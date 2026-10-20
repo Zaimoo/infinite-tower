@@ -139,4 +139,5 @@ flowchart TD
 | **Squad Wipe & Spilled Loot** | Complete | Wipe drops held cargo, sets `CanCollectLoot = false`, and locks looting until Infirmary recovery |
 | **Blood Pact Removal** | Clean | Remotes, 3D pedestals, and UI cards completely deleted; no orphan dependencies |
 | **Mercenary Removal** | Clean | Remotes, 3D boards, directives, and Audit Soul UI completely deleted; zero syntax errors |
-| **Script Compilation** | 100% Pass | All 16 scripts compile with 0 errors in Roblox Studio |
+| **Anime R15 Hero Rig Pipeline** | Complete & Verified | 7 custom anime models in `ReplicatedStorage.Assets.Heroes` with 15 Motor6Ds, client procedural animation, and 152° loot hauling |
+| **Script Compilation** | 100% Pass | All 17 scripts compile with 0 errors in Roblox Studio |
