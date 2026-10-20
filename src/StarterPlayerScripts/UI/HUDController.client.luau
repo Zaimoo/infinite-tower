@@ -465,6 +465,7 @@ local pitModal = makeFrame({
 local refreshWaitingRoomModal: () -> ()
 local refreshPitModal: () -> ()
 local facilityController: any = nil
+local synthesisController: any = nil
 local refreshBlacksmithModal: () -> ()
 local selectedArtifactUUID: string? = nil
 
@@ -808,6 +809,7 @@ end
 
 _G.OpenMasterModal = function(which: string)
 	if facilityController then facilityController:Close() end
+	if synthesisController then synthesisController:Close() end
 	waitingRoomModal.Visible = (which == "WAITING_ROOM")
 	pitModal.Visible = (which == "THE_PIT")
 	blacksmithModal.Visible = (which == "BLACKSMITH")
@@ -1167,8 +1169,15 @@ _G.PitController = pitController
 refreshPitModal = function() pitController:Refresh() end
 local FacilityController = require(script.Parent:WaitForChild("FacilityController"))
 facilityController = FacilityController.new(hudGui, function() return CurrentProfile end, TycoonRemotes)
+local SynthesisController = require(script.Parent:WaitForChild("SynthesisController"))
+synthesisController = SynthesisController.new(hudGui, TycoonRemotes:WaitForChild("PitRequest") :: RemoteFunction)
+_G.SynthesisController = synthesisController
 _G.OpenFacilityHUD = function(facility: string)
-	if facility == "Synthesis" or facility == "Promotion" then
+	if facility == "Synthesis" then
+		-- Focused synthesis HUD: recipient slot, level preview and material slots.
+		_G.OpenMasterModal("NONE")
+		synthesisController:Open()
+	elseif facility == "Promotion" then
 		_G.OpenMasterModal("THE_PIT")
 		pitController:SetTab(facility)
 	else
@@ -1558,6 +1567,9 @@ ProfileDeltaSyncEvent.OnClientEvent:Connect(function(profile: any)
 		profile = CurrentProfile
 	else CurrentProfile = profile end
 	facilityController:Refresh()
+	if synthesisController and synthesisController.Root and synthesisController.Root.Visible then
+		synthesisController:Refresh()
+	end
 
 	currencyLabel.Text = string.format(
 		" GOLD: %d    GEMS: %d",
