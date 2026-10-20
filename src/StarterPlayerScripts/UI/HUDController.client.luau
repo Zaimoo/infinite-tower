@@ -1329,14 +1329,209 @@ do
 		end)
 	end
 
-	-- Currency is split into two readable pills with the uploaded pack graphics.
+	--========================================================================
+	-- SAVED GOTHIC UI TEXT BOX DESIGN (Obsidian Sheen + White Filigree Corners)
+	--========================================================================
+	local GothicPalette = {
+		ObsidianDark = Color3.fromRGB(13, 9, 18),
+		ObsidianMid = Color3.fromRGB(20, 14, 28),
+		ObsidianSheen = Color3.fromRGB(38, 28, 50),
+		FiligreeWhite = Color3.fromRGB(246, 244, 255),
+		OuterGlow = Color3.fromRGB(222, 205, 255),
+		CornerCutout = Color3.fromRGB(26, 15, 38),
+		InnerLineBright = Color3.fromRGB(112, 100, 132),
+		InnerLineMuted = Color3.fromRGB(68, 58, 84),
+	}
+
+	local function applyGothicBoxStyle(container: Frame, compact: boolean?, zOrder: number?): Frame
+		local isCompact = if compact ~= nil then compact else false
+		local baseZ = zOrder or container.ZIndex or 8
+
+		container.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+		container.BackgroundTransparency = 0
+		container.BorderSizePixel = 0
+		container.ZIndex = baseZ
+
+		for _, child in ipairs(container:GetChildren()) do
+			if
+				child:IsA("UICorner")
+				or child:IsA("UIStroke")
+				or child:IsA("UIGradient")
+				or child.Name == "GothicDecorRoot"
+			then
+				child:Destroy()
+			end
+		end
+
+		local corner = Instance.new("UICorner")
+		corner.CornerRadius = UDim.new(0, isCompact and 3 or 4)
+		corner.Parent = container
+
+		local grad = Instance.new("UIGradient")
+		grad.Rotation = 128
+		grad.Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0.00, GothicPalette.ObsidianDark),
+			ColorSequenceKeypoint.new(0.28, GothicPalette.ObsidianMid),
+			ColorSequenceKeypoint.new(0.46, GothicPalette.ObsidianSheen),
+			ColorSequenceKeypoint.new(0.62, GothicPalette.ObsidianMid),
+			ColorSequenceKeypoint.new(1.00, GothicPalette.ObsidianDark),
+		})
+		grad.Parent = container
+
+		local outerStroke = Instance.new("UIStroke")
+		outerStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		outerStroke.Thickness = isCompact and 1.5 or 2
+		outerStroke.Color = GothicPalette.FiligreeWhite
+		outerStroke.Transparency = 0.04
+		outerStroke.Parent = container
+
+		local decorRoot = Instance.new("Folder")
+		decorRoot.Name = "GothicDecorRoot"
+		decorRoot.Parent = container
+
+		local glowFrame = Instance.new("Frame")
+		glowFrame.Name = "OuterGlow"
+		glowFrame.Size = UDim2.new(1, isCompact and 6 or 10, 1, isCompact and 6 or 10)
+		glowFrame.Position = UDim2.fromScale(0.5, 0.5)
+		glowFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+		glowFrame.BackgroundTransparency = 1
+		glowFrame.ZIndex = baseZ
+		glowFrame.Parent = decorRoot
+
+		local glowCorner = Instance.new("UICorner")
+		glowCorner.CornerRadius = UDim.new(0, isCompact and 5 or 7)
+		glowCorner.Parent = glowFrame
+
+		local glowStroke = Instance.new("UIStroke")
+		glowStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		glowStroke.Thickness = isCompact and 2.5 or 4
+		glowStroke.Color = GothicPalette.OuterGlow
+		glowStroke.Transparency = 0.62
+		glowStroke.Parent = glowFrame
+
+		local insetX = isCompact and 10 or 18
+		local line1Y = isCompact and 4 or 7
+		local line2Y = isCompact and 6 or 11
+
+		local function makeTrimLine(name: string, yOffset: number, fromBottom: boolean, col: Color3, trans: number)
+			local line = Instance.new("Frame")
+			line.Name = name
+			line.Size = UDim2.new(1, -insetX * 2, 0, 1)
+			line.Position = if fromBottom
+				then UDim2.new(0, insetX, 1, -yOffset)
+				else UDim2.new(0, insetX, 0, yOffset)
+			line.BackgroundColor3 = col
+			line.BackgroundTransparency = trans
+			line.BorderSizePixel = 0
+			line.ZIndex = baseZ + 1
+			line.Parent = decorRoot
+		end
+
+		makeTrimLine("TopTrimOuter", line1Y, false, GothicPalette.InnerLineBright, 0.25)
+		makeTrimLine("TopTrimInner", line2Y, false, GothicPalette.InnerLineMuted, 0.42)
+		makeTrimLine("BottomTrimOuter", line1Y, true, GothicPalette.InnerLineBright, 0.25)
+		makeTrimLine("BottomTrimInner", line2Y, true, GothicPalette.InnerLineMuted, 0.42)
+
+		local wingLen = isCompact and 13 or 24
+		local wingThick = isCompact and 2 or 3
+		local diamondOuter = isCompact and 9 or 15
+		local diamondInner = isCompact and 5 or 8
+		local spurSize = isCompact and 4 or 6
+
+		local corners = {
+			{ Name = "CornerTL", X = 0, Y = 0, AX = 0, AY = 0, SX = 1, SY = 1 },
+			{ Name = "CornerTR", X = 1, Y = 0, AX = 1, AY = 0, SX = -1, SY = 1 },
+			{ Name = "CornerBL", X = 0, Y = 1, AX = 0, AY = 1, SX = 1, SY = -1 },
+			{ Name = "CornerBR", X = 1, Y = 1, AX = 1, AY = 1, SX = -1, SY = -1 },
+		}
+
+		for _, c in ipairs(corners) do
+			local hWing = Instance.new("Frame")
+			hWing.Name = c.Name .. "_HWing"
+			hWing.Size = UDim2.fromOffset(wingLen, wingThick)
+			hWing.AnchorPoint = Vector2.new(c.AX, c.AY)
+			hWing.Position = UDim2.new(c.X, -c.SX * 1, c.Y, -c.SY * 1)
+			hWing.BackgroundColor3 = GothicPalette.FiligreeWhite
+			hWing.BorderSizePixel = 0
+			hWing.ZIndex = baseZ + 2
+			hWing.Parent = decorRoot
+
+			local vWing = Instance.new("Frame")
+			vWing.Name = c.Name .. "_VWing"
+			vWing.Size = UDim2.fromOffset(wingThick, wingLen)
+			vWing.AnchorPoint = Vector2.new(c.AX, c.AY)
+			vWing.Position = UDim2.new(c.X, -c.SX * 1, c.Y, -c.SY * 1)
+			vWing.BackgroundColor3 = GothicPalette.FiligreeWhite
+			vWing.BorderSizePixel = 0
+			vWing.ZIndex = baseZ + 2
+			vWing.Parent = decorRoot
+
+			local hSpur = Instance.new("Frame")
+			hSpur.Name = c.Name .. "_HSpur"
+			hSpur.Size = UDim2.fromOffset(spurSize, spurSize)
+			hSpur.AnchorPoint = Vector2.new(0.5, 0.5)
+			hSpur.Position = UDim2.new(c.X, c.SX * (wingLen - 2), c.Y, c.SY * 1)
+			hSpur.Rotation = 45
+			hSpur.BackgroundColor3 = GothicPalette.FiligreeWhite
+			hSpur.BorderSizePixel = 0
+			hSpur.ZIndex = baseZ + 2
+			hSpur.Parent = decorRoot
+
+			local vSpur = Instance.new("Frame")
+			vSpur.Name = c.Name .. "_VSpur"
+			vSpur.Size = UDim2.fromOffset(spurSize, spurSize)
+			vSpur.AnchorPoint = Vector2.new(0.5, 0.5)
+			vSpur.Position = UDim2.new(c.X, c.SX * 1, c.Y, c.SY * (wingLen - 2))
+			vSpur.Rotation = 45
+			vSpur.BackgroundColor3 = GothicPalette.FiligreeWhite
+			vSpur.BorderSizePixel = 0
+			vSpur.ZIndex = baseZ + 2
+			vSpur.Parent = decorRoot
+
+			local crestOuter = Instance.new("Frame")
+			crestOuter.Name = c.Name .. "_CrestOuter"
+			crestOuter.Size = UDim2.fromOffset(diamondOuter, diamondOuter)
+			crestOuter.AnchorPoint = Vector2.new(0.5, 0.5)
+			crestOuter.Position = UDim2.new(c.X, c.SX * (isCompact and 3 or 5), c.Y, c.SY * (isCompact and 3 or 5))
+			crestOuter.Rotation = 45
+			crestOuter.BackgroundColor3 = GothicPalette.FiligreeWhite
+			crestOuter.BorderSizePixel = 0
+			crestOuter.ZIndex = baseZ + 2
+			crestOuter.Parent = decorRoot
+
+			local crestCutout = Instance.new("Frame")
+			crestCutout.Name = "DarkCutout"
+			crestCutout.Size = UDim2.fromOffset(diamondInner, diamondInner)
+			crestCutout.AnchorPoint = Vector2.new(0.5, 0.5)
+			crestCutout.Position = UDim2.fromScale(0.5, 0.5)
+			crestCutout.BackgroundColor3 = GothicPalette.CornerCutout
+			crestCutout.BorderSizePixel = 0
+			crestCutout.ZIndex = baseZ + 3
+			crestCutout.Parent = crestOuter
+		end
+
+		return container
+	end
+
+	-- Remove top menu bar so the viewport top is unobstructed and currencies live in the bottom-left
+	topBar.Visible = false
 	currencyLabel.Visible = false
+	honorLabel.Visible = false
+
+	carriedLootPill.Parent = hudGui
+	carriedLootPill.AnchorPoint = Vector2.new(0, 1)
+	carriedLootPill.Position = UDim2.new(0, 18, 1, -114)
+	carriedLootPill.ZIndex = 8
+
+	-- Bottom-left Gold & Diamond Currency Containers (above PATCH NOTES) using Gothic Box Design
 	local currencyCluster = Instance.new("Frame")
 	currencyCluster.Name = "CurrencyCluster"
 	currencyCluster.BackgroundTransparency = 1
-	currencyCluster.Size = UDim2.fromOffset(242, 44)
-	currencyCluster.Position = UDim2.fromOffset(12, 10)
-	currencyCluster.Parent = topBar
+	currencyCluster.Size = UDim2.fromOffset(258, 44)
+	currencyCluster.AnchorPoint = Vector2.new(0, 1)
+	currencyCluster.Position = UDim2.new(0, 18, 1, -60)
+	currencyCluster.ZIndex = 8
+	currencyCluster.Parent = hudGui
 
 	local currencyFields: { [string]: TextLabel } = {}
 	local currencies = {
@@ -1346,24 +1541,27 @@ do
 	for i, item in currencies do
 		local f = makeFrame({
 			Name = item[1] .. "Pill",
-			Size = UDim2.fromOffset(118, 42),
-			Position = UDim2.fromOffset((i - 1) * 124, 0),
-			BackgroundColor3 = Color3.fromRGB(21, 31, 48),
-			Corner = 9,
+			Size = UDim2.fromOffset(122, 42),
+			Position = UDim2.fromOffset((i - 1) * 134, 1),
+			BackgroundColor3 = GothicPalette.ObsidianDark,
 			Parent = currencyCluster,
 		})
-		stroke(f)
-		image(f, item[2] :: string, UDim2.fromOffset(24, 24), UDim2.fromOffset(8, 9))
-		currencyFields[item[1] :: string] = makeLabel({
-			Size = UDim2.new(1, -42, 1, 0),
-			Position = UDim2.fromOffset(38, 0),
-			Text = "—",
+		applyGothicBoxStyle(f, true, 8)
+		local icon = image(f, item[2] :: string, UDim2.fromOffset(22, 22), UDim2.fromOffset(12, 10))
+		icon.ZIndex = 11
+		local lbl = makeLabel({
+			Size = UDim2.new(1, -46, 1, 0),
+			Position = UDim2.fromOffset(40, 0),
+			Text = if item[1] == "Gold" then "500" else "300",
 			TextColor3 = item[3] :: Color3,
-			TextSize = 16,
+			Font = Enum.Font.Fantasy,
+			TextSize = 17,
 			TextScaled = false,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			Parent = f,
 		})
+		lbl.ZIndex = 11
+		currencyFields[item[1] :: string] = lbl
 	end
 
 	local function number(n: number?): string
@@ -1388,16 +1586,17 @@ do
 	ProfileDeltaSyncEvent.OnClientEvent:Connect(updateCurrency)
 	updateCurrency(CurrentProfile)
 
-	-- Keep development hooks out of normal navigation. F8 reveals them in Studio.
+	-- Keep Studio F8 development hooks available without the top menu bar
+	navButtonsFrame.Parent = hudGui
+	navButtonsFrame.AnchorPoint = Vector2.new(1, 0)
+	navButtonsFrame.Position = UDim2.new(1, -16, 0, 12)
+	navButtonsFrame.Size = UDim2.fromOffset(240, 36)
 	local devButtons = {}
-	local primaryButtons = {}
 	for _, b in navButtonsFrame:GetChildren() do
 		if b:IsA("TextButton") then
+			b.Visible = false
 			if b.Text:find("Spawn Boss") or b.Text:find("Resources") then
-				b.Visible = false
 				table.insert(devButtons, b)
-			else
-				table.insert(primaryButtons, b)
 			end
 		end
 	end
@@ -1414,13 +1613,6 @@ do
 			end
 		end
 	end)
-	for _, b in primaryButtons do
-		b.BackgroundColor3 = Color3.fromRGB(29, 42, 62)
-		b.TextColor3 = P.gold
-		b.TextSize = 14
-		b.TextScaled = false
-		stroke(b)
-	end
 
 	local compact = false
 	local encounterOpen = false
@@ -1491,29 +1683,15 @@ do
 		local portrait = w < 650
 		local stackPanels = portrait or h < 540
 
-		topBar.Position = UDim2.fromOffset(12, 8)
-		topBar.Size = UDim2.new(1, -24, 0, (w < 780) and 106 or 64)
-		topBar.BackgroundColor3 = P.surface
-		topBar.BackgroundTransparency = 0.04
-		stroke(topBar)
+		topBar.Visible = false
+		honorLabel.Visible = false
 
+		currencyCluster.AnchorPoint = Vector2.new(0, 1)
+		currencyCluster.Position = UDim2.new(0, 18, 1, -60)
 		local moneyScale = currencyCluster:FindFirstChildOfClass("UIScale") or Instance.new("UIScale", currencyCluster)
-		moneyScale.Scale = portrait and math.min(1, (w - 48) / 242) or 1
+		moneyScale.Scale = portrait and math.min(1, (w - 48) / 258) or 1
 
-		honorLabel.Visible = not compact
-		honorLabel.Size = UDim2.fromOffset(220, 32)
-		honorLabel.Position = UDim2.fromOffset(266, 16)
-		honorLabel.TextScaled = false
-		honorLabel.TextSize = 12
-
-		navButtonsFrame.Position = (w < 780) and UDim2.fromOffset(12, 60) or UDim2.new(1, -382, 0, 12)
-		navButtonsFrame.Size = (w < 780) and UDim2.new(1, -24, 0, 36) or UDim2.fromOffset(370, 40)
-		for _, b in primaryButtons do
-			b.Size = UDim2.fromOffset(portrait and math.floor((w - 64) / 3) or 116, 36)
-		end
-		navLayout.HorizontalAlignment = (w < 780) and Enum.HorizontalAlignment.Left or Enum.HorizontalAlignment.Right
-
-		bossBanner.Position = UDim2.new(0.5, 0, 0, compact and 124 or 84)
+		bossBanner.Position = UDim2.new(0.5, 0, 0, 14)
 		bossBanner.AnchorPoint = Vector2.new(0.5, 0)
 		bossBanner.Size = UDim2.new(0, math.min(w - 32, 720), 0, 58)
 		bossBanner.BackgroundColor3 = P.surface
@@ -1525,10 +1703,10 @@ do
 		novaCastLabel.TextScaled = false
 
 		toastBanner.AnchorPoint = Vector2.new(0.5, 0)
-		toastBanner.Position = UDim2.new(0.5, 0, 0, compact and 226 or 152)
+		toastBanner.Position = UDim2.new(0.5, 0, 0, 82)
 		toastBanner.Size = UDim2.new(0, math.min(w - 32, 650), 0, 46)
 
-		rightBoard.Position = UDim2.new(1, -16, 0, compact and 228 or 180)
+		rightBoard.Position = UDim2.new(1, -16, 0, compact and 136 or 96)
 		rightBoard.AnchorPoint = Vector2.new(1, 0)
 		rightBoard.Size = UDim2.fromOffset(math.min(260, w - 32), 170)
 		rightBoard.Visible = not compact or encounterOpen
@@ -1536,7 +1714,7 @@ do
 		rightBoard.BackgroundTransparency = 0.08
 		stroke(rightBoard)
 		encounterToggle.Visible = compact
-		encounterToggle.Position = UDim2.new(1, -136, 0, (w < 780) and 122 or 80)
+		encounterToggle.Position = UDim2.new(1, -136, 0, 16)
 
 		-- Responsive scaling for the BottomToolbar on smaller screens
 		patchNotesBtn.Visible = w >= 720
