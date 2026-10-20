@@ -45,6 +45,17 @@ type VisualNode = {
 
 local MetadataByNetId: { [number]: any } = {}
 local VisualNodesByNetId: { [number]: VisualNode } = {}
+local LastMetadataRequestClock = -math.huge
+local METADATA_REQUEST_INTERVAL = 1.0
+
+local function requestEntityMetadata()
+	local now = os.clock()
+	if now - LastMetadataRequestClock < METADATA_REQUEST_INTERVAL then
+		return
+	end
+	LastMetadataRequestClock = now
+	EntityMetadataRemote:FireServer()
+end
 
 -- Expose shared client state for HUD & Input controllers
 _G.ClientCombatState = {
@@ -228,8 +239,22 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 	}
 end
 
-EntityMetadataRemote.OnClientEvent:Connect(function(metaTable: { [number]: any })
-	MetadataByNetId = metaTable or {}
+EntityMetadataRemote.OnClientEvent:Connect(function(metaTable: any)
+	if type(metaTable) ~= "table" then
+		return
+	end
+
+	-- Index payload records by numeric IDs, accepting the dense list and legacy keyed maps.
+	local normalizedMetadata: { [number]: any } = {}
+	for key, meta in pairs(metaTable) do
+		if type(meta) == "table" then
+			local netId = tonumber(meta.NetId) or tonumber(key)
+			if netId then
+				normalizedMetadata[netId] = meta
+			end
+		end
+	end
+	MetadataByNetId = normalizedMetadata
 	_G.ClientCombatState.Metadata = MetadataByNetId
 
 	local foundWorldBoss: number? = nil
@@ -262,6 +287,7 @@ ReplicationTickRemote.OnClientEvent:Connect(function(buf: buffer)
 	local count = buffer.readu8(buf, 0)
 	local now = os.clock()
 	local offset = 5
+	local needsMetadata = false
 
 	for i = 1, count do
 		local netId = buffer.readu16(buf, offset + 0)
@@ -280,6 +306,15 @@ ReplicationTickRemote.OnClientEvent:Connect(function(buf: buffer)
 
 		local meta = MetadataByNetId[netId]
 		local node = VisualNodesByNetId[netId]
+		if not meta then
+			-- Identity is not in the snapshot; wait for it instead of rendering heroes as mobs.
+			needsMetadata = true
+			if node then
+				node.Model:Destroy()
+				VisualNodesByNetId[netId] = nil
+			end
+			continue
+		end
 		if not node then
 			node = createEntityModel(netId, meta, goalPos)
 			VisualNodesByNetId[netId] = node
@@ -323,6 +358,9 @@ ReplicationTickRemote.OnClientEvent:Connect(function(buf: buffer)
 			_G.ClientCombatState.WorldBossCoreExposed = (bit32.band(flags, 4) ~= 0)
 		end
 	end
+	if needsMetadata then
+		requestEntityMetadata()
+	end
 
 	-- Clean up stale entities not seen for > 0.8s
 	for netId, node in pairs(VisualNodesByNetId) do
@@ -335,6 +373,9 @@ ReplicationTickRemote.OnClientEvent:Connect(function(buf: buffer)
 		end
 	end
 end)
+
+-- Request the initial identities after both listeners are ready, including late client starts.
+requestEntityMetadata()
 
 -- 60 FPS Smooth Interpolation Loop
 RunService.RenderStepped:Connect(function(dt: number)

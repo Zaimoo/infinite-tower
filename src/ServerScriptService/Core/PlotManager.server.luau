@@ -11,6 +11,35 @@ local HeroCatalog = require(Shared:WaitForChild("Config"):WaitForChild("HeroCata
 
 local PlotsFolder = Workspace:WaitForChild("WaitingRoomPlots")
 
+-- Keep the Pit interaction above the decorative bowl and visible from either side.
+local function configurePitPrompt(plotModel: Instance)
+	local altar = plotModel:FindFirstChild("SummoningAltar")
+	local pit = altar and altar:FindFirstChild("ThePitCauldron")
+	if not pit or not pit:IsA("BasePart") then return end
+	local prompt = pit:FindFirstChild("ThePitPrompt", true)
+	if not prompt or not prompt:IsA("ProximityPrompt") then return end
+	local attachment = pit:FindFirstChild("PitInteractionAttachment") :: Attachment?
+	if not attachment then
+		attachment = Instance.new("Attachment")
+		attachment.Name = "PitInteractionAttachment"
+		attachment.Parent = pit
+	end
+	attachment.Position = pit.CFrame:VectorToObjectSpace(Vector3.new(0, 2, 0))
+	prompt.Parent = attachment
+	prompt.Enabled = true
+	prompt.RequiresLineOfSight = false
+	prompt.KeyboardKeyCode = Enum.KeyCode.E
+	prompt.GamepadKeyCode = Enum.KeyCode.ButtonX
+	prompt.ActionText = "Open Pit"
+	prompt.ObjectText = "Hero Synthesis & Promotion"
+	prompt.MaxActivationDistance = 14
+	prompt.HoldDuration = 0
+	prompt.ClickablePrompt = true
+end
+
+for _, plotModel in PlotsFolder:GetChildren() do configurePitPrompt(plotModel) end
+PlotsFolder.ChildAdded:Connect(configurePitPrompt)
+
 local ArtPackVisuals = require(ReplicatedStorage.Assets:WaitForChild("ArtPackVisuals"))
 local PlotManager = {}
 local AssignedPlots: { [number]: Player? } = {} -- [1..6] = Player
