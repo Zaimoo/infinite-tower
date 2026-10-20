@@ -635,6 +635,11 @@ local pitTabBtn = makeBarTextButton(centerGroup, "Tab_ThePit", "THE PIT", 62, fu
 end)
 pitTabBtn.LayoutOrder = 2
 
+local forgeTabBtn = makeBarTextButton(centerGroup, "Tab_Blacksmith", "FORGE", 56, function()
+	_G.OpenMasterModal(blacksmithModal.Visible and "NONE" or "BLACKSMITH")
+end)
+forgeTabBtn.LayoutOrder = 2.5
+
 local heroesTabBtn = makeBarTextButton(centerGroup, "Tab_Heroes", "HEROES", 62, function()
 	_G.OpenMasterModal("WAITING_ROOM")
 	AssignHeroRoleFunc:InvokeServer("AUTO_SWAP_EXHAUSTED", "")
@@ -792,10 +797,13 @@ end
 local function updateBottomTabHighlights()
 	local wrActive = waitingRoomModal.Visible
 	local pitActive = pitModal.Visible
+	local forgeActive = blacksmithModal.Visible
 	wrTabBtn:SetAttribute("IsActiveTab", wrActive)
 	pitTabBtn:SetAttribute("IsActiveTab", pitActive)
+	forgeTabBtn:SetAttribute("IsActiveTab", forgeActive)
 	wrTabBtn.TextColor3 = wrActive and SLATE_ACTIVE or SLATE_TEXT
 	pitTabBtn.TextColor3 = pitActive and SLATE_ACTIVE or SLATE_TEXT
+	forgeTabBtn.TextColor3 = forgeActive and SLATE_ACTIVE or SLATE_TEXT
 end
 
 _G.OpenMasterModal = function(which: string)
@@ -831,16 +839,6 @@ makeButton({
 	Corner = 6,
 	OnClick = function()
 		_G.OpenMasterModal(pitModal.Visible and "NONE" or "THE_PIT")
-	end,
-	Parent = navButtonsFrame,
-})
-makeButton({
-	Size = UDim2.new(0, 115, 1, 0),
-	BackgroundColor3 = Color3.fromRGB(200, 115, 25),
-	Text = "⚒️ Blacksmith",
-	Corner = 6,
-	OnClick = function()
-		_G.OpenMasterModal(blacksmithModal.Visible and "NONE" or "BLACKSMITH")
 	end,
 	Parent = navButtonsFrame,
 })
@@ -1696,7 +1694,7 @@ do
 		_G.OpenMasterModal("NONE")
 	end)
 
-	local modalList = { waitingRoomModal, pitModal }
+	local modalList = { waitingRoomModal, pitModal, blacksmithModal }
 	for _, m in modalList do
 		m.AnchorPoint = Vector2.new(0.5, 0.5)
 		m.Position = UDim2.fromScale(0.5, 0.5)
