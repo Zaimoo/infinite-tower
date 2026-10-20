@@ -35,14 +35,14 @@ function A.Template(id: string): Model?
 	if not assets then return nil end
 	local resolved = aliases[id] or id
 
-	-- Prioritize the new stylized anime R15 rigs in Heroes folder
+	-- Prioritize the curated R15 hero rigs in Heroes folder
 	local heroesFolder = assets:FindFirstChild("Heroes")
 	if heroesFolder and heroesFolder:IsA("Folder") then
 		local found = heroesFolder:FindFirstChild(resolved)
 		if found and found:IsA("Model") then return found end
 	end
 
-	-- Fallback search across all asset subfolders
+	-- Search across all other asset subfolders
 	for _, folder in ipairs(assets:GetChildren()) do
 		if folder:IsA("Folder") and folder.Name ~= "Heroes" then
 			local found = folder:FindFirstChild(resolved)
@@ -163,11 +163,20 @@ function A.Animate(node: any, dt: number, time: number)
 		end
 	end
 
+	local isHoldingLoot = node.Model:GetAttribute("CarryingLoot") == true
+	local assetId = node.Model:GetAttribute("ArtPackAssetId")
+	local isMarksman = (assetId == "hero_jenna")
+
 	local moving = (node.GoalPos - node.CurrentPos).Magnitude > 0.15
 	local wave = math.sin(time * 9)
 	local attack = node.StateEnum == 3
 
 	for name, b in pairs(node.ArtBones) do
+		-- Do not override arms if the unit is actively hauling physical loot overhead
+		if isHoldingLoot and (name:find("UpperArm") or name:find("Shoulder")) then
+			continue
+		end
+
 		local angle = 0
 		if moving then
 			local sign = (name:find("Left") or name:find("L_")) and 1 or -1
@@ -176,8 +185,20 @@ function A.Animate(node: any, dt: number, time: number)
 			elseif name:find("UpperArm") or name:find("Shoulder") then
 				angle = -wave * 0.35 * sign
 			end
-		elseif attack and (name == "RightUpperArm" or name == "RightShoulder") then
-			angle = -0.6 - math.sin(time * 7) * 0.5
+		elseif attack then
+			if isMarksman then
+				-- Marksman rifle aim + recoil
+				if name == "RightUpperArm" or name == "RightShoulder" then
+					angle = -1.25 + math.sin(time * 16) * 0.15 -- Aim rifle forward with recoil kick
+				elseif name == "LeftUpperArm" or name == "LeftShoulder" then
+					angle = -1.1 + math.sin(time * 16) * 0.08 -- Support rifle barrel with left hand
+				end
+			else
+				-- Melee strike
+				if name == "RightUpperArm" or name == "RightShoulder" then
+					angle = -0.6 - math.sin(time * 7) * 0.5
+				end
+			end
 		elseif name == "UpperTorso" or name == "Waist" then
 			angle = math.sin(time * 2) * 0.015
 		end

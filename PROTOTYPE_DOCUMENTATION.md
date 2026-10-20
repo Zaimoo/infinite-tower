@@ -143,4 +143,4 @@ flowchart TD
 | **Blood Pact Removal** | Clean | Remotes, 3D pedestals, and UI cards completely deleted; no orphan dependencies |
 | **Mercenary Removal** | Clean | Remotes, 3D boards, directives, and Audit Soul UI completely deleted; zero syntax errors |
 | **Anime R15 Hero Rig Pipeline** | Complete & Verified | 7 custom anime models in `ReplicatedStorage.Assets.Heroes` with 15 Motor6Ds, client procedural animation, and 152° loot hauling |
-| **Script Compilation** | 100% Pass | All 17 scripts compile with 0 errors in Roblox Studio |
+| **Script Compilation** | 100% Pass | All 16 scripts compile with 0 errors in Roblox Studio |

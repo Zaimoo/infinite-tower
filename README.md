@@ -36,7 +36,7 @@
     │   ├── Rendering/                -- EntityRenderer (Buffer Unpacker), HoldingAnimationController
     │   └── UI/                       -- HUDController (Squad Cards, Retaliate Banner, Modals)
     └── ReplicatedStorage/
-        ├── Assets/                   -- ArtPackVisuals, HeroModelBuilder (Stylized Anime R15 Rigs)
+        ├── Assets/                   -- ArtPackVisuals (Zero-Humanoid R15 & Skinned Animator)
         └── Shared/                   -- HeroCatalog, RelicConfig, FacilityConfig, WorldBossConfig, StatFormulas
 ```
 
