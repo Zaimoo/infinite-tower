@@ -171,7 +171,7 @@ local currencyLabel = makeLabel({
 	Name = "CurrencyLabel",
 	Size = UDim2.new(0.36, 0, 0.8, 0),
 	Position = UDim2.new(0.01, 0, 0.1, 0),
-	Text = " GOLD: 500    GEMS: 300    RP: 0",
+	Text = " GOLD: 500    GEMS: 300",
 	TextColor3 = Color3.fromRGB(255, 225, 95),
 	TextXAlignment = Enum.TextXAlignment.Left,
 	Parent = topBar,
@@ -355,8 +355,8 @@ local carriedLootLabel = makeLabel({
 	Parent = carriedLootPill,
 })
 
-CarriedLootSyncRemote.OnClientEvent:Connect(function(gold: number, gems: number, rp: number)
-	if gold > 0 or gems > 0 or rp > 0 then
+CarriedLootSyncRemote.OnClientEvent:Connect(function(gold: number, gems: number)
+	if gold > 0 or gems > 0 then
 		carriedLootPill.Visible = true
 		carriedLootLabel.Text = string.format("🎒 Field: %dG, %d💎", gold, gems)
 	else
@@ -593,10 +593,10 @@ patchNotesBtn.Position = UDim2.new(0, 32, 0.5, 1)
 patchNotesBtn.AnchorPoint = Vector2.new(0, 0.5)
 patchNotesBtn.TextXAlignment = Enum.TextXAlignment.Left
 
--- Center Group: 5 Infinite Tower Text Tabs | Divider | 5 Quick-Action Tool Icons
+-- Center Group: 5 Infinite Tower Text Tabs | Divider | 4 Quick-Action Tool Icons
 local centerGroup = Instance.new("Frame")
 centerGroup.Name = "CenterToolbarGroup"
-centerGroup.Size = UDim2.new(0, 740, 1, -3)
+centerGroup.Size = UDim2.new(0, 692, 1, -3)
 centerGroup.Position = UDim2.new(0.5, 0, 0, 3)
 centerGroup.AnchorPoint = Vector2.new(0.5, 0)
 centerGroup.BackgroundTransparency = 1
@@ -707,23 +707,11 @@ do
 	addPart(bucketCanvas, 13, 12, 3, 4, 0, 2)
 end
 
--- Icon 4: Eyedropper / Collect Lab RP
-local iconPickerBtn, pickerCanvas = makeBarIconButton(centerGroup, "Tool_CollectRP", function()
-	FacilityInteractEvent:FireServer("COLLECT_LAB")
-	showClientToast("Collected Dimensional Lab Research Points!")
-end)
-iconPickerBtn.LayoutOrder = 10
-do
-	addPart(pickerCanvas, 3, 9, 10, 3, -45, 1)
-	addPart(pickerCanvas, 9, 5, 6, 2, 45, 1)
-	addPart(pickerCanvas, 11, 3, 5, 4, -45, 2)
-end
-
--- Icon 5: 3x3 Grid (Toggle Summon / Roster View)
+-- Icon 4: 3x3 Grid (Toggle Summon / Roster View)
 local iconGridBtn, gridCanvas = makeBarIconButton(centerGroup, "Tool_RosterGrid", function()
 	_G.OpenMasterModal(waitingRoomModal.Visible and "NONE" or "WAITING_ROOM")
 end)
-iconGridBtn.LayoutOrder = 11
+iconGridBtn.LayoutOrder = 10
 do
 	for row = 0, 2 do
 		for col = 0, 2 do
@@ -890,7 +878,7 @@ local wrRightPane = makeFrame({
 	Parent = waitingRoomModal,
 })
 
--- Left Pane Controls: Auto-Swap, Mana Conduit, Infirmary, Dimensional Lab & Tech Tree
+-- Left Pane Controls: Auto-Swap, Mana Conduit & Infirmary
 makeButton({
 	Size = UDim2.new(0.94, 0, 0, 32),
 	Position = UDim2.new(0.03, 0, 0, 8),
@@ -1002,86 +990,9 @@ makeButton({
 	Parent = wrLeftPane,
 })
 
--- Dimensional Lab & Tech Tree Section
-local labSummaryLbl = makeLabel({
-	Size = UDim2.new(0.94, 0, 0, 40),
-	Position = UDim2.new(0.03, 0, 0, 204),
-	Text = "3. THE DIMENSIONAL LAB [Lv.1] — RP Buffer: 0 / 100",
-	TextColor3 = Color3.fromRGB(215, 135, 255),
-	TextXAlignment = Enum.TextXAlignment.Left,
-	Parent = wrLeftPane,
-})
-makeButton({
-	Size = UDim2.new(0.45, 0, 0, 28),
-	Position = UDim2.new(0.03, 0, 0, 246),
-	BackgroundColor3 = Color3.fromRGB(135, 65, 205),
-	Text = " COLLECT RP",
-	Corner = 6,
-	OnClick = function()
-		FacilityInteractEvent:FireServer("COLLECT_LAB")
-	end,
-	Parent = wrLeftPane,
-})
-makeButton({
-	Size = UDim2.new(0.45, 0, 0, 28),
-	Position = UDim2.new(0.52, 0, 0, 246),
-	BackgroundColor3 = Color3.fromRGB(115, 55, 175),
-	Text = " UPGRADE LAB",
-	Corner = 6,
-	OnClick = function()
-		FacilityInteractEvent:FireServer("UPGRADE_FACILITY", "DimensionalLab")
-	end,
-	Parent = wrLeftPane,
-})
-
--- Tech Tree Unlock Buttons
-makeButton({
-	Size = UDim2.new(0.45, 0, 0, 34),
-	Position = UDim2.new(0.03, 0, 0, 282),
-	BackgroundColor3 = Color3.fromRGB(50, 110, 175),
-	Text = " 4th Squad Slot\n(65 RP + 1,200G)",
-	Corner = 6,
-	OnClick = function()
-		FacilityInteractEvent:FireServer("UNLOCK_TECH", "tech_squad_slot_4")
-	end,
-	Parent = wrLeftPane,
-})
-makeButton({
-	Size = UDim2.new(0.45, 0, 0, 34),
-	Position = UDim2.new(0.52, 0, 0, 282),
-	BackgroundColor3 = Color3.fromRGB(155, 60, 215),
-	Text = " Ring 2 Barrier Key\n(180 RP + 3,500G)",
-	Corner = 6,
-	OnClick = function()
-		FacilityInteractEvent:FireServer("UNLOCK_TECH", "tech_ring2_barrier")
-	end,
-	Parent = wrLeftPane,
-})
-makeButton({
-	Size = UDim2.new(0.45, 0, 0, 34),
-	Position = UDim2.new(0.03, 0, 0, 322),
-	BackgroundColor3 = Color3.fromRGB(50, 110, 175),
-	Text = " 5th Squad Slot\n(420 RP + 12,000G)",
-	Corner = 6,
-	OnClick = function()
-		FacilityInteractEvent:FireServer("UNLOCK_TECH", "tech_squad_slot_5")
-	end,
-	Parent = wrLeftPane,
-})
-makeButton({
-	Size = UDim2.new(0.45, 0, 0, 34),
-	Position = UDim2.new(0.52, 0, 0, 322),
-	BackgroundColor3 = Color3.fromRGB(35, 165, 195),
-	Text = " Craft Rift Lure\n(300 RP + 5,000G)",
-	Corner = 6,
-	OnClick = function()
-		FacilityInteractEvent:FireServer("UNLOCK_TECH", "craft_rift_lure")
-	end,
-	Parent = wrLeftPane,
-})
 makeButton({
 	Size = UDim2.new(0.94, 0, 0, 32),
-	Position = UDim2.new(0.03, 0, 0, 364),
+	Position = UDim2.new(0.03, 0, 0, 206),
 	BackgroundColor3 = Color3.fromRGB(30, 145, 175),
 	Text = " SUMMON RIFT WARDEN AT RING 3 (Uses 1x Rift Lure)",
 	Corner = 6,
@@ -1132,7 +1043,6 @@ refreshWaitingRoomModal = function()
 	end
 	local c = CurrentProfile.Facilities.ManaConduit
 	local inf = CurrentProfile.Facilities.Infirmary
-	local lab = CurrentProfile.Facilities.DimensionalLab
 
 	conduitSummaryLbl.Text = string.format(
 		"1. MANA CONDUIT [Lv.%d] — Chest: %d Gems | Workers: %d | Mimic: %s",
@@ -1141,10 +1051,6 @@ refreshWaitingRoomModal = function()
 	infirmarySummaryLbl.Text = string.format(
 		"2. THE INFIRMARY [Lv.%d] — Healers: %d (Recovers Stamina & Clears Coma)",
 		inf.Level, #inf.AssignedHeroUUIDs
-	)
-	labSummaryLbl.Text = string.format(
-		"3. DIMENSIONAL LAB [Lv.%d] — RP Buffer: %d RP | Scholars: %d",
-		lab.Level, math.floor(lab.UncollectedOutput), #lab.AssignedHeroUUIDs
 	)
 
 	for _, child in ipairs(rosterScroll:GetChildren()) do
@@ -1185,7 +1091,7 @@ refreshWaitingRoomModal = function()
 
 		local uuid = h.UUID
 		makeButton({
-			Size = UDim2.new(0.11, 0, 0.72, 0),
+			Size = UDim2.new(0.15, 0, 0.72, 0),
 			Position = UDim2.new(0.51, 0, 0.14, 0),
 			BackgroundColor3 = Color3.fromRGB(45, 145, 215),
 			Text = "Squad",
@@ -1196,8 +1102,8 @@ refreshWaitingRoomModal = function()
 			Parent = row,
 		})
 		makeButton({
-			Size = UDim2.new(0.11, 0, 0.72, 0),
-			Position = UDim2.new(0.63, 0, 0.14, 0),
+			Size = UDim2.new(0.15, 0, 0.72, 0),
+			Position = UDim2.new(0.67, 0, 0.14, 0),
 			BackgroundColor3 = Color3.fromRGB(40, 165, 195),
 			Text = "Mana",
 			Corner = 4,
@@ -1207,19 +1113,8 @@ refreshWaitingRoomModal = function()
 			Parent = row,
 		})
 		makeButton({
-			Size = UDim2.new(0.11, 0, 0.72, 0),
-			Position = UDim2.new(0.75, 0, 0.14, 0),
-			BackgroundColor3 = Color3.fromRGB(145, 70, 215),
-			Text = "Lab",
-			Corner = 4,
-			OnClick = function()
-				AssignHeroRoleFunc:InvokeServer(uuid, "FACILITY_LAB")
-			end,
-			Parent = row,
-		})
-		makeButton({
-			Size = UDim2.new(0.11, 0, 0.72, 0),
-			Position = UDim2.new(0.87, 0, 0.14, 0),
+			Size = UDim2.new(0.15, 0, 0.72, 0),
+			Position = UDim2.new(0.83, 0, 0.14, 0),
 			BackgroundColor3 = Color3.fromRGB(95, 100, 120),
 			Text = "Bench",
 			Corner = 4,
@@ -1403,10 +1298,9 @@ ProfileDeltaSyncEvent.OnClientEvent:Connect(function(profile: any)
 	end
 
 	currencyLabel.Text = string.format(
-		" GOLD: %d    GEMS: %d    RP: %d",
+		" GOLD: %d    GEMS: %d",
 		math.floor(profile.Currencies.Gold),
-		math.floor(profile.Currencies.Gems),
-		math.floor(profile.Currencies.ResearchPoints)
+		math.floor(profile.Currencies.Gems)
 	)
 
 	local h = profile.Social.Honor
@@ -1423,12 +1317,11 @@ ProfileDeltaSyncEvent.OnClientEvent:Connect(function(profile: any)
 		honorLabel.TextColor3 = Color3.fromRGB(130, 225, 255)
 	end
 
-	-- Right Board Pity & Tech Summary
+	-- Right Board Pity Summary
 	rightBoardText.Text = string.format(
-		" WORLD BOSS & PITY\n• Min 3.0%% DMG for Loot\n• Boss Pity Meter: %d%% / 100%%\n• Rift Lures Owned: %d\n• Ring 2 Key: %s",
+		" WORLD BOSS & PITY\n• Min 3.0%% DMG for Loot\n• Boss Pity Meter: %d%% / 100%%\n• Rift Lures Owned: %d",
 		profile.BossPity,
-		profile.RiftLuresOwned,
-		profile.UnlockedResearch.Ring2BarrierGate and "UNLOCKED ✓" or "LOCKED "
+		profile.RiftLuresOwned
 	)
 
 	if waitingRoomModal.Visible and refreshWaitingRoomModal then
@@ -1565,12 +1458,12 @@ do
 		end)
 	end
 
-	-- Currency is split into three readable pills with the uploaded pack graphics.
+	-- Currency is split into two readable pills with the uploaded pack graphics.
 	currencyLabel.Visible = false
 	local currencyCluster = Instance.new("Frame")
 	currencyCluster.Name = "CurrencyCluster"
 	currencyCluster.BackgroundTransparency = 1
-	currencyCluster.Size = UDim2.fromOffset(370, 44)
+	currencyCluster.Size = UDim2.fromOffset(242, 44)
 	currencyCluster.Position = UDim2.fromOffset(12, 10)
 	currencyCluster.Parent = topBar
 
@@ -1578,7 +1471,6 @@ do
 	local currencies = {
 		{ "Gold", "rbxassetid://99086944565283", P.gold },
 		{ "Gems", "rbxassetid://74751786636473", P.cyan },
-		{ "ResearchPoints", "rbxassetid://80949385662716", Color3.fromRGB(178, 143, 242) },
 	}
 	for i, item in currencies do
 		local f = makeFrame({
@@ -1766,11 +1658,11 @@ do
 		stroke(topBar)
 
 		local moneyScale = currencyCluster:FindFirstChildOfClass("UIScale") or Instance.new("UIScale", currencyCluster)
-		moneyScale.Scale = portrait and math.min(1, (w - 48) / 370) or 1
+		moneyScale.Scale = portrait and math.min(1, (w - 48) / 242) or 1
 
 		honorLabel.Visible = not compact
 		honorLabel.Size = UDim2.fromOffset(220, 32)
-		honorLabel.Position = UDim2.fromOffset(394, 16)
+		honorLabel.Position = UDim2.fromOffset(266, 16)
 		honorLabel.TextScaled = false
 		honorLabel.TextSize = 12
 

@@ -41,7 +41,6 @@ export type HeroAssignment =
 	| "SQUAD_SLOT_5"
 	| "FACILITY_CONDUIT"
 	| "FACILITY_INFIRMARY"
-	| "FACILITY_LAB"
 
 export type MimicChestMode = "TRUE_STATE" | "FOOLS_GOLD" | "VEIL_OF_POVERTY"
 
@@ -116,21 +115,14 @@ export type PlayerProfile = {
 	Currencies: {
 		Gold: number,
 		Gems: number,
-		ResearchPoints: number,
 	},
 	BossPity: number,
 	RiftLuresOwned: number,
-	UnlockedResearch: {
-		SquadSlot4: boolean,
-		SquadSlot5: boolean,
-		Ring2BarrierGate: boolean,
-	},
 	Heroes: { [string]: HeroInstance },
 	DeployedSquadOrder: { string },
 	Facilities: {
 		ManaConduit: FacilityData,
 		Infirmary: FacilityData,
-		DimensionalLab: FacilityData,
 	},
 	Social: SocialProfile,
 }
@@ -207,15 +199,9 @@ local function createDefaultPlayerProfile(): PlayerProfile
 		Currencies = {
 			Gold = 500,
 			Gems = 300, -- 3 immediate Gacha pulls during onboarding (Doc 3 Section 5.1)
-			ResearchPoints = 0,
 		},
 		BossPity = 0,
 		RiftLuresOwned = 0,
-		UnlockedResearch = {
-			SquadSlot4 = false,
-			SquadSlot5 = false,
-			Ring2BarrierGate = false,
-		},
 		Heroes = {
 			[hanUUID] = hanHero,
 			[jennaUUID] = jennaHero,
@@ -225,7 +211,6 @@ local function createDefaultPlayerProfile(): PlayerProfile
 		Facilities = {
 			ManaConduit = conduit,
 			Infirmary = createDefaultFacility(),
-			DimensionalLab = createDefaultFacility(),
 		},
 		Social = {
 			Honor = 0,
@@ -294,7 +279,7 @@ function DataManager.ApplyCollisionGroup(player: Player)
 	if not profile or not char then
 		return
 	end
-	local groupName = profile.UnlockedResearch.Ring2BarrierGate and "UnlockedRing2" or "DefaultPlayer"
+	local groupName = "UnlockedRing2"
 	for _, desc in ipairs(char:GetDescendants()) do
 		if desc:IsA("BasePart") then
 			pcall(function()
@@ -330,13 +315,8 @@ function DataManager.IsPlayerRogue(player: Player): boolean
 	return (profile.Social.Honor <= -30) or (os.time() < profile.Social.RogueUntilTimestamp)
 end
 
-function DataManager.MaxSquadSlots(profile: PlayerProfile): number
-	if profile.UnlockedResearch.SquadSlot5 then
-		return 5
-	elseif profile.UnlockedResearch.SquadSlot4 then
-		return 4
-	end
-	return 3
+function DataManager.MaxSquadSlots(_profile: PlayerProfile): number
+	return 5
 end
 
 --============================================================================
@@ -642,12 +622,10 @@ AssignHeroRoleFunc.OnServerInvoke = function(player: Player, heroUUID: any, targ
 			end
 		end
 		if not placed then
-			return false, string.format("All %d Unlocked Squad Slots are full! (Unlock more in Dimensional Lab)", maxSlots)
+			return false, string.format("All %d Squad Slots are full!", maxSlots)
 		end
-	elseif targetAssignment == "FACILITY_CONDUIT" or targetAssignment == "FACILITY_INFIRMARY" or targetAssignment == "FACILITY_LAB" then
-		local facKey = if targetAssignment == "FACILITY_CONDUIT" then "ManaConduit"
-			elseif targetAssignment == "FACILITY_INFIRMARY" then "Infirmary"
-			else "DimensionalLab"
+	elseif targetAssignment == "FACILITY_CONDUIT" or targetAssignment == "FACILITY_INFIRMARY" then
+		local facKey = if targetAssignment == "FACILITY_CONDUIT" then "ManaConduit" else "Infirmary"
 		local facData = (profile.Facilities :: any)[facKey] :: FacilityData
 		local cfg = (FacilityConfig.UpgradeTable :: any)[facKey][facData.Level]
 		local maxWorkers = cfg and cfg.MaxWorkers or 1
@@ -669,7 +647,7 @@ AssignHeroRoleFunc.OnServerInvoke = function(player: Player, heroUUID: any, targ
 end
 
 --============================================================================
--- 6. FACILITY INTERACTIONS (COLLECT, UPGRADE, TECH TREE & RIFT LURES)
+-- 6. FACILITY INTERACTIONS (COLLECT & UPGRADE)
 --============================================================================
 
 FacilityInteractEvent.OnServerEvent:Connect(function(player: Player, action: any, param: any)
@@ -695,17 +673,6 @@ FacilityInteractEvent.OnServerEvent:Connect(function(player: Player, action: any
 			DataManager.SendToast(player, "Mana Conduit Chest is empty right now.", "INFO")
 		end
 
-	elseif action == "COLLECT_LAB" then
-		local amt = math.floor(profile.Facilities.DimensionalLab.UncollectedOutput)
-		if amt > 0 then
-			profile.Facilities.DimensionalLab.UncollectedOutput -= amt
-			profile.Currencies.ResearchPoints += amt
-			DataManager.SendToast(player, string.format("Collected +%d Research Points (RP) from Dimensional Lab!", amt), "SUCCESS")
-			DataManager.SyncProfile(player)
-		else
-			DataManager.SendToast(player, "Dimensional Lab buffer is empty right now.", "INFO")
-		end
-
 	elseif action == "UPGRADE_FACILITY" and type(param) == "string" then
 		local facData = (profile.Facilities :: any)[param] :: FacilityData?
 		local upgTable = (FacilityConfig.UpgradeTable :: any)[param]
@@ -718,59 +685,20 @@ FacilityInteractEvent.OnServerEvent:Connect(function(player: Player, action: any
 			DataManager.SendToast(player, param .. " is already at Max Level (Lv.5)!", "INFO")
 			return
 		end
-		if profile.Currencies.Gold < nextCfg.Gold or profile.Currencies.ResearchPoints < nextCfg.RP then
-			DataManager.SendToast(player, string.format("Need %d Gold + %d RP to upgrade %s to Lv.%d!", nextCfg.Gold, nextCfg.RP, param, nextLevel), "WARN")
+		if profile.Currencies.Gold < nextCfg.Gold then
+			DataManager.SendToast(player, string.format("Need %d Gold to upgrade %s to Lv.%d!", nextCfg.Gold, param, nextLevel), "WARN")
 			return
 		end
 		profile.Currencies.Gold -= nextCfg.Gold
-		profile.Currencies.ResearchPoints -= nextCfg.RP
 		facData.Level = nextLevel
 		DataManager.SendToast(player, string.format("Upgraded %s to Level %d!", param, nextLevel), "SUCCESS")
-		DataManager.SyncProfile(player)
-
-	elseif action == "UNLOCK_TECH" and type(param) == "string" then
-		local node = (FacilityConfig.TechNodes :: any)[param]
-		if not node then
-			return
-		end
-		if profile.Facilities.DimensionalLab.Level < node.ReqLabLevel then
-			DataManager.SendToast(player, string.format("Requires Dimensional Lab Level %d!", node.ReqLabLevel), "WARN")
-			return
-		end
-		if param == "tech_squad_slot_4" and profile.UnlockedResearch.SquadSlot4 then return end
-		if param == "tech_squad_slot_5" and profile.UnlockedResearch.SquadSlot5 then return end
-		if param == "tech_ring2_barrier" and profile.UnlockedResearch.Ring2BarrierGate then return end
-
-		if profile.Currencies.ResearchPoints < node.RPCost or profile.Currencies.Gold < node.GoldCost then
-			DataManager.SendToast(player, string.format("Need %d RP + %d Gold for %s!", node.RPCost, node.GoldCost, node.Name), "WARN")
-			return
-		end
-
-		profile.Currencies.ResearchPoints -= node.RPCost
-		profile.Currencies.Gold -= node.GoldCost
-
-		if param == "tech_squad_slot_4" then
-			profile.UnlockedResearch.SquadSlot4 = true
-			DataManager.SendToast(player, "Unlocked 4th Squad Deployment Slot!", "SUCCESS")
-		elseif param == "tech_ring2_barrier" then
-			profile.UnlockedResearch.Ring2BarrierGate = true
-			DataManager.ApplyCollisionGroup(player)
-			DataManager.SendToast(player, "Ring 2 Arcane Barrier Gate Unlocked! You may now enter Ring 2 & Ring 3!", "SUCCESS")
-		elseif param == "tech_squad_slot_5" then
-			profile.UnlockedResearch.SquadSlot5 = true
-			DataManager.SendToast(player, "Unlocked 5th Squad Deployment Slot (Max 5-Hero Squad)!", "SUCCESS")
-		elseif param == "craft_rift_lure" then
-			profile.RiftLuresOwned += 1
-			DataManager.SendToast(player, "Crafted 1x Rift Lure! Use it at the Ring 3 Altar to summon The Rift Warden!", "SUCCESS")
-		end
 		DataManager.SyncProfile(player)
 
 	elseif action == "DEV_GRANT_RESOURCES" then
 		-- Prototype helper so testers can also test mid/late-game features immediately if desired
 		profile.Currencies.Gold += 25000
 		profile.Currencies.Gems += 1800
-		profile.Currencies.ResearchPoints += 600
-		DataManager.SendToast(player, "[Prototype Boost] +25,000 Gold, +1,800 Gems, +600 RP added!", "SUCCESS")
+		DataManager.SendToast(player, "[Prototype Boost] +25,000 Gold, +1,800 Gems added!", "SUCCESS")
 		DataManager.SyncProfile(player)
 	end
 end)
