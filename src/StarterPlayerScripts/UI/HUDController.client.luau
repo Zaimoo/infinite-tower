@@ -32,8 +32,6 @@ local DropCarriedItemRemote = CombatRemotes:WaitForChild("DropCarriedItem") :: R
 local CarriedLootSyncRemote = CombatRemotes:WaitForChild("CarriedLootSync") :: RemoteEvent
 
 local RequestSummonFunc = TycoonRemotes:WaitForChild("RequestSummon") :: RemoteFunction
-local SynthesizeHeroesFunc = TycoonRemotes:WaitForChild("SynthesizeHeroes") :: RemoteFunction
-local PromoteHeroStarFunc = TycoonRemotes:WaitForChild("PromoteHeroStar") :: RemoteFunction
 local AssignHeroRoleFunc = TycoonRemotes:WaitForChild("AssignHeroRole") :: RemoteFunction
 local FacilityInteractEvent = TycoonRemotes:WaitForChild("FacilityInteract") :: RemoteEvent
 
@@ -42,7 +40,6 @@ local ProfileDeltaSyncEvent = SyndicateRemotes:WaitForChild("ProfileDeltaSync") 
 local SystemToastEvent = SyndicateRemotes:WaitForChild("SystemToast") :: RemoteEvent
 
 local CurrentProfile: any = nil
-local SelectedPitTargetUUID: string? = nil
 local SelectedMercDirective: string = "PARASITE"
 local LastQClock = -99
 local LastEClock = -99
@@ -456,6 +453,7 @@ local pitModal = makeFrame({
 
 local refreshWaitingRoomModal: () -> ()
 local refreshPitModal: () -> ()
+local facilityController: any = nil
 
 --============================================================================
 -- BOTTOM NAVIGATION & TOOL BAR (White Bar with Cyan Top Border)
@@ -797,6 +795,7 @@ local function updateBottomTabHighlights()
 end
 
 _G.OpenMasterModal = function(which: string)
+	if facilityController then facilityController:Close() end
 	waitingRoomModal.Visible = (which == "WAITING_ROOM")
 	pitModal.Visible = (which == "THE_PIT")
 	updateBottomTabHighlights()
@@ -1233,163 +1232,27 @@ refreshWaitingRoomModal = function()
 end
 
 --============================================================================
--- 4. BUILD THE PIT MODAL (SYNTHESIS XP & STAR PROMOTION 1 -> 5)
+-- 4. THE PIT: modular recipient / donor workspace and authoritative transactions.
 --============================================================================
-
-makeLabel({
-	Size = UDim2.new(0.75, 0, 0, 36),
-	Position = UDim2.new(0.02, 0, 0, 6),
-	Text = " THE PIT — HERO SYNTHESIS (XP FODDER) & STAR PROMOTION (1 -> 5)",
-	TextColor3 = Color3.fromRGB(255, 145, 75),
-	TextXAlignment = Enum.TextXAlignment.Left,
-	Parent = pitModal,
-})
-makeButton({
-	Size = UDim2.new(0, 90, 0, 30),
-	Position = UDim2.new(1, -100, 0, 9),
-	BackgroundColor3 = Color3.fromRGB(185, 45, 60),
-	Text = "X CLOSE",
-	Corner = 6,
-	OnClick = function()
-		pitModal.Visible = false
-		updateBottomTabHighlights()
-	end,
-	Parent = pitModal,
-})
-
-local pitTargetLabel = makeLabel({
-	Size = UDim2.new(0.45, 0, 0, 160),
-	Position = UDim2.new(0.02, 0, 0, 52),
-	Text = "Select a Target Hero from the list on the right ->",
-	TextColor3 = Color3.fromRGB(255, 225, 140),
-	TextXAlignment = Enum.TextXAlignment.Left,
-	Parent = pitModal,
-})
-
-makeButton({
-	Size = UDim2.new(0.45, 0, 0, 44),
-	Position = UDim2.new(0.02, 0, 0, 230),
-	BackgroundColor3 = Color3.fromRGB(215, 85, 30),
-	Text = " FEED UNLOCKED 1 BENCHED FODDER (SYNTHESIS XP)",
-	Corner = 8,
-	OnClick = function()
-		if not CurrentProfile or not SelectedPitTargetUUID then
-			return
-		end
-		local fodders = {}
-		for uuid, h in pairs(CurrentProfile.Heroes) do
-			if uuid ~= SelectedPitTargetUUID and h.Assignment == "BENCHED" and not h.Locked and h.Stars == 1 then
-				table.insert(fodders, uuid)
-				if #fodders >= 10 then
-					break
-				end
-			end
-		end
-		SynthesizeHeroesFunc:InvokeServer(SelectedPitTargetUUID, fodders)
-	end,
-	Parent = pitModal,
-})
-
-makeButton({
-	Size = UDim2.new(0.45, 0, 0, 48),
-	Position = UDim2.new(0.02, 0, 0, 290),
-	BackgroundColor3 = Color3.fromRGB(215, 160, 25),
-	Text = " ASCEND STAR TIER (PROMOTE 1 -> 5)",
-	Corner = 8,
-	OnClick = function()
-		if not CurrentProfile or not SelectedPitTargetUUID then
-			return
-		end
-		local target = CurrentProfile.Heroes[SelectedPitTargetUUID]
-		if not target then
-			return
-		end
-		local reqStars = target.Stars
-		local fodders = {}
-		for uuid, h in pairs(CurrentProfile.Heroes) do
-			if uuid ~= SelectedPitTargetUUID and h.Assignment == "BENCHED" and not h.Locked and h.Stars == reqStars then
-				table.insert(fodders, uuid)
-				if #fodders >= reqStars then
-					break
-				end
-			end
-		end
-		PromoteHeroStarFunc:InvokeServer(SelectedPitTargetUUID, fodders)
-	end,
-	Parent = pitModal,
-})
-
-local pitRosterScroll = Instance.new("ScrollingFrame")
-pitRosterScroll.Size = UDim2.new(0.48, 0, 1, -60)
-pitRosterScroll.Position = UDim2.new(0.50, 0, 0, 50)
-pitRosterScroll.BackgroundTransparency = 1
-pitRosterScroll.ScrollBarThickness = 6
-pitRosterScroll.Parent = pitModal
-
-local pitRosterLayout = Instance.new("UIListLayout")
-pitRosterLayout.Padding = UDim.new(0, 6)
-pitRosterLayout.Parent = pitRosterScroll
-
-refreshPitModal = function()
-	if not CurrentProfile then
-		return
+local PitController = require(script.Parent:WaitForChild("PitController"))
+local pitController = PitController.new(
+	pitModal,
+	TycoonRemotes:WaitForChild("PitRequest") :: RemoteFunction,
+	FacilityInteractEvent,
+	function() _G.OpenMasterModal("NONE") end
+)
+_G.PitController = pitController
+refreshPitModal = function() pitController:Refresh() end
+local FacilityController = require(script.Parent:WaitForChild("FacilityController"))
+facilityController = FacilityController.new(hudGui, function() return CurrentProfile end, TycoonRemotes)
+_G.OpenFacilityHUD = function(facility: string)
+	if facility == "Synthesis" or facility == "Promotion" then
+		_G.OpenMasterModal("THE_PIT")
+		pitController:SetTab(facility)
+	else
+		_G.OpenMasterModal("NONE")
+		facilityController:Open(facility)
 	end
-	if not SelectedPitTargetUUID or not CurrentProfile.Heroes[SelectedPitTargetUUID] then
-		for uuid, _ in pairs(CurrentProfile.Heroes) do
-			SelectedPitTargetUUID = uuid
-			break
-		end
-	end
-
-	local target = SelectedPitTargetUUID and CurrentProfile.Heroes[SelectedPitTargetUUID] or nil
-	if target then
-		local maxLv = target.Stars * 10
-		local reqXP = StatFormulas.GetXPRequiredForNextLevel(target.Level)
-		local promoGold = StatFormulas.GetPromotionGoldCost(target.Stars)
-		local effATK, effHP, dps = StatFormulas.GetEffectiveCombatStats(target, false, false)
-		pitTargetLabel.Text = string.format(
-			"TARGET IN CAULDRON: %s (%d)\nLevel: %d / %d (XP: %d / %d)\nEffective HP: %d | ATK: %d | DPS: %.1f\n\nStar Promotion (%d -> %d):\n• Requires Lv.%d + %dx %d Benched Fodder + %d Gold\n• Multiplies Base Combat x1.65 & Labor x1.35!",
-			target.DisplayName, target.Stars, target.Level, maxLv, target.XP, reqXP, effHP, effATK, dps,
-			target.Stars, target.Stars + 1, maxLv, target.Stars, target.Stars, promoGold
-		)
-	end
-
-	for _, c in ipairs(pitRosterScroll:GetChildren()) do
-		if c:IsA("Frame") then
-			c:Destroy()
-		end
-	end
-
-	local count = 0
-	for uuid, h in pairs(CurrentProfile.Heroes) do
-		count += 1
-		local row = makeFrame({
-			Size = UDim2.new(1, -8, 0, 44),
-			BackgroundColor3 = (uuid == SelectedPitTargetUUID) and Color3.fromRGB(85, 45, 35) or Color3.fromRGB(36, 26, 34),
-			Corner = 6,
-			Parent = pitRosterScroll,
-		})
-		makeLabel({
-			Size = UDim2.new(0.68, 0, 0.86, 0),
-			Position = UDim2.new(0.03, 0, 0.07, 0),
-			Text = string.format("%s (%d Lv.%d) [%s]", h.DisplayName, h.Stars, h.Level, h.Assignment),
-			TextXAlignment = Enum.TextXAlignment.Left,
-			Parent = row,
-		})
-		makeButton({
-			Size = UDim2.new(0.25, 0, 0.76, 0),
-			Position = UDim2.new(0.72, 0, 0.12, 0),
-			BackgroundColor3 = Color3.fromRGB(205, 95, 40),
-			Text = "SELECT",
-			Corner = 5,
-			OnClick = function()
-				SelectedPitTargetUUID = uuid
-				refreshPitModal()
-			end,
-			Parent = row,
-		})
-	end
-	pitRosterScroll.CanvasSize = UDim2.new(0, 0, 0, count * 50)
 end
 
 --============================================================================
@@ -1397,10 +1260,18 @@ end
 --============================================================================
 
 ProfileDeltaSyncEvent.OnClientEvent:Connect(function(profile: any)
-	CurrentProfile = profile
-	if not profile then
-		return
-	end
+	if not profile then return end
+	if profile._PitDelta then
+		-- Pit and combat EXP send small updates; retain unrelated profile fields.
+		if not CurrentProfile then return end
+		for uuid, hero in profile.Heroes or {} do CurrentProfile.Heroes[uuid] = hero end
+		for _, uuid in profile.Removed or {} do CurrentProfile.Heroes[uuid] = nil end
+		for _, key in {"Currencies", "PitMaterials", "PitRevision", "UnlockedResearch"} do
+			if profile[key] ~= nil then CurrentProfile[key] = profile[key] end
+		end
+		profile = CurrentProfile
+	else CurrentProfile = profile end
+	facilityController:Refresh()
 
 	currencyLabel.Text = string.format(
 		" GOLD: %d    GEMS: %d    RP: %d",
@@ -1434,9 +1305,7 @@ ProfileDeltaSyncEvent.OnClientEvent:Connect(function(profile: any)
 	if waitingRoomModal.Visible and refreshWaitingRoomModal then
 		refreshWaitingRoomModal()
 	end
-	if pitModal.Visible and refreshPitModal then
-		refreshPitModal()
-	end
+	pitController:ProfileChanged(profile)
 end)
 
 RunService.RenderStepped:Connect(function()
@@ -1542,14 +1411,16 @@ do
 	for _, m in modalList do
 		m.AnchorPoint = Vector2.new(0.5, 0.5)
 		m.Position = UDim2.fromScale(0.5, 0.5)
-		m.BackgroundColor3 = P.surface
-		m.BackgroundTransparency = 0.02
 		m.ZIndex = 20
-		stroke(m, P.gold)
-		local g = Instance.new("UIGradient")
-		g.Color = ColorSequence.new(Color3.fromRGB(25, 36, 56), P.surface)
-		g.Rotation = 100
-		g.Parent = m
+		if m == waitingRoomModal then
+			m.BackgroundColor3 = P.surface
+			m.BackgroundTransparency = 0.02
+			stroke(m, P.gold)
+			local g = Instance.new("UIGradient")
+			g.Color = ColorSequence.new(Color3.fromRGB(25, 36, 56), P.surface)
+			g.Rotation = 100
+			g.Parent = m
+		end
 		m:GetPropertyChangedSignal("Visible"):Connect(function()
 			local any = false
 			for _, other in modalList do
@@ -1615,9 +1486,9 @@ do
 	end
 
 	local function updateCurrency(profile: any)
-		if not profile then
-			return
-		end
+		if not profile then return end
+		if profile._PitDelta then profile = CurrentProfile end
+		if not profile or not profile.Currencies then return end
 		for key, label in currencyFields do
 			label.Text = number(profile.Currencies[key])
 		end
@@ -1687,38 +1558,7 @@ do
 	wrLeftPane.Parent = wrScroll
 	wrRightPane.Parent = wrScroll
 
-	local pitLeft = Instance.new("Frame")
-	pitLeft.Name = "PitTargetContent"
-	pitLeft.BackgroundTransparency = 1
-	pitLeft.Parent = pitModal
-
-	local pitContentScroll = Instance.new("ScrollingFrame")
-	pitContentScroll.Name = "PitContent"
-	pitContentScroll.BackgroundTransparency = 1
-	pitContentScroll.BorderSizePixel = 0
-	pitContentScroll.ScrollBarThickness = 4
-	pitContentScroll.ScrollBarImageColor3 = P.gold
-	pitContentScroll.Parent = pitModal
-	pitLeft.Parent = pitContentScroll
-	pitRosterScroll.Parent = pitContentScroll
-	pitTargetLabel.Parent = pitLeft
-	pitTargetLabel.Position = UDim2.fromOffset(0, 0)
-	pitTargetLabel.Size = UDim2.new(1, 0, 0, 170)
-	pitTargetLabel.TextSize = 14
-	pitTargetLabel.TextScaled = false
-	pitTargetLabel.TextWrapped = true
-
-	local pitAction = 0
-	for _, b in pitModal:GetChildren() do
-		if b:IsA("TextButton") and (b.Text:find("FEED") or b.Text:find("ASCEND")) then
-			b.Parent = pitLeft
-			b.Position = UDim2.fromOffset(0, 184 + pitAction * 64)
-			b.Size = UDim2.new(1, 0, 0, 54)
-			pitAction += 1
-		end
-	end
-
-	for _, list in { rosterScroll, pitRosterScroll } do
+	for _, list in { rosterScroll } do
 		list.AutomaticCanvasSize = Enum.AutomaticSize.Y
 		list.CanvasSize = UDim2.fromOffset(0, 0)
 		list.ScrollBarImageColor3 = P.gold
@@ -1741,13 +1581,13 @@ do
 			end
 		end
 	end
-	for _, list in { rosterScroll, pitRosterScroll } do
+	for _, list in { rosterScroll } do
 		list.ChildAdded:Connect(function(o)
 			task.defer(rowStyle, o)
 		end)
 	end
 
-	local modalWidths = { 1000, 920 }
+	local modalWidths = { 1000 }
 	local function layout()
 		local cam = workspace.CurrentCamera
 		if not cam then
@@ -1823,9 +1663,7 @@ do
 			centerGroup.AnchorPoint = Vector2.new(0.5, 0)
 		end
 
-		for i, m in modalList do
-			m.Size = UDim2.fromOffset(math.min(w - 24, modalWidths[i]), math.min(h - 70, 560))
-		end
+		waitingRoomModal.Size = UDim2.fromOffset(math.min(w - 24, modalWidths[1]), math.min(h - 70, 560))
 		wrScroll.Position = UDim2.fromOffset(12, 48)
 		wrScroll.Size = UDim2.new(1, -24, 1, -62)
 		if stackPanels then
@@ -1842,23 +1680,10 @@ do
 			wrRightPane.Size = UDim2.new(0.5, -10, 1, 0)
 		end
 
-		pitContentScroll.Position = UDim2.fromOffset(16, 52)
-		pitContentScroll.Size = UDim2.new(1, -32, 1, -64)
-		if stackPanels then
-			pitContentScroll.CanvasSize = UDim2.fromOffset(0, 660)
-			pitLeft.Position = UDim2.fromOffset(0, 0)
-			pitLeft.Size = UDim2.new(1, -10, 0, 304)
-			pitRosterScroll.Position = UDim2.fromOffset(0, 324)
-			pitRosterScroll.Size = UDim2.new(1, -10, 0, 320)
-		else
-			pitContentScroll.CanvasSize = UDim2.fromOffset(0, 0)
-			pitLeft.Position = UDim2.fromScale(0, 0)
-			pitLeft.Size = UDim2.new(0.46, 0, 1, 0)
-			pitRosterScroll.Position = UDim2.fromScale(0.5, 0)
-			pitRosterScroll.Size = UDim2.new(0.5, -10, 1, 0)
-		end
+		-- The Pit composes its own columns and phone steps from these bounds.
+		pitModal.Size = UDim2.fromOffset(math.min(w - 20, 1340), math.max(360, math.min(h - 76, 850)))
 
-		for _, list in { rosterScroll, pitRosterScroll } do
+		for _, list in { rosterScroll } do
 			for _, o in list:GetChildren() do
 				rowStyle(o)
 			end

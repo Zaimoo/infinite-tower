@@ -29,6 +29,26 @@ FacilityConfig.UpgradeTable = {
 }
 
 FacilityConfig.TechNodes = {
+	tech_essence_attunement = {
+		Id = "tech_essence_attunement", Name = "Essence Attunement", ResearchKey = "EssenceAttunement",
+		ReqLabLevel = 1, RPCost = 40, GoldCost = 750,
+		Description = "Improves synthesis EXP by 10% before rounding.",
+	},
+	tech_memory_studies = {
+		Id = "tech_memory_studies", Name = "Memory Studies", ResearchKey = "MemoryStudies",
+		ReqLabLevel = 2, RPCost = 120, GoldCost = 2500,
+		Description = "Unlocks advanced Runic Method imprints for compatible heroes.",
+	},
+	tech_advanced_stonecraft = {
+		Id = "tech_advanced_stonecraft", Name = "Advanced Stonecraft", ResearchKey = "AdvancedStonecraft",
+		ReqLabLevel = 2, RPCost = 150, GoldCost = 3000,
+		Description = "Refines Promotion Stones into rituals for 3★ to 4★ promotion.",
+	},
+	tech_master_stonecraft = {
+		Id = "tech_master_stonecraft", Name = "Master Stonecraft", ResearchKey = "MasterStonecraft",
+		ReqLabLevel = 4, RPCost = 450, GoldCost = 15000,
+		Description = "Unlocks the final 4★ to 5★ promotion ritual.",
+	},
 	tech_squad_slot_4 = {
 		Id = "tech_squad_slot_4",
 		Name = "4th Squad Deployment Slot",

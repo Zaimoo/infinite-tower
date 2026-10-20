@@ -1,6 +1,6 @@
 --!strict
 -- StarterPlayerScripts/Input/MasterController.client.luau
--- Handles [Click/Tap] Focus Target Raycasting, [Q] Overdrive, [E] Recall & Plot Prompts
+-- Handles [Click/Tap] targeting, [Q] Overdrive, [E] Recall, and [F] facility HUD prompts.
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -143,7 +143,12 @@ ProximityPromptService.PromptTriggered:Connect(function(prompt: ProximityPrompt,
 	end
 
 	local name = prompt.Name
-	if name == "SummonAltarPrompt" then
+	if name == "FacilityHUDPrompt" then
+		local facility = prompt:GetAttribute("FacilityHUD")
+		if type(facility) == "string" and _G.OpenFacilityHUD then
+			_G.OpenFacilityHUD(facility)
+		end
+	elseif name == "SummonAltarPrompt" then
 		if _G.OpenMasterModal then
 			_G.OpenMasterModal("WAITING_ROOM")
 		end

@@ -12,6 +12,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local HeroCatalog = require(Shared:WaitForChild("Config"):WaitForChild("HeroCatalog"))
 local FacilityConfig = require(Shared:WaitForChild("Config"):WaitForChild("FacilityConfig"))
 local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormulas"))
+local PitService = require(script.Parent:WaitForChild("PitService"))
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local TycoonRemotes = Remotes:WaitForChild("TycoonGachaRemotes")
@@ -22,6 +23,12 @@ local SynthesizeHeroesFunc = TycoonRemotes:WaitForChild("SynthesizeHeroes") :: R
 local PromoteHeroStarFunc = TycoonRemotes:WaitForChild("PromoteHeroStar") :: RemoteFunction
 local AssignHeroRoleFunc = TycoonRemotes:WaitForChild("AssignHeroRole") :: RemoteFunction
 local FacilityInteractEvent = TycoonRemotes:WaitForChild("FacilityInteract") :: RemoteEvent
+local PitRequestFunc = TycoonRemotes:FindFirstChild("PitRequest") :: RemoteFunction?
+if not PitRequestFunc then
+	PitRequestFunc = Instance.new("RemoteFunction")
+	PitRequestFunc.Name = "PitRequest"
+	PitRequestFunc.Parent = TycoonRemotes
+end
 
 local ProfileDeltaSyncEvent = SyndicateRemotes:WaitForChild("ProfileDeltaSync") :: RemoteEvent
 local SystemToastEvent = SyndicateRemotes:WaitForChild("SystemToast") :: RemoteEvent
@@ -66,6 +73,11 @@ export type HeroInstance = {
 	IsHardAuditComa: boolean,
 	Assignment: HeroAssignment,
 	Locked: boolean,
+	Favorite: boolean,
+	OverflowXP: number,
+	InheritedImprints: { [string]: number },
+	ImprintCapacity: number,
+	SynthesisHistory: any,
 }
 
 export type FacilityData = {
@@ -112,6 +124,8 @@ export type SocialProfile = {
 
 export type PlayerProfile = {
 	SchemaVersion: number,
+	PitMaterials: { [string]: number },
+	PitRevision: number,
 	PlotIndex: number,
 	Currencies: {
 		Gold: number,
@@ -124,6 +138,10 @@ export type PlayerProfile = {
 		SquadSlot4: boolean,
 		SquadSlot5: boolean,
 		Ring2BarrierGate: boolean,
+		EssenceAttunement: boolean,
+		MemoryStudies: boolean,
+		AdvancedStonecraft: boolean,
+		MasterStonecraft: boolean,
 	},
 	Heroes: { [string]: HeroInstance },
 	DeployedSquadOrder: { string },
@@ -183,6 +201,11 @@ function DataManager.CreateHeroFromSeed(seedId: string, forceQuality: number?): 
 		IsHardAuditComa = false,
 		Assignment = "BENCHED",
 		Locked = false,
+		Favorite = false,
+		OverflowXP = 0,
+		InheritedImprints = {},
+		ImprintCapacity = math.ceil(seed.BaseStar / 2),
+		SynthesisHistory = { DonorsConsumed = 0, XPGained = 0, ImprintsPerformed = 0, Promotions = 0 },
 	}
 	return uuid, hero
 end
@@ -202,7 +225,9 @@ local function createDefaultPlayerProfile(): PlayerProfile
 	conduit.AssignedHeroUUIDs = { catioUUID }
 
 	return {
-		SchemaVersion = 1,
+		SchemaVersion = 2,
+		PitMaterials = { SoulEssence = 0, PromotionStone = 0, ImprintCatalyst = 0 },
+		PitRevision = 0,
 		PlotIndex = 1,
 		Currencies = {
 			Gold = 500,
@@ -215,6 +240,10 @@ local function createDefaultPlayerProfile(): PlayerProfile
 			SquadSlot4 = false,
 			SquadSlot5 = false,
 			Ring2BarrierGate = false,
+			EssenceAttunement = false,
+			MemoryStudies = false,
+			AdvancedStonecraft = false,
+			MasterStonecraft = false,
 		},
 		Heroes = {
 			[hanUUID] = hanHero,
@@ -246,7 +275,9 @@ end
 --============================================================================
 
 function DataManager.GetProfile(player: Player): PlayerProfile?
-	return ActiveProfiles[player]
+	local profile = ActiveProfiles[player]
+	if profile and (profile.SchemaVersion or 1) < 2 then PitService.EnsureDefaults(profile) end
+	return profile
 end
 
 function DataManager.SendToast(player: Player, message: string, colorType: string?)
@@ -258,7 +289,7 @@ function DataManager.BroadcastToast(message: string, colorType: string?)
 end
 
 -- Build a sanitized copy of profile for client UI (hiding secret directive of rented mercenary!)
-function DataManager.SyncProfile(player: Player)
+function DataManager.SyncProfile(player: Player, progressionOnly: boolean?)
 	local profile = ActiveProfiles[player]
 	if not profile then
 		return
@@ -278,14 +309,37 @@ function DataManager.SyncProfile(player: Player)
 	profile.DeployedSquadOrder = deployed
 
 	-- Notify CombatSimulation and PlotManager if loaded
-	if _G.CombatSimulation and _G.CombatSimulation.RebuildPlayerSquad then
+	if not progressionOnly and _G.CombatSimulation and _G.CombatSimulation.RebuildPlayerSquad then
 		_G.CombatSimulation.RebuildPlayerSquad(player)
 	end
 	if _G.PlotManager and _G.PlotManager.RefreshPlotVisuals then
 		_G.PlotManager.RefreshPlotVisuals(player)
 	end
 
+	if progressionOnly and _G.CombatSimulation and _G.CombatSimulation.RefreshPlayerHeroStats then
+		_G.CombatSimulation.RefreshPlayerHeroStats(player)
+	end
 	ProfileDeltaSyncEvent:FireClient(player, profile)
+end
+
+-- Pit operations and participation EXP send only affected heroes. Consumers merge
+-- this packet into their current session profile instead of replacing the roster.
+function DataManager.SyncPitDelta(player: Player, changed: any, removed: any)
+	local profile = ActiveProfiles[player]
+	if not profile then return end
+	if _G.CombatSimulation and _G.CombatSimulation.RefreshPlayerHeroStats then
+		_G.CombatSimulation.RefreshPlayerHeroStats(player)
+	end
+	local facilityChanged = false
+	for _, hero in pairs(changed) do
+		if string.find(hero.Assignment or "", "^FACILITY_") then facilityChanged = true break end
+	end
+	if facilityChanged and _G.PlotManager and _G.PlotManager.RefreshPlotVisuals then
+		_G.PlotManager.RefreshPlotVisuals(player)
+	end
+	ProfileDeltaSyncEvent:FireClient(player, { _PitDelta = true, Heroes = changed, Removed = removed,
+		Currencies = profile.Currencies, PitMaterials = profile.PitMaterials, PitRevision = profile.PitRevision,
+		UnlockedResearch = profile.UnlockedResearch })
 end
 
 function DataManager.ApplyCollisionGroup(player: Player)
@@ -391,152 +445,49 @@ RequestSummonFunc.OnServerInvoke = function(player: Player, pullCount: any)
 	return { Success = true, Summoned = summonedList }
 end
 
--- Atomic Synthesis ("The Pit") Transaction
-function DataManager.SynthesizeHeroes(player: Player, targetUUID: string, fodderUUIDs: { string }): (boolean, string)
-	local profile = ActiveProfiles[player]
-	if not profile then
-		return false, "Profile not loaded"
-	end
-
-	local targetHero = profile.Heroes[targetUUID]
-	if not targetHero then
-		return false, "Target hero does not exist"
-	end
-
-	local maxLevel = targetHero.Stars * 10
-	if targetHero.Level >= maxLevel then
-		return false, string.format("%s is already at Max Level (Lv.%d)! Use Star Promotion.", targetHero.DisplayName, maxLevel)
-	end
-
-	if type(fodderUUIDs) ~= "table" or #fodderUUIDs == 0 or #fodderUUIDs > 20 then
-		return false, "Select 1 to 20 unlocked Benched fodder heroes"
-	end
-
-	local seen: { [string]: boolean } = { [targetUUID] = true }
-	local totalXPGained = 0
-
-	for _, fUUID in ipairs(fodderUUIDs) do
-		if seen[fUUID] then
-			return false, "Duplicate or self-sacrificed hero detected"
-		end
-		seen[fUUID] = true
-
-		local fodder = profile.Heroes[fUUID]
-		if not fodder then
-			return false, "Fodder hero missing"
-		end
-		if fodder.Locked then
-			return false, "Cannot sacrifice a Locked hero"
-		end
-		if fodder.Assignment ~= "BENCHED" then
-			return false, "Fodder hero must be Benched first"
-		end
-
-		totalXPGained += StatFormulas.CalculateSynthesisXP(fodder.Stars, fodder.Level)
-	end
-
-	for _, fUUID in ipairs(fodderUUIDs) do
-		profile.Heroes[fUUID] = nil
-	end
-
-	targetHero.XP += totalXPGained
-	while targetHero.Level < maxLevel do
-		local reqXP = StatFormulas.GetXPRequiredForNextLevel(targetHero.Level)
-		if targetHero.XP >= reqXP then
-			targetHero.XP -= reqXP
-			targetHero.Level += 1
-		else
-			break
-		end
-	end
-
-	if targetHero.Level >= maxLevel then
-		targetHero.XP = 0
-	end
-
-	DataManager.SyncProfile(player)
-	local msg = string.format("The Pit: +%d XP -> %s is now Lv.%d!", totalXPGained, targetHero.DisplayName, targetHero.Level)
-	DataManager.SendToast(player, msg, "SUCCESS")
-	return true, msg
+-- Legacy endpoints cannot bypass confirmed previews.
+function DataManager.SynthesizeHeroes(_player: Player, _targetUUID: string, _fodderUUIDs: { string }): (boolean, string)
+	return false, "Open The Pit and confirm a synthesis preview."
 end
-
-SynthesizeHeroesFunc.OnServerInvoke = function(player: Player, targetUUID: any, fodderUUIDs: any)
-	if type(targetUUID) ~= "string" or type(fodderUUIDs) ~= "table" then
-		return false, "Invalid arguments"
-	end
-	return DataManager.SynthesizeHeroes(player, targetUUID, fodderUUIDs)
+function DataManager.PromoteHeroStar(_player: Player, _targetUUID: string, _fodderUUIDs: { string }): (boolean, string)
+	return false, "Open The Pit and confirm a material-based promotion preview."
 end
+SynthesizeHeroesFunc.OnServerInvoke = DataManager.SynthesizeHeroes
+PromoteHeroStarFunc.OnServerInvoke = DataManager.PromoteHeroStar
 
--- Atomic Star Promotion Transaction (1★ to 5★)
-function DataManager.PromoteHeroStar(player: Player, targetUUID: string, fodderUUIDs: { string }): (boolean, string)
-	local profile = ActiveProfiles[player]
-	if not profile then
-		return false, "Profile not loaded"
-	end
-
-	local targetHero = profile.Heroes[targetUUID]
-	if not targetHero then
-		return false, "Target hero not found"
-	end
-
-	local currentStars = targetHero.Stars
-	if currentStars >= 5 then
-		return false, "Hero is already at maximum 5★ Mythic tier!"
-	end
-
-	local requiredMaxLevel = currentStars * 10
-	if targetHero.Level < requiredMaxLevel then
-		return false, string.format("Hero must reach Max Level (Lv.%d) before promoting!", requiredMaxLevel)
-	end
-
-	if type(fodderUUIDs) ~= "table" or #fodderUUIDs ~= currentStars then
-		return false, string.format("Requires sacrificing %dx %d★ Benched heroes!", currentStars, currentStars)
-	end
-
-	local goldCost = StatFormulas.GetPromotionGoldCost(currentStars)
-	if profile.Currencies.Gold < goldCost then
-		return false, string.format("Requires %d Gold for %d★ -> %d★ Promotion", goldCost, currentStars, currentStars + 1)
-	end
-
-	local seen: { [string]: boolean } = { [targetUUID] = true }
-	for _, fUUID in ipairs(fodderUUIDs) do
-		if seen[fUUID] then
-			return false, "Duplicate fodder UUID"
+local pendingCombatSync: { [Player]: any } = {}
+local pit = PitService.new({
+	GetProfile = function(player: Player) return ActiveProfiles[player] end,
+	GenerateToken = function() return HttpService:GenerateGUID(false) end,
+	Clock = os.clock,
+	SyncProfile = function(player: Player, changed: any, removed: any)
+		DataManager.SyncPitDelta(player, changed or {}, removed or {})
+	end,
+	SyncCombatXP = function(player: Player, uuid: string, _hero: any)
+		if not pendingCombatSync[player] then
+			pendingCombatSync[player] = {}
+			task.delay(0.25, function()
+				local pending = pendingCombatSync[player]
+				pendingCombatSync[player] = nil
+				local profile = ActiveProfiles[player]
+				if pending and profile then
+					local changed = {}
+					for pendingUUID in pairs(pending) do
+						if profile.Heroes[pendingUUID] then changed[pendingUUID] = profile.Heroes[pendingUUID] end
+					end
+					if next(changed) then DataManager.SyncPitDelta(player, changed, {}) end
+				end
+			end)
 		end
-		seen[fUUID] = true
-
-		local fodder = profile.Heroes[fUUID]
-		if not fodder or fodder.Stars ~= currentStars then
-			return false, string.format("All fodder heroes must be %d★", currentStars)
-		end
-		if fodder.Locked or fodder.Assignment ~= "BENCHED" then
-			return false, "Fodder heroes must be unlocked and Benched"
-		end
-	end
-
-	profile.Currencies.Gold -= goldCost
-	for _, fUUID in ipairs(fodderUUIDs) do
-		profile.Heroes[fUUID] = nil
-	end
-
-	targetHero.Stars = currentStars + 1
-	targetHero.Level = 1
-	targetHero.XP = 0
-	targetHero.BaseHP = math.round(targetHero.BaseHP * 1.65)
-	targetHero.BaseATK = math.round(targetHero.BaseATK * 1.65)
-	targetHero.BaseLabor = math.round(targetHero.BaseLabor * 1.35 * 100) / 100
-
-	DataManager.SyncProfile(player)
-	local msg = string.format("STAR PROMOTION! %s ascended to %d★ (1.65x Combat / 1.35x Labor)!", targetHero.DisplayName, targetHero.Stars)
-	DataManager.BroadcastToast(string.format("⭐ %s promoted %s to %d★!", player.DisplayName, targetHero.DisplayName, targetHero.Stars), "SUCCESS")
-	return true, msg
+		pendingCombatSync[player][uuid] = true
+	end,
+})
+DataManager.PitService = pit
+function DataManager.GrantCombatXP(player: Player, uuid: string, amount: number): (boolean, any)
+	return pit:GrantCombatXP(player, uuid, amount)
 end
-
-PromoteHeroStarFunc.OnServerInvoke = function(player: Player, targetUUID: any, fodderUUIDs: any)
-	if type(targetUUID) ~= "string" or type(fodderUUIDs) ~= "table" then
-		return false, "Invalid arguments"
-	end
-	return DataManager.PromoteHeroStar(player, targetUUID, fodderUUIDs)
+(PitRequestFunc :: RemoteFunction).OnServerInvoke = function(player: Player, command: any, payload: any)
+	return pit:Request(player, command, payload)
 end
 
 --============================================================================
@@ -737,6 +688,7 @@ FacilityInteractEvent.OnServerEvent:Connect(function(player: Player, action: any
 			DataManager.SendToast(player, string.format("Requires Dimensional Lab Level %d!", node.ReqLabLevel), "WARN")
 			return
 		end
+		if node.ResearchKey and (profile.UnlockedResearch :: any)[node.ResearchKey] then return end
 		if param == "tech_squad_slot_4" and profile.UnlockedResearch.SquadSlot4 then return end
 		if param == "tech_squad_slot_5" and profile.UnlockedResearch.SquadSlot5 then return end
 		if param == "tech_ring2_barrier" and profile.UnlockedResearch.Ring2BarrierGate then return end
@@ -749,7 +701,10 @@ FacilityInteractEvent.OnServerEvent:Connect(function(player: Player, action: any
 		profile.Currencies.ResearchPoints -= node.RPCost
 		profile.Currencies.Gold -= node.GoldCost
 
-		if param == "tech_squad_slot_4" then
+		if node.ResearchKey then
+			(profile.UnlockedResearch :: any)[node.ResearchKey] = true
+			DataManager.SendToast(player, "Unlocked " .. node.Name .. "!", "SUCCESS")
+		elseif param == "tech_squad_slot_4" then
 			profile.UnlockedResearch.SquadSlot4 = true
 			DataManager.SendToast(player, "Unlocked 4th Squad Deployment Slot!", "SUCCESS")
 		elseif param == "tech_ring2_barrier" then
@@ -767,6 +722,7 @@ FacilityInteractEvent.OnServerEvent:Connect(function(player: Player, action: any
 
 	elseif action == "DEV_GRANT_RESOURCES" then
 		-- Prototype helper so testers can also test mid/late-game features immediately if desired
+		if not game:GetService("RunService"):IsStudio() then return end
 		profile.Currencies.Gold += 25000
 		profile.Currencies.Gems += 1800
 		profile.Currencies.ResearchPoints += 600
@@ -781,6 +737,7 @@ end)
 
 local function onPlayerAdded(player: Player)
 	local profile = createDefaultPlayerProfile()
+	PitService.EnsureDefaults(profile)
 	ActiveProfiles[player] = profile
 
 	player.CharacterAdded:Connect(function(char)
@@ -804,6 +761,8 @@ end
 Players.PlayerAdded:Connect(onPlayerAdded)
 
 Players.PlayerRemoving:Connect(function(player: Player)
+	pit:Forget(player)
+	pendingCombatSync[player] = nil
 	ActiveProfiles[player] = nil
 end)
 

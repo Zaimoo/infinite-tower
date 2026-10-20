@@ -538,7 +538,7 @@ To keep server bandwidth well under Roblox's `50 KB/s` per-client budget—even 
 
 | Remote Name & Class | Direction | Payload Parameters & Types | Byte-Size Optimization | Server-Side Sanity Checks & Anti-Exploit Validations |
 | :--- | :--- | :--- | :--- | :--- |
-| **`ReplicationTick`**<br>`UnreliableRemoteEvent` | `S -> C` (5 Hz / 0.2s) | `snapshotBuf: buffer`<br>Header: `uint8` entityCount, `float32` serverTime.<br>Per Entity (12 bytes): `uint16` netId, `int16` posX (`*10`), `int16` posZ (`*10`), `uint8` rotYaw, `uint8` stateEnum, `uint16` hpPct (`0..1000`), `uint8` stamina (`0..100`), `uint8` flags (`Overdrive/Coma/Pacified`). | **12 bytes per entity.** 30 Heroes + 30 Mobs + 1 Boss = 61 entities $\times$ 12B + 5B header = **`737 bytes/tick` (`3.68 KB/s`)** per client. | Read-only broadcast (`S -> C`). Any `C -> S` packet fired on this remote is dropped and increments player exploit strike counter. |
+| **`ReplicationTick`**<br>`UnreliableRemoteEvent` | `S -> C` (5 Hz / 0.2s) | `snapshotBuf: buffer`<br>Header: `uint8` entityCount, `float32` serverTime.<br>Per Entity (14 bytes): `uint16` netId, `int16` posX (`*10`), `int16` posZ (`*10`), `uint8` rotYaw, `uint8` stateEnum, `uint16` hpPct (`0..1000`), `uint8` stamina (`0..100`), `uint8` flags (`Overdrive/Coma/Pacified`), `int16` posY (`*10`). | **14 bytes per entity; at most 64 entities per packet.** 30 Heroes + 30 Mobs + 1 Boss = 61 entities $\times$ 14B + 5B header = **`859 bytes/tick` (`4.30 KB/s`)** per client. | Read-only broadcast (`S -> C`). Any `C -> S` packet fired on this remote is dropped and increments player exploit strike counter. |
 | **`FocusTarget`**<br>`RemoteEvent` | `C -> S` | `targetNetId: number` (`uint16`) | `2 bytes` integer ID instead of passing `Instance` or string UUIDs. | 1. Rate limit: Max `8 calls/sec` per player.<br>2. Verify `targetNetId` exists in active `MobTable` or belongs to a confirmed **Rogue Master** (`IsPlayerRogue == true`) inside Ring 1 or Ring 2.<br>3. Verify distance between Master `HumanoidRootPart` and target is `<= 85 studs`. |
 | **`WhistleCommand`**<br>`RemoteEvent` | `C -> S` | `commandCode: number` (`uint8`: `1 = Q_OVERDRIVE`, `2 = E_RECALL`) | `1 byte` enum (`uint8`). | 1. Server tracks authoritative cooldown timestamps: `Q` requires `os.clock() - lastQ >= 20.0s`; `E` requires `os.clock() - lastE >= 6.0s`.<br>2. For `Q_OVERDRIVE`, server verifies each deployed hero has `CurrentStamina >= 5.0` before deducting `5.0` Stamina.<br>3. For `E_RECALL`, server validates Master is alive and not currently inside an out-of-bounds geometry clip. |
 | **`BossTelegraph`**<br>`RemoteEvent` | `S -> C` | `telegraphType: uint8`, `originXZ: Vector2int16`, `radius: uint8`, `durationMs: uint16` | `7 bytes` total per boss cast. | Server-authoritative broadcast only. Hit detection for **Devouring Nova** (`R <= 85 studs` at `t = 3.0s`) is computed 100% on the server—client VFX timing cannot be spoofed to dodge. |
@@ -1127,45 +1127,51 @@ local function broadcastReplicationSnapshot(now: number)
 	end
 
 	local count = math.min(#entities, 255)
-	-- 5-byte header + 12 bytes per entity
-	local buf = buffer.create(5 + (count * 12))
-	buffer.writeu8(buf, 0, count)
-	buffer.writef32(buf, 1, now)
+	-- Keep every unreliable packet below Roblox's 1 KB payload limit.
+	for batchStart = 1, count, 64 do
+		local batchCount = math.min(64, count - batchStart + 1)
+		local buf = buffer.create(5 + (batchCount * 14))
+		buffer.writeu8(buf, 0, batchCount)
+		buffer.writef32(buf, 1, now)
 
-	local offset = 5
-	for i = 1, count do
-		local entry = entities[i]
-		local e = entry.Ref
-		buffer.writeu16(buf, offset + 0, e.NetId)
-		buffer.writei16(buf, offset + 2, math.clamp(math.round(e.Position.X * 10), -32767, 32767))
-		buffer.writei16(buf, offset + 4, math.clamp(math.round(e.Position.Z * 10), -32767, 32767))
+		local offset = 5
+		for i = batchStart, batchStart + batchCount - 1 do
+			local entry = entities[i]
+			local e = entry.Ref
+			buffer.writeu16(buf, offset + 0, e.NetId)
+			buffer.writei16(buf, offset + 2, math.clamp(math.round(e.Position.X * 10), -32767, 32767))
+			buffer.writei16(buf, offset + 4, math.clamp(math.round(e.Position.Z * 10), -32767, 32767))
 
-		local yawByte = math.clamp(math.round(((e.Yaw or 0) + math.pi) / (2 * math.pi) * 255), 0, 255)
-		buffer.writeu8(buf, offset + 6, yawByte)
+			local yawByte = math.clamp(math.round(((e.Yaw or 0) + math.pi) / (2 * math.pi) * 255), 0, 255)
+			buffer.writeu8(buf, offset + 6, yawByte)
 
-		local stateByte = entry.IsHero and (STATE_TO_ENUM[e.State] or 1) or (10 + (e.Phase or 1))
-		buffer.writeu8(buf, offset + 7, stateByte)
+			local stateByte = entry.IsHero and (STATE_TO_ENUM[e.State] or 1) or (10 + (e.Phase or 1))
+			buffer.writeu8(buf, offset + 7, stateByte)
 
-		local hpPermille = math.clamp(math.round((e.CurrentHP / math.max(1, e.MaxHP)) * 1000), 0, 1000)
-		buffer.writeu16(buf, offset + 8, hpPermille)
+			local hpPermille = math.clamp(math.round((e.CurrentHP / math.max(1, e.MaxHP)) * 1000), 0, 1000)
+			buffer.writeu16(buf, offset + 8, hpPermille)
 
-		local staminaByte = entry.IsHero and math.clamp(math.round(e.Stamina), 0, 100) or 100
-		buffer.writeu8(buf, offset + 10, staminaByte)
+			local staminaByte = entry.IsHero and math.clamp(math.round(e.Stamina), 0, 100) or 100
+			buffer.writeu8(buf, offset + 10, staminaByte)
 
-		local flags = 0
-		if entry.IsHero then
-			if now < e.OverdriveUntil then
-				flags = bit32.bor(flags, 1)
+			local flags = 0
+			if entry.IsHero then
+				if now < e.OverdriveUntil then
+					flags = bit32.bor(flags, 1)
+				end
+				if now < e.PacifiedUntil then
+					flags = bit32.bor(flags, 2)
+				end
+			elseif e.MobType == "WORLD_BOSS" and now < e.PunishWindowUntil then
+				flags = bit32.bor(flags, 4) -- Core Exposed (+25% DMG)
 			end
-			if now < e.PacifiedUntil then
-				flags = bit32.bor(flags, 2)
-			end
+			buffer.writeu8(buf, offset + 11, flags)
+			buffer.writei16(buf, offset + 12, math.clamp(math.round(e.Position.Y * 10), -32767, 32767))
+			offset += 14
 		end
-		buffer.writeu8(buf, offset + 11, flags)
-		offset += 12
-	end
 
-	ReplicationTickRemote:FireAllClients(buf)
+		ReplicationTickRemote:FireAllClients(buf)
+	end
 end
 
 -- Authoritative 5 Hz Accumulator Loop

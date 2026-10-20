@@ -10,7 +10,9 @@ local Workspace = game:GetService("Workspace")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local WorldBossConfig = require(Shared:WaitForChild("Config"):WaitForChild("WorldBossConfig"))
 local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormulas"))
+local PitBalance = require(Shared:WaitForChild("Config"):WaitForChild("PitBalanceConfig"))
 local ArtPackVisuals = require(ReplicatedStorage:WaitForChild("Assets"):WaitForChild("ArtPackVisuals"))
+local HeroNavigation = require(script.Parent.Parent:WaitForChild("Core"):WaitForChild("HeroNavigation"))
 
 local CombatRemotes = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CombatRemotes")
 local ReplicationTickRemote = CombatRemotes:WaitForChild("ReplicationTick") :: UnreliableRemoteEvent
@@ -54,7 +56,8 @@ local OVERDRIVE_ATK_SPEED_MULT = 1.40
 local RECALL_COOLDOWN = 6.0
 local RECALL_PACIFY_DURATION = 2.0
 
-local WORLD_BOSS_ORIGIN = Vector3.new(0, 16, 0)
+local TowerSpawnLayout = require(ReplicatedStorage:WaitForChild("TowerSpawnLayout"))
+local WORLD_BOSS_ORIGIN = TowerSpawnLayout.Boss()
 local NOVA_INTERVAL = 20.0
 local NOVA_TELEGRAPH_DURATION = 3.0
 local NOVA_BLAST_RADIUS = 85.0
@@ -144,6 +147,11 @@ local ActiveMasters: { [Player]: MasterCombatState } = {}
 local ActiveHeroesByNetId: { [number]: SimHero } = {}
 local ActiveMobsByNetId: { [number]: SimMob } = {}
 local ActiveWorldBoss: SimMob? = nil
+-- Progression is awarded on a confirmed PvE death, outside the simulation's per-tick work.
+-- Only recent, deliberate Master commands qualify; idle auto-attacks do not level a squad.
+local ProgressionActivity: { [Player]: number } = {}
+local ProgressionHits: { [number]: { [number]: { Damage: number, At: number } } } = {}
+local ProgressionAwards: { [number]: number } = {}
 local NextWorldBossSpawnClock = os.clock() + 180 -- First automatic World Boss in 3m for prototype pacing (or instant via button!)
 
 --============================================================================
@@ -177,6 +185,7 @@ local function buildMetadataTable(): { any }
 				MobType = m.MobType,
 				Name = m.DisplayName,
 				RingIndex = m.RingIndex,
+				GroundY = m.HomePosition.Y,
 				MaxHP = m.MaxHP,
 				Phase = m.Phase,
 			})
@@ -252,6 +261,26 @@ local function getMasterRootPosition(player: Player): Vector3?
 	return hrp and hrp.Position or nil
 end
 
+-- Refresh progression without rebuilding entities, resetting cooldowns, or healing.
+-- Facility output reads StatFormulas from profile data on its existing 1 Hz loop.
+function CombatSimulation.RefreshPlayerHeroStats(player: Player)
+	local state = ActiveMasters[player]
+	local profile = getDataManager().GetProfile(player)
+	if not state or not profile then return end
+	local metadataChanged = false
+	for uuid, simHero in pairs(state.DeployedHeroes) do
+		local hero = profile.Heroes[uuid]
+		if hero then
+			local atk, hp = StatFormulas.GetEffectiveCombatStats(hero, false, false)
+			metadataChanged = metadataChanged or simHero.Level ~= hero.Level or simHero.Stars ~= hero.Stars or simHero.MaxHP ~= hp
+			simHero.Level, simHero.Stars = hero.Level, hero.Stars
+			simHero.EffectiveATK, simHero.MaxHP = atk, hp
+			simHero.CurrentHP = math.min(simHero.CurrentHP, hp)
+		end
+	end
+	if metadataChanged then broadcastMetadata(nil) end
+end
+
 --============================================================================
 -- 3. SQUAD MANAGEMENT & COMA RECALL
 --============================================================================
@@ -293,6 +322,8 @@ function CombatSimulation.RebuildPlayerSquad(player: Player)
 	-- Remove heroes no longer deployed
 	for uuid, simHero in pairs(masterState.DeployedHeroes) do
 		if not desiredUUIDs[uuid] then
+			HeroNavigation.Clear(simHero)
+			ProgressionAwards[simHero.NetId] = nil
 			ActiveHeroesByNetId[simHero.NetId] = nil
 			masterState.DeployedHeroes[uuid] = nil
 		end
@@ -313,7 +344,7 @@ function CombatSimulation.RebuildPlayerSquad(player: Player)
 			existing.SlotIndex = slotIndex
 		else
 			local netId = allocateNetId()
-			local spawnPos = masterPos + getFormationOffset(slotIndex)
+			local spawnPos = HeroNavigation.PlaceNear(masterPos, getFormationOffset(slotIndex))
 			local newSim: SimHero = {
 				NetId = netId,
 				Owner = player,
@@ -323,7 +354,7 @@ function CombatSimulation.RebuildPlayerSquad(player: Player)
 				Stars = heroData.Stars,
 				Level = heroData.Level,
 				State = "FOLLOW_MASTER",
-				Position = Vector3.new(spawnPos.X, getGroundHeightForRadius(Vector2.new(spawnPos.X, spawnPos.Z).Magnitude), spawnPos.Z),
+				Position = spawnPos,
 				Yaw = 0,
 				CurrentHP = effHP,
 				MaxHP = effHP,
@@ -439,6 +470,7 @@ DropCarriedItemRemote.OnServerEvent:Connect(function(player: Player)
 end)
 
 local function knockHeroIntoComa(simHero: SimHero, baseComaSeconds: number)
+	HeroNavigation.Clear(simHero)
 	local dm = getDataManager()
 	local profile = dm.GetProfile(simHero.Owner)
 	local effectiveComa = baseComaSeconds
@@ -463,6 +495,7 @@ local function knockHeroIntoComa(simHero: SimHero, baseComaSeconds: number)
 		end
 	end
 
+	ProgressionAwards[simHero.NetId] = nil
 	ActiveHeroesByNetId[simHero.NetId] = nil
 	local masterState = ActiveMasters[simHero.Owner]
 	if masterState then
@@ -553,6 +586,7 @@ local function createSimMob(specId: string, pos: Vector3, mobType: "RING1_MOB" |
 end
 
 local function populateArenaMobs()
+	local towerSpawnSlot = 0
 	-- Ring 1: Outer Ruins (R = 295..445, Y = 2)
 	local ring1List = {
 		{ Id = "mob_mana_node", Count = 12, RMin = 305, RMax = 435 },
@@ -563,7 +597,8 @@ local function populateArenaMobs()
 		for i = 1, group.Count do
 			local angle = ((i - 1) / group.Count) * (math.pi * 2) + (math.random() * 0.25)
 			local r = group.RMin + math.random() * (group.RMax - group.RMin)
-			local pos = Vector3.new(math.cos(angle) * r, 2.0, math.sin(angle) * r)
+			towerSpawnSlot += 1
+			local pos = TowerSpawnLayout.Regular(towerSpawnSlot)
 			createSimMob(group.Id, pos, "RING1_MOB")
 		end
 	end
@@ -578,7 +613,8 @@ local function populateArenaMobs()
 		for i = 1, group.Count do
 			local angle = ((i - 1) / group.Count) * (math.pi * 2) + 0.3
 			local r = group.RMin + math.random() * (group.RMax - group.RMin)
-			local pos = Vector3.new(math.cos(angle) * r, 4.0, math.sin(angle) * r)
+			towerSpawnSlot += 1
+			local pos = TowerSpawnLayout.Regular(towerSpawnSlot)
 			createSimMob(group.Id, pos, "RING2_ELITE")
 		end
 	end
@@ -663,7 +699,7 @@ function CombatSimulation.SpawnRiftWarden(summoner: Player)
 	profile.RiftLuresOwned -= 1
 	dm.SyncProfile(summoner)
 
-	local warden = createSimMob("boss_rift_warden", Vector3.new(0, 16, 22), "RIFT_BOSS")
+	local warden = createSimMob("boss_rift_warden", WORLD_BOSS_ORIGIN + Vector3.new(0, 0, 22), "RIFT_BOSS")
 	dm.BroadcastToast(string.format("🌀 %s used a Rift Lure at Ring 3 to summon THE RIFT WARDEN!", summoner.DisplayName), "WARN")
 	broadcastMetadata(nil)
 end
@@ -954,9 +990,40 @@ end
 -- 5. MOB DEATH, RELIC DROPS & WORLD BOSS 50/50 LOOT + PITY DISTRIBUTION
 --============================================================================
 
+local function awardParticipationXP(mob: SimMob)
+	local hits = ProgressionHits[mob.NetId]
+	ProgressionHits[mob.NetId] = nil
+	if not hits then return end
+	local now = os.clock()
+	local cfg = PitBalance.CombatXP
+	local amount = (mob.MobType == "WORLD_BOSS" or mob.MobType == "RIFT_BOSS") and cfg.Boss
+		or (mob.RingIndex >= 2 and cfg.Ring2 or cfg.Ring1)
+	-- Defer profile changes until the current death/tick finishes iterating entities.
+	task.defer(function()
+		local dm = getDataManager()
+		if not dm.GrantCombatXP then return end
+		for netId, contribution in pairs(hits) do
+			local hero = ActiveHeroesByNetId[netId]
+			local owner = hero and hero.Owner
+			local character = owner and owner.Character
+			local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+			if hero and owner and owner.Parent == Players and humanoid and humanoid.Health > 0
+				and hero.State ~= "COMA" and hero.CurrentHP > 0 and hero.Stamina > 0
+				and now - (ProgressionActivity[owner] or -math.huge) <= cfg.ActivityWindow
+				and now - contribution.At <= cfg.ParticipationWindow
+				and contribution.Damage >= mob.MaxHP * cfg.MinimumDamageFraction
+				and now - (ProgressionAwards[netId] or -math.huge) >= cfg.AwardCooldown then
+				ProgressionAwards[netId] = now
+				dm.GrantCombatXP(owner, hero.HeroUUID, amount)
+			end
+		end
+	end)
+end
+
 local function handleMobDeath(mob: SimMob, killerPlayer: Player)
 	local dm = getDataManager()
 	mob.IsAlive = false
+	awardParticipationXP(mob)
 
 	if mob.MobType == "WORLD_BOSS" then
 		ActiveWorldBoss = nil
@@ -1168,6 +1235,7 @@ FocusTargetRemote.OnServerEvent:Connect(function(player: Player, targetNetId: an
 		local targetMob = ActiveMobsByNetId[targetNetId]
 		if targetMob and targetMob.IsAlive then
 			if getHorizontalDistance(masterPos, targetMob.Position) <= 95 then
+				ProgressionActivity[player] = now
 				masterState.TargetEnemyUserId = nil
 				masterState.FocusedTargetNetId = targetNetId
 				for _, simHero in pairs(masterState.DeployedHeroes) do
@@ -1201,6 +1269,7 @@ WhistleCommandRemote.OnServerEvent:Connect(function(player: Player, commandCode:
 			return
 		end
 		masterState.LastOverdriveClock = now
+		ProgressionActivity[player] = now
 
 		local profile = dm.GetProfile(player)
 		for uuid, simHero in pairs(masterState.DeployedHeroes) do
@@ -1221,14 +1290,14 @@ WhistleCommandRemote.OnServerEvent:Connect(function(player: Player, commandCode:
 			return
 		end
 		masterState.LastRecallClock = now
+		ProgressionActivity[player] = now
 		masterState.FocusedTargetNetId = nil
 
 		for _, simHero in pairs(masterState.DeployedHeroes) do
 			if simHero.State ~= "COMA" then
 				local offset = getFormationOffset(simHero.SlotIndex)
-				local newPos = masterPos + offset
-				local r = math.sqrt(newPos.X * newPos.X + newPos.Z * newPos.Z)
-				simHero.Position = Vector3.new(newPos.X, getGroundHeightForRadius(r), newPos.Z)
+				simHero.Position = HeroNavigation.PlaceNear(masterPos, offset)
+				HeroNavigation.Clear(simHero)
 				simHero.TargetNetId = nil
 				simHero.State = "FOLLOW_MASTER"
 				simHero.PacifiedUntil = now + RECALL_PACIFY_DURATION
@@ -1251,6 +1320,7 @@ local function stepWorldBoss(boss: SimMob, dt: number, now: number)
 	if boss.DespawnAt and now >= boss.DespawnAt then
 		boss.IsAlive = false
 		ActiveWorldBoss = nil
+		ProgressionHits[boss.NetId] = nil
 		ActiveMobsByNetId[boss.NetId] = nil
 		dm.BroadcastToast("⏳ The Dimensional Sovereign tore open a rift and vanished (5m timer expired)!", "WARN")
 		broadcastMetadata(nil)
@@ -1275,12 +1345,12 @@ local function stepWorldBoss(boss: SimMob, dt: number, now: number)
 		if boss.Phase >= 2 then
 			for _, simHero in pairs(ActiveHeroesByNetId) do
 				local dist = getHorizontalDistance(simHero.Position, WORLD_BOSS_ORIGIN)
-				if dist <= 120 then
+				if dist <= 120 and math.abs(simHero.Position.Y - WORLD_BOSS_ORIGIN.Y) < 10 then
 					local dir = (simHero.Position - WORLD_BOSS_ORIGIN)
 					local unitXZ = Vector3.new(dir.X, 0, dir.Z)
 					unitXZ = (unitXZ.Magnitude > 0.01) and unitXZ.Unit or Vector3.new(1, 0, 0)
 					local p = WORLD_BOSS_ORIGIN + (unitXZ * 15.0)
-					simHero.Position = Vector3.new(p.X, 16.0, p.Z)
+					HeroNavigation.Displace(simHero, p)
 				end
 			end
 		end
@@ -1486,7 +1556,7 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 
 	local masterState = ActiveMasters[simHero.Owner]
 	local maxLeash = (masterState and masterState.TargetEnemyUserId ~= nil) and 150.0 or LEASH_DISTANCE
-	if getHorizontalDistance(simHero.Position, masterPos) > maxLeash then
+	if getHorizontalDistance(simHero.Position, masterPos) > maxLeash or math.abs(simHero.Position.Y - masterPos.Y) > 15 then
 		simHero.TargetNetId = nil
 		simHero.State = "FOLLOW_MASTER"
 	end
@@ -1509,7 +1579,7 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 		local nearestDist = 30.0
 		local nearestMobId: number? = nil
 		for netId, mob in pairs(ActiveMobsByNetId) do
-			if mob.IsAlive then
+			if mob.IsAlive and math.abs(mob.Position.Y - simHero.Position.Y) < 12 and math.abs(mob.Position.Y - masterPos.Y) < 12 then
 				local d = getHorizontalDistance(masterPos, mob.Position)
 				if d < nearestDist then
 					nearestDist = d
@@ -1527,30 +1597,18 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 	end
 
 	if simHero.State == "FOLLOW_MASTER" or not targetPos then
-		local goalPos = masterPos + getFormationOffset(simHero.SlotIndex)
-		local delta = goalPos - simHero.Position
-		local dist = Vector3.new(delta.X, 0, delta.Z).Magnitude
-		if dist > 0.5 then
-			local stepDist = math.min(dist, currentMoveSpeed * dt)
-			local dir = Vector3.new(delta.X, 0, delta.Z).Unit
-			local nextXZ = simHero.Position + (dir * stepDist)
-			local r = math.sqrt(nextXZ.X * nextXZ.X + nextXZ.Z * nextXZ.Z)
-			simHero.Position = Vector3.new(nextXZ.X, getGroundHeightForRadius(r), nextXZ.Z)
-			simHero.Yaw = math.atan2(-dir.X, -dir.Z)
+		local goalPos = HeroNavigation.PlaceNear(masterPos, getFormationOffset(simHero.SlotIndex))
+		if (goalPos - simHero.Position).Magnitude > .5 then
+			HeroNavigation.Step(simHero, goalPos, currentMoveSpeed * dt, now)
 		end
 		return
 	end
 
-	local distToTarget = getHorizontalDistance(simHero.Position, targetPos)
-	if distToTarget > simHero.AttackRange then
+	local distToTarget = (simHero.Position - targetPos).Magnitude
+	if distToTarget > simHero.AttackRange or not HeroNavigation.CanAttack(simHero.Position, targetPos) then
 		simHero.State = "MOVE_TO_TARGET"
-		local delta = targetPos - simHero.Position
-		local dir = Vector3.new(delta.X, 0, delta.Z).Unit
-		local stepDist = math.min(distToTarget - (simHero.AttackRange * 0.85), currentMoveSpeed * dt)
-		local nextXZ = simHero.Position + (dir * math.max(0, stepDist))
-		local r = math.sqrt(nextXZ.X * nextXZ.X + nextXZ.Z * nextXZ.Z)
-		simHero.Position = Vector3.new(nextXZ.X, getGroundHeightForRadius(r), nextXZ.Z)
-		simHero.Yaw = math.atan2(-dir.X, -dir.Z)
+		local stepDist = math.min(math.max(.5, distToTarget - simHero.AttackRange * .85), currentMoveSpeed * dt)
+		HeroNavigation.Step(simHero, targetPos, stepDist, now)
 	else
 		simHero.State = "ATTACKING"
 		local delta = targetPos - simHero.Position
@@ -1575,6 +1633,14 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 				if targetMob.MobType == "WORLD_BOSS" and now < targetMob.PunishWindowUntil then
 					damage = math.round(damage * NOVA_PUNISH_DAMAGE_MULT)
 				end
+				local actualDamage = math.min(targetMob.CurrentHP, damage)
+				local participation = ProgressionHits[targetMob.NetId]
+				if not participation then
+					participation = {}
+					ProgressionHits[targetMob.NetId] = participation
+				end
+				local previous = participation[simHero.NetId]
+				participation[simHero.NetId] = { Damage = (previous and previous.Damage or 0) + actualDamage, At = now }
 				targetMob.CurrentHP = math.max(0, targetMob.CurrentHP - damage)
 				targetMob.DamageLedger[simHero.Owner.UserId] = (targetMob.DamageLedger[simHero.Owner.UserId] or 0) + damage
 
@@ -1633,46 +1699,51 @@ local function broadcastReplicationSnapshot(now: number)
 	end
 
 	local count = math.min(#entities, 255)
-	local buf = buffer.create(5 + (count * 12))
-	buffer.writeu8(buf, 0, count)
-	buffer.writef32(buf, 1, now)
+	-- Keep every unreliable packet below Roblox's 1 KB payload limit.
+	for batchStart = 1, count, 64 do
+		local batchCount = math.min(64, count - batchStart + 1)
+		local buf = buffer.create(5 + (batchCount * 14))
+		buffer.writeu8(buf, 0, batchCount)
+		buffer.writef32(buf, 1, now)
 
-	local offset = 5
-	for i = 1, count do
-		local entry = entities[i]
-		local e = entry.Ref
-		buffer.writeu16(buf, offset + 0, e.NetId)
-		buffer.writei16(buf, offset + 2, math.clamp(math.round(e.Position.X * 10), -32767, 32767))
-		buffer.writei16(buf, offset + 4, math.clamp(math.round(e.Position.Z * 10), -32767, 32767))
+		local offset = 5
+		for i = batchStart, batchStart + batchCount - 1 do
+			local entry = entities[i]
+			local e = entry.Ref
+			buffer.writeu16(buf, offset + 0, e.NetId)
+			buffer.writei16(buf, offset + 2, math.clamp(math.round(e.Position.X * 10), -32767, 32767))
+			buffer.writei16(buf, offset + 4, math.clamp(math.round(e.Position.Z * 10), -32767, 32767))
 
-		local yawByte = math.clamp(math.round(((e.Yaw or 0) + math.pi) / (2 * math.pi) * 255), 0, 255)
-		buffer.writeu8(buf, offset + 6, yawByte)
+			local yawByte = math.clamp(math.round(((e.Yaw or 0) + math.pi) / (2 * math.pi) * 255), 0, 255)
+			buffer.writeu8(buf, offset + 6, yawByte)
 
-		local stateByte = entry.IsHero and (STATE_TO_ENUM[e.State] or 1) or (10 + (e.Phase or 1))
-		buffer.writeu8(buf, offset + 7, stateByte)
+			local stateByte = entry.IsHero and (STATE_TO_ENUM[e.State] or 1) or (10 + (e.Phase or 1))
+			buffer.writeu8(buf, offset + 7, stateByte)
 
-		local hpPermille = math.clamp(math.round((e.CurrentHP / math.max(1, e.MaxHP)) * 1000), 0, 1000)
-		buffer.writeu16(buf, offset + 8, hpPermille)
+			local hpPermille = math.clamp(math.round((e.CurrentHP / math.max(1, e.MaxHP)) * 1000), 0, 1000)
+			buffer.writeu16(buf, offset + 8, hpPermille)
 
-		local staminaByte = entry.IsHero and math.clamp(math.round(e.Stamina), 0, 100) or 100
-		buffer.writeu8(buf, offset + 10, staminaByte)
+			local staminaByte = entry.IsHero and math.clamp(math.round(e.Stamina), 0, 100) or 100
+			buffer.writeu8(buf, offset + 10, staminaByte)
 
-		local flags = 0
-		if entry.IsHero then
-			if now < e.OverdriveUntil then
-				flags = bit32.bor(flags, 1)
+			local flags = 0
+			if entry.IsHero then
+				if now < e.OverdriveUntil then
+					flags = bit32.bor(flags, 1)
+				end
+				if now < e.PacifiedUntil then
+					flags = bit32.bor(flags, 2)
+				end
+			elseif e.MobType == "WORLD_BOSS" and now < e.PunishWindowUntil then
+				flags = bit32.bor(flags, 4) -- Core Exposed (+25% DMG)
 			end
-			if now < e.PacifiedUntil then
-				flags = bit32.bor(flags, 2)
-			end
-		elseif e.MobType == "WORLD_BOSS" and now < e.PunishWindowUntil then
-			flags = bit32.bor(flags, 4) -- Core Exposed (+25% DMG)
+			buffer.writeu8(buf, offset + 11, flags)
+			buffer.writei16(buf, offset + 12, math.clamp(math.round(e.Position.Y * 10), -32767, 32767))
+			offset += 14
 		end
-		buffer.writeu8(buf, offset + 11, flags)
-		offset += 12
-	end
 
-	ReplicationTickRemote:FireAllClients(buf)
+		ReplicationTickRemote:FireAllClients(buf)
+	end
 end
 
 -- Initialize Mobs & Loop
@@ -1692,10 +1763,13 @@ for _, p in ipairs(Players:GetPlayers()) do
 end
 
 Players.PlayerRemoving:Connect(function(player: Player)
+	ProgressionActivity[player] = nil
 	LastMetadataRequestByPlayer[player] = nil
 	local masterState = ActiveMasters[player]
 	if masterState then
 		for _, simHero in pairs(masterState.DeployedHeroes) do
+			HeroNavigation.Clear(simHero)
+			ProgressionAwards[simHero.NetId] = nil
 			ActiveHeroesByNetId[simHero.NetId] = nil
 		end
 		ActiveMasters[player] = nil

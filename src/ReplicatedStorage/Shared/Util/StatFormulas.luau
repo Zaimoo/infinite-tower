@@ -4,12 +4,26 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local HeroCatalog = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("HeroCatalog"))
+local PitBalanceConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("PitBalanceConfig"))
 
 local StatFormulas = {}
 
 -- Level Cap: MaxLevel(S) = S * 10
 function StatFormulas.GetMaxLevel(stars: number): number
-	return stars * 10
+	return math.clamp(math.floor(stars), 1, PitBalanceConfig.MaxStars) * 10
+end
+
+-- Inherited effects share the existing stat pipeline; no secondary combat system.
+function StatFormulas.GetImprintBonuses(hero: any): (number, number, number)
+	local totals = { ATK = 0, HP = 0, Labor = 0 }
+	for id, rank in pairs(hero.InheritedImprints or {}) do
+		local definition = PitBalanceConfig.Imprints.Definitions[id]
+		if definition and type(rank) == "number" and rank == rank and definition.RecipientRoles[hero.Archetype] then
+			local safeRank = math.clamp(math.floor(rank), 0, PitBalanceConfig.Imprints.MaxRank)
+			for stat, value in pairs(definition.Effect) do totals[stat] += value * safeRank end
+		end
+	end
+	return math.min(totals.ATK, PitBalanceConfig.Imprints.BonusCaps.ATK), math.min(totals.HP, PitBalanceConfig.Imprints.BonusCaps.HP), math.min(totals.Labor, PitBalanceConfig.Imprints.BonusCaps.Labor)
 end
 
 -- XP Required for Level L -> L + 1: round(50 * (L ^ 1.45))
@@ -19,28 +33,23 @@ end
 
 -- Synthesis ("The Pit") Fodder XP: (100 * 3^(FodderStars - 1)) + (25 * FodderLevel)
 function StatFormulas.CalculateSynthesisXP(fodderStars: number, fodderLevel: number): number
-	return (100 * (3 ^ (fodderStars - 1))) + (25 * fodderLevel)
+	local config = PitBalanceConfig.Synthesis
+	return (config.BaseXP * (config.StarMultiplier ^ (fodderStars - 1))) + (config.LevelXP * fodderLevel)
 end
 
 -- Star Promotion Multipliers: 1.65^(S-1) Combat, 1.35^(S-1) Labor
 function StatFormulas.GetPromotionCombatMult(stars: number): number
-	return 1.65 ^ (stars - 1)
+	return PitBalanceConfig.Promotion.CombatMultiplier ^ (stars - 1)
 end
 
 function StatFormulas.GetPromotionLaborMult(stars: number): number
-	return 1.35 ^ (stars - 1)
+	return PitBalanceConfig.Promotion.LaborMultiplier ^ (stars - 1)
 end
 
 -- Promotion Gold Cost
-local PROMOTION_GOLD_COSTS = {
-	[1] = 1500,
-	[2] = 7500,
-	[3] = 35000,
-	[4] = 150000,
-}
-
 function StatFormulas.GetPromotionGoldCost(currentStars: number): number
-	return PROMOTION_GOLD_COSTS[currentStars] or 9999999
+	local cost = PitBalanceConfig.Promotion[currentStars]
+	return cost and cost.Gold or 9999999
 end
 
 -- Effective Combat Stats (ATK, HP, Single-Target DPS)
@@ -51,10 +60,11 @@ function StatFormulas.GetEffectiveCombatStats(hero: any, inBloodPact: boolean?, 
 	local pactBonus = inBloodPact and 0.20 or 0.0
 	local levelScalar = 1 + 0.08 * ((hero.Level or 1) - 1)
 	local q = hero.QualityScalar or 1.0
+	local imprintATK, imprintHP = StatFormulas.GetImprintBonuses(hero)
 
 	-- BaseATK and BaseHP on HeroInstance already include the 1.65^(S-1) promotion multiplier
-	local effATK = math.round((hero.BaseATK or 35) * q * levelScalar * (1 + traitATK) * (1 + pactBonus))
-	local effHP = math.round((hero.BaseHP or 280) * q * levelScalar * (1 + traitHP))
+	local effATK = math.round((hero.BaseATK or 35) * q * levelScalar * (1 + traitATK + imprintATK) * (1 + pactBonus))
+	local effHP = math.round((hero.BaseHP or 280) * q * levelScalar * (1 + traitHP + imprintHP))
 
 	local interval = hero.AttackInterval or 1.0
 	local overdriveMult = inOverdrive and 1.40 or 1.00
@@ -77,8 +87,9 @@ function StatFormulas.GetEffectiveLabor(hero: any, targetFacilityAssignment: str
 	local synergyBonus = hasSynergy and 0.25 or 0.0
 	local levelScalar = 1 + 0.05 * ((hero.Level or 1) - 1)
 	local q = hero.QualityScalar or 1.0
+	local _, _, imprintLabor = StatFormulas.GetImprintBonuses(hero)
 
-	local effLabor = (hero.BaseLabor or 14) * q * levelScalar * (1 + synergyBonus) * (1 + traitLabor)
+	local effLabor = (hero.BaseLabor or 14) * q * levelScalar * (1 + synergyBonus) * (1 + traitLabor + imprintLabor)
 	return math.round(effLabor * 100) / 100
 end
 
