@@ -215,7 +215,7 @@ end
 local function assignPlotToPlayer(player: Player)
 	local dm = getDataManager()
 	local chosenIdx = 1
-	for i = 1, 6 do
+	for i = 1, 5 do
 		if AssignedPlots[i] == nil then
 			chosenIdx = i
 			break
