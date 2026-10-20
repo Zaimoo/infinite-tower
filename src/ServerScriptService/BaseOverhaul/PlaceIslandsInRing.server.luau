@@ -369,3 +369,6 @@ local function buildOverhaul(forceRebuild: boolean?)
 end
 
 buildOverhaul(false)
+
+local BridgeBuilder = require(script.Parent:WaitForChild("BridgeBuilder"))
+BridgeBuilder.Build()

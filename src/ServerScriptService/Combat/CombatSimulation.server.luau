@@ -54,7 +54,8 @@ local OVERDRIVE_ATK_SPEED_MULT = 1.40
 local RECALL_COOLDOWN = 6.0
 local RECALL_PACIFY_DURATION = 2.0
 
-local WORLD_BOSS_ORIGIN = Vector3.new(0, 16, 0)
+local TowerSpawnLayout = require(game:GetService("ReplicatedStorage"):WaitForChild("TowerSpawnLayout"))
+local WORLD_BOSS_ORIGIN = TowerSpawnLayout.Boss()
 local NOVA_INTERVAL = 20.0
 local NOVA_TELEGRAPH_DURATION = 3.0
 local NOVA_BLAST_RADIUS = 85.0
@@ -177,6 +178,7 @@ local function buildMetadataTable(): { any }
 				MobType = m.MobType,
 				Name = m.DisplayName,
 				RingIndex = m.RingIndex,
+				GroundY = m.HomePosition.Y,
 				MaxHP = m.MaxHP,
 				Phase = m.Phase,
 			})
@@ -553,6 +555,7 @@ local function createSimMob(specId: string, pos: Vector3, mobType: "RING1_MOB" |
 end
 
 local function populateArenaMobs()
+	local towerSpawnSlot = 0
 	-- Ring 1: Outer Ruins (R = 295..445, Y = 2)
 	local ring1List = {
 		{ Id = "mob_mana_node", Count = 12, RMin = 305, RMax = 435 },
@@ -563,7 +566,8 @@ local function populateArenaMobs()
 		for i = 1, group.Count do
 			local angle = ((i - 1) / group.Count) * (math.pi * 2) + (math.random() * 0.25)
 			local r = group.RMin + math.random() * (group.RMax - group.RMin)
-			local pos = Vector3.new(math.cos(angle) * r, 2.0, math.sin(angle) * r)
+			towerSpawnSlot += 1
+			local pos = TowerSpawnLayout.Regular(towerSpawnSlot)
 			createSimMob(group.Id, pos, "RING1_MOB")
 		end
 	end
@@ -578,7 +582,8 @@ local function populateArenaMobs()
 		for i = 1, group.Count do
 			local angle = ((i - 1) / group.Count) * (math.pi * 2) + 0.3
 			local r = group.RMin + math.random() * (group.RMax - group.RMin)
-			local pos = Vector3.new(math.cos(angle) * r, 4.0, math.sin(angle) * r)
+			towerSpawnSlot += 1
+			local pos = TowerSpawnLayout.Regular(towerSpawnSlot)
 			createSimMob(group.Id, pos, "RING2_ELITE")
 		end
 	end
@@ -663,7 +668,7 @@ function CombatSimulation.SpawnRiftWarden(summoner: Player)
 	profile.RiftLuresOwned -= 1
 	dm.SyncProfile(summoner)
 
-	local warden = createSimMob("boss_rift_warden", Vector3.new(0, 16, 22), "RIFT_BOSS")
+	local warden = createSimMob("boss_rift_warden", WORLD_BOSS_ORIGIN + Vector3.new(0, 0, 22), "RIFT_BOSS")
 	dm.BroadcastToast(string.format("🌀 %s used a Rift Lure at Ring 3 to summon THE RIFT WARDEN!", summoner.DisplayName), "WARN")
 	broadcastMetadata(nil)
 end

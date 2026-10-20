@@ -309,7 +309,8 @@ ReplicationTickRemote.OnClientEvent:Connect(function(buf: buffer)
 		offset += 12
 
 		local yaw = ((yawByte / 255.0) * (math.pi * 2)) - math.pi
-		local y = getGroundY(posX, posZ)
+		local heightMeta = MetadataByNetId[netId]
+		local y = if heightMeta and not heightMeta.IsHero and heightMeta.GroundY then heightMeta.GroundY else getGroundY(posX, posZ)
 		local goalPos = Vector3.new(posX, y, posZ)
 
 		local meta = MetadataByNetId[netId]

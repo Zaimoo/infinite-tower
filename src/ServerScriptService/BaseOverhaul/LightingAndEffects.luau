@@ -12,9 +12,9 @@ local LightingAndEffects = {}
 --============================================================================
 LightingAndEffects.Config = {
 	-- Core Lighting Properties (Readable gameplay + dramatic crimson-horizon storm)
-	ClockTime = 17.3, -- Late afternoon/dusk so island stone and tower architecture stay crisp & readable
+	ClockTime = 17.3,
 	Brightness = 2.4,
-	Ambient = Color3.fromRGB(112, 98, 104), -- Balanced ambient so dark stone plots remain readable
+	Ambient = Color3.fromRGB(112, 98, 104),
 	OutdoorAmbient = Color3.fromRGB(145, 122, 128),
 	ColorShift_Top = Color3.fromRGB(225, 155, 160),
 	ColorShift_Bottom = Color3.fromRGB(105, 42, 50),
@@ -22,12 +22,12 @@ LightingAndEffects.Config = {
 	EnvironmentSpecularScale = 0.80,
 
 	-- Atmosphere (Dark Red Storm Horizon & Haze)
-	AtmosphereDensity = 0.28, -- Low enough to see the 860-stud tower clearly from the islands
+	AtmosphereDensity = 0.08,
 	AtmosphereOffset = 0.12,
-	AtmosphereColor = Color3.fromRGB(135, 34, 44), -- Crimson storm tint in the distance
-	AtmosphereDecay = Color3.fromRGB(52, 16, 22), -- Deep dark red/black decay
-	AtmosphereGlare = 0.30,
-	AtmosphereHaze = 1.55,
+	AtmosphereColor = Color3.fromRGB(135, 34, 44),
+	AtmosphereDecay = Color3.fromRGB(52, 16, 22),
+	AtmosphereGlare = 0,
+	AtmosphereHaze = 0,
 
 	-- ColorCorrection (Subtle contrast + warm crimson tint without washing out UI/Gameplay)
 	TintColor = Color3.fromRGB(255, 240, 242),
@@ -36,9 +36,9 @@ LightingAndEffects.Config = {
 	BrightnessOffset = 0.03,
 
 	-- Bloom (Makes the white fountain water and dull-red tower windows pop)
-	BloomIntensity = 0.45,
-	BloomSize = 22,
-	BloomThreshold = 0.95,
+	BloomIntensity = 0,
+	BloomSize = 10,
+	BloomThreshold = 1.5,
 }
 
 --============================================================================
@@ -52,7 +52,6 @@ function LightingAndEffects.Apply(customConfig: { [string]: any }?)
 		end
 	end
 
-	-- 1. Core Lighting
 	Lighting.ClockTime = cfg.ClockTime
 	Lighting.Brightness = cfg.Brightness
 	Lighting.Ambient = cfg.Ambient
@@ -62,7 +61,6 @@ function LightingAndEffects.Apply(customConfig: { [string]: any }?)
 	Lighting.EnvironmentDiffuseScale = cfg.EnvironmentDiffuseScale
 	Lighting.EnvironmentSpecularScale = cfg.EnvironmentSpecularScale
 
-	-- 2. Atmosphere
 	local atmosphere = Lighting:FindFirstChild("TowerStormAtmosphere") :: Atmosphere?
 		or Lighting:FindFirstChildOfClass("Atmosphere")
 	if not atmosphere then
@@ -77,7 +75,6 @@ function LightingAndEffects.Apply(customConfig: { [string]: any }?)
 	atmosphere.Glare = cfg.AtmosphereGlare
 	atmosphere.Haze = cfg.AtmosphereHaze
 
-	-- 3. ColorCorrectionEffect
 	local cc = Lighting:FindFirstChild("TowerStormColorCorrection") :: ColorCorrectionEffect?
 	if not cc then
 		cc = Instance.new("ColorCorrectionEffect")
@@ -90,14 +87,21 @@ function LightingAndEffects.Apply(customConfig: { [string]: any }?)
 	cc.Saturation = cfg.Saturation
 	cc.Brightness = cfg.BrightnessOffset
 
-	-- 4. BloomEffect
 	local bloom = Lighting:FindFirstChild("TowerStormBloom") :: BloomEffect?
 	if not bloom then
 		bloom = Instance.new("BloomEffect")
 		bloom.Name = "TowerStormBloom"
 		bloom.Parent = Lighting
 	end
-	bloom.Enabled = true
+ -- Keep one subtle bloom layer so glow does not stack.
+ for _, effect in Lighting:GetChildren() do
+  if effect:IsA("BloomEffect") and effect ~= bloom then
+   effect.Enabled = false
+  elseif effect:IsA("BlurEffect") or effect:IsA("DepthOfFieldEffect") or effect:IsA("SunRaysEffect") then
+   effect.Enabled = false
+  end
+ end
+	bloom.Enabled = false
 	bloom.Intensity = cfg.BloomIntensity
 	bloom.Size = cfg.BloomSize
 	bloom.Threshold = cfg.BloomThreshold

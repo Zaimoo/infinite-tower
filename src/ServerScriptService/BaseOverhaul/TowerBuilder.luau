@@ -243,7 +243,7 @@ function TowerBuilder.Build(parent: Instance?, customConfig: { [string]: any }?)
 				Parent = ringsFolder,
 			})
 
-			-- Dark Stone Center Mullion Bar (Gives the Renaissance arched window grid look)
+			-- Dark Stone Center Mullion Bar
 			makePart({
 				Name = string.format("WindowMullionV_%02d_%02d", ringIdx, wIdx),
 				Size = Vector3.new(1.1, windowH + windowW * 0.45, 2.2),
@@ -384,6 +384,27 @@ function TowerBuilder.Build(parent: Instance?, customConfig: { [string]: any }?)
 		redEmbers.Acceleration = Vector3.new(0, 6, 0)
 		redEmbers.Parent = emitterPart
 	end
+
+ -- Ring2WidthMatch: widen horizontally while preserving tower height and taper.
+ local arena = workspace:FindFirstChild("ArenaRings")
+ local ring2 = arena and arena:FindFirstChild("Ring2_CorruptedGrove")
+ local floor = ring2 and ring2:FindFirstChild("Ring2_Floor")
+ local targetDiameter = if floor and floor:IsA("BasePart") then floor.Size.Y else 650
+ local horizontalScale = targetDiameter / cfg.BaseDiameter
+ local partCount = 0
+ for _, part in towerModel:GetDescendants() do
+  if part:IsA("BasePart") then
+   local cf = part.CFrame
+   local offset = cf.Position - origin
+   local function axisScale(axis: Vector3): number
+    return Vector3.new(axis.X * horizontalScale, axis.Y, axis.Z * horizontalScale).Magnitude
+   end
+   part.Size = Vector3.new(part.Size.X * axisScale(cf.RightVector), part.Size.Y * axisScale(cf.UpVector), part.Size.Z * axisScale(cf.LookVector))
+   part.CFrame = CFrame.new(origin + Vector3.new(offset.X * horizontalScale, offset.Y, offset.Z * horizontalScale)) * cf.Rotation
+   partCount += 1
+   if partCount % 300 == 0 then task.wait() end
+  end
+ end
 
 	if parent then
 		towerModel.Parent = parent
