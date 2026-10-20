@@ -303,11 +303,9 @@ local function awardRelicPayout(player: Player, spec: any, scalar: number)
 	end
 	local gems = math.round(spec.Payout.Gems * scalar)
 	local gold = math.round(spec.Payout.Gold * scalar)
-	local rp = math.round(spec.Payout.ResearchPoints * scalar)
 
 	profile.Currencies.Gems += gems
 	profile.Currencies.Gold += gold
-	profile.Currencies.ResearchPoints += rp
 
 	-- Check Calamity Heart +25% Boss Hero Roll
 	if spec.TierId == "CALAMITY_HEART" and math.random() <= 0.25 then
@@ -318,7 +316,7 @@ local function awardRelicPayout(player: Player, spec: any, scalar: number)
 
 	dm.SendToast(
 		player,
-		string.format("Extracted %s (%d%%): +%d Gems, +%d Gold, +%d RP!", spec.DisplayName, math.round(scalar * 100), gems, gold, rp),
+		string.format("Extracted %s (%d%%): +%d Gems, +%d Gold!", spec.DisplayName, math.round(scalar * 100), gems, gold),
 		"SUCCESS"
 	)
 	dm.SyncProfile(player)

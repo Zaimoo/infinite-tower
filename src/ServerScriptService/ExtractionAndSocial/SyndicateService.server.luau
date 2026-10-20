@@ -34,7 +34,7 @@ PlotEspionageEvent.OnServerEvent:Connect(function(player: Player, opCode: any, p
 		return
 	end
 
-	local facName = (type(facilityKey) == "string" and (facilityKey == "ManaConduit" or facilityKey == "Infirmary" or facilityKey == "DimensionalLab"))
+	local facName = (type(facilityKey) == "string" and (facilityKey == "ManaConduit" or facilityKey == "Infirmary"))
 		and facilityKey
 		or "ManaConduit"
 

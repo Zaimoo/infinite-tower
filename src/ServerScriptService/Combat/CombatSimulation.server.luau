@@ -122,7 +122,7 @@ export type MasterCombatState = {
 	LastOverdriveClock: number,
 	LastRecallClock: number,
 	DeployedHeroes: { [string]: SimHero },
-	CarriedLoot: { Gold: number, Gems: number, RP: number },
+	CarriedLoot: { Gold: number, Gems: number },
 	CanCollectLoot: boolean,
 	IsSquadWiped: boolean,
 }
@@ -270,7 +270,7 @@ function CombatSimulation.RebuildPlayerSquad(player: Player)
 			LastOverdriveClock = -99,
 			LastRecallClock = -99,
 			DeployedHeroes = {},
-			CarriedLoot = { Gold = 0, Gems = 0, RP = 0 },
+			CarriedLoot = { Gold = 0, Gems = 0 },
 			CanCollectLoot = true,
 			IsSquadWiped = false,
 		}
@@ -366,7 +366,7 @@ function CombatSimulation.RebuildPlayerSquad(player: Player)
 end
 
 local collectPhysicalLoot: (player: Player, lootId: number) -> ()
-local spawnPhysicalLoot: (lootType: "GOLD" | "GEMS" | "RP", amount: number, worldPos: Vector3, killerPlayer: Player?, customLabel: string?) -> any
+local spawnPhysicalLoot: (lootType: "GOLD" | "GEMS", amount: number, worldPos: Vector3, killerPlayer: Player?, customLabel: string?) -> any
 
 local function clearLootCarryState(player: Player)
 	local char = player.Character
@@ -379,7 +379,7 @@ local function clearLootCarryState(player: Player)
 		if hum then hum.WalkSpeed = 16.0 end
 	end
 	CarrierToHeldLoot[player] = nil
-	CarriedLootSyncRemote:FireClient(player, 0, 0, 0)
+	CarriedLootSyncRemote:FireClient(player, 0, 0)
 end
 
 function CombatSimulation.DropCarriedLoot(player: Player, openLoot: boolean?): boolean
@@ -500,8 +500,8 @@ local function knockHeroIntoComa(simHero: SimHero, baseComaSeconds: number)
 			_G.RelicService.FumbleRelicOnAoEHit(simHero.Owner)
 		end
 
-		masterState.CarriedLoot = { Gold = 0, Gems = 0, RP = 0 }
-		CarriedLootSyncRemote:FireClient(simHero.Owner, 0, 0, 0)
+		masterState.CarriedLoot = { Gold = 0, Gems = 0 }
+		CarriedLootSyncRemote:FireClient(simHero.Owner, 0, 0)
 		SquadWipeStateRemote:FireClient(simHero.Owner, true)
 
 		dm.SendToast(
@@ -657,7 +657,7 @@ function CombatSimulation.SpawnRiftWarden(summoner: Player)
 		return
 	end
 	if profile.RiftLuresOwned <= 0 then
-		dm.SendToast(summoner, "You need a Rift Lure! Craft one in The Dimensional Lab (Lv.3)!", "WARN")
+		dm.SendToast(summoner, "You need a Rift Lure to summon The Rift Warden!", "WARN")
 		return
 	end
 	profile.RiftLuresOwned -= 1
@@ -774,8 +774,7 @@ function collectPhysicalLoot(player: Player, lootId: number)
 
 	local g = (lootType == "GOLD" and amount or 0)
 	local gm = (lootType == "GEMS" and amount or 0)
-	local rp = (lootType == "RP" and amount or 0)
-	CarriedLootSyncRemote:FireClient(player, g, gm, rp)
+	CarriedLootSyncRemote:FireClient(player, g, gm)
 
 	CombatVFXRemote:FireAllClients("LOOT_PICKUP", hrp.Position)
 
@@ -798,7 +797,7 @@ function collectPhysicalLoot(player: Player, lootId: number)
 	end
 end
 
-function spawnPhysicalLoot(lootType: "GOLD" | "GEMS" | "RP", amount: number, worldPos: Vector3, killerPlayer: Player?, customLabel: string?): any
+function spawnPhysicalLoot(lootType: "GOLD" | "GEMS", amount: number, worldPos: Vector3, killerPlayer: Player?, customLabel: string?): any
 	local lootId = NextLootId
 	NextLootId += 1
 
@@ -820,13 +819,6 @@ function spawnPhysicalLoot(lootType: "GOLD" | "GEMS" | "RP", amount: number, wor
 		end
 		color = Color3.fromRGB(0, 230, 255)
 		icon = "💎"
-	elseif lootType == "RP" then
-		part = ArtPackVisuals.Mesh("prop_rift_lure")
-		if part then
-			part.Size = Vector3.new(2.2, 3.0, 2.2)
-		end
-		color = Color3.fromRGB(180, 120, 255)
-		icon = "🔬"
 	end
 
 	if not part then
@@ -993,7 +985,6 @@ local function handleMobDeath(mob: SimMob, killerPlayer: Player)
 				local payout = WorldBossConfig.DirectPayoutByRank[math.min(6, rankIdx)]
 				entry.Profile.Currencies.Gems += payout.Gems
 				entry.Profile.Currencies.Gold += payout.Gold
-				entry.Profile.Currencies.ResearchPoints += payout.RP
 				entry.Profile.BossPity = math.min(100, entry.Profile.BossPity + payout.PityGain)
 
 				local wonArchon = (math.random() <= payout.ArchonChance) or (entry.Profile.BossPity >= 100)
@@ -1007,8 +998,8 @@ local function handleMobDeath(mob: SimMob, killerPlayer: Player)
 				dm.SendToast(
 					entry.Player,
 					string.format(
-						"🏆 World Boss Rank #%d (%.1f%% DMG): +%d Gems, +%d Gold, +%d RP (Boss Pity: %d%%)!",
-						rankIdx, entry.Pct, payout.Gems, payout.Gold, payout.RP, entry.Profile.BossPity
+						"🏆 World Boss Rank #%d (%.1f%% DMG): +%d Gems, +%d Gold (Boss Pity: %d%%)!",
+						rankIdx, entry.Pct, payout.Gems, payout.Gold, entry.Profile.BossPity
 					),
 					"SUCCESS"
 				)
@@ -1740,8 +1731,6 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 							prof.Currencies.Gold += held.Amount
 						elseif held.LootType == "GEMS" then
 							prof.Currencies.Gems += held.Amount
-						elseif held.LootType == "RP" then
-							prof.Currencies.ResearchPoints += held.Amount
 						end
 
 						dm.SendToast(
