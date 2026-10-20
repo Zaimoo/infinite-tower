@@ -111,7 +111,7 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 		end
 	end
 
-	local rootOffsetY = isHero and 3.0 or (bodySize.Y * 0.5)
+	local rootOffsetY = isHero and 3.2 or (bodySize.Y * 0.5)
 	local root = Instance.new("Part")
 	root.Name = "HumanoidRootPart"
 	root.Size = isHero and Vector3.new(2, 2, 1) or bodySize
@@ -391,7 +391,7 @@ RunService.RenderStepped:Connect(function(dt: number)
 	local alpha = math.clamp(dt * 12.0, 0, 1)
 	for _, node in pairs(VisualNodesByNetId) do
 		node.CurrentPos = node.CurrentPos:Lerp(node.GoalPos, alpha)
-		local bodyH = node.IsHero and 3.0 or (node.RootPart.Size.Y * 0.5)
+		local bodyH = node.IsHero and 3.2 or (node.RootPart.Size.Y * 0.5)
 		local cf = CFrame.new(node.CurrentPos + Vector3.new(0, bodyH, 0)) * CFrame.Angles(0, node.GoalYaw, 0)
 		node.Model:PivotTo(cf)
 		ArtPackVisuals.Animate(node, dt, os.clock())
