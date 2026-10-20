@@ -24,21 +24,20 @@
 ├── technical_architecture.md         -- Document 2: Technical Architecture & Network Contracts
 ├── economy_balancing_tables.md       -- Document 3: Mathematical Economy & Balancing Tables
 ├── ui_ux_wireframes.md               -- Document 4: UI/UX Wireframes & Spatial Screen Specifications
-├── prototype_v0.1/
-│   ├── PROTOTYPE_DOCUMENTATION.md    -- Prototype Implementation & Verification Document
-│   └── src/
-│       ├── ServerScriptService/
-│       │   ├── Core/                 -- DataManager (Profile/Gacha/Promotion), PlotManager
-│       │   ├── Combat/               -- CombatSimulation (5 Hz Zero-Humanoid Engine)
-│       │   ├── ExtractionAndSocial/  -- RelicService, SyndicateService (Plot Espionage)
-│       │   └── Tycoon/               -- WaitingRoomService (1 Hz Facility Production Loop)
-│       ├── StarterPlayerScripts/
-│       │   ├── Input/                -- MasterController (Raycasting, [Q] Overdrive, [E] Recall)
-│       │   ├── Rendering/            -- EntityRenderer (Buffer Unpacker), HoldingAnimationController
-│       │   └── UI/                   -- HUDController (Squad Cards, Retaliate Banner, Modals)
-│       └── ReplicatedStorage/
-│           ├── Assets/               -- ArtPackVisuals
-│           └── Shared/               -- HeroCatalog, RelicConfig, FacilityConfig, WorldBossConfig, StatFormulas
+├── PROTOTYPE_DOCUMENTATION.md        -- Prototype Implementation & Verification Document
+└── src/
+    ├── ServerScriptService/
+    │   ├── Core/                     -- DataManager (Profile/Gacha/Promotion), PlotManager
+    │   ├── Combat/                   -- CombatSimulation (5 Hz Zero-Humanoid Engine)
+    │   ├── ExtractionAndSocial/      -- RelicService, SyndicateService (Plot Espionage)
+    │   └── Tycoon/                   -- WaitingRoomService (1 Hz Facility Production Loop)
+    ├── StarterPlayerScripts/
+    │   ├── Input/                    -- MasterController (Raycasting, [Q] Overdrive, [E] Recall)
+    │   ├── Rendering/                -- EntityRenderer (Buffer Unpacker), HoldingAnimationController
+    │   └── UI/                       -- HUDController (Squad Cards, Retaliate Banner, Modals)
+    └── ReplicatedStorage/
+        ├── Assets/                   -- ArtPackVisuals
+        └── Shared/                   -- HeroCatalog, RelicConfig, FacilityConfig, WorldBossConfig, StatFormulas
 ```
 
 ---
