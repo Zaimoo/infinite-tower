@@ -142,10 +142,7 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 	end
 
 	local art = ArtPackVisuals.Attach(model, meta or {}, root, bodySize)
-	if art and head then
-		head:Destroy()
-	end
-
+	if art and head then head:Destroy() end
 	local hl = Instance.new("Highlight")
 	hl.FillColor = bodyColor
 	hl.OutlineColor = isHero and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(255, 90, 90)
@@ -301,6 +298,9 @@ end)
 -- Unpack 5 Hz Binary Buffer Snapshot
 ReplicationTickRemote.OnClientEvent:Connect(function(buf: buffer)
 	local count = buffer.readu8(buf, 0)
+	-- Height is authoritative; radius alone cannot identify stacked tower floors.
+	local stride = count > 0 and (buffer.len(buf) - 5) / count or 14
+	if stride ~= 14 and stride ~= 12 then return end
 	local now = os.clock()
 	local offset = 5
 	local needsMetadata = false
@@ -314,11 +314,10 @@ ReplicationTickRemote.OnClientEvent:Connect(function(buf: buffer)
 		local hpPermille = buffer.readu16(buf, offset + 8)
 		local stamina = buffer.readu8(buf, offset + 10)
 		local flags = buffer.readu8(buf, offset + 11)
-		offset += 12
+		local y = stride == 14 and buffer.readi16(buf, offset + 12) / 10 or getGroundY(posX, posZ)
+		offset += stride
 
 		local yaw = ((yawByte / 255.0) * (math.pi * 2)) - math.pi
-		local heightMeta = MetadataByNetId[netId]
-		local y = if heightMeta and not heightMeta.IsHero and heightMeta.GroundY then heightMeta.GroundY else getGroundY(posX, posZ)
 		local goalPos = Vector3.new(posX, y, posZ)
 
 		local meta = MetadataByNetId[netId]
@@ -398,7 +397,11 @@ requestEntityMetadata()
 RunService.RenderStepped:Connect(function(dt: number)
 	local alpha = math.clamp(dt * 12.0, 0, 1)
 	for _, node in pairs(VisualNodesByNetId) do
-		node.CurrentPos = node.CurrentPos:Lerp(node.GoalPos, alpha)
+		if (node.GoalPos - node.CurrentPos).Magnitude > 35 then
+			node.CurrentPos = node.GoalPos
+		else
+			node.CurrentPos = node.CurrentPos:Lerp(node.GoalPos, alpha)
+		end
 		local bodyH = node.IsHero and 3.2 or (node.RootPart.Size.Y * 0.5)
 		local cf = CFrame.new(node.CurrentPos + Vector3.new(0, bodyH, 0)) * CFrame.Angles(0, node.GoalYaw, 0)
 		node.Model:PivotTo(cf)

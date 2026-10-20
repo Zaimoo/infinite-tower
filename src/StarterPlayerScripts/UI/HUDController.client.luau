@@ -38,8 +38,6 @@ local RequestUnequipArtifactFunc = ArtifactRemotes:WaitForChild("RequestUnequipA
 local RequestUpgradeRarityFunc = ArtifactRemotes:WaitForChild("RequestUpgradeRarity") :: RemoteFunction
 
 local RequestSummonFunc = TycoonRemotes:WaitForChild("RequestSummon") :: RemoteFunction
-local SynthesizeHeroesFunc = TycoonRemotes:WaitForChild("SynthesizeHeroes") :: RemoteFunction
-local PromoteHeroStarFunc = TycoonRemotes:WaitForChild("PromoteHeroStar") :: RemoteFunction
 local AssignHeroRoleFunc = TycoonRemotes:WaitForChild("AssignHeroRole") :: RemoteFunction
 local FacilityInteractEvent = TycoonRemotes:WaitForChild("FacilityInteract") :: RemoteEvent
 
@@ -48,7 +46,6 @@ local ProfileDeltaSyncEvent = SyndicateRemotes:WaitForChild("ProfileDeltaSync") 
 local SystemToastEvent = SyndicateRemotes:WaitForChild("SystemToast") :: RemoteEvent
 
 local CurrentProfile: any = nil
-local SelectedPitTargetUUID: string? = nil
 local SelectedMercDirective: string = "PARASITE"
 local LastQClock = -99
 local LastEClock = -99
@@ -467,6 +464,7 @@ local pitModal = makeFrame({
 
 local refreshWaitingRoomModal: () -> ()
 local refreshPitModal: () -> ()
+local facilityController: any = nil
 local refreshBlacksmithModal: () -> ()
 local selectedArtifactUUID: string? = nil
 
@@ -483,31 +481,22 @@ local blacksmithModal = makeFrame({
 })
 
 --============================================================================
--- BOTTOM NAVIGATION & TOOL BAR (White Bar with Cyan Top Border)
 --============================================================================
-local SLATE_TEXT = Color3.fromRGB(92, 104, 122)
-local SLATE_ACTIVE = Color3.fromRGB(0, 150, 230)
-local TOP_BORDER_BLUE = Color3.fromRGB(0, 155, 235)
-local DIVIDER_GRAY = Color3.fromRGB(205, 212, 222)
+-- BOTTOM NAVIGATION & TOOL BAR (Gothic Obsidian & White Filigree Container)
+--============================================================================
+local SLATE_TEXT = Color3.fromRGB(232, 226, 245)
+local SLATE_ACTIVE = Color3.fromRGB(230, 192, 112)
+local DIVIDER_GRAY = Color3.fromRGB(112, 100, 132)
 
 local bottomBar = Instance.new("Frame")
 bottomBar.Name = "BottomToolbar"
-bottomBar.Size = UDim2.new(1, 0, 0, 50)
-bottomBar.Position = UDim2.new(0, 0, 1, 0)
-bottomBar.AnchorPoint = Vector2.new(0, 1)
-bottomBar.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+bottomBar.Size = UDim2.new(1, -24, 0, 50)
+bottomBar.Position = UDim2.new(0.5, 0, 1, -6)
+bottomBar.AnchorPoint = Vector2.new(0.5, 1)
+bottomBar.BackgroundColor3 = Color3.fromRGB(20, 14, 28)
 bottomBar.BorderSizePixel = 0
 bottomBar.ZIndex = 8
 bottomBar.Parent = hudGui
-
-local bottomTopBorder = Instance.new("Frame")
-bottomTopBorder.Name = "TopCyanBorder"
-bottomTopBorder.Size = UDim2.new(1, 0, 0, 3)
-bottomTopBorder.Position = UDim2.new(0, 0, 0, 0)
-bottomTopBorder.BackgroundColor3 = TOP_BORDER_BLUE
-bottomTopBorder.BorderSizePixel = 0
-bottomTopBorder.ZIndex = 9
-bottomTopBorder.Parent = bottomBar
 
 local function showClientToast(msg: string)
 	toastCounter += 1
@@ -533,7 +522,7 @@ local function makeBarTextButton(parent: Instance, name: string, label: string, 
 	btn.Text = label
 	btn.TextSize = 11
 	btn.TextColor3 = SLATE_TEXT
-	btn.ZIndex = 9
+	btn.ZIndex = 11
 	btn.Parent = parent
 
 	btn.MouseEnter:Connect(function()
@@ -558,7 +547,7 @@ local function makeBarIconButton(parent: Instance, name: string, onClick: () -> 
 	btn.BorderSizePixel = 0
 	btn.AutoButtonColor = false
 	btn.Text = ""
-	btn.ZIndex = 9
+	btn.ZIndex = 11
 	btn.Parent = parent
 
 	local iconCanvas = Instance.new("Frame")
@@ -567,7 +556,7 @@ local function makeBarIconButton(parent: Instance, name: string, onClick: () -> 
 	iconCanvas.Position = UDim2.fromScale(0.5, 0.5)
 	iconCanvas.AnchorPoint = Vector2.new(0.5, 0.5)
 	iconCanvas.BackgroundTransparency = 1
-	iconCanvas.ZIndex = 9
+	iconCanvas.ZIndex = 11
 	iconCanvas.Parent = btn
 
 	local function tintIcon(col: Color3)
@@ -597,7 +586,7 @@ local function addPart(parent: Instance, x: number, y: number, w: number, h: num
 	f.Position = UDim2.fromOffset(x, y)
 	f.BackgroundColor3 = SLATE_TEXT
 	f.BorderSizePixel = 0
-	f.ZIndex = 9
+	f.ZIndex = 11
 	if rot then
 		f.Rotation = rot
 	end
@@ -614,18 +603,18 @@ end
 local patchNotesBtn = makeBarTextButton(bottomBar, "PatchNotesButton", "PATCH NOTES", 100, function()
 	showClientToast("INFINITE TOWER — Waiting Room, The Pit, World Boss & Tactical Whistles Active")
 end)
-patchNotesBtn.Position = UDim2.new(0, 32, 0.5, 1)
+patchNotesBtn.Position = UDim2.new(0, 26, 0.5, 0)
 patchNotesBtn.AnchorPoint = Vector2.new(0, 0.5)
 patchNotesBtn.TextXAlignment = Enum.TextXAlignment.Left
 
 -- Center Group: 5 Infinite Tower Text Tabs | Divider | 4 Quick-Action Tool Icons
 local centerGroup = Instance.new("Frame")
 centerGroup.Name = "CenterToolbarGroup"
-centerGroup.Size = UDim2.new(0, 692, 1, -3)
-centerGroup.Position = UDim2.new(0.5, 0, 0, 3)
+centerGroup.Size = UDim2.new(0, 692, 1, 0)
+centerGroup.Position = UDim2.new(0.5, 0, 0, 0)
 centerGroup.AnchorPoint = Vector2.new(0.5, 0)
 centerGroup.BackgroundTransparency = 1
-centerGroup.ZIndex = 9
+centerGroup.ZIndex = 11
 centerGroup.Parent = bottomBar
 
 local centerLayout = Instance.new("UIListLayout")
@@ -671,7 +660,7 @@ centerDivider.Size = UDim2.fromOffset(1, 22)
 centerDivider.BackgroundColor3 = DIVIDER_GRAY
 centerDivider.BorderSizePixel = 0
 centerDivider.LayoutOrder = 6
-centerDivider.ZIndex = 9
+centerDivider.ZIndex = 11
 centerDivider.Parent = centerGroup
 
 -- Icon 1: Trash Can (Purge Conduit Rune)
@@ -687,7 +676,7 @@ do
 	bin.Size = UDim2.fromOffset(10, 12)
 	bin.Position = UDim2.fromOffset(4, 5)
 	bin.BackgroundTransparency = 1
-	bin.ZIndex = 9
+	bin.ZIndex = 11
 	bin.Parent = trashCanvas
 	local st = Instance.new("UIStroke")
 	st.Thickness = 1.6
@@ -727,7 +716,7 @@ end)
 iconBucketBtn.LayoutOrder = 9
 do
 	local body = addPart(bucketCanvas, 4, 5, 8, 8, 45, 1)
-	body.ZIndex = 9
+	body.ZIndex = 11
 	addPart(bucketCanvas, 6, 2, 5, 2, -25, 1)
 	addPart(bucketCanvas, 13, 12, 3, 4, 0, 2)
 end
@@ -748,11 +737,11 @@ end
 -- Right Group: Gear Icon + SAVE Button
 local rightGroup = Instance.new("Frame")
 rightGroup.Name = "RightToolbarGroup"
-rightGroup.Size = UDim2.new(0, 110, 1, -3)
-rightGroup.Position = UDim2.new(1, -28, 0, 3)
+rightGroup.Size = UDim2.new(0, 110, 1, 0)
+rightGroup.Position = UDim2.new(1, -26, 0, 0)
 rightGroup.AnchorPoint = Vector2.new(1, 0)
 rightGroup.BackgroundTransparency = 1
-rightGroup.ZIndex = 9
+rightGroup.ZIndex = 11
 rightGroup.Parent = bottomBar
 
 local rightLayout = Instance.new("UIListLayout")
@@ -772,14 +761,14 @@ do
 		addPart(gearCanvas, 2, 7, 14, 4, deg, 1)
 	end
 	local ring = addPart(gearCanvas, 3, 3, 12, 12, 0, 6)
-	ring.ZIndex = 9
+	ring.ZIndex = 11
 	local hole = Instance.new("Frame")
 	hole.Name = "Hole"
 	hole.Size = UDim2.fromOffset(6, 6)
 	hole.Position = UDim2.fromOffset(6, 6)
-	hole.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	hole.BackgroundColor3 = Color3.fromRGB(20, 14, 28)
 	hole.BorderSizePixel = 0
-	hole.ZIndex = 10
+	hole.ZIndex = 12
 	local hc = Instance.new("UICorner")
 	hc.CornerRadius = UDim.new(1, 0)
 	hc.Parent = hole
@@ -810,6 +799,7 @@ local function updateBottomTabHighlights()
 end
 
 _G.OpenMasterModal = function(which: string)
+	if facilityController then facilityController:Close() end
 	waitingRoomModal.Visible = (which == "WAITING_ROOM")
 	pitModal.Visible = (which == "THE_PIT")
 	blacksmithModal.Visible = (which == "BLACKSMITH")
@@ -1166,163 +1156,27 @@ refreshWaitingRoomModal = function()
 end
 
 --============================================================================
--- 4. BUILD THE PIT MODAL (SYNTHESIS XP & STAR PROMOTION 1 -> 5)
+-- 4. THE PIT: modular recipient / donor workspace and authoritative transactions.
 --============================================================================
-
-makeLabel({
-	Size = UDim2.new(0.75, 0, 0, 36),
-	Position = UDim2.new(0.02, 0, 0, 6),
-	Text = " THE PIT — HERO SYNTHESIS (XP FODDER) & STAR PROMOTION (1 -> 5)",
-	TextColor3 = Color3.fromRGB(255, 145, 75),
-	TextXAlignment = Enum.TextXAlignment.Left,
-	Parent = pitModal,
-})
-makeButton({
-	Size = UDim2.new(0, 90, 0, 30),
-	Position = UDim2.new(1, -100, 0, 9),
-	BackgroundColor3 = Color3.fromRGB(185, 45, 60),
-	Text = "X CLOSE",
-	Corner = 6,
-	OnClick = function()
-		pitModal.Visible = false
-		updateBottomTabHighlights()
-	end,
-	Parent = pitModal,
-})
-
-local pitTargetLabel = makeLabel({
-	Size = UDim2.new(0.45, 0, 0, 160),
-	Position = UDim2.new(0.02, 0, 0, 52),
-	Text = "Select a Target Hero from the list on the right ->",
-	TextColor3 = Color3.fromRGB(255, 225, 140),
-	TextXAlignment = Enum.TextXAlignment.Left,
-	Parent = pitModal,
-})
-
-makeButton({
-	Size = UDim2.new(0.45, 0, 0, 44),
-	Position = UDim2.new(0.02, 0, 0, 230),
-	BackgroundColor3 = Color3.fromRGB(215, 85, 30),
-	Text = " FEED UNLOCKED 1 BENCHED FODDER (SYNTHESIS XP)",
-	Corner = 8,
-	OnClick = function()
-		if not CurrentProfile or not SelectedPitTargetUUID then
-			return
-		end
-		local fodders = {}
-		for uuid, h in pairs(CurrentProfile.Heroes) do
-			if uuid ~= SelectedPitTargetUUID and h.Assignment == "BENCHED" and not h.Locked and h.Stars == 1 then
-				table.insert(fodders, uuid)
-				if #fodders >= 10 then
-					break
-				end
-			end
-		end
-		SynthesizeHeroesFunc:InvokeServer(SelectedPitTargetUUID, fodders)
-	end,
-	Parent = pitModal,
-})
-
-makeButton({
-	Size = UDim2.new(0.45, 0, 0, 48),
-	Position = UDim2.new(0.02, 0, 0, 290),
-	BackgroundColor3 = Color3.fromRGB(215, 160, 25),
-	Text = " ASCEND STAR TIER (PROMOTE 1 -> 5)",
-	Corner = 8,
-	OnClick = function()
-		if not CurrentProfile or not SelectedPitTargetUUID then
-			return
-		end
-		local target = CurrentProfile.Heroes[SelectedPitTargetUUID]
-		if not target then
-			return
-		end
-		local reqStars = target.Stars
-		local fodders = {}
-		for uuid, h in pairs(CurrentProfile.Heroes) do
-			if uuid ~= SelectedPitTargetUUID and h.Assignment == "BENCHED" and not h.Locked and h.Stars == reqStars then
-				table.insert(fodders, uuid)
-				if #fodders >= reqStars then
-					break
-				end
-			end
-		end
-		PromoteHeroStarFunc:InvokeServer(SelectedPitTargetUUID, fodders)
-	end,
-	Parent = pitModal,
-})
-
-local pitRosterScroll = Instance.new("ScrollingFrame")
-pitRosterScroll.Size = UDim2.new(0.48, 0, 1, -60)
-pitRosterScroll.Position = UDim2.new(0.50, 0, 0, 50)
-pitRosterScroll.BackgroundTransparency = 1
-pitRosterScroll.ScrollBarThickness = 6
-pitRosterScroll.Parent = pitModal
-
-local pitRosterLayout = Instance.new("UIListLayout")
-pitRosterLayout.Padding = UDim.new(0, 6)
-pitRosterLayout.Parent = pitRosterScroll
-
-refreshPitModal = function()
-	if not CurrentProfile then
-		return
+local PitController = require(script.Parent:WaitForChild("PitController"))
+local pitController = PitController.new(
+	pitModal,
+	TycoonRemotes:WaitForChild("PitRequest") :: RemoteFunction,
+	FacilityInteractEvent,
+	function() _G.OpenMasterModal("NONE") end
+)
+_G.PitController = pitController
+refreshPitModal = function() pitController:Refresh() end
+local FacilityController = require(script.Parent:WaitForChild("FacilityController"))
+facilityController = FacilityController.new(hudGui, function() return CurrentProfile end, TycoonRemotes)
+_G.OpenFacilityHUD = function(facility: string)
+	if facility == "Synthesis" or facility == "Promotion" then
+		_G.OpenMasterModal("THE_PIT")
+		pitController:SetTab(facility)
+	else
+		_G.OpenMasterModal("NONE")
+		facilityController:Open(facility)
 	end
-	if not SelectedPitTargetUUID or not CurrentProfile.Heroes[SelectedPitTargetUUID] then
-		for uuid, _ in pairs(CurrentProfile.Heroes) do
-			SelectedPitTargetUUID = uuid
-			break
-		end
-	end
-
-	local target = SelectedPitTargetUUID and CurrentProfile.Heroes[SelectedPitTargetUUID] or nil
-	if target then
-		local maxLv = target.Stars * 10
-		local reqXP = StatFormulas.GetXPRequiredForNextLevel(target.Level)
-		local promoGold = StatFormulas.GetPromotionGoldCost(target.Stars)
-		local effATK, effHP, dps = StatFormulas.GetEffectiveCombatStats(target, false, false)
-		pitTargetLabel.Text = string.format(
-			"TARGET IN CAULDRON: %s (%d)\nLevel: %d / %d (XP: %d / %d)\nEffective HP: %d | ATK: %d | DPS: %.1f\n\nStar Promotion (%d -> %d):\n• Requires Lv.%d + %dx %d Benched Fodder + %d Gold\n• Multiplies Base Combat x1.65 & Labor x1.35!",
-			target.DisplayName, target.Stars, target.Level, maxLv, target.XP, reqXP, effHP, effATK, dps,
-			target.Stars, target.Stars + 1, maxLv, target.Stars, target.Stars, promoGold
-		)
-	end
-
-	for _, c in ipairs(pitRosterScroll:GetChildren()) do
-		if c:IsA("Frame") then
-			c:Destroy()
-		end
-	end
-
-	local count = 0
-	for uuid, h in pairs(CurrentProfile.Heroes) do
-		count += 1
-		local row = makeFrame({
-			Size = UDim2.new(1, -8, 0, 44),
-			BackgroundColor3 = (uuid == SelectedPitTargetUUID) and Color3.fromRGB(85, 45, 35) or Color3.fromRGB(36, 26, 34),
-			Corner = 6,
-			Parent = pitRosterScroll,
-		})
-		makeLabel({
-			Size = UDim2.new(0.68, 0, 0.86, 0),
-			Position = UDim2.new(0.03, 0, 0.07, 0),
-			Text = string.format("%s (%d Lv.%d) [%s]", h.DisplayName, h.Stars, h.Level, h.Assignment),
-			TextXAlignment = Enum.TextXAlignment.Left,
-			Parent = row,
-		})
-		makeButton({
-			Size = UDim2.new(0.25, 0, 0.76, 0),
-			Position = UDim2.new(0.72, 0, 0.12, 0),
-			BackgroundColor3 = Color3.fromRGB(205, 95, 40),
-			Text = "SELECT",
-			Corner = 5,
-			OnClick = function()
-				SelectedPitTargetUUID = uuid
-				refreshPitModal()
-			end,
-			Parent = row,
-		})
-	end
-	pitRosterScroll.CanvasSize = UDim2.new(0, 0, 0, count * 50)
 end
 
 --============================================================================
@@ -1694,10 +1548,18 @@ end
 --============================================================================
 
 ProfileDeltaSyncEvent.OnClientEvent:Connect(function(profile: any)
-	CurrentProfile = profile
-	if not profile then
-		return
-	end
+	if not profile then return end
+	if profile._PitDelta then
+		-- Pit and combat EXP send small updates; retain unrelated profile fields.
+		if not CurrentProfile then return end
+		for uuid, hero in profile.Heroes or {} do CurrentProfile.Heroes[uuid] = hero end
+		for _, uuid in profile.Removed or {} do CurrentProfile.Heroes[uuid] = nil end
+		for _, key in {"Currencies", "PitMaterials", "PitRevision", "UnlockedResearch"} do
+			if profile[key] ~= nil then CurrentProfile[key] = profile[key] end
+		end
+		profile = CurrentProfile
+	else CurrentProfile = profile end
+	facilityController:Refresh()
 
 	currencyLabel.Text = string.format(
 		" GOLD: %d    GEMS: %d",
@@ -1729,9 +1591,7 @@ ProfileDeltaSyncEvent.OnClientEvent:Connect(function(profile: any)
 	if waitingRoomModal.Visible and refreshWaitingRoomModal then
 		refreshWaitingRoomModal()
 	end
-	if pitModal.Visible and refreshPitModal then
-		refreshPitModal()
-	end
+	pitController:ProfileChanged(profile)
 	if blacksmithModal.Visible and refreshBlacksmithModal then
 		refreshBlacksmithModal()
 	end
@@ -1840,14 +1700,16 @@ do
 	for _, m in modalList do
 		m.AnchorPoint = Vector2.new(0.5, 0.5)
 		m.Position = UDim2.fromScale(0.5, 0.5)
-		m.BackgroundColor3 = P.surface
-		m.BackgroundTransparency = 0.02
 		m.ZIndex = 20
-		stroke(m, P.gold)
-		local g = Instance.new("UIGradient")
-		g.Color = ColorSequence.new(Color3.fromRGB(25, 36, 56), P.surface)
-		g.Rotation = 100
-		g.Parent = m
+		if m == waitingRoomModal then
+			m.BackgroundColor3 = P.surface
+			m.BackgroundTransparency = 0.02
+			stroke(m, P.gold)
+			local g = Instance.new("UIGradient")
+			g.Color = ColorSequence.new(Color3.fromRGB(25, 36, 56), P.surface)
+			g.Rotation = 100
+			g.Parent = m
+		end
 		m:GetPropertyChangedSignal("Visible"):Connect(function()
 			local any = false
 			for _, other in modalList do
@@ -1863,14 +1725,212 @@ do
 		end)
 	end
 
-	-- Currency is split into two readable pills with the uploaded pack graphics.
+	--========================================================================
+	-- SAVED GOTHIC UI TEXT BOX DESIGN (Obsidian Sheen + White Filigree Corners)
+	--========================================================================
+	local GothicPalette = {
+		ObsidianDark = Color3.fromRGB(13, 9, 18),
+		ObsidianMid = Color3.fromRGB(20, 14, 28),
+		ObsidianSheen = Color3.fromRGB(38, 28, 50),
+		FiligreeWhite = Color3.fromRGB(246, 244, 255),
+		OuterGlow = Color3.fromRGB(222, 205, 255),
+		CornerCutout = Color3.fromRGB(26, 15, 38),
+		InnerLineBright = Color3.fromRGB(112, 100, 132),
+		InnerLineMuted = Color3.fromRGB(68, 58, 84),
+	}
+
+	local function applyGothicBoxStyle(container: Frame, compact: boolean?, zOrder: number?): Frame
+		local isCompact = if compact ~= nil then compact else false
+		local baseZ = zOrder or container.ZIndex or 8
+
+		container.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+		container.BackgroundTransparency = 0
+		container.BorderSizePixel = 0
+		container.ZIndex = baseZ
+
+		for _, child in ipairs(container:GetChildren()) do
+			if
+				child:IsA("UICorner")
+				or child:IsA("UIStroke")
+				or child:IsA("UIGradient")
+				or child.Name == "GothicDecorRoot"
+			then
+				child:Destroy()
+			end
+		end
+
+		local corner = Instance.new("UICorner")
+		corner.CornerRadius = UDim.new(0, isCompact and 3 or 4)
+		corner.Parent = container
+
+		local grad = Instance.new("UIGradient")
+		grad.Rotation = 128
+		grad.Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0.00, GothicPalette.ObsidianDark),
+			ColorSequenceKeypoint.new(0.28, GothicPalette.ObsidianMid),
+			ColorSequenceKeypoint.new(0.46, GothicPalette.ObsidianSheen),
+			ColorSequenceKeypoint.new(0.62, GothicPalette.ObsidianMid),
+			ColorSequenceKeypoint.new(1.00, GothicPalette.ObsidianDark),
+		})
+		grad.Parent = container
+
+		local outerStroke = Instance.new("UIStroke")
+		outerStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		outerStroke.Thickness = isCompact and 1.5 or 2
+		outerStroke.Color = GothicPalette.FiligreeWhite
+		outerStroke.Transparency = 0.04
+		outerStroke.Parent = container
+
+		local decorRoot = Instance.new("Folder")
+		decorRoot.Name = "GothicDecorRoot"
+		decorRoot.Parent = container
+
+		local glowFrame = Instance.new("Frame")
+		glowFrame.Name = "OuterGlow"
+		glowFrame.Size = UDim2.new(1, isCompact and 6 or 10, 1, isCompact and 6 or 10)
+		glowFrame.Position = UDim2.fromScale(0.5, 0.5)
+		glowFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+		glowFrame.BackgroundTransparency = 1
+		glowFrame.ZIndex = baseZ
+		glowFrame.Parent = decorRoot
+
+		local glowCorner = Instance.new("UICorner")
+		glowCorner.CornerRadius = UDim.new(0, isCompact and 5 or 7)
+		glowCorner.Parent = glowFrame
+
+		local glowStroke = Instance.new("UIStroke")
+		glowStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		glowStroke.Thickness = isCompact and 2.5 or 4
+		glowStroke.Color = GothicPalette.OuterGlow
+		glowStroke.Transparency = 0.62
+		glowStroke.Parent = glowFrame
+
+		local insetX = isCompact and 10 or 18
+		local line1Y = isCompact and 4 or 7
+		local line2Y = isCompact and 6 or 11
+
+		local function makeTrimLine(name: string, yOffset: number, fromBottom: boolean, col: Color3, trans: number)
+			local line = Instance.new("Frame")
+			line.Name = name
+			line.Size = UDim2.new(1, -insetX * 2, 0, 1)
+			line.Position = if fromBottom
+				then UDim2.new(0, insetX, 1, -yOffset)
+				else UDim2.new(0, insetX, 0, yOffset)
+			line.BackgroundColor3 = col
+			line.BackgroundTransparency = trans
+			line.BorderSizePixel = 0
+			line.ZIndex = baseZ + 1
+			line.Parent = decorRoot
+		end
+
+		makeTrimLine("TopTrimOuter", line1Y, false, GothicPalette.InnerLineBright, 0.25)
+		makeTrimLine("TopTrimInner", line2Y, false, GothicPalette.InnerLineMuted, 0.42)
+		makeTrimLine("BottomTrimOuter", line1Y, true, GothicPalette.InnerLineBright, 0.25)
+		makeTrimLine("BottomTrimInner", line2Y, true, GothicPalette.InnerLineMuted, 0.42)
+
+		local wingLen = isCompact and 13 or 24
+		local wingThick = isCompact and 2 or 3
+		local diamondOuter = isCompact and 9 or 15
+		local diamondInner = isCompact and 5 or 8
+		local spurSize = isCompact and 4 or 6
+
+		local corners = {
+			{ Name = "CornerTL", X = 0, Y = 0, AX = 0, AY = 0, SX = 1, SY = 1 },
+			{ Name = "CornerTR", X = 1, Y = 0, AX = 1, AY = 0, SX = -1, SY = 1 },
+			{ Name = "CornerBL", X = 0, Y = 1, AX = 0, AY = 1, SX = 1, SY = -1 },
+			{ Name = "CornerBR", X = 1, Y = 1, AX = 1, AY = 1, SX = -1, SY = -1 },
+		}
+
+		for _, c in ipairs(corners) do
+			local hWing = Instance.new("Frame")
+			hWing.Name = c.Name .. "_HWing"
+			hWing.Size = UDim2.fromOffset(wingLen, wingThick)
+			hWing.AnchorPoint = Vector2.new(c.AX, c.AY)
+			hWing.Position = UDim2.new(c.X, -c.SX * 1, c.Y, -c.SY * 1)
+			hWing.BackgroundColor3 = GothicPalette.FiligreeWhite
+			hWing.BorderSizePixel = 0
+			hWing.ZIndex = baseZ + 2
+			hWing.Parent = decorRoot
+
+			local vWing = Instance.new("Frame")
+			vWing.Name = c.Name .. "_VWing"
+			vWing.Size = UDim2.fromOffset(wingThick, wingLen)
+			vWing.AnchorPoint = Vector2.new(c.AX, c.AY)
+			vWing.Position = UDim2.new(c.X, -c.SX * 1, c.Y, -c.SY * 1)
+			vWing.BackgroundColor3 = GothicPalette.FiligreeWhite
+			vWing.BorderSizePixel = 0
+			vWing.ZIndex = baseZ + 2
+			vWing.Parent = decorRoot
+
+			local hSpur = Instance.new("Frame")
+			hSpur.Name = c.Name .. "_HSpur"
+			hSpur.Size = UDim2.fromOffset(spurSize, spurSize)
+			hSpur.AnchorPoint = Vector2.new(0.5, 0.5)
+			hSpur.Position = UDim2.new(c.X, c.SX * (wingLen - 2), c.Y, c.SY * 1)
+			hSpur.Rotation = 45
+			hSpur.BackgroundColor3 = GothicPalette.FiligreeWhite
+			hSpur.BorderSizePixel = 0
+			hSpur.ZIndex = baseZ + 2
+			hSpur.Parent = decorRoot
+
+			local vSpur = Instance.new("Frame")
+			vSpur.Name = c.Name .. "_VSpur"
+			vSpur.Size = UDim2.fromOffset(spurSize, spurSize)
+			vSpur.AnchorPoint = Vector2.new(0.5, 0.5)
+			vSpur.Position = UDim2.new(c.X, c.SX * 1, c.Y, c.SY * (wingLen - 2))
+			vSpur.Rotation = 45
+			vSpur.BackgroundColor3 = GothicPalette.FiligreeWhite
+			vSpur.BorderSizePixel = 0
+			vSpur.ZIndex = baseZ + 2
+			vSpur.Parent = decorRoot
+
+			local crestOuter = Instance.new("Frame")
+			crestOuter.Name = c.Name .. "_CrestOuter"
+			crestOuter.Size = UDim2.fromOffset(diamondOuter, diamondOuter)
+			crestOuter.AnchorPoint = Vector2.new(0.5, 0.5)
+			crestOuter.Position = UDim2.new(c.X, c.SX * (isCompact and 3 or 5), c.Y, c.SY * (isCompact and 3 or 5))
+			crestOuter.Rotation = 45
+			crestOuter.BackgroundColor3 = GothicPalette.FiligreeWhite
+			crestOuter.BorderSizePixel = 0
+			crestOuter.ZIndex = baseZ + 2
+			crestOuter.Parent = decorRoot
+
+			local crestCutout = Instance.new("Frame")
+			crestCutout.Name = "DarkCutout"
+			crestCutout.Size = UDim2.fromOffset(diamondInner, diamondInner)
+			crestCutout.AnchorPoint = Vector2.new(0.5, 0.5)
+			crestCutout.Position = UDim2.fromScale(0.5, 0.5)
+			crestCutout.BackgroundColor3 = GothicPalette.CornerCutout
+			crestCutout.BorderSizePixel = 0
+			crestCutout.ZIndex = baseZ + 3
+			crestCutout.Parent = crestOuter
+		end
+
+		return container
+	end
+
+	-- Apply Gothic Obsidian & White Filigree Container Design to the Bottom Menu Bar
+	applyGothicBoxStyle(bottomBar, true, 8)
+
+	-- Remove top menu bar so the viewport top is unobstructed and currencies live in the bottom-left
+	topBar.Visible = false
 	currencyLabel.Visible = false
+	honorLabel.Visible = false
+
+	carriedLootPill.Parent = hudGui
+	carriedLootPill.AnchorPoint = Vector2.new(0, 1)
+	carriedLootPill.Position = UDim2.new(0, 14, 1, -120)
+	carriedLootPill.ZIndex = 8
+
+	-- Bottom-left Gold & Diamond Currency Containers (above PATCH NOTES) using Gothic Box Design
 	local currencyCluster = Instance.new("Frame")
 	currencyCluster.Name = "CurrencyCluster"
 	currencyCluster.BackgroundTransparency = 1
-	currencyCluster.Size = UDim2.fromOffset(242, 44)
-	currencyCluster.Position = UDim2.fromOffset(12, 10)
-	currencyCluster.Parent = topBar
+	currencyCluster.Size = UDim2.fromOffset(258, 44)
+	currencyCluster.AnchorPoint = Vector2.new(0, 1)
+	currencyCluster.Position = UDim2.new(0, 14, 1, -64)
+	currencyCluster.ZIndex = 8
+	currencyCluster.Parent = hudGui
 
 	local currencyFields: { [string]: TextLabel } = {}
 	local currencies = {
@@ -1880,24 +1940,27 @@ do
 	for i, item in currencies do
 		local f = makeFrame({
 			Name = item[1] .. "Pill",
-			Size = UDim2.fromOffset(118, 42),
-			Position = UDim2.fromOffset((i - 1) * 124, 0),
-			BackgroundColor3 = Color3.fromRGB(21, 31, 48),
-			Corner = 9,
+			Size = UDim2.fromOffset(122, 42),
+			Position = UDim2.fromOffset((i - 1) * 134, 1),
+			BackgroundColor3 = GothicPalette.ObsidianDark,
 			Parent = currencyCluster,
 		})
-		stroke(f)
-		image(f, item[2] :: string, UDim2.fromOffset(24, 24), UDim2.fromOffset(8, 9))
-		currencyFields[item[1] :: string] = makeLabel({
-			Size = UDim2.new(1, -42, 1, 0),
-			Position = UDim2.fromOffset(38, 0),
-			Text = "—",
+		applyGothicBoxStyle(f, true, 8)
+		local icon = image(f, item[2] :: string, UDim2.fromOffset(22, 22), UDim2.fromOffset(12, 10))
+		icon.ZIndex = 11
+		local lbl = makeLabel({
+			Size = UDim2.new(1, -46, 1, 0),
+			Position = UDim2.fromOffset(40, 0),
+			Text = if item[1] == "Gold" then "500" else "300",
 			TextColor3 = item[3] :: Color3,
-			TextSize = 16,
+			Font = Enum.Font.Fantasy,
+			TextSize = 17,
 			TextScaled = false,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			Parent = f,
 		})
+		lbl.ZIndex = 11
+		currencyFields[item[1] :: string] = lbl
 	end
 
 	local function number(n: number?): string
@@ -1912,9 +1975,9 @@ do
 	end
 
 	local function updateCurrency(profile: any)
-		if not profile then
-			return
-		end
+		if not profile then return end
+		if profile._PitDelta then profile = CurrentProfile end
+		if not profile or not profile.Currencies then return end
 		for key, label in currencyFields do
 			label.Text = number(profile.Currencies[key])
 		end
@@ -1922,16 +1985,17 @@ do
 	ProfileDeltaSyncEvent.OnClientEvent:Connect(updateCurrency)
 	updateCurrency(CurrentProfile)
 
-	-- Keep development hooks out of normal navigation. F8 reveals them in Studio.
+	-- Keep Studio F8 development hooks available without the top menu bar
+	navButtonsFrame.Parent = hudGui
+	navButtonsFrame.AnchorPoint = Vector2.new(1, 0)
+	navButtonsFrame.Position = UDim2.new(1, -16, 0, 12)
+	navButtonsFrame.Size = UDim2.fromOffset(240, 36)
 	local devButtons = {}
-	local primaryButtons = {}
 	for _, b in navButtonsFrame:GetChildren() do
 		if b:IsA("TextButton") then
+			b.Visible = false
 			if b.Text:find("Spawn Boss") or b.Text:find("Resources") then
-				b.Visible = false
 				table.insert(devButtons, b)
-			else
-				table.insert(primaryButtons, b)
 			end
 		end
 	end
@@ -1948,13 +2012,6 @@ do
 			end
 		end
 	end)
-	for _, b in primaryButtons do
-		b.BackgroundColor3 = Color3.fromRGB(29, 42, 62)
-		b.TextColor3 = P.gold
-		b.TextSize = 14
-		b.TextScaled = false
-		stroke(b)
-	end
 
 	local compact = false
 	local encounterOpen = false
@@ -1984,38 +2041,7 @@ do
 	wrLeftPane.Parent = wrScroll
 	wrRightPane.Parent = wrScroll
 
-	local pitLeft = Instance.new("Frame")
-	pitLeft.Name = "PitTargetContent"
-	pitLeft.BackgroundTransparency = 1
-	pitLeft.Parent = pitModal
-
-	local pitContentScroll = Instance.new("ScrollingFrame")
-	pitContentScroll.Name = "PitContent"
-	pitContentScroll.BackgroundTransparency = 1
-	pitContentScroll.BorderSizePixel = 0
-	pitContentScroll.ScrollBarThickness = 4
-	pitContentScroll.ScrollBarImageColor3 = P.gold
-	pitContentScroll.Parent = pitModal
-	pitLeft.Parent = pitContentScroll
-	pitRosterScroll.Parent = pitContentScroll
-	pitTargetLabel.Parent = pitLeft
-	pitTargetLabel.Position = UDim2.fromOffset(0, 0)
-	pitTargetLabel.Size = UDim2.new(1, 0, 0, 170)
-	pitTargetLabel.TextSize = 14
-	pitTargetLabel.TextScaled = false
-	pitTargetLabel.TextWrapped = true
-
-	local pitAction = 0
-	for _, b in pitModal:GetChildren() do
-		if b:IsA("TextButton") and (b.Text:find("FEED") or b.Text:find("ASCEND")) then
-			b.Parent = pitLeft
-			b.Position = UDim2.fromOffset(0, 184 + pitAction * 64)
-			b.Size = UDim2.new(1, 0, 0, 54)
-			pitAction += 1
-		end
-	end
-
-	for _, list in { rosterScroll, pitRosterScroll } do
+	for _, list in { rosterScroll } do
 		list.AutomaticCanvasSize = Enum.AutomaticSize.Y
 		list.CanvasSize = UDim2.fromOffset(0, 0)
 		list.ScrollBarImageColor3 = P.gold
@@ -2038,13 +2064,13 @@ do
 			end
 		end
 	end
-	for _, list in { rosterScroll, pitRosterScroll } do
+	for _, list in { rosterScroll } do
 		list.ChildAdded:Connect(function(o)
 			task.defer(rowStyle, o)
 		end)
 	end
 
-	local modalWidths = { 1000, 920 }
+	local modalWidths = { 1000 }
 	local function layout()
 		local cam = workspace.CurrentCamera
 		if not cam then
@@ -2056,29 +2082,15 @@ do
 		local portrait = w < 650
 		local stackPanels = portrait or h < 540
 
-		topBar.Position = UDim2.fromOffset(12, 8)
-		topBar.Size = UDim2.new(1, -24, 0, (w < 780) and 106 or 64)
-		topBar.BackgroundColor3 = P.surface
-		topBar.BackgroundTransparency = 0.04
-		stroke(topBar)
+		topBar.Visible = false
+		honorLabel.Visible = false
 
+		currencyCluster.AnchorPoint = Vector2.new(0, 1)
+		currencyCluster.Position = UDim2.new(0, 14, 1, -64)
 		local moneyScale = currencyCluster:FindFirstChildOfClass("UIScale") or Instance.new("UIScale", currencyCluster)
-		moneyScale.Scale = portrait and math.min(1, (w - 48) / 242) or 1
+		moneyScale.Scale = portrait and math.min(1, (w - 48) / 258) or 1
 
-		honorLabel.Visible = not compact
-		honorLabel.Size = UDim2.fromOffset(220, 32)
-		honorLabel.Position = UDim2.fromOffset(266, 16)
-		honorLabel.TextScaled = false
-		honorLabel.TextSize = 12
-
-		navButtonsFrame.Position = (w < 780) and UDim2.fromOffset(12, 60) or UDim2.new(1, -590, 0, 12)
-		navButtonsFrame.Size = (w < 780) and UDim2.new(1, -24, 0, 36) or UDim2.fromOffset(580, 40)
-		for _, b in primaryButtons do
-			b.Size = UDim2.fromOffset(portrait and math.floor((w - 64) / 3) or 116, 36)
-		end
-		navLayout.HorizontalAlignment = (w < 780) and Enum.HorizontalAlignment.Left or Enum.HorizontalAlignment.Right
-
-		bossBanner.Position = UDim2.new(0.5, 0, 0, compact and 124 or 84)
+		bossBanner.Position = UDim2.new(0.5, 0, 0, 14)
 		bossBanner.AnchorPoint = Vector2.new(0.5, 0)
 		bossBanner.Size = UDim2.new(0, math.min(w - 32, 720), 0, 58)
 		bossBanner.BackgroundColor3 = P.surface
@@ -2090,10 +2102,10 @@ do
 		novaCastLabel.TextScaled = false
 
 		toastBanner.AnchorPoint = Vector2.new(0.5, 0)
-		toastBanner.Position = UDim2.new(0.5, 0, 0, compact and 226 or 152)
+		toastBanner.Position = UDim2.new(0.5, 0, 0, 82)
 		toastBanner.Size = UDim2.new(0, math.min(w - 32, 650), 0, 46)
 
-		rightBoard.Position = UDim2.new(1, -16, 0, compact and 228 or 180)
+		rightBoard.Position = UDim2.new(1, -16, 0, compact and 136 or 96)
 		rightBoard.AnchorPoint = Vector2.new(1, 0)
 		rightBoard.Size = UDim2.fromOffset(math.min(260, w - 32), 170)
 		rightBoard.Visible = not compact or encounterOpen
@@ -2101,28 +2113,26 @@ do
 		rightBoard.BackgroundTransparency = 0.08
 		stroke(rightBoard)
 		encounterToggle.Visible = compact
-		encounterToggle.Position = UDim2.new(1, -136, 0, (w < 780) and 122 or 80)
+		encounterToggle.Position = UDim2.new(1, -136, 0, 16)
 
 		-- Responsive scaling for the BottomToolbar on smaller screens
 		patchNotesBtn.Visible = w >= 720
 		local centerScale = centerGroup:FindFirstChildOfClass("UIScale") or Instance.new("UIScale", centerGroup)
 		if w < 720 then
 			centerScale.Scale = math.clamp((w - 130) / 740, 0.55, 1)
-			centerGroup.Position = UDim2.new(0, 12, 0, 3)
+			centerGroup.Position = UDim2.new(0, 12, 0, 0)
 			centerGroup.AnchorPoint = Vector2.new(0, 0)
 		elseif w < 1040 then
 			centerScale.Scale = math.clamp((w - 280) / 740, 0.72, 1)
-			centerGroup.Position = UDim2.new(0.5, 0, 0, 3)
+			centerGroup.Position = UDim2.new(0.5, 0, 0, 0)
 			centerGroup.AnchorPoint = Vector2.new(0.5, 0)
 		else
 			centerScale.Scale = 1
-			centerGroup.Position = UDim2.new(0.5, 0, 0, 3)
+			centerGroup.Position = UDim2.new(0.5, 0, 0, 0)
 			centerGroup.AnchorPoint = Vector2.new(0.5, 0)
 		end
 
-		for i, m in modalList do
-			m.Size = UDim2.fromOffset(math.min(w - 24, modalWidths[i]), math.min(h - 70, 560))
-		end
+		waitingRoomModal.Size = UDim2.fromOffset(math.min(w - 24, modalWidths[1]), math.min(h - 70, 560))
 		wrScroll.Position = UDim2.fromOffset(12, 48)
 		wrScroll.Size = UDim2.new(1, -24, 1, -62)
 		if stackPanels then
@@ -2139,23 +2149,10 @@ do
 			wrRightPane.Size = UDim2.new(0.5, -10, 1, 0)
 		end
 
-		pitContentScroll.Position = UDim2.fromOffset(16, 52)
-		pitContentScroll.Size = UDim2.new(1, -32, 1, -64)
-		if stackPanels then
-			pitContentScroll.CanvasSize = UDim2.fromOffset(0, 660)
-			pitLeft.Position = UDim2.fromOffset(0, 0)
-			pitLeft.Size = UDim2.new(1, -10, 0, 304)
-			pitRosterScroll.Position = UDim2.fromOffset(0, 324)
-			pitRosterScroll.Size = UDim2.new(1, -10, 0, 320)
-		else
-			pitContentScroll.CanvasSize = UDim2.fromOffset(0, 0)
-			pitLeft.Position = UDim2.fromScale(0, 0)
-			pitLeft.Size = UDim2.new(0.46, 0, 1, 0)
-			pitRosterScroll.Position = UDim2.fromScale(0.5, 0)
-			pitRosterScroll.Size = UDim2.new(0.5, -10, 1, 0)
-		end
+		-- The Pit composes its own columns and phone steps from these bounds.
+		pitModal.Size = UDim2.fromOffset(math.min(w - 20, 1340), math.max(360, math.min(h - 76, 850)))
 
-		for _, list in { rosterScroll, pitRosterScroll } do
+		for _, list in { rosterScroll } do
 			for _, o in list:GetChildren() do
 				rowStyle(o)
 			end

@@ -1,8 +1,9 @@
 --!strict
 -- StarterPlayerScripts/Input/MasterController.client.luau
--- Handles [Click/Tap] Focus Target Raycasting, [Q] Overdrive, [E] Recall & Plot Prompts
+-- Handles [Click/Tap] targeting, [Q] Overdrive, [E] Recall, [Shift] Sprint, and [F] facility HUD prompts.
 
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -20,6 +21,35 @@ local WhistleCommandRemote = CombatRemotes:WaitForChild("WhistleCommand") :: Rem
 local DropCarriedItemRemote = CombatRemotes:WaitForChild("DropCarriedItem") :: RemoteEvent
 local FacilityInteractEvent = TycoonRemotes:WaitForChild("FacilityInteract") :: RemoteEvent
 local AssignHeroRoleFunc = TycoonRemotes:WaitForChild("AssignHeroRole") :: RemoteFunction
+
+local SPRINT_MULTIPLIER = 3.0
+local baseWalkSpeed = 16.0
+local lastAppliedSprint = false
+
+RunService.RenderStepped:Connect(function()
+	local char = LocalPlayer.Character
+	local hum = char and char:FindFirstChildOfClass("Humanoid")
+	if not hum then
+		return
+	end
+
+	local shiftDown = not UserInputService:GetFocusedTextBox()
+		and (
+			UserInputService:IsKeyDown(Enum.KeyCode.LeftShift)
+			or UserInputService:IsKeyDown(Enum.KeyCode.RightShift)
+		)
+
+	local expectedSpeed = if lastAppliedSprint then baseWalkSpeed * SPRINT_MULTIPLIER else baseWalkSpeed
+	if math.abs(hum.WalkSpeed - expectedSpeed) > 0.05 then
+		baseWalkSpeed = hum.WalkSpeed
+	end
+
+	lastAppliedSprint = shiftDown
+	local targetSpeed = if shiftDown then baseWalkSpeed * SPRINT_MULTIPLIER else baseWalkSpeed
+	if math.abs(hum.WalkSpeed - targetSpeed) > 0.05 then
+		hum.WalkSpeed = targetSpeed
+	end
+end)
 
 -- Facility interactions take priority over Recall while their prompt is visible.
 local visibleInteractionPrompts: { [ProximityPrompt]: boolean } = {}
@@ -143,7 +173,12 @@ ProximityPromptService.PromptTriggered:Connect(function(prompt: ProximityPrompt,
 	end
 
 	local name = prompt.Name
-	if name == "SummonAltarPrompt" then
+	if name == "FacilityHUDPrompt" then
+		local facility = prompt:GetAttribute("FacilityHUD")
+		if type(facility) == "string" and _G.OpenFacilityHUD then
+			_G.OpenFacilityHUD(facility)
+		end
+	elseif name == "SummonAltarPrompt" then
 		if _G.OpenMasterModal then
 			_G.OpenMasterModal("WAITING_ROOM")
 		end

@@ -5,6 +5,18 @@
 
 ---
 
+## 0. SAVED UI TEXT BOX & CONTAINER DESIGN (`GothicBoxStyle`)
+
+Saved in [`ReplicatedStorage/Shared/Util/GothicBoxStyle.luau`](file:///c:/WORK/infinite-tower/src/ReplicatedStorage/Shared/Util/GothicBoxStyle.luau) and applied in [`StarterPlayerScripts/UI/HUDController.client.luau`](file:///c:/WORK/infinite-tower/src/StarterPlayerScripts/UI/HUDController.client.luau):
+
+- **Interior Surface:** Deep obsidian-violet glossy background (`#0D0912` $\rightarrow$ `#261C32` $\rightarrow$ `#0D0912` at a `128°` diagonal `UIGradient` sheen).
+- **Outer Frame & Glow:** Crisp white-silver border (`#F6F4FF`, `1.5px–2px`) surrounded by a soft lavender-white outer glow (`#DED0FF`, `Transparency = 0.62`).
+- **Double Inner Horizontal Trim Lines:** Inset parallel top and bottom trim lines (`#706484` outer line and `#443A54` inner line).
+- **Ornate 4-Corner Gothic Filigree Crests:** White corner wings with stepped gothic spurs and a `45°` rotated white diamond crest containing a dark-violet diamond cutout (`#1A0F26`).
+- **Bottom-Left Currency Placement:** The top menu bar is removed; `CurrencyCluster` (`GoldPill` and `GemsPill`) uses the compact Gothic Box Design and is anchored at the bottom-left (`Position = UDim2.new(0, 18, 1, -60)`, `AnchorPoint = Vector2.new(0, 1)`) directly above the **PATCH NOTES** button.
+
+---
+
 ## 1. MAIN MASTER HUD (`MasterHUDScreenGui`)
 
 The Main Master HUD is designed around **"Eyes-on-the-Arena" tactical command**. All critical combat telemetry (World Boss *Devouring Nova* telegraphs, Squad Stamina bars, Whistle cooldowns, and the dynamic `[B] Shatter Pact` betrayal trigger) sit in the peripheral bands so the center `70%` of the viewport remains unobstructed for clicking targets and spotting physical Relics.

@@ -8,7 +8,8 @@ function Layout.Floor(index)
  local ledge=folder:WaitForChild(string.format("TowerRingLedge_%02d",index))
  local core=folder:WaitForChild(string.format("TowerRingCore_%02d",index))
  local above=folder:FindFirstChild(string.format("TowerRingCore_%02d",index+1))
- ledge.CanCollide=true ledge.CanQuery=true
+ -- Traversal replaces the solid decorative disk with a platform and stairwell opening.
+ if not ledge:GetAttribute("WalkablePlatform") then ledge.CanCollide=true ledge.CanQuery=true end
  local inner=above and above.Size.Y/2 or 0
  local outer=ledge.Size.Y/2
  return Vector3.new(core.Position.X,ledge.Position.Y+ledge.Size.X/2,core.Position.Z),inner,outer
