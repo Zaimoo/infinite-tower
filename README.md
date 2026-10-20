@@ -49,9 +49,10 @@
 | **Focus Target** | `[Click / Tap]` | Raycast onto any mob, boss, or enemy thief to focus squad aggro. |
 | **Overdrive Whistle** | `[Q]` | $20\text{s}$ CD. Consumes $5$ Stamina/hero for $+40\%$ Attack Speed for $5\text{s}$. |
 | **Emergency Recall** | `[E]` | $6\text{s}$ CD. Instantly warps squad to Master + $2\text{s}$ pacify (dodges $85\text{-stud}$ Devouring Nova). |
+| **Drop Carried Item** | `[R]` / Drop button | Place carried cargo or a relic on the ground for pickup; restores normal movement. |
 | **Retaliate Attack** | `[⚔️ RETALIATE]` | Single-click HUD response when your drop is stolen to unleash squad PvP. |
 | **Waiting Room** | UI / Prompt | Manage roster, Gacha pulls, facility worker assignments, and synthesis. |
-| **The Pit** | UI / Prompt | Synthesize fodder heroes for XP; ascend heroes from $1★$ to $5★$. |
+| **The Pit** | UI / `[E]` prompt | Approach the Pit and open hero synthesis and promotion; ascend heroes from $1★$ to $5★$. |
 
 ---
 

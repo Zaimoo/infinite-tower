@@ -35,6 +35,8 @@ export type ActiveRelic = {
 	LockedUserId: number?,
 	LockExpiresAt: number,
 	DespawnAt: number,
+	PickupBlockedUserId: number?,
+	PickupBlockedUntil: number?,
 }
 
 local BASE_WALKSPEED = 16.0
@@ -186,6 +188,8 @@ function RelicService.TryPickupRelic(player: Player, relic: ActiveRelic): boolea
 	if relic.Carrier ~= nil or CarrierToRelic[player] ~= nil then
 		return false
 	end
+	if player.Character and player.Character:GetAttribute("CarryingLoot") == true then return false end
+	if relic.PickupBlockedUserId == player.UserId and now < (relic.PickupBlockedUntil or 0) then return false end
 	if now < (PlayerStunnedUntil[player] or 0) then
 		return false
 	end
@@ -227,6 +231,33 @@ function RelicService.TryPickupRelic(player: Player, relic: ActiveRelic): boolea
 	updateMasterMovementAttributes(player, now)
 	dm.SendToast(player, string.format("Carrying %s (-%d%% Spd)! Bring to your Extraction Pad!", spec.DisplayName, math.round(spec.WalkSpeedPenalty * 100)), "INFO")
 	RelicStateRemote:FireAllClients(relic.RelicId, relic.TierId, "PICKUP", player.UserId, 0)
+	return true
+end
+
+function RelicService.DropCarriedRelic(carrier: Player): boolean
+	local relic = CarrierToRelic[carrier]
+	if not relic then return false end
+	if relic.Weld then
+		relic.Weld:Destroy()
+		relic.Weld = nil
+	end
+	local _, root = getCharacterParts(carrier)
+	local position = root and (root.Position + root.CFrame.LookVector * 8) or relic.Part.Position
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = {carrier.Character or relic.Part, PhysicalRelicsFolder, Workspace.PhysicalLoot}
+	local ground = Workspace:Raycast(position + Vector3.new(0, 8, 0), Vector3.new(0, -64, 0), params)
+	relic.Part.Anchored = true
+	relic.Part.Position = ground and (ground.Position + Vector3.new(0, relic.Part.Size.Y / 2 + 0.2, 0)) or position
+	relic.Carrier = nil
+	CarrierToRelic[carrier] = nil
+	relic.LockedUserId = nil
+	relic.LockExpiresAt = 0
+	relic.PickupBlockedUserId = carrier.UserId
+	relic.PickupBlockedUntil = os.clock() + 1.5
+	if carrier.Character then carrier.Character:SetAttribute("CarryingRelic", nil) end
+	updateMasterMovementAttributes(carrier, os.clock())
+	RelicStateRemote:FireAllClients(relic.RelicId, relic.TierId, "DROP", carrier.UserId, 0)
 	return true
 end
 

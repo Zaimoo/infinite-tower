@@ -137,6 +137,9 @@ flowchart TD
 | **Physical Contested Loot** | Complete | Physical meshes spawn in `Workspace.PhysicalLoot`, weld overhead, and bank at $R \ge 460$ |
 | **Loot Theft & Retaliation** | Complete & Verified | Theft sets `IsLootThief`, records `TheftGrudge`, HUD Retaliate dispatches PvP aggro, and squads clash |
 | **Squad Wipe & Spilled Loot** | Complete | Wipe drops held cargo, sets `CanCollectLoot = false`, and locks looting until Infirmary recovery |
+| **Pit Proximity Access** | Verified in Studio | Prompt ignores decorative mesh occlusion on all six plots; `[E]` opens the Pit modal and takes priority over Recall |
+| **Manual Item Drop** | Verified in Studio | `[R]` drops cargo; the HUD Drop button drops relics; both support pickup again and restore movement; a 1.5s pickup delay prevents immediate reacquisition |
+| **Carry Cleanup & Banking** | Verified in Studio | Dropping clears carry attributes, welds, and HUD state; banking still awards the cargo value and clears its carry banner |
 | **Blood Pact Removal** | Clean | Remotes, 3D pedestals, and UI cards completely deleted; no orphan dependencies |
 | **Mercenary Removal** | Clean | Remotes, 3D boards, directives, and Audit Soul UI completely deleted; zero syntax errors |
 | **Anime R15 Hero Rig Pipeline** | Complete & Verified | 7 custom anime models in `ReplicatedStorage.Assets.Heroes` with 15 Motor6Ds, client procedural animation, and 152° loot hauling |

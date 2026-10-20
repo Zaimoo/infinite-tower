@@ -28,6 +28,7 @@ local WorldBossTriggerRemote = CombatRemotes:WaitForChild("WorldBossTrigger") ::
 local FocusTargetRemote = CombatRemotes:WaitForChild("FocusTarget") :: RemoteEvent
 local LootStolenAlertRemote = CombatRemotes:WaitForChild("LootStolenAlert") :: RemoteEvent
 local SquadWipeStateRemote = CombatRemotes:WaitForChild("SquadWipeState") :: RemoteEvent
+local DropCarriedItemRemote = CombatRemotes:WaitForChild("DropCarriedItem") :: RemoteEvent
 local CarriedLootSyncRemote = CombatRemotes:WaitForChild("CarriedLootSync") :: RemoteEvent
 
 local RequestSummonFunc = TycoonRemotes:WaitForChild("RequestSummon") :: RemoteFunction
@@ -437,6 +438,20 @@ local relicCarryText = makeLabel({
 	Position = UDim2.new(0.02, 0, 0.07, 0),
 	Text = " CARRYING RELIC!",
 	TextColor3 = Color3.fromRGB(255, 225, 115),
+	Parent = relicCarryBanner,
+})
+
+relicCarryText.Size = UDim2.new(1, -126, 1, -8)
+relicCarryText.Position = UDim2.fromOffset(8, 4)
+local dropCarriedButton = makeButton({
+	Name = "DropCarriedItemButton",
+	Text = "[R] DROP",
+	AnchorPoint = Vector2.new(1, 0.5),
+	Position = UDim2.new(1, -6, 0.5, 0),
+	Size = UDim2.fromOffset(104, 36),
+	BackgroundColor3 = Color3.fromRGB(170, 65, 70),
+	Corner = 6,
+	OnClick = function() DropCarriedItemRemote:FireServer() end,
 	Parent = relicCarryBanner,
 })
 
@@ -1324,7 +1339,7 @@ RunService.RenderStepped:Connect(function()
 	if carryingRelic or carryingLootName then
 		relicCarryBanner.Visible = true
 		local nameStr = carryingRelic or carryingLootName
-		relicCarryText.Text = string.format(" CARRYING: %s! (Bring to Perimeter or Plot)", tostring(nameStr))
+		relicCarryText.Text = string.format(" CARRYING: %s", tostring(nameStr))
 	else
 		relicCarryBanner.Visible = false
 	end

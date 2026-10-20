@@ -24,6 +24,12 @@ local LootStolenAlertRemote = CombatRemotes:WaitForChild("LootStolenAlert") :: R
 local SquadWipeStateRemote = CombatRemotes:WaitForChild("SquadWipeState") :: RemoteEvent
 local CarriedLootSyncRemote = CombatRemotes:WaitForChild("CarriedLootSync") :: RemoteEvent
 local PhysicalLootFolder = Workspace:WaitForChild("PhysicalLoot") :: Folder
+local DropCarriedItemRemote = CombatRemotes:FindFirstChild("DropCarriedItem") :: RemoteEvent?
+if not DropCarriedItemRemote then
+	DropCarriedItemRemote = Instance.new("RemoteEvent")
+	DropCarriedItemRemote.Name = "DropCarriedItem"
+	DropCarriedItemRemote.Parent = CombatRemotes
+end
 
 local function getDataManager(): any
 	while not _G.DataManager do
@@ -144,10 +150,11 @@ local NextWorldBossSpawnClock = os.clock() + 180 -- First automatic World Boss i
 -- 2. METADATA BROADCAST & HELPER FUNCTIONS
 --============================================================================
 
-local function buildMetadataTable(): { [number]: any }
-	local meta: { [number]: any } = {}
+local function buildMetadataTable(): { any }
+	-- Send a dense list so despawned IDs cannot create holes in the remote payload.
+	local meta: { any } = {}
 	for netId, h in pairs(ActiveHeroesByNetId) do
-		meta[netId] = {
+		table.insert(meta, {
 			NetId = netId,
 			IsHero = true,
 			OwnerUserId = h.Owner.UserId,
@@ -159,11 +166,11 @@ local function buildMetadataTable(): { [number]: any }
 			Level = h.Level,
 			SlotIndex = h.SlotIndex,
 			MaxHP = h.MaxHP,
-		}
+		})
 	end
 	for netId, m in pairs(ActiveMobsByNetId) do
 		if m.IsAlive then
-			meta[netId] = {
+			table.insert(meta, {
 				NetId = netId,
 				IsHero = false,
 				SpecId = m.SpecId,
@@ -172,7 +179,7 @@ local function buildMetadataTable(): { [number]: any }
 				RingIndex = m.RingIndex,
 				MaxHP = m.MaxHP,
 				Phase = m.Phase,
-			}
+			})
 		end
 	end
 	return meta
@@ -186,6 +193,17 @@ local function broadcastMetadata(targetPlayer: Player?)
 		EntityMetadataRemote:FireAllClients(payload)
 	end
 end
+
+local LastMetadataRequestByPlayer: { [Player]: number } = {}
+EntityMetadataRemote.OnServerEvent:Connect(function(player: Player)
+	local now = os.clock()
+	local lastRequest = LastMetadataRequestByPlayer[player]
+	if lastRequest and now - lastRequest < 0.5 then
+		return
+	end
+	LastMetadataRequestByPlayer[player] = now
+	broadcastMetadata(player)
+end)
 
 local function getHorizontalDistance(a: Vector3, b: Vector3): number
 	local dx = a.X - b.X
@@ -350,6 +368,76 @@ end
 local collectPhysicalLoot: (player: Player, lootId: number) -> ()
 local spawnPhysicalLoot: (lootType: "GOLD" | "GEMS" | "RP", amount: number, worldPos: Vector3, killerPlayer: Player?, customLabel: string?) -> any
 
+local function clearLootCarryState(player: Player)
+	local char = player.Character
+	if char then
+		char:SetAttribute("CarryingLoot", false)
+		char:SetAttribute("CarryingLootType", nil)
+		char:SetAttribute("CarryingLootAmount", nil)
+		char:SetAttribute("CarryingLootName", nil)
+		local hum = char:FindFirstChildOfClass("Humanoid")
+		if hum then hum.WalkSpeed = 16.0 end
+	end
+	CarrierToHeldLoot[player] = nil
+	CarriedLootSyncRemote:FireClient(player, 0, 0, 0)
+end
+
+function CombatSimulation.DropCarriedLoot(player: Player, openLoot: boolean?): boolean
+	local held = CarrierToHeldLoot[player]
+	if not held then return false end
+	if held.Weld then held.Weld:Destroy() end
+
+	local char = player.Character
+	local root = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
+	local part = held.Part
+	clearLootCarryState(player)
+	if not part or not part.Parent then return true end
+
+	local position = root and (root.Position + root.CFrame.LookVector * 8) or part.Position
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = {char or part, PhysicalLootFolder, Workspace.PhysicalRelics}
+	local ground = Workspace:Raycast(position + Vector3.new(0, 8, 0), Vector3.new(0, -64, 0), params)
+	part.Anchored = true
+	part.Position = ground and (ground.Position + Vector3.new(0, part.Size.Y / 2 + 0.2, 0)) or position
+	part.Parent = PhysicalLootFolder
+
+	local now = os.clock()
+	local dropped = {
+		LootId = held.LootId, LootType = held.LootType, Amount = held.Amount,
+		Part = part, Prompt = held.OriginalPrompt, Billboard = held.Billboard,
+		KillerUserId = openLoot and 0 or held.KillerUserId,
+		KillerName = openLoot and "Open" or held.KillerName,
+		SpawnTime = now, DespawnTime = now + 90,
+		PickupBlockedUserId = player.UserId, PickupBlockedUntil = now + 1.5,
+	}
+	ActiveLootDrops[held.LootId] = dropped
+	if held.OriginalPrompt then
+		held.OriginalPrompt.ActionText = "Hold / Carry"
+		held.OriginalPrompt.Enabled = true
+	end
+	task.delay(90, function()
+		if ActiveLootDrops[held.LootId] == dropped then
+			ActiveLootDrops[held.LootId] = nil
+			part:Destroy()
+		end
+	end)
+	return true
+end
+
+DropCarriedItemRemote.OnServerEvent:Connect(function(player: Player)
+	local char = player.Character
+	local hum = char and char:FindFirstChildOfClass("Humanoid")
+	if not hum or hum.Health <= 0 then return end
+	local dropped = CombatSimulation.DropCarriedLoot(player)
+	if _G.RelicService and _G.RelicService.DropCarriedRelic then
+		dropped = _G.RelicService.DropCarriedRelic(player) or dropped
+	end
+	if dropped then
+		getDataManager().SendToast(player, "Dropped carried item. You can pick it up again.", "INFO")
+	end
+end)
+
 local function knockHeroIntoComa(simHero: SimHero, baseComaSeconds: number)
 	local dm = getDataManager()
 	local profile = dm.GetProfile(simHero.Owner)
@@ -406,51 +494,7 @@ local function knockHeroIntoComa(simHero: SimHero, baseComaSeconds: number)
 			simHero.Owner.Character:SetAttribute("SquadWiped", true)
 		end
 
-		local ownerPos = getMasterRootPosition(simHero.Owner) or simHero.Position
-
-		-- Spills physically held loot onto the ground for open pickup!
-		local held = CarrierToHeldLoot[simHero.Owner]
-		if held then
-			if held.Weld and held.Weld.Parent then
-				held.Weld:Destroy()
-			end
-
-			local part = held.Part
-			if part and part.Parent then
-				part.Anchored = true
-				part.Position = Vector3.new(ownerPos.X, math.max(2.5, ownerPos.Y), ownerPos.Z)
-				part.Parent = PhysicalLootFolder
-
-				if held.OriginalPrompt then
-					held.OriginalPrompt.Enabled = true
-					held.OriginalPrompt.ActionText = "Hold / Carry"
-				end
-
-				ActiveLootDrops[held.LootId] = {
-					LootId = held.LootId,
-					LootType = held.LootType,
-					Amount = held.Amount,
-					Part = part,
-					Prompt = held.OriginalPrompt,
-					Billboard = held.Billboard,
-					KillerUserId = 0,
-					KillerName = "Open",
-					SpawnTime = os.clock(),
-					DespawnTime = os.clock() + 90,
-				}
-			end
-
-			local char = simHero.Owner.Character
-			if char then
-				char:SetAttribute("CarryingLoot", false)
-				local hum = char:FindFirstChildOfClass("Humanoid")
-				if hum then
-					hum.WalkSpeed = 16.0
-				end
-			end
-
-			CarrierToHeldLoot[simHero.Owner] = nil
-		end
+		CombatSimulation.DropCarriedLoot(simHero.Owner, true)
 
 		if _G.RelicService then
 			_G.RelicService.FumbleRelicOnAoEHit(simHero.Owner)
@@ -656,6 +700,10 @@ function collectPhysicalLoot(player: Player, lootId: number)
 		return
 	end
 
+	if loot.PickupBlockedUserId == player.UserId and os.clock() < (loot.PickupBlockedUntil or 0) then
+		return
+	end
+
 	local masterState = ActiveMasters[player]
 	if not masterState then
 		return
@@ -670,8 +718,8 @@ function collectPhysicalLoot(player: Player, lootId: number)
 	end
 
 	-- 2. Check if player is already holding loot
-	if CarrierToHeldLoot[player] ~= nil or (player.Character and player.Character:GetAttribute("CarryingLoot") == true) then
-		dm.SendToast(player, "⚠️ You are already carrying loot! Bank it at the Perimeter Highway or Plot first.", "WARN")
+	if CarrierToHeldLoot[player] ~= nil or (player.Character and (player.Character:GetAttribute("CarryingLoot") == true or player.Character:GetAttribute("CarryingRelic") ~= nil)) then
+		dm.SendToast(player, "⚠️ You are already carrying loot! Drop it with [R] or bank it at the Perimeter Highway or Plot first.", "WARN")
 		return
 	end
 
@@ -681,6 +729,7 @@ function collectPhysicalLoot(player: Player, lootId: number)
 	if not hum or not hrp or hum.Health <= 0 then
 		return
 	end
+	if (hrp.Position - loot.Part.Position).Magnitude > 12 then return end
 
 	ActiveLootDrops[lootId] = nil
 	local part = loot.Part
@@ -890,7 +939,7 @@ function spawnPhysicalLoot(lootType: "GOLD" | "GEMS" | "RP", amount: number, wor
 	end)
 
 	task.delay(90, function()
-		if ActiveLootDrops[lootId] then
+		if ActiveLootDrops[lootId] == lootData then
 			ActiveLootDrops[lootId] = nil
 			if part and part.Parent and not part:FindFirstChildOfClass("WeldConstraint") then
 				part:Destroy()
@@ -1643,6 +1692,7 @@ for _, p in ipairs(Players:GetPlayers()) do
 end
 
 Players.PlayerRemoving:Connect(function(player: Player)
+	LastMetadataRequestByPlayer[player] = nil
 	local masterState = ActiveMasters[player]
 	if masterState then
 		for _, simHero in pairs(masterState.DeployedHeroes) do
@@ -1709,17 +1759,7 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 						held.Part:Destroy()
 					end
 
-					local char = player.Character
-					if char then
-						char:SetAttribute("CarryingLoot", false)
-						local hum = char:FindFirstChildOfClass("Humanoid")
-						if hum then
-							hum.WalkSpeed = 16.0
-						end
-					end
-
-					CarriedLootSyncRemote:FireClient(player, 0, 0, 0)
-					CarrierToHeldLoot[player] = nil
+					clearLootCarryState(player)
 				end
 
 				if masterState.IsSquadWiped then

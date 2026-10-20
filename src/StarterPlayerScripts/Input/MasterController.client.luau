@@ -17,8 +17,18 @@ local TycoonRemotes = Remotes:WaitForChild("TycoonGachaRemotes")
 
 local FocusTargetRemote = CombatRemotes:WaitForChild("FocusTarget") :: RemoteEvent
 local WhistleCommandRemote = CombatRemotes:WaitForChild("WhistleCommand") :: RemoteEvent
+local DropCarriedItemRemote = CombatRemotes:WaitForChild("DropCarriedItem") :: RemoteEvent
 local FacilityInteractEvent = TycoonRemotes:WaitForChild("FacilityInteract") :: RemoteEvent
 local AssignHeroRoleFunc = TycoonRemotes:WaitForChild("AssignHeroRole") :: RemoteFunction
+
+-- Facility interactions take priority over Recall while their prompt is visible.
+local visibleInteractionPrompts: { [ProximityPrompt]: boolean } = {}
+ProximityPromptService.PromptShown:Connect(function(prompt: ProximityPrompt)
+	visibleInteractionPrompts[prompt] = true
+end)
+ProximityPromptService.PromptHidden:Connect(function(prompt: ProximityPrompt)
+	visibleInteractionPrompts[prompt] = nil
+end)
 
 -- 1. Keyboard Hotkeys: [Q] Overdrive Whistle, [E] Emergency Recall Whistle
 UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: boolean)
@@ -31,7 +41,17 @@ UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: 
 		if _G.TriggerHUDWhistleCooldown then
 			_G.TriggerHUDWhistleCooldown("Q")
 		end
+	elseif input.KeyCode == Enum.KeyCode.R then
+		local char = LocalPlayer.Character
+		if char and (char:GetAttribute("CarryingLoot") == true or char:GetAttribute("CarryingRelic") ~= nil) then
+			DropCarriedItemRemote:FireServer()
+		end
 	elseif input.KeyCode == Enum.KeyCode.E then
+		for prompt in pairs(visibleInteractionPrompts) do
+			if prompt.Parent and prompt.Enabled and prompt.KeyboardKeyCode == Enum.KeyCode.E then
+				return
+			end
+		end
 		WhistleCommandRemote:FireServer(2) -- 2 = E_RECALL
 		if _G.TriggerHUDWhistleCooldown then
 			_G.TriggerHUDWhistleCooldown("E")
