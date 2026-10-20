@@ -1,7 +1,7 @@
 --!strict
 -- StarterPlayerScripts/UI/HUDController.client.luau
 -- Complete Implementation of Document 4 UI/UX Wireframes:
--- 1. MasterHUDScreenGui (Main Tactical HUD)
+-- 1. MasterHUDScreenGui (Main Tactical HUD + Clean Bottom Toolbar)
 -- 2. WaitingRoomScreenGui (Tycoon, Facilities, Tech Tree, Gacha & Roster)
 -- 3. ThePitScreenGui (Synthesis XP Fodder & 1->5 Star Promotion)
 -- 4. MercenaryScreenGui (Noticeboard, Secret Directives & 50G Audit Soul Reveal)
@@ -66,7 +66,8 @@ local function makeFrame(props: { [string]: any }): Frame
 	end
 	if props.Stroke then
 		local s = Instance.new("UIStroke")
-		s.ApplyStrokeMode=Enum.ApplyStrokeMode.Border; s.Thickness = props.Stroke
+		s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		s.Thickness = props.Stroke
 		s.Color = props.StrokeColor or Color3.fromRGB(90, 95, 130)
 		s.Parent = f
 	end
@@ -86,9 +87,12 @@ local function makeLabel(props: { [string]: any }): TextLabel
 		end
 	end
 	l.TextWrapped = true
- local cap = Instance.new("UITextSizeConstraint");cap.MinTextSize=10;cap.MaxTextSize=18;cap.Parent=l
- l.Parent = props.Parent
- return l
+	local cap = Instance.new("UITextSizeConstraint")
+	cap.MinTextSize = 10
+	cap.MaxTextSize = 18
+	cap.Parent = l
+	l.Parent = props.Parent
+	return l
 end
 
 local function makeButton(props: { [string]: any }): TextButton
@@ -111,20 +115,28 @@ local function makeButton(props: { [string]: any }): TextButton
 	end
 	if props.Stroke then
 		local s = Instance.new("UIStroke")
-		s.ApplyStrokeMode=Enum.ApplyStrokeMode.Border; s.Thickness = props.Stroke
+		s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		s.Thickness = props.Stroke
 		s.Color = props.StrokeColor or Color3.fromRGB(255, 255, 255)
 		s.Parent = b
 	end
 	if props.OnClick then
 		b.Activated:Connect(props.OnClick)
 	end
-	local base=b.BackgroundColor3
- b.BackgroundColor3=Color3.fromRGB(20,29,46):Lerp(base,.22)
- b.TextColor3=Color3.fromRGB(225,229,237)
- local st=b:FindFirstChildOfClass("UIStroke") or Instance.new("UIStroke");st.ApplyStrokeMode=Enum.ApplyStrokeMode.Border;st.Color=base:Lerp(Color3.fromRGB(103,125,154),.65);st.ApplyStrokeMode=Enum.ApplyStrokeMode.Border;st.Thickness=1;st.Parent=b
- local cap=Instance.new("UITextSizeConstraint");cap.MinTextSize=10;cap.MaxTextSize=16;cap.Parent=b
- b.Parent = props.Parent
- return b
+	local base = b.BackgroundColor3
+	b.BackgroundColor3 = Color3.fromRGB(20, 29, 46):Lerp(base, 0.22)
+	b.TextColor3 = Color3.fromRGB(225, 229, 237)
+	local st = b:FindFirstChildOfClass("UIStroke") or Instance.new("UIStroke")
+	st.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	st.Color = base:Lerp(Color3.fromRGB(103, 125, 154), 0.65)
+	st.Thickness = 1
+	st.Parent = b
+	local cap = Instance.new("UITextSizeConstraint")
+	cap.MinTextSize = 10
+	cap.MaxTextSize = 16
+	cap.Parent = b
+	b.Parent = props.Parent
+	return b
 end
 
 --============================================================================
@@ -132,7 +144,9 @@ end
 --============================================================================
 
 local oldHud = PlayerGui:FindFirstChild("MasterHUDScreenGui")
-if oldHud then oldHud:Destroy() end
+if oldHud then
+	oldHud:Destroy()
+end
 
 local hudGui = Instance.new("ScreenGui")
 hudGui.Name = "MasterHUDScreenGui"
@@ -293,7 +307,7 @@ end)
 local squadWipeBanner = makeFrame({
 	Name = "SquadWipeRecoveryBanner",
 	Size = UDim2.new(0, 560, 0, 44),
-	Position = UDim2.new(0.5, -280, 1, -195),
+	Position = UDim2.new(0.5, -280, 1, -105),
 	BackgroundColor3 = Color3.fromRGB(38, 10, 14),
 	BackgroundTransparency = 0.08,
 	Corner = 8,
@@ -412,163 +426,6 @@ local rightBoardText = makeLabel({
 	Parent = rightBoard,
 })
 
--- Bottom Action Dock (Relic Carry Banner + 5 Squad Slots + [Q] Overdrive & [E] Recall Whistles)
-local bottomDock = makeFrame({
-	Name = "BottomActionDock",
-	Size = UDim2.new(0, 780, 0, 130),
-	Position = UDim2.new(0.5, -390, 1, -140),
-	BackgroundTransparency = 1,
-	Parent = hudGui,
-})
-
-local relicCarryBanner = makeFrame({
-	Name = "RelicCarryContextBanner",
-	Size = UDim2.new(0, 480, 0, 42),
-	Position = UDim2.new(0.5, -240, 0, 0),
-	BackgroundColor3 = Color3.fromRGB(95, 15, 30),
-	Visible = false,
-	Corner = 8,
-	Stroke = 2,
-	StrokeColor = Color3.fromRGB(255, 65, 85),
-	Parent = bottomDock,
-})
-
-local relicCarryText = makeLabel({
-	Size = UDim2.new(1, -16, 0.86, 0),
-	Position = UDim2.new(0.02, 0, 0.07, 0),
-	Text = " CARRYING RELIC!",
-	TextColor3 = Color3.fromRGB(255, 225, 115),
-	Parent = relicCarryBanner,
-})
-
-relicCarryText.Size = UDim2.new(1, -126, 1, -8)
-relicCarryText.Position = UDim2.fromOffset(8, 4)
-local dropCarriedButton = makeButton({
-	Name = "DropCarriedItemButton",
-	Text = "[R] DROP",
-	AnchorPoint = Vector2.new(1, 0.5),
-	Position = UDim2.new(1, -6, 0.5, 0),
-	Size = UDim2.fromOffset(104, 36),
-	BackgroundColor3 = Color3.fromRGB(170, 65, 70),
-	Corner = 6,
-	OnClick = function() DropCarriedItemRemote:FireServer() end,
-	Parent = relicCarryBanner,
-})
-
-local squadStrip = makeFrame({
-	Name = "DeployedSquadStrip",
-	Size = UDim2.new(0, 540, 0, 80),
-	Position = UDim2.new(0, 0, 0, 48),
-	BackgroundTransparency = 1,
-	Parent = bottomDock,
-})
-local squadLayout = Instance.new("UIListLayout")
-squadLayout.FillDirection = Enum.FillDirection.Horizontal
-squadLayout.Padding = UDim.new(0, 8)
-squadLayout.Parent = squadStrip
-
-local SquadSlotCards: { { Frame: Frame, Title: TextLabel, HPFill: Frame, StamFill: Frame, State: TextLabel } } = {}
-for i = 1, 5 do
-	local card = makeFrame({
-		Name = "SquadSlot_" .. i,
-		Size = UDim2.new(0, 101, 1, 0),
-		BackgroundColor3 = Color3.fromRGB(20, 22, 34),
-		BackgroundTransparency = 0.1,
-		Corner = 8,
-		Stroke = 1.5,
-		StrokeColor = Color3.fromRGB(75, 85, 120),
-		Parent = squadStrip,
-	})
-	local t = makeLabel({
-		Size = UDim2.new(1, -6, 0, 22),
-		Position = UDim2.new(0, 3, 0, 3),
-		Text = i .. ". [EMPTY]",
-		TextColor3 = Color3.fromRGB(255, 220, 95),
-		Parent = card,
-	})
-	local hpBg = makeFrame({
-		Size = UDim2.new(0.88, 0, 0, 10),
-		Position = UDim2.new(0.06, 0, 0, 28),
-		BackgroundColor3 = Color3.fromRGB(45, 45, 55),
-		Corner = 3,
-		Parent = card,
-	})
-	local hpFill = makeFrame({
-		Size = UDim2.fromScale(1, 1),
-		BackgroundColor3 = Color3.fromRGB(65, 235, 115),
-		Corner = 3,
-		Parent = hpBg,
-	})
-	local stBg = makeFrame({
-		Size = UDim2.new(0.88, 0, 0, 10),
-		Position = UDim2.new(0.06, 0, 0, 42),
-		BackgroundColor3 = Color3.fromRGB(45, 45, 55),
-		Corner = 3,
-		Parent = card,
-	})
-	local stFill = makeFrame({
-		Size = UDim2.fromScale(1, 1),
-		BackgroundColor3 = Color3.fromRGB(255, 205, 50),
-		Corner = 3,
-		Parent = stBg,
-	})
-	local stText = makeLabel({
-		Size = UDim2.new(1, -6, 0, 20),
-		Position = UDim2.new(0, 3, 0, 56),
-		Text = "BENCHED",
-		TextColor3 = Color3.fromRGB(185, 195, 215),
-		Parent = card,
-	})
-	table.insert(SquadSlotCards, {
-		Frame = card,
-		Title = t,
-		HPFill = hpFill,
-		StamFill = stFill,
-		State = stText,
-	})
-end
-
--- Whistle Buttons ([Q] Overdrive & [E] Emergency Recall)
-local qButton = makeButton({
-	Name = "OverdriveButton_Q",
-	Size = UDim2.new(0, 110, 0, 80),
-	Position = UDim2.new(0, 550, 0, 48),
-	BackgroundColor3 = Color3.fromRGB(205, 115, 25),
-	Text = "[Q] OVERDRIVE\n+40% speed · 5s",
-	Corner = 10,
-	Stroke = 2,
-	StrokeColor = Color3.fromRGB(255, 200, 80),
-	OnClick = function()
-		LastQClock = os.clock()
-		WhistleCommandRemote:FireServer(1)
-	end,
-	Parent = bottomDock,
-})
-
-local eButton = makeButton({
-	Name = "EmergencyRecallButton_E",
-	Size = UDim2.new(0, 110, 0, 80),
-	Position = UDim2.new(0, 668, 0, 48),
-	BackgroundColor3 = Color3.fromRGB(25, 150, 195),
-	Text = "[E] RECALL\nReturn to safety",
-	Corner = 10,
-	Stroke = 2,
-	StrokeColor = Color3.fromRGB(95, 245, 255),
-	OnClick = function()
-		LastEClock = os.clock()
-		WhistleCommandRemote:FireServer(2)
-	end,
-	Parent = bottomDock,
-})
-
-_G.TriggerHUDWhistleCooldown = function(which: string)
-	if which == "Q" then
-		LastQClock = os.clock()
-	elseif which == "E" then
-		LastEClock = os.clock()
-	end
-end
-
 --============================================================================
 -- 2. MODAL WINDOWS (`WaitingRoom`, `ThePit`)
 --============================================================================
@@ -600,9 +457,349 @@ local pitModal = makeFrame({
 local refreshWaitingRoomModal: () -> ()
 local refreshPitModal: () -> ()
 
+--============================================================================
+-- BOTTOM NAVIGATION & TOOL BAR (White Bar with Cyan Top Border)
+--============================================================================
+local SLATE_TEXT = Color3.fromRGB(92, 104, 122)
+local SLATE_ACTIVE = Color3.fromRGB(0, 150, 230)
+local TOP_BORDER_BLUE = Color3.fromRGB(0, 155, 235)
+local DIVIDER_GRAY = Color3.fromRGB(205, 212, 222)
+
+local bottomBar = Instance.new("Frame")
+bottomBar.Name = "BottomToolbar"
+bottomBar.Size = UDim2.new(1, 0, 0, 50)
+bottomBar.Position = UDim2.new(0, 0, 1, 0)
+bottomBar.AnchorPoint = Vector2.new(0, 1)
+bottomBar.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+bottomBar.BorderSizePixel = 0
+bottomBar.ZIndex = 8
+bottomBar.Parent = hudGui
+
+local bottomTopBorder = Instance.new("Frame")
+bottomTopBorder.Name = "TopCyanBorder"
+bottomTopBorder.Size = UDim2.new(1, 0, 0, 3)
+bottomTopBorder.Position = UDim2.new(0, 0, 0, 0)
+bottomTopBorder.BackgroundColor3 = TOP_BORDER_BLUE
+bottomTopBorder.BorderSizePixel = 0
+bottomTopBorder.ZIndex = 9
+bottomTopBorder.Parent = bottomBar
+
+local function showClientToast(msg: string)
+	toastCounter += 1
+	local myId = toastCounter
+	toastBanner.Visible = true
+	toastText.Text = msg
+	toastText.TextColor3 = Color3.fromRGB(135, 225, 255)
+	task.delay(3.5, function()
+		if toastCounter == myId then
+			toastBanner.Visible = false
+		end
+	end)
+end
+
+local function makeBarTextButton(parent: Instance, name: string, label: string, width: number, onClick: () -> ()): TextButton
+	local btn = Instance.new("TextButton")
+	btn.Name = name
+	btn.Size = UDim2.new(0, width, 0, 36)
+	btn.BackgroundTransparency = 1
+	btn.BorderSizePixel = 0
+	btn.AutoButtonColor = false
+	btn.Font = Enum.Font.GothamBold
+	btn.Text = label
+	btn.TextSize = 11
+	btn.TextColor3 = SLATE_TEXT
+	btn.ZIndex = 9
+	btn.Parent = parent
+
+	btn.MouseEnter:Connect(function()
+		if btn:GetAttribute("IsActiveTab") ~= true then
+			btn.TextColor3 = SLATE_ACTIVE
+		end
+	end)
+	btn.MouseLeave:Connect(function()
+		if btn:GetAttribute("IsActiveTab") ~= true then
+			btn.TextColor3 = SLATE_TEXT
+		end
+	end)
+	btn.Activated:Connect(onClick)
+	return btn
+end
+
+local function makeBarIconButton(parent: Instance, name: string, onClick: () -> ()): (TextButton, Frame)
+	local btn = Instance.new("TextButton")
+	btn.Name = name
+	btn.Size = UDim2.new(0, 30, 0, 30)
+	btn.BackgroundTransparency = 1
+	btn.BorderSizePixel = 0
+	btn.AutoButtonColor = false
+	btn.Text = ""
+	btn.ZIndex = 9
+	btn.Parent = parent
+
+	local iconCanvas = Instance.new("Frame")
+	iconCanvas.Name = "IconCanvas"
+	iconCanvas.Size = UDim2.fromOffset(18, 18)
+	iconCanvas.Position = UDim2.fromScale(0.5, 0.5)
+	iconCanvas.AnchorPoint = Vector2.new(0.5, 0.5)
+	iconCanvas.BackgroundTransparency = 1
+	iconCanvas.ZIndex = 9
+	iconCanvas.Parent = btn
+
+	local function tintIcon(col: Color3)
+		for _, d in ipairs(iconCanvas:GetDescendants()) do
+			if d:IsA("Frame") and d.Name ~= "Hole" then
+				d.BackgroundColor3 = col
+			end
+			if d:IsA("UIStroke") then
+				d.Color = col
+			end
+		end
+	end
+
+	btn.MouseEnter:Connect(function()
+		tintIcon(SLATE_ACTIVE)
+	end)
+	btn.MouseLeave:Connect(function()
+		tintIcon(SLATE_TEXT)
+	end)
+	btn.Activated:Connect(onClick)
+	return btn, iconCanvas
+end
+
+local function addPart(parent: Instance, x: number, y: number, w: number, h: number, rot: number?, corner: number?): Frame
+	local f = Instance.new("Frame")
+	f.Size = UDim2.fromOffset(w, h)
+	f.Position = UDim2.fromOffset(x, y)
+	f.BackgroundColor3 = SLATE_TEXT
+	f.BorderSizePixel = 0
+	f.ZIndex = 9
+	if rot then
+		f.Rotation = rot
+	end
+	if corner then
+		local c = Instance.new("UICorner")
+		c.CornerRadius = UDim.new(0, corner)
+		c.Parent = f
+	end
+	f.Parent = parent
+	return f
+end
+
+-- Left: PATCH NOTES
+local patchNotesBtn = makeBarTextButton(bottomBar, "PatchNotesButton", "PATCH NOTES", 100, function()
+	showClientToast("INFINITE TOWER — Waiting Room, The Pit, World Boss & Tactical Whistles Active")
+end)
+patchNotesBtn.Position = UDim2.new(0, 32, 0.5, 1)
+patchNotesBtn.AnchorPoint = Vector2.new(0, 0.5)
+patchNotesBtn.TextXAlignment = Enum.TextXAlignment.Left
+
+-- Center Group: 5 Infinite Tower Text Tabs | Divider | 5 Quick-Action Tool Icons
+local centerGroup = Instance.new("Frame")
+centerGroup.Name = "CenterToolbarGroup"
+centerGroup.Size = UDim2.new(0, 740, 1, -3)
+centerGroup.Position = UDim2.new(0.5, 0, 0, 3)
+centerGroup.AnchorPoint = Vector2.new(0.5, 0)
+centerGroup.BackgroundTransparency = 1
+centerGroup.ZIndex = 9
+centerGroup.Parent = bottomBar
+
+local centerLayout = Instance.new("UIListLayout")
+centerLayout.FillDirection = Enum.FillDirection.Horizontal
+centerLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+centerLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+centerLayout.SortOrder = Enum.SortOrder.LayoutOrder
+centerLayout.Padding = UDim.new(0, 18)
+centerLayout.Parent = centerGroup
+
+local wrTabBtn = makeBarTextButton(centerGroup, "Tab_WaitingRoom", "WAITING ROOM", 98, function()
+	_G.OpenMasterModal(waitingRoomModal.Visible and "NONE" or "WAITING_ROOM")
+end)
+wrTabBtn.LayoutOrder = 1
+
+local pitTabBtn = makeBarTextButton(centerGroup, "Tab_ThePit", "THE PIT", 62, function()
+	_G.OpenMasterModal(pitModal.Visible and "NONE" or "THE_PIT")
+end)
+pitTabBtn.LayoutOrder = 2
+
+local heroesTabBtn = makeBarTextButton(centerGroup, "Tab_Heroes", "HEROES", 62, function()
+	_G.OpenMasterModal("WAITING_ROOM")
+	AssignHeroRoleFunc:InvokeServer("AUTO_SWAP_EXHAUSTED", "")
+end)
+heroesTabBtn.LayoutOrder = 3
+
+local qButton = makeBarTextButton(centerGroup, "OverdriveButton_Q", "OVERDRIVE", 88, function()
+	LastQClock = os.clock()
+	WhistleCommandRemote:FireServer(1)
+end)
+qButton.LayoutOrder = 4
+
+local eButton = makeBarTextButton(centerGroup, "EmergencyRecallButton_E", "RECALL", 72, function()
+	LastEClock = os.clock()
+	WhistleCommandRemote:FireServer(2)
+end)
+eButton.LayoutOrder = 5
+
+-- Vertical Divider
+local centerDivider = Instance.new("Frame")
+centerDivider.Name = "Divider"
+centerDivider.Size = UDim2.fromOffset(1, 22)
+centerDivider.BackgroundColor3 = DIVIDER_GRAY
+centerDivider.BorderSizePixel = 0
+centerDivider.LayoutOrder = 6
+centerDivider.ZIndex = 9
+centerDivider.Parent = centerGroup
+
+-- Icon 1: Trash Can (Purge Conduit Rune)
+local iconTrashBtn, trashCanvas = makeBarIconButton(centerGroup, "Tool_PurgeRune", function()
+	PlotEspionageEvent:FireServer(4, 1, "ManaConduit")
+	showClientToast("Purging Mana Conduit Rune...")
+end)
+iconTrashBtn.LayoutOrder = 7
+do
+	addPart(trashCanvas, 3, 2, 12, 2, 0, 1)
+	addPart(trashCanvas, 7, 0, 4, 2, 0, 1)
+	local bin = Instance.new("Frame")
+	bin.Size = UDim2.fromOffset(10, 12)
+	bin.Position = UDim2.fromOffset(4, 5)
+	bin.BackgroundTransparency = 1
+	bin.ZIndex = 9
+	bin.Parent = trashCanvas
+	local st = Instance.new("UIStroke")
+	st.Thickness = 1.6
+	st.Color = SLATE_TEXT
+	st.Parent = bin
+	local c = Instance.new("UICorner")
+	c.CornerRadius = UDim.new(0, 1)
+	c.Parent = bin
+	addPart(trashCanvas, 7, 7, 1, 7)
+	addPart(trashCanvas, 10, 7, 1, 7)
+end
+
+-- Icon 2: 4-Way Move/Expand Arrows (Auto-Swap Exhausted Heroes)
+local iconMoveBtn, moveCanvas = makeBarIconButton(centerGroup, "Tool_AutoSwap", function()
+	AssignHeroRoleFunc:InvokeServer("AUTO_SWAP_EXHAUSTED", "")
+	showClientToast("Swapped exhausted heroes with fresh bench heroes!")
+end)
+iconMoveBtn.LayoutOrder = 8
+do
+	addPart(moveCanvas, 2, 2, 5, 2)
+	addPart(moveCanvas, 2, 2, 2, 5)
+	addPart(moveCanvas, 11, 2, 5, 2)
+	addPart(moveCanvas, 14, 2, 2, 5)
+	addPart(moveCanvas, 2, 14, 5, 2)
+	addPart(moveCanvas, 2, 11, 2, 5)
+	addPart(moveCanvas, 11, 14, 5, 2)
+	addPart(moveCanvas, 14, 11, 2, 5)
+	addPart(moveCanvas, 3, 8, 12, 2, 45)
+	addPart(moveCanvas, 3, 8, 12, 2, -45)
+end
+
+-- Icon 3: Paint Bucket / Collect Gems (Collect Mana Conduit)
+local iconBucketBtn, bucketCanvas = makeBarIconButton(centerGroup, "Tool_CollectGems", function()
+	FacilityInteractEvent:FireServer("COLLECT_CONDUIT")
+	showClientToast("Collected Mana Conduit Gems!")
+end)
+iconBucketBtn.LayoutOrder = 9
+do
+	local body = addPart(bucketCanvas, 4, 5, 8, 8, 45, 1)
+	body.ZIndex = 9
+	addPart(bucketCanvas, 6, 2, 5, 2, -25, 1)
+	addPart(bucketCanvas, 13, 12, 3, 4, 0, 2)
+end
+
+-- Icon 4: Eyedropper / Collect Lab RP
+local iconPickerBtn, pickerCanvas = makeBarIconButton(centerGroup, "Tool_CollectRP", function()
+	FacilityInteractEvent:FireServer("COLLECT_LAB")
+	showClientToast("Collected Dimensional Lab Research Points!")
+end)
+iconPickerBtn.LayoutOrder = 10
+do
+	addPart(pickerCanvas, 3, 9, 10, 3, -45, 1)
+	addPart(pickerCanvas, 9, 5, 6, 2, 45, 1)
+	addPart(pickerCanvas, 11, 3, 5, 4, -45, 2)
+end
+
+-- Icon 5: 3x3 Grid (Toggle Summon / Roster View)
+local iconGridBtn, gridCanvas = makeBarIconButton(centerGroup, "Tool_RosterGrid", function()
+	_G.OpenMasterModal(waitingRoomModal.Visible and "NONE" or "WAITING_ROOM")
+end)
+iconGridBtn.LayoutOrder = 11
+do
+	for row = 0, 2 do
+		for col = 0, 2 do
+			addPart(gridCanvas, 2 + col * 6, 2 + row * 6, 3, 3, 0, 1)
+		end
+	end
+end
+
+-- Right Group: Gear Icon + SAVE Button
+local rightGroup = Instance.new("Frame")
+rightGroup.Name = "RightToolbarGroup"
+rightGroup.Size = UDim2.new(0, 110, 1, -3)
+rightGroup.Position = UDim2.new(1, -28, 0, 3)
+rightGroup.AnchorPoint = Vector2.new(1, 0)
+rightGroup.BackgroundTransparency = 1
+rightGroup.ZIndex = 9
+rightGroup.Parent = bottomBar
+
+local rightLayout = Instance.new("UIListLayout")
+rightLayout.FillDirection = Enum.FillDirection.Horizontal
+rightLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+rightLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+rightLayout.SortOrder = Enum.SortOrder.LayoutOrder
+rightLayout.Padding = UDim.new(0, 14)
+rightLayout.Parent = rightGroup
+
+local settingsBtn, gearCanvas = makeBarIconButton(rightGroup, "SettingsGearButton", function()
+	rightBoard.Visible = not rightBoard.Visible
+end)
+settingsBtn.LayoutOrder = 1
+do
+	for deg = 0, 135, 45 do
+		addPart(gearCanvas, 2, 7, 14, 4, deg, 1)
+	end
+	local ring = addPart(gearCanvas, 3, 3, 12, 12, 0, 6)
+	ring.ZIndex = 9
+	local hole = Instance.new("Frame")
+	hole.Name = "Hole"
+	hole.Size = UDim2.fromOffset(6, 6)
+	hole.Position = UDim2.fromOffset(6, 6)
+	hole.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	hole.BorderSizePixel = 0
+	hole.ZIndex = 10
+	local hc = Instance.new("UICorner")
+	hc.CornerRadius = UDim.new(1, 0)
+	hc.Parent = hole
+	hole.Parent = gearCanvas
+end
+
+local saveBtn = makeBarTextButton(rightGroup, "SaveButton", "SAVE", 44, function()
+	showClientToast("Profile synced & saved!")
+end)
+saveBtn.LayoutOrder = 2
+saveBtn.TextXAlignment = Enum.TextXAlignment.Right
+
+_G.TriggerHUDWhistleCooldown = function(which: string)
+	if which == "Q" then
+		LastQClock = os.clock()
+	elseif which == "E" then
+		LastEClock = os.clock()
+	end
+end
+
+local function updateBottomTabHighlights()
+	local wrActive = waitingRoomModal.Visible
+	local pitActive = pitModal.Visible
+	wrTabBtn:SetAttribute("IsActiveTab", wrActive)
+	pitTabBtn:SetAttribute("IsActiveTab", pitActive)
+	wrTabBtn.TextColor3 = wrActive and SLATE_ACTIVE or SLATE_TEXT
+	pitTabBtn.TextColor3 = pitActive and SLATE_ACTIVE or SLATE_TEXT
+end
+
 _G.OpenMasterModal = function(which: string)
 	waitingRoomModal.Visible = (which == "WAITING_ROOM")
 	pitModal.Visible = (which == "THE_PIT")
+	updateBottomTabHighlights()
 	if which == "WAITING_ROOM" and refreshWaitingRoomModal then
 		refreshWaitingRoomModal()
 	elseif which == "THE_PIT" and refreshPitModal then
@@ -672,6 +869,7 @@ makeButton({
 	Corner = 6,
 	OnClick = function()
 		waitingRoomModal.Visible = false
+		updateBottomTabHighlights()
 	end,
 	Parent = waitingRoomModal,
 })
@@ -1054,6 +1252,7 @@ makeButton({
 	Corner = 6,
 	OnClick = function()
 		pitModal.Visible = false
+		updateBottomTabHighlights()
 	end,
 	Parent = pitModal,
 })
@@ -1232,46 +1431,6 @@ ProfileDeltaSyncEvent.OnClientEvent:Connect(function(profile: any)
 		profile.UnlockedResearch.Ring2BarrierGate and "UNLOCKED ✓" or "LOCKED "
 	)
 
-	-- Update 5 Squad Slot Cards
-	local maxSlots = if profile.UnlockedResearch.SquadSlot5 then 5
-		elseif profile.UnlockedResearch.SquadSlot4 then 4
-		else 3
-
-	for slot = 1, 5 do
-		local card = SquadSlotCards[slot]
-		local slotTag = "SQUAD_SLOT_" .. tostring(slot)
-		local assignedHero: any = nil
-		for _, hero in pairs(profile.Heroes) do
-			if hero.Assignment == slotTag then
-				assignedHero = hero
-				break
-			end
-		end
-
-		if slot > maxSlots then
-			card.Title.Text = string.format(" SLOT %d", slot)
-			card.State.Text = "UNLOCK IN LAB"
-			card.HPFill.Size = UDim2.fromScale(0, 1)
-			card.StamFill.Size = UDim2.fromScale(0, 1)
-		elseif assignedHero then
-			local stars = string.rep("", assignedHero.Stars)
-			card.Title.Text = string.format("%s %s", assignedHero.DisplayName, stars)
-			card.StamFill.Size = UDim2.fromScale(math.clamp((assignedHero.CurrentStamina or 100) / 100.0, 0, 1), 1)
-			if (assignedHero.ComaUntilTimestamp or 0) > os.time() then
-				card.State.Text = string.format("COMA (%ds)", assignedHero.ComaUntilTimestamp - os.time())
-				card.HPFill.Size = UDim2.fromScale(0, 1)
-			else
-				card.State.Text = string.format("Lv.%d | ST:%d%%", assignedHero.Level, math.round(assignedHero.CurrentStamina or 100))
-				card.HPFill.Size = UDim2.fromScale(1, 1)
-			end
-		else
-			card.Title.Text = string.format("%d. [EMPTY]", slot)
-			card.State.Text = "OPEN SLOT"
-			card.HPFill.Size = UDim2.fromScale(0, 1)
-			card.StamFill.Size = UDim2.fromScale(0, 1)
-		end
-	end
-
 	if waitingRoomModal.Visible and refreshWaitingRoomModal then
 		refreshWaitingRoomModal()
 	end
@@ -1287,9 +1446,9 @@ RunService.RenderStepped:Connect(function()
 	-- 1. Check Whistle Cooldowns & [E] Recall Skill-Check Assist Pulse (t = 1.1s..2.8s of Devouring Nova)
 	local qRem = math.max(0, 20.0 - (now - LastQClock))
 	if qRem > 0 then
-		qButton.Text = string.format("[Q] OVERDRIVE\nCD: %.1fs", qRem)
+		qButton.Text = string.format("OVERDRIVE (%.0fs)", qRem)
 	else
-		qButton.Text = "[Q] OVERDRIVE\n+40% speed · 5s"
+		qButton.Text = "OVERDRIVE"
 	end
 
 	local eRem = math.max(0, 6.0 - (now - LastEClock))
@@ -1297,19 +1456,17 @@ RunService.RenderStepped:Connect(function()
 	local inNovaOptimalWindow = (novaElapsed >= 1.1 and novaElapsed <= 2.8)
 
 	if inNovaOptimalWindow then
-		eButton.BackgroundColor3 = Color3.fromRGB(0, 245, 215)
-		eButton.Text = " PRESS [E] NOW!\nOPTIMAL DODGE!"
+		eButton.TextColor3 = SLATE_ACTIVE
+		eButton.Text = "RECALL [E]!"
 	elseif eRem > 0 then
-		eButton.BackgroundColor3 = Color3.fromRGB(20, 95, 125)
-		eButton.Text = string.format("[E] RECALL\nCD: %.1fs", eRem)
+		eButton.Text = string.format("RECALL (%.0fs)", eRem)
 	else
-		eButton.BackgroundColor3 = Color3.fromRGB(25, 150, 195)
-		eButton.Text = "[E] RECALL\nReturn to safety"
+		eButton.Text = "RECALL"
 	end
 
 	-- 2. Update World Boss Top Banner & Devouring Nova Cast Bar
-	bossBanner.Visible=cs and cs.WorldBossNetId~=nil or false
- if cs and cs.WorldBossNetId then
+	bossBanner.Visible = cs and cs.WorldBossNetId ~= nil or false
+	if cs and cs.WorldBossNetId then
 		local hpPct = (cs.WorldBossHPPerMille or 1000) / 10.0
 		local coreTag = cs.WorldBossCoreExposed and " [ CORE EXPOSED: +25% DMG! PRESS Q!]" or ""
 		bossTitleLabel.Text = string.format(
@@ -1331,201 +1488,391 @@ RunService.RenderStepped:Connect(function()
 		novaBarFill.Size = UDim2.fromScale(1, 1)
 		novaCastLabel.Text = "Prepare your squad. The rift is gathering strength."
 	end
-
-	-- 3. Dynamic Relic Carry Context Banner & [B] Shatter Pact Temptation
-	local char = LocalPlayer.Character
-	local carryingRelic = char and char:GetAttribute("CarryingRelic")
-	local carryingLootName = char and char:GetAttribute("CarryingLootName")
-	if carryingRelic or carryingLootName then
-		relicCarryBanner.Visible = true
-		local nameStr = carryingRelic or carryingLootName
-		relicCarryText.Text = string.format(" CARRYING: %s", tostring(nameStr))
-	else
-		relicCarryBanner.Visible = false
-	end
 end)
-
 
 -- Art-pack UI composition. Gameplay callbacks above remain authoritative.
 do
- local TweenService = game:GetService('TweenService')
- local UserInputService = game:GetService('UserInputService')
- local P = {surface=Color3.fromRGB(15,22,36), edge=Color3.fromRGB(58,75,100), gold=Color3.fromRGB(216,180,105), cyan=Color3.fromRGB(73,225,214), muted=Color3.fromRGB(159,177,200)}
- local portraits = {
-  hero_han='rbxassetid://134553257432732',hero_jenna='rbxassetid://77764660527713',hero_catio='rbxassetid://121100166936309',
-  hero_aaron='rbxassetid://74921274572294',hero_velkist='rbxassetid://99091778282719',hero_eolka='rbxassetid://107164344898405',hero_archon='rbxassetid://119875317197580',
- }
- portraits.starter_iron_vanguard=portraits.hero_han
- hudGui:SetAttribute('ArtPackUIVersion','AnimeR15_20261020')
- hudGui.IgnoreGuiInset=false
- hudGui.ZIndexBehavior=Enum.ZIndexBehavior.Sibling
- local function stroke(parent,color)
-  local st=parent:FindFirstChildOfClass('UIStroke') or Instance.new('UIStroke')
-  st.ApplyStrokeMode=Enum.ApplyStrokeMode.Border;st.Thickness=1;st.Color=color or P.edge;st.Transparency=.12;st.Parent=parent
- end
- local function image(parent,asset,size,pos)
-  local o=Instance.new('ImageLabel');o.BackgroundTransparency=1;o.Image=asset;o.Size=size;o.Position=pos;o.ScaleType=Enum.ScaleType.Fit;o.Parent=parent;return o
- end
- local modalBackdrop=Instance.new('TextButton');modalBackdrop.Name='ModalScrim';modalBackdrop.Text='';modalBackdrop.AutoButtonColor=false;modalBackdrop.BackgroundColor3=Color3.fromRGB(3,6,13);modalBackdrop.BackgroundTransparency=.24;modalBackdrop.Size=UDim2.fromScale(1,1);modalBackdrop.Visible=false;modalBackdrop.ZIndex=10;modalBackdrop.Parent=hudGui
- modalBackdrop.Activated:Connect(function() _G.OpenMasterModal('NONE') end)
- local modalList={waitingRoomModal,pitModal}
- for _,m in modalList do
-  m.AnchorPoint=Vector2.new(.5,.5);m.Position=UDim2.fromScale(.5,.5);m.BackgroundColor3=P.surface;m.BackgroundTransparency=.02;m.ZIndex=20;stroke(m,P.gold)
-  local g=Instance.new('UIGradient');g.Color=ColorSequence.new(Color3.fromRGB(25,36,56),P.surface);g.Rotation=100;g.Parent=m
-  m:GetPropertyChangedSignal('Visible'):Connect(function()
-   local any=false;for _,other in modalList do if other.Visible then any=true end end;modalBackdrop.Visible=any; local touch=PlayerGui:FindFirstChild("TouchGui");if touch and touch:IsA("ScreenGui") then touch.Enabled=not any end
-  end)
- end
-  -- Currency is split into three readable pills with the uploaded pack graphics.
- currencyLabel.Visible=false
- local currencyCluster=Instance.new('Frame');currencyCluster.Name='CurrencyCluster';currencyCluster.BackgroundTransparency=1;currencyCluster.Size=UDim2.fromOffset(370,44);currencyCluster.Position=UDim2.fromOffset(12,10);currencyCluster.Parent=topBar
- local currencyFields={}
- local currencies={{'Gold','rbxassetid://99086944565283',P.gold},{'Gems','rbxassetid://74751786636473',P.cyan},{'ResearchPoints','rbxassetid://80949385662716',Color3.fromRGB(178,143,242)}}
- for i,item in currencies do
-  local f=makeFrame({Name=item[1]..'Pill',Size=UDim2.fromOffset(118,42),Position=UDim2.fromOffset((i-1)*124,0),BackgroundColor3=Color3.fromRGB(21,31,48),Corner=9,Parent=currencyCluster});stroke(f)
-  image(f,item[2],UDim2.fromOffset(24,24),UDim2.fromOffset(8,9))
-  currencyFields[item[1]]=makeLabel({Size=UDim2.new(1,-42,1,0),Position=UDim2.fromOffset(38,0),Text='—',TextColor3=item[3],TextSize=16,TextScaled=false,TextXAlignment=Enum.TextXAlignment.Left,Parent=f})
- end
- local function number(n)
-  n=math.floor(n or 0);if n>=1000000 then return string.format('%.1fm',n/1000000) elseif n>=10000 then return string.format('%.1fk',n/1000) else return tostring(n) end
- end
- local function updateCurrency(profile)
-  if not profile then return end
-  for key,label in currencyFields do label.Text=number(profile.Currencies[key]) end
- end
- ProfileDeltaSyncEvent.OnClientEvent:Connect(updateCurrency);updateCurrency(CurrentProfile)
- -- Portrait cards retain the original profile and combat data connections.
- local cardPortraits={}
- for i,c in SquadSlotCards do
-  c.Frame.BackgroundColor3=P.surface;c.Frame.BackgroundTransparency=.04;stroke(c.Frame)
-  local art=image(c.Frame,'',UDim2.new(1,-8,0,62),UDim2.fromOffset(4,2));art.Name='HeroPortrait';art.ImageRectOffset=Vector2.new(76,0);art.ImageRectSize=Vector2.new(360,310);cardPortraits[i]=art
-  c.Title.Position=UDim2.fromOffset(4,65);c.Title.Size=UDim2.new(1,-8,0,18);c.Title.TextColor3=P.gold;c.Title.TextSize=13;c.Title.TextScaled=false;c.Title.TextTruncate=Enum.TextTruncate.AtEnd
-  c.HPFill.Parent.Position=UDim2.new(.07,0,0,87);c.HPFill.Parent.Size=UDim2.new(.86,0,0,5)
-  c.StamFill.Parent.Position=UDim2.new(.07,0,0,96);c.StamFill.Parent.Size=UDim2.new(.86,0,0,5)
-  c.HPFill.BackgroundColor3=Color3.fromRGB(92,206,145);c.StamFill.BackgroundColor3=P.gold
-  c.State.Position=UDim2.fromOffset(3,104);c.State.Size=UDim2.new(1,-6,0,15);c.State.TextScaled=false;c.State.TextSize=10;c.State.TextColor3=P.muted
- end
- local function updatePortraits(profile)
-  if not profile then return end
-  for i,card in SquadSlotCards do
-   local chosen=nil
-   for _,h in profile.Heroes do if h.Assignment=='SQUAD_SLOT_'..i then chosen=h;break end end
-   cardPortraits[i].Image=chosen and (portraits[chosen.TemplateId] or '') or ''
-   cardPortraits[i].ImageTransparency=chosen and 0 or .6
-  end
- end
- ProfileDeltaSyncEvent.OnClientEvent:Connect(updatePortraits);updatePortraits(CurrentProfile)
- image(qButton,'rbxassetid://106281518854512',UDim2.fromOffset(26,26),UDim2.fromOffset(6,5))
- image(eButton,'rbxassetid://114326036567745',UDim2.fromOffset(26,26),UDim2.fromOffset(6,5))
- for _,b in {qButton,eButton} do b.TextSize=13;b.TextScaled=false;b.TextWrapped=true;stroke(b,b==qButton and P.gold or P.cyan) end
- -- Keep development hooks out of normal navigation. F8 reveals them in Studio.
- local devButtons={};local primaryButtons={}
- for _,b in navButtonsFrame:GetChildren() do
-  if b:IsA('TextButton') then
-   if b.Text:find('Spawn Boss') or b.Text:find('Resources') then b.Visible=false;table.insert(devButtons,b) else table.insert(primaryButtons,b) end
-  end
- end
- UserInputService.InputBegan:Connect(function(input,processed)
-  if processed then return end
-  if input.KeyCode==Enum.KeyCode.Escape then _G.OpenMasterModal('NONE') end
-  if RunService:IsStudio() and input.KeyCode==Enum.KeyCode.F8 then for _,b in devButtons do b.Visible=not b.Visible end end
- end)
- for _,b in primaryButtons do b.BackgroundColor3=Color3.fromRGB(29,42,62);b.TextColor3=P.gold;b.TextSize=14;b.TextScaled=false;stroke(b) end
- local compact=false;local socialOpen=false;local encounterOpen=false
- local encounterToggle=makeButton({Name='EncounterToggle',Text='Encounter',Size=UDim2.fromOffset(120,32),BackgroundColor3=P.surface,Corner=8,OnClick=function() encounterOpen=not encounterOpen;rightBoard.Visible=not compact or encounterOpen end,Parent=hudGui})
- encounterToggle.TextScaled=false;encounterToggle.TextSize=12;stroke(encounterToggle)
- local wrScroll=Instance.new('ScrollingFrame');wrScroll.Name='WaitingRoomContent';wrScroll.BackgroundTransparency=1;wrScroll.BorderSizePixel=0;wrScroll.ScrollBarThickness=4;wrScroll.ScrollBarImageColor3=P.gold;wrScroll.Parent=waitingRoomModal
- wrLeftPane.Parent=wrScroll;wrRightPane.Parent=wrScroll
- local pitLeft=Instance.new('Frame');pitLeft.Name='PitTargetContent';pitLeft.BackgroundTransparency=1;pitLeft.Parent=pitModal
- local pitContentScroll=Instance.new('ScrollingFrame');pitContentScroll.Name='PitContent';pitContentScroll.BackgroundTransparency=1;pitContentScroll.BorderSizePixel=0;pitContentScroll.ScrollBarThickness=4;pitContentScroll.ScrollBarImageColor3=P.gold;pitContentScroll.Parent=pitModal
- pitLeft.Parent=pitContentScroll;pitRosterScroll.Parent=pitContentScroll
- pitTargetLabel.Parent=pitLeft;pitTargetLabel.Position=UDim2.fromOffset(0,0);pitTargetLabel.Size=UDim2.new(1,0,0,170);pitTargetLabel.TextSize=14;pitTargetLabel.TextScaled=false;pitTargetLabel.TextWrapped=true
- local pitAction=0
- for _,b in pitModal:GetChildren() do
-  if b:IsA('TextButton') and (b.Text:find('FEED') or b.Text:find('ASCEND')) then b.Parent=pitLeft;b.Position=UDim2.fromOffset(0,184+pitAction*64);b.Size=UDim2.new(1,0,0,54);pitAction+=1 end
- end
- for _,list in {rosterScroll,pitRosterScroll} do list.AutomaticCanvasSize=Enum.AutomaticSize.Y;list.CanvasSize=UDim2.fromOffset(0,0);list.ScrollBarImageColor3=P.gold end
- -- Modal row sizing now comes from its layout, including rebuilt server lists.
- local function rowStyle(o)
-  if not o:IsA('Frame') then return end
-  o.BackgroundColor3=Color3.fromRGB(23,33,51);stroke(o)
-  
-  if o.Parent==rosterScroll then o.Size=UDim2.new(1,-10,0,compact and 86 or 72) end
-  for _,v in o:GetDescendants() do if v:IsA('TextLabel') then v.TextWrapped=true;v.TextScaled=false;v.TextSize=compact and 12 or 14 end end
- end
- for _,list in {rosterScroll,pitRosterScroll} do list.ChildAdded:Connect(function(o) task.defer(rowStyle,o) end) end
- local modalWidths={1000,920}
- local function layout()
-  local cam=workspace.CurrentCamera;if not cam then return end
-  local view=cam.ViewportSize;local w,h=view.X,math.max(300,view.Y-40);compact=w<1100;local portrait=w<650;local stackPanels=portrait or h<540
-  topBar.Position=UDim2.fromOffset(12,8);topBar.Size=UDim2.new(1,-24,0,(w<780) and 106 or 64);topBar.BackgroundColor3=P.surface;topBar.BackgroundTransparency=.04;stroke(topBar)
-  local moneyScale=currencyCluster:FindFirstChildOfClass('UIScale') or Instance.new('UIScale',currencyCluster);moneyScale.Scale=portrait and math.min(1,(w-48)/370) or 1
-  honorLabel.Visible=not compact;honorLabel.Size=UDim2.fromOffset(220,32);honorLabel.Position=UDim2.fromOffset(394,16);honorLabel.TextScaled=false;honorLabel.TextSize=12
-  navButtonsFrame.Position=(w<780) and UDim2.fromOffset(12,60) or UDim2.new(1,-382,0,12);navButtonsFrame.Size=(w<780) and UDim2.new(1,-24,0,36) or UDim2.fromOffset(370,40)
-  for _,b in primaryButtons do b.Size=UDim2.fromOffset(portrait and math.floor((w-64)/3) or 116,36) end
-  navLayout.HorizontalAlignment=(w<780) and Enum.HorizontalAlignment.Left or Enum.HorizontalAlignment.Right
-  bossBanner.Position=UDim2.new(.5,0,0,compact and 124 or 84);bossBanner.AnchorPoint=Vector2.new(.5,0);bossBanner.Size=UDim2.new(0,math.min(w-32,720),0,58);bossBanner.BackgroundColor3=P.surface;stroke(bossBanner,Color3.fromRGB(144,103,199))
-  bossTitleLabel.TextSize=portrait and 12 or 15;bossTitleLabel.TextScaled=false;bossTitleLabel.TextTruncate=Enum.TextTruncate.AtEnd
-  novaCastLabel.TextSize=portrait and 10 or 12;novaCastLabel.TextScaled=false
-  toastBanner.AnchorPoint=Vector2.new(.5,0);toastBanner.Position=UDim2.new(.5,0,0,compact and 226 or 152);toastBanner.Size=UDim2.new(0,math.min(w-32,650),0,46)
-  rightBoard.Position=UDim2.new(1,-16,0,compact and 228 or 180);rightBoard.AnchorPoint=Vector2.new(1,0);rightBoard.Size=UDim2.fromOffset(math.min(260,w-32),170);rightBoard.Visible=not compact or encounterOpen
-	rightBoard.BackgroundColor3=P.surface;rightBoard.BackgroundTransparency=.08;stroke(rightBoard)
-  encounterToggle.Visible=compact;encounterToggle.Position=UDim2.new(1,-136,0,(w<780) and 122 or 80)
-  if portrait then
-   bottomDock.Size=UDim2.new(1,-24,0,186);bottomDock.Position=UDim2.new(.5,0,1,-130);bottomDock.AnchorPoint=Vector2.new(.5,1)
-   squadStrip.Size=UDim2.new(1,0,0,120);squadStrip.Position=UDim2.fromOffset(0,0)
-   for _,c in SquadSlotCards do c.Frame.Size=UDim2.new(.2,-7,0,120) end
-   qButton.Size=UDim2.new(.5,-4,0,54);eButton.Size=qButton.Size;qButton.Position=UDim2.fromOffset(0,130);eButton.Position=UDim2.new(.5,4,0,130)
-  else
-   local short=view.Y<600;local cw=short and math.clamp(math.floor((w-480)/5),42,70) or math.clamp(math.floor((w-280)/5)-8,80,138);local actionW=short and 76 or 104;local total=cw*5+32+actionW*2+20
-   bottomDock.Size=UDim2.fromOffset(total,120);bottomDock.Position=UDim2.new(.5,0,1,-14);bottomDock.AnchorPoint=Vector2.new(.5,1)
-   squadStrip.Size=UDim2.fromOffset(cw*5+32,120);squadStrip.Position=UDim2.fromOffset(0,0)
-   for _,c in SquadSlotCards do c.Frame.Size=UDim2.fromOffset(cw,120) end
-   qButton.Size=UDim2.fromOffset(actionW,100);eButton.Size=qButton.Size;qButton.Position=UDim2.fromOffset(cw*5+44,20);eButton.Position=UDim2.fromOffset(cw*5+52+actionW,20)
-  end
-  local cardH=(view.Y<600) and 94 or 120
-  for i,c in SquadSlotCards do
-   c.Frame.Size=UDim2.new(c.Frame.Size.X.Scale,c.Frame.Size.X.Offset,0,cardH)
-   cardPortraits[i].Size=UDim2.new(1,-8,0,cardH-58)
-   c.Title.Position=UDim2.fromOffset(4,cardH-55)
-   c.HPFill.Parent.Position=UDim2.new(.07,0,0,cardH-33);c.StamFill.Parent.Position=UDim2.new(.07,0,0,cardH-24)
-   c.State.Position=UDim2.fromOffset(3,cardH-16)
-  end
-  if view.Y<600 and not portrait then
-   bottomDock.Size=UDim2.fromOffset(bottomDock.Size.X.Offset,cardH);squadStrip.Size=UDim2.fromOffset(squadStrip.Size.X.Offset,cardH)
-   qButton.Size=UDim2.fromOffset(qButton.Size.X.Offset,cardH-4);eButton.Size=qButton.Size;qButton.Position=UDim2.fromOffset(qButton.Position.X.Offset,4);eButton.Position=UDim2.fromOffset(eButton.Position.X.Offset,4)
-  end
-  relicCarryBanner.AnchorPoint=Vector2.new(.5,1);relicCarryBanner.Position=UDim2.new(.5,0,0,-10);relicCarryBanner.Size=UDim2.fromOffset(math.min(w-32,650),48)
-  for i,m in modalList do m.Size=UDim2.fromOffset(math.min(w-24,modalWidths[i]),math.min(h-38,i==4 and 260 or 580)) end
-  local mw=waitingRoomModal.AbsoluteSize.X
-  wrScroll.Position=UDim2.fromOffset(12,48);wrScroll.Size=UDim2.new(1,-24,1,-62)
-  if stackPanels then
-   wrScroll.CanvasSize=UDim2.fromOffset(0,810);wrLeftPane.Position=UDim2.fromOffset(0,0);wrLeftPane.Size=UDim2.new(1,-10,0,410);wrRightPane.Position=UDim2.fromOffset(0,430);wrRightPane.Size=UDim2.new(1,-10,0,350)
-  else wrScroll.CanvasSize=UDim2.fromOffset(0,0);wrLeftPane.Position=UDim2.fromScale(0,0);wrLeftPane.Size=UDim2.new(.48,0,1,0);wrRightPane.Position=UDim2.fromScale(.5,0);wrRightPane.Size=UDim2.new(.5,-10,1,0) end
-  local pitWidth=pitModal.AbsoluteSize.X
-  pitContentScroll.Position=UDim2.fromOffset(16,52);pitContentScroll.Size=UDim2.new(1,-32,1,-64)
-  if stackPanels then
-   pitContentScroll.CanvasSize=UDim2.fromOffset(0,660);pitLeft.Position=UDim2.fromOffset(0,0);pitLeft.Size=UDim2.new(1,-10,0,304);pitRosterScroll.Position=UDim2.fromOffset(0,324);pitRosterScroll.Size=UDim2.new(1,-10,0,320)
-  else pitContentScroll.CanvasSize=UDim2.fromOffset(0,0);pitLeft.Position=UDim2.fromScale(0,0);pitLeft.Size=UDim2.new(.46,0,1,0);pitRosterScroll.Position=UDim2.fromScale(.5,0);pitRosterScroll.Size=UDim2.new(.5,-10,1,0) end
-  for _,list in {rosterScroll,pitRosterScroll} do for _,o in list:GetChildren() do rowStyle(o) end end
- end
- task.defer(layout)
- if workspace.CurrentCamera then workspace.CurrentCamera:GetPropertyChangedSignal('ViewportSize'):Connect(layout) end
- workspace:GetPropertyChangedSignal('CurrentCamera'):Connect(function() if workspace.CurrentCamera then workspace.CurrentCamera:GetPropertyChangedSignal('ViewportSize'):Connect(layout);layout() end end)
- -- Feed the footer actual replicated health and stamina, rather than full-health placeholders.
- local elapsed=0
- RunService.Heartbeat:Connect(function(dt)
-  elapsed+=dt;if elapsed<.1 then return end;elapsed=0
-  local state=_G.ClientCombatState;if not state or not CurrentProfile then return end
-  for id,meta in state.Metadata do
-   if meta.IsHero and meta.OwnerUserId==LocalPlayer.UserId and meta.SlotIndex then
-    local c=SquadSlotCards[meta.SlotIndex];local node=state.VisualNodes[id]
-    if c and node then c.HPFill.Size=UDim2.fromScale(math.clamp(node.HpPermille/1000,0,1),1);c.StamFill.Size=UDim2.fromScale(math.clamp(node.Stamina/100,0,1),1);c.State.Text=string.format('HP %d%%  ·  ST %d%%',math.round(node.HpPermille/10),node.Stamina) end
-   end
-  end
- end)
+	local UserInputService = game:GetService("UserInputService")
+	local P = {
+		surface = Color3.fromRGB(15, 22, 36),
+		edge = Color3.fromRGB(58, 75, 100),
+		gold = Color3.fromRGB(216, 180, 105),
+		cyan = Color3.fromRGB(73, 225, 214),
+		muted = Color3.fromRGB(159, 177, 200),
+	}
+	hudGui:SetAttribute("ArtPackUIVersion", "AnimeR15_20261020")
+	hudGui.IgnoreGuiInset = false
+	hudGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+	local function stroke(parent: Instance, color: Color3?)
+		local st = parent:FindFirstChildOfClass("UIStroke") or Instance.new("UIStroke")
+		st.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		st.Thickness = 1
+		st.Color = color or P.edge
+		st.Transparency = 0.12
+		st.Parent = parent
+	end
+
+	local function image(parent: Instance, asset: string, size: UDim2, pos: UDim2): ImageLabel
+		local o = Instance.new("ImageLabel")
+		o.BackgroundTransparency = 1
+		o.Image = asset
+		o.Size = size
+		o.Position = pos
+		o.ScaleType = Enum.ScaleType.Fit
+		o.Parent = parent
+		return o
+	end
+
+	local modalBackdrop = Instance.new("TextButton")
+	modalBackdrop.Name = "ModalScrim"
+	modalBackdrop.Text = ""
+	modalBackdrop.AutoButtonColor = false
+	modalBackdrop.BackgroundColor3 = Color3.fromRGB(3, 6, 13)
+	modalBackdrop.BackgroundTransparency = 0.24
+	modalBackdrop.Size = UDim2.fromScale(1, 1)
+	modalBackdrop.Visible = false
+	modalBackdrop.ZIndex = 10
+	modalBackdrop.Parent = hudGui
+	modalBackdrop.Activated:Connect(function()
+		_G.OpenMasterModal("NONE")
+	end)
+
+	local modalList = { waitingRoomModal, pitModal }
+	for _, m in modalList do
+		m.AnchorPoint = Vector2.new(0.5, 0.5)
+		m.Position = UDim2.fromScale(0.5, 0.5)
+		m.BackgroundColor3 = P.surface
+		m.BackgroundTransparency = 0.02
+		m.ZIndex = 20
+		stroke(m, P.gold)
+		local g = Instance.new("UIGradient")
+		g.Color = ColorSequence.new(Color3.fromRGB(25, 36, 56), P.surface)
+		g.Rotation = 100
+		g.Parent = m
+		m:GetPropertyChangedSignal("Visible"):Connect(function()
+			local any = false
+			for _, other in modalList do
+				if other.Visible then
+					any = true
+				end
+			end
+			modalBackdrop.Visible = any
+			local touch = PlayerGui:FindFirstChild("TouchGui")
+			if touch and touch:IsA("ScreenGui") then
+				touch.Enabled = not any
+			end
+		end)
+	end
+
+	-- Currency is split into three readable pills with the uploaded pack graphics.
+	currencyLabel.Visible = false
+	local currencyCluster = Instance.new("Frame")
+	currencyCluster.Name = "CurrencyCluster"
+	currencyCluster.BackgroundTransparency = 1
+	currencyCluster.Size = UDim2.fromOffset(370, 44)
+	currencyCluster.Position = UDim2.fromOffset(12, 10)
+	currencyCluster.Parent = topBar
+
+	local currencyFields: { [string]: TextLabel } = {}
+	local currencies = {
+		{ "Gold", "rbxassetid://99086944565283", P.gold },
+		{ "Gems", "rbxassetid://74751786636473", P.cyan },
+		{ "ResearchPoints", "rbxassetid://80949385662716", Color3.fromRGB(178, 143, 242) },
+	}
+	for i, item in currencies do
+		local f = makeFrame({
+			Name = item[1] .. "Pill",
+			Size = UDim2.fromOffset(118, 42),
+			Position = UDim2.fromOffset((i - 1) * 124, 0),
+			BackgroundColor3 = Color3.fromRGB(21, 31, 48),
+			Corner = 9,
+			Parent = currencyCluster,
+		})
+		stroke(f)
+		image(f, item[2] :: string, UDim2.fromOffset(24, 24), UDim2.fromOffset(8, 9))
+		currencyFields[item[1] :: string] = makeLabel({
+			Size = UDim2.new(1, -42, 1, 0),
+			Position = UDim2.fromOffset(38, 0),
+			Text = "—",
+			TextColor3 = item[3] :: Color3,
+			TextSize = 16,
+			TextScaled = false,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			Parent = f,
+		})
+	end
+
+	local function number(n: number?): string
+		local val = math.floor(n or 0)
+		if val >= 1000000 then
+			return string.format("%.1fm", val / 1000000)
+		elseif val >= 10000 then
+			return string.format("%.1fk", val / 1000)
+		else
+			return tostring(val)
+		end
+	end
+
+	local function updateCurrency(profile: any)
+		if not profile then
+			return
+		end
+		for key, label in currencyFields do
+			label.Text = number(profile.Currencies[key])
+		end
+	end
+	ProfileDeltaSyncEvent.OnClientEvent:Connect(updateCurrency)
+	updateCurrency(CurrentProfile)
+
+	-- Keep development hooks out of normal navigation. F8 reveals them in Studio.
+	local devButtons = {}
+	local primaryButtons = {}
+	for _, b in navButtonsFrame:GetChildren() do
+		if b:IsA("TextButton") then
+			if b.Text:find("Spawn Boss") or b.Text:find("Resources") then
+				b.Visible = false
+				table.insert(devButtons, b)
+			else
+				table.insert(primaryButtons, b)
+			end
+		end
+	end
+	UserInputService.InputBegan:Connect(function(input, processed)
+		if processed then
+			return
+		end
+		if input.KeyCode == Enum.KeyCode.Escape then
+			_G.OpenMasterModal("NONE")
+		end
+		if RunService:IsStudio() and input.KeyCode == Enum.KeyCode.F8 then
+			for _, b in devButtons do
+				b.Visible = not b.Visible
+			end
+		end
+	end)
+	for _, b in primaryButtons do
+		b.BackgroundColor3 = Color3.fromRGB(29, 42, 62)
+		b.TextColor3 = P.gold
+		b.TextSize = 14
+		b.TextScaled = false
+		stroke(b)
+	end
+
+	local compact = false
+	local encounterOpen = false
+	local encounterToggle = makeButton({
+		Name = "EncounterToggle",
+		Text = "Encounter",
+		Size = UDim2.fromOffset(120, 32),
+		BackgroundColor3 = P.surface,
+		Corner = 8,
+		OnClick = function()
+			encounterOpen = not encounterOpen
+			rightBoard.Visible = not compact or encounterOpen
+		end,
+		Parent = hudGui,
+	})
+	encounterToggle.TextScaled = false
+	encounterToggle.TextSize = 12
+	stroke(encounterToggle)
+
+	local wrScroll = Instance.new("ScrollingFrame")
+	wrScroll.Name = "WaitingRoomContent"
+	wrScroll.BackgroundTransparency = 1
+	wrScroll.BorderSizePixel = 0
+	wrScroll.ScrollBarThickness = 4
+	wrScroll.ScrollBarImageColor3 = P.gold
+	wrScroll.Parent = waitingRoomModal
+	wrLeftPane.Parent = wrScroll
+	wrRightPane.Parent = wrScroll
+
+	local pitLeft = Instance.new("Frame")
+	pitLeft.Name = "PitTargetContent"
+	pitLeft.BackgroundTransparency = 1
+	pitLeft.Parent = pitModal
+
+	local pitContentScroll = Instance.new("ScrollingFrame")
+	pitContentScroll.Name = "PitContent"
+	pitContentScroll.BackgroundTransparency = 1
+	pitContentScroll.BorderSizePixel = 0
+	pitContentScroll.ScrollBarThickness = 4
+	pitContentScroll.ScrollBarImageColor3 = P.gold
+	pitContentScroll.Parent = pitModal
+	pitLeft.Parent = pitContentScroll
+	pitRosterScroll.Parent = pitContentScroll
+	pitTargetLabel.Parent = pitLeft
+	pitTargetLabel.Position = UDim2.fromOffset(0, 0)
+	pitTargetLabel.Size = UDim2.new(1, 0, 0, 170)
+	pitTargetLabel.TextSize = 14
+	pitTargetLabel.TextScaled = false
+	pitTargetLabel.TextWrapped = true
+
+	local pitAction = 0
+	for _, b in pitModal:GetChildren() do
+		if b:IsA("TextButton") and (b.Text:find("FEED") or b.Text:find("ASCEND")) then
+			b.Parent = pitLeft
+			b.Position = UDim2.fromOffset(0, 184 + pitAction * 64)
+			b.Size = UDim2.new(1, 0, 0, 54)
+			pitAction += 1
+		end
+	end
+
+	for _, list in { rosterScroll, pitRosterScroll } do
+		list.AutomaticCanvasSize = Enum.AutomaticSize.Y
+		list.CanvasSize = UDim2.fromOffset(0, 0)
+		list.ScrollBarImageColor3 = P.gold
+	end
+
+	local function rowStyle(o: Instance)
+		if not o:IsA("Frame") then
+			return
+		end
+		o.BackgroundColor3 = Color3.fromRGB(23, 33, 51)
+		stroke(o)
+		if o.Parent == rosterScroll then
+			o.Size = UDim2.new(1, -10, 0, compact and 86 or 72)
+		end
+		for _, v in o:GetDescendants() do
+			if v:IsA("TextLabel") then
+				v.TextWrapped = true
+				v.TextScaled = false
+				v.TextSize = compact and 12 or 14
+			end
+		end
+	end
+	for _, list in { rosterScroll, pitRosterScroll } do
+		list.ChildAdded:Connect(function(o)
+			task.defer(rowStyle, o)
+		end)
+	end
+
+	local modalWidths = { 1000, 920 }
+	local function layout()
+		local cam = workspace.CurrentCamera
+		if not cam then
+			return
+		end
+		local view = cam.ViewportSize
+		local w, h = view.X, math.max(300, view.Y - 40)
+		compact = w < 1100
+		local portrait = w < 650
+		local stackPanels = portrait or h < 540
+
+		topBar.Position = UDim2.fromOffset(12, 8)
+		topBar.Size = UDim2.new(1, -24, 0, (w < 780) and 106 or 64)
+		topBar.BackgroundColor3 = P.surface
+		topBar.BackgroundTransparency = 0.04
+		stroke(topBar)
+
+		local moneyScale = currencyCluster:FindFirstChildOfClass("UIScale") or Instance.new("UIScale", currencyCluster)
+		moneyScale.Scale = portrait and math.min(1, (w - 48) / 370) or 1
+
+		honorLabel.Visible = not compact
+		honorLabel.Size = UDim2.fromOffset(220, 32)
+		honorLabel.Position = UDim2.fromOffset(394, 16)
+		honorLabel.TextScaled = false
+		honorLabel.TextSize = 12
+
+		navButtonsFrame.Position = (w < 780) and UDim2.fromOffset(12, 60) or UDim2.new(1, -382, 0, 12)
+		navButtonsFrame.Size = (w < 780) and UDim2.new(1, -24, 0, 36) or UDim2.fromOffset(370, 40)
+		for _, b in primaryButtons do
+			b.Size = UDim2.fromOffset(portrait and math.floor((w - 64) / 3) or 116, 36)
+		end
+		navLayout.HorizontalAlignment = (w < 780) and Enum.HorizontalAlignment.Left or Enum.HorizontalAlignment.Right
+
+		bossBanner.Position = UDim2.new(0.5, 0, 0, compact and 124 or 84)
+		bossBanner.AnchorPoint = Vector2.new(0.5, 0)
+		bossBanner.Size = UDim2.new(0, math.min(w - 32, 720), 0, 58)
+		bossBanner.BackgroundColor3 = P.surface
+		stroke(bossBanner, Color3.fromRGB(144, 103, 199))
+		bossTitleLabel.TextSize = portrait and 12 or 15
+		bossTitleLabel.TextScaled = false
+		bossTitleLabel.TextTruncate = Enum.TextTruncate.AtEnd
+		novaCastLabel.TextSize = portrait and 10 or 12
+		novaCastLabel.TextScaled = false
+
+		toastBanner.AnchorPoint = Vector2.new(0.5, 0)
+		toastBanner.Position = UDim2.new(0.5, 0, 0, compact and 226 or 152)
+		toastBanner.Size = UDim2.new(0, math.min(w - 32, 650), 0, 46)
+
+		rightBoard.Position = UDim2.new(1, -16, 0, compact and 228 or 180)
+		rightBoard.AnchorPoint = Vector2.new(1, 0)
+		rightBoard.Size = UDim2.fromOffset(math.min(260, w - 32), 170)
+		rightBoard.Visible = not compact or encounterOpen
+		rightBoard.BackgroundColor3 = P.surface
+		rightBoard.BackgroundTransparency = 0.08
+		stroke(rightBoard)
+		encounterToggle.Visible = compact
+		encounterToggle.Position = UDim2.new(1, -136, 0, (w < 780) and 122 or 80)
+
+		-- Responsive scaling for the BottomToolbar on smaller screens
+		patchNotesBtn.Visible = w >= 720
+		local centerScale = centerGroup:FindFirstChildOfClass("UIScale") or Instance.new("UIScale", centerGroup)
+		if w < 720 then
+			centerScale.Scale = math.clamp((w - 130) / 740, 0.55, 1)
+			centerGroup.Position = UDim2.new(0, 12, 0, 3)
+			centerGroup.AnchorPoint = Vector2.new(0, 0)
+		elseif w < 1040 then
+			centerScale.Scale = math.clamp((w - 280) / 740, 0.72, 1)
+			centerGroup.Position = UDim2.new(0.5, 0, 0, 3)
+			centerGroup.AnchorPoint = Vector2.new(0.5, 0)
+		else
+			centerScale.Scale = 1
+			centerGroup.Position = UDim2.new(0.5, 0, 0, 3)
+			centerGroup.AnchorPoint = Vector2.new(0.5, 0)
+		end
+
+		for i, m in modalList do
+			m.Size = UDim2.fromOffset(math.min(w - 24, modalWidths[i]), math.min(h - 70, 560))
+		end
+		wrScroll.Position = UDim2.fromOffset(12, 48)
+		wrScroll.Size = UDim2.new(1, -24, 1, -62)
+		if stackPanels then
+			wrScroll.CanvasSize = UDim2.fromOffset(0, 810)
+			wrLeftPane.Position = UDim2.fromOffset(0, 0)
+			wrLeftPane.Size = UDim2.new(1, -10, 0, 410)
+			wrRightPane.Position = UDim2.fromOffset(0, 430)
+			wrRightPane.Size = UDim2.new(1, -10, 0, 350)
+		else
+			wrScroll.CanvasSize = UDim2.fromOffset(0, 0)
+			wrLeftPane.Position = UDim2.fromScale(0, 0)
+			wrLeftPane.Size = UDim2.new(0.48, 0, 1, 0)
+			wrRightPane.Position = UDim2.fromScale(0.5, 0)
+			wrRightPane.Size = UDim2.new(0.5, -10, 1, 0)
+		end
+
+		pitContentScroll.Position = UDim2.fromOffset(16, 52)
+		pitContentScroll.Size = UDim2.new(1, -32, 1, -64)
+		if stackPanels then
+			pitContentScroll.CanvasSize = UDim2.fromOffset(0, 660)
+			pitLeft.Position = UDim2.fromOffset(0, 0)
+			pitLeft.Size = UDim2.new(1, -10, 0, 304)
+			pitRosterScroll.Position = UDim2.fromOffset(0, 324)
+			pitRosterScroll.Size = UDim2.new(1, -10, 0, 320)
+		else
+			pitContentScroll.CanvasSize = UDim2.fromOffset(0, 0)
+			pitLeft.Position = UDim2.fromScale(0, 0)
+			pitLeft.Size = UDim2.new(0.46, 0, 1, 0)
+			pitRosterScroll.Position = UDim2.fromScale(0.5, 0)
+			pitRosterScroll.Size = UDim2.new(0.5, -10, 1, 0)
+		end
+
+		for _, list in { rosterScroll, pitRosterScroll } do
+			for _, o in list:GetChildren() do
+				rowStyle(o)
+			end
+		end
+	end
+
+	task.defer(layout)
+	if workspace.CurrentCamera then
+		workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(layout)
+	end
+	workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
+		if workspace.CurrentCamera then
+			workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(layout)
+			layout()
+		end
+	end)
 end
-
-
-
-
