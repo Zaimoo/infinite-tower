@@ -456,31 +456,22 @@ local refreshPitModal: () -> ()
 local facilityController: any = nil
 
 --============================================================================
--- BOTTOM NAVIGATION & TOOL BAR (White Bar with Cyan Top Border)
 --============================================================================
-local SLATE_TEXT = Color3.fromRGB(92, 104, 122)
-local SLATE_ACTIVE = Color3.fromRGB(0, 150, 230)
-local TOP_BORDER_BLUE = Color3.fromRGB(0, 155, 235)
-local DIVIDER_GRAY = Color3.fromRGB(205, 212, 222)
+-- BOTTOM NAVIGATION & TOOL BAR (Gothic Obsidian & White Filigree Container)
+--============================================================================
+local SLATE_TEXT = Color3.fromRGB(232, 226, 245)
+local SLATE_ACTIVE = Color3.fromRGB(230, 192, 112)
+local DIVIDER_GRAY = Color3.fromRGB(112, 100, 132)
 
 local bottomBar = Instance.new("Frame")
 bottomBar.Name = "BottomToolbar"
-bottomBar.Size = UDim2.new(1, 0, 0, 50)
-bottomBar.Position = UDim2.new(0, 0, 1, 0)
-bottomBar.AnchorPoint = Vector2.new(0, 1)
-bottomBar.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+bottomBar.Size = UDim2.new(1, -24, 0, 50)
+bottomBar.Position = UDim2.new(0.5, 0, 1, -6)
+bottomBar.AnchorPoint = Vector2.new(0.5, 1)
+bottomBar.BackgroundColor3 = Color3.fromRGB(20, 14, 28)
 bottomBar.BorderSizePixel = 0
 bottomBar.ZIndex = 8
 bottomBar.Parent = hudGui
-
-local bottomTopBorder = Instance.new("Frame")
-bottomTopBorder.Name = "TopCyanBorder"
-bottomTopBorder.Size = UDim2.new(1, 0, 0, 3)
-bottomTopBorder.Position = UDim2.new(0, 0, 0, 0)
-bottomTopBorder.BackgroundColor3 = TOP_BORDER_BLUE
-bottomTopBorder.BorderSizePixel = 0
-bottomTopBorder.ZIndex = 9
-bottomTopBorder.Parent = bottomBar
 
 local function showClientToast(msg: string)
 	toastCounter += 1
@@ -506,7 +497,7 @@ local function makeBarTextButton(parent: Instance, name: string, label: string, 
 	btn.Text = label
 	btn.TextSize = 11
 	btn.TextColor3 = SLATE_TEXT
-	btn.ZIndex = 9
+	btn.ZIndex = 11
 	btn.Parent = parent
 
 	btn.MouseEnter:Connect(function()
@@ -531,7 +522,7 @@ local function makeBarIconButton(parent: Instance, name: string, onClick: () -> 
 	btn.BorderSizePixel = 0
 	btn.AutoButtonColor = false
 	btn.Text = ""
-	btn.ZIndex = 9
+	btn.ZIndex = 11
 	btn.Parent = parent
 
 	local iconCanvas = Instance.new("Frame")
@@ -540,7 +531,7 @@ local function makeBarIconButton(parent: Instance, name: string, onClick: () -> 
 	iconCanvas.Position = UDim2.fromScale(0.5, 0.5)
 	iconCanvas.AnchorPoint = Vector2.new(0.5, 0.5)
 	iconCanvas.BackgroundTransparency = 1
-	iconCanvas.ZIndex = 9
+	iconCanvas.ZIndex = 11
 	iconCanvas.Parent = btn
 
 	local function tintIcon(col: Color3)
@@ -570,7 +561,7 @@ local function addPart(parent: Instance, x: number, y: number, w: number, h: num
 	f.Position = UDim2.fromOffset(x, y)
 	f.BackgroundColor3 = SLATE_TEXT
 	f.BorderSizePixel = 0
-	f.ZIndex = 9
+	f.ZIndex = 11
 	if rot then
 		f.Rotation = rot
 	end
@@ -587,18 +578,18 @@ end
 local patchNotesBtn = makeBarTextButton(bottomBar, "PatchNotesButton", "PATCH NOTES", 100, function()
 	showClientToast("INFINITE TOWER — Waiting Room, The Pit, World Boss & Tactical Whistles Active")
 end)
-patchNotesBtn.Position = UDim2.new(0, 32, 0.5, 1)
+patchNotesBtn.Position = UDim2.new(0, 26, 0.5, 0)
 patchNotesBtn.AnchorPoint = Vector2.new(0, 0.5)
 patchNotesBtn.TextXAlignment = Enum.TextXAlignment.Left
 
 -- Center Group: 5 Infinite Tower Text Tabs | Divider | 4 Quick-Action Tool Icons
 local centerGroup = Instance.new("Frame")
 centerGroup.Name = "CenterToolbarGroup"
-centerGroup.Size = UDim2.new(0, 692, 1, -3)
-centerGroup.Position = UDim2.new(0.5, 0, 0, 3)
+centerGroup.Size = UDim2.new(0, 692, 1, 0)
+centerGroup.Position = UDim2.new(0.5, 0, 0, 0)
 centerGroup.AnchorPoint = Vector2.new(0.5, 0)
 centerGroup.BackgroundTransparency = 1
-centerGroup.ZIndex = 9
+centerGroup.ZIndex = 11
 centerGroup.Parent = bottomBar
 
 local centerLayout = Instance.new("UIListLayout")
@@ -644,7 +635,7 @@ centerDivider.Size = UDim2.fromOffset(1, 22)
 centerDivider.BackgroundColor3 = DIVIDER_GRAY
 centerDivider.BorderSizePixel = 0
 centerDivider.LayoutOrder = 6
-centerDivider.ZIndex = 9
+centerDivider.ZIndex = 11
 centerDivider.Parent = centerGroup
 
 -- Icon 1: Trash Can (Purge Conduit Rune)
@@ -660,7 +651,7 @@ do
 	bin.Size = UDim2.fromOffset(10, 12)
 	bin.Position = UDim2.fromOffset(4, 5)
 	bin.BackgroundTransparency = 1
-	bin.ZIndex = 9
+	bin.ZIndex = 11
 	bin.Parent = trashCanvas
 	local st = Instance.new("UIStroke")
 	st.Thickness = 1.6
@@ -700,7 +691,7 @@ end)
 iconBucketBtn.LayoutOrder = 9
 do
 	local body = addPart(bucketCanvas, 4, 5, 8, 8, 45, 1)
-	body.ZIndex = 9
+	body.ZIndex = 11
 	addPart(bucketCanvas, 6, 2, 5, 2, -25, 1)
 	addPart(bucketCanvas, 13, 12, 3, 4, 0, 2)
 end
@@ -721,11 +712,11 @@ end
 -- Right Group: Gear Icon + SAVE Button
 local rightGroup = Instance.new("Frame")
 rightGroup.Name = "RightToolbarGroup"
-rightGroup.Size = UDim2.new(0, 110, 1, -3)
-rightGroup.Position = UDim2.new(1, -28, 0, 3)
+rightGroup.Size = UDim2.new(0, 110, 1, 0)
+rightGroup.Position = UDim2.new(1, -26, 0, 0)
 rightGroup.AnchorPoint = Vector2.new(1, 0)
 rightGroup.BackgroundTransparency = 1
-rightGroup.ZIndex = 9
+rightGroup.ZIndex = 11
 rightGroup.Parent = bottomBar
 
 local rightLayout = Instance.new("UIListLayout")
@@ -745,14 +736,14 @@ do
 		addPart(gearCanvas, 2, 7, 14, 4, deg, 1)
 	end
 	local ring = addPart(gearCanvas, 3, 3, 12, 12, 0, 6)
-	ring.ZIndex = 9
+	ring.ZIndex = 11
 	local hole = Instance.new("Frame")
 	hole.Name = "Hole"
 	hole.Size = UDim2.fromOffset(6, 6)
 	hole.Position = UDim2.fromOffset(6, 6)
-	hole.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	hole.BackgroundColor3 = Color3.fromRGB(20, 14, 28)
 	hole.BorderSizePixel = 0
-	hole.ZIndex = 10
+	hole.ZIndex = 12
 	local hc = Instance.new("UICorner")
 	hc.CornerRadius = UDim.new(1, 0)
 	hc.Parent = hole
@@ -1513,6 +1504,9 @@ do
 		return container
 	end
 
+	-- Apply Gothic Obsidian & White Filigree Container Design to the Bottom Menu Bar
+	applyGothicBoxStyle(bottomBar, true, 8)
+
 	-- Remove top menu bar so the viewport top is unobstructed and currencies live in the bottom-left
 	topBar.Visible = false
 	currencyLabel.Visible = false
@@ -1520,7 +1514,7 @@ do
 
 	carriedLootPill.Parent = hudGui
 	carriedLootPill.AnchorPoint = Vector2.new(0, 1)
-	carriedLootPill.Position = UDim2.new(0, 18, 1, -114)
+	carriedLootPill.Position = UDim2.new(0, 14, 1, -120)
 	carriedLootPill.ZIndex = 8
 
 	-- Bottom-left Gold & Diamond Currency Containers (above PATCH NOTES) using Gothic Box Design
@@ -1529,7 +1523,7 @@ do
 	currencyCluster.BackgroundTransparency = 1
 	currencyCluster.Size = UDim2.fromOffset(258, 44)
 	currencyCluster.AnchorPoint = Vector2.new(0, 1)
-	currencyCluster.Position = UDim2.new(0, 18, 1, -60)
+	currencyCluster.Position = UDim2.new(0, 14, 1, -64)
 	currencyCluster.ZIndex = 8
 	currencyCluster.Parent = hudGui
 
@@ -1687,7 +1681,7 @@ do
 		honorLabel.Visible = false
 
 		currencyCluster.AnchorPoint = Vector2.new(0, 1)
-		currencyCluster.Position = UDim2.new(0, 18, 1, -60)
+		currencyCluster.Position = UDim2.new(0, 14, 1, -64)
 		local moneyScale = currencyCluster:FindFirstChildOfClass("UIScale") or Instance.new("UIScale", currencyCluster)
 		moneyScale.Scale = portrait and math.min(1, (w - 48) / 258) or 1
 
@@ -1721,15 +1715,15 @@ do
 		local centerScale = centerGroup:FindFirstChildOfClass("UIScale") or Instance.new("UIScale", centerGroup)
 		if w < 720 then
 			centerScale.Scale = math.clamp((w - 130) / 740, 0.55, 1)
-			centerGroup.Position = UDim2.new(0, 12, 0, 3)
+			centerGroup.Position = UDim2.new(0, 12, 0, 0)
 			centerGroup.AnchorPoint = Vector2.new(0, 0)
 		elseif w < 1040 then
 			centerScale.Scale = math.clamp((w - 280) / 740, 0.72, 1)
-			centerGroup.Position = UDim2.new(0.5, 0, 0, 3)
+			centerGroup.Position = UDim2.new(0.5, 0, 0, 0)
 			centerGroup.AnchorPoint = Vector2.new(0.5, 0)
 		else
 			centerScale.Scale = 1
-			centerGroup.Position = UDim2.new(0.5, 0, 0, 3)
+			centerGroup.Position = UDim2.new(0.5, 0, 0, 0)
 			centerGroup.AnchorPoint = Vector2.new(0.5, 0)
 		end
 
