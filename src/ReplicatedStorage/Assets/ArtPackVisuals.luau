@@ -89,7 +89,14 @@ function A.Attach(model: Model, meta: any, root: BasePart, bodySize: Vector3): M
 	local id = A.Resolve(meta)
 	if not id then return nil end
 
-	local art = A.AttachAt(model, id, root.CFrame * CFrame.new(0, -bodySize.Y * 0.5, 0), 1)
+	local template = A.Template(id)
+	if not template then return nil end
+
+	local isR15 = template:FindFirstChild("HumanoidRootPart") ~= nil
+	-- If R15, root.CFrame is already at Y = ground + 3.0. For skinned mobs without HRP, ground at floor.
+	local targetCF = isR15 and root.CFrame or (root.CFrame * CFrame.new(0, -bodySize.Y * 0.5, 0))
+
+	local art = A.AttachAt(model, id, targetCF, 1)
 	if art then
 		for _, p in ipairs(art:GetDescendants()) do
 			if p:IsA("BasePart") then
@@ -103,12 +110,12 @@ function A.Attach(model: Model, meta: any, root: BasePart, bodySize: Vector3): M
 		root.Transparency = 1
 		local head = model:FindFirstChild("Head")
 		if head and head:IsA("BasePart") then
-			head.Transparency = 1
+			head:Destroy()
 		end
 
-		-- For R15 models, weld art HumanoidRootPart to the root entity part
 		local artHrp = art:FindFirstChild("HumanoidRootPart") :: BasePart?
 		if artHrp then
+			artHrp.CFrame = root.CFrame
 			local weld = Instance.new("WeldConstraint")
 			weld.Part0 = root
 			weld.Part1 = artHrp
@@ -183,15 +190,31 @@ function A.Animate(node: any, dt: number, time: number)
 			if name:find("UpperLeg") or name:find("Hip") then
 				angle = wave * 0.45 * sign
 			elseif name:find("UpperArm") or name:find("Shoulder") then
-				angle = -wave * 0.35 * sign
+				if isMarksman then
+					-- When running, marksman keeps bow raised forward with athletic stride bounce
+					angle = math.sin(time * 9) * 0.08
+				else
+					angle = -wave * 0.35 * sign
+				end
 			end
 		elseif attack then
 			if isMarksman then
-				-- Marksman rifle aim + recoil
+				-- Marksman bow draw & snap release cycle (3.5 Hz)
+				-- 70% draw tension build-up, 10% snap release, 20% nock reset
+				local cycle = (time * 3.5) % 1.0
+				local drawTension = 0
+				if cycle < 0.7 then
+					drawTension = (cycle / 0.7) * 0.35
+				elseif cycle < 0.8 then
+					drawTension = -0.15
+				else
+					drawTension = -0.15 * (1 - (cycle - 0.8) / 0.2)
+				end
+
 				if name == "RightUpperArm" or name == "RightShoulder" then
-					angle = -1.25 + math.sin(time * 16) * 0.15 -- Aim rifle forward with recoil kick
+					angle = drawTension -- Pulls drawing arm back under arrow tension
 				elseif name == "LeftUpperArm" or name == "LeftShoulder" then
-					angle = -1.1 + math.sin(time * 16) * 0.08 -- Support rifle barrel with left hand
+					angle = -drawTension * 0.25 -- Subtle forward bow thrust under string tension
 				end
 			else
 				-- Melee strike

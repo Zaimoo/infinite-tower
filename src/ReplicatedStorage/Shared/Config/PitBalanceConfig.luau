@@ -27,8 +27,8 @@ Config.Promotion = {
 	LaborMultiplier = 1.35,
 	[1] = { Gold = 1500, PromotionStone = 1 },
 	[2] = { Gold = 7500, PromotionStone = 3 },
-	[3] = { Gold = 35000, PromotionStone = 8, Research = "AdvancedStonecraft" },
-	[4] = { Gold = 150000, PromotionStone = 18, Research = "MasterStonecraft" },
+	[3] = { Gold = 35000, PromotionStone = 8 },
+	[4] = { Gold = 150000, PromotionStone = 18 },
 }
 Config.Conversion = {
 	BaseEssence = { [1] = 4, [2] = 12, [3] = 36, [4] = 108, [5] = 324 },
@@ -51,7 +51,7 @@ Config.Imprints = {
 		ranged_memory = { Name = "Measured Aim", Category = "Combat", Description = "+2% ATK per rank for ranged specialists.", DonorRoles = { Marksman = true }, RecipientRoles = { Marksman = true, Scholar = true }, Effect = { ATK = 0.02 } },
 		bulwark_memory = { Name = "Guardian's Memory", Category = "Combat", Description = "+3% HP per rank for defensive specialists.", DonorRoles = { Vanguard = true }, RecipientRoles = { Vanguard = true, Healer = true }, Effect = { HP = 0.03 } },
 		conduit_memory = { Name = "Mana Stewardship", Category = "Utility", Description = "+3% labor per rank for conduit specialists.", DonorRoles = { Miner = true }, RecipientRoles = { Miner = true, Striker = true }, Effect = { Labor = 0.03 } },
-		scholarly_memory = { Name = "Runic Method", Category = "Rare Trait", Description = "+3% labor and +1% ATK per rank. Requires Memory Studies.", DonorRoles = { Scholar = true }, RecipientRoles = { Scholar = true, Marksman = true }, Effect = { Labor = 0.03, ATK = 0.01 }, Research = "MemoryStudies", MinimumStars = 2 },
+		scholarly_memory = { Name = "Runic Method", Category = "Rare Trait", Description = "+3% labor and +1% ATK per rank.", DonorRoles = { Scholar = true }, RecipientRoles = { Scholar = true, Marksman = true }, Effect = { Labor = 0.03, ATK = 0.01 }, MinimumStars = 2 },
 		restorative_memory = { Name = "Steady Recovery", Category = "Utility", Description = "+2% HP and +2% labor per rank for supportive specialists.", DonorRoles = { Healer = true }, RecipientRoles = { Healer = true, Vanguard = true }, Effect = { HP = 0.02, Labor = 0.02 } },
 	},
 }

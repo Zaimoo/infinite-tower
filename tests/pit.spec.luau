@@ -165,7 +165,7 @@ test("Conversion rewards are deterministic and account for bounded investment", 
 	equal(Math.GetConversionYield(hero("a", "hero_han", { InheritedImprints = { melee_memory = 999, fake = 999 } })), 10)
 end)
 
-test("Imprint compatibility, research and capacity reject unsupported transfers", function()
+test("Imprint compatibility and capacity reject unsupported transfers without research gates", function()
 	local options = Math.GetImprintOptions(hero("d", "hero_jenna"), hero("r"), {})
 	equal(#options, 1); equal(options[1].Id, "ranged_memory"); equal(options[1].Compatible, false)
 	options = Math.GetImprintOptions(hero("d"), hero("r", "hero_aaron"), {})
@@ -173,7 +173,7 @@ test("Imprint compatibility, research and capacity reject unsupported transfers"
 	local full = hero("r", "hero_han", { InheritedImprints = { conduit_memory = 1 } })
 	equal(Math.GetImprintOptions(hero("d"), full, {})[1].Compatible, false)
 	local scholar = hero("r", "hero_eolka")
-	equal(Math.GetImprintOptions(hero("d", "hero_eolka"), scholar, {})[1].Compatible, false)
+	equal(Math.GetImprintOptions(hero("d", "hero_eolka"), scholar, {})[1].Compatible, true)
 	equal(Math.GetImprintOptions(hero("d", "hero_eolka"), scholar, { MemoryStudies = true })[1].Compatible, true)
 end)
 
@@ -496,22 +496,37 @@ test("Valid promotion charges exact resources, preserves traits and cannot repea
 	rejectedWithoutMutation(c, "PREVIEW", { Action = "PROMOTION", Recipient = "r" })
 end)
 
-test("Promotion validates cap, Gold, stones, advanced research and five-star ceiling", function()
+test("Promotion validates cap, Gold, stones and five-star ceiling without research gates", function()
 	local scenarios = {
 		function(p) p.Heroes.r.Level = 9 end,
 		function(p) p.Currencies.Gold = 1499 end,
 		function(p) p.PitMaterials.PromotionStone = 0 end,
-		function(p) p.Heroes.r.Stars = 3; p.Heroes.r.Level = 30 end,
-		function(p) p.Heroes.r.Stars = 4; p.Heroes.r.Level = 40 end,
 		function(p) p.Heroes.r.Stars = 5; p.Heroes.r.Level = 50 end,
 	}
 	for _, mutate in ipairs(scenarios) do
 		local c = context(); c.profile.Heroes.r.Level = 10; mutate(c.profile)
 		rejectedWithoutMutation(c, "PREVIEW", { Action = "PROMOTION", Recipient = "r" })
 	end
-	local c = context(); c.profile.Heroes.r.Stars = 4; c.profile.Heroes.r.Level = 40; c.profile.UnlockedResearch.MasterStonecraft = true
+	local c = context(); c.profile.Heroes.r.Stars = 4; c.profile.Heroes.r.Level = 40
 	local p = c:preview({ Action = "PROMOTION", Recipient = "r" }); check(p.CanCommit); check(c:commit(p).Success)
 	equal(c.profile.Heroes.r.Stars, 5); equal(Math.GetImprintCapacity(c.profile.Heroes.r), 3)
+end)
+
+test("Current profiles promote without retired research currency or lab facilities", function()
+	for _, stars in ipairs({ 3, 4 }) do
+		local c = context()
+		c.profile.Currencies.ResearchPoints = nil
+		c.profile.Facilities.DimensionalLab = nil
+		c.profile.UnlockedResearch = nil
+		PitService.EnsureDefaults(c.profile)
+		local state = c:request("STATE")
+		check(state.Success); equal(state.State.Research, nil)
+		equal(state.State.Resources.ResearchPoints, nil)
+		c.profile.Heroes.r.Stars, c.profile.Heroes.r.Level = stars, stars * 10
+		local preview = c:preview({ Action = "PROMOTION", Recipient = "r" })
+		check(preview.CanCommit); check(c:commit(preview).Success)
+		equal(c.profile.Heroes.r.Stars, stars + 1)
+	end
 end)
 
 test("Promotion updates actual assigned facility labor without double scaling", function()

@@ -111,15 +111,7 @@ task.spawn(function()
 
 				conduit.UncollectedOutput = math.min(conduitCfg.Cap, conduit.UncollectedOutput + gemsThisSec)
 
-				-- 2. Dimensional Lab (RP / Minute)
-				local lab = profile.Facilities.DimensionalLab
-				local labCfg = FacilityConfig.UpgradeTable.DimensionalLab[lab.Level] or FacilityConfig.UpgradeTable.DimensionalLab[1]
-				local labLabor = computeFacilitySumLabor(profile, lab, "FACILITY_LAB")
-				local labMult = getBlessOrLeechMultiplier(lab, nowUnix)
-				local rpPerMin = StatFormulas.GetDimensionalLabRPPerMin(lab.Level, labLabor, labMult)
-				lab.UncollectedOutput = math.min(labCfg.Cap, lab.UncollectedOutput + (rpPerMin / 60.0))
-
-				-- 3. The Infirmary & Barracks (Stamina Recovery & Coma Clearing)
+				-- 2. The Infirmary & Barracks (Stamina Recovery & Coma Clearing)
 				local inf = profile.Facilities.Infirmary
 				local infLabor = computeFacilitySumLabor(profile, inf, "FACILITY_INFIRMARY")
 				local staminaRegenPerSec, _ = StatFormulas.GetInfirmaryRates(inf.Level, infLabor)

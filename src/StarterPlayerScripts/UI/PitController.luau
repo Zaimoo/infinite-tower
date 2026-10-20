@@ -519,7 +519,7 @@ function Pit.RenderDetails(self: any)
 			if preview.XP then
 				local xp = preview.XP
 				local nextLevel = after.Level >= after.MaxLevel and (after.Stars >= 5 and "Maximum level reached · pursue compatible Imprints" or "At level cap · promotion releases reserved EXP") or (T.Number(math.max(0, StatFormulas.GetXPRequiredForNextLevel(after.Level or 1) - (after.XP or 0))) .. " EXP to next level")
-				autoLabel(self.DetailScroll, string.format("EXP %s → %s\n%s\nBase +%s · Efficiency %s%%\nResearch +%s%% · Final +%s EXP", T.Number(before.XP), T.Number(after.XP), nextLevel, T.Number(xp.Base), T.Number((xp.Efficiency or 1) * 100), T.Number((xp.ResearchBonus or 0) * 100), T.Number(xp.Final)), T.Color.Text, self.TextSize)
+				autoLabel(self.DetailScroll, string.format("EXP %s → %s\n%s\nBase +%s · Efficiency %s%%\nFinal +%s EXP", T.Number(before.XP), T.Number(after.XP), nextLevel, T.Number(xp.Base), T.Number((xp.Efficiency or 1) * 100), T.Number(xp.Final)), T.Color.Text, self.TextSize)
 				local track = T.New("Frame", {Name = "PreviewXPTrack", BackgroundColor3 = T.Color.Obsidian, BorderSizePixel = 0, Size = UDim2.new(1, -8, 0, 8)}, self.DetailScroll)
 				T.Corner(track, 4)
 				local startRatio = math.clamp((before.XP or 0) / StatFormulas.GetXPRequiredForNextLevel(before.Level or 1), 0, 1)
@@ -617,6 +617,7 @@ end
 
 function Pit.RenderResearch(self: any)
 	local research = self.State.Research or {}
+	if next(research) == nil then return end
 	T.Button(self.DetailScroll, self.ShowResearch and "Hide Dimensional Lab research ▴" or "Dimensional Lab research ▾", function() self.ShowResearch = not self.ShowResearch; self:RenderDetails() end)
 	if not self.ShowResearch then return end
 	for key, node in research do

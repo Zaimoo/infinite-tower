@@ -171,19 +171,7 @@ function PlotManager.RefreshPlotVisuals(player: Player)
 		end
 	end
 
-	-- 2. Render Dimensional Lab Workers
-	local labModel = plotModel:FindFirstChild("Facility_DimLab")
-	if labModel then
-		for idx, uuid in ipairs(profile.Facilities.DimensionalLab.AssignedHeroUUIDs) do
-			local hero = profile.Heroes[uuid]
-			local ped = labModel:FindFirstChild("WorkerPedestal_" .. tostring(idx)) :: BasePart?
-			if hero and ped then
-				createWorkerAvatarPart(workersContainer, hero, ped.CFrame, false)
-			end
-		end
-	end
-
-	-- 3. Render Infirmary Healers & Resting/Comatose Heroes on Recuperation Beds
+	-- 2. Render Infirmary Healers & Resting/Comatose Heroes on Recuperation Beds
 	local infModel = plotModel:FindFirstChild("Facility_Infirmary")
 	if infModel then
 		local bedIdx = 1
@@ -215,7 +203,7 @@ end
 local function assignPlotToPlayer(player: Player)
 	local dm = getDataManager()
 	local chosenIdx = 1
-	for i = 1, 6 do
+	for i = 1, 5 do
 		if AssignedPlots[i] == nil then
 			chosenIdx = i
 			break

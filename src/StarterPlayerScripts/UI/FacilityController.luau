@@ -155,15 +155,14 @@ function Controller.Refresh(self: any)
 		for _, h in heroes do if h.Assignment == "FACILITY_INFIRMARY" then resting += 1 end end
 		self.Summary.Text = string.format("Infirmary Lv.%d  •  %d heroes resting  •  Recovery runs while assigned here", facility.Level, resting)
 		local nextLevel = FacilityConfig.UpgradeTable.Infirmary[facility.Level + 1]
-		local upgrade = nextLevel and string.format("UPGRADE · %d GOLD / %d RP", nextLevel.Gold, nextLevel.RP) or "MAXIMUM LEVEL"
+		local upgrade = nextLevel and string.format("UPGRADE · %d GOLD", nextLevel.Gold) or "MAXIMUM LEVEL"
 		self:Button(self.Actions, "Upgrade", upgrade, UDim2.new(1, 0, 1, 0), UDim2.new(), function()
 			if nextLevel then self.Facility:FireServer("UPGRADE_FACILITY", "Infirmary") end
 		end)
 	else
 		local deployed = 0
 		for _, h in heroes do if h.Assignment:match("^SQUAD_SLOT_") then deployed += 1 end end
-		local research = profile.UnlockedResearch or {}
-		local slots = research.SquadSlot5 and 5 or research.SquadSlot4 and 4 or 3
+		local slots = 5 -- All squad slots are available after removal of research unlocks.
 		self.Summary.Text = string.format("%d / %d squad slots occupied  •  Deploy heroes or send them to the bench", deployed, slots)
 		self:Button(self.Actions, "RotateSquad", "REST EXHAUSTED & DEPLOY FRESH HEROES", UDim2.new(1, 0, 1, 0), UDim2.new(), function()
 			self:Request(function() return self.Assign:InvokeServer("AUTO_SWAP_EXHAUSTED", "") end)

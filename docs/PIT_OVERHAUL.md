@@ -1,5 +1,10 @@
 # The Pit: progression and verification
 
+The current integration preserves the removal of research and RP from the game.
+Advanced promotions and Runic Method have no lab prerequisite, infirmary upgrades
+cost Gold, and all five squad slots are available. References to lab unlocks in
+the original design notes below describe the previous progression model.
+
 The Pit has four operations: deterministic EXP synthesis, guaranteed focused
 imprints, guaranteed star promotion, and deterministic conversion. Heroes are
 selected by their instance UUID. Display names and template IDs are never donor

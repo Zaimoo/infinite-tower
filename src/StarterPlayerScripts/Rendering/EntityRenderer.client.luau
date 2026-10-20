@@ -397,7 +397,7 @@ RunService.RenderStepped:Connect(function(dt: number)
 		local bodyH = node.IsHero and 3.2 or (node.RootPart.Size.Y * 0.5)
 		local cf = CFrame.new(node.CurrentPos + Vector3.new(0, bodyH, 0)) * CFrame.Angles(0, node.GoalYaw, 0)
 		node.Model:PivotTo(cf)
-		ArtPackVisuals.Animate(node,dt,os.clock())
+		ArtPackVisuals.Animate(node, dt, os.clock())
 		local head = node.Model:FindFirstChild("Head") :: BasePart?
 		if head and not node.IsHero then
 			head.Position = cf.Position + Vector3.new(0, bodyH + (head.Size.Y * 0.45), 0)
