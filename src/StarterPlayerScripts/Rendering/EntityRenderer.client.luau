@@ -222,6 +222,10 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 		stamFill = sf
 	end
 
+	if isHero and meta and (meta.EquippedArtifactId or meta.EquippedArtifactType) then
+		ArtPackVisuals.EquipWeapon(model, meta.EquippedArtifactId, meta.EquippedArtifactType, meta.EquippedArtifactRarity)
+	end
+
 	model.PrimaryPart = root
 	model.Parent = VisualFolder
 
@@ -282,6 +286,10 @@ EntityMetadataRemote.OnClientEvent:Connect(function(metaTable: any)
 			if meta.IsHero then
 				local stars = string.rep("★", meta.Stars or 1)
 				node.TitleLabel.Text = string.format("%s %s Lv.%d", meta.Name or "Hero", stars, meta.Level or 1)
+				local curWeap = node.Model:GetAttribute("EquippedArtifactId")
+				if curWeap ~= meta.EquippedArtifactId then
+					ArtPackVisuals.EquipWeapon(node.Model, meta.EquippedArtifactId, meta.EquippedArtifactType, meta.EquippedArtifactRarity)
+				end
 			else
 				node.TitleLabel.Text = meta.Name or "Mob"
 			end

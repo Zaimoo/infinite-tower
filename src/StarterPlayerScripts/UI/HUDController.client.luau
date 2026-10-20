@@ -31,6 +31,12 @@ local SquadWipeStateRemote = CombatRemotes:WaitForChild("SquadWipeState") :: Rem
 local DropCarriedItemRemote = CombatRemotes:WaitForChild("DropCarriedItem") :: RemoteEvent
 local CarriedLootSyncRemote = CombatRemotes:WaitForChild("CarriedLootSync") :: RemoteEvent
 
+local ArtifactCatalog = require(Shared:WaitForChild("Config"):WaitForChild("ArtifactCatalog"))
+local ArtifactRemotes = Remotes:WaitForChild("ArtifactRemotes")
+local RequestEquipArtifactFunc = ArtifactRemotes:WaitForChild("RequestEquipArtifact") :: RemoteFunction
+local RequestUnequipArtifactFunc = ArtifactRemotes:WaitForChild("RequestUnequipArtifact") :: RemoteFunction
+local RequestUpgradeRarityFunc = ArtifactRemotes:WaitForChild("RequestUpgradeRarity") :: RemoteFunction
+
 local RequestSummonFunc = TycoonRemotes:WaitForChild("RequestSummon") :: RemoteFunction
 local SynthesizeHeroesFunc = TycoonRemotes:WaitForChild("SynthesizeHeroes") :: RemoteFunction
 local PromoteHeroStarFunc = TycoonRemotes:WaitForChild("PromoteHeroStar") :: RemoteFunction
@@ -82,9 +88,14 @@ local function makeLabel(props: { [string]: any }): TextLabel
 	l.TextColor3 = props.TextColor3 or Color3.fromRGB(240, 240, 250)
 	l.TextScaled = if props.TextScaled ~= nil then props.TextScaled else true
 	for k, v in pairs(props) do
-		if k ~= "Parent" then
+		if k ~= "Parent" and k ~= "Corner" and k ~= "Stroke" and k ~= "StrokeColor" then
 			(l :: any)[k] = v
 		end
+	end
+	if props.Corner then
+		local c = Instance.new("UICorner")
+		c.CornerRadius = UDim.new(0, props.Corner)
+		c.Parent = l
 	end
 	l.TextWrapped = true
 	local cap = Instance.new("UITextSizeConstraint")
@@ -456,6 +467,20 @@ local pitModal = makeFrame({
 
 local refreshWaitingRoomModal: () -> ()
 local refreshPitModal: () -> ()
+local refreshBlacksmithModal: () -> ()
+local selectedArtifactUUID: string? = nil
+
+local blacksmithModal = makeFrame({
+	Name = "BlacksmithModal",
+	Size = UDim2.new(0, 880, 0, 520),
+	Position = UDim2.new(0.5, -440, 0.5, -260),
+	BackgroundColor3 = Color3.fromRGB(22, 20, 26),
+	Visible = false,
+	Corner = 12,
+	Stroke = 2,
+	StrokeColor = Color3.fromRGB(255, 160, 45),
+	Parent = hudGui,
+})
 
 --============================================================================
 -- BOTTOM NAVIGATION & TOOL BAR (White Bar with Cyan Top Border)
@@ -787,11 +812,14 @@ end
 _G.OpenMasterModal = function(which: string)
 	waitingRoomModal.Visible = (which == "WAITING_ROOM")
 	pitModal.Visible = (which == "THE_PIT")
+	blacksmithModal.Visible = (which == "BLACKSMITH")
 	updateBottomTabHighlights()
 	if which == "WAITING_ROOM" and refreshWaitingRoomModal then
 		refreshWaitingRoomModal()
 	elseif which == "THE_PIT" and refreshPitModal then
 		refreshPitModal()
+	elseif which == "BLACKSMITH" and refreshBlacksmithModal then
+		refreshBlacksmithModal()
 	end
 end
 
@@ -813,6 +841,16 @@ makeButton({
 	Corner = 6,
 	OnClick = function()
 		_G.OpenMasterModal(pitModal.Visible and "NONE" or "THE_PIT")
+	end,
+	Parent = navButtonsFrame,
+})
+makeButton({
+	Size = UDim2.new(0, 115, 1, 0),
+	BackgroundColor3 = Color3.fromRGB(200, 115, 25),
+	Text = "⚒️ Blacksmith",
+	Corner = 6,
+	OnClick = function()
+		_G.OpenMasterModal(blacksmithModal.Visible and "NONE" or "BLACKSMITH")
 	end,
 	Parent = navButtonsFrame,
 })
@@ -1288,6 +1326,370 @@ refreshPitModal = function()
 end
 
 --============================================================================
+-- 5. BUILD THE BLACKSMITH MODAL (EQUIPPABLE ARTIFACTS & 16-TIER RARITY FORGE)
+--============================================================================
+
+makeLabel({
+	Size = UDim2.new(0.75, 0, 0, 36),
+	Position = UDim2.new(0.02, 0, 0, 6),
+	Text = "⚒️ BLACKSMITH FORGE — HERO ARTIFACTS & 16 RARITY TIERS (COMMON -> ORIGIN)",
+	TextColor3 = Color3.fromRGB(255, 175, 55),
+	TextXAlignment = Enum.TextXAlignment.Left,
+	Parent = blacksmithModal,
+})
+
+makeButton({
+	Size = UDim2.new(0, 90, 0, 30),
+	Position = UDim2.new(1, -100, 0, 9),
+	BackgroundColor3 = Color3.fromRGB(185, 45, 60),
+	Text = "X CLOSE",
+	Corner = 6,
+	OnClick = function()
+		blacksmithModal.Visible = false
+		updateBottomTabHighlights()
+	end,
+	Parent = blacksmithModal,
+})
+
+-- Left Panel: Selected Artifact Detail & Upgrade Forge
+local forgeDetailFrame = makeFrame({
+	Size = UDim2.new(0.48, -12, 1, -56),
+	Position = UDim2.new(0.02, 0, 0, 46),
+	BackgroundColor3 = Color3.fromRGB(30, 26, 32),
+	Corner = 10,
+	Stroke = 1,
+	StrokeColor = Color3.fromRGB(120, 90, 60),
+	Parent = blacksmithModal,
+})
+
+local artifactTitleLabel = makeLabel({
+	Size = UDim2.new(0.96, 0, 0, 32),
+	Position = UDim2.new(0.02, 0, 0.02, 0),
+	Text = "Select an Artifact from Inventory ->",
+	TextColor3 = Color3.fromRGB(255, 230, 140),
+	TextXAlignment = Enum.TextXAlignment.Left,
+	Parent = forgeDetailFrame,
+})
+
+local rarityBadgeLabel = makeLabel({
+	Size = UDim2.new(0.96, 0, 0, 26),
+	Position = UDim2.new(0.02, 0, 0.09, 0),
+	Text = "[COMMON] Multiplier x1.00",
+	TextColor3 = Color3.fromRGB(200, 200, 200),
+	BackgroundColor3 = Color3.fromRGB(45, 45, 55),
+	Corner = 4,
+	Parent = forgeDetailFrame,
+})
+
+local statsDetailLabel = makeLabel({
+	Size = UDim2.new(0.96, 0, 0, 90),
+	Position = UDim2.new(0.02, 0, 0.16, 0),
+	Text = "Base Stats:\nEffective Stats:\nEquipped To: None",
+	TextColor3 = Color3.fromRGB(220, 225, 235),
+	TextXAlignment = Enum.TextXAlignment.Left,
+	Parent = forgeDetailFrame,
+})
+
+local upgradeForgeFrame = makeFrame({
+	Size = UDim2.new(0.96, 0, 0, 110),
+	Position = UDim2.new(0.02, 0, 0.38, 0),
+	BackgroundColor3 = Color3.fromRGB(40, 32, 38),
+	Corner = 8,
+	Stroke = 1,
+	StrokeColor = Color3.fromRGB(200, 120, 40),
+	Parent = forgeDetailFrame,
+})
+
+local nextRarityLabel = makeLabel({
+	Size = UDim2.new(0.96, 0, 0, 24),
+	Position = UDim2.new(0.02, 0, 0.06, 0),
+	Text = "Next Rarity Preview: None",
+	TextColor3 = Color3.fromRGB(255, 215, 120),
+	TextXAlignment = Enum.TextXAlignment.Left,
+	Parent = upgradeForgeFrame,
+})
+
+local upgradeCostLabel = makeLabel({
+	Size = UDim2.new(0.96, 0, 0, 24),
+	Position = UDim2.new(0.02, 0, 0.30, 0),
+	Text = "Cost: 0 Gold, 0 Gems",
+	TextColor3 = Color3.fromRGB(255, 255, 255),
+	TextXAlignment = Enum.TextXAlignment.Left,
+	Parent = upgradeForgeFrame,
+})
+
+local upgradeButton = makeButton({
+	Size = UDim2.new(0.96, 0, 0, 38),
+	Position = UDim2.new(0.02, 0, 0.58, 0),
+	BackgroundColor3 = Color3.fromRGB(215, 115, 30),
+	Text = "⚒️ UPGRADE RARITY",
+	Corner = 6,
+	OnClick = function()
+		if not CurrentProfile or not selectedArtifactUUID then return end
+		local sel = CurrentProfile.Artifacts and CurrentProfile.Artifacts[selectedArtifactUUID]
+		if not sel or sel.Rarity >= 16 then return end
+		local cost = ArtifactCatalog.GetUpgradeCost(sel.Rarity)
+		if not cost then return end
+		local haveGold = CurrentProfile.Currencies.Gold or 0
+		local haveGems = CurrentProfile.Currencies.Gems or 0
+		if haveGold >= cost.Gold and haveGems >= cost.Gems then
+			task.spawn(function()
+				local success, msg = RequestUpgradeRarityFunc:InvokeServer(sel.UUID)
+				if refreshBlacksmithModal then refreshBlacksmithModal() end
+			end)
+		end
+	end,
+	Parent = upgradeForgeFrame,
+})
+
+-- Equip / Unequip Section
+local heroEquipHeader = makeLabel({
+	Size = UDim2.new(0.96, 0, 0, 24),
+	Position = UDim2.new(0.02, 0, 0.65, 0),
+	Text = "Hero Equipping (Archetype Restricted):",
+	TextColor3 = Color3.fromRGB(255, 215, 120),
+	TextXAlignment = Enum.TextXAlignment.Left,
+	Parent = forgeDetailFrame,
+})
+
+local heroEquipScroll = Instance.new("ScrollingFrame")
+heroEquipScroll.Name = "HeroEquipScroll"
+heroEquipScroll.Size = UDim2.new(0.96, 0, 0.28, 0)
+heroEquipScroll.Position = UDim2.new(0.02, 0, 0.70, 0)
+heroEquipScroll.BackgroundTransparency = 1
+heroEquipScroll.BorderSizePixel = 0
+heroEquipScroll.ScrollBarThickness = 5
+heroEquipScroll.Parent = forgeDetailFrame
+
+local heroEquipLayout = Instance.new("UIListLayout")
+heroEquipLayout.Padding = UDim.new(0, 4)
+heroEquipLayout.Parent = heroEquipScroll
+
+-- Right Panel: Inventory Artifact List
+local artifactListFrame = makeFrame({
+	Size = UDim2.new(0.48, -12, 1, -56),
+	Position = UDim2.new(0.50, 4, 0, 46),
+	BackgroundColor3 = Color3.fromRGB(24, 22, 28),
+	Corner = 10,
+	Stroke = 1,
+	StrokeColor = Color3.fromRGB(90, 80, 95),
+	Parent = blacksmithModal,
+})
+
+local artifactScroll = Instance.new("ScrollingFrame")
+artifactScroll.Name = "ArtifactScroll"
+artifactScroll.Size = UDim2.new(0.96, 0, 0.94, 0)
+artifactScroll.Position = UDim2.new(0.02, 0, 0.03, 0)
+artifactScroll.BackgroundTransparency = 1
+artifactScroll.BorderSizePixel = 0
+artifactScroll.ScrollBarThickness = 6
+artifactScroll.Parent = artifactListFrame
+
+local artifactLayout = Instance.new("UIListLayout")
+artifactLayout.Padding = UDim.new(0, 6)
+artifactLayout.Parent = artifactScroll
+
+refreshBlacksmithModal = function()
+	if not CurrentProfile then return end
+	local artifacts = CurrentProfile.Artifacts or {}
+
+	if (not selectedArtifactUUID or not artifacts[selectedArtifactUUID]) then
+		for uuid, _ in pairs(artifacts) do
+			selectedArtifactUUID = uuid
+			break
+		end
+	end
+
+	local sel = selectedArtifactUUID and artifacts[selectedArtifactUUID]
+	if sel then
+		local rInfo = ArtifactCatalog.GetRarityInfo(sel.Rarity)
+		local baseATK, baseSpd = ArtifactCatalog.GetStarBaseStats(sel.Star)
+		local effATK, effSpd = ArtifactCatalog.CalculateEffectiveStats(sel.Star, sel.Rarity)
+		local starsStr = string.rep("★", sel.Star or 1)
+
+		artifactTitleLabel.Text = string.format("%s %s [%s]", sel.DisplayName or "Artifact", starsStr, sel.Type or "WEAPON")
+		artifactTitleLabel.TextColor3 = rInfo.Color
+
+		rarityBadgeLabel.Text = string.format("Tier %d: %s (Multiplier x%0.2f)", sel.Rarity, rInfo.Name:upper(), rInfo.Multiplier)
+		rarityBadgeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+		rarityBadgeLabel.BackgroundColor3 = rInfo.Color:Lerp(Color3.fromRGB(15, 15, 20), 0.5)
+
+		local equippedHeroName = "None (Available in Inventory)"
+		local equippedHeroUUID: string? = nil
+		if sel.EquippedHeroUUID and CurrentProfile.Heroes and CurrentProfile.Heroes[sel.EquippedHeroUUID] then
+			local h = CurrentProfile.Heroes[sel.EquippedHeroUUID]
+			equippedHeroName = string.format("%s (%s Lv.%d)", h.DisplayName, h.Archetype, h.Level)
+			equippedHeroUUID = sel.EquippedHeroUUID
+		end
+
+		statsDetailLabel.Text = string.format(
+			"Base Stats (Tier %d★): +%d ATK, +%0.1f%% AtkSpd\nEffective Stats (x%0.2f): +%d ATK, +%0.1f%% AtkSpd\nEquipped to: %s",
+			sel.Star, baseATK, baseSpd * 100,
+			rInfo.Multiplier, effATK, effSpd * 100,
+			equippedHeroName
+		)
+
+		local nextRarity = sel.Rarity + 1
+		local cost = ArtifactCatalog.GetUpgradeCost(sel.Rarity)
+		if nextRarity <= 16 and cost then
+			local nextInfo = ArtifactCatalog.GetRarityInfo(nextRarity)
+			local nextEffATK, nextEffSpd = ArtifactCatalog.CalculateEffectiveStats(sel.Star, nextRarity)
+			nextRarityLabel.Text = string.format("Next: %s (x%0.2f) -> +%d ATK, +%0.1f%% Spd", nextInfo.Name, nextInfo.Multiplier, nextEffATK, nextEffSpd * 100)
+			nextRarityLabel.TextColor3 = nextInfo.Color
+
+			local haveGold = CurrentProfile.Currencies.Gold or 0
+			local haveGems = CurrentProfile.Currencies.Gems or 0
+			local canAfford = haveGold >= cost.Gold and haveGems >= cost.Gems
+
+			upgradeCostLabel.Text = string.format("Cost: %d Gold, %d Gems (Have: %d G, %d Gems)", cost.Gold, cost.Gems, math.floor(haveGold), math.floor(haveGems))
+			upgradeCostLabel.TextColor3 = canAfford and Color3.fromRGB(120, 255, 120) or Color3.fromRGB(255, 120, 120)
+
+			upgradeButton.Text = string.format("⚒️ FORGE UPGRADE TO %s", nextInfo.Name:upper())
+			upgradeButton.BackgroundColor3 = canAfford and Color3.fromRGB(215, 115, 30) or Color3.fromRGB(90, 70, 65)
+			upgradeButton.AutoButtonColor = canAfford
+		else
+			nextRarityLabel.Text = "🌟 MAX RARITY ACHIEVED (16: ORIGIN)!"
+			nextRarityLabel.TextColor3 = Color3.fromRGB(255, 160, 245)
+			upgradeCostLabel.Text = "Maximum multiplier reached (x18.00)!"
+			upgradeCostLabel.TextColor3 = Color3.fromRGB(255, 230, 140)
+			upgradeButton.Text = "MAX RARITY REACHED"
+			upgradeButton.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+		end
+
+		for _, c in ipairs(heroEquipScroll:GetChildren()) do
+			if c:IsA("Frame") then c:Destroy() end
+		end
+		local listCount = 0
+
+		if equippedHeroUUID then
+			listCount += 1
+			local unequipRow = makeFrame({
+				Size = UDim2.new(1, -8, 0, 32),
+				BackgroundColor3 = Color3.fromRGB(150, 40, 50),
+				Corner = 5,
+				Parent = heroEquipScroll,
+			})
+			makeButton({
+				Size = UDim2.fromScale(1, 1),
+				Text = string.format("⚔️ UNEQUIP FROM %s", equippedHeroName),
+				BackgroundColor3 = Color3.fromRGB(160, 45, 55),
+				Corner = 5,
+				OnClick = function()
+					task.spawn(function()
+						RequestUnequipArtifactFunc:InvokeServer(equippedHeroUUID)
+						if refreshBlacksmithModal then refreshBlacksmithModal() end
+					end)
+				end,
+				Parent = unequipRow,
+			})
+		end
+
+		for heroUUID, hero in pairs(CurrentProfile.Heroes or {}) do
+			if ArtifactCatalog.CanHeroEquip(hero.Archetype, sel.Type) then
+				listCount += 1
+				local isCurrentHolder = (heroUUID == equippedHeroUUID)
+				local hRow = makeFrame({
+					Size = UDim2.new(1, -8, 0, 32),
+					BackgroundColor3 = isCurrentHolder and Color3.fromRGB(50, 70, 50) or Color3.fromRGB(40, 42, 54),
+					Corner = 5,
+					Parent = heroEquipScroll,
+				})
+				makeLabel({
+					Size = UDim2.new(0.65, 0, 1, 0),
+					Position = UDim2.new(0.03, 0, 0, 0),
+					Text = string.format("%s (%s Lv.%d)", hero.DisplayName, hero.Archetype, hero.Level),
+					TextColor3 = isCurrentHolder and Color3.fromRGB(140, 255, 140) or Color3.fromRGB(235, 235, 245),
+					TextXAlignment = Enum.TextXAlignment.Left,
+					Parent = hRow,
+				})
+				makeButton({
+					Size = UDim2.new(0.30, 0, 0.8, 0),
+					Position = UDim2.new(0.68, 0, 0.1, 0),
+					BackgroundColor3 = isCurrentHolder and Color3.fromRGB(70, 90, 70) or Color3.fromRGB(45, 125, 215),
+					Text = isCurrentHolder and "EQUIPPED" or "EQUIP",
+					Corner = 4,
+					OnClick = function()
+						if not isCurrentHolder then
+							task.spawn(function()
+								RequestEquipArtifactFunc:InvokeServer(heroUUID, sel.UUID)
+								if refreshBlacksmithModal then refreshBlacksmithModal() end
+							end)
+						end
+					end,
+					Parent = hRow,
+				})
+			end
+		end
+		heroEquipScroll.CanvasSize = UDim2.new(0, 0, 0, listCount * 36)
+	else
+		artifactTitleLabel.Text = "No Artifacts in Inventory"
+		rarityBadgeLabel.Text = "Defeat Bosses or Visit Waiting Room to obtain Artifacts!"
+		statsDetailLabel.Text = ""
+		nextRarityLabel.Text = ""
+		upgradeCostLabel.Text = ""
+		upgradeButton.Text = "NO ARTIFACT SELECTED"
+		heroEquipScroll:ClearAllChildren()
+	end
+
+	for _, c in ipairs(artifactScroll:GetChildren()) do
+		if c:IsA("Frame") then c:Destroy() end
+		end
+	local artCount = 0
+	for uuid, art in pairs(artifacts) do
+		artCount += 1
+		local rInfo = ArtifactCatalog.GetRarityInfo(art.Rarity)
+		local effATK, effSpd = ArtifactCatalog.CalculateEffectiveStats(art.Star, art.Rarity)
+		local isSel = (uuid == selectedArtifactUUID)
+
+		local card = makeFrame({
+			Size = UDim2.new(1, -8, 0, 56),
+			BackgroundColor3 = isSel and Color3.fromRGB(55, 45, 40) or Color3.fromRGB(32, 30, 38),
+			Corner = 6,
+			Stroke = isSel and 2 or 1,
+			StrokeColor = isSel and Color3.fromRGB(255, 180, 50) or rInfo.Color,
+			Parent = artifactScroll,
+		})
+
+		local equipTag = "[Available]"
+		if art.EquippedHeroUUID and CurrentProfile.Heroes and CurrentProfile.Heroes[art.EquippedHeroUUID] then
+			equipTag = "[" .. CurrentProfile.Heroes[art.EquippedHeroUUID].DisplayName .. "]"
+		end
+
+		makeLabel({
+			Size = UDim2.new(0.68, 0, 0.5, 0),
+			Position = UDim2.new(0.03, 0, 0.05, 0),
+			Text = string.format("%s %s [%s]", art.DisplayName, string.rep("★", art.Star or 1), art.Type),
+			TextColor3 = rInfo.Color,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			Parent = card,
+		})
+
+		makeLabel({
+			Size = UDim2.new(0.68, 0, 0.45, 0),
+			Position = UDim2.new(0.03, 0, 0.52, 0),
+			Text = string.format("%s (x%0.2f) • +%d ATK, +%0.0f%% Spd", rInfo.Name, rInfo.Multiplier, effATK, effSpd * 100),
+			TextColor3 = Color3.fromRGB(180, 185, 195),
+			TextXAlignment = Enum.TextXAlignment.Left,
+			Parent = card,
+		})
+
+		makeButton({
+			Size = UDim2.new(0.26, 0, 0.72, 0),
+			Position = UDim2.new(0.71, 0, 0.14, 0),
+			BackgroundColor3 = isSel and Color3.fromRGB(220, 125, 30) or Color3.fromRGB(60, 62, 75),
+			Text = isSel and "FORGING" or equipTag,
+			Corner = 4,
+			OnClick = function()
+				selectedArtifactUUID = uuid
+				refreshBlacksmithModal()
+			end,
+			Parent = card,
+		})
+	end
+	artifactScroll.CanvasSize = UDim2.new(0, 0, 0, artCount * 62)
+end
+
+--============================================================================
 -- 6. PROFILE SYNC & 60 FPS HUD UPDATE LOOP (WITH [E] SKILL-CHECK PULSE)
 --============================================================================
 
@@ -1329,6 +1731,9 @@ ProfileDeltaSyncEvent.OnClientEvent:Connect(function(profile: any)
 	end
 	if pitModal.Visible and refreshPitModal then
 		refreshPitModal()
+	end
+	if blacksmithModal.Visible and refreshBlacksmithModal then
+		refreshBlacksmithModal()
 	end
 end)
 
@@ -1666,8 +2071,8 @@ do
 		honorLabel.TextScaled = false
 		honorLabel.TextSize = 12
 
-		navButtonsFrame.Position = (w < 780) and UDim2.fromOffset(12, 60) or UDim2.new(1, -382, 0, 12)
-		navButtonsFrame.Size = (w < 780) and UDim2.new(1, -24, 0, 36) or UDim2.fromOffset(370, 40)
+		navButtonsFrame.Position = (w < 780) and UDim2.fromOffset(12, 60) or UDim2.new(1, -590, 0, 12)
+		navButtonsFrame.Size = (w < 780) and UDim2.new(1, -24, 0, 36) or UDim2.fromOffset(580, 40)
 		for _, b in primaryButtons do
 			b.Size = UDim2.fromOffset(portrait and math.floor((w - 64) / 3) or 116, 36)
 		end

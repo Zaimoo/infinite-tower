@@ -4,6 +4,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local HeroCatalog = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("HeroCatalog"))
+local ArtifactCatalog = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("ArtifactCatalog"))
 
 local StatFormulas = {}
 
@@ -43,8 +44,8 @@ function StatFormulas.GetPromotionGoldCost(currentStars: number): number
 	return PROMOTION_GOLD_COSTS[currentStars] or 9999999
 end
 
--- Effective Combat Stats (ATK, HP, Single-Target DPS)
-function StatFormulas.GetEffectiveCombatStats(hero: any, inBloodPact: boolean?, inOverdrive: boolean?): (number, number, number)
+-- Effective Combat Stats (ATK, HP, Single-Target DPS, Effective Interval)
+function StatFormulas.GetEffectiveCombatStats(hero: any, inBloodPact: boolean?, inOverdrive: boolean?, artifact: any?): (number, number, number, number)
 	local seed = HeroCatalog.Seeds[hero.TemplateId]
 	local traitATK = seed and seed.TraitATKBonus or 0.0
 	local traitHP = seed and seed.TraitHPBonus or 0.0
@@ -57,13 +58,21 @@ function StatFormulas.GetEffectiveCombatStats(hero: any, inBloodPact: boolean?, 
 	local effHP = math.round((hero.BaseHP or 280) * q * levelScalar * (1 + traitHP))
 
 	local interval = hero.AttackInterval or 1.0
+
+	-- Additive Artifact ATK & Multiplicative Attack Speed Bonus
+	if artifact then
+		local artATK, artSpeed = ArtifactCatalog.CalculateEffectiveStats(artifact.Star or 1, artifact.Rarity or 1)
+		effATK += artATK
+		interval = ArtifactCatalog.CalculateEffectiveInterval(interval, artSpeed)
+	end
+
 	local overdriveMult = inOverdrive and 1.40 or 1.00
 	local exhaustionMult = ((hero.CurrentStamina or 100) <= 0) and 0.20 or 1.00
 	if (hero.ComaUntilTimestamp or 0) > os.time() then
 		exhaustionMult = 0.0
 	end
 	local dps = math.round((effATK / interval) * overdriveMult * exhaustionMult * 10) / 10
-	return effATK, effHP, dps
+	return effATK, effHP, dps, interval
 end
 
 -- Effective Labor Output (/min)

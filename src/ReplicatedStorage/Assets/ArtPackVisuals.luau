@@ -231,4 +231,173 @@ function A.Animate(node: any, dt: number, time: number)
 	end
 end
 
+function A.UnequipWeapon(model: Model)
+	local art = model:FindFirstChild("ArtPackVisual") or model
+	local current = art:FindFirstChild("EquippedWeapon")
+	if current then
+		current:Destroy()
+	end
+	local leftCurrent = art:FindFirstChild("EquippedWeaponLeft")
+	if leftCurrent then
+		leftCurrent:Destroy()
+	end
+	model:SetAttribute("EquippedArtifactId", nil)
+	model:SetAttribute("EquippedArtifactType", nil)
+end
+
+function A.EquipWeapon(model: Model, weaponAssetId: string?, weaponType: string?, rarityIndex: number?)
+	local art = model:FindFirstChild("ArtPackVisual") or model
+	if not art then return end
+
+	-- Clean up previous weapon
+	A.UnequipWeapon(model)
+
+	if not weaponAssetId and not weaponType then return end
+
+	local assets = ReplicatedStorage:FindFirstChild("Assets")
+	local weaponsFolder = assets and assets:FindFirstChild("Weapons")
+	if not weaponsFolder then return end
+
+	-- Resolve template: try weaponAssetId, or map weaponType to weapon prefab
+	local template: Model? = nil
+	if weaponAssetId then
+		template = weaponsFolder:FindFirstChild(weaponAssetId) :: Model?
+		if not template then
+			local Shared = ReplicatedStorage:FindFirstChild("Shared")
+			local ArtifactCatalog = Shared and require(Shared:WaitForChild("Config"):WaitForChild("ArtifactCatalog"))
+			if ArtifactCatalog and ArtifactCatalog.Seeds and ArtifactCatalog.Seeds[weaponAssetId] then
+				local seed = ArtifactCatalog.Seeds[weaponAssetId]
+				template = weaponsFolder:FindFirstChild(seed.ModelAssetId) :: Model?
+				if not weaponType then
+					weaponType = seed.Type
+				end
+			end
+		end
+	end
+	if not template and weaponType then
+		local typeMap = {
+			BOW = "weapon_bow",
+			SWORD = "weapon_sword",
+			DAGGERS = "weapon_daggers",
+			AXE = "weapon_axe",
+			STAFF = "weapon_staff",
+			TOME = "weapon_tome",
+		}
+		local prefabName = typeMap[weaponType] or ("weapon_" .. weaponType:lower())
+		template = weaponsFolder:FindFirstChild(prefabName) :: Model?
+	end
+	if not template then return end
+
+	local wModel = template:Clone()
+	wModel.Name = "EquippedWeapon"
+
+	local rHand = art:FindFirstChild("RightHand", true) :: BasePart?
+	local lHand = art:FindFirstChild("LeftHand", true) :: BasePart?
+
+	-- Ensure draw attachment exists on RightHand for marksman bows
+	if rHand and not rHand:FindFirstChild("DrawAttachment") then
+		local drawAtt = Instance.new("Attachment")
+		drawAtt.Name = "DrawAttachment"
+		drawAtt.Position = Vector3.new(0, -0.3, 0)
+		drawAtt.Parent = rHand
+	end
+
+	-- Make sure all BaseParts are uncollidable and massless
+	for _, p in ipairs(wModel:GetDescendants()) do
+		if p:IsA("BasePart") then
+			p.CanCollide = false
+			p.CanTouch = false
+			p.CanQuery = false
+			p.Massless = true
+			p.Anchored = false
+		end
+	end
+
+	-- Optional Rarity visual flair:
+	-- If Rarity >= 6 (Legendary+), add subtle glow or tint
+	if rarityIndex and rarityIndex >= 6 then
+		local Shared = ReplicatedStorage:FindFirstChild("Shared")
+		local ArtifactCatalog = Shared and require(Shared:WaitForChild("Config"):WaitForChild("ArtifactCatalog"))
+		if ArtifactCatalog then
+			local rInfo = ArtifactCatalog.GetRarityInfo(rarityIndex)
+			if rInfo then
+				for _, p in ipairs(wModel:GetDescendants()) do
+					if p:IsA("BasePart") and (p.Name:find("Blade") or p.Name:find("Tip") or p.Name:find("Orb") or p.Name:find("Crystal")) then
+						if rarityIndex >= 14 then
+							p.Material = Enum.Material.Neon
+							p.Color = rInfo.Color
+						end
+					end
+				end
+			end
+		end
+	end
+
+	local effectiveType = weaponType or (if template.Name:find("bow") then "BOW" elseif template.Name:find("sword") then "SWORD" elseif template.Name:find("dagger") then "DAGGERS" elseif template.Name:find("axe") then "AXE" elseif template.Name:find("staff") then "STAFF" else "TOME")
+
+	if effectiveType == "BOW" then
+		if lHand then
+			local primary = wModel.PrimaryPart or wModel:FindFirstChild("Handle") or wModel:FindFirstChildWhichIsA("BasePart")
+			if primary then
+				wModel:PivotTo(lHand.CFrame * CFrame.Angles(0, math.rad(90), math.rad(90)))
+				local weld = Instance.new("WeldConstraint")
+				weld.Part0 = lHand
+				weld.Part1 = primary
+				weld.Parent = primary
+			end
+			-- Connect bowstring beams to RightHand.DrawAttachment
+			local drawAtt = rHand and rHand:FindFirstChild("DrawAttachment") :: Attachment?
+			if drawAtt then
+				for _, beam in ipairs(wModel:GetDescendants()) do
+					if beam:IsA("Beam") then
+						beam.Attachment1 = drawAtt
+					end
+				end
+			end
+		end
+		wModel.Parent = art
+	elseif effectiveType == "DAGGERS" then
+		local leftDagger = wModel:FindFirstChild("LeftDagger")
+		if leftDagger and lHand then
+			leftDagger.Name = "EquippedWeaponLeft"
+			local lPrimary = (leftDagger :: any).PrimaryPart or leftDagger:FindFirstChild("HandleL") or leftDagger:FindFirstChildWhichIsA("BasePart")
+			if lPrimary then
+				leftDagger:PivotTo(lHand.CFrame * CFrame.Angles(math.rad(180), 0, 0))
+				local weldL = Instance.new("WeldConstraint")
+				weldL.Part0 = lHand
+				weldL.Part1 = lPrimary
+				weldL.Parent = lPrimary
+			end
+			leftDagger.Parent = art
+		end
+		if rHand then
+			local primary = wModel.PrimaryPart or wModel:FindFirstChild("Handle") or wModel:FindFirstChildWhichIsA("BasePart")
+			if primary then
+				wModel:PivotTo(rHand.CFrame * CFrame.Angles(math.rad(180), 0, 0))
+				local weldR = Instance.new("WeldConstraint")
+				weldR.Part0 = rHand
+				weldR.Part1 = primary
+				weldR.Parent = primary
+			end
+		end
+		wModel.Parent = art
+	else
+		-- SWORD, AXE, STAFF, TOME: Main hand (RightHand)
+		if rHand then
+			local primary = wModel.PrimaryPart or wModel:FindFirstChild("Handle") or wModel:FindFirstChildWhichIsA("BasePart")
+			if primary then
+				wModel:PivotTo(rHand.CFrame * CFrame.Angles(math.rad(-90), 0, 0))
+				local weld = Instance.new("WeldConstraint")
+				weld.Part0 = rHand
+				weld.Part1 = primary
+				weld.Parent = primary
+			end
+		end
+		wModel.Parent = art
+	end
+
+	model:SetAttribute("EquippedArtifactId", weaponAssetId or template.Name)
+	model:SetAttribute("EquippedArtifactType", effectiveType)
+end
+
 return A

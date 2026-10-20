@@ -18,6 +18,7 @@ end
 
 local function computeFacilitySumLabor(profile: any, facilityData: any, assignmentTag: string): number
 	local sum = 0
+	if not facilityData or not facilityData.AssignedHeroUUIDs then return 0 end
 	for _, uuid in ipairs(facilityData.AssignedHeroUUIDs) do
 		local hero = profile.Heroes[uuid]
 		if hero and (hero.ComaUntilTimestamp or 0) <= os.time() then
@@ -112,6 +113,9 @@ task.spawn(function()
 				conduit.UncollectedOutput = math.min(conduitCfg.Cap, conduit.UncollectedOutput + gemsThisSec)
 
 				-- 2. The Infirmary & Barracks (Stamina Recovery & Coma Clearing)
+				if not profile.Facilities.Infirmary then
+					profile.Facilities.Infirmary = { Level = 1, AssignedHeroUUIDs = {}, UncollectedOutput = 0, BlessedUntil = 0, LeechedUntil = 0, LastRuneTimestamp = 0, LastRuneWasLeech = false }
+				end
 				local inf = profile.Facilities.Infirmary
 				local infLabor = computeFacilitySumLabor(profile, inf, "FACILITY_INFIRMARY")
 				local staminaRegenPerSec, _ = StatFormulas.GetInfirmaryRates(inf.Level, infLabor)

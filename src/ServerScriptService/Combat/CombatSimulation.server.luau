@@ -10,6 +10,7 @@ local Workspace = game:GetService("Workspace")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local WorldBossConfig = require(Shared:WaitForChild("Config"):WaitForChild("WorldBossConfig"))
 local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormulas"))
+local ArtifactCatalog = require(Shared:WaitForChild("Config"):WaitForChild("ArtifactCatalog"))
 local ArtPackVisuals = require(ReplicatedStorage:WaitForChild("Assets"):WaitForChild("ArtPackVisuals"))
 
 local CombatRemotes = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CombatRemotes")
@@ -88,6 +89,10 @@ export type SimHero = {
 	AttackCooldown: number,
 	PacifiedUntil: number,
 	OverdriveUntil: number,
+	EquippedArtifactId: string?,
+	EquippedArtifactRarity: number?,
+	EquippedArtifactType: string?,
+	EquippedArtifactStar: number?,
 }
 
 export type SimMob = {
@@ -167,6 +172,10 @@ local function buildMetadataTable(): { any }
 			Level = h.Level,
 			SlotIndex = h.SlotIndex,
 			MaxHP = h.MaxHP,
+			EquippedArtifactId = h.EquippedArtifactId,
+			EquippedArtifactRarity = h.EquippedArtifactRarity,
+			EquippedArtifactType = h.EquippedArtifactType,
+			EquippedArtifactStar = h.EquippedArtifactStar,
 		})
 	end
 	for netId, m in pairs(ActiveMobsByNetId) do
@@ -303,7 +312,8 @@ function CombatSimulation.RebuildPlayerSquad(player: Player)
 	-- Add or update deployed heroes
 	for uuid, slotIndex in pairs(desiredUUIDs) do
 		local heroData = profile.Heroes[uuid]
-		local effATK, effHP, _ = StatFormulas.GetEffectiveCombatStats(heroData, false, false)
+		local artifact = heroData.EquippedArtifactUUID and profile.Artifacts and profile.Artifacts[heroData.EquippedArtifactUUID]
+		local effATK, effHP, _, effInterval = StatFormulas.GetEffectiveCombatStats(heroData, false, false, artifact)
 		local existing = masterState.DeployedHeroes[uuid]
 		if existing then
 			existing.Stars = heroData.Stars
@@ -313,6 +323,11 @@ function CombatSimulation.RebuildPlayerSquad(player: Player)
 			existing.CurrentHP = math.min(existing.CurrentHP, effHP)
 			existing.Stamina = heroData.CurrentStamina
 			existing.SlotIndex = slotIndex
+			existing.AttackInterval = effInterval
+			existing.EquippedArtifactId = artifact and artifact.TemplateId
+			existing.EquippedArtifactRarity = artifact and artifact.Rarity
+			existing.EquippedArtifactType = artifact and artifact.Type
+			existing.EquippedArtifactStar = artifact and artifact.Star
 		else
 			local netId = allocateNetId()
 			local spawnPos = masterPos + getFormationOffset(slotIndex)
@@ -331,7 +346,7 @@ function CombatSimulation.RebuildPlayerSquad(player: Player)
 				MaxHP = effHP,
 				EffectiveATK = effATK,
 				AttackRange = heroData.AttackRange or 6,
-				AttackInterval = heroData.AttackInterval or 0.9,
+				AttackInterval = effInterval,
 				MoveSpeed = 20.0,
 				Stamina = heroData.CurrentStamina or 100.0,
 				SlotIndex = slotIndex,
@@ -339,6 +354,10 @@ function CombatSimulation.RebuildPlayerSquad(player: Player)
 				AttackCooldown = 0.2,
 				PacifiedUntil = 0,
 				OverdriveUntil = 0,
+				EquippedArtifactId = artifact and artifact.TemplateId,
+				EquippedArtifactRarity = artifact and artifact.Rarity,
+				EquippedArtifactType = artifact and artifact.Type,
+				EquippedArtifactStar = artifact and artifact.Star,
 			}
 			masterState.DeployedHeroes[uuid] = newSim
 			ActiveHeroesByNetId[netId] = newSim

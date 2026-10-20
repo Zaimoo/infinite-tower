@@ -144,7 +144,7 @@ function PlotManager.RefreshPlotVisuals(player: Player)
 
 	-- 1. Render Mana Conduit Workers & Mimic Chest Illusion State
 	local conduitModel = plotModel:FindFirstChild("Facility_ManaConduit")
-	if conduitModel then
+	if conduitModel and profile.Facilities and profile.Facilities.ManaConduit and profile.Facilities.ManaConduit.AssignedHeroUUIDs then
 		for idx, uuid in ipairs(profile.Facilities.ManaConduit.AssignedHeroUUIDs) do
 			local hero = profile.Heroes[uuid]
 			local ped = conduitModel:FindFirstChild("WorkerPedestal_" .. tostring(idx)) :: BasePart?

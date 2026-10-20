@@ -12,6 +12,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local HeroCatalog = require(Shared:WaitForChild("Config"):WaitForChild("HeroCatalog"))
 local FacilityConfig = require(Shared:WaitForChild("Config"):WaitForChild("FacilityConfig"))
 local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormulas"))
+local ArtifactCatalog = require(Shared:WaitForChild("Config"):WaitForChild("ArtifactCatalog"))
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local TycoonRemotes = Remotes:WaitForChild("TycoonGachaRemotes")
@@ -25,6 +26,34 @@ local FacilityInteractEvent = TycoonRemotes:WaitForChild("FacilityInteract") :: 
 
 local ProfileDeltaSyncEvent = SyndicateRemotes:WaitForChild("ProfileDeltaSync") :: RemoteEvent
 local SystemToastEvent = SyndicateRemotes:WaitForChild("SystemToast") :: RemoteEvent
+
+local ArtifactRemotes = Remotes:FindFirstChild("ArtifactRemotes")
+if not ArtifactRemotes then
+	ArtifactRemotes = Instance.new("Folder")
+	ArtifactRemotes.Name = "ArtifactRemotes"
+	ArtifactRemotes.Parent = Remotes
+end
+
+local RequestEquipArtifactFunc = ArtifactRemotes:FindFirstChild("RequestEquipArtifact") :: RemoteFunction?
+if not RequestEquipArtifactFunc then
+	RequestEquipArtifactFunc = Instance.new("RemoteFunction")
+	RequestEquipArtifactFunc.Name = "RequestEquipArtifact"
+	RequestEquipArtifactFunc.Parent = ArtifactRemotes
+end
+
+local RequestUnequipArtifactFunc = ArtifactRemotes:FindFirstChild("RequestUnequipArtifact") :: RemoteFunction?
+if not RequestUnequipArtifactFunc then
+	RequestUnequipArtifactFunc = Instance.new("RemoteFunction")
+	RequestUnequipArtifactFunc.Name = "RequestUnequipArtifact"
+	RequestUnequipArtifactFunc.Parent = ArtifactRemotes
+end
+
+local RequestUpgradeRarityFunc = ArtifactRemotes:FindFirstChild("RequestUpgradeRarity") :: RemoteFunction?
+if not RequestUpgradeRarityFunc then
+	RequestUpgradeRarityFunc = Instance.new("RemoteFunction")
+	RequestUpgradeRarityFunc.Name = "RequestUpgradeRarity"
+	RequestUpgradeRarityFunc.Parent = ArtifactRemotes
+end
 
 --============================================================================
 -- 1. EXPORTED TYPE DEFINITIONS
@@ -64,6 +93,19 @@ export type HeroInstance = {
 	ComaUntilTimestamp: number,
 	IsHardAuditComa: boolean,
 	Assignment: HeroAssignment,
+	Locked: boolean,
+	EquippedArtifactUUID: string?,
+}
+
+export type ArtifactInstance = {
+	UUID: string,
+	TemplateId: string,
+	DisplayName: string,
+	Type: ArtifactCatalog.WeaponType,
+	Star: number, -- 1..7
+	Rarity: number, -- 1..16
+	Level: number,
+	EquippedHeroUUID: string?,
 	Locked: boolean,
 }
 
@@ -120,6 +162,7 @@ export type PlayerProfile = {
 	RiftLuresOwned: number,
 	Heroes: { [string]: HeroInstance },
 	DeployedSquadOrder: { string },
+	Artifacts: { [string]: ArtifactInstance },
 	Facilities: {
 		ManaConduit: FacilityData,
 		Infirmary: FacilityData,
@@ -147,6 +190,23 @@ local function createDefaultFacility(): FacilityData
 		LastRuneTimestamp = 0,
 		LastRuneWasLeech = false,
 	}
+end
+
+function DataManager.CreateArtifact(templateId: string, star: number?, rarity: number?): (string, ArtifactInstance)
+	local seed = ArtifactCatalog.Seeds[templateId] or ArtifactCatalog.Seeds.art_hunters_shortbow
+	local uuid = "art_" .. string.gsub(HttpService:GenerateGUID(false), "-", ""):sub(1, 10)
+	local artifact: ArtifactInstance = {
+		UUID = uuid,
+		TemplateId = seed.TemplateId,
+		DisplayName = seed.DisplayName,
+		Type = seed.Type,
+		Star = star or seed.DefaultStar,
+		Rarity = rarity or 1,
+		Level = 1,
+		EquippedHeroUUID = nil,
+		Locked = false,
+	}
+	return uuid, artifact
 end
 
 function DataManager.CreateHeroFromSeed(seedId: string, forceQuality: number?): (string, HeroInstance)
@@ -193,6 +253,20 @@ local function createDefaultPlayerProfile(): PlayerProfile
 	local conduit = createDefaultFacility()
 	conduit.AssignedHeroUUIDs = { catioUUID }
 
+	-- Grant 1★ starter artifacts equipped to matching starting heroes
+	local bowUUID, bowArt = DataManager.CreateArtifact("art_hunters_shortbow", 1, 1)
+	local swordUUID, swordArt = DataManager.CreateArtifact("art_iron_broadsword", 1, 1)
+	local axeUUID, axeArt = DataManager.CreateArtifact("art_miner_pickaxe", 1, 1)
+
+	jennaHero.EquippedArtifactUUID = bowUUID
+	bowArt.EquippedHeroUUID = jennaUUID
+
+	hanHero.EquippedArtifactUUID = swordUUID
+	swordArt.EquippedHeroUUID = hanUUID
+
+	catioHero.EquippedArtifactUUID = axeUUID
+	axeArt.EquippedHeroUUID = catioUUID
+
 	return {
 		SchemaVersion = 1,
 		PlotIndex = 1,
@@ -206,6 +280,11 @@ local function createDefaultPlayerProfile(): PlayerProfile
 			[hanUUID] = hanHero,
 			[jennaUUID] = jennaHero,
 			[catioUUID] = catioHero,
+		},
+		Artifacts = {
+			[bowUUID] = bowArt,
+			[swordUUID] = swordArt,
+			[axeUUID] = axeArt,
 		},
 		DeployedSquadOrder = { hanUUID, jennaUUID },
 		Facilities = {
@@ -247,6 +326,32 @@ function DataManager.SyncProfile(player: Player)
 	local profile = ActiveProfiles[player]
 	if not profile then
 		return
+	end
+
+	-- Artifacts dictionary migration for existing profiles
+	if not profile.Artifacts then
+		profile.Artifacts = {}
+	end
+	if next(profile.Artifacts) == nil then
+		local bUUID, bArt = DataManager.CreateArtifact("art_hunters_shortbow", 1, 1)
+		local sUUID, sArt = DataManager.CreateArtifact("art_iron_broadsword", 1, 1)
+		local aUUID, aArt = DataManager.CreateArtifact("art_miner_pickaxe", 1, 1)
+		profile.Artifacts[bUUID] = bArt
+		profile.Artifacts[sUUID] = sArt
+		profile.Artifacts[aUUID] = aArt
+
+		for _, h in pairs(profile.Heroes) do
+			if h.TemplateId == "hero_jenna" and not h.EquippedArtifactUUID then
+				h.EquippedArtifactUUID = bUUID
+				bArt.EquippedHeroUUID = h.UUID
+			elseif h.TemplateId == "hero_han" and not h.EquippedArtifactUUID then
+				h.EquippedArtifactUUID = sUUID
+				sArt.EquippedHeroUUID = h.UUID
+			elseif h.TemplateId == "hero_catio" and not h.EquippedArtifactUUID then
+				h.EquippedArtifactUUID = aUUID
+				aArt.EquippedHeroUUID = h.UUID
+			end
+		end
 	end
 
 	-- Reconcile DeployedSquadOrder from Hero Assignments
@@ -517,6 +622,138 @@ PromoteHeroStarFunc.OnServerInvoke = function(player: Player, targetUUID: any, f
 		return false, "Invalid arguments"
 	end
 	return DataManager.PromoteHeroStar(player, targetUUID, fodderUUIDs)
+end
+
+
+--============================================================================
+-- ARTIFACT & WEAPON MANAGEMENT (EQUIP, UNEQUIP & BLACKSMITH UPGRADE)
+--============================================================================
+
+function DataManager.GetArtifacts(player: Player): { [string]: ArtifactInstance }
+	local profile = ActiveProfiles[player]
+	if not profile then return {} end
+	if not profile.Artifacts then profile.Artifacts = {} end
+	return profile.Artifacts
+end
+
+function DataManager.EquipArtifact(player: Player, heroUUID: string, artifactUUID: string): (boolean, string?)
+	local profile = ActiveProfiles[player]
+	if not profile then return false, "Profile not loaded" end
+
+	local hero = profile.Heroes[heroUUID]
+	if not hero then return false, "Hero not found" end
+
+	local artifact = profile.Artifacts and profile.Artifacts[artifactUUID]
+	if not artifact then return false, "Artifact not found" end
+
+	-- Enforce class archetype restrictions
+	if not ArtifactCatalog.CanHeroEquip(hero.Archetype, artifact.Type) then
+		local allowed = ArtifactCatalog.ArchetypeRestrictions[hero.Archetype]
+		local allowedStr = allowed and table.concat(allowed, ", ") or "None"
+		return false, string.format("%s (%s) cannot equip a %s! Permitted weapon types: %s", hero.DisplayName, hero.Archetype, artifact.Type, allowedStr)
+	end
+
+	-- Unequip from prior hero if held
+	if artifact.EquippedHeroUUID and artifact.EquippedHeroUUID ~= heroUUID then
+		local priorHero = profile.Heroes[artifact.EquippedHeroUUID]
+		if priorHero then
+			priorHero.EquippedArtifactUUID = nil
+		end
+	end
+
+	-- Unequip existing artifact from target hero
+	if hero.EquippedArtifactUUID and hero.EquippedArtifactUUID ~= artifactUUID then
+		local oldArt = profile.Artifacts[hero.EquippedArtifactUUID]
+		if oldArt then
+			oldArt.EquippedHeroUUID = nil
+		end
+	end
+
+	hero.EquippedArtifactUUID = artifactUUID
+	artifact.EquippedHeroUUID = heroUUID
+
+	DataManager.SyncProfile(player)
+	DataManager.SendToast(player, string.format("Equipped %s to %s!", artifact.DisplayName, hero.DisplayName), "SUCCESS")
+	return true, string.format("Equipped %s to %s", artifact.DisplayName, hero.DisplayName)
+end
+
+function DataManager.UnequipArtifact(player: Player, heroUUID: string): (boolean, string?)
+	local profile = ActiveProfiles[player]
+	if not profile then return false, "Profile not loaded" end
+
+	local hero = profile.Heroes[heroUUID]
+	if not hero then return false, "Hero not found" end
+
+	if not hero.EquippedArtifactUUID then
+		return false, "No artifact equipped on this hero"
+	end
+
+	local oldArt = profile.Artifacts and profile.Artifacts[hero.EquippedArtifactUUID]
+	if oldArt then
+		oldArt.EquippedHeroUUID = nil
+	end
+	hero.EquippedArtifactUUID = nil
+
+	DataManager.SyncProfile(player)
+	DataManager.SendToast(player, string.format("Unequipped weapon from %s.", hero.DisplayName), "INFO")
+	return true, string.format("Unequipped weapon from %s", hero.DisplayName)
+end
+
+function DataManager.UpgradeArtifactRarity(player: Player, artifactUUID: string): (boolean, string?, number?)
+	local profile = ActiveProfiles[player]
+	if not profile then return false, "Profile not loaded", nil end
+
+	local artifact = profile.Artifacts and profile.Artifacts[artifactUUID]
+	if not artifact then return false, "Artifact not found", nil end
+
+	if artifact.Rarity >= 16 then
+		return false, string.format("%s is already at Maximum Rarity (Origin)!", artifact.DisplayName), artifact.Rarity
+	end
+
+	local cost = ArtifactCatalog.GetUpgradeCost(artifact.Rarity)
+	if not cost then return false, "Cannot upgrade further", artifact.Rarity end
+
+	if profile.Currencies.Gold < cost.Gold then
+		return false, string.format("Need %d Gold to upgrade to %s! (Have: %d)", cost.Gold, ArtifactCatalog.GetRarityInfo(artifact.Rarity + 1).Name, profile.Currencies.Gold), artifact.Rarity
+	end
+
+	if cost.Gems > 0 and profile.Currencies.Gems < cost.Gems then
+		return false, string.format("Need %d Gems to upgrade to %s! (Have: %d)", cost.Gems, ArtifactCatalog.GetRarityInfo(artifact.Rarity + 1).Name, profile.Currencies.Gems), artifact.Rarity
+	end
+
+	-- Deduct cost
+	profile.Currencies.Gold -= cost.Gold
+	if cost.Gems > 0 then
+		profile.Currencies.Gems -= cost.Gems
+	end
+
+	artifact.Rarity += 1
+	local newRarityInfo = ArtifactCatalog.GetRarityInfo(artifact.Rarity)
+
+	DataManager.SyncProfile(player)
+	DataManager.SendToast(player, string.format("⚒️ FORGE SUCCESS! %s upgraded to %s (%0.2fx Stats)!", artifact.DisplayName, newRarityInfo.Name, newRarityInfo.Multiplier), "SUCCESS")
+	return true, string.format("Upgraded %s to %s!", artifact.DisplayName, newRarityInfo.Name), artifact.Rarity
+end
+
+RequestEquipArtifactFunc.OnServerInvoke = function(player: Player, heroUUID: any, artifactUUID: any)
+	if type(heroUUID) ~= "string" or type(artifactUUID) ~= "string" then
+		return false, "Invalid parameters"
+	end
+	return DataManager.EquipArtifact(player, heroUUID, artifactUUID)
+end
+
+RequestUnequipArtifactFunc.OnServerInvoke = function(player: Player, heroUUID: any)
+	if type(heroUUID) ~= "string" then
+		return false, "Invalid parameters"
+	end
+	return DataManager.UnequipArtifact(player, heroUUID)
+end
+
+RequestUpgradeRarityFunc.OnServerInvoke = function(player: Player, artifactUUID: any)
+	if type(artifactUUID) ~= "string" then
+		return false, "Invalid parameters", nil
+	end
+	return DataManager.UpgradeArtifactRarity(player, artifactUUID)
 end
 
 --============================================================================
