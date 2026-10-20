@@ -89,7 +89,14 @@ function A.Attach(model: Model, meta: any, root: BasePart, bodySize: Vector3): M
 	local id = A.Resolve(meta)
 	if not id then return nil end
 
-	local art = A.AttachAt(model, id, root.CFrame * CFrame.new(0, -bodySize.Y * 0.5, 0), 1)
+	local template = A.Template(id)
+	if not template then return nil end
+
+	local isR15 = template:FindFirstChild("HumanoidRootPart") ~= nil
+	-- If R15, root.CFrame is already at Y = ground + 3.0. For skinned mobs without HRP, ground at floor.
+	local targetCF = isR15 and root.CFrame or (root.CFrame * CFrame.new(0, -bodySize.Y * 0.5, 0))
+
+	local art = A.AttachAt(model, id, targetCF, 1)
 	if art then
 		for _, p in ipairs(art:GetDescendants()) do
 			if p:IsA("BasePart") then
@@ -103,12 +110,12 @@ function A.Attach(model: Model, meta: any, root: BasePart, bodySize: Vector3): M
 		root.Transparency = 1
 		local head = model:FindFirstChild("Head")
 		if head and head:IsA("BasePart") then
-			head.Transparency = 1
+			head:Destroy()
 		end
 
-		-- For R15 models, weld art HumanoidRootPart to the root entity part
 		local artHrp = art:FindFirstChild("HumanoidRootPart") :: BasePart?
 		if artHrp then
+			artHrp.CFrame = root.CFrame
 			local weld = Instance.new("WeldConstraint")
 			weld.Part0 = root
 			weld.Part1 = artHrp

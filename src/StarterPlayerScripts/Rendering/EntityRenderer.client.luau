@@ -111,25 +111,28 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 		end
 	end
 
+	local rootOffsetY = isHero and 3.0 or (bodySize.Y * 0.5)
 	local root = Instance.new("Part")
 	root.Name = "HumanoidRootPart"
-	root.Size = bodySize
-	root.Position = initPos + Vector3.new(0, bodySize.Y * 0.5, 0)
+	root.Size = isHero and Vector3.new(2, 2, 1) or bodySize
+	root.Position = initPos + Vector3.new(0, rootOffsetY, 0)
 	root.Color = bodyColor
 	root.Material = isBoss and Enum.Material.Neon or Enum.Material.SmoothPlastic
 	root.Anchored = true
 	root.CanCollide = false
+	root.Transparency = 1
 	root:SetAttribute("NetId", netId)
 	root.Parent = model
 
-	-- Add Head for character silhouette
-	if isHero or (meta and meta.SpecId ~= "mob_mana_node") then
-		local head = Instance.new("Part")
+	-- Only add fallback Head for non-heroes without art packs
+	local head = nil
+	if not isHero and meta and meta.SpecId ~= "mob_mana_node" then
+		head = Instance.new("Part")
 		head.Name = "Head"
 		head.Shape = Enum.PartType.Ball
 		local hScale = isBoss and 4.5 or 1.6
 		head.Size = Vector3.new(hScale, hScale, hScale)
-		head.Color = isHero and Color3.fromRGB(245, 215, 190) or bodyColor:Lerp(Color3.new(1, 1, 1), 0.25)
+		head.Color = bodyColor:Lerp(Color3.new(1, 1, 1), 0.25)
 		head.Material = isBoss and Enum.Material.Neon or Enum.Material.SmoothPlastic
 		head.Anchored = true
 		head.CanCollide = false
@@ -138,12 +141,17 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 		head.Parent = model
 	end
 
-	ArtPackVisuals.Attach(model, meta or {}, root, bodySize)
+	local art = ArtPackVisuals.Attach(model, meta or {}, root, bodySize)
+	if art and head then
+		head:Destroy()
+	end
+
 	local hl = Instance.new("Highlight")
 	hl.FillColor = bodyColor
 	hl.OutlineColor = isHero and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(255, 90, 90)
 	hl.FillTransparency = 1
-	hl.OutlineTransparency = 0.15
+	hl.OutlineTransparency = 0.25
+	hl.Adornee = art or model
 	hl.Parent = model
 
 	-- World-Space BillboardGui (Name, Stars, Green HP Bar, Yellow Stamina Bar)
@@ -382,12 +390,12 @@ RunService.RenderStepped:Connect(function(dt: number)
 	local alpha = math.clamp(dt * 12.0, 0, 1)
 	for _, node in pairs(VisualNodesByNetId) do
 		node.CurrentPos = node.CurrentPos:Lerp(node.GoalPos, alpha)
-		local bodyH = node.RootPart.Size.Y * 0.5
+		local bodyH = node.IsHero and 3.0 or (node.RootPart.Size.Y * 0.5)
 		local cf = CFrame.new(node.CurrentPos + Vector3.new(0, bodyH, 0)) * CFrame.Angles(0, node.GoalYaw, 0)
 		node.Model:PivotTo(cf)
-		ArtPackVisuals.Animate(node,dt,os.clock())
+		ArtPackVisuals.Animate(node, dt, os.clock())
 		local head = node.Model:FindFirstChild("Head") :: BasePart?
-		if head then
+		if head and not node.IsHero then
 			head.Position = cf.Position + Vector3.new(0, bodyH + (head.Size.Y * 0.45), 0)
 		end
 	end
