@@ -166,9 +166,27 @@ UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: 
 	end
 end)
 
+local function isPromptOnOwnedPlot(prompt: ProximityPrompt): boolean
+	local current: Instance? = prompt
+	while current and current.Parent do
+		if current.Parent.Name == "WaitingRoomPlots" then
+			local ownerId = current:GetAttribute("OwnerUserId")
+			if ownerId ~= nil and ownerId ~= LocalPlayer.UserId then
+				return false
+			end
+			return true
+		end
+		current = current.Parent
+	end
+	return true
+end
+
 -- 3. Plot Facility ProximityPrompt Handler
 ProximityPromptService.PromptTriggered:Connect(function(prompt: ProximityPrompt, playerWhoTriggered: Player)
 	if playerWhoTriggered ~= LocalPlayer then
+		return
+	end
+	if not isPromptOnOwnedPlot(prompt) then
 		return
 	end
 

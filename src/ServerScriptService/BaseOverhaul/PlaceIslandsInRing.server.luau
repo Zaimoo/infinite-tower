@@ -22,8 +22,8 @@ local LightingAndEffects = require(BaseOverhaulFolder:WaitForChild("LightingAndE
 -- CONFIGURATION TABLE
 --============================================================================
 local Config = {
-	-- Ring Layout (5 Floating Islands, 72 degrees apart, facing the Tower)
-	IslandCount = 5,
+	-- Ring Layout (6 Floating Islands, 60 degrees apart, facing the Tower)
+	IslandCount = 6,
 	RingCenter = Vector3.new(0, 0, 0),
 	RingRadius = 540, -- Keeps R >= 460 so CombatSimulation automatic Gem/Loot drop-off works without changes!
 	IslandSurfaceY = 12, -- Keeps Y = 12 so CombatSimulation & EntityRenderer hero ground height works without changes!
@@ -91,6 +91,7 @@ local function migratePlotToIsland(plotModel: Model, islandClone: Model, islandT
 		plotSpawn.Anchored = true
 		plotSpawn.CanCollide = false
 		plotSpawn.Transparency = 1 -- Blends cleanly into the cobblestone floor
+		plotSpawn.Neutral = false
 		plotSpawn.CFrame = islandTopCF * CFrame.new(0, 0.5, -38)
 	end
 
@@ -133,6 +134,31 @@ local function migratePlotToIsland(plotModel: Model, islandClone: Model, islandT
 	if fountain then
 		fountain.Parent = plotModel
 	end
+
+	-- 6. Ensure persistent PlotBeaconAnchor so client avatar beacons never stream out
+	local beaconAnchor = plotModel:FindFirstChild("PlotBeaconAnchor") :: Model?
+	if not beaconAnchor then
+		beaconAnchor = Instance.new("Model")
+		beaconAnchor.Name = "PlotBeaconAnchor"
+		beaconAnchor.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
+		beaconAnchor.Parent = plotModel
+	end
+	beaconAnchor.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
+
+	local anchorPart = beaconAnchor:FindFirstChild("AnchorPart") :: BasePart?
+	if not anchorPart then
+		anchorPart = Instance.new("Part")
+		anchorPart.Name = "AnchorPart"
+		anchorPart.Size = Vector3.new(2, 2, 2)
+		anchorPart.Anchored = true
+		anchorPart.CanCollide = false
+		anchorPart.CanTouch = false
+		anchorPart.CanQuery = false
+		anchorPart.Transparency = 1
+		anchorPart.Parent = beaconAnchor
+		beaconAnchor.PrimaryPart = anchorPart
+	end
+	anchorPart.CFrame = CFrame.new(islandTopCF.Position.X, islandTopCF.Position.Y, islandTopCF.Position.Z)
 
 	islandClone.Parent = plotModel
 end
@@ -240,6 +266,9 @@ local function buildOverhaul(forceRebuild: boolean?)
 		and existingContainer:FindFirstChild("CentralCrimsonTower") ~= nil
 		and plot1 ~= nil
 		and plot1:FindFirstChild("FloatingFortressIsland") ~= nil
+		and plotsFolder:FindFirstChild("Plot_6") ~= nil
+		and plotsFolder.Plot_6:FindFirstChild("FloatingFortressIsland") ~= nil
+		and #plotsFolder:GetChildren() >= 6
 
 	if alreadyBaked and not forceRebuild then
 		-- Geometry was already baked in Edit mode; just hook up runtime listeners!
@@ -278,16 +307,24 @@ local function buildOverhaul(forceRebuild: boolean?)
 		local islandTopCF = CFrame.lookAt(islandPos, lookTarget)
 
 		local plotModel = plotsFolder:FindFirstChild("Plot_" .. tostring(i)) :: Model?
-		if plotModel then
-			local islandClone = masterTemplate:Clone()
-			migratePlotToIsland(plotModel, islandClone, islandTopCF)
-		end
-	end
+		if not plotModel then
+			plotModel = Instance.new("Model")
+			plotModel.Name = "Plot_" .. tostring(i)
+			plotModel.Parent = plotsFolder
 
-	-- Destroy unused Plot_6 if present (since the ring uses 5 islands)
-	local plot6 = plotsFolder:FindFirstChild("Plot_6")
-	if plot6 then
-		plot6:Destroy()
+			local plotSpawn = Instance.new("SpawnLocation")
+			plotSpawn.Name = "PlotSpawn"
+			plotSpawn.Neutral = false
+			plotSpawn.Parent = plotModel
+
+			local extPad = Instance.new("Part")
+			extPad.Name = "PrivateExtractionPad"
+			extPad.Size = Vector3.new(12, 1, 12)
+			extPad.Parent = plotModel
+		end
+
+		local islandClone = masterTemplate:Clone()
+		migratePlotToIsland(plotModel, islandClone, islandTopCF)
 	end
 
 	masterTemplate:Destroy()
