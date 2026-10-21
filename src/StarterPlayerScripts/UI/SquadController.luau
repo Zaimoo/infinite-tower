@@ -5,10 +5,8 @@
 
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local UserInputService = game:GetService("UserInputService")
 
 local HeroCard = require(script.Parent:WaitForChild("HeroCard"))
-local HeroCatalog = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("HeroCatalog"))
 
 local SquadController = {}
 SquadController.__index = SquadController
@@ -37,10 +35,13 @@ local C = {
 
 local function new(className: string, props: { [string]: any }, parent: Instance?): any
 	local o = Instance.new(className)
+	local targetParent = parent or props.Parent
 	for k, v in pairs(props) do
-		(o :: any)[k] = v
+		if k ~= "Parent" then
+			(o :: any)[k] = v
+		end
 	end
-	o.Parent = parent
+	o.Parent = targetParent
 	return o
 end
 
@@ -76,7 +77,7 @@ function SquadController.new(screenGui: ScreenGui, getProfile: () -> any, remote
 	self.AssignRemote = remotes:WaitForChild("AssignHeroRole") :: RemoteFunction
 
 	self.SelectedSlot = 1 -- 1..5 currently active slot selected for swapping
-	self.SelectedRosterUUID = nil :: string?
+	self.RosterCards = {} -- [heroUUID] = cached card entry to prevent viewport recreation flashing
 
 	-- Root Dimming Scrim
 	self.Scrim = new("TextButton", {
@@ -142,61 +143,69 @@ function SquadController.new(screenGui: ScreenGui, getProfile: () -> any, remote
 	new("UICorner", { CornerRadius = UDim.new(0, 6) }, innerFrame)
 	stroke(innerFrame, C.BorderDim, 1, 0.4)
 
-	-- Close Button (X)
+	-- Close Button (Standard ASCII 'X' with gothic pill styling)
 	local closeBtn = new("TextButton", {
 		Name = "CloseButton",
 		AnchorPoint = Vector2.new(1, 0),
 		Position = UDim2.new(1, -16, 0, 16),
-		Size = UDim2.fromOffset(28, 28),
-		BackgroundTransparency = 1,
-		Text = "✕",
+		Size = UDim2.fromOffset(30, 30),
+		BackgroundColor3 = C.ButtonBg,
+		BackgroundTransparency = 0.3,
+		Text = "X",
 		Font = Enum.Font.GothamBold,
-		TextSize = 18,
+		TextSize = 14,
 		TextColor3 = C.TextMuted,
+		AutoButtonColor = true,
 		ZIndex = 35,
 	}, self.Root)
+	new("UICorner", { CornerRadius = UDim.new(0, 6) }, closeBtn)
+	local closeStroke = stroke(closeBtn, C.ButtonBorder, 1)
 
 	closeBtn.MouseEnter:Connect(function()
 		closeBtn.TextColor3 = C.TextWhite
+		closeBtn.BackgroundColor3 = Color3.fromRGB(180, 45, 55)
+		closeStroke.Color = Color3.fromRGB(255, 95, 105)
 	end)
 	closeBtn.MouseLeave:Connect(function()
 		closeBtn.TextColor3 = C.TextMuted
+		closeBtn.BackgroundColor3 = C.ButtonBg
+		closeStroke.Color = C.ButtonBorder
 	end)
 	closeBtn.MouseButton1Click:Connect(function()
 		self:Close()
 	end)
 
-	-- Header Titles
+	-- Header Titles matching reference image
 	self.TitleLabel = new("TextLabel", {
 		Name = "Title",
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 20),
-		Size = UDim2.new(1, -80, 0, 28),
+		Position = UDim2.new(0.5, 0, 0, 18),
+		Size = UDim2.new(1, -80, 0, 26),
 		BackgroundTransparency = 1,
 		Text = "S Q U A D   D E P L O Y",
 		Font = Enum.Font.GothamBold,
-		TextSize = 22,
+		TextSize = 20,
 		TextColor3 = C.TextWhite,
 		ZIndex = 33,
 	}, self.Root)
 
-	self.SubtitleLabel1 = new("TextLabel", {
+	self.SubLabel1 = new("TextLabel", {
 		Name = "Subtitle1",
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 50),
-		Size = UDim2.new(1, -80, 0, 16),
+		Position = UDim2.new(0.5, 0, 0, 46),
+		Size = UDim2.new(1, -80, 0, 18),
 		BackgroundTransparency = 1,
 		Text = "MANAGE YOUR 5-HERO ACTIVE SQUAD",
-		Font = Enum.Font.GothamMedium,
-		TextSize = 12,
+		Font = Enum.Font.GothamBold,
+		TextSize = 11,
 		TextColor3 = C.TextMuted,
 		ZIndex = 33,
 	}, self.Root)
 
-	self.SubtitleLabel2 = new("TextLabel", {
+	self.SubLabel2 = new("TextLabel", {
 		Name = "Subtitle2",
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 68),
+		Position = UDim2.new(0.5, 0, 0, 64),
 		Size = UDim2.new(1, -80, 0, 16),
 		BackgroundTransparency = 1,
 		Text = "Tap an active slot or hero below to swap",
@@ -206,15 +215,15 @@ function SquadController.new(screenGui: ScreenGui, getProfile: () -> any, remote
 		ZIndex = 33,
 	}, self.Root)
 
-	-- Active Squad Section Header
+	-- Active Squad Header
 	self.ActiveSquadHeader = new("TextLabel", {
 		Name = "ActiveSquadHeader",
 		Position = UDim2.new(0, 28, 0, 92),
-		Size = UDim2.new(0, 280, 0, 20),
+		Size = UDim2.new(0, 260, 0, 18),
 		BackgroundTransparency = 1,
-		Text = "ACTIVE SQUAD (5/5)",
+		Text = "ACTIVE SQUAD (0/5)",
 		Font = Enum.Font.GothamBold,
-		TextSize = 14,
+		TextSize = 13,
 		TextColor3 = C.TextWhite,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		ZIndex = 33,
@@ -351,6 +360,7 @@ function SquadController.new(screenGui: ScreenGui, getProfile: () -> any, remote
 			Info = infoLbl,
 			Button = actionBtn,
 			HeroUUID = nil,
+			RenderedHeroUUID = "__UNSET__",
 		}
 	end
 
@@ -373,7 +383,7 @@ function SquadController.new(screenGui: ScreenGui, getProfile: () -> any, remote
 		BackgroundTransparency = 1,
 		Text = "SELECT HERO TO DEPLOY",
 		Font = Enum.Font.GothamBold,
-		TextSize = 14,
+		TextSize = 13,
 		TextColor3 = C.TextWhite,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		ZIndex = 33,
@@ -382,22 +392,43 @@ function SquadController.new(screenGui: ScreenGui, getProfile: () -> any, remote
 	-- Horizontal Roster Scrolling Frame
 	self.RosterScroll = new("ScrollingFrame", {
 		Name = "RosterScroll",
-		Position = UDim2.new(0, 24, 0, 360),
-		Size = UDim2.new(1, -48, 0, 190),
+		Position = UDim2.new(0, 24, 0, 358),
+		Size = UDim2.new(1, -48, 0, 196),
 		BackgroundTransparency = 1,
-		ScrollBarThickness = 5,
+		ScrollBarThickness = 6,
 		ScrollBarImageColor3 = C.BorderBronze,
 		ScrollingDirection = Enum.ScrollingDirection.X,
-		CanvasSize = UDim2.new(0, 0, 0, 0),
+		AutomaticCanvasSize = Enum.AutomaticSize.X,
+		CanvasSize = UDim2.new(0, 0, 1, 0),
 		ZIndex = 33,
 	}, self.Root)
 
-	local rosterLayout = new("UIListLayout", {
+	new("UIPadding", {
+		PaddingLeft = UDim.new(0, 4),
+		PaddingRight = UDim.new(0, 16),
+		PaddingTop = UDim.new(0, 4),
+		PaddingBottom = UDim.new(0, 6),
+	}, self.RosterScroll)
+
+	new("UIListLayout", {
+		Name = "RosterListLayout",
 		FillDirection = Enum.FillDirection.Horizontal,
 		SortOrder = Enum.SortOrder.LayoutOrder,
+		VerticalAlignment = Enum.VerticalAlignment.Center,
 		Padding = UDim.new(0, 14),
-		Parent = self.RosterScroll,
-	})
+	}, self.RosterScroll)
+
+	self.EmptyRosterLabel = new("TextLabel", {
+		Name = "EmptyRosterLabel",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1,
+		Text = "No heroes available. Summon heroes at the Summoning Altar!",
+		Font = Enum.Font.GothamMedium,
+		TextSize = 13,
+		TextColor3 = C.TextDim,
+		Visible = false,
+		ZIndex = 34,
+	}, self.RosterScroll)
 
 	-- Bottom Action Bar (Confirm Squad & Auto-Swap)
 	local bottomBar = new("Frame", {
@@ -413,7 +444,7 @@ function SquadController.new(screenGui: ScreenGui, getProfile: () -> any, remote
 		Name = "AutoSwapButton",
 		AnchorPoint = Vector2.new(0, 0.5),
 		Position = UDim2.new(0, 0, 0.5, 0),
-		Size = UDim2.new(0, 210, 0, 38),
+		Size = UDim2.new(0, 210, 0, 40),
 		BackgroundColor3 = C.ButtonBg,
 		Text = "⚡ AUTO-SWAP RESTED",
 		Font = Enum.Font.GothamBold,
@@ -426,7 +457,6 @@ function SquadController.new(screenGui: ScreenGui, getProfile: () -> any, remote
 
 	self.AutoSwapBtn.MouseButton1Click:Connect(function()
 		self.AssignRemote:InvokeServer("AUTO_SWAP_EXHAUSTED", "")
-		task.wait(0.1)
 		self:Refresh()
 	end)
 
@@ -448,22 +478,15 @@ function SquadController.new(screenGui: ScreenGui, getProfile: () -> any, remote
 	cornerDiamonds(self.ConfirmBtn, 7)
 
 	self.ConfirmBtn.MouseEnter:Connect(function()
-		self.ConfirmBtn.BackgroundColor3 = Color3.fromRGB(38, 44, 68)
 		confirmStroke.Color = C.BorderGoldGlow
+		self.ConfirmBtn.TextColor3 = C.BorderGoldGlow
 	end)
 	self.ConfirmBtn.MouseLeave:Connect(function()
-		self.ConfirmBtn.BackgroundColor3 = C.ButtonBg
 		confirmStroke.Color = C.BorderDim
+		self.ConfirmBtn.TextColor3 = C.TextWhite
 	end)
 	self.ConfirmBtn.MouseButton1Click:Connect(function()
 		self:Close()
-	end)
-
-	-- Close on ESC key
-	UserInputService.InputBegan:Connect(function(input, processed)
-		if input.KeyCode == Enum.KeyCode.Escape and self.Root.Visible then
-			self:Close()
-		end
 	end)
 
 	return self
@@ -544,36 +567,45 @@ function SquadController.Refresh(self: any)
 
 	self.ActiveSquadHeader.Text = string.format("ACTIVE SQUAD (%d/%d)", activeCount, SQUAD_SLOTS)
 
-	-- Render 5 Active Slots
+	-- Render 5 Active Slots (Only rebuild portrait if hero UUID changed!)
 	for i = 1, SQUAD_SLOTS do
 		local slotData = self.SlotCards[i]
 		local hero = squadBySlot[i]
-		slotData.HeroUUID = hero and hero.UUID or nil
+		local heroUUID = hero and hero.UUID or nil
+		slotData.HeroUUID = heroUUID
 
-		-- Clear previous portrait
-		for _, c in ipairs(slotData.Portrait:GetChildren()) do
-			c:Destroy()
+		if slotData.RenderedHeroUUID ~= heroUUID then
+			slotData.RenderedHeroUUID = heroUUID
+			for _, c in ipairs(slotData.Portrait:GetChildren()) do
+				if c:IsA("GuiObject") then
+					c:Destroy()
+				end
+			end
+
+			if hero then
+				HeroCard.Portrait(slotData.Portrait, hero)
+			else
+				new("TextLabel", {
+					Name = "EmptySlotPlus",
+					Size = UDim2.fromScale(1, 1),
+					BackgroundTransparency = 1,
+					Text = "+",
+					Font = Enum.Font.GothamMedium,
+					TextSize = 34,
+					TextColor3 = C.TextDim,
+					ZIndex = 36,
+				}, slotData.Portrait)
+			end
 		end
 
 		if hero then
 			slotData.Name.Text = hero.DisplayName
 			slotData.Info.Text = string.format("%s Lv.%d", string.rep("★", hero.Stars or 1), hero.Level or 1)
 			slotData.Button.Text = "CHANGE"
-			HeroCard.Portrait(slotData.Portrait, hero)
 		else
 			slotData.Name.Text = "[EMPTY]"
 			slotData.Info.Text = "Select Below"
 			slotData.Button.Text = "ASSIGN"
-
-			local emptyIcon = new("TextLabel", {
-				Size = UDim2.fromScale(1, 1),
-				BackgroundTransparency = 1,
-				Text = "+",
-				Font = Enum.Font.GothamMedium,
-				TextSize = 34,
-				TextColor3 = C.TextDim,
-				Parent = slotData.Portrait,
-			})
 		end
 
 		local isSel = (self.SelectedSlot == i)
@@ -582,13 +614,7 @@ function SquadController.Refresh(self: any)
 		slotData.Stroke.Thickness = isSel and 2.2 or 1.2
 	end
 
-	-- Render Select Hero To Deploy Roster
-	for _, c in ipairs(self.RosterScroll:GetChildren()) do
-		if c:IsA("GuiObject") then
-			c:Destroy()
-		end
-	end
-
+	-- Render / Update Hero Roster
 	local heroList = {}
 	for _, h in pairs(profile.Heroes) do
 		table.insert(heroList, h)
@@ -597,7 +623,7 @@ function SquadController.Refresh(self: any)
 		local aIn = string.find(a.Assignment or "", "^SQUAD_SLOT_") ~= nil
 		local bIn = string.find(b.Assignment or "", "^SQUAD_SLOT_") ~= nil
 		if aIn ~= bIn then
-			return not aIn -- Put benched/available heroes first!
+			return not aIn -- Benched/available heroes first!
 		end
 		if a.Stars ~= b.Stars then
 			return a.Stars > b.Stars
@@ -605,38 +631,41 @@ function SquadController.Refresh(self: any)
 		return a.Level > b.Level
 	end)
 
+	self.EmptyRosterLabel.Visible = (#heroList == 0)
+
 	local cardWidth = 136
+	local seenUUIDs: { [string]: boolean } = {}
+
 	for idx, hero in ipairs(heroList) do
+		seenUUIDs[hero.UUID] = true
 		local inSquad = string.find(hero.Assignment or "", "^SQUAD_SLOT_") ~= nil
+		local entry = self.RosterCards[hero.UUID]
 
-		local card = new("TextButton", {
-			Name = "HeroCard_" .. hero.UUID,
-			LayoutOrder = idx,
-			Text = "",
-			AutoButtonColor = true,
-			Size = UDim2.new(0, cardWidth, 0, 172),
-			BackgroundColor3 = C.CardBg,
-			ZIndex = 34,
-			Parent = self.RosterScroll,
-		})
-		new("UICorner", { CornerRadius = UDim.new(0, 6) }, card)
-		local cardStroke = stroke(card, inSquad and C.BorderDim or C.BorderBronze, 1.1)
+		if not entry then
+			-- Create new card (one-time instantiation for this hero to avoid flashing)
+			local card = new("TextButton", {
+				Name = "HeroCard_" .. hero.UUID,
+				LayoutOrder = idx,
+				Text = "",
+				AutoButtonColor = true,
+				Size = UDim2.new(0, cardWidth, 0, 172),
+				BackgroundColor3 = C.CardBg,
+				ZIndex = 34,
+			}, self.RosterScroll)
+			new("UICorner", { CornerRadius = UDim.new(0, 6) }, card)
+			local cardStroke = stroke(card, inSquad and C.BorderDim or C.BorderBronze, 1.1)
 
-		-- Portrait
-		local portraitFrame = new("Frame", {
-			Name = "PortraitHost",
-			Position = UDim2.new(0, 6, 0, 6),
-			Size = UDim2.new(1, -12, 0, 96),
-			BackgroundColor3 = C.PortraitBg,
-			ClipsDescendants = true,
-			ZIndex = 35,
-			Parent = card,
-		})
-		new("UICorner", { CornerRadius = UDim.new(0, 4) }, portraitFrame)
-		HeroCard.Portrait(portraitFrame, hero)
+			local portraitFrame = new("Frame", {
+				Name = "PortraitHost",
+				Position = UDim2.new(0, 6, 0, 6),
+				Size = UDim2.new(1, -12, 0, 96),
+				BackgroundColor3 = C.PortraitBg,
+				ClipsDescendants = true,
+				ZIndex = 35,
+			}, card)
+			new("UICorner", { CornerRadius = UDim.new(0, 4) }, portraitFrame)
+			HeroCard.Portrait(portraitFrame, hero)
 
-		-- "IN SQUAD" Overlay Banner matching reference image
-		if inSquad then
 			local inSquadBanner = new("Frame", {
 				Name = "InSquadBanner",
 				AnchorPoint = Vector2.new(0, 1),
@@ -645,9 +674,9 @@ function SquadController.Refresh(self: any)
 				BackgroundColor3 = C.InSquadBg,
 				BackgroundTransparency = 0.25,
 				BorderSizePixel = 0,
+				Visible = inSquad,
 				ZIndex = 36,
-				Parent = portraitFrame,
-			})
+			}, portraitFrame)
 			new("TextLabel", {
 				Size = UDim2.fromScale(1, 1),
 				BackgroundTransparency = 1,
@@ -656,71 +685,91 @@ function SquadController.Refresh(self: any)
 				TextSize = 11,
 				TextColor3 = C.TextWhite,
 				ZIndex = 37,
-				Parent = inSquadBanner,
-			})
+			}, inSquadBanner)
+
+			local nameLbl = new("TextLabel", {
+				Name = "NameLabel",
+				Position = UDim2.new(0, 4, 0, 108),
+				Size = UDim2.new(1, -8, 0, 20),
+				BackgroundTransparency = 1,
+				Text = hero.DisplayName,
+				Font = Enum.Font.GothamBold,
+				TextSize = 13,
+				TextColor3 = C.TextWhite,
+				ZIndex = 35,
+			}, card)
+
+			local infoLbl = new("TextLabel", {
+				Name = "InfoLabel",
+				Position = UDim2.new(0, 4, 0, 128),
+				Size = UDim2.new(1, -8, 0, 18),
+				BackgroundTransparency = 1,
+				Text = string.format("%s Lv.%d", string.rep("★", hero.Stars or 1), hero.Level or 1),
+				Font = Enum.Font.GothamMedium,
+				TextSize = 11,
+				TextColor3 = C.StarGold,
+				ZIndex = 35,
+			}, card)
+
+			local archLbl = new("TextLabel", {
+				Name = "ArchetypeLabel",
+				Position = UDim2.new(0, 4, 0, 148),
+				Size = UDim2.new(1, -8, 0, 16),
+				BackgroundTransparency = 1,
+				Text = string.format("[%s]", string.upper(hero.Archetype or "STRIKER")),
+				Font = Enum.Font.Gotham,
+				TextSize = 10,
+				TextColor3 = C.TextMuted,
+				ZIndex = 35,
+			}, card)
+
+			card.MouseButton1Click:Connect(function()
+				local targetSlot = self.SelectedSlot or 1
+				local targetTag = "SQUAD_SLOT_" .. tostring(targetSlot)
+
+				local latestProf = self.GetProfile()
+				local latestHero = latestProf and latestProf.Heroes and latestProf.Heroes[hero.UUID] or hero
+				if latestHero.Assignment == targetTag then
+					self.AssignRemote:InvokeServer(hero.UUID, "BENCHED")
+				else
+					self.AssignRemote:InvokeServer(hero.UUID, targetTag)
+				end
+
+				self.SelectedSlot = (targetSlot % SQUAD_SLOTS) + 1
+				self:Refresh()
+			end)
+
+			entry = {
+				Card = card,
+				Portrait = portraitFrame,
+				InSquadBanner = inSquadBanner,
+				NameLabel = nameLbl,
+				InfoLabel = infoLbl,
+				ArchetypeLabel = archLbl,
+				Stroke = cardStroke,
+			}
+			self.RosterCards[hero.UUID] = entry
+		else
+			-- Existing card: update dynamic properties without recreating 3D viewport
+			entry.Card.LayoutOrder = idx
+			entry.Card.Visible = true
+			entry.InSquadBanner.Visible = inSquad
+			entry.Stroke.Color = inSquad and C.BorderDim or C.BorderBronze
+			entry.NameLabel.Text = hero.DisplayName
+			entry.InfoLabel.Text = string.format("%s Lv.%d", string.rep("★", hero.Stars or 1), hero.Level or 1)
+			entry.ArchetypeLabel.Text = string.format("[%s]", string.upper(hero.Archetype or "STRIKER"))
 		end
-
-		-- Hero Display Name
-		new("TextLabel", {
-			Name = "NameLabel",
-			Position = UDim2.new(0, 4, 0, 108),
-			Size = UDim2.new(1, -8, 0, 20),
-			BackgroundTransparency = 1,
-			Text = hero.DisplayName,
-			Font = Enum.Font.GothamBold,
-			TextSize = 13,
-			TextColor3 = C.TextWhite,
-			ZIndex = 35,
-			Parent = card,
-		})
-
-		-- Star & Level
-		new("TextLabel", {
-			Name = "InfoLabel",
-			Position = UDim2.new(0, 4, 0, 128),
-			Size = UDim2.new(1, -8, 0, 18),
-			BackgroundTransparency = 1,
-			Text = string.format("%s Lv.%d", string.rep("★", hero.Stars or 1), hero.Level or 1),
-			Font = Enum.Font.GothamMedium,
-			TextSize = 11,
-			TextColor3 = C.StarGold,
-			ZIndex = 35,
-			Parent = card,
-		})
-
-		-- Archetype / Subtext
-		new("TextLabel", {
-			Name = "ArchetypeLabel",
-			Position = UDim2.new(0, 4, 0, 148),
-			Size = UDim2.new(1, -8, 0, 16),
-			BackgroundTransparency = 1,
-			Text = string.format("[%s]", string.upper(hero.Archetype or "STRIKER")),
-			Font = Enum.Font.Gotham,
-			TextSize = 10,
-			TextColor3 = C.TextMuted,
-			ZIndex = 35,
-			Parent = card,
-		})
-
-		card.MouseButton1Click:Connect(function()
-			local targetSlot = self.SelectedSlot or 1
-			local targetTag = "SQUAD_SLOT_" .. tostring(targetSlot)
-
-			-- If hero is already in this slot, bench them
-			if hero.Assignment == targetTag then
-				self.AssignRemote:InvokeServer(hero.UUID, "BENCHED")
-			else
-				self.AssignRemote:InvokeServer(hero.UUID, targetTag)
-			end
-
-			-- Auto-advance selected slot to next slot
-			self.SelectedSlot = (targetSlot % SQUAD_SLOTS) + 1
-			task.wait(0.1)
-			self:Refresh()
-		end)
 	end
 
-	self.RosterScroll.CanvasSize = UDim2.new(0, #heroList * (cardWidth + 14), 0, 0)
+	-- Remove any cards for heroes that were deleted/consumed
+	for uuid, entry in pairs(self.RosterCards) do
+		if not seenUUIDs[uuid] then
+			entry.Card:Destroy()
+			self.RosterCards[uuid] = nil
+		end
+	end
+
+	self.RosterScroll.CanvasSize = UDim2.new(0, #heroList * (cardWidth + 14) + 12, 1, 0)
 end
 
 return SquadController

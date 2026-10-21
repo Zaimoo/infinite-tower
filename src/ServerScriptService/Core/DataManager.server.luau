@@ -372,6 +372,45 @@ function DataManager.SyncProfile(player: Player, progressionOnly: boolean?)
 		end
 	end
 
+	-- Auto-migrate legacy SQUAD assignments or DeployedSquadOrder to SQUAD_SLOT_1..5
+	local occupiedSlots: { [number]: string } = {}
+	for uuid, h in pairs(profile.Heroes) do
+		local slotNum = tonumber(string.match(h.Assignment or "", "^SQUAD_SLOT_(%d+)"))
+		if slotNum and slotNum >= 1 and slotNum <= 5 then
+			occupiedSlots[slotNum] = uuid
+		end
+	end
+	if profile.DeployedSquadOrder then
+		for _, uuid in ipairs(profile.DeployedSquadOrder) do
+			local h = profile.Heroes[uuid]
+			if h and not string.find(h.Assignment or "", "^SQUAD_SLOT_") and not string.find(h.Assignment or "", "^FACILITY_") then
+				for s = 1, 5 do
+					if not occupiedSlots[s] then
+						h.Assignment = ("SQUAD_SLOT_" .. tostring(s)) :: HeroAssignment
+						occupiedSlots[s] = uuid
+						break
+					end
+				end
+			end
+		end
+	end
+	for uuid, h in pairs(profile.Heroes) do
+		if h.Assignment == ("SQUAD" :: any) then
+			for s = 1, 5 do
+				if not occupiedSlots[s] then
+					h.Assignment = ("SQUAD_SLOT_" .. tostring(s)) :: HeroAssignment
+					occupiedSlots[s] = uuid
+					break
+				end
+			end
+			if not string.find(h.Assignment or "", "^SQUAD_SLOT_") then
+				h.Assignment = "BENCHED"
+			end
+		elseif not h.Assignment or h.Assignment == ("" :: any) then
+			h.Assignment = "BENCHED"
+		end
+	end
+
 	-- Reconcile DeployedSquadOrder from Hero Assignments
 	local deployed: { string } = {}
 	for slot = 1, 5 do
