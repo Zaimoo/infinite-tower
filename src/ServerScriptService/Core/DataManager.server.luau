@@ -558,10 +558,10 @@ end
 
 -- Legacy endpoints cannot bypass confirmed previews.
 function DataManager.SynthesizeHeroes(_player: Player, _targetUUID: string, _fodderUUIDs: { string }): (boolean, string)
-	return false, "Open The Pit and confirm a synthesis preview."
+	return false, "Use the Synthesis chamber to synthesize heroes."
 end
 function DataManager.PromoteHeroStar(_player: Player, _targetUUID: string, _fodderUUIDs: { string }): (boolean, string)
-	return false, "Open The Pit and confirm a material-based promotion preview."
+	return false, "Use the Promotion chamber to promote heroes."
 end
 SynthesizeHeroesFunc.OnServerInvoke = DataManager.SynthesizeHeroes
 PromoteHeroStarFunc.OnServerInvoke = DataManager.PromoteHeroStar
@@ -904,7 +904,9 @@ FacilityInteractEvent.OnServerEvent:Connect(function(player: Player, action: any
 		if not game:GetService("RunService"):IsStudio() then return end
 		profile.Currencies.Gold += 25000
 		profile.Currencies.Gems += 1800
-		DataManager.SendToast(player, "[Prototype Boost] +25,000 Gold, +1,800 Gems added!", "SUCCESS")
+		profile.PitMaterials.PromotionStone = (profile.PitMaterials.PromotionStone or 0) + 20
+		profile.PitMaterials.SoulEssence = (profile.PitMaterials.SoulEssence or 0) + 100
+		DataManager.SendToast(player, "[Prototype Boost] +25k Gold, +1.8k Gems, +20 Promotion Stones!", "SUCCESS")
 		DataManager.SyncProfile(player)
 	end
 end)
