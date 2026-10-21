@@ -16,14 +16,23 @@ local function span(n,a,b,w,rails)
  if rails then for _,side in {-1,1} do part(n.."_Rail",Vector3.new(1,4,len),cf*CFrame.new(side*(w/2-0.5),2,0),true) end end
 end
 local radius=375 local y=16 local angles={}
-for i=1,5 do
- local island=workspace.WaitingRoomPlots["Plot_"..i]:WaitForChild("FloatingFortressIsland")
- local walls=island.FortressWalls local gate=walls.GateLintel
- local a=math.atan2(gate.Position.Z,gate.Position.X) table.insert(angles,a)
- local start=Vector3.new(gate.Position.X,12,gate.Position.Z)-gate.CFrame.LookVector*4
- span("IslandBridge_"..i,start,Vector3.new(math.cos(a)*(radius-1),y,math.sin(a)*(radius-1)),18,true)
- local barrier=walls.InvisibleEdgeBarriers:FindFirstChild("Barrier_Front")
- if barrier then barrier.CanCollide=false barrier.CanTouch=false end
+for i=1,6 do
+ local plot = workspace.WaitingRoomPlots:FindFirstChild("Plot_"..i)
+ if plot then
+  local island=plot:WaitForChild("FloatingFortressIsland", 10)
+  if island then
+   local walls=island:FindFirstChild("FortressWalls")
+   local gate=walls and walls:FindFirstChild("GateLintel")
+   if gate and gate:IsA("BasePart") then
+    local a=math.atan2(gate.Position.Z,gate.Position.X) table.insert(angles,a)
+    local start=Vector3.new(gate.Position.X,12,gate.Position.Z)-gate.CFrame.LookVector*4
+    span("IslandBridge_"..i,start,Vector3.new(math.cos(a)*(radius-1),y,math.sin(a)*(radius-1)),18,true)
+    local edgeBarriers=walls:FindFirstChild("InvisibleEdgeBarriers")
+    local barrier=edgeBarriers and edgeBarriers:FindFirstChild("Barrier_Front")
+    if barrier then barrier.CanCollide=false barrier.CanTouch=false end
+   end
+  end
+ end
 end
 local function near(a,b,t) return math.abs(math.atan2(math.sin(a-b),math.cos(a-b)))<t end
 for i=1,120 do
@@ -42,7 +51,7 @@ local portal=tower.TowerBaseEntrance.EntrancePortalTrigger
 local front=portal.Position+portal.CFrame.LookVector*6
 span("TowerEntranceApproach",Vector3.new(0,y,-radius-1),Vector3.new(front.X,y,front.Z),28,true)
 portal.CanCollide=false
-f:SetAttribute("ConnectedIslandCount",5)
+f:SetAttribute("ConnectedIslandCount",#angles)
 return f
 end
 return B

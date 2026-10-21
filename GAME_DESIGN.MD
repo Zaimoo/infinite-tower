@@ -1,7 +1,7 @@
 # DOCUMENT 1: COMPLETE GAME DESIGN DOCUMENT (GDD)
 **Project Title:** *Infinite Tower: Become a Master!*  
 **Target Platform:** Roblox (PC, Mobile, Tablet, Console)  
-**Server Capacity:** 5–6 Players per Server  
+**Server Capacity:** 6 Players per Server (6 Dedicated Floating Fortress Plots)  
 **Engine Architecture:** Server-Authoritative Data Tables (5 Hz Heartbeat) + Client-Side R15 Visual Interpolation (60 FPS `RenderStepped`) | Hybrid Replication: Central Hub 14-Byte Binary Buffers + Infinite Tower Room-Local v2 Binary Buffers (24-byte entity records, 46-byte header)
 
 ---
@@ -18,8 +18,8 @@ In traditional gacha/simulator games, 95% of summons are discarded as worthless 
    - Every hero pulled from the Summoning Altar rolls with **Combat Stats** (movement speed, attack speed, attack damage, health) and **Labor Output** (separate facility productivity), without trait or imprint bonuses.
    - **Up to 5 Deployed Heroes** (all 5 slots unlocked from the start) accompany the Master into the Central Hub or are independently deployed to specific floors (1–50) of the **Infinite Tower**. Heroes expend **Stamina** as they fight and risk a debilitating **60-second Coma** if left inside lethal AoE telegraphs.
    - **Benched Heroes** physically inhabit the player's **Fortress Plot** on recuperation beds in **The Infirmary & Barracks** (Stamina & Coma recovery), or can be forged powerful equipment at the **Blacksmith Forge**.
-   - **Zero Dead Pulls:** Duplicate 1★–3★ heroes are fed into the **Synthesis Chamber** (`SynthesisController.luau`) for EXP leveling to cap (`MaxLevel = Stars * 10`), or converted into materials for Gold-and-Stone **Star Promotion** ($1★ \to 5★$), which keeps the current level.
-   - **Dual Gacha & Artifact Ascension:** In addition to summoning heroes, Masters spend Gems at the **Artifact Summoning Banner** to pull equippable weapons, shields, and rings across **16 Rarity Tiers** (`Common` $\to$ `Origin`) which define inherent base stats. At the **Blacksmith Forge** (`ForgeController.luau`), duplicate gear and Gold are used for **Star Promotion** ($1★ \to 7★$), multiplying inherent rarity power by up to **16.00x**, without enhancement levels.
+   - **Zero Dead Pulls:** Duplicate 1★–3★ heroes are fed into the **Synthesis Chamber** (`SynthesisController.luau`) for EXP leveling to cap (`MaxLevel = Stars * 10`), or sacrificed at the **Promotion Altar** (`PromotionController.luau`) for **Star Promotion** ($1★ \to 5★$), which keeps the current level.
+   - **Dual Gacha & Artifact Ascension:** In addition to summoning heroes, Masters spend Gems at the **Artifact Summoning Banner** (`160 Gems` single / `1,600 Gems` 10x) to pull equippable weapons, shields, and rings across **16 Rarity Tiers** (`Common` $\to$ `Origin`) which define inherent base stats. At the **Blacksmith Forge** (`ForgeController.luau`), duplicate gear and Gold are used for **Star Promotion** ($1★ \to 7★$), multiplying inherent rarity power by up to **16.00x**, without enhancement levels.
 
 2. **Tactical Master Agency Over AFK Whaling:**
    - The Master carries no personal weapon. Instead, the Master directs squads through battlefield commands—**`[Click / Tap]` Focus Target**, **`[Q]` Overdrive Whistle**, and **`[E]` Emergency Recall Whistle**—while physically hauling heavy, high-value **Relics** and cargo back to their plot.
@@ -54,9 +54,9 @@ flowchart TD
     end
 
     subgraph Meso["15-Minute Loop: Recovery, Synthesis, Promotion & Forge"]
-        T1["Gather Gold & Gems from Drops, Relics & Tower Floors"] --> T2["Summoning Altar: Pull Hero Banner & Artifact Banner (100 Gems)"]
+        T1["Gather Gold & Gems from Drops, Relics & Tower Floors"] --> T2["Summoning Altar: Hero Banner (100 Gems) & Artifact Banner (160 Gems)"]
         T2 --> T3["Synthesis Chamber: Feed Duplicates for XP & Max Level Cap"]
-        T3 --> T4["Promotion Altar: Gold & Promotion Stones (1★ -> 5★); Keep Level"]
+        T3 --> T4["Promotion Altar: Sacrifice Same-Rank Heroes for Star Promotion (1★ -> 5★); Keep Level"]
         T4 --> T5["Blacksmith Forge: Weapon Star Promotion (1★ -> 7★); No Enhancement Levels"]
     end
 
@@ -65,7 +65,7 @@ flowchart TD
         B2 --> B3["Engage Biome Boss on Floor Milestone (Floor 5, 10, 15... 50)"]
         B3 --> B4["Dodge Signature Telegraphed AoEs (Self/Target Discs) via [E] Recall"]
         B4 --> B5["Punish Window: Trigger [Q] Overdrive to Burst Down Boss HP"]
-        B5 --> B6["Claim Pinnacle Rewards: Massive Gold/Gems & High-Rarity Pinnacle Artifact Drops"]
+        B5 --> B6["Claim Milestone Rewards: Massive Gold/Gems & High-Rarity Artifact Drops"]
         B6 --> B7["Unlock Next Biome Tier & Advance to Higher Tower Floors"]
     end
 
@@ -94,9 +94,9 @@ flowchart TD
 1. **Facility Upkeep (Every 3–5 Minutes):**
    - Inspect Infirmary beds and swap resting heroes into active squad rotation.
 2. **Summoning & Gacha Pulls (Every 5–10 Minutes):**
-   - Spend Gems (`100 Gems` single / `900 Gems` 10x) at the **Summoning Altar** on either the **Hero Banner** (1★–3★ heroes) or the **Artifact Banner** (weapons, shields, and rings across 16 Rarity Tiers).
+   - Spend Gems at the **Summoning Altar** on either the **Hero Banner** (`100 Gems` single / `900 Gems` 10x for 1★–3★ heroes) or the **Artifact Banner** (`160 Gems` single / `1,600 Gems` 10x for weapons, shields, and rings across 16 Rarity Tiers).
    - **Synthesis Chamber (`SynthesisController.luau`):** Place a recipient hero and up to 5 fodder heroes to level up to the hero's current cap ($\text{MaxLevel} = \text{Stars} \times 10$).
-   - **Promotion Altar (`PromotionController.luau`):** When a hero reaches max level, spend Gold and Promotion Stones to promote star rating ($1★ \to 5★$), keeping the current level and raising the cap by 10.
+   - **Promotion Altar (`PromotionController.luau`):** When a hero reaches max level, sacrifice same-rank heroes and Promotion Stones to permanently ascend star rating ($1★ \to 5★$), keeping the current level and raising the cap by 10.
 3. **Artifact Star Promotion at the Blacksmith Forge (`ForgeController.luau`):**
    - Promote an existing weapon from 1★ to 7★ using same-template duplicates and Gold/Gems. Power multipliers are **1.00 / 1.60 / 2.50 / 4.00 / 6.50 / 10.00 / 16.00x**.
    - Rarity is fixed when the item is acquired. A better rarity requires a newly acquired weapon, which starts at 1★. There are no enhancement levels or enhancement-fodder multipliers in the stat model.
@@ -113,9 +113,24 @@ flowchart TD
      - **Signature 2:** Ranged ground craters placed under distant heroes (`TARGET_DISC`, e.g. `sweeping_roots`, 55 studs cast range, 13 studs radius).
    - **Tactical Counterplay ("Dodge vs. Coma"):** Masters must watch the expanding telegraph decals and sound cues, repositioning and executing **`[E]` Emergency Recall Whistle** to yank heroes out of danger. Heroes struck by signature skills suffer severe stamina loss or a debilitating **60-second Coma**.
    - **Punish Windows:** Following major signature attacks, the boss enters an extended recovery window (1.2s–1.5s), providing active Masters the ideal moment to pop **`[Q]` Overdrive Whistle** for massive burst DPS.
-3. **Biome Clearance & Pinnacle Rewards:**
-   - Defeating the Biome Boss awards immense Gold, Gems, and rare direct drops of high-rarity **Pinnacle Artifacts** (from Legendary up to Origin).
+3. **Biome Clearance & Milestone Rewards:**
+   - Defeating the Biome Boss awards immense Gold, Gems, and rare direct drops of high-rarity **Artifacts** (from Legendary up to Origin).
    - Bosses unlock clearance to enter the next biome in the Infinite Tower.
+
+### 2.4 The AFK & Outskirts Facility Loop (Passive Boost Facilities & Auto/Offline Gold Generation)
+While active squad command in the Central Hub and Infinite Tower drives peak progression, the **Outskirts & Facility Loop** ensures that a Master's benched roster continuously generates value both online and offline—reinforcing the **Zero-Waste Roster Economy**.
+
+1. **Inner Fortress Stations vs. The Rear Outskirts:**
+   - **Core Main Buildings (Inner Courtyard):** Essential progression stations that every Master accesses by default in their main fortress courtyard—including the **Summoning Altar**, **War Banner**, **Synthesis Chamber**, **Promotion Altar**, **Blacksmith Forge**, and **The Infirmary & Barracks** (which operates strictly as a Main Building for Stamina & Coma recovery).
+   - **Support Facilities (Inner Fortress Wings):** Upgradeable utility and economic structures (`Level 1` $\to$ `Level 5`) located inside the fortress courtyard wings where benched heroes are stationed via `FacilityController.luau` to grant global percentage buffs:
+     - **The Market (Inner Commercial Wing):** Grants a percentage multiplier ($+5\%$ base at Lv. 1 up to $+40\%+$ with high-tier Miners) **strictly to Loot Earnings from the Towers**—amplifying Gold dropped by Infinite Tower mobs/Biome Bosses (Floors $1\text{–}50$) and the banking value of physical loot extracted from the Central Crimson Tower rings. (Does not multiply Outskirts Guard Post passive Gold).
+     - **The Training Grounds (Inner Martial Wing):** Grants a percentage multiplier ($+4\%$ base at Lv. 1 up to $+32\%+$ with high-tier Strikers/Scholars) to the Master's **Overall Squad Combat Power**, multiplying total `FinalATK` and `FinalHP` (both intrinsic hero stats and equipped Artifact stats) against all monsters.
+   - **The Outskirts (Southern Frontier Wilderness):** The only area located *outside* the fortress walls, reached through the rear fortress gatehouse. Houses the **Outskirts Guard Post** and wilderness patrol run.
+2. **The Outskirts Guard Post (Unified AFK Gold & Offline Rewards):**
+   - At the southern rear border of the island, outside the fortress battlements, lies the **Outskirts Guard Post**, a frontier bastion and wilderness trail at the back of the fortress.
+   - Masters assign benched heroes (`Vanguard` and `Marksman` preferred) to the Outskirts Guard Post as **Adventurers**. Assigned Adventurers physically venture out and patrol the southern outskirts trail, fending off ambient monsters in a lightweight client-rendered visual loop without draining their combat Stamina.
+   - **Auto-Received Online Gold:** There is no manual treasury chest required while online. Every $60\text{ seconds}$ (ticked automatically in $10\text{-second}$ increments), passive Gold generated by stationed Adventurers is **automatically added directly to the Master's Gold balance**, scaled by the heroes' `EffectiveLabor` and the Master's **Highest Cleared Biome Boss** (Floors $5, 10, \dots, 50$).
+   - **Offline Reward Function (`OfflineRewardService.luau`):** When a Master logs out (`PlayerRemoving`), the server records `LastLogoutTimestamp` alongside their current `PassiveGoldPerMin` rate. Upon reconnecting (`PlayerAdded`), the server calculates elapsed offline minutes up to the Guard Post's **Max Offline Accumulation Cap** ($4\text{ Hours}$ at Lv. 1 $\to$ $12\text{ Hours}$ at Lv. 5) and presents a **"Welcome Back, Master!" Offline Summary Modal**, crediting the accumulated Gold straight to the player's balance.
 
 ---
 
@@ -129,25 +144,25 @@ The world exists in two coordinated spatial contexts:
 
 ```
                       CENTRAL HUB ARENA & FLOATING FORTRESS RING
-                                    [N: (0, -600)]
+                                    [N: (0, -750)]
                                   +----------------+
                                   |  PLOT 1 (0°)   |
                                   +-------+--------+
                                           | (Bridge)
-                     PLOT 5 (288°)        |        PLOT 2 (72°)
-                         \                |                /
-                   (Bridge)\       +------+------+       /(Bridge)
-                             \     |   CENTRAL   |     /
-                              -----+   CRIMSON   +-----
-                             /     |  TOWER HUB  |     \
-                   (Bridge)/       +------+------+       \(Bridge)
-                         /                |                \
-                    PLOT 4 (216°)         |        PLOT 3 (144°)
+                   PLOT 6 (300°)          |           PLOT 2 (60°)
+                        \                 |                 /
+                  (Bridge)\        +------+------+        /(Bridge)
+                            \      |   CENTRAL   |       /
+                             ------+   CRIMSON   +-------
+                            /      |  TOWER HUB  |       \
+                  (Bridge)/        +------+------+        \(Bridge)
+                        /                 |                 \
+                   PLOT 5 (240°)          |           PLOT 3 (120°)
                                           | (Bridge)
                                   +-------+--------+
-                                  |  Perimeter Rim |
+                                  |  PLOT 4 (180°) |
                                   +----------------+
-                                    [S: (0, +600)]
+                                    [S: (0, +750)]
 
                =======================================================
                OFF-MAP INFINITE TOWER ROOMS (Isolated Dynamic Grid)
@@ -164,9 +179,9 @@ The world exists in two coordinated spatial contexts:
 | **Ring 2: Corrupted Grove** | `120 – 280 studs` (Hub) | `160 studs` annulus | Open to all | High-density Elites with red AoE telegraphs. Contested loot PvP active. | **Cursed Urns**, **Abyssal Cores**, High Gold |
 | **Ring 1: Outer Ruins** | `280 – 460 studs` (Hub) | `180 studs` annulus | Open from start | Low-level mobs & Mana Crystal nodes. Contested loot PvP active. | **Mana Geodes**, Starter Gold |
 | **Perimeter Highway** | `460 – 480 studs` (Hub) | `20 studs` paved ring road | Open to all | **Safe Zone** (No mobs). Safe banking threshold ($R \ge 460$). | Banked cargo conversion |
-| **5 Floating Fortress Plots** | `R = 540 studs` ($Y = 12$) | Fortress island mesh with courtyard & walls | Plot Owner + Visitors | Safe Zone. Personal fortress sanctuary for recovery, banner summoning, and forge ascension. | Healing, Blacksmithing, Synthesis, Promotion |
+| **6 Floating Fortress Plots** | `R = 650 studs` ($Y = 12$) | Expanded $260 \times 320\text{ studs}$ citadel island with grand courtyard & rear outskirts ($1.2\times$ radius expansion) | Plot Owner + Visitors | Safe Zone. Personal fortress sanctuary for recovery, banner summoning, forge ascension, and AFK outskirts guard post. | Roster Recovery, Gacha Banners, Forge, Outskirts Passive Gold & Multipliers |
 | **Safety Catch Plane** | Lower kill plane at $Y = -95$ | `2400 x 8 x 2400 studs` | Fallen players | Non-lethal catch plane; teleports fallen players safely to their PlotSpawn. | None |
-| **50 Tower Floor Rooms** | Off-map grid: $X \ge 12,000, Y = 1,000, Z \ge 12,000$ | `248 x 84 x 248 studs` each | Traversal via `TowerController` | Isolated floor-local PvE encounters; shared floor membership; safe arrival zone. | Mob drops, Gold, Gems, **Biome Boss Pinnacle Artifacts** |
+| **50 Tower Floor Rooms** | Off-map grid: $X \ge 12,000, Y = 1,000, Z \ge 12,000$ | `248 x 84 x 248 studs` each | Traversal via `TowerController` | Isolated floor-local PvE encounters; shared floor membership; safe arrival zone. | Mob drops, Gold, Gems, **Biome Boss Rare Artifact Drops** |
 
 ### 3.3 Dynamic Tower Room Architecture & Biomes
 
@@ -194,15 +209,65 @@ Tower floors are dynamically managed by `TowerFloorService.luau` and generated v
 9. **Starlit Vestibule (Floors 41–45):** Starlit Vestibule, Orbiting Stacks, Fractured Index, Runeguard Athenaeum, **Rift Warden's Observatory (Biome Boss: Rift Warden)**.
 10. **Abyssal Descent (Floors 46–50):** Abyssal Descent, Crimson Procession, Voidspan Crossing, Dreadguard Citadel, **Overlord's Throne (Biome Boss: Abyssal Overlord)**.
 
-### 3.4 Private Fortress Plot Internal Layout
-Each of the 5 Floating Fortress Islands is oriented radially toward the central tower:
-- **Plaza & Extraction Pad:** Glowing cyan platform for depositing carried cargo into permanent vault currency.
-- **Summoning Altar:** Dimensional obelisk for 100-Gem Hero and Artifact Banner Gacha pulls.
-- **War Banner:** Physical banner with proximity prompt that opens the **Squad Deploy UI** (`SquadController.luau`).
-- **Synthesis Chamber:** Fiery cauldron station with `[F]` prompt opening the **Synthesis UI** (`SynthesisController.luau`) for feeding EXP fodder.
-- **Promotion Altar:** Consecrated star ascension dais with `[F]` prompt opening the **Promotion UI** (`PromotionController.luau`).
-- **The Blacksmith Forge:** Interactive 3D station featuring an anvil, hearth coals, workbench, and prompt opening the **Forge UI** (`ForgeController.luau`) for weapon Star Promotion.
-- **The Infirmary & Barracks:** Recuperation beds where exhausted or `Coma`-afflicted heroes lie down while assigned Healers accelerate stamina recovery.
+### 3.4 Private Fortress Plot & Outskirts Architectural Layout
+
+To accommodate active fortress management, squad training, commerce, and the passive Outskirts AFK loop, each of the 6 Floating Fortress Islands is expanded by **$1.2\times$** radial distance out to **$R = 650\text{ studs}$** (top surface $Y = 12$) with an enlarged citadel island footprint of **$260\text{ studs (Width)} \times 320\text{ studs (Length)}$**.
+
+The island is divided into two distinct, interconnected sectors:
+1. **The Grand Citadel & Inner Courtyard (Front / North - $260 \times 180\text{ studs}$):** Heavily fortified with $28\text{-stud}$ high crenellated stone walls, corner watch bastions, and a private entrance gatehouse facing the perimeter drawbridge. Encloses all **Core Main Buildings** (Summoning Altar, War Banner, The Pit, Blacksmith Forge, Infirmary) as well as the internal support facilities (**The Market** and **The Training Grounds**).
+2. **The Southern Outskirts (Rear / South - $260 \times 140\text{ studs}$):** The sole exterior zone outside the fortress walls, accessed through the vaulted rear fortress gatehouse. Spans open, rugged frontier terrain, pine trees, and dirt wilderness trails housing **The Outskirts Guard Post**.
+
+```
+                        NORTH (Facing Central Hub & Perimeter Highway)
+                                        | (Bridge)
+                                  [North Gatehouse]
+                       +---------------------------------------+
+                       |   Plaza & Cyan Private Extraction Pad  |
+                       |                                       |
+                       | [Infirmary & Beds]   [Summoning Altar]|
+                       |                      (Hero & Artifact)|
+                       |          [War Banner Pedestal]        |
+                       |                                       |
+                       | [The Pit / Cauldron] [Blacksmith Forge|
+                       | (Synthesis & Promo)   & Anvil Hearth] |
+                       |                                       |
+                       | [Training Grounds]       [The Market] |
+                       | (Sparring & Dummies)  (Bazaar Stalls) |
+                       +-------------------+-------------------+
+                                           | (Rear Fortress Gate)
+                       ====================+====================
+                       |         THE REAR OUTSKIRTS GROUNDS     |
+                       |                                       |
+                       |          [Wilderness Border Trail]    |
+                       |                                       |
+                       |          [Outskirts Guard Post]       |
+                       |       (Timber Bastion & Patrol Run)   |
+                       |                                       |
+                       +---------------------------------------+
+                                SOUTH (Southern Frontier)
+```
+
+#### Detailed Sector Breakdown:
+
+1. **Sector A: Arrival Ramp, Gatehouse & Extraction Plaza (North Front):**
+   - **Perimeter Drawbridge & Gate:** Connects the fortress to the Perimeter Highway ($R = 480 \to 520\text{ studs}$). Features an owner-locked collision barrier preventing unauthorized plot infiltration.
+   - **Plaza & Extraction Pad:** Glowing cyan illuminated deposit zone ($24 \times 1 \times 24\text{ studs}$) for banking carried relics, geodes, and urns into permanent Gold and Gems.
+   - **Beacon Pillar & Plot Spawn:** Center anchor with the Master's avatar beacon projected skyward.
+
+2. **Sector B: Grand Inner Fortress Courtyard (Core Buildings & Interior Facilities):**
+   - **Summoning Altar (East Courtyard):** Towering obsidian obelisk featuring dual runic summoning circles for the **Hero Banner** (`100 Gems` single / `900 Gems` 10x) and **Artifact Banner** (`160 Gems` single / `1,600 Gems` 10x).
+   - **War Banner Pedestal (Center Courtyard):** Gothic stone pedestal with heraldic banner and `[F]` proximity prompt opening the **Squad Deploy UI** (`SquadController.luau`).
+   - **The Pit Sanctuary (West Courtyard):**
+     - **Synthesis Chamber:** Fiery cauldron station with `[F]` prompt opening the **Synthesis UI** (`SynthesisController.luau`) for feeding EXP fodder.
+     - **Promotion Altar:** Consecrated marble star dais with `[F]` prompt opening the **Promotion UI** (`PromotionController.luau`) for star ascensions ($1★ \to 5★$).
+   - **The Blacksmith Forge (South-East Courtyard):** Interactive 3D station featuring an anvil, hearth coals, workbench, and prompt opening the **Forge UI** (`ForgeController.luau`) for Artifact Star Ascension ($1★ \to 7★$).
+   - **The Infirmary & Barracks (North-West Courtyard):** Dedicated Gothic stone hall containing 5 permanent recuperation beds where wounded and `Coma`-afflicted heroes rest. Resting Healer heroes project an aura accelerating stamina regeneration.
+   - **The Market (South-East Inner Wing):** Covered bazaar stalls, coin scales, and ledger counters located inside the fortress commercial quarter. Stationed workers (`Miner` preferred) boost Infinite Tower mob/boss loot drops and Hub extraction banking values ($+5\%$ to $+40\%+$).
+   - **The Training Grounds (South-West Inner Wing):** Cobblestone sparring arena with weapon racks, archery targets, and training dummies located inside the fortress military quarter. Stationed trainers (`Striker` & `Scholar` preferred) boost the Master's overall squad combat power ($+4\%$ to $+32\%+$ Final ATK/HP).
+
+3. **Sector C: The Southern Outskirts (Exterior Wilderness Zone):**
+   - **Rear Fortress Archway:** A $24\text{-stud}$ wide vaulted stone passage connecting the inner fortress courtyard directly to the open wilderness behind the citadel.
+   - **The Outskirts Guard Post (South Perimeter):** Heavy timber bastion, log palisade barricade, and campfire situated along the wilderness trail. Stationed Adventurers (`Vanguard` & `Marksman` preferred) venture out along the dirt patrol trail to battle ambient wildlife in a lightweight visual loop, auto-generating online Gold every 60 seconds and logging offline accumulation. Only the Outskirts and its Guard Post lie outside the fortress walls.
 
 ---
 
@@ -217,18 +282,18 @@ Every summoned hero rolls a `QualityScalar` $q \in [0.90, 1.15]$ applied to atta
 
 | Archetype | Base HP ($HP_0$) | Base ATK ($ATK_0$) | Attack Interval ($t_{\text{atk}}$) | Attack Range | Base Labor ($L_0$) | Preferred Facility (+25% Synergy) | Permitted Weapons |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Vanguard** (Tank) | `450` | `22` | `1.20s` | `6 studs` | `10 / min` | None | `SWORD`, `AXE`, `SHIELD` |
-| **Striker** (Melee DPS) | `280` | `38` | `0.85s` | `6 studs` | `12 / min` | None | `SWORD`, `DAGGERS`, `SHIELD` |
-| **Marksman** (Ranged DPS) | `210` | `34` | `0.80s` | `28 studs` | `13 / min` | None | `BOW` |
-| **Miner** (Gem Specialist) | `300` | `20` | `1.05s` | `6 studs` | `20 / min` | None | `AXE`, `SHIELD` |
+| **Vanguard** (Tank) | `450` | `22` | `1.20s` | `6 studs` | `10 / min` | **Outskirts Guard Post** | `SWORD`, `AXE`, `SHIELD` |
+| **Striker** (Melee DPS) | `280` | `38` | `0.85s` | `6 studs` | `12 / min` | **The Training Grounds** | `SWORD`, `DAGGERS`, `SHIELD` |
+| **Marksman** (Ranged DPS) | `210` | `34` | `0.80s` | `28 studs` | `13 / min` | **Outskirts Guard Post** | `BOW` |
+| **Miner** (Gem Specialist) | `300` | `20` | `1.05s` | `6 studs` | `20 / min` | **The Market** | `AXE`, `SHIELD` |
 | **Healer** (Infirmary Spec.) | `260` | `18` | `1.25s` | `24 studs` | `18 / min` | **The Infirmary & Barracks** | `STAFF`, `TOME` |
-| **Scholar** (Spell Specialist)| `220` | `24` | `1.00s` | `26 studs` | `22 / min` | None | `TOME`, `STAFF` |
+| **Scholar** (Spell Specialist)| `220` | `24` | `1.00s` | `26 studs` | `22 / min` | **The Training Grounds** | `TOME`, `STAFF` |
 
 *(Note: Rings (`RING`) are universal accessories and can be equipped by any archetype).*
 
 ### 4.2 Effective Combat & Labor Formulas
 
-**Stat-only design revision (2026-10-22; implementation pending).** This section changes calculations and progression. Banner, acquisition, drop rates, rewards, and navigation retain their existing rules. The complete [calculated reference](docs/balance/STAT_SCALING_TABLES.md) and [50-floor stat CSV](docs/balance/FLOOR_SCALING.csv) are generated by the offline calculator.
+**Stat-only design revision (2026-10-22; implementation and verification recorded in [IMPLEMENTATION_VERIFICATION.md](docs/balance/IMPLEMENTATION_VERIFICATION.md)).** This section changes calculations and progression. Banner, acquisition, drop rates, rewards, and navigation retain their existing rules. The complete [calculated reference](docs/balance/STAT_SCALING_TABLES.md) and [50-floor stat CSV](docs/balance/FLOOR_SCALING.csv) are generated by the offline calculator.
 
 #### 4.2.1 Leveling, stars, and the four combat stats
 
@@ -305,18 +370,66 @@ $$EffectiveLabor = L_0 \times q \times 1.35^{S-1} \times (1 + 0.05(L-1)) \times 
 
 `B_Synergy = 0.25` when assigned to the preferred facility (including the existing all-facility preference), applied once. Labor is facility output, separate from the four combat stats. It receives no weapon, trait, or inherited-memory modifier. Infirmary formulas in Section 4.3 remain unchanged.
 
-### 4.3 Fortress Plot Facility Output Formulas
-The Infirmary upgrades from **Level 1 to Level 5** using Gold:
-- **Upgrade Table:**
-  - Level 1: Free (Default), 1 Max Worker, 2 Beds.
-  - Level 2: 600 Gold, 1 Max Worker, 3 Beds.
-  - Level 3: 2,000 Gold, 2 Max Workers, 4 Beds.
-  - Level 4: 6,000 Gold, 2 Max Workers, 5 Beds.
-  - Level 5: 18,000 Gold, 3 Max Workers, 5 Beds.
-- **Stamina Recovery Rate:**
-  $$\text{StaminaRegenPerSec} = 2.5 + (0.4 \times F) + (0.06 \times \sum \text{EffectiveLabor})$$
-- **Coma Duration Reduction:**
-  $$\text{EffectiveComaDuration} = \max\left(20\text{s}, \frac{60\text{s}}{1 + 0.05(F - 1) + 0.008 \sum \text{EffectiveLabor}}\right)$$
+### 4.3 Fortress Outskirts & Facility Economy Formulas
+
+Progression is bifurcated between **Core Main Buildings** (free, static fortress stations) and **Upgradeable Outskirts Facilities** (`Level 1` $\to$ `Level 5`) that scale passive Gold generation and global percentage multipliers:
+
+#### 1. Core Main Building: The Infirmary & Barracks
+The Infirmary operates as a standard, permanent fortress fixture with 5 default recuperation beds:
+- **Base Stamina Recovery:** $3.0\text{ Stamina/sec}$ per occupied bed.
+- **Healer Synergy Aura:** $+50\%$ acceleration ($4.5\text{ Stamina/sec}$) if at least one `Healer` hero is resting in the Infirmary.
+- **Coma Duration:** Standard $60\text{ seconds}$ recovery, reduced to $40\text{ seconds}$ when a resting `Healer` is present.
+
+#### 2. Upgradeable Support Facilities (Levels 1 to 5)
+
+##### Facility A: The Outskirts Guard Post (Exterior AFK & Offline Gold Generation)
+Located outside the fortress walls along the southern wilderness border. Stationed Adventurers (`Vanguard` & `Marksman` preferred, receiving $+25\%$ labor synergy) patrol the trail, generating automatic online Gold and accumulating offline rewards:
+
+| Level | Gold Upgrade Cost | Max Adventurers | Base Gold / Min ($\text{BaseRate}$) | Max Offline Cap | Offline Efficiency | Visual Identity |
+| :---: | :---: | :---: | :---: | :---: | :---: | :--- |
+| **Lv. 1** | Free (Unlocked) | 1 Worker | `30 Gold/min` | 4 Hours (240 min) | 75% | Rugged wooden lean-to, simple campfire, dirt path. |
+| **Lv. 2** | 1,500 Gold | 2 Workers | `75 Gold/min` | 6 Hours (360 min) | 80% | Timber guard shack, log palisade fence, weapon rack. |
+| **Lv. 3** | 6,000 Gold | 3 Workers | `160 Gold/min` | 8 Hours (480 min) | 85% | Stone-reinforced bastion, brazier, perimeter ditch. |
+| **Lv. 4** | 20,000 Gold | 4 Workers | `300 Gold/min` | 10 Hours (600 min) | 90% | Fortified outpost tower, crenellated wall, watch bell. |
+| **Lv. 5** | 60,000 Gold | 5 Workers | `550 Gold/min` | 12 Hours (720 min) | 100% | Castle frontier barbican, heavy iron gate, signal beacon. |
+
+- **Online Passive Gold Formula:**
+  $$\text{PassiveGoldPerMin} = \Big(\text{BaseRate}_{\text{Level}} + 0.85 \times \sum \text{EffectiveLabor}\Big) \times \Big(1 + 0.15 \times \text{BiomeBossTier}\Big)$$
+  *(Where $\text{BiomeBossTier} \in [0, 10]$ is the highest Biome Boss defeated: Floor 5 = 1, Floor 10 = 2, ..., Floor 50 = 10).*  
+  *Auto-credited directly to the Master's Gold balance every 60s in 10s sub-increments; no manual claim chest required.*
+- **Offline Gold Accumulation Formula (`OfflineRewardService.luau`):**
+  $$\text{OfflineGold} = \min\big(\text{ElapsedMinutes},\; \text{MaxOfflineCapMinutes}\big) \times \text{PassiveGoldPerMin} \times \text{OfflineEfficiency}_{\text{Level}}$$
+  *Presented via "Welcome Back, Master!" modal upon login, depositing accumulated Gold straight to profile currency.*
+
+##### Facility B: The Market (Interior Fortress Commercial Wing - Tower Loot & Extraction Multiplier)
+Located inside the fortress commercial quarter. Stationed Merchants (`Miner` preferred, $+25\%$ labor synergy) amplify loot yields strictly from Infinite Tower clears and Hub cargo extractions:
+
+| Level | Gold Upgrade Cost | Max Workers | Base Loot Multiplier ($\text{BaseBonus}$) | Visual Identity |
+| :---: | :---: | :---: | :---: | :--- |
+| **Lv. 1** | 1,000 Gold | 1 Worker | `+5.0%` | Single wooden stall, canvas canopy, coin scale. |
+| **Lv. 2** | 3,500 Gold | 1 Worker | `+10.0%` | Expanded twin stalls, cargo crates, merchant wagon. |
+| **Lv. 3** | 12,000 Gold | 2 Workers | `+18.0%` | Covered bazaar pavillion, hanging brass scales, safe box. |
+| **Lv. 4** | 35,000 Gold | 2 Workers | `+28.0%` | Stone exchange depot, trade ledgers, guarded strongbox. |
+| **Lv. 5** | 90,000 Gold | 3 Workers | `+40.0%` | Grand celestial merchant exchange, guild crest, vault cellar. |
+
+- **Market Loot Multiplier Formula:**
+  $$\text{MarketMultiplier} = 1 + \text{BaseBonus}_{\text{Level}} + \big(0.005 \times \sum \text{EffectiveLabor}_{\text{Market}}\big)$$
+  *(Multiplies Gold dropped by mobs and Biome Bosses on Infinite Tower Floors 1–50 and physical cargo banked at the Extraction Pad. Does NOT amplify Outskirts Guard Post passive Gold).*
+
+##### Facility C: The Training Grounds (Interior Fortress Martial Wing - Squad Combat Power Multiplier)
+Located inside the fortress military quarter. Stationed Trainers (`Striker` & `Scholar` preferred, $+25\%$ labor synergy) conduct martial drills, applying an overall multiplier to squad combat stats:
+
+| Level | Gold Upgrade Cost | Max Workers | Base Combat Multiplier ($\text{BaseBonus}$) | Visual Identity |
+| :---: | :---: | :---: | :---: | :--- |
+| **Lv. 1** | 1,200 Gold | 1 Worker | `+4.0%` | Dirt sparring circle, straw dummy, wooden sword rack. |
+| **Lv. 2** | 4,000 Gold | 1 Worker | `+8.0%` | Fenced training yard, sandbags, archery targets. |
+| **Lv. 3** | 14,000 Gold | 2 Workers | `+14.0%` | Cobblestone arena, iron weapon racks, training pell. |
+| **Lv. 4** | 40,000 Gold | 2 Workers | `+22.0%` | Tiered training ring, enchanted strike dummies, war pavilion. |
+| **Lv. 5** | 100,000 Gold | 3 Workers | `+32.0%` | Consecrated martial amphitheater, glowing runic combat ring. |
+
+- **Training Combat Multiplier Formula:**
+  $$\text{TrainingMultiplier} = 1 + \text{BaseBonus}_{\text{Level}} + \big(0.004 \times \sum \text{EffectiveLabor}_{\text{Training}}\big)$$
+  *(Multiplies total squad $\text{FinalATK}$ and $\text{FinalHP}$ across all heroes and equipped Artifacts).*
 
 ### 4.4 Master Controls & Tactical Commands
 
@@ -334,7 +447,7 @@ The Infirmary upgrades from **Level 1 to Level 5** using Gold:
 The player interface is built from modular, gothic-styled components:
 1. **Bottom Navigation Toolbar (`BottomToolbar`):**
    - **Left:** `[PATCH NOTES]` button displaying current server update toasts.
-   - **Center Group:** `[THE PIT]` (opens Synthesis/Promotion modals) | `[FORGE]` (opens Blacksmith Star Ascension / Enhancement modal) | `[SQUAD]` (opens 5-Hero Squad Deploy modal) | `[OVERDRIVE]` (Whistle 1 / Q) | `[RECALL]` (Whistle 2 / E) | Vertical Divider | `[AutoSwap]` (4-way arrow icon: auto-swaps exhausted heroes with bench) | `[RosterGrid]` (3x3 grid icon: toggles Squad Deploy modal).
+   - **Center Group:** `[THE PIT]` (opens Synthesis/Promotion modals) | `[FORGE]` (opens Blacksmith Star Ascension modal) | `[SQUAD]` (opens 5-Hero Squad Deploy modal) | `[OVERDRIVE]` (Whistle 1 / Q) | `[RECALL]` (Whistle 2 / E) | Vertical Divider | `[AutoSwap]` (4-way arrow icon: auto-swaps exhausted heroes with bench) | `[RosterGrid]` (3x3 grid icon: toggles Squad Deploy modal).
    - **Right Group:** Settings Gear (toggles telemetry overlay) | `[SAVE]` button (manual profile save trigger).
 2. **Tower Navigation UI (`TowerController.client.luau`):**
    - **TravelBar (Top of Screen):** Persistent navigation bar displaying `[Previous]`, `[Next]`, `[Floor selector]`, and `[Hub]` buttons.
@@ -383,7 +496,7 @@ In **Infinite Tower**, major boss encounters take place at the apex of each biom
 - **Encounter Respawns:** Biome Bosses operate on an authoritative server respawn cadence ($300\text{s}$ cooldown upon defeat).
 - **Rewards Table:**
   - **Tiered Gold & Gems:** Scaled exponentially to biome difficulty.
-  - **Pinnacle Artifact Drops:** Rare direct drops of high-rarity Pinnacle Artifacts (from Legendary up to Origin tier, e.g. `art_paladin_claymore`, `art_crystal_greatbow`, `art_blade_of_the_rift`).
+  - **High-Rarity Artifact Drops:** Rare direct drops of high-tier Artifacts (from Legendary up to Origin rarity, e.g. `art_paladin_claymore`, `art_crystal_greatbow`, `art_blade_of_the_rift`).
   - **Biome Key / Floor Advancement:** Defeating the Biome Boss permanently unlocks the subsequent biome on the **Floor Selector**.
 
 ---
@@ -459,19 +572,20 @@ The full 1★ to 7★ path consumes 21 donor weapons plus the retained original.
 
 ### 7.4 Artifact Summoning Banner (Gacha Mechanics)
 - **Altar Integration:** The Summoning Altar features two banner tabs: **[HERO BANNER]** and **[ARTIFACT BANNER]**.
-- **Summon Cost:** `100 Gems` per single pull, `900 Gems` for a 10x pull (1 free roll equivalent).
+- **Summon Cost:** `160 Gems` per single pull, `1,600 Gems` for a 10x pull (matching live `ArtifactCatalog.Banner`).
 - **Banner Rarity Probability Table:**
-  - **Common (Tier 1):** `55.0%`
+  - **Common (Tier 1):** `54.9%`
   - **Uncommon (Tier 2):** `25.0%`
   - **Rare (Tier 3):** `12.0%`
   - **Superior (Tier 4):** `5.5%`
   - **Exalted (Tier 5):** `2.0%`
   - **Legendary (Tier 6):** `0.5%`
+  - **Mythical (Tier 7):** `0.1%`
+  - *(Other Rarities will be available in future updates)*
 - **Pity Safeguards:**
   - **10-Pull Guarantee:** Every 10-pull guarantees at least one **Rare (Tier 3)** or higher artifact.
   - **50-Pull Hard Pity:** If no **Legendary (Tier 6)** or higher artifact has been pulled in 49 pulls, the 50th pull guarantees a **Legendary (Tier 6)** or higher artifact.
-- **Acquiring Pinnacle Rarities (Tiers 7–16):**
-  - **Biome Boss Pinnacle Drops:** Rare direct drops of Mythical to Origin artifacts from milestone floor clears.
+  - **Biome Boss Milestone Drops:** Rare direct drops of Mythical to Origin artifacts from milestone floor clears.
   - **Blacksmith Rarity Refinement:** Forge masters can spend high quantities of Gold and Gems to refine an existing artifact's rarity tier upward.
 
 ### 7.5 Archetype Restrictions & 3D Socketing Standards

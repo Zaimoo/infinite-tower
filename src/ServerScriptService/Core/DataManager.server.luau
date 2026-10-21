@@ -576,7 +576,17 @@ local function rollGachaHero(): (string, HeroInstance)
 	return DataManager.CreateHeroFromSeed(chosenId)
 end
 
-RequestSummonFunc.OnServerInvoke = function(player: Player, pullCount: any)
+local function validateCallerPlotOwnership(player: Player, targetPlot: any?): boolean
+	if _G.PlotManager and _G.PlotManager.IsPlayerPlotOwner then
+		return _G.PlotManager.IsPlayerPlotOwner(player, targetPlot)
+	end
+	return true
+end
+
+RequestSummonFunc.OnServerInvoke = function(player: Player, pullCount: any, targetPlot: any?)
+	if not validateCallerPlotOwnership(player, targetPlot) then
+		return { Success = false, Message = "Plot ownership validation failed" }
+	end
 	local profile = ActiveProfiles[player]
 	if not profile then
 		return { Success = false, Message = "Profile not loaded" }
@@ -609,10 +619,16 @@ RequestSummonFunc.OnServerInvoke = function(player: Player, pullCount: any)
 end
 
 -- Legacy endpoints cannot bypass confirmed previews.
-function DataManager.SynthesizeHeroes(_player: Player, _targetUUID: string, _fodderUUIDs: { string }): (boolean, string)
+function DataManager.SynthesizeHeroes(player: Player, _targetUUID: string, _fodderUUIDs: { string }, targetPlot: any?): (boolean, string)
+	if not validateCallerPlotOwnership(player, targetPlot) then
+		return false, "Plot ownership validation failed"
+	end
 	return false, "Use the Synthesis chamber to synthesize heroes."
 end
-function DataManager.PromoteHeroStar(_player: Player, _targetUUID: string, _fodderUUIDs: { string }): (boolean, string)
+function DataManager.PromoteHeroStar(player: Player, _targetUUID: string, _fodderUUIDs: { string }, targetPlot: any?): (boolean, string)
+	if not validateCallerPlotOwnership(player, targetPlot) then
+		return false, "Plot ownership validation failed"
+	end
 	return false, "Use the Promotion chamber to promote heroes."
 end
 SynthesizeHeroesFunc.OnServerInvoke = DataManager.SynthesizeHeroes
@@ -649,7 +665,10 @@ DataManager.PitService = pit
 function DataManager.GrantCombatXP(player: Player, uuid: string, amount: number): (boolean, any)
 	return pit:GrantCombatXP(player, uuid, amount)
 end
-(PitRequestFunc :: RemoteFunction).OnServerInvoke = function(player: Player, command: any, payload: any)
+(PitRequestFunc :: RemoteFunction).OnServerInvoke = function(player: Player, command: any, payload: any, targetPlot: any?)
+	if not validateCallerPlotOwnership(player, targetPlot) then
+		return false, "Plot ownership validation failed"
+	end
 	return pit:Request(player, command, payload)
 end
 
@@ -739,21 +758,30 @@ function DataManager.UpgradeArtifactRarity(_player: Player, _artifactUUID: strin
  return false,"Rarity is inherent; promote weapon stars instead",nil
 end
 
-RequestEquipArtifactFunc.OnServerInvoke = function(player: Player, heroUUID: any, artifactUUID: any)
+RequestEquipArtifactFunc.OnServerInvoke = function(player: Player, heroUUID: any, artifactUUID: any, targetPlot: any?)
+	if not validateCallerPlotOwnership(player, targetPlot) then
+		return false, "Plot ownership validation failed"
+	end
 	if type(heroUUID) ~= "string" or type(artifactUUID) ~= "string" then
 		return false, "Invalid parameters"
 	end
 	return DataManager.EquipArtifact(player, heroUUID, artifactUUID)
 end
 
-RequestUnequipArtifactFunc.OnServerInvoke = function(player: Player, heroUUID: any)
+RequestUnequipArtifactFunc.OnServerInvoke = function(player: Player, heroUUID: any, targetPlot: any?)
+	if not validateCallerPlotOwnership(player, targetPlot) then
+		return false, "Plot ownership validation failed"
+	end
 	if type(heroUUID) ~= "string" then
 		return false, "Invalid parameters"
 	end
 	return DataManager.UnequipArtifact(player, heroUUID)
 end
 
-RequestUpgradeRarityFunc.OnServerInvoke = function(player: Player, artifactUUID: any)
+RequestUpgradeRarityFunc.OnServerInvoke = function(player: Player, artifactUUID: any, targetPlot: any?)
+	if not validateCallerPlotOwnership(player, targetPlot) then
+		return false, "Plot ownership validation failed", nil
+	end
 	if type(artifactUUID) ~= "string" then
 		return false, "Invalid parameters", nil
 	end
@@ -813,14 +841,20 @@ function DataManager.UpgradeArtifact(player: Player, targetUUID: string, fodderU
  return ok,message,star
 end
 
-RequestCraftArtifactFunc.OnServerInvoke = function(player: Player, templateId: any)
+RequestCraftArtifactFunc.OnServerInvoke = function(player: Player, templateId: any, targetPlot: any?)
+	if not validateCallerPlotOwnership(player, targetPlot) then
+		return false, "Plot ownership validation failed", nil
+	end
 	if type(templateId) ~= "string" then
 		return false, "Invalid parameters", nil
 	end
 	return DataManager.CraftArtifact(player, templateId)
 end
 
-RequestUpgradeArtifactFunc.OnServerInvoke = function(player: Player, targetUUID: any, fodderUUIDs: any)
+RequestUpgradeArtifactFunc.OnServerInvoke = function(player: Player, targetUUID: any, fodderUUIDs: any, targetPlot: any?)
+	if not validateCallerPlotOwnership(player, targetPlot) then
+		return false, "Plot ownership validation failed", nil
+	end
 	if type(targetUUID) ~= "string" or type(fodderUUIDs) ~= "table" then
 		return false, "Invalid parameters", nil
 	end
@@ -885,7 +919,10 @@ function DataManager.SummonArtifact(player: Player, pullCount: any): (boolean, s
 	return true, "Summon successful", summonedList, pityRemaining
 end
 
-RequestSummonArtifactFunc.OnServerInvoke = function(player: Player, pullCount: any)
+RequestSummonArtifactFunc.OnServerInvoke = function(player: Player, pullCount: any, targetPlot: any?)
+	if not validateCallerPlotOwnership(player, targetPlot) then
+		return false, "Plot ownership validation failed", nil, 0
+	end
 	return DataManager.SummonArtifact(player, pullCount)
 end
 
@@ -903,7 +940,10 @@ local function removeUUIDFromFacilities(profile: PlayerProfile, uuid: string)
 	end
 end
 
-AssignHeroRoleFunc.OnServerInvoke = function(player: Player, heroUUID: any, targetAssignment: any)
+AssignHeroRoleFunc.OnServerInvoke = function(player: Player, heroUUID: any, targetAssignment: any, targetPlot: any?)
+	if not validateCallerPlotOwnership(player, targetPlot) then
+		return false, "Plot ownership validation failed"
+	end
 	local profile = ActiveProfiles[player]
 	if not profile then
 		return false, "Profile not loaded"
@@ -1028,7 +1068,10 @@ end
 -- 6. FACILITY INTERACTIONS (COLLECT & UPGRADE)
 --============================================================================
 
-FacilityInteractEvent.OnServerEvent:Connect(function(player: Player, action: any, param: any)
+FacilityInteractEvent.OnServerEvent:Connect(function(player: Player, action: any, param: any, targetPlot: any?)
+	if not validateCallerPlotOwnership(player, targetPlot) then
+		return
+	end
 	local profile = ActiveProfiles[player]
 	if not profile or type(action) ~= "string" then
 		return
