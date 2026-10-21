@@ -791,9 +791,10 @@ WorldBossTriggerRemote.OnServerEvent:Connect(function(player: Player, mode: any)
 	end
 end)
 
--- Connect Physical Rift Lure Obelisk Prompt on Ring 3
-local ring3 = Workspace:WaitForChild("ArenaRings"):WaitForChild("Ring3_CenterBossAltar")
-local obelisk = ring3:FindFirstChild("RiftLureObelisk")
+-- The legacy altar is optional in the isolated-floor map and must not block combat startup.
+local arenaRings = Workspace:FindFirstChild("ArenaRings")
+local ring3 = arenaRings and arenaRings:FindFirstChild("Ring3_CenterBossAltar")
+local obelisk = ring3 and ring3:FindFirstChild("RiftLureObelisk")
 local lurePrompt = obelisk and obelisk:FindFirstChild("RiftLurePrompt") :: ProximityPrompt?
 if lurePrompt then
 	lurePrompt.Triggered:Connect(function(player: Player)

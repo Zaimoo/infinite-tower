@@ -53,7 +53,7 @@ foreach ($modulePath in $modulePaths) {
     $bundleParts.Add([System.IO.File]::ReadAllText($sourcePath))
     $bundleParts.Add("`nend)")
 }
-foreach ($suite in @('pit.spec.luau', 'tower.spec.luau', 'tower-transport.spec.luau', 'tower-combat.spec.luau')) {
+foreach ($suite in @('pit.spec.luau', 'forge.spec.luau', 'tower.spec.luau', 'tower-transport.spec.luau', 'tower-combat.spec.luau')) {
     $bundleParts.Add('do')
     $bundleParts.Add([System.IO.File]::ReadAllText((Join-Path $PSScriptRoot $suite)))
     $bundleParts.Add("`nend")

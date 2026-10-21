@@ -1,6 +1,6 @@
 --!strict
 -- ServerScriptService/ExtractionAndSocial/SyndicateService.server.luau
--- Waiting Room Espionage (Bless vs Leech + 15s Purge + Mimic Chest Illusion)
+-- Waiting Room Espionage (Bless vs Leech + 15s Purge)
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -24,7 +24,7 @@ end
 local SyndicateService = {}
 
 --============================================================================
--- WAITING ROOM ESPIONAGE (BLESS VS LEECH, 15s PURGE & MIMIC CHEST)
+-- WAITING ROOM ESPIONAGE (BLESS VS LEECH & 15s PURGE)
 --============================================================================
 
 PlotEspionageEvent.OnServerEvent:Connect(function(player: Player, opCode: any, plotIndex: any, facilityKey: any)
@@ -34,9 +34,7 @@ PlotEspionageEvent.OnServerEvent:Connect(function(player: Player, opCode: any, p
 		return
 	end
 
-	local facName = (type(facilityKey) == "string" and (facilityKey == "ManaConduit" or facilityKey == "Infirmary"))
-		and facilityKey
-		or "ManaConduit"
+	local facName = "Infirmary"
 
 	if opCode == 2 or opCode == 3 then
 		-- 2 = COMPLETE_BLESS (+25% output, +25 Gems, +5 Honor)
@@ -65,22 +63,6 @@ PlotEspionageEvent.OnServerEvent:Connect(function(player: Player, opCode: any, p
 			end
 		else
 			-- Espionage: Plant Leech Rune
-			-- Check if Target's Mana Conduit has FOOLS_GOLD Mimic Trap active!
-			if facName == "ManaConduit" and targetProf.Social.MimicIllusionMode == "FOOLS_GOLD" then
-				if _G.RelicService then
-					_G.RelicService.StunPlayer(player, 3.0)
-				end
-				dm.AdjustHonor(player, -10, false)
-				targetProf.Currencies.Gems += 50
-				targetProf.Currencies.Gold += 500
-				dm.SendToast(player, "🦷 MIMIC CHEST TRAP! You tried to leech a Fool's Gold Mimic! Stunned 3.0s & -10 Honor!", "WARN")
-				if targetOwner then
-					dm.SendToast(targetOwner, string.format("🦷 Your Fool's Gold Mimic Chest snapped shut on %s! Collected +50 Gems & +500 Gold Bounty!", player.DisplayName), "SUCCESS")
-					dm.SyncProfile(targetOwner)
-				end
-				return
-			end
-
 			facData.LeechedUntil = nowUnix + 180
 			facData.LeechVisitorUserId = player.UserId
 			facData.LastRuneWasLeech = true
@@ -131,14 +113,6 @@ PlotEspionageEvent.OnServerEvent:Connect(function(player: Player, opCode: any, p
 			dm.BroadcastToast(string.format("😂 PARANOIA! %s triggered Purge Facility and accidentally destroyed their own +25%% Blessing!", player.DisplayName), "WARN")
 		end
 		dm.SyncProfile(player)
-
-	elseif opCode == 5 and type(facilityKey) == "string" then
-		-- TOGGLE MIMIC CHEST ILLUSION ("TRUE_STATE" | "FOOLS_GOLD" | "VEIL_OF_POVERTY")
-		if facilityKey == "TRUE_STATE" or facilityKey == "FOOLS_GOLD" or facilityKey == "VEIL_OF_POVERTY" then
-			profile.Social.MimicIllusionMode = facilityKey :: any
-			dm.SendToast(player, "Mana Conduit Mimic Illusion set to: " .. facilityKey, "INFO")
-			dm.SyncProfile(player)
-		end
 	end
 end)
 

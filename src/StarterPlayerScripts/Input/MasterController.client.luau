@@ -182,16 +182,11 @@ ProximityPromptService.PromptTriggered:Connect(function(prompt: ProximityPrompt,
 		if _G.OpenMasterModal then
 			_G.OpenMasterModal("WAITING_ROOM")
 		end
-	elseif name == "ThePitPrompt" then
-		if _G.OpenMasterModal then
-			_G.OpenMasterModal("THE_PIT")
-		end
+
 	elseif name == "BlacksmithPrompt" then
 		if _G.OpenMasterModal then
 			_G.OpenMasterModal("BLACKSMITH")
 		end
-	elseif name == "ConduitInteractPrompt" then
-		FacilityInteractEvent:FireServer("COLLECT_CONDUIT")
 	elseif name == "InfirmaryInteractPrompt" then
 		task.spawn(function()
 			AssignHeroRoleFunc:InvokeServer("AUTO_SWAP_EXHAUSTED", "")

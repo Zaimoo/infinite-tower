@@ -80,7 +80,6 @@ MasterHUDScreenGui (ScreenGui - ResetOnSpawn: false, IgnoreGuiInset: true)
 │   ├── CenterToolbarGroup (Frame - Horizontal UIListLayout)
 │   │   ├── Whistle_Q_Button ([Q] Overdrive, 20s cooldown radial overlay)
 │   │   ├── Whistle_E_Button ([E] Recall, 6s cooldown radial overlay)
-│   │   ├── Tool_CollectGems (One-click Mana Conduit gem collection)
 │   │   ├── Tool_Blacksmith (Quick-open Blacksmith Forge modal)
 │   │   └── Tool_ThePit (Quick-open The Pit synthesis modal)
 │   └── RightToolbarGroup -> PlotTeleportButton, SettingsButton
@@ -117,7 +116,7 @@ MasterHUDScreenGui (ScreenGui - ResetOnSpawn: false, IgnoreGuiInset: true)
 
 ### 2.1 Overview & Architecture
 The Waiting Room management experience uses a dual approach:
-1. **Interactive 3D ProximityPrompts & Focused Modals (`FacilityController.luau`):** Approaching any station on the plot (Summoning Altar, Infirmary, Mana Conduit, Blacksmith Forge, Squad Banner) activates a dedicated HUD modal.
+1. **Interactive 3D ProximityPrompts & Focused Modals (`FacilityController.luau`):** Approaching any station on the plot (Summoning Altar, Infirmary, Blacksmith Forge, Squad Banner) activates a dedicated HUD modal.
 2. **Unified Overseer Modal (`WaitingRoomScreenGui`):** Opened via the bottom toolbar or `[F]` menu, providing centralized squad management, facility overview, and roster management.
 
 ```text
@@ -134,22 +133,19 @@ The Waiting Room management experience uses a dual approach:
 |  +---------+ +---------+ +---------+ +---------+ +---+ |  +---------------------------------------------------+  |
 |  [⚡ AUTO-SWAP EXHAUSTED (<25% STAM) TO INFIRMARY]      |  | [🔓] [Catio 2★ Lv.20]    [🔓] [Catio 1★ Lv.10]    |  |
 |  ----------------------------------------------------  |  | DPS: 65  | Lab: 61/m ★   DPS: 39  | Lab: 36/m ★   |  |
-|  2. MANA CONDUIT [Lv.3] — Output: 92.1 Gems/min        |  | Status: [CONDUIT SLOT 1] Status: [INFIRMARY #1]   |  |
-|  Workers: [Catio 2★ (+25%)] [Miner 2★ (+25%)] [🔒Lv5]  |  +---------------------------------------------------+  |
-|  Chest: [340 / 600 Gems] [COLLECT] [UPGRADE: 2.5kG]    |  | [🔓] [Velkist 2★ Lv.1]   [🔓] [Han 1★ Lv.1] (x9)  |  |
-|  Mimic Defense: (•) True  ( ) Fool's Gold  ( ) Poverty |  | DPS: 97  | Lab: 23/m     DPS: 51  | Lab: 17/m     |  |
-|  [⚠️ VISITOR RUNE DETECTED! PURGE FACILITY (11.4s)]    |  | Status: [BENCHED]        Status: [BENCHED]        |  |
-|  ----------------------------------------------------  |  | [DEPLOY] [ASSIGN WORK]   [FEED IN PIT] [ASSIGN]   |  |
-|  3. THE INFIRMARY & BARRACKS [Lv.3] — Regen: 11.6 St/s |  +---------------------------------------------------+  |
-|  Workers: [Aaron 2★ (+25%)] [Healer 2★] [🔒Lv5]        |                                                         |
-|  Recuperation Beds (4/4 Unlocked):                     |  SELECTED HERO QUICK-ACTION BAR:                        |
-|  • Bed 1: [Velkist 2★] — COMA (00:24s remaining)       |  Selected: [Velkist 2★ Lv.1] (Striker | Bloodthirst)    |
-|  • Bed 2: [Aaron 2★]   — Resting (Stamina: 44% -> 100%)|  -> [Deploy to Squad]  [Send to Infirmary Bed]          |
-|  • Bed 3: [EMPTY BED]  | • Bed 4: [EMPTY BED]          |  -> [Assign: Conduit]  [Assign: Infirmary]              |
-|  ----------------------------------------------------  |  -> [Open in Synthesis Pit]   [Equip Weapon]            |
-|  4. BLACKSMITH FORGE — Status: Active                  |                                                         |
-|  Station: Anvil & Hearth online | Tier: Common -> Orig |                                                         |
-|  [⚒️ OPEN BLACKSMITH FORGE]                             |                                                         |
+|  2. THE INFIRMARY & BARRACKS [Lv.3] — Regen: 11.6 St/s |  | Status: [BENCHED]        Status: [INFIRMARY #1]   |  |
+|  Workers: [Aaron 2★ (+25%)] [Healer 2★] [🔒Lv5]        |  +---------------------------------------------------+  |
+|  Recuperation Beds (4/4 Unlocked):                     |  | [🔓] [Velkist 2★ Lv.1]   [🔓] [Han 1★ Lv.1] (x9)  |  |
+|  • Bed 1: [Velkist 2★] — COMA (00:24s remaining)       |  | DPS: 97  | Lab: 23/m     DPS: 51  | Lab: 17/m     |  |
+|  • Bed 2: [Aaron 2★]   — Resting (Stamina: 44% -> 100%)|  | Status: [BENCHED]        Status: [BENCHED]        |  |
+|  • Bed 3: [EMPTY BED]  | • Bed 4: [EMPTY BED]          |  | [DEPLOY] [ASSIGN WORK]   [FEED IN PIT] [ASSIGN]   |  |
+|  ----------------------------------------------------  |  +---------------------------------------------------+  |
+|  3. BLACKSMITH FORGE — Status: Active                  |                                                         |
+|  Station: Anvil & Hearth online | Tier: Common -> Orig |  SELECTED HERO QUICK-ACTION BAR:                        |
+|  [⚒️ OPEN BLACKSMITH FORGE]                             |  Selected: [Velkist 2★ Lv.1] (Striker | Bloodthirst)    |
+|  ----------------------------------------------------  |  -> [Deploy to Squad]  [Send to Infirmary Bed]          |
+|  4. WORLD BOSS TRIGGER (Uses 1x Rift Lure)             |  -> [Open in Synthesis Pit]   [Equip Weapon]            |
+|  [🌌 SUMMON RIFT WARDEN AT RING 3]                     |                                                         |
 +--------------------------------------------------------+---------------------------------------------------------+
 ```
 
@@ -236,4 +232,3 @@ All world-space visual elements and diegetic indicators are rendered client-side
 | **4. Contested Loot Theft Flag** | `BillboardGui` on `Character.Head` + Crimson `Highlight` | `Size: 7.5 x 2.2 studs`<br>`MaxDistance: 280 studs` | **`AlwaysOnTop = true`** | Displays `"💀 [LOOT THIEF]"` with a countdown timer showing the active retaliation grudge window (180s). |
 | **5. Physical Relic World Billboard** | `BillboardGui` on `RelicPart` (`StudsOffset = (0, 3.5, 0)`) | `Size: 6.5 x 2.4 studs`<br>`MaxDistance: 220 studs` | **`AlwaysOnTop = true`** for Calamity Heart | Top row shows relic name; middle row shows ownership lock timer (`🔒 RANK #1 LOCK: 11.4s`); bottom row displays despawn bar. |
 | **6. Espionage Channel (`Bless` vs. `Leech`)** | `ProximityPrompt` (`HoldDuration = 2.0s`) + Floor Rune Decal | `MaxDistance: 45 studs` | 3D Animation + Floor Decal | Both **Bless (+25%)** and **Plant Leech Rune (-20%)** play the same kneeling prayer animation and leave an identical violet runic circle for 15.0s. |
-| **7. Mimic Chest Illusion States** | Client `ManaConduit.GemChest` Mesh Controller | `MaxDistance: 120 studs` | 3D Prop Swap | • **Fool's Gold:** Renders sparkling gold gem chest even when empty to bait thieves.<br>• **Veil of Poverty:** Renders empty stone chest even when full. |

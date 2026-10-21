@@ -25,7 +25,6 @@ game
 │   │   │   ├── PlotSpawn             -- Player SpawnLocation
 │   │   │   ├── PrivateExtractionPad  -- Glowing platform for banking cargo
 │   │   │   ├── SummoningAltar        -- Gacha Obelisk + The Pit Cauldron
-│   │   │   ├── Facility_ManaConduit  -- 3 Worker Pedestals + Gem Chest
 │   │   │   ├── Facility_Infirmary    -- 3 Worker Pedestals + 5 Recuperation Beds
 │   │   │   ├── Facility_Blacksmith   -- 3D Anvil, glowing coals, furnace, workbench, and prompt
 │   │   │   └── ActivePlotWorkers     -- Dynamic 3D physical worker models & sleeping bed avatars
@@ -81,7 +80,7 @@ game
 │   │   └── SyndicateService.server.luau -- Waiting room espionage (Bless vs Leech, 15s Purge, Mimic chest)
 │   └── Tycoon
 │       ├── BlacksmithService.server.luau -- 3D Blacksmith Forge stations, prompts, and upgrade integration
-│       └── WaitingRoomService.server.luau -- 1 Hz facility production (Mana Conduit & Infirmary)
+│       └── WaitingRoomService.server.luau -- 1 Hz facility production (Infirmary)
 │
 └── StarterPlayer.StarterPlayerScripts
     ├── Input
@@ -111,7 +110,6 @@ local ArtifactCatalog = require(game:GetService("ReplicatedStorage").Shared.Conf
 
 export type HeroRoleAssignment = 
 	| "SQUAD_SLOT_1" | "SQUAD_SLOT_2" | "SQUAD_SLOT_3" | "SQUAD_SLOT_4" | "SQUAD_SLOT_5"
-	| "FACILITY_CONDUIT"
 	| "FACILITY_INFIRMARY"
 	| "BENCHED"
 
@@ -189,7 +187,6 @@ export type PlayerProfile = {
 	DeployedSquadOrder: { string },
 	Artifacts: { [string]: ArtifactInstance },
 	Facilities: {
-		ManaConduit: FacilityData,
 		Infirmary: FacilityData,
 	},
 	Social: SocialProfile,

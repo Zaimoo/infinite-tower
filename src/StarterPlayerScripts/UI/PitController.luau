@@ -566,7 +566,7 @@ function Pit.RenderDetails(self: any)
 	end
 	if self.Tab == "Promotion" then
 		autoLabel(self.DetailScroll, "PROMOTION WORKSHOP", T.Color.Gold, 13)
-		autoLabel(self.DetailScroll, "Conversion supplies Soul Essence. Craft stones with Essence, Gold and Gems from your Mana Conduit. Promotion guarantees exactly one star, up to 5★.", T.Color.Muted, 12)
+		autoLabel(self.DetailScroll, "Conversion supplies Soul Essence. Craft stones with Essence, Gold and Gems. Promotion guarantees exactly one star, up to 5★.", T.Color.Muted, 12)
 		self:RenderRecipes("PromotionStone")
 	elseif self.Tab == "Imprints" then
 		autoLabel(self.DetailScroll, "IMPRINT WORKSHOP", T.Color.Gold, 13)

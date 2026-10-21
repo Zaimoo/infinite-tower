@@ -62,6 +62,20 @@ if not RequestUpgradeRarityFunc then
 	RequestUpgradeRarityFunc.Parent = ArtifactRemotes
 end
 
+local RequestCraftArtifactFunc = ArtifactRemotes:FindFirstChild("RequestCraftArtifact") :: RemoteFunction?
+if not RequestCraftArtifactFunc then
+	RequestCraftArtifactFunc = Instance.new("RemoteFunction")
+	RequestCraftArtifactFunc.Name = "RequestCraftArtifact"
+	RequestCraftArtifactFunc.Parent = ArtifactRemotes
+end
+
+local RequestUpgradeArtifactFunc = ArtifactRemotes:FindFirstChild("RequestUpgradeArtifact") :: RemoteFunction?
+if not RequestUpgradeArtifactFunc then
+	RequestUpgradeArtifactFunc = Instance.new("RemoteFunction")
+	RequestUpgradeArtifactFunc.Name = "RequestUpgradeArtifact"
+	RequestUpgradeArtifactFunc.Parent = ArtifactRemotes
+end
+
 --============================================================================
 -- 1. EXPORTED TYPE DEFINITIONS
 --============================================================================
@@ -75,7 +89,6 @@ export type HeroAssignment =
 	| "SQUAD_SLOT_3"
 	| "SQUAD_SLOT_4"
 	| "SQUAD_SLOT_5"
-	| "FACILITY_CONDUIT"
 	| "FACILITY_INFIRMARY"
 
 export type MimicChestMode = "TRUE_STATE" | "FOOLS_GOLD" | "VEIL_OF_POVERTY"
@@ -179,7 +192,6 @@ export type PlayerProfile = {
 	DeployedSquadOrder: { string },
 	Artifacts: { [string]: ArtifactInstance },
 	Facilities: {
-		ManaConduit: FacilityData,
 		Infirmary: FacilityData,
 	},
 	Social: SocialProfile,
@@ -268,15 +280,21 @@ local function createDefaultPlayerProfile(): PlayerProfile
 	jennaHero.Assignment = "SQUAD_SLOT_2"
 
 	local catioUUID, catioHero = DataManager.CreateHeroFromSeed("hero_catio", 1.02)
-	catioHero.Assignment = "FACILITY_CONDUIT"
-
-	local conduit = createDefaultFacility()
-	conduit.AssignedHeroUUIDs = { catioUUID }
+	catioHero.Assignment = "BENCHED"
 
 	-- Grant 1★ starter artifacts equipped to matching starting heroes
 	local bowUUID, bowArt = DataManager.CreateArtifact("art_hunters_shortbow", 1, 1)
 	local swordUUID, swordArt = DataManager.CreateArtifact("art_iron_broadsword", 1, 1)
 	local axeUUID, axeArt = DataManager.CreateArtifact("art_miner_pickaxe", 1, 1)
+
+	-- Additional starter artifacts for forge crafting and fodder testing
+	local riftUUID, riftArt = DataManager.CreateArtifact("art_blade_of_the_rift", 3, 1)
+	riftArt.Level = 4 -- Starts at +4 for immediate mockup parity testing!
+	local f1_UUID, f1_Art = DataManager.CreateArtifact("art_iron_broadsword", 1, 1)
+	local f2_UUID, f2_Art = DataManager.CreateArtifact("art_rusty_daggers", 1, 1)
+	local f3_UUID, f3_Art = DataManager.CreateArtifact("art_hunters_shortbow", 1, 1)
+	local f4_UUID, f4_Art = DataManager.CreateArtifact("art_miner_pickaxe", 1, 1)
+	local f5_UUID, f5_Art = DataManager.CreateArtifact("art_novice_tome", 1, 1)
 
 	jennaHero.EquippedArtifactUUID = bowUUID
 	bowArt.EquippedHeroUUID = jennaUUID
@@ -289,7 +307,16 @@ local function createDefaultPlayerProfile(): PlayerProfile
 
 	return {
 		SchemaVersion = 2,
-		PitMaterials = { SoulEssence = 0, PromotionStone = 0, ImprintCatalyst = 0 },
+		PitMaterials = {
+			SoulEssence = 0,
+			PromotionStone = 0,
+			ImprintCatalyst = 0,
+			IronGear = 25,
+			RiftOrb = 10,
+			AegisGem = 8,
+			StarDust = 35,
+			VoidPowder = 15,
+		},
 		PitRevision = 0,
 		PlotIndex = 1,
 		Currencies = {
@@ -307,10 +334,15 @@ local function createDefaultPlayerProfile(): PlayerProfile
 			[bowUUID] = bowArt,
 			[swordUUID] = swordArt,
 			[axeUUID] = axeArt,
+			[riftUUID] = riftArt,
+			[f1_UUID] = f1_Art,
+			[f2_UUID] = f2_Art,
+			[f3_UUID] = f3_Art,
+			[f4_UUID] = f4_Art,
+			[f5_UUID] = f5_Art,
 		},
 		DeployedSquadOrder = { hanUUID, jennaUUID },
 		Facilities = {
-			ManaConduit = conduit,
 			Infirmary = createDefaultFacility(),
 		},
 		Social = {
@@ -334,6 +366,13 @@ end
 function DataManager.GetProfile(player: Player): PlayerProfile?
 	local profile = ActiveProfiles[player]
 	if profile and (profile.SchemaVersion or 1) < 2 then PitService.EnsureDefaults(profile) end
+	if profile and profile.PitMaterials then
+		if profile.PitMaterials.IronGear == nil then profile.PitMaterials.IronGear = 25 end
+		if profile.PitMaterials.RiftOrb == nil then profile.PitMaterials.RiftOrb = 10 end
+		if profile.PitMaterials.AegisGem == nil then profile.PitMaterials.AegisGem = 8 end
+		if profile.PitMaterials.StarDust == nil then profile.PitMaterials.StarDust = 35 end
+		if profile.PitMaterials.VoidPowder == nil then profile.PitMaterials.VoidPowder = 15 end
+	end
 	return profile
 end
 
@@ -375,6 +414,45 @@ function DataManager.SyncProfile(player: Player, progressionOnly: boolean?)
 				h.EquippedArtifactUUID = aUUID
 				aArt.EquippedHeroUUID = h.UUID
 			end
+		end
+	end
+
+	-- Auto-migrate legacy SQUAD assignments or DeployedSquadOrder to SQUAD_SLOT_1..5
+	local occupiedSlots: { [number]: string } = {}
+	for uuid, h in pairs(profile.Heroes) do
+		local slotNum = tonumber(string.match(h.Assignment or "", "^SQUAD_SLOT_(%d+)"))
+		if slotNum and slotNum >= 1 and slotNum <= 5 then
+			occupiedSlots[slotNum] = uuid
+		end
+	end
+	if profile.DeployedSquadOrder then
+		for _, uuid in ipairs(profile.DeployedSquadOrder) do
+			local h = profile.Heroes[uuid]
+			if h and not string.find(h.Assignment or "", "^SQUAD_SLOT_") and not string.find(h.Assignment or "", "^FACILITY_") then
+				for s = 1, 5 do
+					if not occupiedSlots[s] then
+						h.Assignment = ("SQUAD_SLOT_" .. tostring(s)) :: HeroAssignment
+						occupiedSlots[s] = uuid
+						break
+					end
+				end
+			end
+		end
+	end
+	for uuid, h in pairs(profile.Heroes) do
+		if h.Assignment == ("SQUAD" :: any) then
+			for s = 1, 5 do
+				if not occupiedSlots[s] then
+					h.Assignment = ("SQUAD_SLOT_" .. tostring(s)) :: HeroAssignment
+					occupiedSlots[s] = uuid
+					break
+				end
+			end
+			if not string.find(h.Assignment or "", "^SQUAD_SLOT_") then
+				h.Assignment = "BENCHED"
+			end
+		elseif not h.Assignment or h.Assignment == ("" :: any) then
+			h.Assignment = "BENCHED"
 		end
 	end
 
@@ -501,7 +579,7 @@ RequestSummonFunc.OnServerInvoke = function(player: Player, pullCount: any)
 	local gemCost = (count == 10) and 900 or 100
 
 	if profile.Currencies.Gems < gemCost then
-		DataManager.SendToast(player, string.format("Need %d Gems to Summon! (Collect from Mana Conduit)", gemCost), "WARN")
+		DataManager.SendToast(player, string.format("Need %d Gems to Summon!", gemCost), "WARN")
 		return { Success = false, Message = "Insufficient Gems" }
 	end
 
@@ -525,10 +603,10 @@ end
 
 -- Legacy endpoints cannot bypass confirmed previews.
 function DataManager.SynthesizeHeroes(_player: Player, _targetUUID: string, _fodderUUIDs: { string }): (boolean, string)
-	return false, "Open The Pit and confirm a synthesis preview."
+	return false, "Use the Synthesis chamber to synthesize heroes."
 end
 function DataManager.PromoteHeroStar(_player: Player, _targetUUID: string, _fodderUUIDs: { string }): (boolean, string)
-	return false, "Open The Pit and confirm a material-based promotion preview."
+	return false, "Use the Promotion chamber to promote heroes."
 end
 SynthesizeHeroesFunc.OnServerInvoke = DataManager.SynthesizeHeroes
 PromoteHeroStarFunc.OnServerInvoke = DataManager.PromoteHeroStar
@@ -577,6 +655,13 @@ function DataManager.GetArtifacts(player: Player): { [string]: ArtifactInstance 
 	local profile = ActiveProfiles[player]
 	if not profile then return {} end
 	if not profile.Artifacts then profile.Artifacts = {} end
+	if profile and profile.PitMaterials then
+		if profile.PitMaterials.IronGear == nil then profile.PitMaterials.IronGear = 25 end
+		if profile.PitMaterials.RiftOrb == nil then profile.PitMaterials.RiftOrb = 10 end
+		if profile.PitMaterials.AegisGem == nil then profile.PitMaterials.AegisGem = 8 end
+		if profile.PitMaterials.StarDust == nil then profile.PitMaterials.StarDust = 35 end
+		if profile.PitMaterials.VoidPowder == nil then profile.PitMaterials.VoidPowder = 15 end
+	end
 	return profile.Artifacts
 end
 
@@ -700,6 +785,125 @@ RequestUpgradeRarityFunc.OnServerInvoke = function(player: Player, artifactUUID:
 	return DataManager.UpgradeArtifactRarity(player, artifactUUID)
 end
 
+function DataManager.CraftArtifact(player: Player, templateId: string): (boolean, string?, any?)
+	local profile = ActiveProfiles[player]
+	if not profile then return false, "Profile not loaded", nil end
+
+	local seed = ArtifactCatalog.Seeds[templateId]
+	if not seed then
+		return false, string.format("Unknown artifact recipe: %s", tostring(templateId)), nil
+	end
+
+	if not seed.CraftCost then
+		return false, string.format("%s cannot be crafted at the Forge.", seed.DisplayName), nil
+	end
+
+	if not profile.PitMaterials then profile.PitMaterials = {} end
+
+	-- Validate material requirements
+	for matId, reqQty in pairs(seed.CraftCost) do
+		local haveQty = profile.PitMaterials[matId] or 0
+		if haveQty < reqQty then
+			local matInfo = ArtifactCatalog.CraftingMaterials[matId]
+			local matName = matInfo and matInfo.Name or matId
+			return false, string.format("Need %d %s to craft %s (Have: %d)!", reqQty, matName, seed.DisplayName, haveQty), nil
+		end
+	end
+
+	-- Deduct materials
+	for matId, reqQty in pairs(seed.CraftCost) do
+		profile.PitMaterials[matId] = math.max(0, (profile.PitMaterials[matId] or 0) - reqQty)
+	end
+
+	-- Create new artifact instance at enhancement level 0
+	local uuid, artifact = DataManager.CreateArtifact(templateId, seed.DefaultStar or 1, 1)
+	artifact.Level = 0
+
+	if not profile.Artifacts then profile.Artifacts = {} end
+	profile.Artifacts[uuid] = artifact
+
+	DataManager.SyncProfile(player)
+	DataManager.SendToast(player, string.format("⚒️ FORGE SUCCESS! Crafted %s!", artifact.DisplayName), "SUCCESS")
+	return true, string.format("Crafted %s!", artifact.DisplayName), artifact
+end
+
+function DataManager.UpgradeArtifact(player: Player, targetUUID: string, fodderUUIDs: { any }): (boolean, string?, number?)
+	local profile = ActiveProfiles[player]
+	if not profile then return false, "Profile not loaded", nil end
+
+	local target = profile.Artifacts and profile.Artifacts[targetUUID]
+	if not target then return false, "Target artifact not found", nil end
+
+	local currentLevel = target.Level or 0
+	if currentLevel >= ArtifactCatalog.MaxEnhancementLevel then
+		return false, string.format("%s is already at Maximum Enhancement (+%d)!", target.DisplayName, ArtifactCatalog.MaxEnhancementLevel), currentLevel
+	end
+
+	if type(fodderUUIDs) ~= "table" or #fodderUUIDs == 0 then
+		return false, "No fodder artifacts selected for upgrade", currentLevel
+	end
+
+	if #fodderUUIDs > 5 then
+		return false, "Cannot select more than 5 fodder artifacts at once", currentLevel
+	end
+
+	local reqFodder = ArtifactCatalog.GetFodderRequirement(currentLevel)
+	if #fodderUUIDs < reqFodder then
+		return false, string.format("Enhancing to +%d requires %d fodder artifacts (Selected: %d)!", currentLevel + 1, reqFodder, #fodderUUIDs), currentLevel
+	end
+
+	-- Validate every fodder artifact
+	local seen: { [string]: boolean } = {}
+	for _, fUUID in ipairs(fodderUUIDs) do
+		if type(fUUID) ~= "string" then
+			return false, "Invalid fodder UUID", currentLevel
+		end
+		if fUUID == targetUUID then
+			return false, "Cannot use target artifact as its own fodder", currentLevel
+		end
+		if seen[fUUID] then
+			return false, "Duplicate fodder artifact selected", currentLevel
+		end
+		seen[fUUID] = true
+
+		local fodder = profile.Artifacts[fUUID]
+		if not fodder then
+			return false, "Fodder artifact not found in inventory", currentLevel
+		end
+		if fodder.EquippedHeroUUID then
+			return false, string.format("Cannot consume equipped artifact: %s!", fodder.DisplayName), currentLevel
+		end
+		if fodder.Locked then
+			return false, string.format("Cannot consume locked artifact: %s!", fodder.DisplayName), currentLevel
+		end
+	end
+
+	-- Consume fodder artifacts
+	for _, fUUID in ipairs(fodderUUIDs) do
+		profile.Artifacts[fUUID] = nil
+	end
+
+	target.Level = currentLevel + 1
+
+	DataManager.SyncProfile(player)
+	DataManager.SendToast(player, string.format("✨ ENHANCEMENT SUCCESS! %s is now +%d!", target.DisplayName, target.Level), "SUCCESS")
+	return true, string.format("Upgraded %s to +%d!", target.DisplayName, target.Level), target.Level
+end
+
+RequestCraftArtifactFunc.OnServerInvoke = function(player: Player, templateId: any)
+	if type(templateId) ~= "string" then
+		return false, "Invalid parameters", nil
+	end
+	return DataManager.CraftArtifact(player, templateId)
+end
+
+RequestUpgradeArtifactFunc.OnServerInvoke = function(player: Player, targetUUID: any, fodderUUIDs: any)
+	if type(targetUUID) ~= "string" or type(fodderUUIDs) ~= "table" then
+		return false, "Invalid parameters", nil
+	end
+	return DataManager.UpgradeArtifact(player, targetUUID, fodderUUIDs)
+end
+
 --============================================================================
 -- 5. HERO ASSIGNMENT (SQUAD, FACILITIES, BENCH & AUTO-SWAP EXHAUSTED)
 --============================================================================
@@ -784,6 +988,19 @@ AssignHeroRoleFunc.OnServerInvoke = function(player: Player, heroUUID: any, targ
 
 	if targetAssignment == "BENCHED" then
 		hero.Assignment = "BENCHED"
+	elseif string.find(targetAssignment, "^SQUAD_SLOT_") then
+		local slotNum = tonumber(string.match(targetAssignment, "%d+"))
+		local maxSlots = DataManager.MaxSquadSlots(profile)
+		if not slotNum or slotNum < 1 or slotNum > maxSlots then
+			return false, "Invalid squad slot"
+		end
+		local oldAssignment = hero.Assignment
+		for _, h in pairs(profile.Heroes) do
+			if h.Assignment == targetAssignment and h.UUID ~= heroUUID then
+				h.Assignment = (string.find(oldAssignment, "^SQUAD_SLOT_") and oldAssignment) or "BENCHED"
+			end
+		end
+		hero.Assignment = targetAssignment :: HeroAssignment
 	elseif targetAssignment == "SQUAD_AUTO" then
 		local maxSlots = DataManager.MaxSquadSlots(profile)
 		local placed = false
@@ -805,16 +1022,11 @@ AssignHeroRoleFunc.OnServerInvoke = function(player: Player, heroUUID: any, targ
 		if not placed then
 			return false, string.format("All %d Squad Slots are full!", maxSlots)
 		end
-	elseif targetAssignment == "FACILITY_CONDUIT" or targetAssignment == "FACILITY_INFIRMARY" then
-		local facKey = if targetAssignment == "FACILITY_CONDUIT" then "ManaConduit" else "Infirmary"
-		local facData = (profile.Facilities :: any)[facKey] :: FacilityData
-		local cfg = (FacilityConfig.UpgradeTable :: any)[facKey][facData.Level]
+	elseif targetAssignment == "FACILITY_INFIRMARY" then
+		local facData = profile.Facilities.Infirmary
+		local cfg = FacilityConfig.UpgradeTable.Infirmary[facData.Level]
 		local maxWorkers = cfg and cfg.MaxWorkers or 1
 
-		-- Note: Infirmary also holds resting/Coma heroes beyond healer worker slots
-		if targetAssignment ~= "FACILITY_INFIRMARY" and #facData.AssignedHeroUUIDs >= maxWorkers then
-			return false, string.format("%s Lv.%d only has %d Worker Slot(s)! Upgrade facility for more.", facKey, facData.Level, maxWorkers)
-		end
 		hero.Assignment = targetAssignment :: HeroAssignment
 		if #facData.AssignedHeroUUIDs < maxWorkers then
 			table.insert(facData.AssignedHeroUUIDs, heroUUID)
@@ -837,24 +1049,7 @@ FacilityInteractEvent.OnServerEvent:Connect(function(player: Player, action: any
 		return
 	end
 
-	if action == "COLLECT_CONDUIT" then
-		local amt = math.floor(profile.Facilities.ManaConduit.UncollectedOutput)
-		if amt > 0 then
-			profile.Facilities.ManaConduit.UncollectedOutput -= amt
-			-- Check Garnished Gem Debt from Parasite Audit Soul fine
-			if profile.Social.GarnishedGemDebt > 0 then
-				local seized = math.min(amt, profile.Social.GarnishedGemDebt)
-				amt -= seized
-				profile.Social.GarnishedGemDebt -= seized
-			end
-			profile.Currencies.Gems += amt
-			DataManager.SendToast(player, string.format("Collected +%d Gems from Mana Conduit!", amt), "SUCCESS")
-			DataManager.SyncProfile(player)
-		else
-			DataManager.SendToast(player, "Mana Conduit Chest is empty right now.", "INFO")
-		end
-
-	elseif action == "UPGRADE_FACILITY" and type(param) == "string" then
+	if action == "UPGRADE_FACILITY" and type(param) == "string" then
 		local facData = (profile.Facilities :: any)[param] :: FacilityData?
 		local upgTable = (FacilityConfig.UpgradeTable :: any)[param]
 		if not facData or not upgTable then
@@ -880,7 +1075,9 @@ FacilityInteractEvent.OnServerEvent:Connect(function(player: Player, action: any
 		if not game:GetService("RunService"):IsStudio() then return end
 		profile.Currencies.Gold += 25000
 		profile.Currencies.Gems += 1800
-		DataManager.SendToast(player, "[Prototype Boost] +25,000 Gold, +1,800 Gems added!", "SUCCESS")
+		profile.PitMaterials.PromotionStone = (profile.PitMaterials.PromotionStone or 0) + 20
+		profile.PitMaterials.SoulEssence = (profile.PitMaterials.SoulEssence or 0) + 100
+		DataManager.SendToast(player, "[Prototype Boost] +25k Gold, +1.8k Gems, +20 Promotion Stones!", "SUCCESS")
 		DataManager.SyncProfile(player)
 	end
 end)

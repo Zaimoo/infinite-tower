@@ -1,5 +1,7 @@
 # Part 3 implementation, verification, and handoff
 
+Latest integration: [main merge and Studio restoration](MAIN_MERGE_AND_STUDIO_RESTORE_20261021.md) preserves this scope, fixes startup with the retired altar absent, and passes 101 CLI plus 17 native checks.
+
 Scope revised by the user on 2026-10-21: working combat and basic feedback now; animation/art polish in a separate sprint. This record distinguishes gameplay verification from later release certification.
 
 Status: **VERIFIED for the revised Part 3 combat/feedback gate**. The current default-on combat/feedback run passed all 11 native checks, alongside 95 CLI regressions. Final art quality is deferred and does not block this combat gate. This is not a published release certification.

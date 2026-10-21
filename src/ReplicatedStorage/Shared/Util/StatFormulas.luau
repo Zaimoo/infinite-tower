@@ -71,9 +71,12 @@ function StatFormulas.GetEffectiveCombatStats(hero: any, inBloodPact: boolean?, 
 
 	-- Additive Artifact ATK & Multiplicative Attack Speed Bonus
 	if artifact then
-		local artATK, artSpeed = ArtifactCatalog.CalculateEffectiveStats(artifact.Star or 1, artifact.Rarity or 1)
+		local artATK, artSpeed, extraStats = ArtifactCatalog.CalculateEffectiveStats(artifact.Star or 1, artifact.Rarity or 1, artifact.Level or 0, artifact.TemplateId)
 		effATK += artATK
 		interval = ArtifactCatalog.CalculateEffectiveInterval(interval, artSpeed)
+		if extraStats and extraStats["HP"] then
+			effHP += extraStats["HP"]
+		end
 	end
 
 	local overdriveMult = inOverdrive and 1.40 or 1.00
@@ -103,12 +106,6 @@ function StatFormulas.GetEffectiveLabor(hero: any, targetFacilityAssignment: str
 end
 
 -- Waiting Room Facility Output Formulas
-function StatFormulas.GetManaConduitGemsPerMin(facilityLevel: number, sumEffectiveLabor: number, blessOrLeechMult: number): number
-	local base = (5 * facilityLevel) + (0.45 * sumEffectiveLabor)
-	local levelMult = 1 + 0.12 * (facilityLevel - 1)
-	return math.round(base * levelMult * blessOrLeechMult * 10) / 10
-end
-
 function StatFormulas.GetInfirmaryRates(facilityLevel: number, sumEffectiveLabor: number): (number, number)
 	local staminaRegenPerSec = 2.5 + (0.4 * facilityLevel) + (0.06 * sumEffectiveLabor)
 	local effectiveComaSec = math.max(20, 60 / (1 + 0.05 * (facilityLevel - 1) + (0.008 * sumEffectiveLabor)))
