@@ -1369,34 +1369,75 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 	if mode == "TARGET" then
 		self.DrawerTitle.Text = "SELECT TARGET ARTIFACT TO ENHANCE"
 		for uuid, art in pairs(artifacts) do
+			local isSelected = (uuid == self.SelectedTargetUUID)
 			local card = new("Frame", {
 				Name = "TargetCard_" .. uuid,
-				Size = UDim2.fromOffset(110, 170),
-				BackgroundColor3 = C.CardBg,
+				Size = UDim2.fromOffset(124, 160),
+				BackgroundColor3 = isSelected and Color3.fromRGB(34, 25, 48) or C.CardBg,
 				BorderSizePixel = 0,
 				ZIndex = 72,
 			}, scroll)
 			new("UICorner", { CornerRadius = UDim.new(0, 6) }, card)
-			stroke(card, (uuid == self.SelectedTargetUUID) and C.Border or C.BorderDim, 1)
+			stroke(card, isSelected and C.Border or C.BorderDim, 1)
+
+			local iconTile = new("Frame", {
+				Name = "IconTile",
+				AnchorPoint = Vector2.new(0.5, 0),
+				Position = UDim2.new(0.5, 0, 0, 10),
+				Size = UDim2.fromOffset(42, 42),
+				BackgroundColor3 = Color3.fromRGB(18, 14, 28),
+				BorderSizePixel = 0,
+				ZIndex = 73,
+			}, card)
+			new("UICorner", { CornerRadius = UDim.new(0, 6) }, iconTile)
+			stroke(iconTile, C.BorderDim, 1)
 
 			local iconChar = ICON_MAP[art.Type] or "⚔️"
-			local iconLbl = label(card, iconChar, 32, C.Text)
-			iconLbl.Position = UDim2.new(0, 0, 0, 12)
-			iconLbl.Size = UDim2.new(1, 0, 0, 40)
+			local iconLbl = label(iconTile, iconChar, 24, C.Text)
+			iconLbl.Position = UDim2.fromScale(0, 0)
+			iconLbl.Size = UDim2.fromScale(1, 1)
 			iconLbl.TextXAlignment = Enum.TextXAlignment.Center
 
-			local nameLbl = label(card, art.DisplayName or "Artifact", 12, C.Text, Enum.Font.GothamBold)
-			nameLbl.Position = UDim2.new(0, 6, 0, 58)
-			nameLbl.Size = UDim2.new(1, -12, 0, 38)
+			local nameLbl = label(card, art.DisplayName or "Artifact", 11, C.Text, Enum.Font.GothamBold)
+			nameLbl.Position = UDim2.new(0, 6, 0, 56)
+			nameLbl.Size = UDim2.new(1, -12, 0, 32)
 			nameLbl.TextWrapped = true
+			nameLbl.TextTruncate = Enum.TextTruncate.AtEnd
 			nameLbl.TextXAlignment = Enum.TextXAlignment.Center
 
-			local lvlLbl = label(card, string.format("+%d", art.Level or 0), 13, C.GoldYellow)
-			lvlLbl.Position = UDim2.new(0, 0, 0, 106)
-			lvlLbl.Size = UDim2.new(1, 0, 0, 20)
+			local lvlBadge = new("Frame", {
+				Name = "LvlBadge",
+				AnchorPoint = Vector2.new(0.5, 0),
+				Position = UDim2.new(0.5, 0, 0, 92),
+				Size = UDim2.new(1, -20, 0, 22),
+				BackgroundColor3 = Color3.fromRGB(18, 14, 28),
+				BorderSizePixel = 0,
+				ZIndex = 73,
+			}, card)
+			new("UICorner", { CornerRadius = UDim.new(0, 4) }, lvlBadge)
+			local lvlLbl = label(lvlBadge, string.format("Level +%d", art.Level or 0), 11, C.GoldYellow, Enum.Font.GothamBold)
+			lvlLbl.Position = UDim2.fromScale(0, 0)
+			lvlLbl.Size = UDim2.fromScale(1, 1)
 			lvlLbl.TextXAlignment = Enum.TextXAlignment.Center
 
-			local btn = new("TextButton", { BackgroundTransparency = 1, Text = "", Size = UDim2.fromScale(1, 1), ZIndex = 73 }, card)
+			local actionPill = new("Frame", {
+				Name = "ActionPill",
+				AnchorPoint = Vector2.new(0.5, 0),
+				Position = UDim2.new(0.5, 0, 0, 120),
+				Size = UDim2.new(1, -20, 0, 26),
+				BackgroundColor3 = isSelected and Color3.fromRGB(48, 28, 72) or Color3.fromRGB(22, 18, 32),
+				BorderSizePixel = 0,
+				ZIndex = 73,
+			}, card)
+			new("UICorner", { CornerRadius = UDim.new(0, 4) }, actionPill)
+			stroke(actionPill, isSelected and C.Border or C.BorderDim, 1)
+
+			local actionLbl = label(actionPill, isSelected and "SELECTED" or "SELECT", 11, isSelected and C.Text or C.TextMuted, Enum.Font.GothamBold)
+			actionLbl.Position = UDim2.fromScale(0, 0)
+			actionLbl.Size = UDim2.fromScale(1, 1)
+			actionLbl.TextXAlignment = Enum.TextXAlignment.Center
+
+			local btn = new("TextButton", { BackgroundTransparency = 1, Text = "", Size = UDim2.fromScale(1, 1), ZIndex = 74 }, card)
 			btn.Activated:Connect(function()
 				self.SelectedTargetUUID = uuid
 				table.clear(self.FodderUUIDs)
@@ -1414,7 +1455,7 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 				local isSlotted = table.find(self.FodderUUIDs, uuid) ~= nil
 				local card = new("Frame", {
 					Name = "FodderCard_" .. uuid,
-					Size = UDim2.fromOffset(110, 170),
+					Size = UDim2.fromOffset(124, 160),
 					BackgroundColor3 = isSlotted and Color3.fromRGB(34, 25, 48) or C.CardBg,
 					BorderSizePixel = 0,
 					ZIndex = 72,
@@ -1422,24 +1463,70 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 				new("UICorner", { CornerRadius = UDim.new(0, 6) }, card)
 				stroke(card, isSlotted and C.Border or C.BorderDim, 1)
 
+				local iconTile = new("Frame", {
+					Name = "IconTile",
+					AnchorPoint = Vector2.new(0.5, 0),
+					Position = UDim2.new(0.5, 0, 0, 10),
+					Size = UDim2.fromOffset(42, 42),
+					BackgroundColor3 = Color3.fromRGB(18, 14, 28),
+					BorderSizePixel = 0,
+					ZIndex = 73,
+				}, card)
+				new("UICorner", { CornerRadius = UDim.new(0, 6) }, iconTile)
+				stroke(iconTile, C.BorderDim, 1)
+
 				local iconChar = ICON_MAP[art.Type] or "⚔️"
-				local iconLbl = label(card, iconChar, 32, C.Text)
-				iconLbl.Position = UDim2.new(0, 0, 0, 12)
-				iconLbl.Size = UDim2.new(1, 0, 0, 40)
+				local iconLbl = label(iconTile, iconChar, 24, C.Text)
+				iconLbl.Position = UDim2.fromScale(0, 0)
+				iconLbl.Size = UDim2.fromScale(1, 1)
 				iconLbl.TextXAlignment = Enum.TextXAlignment.Center
 
-				local nameLbl = label(card, art.DisplayName or "Artifact", 12, C.Text, Enum.Font.GothamBold)
-				nameLbl.Position = UDim2.new(0, 6, 0, 58)
-				nameLbl.Size = UDim2.new(1, -12, 0, 38)
+				local nameLbl = label(card, art.DisplayName or "Artifact", 11, C.Text, Enum.Font.GothamBold)
+				nameLbl.Position = UDim2.new(0, 6, 0, 56)
+				nameLbl.Size = UDim2.new(1, -12, 0, 32)
 				nameLbl.TextWrapped = true
+				nameLbl.TextTruncate = Enum.TextTruncate.AtEnd
 				nameLbl.TextXAlignment = Enum.TextXAlignment.Center
 
-				local lvlLbl = label(card, isSlotted and "✓ SLOTTED" or string.format("+%d", art.Level or 0), 12, isSlotted and C.Green or C.TextMuted)
-				lvlLbl.Position = UDim2.new(0, 0, 0, 106)
-				lvlLbl.Size = UDim2.new(1, 0, 0, 20)
+				local lvlBadge = new("Frame", {
+					Name = "LvlBadge",
+					AnchorPoint = Vector2.new(0.5, 0),
+					Position = UDim2.new(0.5, 0, 0, 92),
+					Size = UDim2.new(1, -20, 0, 22),
+					BackgroundColor3 = isSlotted and Color3.fromRGB(24, 60, 36) or Color3.fromRGB(18, 14, 28),
+					BorderSizePixel = 0,
+					ZIndex = 73,
+				}, card)
+				new("UICorner", { CornerRadius = UDim.new(0, 4) }, lvlBadge)
+				stroke(lvlBadge, isSlotted and C.Green or C.BorderDim, 1)
+
+				local lvlText = isSlotted and "✓ SLOTTED" or string.format("Level +%d", art.Level or 0)
+				local lvlColor = isSlotted and C.Green or C.TextMuted
+				local lvlLbl = label(lvlBadge, lvlText, 11, lvlColor, Enum.Font.GothamBold)
+				lvlLbl.Position = UDim2.fromScale(0, 0)
+				lvlLbl.Size = UDim2.fromScale(1, 1)
 				lvlLbl.TextXAlignment = Enum.TextXAlignment.Center
 
-				local btn = new("TextButton", { BackgroundTransparency = 1, Text = "", Size = UDim2.fromScale(1, 1), ZIndex = 73 }, card)
+				local actionPill = new("Frame", {
+					Name = "ActionPill",
+					AnchorPoint = Vector2.new(0.5, 0),
+					Position = UDim2.new(0.5, 0, 0, 120),
+					Size = UDim2.new(1, -20, 0, 26),
+					BackgroundColor3 = isSlotted and Color3.fromRGB(48, 20, 28) or Color3.fromRGB(28, 22, 42),
+					BorderSizePixel = 0,
+					ZIndex = 73,
+				}, card)
+				new("UICorner", { CornerRadius = UDim.new(0, 4) }, actionPill)
+				stroke(actionPill, isSlotted and C.Red or C.BorderCard, 1)
+
+				local actionText = isSlotted and "REMOVE" or "+ ADD"
+				local actionColor = isSlotted and C.Red or C.Text
+				local actionLbl = label(actionPill, actionText, 11, actionColor, Enum.Font.GothamBold)
+				actionLbl.Position = UDim2.fromScale(0, 0)
+				actionLbl.Size = UDim2.fromScale(1, 1)
+				actionLbl.TextXAlignment = Enum.TextXAlignment.Center
+
+				local btn = new("TextButton", { BackgroundTransparency = 1, Text = "", Size = UDim2.fromScale(1, 1), ZIndex = 74 }, card)
 				btn.Activated:Connect(function()
 					if isSlotted then
 						local idx = table.find(self.FodderUUIDs, uuid)
@@ -1467,7 +1554,7 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 
 			local card = new("Frame", {
 				Name = "HeroCard_" .. heroUUID,
-				Size = UDim2.fromOffset(150, 170),
+				Size = UDim2.fromOffset(150, 160),
 				BackgroundColor3 = isCurrentEquipped and Color3.fromRGB(30, 24, 46) or C.CardBg,
 				BorderSizePixel = 0,
 				ZIndex = 72,
@@ -1476,19 +1563,27 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 			stroke(card, isCurrentEquipped and C.Border or (canEquip and C.BorderDim or Color3.fromRGB(45, 35, 55)), 1)
 
 			local starsLbl = label(card, string.rep("★", hero.Stars or 1), 12, C.GoldYellow)
-			starsLbl.Position = UDim2.new(0, 0, 0, 10)
+			starsLbl.Position = UDim2.new(0, 0, 0, 8)
 			starsLbl.Size = UDim2.new(1, 0, 0, 18)
 			starsLbl.TextXAlignment = Enum.TextXAlignment.Center
 
-			local heroNameLbl = label(card, hero.DisplayName or "Hero", 15, C.Text, Enum.Font.GothamBold)
-			heroNameLbl.Position = UDim2.new(0, 6, 0, 32)
-			heroNameLbl.Size = UDim2.new(1, -12, 0, 22)
+			local heroNameLbl = label(card, hero.DisplayName or "Hero", 14, C.Text, Enum.Font.GothamBold)
+			heroNameLbl.Position = UDim2.new(0, 6, 0, 28)
+			heroNameLbl.Size = UDim2.new(1, -12, 0, 20)
 			heroNameLbl.TextXAlignment = Enum.TextXAlignment.Center
 
-			local classLbl = label(card, hero.Archetype or "Class", 12, C.TextLavender)
-			classLbl.Position = UDim2.new(0, 0, 0, 58)
-			classLbl.Size = UDim2.new(1, 0, 0, 18)
+			local classLbl = label(card, hero.Archetype or "Class", 11, C.TextLavender)
+			classLbl.Position = UDim2.new(0, 0, 0, 50)
+			classLbl.Size = UDim2.new(1, 0, 0, 16)
 			classLbl.TextXAlignment = Enum.TextXAlignment.Center
+
+			local eqArt = hero.EquippedArtifactUUID and artifacts[hero.EquippedArtifactUUID]
+			local eqStatusText = isCurrentEquipped and "Equipped: This Artifact" or (eqArt and ("Equipped: " .. (eqArt.DisplayName or "Artifact")) or "No Artifact")
+			local eqStatusLbl = label(card, eqStatusText, 10, isCurrentEquipped and C.Green or C.TextMuted, Enum.Font.Gotham)
+			eqStatusLbl.Position = UDim2.new(0, 6, 0, 72)
+			eqStatusLbl.Size = UDim2.new(1, -12, 0, 16)
+			eqStatusLbl.TextTruncate = Enum.TextTruncate.AtEnd
+			eqStatusLbl.TextXAlignment = Enum.TextXAlignment.Center
 
 			local actionBtn = new("TextButton", {
 				Name = "HeroActionBtn",
