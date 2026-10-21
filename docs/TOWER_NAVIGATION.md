@@ -1,5 +1,9 @@
 # Tower traversal and hero navigation
 
+Current milestone: Parts 1–3 are verified, with working combat on floors 1 and 5. Animation/art polish and Parts 4–5 are deferred. Start with the [tower documentation index](tower-rebuild/README.md) and [Part 3 verification](tower-rebuild/PART_3_VERIFICATION.md) for current behavior.
+
+Historical traversal-v3 record: the 18-floor ascent and 14-byte packet format described below have been superseded by the isolated-room Part 2 implementation. Current travel, room-local v2 replication, safety, recovery, and source/Studio evidence are documented in [Part 2 verification](tower-rebuild/PART_2_VERIFICATION.md). The old traversal module/geometry remain recoverable; legacy tower spawners are disabled.
+
 `Core/TowerTraversalSetup.server.luau` applies `TowerTraversal` to the baked CentralCrimsonTower and to replacement tower models. The original core and ledge parts remain as dimension references for `TowerSpawnLayout`; hollow masonry walls and separate physical platforms replace their solid cylinders. Each of the 18 levels has a quarter-turn ascent ramp, a landing, a stairwell opening with headroom, and an uninterrupted inner walking strip. The base entrance remains open.
 
 `Core/HeroNavigation.luau` keeps heroes as lightweight server tables. It computes asynchronous Roblox navigation paths (maximum three simultaneous computations, a one-second retry interval per hero), follows waypoints, and checks every movement substep for body clearance, walkable ground, and supported edges. Hero sweeps prevent crossing through squadmates. Player bodies, visual rigs, loot, and display models are excluded from terrain queries. Recall uses a supported formation position on the player's current floor. Attacks require line of sight and compatible height; boss pulls respect ground and collision.

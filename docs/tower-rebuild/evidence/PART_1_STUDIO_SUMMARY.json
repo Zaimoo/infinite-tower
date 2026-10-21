@@ -1,0 +1,140 @@
+{
+  "ObservedDate": "2026-10-21 Asia/Manila",
+  "PlaceId": 136256010643848,
+  "GameId": 10771894864,
+  "StudioName": "Infinite Towers: Become a Master!",
+  "StudioId": "35b19ba0-2dd4-49a7-ad5f-46a041997cb3",
+  "Mode": "Edit",
+  "Inspection": "READ_ONLY",
+  "Tower": [
+    {
+      "Path": "Workspace.BaseOverhaulGeometry.CentralCrimsonTower",
+      "Attributes": {
+        "WalkableFloors": 18,
+        "BodyDiameter": 650,
+        "WidthReference": "Workspace.ArenaRings.Ring2_CorruptedGrove.Ring2_Floor",
+        "TraversalVersion": 3
+      },
+      "Descendants": 7972,
+      "Counts": {
+        "Folder": 4,
+        "PointLight": 1,
+        "Model": 19,
+        "Part": 7888,
+        "Attachment": 52,
+        "ParticleEmitter": 8
+      }
+    },
+    {
+      "Path": "Workspace.BaseOverhaulGeometry.CentralCrimsonTower.WalkableTower",
+      "Attributes": [],
+      "Descendants": 6390,
+      "Counts": {
+        "Part": 6372,
+        "Model": 18
+      }
+    },
+    {
+      "Path": "Workspace.BaseOverhaulGeometry.CentralCrimsonTower.TowerRings",
+      "Attributes": [],
+      "Descendants": 1546,
+      "Counts": {
+        "Part": 1494,
+        "Attachment": 52
+      }
+    }
+  ],
+  "MobRigs": [
+    {
+      "Animations": [],
+      "Counts": {
+        "Part": 1,
+        "MeshPart": 1
+      },
+      "Name": "mob_ruin_crawler",
+      "Size": [
+        2.8399999141693115,
+        4.305000305175781,
+        1.1280004978179932
+      ]
+    },
+    {
+      "Animations": [],
+      "Counts": {
+        "Part": 1,
+        "MeshPart": 1
+      },
+      "Name": "mob_stone_sentinel",
+      "Size": [
+        6.255926132202148,
+        9.90488052368164,
+        2.320004940032959
+      ]
+    },
+    {
+      "Animations": [],
+      "Counts": {
+        "Part": 1,
+        "MeshPart": 1
+      },
+      "Name": "elite_corrupted_stalker",
+      "Size": [
+        3.9050021171569824,
+        6.019999980926514,
+        1.7600021362304688
+      ]
+    },
+    {
+      "Animations": [],
+      "Counts": {
+        "Part": 1,
+        "MeshPart": 1
+      },
+      "Name": "elite_abyssal_exec",
+      "Size": [
+        6.869911193847656,
+        11.429131507873535,
+        2.400003433227539
+      ]
+    },
+    {
+      "Animations": [],
+      "Counts": {
+        "Part": 1,
+        "MeshPart": 1
+      },
+      "Name": "boss_rift_warden",
+      "Size": [
+        8.587499618530273,
+        14.27999210357666,
+        3.2248573303222656
+      ]
+    },
+    {
+      "Animations": [],
+      "Counts": {
+        "Part": 1,
+        "MeshPart": 1
+      },
+      "Name": "world_boss_sovereign",
+      "Size": [
+        13.360001564025879,
+        23.30499839782715,
+        6.159997940063477
+      ]
+    },
+    {
+      "Animations": [],
+      "Counts": {
+        "Part": 1,
+        "MeshPart": 1
+      },
+      "Name": "elite_blighted_treant",
+      "Size": [
+        6.112150192260742,
+        7.531784534454346,
+        1.8680520057678223
+      ]
+    }
+  ]
+}

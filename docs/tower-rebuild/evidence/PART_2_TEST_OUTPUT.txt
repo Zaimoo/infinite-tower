@@ -1,0 +1,81 @@
+Compiled 21 KLOC into 663 KB bytecode (read 0.03s, parse 0.02s, compile 0.06s)
+PASS Existing level curve and all five caps remain intact
+PASS Fresh donor value, affinity, research and efficiency have exact results
+PASS Invested donors improve value at every rarity
+PASS Full balance sweep keeps donor XP monotonic and efficiency between 55 and 100 percent
+PASS Every native seed retains original combat and facility formulas without imprints
+PASS One and multiple donors apply the existing level curve
+PASS Cap overflow is stored exactly and excess is reported
+PASS Five stars never exceed level 50 or create a future-tier reserve
+PASS Promotion applies one multiplier and releases reserve through real levels
+PASS Conversion rewards are deterministic and account for bounded investment
+PASS Imprint compatibility and capacity reject unsupported transfers without research gates
+PASS Proficiency upgrades use the existing slot and stop at rank three
+PASS Malformed and incompatible imprint bonuses cannot stack beyond caps
+PASS Schema migration preserves existing heroes, assignments, levels and inventory
+PASS State snapshots do not expose mutable references
+PASS Preview does not spend resources and committed single donor matches exact preview
+PASS Batch synthesis is deterministic and independent of donor order
+PASS Six-donor limit and exact identities are enforced
+PASS Duplicate hero names remain separate UUID instances
+PASS Self-donors, duplicate UUIDs, missing heroes and foreign UUIDs reject atomically
+PASS Every donor protection applies equally to synthesis and conversion
+PASS Redundant squad, facility and reservation indexes protect apparently benched donors
+PASS Malformed and oversized client request shapes cannot mutate profiles
+PASS Client EXP, cost, outcome and star fields never become authoritative
+PASS Stale economy, roster, assignment, research and material changes reject without partial consumption
+PASS Ordinary stamina regeneration preserves a valid preview
+PASS Tokens are expiring, single-use and isolated to their player
+PASS A new preview invalidates a previous operation token
+PASS Rare donors require explicit confirmation, with no cost on rejection
+PASS Reentrant requests observe the per-player lock and cannot double consume
+PASS Replication exceptions preserve a committed success and release the lock
+PASS Committed deltas contain only affected heroes and exact removals
+PASS Delta construction failure cannot misreport an already committed transaction
+PASS Recipient recovery/reservation and overflow reject before donors are lost
+PASS Valid promotion charges exact resources, preserves traits and cannot repeat
+PASS Promotion validates cap, Gold, stones and five-star ceiling without research gates
+PASS Current profiles promote without retired research currency or lab facilities
+PASS Promotion updates actual assigned facility labor without double scaling
+PASS Focused imprint has guaranteed server-derived rank, half EXP and exact consumption
+PASS Five-star level-50 heroes receive explicitly disclosed memory-only imprints
+PASS Imprint incompatibility, maximum rank, full slots and missing costs reject atomically
+PASS Duplicate imprint attempts upgrade one slot to its bounded rank
+PASS Conversion grants exact essence once and no Gem/Gold or hero output
+PASS Conversion-to-crafting loop is a finite resource sink
+PASS Crafting rejects invalid recipes, invalid funds and accidental donor selections
+PASS Lock control invalidates previews and cannot unlock a unique or foreign hero
+PASS Deliberate unified unlock clears current and legacy favorite protection
+PASS Two Masters' simultaneous valid operations affect only their own profiles
+PASS Combat EXP requires active participation, bounds awards and applies cooldown
+PASS Combat EXP holds the player lock through replication and rejects reentrant grants
+PASS Combat EXP replication exceptions preserve one committed award and release the lock
+PASS Missing profiles, unknown commands and forgotten sessions fail safely
+Pit regression tests: 52 passed, 0 failed
+PASS Exactly 50 immediately available floors form ten complete groups
+PASS Each floor has unique declared layout/environment IDs with honest content status
+PASS Ten unique bosses occur only on multiples of five; encounters reference their biome
+PASS Manifest covers 40 enemies and distinguishes proposed fields from missing assets
+PASS Authored attack contract has anticipation, one server impact, recovery and cancellation
+PASS Invalid destinations and absent encounter IDs fail without coercion or boundary wrap
+PASS Every floor stat is finite/nonnegative and each role progresses monotonically
+PASS Catalog data cannot be changed by a consumer
+PROVISIONAL floor=1 enemy=mob_moss_crawler hp=850 atk=18 gold=80 xp=20 starter_formula_seconds=5.8
+PROVISIONAL floor=5 enemy=boss_mossbound_guardian hp=16326 atk=66 gold=991 xp=248 starter_formula_seconds=111.6
+PROVISIONAL floor=25 enemy=boss_frostbound_king hp=76094 atk=158 gold=2892 xp=723 starter_formula_seconds=520.1
+PROVISIONAL floor=50 enemy=boss_crimson_overlord hp=521129 atk=475 gold=11027 xp=2757 starter_formula_seconds=3562.1
+PASS Provisional balance is measured against current starter formulas, not claimed playtested
+Tower foundation tests: 9 passed, 0 failed
+PASS Floor 50 world coordinates roundtrip as local v2 coordinates with complete identity
+PASS 500 relevant entities schedule all IDs in packets under 1 KB
+PASS Empty heartbeat and strict malformed packet lengths
+PASS Old session floor generation and view epoch cannot enter a committed view
+PASS Encoder rejects overflow NaN and invalid identities without clamping
+PASS Decoder rejects bad HP flags batch ranges versions and nonfinite clocks
+PASS Sequence ordering tolerates wrap and rejects duplicate stale half-range packets
+PASS Safe polygons include edges and enforce height with no off-map privilege
+PASS All destination IDs are accepted without a progression or currency claim
+PASS Request schema rejects client authority unknown actions and malformed revisions
+PASS Deduplication fingerprints are stable but distinguish changed payloads
+PASS Resync must identify the full committed context and cancel has bounded identity
+Tower transport tests: 12 passed, 0 failed

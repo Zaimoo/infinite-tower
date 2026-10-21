@@ -1,0 +1,17 @@
+Source: C:\Users\msi\AppData\Local\Roblox\logs\0.743.696.7430007_20261021T102637Z_Studio_DEBF1_last.log Times are UTC; Manila is UTC+8. Selected log lines only.
+5668:2026-10-21T12:23:53.855Z,7036.855957,2e7c,12 [DFLog::HttpTraceError] HttpResponse(#3896 0x27b02ca07f8) time:13660.9ms (net:3000.2ms timeInRetryQueue:0.0ms) error:5 message:HttpError: Timedout url:{ "https://develop.roblox.com/v1/assets?assetIds=136256010643848" } ip:128.116.50.3 external:0 numberOfTimesRetried:0
+5669:2026-10-21T12:23:53.855Z,7036.855957,306c,6,Error [FLog::TeamTestStarter] Failed to start Team Test due to error checking place moderation status
+5761:2026-10-21T12:25:24.918Z,7127.918457,2bc4,6,Info [FLog::TeamTestStarter] Request to start Team Test
+5791:2026-10-21T12:25:27.346Z,7130.346680,306c,6,Info [FLog::CreatorOutput] Info: Connecting to server...
+5792:2026-10-21T12:25:27.347Z,7130.347656,2fa4,6,Info [FLog::TeamTestJoinConfig] Fetching TeamTest join config... Attempt 1
+6030:2026-10-21T12:25:42.174Z,7145.174316,2a1c,6,Info [FLog::TeamTestJoinConfig] Fetching TeamTest join config... Attempt 2
+6090:2026-10-21T12:25:55.979Z,7158.979492,2fac,6,Info [FLog::TeamTestManager] TeamTest connection accepted. Address 128.116.54.33|56875
+6241:2026-10-21T12:26:02.269Z,7165.269043,2fa4,6 [telemetryLog] State: TeamTestSuccess
+6437:2026-10-21T12:26:33.384Z,7196.384766,2bc4,6,Info [FLog::TeamTestManager] request to stop TeamTest
+6596:2026-10-21T12:26:33.511Z,7196.511230,306c,6,Info [FLog::TeamTestManager] TeamTest disconnected. Reason DisconnectClientInitiated, code 285, lostConnection false
+Earlier source: C:\Users\msi\AppData\Local\Roblox\logs\0.743.0.7431133_20261021T094005Z_Studio_A02A3_last.log
+2707:2026-10-21T09:55:06.741Z,901.741089,5198,6,Error [FLog::TeamTestWorkflowManager] Error on checking Team Server Status: HttpError: DnsResolve
+2744:2026-10-21T09:55:16.857Z,911.857727,2c50,6,Error [FLog::TeamTestWorkflowManager] Error on checking Team Server Status: HttpError: DnsResolve
+2826:2026-10-21T09:55:40.514Z,935.514526,4f58,6,Warning [FLog::TeamCreateManager] Disconnected due to Lost connection to the game server, please reconnect (277). LostConnection = false 
+3257:2026-10-21T09:55:49.025Z,944.025940,3f88,12 [DFLog::HttpTraceError] CURLOPT_ERRORBUFFER: Could not resolve host: gamejoin.roblox.com
+3539:2026-10-21T09:55:49.989Z,944.989258,71ec,6,Info [FLog::PlaceManager] Open Place failure : TeamCreateJoinFailure:Unable to verify collaboration eligibility for universeId 10771894864, with error code -1

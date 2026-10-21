@@ -1,0 +1,150 @@
+{
+  "PlaceId": 136256010643848,
+  "StudioId": "a76a834f-f556-4e54-9f71-197315f9ead7",
+  "Method": "LF-normalized UTF-8 byte count and DJB2 modulo 2^32, initial 5381",
+  "Rows": [
+    {
+      "Bytes": 11507,
+      "Hash": 3698988360,
+      "Path": "ReplicatedStorage.Shared.Config.MobCatalog",
+      "Studio": {
+        "Bytes": 11507,
+        "Path": "ReplicatedStorage.Shared.Config.MobCatalog",
+        "Hash": 3698988360
+      },
+      "Matches": true
+    },
+    {
+      "Bytes": 6360,
+      "Hash": 1293398865,
+      "Path": "ReplicatedStorage.Shared.Config.TowerFloorConfig",
+      "Studio": {
+        "Bytes": 6360,
+        "Path": "ReplicatedStorage.Shared.Config.TowerFloorConfig",
+        "Hash": 1293398865
+      },
+      "Matches": true
+    },
+    {
+      "Bytes": 5489,
+      "Hash": 1027886865,
+      "Path": "ReplicatedStorage.Shared.Util.TowerProtocol",
+      "Studio": {
+        "Bytes": 5489,
+        "Path": "ReplicatedStorage.Shared.Util.TowerProtocol",
+        "Hash": 1027886865
+      },
+      "Matches": true
+    },
+    {
+      "Bytes": 2586,
+      "Hash": 341194882,
+      "Path": "ReplicatedStorage.Shared.Util.TowerRequestPolicy",
+      "Studio": {
+        "Bytes": 2586,
+        "Path": "ReplicatedStorage.Shared.Util.TowerRequestPolicy",
+        "Hash": 341194882
+      },
+      "Matches": true
+    },
+    {
+      "Bytes": 70014,
+      "Hash": 2480789514,
+      "Path": "ServerScriptService.Combat.CombatSimulation",
+      "Studio": {
+        "Bytes": 70014,
+        "Path": "ServerScriptService.Combat.CombatSimulation",
+        "Hash": 2480789514
+      },
+      "Matches": true
+    },
+    {
+      "Bytes": 8091,
+      "Hash": 3272550757,
+      "Path": "ServerScriptService.Core.HeroNavigation",
+      "Studio": {
+        "Bytes": 8091,
+        "Path": "ServerScriptService.Core.HeroNavigation",
+        "Hash": 3272550757
+      },
+      "Matches": true
+    },
+    {
+      "Bytes": 7912,
+      "Hash": 3047114125,
+      "Path": "ServerScriptService.Core.PlotManager",
+      "Studio": {
+        "Bytes": 7912,
+        "Path": "ServerScriptService.Core.PlotManager",
+        "Hash": 3047114125
+      },
+      "Matches": true
+    },
+    {
+      "Bytes": 21180,
+      "Hash": 1998423670,
+      "Path": "ServerScriptService.Core.TowerFloorService",
+      "Studio": {
+        "Bytes": 21180,
+        "Path": "ServerScriptService.Core.TowerFloorService",
+        "Hash": 1998423670
+      },
+      "Matches": true
+    },
+    {
+      "Bytes": 4018,
+      "Hash": 3268814886,
+      "Path": "ServerScriptService.Core.TowerRoomBuilder",
+      "Studio": {
+        "Bytes": 4018,
+        "Path": "ServerScriptService.Core.TowerRoomBuilder",
+        "Hash": 3268814886
+      },
+      "Matches": true
+    },
+    {
+      "Bytes": 1745,
+      "Hash": 95735252,
+      "Path": "ServerScriptService.Core.TowerTraversalSetup",
+      "Studio": {
+        "Bytes": 1745,
+        "Path": "ServerScriptService.Core.TowerTraversalSetup",
+        "Hash": 95735252
+      },
+      "Matches": true
+    },
+    {
+      "Bytes": 16913,
+      "Hash": 2803690283,
+      "Path": "ServerScriptService.ExtractionAndSocial.RelicService",
+      "Studio": {
+        "Bytes": 16913,
+        "Path": "ServerScriptService.ExtractionAndSocial.RelicService",
+        "Hash": 2803690283
+      },
+      "Matches": true
+    },
+    {
+      "Bytes": 17626,
+      "Hash": 3475091934,
+      "Path": "StarterPlayer.StarterPlayerScripts.Rendering.EntityRenderer",
+      "Studio": {
+        "Bytes": 17626,
+        "Path": "StarterPlayer.StarterPlayerScripts.Rendering.EntityRenderer",
+        "Hash": 3475091934
+      },
+      "Matches": true
+    },
+    {
+      "Bytes": 10071,
+      "Hash": 3852332599,
+      "Path": "StarterPlayer.StarterPlayerScripts.UI.TowerController",
+      "Studio": {
+        "Bytes": 10071,
+        "Path": "StarterPlayer.StarterPlayerScripts.UI.TowerController",
+        "Hash": 3852332599
+      },
+      "Matches": true
+    }
+  ]
+}

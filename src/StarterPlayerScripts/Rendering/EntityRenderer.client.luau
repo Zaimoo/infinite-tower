@@ -19,7 +19,24 @@ local BossTelegraphRemote = CombatRemotes:WaitForChild("BossTelegraph") :: Remot
 local CombatVFXRemote = CombatRemotes:WaitForChild("CombatVFX") :: UnreliableRemoteEvent
 local EntityMetadataRemote = CombatRemotes:WaitForChild("EntityMetadataSync") :: RemoteEvent
 
+local Protocol=require(Shared.Util.TowerProtocol)
+local FirstBiome=require(Shared.Config.FirstBiomeCombat)
+local ActionState=require(Shared.Util.EnemyActionState)
+local EnemyAnimation=require(ReplicatedStorage.Assets.EnemyAnimationController)
+local Actions=ActionState.New()
+local PendingActions={}
+local DyingNodes={}
+local ActionMetrics={Started=0,Canceled=0,Deaths=0,Rejected=0,Seeks=0}
+local TowerRemotes=ReplicatedStorage.Remotes:WaitForChild("TowerRemotes")
+local View: any=nil
+local LastBootstrap=0
+local Assembly: any=nil
+local Bootstrapped=false
+local Buffered={}
+local EntitySequences: {[number]:number}={}
+local Generations: {[number]:number}={}
 local VisualFolder = Workspace:WaitForChild("ClientVisualEntities")
+local CombatFeedback=require(ReplicatedStorage.Assets.CombatFeedback).new(VisualFolder)
 local ArtPackVisuals = require(ReplicatedStorage:WaitForChild("Assets"):WaitForChild("ArtPackVisuals"))
 
 type VisualNode = {
@@ -59,6 +76,7 @@ end
 
 -- Expose shared client state for HUD & Input controllers
 _G.ClientCombatState = {
+	EnemyActions=Actions,ActionMetrics=ActionMetrics,
 	VisualNodes = VisualNodesByNetId,
 	Metadata = MetadataByNetId,
 	FocusedNetId = nil :: number?,
@@ -88,6 +106,9 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 	model.Name = string.format("Entity_%d_%s", netId, meta and meta.Name or "Unit")
 	model:SetAttribute("NetId", netId)
 	model:SetAttribute("IsHero", isHero)
+	model:SetAttribute("EntityGeneration",meta.EntityGeneration)
+	model:SetAttribute("FloorId",meta.FloorId)
+	model:SetAttribute("RoomGeneration",meta.RoomGeneration)
 
 	local bodySize = Vector3.new(2.4, 3.4, 1.4)
 	local bodyColor = Color3.fromRGB(90, 170, 255)
@@ -111,7 +132,9 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 		end
 	end
 
-	local rootOffsetY = isHero and 3.2 or (bodySize.Y * 0.5)
+	local enemySpec=meta.EnemyId and FirstBiome.Get(meta.EnemyId)
+	if enemySpec then bodySize=Vector3.new(enemySpec.Role=="BOSS" and 13 or 5,enemySpec.Height,5);isBoss=enemySpec.Role=="BOSS";bodyColor=Color3.fromRGB(106,149,89) end
+	local rootOffsetY = enemySpec and enemySpec.RootHeight or isHero and 3.2 or (bodySize.Y * 0.5)
 	local root = Instance.new("Part")
 	root.Name = "HumanoidRootPart"
 	root.Size = isHero and Vector3.new(2, 2, 1) or bodySize
@@ -126,7 +149,7 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 
 	-- Only add fallback Head for non-heroes without art packs
 	local head = nil
-	if not isHero and meta and meta.SpecId ~= "mob_mana_node" then
+	if not isHero and not enemySpec and meta and meta.SpecId ~= "mob_mana_node" then
 		head = Instance.new("Part")
 		head.Name = "Head"
 		head.Shape = Enum.PartType.Ball
@@ -141,7 +164,8 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 		head.Parent = model
 	end
 
-	local art = ArtPackVisuals.Attach(model, meta or {}, root, bodySize)
+	local enemyRig=enemySpec and EnemyAnimation.Attach(model,root,meta.EnemyId)
+	local art = not enemyRig and ArtPackVisuals.Attach(model, meta or {}, root, bodySize) or nil
 	if art and head then head:Destroy() end
 	local hl = Instance.new("Highlight")
 	hl.FillColor = bodyColor
@@ -227,6 +251,7 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 	model.Parent = VisualFolder
 
 	return {
+		EnemyRig=enemyRig,RootHeight=rootOffsetY,BornAt=meta.BornAt,
 		NetId = netId,
 		IsHero = isHero,
 		Model = model,
@@ -248,153 +273,168 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 	}
 end
 
-EntityMetadataRemote.OnClientEvent:Connect(function(metaTable: any)
-	if type(metaTable) ~= "table" then
-		return
-	end
-
-	-- Index payload records by numeric IDs, accepting the dense list and legacy keyed maps.
-	local normalizedMetadata: { [number]: any } = {}
-	for key, meta in pairs(metaTable) do
-		if type(meta) == "table" then
-			local netId = tonumber(meta.NetId) or tonumber(key)
-			if netId then
-				normalizedMetadata[netId] = meta
-			end
-		end
-	end
-	MetadataByNetId = normalizedMetadata
-	_G.ClientCombatState.Metadata = MetadataByNetId
-
-	local foundWorldBoss: number? = nil
-	for netId, meta in pairs(MetadataByNetId) do
-		if not meta.IsHero and meta.MobType == "WORLD_BOSS" then
-			foundWorldBoss = netId
-		end
-		local node = VisualNodesByNetId[netId]
-        if node and (node.Model:GetAttribute("ArtPackAssetId") ~= ArtPackVisuals.Resolve(meta) or node.IsHero ~= (meta.IsHero == true)) then
-            local replacement=createEntityModel(netId,meta,node.CurrentPos)
-            for _,key in {"GoalPos","GoalYaw","CurrentYaw","LastSeenClock","HpPermille","Stamina","StateEnum","Flags"} do
-                (replacement :: any)[key]=(node :: any)[key]
-            end
-            node.Model:Destroy();node=replacement;VisualNodesByNetId[netId]=replacement
-        end
-		if node and node.TitleLabel then
-			if meta.IsHero then
-				local stars = string.rep("★", meta.Stars or 1)
-				node.TitleLabel.Text = string.format("%s %s Lv.%d", meta.Name or "Hero", stars, meta.Level or 1)
-				local curWeap = node.Model:GetAttribute("EquippedArtifactId")
-				if curWeap ~= meta.EquippedArtifactId then
-					ArtPackVisuals.EquipWeapon(node.Model, meta.EquippedArtifactId, meta.EquippedArtifactType, meta.EquippedArtifactRarity)
-				end
-			else
-				node.TitleLabel.Text = meta.Name or "Mob"
-			end
-		end
-	end
-	_G.ClientCombatState.WorldBossNetId = foundWorldBoss
+local function clearView()
+ CombatFeedback:Clear()
+ EnemyAnimation.Clear()
+ for _,node in pairs(DyingNodes) do node.Model:Destroy() end;table.clear(DyingNodes)
+ Actions=ActionState.New();_G.ClientCombatState.EnemyActions=Actions;table.clear(PendingActions)
+ for _,node in pairs(VisualNodesByNetId) do node.Model:Destroy() end
+ table.clear(VisualNodesByNetId);table.clear(MetadataByNetId);table.clear(EntitySequences);table.clear(Generations)
+ VisualFolder:ClearAllChildren();_G.ClientCombatState.Metadata=MetadataByNetId
+ _G.ClientCombatState.FocusedNetId=nil;_G.ClientCombatState.WorldBossNetId=nil;_G.ClientCombatState.NovaCastDuration=0
+ Assembly=nil;Bootstrapped=false;table.clear(Buffered);LastBootstrap=0
+end
+TowerRemotes.Context.OnClientEvent:Connect(function(c)
+ if c.Stage~="COMMIT" then return end
+ if not Protocol.Same(c,View) then clearView() end
+ View=c;_G.TowerView=c
 end)
-
--- Unpack 5 Hz Binary Buffer Snapshot
-ReplicationTickRemote.OnClientEvent:Connect(function(buf: buffer)
-	local count = buffer.readu8(buf, 0)
-	-- Height is authoritative; radius alone cannot identify stacked tower floors.
-	local stride = count > 0 and (buffer.len(buf) - 5) / count or 14
-	if stride ~= 14 and stride ~= 12 then return end
-	local now = os.clock()
-	local offset = 5
-	local needsMetadata = false
-
-	for i = 1, count do
-		local netId = buffer.readu16(buf, offset + 0)
-		local posX = buffer.readi16(buf, offset + 2) / 10.0
-		local posZ = buffer.readi16(buf, offset + 4) / 10.0
-		local yawByte = buffer.readu8(buf, offset + 6)
-		local stateEnum = buffer.readu8(buf, offset + 7)
-		local hpPermille = buffer.readu16(buf, offset + 8)
-		local stamina = buffer.readu8(buf, offset + 10)
-		local flags = buffer.readu8(buf, offset + 11)
-		local y = stride == 14 and buffer.readi16(buf, offset + 12) / 10 or getGroundY(posX, posZ)
-		offset += stride
-
-		local yaw = ((yawByte / 255.0) * (math.pi * 2)) - math.pi
-		local goalPos = Vector3.new(posX, y, posZ)
-
-		local meta = MetadataByNetId[netId]
-		local node = VisualNodesByNetId[netId]
-		if not meta then
-			-- Identity is not in the snapshot; wait for it instead of rendering heroes as mobs.
-			needsMetadata = true
-			if node then
-				node.Model:Destroy()
-				VisualNodesByNetId[netId] = nil
-			end
-			continue
-		end
-		if not node then
-			node = createEntityModel(netId, meta, goalPos)
-			VisualNodesByNetId[netId] = node
-		end
-
-		node.GoalPos = goalPos
-		node.GoalYaw = yaw
-		node.HpPermille = hpPermille
-		node.Stamina = stamina
-		node.StateEnum = stateEnum
-		node.Flags = flags
-		node.LastSeenClock = now
-
-		if node.HPBarFill then
-			node.HPBarFill.Size = UDim2.fromScale(math.clamp(hpPermille / 1000.0, 0, 1), 1)
-		end
-		if node.StamBarFill then
-			node.StamBarFill.Size = UDim2.fromScale(math.clamp(stamina / 100.0, 0, 1), 1)
-		end
-
-		-- Check Overdrive / Focused Highlight
-		if node.Highlight then
-			local isOverdrive = bit32.band(flags, 1) ~= 0
-			local isFocused = (_G.ClientCombatState.FocusedNetId == netId)
-			if isFocused then
-				node.Highlight.OutlineColor = Color3.fromRGB(0, 255, 235)
-				node.Highlight.OutlineTransparency = 0
-			elseif isOverdrive then
-				node.Highlight.OutlineColor = Color3.fromRGB(255, 195, 40)
-				node.Highlight.OutlineTransparency = 0
-			else
-				node.Highlight.OutlineColor = node.IsHero and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(255, 85, 85)
-				node.Highlight.OutlineTransparency = 0.25
-			end
-		end
-
-		if meta and meta.MobType == "WORLD_BOSS" then
-			_G.ClientCombatState.WorldBossNetId = netId
-			_G.ClientCombatState.WorldBossHPPerMille = hpPermille
-			_G.ClientCombatState.WorldBossPhase = math.max(1, stateEnum - 10)
-			_G.ClientCombatState.WorldBossCoreExposed = (bit32.band(flags, 4) ~= 0)
-		end
-	end
-	if needsMetadata then
-		requestEntityMetadata()
-	end
-
-	-- Clean up stale entities not seen for > 0.8s
-	for netId, node in pairs(VisualNodesByNetId) do
-		if (now - node.LastSeenClock) > 0.85 then
-			node.Model:Destroy()
-			VisualNodesByNetId[netId] = nil
-			if _G.ClientCombatState.WorldBossNetId == netId then
-				_G.ClientCombatState.WorldBossNetId = nil
-			end
-		end
-	end
+local function retireVisual(id,at)
+ local node=VisualNodesByNetId[id];if not node then return end
+ VisualNodesByNetId[id]=nil
+ if node.EnemyRig and at+1.6>Workspace:GetServerTimeNow() then
+  EnemyAnimation.Death(node,at);DyingNodes[ActionState.Key({NetId=id,EntityGeneration=node.Model:GetAttribute("EntityGeneration")})]=node
+ else node.Model:Destroy() end
+end
+local function applyAction(message)
+ local id=message.Actor;local now=Workspace:GetServerTimeNow()
+ if message.Kind=="HIT" then
+  local node=id and VisualNodesByNetId[id.NetId]
+  if node and node.Model:GetAttribute("EntityGeneration")==id.EntityGeneration and now-message.StartServerTime<.3 then EnemyAnimation.Hit(node,now) end
+  return
+ end
+ if message.Kind=="IMPACT" then
+  local node=id and VisualNodesByNetId[id.NetId]
+  local active=Actions.Actors[ActionState.Key(id)]
+  if node and not node.DeathAt and node.Model:GetAttribute("EntityGeneration")==id.EntityGeneration and active and not active.Terminal
+   and active.Sequence==message.ActionSequence and not active.ImpactShown then
+   active.ImpactShown=true;EnemyAnimation.Contact(node,message,View.Origin,now)
+  end
+  return
+ end
+ if not ActionState.Receive(Actions,message,MetadataByNetId,now) then ActionMetrics.Rejected+=1;return end
+ local node=id and VisualNodesByNetId[id.NetId]
+ if node and node.Model:GetAttribute("EntityGeneration")~=id.EntityGeneration then node=nil end
+ if message.Kind=="DEATH" then ActionMetrics.Deaths+=1;if node then retireVisual(id.NetId,message.StartServerTime) end
+ elseif message.Kind=="START" then
+  ActionMetrics.Started+=1;if now-message.StartServerTime>.15 then ActionMetrics.Seeks+=1 end
+  if node then EnemyAnimation.Action(node,message,View.Origin,now) end
+ elseif node then ActionMetrics.Canceled+=1;EnemyAnimation.Cancel(node) end
+end
+TowerRemotes.TowerAction.OnClientEvent:Connect(function(context,message)
+ if not Protocol.Same(context,View) or type(message)~="table" or type(message.Actor)~="table" then return end
+ if message.Actor.FloorId~=View.FloorId or message.Actor.RoomGeneration~=View.RoomGeneration then return end
+ if Assembly or not Bootstrapped or (message.Kind=="START" and not MetadataByNetId[message.Actor.NetId]) then
+  if #PendingActions<128 then table.insert(PendingActions,message) else table.clear(PendingActions);requestEntityMetadata() end
+  if not Assembly then requestEntityMetadata() end
+  return
+ end
+ applyAction(message)
 end)
-
--- Request the initial identities after both listeners are ready, including late client starts.
+local function consume(buf: buffer)
+ local packet=Protocol.Decode(buf,View)
+ if not packet then return end
+ if not Bootstrapped then if #Buffered<2 then table.insert(Buffered,buf) else requestEntityMetadata() end;return end
+ local now=os.clock()
+ for _,e in packet.Entities do
+  local id=e.NetId;local meta=MetadataByNetId[id]
+  if Actions.Tombstones[ActionState.Key(e)] then continue end
+  if not meta or meta.EntityGeneration~=e.EntityGeneration then requestEntityMetadata();continue end
+  if EntitySequences[id]~=nil and not Protocol.Newer(packet.Sequence,EntitySequences[id]) then continue end
+  EntitySequences[id]=packet.Sequence
+  local node=VisualNodesByNetId[id]
+  if not node then
+   node=createEntityModel(id,meta,e.Position);VisualNodesByNetId[id]=node
+   local active=Actions.Actors[ActionState.Key(e)]
+   if active and not active.Terminal and active.Action then EnemyAnimation.Action(node,active.Action,View.Origin,Workspace:GetServerTimeNow()) end
+  end
+  node.GoalPos=e.Position;node.GoalYaw=e.Yaw;node.HpPermille=e.HpPermille;node.Stamina=e.Stamina
+  node.StateEnum=e.StateEnum;node.Flags=e.Flags;node.LastSeenClock=now
+  if node.HPBarFill then node.HPBarFill.Size=UDim2.fromScale(e.HpPermille/1000,1) end
+  if node.StamBarFill then node.StamBarFill.Size=UDim2.fromScale(e.Stamina/100,1) end
+  if node.Highlight then
+   node.Highlight.OutlineColor=_G.ClientCombatState.FocusedNetId==id and Color3.fromRGB(0,255,235) or bit32.band(e.Flags,2)~=0 and Color3.fromRGB(255,195,40) or Color3.new(1,1,1)
+   node.Highlight.OutlineTransparency=meta.TowerEnemy and (_G.ClientCombatState.FocusedNetId==id and .15 or .8) or .25
+  end
+  if meta.MobType=="WORLD_BOSS" then
+   _G.ClientCombatState.WorldBossNetId=id;_G.ClientCombatState.WorldBossHPPerMille=e.HpPermille
+   _G.ClientCombatState.WorldBossPhase=math.max(1,e.StateEnum-10);_G.ClientCombatState.WorldBossCoreExposed=bit32.band(e.Flags,8)~=0
+  end
+  if not ActionState.Expected(Actions,e,e.ActionSequence) then requestEntityMetadata() end
+ end
+end
+TowerRemotes.TowerSnapshot.OnClientEvent:Connect(consume)
+TowerRemotes.TowerEntityState.OnClientEvent:Connect(function(context,message)
+ if not Protocol.Same(context,View) or type(message)~="table" then return end
+ local revision=message.BootstrapRevision
+ if type(revision)~="number" or revision<=LastBootstrap then return end
+ if message.Kind=="BOOTSTRAP" then
+  if not Protocol.Integer(message.BatchCount,1,512) or not Protocol.Integer(message.BatchIndex,1,message.BatchCount) or type(message.Entities)~="table" or #message.Entities>32 then return end
+  if Assembly and revision<Assembly.Revision then return end
+  if not Assembly or Assembly.Revision~=revision then Assembly={Revision=revision,Count=message.BatchCount,Chunks={},Actions={},Started=os.clock()} end
+  if Assembly.Count~=message.BatchCount then Assembly=nil;requestEntityMetadata();return end
+  Assembly.Chunks[message.BatchIndex]=message.Entities
+  Assembly.Actions[message.BatchIndex]=message.Actions or {}
+  Assembly.Boss=message.BossPresentation
+ elseif message.Kind=="COMPLETE" then
+  if not Assembly or Assembly.Revision~=revision then requestEntityMetadata();return end
+  local nextMetadata={}
+  for i=1,Assembly.Count do
+   local chunk=Assembly.Chunks[i];if not chunk then Assembly=nil;requestEntityMetadata();return end
+   for _,entry in chunk do
+    if not Protocol.Integer(entry.NetId,1,4294967295) or not Protocol.Integer(entry.EntityGeneration,1,4294967295) or nextMetadata[entry.NetId] then Assembly=nil;requestEntityMetadata();return end
+    if entry.EntityGeneration<(Generations[entry.NetId] or 0) then continue end
+    nextMetadata[entry.NetId]=entry
+   end
+  end
+  for id,node in pairs(VisualNodesByNetId) do
+   local new=nextMetadata[id];local old=MetadataByNetId[id]
+   if not new or not old or new.EntityGeneration~=old.EntityGeneration then
+    if not new and node.EnemyRig then
+     Actions.Tombstones[ActionState.Key(old)]=true;retireVisual(id,Workspace:GetServerTimeNow())
+    else EnemyAnimation.Cancel(node);node.Model:Destroy();VisualNodesByNetId[id]=nil end
+    EntitySequences[id]=nil
+   end
+  end
+  for id,entry in pairs(nextMetadata) do
+   Generations[id]=entry.EntityGeneration
+   local node=VisualNodesByNetId[id]
+   if node and not node.EnemyRig and (node.Model:GetAttribute("ArtPackAssetId")~=ArtPackVisuals.Resolve(entry) or node.IsHero~=(entry.IsHero==true)) then
+    local replacement=createEntityModel(id,entry,node.CurrentPos)
+    for _,key in {"GoalPos","GoalYaw","CurrentYaw","LastSeenClock","HpPermille","Stamina","StateEnum","Flags"} do (replacement :: any)[key]=(node :: any)[key] end
+    node.Model:Destroy();node=replacement;VisualNodesByNetId[id]=node
+   end
+   if node then
+    if node.TitleLabel then node.TitleLabel.Text=entry.IsHero and string.format("%s %s Lv.%d",entry.Name or "Hero",string.rep("★",entry.Stars or 1),entry.Level or 1) or entry.Name or "Mob" end
+    if entry.IsHero and node.Model:GetAttribute("EquippedArtifactId")~=entry.EquippedArtifactId then
+     ArtPackVisuals.EquipWeapon(node.Model,entry.EquippedArtifactId,entry.EquippedArtifactType,entry.EquippedArtifactRarity)
+    end
+   end
+  end
+  MetadataByNetId=nextMetadata;_G.ClientCombatState.Metadata=MetadataByNetId
+  local bootstrapActions=Assembly.Actions
+  _G.ClientCombatState.FloorBoss=Assembly.Boss
+  LastBootstrap=revision;Assembly=nil;Bootstrapped=true
+  for _,chunk in pairs(bootstrapActions) do for _,action in chunk do applyAction(action) end end
+  local queued=PendingActions;PendingActions={};for _,action in queued do applyAction(action) end
+  local pending=Buffered;Buffered={};for _,buf in pending do consume(buf) end
+ end
+end)
+-- Reliable full roster cuts define existence. Packet loss only freezes poses and requests resync.
+RunService.Heartbeat:Connect(function()
+ local now=os.clock()
+ if Assembly and now-Assembly.Started>3 then Assembly=nil;requestEntityMetadata() end
+ for _,node in pairs(VisualNodesByNetId) do if now-node.LastSeenClock>1 then requestEntityMetadata() end end
+end)
 requestEntityMetadata()
 
 -- 60 FPS Smooth Interpolation Loop
 RunService.RenderStepped:Connect(function(dt: number)
+	CombatFeedback:Step(os.clock())
+	local serverNow=Workspace:GetServerTimeNow();EnemyAnimation.StepEffects(serverNow)
+	for key,node in pairs(DyingNodes) do
+		if serverNow>=node.DeathEnd then node.Model:Destroy();DyingNodes[key]=nil else EnemyAnimation.Step(node,dt,serverNow) end
+	end
 	local alpha = math.clamp(dt * 12.0, 0, 1)
 	for _, node in pairs(VisualNodesByNetId) do
 		if (node.GoalPos - node.CurrentPos).Magnitude > 35 then
@@ -402,10 +442,10 @@ RunService.RenderStepped:Connect(function(dt: number)
 		else
 			node.CurrentPos = node.CurrentPos:Lerp(node.GoalPos, alpha)
 		end
-		local bodyH = node.IsHero and 3.2 or (node.RootPart.Size.Y * 0.5)
+		local bodyH = (node :: any).RootHeight or node.IsHero and 3.2 or (node.RootPart.Size.Y * 0.5)
 		local cf = CFrame.new(node.CurrentPos + Vector3.new(0, bodyH, 0)) * CFrame.Angles(0, node.GoalYaw, 0)
 		node.Model:PivotTo(cf)
-		ArtPackVisuals.Animate(node, dt, os.clock())
+		if (node :: any).EnemyRig then EnemyAnimation.Step(node,dt,serverNow) else ArtPackVisuals.Animate(node, dt, os.clock()) end
 		local head = node.Model:FindFirstChild("Head") :: BasePart?
 		if head and not node.IsHero then
 			head.Position = cf.Position + Vector3.new(0, bodyH + (head.Size.Y * 0.45), 0)
@@ -417,7 +457,8 @@ end)
 -- TELEGRAPH VFX (DEVOURING NOVA, ELITE AOES & WHISTLE RINGS)
 --============================================================================
 
-BossTelegraphRemote.OnClientEvent:Connect(function(telegraphType: number, originXZ: Vector2int16, radius: number, durationMs: number)
+BossTelegraphRemote.OnClientEvent:Connect(function(context: any, telegraphType: number, originXZ: Vector2int16, radius: number, durationMs: number)
+	if not Protocol.Same(context,View) then return end
 	local durationSec = durationMs / 1000.0
 	local ox = originXZ.X
 	local oz = originXZ.Y
@@ -455,7 +496,12 @@ BossTelegraphRemote.OnClientEvent:Connect(function(telegraphType: number, origin
 	end
 end)
 
-CombatVFXRemote.OnClientEvent:Connect(function(vfxType: string, pos: Vector3, amount: number?, isOverdrive: boolean?)
+CombatVFXRemote.OnClientEvent:Connect(function(context: any, vfxType: string, pos: Vector3, amount: number?, isOverdrive: boolean?, incoming: boolean?)
+	if not Protocol.Same(context,View) then return end
+	if vfxType=="HIT_SPARK" then
+		CombatFeedback:Hit(pos,amount,isOverdrive,incoming)
+		return
+	end
 	if vfxType == "WHISTLE_Q" or vfxType == "WHISTLE_E" then
 		local pulse = Instance.new("Part")
 		pulse.Shape = Enum.PartType.Cylinder

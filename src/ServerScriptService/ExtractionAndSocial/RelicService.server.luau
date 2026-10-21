@@ -27,6 +27,8 @@ export type RelicTierId = "MANA_GEODE" | "CURSED_URN" | "ABYSSAL_CORE" | "CALAMI
 
 export type ActiveRelic = {
 	RelicId: number,
+	FloorId: number,
+	RoomGeneration: number,
 	TierId: RelicTierId,
 	Part: BasePart,
 	BillboardStatus: TextLabel?,
@@ -45,6 +47,8 @@ local FUMBLE_STUN_SECONDS = 1.0
 local FUMBLE_OWNER_LOCK_SECONDS = 3.0
 
 local ArtPackVisuals = require(ReplicatedStorage.Assets:WaitForChild("ArtPackVisuals"))
+local Tower=require(script.Parent.Parent.Core.TowerFloorService)
+Tower.Init()
 local RelicService = {}
 local NextRelicId = 1
 local ActiveRelics: { [number]: ActiveRelic } = {}
@@ -166,7 +170,9 @@ function RelicService.SpawnRelic(tierId: RelicTierId, worldPos: Vector3, initial
 	statusLbl.Parent = frame
 
 	local now = os.clock()
+	local context=assert(Tower.ContextAt(worldPos),"Relic spawn outside room")
 	local relic: ActiveRelic = {
+		FloorId=context.FloorId,RoomGeneration=context.RoomGeneration,
 		RelicId = relicId,
 		TierId = tierId,
 		Part = part,
@@ -179,12 +185,13 @@ function RelicService.SpawnRelic(tierId: RelicTierId, worldPos: Vector3, initial
 	}
 
 	ActiveRelics[relicId] = relic
-	RelicStateRemote:FireAllClients(relicId, tierId, "SPAWN", initialOwnerUserId, relic.LockExpiresAt)
+	Tower.BroadcastAt(RelicStateRemote,relic,relicId, tierId, "SPAWN", initialOwnerUserId, relic.LockExpiresAt)
 	return relic
 end
 
 function RelicService.TryPickupRelic(player: Player, relic: ActiveRelic): boolean
 	local now = os.clock()
+	if Tower.IsTransitioning(player) or not Tower.Same(Tower.GetState(player),relic) or ActiveRelics[relic.RelicId]~=relic or now>=relic.DespawnAt then return false end
 	if relic.Carrier ~= nil or CarrierToRelic[player] ~= nil then
 		return false
 	end
@@ -230,13 +237,14 @@ function RelicService.TryPickupRelic(player: Player, relic: ActiveRelic): boolea
 
 	updateMasterMovementAttributes(player, now)
 	dm.SendToast(player, string.format("Carrying %s (-%d%% Spd)! Bring to your Extraction Pad!", spec.DisplayName, math.round(spec.WalkSpeedPenalty * 100)), "INFO")
-	RelicStateRemote:FireAllClients(relic.RelicId, relic.TierId, "PICKUP", player.UserId, 0)
+	Tower.BroadcastAt(RelicStateRemote,relic,relic.RelicId, relic.TierId, "PICKUP", player.UserId, 0)
 	return true
 end
 
 function RelicService.DropCarriedRelic(carrier: Player): boolean
 	local relic = CarrierToRelic[carrier]
 	if not relic then return false end
+	Tower.CancelPending(carrier,"CARGO_CHANGED")
 	if relic.Weld then
 		relic.Weld:Destroy()
 		relic.Weld = nil
@@ -248,7 +256,7 @@ function RelicService.DropCarriedRelic(carrier: Player): boolean
 	params.FilterDescendantsInstances = {carrier.Character or relic.Part, PhysicalRelicsFolder, Workspace.PhysicalLoot}
 	local ground = Workspace:Raycast(position + Vector3.new(0, 8, 0), Vector3.new(0, -64, 0), params)
 	relic.Part.Anchored = true
-	relic.Part.Position = ground and (ground.Position + Vector3.new(0, relic.Part.Size.Y / 2 + 0.2, 0)) or position
+	relic.Part.Position = Tower.GroundDrop(relic,position,relic.Part.Size.Y/2)
 	relic.Carrier = nil
 	CarrierToRelic[carrier] = nil
 	relic.LockedUserId = nil
@@ -257,7 +265,7 @@ function RelicService.DropCarriedRelic(carrier: Player): boolean
 	relic.PickupBlockedUntil = os.clock() + 1.5
 	if carrier.Character then carrier.Character:SetAttribute("CarryingRelic", nil) end
 	updateMasterMovementAttributes(carrier, os.clock())
-	RelicStateRemote:FireAllClients(relic.RelicId, relic.TierId, "DROP", carrier.UserId, 0)
+	Tower.BroadcastAt(RelicStateRemote,relic,relic.RelicId, relic.TierId, "DROP", carrier.UserId, 0)
 	return true
 end
 
@@ -267,6 +275,7 @@ function RelicService.FumbleRelicOnAoEHit(carrier: Player)
 		return
 	end
 
+	Tower.CancelPending(carrier,"CARGO_CHANGED")
 	local now = os.clock()
 	if relic.Weld then
 		relic.Weld:Destroy()
@@ -283,7 +292,7 @@ function RelicService.FumbleRelicOnAoEHit(carrier: Player)
 	end
 
 	relic.Part.Anchored = true
-	relic.Part.Position = Vector3.new(dropPos.X, math.max(3.5, dropPos.Y), dropPos.Z)
+	relic.Part.Position = Tower.GroundDrop(relic,dropPos,relic.Part.Size.Y/2)
 	relic.LockedUserId = carrier.UserId
 	relic.LockExpiresAt = now + FUMBLE_OWNER_LOCK_SECONDS
 
@@ -292,7 +301,7 @@ function RelicService.FumbleRelicOnAoEHit(carrier: Player)
 
 	local dm = getDataManager()
 	dm.SendToast(carrier, "💥 AoE Hit! Stunned 1.0s & Fumbled Relic (3.0s Owner-Lock before stealable)!", "WARN")
-	RelicStateRemote:FireAllClients(relic.RelicId, relic.TierId, "FUMBLE", carrier.UserId, relic.LockExpiresAt)
+	Tower.BroadcastAt(RelicStateRemote,relic,relic.RelicId, relic.TierId, "FUMBLE", carrier.UserId, relic.LockExpiresAt)
 end
 
 local function awardRelicPayout(player: Player, spec: any, scalar: number)
@@ -342,6 +351,8 @@ local function destroyRelicInstance(relic: ActiveRelic)
 end
 
 function RelicService.ExtractOnPrivatePad(carrier: Player)
+	local location=Tower.GetState(carrier)
+	if location.FloorId~=0 or not location.BankArmed or Tower.IsTransitioning(carrier) then return end
 	local relic = CarrierToRelic[carrier]
 	if not relic then
 		return
@@ -352,9 +363,22 @@ function RelicService.ExtractOnPrivatePad(carrier: Player)
 		return
 	end
 
-	local spec = RelicConfig[relic.TierId]
-	awardRelicPayout(carrier, spec, 1.00)
-	RelicStateRemote:FireAllClients(relic.RelicId, relic.TierId, "EXTRACT_PRIVATE", carrier.UserId, 0)
+ local hum,root=getCharacterParts(carrier)
+ if not hum or hum.Health<=0 or not root or relic.Carrier~=carrier or not Tower.Same(location,relic) or os.clock()>=relic.DespawnAt then return end
+ local validPad=false
+ for _,plot in PlotsFolder:GetChildren() do
+  local pad=plot:FindFirstChild("PrivateExtractionPad")
+  if plot:GetAttribute("OwnerUserId")==carrier.UserId and pad and pad:IsA("BasePart") then
+   local at=pad.CFrame:PointToObjectSpace(root.Position)
+   if math.abs(at.X)<=pad.Size.X/2+2 and math.abs(at.Z)<=pad.Size.Z/2+2 and at.Y>=-2 and at.Y<=12 then validPad=true;break end
+  end
+ end
+ if not validPad then return end
+ local spec = RelicConfig[relic.TierId]
+ -- Remove authoritative identity before payout/replication to make reentry idempotent.
+ CarrierToRelic[carrier]=nil;ActiveRelics[relic.RelicId]=nil
+ awardRelicPayout(carrier, spec, 1.00)
+	Tower.BroadcastAt(RelicStateRemote,relic,relic.RelicId, relic.TierId, "EXTRACT_PRIVATE", carrier.UserId, 0)
 	destroyRelicInstance(relic)
 end
 
@@ -364,6 +388,7 @@ RunService.Heartbeat:Connect(function()
 
 	for _, relic in pairs(ActiveRelics) do
 		local spec = RelicConfig[relic.TierId]
+		if now>=relic.DespawnAt then destroyRelicInstance(relic);continue end
 		if relic.Carrier == nil then
 			if now >= relic.DespawnAt then
 				destroyRelicInstance(relic)
@@ -401,7 +426,7 @@ RunService.Heartbeat:Connect(function()
 				-- Check Private Extraction Pad on Carrier's Plot (or any plot if testing)
 				for _, plotModel in ipairs(PlotsFolder:GetChildren()) do
 					local ownerId = plotModel:GetAttribute("OwnerUserId")
-					if ownerId == carrier.UserId or ownerId == 0 then
+					if ownerId == carrier.UserId then
 						local pad = plotModel:FindFirstChild("PrivateExtractionPad") :: BasePart?
 						if pad and (hrp.Position - pad.Position).Magnitude <= 10.5 then
 							RelicService.ExtractOnPrivatePad(carrier)
@@ -430,4 +455,13 @@ Players.PlayerRemoving:Connect(function(player: Player)
 	PlayerStunnedUntil[player] = nil
 end)
 
+Tower.RegisterAdapter("Relic",{
+ CaptureCargo=function(player) return CarrierToRelic[player] end,
+ DropCargo=function(player)
+  local relic=CarrierToRelic[player]
+  if relic then RelicService.DropCarriedRelic(player);relic.LockedUserId=nil;relic.LockExpiresAt=0 end
+ end,
+ Pins=function(id,gen) for _,relic in pairs(ActiveRelics) do if relic.FloorId==id and relic.RoomGeneration==gen then return true end end;return false end,
+})
+if RunService:IsStudio() then RelicService.DebugRelics=function() return ActiveRelics,CarrierToRelic end end
 _G.RelicService = RelicService

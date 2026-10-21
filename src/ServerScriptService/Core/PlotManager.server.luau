@@ -153,6 +153,7 @@ function PlotManager.TeleportPlayerToPlot(player: Player)
 	local hrp = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
 	if spawnLoc and hrp then
 		hrp.CFrame = spawnLoc.CFrame * CFrame.new(0, 4, 0)
+		require(script.Parent.TowerFloorService).CommitRespawn(player)
 	end
 end
 

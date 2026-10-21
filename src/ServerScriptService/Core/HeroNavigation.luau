@@ -144,7 +144,7 @@ function Navigation.Step(hero: any, goal: Vector3, distance: number, now: number
 	local nextPosition, clear = walkSegment(old, destination, distance, group)
 	-- Sweep against other heroes too, so a fast tick cannot move through a squadmate.
 	for other in pairs(states) do
-		if other ~= hero and other.State ~= "COMA" and other.Position and math.abs(other.Position.Y - nextPosition.Y) < 3 then
+		if other ~= hero and other.FloorId==hero.FloorId and other.RoomGeneration==hero.RoomGeneration and other.State ~= "COMA" and other.Position and math.abs(other.Position.Y - nextPosition.Y) < 3 then
 			local movement = Vector3.new(nextPosition.X - old.X, 0, nextPosition.Z - old.Z)
 			local offset = Vector3.new(other.Position.X - old.X, 0, other.Position.Z - old.Z)
 			local function clearance(delta: Vector3): number

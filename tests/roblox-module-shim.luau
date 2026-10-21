@@ -50,7 +50,9 @@ function Color3.new(r, g, b)
 	return { R = r, G = g, B = b }
 end
 function Color3.fromHex(hex)
-	return Color3.new(1, 1, 1)
+	local digits = string.gsub(hex, "^#", "")
+	assert(#digits == 6, "Test Color3 expects six hex digits")
+	return Color3.fromRGB(tonumber(string.sub(digits, 1, 2), 16), tonumber(string.sub(digits, 3, 4), 16), tonumber(string.sub(digits, 5, 6), 16))
 end
 
 local Random = {}
@@ -59,3 +61,10 @@ function Random.new()
 end
 
 local warn = print
+
+local Vector3 = {}
+local vectorMeta = {}
+function Vector3.new(x, y, z) return setmetatable({X=x,Y=y,Z=z},vectorMeta) end
+vectorMeta.__add=function(a,b) return Vector3.new(a.X+b.X,a.Y+b.Y,a.Z+b.Z) end
+vectorMeta.__sub=function(a,b) return Vector3.new(a.X-b.X,a.Y-b.Y,a.Z-b.Z) end
+local Vector2 = {new=function(x,y) return {X=x,Y=y} end}

@@ -2,16 +2,18 @@
 
 > **Core Concept:** An asynchronous squad-command extraction RPG and Tycoon built in Roblox. Direct squads of anime heroes in a concentric arena, extract physical loot drops, dodge high-stakes telegraphed boss mechanics, and manage your private Waiting Room tycoon.
 
+Tower rebuild status: **Parts 1–3 are complete and verified for their recorded gates.** Floors 1 and 5 have working combat and damage feedback with prototype visuals; all 50 destinations are available as development rooms. Animation/art polish, Part 4 content/UI expansion, and Part 5 release verification are **deferred until requested again**. Start with the [tower documentation index](docs/tower-rebuild/README.md) for current scope, evidence, and deferred plans. This is a verified combat slice, not a completed 50-floor content release.
+
 ---
 
 ## 🏛️ Architectural Standards
 
 - **Zero Server-Side Humanoids:** All active combat entities (Heroes, Ring 1 Mobs, Ring 2 Elites, and Ring 3 World Boss) run as lightweight Luau table state machines on the server.
 - **5 Hz Server Simulation Loop:** Tick rate of `0.20s` (`5 Hz`) guarantees deterministic math, leashing, and collision-free spatial management.
-- **60 FPS Client RenderStepped Interpolation:** Visual rigs are interpolated smoothly on the client (`RenderStepped`) from a compact 14-byte binary buffer broadcast over `UnreliableRemoteEvent` (`5-byte` packet header, `14 bytes` per entity including quantized Y floor height; at most 64 entities per packet).
+- **Client RenderStepped Interpolation:** Visual rigs interpolate room-local v2 snapshots scoped to their viewer context (`46-byte` header, `24-byte` entity records, 32 records per unreliable packet). Reliable roster bootstrap establishes identity; session/floor/room generation/view epoch reject stale traffic. Every relevant entity is batched without a global 255-entity cap.
 - **Floating Island & Central Crimson Tower Architecture:**
   - 5 floating fortress plot islands arranged symmetrically in a ring ($R = 540\text{ studs}$, $72^\circ$ spacing, $Y = 12$) facing the Central Crimson Tower.
-  - Central Crimson Tower featuring 18 fully walkable platforms, quarter-turn ascent ramps with server-side collision, and grounded waypoint navigation for lightweight hero entities.
+  - Cosmetic Central Crimson Tower with a floor selector leading to isolated rooms. All 50 IDs are available; room art is currently labeled development fixtures, with specific transport probes on floors 1, 5, and 50. The old 18-floor ascent is retained for recovery. Lightweight heroes retain grounded waypoint navigation.
 - **Equippable Artifact & Blacksmith System:**
   - 6 archetypally restricted weapon classes (Bows, Swords, Daggers, Axes, Tomes, Staves) with permanent 1★–7★ Base Stat seeds.
   - Deterministic 16-tier Rarity upgrade path (`Common` $\to$ `Origin`) at the Waiting Room Blacksmith Forge using Gold and Gems, multiplying base stats up to $18.00\times$.

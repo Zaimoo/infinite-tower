@@ -1,0 +1,15 @@
+{
+  "PlaceId": 136256010643848,
+  "StudioMode": "Edit",
+  "DeviceSimulator": "default",
+  "TemporaryMultiplayerEditScripts": 0,
+  "NativeRecoveryPresent": true,
+  "FinalPlayStreamingEnabled": true,
+  "FinalPlayRuntimeErrors": [],
+  "FinalClientRegression": "6 passed, 0 failed",
+  "FinalResponsiveSelectorMouseCheck": "Floor 50 reached",
+  "MappedSourceStudioMatches": 13,
+  "ProductionCompilation": "Passed",
+  "CLITests": { "Pit": 52, "Foundation": 9, "Transport": 12, "Failed": 0 },
+  "NewFloorEncountersEnabled": false
+}
