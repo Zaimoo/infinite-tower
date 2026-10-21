@@ -17,8 +17,8 @@ In traditional gacha/simulator games, 95% of summons are discarded as worthless 
 1. **The Dual-Role Living Roster (Combat + Labor):**
    - Every hero pulled from the Summoning Altar rolls with **Combat Stats** (`HP`, `ATK`, `Range`), **Labor Output** (Tycoon productivity), and a **Passive Trait**.
    - **Up to 5 Deployed Heroes** accompany the Master into the Central Crimson Tower and surrounding rings, expending **Stamina** as they fight and risking a debilitating **60-second Coma** if left inside lethal AoE telegraphs.
-   - **Benched Heroes** do not sit idle in an inventory menu—they physically inhabit the player's **Waiting Room** plot as visible workers powering the **Mana Conduit** (Gem generation), **The Infirmary & Barracks** (Stamina & Coma recovery), and weapon refinement at the **Blacksmith Forge**.
-   - **Zero Dead Pulls:** Every duplicate 1★–3★ hero is immediately valuable as a specialized Tycoon worker, **Synthesis ("The Pit")** XP fodder, or a required sacrifice for **Star Promotion** (the exclusive pathway to 4★ and 5★ heroes).
+   - **Benched Heroes** do not sit idle in an inventory menu—they physically inhabit the player's **Waiting Room** plot on recuperation beds in **The Infirmary & Barracks** (Stamina & Coma recovery), or can be upgraded with gear at the **Blacksmith Forge**.
+   - **Zero Dead Pulls:** Every duplicate 1★–3★ hero is immediately valuable as **Synthesis ("The Pit")** XP fodder, or a required sacrifice for **Star Promotion** (the exclusive pathway to 4★ and 5★ heroes).
 
 2. **Tactical Master Agency Over AFK Whaling:**
    - The Master carries no personal weapon. Instead, the Master directs squads through battlefield commands—**`[Click / Tap]` Focus Target**, **`[Q]` Overdrive Whistle**, and **`[E]` Emergency Recall Whistle**—while physically hauling heavy, high-value **Relics** and cargo back to their plot.
@@ -52,11 +52,11 @@ flowchart TD
         M5 --> M1
     end
 
-    subgraph Meso["15-Minute Loop: Tycoon, Synthesis & Blacksmith"]
-        T1["Collect Gems (Mana Conduit) & Gold Drops"] --> T2["Summon at Altar (100 Gems) & Assign Tycoon Workers"]
+    subgraph Meso["15-Minute Loop: Recovery, Synthesis & Blacksmith"]
+        T1["Gather Gold & Gems from Drops & Relics"] --> T2["Summon at Altar (100 Gems) & Manage Squad"]
         T2 --> T3["The Pit: Feed Duplicates in Synthesis & Promote Stars (1★ -> 5★)"]
         T3 --> T4["The Blacksmith: Upgrade Weapon Rarity (Common -> Origin)"]
-        T4 --> T5["Social: Bless Neighbor Facilities or Purge Leech Runes"]
+        T4 --> T5["Social: Bless Neighbor Infirmary or Purge Leech Runes"]
     end
 
     subgraph Macro["20-Minute Loop: World Boss & Calamity Heart"]
@@ -88,12 +88,11 @@ flowchart TD
    - Depleted heroes (`Stamina < 25%`) are swapped into **Infirmary Recuperation Beds**, and fresh rested heroes are rotated into the active squad.
 
 ### 2.2 The 15-Minute Meso Loop (Tycoon, Synthesis & Blacksmith Progression)
-1. **Facility Harvesting & Upkeep (Every 3–5 Minutes):**
-   - Collect accumulated Gems from the physical chest at the **Mana Conduit**.
-   - Inspect facilities for suspicious visitor activity; trigger **Purge Facility** within `15s` if a visitor planted a **Leech Rune**, or toggle **Mimic Chest Illusions** to bait thieves.
+1. **Facility Upkeep (Every 3–5 Minutes):**
+   - Inspect Infirmary beds, swap resting heroes, and manage visitor interactions.
 2. **Summoning & Roster Compression (Every 5–10 Minutes):**
    - Spend Gems (`100 Gems` per roll) at the **Summoning Altar** to pull 1★ (70%), 2★ (25%), and 3★ (5%) heroes.
-   - Slot high-Labor rolls into the Mana Conduit and Infirmary.
+   - Slot heroes into the Infirmary for accelerated recovery.
    - Feed duplicates into **The Pit (Synthesis)** via the dedicated UI modal (`SynthesisController.luau`) to level heroes to their cap (`MaxLevel = Stars * 10`), then execute **Star Promotions** ($1★ \to 5★$) using Promotion Stones.
 3. **Artifact Equipping & The Blacksmith Forge (Every 5–10 Minutes):**
    - Equip archetypally matched weapons (Bows for Marksman, Swords/Daggers for Striker, Swords/Axes for Vanguard, Axes for Miner, Staves/Tomes for Scholar).
@@ -156,13 +155,12 @@ flowchart TD
 | **Ring 2: Corrupted Grove** | `120 – 280 studs` | `160 studs` annulus | Open to all | High-density Elites with red AoE telegraphs. Contested loot PvP active. | **Cursed Urns**, **Abyssal Cores**, High Gold |
 | **Ring 1: Outer Ruins** | `280 – 460 studs` | `180 studs` annulus | Open from start | Low-level mobs & Mana Crystal nodes. Contested loot PvP active. | **Mana Geodes**, Starter Gold |
 | **Perimeter Highway** | `460 – 480 studs` | `20 studs` paved ring road | Open to all | **Safe Zone** (No mobs). Safe banking threshold ($R \ge 460$). | Banked cargo conversion |
-| **5 Floating Plot Islands** | `R = 540 studs` ($Y = 12$) | Fortress island mesh with courtyard & walls | Plot Owner + Visitors | Safe Zone. Visitors can inspect or Bless/Leech facilities. | Passive **Gems** (Conduit), Healing, Blacksmithing |
+| **5 Floating Plot Islands** | `R = 540 studs` ($Y = 12$) | Fortress island mesh with courtyard & walls | Plot Owner + Visitors | Safe Zone. Visitors can inspect or Bless/Leech Infirmary. | Healing, Blacksmithing, Synthesis |
 
 ### 3.3 Private Plot Internal Layout
 Each of the 5 Floating Fortress Islands is oriented toward the Central Crimson Tower:
 - **Plaza & Extraction Pad:** Glowing cyan platform for depositing carried cargo into permanent vault currency.
 - **Summoning Altar & The Pit:** Obelisk for 100-Gem Gacha pulls and the fiery Synthesis Cauldron (`SynthesisController.luau`) for feeding XP and promoting hero stars.
-- **Mana Conduit:** 3 worker pedestals + physical **Gem Chest** (supports Mimic Illusion states).
 - **The Infirmary & Barracks:** Recuperation Beds where exhausted or `Coma`-afflicted heroes physically lie down while Healer workers channel recovery beams.
 - **The Blacksmith Forge:** Interactive 3D station featuring an anvil, hearth coals, workbench, and `[E]` ProximityPrompt for weapon ascension.
 
@@ -179,12 +177,12 @@ Every summoned hero rolls a `QualityScalar` $q \in [0.90, 1.15]$ applied to thei
 
 | Archetype | Base HP ($HP_0$) | Base ATK ($ATK_0$) | Attack Interval ($t_{\text{atk}}$) | Attack Range | Base Labor ($L_0$) | Preferred Facility (+25% Synergy) |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Vanguard** (Tank) | `450` | `22` | `1.20s` | `6 studs` | `10 / min` | Mana Conduit |
-| **Striker** (Melee DPS) | `280` | `38` | `0.85s` | `6 studs` | `12 / min` | Mana Conduit |
-| **Marksman** (Ranged DPS) | `210` | `34` | `0.80s` | `28 studs` | `13 / min` | Mana Conduit |
-| **Miner** (Gem Specialist) | `300` | `20` | `1.05s` | `6 studs` | `20 / min` | **Mana Conduit** |
+| **Vanguard** (Tank) | `450` | `22` | `1.20s` | `6 studs` | `10 / min` | None |
+| **Striker** (Melee DPS) | `280` | `38` | `0.85s` | `6 studs` | `12 / min` | None |
+| **Marksman** (Ranged DPS) | `210` | `34` | `0.80s` | `28 studs` | `13 / min` | None |
+| **Miner** (Gem Specialist) | `300` | `20` | `1.05s` | `6 studs` | `20 / min` | None |
 | **Healer** (Infirmary Spec.) | `260` | `18` | `1.25s` | `24 studs` | `18 / min` | **The Infirmary & Barracks** |
-| **Scholar** (Spell Specialist)| `220` | `24` | `1.00s` | `26 studs` | `22 / min` | **Mana Conduit** |
+| **Scholar** (Spell Specialist)| `220` | `24` | `1.00s` | `26 studs` | `22 / min` | None |
 
 ### 4.2 Effective Combat & Labor Formulas
 - **Level Cap Formula:** $\text{MaxLevel}(S) = S \times 10$ (`1★ = Lv.10`, `2★ = Lv.20`, `3★ = Lv.30`, `4★ = Lv.40`, `5★ = Lv.50`).
@@ -200,11 +198,7 @@ Every summoned hero rolls a `QualityScalar` $q \in [0.90, 1.15]$ applied to thei
 ### 4.3 Waiting Room Facility Output Formulas
 Each facility upgrades from **Level 1 to Level 5** using Gold:
 
-1. **Mana Conduit (Gems / Minute):**
-   $$\text{GemsPerMin} = \Big(5 \times F + 0.45 \times \sum \text{EffectiveLabor}\Big) \times \big(1 + 0.12(F - 1)\big) \times M_{\text{BlessOrLeech}}$$
-   *(Where $M_{\text{BlessOrLeech}} = 1.25$ if Blessed, $0.80$ if Leeched).*
-
-2. **The Infirmary & Barracks (Stamina Regen & Coma Reduction):**
+**The Infirmary & Barracks (Stamina Regen & Coma Reduction):**
    - **Stamina Recovery Rate:** $\text{StaminaRegenPerSec} = 2.5 + (0.4 \times F) + (0.06 \times \sum \text{EffectiveLabor})$
    - **Coma Duration Reduction:** $\text{EffectiveComaDuration} = \max\left(20\text{s}, \frac{60\text{s}}{1 + 0.05(F - 1) + 0.008 \sum \text{EffectiveLabor}}\right)$
 
@@ -258,11 +252,10 @@ Qualification: Deal $\ge 3.0\%$ of Boss Total HP.
 6. **Perimeter Banking:** Reaching the perimeter or plot pad safely banks loot into permanent Gold and Gems.
 
 ### 6.2 Waiting Room Espionage & Mimic Bluffing
-Visitors can walk onto any neighbor's plot and channel `[E]` (`2.0s`) on the **Mana Conduit** or **Infirmary**:
+Visitors can walk onto any neighbor's plot and channel `[E]` (`2.0s`) on the **Infirmary**:
 - **Bless Facility (+25%):** Grants `+25%` output for 3 minutes; awards visitor `+25 Gems` and `+5 Honor`.
 - **Plant Leech Rune (-20%):** Secretly siphons `20%` of facility output for 3 minutes to the visitor.
 - **Counterplay (Purge Facility):** Owner has a `15.0s` window to activate Purge. Purging a Leech Rune stuns the visitor for `3.0s` and forces them to drop a Bounty Bag. Purging a Blessing destroys the owner's own buff.
-- **Mimic Chest Illusions:** Mana Conduit can display *True State*, *Fool's Gold* (empty looks full to bait thieves into a snap trap), or *Veil of Poverty* (full looks empty to deter visitors).
 
 ---
 

@@ -103,12 +103,6 @@ function StatFormulas.GetEffectiveLabor(hero: any, targetFacilityAssignment: str
 end
 
 -- Waiting Room Facility Output Formulas
-function StatFormulas.GetManaConduitGemsPerMin(facilityLevel: number, sumEffectiveLabor: number, blessOrLeechMult: number): number
-	local base = (5 * facilityLevel) + (0.45 * sumEffectiveLabor)
-	local levelMult = 1 + 0.12 * (facilityLevel - 1)
-	return math.round(base * levelMult * blessOrLeechMult * 10) / 10
-end
-
 function StatFormulas.GetInfirmaryRates(facilityLevel: number, sumEffectiveLabor: number): (number, number)
 	local staminaRegenPerSec = 2.5 + (0.4 * facilityLevel) + (0.06 * sumEffectiveLabor)
 	local effectiveComaSec = math.max(20, 60 / (1 + 0.05 * (facilityLevel - 1) + (0.008 * sumEffectiveLabor)))

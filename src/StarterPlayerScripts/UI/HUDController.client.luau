@@ -2,8 +2,8 @@
 -- StarterPlayerScripts/UI/HUDController.client.luau
 -- Complete Implementation of Document 4 UI/UX Wireframes:
 -- 1. MasterHUDScreenGui (Main Tactical HUD + Clean Bottom Toolbar)
--- 2. WaitingRoomScreenGui (Tycoon, Facilities, Tech Tree, Gacha & Roster)
--- 3. Facility HUDs (Synthesis & Promotion)
+-- 2. SquadDeployScreenGui (Active 5-Hero Squad & Roster Management via War Banner)
+-- 3. ThePitScreenGui (Synthesis XP Fodder & 1->5 Star Promotion)
 -- 4. MercenaryScreenGui (Noticeboard, Secret Directives & 50G Audit Soul Reveal)
 
 local Players = game:GetService("Players")
@@ -435,25 +435,26 @@ local rightBoardText = makeLabel({
 })
 
 --============================================================================
--- 2. MODAL WINDOWS (`WaitingRoom`, `ThePit`)
+-- 2. MODAL WINDOWS (`ThePit`, `Blacksmith`, `SquadController`)
 --============================================================================
 
-local waitingRoomModal = makeFrame({
-	Name = "WaitingRoomModal",
-	Size = UDim2.new(0, 860, 0, 500),
-	Position = UDim2.new(0.5, -430, 0.5, -240),
-	BackgroundColor3 = Color3.fromRGB(18, 20, 32),
+local squadController: any = nil
+
+local pitModal = makeFrame({
+	Name = "ThePitModal",
+	Size = UDim2.new(0, 820, 0, 480),
+	Position = UDim2.new(0.5, -410, 0.5, -230),
+	BackgroundColor3 = Color3.fromRGB(26, 16, 24),
 	Visible = false,
 	Corner = 12,
 	Stroke = 2,
-	StrokeColor = Color3.fromRGB(95, 165, 255),
+	StrokeColor = Color3.fromRGB(255, 105, 45),
 	Parent = hudGui,
 })
 
-local refreshWaitingRoomModal: () -> ()
+local refreshPitModal: () -> ()
 local facilityController: any = nil
 local synthesisController: any = nil
-local promotionController: any = nil
 local refreshBlacksmithModal: () -> ()
 local selectedArtifactUUID: string? = nil
 
@@ -590,16 +591,16 @@ end
 
 -- Left: PATCH NOTES
 local patchNotesBtn = makeBarTextButton(bottomBar, "PatchNotesButton", "PATCH NOTES", 100, function()
-	showClientToast("INFINITE TOWER — Waiting Room, World Boss & Tactical Whistles Active")
+	showClientToast("INFINITE TOWER — Waiting Room, The Pit, World Boss & Tactical Whistles Active")
 end)
 patchNotesBtn.Position = UDim2.new(0, 26, 0.5, 0)
 patchNotesBtn.AnchorPoint = Vector2.new(0, 0.5)
 patchNotesBtn.TextXAlignment = Enum.TextXAlignment.Left
 
--- Center Group: 5 Infinite Tower Text Tabs | Divider | 4 Quick-Action Tool Icons
+-- Center Group: Infinite Tower Tabs | Divider | Quick-Action Tool Icons
 local centerGroup = Instance.new("Frame")
 centerGroup.Name = "CenterToolbarGroup"
-centerGroup.Size = UDim2.new(0, 692, 1, 0)
+centerGroup.Size = UDim2.new(0, 480, 1, 0)
 centerGroup.Position = UDim2.new(0.5, 0, 0, 0)
 centerGroup.AnchorPoint = Vector2.new(0.5, 0)
 centerGroup.BackgroundTransparency = 1
@@ -614,10 +615,10 @@ centerLayout.SortOrder = Enum.SortOrder.LayoutOrder
 centerLayout.Padding = UDim.new(0, 18)
 centerLayout.Parent = centerGroup
 
-local wrTabBtn = makeBarTextButton(centerGroup, "Tab_WaitingRoom", "WAITING ROOM", 98, function()
-	_G.OpenMasterModal(waitingRoomModal.Visible and "NONE" or "WAITING_ROOM")
+local pitTabBtn = makeBarTextButton(centerGroup, "Tab_ThePit", "THE PIT", 62, function()
+	_G.OpenMasterModal(pitModal.Visible and "NONE" or "THE_PIT")
 end)
-wrTabBtn.LayoutOrder = 1
+pitTabBtn.LayoutOrder = 1
 
 local forgeTabBtn = makeBarTextButton(centerGroup, "Tab_Blacksmith", "FORGE", 56, function()
 	_G.OpenMasterModal(blacksmithModal.Visible and "NONE" or "BLACKSMITH")
@@ -625,8 +626,9 @@ end)
 forgeTabBtn.LayoutOrder = 2
 
 local heroesTabBtn = makeBarTextButton(centerGroup, "Tab_Heroes", "HEROES", 62, function()
-	_G.OpenMasterModal("WAITING_ROOM")
-	AssignHeroRoleFunc:InvokeServer("AUTO_SWAP_EXHAUSTED", "")
+	if squadController then
+		squadController:Toggle()
+	end
 end)
 heroesTabBtn.LayoutOrder = 3
 
@@ -652,38 +654,12 @@ centerDivider.LayoutOrder = 6
 centerDivider.ZIndex = 11
 centerDivider.Parent = centerGroup
 
--- Icon 1: Trash Can (Purge Conduit Rune)
-local iconTrashBtn, trashCanvas = makeBarIconButton(centerGroup, "Tool_PurgeRune", function()
-	PlotEspionageEvent:FireServer(4, 1, "ManaConduit")
-	showClientToast("Purging Mana Conduit Rune...")
-end)
-iconTrashBtn.LayoutOrder = 7
-do
-	addPart(trashCanvas, 3, 2, 12, 2, 0, 1)
-	addPart(trashCanvas, 7, 0, 4, 2, 0, 1)
-	local bin = Instance.new("Frame")
-	bin.Size = UDim2.fromOffset(10, 12)
-	bin.Position = UDim2.fromOffset(4, 5)
-	bin.BackgroundTransparency = 1
-	bin.ZIndex = 11
-	bin.Parent = trashCanvas
-	local st = Instance.new("UIStroke")
-	st.Thickness = 1.6
-	st.Color = SLATE_TEXT
-	st.Parent = bin
-	local c = Instance.new("UICorner")
-	c.CornerRadius = UDim.new(0, 1)
-	c.Parent = bin
-	addPart(trashCanvas, 7, 7, 1, 7)
-	addPart(trashCanvas, 10, 7, 1, 7)
-end
-
--- Icon 2: 4-Way Move/Expand Arrows (Auto-Swap Exhausted Heroes)
+-- Icon 1: 4-Way Move/Expand Arrows (Auto-Swap Exhausted Heroes)
 local iconMoveBtn, moveCanvas = makeBarIconButton(centerGroup, "Tool_AutoSwap", function()
 	AssignHeroRoleFunc:InvokeServer("AUTO_SWAP_EXHAUSTED", "")
 	showClientToast("Swapped exhausted heroes with fresh bench heroes!")
 end)
-iconMoveBtn.LayoutOrder = 8
+iconMoveBtn.LayoutOrder = 7
 do
 	addPart(moveCanvas, 2, 2, 5, 2)
 	addPart(moveCanvas, 2, 2, 2, 5)
@@ -697,24 +673,13 @@ do
 	addPart(moveCanvas, 3, 8, 12, 2, -45)
 end
 
--- Icon 3: Paint Bucket / Collect Gems (Collect Mana Conduit)
-local iconBucketBtn, bucketCanvas = makeBarIconButton(centerGroup, "Tool_CollectGems", function()
-	FacilityInteractEvent:FireServer("COLLECT_CONDUIT")
-	showClientToast("Collected Mana Conduit Gems!")
-end)
-iconBucketBtn.LayoutOrder = 9
-do
-	local body = addPart(bucketCanvas, 4, 5, 8, 8, 45, 1)
-	body.ZIndex = 11
-	addPart(bucketCanvas, 6, 2, 5, 2, -25, 1)
-	addPart(bucketCanvas, 13, 12, 3, 4, 0, 2)
-end
-
--- Icon 4: 3x3 Grid (Toggle Summon / Roster View)
+-- Icon 2: 3x3 Grid (Toggle Squad Deploy Modal)
 local iconGridBtn, gridCanvas = makeBarIconButton(centerGroup, "Tool_RosterGrid", function()
-	_G.OpenMasterModal(waitingRoomModal.Visible and "NONE" or "WAITING_ROOM")
+	if squadController then
+		squadController:Toggle()
+	end
 end)
-iconGridBtn.LayoutOrder = 10
+iconGridBtn.LayoutOrder = 8
 do
 	for row = 0, 2 do
 		for col = 0, 2 do
@@ -779,23 +744,32 @@ _G.TriggerHUDWhistleCooldown = function(which: string)
 end
 
 local function updateBottomTabHighlights()
-	local wrActive = waitingRoomModal.Visible
+	local pitActive = pitModal.Visible
 	local forgeActive = blacksmithModal.Visible
-	wrTabBtn:SetAttribute("IsActiveTab", wrActive)
+	local squadActive = squadController ~= nil and squadController:IsOpen()
+	pitTabBtn:SetAttribute("IsActiveTab", pitActive)
 	forgeTabBtn:SetAttribute("IsActiveTab", forgeActive)
-	wrTabBtn.TextColor3 = wrActive and SLATE_ACTIVE or SLATE_TEXT
+	heroesTabBtn:SetAttribute("IsActiveTab", squadActive)
+	pitTabBtn.TextColor3 = pitActive and SLATE_ACTIVE or SLATE_TEXT
 	forgeTabBtn.TextColor3 = forgeActive and SLATE_ACTIVE or SLATE_TEXT
+	heroesTabBtn.TextColor3 = squadActive and SLATE_ACTIVE or SLATE_TEXT
 end
 
 _G.OpenMasterModal = function(which: string)
 	if facilityController then facilityController:Close() end
 	if synthesisController then synthesisController:Close() end
-	if promotionController then promotionController:Close() end
-	waitingRoomModal.Visible = (which == "WAITING_ROOM")
+	if which ~= "SQUAD" and which ~= "WAITING_ROOM" and squadController and squadController:IsOpen() then
+		squadController:Close()
+	end
+	pitModal.Visible = (which == "THE_PIT")
 	blacksmithModal.Visible = (which == "BLACKSMITH")
 	updateBottomTabHighlights()
-	if which == "WAITING_ROOM" and refreshWaitingRoomModal then
-		refreshWaitingRoomModal()
+	if which == "WAITING_ROOM" or which == "SQUAD" then
+		if squadController then
+			squadController:Open()
+		end
+	elseif which == "THE_PIT" and refreshPitModal then
+		refreshPitModal()
 	elseif which == "BLACKSMITH" and refreshBlacksmithModal then
 		refreshBlacksmithModal()
 	end
@@ -805,14 +779,25 @@ end
 makeButton({
 	Size = UDim2.new(0, 118, 1, 0),
 	BackgroundColor3 = Color3.fromRGB(45, 115, 205),
-	Text = " Waiting Room",
+	Text = "⚔️ Squad Deploy",
 	Corner = 6,
 	OnClick = function()
-		_G.OpenMasterModal(waitingRoomModal.Visible and "NONE" or "WAITING_ROOM")
+		if squadController then
+			squadController:Toggle()
+		end
 	end,
 	Parent = navButtonsFrame,
 })
-
+makeButton({
+	Size = UDim2.new(0, 100, 1, 0),
+	BackgroundColor3 = Color3.fromRGB(210, 85, 35),
+	Text = " The Pit",
+	Corner = 6,
+	OnClick = function()
+		_G.OpenMasterModal(pitModal.Visible and "NONE" or "THE_PIT")
+	end,
+	Parent = navButtonsFrame,
+})
 makeButton({
 	Size = UDim2.new(0, 118, 1, 0),
 	BackgroundColor3 = Color3.fromRGB(155, 40, 210),
@@ -835,322 +820,57 @@ makeButton({
 })
 
 --============================================================================
--- 3. BUILD WAITING ROOM MODAL CONTENTS (Document 4 Section 2)
+-- 3. SQUAD DEPLOY & PIT CONTROLLERS
 --============================================================================
-
-makeLabel({
-	Size = UDim2.new(0.75, 0, 0, 36),
-	Position = UDim2.new(0.02, 0, 0, 6),
-	Text = " THE WAITING ROOM",
-	TextColor3 = Color3.fromRGB(115, 200, 255),
-	TextXAlignment = Enum.TextXAlignment.Left,
-	Parent = waitingRoomModal,
-})
-makeButton({
-	Size = UDim2.new(0, 90, 0, 30),
-	Position = UDim2.new(1, -100, 0, 9),
-	BackgroundColor3 = Color3.fromRGB(185, 45, 60),
-	Text = "X CLOSE",
-	Corner = 6,
-	OnClick = function()
-		waitingRoomModal.Visible = false
-		updateBottomTabHighlights()
-	end,
-	Parent = waitingRoomModal,
-})
-
-local wrLeftPane = makeFrame({
-	Size = UDim2.new(0.47, 0, 1, -54),
-	Position = UDim2.new(0.015, 0, 0, 46),
-	BackgroundColor3 = Color3.fromRGB(24, 27, 42),
-	Corner = 8,
-	Parent = waitingRoomModal,
-})
-
-local wrRightPane = makeFrame({
-	Size = UDim2.new(0.485, 0, 1, -54),
-	Position = UDim2.new(0.50, 0, 0, 46),
-	BackgroundColor3 = Color3.fromRGB(24, 27, 42),
-	Corner = 8,
-	Parent = waitingRoomModal,
-})
-
--- Left Pane Controls: Auto-Swap, Mana Conduit & Infirmary
-makeButton({
-	Size = UDim2.new(0.94, 0, 0, 32),
-	Position = UDim2.new(0.03, 0, 0, 8),
-	BackgroundColor3 = Color3.fromRGB(45, 165, 110),
-	Text = " REST EXHAUSTED & DEPLOY FRESH HEROES",
-	Corner = 6,
-	OnClick = function()
-		AssignHeroRoleFunc:InvokeServer("AUTO_SWAP_EXHAUSTED", "")
-	end,
-	Parent = wrLeftPane,
-})
-
-local conduitSummaryLbl = makeLabel({
-	Size = UDim2.new(0.94, 0, 0, 42),
-	Position = UDim2.new(0.03, 0, 0, 46),
-	Text = "1. MANA CONDUIT [Lv.1] — Gem Chest: 0 / 150",
-	TextColor3 = Color3.fromRGB(95, 215, 255),
-	TextXAlignment = Enum.TextXAlignment.Left,
-	Parent = wrLeftPane,
-})
-
-makeButton({
-	Size = UDim2.new(0.30, 0, 0, 28),
-	Position = UDim2.new(0.03, 0, 0, 90),
-	BackgroundColor3 = Color3.fromRGB(35, 145, 205),
-	Text = " COLLECT GEMS",
-	Corner = 6,
-	OnClick = function()
-		FacilityInteractEvent:FireServer("COLLECT_CONDUIT")
-	end,
-	Parent = wrLeftPane,
-})
-makeButton({
-	Size = UDim2.new(0.30, 0, 0, 28),
-	Position = UDim2.new(0.35, 0, 0, 90),
-	BackgroundColor3 = Color3.fromRGB(65, 115, 185),
-	Text = " UPGRADE MANA",
-	Corner = 6,
-	OnClick = function()
-		FacilityInteractEvent:FireServer("UPGRADE_FACILITY", "ManaConduit")
-	end,
-	Parent = wrLeftPane,
-})
-makeButton({
-	Size = UDim2.new(0.30, 0, 0, 28),
-	Position = UDim2.new(0.67, 0, 0, 90),
-	BackgroundColor3 = Color3.fromRGB(205, 115, 30),
-	Text = " PURGE RUNE (15s)",
-	Corner = 6,
-	OnClick = function()
-		PlotEspionageEvent:FireServer(4, 1, "ManaConduit")
-	end,
-	Parent = wrLeftPane,
-})
-
--- Mimic Chest & Espionage Row
-makeButton({
-	Size = UDim2.new(0.30, 0, 0, 26),
-	Position = UDim2.new(0.03, 0, 0, 122),
-	BackgroundColor3 = Color3.fromRGB(145, 95, 35),
-	Text = " MIMIC CHEST",
-	Corner = 5,
-	OnClick = function()
-		PlotEspionageEvent:FireServer(5, 1, "FOOLS_GOLD")
-	end,
-	Parent = wrLeftPane,
-})
-makeButton({
-	Size = UDim2.new(0.30, 0, 0, 26),
-	Position = UDim2.new(0.35, 0, 0, 122),
-	BackgroundColor3 = Color3.fromRGB(55, 155, 95),
-	Text = " Bless (+25 Gems)",
-	Corner = 5,
-	OnClick = function()
-		PlotEspionageEvent:FireServer(2, 1, "ManaConduit")
-	end,
-	Parent = wrLeftPane,
-})
-makeButton({
-	Size = UDim2.new(0.30, 0, 0, 26),
-	Position = UDim2.new(0.67, 0, 0, 122),
-	BackgroundColor3 = Color3.fromRGB(165, 40, 85),
-	Text = " Plant Leech (-20%)",
-	Corner = 5,
-	OnClick = function()
-		PlotEspionageEvent:FireServer(3, 1, "ManaConduit")
-	end,
-	Parent = wrLeftPane,
-})
-
--- Infirmary Section
-local infirmarySummaryLbl = makeLabel({
-	Size = UDim2.new(0.62, 0, 0, 42),
-	Position = UDim2.new(0.03, 0, 0, 156),
-	Text = "2. THE INFIRMARY & BARRACKS [Lv.1]",
-	TextColor3 = Color3.fromRGB(95, 245, 150),
-	TextXAlignment = Enum.TextXAlignment.Left,
-	Parent = wrLeftPane,
-})
-makeButton({
-	Size = UDim2.new(0.30, 0, 0, 32),
-	Position = UDim2.new(0.67, 0, 0, 160),
-	BackgroundColor3 = Color3.fromRGB(45, 155, 95),
-	Text = " UPGRADE",
-	Corner = 6,
-	OnClick = function()
-		FacilityInteractEvent:FireServer("UPGRADE_FACILITY", "Infirmary")
-	end,
-	Parent = wrLeftPane,
-})
-
-makeButton({
-	Size = UDim2.new(0.94, 0, 0, 32),
-	Position = UDim2.new(0.03, 0, 0, 206),
-	BackgroundColor3 = Color3.fromRGB(30, 145, 175),
-	Text = " SUMMON RIFT WARDEN AT RING 3 (Uses 1x Rift Lure)",
-	Corner = 6,
-	OnClick = function()
-		WorldBossTriggerRemote:FireServer("USE_RIFT_LURE")
-	end,
-	Parent = wrLeftPane,
-})
-
--- Right Pane: Summoning Altar Buttons + Scrollable Hero Roster
-makeButton({
-	Size = UDim2.new(0.46, 0, 0, 34),
-	Position = UDim2.new(0.02, 0, 0, 8),
-	BackgroundColor3 = Color3.fromRGB(135, 55, 225),
-	Text = " SUMMON 1x (100 Gems)",
-	Corner = 6,
-	OnClick = function()
-		RequestSummonFunc:InvokeServer(1)
-	end,
-	Parent = wrRightPane,
-})
-makeButton({
-	Size = UDim2.new(0.46, 0, 0, 34),
-	Position = UDim2.new(0.52, 0, 0, 8),
-	BackgroundColor3 = Color3.fromRGB(185, 65, 245),
-	Text = " SUMMON 10x (900 Gems)",
-	Corner = 6,
-	OnClick = function()
-		RequestSummonFunc:InvokeServer(10)
-	end,
-	Parent = wrRightPane,
-})
-
-local rosterScroll = Instance.new("ScrollingFrame")
-rosterScroll.Size = UDim2.new(0.96, 0, 1, -54)
-rosterScroll.Position = UDim2.new(0.02, 0, 0, 48)
-rosterScroll.BackgroundTransparency = 1
-rosterScroll.ScrollBarThickness = 6
-rosterScroll.Parent = wrRightPane
-
-local rosterLayout = Instance.new("UIListLayout")
-rosterLayout.Padding = UDim.new(0, 6)
-rosterLayout.Parent = rosterScroll
-
-refreshWaitingRoomModal = function()
-	if not CurrentProfile then
-		return
-	end
-	local c = CurrentProfile.Facilities.ManaConduit
-	local inf = CurrentProfile.Facilities.Infirmary
-
-	conduitSummaryLbl.Text = string.format(
-		"1. MANA CONDUIT [Lv.%d] — Chest: %d Gems | Workers: %d | Mimic: %s",
-		c.Level, math.floor(c.UncollectedOutput), #c.AssignedHeroUUIDs, CurrentProfile.Social.MimicIllusionMode
-	)
-	infirmarySummaryLbl.Text = string.format(
-		"2. THE INFIRMARY [Lv.%d] — Healers: %d (Recovers Stamina & Clears Coma)",
-		inf.Level, #inf.AssignedHeroUUIDs
-	)
-
-	for _, child in ipairs(rosterScroll:GetChildren()) do
-		if child:IsA("Frame") then
-			child:Destroy()
-		end
-	end
-
-	local heroList = {}
-	for _, h in pairs(CurrentProfile.Heroes) do
-		table.insert(heroList, h)
-	end
-	table.sort(heroList, function(a, b)
-		if a.Stars ~= b.Stars then
-			return a.Stars > b.Stars
-		end
-		return a.Level > b.Level
-	end)
-
-	for _, h in ipairs(heroList) do
-		local row = makeFrame({
-			Size = UDim2.new(1, -8, 0, 58),
-			BackgroundColor3 = Color3.fromRGB(32, 36, 54),
-			Corner = 6,
-			Parent = rosterScroll,
-		})
-		local _, effHP, dps = StatFormulas.GetEffectiveCombatStats(h, false, false)
-		local labor = StatFormulas.GetEffectiveLabor(h, nil)
-		local stars = string.rep("", h.Stars)
-		makeLabel({
-			Size = UDim2.new(0.48, 0, 0.9, 0),
-			Position = UDim2.new(0.02, 0, 0.05, 0),
-			Text = string.format("%s %s Lv.%d (%s)\nHP:%d | DPS:%.0f | Lab:%.1f/m | [%s]", h.DisplayName, stars, h.Level, h.Archetype, effHP, dps, labor, h.Assignment),
-			TextColor3 = Color3.fromRGB(240, 240, 255),
-			TextXAlignment = Enum.TextXAlignment.Left,
-			Parent = row,
-		})
-
-		local uuid = h.UUID
-		makeButton({
-			Size = UDim2.new(0.15, 0, 0.72, 0),
-			Position = UDim2.new(0.51, 0, 0.14, 0),
-			BackgroundColor3 = Color3.fromRGB(45, 145, 215),
-			Text = "Squad",
-			Corner = 4,
-			OnClick = function()
-				AssignHeroRoleFunc:InvokeServer(uuid, "SQUAD_AUTO")
-			end,
-			Parent = row,
-		})
-		makeButton({
-			Size = UDim2.new(0.15, 0, 0.72, 0),
-			Position = UDim2.new(0.67, 0, 0.14, 0),
-			BackgroundColor3 = Color3.fromRGB(40, 165, 195),
-			Text = "Mana",
-			Corner = 4,
-			OnClick = function()
-				AssignHeroRoleFunc:InvokeServer(uuid, "FACILITY_CONDUIT")
-			end,
-			Parent = row,
-		})
-		makeButton({
-			Size = UDim2.new(0.15, 0, 0.72, 0),
-			Position = UDim2.new(0.83, 0, 0.14, 0),
-			BackgroundColor3 = Color3.fromRGB(95, 100, 120),
-			Text = "Bench",
-			Corner = 4,
-			OnClick = function()
-				AssignHeroRoleFunc:InvokeServer(uuid, "BENCHED")
-			end,
-			Parent = row,
-		})
-	end
-	rosterScroll.CanvasSize = UDim2.new(0, 0, 0, #heroList * 64)
+local SquadController = require(script.Parent:WaitForChild("SquadController"))
+squadController = SquadController.new(hudGui, function() return CurrentProfile end, TycoonRemotes)
+_G.SquadController = squadController
+_G.OpenSquadManagement = function()
+	_G.OpenMasterModal("NONE")
+	squadController:Open()
 end
 
---============================================================================
--- 4. THE PIT: modular recipient / donor workspace and authoritative transactions.
---============================================================================
+local PitController = require(script.Parent:WaitForChild("PitController"))
+local pitController = PitController.new(
+	pitModal,
+	TycoonRemotes:WaitForChild("PitRequest") :: RemoteFunction,
+	FacilityInteractEvent,
+	function() _G.OpenMasterModal("NONE") end
+)
+_G.PitController = pitController
+refreshPitModal = function() pitController:Refresh() end
 local FacilityController = require(script.Parent:WaitForChild("FacilityController"))
 facilityController = FacilityController.new(hudGui, function() return CurrentProfile end, TycoonRemotes)
 local SynthesisController = require(script.Parent:WaitForChild("SynthesisController"))
 synthesisController = SynthesisController.new(hudGui, TycoonRemotes:WaitForChild("PitRequest") :: RemoteFunction)
 _G.SynthesisController = synthesisController
-local PromotionController = require(script.Parent:WaitForChild("PromotionController"))
-promotionController = PromotionController.new(hudGui, TycoonRemotes:WaitForChild("PitRequest") :: RemoteFunction)
-_G.PromotionController = promotionController
+
 _G.OpenFacilityHUD = function(facility: string)
 	if facility == "Synthesis" then
+		-- Focused synthesis HUD: recipient slot, level preview and material slots.
 		_G.OpenMasterModal("NONE")
-		if promotionController then promotionController:Close() end
 		synthesisController:Open()
 	elseif facility == "Promotion" then
+		_G.OpenMasterModal("THE_PIT")
+		pitController:SetTab(facility)
+	elseif facility == "SquadManagement" or facility == "Squad" then
 		_G.OpenMasterModal("NONE")
-		if synthesisController then synthesisController:Close() end
-		promotionController:Open()
+		squadController:Open()
 	else
 		_G.OpenMasterModal("NONE")
-		if synthesisController then synthesisController:Close() end
-		if promotionController then promotionController:Close() end
 		facilityController:Open(facility)
 	end
 end
+
+-- Connect Plot Facility ProximityPrompts
+local ProximityPromptService = game:GetService("ProximityPromptService")
+ProximityPromptService.PromptTriggered:Connect(function(prompt, playerWhoTriggered)
+	if playerWhoTriggered ~= LocalPlayer then return end
+	local facilityId = prompt:GetAttribute("FacilityHUD")
+	if facilityId then
+		_G.OpenFacilityHUD(facilityId)
+	end
+end)
 
 --============================================================================
 -- 5. BUILD THE BLACKSMITH MODAL (EQUIPPABLE ARTIFACTS & 16-TIER RARITY FORGE)
@@ -1536,9 +1256,6 @@ ProfileDeltaSyncEvent.OnClientEvent:Connect(function(profile: any)
 	if synthesisController and synthesisController.Root and synthesisController.Root.Visible then
 		synthesisController:Refresh()
 	end
-	if promotionController and promotionController.Root and promotionController.Root.Visible then
-		promotionController:Refresh()
-	end
 
 	currencyLabel.Text = string.format(
 		" GOLD: %d    GEMS: %d",
@@ -1567,9 +1284,10 @@ ProfileDeltaSyncEvent.OnClientEvent:Connect(function(profile: any)
 		profile.RiftLuresOwned
 	)
 
-	if waitingRoomModal.Visible and refreshWaitingRoomModal then
-		refreshWaitingRoomModal()
+	if squadController and squadController:IsOpen() then
+		squadController:Refresh()
 	end
+	pitController:ProfileChanged(profile)
 	if blacksmithModal.Visible and refreshBlacksmithModal then
 		refreshBlacksmithModal()
 	end
@@ -1674,20 +1392,11 @@ do
 		_G.OpenMasterModal("NONE")
 	end)
 
-	local modalList = { waitingRoomModal, blacksmithModal }
+	local modalList = { pitModal, blacksmithModal }
 	for _, m in modalList do
 		m.AnchorPoint = Vector2.new(0.5, 0.5)
 		m.Position = UDim2.fromScale(0.5, 0.5)
 		m.ZIndex = 20
-		if m == waitingRoomModal then
-			m.BackgroundColor3 = P.surface
-			m.BackgroundTransparency = 0.02
-			stroke(m, P.gold)
-			local g = Instance.new("UIGradient")
-			g.Color = ColorSequence.new(Color3.fromRGB(25, 36, 56), P.surface)
-			g.Rotation = 100
-			g.Parent = m
-		end
 		m:GetPropertyChangedSignal("Visible"):Connect(function()
 			local any = false
 			for _, other in modalList do
@@ -2009,45 +1718,6 @@ do
 	encounterToggle.TextSize = 12
 	stroke(encounterToggle)
 
-	local wrScroll = Instance.new("ScrollingFrame")
-	wrScroll.Name = "WaitingRoomContent"
-	wrScroll.BackgroundTransparency = 1
-	wrScroll.BorderSizePixel = 0
-	wrScroll.ScrollBarThickness = 4
-	wrScroll.ScrollBarImageColor3 = P.gold
-	wrScroll.Parent = waitingRoomModal
-	wrLeftPane.Parent = wrScroll
-	wrRightPane.Parent = wrScroll
-
-	for _, list in { rosterScroll } do
-		list.AutomaticCanvasSize = Enum.AutomaticSize.Y
-		list.CanvasSize = UDim2.fromOffset(0, 0)
-		list.ScrollBarImageColor3 = P.gold
-	end
-
-	local function rowStyle(o: Instance)
-		if not o:IsA("Frame") then
-			return
-		end
-		o.BackgroundColor3 = Color3.fromRGB(23, 33, 51)
-		stroke(o)
-		if o.Parent == rosterScroll then
-			o.Size = UDim2.new(1, -10, 0, compact and 86 or 72)
-		end
-		for _, v in o:GetDescendants() do
-			if v:IsA("TextLabel") then
-				v.TextWrapped = true
-				v.TextScaled = false
-				v.TextSize = compact and 12 or 14
-			end
-		end
-	end
-	for _, list in { rosterScroll } do
-		list.ChildAdded:Connect(function(o)
-			task.defer(rowStyle, o)
-		end)
-	end
-
 	local modalWidths = { 1000 }
 	local function layout()
 		local cam = workspace.CurrentCamera
@@ -2097,11 +1767,11 @@ do
 		patchNotesBtn.Visible = w >= 720
 		local centerScale = centerGroup:FindFirstChildOfClass("UIScale") or Instance.new("UIScale", centerGroup)
 		if w < 720 then
-			centerScale.Scale = math.clamp((w - 130) / 740, 0.55, 1)
+			centerScale.Scale = math.clamp((w - 130) / 520, 0.55, 1)
 			centerGroup.Position = UDim2.new(0, 12, 0, 0)
 			centerGroup.AnchorPoint = Vector2.new(0, 0)
 		elseif w < 1040 then
-			centerScale.Scale = math.clamp((w - 280) / 740, 0.72, 1)
+			centerScale.Scale = math.clamp((w - 260) / 510, 0.72, 1)
 			centerGroup.Position = UDim2.new(0.5, 0, 0, 0)
 			centerGroup.AnchorPoint = Vector2.new(0.5, 0)
 		else
@@ -2110,30 +1780,8 @@ do
 			centerGroup.AnchorPoint = Vector2.new(0.5, 0)
 		end
 
-		waitingRoomModal.Size = UDim2.fromOffset(math.min(w - 24, modalWidths[1]), math.min(h - 70, 560))
-		wrScroll.Position = UDim2.fromOffset(12, 48)
-		wrScroll.Size = UDim2.new(1, -24, 1, -62)
-		if stackPanels then
-			wrScroll.CanvasSize = UDim2.fromOffset(0, 810)
-			wrLeftPane.Position = UDim2.fromOffset(0, 0)
-			wrLeftPane.Size = UDim2.new(1, -10, 0, 410)
-			wrRightPane.Position = UDim2.fromOffset(0, 430)
-			wrRightPane.Size = UDim2.new(1, -10, 0, 350)
-		else
-			wrScroll.CanvasSize = UDim2.fromOffset(0, 0)
-			wrLeftPane.Position = UDim2.fromScale(0, 0)
-			wrLeftPane.Size = UDim2.new(0.48, 0, 1, 0)
-			wrRightPane.Position = UDim2.fromScale(0.5, 0)
-			wrRightPane.Size = UDim2.new(0.5, -10, 1, 0)
-		end
-
-
-
-		for _, list in { rosterScroll } do
-			for _, o in list:GetChildren() do
-				rowStyle(o)
-			end
-		end
+		-- The Pit composes its own columns and phone steps from these bounds.
+		pitModal.Size = UDim2.fromOffset(math.min(w - 20, 1340), math.max(360, math.min(h - 76, 850)))
 	end
 
 	task.defer(layout)

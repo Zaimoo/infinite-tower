@@ -66,7 +66,7 @@
 | **Retaliate Attack** | `[⚔️ RETALIATE]` | Single-click HUD response when your drop is stolen to unleash squad PvP. |
 | **Blacksmith Forge** | `[E]` / Prompt | Approach the Blacksmith Forge on your plot to view, equip, and ascend weapon rarities (Common $\to$ Origin). |
 | **The Pit (Synthesis)** | `[E]` / `[F]` / Prompt | Approach the Pit cauldron to open the dedicated Synthesis UI modal (recipient slot, 5 donor slots, level preview) or star promotion. |
-| **Facility HUDs** | `[F]` / Prompt | Approach Summoning Altar, Infirmary, Mana Conduit, or Squad Management to open focused facility HUDs. |
+| **Facility HUDs** | `[F]` / Prompt | Approach Summoning Altar, Infirmary, or Squad Management to open focused facility HUDs. |
 
 ---
 
