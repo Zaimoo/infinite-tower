@@ -3,7 +3,7 @@
 -- Complete Implementation of Document 4 UI/UX Wireframes:
 -- 1. MasterHUDScreenGui (Main Tactical HUD + Clean Bottom Toolbar)
 -- 2. WaitingRoomScreenGui (Tycoon, Facilities, Tech Tree, Gacha & Roster)
--- 3. ThePitScreenGui (Synthesis XP Fodder & 1->5 Star Promotion)
+-- 3. Facility HUDs (Synthesis & Promotion)
 -- 4. MercenaryScreenGui (Noticeboard, Secret Directives & 50G Audit Soul Reveal)
 
 local Players = game:GetService("Players")
@@ -450,22 +450,10 @@ local waitingRoomModal = makeFrame({
 	Parent = hudGui,
 })
 
-local pitModal = makeFrame({
-	Name = "ThePitModal",
-	Size = UDim2.new(0, 820, 0, 480),
-	Position = UDim2.new(0.5, -410, 0.5, -230),
-	BackgroundColor3 = Color3.fromRGB(26, 16, 24),
-	Visible = false,
-	Corner = 12,
-	Stroke = 2,
-	StrokeColor = Color3.fromRGB(255, 105, 45),
-	Parent = hudGui,
-})
-
 local refreshWaitingRoomModal: () -> ()
-local refreshPitModal: () -> ()
 local facilityController: any = nil
 local synthesisController: any = nil
+local promotionController: any = nil
 local refreshBlacksmithModal: () -> ()
 local selectedArtifactUUID: string? = nil
 
@@ -602,7 +590,7 @@ end
 
 -- Left: PATCH NOTES
 local patchNotesBtn = makeBarTextButton(bottomBar, "PatchNotesButton", "PATCH NOTES", 100, function()
-	showClientToast("INFINITE TOWER — Waiting Room, The Pit, World Boss & Tactical Whistles Active")
+	showClientToast("INFINITE TOWER — Waiting Room, World Boss & Tactical Whistles Active")
 end)
 patchNotesBtn.Position = UDim2.new(0, 26, 0.5, 0)
 patchNotesBtn.AnchorPoint = Vector2.new(0, 0.5)
@@ -631,15 +619,10 @@ local wrTabBtn = makeBarTextButton(centerGroup, "Tab_WaitingRoom", "WAITING ROOM
 end)
 wrTabBtn.LayoutOrder = 1
 
-local pitTabBtn = makeBarTextButton(centerGroup, "Tab_ThePit", "THE PIT", 62, function()
-	_G.OpenMasterModal(pitModal.Visible and "NONE" or "THE_PIT")
-end)
-pitTabBtn.LayoutOrder = 2
-
 local forgeTabBtn = makeBarTextButton(centerGroup, "Tab_Blacksmith", "FORGE", 56, function()
 	_G.OpenMasterModal(blacksmithModal.Visible and "NONE" or "BLACKSMITH")
 end)
-forgeTabBtn.LayoutOrder = 2.5
+forgeTabBtn.LayoutOrder = 2
 
 local heroesTabBtn = makeBarTextButton(centerGroup, "Tab_Heroes", "HEROES", 62, function()
 	_G.OpenMasterModal("WAITING_ROOM")
@@ -797,27 +780,22 @@ end
 
 local function updateBottomTabHighlights()
 	local wrActive = waitingRoomModal.Visible
-	local pitActive = pitModal.Visible
 	local forgeActive = blacksmithModal.Visible
 	wrTabBtn:SetAttribute("IsActiveTab", wrActive)
-	pitTabBtn:SetAttribute("IsActiveTab", pitActive)
 	forgeTabBtn:SetAttribute("IsActiveTab", forgeActive)
 	wrTabBtn.TextColor3 = wrActive and SLATE_ACTIVE or SLATE_TEXT
-	pitTabBtn.TextColor3 = pitActive and SLATE_ACTIVE or SLATE_TEXT
 	forgeTabBtn.TextColor3 = forgeActive and SLATE_ACTIVE or SLATE_TEXT
 end
 
 _G.OpenMasterModal = function(which: string)
 	if facilityController then facilityController:Close() end
 	if synthesisController then synthesisController:Close() end
+	if promotionController then promotionController:Close() end
 	waitingRoomModal.Visible = (which == "WAITING_ROOM")
-	pitModal.Visible = (which == "THE_PIT")
 	blacksmithModal.Visible = (which == "BLACKSMITH")
 	updateBottomTabHighlights()
 	if which == "WAITING_ROOM" and refreshWaitingRoomModal then
 		refreshWaitingRoomModal()
-	elseif which == "THE_PIT" and refreshPitModal then
-		refreshPitModal()
 	elseif which == "BLACKSMITH" and refreshBlacksmithModal then
 		refreshBlacksmithModal()
 	end
@@ -834,16 +812,7 @@ makeButton({
 	end,
 	Parent = navButtonsFrame,
 })
-makeButton({
-	Size = UDim2.new(0, 100, 1, 0),
-	BackgroundColor3 = Color3.fromRGB(210, 85, 35),
-	Text = " The Pit",
-	Corner = 6,
-	OnClick = function()
-		_G.OpenMasterModal(pitModal.Visible and "NONE" or "THE_PIT")
-	end,
-	Parent = navButtonsFrame,
-})
+
 makeButton({
 	Size = UDim2.new(0, 118, 1, 0),
 	BackgroundColor3 = Color3.fromRGB(155, 40, 210),
@@ -1158,30 +1127,27 @@ end
 --============================================================================
 -- 4. THE PIT: modular recipient / donor workspace and authoritative transactions.
 --============================================================================
-local PitController = require(script.Parent:WaitForChild("PitController"))
-local pitController = PitController.new(
-	pitModal,
-	TycoonRemotes:WaitForChild("PitRequest") :: RemoteFunction,
-	FacilityInteractEvent,
-	function() _G.OpenMasterModal("NONE") end
-)
-_G.PitController = pitController
-refreshPitModal = function() pitController:Refresh() end
 local FacilityController = require(script.Parent:WaitForChild("FacilityController"))
 facilityController = FacilityController.new(hudGui, function() return CurrentProfile end, TycoonRemotes)
 local SynthesisController = require(script.Parent:WaitForChild("SynthesisController"))
 synthesisController = SynthesisController.new(hudGui, TycoonRemotes:WaitForChild("PitRequest") :: RemoteFunction)
 _G.SynthesisController = synthesisController
+local PromotionController = require(script.Parent:WaitForChild("PromotionController"))
+promotionController = PromotionController.new(hudGui, TycoonRemotes:WaitForChild("PitRequest") :: RemoteFunction)
+_G.PromotionController = promotionController
 _G.OpenFacilityHUD = function(facility: string)
 	if facility == "Synthesis" then
-		-- Focused synthesis HUD: recipient slot, level preview and material slots.
 		_G.OpenMasterModal("NONE")
+		if promotionController then promotionController:Close() end
 		synthesisController:Open()
 	elseif facility == "Promotion" then
-		_G.OpenMasterModal("THE_PIT")
-		pitController:SetTab(facility)
+		_G.OpenMasterModal("NONE")
+		if synthesisController then synthesisController:Close() end
+		promotionController:Open()
 	else
 		_G.OpenMasterModal("NONE")
+		if synthesisController then synthesisController:Close() end
+		if promotionController then promotionController:Close() end
 		facilityController:Open(facility)
 	end
 end
@@ -1570,6 +1536,9 @@ ProfileDeltaSyncEvent.OnClientEvent:Connect(function(profile: any)
 	if synthesisController and synthesisController.Root and synthesisController.Root.Visible then
 		synthesisController:Refresh()
 	end
+	if promotionController and promotionController.Root and promotionController.Root.Visible then
+		promotionController:Refresh()
+	end
 
 	currencyLabel.Text = string.format(
 		" GOLD: %d    GEMS: %d",
@@ -1601,7 +1570,6 @@ ProfileDeltaSyncEvent.OnClientEvent:Connect(function(profile: any)
 	if waitingRoomModal.Visible and refreshWaitingRoomModal then
 		refreshWaitingRoomModal()
 	end
-	pitController:ProfileChanged(profile)
 	if blacksmithModal.Visible and refreshBlacksmithModal then
 		refreshBlacksmithModal()
 	end
@@ -1706,7 +1674,7 @@ do
 		_G.OpenMasterModal("NONE")
 	end)
 
-	local modalList = { waitingRoomModal, pitModal, blacksmithModal }
+	local modalList = { waitingRoomModal, blacksmithModal }
 	for _, m in modalList do
 		m.AnchorPoint = Vector2.new(0.5, 0.5)
 		m.Position = UDim2.fromScale(0.5, 0.5)
@@ -2159,8 +2127,7 @@ do
 			wrRightPane.Size = UDim2.new(0.5, -10, 1, 0)
 		end
 
-		-- The Pit composes its own columns and phone steps from these bounds.
-		pitModal.Size = UDim2.fromOffset(math.min(w - 20, 1340), math.max(360, math.min(h - 76, 850)))
+
 
 		for _, list in { rosterScroll } do
 			for _, o in list:GetChildren() do

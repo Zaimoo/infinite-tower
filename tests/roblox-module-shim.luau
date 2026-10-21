@@ -49,6 +49,9 @@ end
 function Color3.new(r, g, b)
 	return { R = r, G = g, B = b }
 end
+function Color3.fromHex(hex)
+	return Color3.new(1, 1, 1)
+end
 
 local Random = {}
 function Random.new()

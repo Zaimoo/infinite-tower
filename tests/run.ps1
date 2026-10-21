@@ -30,6 +30,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Production Luau compilation failed.' }
 # catalog. The actual math, economy validation and transactions run as shipped.
 $modulePaths = @(
     'ReplicatedStorage/Shared/Config/HeroCatalog.luau',
+    'ReplicatedStorage/Shared/Config/ArtifactCatalog.luau',
     'ReplicatedStorage/Shared/Config/FacilityConfig.luau',
     'ReplicatedStorage/Shared/Config/PitBalanceConfig.luau',
     'ReplicatedStorage/Shared/Util/StatFormulas.luau',
