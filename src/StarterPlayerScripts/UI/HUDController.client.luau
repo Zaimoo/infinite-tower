@@ -622,7 +622,6 @@ wrTabBtn.LayoutOrder = 1
 local forgeTabBtn = makeBarTextButton(centerGroup, "Tab_Blacksmith", "FORGE", 56, function()
 	_G.OpenMasterModal(blacksmithModal.Visible and "NONE" or "BLACKSMITH")
 end)
-<<<<<<< HEAD
 forgeTabBtn.LayoutOrder = 3
 
 local heroesTabBtn = makeBarTextButton(centerGroup, "Tab_Heroes", "HEROES", 62, function()

@@ -164,23 +164,66 @@ function Architecture.Build(model: Model, frame: CFrame, id: string, accent: Col
 		return
 	end
 	if id == "SquadManagement" then
-		cylinder("StandardBase", 2.5, .45, V(0, .7, 0), shadow)
-		cylinder("BaseMoulding", 1.7, .35, V(0, 1.1, 0), pale)
-		cylinder("BannerPole", .18, 15, V(0, 8.7, 0), bronze, Enum.Material.Metal)
-		part("Crossbar", V(7.4, .22, .25), V(0, 14.5, 0), bronze, Enum.Material.Metal)
-		local cloth = part("SquadBanner", V(6.6, 8, .12), V(0, 10.4, 0), Color3.fromRGB(124, 39, 49), Enum.Material.Fabric)
-		-- Split hem and gold edging make this read as a standard, not a wall sign.
-		for _, x in {-3.16, 3.16} do part("EmbroideredBorder", V(.14, 7.8, .16), V(x, 10.4, .02), bronze, Enum.Material.Fabric) end
-		for _, x in {-1.7, 1.7} do part("BannerTail", V(3.1, 1.1, .12), V(x, 5.9, 0), Color3.fromRGB(124, 39, 49), Enum.Material.Fabric) end
-		local crest = part("SpearFinial", V(.8, 1.6, .8), V(0, 16.8, 0), pale, Enum.Material.Metal)
+		cylinder("StandardBase", 3.2, .55, V(0, .7, 0), shadow)
+		cylinder("BaseMoulding", 2.2, .45, V(0, 1.2, 0), pale)
+		cylinder("BaseCap", 1.4, .3, V(0, 1.55, 0), bronze)
+		cylinder("BannerPole", .22, 16, V(0, 9.2, 0), bronze, Enum.Material.Metal)
+		part("Crossbar", V(7.8, .26, .26), V(0, 15.2, 0), bronze, Enum.Material.Metal)
+		for _, x in {-3.9, 3.9} do
+			local finial = part("CrossbarFinial", V(.5, .5, .5), V(x, 15.2, 0), pale, Enum.Material.Metal)
+			finial.CFrame *= CFrame.Angles(0, 0, math.rad(45))
+		end
+		-- Crossed halberds behind the banner standard
+		local s1 = cylinder("SpearShaft1", .14, 17, V(0, 9.2, -.18), bronze, Enum.Material.Metal)
+		s1.CFrame *= CFrame.Angles(0, 0, math.rad(28))
+		local s2 = cylinder("SpearShaft2", .14, 17, V(0, 9.2, -.18), bronze, Enum.Material.Metal)
+		s2.CFrame *= CFrame.Angles(0, 0, math.rad(-28))
+
+		-- Lantern bracket lighting the war standard
+		part("LanternArm", V(.15, .8, 1.4), V(0, 14.6, .8), bronze, Enum.Material.Metal)
+		local lamp = part("StandardLantern", V(.7, 1.2, .7), V(0, 13.9, 1.5), Color3.fromRGB(255, 220, 150), Enum.Material.Neon)
+		lamp.CanCollide = false
+		local light = Instance.new("PointLight")
+		light.Color, light.Range, light.Brightness, light.Parent = lamp.Color, 14, 1.0, lamp
+
+		local cloth = part("SquadBanner", V(7.0, 8.4, .12), V(0, 10.8, 0), Color3.fromRGB(135, 30, 44), Enum.Material.Fabric)
+		-- Gold embroidered border and double split tails
+		for _, x in {-3.36, 3.36} do part("EmbroideredBorder", V(.16, 8.2, .16), V(x, 10.8, .02), bronze, Enum.Material.Fabric) end
+		for _, x in {-1.8, 1.8} do part("BannerTail", V(3.3, 1.3, .12), V(x, 6.0, 0), Color3.fromRGB(135, 30, 44), Enum.Material.Fabric) end
+		local crest = part("SpearFinial", V(.9, 1.8, .9), V(0, 17.5, 0), pale, Enum.Material.Metal)
 		crest.CFrame *= CFrame.Angles(0, 0, math.rad(45))
+
 		for _, face in {Enum.NormalId.Front, Enum.NormalId.Back} do
 			local gui = Instance.new("SurfaceGui")
-			gui.Face, gui.CanvasSize, gui.Parent = face, Vector2.new(450, 650), cloth
-			local label = Instance.new("TextLabel")
-			label.Size, label.BackgroundTransparency = UDim2.fromScale(1, 1), 1
-			label.Text = "⚔\nSQUAD\nMANAGEMENT\n\n• • • • •"
-			label.TextColor3, label.Font, label.TextSize, label.Parent = pale, Enum.Font.GothamBold, 43, gui
+			gui.Face, gui.CanvasSize, gui.Parent = face, Vector2.new(500, 700), cloth
+			local container = Instance.new("Frame")
+			container.Size = UDim2.fromScale(1, 1)
+			container.BackgroundTransparency = 1
+			container.Parent = gui
+
+			local title = Instance.new("TextLabel")
+			title.Size = UDim2.new(1, -20, 0, 130)
+			title.Position = UDim2.new(0, 10, 0, 40)
+			title.BackgroundTransparency = 1
+			title.Text = "⚔️\nSQUAD DEPLOY"
+			title.TextColor3, title.Font, title.TextSize = Color3.fromRGB(255, 235, 180), Enum.Font.GothamBold, 44
+			title.Parent = container
+
+			local divider = Instance.new("TextLabel")
+			divider.Size = UDim2.new(1, -20, 0, 40)
+			divider.Position = UDim2.new(0, 10, 0, 190)
+			divider.BackgroundTransparency = 1
+			divider.Text = "◆   ◆   ◆   ◆   ◆"
+			divider.TextColor3, divider.Font, divider.TextSize = Color3.fromRGB(245, 195, 90), Enum.Font.GothamBold, 26
+			divider.Parent = container
+
+			local sub = Instance.new("TextLabel")
+			sub.Size = UDim2.new(1, -20, 0, 80)
+			sub.Position = UDim2.new(0, 10, 0, 240)
+			sub.BackgroundTransparency = 1
+			sub.Text = "ACTIVE SQUAD\n5 COMBAT SLOTS"
+			sub.TextColor3, sub.Font, sub.TextSize = Color3.fromRGB(220, 215, 235), Enum.Font.GothamMedium, 28
+			sub.Parent = container
 		end
 		return
 	end
