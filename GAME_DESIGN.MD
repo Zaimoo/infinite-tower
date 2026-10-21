@@ -19,7 +19,7 @@ In traditional gacha/simulator games, 95% of summons are discarded as worthless 
    - **Up to 5 Deployed Heroes** (all 5 slots unlocked from the start) accompany the Master into the Central Hub or are independently deployed to specific floors (1–50) of the **Infinite Tower**. Heroes expend **Stamina** as they fight and risk a debilitating **60-second Coma** if left inside lethal AoE telegraphs.
    - **Benched Heroes** physically inhabit the player's **Fortress Plot** on recuperation beds in **The Infirmary & Barracks** (Stamina & Coma recovery), or can be forged powerful equipment at the **Blacksmith Forge**.
    - **Zero Dead Pulls:** Duplicate 1★–3★ heroes are fed into the **Synthesis Chamber** (`SynthesisController.luau`) for EXP leveling to cap (`MaxLevel = Stars * 10`), or sacrificed at the **Promotion Altar** (`PromotionController.luau`) for **Star Promotion** ($1★ \to 5★$).
-   - **Deterministic Forge Upgrades:** Gathered materials (`IronGear`, `RiftOrb`, `AegisGem`, `StarDust`, `VoidPowder`) are crafted and upgraded at the **Blacksmith Forge** (`ForgeController.luau`) across **16 Rarity Tiers** (`Common` $\to$ `Origin`) and 10 Enhancement Levels (+0 to +10).
+   - **Dual Gacha & Artifact Ascension:** In addition to summoning heroes, Masters spend Gems at the **Artifact Summoning Banner** to pull equippable weapons, shields, and rings across **16 Rarity Tiers** (`Common` $\to$ `Origin`) which define inherent base stats. At the **Blacksmith Forge** (`ForgeController.luau`), duplicate gear and Gold are used for **Star Ascension** ($1★ \to 7★$), multiplying base stats with massive progressive multipliers, plus 10 Enhancement Levels (+0 to +10).
 
 2. **Tactical Master Agency Over AFK Whaling:**
    - The Master carries no personal weapon. Instead, the Master directs squads through battlefield commands—**`[Click / Tap]` Focus Target**, **`[Q]` Overdrive Whistle**, and **`[E]` Emergency Recall Whistle**—while physically hauling heavy, high-value **Relics** and cargo back to their plot.
@@ -33,7 +33,7 @@ In traditional gacha/simulator games, 95% of summons are discarded as worthless 
 | ***Pick Me Up, Infinite Gacha*** | Desperate squad survival, Synthesis chamber, Star Promotion, living lobby workers | Heroes suffer Stamina drain and `Coma` if mismanaged; 4★/5★ heroes require hard promotion sacrifices; War Banner plot deployment. |
 | ***Pet Simulator 99*** | Multi-unit squad grinding, tactile loot explosions, exponential progression | Replaces passive pet hovering with Stamina-managed combat squads, active whistle commands, and isolated 50-floor dynamic tower rooms. |
 | ***Blox Fruits*** | Telegraphed boss skills, live DPS leaderboards, open-world bounty hunting | **Greed vs. Coma** boss checks, 10 **Biome Bosses** (Floors 5, 10, ..., 50), and **Contested Loot & Targeted Retaliation PvP** in arena rings. |
-| ***Grow a Garden*** | Cozy-yet-competitive perimeter plots, passive production, neighbor visits | Visitors perform identical animations to either **Bless** (+25% output) or **Plant Leech Rune** (-20% stolen). |
+| ***Grow a Garden*** | Cozy-yet-competitive perimeter plots, passive production, fortress management | Dedicated private plots with Infirmary recuperation beds, War Banner squad deployment, and Forge progression. |
 | ***Steal an Egg*** | Physical object hauling, movement penalties, fumble & steal tension | High-tier **Relics** & cargo weld overhead, slow WalkSpeed by up to -45%, and fumble on AoE hits. |
 
 **The Intimate Server Dynamic:**
@@ -54,19 +54,18 @@ flowchart TD
     end
 
     subgraph Meso["15-Minute Loop: Recovery, Synthesis, Promotion & Forge"]
-        T1["Gather Gold, Gems & Crafting Materials from Drops & Relics"] --> T2["Summon at Altar (100 Gems) & Manage Squad via War Banner"]
+        T1["Gather Gold & Gems from Drops, Relics & Tower Floors"] --> T2["Summoning Altar: Pull Hero Banner & Artifact Banner (100 Gems)"]
         T2 --> T3["Synthesis Chamber: Feed Duplicates for XP & Max Level Cap"]
         T3 --> T4["Promotion Altar: Sacrifice Same-Rank Heroes for Star Promotion (1★ -> 5★)"]
-        T4 --> T5["Blacksmith Forge: Craft Gear & Upgrade Rarity (Common -> Origin)"]
-        T5 --> T6["Social: Bless Neighbor Infirmary or Purge Leech Runes"]
+        T4 --> T5["Blacksmith Forge: Star Ascension (1★ -> 7★ Multipliers) & +10 Enhancement"]
     end
 
     subgraph Macro["Macro Loop: Tower Progression & Biome Boss Conquests"]
-        B1["Prepare Squad: Rest to 100% Stamina & Equip Highest Forged Artifacts"] --> B2["Advance Tower Floors: Clear Mobs & Elites across 5-Floor Biome"]
+        B1["Prepare Squad: Rest to 100% Stamina & Equip High-Rarity/Star Artifacts"] --> B2["Advance Tower Floors: Clear Mobs & Elites across 5-Floor Biome"]
         B2 --> B3["Engage Biome Boss on Floor Milestone (Floor 5, 10, 15... 50)"]
         B3 --> B4["Dodge Signature Telegraphed AoEs (Self/Target Discs) via [E] Recall"]
         B4 --> B5["Punish Window: Trigger [Q] Overdrive to Burst Down Boss HP"]
-        B5 --> B6["Claim Pinnacle Rewards: Massive Gold/Gems, Rare Crafting Mats & 5★-7★ Artifacts"]
+        B5 --> B6["Claim Pinnacle Rewards: Massive Gold/Gems & High-Rarity Pinnacle Artifact Drops"]
         B6 --> B7["Unlock Next Biome Tier & Advance to Higher Tower Floors"]
     end
 
@@ -84,7 +83,7 @@ flowchart TD
    - To accelerate clears, the Master triggers **`[Q]` Overdrive Whistle** (`20s CD`), trading `5 Stamina` per hero for `+40% Attack Speed` for `5s`.
    - When an Elite or Boss telegraphs a red ground AoE (`ARC`, `SELF_DISC`, or `TARGET_DISC`), the Master triggers **`[E]` Emergency Recall Whistle** (`6s CD`), warping all 5 heroes to the Master's safe position and dropping their aggro for `2s`.
 3. **Physical Loot Haul (2:00 – 2:45):**
-   - Defeating mobs/Elites spawns physical drops in `Workspace.PhysicalLoot` (**Bounty Bags**, **Mana Geodes**, **Cursed Urns**, **Abyssal Cores**, and raw **Crafting Materials**).
+   - Defeating mobs/Elites spawns physical drops in `Workspace.PhysicalLoot` (**Bounty Bags**, **Mana Geodes**, **Cursed Urns**, and **Abyssal Cores**).
    - The Master touches the drop to weld it overhead, incurring a **-15% to -45% WalkSpeed penalty** (and disabling jumping for high-tier relics).
    - If hit by an Elite/Boss AoE mid-haul, the Master is **stunned for 1s and fumbles the item** (which becomes stealable after a **3s owner-lock**).
 4. **Extract & Bank (2:45 – 3:00):**
@@ -93,18 +92,18 @@ flowchart TD
 
 ### 2.2 The 15-Minute Meso Loop (Fortress, Synthesis, Promotion & Forge Progression)
 1. **Facility Upkeep (Every 3–5 Minutes):**
-   - Inspect Infirmary beds, swap resting heroes, and manage visitor blessings or leech runes.
-2. **Summoning & Roster Compression (Every 5–10 Minutes):**
-   - Spend Gems (`100 Gems` per roll) at the **Summoning Altar** to pull 1★ (70%), 2★ (25%), and 3★ (5%) heroes.
+   - Inspect Infirmary beds and swap resting heroes into active squad rotation.
+2. **Summoning & Gacha Pulls (Every 5–10 Minutes):**
+   - Spend Gems (`100 Gems` single / `900 Gems` 10x) at the **Summoning Altar** on either the **Hero Banner** (1★–3★ heroes) or the **Artifact Banner** (weapons, shields, and rings across 16 Rarity Tiers).
    - **Synthesis Chamber (`SynthesisController.luau`):** Place a recipient hero and up to 5 fodder heroes to level up to the hero's current cap ($\text{MaxLevel} = \text{Stars} \times 10$).
    - **Promotion Altar (`PromotionController.luau`):** When a hero reaches max level, sacrifice same-rank heroes and Promotion Stones to permanently ascend star rating ($1★ \to 5★$).
-3. **Crafting & Upgrading at the Blacksmith Forge (`ForgeController.luau`):**
-   - **Craft Artifacts:** Gather raw materials (`IronGear`, `RiftOrb`, `AegisGem`, `StarDust`, `VoidPowder`) dropped by mobs and craft class-restricted weapons, shields, and rings.
-   - **Upgrade Artifacts:** Spend Gold and Gems to advance weapons across **16 Rarity Tiers** (`Common` $\to$ `Origin`), multiplying base stats up to **`18.00x`**, plus enhance items up to level +10 using fodder gear.
+3. **Artifact Star Ascension & Enhancement at the Blacksmith Forge (`ForgeController.luau`):**
+   - **Star Ascension (Multipliers):** Ascend artifacts from $1★ \to 7★$ at the Forge by sacrificing duplicate artifacts and Gold, scaling inherent base stats by progressive multipliers up to **`8.00x`**.
+   - **Enhancement (+0 to +10):** Consume fodder artifacts to level items up to +10, adding $+10\%$ bonus stats per level.
 
 ### 2.3 The Macro Loop (Tower Progression & Biome Boss Conquests)
 1. **Biome Traversal & Preparation:**
-   - Masters organize their 5-hero squad, equip high-rarity forged artifacts, and ensure full stamina in the Infirmary before entering a new Biome.
+   - Masters organize their 5-hero squad, equip high-rarity and high-star artifacts, and ensure full stamina in the Infirmary before entering a new Biome.
    - Each biome spans 5 progressively harder floors with rising HP, ATK, and reward scalers ($\text{HP} \times 1.08^{\text{Floor}-1}$, $\text{Damage} \times 1.045^{\text{Floor}-1}$, $\text{Reward} \times 1.055^{\text{Floor}-1}$).
 2. **The Biome Boss Encounter (Floors 5, 10, 15, ..., 50):**
    - The 5th floor of every biome is a dedicated **Biome Boss Arena** featuring a massive boss dais fixture (e.g. `BossDaisFixture` on Floor 5, $60 \times 2 \times 60\text{ studs}$).
@@ -115,8 +114,8 @@ flowchart TD
    - **Tactical Counterplay ("Dodge vs. Coma"):** Masters must watch the expanding telegraph decals and sound cues, repositioning and executing **`[E]` Emergency Recall Whistle** to yank heroes out of danger. Heroes struck by signature skills suffer severe stamina loss or a debilitating **60-second Coma**.
    - **Punish Windows:** Following major signature attacks, the boss enters an extended recovery window (1.2s–1.5s), providing active Masters the ideal moment to pop **`[Q]` Overdrive Whistle** for massive burst DPS.
 3. **Biome Clearance & Pinnacle Rewards:**
-   - Defeating the Biome Boss awards immense Gold, Gems, and guaranteed rare **Crafting Materials** (`IronGear`, `RiftOrb`, `AegisGem`, `StarDust`, `VoidPowder`).
-   - Bosses possess high drop probabilities for rare **5★–7★ Pinnacle Artifacts** and unlock clearance to enter the next biome in the Infinite Tower.
+   - Defeating the Biome Boss awards immense Gold, Gems, and rare direct drops of high-rarity **Pinnacle Artifacts** (from Legendary up to Origin).
+   - Bosses unlock clearance to enter the next biome in the Infinite Tower.
 
 ---
 
@@ -165,9 +164,9 @@ The world exists in two coordinated spatial contexts:
 | **Ring 2: Corrupted Grove** | `120 – 280 studs` (Hub) | `160 studs` annulus | Open to all | High-density Elites with red AoE telegraphs. Contested loot PvP active. | **Cursed Urns**, **Abyssal Cores**, High Gold |
 | **Ring 1: Outer Ruins** | `280 – 460 studs` (Hub) | `180 studs` annulus | Open from start | Low-level mobs & Mana Crystal nodes. Contested loot PvP active. | **Mana Geodes**, Starter Gold |
 | **Perimeter Highway** | `460 – 480 studs` (Hub) | `20 studs` paved ring road | Open to all | **Safe Zone** (No mobs). Safe banking threshold ($R \ge 460$). | Banked cargo conversion |
-| **5 Floating Fortress Plots** | `R = 540 studs` ($Y = 12$) | Fortress island mesh with courtyard & walls | Plot Owner + Visitors | Safe Zone. Visitors can inspect or Bless/Leech Infirmary. | Healing, Blacksmithing, Synthesis, Promotion |
+| **5 Floating Fortress Plots** | `R = 540 studs` ($Y = 12$) | Fortress island mesh with courtyard & walls | Plot Owner + Visitors | Safe Zone. Personal fortress sanctuary for recovery, banner summoning, and forge ascension. | Healing, Blacksmithing, Synthesis, Promotion |
 | **Safety Catch Plane** | Lower kill plane at $Y = -95$ | `2400 x 8 x 2400 studs` | Fallen players | Non-lethal catch plane; teleports fallen players safely to their PlotSpawn. | None |
-| **50 Tower Floor Rooms** | Off-map grid: $X \ge 12,000, Y = 1,000, Z \ge 12,000$ | `248 x 84 x 248 studs` each | Traversal via `TowerController` | Isolated floor-local PvE encounters; shared floor membership; safe arrival zone. | Mob drops, Crafting Materials, **Biome Boss Pinnacle Loot** |
+| **50 Tower Floor Rooms** | Off-map grid: $X \ge 12,000, Y = 1,000, Z \ge 12,000$ | `248 x 84 x 248 studs` each | Traversal via `TowerController` | Isolated floor-local PvE encounters; shared floor membership; safe arrival zone. | Mob drops, Gold, Gems, **Biome Boss Pinnacle Artifacts** |
 
 ### 3.3 Dynamic Tower Room Architecture & Biomes
 
@@ -198,11 +197,11 @@ Tower floors are dynamically managed by `TowerFloorService.luau` and generated v
 ### 3.4 Private Fortress Plot Internal Layout
 Each of the 5 Floating Fortress Islands is oriented radially toward the central tower:
 - **Plaza & Extraction Pad:** Glowing cyan platform for depositing carried cargo into permanent vault currency.
-- **Summoning Altar:** Dimensional obelisk for 100-Gem Gacha pulls.
+- **Summoning Altar:** Dimensional obelisk for 100-Gem Hero and Artifact Banner Gacha pulls.
 - **War Banner:** Physical banner with proximity prompt that opens the **Squad Deploy UI** (`SquadController.luau`).
 - **Synthesis Chamber:** Fiery cauldron station with `[F]` prompt opening the **Synthesis UI** (`SynthesisController.luau`) for feeding EXP fodder.
 - **Promotion Altar:** Consecrated star ascension dais with `[F]` prompt opening the **Promotion UI** (`PromotionController.luau`).
-- **The Blacksmith Forge:** Interactive 3D station featuring an anvil, hearth coals, workbench, and prompt opening the **Forge UI** (`ForgeController.luau`).
+- **The Blacksmith Forge:** Interactive 3D station featuring an anvil, hearth coals, workbench, and prompt opening the **Forge UI** (`ForgeController.luau`) for Star Ascension and Enhancement.
 - **The Infirmary & Barracks:** Recuperation beds where exhausted or `Coma`-afflicted heroes lie down while assigned Healers accelerate stamina recovery.
 
 ---
@@ -235,6 +234,9 @@ Every summoned hero rolls a `QualityScalar` $q \in [0.90, 1.15]$ applied to thei
   $$\text{EffectiveATK} = \text{round}\Big(ATK_0 \times q \times 1.65^{(S - 1)} \times \big(1 + 0.08(L - 1)\big) \times (1 + B_{\text{TraitATK}} + B_{\text{ImprintATK}})\Big) + TotalATKBonus_{\text{Artifact}}$$
   $$\text{EffectiveHP} = \text{round}\Big(HP_0 \times q \times 1.65^{(S - 1)} \times \big(1 + 0.08(L - 1)\big) \times (1 + B_{\text{TraitHP}} + B_{\text{ImprintHP}})\Big)$$
   $$\text{EffectiveInterval} = \max\left(0.12\text{s}, \frac{HeroBaseInterval}{1 + TotalSpeedBonus_{\text{Artifact}}}\right)$$
+  $$\text{TotalATKBonus}_{\text{Artifact}} = \text{round}\Big(ATK_{\text{Base, Rarity}} \times \text{Multiplier}_{\text{Star}} \times \big(1 + 0.10 \times \text{EnhancementLevel}\big)\Big)$$
+  $$\text{TotalSpeedBonus}_{\text{Artifact}} = ASPD_{\text{Base, Rarity}} \times \text{Multiplier}_{\text{Star}}$$
+  *(Where Rarity dictates inherent base stats and Stars ($1★ \to 7★$) dictate the progressive multiplier).*
 - **Effective Labor Formula:**
   $$\text{EffectiveLabor} = L_0 \times q \times 1.35^{(S - 1)} \times \big(1 + 0.05(L - 1)\big) \times (1 + B_{\text{Synergy}}) \times (1 + B_{\text{TraitLabor}} + B_{\text{ImprintLabor}})$$
   *(Where $B_{\text{Synergy}} = 0.25$ when assigned to preferred facility).*
@@ -268,7 +270,7 @@ The Infirmary upgrades from **Level 1 to Level 5** using Gold:
 The player interface is built from modular, gothic-styled components:
 1. **Bottom Navigation Toolbar (`BottomToolbar`):**
    - **Left:** `[PATCH NOTES]` button displaying current server update toasts.
-   - **Center Group:** `[THE PIT]` (opens Synthesis/Promotion modals) | `[FORGE]` (opens Blacksmith Craft/Upgrade modal) | `[SQUAD]` (opens 5-Hero Squad Deploy modal) | `[OVERDRIVE]` (Whistle 1 / Q) | `[RECALL]` (Whistle 2 / E) | Vertical Divider | `[AutoSwap]` (4-way arrow icon: auto-swaps exhausted heroes with bench) | `[RosterGrid]` (3x3 grid icon: toggles Squad Deploy modal).
+   - **Center Group:** `[THE PIT]` (opens Synthesis/Promotion modals) | `[FORGE]` (opens Blacksmith Star Ascension / Enhancement modal) | `[SQUAD]` (opens 5-Hero Squad Deploy modal) | `[OVERDRIVE]` (Whistle 1 / Q) | `[RECALL]` (Whistle 2 / E) | Vertical Divider | `[AutoSwap]` (4-way arrow icon: auto-swaps exhausted heroes with bench) | `[RosterGrid]` (3x3 grid icon: toggles Squad Deploy modal).
    - **Right Group:** Settings Gear (toggles telemetry overlay) | `[SAVE]` button (manual profile save trigger).
 2. **Tower Navigation UI (`TowerController.client.luau`):**
    - **TravelBar (Top of Screen):** Persistent navigation bar displaying `[Previous]`, `[Next]`, `[Floor selector]`, and `[Hub]` buttons.
@@ -317,13 +319,12 @@ In **Infinite Tower**, major boss encounters take place at the apex of each biom
 - **Encounter Respawns:** Biome Bosses operate on an authoritative server respawn cadence ($300\text{s}$ cooldown upon defeat).
 - **Rewards Table:**
   - **Tiered Gold & Gems:** Scaled exponentially to biome difficulty.
-  - **Guaranteed Crafting Materials:** High-tier drops (`RiftOrb`, `AegisGem`, `StarDust`, `VoidPowder`).
-  - **Pinnacle Artifact Drops:** Rare direct drops of 5★, 6★, and 7★ Pinnacle Artifacts (e.g. `art_paladin_claymore`, `art_crystal_greatbow`, `art_blade_of_the_rift`).
+  - **Pinnacle Artifact Drops:** Rare direct drops of high-rarity Pinnacle Artifacts (from Legendary up to Origin tier, e.g. `art_paladin_claymore`, `art_crystal_greatbow`, `art_blade_of_the_rift`).
   - **Biome Key / Floor Advancement:** Defeating the Biome Boss permanently unlocks the subsequent biome on the **Floor Selector**.
 
 ---
 
-## 6. CONTESTED LOOT, RETALIATION PVP & ESPIONAGE
+## 6. CONTESTED LOOT & RETALIATION PVP
 
 ### 6.1 Contested Loot & Targeted Retaliation PvP
 1. **Universal Physical Drops:** Monsters and crystal nodes drop 3D physical cargo in `Workspace.PhysicalLoot` tagged with `KillerUserId`.
@@ -333,65 +334,82 @@ In **Infinite Tower**, major boss encounters take place at the apex of each biom
 5. **Squad Wipe & Spilled Loot:** On squad defeat, all carried loot spills onto the ground, and field looting is locked until the Master returns to their Fortress Plot to heal in the Infirmary.
 6. **Perimeter Banking:** Reaching the perimeter highway ($R \ge 460$) or private plot pad safely banks loot into permanent Gold and Gems.
 
-### 6.2 Fortress Plot Espionage & Mimic Bluffing
-Visitors can walk onto any neighbor's plot and channel `[E]` (`2.0s`) on the **Infirmary**:
-- **Bless Facility (+25%):** Grants `+25%` output for 3 minutes; awards visitor `+25 Gems` and `+5 Honor`.
-- **Plant Leech Rune (-20%):** Secretly siphons `20%` of facility output for 3 minutes to the visitor.
-- **Counterplay (Purge Facility):** Owner has a `15.0s` window to activate Purge via plot interaction. Purging a Leech Rune stuns the visitor for `3.0s` and forces them to drop a Bounty Bag. Purging a Blessing destroys the owner's own buff.
-
 ---
 
 ## 7. EQUIPPABLE ARTIFACT & BLACKSMITH SYSTEM
 
-### 7.1 System Overview & Zero-RNG Philosophy
-Gear progression decouples **Permanent Base Potential** from **Progressive Rarity Multipliers**:
-1. **Permanent Star Potential (1★ to 7★):** Fixed, unchangeable Star tier dictating base stats: **Base Attack Power (`+15` to `+950`)** and **Base Attack Speed (`+5%` to `+60%`)**.
-2. **Deterministic 16-Tier Blacksmith Upgrading:** Every artifact can be forged through **16 Rarity Tiers** (`Common` up to `Origin`) at the Fortress Blacksmith Forge using Gold and Gems, multiplying base stats up to **`18.00x`**.
-3. **Enhancement Levels (+0 to +10):** Artifacts can be enhanced up to level 10 using fodder gear (requiring 1 to 5 fodder items), granting $+12\%$ ATK per enhancement level.
-4. **Crafting System:** Players gather 5 core crafting materials dropped by mobs and geodes to forge weapons:
-   - `IronGear`: Salvaged mechanical construct cog.
-   - `RiftOrb`: Concentrated cosmic rift sphere.
-   - `AegisGem`: Warded crystalline diamond.
-   - `StarDust`: Shimmering celestial cadence particles.
-   - `VoidPowder`: Finely ground abyssal residue.
+### 7.1 System Overview & Dual-Banner Gacha Architecture
+Artifact progression replaces traditional crafting with an **Artifact Summoning Banner** at the Summoning Altar and inverts the classic star/rarity hierarchy:
+1. **Inherent Rarity Potential (Common to Origin - 16 Tiers):** An artifact's Rarity Tier dictates its permanent **Base Attack Power ($ATK_{\text{Base}}$: `+20` to `+7,000`)** and **Base Attack Speed ($ASPD_{\text{Base}}$: `+5.0%` to `+85.0%`)**. The rarity represents the intrinsic baseline power of the drop or pull.
+2. **Progressive Star Multipliers (1★ to 7★):** Star ratings act as **multipliers** applied to the inherent base stats. All newly pulled or acquired artifacts start at **1★ (`1.00x`)**. At the **Blacksmith Forge** (`ForgeController.luau`), players perform **Star Ascension** ($1★ \to 7★$) using duplicate artifacts and Gold, scaling effective stats up to **`8.00x`**.
+3. **Artifact Banner Pulling (Gacha System):** Players spend Gems (`100 Gems` single / `900 Gems` 10x) at the Summoning Altar's **Artifact Banner** to pull equippable weapons, shields, and rings.
+4. **Blacksmith Enhancement Levels (+0 to +10):** Unwanted fodder gear can be sacrificed at the Forge to level an equipped artifact up to +10, adding an additive $+10\%$ ATK bonus per enhancement level ($\times (1 + 0.10 \times \text{Level})$).
 
-### 7.2 The 7 Star Tiers (Base Stat Seeds)
+### 7.2 The 16 Rarity Tiers (Inherent Base Stats)
+The 16 Rarity Tiers determine the baseline stats of any artifact pulled from the banner or dropped by milestone content:
 
-| Star Tier | Base Attack Power ($ATK_{\text{Base}}$) | Base Attack Speed Bonus ($ASPD_{\text{Base}}$) | Progression Context |
-| :---: | :---: | :---: | :--- |
-| **1★** | **`+15`** | **`+5.0%`** (`+0.05`) | Starter equipment (`art_hunters_shortbow`, `art_iron_broadsword`) |
-| **2★** | **`+35`** | **`+10.0%`** (`+0.10`) | Early Ring 1 mob / crystal drop |
-| **3★** | **`+75`** | **`+16.0%`** (`+0.16`) | Rare Ring 1 drop / basic craft |
-| **4★** | **`+150`** | **`+24.0%`** (`+0.24`) | Ring 2 Corrupted Grove Elite drop |
-| **5★** | **`+300`** | **`+34.0%`** (`+0.34`) | Biome Boss reward (Floors 5–15) |
-| **6★** | **`+550`** | **`+46.0%`** (`+0.46`) | Mid-tier Biome Boss reward (Floors 20–35) |
-| **7★** | **`+950`** | **`+60.0%`** (`+0.60`) | High-tier Biome Boss pinnacle reward (Floors 40–50) |
+| Tier | Rarity Name | Base ATK ($ATK_{\text{Base}}$) | Base ASPD Bonus ($ASPD_{\text{Base}}$) | Hex Color | Visual & VFX Identity |
+| :---: | :--- | :---: | :---: | :---: | :--- |
+| **1** | **Common** | **`+20`** | **`+5.0%`** (`+0.050`) | `#B0B0B0` | Weathered iron / rustic wood; standard matte finish. |
+| **2** | **Uncommon** | **`+45`** | **`+7.5%`** (`+0.075`) | `#4BB543` | Cleaned edge, subtle emerald sheen. |
+| **3** | **Rare** | **`+80`** | **`+10.0%`** (`+0.100`) | `#2980B9` | Polished azure finish; fine leather wrappings. |
+| **4** | **Superior** | **`+130`** | **`+13.0%`** (`+0.130`) | `#8E44AD` | Deep amethyst inlay with fine balance grooves. |
+| **5** | **Exalted** | **`+200`** | **`+16.5%`** (`+0.165`) | `#D35400` | Tempered bronze plating; warm amber sheen. |
+| **6** | **Legendary** | **`+300`** | **`+20.0%`** (`+0.200`) | `#F1C40F` | Gilding with glowing runes; subtle gold particle trails. |
+| **7** | **Mythical** | **`+440`** | **`+24.0%`** (`+0.240`) | `#E74C3C` | Crimson mana channels; pulsing inner embers. |
+| **8** | **Transcendent** | **`+640`** | **`+28.5%`** (`+0.285`) | `#1ABC9C` | Pure sea-glass teal resonance; condensation mist. |
+| **9** | **Ascendant** | **`+900`** | **`+33.5%`** (`+0.335`) | `#E056FD` | Neon violet crystal edge; dimensional crackle. |
+| **10** | **Ethereal** | **`+1,250`** | **`+39.0%`** (`+0.390`) | `#686DE0` | Semi-translucent spectral steel; atmospheric hum. |
+| **11** | **Immortal** | **`+1,700`** | **`+45.0%`** (`+0.450`) | `#FF7979` | Sanguine abyssal forged alloy; trailing smoke. |
+| **12** | **Divine** | **`+2,300`** | **`+51.5%`** (`+0.515`) | `#F9CA24` | Blinding solar gold radiant aura; consecrated luster. |
+| **13** | **Celestial** | **`+3,050`** | **`+58.5%`** (`+0.585`) | `#00D2D3` | Cosmic azure starry core; orbiting orbital motes. |
+| **14** | **Primordial** | **`+4,000`** | **`+66.0%`** (`+0.660`) | `#FF3838` | Raw volcanic magma veins; Neon material ignition. |
+| **15** | **Supreme** | **`+5,250`** | **`+74.0%`** (`+0.740`) | `#BADC58` | Iridescent viridian prism; high-frequency bloom. |
+| **16** | **Origin** | **`+7,000`** | **`+85.0%`** (`+0.850`) | `#FF9FF3` | Full prismatic animated chroma aura; dimensional distortion. |
 
-### 7.3 The 16 Rarity Tiers, Multipliers & Upgrade Costs
+### 7.3 The 7 Star Tiers (Progressive Multipliers & Ascension)
+Stars multiply an artifact's inherent base stats. Ascension requires duplicate artifacts and Gold at the Blacksmith Forge:
 
-| Tier | Rarity Name | Multiplier | Hex Color | Upgrade Cost (to Next Tier) | Visual & VFX Identity |
-| :---: | :--- | :---: | :---: | :--- | :--- |
-| **1** | **Common** | **`1.00x`** | `#B0B0B0` | 250 Gold | Weathered iron / rustic wood; standard matte finish. |
-| **2** | **Uncommon** | **`1.15x`** | `#4BB543` | 600 Gold | Cleaned edge, subtle emerald sheen. |
-| **3** | **Rare** | **`1.35x`** | `#2980B9` | 1,500 Gold | Polished azure finish; fine leather wrappings. |
-| **4** | **Superior** | **`1.60x`** | `#8E44AD` | 3,500 Gold | Deep amethyst inlay with fine balance grooves. |
-| **5** | **Exalted** | **`1.90x`** | `#D35400` | 8,000 Gold, 15 Gems | Tempered bronze plating; warm amber sheen. |
-| **6** | **Legendary** | **`2.30x`** | `#F1C40F` | 18,000 Gold, 35 Gems | Gilding with glowing runes; subtle gold particle trails. |
-| **7** | **Mythical** | **`2.80x`** | `#E74C3C` | 40,000 Gold, 75 Gems | Crimson mana channels; pulsing inner embers. |
-| **8** | **Transcendent** | **`3.40x`** | `#1ABC9C` | 90,000 Gold, 150 Gems | Pure sea-glass teal resonance; condensation mist. |
-| **9** | **Ascendant** | **`4.10x`** | `#E056FD` | 200,000 Gold, 300 Gems | Neon violet crystal edge; dimensional crackle. |
-| **10** | **Ethereal** | **`5.00x`** | `#686DE0` | 450,000 Gold, 600 Gems | Semi-translucent spectral steel; atmospheric hum. |
-| **11** | **Immortal** | **`6.10x`** | `#FF7979` | 1,000,000 Gold, 1,200 Gems | Sanguine abyssal forged alloy; trailing smoke. |
-| **12** | **Divine** | **`7.50x`** | `#F9CA24` | 2,200,000 Gold, 2,500 Gems | Blinding solar gold radiant aura; consecrated luster. |
-| **13** | **Celestial** | **`9.20x`** | `#00D2D3` | 5,000,000 Gold, 5,000 Gems | Cosmic azure starry core; orbiting orbital motes. |
-| **14** | **Primordial** | **`11.30x`** | `#FF3838` | 12,000,000 Gold, 10,000 Gems | Raw volcanic magma veins; Neon material ignition. |
-| **15** | **Supreme** | **`14.00x`** | `#BADC58` | 30,000,000 Gold, 25,000 Gems | Iridescent viridian prism; high-frequency bloom. |
-| **16** | **Origin** | **`18.00x`** | `#FF9FF3` | Max Tier (Pinnacle) | Full prismatic animated chroma aura; dimensional distortion. |
+| Star Tier | Stat Multiplier | Ascension Requirement | Gold Cost | Gem Cost | Progression Context |
+| :---: | :---: | :---: | :---: | :---: | :--- |
+| **1★** | **`1.00x`** | Baseline | — | — | Default tier for all pulled/dropped gear. |
+| **2★** | **`1.35x`** | 1 Duplicate Artifact | 500 Gold | — | Early-game power boost. |
+| **3★** | **`1.85x`** | 2 Duplicate Artifacts | 2,000 Gold | — | Mid-Ring 1 progression benchmark. |
+| **4★** | **`2.60x`** | 3 Duplicate Artifacts | 8,000 Gold | — | Ring 2 Corrupted Grove readiness. |
+| **5★** | **`3.75x`** | 4 Duplicate Artifacts | 25,000 Gold | 50 Gems | Biome Boss conquest tier (Floors 1–20). |
+| **6★** | **`5.50x`** | 5 Duplicate Artifacts | 75,000 Gold | 150 Gems | High-tower progression (Floors 25–40). |
+| **7★** | **`8.00x`** | 6 Duplicate Artifacts | 250,000 Gold | 500 Gems | Pinnacle endgame ascendancy (Floors 45–50). |
 
-### 7.4 3D Visual Equipping Standards
-1. **Prefab Directory:** Centralized in `ReplicatedStorage.Assets.Weapons` (`weapon_bow`, `weapon_sword`, `weapon_daggers`, `weapon_axe`, `weapon_staff`, `weapon_tome`).
-2. **Physical Constraints:** All weapon parts have `CanCollide = false`, `CanTouch = false`, `CanQuery = false`, `Massless = true`, `Anchored = false`, welded to an invisible PrimaryPart `Handle`.
-3. **Dynamic Socketing:** Attached to `RightHand` via `ArtPackVisuals.AttachAt`. Bows feature dual dynamic `Beam` sinew strings connecting from stave tips to `RightHand.DrawAttachment`.
+### 7.4 Artifact Summoning Banner (Gacha Mechanics)
+- **Altar Integration:** The Summoning Altar features two banner tabs: **[HERO BANNER]** and **[ARTIFACT BANNER]**.
+- **Summon Cost:** `100 Gems` per single pull, `900 Gems` for a 10x pull (1 free roll equivalent).
+- **Banner Rarity Probability Table:**
+  - **Common (Tier 1):** `55.0%`
+  - **Uncommon (Tier 2):** `25.0%`
+  - **Rare (Tier 3):** `12.0%`
+  - **Superior (Tier 4):** `5.5%`
+  - **Exalted (Tier 5):** `2.0%`
+  - **Legendary (Tier 6):** `0.5%`
+- **Pity Safeguards:**
+  - **10-Pull Guarantee:** Every 10-pull guarantees at least one **Rare (Tier 3)** or higher artifact.
+  - **50-Pull Hard Pity:** If no **Legendary (Tier 6)** or higher artifact has been pulled in 49 pulls, the 50th pull guarantees a **Legendary (Tier 6)** or higher artifact.
+- **Acquiring Pinnacle Rarities (Tiers 7–16):**
+  - **Biome Boss Pinnacle Drops:** Rare direct drops of Mythical to Origin artifacts from milestone floor clears.
+  - **Blacksmith Rarity Refinement:** Forge masters can spend high quantities of Gold and Gems to refine an existing artifact's rarity tier upward.
+
+### 7.5 Archetype Restrictions & 3D Socketing Standards
+1. **Equippable Weapon & Item Catalog:**
+   - **Swords (`SWORD`):** Permitted on `Vanguard`, `Striker`. High single-target slashing DPS.
+   - **Daggers (`DAGGERS`):** Permitted on `Striker`. High-speed dual-wield flurry attacks.
+   - **Bows (`BOW`):** Permitted on `Marksman`. Ranged single-target piercing attacks.
+   - **Axes (`AXE`):** Permitted on `Vanguard`, `Miner`. Heavy cleaving strikes.
+   - **Staves (`STAFF`):** Permitted on `Healer`, `Scholar`. Ranged mystic projectiles and aura empowerment.
+   - **Tomes (`TOME`):** Permitted on `Healer`, `Scholar`. Channeled magical bursts and restorative resonance.
+   - **Shields (`SHIELD`):** Permitted on `Vanguard`, `Striker`, `Miner`. Off-hand defensive posture and damage mitigation.
+   - **Rings (`RING`):** Universal accessory equipable by any archetype for secondary stat amplification.
+2. **Prefab Directory:** Centralized in `ReplicatedStorage.Assets.Weapons` (`weapon_bow`, `weapon_sword`, `weapon_daggers`, `weapon_axe`, `weapon_staff`, `weapon_tome`).
+3. **Physical Constraints:** All weapon parts have `CanCollide = false`, `CanTouch = false`, `CanQuery = false`, `Massless = true`, `Anchored = false`, welded to an invisible PrimaryPart `Handle`.
+4. **Dynamic Socketing:** Attached to `RightHand` via `ArtPackVisuals.AttachAt`. Bows feature dual dynamic `Beam` sinew strings connecting from stave tips to `RightHand.DrawAttachment`.
 
 ---
 
