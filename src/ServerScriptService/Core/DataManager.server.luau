@@ -62,6 +62,20 @@ if not RequestUpgradeRarityFunc then
 	RequestUpgradeRarityFunc.Parent = ArtifactRemotes
 end
 
+local RequestCraftArtifactFunc = ArtifactRemotes:FindFirstChild("RequestCraftArtifact") :: RemoteFunction?
+if not RequestCraftArtifactFunc then
+	RequestCraftArtifactFunc = Instance.new("RemoteFunction")
+	RequestCraftArtifactFunc.Name = "RequestCraftArtifact"
+	RequestCraftArtifactFunc.Parent = ArtifactRemotes
+end
+
+local RequestUpgradeArtifactFunc = ArtifactRemotes:FindFirstChild("RequestUpgradeArtifact") :: RemoteFunction?
+if not RequestUpgradeArtifactFunc then
+	RequestUpgradeArtifactFunc = Instance.new("RemoteFunction")
+	RequestUpgradeArtifactFunc.Name = "RequestUpgradeArtifact"
+	RequestUpgradeArtifactFunc.Parent = ArtifactRemotes
+end
+
 --============================================================================
 -- 1. EXPORTED TYPE DEFINITIONS
 --============================================================================
@@ -273,6 +287,15 @@ local function createDefaultPlayerProfile(): PlayerProfile
 	local swordUUID, swordArt = DataManager.CreateArtifact("art_iron_broadsword", 1, 1)
 	local axeUUID, axeArt = DataManager.CreateArtifact("art_miner_pickaxe", 1, 1)
 
+	-- Additional starter artifacts for forge crafting and fodder testing
+	local riftUUID, riftArt = DataManager.CreateArtifact("art_blade_of_the_rift", 3, 1)
+	riftArt.Level = 4 -- Starts at +4 for immediate mockup parity testing!
+	local f1_UUID, f1_Art = DataManager.CreateArtifact("art_iron_broadsword", 1, 1)
+	local f2_UUID, f2_Art = DataManager.CreateArtifact("art_rusty_daggers", 1, 1)
+	local f3_UUID, f3_Art = DataManager.CreateArtifact("art_hunters_shortbow", 1, 1)
+	local f4_UUID, f4_Art = DataManager.CreateArtifact("art_miner_pickaxe", 1, 1)
+	local f5_UUID, f5_Art = DataManager.CreateArtifact("art_novice_tome", 1, 1)
+
 	jennaHero.EquippedArtifactUUID = bowUUID
 	bowArt.EquippedHeroUUID = jennaUUID
 
@@ -284,7 +307,16 @@ local function createDefaultPlayerProfile(): PlayerProfile
 
 	return {
 		SchemaVersion = 2,
-		PitMaterials = { SoulEssence = 0, PromotionStone = 0, ImprintCatalyst = 0 },
+		PitMaterials = {
+			SoulEssence = 0,
+			PromotionStone = 0,
+			ImprintCatalyst = 0,
+			IronGear = 25,
+			RiftOrb = 10,
+			AegisGem = 8,
+			StarDust = 35,
+			VoidPowder = 15,
+		},
 		PitRevision = 0,
 		PlotIndex = 1,
 		Currencies = {
@@ -302,6 +334,12 @@ local function createDefaultPlayerProfile(): PlayerProfile
 			[bowUUID] = bowArt,
 			[swordUUID] = swordArt,
 			[axeUUID] = axeArt,
+			[riftUUID] = riftArt,
+			[f1_UUID] = f1_Art,
+			[f2_UUID] = f2_Art,
+			[f3_UUID] = f3_Art,
+			[f4_UUID] = f4_Art,
+			[f5_UUID] = f5_Art,
 		},
 		DeployedSquadOrder = { hanUUID, jennaUUID },
 		Facilities = {
@@ -328,6 +366,13 @@ end
 function DataManager.GetProfile(player: Player): PlayerProfile?
 	local profile = ActiveProfiles[player]
 	if profile and (profile.SchemaVersion or 1) < 2 then PitService.EnsureDefaults(profile) end
+	if profile and profile.PitMaterials then
+		if profile.PitMaterials.IronGear == nil then profile.PitMaterials.IronGear = 25 end
+		if profile.PitMaterials.RiftOrb == nil then profile.PitMaterials.RiftOrb = 10 end
+		if profile.PitMaterials.AegisGem == nil then profile.PitMaterials.AegisGem = 8 end
+		if profile.PitMaterials.StarDust == nil then profile.PitMaterials.StarDust = 35 end
+		if profile.PitMaterials.VoidPowder == nil then profile.PitMaterials.VoidPowder = 15 end
+	end
 	return profile
 end
 
@@ -610,6 +655,13 @@ function DataManager.GetArtifacts(player: Player): { [string]: ArtifactInstance 
 	local profile = ActiveProfiles[player]
 	if not profile then return {} end
 	if not profile.Artifacts then profile.Artifacts = {} end
+	if profile and profile.PitMaterials then
+		if profile.PitMaterials.IronGear == nil then profile.PitMaterials.IronGear = 25 end
+		if profile.PitMaterials.RiftOrb == nil then profile.PitMaterials.RiftOrb = 10 end
+		if profile.PitMaterials.AegisGem == nil then profile.PitMaterials.AegisGem = 8 end
+		if profile.PitMaterials.StarDust == nil then profile.PitMaterials.StarDust = 35 end
+		if profile.PitMaterials.VoidPowder == nil then profile.PitMaterials.VoidPowder = 15 end
+	end
 	return profile.Artifacts
 end
 
@@ -731,6 +783,125 @@ RequestUpgradeRarityFunc.OnServerInvoke = function(player: Player, artifactUUID:
 		return false, "Invalid parameters", nil
 	end
 	return DataManager.UpgradeArtifactRarity(player, artifactUUID)
+end
+
+function DataManager.CraftArtifact(player: Player, templateId: string): (boolean, string?, any?)
+	local profile = ActiveProfiles[player]
+	if not profile then return false, "Profile not loaded", nil end
+
+	local seed = ArtifactCatalog.Seeds[templateId]
+	if not seed then
+		return false, string.format("Unknown artifact recipe: %s", tostring(templateId)), nil
+	end
+
+	if not seed.CraftCost then
+		return false, string.format("%s cannot be crafted at the Forge.", seed.DisplayName), nil
+	end
+
+	if not profile.PitMaterials then profile.PitMaterials = {} end
+
+	-- Validate material requirements
+	for matId, reqQty in pairs(seed.CraftCost) do
+		local haveQty = profile.PitMaterials[matId] or 0
+		if haveQty < reqQty then
+			local matInfo = ArtifactCatalog.CraftingMaterials[matId]
+			local matName = matInfo and matInfo.Name or matId
+			return false, string.format("Need %d %s to craft %s (Have: %d)!", reqQty, matName, seed.DisplayName, haveQty), nil
+		end
+	end
+
+	-- Deduct materials
+	for matId, reqQty in pairs(seed.CraftCost) do
+		profile.PitMaterials[matId] = math.max(0, (profile.PitMaterials[matId] or 0) - reqQty)
+	end
+
+	-- Create new artifact instance at enhancement level 0
+	local uuid, artifact = DataManager.CreateArtifact(templateId, seed.DefaultStar or 1, 1)
+	artifact.Level = 0
+
+	if not profile.Artifacts then profile.Artifacts = {} end
+	profile.Artifacts[uuid] = artifact
+
+	DataManager.SyncProfile(player)
+	DataManager.SendToast(player, string.format("⚒️ FORGE SUCCESS! Crafted %s!", artifact.DisplayName), "SUCCESS")
+	return true, string.format("Crafted %s!", artifact.DisplayName), artifact
+end
+
+function DataManager.UpgradeArtifact(player: Player, targetUUID: string, fodderUUIDs: { any }): (boolean, string?, number?)
+	local profile = ActiveProfiles[player]
+	if not profile then return false, "Profile not loaded", nil end
+
+	local target = profile.Artifacts and profile.Artifacts[targetUUID]
+	if not target then return false, "Target artifact not found", nil end
+
+	local currentLevel = target.Level or 0
+	if currentLevel >= ArtifactCatalog.MaxEnhancementLevel then
+		return false, string.format("%s is already at Maximum Enhancement (+%d)!", target.DisplayName, ArtifactCatalog.MaxEnhancementLevel), currentLevel
+	end
+
+	if type(fodderUUIDs) ~= "table" or #fodderUUIDs == 0 then
+		return false, "No fodder artifacts selected for upgrade", currentLevel
+	end
+
+	if #fodderUUIDs > 5 then
+		return false, "Cannot select more than 5 fodder artifacts at once", currentLevel
+	end
+
+	local reqFodder = ArtifactCatalog.GetFodderRequirement(currentLevel)
+	if #fodderUUIDs < reqFodder then
+		return false, string.format("Enhancing to +%d requires %d fodder artifacts (Selected: %d)!", currentLevel + 1, reqFodder, #fodderUUIDs), currentLevel
+	end
+
+	-- Validate every fodder artifact
+	local seen: { [string]: boolean } = {}
+	for _, fUUID in ipairs(fodderUUIDs) do
+		if type(fUUID) ~= "string" then
+			return false, "Invalid fodder UUID", currentLevel
+		end
+		if fUUID == targetUUID then
+			return false, "Cannot use target artifact as its own fodder", currentLevel
+		end
+		if seen[fUUID] then
+			return false, "Duplicate fodder artifact selected", currentLevel
+		end
+		seen[fUUID] = true
+
+		local fodder = profile.Artifacts[fUUID]
+		if not fodder then
+			return false, "Fodder artifact not found in inventory", currentLevel
+		end
+		if fodder.EquippedHeroUUID then
+			return false, string.format("Cannot consume equipped artifact: %s!", fodder.DisplayName), currentLevel
+		end
+		if fodder.Locked then
+			return false, string.format("Cannot consume locked artifact: %s!", fodder.DisplayName), currentLevel
+		end
+	end
+
+	-- Consume fodder artifacts
+	for _, fUUID in ipairs(fodderUUIDs) do
+		profile.Artifacts[fUUID] = nil
+	end
+
+	target.Level = currentLevel + 1
+
+	DataManager.SyncProfile(player)
+	DataManager.SendToast(player, string.format("✨ ENHANCEMENT SUCCESS! %s is now +%d!", target.DisplayName, target.Level), "SUCCESS")
+	return true, string.format("Upgraded %s to +%d!", target.DisplayName, target.Level), target.Level
+end
+
+RequestCraftArtifactFunc.OnServerInvoke = function(player: Player, templateId: any)
+	if type(templateId) ~= "string" then
+		return false, "Invalid parameters", nil
+	end
+	return DataManager.CraftArtifact(player, templateId)
+end
+
+RequestUpgradeArtifactFunc.OnServerInvoke = function(player: Player, targetUUID: any, fodderUUIDs: any)
+	if type(targetUUID) ~= "string" or type(fodderUUIDs) ~= "table" then
+		return false, "Invalid parameters", nil
+	end
+	return DataManager.UpgradeArtifact(player, targetUUID, fodderUUIDs)
 end
 
 --============================================================================

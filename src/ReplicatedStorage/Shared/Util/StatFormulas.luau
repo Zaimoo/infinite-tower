@@ -71,9 +71,12 @@ function StatFormulas.GetEffectiveCombatStats(hero: any, inBloodPact: boolean?, 
 
 	-- Additive Artifact ATK & Multiplicative Attack Speed Bonus
 	if artifact then
-		local artATK, artSpeed = ArtifactCatalog.CalculateEffectiveStats(artifact.Star or 1, artifact.Rarity or 1)
+		local artATK, artSpeed, extraStats = ArtifactCatalog.CalculateEffectiveStats(artifact.Star or 1, artifact.Rarity or 1, artifact.Level or 0, artifact.TemplateId)
 		effATK += artATK
 		interval = ArtifactCatalog.CalculateEffectiveInterval(interval, artSpeed)
+		if extraStats and extraStats["HP"] then
+			effHP += extraStats["HP"]
+		end
 	end
 
 	local overdriveMult = inOverdrive and 1.40 or 1.00
