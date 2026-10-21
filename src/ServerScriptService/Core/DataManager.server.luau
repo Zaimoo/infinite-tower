@@ -196,6 +196,8 @@ export type PlayerProfile = {
 	BossPity: number,
 	ArtifactBannerPity: number?,
 	HeroBannerPity: number?,
+	HeroPermanentPity: number?,
+	HeroLimitedPity: number?,
 	RiftLuresOwned: number,
 	Heroes: { [string]: HeroInstance },
 	DeployedSquadOrder: { string },
@@ -334,7 +336,9 @@ local function createDefaultPlayerProfile(): PlayerProfile
 		},
 		BossPity = 0,
 		ArtifactBannerPity = 8, -- Initial: 42 to 5-star guarantee (50 - 8 = 42) matching mockup parity
-		HeroBannerPity = 8, -- Initial: 42 to 3-star guarantee (50 - 8 = 42) matching mockup parity
+		HeroBannerPity = 8,
+		HeroPermanentPity = 8, -- Initial: 42 to 5-star guarantee (50 - 8 = 42) for Call of the Rift
+		HeroLimitedPity = 8, -- Initial: 42 to 7-star guarantee (50 - 8 = 42) for A Star's Arrival
 		RiftLuresOwned = 0,
 		Heroes = {
 			[hanUUID] = hanHero,
@@ -564,20 +568,66 @@ end
 -- 4. GACHA SUMMONING, THE PIT SYNTHESIS & STAR PROMOTION
 --============================================================================
 
-local function rollGachaHero(): (string, HeroInstance)
+local function rollBannerHero(bannerId: string?): (string, HeroInstance, number)
+	local isLimited = (bannerId == "banner_a_stars_arrival" or bannerId == "A_STARS_ARRIVAL" or bannerId == "LIMITED")
+	local banner = isLimited and HeroCatalog.LimitedBanner or HeroCatalog.PermanentBanner
+
 	local roll = math.random()
 	local star = 1
-	if roll <= 0.05 then
-		star = 3 -- 5% 3★ Epic
-	elseif roll <= 0.30 then
-		star = 2 -- 25% 2★ Rare
+
+	if isLimited then
+		-- A Star's Arrival (Limited 1★-7★)
+		-- Cumulative:
+		-- 7★: 0.003 (0.3%)
+		-- 6★: 0.015 (1.2%)
+		-- 5★: 0.050 (3.5%)
+		-- 4★: 0.115 (6.5%)
+		-- 3★: 0.250 (13.5%)
+		-- 2★: 0.500 (25.0%)
+		-- 1★: 1.000 (50.0%)
+		if roll <= 0.003 then
+			star = 7
+		elseif roll <= 0.015 then
+			star = 6
+		elseif roll <= 0.050 then
+			star = 5
+		elseif roll <= 0.115 then
+			star = 4
+		elseif roll <= 0.250 then
+			star = 3
+		elseif roll <= 0.500 then
+			star = 2
+		else
+			star = 1
+		end
 	else
-		star = 1 -- 70% 1★ Common
+		-- Call of the Rift (Permanent 1★-5★)
+		-- Cumulative:
+		-- 5★: 0.010 (1.0%)
+		-- 4★: 0.050 (4.0%)
+		-- 3★: 0.150 (10.0%)
+		-- 2★: 0.400 (25.0%)
+		-- 1★: 1.000 (60.0%)
+		if roll <= 0.010 then
+			star = 5
+		elseif roll <= 0.050 then
+			star = 4
+		elseif roll <= 0.150 then
+			star = 3
+		elseif roll <= 0.400 then
+			star = 2
+		else
+			star = 1
+		end
 	end
 
-	local pool = HeroCatalog.PoolByStar[star] or HeroCatalog.PoolByStar[1]
-	local chosenId = pool[math.random(1, #pool)]
-	return DataManager.CreateHeroFromSeed(chosenId)
+	local chosenId = banner.HeroesByStar[star]
+	if not chosenId then
+		local pool = HeroCatalog.PoolByStar[star] or HeroCatalog.PoolByStar[1]
+		chosenId = pool[math.random(1, #pool)]
+	end
+	local uuid, hero = DataManager.CreateHeroFromSeed(chosenId)
+	return uuid, hero, star
 end
 
 local function validateCallerPlotOwnership(player: Player, targetPlot: any?): boolean
@@ -587,7 +637,25 @@ local function validateCallerPlotOwnership(player: Player, targetPlot: any?): bo
 	return true
 end
 
-RequestSummonFunc.OnServerInvoke = function(player: Player, pullCount: any, targetPlot: any?)
+RequestSummonFunc.OnServerInvoke = function(player: Player, arg1: any, arg2: any, arg3: any)
+	-- Support flexible calling signatures:
+	-- (player, pullCount, targetPlot, bannerId) or (player, bannerId, pullCount, targetPlot)
+	local bannerId = "CALL_OF_THE_RIFT"
+	local pullCount = 1
+	local targetPlot: any? = nil
+
+	if type(arg1) == "string" and (arg1 == "CALL_OF_THE_RIFT" or arg1 == "A_STARS_ARRIVAL" or arg1:match("^banner_")) then
+		bannerId = arg1
+		pullCount = tonumber(arg2) or 1
+		targetPlot = arg3
+	else
+		pullCount = tonumber(arg1) or 1
+		targetPlot = arg2
+		if type(arg3) == "string" then
+			bannerId = arg3
+		end
+	end
+
 	if not validateCallerPlotOwnership(player, targetPlot) then
 		return { Success = false, Message = "Plot ownership validation failed" }
 	end
@@ -604,38 +672,72 @@ RequestSummonFunc.OnServerInvoke = function(player: Player, pullCount: any, targ
 		return { Success = false, Message = "Insufficient Gems" }
 	end
 
+	local isLimited = (bannerId == "banner_a_stars_arrival" or bannerId == "A_STARS_ARRIVAL" or bannerId == "LIMITED")
+	local bannerKey = isLimited and "HeroLimitedPity" or "HeroPermanentPity"
+
+	if profile.HeroPermanentPity == nil then profile.HeroPermanentPity = profile.HeroBannerPity or 8 end
+	if profile.HeroLimitedPity == nil then profile.HeroLimitedPity = 8 end
+
 	profile.Currencies.Gems -= gemCost
-	if profile.HeroBannerPity == nil then profile.HeroBannerPity = 8 end
 	local summonedList: { HeroInstance } = {}
 
 	for _ = 1, count do
-		profile.HeroBannerPity += 1
-		local isGuaranteed3Star = (profile.HeroBannerPity >= 50)
+		local currentPity = profile[bannerKey] or 0
+		currentPity += 1
+		profile[bannerKey] = currentPity
+
 		local uuid: string
 		local hero: HeroInstance
-		if isGuaranteed3Star then
-			local pool = HeroCatalog.PoolByStar[3] or { "hero_eolka" }
-			local chosenId = pool[math.random(1, #pool)]
-			uuid, hero = DataManager.CreateHeroFromSeed(chosenId)
-			profile.HeroBannerPity = 0
+		local rolledStar: number
+
+		if isLimited then
+			-- Limited banner: Guaranteed 7★ Astrea at 50 pity
+			if currentPity >= 50 then
+				uuid, hero = DataManager.CreateHeroFromSeed(HeroCatalog.LimitedBanner.FeaturedHeroId or "hero_astrea")
+				profile[bannerKey] = 0
+			else
+				uuid, hero, rolledStar = rollBannerHero("A_STARS_ARRIVAL")
+				if rolledStar >= 7 then
+					profile[bannerKey] = 0
+				end
+			end
 		else
-			uuid, hero = rollGachaHero()
-			if hero.Stars >= 3 then
-				profile.HeroBannerPity = 0
+			-- Permanent banner: Guaranteed 5★ Ignis at 50 pity
+			if currentPity >= 50 then
+				uuid, hero = DataManager.CreateHeroFromSeed(HeroCatalog.PermanentBanner.HeroesByStar[5] or "hero_ignis")
+				profile[bannerKey] = 0
+			else
+				uuid, hero, rolledStar = rollBannerHero("CALL_OF_THE_RIFT")
+				if rolledStar >= 5 then
+					profile[bannerKey] = 0
+				end
 			end
 		end
+
 		profile.Heroes[uuid] = hero
 		table.insert(summonedList, hero)
 	end
 
-	local pityRemaining = math.max(1, 50 - profile.HeroBannerPity)
+	-- Mirror permanent pity to legacy HeroBannerPity for backwards compatibility
+	profile.HeroBannerPity = profile.HeroPermanentPity
+
+	local pityRemaining = math.max(1, 50 - (profile[bannerKey] or 0))
 	DataManager.SyncProfile(player)
+
 	local names = {}
 	for _, h in ipairs(summonedList) do
 		table.insert(names, string.format("%s (%d★)", h.DisplayName, h.Stars))
 	end
 	DataManager.SendToast(player, "Summoned: " .. table.concat(names, ", "), "SUCCESS")
-	return { Success = true, Summoned = summonedList, PityRemaining = pityRemaining }
+
+	return {
+		Success = true,
+		Summoned = summonedList,
+		BannerId = isLimited and "A_STARS_ARRIVAL" or "CALL_OF_THE_RIFT",
+		PityRemaining = pityRemaining,
+		PermanentPityRemaining = math.max(1, 50 - profile.HeroPermanentPity),
+		LimitedPityRemaining = math.max(1, 50 - profile.HeroLimitedPity),
+	}
 end
 
 -- Legacy endpoints cannot bypass confirmed previews.

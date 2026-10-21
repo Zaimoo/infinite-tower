@@ -142,7 +142,7 @@ function Controller.new(gui: ScreenGui, getProfile: () -> any, remotes: Instance
 	self.Busy = false
 	self.LastSummoned = {}
 	self.Current = "Summoning"
-	self.ActiveSummonTab = "HERO" -- "HERO" | "ARTIFACT"
+	self.ActiveSummonTab = "CALL_OF_THE_RIFT" -- "CALL_OF_THE_RIFT" | "A_STARS_ARRIVAL"
 
 	-- Remotes
 	self.Summon = remotes:WaitForChild("RequestSummon") :: RemoteFunction
@@ -248,7 +248,7 @@ function Controller.new(gui: ScreenGui, getProfile: () -> any, remotes: Instance
 	gemCurrency.TextXAlignment = Enum.TextXAlignment.Right
 	self.GemCurrency = gemCurrency
 
-	-- 5. Top Tab Container (HERO BANNER | ARTIFACT BANNER)
+	-- 5. Top Tab Container (CALL OF THE RIFT | A STAR'S ARRIVAL)
 	local tabContainer = new("Frame", {
 		Name = "TabContainer",
 		BackgroundTransparency = 1,
@@ -258,27 +258,27 @@ function Controller.new(gui: ScreenGui, getProfile: () -> any, remotes: Instance
 	}, root)
 	self.TabContainer = tabContainer
 
-	local heroTabBtn = new("TextButton", {
-		Name = "TabHero",
-		Text = "HERO BANNER",
-		TextSize = 15,
+	local callTabBtn = new("TextButton", {
+		Name = "TabCallOfTheRift",
+		Text = "CALL OF THE RIFT",
+		TextSize = 13,
 		Font = Enum.Font.GothamBold,
 		TextColor3 = C.Text,
 		BackgroundTransparency = 1,
-		Size = UDim2.fromOffset(130, 36),
+		Size = UDim2.fromOffset(165, 36),
 		Position = UDim2.fromOffset(10, 0),
 		ZIndex = 53,
 	}, tabContainer)
 
-	local artifactTabBtn = new("TextButton", {
-		Name = "TabArtifact",
-		Text = "ARTIFACT BANNER",
-		TextSize = 15,
+	local starTabBtn = new("TextButton", {
+		Name = "TabAStarsArrival",
+		Text = "A STAR'S ARRIVAL",
+		TextSize = 13,
 		Font = Enum.Font.GothamBold,
 		TextColor3 = C.TextMuted,
 		BackgroundTransparency = 1,
-		Size = UDim2.fromOffset(150, 36),
-		Position = UDim2.fromOffset(150, 0),
+		Size = UDim2.fromOffset(165, 36),
+		Position = UDim2.fromOffset(185, 0),
 		ZIndex = 53,
 	}, tabContainer)
 
@@ -286,22 +286,22 @@ function Controller.new(gui: ScreenGui, getProfile: () -> any, remotes: Instance
 		Name = "ActiveTabIndicator",
 		BackgroundColor3 = C.Underline,
 		BorderSizePixel = 0,
-		Size = UDim2.new(0, 90, 0, 3),
+		Size = UDim2.new(0, 130, 0, 3),
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.fromOffset(75, 36),
+		Position = UDim2.fromOffset(92, 36),
 		ZIndex = 54,
 	}, tabContainer)
 	stroke(activeIndicator, C.BorderGlow, 1.5, 0.4)
 
-	self.HeroTabBtn = heroTabBtn
-	self.ArtifactTabBtn = artifactTabBtn
+	self.CallTabBtn = callTabBtn
+	self.StarTabBtn = starTabBtn
 	self.ActiveIndicator = activeIndicator
 
-	heroTabBtn.Activated:Connect(function()
-		self:SetSummonTab("HERO")
+	callTabBtn.Activated:Connect(function()
+		self:SetSummonTab("CALL_OF_THE_RIFT")
 	end)
-	artifactTabBtn.Activated:Connect(function()
-		self:SetSummonTab("ARTIFACT")
+	starTabBtn.Activated:Connect(function()
+		self:SetSummonTab("A_STARS_ARRIVAL")
 	end)
 
 	-- Header Title (Fallback for non-summon facilities like Infirmary / Squad)
@@ -324,9 +324,9 @@ function Controller.new(gui: ScreenGui, getProfile: () -> any, remotes: Instance
 	}, root)
 	self.TabDivider = tabDivider
 
-	-- 6. Summon Views
-	self:BuildHeroSummonView(root)
-	self:BuildArtifactSummonView(root)
+	-- 6. Summon Views (Permanent 5-Star Banner & Limited 7-Star Banner)
+	self:BuildPermanentSummonView(root)
+	self:BuildLimitedSummonView(root)
 
 	-- 7. Legacy / General Facility View (Infirmary, SquadManagement fallback)
 	self:BuildGeneralFacilityView(root)
@@ -356,36 +356,36 @@ function Controller.new(gui: ScreenGui, getProfile: () -> any, remotes: Instance
 end
 
 --============================================================================
--- HERO SUMMON BANNER VIEW (Matches Screenshot 2)
+-- SECTION 1: PERMANENT BANNER VIEW ("CALL OF THE RIFT" - 5 STARS)
 --============================================================================
 
-function Controller:BuildHeroSummonView(root: Frame)
-	local heroView = new("Frame", {
-		Name = "HeroSummonView",
+function Controller:BuildPermanentSummonView(root: Frame)
+	local permView = new("Frame", {
+		Name = "PermanentSummonView",
 		BackgroundTransparency = 1,
 		Position = UDim2.fromOffset(16, 72),
 		Size = UDim2.new(1, -32, 1, -82),
 		Visible = false,
 		ZIndex = 52,
 	}, root)
-	self.HeroSummonView = heroView
+	self.PermanentSummonView = permView
 
 	-- 1. Main Featured Banner Card
 	local bannerCard = new("Frame", {
-		Name = "HeroBannerCard",
+		Name = "PermanentBannerCard",
 		Position = UDim2.fromOffset(0, 0),
 		Size = UDim2.new(1, 0, 0, 246),
 		BackgroundColor3 = Color3.fromRGB(19, 14, 34),
 		BorderSizePixel = 0,
 		ZIndex = 53,
-	}, heroView)
+	}, permView)
 
 	new("UICorner", { CornerRadius = UDim.new(0, 8) }, bannerCard)
 	stroke(bannerCard, C.Border, 1.2, 0.05)
 	glow(bannerCard, 8, C.BorderGlow, 0.85)
 	cornerDiamonds(bannerCard, 6, C.Border)
 
-	-- Cosmic Gradient
+	-- Cosmic Indigo Gradient
 	new("UIGradient", {
 		Color = ColorSequence.new({
 			ColorSequenceKeypoint.new(0.0, Color3.fromRGB(28, 19, 50)),
@@ -396,42 +396,42 @@ function Controller:BuildHeroSummonView(root: Frame)
 	}, bannerCard)
 
 	-- Top Watermark
-	local watermark = label(bannerCard, "★ 3-STAR FEATURED HEROES & RECRUITS", 15, Color3.fromRGB(230, 220, 255), Enum.Font.GothamBold)
+	local watermark = label(bannerCard, "★ 5-STAR PERMANENT HERO BANNER", 15, Color3.fromRGB(230, 220, 255), Enum.Font.GothamBold)
 	watermark.TextTransparency = 0.55
 	watermark.Position = UDim2.fromOffset(24, 18)
 	watermark.Size = UDim2.new(1, -48, 0, 20)
 	watermark.TextXAlignment = Enum.TextXAlignment.Left
 
 	-- Big Glowing Banner Title
-	local bannerTitle = label(bannerCard, "CALL OF THE RIFT", 34, C.GoldYellow, Enum.Font.GothamBlack)
-	bannerTitle.AnchorPoint = Vector2.new(0, 1)
-	bannerTitle.Position = UDim2.new(0, 24, 1, -26)
-	bannerTitle.Size = UDim2.new(0, 420, 0, 44)
+	local bannerTitle = label(bannerCard, "CALL OF THE RIFT", 36, C.GoldYellow, Enum.Font.GothamBlack)
+	bannerTitle.AnchorPoint = Vector2.new(0, 0.5)
+	bannerTitle.Position = UDim2.new(0, 24, 0.48, -4)
+	bannerTitle.Size = UDim2.new(1, -48, 0, 44)
 	bannerTitle.TextXAlignment = Enum.TextXAlignment.Left
 	bannerTitle.TextStrokeTransparency = 0.35
 	bannerTitle.TextStrokeColor3 = Color3.fromRGB(120, 80, 0)
 
-	-- Featured Rate-Up Pill Label
-	local rateUpLabel = label(bannerCard, "★ Rate Up: Eolka (3★)  |  Aaron (2★)  |  Velkist (2★)", 12, Color3.fromRGB(205, 175, 245), Enum.Font.GothamBold)
-	rateUpLabel.AnchorPoint = Vector2.new(1, 1)
-	rateUpLabel.Position = UDim2.new(1, -24, 1, -26)
-	rateUpLabel.Size = UDim2.new(0, 360, 0, 22)
-	rateUpLabel.TextXAlignment = Enum.TextXAlignment.Right
+	-- Hero Pool Available Badge
+	local poolLabel = label(bannerCard, "★ Available Roster: Ignis (5★) • Valeria (4★) • Catio (3★) • Aaron (2★) • Han (1★)", 13, Color3.fromRGB(215, 185, 255), Enum.Font.GothamBold)
+	poolLabel.AnchorPoint = Vector2.new(0, 1)
+	poolLabel.Position = UDim2.new(0, 24, 1, -22)
+	poolLabel.Size = UDim2.new(1, -48, 0, 22)
+	poolLabel.TextXAlignment = Enum.TextXAlignment.Left
 
-	-- 2. Info Row (Guaranteed Pity & Permanent Event Tag)
+	-- 2. Info Row (Guaranteed 5★ Pity & Permanent Tag)
 	local infoRow = new("Frame", {
-		Name = "InfoRow",
+		Name = "PermanentInfoRow",
 		BackgroundTransparency = 1,
 		Position = UDim2.fromOffset(0, 258),
 		Size = UDim2.new(1, 0, 0, 28),
 		ZIndex = 53,
-	}, heroView)
+	}, permView)
 
-	local pityLabel = label(infoRow, "Guaranteed 3-Star in: <b>42</b> summons", 14, C.TextLavender, Enum.Font.GothamMedium)
+	local pityLabel = label(infoRow, "Guaranteed 5-Star in: <b>42</b> summons", 14, C.TextLavender, Enum.Font.GothamMedium)
 	pityLabel.Position = UDim2.fromOffset(6, 4)
 	pityLabel.Size = UDim2.new(0.5, 0, 0, 20)
 	pityLabel.TextXAlignment = Enum.TextXAlignment.Left
-	self.HeroPityLabel = pityLabel
+	self.PermanentPityLabel = pityLabel
 
 	local timerLabel = label(infoRow, "Event: Permanent Banner", 14, C.TextLavender, Enum.Font.GothamMedium)
 	timerLabel.AnchorPoint = Vector2.new(1, 0)
@@ -439,18 +439,18 @@ function Controller:BuildHeroSummonView(root: Frame)
 	timerLabel.Size = UDim2.new(0.5, 0, 0, 20)
 	timerLabel.TextXAlignment = Enum.TextXAlignment.Right
 
-	-- 3. Summon Buttons Container
+	-- 3. Summon Buttons Container (100 / 900 Gems)
 	local btnRow = new("Frame", {
-		Name = "ButtonRow",
+		Name = "PermanentButtonRow",
 		BackgroundTransparency = 1,
 		Position = UDim2.fromOffset(0, 296),
 		Size = UDim2.new(1, 0, 0, 76),
 		ZIndex = 53,
-	}, heroView)
+	}, permView)
 
 	-- SUMMON 1X Button (100 Gems)
 	local btn1X = new("TextButton", {
-		Name = "HeroSummon1XBtn",
+		Name = "PermSummon1XBtn",
 		Position = UDim2.fromScale(0, 0),
 		Size = UDim2.new(0.485, 0, 1, 0),
 		BackgroundColor3 = Color3.fromRGB(22, 18, 36),
@@ -474,12 +474,12 @@ function Controller:BuildHeroSummonView(root: Frame)
 	c1X.Size = UDim2.new(1, 0, 0, 20)
 
 	btn1X.Activated:Connect(function()
-		self:PerformHeroSummon(1)
+		self:PerformSummon("CALL_OF_THE_RIFT", 1)
 	end)
 
 	-- SUMMON 10X Button (900 Gems)
 	local btn10X = new("TextButton", {
-		Name = "HeroSummon10XBtn",
+		Name = "PermSummon10XBtn",
 		AnchorPoint = Vector2.new(1, 0),
 		Position = UDim2.new(1, 0, 0, 0),
 		Size = UDim2.new(0.485, 0, 1, 0),
@@ -504,105 +504,106 @@ function Controller:BuildHeroSummonView(root: Frame)
 	c10X.Size = UDim2.new(1, 0, 0, 20)
 
 	btn10X.Activated:Connect(function()
-		self:PerformHeroSummon(10)
+		self:PerformSummon("CALL_OF_THE_RIFT", 10)
 	end)
 end
 
 --============================================================================
--- ARTIFACT SUMMON BANNER VIEW (Summoning Altar Dual-Banner)
+-- SECTION 2: LIMITED BANNER VIEW ("A STAR'S ARRIVAL" - 1★ TO 7★)
 --============================================================================
 
-function Controller:BuildArtifactSummonView(root: Frame)
-	local artView = new("Frame", {
-		Name = "ArtifactSummonView",
+function Controller:BuildLimitedSummonView(root: Frame)
+	local limView = new("Frame", {
+		Name = "LimitedSummonView",
 		BackgroundTransparency = 1,
 		Position = UDim2.fromOffset(16, 72),
 		Size = UDim2.new(1, -32, 1, -82),
 		Visible = false,
 		ZIndex = 52,
 	}, root)
-	self.ArtifactSummonView = artView
+	self.LimitedSummonView = limView
 
 	-- 1. Main Featured Banner Card
 	local bannerCard = new("Frame", {
-		Name = "ArtifactBannerCard",
+		Name = "LimitedBannerCard",
 		Position = UDim2.fromOffset(0, 0),
 		Size = UDim2.new(1, 0, 0, 246),
-		BackgroundColor3 = Color3.fromRGB(19, 14, 34),
+		BackgroundColor3 = Color3.fromRGB(24, 16, 38),
 		BorderSizePixel = 0,
 		ZIndex = 53,
-	}, artView)
+	}, limView)
 
 	new("UICorner", { CornerRadius = UDim.new(0, 8) }, bannerCard)
-	stroke(bannerCard, C.Border, 1.2, 0.05)
-	glow(bannerCard, 8, C.BorderGlow, 0.85)
-	cornerDiamonds(bannerCard, 6, C.Border)
+	stroke(bannerCard, Color3.fromRGB(150, 90, 210), 1.2, 0.05)
+	glow(bannerCard, 8, Color3.fromRGB(180, 120, 255), 0.85)
+	cornerDiamonds(bannerCard, 6, Color3.fromRGB(220, 160, 255))
 
+	-- Celestial Gold / Amethyst Gradient
 	new("UIGradient", {
 		Color = ColorSequence.new({
-			ColorSequenceKeypoint.new(0.0, Color3.fromRGB(28, 19, 50)),
-			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(20, 14, 36)),
-			ColorSequenceKeypoint.new(1.0, Color3.fromRGB(12, 9, 22)),
+			ColorSequenceKeypoint.new(0.0, Color3.fromRGB(44, 25, 68)),
+			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(28, 16, 44)),
+			ColorSequenceKeypoint.new(1.0, Color3.fromRGB(14, 10, 24)),
 		}),
 		Rotation = 35,
 	}, bannerCard)
 
 	-- Top Watermark
-	local watermark = label(bannerCard, "★ 5-STAR FEATURED HERO & ARTIFACTS", 15, Color3.fromRGB(230, 220, 255), Enum.Font.GothamBold)
-	watermark.TextTransparency = 0.55
+	local watermark = label(bannerCard, "★ 7-STAR LIMITED RATE-UP EVENT", 15, Color3.fromRGB(255, 235, 180), Enum.Font.GothamBold)
+	watermark.TextTransparency = 0.50
 	watermark.Position = UDim2.fromOffset(24, 18)
 	watermark.Size = UDim2.new(1, -48, 0, 20)
 	watermark.TextXAlignment = Enum.TextXAlignment.Left
 
 	-- Big Glowing Banner Title
-	local bannerTitle = label(bannerCard, "ECHOES OF THE RIFT", 34, C.GoldYellow, Enum.Font.GothamBlack)
-	bannerTitle.AnchorPoint = Vector2.new(0, 1)
-	bannerTitle.Position = UDim2.new(0, 24, 1, -26)
-	bannerTitle.Size = UDim2.new(0, 420, 0, 44)
+	local bannerTitle = label(bannerCard, "A STAR'S ARRIVAL", 36, Color3.fromRGB(255, 220, 100), Enum.Font.GothamBlack)
+	bannerTitle.AnchorPoint = Vector2.new(0, 0.5)
+	bannerTitle.Position = UDim2.new(0, 24, 0.48, -4)
+	bannerTitle.Size = UDim2.new(1, -48, 0, 44)
 	bannerTitle.TextXAlignment = Enum.TextXAlignment.Left
 	bannerTitle.TextStrokeTransparency = 0.35
-	bannerTitle.TextStrokeColor3 = Color3.fromRGB(120, 80, 0)
+	bannerTitle.TextStrokeColor3 = Color3.fromRGB(140, 85, 10)
 
-	-- Featured Rate-Up Pill Label
-	local rateUpLabel = label(bannerCard, "★ Rate Up: Blade of the Rift (5★)  |  Aegis Core (5★)", 12, Color3.fromRGB(205, 175, 245), Enum.Font.GothamBold)
-	rateUpLabel.AnchorPoint = Vector2.new(1, 1)
-	rateUpLabel.Position = UDim2.new(1, -24, 1, -26)
-	rateUpLabel.Size = UDim2.new(0, 360, 0, 22)
-	rateUpLabel.TextXAlignment = Enum.TextXAlignment.Right
+	-- Featured Rate-Up Pill Label (1★ to 7★)
+	local rateUpLabel = label(bannerCard, "★ Featured Roster: Astrea (7★) • Solaris (6★) • Archon (5★) • Morrigan (4★) • Eolka (3★) • Velkist (2★) • Jenna (1★)", 12, Color3.fromRGB(255, 215, 150), Enum.Font.GothamBold)
+	rateUpLabel.AnchorPoint = Vector2.new(0, 1)
+	rateUpLabel.Position = UDim2.new(0, 24, 1, -22)
+	rateUpLabel.Size = UDim2.new(1, -48, 0, 22)
+	rateUpLabel.TextXAlignment = Enum.TextXAlignment.Left
 
-	-- 2. Info Row
+	-- 2. Info Row (Guaranteed 7★ Pity & Timer)
 	local infoRow = new("Frame", {
-		Name = "ArtifactInfoRow",
+		Name = "LimitedInfoRow",
 		BackgroundTransparency = 1,
 		Position = UDim2.fromOffset(0, 258),
 		Size = UDim2.new(1, 0, 0, 28),
 		ZIndex = 53,
-	}, artView)
+	}, limView)
 
-	local pityLabel = label(infoRow, "Guaranteed 5-Star in: <b>42</b> summons", 14, C.TextLavender, Enum.Font.GothamMedium)
+	local pityLabel = label(infoRow, "Guaranteed 7-Star in: <b>42</b> summons", 14, Color3.fromRGB(255, 230, 180), Enum.Font.GothamMedium)
 	pityLabel.Position = UDim2.fromOffset(6, 4)
 	pityLabel.Size = UDim2.new(0.5, 0, 0, 20)
 	pityLabel.TextXAlignment = Enum.TextXAlignment.Left
-	self.ArtifactPityLabel = pityLabel
+	self.LimitedPityLabel = pityLabel
 
-	local timerLabel = label(infoRow, "Event Ends: 2d 14h", 14, C.TextLavender, Enum.Font.GothamMedium)
+	local timerLabel = label(infoRow, "Event Ends: 14d 00h", 14, Color3.fromRGB(255, 205, 130), Enum.Font.GothamMedium)
 	timerLabel.AnchorPoint = Vector2.new(1, 0)
 	timerLabel.Position = UDim2.new(1, -6, 0, 4)
 	timerLabel.Size = UDim2.new(0.5, 0, 0, 20)
 	timerLabel.TextXAlignment = Enum.TextXAlignment.Right
 
-	-- 3. Summon Buttons Container (160 / 1600 Gems)
+	-- 3. Summon Buttons Container (100 / 900 Gems)
 	local btnRow = new("Frame", {
-		Name = "ArtifactButtonRow",
+		Name = "LimitedButtonRow",
 		BackgroundTransparency = 1,
 		Position = UDim2.fromOffset(0, 296),
 		Size = UDim2.new(1, 0, 0, 76),
 		ZIndex = 53,
-	}, artView)
+	}, limView)
 
-	-- SUMMON 1X (160 Gems)
+	-- SUMMON 1X Button (100 Gems)
 	local btn1X = new("TextButton", {
-		Name = "ArtifactSummon1XBtn",
+		Name = "LimSummon1XBtn",
 		Position = UDim2.fromScale(0, 0),
 		Size = UDim2.new(0.485, 0, 1, 0),
 		BackgroundColor3 = Color3.fromRGB(22, 18, 36),
@@ -612,26 +613,26 @@ function Controller:BuildArtifactSummonView(root: Frame)
 		ZIndex = 54,
 	}, btnRow)
 	new("UICorner", { CornerRadius = UDim.new(0, 6) }, btn1X)
-	stroke(btn1X, C.Border, 1.2)
-	cornerDiamonds(btn1X, 4, C.Border)
+	stroke(btn1X, Color3.fromRGB(150, 90, 210), 1.2)
+	cornerDiamonds(btn1X, 4, Color3.fromRGB(210, 150, 255))
 
 	local t1X = label(btn1X, "SUMMON 1X", 15, C.Text, Enum.Font.GothamBold)
 	t1X.AnchorPoint = Vector2.new(0.5, 0.5)
 	t1X.Position = UDim2.new(0.5, 0, 0.34, 0)
 	t1X.Size = UDim2.new(1, 0, 0, 20)
 
-	local c1X = label(btn1X, "💎 160", 15, C.GoldYellow, Enum.Font.GothamBold)
+	local c1X = label(btn1X, "💎 100", 15, C.GoldYellow, Enum.Font.GothamBold)
 	c1X.AnchorPoint = Vector2.new(0.5, 0.5)
 	c1X.Position = UDim2.new(0.5, 0, 0.72, 0)
 	c1X.Size = UDim2.new(1, 0, 0, 20)
 
 	btn1X.Activated:Connect(function()
-		self:PerformArtifactSummon(1)
+		self:PerformSummon("A_STARS_ARRIVAL", 1)
 	end)
 
-	-- SUMMON 10X (1600 Gems)
+	-- SUMMON 10X Button (900 Gems)
 	local btn10X = new("TextButton", {
-		Name = "ArtifactSummon10XBtn",
+		Name = "LimSummon10XBtn",
 		AnchorPoint = Vector2.new(1, 0),
 		Position = UDim2.new(1, 0, 0, 0),
 		Size = UDim2.new(0.485, 0, 1, 0),
@@ -642,21 +643,21 @@ function Controller:BuildArtifactSummonView(root: Frame)
 		ZIndex = 54,
 	}, btnRow)
 	new("UICorner", { CornerRadius = UDim.new(0, 6) }, btn10X)
-	stroke(btn10X, C.Border, 1.2)
-	cornerDiamonds(btn10X, 4, C.Border)
+	stroke(btn10X, Color3.fromRGB(150, 90, 210), 1.2)
+	cornerDiamonds(btn10X, 4, Color3.fromRGB(210, 150, 255))
 
 	local t10X = label(btn10X, "SUMMON 10X", 15, C.Text, Enum.Font.GothamBold)
 	t10X.AnchorPoint = Vector2.new(0.5, 0.5)
 	t10X.Position = UDim2.new(0.5, 0, 0.34, 0)
 	t10X.Size = UDim2.new(1, 0, 0, 20)
 
-	local c10X = label(btn10X, "💎 1600", 15, C.GoldYellow, Enum.Font.GothamBold)
+	local c10X = label(btn10X, "💎 900", 15, C.GoldYellow, Enum.Font.GothamBold)
 	c10X.AnchorPoint = Vector2.new(0.5, 0.5)
 	c10X.Position = UDim2.new(0.5, 0, 0.72, 0)
 	c10X.Size = UDim2.new(1, 0, 0, 20)
 
 	btn10X.Activated:Connect(function()
-		self:PerformArtifactSummon(10)
+		self:PerformSummon("A_STARS_ARRIVAL", 10)
 	end)
 end
 
@@ -872,7 +873,19 @@ function Controller:ShowSummonResults(summonedList: { any }, isArtifact: boolean
 			iconLbl.TextXAlignment = Enum.TextXAlignment.Center
 
 			local stars = string.rep("★", hero.Stars or 1)
-			local nameText = string.format("%s  <font color=\"#FACC15\">%s</font>  <font color=\"#9CA3AF\" size=\"12\">[%s]</font>", hero.DisplayName or "Hero", stars, archetype)
+			local starColor = "#FACC15"
+			if hero.Stars == 7 then
+				starColor = "#E0B0FF"
+			elseif hero.Stars == 6 then
+				starColor = "#FFD700"
+			elseif hero.Stars == 5 then
+				starColor = "#C084FC"
+			elseif hero.Stars == 4 then
+				starColor = "#60A5FA"
+			elseif hero.Stars == 3 then
+				starColor = "#34D399"
+			end
+			local nameText = string.format("%s  <font color=\"%s\">%s</font>  <font color=\"#9CA3AF\" size=\"12\">[%s]</font>", hero.DisplayName or "Hero", starColor, stars, archetype)
 			local nameLbl = label(card, nameText, 15, C.Text, Enum.Font.GothamBold)
 			nameLbl.Position = UDim2.fromOffset(72, 12)
 			nameLbl.Size = UDim2.new(1, -90, 0, 22)
@@ -914,23 +927,23 @@ function Controller:Button(parent: Instance, name: string, text: string, size: U
 	return b
 end
 
-function Controller:SetSummonTab(tab: "HERO" | "ARTIFACT")
+function Controller:SetSummonTab(tab: "CALL_OF_THE_RIFT" | "A_STARS_ARRIVAL")
 	self.ActiveSummonTab = tab
-	local isHero = (tab == "HERO")
-	self.HeroTabBtn.TextColor3 = isHero and C.Text or C.TextMuted
-	self.ArtifactTabBtn.TextColor3 = not isHero and C.Text or C.TextMuted
+	local isCall = (tab == "CALL_OF_THE_RIFT")
+	self.CallTabBtn.TextColor3 = isCall and C.Text or C.TextMuted
+	self.StarTabBtn.TextColor3 = not isCall and C.Text or C.TextMuted
 
-	local targetX = isHero and 75 or 225
+	local targetX = isCall and 92 or 268
 	TweenService:Create(self.ActiveIndicator, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
 		Position = UDim2.fromOffset(targetX, 36),
 	}):Play()
 
-	self.HeroSummonView.Visible = isHero
-	self.ArtifactSummonView.Visible = not isHero
+	self.PermanentSummonView.Visible = isCall
+	self.LimitedSummonView.Visible = not isCall
 	self:Refresh()
 end
 
-function Controller:PerformHeroSummon(count: number)
+function Controller:PerformSummon(bannerId: string, count: number)
 	if self.Busy then return end
 	local profile = self.GetProfile()
 	local cost = (count == 10) and 900 or 100
@@ -941,39 +954,18 @@ function Controller:PerformHeroSummon(count: number)
 	self.Busy = true
 	task.spawn(function()
 		local ok, result = pcall(function()
-			return self.Summon:InvokeServer(count)
+			return self.Summon:InvokeServer(count, nil, bannerId)
 		end)
 		self.Busy = false
 		if ok and result and result.Success then
 			self.LastSummoned = result.Summoned or {}
-			if result.PityRemaining and self.HeroPityLabel then
-				self.HeroPityLabel.Text = string.format("Guaranteed 3-Star in: <b>%d</b> summons", result.PityRemaining)
+			if result.PermanentPityRemaining and self.PermanentPityLabel then
+				self.PermanentPityLabel.Text = string.format("Guaranteed 5-Star in: <b>%d</b> summons", result.PermanentPityRemaining)
+			end
+			if result.LimitedPityRemaining and self.LimitedPityLabel then
+				self.LimitedPityLabel.Text = string.format("Guaranteed 7-Star in: <b>%d</b> summons", result.LimitedPityRemaining)
 			end
 			self:ShowSummonResults(self.LastSummoned, false)
-		end
-		self:Refresh()
-	end)
-end
-
-function Controller:PerformArtifactSummon(count: number)
-	if self.Busy or not self.RequestSummonArtifact then return end
-	local profile = self.GetProfile()
-	local cost = (count == 10) and 1600 or 160
-	if not profile or not profile.Currencies or (profile.Currencies.Gems or 0) < cost then
-		return
-	end
-
-	self.Busy = true
-	task.spawn(function()
-		local ok, success, msg, summonedList, pityRemaining = pcall(function()
-			return self.RequestSummonArtifact:InvokeServer(count)
-		end)
-		self.Busy = false
-		if ok and success and summonedList and #summonedList > 0 then
-			if pityRemaining and self.ArtifactPityLabel then
-				self.ArtifactPityLabel.Text = string.format("Guaranteed 5-Star in: <b>%d</b> summons", pityRemaining)
-			end
-			self:ShowSummonResults(summonedList, true)
 		end
 		self:Refresh()
 	end)
@@ -997,8 +989,8 @@ function Controller:Open(facility: string)
 	self.TabContainer.Visible = isSummon
 	self.TabDivider.Visible = isSummon
 	self.HeaderTitle.Visible = not isSummon
-	self.HeroSummonView.Visible = isSummon and (self.ActiveSummonTab == "HERO")
-	self.ArtifactSummonView.Visible = isSummon and (self.ActiveSummonTab == "ARTIFACT")
+	self.PermanentSummonView.Visible = isSummon and (self.ActiveSummonTab == "CALL_OF_THE_RIFT")
+	self.LimitedSummonView.Visible = isSummon and (self.ActiveSummonTab == "A_STARS_ARRIVAL")
 	self.GeneralFacilityView.Visible = not isSummon
 
 	if not isSummon then
@@ -1031,18 +1023,18 @@ function Controller:Refresh()
 	self.GemCurrency.Text = string.format("💎 %d Gems", math.floor(gems))
 
 	if self.Current == "Summoning" then
-		-- Update Hero Pity
-		local heroPity = profile and profile.HeroBannerPity or 8
-		local heroRemaining = math.max(1, 50 - (heroPity % 50))
-		if self.HeroPityLabel then
-			self.HeroPityLabel.Text = string.format("Guaranteed 3-Star in: <b>%d</b> summons", heroRemaining)
+		-- Update Permanent Banner Pity
+		local permPity = profile and (profile.HeroPermanentPity or profile.HeroBannerPity) or 8
+		local permRemaining = math.max(1, 50 - (permPity % 50))
+		if self.PermanentPityLabel then
+			self.PermanentPityLabel.Text = string.format("Guaranteed 5-Star in: <b>%d</b> summons", permRemaining)
 		end
 
-		-- Update Artifact Pity
-		local artPity = profile and profile.ArtifactBannerPity or 8
-		local artRemaining = math.max(1, 50 - (artPity % 50))
-		if self.ArtifactPityLabel then
-			self.ArtifactPityLabel.Text = string.format("Guaranteed 5-Star in: <b>%d</b> summons", artRemaining)
+		-- Update Limited Banner Pity
+		local limPity = profile and profile.HeroLimitedPity or 8
+		local limRemaining = math.max(1, 50 - (limPity % 50))
+		if self.LimitedPityLabel then
+			self.LimitedPityLabel.Text = string.format("Guaranteed 7-Star in: <b>%d</b> summons", limRemaining)
 		end
 		return
 	end
