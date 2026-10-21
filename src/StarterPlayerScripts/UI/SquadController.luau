@@ -399,7 +399,7 @@ function SquadController.new(screenGui: ScreenGui, getProfile: () -> any, remote
 		ScrollBarImageColor3 = C.BorderBronze,
 		ScrollingDirection = Enum.ScrollingDirection.X,
 		AutomaticCanvasSize = Enum.AutomaticSize.X,
-		CanvasSize = UDim2.new(0, 0, 1, 0),
+		CanvasSize = UDim2.new(0, 0, 0, 0),
 		ZIndex = 33,
 	}, self.Root)
 
@@ -420,15 +420,18 @@ function SquadController.new(screenGui: ScreenGui, getProfile: () -> any, remote
 
 	self.EmptyRosterLabel = new("TextLabel", {
 		Name = "EmptyRosterLabel",
-		Size = UDim2.fromScale(1, 1),
+		Position = UDim2.new(0, 24, 0, 358),
+		Size = UDim2.new(1, -48, 0, 196),
 		BackgroundTransparency = 1,
 		Text = "No heroes available. Summon heroes at the Summoning Altar!",
 		Font = Enum.Font.GothamMedium,
 		TextSize = 13,
 		TextColor3 = C.TextDim,
+		TextXAlignment = Enum.TextXAlignment.Center,
+		TextYAlignment = Enum.TextYAlignment.Center,
 		Visible = false,
 		ZIndex = 34,
-	}, self.RosterScroll)
+	}, self.Root)
 
 	-- Bottom Action Bar (Confirm Squad & Auto-Swap)
 	local bottomBar = new("Frame", {
@@ -769,7 +772,7 @@ function SquadController.Refresh(self: any)
 		end
 	end
 
-	self.RosterScroll.CanvasSize = UDim2.new(0, #heroList * (cardWidth + 14) + 12, 1, 0)
+	self.RosterScroll.CanvasSize = UDim2.new(0, #heroList * (cardWidth + 14) + 12, 0, 0)
 end
 
 return SquadController
