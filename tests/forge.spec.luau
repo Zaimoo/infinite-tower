@@ -105,4 +105,31 @@ test("Max enhancement level is capped at 10", function()
 	assertEqual(ArtifactCatalog.MaxEnhancementLevel, 10)
 end)
 
+-- 7. Artifact Banner configuration & pity math
+test("Artifact banner Echoes of the Rift matches mockup pricing and pity", function()
+	local banner = ArtifactCatalog.Banner
+	assert(banner ~= nil, "ArtifactCatalog.Banner missing")
+	assertEqual(banner.Title, "ECHOES OF THE RIFT")
+	assertEqual(banner.Cost1X, 160, "1X summon costs 160 gems")
+	assertEqual(banner.Cost10X, 1600, "10X summon costs 1600 gems")
+	assertEqual(banner.MaxPity, 50, "Pity threshold is 50 pulls")
+	assertEqual(ArtifactCatalog.GetPityRemaining(8), 42, "Mockup parity: initial pity is 42 remaining")
+	assertEqual(ArtifactCatalog.GetPityRemaining(49), 1, "49 pulls gives 1 remaining to guaranteed 5-star")
+	assertEqual(ArtifactCatalog.GetPityRemaining(50), 50, "50 pulls resets to 50 remaining")
+end)
+
+-- 8. Assign View inventory stat breakdown parity
+test("Assign tab stats formatting matches mockup breakdown", function()
+	local bladeStats = ArtifactCatalog.GetStatBreakdown("art_blade_of_the_rift", 3, 1, 4)
+	assert(bladeStats["ATK"] ~= nil and bladeStats["Crit Rate"] ~= nil, "Blade has ATK and Crit Rate")
+
+	local aegisStats = ArtifactCatalog.GetStatBreakdown("art_aegis_core", 3, 1, 5)
+	assertEqual(aegisStats["DEF"], 200, "Aegis Core DEF is 200")
+	assertEqual(aegisStats["HP"], 500, "Aegis Core HP is 500")
+
+	local ringStats = ArtifactCatalog.GetStatBreakdown("art_ring_of_haste", 2, 1, 5)
+	assertEqual(ringStats["SPD"], 15, "Ring of Haste SPD is 15")
+	assertEqual(ringStats["Evasion"], 2.0, "Ring of Haste Evasion is 2.0%")
+end)
+
 print("All Forge spec tests passed successfully!")

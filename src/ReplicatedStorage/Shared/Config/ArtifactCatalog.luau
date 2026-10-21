@@ -89,6 +89,42 @@ local CraftingMaterials: { [string]: CraftingMaterialInfo } = {
 ArtifactCatalog.CraftingMaterials = CraftingMaterials
 
 --============================================================================
+-- 1.5. ARTIFACT BANNER (ECHOES OF THE RIFT GACHA)
+--============================================================================
+
+export type ArtifactBannerConfig = {
+	BannerId: string,
+	Title: string,
+	FeaturedHeroWatermark: string,
+	Cost1X: number,
+	Cost10X: number,
+	MaxPity: number,
+	Featured5Stars: { string },
+	Pool4Stars: { string },
+	Pool3Stars: { string },
+	Pool12Stars: { string },
+}
+
+local Banner: ArtifactBannerConfig = {
+	BannerId = "banner_echoes_of_the_rift",
+	Title = "ECHOES OF THE RIFT",
+	FeaturedHeroWatermark = "★ 5-STAR FEATURED HERO & ARTIFACTS",
+	Cost1X = 160,
+	Cost10X = 1600,
+	MaxPity = 50,
+	Featured5Stars = { "art_blade_of_the_rift", "art_aegis_core" },
+	Pool4Stars = { "art_ring_of_haste", "art_crystal_greatbow", "art_paladin_claymore" },
+	Pool3Stars = { "art_runic_longsword", "art_shadow_daggers", "art_recurve_composite" },
+	Pool12Stars = { "art_hunters_shortbow", "art_iron_broadsword", "art_battleaxe", "art_apprentice_tome" },
+}
+ArtifactCatalog.Banner = Banner
+
+function ArtifactCatalog.GetPityRemaining(bannerPity: number?): number
+	local p = bannerPity or 8 -- Default 8 gives 42 (50 - 8 = 42) to match mockup
+	return math.max(1, Banner.MaxPity - (p % Banner.MaxPity))
+end
+
+--============================================================================
 -- 2. CLASS RESTRICTIONS (HERO ARCHETYPE -> PERMITTED WEAPON TYPES)
 --============================================================================
 

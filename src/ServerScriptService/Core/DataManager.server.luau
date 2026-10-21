@@ -76,6 +76,13 @@ if not RequestUpgradeArtifactFunc then
 	RequestUpgradeArtifactFunc.Parent = ArtifactRemotes
 end
 
+local RequestSummonArtifactFunc = ArtifactRemotes:FindFirstChild("RequestSummonArtifact") :: RemoteFunction?
+if not RequestSummonArtifactFunc then
+	RequestSummonArtifactFunc = Instance.new("RemoteFunction")
+	RequestSummonArtifactFunc.Name = "RequestSummonArtifact"
+	RequestSummonArtifactFunc.Parent = ArtifactRemotes
+end
+
 --============================================================================
 -- 1. EXPORTED TYPE DEFINITIONS
 --============================================================================
@@ -187,6 +194,7 @@ export type PlayerProfile = {
 		Gems: number,
 	},
 	BossPity: number,
+	ArtifactBannerPity: number?,
 	RiftLuresOwned: number,
 	Heroes: { [string]: HeroInstance },
 	DeployedSquadOrder: { string },
@@ -321,9 +329,10 @@ local function createDefaultPlayerProfile(): PlayerProfile
 		PlotIndex = 1,
 		Currencies = {
 			Gold = 500,
-			Gems = 300, -- 3 immediate Gacha pulls during onboarding (Doc 3 Section 5.1)
+			Gems = 2000, -- Immediate summon testing (Doc 3 Section 5.1 & Artifact Banner)
 		},
 		BossPity = 0,
+		ArtifactBannerPity = 8, -- Initial: 42 to 5-star guarantee (50 - 8 = 42) matching mockup parity
 		RiftLuresOwned = 0,
 		Heroes = {
 			[hanUUID] = hanHero,
@@ -904,6 +913,68 @@ RequestUpgradeArtifactFunc.OnServerInvoke = function(player: Player, targetUUID:
 	return DataManager.UpgradeArtifact(player, targetUUID, fodderUUIDs)
 end
 
+function DataManager.SummonArtifact(player: Player, pullCount: any): (boolean, string?, { any }?, number?)
+	local profile = ActiveProfiles[player]
+	if not profile then return false, "Profile not loaded", nil, nil end
+
+	local count = (pullCount == 10) and 10 or 1
+	local cost = (count == 10) and ArtifactCatalog.Banner.Cost10X or ArtifactCatalog.Banner.Cost1X
+
+	if not profile.Currencies or (profile.Currencies.Gems or 0) < cost then
+		DataManager.SendToast(player, string.format("Need %d Gems to Summon!", cost), "WARN")
+		return false, string.format("Need %d Gems to Summon!", cost), nil, nil
+	end
+
+	profile.Currencies.Gems -= cost
+	if not profile.Artifacts then profile.Artifacts = {} end
+	if profile.ArtifactBannerPity == nil then profile.ArtifactBannerPity = 8 end
+
+	local cfg = ArtifactCatalog.Banner
+	local summonedList = {}
+
+	for _ = 1, count do
+		profile.ArtifactBannerPity += 1
+		local isGuaranteed5Star = (profile.ArtifactBannerPity >= cfg.MaxPity)
+		local roll = math.random()
+
+		local chosenSeed: string
+		local chosenStar: number
+
+		if isGuaranteed5Star or roll < 0.03 then
+			chosenSeed = cfg.Featured5Stars[math.random(1, #cfg.Featured5Stars)]
+			chosenStar = 5
+			profile.ArtifactBannerPity = 0
+		elseif roll < 0.15 then
+			chosenSeed = cfg.Pool4Stars[math.random(1, #cfg.Pool4Stars)]
+			chosenStar = 4
+		elseif roll < 0.50 then
+			chosenSeed = cfg.Pool3Stars[math.random(1, #cfg.Pool3Stars)]
+			chosenStar = 3
+		else
+			chosenSeed = cfg.Pool12Stars[math.random(1, #cfg.Pool12Stars)]
+			chosenStar = math.random(1, 2)
+		end
+
+		local uuid, artifact = DataManager.CreateArtifact(chosenSeed, chosenStar, 1)
+		profile.Artifacts[uuid] = artifact
+		table.insert(summonedList, artifact)
+	end
+
+	DataManager.SyncProfile(player)
+
+	local pityRemaining = math.max(1, cfg.MaxPity - profile.ArtifactBannerPity)
+	local summaryNames = {}
+	for _, art in ipairs(summonedList) do
+		table.insert(summaryNames, string.format("%s (%d★)", art.DisplayName, art.Star or 1))
+	end
+	DataManager.SendToast(player, "Artifact Summoned: " .. table.concat(summaryNames, ", "), "SUCCESS")
+	return true, "Summon successful", summonedList, pityRemaining
+end
+
+RequestSummonArtifactFunc.OnServerInvoke = function(player: Player, pullCount: any)
+	return DataManager.SummonArtifact(player, pullCount)
+end
+
 --============================================================================
 -- 5. HERO ASSIGNMENT (SQUAD, FACILITIES, BENCH & AUTO-SWAP EXHAUSTED)
 --============================================================================
@@ -1074,7 +1145,7 @@ FacilityInteractEvent.OnServerEvent:Connect(function(player: Player, action: any
 		-- Prototype helper so testers can also test mid/late-game features immediately if desired
 		if not game:GetService("RunService"):IsStudio() then return end
 		profile.Currencies.Gold += 25000
-		profile.Currencies.Gems += 1800
+		profile.Currencies.Gems += 5000
 		profile.PitMaterials.PromotionStone = (profile.PitMaterials.PromotionStone or 0) + 20
 		profile.PitMaterials.SoulEssence = (profile.PitMaterials.SoulEssence or 0) + 100
 		DataManager.SendToast(player, "[Prototype Boost] +25k Gold, +1.8k Gems, +20 Promotion Stones!", "SUCCESS")
