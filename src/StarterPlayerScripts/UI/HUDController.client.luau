@@ -625,12 +625,11 @@ local forgeTabBtn = makeBarTextButton(centerGroup, "Tab_Blacksmith", "FORGE", 56
 end)
 forgeTabBtn.LayoutOrder = 2
 
-local heroesTabBtn = makeBarTextButton(centerGroup, "Tab_Heroes", "HEROES", 62, function()
-	if squadController then
-		squadController:Toggle()
-	end
+local squadTabBtn = makeBarTextButton(centerGroup, "Tab_Squad", "SQUAD", 60, function()
+	local isSquadOpen = squadController and squadController:IsOpen()
+	_G.OpenMasterModal(isSquadOpen and "NONE" or "SQUAD")
 end)
-heroesTabBtn.LayoutOrder = 3
+squadTabBtn.LayoutOrder = 3
 
 local qButton = makeBarTextButton(centerGroup, "OverdriveButton_Q", "OVERDRIVE", 88, function()
 	LastQClock = os.clock()
@@ -675,9 +674,8 @@ end
 
 -- Icon 2: 3x3 Grid (Toggle Squad Deploy Modal)
 local iconGridBtn, gridCanvas = makeBarIconButton(centerGroup, "Tool_RosterGrid", function()
-	if squadController then
-		squadController:Toggle()
-	end
+	local isSquadOpen = squadController and squadController:IsOpen()
+	_G.OpenMasterModal(isSquadOpen and "NONE" or "SQUAD")
 end)
 iconGridBtn.LayoutOrder = 8
 do
@@ -749,10 +747,10 @@ local function updateBottomTabHighlights()
 	local squadActive = squadController ~= nil and squadController:IsOpen()
 	pitTabBtn:SetAttribute("IsActiveTab", pitActive)
 	forgeTabBtn:SetAttribute("IsActiveTab", forgeActive)
-	heroesTabBtn:SetAttribute("IsActiveTab", squadActive)
+	squadTabBtn:SetAttribute("IsActiveTab", squadActive)
 	pitTabBtn.TextColor3 = pitActive and SLATE_ACTIVE or SLATE_TEXT
 	forgeTabBtn.TextColor3 = forgeActive and SLATE_ACTIVE or SLATE_TEXT
-	heroesTabBtn.TextColor3 = squadActive and SLATE_ACTIVE or SLATE_TEXT
+	squadTabBtn.TextColor3 = squadActive and SLATE_ACTIVE or SLATE_TEXT
 end
 
 _G.OpenMasterModal = function(which: string)
@@ -763,12 +761,13 @@ _G.OpenMasterModal = function(which: string)
 	end
 	pitModal.Visible = (which == "THE_PIT")
 	blacksmithModal.Visible = (which == "BLACKSMITH")
-	updateBottomTabHighlights()
-	if which == "WAITING_ROOM" or which == "SQUAD" then
-		if squadController then
+	if (which == "WAITING_ROOM" or which == "SQUAD") and squadController then
+		if not squadController:IsOpen() then
 			squadController:Open()
 		end
-	elseif which == "THE_PIT" and refreshPitModal then
+	end
+	updateBottomTabHighlights()
+	if which == "THE_PIT" and refreshPitModal then
 		refreshPitModal()
 	elseif which == "BLACKSMITH" and refreshBlacksmithModal then
 		refreshBlacksmithModal()
@@ -823,11 +822,10 @@ makeButton({
 -- 3. SQUAD DEPLOY & PIT CONTROLLERS
 --============================================================================
 local SquadController = require(script.Parent:WaitForChild("SquadController"))
-squadController = SquadController.new(hudGui, function() return CurrentProfile end, TycoonRemotes)
+squadController = SquadController.new(hudGui, function() return CurrentProfile end, TycoonRemotes, updateBottomTabHighlights)
 _G.SquadController = squadController
 _G.OpenSquadManagement = function()
-	_G.OpenMasterModal("NONE")
-	squadController:Open()
+	_G.OpenMasterModal("SQUAD")
 end
 
 local PitController = require(script.Parent:WaitForChild("PitController"))
@@ -854,23 +852,12 @@ _G.OpenFacilityHUD = function(facility: string)
 		_G.OpenMasterModal("THE_PIT")
 		pitController:SetTab(facility)
 	elseif facility == "SquadManagement" or facility == "Squad" then
-		_G.OpenMasterModal("NONE")
-		squadController:Open()
+		_G.OpenMasterModal("SQUAD")
 	else
 		_G.OpenMasterModal("NONE")
 		facilityController:Open(facility)
 	end
 end
-
--- Connect Plot Facility ProximityPrompts
-local ProximityPromptService = game:GetService("ProximityPromptService")
-ProximityPromptService.PromptTriggered:Connect(function(prompt, playerWhoTriggered)
-	if playerWhoTriggered ~= LocalPlayer then return end
-	local facilityId = prompt:GetAttribute("FacilityHUD")
-	if facilityId then
-		_G.OpenFacilityHUD(facilityId)
-	end
-end)
 
 --============================================================================
 -- 5. BUILD THE BLACKSMITH MODAL (EQUIPPABLE ARTIFACTS & 16-TIER RARITY FORGE)

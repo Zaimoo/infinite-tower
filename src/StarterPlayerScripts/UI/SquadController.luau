@@ -71,9 +71,10 @@ local function cornerDiamonds(parent: GuiObject, size: number)
 	end
 end
 
-function SquadController.new(screenGui: ScreenGui, getProfile: () -> any, remotes: Folder)
+function SquadController.new(screenGui: ScreenGui, getProfile: () -> any, remotes: Folder, onClose: (() -> ())?)
 	local self = setmetatable({}, SquadController)
 	self.GetProfile = getProfile
+	self.OnClose = onClose
 	self.AssignRemote = remotes:WaitForChild("AssignHeroRole") :: RemoteFunction
 
 	self.SelectedSlot = 1 -- 1..5 currently active slot selected for swapping
@@ -105,8 +106,9 @@ function SquadController.new(screenGui: ScreenGui, getProfile: () -> any, remote
 		BackgroundColor3 = C.Background,
 		BackgroundTransparency = 0.04,
 		BorderSizePixel = 0,
+		Visible = false,
 		ZIndex = 31,
-	}, self.Scrim)
+	}, screenGui)
 
 	self.Scale = new("UIScale", {
 		Name = "ModalScale",
@@ -123,10 +125,19 @@ function SquadController.new(screenGui: ScreenGui, getProfile: () -> any, remote
 		end
 	end
 	updateScale()
-	local cam = workspace.CurrentCamera
-	if cam then
-		cam:GetPropertyChangedSignal("ViewportSize"):Connect(updateScale)
+	local camConn: RBXScriptConnection? = nil
+	local function bindCamera()
+		if camConn then
+			camConn:Disconnect()
+		end
+		local cam = workspace.CurrentCamera
+		if cam then
+			camConn = cam:GetPropertyChangedSignal("ViewportSize"):Connect(updateScale)
+			updateScale()
+		end
 	end
+	bindCamera()
+	workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindCamera)
 
 	new("UICorner", { CornerRadius = UDim.new(0, 8) }, self.Root)
 	self.MainStroke = stroke(self.Root, C.BorderDim, 1.6)
@@ -533,6 +544,9 @@ function SquadController.Close(self: any)
 	tw.Completed:Connect(function()
 		self.Scrim.Visible = false
 		self.Root.Visible = false
+		if self.OnClose then
+			self.OnClose()
+		end
 	end)
 end
 
@@ -551,6 +565,8 @@ end
 function SquadController.Refresh(self: any)
 	local profile = self.GetProfile()
 	if not profile or not profile.Heroes then
+		self.EmptyRosterLabel.Visible = true
+		self.EmptyRosterLabel.Text = "Loading heroes..."
 		return
 	end
 

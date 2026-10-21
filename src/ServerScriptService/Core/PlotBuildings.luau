@@ -2,7 +2,7 @@
 -- Waiting Room facilities with F-key interactions at each entrance.
 local Buildings = {}
 local Architecture = require(script.Parent:WaitForChild("PlotFacilityArchitecture"))
-local VERSION = 6
+local VERSION = 7
 local definitions = {
 	{Id = "Synthesis", Title = "SYNTHESIS", Subtitle = "THE ESSENCE FORGE", X = -46, Z = -24, Color = Color3.fromRGB(177, 110, 255)},
 	-- The gate and PlotSpawn are on negative Z: keep that central approach clear.
@@ -41,7 +41,7 @@ function Buildings.Build(plot: Instance)
 			elseif def.Id == "Summoning" then 4 else 0
 		interaction.CFrame = frame * CFrame.new(0, 3.5, z)
 		interaction.Anchored, interaction.Transparency = true, 1
-		interaction.CanCollide, interaction.CanTouch, interaction.CanQuery = false, false, false
+		interaction.CanCollide, interaction.CanTouch, interaction.CanQuery = false, false, true
 		interaction.Parent = model
 		local prompt = Instance.new("ProximityPrompt")
 		prompt.Name = "FacilityHUDPrompt"
