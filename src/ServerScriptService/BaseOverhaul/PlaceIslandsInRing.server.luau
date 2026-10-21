@@ -30,7 +30,6 @@ local Config = {
 	StartAngleDeg = -90, -- -90 deg places Plot_1 at (0, 12, -540), matching original Plot_1 orientation
 
 	-- Existing Plot & Environment Visibility
-	HidePrebuiltFacilitiesForEmptyLook = true, -- Tucks prebuilt facilities below the slab so the island top stays 100% open (only Walls + Fountain)
 	HideOldPerimeterHighway = true, -- Hides flat connecting highway segments so islands float over open sky
 	HideOldFlatCenterArena = true, -- Hides flat Ring1/Ring2 floors & ruin props so islands float over open sky around the central Tower
 
@@ -78,12 +77,11 @@ end
 
 -- Repositions a Plot_N model onto its new floating island CFrame while keeping all required children intact
 local function migratePlotToIsland(plotModel: Model, islandClone: Model, islandTopCF: CFrame)
-	-- 1. Hide old flat PlotFloor and ArenaEntryRamp (do not delete, so no script reference can break)
-	for _, partName in ipairs({ "PlotFloor", "ArenaEntryRamp" }) do
+	-- 1. Delete old flat PlotFloor, ArenaEntryRamp, and Art_PrivateExtractionPad if present
+	for _, partName in ipairs({ "PlotFloor", "ArenaEntryRamp", "Art_PrivateExtractionPad" }) do
 		local oldPart = plotModel:FindFirstChild(partName)
-		if oldPart and oldPart:IsA("BasePart") then
-			hideInstanceVisuals(oldPart)
-			oldPart.CFrame = islandTopCF * CFrame.new(0, -40, 0)
+		if oldPart then
+			oldPart:Destroy()
 		end
 	end
 
@@ -102,57 +100,20 @@ local function migratePlotToIsland(plotModel: Model, islandClone: Model, islandT
 	if extractionPad then
 		extractionPad.Anchored = true
 		extractionPad.CFrame = padCFrame
-		if Config.HidePrebuiltFacilitiesForEmptyLook then
-			extractionPad.Transparency = 1
-			extractionPad.CanCollide = false
-		end
-	end
-	local artPad = plotModel:FindFirstChild("Art_PrivateExtractionPad")
-	if artPad and artPad:IsA("Model") then
-		artPad:PivotTo(islandTopCF * CFrame.new(32, 0, -42))
-		if Config.HidePrebuiltFacilitiesForEmptyLook then
-			hideInstanceVisuals(artPad)
+		extractionPad.Transparency = 1
+		extractionPad.CanCollide = false
+		local oldBb = extractionPad:FindFirstChild("InfoBillboard")
+		if oldBb then
+			oldBb:Destroy()
 		end
 	end
 
-	-- 4. Handle existing Tycoon Facility Models (Infirmary, DimLab, SummoningAltar)
-	local facilityOffsets: { [string]: CFrame } = {
-		Facility_Infirmary = CFrame.new(-44, 0, 10),
-		Facility_DimLab = CFrame.new(0, 0, 44),
-		SummoningAltar = CFrame.new(-32, 0, -42),
-	}
-
-	for facName, localOffset in pairs(facilityOffsets) do
+	-- 4. Delete old Tycoon Facility Models (Infirmary, DimLab, SummoningAltar)
+	for _, facName in ipairs({ "Facility_Infirmary", "Facility_DimLab", "SummoningAltar" }) do
 		local fac = plotModel:FindFirstChild(facName)
-		if fac and fac:IsA("Model") then
-			if Config.HidePrebuiltFacilitiesForEmptyLook then
-				-- Tuck prebuilt facility models inside the rock core below the surface and hide them
-				-- so the island top is 100% empty (only Walls + Fountain), while PlotManager & prompts never error!
-				fac:PivotTo(islandTopCF * CFrame.new(localOffset.X, -35, localOffset.Z))
-				hideInstanceVisuals(fac)
-			else
-				fac:PivotTo(islandTopCF * localOffset * CFrame.new(0, 5, 0))
-			end
+		if fac then
+			fac:Destroy()
 		end
-	end
-
-	-- Hide auto-spawned facility worker mannequins if prebuilt facilities are hidden for an empty island
-	if Config.HidePrebuiltFacilitiesForEmptyLook then
-		local function watchWorkers(workersFolder: Instance)
-			hideInstanceVisuals(workersFolder)
-			workersFolder.DescendantAdded:Connect(function(desc)
-				task.defer(hideInstanceVisuals, desc)
-			end)
-		end
-		local existingWorkers = plotModel:FindFirstChild("ActivePlotWorkers")
-		if existingWorkers then
-			watchWorkers(existingWorkers)
-		end
-		plotModel.ChildAdded:Connect(function(child)
-			if child.Name == "ActivePlotWorkers" then
-				watchWorkers(child)
-			end
-		end)
 	end
 
 	-- 5. Parent the generated Floating Island, Walls, and Default Plaza Fountain into Plot_N
@@ -281,35 +242,12 @@ local function buildOverhaul(forceRebuild: boolean?)
 		and plot1:FindFirstChild("FloatingFortressIsland") ~= nil
 
 	if alreadyBaked and not forceRebuild then
-		-- Geometry was already baked in Edit mode; just hook up runtime listeners and worker hiding!
+		-- Geometry was already baked in Edit mode; just hook up runtime listeners!
 		local killZone = existingContainer:FindFirstChild("IslandKillRespawnZone") :: BasePart?
 		if killZone then
 			connectKillZoneTouch(killZone)
 		else
 			setupKillRespawnZone(existingContainer)
-		end
-
-		if Config.HidePrebuiltFacilitiesForEmptyLook then
-			for i = 1, Config.IslandCount do
-				local pModel = plotsFolder:FindFirstChild("Plot_" .. tostring(i))
-				if pModel then
-					local function watchWorkers(workersFolder: Instance)
-						hideInstanceVisuals(workersFolder)
-						workersFolder.DescendantAdded:Connect(function(desc)
-							task.defer(hideInstanceVisuals, desc)
-						end)
-					end
-					local w = pModel:FindFirstChild("ActivePlotWorkers")
-					if w then
-						watchWorkers(w)
-					end
-					pModel.ChildAdded:Connect(function(child)
-						if child.Name == "ActivePlotWorkers" then
-							watchWorkers(child)
-						end
-					end)
-				end
-			end
 		end
 		return
 	end
@@ -346,10 +284,10 @@ local function buildOverhaul(forceRebuild: boolean?)
 		end
 	end
 
-	-- Hide unused Plot_6 if present (since the ring uses 5 islands)
+	-- Destroy unused Plot_6 if present (since the ring uses 5 islands)
 	local plot6 = plotsFolder:FindFirstChild("Plot_6")
 	if plot6 then
-		hideInstanceVisuals(plot6)
+		plot6:Destroy()
 	end
 
 	masterTemplate:Destroy()

@@ -6,7 +6,6 @@ for _, plot in plots:GetChildren() do
 	task.wait()
 end
 plots.ChildAdded:Connect(function(plot)
-	plot:WaitForChild("PlotFloor", 15)
 	plot:WaitForChild("PlotSpawn", 15)
 	Buildings.Build(plot)
 end)

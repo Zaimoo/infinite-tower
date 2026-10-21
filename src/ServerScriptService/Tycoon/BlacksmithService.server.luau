@@ -127,29 +127,6 @@ local function createBlacksmithStation(plotModel: Instance): Model
 	prompt.ClickablePrompt = true
 	prompt.Parent = promptPart
 
-	-- World-Space Billboard Label above the Forge
-	local bb = Instance.new("BillboardGui")
-	bb.Name = "BlacksmithBillboard"
-	bb.Size = UDim2.new(0, 160, 0, 42)
-	bb.StudsOffset = Vector3.new(0, 3.8, 0)
-	bb.MaxDistance = 80
-	bb.AlwaysOnTop = false
-	bb.Parent = promptPart
-
-	local bbLabel = Instance.new("TextLabel")
-	bbLabel.Size = UDim2.fromScale(1, 1)
-	bbLabel.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
-	bbLabel.BackgroundTransparency = 0.25
-	bbLabel.TextColor3 = Color3.fromRGB(255, 180, 50)
-	bbLabel.Font = Enum.Font.GothamBold
-	bbLabel.TextScaled = true
-	bbLabel.Text = "⚒️ Blacksmith Forge"
-	bbLabel.Parent = bb
-
-	local bbCorner = Instance.new("UICorner")
-	bbCorner.CornerRadius = UDim.new(0, 6)
-	bbCorner.Parent = bbLabel
-
 	station.PrimaryPart = slab
 	station.Parent = plotModel
 	return station
