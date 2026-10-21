@@ -247,6 +247,20 @@ function WallsBuilder.Build(parentIsland: Instance?, customConfig: { [string]: a
 			})
 		end
 
+		-- Gate Entrance Barrier (Owner-only private plot entrance; non-owners cannot enter)
+		local gateBarrier = makePart({
+			Name = "GateBarrier",
+			Size = Vector3.new(cfg.OpeningWidth, cfg.OpeningArchHeight + 2, cfg.WallThickness + 1.0),
+			CFrame = CFrame.new(0, (cfg.OpeningArchHeight + 2) * 0.5, -halfL),
+			Material = Enum.Material.ForceField,
+			Color = Color3.fromRGB(180, 40, 50),
+			Transparency = 0.85,
+			Decorative = false,
+			Parent = wallsModel,
+		})
+		gateBarrier.CanTouch = true
+		gateBarrier:SetAttribute("IsPlotGateBarrier", true)
+
 		populateMerlonsAlongSpan(
 			wallsModel,
 			Vector3.new(-halfW + cfg.BastionSize, merlonCenterY, -halfL),
