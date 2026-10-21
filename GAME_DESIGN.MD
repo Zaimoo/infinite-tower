@@ -15,7 +15,7 @@
 In traditional gacha/simulator games, 95% of summons are discarded as worthless stat-sticks, and combat is reduced to passive AFK auto-clicking. **Infinite Tower** solves both problems through two foundational pillars:
 
 1. **The Dual-Role Living Roster (Combat + Labor):**
-   - Every hero pulled from the Summoning Altar rolls with **Combat Stats** (`HP`, `ATK`, `Range`), **Labor Output** (Base productivity), and a **Passive Trait**.
+   - Every hero pulled from the Summoning Altar rolls with **Combat Stats** (movement speed, attack speed, attack damage, health) and **Labor Output** (separate facility productivity), without trait or imprint bonuses.
    - **Up to 5 Deployed Heroes** (all 5 slots unlocked from the start) accompany the Master into the Central Hub or are independently deployed to specific floors (1–50) of the **Infinite Tower**. Heroes expend **Stamina** as they fight and risk a debilitating **60-second Coma** if left inside lethal AoE telegraphs.
    - **Benched Heroes** physically inhabit the player's **Fortress Plot** on recuperation beds in **The Infirmary & Barracks** (Stamina & Coma recovery), or can be forged powerful equipment at the **Blacksmith Forge**.
    - **Zero Dead Pulls:** Duplicate heroes across all star ranks are fed into the **Synthesis Chamber** (`SynthesisController.luau`) for EXP leveling to cap (`MaxLevel = Stars * 10`), or sacrificed at the **Promotion Altar** (`PromotionController.luau`) for **Star Promotion** ($1★ \to 7★$).
@@ -104,7 +104,7 @@ flowchart TD
 ### 2.3 The Macro Loop (Tower Progression & Biome Boss Conquests)
 1. **Biome Traversal & Preparation:**
    - Masters organize their 5-hero squad, equip high-rarity and high-star artifacts, and ensure full stamina in the Infirmary before entering a new Biome.
-   - Each biome spans 5 progressively harder floors with rising HP, ATK, and reward scalers ($\text{HP} \times 1.08^{\text{Floor}-1}$, $\text{Damage} \times 1.045^{\text{Floor}-1}$, $\text{Reward} \times 1.055^{\text{Floor}-1}$).
+   - Each biome spans 5 progressively harder floors. Enemy health and attack damage follow the stat-reference curve in Section 4.2. Reward scaling remains $\text{Reward} \times 1.055^{\text{Floor}-1}$; stat inflation does not change rewards.
 2. **The Biome Boss Encounter (Floors 5, 10, 15, ..., 50):**
    - The 5th floor of every biome is a dedicated **Biome Boss Arena** featuring a massive boss dais fixture (e.g. `BossDaisFixture` on Floor 5, $60 \times 2 \times 60\text{ studs}$).
    - The Biome Boss wields devastating signature attacks with distinct shapes and timings:
@@ -448,18 +448,18 @@ In **Infinite Tower**, major boss encounters take place at the apex of each biom
 
 #### The 10 Biome Bosses:
 
-| Floor | Biome Name | Biome Boss Name | Rig Family | Base HP | Base ATK | Signature Attack Types |
+| Floor | Biome Name | Biome Boss Name | Rig Family | Maximum Health | Basic Attack Damage | Signature Attack Types |
 | :---: | :--- | :--- | :--- | :---: | :---: | :--- |
-| **5** | **Verdant Ruins** | **Mossbound Guardian** | `STONE_COLOSSUS` | `16,326` | `66` | Frontal Cleave (`ARC`), Quake (`SELF_DISC`), Root Bloom (`TARGET_DISC`) |
-| **10** | **Fungal Hollow** | **Spore Matriarch** | `FUNGAL_MATRIARCH` | `24,000` | `82` | Spore Burst (`SELF_DISC`), Corrosive Cloud (`TARGET_DISC`) |
-| **15** | **Drowned Steps** | **Abyssal Leviathan** | `LEVIATHAN` | `35,500` | `102` | Tidal Sweep (`ARC`), Maelstrom (`SELF_DISC`), Geyser Strike (`TARGET_DISC`) |
-| **20** | **Cinder Gate** | **Cinder Colossus** | `FIRE_COLOSSUS` | `52,000` | `128` | Magma Cleave (`ARC`), Eruption (`SELF_DISC`), Fire Rain (`TARGET_DISC`) |
-| **25** | **Rimefall Approach** | **Frost Sovereign** | `FROST_GIANT` | `76,000` | `160` | Glacial Smash (`ARC`), Blizzard Shock (`SELF_DISC`), Ice Spikes (`TARGET_DISC`) |
-| **30** | **Stormgrass Rise** | **Tempest Roc** | `GIANT_AVIAN` | `112,000` | `200` | Gale Slash (`ARC`), Thunderclap (`SELF_DISC`), Lightning Strike (`TARGET_DISC`) |
-| **35** | **Slagworks Entry** | **Slagwork Titan** | `MAGMA_CONSTRUCT` | `165,000` | `250` | Anvil Hammer (`ARC`), Slag Quake (`SELF_DISC`), Molten Core (`TARGET_DISC`) |
-| **40** | **Blighted Verge** | **Heartrot Sovereign** | `CORRUPTED_TREANT` | `242,000` | `312` | Briar Whip (`ARC`), Heartrot Bloom (`SELF_DISC`), Rot Tendrils (`TARGET_DISC`) |
-| **45** | **Starlit Vestibule** | **Rift Warden** | `COSMIC_ENTITY` | `355,000` | `390` | Astral Sweep (`ARC`), Dimensional Rupture (`SELF_DISC`), Void Well (`TARGET_DISC`) |
-| **50** | **Abyssal Descent** | **Abyssal Overlord** | `DEMONIC_OVERLORD` | `520,000` | `488` | Hellfire Cleave (`ARC`), Abyssal Nova (`SELF_DISC`), Doom Pillars (`TARGET_DISC`) |
+| **5** | **Verdant Ruins** | **Mossbound Guardian** | `STONE_COLOSSUS` | `22,050` | `16` | Frontal Cleave (`ARC`), Quake (`SELF_DISC`), Root Bloom (`TARGET_DISC`) |
+| **10** | **Fungal Hollow** | **Spore Matriarch** | `FUNGAL_MATRIARCH` | `76,500` | `24` | Spore Burst (`SELF_DISC`), Corrosive Cloud (`TARGET_DISC`) |
+| **15** | **Drowned Steps** | **Abyssal Leviathan** | `LEVIATHAN` | `470,813` | `106` | Tidal Sweep (`ARC`), Maelstrom (`SELF_DISC`), Geyser Strike (`TARGET_DISC`) |
+| **20** | **Cinder Gate** | **Cinder Colossus** | `FIRE_COLOSSUS` | `1,784,250` | `155` | Magma Cleave (`ARC`), Eruption (`SELF_DISC`), Fire Rain (`TARGET_DISC`) |
+| **25** | **Rimefall Approach** | **Frost Sovereign** | `FROST_GIANT` | `12,198,938` | `685` | Glacial Smash (`ARC`), Blizzard Shock (`SELF_DISC`), Ice Spikes (`TARGET_DISC`) |
+| **30** | **Stormgrass Rise** | **Tempest Roc** | `GIANT_AVIAN` | `83,724,469` | `1,006` | Gale Slash (`ARC`), Thunderclap (`SELF_DISC`), Lightning Strike (`TARGET_DISC`) |
+| **35** | **Slagworks Entry** | **Slagwork Titan** | `MAGMA_CONSTRUCT` | `950,189,344` | `4,436` | Anvil Hammer (`ARC`), Slag Quake (`SELF_DISC`), Molten Core (`TARGET_DISC`) |
+| **40** | **Blighted Verge** | **Heartrot Sovereign** | `CORRUPTED_TREANT` | `5,352,379,031` | `6,517` | Briar Whip (`ARC`), Heartrot Bloom (`SELF_DISC`), Rot Tendrils (`TARGET_DISC`) |
+| **45** | **Starlit Vestibule** | **Rift Warden** | `COSMIC_ENTITY` | `23,593,202,156` | `28,728` | Astral Sweep (`ARC`), Dimensional Rupture (`SELF_DISC`), Void Well (`TARGET_DISC`) |
+| **50** | **Abyssal Descent** | **Abyssal Overlord** | `DEMONIC_OVERLORD` | `110,844,632,813` | `42,211` | Hellfire Cleave (`ARC`), Abyssal Nova (`SELF_DISC`), Doom Pillars (`TARGET_DISC`) |
 
 ### 5.2 Tactical Mechanics & Combat Flow ("Greed vs. Coma")
 1. **Telegraph Shapes & Timings:**
@@ -494,46 +494,60 @@ In **Infinite Tower**, major boss encounters take place at the apex of each biom
 
 ## 7. EQUIPPABLE ARTIFACT & BLACKSMITH SYSTEM
 
-### 7.1 System Overview & Dual-Banner Gacha Architecture
-Artifact progression replaces traditional crafting with an **Artifact Summoning Banner** at the Summoning Altar and inverts the classic star/rarity hierarchy:
-1. **Inherent Rarity Potential (Common to Origin - 16 Tiers):** An artifact's Rarity Tier dictates its permanent **Base Attack Power ($ATK_{\text{Base}}$: `+20` to `+7,000`)** and **Base Attack Speed ($ASPD_{\text{Base}}$: `+5.0%` to `+85.0%`)**. The rarity represents the intrinsic baseline power of the drop or pull.
-2. **Progressive Star Multipliers (1★ to 7★):** Star ratings act as **multipliers** applied to the inherent base stats. All newly pulled or acquired artifacts start at **1★ (`1.00x`)**. At the **Blacksmith Forge** (`ForgeController.luau`), players perform **Star Ascension** ($1★ \to 7★$) using duplicate artifacts and Gold, scaling effective stats up to **`8.00x`**.
-3. **Artifact Banner Pulling (Gacha System):** Players spend Gems (`160 Gems` single / `1,600 Gems` 10x) at the Summoning Altar's **Artifact Banner** to pull equippable weapons, shields, and rings across archetypes.
+### 7.1 Inherent Rarity, Progressive Stars
 
-### 7.2 The 16 Rarity Tiers (Inherent Base Stats)
-The 16 Rarity Tiers determine the baseline stats of any artifact pulled from the banner or dropped by milestone content:
+An **artifact is a weapon**, with one equipped artifact UUID per hero. Its rarity is an immutable property assigned on acquisition. **Star Promotion is the only upgrade to an owned weapon.** There are no enhancement levels or enhancement-fodder multipliers in the stat model.
 
-| Tier | Rarity Name | Base ATK ($ATK_{\text{Base}}$) | Base ASPD Bonus ($ASPD_{\text{Base}}$) | Hex Color | Visual & VFX Identity |
-| :---: | :--- | :---: | :---: | :---: | :--- |
-| **1** | **Common** | **`+20`** | **`+5.0%`** (`+0.050`) | `#B0B0B0` | Weathered iron / rustic wood; standard matte finish. |
-| **2** | **Uncommon** | **`+45`** | **`+7.5%`** (`+0.075`) | `#4BB543` | Cleaned edge, subtle emerald sheen. |
-| **3** | **Rare** | **`+80`** | **`+10.0%`** (`+0.100`) | `#2980B9` | Polished azure finish; fine leather wrappings. |
-| **4** | **Superior** | **`+130`** | **`+13.0%`** (`+0.130`) | `#8E44AD` | Deep amethyst inlay with fine balance grooves. |
-| **5** | **Exalted** | **`+200`** | **`+16.5%`** (`+0.165`) | `#D35400` | Tempered bronze plating; warm amber sheen. |
-| **6** | **Legendary** | **`+300`** | **`+20.0%`** (`+0.200`) | `#F1C40F` | Gilding with glowing runes; subtle gold particle trails. |
-| **7** | **Mythical** | **`+440`** | **`+24.0%`** (`+0.240`) | `#E74C3C` | Crimson mana channels; pulsing inner embers. |
-| **8** | **Transcendent** | **`+640`** | **`+28.5%`** (`+0.285`) | `#1ABC9C` | Pure sea-glass teal resonance; condensation mist. |
-| **9** | **Ascendant** | **`+900`** | **`+33.5%`** (`+0.335`) | `#E056FD` | Neon violet crystal edge; dimensional crackle. |
-| **10** | **Ethereal** | **`+1,250`** | **`+39.0%`** (`+0.390`) | `#686DE0` | Semi-translucent spectral steel; atmospheric hum. |
-| **11** | **Immortal** | **`+1,700`** | **`+45.0%`** (`+0.450`) | `#FF7979` | Sanguine abyssal forged alloy; trailing smoke. |
-| **12** | **Divine** | **`+2,300`** | **`+51.5%`** (`+0.515`) | `#F9CA24` | Blinding solar gold radiant aura; consecrated luster. |
-| **13** | **Celestial** | **`+3,050`** | **`+58.5%`** (`+0.585`) | `#00D2D3` | Cosmic azure starry core; orbiting orbital motes. |
-| **14** | **Primordial** | **`+4,000`** | **`+66.0%`** (`+0.660`) | `#FF3838` | Raw volcanic magma veins; Neon material ignition. |
-| **15** | **Supreme** | **`+5,250`** | **`+74.0%`** (`+0.740`) | `#BADC58` | Iridescent viridian prism; high-frequency bloom. |
-| **16** | **Origin** | **`+7,000`** | **`+85.0%`** (`+0.850`) | `#FF9FF3` | Full prismatic animated chroma aura; dimensional distortion. |
+1. **Inherent rarity:** Sets base weapon power and a fixed attack-speed bonus. The stat reference uses **Mythical at hero level 50 / floor 50**. Rarity cannot be upgraded, rerolled, or refined on the same UUID.
+2. **Progressive stars (1★ to 7★):** Multiply power by **1.00 / 1.60 / 2.50 / 4.00 / 6.50 / 10.00 / 16.00x**. Each promotion retains the recipient's rarity, template, and owner.
+3. **New weapon acquisition:** A higher-rarity weapon is a new item, starting at 1★. Stars do not transfer between items. Compare resulting damage before equipping; a promoted lower-rarity weapon can outperform a fresh higher-rarity weapon.
 
-### 7.3 The 7 Star Tiers (Progressive Multipliers & Ascension)
-Stars multiply an artifact's inherent base stats. Ascension requires duplicate artifacts and Gold at the Blacksmith Forge:
+`WeaponPower = InherentRarityPower * WeaponStarMultiplier`
 
-| Star Tier | Stat Multiplier | Ascension Requirement | Gold Cost | Gem Cost | Progression Context |
-| :---: | :---: | :---: | :---: | :---: | :--- |
-| **1★** | **`1.00x`** | Baseline | — | — | Default tier for all pulled/dropped gear. |
-| **2★** | **`1.35x`** | 1 Duplicate Artifact | 500 Gold | — | Early-game power boost. |
-| **3★** | **`1.85x`** | 2 Duplicate Artifacts | 2,000 Gold | — | Mid-Ring 1 progression benchmark. |
-| **4★** | **`2.60x`** | 3 Duplicate Artifacts | 8,000 Gold | — | Ring 2 Corrupted Grove readiness. |
-| **5★** | **`3.75x`** | 4 Duplicate Artifacts | 25,000 Gold | 50 Gems | Biome Boss conquest tier (Floors 1–20). |
-| **6★** | **`5.50x`** | 5 Duplicate Artifacts | 75,000 Gold | 150 Gems | High-tower progression (Floors 25–40). |
-| **7★** | **`8.00x`** | 6 Duplicate Artifacts | 250,000 Gold | 500 Gems | Maximum star ascendancy (Floors 45–50). |
+`WeaponDamageMultiplier = 1 + WeaponPower/40`
+
+At **Mythical 7★**, power is `7,000 * 16 = 112,000`, for a **2,801x trained-damage multiplier**. The fixed rarity bonus is **+30% attack speed** at every star rank. Weapons do not change health or movement speed. Hero stars, levels, and seed damage remain the other major power axis.
+
+### 7.2 Inherent Weapon Stats by Rarity
+
+| Tier | Inherent rarity | Base power (1★) | Attack-speed bonus | 7★ power | 7★ trained-damage multiplier |
+| --- | --- | --- | --- | --- | --- |
+| 1 | Common | 20 | 5.0% | 320 | 9x |
+| 2 | Uncommon | 60 | 7.5% | 960 | 25x |
+| 3 | Rare | 180 | 10.0% | 2,880 | 73x |
+| 4 | Superior | 540 | 13.0% | 8,640 | 217x |
+| 5 | Exalted | 1,400 | 16.5% | 22,400 | 561x |
+| 6 | Legendary | 3,500 | 20.0% | 56,000 | 1,401x |
+| 7 | Mythical | 7,000 | 30.0% | 112,000 | 2,801x |
+| 8 | Transcendent | 10,000 | 35.0% | 160,000 | 4,001x |
+| 9 | Ascendant | 14,000 | 40.0% | 224,000 | 5,601x |
+| 10 | Ethereal | 20,000 | 45.0% | 320,000 | 8,001x |
+| 11 | Immortal | 28,000 | 50.0% | 448,000 | 11,201x |
+| 12 | Divine | 40,000 | 55.0% | 640,000 | 16,001x |
+| 13 | Celestial | 56,000 | 60.0% | 896,000 | 22,401x |
+| 14 | Primordial | 80,000 | 65.0% | 1,280,000 | 32,001x |
+| 15 | Supreme | 112,000 | 70.0% | 1,792,000 | 44,801x |
+| 16 | Origin | 160,000 | 75.0% | 2,560,000 | 64,001x |
+
+These values apply to every compatible weapon type; templates select appearance/type rather than a special stat formula. Attack speed is fixed by inherent rarity, not multiplied by stars. A Common 7★ weapon has 320 power, while a Mythical 1★ has 7,000 power; a Legendary 7★ has 56,000 power and can outperform that newly acquired Mythical until it is promoted.
+
+Higher rarities retain stat definitions in [the complete weapon matrix](docs/balance/STAT_SCALING_TABLES.md#weapon-power-by-inherent-rarity-and-promoted-stars). They are outside the required floor-50 reference build; this stat revision does not change how any rarity is obtained. The current hero level cap stays 50.
+
+### 7.3 Weapon Star Promotion (1★ to 7★)
+
+Promotion consumes other copies of the **same weapon template**, of any rarity or star rank, plus the listed Gold/Gems. The recipient's inherent rarity never changes. Reject locked, equipped, duplicate, or recipient-as-donor UUIDs. Consumed donors return no previous investment. No random success roll applies.
+
+| Result stars | Power multiplier | Donors for this step | Gold | Gems |
+| --- | --- | --- | --- | --- |
+| 1 | 1.00x | — | — | — |
+| 2 | 1.60x | 1 | 500 | 0 |
+| 3 | 2.50x | 2 | 2,000 | 0 |
+| 4 | 4.00x | 3 | 8,000 | 0 |
+| 5 | 6.50x | 4 | 25,000 | 50 |
+| 6 | 10.00x | 5 | 75,000 | 150 |
+| 7 | 16.00x | 6 | 250,000 | 500 |
+
+The full 1★ to 7★ path consumes 21 donor weapons plus the retained original. There is no additional enhancement-fodder sink. The multipliers now supply the full weapon progression that the removed enhancement track previously shared. Prices and acquisition pacing remain proposed tuning.
 
 ### 7.4 Artifact Summoning Banner (Gacha Mechanics)
 - **Altar Integration:** The Summoning Altar features two banner tabs: **[HERO BANNER]** and **[ARTIFACT BANNER]**.

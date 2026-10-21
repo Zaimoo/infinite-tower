@@ -164,13 +164,13 @@ end)
 
 test("Provisional balance is measured against current starter formulas, not claimed playtested", function()
 	local totalDPS = 0
-	for _, starter in ipairs({ { Id = "hero_han", Quality = 1.05, HP = 315, ATK = 61, DPS = 75.4 }, { Id = "hero_jenna", Quality = 1, HP = 210, ATK = 54, DPS = 70.9 } }) do
+	for _, starter in ipairs({ { Id = "hero_han", Quality = 1.05, HP = 315, ATK = 63, DPS = 63 }, { Id = "hero_jenna", Quality = 1, HP = 210, ATK = 51, DPS = 63.8 } }) do
 		local seed = Heroes.Seeds[starter.Id]
 		local atk, hp, dps = Stats.GetEffectiveCombatStats({ TemplateId = starter.Id, Level = 1, QualityScalar = starter.Quality, BaseATK = seed.NativeATK, BaseHP = seed.NativeHP, Archetype = seed.Archetype, AttackInterval = seed.AttackInterval, CurrentStamina = 100 }, false, false, { Star = 1, Rarity = 1 })
 		assert(atk == starter.ATK and hp == starter.HP and dps == starter.DPS)
 		totalDPS += dps
 	end
-	assert(math.abs(totalDPS - 146.3) < .001)
+	assert(math.abs(totalDPS - 126.8) < .001)
 	for _, id in ipairs({ 1, 5, 25, 50 }) do
 		local floor = Floors.Get(id)
 		local enemyId = floor.BossEnemyId or floor.Encounters[1].EnemyId

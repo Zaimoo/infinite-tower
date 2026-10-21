@@ -10,17 +10,18 @@
 ### 1.1 Launch Roster & World Boss Exclusive Seed Table
 - **Banner Pool Cost:** `100 Gems` (Single Pull) | `900 Gems` (10x Pull).
 - **Banner Drop Rates:** `1★ Common (70%)`, `2★ Rare (25%)`, `3★ Epic (5%)`. `4★` and `5★` are obtained exclusively via **Star Promotion**.
-- **Stat Normalization Note:** In the table below, **Native Star Stats** show the exact stats when summoned at their base Star tier (`Level 1`, `QualityScalar = 1.00`), while **1★ Base Equivalent** shows the underlying $S=1$ seed values before the $1.65^{(S-1)}$ (Combat) and $1.35^{(S-1)}$ (Labor) Star Promotion multipliers.
+- **Stat Normalization Note:** In the table below, **Native Star Stats** show the exact stats when summoned at their base Star tier (`Level 1`, `QualityScalar = 1.00`), while **1★ Base Equivalent** shows the underlying $S=1$ seed values before the $3^{(S-1)}$ (Combat) and $1.35^{(S-1)}$ (Labor) Star Promotion multipliers.
 
-| Hero ID | Hero Name | Origin / Banner Pool | Base Star | Archetype | Native HP (Lv.1) | Native ATK (Lv.1) | 1★ Base HP | 1★ Base ATK | Attack Interval (s) | Attacks / Sec | Native Base DPS (Lv.1) | Attack Range (Studs) | Native Base Labor (/min) | 1★ Base Labor (/min) | Preferred Facility (+25% Labor) | Passive Trait Name | Passive Combat Multiplier | Passive Labor / Utility Multiplier |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| `hero_han` | **Han** | Standard Banner (25.0% Net) | 1★ | Striker | 300 | 40 | 300 | 40 | 0.85 | 1.18 | 47.06 | 6 | 14.0 | 14.0 | None | Unyielding Adaptation | +10% ATK | -10% Combat Stamina Drain |
-| `hero_jenna` | **Jenna** | Standard Banner (22.5% Net) | 1★ | Marksman | 210 | 34 | 210 | 34 | 0.80 | 1.25 | 42.50 | 28 | 13.0 | 13.0 | None | Windstep Precision | +15% Attack Speed | +5% Squad Move Speed |
-| `hero_catio` | **Catio** | Standard Banner (22.5% Net) | 1★ | Miner | 280 | 24 | 280 | 24 | 1.05 | 0.95 | 22.86 | 6 | 20.0 | 20.0 | None | Quartermaster's Ledger | +0% Combat | +25% Labor Output |
-| `hero_aaron` | **Aaron** | Standard Banner (13.0% Net) | 2★ | Vanguard | 743 | 46 | 450 | 28 | 1.10 | 0.91 | 41.82 | 7 | 21.6 | 16.0 | Infirmary | Phalanx Guard | +25% Max HP | -15% AoE Damage Taken |
-| `hero_velkist` | **Velkist** | Standard Banner (12.0% Net) | 2★ | Striker | 495 | 73 | 300 | 44 | 0.75 | 1.33 | 97.33 | 6 | 18.9 | 14.0 | None | Bloodthirst Frenzy | +20% ATK | +1.0s [Q] Overdrive Duration |
-| `hero_eolka` | **Eolka** | Standard Banner (5.0% Net) | 3★ | Scholar | 626 | 142 | 230 | 52 | 1.00 | 1.00 | 142.00 | 30 | 40.1 | 22.0 | None | Crimson Pyromancy | +25% ATK | +30% Labor Output |
-| `hero_archon` | **Sovereign Archon** | World Boss Exclusive (RNG / 100% Pity) | 3★ | Striker | 953 | 177 | 350 | 65 | 0.80 | 1.25 | 221.25 | 14 | 45.6 | 25.0 | All Facilities (+25%) | Dimensional Dominion | +30% Boss Damage | +25% All-Facility Labor & -25% Nova Stamina Loss |
+| Hero ID | Hero Name | Origin / Banner Pool | Base Star | Archetype | Native Health (Lv.1) | Native Attack Damage (Lv.1) | 1★ Base HP | 1★ Base ATK | Attack Interval (s) | Attacks / Sec | Movement Speed (Studs/sec) | Native Base DPS (Lv.1) | Attack Range (Studs) | Native Base Labor (/min) | 1★ Base Labor (/min) | Preferred Facility (+25% Labor) |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `hero_han` | **Han** | Standard Banner (25.0% Net) | 1★ | Striker | 300 | 40 | 300 | 40 | 0.85 | 1.18 | 20 | 47.06 | 6 | 14.0 | 14.0 | None |
+| `hero_jenna` | **Jenna** | Standard Banner (22.5% Net) | 1★ | Marksman | 210 | 34 | 210 | 34 | 0.80 | 1.25 | 20 | 42.50 | 28 | 13.0 | 13.0 | None |
+| `hero_catio` | **Catio** | Standard Banner (22.5% Net) | 1★ | Miner | 280 | 24 | 280 | 24 | 1.05 | 0.95 | 20 | 22.86 | 6 | 20.0 | 20.0 | None |
+| `hero_aaron` | **Aaron** | Standard Banner (13.0% Net) | 2★ | Vanguard | 1,350 | 84 | 450 | 28 | 1.10 | 0.91 | 20 | 76.36 | 7 | 21.6 | 16.0 | Infirmary |
+| `hero_velkist` | **Velkist** | Standard Banner (12.0% Net) | 2★ | Striker | 900 | 132 | 300 | 44 | 0.75 | 1.33 | 20 | 176.00 | 6 | 18.9 | 14.0 | None |
+| `hero_eolka` | **Eolka** | Standard Banner (5.0% Net) | 3★ | Scholar | 2,070 | 468 | 230 | 52 | 1.00 | 1.00 | 20 | 468.00 | 30 | 40.1 | 22.0 | None |
+| `hero_archon` | **Sovereign Archon** | World Boss Exclusive (RNG / 100% Pity) | 3★ | Striker | 3,150 | 585 | 350 | 65 | 0.80 | 1.25 | 20 | 731.25 | 14 | 45.6 | 25.0 | All Facilities (+25%) |
+
 
 ---
 
@@ -31,29 +32,38 @@
 - **XP Required for Level $L \to L+1$:** `=ROUND(50 * (L ^ 1.45), 0)`
 - **Synthesis ("The Pit") Fodder Base XP:** `base = (100 * (3 ^ (FodderStars - 1))) + (25 * FodderLevel)`
 - **Level Efficiency Scaling:** `efficiency = MAX(0.55, 1 - 0.025 * MAX(0, RecipientLevel - FodderLevel - 5))`
-- **Star Promotion Multipliers (Per Star above 1★):** `CombatMult = 1.65 ^ (Stars - 1)` | `LaborMult = 1.35 ^ (Stars - 1)`
-- **Level Stat Scaling:** `+8% Combat Stats per Level above 1` (`1 + 0.08 * (L - 1)`) | `+5% Labor Output per Level above 1` (`1 + 0.05 * (L - 1)`)
+- **Star Promotion Multipliers (Per Star above 1★):** `CombatMult = 3 ^ (Stars - 1)` | `LaborMult = 1.35 ^ (Stars - 1)`
+- **Level Stat Scaling:** `+8% compounded damage and health per Level above 1` (`1.08 ^ (L - 1)`) | `+5% Labor Output per Level above 1` (`1 + 0.05 * (L - 1)`)
+
+- **Promotion:** Keep the current level; increase its cap by 10. Derive damage/health once from immutable one-star seeds, with no trait or imprint factor.
+- **Weapon Power:** `=InherentRarityPower*WeaponStarMultiplier`; inherent rarity stays fixed and stars progress from 1 to 7. There are no enhancement levels.
+- **Attack Damage:** `=ROUND(SeedDamage*Quality*3^(Stars-1)*1.08^(Level-1)*(1+WeaponPower/40),0)`
+- **Health:** `=ROUND(SeedHealth*Quality*3^(Stars-1)*1.08^(Level-1),0)`
+- **Attack Speed:** `=MIN(5,BaseAttackSpeed*(1+InherentRaritySpeedBonus)*OverdriveMultiplier)` attacks/s. Stars and levels do not multiply speed.
+- **Movement Speed:** 20 studs/s for launch heroes; it does not inherit exponential damage/health growth.
+- **5 Hz DPS:** `TickInterval=0.20*CEILING((1/AttackSpeed)/0.20,1)`; `DPS=AttackDamage/TickInterval`. Use a small floating-point tolerance at exact tick boundaries, as in the calculator.
+- **Stat reference:** [Generated tables](docs/balance/STAT_SCALING_TABLES.md) and [50-floor stat CSV](docs/balance/FLOOR_SCALING.csv). These model calculations do not change drops, pity, rewards, navigation, or acquisition rules. Runtime implementation remains pending.
 
 ### 2.2 Star Promotion Milestone & Reference Stat Table (`Han` — 1★ Base to 5★ Lv.50)
-*Reference Hero: **Han** (`1★ Base HP = 300`, `1★ Base ATK = 40`, `Attack Interval = 0.85s`, `1★ Base Labor = 14.0/min`, `Passive Trait = +10% ATK`, `Preferred Facility Synergy = +25%`).*
+*Reference Hero: Han (one-star seeds: 300 health, 40 damage, 0.85s interval, 20 studs/s movement, 14 labor/min), quality 1.00, no weapon, traits, imprints, or facility synergy. Promotion retains level. Cumulative level XP follows the existing XP formula; Gold and stone prices are retained.*
 
-| Milestone Stage | Star Tier (S) | Hero Level (L) | Level Cap (10*S) | Tier XP Required (Lv.1 to Cap) | Promotion Materials Required | Promotion Gold Cost | Cumulative 1★ Copies Used | Star Combat Mult (1.65^(S-1)) | Level Combat Mult (1+0.08*(L-1)) | Total Combat Mult | Han Effective HP | Han Effective ATK (+10% Trait) | Han Base DPS | Han Overdrive DPS (+40% Spd) | Star Labor Mult (1.35^(S-1)) | Level Labor Mult (1+0.05*(L-1)) | Han Effective Labor (/min, +25% Synergy) |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **1★ Base Summon** | 1★ | 1 | 10 | 0 | None | 0 | 1 | 1.000x | 1.00x | 1.000x | 300 | 44 | 51.76 | 72.47 | 1.000x | 1.00x | 17.50 |
-| **1★ Mid-Level** | 1★ | 5 | 10 | 826 | None | 0 | 1 | 1.000x | 1.32x | 1.320x | 396 | 58 | 68.24 | 95.53 | 1.000x | 1.20x | 21.00 |
-| **1★ Max Level** | 1★ | 10 | 10 | 4,450 | None | 0 | 1 | 1.000x | 1.72x | 1.720x | 516 | 76 | 89.41 | 125.18 | 1.000x | 1.45x | 25.38 |
-| **Promote 1★ -> 2★** | 2★ | 1 | 20 | 0 | 1x Promotion Stone | 1,500 | 2 | 1.650x | 1.00x | 1.650x | 495 | 73 | 85.88 | 120.24 | 1.350x | 1.00x | 23.63 |
-| **2★ Mid-Level** | 2★ | 10 | 20 | 4,450 | None | 0 | 2 | 1.650x | 1.72x | 2.838x | 851 | 125 | 147.06 | 205.88 | 1.350x | 1.45x | 34.26 |
-| **2★ Max Level** | 2★ | 20 | 20 | 21,813 | None | 0 | 2 | 1.650x | 2.52x | 4.158x | 1,247 | 183 | 215.29 | 301.41 | 1.350x | 1.95x | 46.07 |
-| **Promote 2★ -> 3★** | 3★ | 1 | 30 | 0 | 3x Promotion Stones | 7,500 | 6 | 2.723x | 1.00x | 2.723x | 817 | 120 | 141.18 | 197.65 | 1.823x | 1.00x | 31.89 |
-| **3★ Mid-Level** | 3★ | 15 | 30 | 11,401 | None | 0 | 6 | 2.723x | 2.12x | 5.772x | 1,732 | 254 | 298.82 | 418.35 | 1.823x | 1.70x | 54.22 |
-| **3★ Max Level** | 3★ | 30 | 30 | 56,906 | None | 0 | 6 | 2.723x | 3.32x | 9.039x | 2,712 | 398 | 468.24 | 655.53 | 1.823x | 2.45x | 78.14 |
-| **Promote 3★ -> 4★** | 4★ | 1 | 40 | 0 | 8x Promotion Stones | 35,000 | 24 | 4.492x | 1.00x | 4.492x | 1,348 | 198 | 232.94 | 326.12 | 2.460x | 1.00x | 43.06 |
-| **4★ Mid-Level** | 4★ | 20 | 40 | 21,813 | None | 0 | 24 | 4.492x | 2.52x | 11.320x | 3,396 | 498 | 585.88 | 820.24 | 2.460x | 1.95x | 83.96 |
-| **4★ Max Level** | 4★ | 40 | 40 | 114,209 | None | 0 | 24 | 4.492x | 4.12x | 18.508x | 5,552 | 814 | 957.65 | 1,340.71 | 2.460x | 2.95x | 127.02 |
-| **Promote 4★ -> 5★** | 5★ | 1 | 50 | 0 | 18x Promotion Stones | 150,000 | 120 | 7.412x | 1.00x | 7.412x | 2,224 | 326 | 383.53 | 536.94 | 3.322x | 1.00x | 58.13 |
-| **5★ Mid-Level** | 5★ | 25 | 50 | 36,928 | None | 0 | 120 | 7.412x | 2.92x | 21.643x | 6,493 | 952 | 1,120.00 | 1,568.00 | 3.322x | 2.20x | 127.88 |
-| **5★ Max Level** | 5★ | 50 | 50 | 197,521 | None | 0 | 120 | 7.412x | 4.92x | 36.467x | 10,940 | 1,605 | 1,888.24 | 2,643.53 | 3.322x | 3.45x | 200.54 |
+| Milestone | Hero stars | Level | Level cap | Cumulative level XP | Promotion Stones | Promotion Gold | Star damage/health factor | Level damage/health factor | Unarmed damage | Health | Scheduled DPS | Overdrive DPS | Labor/min (no synergy) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1★ Base Summon | 1 | 1 | 10 | 0 | — | — | 1.00x | 1.0000x | 40 | 300 | 40.00 | 50.00 | 14.00 |
+| 1★ Mid-Level | 1 | 5 | 10 | 806 | — | — | 1.00x | 1.3605x | 54 | 408 | 54.00 | 67.50 | 16.80 |
+| 1★ Max Level | 1 | 10 | 10 | 5,064 | — | — | 1.00x | 1.9990x | 80 | 600 | 80.00 | 100.00 | 20.30 |
+| Promote 1★ -> 2★ | 2 | 10 | 20 | 5,064 | 1 | 1,500 | 3.00x | 1.9990x | 240 | 1,799 | 240.00 | 300.00 | 27.41 |
+| 2★ Mid-Level | 2 | 15 | 20 | 14,284 | — | — | 3.00x | 2.9372x | 352 | 2,643 | 352.00 | 440.00 | 32.13 |
+| 2★ Max Level | 2 | 20 | 20 | 29,528 | — | — | 3.00x | 4.3157x | 518 | 3,884 | 518.00 | 647.50 | 36.86 |
+| Promote 2★ -> 3★ | 3 | 20 | 30 | 29,528 | 3 | 7,500 | 9.00x | 4.3157x | 1,554 | 11,652 | 1,554.00 | 1,942.50 | 49.75 |
+| 3★ Mid-Level | 3 | 25 | 30 | 51,661 | — | — | 9.00x | 6.3412x | 2,283 | 17,121 | 2,283.00 | 2,853.75 | 56.13 |
+| 3★ Max Level | 3 | 30 | 30 | 81,433 | — | — | 9.00x | 9.3173x | 3,354 | 25,157 | 3,354.00 | 4,192.50 | 62.51 |
+| Promote 3★ -> 4★ | 4 | 30 | 40 | 81,433 | 8 | 35,000 | 27.00x | 9.3173x | 10,063 | 75,470 | 10,063.00 | 12,578.75 | 84.39 |
+| 4★ Mid-Level | 4 | 35 | 40 | 119,511 | — | — | 27.00x | 13.6901x | 14,785 | 110,890 | 14,785.00 | 18,481.25 | 93.00 |
+| 4★ Max Level | 4 | 40 | 40 | 166,504 | — | — | 27.00x | 20.1153x | 21,725 | 162,934 | 21,725.00 | 27,156.25 | 101.61 |
+| Promote 4★ -> 5★ | 5 | 40 | 50 | 166,504 | 18 | 150,000 | 81.00x | 20.1153x | 65,174 | 488,802 | 65,174.00 | 81,467.50 | 137.18 |
+| 5★ Mid-Level | 5 | 45 | 50 | 222,974 | — | — | 81.00x | 29.5560x | 95,761 | 718,210 | 95,761.00 | 119,701.25 | 148.80 |
+| 5★ Max Level | 5 | 50 | 50 | 289,443 | — | — | 81.00x | 43.4274x | 140,705 | 1,055,286 | 140,705.00 | 175,881.25 | 160.43 |
 
 ### 2.3 The Pit Recipes & Conversion Table
 - **Soul Essence Conversion:** Disassembling heroes in The Pit yields Soul Essence based on Star tier (`1★: 4`, `2★: 12`, `3★: 36`, `4★: 108`, `5★: 324`) plus bonus essence for invested levels (`+1 per 5 levels`) and imprint ranks (`+2 per rank`).
@@ -112,40 +122,50 @@ Qualification: Masters must deal $\ge 3.0\%$ of Boss total HP to qualify for ran
 
 ## 5. EQUIPPABLE ARTIFACT & BLACKSMITH ECONOMY TABLES
 
-### 5.1 The 7 Star Tiers (Permanent Foundation Base Stats)
-Each weapon rolls with an immutable Star Tier (1★ to 7★) determining its un-multiplied base attack attributes:
+### 5.1 Weapon Star Promotion (Progressive Power Multipliers)
 
-| Star Tier | Base Attack Power ($ATK_{\text{Base}}$) | Base Attack Speed Bonus ($ASPD_{\text{Base}}$) | Typical Progression Role |
-| :---: | :---: | :---: | :--- |
-| **1★** | **`+15`** | **`+5.0%`** (`+0.05`) | Starter weaponry (`art_hunters_shortbow`, `art_iron_broadsword`) |
-| **2★** | **`+35`** | **`+10.0%`** (`+0.10`) | Mid Ring 1 drops & starter craft (`art_recurve_composite`) |
-| **3★** | **`+75`** | **`+16.0%`** (`+0.16`) | Rare Ring 1 sentinel drops (`art_crystal_greatbow`) |
-| **4★** | **`+150`** | **`+24.0%`** (`+0.24`) | Ring 2 Corrupted Grove Elite drops |
-| **5★** | **`+300`** | **`+34.0%`** (`+0.34`) | Rare Ring 2 Abyssal Executioner drops |
-| **6★** | **`+550`** | **`+46.0%`** (`+0.46`) | Rift Warden Floor Boss exclusive drops |
-| **7★** | **`+950`** | **`+60.0%`** (`+0.60`) | Dimensional Sovereign World Boss pinnacle drops |
+Artifact rarity is inherent. Stars are the progressive upgrade, from 1★ to 7★, without enhancement levels. Hero stars are a separate 1★–5★ progression. The recipient retains rarity during weapon promotion; duplicate and currency costs below match the GDD's existing star-promotion schedule.
 
-### 5.2 The 16 Rarity Tiers & Blacksmith Upgrade Costs
-Weapons ascend through 16 rarity tiers at the Waiting Room Blacksmith Forge, multiplying the base stats:
+| Weapon stars | Power multiplier | Duplicate weapons for this step | Gold | Gems |
+| --- | --- | --- | --- | --- |
+| 1 | 1.00x | — | — | — |
+| 2 | 1.60x | 1 | 500 | 0 |
+| 3 | 2.50x | 2 | 2,000 | 0 |
+| 4 | 4.00x | 3 | 8,000 | 0 |
+| 5 | 6.50x | 4 | 25,000 | 50 |
+| 6 | 10.00x | 5 | 75,000 | 150 |
+| 7 | 16.00x | 6 | 250,000 | 500 |
 
-| Tier Index | Rarity Name | Multiplier | Gold Upgrade Cost | Gems Upgrade Cost | Rarity Hex Color | Visual Aesthetic & Resonance |
-| :---: | :--- | :---: | :---: | :---: | :---: | :--- |
-| **1** | **Common** | **`1.00x`** | — *(Starter)* | — | `#B0B0B0` | Raw wrought iron & plain ash wood |
-| **2** | **Uncommon** | **`1.15x`** | 250 Gold | 0 Gems | `#4BB543` | Polished bronze fittings with leather wrap |
-| **3** | **Rare** | **`1.35x`** | 600 Gold | 0 Gems | `#2980B9` | Tempered cobalt steel edge |
-| **4** | **Superior** | **`1.60x`** | 1,500 Gold | 0 Gems | `#8E44AD` | Deep amethyst inlay and balance grooves |
-| **5** | **Exalted** | **`1.90x`** | 3,500 Gold | 0 Gems | `#D35400` | Bronzed runic plating with warm amber sheen |
-| **6** | **Legendary** | **`2.30x`** | 8,000 Gold | 15 Gems | `#F1C40F` | Radiant gold leaf with subtle particle motes |
-| **7** | **Mythical** | **`2.80x`** | 18,000 Gold | 35 Gems | `#E74C3C` | Crimson mana channels with pulsing inner embers |
-| **8** | **Transcendent**| **`3.40x`** | 40,000 Gold | 75 Gems | `#1ABC9C` | Pure sea-glass teal resonance with mist |
-| **9** | **Ascendant** | **`4.10x`** | 90,000 Gold | 150 Gems | `#E056FD` | Neon violet crystal edge with planar crackle |
-| **10** | **Ethereal** | **`5.00x`** | 200,000 Gold | 300 Gems | `#686DE0` | Semi-translucent spectral steel with low hum |
-| **11** | **Immortal** | **`6.10x`** | 450,000 Gold | 600 Gems | `#FF7979` | Sanguine abyssal alloy with trailing smoke |
-| **12** | **Divine** | **`7.50x`** | 1,000,000 Gold | 1,200 Gems | `#F9CA24` | Blinding solar radiant aura with consecrated luster |
-| **13** | **Celestial** | **`9.20x`** | 2,200,000 Gold | 2,500 Gems | `#00D2D3` | Cosmic azure starry core with orbital motes |
-| **14** | **Primordial** | **`11.30x`** | 5,000,000 Gold | 5,000 Gems | `#FF3838` | Volcanic magma veins with glowing neon ignition |
-| **15** | **Supreme** | **`14.00x`** | 12,000,000 Gold | 10,000 Gems | `#BADC58` | Iridescent viridian prism with bloom |
-| **16** | **Origin** | **`18.00x`** | 30,000,000 Gold | 25,000 Gems | `#FF9FF3` | Full prismatic animated chroma aura with rift distortion |
+`WeaponPower = InherentRarityPower * WeaponStarMultiplier`
+
+`TrainedDamageMultiplier = 1 + WeaponPower/40`
+
+Weapon stars multiply power only; rarity's speed bonus, hero movement speed, and hero health stay unchanged. The full 1★–7★ path consumes 21 duplicates plus the retained weapon. There is no enhancement-fodder calculation.
+
+### 5.2 Inherent Rarity Stats and Level-50 Weapon Reference
+
+| Tier | Inherent rarity | Base power (1★) | Fixed attack-speed bonus | 7★ power | 7★ trained-damage multiplier | Color |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | Common | 20 | 5.0% | 320 | 9x | #B0B0B0 |
+| 2 | Uncommon | 60 | 7.5% | 960 | 25x | #4BB543 |
+| 3 | Rare | 180 | 10.0% | 2,880 | 73x | #2980B9 |
+| 4 | Superior | 540 | 13.0% | 8,640 | 217x | #8E44AD |
+| 5 | Exalted | 1,400 | 16.5% | 22,400 | 561x | #D35400 |
+| 6 | Legendary | 3,500 | 20.0% | 56,000 | 1,401x | #F1C40F |
+| 7 | Mythical | 7,000 | 30.0% | 112,000 | 2,801x | #E74C3C |
+| 8 | Transcendent | 10,000 | 35.0% | 160,000 | 4,001x | #1ABC9C |
+| 9 | Ascendant | 14,000 | 40.0% | 224,000 | 5,601x | #E056FD |
+| 10 | Ethereal | 20,000 | 45.0% | 320,000 | 8,001x | #686DE0 |
+| 11 | Immortal | 28,000 | 50.0% | 448,000 | 11,201x | #FF7979 |
+| 12 | Divine | 40,000 | 55.0% | 640,000 | 16,001x | #F9CA24 |
+| 13 | Celestial | 56,000 | 60.0% | 896,000 | 22,401x | #00D2D3 |
+| 14 | Primordial | 80,000 | 65.0% | 1,280,000 | 32,001x | #FF3838 |
+| 15 | Supreme | 112,000 | 70.0% | 1,792,000 | 44,801x | #BADC58 |
+| 16 | Origin | 160,000 | 75.0% | 2,560,000 | 64,001x | #FF9FF3 |
+
+At hero level 50 / floor 50, the expected build uses **Mythical 7★** weapons: 112,000 power, 2,801x trained damage, and +30% attack speed. Five 5★ level-50 Han/Jenna/Aaron/Velkist/Eolka produce **2.550B scheduled DPS**, **1.913B at 75% uptime**, or **1.721B at 75% uptime with minimum 0.90 quality**. This is a stat benchmark, not a change to rarity availability, drops, or pity.
+
+The [complete rarity-by-star matrix](docs/balance/STAT_SCALING_TABLES.md#weapon-power-by-inherent-rarity-and-promoted-stars) and [enemy stat checkpoints](docs/balance/STAT_SCALING_TABLES.md#enemy-durability-and-basic-attack-checkpoints) are generated by `node docs/balance/stat-scaling-model.cjs --write`; use `--check` to verify them. Enemy health follows expected squad DPS; basic damage follows expected hero health. These generated files contain no reward scaling.
 
 ### 5.3 Weapon Archetype Compatibility
 | Weapon Type | Permitted Hero Archetypes | Launch Roster Compatible Heroes | Equipping Behavior |

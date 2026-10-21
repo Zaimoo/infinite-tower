@@ -107,7 +107,7 @@ function PitService:State(profile: any): any
 	for uuid, hero in pairs(profile.Heroes) do
 		local copy = Math.Copy(hero)
 		copy.PitStatus = self:DonorStatus(profile, hero)
-		copy.Stats = Math.Snapshot(hero)
+		copy.Stats = Math.Snapshot(hero, profile)
 		copy.SynthesisXPValue = Config.Synthesis.BaseXP * Config.Synthesis.StarMultiplier ^ (hero.Stars - 1) + Config.Synthesis.LevelXP * hero.Level
 		heroes[uuid] = copy
 	end
@@ -124,7 +124,7 @@ function PitService:Delta(profile: any, changed: any, removed: any): any
 	for uuid, hero in pairs(changed) do
 		local copy = Math.Copy(hero)
 		copy.PitStatus = self:DonorStatus(profile, hero)
-		copy.Stats = Math.Snapshot(hero)
+		copy.Stats = Math.Snapshot(hero, profile)
 		copy.SynthesisXPValue = Config.Synthesis.BaseXP * Config.Synthesis.StarMultiplier ^ (hero.Stars - 1) + Config.Synthesis.LevelXP * hero.Level
 		heroes[uuid] = copy
 	end
@@ -170,7 +170,7 @@ function PitService:Build(profile: any, request: any): (any, any)
 		if not recipient then reject("Choose an owned recipient hero.")
 		else
 			preview.Recipient = Math.Copy(recipient)
-			preview.Before = Math.Snapshot(recipient)
+			preview.Before = Math.Snapshot(recipient, profile)
 			preview.After = Math.Copy(preview.Before)
 			if recipient.ReservedBy or recipient.Reserved or recipient.OperationReserved or recipient.ReservedOperationId or (profile.ReservedHeroUUIDs or {})[recipient.UUID] then reject("The recipient is reserved by another operation.") end
 			if (recipient.ComaUntilTimestamp or 0) > os.time() or recipient.IsHardAuditComa then reject("The recipient must recover from Coma first.") end
@@ -266,7 +266,7 @@ function PitService:Build(profile: any, request: any): (any, any)
 			end
 			after.SynthesisHistory.DonorsConsumed = (after.SynthesisHistory.DonorsConsumed or 0) + #preview.Donors
 			after.SynthesisHistory.XPGained = (after.SynthesisHistory.XPGained or 0) + xp.Final
-			preview.XP, preview.Overflow, preview.After = xp, overflow, Math.Snapshot(after)
+			preview.XP, preview.Overflow, preview.After = xp, overflow, Math.Snapshot(after, profile)
 			staged.Heroes[recipient.UUID] = after
 		end
 	elseif action == "CONVERSION" then
@@ -289,7 +289,7 @@ function PitService:Build(profile: any, request: any): (any, any)
 				local after, overflow = Math.Promote(recipient)
 				after.ImprintCapacity = Math.GetImprintCapacity(after)
 				after.SynthesisHistory.Promotions = (after.SynthesisHistory.Promotions or 0) + 1
-				preview.After, preview.Overflow = Math.Snapshot(after), overflow
+				preview.After, preview.Overflow = Math.Snapshot(after, profile), overflow
 				staged.Heroes[recipient.UUID] = after
 			end
 		end
@@ -438,7 +438,7 @@ function PitService:GrantCombatXP(player: any, uuid: string, amount: number): (b
 	local after, overflow = Math.AdvanceXP(hero, awarded)
 	-- Cap combat awards to the available reserve. No donor investment is lost.
 	if overflow.Rejected >= awarded then return false, "The hero's EXP reserve is full." end
-	local result = { Before = Math.Snapshot(hero), After = Math.Snapshot(after), Overflow = overflow }
+	local result = { Before = Math.Snapshot(hero, profile), After = Math.Snapshot(after, profile), Overflow = overflow }
 	self.Locks[player] = true
 	self.CombatGrants[key] = now
 	profile.Heroes[uuid] = after

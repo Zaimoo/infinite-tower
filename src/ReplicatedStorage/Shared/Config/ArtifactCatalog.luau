@@ -8,6 +8,8 @@ export type RarityInfo = {
 	Index: number,
 	Name: string,
 	Multiplier: number,
+	Power: number?,
+	SpeedBonus: number?,
 	Color: Color3,
 	HexColor: string,
 }
@@ -43,6 +45,7 @@ export type CraftingMaterialInfo = {
 	Description: string,
 }
 
+local B = require(script.Parent.StatBalance)
 local ArtifactCatalog = {}
 
 --============================================================================
@@ -208,68 +211,35 @@ end
 -- 5. FODDER REQUIREMENT & STAT FORMULAS
 --============================================================================
 
--- Maximum Enhancement level (+0 up to +10)
-ArtifactCatalog.MaxEnhancementLevel = 10
-
--- Returns number of enhancement fodder artifacts required to reach next level
-function ArtifactCatalog.GetFodderRequirement(currentLevel: number): number
-	local safeLvl = math.clamp(math.floor(currentLevel or 0), 0, ArtifactCatalog.MaxEnhancementLevel)
-	return math.clamp(safeLvl + 1, 1, 5)
+-- Level is retained only as an ignored argument for old callers.
+ArtifactCatalog.MaxStars = 7
+ArtifactCatalog.MaxEnhancementLevel = 0
+ArtifactCatalog.StarMultipliers = B.WeaponStarMultipliers
+ArtifactCatalog.StarPromotionCosts = B.WeaponPromotionCosts
+for tier, info in pairs(Rarities) do
+ info.Power = B.RarityPower[tier]
+ info.SpeedBonus = B.RaritySpeed[tier]
 end
-
--- Returns detailed stat dictionary for an artifact at a specific star, rarity, and level
-function ArtifactCatalog.GetStatBreakdown(seedId: string, star: number, rarityIndex: number, level: number): { [string]: number }
-	local seed = ArtifactCatalog.Seeds[seedId]
-	local rInfo = ArtifactCatalog.GetRarityInfo(rarityIndex)
-	local safeLvl = math.clamp(math.floor(level or 0), 0, ArtifactCatalog.MaxEnhancementLevel)
-	local result: { [string]: number } = {}
-
-	if seedId == "art_blade_of_the_rift" then
-		-- Matches mock: +4 = 120, +5 = 155 (+35 per level above 4)
-		local atk = 120 + (safeLvl - 4) * 35
-		if safeLvl < 4 then
-			atk = math.max(45, 120 - (4 - safeLvl) * 18)
-		end
-		result["ATK"] = math.floor(atk * (1 + (rInfo.Multiplier - 1) * 0.25))
-		result["Crit Rate"] = 5 + safeLvl * 0.5
-	elseif seedId == "art_aegis_core" then
-		-- DEF +200 | HP +500 at level 5
-		local def = 160 + (safeLvl - 4) * 40
-		if safeLvl < 4 then def = math.max(60, 160 - (4 - safeLvl) * 25) end
-		local hp = 400 + (safeLvl - 4) * 100
-		if safeLvl < 4 then hp = math.max(150, 400 - (4 - safeLvl) * 60) end
-		result["DEF"] = math.floor(def * (1 + (rInfo.Multiplier - 1) * 0.25))
-		result["HP"] = math.floor(hp * (1 + (rInfo.Multiplier - 1) * 0.25))
-	elseif seedId == "art_ring_of_haste" then
-		-- SPD +15 | Evasion +2% at level 5
-		local spd = 12 + (safeLvl - 4) * 3
-		if safeLvl < 4 then spd = math.max(4, 12 - (4 - safeLvl) * 2) end
-		result["SPD"] = spd
-		result["Evasion"] = 1.6 + (safeLvl - 4) * 0.4
-	else
-		local baseATK, _ = ArtifactCatalog.GetStarBaseStats(star)
-		local lvlMult = 1 + safeLvl * 0.12
-		result["ATK"] = math.floor(baseATK * rInfo.Multiplier * lvlMult)
-	end
-
-	return result
+function ArtifactCatalog.GetStarPromotionCost(currentStar: number): any?
+ return B.Integer(currentStar,1,6) and B.WeaponPromotionCosts[currentStar] or nil
 end
-
-function ArtifactCatalog.CalculateEffectiveStats(star: number, rarityIndex: number, level: number?, seedId: string?): (number, number, { [string]: number })
-	local baseATK, baseSpeed = ArtifactCatalog.GetStarBaseStats(star)
-	local rarity = ArtifactCatalog.GetRarityInfo(rarityIndex)
-	local safeLvl = math.clamp(math.floor(level or 0), 0, ArtifactCatalog.MaxEnhancementLevel)
-	local breakdown = ArtifactCatalog.GetStatBreakdown(seedId or "", star, rarityIndex, safeLvl)
-
-	local totalATKBonus = breakdown["ATK"] or math.floor(baseATK * rarity.Multiplier * (1 + safeLvl * 0.12))
-	local totalSpeedBonus = baseSpeed * rarity.Multiplier * (1 + safeLvl * 0.05)
-	return totalATKBonus, totalSpeedBonus, breakdown
+function ArtifactCatalog.GetFodderRequirement(currentStar: number): number
+ local rule=ArtifactCatalog.GetStarPromotionCost(currentStar)
+ return rule and rule.Donors or 0
 end
-
-function ArtifactCatalog.CalculateEffectiveInterval(baseInterval: number, totalSpeedBonus: number): number
-	local safeInterval = math.max(0.2, baseInterval)
-	local safeSpeed = math.max(0, totalSpeedBonus)
-	return math.max(0.12, safeInterval / (1 + safeSpeed))
+function ArtifactCatalog.GetStatBreakdown(_seedId: string, star: number, rarityIndex: number, _legacyLevel: number?): { [string]: number }
+ local safeStar=B.Integer(star,1,7) and star or 1
+ local r=B.Integer(rarityIndex,1,16) and rarityIndex or 1
+ local power=B.RarityPower[r]*B.WeaponStarMultipliers[safeStar]
+ return {ATK=power, Power=power, ["Attack Speed"]=B.RaritySpeed[r]*100, DamageMultiplier=1+power/B.WeaponPowerDivisor}
+end
+function ArtifactCatalog.CalculateEffectiveStats(star: number, rarityIndex: number, legacyLevel: number?, seedId: string?): (number, number, { [string]: number })
+ local result=ArtifactCatalog.GetStatBreakdown(seedId or "",star,rarityIndex,legacyLevel)
+ return result.Power,result["Attack Speed"]/100,result
+end
+function ArtifactCatalog.CalculateEffectiveInterval(baseInterval: number, speed: number): number
+ local interval=B.Finite(baseInterval) and math.max(.2,baseInterval) or 1
+ return math.max(.2,interval/(1+(B.Finite(speed) and math.max(0,speed) or 0)))
 end
 
 --============================================================================

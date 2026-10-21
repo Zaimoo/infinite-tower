@@ -2,6 +2,7 @@
 -- Part 1 data only. Names, layouts, encounters and balance are proposed defaults.
 -- Requiring this module does not build rooms, change travel, or spawn encounters.
 local MobCatalog = require(script.Parent.MobCatalog)
+local StatBalance = require(script.Parent.StatBalance)
 
 export type Encounter = { EnemyId: string, Count: number }
 export type Floor = {
@@ -125,8 +126,8 @@ function Config.GetEnemyStats(floorId: any, enemyId: any): any?
 	local base = Config.BaseStatsByRole[enemy.Role]
 	if not base then return nil end
 	return table.freeze({
-		MaxHP = math.round(base.MaxHP * floor.Difficulty.HPMultiplier),
-		ATK = math.round(base.ATK * floor.Difficulty.DamageMultiplier),
+		MaxHP = (StatBalance.GetFloorStats(floorId,enemy.Role) :: any).MaxHP,
+		ATK = (StatBalance.GetFloorStats(floorId,enemy.Role) :: any).ATK,
 		GoldReward = math.round(base.GoldReward * floor.Rewards.GoldMultiplier),
 		XPReward = math.round(base.XPReward * floor.Rewards.XPMultiplier),
 	})

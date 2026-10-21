@@ -74,35 +74,17 @@ test("Hero class restrictions allow universal rings and tank shields", function(
 	assert(ArtifactCatalog.CanHeroEquip("Marksman", "BOW"), "Marksman can equip BOW")
 end)
 
--- 4. Stat scaling parity with UI Mockup (+4 = 120 ATK -> +5 = 155 ATK)
-test("Blade of the Rift exact mockup stats parity: +4 gives 120 ATK, +5 gives 155 ATK", function()
-	local statsLvl4 = ArtifactCatalog.GetStatBreakdown("art_blade_of_the_rift", 3, 1, 4)
-	assertEqual(statsLvl4["ATK"], 120, "Level 4 Blade of the Rift ATK")
-
-	local statsLvl5 = ArtifactCatalog.GetStatBreakdown("art_blade_of_the_rift", 3, 1, 5)
-	assertEqual(statsLvl5["ATK"], 155, "Level 5 Blade of the Rift ATK")
-
-	-- Also verify effective stats returns expected ATK
-	local effATK_4, _ = ArtifactCatalog.CalculateEffectiveStats(3, 1, 4, "art_blade_of_the_rift")
-	assertEqual(effATK_4, 120, "CalculateEffectiveStats Lvl 4")
-
-	local effATK_5, _ = ArtifactCatalog.CalculateEffectiveStats(3, 1, 5, "art_blade_of_the_rift")
-	assertEqual(effATK_5, 155, "CalculateEffectiveStats Lvl 5")
-end)
-
--- 5. Fodder Requirement progression
-test("Fodder requirement scales from 1 to 5 items", function()
-	assertEqual(ArtifactCatalog.GetFodderRequirement(0), 1, "Level 0 -> 1 requires 1 fodder")
-	assertEqual(ArtifactCatalog.GetFodderRequirement(1), 2, "Level 1 -> 2 requires 2 fodder")
-	assertEqual(ArtifactCatalog.GetFodderRequirement(2), 3, "Level 2 -> 3 requires 3 fodder")
-	assertEqual(ArtifactCatalog.GetFodderRequirement(3), 4, "Level 3 -> 4 requires 4 fodder")
-	assertEqual(ArtifactCatalog.GetFodderRequirement(4), 5, "Level 4 -> 5 requires 5 fodder")
-	assertEqual(ArtifactCatalog.GetFodderRequirement(5), 5, "Level 5+ capped at 5 fodder")
-end)
-
--- 6. Max Enhancement Level
-test("Max enhancement level is capped at 10", function()
-	assertEqual(ArtifactCatalog.MaxEnhancementLevel, 10)
+-- Star progression replaces enhancement; named templates cannot bypass the formula.
+test("Mythical power and speed are inherent and ignore enhancement fields",function()
+ for _,id in {"art_blade_of_the_rift","art_iron_broadsword","art_crystal_greatbow"} do
+  local p,speed=ArtifactCatalog.CalculateEffectiveStats(7,7,0,id)
+  assertEqual(p,112000);assertEqual(speed,.30)
+  local legacy=ArtifactCatalog.CalculateEffectiveStats(7,7,999,id)
+  assertEqual(legacy,p)
+ end
+ assertEqual(ArtifactCatalog.MaxStars,7)
+ assertEqual(ArtifactCatalog.GetFodderRequirement(6),6)
+ assertEqual(ArtifactCatalog.GetFodderRequirement(7),0)
 end)
 
 -- 7. Artifact Banner configuration & pity math
@@ -118,18 +100,99 @@ test("Artifact banner Echoes of the Rift matches mockup pricing and pity", funct
 	assertEqual(ArtifactCatalog.GetPityRemaining(50), 50, "50 pulls resets to 50 remaining")
 end)
 
--- 8. Assign View inventory stat breakdown parity
-test("Assign tab stats formatting matches mockup breakdown", function()
-	local bladeStats = ArtifactCatalog.GetStatBreakdown("art_blade_of_the_rift", 3, 1, 4)
-	assert(bladeStats["ATK"] ~= nil and bladeStats["Crit Rate"] ~= nil, "Blade has ATK and Crit Rate")
-
-	local aegisStats = ArtifactCatalog.GetStatBreakdown("art_aegis_core", 3, 1, 5)
-	assertEqual(aegisStats["DEF"], 200, "Aegis Core DEF is 200")
-	assertEqual(aegisStats["HP"], 500, "Aegis Core HP is 500")
-
-	local ringStats = ArtifactCatalog.GetStatBreakdown("art_ring_of_haste", 2, 1, 5)
-	assertEqual(ringStats["SPD"], 15, "Ring of Haste SPD is 15")
-	assertEqual(ringStats["Evasion"], 2.0, "Ring of Haste Evasion is 2.0%")
+local Promotion=require(ReplicatedStorage.Shared.Util.WeaponPromotion)
+local Stats=require(ReplicatedStorage.Shared.Util.StatFormulas)
+local Heroes=require(ReplicatedStorage.Shared.Config.HeroCatalog)
+local Balance=require(ReplicatedStorage.Shared.Config.StatBalance)
+local function fixture()
+ local p={Currencies={Gold=300000,Gems=1000},Heroes={},Artifacts={target={TemplateId="art_iron_broadsword",Star=6,Rarity=7,Level=999}}}
+ local donors={}
+ for i=1,6 do local id="donor"..i;p.Artifacts[id]={TemplateId="art_iron_broadsword",Star=1,Rarity=1};table.insert(donors,id) end
+ return p,donors
+end
+test("Six-donor final promotion preserves rarity and commits exact resources once",function()
+ local p,d=fixture();local target=p.Artifacts.target
+ local ok,_,star=Promotion.Promote(p,"target",d)
+ assert(ok);assertEqual(star,7);assertEqual(target.Rarity,7);assertEqual(target.Level,999)
+ assertEqual(p.Currencies.Gold,50000);assertEqual(p.Currencies.Gems,500)
+ for _,id in d do assert(p.Artifacts[id]==nil) end
+ assert(not Promotion.Promote(p,"target",d));assertEqual(p.Currencies.Gold,50000)
 end)
-
+test("Every promotion step charges exactly once and retains identity, rarity and speed",function()
+ for star=1,6 do
+  local p,d=fixture();p.Artifacts.target.Star=star
+  for i=6,star+1,-1 do d[i]=nil end
+  local rule=Balance.WeaponPromotionCosts[star]
+  local before=p.Artifacts.target
+  local ok=Promotion.Promote(p,"target",d);assert(ok)
+  assert(p.Artifacts.target==before);assertEqual(before.Star,star+1);assertEqual(before.Rarity,7)
+  assertEqual(p.Currencies.Gold,300000-rule.Gold);assertEqual(p.Currencies.Gems,1000-rule.Gems)
+  local _,speed=ArtifactCatalog.CalculateEffectiveStats(before.Star,before.Rarity)
+  assertEqual(speed,.3)
+  assert(not Promotion.Promote(p,"target",d));assertEqual(p.Currencies.Gold,300000-rule.Gold)
+ end
+end)
+test("Malformed, stale, protected and insufficient promotions reject without mutation",function()
+ for _,change in {
+  function(p,d) d[6]=d[1] end,
+  function(p,d) d[6]="target" end,
+  function(p,d) d[6]="foreign" end,
+  function(p,d) d[6]=nil end,
+  function(p,d) d[7]="extra" end,
+  function(p,d) d.fake="donor1" end,
+  function(p,d) p.Artifacts.donor1.Locked=true end,
+  function(p,d) p.Artifacts.donor1.EquippedHeroUUID="hero" end,
+  function(p,d) p.Heroes.hero={EquippedArtifactUUID="donor1"} end,
+  function(p,d) p.Artifacts.donor1.TemplateId="other" end,
+  function(p,d) p.Currencies.Gold=0 end,
+  function(p,d) p.Currencies.Gems=0 end,
+  function(p,d) p.Artifacts.target.Star=0/0 end,
+ } do
+  local p,d=fixture();change(p,d);local gold,gems=p.Currencies.Gold,p.Currencies.Gems
+  local ok=Promotion.Promote(p,"target",d);assert(not ok)
+  assertEqual(p.Currencies.Gold,gold);assertEqual(p.Currencies.Gems,gems);assert(p.Artifacts.donor1~=nil)
+  assertEqual(p.Artifacts.target.Rarity,7)
+ end
+end)
+test("All hero/weapon tiers are finite, monotonic and independent of legacy levels",function()
+ for id,seed in Heroes.Seeds do
+  local hero={TemplateId=id,Stars=5,Level=50,QualityScalar=1,CurrentStamina=100}
+  for r=1,16 do
+   local last=0
+   for star=1,7 do
+    local artifact={TemplateId="art_iron_broadsword",Rarity=r,Star=star,Level=10000}
+    local v=Stats.GetCombatSnapshot(hero,artifact)
+    assert(v.AttackDamage>last);last=v.AttackDamage
+    assert(v.AttackSpeed<=5);assertEqual(v.MovementSpeed,20)
+    local expectedPower=Balance.RarityPower[r]*Balance.WeaponStarMultipliers[star]
+    assertEqual(v.AttackDamage,math.round(seed.BaseATK_1Star*81*1.08^49*(1+expectedPower/40)))
+    assert(math.abs(v.AttackSpeed-(1+Balance.RaritySpeed[r])/seed.AttackInterval)<1e-9)
+    assertEqual(v.Health,math.round(seed.BaseHP_1Star*81*1.08^49))
+   end
+  end
+ end
+end)
+test("Low-quality mixed squad exceeds one billion DPS at 75 percent uptime",function()
+ local total=0
+ for _,id in {"hero_han","hero_jenna","hero_aaron","hero_velkist","hero_eolka"} do
+  local h={TemplateId=id,Stars=5,Level=50,QualityScalar=.9,CurrentStamina=100}
+  local v=Stats.GetCombatSnapshot(h,{Star=7,Rarity=7})
+  total+=v.DPS
+ end
+ assert(math.abs(total*.75-1721417146)<2)
+ assert(total*.75>1e9)
+ assertEqual(Balance.GetFloorStats(50,"BOSS").MaxHP,110844632813)
+end)
+test("Legacy trait and imprint fields cannot restore retired stat bonuses",function()
+ local hero={TemplateId="hero_han",Stars=5,Level=50,QualityScalar=1,CurrentStamina=100}
+ local clean=Stats.GetCombatSnapshot(hero,{Star=7,Rarity=7})
+ hero.PassiveTrait="Blood Pact";hero.TraitATKBonus=100;hero.TraitHPBonus=100;hero.InheritedImprints={melee_memory=3}
+ local legacy=Stats.GetCombatSnapshot(hero,{Star=7,Rarity=7,Level=999},false,true)
+ assertEqual(legacy.AttackDamage,clean.AttackDamage);assertEqual(legacy.Health,clean.Health)
+ assertEqual(legacy.AttackSpeed,clean.AttackSpeed)
+end)
+test("Formatting supports damage and health above unsigned 32-bit range",function()
+ assertEqual(Balance.Format(110844632813),"110.84B")
+ assertEqual(Balance.Format(0/0),"0")
+end)
 print("All Forge spec tests passed successfully!")

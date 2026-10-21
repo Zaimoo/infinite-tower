@@ -7,6 +7,7 @@ local HeroCatalog = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChil
 local ArtifactCatalog = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("ArtifactCatalog"))
 local PitBalanceConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("PitBalanceConfig"))
 
+local B = require(ReplicatedStorage.Shared.Config.StatBalance)
 local StatFormulas = {}
 
 -- Level Cap: MaxLevel(S) = S * 10
@@ -14,17 +15,12 @@ function StatFormulas.GetMaxLevel(stars: number): number
 	return math.clamp(math.floor(stars), 1, PitBalanceConfig.MaxStars) * 10
 end
 
--- Inherited effects share the existing stat pipeline; no secondary combat system.
-function StatFormulas.GetImprintBonuses(hero: any): (number, number, number)
-	local totals = { ATK = 0, HP = 0, Labor = 0 }
-	for id, rank in pairs(hero.InheritedImprints or {}) do
-		local definition = PitBalanceConfig.Imprints.Definitions[id]
-		if definition and type(rank) == "number" and rank == rank and definition.RecipientRoles[hero.Archetype] then
-			local safeRank = math.clamp(math.floor(rank), 0, PitBalanceConfig.Imprints.MaxRank)
-			for stat, value in pairs(definition.Effect) do totals[stat] += value * safeRank end
-		end
-	end
-	return math.min(totals.ATK, PitBalanceConfig.Imprints.BonusCaps.ATK), math.min(totals.HP, PitBalanceConfig.Imprints.BonusCaps.HP), math.min(totals.Labor, PitBalanceConfig.Imprints.BonusCaps.Labor)
+-- Legacy compatibility: retired effects cannot affect stats.
+function StatFormulas.GetImprintBonuses(_hero: any): (number,number,number)
+ return 0,0,0
+end
+function StatFormulas.GetEquippedArtifact(profile: any, hero: any): any?
+ return profile and profile.Artifacts and hero and hero.EquippedArtifactUUID and profile.Artifacts[hero.EquippedArtifactUUID] or nil
 end
 
 -- XP Required for Level L -> L + 1: round(50 * (L ^ 1.45))
@@ -38,7 +34,7 @@ function StatFormulas.CalculateSynthesisXP(fodderStars: number, fodderLevel: num
 	return (config.BaseXP * (config.StarMultiplier ^ (fodderStars - 1))) + (config.LevelXP * fodderLevel)
 end
 
--- Star Promotion Multipliers: 1.65^(S-1) Combat, 1.35^(S-1) Labor
+-- Star Promotion Multipliers: 3^(S-1) Combat, 1.35^(S-1) Labor
 function StatFormulas.GetPromotionCombatMult(stars: number): number
 	return PitBalanceConfig.Promotion.CombatMultiplier ^ (stars - 1)
 end
@@ -53,56 +49,40 @@ function StatFormulas.GetPromotionGoldCost(currentStars: number): number
 	return cost and cost.Gold or 9999999
 end
 
--- Effective Combat Stats (ATK, HP, Single-Target DPS, Effective Interval)
-function StatFormulas.GetEffectiveCombatStats(hero: any, inBloodPact: boolean?, inOverdrive: boolean?, artifact: any?): (number, number, number, number)
-	local seed = HeroCatalog.Seeds[hero.TemplateId]
-	local traitATK = seed and seed.TraitATKBonus or 0.0
-	local traitHP = seed and seed.TraitHPBonus or 0.0
-	local pactBonus = inBloodPact and 0.20 or 0.0
-	local levelScalar = 1 + 0.08 * ((hero.Level or 1) - 1)
-	local q = hero.QualityScalar or 1.0
-	local imprintATK, imprintHP = StatFormulas.GetImprintBonuses(hero)
-
-	-- BaseATK and BaseHP on HeroInstance already include the 1.65^(S-1) promotion multiplier
-	local effATK = math.round((hero.BaseATK or 35) * q * levelScalar * (1 + traitATK + imprintATK) * (1 + pactBonus))
-	local effHP = math.round((hero.BaseHP or 280) * q * levelScalar * (1 + traitHP + imprintHP))
-
-	local interval = hero.AttackInterval or 1.0
-
-	-- Additive Artifact ATK & Multiplicative Attack Speed Bonus
-	if artifact then
-		local artATK, artSpeed, extraStats = ArtifactCatalog.CalculateEffectiveStats(artifact.Star or 1, artifact.Rarity or 1, artifact.Level or 0, artifact.TemplateId)
-		effATK += artATK
-		interval = ArtifactCatalog.CalculateEffectiveInterval(interval, artSpeed)
-		if extraStats and extraStats["HP"] then
-			effHP += extraStats["HP"]
-		end
-	end
-
-	local overdriveMult = inOverdrive and 1.40 or 1.00
-	local exhaustionMult = ((hero.CurrentStamina or 100) <= 0) and 0.20 or 1.00
-	if (hero.ComaUntilTimestamp or 0) > os.time() then
-		exhaustionMult = 0.0
-	end
-	local dps = math.round((effATK / interval) * overdriveMult * exhaustionMult * 10) / 10
-	return effATK, effHP, dps, interval
+-- Canonical four-stat snapshot. Legacy base fields are never multiplied again.
+function StatFormulas.GetCombatSnapshot(hero: any, artifact: any?, inOverdrive: boolean?, _inBloodPact: boolean?): any
+ local seed=HeroCatalog.Seeds[hero.TemplateId]
+ local stars=B.Integer(hero.Stars,1,5) and hero.Stars or 1
+ local level=B.Integer(hero.Level,1,stars*10) and hero.Level or 1
+ local quality=B.Finite(hero.QualityScalar) and math.clamp(hero.QualityScalar,.9,1.15) or 1
+ local growth=B.HeroPromotionMultiplier^(stars-1)*B.LevelMultiplier^(level-1)
+ local power,speed=0,0
+ if artifact then power,speed=ArtifactCatalog.CalculateEffectiveStats(artifact.Star,artifact.Rarity,nil,artifact.TemplateId) end
+ local damage=math.round((seed and seed.BaseATK_1Star or 35)*quality*growth*(1+power/B.WeaponPowerDivisor))
+ local health=math.round((seed and seed.BaseHP_1Star or 280)*quality*growth)
+ local baseInterval=seed and seed.AttackInterval or hero.AttackInterval or 1
+ local interval=math.max(.2,baseInterval/((1+speed)*(inOverdrive and 1.4 or 1)))
+ local tickInterval=B.ScheduledInterval(interval)
+ local exhaustion=(hero.CurrentStamina or 100)<=0 and .2 or 1
+ if (hero.ComaUntilTimestamp or 0)>os.time() then exhaustion=0 end
+ return {AttackDamage=damage,Health=health,AttackSpeed=1/interval,MovementSpeed=seed and seed.MovementSpeed or 20,
+  AttackInterval=interval,TickInterval=tickInterval,DPS=math.round(damage/tickInterval*exhaustion*10)/10,
+  ATK=damage,HP=health,WeaponPower=power}
 end
-
--- Effective Labor Output (/min)
+function StatFormulas.GetEffectiveCombatStats(hero: any, inBloodPact: boolean?, inOverdrive: boolean?, artifact: any?): (number,number,number,number)
+ local v=StatFormulas.GetCombatSnapshot(hero,artifact,inOverdrive,inBloodPact)
+ return v.AttackDamage,v.Health,v.DPS,v.AttackInterval
+end
 function StatFormulas.GetEffectiveLabor(hero: any, targetFacilityAssignment: string?): number
-	local seed = HeroCatalog.Seeds[hero.TemplateId]
-	local traitLabor = seed and seed.TraitLaborBonus or 0.0
-	local prefFacility = seed and seed.PreferredFacility or ""
-	local checkFacility = targetFacilityAssignment or hero.Assignment or ""
-
-	local hasSynergy = (prefFacility == "ALL") or (prefFacility ~= "" and prefFacility == checkFacility)
-	local synergyBonus = hasSynergy and 0.25 or 0.0
-	local levelScalar = 1 + 0.05 * ((hero.Level or 1) - 1)
-	local q = hero.QualityScalar or 1.0
-	local _, _, imprintLabor = StatFormulas.GetImprintBonuses(hero)
-
-	local effLabor = (hero.BaseLabor or 14) * q * levelScalar * (1 + synergyBonus) * (1 + traitLabor + imprintLabor)
-	return math.round(effLabor * 100) / 100
+ local seed=HeroCatalog.Seeds[hero.TemplateId]
+ local stars=B.Integer(hero.Stars,1,5) and hero.Stars or 1
+ local level=B.Integer(hero.Level,1,stars*10) and hero.Level or 1
+ local q=B.Finite(hero.QualityScalar) and math.clamp(hero.QualityScalar,.9,1.15) or 1
+ local pref=seed and seed.PreferredFacility or ""
+ local target=targetFacilityAssignment or hero.Assignment or ""
+ local synergy=pref=="ALL" or (pref~="" and pref==target)
+ local labor=(seed and seed.BaseLabor_1Star or 14)*q*1.35^(stars-1)*(1+.05*(level-1))*(synergy and 1.25 or 1)
+ return math.round(labor*100)/100
 end
 
 -- Waiting Room Facility Output Formulas
