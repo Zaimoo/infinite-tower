@@ -439,20 +439,8 @@ local rightBoardText = makeLabel({
 --============================================================================
 
 local squadController: any = nil
+local promotionController: any = nil
 
-local pitModal = makeFrame({
-	Name = "ThePitModal",
-	Size = UDim2.new(0, 820, 0, 480),
-	Position = UDim2.new(0.5, -410, 0.5, -230),
-	BackgroundColor3 = Color3.fromRGB(26, 16, 24),
-	Visible = false,
-	Corner = 12,
-	Stroke = 2,
-	StrokeColor = Color3.fromRGB(255, 105, 45),
-	Parent = hudGui,
-})
-
-local refreshPitModal: () -> ()
 local facilityController: any = nil
 local synthesisController: any = nil
 local forgeController: any = nil
@@ -617,7 +605,13 @@ centerLayout.Padding = UDim.new(0, 18)
 centerLayout.Parent = centerGroup
 
 local pitTabBtn = makeBarTextButton(centerGroup, "Tab_ThePit", "THE PIT", 62, function()
-	_G.OpenMasterModal(pitModal.Visible and "NONE" or "THE_PIT")
+	if synthesisController then
+		if synthesisController:IsOpen() then
+			synthesisController:Close()
+		else
+			_G.OpenFacilityHUD("Synthesis")
+		end
+	end
 end)
 pitTabBtn.LayoutOrder = 1
 
@@ -744,7 +738,7 @@ _G.TriggerHUDWhistleCooldown = function(which: string)
 end
 
 local function updateBottomTabHighlights()
-	local pitActive = pitModal.Visible
+	local pitActive = (synthesisController ~= nil and synthesisController:IsOpen()) or (promotionController ~= nil and promotionController:IsOpen())
 	local forgeActive = (forgeController and forgeController.Root and forgeController.Root.Visible) or blacksmithModal.Visible
 	local squadActive = squadController ~= nil and squadController:IsOpen()
 	pitTabBtn:SetAttribute("IsActiveTab", pitActive)
@@ -758,11 +752,11 @@ end
 _G.OpenMasterModal = function(which: string)
 	if facilityController then facilityController:Close() end
 	if synthesisController then synthesisController:Close() end
+	if promotionController then promotionController:Close() end
 	if forgeController then forgeController:Close() end
 	if which ~= "SQUAD" and which ~= "WAITING_ROOM" and squadController and squadController:IsOpen() then
 		squadController:Close()
 	end
-	pitModal.Visible = (which == "THE_PIT")
 	if which == "BLACKSMITH" and forgeController then
 		blacksmithModal.Visible = false
 		forgeController:Open()
@@ -775,9 +769,7 @@ _G.OpenMasterModal = function(which: string)
 		end
 	end
 	updateBottomTabHighlights()
-	if which == "THE_PIT" and refreshPitModal then
-		refreshPitModal()
-	elseif which == "BLACKSMITH" and refreshBlacksmithModal then
+	if which == "BLACKSMITH" and refreshBlacksmithModal then
 		refreshBlacksmithModal()
 	end
 end
@@ -801,7 +793,13 @@ makeButton({
 	Text = " The Pit",
 	Corner = 6,
 	OnClick = function()
-		_G.OpenMasterModal(pitModal.Visible and "NONE" or "THE_PIT")
+		if synthesisController then
+			if synthesisController:IsOpen() then
+				synthesisController:Close()
+			else
+				_G.OpenFacilityHUD("Synthesis")
+			end
+		end
 	end,
 	Parent = navButtonsFrame,
 })
@@ -827,7 +825,7 @@ makeButton({
 })
 
 --============================================================================
--- 3. SQUAD DEPLOY & PIT CONTROLLERS
+-- 3. SQUAD DEPLOY, SYNTHESIS & PROMOTION CONTROLLERS
 --============================================================================
 local SquadController = require(script.Parent:WaitForChild("SquadController"))
 squadController = SquadController.new(hudGui, function() return CurrentProfile end, TycoonRemotes, updateBottomTabHighlights)
@@ -836,15 +834,13 @@ _G.OpenSquadManagement = function()
 	_G.OpenMasterModal("SQUAD")
 end
 
-local PitController = require(script.Parent:WaitForChild("PitController"))
-local pitController = PitController.new(
-	pitModal,
-	TycoonRemotes:WaitForChild("PitRequest") :: RemoteFunction,
-	FacilityInteractEvent,
-	function() _G.OpenMasterModal("NONE") end
-)
-_G.PitController = pitController
-refreshPitModal = function() pitController:Refresh() end
+local PromotionController = require(script.Parent:WaitForChild("PromotionController"))
+promotionController = PromotionController.new(hudGui, TycoonRemotes:WaitForChild("PitRequest") :: RemoteFunction)
+_G.PromotionController = promotionController
+_G.OpenPromotion = function()
+	_G.OpenFacilityHUD("Promotion")
+end
+
 local FacilityController = require(script.Parent:WaitForChild("FacilityController"))
 facilityController = FacilityController.new(hudGui, function() return CurrentProfile end, TycoonRemotes)
 local SynthesisController = require(script.Parent:WaitForChild("SynthesisController"))
@@ -859,15 +855,20 @@ _G.OpenFacilityHUD = function(facility: string)
 		-- Focused synthesis HUD: recipient slot, level preview and material slots.
 		_G.OpenMasterModal("NONE")
 		if forgeController then forgeController:Close() end
+		if promotionController then promotionController:Close() end
 		synthesisController:Open()
 	elseif facility == "Promotion" then
-		_G.OpenMasterModal("THE_PIT")
-		pitController:SetTab(facility)
+		-- Dedicated Hero Promotion Ritual HUD matching the Gothic Ascension Mockup.
+		_G.OpenMasterModal("NONE")
+		if forgeController then forgeController:Close() end
+		if synthesisController then synthesisController:Close() end
+		promotionController:Open()
 	elseif facility == "SquadManagement" or facility == "Squad" then
 		_G.OpenMasterModal("SQUAD")
 	else
 		_G.OpenMasterModal("NONE")
 		if synthesisController then synthesisController:Close() end
+		if promotionController then promotionController:Close() end
 		if forgeController then forgeController:Close() end
 		facilityController:Open(facility)
 	end
@@ -1295,7 +1296,9 @@ ProfileDeltaSyncEvent.OnClientEvent:Connect(function(profile: any)
 	if squadController and squadController:IsOpen() then
 		squadController:Refresh()
 	end
-	pitController:ProfileChanged(profile)
+	if promotionController and promotionController:IsOpen() then
+		promotionController:Refresh()
+	end
 	if ((forgeController and forgeController.Root and forgeController.Root.Visible) or blacksmithModal.Visible) and refreshBlacksmithModal then
 		refreshBlacksmithModal()
 	end
@@ -1400,7 +1403,7 @@ do
 		_G.OpenMasterModal("NONE")
 	end)
 
-	local modalList = { pitModal, blacksmithModal }
+	local modalList = { blacksmithModal }
 	for _, m in modalList do
 		m.AnchorPoint = Vector2.new(0.5, 0.5)
 		m.Position = UDim2.fromScale(0.5, 0.5)
@@ -1787,9 +1790,6 @@ do
 			centerGroup.Position = UDim2.new(0.5, 0, 0, 0)
 			centerGroup.AnchorPoint = Vector2.new(0.5, 0)
 		end
-
-		-- The Pit composes its own columns and phone steps from these bounds.
-		pitModal.Size = UDim2.fromOffset(math.min(w - 20, 1340), math.max(360, math.min(h - 76, 850)))
 	end
 
 	task.defer(layout)
