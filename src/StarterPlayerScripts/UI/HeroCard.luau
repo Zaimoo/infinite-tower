@@ -92,8 +92,8 @@ function HeroCard.Update(self: any, hero: any, selected: boolean, mode: string, 
 	self.Name.Text = (selected and "✓ " or "") .. (hero.DisplayName or "Hero")
 	self.Name.TextColor3 = rarity
 	local stats = hero.Stats or hero.PitStats
-	local _, _, dps = StatFormulas.GetEffectiveCombatStats(hero, false, false)
-	self.Info.Text = string.format("%s  Lv.%d / %d\n%s · DPS %s", T.Stars(stars), hero.Level or 1, stars * 10, hero.Archetype or "Hero", T.Number(stats and stats.DPS or dps))
+	local combat = stats or StatFormulas.GetCombatSnapshot(hero)
+	self.Info.Text = string.format("%s  Lv.%d / %d\n%s · DPS %s", T.Stars(stars), hero.Level or 1, stars * 10, hero.Archetype or "Hero", T.Number(combat.DPS))
 	local status = hero.PitStatus or {}
 	local reason = status.Reason
 	self.Status.Text = (hero.Locked and "[LOCKED] " or "") .. (hero.Favorite and "[FAVORITE] " or "") .. (status.Status or hero.Assignment or "Available")
@@ -101,7 +101,7 @@ function HeroCard.Update(self: any, hero: any, selected: boolean, mode: string, 
 		self.Status.Text = reason or "Ineligible"
 		self.Status.TextColor3 = T.Color.Danger
 	else self.Status.TextColor3 = T.Color.Muted end
-	self.Trait.Text = hero.PassiveTrait or "No signature trait recorded"
+	self.Trait.Text = string.format("Damage %s · HP %s\nSpeed %.2f/s · Move %.0f studs/s", T.Number(combat.AttackDamage or combat.ATK), T.Number(combat.Health or combat.HP), combat.AttackSpeed or 1, combat.MovementSpeed or 20)
 	self.XPFill.Size = UDim2.fromScale(math.clamp((hero.XP or 0) / StatFormulas.GetXPRequiredForNextLevel(hero.Level or 1), 0, 1), 1)
 	self.XPFill.BackgroundColor3 = rarity
 	self.Name.TextSize = (textSize or 14) + 1

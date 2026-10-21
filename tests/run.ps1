@@ -29,6 +29,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Production Luau compilation failed.' }
 # closures, supplying only module lookup and the Color3 constructors used by the
 # catalog. The actual math, economy validation and transactions run as shipped.
 $modulePaths = @(
+    'ReplicatedStorage/Shared/Config/StatBalance.luau',
     'ReplicatedStorage/Shared/Config/HeroCatalog.luau',
     'ReplicatedStorage/Shared/Config/ArtifactCatalog.luau',
     'ReplicatedStorage/Shared/Config/FacilityConfig.luau',
@@ -41,6 +42,7 @@ $modulePaths = @(
     'ReplicatedStorage/Shared/Util/TowerProtocol.luau',
     'ReplicatedStorage/Shared/Util/TowerRequestPolicy.luau',
     'ReplicatedStorage/Shared/Util/StatFormulas.luau',
+    'ReplicatedStorage/Shared/Util/WeaponPromotion.luau',
     'ReplicatedStorage/Shared/Util/PitMath.luau',
     'ServerScriptService/Core/PitService.luau'
 )

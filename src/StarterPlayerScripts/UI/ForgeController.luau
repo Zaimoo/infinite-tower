@@ -3,7 +3,7 @@
 -- Authoritative Blacksmith Forge HUD featuring 3 Sections:
 --   1. ASSIGN (Inventory list of all owned artifacts with stats & 1-click hero assignment)
 --   2. SUMMON (Dimensional banner gacha for artifacts: 1X & 10X pulls, 50-pull pity counter, rate-up featured items)
---   3. UPGRADE ARTIFACT (Enhance artifact levels using 5 fodder slots & stat comparisons)
+--   3. UPGRADE ARTIFACT (Promote weapon stars with up to 6 duplicate copies)
 -- Matches exact cosmic purple aesthetic with corner diamond accents, glowing borders, and responsive scaling.
 
 local TweenService = game:GetService("TweenService")
@@ -13,6 +13,8 @@ local Players = game:GetService("Players")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local ArtifactCatalog = require(Shared:WaitForChild("Config"):WaitForChild("ArtifactCatalog"))
+local StatFormulas = require(Shared.Util.StatFormulas)
+local StatBalance = require(Shared.Config.StatBalance)
 
 local LocalPlayer = Players.LocalPlayer
 
@@ -115,31 +117,8 @@ end
 
 -- Formats artifact stat string e.g. "ATK +150 | Crit Rate +5%" matching mockup
 local function formatStatSummary(art: any): string
-	local stats = ArtifactCatalog.GetStatBreakdown(art.TemplateId, art.Star or 1, art.Rarity or 1, art.Level or 0)
-	local parts = {}
-	if stats["ATK"] and stats["ATK"] > 0 then
-		table.insert(parts, string.format("ATK +%d", stats["ATK"]))
-	end
-	if stats["DEF"] and stats["DEF"] > 0 then
-		table.insert(parts, string.format("DEF +%d", stats["DEF"]))
-	end
-	if stats["HP"] and stats["HP"] > 0 then
-		table.insert(parts, string.format("HP +%d", stats["HP"]))
-	end
-	if stats["SPD"] and stats["SPD"] > 0 then
-		table.insert(parts, string.format("SPD +%d", stats["SPD"]))
-	end
-	if stats["Crit Rate"] and stats["Crit Rate"] > 0 then
-		table.insert(parts, string.format("Crit Rate +%d%%", stats["Crit Rate"]))
-	end
-	if stats["Evasion"] and stats["Evasion"] > 0 then
-		table.insert(parts, string.format("Evasion +%d%%", stats["Evasion"]))
-	end
-	if #parts == 0 then
-		local baseAtk = stats["ATK"] or 15
-		table.insert(parts, string.format("ATK +%d | AtkSpd +5%%", baseAtk))
-	end
-	return table.concat(parts, " | ")
+ local stats=ArtifactCatalog.GetStatBreakdown(art.TemplateId,art.Star or 1,art.Rarity or 1)
+ return string.format("Power %.0f | Damage x%.2f | AtkSpd +%.1f%%",stats.Power,stats.DamageMultiplier,stats["Attack Speed"])
 end
 
 --============================================================================
@@ -160,7 +139,7 @@ function Forge.new(gui: ScreenGui, artifactRemotes: Folder, getProfile: (() -> a
 	self.ActiveTab = "ASSIGN" :: "ASSIGN" | "SUMMON" | "UPGRADE"
 	self.SelectedAssignArtifactUUID = nil :: string?
 	self.SelectedTargetUUID = nil :: string?
-	self.FodderUUIDs = {} :: { string } -- Array of up to 5 artifact UUIDs
+	self.FodderUUIDs = {} :: { string } -- Up to six same-template donor UUIDs.
 	self.PickerMode = "NONE" :: "NONE" | "TARGET" | "FODDER" | "EQUIP_LOADOUT"
 	self.Busy = false
 
@@ -537,8 +516,8 @@ function Forge:RenderAssignView()
 		local aStar = a.Art.Star or 1
 		local bStar = b.Art.Star or 1
 		if aStar ~= bStar then return aStar > bStar end
-		local aLvl = a.Art.Level or 0
-		local bLvl = b.Art.Level or 0
+		local aLvl = a.Art.Rarity or 1
+		local bLvl = b.Art.Rarity or 1
 		if aLvl ~= bLvl then return aLvl > bLvl end
 		return (a.Art.DisplayName or "") < (b.Art.DisplayName or "")
 	end)
@@ -588,9 +567,7 @@ function Forge:RenderAssignView()
 		}, card)
 
 		local displayName = art.DisplayName or "Artifact"
-		if art.Level and art.Level > 0 then
-			displayName = string.format("%s +%d", displayName, art.Level)
-		end
+		displayName = string.format("%s (%d stars)", displayName, art.Star or 1)
 
 		local nameLabel = label(infoContainer, displayName, 16, C.Text, Enum.Font.GothamBold)
 		nameLabel.Position = UDim2.fromOffset(0, 2)
@@ -961,7 +938,7 @@ function Forge:ShowSummonResults(summonedList: { any })
 end
 
 --============================================================================
--- SECTION 3: UPGRADE ARTIFACT VIEW (Level Enhancement & 5 Fodder Slots)
+-- SECTION 3: WEAPON STAR PROMOTION VIEW (up to 6 donor slots)
 --============================================================================
 
 function Forge:BuildUpgradeView(root: Frame)
@@ -1029,7 +1006,7 @@ function Forge:BuildUpgradeView(root: Frame)
 	new("UICorner", { CornerRadius = UDim.new(0, 8) }, statBox)
 	stroke(statBox, C.BorderCard, 1)
 
-	local previewHeader = label(statBox, "ENHANCEMENT PREVIEW", 15, C.Text, Enum.Font.GothamBold)
+	local previewHeader = label(statBox, "STAR PROMOTION PREVIEW", 15, C.Text, Enum.Font.GothamBold)
 	previewHeader.Position = UDim2.new(0, 18, 0, 14)
 	previewHeader.Size = UDim2.new(1, -36, 0, 22)
 	previewHeader.TextXAlignment = Enum.TextXAlignment.Left
@@ -1044,8 +1021,9 @@ function Forge:BuildUpgradeView(root: Frame)
 	arrowLabel.Position = UDim2.new(0, 18, 0, 84)
 	arrowLabel.Size = UDim2.new(1, -36, 0, 20)
 	arrowLabel.TextXAlignment = Enum.TextXAlignment.Left
+	self.HeroStatPreview = arrowLabel
 
-	local nextStatsLabel = label(statBox, "Next Level: —", 14, C.Green, Enum.Font.GothamBold)
+	local nextStatsLabel = label(statBox, "Next Star: —", 14, C.Green, Enum.Font.GothamBold)
 	nextStatsLabel.Position = UDim2.new(0, 18, 0, 114)
 	nextStatsLabel.Size = UDim2.new(1, -36, 0, 24)
 	nextStatsLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -1057,7 +1035,7 @@ function Forge:BuildUpgradeView(root: Frame)
 	fodderReqLabel.TextXAlignment = Enum.TextXAlignment.Left
 	self.FodderReqLabel = fodderReqLabel
 
-	-- 5 Fodder Slots (Image 2)
+	-- Six duplicate slots support the final star promotion.
 	local fodderContainer = new("Frame", {
 		Name = "FodderSlotsContainer",
 		Position = UDim2.fromOffset(24, 214),
@@ -1067,10 +1045,10 @@ function Forge:BuildUpgradeView(root: Frame)
 	}, upgradeView)
 
 	self.FodderSlotFrames = {}
-	local slotW = 110
-	local spacing = 16
+	local slotW = 88
+	local spacing = 12
 
-	for i = 1, 5 do
+	for i = 1, 6 do
 		local slot = new("Frame", {
 			Name = "FodderSlot_" .. i,
 			Position = UDim2.fromOffset((i - 1) * (slotW + spacing), 0),
@@ -1140,7 +1118,7 @@ function Forge:BuildUpgradeView(root: Frame)
 		Size = UDim2.fromOffset(260, 46),
 		BackgroundColor3 = Color3.fromRGB(30, 22, 46),
 		BorderSizePixel = 0,
-		Text = "⚒️ ENHANCE ARTIFACT",
+		Text = "⚒️ PROMOTE WEAPON",
 		Font = Enum.Font.GothamBold,
 		TextSize = 15,
 		TextColor3 = C.Text,
@@ -1175,8 +1153,9 @@ function Forge:RenderUpgradeView()
 		self.TargetName.Text = "NO ARTIFACT"
 		self.TargetLevel.Text = "Click to pick"
 		self.CurrentStatsLabel.Text = "Current Stats: No artifact selected"
-		self.NextStatsLabel.Text = "Next Level: —"
+		self.NextStatsLabel.Text = "Next Star: —"
 		self.FodderReqLabel.Text = "Fodder Required: 0 / 0"
+		self.HeroStatPreview.Text = "Equip a weapon to preview hero damage and DPS"
 		return
 	end
 
@@ -1184,37 +1163,47 @@ function Forge:RenderUpgradeView()
 	local iconChar = ICON_MAP[target.Type] or "⚔️"
 	self.TargetIcon.Text = iconChar
 	self.TargetName.Text = target.DisplayName or "Artifact"
-	self.TargetLevel.Text = string.format("Level +%d", target.Level or 0)
+	self.TargetLevel.Text = string.format("%s · %d stars", ArtifactCatalog.GetRarityInfo(target.Rarity or 1).Name, target.Star or 1)
 
-	local currentLevel = target.Level or 0
-	local maxLevel = ArtifactCatalog.MaxEnhancementLevel or 10
-	local reqFodder = ArtifactCatalog.GetFodderRequirement(currentLevel)
+	local currentStar = target.Star or 1
+	local maxStars = ArtifactCatalog.MaxStars or 7
+	local reqFodder = ArtifactCatalog.GetFodderRequirement(currentStar)
 
 	-- Update Stats
 	local currentStats = formatStatSummary(target)
 	self.CurrentStatsLabel.Text = string.format("Current Stats: %s", currentStats)
-
-	if currentLevel >= maxLevel then
-		self.NextStatsLabel.Text = "★ MAXIMUM ENHANCEMENT LEVEL REACHED"
-		self.FodderReqLabel.Text = "Max Level (+10)"
-		self.EnhanceBtn.Text = "MAX LEVEL REACHED"
+	local equippedHero = target.EquippedHeroUUID and profile.Heroes and profile.Heroes[target.EquippedHeroUUID]
+	if equippedHero then
+		local before = StatFormulas.GetCombatSnapshot(equippedHero, target)
+		local nextWeapon = table.clone(target)
+		nextWeapon.Star = math.min(maxStars, currentStar + 1)
+		local after = StatFormulas.GetCombatSnapshot(equippedHero, nextWeapon)
+		self.HeroStatPreview.Text = string.format("Hit %s → %s | DPS %s → %s", StatBalance.Format(before.AttackDamage), StatBalance.Format(after.AttackDamage), StatBalance.Format(before.DPS), StatBalance.Format(after.DPS))
 	else
-		-- Simulate next level
+		self.HeroStatPreview.Text = "Equip to a hero to preview damage and DPS"
+	end
+
+	if currentStar >= maxStars then
+		self.NextStatsLabel.Text = "★ MAXIMUM 7-STAR RANK REACHED"
+		self.FodderReqLabel.Text = "Maximum 7-star rank"
+		self.EnhanceBtn.Text = "MAX STARS REACHED"
+	else
+		-- Preview the next star with unchanged rarity and speed.
 		local simNext = {
 			TemplateId = target.TemplateId,
-			Star = target.Star,
+			Star = currentStar + 1,
 			Rarity = target.Rarity,
-			Level = currentLevel + 1,
 			Type = target.Type,
 		}
 		local nextStats = formatStatSummary(simNext)
-		self.NextStatsLabel.Text = string.format("Next Level (+%d): %s", currentLevel + 1, nextStats)
-		self.FodderReqLabel.Text = string.format("Fodder Required: %d / %d items slotted", #self.FodderUUIDs, reqFodder)
-		self.EnhanceBtn.Text = string.format("⚒️ ENHANCE TO +%d (%d/%d)", currentLevel + 1, #self.FodderUUIDs, reqFodder)
+		self.NextStatsLabel.Text = string.format("Next Star (%d): %s", currentStar + 1, nextStats)
+		local cost=ArtifactCatalog.GetStarPromotionCost(currentStar)
+		self.FodderReqLabel.Text = string.format("Copies: %d/%d | Gold %d | Gems %d", #self.FodderUUIDs, reqFodder, cost.Gold, cost.Gems)
+		self.EnhanceBtn.Text = string.format("⚒️ PROMOTE TO %d STARS (%d/%d)", currentStar + 1, #self.FodderUUIDs, reqFodder)
 	end
 
 	-- Update Fodder Slots
-	for i = 1, 5 do
+	for i = 1, 6 do
 		local slotFrame = self.FodderSlotFrames[i]
 		if slotFrame then
 			local plusLabel = slotFrame:FindFirstChild("PlusLabel") :: TextLabel?
@@ -1243,23 +1232,23 @@ function Forge:AutoFillFodder()
 	local target = self.SelectedTargetUUID and artifacts[self.SelectedTargetUUID]
 	if not target then return end
 
-	local currentLevel = target.Level or 0
-	local reqFodder = ArtifactCatalog.GetFodderRequirement(currentLevel)
+	local currentStar = target.Star or 1
+	local reqFodder = ArtifactCatalog.GetFodderRequirement(currentStar)
 
 	table.clear(self.FodderUUIDs)
 
-	-- Fill with unequipped, unlocked, non-target artifacts (lower star/level preferred)
+	-- Prefer lower rarity/star copies of the same weapon.
 	local candidates = {}
 	for uuid, art in pairs(artifacts) do
-		if uuid ~= self.SelectedTargetUUID and not art.EquippedHeroUUID and not art.Locked then
+		if uuid ~= self.SelectedTargetUUID and not art.EquippedHeroUUID and not art.Locked and target and art.TemplateId == target.TemplateId then
 			table.insert(candidates, { UUID = uuid, Art = art })
 		end
 	end
 
 	table.sort(candidates, function(a, b)
-		local aLvl = a.Art.Level or 0
-		local bLvl = b.Art.Level or 0
-		if aLvl ~= bLvl then return aLvl < bLvl end
+		local aRarity = a.Art.Rarity or 1
+		local bRarity = b.Art.Rarity or 1
+		if aRarity ~= bRarity then return aRarity < bRarity end
 		return (a.Art.Star or 1) < (b.Art.Star or 1)
 	end)
 
@@ -1277,16 +1266,16 @@ function Forge:PerformUpgrade()
 	local target = self.SelectedTargetUUID and artifacts[self.SelectedTargetUUID]
 	if not target then return end
 
-	local currentLevel = target.Level or 0
-	local reqFodder = ArtifactCatalog.GetFodderRequirement(currentLevel)
+	local currentStar = target.Star or 1
+	local reqFodder = ArtifactCatalog.GetFodderRequirement(currentStar)
 
-	if #self.FodderUUIDs < reqFodder then
+	if reqFodder == 0 or #self.FodderUUIDs ~= reqFodder then
 		return
 	end
 
 	self.Busy = true
 	task.spawn(function()
-		local success, msg, newLevel = self.RequestUpgrade:InvokeServer(self.SelectedTargetUUID, self.FodderUUIDs)
+		local success, msg, newStar = self.RequestUpgrade:InvokeServer(self.SelectedTargetUUID, self.FodderUUIDs)
 		self.Busy = false
 		if success then
 			table.clear(self.FodderUUIDs)
@@ -1462,7 +1451,7 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 				ZIndex = 73,
 			}, card)
 			new("UICorner", { CornerRadius = UDim.new(0, 4) }, lvlBadge)
-			local lvlLbl = label(lvlBadge, string.format("Level +%d", art.Level or 0), 11, C.GoldYellow, Enum.Font.GothamBold)
+			local lvlLbl = label(lvlBadge, string.format("%d stars", art.Star or 1), 11, C.GoldYellow, Enum.Font.GothamBold)
 			lvlLbl.Position = UDim2.fromScale(0, 0)
 			lvlLbl.Size = UDim2.fromScale(1, 1)
 			lvlLbl.TextXAlignment = Enum.TextXAlignment.Center
@@ -1493,12 +1482,12 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 			end)
 		end
 	elseif mode == "FODDER" then
-		self.DrawerTitle.Text = "SELECT ENHANCEMENT FODDER (UNEQUIPPED ARTIFACTS)"
+		self.DrawerTitle.Text = "SELECT SAME-WEAPON COPIES (RARITY STAYS FIXED)"
 		local target = self.SelectedTargetUUID and artifacts[self.SelectedTargetUUID]
-		local req = target and ArtifactCatalog.GetFodderRequirement(target.Level or 0) or 5
+		local req = target and ArtifactCatalog.GetFodderRequirement(target.Star or 1) or 0
 
 		for uuid, art in pairs(artifacts) do
-			if uuid ~= self.SelectedTargetUUID and not art.EquippedHeroUUID and not art.Locked then
+			if uuid ~= self.SelectedTargetUUID and not art.EquippedHeroUUID and not art.Locked and target and art.TemplateId == target.TemplateId then
 				local isSlotted = table.find(self.FodderUUIDs, uuid) ~= nil
 				local card = new("Frame", {
 					Name = "FodderCard_" .. uuid,
@@ -1547,7 +1536,7 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 				new("UICorner", { CornerRadius = UDim.new(0, 4) }, lvlBadge)
 				stroke(lvlBadge, isSlotted and C.Green or C.BorderDim, 1)
 
-				local lvlText = isSlotted and "✓ SLOTTED" or string.format("Level +%d", art.Level or 0)
+				local lvlText = isSlotted and "✓ SLOTTED" or string.format("%d stars", art.Star or 1)
 				local lvlColor = isSlotted and C.Green or C.TextMuted
 				local lvlLbl = label(lvlBadge, lvlText, 11, lvlColor, Enum.Font.GothamBold)
 				lvlLbl.Position = UDim2.fromScale(0, 0)

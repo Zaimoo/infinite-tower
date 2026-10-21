@@ -14,6 +14,7 @@ export type HeroSeed = {
 	NativeHP: number,
 	NativeATK: number,
 	AttackInterval: number,
+	MovementSpeed: number?,
 	AttackRange: number,
 	BaseLabor_1Star: number,
 	NativeLabor: number,
@@ -189,6 +190,13 @@ HeroCatalog.Seeds = {
 		Color = Color3.fromRGB(190, 85, 255),
 	},
 }
+
+-- Derived compatibility fields; immutable one-star seeds remain authoritative.
+for _, seed in pairs(HeroCatalog.Seeds) do
+ seed.NativeHP = math.round(seed.BaseHP_1Star * 3^(seed.BaseStar-1))
+ seed.NativeATK = math.round(seed.BaseATK_1Star * 3^(seed.BaseStar-1))
+ seed.MovementSpeed = 20
+end
 
 HeroCatalog.PoolByStar = {
 	[1] = { "hero_han", "hero_jenna", "hero_catio" },

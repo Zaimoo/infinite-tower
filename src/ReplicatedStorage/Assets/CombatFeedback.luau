@@ -2,6 +2,7 @@
 -- Cosmetic server-hit feedback. Never computes damage or changes combat state.
 local TweenService=game:GetService("TweenService")
 local Debris=game:GetService("Debris")
+local Format=require(game:GetService("ReplicatedStorage").Shared.Config.StatBalance).Format
 local Feedback={}
 Feedback.MaxNumbers=32
 Feedback.Lifetime=.8
@@ -31,7 +32,7 @@ function Feedback.new(parent: Instance): any
 		gui.AlwaysOnTop=true;gui.MaxDistance=150;gui.LightInfluence=0
 		local sideways=((self.Serial%5)-2)*.35;gui.StudsOffsetWorldSpace=Vector3.new(sideways,3.6,0);gui.Parent=anchor
 		local label=Instance.new("TextLabel");label.BackgroundTransparency=1;label.Size=UDim2.fromScale(1,1)
-		label.Font=Enum.Font.GothamBold;label.TextSize=overdrive and 28 or 23;label.Text="-"..tostring(math.max(1,math.round(amount)))
+		label.Font=Enum.Font.GothamBold;label.TextSize=overdrive and 28 or 23;label.Text="-"..Format(math.max(1,math.round(amount)))
 		label.TextColor3=incoming and Color3.fromRGB(255,116,116) or overdrive and Color3.fromRGB(255,207,89) or Color3.fromRGB(243,255,226)
 		label.TextStrokeColor3=Color3.fromRGB(25,28,22);label.TextStrokeTransparency=.2;label.Parent=gui
 		TweenService:Create(gui,TweenInfo.new(Feedback.Lifetime,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),
