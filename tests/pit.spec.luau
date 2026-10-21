@@ -97,19 +97,19 @@ test("Full balance sweep keeps donor XP monotonic and efficiency between 55 and 
 	end
 end)
 
-test("Every native seed retains original combat and facility formulas without imprints", function()
+test("Every native seed uses canonical compounded growth without retired effects", function()
 	for seedId, seed in pairs(Catalog.Seeds) do
 		for level = 1, seed.BaseStar * 10 do
 			for _, quality in ipairs({ 0.9, 1, 1.15 }) do
 				local original = hero("native", seedId, { Level = level, QualityScalar = quality })
 				local atk, hp, dps = Stats.GetEffectiveCombatStats(original, false, false)
-				local expectedATK = math.round(seed.NativeATK * quality * (1 + 0.08 * (level - 1)) * (1 + seed.TraitATKBonus))
-				local expectedHP = math.round(seed.NativeHP * quality * (1 + 0.08 * (level - 1)) * (1 + seed.TraitHPBonus))
-				local expectedDPS = math.round((expectedATK / seed.AttackInterval) * 10) / 10
+				local expectedATK = math.round(seed.BaseATK_1Star * quality * 3^(seed.BaseStar-1) * 1.08^(level-1))
+				local expectedHP = math.round(seed.BaseHP_1Star * quality * 3^(seed.BaseStar-1) * 1.08^(level-1))
+				local expectedDPS = math.round((expectedATK / (math.ceil(seed.AttackInterval/.2-1e-10)*.2)) * 10) / 10
 				equal(atk, expectedATK); equal(hp, expectedHP); equal(dps, expectedDPS)
 				for _, facility in ipairs({ "BENCHED", "FACILITY_CONDUIT", "FACILITY_INFIRMARY", "FACILITY_LAB" }) do
 					local synergy = (seed.PreferredFacility == "ALL" or seed.PreferredFacility == facility) and 0.25 or 0
-					local expectedLabor = math.round(seed.NativeLabor * quality * (1 + 0.05 * (level - 1)) * (1 + synergy) * (1 + seed.TraitLaborBonus) * 100) / 100
+					local expectedLabor = math.round(seed.BaseLabor_1Star * 1.35^(seed.BaseStar-1) * quality * (1 + 0.05 * (level - 1)) * (1 + synergy) * 100) / 100
 					equal(Stats.GetEffectiveLabor(original, facility), expectedLabor)
 				end
 			end
@@ -125,7 +125,7 @@ test("One and multiple donors apply the existing level curve", function()
 	equal(batch.Level, 3); equal(batch.XP, 63)
 	equal(original.Level, 1); equal(original.XP, 0)
 	local atk, hp, dps = Stats.GetEffectiveCombatStats(after, false, false)
-	equal(atk, 48); equal(hp, 324); equal(dps, 56.5)
+	equal(atk, 43); equal(hp, 324); equal(dps, 43)
 	equal(Stats.GetEffectiveLabor(after), 14.7)
 end)
 
@@ -146,14 +146,14 @@ end)
 test("Promotion applies one multiplier and releases reserve through real levels", function()
 	local before = hero("r", "hero_han", { Level = 10, OverflowXP = 3027, InheritedImprints = { melee_memory = 1 } })
 	local after = Math.Promote(before)
-	equal(after.Stars, 2); equal(after.BaseATK, 66); equal(after.BaseHP, 495); equal(after.BaseLabor, 18.9)
+	equal(after.Stars, 2); equal(after.BaseATK, 120); equal(after.BaseHP, 900); equal(after.BaseLabor, 18.9)
 	equal(after.Level, 12); equal(after.XP, 0); equal(after.OverflowXP, 0)
 	equal(after.PassiveTrait, before.PassiveTrait); equal(after.InheritedImprints.melee_memory, 1)
 	equal(before.Stars, 1); equal(before.BaseATK, 40)
 	local atk, hp = Stats.GetEffectiveCombatStats(after, false, false)
-	equal(atk, math.round(66 * 1.88 * 1.12)); equal(hp, math.round(495 * 1.88))
+	equal(atk, math.round(120 * 1.08^11)); equal(hp, math.round(900 * 1.08^11))
 	local repeatATK, repeatHP = Stats.GetEffectiveCombatStats(after, false, false)
-	equal(repeatATK, atk); equal(repeatHP, hp); equal(after.BaseATK, 66)
+	equal(repeatATK, atk); equal(repeatHP, hp); equal(after.BaseATK, 120)
 	close(Stats.GetEffectiveLabor(after, "FACILITY_CONDUIT"), 29.3, 0.00001)
 end)
 
@@ -190,7 +190,7 @@ test("Malformed and incompatible imprint bonuses cannot stack beyond caps", func
 		scholarly_memory = 1000, bulwark_memory = 1000, fake = 1000,
 	} })
 	local atk, hp, labor = Stats.GetImprintBonuses(recipient)
-	close(atk, 0.06); equal(hp, 0); close(labor, 0.09)
+	equal(atk, 0); equal(hp, 0); equal(labor, 0)
 	check(atk <= Config.Imprints.BonusCaps.ATK); check(labor <= Config.Imprints.BonusCaps.Labor)
 	recipient.InheritedImprints = { melee_memory = -1, conduit_memory = 0 / 0 }
 	atk, hp, labor = Stats.GetImprintBonuses(recipient)
@@ -489,7 +489,7 @@ test("Valid promotion charges exact resources, preserves traits and cannot repea
 	local p = c:preview({ Action = "PROMOTION", Recipient = "r" }); check(p.CanCommit)
 	equal(p.Costs.Gold, 1500); equal(p.Costs.PromotionStone, 1)
 	check(c:commit(p).Success); equal(c.profile.Currencies.Gold, 998500); equal(c.profile.PitMaterials.PromotionStone, 99)
-	equal(c.profile.Heroes.r.Stars, 2); equal(c.profile.Heroes.r.BaseATK, 66)
+	equal(c.profile.Heroes.r.Stars, 2); equal(c.profile.Heroes.r.BaseATK, 120)
 	equal(c.profile.Heroes.r.BaseLabor, 18.9); equal(c.profile.Heroes.r.InheritedImprints.melee_memory, 1)
 	equal(c.profile.Heroes.r.PassiveTrait, Catalog.Seeds.hero_han.PassiveTraitName)
 	rejectedWithoutMutation(c, "COMMIT", { Token = p.Token })
@@ -562,7 +562,7 @@ test("Five-star level-50 heroes receive explicitly disclosed memory-only imprint
 	equal(p.After.Level, 50); equal(p.After.XP, 0); equal(p.After.OverflowXP, 0)
 	check(c:commit(p).Success); equal(c.profile.Heroes.d, nil)
 	equal(c.profile.Heroes.r.InheritedImprints.melee_memory, 1); equal(c.profile.Heroes.r.Level, 50)
-	check((Stats.GetEffectiveCombatStats(c.profile.Heroes.r, false, false)) > beforeATK)
+	equal((Stats.GetEffectiveCombatStats(c.profile.Heroes.r, false, false)), beforeATK)
 	equal(c.profile.Currencies.Gold, 999800); equal(c.profile.PitMaterials.ImprintCatalyst, 99)
 	rejectedWithoutMutation(c, "COMMIT", { Token = p.Token })
 end)
@@ -589,7 +589,7 @@ test("Duplicate imprint attempts upgrade one slot to its bounded rank", function
 		check(p.CanCommit); check(c:commit(p).Success); equal(c.profile.Heroes.r.InheritedImprints.melee_memory, rank)
 	end
 	local count = 0; for _ in pairs(c.profile.Heroes.r.InheritedImprints) do count += 1 end
-	equal(count, 1); close((Stats.GetImprintBonuses(c.profile.Heroes.r)), 0.06)
+	equal(count, 1); equal((Stats.GetImprintBonuses(c.profile.Heroes.r)), 0)
 end)
 
 test("Conversion grants exact essence once and no Gem/Gold or hero output", function()

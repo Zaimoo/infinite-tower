@@ -136,7 +136,7 @@ export type ArtifactInstance = {
 	Type: ArtifactCatalog.WeaponType,
 	Star: number, -- 1..7
 	Rarity: number, -- 1..16
-	Level: number,
+	Level: number?, -- Legacy save field; ignored by combat and promotion.
 	EquippedHeroUUID: string?,
 	Locked: boolean,
 }
@@ -237,7 +237,6 @@ function DataManager.CreateArtifact(templateId: string, star: number?, rarity: n
 		Type = seed.Type,
 		Star = star or seed.DefaultStar,
 		Rarity = rarity or 1,
-		Level = 1,
 		EquippedHeroUUID = nil,
 		Locked = false,
 	}
@@ -297,7 +296,6 @@ local function createDefaultPlayerProfile(): PlayerProfile
 
 	-- Additional starter artifacts for forge crafting and fodder testing
 	local riftUUID, riftArt = DataManager.CreateArtifact("art_blade_of_the_rift", 3, 1)
-	riftArt.Level = 4 -- Starts at +4 for immediate mockup parity testing!
 	local f1_UUID, f1_Art = DataManager.CreateArtifact("art_iron_broadsword", 1, 1)
 	local f2_UUID, f2_Art = DataManager.CreateArtifact("art_rusty_daggers", 1, 1)
 	local f3_UUID, f3_Art = DataManager.CreateArtifact("art_hunters_shortbow", 1, 1)
@@ -737,40 +735,8 @@ function DataManager.UnequipArtifact(player: Player, heroUUID: string): (boolean
 	return true, string.format("Unequipped weapon from %s", hero.DisplayName)
 end
 
-function DataManager.UpgradeArtifactRarity(player: Player, artifactUUID: string): (boolean, string?, number?)
-	local profile = ActiveProfiles[player]
-	if not profile then return false, "Profile not loaded", nil end
-
-	local artifact = profile.Artifacts and profile.Artifacts[artifactUUID]
-	if not artifact then return false, "Artifact not found", nil end
-
-	if artifact.Rarity >= 16 then
-		return false, string.format("%s is already at Maximum Rarity (Origin)!", artifact.DisplayName), artifact.Rarity
-	end
-
-	local cost = ArtifactCatalog.GetUpgradeCost(artifact.Rarity)
-	if not cost then return false, "Cannot upgrade further", artifact.Rarity end
-
-	if profile.Currencies.Gold < cost.Gold then
-		return false, string.format("Need %d Gold to upgrade to %s! (Have: %d)", cost.Gold, ArtifactCatalog.GetRarityInfo(artifact.Rarity + 1).Name, profile.Currencies.Gold), artifact.Rarity
-	end
-
-	if cost.Gems > 0 and profile.Currencies.Gems < cost.Gems then
-		return false, string.format("Need %d Gems to upgrade to %s! (Have: %d)", cost.Gems, ArtifactCatalog.GetRarityInfo(artifact.Rarity + 1).Name, profile.Currencies.Gems), artifact.Rarity
-	end
-
-	-- Deduct cost
-	profile.Currencies.Gold -= cost.Gold
-	if cost.Gems > 0 then
-		profile.Currencies.Gems -= cost.Gems
-	end
-
-	artifact.Rarity += 1
-	local newRarityInfo = ArtifactCatalog.GetRarityInfo(artifact.Rarity)
-
-	DataManager.SyncProfile(player)
-	DataManager.SendToast(player, string.format("⚒️ FORGE SUCCESS! %s upgraded to %s (%0.2fx Stats)!", artifact.DisplayName, newRarityInfo.Name, newRarityInfo.Multiplier), "SUCCESS")
-	return true, string.format("Upgraded %s to %s!", artifact.DisplayName, newRarityInfo.Name), artifact.Rarity
+function DataManager.UpgradeArtifactRarity(_player: Player, _artifactUUID: string): (boolean, string?, number?)
+ return false,"Rarity is inherent; promote weapon stars instead",nil
 end
 
 RequestEquipArtifactFunc.OnServerInvoke = function(player: Player, heroUUID: any, artifactUUID: any)
@@ -826,7 +792,6 @@ function DataManager.CraftArtifact(player: Player, templateId: string): (boolean
 
 	-- Create new artifact instance at enhancement level 0
 	local uuid, artifact = DataManager.CreateArtifact(templateId, seed.DefaultStar or 1, 1)
-	artifact.Level = 0
 
 	if not profile.Artifacts then profile.Artifacts = {} end
 	profile.Artifacts[uuid] = artifact
@@ -837,66 +802,15 @@ function DataManager.CraftArtifact(player: Player, templateId: string): (boolean
 end
 
 function DataManager.UpgradeArtifact(player: Player, targetUUID: string, fodderUUIDs: { any }): (boolean, string?, number?)
-	local profile = ActiveProfiles[player]
-	if not profile then return false, "Profile not loaded", nil end
-
-	local target = profile.Artifacts and profile.Artifacts[targetUUID]
-	if not target then return false, "Target artifact not found", nil end
-
-	local currentLevel = target.Level or 0
-	if currentLevel >= ArtifactCatalog.MaxEnhancementLevel then
-		return false, string.format("%s is already at Maximum Enhancement (+%d)!", target.DisplayName, ArtifactCatalog.MaxEnhancementLevel), currentLevel
-	end
-
-	if type(fodderUUIDs) ~= "table" or #fodderUUIDs == 0 then
-		return false, "No fodder artifacts selected for upgrade", currentLevel
-	end
-
-	if #fodderUUIDs > 5 then
-		return false, "Cannot select more than 5 fodder artifacts at once", currentLevel
-	end
-
-	local reqFodder = ArtifactCatalog.GetFodderRequirement(currentLevel)
-	if #fodderUUIDs < reqFodder then
-		return false, string.format("Enhancing to +%d requires %d fodder artifacts (Selected: %d)!", currentLevel + 1, reqFodder, #fodderUUIDs), currentLevel
-	end
-
-	-- Validate every fodder artifact
-	local seen: { [string]: boolean } = {}
-	for _, fUUID in ipairs(fodderUUIDs) do
-		if type(fUUID) ~= "string" then
-			return false, "Invalid fodder UUID", currentLevel
-		end
-		if fUUID == targetUUID then
-			return false, "Cannot use target artifact as its own fodder", currentLevel
-		end
-		if seen[fUUID] then
-			return false, "Duplicate fodder artifact selected", currentLevel
-		end
-		seen[fUUID] = true
-
-		local fodder = profile.Artifacts[fUUID]
-		if not fodder then
-			return false, "Fodder artifact not found in inventory", currentLevel
-		end
-		if fodder.EquippedHeroUUID then
-			return false, string.format("Cannot consume equipped artifact: %s!", fodder.DisplayName), currentLevel
-		end
-		if fodder.Locked then
-			return false, string.format("Cannot consume locked artifact: %s!", fodder.DisplayName), currentLevel
-		end
-	end
-
-	-- Consume fodder artifacts
-	for _, fUUID in ipairs(fodderUUIDs) do
-		profile.Artifacts[fUUID] = nil
-	end
-
-	target.Level = currentLevel + 1
-
-	DataManager.SyncProfile(player)
-	DataManager.SendToast(player, string.format("✨ ENHANCEMENT SUCCESS! %s is now +%d!", target.DisplayName, target.Level), "SUCCESS")
-	return true, string.format("Upgraded %s to +%d!", target.DisplayName, target.Level), target.Level
+ local profile=ActiveProfiles[player]
+ if not profile then return false,"Profile not loaded",nil end
+ local Promotion=require(ReplicatedStorage.Shared.Util.WeaponPromotion)
+ local ok,message,star=Promotion.Promote(profile,targetUUID,fodderUUIDs)
+ if ok then
+  DataManager.SyncProfile(player,true)
+  DataManager.SendToast(player,message,"SUCCESS")
+ end
+ return ok,message,star
 end
 
 RequestCraftArtifactFunc.OnServerInvoke = function(player: Player, templateId: any)
@@ -1023,7 +937,7 @@ AssignHeroRoleFunc.OnServerInvoke = function(player: Player, heroUUID: any, targ
 				local bestDPS = -1
 				for _, h in pairs(profile.Heroes) do
 					if h.Assignment == "BENCHED" and h.CurrentStamina >= 50 and h.ComaUntilTimestamp <= os.time() then
-						local _, _, dps = StatFormulas.GetEffectiveCombatStats(h, false, false)
+						local _, _, dps = StatFormulas.GetEffectiveCombatStats(h, false, false, StatFormulas.GetEquippedArtifact(profile, h))
 						if dps > bestDPS then
 							bestDPS = dps
 							bestHero = h

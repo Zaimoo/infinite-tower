@@ -2,6 +2,7 @@
 -- Pure calculations shared by authoritative previews, progression, and tests.
 local Config = require(script.Parent.Parent.Config.PitBalanceConfig)
 local Stats = require(script.Parent.StatFormulas)
+local Catalog = require(script.Parent.Parent.Config.HeroCatalog)
 local PitMath = {}
 
 function PitMath.Copy(value: any): any
@@ -94,16 +95,19 @@ end
 function PitMath.Promote(hero: any): (any, any)
 	local result = PitMath.Copy(hero)
 	result.Stars += 1
-	-- Base fields already contain the native star scaling. Apply one promotion only.
-	result.BaseHP = math.round(result.BaseHP * Config.Promotion.CombatMultiplier)
-	result.BaseATK = math.round(result.BaseATK * Config.Promotion.CombatMultiplier)
-	result.BaseLabor = math.round(result.BaseLabor * Config.Promotion.LaborMultiplier * 100) / 100
+ local seed=Catalog.Seeds[result.TemplateId]
+ if seed then
+  result.BaseHP=math.round(seed.BaseHP_1Star*3^(result.Stars-1))
+  result.BaseATK=math.round(seed.BaseATK_1Star*3^(result.Stars-1))
+  result.BaseLabor=math.round(seed.BaseLabor_1Star*1.35^(result.Stars-1)*100)/100
+ end
 	return PitMath.AdvanceXP(result, 0)
 end
 
-function PitMath.Snapshot(hero: any): any
-	local atk, hp, dps = Stats.GetEffectiveCombatStats(hero, false, false)
-	return { Level = hero.Level, XP = hero.XP, Stars = hero.Stars, HP = hp, ATK = atk, DPS = dps,
+function PitMath.Snapshot(hero: any, profile: any?): any
+	local combat = Stats.GetCombatSnapshot(hero, Stats.GetEquippedArtifact(profile, hero))
+	return { Level = hero.Level, XP = hero.XP, Stars = hero.Stars, HP = combat.Health, ATK = combat.AttackDamage, DPS = combat.DPS,
+		AttackDamage = combat.AttackDamage, Health = combat.Health, AttackSpeed = combat.AttackSpeed, MovementSpeed = combat.MovementSpeed,
 		Labor = Stats.GetEffectiveLabor(hero), MaxLevel = Stats.GetMaxLevel(hero.Stars),
 		XPRequired = Stats.GetXPRequiredForNextLevel(hero.Level), OverflowXP = hero.OverflowXP or 0,
 		ImprintCapacity = PitMath.GetImprintCapacity(hero), InheritedImprints = PitMath.Copy(hero.InheritedImprints or {}) }

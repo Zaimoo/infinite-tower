@@ -320,10 +320,10 @@ function CombatSimulation.RefreshPlayerHeroStats(player: Player)
 	for uuid, simHero in pairs(state.DeployedHeroes) do
 		local hero = profile.Heroes[uuid]
 		if hero then
-			local atk, hp = StatFormulas.GetEffectiveCombatStats(hero, false, false)
+			local atk, hp, _, interval = StatFormulas.GetEffectiveCombatStats(hero, false, false, StatFormulas.GetEquippedArtifact(profile,hero))
 			metadataChanged = metadataChanged or simHero.Level ~= hero.Level or simHero.Stars ~= hero.Stars or simHero.MaxHP ~= hp
 			simHero.Level, simHero.Stars = hero.Level, hero.Stars
-			simHero.EffectiveATK, simHero.MaxHP = atk, hp
+			simHero.EffectiveATK, simHero.MaxHP, simHero.AttackInterval = atk, hp, interval
 			simHero.CurrentHP = math.min(simHero.CurrentHP, hp)
 		end
 	end
@@ -708,7 +708,7 @@ function CombatSimulation.SpawnWorldBoss()
 		if prof then
 			local dpsList = {}
 			for _, h in pairs(prof.Heroes) do
-				local _, _, dps = StatFormulas.GetEffectiveCombatStats(h, false, false)
+				local _, _, dps = StatFormulas.GetEffectiveCombatStats(h, false, false, StatFormulas.GetEquippedArtifact(prof,h))
 				table.insert(dpsList, dps)
 			end
 			table.sort(dpsList, function(a, b) return a > b end)
@@ -1613,7 +1613,10 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 	local dm = getDataManager()
 	local profile = dm.GetProfile(simHero.Owner)
 	if profile and profile.Heroes[simHero.HeroUUID] then
-		local effATK, effHP, _ = StatFormulas.GetEffectiveCombatStats(profile.Heroes[simHero.HeroUUID], false, false)
+		local currentHero = profile.Heroes[simHero.HeroUUID]
+		local effATK, effHP, _, interval = StatFormulas.GetEffectiveCombatStats(currentHero, false, false, StatFormulas.GetEquippedArtifact(profile,currentHero))
+		simHero.AttackInterval = interval
+		simHero.CurrentHP = math.min(simHero.CurrentHP,effHP)
 		simHero.EffectiveATK = effATK
 		simHero.MaxHP = effHP
 	end

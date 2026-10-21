@@ -76,9 +76,7 @@ function T.List(parent: Instance, padding: number?)
 end
 
 function T.Number(value: any): string
-	local n = tonumber(value) or 0
-	if n % 1 == 0 then return tostring(math.floor(n)) end
-	return string.format("%.1f", n)
+ return require(game:GetService("ReplicatedStorage").Shared.Config.StatBalance).Format(tonumber(value) or 0)
 end
 
 function T.Stars(stars: number?): string

@@ -23,7 +23,7 @@ Config.Synthesis = {
 	FocusedXPScale = 0.5,
 }
 Config.Promotion = {
-	CombatMultiplier = 1.65,
+	CombatMultiplier = 3,
 	LaborMultiplier = 1.35,
 	[1] = { Gold = 1500, PromotionStone = 1 },
 	[2] = { Gold = 7500, PromotionStone = 3 },

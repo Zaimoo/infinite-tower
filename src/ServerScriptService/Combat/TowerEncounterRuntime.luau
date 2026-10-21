@@ -4,6 +4,7 @@ local RS=game:GetService("ReplicatedStorage")
 local Players=game:GetService("Players")
 local RunService=game:GetService("RunService")
 local Config=require(RS.Shared.Config.FirstBiomeCombat)
+local StatBalance=require(RS.Shared.Config.StatBalance)
 local Timeline=require(RS.Shared.Util.AttackTimeline)
 local Runtime={}
 function Runtime.new(api: any): any
@@ -85,7 +86,9 @@ function Runtime.new(api: any): any
 					room.CombatLabeled=true
 				end
 				for slot,placement in placements do
-					local e=Config.Get(placement.EnemyId);local m=ledger.Slots[slot]
+					local e=table.clone(Config.Get(placement.EnemyId));local numeric=StatBalance.GetFloorStats(floor,e.Role)
+					if numeric then e.MaxHP=numeric.MaxHP;e.ATK=numeric.ATK end
+					local m=ledger.Slots[slot]
 					if not m then
 						m={NetId=api.Allocate(),EntityGeneration=0,FloorId=floor,RoomGeneration=0,EnemyId=e.EnemyId,SpecId=e.EnemyId,
 							DisplayName=({mob_moss_crawler="Moss Crawler",elite_vinebound="Vinebound Elite",boss_mossbound_guardian="Mossbound Guardian"})[e.EnemyId],
