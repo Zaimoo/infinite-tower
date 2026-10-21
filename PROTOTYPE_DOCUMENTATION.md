@@ -30,9 +30,9 @@ The current implementation establishes:
    - **Emergency Recall Whistle:** `[E]` ($6\text{s}$ CD, instant warp to Master, $2\text{s}$ aggro pacification; yields priority to nearby ProximityPrompts).
    - **Drop Item:** `[R]` / HUD button drops carried cargo or relics.
 5. **Living Waiting Room Tycoon ($1\text{ Hz}$):**
-   - Benched heroes physically inhabit the plot as 3D workers on pedestals and recuperation beds, powering the **Mana Conduit** (Gems) and **Infirmary & Barracks** (Stamina & Coma recovery).
+   - Benched heroes physically inhabit the plot on recuperation beds in the **Infirmary & Barracks** (accelerated Stamina & Coma recovery).
    - **Blacksmith Forge:** An interactive 3D forge station on each island plot featuring an anvil, burning neon coals, workbench, and `[E]` ProximityPrompt for upgrading weapons.
-   - *Note on Pruned Features:* Research Points (RP) and the Dimensional Lab tech tree were removed to eliminate artificial progression barriers. All 5 squad deployment slots and arena areas are accessible.
+   - *Note on Pruned Features:* Research Points (RP), Dimensional Lab, and Mana Conduit were removed to eliminate artificial progression barriers and streamline gameplay around active combat, the Pit, and the Forge. All 5 squad deployment slots and arena areas are accessible.
 6. **The World Boss ("The Dimensional Sovereign"):**
    - Features dynamic HP scaling, phase transitions, expanding $85\text{-stud}$ red **Devouring Nova** telegraphs every $20\text{s}$, $5\text{s}$ $+25\%$ Core Exposed punish windows, and independent squad DPS loot payout with Boss Pity.
 7. **Contested Loot & Targeted Retaliation PvP:**
@@ -75,7 +75,6 @@ game
 │   │   │   ├── PlotSpawn             -- Player SpawnLocation
 │   │   │   ├── PrivateExtractionPad  -- Glowing platform for banking cargo
 │   │   │   ├── SummoningAltar        -- Gacha Obelisk + The Pit Cauldron
-│   │   │   ├── Facility_ManaConduit  -- 3 Worker Pedestals + Gem Chest
 │   │   │   ├── Facility_Infirmary    -- 3 Worker Pedestals + 5 Recuperation Beds
 │   │   │   ├── Facility_Blacksmith   -- 3D Anvil, glowing coals, furnace, workbench, and prompt
 │   │   │   └── ActivePlotWorkers     -- Dynamic 3D physical worker models & sleeping bed avatars
@@ -130,7 +129,7 @@ game
 │   │   └── SyndicateService.server.luau -- Waiting room espionage (Bless vs Leech, 15s Purge, Mimic chest)
 │   └── Tycoon
 │       ├── BlacksmithService.server.luau -- 3D Blacksmith Forge stations, prompts, and upgrade integration
-│       └── WaitingRoomService.server.luau -- 1 Hz facility production (Mana Conduit & Infirmary)
+│       └── WaitingRoomService.server.luau -- 1 Hz facility production (Infirmary)
 │
 └── StarterPlayer.StarterPlayerScripts
     ├── Input

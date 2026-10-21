@@ -14,12 +14,12 @@
 
 | Hero ID | Hero Name | Origin / Banner Pool | Base Star | Archetype | Native HP (Lv.1) | Native ATK (Lv.1) | 1★ Base HP | 1★ Base ATK | Attack Interval (s) | Attacks / Sec | Native Base DPS (Lv.1) | Attack Range (Studs) | Native Base Labor (/min) | 1★ Base Labor (/min) | Preferred Facility (+25% Labor) | Passive Trait Name | Passive Combat Multiplier | Passive Labor / Utility Multiplier |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| `hero_han` | **Han** | Standard Banner (25.0% Net) | 1★ | Striker | 300 | 40 | 300 | 40 | 0.85 | 1.18 | 47.06 | 6 | 14.0 | 14.0 | Mana Conduit | Unyielding Adaptation | +10% ATK | -10% Combat Stamina Drain |
-| `hero_jenna` | **Jenna** | Standard Banner (22.5% Net) | 1★ | Marksman | 210 | 34 | 210 | 34 | 0.80 | 1.25 | 42.50 | 28 | 13.0 | 13.0 | Mana Conduit | Windstep Precision | +15% Attack Speed | +5% Squad Move Speed |
-| `hero_catio` | **Catio** | Standard Banner (22.5% Net) | 1★ | Miner | 280 | 24 | 280 | 24 | 1.05 | 0.95 | 22.86 | 6 | 20.0 | 20.0 | Mana Conduit | Quartermaster's Ledger | +0% Combat | +25% Labor Output |
+| `hero_han` | **Han** | Standard Banner (25.0% Net) | 1★ | Striker | 300 | 40 | 300 | 40 | 0.85 | 1.18 | 47.06 | 6 | 14.0 | 14.0 | None | Unyielding Adaptation | +10% ATK | -10% Combat Stamina Drain |
+| `hero_jenna` | **Jenna** | Standard Banner (22.5% Net) | 1★ | Marksman | 210 | 34 | 210 | 34 | 0.80 | 1.25 | 42.50 | 28 | 13.0 | 13.0 | None | Windstep Precision | +15% Attack Speed | +5% Squad Move Speed |
+| `hero_catio` | **Catio** | Standard Banner (22.5% Net) | 1★ | Miner | 280 | 24 | 280 | 24 | 1.05 | 0.95 | 22.86 | 6 | 20.0 | 20.0 | None | Quartermaster's Ledger | +0% Combat | +25% Labor Output |
 | `hero_aaron` | **Aaron** | Standard Banner (13.0% Net) | 2★ | Vanguard | 743 | 46 | 450 | 28 | 1.10 | 0.91 | 41.82 | 7 | 21.6 | 16.0 | Infirmary | Phalanx Guard | +25% Max HP | -15% AoE Damage Taken |
-| `hero_velkist` | **Velkist** | Standard Banner (12.0% Net) | 2★ | Striker | 495 | 73 | 300 | 44 | 0.75 | 1.33 | 97.33 | 6 | 18.9 | 14.0 | Mana Conduit | Bloodthirst Frenzy | +20% ATK | +1.0s [Q] Overdrive Duration |
-| `hero_eolka` | **Eolka** | Standard Banner (5.0% Net) | 3★ | Scholar | 626 | 142 | 230 | 52 | 1.00 | 1.00 | 142.00 | 30 | 40.1 | 22.0 | Mana Conduit | Crimson Pyromancy | +25% ATK | +30% Labor Output |
+| `hero_velkist` | **Velkist** | Standard Banner (12.0% Net) | 2★ | Striker | 495 | 73 | 300 | 44 | 0.75 | 1.33 | 97.33 | 6 | 18.9 | 14.0 | None | Bloodthirst Frenzy | +20% ATK | +1.0s [Q] Overdrive Duration |
+| `hero_eolka` | **Eolka** | Standard Banner (5.0% Net) | 3★ | Scholar | 626 | 142 | 230 | 52 | 1.00 | 1.00 | 142.00 | 30 | 40.1 | 22.0 | None | Crimson Pyromancy | +25% ATK | +30% Labor Output |
 | `hero_archon` | **Sovereign Archon** | World Boss Exclusive (RNG / 100% Pity) | 3★ | Striker | 953 | 177 | 350 | 65 | 0.80 | 1.25 | 221.25 | 14 | 45.6 | 25.0 | All Facilities (+25%) | Dimensional Dominion | +30% Boss Damage | +25% All-Facility Labor & -25% Nova Stamina Loss |
 
 ---
@@ -97,17 +97,11 @@ Qualification: Masters must deal $\ge 3.0\%$ of Boss total HP to qualify for ran
 
 ### 4.1 Facility Upgrade & Production Table (Levels 1–5)
 *Formulas:*
-- **Mana Conduit (`Gems/min`):** `(5 * Level + 0.45 * SumEffectiveLabor) * (1 + 0.12 * (Level - 1))`
 - **The Infirmary (`Stamina/sec` & `Coma Duration`):** `StaminaRegen = 2.5 + (0.4 * Level) + (0.06 * SumEffectiveLabor)` | `ComaSec = MAX(20, 60 / (1 + 0.05 * (Level - 1) + 0.008 * SumEffectiveLabor))`
-*(Worker Benchmarks below use **Catio** (`20 Base Labor + 25% Synergy`) for Mana Conduit and **Aaron** for Infirmary).*
+*(Worker Benchmarks below use **Aaron** for Infirmary).*
 
 | Facility Name | Facility Level | Upgrade Cost (Gold) | Max Worker Slots | Facility Level Mult | Base Output / Min (0 Workers) | Output / Min (1★ Lv.10 Workers Filled) | Output / Min (2★ Lv.20 Workers Filled) | Output / Min (3★ Lv.30 Workers Filled) | Physical Chest / Capacity Cap |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Mana Conduit** | **Level 1** | 0 *(Starter)* | 1 Slot | 1.00x | 5.0 Gems/m | 21.3 Gems/m *(1 Worker)* | 34.6 Gems/m *(1 Worker)* | 55.3 Gems/m *(1 Worker)* | 150 Gems |
-| **Mana Conduit** | **Level 2** | 800 Gold | 1 Slot | 1.12x | 11.2 Gems/m | 29.5 Gems/m *(1 Worker)* | 44.4 Gems/m *(1 Worker)* | 67.5 Gems/m *(1 Worker)* | 300 Gems |
-| **Mana Conduit** | **Level 3** | 2,500 Gold | 2 Slots | 1.24x | 18.6 Gems/m | 59.1 Gems/m *(2 Workers)* | 92.1 Gems/m *(2 Workers)* | 143.3 Gems/m *(2 Workers)* | 600 Gems |
-| **Mana Conduit** | **Level 4** | 7,500 Gold | 2 Slots | 1.36x | 27.2 Gems/m | 71.6 Gems/m *(2 Workers)* | 107.8 Gems/m *(2 Workers)* | 164.0 Gems/m *(2 Workers)* | 1,200 Gems |
-| **Mana Conduit** | **Level 5** | 22,000 Gold | 3 Slots | 1.48x | 37.0 Gems/m | 109.5 Gems/m *(3 Workers)* | 168.5 Gems/m *(3 Workers)* | 260.2 Gems/m *(3 Workers)* | 2,500 Gems |
 | **The Infirmary & Barracks** | **Level 1** | 0 *(Starter)* | 1 Slot | 1.00x | 2.90 Stam/s (60.0s Coma) | 5.08 Stam/s (46.5s Coma) | 6.85 Stam/s (39.3s Coma) | 9.61 Stam/s (31.7s Coma) | 2 Recuperation Beds |
 | **The Infirmary & Barracks** | **Level 2** | 600 Gold | 1 Slot | 1.05x | 3.30 Stam/s (57.1s Coma) | 5.48 Stam/s (44.8s Coma) | 7.25 Stam/s (38.1s Coma) | 10.01 Stam/s (30.9s Coma) | 3 Recuperation Beds |
 | **The Infirmary & Barracks** | **Level 3** | 2,000 Gold | 2 Slots | 1.10x | 3.70 Stam/s (54.5s Coma) | 8.05 Stam/s (35.7s Coma) | 11.60 Stam/s (27.9s Coma) | 17.12 Stam/s (20.8s Coma) | 4 Recuperation Beds |
@@ -169,7 +163,7 @@ Weapons ascend through 16 rarity tiers at the Waiting Room Blacksmith Forge, mul
 
 ### 6.1 F2P Pacing Assumptions
 - **Starting Resources (`T = 0:00`):** `500 Gold`, `300 Gems` (3 immediate Gacha pulls), and starter hero (**Han 1★ Lv.1**).
-- **Onboarding Pulls (`T = 0:30`):** Player spends `300 Gems` for 3 pulls (`2x 1★` + `1x 2★`, or `3x 1★`). Player deploys 3 heroes into Ring 1 / Central Crimson Tower and assigns 1 hero to Mana Conduit.
+- **Onboarding Pulls (`T = 0:30`):** Player spends `300 Gems` for 3 pulls (`2x 1★` + `1x 2★`, or `3x 1★`). Player deploys 3 heroes into Ring 1 / Central Crimson Tower.
 - **Active Extraction Rate:** Player completes 1 physical Relic extraction every `~2.5 minutes`, banking Gold and Gems at the perimeter or plot pad.
 - **World Boss Cycles:** Spawns at `T = 20:00` and `T = 40:00`. Even placing Rank #4 or #5 awards `+400 Gems`, `+4,000 Gold`, and `+10% Boss Pity`.
 
@@ -177,9 +171,9 @@ Weapons ascend through 16 rarity tiers at the Waiting Room Blacksmith Forge, mul
 
 | Milestone Target | Target Unlock Requirements | Active Play Time | Cumulative Gold Earned | Cumulative Gems Earned | Primary Gameplay Loop & Progression Drivers |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **0. Onboarding & First 3 Pulls** | `300 Starter Gems` | **1.0 Min** | 500 Gold | 300 Gems | Spend starter `300 Gems` -> Deploy 3-Hero Squad + Assign 1 Worker to Mana Conduit. |
+| **0. Onboarding & First 3 Pulls** | `300 Starter Gems` | **1.0 Min** | 500 Gold | 300 Gems | Spend starter `300 Gems` -> Deploy 3-Hero Squad into Ring 1. |
 | **1. First Weapon Ascension** | **250 Gold** | **3.0 Mins** | 1,200 Gold | 340 Gems | Upgrade starter bow/sword to **Uncommon** (`1.15x` multiplier) at the Blacksmith Forge. |
-| **2. Mana Conduit Lv.2** | **800 Gold** | **7.5 Mins** | 2,800 Gold | 460 Gems | Upgrade Mana Conduit to Lv.2 -> increases uncollected cap to 300 Gems. |
+| **2. The Infirmary Lv.2** | **600 Gold** | **7.5 Mins** | 2,800 Gold | 460 Gems | Upgrade Infirmary to Lv.2 -> unlocks 3rd recuperation bed and boosts stamina regen. |
 | **3. Rare Weapon Ascension** | **600 Gold** | **12.0 Mins** | 5,600 Gold | 880 Gems | Upgrade primary weapon to **Rare** (`1.35x` multiplier); squad DPS climbs to ~250. |
 | **4. First 2★ -> 3★ Promotion** | **7,500 Gold + 3 Stones** | **22.0 Mins** | 16,500 Gold | 1,950 Gems | First World Boss clear awards `+4,000 Gold` & `+400 Gems`. Synthesize dupes in The Pit, craft Promotion Stones, and promote core hero to 3★! |
 | **5. Exalted Weapon Ascension** | **3,500 Gold** | **32.0 Mins** | 28,000 Gold | 2,800 Gems | Ascend weapon to **Exalted** (`1.90x` multiplier), pushing squad DPS past 650. |
