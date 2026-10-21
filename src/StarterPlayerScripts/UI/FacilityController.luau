@@ -1,124 +1,1069 @@
 --!strict
--- Focused building HUDs; all mutations use the existing authoritative remotes.
-local Workspace = game:GetService("Workspace")
+-- StarterPlayerScripts/UI/FacilityController.luau
+-- Authoritative Facility HUD featuring:
+--   1. HERO BANNER & ARTIFACT BANNER SUMMONING (Call of the Rift & Echoes of the Rift)
+--   2. Dynamic 50-pull pity tracking, 1X & 10X summons, rate-up hero highlights
+--   3. Summon Celebration Reveal Modal
+--   4. Full backward-compatibility for Infirmary & Squad Management
+-- Matches the exact cosmic purple aesthetic with corner diamond accents, glowing borders, and responsive scaling.
+
+local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local FacilityConfig = require(ReplicatedStorage.Shared.Config.FacilityConfig)
+local Workspace = game:GetService("Workspace")
+local Players = game:GetService("Players")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local FacilityConfig = require(Shared:WaitForChild("Config"):WaitForChild("FacilityConfig"))
+local HeroCatalog = require(Shared:WaitForChild("Config"):WaitForChild("HeroCatalog"))
+local ArtifactCatalog = require(Shared:WaitForChild("Config"):WaitForChild("ArtifactCatalog"))
+
+local RemotesFolder = ReplicatedStorage:WaitForChild("Remotes")
+local ArtifactRemotes = RemotesFolder:FindFirstChild("ArtifactRemotes") :: Folder?
+
 local Controller = {}
 Controller.__index = Controller
-local C = {Panel = Color3.fromRGB(17, 24, 38), Row = Color3.fromRGB(25, 36, 54), Text = Color3.fromRGB(237, 231, 213), Muted = Color3.fromRGB(160, 176, 194)}
-local DETAILS = {
-	Summoning = {Title = "SUMMONING", Description = "Call new heroes through the rift.", Color = Color3.fromRGB(96, 191, 255)},
-	Infirmary = {Title = "INFIRMARY", Description = "Rest heroes, restore stamina, and recover from coma.", Color = Color3.fromRGB(100, 232, 175)},
-	SquadManagement = {Title = "SQUAD MANAGEMENT", Description = "Deploy rested heroes and bench your current squad.", Color = Color3.fromRGB(245, 128, 99)},
+
+local WIDTH, HEIGHT = 760, 520
+
+local C = {
+	Scrim = Color3.fromRGB(6, 5, 10),
+	Panel = Color3.fromRGB(15, 13, 22),
+	PanelInner = Color3.fromRGB(20, 17, 30),
+	CardBg = Color3.fromRGB(24, 21, 40),
+	SlotBg = Color3.fromRGB(18, 15, 26),
+	StatBoxBg = Color3.fromRGB(12, 10, 18),
+	Border = Color3.fromRGB(192, 132, 252),
+	BorderGlow = Color3.fromRGB(175, 115, 215),
+	BorderDim = Color3.fromRGB(58, 48, 75),
+	BorderCard = Color3.fromRGB(59, 45, 84),
+	Text = Color3.fromRGB(255, 255, 255),
+	TextMuted = Color3.fromRGB(155, 145, 175),
+	TextLavender = Color3.fromRGB(180, 175, 205),
+	GoldYellow = Color3.fromRGB(250, 204, 21),
+	Green = Color3.fromRGB(74, 222, 128),
+	Red = Color3.fromRGB(239, 68, 68),
+	Arrow = Color3.fromRGB(140, 130, 160),
+	Underline = Color3.fromRGB(225, 150, 245),
 }
 
-local function corner(object: GuiObject, radius: number)
-	local c = Instance.new("UICorner")
-	c.CornerRadius, c.Parent = UDim.new(0, radius), object
-end
-local function label(parent: Instance, name: string, size: UDim2, position: UDim2, textSize: number, color: Color3): TextLabel
-	local l = Instance.new("TextLabel")
-	l.Name, l.Size, l.Position = name, size, position
-	l.ZIndex = 24
-	l.BackgroundTransparency, l.TextColor3, l.TextSize = 1, color, textSize
-	l.Font, l.TextWrapped, l.TextXAlignment = Enum.Font.GothamMedium, true, Enum.TextXAlignment.Left
-	l.Text, l.Parent = "", parent
-	return l
+local ARCHETYPE_ICONS: { [string]: string } = {
+	Vanguard = "🛡️",
+	Striker = "⚔️",
+	Marksman = "🏹",
+	Scholar = "🔮",
+	Healer = "💚",
+	Miner = "⛏️",
+}
+
+local ARTIFACT_ICONS: { [string]: string } = {
+	BOW = "🏹",
+	SWORD = "⚔️",
+	DAGGERS = "🗡️",
+	AXE = "🪓",
+	TOME = "📖",
+	STAFF = "🪄",
+	RING = "💍",
+	SHIELD = "🛡️",
+}
+
+local DETAILS = {
+	Summoning = { Title = "SUMMONING", Description = "Call legendary heroes through the dimensional rift.", Color = Color3.fromRGB(192, 132, 252) },
+	Infirmary = { Title = "INFIRMARY", Description = "Rest heroes, restore stamina, and recover from coma.", Color = Color3.fromRGB(100, 232, 175) },
+	SquadManagement = { Title = "SQUAD MANAGEMENT", Description = "Deploy rested heroes and bench your current squad.", Color = Color3.fromRGB(245, 128, 99) },
+}
+
+local function new(className: string, props: { [string]: any }, parent: Instance?): any
+	local o = Instance.new(className)
+	for k, v in pairs(props) do
+		(o :: any)[k] = v
+	end
+	o.Parent = parent
+	return o
 end
 
-function Controller.new(parent: Instance, getProfile: () -> any, remotes: Instance)
-	local self: any = setmetatable({}, Controller)
-	self.GetProfile, self.Busy, self.LastSummoned = getProfile, false, {}
-	self.Summon = remotes:WaitForChild("RequestSummon")
-	self.Assign = remotes:WaitForChild("AssignHeroRole")
-	self.Facility = remotes:WaitForChild("FacilityInteract")
-	local root = Instance.new("Frame")
-	root.Name, root.AnchorPoint, root.Position = "FacilityModal", Vector2.new(.5, .5), UDim2.fromScale(.5, .5)
-	root.BackgroundColor3, root.BorderSizePixel, root.Visible = C.Panel, 0, false
-	root.Active, root.ZIndex, root.Parent = true, 20, parent
-	corner(root, 12)
-	local stroke = Instance.new("UIStroke")
-	stroke.Color, stroke.Thickness, stroke.Parent = C.Muted, 1.5, root
-	self.Root, self.Stroke = root, stroke
-	self.Title = label(root, "FacilityTitle", UDim2.new(1, -130, 0, 30), UDim2.fromOffset(20, 16), 22, C.Text)
-	self.Title.TextScaled, self.Title.TextWrapped = true, false
-	local titleSize = Instance.new("UITextSizeConstraint")
-	titleSize.MinTextSize, titleSize.MaxTextSize, titleSize.Parent = 12, 22, self.Title
-	self.Description = label(root, "Description", UDim2.new(1, -40, 0, 40), UDim2.fromOffset(20, 52), 14, C.Muted)
-	self.Summary = label(root, "Summary", UDim2.new(1, -40, 0, 44), UDim2.fromOffset(20, 98), 15, C.Text)
-	self.Actions = Instance.new("Frame")
-	self.Actions.Name, self.Actions.BackgroundTransparency = "FacilityActions", 1
-	self.Actions.ZIndex = 21
-	self.Actions.Position, self.Actions.Size, self.Actions.Parent = UDim2.fromOffset(20, 150), UDim2.new(1, -40, 0, 42), root
-	self.List = Instance.new("ScrollingFrame")
-	self.List.Name, self.List.BackgroundTransparency, self.List.BorderSizePixel = "HeroList", 1, 0
-	self.List.ZIndex = 21
-	self.List.Position, self.List.Size = UDim2.fromOffset(20, 210), UDim2.new(1, -40, 1, -274)
-	self.List.ScrollBarThickness, self.List.AutomaticCanvasSize, self.List.CanvasSize = 5, Enum.AutomaticSize.Y, UDim2.new()
-	self.List.Parent = root
-	local layout = Instance.new("UIListLayout")
-	layout.Padding, layout.SortOrder, layout.Parent = UDim.new(0, 8), Enum.SortOrder.LayoutOrder, self.List
-	self.Status = label(root, "Status", UDim2.new(1, -40, 0, 44), UDim2.new(0, 20, 1, -52), 13, C.Muted)
-	self:Button(root, "Close", "CLOSE", UDim2.fromOffset(88, 30), UDim2.new(1, -108, 0, 16), function() self:Close() end)
-	local function resize()
-		local camera = Workspace.CurrentCamera
-		if camera then root.Size = UDim2.fromOffset(math.min(850, math.max(280, camera.ViewportSize.X - 32)), math.min(620, math.max(300, camera.ViewportSize.Y - 100))) end
+local function stroke(parent: Instance, color: Color3, thickness: number?, transparency: number?): UIStroke
+	return new("UIStroke", {
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+		Color = color,
+		Thickness = thickness or 1,
+		Transparency = transparency or 0,
+	}, parent)
+end
+
+local function glow(parent: GuiObject, pad: number, color: Color3?, transparency: number?)
+	local g = new("Frame", {
+		Name = "Glow",
+		BackgroundTransparency = 1,
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.new(1, pad, 1, pad),
+		ZIndex = parent.ZIndex,
+	}, parent)
+	stroke(g, color or C.BorderGlow, 3, transparency or 0.8)
+end
+
+local function cornerDiamonds(parent: GuiObject, size: number, color: Color3?)
+	for _, c in { Vector2.new(0, 0), Vector2.new(1, 0), Vector2.new(0, 1), Vector2.new(1, 1) } do
+		local d = new("Frame", {
+			Name = "CornerDiamond",
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Rotation = 45,
+			Position = UDim2.fromScale(c.X, c.Y),
+			Size = UDim2.fromOffset(size, size),
+			BackgroundColor3 = C.Panel,
+			BorderSizePixel = 0,
+			ZIndex = parent.ZIndex + 2,
+		}, parent)
+		stroke(d, color or C.Border, 1)
 	end
-	local cameraConnection: RBXScriptConnection? = nil
-	local function trackCamera()
-		if cameraConnection then cameraConnection:Disconnect() end
-		if Workspace.CurrentCamera then cameraConnection = Workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(resize) end
+end
+
+local function label(parent: Instance, text: string, size: number, color: Color3, font: Enum.Font?): TextLabel
+	return new("TextLabel", {
+		BackgroundTransparency = 1,
+		Text = text,
+		TextSize = size,
+		TextColor3 = color,
+		Font = font or Enum.Font.GothamBold,
+		Size = UDim2.new(1, 0, 0, size + 8),
+		TextWrapped = false,
+		TextTruncate = Enum.TextTruncate.AtEnd,
+		RichText = true,
+	}, parent)
+end
+
+--============================================================================
+-- CONSTRUCTOR
+--============================================================================
+
+function Controller.new(gui: ScreenGui, getProfile: () -> any, remotes: Instance)
+	local self: any = setmetatable({}, Controller)
+	self.GetProfile = getProfile
+	self.Busy = false
+	self.LastSummoned = {}
+	self.Current = "Summoning"
+	self.ActiveSummonTab = "HERO" -- "HERO" | "ARTIFACT"
+
+	-- Remotes
+	self.Summon = remotes:WaitForChild("RequestSummon") :: RemoteFunction
+	self.Assign = remotes:WaitForChild("AssignHeroRole") :: RemoteFunction
+	self.Facility = remotes:WaitForChild("FacilityInteract") :: RemoteEvent
+
+	if ArtifactRemotes then
+		self.RequestSummonArtifact = ArtifactRemotes:FindFirstChild("RequestSummonArtifact") :: RemoteFunction?
+	end
+
+	-- 1. Scrim Background (dims world)
+	self.Scrim = new("TextButton", {
+		Name = "FacilityScrim",
+		Text = "",
+		AutoButtonColor = false,
+		BackgroundColor3 = C.Scrim,
+		BackgroundTransparency = 0.35,
+		Size = UDim2.fromScale(1, 1),
+		Visible = false,
+		ZIndex = 50,
+	}, gui)
+	self.Scrim.Activated:Connect(function()
+		if not self.Busy then
+			self:Close()
+		end
+	end)
+
+	-- 2. Modal Frame
+	local root = new("Frame", {
+		Name = "FacilityModal",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromOffset(WIDTH, HEIGHT),
+		BackgroundColor3 = C.Panel,
+		BorderSizePixel = 0,
+		Visible = false,
+		ZIndex = 51,
+	}, gui)
+	self.Root = root
+
+	self.Stroke = stroke(root, C.Border, 1.2, 0.05)
+	glow(root, 10, C.BorderGlow, 0.8)
+	cornerDiamonds(root, 8, C.Border)
+
+	local inner = new("Frame", {
+		Name = "InnerBorder",
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(4, 4),
+		Size = UDim2.new(1, -8, 1, -8),
+		ZIndex = 51,
+	}, root)
+	stroke(inner, C.BorderDim, 1, 0.4)
+
+	self.Scale = new("UIScale", {}, root)
+
+	-- 3. Close Button (High contrast gothic pill styling with Latin 'X')
+	local closeBtn = new("TextButton", {
+		Name = "CloseButton",
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -16, 0, 16),
+		Size = UDim2.fromOffset(30, 30),
+		BackgroundColor3 = Color3.fromRGB(28, 22, 42),
+		Text = "X",
+		Font = Enum.Font.GothamBold,
+		TextSize = 14,
+		TextColor3 = Color3.fromRGB(225, 210, 250),
+		AutoButtonColor = false,
+		ZIndex = 60,
+	}, root)
+	new("UICorner", { CornerRadius = UDim.new(0, 6) }, closeBtn)
+	local closeStroke = stroke(closeBtn, Color3.fromRGB(80, 60, 110), 1)
+
+	closeBtn.MouseEnter:Connect(function()
+		TweenService:Create(closeBtn, TweenInfo.new(0.15), {
+			BackgroundColor3 = Color3.fromRGB(180, 45, 60),
+			TextColor3 = Color3.fromRGB(255, 255, 255),
+		}):Play()
+		TweenService:Create(closeStroke, TweenInfo.new(0.15), {
+			Color = Color3.fromRGB(255, 100, 120),
+		}):Play()
+	end)
+	closeBtn.MouseLeave:Connect(function()
+		TweenService:Create(closeBtn, TweenInfo.new(0.15), {
+			BackgroundColor3 = Color3.fromRGB(28, 22, 42),
+			TextColor3 = Color3.fromRGB(225, 210, 250),
+		}):Play()
+		TweenService:Create(closeStroke, TweenInfo.new(0.15), {
+			Color = Color3.fromRGB(80, 60, 110),
+		}):Play()
+	end)
+	closeBtn.Activated:Connect(function()
+		if not self.Busy then
+			self:Close()
+		end
+	end)
+
+	-- 4. Currency / Gems Indicator in Top Bar
+	local gemCurrency = label(root, "💎 0", 14, C.GoldYellow, Enum.Font.GothamBold)
+	gemCurrency.Name = "GemCurrency"
+	gemCurrency.AnchorPoint = Vector2.new(1, 0)
+	gemCurrency.Position = UDim2.new(1, -56, 0, 20)
+	gemCurrency.Size = UDim2.new(0, 180, 0, 22)
+	gemCurrency.TextXAlignment = Enum.TextXAlignment.Right
+	self.GemCurrency = gemCurrency
+
+	-- 5. Top Tab Container (HERO BANNER | ARTIFACT BANNER)
+	local tabContainer = new("Frame", {
+		Name = "TabContainer",
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(24, 14),
+		Size = UDim2.new(1, -260, 0, 44),
+		ZIndex = 52,
+	}, root)
+	self.TabContainer = tabContainer
+
+	local heroTabBtn = new("TextButton", {
+		Name = "TabHero",
+		Text = "HERO BANNER",
+		TextSize = 15,
+		Font = Enum.Font.GothamBold,
+		TextColor3 = C.Text,
+		BackgroundTransparency = 1,
+		Size = UDim2.fromOffset(130, 36),
+		Position = UDim2.fromOffset(10, 0),
+		ZIndex = 53,
+	}, tabContainer)
+
+	local artifactTabBtn = new("TextButton", {
+		Name = "TabArtifact",
+		Text = "ARTIFACT BANNER",
+		TextSize = 15,
+		Font = Enum.Font.GothamBold,
+		TextColor3 = C.TextMuted,
+		BackgroundTransparency = 1,
+		Size = UDim2.fromOffset(150, 36),
+		Position = UDim2.fromOffset(150, 0),
+		ZIndex = 53,
+	}, tabContainer)
+
+	local activeIndicator = new("Frame", {
+		Name = "ActiveTabIndicator",
+		BackgroundColor3 = C.Underline,
+		BorderSizePixel = 0,
+		Size = UDim2.new(0, 90, 0, 3),
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.fromOffset(75, 36),
+		ZIndex = 54,
+	}, tabContainer)
+	stroke(activeIndicator, C.BorderGlow, 1.5, 0.4)
+
+	self.HeroTabBtn = heroTabBtn
+	self.ArtifactTabBtn = artifactTabBtn
+	self.ActiveIndicator = activeIndicator
+
+	heroTabBtn.Activated:Connect(function()
+		self:SetSummonTab("HERO")
+	end)
+	artifactTabBtn.Activated:Connect(function()
+		self:SetSummonTab("ARTIFACT")
+	end)
+
+	-- Header Title (Fallback for non-summon facilities like Infirmary / Squad)
+	local headerTitle = label(root, "SUMMONING", 20, C.Text, Enum.Font.GothamBold)
+	headerTitle.Name = "FacilityHeaderTitle"
+	headerTitle.Position = UDim2.fromOffset(24, 18)
+	headerTitle.Size = UDim2.new(1, -260, 0, 26)
+	headerTitle.TextXAlignment = Enum.TextXAlignment.Left
+	headerTitle.Visible = false
+	self.HeaderTitle = headerTitle
+
+	-- Tab Divider line
+	local tabDivider = new("Frame", {
+		Name = "TabDivider",
+		BackgroundColor3 = C.BorderDim,
+		BorderSizePixel = 0,
+		Position = UDim2.fromOffset(16, 62),
+		Size = UDim2.new(1, -32, 0, 1),
+		ZIndex = 52,
+	}, root)
+	self.TabDivider = tabDivider
+
+	-- 6. Summon Views
+	self:BuildHeroSummonView(root)
+	self:BuildArtifactSummonView(root)
+
+	-- 7. Legacy / General Facility View (Infirmary, SquadManagement fallback)
+	self:BuildGeneralFacilityView(root)
+
+	-- 8. Summon Reveal Modal
+	self:BuildSummonRevealModal(gui)
+
+	-- Responsive scale tracking
+	local function resize()
+		local cam = Workspace.CurrentCamera
+		if not cam then return end
+		local v = cam.ViewportSize
+		self.Scale.Scale = math.clamp(math.min((v.X - 20) / WIDTH, (v.Y - 40) / HEIGHT), 0.45, 1)
+	end
+	local camConn: RBXScriptConnection? = nil
+	local function track()
+		if camConn then camConn:Disconnect() end
+		if Workspace.CurrentCamera then
+			camConn = Workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(resize)
+		end
 		resize()
 	end
-	Workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(trackCamera)
-	trackCamera()
+	Workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(track)
+	track()
+
 	return self
 end
 
-function Controller.Button(self: any, parent: Instance, name: string, text: string, size: UDim2, position: UDim2, action: () -> ())
-	local b = Instance.new("TextButton")
-	b.Name, b.Text, b.Size, b.Position = name, text, size, position
-	b.ZIndex = 24
-	b.Font, b.TextSize, b.TextWrapped = Enum.Font.GothamBold, 13, true
-	b.BackgroundColor3, b.TextColor3, b.BorderSizePixel = Color3.fromRGB(45, 64, 82), C.Text, 0
-	b.Parent = parent
-	corner(b, 6)
+--============================================================================
+-- HERO SUMMON BANNER VIEW (Matches Screenshot 2)
+--============================================================================
+
+function Controller:BuildHeroSummonView(root: Frame)
+	local heroView = new("Frame", {
+		Name = "HeroSummonView",
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(16, 72),
+		Size = UDim2.new(1, -32, 1, -82),
+		Visible = false,
+		ZIndex = 52,
+	}, root)
+	self.HeroSummonView = heroView
+
+	-- 1. Main Featured Banner Card
+	local bannerCard = new("Frame", {
+		Name = "HeroBannerCard",
+		Position = UDim2.fromOffset(0, 0),
+		Size = UDim2.new(1, 0, 0, 246),
+		BackgroundColor3 = Color3.fromRGB(19, 14, 34),
+		BorderSizePixel = 0,
+		ZIndex = 53,
+	}, heroView)
+
+	new("UICorner", { CornerRadius = UDim.new(0, 8) }, bannerCard)
+	stroke(bannerCard, C.Border, 1.2, 0.05)
+	glow(bannerCard, 8, C.BorderGlow, 0.85)
+	cornerDiamonds(bannerCard, 6, C.Border)
+
+	-- Cosmic Gradient
+	new("UIGradient", {
+		Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0.0, Color3.fromRGB(28, 19, 50)),
+			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(20, 14, 36)),
+			ColorSequenceKeypoint.new(1.0, Color3.fromRGB(12, 9, 22)),
+		}),
+		Rotation = 35,
+	}, bannerCard)
+
+	-- Top Watermark
+	local watermark = label(bannerCard, "★ 3-STAR FEATURED HEROES & RECRUITS", 15, Color3.fromRGB(230, 220, 255), Enum.Font.GothamBold)
+	watermark.TextTransparency = 0.55
+	watermark.Position = UDim2.fromOffset(24, 18)
+	watermark.Size = UDim2.new(1, -48, 0, 20)
+	watermark.TextXAlignment = Enum.TextXAlignment.Left
+
+	-- Big Glowing Banner Title
+	local bannerTitle = label(bannerCard, "CALL OF THE RIFT", 34, C.GoldYellow, Enum.Font.GothamBlack)
+	bannerTitle.AnchorPoint = Vector2.new(0, 1)
+	bannerTitle.Position = UDim2.new(0, 24, 1, -26)
+	bannerTitle.Size = UDim2.new(0, 420, 0, 44)
+	bannerTitle.TextXAlignment = Enum.TextXAlignment.Left
+	bannerTitle.TextStrokeTransparency = 0.35
+	bannerTitle.TextStrokeColor3 = Color3.fromRGB(120, 80, 0)
+
+	-- Featured Rate-Up Pill Label
+	local rateUpLabel = label(bannerCard, "★ Rate Up: Eolka (3★)  |  Aaron (2★)  |  Velkist (2★)", 12, Color3.fromRGB(205, 175, 245), Enum.Font.GothamBold)
+	rateUpLabel.AnchorPoint = Vector2.new(1, 1)
+	rateUpLabel.Position = UDim2.new(1, -24, 1, -26)
+	rateUpLabel.Size = UDim2.new(0, 360, 0, 22)
+	rateUpLabel.TextXAlignment = Enum.TextXAlignment.Right
+
+	-- 2. Info Row (Guaranteed Pity & Permanent Event Tag)
+	local infoRow = new("Frame", {
+		Name = "InfoRow",
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(0, 258),
+		Size = UDim2.new(1, 0, 0, 28),
+		ZIndex = 53,
+	}, heroView)
+
+	local pityLabel = label(infoRow, "Guaranteed 3-Star in: <b>42</b> summons", 14, C.TextLavender, Enum.Font.GothamMedium)
+	pityLabel.Position = UDim2.fromOffset(6, 4)
+	pityLabel.Size = UDim2.new(0.5, 0, 0, 20)
+	pityLabel.TextXAlignment = Enum.TextXAlignment.Left
+	self.HeroPityLabel = pityLabel
+
+	local timerLabel = label(infoRow, "Event: Permanent Banner", 14, C.TextLavender, Enum.Font.GothamMedium)
+	timerLabel.AnchorPoint = Vector2.new(1, 0)
+	timerLabel.Position = UDim2.new(1, -6, 0, 4)
+	timerLabel.Size = UDim2.new(0.5, 0, 0, 20)
+	timerLabel.TextXAlignment = Enum.TextXAlignment.Right
+
+	-- 3. Summon Buttons Container
+	local btnRow = new("Frame", {
+		Name = "ButtonRow",
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(0, 296),
+		Size = UDim2.new(1, 0, 0, 76),
+		ZIndex = 53,
+	}, heroView)
+
+	-- SUMMON 1X Button (100 Gems)
+	local btn1X = new("TextButton", {
+		Name = "HeroSummon1XBtn",
+		Position = UDim2.fromScale(0, 0),
+		Size = UDim2.new(0.485, 0, 1, 0),
+		BackgroundColor3 = Color3.fromRGB(22, 18, 36),
+		BorderSizePixel = 0,
+		Text = "",
+		AutoButtonColor = true,
+		ZIndex = 54,
+	}, btnRow)
+	new("UICorner", { CornerRadius = UDim.new(0, 6) }, btn1X)
+	stroke(btn1X, C.Border, 1.2)
+	cornerDiamonds(btn1X, 4, C.Border)
+
+	local t1X = label(btn1X, "SUMMON 1X", 15, C.Text, Enum.Font.GothamBold)
+	t1X.AnchorPoint = Vector2.new(0.5, 0.5)
+	t1X.Position = UDim2.new(0.5, 0, 0.34, 0)
+	t1X.Size = UDim2.new(1, 0, 0, 20)
+
+	local c1X = label(btn1X, "💎 100", 15, C.GoldYellow, Enum.Font.GothamBold)
+	c1X.AnchorPoint = Vector2.new(0.5, 0.5)
+	c1X.Position = UDim2.new(0.5, 0, 0.72, 0)
+	c1X.Size = UDim2.new(1, 0, 0, 20)
+
+	btn1X.Activated:Connect(function()
+		self:PerformHeroSummon(1)
+	end)
+
+	-- SUMMON 10X Button (900 Gems)
+	local btn10X = new("TextButton", {
+		Name = "HeroSummon10XBtn",
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, 0, 0, 0),
+		Size = UDim2.new(0.485, 0, 1, 0),
+		BackgroundColor3 = Color3.fromRGB(22, 18, 36),
+		BorderSizePixel = 0,
+		Text = "",
+		AutoButtonColor = true,
+		ZIndex = 54,
+	}, btnRow)
+	new("UICorner", { CornerRadius = UDim.new(0, 6) }, btn10X)
+	stroke(btn10X, C.Border, 1.2)
+	cornerDiamonds(btn10X, 4, C.Border)
+
+	local t10X = label(btn10X, "SUMMON 10X", 15, C.Text, Enum.Font.GothamBold)
+	t10X.AnchorPoint = Vector2.new(0.5, 0.5)
+	t10X.Position = UDim2.new(0.5, 0, 0.34, 0)
+	t10X.Size = UDim2.new(1, 0, 0, 20)
+
+	local c10X = label(btn10X, "💎 900", 15, C.GoldYellow, Enum.Font.GothamBold)
+	c10X.AnchorPoint = Vector2.new(0.5, 0.5)
+	c10X.Position = UDim2.new(0.5, 0, 0.72, 0)
+	c10X.Size = UDim2.new(1, 0, 0, 20)
+
+	btn10X.Activated:Connect(function()
+		self:PerformHeroSummon(10)
+	end)
+end
+
+--============================================================================
+-- ARTIFACT SUMMON BANNER VIEW (Summoning Altar Dual-Banner)
+--============================================================================
+
+function Controller:BuildArtifactSummonView(root: Frame)
+	local artView = new("Frame", {
+		Name = "ArtifactSummonView",
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(16, 72),
+		Size = UDim2.new(1, -32, 1, -82),
+		Visible = false,
+		ZIndex = 52,
+	}, root)
+	self.ArtifactSummonView = artView
+
+	-- 1. Main Featured Banner Card
+	local bannerCard = new("Frame", {
+		Name = "ArtifactBannerCard",
+		Position = UDim2.fromOffset(0, 0),
+		Size = UDim2.new(1, 0, 0, 246),
+		BackgroundColor3 = Color3.fromRGB(19, 14, 34),
+		BorderSizePixel = 0,
+		ZIndex = 53,
+	}, artView)
+
+	new("UICorner", { CornerRadius = UDim.new(0, 8) }, bannerCard)
+	stroke(bannerCard, C.Border, 1.2, 0.05)
+	glow(bannerCard, 8, C.BorderGlow, 0.85)
+	cornerDiamonds(bannerCard, 6, C.Border)
+
+	new("UIGradient", {
+		Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0.0, Color3.fromRGB(28, 19, 50)),
+			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(20, 14, 36)),
+			ColorSequenceKeypoint.new(1.0, Color3.fromRGB(12, 9, 22)),
+		}),
+		Rotation = 35,
+	}, bannerCard)
+
+	-- Top Watermark
+	local watermark = label(bannerCard, "★ 5-STAR FEATURED HERO & ARTIFACTS", 15, Color3.fromRGB(230, 220, 255), Enum.Font.GothamBold)
+	watermark.TextTransparency = 0.55
+	watermark.Position = UDim2.fromOffset(24, 18)
+	watermark.Size = UDim2.new(1, -48, 0, 20)
+	watermark.TextXAlignment = Enum.TextXAlignment.Left
+
+	-- Big Glowing Banner Title
+	local bannerTitle = label(bannerCard, "ECHOES OF THE RIFT", 34, C.GoldYellow, Enum.Font.GothamBlack)
+	bannerTitle.AnchorPoint = Vector2.new(0, 1)
+	bannerTitle.Position = UDim2.new(0, 24, 1, -26)
+	bannerTitle.Size = UDim2.new(0, 420, 0, 44)
+	bannerTitle.TextXAlignment = Enum.TextXAlignment.Left
+	bannerTitle.TextStrokeTransparency = 0.35
+	bannerTitle.TextStrokeColor3 = Color3.fromRGB(120, 80, 0)
+
+	-- Featured Rate-Up Pill Label
+	local rateUpLabel = label(bannerCard, "★ Rate Up: Blade of the Rift (5★)  |  Aegis Core (5★)", 12, Color3.fromRGB(205, 175, 245), Enum.Font.GothamBold)
+	rateUpLabel.AnchorPoint = Vector2.new(1, 1)
+	rateUpLabel.Position = UDim2.new(1, -24, 1, -26)
+	rateUpLabel.Size = UDim2.new(0, 360, 0, 22)
+	rateUpLabel.TextXAlignment = Enum.TextXAlignment.Right
+
+	-- 2. Info Row
+	local infoRow = new("Frame", {
+		Name = "ArtifactInfoRow",
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(0, 258),
+		Size = UDim2.new(1, 0, 0, 28),
+		ZIndex = 53,
+	}, artView)
+
+	local pityLabel = label(infoRow, "Guaranteed 5-Star in: <b>42</b> summons", 14, C.TextLavender, Enum.Font.GothamMedium)
+	pityLabel.Position = UDim2.fromOffset(6, 4)
+	pityLabel.Size = UDim2.new(0.5, 0, 0, 20)
+	pityLabel.TextXAlignment = Enum.TextXAlignment.Left
+	self.ArtifactPityLabel = pityLabel
+
+	local timerLabel = label(infoRow, "Event Ends: 2d 14h", 14, C.TextLavender, Enum.Font.GothamMedium)
+	timerLabel.AnchorPoint = Vector2.new(1, 0)
+	timerLabel.Position = UDim2.new(1, -6, 0, 4)
+	timerLabel.Size = UDim2.new(0.5, 0, 0, 20)
+	timerLabel.TextXAlignment = Enum.TextXAlignment.Right
+
+	-- 3. Summon Buttons Container (160 / 1600 Gems)
+	local btnRow = new("Frame", {
+		Name = "ArtifactButtonRow",
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(0, 296),
+		Size = UDim2.new(1, 0, 0, 76),
+		ZIndex = 53,
+	}, artView)
+
+	-- SUMMON 1X (160 Gems)
+	local btn1X = new("TextButton", {
+		Name = "ArtifactSummon1XBtn",
+		Position = UDim2.fromScale(0, 0),
+		Size = UDim2.new(0.485, 0, 1, 0),
+		BackgroundColor3 = Color3.fromRGB(22, 18, 36),
+		BorderSizePixel = 0,
+		Text = "",
+		AutoButtonColor = true,
+		ZIndex = 54,
+	}, btnRow)
+	new("UICorner", { CornerRadius = UDim.new(0, 6) }, btn1X)
+	stroke(btn1X, C.Border, 1.2)
+	cornerDiamonds(btn1X, 4, C.Border)
+
+	local t1X = label(btn1X, "SUMMON 1X", 15, C.Text, Enum.Font.GothamBold)
+	t1X.AnchorPoint = Vector2.new(0.5, 0.5)
+	t1X.Position = UDim2.new(0.5, 0, 0.34, 0)
+	t1X.Size = UDim2.new(1, 0, 0, 20)
+
+	local c1X = label(btn1X, "💎 160", 15, C.GoldYellow, Enum.Font.GothamBold)
+	c1X.AnchorPoint = Vector2.new(0.5, 0.5)
+	c1X.Position = UDim2.new(0.5, 0, 0.72, 0)
+	c1X.Size = UDim2.new(1, 0, 0, 20)
+
+	btn1X.Activated:Connect(function()
+		self:PerformArtifactSummon(1)
+	end)
+
+	-- SUMMON 10X (1600 Gems)
+	local btn10X = new("TextButton", {
+		Name = "ArtifactSummon10XBtn",
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, 0, 0, 0),
+		Size = UDim2.new(0.485, 0, 1, 0),
+		BackgroundColor3 = Color3.fromRGB(22, 18, 36),
+		BorderSizePixel = 0,
+		Text = "",
+		AutoButtonColor = true,
+		ZIndex = 54,
+	}, btnRow)
+	new("UICorner", { CornerRadius = UDim.new(0, 6) }, btn10X)
+	stroke(btn10X, C.Border, 1.2)
+	cornerDiamonds(btn10X, 4, C.Border)
+
+	local t10X = label(btn10X, "SUMMON 10X", 15, C.Text, Enum.Font.GothamBold)
+	t10X.AnchorPoint = Vector2.new(0.5, 0.5)
+	t10X.Position = UDim2.new(0.5, 0, 0.34, 0)
+	t10X.Size = UDim2.new(1, 0, 0, 20)
+
+	local c10X = label(btn10X, "💎 1600", 15, C.GoldYellow, Enum.Font.GothamBold)
+	c10X.AnchorPoint = Vector2.new(0.5, 0.5)
+	c10X.Position = UDim2.new(0.5, 0, 0.72, 0)
+	c10X.Size = UDim2.new(1, 0, 0, 20)
+
+	btn10X.Activated:Connect(function()
+		self:PerformArtifactSummon(10)
+	end)
+end
+
+--============================================================================
+-- LEGACY / GENERAL FACILITY VIEW (Infirmary, SquadManagement fallback)
+--============================================================================
+
+function Controller:BuildGeneralFacilityView(root: Frame)
+	local generalView = new("Frame", {
+		Name = "GeneralFacilityView",
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(16, 72),
+		Size = UDim2.new(1, -32, 1, -82),
+		Visible = false,
+		ZIndex = 52,
+	}, root)
+	self.GeneralFacilityView = generalView
+
+	self.Title = label(generalView, "FacilityTitle", 18, C.Text, Enum.Font.GothamBold)
+	self.Title.Position = UDim2.fromOffset(12, 0)
+	self.Title.Size = UDim2.new(1, -24, 0, 24)
+	self.Title.TextXAlignment = Enum.TextXAlignment.Left
+
+	self.Description = label(generalView, "Description", 13, C.TextMuted, Enum.Font.GothamMedium)
+	self.Description.Position = UDim2.fromOffset(12, 26)
+	self.Description.Size = UDim2.new(1, -24, 0, 20)
+	self.Description.TextXAlignment = Enum.TextXAlignment.Left
+
+	self.Summary = label(generalView, "Summary", 14, C.TextLavender, Enum.Font.GothamMedium)
+	self.Summary.Position = UDim2.fromOffset(12, 50)
+	self.Summary.Size = UDim2.new(1, -24, 0, 22)
+	self.Summary.TextXAlignment = Enum.TextXAlignment.Left
+
+	self.Actions = new("Frame", {
+		Name = "FacilityActions",
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(12, 80),
+		Size = UDim2.new(1, -24, 0, 44),
+		ZIndex = 53,
+	}, generalView)
+
+	self.List = new("ScrollingFrame", {
+		Name = "HeroList",
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		Position = UDim2.fromOffset(12, 136),
+		Size = UDim2.new(1, -24, 1, -176),
+		ScrollBarThickness = 4,
+		ScrollBarImageColor3 = C.Border,
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		CanvasSize = UDim2.new(),
+		ZIndex = 53,
+	}, generalView)
+
+	local layout = new("UIListLayout", {
+		Padding = UDim.new(0, 8),
+		SortOrder = Enum.SortOrder.LayoutOrder,
+	}, self.List)
+
+	self.Status = label(generalView, "", 13, C.TextMuted, Enum.Font.GothamMedium)
+	self.Status.Position = UDim2.new(0, 12, 1, -30)
+	self.Status.Size = UDim2.new(1, -24, 0, 24)
+	self.Status.TextXAlignment = Enum.TextXAlignment.Left
+end
+
+--============================================================================
+-- SUMMON REVEAL CELEBRATION MODAL
+--============================================================================
+
+function Controller:BuildSummonRevealModal(gui: ScreenGui)
+	local revealScrim = new("TextButton", {
+		Name = "SummonRevealScrim",
+		Text = "",
+		AutoButtonColor = false,
+		BackgroundColor3 = C.Scrim,
+		BackgroundTransparency = 0.25,
+		Size = UDim2.fromScale(1, 1),
+		Visible = false,
+		ZIndex = 80,
+	}, gui)
+	self.RevealScrim = revealScrim
+
+	local modal = new("Frame", {
+		Name = "SummonRevealModal",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromOffset(680, 440),
+		BackgroundColor3 = C.Panel,
+		BorderSizePixel = 0,
+		ZIndex = 81,
+	}, revealScrim)
+	self.RevealModal = modal
+
+	stroke(modal, C.Border, 1.5)
+	glow(modal, 12, C.BorderGlow, 0.8)
+	cornerDiamonds(modal, 8, C.Border)
+
+	local revealTitle = label(modal, "✨ DIMENSIONAL HEROES SUMMONED", 20, C.GoldYellow, Enum.Font.GothamBlack)
+	revealTitle.Position = UDim2.new(0, 0, 0, 20)
+	revealTitle.Size = UDim2.new(1, 0, 0, 28)
+	self.RevealTitle = revealTitle
+
+	local cardScroll = new("ScrollingFrame", {
+		Name = "RevealScroll",
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		Position = UDim2.fromOffset(24, 64),
+		Size = UDim2.new(1, -48, 1, -140),
+		ScrollBarThickness = 4,
+		ScrollBarImageColor3 = C.Border,
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		CanvasSize = UDim2.fromScale(0, 0),
+		ZIndex = 82,
+	}, modal)
+	self.RevealScroll = cardScroll
+
+	new("UIListLayout", {
+		SortOrder = Enum.SortOrder.LayoutOrder,
+		Padding = UDim.new(0, 8),
+	}, cardScroll)
+
+	local collectBtn = new("TextButton", {
+		Name = "CollectBtn",
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, -22),
+		Size = UDim2.fromOffset(220, 42),
+		BackgroundColor3 = Color3.fromRGB(28, 22, 44),
+		BorderSizePixel = 0,
+		Text = "COLLECT & CONTINUE",
+		Font = Enum.Font.GothamBold,
+		TextSize = 14,
+		TextColor3 = C.GoldYellow,
+		ZIndex = 82,
+	}, modal)
+	new("UICorner", { CornerRadius = UDim.new(0, 6) }, collectBtn)
+	stroke(collectBtn, C.Border, 1.2)
+	cornerDiamonds(collectBtn, 4, C.Border)
+
+	collectBtn.Activated:Connect(function()
+		self.RevealScrim.Visible = false
+	end)
+end
+
+function Controller:ShowSummonResults(summonedList: { any }, isArtifact: boolean?)
+	for _, child in self.RevealScroll:GetChildren() do
+		if child:IsA("GuiObject") then child:Destroy() end
+	end
+
+	self.RevealTitle.Text = isArtifact and "✨ DIMENSIONAL ARTIFACTS SUMMONED" or "✨ DIMENSIONAL HEROES SUMMONED"
+
+	for order, item in ipairs(summonedList) do
+		local card = new("Frame", {
+			Name = "ResultCard_" .. order,
+			Size = UDim2.new(1, 0, 0, 72),
+			BackgroundColor3 = C.CardBg,
+			BorderSizePixel = 0,
+			LayoutOrder = order,
+			ZIndex = 83,
+		}, self.RevealScroll)
+		new("UICorner", { CornerRadius = UDim.new(0, 6) }, card)
+		stroke(card, C.BorderCard, 1)
+
+		if isArtifact then
+			local art = item
+			local iconChar = ARTIFACT_ICONS[art.Type] or "⚔️"
+			local iconTile = new("Frame", {
+				AnchorPoint = Vector2.new(0, 0.5),
+				Position = UDim2.new(0, 12, 0.5, 0),
+				Size = UDim2.fromOffset(48, 48),
+				BackgroundColor3 = Color3.fromRGB(18, 15, 28),
+				BorderSizePixel = 0,
+				ZIndex = 84,
+			}, card)
+			new("UICorner", { CornerRadius = UDim.new(0, 6) }, iconTile)
+			stroke(iconTile, C.BorderCard)
+
+			local iconLbl = label(iconTile, iconChar, 22, C.Text)
+			iconLbl.Position = UDim2.fromScale(0, 0)
+			iconLbl.Size = UDim2.fromScale(1, 1)
+			iconLbl.TextXAlignment = Enum.TextXAlignment.Center
+
+			local stars = string.rep("★", art.Star or 1)
+			local nameText = string.format("%s  <font color=\"#FACC15\">%s</font>", art.DisplayName or "Artifact", stars)
+			local nameLbl = label(card, nameText, 15, C.Text, Enum.Font.GothamBold)
+			nameLbl.Position = UDim2.fromOffset(72, 12)
+			nameLbl.Size = UDim2.new(1, -90, 0, 22)
+			nameLbl.TextXAlignment = Enum.TextXAlignment.Left
+
+			local subText = string.format("Level +%d  •  Tier %d  •  Equippable Weapon", art.Level or 0, art.Rarity or 1)
+			local subLbl = label(card, subText, 13, C.TextLavender, Enum.Font.GothamMedium)
+			subLbl.Position = UDim2.fromOffset(72, 36)
+			subLbl.Size = UDim2.new(1, -90, 0, 18)
+			subLbl.TextXAlignment = Enum.TextXAlignment.Left
+		else
+			local hero = item
+			local archetype = hero.Archetype or "Striker"
+			local iconChar = ARCHETYPE_ICONS[archetype] or "⚔️"
+
+			local iconTile = new("Frame", {
+				AnchorPoint = Vector2.new(0, 0.5),
+				Position = UDim2.new(0, 12, 0.5, 0),
+				Size = UDim2.fromOffset(48, 48),
+				BackgroundColor3 = Color3.fromRGB(18, 15, 28),
+				BorderSizePixel = 0,
+				ZIndex = 84,
+			}, card)
+			new("UICorner", { CornerRadius = UDim.new(0, 6) }, iconTile)
+			stroke(iconTile, C.BorderCard)
+
+			local iconLbl = label(iconTile, iconChar, 22, C.Text)
+			iconLbl.Position = UDim2.fromScale(0, 0)
+			iconLbl.Size = UDim2.fromScale(1, 1)
+			iconLbl.TextXAlignment = Enum.TextXAlignment.Center
+
+			local stars = string.rep("★", hero.Stars or 1)
+			local nameText = string.format("%s  <font color=\"#FACC15\">%s</font>  <font color=\"#9CA3AF\" size=\"12\">[%s]</font>", hero.DisplayName or "Hero", stars, archetype)
+			local nameLbl = label(card, nameText, 15, C.Text, Enum.Font.GothamBold)
+			nameLbl.Position = UDim2.fromOffset(72, 12)
+			nameLbl.Size = UDim2.new(1, -90, 0, 22)
+			nameLbl.TextXAlignment = Enum.TextXAlignment.Left
+
+			local trait = hero.PassiveTrait or "Combat Ready"
+			local subText = string.format("HP: %d  |  ATK: %d  •  %s", math.round(hero.BaseHP or 100), math.round(hero.BaseATK or 10), trait)
+			local subLbl = label(card, subText, 12, C.TextLavender, Enum.Font.GothamMedium)
+			subLbl.Position = UDim2.fromOffset(72, 36)
+			subLbl.Size = UDim2.new(1, -90, 0, 18)
+			subLbl.TextXAlignment = Enum.TextXAlignment.Left
+		end
+	end
+
+	self.RevealScrim.Visible = true
+end
+
+--============================================================================
+-- ACTIONS & METHODS
+--============================================================================
+
+function Controller:Button(parent: Instance, name: string, text: string, size: UDim2, position: UDim2, action: () -> ()): TextButton
+	local b = new("TextButton", {
+		Name = name,
+		Text = text,
+		Size = size,
+		Position = position,
+		ZIndex = 54,
+		Font = Enum.Font.GothamBold,
+		TextSize = 13,
+		TextWrapped = true,
+		BackgroundColor3 = Color3.fromRGB(34, 28, 52),
+		TextColor3 = C.Text,
+		BorderSizePixel = 0,
+	}, parent)
+	new("UICorner", { CornerRadius = UDim.new(0, 6) }, b)
+	stroke(b, C.BorderDim, 1)
 	b.Activated:Connect(action)
 	return b
 end
 
-function Controller.Close(self: any)
-	self.Root.Visible = false
-end
+function Controller:SetSummonTab(tab: "HERO" | "ARTIFACT")
+	self.ActiveSummonTab = tab
+	local isHero = (tab == "HERO")
+	self.HeroTabBtn.TextColor3 = isHero and C.Text or C.TextMuted
+	self.ArtifactTabBtn.TextColor3 = not isHero and C.Text or C.TextMuted
 
-function Controller.Open(self: any, facility: string)
-	if not DETAILS[facility] then return end
-	self.Current, self.Root.Visible = facility, true
-	self.Root:SetAttribute("Facility", facility)
-	self.Status.Text = ""
+	local targetX = isHero and 75 or 225
+	TweenService:Create(self.ActiveIndicator, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		Position = UDim2.fromOffset(targetX, 36),
+	}):Play()
+
+	self.HeroSummonView.Visible = isHero
+	self.ArtifactSummonView.Visible = not isHero
 	self:Refresh()
 end
 
-function Controller.Request(self: any, callback: () -> (boolean, string))
+function Controller:PerformHeroSummon(count: number)
 	if self.Busy then return end
-	self.Busy, self.Status.Text = true, "Working…"
+	local profile = self.GetProfile()
+	local cost = (count == 10) and 900 or 100
+	if not profile or not profile.Currencies or (profile.Currencies.Gems or 0) < cost then
+		return
+	end
+
+	self.Busy = true
 	task.spawn(function()
-		local ok, success, message = pcall(callback)
+		local ok, result = pcall(function()
+			return self.Summon:InvokeServer(count)
+		end)
 		self.Busy = false
-		self.Status.Text = if ok then message or (success and "Done." or "Unable to complete this action.") else "Connection failed. Please try again."
+		if ok and result and result.Success then
+			self.LastSummoned = result.Summoned or {}
+			if result.PityRemaining and self.HeroPityLabel then
+				self.HeroPityLabel.Text = string.format("Guaranteed 3-Star in: <b>%d</b> summons", result.PityRemaining)
+			end
+			self:ShowSummonResults(self.LastSummoned, false)
+		end
 		self:Refresh()
 	end)
 end
 
-function Controller.Refresh(self: any)
+function Controller:PerformArtifactSummon(count: number)
+	if self.Busy or not self.RequestSummonArtifact then return end
+	local profile = self.GetProfile()
+	local cost = (count == 10) and 1600 or 160
+	if not profile or not profile.Currencies or (profile.Currencies.Gems or 0) < cost then
+		return
+	end
+
+	self.Busy = true
+	task.spawn(function()
+		local ok, success, msg, summonedList, pityRemaining = pcall(function()
+			return self.RequestSummonArtifact:InvokeServer(count)
+		end)
+		self.Busy = false
+		if ok and success and summonedList and #summonedList > 0 then
+			if pityRemaining and self.ArtifactPityLabel then
+				self.ArtifactPityLabel.Text = string.format("Guaranteed 5-Star in: <b>%d</b> summons", pityRemaining)
+			end
+			self:ShowSummonResults(summonedList, true)
+		end
+		self:Refresh()
+	end)
+end
+
+function Controller:Close()
+	self.Root.Visible = false
+	self.Scrim.Visible = false
+	self.RevealScrim.Visible = false
+end
+
+function Controller:Open(facility: string)
+	if not DETAILS[facility] then return end
+	self.Current = facility
+	self.Root.Visible = true
+	self.Scrim.Visible = true
+	self.Root:SetAttribute("Facility", facility)
+	if self.Status then self.Status.Text = "" end
+
+	local isSummon = (facility == "Summoning")
+	self.TabContainer.Visible = isSummon
+	self.TabDivider.Visible = isSummon
+	self.HeaderTitle.Visible = not isSummon
+	self.HeroSummonView.Visible = isSummon and (self.ActiveSummonTab == "HERO")
+	self.ArtifactSummonView.Visible = isSummon and (self.ActiveSummonTab == "ARTIFACT")
+	self.GeneralFacilityView.Visible = not isSummon
+
+	if not isSummon then
+		local info = DETAILS[facility]
+		self.HeaderTitle.Text = info.Title
+		self.HeaderTitle.TextColor3 = info.Color
+	end
+
+	self:Refresh()
+end
+
+function Controller:Request(callback: () -> (boolean, string))
+	if self.Busy then return end
+	self.Busy = true
+	if self.Status then self.Status.Text = "Working…" end
+	task.spawn(function()
+		local ok, success, message = pcall(callback)
+		self.Busy = false
+		if self.Status then
+			self.Status.Text = if ok then message or (success and "Done." or "Unable to complete this action.") else "Connection failed. Please try again."
+		end
+		self:Refresh()
+	end)
+end
+
+function Controller:Refresh()
 	if not self.Root.Visible then return end
+	local profile = self.GetProfile()
+	local gems = profile and profile.Currencies and profile.Currencies.Gems or 0
+	self.GemCurrency.Text = string.format("💎 %d Gems", math.floor(gems))
+
+	if self.Current == "Summoning" then
+		-- Update Hero Pity
+		local heroPity = profile and profile.HeroBannerPity or 8
+		local heroRemaining = math.max(1, 50 - (heroPity % 50))
+		if self.HeroPityLabel then
+			self.HeroPityLabel.Text = string.format("Guaranteed 3-Star in: <b>%d</b> summons", heroRemaining)
+		end
+
+		-- Update Artifact Pity
+		local artPity = profile and profile.ArtifactBannerPity or 8
+		local artRemaining = math.max(1, 50 - (artPity % 50))
+		if self.ArtifactPityLabel then
+			self.ArtifactPityLabel.Text = string.format("Guaranteed 5-Star in: <b>%d</b> summons", artRemaining)
+		end
+		return
+	end
+
+	-- Infirmary or SquadManagement fallback rendering
 	local info = DETAILS[self.Current]
-	self.Title.Text, self.Description.Text, self.Stroke.Color = info.Title, info.Description, info.Color
+	if not info then return end
+
+	self.Title.Text = info.Title
 	self.Title.TextColor3 = info.Color
+	self.Description.Text = info.Description
+	self.Stroke.Color = info.Color
+
 	for _, c in self.Actions:GetChildren() do c:Destroy() end
 	for _, c in self.List:GetChildren() do if c:IsA("GuiObject") then c:Destroy() end end
-	local profile = self.GetProfile()
-	if not profile then self.Summary.Text = "Loading your heroes…"; return end
+
+	if not profile then
+		self.Summary.Text = "Loading your heroes…"
+		return
+	end
+
 	local heroes = {}
 	for _, h in profile.Heroes or {} do table.insert(heroes, h) end
 	table.sort(heroes, function(a, b)
@@ -132,24 +1077,8 @@ function Controller.Refresh(self: any)
 		if a.Stars ~= b.Stars then return a.Stars > b.Stars end
 		return tostring(a.UUID) < tostring(b.UUID)
 	end)
-	if self.Current == "Summoning" then
-		self.Summary.Text = string.format("%d Gems available  •  %d heroes owned", math.floor(profile.Currencies.Gems), #heroes)
-		for i, pull in {1, 10} do
-			local cost = pull == 10 and 900 or 100
-			self:Button(self.Actions, "Summon" .. pull, string.format("SUMMON %dx  ·  %d GEMS", pull, cost), UDim2.new(.49, -4, 1, 0), UDim2.fromScale((i - 1) * .51, 0), function()
-				self:Request(function()
-					local result = self.Summon:InvokeServer(pull)
-					if result.Success then
-						self.LastSummoned = result.Summoned or {}
-						local count = #self.LastSummoned
-						return true, string.format("Summoned %d %s. New heroes appear below.", count, count == 1 and "hero" or "heroes")
-					end
-					return false, result.Message or "Summoning failed."
-				end)
-			end)
-		end
-		if #self.LastSummoned > 0 then heroes = self.LastSummoned end
-	elseif self.Current == "Infirmary" then
+
+	if self.Current == "Infirmary" then
 		local facility = profile.Facilities.Infirmary
 		local resting = 0
 		for _, h in heroes do if h.Assignment == "FACILITY_INFIRMARY" then resting += 1 end end
@@ -162,37 +1091,51 @@ function Controller.Refresh(self: any)
 	else
 		local deployed = 0
 		for _, h in heroes do if h.Assignment:match("^SQUAD_SLOT_") then deployed += 1 end end
-		local slots = 5 -- All squad slots are available after removal of research unlocks.
+		local slots = 5
 		self.Summary.Text = string.format("%d / %d squad slots occupied  •  Deploy heroes or send them to the bench", deployed, slots)
 		self:Button(self.Actions, "RotateSquad", "REST EXHAUSTED & DEPLOY FRESH HEROES", UDim2.new(1, 0, 1, 0), UDim2.new(), function()
 			self:Request(function() return self.Assign:InvokeServer("AUTO_SWAP_EXHAUSTED", "") end)
 		end)
 	end
+
 	if #heroes == 0 then
-		local empty = label(self.List, "Empty", UDim2.new(1, -8, 0, 80), UDim2.new(), 16, C.Muted)
-		empty.Text = "Your roster is empty. Visit Summoning to call a hero."
+		local empty = label(self.List, "Your roster is empty. Visit Summoning to call a hero.", 14, C.TextMuted, Enum.Font.GothamMedium)
+		empty.Size = UDim2.new(1, 0, 0, 60)
+		empty.TextXAlignment = Enum.TextXAlignment.Center
 	end
-	for index, hero in heroes do
-		local row = Instance.new("Frame")
-		row.Name, row.LayoutOrder, row.Size = "Hero_" .. hero.UUID, index, UDim2.new(1, -10, 0, 92)
-		row.ZIndex = 22
-		row.BackgroundColor3, row.BorderSizePixel, row.Parent = C.Row, 0, self.List
-		corner(row, 8)
-		local description = label(row, "HeroDetails", UDim2.new(self.Current == "Summoning" and 1 or .56, -18, 1, -12), UDim2.fromOffset(12, 6), 14, C.Text)
+
+	for index, hero in ipairs(heroes) do
+		local row = new("Frame", {
+			Name = "Hero_" .. hero.UUID,
+			LayoutOrder = index,
+			Size = UDim2.new(1, -8, 0, 84),
+			BackgroundColor3 = C.CardBg,
+			BorderSizePixel = 0,
+			ZIndex = 54,
+		}, self.List)
+		new("UICorner", { CornerRadius = UDim.new(0, 6) }, row)
+		stroke(row, C.BorderCard, 1)
+
+		local desc = label(row, "", 14, C.Text, Enum.Font.GothamMedium)
+		desc.Position = UDim2.fromOffset(12, 10)
+		desc.Size = UDim2.new(0.6, -18, 1, -20)
+		desc.TextXAlignment = Enum.TextXAlignment.Left
+
 		local coma = math.max(0, (hero.ComaUntilTimestamp or 0) - os.time())
 		local status = coma > 0 and string.format("Recovering · %ds", coma) or string.format("Stamina %d%%", math.round(hero.CurrentStamina or 100))
-		description.Text = string.format("%s  %s  Lv.%d\n%s  ·  %s", hero.DisplayName, string.rep("★", hero.Stars or 1), hero.Level or 1, hero.Assignment, status)
-		if self.Current ~= "Summoning" then
-			local rest = self.Current == "Infirmary"
-			local uuid = hero.UUID
-			local assignment = rest and "FACILITY_INFIRMARY" or "SQUAD_AUTO"
-			self:Button(row, "Assign", rest and "REST" or "DEPLOY", UDim2.new(.20, -4, 0, 42), UDim2.new(.57, 0, .5, -21), function()
-				self:Request(function() return self.Assign:InvokeServer(uuid, assignment) end)
-			end)
-			self:Button(row, "Bench", "BENCH", UDim2.new(.20, -4, 0, 42), UDim2.new(.79, 0, .5, -21), function()
-				self:Request(function() return self.Assign:InvokeServer(uuid, "BENCHED") end)
-			end)
-		end
+		local stars = string.rep("★", hero.Stars or 1)
+		desc.Text = string.format("%s  <font color=\"#FACC15\">%s</font>  Lv.%d\n<font color=\"#A0B0C4\">%s  •  %s</font>", hero.DisplayName, stars, hero.Level or 1, hero.Assignment, status)
+
+		local rest = (self.Current == "Infirmary")
+		local uuid = hero.UUID
+		local assignment = rest and "FACILITY_INFIRMARY" or "SQUAD_AUTO"
+		self:Button(row, "Assign", rest and "REST" or "DEPLOY", UDim2.new(0.18, -4, 0, 36), UDim2.new(0.62, 0, 0.5, -18), function()
+			self:Request(function() return self.Assign:InvokeServer(uuid, assignment) end)
+		end)
+		self:Button(row, "Bench", "BENCH", UDim2.new(0.18, -4, 0, 36), UDim2.new(0.81, 0, 0.5, -18), function()
+			self:Request(function() return self.Assign:InvokeServer(uuid, "BENCHED") end)
+		end)
 	end
 end
+
 return Controller

@@ -195,6 +195,7 @@ export type PlayerProfile = {
 	},
 	BossPity: number,
 	ArtifactBannerPity: number?,
+	HeroBannerPity: number?,
 	RiftLuresOwned: number,
 	Heroes: { [string]: HeroInstance },
 	DeployedSquadOrder: { string },
@@ -333,6 +334,7 @@ local function createDefaultPlayerProfile(): PlayerProfile
 		},
 		BossPity = 0,
 		ArtifactBannerPity = 8, -- Initial: 42 to 5-star guarantee (50 - 8 = 42) matching mockup parity
+		HeroBannerPity = 8, -- Initial: 42 to 3-star guarantee (50 - 8 = 42) matching mockup parity
 		RiftLuresOwned = 0,
 		Heroes = {
 			[hanUUID] = hanHero,
@@ -603,21 +605,37 @@ RequestSummonFunc.OnServerInvoke = function(player: Player, pullCount: any, targ
 	end
 
 	profile.Currencies.Gems -= gemCost
+	if profile.HeroBannerPity == nil then profile.HeroBannerPity = 8 end
 	local summonedList: { HeroInstance } = {}
 
 	for _ = 1, count do
-		local uuid, hero = rollGachaHero()
+		profile.HeroBannerPity += 1
+		local isGuaranteed3Star = (profile.HeroBannerPity >= 50)
+		local uuid: string
+		local hero: HeroInstance
+		if isGuaranteed3Star then
+			local pool = HeroCatalog.PoolByStar[3] or { "hero_eolka" }
+			local chosenId = pool[math.random(1, #pool)]
+			uuid, hero = DataManager.CreateHeroFromSeed(chosenId)
+			profile.HeroBannerPity = 0
+		else
+			uuid, hero = rollGachaHero()
+			if hero.Stars >= 3 then
+				profile.HeroBannerPity = 0
+			end
+		end
 		profile.Heroes[uuid] = hero
 		table.insert(summonedList, hero)
 	end
 
+	local pityRemaining = math.max(1, 50 - profile.HeroBannerPity)
 	DataManager.SyncProfile(player)
 	local names = {}
 	for _, h in ipairs(summonedList) do
 		table.insert(names, string.format("%s (%d★)", h.DisplayName, h.Stars))
 	end
 	DataManager.SendToast(player, "Summoned: " .. table.concat(names, ", "), "SUCCESS")
-	return { Success = true, Summoned = summonedList }
+	return { Success = true, Summoned = summonedList, PityRemaining = pityRemaining }
 end
 
 -- Legacy endpoints cannot bypass confirmed previews.
