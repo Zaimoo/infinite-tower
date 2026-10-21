@@ -47,6 +47,7 @@ foreach ($modulePath in $modulePaths) {
     $bundleParts.Add("`nend)")
 }
 $bundleParts.Add([System.IO.File]::ReadAllText((Join-Path $PSScriptRoot 'pit.spec.luau')))
+$bundleParts.Add([System.IO.File]::ReadAllText((Join-Path $PSScriptRoot 'forge.spec.luau')))
 $bundlePath = Join-Path $LuauDirectory 'infinite-tower-pit-tests.luau'
 [System.IO.File]::WriteAllText($bundlePath, ($bundleParts -join "`n"), [System.Text.UTF8Encoding]::new($false))
 & $luau $bundlePath

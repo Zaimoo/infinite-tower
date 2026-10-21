@@ -1,8 +1,8 @@
 --!strict
 -- ReplicatedStorage/Shared/Config/ArtifactCatalog.luau
--- Authoritative configuration for Equippable Artifacts (Weapons), 7 Star Tiers, 16 Rarity Multipliers & Blacksmith Upgrades.
+-- Authoritative configuration for Equippable Artifacts (Weapons), 7 Star Tiers, 16 Rarity Multipliers, Crafting & Forge Upgrades.
 
-export type WeaponType = "BOW" | "SWORD" | "DAGGERS" | "AXE" | "TOME" | "STAFF"
+export type WeaponType = "BOW" | "SWORD" | "DAGGERS" | "AXE" | "TOME" | "STAFF" | "RING" | "SHIELD"
 
 export type RarityInfo = {
 	Index: number,
@@ -25,24 +25,89 @@ export type ArtifactSeed = {
 	DefaultStar: number,
 	ModelAssetId: string, -- Key in ReplicatedStorage.Assets.Weapons
 	Description: string,
+	BaseATK: number?,
+	BaseDEF: number?,
+	BaseHP: number?,
+	BaseSPD: number?,
+	BaseCritRate: number?,
+	BaseEvasion: number?,
+	BaseAttackSpeed: number?,
+	CraftCost: { [string]: number }?,
+}
+
+export type CraftingMaterialInfo = {
+	Id: string,
+	Name: string,
+	Icon: string,
+	Color: Color3,
+	Description: string,
 }
 
 local ArtifactCatalog = {}
 
 --============================================================================
--- 1. CLASS RESTRICTIONS (HERO ARCHETYPE -> PERMITTED WEAPON TYPES)
+-- 1. CRAFTING MATERIALS FOR FORGE
+--============================================================================
+
+local CraftingMaterials: { [string]: CraftingMaterialInfo } = {
+	IronGear = {
+		Id = "IronGear",
+		Name = "Iron Gear",
+		Icon = "⚙️",
+		Color = Color3.fromRGB(180, 185, 195),
+		Description = "Tempered machine cog salvaged from mechanical constructs.",
+	},
+	RiftOrb = {
+		Id = "RiftOrb",
+		Name = "Rift Orb",
+		Icon = "🔮",
+		Color = Color3.fromRGB(190, 120, 255),
+		Description = "Concentrated cosmic energy condensed into an astral sphere.",
+	},
+	AegisGem = {
+		Id = "AegisGem",
+		Name = "Aegis Gem",
+		Icon = "💎",
+		Color = Color3.fromRGB(80, 200, 255),
+		Description = "Luminous crystalline diamond imbued with defensive wards.",
+	},
+	StarDust = {
+		Id = "StarDust",
+		Name = "Star Dust",
+		Icon = "✨",
+		Color = Color3.fromRGB(255, 215, 80),
+		Description = "Shimmering celestial particles that quicken cadence and agility.",
+	},
+	VoidPowder = {
+		Id = "VoidPowder",
+		Name = "Void Powder",
+		Icon = "🌑",
+		Color = Color3.fromRGB(160, 140, 200),
+		Description = "Finely ground abyssal residue that destabilizes inertia.",
+	},
+}
+ArtifactCatalog.CraftingMaterials = CraftingMaterials
+
+--============================================================================
+-- 2. CLASS RESTRICTIONS (HERO ARCHETYPE -> PERMITTED WEAPON TYPES)
 --============================================================================
 
 ArtifactCatalog.ArchetypeRestrictions = {
 	Marksman = { "BOW" },
 	Striker = { "SWORD", "DAGGERS" },
-	Vanguard = { "SWORD", "AXE" },
-	Miner = { "AXE" },
+	Vanguard = { "SWORD", "AXE", "SHIELD" },
+	Miner = { "AXE", "SHIELD" },
 	Scholar = { "TOME", "STAFF" },
 	Healer = { "STAFF", "TOME" },
 }
 
 function ArtifactCatalog.CanHeroEquip(heroArchetype: string, weaponType: WeaponType): boolean
+	if weaponType == "RING" then
+		return true -- Rings can be equipped by any hero archetype
+	end
+	if weaponType == "SHIELD" then
+		return heroArchetype == "Vanguard" or heroArchetype == "Striker" or heroArchetype == "Miner"
+	end
 	local allowed = ArtifactCatalog.ArchetypeRestrictions[heroArchetype]
 	if not allowed then return false end
 	for _, t in ipairs(allowed) do
@@ -54,7 +119,7 @@ function ArtifactCatalog.CanHeroEquip(heroArchetype: string, weaponType: WeaponT
 end
 
 --============================================================================
--- 2. THE 7 STAR TIERS (BASE STATS)
+-- 3. THE 7 STAR TIERS (BASE STATS)
 --============================================================================
 
 local StarTiers: { [number]: StarBaseStats } = {
@@ -75,7 +140,7 @@ function ArtifactCatalog.GetStarBaseStats(star: number): (number, number)
 end
 
 --============================================================================
--- 3. THE 16 RARITY TIERS (STAT MULTIPLIERS & PALETTE)
+-- 4. THE 16 RARITY TIERS (STAT MULTIPLIERS & PALETTE)
 --============================================================================
 
 local Rarities: { [number]: RarityInfo } = {
@@ -104,15 +169,65 @@ function ArtifactCatalog.GetRarityInfo(rarityIndex: number): RarityInfo
 end
 
 --============================================================================
--- 4. MATHEMATICAL COMBAT FORMULAS
+-- 5. FODDER REQUIREMENT & STAT FORMULAS
 --============================================================================
 
-function ArtifactCatalog.CalculateEffectiveStats(star: number, rarityIndex: number): (number, number)
+-- Maximum Enhancement level (+0 up to +10)
+ArtifactCatalog.MaxEnhancementLevel = 10
+
+-- Returns number of enhancement fodder artifacts required to reach next level
+function ArtifactCatalog.GetFodderRequirement(currentLevel: number): number
+	local safeLvl = math.clamp(math.floor(currentLevel or 0), 0, ArtifactCatalog.MaxEnhancementLevel)
+	return math.clamp(safeLvl + 1, 1, 5)
+end
+
+-- Returns detailed stat dictionary for an artifact at a specific star, rarity, and level
+function ArtifactCatalog.GetStatBreakdown(seedId: string, star: number, rarityIndex: number, level: number): { [string]: number }
+	local seed = ArtifactCatalog.Seeds[seedId]
+	local rInfo = ArtifactCatalog.GetRarityInfo(rarityIndex)
+	local safeLvl = math.clamp(math.floor(level or 0), 0, ArtifactCatalog.MaxEnhancementLevel)
+	local result: { [string]: number } = {}
+
+	if seedId == "art_blade_of_the_rift" then
+		-- Matches mock: +4 = 120, +5 = 155 (+35 per level above 4)
+		local atk = 120 + (safeLvl - 4) * 35
+		if safeLvl < 4 then
+			atk = math.max(45, 120 - (4 - safeLvl) * 18)
+		end
+		result["ATK"] = math.floor(atk * (1 + (rInfo.Multiplier - 1) * 0.25))
+		result["Crit Rate"] = 5 + safeLvl * 0.5
+	elseif seedId == "art_aegis_core" then
+		-- DEF +200 | HP +500 at level 5
+		local def = 160 + (safeLvl - 4) * 40
+		if safeLvl < 4 then def = math.max(60, 160 - (4 - safeLvl) * 25) end
+		local hp = 400 + (safeLvl - 4) * 100
+		if safeLvl < 4 then hp = math.max(150, 400 - (4 - safeLvl) * 60) end
+		result["DEF"] = math.floor(def * (1 + (rInfo.Multiplier - 1) * 0.25))
+		result["HP"] = math.floor(hp * (1 + (rInfo.Multiplier - 1) * 0.25))
+	elseif seedId == "art_ring_of_haste" then
+		-- SPD +15 | Evasion +2% at level 5
+		local spd = 12 + (safeLvl - 4) * 3
+		if safeLvl < 4 then spd = math.max(4, 12 - (4 - safeLvl) * 2) end
+		result["SPD"] = spd
+		result["Evasion"] = 1.6 + (safeLvl - 4) * 0.4
+	else
+		local baseATK, _ = ArtifactCatalog.GetStarBaseStats(star)
+		local lvlMult = 1 + safeLvl * 0.12
+		result["ATK"] = math.floor(baseATK * rInfo.Multiplier * lvlMult)
+	end
+
+	return result
+end
+
+function ArtifactCatalog.CalculateEffectiveStats(star: number, rarityIndex: number, level: number?, seedId: string?): (number, number, { [string]: number })
 	local baseATK, baseSpeed = ArtifactCatalog.GetStarBaseStats(star)
 	local rarity = ArtifactCatalog.GetRarityInfo(rarityIndex)
-	local totalATKBonus = math.floor(baseATK * rarity.Multiplier)
-	local totalSpeedBonus = baseSpeed * rarity.Multiplier
-	return totalATKBonus, totalSpeedBonus
+	local safeLvl = math.clamp(math.floor(level or 0), 0, ArtifactCatalog.MaxEnhancementLevel)
+	local breakdown = ArtifactCatalog.GetStatBreakdown(seedId or "", star, rarityIndex, safeLvl)
+
+	local totalATKBonus = breakdown["ATK"] or math.floor(baseATK * rarity.Multiplier * (1 + safeLvl * 0.12))
+	local totalSpeedBonus = baseSpeed * rarity.Multiplier * (1 + safeLvl * 0.05)
+	return totalATKBonus, totalSpeedBonus, breakdown
 end
 
 function ArtifactCatalog.CalculateEffectiveInterval(baseInterval: number, totalSpeedBonus: number): number
@@ -122,7 +237,7 @@ function ArtifactCatalog.CalculateEffectiveInterval(baseInterval: number, totalS
 end
 
 --============================================================================
--- 5. BLACKSMITH UPGRADE COSTS (TIER R -> TIER R + 1)
+-- 6. BLACKSMITH UPGRADE COSTS (TIER R -> TIER R + 1)
 --============================================================================
 
 ArtifactCatalog.BlacksmithUpgradeCosts = {
@@ -148,10 +263,45 @@ function ArtifactCatalog.GetUpgradeCost(currentRarityIndex: number): { Gold: num
 end
 
 --============================================================================
--- 6. CATALOG SEEDS / TEMPLATES
+-- 7. CATALOG SEEDS / TEMPLATES & RECIPES
 --============================================================================
 
 local Seeds: { [string]: ArtifactSeed } = {
+	-- FEATURED RECIPES (FROM MOCKUP)
+	art_blade_of_the_rift = {
+		TemplateId = "art_blade_of_the_rift",
+		DisplayName = "Blade of the Rift",
+		Type = "SWORD",
+		DefaultStar = 3,
+		ModelAssetId = "weapon_sword",
+		Description = "A mastercrafted edge resonating with dimensional rift energy.",
+		BaseATK = 150,
+		BaseCritRate = 0.05,
+		CraftCost = { IronGear = 5, RiftOrb = 3 },
+	},
+	art_aegis_core = {
+		TemplateId = "art_aegis_core",
+		DisplayName = "Aegis Core",
+		Type = "SHIELD",
+		DefaultStar = 3,
+		ModelAssetId = "weapon_sword",
+		Description = "An impenetrable aegis matrix radiating dense warding fields.",
+		BaseDEF = 200,
+		BaseHP = 500,
+		CraftCost = { IronGear = 8, AegisGem = 2 },
+	},
+	art_ring_of_haste = {
+		TemplateId = "art_ring_of_haste",
+		DisplayName = "Ring of Haste",
+		Type = "RING",
+		DefaultStar = 2,
+		ModelAssetId = "weapon_daggers",
+		Description = "A swift cosmic band that bends temporal currents around the bearer.",
+		BaseSPD = 15,
+		BaseEvasion = 0.02,
+		CraftCost = { StarDust = 10, VoidPowder = 5 },
+	},
+
 	-- BOWS
 	art_hunters_shortbow = {
 		TemplateId = "art_hunters_shortbow",
@@ -160,6 +310,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		DefaultStar = 1,
 		ModelAssetId = "weapon_bow",
 		Description = "A lightweight hunting bow, balanced and easy to handle in scouts' hands.",
+		CraftCost = { IronGear = 4, StarDust = 4 },
 	},
 	art_recurve_composite = {
 		TemplateId = "art_recurve_composite",
@@ -168,6 +319,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		DefaultStar = 2,
 		ModelAssetId = "weapon_bow",
 		Description = "Reinforced composite bow layered with flexible ashwood and horn.",
+		CraftCost = { IronGear = 6, RiftOrb = 2 },
 	},
 	art_crystal_greatbow = {
 		TemplateId = "art_crystal_greatbow",
@@ -176,6 +328,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		DefaultStar = 3,
 		ModelAssetId = "weapon_bow",
 		Description = "Gleaming crystalline limbs that hum with condensed atmospheric mana.",
+		CraftCost = { RiftOrb = 4, AegisGem = 2 },
 	},
 
 	-- SWORDS
@@ -186,6 +339,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		DefaultStar = 1,
 		ModelAssetId = "weapon_sword",
 		Description = "Standard-issue balanced iron blade favoured by frontline strikers.",
+		CraftCost = { IronGear = 4, RiftOrb = 1 },
 	},
 	art_runic_longsword = {
 		TemplateId = "art_runic_longsword",
@@ -194,6 +348,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		DefaultStar = 2,
 		ModelAssetId = "weapon_sword",
 		Description = "A double-edged steel longsword etched with runic blood-grooves.",
+		CraftCost = { IronGear = 6, RiftOrb = 2 },
 	},
 	art_paladin_claymore = {
 		TemplateId = "art_paladin_claymore",
@@ -202,6 +357,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		DefaultStar = 3,
 		ModelAssetId = "weapon_sword",
 		Description = "Massive consecrated two-hander capable of rending fiends asunder.",
+		CraftCost = { IronGear = 8, AegisGem = 2 },
 	},
 
 	-- DAGGERS
@@ -212,6 +368,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		DefaultStar = 1,
 		ModelAssetId = "weapon_daggers",
 		Description = "Twin serrated trench daggers suited for swift vital strikes.",
+		CraftCost = { IronGear = 3, VoidPowder = 2 },
 	},
 	art_shadow_fangs = {
 		TemplateId = "art_shadow_fangs",
@@ -220,6 +377,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		DefaultStar = 2,
 		ModelAssetId = "weapon_daggers",
 		Description = "Twin obsidian stilettos that leave faint trails of abyssal smoke.",
+		CraftCost = { StarDust = 6, VoidPowder = 4 },
 	},
 
 	-- AXES
@@ -230,6 +388,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		DefaultStar = 1,
 		ModelAssetId = "weapon_axe",
 		Description = "Heavy tempered tool ideal for splitting both bedrock and armored foes.",
+		CraftCost = { IronGear = 5, RiftOrb = 1 },
 	},
 	art_battleaxe_cleaver = {
 		TemplateId = "art_battleaxe_cleaver",
@@ -238,9 +397,10 @@ local Seeds: { [string]: ArtifactSeed } = {
 		DefaultStar = 2,
 		ModelAssetId = "weapon_axe",
 		Description = "Beveled dual-headed axe built to smash through heavy shields.",
+		CraftCost = { IronGear = 8, AegisGem = 2 },
 	},
 
-	-- TOMES & STAVES (SCHOLAR)
+	-- TOMES & STAVES (SCHOLAR / HEALER)
 	art_novice_tome = {
 		TemplateId = "art_novice_tome",
 		DisplayName = "Novice Pyromancer Tome",
@@ -248,6 +408,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		DefaultStar = 1,
 		ModelAssetId = "weapon_tome",
 		Description = "Leatherbound grimoire inscribed with foundational flame incantations.",
+		CraftCost = { StarDust = 5, RiftOrb = 2 },
 	},
 	art_ruby_staff = {
 		TemplateId = "art_ruby_staff",
@@ -256,8 +417,28 @@ local Seeds: { [string]: ArtifactSeed } = {
 		DefaultStar = 2,
 		ModelAssetId = "weapon_staff",
 		Description = "Staff tipped with an uncut igneous crystal that amplifies spellcasting cadence.",
+		CraftCost = { StarDust = 8, RiftOrb = 3 },
 	},
 }
 ArtifactCatalog.Seeds = Seeds
+
+-- List of recipes in presentation order for the Crafting UI
+ArtifactCatalog.CraftingRecipeOrder = {
+	"art_blade_of_the_rift",
+	"art_aegis_core",
+	"art_ring_of_haste",
+	"art_iron_broadsword",
+	"art_runic_longsword",
+	"art_paladin_claymore",
+	"art_hunters_shortbow",
+	"art_recurve_composite",
+	"art_crystal_greatbow",
+	"art_rusty_daggers",
+	"art_shadow_fangs",
+	"art_miner_pickaxe",
+	"art_battleaxe_cleaver",
+	"art_novice_tome",
+	"art_ruby_staff",
+}
 
 return ArtifactCatalog
