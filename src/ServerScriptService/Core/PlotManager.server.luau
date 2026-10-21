@@ -41,7 +41,7 @@ function PlotManager.GetPlotOwner(plotIndex: number): Player?
 end
 
 -- Validates that the caller owns an active plot, and optionally that targetPlot matches their owned plot.
--- Rejects if targetPlot belongs to another player, or if caller is physically trespassing inside another player's island.
+-- Rejects if targetPlot belongs to another player.
 function PlotManager.IsPlayerPlotOwner(player: Player, targetPlot: any?): boolean
 	if not player or not player:IsDescendantOf(Players) then
 		return false
@@ -69,27 +69,6 @@ function PlotManager.IsPlayerPlotOwner(player: Player, targetPlot: any?): boolea
 		elseif type(targetPlot) == "string" then
 			if ownedPlot.Name ~= targetPlot then
 				return false
-			end
-		end
-	end
-
-	-- Check if caller's character is physically located inside another player's plot island
-	local char = player.Character
-	local hrp = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
-	if hrp then
-		for _, otherPlot in ipairs(PlotsFolder:GetChildren()) do
-			if otherPlot ~= ownedPlot and otherPlot:IsA("Model") then
-				local island = otherPlot:FindFirstChild("FloatingFortressIsland")
-				local surface = island and island:FindFirstChild("IslandTopSurface") :: BasePart?
-				if surface then
-					local rel = surface.CFrame:PointToObjectSpace(hrp.Position)
-					local halfW = surface.Size.X * 0.5 + 4
-					local halfL = surface.Size.Z * 0.5 + 4
-					if math.abs(rel.X) <= halfW and math.abs(rel.Z) <= halfL and rel.Y >= -5 and rel.Y <= 60 then
-						-- Character is inside another player's private island boundary
-						return false
-					end
-				end
 			end
 		end
 	end
@@ -190,41 +169,10 @@ local function setupPlotGateBarrier(plotModel: Model)
 		return
 	end
 
-	local debounce: { [Player]: number } = {}
-	barrier.Touched:Connect(function(hit: BasePart)
-		local char = hit.Parent
-		if not char then
-			return
-		end
-		local player = Players:GetPlayerFromCharacter(char)
-		if not player then
-			return
-		end
-
-		local ownerId = plotModel:GetAttribute("OwnerUserId")
-		if ownerId ~= player.UserId then
-			local now = os.clock()
-			if debounce[player] and (now - debounce[player]) < 0.5 then
-				return
-			end
-			debounce[player] = now
-
-			local hrp = char:FindFirstChild("HumanoidRootPart") :: BasePart?
-			if hrp then
-				hrp.AssemblyLinearVelocity = Vector3.zero
-				local walls = barrier.Parent
-				local gateLintel = walls and walls:FindFirstChild("GateLintel") :: BasePart?
-				if gateLintel then
-					local bridgeStand = gateLintel.Position - gateLintel.CFrame.LookVector * 10
-					hrp.CFrame = CFrame.lookAt(Vector3.new(bridgeStand.X, 15, bridgeStand.Z), gateLintel.Position)
-				else
-					local pushDir = (barrier.Position - plotModel:GetPivot().Position).Unit
-					local pushPos = barrier.Position + pushDir * 8
-					hrp.CFrame = CFrame.new(Vector3.new(pushPos.X, 15, pushPos.Z))
-				end
-			end
-		end
-	end)
+	-- Open visiting: gate opening is completely walkable in both directions
+	barrier.CanCollide = false
+	barrier.CanTouch = false
+	barrier.Transparency = 1
 end
 
 local function initializePlotModel(plotModel: Model)

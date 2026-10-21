@@ -338,11 +338,12 @@ local function syncPlotAccess(plotModel: Model)
 	local ownerUserId = plotModel:GetAttribute("OwnerUserId") :: number?
 	local isOwner = (ownerUserId ~= nil and ownerUserId > 0 and ownerUserId == LocalPlayer.UserId)
 
-	-- 1. Gate Barrier Collision (pushback / physical blocker for non-owners)
+	-- 1. Gate Opening (Open visiting: non-collidable so visitors can freely walk in and out)
 	local barrier = plotModel:FindFirstChild("GateBarrier", true) :: BasePart?
 	if barrier then
-		barrier.CanCollide = not isOwner
-		barrier.Transparency = isOwner and 1 or 0.82
+		barrier.CanCollide = false
+		barrier.CanTouch = false
+		barrier.Transparency = 1
 	end
 
 	-- 2. Building ProximityPrompts (disabled for non-owners)
