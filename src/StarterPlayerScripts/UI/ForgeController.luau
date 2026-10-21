@@ -209,18 +209,41 @@ function Forge.new(gui: ScreenGui, artifactRemotes: Folder, getProfile: (() -> a
 
 	self.Scale = new("UIScale", {}, root)
 
-	-- 3. Close Button
+	-- 3. Close Button (High contrast gothic pill styling with Latin 'X')
 	local closeBtn = new("TextButton", {
 		Name = "CloseButton",
-		Text = "✕",
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -16, 0, 16),
+		Size = UDim2.fromOffset(30, 30),
+		BackgroundColor3 = Color3.fromRGB(28, 22, 42),
+		Text = "X",
 		Font = Enum.Font.GothamBold,
-		TextSize = 16,
-		TextColor3 = C.TextMuted,
-		BackgroundTransparency = 1,
-		Size = UDim2.fromOffset(32, 32),
-		Position = UDim2.new(1, -36, 0, 10),
+		TextSize = 14,
+		TextColor3 = Color3.fromRGB(225, 210, 250),
+		AutoButtonColor = false,
 		ZIndex = 60,
 	}, root)
+	new("UICorner", { CornerRadius = UDim.new(0, 6) }, closeBtn)
+	local closeStroke = stroke(closeBtn, Color3.fromRGB(80, 60, 110), 1)
+
+	closeBtn.MouseEnter:Connect(function()
+		TweenService:Create(closeBtn, TweenInfo.new(0.15), {
+			BackgroundColor3 = Color3.fromRGB(180, 45, 60),
+			TextColor3 = Color3.fromRGB(255, 255, 255),
+		}):Play()
+		TweenService:Create(closeStroke, TweenInfo.new(0.15), {
+			Color = Color3.fromRGB(255, 100, 120),
+		}):Play()
+	end)
+	closeBtn.MouseLeave:Connect(function()
+		TweenService:Create(closeBtn, TweenInfo.new(0.15), {
+			BackgroundColor3 = Color3.fromRGB(28, 22, 42),
+			TextColor3 = Color3.fromRGB(225, 210, 250),
+		}):Play()
+		TweenService:Create(closeStroke, TweenInfo.new(0.15), {
+			Color = Color3.fromRGB(80, 60, 110),
+		}):Play()
+	end)
 	closeBtn.Activated:Connect(function()
 		if not self.Busy then
 			self:Close()
@@ -1309,15 +1332,39 @@ function Forge:BuildPickerDrawer(root: Frame)
 	self.DrawerTitle = title
 
 	local closeDrawerBtn = new("TextButton", {
-		Text = "✕",
+		Name = "CloseDrawerBtn",
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, -4, 0.5, 0),
+		Size = UDim2.fromOffset(28, 28),
+		BackgroundColor3 = Color3.fromRGB(28, 22, 42),
+		Text = "X",
 		Font = Enum.Font.GothamBold,
-		TextSize = 15,
-		TextColor3 = C.TextMuted,
-		BackgroundTransparency = 1,
-		Size = UDim2.fromOffset(30, 30),
-		Position = UDim2.new(1, -30, 0, 0),
+		TextSize = 13,
+		TextColor3 = Color3.fromRGB(225, 210, 250),
+		AutoButtonColor = false,
 		ZIndex = 72,
 	}, header)
+	new("UICorner", { CornerRadius = UDim.new(0, 6) }, closeDrawerBtn)
+	local drawerCloseStroke = stroke(closeDrawerBtn, Color3.fromRGB(80, 60, 110), 1)
+
+	closeDrawerBtn.MouseEnter:Connect(function()
+		TweenService:Create(closeDrawerBtn, TweenInfo.new(0.15), {
+			BackgroundColor3 = Color3.fromRGB(180, 45, 60),
+			TextColor3 = Color3.fromRGB(255, 255, 255),
+		}):Play()
+		TweenService:Create(drawerCloseStroke, TweenInfo.new(0.15), {
+			Color = Color3.fromRGB(255, 100, 120),
+		}):Play()
+	end)
+	closeDrawerBtn.MouseLeave:Connect(function()
+		TweenService:Create(closeDrawerBtn, TweenInfo.new(0.15), {
+			BackgroundColor3 = Color3.fromRGB(28, 22, 42),
+			TextColor3 = Color3.fromRGB(225, 210, 250),
+		}):Play()
+		TweenService:Create(drawerCloseStroke, TweenInfo.new(0.15), {
+			Color = Color3.fromRGB(80, 60, 110),
+		}):Play()
+	end)
 	closeDrawerBtn.Activated:Connect(function()
 		self:ClosePicker()
 	end)
