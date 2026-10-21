@@ -1,11 +1,14 @@
 --!strict
 -- ReplicatedStorage/Shared/Config/HeroCatalog.luau
--- Complete Hero Seed Table from Document 3 (Economy & Balancing Tables)
+-- Authoritative Hero Seed & Banner Configuration
+-- Features:
+--   1. Permanent Banner: "Call of the Rift" (5 Stars: 1★ to 5★, exactly 1 character per star)
+--   2. Limited Time Banner: "A Star's Arrival" (7 Stars: 1★ to 7★, exactly 1 character per star)
 
 export type HeroSeed = {
 	HeroId: string,
 	DisplayName: string,
-	BannerOrigin: "STANDARD" | "WORLD_BOSS",
+	BannerOrigin: "STANDARD" | "WORLD_BOSS" | "LIMITED",
 	DropWeight: number, -- Relative weight within tier
 	BaseStar: number,
 	Archetype: "Vanguard" | "Striker" | "Marksman" | "Miner" | "Healer" | "Scholar",
@@ -28,18 +31,75 @@ export type HeroSeed = {
 
 local HeroCatalog = {}
 
-HeroCatalog.BannerDropRates = {
-	[1] = 0.70, -- 70% 1★ Common
-	[2] = 0.25, -- 25% 2★ Rare
-	[3] = 0.05, -- 5% 3★ Epic (4★ & 5★ exclusively via Star Promotion)
+--============================================================================
+-- BANNER CONFIGURATIONS
+--============================================================================
+
+HeroCatalog.PermanentBanner = {
+	BannerId = "banner_call_of_the_rift",
+	Title = "CALL OF THE RIFT",
+	Subtitle = "5-STAR PERMANENT HERO BANNER",
+	MaxStar = 5,
+	MaxPity = 50,
+	Rates = {
+		[1] = 0.600, -- 60.0% 1★ Han
+		[2] = 0.250, -- 25.0% 2★ Aaron
+		[3] = 0.100, -- 10.0% 3★ Catio
+		[4] = 0.040, -- 4.0% 4★ Valeria
+		[5] = 0.010, -- 1.0% 5★ Ignis
+	},
+	HeroesByStar = {
+		[1] = "hero_han",
+		[2] = "hero_aaron",
+		[3] = "hero_catio",
+		[4] = "hero_valeria",
+		[5] = "hero_ignis",
+	},
 }
 
+HeroCatalog.LimitedBanner = {
+	BannerId = "banner_a_stars_arrival",
+	Title = "A STAR'S ARRIVAL",
+	Subtitle = "7-STAR LIMITED RATE-UP EVENT",
+	MaxStar = 7,
+	MaxPity = 50,
+	FeaturedHeroId = "hero_astrea",
+	Rates = {
+		[1] = 0.500, -- 50.0% 1★ Jenna
+		[2] = 0.250, -- 25.0% 2★ Velkist
+		[3] = 0.135, -- 13.5% 3★ Eolka
+		[4] = 0.065, -- 6.5% 4★ Morrigan
+		[5] = 0.035, -- 3.5% 5★ Archon
+		[6] = 0.012, -- 1.2% 6★ Solaris
+		[7] = 0.003, -- 0.3% 7★ Astrea (Featured)
+	},
+	HeroesByStar = {
+		[1] = "hero_jenna",
+		[2] = "hero_velkist",
+		[3] = "hero_eolka",
+		[4] = "hero_morrigan",
+		[5] = "hero_archon",
+		[6] = "hero_solaris",
+		[7] = "hero_astrea",
+	},
+}
+
+-- Legacy fallback drop rates
+HeroCatalog.BannerDropRates = HeroCatalog.PermanentBanner.Rates
+
+--============================================================================
+-- HERO SEEDS
+--============================================================================
+
 HeroCatalog.Seeds = {
+	-- ------------------------------------------------------------------------
+	-- CALL OF THE RIFT (Permanent Banner: 1★ to 5★)
+	-- ------------------------------------------------------------------------
 	hero_han = {
 		HeroId = "hero_han",
 		DisplayName = "Han",
 		BannerOrigin = "STANDARD",
-		DropWeight = 25.0,
+		DropWeight = 60.0,
 		BaseStar = 1,
 		Archetype = "Striker",
 		BaseHP_1Star = 300,
@@ -57,55 +117,11 @@ HeroCatalog.Seeds = {
 		TraitLaborBonus = 0.0,
 		Color = Color3.fromRGB(70, 155, 255),
 	},
-	hero_jenna = {
-		HeroId = "hero_jenna",
-		DisplayName = "Jenna",
-		BannerOrigin = "STANDARD",
-		DropWeight = 22.5,
-		BaseStar = 1,
-		Archetype = "Marksman",
-		BaseHP_1Star = 210,
-		BaseATK_1Star = 34,
-		NativeHP = 210,
-		NativeATK = 34,
-		AttackInterval = 0.80,
-		AttackRange = 28,
-		BaseLabor_1Star = 13.0,
-		NativeLabor = 13.0,
-		PreferredFacility = "NONE",
-		PassiveTraitName = "Windstep Precision (+15% ASPD, +5% Move Spd)",
-		TraitATKBonus = 0.15,
-		TraitHPBonus = 0.0,
-		TraitLaborBonus = 0.0,
-		Color = Color3.fromRGB(80, 200, 255),
-	},
-	hero_catio = {
-		HeroId = "hero_catio",
-		DisplayName = "Catio",
-		BannerOrigin = "STANDARD",
-		DropWeight = 22.5,
-		BaseStar = 1,
-		Archetype = "Miner",
-		BaseHP_1Star = 280,
-		BaseATK_1Star = 24,
-		NativeHP = 280,
-		NativeATK = 24,
-		AttackInterval = 1.05,
-		AttackRange = 6,
-		BaseLabor_1Star = 20.0,
-		NativeLabor = 20.0,
-		PreferredFacility = "NONE",
-		PassiveTraitName = "Quartermaster's Ledger (+25% Labor Output)",
-		TraitATKBonus = 0.0,
-		TraitHPBonus = 0.0,
-		TraitLaborBonus = 0.25,
-		Color = Color3.fromRGB(255, 205, 75),
-	},
 	hero_aaron = {
 		HeroId = "hero_aaron",
 		DisplayName = "Aaron",
 		BannerOrigin = "STANDARD",
-		DropWeight = 13.0,
+		DropWeight = 25.0,
 		BaseStar = 2,
 		Archetype = "Vanguard",
 		BaseHP_1Star = 450,
@@ -123,11 +139,103 @@ HeroCatalog.Seeds = {
 		TraitLaborBonus = 0.0,
 		Color = Color3.fromRGB(255, 155, 60),
 	},
+	hero_catio = {
+		HeroId = "hero_catio",
+		DisplayName = "Catio",
+		BannerOrigin = "STANDARD",
+		DropWeight = 10.0,
+		BaseStar = 3,
+		Archetype = "Miner",
+		BaseHP_1Star = 280,
+		BaseATK_1Star = 24,
+		NativeHP = 762,
+		NativeATK = 65,
+		AttackInterval = 1.05,
+		AttackRange = 6,
+		BaseLabor_1Star = 20.0,
+		NativeLabor = 36.5,
+		PreferredFacility = "NONE",
+		PassiveTraitName = "Quartermaster's Ledger (+25% Labor Output)",
+		TraitATKBonus = 0.0,
+		TraitHPBonus = 0.0,
+		TraitLaborBonus = 0.25,
+		Color = Color3.fromRGB(255, 205, 75),
+	},
+	hero_valeria = {
+		HeroId = "hero_valeria",
+		DisplayName = "Valeria",
+		BannerOrigin = "STANDARD",
+		DropWeight = 4.0,
+		BaseStar = 4,
+		Archetype = "Healer",
+		BaseHP_1Star = 260,
+		BaseATK_1Star = 18,
+		NativeHP = 1168,
+		NativeATK = 81,
+		AttackInterval = 1.25,
+		AttackRange = 24,
+		BaseLabor_1Star = 18.0,
+		NativeLabor = 44.3,
+		PreferredFacility = "FACILITY_INFIRMARY",
+		PassiveTraitName = "Sanctuary Aegis (+30% Healing, +20% Coma Recovery)",
+		TraitATKBonus = 0.0,
+		TraitHPBonus = 0.15,
+		TraitLaborBonus = 0.30,
+		Color = Color3.fromRGB(100, 232, 175),
+	},
+	hero_ignis = {
+		HeroId = "hero_ignis",
+		DisplayName = "Ignis",
+		BannerOrigin = "STANDARD",
+		DropWeight = 1.0,
+		BaseStar = 5,
+		Archetype = "Vanguard",
+		BaseHP_1Star = 450,
+		BaseATK_1Star = 26,
+		NativeHP = 3335,
+		NativeATK = 193,
+		AttackInterval = 1.15,
+		AttackRange = 8,
+		BaseLabor_1Star = 16.0,
+		NativeLabor = 53.1,
+		PreferredFacility = "NONE",
+		PassiveTraitName = "Rift Warlord (+35% ATK, +20% DMG Reduction)",
+		TraitATKBonus = 0.35,
+		TraitHPBonus = 0.20,
+		TraitLaborBonus = 0.0,
+		Color = Color3.fromRGB(255, 85, 40),
+	},
+
+	-- ------------------------------------------------------------------------
+	-- A STAR'S ARRIVAL (Limited Time Banner: 1★ to 7★)
+	-- ------------------------------------------------------------------------
+	hero_jenna = {
+		HeroId = "hero_jenna",
+		DisplayName = "Jenna",
+		BannerOrigin = "LIMITED",
+		DropWeight = 50.0,
+		BaseStar = 1,
+		Archetype = "Marksman",
+		BaseHP_1Star = 210,
+		BaseATK_1Star = 34,
+		NativeHP = 210,
+		NativeATK = 34,
+		AttackInterval = 0.80,
+		AttackRange = 28,
+		BaseLabor_1Star = 13.0,
+		NativeLabor = 13.0,
+		PreferredFacility = "NONE",
+		PassiveTraitName = "Windstep Precision (+15% ASPD, +5% Move Spd)",
+		TraitATKBonus = 0.15,
+		TraitHPBonus = 0.0,
+		TraitLaborBonus = 0.0,
+		Color = Color3.fromRGB(80, 200, 255),
+	},
 	hero_velkist = {
 		HeroId = "hero_velkist",
 		DisplayName = "Velkist",
-		BannerOrigin = "STANDARD",
-		DropWeight = 12.0,
+		BannerOrigin = "LIMITED",
+		DropWeight = 25.0,
 		BaseStar = 2,
 		Archetype = "Striker",
 		BaseHP_1Star = 300,
@@ -148,8 +256,8 @@ HeroCatalog.Seeds = {
 	hero_eolka = {
 		HeroId = "hero_eolka",
 		DisplayName = "Eolka",
-		BannerOrigin = "STANDARD",
-		DropWeight = 5.0,
+		BannerOrigin = "LIMITED",
+		DropWeight = 13.5,
 		BaseStar = 3,
 		Archetype = "Scholar",
 		BaseHP_1Star = 230,
@@ -167,27 +275,93 @@ HeroCatalog.Seeds = {
 		TraitLaborBonus = 0.30,
 		Color = Color3.fromRGB(255, 80, 195),
 	},
+	hero_morrigan = {
+		HeroId = "hero_morrigan",
+		DisplayName = "Morrigan",
+		BannerOrigin = "LIMITED",
+		DropWeight = 6.5,
+		BaseStar = 4,
+		Archetype = "Vanguard",
+		BaseHP_1Star = 450,
+		BaseATK_1Star = 24,
+		NativeHP = 2021,
+		NativeATK = 108,
+		AttackInterval = 1.15,
+		AttackRange = 7,
+		BaseLabor_1Star = 16.0,
+		NativeLabor = 39.4,
+		PreferredFacility = "NONE",
+		PassiveTraitName = "Abyssal Bulwark (+30% Max HP, +15% Reflect DMG)",
+		TraitATKBonus = 0.0,
+		TraitHPBonus = 0.30,
+		TraitLaborBonus = 0.0,
+		Color = Color3.fromRGB(160, 100, 240),
+	},
 	hero_archon = {
 		HeroId = "hero_archon",
 		DisplayName = "Sovereign Archon",
-		BannerOrigin = "WORLD_BOSS",
-		DropWeight = 0.0,
-		BaseStar = 3,
+		BannerOrigin = "LIMITED",
+		DropWeight = 3.5,
+		BaseStar = 5,
 		Archetype = "Striker",
 		BaseHP_1Star = 350,
 		BaseATK_1Star = 65,
-		NativeHP = 953,
-		NativeATK = 177,
+		NativeHP = 2594,
+		NativeATK = 482,
 		AttackInterval = 0.80,
 		AttackRange = 14,
 		BaseLabor_1Star = 25.0,
-		NativeLabor = 45.6,
+		NativeLabor = 83.0,
 		PreferredFacility = "ALL",
 		PassiveTraitName = "Dimensional Dominion (+30% Boss DMG, +25% All Labor)",
 		TraitATKBonus = 0.30,
 		TraitHPBonus = 0.15,
 		TraitLaborBonus = 0.25,
 		Color = Color3.fromRGB(190, 85, 255),
+	},
+	hero_solaris = {
+		HeroId = "hero_solaris",
+		DisplayName = "Solaris",
+		BannerOrigin = "LIMITED",
+		DropWeight = 1.2,
+		BaseStar = 6,
+		Archetype = "Scholar",
+		BaseHP_1Star = 240,
+		BaseATK_1Star = 55,
+		NativeHP = 2935,
+		NativeATK = 673,
+		AttackInterval = 0.95,
+		AttackRange = 30,
+		BaseLabor_1Star = 22.0,
+		NativeLabor = 98.6,
+		PreferredFacility = "NONE",
+		PassiveTraitName = "Supernova Flare (+40% ATK, +25% AoE Radius)",
+		TraitATKBonus = 0.40,
+		TraitHPBonus = 0.10,
+		TraitLaborBonus = 0.20,
+		Color = Color3.fromRGB(255, 215, 0),
+	},
+	hero_astrea = {
+		HeroId = "hero_astrea",
+		DisplayName = "Astrea",
+		BannerOrigin = "LIMITED",
+		DropWeight = 0.3,
+		BaseStar = 7,
+		Archetype = "Marksman",
+		BaseHP_1Star = 230,
+		BaseATK_1Star = 48,
+		NativeHP = 4641,
+		NativeATK = 969,
+		AttackInterval = 0.70,
+		AttackRange = 32,
+		BaseLabor_1Star = 23.0,
+		NativeLabor = 139.2,
+		PreferredFacility = "ALL",
+		PassiveTraitName = "Cosmic Zenith (+50% ATK, +30% ASPD, +35% Boss DMG)",
+		TraitATKBonus = 0.50,
+		TraitHPBonus = 0.20,
+		TraitLaborBonus = 0.35,
+		Color = Color3.fromRGB(235, 220, 255),
 	},
 }
 
@@ -199,9 +373,13 @@ for _, seed in pairs(HeroCatalog.Seeds) do
 end
 
 HeroCatalog.PoolByStar = {
-	[1] = { "hero_han", "hero_jenna", "hero_catio" },
+	[1] = { "hero_han", "hero_jenna" },
 	[2] = { "hero_aaron", "hero_velkist" },
-	[3] = { "hero_eolka" },
+	[3] = { "hero_catio", "hero_eolka" },
+	[4] = { "hero_valeria", "hero_morrigan" },
+	[5] = { "hero_ignis", "hero_archon" },
+	[6] = { "hero_solaris" },
+	[7] = { "hero_astrea" },
 }
 
 return HeroCatalog

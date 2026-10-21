@@ -668,7 +668,7 @@ function Forge:BuildSummonView(root: Frame)
 	bannerTitle.TextStrokeColor3 = Color3.fromRGB(120, 80, 0)
 
 	-- Featured Rate-Up Pill Label
-	local rateUpLabel = label(bannerCard, "✦ Rate Up: Blade of the Rift (5★)  |  Aegis Core (5★)", 12, Color3.fromRGB(205, 175, 245), Enum.Font.GothamBold)
+	local rateUpLabel = label(bannerCard, "★ Rate Up: Blade of the Rift (5★)  |  Aegis Core (5★)", 12, Color3.fromRGB(205, 175, 245), Enum.Font.GothamBold)
 	rateUpLabel.AnchorPoint = Vector2.new(1, 1)
 	rateUpLabel.Position = UDim2.new(1, -24, 1, -26)
 	rateUpLabel.Size = UDim2.new(0, 320, 0, 22)

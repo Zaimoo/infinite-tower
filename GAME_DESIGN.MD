@@ -18,8 +18,8 @@ In traditional gacha/simulator games, 95% of summons are discarded as worthless 
    - Every hero pulled from the Summoning Altar rolls with **Combat Stats** (movement speed, attack speed, attack damage, health) and **Labor Output** (separate facility productivity), without trait or imprint bonuses.
    - **Up to 5 Deployed Heroes** (all 5 slots unlocked from the start) accompany the Master into the Central Hub or are independently deployed to specific floors (1–50) of the **Infinite Tower**. Heroes expend **Stamina** as they fight and risk a debilitating **60-second Coma** if left inside lethal AoE telegraphs.
    - **Benched Heroes** physically inhabit the player's **Fortress Plot** on recuperation beds in **The Infirmary & Barracks** (Stamina & Coma recovery), or can be forged powerful equipment at the **Blacksmith Forge**.
-   - **Zero Dead Pulls:** Duplicate 1★–3★ heroes are fed into the **Synthesis Chamber** (`SynthesisController.luau`) for EXP leveling to cap (`MaxLevel = Stars * 10`), or sacrificed at the **Promotion Altar** (`PromotionController.luau`) for **Star Promotion** ($1★ \to 5★$), which keeps the current level.
-   - **Dual Gacha & Artifact Ascension:** In addition to summoning heroes, Masters spend Gems at the **Artifact Summoning Banner** (`160 Gems` single / `1,600 Gems` 10x) to pull equippable weapons, shields, and rings across **16 Rarity Tiers** (`Common` $\to$ `Origin`) which define inherent base stats. At the **Blacksmith Forge** (`ForgeController.luau`), duplicate gear and Gold are used for **Star Promotion** ($1★ \to 7★$), multiplying inherent rarity power by up to **16.00x**, without enhancement levels.
+   - **Zero Dead Pulls:** Duplicate heroes across all star ranks are fed into the **Synthesis Chamber** (`SynthesisController.luau`) for EXP leveling to cap (`MaxLevel = Stars * 10`), or sacrificed at the **Promotion Altar** (`PromotionController.luau`) for **Star Promotion** ($1★ \to 7★$).
+   - **Dual Hero Banners & Artifact Ascension:** At the **Summoning Altar**, players spend Gems (`100 Gems` single / `900 Gems` 10x) on two distinct banners: **Call of the Rift** (Permanent Banner featuring 5 stars: $1★ \to 5★$) and **A Star's Arrival** (Limited Time Banner featuring 1 character per star across all 7 stars: $1★ \to 7★$). In addition, Masters spend Gems at the **Artifact Summoning Banner** (`160 Gems` single / `1,600 Gems` 10x) to pull equippable weapons, shields, and rings across **16 Rarity Tiers** (`Common` $\to$ `Origin`) which define inherent base stats. At the **Blacksmith Forge** (`ForgeController.luau`), duplicate gear and Gold are used for **Star Ascension** ($1★ \to 7★$), multiplying base stats with massive progressive multipliers up to **`8.00x`**.
 
 2. **Tactical Master Agency Over AFK Whaling:**
    - The Master carries no personal weapon. Instead, the Master directs squads through battlefield commands—**`[Click / Tap]` Focus Target**, **`[Q]` Overdrive Whistle**, and **`[E]` Emergency Recall Whistle**—while physically hauling heavy, high-value **Relics** and cargo back to their plot.
@@ -54,10 +54,11 @@ flowchart TD
     end
 
     subgraph Meso["15-Minute Loop: Recovery, Synthesis, Promotion & Forge"]
-        T1["Gather Gold & Gems from Drops, Relics & Tower Floors"] --> T2["Summoning Altar: Hero Banner (100 Gems) & Artifact Banner (160 Gems)"]
+        T1["Gather Gold & Gems from Drops, Relics & Tower Floors"] --> T2["Summoning Altar: Call of the Rift (5★ Perm) & A Star's Arrival (1-7★ Limited)"]
         T2 --> T3["Synthesis Chamber: Feed Duplicates for XP & Max Level Cap"]
-        T3 --> T4["Promotion Altar: Sacrifice Same-Rank Heroes for Star Promotion (1★ -> 5★); Keep Level"]
-        T4 --> T5["Blacksmith Forge: Weapon Star Promotion (1★ -> 7★); No Enhancement Levels"]
+        T2 --> T4["Artifact Banner: 16 Rarity Tiers (160 Gems)"]
+        T3 --> T5["Promotion Altar: Sacrifice Same-Rank Heroes for Star Promotion (1★ -> 7★)"]
+        T4 --> T6["Blacksmith Forge: Star Ascension (1★ -> 7★ Multipliers)"]
     end
 
     subgraph Macro["Macro Loop: Tower Progression & Biome Boss Conquests"]
@@ -94,12 +95,11 @@ flowchart TD
 1. **Facility Upkeep (Every 3–5 Minutes):**
    - Inspect Infirmary beds and swap resting heroes into active squad rotation.
 2. **Summoning & Gacha Pulls (Every 5–10 Minutes):**
-   - Spend Gems at the **Summoning Altar** on either the **Hero Banner** (`100 Gems` single / `900 Gems` 10x for 1★–3★ heroes) or the **Artifact Banner** (`160 Gems` single / `1,600 Gems` 10x for weapons, shields, and rings across 16 Rarity Tiers).
+   - Spend Gems at the **Summoning Altar** on either **Call of the Rift** (1★–5★ Permanent Banner), **A Star's Arrival** (1★–7★ Limited Time Rate-Up Banner, featuring 1 character per star), or the **Artifact Banner** (`160 Gems` single / `1,600 Gems` 10x for weapons, shields, and rings across 16 Rarity Tiers).
    - **Synthesis Chamber (`SynthesisController.luau`):** Place a recipient hero and up to 5 fodder heroes to level up to the hero's current cap ($\text{MaxLevel} = \text{Stars} \times 10$).
-   - **Promotion Altar (`PromotionController.luau`):** When a hero reaches max level, sacrifice same-rank heroes and Promotion Stones to permanently ascend star rating ($1★ \to 5★$), keeping the current level and raising the cap by 10.
-3. **Artifact Star Promotion at the Blacksmith Forge (`ForgeController.luau`):**
-   - Promote an existing weapon from 1★ to 7★ using same-template duplicates and Gold/Gems. Power multipliers are **1.00 / 1.60 / 2.50 / 4.00 / 6.50 / 10.00 / 16.00x**.
-   - Rarity is fixed when the item is acquired. A better rarity requires a newly acquired weapon, which starts at 1★. There are no enhancement levels or enhancement-fodder multipliers in the stat model.
+   - **Promotion Altar (`PromotionController.luau`):** When a hero reaches max level, sacrifice same-rank heroes and Promotion Stones to permanently ascend star rating ($1★ \to 7★$).
+3. **Artifact Star Ascension at the Blacksmith Forge (`ForgeController.luau`):**
+   - **Star Ascension (Multipliers):** Ascend artifacts from $1★ \to 7★$ at the Forge by sacrificing duplicate artifacts and Gold, scaling inherent base stats by progressive multipliers up to **`8.00x`**.
 
 ### 2.3 The Macro Loop (Tower Progression & Biome Boss Conquests)
 1. **Biome Traversal & Preparation:**
@@ -273,12 +273,55 @@ The island is divided into two distinct, interconnected sectors:
 
 ## 4. HERO, COMBAT & UI MECHANICS
 
-### 4.1 Gacha Banner & Base Archetypes
-- **Summon Cost:** `100 Gems` per single pull (`900 Gems` for 10x pull).
-- **Drop Rates:** `1★ Common (70.0%)`, `2★ Rare (25.0%)`, `3★ Epic (5.0%)`. `4★` and `5★` are obtained exclusively via **Star Promotion**.
+### 4.1 Gacha Banners & Hero Roster Architecture
 
-#### Launch Roster Base Stats (At 1★, Level 1)
-Every summoned hero rolls a `QualityScalar` $q \in [0.90, 1.15]$ applied to attack damage and health. The four combat stats are **movement speed**, **attack speed**, **attack damage**, and **health**. Movement speed is 20 studs/s for launch heroes; attack speed is the reciprocal of the listed base interval. Range is targeting metadata and labor is facility output. Named heroes use the one-star seeds in Document 3; the archetype table below supplies fallback seeds:
+Hero summoning at the **Summoning Altar** (`FacilityController.luau`) is partitioned into two distinct banners:
+
+#### 1. Permanent Banner: "Call of the Rift" (5 Stars: 1★ to 5★)
+The permanent standard banner features exactly **one character for each star rating from 1★ to 5★** (5 total heroes):
+- **Summon Cost:** `100 Gems` per single pull (`900 Gems` for 10x pull).
+- **Pity System:** Guaranteed 5★ hero within **50 summons** (`MaxPity = 50`). Natural 5★ pull resets pity counter.
+- **Drop Rates:**
+  - `1★ Common (60.0%)`: **Han**
+  - `2★ Rare (25.0%)`: **Aaron**
+  - `3★ Epic (10.0%)`: **Catio**
+  - `4★ Legendary (4.0%)`: **Valeria**
+  - `5★ Mythic (1.0%)`: **Ignis**
+
+#### 2. Limited Time Banner: "A Star's Arrival" (7 Stars: 1★ to 7★)
+The inaugural limited-time rate-up banner features exactly **one character for each star rating from 1★ to 7★** (7 total heroes):
+- **Summon Cost:** `100 Gems` per single pull (`900 Gems` for 10x pull).
+- **Pity System:** Guaranteed 7★ featured hero (**Astrea**) within **50 summons** (`MaxPity = 50`). Natural 7★ pull resets pity counter.
+- **Drop Rates:**
+  - `1★ Common (50.0%)`: **Jenna**
+  - `2★ Rare (25.0%)`: **Velkist**
+  - `3★ Epic (13.5%)`: **Eolka**
+  - `4★ Legendary (6.5%)`: **Morrigan**
+  - `5★ Mythic (3.5%)`: **Sovereign Archon**
+  - `6★ Transcendent (1.2%)`: **Solaris**
+  - `7★ Primordial (0.3%)`: **Astrea (Featured 7★ Starlight Primordial)**
+
+---
+
+#### Launch Roster Base & Native Stats
+Every summoned hero rolls a `QualityScalar` $q \in [0.90, 1.15]$ applied to their archetype base stats. Native stats scale with Base Star $S$ according to $Stat_0 \times 1.65^{(S - 1)}$ for combat and $L_0 \times 1.35^{(S - 1)}$ for labor:
+
+| Banner | Hero | Star | Archetype | Base HP / ATK | Native HP / ATK | Base / Native Labor | Passive Trait |
+| :--- | :--- | :---: | :--- | :--- | :--- | :--- | :--- |
+| **Call of the Rift** | **Han** | **1★** | Striker | `300` / `40` | `300` / `40` | `14` / `14.0` | **Unyielding Adaptation** (+10% ATK, -10% Stamina Drain) |
+| **Call of the Rift** | **Aaron** | **2★** | Vanguard | `450` / `28` | `743` / `46` | `16` / `21.6` | **Phalanx Guard** (+25% Max HP, -15% AoE Taken) |
+| **Call of the Rift** | **Catio** | **3★** | Miner | `280` / `24` | `762` / `65` | `20` / `36.5` | **Quartermaster's Ledger** (+25% Labor Output) |
+| **Call of the Rift** | **Valeria** | **4★** | Healer | `260` / `18` | `1,168` / `81` | `18` / `44.3` | **Sanctuary Aegis** (+30% Healing, +20% Coma Recovery) |
+| **Call of the Rift** | **Ignis** | **5★** | Vanguard | `450` / `26` | `3,335` / `193` | `16` / `53.1` | **Rift Warlord** (+35% ATK, +20% DMG Reduction) |
+| **A Star's Arrival** | **Jenna** | **1★** | Marksman | `210` / `34` | `210` / `34` | `13` / `13.0` | **Windstep Precision** (+15% ASPD, +5% Move Spd) |
+| **A Star's Arrival** | **Velkist** | **2★** | Striker | `300` / `44` | `495` / `73` | `14` / `18.9` | **Bloodthirst Frenzy** (+20% ATK, +1s Overdrive) |
+| **A Star's Arrival** | **Eolka** | **3★** | Scholar | `230` / `52` | `626` / `142` | `22` / `40.1` | **Crimson Pyromancy** (+25% ATK, +30% Labor Output) |
+| **A Star's Arrival** | **Morrigan**| **4★** | Vanguard | `450` / `24` | `2,021` / `108` | `16` / `39.4` | **Abyssal Bulwark** (+30% Max HP, +15% Reflect DMG) |
+| **A Star's Arrival** | **Archon** | **5★** | Striker | `350` / `65` | `2,594` / `482` | `25` / `83.0` | **Dimensional Dominion** (+30% Boss DMG, +25% All Labor) |
+| **A Star's Arrival** | **Solaris** | **6★** | Scholar | `240` / `55` | `2,935` / `673` | `22` / `98.6` | **Supernova Flare** (+40% ATK, +25% AoE Radius) |
+| **A Star's Arrival** | **Astrea** | **7★** | Marksman | `230` / `48` | `4,641` / `969` | `23` / `139.2` | **Cosmic Zenith** (+50% ATK, +30% ASPD, +35% Boss DMG) |
+
+#### Archetype Foundation Table
 
 | Archetype | Base HP ($HP_0$) | Base ATK ($ATK_0$) | Attack Interval ($t_{\text{atk}}$) | Attack Range | Base Labor ($L_0$) | Preferred Facility (+25% Synergy) | Permitted Weapons |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -292,83 +335,19 @@ Every summoned hero rolls a `QualityScalar` $q \in [0.90, 1.15]$ applied to atta
 *(Note: Rings (`RING`) are universal accessories and can be equipped by any archetype).*
 
 ### 4.2 Effective Combat & Labor Formulas
-
-**Stat-only design revision (2026-10-22; implementation and verification recorded in [IMPLEMENTATION_VERIFICATION.md](docs/balance/IMPLEMENTATION_VERIFICATION.md)).** This section changes calculations and progression. Banner, acquisition, drop rates, rewards, and navigation retain their existing rules. The complete [calculated reference](docs/balance/STAT_SCALING_TABLES.md) and [50-floor stat CSV](docs/balance/FLOOR_SCALING.csv) are generated by the offline calculator.
-
-#### 4.2.1 Leveling, stars, and the four combat stats
-
-`S` is hero stars (1–5), `L` is level (1–`10*S`), `q` is summon quality. Weapon rarity is inherent; weapon stars are progressive. `D0`, `H0`, `AS0`, and `MS0` are immutable one-star level-one seeds. Use the named hero's seeds when available.
-
-$$G(S,L) = 3^{S-1} \times 1.08^{L-1}$$
-
-$$P = InherentRarityPower \times WeaponStarMultiplier$$
-
-$$AttackDamage = \operatorname{round}\left(D_0 \times q \times G(S,L) \times \left(1 + \frac{P}{40}\right)\right)$$
-
-$$Health = \operatorname{round}\left(H_0 \times q \times G(S,L)\right)$$
-
-$$AttackSpeed = \min\left(5,\; AS_0 \times (1 + RaritySpeedBonus) \times OverdriveMultiplier\right)$$
-
-$$MovementSpeed = MS_0 = 20\text{ studs/s for launch heroes}$$
-
-- **Promotion keeps level.** Raise the cap by 10 and multiply trained damage and health by 3 at the same level; multiply labor's star factor by 1.35. No level reset or post-promotion power loss.
-- **Each level compounds damage and health by 1.08.** The old linear `1 + 0.08*(L-1)` factor is retired. Level 50 alone gives about 43.43x; combined with 5-star promotion the hero growth factor is about 3,517.62x.
-- **Weapon power amplifies the trained hero.** 20 power gives `1.50x` damage; 180 power gives `5.50x`. The fixed 40-point denominator is shared by all weapon types. A hero's seed damage, quality, level, and stars still matter at every weapon tier. Unequipping uses `P = 0`.
-- **Only damage and health grow exponentially.** Weapon star promotion multiplies power only. Rarity never changes on an owned weapon. Weapon rarity supplies a bounded attack-speed bonus. Movement speed, targeting range, labor, and stamina do not inherit combat growth. Coma disables movement/attacks; it does not change the stored movement-speed seed.
-- **Reference loadout:** The DPS benchmark uses one weapon per hero and the four specified combat stats. It assumes no additional accessory, critical-hit, or proc multipliers; it does not change the item catalog or equip permissions.
-- **Round damage and health once, at the end.** Derive from immutable seeds rather than repeatedly multiplying already-scaled fields. `ATK` and `HP` in legacy code are aliases for attack damage and health, not extra stats.
-
-Attack range remains fixed targeting metadata. Master sprint and relic-carry movement penalties belong to the player character and do not modify hero movement speed.
-
-#### 4.2.2 DPS definition, commands, and the floor-50 target
-
-The acceptance target is **at least 1B total squad DPS at 75% combat uptime**, using five 5-star level-50 heroes, Mythical 7-star weapons, and quality as low as 0.90. No higher-than-Mythical drop, critical hit, Overdrive, exposure bonus, paid modifier, or exclusive hero is required.
-
-The conservative calculation matches a 5 Hz cooldown reset:
-
-```text
-Interval = 1 / AttackSpeed
-TickInterval = 0.20 * CEILING(Interval / 0.20)
-HeroDPS = AttackDamage / TickInterval
-SquadDPS = SUM(HeroDPS of deployed heroes)
-EncounterDPS = SquadDPS * AttackUptime
-```
-
-For Han / Jenna / Aaron / Velkist / Eolka, with quality 1.00 and Mythical 7-star weapons:
-
-| Measure | Design result |
-| --- | --- |
-| Sustained five-hero squad DPS while attacking | **2.550B** |
-| DPS at 75% attack uptime | **1.913B** |
-| DPS at 75% uptime and minimum 0.90 quality | **1.721B** |
-| Han normal hit with Mythical | **394.114M** |
-| Han health | **1.055M** |
-
-`[Q]` Overdrive multiplies attack speed by 1.40 for 5s, on a 20s cooldown, at 5 stamina per hero. It does not multiply hit damage or create critical hits. Exposure multiplies hit damage by 1.25 only while the target is exposed. These two effects are distinct. Exhaustion multiplies hit damage by 0.20; coma produces zero DPS. The benchmark is a rested combat window, not an infinite-duration AFK DPS claim.
-
-Preserving cooldown remainder in a later implementation would reduce tick-quantization losses. Until then, show conservative scheduled DPS in previews; a 40% attack-speed buff can cross different tick boundaries for different heroes. Confirm actual output in Studio before claiming smooth speed gains.
-
-#### 4.2.3 Enemy scaling and encounter duration
-
-Use the [generated expected-build checkpoints and 50-floor CSV](docs/balance/STAT_SCALING_TABLES.md). Five copies of Han provide a reproducible calibration squad; the mixed launch squad above verifies the target without an exclusive summon. Checkpoint equipment is an **earned build available before that encounter**, never a stat grant for visiting its floor.
-
-For adjacent checkpoints `(fa, Da)` and `(fb, Db)`, compute the intermediate floor's expected squad output as `D(f) = Da * (Db/Da)^((f-fa)/(fb-fa))`. Interpolate reference Han health geometrically in the same way. This avoids abrupt enemy stat jumps at a hero promotion or weapon rarity threshold.
-
-| Enemy role | Maximum health | Basic attack damage | Focused contact-time target |
-| --- | --- | --- | --- |
-| Regular | `ROUND(2 * D(f))` | `ROUND(0.015 * ReferenceHeroHealth(f))` | 2s |
-| Elite | `ROUND(8 * D(f))` | `ROUND(0.030 * ReferenceHeroHealth(f))` | 8s |
-| Biome boss | `ROUND(45 * D(f))` | `ROUND(0.040 * ReferenceHeroHealth(f))` | 45s |
-
-These are static floor configurations. They do not read the visiting player's equipment and do not erase the benefit of an upgrade. Bosses spawn every fifth floor only. Additional squads share the existing encounter and shorten the fight; there is no per-visitor health inflation in this floor curve. Attack timings and signature patterns remain authored by the enemy catalog.
-
-Floor 50 has about **4.926B regular health**, **19.706B elite health**, and **110.845B boss health**. The Mythical mixed squad takes about **43.5s** of uninterrupted attacks, or **58.0s at 75% uptime**, to defeat that boss before commands. Overdrive and exposure shorten the fight. Tune boss encounters around roughly **40–65s for the reference build**, with rested heroes and correct recalls. Recheck stamina against actual encounter density: current attack-state drain is 1.5/s, Overdrive costs 5, and signatures still remove 50% stamina or cause coma. Damage growth does not bypass these skill checks.
-
-#### 4.2.4 Facility output
-
-$$EffectiveLabor = L_0 \times q \times 1.35^{S-1} \times (1 + 0.05(L-1)) \times (1 + B_{Synergy})$$
-
-`B_Synergy = 0.25` when assigned to the preferred facility (including the existing all-facility preference), applied once. Labor is facility output, separate from the four combat stats. It receives no weapon, trait, or inherited-memory modifier. Infirmary formulas in Section 4.3 remain unchanged.
+- **Level Cap Formula:**
+  $$\text{MaxLevel}(S) = S \times 10 \quad (1★ = \text{Lv.10},\; 2★ = \text{Lv.20},\; 3★ = \text{Lv.30},\; 4★ = \text{Lv.40},\; 5★ = \text{Lv.50},\; 6★ = \text{Lv.60},\; 7★ = \text{Lv.70})$$
+- **Star Promotion Multipliers:** Promoting a hero from $S \to S+1$ resets Level to `1`, increases cap by `+10`, multiplies Base Combat stats by **`1.65x`**, and multiplies Base Labor output by **`1.35x`**.
+- **Effective Combat Stats (with Artifact Integration):**
+  $$\text{EffectiveATK} = \text{round}\Big(ATK_0 \times q \times 1.65^{(S - 1)} \times \big(1 + 0.08(L - 1)\big) \times (1 + B_{\text{TraitATK}} + B_{\text{ImprintATK}})\Big) + TotalATKBonus_{\text{Artifact}}$$
+  $$\text{EffectiveHP} = \text{round}\Big(HP_0 \times q \times 1.65^{(S - 1)} \times \big(1 + 0.08(L - 1)\big) \times (1 + B_{\text{TraitHP}} + B_{\text{ImprintHP}})\Big)$$
+  $$\text{EffectiveInterval} = \max\left(0.12\text{s}, \frac{HeroBaseInterval}{1 + TotalSpeedBonus_{\text{Artifact}}}\right)$$
+  $$\text{TotalATKBonus}_{\text{Artifact}} = \text{round}\Big(ATK_{\text{Base, Rarity}} \times \text{Multiplier}_{\text{Star}}\Big)$$
+  $$\text{TotalSpeedBonus}_{\text{Artifact}} = ASPD_{\text{Base, Rarity}} \times \text{Multiplier}_{\text{Star}}$$
+  *(Where Rarity dictates inherent base stats and Stars ($1★ \to 7★$) dictate the progressive multiplier).*
+- **Effective Labor Formula:**
+  $$\text{EffectiveLabor} = L_0 \times q \times 1.35^{(S - 1)} \times \big(1 + 0.05(L - 1)\big) \times (1 + B_{\text{Synergy}}) \times (1 + B_{\text{TraitLabor}} + B_{\text{ImprintLabor}})$$
+  *(Where $B_{\text{Synergy}} = 0.25$ when assigned to preferred facility).*
 
 ### 4.3 Fortress Outskirts & Facility Economy Formulas
 
