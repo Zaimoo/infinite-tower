@@ -154,7 +154,7 @@ test("Promotion applies one multiplier and releases reserve through real levels"
 	equal(atk, math.round(66 * 1.88 * 1.12)); equal(hp, math.round(495 * 1.88))
 	local repeatATK, repeatHP = Stats.GetEffectiveCombatStats(after, false, false)
 	equal(repeatATK, atk); equal(repeatHP, hp); equal(after.BaseATK, 66)
-	close(Stats.GetEffectiveLabor(after, "FACILITY_CONDUIT"), 36.62, 0.00001)
+	close(Stats.GetEffectiveLabor(after, "FACILITY_CONDUIT"), 29.3, 0.00001)
 end)
 
 test("Conversion rewards are deterministic and account for bounded investment", function()

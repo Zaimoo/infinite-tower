@@ -455,6 +455,7 @@ local pitModal = makeFrame({
 local refreshPitModal: () -> ()
 local facilityController: any = nil
 local synthesisController: any = nil
+local forgeController: any = nil
 local refreshBlacksmithModal: () -> ()
 local selectedArtifactUUID: string? = nil
 
@@ -621,7 +622,8 @@ end)
 pitTabBtn.LayoutOrder = 1
 
 local forgeTabBtn = makeBarTextButton(centerGroup, "Tab_Blacksmith", "FORGE", 56, function()
-	_G.OpenMasterModal(blacksmithModal.Visible and "NONE" or "BLACKSMITH")
+	local isForgeOpen = (forgeController and forgeController.Root and forgeController.Root.Visible) or blacksmithModal.Visible
+	_G.OpenMasterModal(isForgeOpen and "NONE" or "BLACKSMITH")
 end)
 forgeTabBtn.LayoutOrder = 2
 
@@ -743,7 +745,7 @@ end
 
 local function updateBottomTabHighlights()
 	local pitActive = pitModal.Visible
-	local forgeActive = blacksmithModal.Visible
+	local forgeActive = (forgeController and forgeController.Root and forgeController.Root.Visible) or blacksmithModal.Visible
 	local squadActive = squadController ~= nil and squadController:IsOpen()
 	pitTabBtn:SetAttribute("IsActiveTab", pitActive)
 	forgeTabBtn:SetAttribute("IsActiveTab", forgeActive)
@@ -756,11 +758,17 @@ end
 _G.OpenMasterModal = function(which: string)
 	if facilityController then facilityController:Close() end
 	if synthesisController then synthesisController:Close() end
+	if forgeController then forgeController:Close() end
 	if which ~= "SQUAD" and which ~= "WAITING_ROOM" and squadController and squadController:IsOpen() then
 		squadController:Close()
 	end
 	pitModal.Visible = (which == "THE_PIT")
-	blacksmithModal.Visible = (which == "BLACKSMITH")
+	if which == "BLACKSMITH" and forgeController then
+		blacksmithModal.Visible = false
+		forgeController:Open()
+	else
+		blacksmithModal.Visible = (which == "BLACKSMITH")
+	end
 	if (which == "WAITING_ROOM" or which == "SQUAD") and squadController then
 		if not squadController:IsOpen() then
 			squadController:Open()
@@ -842,11 +850,15 @@ facilityController = FacilityController.new(hudGui, function() return CurrentPro
 local SynthesisController = require(script.Parent:WaitForChild("SynthesisController"))
 synthesisController = SynthesisController.new(hudGui, TycoonRemotes:WaitForChild("PitRequest") :: RemoteFunction)
 _G.SynthesisController = synthesisController
-
+local ForgeController = require(script.Parent:WaitForChild("ForgeController"))
+local ArtifactRemotes = Remotes:WaitForChild("ArtifactRemotes") :: Folder
+forgeController = ForgeController.new(hudGui, ArtifactRemotes, function() return CurrentProfile end, updateBottomTabHighlights)
+_G.ForgeController = forgeController
 _G.OpenFacilityHUD = function(facility: string)
 	if facility == "Synthesis" then
 		-- Focused synthesis HUD: recipient slot, level preview and material slots.
 		_G.OpenMasterModal("NONE")
+		if forgeController then forgeController:Close() end
 		synthesisController:Open()
 	elseif facility == "Promotion" then
 		_G.OpenMasterModal("THE_PIT")
@@ -855,6 +867,8 @@ _G.OpenFacilityHUD = function(facility: string)
 		_G.OpenMasterModal("SQUAD")
 	else
 		_G.OpenMasterModal("NONE")
+		if synthesisController then synthesisController:Close() end
+		if forgeController then forgeController:Close() end
 		facilityController:Open(facility)
 	end
 end
@@ -1024,6 +1038,9 @@ artifactLayout.Padding = UDim.new(0, 6)
 artifactLayout.Parent = artifactScroll
 
 refreshBlacksmithModal = function()
+	if forgeController then
+		forgeController:Refresh()
+	end
 	if not CurrentProfile then return end
 	local artifacts = CurrentProfile.Artifacts or {}
 
@@ -1239,9 +1256,13 @@ ProfileDeltaSyncEvent.OnClientEvent:Connect(function(profile: any)
 		end
 		profile = CurrentProfile
 	else CurrentProfile = profile end
+	_G.CurrentProfile = CurrentProfile
 	facilityController:Refresh()
 	if synthesisController and synthesisController.Root and synthesisController.Root.Visible then
 		synthesisController:Refresh()
+	end
+	if forgeController and forgeController.Root and forgeController.Root.Visible then
+		forgeController:Refresh()
 	end
 
 	currencyLabel.Text = string.format(
@@ -1275,7 +1296,7 @@ ProfileDeltaSyncEvent.OnClientEvent:Connect(function(profile: any)
 		squadController:Refresh()
 	end
 	pitController:ProfileChanged(profile)
-	if blacksmithModal.Visible and refreshBlacksmithModal then
+	if ((forgeController and forgeController.Root and forgeController.Root.Visible) or blacksmithModal.Visible) and refreshBlacksmithModal then
 		refreshBlacksmithModal()
 	end
 end)
