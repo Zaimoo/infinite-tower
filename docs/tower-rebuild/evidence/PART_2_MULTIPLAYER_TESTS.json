@@ -1,0 +1,32 @@
+{
+  "Result": {
+    "Passed": true,
+    "Results": [
+      {
+        "Name": "Two real clients share floor 50 metadata positions and accurate visitor/squad presence",
+        "Passed": true
+      },
+      {
+        "Name": "Reassignment updates both viewers without duplicating heroes or switching owner view",
+        "Passed": true
+      },
+      {
+        "Name": "Cross-floor pickup and stale room snapshots/metadata fail on actual clients",
+        "Passed": true
+      },
+      {
+        "Name": "Respawn returns player to hub while independently assigned heroes retain floor and health",
+        "Passed": true
+      },
+      {
+        "Name": "Leaving client clears visitor/squad presence and deployed entities for the remaining viewer",
+        "Passed": true
+      },
+      {
+        "Name": "Room retirement increments geometry generation while retaining encounter payout claims",
+        "Passed": true
+      }
+    ]
+  },
+  "Succeeded": true
+}

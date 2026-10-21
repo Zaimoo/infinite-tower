@@ -1,0 +1,4 @@
+EQUIPMENT_SAMPLE hero=hero_han star=1 rarity=1 rebuildATK=59 tickATK=44 lostATK=15 retainedInterval=0.809524
+PASS equipped ATK loss reproduced for all 112 star/rarity combinations using extracted current production call sites
+PASS elite damage predicate accepts hero 100 studs above elite at same X/Z; horizontalDistance=0 AoERadius=22
+LIMITS: isolated CLI proof of actual formula/catalog bodies and extracted production statements; not an end-to-end Studio playtest

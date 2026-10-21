@@ -1,0 +1,130 @@
+{
+  "StudioScriptCount": 54,
+  "UniqueBodiesCaptured": 48,
+  "CaptureIntegrityErrors": [],
+  "ExistingSourceScriptCount": 48,
+  "SharedContentDifferences": 16,
+  "StudioOnlyScripts": 6,
+  "Differences": [
+    {
+      "Path": "ReplicatedStorage.Assets.ArtPackVisuals",
+      "Difference": "CONTENT_DIFFERS",
+      "SourceHash": "f98f3487",
+      "StudioHash": "f66021bb"
+    },
+    {
+      "Path": "ReplicatedStorage.Shared.Config.FacilityConfig",
+      "Difference": "CONTENT_DIFFERS",
+      "SourceHash": "a5bef342",
+      "StudioHash": "af947d63"
+    },
+    {
+      "Path": "ReplicatedStorage.Shared.Config.HeroCatalog",
+      "Difference": "CONTENT_DIFFERS",
+      "SourceHash": "761ed4bc",
+      "StudioHash": "1f747f7a"
+    },
+    {
+      "Path": "ReplicatedStorage.Shared.Config.PitBalanceConfig",
+      "Difference": "CONTENT_DIFFERS",
+      "SourceHash": "8d001c88",
+      "StudioHash": "36dde13a"
+    },
+    {
+      "Path": "ReplicatedStorage.Shared.Util.StatFormulas",
+      "Difference": "CONTENT_DIFFERS",
+      "SourceHash": "000afa55",
+      "StudioHash": "3dfed715"
+    },
+    {
+      "Path": "ServerScriptService.BaseOverhaul.PlaceIslandsInRing",
+      "Difference": "CONTENT_DIFFERS",
+      "SourceHash": "3b94815a",
+      "StudioHash": "eefff567"
+    },
+    {
+      "Path": "ServerScriptService.Core.DataManager",
+      "Difference": "CONTENT_DIFFERS",
+      "SourceHash": "19dcd3b8",
+      "StudioHash": "6e483ea1"
+    },
+    {
+      "Path": "ServerScriptService.Core.PitService",
+      "Difference": "CONTENT_DIFFERS",
+      "SourceHash": "32da8db4",
+      "StudioHash": "b5420c19"
+    },
+    {
+      "Path": "ServerScriptService.Core.PlotBuildings",
+      "Difference": "CONTENT_DIFFERS",
+      "SourceHash": "0e110d06",
+      "StudioHash": "41607f7e"
+    },
+    {
+      "Path": "ServerScriptService.Core.PlotFacilityArchitecture",
+      "Difference": "CONTENT_DIFFERS",
+      "SourceHash": "8a13651f",
+      "StudioHash": "04c07e60"
+    },
+    {
+      "Path": "ServerScriptService.Core.PlotManager",
+      "Difference": "CONTENT_DIFFERS",
+      "SourceHash": "092678fa",
+      "StudioHash": "e4a84b8f"
+    },
+    {
+      "Path": "ServerScriptService.ExtractionAndSocial.SyndicateService",
+      "Difference": "CONTENT_DIFFERS",
+      "SourceHash": "f5144d9f",
+      "StudioHash": "754f7235"
+    },
+    {
+      "Path": "ServerScriptService.Tycoon.WaitingRoomService",
+      "Difference": "CONTENT_DIFFERS",
+      "SourceHash": "a561552c",
+      "StudioHash": "cc373c63"
+    },
+    {
+      "Path": "StarterPlayer.StarterPlayerScripts.Input.MasterController",
+      "Difference": "CONTENT_DIFFERS",
+      "SourceHash": "6d84ba99",
+      "StudioHash": "3e07125a"
+    },
+    {
+      "Path": "StarterPlayer.StarterPlayerScripts.UI.HUDController",
+      "Difference": "CONTENT_DIFFERS",
+      "SourceHash": "08a68362",
+      "StudioHash": "5e59eb1f"
+    },
+    {
+      "Path": "StarterPlayer.StarterPlayerScripts.UI.PitController",
+      "Difference": "CONTENT_DIFFERS",
+      "SourceHash": "6afddd86",
+      "StudioHash": "7094ea70"
+    },
+    {
+      "Path": "ReplicatedStorage.Assets.Heroes.hero_jenna.RightUpperArm.CrystalPauldron.LightConfig",
+      "Difference": "STUDIO_ONLY"
+    },
+    {
+      "Path": "ReplicatedStorage.Assets.Heroes.hero_jenna.RightUpperArm.CrystalPauldron.LightConfig.EasyConfiguration",
+      "Difference": "STUDIO_ONLY"
+    },
+    {
+      "Path": "ReplicatedStorage.Assets.Heroes.hero_jenna.RightUpperArm.CrystalPauldron.LightConfig.Type",
+      "Difference": "STUDIO_ONLY"
+    },
+    {
+      "Path": "StarterPlayer.StarterPlayerScripts.BlurGuard",
+      "Difference": "STUDIO_ONLY"
+    },
+    {
+      "Path": "StarterPlayer.StarterPlayerScripts.UI.PromotionController",
+      "Difference": "STUDIO_ONLY"
+    },
+    {
+      "Path": "StarterPlayer.StarterPlayerScripts.UI.SquadController",
+      "Difference": "STUDIO_ONLY"
+    }
+  ]
+}

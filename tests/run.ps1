@@ -30,8 +30,16 @@ if ($LASTEXITCODE -ne 0) { throw 'Production Luau compilation failed.' }
 # catalog. The actual math, economy validation and transactions run as shipped.
 $modulePaths = @(
     'ReplicatedStorage/Shared/Config/HeroCatalog.luau',
+    'ReplicatedStorage/Shared/Config/ArtifactCatalog.luau',
     'ReplicatedStorage/Shared/Config/FacilityConfig.luau',
     'ReplicatedStorage/Shared/Config/PitBalanceConfig.luau',
+    'ReplicatedStorage/Shared/Config/MobCatalog.luau',
+    'ReplicatedStorage/Shared/Config/TowerFloorConfig.luau',
+    'ReplicatedStorage/Shared/Config/FirstBiomeCombat.luau',
+    'ReplicatedStorage/Shared/Util/AttackTimeline.luau',
+    'ReplicatedStorage/Shared/Util/EnemyActionState.luau',
+    'ReplicatedStorage/Shared/Util/TowerProtocol.luau',
+    'ReplicatedStorage/Shared/Util/TowerRequestPolicy.luau',
     'ReplicatedStorage/Shared/Util/StatFormulas.luau',
     'ReplicatedStorage/Shared/Util/PitMath.luau',
     'ServerScriptService/Core/PitService.luau'
@@ -45,8 +53,13 @@ foreach ($modulePath in $modulePaths) {
     $bundleParts.Add([System.IO.File]::ReadAllText($sourcePath))
     $bundleParts.Add("`nend)")
 }
-$bundleParts.Add([System.IO.File]::ReadAllText((Join-Path $PSScriptRoot 'pit.spec.luau')))
-$bundlePath = Join-Path $LuauDirectory 'infinite-tower-pit-tests.luau'
+foreach ($suite in @('pit.spec.luau', 'tower.spec.luau', 'tower-transport.spec.luau', 'tower-combat.spec.luau')) {
+    $bundleParts.Add('do')
+    $bundleParts.Add([System.IO.File]::ReadAllText((Join-Path $PSScriptRoot $suite)))
+    $bundleParts.Add("`nend")
+}
+# Keep generated tests out of the installed CLI directory, which may be read-only.
+$bundlePath = Join-Path $env:TEMP 'infinite-tower-tests.luau'
 [System.IO.File]::WriteAllText($bundlePath, ($bundleParts -join "`n"), [System.Text.UTF8Encoding]::new($false))
 & $luau $bundlePath
-if ($LASTEXITCODE -ne 0) { throw 'Pit regression tests failed.' }
+if ($LASTEXITCODE -ne 0) { throw 'Pit/tower regression tests failed.' }

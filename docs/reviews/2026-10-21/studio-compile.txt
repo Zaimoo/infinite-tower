@@ -1,0 +1,3 @@
+Current Studio application source compilation only; scripts are not executed.
+Bodies: 48; exit code: 0
+Compiled 16 KLOC into 521 KB bytecode (read 0.04s, parse 0.02s, compile 0.05s)

@@ -1,0 +1,31 @@
+{
+  "Tests": [
+    {
+      "Name": "Existing elite AoE cannot damage a different FloorId even with identical physical coordinates",
+      "Passed": true
+    },
+    {
+      "Name": "Live dropped loot pins its room until the physical item is removed",
+      "Passed": true
+    }
+  ],
+  "PrivatePad": "Real owned private pad paid exactly once; balances restored in disposable Play session",
+  "Mobile": {
+    "Device": "iPhone 17 Pro",
+    "Orientation": "LandscapeLeft",
+    "GameOrientation": "Sensor",
+    "Viewport": "750x381",
+    "Panel": "500x291",
+    "ActionButton": "145x44",
+    "Insets": "CoreUISafeInsets",
+    "TravelBarHiddenWhenSelectorOpen": true
+  },
+  "DesktopMouseRoute": [
+    0,
+    1,
+    5,
+    50,
+    0
+  ],
+  "StreamingEnabled": true
+}

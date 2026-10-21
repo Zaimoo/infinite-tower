@@ -1,0 +1,402 @@
+{
+  "GameId": 10771894864,
+  "StreamingEnabled": true,
+  "PlaceId": 136256010643848,
+  "Scripts": [
+    {
+      "Bytes": 13339,
+      "Path": "ReplicatedStorage.Assets.ArtPackVisuals",
+      "Class": "ModuleScript",
+      "Hash": "f66021bb"
+    },
+    {
+      "Bytes": 28802,
+      "Path": "ReplicatedStorage.Assets.Heroes.hero_aaron.Animate",
+      "Class": "LocalScript",
+      "Hash": "e15688ee"
+    },
+    {
+      "Bytes": 28802,
+      "Path": "ReplicatedStorage.Assets.Heroes.hero_archon.Animate",
+      "Class": "LocalScript",
+      "Hash": "e15688ee"
+    },
+    {
+      "Bytes": 28802,
+      "Path": "ReplicatedStorage.Assets.Heroes.hero_catio.Animate",
+      "Class": "LocalScript",
+      "Hash": "e15688ee"
+    },
+    {
+      "Bytes": 28802,
+      "Path": "ReplicatedStorage.Assets.Heroes.hero_eolka.Animate",
+      "Class": "LocalScript",
+      "Hash": "e15688ee"
+    },
+    {
+      "Bytes": 28802,
+      "Path": "ReplicatedStorage.Assets.Heroes.hero_han.Animate",
+      "Class": "LocalScript",
+      "Hash": "e15688ee"
+    },
+    {
+      "Bytes": 28802,
+      "Path": "ReplicatedStorage.Assets.Heroes.hero_jenna.Animate",
+      "Class": "LocalScript",
+      "Hash": "e15688ee"
+    },
+    {
+      "Bytes": 6800,
+      "Path": "ReplicatedStorage.Assets.Heroes.hero_jenna.RightUpperArm.CrystalPauldron.LightConfig",
+      "Class": "Script",
+      "Hash": "7a0dff67"
+    },
+    {
+      "Bytes": 4353,
+      "Path": "ReplicatedStorage.Assets.Heroes.hero_jenna.RightUpperArm.CrystalPauldron.LightConfig.EasyConfiguration",
+      "Class": "ModuleScript",
+      "Hash": "0e39752b"
+    },
+    {
+      "Bytes": 6575,
+      "Path": "ReplicatedStorage.Assets.Heroes.hero_jenna.RightUpperArm.CrystalPauldron.LightConfig.Type",
+      "Class": "ModuleScript",
+      "Hash": "c3405b9d"
+    },
+    {
+      "Bytes": 28802,
+      "Path": "ReplicatedStorage.Assets.Heroes.hero_velkist.Animate",
+      "Class": "LocalScript",
+      "Hash": "e15688ee"
+    },
+    {
+      "Bytes": 10678,
+      "Path": "ReplicatedStorage.Shared.Config.ArtifactCatalog",
+      "Class": "ModuleScript",
+      "Hash": "53a3f6f3"
+    },
+    {
+      "Bytes": 459,
+      "Path": "ReplicatedStorage.Shared.Config.FacilityConfig",
+      "Class": "ModuleScript",
+      "Hash": "af947d63"
+    },
+    {
+      "Bytes": 4959,
+      "Path": "ReplicatedStorage.Shared.Config.HeroCatalog",
+      "Class": "ModuleScript",
+      "Hash": "1f747f7a"
+    },
+    {
+      "Bytes": 3103,
+      "Path": "ReplicatedStorage.Shared.Config.PitBalanceConfig",
+      "Class": "ModuleScript",
+      "Hash": "36dde13a"
+    },
+    {
+      "Bytes": 1878,
+      "Path": "ReplicatedStorage.Shared.Config.RelicConfig",
+      "Class": "ModuleScript",
+      "Hash": "ddde1cfc"
+    },
+    {
+      "Bytes": 3466,
+      "Path": "ReplicatedStorage.Shared.Config.WorldBossConfig",
+      "Class": "ModuleScript",
+      "Hash": "001547d2"
+    },
+    {
+      "Bytes": 7680,
+      "Path": "ReplicatedStorage.Shared.Util.GothicBoxStyle",
+      "Class": "ModuleScript",
+      "Hash": "2b85b450"
+    },
+    {
+      "Bytes": 5415,
+      "Path": "ReplicatedStorage.Shared.Util.PitMath",
+      "Class": "ModuleScript",
+      "Hash": "a29ec02a"
+    },
+    {
+      "Bytes": 5501,
+      "Path": "ReplicatedStorage.Shared.Util.StatFormulas",
+      "Class": "ModuleScript",
+      "Hash": "3dfed715"
+    },
+    {
+      "Bytes": 1234,
+      "Path": "ReplicatedStorage.TowerSpawnLayout",
+      "Class": "ModuleScript",
+      "Hash": "5c4c3abb"
+    },
+    {
+      "Bytes": 2642,
+      "Path": "ServerScriptService.BaseOverhaul.BridgeBuilder",
+      "Class": "ModuleScript",
+      "Hash": "fe47219a"
+    },
+    {
+      "Bytes": 11836,
+      "Path": "ServerScriptService.BaseOverhaul.FountainBuilder",
+      "Class": "ModuleScript",
+      "Hash": "7cbd4620"
+    },
+    {
+      "Bytes": 9530,
+      "Path": "ServerScriptService.BaseOverhaul.IslandBuilder",
+      "Class": "ModuleScript",
+      "Hash": "4da8c28c"
+    },
+    {
+      "Bytes": 3806,
+      "Path": "ServerScriptService.BaseOverhaul.LightingAndEffects",
+      "Class": "ModuleScript",
+      "Hash": "6cbe426c"
+    },
+    {
+      "Bytes": 14049,
+      "Path": "ServerScriptService.BaseOverhaul.PlaceIslandsInRing",
+      "Class": "Script",
+      "Hash": "eefff567"
+    },
+    {
+      "Bytes": 14862,
+      "Path": "ServerScriptService.BaseOverhaul.TowerBuilder",
+      "Class": "ModuleScript",
+      "Hash": "3a1b5095"
+    },
+    {
+      "Bytes": 9953,
+      "Path": "ServerScriptService.BaseOverhaul.WallsBuilder",
+      "Class": "ModuleScript",
+      "Hash": "aa79d671"
+    },
+    {
+      "Bytes": 62900,
+      "Path": "ServerScriptService.Combat.CombatSimulation",
+      "Class": "Script",
+      "Hash": "c5c5363d"
+    },
+    {
+      "Bytes": 32705,
+      "Path": "ServerScriptService.Core.DataManager",
+      "Class": "Script",
+      "Hash": "6e483ea1"
+    },
+    {
+      "Bytes": 8013,
+      "Path": "ServerScriptService.Core.HeroNavigation",
+      "Class": "ModuleScript",
+      "Hash": "86744023"
+    },
+    {
+      "Bytes": 26264,
+      "Path": "ServerScriptService.Core.PitService",
+      "Class": "ModuleScript",
+      "Hash": "b5420c19"
+    },
+    {
+      "Bytes": 356,
+      "Path": "ServerScriptService.Core.PlotBuildingPlacement",
+      "Class": "Script",
+      "Hash": "3ee272c9"
+    },
+    {
+      "Bytes": 4869,
+      "Path": "ServerScriptService.Core.PlotBuildings",
+      "Class": "ModuleScript",
+      "Hash": "41607f7e"
+    },
+    {
+      "Bytes": 19421,
+      "Path": "ServerScriptService.Core.PlotFacilityArchitecture",
+      "Class": "ModuleScript",
+      "Hash": "04c07e60"
+    },
+    {
+      "Bytes": 7847,
+      "Path": "ServerScriptService.Core.PlotManager",
+      "Class": "Script",
+      "Hash": "e4a84b8f"
+    },
+    {
+      "Bytes": 6182,
+      "Path": "ServerScriptService.Core.TowerTraversal",
+      "Class": "ModuleScript",
+      "Hash": "7521be75"
+    },
+    {
+      "Bytes": 427,
+      "Path": "ServerScriptService.Core.TowerTraversalSetup",
+      "Class": "Script",
+      "Hash": "30ae7117"
+    },
+    {
+      "Bytes": 14877,
+      "Path": "ServerScriptService.ExtractionAndSocial.RelicService",
+      "Class": "Script",
+      "Hash": "c175ba0f"
+    },
+    {
+      "Bytes": 4582,
+      "Path": "ServerScriptService.ExtractionAndSocial.SyndicateService",
+      "Class": "Script",
+      "Hash": "754f7235"
+    },
+    {
+      "Bytes": 6564,
+      "Path": "ServerScriptService.Tycoon.BlacksmithService",
+      "Class": "Script",
+      "Hash": "a05a1b80"
+    },
+    {
+      "Bytes": 3239,
+      "Path": "ServerScriptService.Tycoon.WaitingRoomService",
+      "Class": "Script",
+      "Hash": "cc373c63"
+    },
+    {
+      "Bytes": 13657,
+      "Path": "ServerStorage.ArtPack_Backup_20261020.EntityRenderer",
+      "Disabled": true,
+      "Class": "LocalScript",
+      "Hash": "1c10a1b3"
+    },
+    {
+      "Bytes": 47478,
+      "Path": "ServerStorage.ArtPack_Backup_20261020.HUDController",
+      "Disabled": true,
+      "Class": "LocalScript",
+      "Hash": "b0252447"
+    },
+    {
+      "Bytes": 7843,
+      "Path": "ServerStorage.ArtPack_Backup_20261020.PlotManager",
+      "Disabled": true,
+      "Class": "Script",
+      "Hash": "332f70a8"
+    },
+    {
+      "Bytes": 20010,
+      "Path": "ServerStorage.ArtPack_Backup_20261020.RelicService",
+      "Disabled": true,
+      "Class": "Script",
+      "Hash": "d4be1f06"
+    },
+    {
+      "Bytes": 3788,
+      "Path": "ServerStorage.BeforeEnvironmentCollisions_20261020.ArtPackVisuals",
+      "Class": "ModuleScript",
+      "Hash": "0802865d"
+    },
+    {
+      "Bytes": 62118,
+      "Path": "ServerStorage.BeforeTowerEnemyAlignment_1792512906.CombatSimulation",
+      "Class": "Script",
+      "Hash": "e8e1e2c1"
+    },
+    {
+      "Bytes": 15724,
+      "Path": "ServerStorage.BeforeTowerEnemyAlignment_1792512906.EntityRenderer",
+      "Class": "LocalScript",
+      "Hash": "47b450e7"
+    },
+    {
+      "Bytes": 936,
+      "Path": "StarterPlayer.StarterPlayerScripts.BlurGuard",
+      "Class": "LocalScript",
+      "Hash": "02885cc8"
+    },
+    {
+      "Bytes": 6633,
+      "Path": "StarterPlayer.StarterPlayerScripts.Input.MasterController",
+      "Class": "LocalScript",
+      "Hash": "3e07125a"
+    },
+    {
+      "Bytes": 16537,
+      "Path": "StarterPlayer.StarterPlayerScripts.Rendering.EntityRenderer",
+      "Class": "LocalScript",
+      "Hash": "e6143d05"
+    },
+    {
+      "Bytes": 1445,
+      "Path": "StarterPlayer.StarterPlayerScripts.Rendering.HoldingAnimationController",
+      "Class": "LocalScript",
+      "Hash": "4bf20fad"
+    },
+    {
+      "Bytes": 10657,
+      "Path": "StarterPlayer.StarterPlayerScripts.UI.FacilityController",
+      "Class": "ModuleScript",
+      "Hash": "0bb55d6f"
+    },
+    {
+      "Bytes": 61566,
+      "Path": "StarterPlayer.StarterPlayerScripts.UI.HUDController",
+      "Class": "LocalScript",
+      "Hash": "5e59eb1f"
+    },
+    {
+      "Bytes": 6675,
+      "Path": "StarterPlayer.StarterPlayerScripts.UI.HeroCard",
+      "Class": "ModuleScript",
+      "Hash": "d7d8e92a"
+    },
+    {
+      "Bytes": 56762,
+      "Path": "StarterPlayer.StarterPlayerScripts.UI.PitController",
+      "Class": "ModuleScript",
+      "Hash": "7094ea70"
+    },
+    {
+      "Bytes": 3497,
+      "Path": "StarterPlayer.StarterPlayerScripts.UI.PitDesignTokens",
+      "Class": "ModuleScript",
+      "Hash": "929976f8"
+    },
+    {
+      "Bytes": 27135,
+      "Path": "StarterPlayer.StarterPlayerScripts.UI.PromotionController",
+      "Class": "ModuleScript",
+      "Hash": "8b907b69"
+    },
+    {
+      "Bytes": 22544,
+      "Path": "StarterPlayer.StarterPlayerScripts.UI.SquadController",
+      "Class": "ModuleScript",
+      "Hash": "665aecf6"
+    },
+    {
+      "Bytes": 25133,
+      "Path": "StarterPlayer.StarterPlayerScripts.UI.SynthesisController",
+      "Class": "ModuleScript",
+      "Hash": "a9cba5fc"
+    },
+    {
+      "Bytes": 28802,
+      "Path": "Workspace.ModelViewer.JennaPreview.Animate",
+      "Class": "LocalScript",
+      "Hash": "e15688ee"
+    },
+    {
+      "Bytes": 6800,
+      "Path": "Workspace.ModelViewer.JennaPreview.RightUpperArm.CrystalPauldron.LightConfig",
+      "Class": "Script",
+      "Hash": "7a0dff67"
+    },
+    {
+      "Bytes": 4353,
+      "Path": "Workspace.ModelViewer.JennaPreview.RightUpperArm.CrystalPauldron.LightConfig.EasyConfiguration",
+      "Class": "ModuleScript",
+      "Hash": "0e39752b"
+    },
+    {
+      "Bytes": 6575,
+      "Path": "Workspace.ModelViewer.JennaPreview.RightUpperArm.CrystalPauldron.LightConfig.Type",
+      "Class": "ModuleScript",
+      "Hash": "c3405b9d"
+    }
+  ],
+  "MaxPlayers": 60
+}

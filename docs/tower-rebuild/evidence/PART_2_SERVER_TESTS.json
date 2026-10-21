@@ -1,0 +1,42 @@
+[
+  {
+    "Name": "Live HP stamina cooldown and physical cargo identity survive floor-50 travel without banking",
+    "Passed": true
+  },
+  {
+    "Name": "Cross-floor pickups fail even when the physical part is placed beside the carrier",
+    "Passed": true
+  },
+  {
+    "Name": "Relic cargo preserves identity locks expiry weld and private extraction rejects off-map",
+    "Passed": true
+  },
+  {
+    "Name": "Duplicate terminal requests replay once while changed payloads do not mutate location",
+    "Passed": true
+  },
+  {
+    "Name": "Server safe arrival checks reject unsupported surfaces without moving the character",
+    "Passed": true
+  },
+  {
+    "Name": "Readiness timeout rejects stale Ready and preserves current source damage and membership",
+    "Passed": true
+  },
+  {
+    "Name": "Cancellation releases destination reservation and repeated pending IDs cannot duplicate travel",
+    "Passed": true
+  },
+  {
+    "Name": "Bounds recovery returns a falling character to its own validated landing",
+    "Passed": true
+  },
+  {
+    "Name": "Opaque room enclosures block hub and neighboring rooms",
+    "Passed": true
+  },
+  {
+    "Name": "300 relevant fixture entities retain IDs and metadata beyond the legacy 255 limit",
+    "Passed": true
+  }
+]

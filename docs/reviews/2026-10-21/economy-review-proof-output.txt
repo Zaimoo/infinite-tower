@@ -1,0 +1,8 @@
+PASS: two immediate self-bless calls: +50 Gems, +10 Honor
+PASS: two immediate self-leech/purge pairs: +100 Gems, +1000 Gold
+PASS: two immediate self-bless calls: +50 Gems, +10 Honor
+PASS: two immediate self-leech/purge pairs: +100 Gems, +1000 Gold
+PASS: intended BENCHED A is redeployed into SQUAD_SLOT_1 by stale order
+PASS: displaced A is redeployed into empty SQUAD_SLOT_2 after replacing slot 1 with B
+PASS: rejected SQUAD_AUTO removes existing infirmary worker index while preserving assignment: All 5 Squad Slots are full!
+All 7 isolated review reproductions passed. These are bug reproductions, not successful gameplay acceptance checks.
