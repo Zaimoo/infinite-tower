@@ -1,5 +1,5 @@
 # DOCUMENT 1: COMPLETE GAME DESIGN DOCUMENT (GDD)
-**Project Codename:** *Project: Waiting Room* (*Infinite Towers: Become a Master!*)  
+**Project Title:** *Infinite Tower: Become a Master!*  
 **Target Platform:** Roblox (PC, Mobile, Tablet, Console)  
 **Server Capacity:** 5–6 Players per Server  
 **Engine Architecture:** Server-Authoritative Data Tables (5 Hz Heartbeat) + Client-Side R15 Visual Interpolation (60 FPS `RenderStepped`) | Hybrid Replication: Central Hub 14-Byte Binary Buffers + Infinite Tower Room-Local v2 Binary Buffers (24-byte entity records, 46-byte header)
@@ -9,35 +9,35 @@
 ## 1. EXECUTIVE OVERVIEW & PLAYER FANTASY
 
 ### 1.1 High-Concept Pitch
-**Project: Waiting Room** is a tactical squad-command Action-RPG, extraction sandbox, and Tycoon inspired by the dark survival manhwa *Pick Me Up, Infinite Gacha*. Players do not play as generic hack-and-slash warriors; instead, each player embodies a **Master**—a dimensional overseer who summons, trains, equips, promotes, and commands a roster of sentient Gacha Heroes from a private floating fortress known as **The Waiting Room**.
+**Infinite Tower: Become a Master!** is a tactical squad-command Action-RPG, extraction sandbox, and fortress progression game inspired by the dark survival manhwa *Pick Me Up, Infinite Gacha*. Players do not play as generic hack-and-slash warriors; instead, each player embodies a **Master**—a dimensional overseer who summons, trains, equips, promotes, and commands a roster of sentient Gacha Heroes from a private floating sanctuary known as the **Master's Fortress Plot**.
 
 ### 1.2 The "Pick Me Up" Fantasy & Zero-Waste Roster Economy
-In traditional gacha/simulator games, 95% of summons are discarded as worthless stat-sticks, and combat is reduced to passive AFK auto-clicking. **Project: Waiting Room** solves both problems through two foundational pillars:
+In traditional gacha/simulator games, 95% of summons are discarded as worthless stat-sticks, and combat is reduced to passive AFK auto-clicking. **Infinite Tower** solves both problems through two foundational pillars:
 
 1. **The Dual-Role Living Roster (Combat + Labor):**
-   - Every hero pulled from the Summoning Altar rolls with **Combat Stats** (`HP`, `ATK`, `Range`), **Labor Output** (Tycoon productivity), and a **Passive Trait**.
-   - **Up to 5 Deployed Heroes** (all 5 slots unlocked from the start) accompany the Master into the Central Hub Arena or are independently deployed to specific floors (1–50) of the **Infinite Tower**. Heroes expend **Stamina** as they fight and risk a debilitating **60-second Coma** if left inside lethal AoE telegraphs.
-   - **Benched Heroes** physically inhabit the player's **Waiting Room** plot on recuperation beds in **The Infirmary & Barracks** (Stamina & Coma recovery), or can be forged powerful equipment at the **Blacksmith Forge**.
+   - Every hero pulled from the Summoning Altar rolls with **Combat Stats** (`HP`, `ATK`, `Range`), **Labor Output** (Base productivity), and a **Passive Trait**.
+   - **Up to 5 Deployed Heroes** (all 5 slots unlocked from the start) accompany the Master into the Central Hub or are independently deployed to specific floors (1–50) of the **Infinite Tower**. Heroes expend **Stamina** as they fight and risk a debilitating **60-second Coma** if left inside lethal AoE telegraphs.
+   - **Benched Heroes** physically inhabit the player's **Fortress Plot** on recuperation beds in **The Infirmary & Barracks** (Stamina & Coma recovery), or can be forged powerful equipment at the **Blacksmith Forge**.
    - **Zero Dead Pulls:** Duplicate 1★–3★ heroes are fed into the **Synthesis Chamber** (`SynthesisController.luau`) for EXP leveling to cap (`MaxLevel = Stars * 10`), or sacrificed at the **Promotion Altar** (`PromotionController.luau`) for **Star Promotion** ($1★ \to 5★$).
    - **Deterministic Forge Upgrades:** Gathered materials (`IronGear`, `RiftOrb`, `AegisGem`, `StarDust`, `VoidPowder`) are crafted and upgraded at the **Blacksmith Forge** (`ForgeController.luau`) across **16 Rarity Tiers** (`Common` $\to$ `Origin`) and 10 Enhancement Levels (+0 to +10).
 
 2. **Tactical Master Agency Over AFK Whaling:**
    - The Master carries no personal weapon. Instead, the Master directs squads through battlefield commands—**`[Click / Tap]` Focus Target**, **`[Q]` Overdrive Whistle**, and **`[E]` Emergency Recall Whistle**—while physically hauling heavy, high-value **Relics** and cargo back to their plot.
    - Masters use **`[LeftShift]` Sprint** ($3.0\times$ speed multiplier) to cross high-elevation bridges and dodge lethal hazards.
-   - Because boss signature skill checks (the World Boss's **Devouring Nova** and Tower Milestone Boss AoEs) inflict instant 50% Stamina loss or a **60-second Coma** on heroes left inside the blast zone, an AFK player will have their squad wiped and sent to the Infirmary, dropping their DPS to zero. An active Master who times **`[E]` Emergency Recall Whistle** to dodge the blast and triggers **`[Q]` Overdrive Whistle** during punish windows will consistently out-damage and out-loot an AFK whale.
+   - Because boss signature skill checks (the **Biome Boss** signature attacks like *Moss Quake* and *Sweeping Roots*, and elite ground telegraphs) inflict instant 50% Stamina loss or a **60-second Coma** on heroes left inside the blast zone, an AFK player will have their squad wiped and sent to the Infirmary, dropping their DPS to zero. An active Master who times **`[E]` Emergency Recall Whistle** to dodge the blast and triggers **`[Q]` Overdrive Whistle** during punish windows will consistently out-damage and out-loot an AFK whale.
 
 ### 1.3 Hybrid Retention Matrix & Core Drivers
 
-| Reference Title | Adopted Core Mechanic | *Project: Waiting Room* Evolution |
+| Reference Title | Adopted Core Mechanic | *Infinite Tower* Evolution |
 | :--- | :--- | :--- |
 | ***Pick Me Up, Infinite Gacha*** | Desperate squad survival, Synthesis chamber, Star Promotion, living lobby workers | Heroes suffer Stamina drain and `Coma` if mismanaged; 4★/5★ heroes require hard promotion sacrifices; War Banner plot deployment. |
 | ***Pet Simulator 99*** | Multi-unit squad grinding, tactile loot explosions, exponential progression | Replaces passive pet hovering with Stamina-managed combat squads, active whistle commands, and isolated 50-floor dynamic tower rooms. |
-| ***Blox Fruits*** | Telegraphed boss skills, live DPS leaderboards, open-world bounty hunting | **Greed vs. Coma** boss checks, 50-floor milestone bosses, and **Contested Loot & Targeted Retaliation PvP** in arena rings. |
+| ***Blox Fruits*** | Telegraphed boss skills, live DPS leaderboards, open-world bounty hunting | **Greed vs. Coma** boss checks, 10 **Biome Bosses** (Floors 5, 10, ..., 50), and **Contested Loot & Targeted Retaliation PvP** in arena rings. |
 | ***Grow a Garden*** | Cozy-yet-competitive perimeter plots, passive production, neighbor visits | Visitors perform identical animations to either **Bless** (+25% output) or **Plant Leech Rune** (-20% stolen). |
 | ***Steal an Egg*** | Physical object hauling, movement penalties, fumble & steal tension | High-tier **Relics** & cargo weld overhead, slow WalkSpeed by up to -45%, and fumble on AoE hits. |
 
 **The Intimate Server Dynamic:**
-In a 5–6 player server, anonymity disappears. Every player knows who holds Rank #1 DPS on the World Boss, who just scooped contested loot, and who holds an active 3-minute retaliation grudge. The interplay of high-stakes extraction, boss timing, and targeted revenge loops keeps players engaged in continuous 20-minute World Boss cycles and Infinite Tower floor pushes.
+In a 5–6 player server, anonymity disappears. Every player knows who conquered the latest Biome Boss, who just scooped contested loot, and who holds an active 3-minute retaliation grudge. The interplay of high-stakes extraction, boss timing, and targeted revenge loops keeps players engaged in continuous Biome Boss clears and Infinite Tower floor pushes.
 
 ---
 
@@ -61,13 +61,13 @@ flowchart TD
         T5 --> T6["Social: Bless Neighbor Infirmary or Purge Leech Runes"]
     end
 
-    subgraph Macro["20-Minute Loop: World Boss & Tower Progression"]
-        W1["T-3:00 Warning: Rest Squad to 100% Stamina & Equip Weapons"] --> W2["Converge at Ring 3: The Dimensional Sovereign"]
-        W2 --> W3["Survive 'Devouring Nova' every 20s via [E] Recall Whistle"]
-        W3 --> W4["Punish Window: [Q] Overdrive to Climb Live DPS Leaderboard"]
-        W4 --> W5["Direct Payout (Gold, Gems, Archon RNG) + Boss Pity Meter"]
-        W5 --> W6["Physical Drop: Rank #1 Hauls Calamity Heart (15s Exclusive Lock)"]
-        W6 --> W7["Infinite Tower Progression: Push Milestone Boss Floors (Every 5th Floor)"]
+    subgraph Macro["Macro Loop: Tower Progression & Biome Boss Conquests"]
+        B1["Prepare Squad: Rest to 100% Stamina & Equip Highest Forged Artifacts"] --> B2["Advance Tower Floors: Clear Mobs & Elites across 5-Floor Biome"]
+        B2 --> B3["Engage Biome Boss on Floor Milestone (Floor 5, 10, 15... 50)"]
+        B3 --> B4["Dodge Signature Telegraphed AoEs (Self/Target Discs) via [E] Recall"]
+        B4 --> B5["Punish Window: Trigger [Q] Overdrive to Burst Down Boss HP"]
+        B5 --> B6["Claim Pinnacle Rewards: Massive Gold/Gems, Rare Crafting Mats & 5★-7★ Artifacts"]
+        B6 --> B7["Unlock Next Biome Tier & Advance to Higher Tower Floors"]
     end
 
     Micro --> Meso
@@ -78,7 +78,7 @@ flowchart TD
 ### 2.1 The 3-Minute Micro Loop (Grind, Command & Physical Extraction)
 1. **Deploy & Traverse (0:00 – 0:15):**
    - The Master selects up to 5 rested heroes from their roster via the **War Banner** or **Squad Deploy UI** (`SquadController.luau`).
-   - The Master can sprint (`[LeftShift]`, $3.0\times$ speed) across high-elevation stone bridges onto the **Central Hub Arena**, or use the **Tower Controller** (`TowerController.client.luau`) to travel (`Visit floor`) or station their squad (`Assign squad`) on any of the 50 **Infinite Tower Floors**.
+   - The Master can sprint (`[LeftShift]`, $3.0\times$ speed) across high-elevation stone bridges onto the **Central Hub**, or use the **Tower Controller** (`TowerController.client.luau`) to travel (`Visit floor`) or station their squad (`Assign squad`) on any of the 50 **Infinite Tower Floors**.
 2. **Tactical Grind & Stamina Expenditure (0:15 – 2:00):**
    - The Master uses **`[Click / Tap]` Focus Target** to direct all 5 deployed heroes onto target mobs, crystal nodes, or floor bosses.
    - To accelerate clears, the Master triggers **`[Q]` Overdrive Whistle** (`20s CD`), trading `5 Stamina` per hero for `+40% Attack Speed` for `5s`.
@@ -91,7 +91,7 @@ flowchart TD
    - Stepping onto the Perimeter Highway (`R >= 460 studs`) or a Private Extraction Pad safely deposits cargo into permanent Gold and Gems.
    - Depleted heroes (`Stamina < 25%`) are swapped into **Infirmary Recuperation Beds**, and fresh rested heroes are rotated into the active squad via the `[AutoSwap]` toolbar action.
 
-### 2.2 The 15-Minute Meso Loop (Tycoon, Synthesis, Promotion & Forge Progression)
+### 2.2 The 15-Minute Meso Loop (Fortress, Synthesis, Promotion & Forge Progression)
 1. **Facility Upkeep (Every 3–5 Minutes):**
    - Inspect Infirmary beds, swap resting heroes, and manage visitor blessings or leech runes.
 2. **Summoning & Roster Compression (Every 5–10 Minutes):**
@@ -102,21 +102,21 @@ flowchart TD
    - **Craft Artifacts:** Gather raw materials (`IronGear`, `RiftOrb`, `AegisGem`, `StarDust`, `VoidPowder`) dropped by mobs and craft class-restricted weapons, shields, and rings.
    - **Upgrade Artifacts:** Spend Gold and Gems to advance weapons across **16 Rarity Tiers** (`Common` $\to$ `Origin`), multiplying base stats up to **`18.00x`**, plus enhance items up to level +10 using fodder gear.
 
-### 2.3 The 20-Minute Macro Loop (World Boss Prep, "Greed vs. Coma" & Infinite Tower)
-1. **T-Minus 3:00 (Server Warning & Preparation Phase):**
-   - A server-wide banner announces that **The Dimensional Sovereign (World Boss)** will manifest at Ring 3 in `3:00`.
-   - Masters retreat to their plots, rest combat heroes in the Infirmary to hit `100% Stamina`, and equip their highest-rarity forged artifacts.
-2. **T-Minus 0:00 to +5:00 (The Encounter — "Greed vs. Coma"):**
-   - All active Masters converge on **Ring 3 (Center Boss Altar)**. Boss HP scales dynamically to the server's combined squad DPS.
-   - Every `20 seconds`, the Sovereign channels **Devouring Nova** (`3s` red telegraph, $R = 0 \text{ to } 85\text{ studs}$). Masters must position in the safe outer rim ($R = 85 \text{ to } 120\text{ studs}$) and press **`[E]` Emergency Recall Whistle** between `t = 1.1s` and `t = 2.8s`.
-   - Heroes caught inside lose **50% Stamina instantly** or enter a **60-second Coma** (warped back to their plot's Infirmary).
-   - Immediately after each Nova detonation, the core is exposed for `5.0s` (`+25% Damage Taken`), allowing Masters to trigger **`[Q]` Overdrive Whistle** to burst up the live Damage Leaderboard.
-3. **Post-Kill Climax & Calamity Heart Extraction:**
-   - Masters with $\ge 3\%$ damage contribution receive the **Direct Payout** (Gems, Gold, RNG roll for the Exclusive 3★ Sovereign Archon, plus **+10% Boss Pity** for Ranks #4–#6).
-   - The **Calamity Heart** spawns on the Center Altar with a **15-second exclusive pickup lock for Rank #1 DPS**.
-   - Rank #1 welds the Calamity Heart overhead (**-45% WalkSpeed**, jumping disabled) and hauls it across bridges back to their plot extraction pad.
-4. **Infinite Tower Milestone Progression:**
-   - Between World Boss windows, Masters tackle the 50-floor **Infinite Tower**, pushing through 10 distinct biomes with major **Milestone Bosses** every 5th floor (Floors 5, 10, 15, ..., 50) for massive Gold, XP, and rare crafting materials.
+### 2.3 The Macro Loop (Tower Progression & Biome Boss Conquests)
+1. **Biome Traversal & Preparation:**
+   - Masters organize their 5-hero squad, equip high-rarity forged artifacts, and ensure full stamina in the Infirmary before entering a new Biome.
+   - Each biome spans 5 progressively harder floors with rising HP, ATK, and reward scalers ($\text{HP} \times 1.08^{\text{Floor}-1}$, $\text{Damage} \times 1.045^{\text{Floor}-1}$, $\text{Reward} \times 1.055^{\text{Floor}-1}$).
+2. **The Biome Boss Encounter (Floors 5, 10, 15, ..., 50):**
+   - The 5th floor of every biome is a dedicated **Biome Boss Arena** featuring a massive boss dais fixture (e.g. `BossDaisFixture` on Floor 5, $60 \times 2 \times 60\text{ studs}$).
+   - The Biome Boss wields devastating signature attacks with distinct shapes and timings:
+     - **Basic Attacks:** Wide frontal arcs (`ARC`, e.g. `guardian_crush`, 13 studs).
+     - **Signature 1:** Expanding circular ground shocks centered on the boss (`SELF_DISC`, e.g. `moss_quake`, 22 studs radius).
+     - **Signature 2:** Ranged ground craters placed under distant heroes (`TARGET_DISC`, e.g. `sweeping_roots`, 55 studs cast range, 13 studs radius).
+   - **Tactical Counterplay ("Dodge vs. Coma"):** Masters must watch the expanding telegraph decals and sound cues, repositioning and executing **`[E]` Emergency Recall Whistle** to yank heroes out of danger. Heroes struck by signature skills suffer severe stamina loss or a debilitating **60-second Coma**.
+   - **Punish Windows:** Following major signature attacks, the boss enters an extended recovery window (1.2s–1.5s), providing active Masters the ideal moment to pop **`[Q]` Overdrive Whistle** for massive burst DPS.
+3. **Biome Clearance & Pinnacle Rewards:**
+   - Defeating the Biome Boss awards immense Gold, Gems, and guaranteed rare **Crafting Materials** (`IronGear`, `RiftOrb`, `AegisGem`, `StarDust`, `VoidPowder`).
+   - Bosses possess high drop probabilities for rare **5★–7★ Pinnacle Artifacts** and unlock clearance to enter the next biome in the Infinite Tower.
 
 ---
 
@@ -125,8 +125,8 @@ flowchart TD
 ### 3.1 Dual-Mode Spatial Architecture
 
 The world exists in two coordinated spatial contexts:
-1. **The Central Hub & Floating Fortress Ring (World Coordinates):** Open-world extraction arena, player plots, and World Boss altar.
-2. **The 50 Dynamic Isolated Tower Floors (Off-Map Isolated Grid):** Server-managed dynamic encounter rooms for vertical climbing.
+1. **The Central Hub & Floating Fortress Ring (World Coordinates):** Landmark Central Crimson Tower, perimeter bridges, and player fortress plots.
+2. **The 50 Dynamic Isolated Tower Floors (Off-Map Isolated Grid):** Server-managed dynamic encounter rooms for vertical climbing and Biome Boss arenas.
 
 ```
                       CENTRAL HUB ARENA & FLOATING FORTRESS RING
@@ -138,9 +138,9 @@ The world exists in two coordinated spatial contexts:
                      PLOT 5 (288°)        |        PLOT 2 (72°)
                          \                |                /
                    (Bridge)\       +------+------+       /(Bridge)
-                             \     |  CRIMSON    |     /
-                              -----+  TOWER &    +-----
-                             /     | BOSS ALTAR  |     \
+                             \     |   CENTRAL   |     /
+                              -----+   CRIMSON   +-----
+                             /     |  TOWER HUB  |     \
                    (Bridge)/       +------+------+       \(Bridge)
                          /                |                \
                     PLOT 4 (216°)         |        PLOT 3 (144°)
@@ -154,20 +154,20 @@ The world exists in two coordinated spatial contexts:
                OFF-MAP INFINITE TOWER ROOMS (Isolated Dynamic Grid)
                Origin(id) = (12000 + ((id-1)%10)*1800, 1000, 12000 + floor((id-1)/10)*1800)
                Enclosed 248 x 84 x 248 studs chambers with Safe Arrival platforms (CombatSafe=true)
+               Floors 5, 10, 15, ..., 50 feature dedicated Biome Boss Dais Arenas (BossDaisFixture)
 ```
 
 ### 3.2 Global Coordinate Systems & Zones Table
 
 | Zone Name | Radial Distance / Coordinate Space | Dimensions | Access Rule | Combat & PvP Rules | Primary Drops |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Central Crimson Tower** | `0 – 120 studs` (Hub) | Central 18-level landmark structure | Open to all | Landmark tower, open entrance portal to Infinite Tower floors. | Mana Geodes, Gold |
-| **Ring 3: Center Boss Altar** | `0 – 120 studs` (Dia: `240`) | Circular obsidian altar at `(0,0,0)` | Open to all | World Boss (20m cadence) & Rift Warden. PvE AoE Fumbles active; direct PvP disabled on Altar platform. | **Calamity Heart** (World Boss), **Abyssal Core** |
+| **Central Crimson Tower** | `0 – 120 studs` (Hub) | Central 18-level landmark structure | Open to all | Landmark tower hub, open entrance portal to Infinite Tower floors. | Mana Geodes, Gold |
 | **Ring 2: Corrupted Grove** | `120 – 280 studs` (Hub) | `160 studs` annulus | Open to all | High-density Elites with red AoE telegraphs. Contested loot PvP active. | **Cursed Urns**, **Abyssal Cores**, High Gold |
 | **Ring 1: Outer Ruins** | `280 – 460 studs` (Hub) | `180 studs` annulus | Open from start | Low-level mobs & Mana Crystal nodes. Contested loot PvP active. | **Mana Geodes**, Starter Gold |
 | **Perimeter Highway** | `460 – 480 studs` (Hub) | `20 studs` paved ring road | Open to all | **Safe Zone** (No mobs). Safe banking threshold ($R \ge 460$). | Banked cargo conversion |
-| **5 Floating Plot Islands** | `R = 540 studs` ($Y = 12$) | Fortress island mesh with courtyard & walls | Plot Owner + Visitors | Safe Zone. Visitors can inspect or Bless/Leech Infirmary. | Healing, Blacksmithing, Synthesis, Promotion |
+| **5 Floating Fortress Plots** | `R = 540 studs` ($Y = 12$) | Fortress island mesh with courtyard & walls | Plot Owner + Visitors | Safe Zone. Visitors can inspect or Bless/Leech Infirmary. | Healing, Blacksmithing, Synthesis, Promotion |
 | **Safety Catch Plane** | Lower kill plane at $Y = -95$ | `2400 x 8 x 2400 studs` | Fallen players | Non-lethal catch plane; teleports fallen players safely to their PlotSpawn. | None |
-| **50 Tower Floor Rooms** | Off-map grid: $X \ge 12,000, Y = 1,000, Z \ge 12,000$ | `248 x 84 x 248 studs` each | Traversal via `TowerController` | Isolated floor-local PvE encounters; shared floor membership; safe arrival zone. | Mob drops, Floor Boss loot, Crafting Materials |
+| **50 Tower Floor Rooms** | Off-map grid: $X \ge 12,000, Y = 1,000, Z \ge 12,000$ | `248 x 84 x 248 studs` each | Traversal via `TowerController` | Isolated floor-local PvE encounters; shared floor membership; safe arrival zone. | Mob drops, Crafting Materials, **Biome Boss Pinnacle Loot** |
 
 ### 3.3 Dynamic Tower Room Architecture & Biomes
 
@@ -180,22 +180,22 @@ Tower floors are dynamically managed by `TowerFloorService.luau` and generated v
   - `PREVIOUS`: Move to floor $id - 1$ (disabled on Floor 1).
   - `NEXT`: Move to floor $id + 1$ (disabled on Floor 50).
   - `SELECTOR`: Opens the full 50-floor modal selector.
-  - `HUB`: Returns player directly to their Hub Waiting Room plot.
+  - `HUB`: Returns player directly to their Fortress Plot.
 - **Room Lifecycle:** Rooms transition through `ABSENT -> BUILDING -> READY -> RETIRING -> ABSENT` with a 60-second retirement grace period when unoccupied.
 
 #### Biome Catalog (50 Floors across 10 Biomes):
-1. **Verdant Ruins (Floors 1–5):** Overgrown Threshold, Broken Aqueduct, Rootway Crossing, Vinebound Bastion, **Mossbound Court (Boss: Mossbound Guardian)**.
-2. **Fungal Hollow (Floors 6–10):** Sporelit Entry, Mycelium Galleries, Blooming Chasm, Rotcap Keep, **Matriarch's Hollow (Boss: Spore Matriarch)**.
-3. **Drowned Steps (Floors 11–15):** Drowned Steps, Coral Cloister, Tidal Channels, Pearlguard Vault, **Leviathan's Basin (Boss: Abyssal Leviathan)**.
-4. **Cinder Gate (Floors 16–20):** Cinder Gate, Buried Caravan, Glasswind Ravine, Sunscar Fortress, **Colossus Dais (Boss: Cinder Colossus)**.
-5. **Rimefall Approach (Floors 21–25):** Rimefall Approach, Frozen Barracks, Shattered Iceway, Whiteguard Keep, **Frostbound Throne (Boss: Frost Sovereign)**.
-6. **Stormgrass Rise (Floors 26–30):** Stormgrass Rise, Thunderhead Outpost, Skybridge Cliffs, Tempest Redoubt, **Roc's Eyrie (Boss: Tempest Roc)**.
-7. **Slagworks Entry (Floors 31–35):** Slagworks Entry, Molten Assembly, Furnace Causeway, Ironflame Bulwark, **Titan's Crucible (Boss: Slagwork Titan)**.
-8. **Blighted Verge (Floors 36–40):** Blighted Verge, Twisted Orchard, Briar Labyrinth, Heartrot Stronghold, **Sovereign's Grove (Boss: Heartrot Sovereign)**.
-9. **Starlit Vestibule (Floors 41–45):** Starlit Vestibule, Orbiting Stacks, Fractured Index, Runeguard Athenaeum, **Rift Warden's Observatory (Boss: Rift Warden)**.
-10. **Abyssal Descent (Floors 46–50):** Abyssal Descent, Crimson Procession, Voidspan Crossing, Dreadguard Citadel, **Overlord's Throne (Boss: Abyssal Overlord)**.
+1. **Verdant Ruins (Floors 1–5):** Overgrown Threshold, Broken Aqueduct, Rootway Crossing, Vinebound Bastion, **Mossbound Court (Biome Boss: Mossbound Guardian)**.
+2. **Fungal Hollow (Floors 6–10):** Sporelit Entry, Mycelium Galleries, Blooming Chasm, Rotcap Keep, **Matriarch's Hollow (Biome Boss: Spore Matriarch)**.
+3. **Drowned Steps (Floors 11–15):** Drowned Steps, Coral Cloister, Tidal Channels, Pearlguard Vault, **Leviathan's Basin (Biome Boss: Abyssal Leviathan)**.
+4. **Cinder Gate (Floors 16–20):** Cinder Gate, Buried Caravan, Glasswind Ravine, Sunscar Fortress, **Colossus Dais (Biome Boss: Cinder Colossus)**.
+5. **Rimefall Approach (Floors 21–25):** Rimefall Approach, Frozen Barracks, Shattered Iceway, Whiteguard Keep, **Frostbound Throne (Biome Boss: Frost Sovereign)**.
+6. **Stormgrass Rise (Floors 26–30):** Stormgrass Rise, Thunderhead Outpost, Skybridge Cliffs, Tempest Redoubt, **Roc's Eyrie (Biome Boss: Tempest Roc)**.
+7. **Slagworks Entry (Floors 31–35):** Slagworks Entry, Molten Assembly, Furnace Causeway, Ironflame Bulwark, **Titan's Crucible (Biome Boss: Slagwork Titan)**.
+8. **Blighted Verge (Floors 36–40):** Blighted Verge, Twisted Orchard, Briar Labyrinth, Heartrot Stronghold, **Sovereign's Grove (Biome Boss: Heartrot Sovereign)**.
+9. **Starlit Vestibule (Floors 41–45):** Starlit Vestibule, Orbiting Stacks, Fractured Index, Runeguard Athenaeum, **Rift Warden's Observatory (Biome Boss: Rift Warden)**.
+10. **Abyssal Descent (Floors 46–50):** Abyssal Descent, Crimson Procession, Voidspan Crossing, Dreadguard Citadel, **Overlord's Throne (Biome Boss: Abyssal Overlord)**.
 
-### 3.4 Private Plot Internal Layout
+### 3.4 Private Fortress Plot Internal Layout
 Each of the 5 Floating Fortress Islands is oriented radially toward the central tower:
 - **Plaza & Extraction Pad:** Glowing cyan platform for depositing carried cargo into permanent vault currency.
 - **Summoning Altar:** Dimensional obelisk for 100-Gem Gacha pulls.
@@ -239,7 +239,7 @@ Every summoned hero rolls a `QualityScalar` $q \in [0.90, 1.15]$ applied to thei
   $$\text{EffectiveLabor} = L_0 \times q \times 1.35^{(S - 1)} \times \big(1 + 0.05(L - 1)\big) \times (1 + B_{\text{Synergy}}) \times (1 + B_{\text{TraitLabor}} + B_{\text{ImprintLabor}})$$
   *(Where $B_{\text{Synergy}} = 0.25$ when assigned to preferred facility).*
 
-### 4.3 Waiting Room Facility Output Formulas
+### 4.3 Fortress Plot Facility Output Formulas
 The Infirmary upgrades from **Level 1 to Level 5** using Gold:
 - **Upgrade Table:**
   - Level 1: Free (Default), 1 Max Worker, 2 Beds.
@@ -269,10 +269,10 @@ The player interface is built from modular, gothic-styled components:
 1. **Bottom Navigation Toolbar (`BottomToolbar`):**
    - **Left:** `[PATCH NOTES]` button displaying current server update toasts.
    - **Center Group:** `[THE PIT]` (opens Synthesis/Promotion modals) | `[FORGE]` (opens Blacksmith Craft/Upgrade modal) | `[SQUAD]` (opens 5-Hero Squad Deploy modal) | `[OVERDRIVE]` (Whistle 1 / Q) | `[RECALL]` (Whistle 2 / E) | Vertical Divider | `[AutoSwap]` (4-way arrow icon: auto-swaps exhausted heroes with bench) | `[RosterGrid]` (3x3 grid icon: toggles Squad Deploy modal).
-   - **Right Group:** Settings Gear (toggles World Boss & Pity board) | `[SAVE]` button (manual profile save trigger).
+   - **Right Group:** Settings Gear (toggles telemetry overlay) | `[SAVE]` button (manual profile save trigger).
 2. **Tower Navigation UI (`TowerController.client.luau`):**
    - **TravelBar (Top of Screen):** Persistent navigation bar displaying `[Previous]`, `[Next]`, `[Floor selector]`, and `[Hub]` buttons.
-   - **Floor Selector Modal (`FloorSelector`):** Responsive 50-floor grid showing milestone boss floors (`◆`), biome names, current visitors count, assigned player squads, and action buttons (`Visit floor`, `Assign squad`, `Recall squad`).
+   - **Floor Selector Modal (`FloorSelector`):** Responsive 50-floor grid showing milestone **Biome Boss floors** (`◆`), biome names, current visitors count, assigned player squads, and action buttons (`Visit floor`, `Assign squad`, `Recall squad`).
 3. **Real-Time Combat Feedback (`CombatFeedback.luau`):**
    - **Damage Popups:** Server-hit floating damage labels pooled up to 32 active instances. Styled with `GothamBold` font, quadratic easing upward, and color-coded:
      - Gold (`#FFCF59`): Overdrive crits / empowered hits.
@@ -283,29 +283,43 @@ The player interface is built from modular, gothic-styled components:
 
 ---
 
-## 5. WORLD BOSS ENCOUNTER DESIGN ("THE DIMENSIONAL SOVEREIGN")
+## 5. BIOME BOSS ENCOUNTER DESIGN (MILESTONE FLOORS)
 
-### 5.1 Spawn Schedule & Mechanics
-- **Spawn Cadence:** Every **20 minutes** at **Ring 3 Center Boss Altar**.
-- **Pre-Spawn Warning:** At `T - 3:00`, the skybox shifts to crimson and a server banner sounds the alert.
-- **Encounter Duration:** 5-minute despawn timer.
-- **The "Greed vs. Coma" Skill Check (*Devouring Nova*):**
-  - Channels every **`20.0 seconds`** with a **`3.0-second`** expanding crimson telegraph ($R = 0\text{ to }85\text{ studs}$).
-  - Masters must stand in the **Safe Rim** ($R = 85\text{ to }120\text{ studs}$) and press **`[E]` Recall Whistle** between `t = 1.1s` and `t = 2.8s`.
-  - Heroes caught inside lose **50% Stamina** or enter an instant **60-second Coma** back at base.
-  - For **`5.0 seconds`** after detonation, the Sovereign's core is exposed, granting a **`+25% Damage Taken`** punish window where skilled Masters trigger **`[Q]` Overdrive Whistle**.
+### 5.1 Architecture & Biome Milestone Cadence
+In **Infinite Tower**, major boss encounters take place at the apex of each biome: every 5th floor of the Infinite Tower (Floors 5, 10, 15, 20, 25, 30, 35, 40, 45, 50). Each Biome Boss commands a massive dedicated arena dais ($60 \times 2 \times 60\text{ studs}$ `BossDaisFixture`) and possesses dynamic health, high damage multipliers, and signature multi-phase telegraphed attacks.
 
-### 5.2 World Boss Direct Payout Table
-Qualification: Deal $\ge 3.0\%$ of Boss Total HP.
+#### The 10 Biome Bosses:
 
-| DPS Rank | Gems Awarded | Gold Awarded | Sovereign Archon (3★) Drop Chance | Boss Pity Gained |
-| :---: | :---: | :---: | :---: | :---: |
-| **#1** | **1,000 Gems** | **10,000 Gold** | **15.0%** | **0%** (Gets 15s Calamity Heart Lock) |
-| **#2** | **750 Gems** | **7,500 Gold** | **10.0%** | **+5%** |
-| **#3** | **550 Gems** | **5,500 Gold** | **7.0%** | **+5%** |
-| **#4** | **400 Gems** | **4,000 Gold** | **4.0%** | **+10%** |
-| **#5** | **300 Gems** | **3,000 Gold** | **2.5%** | **+10%** |
-| **#6** | **250 Gems** | **2,500 Gold** | **1.5%** | **+10%** |
+| Floor | Biome Name | Biome Boss Name | Rig Family | Base HP | Base ATK | Signature Attack Types |
+| :---: | :--- | :--- | :--- | :---: | :---: | :--- |
+| **5** | **Verdant Ruins** | **Mossbound Guardian** | `STONE_COLOSSUS` | `16,326` | `66` | Frontal Cleave (`ARC`), Quake (`SELF_DISC`), Root Bloom (`TARGET_DISC`) |
+| **10** | **Fungal Hollow** | **Spore Matriarch** | `FUNGAL_MATRIARCH` | `24,000` | `82` | Spore Burst (`SELF_DISC`), Corrosive Cloud (`TARGET_DISC`) |
+| **15** | **Drowned Steps** | **Abyssal Leviathan** | `LEVIATHAN` | `35,500` | `102` | Tidal Sweep (`ARC`), Maelstrom (`SELF_DISC`), Geyser Strike (`TARGET_DISC`) |
+| **20** | **Cinder Gate** | **Cinder Colossus** | `FIRE_COLOSSUS` | `52,000` | `128` | Magma Cleave (`ARC`), Eruption (`SELF_DISC`), Fire Rain (`TARGET_DISC`) |
+| **25** | **Rimefall Approach** | **Frost Sovereign** | `FROST_GIANT` | `76,000` | `160` | Glacial Smash (`ARC`), Blizzard Shock (`SELF_DISC`), Ice Spikes (`TARGET_DISC`) |
+| **30** | **Stormgrass Rise** | **Tempest Roc** | `GIANT_AVIAN` | `112,000` | `200` | Gale Slash (`ARC`), Thunderclap (`SELF_DISC`), Lightning Strike (`TARGET_DISC`) |
+| **35** | **Slagworks Entry** | **Slagwork Titan** | `MAGMA_CONSTRUCT` | `165,000` | `250` | Anvil Hammer (`ARC`), Slag Quake (`SELF_DISC`), Molten Core (`TARGET_DISC`) |
+| **40** | **Blighted Verge** | **Heartrot Sovereign** | `CORRUPTED_TREANT` | `242,000` | `312` | Briar Whip (`ARC`), Heartrot Bloom (`SELF_DISC`), Rot Tendrils (`TARGET_DISC`) |
+| **45** | **Starlit Vestibule** | **Rift Warden** | `COSMIC_ENTITY` | `355,000` | `390` | Astral Sweep (`ARC`), Dimensional Rupture (`SELF_DISC`), Void Well (`TARGET_DISC`) |
+| **50** | **Abyssal Descent** | **Abyssal Overlord** | `DEMONIC_OVERLORD` | `520,000` | `488` | Hellfire Cleave (`ARC`), Abyssal Nova (`SELF_DISC`), Doom Pillars (`TARGET_DISC`) |
+
+### 5.2 Tactical Mechanics & Combat Flow ("Greed vs. Coma")
+1. **Telegraph Shapes & Timings:**
+   - **`ARC` (Basic Cleave):** Fast frontal swipe ($1.1\text{s}$ windup, $1.0\text{s}$ recovery, 13-stud reach). Vanguard tanks should position facing away from squishier DPS heroes.
+   - **`SELF_DISC` (Boss Quake):** Expanding crimson circle centered on the boss ($1.8\text{s}$ windup, $1.2\text{s}$ recovery, 22-stud radius). Masters must sprint out and trigger **`[E]` Emergency Recall** before impact.
+   - **`TARGET_DISC` (Targeted AoE):** Red circle targeted at distant heroes ($2.2\text{s}$ windup, $1.5\text{s}$ recovery, 13-stud radius). Requires instant Master recognition and recall repositioning.
+2. **Coma Skill Check:**
+   - Heroes caught inside `SELF_DISC` or `TARGET_DISC` blast zones suffer instant 50% Stamina loss or fall into a **60-second Coma** (expelled back to the Fortress Infirmary).
+3. **Punish Window:**
+   - Immediately following a Signature detonation, the Biome Boss enters an exposed recovery window granting $+25\%$ damage taken for 4.0s. Active Masters trigger **`[Q]` Overdrive Whistle** to unleash $+40\%$ squad attack speed and maximize DPS output.
+
+### 5.3 Biome Boss Loot & Progression Ledger
+- **Encounter Respawns:** Biome Bosses operate on an authoritative server respawn cadence ($300\text{s}$ cooldown upon defeat).
+- **Rewards Table:**
+  - **Tiered Gold & Gems:** Scaled exponentially to biome difficulty.
+  - **Guaranteed Crafting Materials:** High-tier drops (`RiftOrb`, `AegisGem`, `StarDust`, `VoidPowder`).
+  - **Pinnacle Artifact Drops:** Rare direct drops of 5★, 6★, and 7★ Pinnacle Artifacts (e.g. `art_paladin_claymore`, `art_crystal_greatbow`, `art_blade_of_the_rift`).
+  - **Biome Key / Floor Advancement:** Defeating the Biome Boss permanently unlocks the subsequent biome on the **Floor Selector**.
 
 ---
 
@@ -316,10 +330,10 @@ Qualification: Deal $\ge 3.0\%$ of Boss Total HP.
 2. **Physical Overhead Hauling:** Picking up loot welds it overhead, slows movement by `-15%` to `-45%`, and triggers the upper-arm holding pose (`HoldingAnimationController.client.luau`).
 3. **Theft Detection & Retaliation:** Picking up another player's loot flags the player as a `[Loot Thief]` and registers a 3-minute retaliation grudge. The victim receives a real-time HUD alert with a `[⚔️ RETALIATE]` button.
 4. **Squad-vs-Squad Clash:** Clicking `[⚔️ RETALIATE]` commands your squad to attack the thief's squad at $25\%$ PvP damage scaling. The targeted squad auto-retaliates. Defeated heroes enter `COMA`.
-5. **Squad Wipe & Spilled Loot:** On squad defeat, all carried loot spills onto the ground, and field looting is locked until the Master returns to their Waiting Room plot to heal in the Infirmary.
+5. **Squad Wipe & Spilled Loot:** On squad defeat, all carried loot spills onto the ground, and field looting is locked until the Master returns to their Fortress Plot to heal in the Infirmary.
 6. **Perimeter Banking:** Reaching the perimeter highway ($R \ge 460$) or private plot pad safely banks loot into permanent Gold and Gems.
 
-### 6.2 Waiting Room Espionage & Mimic Bluffing
+### 6.2 Fortress Plot Espionage & Mimic Bluffing
 Visitors can walk onto any neighbor's plot and channel `[E]` (`2.0s`) on the **Infirmary**:
 - **Bless Facility (+25%):** Grants `+25%` output for 3 minutes; awards visitor `+25 Gems` and `+5 Honor`.
 - **Plant Leech Rune (-20%):** Secretly siphons `20%` of facility output for 3 minutes to the visitor.
@@ -332,7 +346,7 @@ Visitors can walk onto any neighbor's plot and channel `[E]` (`2.0s`) on the **I
 ### 7.1 System Overview & Zero-RNG Philosophy
 Gear progression decouples **Permanent Base Potential** from **Progressive Rarity Multipliers**:
 1. **Permanent Star Potential (1★ to 7★):** Fixed, unchangeable Star tier dictating base stats: **Base Attack Power (`+15` to `+950`)** and **Base Attack Speed (`+5%` to `+60%`)**.
-2. **Deterministic 16-Tier Blacksmith Upgrading:** Every artifact can be forged through **16 Rarity Tiers** (`Common` up to `Origin`) at the Waiting Room Blacksmith Forge using Gold and Gems, multiplying base stats up to **`18.00x`**.
+2. **Deterministic 16-Tier Blacksmith Upgrading:** Every artifact can be forged through **16 Rarity Tiers** (`Common` up to `Origin`) at the Fortress Blacksmith Forge using Gold and Gems, multiplying base stats up to **`18.00x`**.
 3. **Enhancement Levels (+0 to +10):** Artifacts can be enhanced up to level 10 using fodder gear (requiring 1 to 5 fodder items), granting $+12\%$ ATK per enhancement level.
 4. **Crafting System:** Players gather 5 core crafting materials dropped by mobs and geodes to forge weapons:
    - `IronGear`: Salvaged mechanical construct cog.
@@ -349,9 +363,9 @@ Gear progression decouples **Permanent Base Potential** from **Progressive Rarit
 | **2★** | **`+35`** | **`+10.0%`** (`+0.10`) | Early Ring 1 mob / crystal drop |
 | **3★** | **`+75`** | **`+16.0%`** (`+0.16`) | Rare Ring 1 drop / basic craft |
 | **4★** | **`+150`** | **`+24.0%`** (`+0.24`) | Ring 2 Corrupted Grove Elite drop |
-| **5★** | **`+300`** | **`+34.0%`** (`+0.34`) | Rare Ring 2 Abyssal Executioner drop |
-| **6★** | **`+550`** | **`+46.0%`** (`+0.46`) | Rift Warden / Tower Milestone Boss reward |
-| **7★** | **`+950`** | **`+60.0%`** (`+0.60`) | Sovereign World Boss pinnacle reward |
+| **5★** | **`+300`** | **`+34.0%`** (`+0.34`) | Biome Boss reward (Floors 5–15) |
+| **6★** | **`+550`** | **`+46.0%`** (`+0.46`) | Mid-tier Biome Boss reward (Floors 20–35) |
+| **7★** | **`+950`** | **`+60.0%`** (`+0.60`) | High-tier Biome Boss pinnacle reward (Floors 40–50) |
 
 ### 7.3 The 16 Rarity Tiers, Multipliers & Upgrade Costs
 
@@ -387,8 +401,8 @@ Gear progression decouples **Permanent Base Potential** from **Progressive Rarit
 To isolate simulation state and prevent entity overflow or vertical AoE bleed across the 50 Tower Floors:
 - **Packet Structure:** 46-byte header + 24 bytes per entity record. Batches capped at 32 records (814 bytes total).
 - **Context Identity:** `(ServerSessionId, FloorId, RoomGeneration, ViewEpoch)`.
-  - Floor 0 represents the Central Hub Arena and Plots.
-  - Floors 1–50 represent dynamic isolated tower chambers.
+  - Floor 0 represents the Central Hub and Fortress Plots.
+  - Floors 1–50 represent dynamic isolated tower chambers (with Biome Boss arenas on Floors 5, 10, 15... 50).
 - **Entity Record Layout:**
   - `EntityId` (u32), `EntityGeneration` (u32).
   - Local quantized `X, Y, Z` (3x i16, factor 10.0).
