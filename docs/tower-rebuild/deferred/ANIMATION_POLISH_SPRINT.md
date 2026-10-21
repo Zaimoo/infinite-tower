@@ -1,6 +1,6 @@
 # Separate sprint: enemy art, animation, and presentation polish
 
-Status: **DEFERRED by user request on 2026-10-21**. This sprint is not a prerequisite for Part 3 combat completion. No scheduled automation or start date is implied.
+Status: **DEFERRED by user request on 2026-10-21**. Resume only when the user requests it again. This sprint is not a prerequisite for the completed Part 3 combat milestone. No scheduled automation or start date is implied. Part 4 content/UI and Part 5 release verification are also deferred.
 
 Retain Part 3's authoritative attack definitions and original synchronized start times. Cosmetic clips, effects, and markers must not become damage or reward authority.
 
@@ -15,4 +15,4 @@ Retain Part 3's authoritative attack definitions and original synchronized start
 
 ## Starting evidence
 
-See [Part 3 verification](PART_3_VERIFICATION.md), [crawler preview](evidence/PART_3_CRAWLER_PREVIEW.png), [elite preview](evidence/PART_3_ELITE_PREVIEW.png), [boss preview](evidence/PART_3_BOSS_PREVIEW.png), and [contact-pose review](evidence/PART_3_CONTACT_POSES.png). These establish prototype implementations, not final-quality approval.
+See [Part 3 verification](../PART_3_VERIFICATION.md), [crawler preview](../evidence/PART_3_CRAWLER_PREVIEW.png), [elite preview](../evidence/PART_3_ELITE_PREVIEW.png), [boss preview](../evidence/PART_3_BOSS_PREVIEW.png), and [contact-pose review](../evidence/PART_3_CONTACT_POSES.png). These establish prototype implementations, not final-quality approval.

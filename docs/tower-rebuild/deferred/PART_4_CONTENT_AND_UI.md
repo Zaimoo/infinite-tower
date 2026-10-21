@@ -1,8 +1,8 @@
 # Part 4 of 5: All 50 floors, full enemy roster, and complete UI
 
-Implementation status: NOT STARTED.
+Implementation status: **DEFERRED by user request on 2026-10-21; implementation NOT STARTED.** The current milestone ends at Part 3. No Part 4 source changes landed. Resume only after the user explicitly requests this work again; passing Part 3 does not automatically start it.
 
-Read [the master requirements](TOWER_REBUILD_PLAN.md), [Part 3](PART_3_COMBAT_AND_ANIMATION.md), and its completed handoff. Start after the first-biome combat gate is verified. Final animation/art polish is tracked in its [separate sprint](ANIMATION_POLISH_SPRINT.md), not a Part 3 prerequisite.
+Read [the master requirements](../TOWER_REBUILD_PLAN.md), [Part 3](../PART_3_COMBAT_AND_FEEDBACK.md), and its completed handoff. Start after the first-biome combat gate is verified. Final animation/art polish is tracked in its [separate sprint](ANIMATION_POLISH_SPRINT.md), not a Part 3 prerequisite.
 
 ## Scope
 
@@ -44,14 +44,14 @@ The master biome names are proposed. Update the ledger and catalog together if n
 
 ## Handoff record to complete during execution
 
-- Status: NOT STARTED.
+- Status: DEFERRED; implementation NOT STARTED.
 - Part 3 combat gate/budgets consumed: not verified for Part 4. Final visual benchmark is deferred to the separate polish sprint.
 - Actual changed files and asset manifest: none.
 - Completed biome ledger and visual evidence: none.
 - UI/input/multiplayer checks and results: none.
 - Missing content or unresolved issues: not assessed during implementation.
-- Next starting point: Part 5, after this gate is verified.
+- Resume point: implement this plan only when requested again. Part 5 remains independently deferred and requires its own resumption request.
 
-## Suggested execution prompt
+## Future execution prompt (use only after resumption is requested)
 
 Implement only Part 4 using the verified Part 3 combat handoff and provisional performance observations. Complete floor content, functional biome encounters/presentation mappings, and travel/presence UI. Track final animation/art polish in its separate sprint. Work biome by biome, record actual combat evidence, label prototypes honestly, and do not begin final release work.

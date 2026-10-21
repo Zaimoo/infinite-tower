@@ -1,8 +1,8 @@
 # Part 3 of 5: Working combat and damage feedback
 
-Scope revised by the user on 2026-10-21: **finish combat now; defer animation and art polish to another sprint**. This file keeps its existing filename so earlier links continue working.
+Scope revised by the user on 2026-10-21: **working combat and basic feedback through Part 3**. Animation/art polish, Part 4, and Part 5 are deferred until requested again.
 
-Implementation status: **VERIFIED for the revised combat/feedback gate**. All 95 CLI regressions and 11 native combat/feedback checks passed. See [verification and handoff](PART_3_VERIFICATION.md). Animation/art polish remains deferred and does not block this part.
+Implementation status: **VERIFIED for the revised combat/feedback gate**. The latest main merge and Studio restoration pass 101 CLI regressions and 17 native checks (11 combat/feedback and six travel). See [verification and handoff](PART_3_VERIFICATION.md) and [merge/restoration evidence](MAIN_MERGE_AND_STUDIO_RESTORE_20261021.md). This is the current stopping point.
 
 ## Scope
 
@@ -26,13 +26,13 @@ Implementation status: **VERIFIED for the revised combat/feedback gate**. All 95
 
 ## Deferred to a separate sprint
 
-Final enemy model quality, refined animation clips, foot planting/sliding, deformation, weapon/ground contact, cinematic death/awakening, audio, and polished effects are tracked in [Animation and art polish sprint](ANIMATION_POLISH_SPRINT.md). They do not prevent Part 3 combat completion or activation of the two test floors. Visible warnings before authoritative damage remain required now.
+Final enemy model quality, refined animation clips, foot planting/sliding, deformation, weapon/ground contact, cinematic death/awakening, audio, and polished effects are tracked in [Animation and art polish sprint](deferred/ANIMATION_POLISH_SPRINT.md). They do not prevent Part 3 combat completion or activation of the two test floors. Visible warnings before authoritative damage remain required now.
 
 Do not expand into the other nine biomes in this part. Published-place testing and physical-device certification remain later integration/release checks, not animation prerequisites for this combat sprint.
 
 ## Handoff
 
-See [Part 3 verification](PART_3_VERIFICATION.md) for changed files, attack timings, executed checks, evidence, enablement, and remaining work. The next content work is Part 4 after the combat gate passes; animation polish is its own sprint.
+See [Part 3 verification](PART_3_VERIFICATION.md) for changed files, attack timings, executed checks, evidence, enablement, and remaining work. Parts 1–3 are complete for this milestone. Animation/art polish and Parts 4–5 remain in the deferred backlog; no further implementation is scheduled.
 
 ## Execution prompt
 

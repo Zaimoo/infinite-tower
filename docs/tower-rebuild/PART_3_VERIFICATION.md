@@ -59,7 +59,7 @@ All use scheduled server shape checks and fixed warning/aim geometry; no cosmeti
 
 ## Prototype visual evidence and deferred work
 
-See [crawler](evidence/PART_3_CRAWLER_PREVIEW.png), [elite](evidence/PART_3_ELITE_PREVIEW.png), [boss](evidence/PART_3_BOSS_PREVIEW.png), [contact poses](evidence/PART_3_CONTACT_POSES.png), and the [live floor-5 overview](evidence/PART_3_FLOOR5_PREVIEW.png). These are prototype previews, not final-quality approval. Foot contact during body leans, contact poses, silhouette/material polish, refined motion and audio belong to [the separate polish sprint](ANIMATION_POLISH_SPRINT.md).
+See [crawler](evidence/PART_3_CRAWLER_PREVIEW.png), [elite](evidence/PART_3_ELITE_PREVIEW.png), [boss](evidence/PART_3_BOSS_PREVIEW.png), [contact poses](evidence/PART_3_CONTACT_POSES.png), and the [live floor-5 overview](evidence/PART_3_FLOOR5_PREVIEW.png). These are prototype previews, not final-quality approval. Foot contact during body leans, contact poses, silhouette/material polish, refined motion and audio belong to [the separate polish sprint](deferred/ANIMATION_POLISH_SPRINT.md).
 
 Native fault injection of real packet loss, a published-place access check, physical-device certification, and full release regression remain NOT VERIFIED. Part 2's earlier respawn/disconnect tests are not represented as re-executed with combat by this record. Retain these explicit integration checks for Part 5.
 
@@ -67,4 +67,4 @@ Native fault injection of real packet loss, a published-place access check, phys
 
 Pre-change Studio sources and the later reconnect backup are under `evidence/PART_3_STUDIO_BEFORE.json`, `PART_3_RECONNECTED_STUDIO_BEFORE.json`, and `PART_3_COMBAT_SCOPE_STUDIO_BEFORE.json`. Earlier comparison matched all 20 tower source mappings. The scope update's five production mappings have a separate [source/Studio comparison](evidence/PART_3_COMBAT_SCOPE_SOURCE_STUDIO.json). Preserve unrelated Studio-only assets and other source changes. Temporary fixtures under `tests/` are outside production mappings and are removed from Edit after native runs.
 
-Next: Part 4 content/UI work when requested. Animation/art polish remains its own deferred sprint and no longer prevents using this combat slice. Floors 1 and 5 are enabled; no Roblox publishing was performed.
+Current stopping point: Parts 1–3 are complete for their recorded gates. Animation/art polish, Part 4 content/UI, and Part 5 integration/release verification are explicitly deferred until the user requests them again. See the [deferred backlog](deferred/README.md). Floors 1 and 5 are enabled; no Roblox publishing was performed.

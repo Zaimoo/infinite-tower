@@ -2,7 +2,7 @@
 
 > **Core Concept:** An asynchronous squad-command extraction RPG and Tycoon built in Roblox. Direct squads of anime heroes in a concentric arena, extract physical loot drops, dodge high-stakes telegraphed boss mechanics, and manage your private Waiting Room tycoon.
 
-Tower rebuild status: Parts 1 and 2 are verified in source and Studio. Part 3 now targets working combat and damage feedback; floor 1/5 encounters are enabled with prototype visuals. Final art and animation polish belongs to a [separate sprint](docs/tower-rebuild/ANIMATION_POLISH_SPRINT.md). See [Part 3 implementation and verification](docs/tower-rebuild/PART_3_VERIFICATION.md) and the [Part 2 handoff](docs/tower-rebuild/PART_2_VERIFICATION.md).
+Tower rebuild status: **Parts 1–3 are complete and verified for their recorded gates.** Floors 1 and 5 have working combat and damage feedback with prototype visuals; all 50 destinations are available as development rooms. Animation/art polish, Part 4 content/UI expansion, and Part 5 release verification are **deferred until requested again**. Start with the [tower documentation index](docs/tower-rebuild/README.md) for current scope, evidence, and deferred plans. This is a verified combat slice, not a completed 50-floor content release.
 
 ---
 

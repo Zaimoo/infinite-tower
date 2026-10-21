@@ -1,8 +1,8 @@
 # Part 5 of 5: Integration, performance, migration, and release verification
 
-Implementation status: NOT STARTED.
+Implementation status: **DEFERRED by user request on 2026-10-21; implementation NOT STARTED.** The current milestone ends at Part 3. Preserve the acceptance matrix as future release work; it is not an active task or a claim that release checks have passed. Resume only after the user requests this part again and its prerequisites are verified.
 
-Read [the master requirements](TOWER_REBUILD_PLAN.md), [Part 4](PART_4_CONTENT_AND_UI.md), and its completed handoff. Review earlier protocol/asset handoffs when checking their behavior. Start only after the Part 4 gate is verified.
+Read [the master requirements](../TOWER_REBUILD_PLAN.md), [Part 4](PART_4_CONTENT_AND_UI.md), and its completed handoff. Review earlier protocol/asset handoffs when checking their behavior. Start only after the Part 4 gate is verified.
 
 ## Scope
 
@@ -45,7 +45,7 @@ Fix defects needed to meet the existing requirements. Do not add unrelated featu
 
 ## Verification gate and handoff
 
-- Status: NOT STARTED.
+- Status: DEFERRED; implementation NOT STARTED.
 - Actual changed files and final source/Studio comparison: none.
 - Recovery snapshot/location and migration result: not recorded.
 - Executed compilation/regression/playtest commands and results: none.
@@ -54,6 +54,6 @@ Fix defects needed to meet the existing requirements. Do not add unrelated featu
 - Unavailable checks, unresolved defects, and external blockers: not assessed during implementation.
 - Release result: NOT VERIFIED. Report incomplete work honestly; the plan alone is not implementation evidence.
 
-## Suggested execution prompt
+## Future execution prompt (use only after resumption is requested)
 
 Implement only Part 5 of the tower rebuild using the verified Part 4 handoff. Complete targeted legacy migration, integration fixes, source/Studio synchronization, and documented regression/multiplayer/mobile/performance checks. Fill the acceptance matrix with actual evidence, preserve a recovery path, and report any unverified checks. Do not claim the rebuild finished unless its required gates have passed.

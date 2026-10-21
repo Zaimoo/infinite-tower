@@ -1,18 +1,19 @@
 # Tower rebuild implementation plan
 
-Status: Parts 1 and 2 VERIFIED. Part 3 VERIFIED for working combat and damage feedback, with encounters enabled on floors 1 and 5; see its [verification record](PART_3_VERIFICATION.md). The user deferred animation/art polish to a [separate sprint](ANIMATION_POLISH_SPRINT.md) on 2026-10-21. Parts 4-5 are NOT STARTED. See [Part 1 evidence](PART_1_VERIFICATION.md), [Part 2 handoff](PART_2_VERIFICATION.md), and [contract v1](TOWER_CONTRACTS.md).
+Current milestone: **Parts 1–3 VERIFIED for their recorded gates; implementation stops at Part 3.** Combat and damage feedback are enabled on floors 1 and 5 with prototype visuals. The user explicitly deferred animation/art polish, Part 4, and Part 5 on 2026-10-21. Resume those only after a new user request. See the [documentation index](README.md), [Part 3 evidence](PART_3_VERIFICATION.md), and [latest merge/Studio verification](MAIN_MERGE_AND_STUDIO_RESTORE_20261021.md).
 
 ## Five-part execution map
 
-Run these parts in order, one part per implementation session. This master document holds the shared requirements; each linked file limits the work for that session. A completed plan document does not mean its implementation is complete.
+This document preserves the complete design roadmap. Parts 1–3 describe the completed milestone; later content and release requirements are deferred backlog. The broader design and final acceptance criteria below do not extend the current implementation scope.
 
-| Part | Work package | Verification gate |
+| Part | Work package | Current status |
 | --- | --- | --- |
-| 1 | [Verified baseline, floor data, and contracts](PART_1_FOUNDATION.md) | Existing behavior inspected; contracts documented; floor catalog invariants checked |
-| 2 | [Hub, isolated rooms, travel, and replication](PART_2_WORLD_AND_TRAVEL.md) | Hub/floors 1, 5, and 50 test route works; coordinates, isolation, and cargo rules verified |
-| 3 | [Working mob/squad combat and damage feedback](PART_3_COMBAT_AND_ANIMATION.md) | Regular, elite, and boss combat works; authority, isolation, rewards, multiplayer, and feedback checks pass |
-| 4 | [All 50 floors, full enemy roster, and complete UI](PART_4_CONTENT_AND_UI.md) | Every room, enemy design, animation mapping, and navigation flow checked |
-| 5 | [Integration, performance, migration, and release verification](PART_5_VERIFICATION_AND_MIGRATION.md) | Full acceptance matrix supported by actual evidence and source/Studio sync checked |
+| 1 | [Verified baseline, floor data, and contracts](PART_1_FOUNDATION.md) | VERIFIED — [evidence](PART_1_VERIFICATION.md) |
+| 2 | [Hub, isolated rooms, travel, and replication](PART_2_WORLD_AND_TRAVEL.md) | VERIFIED — [evidence](PART_2_VERIFICATION.md) |
+| 3 | [Working mob/squad combat and damage feedback](PART_3_COMBAT_AND_FEEDBACK.md) | VERIFIED — [evidence](PART_3_VERIFICATION.md); current stopping point |
+| Separate sprint | [Animation and art polish](deferred/ANIMATION_POLISH_SPRINT.md) | DEFERRED — not scheduled |
+| 4 | [All 50 floors, full enemy roster, and complete UI](deferred/PART_4_CONTENT_AND_UI.md) | DEFERRED — implementation not started |
+| 5 | [Integration, performance, migration, and release verification](deferred/PART_5_VERIFICATION_AND_MIGRATION.md) | DEFERRED — release verification not started |
 
 ### Rules for each implementation session
 
@@ -21,12 +22,12 @@ Run these parts in order, one part per implementation session. This master docum
 3. Work only on the current part. Include necessary prerequisite fixes within that part and record them. Do not silently redesign unrelated systems or expand into later content work.
 4. Never invent asset IDs, animation IDs, existing modules, successful tool results, performance numbers, or test outcomes. Inspect assets before calling them suitable. Mark unavailable checks NOT VERIFIED and missing assets MISSING.
 5. Keep server/client protocol changes together. Enforce FloorId and explicit safe-zone rules before off-map combat is enabled. Part 2 may use labeled development fixtures; they do not satisfy the final art/content requirements.
-6. End with the part's handoff filled in: actual files changed, implemented contracts, executed checks, visual evidence where required, known issues, and the exact next starting point. Use NOT STARTED, IN PROGRESS, VERIFIED, or BLOCKED for implementation status.
-7. Advance only when the current verification gate has evidence. If a required tool or external asset is unavailable, finish independent work, record the exact gap, and report it without claiming completion. Gates require verification, not routine extra permission from the user.
+6. End with the part's handoff filled in: actual files changed, implemented contracts, executed checks, visual evidence where required, known issues, and the exact stopping point. Use NOT STARTED, IN PROGRESS, VERIFIED, BLOCKED, or DEFERRED for implementation status.
+7. A verified gate records completion of that part; it does not authorize starting deferred work. Resume deferred scopes only when the user requests them. If a required tool or external asset is unavailable, finish independent authorized work, record the exact gap, and report it without claiming completion.
 
 Partitioning limits context and scope; the recorded checks are what establish correctness. No phase is implemented merely because its checklist exists.
 
-## Intended behavior
+## Full-roadmap intended behavior
 
 - The central crimson tower remains the cosmetic landmark and portal hub.
 - There are exactly 50 playable floors, each in a separate enclosed room outside the visible hub. Players see the room they enter, without seeing neighboring rooms or rooms from the hub.
@@ -107,7 +108,9 @@ The existing ordinary-mob update only handles respawning and stationary AoEs, wi
 
 In the separate polish sprint, complete one first-biome regular mob, one elite, and the first boss to the intended art/animation standard before propagating the polished visual treatment to the remaining roster. Review normal-camera and mobile motion, foot contact, deformation, weapon attachment, and effects. Combat/content implementation can proceed with honestly labeled prototypes. Readable telegraphs and correct server impact timing remain immediate combat requirements.
 
-## Findings from the existing implementation
+## Historical findings before the rebuild
+
+These observations describe the pre-Part-1 baseline. Parts 1–3 supersede several of them; consult their verification records for current behavior.
 
 - Studio currently contains an 18-floor WalkableTower with roughly 6,390 descendants. TowerTraversal and TowerSpawnLayout depend on these physical platforms and ramps.
 - CombatSimulation uses a 5 Hz lightweight entity simulation and one global world-boss state. Preserve the simulation approach, but move spawning and boss state into floor contexts.
@@ -121,7 +124,7 @@ In the separate polish sprint, complete one first-biome regular mob, one elite, 
 - The renderer has no deliberate hit/cast/death playback, and its effect handler does not render the emitted HIT_SPARK effect. Add enemy action presentation and allow death animation to complete before cosmetic cleanup.
 - PlotManager returns players to their plot on respawn. Floor location and squad state must reconcile with that existing behavior.
 
-## Implementation sequence
+## Roadmap sequence (Parts 4–5 deferred)
 
 1. Part 1 creates verified floor data and the state, network, attack, and asset contracts. It records migration/recovery steps and the boundary between existing and proposed modules.
 2. Part 2 implements the hub and a limited test route through isolated rooms 1, 5, and 50, a minimal selector, validated travel, presence plumbing, loot-safe transfer, and matching server/client room-local replication. New floor encounters stay disabled until Part 3 passes. Preserve a recoverable copy of old generated traversal when replacing its test-route integration.
@@ -129,7 +132,9 @@ In the separate polish sprint, complete one first-biome regular mob, one elite, 
 4. Part 4 expands through ten biome kits and 50 distinct rooms, completes the enemy roster and animated attacks, tunes difficulty/rewards, and finishes the selector/navigation/social UI. Work in five-floor biome batches within this part, with a recorded content check for each batch.
 5. Part 5 completes integration and performance fixes, compilation and existing Pit regressions, targeted tower checks, multiplayer/mobile playtests, source/Studio comparison, targeted legacy migration, and final documentation. Preserve a recovery snapshot and record actual evidence against the acceptance criteria below.
 
-## Acceptance criteria
+## Final release acceptance criteria (deferred Part 5)
+
+These criteria cover the eventual full rebuild. They are not claims that the Part 3 milestone supplies all 50 finished environments, the full roster, polished animation, or release certification.
 
 - A new player can enter floors 1, 25, or 50 directly with no unlock, payment, or clear requirement.
 - Exactly 50 floor definitions map to ten five-floor biome groups; each floor has its own environment variant.
