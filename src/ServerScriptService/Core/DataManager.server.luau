@@ -75,7 +75,6 @@ export type HeroAssignment =
 	| "SQUAD_SLOT_3"
 	| "SQUAD_SLOT_4"
 	| "SQUAD_SLOT_5"
-	| "FACILITY_CONDUIT"
 	| "FACILITY_INFIRMARY"
 
 export type MimicChestMode = "TRUE_STATE" | "FOOLS_GOLD" | "VEIL_OF_POVERTY"
@@ -179,7 +178,6 @@ export type PlayerProfile = {
 	DeployedSquadOrder: { string },
 	Artifacts: { [string]: ArtifactInstance },
 	Facilities: {
-		ManaConduit: FacilityData,
 		Infirmary: FacilityData,
 	},
 	Social: SocialProfile,
@@ -268,10 +266,7 @@ local function createDefaultPlayerProfile(): PlayerProfile
 	jennaHero.Assignment = "SQUAD_SLOT_2"
 
 	local catioUUID, catioHero = DataManager.CreateHeroFromSeed("hero_catio", 1.02)
-	catioHero.Assignment = "FACILITY_CONDUIT"
-
-	local conduit = createDefaultFacility()
-	conduit.AssignedHeroUUIDs = { catioUUID }
+	catioHero.Assignment = "BENCHED"
 
 	-- Grant 1★ starter artifacts equipped to matching starting heroes
 	local bowUUID, bowArt = DataManager.CreateArtifact("art_hunters_shortbow", 1, 1)
@@ -310,7 +305,6 @@ local function createDefaultPlayerProfile(): PlayerProfile
 		},
 		DeployedSquadOrder = { hanUUID, jennaUUID },
 		Facilities = {
-			ManaConduit = conduit,
 			Infirmary = createDefaultFacility(),
 		},
 		Social = {
@@ -501,7 +495,7 @@ RequestSummonFunc.OnServerInvoke = function(player: Player, pullCount: any)
 	local gemCost = (count == 10) and 900 or 100
 
 	if profile.Currencies.Gems < gemCost then
-		DataManager.SendToast(player, string.format("Need %d Gems to Summon! (Collect from Mana Conduit)", gemCost), "WARN")
+		DataManager.SendToast(player, string.format("Need %d Gems to Summon!", gemCost), "WARN")
 		return { Success = false, Message = "Insufficient Gems" }
 	end
 
@@ -805,16 +799,11 @@ AssignHeroRoleFunc.OnServerInvoke = function(player: Player, heroUUID: any, targ
 		if not placed then
 			return false, string.format("All %d Squad Slots are full!", maxSlots)
 		end
-	elseif targetAssignment == "FACILITY_CONDUIT" or targetAssignment == "FACILITY_INFIRMARY" then
-		local facKey = if targetAssignment == "FACILITY_CONDUIT" then "ManaConduit" else "Infirmary"
-		local facData = (profile.Facilities :: any)[facKey] :: FacilityData
-		local cfg = (FacilityConfig.UpgradeTable :: any)[facKey][facData.Level]
+	elseif targetAssignment == "FACILITY_INFIRMARY" then
+		local facData = profile.Facilities.Infirmary
+		local cfg = FacilityConfig.UpgradeTable.Infirmary[facData.Level]
 		local maxWorkers = cfg and cfg.MaxWorkers or 1
 
-		-- Note: Infirmary also holds resting/Coma heroes beyond healer worker slots
-		if targetAssignment ~= "FACILITY_INFIRMARY" and #facData.AssignedHeroUUIDs >= maxWorkers then
-			return false, string.format("%s Lv.%d only has %d Worker Slot(s)! Upgrade facility for more.", facKey, facData.Level, maxWorkers)
-		end
 		hero.Assignment = targetAssignment :: HeroAssignment
 		if #facData.AssignedHeroUUIDs < maxWorkers then
 			table.insert(facData.AssignedHeroUUIDs, heroUUID)
@@ -837,24 +826,7 @@ FacilityInteractEvent.OnServerEvent:Connect(function(player: Player, action: any
 		return
 	end
 
-	if action == "COLLECT_CONDUIT" then
-		local amt = math.floor(profile.Facilities.ManaConduit.UncollectedOutput)
-		if amt > 0 then
-			profile.Facilities.ManaConduit.UncollectedOutput -= amt
-			-- Check Garnished Gem Debt from Parasite Audit Soul fine
-			if profile.Social.GarnishedGemDebt > 0 then
-				local seized = math.min(amt, profile.Social.GarnishedGemDebt)
-				amt -= seized
-				profile.Social.GarnishedGemDebt -= seized
-			end
-			profile.Currencies.Gems += amt
-			DataManager.SendToast(player, string.format("Collected +%d Gems from Mana Conduit!", amt), "SUCCESS")
-			DataManager.SyncProfile(player)
-		else
-			DataManager.SendToast(player, "Mana Conduit Chest is empty right now.", "INFO")
-		end
-
-	elseif action == "UPGRADE_FACILITY" and type(param) == "string" then
+	if action == "UPGRADE_FACILITY" and type(param) == "string" then
 		local facData = (profile.Facilities :: any)[param] :: FacilityData?
 		local upgTable = (FacilityConfig.UpgradeTable :: any)[param]
 		if not facData or not upgTable then

@@ -611,7 +611,7 @@ patchNotesBtn.TextXAlignment = Enum.TextXAlignment.Left
 -- Center Group: 5 Infinite Tower Text Tabs | Divider | 4 Quick-Action Tool Icons
 local centerGroup = Instance.new("Frame")
 centerGroup.Name = "CenterToolbarGroup"
-centerGroup.Size = UDim2.new(0, 692, 1, 0)
+centerGroup.Size = UDim2.new(0, 580, 1, 0)
 centerGroup.Position = UDim2.new(0.5, 0, 0, 0)
 centerGroup.AnchorPoint = Vector2.new(0.5, 0)
 centerGroup.BackgroundTransparency = 1
@@ -639,25 +639,25 @@ pitTabBtn.LayoutOrder = 2
 local forgeTabBtn = makeBarTextButton(centerGroup, "Tab_Blacksmith", "FORGE", 56, function()
 	_G.OpenMasterModal(blacksmithModal.Visible and "NONE" or "BLACKSMITH")
 end)
-forgeTabBtn.LayoutOrder = 2.5
+forgeTabBtn.LayoutOrder = 3
 
 local heroesTabBtn = makeBarTextButton(centerGroup, "Tab_Heroes", "HEROES", 62, function()
 	_G.OpenMasterModal("WAITING_ROOM")
 	AssignHeroRoleFunc:InvokeServer("AUTO_SWAP_EXHAUSTED", "")
 end)
-heroesTabBtn.LayoutOrder = 3
+heroesTabBtn.LayoutOrder = 4
 
 local qButton = makeBarTextButton(centerGroup, "OverdriveButton_Q", "OVERDRIVE", 88, function()
 	LastQClock = os.clock()
 	WhistleCommandRemote:FireServer(1)
 end)
-qButton.LayoutOrder = 4
+qButton.LayoutOrder = 5
 
 local eButton = makeBarTextButton(centerGroup, "EmergencyRecallButton_E", "RECALL", 72, function()
 	LastEClock = os.clock()
 	WhistleCommandRemote:FireServer(2)
 end)
-eButton.LayoutOrder = 5
+eButton.LayoutOrder = 6
 
 -- Vertical Divider
 local centerDivider = Instance.new("Frame")
@@ -665,37 +665,11 @@ centerDivider.Name = "Divider"
 centerDivider.Size = UDim2.fromOffset(1, 22)
 centerDivider.BackgroundColor3 = DIVIDER_GRAY
 centerDivider.BorderSizePixel = 0
-centerDivider.LayoutOrder = 6
+centerDivider.LayoutOrder = 7
 centerDivider.ZIndex = 11
 centerDivider.Parent = centerGroup
 
--- Icon 1: Trash Can (Purge Conduit Rune)
-local iconTrashBtn, trashCanvas = makeBarIconButton(centerGroup, "Tool_PurgeRune", function()
-	PlotEspionageEvent:FireServer(4, 1, "ManaConduit")
-	showClientToast("Purging Mana Conduit Rune...")
-end)
-iconTrashBtn.LayoutOrder = 7
-do
-	addPart(trashCanvas, 3, 2, 12, 2, 0, 1)
-	addPart(trashCanvas, 7, 0, 4, 2, 0, 1)
-	local bin = Instance.new("Frame")
-	bin.Size = UDim2.fromOffset(10, 12)
-	bin.Position = UDim2.fromOffset(4, 5)
-	bin.BackgroundTransparency = 1
-	bin.ZIndex = 11
-	bin.Parent = trashCanvas
-	local st = Instance.new("UIStroke")
-	st.Thickness = 1.6
-	st.Color = SLATE_TEXT
-	st.Parent = bin
-	local c = Instance.new("UICorner")
-	c.CornerRadius = UDim.new(0, 1)
-	c.Parent = bin
-	addPart(trashCanvas, 7, 7, 1, 7)
-	addPart(trashCanvas, 10, 7, 1, 7)
-end
-
--- Icon 2: 4-Way Move/Expand Arrows (Auto-Swap Exhausted Heroes)
+-- Icon 1: 4-Way Move/Expand Arrows (Auto-Swap Exhausted Heroes)
 local iconMoveBtn, moveCanvas = makeBarIconButton(centerGroup, "Tool_AutoSwap", function()
 	AssignHeroRoleFunc:InvokeServer("AUTO_SWAP_EXHAUSTED", "")
 	showClientToast("Swapped exhausted heroes with fresh bench heroes!")
@@ -714,24 +688,11 @@ do
 	addPart(moveCanvas, 3, 8, 12, 2, -45)
 end
 
--- Icon 3: Paint Bucket / Collect Gems (Collect Mana Conduit)
-local iconBucketBtn, bucketCanvas = makeBarIconButton(centerGroup, "Tool_CollectGems", function()
-	FacilityInteractEvent:FireServer("COLLECT_CONDUIT")
-	showClientToast("Collected Mana Conduit Gems!")
-end)
-iconBucketBtn.LayoutOrder = 9
-do
-	local body = addPart(bucketCanvas, 4, 5, 8, 8, 45, 1)
-	body.ZIndex = 11
-	addPart(bucketCanvas, 6, 2, 5, 2, -25, 1)
-	addPart(bucketCanvas, 13, 12, 3, 4, 0, 2)
-end
-
--- Icon 4: 3x3 Grid (Toggle Summon / Roster View)
+-- Icon 2: 3x3 Grid (Toggle Summon / Roster View)
 local iconGridBtn, gridCanvas = makeBarIconButton(centerGroup, "Tool_RosterGrid", function()
 	_G.OpenMasterModal(waitingRoomModal.Visible and "NONE" or "WAITING_ROOM")
 end)
-iconGridBtn.LayoutOrder = 10
+iconGridBtn.LayoutOrder = 9
 do
 	for row = 0, 2 do
 		for col = 0, 2 do
@@ -906,7 +867,7 @@ local wrRightPane = makeFrame({
 	Parent = waitingRoomModal,
 })
 
--- Left Pane Controls: Auto-Swap, Mana Conduit & Infirmary
+-- Left Pane Controls: Auto-Swap & Infirmary
 makeButton({
 	Size = UDim2.new(0.94, 0, 0, 32),
 	Position = UDim2.new(0.03, 0, 0, 8),
@@ -919,96 +880,18 @@ makeButton({
 	Parent = wrLeftPane,
 })
 
-local conduitSummaryLbl = makeLabel({
-	Size = UDim2.new(0.94, 0, 0, 42),
-	Position = UDim2.new(0.03, 0, 0, 46),
-	Text = "1. MANA CONDUIT [Lv.1] — Gem Chest: 0 / 150",
-	TextColor3 = Color3.fromRGB(95, 215, 255),
-	TextXAlignment = Enum.TextXAlignment.Left,
-	Parent = wrLeftPane,
-})
-
-makeButton({
-	Size = UDim2.new(0.30, 0, 0, 28),
-	Position = UDim2.new(0.03, 0, 0, 90),
-	BackgroundColor3 = Color3.fromRGB(35, 145, 205),
-	Text = " COLLECT GEMS",
-	Corner = 6,
-	OnClick = function()
-		FacilityInteractEvent:FireServer("COLLECT_CONDUIT")
-	end,
-	Parent = wrLeftPane,
-})
-makeButton({
-	Size = UDim2.new(0.30, 0, 0, 28),
-	Position = UDim2.new(0.35, 0, 0, 90),
-	BackgroundColor3 = Color3.fromRGB(65, 115, 185),
-	Text = " UPGRADE MANA",
-	Corner = 6,
-	OnClick = function()
-		FacilityInteractEvent:FireServer("UPGRADE_FACILITY", "ManaConduit")
-	end,
-	Parent = wrLeftPane,
-})
-makeButton({
-	Size = UDim2.new(0.30, 0, 0, 28),
-	Position = UDim2.new(0.67, 0, 0, 90),
-	BackgroundColor3 = Color3.fromRGB(205, 115, 30),
-	Text = " PURGE RUNE (15s)",
-	Corner = 6,
-	OnClick = function()
-		PlotEspionageEvent:FireServer(4, 1, "ManaConduit")
-	end,
-	Parent = wrLeftPane,
-})
-
--- Mimic Chest & Espionage Row
-makeButton({
-	Size = UDim2.new(0.30, 0, 0, 26),
-	Position = UDim2.new(0.03, 0, 0, 122),
-	BackgroundColor3 = Color3.fromRGB(145, 95, 35),
-	Text = " MIMIC CHEST",
-	Corner = 5,
-	OnClick = function()
-		PlotEspionageEvent:FireServer(5, 1, "FOOLS_GOLD")
-	end,
-	Parent = wrLeftPane,
-})
-makeButton({
-	Size = UDim2.new(0.30, 0, 0, 26),
-	Position = UDim2.new(0.35, 0, 0, 122),
-	BackgroundColor3 = Color3.fromRGB(55, 155, 95),
-	Text = " Bless (+25 Gems)",
-	Corner = 5,
-	OnClick = function()
-		PlotEspionageEvent:FireServer(2, 1, "ManaConduit")
-	end,
-	Parent = wrLeftPane,
-})
-makeButton({
-	Size = UDim2.new(0.30, 0, 0, 26),
-	Position = UDim2.new(0.67, 0, 0, 122),
-	BackgroundColor3 = Color3.fromRGB(165, 40, 85),
-	Text = " Plant Leech (-20%)",
-	Corner = 5,
-	OnClick = function()
-		PlotEspionageEvent:FireServer(3, 1, "ManaConduit")
-	end,
-	Parent = wrLeftPane,
-})
-
 -- Infirmary Section
 local infirmarySummaryLbl = makeLabel({
 	Size = UDim2.new(0.62, 0, 0, 42),
-	Position = UDim2.new(0.03, 0, 0, 156),
-	Text = "2. THE INFIRMARY & BARRACKS [Lv.1]",
+	Position = UDim2.new(0.03, 0, 0, 48),
+	Text = "THE INFIRMARY & BARRACKS [Lv.1]",
 	TextColor3 = Color3.fromRGB(95, 245, 150),
 	TextXAlignment = Enum.TextXAlignment.Left,
 	Parent = wrLeftPane,
 })
 makeButton({
 	Size = UDim2.new(0.30, 0, 0, 32),
-	Position = UDim2.new(0.67, 0, 0, 160),
+	Position = UDim2.new(0.67, 0, 0, 52),
 	BackgroundColor3 = Color3.fromRGB(45, 155, 95),
 	Text = " UPGRADE",
 	Corner = 6,
@@ -1020,7 +903,7 @@ makeButton({
 
 makeButton({
 	Size = UDim2.new(0.94, 0, 0, 32),
-	Position = UDim2.new(0.03, 0, 0, 206),
+	Position = UDim2.new(0.03, 0, 0, 96),
 	BackgroundColor3 = Color3.fromRGB(30, 145, 175),
 	Text = " SUMMON RIFT WARDEN AT RING 3 (Uses 1x Rift Lure)",
 	Corner = 6,
@@ -1069,17 +952,14 @@ refreshWaitingRoomModal = function()
 	if not CurrentProfile then
 		return
 	end
-	local c = CurrentProfile.Facilities.ManaConduit
 	local inf = CurrentProfile.Facilities.Infirmary
 
-	conduitSummaryLbl.Text = string.format(
-		"1. MANA CONDUIT [Lv.%d] — Chest: %d Gems | Workers: %d | Mimic: %s",
-		c.Level, math.floor(c.UncollectedOutput), #c.AssignedHeroUUIDs, CurrentProfile.Social.MimicIllusionMode
-	)
-	infirmarySummaryLbl.Text = string.format(
-		"2. THE INFIRMARY [Lv.%d] — Healers: %d (Recovers Stamina & Clears Coma)",
-		inf.Level, #inf.AssignedHeroUUIDs
-	)
+	if inf then
+		infirmarySummaryLbl.Text = string.format(
+			"THE INFIRMARY [Lv.%d] — Healers: %d (Recovers Stamina & Clears Coma)",
+			inf.Level, #inf.AssignedHeroUUIDs
+		)
+	end
 
 	for _, child in ipairs(rosterScroll:GetChildren()) do
 		if child:IsA("Frame") then
@@ -1132,11 +1012,11 @@ refreshWaitingRoomModal = function()
 		makeButton({
 			Size = UDim2.new(0.15, 0, 0.72, 0),
 			Position = UDim2.new(0.67, 0, 0.14, 0),
-			BackgroundColor3 = Color3.fromRGB(40, 165, 195),
-			Text = "Mana",
+			BackgroundColor3 = Color3.fromRGB(45, 165, 110),
+			Text = "Clinic",
 			Corner = 4,
 			OnClick = function()
-				AssignHeroRoleFunc:InvokeServer(uuid, "FACILITY_CONDUIT")
+				AssignHeroRoleFunc:InvokeServer(uuid, "FACILITY_INFIRMARY")
 			end,
 			Parent = row,
 		})
@@ -2129,11 +2009,11 @@ do
 		patchNotesBtn.Visible = w >= 720
 		local centerScale = centerGroup:FindFirstChildOfClass("UIScale") or Instance.new("UIScale", centerGroup)
 		if w < 720 then
-			centerScale.Scale = math.clamp((w - 130) / 740, 0.55, 1)
+			centerScale.Scale = math.clamp((w - 130) / 620, 0.55, 1)
 			centerGroup.Position = UDim2.new(0, 12, 0, 0)
 			centerGroup.AnchorPoint = Vector2.new(0, 0)
 		elseif w < 1040 then
-			centerScale.Scale = math.clamp((w - 280) / 740, 0.72, 1)
+			centerScale.Scale = math.clamp((w - 280) / 620, 0.72, 1)
 			centerGroup.Position = UDim2.new(0.5, 0, 0, 0)
 			centerGroup.AnchorPoint = Vector2.new(0.5, 0)
 		else

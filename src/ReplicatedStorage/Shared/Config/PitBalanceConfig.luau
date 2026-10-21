@@ -50,7 +50,7 @@ Config.Imprints = {
 		melee_memory = { Name = "Blade Discipline", Category = "Combat", Description = "+2% ATK per rank for melee specialists.", DonorRoles = { Striker = true }, RecipientRoles = { Striker = true, Vanguard = true }, Effect = { ATK = 0.02 } },
 		ranged_memory = { Name = "Measured Aim", Category = "Combat", Description = "+2% ATK per rank for ranged specialists.", DonorRoles = { Marksman = true }, RecipientRoles = { Marksman = true, Scholar = true }, Effect = { ATK = 0.02 } },
 		bulwark_memory = { Name = "Guardian's Memory", Category = "Combat", Description = "+3% HP per rank for defensive specialists.", DonorRoles = { Vanguard = true }, RecipientRoles = { Vanguard = true, Healer = true }, Effect = { HP = 0.03 } },
-		conduit_memory = { Name = "Mana Stewardship", Category = "Utility", Description = "+3% labor per rank for conduit specialists.", DonorRoles = { Miner = true }, RecipientRoles = { Miner = true, Striker = true }, Effect = { Labor = 0.03 } },
+		conduit_memory = { Name = "Labor Stewardship", Category = "Utility", Description = "+3% labor per rank for facility specialists.", DonorRoles = { Miner = true }, RecipientRoles = { Miner = true, Striker = true }, Effect = { Labor = 0.03 } },
 		scholarly_memory = { Name = "Runic Method", Category = "Rare Trait", Description = "+3% labor and +1% ATK per rank.", DonorRoles = { Scholar = true }, RecipientRoles = { Scholar = true, Marksman = true }, Effect = { Labor = 0.03, ATK = 0.01 }, MinimumStars = 2 },
 		restorative_memory = { Name = "Steady Recovery", Category = "Utility", Description = "+2% HP and +2% labor per rank for supportive specialists.", DonorRoles = { Healer = true }, RecipientRoles = { Healer = true, Vanguard = true }, Effect = { HP = 0.02, Labor = 0.02 } },
 	},

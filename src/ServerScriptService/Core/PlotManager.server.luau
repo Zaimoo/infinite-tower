@@ -142,36 +142,7 @@ function PlotManager.RefreshPlotVisuals(player: Player)
 	end
 	workersContainer:ClearAllChildren()
 
-	-- 1. Render Mana Conduit Workers & Mimic Chest Illusion State
-	local conduitModel = plotModel:FindFirstChild("Facility_ManaConduit")
-	if conduitModel and profile.Facilities and profile.Facilities.ManaConduit and profile.Facilities.ManaConduit.AssignedHeroUUIDs then
-		for idx, uuid in ipairs(profile.Facilities.ManaConduit.AssignedHeroUUIDs) do
-			local hero = profile.Heroes[uuid]
-			local ped = conduitModel:FindFirstChild("WorkerPedestal_" .. tostring(idx)) :: BasePart?
-			if hero and ped then
-				createWorkerAvatarPart(workersContainer, hero, ped.CFrame, false)
-			end
-		end
-
-		local gemChest = conduitModel:FindFirstChild("GemChest") :: BasePart?
-		if gemChest then
-			ArtPackVisuals.SetChestState(conduitModel,profile.Social.MimicIllusionMode,math.floor(profile.Facilities.ManaConduit.UncollectedOutput))
-			local mode = profile.Social.MimicIllusionMode
-			local uncollected = math.floor(profile.Facilities.ManaConduit.UncollectedOutput)
-			if mode == "FOOLS_GOLD" then
-				gemChest.Color = Color3.fromRGB(255, 215, 0)
-				gemChest.Material = Enum.Material.Neon
-			elseif mode == "VEIL_OF_POVERTY" then
-				gemChest.Color = Color3.fromRGB(95, 90, 85)
-				gemChest.Material = Enum.Material.Slate
-			else
-				gemChest.Color = (uncollected >= 20) and Color3.fromRGB(80, 215, 255) or Color3.fromRGB(205, 175, 75)
-				gemChest.Material = (uncollected >= 20) and Enum.Material.Neon or Enum.Material.Metal
-			end
-		end
-	end
-
-	-- 2. Render Infirmary Healers & Resting/Comatose Heroes on Recuperation Beds
+	-- Render Infirmary Healers & Resting/Comatose Heroes on Recuperation Beds
 	local infModel = plotModel:FindFirstChild("Facility_Infirmary")
 	if infModel then
 		local bedIdx = 1

@@ -115,9 +115,8 @@ local function migratePlotToIsland(plotModel: Model, islandClone: Model, islandT
 		end
 	end
 
-	-- 4. Handle existing Tycoon Facility Models (ManaConduit, Infirmary, DimLab, SummoningAltar)
+	-- 4. Handle existing Tycoon Facility Models (Infirmary, DimLab, SummoningAltar)
 	local facilityOffsets: { [string]: CFrame } = {
-		Facility_ManaConduit = CFrame.new(44, 0, 10),
 		Facility_Infirmary = CFrame.new(-44, 0, 10),
 		Facility_DimLab = CFrame.new(0, 0, 44),
 		SummoningAltar = CFrame.new(-32, 0, -42),

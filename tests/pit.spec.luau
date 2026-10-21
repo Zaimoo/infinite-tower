@@ -531,13 +531,15 @@ end)
 
 test("Promotion updates actual assigned facility labor without double scaling", function()
 	local c = context(); local r = c.profile.Heroes.r
-	r.Level = 10; r.Assignment = "FACILITY_CONDUIT"; c.profile.Facilities.ManaConduit.AssignedHeroUUIDs = { "r" }
+	r.Level = 10; r.Assignment = "FACILITY_INFIRMARY"; c.profile.Facilities.Infirmary.AssignedHeroUUIDs = { "r" }
 	local beforeLabor = Stats.GetEffectiveLabor(r)
 	local p = c:preview({ Action = "PROMOTION", Recipient = "r" }); check(c:commit(p).Success)
 	local promoted = c.profile.Heroes.r; local actualLabor = Stats.GetEffectiveLabor(promoted)
-	equal(promoted.Assignment, "FACILITY_CONDUIT"); equal(c.profile.Facilities.ManaConduit.AssignedHeroUUIDs[1], "r")
+	equal(promoted.Assignment, "FACILITY_INFIRMARY"); equal(c.profile.Facilities.Infirmary.AssignedHeroUUIDs[1], "r")
 	check(actualLabor > beforeLabor); equal(actualLabor, p.After.Labor)
-	check(Stats.GetManaConduitGemsPerMin(1, actualLabor, 1) > Stats.GetManaConduitGemsPerMin(1, beforeLabor, 1))
+	local afterStam, _ = Stats.GetInfirmaryRates(1, actualLabor)
+	local beforeStam, _ = Stats.GetInfirmaryRates(1, beforeLabor)
+	check(afterStam > beforeStam)
 	c:request("STATE"); equal(Stats.GetEffectiveLabor(c.profile.Heroes.r), actualLabor)
 end)
 
