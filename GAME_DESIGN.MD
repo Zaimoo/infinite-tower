@@ -199,7 +199,7 @@ Tower floors are dynamically managed by `TowerFloorService.luau` and generated v
 Each of the 5 Floating Fortress Islands is oriented radially toward the central tower:
 - **Plaza & Extraction Pad:** Glowing cyan platform for depositing carried cargo into permanent vault currency.
 - **Summoning Altar:** Dimensional obelisk for 100-Gem Gacha pulls.
-- **War Banner:** Physical banner featuring a floating 3D billboard (`SquadBannerBillboard`) and proximity prompt that opens the **Squad Deploy UI** (`SquadController.luau`).
+- **War Banner:** Physical banner with proximity prompt that opens the **Squad Deploy UI** (`SquadController.luau`).
 - **Synthesis Chamber:** Fiery cauldron station with `[F]` prompt opening the **Synthesis UI** (`SynthesisController.luau`) for feeding EXP fodder.
 - **Promotion Altar:** Consecrated star ascension dais with `[F]` prompt opening the **Promotion UI** (`PromotionController.luau`).
 - **The Blacksmith Forge:** Interactive 3D station featuring an anvil, hearth coals, workbench, and prompt opening the **Forge UI** (`ForgeController.luau`).

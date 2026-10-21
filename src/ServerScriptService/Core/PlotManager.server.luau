@@ -11,23 +11,9 @@ local HeroCatalog = require(Shared:WaitForChild("Config"):WaitForChild("HeroCata
 
 local PlotsFolder = Workspace:WaitForChild("WaitingRoomPlots")
 
--- Remove legacy Pit interaction; Synthesis and Promotion now use their dedicated chambers.
-local function configurePitPrompt(plotModel: Instance)
-	local altar = plotModel:FindFirstChild("SummoningAltar")
-	local pit = altar and altar:FindFirstChild("ThePitCauldron")
-	if not pit or not pit:IsA("BasePart") then return end
-	local prompt = pit:FindFirstChild("ThePitPrompt", true)
-	if prompt and prompt:IsA("ProximityPrompt") then
-		prompt:Destroy()
-	end
-end
-
-for _, plotModel in PlotsFolder:GetChildren() do configurePitPrompt(plotModel) end
-PlotsFolder.ChildAdded:Connect(configurePitPrompt)
-
 local ArtPackVisuals = require(ReplicatedStorage.Assets:WaitForChild("ArtPackVisuals"))
 local PlotManager = {}
-local AssignedPlots: { [number]: Player? } = {} -- [1..6] = Player
+local AssignedPlots: { [number]: Player? } = {} -- [1..5] = Player
 local PlayerToPlotIndex: { [Player]: number } = {}
 
 local function getDataManager(): any
@@ -83,32 +69,9 @@ local function createWorkerAvatarPart(parent: Instance, hero: any, cframe: CFram
 	head.Parent = model
 
 	local ground = cframe
- if isSleepingInBed then ground=cframe*CFrame.new(0,1.2,0)*CFrame.Angles(math.rad(90),0,0)*CFrame.new(0,-1.9,0) end
- local art=ArtPackVisuals.AttachAt(model,hero.TemplateId or "hero_han",ground,isSleepingInBed and .72 or 1)
- if art then torso.Transparency=1;head.Transparency=1 end
- local bb = Instance.new("BillboardGui")
-	bb.Size = UDim2.new(0, 140, 0, 40)
-	bb.StudsOffset = Vector3.new(0, 2.8, 0)
-	bb.MaxDistance = 90
-	bb.Parent = head
-
-	local lbl = Instance.new("TextLabel")
-	lbl.Size = UDim2.fromScale(1, 1)
-	lbl.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
-	lbl.BackgroundTransparency = 0.25
-	lbl.TextColor3 = Color3.fromRGB(255, 230, 110)
-	lbl.Font = Enum.Font.GothamBold
-	lbl.TextScaled = true
-	local starsStr = string.rep("★", hero.Stars or 1)
-	local statusTag = if (hero.ComaUntilTimestamp or 0) > os.time() then " [COMA!]"
-		elseif isSleepingInBed then string.format(" [REST: %d%%]", math.round(hero.CurrentStamina or 100))
-		else " [WORKING]"
-	lbl.Text = string.format("%s %s Lv.%d\n%s", hero.DisplayName, starsStr, hero.Level or 1, statusTag)
-	lbl.Parent = bb
-
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 6)
-	corner.Parent = lbl
+	if isSleepingInBed then ground=cframe*CFrame.new(0,1.2,0)*CFrame.Angles(math.rad(90),0,0)*CFrame.new(0,-1.9,0) end
+	local art=ArtPackVisuals.AttachAt(model,hero.TemplateId or "hero_han",ground,isSleepingInBed and .72 or 1)
+	if art then torso.Transparency=1;head.Transparency=1 end
 end
 
 function PlotManager.RefreshPlotVisuals(player: Player)
@@ -127,13 +90,15 @@ function PlotManager.RefreshPlotVisuals(player: Player)
 	end
 	workersContainer:ClearAllChildren()
 
-	-- Render Infirmary Healers & Resting/Comatose Heroes on Recuperation Beds
-	local infModel = plotModel:FindFirstChild("Facility_Infirmary")
+	-- Render Infirmary Healers & Resting/Comatose Heroes on Recuperation Beds in Building_Infirmary
+	local pb = plotModel:FindFirstChild("PlotBuildings")
+	local infModel = pb and pb:FindFirstChild("Building_Infirmary")
 	if infModel then
 		local bedIdx = 1
 		for _, hero in pairs(profile.Heroes) do
 			if hero.Assignment == "FACILITY_INFIRMARY" and bedIdx <= 5 then
-				local bedPart = infModel:FindFirstChild("RecuperationBed_" .. tostring(bedIdx)) :: BasePart?
+				local bedPart = (infModel:FindFirstChild("Mattress_" .. tostring(bedIdx))
+					or infModel:FindFirstChild("BedFrame_" .. tostring(bedIdx))) :: BasePart?
 				if bedPart then
 					createWorkerAvatarPart(workersContainer, hero, bedPart.CFrame, true)
 					bedIdx += 1
