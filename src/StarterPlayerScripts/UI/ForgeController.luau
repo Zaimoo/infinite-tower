@@ -106,7 +106,9 @@ local function label(parent: Instance, text: string, size: number, color: Color3
 		TextSize = size,
 		TextColor3 = color,
 		Font = font or Enum.Font.GothamBold,
-		TextWrapped = true,
+		Size = UDim2.new(1, 0, 0, size + 8),
+		TextWrapped = false,
+		TextTruncate = Enum.TextTruncate.AtEnd,
 		RichText = true,
 	}, parent)
 end
@@ -482,7 +484,9 @@ function Forge:RenderAssignView()
 		new("UICorner", { CornerRadius = UDim.new(0, 8) }, emptyCard)
 		stroke(emptyCard, C.BorderDim)
 
-		label(emptyCard, "📦 NO ARTIFACTS IN INVENTORY", 18, C.Text, Enum.Font.GothamBold).Position = UDim2.new(0, 0, 0.3, 0)
+		local emptyTitle = label(emptyCard, "📦 NO ARTIFACTS IN INVENTORY", 18, C.Text, Enum.Font.GothamBold)
+		emptyTitle.Position = UDim2.new(0, 0, 0.25, 0)
+		emptyTitle.Size = UDim2.new(1, 0, 0, 26)
 		local sub = label(emptyCard, "Visit the <b>SUMMON</b> tab to draw weapons from the dimensional banner!", 14, C.TextLavender, Enum.Font.Gotham)
 		sub.Position = UDim2.new(0, 0, 0.5, 0)
 		sub.Size = UDim2.new(1, 0, 0, 24)
@@ -825,7 +829,9 @@ function Forge:BuildSummonRevealModal(gui: ScreenGui)
 	glow(modal, 12, C.BorderGlow, 0.8)
 	cornerDiamonds(modal, 8, C.Border)
 
-	label(modal, "✨ DIMENSIONAL ARTIFACTS SUMMONED", 20, C.GoldYellow, Enum.Font.GothamBlack).Position = UDim2.new(0, 0, 0, 20)
+	local revealTitle = label(modal, "✨ DIMENSIONAL ARTIFACTS SUMMONED", 20, C.GoldYellow, Enum.Font.GothamBlack)
+	revealTitle.Position = UDim2.new(0, 0, 0, 20)
+	revealTitle.Size = UDim2.new(1, 0, 0, 28)
 
 	local cardScroll = new("ScrollingFrame", {
 		Name = "RevealScroll",
@@ -1000,7 +1006,10 @@ function Forge:BuildUpgradeView(root: Frame)
 	new("UICorner", { CornerRadius = UDim.new(0, 8) }, statBox)
 	stroke(statBox, C.BorderCard, 1)
 
-	label(statBox, "ENHANCEMENT PREVIEW", 15, C.Text, Enum.Font.GothamBold).Position = UDim2.new(0, 18, 0, 14)
+	local previewHeader = label(statBox, "ENHANCEMENT PREVIEW", 15, C.Text, Enum.Font.GothamBold)
+	previewHeader.Position = UDim2.new(0, 18, 0, 14)
+	previewHeader.Size = UDim2.new(1, -36, 0, 22)
+	previewHeader.TextXAlignment = Enum.TextXAlignment.Left
 
 	local currentStatsLabel = label(statBox, "Current Stats: Select an artifact", 13, C.TextLavender, Enum.Font.GothamMedium)
 	currentStatsLabel.Position = UDim2.new(0, 18, 0, 48)
@@ -1371,9 +1380,21 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 			stroke(card, (uuid == self.SelectedTargetUUID) and C.Border or C.BorderDim, 1)
 
 			local iconChar = ICON_MAP[art.Type] or "⚔️"
-			label(card, iconChar, 34, C.Text).Position = UDim2.fromScale(0, 0.1)
-			label(card, art.DisplayName or "Artifact", 12, C.Text, Enum.Font.GothamBold).Position = UDim2.fromScale(0, 0.5)
-			label(card, string.format("+%d", art.Level or 0), 12, C.GoldYellow).Position = UDim2.fromScale(0, 0.72)
+			local iconLbl = label(card, iconChar, 32, C.Text)
+			iconLbl.Position = UDim2.new(0, 0, 0, 12)
+			iconLbl.Size = UDim2.new(1, 0, 0, 40)
+			iconLbl.TextXAlignment = Enum.TextXAlignment.Center
+
+			local nameLbl = label(card, art.DisplayName or "Artifact", 12, C.Text, Enum.Font.GothamBold)
+			nameLbl.Position = UDim2.new(0, 6, 0, 58)
+			nameLbl.Size = UDim2.new(1, -12, 0, 38)
+			nameLbl.TextWrapped = true
+			nameLbl.TextXAlignment = Enum.TextXAlignment.Center
+
+			local lvlLbl = label(card, string.format("+%d", art.Level or 0), 13, C.GoldYellow)
+			lvlLbl.Position = UDim2.new(0, 0, 0, 106)
+			lvlLbl.Size = UDim2.new(1, 0, 0, 20)
+			lvlLbl.TextXAlignment = Enum.TextXAlignment.Center
 
 			local btn = new("TextButton", { BackgroundTransparency = 1, Text = "", Size = UDim2.fromScale(1, 1), ZIndex = 73 }, card)
 			btn.Activated:Connect(function()
@@ -1402,9 +1423,21 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 				stroke(card, isSlotted and C.Border or C.BorderDim, 1)
 
 				local iconChar = ICON_MAP[art.Type] or "⚔️"
-				label(card, iconChar, 34, C.Text).Position = UDim2.fromScale(0, 0.1)
-				label(card, art.DisplayName or "Artifact", 12, C.Text, Enum.Font.GothamBold).Position = UDim2.fromScale(0, 0.5)
-				label(card, isSlotted and "✓ SLOTTED" or string.format("+%d", art.Level or 0), 12, isSlotted and C.Green or C.TextMuted).Position = UDim2.fromScale(0, 0.72)
+				local iconLbl = label(card, iconChar, 32, C.Text)
+				iconLbl.Position = UDim2.new(0, 0, 0, 12)
+				iconLbl.Size = UDim2.new(1, 0, 0, 40)
+				iconLbl.TextXAlignment = Enum.TextXAlignment.Center
+
+				local nameLbl = label(card, art.DisplayName or "Artifact", 12, C.Text, Enum.Font.GothamBold)
+				nameLbl.Position = UDim2.new(0, 6, 0, 58)
+				nameLbl.Size = UDim2.new(1, -12, 0, 38)
+				nameLbl.TextWrapped = true
+				nameLbl.TextXAlignment = Enum.TextXAlignment.Center
+
+				local lvlLbl = label(card, isSlotted and "✓ SLOTTED" or string.format("+%d", art.Level or 0), 12, isSlotted and C.Green or C.TextMuted)
+				lvlLbl.Position = UDim2.new(0, 0, 0, 106)
+				lvlLbl.Size = UDim2.new(1, 0, 0, 20)
+				lvlLbl.TextXAlignment = Enum.TextXAlignment.Center
 
 				local btn = new("TextButton", { BackgroundTransparency = 1, Text = "", Size = UDim2.fromScale(1, 1), ZIndex = 73 }, card)
 				btn.Activated:Connect(function()
@@ -1442,9 +1475,20 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 			new("UICorner", { CornerRadius = UDim.new(0, 6) }, card)
 			stroke(card, isCurrentEquipped and C.Border or (canEquip and C.BorderDim or Color3.fromRGB(45, 35, 55)), 1)
 
-			label(card, string.rep("★", hero.Stars or 1), 12, C.GoldYellow).Position = UDim2.fromScale(0, 0.08)
-			label(card, hero.DisplayName or "Hero", 15, C.Text, Enum.Font.GothamBold).Position = UDim2.fromScale(0, 0.26)
-			label(card, hero.Archetype or "Class", 12, C.TextLavender).Position = UDim2.fromScale(0, 0.46)
+			local starsLbl = label(card, string.rep("★", hero.Stars or 1), 12, C.GoldYellow)
+			starsLbl.Position = UDim2.new(0, 0, 0, 10)
+			starsLbl.Size = UDim2.new(1, 0, 0, 18)
+			starsLbl.TextXAlignment = Enum.TextXAlignment.Center
+
+			local heroNameLbl = label(card, hero.DisplayName or "Hero", 15, C.Text, Enum.Font.GothamBold)
+			heroNameLbl.Position = UDim2.new(0, 6, 0, 32)
+			heroNameLbl.Size = UDim2.new(1, -12, 0, 22)
+			heroNameLbl.TextXAlignment = Enum.TextXAlignment.Center
+
+			local classLbl = label(card, hero.Archetype or "Class", 12, C.TextLavender)
+			classLbl.Position = UDim2.new(0, 0, 0, 58)
+			classLbl.Size = UDim2.new(1, 0, 0, 18)
+			classLbl.TextXAlignment = Enum.TextXAlignment.Center
 
 			local actionBtn = new("TextButton", {
 				Name = "HeroActionBtn",
