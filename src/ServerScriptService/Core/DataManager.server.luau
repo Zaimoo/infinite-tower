@@ -778,6 +778,19 @@ AssignHeroRoleFunc.OnServerInvoke = function(player: Player, heroUUID: any, targ
 
 	if targetAssignment == "BENCHED" then
 		hero.Assignment = "BENCHED"
+	elseif string.find(targetAssignment, "^SQUAD_SLOT_") then
+		local slotNum = tonumber(string.match(targetAssignment, "%d+"))
+		local maxSlots = DataManager.MaxSquadSlots(profile)
+		if not slotNum or slotNum < 1 or slotNum > maxSlots then
+			return false, "Invalid squad slot"
+		end
+		local oldAssignment = hero.Assignment
+		for _, h in pairs(profile.Heroes) do
+			if h.Assignment == targetAssignment and h.UUID ~= heroUUID then
+				h.Assignment = (string.find(oldAssignment, "^SQUAD_SLOT_") and oldAssignment) or "BENCHED"
+			end
+		end
+		hero.Assignment = targetAssignment :: HeroAssignment
 	elseif targetAssignment == "SQUAD_AUTO" then
 		local maxSlots = DataManager.MaxSquadSlots(profile)
 		local placed = false
