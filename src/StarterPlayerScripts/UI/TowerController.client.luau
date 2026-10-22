@@ -46,6 +46,18 @@ local function request(action: string,id: number?)
 		ExpectedLocationRevision=selfState.LocationRevision,ExpectedSquadRevision=selfState.SquadRevision}
 	pending=r.RequestId;status.Text="Preparing travel…";remotes.Request:FireServer(r)
 end
+_G.RequestTowerHub = function(): boolean
+	if not selfState then
+		warn("[TowerController] Cannot travel to Hub: selfState not ready yet")
+		return false
+	end
+	if pending then
+		warn("[TowerController] Travel already pending: " .. tostring(pending))
+		return false
+	end
+	request("HUB")
+	return true
+end
 local function render()
 	local floor=floors.Get(selected)
 	local info=presence and presence.Floors[selected+1]
