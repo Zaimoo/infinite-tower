@@ -32,6 +32,9 @@ local OTHER_BEACON_FADE_SPAN = OTHER_BEACON_MAX_DISTANCE - OTHER_BEACON_FADE_STA
 
 local HEADSHOT_PLACEHOLDER = "rbxasset://textures/ui/PlayerList/NewEmptyHeadShot.png"
 
+-- Fixed elevation above the island center anchor (clears fortress walls, buildings, and player character)
+local BEACON_HEIGHT_OFFSET = 110
+
 --------------------------------------------------------------------------------
 -- STATE & TYPES
 --------------------------------------------------------------------------------
@@ -39,7 +42,6 @@ type BeaconData = {
 	PlotModel: Model,
 	Billboard: BillboardGui,
 	RootGroup: CanvasGroup,
-	DistanceLabel: TextLabel,
 	IsLocal: boolean,
 	CenterPosition: Vector3,
 	UserId: number,
@@ -187,7 +189,6 @@ local function buildBeacon(plotModel: Model)
 	end
 
 	local isLocal = (ownerUserId == LocalPlayer.UserId)
-	local displayName = (ownerName and ownerName ~= "Unclaimed") and ownerName or ("Player " .. tostring(ownerUserId))
 
 	-- 1. Fixed Pixel Size BillboardGui (AlwaysOnTop)
 	local billboard = Instance.new("BillboardGui")
@@ -195,8 +196,8 @@ local function buildBeacon(plotModel: Model)
 	billboard.AlwaysOnTop = true
 	billboard.LightInfluence = 0
 	billboard.MaxDistance = isLocal and LOCAL_BEACON_MAX_DISTANCE or OTHER_BEACON_MAX_DISTANCE
-	billboard.Size = UDim2.new(0, 136, 0, 136)
-	billboard.StudsOffset = Vector3.new(0, 50, 0)
+	billboard.Size = UDim2.new(0, 104, 0, 104)
+	billboard.StudsOffset = Vector3.new(0, BEACON_HEIGHT_OFFSET, 0)
 	billboard.ResetOnSpawn = false
 	billboard.Active = false
 	billboard.Adornee = adornee
@@ -210,11 +211,11 @@ local function buildBeacon(plotModel: Model)
 	rootGroup.Parent = billboard
 
 	-- 2. Circular Avatar Frame with Gothic border
-	local avatarSize = 84
+	local avatarSize = 88
 	local avatarFrame = Instance.new("Frame")
 	avatarFrame.Name = "AvatarFrame"
-	avatarFrame.AnchorPoint = Vector2.new(0.5, 0)
-	avatarFrame.Position = UDim2.new(0.5, 0, 0, 0)
+	avatarFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+	avatarFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
 	avatarFrame.Size = UDim2.new(0, avatarSize, 0, avatarSize)
 	avatarFrame.BackgroundColor3 = Palette.ObsidianDark
 	avatarFrame.BorderSizePixel = 0
@@ -269,64 +270,12 @@ local function buildBeacon(plotModel: Model)
 		end
 	end)
 
-	-- 3. Name & Distance Pill Container (Gothic Obsidian Style)
-	local pillHeight = 38
-	local pillWidth = 132
-	local pill = Instance.new("Frame")
-	pill.Name = "InfoPill"
-	pill.AnchorPoint = Vector2.new(0.5, 0)
-	pill.Position = UDim2.new(0.5, 0, 0, avatarSize + 6)
-	pill.Size = UDim2.new(0, pillWidth, 0, pillHeight)
-	pill.BackgroundColor3 = Palette.ObsidianDark
-	pill.BackgroundTransparency = 0.15
-	pill.BorderSizePixel = 0
-	pill.Parent = rootGroup
-
-	local pillCorner = Instance.new("UICorner")
-	pillCorner.CornerRadius = UDim.new(0, 5)
-	pillCorner.Parent = pill
-
-	local pillStroke = Instance.new("UIStroke")
-	pillStroke.Color = isLocal and Color3.fromRGB(240, 195, 60) or Palette.InnerLineMuted
-	pillStroke.Thickness = isLocal and 1.5 or 1.0
-	pillStroke.Parent = pill
-
-	local nameLabel = Instance.new("TextLabel")
-	nameLabel.Name = "OwnerNameLabel"
-	nameLabel.AnchorPoint = Vector2.new(0.5, 0)
-	nameLabel.Position = UDim2.new(0.5, 0, 0, 2)
-	nameLabel.Size = UDim2.new(1, -8, 0, 18)
-	nameLabel.BackgroundTransparency = 1
-	nameLabel.Font = Enum.Font.GothamBold
-	nameLabel.Text = displayName
-	nameLabel.TextSize = 13
-	nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-	nameLabel.TextStrokeColor3 = Color3.fromRGB(15, 10, 20)
-	nameLabel.TextStrokeTransparency = 0.2
-	nameLabel.TextTruncate = Enum.TextTruncate.AtEnd
-	nameLabel.Parent = pill
-
-	local distLabel = Instance.new("TextLabel")
-	distLabel.Name = "DistanceLabel"
-	distLabel.AnchorPoint = Vector2.new(0.5, 0)
-	distLabel.Position = UDim2.new(0.5, 0, 0, 20)
-	distLabel.Size = UDim2.new(1, -8, 0, 16)
-	distLabel.BackgroundTransparency = 1
-	distLabel.Font = Enum.Font.GothamBold
-	distLabel.Text = isLocal and "⌂ HOME • calculating..." or "calculating..."
-	distLabel.TextSize = 11
-	distLabel.TextColor3 = isLocal and Palette.GoldText or Color3.fromRGB(200, 210, 225)
-	distLabel.TextStrokeColor3 = Color3.fromRGB(20, 14, 25)
-	distLabel.TextStrokeTransparency = 0.2
-	distLabel.Parent = pill
-
 	billboard.Parent = PlayerGui
 
 	activeBeacons[plotModel] = {
 		PlotModel = plotModel,
 		Billboard = billboard,
 		RootGroup = rootGroup,
-		DistanceLabel = distLabel,
 		IsLocal = isLocal,
 		CenterPosition = adornee.Position,
 		UserId = ownerUserId,
@@ -403,12 +352,10 @@ LocalPlayer.CharacterAdded:Connect(function()
 	end
 end)
 
--- Single Heartbeat loop: gentle bobbing animation, real-time distance updates, and smooth fade
+-- Single Heartbeat loop: smooth camera fade (beacon position is fixed in the sky)
 local lastPeriodicSync = 0
 RunService.Heartbeat:Connect(function()
 	local now = os.clock()
-	local bobOffset = math.sin(now * 1.8) * 2.5
-	local currentYOffset = 50 + bobOffset
 
 	local char = LocalPlayer.Character
 	local hrp = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
@@ -418,19 +365,6 @@ RunService.Heartbeat:Connect(function()
 	local camPos = cam and cam.CFrame.Position or playerPos
 
 	for _, beacon in pairs(activeBeacons) do
-		if beacon.Billboard and beacon.Billboard.Parent then
-			beacon.Billboard.StudsOffset = Vector3.new(0, currentYOffset, 0)
-		end
-
-		if beacon.DistanceLabel and playerPos then
-			local dist = (playerPos - beacon.CenterPosition).Magnitude
-			if beacon.IsLocal then
-				beacon.DistanceLabel.Text = string.format("⌂ HOME • %d studs", math.round(dist))
-			else
-				beacon.DistanceLabel.Text = string.format("%d studs", math.round(dist))
-			end
-		end
-
 		-- Smooth fade out for other players' beacons over the last 15% (595 to 700 studs from camera)
 		if not beacon.IsLocal and beacon.RootGroup and camPos then
 			local camDist = (camPos - beacon.CenterPosition).Magnitude
