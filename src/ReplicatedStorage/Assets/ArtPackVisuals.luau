@@ -39,16 +39,30 @@ function A.Template(id: string): Model?
 	local heroesFolder = assets:FindFirstChild("Heroes")
 	if heroesFolder and heroesFolder:IsA("Folder") then
 		local found = heroesFolder:FindFirstChild(resolved)
-		if found and found:IsA("Model") then return found end
+		if found and found:IsA("Model") and #found:GetChildren() > 0 then return found end
 	end
 
 	-- Search across all other asset subfolders
 	for _, folder in ipairs(assets:GetChildren()) do
 		if folder:IsA("Folder") and folder.Name ~= "Heroes" then
 			local found = folder:FindFirstChild(resolved)
-			if found and found:IsA("Model") then return found end
+			if found and found:IsA("Model") and #found:GetChildren() > 0 then return found end
 		end
 	end
+
+	-- Safe fallback: If a specific hero template is missing, try hero_han or any available hero model
+	if heroesFolder and (resolved:find("hero_") or id:find("hero_")) then
+		local fallback = heroesFolder:FindFirstChild("hero_han")
+		if fallback and fallback:IsA("Model") and #fallback:GetChildren() > 0 then
+			return fallback
+		end
+		for _, child in ipairs(heroesFolder:GetChildren()) do
+			if child:IsA("Model") and #child:GetChildren() > 0 then
+				return child
+			end
+		end
+	end
+
 	return nil
 end
 
@@ -70,7 +84,7 @@ function A.AttachAt(parent: Instance, id: string, ground: CFrame, scale: number?
 			p.CanQuery = false
 			p.Massless = true
 			if isR15 then
-				p.Anchored = (p.Name == "HumanoidRootPart")
+				p.Anchored = false
 			else
 				p.Anchored = true
 				p.CanCollide = p:GetAttribute("ArtPackCollider") == true
