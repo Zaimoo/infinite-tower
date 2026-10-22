@@ -166,7 +166,24 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 
 	local enemyRig=enemySpec and EnemyAnimation.Attach(model,root,meta.EnemyId)
 	local art = not enemyRig and ArtPackVisuals.Attach(model, meta or {}, root, bodySize) or nil
-	if art and head then head:Destroy() end
+	if art and head then
+		head:Destroy()
+	elseif isHero and not art then
+		-- Fallback visual rig if hero model is missing or loading
+		root.Transparency = 0
+		root.Material = Enum.Material.SmoothPlastic
+		head = Instance.new("Part")
+		head.Name = "Head"
+		head.Shape = Enum.PartType.Ball
+		head.Size = Vector3.new(1.4, 1.4, 1.4)
+		head.Color = Color3.fromRGB(255, 224, 196)
+		head.Material = Enum.Material.SmoothPlastic
+		head.Anchored = true
+		head.CanCollide = false
+		head:SetAttribute("NetId", netId)
+		head.Position = root.Position + Vector3.new(0, 1.8, 0)
+		head.Parent = model
+	end
 	local hl = Instance.new("Highlight")
 	hl.FillColor = bodyColor
 	hl.OutlineColor = isHero and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(255, 90, 90)
