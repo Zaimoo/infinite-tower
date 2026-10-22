@@ -9,6 +9,8 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
@@ -1674,6 +1676,11 @@ do
 		if input.KeyCode == Enum.KeyCode.Escape then
 			_G.OpenMasterModal("NONE")
 		end
+		if input.KeyCode == Enum.KeyCode.B then
+			if _G.ToggleShop then
+				_G.ToggleShop()
+			end
+		end
 		if RunService:IsStudio() and input.KeyCode == Enum.KeyCode.F8 then
 			for _, b in devButtons do
 				b.Visible = not b.Visible
@@ -1699,6 +1706,117 @@ do
 	encounterToggle.TextSize = 12
 	stroke(encounterToggle)
 
+	--============================================================================
+	-- LEFT SIDEBAR NAVIGATION (Shop Icon & Future Sidebar Tools)
+	--============================================================================
+	local leftSidebar = Instance.new("Frame")
+	leftSidebar.Name = "LeftSidebar"
+	leftSidebar.Size = UDim2.fromOffset(80, 240)
+	leftSidebar.Position = UDim2.new(0, 16, 0.40, 0)
+	leftSidebar.AnchorPoint = Vector2.new(0, 0.5)
+	leftSidebar.BackgroundTransparency = 1
+	leftSidebar.ZIndex = 12
+	leftSidebar.Parent = hudGui
+
+	local leftList = Instance.new("UIListLayout")
+	leftList.FillDirection = Enum.FillDirection.Vertical
+	leftList.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	leftList.SortOrder = Enum.SortOrder.LayoutOrder
+	leftList.Padding = UDim.new(0, 12)
+	leftList.Parent = leftSidebar
+
+	-- Pure Floating Shop Icon Button (no box container, pure transparent silhouette)
+	local shopBtn = Instance.new("ImageButton")
+	shopBtn.Name = "ShopIconButton"
+	shopBtn.Size = UDim2.fromOffset(88, 88)
+	shopBtn.BackgroundTransparency = 1
+	shopBtn.BorderSizePixel = 0
+	shopBtn.AutoButtonColor = false
+	shopBtn.Image = "rbxassetid://95822585057439"
+	shopBtn.ScaleType = Enum.ScaleType.Fit
+	shopBtn.LayoutOrder = 1
+	shopBtn.ZIndex = 12
+	shopBtn.Parent = leftSidebar
+
+	local shopScale = Instance.new("UIScale")
+	shopScale.Scale = 1
+	shopScale.Parent = shopBtn
+
+	-- Notification Badge ("!") with breathing animation
+	local shopBadge = Instance.new("Frame")
+	shopBadge.Name = "NotificationBadge"
+	shopBadge.Size = UDim2.fromOffset(22, 22)
+	shopBadge.Position = UDim2.new(1, -6, 0, 4)
+	shopBadge.AnchorPoint = Vector2.new(0.5, 0.5)
+	shopBadge.BackgroundColor3 = Color3.fromRGB(235, 45, 65)
+	shopBadge.BorderSizePixel = 0
+	shopBadge.ZIndex = 15
+	shopBadge.Parent = shopBtn
+
+	local badgeCorner = Instance.new("UICorner")
+	badgeCorner.CornerRadius = UDim.new(1, 0)
+	badgeCorner.Parent = shopBadge
+
+	local badgeStroke = Instance.new("UIStroke")
+	badgeStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	badgeStroke.Thickness = 1.5
+	badgeStroke.Color = Color3.fromRGB(255, 255, 255)
+	badgeStroke.Parent = shopBadge
+
+	local badgeLabel = Instance.new("TextLabel")
+	badgeLabel.Size = UDim2.fromScale(1, 1)
+	badgeLabel.BackgroundTransparency = 1
+	badgeLabel.Text = "!"
+	badgeLabel.Font = Enum.Font.GothamBold
+	badgeLabel.TextSize = 13
+	badgeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+	badgeLabel.ZIndex = 16
+	badgeLabel.Parent = shopBadge
+
+	local badgeTween = TweenService:Create(
+		shopBadge,
+		TweenInfo.new(1.1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+		{ Size = UDim2.fromOffset(25, 25) }
+	)
+	badgeTween:Play()
+
+	-- Smooth Hover & Click Animations on Floating Icon
+	local isShopHovered = false
+	shopBtn.MouseEnter:Connect(function()
+		isShopHovered = true
+		TweenService:Create(shopScale, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1.10 }):Play()
+		TweenService:Create(shopBtn, TweenInfo.new(0.2), { ImageColor3 = Color3.fromRGB(255, 235, 255) }):Play()
+	end)
+
+	shopBtn.MouseLeave:Connect(function()
+		isShopHovered = false
+		TweenService:Create(shopScale, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = 1.0 }):Play()
+		TweenService:Create(shopBtn, TweenInfo.new(0.2), { ImageColor3 = Color3.fromRGB(255, 255, 255) }):Play()
+	end)
+
+	shopBtn.MouseButton1Down:Connect(function()
+		TweenService:Create(shopScale, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = 0.92 }):Play()
+	end)
+
+	shopBtn.MouseButton1Up:Connect(function()
+		local target = isShopHovered and 1.10 or 1.0
+		TweenService:Create(shopScale, TweenInfo.new(0.14, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = target }):Play()
+	end)
+
+	local function toggleShop()
+		if facilityController and facilityController.Root and facilityController.Root.Visible and facilityController.Current == "Summoning" then
+			facilityController:Close()
+		else
+			_G.OpenFacilityHUD("Summoning")
+		end
+	end
+	_G.ToggleShop = toggleShop
+	_G.OpenShop = toggleShop
+
+	shopBtn.Activated:Connect(function()
+		toggleShop()
+	end)
+
 	local modalWidths = { 1000 }
 	local function layout()
 		local cam = workspace.CurrentCamera
@@ -1710,6 +1828,15 @@ do
 		compact = w < 1100
 		local portrait = w < 650
 		local stackPanels = portrait or h < 540
+
+		-- LeftSidebar responsive positioning & scaling
+		leftSidebar.Position = portrait and UDim2.new(0, 8, 0.38, 0) or UDim2.new(0, 16, 0.40, 0)
+		local sidebarScale = leftSidebar:FindFirstChildOfClass("UIScale") or Instance.new("UIScale", leftSidebar)
+		if h < 550 or portrait then
+			sidebarScale.Scale = math.clamp(h / 650, 0.72, 1.0)
+		else
+			sidebarScale.Scale = 1.0
+		end
 
 		topBar.Visible = false
 		honorLabel.Visible = false
