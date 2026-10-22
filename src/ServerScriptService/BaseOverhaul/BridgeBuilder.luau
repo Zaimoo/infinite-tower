@@ -8,12 +8,24 @@ local function part(n,size,cf,rail)
  local p=Instance.new("Part") p.Name=n p.Size=size p.CFrame=cf p.Anchored=true
  p.Material=rail and Enum.Material.Granite or Enum.Material.Slate
  p.Color=rail and Color3.fromRGB(112,26,37) or Color3.fromRGB(55,45,52)
- p.TopSurface=Enum.SurfaceType.Smooth p.BottomSurface=Enum.SurfaceType.Smooth p.Parent=f
+ p.TopSurface=Enum.SurfaceType.Smooth p.BottomSurface=Enum.SurfaceType.Smooth
+ if rail then
+  local mod = Instance.new("PathfindingModifier")
+  mod.Label = "BridgeRail"
+  mod.Parent = p
+ end
+ p.Parent=f
 end
-local function span(n,a,b,w,rails)
+local function span(n,a,b,w,rails,railInset,railEndInset)
  local cf=CFrame.lookAt((a+b)/2,b) local len=(b-a).Magnitude+1
  part(n,Vector3.new(w,2,len),cf*CFrame.new(0,-1,0),false)
- if rails then for _,side in {-1,1} do part(n.."_Rail",Vector3.new(1,4,len),cf*CFrame.new(side*(w/2-0.5),2,0),true) end end
+ if rails then
+  local rA = if railInset then a + (b - a).Unit * railInset else a
+  local rB = if railEndInset then b - (b - a).Unit * railEndInset else b
+  local rLen = (rB - rA).Magnitude + 1
+  local rCf = CFrame.lookAt((rA + rB)/2, rB)
+  for _,side in {-1,1} do part(n.."_Rail",Vector3.new(1,4,rLen),rCf*CFrame.new(side*(w/2-0.5),2,0),true) end
+ end
 end
 local radius=375 local y=16 local angles={}
 for i=1,6 do
@@ -26,7 +38,7 @@ for i=1,6 do
    if gate and gate:IsA("BasePart") then
     local a=math.atan2(gate.Position.Z,gate.Position.X) table.insert(angles,a)
     local start=Vector3.new(gate.Position.X,12,gate.Position.Z)-gate.CFrame.LookVector*4
-    span("IslandBridge_"..i,start,Vector3.new(math.cos(a)*(radius-1),y,math.sin(a)*(radius-1)),18,true)
+    span("IslandBridge_"..i,start,Vector3.new(math.cos(a)*(radius-1),y,math.sin(a)*(radius-1)),18,true,4,18)
     local edgeBarriers=walls:FindFirstChild("InvisibleEdgeBarriers")
     local barrier=edgeBarriers and edgeBarriers:FindFirstChild("Barrier_Front")
     if barrier then barrier.CanCollide=false barrier.CanTouch=false end
