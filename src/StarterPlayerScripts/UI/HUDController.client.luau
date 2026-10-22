@@ -580,7 +580,7 @@ end
 
 -- Left: PATCH NOTES
 local patchNotesBtn = makeBarTextButton(bottomBar, "PatchNotesButton", "PATCH NOTES", 100, function()
-	showClientToast("INFINITE TOWER — Waiting Room, The Pit, World Boss & Tactical Whistles Active")
+	showClientToast("INFINITE TOWER — Waiting Room, World Boss & Tactical Whistles Active")
 end)
 patchNotesBtn.Position = UDim2.new(0, 26, 0.5, 0)
 patchNotesBtn.AnchorPoint = Vector2.new(0, 0.5)
@@ -604,40 +604,29 @@ centerLayout.SortOrder = Enum.SortOrder.LayoutOrder
 centerLayout.Padding = UDim.new(0, 18)
 centerLayout.Parent = centerGroup
 
-local pitTabBtn = makeBarTextButton(centerGroup, "Tab_ThePit", "THE PIT", 62, function()
-	if synthesisController then
-		if synthesisController:IsOpen() then
-			synthesisController:Close()
-		else
-			_G.OpenFacilityHUD("Synthesis")
-		end
-	end
-end)
-pitTabBtn.LayoutOrder = 1
-
 local forgeTabBtn = makeBarTextButton(centerGroup, "Tab_Blacksmith", "FORGE", 56, function()
 	local isForgeOpen = (forgeController and forgeController.Root and forgeController.Root.Visible) or blacksmithModal.Visible
 	_G.OpenMasterModal(isForgeOpen and "NONE" or "BLACKSMITH")
 end)
-forgeTabBtn.LayoutOrder = 2
+forgeTabBtn.LayoutOrder = 1
 
 local squadTabBtn = makeBarTextButton(centerGroup, "Tab_Squad", "SQUAD", 60, function()
 	local isSquadOpen = squadController and squadController:IsOpen()
 	_G.OpenMasterModal(isSquadOpen and "NONE" or "SQUAD")
 end)
-squadTabBtn.LayoutOrder = 3
+squadTabBtn.LayoutOrder = 2
 
 local qButton = makeBarTextButton(centerGroup, "OverdriveButton_Q", "OVERDRIVE", 88, function()
 	LastQClock = os.clock()
 	WhistleCommandRemote:FireServer(1)
 end)
-qButton.LayoutOrder = 4
+qButton.LayoutOrder = 3
 
 local eButton = makeBarTextButton(centerGroup, "EmergencyRecallButton_E", "RECALL", 72, function()
 	LastEClock = os.clock()
 	WhistleCommandRemote:FireServer(2)
 end)
-eButton.LayoutOrder = 5
+eButton.LayoutOrder = 4
 
 -- Vertical Divider
 local centerDivider = Instance.new("Frame")
@@ -645,7 +634,7 @@ centerDivider.Name = "Divider"
 centerDivider.Size = UDim2.fromOffset(1, 22)
 centerDivider.BackgroundColor3 = DIVIDER_GRAY
 centerDivider.BorderSizePixel = 0
-centerDivider.LayoutOrder = 6
+centerDivider.LayoutOrder = 5
 centerDivider.ZIndex = 11
 centerDivider.Parent = centerGroup
 
@@ -654,7 +643,7 @@ local iconMoveBtn, moveCanvas = makeBarIconButton(centerGroup, "Tool_AutoSwap", 
 	AssignHeroRoleFunc:InvokeServer("AUTO_SWAP_EXHAUSTED", "")
 	showClientToast("Swapped exhausted heroes with fresh bench heroes!")
 end)
-iconMoveBtn.LayoutOrder = 7
+iconMoveBtn.LayoutOrder = 6
 do
 	addPart(moveCanvas, 2, 2, 5, 2)
 	addPart(moveCanvas, 2, 2, 2, 5)
@@ -673,7 +662,7 @@ local iconGridBtn, gridCanvas = makeBarIconButton(centerGroup, "Tool_RosterGrid"
 	local isSquadOpen = squadController and squadController:IsOpen()
 	_G.OpenMasterModal(isSquadOpen and "NONE" or "SQUAD")
 end)
-iconGridBtn.LayoutOrder = 8
+iconGridBtn.LayoutOrder = 7
 do
 	for row = 0, 2 do
 		for col = 0, 2 do
@@ -738,13 +727,10 @@ _G.TriggerHUDWhistleCooldown = function(which: string)
 end
 
 local function updateBottomTabHighlights()
-	local pitActive = (synthesisController ~= nil and synthesisController:IsOpen()) or (promotionController ~= nil and promotionController:IsOpen())
 	local forgeActive = (forgeController and forgeController.Root and forgeController.Root.Visible) or blacksmithModal.Visible
 	local squadActive = squadController ~= nil and squadController:IsOpen()
-	pitTabBtn:SetAttribute("IsActiveTab", pitActive)
 	forgeTabBtn:SetAttribute("IsActiveTab", forgeActive)
 	squadTabBtn:SetAttribute("IsActiveTab", squadActive)
-	pitTabBtn.TextColor3 = pitActive and SLATE_ACTIVE or SLATE_TEXT
 	forgeTabBtn.TextColor3 = forgeActive and SLATE_ACTIVE or SLATE_TEXT
 	squadTabBtn.TextColor3 = squadActive and SLATE_ACTIVE or SLATE_TEXT
 end
@@ -783,22 +769,6 @@ makeButton({
 	OnClick = function()
 		if squadController then
 			squadController:Toggle()
-		end
-	end,
-	Parent = navButtonsFrame,
-})
-makeButton({
-	Size = UDim2.new(0, 100, 1, 0),
-	BackgroundColor3 = Color3.fromRGB(210, 85, 35),
-	Text = " The Pit",
-	Corner = 6,
-	OnClick = function()
-		if synthesisController then
-			if synthesisController:IsOpen() then
-				synthesisController:Close()
-			else
-				_G.OpenFacilityHUD("Synthesis")
-			end
 		end
 	end,
 	Parent = navButtonsFrame,
