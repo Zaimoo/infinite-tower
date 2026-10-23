@@ -382,6 +382,115 @@ function Architecture.Build(model: Model, frame: CFrame, id: string, accent: Col
 		return
 	end
 
+	if id == "Blacksmith" or id == "Forge" then
+		local darkIron = Color3.fromRGB(48, 52, 60)
+		local steel = Color3.fromRGB(160, 165, 175)
+		local coalOrange = Color3.fromRGB(255, 75, 15)
+		local darkTimber = Color3.fromRGB(65, 45, 30)
+
+		-- 1. Heavy Stone & Granite Foundation Platform with stepped approach
+		part("ForgeFoundation", V(26, .7, 22), V(0, .35, 0), shadow, Enum.Material.Slate)
+		part("ForgeInnerHearthDeck", V(24.5, .4, 20.5), V(0, .8, 0), Color3.fromRGB(70, 72, 78), Enum.Material.Basalt)
+		for i = 1, 3 do
+			part("ForgeStep_" .. i, V(14 + i * 2, .35, 1.4), V(0, .9 - (i - 1) * .35, 11.2 + (i - 1) * 1.2), shadow, Enum.Material.Slate)
+		end
+
+		-- 2. Heavy Stone Smelting Furnace & Gothic Chimney Stack
+		local furnaceBackZ = -6.5
+		part("FurnaceMainBody", V(9, 7.5, 6), V(0, 4.5, furnaceBackZ), Color3.fromRGB(52, 54, 60), Enum.Material.Cobblestone)
+		part("FurnaceLintel", V(9.8, .8, 6.4), V(0, 8.4, furnaceBackZ), bronze, Enum.Material.Granite)
+		part("ChimneyBase", V(5, 5, 4.5), V(0, 11, furnaceBackZ), Color3.fromRGB(45, 47, 52), Enum.Material.Cobblestone)
+		part("ChimneyStack", V(3.8, 12, 3.4), V(0, 19, furnaceBackZ), Color3.fromRGB(38, 40, 45), Enum.Material.Basalt)
+		part("ChimneyCap", V(4.6, .6, 4.2), V(0, 25.2, furnaceBackZ), bronze, Enum.Material.Granite)
+
+		-- Arch hearth opening with burning coke coals
+		part("HearthArchLeft", V(1.8, 4.2, 1.8), V(-2.8, 3.2, furnaceBackZ + 2.2), shadow, Enum.Material.Slate)
+		part("HearthArchRight", V(1.8, 4.2, 1.8), V(2.8, 3.2, furnaceBackZ + 2.2), shadow, Enum.Material.Slate)
+		part("HearthArchTop", V(6.4, 1.4, 1.8), V(0, 5.5, furnaceBackZ + 2.2), shadow, Enum.Material.Slate)
+
+		local coals = part("BlazingCoals", V(4.8, 1.4, 3.2), V(0, 1.6, furnaceBackZ + 1.2), coalOrange, Enum.Material.Neon)
+		coals.CanCollide = false
+		local forgeLight = Instance.new("PointLight")
+		forgeLight.Color = Color3.fromRGB(255, 140, 30)
+		forgeLight.Brightness = 3.5
+		forgeLight.Range = 26
+		forgeLight.Shadows = false
+		forgeLight.Parent = coals
+
+		local smoke = Instance.new("Smoke")
+		smoke.Color = Color3.fromRGB(60, 55, 55)
+		smoke.Size = 1.2
+		smoke.RiseVelocity = 12
+		smoke.Opacity = 0.4
+		smoke.Parent = part("ChimneySmokeAnchor", V(.5, .5, .5), V(0, 25.5, furnaceBackZ), shadow, Enum.Material.Metal)
+
+		-- 3. Massive Heavy Iron Anvil on Petrified Ironwood Block
+		cylinder("AnvilStump", 2.2, 2.4, V(0, 2.0, 1.0), darkTimber, Enum.Material.Wood)
+		cylinder("StumpIronBand", 2.3, .3, V(0, 2.0, 1.0), darkIron, Enum.Material.Metal)
+		part("AnvilBase", V(2.6, .8, 4.2), V(0, 3.5, 1.0), darkIron, Enum.Material.Metal)
+		part("AnvilWaist", V(1.6, 1.2, 2.6), V(0, 4.3, 1.0), darkIron, Enum.Material.Metal)
+		part("AnvilFace", V(2.4, .9, 4.8), V(0, 5.2, 1.0), steel, Enum.Material.Metal)
+		part("AnvilHorn", V(1.4, .8, 2.0), V(0, 5.2, 3.8), steel, Enum.Material.Metal)
+
+		-- Smithing Hammer on Anvil
+		local hammer = part("SmithingHammer", V(.5, .6, 1.6), V(-.4, 5.8, 1.2), steel, Enum.Material.Metal)
+		hammer.CFrame *= CFrame.Angles(0, math.rad(30), 0)
+		hammer.CanCollide = false
+
+		-- 4. Dual Quenching Troughs (Water & Oil)
+		part("WaterTroughTub", V(3.5, 2.4, 7), V(-8.5, 2.0, 0), shadow, Enum.Material.Slate)
+		local water = part("QuenchingWater", V(2.7, .2, 6.2), V(-8.5, 2.9, 0), Color3.fromRGB(65, 160, 215), Enum.Material.Glass)
+		water.Transparency = 0.35
+		water.CanCollide = false
+
+		part("OilTroughTub", V(3.5, 2.4, 7), V(8.5, 2.0, 0), shadow, Enum.Material.Slate)
+		local oil = part("TemperingOil", V(2.7, .2, 6.2), V(8.5, 2.9, 0), Color3.fromRGB(45, 35, 30), Enum.Material.SmoothPlastic)
+		oil.CanCollide = false
+
+		-- 5. Gothic Timber Canopy with Pitch Slate Eaves
+		for _, x in {-10.5, 10.5} do
+			for _, z in {-8.5, 8.5} do
+				cylinder("ForgePillar", .65, 12, V(x, 6.8, z), darkTimber, Enum.Material.Wood)
+			end
+		end
+		part("CanopyBeamLeft", V(1.2, 1.0, 18), V(-10.5, 12.8, 0), darkTimber, Enum.Material.Wood)
+		part("CanopyBeamRight", V(1.2, 1.0, 18), V(10.5, 12.8, 0), darkTimber, Enum.Material.Wood)
+		part("CanopyBeamFront", V(22, 1.0, 1.2), V(0, 12.8, 8.5), darkTimber, Enum.Material.Wood)
+		part("CanopyBeamRear", V(22, 1.0, 1.2), V(0, 12.8, -8.5), darkTimber, Enum.Material.Wood)
+
+		for _, side in {-1, 1} do
+			local pitch = math.rad(-side * 18)
+			block("SlateCanopyEave", V(13.5, .6, 20), CFrame.new(side * 6.2, 14.6, 0) * CFrame.Angles(0, 0, pitch), Color3.fromRGB(40, 42, 48), Enum.Material.Slate)
+		end
+		part("RidgeCap", V(1.2, .6, 20.4), V(0, 16.8, 0), bronze, Enum.Material.Metal)
+
+		-- 6. Hanging Lanterns & Weapon Display Racks
+		for _, x in {-7, 7} do
+			part("ForgeLanternArm", V(.18, .6, 1.2), V(x, 11.8, 8.6), bronze, Enum.Material.Metal)
+			local lamp = part("ForgeLantern", V(.7, 1.2, .7), V(x, 11.0, 9.1), Color3.fromRGB(255, 200, 120), Enum.Material.Neon)
+			lamp.CanCollide = false
+			local light = Instance.new("PointLight")
+			light.Color, light.Range, light.Brightness, light.Parent = lamp.Color, 14, 1.0, lamp
+		end
+
+		-- Weapon Racks along side walls
+		part("WeaponRackWood", V(1.2, 6.5, 5), V(-8.5, 4.5, -4), darkTimber, Enum.Material.Wood)
+		local bladeGlow = part("WeaponBladeGlow", V(.2, 4.5, .6), V(-7.8, 4.8, -4), Color3.fromRGB(120, 200, 255), Enum.Material.Neon)
+		bladeGlow.CanCollide = false
+
+		-- 7. Crafting Workbench & Metal Ingots
+		part("SmithWorkbench", V(5.5, 2.8, 2.2), V(5.5, 2.2, -4), darkTimber, Enum.Material.Wood)
+		part("BenchTop", V(5.8, .3, 2.5), V(5.5, 3.65, -4), pale, Enum.Material.Marble)
+		for i = -1, 1 do
+			local ingot = part("GoldIngot", V(.6, .3, 1.2), V(5.5 + i * .9, 3.9, -4), Color3.fromRGB(235, 185, 65), Enum.Material.Metal)
+			ingot.CanCollide = false
+		end
+
+		local title = part("ForgeSign", V(15, 1.9, .25), V(0, 14.2, 9.4), shadow)
+		sign(title, "THE BLACKSMITH", "FORGE OF ASCENSION")
+		return
+	end
+
 	if id == "GuardPost" then
 		local logColor = Color3.fromRGB(92, 68, 44)
 		local timberColor = Color3.fromRGB(120, 90, 58)

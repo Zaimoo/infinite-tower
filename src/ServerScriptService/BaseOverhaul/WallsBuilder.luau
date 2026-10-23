@@ -1,7 +1,11 @@
 --!strict
 -- WallsBuilder.luau
--- ModuleScript: Builds tall crenellated fortress walls around the island perimeter,
--- with an optional arched front gate facing the Tower (-Z local) and an invisible backup collision barrier.
+-- ModuleScript: Builds 28-stud high crenellated fortress walls around the Grand Citadel Courtyard (260 x 180 studs).
+-- Features:
+--   1. North Gatehouse facing the Drawbridge and Tower (-Z)
+--   2. South Vaulted Gatehouse archway opening into the Rear Outskirts (+Z)
+--   3. Corner Bastions and Merlons
+-- Implements GDD Section 3.4.
 
 local WallsBuilder = {}
 
@@ -9,36 +13,41 @@ local WallsBuilder = {}
 -- CONFIGURATION TABLE
 --============================================================================
 WallsBuilder.Config = {
-	-- Perimeter Dimensions (Matches IslandBuilder TopWidth / TopLength)
-	PerimeterWidth = 148,
-	PerimeterLength = 136,
+	-- Perimeter Dimensions (Grand Citadel & Courtyard: 260 x 180 studs)
+	PerimeterWidth = 260,
+	PerimeterLength = 180,
 
-	-- Wall Geometry
-	WallHeight = 18, -- Tall enough that standard JumpPower (50) cannot jump over
-	WallThickness = 5,
-	BastionSize = 9, -- Corner pillar thickness
-	BastionHeight = 22,
+	-- Wall Geometry (GDD Section 3.4: 28-stud high crenellated stone walls)
+	WallHeight = 28,
+	WallThickness = 6,
+	BastionSize = 12,
+	BastionHeight = 34,
 
 	-- Crenellations (Merlons on top of the wall)
 	MerlonWidth = 6,
-	MerlonHeight = 3.5,
+	MerlonHeight = 4.0,
 	MerlonSpacing = 12,
 
 	-- Front Gate Opening (Facing the Tower, -Z local direction)
-	IncludeFrontOpening = true, -- Set true so players have a clear portal/entry archway facing the Tower
-	OpeningWidth = 22,
-	OpeningArchHeight = 14,
-	BlockOpeningWithInvisibleBarrier = true, -- Prevents accidental walk-offs into open sky while keeping the visual gate
+	IncludeFrontOpening = true,
+	OpeningWidth = 24,
+	OpeningArchHeight = 18,
+	BlockOpeningWithInvisibleBarrier = false, -- Non-collidable so players walk across bridge into fortress
+
+	-- Rear Gate Opening (Facing the Outskirts, +Z local direction)
+	IncludeRearOpening = true,
+	RearOpeningWidth = 24,
+	RearOpeningArchHeight = 18,
 
 	-- Invisible Backup Safety Barrier
-	InvisibleBarrierHeight = 42, -- Extends well above the wall top so players can never fall off
+	InvisibleBarrierHeight = 48,
 
 	-- Materials & Colors
 	WallMaterial = Enum.Material.Brick,
-	WallColor = Color3.fromRGB(142, 140, 148),
+	WallColor = Color3.fromRGB(135, 133, 140),
 	TrimMaterial = Enum.Material.Cobblestone,
-	TrimColor = Color3.fromRGB(112, 110, 118),
-	BastionColor = Color3.fromRGB(122, 120, 128),
+	TrimColor = Color3.fromRGB(105, 103, 110),
+	BastionColor = Color3.fromRGB(115, 113, 120),
 }
 
 --============================================================================
@@ -89,11 +98,11 @@ local function populateMerlonsAlongSpan(
 		local pos = startPos:Lerp(endPos, alpha)
 		makePart({
 			Name = "WallMerlon",
-			Size = Vector3.new(wallThickness + 0.6, cfg.MerlonHeight, cfg.MerlonWidth),
+			Size = Vector3.new(wallThickness + 0.8, cfg.MerlonHeight, cfg.MerlonWidth),
 			CFrame = CFrame.new(pos) * CFrame.Angles(0, yaw, 0),
 			Material = cfg.TrimMaterial,
 			Color = cfg.TrimColor,
-			Decorative = true, -- Decorative crenellations; main wall + invisible barrier handle collisions
+			Decorative = true,
 			Parent = parent,
 		})
 	end
@@ -102,7 +111,6 @@ end
 --============================================================================
 -- BUILDER
 --============================================================================
--- Attaches or returns a Folder/Model of fortress walls centered at local Y = 0 (island top surface).
 function WallsBuilder.Build(parentIsland: Instance?, customConfig: { [string]: any }?): Model
 	local cfg = table.clone(WallsBuilder.Config)
 	if customConfig then
@@ -138,8 +146,8 @@ function WallsBuilder.Build(parentIsland: Instance?, customConfig: { [string]: a
 		})
 		makePart({
 			Name = string.format("CornerBastionCap_%d", i),
-			Size = Vector3.new(cfg.BastionSize + 1.5, 2, cfg.BastionSize + 1.5),
-			CFrame = CFrame.new(cPos.X, cfg.BastionHeight + 1, cPos.Z),
+			Size = Vector3.new(cfg.BastionSize + 2, 2.5, cfg.BastionSize + 2),
+			CFrame = CFrame.new(cPos.X, cfg.BastionHeight + 1.25, cPos.Z),
 			Material = cfg.TrimMaterial,
 			Color = cfg.TrimColor,
 			Decorative = true,
@@ -147,24 +155,7 @@ function WallsBuilder.Build(parentIsland: Instance?, customConfig: { [string]: a
 		})
 	end
 
-	-- 2. Back Wall (+Z), Left Wall (-X), Right Wall (+X)
-	makePart({
-		Name = "Wall_Back",
-		Size = Vector3.new(cfg.PerimeterWidth, cfg.WallHeight, cfg.WallThickness),
-		CFrame = CFrame.new(0, wallCenterY, halfL),
-		Material = cfg.WallMaterial,
-		Color = cfg.WallColor,
-		Decorative = false,
-		Parent = wallsModel,
-	})
-	populateMerlonsAlongSpan(
-		wallsModel,
-		Vector3.new(-halfW + cfg.BastionSize, merlonCenterY, halfL),
-		Vector3.new(halfW - cfg.BastionSize, merlonCenterY, halfL),
-		cfg.WallThickness,
-		cfg
-	)
-
+	-- 2. Left Wall (-X) and Right Wall (+X)
 	makePart({
 		Name = "Wall_West",
 		Size = Vector3.new(cfg.WallThickness, cfg.WallHeight, cfg.PerimeterLength),
@@ -199,7 +190,7 @@ function WallsBuilder.Build(parentIsland: Instance?, customConfig: { [string]: a
 		cfg
 	)
 
-	-- 3. Front Wall (-Z, facing the Central Tower)
+	-- 3. Front Wall (-Z, facing the Central Tower and Drawbridge)
 	if cfg.IncludeFrontOpening then
 		local sideSpan = (cfg.PerimeterWidth - cfg.OpeningWidth) * 0.5
 		local leftCenterX = -(cfg.OpeningWidth * 0.5 + sideSpan * 0.5)
@@ -225,10 +216,10 @@ function WallsBuilder.Build(parentIsland: Instance?, customConfig: { [string]: a
 		})
 
 		-- Gate Pillars & Upper Arch Lintel
-		local lintelHeight = math.max(3, cfg.WallHeight - cfg.OpeningArchHeight)
+		local lintelHeight = math.max(4, cfg.WallHeight - cfg.OpeningArchHeight)
 		makePart({
 			Name = "GateLintel",
-			Size = Vector3.new(cfg.OpeningWidth + 4, lintelHeight, cfg.WallThickness + 1.5),
+			Size = Vector3.new(cfg.OpeningWidth + 4, lintelHeight, cfg.WallThickness + 2),
 			CFrame = CFrame.new(0, cfg.OpeningArchHeight + lintelHeight * 0.5, -halfL),
 			Material = cfg.TrimMaterial,
 			Color = cfg.TrimColor,
@@ -238,8 +229,8 @@ function WallsBuilder.Build(parentIsland: Instance?, customConfig: { [string]: a
 		for _, signX in ipairs({ -1, 1 }) do
 			makePart({
 				Name = signX < 0 and "GatePillar_Left" or "GatePillar_Right",
-				Size = Vector3.new(4.5, cfg.WallHeight + 3, cfg.WallThickness + 2.5),
-				CFrame = CFrame.new(signX * (cfg.OpeningWidth * 0.5 + 1.5), (cfg.WallHeight + 3) * 0.5, -halfL),
+				Size = Vector3.new(5.0, cfg.WallHeight + 4, cfg.WallThickness + 3.0),
+				CFrame = CFrame.new(signX * (cfg.OpeningWidth * 0.5 + 2.0), (cfg.WallHeight + 4) * 0.5, -halfL),
 				Material = cfg.TrimMaterial,
 				Color = cfg.BastionColor,
 				Decorative = false,
@@ -247,65 +238,103 @@ function WallsBuilder.Build(parentIsland: Instance?, customConfig: { [string]: a
 			})
 		end
 
-		-- Gate Entrance Opening (Open visiting: non-collidable so visitors can freely walk in and out)
-		local gateBarrier = makePart({
-			Name = "GateBarrier",
-			Size = Vector3.new(cfg.OpeningWidth, cfg.OpeningArchHeight + 2, cfg.WallThickness + 1.0),
-			CFrame = CFrame.new(0, (cfg.OpeningArchHeight + 2) * 0.5, -halfL),
-			Material = Enum.Material.ForceField,
-			Color = Color3.fromRGB(180, 40, 50),
-			Transparency = 1,
-			Decorative = true,
-			Parent = wallsModel,
-		})
-		gateBarrier.CanCollide = false
-		gateBarrier.CanTouch = false
-		gateBarrier:SetAttribute("IsPlotGateBarrier", true)
-
 		populateMerlonsAlongSpan(
 			wallsModel,
 			Vector3.new(-halfW + cfg.BastionSize, merlonCenterY, -halfL),
+			Vector3.new(-cfg.OpeningWidth * 0.5, merlonCenterY, -halfL),
+			cfg.WallThickness,
+			cfg
+		)
+		populateMerlonsAlongSpan(
+			wallsModel,
+			Vector3.new(cfg.OpeningWidth * 0.5, merlonCenterY, -halfL),
 			Vector3.new(halfW - cfg.BastionSize, merlonCenterY, -halfL),
 			cfg.WallThickness,
 			cfg
 		)
-	else
+	end
+
+	-- 4. Rear Wall (+Z, facing the Southern Outskirts)
+	if cfg.IncludeRearOpening then
+		local rearSpan = (cfg.PerimeterWidth - cfg.RearOpeningWidth) * 0.5
+		local leftCenterX = -(cfg.RearOpeningWidth * 0.5 + rearSpan * 0.5)
+		local rightCenterX = (cfg.RearOpeningWidth * 0.5 + rearSpan * 0.5)
+
 		makePart({
-			Name = "Wall_Front",
-			Size = Vector3.new(cfg.PerimeterWidth, cfg.WallHeight, cfg.WallThickness),
-			CFrame = CFrame.new(0, wallCenterY, -halfL),
+			Name = "Wall_BackLeft",
+			Size = Vector3.new(rearSpan, cfg.WallHeight, cfg.WallThickness),
+			CFrame = CFrame.new(leftCenterX, wallCenterY, halfL),
 			Material = cfg.WallMaterial,
 			Color = cfg.WallColor,
 			Decorative = false,
 			Parent = wallsModel,
 		})
+		makePart({
+			Name = "Wall_BackRight",
+			Size = Vector3.new(rearSpan, cfg.WallHeight, cfg.WallThickness),
+			CFrame = CFrame.new(rightCenterX, wallCenterY, halfL),
+			Material = cfg.WallMaterial,
+			Color = cfg.WallColor,
+			Decorative = false,
+			Parent = wallsModel,
+		})
+
+		-- Vaulted Rear Archway Lintel
+		local lintelHeight = math.max(4, cfg.WallHeight - cfg.RearOpeningArchHeight)
+		makePart({
+			Name = "RearGateLintel",
+			Size = Vector3.new(cfg.RearOpeningWidth + 4, lintelHeight, cfg.WallThickness + 2),
+			CFrame = CFrame.new(0, cfg.RearOpeningArchHeight + lintelHeight * 0.5, halfL),
+			Material = cfg.TrimMaterial,
+			Color = cfg.TrimColor,
+			Decorative = false,
+			Parent = wallsModel,
+		})
+		for _, signX in ipairs({ -1, 1 }) do
+			makePart({
+				Name = signX < 0 and "RearGatePillar_Left" or "RearGatePillar_Right",
+				Size = Vector3.new(5.0, cfg.WallHeight + 4, cfg.WallThickness + 3.0),
+				CFrame = CFrame.new(signX * (cfg.RearOpeningWidth * 0.5 + 2.0), (cfg.WallHeight + 4) * 0.5, halfL),
+				Material = cfg.TrimMaterial,
+				Color = cfg.BastionColor,
+				Decorative = false,
+				Parent = wallsModel,
+			})
+		end
+
 		populateMerlonsAlongSpan(
 			wallsModel,
-			Vector3.new(-halfW + cfg.BastionSize, merlonCenterY, -halfL),
-			Vector3.new(halfW - cfg.BastionSize, merlonCenterY, -halfL),
+			Vector3.new(-halfW + cfg.BastionSize, merlonCenterY, halfL),
+			Vector3.new(-cfg.RearOpeningWidth * 0.5, merlonCenterY, halfL),
+			cfg.WallThickness,
+			cfg
+		)
+		populateMerlonsAlongSpan(
+			wallsModel,
+			Vector3.new(cfg.RearOpeningWidth * 0.5, merlonCenterY, halfL),
+			Vector3.new(halfW - cfg.BastionSize, merlonCenterY, halfL),
 			cfg.WallThickness,
 			cfg
 		)
 	end
 
-	-- 4. Invisible Backup Collision Barrier along all 4 edges
+	-- 5. Invisible Backup Collision Barriers
 	local barrierFolder = Instance.new("Folder")
 	barrierFolder.Name = "InvisibleEdgeBarriers"
 	barrierFolder.Parent = wallsModel
 
 	local bY = cfg.InvisibleBarrierHeight * 0.5
+	local rearSpan = (cfg.PerimeterWidth - cfg.RearOpeningWidth) * 0.5
+	local leftRearX = -(cfg.RearOpeningWidth * 0.5 + rearSpan * 0.5)
+	local rightRearX = (cfg.RearOpeningWidth * 0.5 + rearSpan * 0.5)
+
 	local barrierDefs = {
-		{ Name = "Barrier_Back", Size = Vector3.new(cfg.PerimeterWidth + 4, cfg.InvisibleBarrierHeight, 2), Pos = Vector3.new(0, bY, halfL + 1.5) },
 		{ Name = "Barrier_West", Size = Vector3.new(2, cfg.InvisibleBarrierHeight, cfg.PerimeterLength + 4), Pos = Vector3.new(-halfW - 1.5, bY, 0) },
 		{ Name = "Barrier_East", Size = Vector3.new(2, cfg.InvisibleBarrierHeight, cfg.PerimeterLength + 4), Pos = Vector3.new(halfW + 1.5, bY, 0) },
+		-- Rear barriers flanking the central archway
+		{ Name = "Barrier_BackLeft", Size = Vector3.new(rearSpan, cfg.InvisibleBarrierHeight, 2), Pos = Vector3.new(leftRearX, bY, halfL + 1.5) },
+		{ Name = "Barrier_BackRight", Size = Vector3.new(rearSpan, cfg.InvisibleBarrierHeight, 2), Pos = Vector3.new(rightRearX, bY, halfL + 1.5) },
 	}
-	if cfg.BlockOpeningWithInvisibleBarrier or not cfg.IncludeFrontOpening then
-		table.insert(barrierDefs, {
-			Name = "Barrier_Front",
-			Size = Vector3.new(cfg.PerimeterWidth + 4, cfg.InvisibleBarrierHeight, 2),
-			Pos = Vector3.new(0, bY, -halfL - 1.5),
-		})
-	end
 
 	for _, b in ipairs(barrierDefs) do
 		makePart({

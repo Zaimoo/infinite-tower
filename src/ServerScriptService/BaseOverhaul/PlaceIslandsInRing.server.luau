@@ -25,9 +25,9 @@ local Config = {
 	-- Ring Layout (6 Floating Islands, 60 degrees apart, facing the Tower)
 	IslandCount = 6,
 	RingCenter = Vector3.new(0, 0, 0),
-	RingRadius = 540, -- Keeps R >= 460 so CombatSimulation automatic Gem/Loot drop-off works without changes!
+	RingRadius = 650, -- GDD Section 3.2 & 3.4: 1.2x expansion out to R = 650 studs
 	IslandSurfaceY = 12, -- Keeps Y = 12 so CombatSimulation & EntityRenderer hero ground height works without changes!
-	StartAngleDeg = -90, -- -90 deg places Plot_1 at (0, 12, -540), matching original Plot_1 orientation
+	StartAngleDeg = -90, -- -90 deg places Plot_1 at (0, 12, -650), matching original Plot_1 orientation
 
 	-- Existing Plot & Environment Visibility
 	HideOldPerimeterHighway = true, -- Hides flat connecting highway segments so islands float over open sky
@@ -92,12 +92,12 @@ local function migratePlotToIsland(plotModel: Model, islandClone: Model, islandT
 		plotSpawn.CanCollide = false
 		plotSpawn.Transparency = 1 -- Blends cleanly into the cobblestone floor
 		plotSpawn.Neutral = false
-		plotSpawn.CFrame = islandTopCF * CFrame.new(0, 0.5, -38)
+		plotSpawn.CFrame = islandTopCF * CFrame.new(0, 0.5, -80)
 	end
 
 	-- 3. Move PrivateExtractionPad to the inner edge near the front gate so Relic drop-off continues to work
 	local extractionPad = plotModel:FindFirstChild("PrivateExtractionPad") :: BasePart?
-	local padCFrame = islandTopCF * CFrame.new(32, 0.6, -42)
+	local padCFrame = islandTopCF * CFrame.new(36, 0.6, -72)
 	if extractionPad then
 		extractionPad.Anchored = true
 		extractionPad.CFrame = padCFrame
@@ -109,8 +109,8 @@ local function migratePlotToIsland(plotModel: Model, islandClone: Model, islandT
 		end
 	end
 
-	-- 4. Delete old Tycoon Facility Models (Infirmary, DimLab, SummoningAltar)
-	for _, facName in ipairs({ "Facility_Infirmary", "Facility_DimLab", "SummoningAltar" }) do
+	-- 4. Delete old Tycoon Facility Models (Infirmary, DimLab, SummoningAltar, legacy Blacksmith)
+	for _, facName in ipairs({ "Facility_Infirmary", "Facility_DimLab", "SummoningAltar", "Facility_Blacksmith" }) do
 		local fac = plotModel:FindFirstChild(facName)
 		if fac then
 			fac:Destroy()
@@ -259,10 +259,12 @@ local function buildOverhaul(forceRebuild: boolean?)
 		end
 	end
 
+	local OVERHAUL_VERSION = 4
 	local plotsFolder = Workspace:WaitForChild("WaitingRoomPlots")
 	local existingContainer = Workspace:FindFirstChild("BaseOverhaulGeometry")
 	local plot1 = plotsFolder:FindFirstChild("Plot_1")
 	local alreadyBaked = existingContainer ~= nil
+		and existingContainer:GetAttribute("OverhaulVersion") == OVERHAUL_VERSION
 		and existingContainer:FindFirstChild("CentralCrimsonTower") ~= nil
 		and plot1 ~= nil
 		and plot1:FindFirstChild("FloatingFortressIsland") ~= nil
@@ -286,6 +288,7 @@ local function buildOverhaul(forceRebuild: boolean?)
 	end
 	local overhaulContainer = Instance.new("Folder")
 	overhaulContainer.Name = "BaseOverhaulGeometry"
+	overhaulContainer:SetAttribute("OverhaulVersion", OVERHAUL_VERSION)
 	overhaulContainer.Parent = Workspace
 
 	-- 1. Build Central Black & Red Tower
