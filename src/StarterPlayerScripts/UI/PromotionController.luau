@@ -28,6 +28,7 @@ local Workspace = game:GetService("Workspace")
 local HeroCard = require(script.Parent:WaitForChild("HeroCard"))
 local StatFormulas = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("StatFormulas"))
 local PitBalanceConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("PitBalanceConfig"))
+local GothicBoxStyle = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GothicBoxStyle"))
 
 local Promo = {}
 Promo.__index = Promo
@@ -88,20 +89,12 @@ local function glow(parent: GuiObject, pad: number, color: Color3?, transparency
 	stroke(g, color or C.BorderGlow, 3, transparency or 0.75)
 end
 
+local function applyGothicStyle(container: GuiObject, style: "Window" | "Card" | "Button" | "Compact")
+	return GothicBoxStyle.Apply(container, { Style = style })
+end
+
 local function cornerDiamonds(parent: GuiObject, size: number)
-	for _, corner in { Vector2.new(0, 0), Vector2.new(1, 0), Vector2.new(0, 1), Vector2.new(1, 1) } do
-		local d = new("Frame", {
-			Name = "DiamondCorner",
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Rotation = 45,
-			Position = UDim2.fromScale(corner.X, corner.Y),
-			Size = UDim2.fromOffset(size, size),
-			BackgroundColor3 = Color3.fromRGB(10, 10, 16),
-			BorderSizePixel = 0,
-			ZIndex = parent.ZIndex + 3,
-		}, parent)
-		stroke(d, C.Border, 1, 0)
-	end
+	-- Handled automatically by GothicBoxStyle
 end
 
 local function label(parent: Instance, text: string, size: number, color: Color3, font: Enum.Font?): TextLabel
@@ -163,7 +156,7 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 		end
 	end)
 
-	-- 2. Modal Root Frame
+	-- 2. Modal Root Frame (Ornate Gothic Box Container)
 	local root = new("Frame", {
 		Name = "HeroPromotionModal",
 		AnchorPoint = Vector2.new(0.5, 0.5),
@@ -177,35 +170,12 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 	}, gui)
 	self.Root = root
 
-	stroke(root, C.Border, 1, 0)
-	glow(root, 10, C.BorderGlow, 0.75)
+	applyGothicStyle(root, "Window")
 
-	-- Inset Inner Border
-	local inner = new("Frame", {
-		Name = "InnerBorder",
-		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(4, 4),
-		Size = UDim2.new(1, -8, 1, -8),
-		ZIndex = 41,
-	}, root)
-	stroke(inner, C.Border, 1, 0.7)
-
-	cornerDiamonds(root, 10)
 	self.Scale = new("UIScale", {}, root)
 
-	-- Close Button
-	local close = new("TextButton", {
-		Name = "Close",
-		Text = "×",
-		TextSize = 26,
-		Font = Enum.Font.GothamBold,
-		TextColor3 = C.TextDim,
-		BackgroundTransparency = 1,
-		Position = UDim2.new(1, -44, 0, 14),
-		Size = UDim2.fromOffset(36, 36),
-		ZIndex = 43,
-	}, root)
-	close.Activated:Connect(function()
+	-- Close Button (High contrast gothic rounded square with Latin 'X')
+	local close = GothicBoxStyle.CreateCloseButton(root, function()
 		if not self.Busy then
 			self:Close()
 		end
@@ -534,18 +504,8 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 		ZIndex = 43,
 	}, actionArea)
 	self.ConfirmButton = btn
-	self.ConfirmStroke = stroke(btn, C.Border, 1, 0)
-	glow(btn, 6, C.BorderGlow, 0.75)
-
-	local btnInner = new("Frame", {
-		Name = "InnerBorder",
-		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(3, 3),
-		Size = UDim2.new(1, -6, 1, -6),
-		ZIndex = 44,
-	}, btn)
-	stroke(btnInner, C.Border, 1, 0.65)
-	cornerDiamonds(btn, 7)
+	applyGothicStyle(btn, "Button")
+	self.ConfirmStroke = btn:FindFirstChildOfClass("UIStroke")
 
 	btn.Activated:Connect(function()
 		self:Confirm()
@@ -609,8 +569,7 @@ function Promo.BuildPicker(self: any)
 		Size = UDim2.new(1, -24, 1, -24),
 		ZIndex = 60,
 	}, self.Root)
-	stroke(picker, C.Border, 1, 0.2)
-	cornerDiamonds(picker, 8)
+	applyGothicStyle(picker, "Window")
 	self.Picker = picker
 
 	self.PickerTitle = label(picker, "", 18, C.Text, Enum.Font.GothamBlack)
@@ -917,12 +876,12 @@ function Promo.RenderPicker(self: any)
 			Name = "Hero_" .. tostring(hero.UUID),
 			Text = "",
 			LayoutOrder = i,
-			AutoButtonColor = true,
+			AutoButtonColor = false,
 			BackgroundColor3 = C.SlotBg,
 			BorderSizePixel = 0,
 			ZIndex = 62,
 		}, self.PickerList)
-		stroke(tile, eligible and rarity or Color3.fromRGB(75, 68, 92), 1, eligible and 0.1 or 0.6)
+		GothicBoxStyle.Apply(tile, { Style = "Card" })
 
 		local host = new("Frame", {
 			BackgroundTransparency = 1,
@@ -1090,7 +1049,9 @@ function Promo.Render(self: any)
 	end
 
 	button.TextColor3 = (canCommit or self.Busy) and C.Text or Color3.fromRGB(120, 115, 135)
-	self.ConfirmStroke.Color = canCommit and C.Border or Color3.fromRGB(80, 70, 95)
+	if self.ConfirmStroke then
+		self.ConfirmStroke.Color = canCommit and C.Border or Color3.fromRGB(80, 70, 95)
+	end
 
 	local status, color = self.Message, C.TextDim
 	if status == "" then

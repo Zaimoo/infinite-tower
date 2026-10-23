@@ -15,13 +15,14 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local ArtifactCatalog = require(Shared:WaitForChild("Config"):WaitForChild("ArtifactCatalog"))
 local StatFormulas = require(Shared.Util.StatFormulas)
 local StatBalance = require(Shared.Config.StatBalance)
+local GothicBoxStyle = require(Shared.Util.GothicBoxStyle)
 
 local LocalPlayer = Players.LocalPlayer
 
 local Forge = {}
 Forge.__index = Forge
 
-local WIDTH, HEIGHT = 760, 520
+local WIDTH, HEIGHT = 760, 530
 
 local C = {
 	Scrim = Color3.fromRGB(6, 5, 10),
@@ -85,20 +86,12 @@ local function glow(parent: GuiObject, pad: number, color: Color3?, transparency
 	stroke(g, color or C.BorderGlow, 3, transparency or 0.8)
 end
 
+local function applyGothicStyle(container: GuiObject, style: "Window" | "Card" | "Button" | "Compact")
+	return GothicBoxStyle.Apply(container, { Style = style })
+end
+
 local function cornerDiamonds(parent: GuiObject, size: number, color: Color3?)
-	for _, corner in { Vector2.new(0, 0), Vector2.new(1, 0), Vector2.new(0, 1), Vector2.new(1, 1) } do
-		local d = new("Frame", {
-			Name = "CornerDiamond",
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Rotation = 45,
-			Position = UDim2.fromScale(corner.X, corner.Y),
-			Size = UDim2.fromOffset(size, size),
-			BackgroundColor3 = C.Panel,
-			BorderSizePixel = 0,
-			ZIndex = parent.ZIndex + 2,
-		}, parent)
-		stroke(d, color or C.Border, 1)
-	end
+	-- Styled automatically by GothicBoxStyle
 end
 
 local function label(parent: Instance, text: string, size: number, color: Color3, font: Enum.Font?): TextLabel
@@ -160,7 +153,7 @@ function Forge.new(gui: ScreenGui, artifactRemotes: Folder, getProfile: (() -> a
 		end
 	end)
 
-	-- 2. Modal Frame
+	-- 2. Modal Frame (Ornate Gothic Box Container)
 	local root = new("Frame", {
 		Name = "BlacksmithForgeModal",
 		AnchorPoint = Vector2.new(0.5, 0.5),
@@ -173,118 +166,75 @@ function Forge.new(gui: ScreenGui, artifactRemotes: Folder, getProfile: (() -> a
 	}, gui)
 	self.Root = root
 
-	stroke(root, C.Border, 1.2, 0.05)
-	glow(root, 10, C.BorderGlow, 0.8)
-	cornerDiamonds(root, 8, C.Border)
-
-	local inner = new("Frame", {
-		Name = "InnerBorder",
-		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(4, 4),
-		Size = UDim2.new(1, -8, 1, -8),
-		ZIndex = 51,
-	}, root)
-	stroke(inner, C.BorderDim, 1, 0.4)
+	applyGothicStyle(root, "Window")
 
 	self.Scale = new("UIScale", {}, root)
 
-	-- 3. Close Button (High contrast gothic pill styling with Latin 'X')
-	local closeBtn = new("TextButton", {
-		Name = "CloseButton",
-		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -16, 0, 16),
-		Size = UDim2.fromOffset(30, 30),
-		BackgroundColor3 = Color3.fromRGB(28, 22, 42),
-		Text = "X",
-		Font = Enum.Font.GothamBold,
-		TextSize = 14,
-		TextColor3 = Color3.fromRGB(225, 210, 250),
-		AutoButtonColor = false,
-		ZIndex = 60,
-	}, root)
-	new("UICorner", { CornerRadius = UDim.new(0, 6) }, closeBtn)
-	local closeStroke = stroke(closeBtn, Color3.fromRGB(80, 60, 110), 1)
-
-	closeBtn.MouseEnter:Connect(function()
-		TweenService:Create(closeBtn, TweenInfo.new(0.15), {
-			BackgroundColor3 = Color3.fromRGB(180, 45, 60),
-			TextColor3 = Color3.fromRGB(255, 255, 255),
-		}):Play()
-		TweenService:Create(closeStroke, TweenInfo.new(0.15), {
-			Color = Color3.fromRGB(255, 100, 120),
-		}):Play()
-	end)
-	closeBtn.MouseLeave:Connect(function()
-		TweenService:Create(closeBtn, TweenInfo.new(0.15), {
-			BackgroundColor3 = Color3.fromRGB(28, 22, 42),
-			TextColor3 = Color3.fromRGB(225, 210, 250),
-		}):Play()
-		TweenService:Create(closeStroke, TweenInfo.new(0.15), {
-			Color = Color3.fromRGB(80, 60, 110),
-		}):Play()
-	end)
-	closeBtn.Activated:Connect(function()
+	-- 3. Close Button (High contrast gothic rounded square with Latin 'X')
+	local closeBtn = GothicBoxStyle.CreateCloseButton(root, function()
 		if not self.Busy then
 			self:Close()
 		end
 	end)
+	closeBtn.Position = UDim2.fromOffset(658, 68)
+	closeBtn.Size = UDim2.fromOffset(26, 26)
 
 	-- 4. Top Header & 3 Tabs (ASSIGN | SUMMON | UPGRADE ARTIFACT)
 	local tabContainer = new("Frame", {
 		Name = "TabContainer",
 		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(24, 14),
-		Size = UDim2.new(1, -70, 0, 44),
+		Position = UDim2.fromOffset(72, 68),
+		Size = UDim2.new(0, 540, 0, 30),
 		ZIndex = 52,
 	}, root)
 
 	local assignTabBtn = new("TextButton", {
 		Name = "TabAssign",
 		Text = "ASSIGN",
-		TextSize = 15,
+		TextSize = 13,
 		Font = Enum.Font.GothamBold,
 		TextColor3 = C.Text,
 		BackgroundTransparency = 1,
-		Size = UDim2.fromOffset(100, 36),
-		Position = UDim2.fromOffset(10, 0),
+		Size = UDim2.fromOffset(105, 26),
+		Position = UDim2.fromOffset(0, 0),
 		ZIndex = 53,
 	}, tabContainer)
 
 	local summonTabBtn = new("TextButton", {
 		Name = "TabSummon",
 		Text = "SUMMON",
-		TextSize = 15,
+		TextSize = 13,
 		Font = Enum.Font.GothamBold,
 		TextColor3 = C.TextMuted,
 		BackgroundTransparency = 1,
-		Size = UDim2.fromOffset(110, 36),
-		Position = UDim2.fromOffset(130, 0),
+		Size = UDim2.fromOffset(105, 26),
+		Position = UDim2.fromOffset(105, 0),
 		ZIndex = 53,
 	}, tabContainer)
 
 	local upgradeTabBtn = new("TextButton", {
 		Name = "TabUpgrade",
 		Text = "UPGRADE ARTIFACT",
-		TextSize = 15,
+		TextSize = 13,
 		Font = Enum.Font.GothamBold,
 		TextColor3 = C.TextMuted,
 		BackgroundTransparency = 1,
-		Size = UDim2.fromOffset(180, 36),
-		Position = UDim2.fromOffset(260, 0),
+		Size = UDim2.fromOffset(170, 26),
+		Position = UDim2.fromOffset(210, 0),
 		ZIndex = 53,
 	}, tabContainer)
 
-	-- Active Underline indicator
+	-- Active Underline indicator (Stark white rounded pill matching gothic mockup)
 	local activeIndicator = new("Frame", {
 		Name = "ActiveTabIndicator",
-		BackgroundColor3 = C.Underline,
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
 		BorderSizePixel = 0,
-		Size = UDim2.new(0, 70, 0, 3),
+		Size = UDim2.new(0, 55, 0, 3),
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.fromOffset(60, 36),
+		Position = UDim2.fromOffset(52, 26),
 		ZIndex = 54,
 	}, tabContainer)
-	stroke(activeIndicator, C.BorderGlow, 1.5, 0.4)
+	new("UICorner", { CornerRadius = UDim.new(1, 0) }, activeIndicator)
 
 	self.AssignTabBtn = assignTabBtn
 	self.SummonTabBtn = summonTabBtn
@@ -304,10 +254,10 @@ function Forge.new(gui: ScreenGui, artifactRemotes: Folder, getProfile: (() -> a
 	-- Divider Line beneath tabs
 	local tabDivider = new("Frame", {
 		Name = "TabDivider",
-		BackgroundColor3 = C.BorderDim,
+		BackgroundColor3 = Color3.fromRGB(55, 45, 70),
 		BorderSizePixel = 0,
-		Position = UDim2.fromOffset(16, 62),
-		Size = UDim2.new(1, -32, 0, 1),
+		Position = UDim2.fromOffset(72, 102),
+		Size = UDim2.new(0, 616, 0, 1),
 		ZIndex = 52,
 	}, root)
 
@@ -378,8 +328,8 @@ function Forge:SetTab(tab: "ASSIGN" | "SUMMON" | "UPGRADE")
 
 		local targetX = self.AssignTabBtn.Position.X.Offset + self.AssignTabBtn.Size.X.Offset / 2
 		TweenService:Create(self.ActiveIndicator, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-			Position = UDim2.fromOffset(targetX, 36),
-			Size = UDim2.fromOffset(70, 3),
+			Position = UDim2.fromOffset(targetX, 26),
+			Size = UDim2.fromOffset(55, 3),
 		}):Play()
 		self:RenderAssignView()
 	elseif tab == "SUMMON" then
@@ -393,8 +343,8 @@ function Forge:SetTab(tab: "ASSIGN" | "SUMMON" | "UPGRADE")
 
 		local targetX = self.SummonTabBtn.Position.X.Offset + self.SummonTabBtn.Size.X.Offset / 2
 		TweenService:Create(self.ActiveIndicator, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-			Position = UDim2.fromOffset(targetX, 36),
-			Size = UDim2.fromOffset(78, 3),
+			Position = UDim2.fromOffset(targetX, 26),
+			Size = UDim2.fromOffset(60, 3),
 		}):Play()
 		self:RenderSummonView()
 	else
@@ -408,8 +358,8 @@ function Forge:SetTab(tab: "ASSIGN" | "SUMMON" | "UPGRADE")
 
 		local targetX = self.UpgradeTabBtn.Position.X.Offset + self.UpgradeTabBtn.Size.X.Offset / 2
 		TweenService:Create(self.ActiveIndicator, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-			Position = UDim2.fromOffset(targetX, 36),
-			Size = UDim2.fromOffset(130, 3),
+			Position = UDim2.fromOffset(targetX, 26),
+			Size = UDim2.fromOffset(110, 3),
 		}):Play()
 		self:RenderUpgradeView()
 	end
@@ -423,8 +373,8 @@ function Forge:BuildAssignView(root: Frame)
 	local assignView = new("Frame", {
 		Name = "AssignView",
 		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(16, 72),
-		Size = UDim2.new(1, -32, 1, -82),
+		Position = UDim2.fromOffset(72, 108),
+		Size = UDim2.new(0, 616, 0, 380),
 		Visible = true,
 		ZIndex = 52,
 	}, root)
@@ -535,8 +485,7 @@ function Forge:RenderAssignView()
 			LayoutOrder = order,
 			ZIndex = 53,
 		}, scroll)
-		new("UICorner", { CornerRadius = UDim.new(0, 6) }, card)
-		stroke(card, C.BorderCard, 1)
+		applyGothicStyle(card, "Card")
 
 		-- Left Weapon Icon Box
 		local iconBox = new("Frame", {
@@ -548,8 +497,7 @@ function Forge:RenderAssignView()
 			BorderSizePixel = 0,
 			ZIndex = 54,
 		}, card)
-		new("UICorner", { CornerRadius = UDim.new(0, 6) }, iconBox)
-		stroke(iconBox, C.BorderCard, 1)
+		applyGothicStyle(iconBox, "Compact")
 
 		local iconChar = ICON_MAP[art.Type] or "⚔️"
 		local iconLabel = label(iconBox, iconChar, 24, C.Text)
@@ -598,9 +546,7 @@ function Forge:RenderAssignView()
 			TextColor3 = C.Text,
 			ZIndex = 54,
 		}, card)
-		new("UICorner", { CornerRadius = UDim.new(0, 6) }, assignBtn)
-		stroke(assignBtn, C.Border, 1)
-		cornerDiamonds(assignBtn, 4, C.Border)
+		applyGothicStyle(assignBtn, "Button")
 
 		assignBtn.Activated:Connect(function()
 			if self.Busy then return end
@@ -618,88 +564,88 @@ function Forge:BuildSummonView(root: Frame)
 	local summonView = new("Frame", {
 		Name = "SummonView",
 		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(16, 72),
-		Size = UDim2.new(1, -32, 1, -82),
+		Position = UDim2.fromOffset(72, 108),
+		Size = UDim2.new(0, 616, 0, 380),
 		Visible = false,
 		ZIndex = 52,
 	}, root)
 	self.SummonView = summonView
 
-	-- 1. Main Featured Banner Card (Image 1)
+	-- 1. Main Featured Banner Card (Image 1 - Ornate Gothic Card Container)
 	local bannerCard = new("Frame", {
 		Name = "BannerCard",
 		Position = UDim2.fromOffset(0, 0),
-		Size = UDim2.new(1, 0, 0, 246),
-		BackgroundColor3 = Color3.fromRGB(19, 14, 34),
+		Size = UDim2.new(1, 0, 0, 230),
+		BackgroundColor3 = Color3.fromRGB(18, 14, 28),
 		BorderSizePixel = 0,
 		ZIndex = 53,
 	}, summonView)
 	self.BannerCard = bannerCard
 
-	new("UICorner", { CornerRadius = UDim.new(0, 8) }, bannerCard)
-	stroke(bannerCard, C.Border, 1.2, 0.05)
-	glow(bannerCard, 8, C.BorderGlow, 0.85)
-	cornerDiamonds(bannerCard, 6, C.Border)
+	applyGothicStyle(bannerCard, "Card")
 
 	-- Cosmic Gradient
 	local grad = new("UIGradient", {
 		Color = ColorSequence.new({
-			ColorSequenceKeypoint.new(0.0, Color3.fromRGB(28, 19, 50)),
-			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(20, 14, 36)),
-			ColorSequenceKeypoint.new(1.0, Color3.fromRGB(12, 9, 22)),
+			ColorSequenceKeypoint.new(0.0, Color3.fromRGB(28, 20, 42)),
+			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(18, 13, 28)),
+			ColorSequenceKeypoint.new(1.0, Color3.fromRGB(12, 9, 20)),
 		}),
 		Rotation = 35,
 	}, bannerCard)
 
 	-- Top Watermark
-	local watermark = label(bannerCard, "★ 5-STAR FEATURED HERO & ARTIFACTS", 15, Color3.fromRGB(230, 220, 255), Enum.Font.GothamBold)
-	watermark.TextTransparency = 0.55
-	watermark.Position = UDim2.fromOffset(24, 18)
-	watermark.Size = UDim2.new(1, -48, 0, 20)
+	local watermark = label(bannerCard, "★ 5-STAR FEATURED HERO & ARTIFACTS", 11, Color3.fromRGB(225, 220, 235), Enum.Font.GothamBold)
+	watermark.TextTransparency = 0.4
+	watermark.Position = UDim2.fromOffset(26, 22)
+	watermark.Size = UDim2.new(1, -52, 0, 18)
 	watermark.TextXAlignment = Enum.TextXAlignment.Left
+	watermark.ZIndex = 56
 
 	-- Big Glowing Banner Title
-	local bannerTitle = label(bannerCard, "ECHOES OF THE RIFT", 34, C.GoldYellow, Enum.Font.GothamBlack)
-	bannerTitle.AnchorPoint = Vector2.new(0, 1)
-	bannerTitle.Position = UDim2.new(0, 24, 1, -26)
-	bannerTitle.Size = UDim2.new(0, 420, 0, 44)
+	local bannerTitle = label(bannerCard, "ECHOES OF THE RIFT", 25, C.GoldYellow, Enum.Font.GothamBlack)
+	bannerTitle.AnchorPoint = Vector2.new(0, 0)
+	bannerTitle.Position = UDim2.new(0, 28, 0, 152)
+	bannerTitle.Size = UDim2.new(0, 340, 0, 30)
 	bannerTitle.TextXAlignment = Enum.TextXAlignment.Left
-	bannerTitle.TextStrokeTransparency = 0.35
-	bannerTitle.TextStrokeColor3 = Color3.fromRGB(120, 80, 0)
+	bannerTitle.TextStrokeTransparency = 0.3
+	bannerTitle.TextStrokeColor3 = Color3.fromRGB(110, 75, 0)
+	bannerTitle.ZIndex = 56
 
 	-- Featured Rate-Up Pill Label
-	local rateUpLabel = label(bannerCard, "★ Rate Up: Blade of the Rift (5★)  |  Aegis Core (5★)", 12, Color3.fromRGB(205, 175, 245), Enum.Font.GothamBold)
-	rateUpLabel.AnchorPoint = Vector2.new(1, 1)
-	rateUpLabel.Position = UDim2.new(1, -24, 1, -26)
-	rateUpLabel.Size = UDim2.new(0, 320, 0, 22)
+	local rateUpLabel = label(bannerCard, "✧ Rate Up: Blade of the Rift (5★)  |  Aegis Core (5★)", 11, Color3.fromRGB(216, 140, 230), Enum.Font.GothamBold)
+	rateUpLabel.AnchorPoint = Vector2.new(1, 0)
+	rateUpLabel.Position = UDim2.new(1, -28, 0, 158)
+	rateUpLabel.Size = UDim2.new(0, 320, 0, 20)
 	rateUpLabel.TextXAlignment = Enum.TextXAlignment.Right
+	rateUpLabel.ZIndex = 56
 
 	-- 2. Info Row (Guaranteed Pity & Timer)
 	local infoRow = new("Frame", {
 		Name = "InfoRow",
 		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(0, 258),
-		Size = UDim2.new(1, 0, 0, 28),
+		Position = UDim2.fromOffset(0, 236),
+		Size = UDim2.new(1, 0, 0, 22),
 		ZIndex = 53,
 	}, summonView)
 
-	local pityLabel = label(infoRow, "Guaranteed 5-Star in: <b>42</b> summons", 14, C.TextLavender, Enum.Font.GothamMedium)
-	pityLabel.Position = UDim2.fromOffset(6, 4)
-	pityLabel.Size = UDim2.new(0.5, 0, 0, 20)
+	local pityLabel = label(infoRow, "Guaranteed 5-Star in: <b>42</b> summons", 12, Color3.fromRGB(230, 225, 240), Enum.Font.GothamMedium)
+	pityLabel.Position = UDim2.fromOffset(4, 0)
+	pityLabel.Size = UDim2.new(0.5, 0, 1, 0)
 	pityLabel.TextXAlignment = Enum.TextXAlignment.Left
 	self.PityLabel = pityLabel
 
-	local timerLabel = label(infoRow, "Event Ends: 2d 14h", 14, C.TextLavender, Enum.Font.GothamMedium)
+	local timerLabel = label(infoRow, "Event Ends: 2d 14h", 12, Color3.fromRGB(180, 170, 200), Enum.Font.GothamMedium)
 	timerLabel.AnchorPoint = Vector2.new(1, 0)
-	timerLabel.Position = UDim2.new(1, -6, 0, 4)
-	timerLabel.Size = UDim2.new(0.5, 0, 0, 20)
+	timerLabel.Position = UDim2.new(1, -4, 0, 0)
+	timerLabel.Size = UDim2.new(0.5, 0, 1, 0)
 	timerLabel.TextXAlignment = Enum.TextXAlignment.Right
 
-	-- 3. Summon Buttons Container (Image 1)
+	-- 3. Summon Buttons Container (Image 1 - Ornate Gothic Button Containers)
 	local btnRow = new("Frame", {
 		Name = "ButtonRow",
 		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(0, 296),
+		Position = UDim2.fromOffset(0, 264),
 		Size = UDim2.new(1, 0, 0, 76),
 		ZIndex = 53,
 	}, summonView)
@@ -712,22 +658,22 @@ function Forge:BuildSummonView(root: Frame)
 		BackgroundColor3 = Color3.fromRGB(22, 18, 36),
 		BorderSizePixel = 0,
 		Text = "",
-		AutoButtonColor = true,
+		AutoButtonColor = false,
 		ZIndex = 54,
 	}, btnRow)
-	new("UICorner", { CornerRadius = UDim.new(0, 6) }, btn1X)
-	stroke(btn1X, C.Border, 1.2)
-	cornerDiamonds(btn1X, 4, C.Border)
+	applyGothicStyle(btn1X, "Button")
 
-	local t1X = label(btn1X, "SUMMON 1X", 15, C.Text, Enum.Font.GothamBold)
-	t1X.AnchorPoint = Vector2.new(0.5, 0.5)
-	t1X.Position = UDim2.new(0.5, 0, 0.34, 0)
-	t1X.Size = UDim2.new(1, 0, 0, 20)
+	local t1X = label(btn1X, "SUMMON 1X", 14, Color3.fromRGB(255, 255, 255), Enum.Font.GothamBold)
+	t1X.AnchorPoint = Vector2.new(0.5, 0)
+	t1X.Position = UDim2.new(0.5, 0, 0, 22)
+	t1X.Size = UDim2.new(1, 0, 0, 16)
+	t1X.ZIndex = 56
 
-	local c1X = label(btn1X, "💎 160", 15, C.GoldYellow, Enum.Font.GothamBold)
-	c1X.AnchorPoint = Vector2.new(0.5, 0.5)
-	c1X.Position = UDim2.new(0.5, 0, 0.72, 0)
-	c1X.Size = UDim2.new(1, 0, 0, 20)
+	local c1X = label(btn1X, "💎 160", 13, Color3.fromRGB(255, 255, 255), Enum.Font.GothamBold)
+	c1X.AnchorPoint = Vector2.new(0.5, 0)
+	c1X.Position = UDim2.new(0.5, 0, 0, 42)
+	c1X.Size = UDim2.new(1, 0, 0, 16)
+	c1X.ZIndex = 56
 
 	btn1X.Activated:Connect(function()
 		self:PerformSummon(1)
@@ -742,22 +688,22 @@ function Forge:BuildSummonView(root: Frame)
 		BackgroundColor3 = Color3.fromRGB(22, 18, 36),
 		BorderSizePixel = 0,
 		Text = "",
-		AutoButtonColor = true,
+		AutoButtonColor = false,
 		ZIndex = 54,
 	}, btnRow)
-	new("UICorner", { CornerRadius = UDim.new(0, 6) }, btn10X)
-	stroke(btn10X, C.Border, 1.2)
-	cornerDiamonds(btn10X, 4, C.Border)
+	applyGothicStyle(btn10X, "Button")
 
-	local t10X = label(btn10X, "SUMMON 10X", 15, C.Text, Enum.Font.GothamBold)
-	t10X.AnchorPoint = Vector2.new(0.5, 0.5)
-	t10X.Position = UDim2.new(0.5, 0, 0.34, 0)
-	t10X.Size = UDim2.new(1, 0, 0, 20)
+	local t10X = label(btn10X, "SUMMON 10X", 14, Color3.fromRGB(255, 255, 255), Enum.Font.GothamBold)
+	t10X.AnchorPoint = Vector2.new(0.5, 0)
+	t10X.Position = UDim2.new(0.5, 0, 0, 22)
+	t10X.Size = UDim2.new(1, 0, 0, 16)
+	t10X.ZIndex = 56
 
-	local c10X = label(btn10X, "💎 1600", 15, C.GoldYellow, Enum.Font.GothamBold)
-	c10X.AnchorPoint = Vector2.new(0.5, 0.5)
-	c10X.Position = UDim2.new(0.5, 0, 0.72, 0)
-	c10X.Size = UDim2.new(1, 0, 0, 20)
+	local c10X = label(btn10X, "💎 1600", 13, Color3.fromRGB(255, 255, 255), Enum.Font.GothamBold)
+	c10X.AnchorPoint = Vector2.new(0.5, 0)
+	c10X.Position = UDim2.new(0.5, 0, 0, 42)
+	c10X.Size = UDim2.new(1, 0, 0, 16)
+	c10X.ZIndex = 56
 
 	btn10X.Activated:Connect(function()
 		self:PerformSummon(10)
@@ -825,9 +771,7 @@ function Forge:BuildSummonRevealModal(gui: ScreenGui)
 	}, revealScrim)
 	self.RevealModal = modal
 
-	stroke(modal, C.Border, 1.5)
-	glow(modal, 12, C.BorderGlow, 0.8)
-	cornerDiamonds(modal, 8, C.Border)
+	applyGothicStyle(modal, "Window")
 
 	local revealTitle = label(modal, "✨ DIMENSIONAL ARTIFACTS SUMMONED", 20, C.GoldYellow, Enum.Font.GothamBlack)
 	revealTitle.Position = UDim2.new(0, 0, 0, 20)
@@ -865,9 +809,7 @@ function Forge:BuildSummonRevealModal(gui: ScreenGui)
 		TextColor3 = C.Text,
 		ZIndex = 82,
 	}, modal)
-	new("UICorner", { CornerRadius = UDim.new(0, 6) }, collectBtn)
-	stroke(collectBtn, C.Border, 1.2)
-	cornerDiamonds(collectBtn, 4, C.Border)
+	applyGothicStyle(collectBtn, "Button")
 
 	collectBtn.Activated:Connect(function()
 		self.RevealScrim.Visible = false
@@ -945,8 +887,8 @@ function Forge:BuildUpgradeView(root: Frame)
 	local upgradeView = new("Frame", {
 		Name = "UpgradeView",
 		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(16, 72),
-		Size = UDim2.new(1, -32, 1, -82),
+		Position = UDim2.fromOffset(72, 108),
+		Size = UDim2.new(0, 616, 0, 380),
 		Visible = false,
 		ZIndex = 52,
 	}, root)
@@ -961,9 +903,7 @@ function Forge:BuildUpgradeView(root: Frame)
 		BorderSizePixel = 0,
 		ZIndex = 53,
 	}, upgradeView)
-	new("UICorner", { CornerRadius = UDim.new(0, 8) }, targetSlot)
-	stroke(targetSlot, C.Border, 1.2)
-	cornerDiamonds(targetSlot, 5, C.Border)
+	applyGothicStyle(targetSlot, "Card")
 
 	local targetIcon = label(targetSlot, "⚔️", 46, C.Text)
 	targetIcon.Name = "TargetIcon"
@@ -1003,8 +943,7 @@ function Forge:BuildUpgradeView(root: Frame)
 		BorderSizePixel = 0,
 		ZIndex = 53,
 	}, upgradeView)
-	new("UICorner", { CornerRadius = UDim.new(0, 8) }, statBox)
-	stroke(statBox, C.BorderCard, 1)
+	applyGothicStyle(statBox, "Card")
 
 	local previewHeader = label(statBox, "STAR PROMOTION PREVIEW", 15, C.Text, Enum.Font.GothamBold)
 	previewHeader.Position = UDim2.new(0, 18, 0, 14)
@@ -1057,8 +996,7 @@ function Forge:BuildUpgradeView(root: Frame)
 			BorderSizePixel = 0,
 			ZIndex = 53,
 		}, fodderContainer)
-		new("UICorner", { CornerRadius = UDim.new(0, 6) }, slot)
-		stroke(slot, C.BorderDim, 1)
+		applyGothicStyle(slot, "Compact")
 
 		local plus = label(slot, "+", 28, C.TextMuted, Enum.Font.GothamBold)
 		plus.Name = "PlusLabel"
@@ -1105,8 +1043,7 @@ function Forge:BuildUpgradeView(root: Frame)
 		TextColor3 = C.Text,
 		ZIndex = 54,
 	}, bottomRow)
-	new("UICorner", { CornerRadius = UDim.new(0, 6) }, autoFillBtn)
-	stroke(autoFillBtn, C.BorderCard, 1)
+	applyGothicStyle(autoFillBtn, "Button")
 	autoFillBtn.Activated:Connect(function()
 		self:AutoFillFodder()
 	end)
@@ -1124,10 +1061,7 @@ function Forge:BuildUpgradeView(root: Frame)
 		TextColor3 = C.Text,
 		ZIndex = 54,
 	}, bottomRow)
-	new("UICorner", { CornerRadius = UDim.new(0, 6) }, enhanceBtn)
-	stroke(enhanceBtn, C.Border, 1.2)
-	glow(enhanceBtn, 6, C.BorderGlow, 0.85)
-	cornerDiamonds(enhanceBtn, 4, C.Border)
+	applyGothicStyle(enhanceBtn, "Button")
 	self.EnhanceBtn = enhanceBtn
 
 	enhanceBtn.Activated:Connect(function()
@@ -1301,9 +1235,7 @@ function Forge:BuildPickerDrawer(root: Frame)
 	}, root)
 	self.Drawer = drawer
 
-	new("UICorner", { CornerRadius = UDim.new(0, 8) }, drawer)
-	stroke(drawer, C.Border, 1.2)
-	cornerDiamonds(drawer, 6, C.Border)
+	applyGothicStyle(drawer, "Card")
 
 	local header = new("Frame", {
 		Name = "DrawerHeader",
@@ -1413,8 +1345,7 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 				BorderSizePixel = 0,
 				ZIndex = 72,
 			}, scroll)
-			new("UICorner", { CornerRadius = UDim.new(0, 6) }, card)
-			stroke(card, isSelected and C.Border or C.BorderDim, 1)
+			applyGothicStyle(card, "Card")
 
 			local iconTile = new("Frame", {
 				Name = "IconTile",
@@ -1496,8 +1427,7 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 					BorderSizePixel = 0,
 					ZIndex = 72,
 				}, scroll)
-				new("UICorner", { CornerRadius = UDim.new(0, 6) }, card)
-				stroke(card, isSlotted and C.Border or C.BorderDim, 1)
+				applyGothicStyle(card, "Card")
 
 				local iconTile = new("Frame", {
 					Name = "IconTile",
@@ -1595,8 +1525,7 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 				BorderSizePixel = 0,
 				ZIndex = 72,
 			}, scroll)
-			new("UICorner", { CornerRadius = UDim.new(0, 6) }, card)
-			stroke(card, isCurrentEquipped and C.Border or (canEquip and C.BorderDim or Color3.fromRGB(45, 35, 55)), 1)
+			applyGothicStyle(card, "Card")
 
 			local starsLbl = label(card, string.rep("★", hero.Stars or 1), 12, C.GoldYellow)
 			starsLbl.Position = UDim2.new(0, 0, 0, 8)
@@ -1632,11 +1561,10 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 				Font = Enum.Font.GothamBold,
 				TextSize = 12,
 				TextColor3 = isCurrentEquipped and C.Red or (canEquip and C.Text or C.TextMuted),
-				AutoButtonColor = canEquip,
+				AutoButtonColor = false,
 				ZIndex = 73,
 			}, card)
-			new("UICorner", { CornerRadius = UDim.new(0, 4) }, actionBtn)
-			stroke(actionBtn, isCurrentEquipped and C.Red or (canEquip and C.Border or Color3.fromRGB(45, 35, 55)), 1)
+			applyGothicStyle(actionBtn, "Button")
 
 			if canEquip or isCurrentEquipped then
 				actionBtn.Activated:Connect(function()

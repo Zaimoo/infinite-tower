@@ -17,6 +17,7 @@ local FacilityConfig = require(Shared:WaitForChild("Config"):WaitForChild("Facil
 local HeroCatalog = require(Shared:WaitForChild("Config"):WaitForChild("HeroCatalog"))
 local ArtifactCatalog = require(Shared:WaitForChild("Config"):WaitForChild("ArtifactCatalog"))
 local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormulas"))
+local GothicBoxStyle = require(Shared:WaitForChild("Util"):WaitForChild("GothicBoxStyle"))
 
 local RemotesFolder = ReplicatedStorage:WaitForChild("Remotes")
 local ArtifactRemotes = RemotesFolder:FindFirstChild("ArtifactRemotes") :: Folder?
@@ -106,20 +107,12 @@ local function glow(parent: GuiObject, pad: number, color: Color3?, transparency
 	stroke(g, color or C.BorderGlow, 3, transparency or 0.8)
 end
 
+local function applyGothicStyle(container: GuiObject, style: "Window" | "Card" | "Button" | "Compact")
+	return GothicBoxStyle.Apply(container, { Style = style })
+end
+
 local function cornerDiamonds(parent: GuiObject, size: number, color: Color3?)
-	for _, c in { Vector2.new(0, 0), Vector2.new(1, 0), Vector2.new(0, 1), Vector2.new(1, 1) } do
-		local d = new("Frame", {
-			Name = "CornerDiamond",
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Rotation = 45,
-			Position = UDim2.fromScale(c.X, c.Y),
-			Size = UDim2.fromOffset(size, size),
-			BackgroundColor3 = C.Panel,
-			BorderSizePixel = 0,
-			ZIndex = parent.ZIndex + 2,
-		}, parent)
-		stroke(d, color or C.Border, 1)
-	end
+	-- Styled automatically by GothicBoxStyle
 end
 
 local function label(parent: Instance, text: string, size: number, color: Color3, font: Enum.Font?): TextLabel
@@ -174,7 +167,7 @@ function Controller.new(gui: ScreenGui, getProfile: () -> any, remotes: Instance
 		end
 	end)
 
-	-- 2. Modal Frame
+	-- 2. Modal Frame (Ornate Gothic Box Container)
 	local root = new("Frame", {
 		Name = "FacilityModal",
 		AnchorPoint = Vector2.new(0.5, 0.5),
@@ -187,57 +180,13 @@ function Controller.new(gui: ScreenGui, getProfile: () -> any, remotes: Instance
 	}, gui)
 	self.Root = root
 
-	self.Stroke = stroke(root, C.Border, 1.2, 0.05)
-	glow(root, 10, C.BorderGlow, 0.8)
-	cornerDiamonds(root, 8, C.Border)
-
-	local inner = new("Frame", {
-		Name = "InnerBorder",
-		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(4, 4),
-		Size = UDim2.new(1, -8, 1, -8),
-		ZIndex = 51,
-	}, root)
-	stroke(inner, C.BorderDim, 1, 0.4)
+	applyGothicStyle(root, "Window")
+	self.Stroke = root:FindFirstChildOfClass("UIStroke")
 
 	self.Scale = new("UIScale", {}, root)
 
-	-- 3. Close Button (High contrast gothic pill styling with Latin 'X')
-	local closeBtn = new("TextButton", {
-		Name = "CloseButton",
-		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -16, 0, 16),
-		Size = UDim2.fromOffset(30, 30),
-		BackgroundColor3 = Color3.fromRGB(28, 22, 42),
-		Text = "X",
-		Font = Enum.Font.GothamBold,
-		TextSize = 14,
-		TextColor3 = Color3.fromRGB(225, 210, 250),
-		AutoButtonColor = false,
-		ZIndex = 60,
-	}, root)
-	new("UICorner", { CornerRadius = UDim.new(0, 6) }, closeBtn)
-	local closeStroke = stroke(closeBtn, Color3.fromRGB(80, 60, 110), 1)
-
-	closeBtn.MouseEnter:Connect(function()
-		TweenService:Create(closeBtn, TweenInfo.new(0.15), {
-			BackgroundColor3 = Color3.fromRGB(180, 45, 60),
-			TextColor3 = Color3.fromRGB(255, 255, 255),
-		}):Play()
-		TweenService:Create(closeStroke, TweenInfo.new(0.15), {
-			Color = Color3.fromRGB(255, 100, 120),
-		}):Play()
-	end)
-	closeBtn.MouseLeave:Connect(function()
-		TweenService:Create(closeBtn, TweenInfo.new(0.15), {
-			BackgroundColor3 = Color3.fromRGB(28, 22, 42),
-			TextColor3 = Color3.fromRGB(225, 210, 250),
-		}):Play()
-		TweenService:Create(closeStroke, TweenInfo.new(0.15), {
-			Color = Color3.fromRGB(80, 60, 110),
-		}):Play()
-	end)
-	closeBtn.Activated:Connect(function()
+	-- 3. Close Button (High contrast gothic rounded square with Latin 'X')
+	local closeBtn = GothicBoxStyle.CreateCloseButton(root, function()
 		if not self.Busy then
 			self:Close()
 		end
@@ -384,10 +333,7 @@ function Controller:BuildPermanentSummonView(root: Frame)
 		ZIndex = 53,
 	}, permView)
 
-	new("UICorner", { CornerRadius = UDim.new(0, 8) }, bannerCard)
-	stroke(bannerCard, C.Border, 1.2, 0.05)
-	glow(bannerCard, 8, C.BorderGlow, 0.85)
-	cornerDiamonds(bannerCard, 6, C.Border)
+	applyGothicStyle(bannerCard, "Card")
 
 	-- Cosmic Indigo Gradient
 	new("UIGradient", {
@@ -460,22 +406,22 @@ function Controller:BuildPermanentSummonView(root: Frame)
 		BackgroundColor3 = Color3.fromRGB(22, 18, 36),
 		BorderSizePixel = 0,
 		Text = "",
-		AutoButtonColor = true,
+		AutoButtonColor = false,
 		ZIndex = 54,
 	}, btnRow)
-	new("UICorner", { CornerRadius = UDim.new(0, 6) }, btn1X)
-	stroke(btn1X, C.Border, 1.2)
-	cornerDiamonds(btn1X, 4, C.Border)
+	applyGothicStyle(btn1X, "Button")
 
-	local t1X = label(btn1X, "SUMMON 1X", 15, C.Text, Enum.Font.GothamBold)
+	local t1X = label(btn1X, "SUMMON 1X", 15, Color3.fromRGB(255, 255, 255), Enum.Font.GothamBold)
 	t1X.AnchorPoint = Vector2.new(0.5, 0.5)
 	t1X.Position = UDim2.new(0.5, 0, 0.34, 0)
 	t1X.Size = UDim2.new(1, 0, 0, 20)
+	t1X.ZIndex = 56
 
-	local c1X = label(btn1X, "💎 100", 15, C.GoldYellow, Enum.Font.GothamBold)
+	local c1X = label(btn1X, "💎 100", 15, Color3.fromRGB(255, 255, 255), Enum.Font.GothamBold)
 	c1X.AnchorPoint = Vector2.new(0.5, 0.5)
 	c1X.Position = UDim2.new(0.5, 0, 0.72, 0)
 	c1X.Size = UDim2.new(1, 0, 0, 20)
+	c1X.ZIndex = 56
 
 	btn1X.Activated:Connect(function()
 		self:PerformSummon("CALL_OF_THE_RIFT", 1)
@@ -490,22 +436,22 @@ function Controller:BuildPermanentSummonView(root: Frame)
 		BackgroundColor3 = Color3.fromRGB(22, 18, 36),
 		BorderSizePixel = 0,
 		Text = "",
-		AutoButtonColor = true,
+		AutoButtonColor = false,
 		ZIndex = 54,
 	}, btnRow)
-	new("UICorner", { CornerRadius = UDim.new(0, 6) }, btn10X)
-	stroke(btn10X, C.Border, 1.2)
-	cornerDiamonds(btn10X, 4, C.Border)
+	applyGothicStyle(btn10X, "Button")
 
-	local t10X = label(btn10X, "SUMMON 10X", 15, C.Text, Enum.Font.GothamBold)
+	local t10X = label(btn10X, "SUMMON 10X", 15, Color3.fromRGB(255, 255, 255), Enum.Font.GothamBold)
 	t10X.AnchorPoint = Vector2.new(0.5, 0.5)
 	t10X.Position = UDim2.new(0.5, 0, 0.34, 0)
 	t10X.Size = UDim2.new(1, 0, 0, 20)
+	t10X.ZIndex = 56
 
-	local c10X = label(btn10X, "💎 900", 15, C.GoldYellow, Enum.Font.GothamBold)
+	local c10X = label(btn10X, "💎 900", 15, Color3.fromRGB(255, 255, 255), Enum.Font.GothamBold)
 	c10X.AnchorPoint = Vector2.new(0.5, 0.5)
 	c10X.Position = UDim2.new(0.5, 0, 0.72, 0)
 	c10X.Size = UDim2.new(1, 0, 0, 20)
+	c10X.ZIndex = 56
 
 	btn10X.Activated:Connect(function()
 		self:PerformSummon("CALL_OF_THE_RIFT", 10)
@@ -537,10 +483,7 @@ function Controller:BuildLimitedSummonView(root: Frame)
 		ZIndex = 53,
 	}, limView)
 
-	new("UICorner", { CornerRadius = UDim.new(0, 8) }, bannerCard)
-	stroke(bannerCard, Color3.fromRGB(150, 90, 210), 1.2, 0.05)
-	glow(bannerCard, 8, Color3.fromRGB(180, 120, 255), 0.85)
-	cornerDiamonds(bannerCard, 6, Color3.fromRGB(220, 160, 255))
+	applyGothicStyle(bannerCard, "Card")
 
 	-- Celestial Gold / Amethyst Gradient
 	new("UIGradient", {
@@ -613,22 +556,22 @@ function Controller:BuildLimitedSummonView(root: Frame)
 		BackgroundColor3 = Color3.fromRGB(22, 18, 36),
 		BorderSizePixel = 0,
 		Text = "",
-		AutoButtonColor = true,
+		AutoButtonColor = false,
 		ZIndex = 54,
 	}, btnRow)
-	new("UICorner", { CornerRadius = UDim.new(0, 6) }, btn1X)
-	stroke(btn1X, Color3.fromRGB(150, 90, 210), 1.2)
-	cornerDiamonds(btn1X, 4, Color3.fromRGB(210, 150, 255))
+	applyGothicStyle(btn1X, "Button")
 
-	local t1X = label(btn1X, "SUMMON 1X", 15, C.Text, Enum.Font.GothamBold)
+	local t1X = label(btn1X, "SUMMON 1X", 15, Color3.fromRGB(255, 255, 255), Enum.Font.GothamBold)
 	t1X.AnchorPoint = Vector2.new(0.5, 0.5)
 	t1X.Position = UDim2.new(0.5, 0, 0.34, 0)
 	t1X.Size = UDim2.new(1, 0, 0, 20)
+	t1X.ZIndex = 56
 
-	local c1X = label(btn1X, "💎 100", 15, C.GoldYellow, Enum.Font.GothamBold)
+	local c1X = label(btn1X, "💎 100", 15, Color3.fromRGB(255, 255, 255), Enum.Font.GothamBold)
 	c1X.AnchorPoint = Vector2.new(0.5, 0.5)
 	c1X.Position = UDim2.new(0.5, 0, 0.72, 0)
 	c1X.Size = UDim2.new(1, 0, 0, 20)
+	c1X.ZIndex = 56
 
 	btn1X.Activated:Connect(function()
 		self:PerformSummon("A_STARS_ARRIVAL", 1)
@@ -643,22 +586,22 @@ function Controller:BuildLimitedSummonView(root: Frame)
 		BackgroundColor3 = Color3.fromRGB(22, 18, 36),
 		BorderSizePixel = 0,
 		Text = "",
-		AutoButtonColor = true,
+		AutoButtonColor = false,
 		ZIndex = 54,
 	}, btnRow)
-	new("UICorner", { CornerRadius = UDim.new(0, 6) }, btn10X)
-	stroke(btn10X, Color3.fromRGB(150, 90, 210), 1.2)
-	cornerDiamonds(btn10X, 4, Color3.fromRGB(210, 150, 255))
+	applyGothicStyle(btn10X, "Button")
 
-	local t10X = label(btn10X, "SUMMON 10X", 15, C.Text, Enum.Font.GothamBold)
+	local t10X = label(btn10X, "SUMMON 10X", 15, Color3.fromRGB(255, 255, 255), Enum.Font.GothamBold)
 	t10X.AnchorPoint = Vector2.new(0.5, 0.5)
 	t10X.Position = UDim2.new(0.5, 0, 0.34, 0)
 	t10X.Size = UDim2.new(1, 0, 0, 20)
+	t10X.ZIndex = 56
 
-	local c10X = label(btn10X, "💎 900", 15, C.GoldYellow, Enum.Font.GothamBold)
+	local c10X = label(btn10X, "💎 900", 15, Color3.fromRGB(255, 255, 255), Enum.Font.GothamBold)
 	c10X.AnchorPoint = Vector2.new(0.5, 0.5)
 	c10X.Position = UDim2.new(0.5, 0, 0.72, 0)
 	c10X.Size = UDim2.new(1, 0, 0, 20)
+	c10X.ZIndex = 56
 
 	btn10X.Activated:Connect(function()
 		self:PerformSummon("A_STARS_ARRIVAL", 10)
@@ -755,9 +698,7 @@ function Controller:BuildSummonRevealModal(gui: ScreenGui)
 	}, revealScrim)
 	self.RevealModal = modal
 
-	stroke(modal, C.Border, 1.5)
-	glow(modal, 12, C.BorderGlow, 0.8)
-	cornerDiamonds(modal, 8, C.Border)
+	applyGothicStyle(modal, "Window")
 
 	local revealTitle = label(modal, "✨ DIMENSIONAL HEROES SUMMONED", 20, C.GoldYellow, Enum.Font.GothamBlack)
 	revealTitle.Position = UDim2.new(0, 0, 0, 20)
@@ -796,9 +737,7 @@ function Controller:BuildSummonRevealModal(gui: ScreenGui)
 		TextColor3 = C.GoldYellow,
 		ZIndex = 82,
 	}, modal)
-	new("UICorner", { CornerRadius = UDim.new(0, 6) }, collectBtn)
-	stroke(collectBtn, C.Border, 1.2)
-	cornerDiamonds(collectBtn, 4, C.Border)
+	applyGothicStyle(collectBtn, "Button")
 
 	collectBtn.Activated:Connect(function()
 		self.RevealScrim.Visible = false
@@ -1050,7 +989,9 @@ function Controller:Refresh()
 	self.Title.Text = info.Title
 	self.Title.TextColor3 = info.Color
 	self.Description.Text = info.Description
-	self.Stroke.Color = info.Color
+	if self.Stroke then
+		self.Stroke.Color = info.Color
+	end
 
 	for _, c in self.Actions:GetChildren() do c:Destroy() end
 	for _, c in self.List:GetChildren() do if c:IsA("GuiObject") then c:Destroy() end end

@@ -165,6 +165,7 @@ local function allocateNetId(): number
 end
 
 local ActiveMasters: { [Player]: MasterCombatState } = {}
+local HeroStuckTracking: { [number]: { LastDist: number, LastClock: number } } = {}
 local ActiveHeroesByNetId: { [number]: SimHero } = {}
 local ActiveMobsByNetId: { [number]: SimMob } = {}
 local ActiveWorldBoss: SimMob? = nil
@@ -1667,9 +1668,52 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 	end
 
 	if simHero.State == "FOLLOW_MASTER" or not targetPos then
-		local goalPos = HeroNavigation.PlaceNear(masterPos, getFormationOffset(simHero.SlotIndex))
-		if (goalPos - simHero.Position).Magnitude > .5 then
-			HeroNavigation.Step(simHero, goalPos, currentMoveSpeed * dt, now)
+		local formation = getFormationOffset(simHero.SlotIndex)
+		local distToMaster = (masterPos - simHero.Position).Magnitude
+		-- When catching up from far away, tighten formation offset so squadmates file through gates and bridges cleanly
+		local targetOffset = if distToMaster > 18 then formation * math.clamp(18 / distToMaster, 0.25, 1.0) else formation
+		local goalPos = HeroNavigation.PlaceNear(masterPos, targetOffset)
+		local distToGoal = (goalPos - simHero.Position).Magnitude
+		if distToGoal > .5 then
+			local followSpeed = currentMoveSpeed
+			if distToGoal > 12 then
+				-- Catch-up speed so heroes keep following and catch up when master sprints
+				local sprintFactor = math.clamp((distToGoal - 12) / 28, 0, 1)
+				followSpeed = currentMoveSpeed + (48.0 - currentMoveSpeed) * sprintFactor
+				if distToGoal > 70 then
+					followSpeed = math.max(followSpeed, 54.0)
+				end
+			end
+			-- Anti-stuck progress tracker: if hero fails to make progress toward master for > 2.0s, safely recover near master
+			local tracker = HeroStuckTracking[simHero.NetId]
+			if not tracker then
+				tracker = { LastDist = distToGoal, LastClock = now }
+				HeroStuckTracking[simHero.NetId] = tracker
+			end
+			if distToGoal > 4.0 then
+				if tracker.LastDist - distToGoal > 1.5 then
+					tracker.LastDist = distToGoal
+					tracker.LastClock = now
+				elseif distToGoal - tracker.LastDist > 4.0 then
+					tracker.LastDist = distToGoal
+				elseif now - tracker.LastClock > 2.0 then
+					simHero.Position = HeroNavigation.PlaceNear(masterPos, Vector3.zero)
+					HeroNavigation.Clear(simHero)
+					tracker.LastDist = 0
+					tracker.LastClock = now
+				end
+			else
+				tracker.LastDist = distToGoal
+				tracker.LastClock = now
+			end
+
+			if distToGoal > 220 and math.abs(simHero.Position.Y - masterPos.Y) > 25 then
+				-- Safety fallback if fallen into pit or stranded far away
+				simHero.Position = goalPos
+				HeroNavigation.Clear(simHero)
+			else
+				HeroNavigation.Step(simHero, goalPos, followSpeed * dt, now)
+			end
 		end
 		return
 	end

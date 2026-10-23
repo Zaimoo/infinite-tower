@@ -5,6 +5,7 @@ local PromptService=game:GetService("ProximityPromptService")
 local Http=game:GetService("HttpService")
 local player=Players.LocalPlayer
 local floors=require(RS.Shared.Config.TowerFloorConfig)
+local GothicBoxStyle=require(RS.Shared.Util.GothicBoxStyle)
 local remotes=RS:WaitForChild("Remotes"):WaitForChild("TowerRemotes")
 local selfState: any=nil
 local context: any=nil
@@ -17,13 +18,14 @@ local function label(parent: Instance,text: string,pos: UDim2,size: UDim2): Text
 	l.Font=Enum.Font.Gotham;l.TextSize=14;l.TextWrapped=true;l.Parent=parent;return l
 end
 local function button(parent: Instance,text: string,pos: UDim2,size: UDim2,callback: ()->()): TextButton
-	local b=Instance.new("TextButton");b.Text=text;b.Position=pos;b.Size=size;b.BackgroundColor3=Color3.fromRGB(105,34,51)
+	local b=Instance.new("TextButton");b.Text=text;b.Position=pos;b.Size=size;b.BackgroundColor3=Color3.fromRGB(28,20,38)
 	b.Name=text:gsub("[^%w]","");if b.Name=="" then b.Name="Close" end
 	b.TextColor3=Color3.new(1,1,1);b.Font=Enum.Font.GothamBold;b.TextSize=14;b.Parent=parent
-	local corner=Instance.new("UICorner");corner.CornerRadius=UDim.new(0,6);corner.Parent=b;b.Activated:Connect(callback);return b
+	GothicBoxStyle.Apply(b, { Style = "Button", OnClick = callback });return b
 end
 local panel=Instance.new("Frame");panel.Name="FloorSelector";panel.AnchorPoint=Vector2.new(.5,.5);panel.Position=UDim2.fromScale(.5,.5);panel.Size=UDim2.fromOffset(500,460)
-panel.BackgroundColor3=Color3.fromRGB(23,21,30);panel.Visible=false;panel.Parent=gui
+panel.BackgroundColor3=Color3.fromRGB(15,12,22);panel.Visible=false;panel.Parent=gui
+GothicBoxStyle.Apply(panel, { Style = "Window" })
 local scale=Instance.new("UIScale");scale.Parent=panel
 local reflow: any=nil
 local function fit()
@@ -46,6 +48,18 @@ local function request(action: string,id: number?)
 		ExpectedLocationRevision=selfState.LocationRevision,ExpectedSquadRevision=selfState.SquadRevision}
 	pending=r.RequestId;status.Text="Preparing travel…";remotes.Request:FireServer(r)
 end
+_G.RequestTowerHub = function(): boolean
+	if not selfState then
+		warn("[TowerController] Cannot travel to Hub: selfState not ready yet")
+		return false
+	end
+	if pending then
+		warn("[TowerController] Travel already pending: " .. tostring(pending))
+		return false
+	end
+	request("HUB")
+	return true
+end
 local function render()
 	local floor=floors.Get(selected)
 	local info=presence and presence.Floors[selected+1]
@@ -63,22 +77,6 @@ button(panel,"Visit floor",UDim2.fromOffset(20,340),UDim2.fromOffset(145,38),fun
 button(panel,"Assign squad",UDim2.fromOffset(177,340),UDim2.fromOffset(145,38),function() request("ASSIGN",selected) end)
 button(panel,"Recall squad",UDim2.fromOffset(334,340),UDim2.fromOffset(145,38),function() request("RECALL") end)
 button(panel,"×",UDim2.fromOffset(452,8),UDim2.fromOffset(36,28),function() panel.Visible=false end)
-local bar=Instance.new("Frame");bar.Name="TravelBar";bar.AnchorPoint=Vector2.new(.5,0);bar.Position=UDim2.new(.5,0,0,60);bar.Size=UDim2.fromOffset(460,36);bar.BackgroundTransparency=1;bar.Parent=gui
-local barScale=Instance.new("UIScale");barScale.Parent=bar
-local function fitBar()
-	if workspace.CurrentCamera then
-		local width=math.min(460,workspace.CurrentCamera.ViewportSize.X-16)
-		bar.Size=UDim2.fromOffset(width,44);barScale.Scale=1
-		local col=(width-24)/4
-		for i,name in {"Previous","Next","Floorselector","Hub"} do local b=bar:FindFirstChild(name);if b and b:IsA("TextButton") then b.Position=UDim2.fromOffset((i-1)*(col+8),0);b.Size=UDim2.fromOffset(col,44) end end
-	end
-end
-fitBar();if workspace.CurrentCamera then workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(fitBar) end
-local prev=button(bar,"Previous",UDim2.fromOffset(0,0),UDim2.fromOffset(100,36),function() if context and context.FloorId>1 then request("VISIT",context.FloorId-1) end end)
-local nextButton=button(bar,"Next",UDim2.fromOffset(110,0),UDim2.fromOffset(100,36),function() if context and context.FloorId>0 and context.FloorId<50 then request("VISIT",context.FloorId+1) end end)
-button(bar,"Floor selector",UDim2.fromOffset(220,0),UDim2.fromOffset(120,36),function() panel.Visible=not panel.Visible;render() end)
-button(bar,"Hub",UDim2.fromOffset(350,0),UDim2.fromOffset(100,36),function() request("HUB") end)
-panel:GetPropertyChangedSignal("Visible"):Connect(function() bar.Visible=not panel.Visible end)
 reflow=function(width: number,height: number)
 	local compact=height<400
 	local listY=compact and 52 or 82
@@ -96,15 +94,16 @@ reflow=function(width: number,height: number)
 	status.Position=UDim2.fromOffset(20,actionY+48);status.Size=UDim2.fromOffset(width-40,math.max(24,height-actionY-52))
 	local close=panel:FindFirstChild("Close");if close and close:IsA("TextButton") then close.Position=UDim2.fromOffset(width-48,2);close.Size=UDim2.fromOffset(44,44) end
 end
-fit();fitBar()
+fit()
 remotes.OpenSelector.OnClientEvent:Connect(function() panel.Visible=true;render() end)
 PromptService.PromptTriggered:Connect(function(prompt,who)
 	if who and who~=player then return end
 	local action=prompt:GetAttribute("TowerAction")
+	local curFloor = if context and context.FloorId then context.FloorId elseif selfState and selfState.PlayerLocation then selfState.PlayerLocation.FloorId else 0
 	if action=="SELECTOR" or prompt.Name=="TowerSelectorPrompt" then panel.Visible=true;render()
 	elseif action=="HUB" then request("HUB")
-	elseif action=="PREVIOUS" and context and context.FloorId>1 then request("VISIT",context.FloorId-1)
-	elseif action=="NEXT" and context and context.FloorId<50 then request("VISIT",context.FloorId+1) end
+	elseif action=="PREVIOUS" and curFloor>1 then request("VISIT",curFloor-1)
+	elseif action=="NEXT" and curFloor>0 and curFloor<50 then request("VISIT",curFloor+1) end
 end)
 remotes.Presence.OnClientEvent:Connect(function(p)
 	if presence and p.ServerSessionId==presence.ServerSessionId and p.PresenceRevision<presence.PresenceRevision then return end
@@ -123,8 +122,6 @@ remotes.Context.OnClientEvent:Connect(function(c)
 		end)
 	elseif c.Stage=="COMMIT" then
 		context=c;_G.TowerView=c
-		prev.Active=c.FloorId>1;prev.AutoButtonColor=prev.Active;prev.BackgroundTransparency=prev.Active and 0 or .6
-		nextButton.Active=c.FloorId>0 and c.FloorId<50;nextButton.AutoButtonColor=nextButton.Active;nextButton.BackgroundTransparency=nextButton.Active and 0 or .6
 		if c.FloorId>0 then selected=c.FloorId end
 		local char=player.Character;local root=char and char:FindFirstChild("HumanoidRootPart")
 		if root and root:IsA("BasePart") then root.AssemblyLinearVelocity=Vector3.zero;root.AssemblyAngularVelocity=Vector3.zero end
