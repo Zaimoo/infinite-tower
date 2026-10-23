@@ -47,18 +47,18 @@ local CONFIG: ButtonConfig = {
 	-- ASSET INPUTS:
 	-- Set to your uploaded Roblox asset ID (e.g. "rbxassetid://123456789").
 	-- When set to "rbxassetid://REPLACE_ME", automatically uses FALLBACK_FRAME_IMAGE.
-	FRAME_IMAGE = "rbxassetid://REPLACE_ME",
+	FRAME_IMAGE = "rbxassetid://106460392252247",
 
 	-- Source Image Resolution:
-	-- PRESET 1 (Tightly Cropped, GothicFrame_Cropped.png): Vector2.new(690, 303)
-	-- PRESET 2 (Master Canvas, GothicFrame.png):           Vector2.new(1024, 572)
+	-- PRESET 1 (Tightly Cropped, GothicFrame_Cropped.png - rbxassetid://106460392252247): Vector2.new(690, 303)
+	-- PRESET 2 (Master Canvas, GothicFrame.png - rbxassetid://122557249536640):           Vector2.new(1024, 572)
 	FRAME_IMAGE_SIZE = Vector2.new(690, 303),
 
 	-- Transparent padding around the visible frame border for the ambient glow (in image pixels)
 	GLOW_PADDING_PX = 16,
 
 	-- Faceted blue gem icon (authoritative existing project gem asset)
-	GEM_IMAGE = "rbxassetid://74751786636473",
+	GEM_IMAGE = "rbxassetid://78431923289071",
 
 	-- 9-Slice Bounds: Chosen from FRAME_IMAGE_SIZE so corner spires and filigree
 	-- remain 100% undistorted while the center borders stretch cleanly.
