@@ -5,6 +5,7 @@ local PromptService=game:GetService("ProximityPromptService")
 local Http=game:GetService("HttpService")
 local player=Players.LocalPlayer
 local floors=require(RS.Shared.Config.TowerFloorConfig)
+local GothicBoxStyle=require(RS.Shared.Util.GothicBoxStyle)
 local remotes=RS:WaitForChild("Remotes"):WaitForChild("TowerRemotes")
 local selfState: any=nil
 local context: any=nil
@@ -17,13 +18,14 @@ local function label(parent: Instance,text: string,pos: UDim2,size: UDim2): Text
 	l.Font=Enum.Font.Gotham;l.TextSize=14;l.TextWrapped=true;l.Parent=parent;return l
 end
 local function button(parent: Instance,text: string,pos: UDim2,size: UDim2,callback: ()->()): TextButton
-	local b=Instance.new("TextButton");b.Text=text;b.Position=pos;b.Size=size;b.BackgroundColor3=Color3.fromRGB(105,34,51)
+	local b=Instance.new("TextButton");b.Text=text;b.Position=pos;b.Size=size;b.BackgroundColor3=Color3.fromRGB(28,20,38)
 	b.Name=text:gsub("[^%w]","");if b.Name=="" then b.Name="Close" end
 	b.TextColor3=Color3.new(1,1,1);b.Font=Enum.Font.GothamBold;b.TextSize=14;b.Parent=parent
-	local corner=Instance.new("UICorner");corner.CornerRadius=UDim.new(0,6);corner.Parent=b;b.Activated:Connect(callback);return b
+	GothicBoxStyle.Apply(b, { Style = "Button", OnClick = callback });return b
 end
 local panel=Instance.new("Frame");panel.Name="FloorSelector";panel.AnchorPoint=Vector2.new(.5,.5);panel.Position=UDim2.fromScale(.5,.5);panel.Size=UDim2.fromOffset(500,460)
-panel.BackgroundColor3=Color3.fromRGB(23,21,30);panel.Visible=false;panel.Parent=gui
+panel.BackgroundColor3=Color3.fromRGB(15,12,22);panel.Visible=false;panel.Parent=gui
+GothicBoxStyle.Apply(panel, { Style = "Window" })
 local scale=Instance.new("UIScale");scale.Parent=panel
 local reflow: any=nil
 local function fit()

@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 local HeroCard = require(script.Parent:WaitForChild("HeroCard"))
 local StatFormulas = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("StatFormulas"))
+local GothicBoxStyle = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GothicBoxStyle"))
 
 local Synth = {}
 Synth.__index = Synth
@@ -55,16 +56,13 @@ local function glow(parent: GuiObject, pad: number, transparency: number)
 	stroke(g, C.Line, 3, transparency)
 end
 
+local function applyGothicStyle(container: GuiObject, style: "Window" | "Card" | "Button" | "Compact")
+	return GothicBoxStyle.Apply(container, { Style = style })
+end
+
 -- Small hollow diamonds pinned to each corner, matching the reference frame.
 local function cornerDiamonds(parent: GuiObject, size: number)
-	for _, corner in { Vector2.new(0, 0), Vector2.new(1, 0), Vector2.new(0, 1), Vector2.new(1, 1) } do
-		local d = new("Frame", {
-			Name = "CornerDiamond", AnchorPoint = Vector2.new(0.5, 0.5), Rotation = 45,
-			Position = UDim2.fromScale(corner.X, corner.Y), Size = UDim2.fromOffset(size, size),
-			BackgroundColor3 = C.Panel, BorderSizePixel = 0, ZIndex = parent.ZIndex + 2,
-		}, parent)
-		stroke(d, C.Line, 1)
-	end
+	-- Styled automatically by GothicBoxStyle
 end
 
 local function label(parent: Instance, text: string, size: number, color: Color3, font: Enum.Font?): TextLabel
@@ -111,24 +109,13 @@ function Synth.new(gui: ScreenGui, remote: RemoteFunction)
 		Visible = false, Active = true, ZIndex = 40,
 	}, gui)
 	self.Root = root
-	stroke(root, C.Line, 1, 0.1)
-	glow(root, 8, 0.82)
-	local inner = new("Frame", {
-		Name = "InnerBorder", BackgroundTransparency = 1, Position = UDim2.fromOffset(5, 5),
-		Size = UDim2.new(1, -10, 1, -10), ZIndex = 41,
-	}, root)
-	stroke(inner, C.LineDim, 1, 0.2)
-	cornerDiamonds(root, 8)
+	applyGothicStyle(root, "Window")
 	self.Scale = new("UIScale", {}, root)
 
 	local title = label(root, spaced("SYNTHESIS"), 26, C.Text, Enum.Font.GothamBlack)
 	title.Name, title.Position, title.Size, title.ZIndex = "Title", UDim2.fromOffset(0, 44), UDim2.new(1, 0, 0, 40), 42
 
-	local close = new("TextButton", {
-		Name = "Close", Text = "×", TextSize = 28, Font = Enum.Font.GothamBold, TextColor3 = C.Muted,
-		BackgroundTransparency = 1, Position = UDim2.new(1, -54, 0, 14), Size = UDim2.fromOffset(40, 40), ZIndex = 42,
-	}, root)
-	close.Activated:Connect(function() if not self.Busy then self:Close() end end)
+	local close = GothicBoxStyle.CreateCloseButton(root, function() if not self.Busy then self:Close() end end)
 
 	-- Recipient (the hero being synthesized)
 	self.RecipientSlot = self:BuildSlot(root, "RecipientSlot", 130, UDim2.fromOffset((WIDTH - 130) / 2, 108), true)
@@ -166,16 +153,13 @@ function Synth.new(gui: ScreenGui, remote: RemoteFunction)
 	-- Confirm button
 	local confirm = new("TextButton", {
 		Name = "ConfirmSynthesize", Text = "CONFIRM SYNTHESIZE", TextSize = 17, Font = Enum.Font.GothamBlack,
-		TextColor3 = C.Text, BackgroundColor3 = Color3.fromRGB(15, 14, 20), BorderSizePixel = 0, AutoButtonColor = true,
+		TextColor3 = C.Text, BackgroundColor3 = Color3.fromRGB(15, 14, 20), BorderSizePixel = 0, AutoButtonColor = false,
 		Position = UDim2.fromOffset((WIDTH - 506) / 2, 480), Size = UDim2.fromOffset(506, 60), ZIndex = 42,
 	}, root)
-	self.ConfirmStroke = stroke(confirm, C.Line, 1, 0.1)
-	glow(confirm, 6, 0.85)
-	local confirmInner = new("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(4, 4), Size = UDim2.new(1, -8, 1, -8), ZIndex = 42 }, confirm)
-	stroke(confirmInner, C.LineDim, 1, 0.3)
-	cornerDiamonds(confirm, 7)
+	applyGothicStyle(confirm, "Button")
 	confirm.Activated:Connect(function() self:Confirm() end)
 	self.ConfirmButton = confirm
+	self.ConfirmStroke = confirm:FindFirstChildOfClass("UIStroke")
 
 	self.Status = label(root, "", 13, C.Muted, Enum.Font.GothamMedium)
 	self.Status.Position, self.Status.Size, self.Status.ZIndex = UDim2.fromOffset(40, 550), UDim2.new(1, -80, 0, 40), 42
@@ -203,14 +187,12 @@ end
 
 function Synth.BuildSlot(self: any, parent: Instance, name: string, size: number, position: UDim2, primary: boolean): any
 	local button = new("TextButton", {
-		Name = name, Text = "", AutoButtonColor = true, BackgroundColor3 = C.Slot, BorderSizePixel = 0,
+		Name = name, Text = "", AutoButtonColor = false, BackgroundColor3 = C.Slot, BorderSizePixel = 0,
 		Position = position, Size = UDim2.fromOffset(size, size), ZIndex = 42,
 	}, parent)
 	local slot: any = { Button = button, HeroId = nil }
-	slot.Stroke = stroke(button, primary and C.Line or C.LineDim, 1, primary and 0 or 0.1)
-	if primary then glow(button, 8, 0.75) end
-	local inset = new("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(3, 3), Size = UDim2.new(1, -6, 1, -6), ZIndex = 42 }, button)
-	stroke(inset, C.LineDim, 1, primary and 0.4 or 0.55)
+	applyGothicStyle(button, "Card")
+	slot.Stroke = button:FindFirstChildOfClass("UIStroke")
 	slot.Portrait = new("Frame", {
 		Name = "Portrait", BackgroundTransparency = 1, ClipsDescendants = true,
 		Position = UDim2.fromOffset(4, 4), Size = UDim2.new(1, -8, 1, -8), ZIndex = 43,
@@ -229,7 +211,7 @@ function Synth.BuildPicker(self: any)
 		Name = "HeroPicker", BackgroundColor3 = C.Panel, BorderSizePixel = 0, Visible = false, Active = true,
 		Position = UDim2.fromOffset(14, 14), Size = UDim2.new(1, -28, 1, -28), ZIndex = 60,
 	}, self.Root)
-	stroke(picker, C.LineDim, 1)
+	applyGothicStyle(picker, "Window")
 	self.Picker = picker
 	self.PickerTitle = label(picker, "", 18, C.Text, Enum.Font.GothamBlack)
 	self.PickerTitle.Position, self.PickerTitle.Size, self.PickerTitle.ZIndex = UDim2.fromOffset(0, 18), UDim2.new(1, 0, 0, 28), 61
@@ -461,10 +443,14 @@ function Synth.RenderSlot(self: any, slot: any, hero: any?, primary: boolean)
 		local rarity = RARITY[math.clamp(hero.Stars or 1, 1, 5)]
 		slot.Caption.Text = primary and stars(hero.Stars) or string.format("Lv.%d", hero.Level or 1)
 		slot.Caption.TextColor3 = primary and rarity or C.Text
-		slot.Stroke.Color = primary and C.Line or rarity
+		if slot.Stroke then
+			slot.Stroke.Color = primary and C.Line or rarity
+		end
 	else
 		slot.Caption.Text = ""
-		slot.Stroke.Color = primary and C.Line or C.LineDim
+		if slot.Stroke then
+			slot.Stroke.Color = primary and C.Line or C.LineDim
+		end
 	end
 end
 
@@ -515,7 +501,9 @@ function Synth.Render(self: any)
 	elseif self.ArmedRare then button.Text = "CONFIRM — RARE HEROES WILL BE LOST"
 	else button.Text = "CONFIRM SYNTHESIZE" end
 	button.TextColor3 = (ready or self.Busy) and C.Text or C.Muted
-	self.ConfirmStroke.Color = self.ArmedRare and C.Danger or C.Line
+	if self.ConfirmStroke then
+		self.ConfirmStroke.Color = self.ArmedRare and C.Danger or C.Line
+	end
 
 	local status, color = self.Message, C.Muted
 	if status == "" then

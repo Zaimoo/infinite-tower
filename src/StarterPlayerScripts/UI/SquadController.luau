@@ -7,6 +7,7 @@ local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local HeroCard = require(script.Parent:WaitForChild("HeroCard"))
+local GothicBoxStyle = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GothicBoxStyle"))
 
 local SquadController = {}
 SquadController.__index = SquadController
@@ -139,50 +140,10 @@ function SquadController.new(screenGui: ScreenGui, getProfile: () -> any, remote
 	bindCamera()
 	workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindCamera)
 
-	new("UICorner", { CornerRadius = UDim.new(0, 8) }, self.Root)
-	self.MainStroke = stroke(self.Root, C.BorderDim, 1.6)
-	cornerDiamonds(self.Root, 10)
+	GothicBoxStyle.Apply(self.Root, { Style = "Window" })
 
-	-- Inner decorative outline frame
-	local innerFrame = new("Frame", {
-		Name = "InnerFrame",
-		Position = UDim2.fromOffset(6, 6),
-		Size = UDim2.new(1, -12, 1, -12),
-		BackgroundTransparency = 1,
-		ZIndex = 31,
-	}, self.Root)
-	new("UICorner", { CornerRadius = UDim.new(0, 6) }, innerFrame)
-	stroke(innerFrame, C.BorderDim, 1, 0.4)
-
-	-- Close Button (Standard ASCII 'X' with gothic pill styling)
-	local closeBtn = new("TextButton", {
-		Name = "CloseButton",
-		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -16, 0, 16),
-		Size = UDim2.fromOffset(30, 30),
-		BackgroundColor3 = C.ButtonBg,
-		BackgroundTransparency = 0.3,
-		Text = "X",
-		Font = Enum.Font.GothamBold,
-		TextSize = 14,
-		TextColor3 = C.TextMuted,
-		AutoButtonColor = true,
-		ZIndex = 35,
-	}, self.Root)
-	new("UICorner", { CornerRadius = UDim.new(0, 6) }, closeBtn)
-	local closeStroke = stroke(closeBtn, C.ButtonBorder, 1)
-
-	closeBtn.MouseEnter:Connect(function()
-		closeBtn.TextColor3 = C.TextWhite
-		closeBtn.BackgroundColor3 = Color3.fromRGB(180, 45, 55)
-		closeStroke.Color = Color3.fromRGB(255, 95, 105)
-	end)
-	closeBtn.MouseLeave:Connect(function()
-		closeBtn.TextColor3 = C.TextMuted
-		closeBtn.BackgroundColor3 = C.ButtonBg
-		closeStroke.Color = C.ButtonBorder
-	end)
-	closeBtn.MouseButton1Click:Connect(function()
+	-- Close Button (High contrast gothic rounded square with Latin 'X')
+	local closeBtn = GothicBoxStyle.CreateCloseButton(self.Root, function()
 		self:Close()
 	end)
 
@@ -285,8 +246,8 @@ function SquadController.new(screenGui: ScreenGui, getProfile: () -> any, remote
 			BackgroundColor3 = C.CardBg,
 			ZIndex = 34,
 		}, col)
-		new("UICorner", { CornerRadius = UDim.new(0, 6) }, card)
-		local cardStroke = stroke(card, C.BorderBronze, 1.2)
+		GothicBoxStyle.Apply(card, { Style = "Card" })
+		local cardStroke = card:FindFirstChildOfClass("UIStroke")
 
 		-- Outer Glow for Selected Slot State
 		local glowFrame = new("Frame", {
@@ -466,8 +427,7 @@ function SquadController.new(screenGui: ScreenGui, getProfile: () -> any, remote
 		TextColor3 = C.Green,
 		ZIndex = 34,
 	}, bottomBar)
-	new("UICorner", { CornerRadius = UDim.new(0, 5) }, self.AutoSwapBtn)
-	stroke(self.AutoSwapBtn, C.Green, 1, 0.3)
+	GothicBoxStyle.Apply(self.AutoSwapBtn, { Style = "Button" })
 
 	self.AutoSwapBtn.MouseButton1Click:Connect(function()
 		self.AssignRemote:InvokeServer("AUTO_SWAP_EXHAUSTED", "")
@@ -487,18 +447,7 @@ function SquadController.new(screenGui: ScreenGui, getProfile: () -> any, remote
 		TextColor3 = C.TextWhite,
 		ZIndex = 34,
 	}, bottomBar)
-	new("UICorner", { CornerRadius = UDim.new(0, 6) }, self.ConfirmBtn)
-	local confirmStroke = stroke(self.ConfirmBtn, C.BorderDim, 1.4)
-	cornerDiamonds(self.ConfirmBtn, 7)
-
-	self.ConfirmBtn.MouseEnter:Connect(function()
-		confirmStroke.Color = C.BorderGoldGlow
-		self.ConfirmBtn.TextColor3 = C.BorderGoldGlow
-	end)
-	self.ConfirmBtn.MouseLeave:Connect(function()
-		confirmStroke.Color = C.BorderDim
-		self.ConfirmBtn.TextColor3 = C.TextWhite
-	end)
+	GothicBoxStyle.Apply(self.ConfirmBtn, { Style = "Button" })
 	self.ConfirmBtn.MouseButton1Click:Connect(function()
 		self:Close()
 	end)
@@ -666,13 +615,13 @@ function SquadController.Refresh(self: any)
 				Name = "HeroCard_" .. hero.UUID,
 				LayoutOrder = idx,
 				Text = "",
-				AutoButtonColor = true,
+				AutoButtonColor = false,
 				Size = UDim2.new(0, cardWidth, 0, 172),
 				BackgroundColor3 = C.CardBg,
 				ZIndex = 34,
 			}, self.RosterScroll)
-			new("UICorner", { CornerRadius = UDim.new(0, 6) }, card)
-			local cardStroke = stroke(card, inSquad and C.BorderDim or C.BorderBronze, 1.1)
+			GothicBoxStyle.Apply(card, { Style = "Card" })
+		local cardStroke = card:FindFirstChildOfClass("UIStroke")
 
 			local portraitFrame = new("Frame", {
 				Name = "PortraitHost",

@@ -18,6 +18,7 @@ local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local FacilityConfig = require(Shared:WaitForChild("Config"):WaitForChild("FacilityConfig"))
 local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormulas"))
+local GothicBoxStyle = require(Shared:WaitForChild("Util"):WaitForChild("GothicBoxStyle"))
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local CombatRemotes = Remotes:WaitForChild("CombatRemotes")
@@ -421,15 +422,14 @@ local rightBoard = makeFrame({
 	Position = UDim2.new(1, -257, 0.34, 0),
 	BackgroundColor3 = Color3.fromRGB(18, 20, 30),
 	BackgroundTransparency = 0.18,
-	Corner = 10,
-	Stroke = 1.5,
-	StrokeColor = Color3.fromRGB(140, 75, 195),
+	BackgroundTransparency = 1,
 	Parent = hudGui,
 })
+GothicBoxStyle.Apply(rightBoard, { Style = "Card" })
 
 local rightBoardText = makeLabel({
-	Size = UDim2.new(1, -16, 1, -12),
-	Position = UDim2.new(0, 8, 0, 6),
+	Size = UDim2.new(1, -36, 1, -28),
+	Position = UDim2.fromOffset(18, 14),
 	Text = " WORLD BOSS & PITY\n• Min 3.0% DMG for Loot\n• 50% Direct + 50% Calamity Heart\n• Boss Pity: 0% / 100%\n• Rift Lures Owned: 0",
 	TextColor3 = Color3.fromRGB(230, 215, 250),
 	TextXAlignment = Enum.TextXAlignment.Left,
@@ -1397,171 +1397,10 @@ do
 	local function applyGothicBoxStyle(container: Frame, compact: boolean?, zOrder: number?): Frame
 		local isCompact = if compact ~= nil then compact else false
 		local baseZ = zOrder or container.ZIndex or 8
-
-		container.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-		container.BackgroundTransparency = 0
-		container.BorderSizePixel = 0
-		container.ZIndex = baseZ
-
-		for _, child in ipairs(container:GetChildren()) do
-			if
-				child:IsA("UICorner")
-				or child:IsA("UIStroke")
-				or child:IsA("UIGradient")
-				or child.Name == "GothicDecorRoot"
-			then
-				child:Destroy()
-			end
-		end
-
-		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(0, isCompact and 3 or 4)
-		corner.Parent = container
-
-		local grad = Instance.new("UIGradient")
-		grad.Rotation = 128
-		grad.Color = ColorSequence.new({
-			ColorSequenceKeypoint.new(0.00, GothicPalette.ObsidianDark),
-			ColorSequenceKeypoint.new(0.28, GothicPalette.ObsidianMid),
-			ColorSequenceKeypoint.new(0.46, GothicPalette.ObsidianSheen),
-			ColorSequenceKeypoint.new(0.62, GothicPalette.ObsidianMid),
-			ColorSequenceKeypoint.new(1.00, GothicPalette.ObsidianDark),
-		})
-		grad.Parent = container
-
-		local outerStroke = Instance.new("UIStroke")
-		outerStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-		outerStroke.Thickness = isCompact and 1.5 or 2
-		outerStroke.Color = GothicPalette.FiligreeWhite
-		outerStroke.Transparency = 0.04
-		outerStroke.Parent = container
-
-		local decorRoot = Instance.new("Folder")
-		decorRoot.Name = "GothicDecorRoot"
-		decorRoot.Parent = container
-
-		local glowFrame = Instance.new("Frame")
-		glowFrame.Name = "OuterGlow"
-		glowFrame.Size = UDim2.new(1, isCompact and 6 or 10, 1, isCompact and 6 or 10)
-		glowFrame.Position = UDim2.fromScale(0.5, 0.5)
-		glowFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-		glowFrame.BackgroundTransparency = 1
-		glowFrame.ZIndex = baseZ
-		glowFrame.Parent = decorRoot
-
-		local glowCorner = Instance.new("UICorner")
-		glowCorner.CornerRadius = UDim.new(0, isCompact and 5 or 7)
-		glowCorner.Parent = glowFrame
-
-		local glowStroke = Instance.new("UIStroke")
-		glowStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-		glowStroke.Thickness = isCompact and 2.5 or 4
-		glowStroke.Color = GothicPalette.OuterGlow
-		glowStroke.Transparency = 0.62
-		glowStroke.Parent = glowFrame
-
-		local insetX = isCompact and 10 or 18
-		local line1Y = isCompact and 4 or 7
-		local line2Y = isCompact and 6 or 11
-
-		local function makeTrimLine(name: string, yOffset: number, fromBottom: boolean, col: Color3, trans: number)
-			local line = Instance.new("Frame")
-			line.Name = name
-			line.Size = UDim2.new(1, -insetX * 2, 0, 1)
-			line.Position = if fromBottom
-				then UDim2.new(0, insetX, 1, -yOffset)
-				else UDim2.new(0, insetX, 0, yOffset)
-			line.BackgroundColor3 = col
-			line.BackgroundTransparency = trans
-			line.BorderSizePixel = 0
-			line.ZIndex = baseZ + 1
-			line.Parent = decorRoot
-		end
-
-		makeTrimLine("TopTrimOuter", line1Y, false, GothicPalette.InnerLineBright, 0.25)
-		makeTrimLine("TopTrimInner", line2Y, false, GothicPalette.InnerLineMuted, 0.42)
-		makeTrimLine("BottomTrimOuter", line1Y, true, GothicPalette.InnerLineBright, 0.25)
-		makeTrimLine("BottomTrimInner", line2Y, true, GothicPalette.InnerLineMuted, 0.42)
-
-		local wingLen = isCompact and 13 or 24
-		local wingThick = isCompact and 2 or 3
-		local diamondOuter = isCompact and 9 or 15
-		local diamondInner = isCompact and 5 or 8
-		local spurSize = isCompact and 4 or 6
-
-		local corners = {
-			{ Name = "CornerTL", X = 0, Y = 0, AX = 0, AY = 0, SX = 1, SY = 1 },
-			{ Name = "CornerTR", X = 1, Y = 0, AX = 1, AY = 0, SX = -1, SY = 1 },
-			{ Name = "CornerBL", X = 0, Y = 1, AX = 0, AY = 1, SX = 1, SY = -1 },
-			{ Name = "CornerBR", X = 1, Y = 1, AX = 1, AY = 1, SX = -1, SY = -1 },
-		}
-
-		for _, c in ipairs(corners) do
-			local hWing = Instance.new("Frame")
-			hWing.Name = c.Name .. "_HWing"
-			hWing.Size = UDim2.fromOffset(wingLen, wingThick)
-			hWing.AnchorPoint = Vector2.new(c.AX, c.AY)
-			hWing.Position = UDim2.new(c.X, -c.SX * 1, c.Y, -c.SY * 1)
-			hWing.BackgroundColor3 = GothicPalette.FiligreeWhite
-			hWing.BorderSizePixel = 0
-			hWing.ZIndex = baseZ + 2
-			hWing.Parent = decorRoot
-
-			local vWing = Instance.new("Frame")
-			vWing.Name = c.Name .. "_VWing"
-			vWing.Size = UDim2.fromOffset(wingThick, wingLen)
-			vWing.AnchorPoint = Vector2.new(c.AX, c.AY)
-			vWing.Position = UDim2.new(c.X, -c.SX * 1, c.Y, -c.SY * 1)
-			vWing.BackgroundColor3 = GothicPalette.FiligreeWhite
-			vWing.BorderSizePixel = 0
-			vWing.ZIndex = baseZ + 2
-			vWing.Parent = decorRoot
-
-			local hSpur = Instance.new("Frame")
-			hSpur.Name = c.Name .. "_HSpur"
-			hSpur.Size = UDim2.fromOffset(spurSize, spurSize)
-			hSpur.AnchorPoint = Vector2.new(0.5, 0.5)
-			hSpur.Position = UDim2.new(c.X, c.SX * (wingLen - 2), c.Y, c.SY * 1)
-			hSpur.Rotation = 45
-			hSpur.BackgroundColor3 = GothicPalette.FiligreeWhite
-			hSpur.BorderSizePixel = 0
-			hSpur.ZIndex = baseZ + 2
-			hSpur.Parent = decorRoot
-
-			local vSpur = Instance.new("Frame")
-			vSpur.Name = c.Name .. "_VSpur"
-			vSpur.Size = UDim2.fromOffset(spurSize, spurSize)
-			vSpur.AnchorPoint = Vector2.new(0.5, 0.5)
-			vSpur.Position = UDim2.new(c.X, c.SX * 1, c.Y, c.SY * (wingLen - 2))
-			vSpur.Rotation = 45
-			vSpur.BackgroundColor3 = GothicPalette.FiligreeWhite
-			vSpur.BorderSizePixel = 0
-			vSpur.ZIndex = baseZ + 2
-			vSpur.Parent = decorRoot
-
-			local crestOuter = Instance.new("Frame")
-			crestOuter.Name = c.Name .. "_CrestOuter"
-			crestOuter.Size = UDim2.fromOffset(diamondOuter, diamondOuter)
-			crestOuter.AnchorPoint = Vector2.new(0.5, 0.5)
-			crestOuter.Position = UDim2.new(c.X, c.SX * (isCompact and 3 or 5), c.Y, c.SY * (isCompact and 3 or 5))
-			crestOuter.Rotation = 45
-			crestOuter.BackgroundColor3 = GothicPalette.FiligreeWhite
-			crestOuter.BorderSizePixel = 0
-			crestOuter.ZIndex = baseZ + 2
-			crestOuter.Parent = decorRoot
-
-			local crestCutout = Instance.new("Frame")
-			crestCutout.Name = "DarkCutout"
-			crestCutout.Size = UDim2.fromOffset(diamondInner, diamondInner)
-			crestCutout.AnchorPoint = Vector2.new(0.5, 0.5)
-			crestCutout.Position = UDim2.fromScale(0.5, 0.5)
-			crestCutout.BackgroundColor3 = GothicPalette.CornerCutout
-			crestCutout.BorderSizePixel = 0
-			crestCutout.ZIndex = baseZ + 3
-			crestCutout.Parent = crestOuter
-		end
-
-		return container
+		return GothicBoxStyle.Apply(container, {
+			Style = if isCompact then "Compact" else "Card",
+			ZIndex = baseZ,
+		}) :: Frame
 	end
 
 
@@ -1580,9 +1419,9 @@ do
 	local currencyCluster = Instance.new("Frame")
 	currencyCluster.Name = "CurrencyCluster"
 	currencyCluster.BackgroundTransparency = 1
-	currencyCluster.Size = UDim2.fromOffset(258, 44)
+	currencyCluster.Size = UDim2.fromOffset(272, 48)
 	currencyCluster.AnchorPoint = Vector2.new(0, 1)
-	currencyCluster.Position = UDim2.new(0, 16, 1, -18)
+	currencyCluster.Position = UDim2.new(0, 20, 1, -28)
 	currencyCluster.ZIndex = 8
 	currencyCluster.Parent = hudGui
 
@@ -1594,7 +1433,7 @@ do
 	for i, item in currencies do
 		local f = makeFrame({
 			Name = item[1] .. "Pill",
-			Size = UDim2.fromOffset(122, 42),
+			Size = UDim2.fromOffset(130, 46),
 			Position = UDim2.fromOffset((i - 1) * 134, 1),
 			BackgroundColor3 = GothicPalette.ObsidianDark,
 			Parent = currencyCluster,
@@ -1826,7 +1665,7 @@ do
 		honorLabel.Visible = false
 
 		currencyCluster.AnchorPoint = Vector2.new(0, 1)
-		currencyCluster.Position = UDim2.new(0, 16, 1, -18)
+		currencyCluster.Position = UDim2.new(0, 20, 1, -28)
 		local moneyScale = currencyCluster:FindFirstChildOfClass("UIScale") or Instance.new("UIScale", currencyCluster)
 		moneyScale.Scale = portrait and math.min(1, (w - 48) / 258) or 1
 
