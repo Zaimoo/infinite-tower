@@ -1,6 +1,6 @@
 --!strict
 -- ServerScriptService/Tycoon/WaitingRoomService.server.luau
--- 1 Hz Authoritative Waiting Room Facility Tick (Infirmary & Barracks)
+-- 1 Hz Authoritative Waiting Room & Outskirts AFK Economy Loop (GDD Sections 2.4 & 4.3)
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -37,7 +37,7 @@ local function getBlessOrLeechMultiplier(facData: any, nowUnix: number): number
 	return 1.00
 end
 
--- 1 Hz Economy Loop
+-- 1 Hz Economy & AFK Facility Loop
 task.spawn(function()
 	local dm = getDataManager()
 	local tickCount = 0
@@ -50,37 +50,70 @@ task.spawn(function()
 		for _, player in ipairs(Players:GetPlayers()) do
 			local profile = dm.GetProfile(player)
 			if profile then
+				dm.EnsureFacilities(profile)
 				local dirty = false
 
 				-- Expire Rented Mercenary if contract has elapsed
-				local merc = profile.Social.RentedMercenary
+				local merc = profile.Social and profile.Social.RentedMercenary
 				if merc and nowUnix >= merc.ExpiresAt then
 					profile.Social.RentedMercenary = nil
 					dirty = true
 				end
 
-				-- 1. The Infirmary & Barracks (Stamina Recovery & Coma Clearing)
-				if not profile.Facilities.Infirmary then
-					profile.Facilities.Infirmary = { Level = 1, AssignedHeroUUIDs = {}, UncollectedOutput = 0, BlessedUntil = 0, LeechedUntil = 0, LastRuneTimestamp = 0, LastRuneWasLeech = false }
-				end
+				-- 1. The Infirmary & Barracks (Stamina Recovery & Coma Clearing - Section 4.3.1)
 				local inf = profile.Facilities.Infirmary
+				local hasHealer = false
+				for _, uuid in ipairs(inf.AssignedHeroUUIDs) do
+					local h = profile.Heroes[uuid]
+					if h and h.Archetype == "Healer" and (h.ComaUntilTimestamp or 0) <= nowUnix then
+						hasHealer = true
+						break
+					end
+				end
+
 				local infLabor = computeFacilitySumLabor(profile, inf, "FACILITY_INFIRMARY") * getBlessOrLeechMultiplier(inf, nowUnix)
-				local staminaRegenPerSec, _ = StatFormulas.GetInfirmaryRates(inf.Level, infLabor)
+				local staminaRegenPerSec, _ = StatFormulas.GetInfirmaryRates(inf.Level, infLabor, hasHealer)
 
 				for _, hero in pairs(profile.Heroes) do
+					-- Check Coma resolution
 					if hero.ComaUntilTimestamp > 0 and nowUnix >= hero.ComaUntilTimestamp then
 						hero.ComaUntilTimestamp = 0
 						hero.CurrentStamina = 50.0
 						dirty = true
 					end
+
+					-- Active Infirmary recovery vs passive bench recovery
 					if hero.Assignment == "FACILITY_INFIRMARY" and hero.ComaUntilTimestamp <= nowUnix then
 						if hero.CurrentStamina < hero.MaxStamina then
 							hero.CurrentStamina = math.min(hero.MaxStamina, hero.CurrentStamina + staminaRegenPerSec)
 							dirty = true
 						end
-					elseif hero.Assignment == "BENCHED" and hero.CurrentStamina < hero.MaxStamina then
-						-- Gentle passive bench recovery
+					elseif (hero.Assignment == "BENCHED"
+						or hero.Assignment == "FACILITY_GUARD_POST"
+						or hero.Assignment == "FACILITY_MARKET"
+						or hero.Assignment == "FACILITY_TRAINING")
+						and hero.CurrentStamina < hero.MaxStamina
+						and hero.ComaUntilTimestamp <= nowUnix then
+						-- Benched & Stationed Facility workers passively recover without combat stamina drain
 						hero.CurrentStamina = math.min(hero.MaxStamina, hero.CurrentStamina + 1.0)
+					end
+				end
+
+				-- 2. The Outskirts Guard Post: Auto-Received Online Gold (Section 2.4 & 4.3)
+				-- Every 60s (ticked in 10s sub-increments)
+				if tickCount % FacilityConfig.Constants.PassiveGoldTickIntervalSeconds == 0 then
+					local guardPost = profile.Facilities.GuardPost
+					if guardPost and guardPost.Level >= 1 then
+						local gpLabor = computeFacilitySumLabor(profile, guardPost, "FACILITY_GUARD_POST") * getBlessOrLeechMultiplier(guardPost, nowUnix)
+						local bossTier = profile.HighestClearedBiomeBoss or 0
+						local goldRatePerMin = StatFormulas.GetPassiveGoldRate(guardPost.Level, gpLabor, bossTier)
+						local goldSubIncrement = math.round((goldRatePerMin / 60) * FacilityConfig.Constants.PassiveGoldTickIntervalSeconds * 100) / 100
+
+						if goldSubIncrement > 0 then
+							profile.Currencies.Gold = (profile.Currencies.Gold or 0) + goldSubIncrement
+							profile.LastActiveTimestamp = nowUnix
+							dirty = true
+						end
 					end
 				end
 

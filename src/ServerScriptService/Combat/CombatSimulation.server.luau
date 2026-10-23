@@ -321,7 +321,8 @@ function CombatSimulation.RefreshPlayerHeroStats(player: Player)
 	for uuid, simHero in pairs(state.DeployedHeroes) do
 		local hero = profile.Heroes[uuid]
 		if hero then
-			local atk, hp, _, interval = StatFormulas.GetEffectiveCombatStats(hero, false, false, StatFormulas.GetEquippedArtifact(profile,hero))
+			local trainingMult = getDataManager().GetTrainingMultiplier and getDataManager().GetTrainingMultiplier(player) or 1.0
+			local atk, hp, _, interval = StatFormulas.GetEffectiveCombatStats(hero, false, false, StatFormulas.GetEquippedArtifact(profile,hero), trainingMult)
 			metadataChanged = metadataChanged or simHero.Level ~= hero.Level or simHero.Stars ~= hero.Stars or simHero.MaxHP ~= hp
 			simHero.Level, simHero.Stars = hero.Level, hero.Stars
 			simHero.EffectiveATK, simHero.MaxHP, simHero.AttackInterval = atk, hp, interval
@@ -387,7 +388,8 @@ function CombatSimulation.RebuildPlayerSquad(player: Player)
 	for uuid, slotIndex in pairs(desiredUUIDs) do
 		local heroData = profile.Heroes[uuid]
 		local artifact = heroData.EquippedArtifactUUID and profile.Artifacts and profile.Artifacts[heroData.EquippedArtifactUUID]
-		local effATK, effHP, _, effInterval = StatFormulas.GetEffectiveCombatStats(heroData, false, false, artifact)
+		local trainingMult = dm.GetTrainingMultiplier and dm.GetTrainingMultiplier(player) or 1.0
+		local effATK, effHP, _, effInterval = StatFormulas.GetEffectiveCombatStats(heroData, false, false, artifact, trainingMult)
 		local existing = masterState.DeployedHeroes[uuid]
 		if existing then
 			rosterChanged=rosterChanged or existing.SlotIndex~=slotIndex
@@ -1615,7 +1617,8 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 	local profile = dm.GetProfile(simHero.Owner)
 	if profile and profile.Heroes[simHero.HeroUUID] then
 		local currentHero = profile.Heroes[simHero.HeroUUID]
-		local effATK, effHP, _, interval = StatFormulas.GetEffectiveCombatStats(currentHero, false, false, StatFormulas.GetEquippedArtifact(profile,currentHero))
+		local trainingMult = dm.GetTrainingMultiplier and dm.GetTrainingMultiplier(simHero.Owner) or 1.0
+		local effATK, effHP, _, interval = StatFormulas.GetEffectiveCombatStats(currentHero, false, false, StatFormulas.GetEquippedArtifact(profile,currentHero), trainingMult)
 		simHero.AttackInterval = interval
 		simHero.CurrentHP = math.min(simHero.CurrentHP,effHP)
 		simHero.EffectiveATK = effATK
@@ -1894,7 +1897,24 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
  end,
  Reward=function(mob,killer)
   awardParticipationXP(mob)
-  if killer and killer.Parent==Players then spawnPhysicalLoot("GOLD",mob.GoldReward,mob.Position,killer,mob.DisplayName) end
+  local dm = getDataManager()
+  if killer and killer.Parent==Players then
+   local marketMult = dm.GetMarketMultiplier and dm.GetMarketMultiplier(killer) or 1.0
+   local rewardGold = math.round(mob.GoldReward * marketMult)
+   spawnPhysicalLoot("GOLD",rewardGold,mob.Position,killer,mob.DisplayName)
+  end
+  if (mob :: any).Role == "BOSS" and mob.FloorId and mob.FloorId % 5 == 0 then
+   local bossTier = math.floor(mob.FloorId / 5)
+   if killer and killer.Parent == Players then
+    dm.RecordBiomeBossClear(killer, bossTier)
+   end
+   for p in pairs(ActiveMasters) do
+    local s = Tower.GetState(p)
+    if (s.FloorId == mob.FloorId or s.SquadFloorId == mob.FloorId) and p ~= killer then
+     dm.RecordBiomeBossClear(p, bossTier)
+    end
+   end
+  end
  end,
 })
 if RunService:IsStudio() then
@@ -1973,16 +1993,24 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 					local prof = dm.GetProfile(player)
 					if prof then
 						if held.LootType == "GOLD" then
-							prof.Currencies.Gold += held.Amount
+							local marketMult = dm.GetMarketMultiplier and dm.GetMarketMultiplier(player) or 1.0
+							local finalGold = math.round(held.Amount * marketMult)
+							prof.Currencies.Gold += finalGold
+							dm.SendToast(
+								player,
+								if marketMult > 1.0
+									then string.format("🏦 Safely Banked Field Cargo: +%d GOLD (Market: +%.1f%%)!", finalGold, (marketMult - 1) * 100)
+									else string.format("🏦 Safely Banked Field Cargo: +%d GOLD!", finalGold),
+								"SUCCESS"
+							)
 						elseif held.LootType == "GEMS" then
 							prof.Currencies.Gems += held.Amount
+							dm.SendToast(
+								player,
+								string.format("🏦 Safely Banked Field Cargo: +%d GEMS!", held.Amount),
+								"SUCCESS"
+							)
 						end
-
-						dm.SendToast(
-							player,
-							string.format("🏦 Safely Banked Field Cargo: +%d %s!", held.Amount, held.LootType),
-							"SUCCESS"
-						)
 						dm.SyncProfile(player)
 					end
 

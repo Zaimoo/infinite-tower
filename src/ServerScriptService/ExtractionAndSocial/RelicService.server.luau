@@ -310,8 +310,9 @@ local function awardRelicPayout(player: Player, spec: any, scalar: number)
 	if not profile then
 		return
 	end
+	local marketMult = dm.GetMarketMultiplier and dm.GetMarketMultiplier(player) or 1.0
 	local gems = math.round(spec.Payout.Gems * scalar)
-	local gold = math.round(spec.Payout.Gold * scalar)
+	local gold = math.round(spec.Payout.Gold * scalar * marketMult)
 
 	profile.Currencies.Gems += gems
 	profile.Currencies.Gold += gold
