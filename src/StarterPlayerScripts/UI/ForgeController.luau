@@ -381,7 +381,7 @@ function Forge:BuildAssignView(root: Frame)
 		Name = "AssignView",
 		BackgroundTransparency = 1,
 		Position = UDim2.fromOffset(72, 108),
-		Size = UDim2.new(0, 616, 0, 380),
+		Size = UDim2.new(0, 616, 0, 372),
 		Visible = true,
 		ZIndex = 52,
 	}, root)
@@ -572,7 +572,7 @@ function Forge:BuildSummonView(root: Frame)
 		Name = "SummonView",
 		BackgroundTransparency = 1,
 		Position = UDim2.fromOffset(72, 108),
-		Size = UDim2.new(0, 616, 0, 380),
+		Size = UDim2.new(0, 616, 0, 372),
 		ClipsDescendants = false,
 		Visible = false,
 		ZIndex = 52,
@@ -583,7 +583,7 @@ function Forge:BuildSummonView(root: Frame)
 	local bannerCard = new("Frame", {
 		Name = "BannerCard",
 		Position = UDim2.fromOffset(0, 0),
-		Size = UDim2.new(1, 0, 0, 230),
+		Size = UDim2.new(1, 0, 0, 248),
 		BackgroundColor3 = Color3.fromRGB(18, 14, 28),
 		BorderSizePixel = 0,
 		ZIndex = 53,
@@ -605,7 +605,7 @@ function Forge:BuildSummonView(root: Frame)
 	-- Top Watermark
 	local watermark = label(bannerCard, "★ 5-STAR FEATURED HERO & ARTIFACTS", 11, Color3.fromRGB(225, 220, 235), Enum.Font.GothamBold)
 	watermark.TextTransparency = 0.4
-	watermark.Position = UDim2.fromOffset(26, 22)
+	watermark.Position = UDim2.fromOffset(26, 18)
 	watermark.Size = UDim2.new(1, -52, 0, 18)
 	watermark.TextXAlignment = Enum.TextXAlignment.Left
 	watermark.ZIndex = 56
@@ -613,7 +613,7 @@ function Forge:BuildSummonView(root: Frame)
 	-- Big Glowing Banner Title
 	local bannerTitle = label(bannerCard, "ECHOES OF THE RIFT", 25, C.GoldYellow, Enum.Font.GothamBlack)
 	bannerTitle.AnchorPoint = Vector2.new(0, 0)
-	bannerTitle.Position = UDim2.new(0, 28, 0, 152)
+	bannerTitle.Position = UDim2.new(0, 26, 0, 196)
 	bannerTitle.Size = UDim2.new(0, 340, 0, 30)
 	bannerTitle.TextXAlignment = Enum.TextXAlignment.Left
 	bannerTitle.TextStrokeTransparency = 0.3
@@ -623,7 +623,7 @@ function Forge:BuildSummonView(root: Frame)
 	-- Featured Rate-Up Pill Label
 	local rateUpLabel = label(bannerCard, "✧ Rate Up: Blade of the Rift (5★)  |  Aegis Core (5★)", 11, Color3.fromRGB(216, 140, 230), Enum.Font.GothamBold)
 	rateUpLabel.AnchorPoint = Vector2.new(1, 0)
-	rateUpLabel.Position = UDim2.new(1, -28, 0, 158)
+	rateUpLabel.Position = UDim2.new(1, -26, 0, 202)
 	rateUpLabel.Size = UDim2.new(0, 320, 0, 20)
 	rateUpLabel.TextXAlignment = Enum.TextXAlignment.Right
 	rateUpLabel.ZIndex = 56
@@ -632,8 +632,8 @@ function Forge:BuildSummonView(root: Frame)
 	local infoRow = new("Frame", {
 		Name = "InfoRow",
 		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(0, 236),
-		Size = UDim2.new(1, 0, 0, 22),
+		Position = UDim2.fromOffset(0, 258),
+		Size = UDim2.new(1, 0, 0, 20),
 		ZIndex = 53,
 	}, summonView)
 
@@ -653,8 +653,8 @@ function Forge:BuildSummonView(root: Frame)
 	local btnRow = new("Frame", {
 		Name = "ButtonRow",
 		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(0, 264),
-		Size = UDim2.new(1, 0, 0, 76),
+		Position = UDim2.fromOffset(0, 290),
+		Size = UDim2.new(1, 0, 0, 78),
 		ClipsDescendants = false,
 		ZIndex = 53,
 	}, summonView)
@@ -872,7 +872,7 @@ function Forge:BuildUpgradeView(root: Frame)
 		Name = "UpgradeView",
 		BackgroundTransparency = 1,
 		Position = UDim2.fromOffset(72, 108),
-		Size = UDim2.new(0, 616, 0, 380),
+		Size = UDim2.new(0, 616, 0, 372),
 		Visible = false,
 		ZIndex = 52,
 	}, root)
