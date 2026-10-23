@@ -98,15 +98,21 @@ local function cornerDiamonds(parent: GuiObject, size: number)
 end
 
 local function label(parent: Instance, text: string, size: number, color: Color3, font: Enum.Font?): TextLabel
-	return new("TextLabel", {
+	local lbl = new("TextLabel", {
 		BackgroundTransparency = 1,
 		Text = text,
 		TextSize = size,
 		TextColor3 = color,
-		Font = font or Enum.Font.GothamBold,
+		Font = font or GothicBoxStyle.Font.LegacyFont or Enum.Font.GothamBold,
 		TextWrapped = true,
 		RichText = true,
 	}, parent)
+	GothicBoxStyle.Font.Apply(lbl, {
+		Role = if size >= 20 then "Title" else if size >= 15 then "Header" else "Body",
+		Color = color,
+		Size = size,
+	})
+	return lbl
 end
 
 local function spaced(text: string): string

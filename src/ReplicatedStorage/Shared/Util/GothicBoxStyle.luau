@@ -2,7 +2,10 @@
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 
+local GothicFont = require(script.Parent:WaitForChild("GothicFont"))
+
 local GothicBoxStyle = {}
+GothicBoxStyle.Font = GothicFont
 
 -- Configured authoritative asset ID uploaded by user
 GothicBoxStyle.CustomAssetId = "rbxassetid://110449235011652" :: string?
