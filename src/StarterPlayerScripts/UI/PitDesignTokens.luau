@@ -80,18 +80,24 @@ function T.Panel(parent: Instance, name: string): Frame
 end
 
 function T.Label(parent: Instance, text: string, size: number?, color: Color3?): TextLabel
-	return T.New("TextLabel", {
+	local lbl = T.New("TextLabel", {
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		Text = text,
 		TextColor3 = color or T.Color.Text,
-		Font = Enum.Font.GothamBold,
+		Font = GothicBoxStyle.Font.LegacyFont or Enum.Font.GothamBold,
 		TextSize = size or T.Text.Body,
 		TextWrapped = true,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextYAlignment = Enum.TextYAlignment.Center,
 		Size = UDim2.new(1, 0, 0, 24),
 	}, parent)
+	GothicBoxStyle.Font.Apply(lbl, {
+		Role = if (size and size >= 18) then "Title" else "Body",
+		Color = color or T.Color.Text,
+		Size = size or T.Text.Body,
+	})
+	return lbl
 end
 
 -- Creates an Ornate Gothic Action Button
@@ -99,7 +105,7 @@ function T.Button(parent: Instance, text: string, callback: (() -> ())?): TextBu
 	local b = T.New("TextButton", {
 		Text = text,
 		TextColor3 = T.Color.Text,
-		Font = Enum.Font.GothamBold,
+		Font = GothicBoxStyle.Font.LegacyFont or Enum.Font.GothamBold,
 		TextSize = T.Text.Body,
 		TextWrapped = true,
 		AutoButtonColor = false,
@@ -107,6 +113,12 @@ function T.Button(parent: Instance, text: string, callback: (() -> ())?): TextBu
 		Size = UDim2.new(1, 0, 0, 44),
 		Selectable = true,
 	}, parent)
+	GothicBoxStyle.Font.Apply(b, {
+		Role = "Button",
+		Color = T.Color.Text,
+		Size = T.Text.Body,
+		Uppercase = true,
+	})
 	GothicBoxStyle.Apply(b, { Style = "Button", OnClick = callback })
 	return b
 end
