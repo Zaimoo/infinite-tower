@@ -16,6 +16,7 @@ local ArtifactCatalog = require(Shared:WaitForChild("Config"):WaitForChild("Arti
 local StatFormulas = require(Shared.Util.StatFormulas)
 local StatBalance = require(Shared.Config.StatBalance)
 local GothicBoxStyle = require(Shared.Util.GothicBoxStyle)
+local OrnateFrameButton = require(Shared.Util.OrnateFrameButton)
 
 local LocalPlayer = Players.LocalPlayer
 
@@ -572,6 +573,7 @@ function Forge:BuildSummonView(root: Frame)
 		BackgroundTransparency = 1,
 		Position = UDim2.fromOffset(72, 108),
 		Size = UDim2.new(0, 616, 0, 380),
+		ClipsDescendants = false,
 		Visible = false,
 		ZIndex = 52,
 	}, root)
@@ -653,67 +655,43 @@ function Forge:BuildSummonView(root: Frame)
 		BackgroundTransparency = 1,
 		Position = UDim2.fromOffset(0, 264),
 		Size = UDim2.new(1, 0, 0, 76),
+		ClipsDescendants = false,
 		ZIndex = 53,
 	}, summonView)
 
-	-- SUMMON 1X Button
-	local btn1X = new("TextButton", {
+	-- SUMMON 1X Button (Restyled via reusable OrnateFrameButton)
+	local btn1X = OrnateFrameButton.new(btnRow, {
 		Name = "Summon1XBtn",
+		Title = "SUMMON 1X",
+		Cost = 160,
 		Position = UDim2.fromScale(0, 0),
 		Size = UDim2.new(0.485, 0, 1, 0),
-		BackgroundColor3 = Color3.fromRGB(22, 18, 36),
-		BorderSizePixel = 0,
-		Text = "",
-		AutoButtonColor = false,
 		ZIndex = 54,
-	}, btnRow)
-	applyGothicStyle(btn1X, "Button")
+		OnClick = function()
+			if self.Busy then return end
+			self:PerformSummon(1)
+		end,
+	})
+	self.Summon1XBtn = btn1X.Root
+	self.OrnateBtn1X = btn1X
 
-	local t1X = label(btn1X, "SUMMON 1X", 14, Color3.fromRGB(255, 255, 255), Enum.Font.GothamBold)
-	t1X.AnchorPoint = Vector2.new(0.5, 0)
-	t1X.Position = UDim2.new(0.5, 0, 0, 22)
-	t1X.Size = UDim2.new(1, 0, 0, 16)
-	t1X.ZIndex = 56
-
-	local c1X = label(btn1X, "💎 160", 13, Color3.fromRGB(255, 255, 255), Enum.Font.GothamBold)
-	c1X.AnchorPoint = Vector2.new(0.5, 0)
-	c1X.Position = UDim2.new(0.5, 0, 0, 42)
-	c1X.Size = UDim2.new(1, 0, 0, 16)
-	c1X.ZIndex = 56
-
-	btn1X.Activated:Connect(function()
-		self:PerformSummon(1)
-	end)
-
-	-- SUMMON 10X Button
-	local btn10X = new("TextButton", {
+	-- SUMMON 10X Button (Restyled via reusable OrnateFrameButton)
+	local btn10X = OrnateFrameButton.new(btnRow, {
 		Name = "Summon10XBtn",
+		Title = "SUMMON 10X",
+		Cost = 1600,
 		AnchorPoint = Vector2.new(1, 0),
 		Position = UDim2.new(1, 0, 0, 0),
 		Size = UDim2.new(0.485, 0, 1, 0),
-		BackgroundColor3 = Color3.fromRGB(22, 18, 36),
-		BorderSizePixel = 0,
-		Text = "",
-		AutoButtonColor = false,
 		ZIndex = 54,
-	}, btnRow)
-	applyGothicStyle(btn10X, "Button")
+		OnClick = function()
+			if self.Busy then return end
+			self:PerformSummon(10)
+		end,
+	})
+	self.Summon10XBtn = btn10X.Root
+	self.OrnateBtn10X = btn10X
 
-	local t10X = label(btn10X, "SUMMON 10X", 14, Color3.fromRGB(255, 255, 255), Enum.Font.GothamBold)
-	t10X.AnchorPoint = Vector2.new(0.5, 0)
-	t10X.Position = UDim2.new(0.5, 0, 0, 22)
-	t10X.Size = UDim2.new(1, 0, 0, 16)
-	t10X.ZIndex = 56
-
-	local c10X = label(btn10X, "💎 1600", 13, Color3.fromRGB(255, 255, 255), Enum.Font.GothamBold)
-	c10X.AnchorPoint = Vector2.new(0.5, 0)
-	c10X.Position = UDim2.new(0.5, 0, 0, 42)
-	c10X.Size = UDim2.new(1, 0, 0, 16)
-	c10X.ZIndex = 56
-
-	btn10X.Activated:Connect(function()
-		self:PerformSummon(10)
-	end)
 end
 
 function Forge:RenderSummonView()
