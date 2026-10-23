@@ -16,6 +16,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local FacilityConfig = require(Shared:WaitForChild("Config"):WaitForChild("FacilityConfig"))
 local HeroCatalog = require(Shared:WaitForChild("Config"):WaitForChild("HeroCatalog"))
 local ArtifactCatalog = require(Shared:WaitForChild("Config"):WaitForChild("ArtifactCatalog"))
+local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormulas"))
 
 local RemotesFolder = ReplicatedStorage:WaitForChild("Remotes")
 local ArtifactRemotes = RemotesFolder:FindFirstChild("ArtifactRemotes") :: Folder?
