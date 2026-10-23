@@ -5,24 +5,23 @@
 
 local Buildings = {}
 local Architecture = require(script.Parent:WaitForChild("PlotFacilityArchitecture"))
-local VERSION = 10
+local VERSION = 11
 
 local definitions = {
-	-- North Courtyard: Recovery & Summoning
+	-- North Courtyard: Recovery & Summoning (Symmetric Pair at Z = -35)
 	{Id = "Infirmary", Title = "INFIRMARY", Subtitle = "REST & RECOVERY", X = -75, Z = -35, Color = Color3.fromRGB(100, 232, 175)},
 	{Id = "Summoning", Title = "SUMMONING", Subtitle = "CALL OF THE RIFT", X = 75, Z = -35, Color = Color3.fromRGB(96, 191, 255)},
 
 	-- Center Courtyard: Heraldic Squad Command Standard
 	{Id = "SquadManagement", Title = "SQUAD DEPLOY", Subtitle = "5 ACTIVE SLOTS", X = 0, Z = 0, Color = Color3.fromRGB(245, 128, 99)},
 
-	-- Mid Courtyard: The Pit (Synthesis & Promotion) & The Blacksmith Forge
-	{Id = "Synthesis", Title = "SYNTHESIS", Subtitle = "THE ESSENCE CAULDRON", X = -82, Z = 35, Color = Color3.fromRGB(177, 110, 255)},
-	{Id = "Promotion", Title = "PROMOTION", Subtitle = "HALL OF ASCENSION", X = -45, Z = 35, Color = Color3.fromRGB(255, 202, 93)},
-	{Id = "Blacksmith", Title = "BLACKSMITH FORGE", Subtitle = "ARTIFACT ASCENSION & REFINING", X = 75, Z = 35, Color = Color3.fromRGB(255, 120, 40)},
+	-- Mid Courtyard: The Pit (Synthesis & Promotion) & The Blacksmith Forge (Symmetric Pair at Z = 28)
+	{Id = "ThePit", Title = "THE PIT", Subtitle = "SYNTHESIS & PROMOTION", X = -75, Z = 28, Color = Color3.fromRGB(177, 110, 255)},
+	{Id = "Blacksmith", Title = "BLACKSMITH FORGE", Subtitle = "ARTIFACT ASCENSION & REFINING", X = 75, Z = 28, Color = Color3.fromRGB(255, 120, 40)},
 
-	-- South Inner Courtyard: Support Facilities
-	{Id = "TrainingGrounds", Title = "TRAINING GROUNDS", Subtitle = "MARTIAL COMBAT DRILLS", X = -65, Z = 72, Color = Color3.fromRGB(235, 80, 80)},
-	{Id = "Market", Title = "THE MARKET", Subtitle = "TOWER LOOT & COMMERCE", X = 65, Z = 72, Color = Color3.fromRGB(245, 195, 75)},
+	-- South Inner Courtyard: Support Facilities (Symmetric Pair at Z = 70)
+	{Id = "TrainingGrounds", Title = "TRAINING GROUNDS", Subtitle = "MARTIAL COMBAT DRILLS", X = -75, Z = 70, Color = Color3.fromRGB(235, 80, 80)},
+	{Id = "Market", Title = "THE MARKET", Subtitle = "TOWER LOOT & COMMERCE", X = 75, Z = 70, Color = Color3.fromRGB(245, 195, 75)},
 
 	-- Southern Outskirts Grounds (Exterior Frontier Wilderness)
 	{Id = "GuardPost", Title = "OUTSKIRTS GUARD POST", Subtitle = "FRONTIER PATROL & PASSIVE GOLD", X = 0, Z = 160, Color = Color3.fromRGB(130, 205, 95)},
@@ -108,24 +107,68 @@ function Buildings.Build(plot: Instance)
 			frame = CFrame.lookAt(position, position + outward)
 		end
 		Architecture.Build(model, frame, def.Id, def.Color)
-		local interaction = Instance.new("Part")
-		interaction.Name = "FacilityInteraction"
-		interaction.Size = Vector3.new(1, 1, 1)
-		local z = if def.Id == "Synthesis" or def.Id == "Promotion" then 18
-			elseif def.Id == "Infirmary" then 13
-			elseif def.Id == "Summoning" then 4
-			elseif def.Id == "Market" then 8
-			elseif def.Id == "TrainingGrounds" then 10
-			elseif def.Id == "GuardPost" then 9
-			elseif def.Id == "Blacksmith" then 10
-			else 0
-		interaction.CFrame = frame * CFrame.new(0, 3.5, z)
-		interaction.Anchored, interaction.Transparency = true, 1
-		interaction.CanCollide, interaction.CanTouch, interaction.CanQuery = false, false, true
-		interaction.Parent = model
-		local prompt = Instance.new("ProximityPrompt")
-		prompt.Name = "FacilityHUDPrompt"
-		prompt:SetAttribute("FacilityHUD", def.Id)
+
+		if def.Id == "ThePit" then
+			-- Dual interactive stations for The Pit: Left is Synthesis Cauldron, Right is Promotion Altar
+			local synthPart = Instance.new("Part")
+			synthPart.Name = "FacilityInteraction_Synthesis"
+			synthPart.Size = Vector3.new(2, 2, 2)
+			synthPart.CFrame = frame * CFrame.new(-6.5, 3.5, 7)
+			synthPart.Anchored, synthPart.Transparency = true, 1
+			synthPart.CanCollide, synthPart.CanTouch, synthPart.CanQuery = false, false, true
+			synthPart.Parent = model
+
+			local synthPrompt = Instance.new("ProximityPrompt")
+			synthPrompt.Name = "FacilityHUDPrompt"
+			synthPrompt:SetAttribute("FacilityHUD", "Synthesis")
+			synthPrompt.ObjectText = "Synthesis Cauldron"
+			synthPrompt.ActionText = "Feed EXP & Imprints"
+			synthPrompt.MaxActivationDistance = 14
+			synthPrompt.HoldDuration = 0
+			synthPrompt.RequiresLineOfSight = false
+			synthPrompt.KeyboardKeyCode, synthPrompt.GamepadKeyCode = Enum.KeyCode.F, Enum.KeyCode.ButtonX
+			synthPrompt.ClickablePrompt = true
+			synthPrompt.Exclusivity = Enum.ProximityPromptExclusivity.OnePerButton
+			synthPrompt.Parent = synthPart
+
+			local promoPart = Instance.new("Part")
+			promoPart.Name = "FacilityInteraction_Promotion"
+			promoPart.Size = Vector3.new(2, 2, 2)
+			promoPart.CFrame = frame * CFrame.new(6.5, 3.5, 7)
+			promoPart.Anchored, promoPart.Transparency = true, 1
+			promoPart.CanCollide, promoPart.CanTouch, promoPart.CanQuery = false, false, true
+			promoPart.Parent = model
+
+			local promoPrompt = Instance.new("ProximityPrompt")
+			promoPrompt.Name = "FacilityHUDPrompt"
+			promoPrompt:SetAttribute("FacilityHUD", "Promotion")
+			promoPrompt.ObjectText = "Promotion Altar"
+			promoPrompt.ActionText = "Ascend Stars (1★-5★)"
+			promoPrompt.MaxActivationDistance = 14
+			promoPrompt.HoldDuration = 0
+			promoPrompt.RequiresLineOfSight = false
+			promoPrompt.KeyboardKeyCode, promoPrompt.GamepadKeyCode = Enum.KeyCode.F, Enum.KeyCode.ButtonX
+			promoPrompt.ClickablePrompt = true
+			promoPrompt.Exclusivity = Enum.ProximityPromptExclusivity.OnePerButton
+			promoPrompt.Parent = promoPart
+		else
+			local interaction = Instance.new("Part")
+			interaction.Name = "FacilityInteraction"
+			interaction.Size = Vector3.new(1, 1, 1)
+			local z = if def.Id == "Infirmary" then 13
+				elseif def.Id == "Summoning" then 4
+				elseif def.Id == "Market" then 8
+				elseif def.Id == "TrainingGrounds" then 10
+				elseif def.Id == "GuardPost" then 9
+				elseif def.Id == "Blacksmith" then 10
+				else 0
+			interaction.CFrame = frame * CFrame.new(0, 3.5, z)
+			interaction.Anchored, interaction.Transparency = true, 1
+			interaction.CanCollide, interaction.CanTouch, interaction.CanQuery = false, false, true
+			interaction.Parent = model
+			local prompt = Instance.new("ProximityPrompt")
+			prompt.Name = "FacilityHUDPrompt"
+			prompt:SetAttribute("FacilityHUD", def.Id)
 		if def.Id == "SquadManagement" then
 			prompt.ObjectText = "War Banner"
 			prompt.ActionText = "Deploy & Manage Squad"
@@ -174,7 +217,16 @@ function Buildings.Build(plot: Instance)
 		prompt.ClickablePrompt = true
 		prompt.Exclusivity = Enum.ProximityPromptExclusivity.OnePerButton
 		prompt.Parent = interaction
+		end
 		model.Parent = folder
+	end
+
+	-- Compatibility alias models for legacy external references
+	for _, aliasName in { "Building_Synthesis", "Building_Promotion" } do
+		local alias = Instance.new("Model")
+		alias.Name = aliasName
+		alias:SetAttribute("Facility", string.sub(aliasName, 10))
+		alias.Parent = folder
 	end
 
 	if existing then existing:Destroy() end
