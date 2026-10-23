@@ -429,7 +429,7 @@ The player interface is built from modular, gothic-styled components:
    - **Center Group:** `[THE PIT]` (opens Synthesis/Promotion modals) | `[FORGE]` (opens Blacksmith Star Ascension modal) | `[SQUAD]` (opens 5-Hero Squad Deploy modal) | `[OVERDRIVE]` (Whistle 1 / Q) | `[RECALL]` (Whistle 2 / E) | Vertical Divider | `[AutoSwap]` (4-way arrow icon: auto-swaps exhausted heroes with bench) | `[RosterGrid]` (3x3 grid icon: toggles Squad Deploy modal).
    - **Right Group:** Settings Gear (toggles telemetry overlay) | `[SAVE]` button (manual profile save trigger).
 2. **Tower Navigation UI (`TowerController.client.luau`):**
-   - **TravelBar (Top of Screen):** Persistent navigation bar displaying `[Previous]`, `[Next]`, `[Floor selector]`, and `[Hub]` buttons.
+   - **In-World Navigation Pedestals & Prompts:** Travel bar removed from persistent screen overlay. Travel interactions are accessed in-world via ProximityPrompts: `Previous Floor` and `Next Floor` pedestals inside active tower floors, Central Crimson Tower `Choose floor` prompt in the Hub, and the bottom toolbar `[TOWER]` hub teleport button.
    - **Floor Selector Modal (`FloorSelector`):** Responsive 50-floor grid showing milestone **Biome Boss floors** (`◆`), biome names, current visitors count, assigned player squads, and action buttons (`Visit floor`, `Assign squad`, `Recall squad`).
 3. **Real-Time Combat Feedback (`CombatFeedback.luau`):**
    - **Damage Popups:** Server-hit floating damage labels pooled up to 32 active instances. Styled with `GothamBold` font, quadratic easing upward, and color-coded:

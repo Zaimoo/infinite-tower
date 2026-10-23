@@ -75,22 +75,6 @@ button(panel,"Visit floor",UDim2.fromOffset(20,340),UDim2.fromOffset(145,38),fun
 button(panel,"Assign squad",UDim2.fromOffset(177,340),UDim2.fromOffset(145,38),function() request("ASSIGN",selected) end)
 button(panel,"Recall squad",UDim2.fromOffset(334,340),UDim2.fromOffset(145,38),function() request("RECALL") end)
 button(panel,"×",UDim2.fromOffset(452,8),UDim2.fromOffset(36,28),function() panel.Visible=false end)
-local bar=Instance.new("Frame");bar.Name="TravelBar";bar.AnchorPoint=Vector2.new(.5,0);bar.Position=UDim2.new(.5,0,0,60);bar.Size=UDim2.fromOffset(460,36);bar.BackgroundTransparency=1;bar.Parent=gui
-local barScale=Instance.new("UIScale");barScale.Parent=bar
-local function fitBar()
-	if workspace.CurrentCamera then
-		local width=math.min(460,workspace.CurrentCamera.ViewportSize.X-16)
-		bar.Size=UDim2.fromOffset(width,44);barScale.Scale=1
-		local col=(width-24)/4
-		for i,name in {"Previous","Next","Floorselector","Hub"} do local b=bar:FindFirstChild(name);if b and b:IsA("TextButton") then b.Position=UDim2.fromOffset((i-1)*(col+8),0);b.Size=UDim2.fromOffset(col,44) end end
-	end
-end
-fitBar();if workspace.CurrentCamera then workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(fitBar) end
-local prev=button(bar,"Previous",UDim2.fromOffset(0,0),UDim2.fromOffset(100,36),function() if context and context.FloorId>1 then request("VISIT",context.FloorId-1) end end)
-local nextButton=button(bar,"Next",UDim2.fromOffset(110,0),UDim2.fromOffset(100,36),function() if context and context.FloorId>0 and context.FloorId<50 then request("VISIT",context.FloorId+1) end end)
-button(bar,"Floor selector",UDim2.fromOffset(220,0),UDim2.fromOffset(120,36),function() panel.Visible=not panel.Visible;render() end)
-button(bar,"Hub",UDim2.fromOffset(350,0),UDim2.fromOffset(100,36),function() request("HUB") end)
-panel:GetPropertyChangedSignal("Visible"):Connect(function() bar.Visible=not panel.Visible end)
 reflow=function(width: number,height: number)
 	local compact=height<400
 	local listY=compact and 52 or 82
@@ -108,15 +92,16 @@ reflow=function(width: number,height: number)
 	status.Position=UDim2.fromOffset(20,actionY+48);status.Size=UDim2.fromOffset(width-40,math.max(24,height-actionY-52))
 	local close=panel:FindFirstChild("Close");if close and close:IsA("TextButton") then close.Position=UDim2.fromOffset(width-48,2);close.Size=UDim2.fromOffset(44,44) end
 end
-fit();fitBar()
+fit()
 remotes.OpenSelector.OnClientEvent:Connect(function() panel.Visible=true;render() end)
 PromptService.PromptTriggered:Connect(function(prompt,who)
 	if who and who~=player then return end
 	local action=prompt:GetAttribute("TowerAction")
+	local curFloor = if context and context.FloorId then context.FloorId elseif selfState and selfState.PlayerLocation then selfState.PlayerLocation.FloorId else 0
 	if action=="SELECTOR" or prompt.Name=="TowerSelectorPrompt" then panel.Visible=true;render()
 	elseif action=="HUB" then request("HUB")
-	elseif action=="PREVIOUS" and context and context.FloorId>1 then request("VISIT",context.FloorId-1)
-	elseif action=="NEXT" and context and context.FloorId<50 then request("VISIT",context.FloorId+1) end
+	elseif action=="PREVIOUS" and curFloor>1 then request("VISIT",curFloor-1)
+	elseif action=="NEXT" and curFloor>0 and curFloor<50 then request("VISIT",curFloor+1) end
 end)
 remotes.Presence.OnClientEvent:Connect(function(p)
 	if presence and p.ServerSessionId==presence.ServerSessionId and p.PresenceRevision<presence.PresenceRevision then return end
@@ -135,8 +120,6 @@ remotes.Context.OnClientEvent:Connect(function(c)
 		end)
 	elseif c.Stage=="COMMIT" then
 		context=c;_G.TowerView=c
-		prev.Active=c.FloorId>1;prev.AutoButtonColor=prev.Active;prev.BackgroundTransparency=prev.Active and 0 or .6
-		nextButton.Active=c.FloorId>0 and c.FloorId<50;nextButton.AutoButtonColor=nextButton.Active;nextButton.BackgroundTransparency=nextButton.Active and 0 or .6
 		if c.FloorId>0 then selected=c.FloorId end
 		local char=player.Character;local root=char and char:FindFirstChild("HumanoidRootPart")
 		if root and root:IsA("BasePart") then root.AssemblyLinearVelocity=Vector3.zero;root.AssemblyAngularVelocity=Vector3.zero end

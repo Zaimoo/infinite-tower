@@ -40,9 +40,29 @@ function Builder.Build(id: number,generation: number): any
 	end
 	for i,action in {"PREVIOUS","NEXT","SELECTOR","HUB"} do
 		local p=part(model,action,Vector3.new(10,7,4),origin+Vector3.new((i-2.5)*17,3.5,111),Color3.fromRGB(105,34,51))
-		local prompt=Instance.new("ProximityPrompt");prompt.ActionText=action;prompt.ObjectText="Tower travel";prompt.MaxActivationDistance=12
+		local prompt=Instance.new("ProximityPrompt")
+		local actionText = if action=="PREVIOUS" then "Previous Floor"
+			elseif action=="NEXT" then "Next Floor"
+			elseif action=="SELECTOR" then "Choose Floor"
+			elseif action=="HUB" then "Return to Hub"
+			else action
+		local objectText = if action=="PREVIOUS" then string.format("Floor %d", id - 1)
+			elseif action=="NEXT" then string.format("Floor %d", id + 1)
+			elseif action=="SELECTOR" or action=="HUB" then "Infinite Tower"
+			else "Tower travel"
+		prompt.ActionText=actionText;prompt.ObjectText=objectText;prompt.MaxActivationDistance=14
 		prompt.RequiresLineOfSight=false;prompt.KeyboardKeyCode=Enum.KeyCode.F;prompt:SetAttribute("TowerAction",action)
 		prompt.Enabled=not ((action=="PREVIOUS" and id==1) or (action=="NEXT" and id==50));prompt.Parent=p
+		local bg=Instance.new("BillboardGui");bg.Name="PedestalLabel";bg.Size=UDim2.fromOffset(130,28);bg.StudsOffset=Vector3.new(0,4.5,0);bg.AlwaysOnTop=false;bg.MaxDistance=50;bg.Parent=p
+		local lbl=Instance.new("TextLabel");lbl.Size=UDim2.fromScale(1,1);lbl.BackgroundTransparency=0.3;lbl.BackgroundColor3=Color3.fromRGB(24,20,30);lbl.TextColor3=Color3.fromRGB(245,235,225);lbl.Font=Enum.Font.GothamBold;lbl.TextSize=13
+		local corner=Instance.new("UICorner");corner.CornerRadius=UDim.new(0,4);corner.Parent=lbl
+		if action=="PREVIOUS" and id==1 then lbl.Text="Floor 1 (Lowest)";lbl.TextColor3=Color3.fromRGB(140,130,130)
+		elseif action=="NEXT" and id==50 then lbl.Text="Floor 50 (Apex)";lbl.TextColor3=Color3.fromRGB(140,130,130)
+		elseif action=="PREVIOUS" then lbl.Text=string.format("◀ Floor %d", id - 1)
+		elseif action=="NEXT" then lbl.Text=string.format("Floor %d ▶", id + 1)
+		elseif action=="SELECTOR" then lbl.Text="Choose Floor"
+		elseif action=="HUB" then lbl.Text="Return to Hub" end
+		lbl.Parent=bg
 	end
 	local sign=Instance.new("SurfaceGui");sign.Face=Enum.NormalId.Back;sign.CanvasSize=Vector2.new(1000,220);sign.Parent=model:FindFirstChild("WallZ")
 	local label=Instance.new("TextLabel");label.Size=UDim2.fromScale(1,1);label.BackgroundTransparency=1;label.TextColor3=Color3.new(1,1,1)
