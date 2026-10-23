@@ -154,12 +154,13 @@ function SquadController.new(screenGui: ScreenGui, getProfile: () -> any, remote
 		Position = UDim2.new(0.5, 0, 0, 18),
 		Size = UDim2.new(1, -80, 0, 26),
 		BackgroundTransparency = 1,
-		Text = "S Q U A D   D E P L O Y",
-		Font = Enum.Font.GothamBold,
+		Text = "SQUAD DEPLOY",
+		Font = GothicBoxStyle.Font.LegacyFont or Enum.Font.GothamBold,
 		TextSize = 20,
 		TextColor3 = C.TextWhite,
 		ZIndex = 33,
 	}, self.Root)
+	GothicBoxStyle.Font.Apply(self.TitleLabel, { Role = "Title", Color = C.TextWhite, Size = 20, Spaced = true })
 
 	self.SubLabel1 = new("TextLabel", {
 		Name = "Subtitle1",
@@ -168,11 +169,12 @@ function SquadController.new(screenGui: ScreenGui, getProfile: () -> any, remote
 		Size = UDim2.new(1, -80, 0, 18),
 		BackgroundTransparency = 1,
 		Text = "MANAGE YOUR 5-HERO ACTIVE SQUAD",
-		Font = Enum.Font.GothamBold,
+		Font = GothicBoxStyle.Font.LegacyFont or Enum.Font.GothamBold,
 		TextSize = 11,
 		TextColor3 = C.TextMuted,
 		ZIndex = 33,
 	}, self.Root)
+	GothicBoxStyle.Font.Apply(self.SubLabel1, { Role = "SubHeader", Color = C.TextMuted, Size = 11 })
 
 	self.SubLabel2 = new("TextLabel", {
 		Name = "Subtitle2",
@@ -422,11 +424,12 @@ function SquadController.new(screenGui: ScreenGui, getProfile: () -> any, remote
 		Size = UDim2.new(0, 210, 0, 40),
 		BackgroundColor3 = C.ButtonBg,
 		Text = "⚡ AUTO-SWAP RESTED",
-		Font = Enum.Font.GothamBold,
+		Font = GothicBoxStyle.Font.LegacyFont or Enum.Font.GothamBold,
 		TextSize = 11,
 		TextColor3 = C.Green,
 		ZIndex = 34,
 	}, bottomBar)
+	GothicBoxStyle.Font.Apply(self.AutoSwapBtn, { Role = "Button", Color = C.Green, Size = 11, Uppercase = true })
 	GothicBoxStyle.Apply(self.AutoSwapBtn, { Style = "Button" })
 
 	self.AutoSwapBtn.MouseButton1Click:Connect(function()
@@ -442,11 +445,12 @@ function SquadController.new(screenGui: ScreenGui, getProfile: () -> any, remote
 		Size = UDim2.new(0, 340, 0, 44),
 		BackgroundColor3 = C.ButtonBg,
 		Text = "CONFIRM SQUAD",
-		Font = Enum.Font.GothamBold,
+		Font = GothicBoxStyle.Font.LegacyFont or Enum.Font.GothamBold,
 		TextSize = 14,
 		TextColor3 = C.TextWhite,
 		ZIndex = 34,
 	}, bottomBar)
+	GothicBoxStyle.Font.Apply(self.ConfirmBtn, { Role = "Button", Color = C.TextWhite, Size = 14, Uppercase = true })
 	GothicBoxStyle.Apply(self.ConfirmBtn, { Style = "Button" })
 	self.ConfirmBtn.MouseButton1Click:Connect(function()
 		self:Close()

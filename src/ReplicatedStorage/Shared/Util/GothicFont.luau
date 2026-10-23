@@ -28,8 +28,8 @@ local hasFontWeight, _ = pcall(function()
 end)
 
 -- Built-in Classical Roman fantasy families available natively in Roblox Studio:
-local PRIMARY_FAMILY = "Cinzel"
-local SECONDARY_FAMILY = "Trajan"
+local PRIMARY_FAMILY = "CinzelDecorative"
+local SECONDARY_FAMILY = "Cinzel"
 local DECORATIVE_FAMILY = "CinzelDecorative"
 
 -- Colors sampled directly from the inscriptional navigation specification
