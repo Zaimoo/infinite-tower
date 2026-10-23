@@ -75,7 +75,7 @@ local CONFIG: ButtonConfig = {
 	-- Typography: Built-in serif closest to inscriptional Roman gothic fantasy.
 	-- Enum.Font.Garamond matches classical dark fantasy serif proportions.
 	FONT = Enum.Font.Garamond,
-	USE_CUSTOM_FONT_FACE = true, -- Sets binding to GothicFont.GetFont() FontFace object (Cinzel Decorative)
+	USE_CUSTOM_FONT_FACE = false, -- Default to built-in serif Enum.Font.Garamond (set true to bind to GothicFont.GetFont())
 
 	-- Bronze / gold palette (RGB ~190, 150, 95)
 	COLOR_TITLE = Color3.fromRGB(190, 150, 95),
