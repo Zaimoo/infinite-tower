@@ -259,7 +259,7 @@ local function buildOverhaul(forceRebuild: boolean?)
 		end
 	end
 
-	local OVERHAUL_VERSION = 4
+	local OVERHAUL_VERSION = 5
 	local plotsFolder = Workspace:WaitForChild("WaitingRoomPlots")
 	local existingContainer = Workspace:FindFirstChild("BaseOverhaulGeometry")
 	local plot1 = plotsFolder:FindFirstChild("Plot_1")

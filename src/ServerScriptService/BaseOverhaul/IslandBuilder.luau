@@ -9,9 +9,11 @@ local IslandBuilder = {}
 -- CONFIGURATION TABLE
 --============================================================================
 IslandBuilder.Config = {
-	-- Top Buildable Surface Dimensions (GDD Section 3.2 & 3.4: 260 x 320 studs)
+	-- Top Buildable Surface Dimensions (Citadel Courtyard: 260 x 180 studs; Outskirts: 260 x 140 studs)
 	TopWidth = 260, -- X dimension (studs)
-	TopLength = 320, -- Z dimension (studs)
+	TopLength = 180, -- Courtyard walking surface Z dimension (studs) [-90, +90]
+	CitadelLength = 180, -- Z dimension of cobblestone Courtyard (studs) [-90, +90]
+	TotalLength = 320, -- Full island footprint [-90, +230] supporting rocky underside
 	TopThickness = 6, -- Thickness of the top stone slab (studs)
 	CenterOffsetZ = 70, -- Midpoint between Citadel [-90, +90] and Outskirts [+90, +230]
 	chamferSize = 22, -- Corner bevel size to give a fortress silhouette
@@ -111,30 +113,44 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 	islandModel.Name = "FloatingFortressIsland"
 
 	local centerZ = cfg.CenterOffsetZ or 70
+	local courtyardL = cfg.CitadelLength or cfg.TopLength or 180
+	local totalL = cfg.TotalLength or 320
 
-	-- 1. Primary Flat Buildable Top Surface (Top surface sits flush at Y = 0)
+	-- Invisible Island Anchor at geometric center of entire island mass (centerZ = 70)
+	-- Serves as PrimaryPart so pivoting to RingRadius R=650 places courtyard at R=580 and outskirts at R=740
+	local islandRoot = makePart({
+		Name = "IslandRoot",
+		Size = Vector3.new(2, 2, 2),
+		CFrame = CFrame.new(0, -cfg.TopThickness * 0.5, centerZ),
+		Transparency = 1,
+		CanCollide = false,
+		Decorative = true,
+		Parent = islandModel,
+	})
+	islandModel.PrimaryPart = islandRoot
+
+	-- 1. Primary Flat Buildable Top Surface (Courtyard only: covers [-90, +90], stops at rear wall)
+	-- Does NOT reach the Outskirts [+90, +230], preventing coplanar Z-fighting with OutskirtsGrounds
 	local topSlab = makePart({
 		Name = "IslandTopSurface",
-		Size = Vector3.new(cfg.TopWidth, cfg.TopThickness, cfg.TopLength),
-		CFrame = CFrame.new(0, -cfg.TopThickness * 0.5, centerZ),
+		Size = Vector3.new(cfg.TopWidth, cfg.TopThickness, courtyardL),
+		CFrame = CFrame.new(0, -cfg.TopThickness * 0.5, 0),
 		Material = cfg.TopMaterial,
 		Color = cfg.TopColor,
 		Decorative = false,
 		Parent = islandModel,
 	})
-	islandModel.PrimaryPart = topSlab
 
-	-- Subtle Stone Rim Framing around the top slab
+	-- Subtle Stone Rim Framing around the courtyard top slab
 	local rimHeight = cfg.TopThickness + 1.0
 	local rimThickness = 4.0
 	local halfW = cfg.TopWidth * 0.5
-	local halfL = cfg.TopLength * 0.5
+	local halfCourtyardL = courtyardL * 0.5
 
 	local rimDefs = {
-		{ Name = "RimNorth", Size = Vector3.new(cfg.TopWidth + 2, rimHeight, rimThickness), Pos = Vector3.new(0, -rimHeight * 0.5 + 0.2, centerZ - halfL) },
-		{ Name = "RimSouth", Size = Vector3.new(cfg.TopWidth + 2, rimHeight, rimThickness), Pos = Vector3.new(0, -rimHeight * 0.5 + 0.2, centerZ + halfL) },
-		{ Name = "RimEast", Size = Vector3.new(rimThickness, rimHeight, cfg.TopLength + 2), Pos = Vector3.new(halfW, -rimHeight * 0.5 + 0.2, centerZ) },
-		{ Name = "RimWest", Size = Vector3.new(rimThickness, rimHeight, cfg.TopLength + 2), Pos = Vector3.new(-halfW, -rimHeight * 0.5 + 0.2, centerZ) },
+		{ Name = "RimNorth", Size = Vector3.new(cfg.TopWidth + 2, rimHeight, rimThickness), Pos = Vector3.new(0, -rimHeight * 0.5 + 0.2, -halfCourtyardL) },
+		{ Name = "RimEast", Size = Vector3.new(rimThickness, rimHeight, courtyardL), Pos = Vector3.new(halfW, -rimHeight * 0.5 + 0.2, 0) },
+		{ Name = "RimWest", Size = Vector3.new(rimThickness, rimHeight, courtyardL), Pos = Vector3.new(-halfW, -rimHeight * 0.5 + 0.2, 0) },
 	}
 	for _, r in ipairs(rimDefs) do
 		makePart({
@@ -160,7 +176,7 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 		local t = (layer - 1) / math.max(1, cfg.UndersideLayers - 1)
 		local scale = 1.0 - (t * 0.58)
 		local layerW = cfg.TopWidth * scale
-		local layerL = cfg.TopLength * scale
+		local layerL = totalL * scale
 		local col = cfg.RockColorUpper:Lerp(cfg.RockColorDeep, t)
 		local yawJitter = math.rad((layer % 2 == 0 and 1 or -1) * (layer * 3.5))
 
@@ -180,7 +196,7 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 	for i = 1, cfg.OuterSpireCount do
 		local angle = ((i - 1) / cfg.OuterSpireCount) * (math.pi * 2) + rng:NextNumber(-0.08, 0.08)
 		local rx = (cfg.TopWidth * 0.44) * rng:NextNumber(0.86, 1.02)
-		local rz = (cfg.TopLength * 0.44) * rng:NextNumber(0.86, 1.02)
+		local rz = (totalL * 0.44) * rng:NextNumber(0.86, 1.02)
 		local px = math.cos(angle) * rx
 		local pz = centerZ + math.sin(angle) * rz
 		local spireH = rng:NextNumber(34, 58)

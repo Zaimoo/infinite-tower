@@ -5,7 +5,8 @@
 
 local Buildings = {}
 local Architecture = require(script.Parent:WaitForChild("PlotFacilityArchitecture"))
-local VERSION = 13
+local OutskirtsBuilder = require(script.Parent:WaitForChild("OutskirtsEnvironmentBuilder"))
+local VERSION = 15
 
 local definitions = {
 	-- North Courtyard: Recovery & Summoning (Symmetric Pair at Z = -35)
@@ -39,60 +40,25 @@ function Buildings.Build(plot: Instance)
 		else spawn
 	local surfaceY = if top and top:IsA("BasePart") then top.Position.Y + top.Size.Y / 2
 		else spawn.Position.Y - spawn.Size.Y / 2
-	local origin = if top and top:IsA("BasePart") then
-		CFrame.new(top.Position.X, surfaceY, top.Position.Z) * top.CFrame.Rotation * CFrame.new(0, 0, -70)
+	local origin: CFrame
+	if top and top:IsA("BasePart") then
+		if top.Size.Z > 200 then
+			-- Legacy 320-stud top slab centered at centerZ = 70
+			origin = CFrame.new(top.Position.X, surfaceY, top.Position.Z) * top.CFrame.Rotation * CFrame.new(0, 0, -70)
+		else
+			-- Clean 180-stud top slab centered at courtyard center Z = 0
+			origin = CFrame.new(top.Position.X, surfaceY, top.Position.Z) * top.CFrame.Rotation
+		end
 	else
-		CFrame.new(spawn.Position.X, surfaceY, spawn.Position.Z) * spawn.CFrame.Rotation * CFrame.new(0, 0, 80)
+		origin = CFrame.new(spawn.Position.X, surfaceY, spawn.Position.Z) * spawn.CFrame.Rotation * CFrame.new(0, 0, 80)
+	end
 	local folder = Instance.new("Folder")
 	folder.Name = "PlotBuildings_Updating"
 	folder:SetAttribute("Version", VERSION)
 	folder.Parent = plot
 
-	-- Ensure solid ground and patrol trail for the Southern Outskirts (GDD Section 3.4)
-	-- Width of the Outskirts matches the Fortress Width exactly (260 studs)
-	local outskirtsGround = Instance.new("Part")
-	outskirtsGround.Name = "OutskirtsGrounds"
-	outskirtsGround.Size = Vector3.new(260, 6, 140)
-	outskirtsGround.CFrame = origin * CFrame.new(0, -3, 160)
-	outskirtsGround.Anchored = true
-	outskirtsGround.CanCollide = true
-	outskirtsGround.CanTouch = true
-	outskirtsGround.CanQuery = true
-	outskirtsGround.Material = Enum.Material.Ground
-	outskirtsGround.Color = Color3.fromRGB(88, 76, 62)
-	outskirtsGround.Parent = folder
-
-	-- Dirt wilderness patrol trail
-	local trail = Instance.new("Part")
-	trail.Name = "WildernessPatrolTrail"
-	trail.Size = Vector3.new(230, 0.25, 20)
-	trail.CFrame = origin * CFrame.new(0, 0.12, 160)
-	trail.Anchored = true
-	trail.CanCollide = false
-	trail.Material = Enum.Material.Sand
-	trail.Color = Color3.fromRGB(135, 115, 88)
-	trail.Parent = folder
-
-	-- Decorative Pine Trees along the southern wilderness border (Z = 218)
-	for _, tx in {-110, -75, -40, 0, 40, 75, 110} do
-		local trunk = Instance.new("Part")
-		trunk.Name = "BorderPineTrunk"
-		trunk.Size = Vector3.new(2.2, 14, 2.2)
-		trunk.CFrame = origin * CFrame.new(tx, 7, 218)
-		trunk.Anchored = true
-		trunk.Material = Enum.Material.Wood
-		trunk.Color = Color3.fromRGB(72, 50, 32)
-		trunk.Parent = folder
-
-		local foliage = Instance.new("Part")
-		foliage.Name = "BorderPineFoliage"
-		foliage.Size = Vector3.new(12, 18, 12)
-		foliage.CFrame = origin * CFrame.new(tx, 20, 218)
-		foliage.Anchored = true
-		foliage.Material = Enum.Material.Grass
-		foliage.Color = Color3.fromRGB(42, 68, 45)
-		foliage.Parent = folder
-	end
+	-- Build Southern Outskirts wilderness (Lush grass meadow, winding curved trail, asymmetrical pines/oaks, wild bushes, berry shrubs & boulders)
+	OutskirtsBuilder.Build(folder, origin)
 
 	for _, def in definitions do
 		local model = Instance.new("Model")
