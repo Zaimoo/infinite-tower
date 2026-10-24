@@ -1465,15 +1465,25 @@ do
 	carriedLootPill.Position = UDim2.new(0, 16, 1, -74)
 	carriedLootPill.ZIndex = 8
 
-	-- Bottom-left Gold & Diamond Currency Containers (above PATCH NOTES) using Gothic Box Design
+	-- Bottom-left Gold & Diamond Currency Display (Pure icon + numeric text without box containers)
 	local currencyCluster = Instance.new("Frame")
 	currencyCluster.Name = "CurrencyCluster"
 	currencyCluster.BackgroundTransparency = 1
-	currencyCluster.Size = UDim2.fromOffset(272, 48)
+	currencyCluster.BorderSizePixel = 0
+	currencyCluster.AutomaticSize = Enum.AutomaticSize.XY
+	currencyCluster.Size = UDim2.fromOffset(0, 28)
 	currencyCluster.AnchorPoint = Vector2.new(0, 1)
-	currencyCluster.Position = UDim2.new(0, 20, 1, -28)
+	currencyCluster.Position = UDim2.new(0, 20, 1, -20)
 	currencyCluster.ZIndex = 8
 	currencyCluster.Parent = hudGui
+
+	local clusterLayout = Instance.new("UIListLayout")
+	clusterLayout.Name = "ClusterLayout"
+	clusterLayout.FillDirection = Enum.FillDirection.Horizontal
+	clusterLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	clusterLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+	clusterLayout.Padding = UDim.new(0, 20)
+	clusterLayout.Parent = currencyCluster
 
 	local currencyFields: { [string]: TextLabel } = {}
 	local currencies = {
@@ -1481,33 +1491,51 @@ do
 		{ "Gems", P.cyan },
 	}
 	for i, item in currencies do
-		local f = makeFrame({
-			Name = item[1] .. "Pill",
-			Size = UDim2.fromOffset(130, 46),
-			Position = UDim2.fromOffset((i - 1) * 134, 1),
-			BackgroundColor3 = GothicPalette.ObsidianDark,
-			Parent = currencyCluster,
-		})
-		applyGothicBoxStyle(f, true, 8)
+		local row = Instance.new("Frame")
+		row.Name = item[1] .. "Display"
+		row.BackgroundTransparency = 1
+		row.BorderSizePixel = 0
+		row.AutomaticSize = Enum.AutomaticSize.X
+		row.Size = UDim2.fromOffset(0, 28)
+		row.LayoutOrder = i
+		row.Parent = currencyCluster
+
+		local rowLayout = Instance.new("UIListLayout")
+		rowLayout.Name = "RowLayout"
+		rowLayout.FillDirection = Enum.FillDirection.Horizontal
+		rowLayout.SortOrder = Enum.SortOrder.LayoutOrder
+		rowLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+		rowLayout.Padding = UDim.new(0, 6)
+		rowLayout.Parent = row
+
 		local icon = GothicVectorIcons.Create(item[1] :: string, {
 			Size = UDim2.fromOffset(24, 24),
-			Position = UDim2.fromOffset(12, 11),
+			Position = UDim2.fromOffset(0, 0),
 			AnchorPoint = Vector2.new(0, 0),
 			ZIndex = 11,
-			Parent = f,
+			Parent = row,
 		})
-		local lbl = makeLabel({
-			Size = UDim2.new(1, -48, 1, 0),
-			Position = UDim2.fromOffset(42, 0),
-			Text = if item[1] == "Gold" then "500" else "300",
-			TextColor3 = item[2] :: Color3,
-			Font = Enum.Font.Fantasy,
-			TextSize = 17,
-			TextScaled = false,
-			TextXAlignment = Enum.TextXAlignment.Left,
-			Parent = f,
-		})
+		icon.LayoutOrder = 1
+
+		local lbl = Instance.new("TextLabel")
+		lbl.Name = item[1] .. "Value"
+		lbl.BackgroundTransparency = 1
+		lbl.BorderSizePixel = 0
+		lbl.AutomaticSize = Enum.AutomaticSize.X
+		lbl.Size = UDim2.fromOffset(0, 24)
+		lbl.LayoutOrder = 2
+		lbl.Text = if item[1] == "Gold" then "500" else "300"
+		lbl.TextColor3 = item[2] :: Color3
+		lbl.Font = Enum.Font.Fantasy
+		lbl.TextSize = 18
+		lbl.TextScaled = false
+		lbl.TextStrokeColor3 = Color3.fromRGB(12, 8, 18)
+		lbl.TextStrokeTransparency = 0.2
+		lbl.TextXAlignment = Enum.TextXAlignment.Left
+		lbl.TextYAlignment = Enum.TextYAlignment.Center
 		lbl.ZIndex = 11
+		lbl.Parent = row
+
 		currencyFields[item[1] :: string] = lbl
 	end
 
@@ -1733,11 +1761,6 @@ do
 		topBar.Visible = false
 		honorLabel.Visible = false
 
-		currencyCluster.AnchorPoint = Vector2.new(0, 1)
-		currencyCluster.Position = UDim2.new(0, 20, 1, -28)
-		local moneyScale = currencyCluster:FindFirstChildOfClass("UIScale") or Instance.new("UIScale", currencyCluster)
-		moneyScale.Scale = portrait and math.min(1, (w - 48) / 258) or 1
-
 		bossBanner.Position = UDim2.new(0.5, 0, 0, 14)
 		bossBanner.AnchorPoint = Vector2.new(0.5, 0)
 		bossBanner.Size = UDim2.new(0, math.min(w - 32, 720), 0, 58)
@@ -1766,7 +1789,7 @@ do
 		-- Responsive positioning and scaling for Currencies and Floating Toolbar
 		local isNarrow = w < 720
 		currencyCluster.AnchorPoint = Vector2.new(0, 1)
-		currencyCluster.Position = if isNarrow then UDim2.new(0, 14, 1, -100) else UDim2.new(0, 16, 1, -18)
+		currencyCluster.Position = if isNarrow then UDim2.new(0, 14, 1, -100) else UDim2.new(0, 20, 1, -20)
 		local moneyScale = currencyCluster:FindFirstChildOfClass("UIScale") or Instance.new("UIScale", currencyCluster)
 		moneyScale.Scale = portrait and math.min(1, (w - 48) / 258) or 1
 
