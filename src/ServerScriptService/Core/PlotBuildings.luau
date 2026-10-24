@@ -6,7 +6,7 @@
 local Buildings = {}
 local Architecture = require(script.Parent:WaitForChild("PlotFacilityArchitecture"))
 local OutskirtsBuilder = require(script.Parent:WaitForChild("OutskirtsEnvironmentBuilder"))
-local VERSION = 14
+local VERSION = 15
 
 local definitions = {
 	-- North Courtyard: Recovery & Summoning (Symmetric Pair at Z = -35)
@@ -40,10 +40,18 @@ function Buildings.Build(plot: Instance)
 		else spawn
 	local surfaceY = if top and top:IsA("BasePart") then top.Position.Y + top.Size.Y / 2
 		else spawn.Position.Y - spawn.Size.Y / 2
-	local origin = if top and top:IsA("BasePart") then
-		CFrame.new(top.Position.X, surfaceY, top.Position.Z) * top.CFrame.Rotation * CFrame.new(0, 0, -70)
+	local origin: CFrame
+	if top and top:IsA("BasePart") then
+		if top.Size.Z > 200 then
+			-- Legacy 320-stud top slab centered at centerZ = 70
+			origin = CFrame.new(top.Position.X, surfaceY, top.Position.Z) * top.CFrame.Rotation * CFrame.new(0, 0, -70)
+		else
+			-- Clean 180-stud top slab centered at courtyard center Z = 0
+			origin = CFrame.new(top.Position.X, surfaceY, top.Position.Z) * top.CFrame.Rotation
+		end
 	else
-		CFrame.new(spawn.Position.X, surfaceY, spawn.Position.Z) * spawn.CFrame.Rotation * CFrame.new(0, 0, 80)
+		origin = CFrame.new(spawn.Position.X, surfaceY, spawn.Position.Z) * spawn.CFrame.Rotation * CFrame.new(0, 0, 80)
+	end
 	local folder = Instance.new("Folder")
 	folder.Name = "PlotBuildings_Updating"
 	folder:SetAttribute("Version", VERSION)
