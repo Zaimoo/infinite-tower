@@ -197,12 +197,12 @@ export type PlayerProfile = {
 		Gold: number,
 		Gems: number,
 	},
-	BossPity: number,
+	BossPity: number?,
 	ArtifactBannerPity: number?,
 	HeroBannerPity: number?,
 	HeroPermanentPity: number?,
 	HeroLimitedPity: number?,
-	RiftLuresOwned: number,
+	RiftLuresOwned: number?,
 	Heroes: { [string]: HeroInstance },
 	DeployedSquadOrder: { string },
 	Artifacts: { [string]: ArtifactInstance },
@@ -373,12 +373,12 @@ local function createDefaultPlayerProfile(): PlayerProfile
 			Gold = 500,
 			Gems = 2000, -- Immediate summon testing (Doc 3 Section 5.1 & Artifact Banner)
 		},
-		BossPity = 0,
+
 		ArtifactBannerPity = 8, -- Initial: 42 to 5-star guarantee (50 - 8 = 42) matching mockup parity
 		HeroBannerPity = 8,
 		HeroPermanentPity = 8, -- Initial: 42 to 5-star guarantee (50 - 8 = 42) for Call of the Rift
 		HeroLimitedPity = 8, -- Initial: 42 to 7-star guarantee (50 - 8 = 42) for A Star's Arrival
-		RiftLuresOwned = 0,
+
 		Heroes = {
 			[hanUUID] = hanHero,
 			[jennaUUID] = jennaHero,

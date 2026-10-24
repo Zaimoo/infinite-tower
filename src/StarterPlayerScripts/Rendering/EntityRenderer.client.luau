@@ -80,12 +80,6 @@ _G.ClientCombatState = {
 	VisualNodes = VisualNodesByNetId,
 	Metadata = MetadataByNetId,
 	FocusedNetId = nil :: number?,
-	WorldBossNetId = nil :: number?,
-	WorldBossHPPerMille = 1000,
-	WorldBossPhase = 1,
-	WorldBossCoreExposed = false,
-	NovaCastStartClock = 0,
-	NovaCastDuration = 0,
 }
 
 local function getGroundY(x: number, z: number): number
@@ -119,16 +113,9 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 		bodyColor = (seed and seed.Color) or Color3.fromRGB(85, 175, 255)
 	else
 		local spec = meta and (WorldBossConfig.MobSpecs :: any)[meta.SpecId]
-		if meta and meta.MobType == "WORLD_BOSS" then
-			bodySize = Vector3.new(13, 20, 13)
-			bodyColor = Color3.fromRGB(190, 35, 255)
-			isBoss = true
-		elseif spec then
+		if spec then
 			bodySize = spec.Size or Vector3.new(4, 5.5, 4)
 			bodyColor = spec.Color or Color3.fromRGB(215, 75, 95)
-			if meta.MobType == "RIFT_BOSS" then
-				isBoss = true
-			end
 		end
 	end
 
@@ -298,7 +285,7 @@ local function clearView()
  for _,node in pairs(VisualNodesByNetId) do node.Model:Destroy() end
  table.clear(VisualNodesByNetId);table.clear(MetadataByNetId);table.clear(EntitySequences);table.clear(Generations)
  VisualFolder:ClearAllChildren();_G.ClientCombatState.Metadata=MetadataByNetId
- _G.ClientCombatState.FocusedNetId=nil;_G.ClientCombatState.WorldBossNetId=nil;_G.ClientCombatState.NovaCastDuration=0;_G.ClientCombatState.FloorBoss=nil
+ _G.ClientCombatState.FocusedNetId=nil;_G.ClientCombatState.FloorBoss=nil
  Assembly=nil;Bootstrapped=false;table.clear(Buffered);LastBootstrap=0
 end
 TowerRemotes.Context.OnClientEvent:Connect(function(c)
@@ -383,10 +370,6 @@ local function consume(buf: buffer)
   if node.Highlight then
    node.Highlight.OutlineColor=_G.ClientCombatState.FocusedNetId==id and Color3.fromRGB(0,255,235) or bit32.band(e.Flags,2)~=0 and Color3.fromRGB(255,195,40) or Color3.new(1,1,1)
    node.Highlight.OutlineTransparency=meta.TowerEnemy and (_G.ClientCombatState.FocusedNetId==id and .15 or .8) or .25
-  end
-  if meta.MobType=="WORLD_BOSS" then
-   _G.ClientCombatState.WorldBossNetId=id;_G.ClientCombatState.WorldBossHPPerMille=e.HpPermille
-   _G.ClientCombatState.WorldBossPhase=math.max(1,e.StateEnum-10);_G.ClientCombatState.WorldBossCoreExposed=bit32.band(e.Flags,8)~=0
   end
   if not ActionState.Expected(Actions,e,e.ActionSequence) then requestEntityMetadata() end
  end

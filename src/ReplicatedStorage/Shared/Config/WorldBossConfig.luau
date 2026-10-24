@@ -1,6 +1,6 @@
 --!strict
 -- ReplicatedStorage/Shared/Config/WorldBossConfig.luau
--- Mob & World Boss Scaling Table from Document 1 & Document 3
+-- Mob Scaling Table
 
 local WorldBossConfig = {}
 
@@ -107,32 +107,6 @@ WorldBossConfig.MobSpecs = {
 		Color = Color3.fromRGB(235, 35, 90),
 		Size = Vector3.new(7, 10.5, 7),
 	},
-	boss_rift_warden = {
-		Id = "boss_rift_warden",
-		Name = "THE RIFT WARDEN (FLOOR BOSS)",
-		Ring = 3,
-		Count = 0,
-		MaxHP = 95000,
-		ATK = 360,
-		AttackInterval = 1.25,
-		RespawnTime = 0,
-		GoldReward = 6000,
-		Drops = { CURSED_URN = 1.0, ABYSSAL_CORE = 1.0 },
-		AoERadius = 45,
-		AoECastTime = 2.5,
-		AoECooldown = 14.0,
-		Color = Color3.fromRGB(65, 225, 255),
-		Size = Vector3.new(10, 15, 10),
-	},
-}
-
-WorldBossConfig.DirectPayoutByRank = {
-	[1] = { Gems = 1000, Gold = 10000, ArchonChance = 0.15, PityGain = 0 },
-	[2] = { Gems = 750, Gold = 7500, ArchonChance = 0.10, PityGain = 5 },
-	[3] = { Gems = 550, Gold = 5500, ArchonChance = 0.07, PityGain = 5 },
-	[4] = { Gems = 400, Gold = 4000, ArchonChance = 0.04, PityGain = 10 },
-	[5] = { Gems = 300, Gold = 3000, ArchonChance = 0.025, PityGain = 10 },
-	[6] = { Gems = 250, Gold = 2500, ArchonChance = 0.015, PityGain = 10 },
 }
 
 return WorldBossConfig

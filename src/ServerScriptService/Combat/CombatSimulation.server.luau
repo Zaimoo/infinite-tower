@@ -33,7 +33,6 @@ local WhistleCommandRemote = CombatRemotes:WaitForChild("WhistleCommand") :: Rem
 local BossTelegraphRemote = CombatRemotes:WaitForChild("BossTelegraph") :: RemoteEvent
 local CombatVFXRemote = CombatRemotes:WaitForChild("CombatVFX") :: UnreliableRemoteEvent
 local EntityMetadataRemote = CombatRemotes:WaitForChild("EntityMetadataSync") :: RemoteEvent
-local WorldBossTriggerRemote = CombatRemotes:WaitForChild("WorldBossTrigger") :: RemoteEvent
 local LootStolenAlertRemote = CombatRemotes:WaitForChild("LootStolenAlert") :: RemoteEvent
 local SquadWipeStateRemote = CombatRemotes:WaitForChild("SquadWipeState") :: RemoteEvent
 local CarriedLootSyncRemote = CombatRemotes:WaitForChild("CarriedLootSync") :: RemoteEvent
@@ -69,12 +68,6 @@ local RECALL_COOLDOWN = 6.0
 local RECALL_PACIFY_DURATION = 2.0
 
 local TowerSpawnLayout = require(ReplicatedStorage:WaitForChild("TowerSpawnLayout"))
-local WORLD_BOSS_ORIGIN = TowerSpawnLayout.Boss()
-local NOVA_INTERVAL = 20.0
-local NOVA_TELEGRAPH_DURATION = 3.0
-local NOVA_BLAST_RADIUS = 85.0
-local NOVA_PUNISH_DURATION = 5.0
-local NOVA_PUNISH_DAMAGE_MULT = 1.25
 local COMA_DURATION_DEFAULT = 60
 
 export type HeroSimState = "FOLLOW_MASTER" | "MOVE_TO_TARGET" | "ATTACKING" | "COMA"
@@ -175,13 +168,11 @@ local ActiveMasters: { [Player]: MasterCombatState } = {}
 local HeroStuckTracking: { [number]: { LastDist: number, LastClock: number } } = {}
 local ActiveHeroesByNetId: { [number]: SimHero } = {}
 local ActiveMobsByNetId: { [number]: SimMob } = {}
-local ActiveWorldBoss: SimMob? = nil
 -- Progression is awarded on a confirmed PvE death, outside the simulation's per-tick work.
 -- Only recent, deliberate Master commands qualify; idle auto-attacks do not level a squad.
 local ProgressionActivity: { [Player]: number } = {}
 local ProgressionHits: { [number]: { [number]: { Damage: number, At: number } } } = {}
 local ProgressionAwards: { [number]: number } = {}
-local NextWorldBossSpawnClock = os.clock() + 180 -- First automatic World Boss in 3m for prototype pacing (or instant via button!)
 
 --============================================================================
 -- 2. METADATA BROADCAST & HELPER FUNCTIONS
@@ -641,7 +632,7 @@ end
 -- 4. RING 1 / RING 2 MOB SPAWNER & WORLD BOSS DIRECTOR
 --============================================================================
 
-local function createSimMob(specId: string, pos: Vector3, mobType: "RING1_MOB" | "RING2_ELITE" | "RIFT_BOSS" | "WORLD_BOSS"): SimMob
+local function createSimMob(specId: string, pos: Vector3, mobType: "RING1_MOB" | "RING2_ELITE"): SimMob
 	local spec = (WorldBossConfig.MobSpecs :: any)[specId]
 	local netId = allocateNetId()
 	local now = os.clock()
@@ -666,7 +657,7 @@ local function createSimMob(specId: string, pos: Vector3, mobType: "RING1_MOB" |
 		AoEDetonateTime = nil,
 		AoERadius = spec and spec.AoERadius or 0,
 		Phase = 1,
-		NextNovaCastTime = now + NOVA_INTERVAL,
+		NextNovaCastTime = 0,
 		NovaDetonateTime = nil,
 		PunishWindowUntil = 0,
 		DespawnAt = nil,
@@ -711,114 +702,6 @@ local function populateArenaMobs()
 	end
 end
 
-function CombatSimulation.SpawnWorldBoss()
-	if true then return end -- Part 2: legacy/new encounters disabled.
-	if ActiveWorldBoss and ActiveWorldBoss.IsAlive then
-		return
-	end
-	local dm = getDataManager()
-
-	-- Dynamic HP Scaling Formula (Document 1 Section 5.1)
-	local sumTop5DPS = 0
-	local nPlayers = math.max(1, #Players:GetPlayers())
-	for _, p in ipairs(Players:GetPlayers()) do
-		local prof = dm.GetProfile(p)
-		if prof then
-			local dpsList = {}
-			for _, h in pairs(prof.Heroes) do
-				local _, _, dps = StatFormulas.GetEffectiveCombatStats(h, false, false, StatFormulas.GetEquippedArtifact(prof,h))
-				table.insert(dpsList, dps)
-			end
-			table.sort(dpsList, function(a, b) return a > b end)
-			for i = 1, math.min(5, #dpsList) do
-				sumTop5DPS += dpsList[i]
-			end
-		end
-	end
-
-	local dynamicMaxHP = math.max(75000, math.round(sumTop5DPS * 165 * (nPlayers ^ -0.15)))
-	local now = os.clock()
-	local netId = allocateNetId()
-
-	local boss: SimMob = {
-		NetId = netId,
-			FloorId = 0, RoomGeneration = 1, EntityGeneration = 1,
-		SpecId = "world_boss_sovereign",
-		DisplayName = "THE DIMENSIONAL SOVEREIGN",
-		MobType = "WORLD_BOSS",
-		RingIndex = 3,
-		Position = WORLD_BOSS_ORIGIN,
-		HomePosition = WORLD_BOSS_ORIGIN,
-		Yaw = 0,
-		CurrentHP = dynamicMaxHP,
-		MaxHP = dynamicMaxHP,
-		ATK = 420,
-		AttackInterval = 1.20,
-		AttackCooldown = 1.20,
-		IsAlive = true,
-		RespawnAt = 0,
-		NextAoECastTime = 0,
-		AoEDetonateTime = nil,
-		AoERadius = NOVA_BLAST_RADIUS,
-		Phase = 1,
-		NextNovaCastTime = now + 12.0, -- First Devouring Nova 12s after pull, then every 20.0s!
-		NovaDetonateTime = nil,
-		PunishWindowUntil = 0,
-		DespawnAt = now + 300.0, -- 5-minute Despawn Timer
-		DamageLedger = {},
-	}
-
-	ActiveMobsByNetId[netId] = boss
-	ActiveWorldBoss = boss
-	NextWorldBossSpawnClock = now + 1200.0
-
-	dm.BroadcastToast(
-		string.format("🔥 THE DIMENSIONAL SOVEREIGN HAS MANIFESTED AT RING 3 (HP: %d)! Watch for Devouring Nova every 20s!", dynamicMaxHP),
-		"WARN"
-	)
-	broadcastMetadata(nil)
-end
-
-function CombatSimulation.SpawnRiftWarden(summoner: Player)
-	if true then return end -- Do not consume lures until Part 3.
-	local dm = getDataManager()
-	local profile = dm.GetProfile(summoner)
-	if not profile then
-		return
-	end
-	if profile.RiftLuresOwned <= 0 then
-		dm.SendToast(summoner, "You need a Rift Lure to summon The Rift Warden!", "WARN")
-		return
-	end
-	profile.RiftLuresOwned -= 1
-	dm.SyncProfile(summoner)
-
-	local warden = createSimMob("boss_rift_warden", WORLD_BOSS_ORIGIN + Vector3.new(0, 0, 22), "RIFT_BOSS")
-	dm.BroadcastToast(string.format("🌀 %s used a Rift Lure at Ring 3 to summon THE RIFT WARDEN!", summoner.DisplayName), "WARN")
-	broadcastMetadata(nil)
-end
-
--- WorldBossTrigger Remote (Allows HUD button to trigger World Boss for instant prototype testing)
-WorldBossTriggerRemote.OnServerEvent:Connect(function(player: Player, mode: any)
-	if mode == "SPAWN_WORLD_BOSS" then
-		CombatSimulation.SpawnWorldBoss()
-	elseif mode == "TRIGGER_NOVA_NOW" and ActiveWorldBoss and ActiveWorldBoss.IsAlive then
-		ActiveWorldBoss.NextNovaCastTime = os.clock()
-	elseif mode == "USE_RIFT_LURE" then
-		CombatSimulation.SpawnRiftWarden(player)
-	end
-end)
-
--- The legacy altar is optional in the isolated-floor map and must not block combat startup.
-local arenaRings = Workspace:FindFirstChild("ArenaRings")
-local ring3 = arenaRings and arenaRings:FindFirstChild("Ring3_CenterBossAltar")
-local obelisk = ring3 and ring3:FindFirstChild("RiftLureObelisk")
-local lurePrompt = obelisk and obelisk:FindFirstChild("RiftLurePrompt") :: ProximityPrompt?
-if lurePrompt then
-	lurePrompt.Triggered:Connect(function(player: Player)
-		CombatSimulation.SpawnRiftWarden(player)
-	end)
-end
 
 --============================================================================
 --============================================================================
@@ -1079,7 +962,7 @@ function spawnPhysicalLoot(lootType: "GOLD" | "GEMS", amount: number, worldPos: 
 end
 
 
--- 5. MOB DEATH, RELIC DROPS & WORLD BOSS 50/50 LOOT + PITY DISTRIBUTION
+-- 5. MOB DEATH & RELIC DROPS
 --============================================================================
 
 local function awardParticipationXP(mob: SimMob)
@@ -1119,75 +1002,6 @@ local function handleMobDeath(mob: SimMob, killerPlayer: Player)
 	mob.IsAlive = false
 	awardParticipationXP(mob)
 
-	if mob.MobType == "WORLD_BOSS" then
-		ActiveWorldBoss = nil
-		-- Compute Total Boss Damage & Shared Blood Pact Scores (Document 1 Section 5.4 & 6.1)
-		local totalRawDamage = 0
-		for _, dmg in pairs(mob.DamageLedger) do
-			totalRawDamage += dmg
-		end
-		totalRawDamage = math.max(1, totalRawDamage)
-
-		local rankedScores = {}
-		for _, p in ipairs(Players:GetPlayers()) do
-			local raw = mob.DamageLedger[p.UserId] or 0
-			local prof = dm.GetProfile(p)
-			local combinedScore = raw
-			local pct = (combinedScore / totalRawDamage) * 100.0
-			table.insert(rankedScores, {
-				Player = p,
-				Profile = prof,
-				Score = combinedScore,
-				Pct = pct,
-			})
-		end
-
-		table.sort(rankedScores, function(a, b)
-			return a.Score > b.Score
-		end)
-
-		local rank1UserId = rankedScores[1] and rankedScores[1].Player.UserId or killerPlayer.UserId
-
-		-- Part A: 50% Direct Payout + Boss Pity Meter
-		for rankIdx, entry in ipairs(rankedScores) do
-			if entry.Pct >= 3.0 and entry.Profile then
-				local payout = WorldBossConfig.DirectPayoutByRank[math.min(6, rankIdx)]
-				entry.Profile.Currencies.Gems += payout.Gems
-				entry.Profile.Currencies.Gold += payout.Gold
-				entry.Profile.BossPity = math.min(100, entry.Profile.BossPity + payout.PityGain)
-
-				local wonArchon = (math.random() <= payout.ArchonChance) or (entry.Profile.BossPity >= 100)
-				if wonArchon then
-					entry.Profile.BossPity = 0
-					local uuid, archon = dm.CreateHeroFromSeed("hero_archon", 1.12)
-					entry.Profile.Heroes[uuid] = archon
-					dm.BroadcastToast(string.format("👑 %s obtained the 3★ Boss Exclusive Hero: SOVEREIGN ARCHON!", entry.Player.DisplayName), "SUCCESS")
-				end
-
-				dm.SendToast(
-					entry.Player,
-					string.format(
-						"🏆 World Boss Rank #%d (%.1f%% DMG): +%d Gems, +%d Gold (Boss Pity: %d%%)!",
-						rankIdx, entry.Pct, payout.Gems, payout.Gold, entry.Profile.BossPity
-					),
-					"SUCCESS"
-				)
-				dm.SyncProfile(entry.Player)
-			end
-		end
-
-		-- Part B: 50% Physical Drop — THE CALAMITY HEART (15s Rank #1 DPS Lock!)
-		if _G.RelicService then
-			_G.RelicService.SpawnRelic("CALAMITY_HEART", WORLD_BOSS_ORIGIN, rank1UserId)
-			dm.BroadcastToast(
-				string.format("❤️‍🔥 THE CALAMITY HEART HAS DROPPED AT RING 3! (15s Exclusive Lock for Rank #1 DPS: %s)", rankedScores[1] and rankedScores[1].Player.DisplayName or killerPlayer.DisplayName),
-				"WARN"
-			)
-		end
-
-		broadcastMetadata(nil)
-		return
-	end
 
 	-- Standard Mob / Elite / Rift Warden Death
 	local spec = (WorldBossConfig.MobSpecs :: any)[mob.SpecId]
@@ -1389,105 +1203,6 @@ end)
 -- 7. WORLD BOSS & ELITE AOE SIMULATION
 --============================================================================
 
-local function stepWorldBoss(boss: SimMob, dt: number, now: number)
-	if not boss.IsAlive then
-		return
-	end
-	local dm = getDataManager()
-
-	if boss.DespawnAt and now >= boss.DespawnAt then
-		boss.IsAlive = false
-		ActiveWorldBoss = nil
-		ProgressionHits[boss.NetId] = nil
-		ActiveMobsByNetId[boss.NetId] = nil
-		dm.BroadcastToast("⏳ The Dimensional Sovereign tore open a rift and vanished (5m timer expired)!", "WARN")
-		broadcastMetadata(nil)
-		return
-	end
-
-	local hpRatio = boss.CurrentHP / math.max(1, boss.MaxHP)
-	if hpRatio <= 0.25 then
-		boss.Phase = 3
-	elseif hpRatio <= 0.50 then
-		boss.Phase = 2
-	else
-		boss.Phase = 1
-	end
-
-	-- 1. Devouring Nova 3.0s Telegraph (Strictly every 20.0s)
-	if boss.NovaDetonateTime == nil and now >= boss.NextNovaCastTime then
-		boss.NovaDetonateTime = now + NOVA_TELEGRAPH_DURATION
-		boss.NextNovaCastTime = now + NOVA_INTERVAL
-
-		-- Phase 2+ Gravity Well: Pull all heroes on Ring 3 inward before Nova telegraph
-		if boss.Phase >= 2 then
-			for _, simHero in pairs(ActiveHeroesByNetId) do
-				local dist = getHorizontalDistance(simHero.Position, WORLD_BOSS_ORIGIN)
-				if dist <= 120 and math.abs(simHero.Position.Y - WORLD_BOSS_ORIGIN.Y) < 10 then
-					local dir = (simHero.Position - WORLD_BOSS_ORIGIN)
-					local unitXZ = Vector3.new(dir.X, 0, dir.Z)
-					unitXZ = (unitXZ.Magnitude > 0.01) and unitXZ.Unit or Vector3.new(1, 0, 0)
-					local p = WORLD_BOSS_ORIGIN + (unitXZ * 15.0)
-					HeroNavigation.Displace(simHero, p)
-				end
-			end
-		end
-
-		Tower.BroadcastAt(BossTelegraphRemote,boss,
-			1, -- 1 = DEVOURING_NOVA
-			Vector2int16.new(math.round(WORLD_BOSS_ORIGIN.X), math.round(WORLD_BOSS_ORIGIN.Z)),
-			NOVA_BLAST_RADIUS,
-			math.round(NOVA_TELEGRAPH_DURATION * 1000)
-		)
-	end
-
-	-- 2. Devouring Nova Detonation (t = 3.0s)
-	if boss.NovaDetonateTime ~= nil and now >= boss.NovaDetonateTime then
-		boss.NovaDetonateTime = nil
-		boss.PunishWindowUntil = now + NOVA_PUNISH_DURATION
-
-		Tower.BroadcastAt(BossTelegraphRemote,boss,
-			2, -- 2 = CORE_EXPOSED_PUNISH_WINDOW (5.0s +25% DMG!)
-			Vector2int16.new(0, 0),
-			NOVA_BLAST_RADIUS,
-			math.round(NOVA_PUNISH_DURATION * 1000)
-		)
-
-		-- Check Heroes inside R <= 85 studs ("Greed vs. Coma")
-		local toComa = {}
-		for _, simHero in pairs(ActiveHeroesByNetId) do
-			if simHero.State ~= "COMA" and Tower.Same(simHero,boss) and not Tower.GetSafety(simHero,simHero.Position).CombatSafe then
-				local distFromAltar = getHorizontalDistance(simHero.Position, WORLD_BOSS_ORIGIN)
-				if distFromAltar <= NOVA_BLAST_RADIUS then
-					if simHero.Stamina > 50.0 and boss.Phase == 1 then
-						simHero.Stamina = math.max(0, simHero.Stamina - 50.0)
-						simHero.CurrentHP = math.max(1, simHero.CurrentHP - math.round(simHero.MaxHP * 0.40))
-						local profile = dm.GetProfile(simHero.Owner)
-						if profile and profile.Heroes[simHero.HeroUUID] then
-							profile.Heroes[simHero.HeroUUID].CurrentStamina = simHero.Stamina
-						end
-						dm.SendToast(simHero.Owner, string.format("⚠️ %s was hit by Devouring Nova (-50 Stamina)! Use [E] Recall from the Safe Rim!", simHero.DisplayName), "WARN")
-					else
-						table.insert(toComa, simHero)
-					end
-				end
-			end
-		end
-		for _, h in ipairs(toComa) do
-			knockHeroIntoComa(h, COMA_DURATION_DEFAULT)
-		end
-
-		-- Also check if any Relic Carrier is inside R <= 85 studs -> Fumble!
-		if _G.RelicService then
-			for _, p in ipairs(Players:GetPlayers()) do
-				local mPos = getMasterRootPosition(p)
-				if mPos and Tower.Same(Tower.GetState(p),boss) and not Tower.GetSafety(Tower.GetState(p),mPos).CombatSafe and getHorizontalDistance(mPos, WORLD_BOSS_ORIGIN) <= NOVA_BLAST_RADIUS then
-					_G.RelicService.FumbleRelicOnAoEHit(p)
-				end
-			end
-		end
-	end
-end
 
 local function stepMobAndEliteAoEs(mob: SimMob, dt: number, now: number)
 	if not mob.IsAlive then
@@ -1502,10 +1217,6 @@ local function stepMobAndEliteAoEs(mob: SimMob, dt: number, now: number)
 		return
 	end
 
-	if mob.MobType == "WORLD_BOSS" then
-		stepWorldBoss(mob, dt, now)
-		return
-	end
 
 	if mob.AoERadius > 0 and mob.NextAoECastTime > 0 then
 		local spec = (WorldBossConfig.MobSpecs :: any)[mob.SpecId]
@@ -1972,9 +1683,6 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 				if targetMob.DefenseShredUntil and now < targetMob.DefenseShredUntil then
 					damage = math.round(damage * 1.20)
 				end
-				if targetMob.MobType == "WORLD_BOSS" and now < targetMob.PunishWindowUntil then
-					damage = math.round(damage * NOVA_PUNISH_DAMAGE_MULT)
-				end
 				local actualDamage = math.min(targetMob.CurrentHP, damage)
 				local participation = ProgressionHits[targetMob.NetId]
 				if not participation then
@@ -2052,7 +1760,7 @@ local function broadcastReplicationSnapshot(now: number)
   end
   local hero=e.Owner~=nil;local entry=table.clone(e)
   entry.StateEnum=hero and (STATE_TO_ENUM[e.State] or 1) or (e.TowerEnemy and ({IDLE=20,CHASE=21,WINDUP=22,RECOVERY=23,RESET=24})[e.State] or (10+(e.Phase or 1)))
-  entry.Flags=hero and (1+(now<e.OverdriveUntil and 2 or 0)+(now<e.PacifiedUntil and 4 or 0)) or (e.MobType=="WORLD_BOSS" and now<e.PunishWindowUntil and 8 or 0)
+  entry.Flags=hero and (1+(now<e.OverdriveUntil and 2 or 0)+(now<e.PacifiedUntil and 4 or 0)) or 0
   byFloor[e.FloorId]=byFloor[e.FloorId] or {};table.insert(byFloor[e.FloorId],entry)
  end end
  for _,p in Players:GetPlayers() do
@@ -2208,9 +1916,6 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 	local now = os.clock()
 	Encounters:Tick(dt)
 
-	if not ActiveWorldBoss and now >= NextWorldBossSpawnClock then
-		CombatSimulation.SpawnWorldBoss()
-	end
 
 	for _, mob in pairs(ActiveMobsByNetId) do
 		if not (mob :: any).TowerEnemy then stepMobAndEliteAoEs(mob, dt, now) end

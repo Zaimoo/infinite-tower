@@ -28,7 +28,7 @@ local TycoonRemotes = Remotes:WaitForChild("TycoonGachaRemotes")
 local SyndicateRemotes = Remotes:WaitForChild("SyndicateRemotes")
 
 local WhistleCommandRemote = CombatRemotes:WaitForChild("WhistleCommand") :: RemoteEvent
-local WorldBossTriggerRemote = CombatRemotes:WaitForChild("WorldBossTrigger") :: RemoteEvent
+
 local FocusTargetRemote = CombatRemotes:WaitForChild("FocusTarget") :: RemoteEvent
 local LootStolenAlertRemote = CombatRemotes:WaitForChild("LootStolenAlert") :: RemoteEvent
 local SquadWipeStateRemote = CombatRemotes:WaitForChild("SquadWipeState") :: RemoteEvent
@@ -378,7 +378,7 @@ end)
 
 -- World Boss Top Banner
 local bossBanner = makeFrame({
-	Name = "WorldBossTopBanner",
+	Name = "FloorBossTopBanner",
 	Size = UDim2.new(0.54, 0, 0, 46),
 	Position = UDim2.new(0.23, 0, 0, 60),
 	BackgroundColor3 = Color3.fromRGB(28, 16, 38),
@@ -392,7 +392,7 @@ local bossBanner = makeFrame({
 local bossTitleLabel = makeLabel({
 	Size = UDim2.new(0.96, 0, 0.48, 0),
 	Position = UDim2.new(0.02, 0, 0.04, 0),
-	Text = "THE DIMENSIONAL SOVEREIGN",
+	Text = "FLOOR BOSS",
 	TextColor3 = Color3.fromRGB(235, 165, 255),
 	Parent = bossBanner,
 })
@@ -412,30 +412,10 @@ local novaBarFill = makeFrame({
 })
 local novaCastLabel = makeLabel({
 	Size = UDim2.fromScale(1, 1),
-	Text = "Prepare your squad. The rift is gathering strength.",
+	Text = "Boss Encounter",
 	Parent = novaBarBg,
 })
 
--- Right World Boss Pity & Info Card
-local rightBoard = makeFrame({
-	Name = "RightWorldBossLeaderboard",
-	Size = UDim2.new(0, 245, 0, 145),
-	Position = UDim2.new(1, -257, 0.34, 0),
-	BackgroundColor3 = Color3.fromRGB(18, 20, 30),
-	BackgroundTransparency = 0.18,
-	BackgroundTransparency = 1,
-	Parent = hudGui,
-})
-GothicBoxStyle.Apply(rightBoard, { Style = "Card" })
-
-local rightBoardText = makeLabel({
-	Size = UDim2.new(1, -36, 1, -28),
-	Position = UDim2.fromOffset(18, 14),
-	Text = " WORLD BOSS & PITY\n• Min 3.0% DMG for Loot\n• 50% Direct + 50% Calamity Heart\n• Boss Pity: 0% / 100%\n• Rift Lures Owned: 0",
-	TextColor3 = Color3.fromRGB(230, 215, 250),
-	TextXAlignment = Enum.TextXAlignment.Left,
-	Parent = rightBoard,
-})
 
 --============================================================================
 -- 2. MODAL WINDOWS (`ThePit`, `Blacksmith`, `SquadController`)
@@ -789,16 +769,6 @@ makeButton({
 		if squadController then
 			squadController:Toggle()
 		end
-	end,
-	Parent = navButtonsFrame,
-})
-makeButton({
-	Size = UDim2.new(0, 118, 1, 0),
-	BackgroundColor3 = Color3.fromRGB(155, 40, 210),
-	Text = " Spawn Boss",
-	Corner = 6,
-	OnClick = function()
-		WorldBossTriggerRemote:FireServer("SPAWN_WORLD_BOSS")
 	end,
 	Parent = navButtonsFrame,
 })
@@ -1275,12 +1245,6 @@ ProfileDeltaSyncEvent.OnClientEvent:Connect(function(profile: any)
 		honorLabel.TextColor3 = Color3.fromRGB(130, 225, 255)
 	end
 
-	-- Right Board Pity Summary
-	rightBoardText.Text = string.format(
-		" WORLD BOSS & PITY\n• Min 3.0%% DMG for Loot\n• Boss Pity Meter: %d%% / 100%%\n• Rift Lures Owned: %d",
-		profile.BossPity,
-		profile.RiftLuresOwned
-	)
 
 	if squadController and squadController:IsOpen() then
 		squadController:Refresh()
@@ -1327,7 +1291,7 @@ RunService.RenderStepped:Connect(function()
 	-- 2. Update World Boss Top Banner & Devouring Nova Cast Bar
 	local floorBoss = cs and cs.FloorBoss
 	local hasFloorBoss = floorBoss and floorBoss.Enabled == true
-	bossBanner.Visible = (cs and cs.WorldBossNetId ~= nil) or hasFloorBoss or false
+	bossBanner.Visible = hasFloorBoss or false
 	if hasFloorBoss then
 		local node = cs.VisualNodes and cs.VisualNodes[floorBoss.NetId]
 		local hpPct = if node and node.HpPermille then node.HpPermille / 10.0 else (floorBoss.CurrentHP or 1) / math.max(1, floorBoss.MaxHP or 1) * 100.0
@@ -1337,28 +1301,6 @@ RunService.RenderStepped:Connect(function()
 		novaBarFill.Size = UDim2.fromScale(math.clamp(hpPct / 100.0, 0, 1), 1)
 		novaBarFill.BackgroundColor3 = Color3.fromRGB(215, 65, 110)
 		novaCastLabel.Text = string.format("BOSS HP: %.1f%% | Watch ground telegraphs & use [E] Recall to dodge!", hpPct)
-	elseif cs and cs.WorldBossNetId then
-
-		local hpPct = (cs.WorldBossHPPerMille or 1000) / 10.0
-		local coreTag = cs.WorldBossCoreExposed and " [ CORE EXPOSED: +25% DMG! PRESS Q!]" or ""
-		bossTitleLabel.Text = string.format(
-			" THE DIMENSIONAL SOVEREIGN (PHASE %d) — HP: %.1f%%%s",
-			cs.WorldBossPhase or 1, hpPct, coreTag
-		)
-		if novaElapsed <= (cs.NovaCastDuration or 3.0) then
-			local ratio = math.clamp(novaElapsed / (cs.NovaCastDuration or 3.0), 0, 1)
-			novaBarFill.Size = UDim2.fromScale(ratio, 1)
-			novaBarFill.BackgroundColor3 = Color3.fromRGB(255, 35, 65)
-			novaCastLabel.Text = string.format(" DEVOURING NOVA IN %.1fs — STAND IN SAFE RIM (R>85) & PRESS [E]!", (cs.NovaCastDuration or 3.0) - novaElapsed)
-		else
-			novaBarFill.Size = UDim2.fromScale(math.clamp(hpPct / 100.0, 0, 1), 1)
-			novaBarFill.BackgroundColor3 = cs.WorldBossCoreExposed and Color3.fromRGB(255, 195, 40) or Color3.fromRGB(185, 45, 245)
-			novaCastLabel.Text = string.format("BOSS HP: %.1f%% | Devouring Nova every 20s", hpPct)
-		end
-	else
-		bossTitleLabel.Text = "THE DIMENSIONAL SOVEREIGN"
-		novaBarFill.Size = UDim2.fromScale(1, 1)
-		novaCastLabel.Text = "Prepare your squad. The rift is gathering strength."
 	end
 end)
 
@@ -1594,23 +1536,6 @@ do
 		end
 	end)
 
-	local compact = false
-	local encounterOpen = false
-	local encounterToggle = makeButton({
-		Name = "EncounterToggle",
-		Text = "Encounter",
-		Size = UDim2.fromOffset(120, 32),
-		BackgroundColor3 = P.surface,
-		Corner = 8,
-		OnClick = function()
-			encounterOpen = not encounterOpen
-			rightBoard.Visible = not compact or encounterOpen
-		end,
-		Parent = hudGui,
-	})
-	encounterToggle.TextScaled = false
-	encounterToggle.TextSize = 12
-	stroke(encounterToggle)
 
 	--============================================================================
 	-- LEFT SIDEBAR NAVIGATION (Shop Icon & Future Sidebar Tools)
@@ -1745,7 +1670,6 @@ do
 		end
 		local view = cam.ViewportSize
 		local w, h = view.X, math.max(300, view.Y - 40)
-		compact = w < 1100
 		local portrait = w < 650
 		local stackPanels = portrait or h < 540
 
@@ -1776,15 +1700,6 @@ do
 		toastBanner.Position = UDim2.new(0.5, 0, 0, 82)
 		toastBanner.Size = UDim2.new(0, math.min(w - 32, 650), 0, 46)
 
-		rightBoard.Position = UDim2.new(1, -16, 0, compact and 136 or 96)
-		rightBoard.AnchorPoint = Vector2.new(1, 0)
-		rightBoard.Size = UDim2.fromOffset(math.min(260, w - 32), 170)
-		rightBoard.Visible = not compact or encounterOpen
-		rightBoard.BackgroundColor3 = P.surface
-		rightBoard.BackgroundTransparency = 0.08
-		stroke(rightBoard)
-		encounterToggle.Visible = compact
-		encounterToggle.Position = UDim2.new(1, -136, 0, 16)
 
 		-- Responsive positioning and scaling for Currencies and Floating Toolbar
 		local isNarrow = w < 720
