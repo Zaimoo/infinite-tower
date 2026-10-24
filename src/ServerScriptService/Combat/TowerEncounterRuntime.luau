@@ -1,7 +1,6 @@
 --!strict
 -- Server-only director. Retained slots belong to the floor, never to its viewers.
 local RS = game:GetService("ReplicatedStorage")
-local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Config = require(RS.Shared.Config.FirstBiomeCombat)
 local MobCatalog = require(RS.Shared.Config.MobCatalog)
@@ -11,7 +10,7 @@ local Timeline = require(RS.Shared.Util.AttackTimeline)
 local Runtime = {}
 
 function Runtime.new(api: any): any
-	local self: any = { API = api, PlayerTargets = {}, Metrics = { Started = 0, Impacts = 0, Canceled = 0, Deaths = 0, Hits = 0 } }
+	local self: any = { API = api, Metrics = { Started = 0, Impacts = 0, Canceled = 0, Deaths = 0, Hits = 0 } }
 	function self:Enabled(): boolean
 		if RunService:IsStudio() and workspace:GetAttribute("TowerCombatPreview") == false then return false end
 		return Config.ReleaseEnabled or (RunService:IsStudio() and workspace:GetAttribute("TowerCombatPreview") == true)
@@ -24,30 +23,7 @@ function Runtime.new(api: any): any
 		for _, h in pairs(api.Heroes) do
 			if Timeline.Alive(h) then table.insert(targets, h) end
 		end
-		for _, p in Players:GetPlayers() do
-			local state = api.Tower.GetState(p)
-			local char = p.Character
-			local root = char and char:FindFirstChild("HumanoidRootPart")
-			local hum = char and char:FindFirstChildOfClass("Humanoid")
-			if root and hum and hum.Health > 0 then
-				local previous = self.PlayerTargets[p]
-				if not previous or previous.Character ~= char then
-					previous = { NetId = api.Allocate(), Character = char }
-					self.PlayerTargets[p] = previous
-				end
-				previous.EntityGeneration = state.CharacterGeneration
-				previous.FloorId = state.FloorId
-				previous.RoomGeneration = state.RoomGeneration
-				previous.CurrentHP = hum.Health
-				previous.Position = root.Position - Vector3.new(0, 3, 0)
-				previous.Player = p
-				previous.Humanoid = hum
-				table.insert(targets, previous)
-			end
-		end
-		for p in pairs(self.PlayerTargets) do
-			if p.Parent ~= Players then self.PlayerTargets[p] = nil end
-		end
+		-- Only heroes participate in enemy targeting and area damage.
 		return targets
 	end
 	function self:PublicAction(a, kind)
@@ -196,16 +172,18 @@ function Runtime.new(api: any): any
 							ActionSequence = 0,
 							RespawnAt = 0,
 							BornAt = now,
-							LocalPosition = Vector3.new(placement.X, 0, placement.Z),
+							LocalPosition = Vector3.new(placement.X, placement.Y or 0, placement.Z),
 						}
 						ledger.Slots[slot] = m
 						if e.Role == "BOSS" then ledger.BossGeneration = m.LifeGeneration end
 					end
+					m.LeashRadius = placement.LeashRadius or Config.LeashRange
+					m.CampId = placement.CampId
 					if m.RoomGeneration ~= room.RoomGeneration then
 						m.EntityGeneration += 1
 						m.RoomGeneration = room.RoomGeneration
-						m.HomePosition = api.Navigation.Ground(room.Origin + Vector3.new(placement.X, 2, placement.Z), nil, 5, 12) or room.Origin + Vector3.new(placement.X, 0, placement.Z)
-						m.Position = room.Origin + m.LocalPosition
+						m.HomePosition = api.Navigation.Ground(room.Origin + Vector3.new(placement.X, (placement.Y or 0) + 6, placement.Z), nil, 2, 12) or room.Origin + Vector3.new(placement.X, placement.Y or 0, placement.Z)
+						m.Position = if m.LastOrigin then room.Origin + m.LocalPosition else m.HomePosition
 						api.Navigation.Clear(m)
 					end
 					if not api.Mobs[m.NetId] then
@@ -291,7 +269,7 @@ function Runtime.new(api: any): any
 		local target = nil
 		local nearest = e.AggroRange
 		for _, t in targets do
-			if Timeline.Alive(t) and api.Tower.Same(m, t) and not safe(t) and (t.Position - m.HomePosition).Magnitude < Config.LeashRange then
+			if Timeline.Alive(t) and api.Tower.Same(m, t) and not safe(t) and (t.Position - m.HomePosition).Magnitude < (m.LeashRadius or Config.LeashRange) then
 				local d = (m.Position - t.Position).Magnitude
 				if d < nearest then
 					nearest = d
@@ -299,7 +277,7 @@ function Runtime.new(api: any): any
 				end
 			end
 		end
-		if fromHome > Config.LeashRange or safe(m) or not target then
+		if fromHome > (m.LeashRadius or Config.LeashRange) or safe(m) or not target then
 			m.State = fromHome > 3 and "RESET" or "IDLE"
 			if fromHome > 3 then
 				api.Navigation.Step(m, m.HomePosition, e.MoveSpeed * math.min(dt, .3), os.clock())

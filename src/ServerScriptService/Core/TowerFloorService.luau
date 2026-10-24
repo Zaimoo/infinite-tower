@@ -269,13 +269,18 @@ local function disconnectCargo(player: Player)
 end
 function Service.Init()
 	if started then return end;started=true;remotes=remoteFolder()
+	-- Edit-time previews are replaced by the authoritative lazily built rooms in Play.
+	if RunService:IsStudio() then
+		local previews=workspace:FindFirstChild("TowerReworkPreviews")
+		if previews then previews:Destroy() end
+	end
 	local zones={}
 	-- Authored polygon belt and bounded plot boxes. Distance from origin grants no privilege.
 	for i=0,23 do
 		local a,b=i*math.pi/12,(i+1)*math.pi/12
 		table.insert(zones,{ZoneId="HUB_BANK_"..i,FloorId=0,RoomGeneration=1,LocalPolygonXZ={Vector2.new(math.cos(a)*460,math.sin(a)*460),Vector2.new(math.cos(b)*460,math.sin(b)*460),Vector2.new(math.cos(b)*760,math.sin(b)*760),Vector2.new(math.cos(a)*760,math.sin(a)*760)},MinY=-10,MaxY=100,CombatSafe=true,CanBankCargo=true,CanRecoverWipe=true})
 	end
-	rooms[0]={FloorId=0,RoomGeneration=1,Origin=Vector3.zero,Arrival=CFrame.new(0,19.5,-330),Bounds={Min=Vector3.new(-1500,-100,-1500),Max=Vector3.new(1500,2500,1500)},Zones=zones,Status="READY",Reservations=0}
+	rooms[0]={FloorId=0,RoomGeneration=1,Origin=Vector3.zero,Arrival=CFrame.lookAt(Vector3.new(0,18.5,-342),Vector3.new(0,18.5,-330)),Bounds={Min=Vector3.new(-1500,-100,-1500),Max=Vector3.new(1500,2500,1500)},Zones=zones,Status="READY",Reservations=0}
 	local plots=workspace:WaitForChild("WaitingRoomPlots")
 	for _,plot in plots:GetChildren() do local spawn=plot:FindFirstChild("PlotSpawn");if spawn and spawn:IsA("BasePart") then
 		local p=spawn.Position;table.insert(zones,{ZoneId=plot.Name,FloorId=0,RoomGeneration=1,LocalPolygonXZ={Vector2.new(p.X-60,p.Z-60),Vector2.new(p.X+60,p.Z-60),Vector2.new(p.X+60,p.Z+60),Vector2.new(p.X-60,p.Z+60)},MinY=p.Y-15,MaxY=p.Y+60,CombatSafe=true,CanBankCargo=true,CanRecoverWipe=true})
