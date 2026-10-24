@@ -177,9 +177,9 @@ RunService.RenderStepped:Connect(function(dt: number)
 		activeUUIDMap[uuid] = true
 		local hero = profile.Heroes and profile.Heroes[uuid]
 		if hero and not ActivePatrols[uuid] then
-			local laneOffset = (slotIndex - 3) * 28
-			local p1 = origin:PointToWorldSpace(Vector3.new(laneOffset - 12, 1.2, 85))
-			local p2 = origin:PointToWorldSpace(Vector3.new(laneOffset + 12, 1.2, 85))
+			local laneOffset = (slotIndex - 3) * 36
+			local p1 = origin:PointToWorldSpace(Vector3.new(laneOffset - 18, 1.2, 160))
+			local p2 = origin:PointToWorldSpace(Vector3.new(laneOffset + 18, 1.2, 160))
 			ActivePatrols[uuid] = createAdventurerRig(hero, slotIndex, p1, p2)
 		end
 	end

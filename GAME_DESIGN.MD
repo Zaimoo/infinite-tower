@@ -234,7 +234,8 @@ The island is divided into two distinct, interconnected sectors:
                        |                                       |
                        | [Infirmary & Beds]   [Summoning Altar]|
                        |                      (Hero & Artifact)|
-                       |          [War Banner Pedestal]        |
+                       |   [Plaza Fountain]                    |
+                       | [War Banner Standard]                 |
                        |                                       |
                        | [The Pit / Cauldron] [Blacksmith Forge|
                        | (Synthesis & Promo)   & Anvil Hearth] |
@@ -264,7 +265,7 @@ The island is divided into two distinct, interconnected sectors:
 
 2. **Sector B: Grand Inner Fortress Courtyard (Core Buildings & Interior Facilities):**
    - **Summoning Altar (East Courtyard):** Towering obsidian obelisk featuring dual runic summoning circles for the **Hero Banner** (`100 Gems` single / `900 Gems` 10x) and **Artifact Banner** (`160 Gems` single / `1,600 Gems` 10x).
-   - **War Banner Pedestal (Center Courtyard):** Gothic stone pedestal with heraldic banner and `[F]` proximity prompt opening the **Squad Deploy UI** (`SquadController.luau`).
+   - **Plaza Fountain & War Banner (Center Courtyard):** Central triple-tiered Gothic stone fountain in the courtyard center with water basins and blue glow, flanked to the left by the heraldic War Banner standard on a carved stone pedestal with `[F]` proximity prompt opening the **Squad Deploy UI** (`SquadController.luau`).
    - **The Pit Sanctuary (West Courtyard):**
      - **Synthesis Chamber:** Fiery cauldron station with `[F]` prompt opening the **Synthesis UI** (`SynthesisController.luau`) for feeding EXP fodder.
      - **Promotion Altar:** Consecrated marble star dais with `[F]` prompt opening the **Promotion UI** (`PromotionController.luau`) for star ascensions ($1★ \to 5★$).

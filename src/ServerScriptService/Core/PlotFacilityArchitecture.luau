@@ -382,6 +382,252 @@ function Architecture.Build(model: Model, frame: CFrame, id: string, accent: Col
 		return
 	end
 
+	if id == "Blacksmith" or id == "Forge" then
+		local darkIron = Color3.fromRGB(48, 52, 60)
+		local steel = Color3.fromRGB(160, 165, 175)
+		local coalOrange = Color3.fromRGB(255, 75, 15)
+		local darkTimber = Color3.fromRGB(65, 45, 30)
+
+		-- 1. Heavy Stone & Granite Foundation Platform with stepped approach
+		part("ForgeFoundation", V(26, .7, 22), V(0, .35, 0), shadow, Enum.Material.Slate)
+		part("ForgeInnerHearthDeck", V(24.5, .4, 20.5), V(0, .8, 0), Color3.fromRGB(70, 72, 78), Enum.Material.Basalt)
+		for i = 1, 3 do
+			part("ForgeStep_" .. i, V(14 + i * 2, .35, 1.4), V(0, .9 - (i - 1) * .35, 11.2 + (i - 1) * 1.2), shadow, Enum.Material.Slate)
+		end
+
+		-- 2. Heavy Stone Smelting Furnace & Gothic Chimney Stack
+		local furnaceBackZ = -6.5
+		part("FurnaceMainBody", V(9, 7.5, 6), V(0, 4.5, furnaceBackZ), Color3.fromRGB(52, 54, 60), Enum.Material.Cobblestone)
+		part("FurnaceLintel", V(9.8, .8, 6.4), V(0, 8.4, furnaceBackZ), bronze, Enum.Material.Granite)
+		part("ChimneyBase", V(5, 5, 4.5), V(0, 11, furnaceBackZ), Color3.fromRGB(45, 47, 52), Enum.Material.Cobblestone)
+		part("ChimneyStack", V(3.8, 12, 3.4), V(0, 19, furnaceBackZ), Color3.fromRGB(38, 40, 45), Enum.Material.Basalt)
+		part("ChimneyCap", V(4.6, .6, 4.2), V(0, 25.2, furnaceBackZ), bronze, Enum.Material.Granite)
+
+		-- Arch hearth opening with burning coke coals
+		part("HearthArchLeft", V(1.8, 4.2, 1.8), V(-2.8, 3.2, furnaceBackZ + 2.2), shadow, Enum.Material.Slate)
+		part("HearthArchRight", V(1.8, 4.2, 1.8), V(2.8, 3.2, furnaceBackZ + 2.2), shadow, Enum.Material.Slate)
+		part("HearthArchTop", V(6.4, 1.4, 1.8), V(0, 5.5, furnaceBackZ + 2.2), shadow, Enum.Material.Slate)
+
+		local coals = part("BlazingCoals", V(4.8, 1.4, 3.2), V(0, 1.6, furnaceBackZ + 1.2), coalOrange, Enum.Material.Neon)
+		coals.CanCollide = false
+		local forgeLight = Instance.new("PointLight")
+		forgeLight.Color = Color3.fromRGB(255, 140, 30)
+		forgeLight.Brightness = 3.5
+		forgeLight.Range = 26
+		forgeLight.Shadows = false
+		forgeLight.Parent = coals
+
+		local smoke = Instance.new("Smoke")
+		smoke.Color = Color3.fromRGB(60, 55, 55)
+		smoke.Size = 1.2
+		smoke.RiseVelocity = 12
+		smoke.Opacity = 0.4
+		smoke.Parent = part("ChimneySmokeAnchor", V(.5, .5, .5), V(0, 25.5, furnaceBackZ), shadow, Enum.Material.Metal)
+
+		-- 3. Massive Heavy Iron Anvil on Petrified Ironwood Block
+		cylinder("AnvilStump", 2.2, 2.4, V(0, 2.0, 1.0), darkTimber, Enum.Material.Wood)
+		cylinder("StumpIronBand", 2.3, .3, V(0, 2.0, 1.0), darkIron, Enum.Material.Metal)
+		part("AnvilBase", V(2.6, .8, 4.2), V(0, 3.5, 1.0), darkIron, Enum.Material.Metal)
+		part("AnvilWaist", V(1.6, 1.2, 2.6), V(0, 4.3, 1.0), darkIron, Enum.Material.Metal)
+		part("AnvilFace", V(2.4, .9, 4.8), V(0, 5.2, 1.0), steel, Enum.Material.Metal)
+		part("AnvilHorn", V(1.4, .8, 2.0), V(0, 5.2, 3.8), steel, Enum.Material.Metal)
+
+		-- Smithing Hammer on Anvil
+		local hammer = part("SmithingHammer", V(.5, .6, 1.6), V(-.4, 5.8, 1.2), steel, Enum.Material.Metal)
+		hammer.CFrame *= CFrame.Angles(0, math.rad(30), 0)
+		hammer.CanCollide = false
+
+		-- 4. Dual Quenching Troughs (Water & Oil)
+		part("WaterTroughTub", V(3.5, 2.4, 7), V(-8.5, 2.0, 0), shadow, Enum.Material.Slate)
+		local water = part("QuenchingWater", V(2.7, .2, 6.2), V(-8.5, 2.9, 0), Color3.fromRGB(65, 160, 215), Enum.Material.Glass)
+		water.Transparency = 0.35
+		water.CanCollide = false
+
+		part("OilTroughTub", V(3.5, 2.4, 7), V(8.5, 2.0, 0), shadow, Enum.Material.Slate)
+		local oil = part("TemperingOil", V(2.7, .2, 6.2), V(8.5, 2.9, 0), Color3.fromRGB(45, 35, 30), Enum.Material.SmoothPlastic)
+		oil.CanCollide = false
+
+		-- 5. Gothic Timber Canopy with Pitch Slate Eaves
+		for _, x in {-10.5, 10.5} do
+			for _, z in {-8.5, 8.5} do
+				cylinder("ForgePillar", .65, 12, V(x, 6.8, z), darkTimber, Enum.Material.Wood)
+			end
+		end
+		part("CanopyBeamLeft", V(1.2, 1.0, 18), V(-10.5, 12.8, 0), darkTimber, Enum.Material.Wood)
+		part("CanopyBeamRight", V(1.2, 1.0, 18), V(10.5, 12.8, 0), darkTimber, Enum.Material.Wood)
+		part("CanopyBeamFront", V(22, 1.0, 1.2), V(0, 12.8, 8.5), darkTimber, Enum.Material.Wood)
+		part("CanopyBeamRear", V(22, 1.0, 1.2), V(0, 12.8, -8.5), darkTimber, Enum.Material.Wood)
+
+		for _, side in {-1, 1} do
+			local pitch = math.rad(-side * 18)
+			block("SlateCanopyEave", V(13.5, .6, 20), CFrame.new(side * 6.2, 14.6, 0) * CFrame.Angles(0, 0, pitch), Color3.fromRGB(40, 42, 48), Enum.Material.Slate)
+		end
+		part("RidgeCap", V(1.2, .6, 20.4), V(0, 16.8, 0), bronze, Enum.Material.Metal)
+
+		-- 6. Hanging Lanterns & Weapon Display Racks
+		for _, x in {-7, 7} do
+			part("ForgeLanternArm", V(.18, .6, 1.2), V(x, 11.8, 8.6), bronze, Enum.Material.Metal)
+			local lamp = part("ForgeLantern", V(.7, 1.2, .7), V(x, 11.0, 9.1), Color3.fromRGB(255, 200, 120), Enum.Material.Neon)
+			lamp.CanCollide = false
+			local light = Instance.new("PointLight")
+			light.Color, light.Range, light.Brightness, light.Parent = lamp.Color, 14, 1.0, lamp
+		end
+
+		-- Weapon Racks along side walls
+		part("WeaponRackWood", V(1.2, 6.5, 5), V(-8.5, 4.5, -4), darkTimber, Enum.Material.Wood)
+		local bladeGlow = part("WeaponBladeGlow", V(.2, 4.5, .6), V(-7.8, 4.8, -4), Color3.fromRGB(120, 200, 255), Enum.Material.Neon)
+		bladeGlow.CanCollide = false
+
+		-- 7. Crafting Workbench & Metal Ingots
+		part("SmithWorkbench", V(5.5, 2.8, 2.2), V(5.5, 2.2, -4), darkTimber, Enum.Material.Wood)
+		part("BenchTop", V(5.8, .3, 2.5), V(5.5, 3.65, -4), pale, Enum.Material.Marble)
+		for i = -1, 1 do
+			local ingot = part("GoldIngot", V(.6, .3, 1.2), V(5.5 + i * .9, 3.9, -4), Color3.fromRGB(235, 185, 65), Enum.Material.Metal)
+			ingot.CanCollide = false
+		end
+
+		local title = part("ForgeSign", V(15, 1.9, .25), V(0, 14.2, 9.4), shadow)
+		sign(title, "THE BLACKSMITH", "FORGE OF ASCENSION")
+		return
+	end
+
+	if id == "ThePit" or id == "Pit" then
+		local stoneBasalt = Color3.fromRGB(48, 46, 52)
+		local marbleWhite = Color3.fromRGB(225, 222, 215)
+		local darkTimber = Color3.fromRGB(65, 45, 30)
+		local essencePurple = Color3.fromRGB(185, 80, 255)
+		local promoGold = Color3.fromRGB(255, 205, 85)
+
+		-- 1. Heavy Stone & Granite Foundation Platform (matching Blacksmith footprint: 26 x 22 studs)
+		part("PitFoundation", V(26, .7, 22), V(0, .35, 0), shadow, Enum.Material.Slate)
+		part("PitInnerRitualDeck", V(24.5, .4, 20.5), V(0, .8, 0), Color3.fromRGB(58, 55, 65), Enum.Material.Basalt)
+		for i = 1, 3 do
+			part("PitStep_" .. i, V(14 + i * 2, .35, 1.4), V(0, .9 - (i - 1) * .35, 11.2 + (i - 1) * 1.2), shadow, Enum.Material.Slate)
+		end
+
+		-- 2. Rear Gothic Sanctuary Vault Wall with Twin Arches
+		local rearWallZ = -7.5
+		part("PitRearWall", V(24, 13, 3), V(0, 7.5, rearWallZ), stoneBasalt, Enum.Material.Cobblestone)
+		part("PitRearCornice", V(25.5, .8, 3.6), V(0, 14.4, rearWallZ), bronze, Enum.Material.Granite)
+
+		-- Twin Arched Niches on the back wall
+		arch("ArchNiche_Left", 4.2, 8.5, rearWallZ + 1.2, .8, bronze)
+		arch("ArchNiche_Right", 4.2, 8.5, rearWallZ + 1.2, .8, bronze)
+
+		-- 3. Gothic Stone Canopy with Slate Shingles
+		for _, x in {-10.5, 10.5} do
+			for _, z in {-8.5, 8.5} do
+				cylinder("PitPillar", .65, 12, V(x, 6.8, z), stoneBasalt, Enum.Material.Cobblestone)
+			end
+		end
+		part("PitCanopyBeamLeft", V(1.2, 1.0, 18), V(-10.5, 12.8, 0), shadow, Enum.Material.Slate)
+		part("PitCanopyBeamRight", V(1.2, 1.0, 18), V(10.5, 12.8, 0), shadow, Enum.Material.Slate)
+		part("PitCanopyBeamFront", V(22, 1.0, 1.2), V(0, 12.8, 8.5), shadow, Enum.Material.Slate)
+		part("PitCanopyBeamRear", V(22, 1.0, 1.2), V(0, 12.8, -8.5), shadow, Enum.Material.Slate)
+
+		for _, side in {-1, 1} do
+			local pitch = math.rad(-side * 18)
+			block("PitSlateCanopyEave", V(13.5, .6, 20), CFrame.new(side * 6.2, 14.6, 0) * CFrame.Angles(0, 0, pitch), Color3.fromRGB(40, 42, 48), Enum.Material.Slate)
+		end
+		part("PitRidgeCap", V(1.2, .6, 20.4), V(0, 16.8, 0), bronze, Enum.Material.Metal)
+
+		-- 4. Left Wing: The Synthesis Cauldron (The Essence Basin)
+		local synthX = -6.5
+		cylinder("SynthesisDais", 4.8, .8, V(synthX, 1.2, 0), stoneBasalt, Enum.Material.Cobblestone)
+		cylinder("SynthesisDaisRim", 5.0, .25, V(synthX, 1.6, 0), bronze, Enum.Material.Metal)
+		cylinder("CauldronBase", 2.4, 2.2, V(synthX, 2.7, 0), Color3.fromRGB(30, 28, 36), Enum.Material.Metal)
+		cylinder("CauldronRim", 2.7, .4, V(synthX, 3.8, 0), bronze, Enum.Material.Metal)
+		local essence = part("EssencePool", V(4.6, .3, 4.6), V(synthX, 3.85, 0), essencePurple, Enum.Material.Neon)
+		essence.CanCollide = false
+		essence.Shape = Enum.PartType.Ball
+
+		local synthLight = Instance.new("PointLight")
+		synthLight.Color = essencePurple
+		synthLight.Brightness = 3.2
+		synthLight.Range = 22
+		synthLight.Shadows = false
+		synthLight.Parent = essence
+
+		local synthParticles = Instance.new("ParticleEmitter")
+		synthParticles.Name = "EssenceSparks"
+		synthParticles.Rate = 14
+		synthParticles.Lifetime = NumberRange.new(0.8, 1.6)
+		synthParticles.Speed = NumberRange.new(2, 6)
+		synthParticles.SpreadAngle = Vector2.new(30, 30)
+		synthParticles.Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 120, 255)),
+			ColorSequenceKeypoint.new(0.6, Color3.fromRGB(185, 80, 255)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(75, 20, 120)),
+		})
+		synthParticles.Size = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 0.25),
+			NumberSequenceKeypoint.new(1, 0.05),
+		})
+		synthParticles.Acceleration = Vector3.new(0, 4, 0)
+		synthParticles.Parent = essence
+
+		-- Synthesis Station Signboard
+		local synthLabel = part("SynthesisLabel", V(6.5, 1.2, .2), V(synthX, 6.2, rearWallZ + 1.6), shadow)
+		sign(synthLabel, "SYNTHESIS", "ESSENCE CAULDRON")
+
+		-- 5. Right Wing: The Promotion Altar (Hall of Ascension)
+		local promoX = 6.5
+		cylinder("PromotionDais", 4.8, .8, V(promoX, 1.2, 0), marbleWhite, Enum.Material.Marble)
+		cylinder("PromotionDaisRim", 5.0, .25, V(promoX, 1.6, 0), bronze, Enum.Material.Metal)
+		for i = 1, 3 do
+			cylinder("PromotionTier_" .. i, 3.6 - i * .65, .5, V(promoX, 1.85 + (i - 1) * .5, 0), pale, Enum.Material.Marble)
+		end
+
+		-- Floating Golden Ascension Crystal
+		local crystal = part("PromotionCrystal", V(1.4, 3.0, 1.4), V(promoX, 5.0, 0), promoGold, Enum.Material.Neon)
+		crystal.CFrame *= CFrame.Angles(0, math.rad(35), math.rad(25))
+		crystal.CanCollide = false
+
+		local promoLight = Instance.new("PointLight")
+		promoLight.Color = promoGold
+		promoLight.Brightness = 3.2
+		promoLight.Range = 22
+		promoLight.Shadows = false
+		promoLight.Parent = crystal
+
+		local promoParticles = Instance.new("ParticleEmitter")
+		promoParticles.Name = "AscensionRays"
+		promoParticles.Rate = 12
+		promoParticles.Lifetime = NumberRange.new(1.0, 2.0)
+		promoParticles.Speed = NumberRange.new(1, 4)
+		promoParticles.SpreadAngle = Vector2.new(45, 45)
+		promoParticles.Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 245, 180)),
+			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 205, 85)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(180, 120, 20)),
+		})
+		promoParticles.Size = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 0.22),
+			NumberSequenceKeypoint.new(1, 0.04),
+		})
+		promoParticles.Acceleration = Vector3.new(0, 3, 0)
+		promoParticles.Parent = crystal
+
+		-- Promotion Station Signboard
+		local promoLabel = part("PromotionLabel", V(6.5, 1.2, .2), V(promoX, 6.2, rearWallZ + 1.6), shadow)
+		sign(promoLabel, "PROMOTION", "STAR ASCENSION")
+
+		-- 6. Hanging Sanctuary Lanterns
+		for _, x in {-7, 7} do
+			part("PitLanternArm", V(.18, .6, 1.2), V(x, 11.8, 8.6), bronze, Enum.Material.Metal)
+			local lampCol = x < 0 and essencePurple or promoGold
+			local lamp = part("PitLantern", V(.7, 1.2, .7), V(x, 11.0, 9.1), lampCol, Enum.Material.Neon)
+			lamp.CanCollide = false
+			local light = Instance.new("PointLight")
+			light.Color, light.Range, light.Brightness, light.Parent = lampCol, 14, 1.0, lamp
+		end
+
+		-- 7. Main Sanctuary Facade Sign
+		local title = part("PitMainSign", V(15, 1.9, .25), V(0, 14.2, 9.4), shadow)
+		sign(title, "THE PIT", "SYNTHESIS & PROMOTION")
+		return
+	end
+
 	if id == "GuardPost" then
 		local logColor = Color3.fromRGB(92, 68, 44)
 		local timberColor = Color3.fromRGB(120, 90, 58)

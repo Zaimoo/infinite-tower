@@ -4,11 +4,24 @@ import http.server
 import socketserver
 import urllib.parse
 import threading
+import subprocess
 
 PORT = 38291
 SRC_DIR = os.path.abspath("src")
 
-def scan_files():
+def get_branch_files():
+    # Get modified/added files in git relative to origin/main
+    try:
+        res = subprocess.run(["git", "diff", "--name-only", "origin/main"], capture_output=True, text=True, check=True)
+        files = [line.strip().replace(chr(92), "/") for line in res.stdout.splitlines() if line.strip().startswith("src/") and line.strip().endswith(".luau")]
+        if files:
+            return set(files)
+    except Exception as e:
+        print("Git diff error:", e)
+    return None
+
+def scan_files(only_branch=True):
+    branch_set = get_branch_files() if only_branch else None
     file_list = []
     idx = 0
     for dirpath, _, filenames in os.walk(SRC_DIR):
@@ -16,8 +29,12 @@ def scan_files():
             if not f.endswith(".luau"):
                 continue
             full_path = os.path.join(dirpath, f)
-            rel = os.path.relpath(full_path, SRC_DIR).replace(chr(92), "/")
-            parts = rel.split("/")
+            rel = "src/" + os.path.relpath(full_path, SRC_DIR).replace(chr(92), "/")
+            
+            if branch_set is not None and rel not in branch_set:
+                continue
+
+            parts = rel[4:].split("/")
             base = parts[0]
             
             if base == "ReplicatedStorage":
@@ -47,7 +64,7 @@ def scan_files():
                 
             file_list.append({
                 "id": idx,
-                "localPath": "src/" + rel,
+                "localPath": rel,
                 "fullPath": full_path,
                 "service": service,
                 "folders": folders,
@@ -57,12 +74,11 @@ def scan_files():
             idx += 1
     return file_list
 
-FILES = scan_files()
-print(f"Loaded {len(FILES)} files to sync.")
+FILES = scan_files(only_branch=True)
+print(f"Loaded {len(FILES)} modified files to sync.")
 
 class SyncHandler(http.server.BaseHTTPRequestHandler):
     def log_message(self, format, *args):
-        # Silence routine request logging
         pass
 
     def do_GET(self):

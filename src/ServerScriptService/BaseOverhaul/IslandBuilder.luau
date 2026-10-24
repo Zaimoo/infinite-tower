@@ -9,18 +9,19 @@ local IslandBuilder = {}
 -- CONFIGURATION TABLE
 --============================================================================
 IslandBuilder.Config = {
-	-- Top Buildable Surface Dimensions
-	TopWidth = 148, -- X dimension (studs)
-	TopLength = 136, -- Z dimension (studs)
+	-- Top Buildable Surface Dimensions (GDD Section 3.2 & 3.4: 260 x 320 studs)
+	TopWidth = 260, -- X dimension (studs)
+	TopLength = 320, -- Z dimension (studs)
 	TopThickness = 6, -- Thickness of the top stone slab (studs)
-	 chamferSize = 18, -- Corner bevel size to give a fortress silhouette
+	CenterOffsetZ = 70, -- Midpoint between Citadel [-90, +90] and Outskirts [+90, +230]
+	chamferSize = 22, -- Corner bevel size to give a fortress silhouette
 
 	-- Underside Rock Formation
-	UndersideDepth = 115, -- Total depth of the tapered rocky mass below the top slab
-	UndersideLayers = 5, -- Number of stepped rock tiers tapering inward
-	OuterSpireCount = 14, -- Jagged rock spires around the upper/mid underside perimeter
-	InnerStalactiteCount = 9, -- Deep jagged rock points tapering toward the bottom tip
-	RandomSeed = 4042026, -- Fixed seed so all 5 cloned islands have identical geometry
+	UndersideDepth = 135, -- Total depth of the tapered rocky mass below the top slab
+	UndersideLayers = 6, -- Number of stepped rock tiers tapering inward
+	OuterSpireCount = 20, -- Jagged rock spires around the upper/mid underside perimeter
+	InnerStalactiteCount = 12, -- Deep jagged rock points tapering toward the bottom tip
+	RandomSeed = 4042026, -- Fixed seed so all 6 cloned islands have identical geometry
 
 	-- Materials & Colors
 	TopMaterial = Enum.Material.Cobblestone,
@@ -109,11 +110,13 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 	local islandModel = Instance.new("Model")
 	islandModel.Name = "FloatingFortressIsland"
 
+	local centerZ = cfg.CenterOffsetZ or 70
+
 	-- 1. Primary Flat Buildable Top Surface (Top surface sits flush at Y = 0)
 	local topSlab = makePart({
 		Name = "IslandTopSurface",
 		Size = Vector3.new(cfg.TopWidth, cfg.TopThickness, cfg.TopLength),
-		CFrame = CFrame.new(0, -cfg.TopThickness * 0.5, 0),
+		CFrame = CFrame.new(0, -cfg.TopThickness * 0.5, centerZ),
 		Material = cfg.TopMaterial,
 		Color = cfg.TopColor,
 		Decorative = false,
@@ -128,10 +131,10 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 	local halfL = cfg.TopLength * 0.5
 
 	local rimDefs = {
-		{ Name = "RimNorth", Size = Vector3.new(cfg.TopWidth + 2, rimHeight, rimThickness), Pos = Vector3.new(0, -rimHeight * 0.5 + 0.2, -halfL) },
-		{ Name = "RimSouth", Size = Vector3.new(cfg.TopWidth + 2, rimHeight, rimThickness), Pos = Vector3.new(0, -rimHeight * 0.5 + 0.2, halfL) },
-		{ Name = "RimEast", Size = Vector3.new(rimThickness, rimHeight, cfg.TopLength + 2), Pos = Vector3.new(halfW, -rimHeight * 0.5 + 0.2, 0) },
-		{ Name = "RimWest", Size = Vector3.new(rimThickness, rimHeight, cfg.TopLength + 2), Pos = Vector3.new(-halfW, -rimHeight * 0.5 + 0.2, 0) },
+		{ Name = "RimNorth", Size = Vector3.new(cfg.TopWidth + 2, rimHeight, rimThickness), Pos = Vector3.new(0, -rimHeight * 0.5 + 0.2, centerZ - halfL) },
+		{ Name = "RimSouth", Size = Vector3.new(cfg.TopWidth + 2, rimHeight, rimThickness), Pos = Vector3.new(0, -rimHeight * 0.5 + 0.2, centerZ + halfL) },
+		{ Name = "RimEast", Size = Vector3.new(rimThickness, rimHeight, cfg.TopLength + 2), Pos = Vector3.new(halfW, -rimHeight * 0.5 + 0.2, centerZ) },
+		{ Name = "RimWest", Size = Vector3.new(rimThickness, rimHeight, cfg.TopLength + 2), Pos = Vector3.new(-halfW, -rimHeight * 0.5 + 0.2, centerZ) },
 	}
 	for _, r in ipairs(rimDefs) do
 		makePart({
@@ -164,7 +167,7 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 		makePart({
 			Name = string.format("RockTier_%d", layer),
 			Size = Vector3.new(layerW, layerHeight + 2, layerL),
-			CFrame = CFrame.new(0, currentY - layerHeight * 0.5, 0) * CFrame.Angles(0, yawJitter, 0),
+			CFrame = CFrame.new(0, currentY - layerHeight * 0.5, centerZ) * CFrame.Angles(0, yawJitter, 0),
 			Material = cfg.RockMaterial,
 			Color = col,
 			Decorative = true,
@@ -179,7 +182,7 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 		local rx = (cfg.TopWidth * 0.44) * rng:NextNumber(0.86, 1.02)
 		local rz = (cfg.TopLength * 0.44) * rng:NextNumber(0.86, 1.02)
 		local px = math.cos(angle) * rx
-		local pz = math.sin(angle) * rz
+		local pz = centerZ + math.sin(angle) * rz
 		local spireH = rng:NextNumber(34, 58)
 		local spireW = rng:NextNumber(18, 28)
 		local spireD = rng:NextNumber(16, 24)
@@ -202,9 +205,9 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 	-- 4. Deep Inner Jagged Points & Central Root Spike
 	for i = 1, cfg.InnerStalactiteCount do
 		local angle = ((i - 1) / cfg.InnerStalactiteCount) * (math.pi * 2) + 0.25
-		local radius = rng:NextNumber(16, 36)
+		local radius = rng:NextNumber(20, 50)
 		local px = math.cos(angle) * radius
-		local pz = math.sin(angle) * radius
+		local pz = centerZ + math.sin(angle) * radius
 		local pointH = rng:NextNumber(42, 68)
 		local pointW = rng:NextNumber(12, 20)
 
@@ -223,8 +226,8 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 	-- Central Apex Point at the very bottom
 	makeWedge({
 		Name = "CentralApexSpike",
-		Size = Vector3.new(22, 54, 22),
-		CFrame = CFrame.new(0, -cfg.UndersideDepth + 12, 0) * CFrame.Angles(math.rad(180), math.rad(45), 0),
+		Size = Vector3.new(26, 60, 26),
+		CFrame = CFrame.new(0, -cfg.UndersideDepth + 12, centerZ) * CFrame.Angles(math.rad(180), math.rad(45), 0),
 		Material = cfg.RockMaterial,
 		Color = cfg.RockColorDeep,
 		Decorative = true,
@@ -236,7 +239,7 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 		local cloudAnchor = makePart({
 			Name = "UndersideCloudEmitter",
 			Size = Vector3.new(4, 1, 4),
-			CFrame = CFrame.new(0, -cfg.TopThickness - 22, 0),
+			CFrame = CFrame.new(0, -cfg.TopThickness - 22, centerZ),
 			Transparency = 1,
 			Decorative = true,
 			Parent = undersideFolder,
