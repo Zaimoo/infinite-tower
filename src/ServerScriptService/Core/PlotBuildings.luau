@@ -1,11 +1,11 @@
 --!strict
 -- ServerScriptService/Core/PlotBuildings.luau
--- Waiting Room facilities & Outskirts Guard Post with F-key/E-key interactions at each entrance.
+-- Waiting Room facilities & Outskirts Guard Post with F-key interactions at each entrance.
 -- Implements GDD Sections 2.4, 3.2, 3.4 & 4.3 (Citadel Courtyard 260x180 + Southern Outskirts Grounds 260x140).
 
 local Buildings = {}
 local Architecture = require(script.Parent:WaitForChild("PlotFacilityArchitecture"))
-local VERSION = 12
+local VERSION = 13
 
 local definitions = {
 	-- North Courtyard: Recovery & Summoning (Symmetric Pair at Z = -35)
@@ -204,7 +204,7 @@ function Buildings.Build(plot: Instance)
 			prompt.MaxActivationDistance = 14
 			prompt.HoldDuration = 0
 			prompt.RequiresLineOfSight = false
-			prompt.KeyboardKeyCode, prompt.GamepadKeyCode = Enum.KeyCode.E, Enum.KeyCode.ButtonX
+			prompt.KeyboardKeyCode, prompt.GamepadKeyCode = Enum.KeyCode.F, Enum.KeyCode.ButtonX
 			prompt:SetAttribute("FacilityHUD", "Forge")
 		else
 			prompt.ObjectText = def.Title
