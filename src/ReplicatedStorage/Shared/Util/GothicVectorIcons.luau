@@ -1201,6 +1201,81 @@ function GothicVectorIcons.CreateRightArrow(opts: IconOptions?): Frame
 end
 
 --------------------------------------------------------------------------------
+-- 10. PADLOCK (Vector Gothic Lock for Slots & Locked Features)
+--------------------------------------------------------------------------------
+function GothicVectorIcons.CreatePadlock(opts: IconOptions?): Frame
+	local o = opts or {}
+	local baseZ = o.ZIndex or 10
+	local accent = o.AccentColor or Color3.fromRGB(154, 142, 181)
+
+	local root = new("Frame", {
+		Name = "VectorPadlock",
+		BackgroundTransparency = 1,
+		Size = o.Size or UDim2.fromOffset(24, 24),
+		Position = o.Position or UDim2.fromScale(0.5, 0.5),
+		AnchorPoint = o.AnchorPoint or Vector2.new(0.5, 0.5),
+		ZIndex = baseZ,
+	}, o.Parent)
+
+	new("UIAspectRatioConstraint", { AspectRatio = 1, AspectType = Enum.AspectType.FitWithinMaxSize }, root)
+
+	-- Top Shackle (Arched U-bar)
+	local shackle = new("Frame", {
+		Name = "Shackle",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.fromScale(0.5, 0.1),
+		Size = UDim2.fromScale(0.48, 0.44),
+		BackgroundTransparency = 1,
+		ZIndex = baseZ + 1,
+	}, root)
+	new("UICorner", { CornerRadius = UDim.new(0.5, 0) }, shackle)
+	new("UIStroke", {
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+		Color = accent,
+		Thickness = 2.2,
+	}, shackle)
+
+	-- Lower Body Box (Rounded Rect)
+	local body = new("Frame", {
+		Name = "Body",
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.fromScale(0.5, 0.92),
+		Size = UDim2.fromScale(0.66, 0.52),
+		BackgroundColor3 = accent,
+		BorderSizePixel = 0,
+		ZIndex = baseZ + 2,
+	}, root)
+	new("UICorner", { CornerRadius = UDim.new(0, 3) }, body)
+
+	-- Keyhole Center Circle & Slit
+	local keyholeDot = new("Frame", {
+		Name = "KeyholeCircle",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.42),
+		Size = UDim2.fromScale(0.22, 0.28),
+		BackgroundColor3 = Color3.fromRGB(15, 12, 24),
+		BorderSizePixel = 0,
+		ZIndex = baseZ + 3,
+	}, body)
+	new("UICorner", { CornerRadius = UDim.new(1, 0) }, keyholeDot)
+
+	local keyholeSlit = new("Frame", {
+		Name = "KeyholeSlit",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.fromScale(0.5, 0.46),
+		Size = UDim2.fromScale(0.12, 0.32),
+		BackgroundColor3 = Color3.fromRGB(15, 12, 24),
+		BorderSizePixel = 0,
+		ZIndex = baseZ + 3,
+	}, body)
+	new("UICorner", { CornerRadius = UDim.new(0, 1) }, keyholeSlit)
+
+	return root
+end
+
+GothicVectorIcons.CreateLock = GothicVectorIcons.CreatePadlock
+
+--------------------------------------------------------------------------------
 -- GENERAL DISPATCHER
 --------------------------------------------------------------------------------
 function GothicVectorIcons.Create(name: string, opts: IconOptions?): Frame
@@ -1223,6 +1298,8 @@ function GothicVectorIcons.Create(name: string, opts: IconOptions?): Frame
 		return GothicVectorIcons.CreateAura(opts)
 	elseif n == "arrow" or n == "rightarrow" or n == "right_arrow" then
 		return GothicVectorIcons.CreateRightArrow(opts)
+	elseif n == "lock" or n == "padlock" then
+		return GothicVectorIcons.CreatePadlock(opts)
 	else
 		-- Fallback to gold or generic diamond
 		return GothicVectorIcons.CreateGold(opts)

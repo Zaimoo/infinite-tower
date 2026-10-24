@@ -16,6 +16,7 @@ local ArtifactCatalog = require(Shared:WaitForChild("Config"):WaitForChild("Arti
 local StatFormulas = require(Shared.Util.StatFormulas)
 local StatBalance = require(Shared.Config.StatBalance)
 local GothicBoxStyle = require(Shared.Util.GothicBoxStyle)
+local GothicVectorIcons = require(Shared.Util.GothicVectorIcons)
 local OrnateFrameButton = require(Shared.Util.OrnateFrameButton)
 
 local LocalPlayer = Players.LocalPlayer
@@ -27,23 +28,28 @@ local WIDTH, HEIGHT = 760, 530
 
 local C = {
 	Scrim = Color3.fromRGB(6, 5, 10),
-	Panel = Color3.fromRGB(15, 13, 22),
-	PanelInner = Color3.fromRGB(20, 17, 30),
-	CardBg = Color3.fromRGB(24, 21, 40),
-	SlotBg = Color3.fromRGB(18, 15, 26),
-	StatBoxBg = Color3.fromRGB(12, 10, 18),
-	Border = Color3.fromRGB(192, 132, 252),
-	BorderGlow = Color3.fromRGB(175, 115, 215),
-	BorderDim = Color3.fromRGB(58, 48, 75),
-	BorderCard = Color3.fromRGB(59, 45, 84),
-	Text = Color3.fromRGB(255, 255, 255),
-	TextMuted = Color3.fromRGB(155, 145, 175),
-	TextLavender = Color3.fromRGB(180, 175, 205),
-	GoldYellow = Color3.fromRGB(250, 204, 21),
-	Green = Color3.fromRGB(74, 222, 128),
-	Red = Color3.fromRGB(239, 68, 68),
-	Arrow = Color3.fromRGB(140, 130, 160),
-	Underline = Color3.fromRGB(225, 150, 245),
+	Panel = Color3.fromHex("#0D0912"),
+	PanelInner = Color3.fromHex("#1F162B"),
+	CardBg = Color3.fromHex("#140F1D"),
+	SlotBg = Color3.fromHex("#0B0811"),
+	StatBoxBg = Color3.fromHex("#120D1A"),
+	Border = Color3.fromHex("#C084FC"),
+	BorderGlow = Color3.fromRGB(222, 208, 255),
+	BorderDim = Color3.fromHex("#443A54"),
+	BorderCard = Color3.fromHex("#312740"),
+	Text = Color3.fromHex("#F6F4FF"),
+	TextMuted = Color3.fromHex("#8C7FA6"),
+	TextLavender = Color3.fromHex("#A396BA"),
+	GoldYellow = Color3.fromHex("#FACC15"),
+	GoldWarm = Color3.fromHex("#E4BA73"),
+	GoldDeep = Color3.fromHex("#D97706"),
+	Green = Color3.fromHex("#4ADE80"),
+	Red = Color3.fromHex("#E74C3C"),
+	Arrow = Color3.fromHex("#4ADE80"),
+	Underline = Color3.fromHex("#F6F4FF"),
+	CyanEquipped = Color3.fromHex("#38BDF8"),
+	CyanBg = Color3.fromHex("#0F293A"),
+	CyanBorder = Color3.fromHex("#1E4E68"),
 }
 
 local ICON_MAP: { [string]: string } = {
@@ -87,8 +93,10 @@ local function glow(parent: GuiObject, pad: number, color: Color3?, transparency
 	stroke(g, color or C.BorderGlow, 3, transparency or 0.8)
 end
 
-local function applyGothicStyle(container: GuiObject, style: "Window" | "Card" | "Button" | "Compact")
-	return GothicBoxStyle.Apply(container, { Style = style })
+local function applyGothicStyle(container: GuiObject, style: GothicBoxStyle.GothicStyle, opts: GothicBoxStyle.ApplyOptions?): GuiObject
+	local options = opts or {}
+	options.Style = style
+	return GothicBoxStyle.Apply(container, options)
 end
 
 local function cornerDiamonds(parent: GuiObject, size: number, color: Color3?)
@@ -117,8 +125,8 @@ end
 
 -- Formats artifact stat string e.g. "ATK +150 | Crit Rate +5%" matching mockup
 local function formatStatSummary(art: any): string
- local stats=ArtifactCatalog.GetStatBreakdown(art.TemplateId,art.Star or 1,art.Rarity or 1)
- return string.format("Power %.0f | Damage x%.2f | AtkSpd +%.1f%%",stats.Power,stats.DamageMultiplier,stats["Attack Speed"])
+	local stats = ArtifactCatalog.GetStatBreakdown(art.TemplateId, art.Star or 1, art.Rarity or 1)
+	return string.format("Power <b>%.0f</b> &nbsp;|&nbsp; Damage <b>x%.2f</b> &nbsp;|&nbsp; AtkSpd <b>+%.1f%%</b>", stats.Power, stats.DamageMultiplier, stats["Attack Speed"])
 end
 
 --============================================================================
@@ -482,78 +490,87 @@ function Forge:RenderAssignView()
 	for order, item in ipairs(artList) do
 		local uuid = item.UUID
 		local art = item.Art
+		local rarityInfo = ArtifactCatalog.GetRarityInfo(art.Rarity or 1)
+		local rarityColor = rarityInfo.Color
 		local equippedHero = art.EquippedHeroUUID and heroMap[art.EquippedHeroUUID]
 
 		local card = new("Frame", {
 			Name = "ArtCard_" .. uuid,
-			Size = UDim2.new(1, 0, 0, 80),
+			Size = UDim2.new(1, 0, 0, 84),
 			BackgroundColor3 = C.CardBg,
 			BorderSizePixel = 0,
 			LayoutOrder = order,
 			ZIndex = 53,
 		}, scroll)
-		applyGothicStyle(card, "Card")
+		applyGothicStyle(card, "Row", { AccentColor = rarityColor })
 
-		-- Left Weapon Icon Box
+		-- Left Weapon Icon Box (Slot Style)
 		local iconBox = new("Frame", {
 			Name = "IconBox",
 			AnchorPoint = Vector2.new(0, 0.5),
-			Position = UDim2.new(0, 14, 0.5, 0),
-			Size = UDim2.fromOffset(52, 52),
-			BackgroundColor3 = Color3.fromRGB(18, 15, 28),
+			Position = UDim2.new(0, 16, 0.5, 0),
+			Size = UDim2.fromOffset(56, 56),
 			BorderSizePixel = 0,
 			ZIndex = 54,
 		}, card)
-		applyGothicStyle(iconBox, "Compact")
+		applyGothicStyle(iconBox, "Slot", { State = "Filled", AccentColor = rarityColor })
 
 		local iconChar = ICON_MAP[art.Type] or "⚔️"
-		local iconLabel = label(iconBox, iconChar, 24, C.Text)
+		local iconLabel = label(iconBox, iconChar, 26, C.Text)
 		iconLabel.Position = UDim2.fromScale(0, 0)
 		iconLabel.Size = UDim2.fromScale(1, 1)
+		iconLabel.TextXAlignment = Enum.TextXAlignment.Center
 
 		-- Center Text Info
 		local infoContainer = new("Frame", {
 			Name = "Info",
 			BackgroundTransparency = 1,
 			AnchorPoint = Vector2.new(0, 0.5),
-			Position = UDim2.new(0, 80, 0.5, 0),
-			Size = UDim2.new(1, -260, 0, 48),
+			Position = UDim2.new(0, 88, 0.5, 0),
+			Size = UDim2.new(1, -266, 0, 50),
 			ZIndex = 54,
 		}, card)
 
+		local starCount = art.Star or 1
 		local displayName = art.DisplayName or "Artifact"
-		displayName = string.format("%s (%d stars)", displayName, art.Star or 1)
+		local titleColorHex = if starCount >= 3 or (art.Rarity or 1) >= 6 then "#FDE047" else "#F6F4FF"
 
-		local nameLabel = label(infoContainer, displayName, 16, C.Text, Enum.Font.GothamBold)
+		local titleRichText: string
+		if equippedHero then
+			titleRichText = string.format("<font color=\"%s\"><b>%s (%d stars)</b></font>  <font color=\"#38BDF8\">[Equipped: %s]</font>", titleColorHex, displayName, starCount, equippedHero.DisplayName)
+		else
+			titleRichText = string.format("<font color=\"%s\"><b>%s (%d stars)</b></font>", titleColorHex, displayName, starCount)
+		end
+
+		local nameLabel = label(infoContainer, titleRichText, 16, C.Text, Enum.Font.GothamBold)
 		nameLabel.Position = UDim2.fromOffset(0, 2)
 		nameLabel.Size = UDim2.new(1, 0, 0, 22)
 		nameLabel.TextXAlignment = Enum.TextXAlignment.Left
 
-		if equippedHero then
-			nameLabel.Text = string.format("%s  <font color=\"#60A5FA\" size=\"12\">[Equipped: %s]</font>", displayName, equippedHero.DisplayName)
-		end
-
 		local statSummary = formatStatSummary(art)
 		local statLabel = label(infoContainer, statSummary, 13, C.TextLavender, Enum.Font.GothamMedium)
 		statLabel.Position = UDim2.fromOffset(0, 26)
-		statLabel.Size = UDim2.new(1, 0, 0, 18)
+		statLabel.Size = UDim2.new(1, 0, 0, 20)
 		statLabel.TextXAlignment = Enum.TextXAlignment.Left
 
-		-- Right Button: ASSIGN ARTIFACT
+		-- Right Button: ASSIGN ARTIFACT / CHANGE HERO
 		local assignBtn = new("TextButton", {
 			Name = "AssignBtn",
 			AnchorPoint = Vector2.new(1, 0.5),
 			Position = UDim2.new(1, -16, 0.5, 0),
-			Size = UDim2.fromOffset(150, 42),
-			BackgroundColor3 = Color3.fromRGB(22, 18, 34),
+			Size = UDim2.fromOffset(164, 42),
 			BorderSizePixel = 0,
 			Text = equippedHero and "CHANGE HERO" or "ASSIGN ARTIFACT",
 			Font = Enum.Font.GothamBold,
 			TextSize = 13,
-			TextColor3 = C.Text,
 			ZIndex = 54,
 		}, card)
-		applyGothicStyle(assignBtn, "Button")
+
+		if equippedHero then
+			applyGothicStyle(assignBtn, "ButtonSecondary")
+		else
+			applyGothicStyle(assignBtn, "ButtonPrimary", { Variant = "Gold" })
+		end
 
 		assignBtn.Activated:Connect(function()
 			if self.Busy then return end
@@ -579,91 +596,292 @@ function Forge:BuildSummonView(root: Frame)
 	}, root)
 	self.SummonView = summonView
 
-	-- 1. Main Featured Banner Card (Image 1 - Ornate Gothic Card Container)
+	-- 1. Main Featured Banner Card (Section Panel with Notched Borders & Cosmic Rift Art)
 	local bannerCard = new("Frame", {
 		Name = "BannerCard",
 		Position = UDim2.fromOffset(0, 0),
-		Size = UDim2.new(1, 0, 0, 248),
-		BackgroundColor3 = Color3.fromRGB(18, 14, 28),
+		Size = UDim2.new(1, 0, 0, 246),
 		BorderSizePixel = 0,
 		ZIndex = 53,
 	}, summonView)
 	self.BannerCard = bannerCard
+	applyGothicStyle(bannerCard, "Panel")
 
-	applyGothicStyle(bannerCard, "Card")
-
-	-- Cosmic Gradient
-	local grad = new("UIGradient", {
-		Color = ColorSequence.new({
-			ColorSequenceKeypoint.new(0.0, Color3.fromRGB(28, 20, 42)),
-			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(18, 13, 28)),
-			ColorSequenceKeypoint.new(1.0, Color3.fromRGB(12, 9, 20)),
-		}),
-		Rotation = 35,
-	}, bannerCard)
-
-	-- Top Watermark
-	local watermark = label(bannerCard, "★ 5-STAR FEATURED HERO & ARTIFACTS", 11, Color3.fromRGB(225, 220, 235), Enum.Font.GothamBold)
-	watermark.TextTransparency = 0.4
-	watermark.Position = UDim2.fromOffset(26, 18)
-	watermark.Size = UDim2.new(1, -52, 0, 18)
+	-- Top Watermark Tag
+	local watermark = label(bannerCard, "★ 5-STAR FEATURED HERO & ARTIFACTS", 11, Color3.fromHex("#C4B8DB"), Enum.Font.GothamBold)
+	watermark.Position = UDim2.fromOffset(20, 16)
+	watermark.Size = UDim2.new(1, -40, 0, 18)
 	watermark.TextXAlignment = Enum.TextXAlignment.Left
 	watermark.ZIndex = 56
 
-	-- Big Glowing Banner Title
-	local bannerTitle = label(bannerCard, "ECHOES OF THE RIFT", 25, C.GoldYellow, Enum.Font.GothamBlack)
-	bannerTitle.AnchorPoint = Vector2.new(0, 0)
-	bannerTitle.Position = UDim2.new(0, 26, 0, 196)
-	bannerTitle.Size = UDim2.new(0, 340, 0, 30)
+	-- Procedural Cosmic Rift & Glowing Greatsword Focal Art Container
+	local riftContainer = new("Frame", {
+		Name = "RiftArtContainer",
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, -24, 0.5, 0),
+		Size = UDim2.fromOffset(210, 210),
+		BackgroundTransparency = 1,
+		ClipsDescendants = false,
+		ZIndex = 54,
+	}, bannerCard)
+
+	-- Arcane Vortex
+	local vortex = new("Frame", {
+		Name = "RiftVortex",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromOffset(190, 190),
+		BackgroundColor3 = Color3.fromHex("#C084FC"),
+		BackgroundTransparency = 0.55,
+		BorderSizePixel = 0,
+		ZIndex = 54,
+	}, riftContainer)
+	new("UICorner", { CornerRadius = UDim.new(1, 0) }, vortex)
+	new("UIGradient", {
+		Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0.0, Color3.fromHex("#7E22CE")),
+			ColorSequenceKeypoint.new(0.35, Color3.fromHex("#C084FC")),
+			ColorSequenceKeypoint.new(0.70, Color3.fromHex("#FAF5FF")),
+			ColorSequenceKeypoint.new(1.0, Color3.fromHex("#581C87")),
+		}),
+		Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0.0, 0.8),
+			NumberSequenceKeypoint.new(0.4, 0.15),
+			NumberSequenceKeypoint.new(1.0, 0.85),
+		}),
+		Rotation = 45,
+	}, vortex)
+
+	-- Deep Rift Core
+	local riftCore = new("Frame", {
+		Name = "RiftCore",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromOffset(94, 94),
+		BackgroundColor3 = Color3.fromHex("#07030C"),
+		BorderSizePixel = 0,
+		ZIndex = 55,
+	}, riftContainer)
+	new("UICorner", { CornerRadius = UDim.new(1, 0) }, riftCore)
+	new("UIStroke", {
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+		Color = Color3.fromHex("#C084FC"),
+		Thickness = 2.5,
+		Transparency = 0.2,
+	}, riftCore)
+
+	-- Glowing Greatsword Silhouette tilted at 28 degrees
+	local swordRoot = new("Frame", {
+		Name = "SwordSilhouette",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromOffset(36, 140),
+		BackgroundTransparency = 1,
+		Rotation = 28,
+		ZIndex = 56,
+	}, riftContainer)
+
+	local blade = new("Frame", {
+		Name = "Blade",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.fromScale(0.5, 0),
+		Size = UDim2.new(0, 16, 0, 92),
+		BackgroundColor3 = Color3.fromHex("#2E1065"),
+		BorderSizePixel = 0,
+		ZIndex = 56,
+	}, swordRoot)
+	new("UICorner", { CornerRadius = UDim.new(0, 3) }, blade)
+	new("UIStroke", {
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+		Color = Color3.fromHex("#F0ABFC"),
+		Thickness = 1.8,
+	}, blade)
+
+	local spine = new("Frame", {
+		Name = "Spine",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.fromScale(0.5, 0.05),
+		Size = UDim2.new(0, 2, 0, 82),
+		BackgroundColor3 = Color3.fromHex("#FAF5FF"),
+		BorderSizePixel = 0,
+		ZIndex = 57,
+	}, blade)
+	new("UICorner", { CornerRadius = UDim.new(1, 0) }, spine)
+
+	local guard = new("Frame", {
+		Name = "Crossguard",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 90),
+		Size = UDim2.fromOffset(40, 8),
+		BackgroundColor3 = Color3.fromHex("#581C87"),
+		BorderSizePixel = 0,
+		ZIndex = 57,
+	}, swordRoot)
+	new("UICorner", { CornerRadius = UDim.new(0, 2) }, guard)
+	new("UIStroke", {
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+		Color = Color3.fromHex("#E879F9"),
+		Thickness = 1.5,
+	}, guard)
+
+	local hilt = new("Frame", {
+		Name = "Hilt",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 98),
+		Size = UDim2.fromOffset(6, 22),
+		BackgroundColor3 = Color3.fromHex("#3B0764"),
+		BorderSizePixel = 0,
+		ZIndex = 57,
+	}, swordRoot)
+	new("UICorner", { CornerRadius = UDim.new(0, 1) }, hilt)
+
+	local pommel = new("Frame", {
+		Name = "Pommel",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 120),
+		Size = UDim2.fromOffset(10, 10),
+		BackgroundColor3 = Color3.fromHex("#F0ABFC"),
+		BorderSizePixel = 0,
+		Rotation = 45,
+		ZIndex = 58,
+	}, swordRoot)
+	new("UICorner", { CornerRadius = UDim.new(0, 2) }, pommel)
+
+	-- Banner Bottom Row (Title + Rate-Up Chips)
+	local bannerBottom = new("Frame", {
+		Name = "BannerBottomRow",
+		AnchorPoint = Vector2.new(0, 1),
+		Position = UDim2.new(0, 20, 1, -14),
+		Size = UDim2.new(1, -40, 0, 56),
+		BackgroundTransparency = 1,
+		ZIndex = 56,
+	}, bannerCard)
+
+	local bannerTitle = label(bannerBottom, "ECHOES OF THE RIFT", 26, C.GoldYellow, Enum.Font.GothamBlack)
+	bannerTitle.Position = UDim2.fromOffset(0, 0)
+	bannerTitle.Size = UDim2.new(0, 320, 0, 28)
 	bannerTitle.TextXAlignment = Enum.TextXAlignment.Left
-	bannerTitle.TextStrokeTransparency = 0.3
-	bannerTitle.TextStrokeColor3 = Color3.fromRGB(110, 75, 0)
 	bannerTitle.ZIndex = 56
 
-	-- Featured Rate-Up Pill Label
-	local rateUpLabel = label(bannerCard, "✧ Rate Up: Blade of the Rift (5★)  |  Aegis Core (5★)", 11, Color3.fromRGB(216, 140, 230), Enum.Font.GothamBold)
-	rateUpLabel.AnchorPoint = Vector2.new(1, 0)
-	rateUpLabel.Position = UDim2.new(1, -26, 0, 202)
-	rateUpLabel.Size = UDim2.new(0, 320, 0, 20)
-	rateUpLabel.TextXAlignment = Enum.TextXAlignment.Right
-	rateUpLabel.ZIndex = 56
+	-- Rate-Up Row with supported symbol and chips
+	local rateUpContainer = new("Frame", {
+		Name = "RateUpRow",
+		Position = UDim2.fromOffset(0, 30),
+		Size = UDim2.new(1, 0, 0, 24),
+		BackgroundTransparency = 1,
+		ZIndex = 56,
+	}, bannerBottom)
+
+	local rateUpLayout = new("UIListLayout", {
+		FillDirection = Enum.FillDirection.Horizontal,
+		VerticalAlignment = Enum.VerticalAlignment.Center,
+		SortOrder = Enum.SortOrder.LayoutOrder,
+		Padding = UDim.new(0, 8),
+	}, rateUpContainer)
+
+	local rateUpPrefix = label(rateUpContainer, "▣ Rate Up:", 12, Color3.fromHex("#C084FC"), Enum.Font.GothamBold)
+	rateUpPrefix.LayoutOrder = 1
+	rateUpPrefix.AutomaticSize = Enum.AutomaticSize.X
+	rateUpPrefix.Size = UDim2.new(0, 0, 1, 0)
+
+	local chip1 = new("Frame", {
+		Name = "ChipGold",
+		LayoutOrder = 2,
+		BackgroundColor3 = Color3.fromRGB(18, 13, 26),
+		BackgroundTransparency = 0.15,
+		BorderSizePixel = 0,
+		AutomaticSize = Enum.AutomaticSize.X,
+		Size = UDim2.new(0, 0, 0, 22),
+		ZIndex = 56,
+	}, rateUpContainer)
+	new("UICorner", { CornerRadius = UDim.new(1, 0) }, chip1)
+	new("UIStroke", { Color = Color3.fromHex("#EAB308"), Thickness = 1 }, chip1)
+	new("UIPadding", { PaddingLeft = UDim.new(0, 9), PaddingRight = UDim.new(0, 9) }, chip1)
+	local chip1Lbl = label(chip1, "Blade of the Rift (5★)", 11, Color3.fromHex("#FDE047"), Enum.Font.GothamBold)
+	chip1Lbl.Size = UDim2.fromScale(1, 1)
+
+	local chip2 = new("Frame", {
+		Name = "ChipViolet",
+		LayoutOrder = 3,
+		BackgroundColor3 = Color3.fromRGB(18, 13, 26),
+		BackgroundTransparency = 0.15,
+		BorderSizePixel = 0,
+		AutomaticSize = Enum.AutomaticSize.X,
+		Size = UDim2.new(0, 0, 0, 22),
+		ZIndex = 56,
+	}, rateUpContainer)
+	new("UICorner", { CornerRadius = UDim.new(1, 0) }, chip2)
+	new("UIStroke", { Color = Color3.fromHex("#A855F7"), Thickness = 1 }, chip2)
+	new("UIPadding", { PaddingLeft = UDim.new(0, 9), PaddingRight = UDim.new(0, 9) }, chip2)
+	local chip2Lbl = label(chip2, "Aegis Core (5★)", 11, Color3.fromHex("#E9D5FF"), Enum.Font.GothamBold)
+	chip2Lbl.Size = UDim2.fromScale(1, 1)
 
 	-- 2. Info Row (Guaranteed Pity & Timer)
 	local infoRow = new("Frame", {
 		Name = "InfoRow",
 		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(0, 258),
-		Size = UDim2.new(1, 0, 0, 20),
+		Position = UDim2.fromOffset(0, 252),
+		Size = UDim2.new(1, 0, 0, 18),
 		ZIndex = 53,
 	}, summonView)
 
-	local pityLabel = label(infoRow, "Guaranteed 5-Star in: <b>42</b> summons", 12, Color3.fromRGB(230, 225, 240), Enum.Font.GothamMedium)
-	pityLabel.Position = UDim2.fromOffset(4, 0)
+	local pityLabel = label(infoRow, "Guaranteed 5-Star in: <b>42</b> summons", 13, Color3.fromHex("#A396BA"), Enum.Font.GothamMedium)
+	pityLabel.Position = UDim2.fromOffset(2, 0)
 	pityLabel.Size = UDim2.new(0.5, 0, 1, 0)
 	pityLabel.TextXAlignment = Enum.TextXAlignment.Left
 	self.PityLabel = pityLabel
 
-	local timerLabel = label(infoRow, "Event Ends: 2d 14h", 12, Color3.fromRGB(180, 170, 200), Enum.Font.GothamMedium)
+	local timerLabel = label(infoRow, "Event Ends: <b>2d 14h</b>", 13, Color3.fromHex("#A396BA"), Enum.Font.GothamMedium)
 	timerLabel.AnchorPoint = Vector2.new(1, 0)
-	timerLabel.Position = UDim2.new(1, -4, 0, 0)
+	timerLabel.Position = UDim2.new(1, -2, 0, 0)
 	timerLabel.Size = UDim2.new(0.5, 0, 1, 0)
 	timerLabel.TextXAlignment = Enum.TextXAlignment.Right
 
-	-- 3. Summon Buttons Container (Image 1 - Ornate Gothic Button Containers)
+	-- Pity Bar Progress Track
+	local pityTrack = new("Frame", {
+		Name = "PityBarTrack",
+		Position = UDim2.fromOffset(0, 272),
+		Size = UDim2.new(0, 340, 0, 8),
+		BackgroundColor3 = Color3.fromHex("#120D1A"),
+		BorderSizePixel = 0,
+		ZIndex = 53,
+	}, summonView)
+	new("UICorner", { CornerRadius = UDim.new(1, 0) }, pityTrack)
+	new("UIStroke", { Color = Color3.fromHex("#6D5B87"), Thickness = 1 }, pityTrack)
+
+	local pityFill = new("Frame", {
+		Name = "PityBarFill",
+		Position = UDim2.fromOffset(0, 0),
+		Size = UDim2.new(0.66, 0, 1, 0),
+		BackgroundColor3 = Color3.fromHex("#C084FC"),
+		BorderSizePixel = 0,
+		ZIndex = 54,
+	}, pityTrack)
+	new("UICorner", { CornerRadius = UDim.new(1, 0) }, pityFill)
+	new("UIGradient", {
+		Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0.0, Color3.fromHex("#7E22CE")),
+			ColorSequenceKeypoint.new(0.6, Color3.fromHex("#C084FC")),
+			ColorSequenceKeypoint.new(1.0, Color3.fromHex("#FEF08A")),
+		}),
+	}, pityFill)
+	self.PityFill = pityFill
+
+	-- 3. Summon Buttons Row (SUMMON 1X / SUMMON 10X)
 	local btnRow = new("Frame", {
 		Name = "ButtonRow",
+		Position = UDim2.fromOffset(0, 288),
+		Size = UDim2.new(1, 0, 0, 84),
 		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(0, 290),
-		Size = UDim2.new(1, 0, 0, 78),
-		ClipsDescendants = false,
 		ZIndex = 53,
 	}, summonView)
 
-	-- SUMMON 1X Button (Restyled via reusable OrnateFrameButton)
+	-- SUMMON 1X Button (Restyled via reusable OrnateFrameButton with PrimaryViolet)
 	local btn1X = OrnateFrameButton.new(btnRow, {
 		Name = "Summon1XBtn",
 		Title = "SUMMON 1X",
 		Cost = 160,
+		Variant = "PrimaryViolet",
 		Position = UDim2.fromScale(0, 0),
 		Size = UDim2.new(0.485, 0, 1, 0),
 		ZIndex = 54,
@@ -675,11 +893,12 @@ function Forge:BuildSummonView(root: Frame)
 	self.Summon1XBtn = btn1X.Root
 	self.OrnateBtn1X = btn1X
 
-	-- SUMMON 10X Button (Restyled via reusable OrnateFrameButton)
+	-- SUMMON 10X Button (Restyled via reusable OrnateFrameButton with PrimaryGold)
 	local btn10X = OrnateFrameButton.new(btnRow, {
 		Name = "Summon10XBtn",
 		Title = "SUMMON 10X",
 		Cost = 1600,
+		Variant = "PrimaryGold",
 		AnchorPoint = Vector2.new(1, 0),
 		Position = UDim2.new(1, 0, 0, 0),
 		Size = UDim2.new(0.485, 0, 1, 0),
@@ -691,15 +910,19 @@ function Forge:BuildSummonView(root: Frame)
 	})
 	self.Summon10XBtn = btn10X.Root
 	self.OrnateBtn10X = btn10X
-
 end
 
 function Forge:RenderSummonView()
 	local profile = self:ResolveProfile()
 	local pity = profile and profile.ArtifactBannerPity or 8
 	local remaining = math.max(1, 50 - (pity % 50))
+	local progress = math.clamp((50 - remaining) / 50, 0.05, 1)
+
 	if self.PityLabel then
 		self.PityLabel.Text = string.format("Guaranteed 5-Star in: <b>%d</b> summons", remaining)
+	end
+	if self.PityFill then
+		self.PityFill.Size = UDim2.new(progress, 0, 1, 0)
 	end
 end
 
@@ -785,15 +1008,13 @@ function Forge:BuildSummonRevealModal(gui: ScreenGui)
 		AnchorPoint = Vector2.new(0.5, 1),
 		Position = UDim2.new(0.5, 0, 1, -20),
 		Size = UDim2.fromOffset(200, 44),
-		BackgroundColor3 = Color3.fromRGB(22, 18, 36),
 		BorderSizePixel = 0,
 		Text = "COLLECT ARTIFACTS",
 		Font = Enum.Font.GothamBold,
 		TextSize = 14,
-		TextColor3 = C.Text,
 		ZIndex = 82,
 	}, modal)
-	applyGothicStyle(collectBtn, "Button")
+	applyGothicStyle(collectBtn, "ButtonPrimary", { Variant = "Gold" })
 
 	collectBtn.Activated:Connect(function()
 		self.RevealScrim.Visible = false
@@ -808,6 +1029,11 @@ function Forge:ShowSummonResults(summonedList: { any })
 	end
 
 	for order, art in ipairs(summonedList) do
+		-- Star Rating string
+		local starCount = art.Star or 1
+		local starStr = string.rep("★", starCount)
+		local starColor = (starCount >= 5) and C.GoldYellow or ((starCount >= 4) and Color3.fromRGB(192, 132, 252) or C.TextLavender)
+
 		local row = new("Frame", {
 			Name = "ResultRow_" .. order,
 			Size = UDim2.new(1, -4, 0, 64),
@@ -816,24 +1042,16 @@ function Forge:ShowSummonResults(summonedList: { any })
 			LayoutOrder = order,
 			ZIndex = 83,
 		}, scroll)
-		new("UICorner", { CornerRadius = UDim.new(0, 6) }, row)
-		stroke(row, C.BorderCard, 1)
+		applyGothicStyle(row, "Row", { AccentColor = starColor })
 
-		-- Star Rating string
-		local starCount = art.Star or 1
-		local starStr = string.rep("★", starCount)
-		local starColor = (starCount >= 5) and C.GoldYellow or ((starCount >= 4) and Color3.fromRGB(192, 132, 252) or C.TextLavender)
-
-		-- Left Icon Box
+		-- Left Icon Box (Slot)
 		local iconBox = new("Frame", {
 			Position = UDim2.fromOffset(10, 8),
 			Size = UDim2.fromOffset(48, 48),
-			BackgroundColor3 = Color3.fromRGB(18, 14, 28),
 			BorderSizePixel = 0,
 			ZIndex = 84,
 		}, row)
-		new("UICorner", { CornerRadius = UDim.new(0, 6) }, iconBox)
-		stroke(iconBox, starColor, 1)
+		applyGothicStyle(iconBox, "Slot", { State = "Filled", AccentColor = starColor })
 
 		local iconChar = ICON_MAP[art.Type] or "⚔️"
 		local iconLabel = label(iconBox, iconChar, 22, starColor)
@@ -878,126 +1096,227 @@ function Forge:BuildUpgradeView(root: Frame)
 	}, root)
 	self.UpgradeView = upgradeView
 
-	-- Target Slot (Selected Artifact to Enhance)
-	local targetSlot = new("Frame", {
-		Name = "TargetSlot",
-		Position = UDim2.fromOffset(24, 14),
-		Size = UDim2.fromOffset(160, 180),
-		BackgroundColor3 = C.SlotBg,
-		BorderSizePixel = 0,
+	-- Top Grid: Left Target Slot Area (240x194) & Right Preview Panel (364x194)
+	local targetArea = new("Frame", {
+		Name = "TargetArea",
+		Position = UDim2.fromOffset(0, 0),
+		Size = UDim2.fromOffset(240, 194),
+		BackgroundTransparency = 1,
 		ZIndex = 53,
 	}, upgradeView)
-	applyGothicStyle(targetSlot, "Card")
 
-	local targetIcon = label(targetSlot, "⚔️", 46, C.Text)
+	-- Target Slot Card (Rounded Slot)
+	local targetSlot = new("Frame", {
+		Name = "TargetSlotCard",
+		Position = UDim2.fromOffset(0, 0),
+		Size = UDim2.fromOffset(128, 194),
+		BorderSizePixel = 0,
+		ZIndex = 53,
+	}, targetArea)
+	applyGothicStyle(targetSlot, "Slot", { State = "Filled" })
+	self.TargetSlotFrame = targetSlot
+
+	local targetIcon = label(targetSlot, "🪓", 56, C.Text)
 	targetIcon.Name = "TargetIcon"
-	targetIcon.Position = UDim2.fromScale(0, 0.15)
-	targetIcon.Size = UDim2.fromScale(1, 0.45)
+	targetIcon.Position = UDim2.fromScale(0, 0)
+	targetIcon.Size = UDim2.fromScale(1, 1)
+	targetIcon.TextXAlignment = Enum.TextXAlignment.Center
 	self.TargetIcon = targetIcon
-
-	local targetName = label(targetSlot, "SELECT ARTIFACT", 14, C.Text, Enum.Font.GothamBold)
-	targetName.Name = "TargetName"
-	targetName.Position = UDim2.fromScale(0, 0.62)
-	targetName.Size = UDim2.fromScale(1, 0.18)
-	self.TargetName = targetName
-
-	local targetLevel = label(targetSlot, "Click to choose", 12, C.TextLavender, Enum.Font.Gotham)
-	targetLevel.Name = "TargetLevel"
-	targetLevel.Position = UDim2.fromScale(0, 0.78)
-	targetLevel.Size = UDim2.fromScale(1, 0.18)
-	self.TargetLevel = targetLevel
 
 	local targetBtn = new("TextButton", {
 		Name = "TargetSlotBtn",
 		BackgroundTransparency = 1,
 		Text = "",
 		Size = UDim2.fromScale(1, 1),
-		ZIndex = 54,
+		ZIndex = 55,
 	}, targetSlot)
 	targetBtn.Activated:Connect(function()
 		self:OpenDrawer("TARGET")
 	end)
 
-	-- Center Arrow & Stat Preview Box
-	local statBox = new("Frame", {
-		Name = "StatComparisonBox",
-		Position = UDim2.fromOffset(210, 14),
-		Size = UDim2.new(1, -234, 0, 180),
-		BackgroundColor3 = C.CardBg,
+	-- Target Meta (Right of Target Slot Card)
+	local targetMeta = new("Frame", {
+		Name = "TargetMeta",
+		Position = UDim2.fromOffset(140, 12),
+		Size = UDim2.fromOffset(96, 170),
+		BackgroundTransparency = 1,
+		ZIndex = 54,
+	}, targetArea)
+
+	local targetName = label(targetMeta, "Prospector's\nCleaver", 16, C.Text, Enum.Font.GothamBold)
+	targetName.Name = "TargetName"
+	targetName.Position = UDim2.fromOffset(0, 0)
+	targetName.Size = UDim2.new(1, 0, 0, 48)
+	targetName.TextWrapped = true
+	targetName.TextXAlignment = Enum.TextXAlignment.Left
+	targetName.TextYAlignment = Enum.TextYAlignment.Top
+	self.TargetName = targetName
+
+	local targetRarityBadge = new("Frame", {
+		Name = "TargetRarityBadge",
+		Position = UDim2.fromOffset(0, 56),
+		Size = UDim2.fromOffset(94, 22),
+		BackgroundColor3 = Color3.fromHex("#2B2832"),
+		BorderSizePixel = 0,
+		ZIndex = 54,
+	}, targetMeta)
+	new("UICorner", { CornerRadius = UDim.new(1, 0) }, targetRarityBadge)
+	new("UIStroke", { Color = Color3.fromHex("#6E6A78"), Thickness = 1 }, targetRarityBadge)
+
+	local targetLevel = label(targetRarityBadge, "Common · 1★", 11, Color3.fromHex("#E2E0E8"), Enum.Font.GothamBold)
+	targetLevel.Name = "TargetLevel"
+	targetLevel.Position = UDim2.fromScale(0, 0)
+	targetLevel.Size = UDim2.fromScale(1, 1)
+	targetLevel.TextXAlignment = Enum.TextXAlignment.Center
+	self.TargetLevel = targetLevel
+
+	local changeTargetBtn = new("TextButton", {
+		Name = "ChangeTargetBtn",
+		Position = UDim2.fromOffset(0, 88),
+		Size = UDim2.fromOffset(94, 28),
+		Text = "CHANGE",
+		Font = Enum.Font.GothamBold,
+		TextSize = 11,
+		ZIndex = 55,
+	}, targetMeta)
+	applyGothicStyle(changeTargetBtn, "ButtonSecondary")
+	changeTargetBtn.Activated:Connect(function()
+		self:OpenDrawer("TARGET")
+	end)
+
+	-- Right: Star Promotion Preview Panel (Section Panel Style)
+	local previewPanel = new("Frame", {
+		Name = "PreviewPanel",
+		Position = UDim2.fromOffset(252, 0),
+		Size = UDim2.new(1, -252, 0, 194),
 		BorderSizePixel = 0,
 		ZIndex = 53,
 	}, upgradeView)
-	applyGothicStyle(statBox, "Card")
+	applyGothicStyle(previewPanel, "Panel")
 
-	local previewHeader = label(statBox, "STAR PROMOTION PREVIEW", 15, C.Text, Enum.Font.GothamBold)
-	previewHeader.Position = UDim2.new(0, 18, 0, 14)
-	previewHeader.Size = UDim2.new(1, -36, 0, 22)
-	previewHeader.TextXAlignment = Enum.TextXAlignment.Left
+	local previewHeading = label(previewPanel, "STAR PROMOTION PREVIEW", 13, C.GoldWarm, Enum.Font.GothamBold)
+	previewHeading.Position = UDim2.fromOffset(16, 12)
+	previewHeading.Size = UDim2.new(1, -32, 0, 18)
+	previewHeading.TextXAlignment = Enum.TextXAlignment.Left
 
-	local currentStatsLabel = label(statBox, "Current Stats: Select an artifact", 13, C.TextLavender, Enum.Font.GothamMedium)
-	currentStatsLabel.Position = UDim2.new(0, 18, 0, 48)
-	currentStatsLabel.Size = UDim2.new(1, -36, 0, 24)
-	currentStatsLabel.TextXAlignment = Enum.TextXAlignment.Left
-	self.CurrentStatsLabel = currentStatsLabel
+	-- Stat Comparison Table
+	local statTable = new("Frame", {
+		Name = "StatTable",
+		Position = UDim2.fromOffset(16, 34),
+		Size = UDim2.new(1, -32, 0, 114),
+		BackgroundTransparency = 1,
+		ZIndex = 54,
+	}, previewPanel)
 
-	local arrowLabel = label(statBox, "▼  UPGRADE BOOST  ▼", 12, C.Arrow, Enum.Font.GothamBold)
-	arrowLabel.Position = UDim2.new(0, 18, 0, 84)
-	arrowLabel.Size = UDim2.new(1, -36, 0, 20)
-	arrowLabel.TextXAlignment = Enum.TextXAlignment.Left
-	self.HeroStatPreview = arrowLabel
+	new("UIListLayout", {
+		SortOrder = Enum.SortOrder.LayoutOrder,
+		Padding = UDim.new(0, 5),
+	}, statTable)
 
-	local nextStatsLabel = label(statBox, "Next Star: —", 14, C.Green, Enum.Font.GothamBold)
-	nextStatsLabel.Position = UDim2.new(0, 18, 0, 114)
-	nextStatsLabel.Size = UDim2.new(1, -36, 0, 24)
-	nextStatsLabel.TextXAlignment = Enum.TextXAlignment.Left
-	self.NextStatsLabel = nextStatsLabel
+	local function createStatRow(name: string, labelText: string, order: number)
+		local row = new("Frame", {
+			Name = name,
+			LayoutOrder = order,
+			Size = UDim2.new(1, 0, 0, 22),
+			BackgroundTransparency = 1,
+			ZIndex = 54,
+		}, statTable)
 
-	local fodderReqLabel = label(statBox, "Fodder Required: 0 / 0", 12, C.TextMuted, Enum.Font.Gotham)
-	fodderReqLabel.Position = UDim2.new(0, 18, 0, 146)
-	fodderReqLabel.Size = UDim2.new(1, -36, 0, 20)
-	fodderReqLabel.TextXAlignment = Enum.TextXAlignment.Left
-	self.FodderReqLabel = fodderReqLabel
+		local lbl = label(row, labelText, 12, Color3.fromHex("#A396BA"), Enum.Font.GothamMedium)
+		lbl.Position = UDim2.fromOffset(0, 0)
+		lbl.Size = UDim2.new(0, 140, 1, 0)
+		lbl.TextXAlignment = Enum.TextXAlignment.Left
 
-	-- Six duplicate slots support the final star promotion.
+		local oldVal = label(row, "—", 12, Color3.fromHex("#F6F4FF"), Enum.Font.GothamBold)
+		oldVal.Name = "OldVal"
+		oldVal.Position = UDim2.new(0, 140, 0, 0)
+		oldVal.Size = UDim2.new(0, 60, 1, 0)
+		oldVal.TextXAlignment = Enum.TextXAlignment.Right
+
+		local arrow = label(row, "→", 12, Color3.fromHex("#4ADE80"), Enum.Font.GothamBold)
+		arrow.Position = UDim2.new(0, 202, 0, 0)
+		arrow.Size = UDim2.new(0, 24, 1, 0)
+		arrow.TextXAlignment = Enum.TextXAlignment.Center
+
+		local newVal = label(row, "—", 12, Color3.fromHex("#4ADE80"), Enum.Font.GothamBold)
+		newVal.Name = "NewVal"
+		newVal.Position = UDim2.new(0, 228, 0, 0)
+		newVal.Size = UDim2.new(1, -228, 1, 0)
+		newVal.TextXAlignment = Enum.TextXAlignment.Left
+
+		return { Row = row, Old = oldVal, New = newVal }
+	end
+
+	self.StatRows = {
+		Power = createStatRow("PowerRow", "Power:", 1),
+		Damage = createStatRow("DamageRow", "Damage Multiplier:", 2),
+		AtkSpd = createStatRow("AtkSpdRow", "AtkSpd:", 3),
+		DPS = createStatRow("DPSRow", "Hit / DPS:", 4),
+	}
+
+	-- Preview Cost Footer
+	local footerLine = new("Frame", {
+		Name = "FooterDivider",
+		Position = UDim2.fromOffset(16, 154),
+		Size = UDim2.new(1, -32, 0, 1),
+		BackgroundColor3 = Color3.fromHex("#352B47"),
+		BorderSizePixel = 0,
+		ZIndex = 54,
+	}, previewPanel)
+
+	local footerLabel = label(previewPanel, "Copies: <b>0/1</b>  |  Gold: <b>500</b>  |  Gems: <b>0</b>", 12, Color3.fromHex("#A396BA"), Enum.Font.Gotham)
+	footerLabel.Position = UDim2.fromOffset(16, 160)
+	footerLabel.Size = UDim2.new(1, -32, 0, 24)
+	footerLabel.TextXAlignment = Enum.TextXAlignment.Left
+	self.FodderReqLabel = footerLabel
+
+	-- 6 Fodder Slots Container
 	local fodderContainer = new("Frame", {
 		Name = "FodderSlotsContainer",
-		Position = UDim2.fromOffset(24, 214),
-		Size = UDim2.new(1, -48, 0, 100),
+		Position = UDim2.fromOffset(0, 206),
+		Size = UDim2.new(1, 0, 0, 96),
 		BackgroundTransparency = 1,
 		ZIndex = 53,
 	}, upgradeView)
 
+	new("UIListLayout", {
+		FillDirection = Enum.FillDirection.Horizontal,
+		HorizontalAlignment = Enum.HorizontalAlignment.Center,
+		SortOrder = Enum.SortOrder.LayoutOrder,
+		Padding = UDim.new(0, 12),
+	}, fodderContainer)
+
 	self.FodderSlotFrames = {}
-	local slotW = 88
-	local spacing = 12
+	local slotW = 92
 
 	for i = 1, 6 do
 		local slot = new("Frame", {
 			Name = "FodderSlot_" .. i,
-			Position = UDim2.fromOffset((i - 1) * (slotW + spacing), 0),
-			Size = UDim2.fromOffset(slotW, 90),
-			BackgroundColor3 = C.SlotBg,
+			Size = UDim2.fromOffset(slotW, 94),
 			BorderSizePixel = 0,
+			LayoutOrder = i,
 			ZIndex = 53,
 		}, fodderContainer)
-		applyGothicStyle(slot, "Compact")
+		applyGothicStyle(slot, "Slot", { State = "Empty" })
 
-		local plus = label(slot, "+", 28, C.TextMuted, Enum.Font.GothamBold)
+		local plus = label(slot, "+", 26, Color3.fromHex("#B4A5D1"), Enum.Font.GothamBold)
 		plus.Name = "PlusLabel"
-		plus.Position = UDim2.fromScale(0, 0.15)
-		plus.Size = UDim2.fromScale(1, 0.45)
+		plus.Position = UDim2.fromScale(0, 0.12)
+		plus.Size = UDim2.fromScale(1, 0.44)
+		plus.TextXAlignment = Enum.TextXAlignment.Center
 
-		local name = label(slot, "Fodder", 11, C.TextMuted, Enum.Font.Gotham)
+		local name = label(slot, "Slot " .. i, 11, Color3.fromHex("#8C7FA6"), Enum.Font.Gotham)
 		name.Name = "NameLabel"
-		name.Position = UDim2.fromScale(0, 0.6)
-		name.Size = UDim2.fromScale(1, 0.3)
+		name.Position = UDim2.fromScale(0, 0.58)
+		name.Size = UDim2.fromScale(1, 0.32)
+		name.TextXAlignment = Enum.TextXAlignment.Center
 
 		local slotBtn = new("TextButton", {
 			Name = "SlotBtn",
 			BackgroundTransparency = 1,
 			Text = "",
 			Size = UDim2.fromScale(1, 1),
-			ZIndex = 54,
+			ZIndex = 55,
 		}, slot)
 		slotBtn.Activated:Connect(function()
 			self:OpenDrawer("FODDER")
@@ -1009,8 +1328,8 @@ function Forge:BuildUpgradeView(root: Frame)
 	-- Bottom Action Row (Auto-Fill & Enhance Button)
 	local bottomRow = new("Frame", {
 		Name = "BottomActionRow",
-		Position = UDim2.fromOffset(24, 326),
-		Size = UDim2.new(1, -48, 0, 52),
+		Position = UDim2.fromOffset(0, 314),
+		Size = UDim2.new(1, 0, 0, 48),
 		BackgroundTransparency = 1,
 		ZIndex = 53,
 	}, upgradeView)
@@ -1018,16 +1337,15 @@ function Forge:BuildUpgradeView(root: Frame)
 	local autoFillBtn = new("TextButton", {
 		Name = "AutoFillBtn",
 		Position = UDim2.fromScale(0, 0),
-		Size = UDim2.fromOffset(180, 46),
-		BackgroundColor3 = Color3.fromRGB(26, 20, 38),
+		Size = UDim2.fromOffset(240, 46),
 		BorderSizePixel = 0,
 		Text = "⚡ AUTO-FILL FODDER",
 		Font = Enum.Font.GothamBold,
 		TextSize = 13,
-		TextColor3 = C.Text,
 		ZIndex = 54,
 	}, bottomRow)
-	applyGothicStyle(autoFillBtn, "Button")
+	applyGothicStyle(autoFillBtn, "ButtonSecondary")
+	self.AutoFillBtn = autoFillBtn
 	autoFillBtn.Activated:Connect(function()
 		self:AutoFillFodder()
 	end)
@@ -1036,18 +1354,15 @@ function Forge:BuildUpgradeView(root: Frame)
 		Name = "EnhanceBtn",
 		AnchorPoint = Vector2.new(1, 0),
 		Position = UDim2.new(1, 0, 0, 0),
-		Size = UDim2.fromOffset(260, 46),
-		BackgroundColor3 = Color3.fromRGB(30, 22, 46),
+		Size = UDim2.new(1, -252, 0, 46),
 		BorderSizePixel = 0,
-		Text = "⚒️ PROMOTE WEAPON",
+		Text = "⚒️ PROMOTE TO 2 STARS (0/1)",
 		Font = Enum.Font.GothamBold,
-		TextSize = 15,
-		TextColor3 = C.Text,
+		TextSize = 14,
 		ZIndex = 54,
 	}, bottomRow)
-	applyGothicStyle(enhanceBtn, "Button")
+	applyGothicStyle(enhanceBtn, "ButtonPrimary", { Disabled = true })
 	self.EnhanceBtn = enhanceBtn
-
 	enhanceBtn.Activated:Connect(function()
 		self:PerformUpgrade()
 	end)
@@ -1070,57 +1385,101 @@ function Forge:RenderUpgradeView()
 		self.TargetIcon.Text = "⚔️"
 		self.TargetName.Text = "NO ARTIFACT"
 		self.TargetLevel.Text = "Click to pick"
-		self.CurrentStatsLabel.Text = "Current Stats: No artifact selected"
-		self.NextStatsLabel.Text = "Next Star: —"
-		self.FodderReqLabel.Text = "Fodder Required: 0 / 0"
-		self.HeroStatPreview.Text = "Equip a weapon to preview hero damage and DPS"
+		if self.StatRows then
+			self.StatRows.Power.Old.Text = "—"
+			self.StatRows.Power.New.Text = "—"
+			self.StatRows.Damage.Old.Text = "—"
+			self.StatRows.Damage.New.Text = "—"
+			self.StatRows.AtkSpd.Old.Text = "—"
+			self.StatRows.AtkSpd.New.Text = "—"
+			self.StatRows.DPS.Old.Text = "—"
+			self.StatRows.DPS.New.Text = "—"
+		end
+		self.FodderReqLabel.Text = "Copies: <b>0/0</b>  |  Gold: <b>0</b>  |  Gems: <b>0</b>"
+		applyGothicStyle(self.EnhanceBtn, "ButtonPrimary", { Disabled = true })
+		self.EnhanceBtn.Text = "NO ARTIFACT SELECTED"
 		return
 	end
-
-	-- Update Target Slot
-	local iconChar = ICON_MAP[target.Type] or "⚔️"
-	self.TargetIcon.Text = iconChar
-	self.TargetName.Text = target.DisplayName or "Artifact"
-	self.TargetLevel.Text = string.format("%s · %d stars", ArtifactCatalog.GetRarityInfo(target.Rarity or 1).Name, target.Star or 1)
 
 	local currentStar = target.Star or 1
 	local maxStars = ArtifactCatalog.MaxStars or 7
 	local reqFodder = ArtifactCatalog.GetFodderRequirement(currentStar)
+	local rarityInfo = ArtifactCatalog.GetRarityInfo(target.Rarity or 1)
+	local rarityColor = rarityInfo.Color
 
-	-- Update Stats
-	local currentStats = formatStatSummary(target)
-	self.CurrentStatsLabel.Text = string.format("Current Stats: %s", currentStats)
-	local equippedHero = target.EquippedHeroUUID and profile.Heroes and profile.Heroes[target.EquippedHeroUUID]
-	if equippedHero then
-		local before = StatFormulas.GetCombatSnapshot(equippedHero, target)
-		local nextWeapon = table.clone(target)
-		nextWeapon.Star = math.min(maxStars, currentStar + 1)
-		local after = StatFormulas.GetCombatSnapshot(equippedHero, nextWeapon)
-		self.HeroStatPreview.Text = string.format("Hit %s → %s | DPS %s → %s", StatBalance.Format(before.AttackDamage), StatBalance.Format(after.AttackDamage), StatBalance.Format(before.DPS), StatBalance.Format(after.DPS))
-	else
-		self.HeroStatPreview.Text = "Equip to a hero to preview damage and DPS"
+	-- Update Target Slot Card
+	local iconChar = ICON_MAP[target.Type] or "⚔️"
+	self.TargetIcon.Text = iconChar
+	self.TargetName.Text = target.DisplayName or "Artifact"
+	self.TargetLevel.Text = string.format("%s · %d★", rarityInfo.Name, currentStar)
+	if self.TargetSlotFrame then
+		applyGothicStyle(self.TargetSlotFrame, "Slot", { State = "Filled", AccentColor = rarityColor })
 	end
 
-	if currentStar >= maxStars then
-		self.NextStatsLabel.Text = "★ MAXIMUM 7-STAR RANK REACHED"
-		self.FodderReqLabel.Text = "Maximum 7-star rank"
+	-- Current and Next Stat Breakdown
+	local currStats = ArtifactCatalog.GetStatBreakdown(target.TemplateId, currentStar, target.Rarity or 1)
+	local simNext = {
+		TemplateId = target.TemplateId,
+		Star = math.min(maxStars, currentStar + 1),
+		Rarity = target.Rarity,
+		Type = target.Type,
+	}
+	local nextStats = ArtifactCatalog.GetStatBreakdown(simNext.TemplateId, simNext.Star, simNext.Rarity or 1)
+
+	if self.StatRows then
+		self.StatRows.Power.Old.Text = string.format("%.0f", currStats.Power)
+		self.StatRows.Power.New.Text = string.format("%.0f", nextStats.Power)
+
+		self.StatRows.Damage.Old.Text = string.format("x%.2f", currStats.DamageMultiplier)
+		self.StatRows.Damage.New.Text = string.format("x%.2f", nextStats.DamageMultiplier)
+
+		self.StatRows.AtkSpd.Old.Text = string.format("+%.1f%%", currStats["Attack Speed"])
+		self.StatRows.AtkSpd.New.Text = string.format("+%.1f%%", nextStats["Attack Speed"])
+
+		local equippedHero = target.EquippedHeroUUID and profile.Heroes and profile.Heroes[target.EquippedHeroUUID]
+		if equippedHero then
+			local before = StatFormulas.GetCombatSnapshot(equippedHero, target)
+			local nextWeapon = table.clone(target)
+			nextWeapon.Star = math.min(maxStars, currentStar + 1)
+			local after = StatFormulas.GetCombatSnapshot(equippedHero, nextWeapon)
+			self.StatRows.DPS.Old.Text = StatBalance.Format(before.DPS)
+			self.StatRows.DPS.New.Text = StatBalance.Format(after.DPS)
+		else
+			self.StatRows.DPS.Old.Text = "—"
+			self.StatRows.DPS.New.Text = "—"
+		end
+	end
+
+	-- Cost & Copies
+	local isMaxRank = (currentStar >= maxStars)
+	local cost = ArtifactCatalog.GetStarPromotionCost(currentStar) or { Gold = 0, Gems = 0 }
+	local copiesCount = #self.FodderUUIDs
+	local copiesColor = if copiesCount >= reqFodder and reqFodder > 0 then "#4ADE80" else "#F6F4FF"
+
+	if isMaxRank then
+		self.FodderReqLabel.Text = "<font color=\"#E4BA73\"><b>MAXIMUM 7-STAR RANK REACHED</b></font>"
 		self.EnhanceBtn.Text = "MAX STARS REACHED"
+		applyGothicStyle(self.EnhanceBtn, "ButtonPrimary", { Disabled = true })
 	else
-		-- Preview the next star with unchanged rarity and speed.
-		local simNext = {
-			TemplateId = target.TemplateId,
-			Star = currentStar + 1,
-			Rarity = target.Rarity,
-			Type = target.Type,
-		}
-		local nextStats = formatStatSummary(simNext)
-		self.NextStatsLabel.Text = string.format("Next Star (%d): %s", currentStar + 1, nextStats)
-		local cost=ArtifactCatalog.GetStarPromotionCost(currentStar)
-		self.FodderReqLabel.Text = string.format("Copies: %d/%d | Gold %d | Gems %d", #self.FodderUUIDs, reqFodder, cost.Gold, cost.Gems)
-		self.EnhanceBtn.Text = string.format("⚒️ PROMOTE TO %d STARS (%d/%d)", currentStar + 1, #self.FodderUUIDs, reqFodder)
+		self.FodderReqLabel.Text = string.format(
+			"Copies: <font color=\"%s\"><b>%d/%d</b></font>  |  Gold: <b>%s</b>  |  Gems: <b>%d</b>",
+			copiesColor,
+			copiesCount,
+			reqFodder,
+			StatBalance.Format(cost.Gold),
+			cost.Gems
+		)
+
+		if copiesCount >= reqFodder and reqFodder > 0 then
+			self.EnhanceBtn.Text = string.format("⚒️ PROMOTE TO %d STARS (%d/%d)", currentStar + 1, copiesCount, reqFodder)
+			applyGothicStyle(self.EnhanceBtn, "ButtonPrimary", { Variant = "Gold", Disabled = false })
+		else
+			self.EnhanceBtn.Text = string.format("⚒️ PROMOTE TO %d STARS (%d/%d)", currentStar + 1, copiesCount, reqFodder)
+			applyGothicStyle(self.EnhanceBtn, "ButtonPrimary", { Disabled = true })
+		end
 	end
 
-	-- Update Fodder Slots
+	-- Update 6 Fodder Slots (without stacking duplicate UIStroke instances!)
 	for i = 1, 6 do
 		local slotFrame = self.FodderSlotFrames[i]
 		if slotFrame then
@@ -1130,15 +1489,36 @@ function Forge:RenderUpgradeView()
 			local fArt = fUUID and artifacts[fUUID]
 
 			if fArt then
-				if plusLabel then plusLabel.Text = ICON_MAP[fArt.Type] or "⚔️" end
-				if nameLabel then nameLabel.Text = fArt.DisplayName or "Fodder" end
-				slotFrame.BackgroundColor3 = Color3.fromRGB(26, 20, 36)
-				stroke(slotFrame, C.Border, 1)
+				local fRarity = ArtifactCatalog.GetRarityInfo(fArt.Rarity or 1)
+				applyGothicStyle(slotFrame, "Slot", { State = "Filled", AccentColor = fRarity.Color })
+				if plusLabel then
+					plusLabel.Text = ICON_MAP[fArt.Type] or "⚔️"
+					plusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+				end
+				if nameLabel then
+					nameLabel.Text = string.format("%s %d★", fArt.DisplayName or "Fodder", fArt.Star or 1)
+					nameLabel.TextColor3 = Color3.fromRGB(246, 244, 255)
+				end
+			elseif i <= reqFodder then
+				applyGothicStyle(slotFrame, "Slot", { State = "Empty" })
+				if plusLabel then
+					plusLabel.Text = "+"
+					plusLabel.TextColor3 = Color3.fromHex("#B4A5D1")
+				end
+				if nameLabel then
+					nameLabel.Text = "Slot " .. i
+					nameLabel.TextColor3 = Color3.fromHex("#8C7FA6")
+				end
 			else
-				if plusLabel then plusLabel.Text = (i <= reqFodder) and "+" or "🔒" end
-				if nameLabel then nameLabel.Text = (i <= reqFodder) and "Slot " .. i or "Locked" end
-				slotFrame.BackgroundColor3 = C.SlotBg
-				stroke(slotFrame, C.BorderDim, 1)
+				applyGothicStyle(slotFrame, "Slot", { State = "Locked" })
+				if plusLabel then
+					plusLabel.Text = "🔒"
+					plusLabel.TextColor3 = Color3.fromHex("#706484")
+				end
+				if nameLabel then
+					nameLabel.Text = "Req. " .. (i + 1) .. "★"
+					nameLabel.TextColor3 = Color3.fromHex("#706484")
+				end
 			end
 		end
 	end
@@ -1219,7 +1599,7 @@ function Forge:BuildPickerDrawer(root: Frame)
 	}, root)
 	self.Drawer = drawer
 
-	applyGothicStyle(drawer, "Card")
+	applyGothicStyle(drawer, "Panel")
 
 	local header = new("Frame", {
 		Name = "DrawerHeader",
@@ -1242,7 +1622,7 @@ function Forge:BuildPickerDrawer(root: Frame)
 		Position = UDim2.new(1, -4, 0.5, 0),
 		Size = UDim2.fromOffset(28, 28),
 		BackgroundColor3 = Color3.fromRGB(28, 22, 42),
-		Text = "X",
+		Text = "✕",
 		Font = Enum.Font.GothamBold,
 		TextSize = 13,
 		TextColor3 = Color3.fromRGB(225, 210, 250),
@@ -1322,26 +1702,25 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 		self.DrawerTitle.Text = "SELECT TARGET ARTIFACT TO ENHANCE"
 		for uuid, art in pairs(artifacts) do
 			local isSelected = (uuid == self.SelectedTargetUUID)
+			local rarityInfo = ArtifactCatalog.GetRarityInfo(art.Rarity or 1)
+
 			local card = new("Frame", {
 				Name = "TargetCard_" .. uuid,
-				Size = UDim2.fromOffset(124, 160),
-				BackgroundColor3 = isSelected and Color3.fromRGB(34, 25, 48) or C.CardBg,
+				Size = UDim2.fromOffset(128, 164),
 				BorderSizePixel = 0,
 				ZIndex = 72,
 			}, scroll)
-			applyGothicStyle(card, "Card")
+			applyGothicStyle(card, "Row", { AccentColor = rarityInfo.Color })
 
 			local iconTile = new("Frame", {
 				Name = "IconTile",
 				AnchorPoint = Vector2.new(0.5, 0),
 				Position = UDim2.new(0.5, 0, 0, 10),
-				Size = UDim2.fromOffset(42, 42),
-				BackgroundColor3 = Color3.fromRGB(18, 14, 28),
+				Size = UDim2.fromOffset(46, 46),
 				BorderSizePixel = 0,
 				ZIndex = 73,
 			}, card)
-			new("UICorner", { CornerRadius = UDim.new(0, 6) }, iconTile)
-			stroke(iconTile, C.BorderDim, 1)
+			applyGothicStyle(iconTile, "Slot", { State = "Filled", AccentColor = rarityInfo.Color })
 
 			local iconChar = ICON_MAP[art.Type] or "⚔️"
 			local iconLbl = label(iconTile, iconChar, 24, C.Text)
@@ -1350,8 +1729,8 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 			iconLbl.TextXAlignment = Enum.TextXAlignment.Center
 
 			local nameLbl = label(card, art.DisplayName or "Artifact", 11, C.Text, Enum.Font.GothamBold)
-			nameLbl.Position = UDim2.new(0, 6, 0, 56)
-			nameLbl.Size = UDim2.new(1, -12, 0, 32)
+			nameLbl.Position = UDim2.new(0, 6, 0, 60)
+			nameLbl.Size = UDim2.new(1, -12, 0, 30)
 			nameLbl.TextWrapped = true
 			nameLbl.TextTruncate = Enum.TextTruncate.AtEnd
 			nameLbl.TextXAlignment = Enum.TextXAlignment.Center
@@ -1359,7 +1738,7 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 			local lvlBadge = new("Frame", {
 				Name = "LvlBadge",
 				AnchorPoint = Vector2.new(0.5, 0),
-				Position = UDim2.new(0.5, 0, 0, 92),
+				Position = UDim2.new(0.5, 0, 0, 94),
 				Size = UDim2.new(1, -20, 0, 22),
 				BackgroundColor3 = Color3.fromRGB(18, 14, 28),
 				BorderSizePixel = 0,
@@ -1371,25 +1750,24 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 			lvlLbl.Size = UDim2.fromScale(1, 1)
 			lvlLbl.TextXAlignment = Enum.TextXAlignment.Center
 
-			local actionPill = new("Frame", {
-				Name = "ActionPill",
+			local selectBtn = new("TextButton", {
+				Name = "SelectBtn",
 				AnchorPoint = Vector2.new(0.5, 0),
-				Position = UDim2.new(0.5, 0, 0, 120),
-				Size = UDim2.new(1, -20, 0, 26),
-				BackgroundColor3 = isSelected and Color3.fromRGB(48, 28, 72) or Color3.fromRGB(22, 18, 32),
-				BorderSizePixel = 0,
-				ZIndex = 73,
+				Position = UDim2.new(0.5, 0, 0, 122),
+				Size = UDim2.new(1, -20, 0, 28),
+				Text = isSelected and "SELECTED" or "SELECT",
+				Font = Enum.Font.GothamBold,
+				TextSize = 11,
+				ZIndex = 74,
 			}, card)
-			new("UICorner", { CornerRadius = UDim.new(0, 4) }, actionPill)
-			stroke(actionPill, isSelected and C.Border or C.BorderDim, 1)
 
-			local actionLbl = label(actionPill, isSelected and "SELECTED" or "SELECT", 11, isSelected and C.Text or C.TextMuted, Enum.Font.GothamBold)
-			actionLbl.Position = UDim2.fromScale(0, 0)
-			actionLbl.Size = UDim2.fromScale(1, 1)
-			actionLbl.TextXAlignment = Enum.TextXAlignment.Center
+			if isSelected then
+				applyGothicStyle(selectBtn, "ButtonSecondary")
+			else
+				applyGothicStyle(selectBtn, "ButtonPrimary", { Variant = "Gold" })
+			end
 
-			local btn = new("TextButton", { BackgroundTransparency = 1, Text = "", Size = UDim2.fromScale(1, 1), ZIndex = 74 }, card)
-			btn.Activated:Connect(function()
+			selectBtn.Activated:Connect(function()
 				self.SelectedTargetUUID = uuid
 				table.clear(self.FodderUUIDs)
 				self:ClosePicker()
@@ -1404,26 +1782,25 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 		for uuid, art in pairs(artifacts) do
 			if uuid ~= self.SelectedTargetUUID and not art.EquippedHeroUUID and not art.Locked and target and art.TemplateId == target.TemplateId then
 				local isSlotted = table.find(self.FodderUUIDs, uuid) ~= nil
+				local rarityInfo = ArtifactCatalog.GetRarityInfo(art.Rarity or 1)
+
 				local card = new("Frame", {
 					Name = "FodderCard_" .. uuid,
-					Size = UDim2.fromOffset(124, 160),
-					BackgroundColor3 = isSlotted and Color3.fromRGB(34, 25, 48) or C.CardBg,
+					Size = UDim2.fromOffset(128, 164),
 					BorderSizePixel = 0,
 					ZIndex = 72,
 				}, scroll)
-				applyGothicStyle(card, "Card")
+				applyGothicStyle(card, "Row", { AccentColor = rarityInfo.Color })
 
 				local iconTile = new("Frame", {
 					Name = "IconTile",
 					AnchorPoint = Vector2.new(0.5, 0),
 					Position = UDim2.new(0.5, 0, 0, 10),
-					Size = UDim2.fromOffset(42, 42),
-					BackgroundColor3 = Color3.fromRGB(18, 14, 28),
+					Size = UDim2.fromOffset(46, 46),
 					BorderSizePixel = 0,
 					ZIndex = 73,
 				}, card)
-				new("UICorner", { CornerRadius = UDim.new(0, 6) }, iconTile)
-				stroke(iconTile, C.BorderDim, 1)
+				applyGothicStyle(iconTile, "Slot", { State = "Filled", AccentColor = rarityInfo.Color })
 
 				local iconChar = ICON_MAP[art.Type] or "⚔️"
 				local iconLbl = label(iconTile, iconChar, 24, C.Text)
@@ -1432,8 +1809,8 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 				iconLbl.TextXAlignment = Enum.TextXAlignment.Center
 
 				local nameLbl = label(card, art.DisplayName or "Artifact", 11, C.Text, Enum.Font.GothamBold)
-				nameLbl.Position = UDim2.new(0, 6, 0, 56)
-				nameLbl.Size = UDim2.new(1, -12, 0, 32)
+				nameLbl.Position = UDim2.new(0, 6, 0, 60)
+				nameLbl.Size = UDim2.new(1, -12, 0, 30)
 				nameLbl.TextWrapped = true
 				nameLbl.TextTruncate = Enum.TextTruncate.AtEnd
 				nameLbl.TextXAlignment = Enum.TextXAlignment.Center
@@ -1441,7 +1818,7 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 				local lvlBadge = new("Frame", {
 					Name = "LvlBadge",
 					AnchorPoint = Vector2.new(0.5, 0),
-					Position = UDim2.new(0.5, 0, 0, 92),
+					Position = UDim2.new(0.5, 0, 0, 94),
 					Size = UDim2.new(1, -20, 0, 22),
 					BackgroundColor3 = isSlotted and Color3.fromRGB(24, 60, 36) or Color3.fromRGB(18, 14, 28),
 					BorderSizePixel = 0,
@@ -1457,27 +1834,24 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 				lvlLbl.Size = UDim2.fromScale(1, 1)
 				lvlLbl.TextXAlignment = Enum.TextXAlignment.Center
 
-				local actionPill = new("Frame", {
-					Name = "ActionPill",
+				local fodderBtn = new("TextButton", {
+					Name = "FodderActionBtn",
 					AnchorPoint = Vector2.new(0.5, 0),
-					Position = UDim2.new(0.5, 0, 0, 120),
-					Size = UDim2.new(1, -20, 0, 26),
-					BackgroundColor3 = isSlotted and Color3.fromRGB(48, 20, 28) or Color3.fromRGB(28, 22, 42),
-					BorderSizePixel = 0,
-					ZIndex = 73,
+					Position = UDim2.new(0.5, 0, 0, 122),
+					Size = UDim2.new(1, -20, 0, 28),
+					Text = isSlotted and "REMOVE" or "+ ADD",
+					Font = Enum.Font.GothamBold,
+					TextSize = 11,
+					ZIndex = 74,
 				}, card)
-				new("UICorner", { CornerRadius = UDim.new(0, 4) }, actionPill)
-				stroke(actionPill, isSlotted and C.Red or C.BorderCard, 1)
 
-				local actionText = isSlotted and "REMOVE" or "+ ADD"
-				local actionColor = isSlotted and C.Red or C.Text
-				local actionLbl = label(actionPill, actionText, 11, actionColor, Enum.Font.GothamBold)
-				actionLbl.Position = UDim2.fromScale(0, 0)
-				actionLbl.Size = UDim2.fromScale(1, 1)
-				actionLbl.TextXAlignment = Enum.TextXAlignment.Center
+				if isSlotted then
+					applyGothicStyle(fodderBtn, "ButtonSecondary")
+				else
+					applyGothicStyle(fodderBtn, "ButtonPrimary", { Variant = "Gold" })
+				end
 
-				local btn = new("TextButton", { BackgroundTransparency = 1, Text = "", Size = UDim2.fromScale(1, 1), ZIndex = 74 }, card)
-				btn.Activated:Connect(function()
+				fodderBtn.Activated:Connect(function()
 					if isSlotted then
 						local idx = table.find(self.FodderUUIDs, uuid)
 						if idx then table.remove(self.FodderUUIDs, idx) end
@@ -1504,12 +1878,11 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 
 			local card = new("Frame", {
 				Name = "HeroCard_" .. heroUUID,
-				Size = UDim2.fromOffset(150, 160),
-				BackgroundColor3 = isCurrentEquipped and Color3.fromRGB(30, 24, 46) or C.CardBg,
+				Size = UDim2.fromOffset(150, 164),
 				BorderSizePixel = 0,
 				ZIndex = 72,
 			}, scroll)
-			applyGothicStyle(card, "Card")
+			applyGothicStyle(card, "Row")
 
 			local starsLbl = label(card, string.rep("★", hero.Stars or 1), 12, C.GoldYellow)
 			starsLbl.Position = UDim2.new(0, 0, 0, 8)
@@ -1539,16 +1912,20 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 				AnchorPoint = Vector2.new(0.5, 1),
 				Position = UDim2.new(0.5, 0, 1, -10),
 				Size = UDim2.fromOffset(130, 32),
-				BackgroundColor3 = isCurrentEquipped and Color3.fromRGB(50, 20, 28) or (canEquip and Color3.fromRGB(24, 20, 38) or Color3.fromRGB(20, 18, 26)),
 				BorderSizePixel = 0,
 				Text = isCurrentEquipped and "UNEQUIP" or (canEquip and (hero.EquippedArtifactUUID and "SWAP" or "EQUIP") or "INCOMPATIBLE"),
 				Font = Enum.Font.GothamBold,
 				TextSize = 12,
-				TextColor3 = isCurrentEquipped and C.Red or (canEquip and C.Text or C.TextMuted),
-				AutoButtonColor = false,
 				ZIndex = 73,
 			}, card)
-			applyGothicStyle(actionBtn, "Button")
+
+			if isCurrentEquipped then
+				applyGothicStyle(actionBtn, "ButtonSecondary")
+			elseif canEquip then
+				applyGothicStyle(actionBtn, "ButtonPrimary", { Variant = "Gold" })
+			else
+				applyGothicStyle(actionBtn, "ButtonSecondary", { Disabled = true })
+			end
 
 			if canEquip or isCurrentEquipped then
 				actionBtn.Activated:Connect(function()
