@@ -7,7 +7,7 @@ local GothicFont = require(script.Parent:WaitForChild("GothicFont"))
 local GothicBoxStyle = {}
 GothicBoxStyle.Font = GothicFont
 
--- Configured authoritative asset ID uploaded by user
+-- Configured authoritative asset ID uploaded by user (nil uses procedural vector styling)
 GothicBoxStyle.CustomAssetId = nil :: string?
 
 export type GothicStyle = "Window" | "Card" | "Button" | "Compact" | "Panel" | "Row" | "Slot" | "ButtonPrimary" | "ButtonSecondary"
@@ -603,42 +603,42 @@ function GothicBoxStyle.Apply(container: GuiObject, opts: ApplyOptions?): GuiObj
 		Transparency = 0.15,
 	}, innerWhiteRail)
 
-	-- 4. Ornate Gothic Bone Flourishes Folder
+	-- 4. Simplified Gothic Accents Folder
 	local decor = new("Folder", { Name = "GothicDecorRoot" }, container)
 
-	-- 4A. 4-Corner Carved Bone Brackets with Hollow Teardrop/Diamond Negative Space Cutouts
-	local bracketSize = math.floor(40 * scale)
-	local cutoutSize = math.floor(15 * scale)
+	-- 4A. Clean 4-Corner Gothic Diamond Bosses
+	local diamondSize = math.floor(18 * scale)
+	local cutoutSize = math.max(2, math.floor(8 * scale))
 	local corners = {
-		{ Name = "Claw_TL", Anchor = Vector2.new(0.5, 0.5), Pos = UDim2.fromScale(0, 0), SignX = 1, SignY = 1 },
-		{ Name = "Claw_TR", Anchor = Vector2.new(0.5, 0.5), Pos = UDim2.fromScale(1, 0), SignX = -1, SignY = 1 },
-		{ Name = "Claw_BL", Anchor = Vector2.new(0.5, 0.5), Pos = UDim2.fromScale(0, 1), SignX = 1, SignY = -1 },
-		{ Name = "Claw_BR", Anchor = Vector2.new(0.5, 0.5), Pos = UDim2.fromScale(1, 1), SignX = -1, SignY = -1 },
+		{ Name = "Corner_TL", Pos = UDim2.fromScale(0, 0) },
+		{ Name = "Corner_TR", Pos = UDim2.fromScale(1, 0) },
+		{ Name = "Corner_BL", Pos = UDim2.fromScale(0, 1) },
+		{ Name = "Corner_BR", Pos = UDim2.fromScale(1, 1) },
 	}
 
 	for _, c in ipairs(corners) do
 		local rootCorner = new("Frame", {
 			Name = c.Name,
-			AnchorPoint = c.Anchor,
+			AnchorPoint = Vector2.new(0.5, 0.5),
 			Position = c.Pos,
-			Size = UDim2.fromOffset(bracketSize, bracketSize),
+			Size = UDim2.fromOffset(diamondSize, diamondSize),
 			BackgroundTransparency = 1,
 			ZIndex = baseZ + 3,
 		}, decor)
 
-		-- Main Outer Bone Diamond
+		-- Main Corner Diamond Boss
 		local mainHead = new("Frame", {
 			Name = "MainHead",
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			Position = UDim2.fromScale(0.5, 0.5),
-			Size = UDim2.fromOffset(math.floor(28 * scale), math.floor(28 * scale)),
+			Size = UDim2.fromOffset(diamondSize, diamondSize),
 			BackgroundColor3 = C.RailWhite,
 			BorderSizePixel = 0,
 			Rotation = 45,
 			ZIndex = baseZ + 3,
 		}, rootCorner)
 
-		-- Inner Negative Space Cutout
+		-- Concentric Obsidian Core Inset
 		new("Frame", {
 			Name = "NegativeCutout",
 			AnchorPoint = Vector2.new(0.5, 0.5),
@@ -649,135 +649,57 @@ function GothicBoxStyle.Apply(container: GuiObject, opts: ApplyOptions?): GuiObj
 			Rotation = 0,
 			ZIndex = baseZ + 4,
 		}, mainHead)
-
-		-- Outward Thorn Tip
-		new("Frame", {
-			Name = "OuterTip",
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.new(0.5, math.floor(c.SignX * 16 * scale), 0.5, math.floor(c.SignY * 16 * scale)),
-			Size = UDim2.fromOffset(math.floor(12 * scale), math.floor(12 * scale)),
-			BackgroundColor3 = C.RailWhite,
-			BorderSizePixel = 0,
-			Rotation = 45,
-			ZIndex = baseZ + 4,
-		}, rootCorner)
-
-		-- Horizontal Rail Hook
-		new("Frame", {
-			Name = "HorizontalHook",
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.new(0.5, math.floor(c.SignX * 22 * scale), 0.5, math.floor(c.SignY * 2 * scale)),
-			Size = UDim2.fromOffset(math.floor(18 * scale), math.floor(8 * scale)),
-			BackgroundColor3 = C.RailWhite,
-			BorderSizePixel = 0,
-			Rotation = c.SignX * 10,
-			ZIndex = baseZ + 3,
-		}, rootCorner)
-
-		-- Vertical Rail Hook
-		new("Frame", {
-			Name = "VerticalHook",
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.new(0.5, math.floor(c.SignX * 2 * scale), 0.5, math.floor(c.SignY * 22 * scale)),
-			Size = UDim2.fromOffset(math.floor(8 * scale), math.floor(18 * scale)),
-			BackgroundColor3 = C.RailWhite,
-			BorderSizePixel = 0,
-			Rotation = c.SignY * -10,
-			ZIndex = baseZ + 3,
-		}, rootCorner)
 	end
 
-	-- 4B. Dual Sweeping Horn Crests, Center Notches, & Side Barbs (For Windows and Cards)
-	if style == "Window" or style == "Card" then
-		local hornW = math.floor(58 * scale)
-		local hornH = math.floor(16 * scale)
+	-- 4B. Center Top & Bottom Subtle Crest Notches
+	local notchW = math.floor(18 * scale)
+	local notchH = math.floor(6 * scale)
 
-		local railHorns = {
-			{ Name = "TopHorn_L", Pos = UDim2.new(0.24, 0, 0, 0), SignX = 1, SignY = -1 },
-			{ Name = "TopHorn_R", Pos = UDim2.new(0.76, 0, 0, 0), SignX = -1, SignY = -1 },
-			{ Name = "BottomHorn_L", Pos = UDim2.new(0.24, 0, 1, 0), SignX = 1, SignY = 1 },
-			{ Name = "BottomHorn_R", Pos = UDim2.new(0.76, 0, 1, 0), SignX = -1, SignY = 1 },
-		}
+	local topCenterNotch = new("Frame", {
+		Name = "TopCenterNotch",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new(0.5, 0, 0, 0),
+		Size = UDim2.fromOffset(notchW, notchH),
+		BackgroundColor3 = C.RailWhite,
+		BorderSizePixel = 0,
+		ZIndex = baseZ + 3,
+	}, decor)
+	new("UICorner", { CornerRadius = UDim.new(0, 2) }, topCenterNotch)
 
-		for _, h in ipairs(railHorns) do
-			local horn = new("Frame", {
-				Name = h.Name,
-				AnchorPoint = Vector2.new(0.5, h.SignY == -1 and 1 or 0),
-				Position = h.Pos,
-				Size = UDim2.fromOffset(hornW, hornH),
-				BackgroundTransparency = 1,
-				ZIndex = baseZ + 3,
-			}, decor)
+	local btmCenterNotch = new("Frame", {
+		Name = "BottomCenterNotch",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new(0.5, 0, 1, 0),
+		Size = UDim2.fromOffset(notchW, notchH),
+		BackgroundColor3 = C.RailWhite,
+		BorderSizePixel = 0,
+		ZIndex = baseZ + 3,
+	}, decor)
+	new("UICorner", { CornerRadius = UDim.new(0, 2) }, btmCenterNotch)
 
-			local fin = new("Frame", {
-				AnchorPoint = Vector2.new(0.5, 0.5),
-				Position = UDim2.new(0.5, 0, 0.5, 0),
-				Size = UDim2.fromOffset(math.floor(48 * scale), math.floor(10 * scale)),
-				BackgroundColor3 = C.RailWhite,
-				BorderSizePixel = 0,
-				Rotation = h.SignX * h.SignY * 9,
-				ZIndex = baseZ + 3,
-			}, horn)
-			new("UICorner", { CornerRadius = UDim.new(0, 3) }, fin)
+	-- 4C. Left & Right Rail Midpoint Barbs
+	local sideBarbSize = math.floor(10 * scale)
+	new("Frame", {
+		Name = "LeftMidBarb",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new(0, 0, 0.5, 0),
+		Size = UDim2.fromOffset(sideBarbSize, sideBarbSize),
+		BackgroundColor3 = C.RailWhite,
+		BorderSizePixel = 0,
+		Rotation = 45,
+		ZIndex = baseZ + 3,
+	}, decor)
 
-			new("Frame", {
-				AnchorPoint = Vector2.new(0.5, 0.5),
-				Position = UDim2.new(h.SignX == 1 and 0.85 or 0.15, 0, 0.5, math.floor(h.SignY * -3 * scale)),
-				Size = UDim2.fromOffset(math.floor(12 * scale), math.floor(12 * scale)),
-				BackgroundColor3 = C.RailWhite,
-				BorderSizePixel = 0,
-				Rotation = 45,
-				ZIndex = baseZ + 4,
-			}, horn)
-		end
-
-		-- Center Top & Bottom Subtle Crest Notches
-		local topCenterNotch = new("Frame", {
-			Name = "TopCenterNotch",
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.new(0.5, 0, 0, 0),
-			Size = UDim2.fromOffset(math.floor(20 * scale), math.floor(8 * scale)),
-			BackgroundColor3 = C.RailWhite,
-			BorderSizePixel = 0,
-			ZIndex = baseZ + 3,
-		}, decor)
-		new("UICorner", { CornerRadius = UDim.new(0, 2) }, topCenterNotch)
-
-		local btmCenterNotch = new("Frame", {
-			Name = "BottomCenterNotch",
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.new(0.5, 0, 1, 0),
-			Size = UDim2.fromOffset(math.floor(20 * scale), math.floor(8 * scale)),
-			BackgroundColor3 = C.RailWhite,
-			BorderSizePixel = 0,
-			ZIndex = baseZ + 3,
-		}, decor)
-		new("UICorner", { CornerRadius = UDim.new(0, 2) }, btmCenterNotch)
-
-		-- 4C. Left & Right Rail Midpoint Barbs
-		local sideBarbSize = math.floor(14 * scale)
-		new("Frame", {
-			Name = "LeftMidBarb",
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.new(0, 0, 0.5, 0),
-			Size = UDim2.fromOffset(sideBarbSize, sideBarbSize),
-			BackgroundColor3 = C.RailWhite,
-			BorderSizePixel = 0,
-			Rotation = 45,
-			ZIndex = baseZ + 3,
-		}, decor)
-
-		new("Frame", {
-			Name = "RightMidBarb",
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.new(1, 0, 0.5, 0),
-			Size = UDim2.fromOffset(sideBarbSize, sideBarbSize),
-			BackgroundColor3 = C.RailWhite,
-			BorderSizePixel = 0,
-			Rotation = 45,
-			ZIndex = baseZ + 3,
-		}, decor)
-	end
+	new("Frame", {
+		Name = "RightMidBarb",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new(1, 0, 0.5, 0),
+		Size = UDim2.fromOffset(sideBarbSize, sideBarbSize),
+		BackgroundColor3 = C.RailWhite,
+		BorderSizePixel = 0,
+		Rotation = 45,
+		ZIndex = baseZ + 3,
+	}, decor)
 
 	-- 5. Interactive Hover Feedback for Buttons
 	if style == "Button" and container:IsA("GuiButton") then
