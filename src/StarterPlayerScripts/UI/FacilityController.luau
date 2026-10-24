@@ -16,6 +16,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local FacilityConfig = require(Shared:WaitForChild("Config"):WaitForChild("FacilityConfig"))
 local HeroCatalog = require(Shared:WaitForChild("Config"):WaitForChild("HeroCatalog"))
 local ArtifactCatalog = require(Shared:WaitForChild("Config"):WaitForChild("ArtifactCatalog"))
+local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormulas"))
 local GothicBoxStyle = require(Shared:WaitForChild("Util"):WaitForChild("GothicBoxStyle"))
 
 local RemotesFolder = ReplicatedStorage:WaitForChild("Remotes")
@@ -69,8 +70,11 @@ local ARTIFACT_ICONS: { [string]: string } = {
 
 local DETAILS = {
 	Summoning = { Title = "SUMMONING", Description = "Call legendary heroes through the dimensional rift.", Color = Color3.fromRGB(192, 132, 252) },
-	Infirmary = { Title = "INFIRMARY", Description = "Rest heroes, restore stamina, and recover from coma.", Color = Color3.fromRGB(100, 232, 175) },
+	Infirmary = { Title = "INFIRMARY & BARRACKS", Description = "Rest wounded heroes, restore stamina, and clear coma. Resting Healers grant a +50% recovery aura.", Color = Color3.fromRGB(100, 232, 175) },
 	SquadManagement = { Title = "SQUAD MANAGEMENT", Description = "Deploy rested heroes and bench your current squad.", Color = Color3.fromRGB(245, 128, 99) },
+	GuardPost = { Title = "OUTSKIRTS GUARD POST", Description = "Station Adventurers along the southern trail to defend the outskirts and generate passive Gold online & offline.", Color = Color3.fromRGB(130, 205, 95) },
+	Market = { Title = "THE MARKET", Description = "Station Merchants to multiply Infinite Tower mob/boss loot drops and cargo extraction banking.", Color = Color3.fromRGB(245, 195, 75) },
+	TrainingGrounds = { Title = "TRAINING GROUNDS", Description = "Station Trainers to run martial combat drills, multiplying overall squad Final ATK and Final HP.", Color = Color3.fromRGB(235, 80, 80) },
 }
 
 local function new(className: string, props: { [string]: any }, parent: Instance?): any
@@ -112,17 +116,23 @@ local function cornerDiamonds(parent: GuiObject, size: number, color: Color3?)
 end
 
 local function label(parent: Instance, text: string, size: number, color: Color3, font: Enum.Font?): TextLabel
-	return new("TextLabel", {
+	local lbl = new("TextLabel", {
 		BackgroundTransparency = 1,
 		Text = text,
 		TextSize = size,
 		TextColor3 = color,
-		Font = font or Enum.Font.GothamBold,
+		Font = font or GothicBoxStyle.Font.LegacyFont or Enum.Font.GothamBold,
 		Size = UDim2.new(1, 0, 0, size + 8),
 		TextWrapped = false,
 		TextTruncate = Enum.TextTruncate.AtEnd,
 		RichText = true,
 	}, parent)
+	GothicBoxStyle.Font.Apply(lbl, {
+		Role = if size >= 20 then "Title" else if size >= 15 then "Header" else "Body",
+		Color = color,
+		Size = size,
+	})
+	return lbl
 end
 
 --============================================================================
@@ -999,28 +1009,102 @@ function Controller:Refresh()
 
 	local heroes = {}
 	for _, h in profile.Heroes or {} do table.insert(heroes, h) end
+	local currentTag = FacilityConfig.AssignmentTags[self.Current]
+
 	table.sort(heroes, function(a, b)
-		if self.Current == "SquadManagement" then
+		if currentTag then
+			local aAssigned, bAssigned = a.Assignment == currentTag, b.Assignment == currentTag
+			if aAssigned ~= bAssigned then return aAssigned end
+		elseif self.Current == "SquadManagement" then
 			local aSquad, bSquad = a.Assignment:match("^SQUAD_SLOT_") ~= nil, b.Assignment:match("^SQUAD_SLOT_") ~= nil
 			if aSquad ~= bSquad then return aSquad end
-		elseif self.Current == "Infirmary" then
-			local aRest, bRest = a.Assignment == "FACILITY_INFIRMARY", b.Assignment == "FACILITY_INFIRMARY"
-			if aRest ~= bRest then return aRest end
 		end
 		if a.Stars ~= b.Stars then return a.Stars > b.Stars end
 		return tostring(a.UUID) < tostring(b.UUID)
 	end)
 
-	if self.Current == "Infirmary" then
-		local facility = profile.Facilities.Infirmary
-		local resting = 0
-		for _, h in heroes do if h.Assignment == "FACILITY_INFIRMARY" then resting += 1 end end
-		self.Summary.Text = string.format("Infirmary Lv.%d  •  %d heroes resting  •  Recovery runs while assigned here", facility.Level, resting)
-		local nextLevel = FacilityConfig.UpgradeTable.Infirmary[facility.Level + 1]
-		local upgrade = nextLevel and string.format("UPGRADE · %d GOLD", nextLevel.Gold) or "MAXIMUM LEVEL"
+	if self.Current == "GuardPost" then
+		local fac = profile.Facilities and profile.Facilities.GuardPost or { Level = 1, AssignedHeroUUIDs = {} }
+		local sumLabor = 0
+		for _, u in ipairs(fac.AssignedHeroUUIDs) do
+			local h = profile.Heroes[u]
+			if h and (h.ComaUntilTimestamp or 0) <= os.time() then
+				sumLabor += StatFormulas.GetEffectiveLabor(h, "FACILITY_GUARD_POST")
+			end
+		end
+		local bossTier = profile.HighestClearedBiomeBoss or 0
+		local rate = StatFormulas.GetPassiveGoldRate(fac.Level, sumLabor, bossTier)
+		local cfg = FacilityConfig.UpgradeTable.GuardPost[fac.Level]
+		local nextCfg = FacilityConfig.UpgradeTable.GuardPost[fac.Level + 1]
+		local hours = cfg and math.round(cfg.MaxOfflineMinutes / 60) or 4
+		local eff = cfg and math.round(cfg.OfflineEfficiency * 100) or 75
+		local bossText = bossTier > 0 and string.format(" (+%d%% Boss Tier %d)", bossTier * 15, bossTier) or ""
+
+		self.Summary.Text = string.format("Guard Post Lv.%d (%s)  •  %d/%d Adventurers  •  💰 <b>%.1f Gold/min</b>%s  •  Offline Cap: %dh (%d%%)", fac.Level, cfg and cfg.VisualTitle or "Bastion", #fac.AssignedHeroUUIDs, cfg and cfg.MaxWorkers or 1, rate, bossText, hours, eff)
+		local upgrade = nextCfg and string.format("UPGRADE TO LV.%d · %d GOLD (+%d Base Gold/min, +2h Cap)", fac.Level + 1, nextCfg.Gold, nextCfg.BaseGoldPerMin - (cfg and cfg.BaseGoldPerMin or 30)) or "MAXIMUM LEVEL (LV.5)"
 		self:Button(self.Actions, "Upgrade", upgrade, UDim2.new(1, 0, 1, 0), UDim2.new(), function()
-			if nextLevel then self.Facility:FireServer("UPGRADE_FACILITY", "Infirmary") end
+			if nextCfg then self.Facility:FireServer("UPGRADE_FACILITY", "GuardPost") end
 		end)
+
+	elseif self.Current == "Market" then
+		local fac = profile.Facilities and profile.Facilities.Market or { Level = 1, AssignedHeroUUIDs = {} }
+		local sumLabor = 0
+		for _, u in ipairs(fac.AssignedHeroUUIDs) do
+			local h = profile.Heroes[u]
+			if h and (h.ComaUntilTimestamp or 0) <= os.time() then
+				sumLabor += StatFormulas.GetEffectiveLabor(h, "FACILITY_MARKET")
+			end
+		end
+		local mult = StatFormulas.GetMarketLootMultiplier(fac.Level, sumLabor)
+		local bonusPct = math.round((mult - 1) * 1000) / 10
+		local cfg = FacilityConfig.UpgradeTable.Market[fac.Level]
+		local nextCfg = FacilityConfig.UpgradeTable.Market[fac.Level + 1]
+
+		self.Summary.Text = string.format("Market Lv.%d (%s)  •  %d/%d Merchants  •  📦 <b>+%.1f%% Tower & Cargo Gold</b>", fac.Level, cfg and cfg.VisualTitle or "Bazaar", #fac.AssignedHeroUUIDs, cfg and cfg.MaxWorkers or 1, bonusPct)
+		local upgrade = nextCfg and string.format("UPGRADE TO LV.%d · %d GOLD (+%.0f%% Base Loot Multiplier)", fac.Level + 1, nextCfg.Gold, (nextCfg.BaseBonus - (cfg and cfg.BaseBonus or 0)) * 100) or "MAXIMUM LEVEL (LV.5)"
+		self:Button(self.Actions, "Upgrade", upgrade, UDim2.new(1, 0, 1, 0), UDim2.new(), function()
+			if nextCfg then self.Facility:FireServer("UPGRADE_FACILITY", "Market") end
+		end)
+
+	elseif self.Current == "TrainingGrounds" then
+		local fac = profile.Facilities and profile.Facilities.TrainingGrounds or { Level = 1, AssignedHeroUUIDs = {} }
+		local sumLabor = 0
+		for _, u in ipairs(fac.AssignedHeroUUIDs) do
+			local h = profile.Heroes[u]
+			if h and (h.ComaUntilTimestamp or 0) <= os.time() then
+				sumLabor += StatFormulas.GetEffectiveLabor(h, "FACILITY_TRAINING")
+			end
+		end
+		local mult = StatFormulas.GetTrainingCombatMultiplier(fac.Level, sumLabor)
+		local bonusPct = math.round((mult - 1) * 1000) / 10
+		local cfg = FacilityConfig.UpgradeTable.TrainingGrounds[fac.Level]
+		local nextCfg = FacilityConfig.UpgradeTable.TrainingGrounds[fac.Level + 1]
+
+		self.Summary.Text = string.format("Training Grounds Lv.%d (%s)  •  %d/%d Trainers  •  ⚔️ <b>+%.1f%% Squad Final ATK & HP</b>", fac.Level, cfg and cfg.VisualTitle or "Arena", #fac.AssignedHeroUUIDs, cfg and cfg.MaxWorkers or 1, bonusPct)
+		local upgrade = nextCfg and string.format("UPGRADE TO LV.%d · %d GOLD (+%.0f%% Base Combat Multiplier)", fac.Level + 1, nextCfg.Gold, (nextCfg.BaseBonus - (cfg and cfg.BaseBonus or 0)) * 100) or "MAXIMUM LEVEL (LV.5)"
+		self:Button(self.Actions, "Upgrade", upgrade, UDim2.new(1, 0, 1, 0), UDim2.new(), function()
+			if nextCfg then self.Facility:FireServer("UPGRADE_FACILITY", "TrainingGrounds") end
+		end)
+
+	elseif self.Current == "Infirmary" then
+		local facility = profile.Facilities and profile.Facilities.Infirmary or { Level = 1, AssignedHeroUUIDs = {} }
+		local resting = 0
+		local hasHealer = false
+		for _, h in heroes do
+			if h.Assignment == "FACILITY_INFIRMARY" then
+				resting += 1
+				if h.Archetype == "Healer" and (h.ComaUntilTimestamp or 0) <= os.time() then
+					hasHealer = true
+				end
+			end
+		end
+		local regen, coma = StatFormulas.GetInfirmaryRates(facility.Level, 0, hasHealer)
+		local auraText = hasHealer and "<font color=\"#4ADE80\">💚 HEALER AURA ACTIVE (+50% Regen, 40s Coma)</font>" or "<font color=\"#A0B0C4\">Standard Recovery (3.0/s, 60s Coma)</font>"
+		self.Summary.Text = string.format("Infirmary (5 Beds)  •  %d heroes resting  •  %.1f Stamina/s  •  %s", resting, regen, auraText)
+		self:Button(self.Actions, "Upgrade", "CORE CITADEL FACILITY · 5 PERMANENT RECUPERATION BEDS", UDim2.new(1, 0, 1, 0), UDim2.new(), function()
+			-- Core Main Building: 5 permanent beds
+		end)
+
 	else
 		local deployed = 0
 		for _, h in heroes do if h.Assignment:match("^SQUAD_SLOT_") then deployed += 1 end end
@@ -1049,21 +1133,43 @@ function Controller:Refresh()
 		new("UICorner", { CornerRadius = UDim.new(0, 6) }, row)
 		stroke(row, C.BorderCard, 1)
 
-		local desc = label(row, "", 14, C.Text, Enum.Font.GothamMedium)
-		desc.Position = UDim2.fromOffset(12, 10)
-		desc.Size = UDim2.new(0.6, -18, 1, -20)
+		local desc = label(row, "", 13, C.Text, Enum.Font.GothamMedium)
+		desc.Position = UDim2.fromOffset(12, 8)
+		desc.Size = UDim2.new(0.6, -18, 1, -16)
 		desc.TextXAlignment = Enum.TextXAlignment.Left
 
 		local coma = math.max(0, (hero.ComaUntilTimestamp or 0) - os.time())
-		local status = coma > 0 and string.format("Recovering · %ds", coma) or string.format("Stamina %d%%", math.round(hero.CurrentStamina or 100))
+		local status = coma > 0 and string.format("<font color=\"#EF4444\">Coma (%ds)</font>", coma) or string.format("Stamina %d%%", math.round(hero.CurrentStamina or 100))
 		local stars = string.rep("★", hero.Stars or 1)
-		desc.Text = string.format("%s  <font color=\"#FACC15\">%s</font>  Lv.%d\n<font color=\"#A0B0C4\">%s  •  %s</font>", hero.DisplayName, stars, hero.Level or 1, hero.Assignment, status)
+		local archIcon = ARCHETYPE_ICONS[hero.Archetype] or "🛡️"
 
-		local rest = (self.Current == "Infirmary")
+		local labor = StatFormulas.GetEffectiveLabor(hero, currentTag or hero.Assignment)
+		local seed = HeroCatalog.Seeds[hero.TemplateId]
+		local pref = seed and seed.PreferredFacility or ""
+		local hasSynergy = currentTag and (pref == "ALL" or pref == currentTag)
+		local synergyText = hasSynergy and " <font color=\"#4ADE80\">★ +25% Synergy</font>" or ""
+
+		desc.Text = string.format("%s %s  <font color=\"#FACC15\">%s</font>  Lv.%d\n<font color=\"#A0B0C4\">%s  •  %s</font>\n<font color=\"#E2D5FC\">⛏️ Labor: <b>%.1f</b>%s</font>", archIcon, hero.DisplayName, stars, hero.Level or 1, hero.Assignment, status, labor, synergyText)
+
+		local assignTitle = "DEPLOY"
+		local targetAssignment = "SQUAD_AUTO"
+		if self.Current == "GuardPost" then
+			assignTitle = "PATROL"
+			targetAssignment = "FACILITY_GUARD_POST"
+		elseif self.Current == "Market" then
+			assignTitle = "MERCHANT"
+			targetAssignment = "FACILITY_MARKET"
+		elseif self.Current == "TrainingGrounds" then
+			assignTitle = "TRAIN"
+			targetAssignment = "FACILITY_TRAINING"
+		elseif self.Current == "Infirmary" then
+			assignTitle = "REST"
+			targetAssignment = "FACILITY_INFIRMARY"
+		end
+
 		local uuid = hero.UUID
-		local assignment = rest and "FACILITY_INFIRMARY" or "SQUAD_AUTO"
-		self:Button(row, "Assign", rest and "REST" or "DEPLOY", UDim2.new(0.18, -4, 0, 36), UDim2.new(0.62, 0, 0.5, -18), function()
-			self:Request(function() return self.Assign:InvokeServer(uuid, assignment) end)
+		self:Button(row, "Assign", assignTitle, UDim2.new(0.18, -4, 0, 36), UDim2.new(0.62, 0, 0.5, -18), function()
+			self:Request(function() return self.Assign:InvokeServer(uuid, targetAssignment) end)
 		end)
 		self:Button(row, "Bench", "BENCH", UDim2.new(0.18, -4, 0, 36), UDim2.new(0.81, 0, 0.5, -18), function()
 			self:Request(function() return self.Assign:InvokeServer(uuid, "BENCHED") end)

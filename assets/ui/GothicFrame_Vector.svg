@@ -1,0 +1,119 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 572" width="1024" height="572" style="background: transparent;">
+  <defs>
+    <!-- Purple Ambient Glow Filter -->
+    <filter id="vectorGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="7" result="glowBlur" />
+      <feFlood flood-color="#a47eff" flood-opacity="0.9" result="glowColor" />
+      <feComposite in="glowColor" in2="glowBlur" operator="in" result="coloredGlow" />
+      <feMerge>
+        <feMergeNode in="coloredGlow" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <!-- Metallic Brushed Silver Gradients -->
+    <linearGradient id="silverH" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="30%" stop-color="#dedce8" />
+      <stop offset="50%" stop-color="#b0abbf" />
+      <stop offset="70%" stop-color="#e8e6f0" />
+      <stop offset="100%" stop-color="#ffffff" />
+    </linearGradient>
+
+    <linearGradient id="silverV" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="30%" stop-color="#dedce8" />
+      <stop offset="50%" stop-color="#b0abbf" />
+      <stop offset="70%" stop-color="#e8e6f0" />
+      <stop offset="100%" stop-color="#ffffff" />
+    </linearGradient>
+
+    <linearGradient id="cornerShade" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2d243d" />
+      <stop offset="50%" stop-color="#191424" />
+      <stop offset="100%" stop-color="#0e0a16" />
+    </linearGradient>
+  </defs>
+
+  <!-- AMBIENT PURPLE GLOW BASE -->
+  <g id="Ambient-Purple-Glow" filter="url(#vectorGlow)" opacity="0.85">
+    <path d="M 195 175 L 829 175 L 829 397 L 195 397 Z" fill="none" stroke="#8d62f5" stroke-width="12" stroke-linejoin="round" />
+  </g>
+
+  <!-- METALLIC OUTER RAIL -->
+  <g id="Metallic-Outer-Rail">
+    <rect x="195" y="175" width="634" height="222" fill="none" stroke="url(#silverH)" stroke-width="2.5" />
+    <rect x="198" y="178" width="628" height="216" fill="none" stroke="#1d1728" stroke-width="1.8" />
+    <rect x="203" y="181" width="618" height="210" fill="none" stroke="url(#silverH)" stroke-width="2" />
+  </g>
+
+  <!-- CORNER FLOURISHES & GOTHIC SPIRES -->
+  <g id="Corner-Ornaments">
+    <!-- Top-Left Corner Ornament -->
+    <g id="Corner-TopLeft" transform="translate(195, 175)">
+      <!-- Corner pocket shadow -->
+      <path d="M 0 0 L 60 0 C 45 15 15 45 0 60 Z" fill="url(#cornerShade)" />
+      <!-- Outer Gothic Spires -->
+      <path d="M 0 0 L -8 -16 L -16 -8 Z" fill="url(#silverH)" />
+      <path d="M -8 -8 L -18 -26 L -6 -16 L 4 -28 L 6 -12 Z" fill="#ffffff" />
+      <path d="M -2 -14 C -12 -28 -24 -38 -36 -44 C -28 -32 -20 -18 -8 -8 Z" fill="url(#silverH)" stroke="#f0edfa" stroke-width="0.8" />
+      <!-- Horizontal Upper Spire -->
+      <path d="M 12 -4 L 28 -14 L 18 -2 L 32 -4 L 20 2 Z" fill="url(#silverH)" />
+      <!-- Vertical Left Spire -->
+      <path d="M -4 12 L -14 28 L -2 18 L -4 32 L 2 20 Z" fill="url(#silverH)" />
+      <!-- Inner Diagonal Chamfer Rail -->
+      <path d="M 60 0 C 42 16 16 42 0 60" fill="none" stroke="url(#silverH)" stroke-width="2.8" stroke-linecap="round" />
+      <path d="M 58 4 C 42 18 18 42 4 58" fill="none" stroke="#2a1f3d" stroke-width="1.2" />
+    </g>
+
+    <!-- Top-Right Corner Ornament -->
+    <g id="Corner-TopRight" transform="translate(829, 175) scale(-1, 1)">
+      <path d="M 0 0 L 60 0 C 45 15 15 45 0 60 Z" fill="url(#cornerShade)" />
+      <path d="M 0 0 L -8 -16 L -16 -8 Z" fill="url(#silverH)" />
+      <path d="M -8 -8 L -18 -26 L -6 -16 L 4 -28 L 6 -12 Z" fill="#ffffff" />
+      <path d="M -2 -14 C -12 -28 -24 -38 -36 -44 C -28 -32 -20 -18 -8 -8 Z" fill="url(#silverH)" stroke="#f0edfa" stroke-width="0.8" />
+      <path d="M 12 -4 L 28 -14 L 18 -2 L 32 -4 L 20 2 Z" fill="url(#silverH)" />
+      <path d="M -4 12 L -14 28 L -2 18 L -4 32 L 2 20 Z" fill="url(#silverH)" />
+      <path d="M 60 0 C 42 16 16 42 0 60" fill="none" stroke="url(#silverH)" stroke-width="2.8" stroke-linecap="round" />
+      <path d="M 58 4 C 42 18 18 42 4 58" fill="none" stroke="#2a1f3d" stroke-width="1.2" />
+    </g>
+
+    <!-- Bottom-Left Corner Ornament -->
+    <g id="Corner-BottomLeft" transform="translate(195, 397) scale(1, -1)">
+      <path d="M 0 0 L 60 0 C 45 15 15 45 0 60 Z" fill="url(#cornerShade)" />
+      <path d="M 0 0 L -8 -16 L -16 -8 Z" fill="url(#silverH)" />
+      <path d="M -8 -8 L -18 -26 L -6 -16 L 4 -28 L 6 -12 Z" fill="#ffffff" />
+      <path d="M -2 -14 C -12 -28 -24 -38 -36 -44 C -28 -32 -20 -18 -8 -8 Z" fill="url(#silverH)" stroke="#f0edfa" stroke-width="0.8" />
+      <path d="M 12 -4 L 28 -14 L 18 -2 L 32 -4 L 20 2 Z" fill="url(#silverH)" />
+      <path d="M -4 12 L -14 28 L -2 18 L -4 32 L 2 20 Z" fill="url(#silverH)" />
+      <path d="M 60 0 C 42 16 16 42 0 60" fill="none" stroke="url(#silverH)" stroke-width="2.8" stroke-linecap="round" />
+      <path d="M 58 4 C 42 18 18 42 4 58" fill="none" stroke="#2a1f3d" stroke-width="1.2" />
+    </g>
+
+    <!-- Bottom-Right Corner Ornament -->
+    <g id="Corner-BottomRight" transform="translate(829, 397) scale(-1, -1)">
+      <path d="M 0 0 L 60 0 C 45 15 15 45 0 60 Z" fill="url(#cornerShade)" />
+      <path d="M 0 0 L -8 -16 L -16 -8 Z" fill="url(#silverH)" />
+      <path d="M -8 -8 L -18 -26 L -6 -16 L 4 -28 L 6 -12 Z" fill="#ffffff" />
+      <path d="M -2 -14 C -12 -28 -24 -38 -36 -44 C -28 -32 -20 -18 -8 -8 Z" fill="url(#silverH)" stroke="#f0edfa" stroke-width="0.8" />
+      <path d="M 12 -4 L 28 -14 L 18 -2 L 32 -4 L 20 2 Z" fill="url(#silverH)" />
+      <path d="M -4 12 L -14 28 L -2 18 L -4 32 L 2 20 Z" fill="url(#silverH)" />
+      <path d="M 60 0 C 42 16 16 42 0 60" fill="none" stroke="url(#silverH)" stroke-width="2.8" stroke-linecap="round" />
+      <path d="M 58 4 C 42 18 18 42 4 58" fill="none" stroke="#2a1f3d" stroke-width="1.2" />
+    </g>
+  </g>
+
+  <!-- CENTER CRESTS & MIDPOINT BARBS -->
+  <g id="Center-Accents">
+    <polygon points="512,168 518,175 512,180 506,175" fill="#ffffff" stroke="#c0bccd" stroke-width="0.5" />
+    <polygon points="512,392 518,397 512,404 506,397" fill="#ffffff" stroke="#c0bccd" stroke-width="0.5" />
+    <polygon points="188,286 195,280 200,286 195,292" fill="#ffffff" stroke="#c0bccd" stroke-width="0.5" />
+    <polygon points="836,286 829,280 824,286 829,292" fill="#ffffff" stroke="#c0bccd" stroke-width="0.5" />
+  </g>
+
+  <!-- TRANSPARENT CENTER VIEWPORT (Empty for Content Insertion) -->
+  <g id="Center-Content-Window">
+    <!-- Path traces the inner edge including chamfered corners -->
+    <path d="M 255 181 L 769 181 C 785 195 815 225 829 241 L 829 331 C 815 347 785 377 769 391 L 255 391 C 239 377 209 347 195 331 L 195 241 C 209 225 239 195 255 181 Z" fill="none" />
+  </g>
+</svg>

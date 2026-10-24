@@ -262,6 +262,186 @@ function Architecture.Build(model: Model, frame: CFrame, id: string, accent: Col
 		return
 	end
 
+	if id == "Market" then
+		local woodPlank = Color3.fromRGB(115, 85, 55)
+		local darkWood = Color3.fromRGB(75, 50, 35)
+		local crimson = Color3.fromRGB(160, 35, 45)
+		local goldTone = Color3.fromRGB(225, 175, 60)
+
+		-- Wooden bazaar deck foundation
+		part("MarketDeck", V(26, .7, 20), V(0, .35, 0), darkWood, Enum.Material.WoodPlanks)
+		part("MarketInlaidFloor", V(24.5, .4, 18.5), V(0, .8, 0), woodPlank, Enum.Material.WoodPlanks)
+
+		-- Main Bazaar Stall Frame
+		for _, x in {-9.5, 9.5} do
+			for _, z in {-7, 7} do
+				cylinder("StallPillar", .55, 10, V(x, 5.8, z), darkWood, Enum.Material.Wood)
+			end
+		end
+
+		-- Twin Striped Canopy Awning
+		for i = 0, 9 do
+			local z = -7.5 + (i + 0.5) * 1.5
+			local color = (i % 2 == 0) and crimson or goldTone
+			block("AwningStripeLeft", V(10, .35, 1.5), CFrame.new(-4.8, 11, z) * CFrame.Angles(0, 0, math.rad(-12)), color, Enum.Material.Fabric)
+			block("AwningStripeRight", V(10, .35, 1.5), CFrame.new(4.8, 11, z) * CFrame.Angles(0, 0, math.rad(12)), color, Enum.Material.Fabric)
+		end
+		part("CanopyRidge", V(1.2, .6, 16.5), V(0, 12.1, 0), bronze, Enum.Material.Metal)
+
+		-- Merchant Counters & Display Tables
+		part("FrontCounter", V(18, 3.2, 2.2), V(0, 2.4, 6), darkWood, Enum.Material.Wood)
+		part("CounterTop", V(19, .4, 2.6), V(0, 4.1, 6), pale, Enum.Material.Marble)
+
+		-- Scales, Ledgers & Coin Bags on Counter
+		part("CoinScaleStand", V(.35, 2.2, .35), V(-4, 5.3, 6), bronze, Enum.Material.Metal)
+		part("CoinScaleBeam", V(2.2, .18, .18), V(-4, 6.3, 6), bronze, Enum.Material.Metal)
+		part("CoinScalePanLeft", V(1, .15, 1), V(-5, 5.7, 6), goldTone, Enum.Material.Metal)
+		part("CoinScalePanRight", V(1, .15, 1), V(-3, 5.7, 6), goldTone, Enum.Material.Metal)
+
+		local ledger = part("TradeLedger", V(1.8, .22, 1.4), V(3, 4.4, 6), Color3.fromRGB(240, 235, 215), Enum.Material.Fabric)
+		ledger.CFrame *= CFrame.Angles(0, math.rad(15), 0)
+
+		-- Cargo Crates & Sacks Stacked at the Rear
+		for _, x in {-6, -2, 4} do
+			part("CargoCrate_" .. x, V(3.2, 3.2, 3.2), V(x, 2.4, -4.5), darkWood, Enum.Material.Wood)
+			part("CrateIronBand", V(3.3, .3, 3.3), V(x, 2.4, -4.5), shadow, Enum.Material.Metal)
+		end
+		part("CargoCrateStacked", V(2.8, 2.8, 2.8), V(-4, 5.2, -4.5), darkWood, Enum.Material.Wood)
+
+		-- Hanging Brass Market Lanterns
+		for _, x in {-8, 8} do
+			part("MarketLanternArm", V(.18, .6, 1.2), V(x, 10, 7), bronze, Enum.Material.Metal)
+			local lamp = part("MarketLantern", V(.65, 1.1, .65), V(x, 9.3, 7.5), Color3.fromRGB(255, 215, 140), Enum.Material.Neon)
+			lamp.CanCollide = false
+			local light = Instance.new("PointLight")
+			light.Color, light.Range, light.Brightness, light.Parent = lamp.Color, 12, 1.0, lamp
+		end
+
+		local title = part("MarketSign", V(14, 1.8, .25), V(0, 13.2, 7.8), shadow)
+		sign(title, "THE MARKET", "BAZAAR OF COMMERCE")
+		return
+	end
+
+	if id == "TrainingGrounds" then
+		local woodTrim = Color3.fromRGB(90, 65, 45)
+		local ropeColor = Color3.fromRGB(195, 175, 135)
+		local strawColor = Color3.fromRGB(220, 195, 120)
+		local ironMetal = Color3.fromRGB(80, 85, 95)
+
+		-- Cobblestone & Sand Sparring Arena Floor
+		cylinder("ArenaFoundation", 12.5, .6, V(0, .3, 0), shadow)
+		cylinder("SandSparringRing", 11.8, .4, V(0, .6, 0), Color3.fromRGB(180, 160, 130), Enum.Material.Sand)
+		cylinder("ArenaStoneBorder", 12.2, .25, V(0, .85, 0), pale)
+
+		-- Heavy Timber Ring Posts and Boundary Ropes
+		for i = 0, 7 do
+			local angle = i * math.pi / 4
+			local x, z = math.cos(angle) * 11.2, math.sin(angle) * 11.2
+			cylinder("RingPost_" .. i, .45, 4.2, V(x, 2.7, z), woodTrim, Enum.Material.Wood)
+			for _, ry in {2.2, 3.6} do
+				local nextA = (i + 1) * math.pi / 4
+				local nx, nz = math.cos(nextA) * 11.2, math.sin(nextA) * 11.2
+				line("BoundaryRope", V(x, ry, z), V(nx, ry, nz), .14, ropeColor, Enum.Material.Fabric)
+			end
+		end
+
+		-- Straw Training Dummies with Bullseye Chestplates
+		for _, dx in {-4.5, 4.5} do
+			cylinder("DummyStand", .25, 4.2, V(dx, 2.7, -3.5), woodTrim, Enum.Material.Wood)
+			part("DummyCrossbar", V(3.2, .25, .25), V(dx, 3.6, -3.5), woodTrim, Enum.Material.Wood)
+			local body = part("DummyStrawBody", V(1.8, 2.8, 1.4), V(dx, 3.5, -3.5), strawColor, Enum.Material.Grass)
+			body.Shape = Enum.PartType.Ball
+			local head = part("DummyHead", V(1.1, 1.2, 1.1), V(dx, 5.2, -3.5), strawColor, Enum.Material.Grass)
+			head.Shape = Enum.PartType.Ball
+			-- Target plate
+			part("DummyBullseye", V(.9, .9, .15), V(dx, 3.5, -2.75), Color3.fromRGB(220, 50, 50), Enum.Material.SmoothPlastic)
+		end
+
+		-- Iron Weapon Rack with Practice Swords
+		part("WeaponRackBase", V(6, .35, 1.8), V(0, .9, -7.5), woodTrim, Enum.Material.Wood)
+		for _, x in {-2.6, 2.6} do
+			part("WeaponRackUpright", V(.35, 4.2, 1.6), V(x, 3, -7.5), woodTrim, Enum.Material.Wood)
+		end
+		part("WeaponRackBeam", V(5.5, .3, .25), V(0, 4.6, -7.5), woodTrim, Enum.Material.Wood)
+		for i = -2, 2 do
+			local sword = part("PracticeSword_" .. i, V(.2, 3.4, .45), V(i * 1.1, 3.2, -7.5), ironMetal, Enum.Material.Metal)
+			sword.CFrame *= CFrame.Angles(0, 0, math.rad(10))
+		end
+
+		-- Iron Brazier with Warm Combat Flame
+		cylinder("BrazierBase", 1.2, .5, V(0, .9, 6.5), shadow)
+		cylinder("BrazierBowl", 1.6, .9, V(0, 2.0, 6.5), ironMetal, Enum.Material.Metal)
+		local coal = part("BrazierCoal", V(2.2, .4, 2.2), V(0, 2.4, 6.5), Color3.fromRGB(255, 120, 40), Enum.Material.Neon)
+		coal.Shape = Enum.PartType.Ball
+		coal.CanCollide = false
+		local fire = Instance.new("PointLight")
+		fire.Color, fire.Range, fire.Brightness, fire.Parent = Color3.fromRGB(255, 160, 60), 16, 1.2, coal
+
+		local title = part("TrainingSign", V(14, 1.8, .25), V(0, 8.5, 9.5), shadow)
+		sign(title, "TRAINING GROUNDS", "MARTIAL DRILL ARENA")
+		return
+	end
+
+	if id == "GuardPost" then
+		local logColor = Color3.fromRGB(92, 68, 44)
+		local timberColor = Color3.fromRGB(120, 90, 58)
+		local ironColor = Color3.fromRGB(60, 65, 75)
+		local emberColor = Color3.fromRGB(255, 105, 30)
+
+		-- Heavy Timber Bastion Base & Watchtower
+		part("BastionPlatform", V(24, .9, 18), V(0, .45, 0), timberColor, Enum.Material.WoodPlanks)
+
+		-- Sturdy Log Corner Posts
+		for _, x in {-10, 10} do
+			for _, z in {-7.5, 7.5} do
+				cylinder("BastionLogColumn", .75, 12, V(x, 6.5, z), logColor, Enum.Material.Wood)
+			end
+		end
+
+		-- Raised Watchtower Parapet & Roof
+		part("WatchPlatform", V(22, .6, 16), V(0, 12.3, 0), timberColor, Enum.Material.WoodPlanks)
+		for _, side in {-1, 1} do
+			block("WatchRoofSlab", V(13, .55, 18), CFrame.new(side * 5.6, 15.6, 0) * CFrame.Angles(0, 0, math.rad(-side * 18)), logColor, Enum.Material.Wood)
+		end
+		part("WatchRoofPeak", V(1.4, .5, 18.2), V(0, 17.5, 0), ironColor, Enum.Material.Metal)
+
+		-- Defensive Log Palisade Barricade with Sharpened Tips
+		for i = 0, 11 do
+			local x = -8.8 + (i + 0.5) * 1.6
+			local stake = cylinder("PalisadeStake_" .. i, .38, 5.2, V(x, 3.1, 7.8), logColor, Enum.Material.Wood)
+			stake.CFrame *= CFrame.Angles(math.rad(12), 0, 0)
+		end
+		part("PalisadeCrossBeam", V(18.5, .35, .35), V(0, 2.8, 7.6), ironColor, Enum.Material.Metal)
+
+		-- Central Campfire with Stone Ring & Glowing Embers
+		for i = 0, 7 do
+			local angle = i * math.pi / 4
+			part("CampfireStone_" .. i, V(1.1, .75, 1.1), V(math.cos(angle) * 2.2, 1.0, -1.5 + math.sin(angle) * 2.2), stone, Enum.Material.Slate)
+		end
+		-- Crossed Campfire Logs
+		local log1 = cylinder("CampfireLog1", .22, 3.6, V(0, 1.2, -1.5), logColor, Enum.Material.Wood)
+		log1.CFrame *= CFrame.Angles(0, math.rad(45), 0)
+		local log2 = cylinder("CampfireLog2", .22, 3.6, V(0, 1.2, -1.5), logColor, Enum.Material.Wood)
+		log2.CFrame *= CFrame.Angles(0, math.rad(-45), 0)
+
+		local embers = part("GlowingEmbers", V(2.4, .5, 2.4), V(0, 1.4, -1.5), emberColor, Enum.Material.Neon)
+		embers.Shape = Enum.PartType.Ball
+		embers.CanCollide = false
+		local fireLight = Instance.new("PointLight")
+		fireLight.Color, fireLight.Range, fireLight.Brightness, fireLight.Parent = Color3.fromRGB(255, 140, 50), 18, 1.4, embers
+
+		-- Signal Beacon Lantern on Front Parapet
+		local lanternPost = cylinder("BeaconPole", .25, 4.5, V(0, 14.5, 7.8), ironColor, Enum.Material.Metal)
+		local signalLamp = part("SignalBeacon", V(.9, 1.4, .9), V(0, 16.5, 7.8), Color3.fromRGB(255, 210, 120), Enum.Material.Neon)
+		signalLamp.CanCollide = false
+		local beaconLight = Instance.new("PointLight")
+		beaconLight.Color, beaconLight.Range, beaconLight.Brightness, beaconLight.Parent = signalLamp.Color, 20, 1.5, signalLamp
+
+		local title = part("BastionSign", V(16, 2.0, .3), V(0, 11.2, 8.4), shadow)
+		sign(title, "OUTSKIRTS GUARD POST", "FRONTIER BASTION")
+		return
+	end
+
 	-- A round classical sanctuary, with layered cornices, pilasters, and open arched doors.
 	local promotion = id == "Promotion"
 	local title = promotion and "PROMOTION" or "SYNTHESIS"

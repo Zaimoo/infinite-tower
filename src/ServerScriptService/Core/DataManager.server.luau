@@ -13,6 +13,7 @@ local HeroCatalog = require(Shared:WaitForChild("Config"):WaitForChild("HeroCata
 local FacilityConfig = require(Shared:WaitForChild("Config"):WaitForChild("FacilityConfig"))
 local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormulas"))
 local PitService = require(script.Parent:WaitForChild("PitService"))
+local OfflineRewardService = require(script.Parent:WaitForChild("OfflineRewardService"))
 local ArtifactCatalog = require(Shared:WaitForChild("Config"):WaitForChild("ArtifactCatalog"))
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
@@ -97,6 +98,9 @@ export type HeroAssignment =
 	| "SQUAD_SLOT_4"
 	| "SQUAD_SLOT_5"
 	| "FACILITY_INFIRMARY"
+	| "FACILITY_GUARD_POST"
+	| "FACILITY_MARKET"
+	| "FACILITY_TRAINING"
 
 export type MimicChestMode = "TRUE_STATE" | "FOOLS_GOLD" | "VEIL_OF_POVERTY"
 
@@ -204,7 +208,14 @@ export type PlayerProfile = {
 	Artifacts: { [string]: ArtifactInstance },
 	Facilities: {
 		Infirmary: FacilityData,
+		GuardPost: FacilityData,
+		Market: FacilityData,
+		TrainingGrounds: FacilityData,
 	},
+	HighestClearedBiomeBoss: number?,
+	HighestClearedFloor: number?,
+	LastLogoutTimestamp: number?,
+	LastActiveTimestamp: number?,
 	Social: SocialProfile,
 }
 
@@ -228,6 +239,36 @@ local function createDefaultFacility(): FacilityData
 		LastRuneTimestamp = 0,
 		LastRuneWasLeech = false,
 	}
+end
+
+function DataManager.EnsureFacilities(profile: any)
+	if not profile.Facilities then
+		profile.Facilities = {}
+	end
+	if not profile.Facilities.Infirmary then
+		profile.Facilities.Infirmary = createDefaultFacility()
+	end
+	if not profile.Facilities.GuardPost then
+		profile.Facilities.GuardPost = createDefaultFacility()
+	end
+	if not profile.Facilities.Market then
+		profile.Facilities.Market = createDefaultFacility()
+	end
+	if not profile.Facilities.TrainingGrounds then
+		profile.Facilities.TrainingGrounds = createDefaultFacility()
+	end
+	if profile.HighestClearedBiomeBoss == nil then
+		profile.HighestClearedBiomeBoss = 0
+	end
+	if profile.HighestClearedFloor == nil then
+		profile.HighestClearedFloor = 0
+	end
+	if profile.LastActiveTimestamp == nil then
+		profile.LastActiveTimestamp = os.time()
+	end
+	if profile.LastLogoutTimestamp == nil then
+		profile.LastLogoutTimestamp = os.time()
+	end
 end
 
 function DataManager.CreateArtifact(templateId: string, star: number?, rarity: number?): (string, ArtifactInstance)
@@ -357,7 +398,14 @@ local function createDefaultPlayerProfile(): PlayerProfile
 		DeployedSquadOrder = { hanUUID, jennaUUID },
 		Facilities = {
 			Infirmary = createDefaultFacility(),
+			GuardPost = createDefaultFacility(),
+			Market = createDefaultFacility(),
+			TrainingGrounds = createDefaultFacility(),
 		},
+		HighestClearedBiomeBoss = 0,
+		HighestClearedFloor = 0,
+		LastLogoutTimestamp = os.time(),
+		LastActiveTimestamp = os.time(),
 		Social = {
 			Honor = 0,
 			RogueUntilTimestamp = 0,
@@ -1170,12 +1218,42 @@ AssignHeroRoleFunc.OnServerInvoke = function(player: Player, heroUUID: any, targ
 	elseif targetAssignment == "FACILITY_INFIRMARY" then
 		local facData = profile.Facilities.Infirmary
 		local cfg = FacilityConfig.UpgradeTable.Infirmary[facData.Level]
-		local maxWorkers = cfg and cfg.MaxWorkers or 1
-
-		hero.Assignment = targetAssignment :: HeroAssignment
-		if #facData.AssignedHeroUUIDs < maxWorkers then
-			table.insert(facData.AssignedHeroUUIDs, heroUUID)
+		local maxWorkers = cfg and cfg.MaxWorkers or 5
+		if #facData.AssignedHeroUUIDs >= maxWorkers then
+			return false, string.format("The Infirmary is full! (Max %d heroes)", maxWorkers)
 		end
+		hero.Assignment = targetAssignment :: HeroAssignment
+		table.insert(facData.AssignedHeroUUIDs, heroUUID)
+
+	elseif targetAssignment == "FACILITY_GUARD_POST" then
+		local facData = profile.Facilities.GuardPost
+		local cfg = FacilityConfig.UpgradeTable.GuardPost[facData.Level]
+		local maxWorkers = cfg and cfg.MaxWorkers or 1
+		if #facData.AssignedHeroUUIDs >= maxWorkers then
+			return false, string.format("Outskirts Guard Post is full! (Max %d Adventurers at Lv.%d)", maxWorkers, facData.Level)
+		end
+		hero.Assignment = targetAssignment :: HeroAssignment
+		table.insert(facData.AssignedHeroUUIDs, heroUUID)
+
+	elseif targetAssignment == "FACILITY_MARKET" then
+		local facData = profile.Facilities.Market
+		local cfg = FacilityConfig.UpgradeTable.Market[facData.Level]
+		local maxWorkers = cfg and cfg.MaxWorkers or 1
+		if #facData.AssignedHeroUUIDs >= maxWorkers then
+			return false, string.format("The Market is full! (Max %d Merchants at Lv.%d)", maxWorkers, facData.Level)
+		end
+		hero.Assignment = targetAssignment :: HeroAssignment
+		table.insert(facData.AssignedHeroUUIDs, heroUUID)
+
+	elseif targetAssignment == "FACILITY_TRAINING" then
+		local facData = profile.Facilities.TrainingGrounds
+		local cfg = FacilityConfig.UpgradeTable.TrainingGrounds[facData.Level]
+		local maxWorkers = cfg and cfg.MaxWorkers or 1
+		if #facData.AssignedHeroUUIDs >= maxWorkers then
+			return false, string.format("The Training Grounds are full! (Max %d Trainers at Lv.%d)", maxWorkers, facData.Level)
+		end
+		hero.Assignment = targetAssignment :: HeroAssignment
+		table.insert(facData.AssignedHeroUUIDs, heroUUID)
 	else
 		return false, "Unknown assignment target"
 	end
@@ -1230,6 +1308,65 @@ FacilityInteractEvent.OnServerEvent:Connect(function(player: Player, action: any
 	end
 end)
 
+function DataManager.GetMarketMultiplier(player: Player): number
+	local profile = ActiveProfiles[player]
+	if not profile or not profile.Facilities or not profile.Facilities.Market then return 1.0 end
+	local market = profile.Facilities.Market
+	local sumLabor = 0
+	local now = os.time()
+	for _, uuid in ipairs(market.AssignedHeroUUIDs) do
+		local hero = profile.Heroes[uuid]
+		if hero and (hero.ComaUntilTimestamp or 0) <= now then
+			sumLabor += StatFormulas.GetEffectiveLabor(hero, "FACILITY_MARKET")
+		end
+	end
+	return StatFormulas.GetMarketLootMultiplier(market.Level, sumLabor)
+end
+
+function DataManager.GetTrainingMultiplier(player: Player): number
+	local profile = ActiveProfiles[player]
+	if not profile or not profile.Facilities or not profile.Facilities.TrainingGrounds then return 1.0 end
+	local training = profile.Facilities.TrainingGrounds
+	local sumLabor = 0
+	local now = os.time()
+	for _, uuid in ipairs(training.AssignedHeroUUIDs) do
+		local hero = profile.Heroes[uuid]
+		if hero and (hero.ComaUntilTimestamp or 0) <= now then
+			sumLabor += StatFormulas.GetEffectiveLabor(hero, "FACILITY_TRAINING")
+		end
+	end
+	return StatFormulas.GetTrainingCombatMultiplier(training.Level, sumLabor)
+end
+
+function DataManager.RecordBiomeBossClear(player: Player, bossTier: number)
+	local profile = ActiveProfiles[player]
+	if not profile then return end
+	DataManager.EnsureFacilities(profile)
+	local currentTier = profile.HighestClearedBiomeBoss or 0
+	if bossTier > currentTier then
+		profile.HighestClearedBiomeBoss = bossTier
+		profile.HighestClearedFloor = math.max(profile.HighestClearedFloor or 0, bossTier * 5)
+		DataManager.SendToast(player, string.format("🏆 Biome Boss Milestone! Cleared Tier %d Boss (Floor %d)! Outskirts Passive Gold increased!", bossTier, bossTier * 5), "SUCCESS")
+		DataManager.SyncProfile(player)
+	end
+end
+
+function DataManager.GetPassiveGoldRate(player: Player): number
+	local profile = ActiveProfiles[player]
+	if not profile or not profile.Facilities or not profile.Facilities.GuardPost then return 0 end
+	local guardPost = profile.Facilities.GuardPost
+	local sumLabor = 0
+	local now = os.time()
+	for _, uuid in ipairs(guardPost.AssignedHeroUUIDs) do
+		local hero = profile.Heroes[uuid]
+		if hero and (hero.ComaUntilTimestamp or 0) <= now then
+			sumLabor += StatFormulas.GetEffectiveLabor(hero, "FACILITY_GUARD_POST")
+		end
+	end
+	local bossTier = profile.HighestClearedBiomeBoss or 0
+	return StatFormulas.GetPassiveGoldRate(guardPost.Level, sumLabor, bossTier)
+end
+
 --============================================================================
 -- 7. PLAYER LIFECYCLE INITIALIZATION
 --============================================================================
@@ -1237,7 +1374,10 @@ end)
 local function onPlayerAdded(player: Player)
 	local profile = createDefaultPlayerProfile()
 	PitService.EnsureDefaults(profile)
+	DataManager.EnsureFacilities(profile)
 	ActiveProfiles[player] = profile
+
+	OfflineRewardService.ProcessLoginRewards(player, profile, DataManager)
 
 	player.CharacterAdded:Connect(function(char)
 		task.wait(0.2)
@@ -1260,6 +1400,10 @@ end
 Players.PlayerAdded:Connect(onPlayerAdded)
 
 Players.PlayerRemoving:Connect(function(player: Player)
+	local profile = ActiveProfiles[player]
+	if profile then
+		OfflineRewardService.RecordLogout(player, profile)
+	end
 	pit:Forget(player)
 	pendingCombatSync[player] = nil
 	ActiveProfiles[player] = nil

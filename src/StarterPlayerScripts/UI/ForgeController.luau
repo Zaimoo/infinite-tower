@@ -16,6 +16,7 @@ local ArtifactCatalog = require(Shared:WaitForChild("Config"):WaitForChild("Arti
 local StatFormulas = require(Shared.Util.StatFormulas)
 local StatBalance = require(Shared.Config.StatBalance)
 local GothicBoxStyle = require(Shared.Util.GothicBoxStyle)
+local OrnateFrameButton = require(Shared.Util.OrnateFrameButton)
 
 local LocalPlayer = Players.LocalPlayer
 
@@ -95,17 +96,23 @@ local function cornerDiamonds(parent: GuiObject, size: number, color: Color3?)
 end
 
 local function label(parent: Instance, text: string, size: number, color: Color3, font: Enum.Font?): TextLabel
-	return new("TextLabel", {
+	local lbl = new("TextLabel", {
 		BackgroundTransparency = 1,
 		Text = text,
 		TextSize = size,
 		TextColor3 = color,
-		Font = font or Enum.Font.GothamBold,
+		Font = font or GothicBoxStyle.Font.LegacyFont or Enum.Font.GothamBold,
 		Size = UDim2.new(1, 0, 0, size + 8),
 		TextWrapped = false,
 		TextTruncate = Enum.TextTruncate.AtEnd,
 		RichText = true,
 	}, parent)
+	GothicBoxStyle.Font.Apply(lbl, {
+		Role = if size >= 20 then "Title" else if size >= 15 then "Header" else "Body",
+		Color = color,
+		Size = size,
+	})
+	return lbl
 end
 
 -- Formats artifact stat string e.g. "ATK +150 | Crit Rate +5%" matching mockup
@@ -374,7 +381,7 @@ function Forge:BuildAssignView(root: Frame)
 		Name = "AssignView",
 		BackgroundTransparency = 1,
 		Position = UDim2.fromOffset(72, 108),
-		Size = UDim2.new(0, 616, 0, 380),
+		Size = UDim2.new(0, 616, 0, 372),
 		Visible = true,
 		ZIndex = 52,
 	}, root)
@@ -565,7 +572,8 @@ function Forge:BuildSummonView(root: Frame)
 		Name = "SummonView",
 		BackgroundTransparency = 1,
 		Position = UDim2.fromOffset(72, 108),
-		Size = UDim2.new(0, 616, 0, 380),
+		Size = UDim2.new(0, 616, 0, 372),
+		ClipsDescendants = false,
 		Visible = false,
 		ZIndex = 52,
 	}, root)
@@ -575,7 +583,7 @@ function Forge:BuildSummonView(root: Frame)
 	local bannerCard = new("Frame", {
 		Name = "BannerCard",
 		Position = UDim2.fromOffset(0, 0),
-		Size = UDim2.new(1, 0, 0, 230),
+		Size = UDim2.new(1, 0, 0, 248),
 		BackgroundColor3 = Color3.fromRGB(18, 14, 28),
 		BorderSizePixel = 0,
 		ZIndex = 53,
@@ -597,7 +605,7 @@ function Forge:BuildSummonView(root: Frame)
 	-- Top Watermark
 	local watermark = label(bannerCard, "★ 5-STAR FEATURED HERO & ARTIFACTS", 11, Color3.fromRGB(225, 220, 235), Enum.Font.GothamBold)
 	watermark.TextTransparency = 0.4
-	watermark.Position = UDim2.fromOffset(26, 22)
+	watermark.Position = UDim2.fromOffset(26, 18)
 	watermark.Size = UDim2.new(1, -52, 0, 18)
 	watermark.TextXAlignment = Enum.TextXAlignment.Left
 	watermark.ZIndex = 56
@@ -605,7 +613,7 @@ function Forge:BuildSummonView(root: Frame)
 	-- Big Glowing Banner Title
 	local bannerTitle = label(bannerCard, "ECHOES OF THE RIFT", 25, C.GoldYellow, Enum.Font.GothamBlack)
 	bannerTitle.AnchorPoint = Vector2.new(0, 0)
-	bannerTitle.Position = UDim2.new(0, 28, 0, 152)
+	bannerTitle.Position = UDim2.new(0, 26, 0, 196)
 	bannerTitle.Size = UDim2.new(0, 340, 0, 30)
 	bannerTitle.TextXAlignment = Enum.TextXAlignment.Left
 	bannerTitle.TextStrokeTransparency = 0.3
@@ -615,7 +623,7 @@ function Forge:BuildSummonView(root: Frame)
 	-- Featured Rate-Up Pill Label
 	local rateUpLabel = label(bannerCard, "✧ Rate Up: Blade of the Rift (5★)  |  Aegis Core (5★)", 11, Color3.fromRGB(216, 140, 230), Enum.Font.GothamBold)
 	rateUpLabel.AnchorPoint = Vector2.new(1, 0)
-	rateUpLabel.Position = UDim2.new(1, -28, 0, 158)
+	rateUpLabel.Position = UDim2.new(1, -26, 0, 202)
 	rateUpLabel.Size = UDim2.new(0, 320, 0, 20)
 	rateUpLabel.TextXAlignment = Enum.TextXAlignment.Right
 	rateUpLabel.ZIndex = 56
@@ -624,8 +632,8 @@ function Forge:BuildSummonView(root: Frame)
 	local infoRow = new("Frame", {
 		Name = "InfoRow",
 		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(0, 236),
-		Size = UDim2.new(1, 0, 0, 22),
+		Position = UDim2.fromOffset(0, 258),
+		Size = UDim2.new(1, 0, 0, 20),
 		ZIndex = 53,
 	}, summonView)
 
@@ -645,69 +653,45 @@ function Forge:BuildSummonView(root: Frame)
 	local btnRow = new("Frame", {
 		Name = "ButtonRow",
 		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(0, 264),
-		Size = UDim2.new(1, 0, 0, 76),
+		Position = UDim2.fromOffset(0, 290),
+		Size = UDim2.new(1, 0, 0, 78),
+		ClipsDescendants = false,
 		ZIndex = 53,
 	}, summonView)
 
-	-- SUMMON 1X Button
-	local btn1X = new("TextButton", {
+	-- SUMMON 1X Button (Restyled via reusable OrnateFrameButton)
+	local btn1X = OrnateFrameButton.new(btnRow, {
 		Name = "Summon1XBtn",
+		Title = "SUMMON 1X",
+		Cost = 160,
 		Position = UDim2.fromScale(0, 0),
 		Size = UDim2.new(0.485, 0, 1, 0),
-		BackgroundColor3 = Color3.fromRGB(22, 18, 36),
-		BorderSizePixel = 0,
-		Text = "",
-		AutoButtonColor = false,
 		ZIndex = 54,
-	}, btnRow)
-	applyGothicStyle(btn1X, "Button")
+		OnClick = function()
+			if self.Busy then return end
+			self:PerformSummon(1)
+		end,
+	})
+	self.Summon1XBtn = btn1X.Root
+	self.OrnateBtn1X = btn1X
 
-	local t1X = label(btn1X, "SUMMON 1X", 14, Color3.fromRGB(255, 255, 255), Enum.Font.GothamBold)
-	t1X.AnchorPoint = Vector2.new(0.5, 0)
-	t1X.Position = UDim2.new(0.5, 0, 0, 22)
-	t1X.Size = UDim2.new(1, 0, 0, 16)
-	t1X.ZIndex = 56
-
-	local c1X = label(btn1X, "💎 160", 13, Color3.fromRGB(255, 255, 255), Enum.Font.GothamBold)
-	c1X.AnchorPoint = Vector2.new(0.5, 0)
-	c1X.Position = UDim2.new(0.5, 0, 0, 42)
-	c1X.Size = UDim2.new(1, 0, 0, 16)
-	c1X.ZIndex = 56
-
-	btn1X.Activated:Connect(function()
-		self:PerformSummon(1)
-	end)
-
-	-- SUMMON 10X Button
-	local btn10X = new("TextButton", {
+	-- SUMMON 10X Button (Restyled via reusable OrnateFrameButton)
+	local btn10X = OrnateFrameButton.new(btnRow, {
 		Name = "Summon10XBtn",
+		Title = "SUMMON 10X",
+		Cost = 1600,
 		AnchorPoint = Vector2.new(1, 0),
 		Position = UDim2.new(1, 0, 0, 0),
 		Size = UDim2.new(0.485, 0, 1, 0),
-		BackgroundColor3 = Color3.fromRGB(22, 18, 36),
-		BorderSizePixel = 0,
-		Text = "",
-		AutoButtonColor = false,
 		ZIndex = 54,
-	}, btnRow)
-	applyGothicStyle(btn10X, "Button")
+		OnClick = function()
+			if self.Busy then return end
+			self:PerformSummon(10)
+		end,
+	})
+	self.Summon10XBtn = btn10X.Root
+	self.OrnateBtn10X = btn10X
 
-	local t10X = label(btn10X, "SUMMON 10X", 14, Color3.fromRGB(255, 255, 255), Enum.Font.GothamBold)
-	t10X.AnchorPoint = Vector2.new(0.5, 0)
-	t10X.Position = UDim2.new(0.5, 0, 0, 22)
-	t10X.Size = UDim2.new(1, 0, 0, 16)
-	t10X.ZIndex = 56
-
-	local c10X = label(btn10X, "💎 1600", 13, Color3.fromRGB(255, 255, 255), Enum.Font.GothamBold)
-	c10X.AnchorPoint = Vector2.new(0.5, 0)
-	c10X.Position = UDim2.new(0.5, 0, 0, 42)
-	c10X.Size = UDim2.new(1, 0, 0, 16)
-	c10X.ZIndex = 56
-
-	btn10X.Activated:Connect(function()
-		self:PerformSummon(10)
-	end)
 end
 
 function Forge:RenderSummonView()
@@ -888,7 +872,7 @@ function Forge:BuildUpgradeView(root: Frame)
 		Name = "UpgradeView",
 		BackgroundTransparency = 1,
 		Position = UDim2.fromOffset(72, 108),
-		Size = UDim2.new(0, 616, 0, 380),
+		Size = UDim2.new(0, 616, 0, 372),
 		Visible = false,
 		ZIndex = 52,
 	}, root)
