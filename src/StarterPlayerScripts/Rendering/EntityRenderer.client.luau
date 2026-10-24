@@ -371,7 +371,15 @@ local function consume(buf: buffer)
   node.GoalPos=e.Position;node.GoalYaw=e.Yaw;node.HpPermille=e.HpPermille;node.Stamina=e.Stamina
   node.StateEnum=e.StateEnum;node.Flags=e.Flags;node.LastSeenClock=now
   if node.HPBarFill then node.HPBarFill.Size=UDim2.fromScale(e.HpPermille/1000,1) end
-  if node.StamBarFill then node.StamBarFill.Size=UDim2.fromScale(e.Stamina/100,1) end
+  if node.StamBarFill then
+   node.StamBarFill.Size=UDim2.fromScale(math.clamp(e.Stamina/100,0,1),1)
+   if e.Stamina >= 100 then
+    local pulse = (math.sin(now * 8) + 1) * 0.5
+    node.StamBarFill.BackgroundColor3 = Color3.fromRGB(255, 215, 60):Lerp(Color3.fromRGB(255, 250, 180), pulse)
+   else
+    node.StamBarFill.BackgroundColor3 = Color3.fromRGB(255, 210, 55)
+   end
+  end
   if node.Highlight then
    node.Highlight.OutlineColor=_G.ClientCombatState.FocusedNetId==id and Color3.fromRGB(0,255,235) or bit32.band(e.Flags,2)~=0 and Color3.fromRGB(255,195,40) or Color3.new(1,1,1)
    node.Highlight.OutlineTransparency=meta.TowerEnemy and (_G.ClientCombatState.FocusedNetId==id and .15 or .8) or .25
@@ -520,6 +528,15 @@ CombatVFXRemote.OnClientEvent:Connect(function(context: any, vfxType: string, po
 	if not Protocol.Same(context,View) then return end
 	if vfxType=="HIT_SPARK" then
 		CombatFeedback:Hit(pos,amount,isOverdrive,incoming)
+		return
+	elseif vfxType=="HIT_SPECIAL" then
+		CombatFeedback:Special(pos,amount,isOverdrive,incoming)
+		return
+	elseif vfxType=="SKILL_CAST" or vfxType=="SKILL_TEMPEST" or vfxType=="SKILL_METEOR" or vfxType=="SKILL_ARROWS" or vfxType=="SKILL_CRYSTAL" or vfxType=="SKILL_SHIELD" or vfxType=="BARRIER_APPLIED" then
+		CombatFeedback:Skill(pos,amount,vfxType)
+		return
+	elseif vfxType=="HEAL_SPARK" or vfxType=="HEAL_BURST" then
+		CombatFeedback:Heal(pos,amount)
 		return
 	end
 	if vfxType == "WHISTLE_Q" or vfxType == "WHISTLE_E" then
