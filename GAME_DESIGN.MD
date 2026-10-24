@@ -82,7 +82,7 @@ flowchart TD
 2. **Tactical Grind & Stamina Expenditure (0:15 – 2:00):**
    - The Master uses **`[Click / Tap]` Focus Target** to direct all 5 deployed heroes onto target mobs, crystal nodes, or floor bosses.
    - To accelerate clears, the Master triggers **`[Q]` Overdrive Whistle** (`20s CD`), trading `5 Stamina` per hero for `+40% Attack Speed` for `5s`.
-   - When an Elite or Boss telegraphs a red ground AoE (`ARC`, `SELF_DISC`, or `TARGET_DISC`), the Master triggers **`[E]` Emergency Recall Whistle** (`6s CD`), warping all 5 heroes to the Master's safe position and dropping their aggro for `2s`.
+   - When an Elite or Boss telegraphs a red ground AoE or ranged projectile (`ARC`, `SELF_DISC`, `TARGET_DISC`, or swept-corridor `PROJECTILE`), the Master triggers **`[E]` Emergency Recall Whistle** (`6s CD`), warping all 5 heroes to the Master's safe position and dropping their aggro for `2s`.
 3. **Physical Loot Haul (2:00 – 2:45):**
    - Defeating mobs/Elites spawns physical drops in `Workspace.PhysicalLoot` (**Bounty Bags**, **Mana Geodes**, **Cursed Urns**, and **Abyssal Cores**).
    - The Master touches the drop to weld it overhead, incurring a **-15% to -45% WalkSpeed penalty** (and disabling jumping for high-tier relics).
@@ -104,18 +104,19 @@ flowchart TD
 ### 2.3 The Macro Loop (Tower Progression & Biome Boss Conquests)
 1. **Biome Traversal & Preparation:**
    - Masters organize their 5-hero squad, equip high-rarity and high-star artifacts, and ensure full stamina in the Infirmary before entering a new Biome.
-   - Each biome spans 5 progressively harder floors. Enemy health and attack damage follow the stat-reference curve in Section 4.2. Reward scaling remains $\text{Reward} \times 1.055^{\text{Floor}-1}$; stat inflation does not change rewards.
+   - Each of the 10 biomes spans 5 progressively harder floors (50 floors total) with 4 unique biome enemy species (2 Regulars, 1 Elite, and 1 Biome Boss; 40 total enemy species across the Tower). Floor 1 and the 3rd–4th floors of every biome include Elite encounters alongside Regulars. Enemy health and attack damage follow the stat-reference curve in Section 4.2. Reward scaling remains $\text{Reward} \times 1.055^{\text{Floor}-1}$; stat inflation does not change rewards.
 2. **The Biome Boss Encounter (Floors 5, 10, 15, ..., 50):**
-   - The 5th floor of every biome is a dedicated **Biome Boss Arena** featuring a massive boss dais fixture (e.g. `BossDaisFixture` on Floor 5, $60 \times 2 \times 60\text{ studs}$).
-   - The Biome Boss wields devastating signature attacks with distinct shapes and timings:
+   - The 5th floor of every biome is a dedicated **Biome Boss Arena** (`BOSS_ARENA` layout variant) featuring an 8-column ritual ring, boss braziers, and a massive boss dais fixture (`BossDaisFixture`, $60 \times 2 \times 60\text{ studs}$).
+   - Every Biome Boss transitions dynamically from **Phase 1** to **Phase 2 (Enraged)** below 55% HP and wields devastating signature attacks with distinct authoritative shapes and timings:
      - **Basic Attacks:** Wide frontal arcs (`ARC`, e.g. `guardian_crush`, 13 studs).
      - **Signature 1:** Expanding circular ground shocks centered on the boss (`SELF_DISC`, e.g. `moss_quake`, 22 studs radius).
      - **Signature 2:** Ranged ground craters placed under distant heroes (`TARGET_DISC`, e.g. `sweeping_roots`, 55 studs cast range, 13 studs radius).
-   - **Tactical Counterplay ("Dodge vs. Coma"):** Masters must watch the expanding telegraph decals and sound cues, repositioning and executing **`[E]` Emergency Recall Whistle** to yank heroes out of danger. Heroes struck by signature skills suffer severe stamina loss or a debilitating **60-second Coma**.
+     - **Ranged / Caster Regulars:** Biome ranged and caster regulars (`mob_spore_drifter`, `mob_ember_imp`, `mob_frost_archer`, `mob_tempest_wisp`, `mob_slag_thrower`, `mob_void_acolyte`) fire authoritative swept-corridor projectiles (`PROJECTILE`) with a floor corridor warning and flying orb visual.
+   - **Tactical Counterplay ("Dodge vs. Coma"):** Masters must watch the expanding progress-fill telegraph discs, corridor warnings, and sound cues, repositioning and executing **`[E]` Emergency Recall Whistle** to yank heroes out of danger. Heroes struck by signature skills suffer severe stamina loss or a debilitating **60-second Coma**.
    - **Punish Windows:** Following major signature attacks, the boss enters an extended recovery window (1.2s–1.5s), providing active Masters the ideal moment to pop **`[Q]` Overdrive Whistle** for massive burst DPS.
 3. **Biome Clearance & Milestone Rewards:**
    - Defeating the Biome Boss awards immense Gold, Gems, and rare direct drops of high-rarity **Artifacts** (from Legendary up to Origin).
-   - Bosses unlock clearance to enter the next biome in the Infinite Tower.
+   - All 50 floors are accessible via the **Floor Selector** (`TowerController.client.luau`), with no boss-kill lock gating travel.
 
 ### 2.4 The AFK & Outskirts Facility Loop (Passive Boost Facilities & Auto/Offline Gold Generation)
 While active squad command in the Central Hub and Infinite Tower drives peak progression, the **Outskirts & Facility Loop** ensures that a Master's benched roster continuously generates value both online and offline—reinforcing the **Zero-Waste Roster Economy**.
@@ -188,13 +189,20 @@ The world exists in two coordinated spatial contexts:
 Tower floors are dynamically managed by `TowerFloorService.luau` and generated via `TowerRoomBuilder.luau`:
 - **Room Origin Formula:**
   $$\text{Origin}(id) = \Big(12000 + ((id - 1) \bmod 10) \times 1800,\; 1000,\; 12000 + \lfloor(id - 1) / 10\rfloor \times 1800\Big)$$
-- **Enclosure:** Enclosed $248 \times 84 \times 248\text{ studs}$ slate walls and opaque ceiling, preventing cross-floor visual overlap or raycast leakage.
+- **Enclosure & Flat Combat Floor:** Enclosed $248 \times 84 \times 248\text{ studs}$ biome-styled walls and opaque ceiling, preventing cross-floor visual overlap or raycast leakage, with a flat `CombatFloor` ($240 \times 4 \times 240\text{ studs}$ at $Y = 0$) so grounded navigation and AoE telegraphs remain unobstructed.
 - **Safe Arrival Zone:** $70 \times 0.2 \times 42\text{ studs}$ elevated landing pad at `origin + (0, 0.1, 90)` designated with `CombatSafe = true`, `CanBankCargo = false`.
 - **Travel Pedestals:** 4 ProximityPrompt interaction points on the arrival pad:
   - `PREVIOUS`: Move to floor $id - 1$ (disabled on Floor 1).
   - `NEXT`: Move to floor $id + 1$ (disabled on Floor 50).
   - `SELECTOR`: Opens the full 50-floor modal selector.
   - `HUB`: Returns player directly to their Fortress Plot.
+- **10 Biome Kits $\times$ 5 Layout Variants (`TowerFloorConfig.luau` & `TowerRoomBuilder.luau`):**
+  Every biome defines its own material, wall/floor/trim/accent/glow palette, and architectural props across 5 floor layout variants:
+  1. **`ENTRY` (1st floor of biome — Floors 1, 6, ..., 46):** Colonnade pillars, biome focal centerpiece, recessed wall niches, overhead ceiling beams, and perimeter torches.
+  2. **`CORRIDOR` (2nd floor of biome — Floors 2, 7, ..., 47):** Angled wall buttresses, overhead structural ribs, side alcoves, hanging banners, and perimeter torches.
+  3. **`CROSSING` (3rd floor of biome — Floors 3, 8, ..., 48):** Four corner obelisks, perimeter colonnade, intersecting cross ceiling ribs, wall niches, and glowing braziers.
+  4. **`BASTION` (4th floor of biome — Floors 4, 9, ..., 49):** Heavy bastion piers, interior battlements, weapon/banner alcoves, ceiling vaults, and braziers.
+  5. **`BOSS_ARENA` (5th floor of biome — Floors 5, 10, ..., 50):** 8-column ritual ring, $60 \times 2 \times 60\text{ studs}$ `BossDaisFixture` with glowing trim, vaulted ceiling ribs, boss braziers, and perimeter torches.
 - **Room Lifecycle:** Rooms transition through `ABSENT -> BUILDING -> READY -> RETIRING -> ABSENT` with a 60-second retirement grace period when unoccupied.
 
 #### Biome Catalog (50 Floors across 10 Biomes):
@@ -429,15 +437,18 @@ The player interface is built from modular, gothic-styled components:
    - **Center Group:** `[THE PIT]` (opens Synthesis/Promotion modals) | `[FORGE]` (opens Blacksmith Star Ascension modal) | `[SQUAD]` (opens 5-Hero Squad Deploy modal) | `[OVERDRIVE]` (Whistle 1 / Q) | `[RECALL]` (Whistle 2 / E) | Vertical Divider | `[AutoSwap]` (4-way arrow icon: auto-swaps exhausted heroes with bench) | `[RosterGrid]` (3x3 grid icon: toggles Squad Deploy modal).
    - **Right Group:** Settings Gear (toggles telemetry overlay) | `[SAVE]` button (manual profile save trigger).
 2. **Tower Navigation UI (`TowerController.client.luau`):**
-   - **In-World Navigation Pedestals & Prompts:** Travel bar removed from persistent screen overlay. Travel interactions are accessed in-world via ProximityPrompts: `Previous Floor` and `Next Floor` pedestals inside active tower floors, Central Crimson Tower `Choose floor` prompt in the Hub, and the bottom toolbar `[TOWER]` hub teleport button.
-   - **Floor Selector Modal (`FloorSelector`):** Responsive 50-floor grid showing milestone **Biome Boss floors** (`◆`), biome names, current visitors count, assigned player squads, and action buttons (`Visit floor`, `Assign squad`, `Recall squad`).
-3. **Real-Time Combat Feedback (`CombatFeedback.luau`):**
+   - **In-World Navigation Pedestals & Prompts:** Travel interactions are accessed in-world via ProximityPrompts (`Previous Floor`, `Next Floor`, `Floor Selector`, and `Return to Hub` pedestals on the safe arrival pad, plus the Central Crimson Tower `Choose floor` prompt in the Hub) and the bottom toolbar `[TOWER]` button.
+   - **Top-Right `Return to Hub` Action Button:** Whenever the Master is visiting any Tower floor (`FloorId >= 1`), a dedicated top-right **`Return to Hub`** button (`TowerGui.ReturnHubButton`) is displayed for one-click extraction back to the Fortress Plot.
+   - **Biome-Grouped Floor Selector Modal (`FloorSelector`):** Scrollable 50-floor selector organized under 10 **Biome Header Banners** (`BIOME 1 — VERDANT RUINS (FLOORS 1–5)` through `BIOME 10 — ABYSSAL DESCENT (FLOORS 46–50)`). Each floor button displays live status badges (`◆` Boss Floor, `★` You + Squad present, `●` You present, `▲` Squad stationed) and opens a detail pane showing floor name, biome, role (`Boss Floor` / `Combat Floor`), live `Visited: N | Squads: M` presence counts, and action buttons (`Visit floor`, `Assign squad`, `Recall squad`).
+   - **Modal Click-Through Prevention (`MasterController.client.luau`):** Viewport targeting checks `GuiService:GetGuiObjectsAtPosition` so clicking inside open UI modals or HUD buttons never leaks world-space `FocusTarget` raycasts onto mobs behind the UI.
+3. **Real-Time Combat Feedback & Boss HUD (`CombatFeedback.luau`, `EnemyAnimationController.luau`, `HUDController.client.luau`):**
+   - **Tower Floor Boss Top HUD Banner:** Engaging any of the 10 Biome Bosses on Floors `5, 10, ..., 50` activates the top-center Boss HUD Banner (`_G.ClientCombatState.FloorBoss`), displaying `"FLOOR N BIOME BOSS — NAME [PHASE 1 / PHASE 2: ENRAGED]"` and a live HP bar that automatically clears on boss death or floor departure.
    - **Damage Popups:** Server-hit floating damage labels pooled up to 32 active instances. Styled with `GothamBold` font, quadratic easing upward, and color-coded:
      - Gold (`#FFCF59`): Overdrive crits / empowered hits.
      - Pale Green (`#F3FFE2`): Normal outbound hero damage.
      - Coral Red (`#FF7474`): Incoming damage received by heroes.
    - **Hit Sparks:** Material Neon sphere sparks with dynamic scaling and fade.
-   - **Telegraph Geometry:** Authoritative server-timed warning decals and cylinders (`ARC`, `SELF_DISC`, `TARGET_DISC`).
+   - **Telegraph Geometry (`MAX_EFFECTS = 12` Cap):** Authoritative server-timed warning shapes with expanding inner progress-fill discs (`SELF_DISC`, `TARGET_DISC`), frontal cleave wedges (`ARC`), and swept-corridor warning strips + flying Neon orbs (`PROJECTILE`).
 
 ---
 
@@ -461,17 +472,34 @@ In **Infinite Tower**, major boss encounters take place at the apex of each biom
 | **45** | **Starlit Vestibule** | **Rift Warden** | `COSMIC_ENTITY` | `23,593,202,156` | `28,728` | Astral Sweep (`ARC`), Dimensional Rupture (`SELF_DISC`), Void Well (`TARGET_DISC`) |
 | **50** | **Abyssal Descent** | **Abyssal Overlord** | `DEMONIC_OVERLORD` | `110,844,632,813` | `42,211` | Hellfire Cleave (`ARC`), Abyssal Nova (`SELF_DISC`), Doom Pillars (`TARGET_DISC`) |
 
-### 5.2 Tactical Mechanics & Combat Flow ("Greed vs. Coma")
-1. **Telegraph Shapes & Timings:**
-   - **`ARC` (Basic Cleave):** Fast frontal swipe ($1.1\text{s}$ windup, $1.0\text{s}$ recovery, 13-stud reach). Vanguard tanks should position facing away from squishier DPS heroes.
-   - **`SELF_DISC` (Boss Quake):** Expanding crimson circle centered on the boss ($1.8\text{s}$ windup, $1.2\text{s}$ recovery, 22-stud radius). Masters must sprint out and trigger **`[E]` Emergency Recall** before impact.
-   - **`TARGET_DISC` (Targeted AoE):** Red circle targeted at distant heroes ($2.2\text{s}$ windup, $1.5\text{s}$ recovery, 13-stud radius). Requires instant Master recognition and recall repositioning.
+### 5.2 Full 40-Enemy Biome Roster & Procedural Rig Architecture
+Each of the 10 biomes features 4 local-authored procedural enemies (2 Regulars, 1 Elite, 1 Biome Boss = **40 enemies total** in `MobCatalog.luau` and `FirstBiomeCombat.luau`), built with biome-specific material/glow palettes in `TowerEnemyRigs.luau` and animated with planted-foot leg counter-rotation (`plantedPose`) in `TowerEnemyClips.luau`:
+
+| Biome (Floors) | Regular 1 | Regular 2 | Biome Elite | Biome Boss (5th Floor) |
+| :--- | :--- | :--- | :--- | :--- |
+| **1. Verdant Ruins (1–5)** | Moss Crawler (`CRAWLER`) | Ruin Guardian (`ARMORED_BIPED`) | Vinebound Sentinel (`HEAVY_BIPED`) | **Mossbound Guardian** (`STONE_COLOSSUS`) |
+| **2. Fungal Hollow (6–10)** | Spore Crawler (`CRAWLER`) | Spore Drifter (`CASTER_BIPED`, `PROJECTILE`) | Mycelium Brute (`HEAVY_BIPED`) | **Spore Matriarch** (`FUNGAL_MATRIARCH`) |
+| **3. Drowned Steps (11–15)** | Sunken Skitterer (`CRUSTACEAN`) | Coral Sentinel (`ARMORED_BIPED`) | Tidebound Executioner (`HEAVY_BIPED`) | **Abyssal Leviathan** (`LEVIATHAN`) |
+| **4. Cinder Gate (16–20)** | Ash Hound (`QUADRUPED`) | Ember Imp (`AGILE_BIPED`, `PROJECTILE`) | Glassflame Champion (`ARMORED_BIPED`) | **Cinder Colossus** (`FIRE_COLOSSUS`) |
+| **5. Rimefall Approach (21–25)** | Rime Wolf (`QUADRUPED`) | Frost Archer (`RANGED_BIPED`, `PROJECTILE`) | Glacial Reaver (`HEAVY_BIPED`) | **Frost Sovereign** (`FROST_GIANT`) |
+| **6. Stormgrass Rise (26–30)** | Gale Raptor (`AVIAN`) | Tempest Wisp (`CASTER_BIPED`, `PROJECTILE`) | Stormcaller Knight (`ARMORED_BIPED`) | **Tempest Roc** (`GIANT_AVIAN`) |
+| **7. Slagworks Entry (31–35)** | Cinder Automaton (`CONSTRUCT_BIPED`) | Slag Thrower (`RANGED_BIPED`, `PROJECTILE`) | Furnace Enforcer (`HEAVY_BIPED`) | **Slagwork Titan** (`MAGMA_CONSTRUCT`) |
+| **8. Blighted Verge (36–40)** | Blight Beetle (`INSECT`) | Thorn Stalker (`AGILE_BIPED`) | Briar Executioner (`HEAVY_BIPED`) | **Heartrot Sovereign** (`CORRUPTED_TREANT`) |
+| **9. Starlit Vestibule (41–45)** | Astral Drone (`CONSTRUCT_BIPED`) | Void Acolyte (`CASTER_BIPED`, `PROJECTILE`) | Runeguard Adjudicator (`ARMORED_BIPED`) | **Rift Warden** (`COSMIC_ENTITY`) |
+| **10. Abyssal Descent (46–50)** | Dread Fiend (`AGILE_BIPED`) | Blood Stalker (`SCORPION`) | Abyssal Vanguard (`HEAVY_BIPED`) | **Abyssal Overlord** (`DEMONIC_OVERLORD`) |
+
+### 5.3 Tactical Mechanics & Combat Flow ("Greed vs. Coma")
+1. **Telegraph Shapes & Timings (`AttackTimeline.luau`):**
+   - **`ARC` (Basic Cleave):** Fast frontal swipe ($0.65\text{s–}1.1\text{s}$ windup, $7\text{–}13\text{-stud}$ reach). Vanguard tanks should position facing away from squishier DPS heroes.
+   - **`SELF_DISC` (Boss Quake / Burst):** Expanding crimson circle with inner progress-fill disc centered on the boss ($1.8\text{s}$ windup, $1.2\text{s}$ recovery, 22-stud radius). Masters must sprint out and trigger **`[E]` Emergency Recall** before impact.
+   - **`TARGET_DISC` (Targeted AoE):** Ground circle with expanding fill disc locked onto a hero's position ($1.4\text{s–}2.2\text{s}$ windup, $9\text{–}13\text{-stud}$ radius). Requires instant Master recognition and recall repositioning.
+   - **`PROJECTILE` (Ranged Swept Corridor):** Aimed linear corridor ($0.75\text{s}$ windup + $0.35\text{s}$ travel time, $26\text{-stud}$ range, $2.2\text{-stud}$ corridor width). Evaluates authoritative swept-segment distance along the projectile line at `WindupSeconds + TravelSeconds`.
 2. **Coma Skill Check:**
    - Heroes caught inside `SELF_DISC` or `TARGET_DISC` blast zones suffer instant 50% Stamina loss or fall into a **60-second Coma** (expelled back to the Fortress Infirmary).
 3. **Punish Window:**
    - Immediately following a Signature detonation, the Biome Boss enters an exposed recovery window granting $+25\%$ damage taken for 4.0s. Active Masters trigger **`[Q]` Overdrive Whistle** to unleash $+40\%$ squad attack speed and maximize DPS output.
 
-### 5.3 Biome Boss Loot & Progression Ledger
+### 5.4 Biome Boss Loot & Progression Ledger
 - **Encounter Respawns:** Biome Bosses operate on an authoritative server respawn cadence ($300\text{s}$ cooldown upon defeat).
 - **Rewards Table:**
   - **Tiered Gold & Gems:** Scaled exponentially to biome difficulty.

@@ -10,7 +10,9 @@ This document preserves the complete design roadmap. Parts 1–3 describe the co
 | --- | --- | --- |
 | 1 | [Verified baseline, floor data, and contracts](PART_1_FOUNDATION.md) | VERIFIED — [evidence](PART_1_VERIFICATION.md) |
 | 2 | [Hub, isolated rooms, travel, and replication](PART_2_WORLD_AND_TRAVEL.md) | VERIFIED — [evidence](PART_2_VERIFICATION.md) |
-| 3 | [Working mob/squad combat and damage feedback](PART_3_COMBAT_AND_FEEDBACK.md) | VERIFIED — [evidence](PART_3_VERIFICATION.md); current stopping point |
+| 3 | [Working mob/squad combat and damage feedback](PART_3_COMBAT_AND_FEEDBACK.md) | VERIFIED — [evidence](PART_3_VERIFICATION.md) |
+| Separate sprint | [Animation and art polish](deferred/ANIMATION_POLISH_SPRINT.md) | IMPLEMENTED (CLI VERIFIED; Studio NOT VERIFIED) |
+| 4 | [All 50 floors, full enemy roster, and complete UI](deferred/PART_4_CONTENT_AND_UI.md) | IMPLEMENTED (CLI VERIFIED; Studio NOT VERIFIED) |
 | Separate sprint | [Animation and art polish](deferred/ANIMATION_POLISH_SPRINT.md) | DEFERRED — not scheduled |
 | 4 | [All 50 floors, full enemy roster, and complete UI](deferred/PART_4_CONTENT_AND_UI.md) | DEFERRED — implementation not started |
 | 5 | [Integration, performance, migration, and release verification](deferred/PART_5_VERIFICATION_AND_MIGRATION.md) | DEFERRED — release verification not started |

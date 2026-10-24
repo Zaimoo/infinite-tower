@@ -716,7 +716,18 @@ local function updateBottomTabHighlights()
 		squadAura.ImageTransparency = 0.25
 	end
 end
+_G.IsAnyMasterModalOpen = function(): boolean
+	if _G.IsTowerSelectorOpen and _G.IsTowerSelectorOpen() then return true end
+	if facilityController and facilityController.Root and facilityController.Root.Visible then return true end
+	if synthesisController and synthesisController.Root and synthesisController.Root.Visible then return true end
+	if promotionController and promotionController:IsOpen() then return true end
+	if forgeController and forgeController.Root and forgeController.Root.Visible then return true end
+	if squadController and squadController:IsOpen() then return true end
+	if blacksmithModal.Visible then return true end
+	return false
+end
 _G.OpenMasterModal = function(which: string)
+	if _G.CloseTowerSelector then _G.CloseTowerSelector() end
 	if facilityController then facilityController:Close() end
 	if synthesisController then synthesisController:Close() end
 	if promotionController then promotionController:Close() end
@@ -1287,8 +1298,20 @@ RunService.RenderStepped:Connect(function()
 	end
 
 	-- 2. Update World Boss Top Banner & Devouring Nova Cast Bar
-	bossBanner.Visible = cs and cs.WorldBossNetId ~= nil or false
-	if cs and cs.WorldBossNetId then
+	local floorBoss = cs and cs.FloorBoss
+	local hasFloorBoss = floorBoss and floorBoss.Enabled == true
+	bossBanner.Visible = (cs and cs.WorldBossNetId ~= nil) or hasFloorBoss or false
+	if hasFloorBoss then
+		local node = cs.VisualNodes and cs.VisualNodes[floorBoss.NetId]
+		local hpPct = if node and node.HpPermille then node.HpPermille / 10.0 else (floorBoss.CurrentHP or 1) / math.max(1, floorBoss.MaxHP or 1) * 100.0
+		local phase = if hpPct <= 50.0 then 2 else (floorBoss.Phase or 1)
+		local floorNum = floorBoss.FloorId or (_G.TowerView and _G.TowerView.FloorId) or 5
+		bossTitleLabel.Text = string.format(" FLOOR %d BOSS · %s (PHASE %d) — HP: %.1f%%", floorNum, string.upper(floorBoss.Name or "FLOOR BOSS"), phase, hpPct)
+		novaBarFill.Size = UDim2.fromScale(math.clamp(hpPct / 100.0, 0, 1), 1)
+		novaBarFill.BackgroundColor3 = Color3.fromRGB(215, 65, 110)
+		novaCastLabel.Text = string.format("BOSS HP: %.1f%% | Watch ground telegraphs & use [E] Recall to dodge!", hpPct)
+	elseif cs and cs.WorldBossNetId then
+
 		local hpPct = (cs.WorldBossHPPerMille or 1000) / 10.0
 		local coreTag = cs.WorldBossCoreExposed and " [ CORE EXPOSED: +25% DMG! PRESS Q!]" or ""
 		bossTitleLabel.Text = string.format(

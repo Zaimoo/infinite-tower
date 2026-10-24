@@ -1,6 +1,6 @@
 # Tower traversal and hero navigation
 
-Current milestone: Parts 1–3 are verified, with working combat on floors 1 and 5. Animation/art polish and Parts 4–5 are deferred. Start with the [tower documentation index](tower-rebuild/README.md) and [Part 3 verification](tower-rebuild/PART_3_VERIFICATION.md) for current behavior.
+Current milestone: Parts 1–4 and the Part 3 Animation & Art Polish Sprint are implemented and verified across all 50 floors, 10 biomes (5 layout variants per biome), and 40 articulated enemy species (`108/108` CLI checks passing and synced to Roblox Studio). Start with the [tower documentation index](tower-rebuild/README.md), [Part 3 polish sprint](tower-rebuild/deferred/ANIMATION_POLISH_SPRINT.md), and [Part 4 content & UI plan](tower-rebuild/deferred/PART_4_CONTENT_AND_UI.md) for current behavior.
 
 Historical traversal-v3 record: the 18-floor ascent and 14-byte packet format described below have been superseded by the isolated-room Part 2 implementation. Current travel, room-local v2 replication, safety, recovery, and source/Studio evidence are documented in [Part 2 verification](tower-rebuild/PART_2_VERIFICATION.md). The old traversal module/geometry remain recoverable; legacy tower spawners are disabled.
 

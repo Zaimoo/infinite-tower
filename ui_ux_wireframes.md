@@ -85,7 +85,10 @@ MasterHUDScreenGui (ScreenGui - ResetOnSpawn: false, IgnoreGuiInset: true)
 │   └── RightToolbarGroup -> PlotTeleportButton, SettingsButton
 │
 ├── WorldBossTopBanner (Frame - AnchorPoint: 0.5, 0 | Pos: 0.5, 0, 0, 12)
-│   ├── CountdownModeFrame (Visible T-20:00 to T-0:00; turns Crimson at T-3:00)
+│   ├── CountdownModeFrame (Visible T-20:00 to T-0:00 in Hub; turns Crimson at T-3:00)
+│   ├── TowerFloorBossMode (Active on Tower Floors 5, 10, ..., 50 via _G.ClientCombatState.FloorBoss)
+│   │   ├── BossNameAndPhaseLabel ("FLOOR 5 BIOME BOSS — MOSSBOUND GUARDIAN [PHASE 1 / PHASE 2: ENRAGED]")
+│   │   └── BossHealthBar (Live HP Permille fill & percentage readout; auto-hides on boss death or floor exit)
 │   └── ActiveBossModeFrame (Visible during Ring 3 Sovereign / Rift Boss fight)
 │       ├── BossNameAndPhaseLabel ("THE DIMENSIONAL SOVEREIGN — PHASE 2: INSTABILITY")
 │       ├── BossHealthBar (Dynamic HP / MaxHP + Tether Shield Overlay)
@@ -232,3 +235,45 @@ All world-space visual elements and diegetic indicators are rendered client-side
 | **4. Contested Loot Theft Flag** | `BillboardGui` on `Character.Head` + Crimson `Highlight` | `Size: 7.5 x 2.2 studs`<br>`MaxDistance: 280 studs` | **`AlwaysOnTop = true`** | Displays `"💀 [LOOT THIEF]"` with a countdown timer showing the active retaliation grudge window (180s). |
 | **5. Physical Relic World Billboard** | `BillboardGui` on `RelicPart` (`StudsOffset = (0, 3.5, 0)`) | `Size: 6.5 x 2.4 studs`<br>`MaxDistance: 220 studs` | **`AlwaysOnTop = true`** for Calamity Heart | Top row shows relic name; middle row shows ownership lock timer (`🔒 RANK #1 LOCK: 11.4s`); bottom row displays despawn bar. |
 | **6. Espionage Channel (`Bless` vs. `Leech`)** | `ProximityPrompt` (`HoldDuration = 2.0s`) + Floor Rune Decal | `MaxDistance: 45 studs` | 3D Animation + Floor Decal | Both **Bless (+25%)** and **Plant Leech Rune (-20%)** play the same kneeling prayer animation and leave an identical violet runic circle for 15.0s. |
+
+---
+
+## 6. INFINITE TOWER FLOOR SELECTOR & NAVIGATION UI (`TowerController.client.luau`)
+
+### 6.1 Top-Right `Return to Hub` Button & Biome-Grouped 50-Floor Selector Wireframe
+When visiting any Tower floor (`FloorId >= 1`), a persistent **`Return to Hub`** button appears at the top-right (`UDim2.new(1, -18, 0, 18)`). Interacting with a `Floor Selector` pedestal, the Central Crimson Tower portal prompt, or the bottom toolbar `[TOWER]` button opens the **50-Floor Biome-Grouped Selector Modal**:
+
+```text
+                                                                                      +--------------------+
+                                                                                      | [ RETURN TO HUB ]  |
+                                                                                      +--------------------+
++----------------------------------------------------------------------------------------------------------+
+|  INFINITE TOWER — 50 FLOORS (10 BIOMES)                                                      [Close]     |
+|  You: Floor 5 | Squad: Floor 5 (5)                                                                       |
++--------------------------------------------------------------------+-------------------------------------+
+|  SCROLLABLE 50-FLOOR LIST (GROUPED BY BIOME)                       |  SELECTED FLOOR DETAIL CARD         |
+|  +--------------------------------------------------------------+  |  +-------------------------------+  |
+|  |  BIOME 1 — VERDANT RUINS (FLOORS 1–5)                        |  |  | Floor 5 — Mossbound Court     |  |
+|  +--------------------------------------------------------------+  |  | Biome: Verdant Ruins          |  |
+|  | [F1: Overgrown Threshold] [F2: Broken Aqueduct] [F3: Rootway]|  |  | Role: Boss Floor              |  |
+|  | [F4: Vinebound Bastion]   [◆ ★ F5: Mossbound Court]          |  |  | Visited: 1 | Squads: 1        |  |
+|  +--------------------------------------------------------------+  |  |                               |  |
+|  |  BIOME 2 — FUNGAL HOLLOW (FLOORS 6–10)                       |  |  | Status:                       |  |
+|  +--------------------------------------------------------------+  |  | You are here | Squad assigned |  |
+|  | [F6: Sporelit Entry]      [F7: Mycelium Galleries] ...       |  |  |                               |  |
+|  | ...                       [◆ F10: Matriarch's Hollow]        |  |  | +---------------------------+ |  |
+|  +--------------------------------------------------------------+  |  | |       [Visit floor]       | |  |
+|  |  ... Biomes 3–9 ...                                          |  |  | +---------------------------+ |  |
+|  +--------------------------------------------------------------+  |  | |      [Assign squad]       | |  |
+|  |  BIOME 10 — ABYSSAL DESCENT (FLOORS 46–50)                   |  |  | +---------------------------+ |  |
+|  +--------------------------------------------------------------+  |  | |      [Recall squad]       | |  |
+|  | [F46: Abyssal Descent] ... [◆ F50: Overlord's Throne]        |  |  | +---------------------------+ |  |
+|  +--------------------------------------------------------------+  |  +-------------------------------+  |
++--------------------------------------------------------------------+-------------------------------------+
+```
+
+### 6.2 Floor Button Status Badges
+- **`◆`**: Milestone Biome Boss Floor (`Floors 5, 10, 15, 20, 25, 30, 35, 40, 45, 50`).
+- **`★`**: Both the Master (`PlayerLocation`) and their deployed squad (`SquadContext`) are on this floor.
+- **`●`**: The Master is currently visiting this floor.
+- **`▲`**: The Master's deployed squad is stationed on this floor while the Master is elsewhere.

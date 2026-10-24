@@ -298,7 +298,7 @@ local function clearView()
  for _,node in pairs(VisualNodesByNetId) do node.Model:Destroy() end
  table.clear(VisualNodesByNetId);table.clear(MetadataByNetId);table.clear(EntitySequences);table.clear(Generations)
  VisualFolder:ClearAllChildren();_G.ClientCombatState.Metadata=MetadataByNetId
- _G.ClientCombatState.FocusedNetId=nil;_G.ClientCombatState.WorldBossNetId=nil;_G.ClientCombatState.NovaCastDuration=0
+ _G.ClientCombatState.FocusedNetId=nil;_G.ClientCombatState.WorldBossNetId=nil;_G.ClientCombatState.NovaCastDuration=0;_G.ClientCombatState.FloorBoss=nil
  Assembly=nil;Bootstrapped=false;table.clear(Buffered);LastBootstrap=0
 end
 TowerRemotes.Context.OnClientEvent:Connect(function(c)
@@ -332,7 +332,10 @@ local function applyAction(message)
  if not ActionState.Receive(Actions,message,MetadataByNetId,now) then ActionMetrics.Rejected+=1;return end
  local node=id and VisualNodesByNetId[id.NetId]
  if node and node.Model:GetAttribute("EntityGeneration")~=id.EntityGeneration then node=nil end
- if message.Kind=="DEATH" then ActionMetrics.Deaths+=1;if node then retireVisual(id.NetId,message.StartServerTime) end
+ if message.Kind=="DEATH" then
+  ActionMetrics.Deaths+=1
+  if _G.ClientCombatState.FloorBoss and _G.ClientCombatState.FloorBoss.NetId==id.NetId then _G.ClientCombatState.FloorBoss.Enabled=false end
+  if node then retireVisual(id.NetId,message.StartServerTime) end
  elseif message.Kind=="START" then
   ActionMetrics.Started+=1;if now-message.StartServerTime>.15 then ActionMetrics.Seeks+=1 end
   if node then EnemyAnimation.Action(node,message,View.Origin,now) end

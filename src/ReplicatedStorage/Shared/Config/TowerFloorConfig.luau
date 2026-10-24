@@ -1,5 +1,5 @@
 --!strict
--- Part 1 data only. Names, layouts, encounters and balance are proposed defaults.
+-- Part 1/4 floor configuration. Names, layouts, encounters and scaling across all 50 floors.
 -- Requiring this module does not build rooms, change travel, or spawn encounters.
 local MobCatalog = require(script.Parent.MobCatalog)
 local StatBalance = require(script.Parent.StatBalance)
@@ -9,8 +9,10 @@ export type Floor = {
 	Id: number,
 	DisplayName: string,
 	BiomeId: string,
+	BiomeDisplayName: string,
 	BiomeIndex: number,
 	IndexInBiome: number,
+	VariantKind: string,
 	LayoutId: string,
 	EnvironmentVariantId: string,
 	Unlocked: boolean,
@@ -22,14 +24,14 @@ export type Floor = {
 }
 
 local Config = {}
-Config.Version = 1
-Config.ContentStatus = "PROPOSED_DEFAULTS"
+Config.Version = 2
+Config.ContentStatus = "LOCAL_AUTHORED_PROTOTYPE"
 Config.BalanceStatus = "PROVISIONAL_NOT_PLAYTESTED"
 Config.FloorCount = 50
 Config.FloorsPerBiome = 5
 Config.HubFloorId = 0 -- context only, never a playable floor/catalog record
 
--- These curves are inputs for later combat integration, not existing WorldBossConfig
+-- These curves are inputs for combat integration, not existing WorldBossConfig
 -- replacements. Rewards stay physical; these values do not grant a travel payout.
 Config.Scaling = table.freeze({ HPPerFloor = 1.08, DamagePerFloor = 1.045, RewardPerFloor = 1.055 })
 Config.BaseStatsByRole = table.freeze({
@@ -60,27 +62,43 @@ for biomeIndex, biome in ipairs(MobCatalog.Biomes) do
 		local id = (biomeIndex - 1) * Config.FloorsPerBiome + indexInBiome
 		local layoutId = string.format("tower_floor_%02d", id)
 		local environmentId = string.format("tower_environment_%02d", id)
+		local variantKind = variantKinds[indexInBiome]
 		local encounters: { Encounter } = {
-			table.freeze({ EnemyId = biome.RegularEnemyIds[1], Count = 4 + indexInBiome }),
-			table.freeze({ EnemyId = biome.RegularEnemyIds[2], Count = 1 + indexInBiome }),
+			table.freeze({ EnemyId = biome.RegularEnemyIds[1], Count = 2 + indexInBiome }),
+			table.freeze({ EnemyId = biome.RegularEnemyIds[2], Count = 1 + math.floor(indexInBiome / 2) }),
 		}
 		local bossId: string? = nil
-		if indexInBiome >= 4 then
+		if indexInBiome >= 3 or id == 1 then
 			table.insert(encounters, table.freeze({ EnemyId = biome.EliteEnemyId, Count = indexInBiome == 4 and 2 or 1 }))
 		end
 		if indexInBiome == 5 then
 			bossId = biome.BossEnemyId
 			table.insert(encounters, table.freeze({ EnemyId = biome.BossEnemyId, Count = 1 }))
 		end
-		-- Identifier registries are design records, not evidence of built geometry/art.
-		layouts[layoutId] = table.freeze({ Id = layoutId, FloorId = id, BiomeId = biome.Id, VariantKind = variantKinds[indexInBiome], Status = "NOT_STARTED" })
-		environments[environmentId] = table.freeze({ Id = environmentId, FloorId = id, BiomeId = biome.Id, Status = "NOT_STARTED" })
+		layouts[layoutId] = table.freeze({
+			Id = layoutId,
+			FloorId = id,
+			BiomeId = biome.Id,
+			VariantKind = variantKind,
+			Status = "LOCAL_AUTHORED_PROTOTYPE",
+			SourceModule = "ServerScriptService.Core.TowerRoomBuilder",
+		})
+		environments[environmentId] = table.freeze({
+			Id = environmentId,
+			FloorId = id,
+			BiomeId = biome.Id,
+			VariantKind = variantKind,
+			Status = "LOCAL_AUTHORED_PROTOTYPE",
+			SourceModule = "ServerScriptService.Core.TowerRoomBuilder",
+		})
 		floors[id] = table.freeze({
 			Id = id,
 			DisplayName = floorNames[biomeIndex][indexInBiome],
 			BiomeId = biome.Id,
+			BiomeDisplayName = biome.DisplayName,
 			BiomeIndex = biomeIndex,
 			IndexInBiome = indexInBiome,
+			VariantKind = variantKind,
 			LayoutId = layoutId,
 			EnvironmentVariantId = environmentId,
 			Unlocked = true,
@@ -88,7 +106,7 @@ for biomeIndex, biome in ipairs(MobCatalog.Biomes) do
 			Encounters = table.freeze(encounters),
 			Difficulty = table.freeze({ HPMultiplier = Config.Scaling.HPPerFloor ^ (id - 1), DamageMultiplier = Config.Scaling.DamagePerFloor ^ (id - 1) }),
 			Rewards = table.freeze({ GoldMultiplier = Config.Scaling.RewardPerFloor ^ (id - 1), XPMultiplier = Config.Scaling.RewardPerFloor ^ (id - 1) }),
-			ContentStatus = "NOT_STARTED",
+			ContentStatus = "LOCAL_AUTHORED_PROTOTYPE",
 		})
 	end
 end
@@ -112,8 +130,7 @@ function Config.GetAdjacent(floorId: any, direction: any): Floor?
 	return Config.Get(floorId + direction)
 end
 
--- Caller chooses a catalog enemy; stats are pure previews until Part 3 integrates
--- them. Validate both floor and enemy membership to avoid borrowing another biome.
+-- Validate both floor and enemy membership to avoid borrowing another biome.
 function Config.GetEnemyStats(floorId: any, enemyId: any): any?
 	local floor = Config.Get(floorId)
 	local enemy = type(enemyId) == "string" and MobCatalog.Get(enemyId) or nil
@@ -126,8 +143,8 @@ function Config.GetEnemyStats(floorId: any, enemyId: any): any?
 	local base = Config.BaseStatsByRole[enemy.Role]
 	if not base then return nil end
 	return table.freeze({
-		MaxHP = (StatBalance.GetFloorStats(floorId,enemy.Role) :: any).MaxHP,
-		ATK = (StatBalance.GetFloorStats(floorId,enemy.Role) :: any).ATK,
+		MaxHP = (StatBalance.GetFloorStats(floorId, enemy.Role) :: any).MaxHP,
+		ATK = (StatBalance.GetFloorStats(floorId, enemy.Role) :: any).ATK,
 		GoldReward = math.round(base.GoldReward * floor.Rewards.GoldMultiplier),
 		XPReward = math.round(base.XPReward * floor.Rewards.XPMultiplier),
 	})

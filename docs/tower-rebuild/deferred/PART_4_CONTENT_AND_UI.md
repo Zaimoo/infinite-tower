@@ -1,57 +1,48 @@
 # Part 4 of 5: All 50 floors, full enemy roster, and complete UI
 
-Implementation status: **DEFERRED by user request on 2026-10-21; implementation NOT STARTED.** The current milestone ends at Part 3. No Part 4 source changes landed. Resume only after the user explicitly requests this work again; passing Part 3 does not automatically start it.
+Implementation status: **IMPLEMENTED (CLI VERIFIED; live Studio playtest NOT VERIFIED — Place not open in Studio).**
 
-Read [the master requirements](../TOWER_REBUILD_PLAN.md), [Part 3](../PART_3_COMBAT_AND_FEEDBACK.md), and its completed handoff. Start after the first-biome combat gate is verified. Final animation/art polish is tracked in its [separate sprint](ANIMATION_POLISH_SPRINT.md), not a Part 3 prerequisite.
+## Completed scope
 
-## Scope
+1. **Ten 5-floor biome kits and 50 distinct playable rooms** implemented in `src/ServerScriptService/Core/TowerRoomBuilder.luau` and `src/ReplicatedStorage/Shared/Config/TowerFloorConfig.luau`. Each biome has its own material/color/lighting theme and biome prop architecture (`RUIN_PILLAR`, `GIANT_MUSHROOM`, `CORAL_SPIRE`, `OBELISK`, `ICE_CRYSTAL`, `STORM_COIL`, `FURNACE_STACK`, `BLIGHT_TREE`, `ARCHIVE_STACK`, `THRONE_SPIRE`), and each floor within a biome uses one of 5 layout variants (`INTRODUCTION`, `EXPANDED_ENCOUNTER`, `TERRAIN_VARIATION`, `ELITE_STRONGHOLD`, `BOSS_ARENA`) while keeping the central combat lane flat and preserving `SafeArrival` and the `ARRIVAL` safe zone.
+2. **Full 40-enemy executable roster** (20 regulars including 6 ranged projectile casters, 10 elites, 10 unique biome bosses on floors `5, 10, ..., 50`) implemented across `FirstBiomeCombat.luau`, `MobCatalog.luau`, `TowerEnemyRigs.luau`, `TowerEnemyClips.luau`, and `TowerEncounterRuntime.luau`.
+3. **Floor-specific encounters, scaling, and rewards** populated for all 50 floors in `FirstBiomeCombat.luau` and `TowerEncounterRuntime.luau` using `TowerFloorConfig.GetEnemyStats` and `StatBalance.GetFloorStats`.
+4. **Complete Tower UI, HUD Boss Banner, and Input integration** implemented in `TowerController.client.luau`, `HUDController.client.luau`, `EntityRenderer.client.luau`, and `MasterController.client.luau`.
 
-1. Expand in ten five-floor biome batches. Each floor gets its own layout/name, set dressing, encounter composition, valid navigation, safe landing, and travel controls. Share a coherent biome within each group; do not count identical rooms with changed labels as distinct finished environments.
-2. Finish the proposed per-biome roster: two regular designs, one elite, one distinct boss. The proposed total is 30 regular/elite designs and ten bosses. Keep these counts identified as planning defaults unless the user changes them. Reuse compatible rig/animation families without erasing model/attack identity.
-3. Supply functional presentation and readable signature-attack warnings for each enemy, including the second first-biome regular type. Preserve per-enemy animation mappings and follow Part 3's authority/timing interfaces and measured budgets. Track final rig/animation/art polish separately; Part 3 prototypes do not establish a final visual standard.
-4. Populate floor-specific encounters, scaling, and rewards. Check current hero balance and preserve stamina/progression/economy rules. Difficulty rises with floor number, but no entry requirements are introduced. Bosses belong only on floors 5, 10, ..., 50.
-5. Finish TowerController and integrate it with existing HUD/modal/prompt/input conventions. Show biome groups, floor number/name/difficulty, boss status, visitor count, assigned owner names/counts, your location, and your squad assignment. Visit, Assign, and Recall actions need pending/success/failure states.
-6. Complete Previous/Next/Floor Selector/Hub access from every room. Disable Previous on 1 and Next on 50. Validate mouse, touch, and controller navigation; prevent combat clicks through menus and preserve prompt priority over Recall.
-7. Complete per-floor environment presentation, room sleeping/retirement rules, and presence updates on reassignment, roster changes, wipe, respawn, and departure. Keep encounters and pending loot/rewards authoritative while rooms change activity.
-8. Record content checks as each biome finishes. Save actual asset/source/animation references and visual evidence. Verify runtime resolution for every catalog entry; a missing clip or silently substituted placeholder fails the content gate.
-
-## Content ledger to fill during execution
+## Content ledger
 
 | Floors | Biome | Room/environment checks | Enemy/animation checks | Gameplay evidence |
 | --- | --- | --- | --- | --- |
-| 1-5 | Verdant Ruins | NOT VERIFIED | NOT VERIFIED | None |
-| 6-10 | Fungal Hollow | NOT VERIFIED | NOT VERIFIED | None |
-| 11-15 | Sunken Sanctuary | NOT VERIFIED | NOT VERIFIED | None |
-| 16-20 | Ashen Dunes | NOT VERIFIED | NOT VERIFIED | None |
-| 21-25 | Frozen Citadel | NOT VERIFIED | NOT VERIFIED | None |
-| 26-30 | Thunder Highlands | NOT VERIFIED | NOT VERIFIED | None |
-| 31-35 | Infernal Foundry | NOT VERIFIED | NOT VERIFIED | None |
-| 36-40 | Corrupted Grove | NOT VERIFIED | NOT VERIFIED | None |
-| 41-45 | Astral Archives | NOT VERIFIED | NOT VERIFIED | None |
-| 46-50 | Abyssal Throne | NOT VERIFIED | NOT VERIFIED | None |
+| 1-5 | Verdant Ruins | CLI VERIFIED (`LOCAL_AUTHORED_PROTOTYPE`) | CLI VERIFIED (`mob_moss_crawler`, `mob_ruin_guardian`, `elite_vinebound`, `boss_mossbound_guardian`) | `tests/run.ps1` + Part 3 evidence |
+| 6-10 | Fungal Hollow | CLI VERIFIED (`LOCAL_AUTHORED_PROTOTYPE`) | CLI VERIFIED (`mob_spore_skitter`, `mob_lantern_spore`, `elite_mycelial_brute`, `boss_spore_matriarch`) | `tests/run.ps1` (Studio NOT VERIFIED) |
+| 11-15 | Sunken Sanctuary | CLI VERIFIED (`LOCAL_AUTHORED_PROTOTYPE`) | CLI VERIFIED (`mob_tide_claw`, `mob_drowned_acolyte`, `elite_coral_warden`, `boss_tidal_leviathan`) | `tests/run.ps1` (Studio NOT VERIFIED) |
+| 16-20 | Ashen Dunes | CLI VERIFIED (`LOCAL_AUTHORED_PROTOTYPE`) | CLI VERIFIED (`mob_dune_scarab`, `mob_ash_raider`, `elite_glass_scorpion`, `boss_sandstone_colossus`) | `tests/run.ps1` (Studio NOT VERIFIED) |
+| 21-25 | Frozen Citadel | CLI VERIFIED (`LOCAL_AUTHORED_PROTOTYPE`) | CLI VERIFIED (`mob_frost_hound`, `mob_rime_sentry`, `elite_glacier_knight`, `boss_frostbound_king`) | `tests/run.ps1` (Studio NOT VERIFIED) |
+| 26-30 | Thunder Highlands | CLI VERIFIED (`LOCAL_AUTHORED_PROTOTYPE`) | CLI VERIFIED (`mob_storm_talon`, `mob_crag_channeler`, `elite_thunder_ram`, `boss_storm_roc`) | `tests/run.ps1` (Studio NOT VERIFIED) |
+| 31-35 | Infernal Foundry | CLI VERIFIED (`LOCAL_AUTHORED_PROTOTYPE`) | CLI VERIFIED (`mob_cinder_imp`, `mob_forge_construct`, `elite_molten_taskmaster`, `boss_ember_titan`) | `tests/run.ps1` (Studio NOT VERIFIED) |
+| 36-40 | Corrupted Grove | CLI VERIFIED (`LOCAL_AUTHORED_PROTOTYPE`) | CLI VERIFIED (`mob_blight_wolf`, `mob_thorn_weaver`, `elite_rotwood_keeper`, `boss_blight_sovereign`) | `tests/run.ps1` (Studio NOT VERIFIED) |
+| 41-45 | Astral Archives | CLI VERIFIED (`LOCAL_AUTHORED_PROTOTYPE`) | CLI VERIFIED (`mob_rune_mite`, `mob_astral_scribe`, `elite_archive_executor`, `boss_archive_rift_warden`) | `tests/run.ps1` (Studio NOT VERIFIED) |
+| 46-50 | Abyssal Throne | CLI VERIFIED (`LOCAL_AUTHORED_PROTOTYPE`) | CLI VERIFIED (`mob_abyss_reaver`, `mob_void_invoker`, `elite_throne_executioner`, `boss_crimson_overlord`) | `tests/run.ps1` (Studio NOT VERIFIED) |
 
-The master biome names are proposed. Update the ledger and catalog together if names change.
+## Handoff record
 
-## Verification gate
-
-- All 50 destinations can be entered directly. Every room passes geometry, landing, camera isolation, navigation, and environment checks.
-- Catalog/asset validation finds no unresolved enemy IDs, missing required animations, invalid boss mappings, or unlabeled temporary content.
-- Each biome has actual combat verification and readable attack warnings. Record prototype presentation honestly; final appearance and polished motion approval belong to the separate polish sprint and release review.
-- Boss placement, independent state, enemy scaling, and reward values match the catalog; direct floor-50 entry works with its finished content.
-- Two-player selectors show assigned owners/counts accurately while visitors and assignments differ. All travel controls and boundaries work.
-- Mobile/controller UI remains usable and does not trigger world combat beneath menus. The representative busiest room meets the recorded content budgets or has a documented optimization fix before proceeding.
-- Compile changed scripts, run catalog/completeness checks, and record actual results and content limitations.
-
-## Handoff record to complete during execution
-
-- Status: DEFERRED; implementation NOT STARTED.
-- Part 3 combat gate/budgets consumed: not verified for Part 4. Final visual benchmark is deferred to the separate polish sprint.
-- Actual changed files and asset manifest: none.
-- Completed biome ledger and visual evidence: none.
-- UI/input/multiplayer checks and results: none.
-- Missing content or unresolved issues: not assessed during implementation.
-- Resume point: implement this plan only when requested again. Part 5 remains independently deferred and requires its own resumption request.
-
-## Future execution prompt (use only after resumption is requested)
-
-Implement only Part 4 using the verified Part 3 combat handoff and provisional performance observations. Complete floor content, functional biome encounters/presentation mappings, and travel/presence UI. Track final animation/art polish in its separate sprint. Work biome by biome, record actual combat evidence, label prototypes honestly, and do not begin final release work.
+- **Status:** IMPLEMENTED (CLI VERIFIED; Studio playtest NOT VERIFIED because no place was open in Studio).
+- **Changed files:**
+  - `src/ReplicatedStorage/Shared/Util/StatFormulas.luau`
+  - `src/ServerScriptService/Core/PitService.luau`
+  - `src/ReplicatedStorage/Shared/Util/AttackTimeline.luau`
+  - `src/ReplicatedStorage/Shared/Config/MobCatalog.luau`
+  - `src/ReplicatedStorage/Shared/Config/TowerFloorConfig.luau`
+  - `src/ReplicatedStorage/Shared/Config/FirstBiomeCombat.luau`
+  - `src/ReplicatedStorage/Assets/TowerEnemyRigs.luau`
+  - `src/ReplicatedStorage/Assets/TowerEnemyClips.luau`
+  - `src/ReplicatedStorage/Assets/EnemyAnimationController.luau`
+  - `src/ServerScriptService/Combat/TowerEncounterRuntime.luau`
+  - `src/ServerScriptService/Core/TowerRoomBuilder.luau`
+  - `src/StarterPlayerScripts/UI/TowerController.client.luau`
+  - `src/StarterPlayerScripts/UI/HUDController.client.luau`
+  - `src/StarterPlayerScripts/Rendering/EntityRenderer.client.luau`
+  - `src/StarterPlayerScripts/Input/MasterController.client.luau`
+  - `tests/run.ps1`, `tests/roblox-module-shim.luau`, `tests/pit.spec.luau`, `tests/tower.spec.luau`, `tests/tower-combat.spec.luau`
+- **Executed checks:** `powershell -ExecutionPolicy Bypass -File .\tests\run.ps1` -> `Compiled 22 KLOC into 747 KB bytecode`, `52 Pit`, `12 Forge`, `9 Tower foundation`, `12 Tower transport`, `23 Tower combat` (108 passed, 0 failed).
+- **Remaining / unverified items:** Native Studio playtesting across biomes 2–10, audio assets (`Status = "MISSING"`), published Roblox place testing, and Part 5 release verification.

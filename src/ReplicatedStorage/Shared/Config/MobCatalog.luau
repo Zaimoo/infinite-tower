@@ -1,18 +1,33 @@
 --!strict
--- Part 1 design manifest only. No entry is approved or wired to combat/rendering.
--- Names, anatomy, dimensions and attack timings are PROPOSED defaults.
--- Planned paths are destinations, not evidence of models or editable sources.
-local Catalog: any = { Status = "PROPOSED", SchemaVersion = 1, Biomes = {}, Entries = {} }
+-- Part 1/4 enemy catalog. Native procedural rigs and clips are authored locally in
+-- ReplicatedStorage.Assets.TowerEnemyRigs and ReplicatedStorage.Assets.TowerEnemyClips.
+-- No uploaded Roblox asset or animation IDs are claimed (AssetId / AnimationId remain nil).
+local Catalog: any = { Status = "LOCAL_AUTHORED_UNVERIFIED", SchemaVersion = 2, Biomes = {}, Entries = {} }
 
 local function missing(): any
 	return { Status = "MISSING" }
+end
+
+local function authoredClip(slot: string): any
+	return {
+		Status = "LOCAL_AUTHORED_UNVERIFIED",
+		SourceModule = "ReplicatedStorage.Assets.TowerEnemyClips",
+		Slot = slot,
+	}
+end
+
+local function authoredEffects(): any
+	return {
+		Status = "LOCAL_AUTHORED_UNVERIFIED",
+		SourceModule = "ReplicatedStorage.Assets.EnemyAnimationController",
+	}
 end
 
 local function attack(id: string, animation: string, kind: string, windup: number, recovery: number, travel: number?): any
 	local flight = travel or 0
 	return {
 		Id = id,
-		Status = "PROPOSED",
+		Status = "LOCAL_AUTHORED_UNVERIFIED",
 		AnimationKey = animation,
 		Kind = kind,
 		Windup = windup,
@@ -26,12 +41,14 @@ local function attack(id: string, animation: string, kind: string, windup: numbe
 		ImpactRule = if kind == "PROJECTILE" then "SERVER_SWEPT_PROJECTILE_SAME_FLOOR_ONCE"
 			elseif kind == "GROUND_AREA" then "SERVER_TELEGRAPH_AREA_SAME_FLOOR_ONCE"
 			else "SERVER_RANGE_AND_ARC_SAME_FLOOR_ONCE",
-		-- The manifest is not executable combat tuning. Part 3 must author these
-		-- parameters alongside the intended room, rig, warning, and damage tests.
-		Gameplay = { Status = "MISSING", RequiredFields = { "RangeAndShape", "TargetRule", "DamageRule", "TelegraphGeometry", "ProjectileSpeedAndCollisionIfRanged" } },
+		Gameplay = {
+			Status = "LOCAL_AUTHORED_UNVERIFIED",
+			SourceModule = "ReplicatedStorage.Shared.Config.FirstBiomeCombat",
+			RequiredFields = { "RangeAndShape", "TargetRule", "DamageRule", "TelegraphGeometry", "ProjectileSpeedAndCollisionIfRanged" },
+		},
 		CancelOnDeath = true,
 		CancelOnContextChange = true,
-		Effects = missing(),
+		Effects = authoredEffects(),
 		Audio = missing(),
 	}
 end
@@ -40,16 +57,16 @@ local function enemy(biome: string, role: string, id: string, name: string, fami
 	width: number, height: number, depth: number, basicKind: string, specialKind: string?): any
 	local animations: any = {}
 	for _, key in { "Idle", "Locomotion", "BasicAttack", "HitReaction", "Death" } do
-		animations[key] = missing()
+		animations[key] = authoredClip(key)
 	end
 	local attacks = { attack(id .. "_basic", "BasicAttack", basicKind, .6, .8, if basicKind == "PROJECTILE" then .4 else nil) }
 	if role == "ELITE" then
-		animations.Special = missing()
+		animations.Special = authoredClip("Special")
 		table.insert(attacks, attack(id .. "_special", "Special", specialKind or "GROUND_AREA", 1.2, 1.0))
 	elseif role == "BOSS" then
-		animations.Awakening = missing()
-		animations.Signature1 = missing()
-		animations.Signature2 = missing()
+		animations.Awakening = authoredClip("Awakening")
+		animations.Signature1 = authoredClip("Signature1")
+		animations.Signature2 = authoredClip("Signature2")
 		table.insert(attacks, attack(id .. "_signature_1", "Signature1", specialKind or "GROUND_AREA", 1.8, 1.2))
 		table.insert(attacks, attack(id .. "_signature_2", "Signature2", "GROUND_AREA", 2.2, 1.5))
 	end
@@ -58,19 +75,36 @@ local function enemy(biome: string, role: string, id: string, name: string, fami
 		BiomeId = biome,
 		Role = role,
 		DisplayName = name,
-		Status = "PROPOSED",
-		Model = { Status = "MISSING", PlannedTemplatePath = "ReplicatedStorage.Assets.TowerEnemies." .. id },
-		Rig = { Status = "MISSING", ProposedFamily = family, Pivot = missing(), FloorContact = missing() },
-		Anatomy = { Status = "PROPOSED", Description = anatomy,
+		Status = "LOCAL_AUTHORED_UNVERIFIED",
+		Model = {
+			Status = "LOCAL_AUTHORED_UNVERIFIED",
+			SourceModule = "ReplicatedStorage.Assets.TowerEnemyRigs",
+			PlannedTemplatePath = "ReplicatedStorage.Assets.TowerEnemies." .. id,
+		},
+		Rig = {
+			Status = "LOCAL_AUTHORED_UNVERIFIED",
+			ProposedFamily = family,
+			Pivot = { Status = "LOCAL_AUTHORED_UNVERIFIED", Mode = "HumanoidRootPart" },
+			FloorContact = { Status = "LOCAL_AUTHORED_UNVERIFIED", Mode = "Planted" },
+		},
+		Anatomy = {
+			Status = "LOCAL_AUTHORED_UNVERIFIED",
+			Description = anatomy,
 			LocomotionMode = if family == "SERPENT" then "SLITHER" elseif family == "GIANT_AVIAN" or family == "AVIAN" then "WALK_WING_ASSISTED"
-				elseif family == "CRAWLER" or family == "INSECT" or family == "SCORPION" or family == "CRUSTACEAN" then "CRAWL" else "WALK" },
-		Bounds = { Status = "PROPOSED", Width = width, Height = height, Depth = depth },
-		Source = { Status = "MISSING", PlannedDirectory = "assets-source/tower/enemies/" .. id,
+				elseif family == "CRAWLER" or family == "INSECT" or family == "SCORPION" or family == "CRUSTACEAN" then "CRAWL" else "WALK",
+		},
+		Bounds = { Status = "LOCAL_AUTHORED_UNVERIFIED", Width = width, Height = height, Depth = depth },
+		Source = {
+			Status = "LOCAL_AUTHORED_UNVERIFIED",
+			NativeRigModule = "src/ReplicatedStorage/Assets/TowerEnemyRigs.luau",
+			NativeClipModule = "src/ReplicatedStorage/Assets/TowerEnemyClips.luau",
+			PlannedDirectory = "assets-source/tower/enemies/" .. id,
 			PlannedModelSourcePath = "assets-source/tower/enemies/" .. id .. "/model.blend",
-			PlannedAnimationSourcePath = "assets-source/tower/enemies/" .. id .. "/animations.blend" },
+			PlannedAnimationSourcePath = "assets-source/tower/enemies/" .. id .. "/animations.blend",
+		},
 		Animations = animations,
 		Attacks = attacks,
-		Effects = missing(),
+		Effects = authoredEffects(),
 		Audio = missing(),
 	}
 	Catalog.Entries[id] = entry
@@ -81,7 +115,7 @@ local function biome(id: string, name: string, regular1: any, regular2: any, eli
 	table.insert(Catalog.Biomes, {
 		Id = id,
 		DisplayName = name,
-		Status = "PROPOSED",
+		Status = "LOCAL_AUTHORED_UNVERIFIED",
 		RegularEnemyIds = { regular1.Id, regular2.Id },
 		EliteEnemyId = elite.Id,
 		BossEnemyId = boss.Id,

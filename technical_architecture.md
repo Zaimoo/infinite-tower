@@ -1,6 +1,6 @@
 # DOCUMENT 2: TECHNICAL ARCHITECTURE & LUAU SPECIFICATION
 **Project Codename:** *Project: Waiting Room* (*Infinite Towers: Become a Master!*)  
-**Architecture Standard:** `--!strict` Roblox Luau | Zero Server-Side Humanoids | 5 Hz (`0.20s`) Server Simulation Loop | 60 FPS Client `RenderStepped` Interpolation | 14-Byte Binary Buffer Replication | Profile Session-Locked Persistence
+**Architecture Standard:** `--!strict` Roblox Luau | Zero Server-Side Humanoids | 5 Hz (`0.20s`) Server Simulation Loop + Heartbeat Attack Impact Validation | 60 FPS Client `RenderStepped` Interpolation | Hybrid Replication: 14-Byte Hub Buffers + Room-Local v2 Tower Buffers (46-Byte Header + 24-Byte Records) | Profile Session-Locked Persistence
 
 ---
 
@@ -36,6 +36,7 @@ game
 ├── ReplicatedStorage
 │   ├── Remotes                       -- Network Layer (Auto-registered at boot)
 │   │   ├── CombatRemotes             -- ReplicationTick, FocusTarget, WhistleCommand, BossTelegraph, CombatVFX, EntityMetadataSync, WorldBossTrigger, LootStolenAlert, SquadWipeState, CarriedLootSync, DropCarriedItem
+│   │   ├── TowerRemotes              -- Request, Response, Context, Ready, Presence, TowerEntityState, TowerAction, TowerSnapshot, OpenSelector
 │   │   ├── RelicPactRemotes          -- RelicStateChanged, BountyDropped
 │   │   ├── TycoonGachaRemotes        -- RequestSummon, SynthesizeHeroes, PromoteHeroStar, AssignHeroRole, FacilityInteract
 │   │   ├── ArtifactRemotes           -- RequestEquipArtifact, RequestUnequipArtifact, RequestUpgradeRarity
@@ -44,15 +45,30 @@ game
 │   │   ├── Config
 │   │   │   ├── ArtifactCatalog.luau  -- Weapons, 7 Star Tiers, 16 Rarity Tiers, Blacksmith upgrade costs
 │   │   │   ├── FacilityConfig.luau   -- Levels 1-5 upgrade costs (Gold only), caps
+│   │   │   ├── FirstBiomeCombat.luau -- All 40 Tower enemy combat specs, attacks, and 50 floor encounter spawns
 │   │   │   ├── HeroCatalog.luau      -- Roster seed stats, archetypes, traits, banner weights
+│   │   │   ├── MobCatalog.luau       -- 40-enemy catalog across 10 biomes (Regulars, Elites, Biome Bosses)
 │   │   │   ├── PitBalanceConfig.luau -- Pit costs, EXP formulas, imprint definitions, promotion materials
 │   │   │   ├── RelicConfig.luau      -- Speed penalties, despawn times, drop rates, Gold/Gem payouts
+│   │   │   ├── StatBalance.luau      -- Canonical stat scaling constants and validators
+│   │   │   ├── TowerFloorConfig.luau -- 50-floor definitions, 10 biome themes, and 5 layout variant specs
 │   │   │   └── WorldBossConfig.luau  -- Mob specs, Sovereign phases, direct loot rankings
 │   │   └── Util
+│   │       ├── AttackTimeline.luau   -- Authoritative once-only attack impact & shape validation (ARC, SELF_DISC, TARGET_DISC, PROJECTILE)
+│   │       ├── EnemyActionState.luau -- Client action sequence reconciliation, terminal records, and death tombstones
 │   │       ├── GothicBoxStyle.luau   -- Obsidian & white filigree UI container styling
 │   │       ├── PitMath.luau          -- Synthesis preview, imprint matching, conversion calculations
-│   │       └── StatFormulas.luau     -- Mathematical formulas (Level XP, Promotion, Labor, Combat DPS)
+│   │       ├── StatFormulas.luau     -- Mathematical formulas (Level XP, Promotion, Labor, Combat DPS)
+│   │       ├── TowerProtocol.luau    -- Room-local v2 46-byte header + 24-byte entity binary buffer codec
+│   │       ├── TowerRequestPolicy.luau -- Travel/assignment idempotency, rate limiting, and validation
+│   │       └── WeaponPromotion.luau  -- Deterministic weapon star promotion validation
 │   └── Assets                        -- Rigs, Mob Rigs, Relics, Weapons, Props, and ArtPackVisuals
+│       ├── ArtPackVisuals.luau       -- Hero & hub mob visual attachment and weapon socketing
+│       ├── CombatFeedback.luau       -- Bounded 32-label floating damage numbers and hit sparks
+│       ├── EnemyAnimationController.luau -- Procedural clip playback, progress-fill telegraphs, and PROJECTILE orbs (MAX_EFFECTS = 12)
+│       ├── HeroModelBuilder.luau     -- Procedural R15 hero model fallback builder
+│       ├── TowerEnemyClips.luau      -- Authored pose keyframes with plantedPose leg counter-rotation for all 40 enemies
+│       └── TowerEnemyRigs.luau       -- Articulated Motor6D rig builder across 10 biome palettes and 40 enemy species
 │
 ├── ServerScriptService
 │   ├── BaseOverhaul
@@ -64,17 +80,21 @@ game
 │   │   ├── TowerBuilder.luau         -- Procedural 18-floor Crimson Tower generator
 │   │   └── WallsBuilder.luau         -- Castle battlements and fortress wall builder
 │   ├── Combat
-│   │   └── CombatSimulation.server.luau -- 5 Hz zero-humanoid engine, 14-byte replication, Contested Loot, Retaliation PvP
+│   │   ├── CombatSimulation.server.luau -- 5 Hz zero-humanoid engine, Hub + Tower room combat, Contested Loot, Retaliation PvP
+│   │   └── TowerEncounterRuntime.luau -- Room-local 50-floor AI, floor-scaled stats, boss phase transitions, and active attack timelines
 │   ├── Core
 │   │   ├── DataManager.server.luau   -- Profiles, session management, Gacha, Blacksmith upgrades, artifact persistence
+│   │   ├── HeroAssetSetup.server.luau -- Verifies and populates R15 hero models in ReplicatedStorage.Assets.Heroes
 │   │   ├── HeroNavigation.luau       -- Grounded waypoint navigation, slope and clearance verification
 │   │   ├── PitService.luau           -- Authoritative synthesis, promotion, and imprint transactions
 │   │   ├── PlotBuildingPlacement.server.luau -- Facility placement runner
 │   │   ├── PlotBuildings.luau        -- Facility layout logic
 │   │   ├── PlotFacilityArchitecture.luau -- Facility geometry generator
-│   │   ├── PlotManager.server.luau   -- 5-island plot allocation, respawn binding, worker 3D models
+│   │   ├── PlotManager.server.luau   -- Plot allocation, respawn binding, worker 3D models
+│   │   ├── TowerFloorService.luau    -- Isolated 50-floor room lifecycle, travel, squad assignment, and presence authority
+│   │   ├── TowerRoomBuilder.luau     -- Dynamic 248x84x248 room builder with 10 biome kits x 5 layout variants
 │   │   ├── TowerTraversal.luau       -- Collision-checked tower ramp traversal and waypoint routing
-│   │   └── TowerTraversalSetup.server.luau -- Traversal initialization
+│   │   └── TowerTraversalSetup.server.luau -- TowerFloorService init and CentralCrimsonTower portal prompt binding
 │   ├── ExtractionAndSocial
 │   │   ├── RelicService.server.luau  -- Relic spawning, welds, slow penalties, fumbles, extraction pads
 │   │   └── SyndicateService.server.luau -- Waiting room espionage (Bless vs Leech, 15s Purge, Mimic chest)
@@ -84,18 +104,21 @@ game
 │
 └── StarterPlayer.StarterPlayerScripts
     ├── Input
-    │   └── MasterController.client.luau -- Click raycast, [Shift] Sprint, [Q], [E] hotkeys, ProximityPrompts
+    │   └── MasterController.client.luau -- Click raycast (with UI click-through guard), [Shift] Sprint, [Q], [E] hotkeys, ProximityPrompts
     ├── Rendering
-    │   ├── EntityRenderer.client.luau -- 5 Hz 14-byte buffer unpacker, 60 FPS lerp, unit status billboards, weapon socketing
-    │   └── HoldingAnimationController.client.luau -- Upper-arm holding pose animation for carrying physical loot
+    │   ├── EntityRenderer.client.luau -- Hub 14-byte & Tower v2 24-byte buffer unpacker, 60 FPS lerp, FloorBoss HUD sync, weapon socketing
+    │   ├── HoldingAnimationController.client.luau -- Upper-arm holding pose animation for carrying physical loot
+    │   └── PlotBeaconController.client.luau -- Skyward plot beacon renderer
     └── UI
         ├── FacilityController.luau   -- Focused facility HUDs (Summoning, Infirmary, Squad Management)
-        ├── GothicBoxStyle.luau       -- Client-side container styling helper
+        ├── ForgeController.luau      -- Weapon Star Promotion UI modal
         ├── HeroCard.luau             -- Reusable hero card UI component
-        ├── HUDController.client.luau -- 60 FPS HUD, Gothic bottom toolbar, bottom-left currencies, modals
-        ├── PitController.luau        -- Pit interface wrapper
+        ├── HUDController.client.luau -- 60 FPS HUD, World/Floor Boss top banner, Gothic bottom toolbar, currencies, modals
         ├── PitDesignTokens.luau      -- Design tokens and color palette for The Pit
-        └── SynthesisController.luau  -- Dedicated Synthesis UI modal (recipient slot, 5 material slots, preview)
+        ├── PromotionController.luau  -- Hero Star Promotion UI modal
+        ├── SquadController.luau      -- 5-Hero Squad Deployment UI modal
+        ├── SynthesisController.luau  -- Dedicated Synthesis UI modal (recipient slot, 5 material slots, preview)
+        └── TowerController.client.luau -- 10-biome grouped 50-floor selector modal, status badges, and Return to Hub button
 ```
 
 ---
@@ -255,8 +278,14 @@ Heroes navigate the 18 platforms and quarter-turn ascent ramps of the Central Cr
 3. **Targeted Retaliation:** The victim receives a HUD alert with a `[⚔️ RETALIATE]` button. Activating it dispatches squad-vs-squad PvP targeting at $25\%$ PvP damage scaling. The targeted squad auto-retaliates in mutual defense.
 4. **Squad Wipe:** If all 5 heroes fall into `COMA`, carried loot spills at the Master's feet, and field looting is locked (`CanCollectLoot = false`) until the Master returns to their plot to heal heroes in the Infirmary.
 
-### 4.3 Master Movement & Shift Sprint
-`MasterController.client.luau` monitors `[LeftShift / RightShift]` key states on `RenderStepped`, applying an immediate $3.0\times$ speed multiplier to the Master's Humanoid WalkSpeed. ProximityPrompts for plot facilities arbitrate hotkey precedence so interacting with facilities does not trigger emergency whistles.
+### 4.3 Master Movement, Shift Sprint & UI Click-Through Guard
+`MasterController.client.luau` monitors `[LeftShift / RightShift]` key states on `RenderStepped`, applying an immediate $3.0\times$ speed multiplier to the Master's Humanoid WalkSpeed. ProximityPrompts for plot facilities and tower pedestals arbitrate hotkey precedence so interacting with prompts does not trigger emergency whistles. Viewport click targeting (`FocusTarget`) queries `GuiService:GetGuiObjectsAtPosition(pos.X, pos.Y)` and aborts world raycasting whenever the cursor clicks an interactive or opaque GUI object (`GuiButton` or visible background `GuiObject`), preventing modal click-through.
+
+### 4.4 Infinite Tower 50-Floor Encounter Runtime & Attack Timeline (`TowerEncounterRuntime.luau`, `AttackTimeline.luau`)
+- **Isolated Room Generation (`TowerFloorService.luau` & `TowerRoomBuilder.luau`):** Builds enclosed $248 \times 84 \times 248\text{ studs}$ chambers on demand across 10 biome material/color kits and 5 layout variants (`ENTRY`, `CORRIDOR`, `CROSSING`, `BASTION`, `BOSS_ARENA`) while keeping `CombatFloor` flat at $Y = 0$ and preserving the elevated `SafeArrival` zone (`CombatSafe = true`).
+- **40-Enemy Floor-Scaled Encounters (`FirstBiomeCombat.luau` & `TowerEncounterRuntime.luau`):** Populates all 50 floors with biome-matched Regulars, Elites (on Floor 1 and the 3rd–4th floors of every biome), and Biome Bosses (solely on Floors `5, 10, ..., 50`). Scales `MaxHP`, `ATK`, and `GoldReward` per floor using `StatBalance` curves and transitions Biome Bosses from Phase 1 to Phase 2 below 55% HP.
+- **Heartbeat-Validated Attack Shapes (`AttackTimeline.luau`):** Evaluates once-only impact at `WindupSeconds` for `ARC`, `SELF_DISC`, and `TARGET_DISC`, and at `WindupSeconds + TravelSeconds` along the swept projectile segment for `PROJECTILE` attacks.
+- **Procedural Articulated Rigs & Clips (`TowerEnemyRigs.luau`, `TowerEnemyClips.luau`, `EnemyAnimationController.luau`):** Builds Motor6D rigs for all 40 enemies across 10 biome palettes, samples keyframes with `plantedPose` leg counter-rotation so feet remain planted during torso leans, and renders expanding progress-fill telegraph discs and flying projectile orbs within a strict `MAX_EFFECTS = 12` visual cap.
 
 ---
 
