@@ -16,8 +16,8 @@ In traditional gacha/simulator games, 95% of summons are discarded as worthless 
 
 1. **The Dual-Role Living Roster (Combat + Labor):**
    - Every hero pulled from the Summoning Altar rolls with **Combat Stats** (movement speed, attack speed, attack damage, health) and **Labor Output** (separate facility productivity), without trait or imprint bonuses.
-   - **Up to 5 Deployed Heroes** (all 5 slots unlocked from the start) accompany the Master into the Central Hub or are independently deployed to specific floors (1–50) of the **Infinite Tower**. Heroes expend **Stamina** as they fight and risk a debilitating **60-second Coma** if left inside lethal AoE telegraphs.
-   - **Benched Heroes** physically inhabit the player's **Fortress Plot** on recuperation beds in **The Infirmary & Barracks** (Stamina & Coma recovery), or can be forged powerful equipment at the **Blacksmith Forge**.
+   - **Up to 5 Deployed Heroes** (all 5 slots unlocked from the start) accompany the Master into the Central Hub or are independently deployed to specific floors (1–50) of the **Infinite Tower**. Heroes charge an in-combat **Skill/Stamina Gauge** (0 to 100) through a 3-tier attack cadence (Basic -> Basic -> Special -> Skill Attack at 100), and risk a debilitating **60-second Coma** if left inside lethal AoE telegraphs.
+   - **Benched Heroes** physically inhabit the player's **Fortress Plot** on recuperation beds in **The Infirmary & Barracks** (Coma recovery & rest), or can be forged powerful equipment at the **Blacksmith Forge**.
    - **Zero Dead Pulls:** Duplicate heroes across all star ranks are fed into the **Synthesis Chamber** (`SynthesisController.luau`) for EXP leveling to cap (`MaxLevel = Stars * 10`), or sacrificed at the **Promotion Altar** (`PromotionController.luau`) for **Star Promotion** ($1★ \to 7★$).
    - **Dual Hero Banners & Artifact Ascension:** At the **Summoning Altar**, players spend Gems (`100 Gems` single / `900 Gems` 10x) on two distinct banners: **Call of the Rift** (Permanent Banner featuring 5 stars: $1★ \to 5★$) and **A Star's Arrival** (Limited Time Banner featuring 1 character per star across all 7 stars: $1★ \to 7★$). In addition, Masters spend Gems at the **Artifact Summoning Banner** (`160 Gems` single / `1,600 Gems` 10x) to pull equippable weapons, shields, and rings across **16 Rarity Tiers** (`Common` $\to$ `Origin`) which define inherent base stats. At the **Blacksmith Forge** (`ForgeController.luau`), duplicate gear and Gold are used for **Star Ascension** ($1★ \to 7★$), multiplying base stats with massive progressive multipliers up to **`8.00x`**.
 
@@ -79,9 +79,10 @@ flowchart TD
 1. **Deploy & Traverse (0:00 – 0:15):**
    - The Master selects up to 5 rested heroes from their roster via the **War Banner** or **Squad Deploy UI** (`SquadController.luau`).
    - The Master can sprint (`[LeftShift]`, $3.0\times$ speed) across high-elevation stone bridges onto the **Central Hub**, or use the **Tower Controller** (`TowerController.client.luau`) to travel (`Visit floor`) or station their squad (`Assign squad`) on any of the 50 **Infinite Tower Floors**.
-2. **Tactical Grind & Stamina Expenditure (0:15 – 2:00):**
+2. **Tactical Grind & Skill Gauge Building (0:15 – 2:00):**
    - The Master uses **`[Click / Tap]` Focus Target** to direct all 5 deployed heroes onto target mobs, crystal nodes, or floor bosses.
-   - To accelerate clears, the Master triggers **`[Q]` Overdrive Whistle** (`20s CD`), trading `5 Stamina` per hero for `+40% Attack Speed` for `5s`.
+   - Heroes execute a 3-tier cadence: **Basic Attack** (+5 Stamina) $\to$ **Special Attack** (+10 Stamina every 3rd hit) $\to$ **Skill Attack** (unleashed when Stamina reaches 100, resetting gauge to 0).
+   - To accelerate clears and rapidly charge Skill Attacks, the Master triggers **`[Q]` Overdrive Whistle** (`20s CD`), granting **+40% Attack Speed** for `5s` with zero stamina cost.
    - When an Elite or Boss telegraphs a red ground AoE or ranged projectile (`ARC`, `SELF_DISC`, `TARGET_DISC`, or swept-corridor `PROJECTILE`), the Master triggers **`[E]` Emergency Recall Whistle** (`6s CD`), warping all 5 heroes to the Master's safe position and dropping their aggro for `2s`.
 3. **Physical Loot Haul (2:00 – 2:45):**
    - Defeating mobs/Elites spawns physical drops in `Workspace.PhysicalLoot` (**Bounty Bags**, **Mana Geodes**, **Cursed Urns**, and **Abyssal Cores**).
@@ -89,7 +90,7 @@ flowchart TD
    - If hit by an Elite/Boss AoE mid-haul, the Master is **stunned for 1s and fumbles the item** (which becomes stealable after a **3s owner-lock**).
 4. **Extract & Bank (2:45 – 3:00):**
    - Stepping onto the Perimeter Highway (`R >= 460 studs`) or a Private Extraction Pad safely deposits cargo into permanent Gold and Gems.
-   - Depleted heroes (`Stamina < 25%`) are swapped into **Infirmary Recuperation Beds**, and fresh rested heroes are rotated into the active squad via the `[AutoSwap]` toolbar action.
+   - Comatose heroes are swapped into **Infirmary Recuperation Beds**, and fresh rested heroes are rotated into the active squad via the `[AutoSwap]` toolbar action.
 
 ### 2.2 The 15-Minute Meso Loop (Fortress, Synthesis, Promotion & Forge Progression)
 1. **Facility Upkeep (Every 3–5 Minutes):**
@@ -332,14 +333,14 @@ Every summoned hero rolls a `QualityScalar` $q \in [0.90, 1.15]$ applied to thei
 
 #### Archetype Foundation Table
 
-| Archetype | Base HP ($HP_0$) | Base ATK ($ATK_0$) | Attack Interval ($t_{\text{atk}}$) | Attack Range | Base Labor ($L_0$) | Preferred Facility (+25% Synergy) | Permitted Weapons |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Vanguard** (Tank) | `450` | `22` | `1.20s` | `6 studs` | `10 / min` | **Outskirts Guard Post** | `SWORD`, `AXE`, `SHIELD` |
-| **Striker** (Melee DPS) | `280` | `38` | `0.85s` | `6 studs` | `12 / min` | **The Training Grounds** | `SWORD`, `DAGGERS`, `SHIELD` |
-| **Marksman** (Ranged DPS) | `210` | `34` | `0.80s` | `28 studs` | `13 / min` | **Outskirts Guard Post** | `BOW` |
-| **Miner** (Gem Specialist) | `300` | `20` | `1.05s` | `6 studs` | `20 / min` | **The Market** | `AXE`, `SHIELD` |
-| **Healer** (Infirmary Spec.) | `260` | `18` | `1.25s` | `24 studs` | `18 / min` | **The Infirmary & Barracks** | `STAFF`, `TOME` |
-| **Scholar** (Spell Specialist)| `220` | `24` | `1.00s` | `26 studs` | `22 / min` | **The Training Grounds** | `TOME`, `STAFF` |
+| Archetype | Base HP ($HP_0$) | Base ATK ($ATK_0$) | Attack Interval ($t_{\text{atk}}$) | Attack Range | Base Labor ($L_0$) | Permitted Weapons | Basic Attack (+5 SP) | Special Attack (+10 SP, 3rd Hit) | Skill Attack (100 SP Ultimate) |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Vanguard** (Tank) | `450` | `22` | `1.20s` | `6 studs` | `10 / min` | `SWORD`, `AXE`, `SHIELD` | Shield Strike (1.0x) | Shield Bash (1.4x front cleave + slow) | Fortress Aegis (Taunt + 40% Max HP Shield) |
+| **Striker** (Melee DPS) | `280` | `38` | `0.85s` | `6 studs` | `12 / min` | `SWORD`, `DAGGERS`, `SHIELD` | Twin Blade Slash (1.0x) | Flurry Cross (1.6x 2-hit +25% Crit) | Blade Tempest (3.2x omni-burst AoE) |
+| **Marksman** (Ranged DPS) | `210` | `34` | `0.80s` | `28 studs` | `13 / min` | `BOW` | Precision Shot (1.0x) | Piercing Volley (1.5x line pierce 32s) | Rain of Arrows (2.8x 4-tick AoE + 20% Shred) |
+| **Miner** (Gem Specialist) | `300` | `20` | `1.05s` | `6 studs` | `20 / min` | `AXE`, `SHIELD` | Heavy Maul Swing (1.0x) | Seismic Slam (1.5x 8s ground shock) | Crystalline Cataclysm (2.6x AoE + Gem Shards) |
+| **Healer** (Infirmary Spec.) | `260` | `18` | `1.25s` | `24 studs` | `18 / min` | `STAFF`, `TOME` | Holy Bolt (1.0x) | Radiant Pulse (1.2x + 8% Lowest Ally Heal) | Sanctuary Miracle (35% Squad Heal + Cleanse + Regen) |
+| **Scholar** (Spell Specialist)| `220` | `24` | `1.00s` | `26 studs` | `22 / min` | `TOME`, `STAFF` | Arcane Spark (1.0x) | Chain Lightning (1.4x bounces to 2 mobs) | Supernova Cataclysm (3.5x Meteor AoE + Burn) |
 
 *(Note: Rings (`RING`) are universal accessories and can be equipped by any archetype).*
 
@@ -419,18 +420,67 @@ Located inside the fortress military quarter. Stationed Trainers (`Striker` & `S
   $$\text{TrainingMultiplier} = 1 + \text{BaseBonus}_{\text{Level}} + \big(0.004 \times \sum \text{EffectiveLabor}_{\text{Training}}\big)$$
   *(Multiplies total squad $\text{FinalATK}$ and $\text{FinalHP}$ across all heroes and equipped Artifacts).*
 
-### 4.4 Master Controls & Tactical Commands
+### 4.4 Archetype 3-Tier Attack Cadence & Dynamic Skill Gauge System
+
+In Infinite Tower, combat is server-authoritative with client prediction/interpolation. Each hero executes a 3-tier attack cadence governed by the **Dynamic Skill Gauge** (formerly Stamina):
+
+#### 1. In-Combat Skill Gauge Rules & Cadence Mechanics
+- **Gauge Starting State & Maximum:** Heroes enter active combat with **0 Skill Gauge** (represented by the yellow billboard bar above the hero's head) that fills up to a maximum of **100**.
+- **Accrual Rules:**
+  - **Tier 1: Basic Attack:** Standard auto-attack governed by base interval $t_{\text{atk}}$. Generates **+5 Skill Gauge**.
+  - **Tier 2: Special Attack:** Automatically procs on every **3rd attack** (Cadence: `Basic (5) -> Basic (5) -> Special (10)`). Generates **+10 Skill Gauge**. Deals amplified damage with archetype-specific secondary mechanics (frontal cleaves, pierces, multi-slashes, chain lightning, or allied mini-heals).
+  - **Tier 3: Skill Attack (Ultimate):** When the gauge reaches **100**, the hero's next attack triggers their archetype-defining ultimate. Consumes all 100 gauge points (resetting back to **0**).
+- **Accrual Math & Combat Rhythm:**
+  - Each 3-attack cycle yields: $5 + 5 + 10 = 20\text{ Skill Gauge}$.
+  - A hero requires exactly $5\text{ cycles} \times 3\text{ attacks} = 15\text{ attacks}$ ($10\text{ Basic} + 5\text{ Special}$) to reach 100 gauge points without external buffs.
+  - At an average interval of $1.0\text{s}$, a hero triggers an ultimate roughly every $15\text{ seconds}$.
+- **Overdrive Whistle Synergy (`[Q]`):** Overdrive Whistle grants $+40\%$ Attack Speed for $5\text{s}$ with zero Stamina drain, compressing the time to charge and release signature Ultimates during crucial DPS/punish windows.
+
+#### 2. Detailed Archetype Combat Skill Specifications
+
+| Archetype | Attack Tier | Move Name | Damage / Effect | Secondary Mechanics & Range | Accrual |
+| :--- | :--- | :--- | :--- | :--- | :---: |
+| **Vanguard**<br>*(Tank)* | **Basic** | Shield / Blade Strike | `1.0x ATK` Physical | Single-target melee (`6 studs`). | `+5` |
+| | **Special** (Hit 3) | Shield Bash | `1.4x ATK` Physical | Cleaves in front cone (`10 studs`). Applies 0.5s stagger / slow. | `+10` |
+| | **Skill** (100 SP) | Fortress Aegis / Iron Roar | `0.0x ATK` Utility / Barrier | Resounding roar taunts all enemies within `25 studs` for `4s`. Grants Vanguard a damage barrier absorbing `40% Max HP` for `6s`. | `Resets to 0` |
+| **Striker**<br>*(Melee DPS)* | **Basic** | Twin Blade Slash | `1.0x ATK` Physical | Single-target rapid melee (`6 studs`). | `+5` |
+| | **Special** (Hit 3) | Flurry Cross | `1.6x ATK` Physical (2 hits) | Rapid dual cross-slash with `+25% bonus Crit Chance`. | `+10` |
+| | **Skill** (100 SP) | Blade Tempest | `3.2x ATK` Physical | Omni-directional dashing flurry dealing massive burst in a `12-stud` radius. | `Resets to 0` |
+| **Marksman**<br>*(Ranged DPS)* | **Basic** | Precision Shot | `1.0x ATK` Piercing | Single-target arrow projectile (`28 studs`). | `+5` |
+| | **Special** (Hit 3) | Piercing Volley | `1.5x ATK` Piercing | Penetrating bolt passing through primary target in a straight line up to `32 studs`. | `+10` |
+| | **Skill** (100 SP) | Rain of Arrows | `2.8x ATK` Physical (4 ticks) | Localized arrow storm (`16-stud` radius) dealing 4 rapid ticks and shredding enemy defense by `20%` for `5s`. | `Resets to 0` |
+| **Miner**<br>*(Disruptor)* | **Basic** | Heavy Maul Swing | `1.0x ATK` Blunt | Single-target heavy melee (`6 studs`). | `+5` |
+| | **Special** (Hit 3) | Seismic Slam | `1.5x ATK` Blunt | Ground pound shattering the earth in an `8-stud` radius, staggering targets. | `+10` |
+| | **Skill** (100 SP) | Crystalline Cataclysm | `2.6x ATK` Blunt AoE | Summons sharp crystalline spikes under all enemies within `18 studs`; struck targets yield bonus temporary gem shards. | `Resets to 0` |
+| **Healer**<br>*(Recovery)* | **Basic** | Holy Bolt | `1.0x ATK` Holy | Single-target holy projectile against hostile target (`24 studs`). | `+5` |
+| | **Special** (Hit 3) | Radiant Pulse | `1.2x ATK` Holy + `8% Max HP` Heal | Strikes enemy and pulses a mini-heal restoring `8% Max HP` to lowest-HP ally within `30 studs`. | `+10` |
+| | **Skill** (100 SP) | Sanctuary Miracle | `35% Max HP` Squad Heal + Cleanse | Chants divine circle (`25-stud` radius). Instantly restores `35% Max HP` to all active squad heroes, cleanses debuffs, and grants `3% HP/sec` regenerative aura for `4s`. | `Resets to 0` |
+| **Scholar**<br>*(Mage)* | **Basic** | Arcane Spark | `1.0x ATK` Magic | Single-target mystical projectile (`26 studs`). | `+5` |
+| | **Special** (Hit 3) | Chain Lightning | `1.4x ATK` Lightning | Arcs from primary target to up to 2 adjacent mobs within `14 studs`. | `+10` |
+| | **Skill** (100 SP) | Supernova Cataclysm | `3.5x ATK` Fire AoE | Dimensional portal drops a burning meteor on target area (`20-stud` radius), leaving lingering ground flames for `3s`. | `Resets to 0` |
+
+#### 3. Visual & Audio Combat Feedback
+- **Billboard Gauge:** Yellow bar above hero health smoothly fills from $0 \to 100\%$.
+- **Skill Ready Indicator:** When gauge reaches $100\%$, the bar triggers a dynamic golden pulsation animation (`#FFD700`), signaling the impending ultimate.
+- **Floating Combat Text (FCT):**
+  - **Basic Hit:** Pale Green (`#F3FFE2`)
+  - **Special Hit:** Vibrant Orange (`#FF9900`), Bold font
+  - **Skill / Ultimate Hit:** Glowing Gold (`#FFD700`), 1.25x scale, Extra Bold font
+  - **Restorative Heal:** Lime Green (`#44FF88`), prefixed with `+`
+  - **Protective Barrier:** Cyan (`#00E5FF`), prefixed with `🛡️ +`
+
+### 4.5 Master Controls & Tactical Commands
 
 | Action | Keybind / Input | Description |
 | :--- | :--- | :--- |
 | **Shift Sprint** | `[LeftShift / RightShift]` | $3.0\times$ speed multiplier for rapid traversal across bridges, rings, and rooms. |
 | **Focus Target** | `[Click / Tap]` | Raycast onto any mob, boss, or thief to focus all 5 heroes' aggro. |
-| **Overdrive Whistle** | `[Q]` / Bottom Bar | $20\text{s}$ CD. Consumes $5$ Stamina/hero for $+40\%$ Attack Speed for $5\text{s}$. |
+| **Overdrive Whistle** | `[Q]` / Bottom Bar | $20\text{s}$ CD. Grants $+40\%$ Attack Speed for $5\text{s}$ across all active heroes with zero Stamina drain, allowing squads to rapidly charge their Skill Gauges. |
 | **Emergency Recall** | `[E]` / Bottom Bar | $6\text{s}$ CD. Instantly warps squad to Master + $2\text{s}$ pacify (dodges lethal AoE). Yields priority to ProximityPrompts. |
 | **Drop Carried Item**| `[R]` / HUD Button | Drops carried cargo or relic on the ground; restores normal WalkSpeed. |
 | **Retaliate Attack** | `[⚔️ RETALIATE]` | Single-click HUD prompt when your drop is stolen to unleash squad PvP retaliation. |
 
-### 4.5 Tactical UI & HUD Architecture
+### 4.6 Tactical UI & HUD Architecture
 
 The player interface is built from modular, gothic-styled components:
 1. **Bottom Navigation Toolbar (`BottomToolbar`):**
