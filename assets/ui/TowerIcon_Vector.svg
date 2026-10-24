@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" style="background: transparent;">
+  <defs>
+    <filter id="amethystGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feFlood flood-color="#c084fc" flood-opacity="0.65" result="color" />
+      <feComposite in="color" in2="blur" operator="in" result="glow" />
+      <feMerge>
+        <feMergeNode in="glow" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <radialGradient id="obsidianAmethyst" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#321845" />
+      <stop offset="60%" stop-color="#190a24" />
+      <stop offset="100%" stop-color="#09030e" />
+    </radialGradient>
+
+    <linearGradient id="amethystPlate" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="30%" stop-color="#f3e8ff" />
+      <stop offset="70%" stop-color="#c084fc" />
+      <stop offset="100%" stop-color="#7e22ce" />
+    </linearGradient>
+  </defs>
+
+  <!-- Ambient Outer Glow -->
+  <circle cx="128" cy="128" r="116" fill="none" stroke="#c084fc" stroke-width="6" opacity="0.4" filter="url(#amethystGlow)" />
+
+  <!-- Amethyst Obsidian Base -->
+  <circle cx="128" cy="128" r="110" fill="url(#obsidianAmethyst)" stroke="url(#amethystPlate)" stroke-width="7" />
+
+  <!-- Inner Filigree Ring -->
+  <circle cx="128" cy="128" r="96" fill="none" stroke="#a855f7" stroke-width="2" opacity="0.5" stroke-dasharray="14 4" />
+
+  <!-- Base Citadel Rampart -->
+  <rect x="76" y="174" width="104" height="18" rx="3" fill="url(#amethystPlate)" stroke="#fff" stroke-width="1.5" />
+
+  <!-- Tier 1 Tower Monolith -->
+  <rect x="94" y="128" width="68" height="46" rx="2" fill="url(#amethystPlate)" stroke="#fff" stroke-width="1.5" />
+  <!-- Arrow Slit Window -->
+  <rect x="122" y="138" width="12" height="24" rx="2" fill="#1e0b2e" />
+
+  <!-- Tier 2 Upper Tower -->
+  <rect x="106" y="92" width="44" height="36" rx="2" fill="url(#amethystPlate)" stroke="#fff" stroke-width="1.5" />
+
+  <!-- Spire Needle Peak -->
+  <polygon points="128,46 136,92 120,92" fill="#ffffff" stroke="url(#amethystPlate)" stroke-width="1" />
+
+  <!-- Apex Beacon Diamond (Pinnacle Star) -->
+  <polygon points="128,34 136,46 128,58 120,46" fill="#ffffff" stroke="#c084fc" stroke-width="2" />
+</svg>

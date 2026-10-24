@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" style="background: transparent;">
+  <defs>
+    <filter id="cyanGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feFlood flood-color="#38bdf8" flood-opacity="0.65" result="color" />
+      <feComposite in="color" in2="blur" operator="in" result="glow" />
+      <feMerge>
+        <feMergeNode in="glow" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <radialGradient id="obsidianCyan" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#0f2b48" />
+      <stop offset="60%" stop-color="#071524" />
+      <stop offset="100%" stop-color="#02080f" />
+    </radialGradient>
+
+    <linearGradient id="cyanPlate" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="30%" stop-color="#bae6fd" />
+      <stop offset="70%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#0284c7" />
+    </linearGradient>
+  </defs>
+
+  <!-- Ambient Outer Glow -->
+  <circle cx="128" cy="128" r="116" fill="none" stroke="#38bdf8" stroke-width="6" opacity="0.4" filter="url(#cyanGlow)" />
+
+  <!-- Arcane Obsidian Base -->
+  <circle cx="128" cy="128" r="110" fill="url(#obsidianCyan)" stroke="url(#cyanPlate)" stroke-width="7" />
+
+  <!-- Mid Concentric Rift Ring -->
+  <circle cx="128" cy="128" r="82" fill="none" stroke="url(#cyanPlate)" stroke-width="2.5" opacity="0.65" stroke-dasharray="16 6" />
+
+  <!-- 4 Orbiting Arcane Rune Diamonds -->
+  <polygon points="128,40 134,48 128,56 122,48" fill="#e0f2fe" />
+  <polygon points="128,200 134,208 128,216 122,208" fill="#e0f2fe" />
+  <polygon points="40,128 48,134 56,128 48,122" fill="#e0f2fe" />
+  <polygon points="200,128 208,134 216,128 208,122" fill="#e0f2fe" />
+
+  <!-- Arcane Portal Spiral Vortex -->
+  <circle cx="128" cy="128" r="54" fill="none" stroke="#67e8f9" stroke-width="4" opacity="0.8" />
+
+  <!-- Upward Return Chevron / Sacred Arch -->
+  <path d="M 104 152 L 128 104 L 152 152" fill="none" stroke="#ffffff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" />
+  <polygon points="128,86 136,98 128,110 120,98" fill="#ffffff" />
+</svg>

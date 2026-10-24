@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" style="background: transparent;">
+  <defs>
+    <filter id="azureGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feFlood flood-color="#90caf9" flood-opacity="0.6" result="color" />
+      <feComposite in="color" in2="blur" operator="in" result="glow" />
+      <feMerge>
+        <feMergeNode in="glow" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <radialGradient id="obsidianNavy" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#1f2c4c" />
+      <stop offset="60%" stop-color="#101728" />
+      <stop offset="100%" stop-color="#070a12" />
+    </radialGradient>
+
+    <linearGradient id="silverPlate" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="35%" stop-color="#e8eaf6" />
+      <stop offset="75%" stop-color="#b0bec5" />
+      <stop offset="100%" stop-color="#78909c" />
+    </linearGradient>
+
+    <linearGradient id="goldPlate" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fff275" />
+      <stop offset="50%" stop-color="#ffd54f" />
+      <stop offset="100%" stop-color="#d49e1e" />
+    </linearGradient>
+  </defs>
+
+  <!-- Ambient Outer Glow -->
+  <circle cx="128" cy="128" r="116" fill="none" stroke="#90caf9" stroke-width="6" opacity="0.4" filter="url(#azureGlow)" />
+
+  <!-- Obsidian-Navy Base Disc -->
+  <circle cx="128" cy="128" r="110" fill="url(#obsidianNavy)" stroke="url(#silverPlate)" stroke-width="7" />
+
+  <!-- Inner Steel Filigree Ring -->
+  <circle cx="128" cy="128" r="96" fill="none" stroke="#78909c" stroke-width="2" opacity="0.6" stroke-dasharray="12 4" />
+
+  <!-- Crossed Broadswords -->
+  <!-- Sword 1 (TL to BR) -->
+  <g transform="translate(128,128) rotate(-45) translate(-128,-128)">
+    <path d="M 124 40 L 132 40 L 132 176 L 124 176 Z" fill="url(#silverPlate)" stroke="#fff" stroke-width="1" />
+    <polygon points="124,40 128,26 132,40" fill="#fff" />
+    <rect x="110" y="176" width="36" height="8" rx="2" fill="url(#goldPlate)" />
+    <rect x="125" y="184" width="6" height="26" fill="#4e342e" />
+    <polygon points="128,212 134,220 128,228 122,220" fill="url(#goldPlate)" />
+  </g>
+
+  <!-- Sword 2 (TR to BL) -->
+  <g transform="translate(128,128) rotate(45) translate(-128,-128)">
+    <path d="M 124 40 L 132 40 L 132 176 L 124 176 Z" fill="url(#silverPlate)" stroke="#fff" stroke-width="1" />
+    <polygon points="124,40 128,26 132,40" fill="#fff" />
+    <rect x="110" y="176" width="36" height="8" rx="2" fill="url(#goldPlate)" />
+    <rect x="125" y="184" width="6" height="26" fill="#4e342e" />
+    <polygon points="128,212 134,220 128,228 122,220" fill="url(#goldPlate)" />
+  </g>
+
+  <!-- Heraldic Knight Shield -->
+  <path d="M 96 92 L 160 92 Q 160 148 128 180 Q 96 148 96 92 Z" fill="#1e293b" stroke="url(#silverPlate)" stroke-width="5" />
+  <path d="M 104 100 L 152 100 Q 152 144 128 168 Q 104 144 104 100 Z" fill="none" stroke="#64748b" stroke-width="1.5" />
+
+  <!-- Golden Crest Star -->
+  <polygon points="128,110 134,124 148,124 136,134 140,148 128,138 116,148 120,134 108,124 122,124" fill="url(#goldPlate)" stroke="#fff" stroke-width="1" />
+</svg>

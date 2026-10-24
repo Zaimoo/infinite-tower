@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" style="background: transparent;">
+  <defs>
+    <radialGradient id="goldCoinSurface" cx="45%" cy="40%" r="65%">
+      <stop offset="0%" stop-color="#fff59d" />
+      <stop offset="35%" stop-color="#fbc02d" />
+      <stop offset="75%" stop-color="#f57f17" />
+      <stop offset="100%" stop-color="#bc5100" />
+    </radialGradient>
+
+    <radialGradient id="coinRecess" cx="50%" cy="45%" r="55%">
+      <stop offset="0%" stop-color="#fbc02d" />
+      <stop offset="70%" stop-color="#f57f17" />
+      <stop offset="100%" stop-color="#823c00" />
+    </radialGradient>
+  </defs>
+
+  <!-- Outer Rim with Specular Edge -->
+  <circle cx="64" cy="64" r="58" fill="url(#goldCoinSurface)" stroke="#fffde7" stroke-width="3" />
+
+  <!-- Inner Beveled Disc -->
+  <circle cx="64" cy="64" r="44" fill="url(#coinRecess)" stroke="#ffd54f" stroke-width="1.5" />
+
+  <!-- Center Starburst Crest -->
+  <polygon points="64,38 72,56 90,64 72,72 64,90 56,72 38,64 56,56" fill="#fffde7" stroke="#fff" stroke-width="1" />
+
+  <!-- Top-Left Specular Glint -->
+  <circle cx="44" cy="44" r="8" fill="#ffffff" opacity="0.5" />
+</svg>

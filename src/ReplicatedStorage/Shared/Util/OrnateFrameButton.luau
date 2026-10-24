@@ -7,6 +7,8 @@
 local TweenService = game:GetService("TweenService")
 
 local GothicFont = require(script.Parent:WaitForChild("GothicFont"))
+local GothicBoxStyle = require(script.Parent:WaitForChild("GothicBoxStyle"))
+local GothicVectorIcons = require(script.Parent:WaitForChild("GothicVectorIcons"))
 
 local OrnateFrameButton = {}
 OrnateFrameButton.__index = OrnateFrameButton
@@ -236,7 +238,7 @@ function OrnateFrameButton.new(parent: Instance?, props: ButtonProps): ButtonIns
 		Scale = 1.0,
 	}, visualRoot)
 
-	-- 3. Dark Navy / Near-Black Panel Interior (Opaque dark plate beneath transparent frame)
+	-- 3. Dark Navy / Near-Black Panel Interior (Pure Procedural Vector Gothic Styling)
 	local darkPanel = new("Frame", {
 		Name = "DarkPanel",
 		BackgroundColor3 = customCfg.BG_COLOR or CONFIG.BG_COLOR,
@@ -249,27 +251,24 @@ function OrnateFrameButton.new(parent: Instance?, props: ButtonProps): ButtonIns
 		ZIndex = baseZ,
 	}, visualRoot)
 
-	new("UICorner", {
-		CornerRadius = UDim.new(0, 3),
+	-- Apply pure procedural vector Gothic double rails and corner spires
+	GothicBoxStyle.Apply(darkPanel, { Style = "Button", ZIndex = baseZ })
+
+	-- Soft Lavender Outer Glow Stroke
+	new("UIStroke", {
+		Name = "LavenderOuterGlow",
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+		Color = Color3.fromRGB(168, 125, 255),
+		Thickness = 2.0,
+		Transparency = 0.45,
 	}, darkPanel)
 
-	new("UIGradient", {
-		Color = ColorSequence.new({
-			ColorSequenceKeypoint.new(0.0, Color3.fromRGB(24, 19, 36)),
-			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(16, 13, 26)),
-			ColorSequenceKeypoint.new(1.0, Color3.fromRGB(12, 10, 20)),
-		}),
-		Rotation = 45,
-	}, darkPanel)
-
-	-- 4. 9-Sliced Ornate Silver & Lavender Outer Glow Frame ImageLabel
-	-- Sized and positioned with -glowOffset so the outer glow shines outward while
-	-- the visible frame border precisely matches the root button's clickable hit area.
+	-- 4. Vector Container / Legacy ImageLabel Fallback (Set to transparent vector frame)
 	local frameImage = new("ImageLabel", {
 		Name = "FrameImage",
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
-		Image = frameAsset,
+		Image = "",
 		ScaleType = Enum.ScaleType.Slice,
 		SliceCenter = activeSliceCenter,
 		SliceScale = activeSliceScale,
@@ -329,16 +328,25 @@ function OrnateFrameButton.new(parent: Instance?, props: ButtonProps): ButtonIns
 		Padding = UDim.new(0, 5),
 	}, costRow)
 
+	-- Procedural Vector Diamond Gem
 	local gemIcon = new("ImageLabel", {
 		Name = "GemIcon",
 		LayoutOrder = 1,
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
-		Image = gemAsset,
+		Image = "",
 		Size = UDim2.fromOffset(18, 18),
 		ScaleType = Enum.ScaleType.Fit,
 		ZIndex = baseZ + 3,
 	}, costRow)
+
+	GothicVectorIcons.CreateGems({
+		Size = UDim2.fromScale(1, 1),
+		Position = UDim2.fromScale(0.5, 0.5),
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		ZIndex = baseZ + 3,
+		Parent = gemIcon,
+	})
 
 	local costLabel = new("TextLabel", {
 		Name = "CostLabel",
