@@ -1122,9 +1122,9 @@ AssignHeroRoleFunc.OnServerInvoke = function(player: Player, heroUUID: any, targ
 		local maxSlots = DataManager.MaxSquadSlots(profile)
 		local swappedCount = 0
 
-		-- 1. Move any deployed hero with Stamina < 25% into Infirmary
+		-- 1. Move any deployed hero in Coma into Infirmary
 		for _, h in pairs(profile.Heroes) do
-			if string.find(h.Assignment, "^SQUAD_SLOT_") and h.CurrentStamina < 25 then
+			if string.find(h.Assignment, "^SQUAD_SLOT_") and h.ComaUntilTimestamp > os.time() then
 				h.Assignment = "FACILITY_INFIRMARY"
 				swappedCount += 1
 			end
@@ -1144,7 +1144,7 @@ AssignHeroRoleFunc.OnServerInvoke = function(player: Player, heroUUID: any, targ
 				local bestHero: HeroInstance? = nil
 				local bestDPS = -1
 				for _, h in pairs(profile.Heroes) do
-					if h.Assignment == "BENCHED" and h.CurrentStamina >= 50 and h.ComaUntilTimestamp <= os.time() then
+					if h.Assignment == "BENCHED" and h.ComaUntilTimestamp <= os.time() then
 						local _, _, dps = StatFormulas.GetEffectiveCombatStats(h, false, false, StatFormulas.GetEquippedArtifact(profile, h))
 						if dps > bestDPS then
 							bestDPS = dps

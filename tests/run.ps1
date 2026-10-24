@@ -32,6 +32,7 @@ $modulePaths = @(
     'ReplicatedStorage/Shared/Config/StatBalance.luau',
     'ReplicatedStorage/Shared/Config/HeroCatalog.luau',
     'ReplicatedStorage/Shared/Config/ArtifactCatalog.luau',
+    'ReplicatedStorage/Shared/Config/ArchetypeCombatSkills.luau',
     'ReplicatedStorage/Shared/Config/FacilityConfig.luau',
     'ReplicatedStorage/Shared/Config/PitBalanceConfig.luau',
     'ReplicatedStorage/Shared/Config/MobCatalog.luau',
@@ -58,7 +59,7 @@ foreach ($modulePath in $modulePaths) {
     $bundleParts.Add([System.IO.File]::ReadAllText($sourcePath))
     $bundleParts.Add("`nend)")
 }
-foreach ($suite in @('pit.spec.luau', 'forge.spec.luau', 'tower.spec.luau', 'tower-transport.spec.luau', 'tower-combat.spec.luau', 'tower-rework.spec.luau')) {
+foreach ($suite in @('pit.spec.luau', 'forge.spec.luau', 'combat-skills.spec.luau', 'tower.spec.luau', 'tower-transport.spec.luau', 'tower-combat.spec.luau', 'tower-rework.spec.luau')) {
     $bundleParts.Add('do')
     $bundleParts.Add([System.IO.File]::ReadAllText((Join-Path $PSScriptRoot $suite)))
     $bundleParts.Add("`nend")

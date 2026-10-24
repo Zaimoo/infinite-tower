@@ -11,6 +11,8 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local WorldBossConfig = require(Shared:WaitForChild("Config"):WaitForChild("WorldBossConfig"))
 local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormulas"))
 local ArtifactCatalog = require(Shared:WaitForChild("Config"):WaitForChild("ArtifactCatalog"))
+local ArchetypeCombatSkills = require(Shared:WaitForChild("Config"):WaitForChild("ArchetypeCombatSkills"))
+local HeroCatalog = require(Shared:WaitForChild("Config"):WaitForChild("HeroCatalog"))
 local PitBalance = require(Shared:WaitForChild("Config"):WaitForChild("PitBalanceConfig"))
 local ArtPackVisuals = require(ReplicatedStorage:WaitForChild("Assets"):WaitForChild("ArtPackVisuals"))
 local HeroNavigation = require(script.Parent.Parent:WaitForChild("Core"):WaitForChild("HeroNavigation"))
@@ -109,6 +111,10 @@ export type SimHero = {
 	EquippedArtifactRarity: number?,
 	EquippedArtifactType: string?,
 	EquippedArtifactStar: number?,
+	Archetype: string?,
+	AttackCount: number?,
+	BarrierHP: number?,
+	BarrierExpires: number?,
 }
 
 export type SimMob = {
@@ -137,6 +143,7 @@ export type SimMob = {
 	NextNovaCastTime: number,
 	NovaDetonateTime: number?,
 	PunishWindowUntil: number,
+	DefenseShredUntil: number?,
 	DespawnAt: number?,
 	DamageLedger: { [number]: number },
 }
@@ -400,13 +407,17 @@ function CombatSimulation.RebuildPlayerSquad(player: Player)
 			existing.EffectiveATK = effATK
 			existing.MaxHP = effHP
 			existing.CurrentHP = math.min(existing.CurrentHP, effHP)
-			existing.Stamina = heroData.CurrentStamina
+			existing.Stamina = heroData.CurrentStamina or existing.Stamina or 0.0
 			existing.SlotIndex = slotIndex
 			existing.AttackInterval = effInterval
 			existing.EquippedArtifactId = artifact and artifact.TemplateId
 			existing.EquippedArtifactRarity = artifact and artifact.Rarity
 			existing.EquippedArtifactType = artifact and artifact.Type
 			existing.EquippedArtifactStar = artifact and artifact.Star
+			existing.Archetype = (HeroCatalog.Seeds[heroData.TemplateId] and HeroCatalog.Seeds[heroData.TemplateId].Archetype) or "Striker"
+			existing.AttackCount = existing.AttackCount or 0
+			existing.BarrierHP = existing.BarrierHP or 0
+			existing.BarrierExpires = existing.BarrierExpires or 0
 		else
 			local netId = allocateNetId()
 			rosterChanged=true
@@ -429,7 +440,7 @@ function CombatSimulation.RebuildPlayerSquad(player: Player)
 				AttackRange = heroData.AttackRange or 6,
 				AttackInterval = effInterval,
 				MoveSpeed = 20.0,
-				Stamina = heroData.CurrentStamina or 100.0,
+				Stamina = heroData.CurrentStamina or 0.0,
 				SlotIndex = slotIndex,
 				TargetNetId = masterState.FocusedTargetNetId,
 				AttackCooldown = 0.2,
@@ -439,6 +450,10 @@ function CombatSimulation.RebuildPlayerSquad(player: Player)
 				EquippedArtifactRarity = artifact and artifact.Rarity,
 				EquippedArtifactType = artifact and artifact.Type,
 				EquippedArtifactStar = artifact and artifact.Star,
+				Archetype = (HeroCatalog.Seeds[heroData.TemplateId] and HeroCatalog.Seeds[heroData.TemplateId].Archetype) or "Striker",
+				AttackCount = 0,
+				BarrierHP = 0,
+				BarrierExpires = 0,
 			}
 			newSim.FloorId=towerState.SquadFloorId;newSim.RoomGeneration=towerState.SquadRoomGeneration
 			masterState.DeployedHeroes[uuid] = newSim
@@ -1088,7 +1103,7 @@ local function awardParticipationXP(mob: SimMob)
 			local character = owner and owner.Character
 			local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 			if hero and owner and owner.Parent == Players and contribution.Owner==owner and contribution.HeroUUID==hero.HeroUUID and contribution.EntityGeneration==hero.EntityGeneration and Tower.Same(contribution,mob) and humanoid and humanoid.Health > 0
-				and hero.State ~= "COMA" and hero.CurrentHP > 0 and hero.Stamina > 0
+				and hero.State ~= "COMA" and hero.CurrentHP > 0
 				and now - (ProgressionActivity[owner] or -math.huge) <= cfg.ActivityWindow
 				and now - contribution.At <= cfg.ParticipationWindow
 				and contribution.Damage >= mob.MaxHP * cfg.MinimumDamageFraction
@@ -1356,7 +1371,7 @@ WhistleCommandRemote.OnServerEvent:Connect(function(player: Player, commandCode:
 	local dm = getDataManager()
 
 	if commandCode == 1 then
-		-- [Q] OVERDRIVE WHISTLE (20s CD, -5 Stamina/hero, +40% Attack Speed for 5s)
+		-- [Q] OVERDRIVE WHISTLE (20s CD, +40% Attack Speed for 5s to accelerate Skill Charge building)
 		if (now - masterState.LastOverdriveClock) < OVERDRIVE_COOLDOWN then
 			return
 		end
@@ -1365,8 +1380,7 @@ WhistleCommandRemote.OnServerEvent:Connect(function(player: Player, commandCode:
 
 		local profile = dm.GetProfile(player)
 		for uuid, simHero in pairs(masterState.DeployedHeroes) do
-			if simHero.State ~= "COMA" and simHero.Stamina >= OVERDRIVE_STAMINA_COST then
-				simHero.Stamina = math.max(0, simHero.Stamina - OVERDRIVE_STAMINA_COST)
+			if simHero.State ~= "COMA" and simHero.CurrentHP > 0 then
 				simHero.OverdriveUntil = now + OVERDRIVE_DURATION
 				if profile and profile.Heroes[uuid] then
 					profile.Heroes[uuid].CurrentStamina = simHero.Stamina
@@ -1537,8 +1551,15 @@ local function stepMobAndEliteAoEs(mob: SimMob, dt: number, now: number)
 			for _, simHero in pairs(ActiveHeroesByNetId) do
 				if Tower.Same(simHero,mob) and not Tower.GetSafety(simHero,simHero.Position).CombatSafe and getHorizontalDistance(simHero.Position, mob.Position) <= mob.AoERadius then
 					simHero.Stamina = math.max(0, simHero.Stamina - 15)
-					simHero.CurrentHP -= mob.ATK * 2
-					if simHero.CurrentHP <= 0 or simHero.Stamina <= 0 then
+					local rawDmg = mob.ATK * 2
+					local heroBarrier = simHero.BarrierHP or 0
+					if heroBarrier > 0 and (simHero.BarrierExpires or 0) > now then
+						local absorbed = math.min(heroBarrier, rawDmg)
+						simHero.BarrierHP = heroBarrier - absorbed
+						rawDmg -= absorbed
+					end
+					simHero.CurrentHP -= rawDmg
+					if simHero.CurrentHP <= 0 then
 						table.insert(comas, simHero)
 					end
 				end
@@ -1649,10 +1670,7 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 	end
 
 	local isOverdrive = now < simHero.OverdriveUntil
-	local isExhausted = simHero.Stamina <= 0.0
-	local currentMoveSpeed = simHero.MoveSpeed
-		* (isOverdrive and 1.20 or 1.0)
-		* (isExhausted and 0.50 or 1.0)
+	local currentMoveSpeed = simHero.MoveSpeed * (isOverdrive and 1.20 or 1.0)
 
 	local targetPos, targetMob, targetEnemyHero = resolveTargetPositionAndAlive(simHero)
 
@@ -1740,20 +1758,230 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 			simHero.Yaw = math.atan2(-delta.X, -delta.Z)
 		end
 
-		local drainRate = simHero.FloorId~=0 and 1.5 or getZoneStaminaDrainPerSec(simHero.Position)
-		simHero.Stamina = math.max(0.0, simHero.Stamina - (drainRate * dt))
-		if profile and profile.Heroes[simHero.HeroUUID] then
-			profile.Heroes[simHero.HeroUUID].CurrentStamina = simHero.Stamina
-		end
-
 		local effectiveInterval = simHero.AttackInterval / (isOverdrive and OVERDRIVE_ATK_SPEED_MULT or 1.0)
 		simHero.AttackCooldown -= dt
 		if simHero.AttackCooldown <= 0 then
 			simHero.AttackCooldown = effectiveInterval
-			local exhaustionScalar = isExhausted and 0.20 or 1.00
-			local damage = math.round(simHero.EffectiveATK * exhaustionScalar)
+
+			local skillProfile = ArchetypeCombatSkills.GetSkillProfile(simHero.Archetype)
+			local isSkillReady = (simHero.Stamina or 0) >= ArchetypeCombatSkills.Constants.MAX_STAMINA
+
+			local attackType: "BASIC" | "SPECIAL" | "SKILL" = "BASIC"
+			if isSkillReady then
+				attackType = "SKILL"
+			elseif ((simHero.AttackCount or 0) + 1) % skillProfile.Special.Cadence == 0 then
+				attackType = "SPECIAL"
+			else
+				attackType = "BASIC"
+			end
+
+			local damageMult = 1.0
+			local vfxRemoteType = "HIT_SPARK"
+
+			if attackType == "SKILL" then
+				simHero.Stamina = 0
+				damageMult = skillProfile.Skill.DamageMultiplier
+				vfxRemoteType = skillProfile.Skill.VFXKey or "SKILL_CAST"
+
+				-- Execute Archetype-Specific Skill Effects
+				if simHero.Archetype == "Vanguard" then
+					local barrierAmt = math.round(simHero.MaxHP * (skillProfile.Skill.BarrierPercent or 0.40))
+					simHero.BarrierHP = barrierAmt
+					simHero.BarrierExpires = now + (skillProfile.Skill.Duration or 6.0)
+					local tauntRad = skillProfile.Skill.Radius or 25.0
+					for _, mob in pairs(ActiveMobsByNetId) do
+						if mob.IsAlive and Tower.Same(simHero, mob) and not Tower.GetSafety(mob, mob.Position).CombatSafe and getHorizontalDistance(simHero.Position, mob.Position) <= tauntRad then
+							mob.TargetNetId = simHero.NetId
+						end
+					end
+					Tower.BroadcastAt(CombatVFXRemote, simHero, "BARRIER_APPLIED", simHero.Position, barrierAmt, false, false)
+
+				elseif simHero.Archetype == "Healer" then
+					if masterState and masterState.DeployedHeroes then
+						local healPct = skillProfile.Skill.HealPercent or 0.35
+						for _, ally in pairs(masterState.DeployedHeroes) do
+							if ally.State ~= "COMA" and ally.CurrentHP > 0 then
+								local healAmt = math.round(ally.MaxHP * healPct)
+								ally.CurrentHP = math.min(ally.MaxHP, ally.CurrentHP + healAmt)
+								Tower.BroadcastAt(CombatVFXRemote, ally, "HEAL_BURST", ally.Position, healAmt, false, false)
+							end
+						end
+					end
+
+				elseif simHero.Archetype == "Striker" then
+					local aoeRadius = skillProfile.Skill.Radius or 12.0
+					local splashDmg = math.round(simHero.EffectiveATK * (damageMult * 0.5))
+					for _, mob in pairs(ActiveMobsByNetId) do
+						if mob.IsAlive and mob ~= targetMob and Tower.Same(simHero, mob) and not Tower.GetSafety(mob, mob.Position).CombatSafe and getHorizontalDistance(targetPos, mob.Position) <= aoeRadius then
+							mob.CurrentHP = math.max(0, mob.CurrentHP - splashDmg)
+							mob.DamageLedger[simHero.Owner.UserId] = (mob.DamageLedger[simHero.Owner.UserId] or 0) + splashDmg
+							Tower.BroadcastAt(CombatVFXRemote, mob, "HIT_SPARK", mob.Position, splashDmg, false, false)
+							if mob.CurrentHP <= 0 then
+								handleMobDeath(mob, simHero.Owner)
+							end
+						end
+					end
+
+				elseif simHero.Archetype == "Marksman" then
+					local aoeRadius = skillProfile.Skill.Radius or 16.0
+					local splashDmg = math.round(simHero.EffectiveATK * (damageMult * 0.5))
+					for _, mob in pairs(ActiveMobsByNetId) do
+						if mob.IsAlive and Tower.Same(simHero, mob) and not Tower.GetSafety(mob, mob.Position).CombatSafe and getHorizontalDistance(targetPos, mob.Position) <= aoeRadius then
+							mob.DefenseShredUntil = now + (skillProfile.Skill.Duration or 5.0)
+							if mob ~= targetMob then
+								mob.CurrentHP = math.max(0, mob.CurrentHP - splashDmg)
+								mob.DamageLedger[simHero.Owner.UserId] = (mob.DamageLedger[simHero.Owner.UserId] or 0) + splashDmg
+								Tower.BroadcastAt(CombatVFXRemote, mob, "HIT_SPARK", mob.Position, splashDmg, false, false)
+								if mob.CurrentHP <= 0 then
+									handleMobDeath(mob, simHero.Owner)
+								end
+							end
+						end
+					end
+
+				elseif simHero.Archetype == "Scholar" then
+					local aoeRadius = skillProfile.Skill.Radius or 20.0
+					local splashDmg = math.round(simHero.EffectiveATK * (damageMult * 0.6))
+					for _, mob in pairs(ActiveMobsByNetId) do
+						if mob.IsAlive and mob ~= targetMob and Tower.Same(simHero, mob) and not Tower.GetSafety(mob, mob.Position).CombatSafe and getHorizontalDistance(targetPos, mob.Position) <= aoeRadius then
+							mob.CurrentHP = math.max(0, mob.CurrentHP - splashDmg)
+							mob.DamageLedger[simHero.Owner.UserId] = (mob.DamageLedger[simHero.Owner.UserId] or 0) + splashDmg
+							Tower.BroadcastAt(CombatVFXRemote, mob, "HIT_SPARK", mob.Position, splashDmg, false, false)
+							if mob.CurrentHP <= 0 then
+								handleMobDeath(mob, simHero.Owner)
+							end
+						end
+					end
+
+				elseif simHero.Archetype == "Miner" then
+					local aoeRadius = skillProfile.Skill.Radius or 18.0
+					local splashDmg = math.round(simHero.EffectiveATK * (damageMult * 0.5))
+					for _, mob in pairs(ActiveMobsByNetId) do
+						if mob.IsAlive and mob ~= targetMob and Tower.Same(simHero, mob) and not Tower.GetSafety(mob, mob.Position).CombatSafe and getHorizontalDistance(targetPos, mob.Position) <= aoeRadius then
+							mob.CurrentHP = math.max(0, mob.CurrentHP - splashDmg)
+							mob.DamageLedger[simHero.Owner.UserId] = (mob.DamageLedger[simHero.Owner.UserId] or 0) + splashDmg
+							Tower.BroadcastAt(CombatVFXRemote, mob, "HIT_SPARK", mob.Position, splashDmg, false, false)
+							if mob.CurrentHP <= 0 then
+								handleMobDeath(mob, simHero.Owner)
+							end
+						end
+					end
+				end
+
+			elseif attackType == "SPECIAL" then
+				simHero.AttackCount = (simHero.AttackCount or 0) + 1
+				simHero.Stamina = math.clamp((simHero.Stamina or 0) + skillProfile.Special.StaminaGain, 0, 100)
+				damageMult = skillProfile.Special.DamageMultiplier
+				vfxRemoteType = "HIT_SPECIAL"
+
+				-- Execute Archetype-Specific Special Mechanics
+				if simHero.Archetype == "Healer" then
+					if masterState and masterState.DeployedHeroes then
+						local lowestAlly: SimHero? = nil
+						local lowestPct = 1.0
+						for _, ally in pairs(masterState.DeployedHeroes) do
+							if ally.State ~= "COMA" and ally.CurrentHP > 0 and ally.CurrentHP < ally.MaxHP then
+								local pct = ally.CurrentHP / ally.MaxHP
+								if pct < lowestPct then
+									lowestPct = pct
+									lowestAlly = ally
+								end
+							end
+						end
+						if lowestAlly then
+							local healAmt = math.round(lowestAlly.MaxHP * skillProfile.Special.SecondaryParam)
+							lowestAlly.CurrentHP = math.min(lowestAlly.MaxHP, lowestAlly.CurrentHP + healAmt)
+							Tower.BroadcastAt(CombatVFXRemote, lowestAlly, "HEAL_SPARK", lowestAlly.Position, healAmt, false, false)
+						end
+					end
+
+				elseif simHero.Archetype == "Striker" then
+					-- +25% bonus critical chance
+					if math.random() < (skillProfile.Special.SecondaryParam or 0.25) then
+						damageMult = damageMult * 1.50
+					end
+
+				elseif simHero.Archetype == "Vanguard" then
+					-- 10-stud front cone cleave to up to 2 other mobs
+					local hitCount = 0
+					for _, mob in pairs(ActiveMobsByNetId) do
+						if mob.IsAlive and mob ~= targetMob and Tower.Same(simHero, mob) and not Tower.GetSafety(mob, mob.Position).CombatSafe and getHorizontalDistance(simHero.Position, mob.Position) <= 10 then
+							local splashDmg = math.round(simHero.EffectiveATK * 0.50)
+							mob.CurrentHP = math.max(0, mob.CurrentHP - splashDmg)
+							mob.DamageLedger[simHero.Owner.UserId] = (mob.DamageLedger[simHero.Owner.UserId] or 0) + splashDmg
+							Tower.BroadcastAt(CombatVFXRemote, mob, "HIT_SPARK", mob.Position, splashDmg, false, false)
+							if mob.CurrentHP <= 0 then
+								handleMobDeath(mob, simHero.Owner)
+							end
+							hitCount += 1
+							if hitCount >= 2 then break end
+						end
+					end
+
+				elseif simHero.Archetype == "Scholar" then
+					-- Chain Lightning to up to 2 other mobs within 14 studs
+					local chainCount = 0
+					for _, mob in pairs(ActiveMobsByNetId) do
+						if mob.IsAlive and mob ~= targetMob and Tower.Same(simHero, mob) and not Tower.GetSafety(mob, mob.Position).CombatSafe and getHorizontalDistance(targetPos, mob.Position) <= 14 then
+							local chainDmg = math.round(simHero.EffectiveATK * 0.70)
+							mob.CurrentHP = math.max(0, mob.CurrentHP - chainDmg)
+							mob.DamageLedger[simHero.Owner.UserId] = (mob.DamageLedger[simHero.Owner.UserId] or 0) + chainDmg
+							Tower.BroadcastAt(CombatVFXRemote, mob, "HIT_SPARK", mob.Position, chainDmg, false, false)
+							if mob.CurrentHP <= 0 then
+								handleMobDeath(mob, simHero.Owner)
+							end
+							chainCount += 1
+							if chainCount >= 2 then break end
+						end
+					end
+
+				elseif simHero.Archetype == "Miner" then
+					-- Seismic Slam: 8-stud radius splash damage
+					for _, mob in pairs(ActiveMobsByNetId) do
+						if mob.IsAlive and mob ~= targetMob and Tower.Same(simHero, mob) and not Tower.GetSafety(mob, mob.Position).CombatSafe and getHorizontalDistance(targetPos, mob.Position) <= 8 then
+							local splashDmg = math.round(simHero.EffectiveATK * 0.50)
+							mob.CurrentHP = math.max(0, mob.CurrentHP - splashDmg)
+							mob.DamageLedger[simHero.Owner.UserId] = (mob.DamageLedger[simHero.Owner.UserId] or 0) + splashDmg
+							Tower.BroadcastAt(CombatVFXRemote, mob, "HIT_SPARK", mob.Position, splashDmg, false, false)
+							if mob.CurrentHP <= 0 then
+								handleMobDeath(mob, simHero.Owner)
+							end
+						end
+					end
+
+				elseif simHero.Archetype == "Marksman" then
+					-- Piercing Volley: damages an additional mob along line within 32 studs
+					for _, mob in pairs(ActiveMobsByNetId) do
+						if mob.IsAlive and mob ~= targetMob and Tower.Same(simHero, mob) and not Tower.GetSafety(mob, mob.Position).CombatSafe and getHorizontalDistance(simHero.Position, mob.Position) <= 32 then
+							local pierceDmg = math.round(simHero.EffectiveATK * 0.75)
+							mob.CurrentHP = math.max(0, mob.CurrentHP - pierceDmg)
+							mob.DamageLedger[simHero.Owner.UserId] = (mob.DamageLedger[simHero.Owner.UserId] or 0) + pierceDmg
+							Tower.BroadcastAt(CombatVFXRemote, mob, "HIT_SPARK", mob.Position, pierceDmg, false, false)
+							if mob.CurrentHP <= 0 then
+								handleMobDeath(mob, simHero.Owner)
+							end
+							break
+						end
+					end
+				end
+
+			else -- BASIC
+				simHero.AttackCount = (simHero.AttackCount or 0) + 1
+				simHero.Stamina = math.clamp((simHero.Stamina or 0) + skillProfile.Basic.StaminaGain, 0, 100)
+				damageMult = skillProfile.Basic.DamageMultiplier
+				vfxRemoteType = "HIT_SPARK"
+			end
+
+			if profile and profile.Heroes[simHero.HeroUUID] then
+				profile.Heroes[simHero.HeroUUID].CurrentStamina = simHero.Stamina
+			end
+
+			local damage = math.round(simHero.EffectiveATK * damageMult)
 
 			if targetMob then
+				if targetMob.DefenseShredUntil and now < targetMob.DefenseShredUntil then
+					damage = math.round(damage * 1.20)
+				end
 				if targetMob.MobType == "WORLD_BOSS" and now < targetMob.PunishWindowUntil then
 					damage = math.round(damage * NOVA_PUNISH_DAMAGE_MULT)
 				end
@@ -1768,7 +1996,7 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 				targetMob.CurrentHP = math.max(0, targetMob.CurrentHP - damage)
 				targetMob.DamageLedger[simHero.Owner.UserId] = (targetMob.DamageLedger[simHero.Owner.UserId] or 0) + damage
 
-				Tower.BroadcastAt(CombatVFXRemote,targetMob,"HIT_SPARK", targetMob.Position, actualDamage, isOverdrive,false)
+				Tower.BroadcastAt(CombatVFXRemote,targetMob,vfxRemoteType, targetMob.Position, actualDamage, isOverdrive,false)
 				if (targetMob :: any).TowerEnemy then
 					CombatLifecycleRevision+=1
 					Tower.BroadcastAt(TowerRemotes.TowerAction,targetMob,{Kind="HIT",Actor=AttackTimeline.Identity(targetMob),LifecycleRevision=CombatLifecycleRevision,StartServerTime=Workspace:GetServerTimeNow()})
@@ -1781,9 +2009,15 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 				end
 			elseif targetEnemyHero then
 				local pvpDamage = math.max(1, math.round(damage * 0.25))
+				local heroBarrier = targetEnemyHero.BarrierHP or 0
+				if heroBarrier > 0 and (targetEnemyHero.BarrierExpires or 0) > now then
+					local absorbed = math.min(heroBarrier, pvpDamage)
+					targetEnemyHero.BarrierHP = heroBarrier - absorbed
+					pvpDamage -= absorbed
+				end
 				local actualDamage=math.min(targetEnemyHero.CurrentHP,pvpDamage)
 				targetEnemyHero.CurrentHP = math.max(0, targetEnemyHero.CurrentHP - pvpDamage)
-				Tower.BroadcastAt(CombatVFXRemote,targetEnemyHero,"HIT_SPARK", targetEnemyHero.Position, actualDamage, isOverdrive,true)
+				Tower.BroadcastAt(CombatVFXRemote,targetEnemyHero,vfxRemoteType, targetEnemyHero.Position, actualDamage, isOverdrive,true)
 
 				-- Defending hero and defending Master auto-retaliate
 				if targetEnemyHero.State == "FOLLOW_MASTER" or targetEnemyHero.TargetNetId == nil then
@@ -1900,6 +2134,12 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
    local hp=victim.Humanoid.Health;victim.Humanoid:TakeDamage(damage)
    Tower.BroadcastAt(CombatVFXRemote,victim,"HIT_SPARK",victim.Position,hp-victim.Humanoid.Health,false,true)
   else
+   local heroBarrier = victim.BarrierHP or 0
+   if heroBarrier > 0 and (victim.BarrierExpires or 0) > os.clock() then
+       local absorbed = math.min(heroBarrier, damage)
+       victim.BarrierHP = heroBarrier - absorbed
+       damage -= absorbed
+   end
    local actualDamage=math.min(victim.CurrentHP,damage)
    victim.CurrentHP=math.max(0,victim.CurrentHP-damage)
    Tower.BroadcastAt(CombatVFXRemote,victim,"HIT_SPARK",victim.Position,actualDamage,false,true)

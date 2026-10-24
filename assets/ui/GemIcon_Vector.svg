@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" style="background: transparent;">
+  <defs>
+    <linearGradient id="gemDiamond" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e0f7fa" />
+      <stop offset="30%" stop-color="#4dd0e1" />
+      <stop offset="70%" stop-color="#0097a7" />
+      <stop offset="100%" stop-color="#006064" />
+    </linearGradient>
+  </defs>
+
+  <!-- Main 45-degree Faceted Crystal Diamond -->
+  <polygon points="64,12 116,64 64,116 12,64" fill="url(#gemDiamond)" stroke="#e0f7fa" stroke-width="3" stroke-linejoin="round" />
+
+  <!-- Upper Specular Highlight Facet -->
+  <polygon points="64,24 96,64 64,64 44,44" fill="#ffffff" opacity="0.45" />
+
+  <!-- Lower Depth Facet -->
+  <polygon points="64,64 96,64 64,104 44,84" fill="#00363a" opacity="0.5" />
+
+  <!-- Center Brilliant Core -->
+  <polygon points="64,52 76,64 64,76 52,64" fill="#ffffff" opacity="0.8" />
+</svg>

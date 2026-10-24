@@ -66,8 +66,7 @@ function StatFormulas.GetCombatSnapshot(hero: any, artifact: any?, inOverdrive: 
  local baseInterval=seed and seed.AttackInterval or hero.AttackInterval or 1
  local interval=math.max(.2,baseInterval/((1+speed)*(inOverdrive and 1.4 or 1)))
  local tickInterval=B.ScheduledInterval(interval)
- local exhaustion=(hero.CurrentStamina or 100)<=0 and .2 or 1
- if (hero.ComaUntilTimestamp or 0)>os.time() then exhaustion=0 end
+ local exhaustion=if (hero.ComaUntilTimestamp or 0)>os.time() then 0 else 1
  return {AttackDamage=damage,Health=health,AttackSpeed=1/interval,MovementSpeed=seed and seed.MovementSpeed or 20,
   AttackInterval=interval,TickInterval=tickInterval,DPS=math.round(damage/tickInterval*exhaustion*10)/10,
   ATK=damage,HP=health,WeaponPower=power}

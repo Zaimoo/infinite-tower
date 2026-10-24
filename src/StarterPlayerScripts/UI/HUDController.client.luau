@@ -19,6 +19,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local FacilityConfig = require(Shared:WaitForChild("Config"):WaitForChild("FacilityConfig"))
 local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormulas"))
 local GothicBoxStyle = require(Shared:WaitForChild("Util"):WaitForChild("GothicBoxStyle"))
+local GothicVectorIcons = require(Shared:WaitForChild("Util"):WaitForChild("GothicVectorIcons"))
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local CombatRemotes = Remotes:WaitForChild("CombatRemotes")
@@ -531,25 +532,51 @@ local function createFloatingIconButton(
 	aura.Position = UDim2.fromScale(0.5, 0.5)
 	aura.AnchorPoint = Vector2.new(0.5, 0.5)
 	aura.BackgroundTransparency = 1
-	aura.Image = "rbxassetid://99086944565283"
+	aura.Image = ""
 	aura.ImageColor3 = Color3.fromRGB(200, 140, 255)
 	aura.ImageTransparency = 0.4
 	aura.Visible = false
 	aura.ZIndex = 11
 	aura.Parent = container
 
-	-- The circular floating badge ImageButton
+	local vectorHalo = GothicVectorIcons.CreateAura({
+		Size = UDim2.fromScale(1, 1),
+		Position = UDim2.fromScale(0.5, 0.5),
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		ZIndex = 11,
+		Parent = aura,
+	})
+	vectorHalo.Visible = true
+
+	local auraStroke = vectorHalo:FindFirstChild("HaloRing") and vectorHalo.HaloRing:FindFirstChild("AuraStroke") :: UIStroke?
+	aura:GetPropertyChangedSignal("ImageColor3"):Connect(function()
+		if auraStroke then auraStroke.Color = aura.ImageColor3 end
+	end)
+	aura:GetPropertyChangedSignal("ImageTransparency"):Connect(function()
+		if auraStroke then auraStroke.Transparency = aura.ImageTransparency end
+	end)
+
+	-- The circular floating badge Hitbox Button
 	local btn = Instance.new("ImageButton")
 	btn.Name = "Hitbox"
 	btn.Size = UDim2.fromScale(1, 1)
 	btn.Position = UDim2.fromScale(0.5, 0.5)
 	btn.AnchorPoint = Vector2.new(0.5, 0.5)
 	btn.BackgroundTransparency = 1
-	btn.Image = imageAsset
+	btn.Image = ""
 	btn.ScaleType = Enum.ScaleType.Fit
 	btn.AutoButtonColor = false
 	btn.ZIndex = 12
 	btn.Parent = container
+
+	-- Pure Procedural Vector Action Icon
+	GothicVectorIcons.Create(name, {
+		Size = UDim2.fromScale(1, 1),
+		Position = UDim2.fromScale(0.5, 0.5),
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		ZIndex = 12,
+		Parent = btn,
+	})
 
 	-- Cooldown overlay (dark circular frame with countdown text)
 	local cdFrame = Instance.new("Frame")
@@ -1450,44 +1477,77 @@ do
 	carriedLootPill.Position = UDim2.new(0, 16, 1, -74)
 	carriedLootPill.ZIndex = 8
 
-	-- Bottom-left Gold & Diamond Currency Containers (above PATCH NOTES) using Gothic Box Design
+	-- Bottom-left Gold & Diamond Currency Display (Pure icon + numeric text without box containers)
 	local currencyCluster = Instance.new("Frame")
 	currencyCluster.Name = "CurrencyCluster"
 	currencyCluster.BackgroundTransparency = 1
-	currencyCluster.Size = UDim2.fromOffset(272, 48)
+	currencyCluster.BorderSizePixel = 0
+	currencyCluster.AutomaticSize = Enum.AutomaticSize.XY
+	currencyCluster.Size = UDim2.fromOffset(0, 28)
 	currencyCluster.AnchorPoint = Vector2.new(0, 1)
-	currencyCluster.Position = UDim2.new(0, 20, 1, -28)
+	currencyCluster.Position = UDim2.new(0, 20, 1, -20)
 	currencyCluster.ZIndex = 8
 	currencyCluster.Parent = hudGui
 
+	local clusterLayout = Instance.new("UIListLayout")
+	clusterLayout.Name = "ClusterLayout"
+	clusterLayout.FillDirection = Enum.FillDirection.Horizontal
+	clusterLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	clusterLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+	clusterLayout.Padding = UDim.new(0, 20)
+	clusterLayout.Parent = currencyCluster
+
 	local currencyFields: { [string]: TextLabel } = {}
 	local currencies = {
-		{ "Gold", "rbxassetid://99086944565283", P.gold },
-		{ "Gems", "rbxassetid://74751786636473", P.cyan },
+		{ "Gold", P.gold },
+		{ "Gems", P.cyan },
 	}
 	for i, item in currencies do
-		local f = makeFrame({
-			Name = item[1] .. "Pill",
-			Size = UDim2.fromOffset(130, 46),
-			Position = UDim2.fromOffset((i - 1) * 134, 1),
-			BackgroundColor3 = GothicPalette.ObsidianDark,
-			Parent = currencyCluster,
+		local row = Instance.new("Frame")
+		row.Name = item[1] .. "Display"
+		row.BackgroundTransparency = 1
+		row.BorderSizePixel = 0
+		row.AutomaticSize = Enum.AutomaticSize.X
+		row.Size = UDim2.fromOffset(0, 28)
+		row.LayoutOrder = i
+		row.Parent = currencyCluster
+
+		local rowLayout = Instance.new("UIListLayout")
+		rowLayout.Name = "RowLayout"
+		rowLayout.FillDirection = Enum.FillDirection.Horizontal
+		rowLayout.SortOrder = Enum.SortOrder.LayoutOrder
+		rowLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+		rowLayout.Padding = UDim.new(0, 6)
+		rowLayout.Parent = row
+
+		local icon = GothicVectorIcons.Create(item[1] :: string, {
+			Size = UDim2.fromOffset(24, 24),
+			Position = UDim2.fromOffset(0, 0),
+			AnchorPoint = Vector2.new(0, 0),
+			ZIndex = 11,
+			Parent = row,
 		})
-		applyGothicBoxStyle(f, true, 8)
-		local icon = image(f, item[2] :: string, UDim2.fromOffset(22, 22), UDim2.fromOffset(12, 10))
-		icon.ZIndex = 11
-		local lbl = makeLabel({
-			Size = UDim2.new(1, -46, 1, 0),
-			Position = UDim2.fromOffset(40, 0),
-			Text = if item[1] == "Gold" then "500" else "300",
-			TextColor3 = item[3] :: Color3,
-			Font = Enum.Font.Fantasy,
-			TextSize = 17,
-			TextScaled = false,
-			TextXAlignment = Enum.TextXAlignment.Left,
-			Parent = f,
-		})
+		icon.LayoutOrder = 1
+
+		local lbl = Instance.new("TextLabel")
+		lbl.Name = item[1] .. "Value"
+		lbl.BackgroundTransparency = 1
+		lbl.BorderSizePixel = 0
+		lbl.AutomaticSize = Enum.AutomaticSize.X
+		lbl.Size = UDim2.fromOffset(0, 24)
+		lbl.LayoutOrder = 2
+		lbl.Text = if item[1] == "Gold" then "500" else "300"
+		lbl.TextColor3 = item[2] :: Color3
+		lbl.Font = Enum.Font.Fantasy
+		lbl.TextSize = 18
+		lbl.TextScaled = false
+		lbl.TextStrokeColor3 = Color3.fromRGB(12, 8, 18)
+		lbl.TextStrokeTransparency = 0.2
+		lbl.TextXAlignment = Enum.TextXAlignment.Left
+		lbl.TextYAlignment = Enum.TextYAlignment.Center
 		lbl.ZIndex = 11
+		lbl.Parent = row
+
 		currencyFields[item[1] :: string] = lbl
 	end
 
@@ -1590,11 +1650,20 @@ do
 	shopBtn.BackgroundTransparency = 1
 	shopBtn.BorderSizePixel = 0
 	shopBtn.AutoButtonColor = false
-	shopBtn.Image = "rbxassetid://95822585057439"
+	shopBtn.Image = ""
 	shopBtn.ScaleType = Enum.ScaleType.Fit
 	shopBtn.LayoutOrder = 1
 	shopBtn.ZIndex = 12
 	shopBtn.Parent = leftSidebar
+
+	-- Procedural Vector Shop Medallion
+	local shopVector = GothicVectorIcons.CreateShop({
+		Size = UDim2.fromScale(1, 1),
+		Position = UDim2.fromScale(0.5, 0.5),
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		ZIndex = 12,
+		Parent = shopBtn,
+	})
 
 	local shopScale = Instance.new("UIScale")
 	shopScale.Scale = 1
@@ -1639,17 +1708,22 @@ do
 	badgeTween:Play()
 
 	-- Smooth Hover & Click Animations on Floating Icon
+	local shopGoldBorder = (shopVector:FindFirstChild("ObsidianDisc") and shopVector.ObsidianDisc:FindFirstChild("DiscGoldBorder")) :: UIStroke?
 	local isShopHovered = false
 	shopBtn.MouseEnter:Connect(function()
 		isShopHovered = true
 		TweenService:Create(shopScale, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1.10 }):Play()
-		TweenService:Create(shopBtn, TweenInfo.new(0.2), { ImageColor3 = Color3.fromRGB(255, 235, 255) }):Play()
+		if shopGoldBorder then
+			TweenService:Create(shopGoldBorder, TweenInfo.new(0.2), { Color = Color3.fromRGB(255, 238, 150) }):Play()
+		end
 	end)
 
 	shopBtn.MouseLeave:Connect(function()
 		isShopHovered = false
 		TweenService:Create(shopScale, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = 1.0 }):Play()
-		TweenService:Create(shopBtn, TweenInfo.new(0.2), { ImageColor3 = Color3.fromRGB(255, 255, 255) }):Play()
+		if shopGoldBorder then
+			TweenService:Create(shopGoldBorder, TweenInfo.new(0.2), { Color = Color3.fromRGB(245, 205, 95) }):Play()
+		end
 	end)
 
 	shopBtn.MouseButton1Down:Connect(function()
@@ -1699,11 +1773,6 @@ do
 		topBar.Visible = false
 		honorLabel.Visible = false
 
-		currencyCluster.AnchorPoint = Vector2.new(0, 1)
-		currencyCluster.Position = UDim2.new(0, 20, 1, -28)
-		local moneyScale = currencyCluster:FindFirstChildOfClass("UIScale") or Instance.new("UIScale", currencyCluster)
-		moneyScale.Scale = portrait and math.min(1, (w - 48) / 258) or 1
-
 		bossBanner.Position = UDim2.new(0.5, 0, 0, 14)
 		bossBanner.AnchorPoint = Vector2.new(0.5, 0)
 		bossBanner.Size = UDim2.new(0, math.min(w - 32, 720), 0, 58)
@@ -1732,7 +1801,7 @@ do
 		-- Responsive positioning and scaling for Currencies and Floating Toolbar
 		local isNarrow = w < 720
 		currencyCluster.AnchorPoint = Vector2.new(0, 1)
-		currencyCluster.Position = if isNarrow then UDim2.new(0, 14, 1, -100) else UDim2.new(0, 16, 1, -18)
+		currencyCluster.Position = if isNarrow then UDim2.new(0, 14, 1, -100) else UDim2.new(0, 20, 1, -20)
 		local moneyScale = currencyCluster:FindFirstChildOfClass("UIScale") or Instance.new("UIScale", currencyCluster)
 		moneyScale.Scale = portrait and math.min(1, (w - 48) / 258) or 1
 

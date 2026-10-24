@@ -21,14 +21,15 @@ local PlotsFolder = Workspace:WaitForChild("WaitingRoomPlots")
 --------------------------------------------------------------------------------
 -- TUNABLE RANGE CONSTANTS
 --------------------------------------------------------------------------------
--- Other players' beacons are only visible to nearby island neighbors (left and right).
--- Radius 540 ring with 60 deg spacing has neighbors ~540 studs apart, next ~935 studs apart.
-local OTHER_BEACON_MAX_DISTANCE = 700
-local LOCAL_BEACON_MAX_DISTANCE = 1500
-local FADE_PERCENT_RANGE = 0.15 -- Smooth fade over the last 15% (595 to 700 studs)
+-- Beacons are visible across the entire waiting room / lobby ring from any island.
+-- The ring radius is ~650 studs (diameter ~1300 studs, max diagonal distance ~1800 studs).
+-- Range of 3500 studs ensures all players' beacons are fully visible from anywhere in the lobby.
+local OTHER_BEACON_MAX_DISTANCE = 3500
+local LOCAL_BEACON_MAX_DISTANCE = 3500
+local FADE_PERCENT_RANGE = 0.15 -- Smooth fade over the last 15% (2975 to 3500 studs)
 
-local OTHER_BEACON_FADE_START = OTHER_BEACON_MAX_DISTANCE * (1 - FADE_PERCENT_RANGE) -- 595 studs
-local OTHER_BEACON_FADE_SPAN = OTHER_BEACON_MAX_DISTANCE - OTHER_BEACON_FADE_START -- 105 studs
+local OTHER_BEACON_FADE_START = OTHER_BEACON_MAX_DISTANCE * (1 - FADE_PERCENT_RANGE) -- 2975 studs
+local OTHER_BEACON_FADE_SPAN = OTHER_BEACON_MAX_DISTANCE - OTHER_BEACON_FADE_START -- 525 studs
 
 local HEADSHOT_PLACEHOLDER = "rbxasset://textures/ui/PlayerList/NewEmptyHeadShot.png"
 
@@ -176,7 +177,7 @@ local function buildBeacon(plotModel: Model)
 		-- Retry asynchronously when parts replicate
 		task.spawn(function()
 			local retries = 0
-			while retries < 15 and not adornee do
+			while retries < 30 and not adornee do
 				task.wait(0.2)
 				retries += 1
 				adornee = getPlotAnchor(plotModel)
@@ -227,7 +228,7 @@ local function buildBeacon(plotModel: Model)
 
 	local stroke = Instance.new("UIStroke")
 	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	stroke.Color = isLocal and Color3.fromRGB(255, 215, 0) or Palette.FiligreeWhite
+	stroke.Color = isLocal and Color3.fromRGB(255, 215, 0) or (Palette.RailInnerWhite or Color3.fromRGB(246, 244, 255))
 	stroke.Thickness = isLocal and 3.5 or 2.0
 	stroke.Parent = avatarFrame
 
@@ -365,7 +366,7 @@ RunService.Heartbeat:Connect(function()
 	local camPos = cam and cam.CFrame.Position or playerPos
 
 	for _, beacon in pairs(activeBeacons) do
-		-- Smooth fade out for other players' beacons over the last 15% (595 to 700 studs from camera)
+		-- Smooth fade out for other players' beacons over the last 15% (2975 to 3500 studs from camera)
 		if not beacon.IsLocal and beacon.RootGroup and camPos then
 			local camDist = (camPos - beacon.CenterPosition).Magnitude
 			if camDist >= OTHER_BEACON_MAX_DISTANCE then
@@ -379,15 +380,28 @@ RunService.Heartbeat:Connect(function()
 		end
 	end
 
-	-- Low frequency check (every 1 second) to keep barriers & prompts synced
+	-- Low frequency check (every 1 second) to keep barriers, prompts, and beacons synced
 	if now - lastPeriodicSync > 1.0 then
 		lastPeriodicSync = now
 		for _, plot in ipairs(PlotsFolder:GetChildren()) do
 			if plot:IsA("Model") then
 				syncPlotAccess(plot)
-				local uid = plot:GetAttribute("OwnerUserId")
-				if (uid and uid > 0) and not activeBeacons[plot] then
-					buildBeacon(plot)
+				local uid = plot:GetAttribute("OwnerUserId") :: number?
+				if not uid or uid <= 0 then
+					local anchor = plot:FindFirstChild("PlotBeaconAnchor")
+					if anchor then
+						uid = anchor:GetAttribute("OwnerUserId") :: number?
+					end
+				end
+				if uid and uid > 0 then
+					local existing = activeBeacons[plot]
+					if not existing or existing.UserId ~= uid or not existing.Billboard or not existing.Billboard.Parent then
+						buildBeacon(plot)
+					end
+				else
+					if activeBeacons[plot] then
+						destroyBeacon(plot)
+					end
 				end
 			end
 		end

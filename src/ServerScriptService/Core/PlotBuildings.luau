@@ -1,24 +1,31 @@
 --!strict
 -- ServerScriptService/Core/PlotBuildings.luau
 -- Waiting Room facilities & Outskirts Guard Post with F-key interactions at each entrance.
--- Implements GDD Sections 2.4, 3.4 & 4.3 (Citadel Courtyard + Southern Outskirts Grounds).
+-- Implements GDD Sections 2.4, 3.2, 3.4 & 4.3 (Citadel Courtyard 260x180 + Southern Outskirts Grounds 260x140).
 
 local Buildings = {}
 local Architecture = require(script.Parent:WaitForChild("PlotFacilityArchitecture"))
-local VERSION = 9
+local OutskirtsBuilder = require(script.Parent:WaitForChild("OutskirtsEnvironmentBuilder"))
+local VERSION = 15
 
 local definitions = {
-	{Id = "Synthesis", Title = "SYNTHESIS", Subtitle = "THE ESSENCE FORGE", X = -46, Z = -24, Color = Color3.fromRGB(177, 110, 255)},
-	-- The gate and PlotSpawn are on negative Z: keep that central approach clear.
-	{Id = "Promotion", Title = "PROMOTION", Subtitle = "HALL OF ASCENSION", X = 0, Z = 44, Color = Color3.fromRGB(255, 202, 93)},
-	{Id = "Infirmary", Title = "INFIRMARY", Subtitle = "REST & RECOVERY", X = 46, Z = -24, Color = Color3.fromRGB(100, 232, 175)},
-	{Id = "Summoning", Title = "SUMMONING", Subtitle = "CALL OF THE RIFT", X = 46, Z = 24, Color = Color3.fromRGB(96, 191, 255)},
-	{Id = "SquadManagement", Title = "SQUAD DEPLOY", Subtitle = "5 ACTIVE SLOTS", X = -18, Z = 0, Color = Color3.fromRGB(245, 128, 99)},
-	-- Support Facilities (Inner Fortress Wings - GDD Sections 2.4 & 3.4)
-	{Id = "Market", Title = "THE MARKET", Subtitle = "TOWER LOOT & COMMERCE", X = 48, Z = 50, Color = Color3.fromRGB(245, 195, 75)},
-	{Id = "TrainingGrounds", Title = "TRAINING GROUNDS", Subtitle = "MARTIAL COMBAT DRILLS", X = -48, Z = 50, Color = Color3.fromRGB(235, 80, 80)},
-	-- Southern Outskirts Grounds (Exterior Frontier Wilderness - GDD Sections 2.4, 3.4 & 4.3)
-	{Id = "GuardPost", Title = "OUTSKIRTS GUARD POST", Subtitle = "FRONTIER PATROL & PASSIVE GOLD", X = 0, Z = 86, Color = Color3.fromRGB(130, 205, 95)},
+	-- North Courtyard: Recovery & Summoning (Symmetric Pair at Z = -35)
+	{Id = "Infirmary", Title = "INFIRMARY", Subtitle = "REST & RECOVERY", X = -75, Z = -35, Color = Color3.fromRGB(100, 232, 175)},
+	{Id = "Summoning", Title = "SUMMONING", Subtitle = "CALL OF THE RIFT", X = 75, Z = -35, Color = Color3.fromRGB(96, 191, 255)},
+
+	-- Center-Left Courtyard: Heraldic Squad Command Standard (Flanking the Central Fountain)
+	{Id = "SquadManagement", Title = "SQUAD DEPLOY", Subtitle = "5 ACTIVE SLOTS", X = 30, Z = 0, Color = Color3.fromRGB(245, 128, 99)},
+
+	-- Mid Courtyard: The Pit (Synthesis & Promotion) & The Blacksmith Forge (Symmetric Pair at Z = 28)
+	{Id = "ThePit", Title = "THE PIT", Subtitle = "SYNTHESIS & PROMOTION", X = -75, Z = 28, Color = Color3.fromRGB(177, 110, 255)},
+	{Id = "Blacksmith", Title = "BLACKSMITH FORGE", Subtitle = "ARTIFACT ASCENSION & REFINING", X = 75, Z = 28, Color = Color3.fromRGB(255, 120, 40)},
+
+	-- South Inner Courtyard: Support Facilities (Symmetric Pair at Z = 70)
+	{Id = "TrainingGrounds", Title = "TRAINING GROUNDS", Subtitle = "MARTIAL COMBAT DRILLS", X = -75, Z = 70, Color = Color3.fromRGB(235, 80, 80)},
+	{Id = "Market", Title = "THE MARKET", Subtitle = "TOWER LOOT & COMMERCE", X = 75, Z = 70, Color = Color3.fromRGB(245, 195, 75)},
+
+	-- Southern Outskirts Grounds (Exterior Frontier Wilderness)
+	{Id = "GuardPost", Title = "OUTSKIRTS GUARD POST", Subtitle = "FRONTIER PATROL & PASSIVE GOLD", X = 0, Z = 160, Color = Color3.fromRGB(130, 205, 95)},
 }
 
 function Buildings.Build(plot: Instance)
@@ -33,56 +40,25 @@ function Buildings.Build(plot: Instance)
 		else spawn
 	local surfaceY = if top and top:IsA("BasePart") then top.Position.Y + top.Size.Y / 2
 		else spawn.Position.Y - spawn.Size.Y / 2
-	local origin = CFrame.new(anchorPart.Position.X, surfaceY, anchorPart.Position.Z) * anchorPart.CFrame.Rotation
+	local origin: CFrame
+	if top and top:IsA("BasePart") then
+		if top.Size.Z > 200 then
+			-- Legacy 320-stud top slab centered at centerZ = 70
+			origin = CFrame.new(top.Position.X, surfaceY, top.Position.Z) * top.CFrame.Rotation * CFrame.new(0, 0, -70)
+		else
+			-- Clean 180-stud top slab centered at courtyard center Z = 0
+			origin = CFrame.new(top.Position.X, surfaceY, top.Position.Z) * top.CFrame.Rotation
+		end
+	else
+		origin = CFrame.new(spawn.Position.X, surfaceY, spawn.Position.Z) * spawn.CFrame.Rotation * CFrame.new(0, 0, 80)
+	end
 	local folder = Instance.new("Folder")
 	folder.Name = "PlotBuildings_Updating"
 	folder:SetAttribute("Version", VERSION)
 	folder.Parent = plot
 
-	-- Ensure solid ground and patrol trail for the Southern Outskirts (GDD Section 3.4)
-	local outskirtsGround = Instance.new("Part")
-	outskirtsGround.Name = "OutskirtsGrounds"
-	outskirtsGround.Size = Vector3.new(220, 6, 95)
-	outskirtsGround.CFrame = origin * CFrame.new(0, -3, 85)
-	outskirtsGround.Anchored = true
-	outskirtsGround.CanCollide = true
-	outskirtsGround.CanTouch = true
-	outskirtsGround.CanQuery = true
-	outskirtsGround.Material = Enum.Material.Ground
-	outskirtsGround.Color = Color3.fromRGB(88, 76, 62)
-	outskirtsGround.Parent = folder
-
-	-- Dirt wilderness patrol trail
-	local trail = Instance.new("Part")
-	trail.Name = "WildernessPatrolTrail"
-	trail.Size = Vector3.new(180, 0.25, 16)
-	trail.CFrame = origin * CFrame.new(0, 0.12, 85)
-	trail.Anchored = true
-	trail.CanCollide = false
-	trail.Material = Enum.Material.Sand
-	trail.Color = Color3.fromRGB(135, 115, 88)
-	trail.Parent = folder
-
-	-- Decorative Pine Trees along the southern wilderness border
-	for _, tx in {-80, -45, 45, 80} do
-		local trunk = Instance.new("Part")
-		trunk.Name = "BorderPineTrunk"
-		trunk.Size = Vector3.new(1.8, 12, 1.8)
-		trunk.CFrame = origin * CFrame.new(tx, 6, 120)
-		trunk.Anchored = true
-		trunk.Material = Enum.Material.Wood
-		trunk.Color = Color3.fromRGB(72, 50, 32)
-		trunk.Parent = folder
-
-		local foliage = Instance.new("Part")
-		foliage.Name = "BorderPineFoliage"
-		foliage.Size = Vector3.new(10, 16, 10)
-		foliage.CFrame = origin * CFrame.new(tx, 18, 120)
-		foliage.Anchored = true
-		foliage.Material = Enum.Material.Grass
-		foliage.Color = Color3.fromRGB(42, 68, 45)
-		foliage.Parent = folder
-	end
+	-- Build Southern Outskirts wilderness (Lush grass meadow, winding curved trail, asymmetrical pines/oaks, wild bushes, berry shrubs & boulders)
+	OutskirtsBuilder.Build(folder, origin)
 
 	for _, def in definitions do
 		local model = Instance.new("Model")
@@ -90,63 +66,135 @@ function Buildings.Build(plot: Instance)
 		model:SetAttribute("Facility", def.Id)
 		local position = origin:PointToWorldSpace(Vector3.new(def.X, 0, def.Z))
 		local outward = position - origin.Position
-		local frame = CFrame.lookAt(position, position + outward)
+		local frame: CFrame
+		if def.Id == "SquadManagement" or outward.Magnitude < 0.1 then
+			frame = origin * CFrame.new(def.X, 0, def.Z)
+		else
+			frame = CFrame.lookAt(position, position + outward)
+		end
 		Architecture.Build(model, frame, def.Id, def.Color)
-		local interaction = Instance.new("Part")
-		interaction.Name = "FacilityInteraction"
-		interaction.Size = Vector3.new(1, 1, 1)
-		local z = if def.Id == "Synthesis" or def.Id == "Promotion" then 18
-			elseif def.Id == "Infirmary" then 13
-			elseif def.Id == "Summoning" then 4
-			elseif def.Id == "Market" then 8
-			elseif def.Id == "TrainingGrounds" then 10
-			elseif def.Id == "GuardPost" then 9
-			else 0
-		interaction.CFrame = frame * CFrame.new(0, 3.5, z)
-		interaction.Anchored, interaction.Transparency = true, 1
-		interaction.CanCollide, interaction.CanTouch, interaction.CanQuery = false, false, true
-		interaction.Parent = model
-		local prompt = Instance.new("ProximityPrompt")
-		prompt.Name = "FacilityHUDPrompt"
-		prompt:SetAttribute("FacilityHUD", def.Id)
+
+		if def.Id == "ThePit" then
+			-- Dual interactive stations for The Pit: Left is Synthesis Cauldron, Right is Promotion Altar
+			local synthPart = Instance.new("Part")
+			synthPart.Name = "FacilityInteraction_Synthesis"
+			synthPart.Size = Vector3.new(2, 2, 2)
+			synthPart.CFrame = frame * CFrame.new(-6.5, 3.5, 7)
+			synthPart.Anchored, synthPart.Transparency = true, 1
+			synthPart.CanCollide, synthPart.CanTouch, synthPart.CanQuery = false, false, true
+			synthPart.Parent = model
+
+			local synthPrompt = Instance.new("ProximityPrompt")
+			synthPrompt.Name = "FacilityHUDPrompt"
+			synthPrompt:SetAttribute("FacilityHUD", "Synthesis")
+			synthPrompt.ObjectText = "Synthesis Cauldron"
+			synthPrompt.ActionText = "Feed EXP & Imprints"
+			synthPrompt.MaxActivationDistance = 14
+			synthPrompt.HoldDuration = 0
+			synthPrompt.RequiresLineOfSight = false
+			synthPrompt.KeyboardKeyCode, synthPrompt.GamepadKeyCode = Enum.KeyCode.F, Enum.KeyCode.ButtonX
+			synthPrompt.ClickablePrompt = true
+			synthPrompt.Exclusivity = Enum.ProximityPromptExclusivity.OnePerButton
+			synthPrompt.Parent = synthPart
+
+			local promoPart = Instance.new("Part")
+			promoPart.Name = "FacilityInteraction_Promotion"
+			promoPart.Size = Vector3.new(2, 2, 2)
+			promoPart.CFrame = frame * CFrame.new(6.5, 3.5, 7)
+			promoPart.Anchored, promoPart.Transparency = true, 1
+			promoPart.CanCollide, promoPart.CanTouch, promoPart.CanQuery = false, false, true
+			promoPart.Parent = model
+
+			local promoPrompt = Instance.new("ProximityPrompt")
+			promoPrompt.Name = "FacilityHUDPrompt"
+			promoPrompt:SetAttribute("FacilityHUD", "Promotion")
+			promoPrompt.ObjectText = "Promotion Altar"
+			promoPrompt.ActionText = "Ascend Stars (1★-5★)"
+			promoPrompt.MaxActivationDistance = 14
+			promoPrompt.HoldDuration = 0
+			promoPrompt.RequiresLineOfSight = false
+			promoPrompt.KeyboardKeyCode, promoPrompt.GamepadKeyCode = Enum.KeyCode.F, Enum.KeyCode.ButtonX
+			promoPrompt.ClickablePrompt = true
+			promoPrompt.Exclusivity = Enum.ProximityPromptExclusivity.OnePerButton
+			promoPrompt.Parent = promoPart
+		else
+			local interaction = Instance.new("Part")
+			interaction.Name = "FacilityInteraction"
+			interaction.Size = Vector3.new(1, 1, 1)
+			local z = if def.Id == "Infirmary" then 13
+				elseif def.Id == "Summoning" then 4
+				elseif def.Id == "Market" then 8
+				elseif def.Id == "TrainingGrounds" then 10
+				elseif def.Id == "GuardPost" then 9
+				elseif def.Id == "Blacksmith" then 10
+				else 0
+			interaction.CFrame = frame * CFrame.new(0, 3.5, z)
+			interaction.Anchored, interaction.Transparency = true, 1
+			interaction.CanCollide, interaction.CanTouch, interaction.CanQuery = false, false, true
+			interaction.Parent = model
+			local prompt = Instance.new("ProximityPrompt")
+			prompt.Name = "FacilityHUDPrompt"
+			prompt:SetAttribute("FacilityHUD", def.Id)
 		if def.Id == "SquadManagement" then
 			prompt.ObjectText = "War Banner"
 			prompt.ActionText = "Deploy & Manage Squad"
 			prompt.MaxActivationDistance = 14
 			prompt.HoldDuration = 0
 			prompt.RequiresLineOfSight = false
+			prompt.KeyboardKeyCode, prompt.GamepadKeyCode = Enum.KeyCode.F, Enum.KeyCode.ButtonX
 		elseif def.Id == "Market" then
 			prompt.ObjectText = "The Market"
 			prompt.ActionText = "Manage Merchants & Upgrades"
 			prompt.MaxActivationDistance = 12
 			prompt.HoldDuration = 0
 			prompt.RequiresLineOfSight = false
+			prompt.KeyboardKeyCode, prompt.GamepadKeyCode = Enum.KeyCode.F, Enum.KeyCode.ButtonX
 		elseif def.Id == "TrainingGrounds" then
 			prompt.ObjectText = "Training Grounds"
 			prompt.ActionText = "Manage Trainers & Drills"
 			prompt.MaxActivationDistance = 12
 			prompt.HoldDuration = 0
 			prompt.RequiresLineOfSight = false
+			prompt.KeyboardKeyCode, prompt.GamepadKeyCode = Enum.KeyCode.F, Enum.KeyCode.ButtonX
 		elseif def.Id == "GuardPost" then
 			prompt.ObjectText = "Outskirts Guard Post"
 			prompt.ActionText = "Manage Adventurers & Defense"
 			prompt.MaxActivationDistance = 14
 			prompt.HoldDuration = 0
 			prompt.RequiresLineOfSight = false
+			prompt.KeyboardKeyCode, prompt.GamepadKeyCode = Enum.KeyCode.F, Enum.KeyCode.ButtonX
+		elseif def.Id == "Blacksmith" then
+			prompt.Name = "BlacksmithPrompt"
+			prompt.ObjectText = "Blacksmith Forge"
+			prompt.ActionText = "Upgrade & Refine Artifacts"
+			prompt.MaxActivationDistance = 14
+			prompt.HoldDuration = 0
+			prompt.RequiresLineOfSight = false
+			prompt.KeyboardKeyCode, prompt.GamepadKeyCode = Enum.KeyCode.F, Enum.KeyCode.ButtonX
+			prompt:SetAttribute("FacilityHUD", "Forge")
 		else
 			prompt.ObjectText = def.Title
 			prompt.ActionText = "Open " .. def.Id
 			prompt.MaxActivationDistance = 10
 			prompt.HoldDuration = 0
 			prompt.RequiresLineOfSight = false
+			prompt.KeyboardKeyCode, prompt.GamepadKeyCode = Enum.KeyCode.F, Enum.KeyCode.ButtonX
 		end
-		prompt.KeyboardKeyCode, prompt.GamepadKeyCode = Enum.KeyCode.F, Enum.KeyCode.ButtonX
 		prompt.ClickablePrompt = true
 		prompt.Exclusivity = Enum.ProximityPromptExclusivity.OnePerButton
 		prompt.Parent = interaction
+		end
 		model.Parent = folder
-		task.wait()
 	end
+
+	-- Compatibility alias models for legacy external references
+	for _, aliasName in { "Building_Synthesis", "Building_Promotion" } do
+		local alias = Instance.new("Model")
+		alias.Name = aliasName
+		alias:SetAttribute("Facility", string.sub(aliasName, 10))
+		alias.Parent = folder
+	end
+
 	if existing then existing:Destroy() end
 	folder.Name = "PlotBuildings"
 	return folder

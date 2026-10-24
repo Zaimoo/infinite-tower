@@ -12,7 +12,7 @@
 --        - 3 Orbiting Sacrifice Material Slots (75x75) at radius ~130px (Top, Bottom-Right, Bottom-Left)
 --     3. Stats Display Panel:
 --        - Left (Current): Max Level, HP, Base ATK, Gold Stars
---        - Center Arrow: "➔" with purple glow
+--        - Center Arrow: Procedural vector arrow facing right with purple glow
 --        - Right (Upgraded): Max Level, HP, Base ATK, Green Star in neon #39ff14
 --     4. Action Area:
 --        - "100% SUCCESS RATE" in neon green (#39ff14)
@@ -96,6 +96,100 @@ end
 local function cornerDiamonds(parent: GuiObject, size: number)
 	-- Handled automatically by GothicBoxStyle
 end
+
+local function createRightArrow(parent: Instance, size: UDim2, position: UDim2, color: Color3): Frame
+	local root = new("Frame", {
+		Name = "VectorRightArrow",
+		BackgroundTransparency = 1,
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = position,
+		Size = size,
+		ZIndex = 43,
+	}, parent)
+
+	local bright = Color3.fromRGB(
+		math.clamp(math.floor(color.R * 255 * 1.25 + 20), 0, 255),
+		math.clamp(math.floor(color.G * 255 * 1.25 + 20), 0, 255),
+		math.clamp(math.floor(color.B * 255 * 1.25 + 20), 0, 255)
+	)
+
+	-- Outer Atmospheric Glow
+	local g = new("Frame", {
+		Name = "Glow",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.new(1, -8, 0, 22),
+		BackgroundColor3 = color,
+		BackgroundTransparency = 0.88,
+		BorderSizePixel = 0,
+		ZIndex = 43,
+	}, root)
+	new("UICorner", { CornerRadius = UDim.new(0, 11) }, g)
+
+	-- Central Horizontal Shaft
+	local shaft = new("Frame", {
+		Name = "Shaft",
+		AnchorPoint = Vector2.new(0, 0.5),
+		Position = UDim2.new(0, 8, 0.5, 0),
+		Size = UDim2.new(1, -18, 0, 3.5),
+		BackgroundColor3 = color,
+		BorderSizePixel = 0,
+		ZIndex = 44,
+	}, root)
+	new("UICorner", { CornerRadius = UDim.new(1, 0) }, shaft)
+
+	new("UIGradient", {
+		Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0.0, Color3.fromRGB(
+				math.floor(color.R * 255 * 0.75),
+				math.floor(color.G * 255 * 0.75),
+				math.floor(color.B * 255 * 0.75)
+			)),
+			ColorSequenceKeypoint.new(0.65, color),
+			ColorSequenceKeypoint.new(1.0, bright),
+		}),
+	}, shaft)
+
+	-- Arrowhead Wings (Chevron pointing right)
+	local wingTop = new("Frame", {
+		Name = "WingTop",
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, -10, 0.5, 0),
+		Size = UDim2.new(0, 14, 0, 3.5),
+		Rotation = 38,
+		BackgroundColor3 = bright,
+		BorderSizePixel = 0,
+		ZIndex = 45,
+	}, root)
+	new("UICorner", { CornerRadius = UDim.new(1, 0) }, wingTop)
+
+	local wingBottom = new("Frame", {
+		Name = "WingBottom",
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, -10, 0.5, 0),
+		Size = UDim2.new(0, 14, 0, 3.5),
+		Rotation = -38,
+		BackgroundColor3 = bright,
+		BorderSizePixel = 0,
+		ZIndex = 45,
+	}, root)
+	new("UICorner", { CornerRadius = UDim.new(1, 0) }, wingBottom)
+
+	-- Seamless Vertex Tip
+	local tip = new("Frame", {
+		Name = "Tip",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new(1, -10.5, 0.5, 0),
+		Size = UDim2.fromOffset(5, 5),
+		Rotation = 45,
+		BackgroundColor3 = bright,
+		BorderSizePixel = 0,
+		ZIndex = 46,
+	}, root)
+
+	return root
+end
+
 
 local function label(parent: Instance, text: string, size: number, color: Color3, font: Enum.Font?): TextLabel
 	local lbl = new("TextLabel", {
@@ -432,14 +526,8 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 	self.OldStars.TextXAlignment = Enum.TextXAlignment.Center
 	self.OldStars.ZIndex = 43
 
-	-- Center Arrow
-	local arrow = label(statsPanel, "➔", 32, C.Border, Enum.Font.GothamBlack)
-	arrow.AnchorPoint = Vector2.new(0.5, 0.5)
-	arrow.Position = UDim2.fromScale(0.5, 0.5)
-	arrow.Size = UDim2.fromOffset(60, 40)
-	arrow.ZIndex = 43
-	arrow.TextStrokeColor3 = C.Border
-	arrow.TextStrokeTransparency = 0.5
+	-- Center Arrow (Procedural Gothic Vector Arrow facing right: Current Stats ➔ Upgraded Stats)
+	local arrow = createRightArrow(statsPanel, UDim2.fromOffset(60, 32), UDim2.fromScale(0.5, 0.5), C.Border)
 	self.Arrow = arrow
 
 	-- Right Stat Block (Upgraded)

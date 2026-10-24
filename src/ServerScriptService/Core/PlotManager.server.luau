@@ -176,6 +176,7 @@ local function setupPlotGateBarrier(plotModel: Model)
 end
 
 local function initializePlotModel(plotModel: Model)
+	plotModel.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
 	if not plotModel:GetAttribute("OwnerUserId") then
 		plotModel:SetAttribute("OwnerUserId", 0)
 	end
