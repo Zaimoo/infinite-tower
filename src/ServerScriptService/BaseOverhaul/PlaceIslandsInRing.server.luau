@@ -136,6 +136,7 @@ local function migratePlotToIsland(plotModel: Model, islandClone: Model, islandT
 	end
 
 	-- 6. Ensure persistent PlotBeaconAnchor so client avatar beacons never stream out
+	plotModel.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
 	local beaconAnchor = plotModel:FindFirstChild("PlotBeaconAnchor") :: Model?
 	if not beaconAnchor then
 		beaconAnchor = Instance.new("Model")
@@ -313,6 +314,7 @@ local function buildOverhaul(forceRebuild: boolean?)
 		if not plotModel then
 			plotModel = Instance.new("Model")
 			plotModel.Name = "Plot_" .. tostring(i)
+			plotModel.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
 			plotModel.Parent = plotsFolder
 
 			local plotSpawn = Instance.new("SpawnLocation")
