@@ -10,13 +10,17 @@ GothicBoxStyle.Font = GothicFont
 -- Configured authoritative asset ID uploaded by user
 GothicBoxStyle.CustomAssetId = nil :: string?
 
-export type GothicStyle = "Window" | "Card" | "Button" | "Compact"
+export type GothicStyle = "Window" | "Card" | "Button" | "Compact" | "Panel" | "Row" | "Slot" | "ButtonPrimary" | "ButtonSecondary"
 
 export type ApplyOptions = {
 	Style: GothicStyle?,
 	ZIndex: number?,
 	OnClick: (() -> ())?,
 	AssetId: string?,
+	AccentColor: Color3?,
+	State: string?,
+	Disabled: boolean?,
+	Variant: string?,
 }
 
 local C = {
@@ -28,6 +32,23 @@ local C = {
 	TextWhite = Color3.fromRGB(255, 255, 255),
 	TextDim = Color3.fromRGB(165, 155, 185),
 	CloseRed = Color3.fromRGB(220, 38, 38),
+
+	-- Core UI Mockup Palette
+	GoldBright = Color3.fromHex("#FACC15"),
+	GoldWarm = Color3.fromHex("#E4BA73"),
+	GoldDeep = Color3.fromHex("#D97706"),
+	VioletArcane = Color3.fromHex("#C084FC"),
+	GreenSuccess = Color3.fromHex("#4ADE80"),
+	CyanEquipped = Color3.fromHex("#38BDF8"),
+	BorderCard = Color3.fromHex("#312740"),
+	BorderRailOuter = Color3.fromHex("#706484"),
+	BorderRailInner = Color3.fromHex("#443A54"),
+	PanelBgStart = Color3.fromHex("#120D1A"),
+	PanelBgEnd = Color3.fromHex("#1F162B"),
+	CardBg = Color3.fromHex("#140F1D"),
+	SlotTop = Color3.fromHex("#0B0811"),
+	SlotBot = Color3.fromHex("#171122"),
+	ButtonDarkBg = Color3.fromHex("#161020"),
 }
 
 GothicBoxStyle.Palette = C
@@ -83,11 +104,418 @@ function GothicBoxStyle.Apply(container: GuiObject, opts: ApplyOptions?): GuiObj
 		"InnerPurpleGlow",
 		"GothicDecorRoot",
 		"Gothic9SliceImage",
+		"GothicPanelCorner",
+		"GothicPanelStroke",
+		"GothicPanelGrad",
+		"GothicPanelNotchTL",
+		"GothicPanelNotchBR",
+		"GothicRowCorner",
+		"GothicRowStroke",
+		"GothicRowAccentBar",
+		"GothicSlotCorner",
+		"GothicSlotStroke",
+		"GothicSlotGrad",
+		"GothicButtonCorner",
+		"GothicButtonStroke",
+		"GothicButtonGrad",
 	}) do
 		local existing = container:FindFirstChild(childName)
 		if existing then
 			existing:Destroy()
 		end
+	end
+
+	-- Dedicated styling for Section Panels (1px notched border, dark gradient)
+	if style == "Panel" then
+		container.BackgroundColor3 = C.PanelBgStart
+		container.BackgroundTransparency = 0
+
+		new("UICorner", {
+			Name = "GothicPanelCorner",
+			CornerRadius = UDim.new(0, 6),
+		}, container)
+
+		new("UIGradient", {
+			Name = "GothicPanelGrad",
+			Color = ColorSequence.new({
+				ColorSequenceKeypoint.new(0.0, C.PanelBgStart),
+				ColorSequenceKeypoint.new(1.0, C.PanelBgEnd),
+			}),
+			Rotation = 135,
+		}, container)
+
+		new("UIStroke", {
+			Name = "GothicPanelStroke",
+			ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+			Color = C.BorderRailInner,
+			Thickness = 1,
+			Transparency = 0,
+		}, container)
+
+		local notchTL = new("Frame", {
+			Name = "GothicPanelNotchTL",
+			BackgroundTransparency = 1,
+			Position = UDim2.fromOffset(3, 3),
+			Size = UDim2.fromOffset(6, 6),
+			ZIndex = baseZ + 2,
+		}, container)
+		new("Frame", {
+			Name = "TopLine",
+			BackgroundColor3 = Color3.fromRGB(140, 127, 166),
+			BorderSizePixel = 0,
+			Position = UDim2.fromOffset(0, 0),
+			Size = UDim2.fromOffset(6, 1),
+			ZIndex = baseZ + 2,
+		}, notchTL)
+		new("Frame", {
+			Name = "LeftLine",
+			BackgroundColor3 = Color3.fromRGB(140, 127, 166),
+			BorderSizePixel = 0,
+			Position = UDim2.fromOffset(0, 0),
+			Size = UDim2.fromOffset(1, 6),
+			ZIndex = baseZ + 2,
+		}, notchTL)
+
+		local notchBR = new("Frame", {
+			Name = "GothicPanelNotchBR",
+			AnchorPoint = Vector2.new(1, 1),
+			Position = UDim2.new(1, -3, 1, -3),
+			Size = UDim2.fromOffset(6, 6),
+			BackgroundTransparency = 1,
+			ZIndex = baseZ + 2,
+		}, container)
+		new("Frame", {
+			Name = "BottomLine",
+			AnchorPoint = Vector2.new(0, 1),
+			BackgroundColor3 = Color3.fromRGB(140, 127, 166),
+			BorderSizePixel = 0,
+			Position = UDim2.fromScale(0, 1),
+			Size = UDim2.fromOffset(6, 1),
+			ZIndex = baseZ + 2,
+		}, notchBR)
+		new("Frame", {
+			Name = "RightLine",
+			AnchorPoint = Vector2.new(1, 0),
+			BackgroundColor3 = Color3.fromRGB(140, 127, 166),
+			BorderSizePixel = 0,
+			Position = UDim2.fromScale(1, 0),
+			Size = UDim2.fromOffset(1, 6),
+			ZIndex = baseZ + 2,
+		}, notchBR)
+
+		return container
+	end
+
+	-- Dedicated styling for List Row Cards (flat dark card, 1px stroke, rarity accent bar)
+	if style == "Row" then
+		container.BackgroundColor3 = C.CardBg
+		container.BackgroundTransparency = 0
+		container.ClipsDescendants = false
+
+		new("UICorner", {
+			Name = "GothicRowCorner",
+			CornerRadius = UDim.new(0, 6),
+		}, container)
+
+		local rowStroke = new("UIStroke", {
+			Name = "GothicRowStroke",
+			ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+			Color = C.BorderCard,
+			Thickness = 1,
+			Transparency = 0,
+		}, container)
+
+		local accentColor = options.AccentColor or Color3.fromRGB(176, 176, 176)
+		local accentBar = new("Frame", {
+			Name = "GothicRowAccentBar",
+			Position = UDim2.fromOffset(0, 0),
+			Size = UDim2.new(0, 5, 1, 0),
+			BackgroundColor3 = accentColor,
+			BorderSizePixel = 0,
+			ZIndex = baseZ + 2,
+		}, container)
+		new("UICorner", { CornerRadius = UDim.new(0, 2) }, accentBar)
+
+		if container:IsA("GuiButton") or options.OnClick then
+			local btn = container :: GuiButton
+			btn.AutoButtonColor = false
+			btn.MouseEnter:Connect(function()
+				TweenService:Create(container, TweenInfo.new(0.15), {
+					BackgroundColor3 = Color3.fromRGB(33, 24, 48),
+				}):Play()
+				TweenService:Create(rowStroke, TweenInfo.new(0.15), {
+					Color = C.VioletArcane,
+				}):Play()
+			end)
+			btn.MouseLeave:Connect(function()
+				TweenService:Create(container, TweenInfo.new(0.15), {
+					BackgroundColor3 = C.CardBg,
+				}):Play()
+				TweenService:Create(rowStroke, TweenInfo.new(0.15), {
+					Color = C.BorderCard,
+				}):Play()
+			end)
+			if options.OnClick then
+				btn.Activated:Connect(options.OnClick)
+			end
+		end
+
+		return container
+	end
+
+	-- Dedicated styling for Item/Weapon Slots (rounded square, inner bevel, states: Empty/Filled/Locked)
+	if style == "Slot" then
+		local state = options.State or "Empty"
+		container.BorderSizePixel = 0
+
+		new("UICorner", {
+			Name = "GothicSlotCorner",
+			CornerRadius = UDim.new(0, 8),
+		}, container)
+
+		if state == "Locked" then
+			container.BackgroundColor3 = Color3.fromRGB(19, 15, 27)
+			container.BackgroundTransparency = 0.12
+
+			new("UIStroke", {
+				Name = "GothicSlotStroke",
+				ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+				Color = Color3.fromRGB(45, 36, 59),
+				Thickness = 1.5,
+				Transparency = 0.15,
+			}, container)
+		elseif state == "Filled" then
+			local rarityColor = options.AccentColor or Color3.fromRGB(176, 176, 176)
+			container.BackgroundColor3 = C.SlotTop
+			container.BackgroundTransparency = 0
+
+			new("UIGradient", {
+				Name = "GothicSlotGrad",
+				Color = ColorSequence.new({
+					ColorSequenceKeypoint.new(0.0, Color3.fromRGB(
+						math.clamp(math.floor(rarityColor.R * 255 * 0.25 + 15), 0, 255),
+						math.clamp(math.floor(rarityColor.G * 255 * 0.25 + 12), 0, 255),
+						math.clamp(math.floor(rarityColor.B * 255 * 0.25 + 24), 0, 255)
+					)),
+					ColorSequenceKeypoint.new(1.0, C.SlotBot),
+				}),
+				Rotation = 90,
+			}, container)
+
+			new("UIStroke", {
+				Name = "GothicSlotStroke",
+				ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+				Color = rarityColor,
+				Thickness = 2,
+				Transparency = 0,
+			}, container)
+		else -- "Empty"
+			container.BackgroundColor3 = C.SlotTop
+			container.BackgroundTransparency = 0
+
+			new("UIGradient", {
+				Name = "GothicSlotGrad",
+				Color = ColorSequence.new({
+					ColorSequenceKeypoint.new(0.0, C.SlotTop),
+					ColorSequenceKeypoint.new(1.0, C.SlotBot),
+				}),
+				Rotation = 90,
+			}, container)
+
+			new("UIStroke", {
+				Name = "GothicSlotStroke",
+				ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+				Color = Color3.fromRGB(99, 83, 125),
+				Thickness = 1.5,
+				Transparency = 0.35,
+			}, container)
+		end
+
+		if container:IsA("GuiButton") and options.OnClick then
+			(container :: GuiButton).Activated:Connect(options.OnClick)
+		end
+
+		return container
+	end
+
+	-- Dedicated styling for Primary Buttons (Gold-Amber Gradient or Arcane Violet)
+	if style == "ButtonPrimary" then
+		local isDisabled = options.Disabled == true or options.State == "Disabled"
+		local isViolet = options.Variant == "Violet"
+
+		new("UICorner", {
+			Name = "GothicButtonCorner",
+			CornerRadius = UDim.new(0, 6),
+		}, container)
+
+		if isDisabled then
+			container.BackgroundColor3 = Color3.fromRGB(39, 32, 48)
+			container.BackgroundTransparency = 0
+
+			new("UIGradient", {
+				Name = "GothicButtonGrad",
+				Color = ColorSequence.new({
+					ColorSequenceKeypoint.new(0.0, Color3.fromRGB(39, 32, 48)),
+					ColorSequenceKeypoint.new(1.0, Color3.fromRGB(27, 21, 35)),
+				}),
+				Rotation = 90,
+			}, container)
+
+			new("UIStroke", {
+				Name = "GothicButtonStroke",
+				ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+				Color = Color3.fromRGB(69, 58, 86),
+				Thickness = 1,
+				Transparency = 0,
+			}, container)
+
+			if container:IsA("TextButton") or container:IsA("TextLabel") then
+				(container :: any).TextColor3 = Color3.fromRGB(154, 142, 181)
+			end
+		else
+			container.BackgroundTransparency = 0
+			local btnStroke: UIStroke
+
+			if isViolet then
+				container.BackgroundColor3 = Color3.fromRGB(43, 27, 66)
+				new("UIGradient", {
+					Name = "GothicButtonGrad",
+					Color = ColorSequence.new({
+						ColorSequenceKeypoint.new(0.0, Color3.fromRGB(43, 27, 66)),
+						ColorSequenceKeypoint.new(1.0, Color3.fromRGB(25, 15, 41)),
+					}),
+					Rotation = 90,
+				}, container)
+
+				btnStroke = new("UIStroke", {
+					Name = "GothicButtonStroke",
+					ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+					Color = C.GoldWarm,
+					Thickness = 1.5,
+					Transparency = 0,
+				}, container)
+
+				if container:IsA("TextButton") or container:IsA("TextLabel") then
+					(container :: any).TextColor3 = Color3.fromRGB(246, 244, 255)
+				end
+			else -- Default Gold
+				container.BackgroundColor3 = C.GoldBright
+				new("UIGradient", {
+					Name = "GothicButtonGrad",
+					Color = ColorSequence.new({
+						ColorSequenceKeypoint.new(0.0, C.GoldBright),
+						ColorSequenceKeypoint.new(1.0, C.GoldDeep),
+					}),
+					Rotation = 90,
+				}, container)
+
+				btnStroke = new("UIStroke", {
+					Name = "GothicButtonStroke",
+					ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+					Color = Color3.fromRGB(254, 240, 138),
+					Thickness = 1.5,
+					Transparency = 0,
+				}, container)
+
+				if container:IsA("TextButton") or container:IsA("TextLabel") then
+					(container :: any).TextColor3 = Color3.fromRGB(22, 15, 4)
+				end
+			end
+
+			if container:IsA("GuiButton") then
+				local btn = container :: GuiButton
+				btn.AutoButtonColor = false
+				btn.MouseEnter:Connect(function()
+					if isViolet then
+						TweenService:Create(container, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(57, 36, 87) }):Play()
+						TweenService:Create(btnStroke, TweenInfo.new(0.15), { Color = C.GoldBright }):Play()
+					else
+						TweenService:Create(container, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(253, 224, 71) }):Play()
+						TweenService:Create(btnStroke, TweenInfo.new(0.15), { Color = Color3.fromRGB(255, 255, 255) }):Play()
+					end
+				end)
+				btn.MouseLeave:Connect(function()
+					if isViolet then
+						TweenService:Create(container, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(43, 27, 66) }):Play()
+						TweenService:Create(btnStroke, TweenInfo.new(0.15), { Color = C.GoldWarm }):Play()
+					else
+						TweenService:Create(container, TweenInfo.new(0.15), { BackgroundColor3 = C.GoldBright }):Play()
+						TweenService:Create(btnStroke, TweenInfo.new(0.15), { Color = Color3.fromRGB(254, 240, 138) }):Play()
+					end
+				end)
+				if options.OnClick then
+					btn.Activated:Connect(options.OnClick)
+				end
+			end
+		end
+
+		return container
+	end
+
+	-- Dedicated styling for Secondary Buttons (Dark Outlined)
+	if style == "ButtonSecondary" then
+		local isDisabled = options.Disabled == true or options.State == "Disabled"
+
+		new("UICorner", {
+			Name = "GothicButtonCorner",
+			CornerRadius = UDim.new(0, 6),
+		}, container)
+
+		if isDisabled then
+			container.BackgroundColor3 = Color3.fromRGB(26, 20, 36)
+			container.BackgroundTransparency = 0
+
+			new("UIStroke", {
+				Name = "GothicButtonStroke",
+				ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+				Color = Color3.fromRGB(58, 50, 72),
+				Thickness = 1,
+				Transparency = 0,
+			}, container)
+
+			if container:IsA("TextButton") or container:IsA("TextLabel") then
+				(container :: any).TextColor3 = Color3.fromRGB(112, 100, 132)
+			end
+		else
+			container.BackgroundColor3 = C.ButtonDarkBg
+			container.BackgroundTransparency = 0
+
+			local btnStroke = new("UIStroke", {
+				Name = "GothicButtonStroke",
+				ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+				Color = Color3.fromRGB(86, 71, 112),
+				Thickness = 1.5,
+				Transparency = 0,
+			}, container)
+
+			if container:IsA("TextButton") or container:IsA("TextLabel") then
+				(container :: any).TextColor3 = Color3.fromRGB(226, 217, 243)
+			end
+
+			if container:IsA("GuiButton") then
+				local btn = container :: GuiButton
+				btn.AutoButtonColor = false
+				btn.MouseEnter:Connect(function()
+					TweenService:Create(container, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(35, 25, 52) }):Play()
+					TweenService:Create(btnStroke, TweenInfo.new(0.15), { Color = C.VioletArcane }):Play()
+					if container:IsA("TextButton") then
+						(container :: TextButton).TextColor3 = Color3.fromRGB(255, 255, 255)
+					end
+				end)
+				btn.MouseLeave:Connect(function()
+					TweenService:Create(container, TweenInfo.new(0.15), { BackgroundColor3 = C.ButtonDarkBg }):Play()
+					TweenService:Create(btnStroke, TweenInfo.new(0.15), { Color = Color3.fromRGB(86, 71, 112) }):Play()
+					if container:IsA("TextButton") then
+						(container :: TextButton).TextColor3 = Color3.fromRGB(226, 217, 243)
+					end
+				end)
+				if options.OnClick then
+					btn.Activated:Connect(options.OnClick)
+				end
+			end
+		end
+
+		return container
 	end
 
 	local assetId = options.AssetId or GothicBoxStyle.CustomAssetId
@@ -378,6 +806,10 @@ function GothicBoxStyle.CreateContainer(props: {
 	Parent: Instance?,
 	ZIndex: number?,
 	AssetId: string?,
+	AccentColor: Color3?,
+	State: string?,
+	Disabled: boolean?,
+	Variant: string?,
 }): Frame
 	local frame = new("Frame", {
 		Name = props.Name or "GothicContainer",
@@ -404,6 +836,10 @@ function GothicBoxStyle.CreateButton(props: {
 	ZIndex: number?,
 	OnClick: (() -> ())?,
 	AssetId: string?,
+	AccentColor: Color3?,
+	State: string?,
+	Disabled: boolean?,
+	Variant: string?,
 }): TextButton
 	local btn = new("TextButton", {
 		Name = props.Name or "GothicButton",

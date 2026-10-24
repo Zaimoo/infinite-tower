@@ -120,6 +120,7 @@ export type ButtonProps = {
 	Visible: boolean?,
 	Enabled: boolean?,
 	Selectable: boolean?,
+	Variant: ("PrimaryGold" | "PrimaryViolet" | "Secondary")?,
 	OnClick: (() -> ())?,
 	OnActivated: (() -> ())?,
 	Config: { [string]: any }?,
@@ -238,10 +239,20 @@ function OrnateFrameButton.new(parent: Instance?, props: ButtonProps): ButtonIns
 		Scale = 1.0,
 	}, visualRoot)
 
-	-- 3. Dark Navy / Near-Black Panel Interior (Pure Procedural Vector Gothic Styling)
+	-- 3. Modern Gothic Button Panel (Clean filled gradient or outlined per mockup)
+	local variant: "PrimaryGold" | "PrimaryViolet" | "Secondary"
+	if props.Variant then
+		variant = props.Variant
+	elseif props.Title and string.find(props.Title, "10X") then
+		variant = "PrimaryGold"
+	elseif props.Title and string.find(props.Title, "1X") then
+		variant = "PrimaryViolet"
+	else
+		variant = "PrimaryGold"
+	end
+
 	local darkPanel = new("Frame", {
 		Name = "DarkPanel",
-		BackgroundColor3 = customCfg.BG_COLOR or CONFIG.BG_COLOR,
 		BackgroundTransparency = 0,
 		BorderSizePixel = 0,
 		Size = UDim2.fromScale(1, 1),
@@ -250,17 +261,17 @@ function OrnateFrameButton.new(parent: Instance?, props: ButtonProps): ButtonIns
 		ClipsDescendants = false,
 		ZIndex = baseZ,
 	}, visualRoot)
+	new("UICorner", { CornerRadius = UDim.new(0, 6) }, darkPanel)
 
-	-- Apply pure procedural vector Gothic double rails and corner spires
-	GothicBoxStyle.Apply(darkPanel, { Style = "Button", ZIndex = baseZ })
+	local panelGrad = new("UIGradient", {
+		Name = "PanelGradient",
+		Rotation = 90,
+	}, darkPanel)
 
-	-- Soft Lavender Outer Glow Stroke
-	new("UIStroke", {
-		Name = "LavenderOuterGlow",
+	local panelStroke = new("UIStroke", {
+		Name = "PanelStroke",
 		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-		Color = Color3.fromRGB(168, 125, 255),
-		Thickness = 2.0,
-		Transparency = 0.45,
+		Thickness = 1.5,
 	}, darkPanel)
 
 	-- 4. Vector Container / Legacy ImageLabel Fallback (Set to transparent vector frame)
@@ -408,19 +419,18 @@ function OrnateFrameButton.new(parent: Instance?, props: ButtonProps): ButtonIns
 		local tInfo = TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
 		if not isEnabled then
-			tween(frameImage, tInfo, {
-				ImageColor3 = customCfg.FRAME_COLOR_DISABLED or CONFIG.FRAME_COLOR_DISABLED,
-				ImageTransparency = 0.40,
-			})
+			panelGrad.Color = ColorSequence.new(Color3.fromRGB(39, 32, 48), Color3.fromRGB(27, 21, 35))
+			panelStroke.Color = Color3.fromRGB(69, 58, 86)
 			tween(darkPanel, tInfo, {
-				BackgroundTransparency = 0.25,
+				BackgroundColor3 = Color3.fromRGB(39, 32, 48),
+				BackgroundTransparency = 0,
 			})
 			tween(titleLabel, tInfo, {
-				TextColor3 = customCfg.COLOR_DISABLED or CONFIG.COLOR_DISABLED,
+				TextColor3 = Color3.fromRGB(154, 142, 181),
 				TextTransparency = 0.40,
 			})
 			tween(costLabel, tInfo, {
-				TextColor3 = customCfg.COLOR_DISABLED or CONFIG.COLOR_DISABLED,
+				TextColor3 = Color3.fromRGB(154, 142, 181),
 				TextTransparency = 0.40,
 			})
 			tween(gemIcon, tInfo, {
@@ -432,29 +442,69 @@ function OrnateFrameButton.new(parent: Instance?, props: ButtonProps): ButtonIns
 			return
 		end
 
-		local targetFrameColor = if isHovered
-			then (customCfg.FRAME_COLOR_HOVER or CONFIG.FRAME_COLOR_HOVER)
-			else (customCfg.FRAME_COLOR_NORMAL or CONFIG.FRAME_COLOR_NORMAL)
+		local targetBgColor: Color3
+		local targetGrad: ColorSequence
+		local targetStrokeColor: Color3
+		local targetTitleColor: Color3
+		local targetCostColor: Color3
 
-		local targetTitleColor = if isHovered
-			then (customCfg.COLOR_TITLE_HOVER or CONFIG.COLOR_TITLE_HOVER)
-			else (customCfg.COLOR_TITLE or CONFIG.COLOR_TITLE)
+		if variant == "PrimaryGold" then
+			if isHovered then
+				targetBgColor = Color3.fromHex("#FDE047")
+				targetGrad = ColorSequence.new(Color3.fromHex("#FDE047"), Color3.fromHex("#F59E0B"))
+				targetStrokeColor = Color3.fromRGB(255, 255, 255)
+				targetTitleColor = Color3.fromHex("#160F04")
+				targetCostColor = Color3.fromHex("#160F04")
+			else
+				targetBgColor = Color3.fromHex("#FACC15")
+				targetGrad = ColorSequence.new(Color3.fromHex("#FACC15"), Color3.fromHex("#D97706"))
+				targetStrokeColor = Color3.fromHex("#FEF08A")
+				targetTitleColor = Color3.fromHex("#160F04")
+				targetCostColor = Color3.fromHex("#160F04")
+			end
+		elseif variant == "PrimaryViolet" then
+			if isHovered then
+				targetBgColor = Color3.fromHex("#392457")
+				targetGrad = ColorSequence.new(Color3.fromHex("#392457"), Color3.fromHex("#24163A"))
+				targetStrokeColor = Color3.fromHex("#FACC15")
+				targetTitleColor = Color3.fromRGB(255, 255, 255)
+				targetCostColor = Color3.fromRGB(255, 255, 255)
+			else
+				targetBgColor = Color3.fromHex("#2B1B42")
+				targetGrad = ColorSequence.new(Color3.fromHex("#2B1B42"), Color3.fromHex("#190F29"))
+				targetStrokeColor = Color3.fromHex("#E4BA73")
+				targetTitleColor = Color3.fromHex("#FDE047")
+				targetCostColor = Color3.fromHex("#F6F4FF")
+			end
+		else -- "Secondary"
+			if isHovered then
+				targetBgColor = Color3.fromHex("#231934")
+				targetGrad = ColorSequence.new(Color3.fromHex("#231934"), Color3.fromHex("#231934"))
+				targetStrokeColor = Color3.fromHex("#C084FC")
+				targetTitleColor = Color3.fromRGB(255, 255, 255)
+				targetCostColor = Color3.fromRGB(255, 255, 255)
+			else
+				targetBgColor = Color3.fromHex("#161020")
+				targetGrad = ColorSequence.new(Color3.fromHex("#161020"), Color3.fromHex("#161020"))
+				targetStrokeColor = Color3.fromHex("#564770")
+				targetTitleColor = Color3.fromHex("#E2D9F3")
+				targetCostColor = Color3.fromHex("#E2D9F3")
+			end
+		end
 
-		local targetCostColor = if isHovered
-			then (customCfg.COLOR_COST_HOVER or CONFIG.COLOR_COST_HOVER)
-			else (customCfg.COLOR_COST or CONFIG.COLOR_COST)
+		panelGrad.Color = targetGrad
 
 		local targetScale = if isPressed then 0.97 else 1.0
 		local scaleTInfo = if isPressed
 			then TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 			else TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
-		tween(frameImage, tInfo, {
-			ImageColor3 = targetFrameColor,
-			ImageTransparency = 0,
-		})
 		tween(darkPanel, tInfo, {
+			BackgroundColor3 = targetBgColor,
 			BackgroundTransparency = 0,
+		})
+		tween(panelStroke, tInfo, {
+			Color = targetStrokeColor,
 		})
 		tween(titleLabel, tInfo, {
 			TextColor3 = targetTitleColor,
