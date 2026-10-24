@@ -1101,6 +1101,106 @@ function GothicVectorIcons.CreateAura(opts: IconOptions?): Frame
 end
 
 --------------------------------------------------------------------------------
+-- 9. PROGRESSION RIGHT ARROW (Vector Directional Ascension Arrow)
+--------------------------------------------------------------------------------
+function GothicVectorIcons.CreateRightArrow(opts: IconOptions?): Frame
+	local o = opts or {}
+	local baseZ = o.ZIndex or 43
+	local accent = o.AccentColor or Color3.fromRGB(200, 162, 200)
+
+	local root = new("Frame", {
+		Name = "VectorRightArrow",
+		BackgroundTransparency = 1,
+		Size = o.Size or UDim2.fromOffset(60, 32),
+		Position = o.Position or UDim2.fromScale(0.5, 0.5),
+		AnchorPoint = o.AnchorPoint or Vector2.new(0.5, 0.5),
+		ZIndex = baseZ,
+	}, o.Parent)
+
+	local bright = Color3.fromRGB(
+		math.clamp(math.floor(accent.R * 255 * 1.25 + 20), 0, 255),
+		math.clamp(math.floor(accent.G * 255 * 1.25 + 20), 0, 255),
+		math.clamp(math.floor(accent.B * 255 * 1.25 + 20), 0, 255)
+	)
+
+	-- Outer Atmospheric Glow
+	local glow = new("Frame", {
+		Name = "Glow",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.new(1, -8, 0, 22),
+		BackgroundColor3 = accent,
+		BackgroundTransparency = 0.88,
+		BorderSizePixel = 0,
+		ZIndex = baseZ,
+	}, root)
+	new("UICorner", { CornerRadius = UDim.new(0, 11) }, glow)
+
+	-- Central Horizontal Shaft
+	local shaft = new("Frame", {
+		Name = "Shaft",
+		AnchorPoint = Vector2.new(0, 0.5),
+		Position = UDim2.new(0, 8, 0.5, 0),
+		Size = UDim2.new(1, -18, 0, 3.5),
+		BackgroundColor3 = accent,
+		BorderSizePixel = 0,
+		ZIndex = baseZ + 1,
+	}, root)
+	new("UICorner", { CornerRadius = UDim.new(1, 0) }, shaft)
+
+	new("UIGradient", {
+		Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0.0, Color3.fromRGB(
+				math.floor(accent.R * 255 * 0.75),
+				math.floor(accent.G * 255 * 0.75),
+				math.floor(accent.B * 255 * 0.75)
+			)),
+			ColorSequenceKeypoint.new(0.65, accent),
+			ColorSequenceKeypoint.new(1.0, bright),
+		}),
+	}, shaft)
+
+	-- Arrowhead Wings (Chevron pointing right)
+	local wingTop = new("Frame", {
+		Name = "WingTop",
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, -10, 0.5, 0),
+		Size = UDim2.new(0, 14, 0, 3.5),
+		Rotation = 38,
+		BackgroundColor3 = bright,
+		BorderSizePixel = 0,
+		ZIndex = baseZ + 2,
+	}, root)
+	new("UICorner", { CornerRadius = UDim.new(1, 0) }, wingTop)
+
+	local wingBottom = new("Frame", {
+		Name = "WingBottom",
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, -10, 0.5, 0),
+		Size = UDim2.new(0, 14, 0, 3.5),
+		Rotation = -38,
+		BackgroundColor3 = bright,
+		BorderSizePixel = 0,
+		ZIndex = baseZ + 2,
+	}, root)
+	new("UICorner", { CornerRadius = UDim.new(1, 0) }, wingBottom)
+
+	-- Seamless Vertex Tip
+	local tip = new("Frame", {
+		Name = "Tip",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new(1, -10.5, 0.5, 0),
+		Size = UDim2.fromOffset(5, 5),
+		Rotation = 45,
+		BackgroundColor3 = bright,
+		BorderSizePixel = 0,
+		ZIndex = baseZ + 3,
+	}, root)
+
+	return root
+end
+
+--------------------------------------------------------------------------------
 -- GENERAL DISPATCHER
 --------------------------------------------------------------------------------
 function GothicVectorIcons.Create(name: string, opts: IconOptions?): Frame
@@ -1121,6 +1221,8 @@ function GothicVectorIcons.Create(name: string, opts: IconOptions?): Frame
 		return GothicVectorIcons.CreateTower(opts)
 	elseif n == "aura" then
 		return GothicVectorIcons.CreateAura(opts)
+	elseif n == "arrow" or n == "rightarrow" or n == "right_arrow" then
+		return GothicVectorIcons.CreateRightArrow(opts)
 	else
 		-- Fallback to gold or generic diamond
 		return GothicVectorIcons.CreateGold(opts)
