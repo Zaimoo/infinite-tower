@@ -5,15 +5,15 @@
 
 local Buildings = {}
 local Architecture = require(script.Parent:WaitForChild("PlotFacilityArchitecture"))
-local VERSION = 11
+local VERSION = 12
 
 local definitions = {
 	-- North Courtyard: Recovery & Summoning (Symmetric Pair at Z = -35)
 	{Id = "Infirmary", Title = "INFIRMARY", Subtitle = "REST & RECOVERY", X = -75, Z = -35, Color = Color3.fromRGB(100, 232, 175)},
 	{Id = "Summoning", Title = "SUMMONING", Subtitle = "CALL OF THE RIFT", X = 75, Z = -35, Color = Color3.fromRGB(96, 191, 255)},
 
-	-- Center Courtyard: Heraldic Squad Command Standard
-	{Id = "SquadManagement", Title = "SQUAD DEPLOY", Subtitle = "5 ACTIVE SLOTS", X = 0, Z = 0, Color = Color3.fromRGB(245, 128, 99)},
+	-- Center-Left Courtyard: Heraldic Squad Command Standard (Flanking the Central Fountain)
+	{Id = "SquadManagement", Title = "SQUAD DEPLOY", Subtitle = "5 ACTIVE SLOTS", X = 30, Z = 0, Color = Color3.fromRGB(245, 128, 99)},
 
 	-- Mid Courtyard: The Pit (Synthesis & Promotion) & The Blacksmith Forge (Symmetric Pair at Z = 28)
 	{Id = "ThePit", Title = "THE PIT", Subtitle = "SYNTHESIS & PROMOTION", X = -75, Z = 28, Color = Color3.fromRGB(177, 110, 255)},
@@ -101,7 +101,7 @@ function Buildings.Build(plot: Instance)
 		local position = origin:PointToWorldSpace(Vector3.new(def.X, 0, def.Z))
 		local outward = position - origin.Position
 		local frame: CFrame
-		if outward.Magnitude < 0.1 then
+		if def.Id == "SquadManagement" or outward.Magnitude < 0.1 then
 			frame = origin * CFrame.new(def.X, 0, def.Z)
 		else
 			frame = CFrame.lookAt(position, position + outward)
