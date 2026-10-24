@@ -1,17 +1,25 @@
 --!strict
 -- Part 2/4 Tower Room Builder: constructs all 50 playable floors across 10 biomes
 -- and 5 architectural layout variants per biome while preserving safe arrival,
--- camera enclosure, flat combat navigation, and travel pedestals.
+-- camera enclosure, multi-tier traversal, sanctuary extraction, and travel pedestals.
 local Config = require(game.ReplicatedStorage.Shared.Config.TowerFloorConfig)
+local Layout = require(game.ReplicatedStorage.Shared.Config.TowerLayout)
+local BiomeAssets = require(script.Parent.TowerBiomeAssets)
 local Builder = {}
 
-type BiomeTheme = {
+export type BiomeTheme = {
 	GroundColor: Color3,
+	SubFloorColor: Color3,
+	CliffColor: Color3,
 	WallColor: Color3,
+	SkyColor: Color3,
+	HorizonColor: Color3,
 	TrimColor: Color3,
 	AccentColor: Color3,
 	LightColor: Color3,
+	LiquidColor: Color3,
 	GroundMaterial: Enum.Material,
+	CliffMaterial: Enum.Material,
 	WallMaterial: Enum.Material,
 	TrimMaterial: Enum.Material,
 	PropKind: string,
@@ -19,112 +27,172 @@ type BiomeTheme = {
 
 local Themes: { [string]: BiomeTheme } = {
 	verdant_ruins = {
-		GroundColor = Color3.fromRGB(54, 66, 56),
-		WallColor = Color3.fromRGB(44, 52, 46),
-		TrimColor = Color3.fromRGB(96, 114, 98),
-		AccentColor = Color3.fromRGB(72, 128, 58),
-		LightColor = Color3.fromRGB(165, 240, 145),
-		GroundMaterial = Enum.Material.Slate,
-		WallMaterial = Enum.Material.Cobblestone,
+		GroundColor = Color3.fromRGB(64, 88, 58),
+		SubFloorColor = Color3.fromRGB(34, 58, 48),
+		CliffColor = Color3.fromRGB(72, 82, 68),
+		WallColor = Color3.fromRGB(98, 142, 128),
+		SkyColor = Color3.fromRGB(152, 198, 184),
+		HorizonColor = Color3.fromRGB(245, 220, 155),
+		TrimColor = Color3.fromRGB(132, 138, 118),
+		AccentColor = Color3.fromRGB(82, 148, 66),
+		LightColor = Color3.fromRGB(255, 232, 165),
+		LiquidColor = Color3.fromRGB(38, 158, 132),
+		GroundMaterial = Enum.Material.Cobblestone,
+		CliffMaterial = Enum.Material.Rock,
+		WallMaterial = Enum.Material.SmoothPlastic,
 		TrimMaterial = Enum.Material.Slate,
 		PropKind = "RUIN_PILLAR",
 	},
 	fungal_hollow = {
-		GroundColor = Color3.fromRGB(46, 36, 58),
-		WallColor = Color3.fromRGB(36, 28, 48),
-		TrimColor = Color3.fromRGB(88, 66, 112),
-		AccentColor = Color3.fromRGB(64, 175, 162),
-		LightColor = Color3.fromRGB(115, 255, 225),
-		GroundMaterial = Enum.Material.Slate,
+		GroundColor = Color3.fromRGB(46, 40, 66),
+		SubFloorColor = Color3.fromRGB(24, 22, 42),
+		CliffColor = Color3.fromRGB(38, 32, 58),
+		WallColor = Color3.fromRGB(24, 28, 52),
+		SkyColor = Color3.fromRGB(30, 42, 74),
+		HorizonColor = Color3.fromRGB(85, 195, 235),
+		TrimColor = Color3.fromRGB(92, 78, 124),
+		AccentColor = Color3.fromRGB(118, 78, 215),
+		LightColor = Color3.fromRGB(95, 245, 235),
+		LiquidColor = Color3.fromRGB(36, 128, 168),
+		GroundMaterial = Enum.Material.Cobblestone,
+		CliffMaterial = Enum.Material.Slate,
 		WallMaterial = Enum.Material.Slate,
-		TrimMaterial = Enum.Material.SmoothPlastic,
+		TrimMaterial = Enum.Material.Rock,
 		PropKind = "GIANT_MUSHROOM",
 	},
-	sunken_sanctuary = {
-		GroundColor = Color3.fromRGB(34, 58, 72),
-		WallColor = Color3.fromRGB(28, 46, 58),
-		TrimColor = Color3.fromRGB(78, 122, 138),
-		AccentColor = Color3.fromRGB(212, 104, 94),
-		LightColor = Color3.fromRGB(110, 225, 255),
-		GroundMaterial = Enum.Material.Slate,
-		WallMaterial = Enum.Material.Brick,
-		TrimMaterial = Enum.Material.Marble,
-		PropKind = "CORAL_SPIRE",
-	},
 	ashen_dunes = {
-		GroundColor = Color3.fromRGB(98, 76, 54),
-		WallColor = Color3.fromRGB(78, 58, 42),
-		TrimColor = Color3.fromRGB(154, 118, 78),
-		AccentColor = Color3.fromRGB(210, 155, 75),
-		LightColor = Color3.fromRGB(255, 185, 95),
-		GroundMaterial = Enum.Material.Sandstone,
-		WallMaterial = Enum.Material.Sandstone,
-		TrimMaterial = Enum.Material.Granite,
+		GroundColor = Color3.fromRGB(52, 44, 42),
+		SubFloorColor = Color3.fromRGB(34, 28, 28),
+		CliffColor = Color3.fromRGB(30, 24, 26),
+		WallColor = Color3.fromRGB(84, 38, 30),
+		SkyColor = Color3.fromRGB(112, 46, 32),
+		HorizonColor = Color3.fromRGB(255, 135, 55),
+		TrimColor = Color3.fromRGB(114, 88, 70),
+		AccentColor = Color3.fromRGB(245, 115, 42),
+		LightColor = Color3.fromRGB(255, 165, 75),
+		LiquidColor = Color3.fromRGB(255, 92, 24),
+		GroundMaterial = Enum.Material.Sand,
+		CliffMaterial = Enum.Material.Basalt,
+		WallMaterial = Enum.Material.SmoothPlastic,
+		TrimMaterial = Enum.Material.Sandstone,
 		PropKind = "OBELISK",
 	},
 	frozen_citadel = {
-		GroundColor = Color3.fromRGB(62, 84, 110),
-		WallColor = Color3.fromRGB(48, 66, 88),
-		TrimColor = Color3.fromRGB(145, 188, 225),
-		AccentColor = Color3.fromRGB(185, 230, 255),
-		LightColor = Color3.fromRGB(145, 235, 255),
+		GroundColor = Color3.fromRGB(78, 104, 134),
+		SubFloorColor = Color3.fromRGB(44, 68, 98),
+		CliffColor = Color3.fromRGB(58, 82, 112),
+		WallColor = Color3.fromRGB(42, 62, 92),
+		SkyColor = Color3.fromRGB(52, 82, 122),
+		HorizonColor = Color3.fromRGB(145, 235, 255),
+		TrimColor = Color3.fromRGB(165, 208, 238),
+		AccentColor = Color3.fromRGB(115, 225, 255),
+		LightColor = Color3.fromRGB(155, 240, 255),
+		LiquidColor = Color3.fromRGB(115, 205, 238),
 		GroundMaterial = Enum.Material.Slate,
-		WallMaterial = Enum.Material.Brick,
+		CliffMaterial = Enum.Material.Glacier,
+		WallMaterial = Enum.Material.SmoothPlastic,
 		TrimMaterial = Enum.Material.Ice,
 		PropKind = "ICE_CRYSTAL",
 	},
-	thunder_highlands = {
-		GroundColor = Color3.fromRGB(52, 56, 76),
-		WallColor = Color3.fromRGB(40, 44, 62),
-		TrimColor = Color3.fromRGB(104, 112, 148),
-		AccentColor = Color3.fromRGB(225, 195, 88),
-		LightColor = Color3.fromRGB(255, 230, 120),
-		GroundMaterial = Enum.Material.Slate,
-		WallMaterial = Enum.Material.Granite,
-		TrimMaterial = Enum.Material.Metal,
-		PropKind = "STORM_COIL",
-	},
 	infernal_foundry = {
 		GroundColor = Color3.fromRGB(44, 34, 36),
-		WallColor = Color3.fromRGB(34, 26, 28),
-		TrimColor = Color3.fromRGB(88, 56, 52),
-		AccentColor = Color3.fromRGB(215, 95, 42),
-		LightColor = Color3.fromRGB(255, 130, 55),
+		SubFloorColor = Color3.fromRGB(26, 18, 20),
+		CliffColor = Color3.fromRGB(34, 24, 26),
+		WallColor = Color3.fromRGB(42, 20, 18),
+		SkyColor = Color3.fromRGB(48, 22, 18),
+		HorizonColor = Color3.fromRGB(255, 115, 35),
+		TrimColor = Color3.fromRGB(74, 54, 52),
+		AccentColor = Color3.fromRGB(255, 108, 32),
+		LightColor = Color3.fromRGB(255, 145, 55),
+		LiquidColor = Color3.fromRGB(255, 98, 18),
 		GroundMaterial = Enum.Material.Basalt,
-		WallMaterial = Enum.Material.Metal,
-		TrimMaterial = Enum.Material.DiamondPlate,
+		CliffMaterial = Enum.Material.Basalt,
+		WallMaterial = Enum.Material.Slate,
+		TrimMaterial = Enum.Material.Metal,
 		PropKind = "FURNACE_STACK",
 	},
+	thunder_highlands = {
+		GroundColor = Color3.fromRGB(62, 74, 66),
+		SubFloorColor = Color3.fromRGB(44, 50, 66),
+		CliffColor = Color3.fromRGB(74, 78, 88),
+		WallColor = Color3.fromRGB(42, 46, 76),
+		SkyColor = Color3.fromRGB(48, 52, 88),
+		HorizonColor = Color3.fromRGB(155, 145, 255),
+		TrimColor = Color3.fromRGB(112, 118, 136),
+		AccentColor = Color3.fromRGB(125, 165, 255),
+		LightColor = Color3.fromRGB(165, 195, 255),
+		LiquidColor = Color3.fromRGB(215, 225, 245),
+		GroundMaterial = Enum.Material.Cobblestone,
+		CliffMaterial = Enum.Material.Rock,
+		WallMaterial = Enum.Material.SmoothPlastic,
+		TrimMaterial = Enum.Material.Slate,
+		PropKind = "STORM_COIL",
+	},
 	corrupted_grove = {
-		GroundColor = Color3.fromRGB(44, 34, 46),
-		WallColor = Color3.fromRGB(34, 26, 36),
-		TrimColor = Color3.fromRGB(84, 58, 78),
-		AccentColor = Color3.fromRGB(158, 68, 142),
-		LightColor = Color3.fromRGB(220, 110, 250),
+		GroundColor = Color3.fromRGB(46, 32, 50),
+		SubFloorColor = Color3.fromRGB(28, 18, 34),
+		CliffColor = Color3.fromRGB(36, 24, 40),
+		WallColor = Color3.fromRGB(48, 22, 46),
+		SkyColor = Color3.fromRGB(64, 28, 60),
+		HorizonColor = Color3.fromRGB(235, 85, 185),
+		TrimColor = Color3.fromRGB(88, 64, 92),
+		AccentColor = Color3.fromRGB(215, 62, 165),
+		LightColor = Color3.fromRGB(245, 95, 205),
+		LiquidColor = Color3.fromRGB(115, 36, 108),
 		GroundMaterial = Enum.Material.Slate,
-		WallMaterial = Enum.Material.Wood,
-		TrimMaterial = Enum.Material.Wood,
+		CliffMaterial = Enum.Material.Rock,
+		WallMaterial = Enum.Material.SmoothPlastic,
+		TrimMaterial = Enum.Material.Cobblestone,
 		PropKind = "BLIGHT_TREE",
 	},
-	astral_archives = {
-		GroundColor = Color3.fromRGB(38, 42, 72),
-		WallColor = Color3.fromRGB(28, 32, 56),
-		TrimColor = Color3.fromRGB(92, 102, 164),
-		AccentColor = Color3.fromRGB(225, 196, 118),
-		LightColor = Color3.fromRGB(165, 215, 255),
-		GroundMaterial = Enum.Material.Marble,
-		WallMaterial = Enum.Material.Slate,
+	sunken_sanctuary = {
+		GroundColor = Color3.fromRGB(154, 178, 172),
+		SubFloorColor = Color3.fromRGB(34, 92, 112),
+		CliffColor = Color3.fromRGB(118, 148, 146),
+		WallColor = Color3.fromRGB(32, 108, 132),
+		SkyColor = Color3.fromRGB(48, 152, 178),
+		HorizonColor = Color3.fromRGB(145, 245, 255),
+		TrimColor = Color3.fromRGB(198, 206, 190),
+		AccentColor = Color3.fromRGB(235, 188, 92),
+		LightColor = Color3.fromRGB(125, 238, 255),
+		LiquidColor = Color3.fromRGB(42, 182, 204),
+		GroundMaterial = Enum.Material.Limestone,
+		CliffMaterial = Enum.Material.Sandstone,
+		WallMaterial = Enum.Material.SmoothPlastic,
 		TrimMaterial = Enum.Material.Marble,
+		PropKind = "CORAL_SPIRE",
+	},
+	astral_archives = {
+		GroundColor = Color3.fromRGB(196, 204, 222),
+		SubFloorColor = Color3.fromRGB(24, 28, 58),
+		CliffColor = Color3.fromRGB(42, 48, 86),
+		WallColor = Color3.fromRGB(20, 24, 52),
+		SkyColor = Color3.fromRGB(26, 30, 68),
+		HorizonColor = Color3.fromRGB(145, 165, 255),
+		TrimColor = Color3.fromRGB(212, 176, 96),
+		AccentColor = Color3.fromRGB(235, 198, 112),
+		LightColor = Color3.fromRGB(165, 215, 255),
+		LiquidColor = Color3.fromRGB(78, 122, 232),
+		GroundMaterial = Enum.Material.Marble,
+		CliffMaterial = Enum.Material.Marble,
+		WallMaterial = Enum.Material.SmoothPlastic,
+		TrimMaterial = Enum.Material.Metal,
 		PropKind = "ARCHIVE_STACK",
 	},
 	abyssal_throne = {
-		GroundColor = Color3.fromRGB(32, 22, 32),
-		WallColor = Color3.fromRGB(24, 16, 26),
-		TrimColor = Color3.fromRGB(82, 32, 48),
-		AccentColor = Color3.fromRGB(185, 38, 64),
-		LightColor = Color3.fromRGB(255, 82, 108),
+		GroundColor = Color3.fromRGB(32, 26, 40),
+		SubFloorColor = Color3.fromRGB(16, 22, 32),
+		CliffColor = Color3.fromRGB(22, 18, 30),
+		WallColor = Color3.fromRGB(18, 14, 28),
+		SkyColor = Color3.fromRGB(22, 18, 36),
+		HorizonColor = Color3.fromRGB(155, 95, 245),
+		TrimColor = Color3.fromRGB(162, 136, 86),
+		AccentColor = Color3.fromRGB(152, 88, 235),
+		LightColor = Color3.fromRGB(95, 228, 242),
+		LiquidColor = Color3.fromRGB(48, 178, 196),
 		GroundMaterial = Enum.Material.Basalt,
-		WallMaterial = Enum.Material.Metal,
+		CliffMaterial = Enum.Material.Basalt,
+		WallMaterial = Enum.Material.SmoothPlastic,
 		TrimMaterial = Enum.Material.Marble,
 		PropKind = "THRONE_SPIRE",
 	},
@@ -132,7 +200,7 @@ local Themes: { [string]: BiomeTheme } = {
 
 function Builder.Origin(id: number): Vector3
 	if id == 0 then return Vector3.zero end
-	return Vector3.new(12000 + ((id - 1) % 10) * 1800, 1000, 12000 + math.floor((id - 1) / 10) * 1800)
+	return Vector3.new(12000 + ((id - 1) % 10) * 2400, 1000, 12000 + math.floor((id - 1) / 10) * 2400)
 end
 
 local function part(parent: Instance, name: string, size: Vector3, pos: Vector3, color: Color3, mat: Enum.Material?, canCollide: boolean?): Part
@@ -150,33 +218,18 @@ local function part(parent: Instance, name: string, size: Vector3, pos: Vector3,
 	return p
 end
 
-local function buildBiomeProp(parent: Instance, theme: BiomeTheme, basePos: Vector3, heightScale: number)
-	local h = 18 * heightScale
-	local kind = theme.PropKind
-	if kind == "GIANT_MUSHROOM" then
-		part(parent, "FungalStalk", Vector3.new(4.5, h, 4.5), basePos + Vector3.new(0, h * 0.5, 0), theme.TrimColor, theme.TrimMaterial)
-		local cap = part(parent, "FungalCap", Vector3.new(3.5, 13 * heightScale, 13 * heightScale), basePos + Vector3.new(0, h + 1, 0), theme.AccentColor, Enum.Material.SmoothPlastic, false)
-		cap.Shape = Enum.PartType.Cylinder
-		cap.CFrame = CFrame.new(basePos + Vector3.new(0, h + 1, 0)) * CFrame.Angles(0, 0, math.pi / 2)
-		part(parent, "SporeGlow", Vector3.new(5, 0.6, 5), basePos + Vector3.new(0, h - 0.6, 0), theme.LightColor, Enum.Material.Neon, false)
-	elseif kind == "ICE_CRYSTAL" or kind == "CORAL_SPIRE" then
-		part(parent, "SpireBase", Vector3.new(7, 3, 7), basePos + Vector3.new(0, 1.5, 0), theme.TrimColor, theme.TrimMaterial)
-		part(parent, "CrystalShaft", Vector3.new(4.5, h, 4.5), basePos + Vector3.new(0, h * 0.5 + 2, 0), theme.AccentColor, theme.TrimMaterial)
-		part(parent, "CrystalTip", Vector3.new(2.4, 4.5, 2.4), basePos + Vector3.new(0, h + 4, 0), theme.LightColor, Enum.Material.Neon, false)
-	elseif kind == "STORM_COIL" or kind == "FURNACE_STACK" then
-		part(parent, "IndustrialPillar", Vector3.new(6.5, h, 6.5), basePos + Vector3.new(0, h * 0.5, 0), theme.TrimColor, theme.TrimMaterial)
-		part(parent, "EnergyRing1", Vector3.new(8.2, 1.2, 8.2), basePos + Vector3.new(0, h * 0.45, 0), theme.LightColor, Enum.Material.Neon, false)
-		part(parent, "EnergyRing2", Vector3.new(8.2, 1.2, 8.2), basePos + Vector3.new(0, h * 0.8, 0), theme.LightColor, Enum.Material.Neon, false)
-	elseif kind == "BLIGHT_TREE" then
-		part(parent, "TwistedTrunk", Vector3.new(5.5, h, 5.5), basePos + Vector3.new(0, h * 0.5, 0), theme.TrimColor, Enum.Material.Wood)
-		part(parent, "BlightCanopy", Vector3.new(12 * heightScale, 4, 12 * heightScale), basePos + Vector3.new(0, h + 1.5, 0), theme.AccentColor, Enum.Material.Slate, false)
-		part(parent, "HeartrotNode", Vector3.new(2.2, 2.2, 2.2), basePos + Vector3.new(0, h * 0.55, 0), theme.LightColor, Enum.Material.Neon, false)
-	else
-		part(parent, "PillarBase", Vector3.new(8, 3, 8), basePos + Vector3.new(0, 1.5, 0), theme.TrimColor, theme.TrimMaterial)
-		part(parent, "PillarShaft", Vector3.new(5.5, h, 5.5), basePos + Vector3.new(0, h * 0.5 + 1.5, 0), theme.TrimColor, theme.TrimMaterial)
-		part(parent, "PillarCap", Vector3.new(8.5, 2.5, 8.5), basePos + Vector3.new(0, h + 3, 0), theme.AccentColor, theme.TrimMaterial)
-		part(parent, "PillarRune", Vector3.new(6.2, 1.4, 6.2), basePos + Vector3.new(0, h * 0.6, 0), theme.LightColor, Enum.Material.Neon, false)
-	end
+local function decor(parent: Instance, name: string, size: Vector3, pos: Vector3, color: Color3, mat: Enum.Material?, transparency: number?): Part
+	local solid = name == "BridgeCurb" or name == "SanctuarySideWall"
+  or name == "TerraceRockOutcrop" or name == "TerraceCornerPedestal"
+  or name == "TerraceMasonryBand" or name == "TerraceSideBand"
+  or name == "TerracePlinthX" or name == "TerracePlinthZ" or name == "ViaductPier"
+ local p = part(parent, name, size, pos, color, mat, solid)
+ p.CanQuery = solid
+ p:SetAttribute("SolidScenery", solid)
+	p.CanTouch = false
+	p.CastShadow = false
+	if transparency then p.Transparency = transparency end
+	return p
 end
 
 function Builder.Build(id: number, generation: number): any
@@ -185,6 +238,8 @@ function Builder.Build(id: number, generation: number): any
 	local theme = Themes[floorSpec.BiomeId] or Themes.verdant_ruins
 	local origin = Builder.Origin(id)
 	local idx = floorSpec.IndexInBiome
+	local layout = Layout.Get(idx)
+	local safe = layout.Sanctuary
 
 	local model = Instance.new("Model")
 	model.Name = string.format("Floor_%02d", id)
@@ -198,100 +253,205 @@ function Builder.Build(id: number, generation: number): any
 	model:SetAttribute("ContentStatus", "LOCAL_AUTHORED_PROTOTYPE")
 	model:SetAttribute("EncountersEnabled", false)
 
-	-- Room envelope (camera-isolated 248x84x248 chamber)
-	part(model, "Ground", Vector3.new(248, 4, 248), origin - Vector3.new(0, 2, 0), theme.GroundColor, theme.GroundMaterial)
-	for _, s in { -1, 1 } do
-		part(model, "WallX", Vector3.new(6, 84, 248), origin + Vector3.new(s * 124, 40, 0), theme.WallColor, theme.WallMaterial)
-		part(model, "WallZ", Vector3.new(248, 84, 6), origin + Vector3.new(0, 40, s * 124), theme.WallColor, theme.WallMaterial)
-		part(model, "WallTrimX", Vector3.new(2, 6, 240), origin + Vector3.new(s * 120, 3, 0), theme.TrimColor, theme.TrimMaterial)
+	local width, depth, height = layout.Width, layout.Depth, layout.Height
+	model:SetAttribute("Width", width)
+	model:SetAttribute("Depth", depth)
+	model:SetAttribute("Height", height)
+	model:SetAttribute("CampCount", #layout.Camps)
+
+	-- Base sub-floor and sky/cavern enclosure
+	part(model, "Ground", Vector3.new(width, 4, depth), origin + Vector3.new(0, layout.Bottom - 2, 0), theme.SubFloorColor, theme.GroundMaterial)
+	for _, side in { -1, 1 } do
+		part(model, "WallX", Vector3.new(6, height + 16, depth), origin + Vector3.new(side * (width / 2 + 3), height / 2 - 8, 0), theme.WallColor, theme.WallMaterial)
+		part(model, "WallZ", Vector3.new(width + 12, height + 16, 6), origin + Vector3.new(0, height / 2 - 8, side * (depth / 2 + 3)), theme.WallColor, theme.WallMaterial)
 	end
-	part(model, "OpaqueCeiling", Vector3.new(254, 6, 254), origin + Vector3.new(0, 84, 0), theme.WallColor, theme.WallMaterial)
+	part(model, "OpaqueCeiling", Vector3.new(width + 12, 6, depth + 12), origin + Vector3.new(0, height + 3, 0), theme.SkyColor, theme.WallMaterial)
 
-	-- Flush non-colliding walkway inlay from SafeArrival to Combat Court
-	part(model, "SanctumWalkway", Vector3.new(26, 0.12, 130), origin + Vector3.new(0, 0.04, 10), theme.TrimColor, theme.TrimMaterial, false)
+	local isNatural = floorSpec.BiomeId == "verdant_ruins"
+		or floorSpec.BiomeId == "fungal_hollow"
+		or floorSpec.BiomeId == "ashen_dunes"
+		or floorSpec.BiomeId == "thunder_highlands"
+		or floorSpec.BiomeId == "corrupted_grove"
 
-	-- SafeArrival platform & arrival lighting
-	local landing = part(model, "SafeArrival", Vector3.new(70, .2, 42), origin + Vector3.new(0, .1, 90), Color3.fromRGB(45, 100, 115), Enum.Material.Marble)
+	for name, terrace in layout.Platforms do
+		local thickness = terrace.Y - layout.Bottom + 4
+		local slab = part(
+			model,
+			if name == "Sanctuary" then "SafeArrival" else name,
+			Vector3.new(terrace.Width, thickness, terrace.Depth),
+			origin + Vector3.new(terrace.X, terrace.Y - thickness / 2, terrace.Z),
+			theme.GroundColor,
+			theme.GroundMaterial
+		)
+		slab:SetAttribute("SurfaceY", terrace.Y)
+		slab:SetAttribute("TerraceId", name)
+
+		local topCenter = origin + Vector3.new(terrace.X, terrace.Y, terrace.Z)
+		decor(model, "TerraceCenterMosaic", Vector3.new(terrace.Width * 0.62, 0.08, terrace.Depth * 0.62), topCenter + Vector3.new(0, 0.02, 0), theme.TrimColor, theme.TrimMaterial)
+		decor(model, "TerraceInnerField", Vector3.new(terrace.Width * 0.52, 0.1, terrace.Depth * 0.52), topCenter + Vector3.new(0, 0.03, 0), theme.GroundColor, theme.GroundMaterial)
+
+		for _, side in { -1, 1 } do
+			decor(model, "TerraceMasonryBand", Vector3.new(terrace.Width + 2, 1.4, 2.2), topCenter + Vector3.new(0, -0.7, side * (terrace.Depth / 2)), theme.TrimColor, theme.TrimMaterial)
+			decor(model, "TerraceSideBand", Vector3.new(2.2, 1.4, terrace.Depth + 2), topCenter + Vector3.new(side * (terrace.Width / 2), -0.7, 0), theme.TrimColor, theme.TrimMaterial)
+			if thickness > 5 then
+				decor(model, "TerracePlinthZ", Vector3.new(terrace.Width + 6, thickness * 0.65, 4), origin + Vector3.new(terrace.X, layout.Bottom + thickness * 0.32 - 2, terrace.Z + side * (terrace.Depth / 2 + 1)), theme.CliffColor, theme.CliffMaterial)
+				decor(model, "TerracePlinthX", Vector3.new(4, thickness * 0.65, terrace.Depth + 6), origin + Vector3.new(terrace.X + side * (terrace.Width / 2 + 1), layout.Bottom + thickness * 0.32 - 2, terrace.Z), theme.CliffColor, theme.CliffMaterial)
+			end
+		end
+
+		if name ~= "Sanctuary" then
+			for _, sx in { -1, 1 } do
+				for _, sz in { -1, 1 } do
+					local corner = topCenter + Vector3.new(sx * (terrace.Width / 2 - 4), 0, sz * (terrace.Depth / 2 - 4))
+					if isNatural then
+						decor(model, "TerraceRockOutcrop", Vector3.new(7, 5, 7), corner + Vector3.new(0, 2.5, 0), theme.CliffColor, theme.CliffMaterial)
+						decor(model, "TerraceGlowFlora", Vector3.new(2.5, 3.2, 2.5), corner + Vector3.new(0, 5.5, 0), theme.LightColor, Enum.Material.SmoothPlastic, 0.15)
+					else
+						decor(model, "TerraceCornerPedestal", Vector3.new(5, 8, 5), corner + Vector3.new(0, 4, 0), theme.TrimColor, theme.TrimMaterial)
+						decor(model, "TerraceCornerBrazier", Vector3.new(3, 2.5, 3), corner + Vector3.new(0, 9, 0), theme.LightColor, Enum.Material.SmoothPlastic, 0.1)
+					end
+				end
+			end
+		end
+	end
+
+	for _, link in layout.Links do
+		local a = origin + Vector3.new(link.AX, link.AY, link.AZ)
+		local b = origin + Vector3.new(link.BX, link.BY, link.BZ)
+		local delta = b - a
+		local mid = (a + b) / 2
+		local flat = Vector3.new(delta.X, 0, delta.Z)
+		local flatUnit = if flat.Magnitude > 0.01 then flat.Unit else Vector3.new(0, 0, -1)
+		local right = Vector3.new(-flatUnit.Z, 0, flatUnit.X)
+
+		if link.From == "Crossing" and link.To == "Apex" then
+			local steps = math.max(1, math.ceil(math.abs(delta.Y)))
+			for step = 1, steps do
+				local t = (step - 0.5) / steps
+				local top = a.Y + delta.Y * step / steps
+				local center = a + flat * t
+				local tread = part(
+					model,
+					"GrandStairTread",
+					Vector3.new(link.Width, 2, flat.Magnitude / steps + 0.15),
+					Vector3.new(center.X, top - 1, center.Z),
+					theme.TrimColor,
+					theme.TrimMaterial
+				)
+				tread.CFrame = CFrame.lookAt(tread.Position, tread.Position + flat)
+				local runner = decor(model, "GrandStairRunner", Vector3.new(link.Width * 0.36, 0.08, flat.Magnitude / steps + 0.2), Vector3.new(center.X, top + 0.02, center.Z), theme.AccentColor, theme.TrimMaterial)
+				runner.CFrame = CFrame.lookAt(runner.Position, runner.Position + flat)
+			end
+		else
+			local ramp = part(model, "TraversalRamp", Vector3.new(link.Width, 2, delta.Magnitude), mid, theme.TrimColor, theme.TrimMaterial)
+			ramp.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, -1, 0)
+			local inlay = decor(model, "RampPathInlay", Vector3.new(link.Width * 0.55, 0.08, delta.Magnitude), mid, theme.AccentColor, theme.GroundMaterial)
+			inlay.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, 0.03, 0)
+		end
+
+		for _, side in { -1, 1 } do
+			local curbOffset = right * (side * (link.Width / 2 + 1.4))
+			local curb = decor(model, "BridgeCurb", Vector3.new(2.2, 2.6, delta.Magnitude), mid + curbOffset, theme.TrimColor, theme.TrimMaterial)
+			curb.CFrame = CFrame.lookAt(mid + curbOffset, b + curbOffset) * CFrame.new(0, -0.4, 0)
+			local glowStrip = decor(model, "BridgeRuneStrip", Vector3.new(0.45, 0.35, delta.Magnitude - 4), mid + curbOffset, theme.LightColor, Enum.Material.SmoothPlastic, 0.3)
+			glowStrip.CFrame = CFrame.lookAt(mid + curbOffset, b + curbOffset) * CFrame.new(0, 0.95, 0)
+		end
+		for _, frac in { 0.28, 0.72 } do
+			local pt = a:Lerp(b, frac)
+			local pierH = math.max(2, (pt.Y - origin.Y) - layout.Bottom)
+			for _, side in { -1, 1 } do
+				local pierPos = pt + right * (side * (link.Width / 2 - 2.5)) - Vector3.new(0, pierH / 2 + 1.5, 0)
+				decor(model, "ViaductPier", Vector3.new(4.5, pierH, 5.5), pierPos, theme.CliffColor, theme.CliffMaterial)
+			end
+		end
+	end
+
+	if layout.Bottom < 0 then
+		local basin = layout.Platforms.Basin
+		for _, side in { -1, 1 } do
+			local a = origin + Vector3.new(side * width * 0.37, layout.Bottom, basin.Z - basin.Depth / 2 - 28)
+			local b = origin + Vector3.new(side * width * 0.37, 0, basin.Z - basin.Depth / 2 + 4)
+			local ramp = part(model, "BasinReturnRamp", Vector3.new(32, 2, (b - a).Magnitude), (a + b) / 2, theme.GroundColor, theme.GroundMaterial)
+			ramp.CFrame = CFrame.lookAt((a + b) / 2, b) * CFrame.new(0, -1, 0)
+		end
+	end
+
+	BiomeAssets.Build(model, origin, floorSpec.BiomeId, idx, layout, theme)
+
+	for x = -width / 2 + 70, width / 2 - 50, 140 do
+		for z = -depth / 2 + 70, depth / 2 - 50, 140 do
+			local lamp = decor(model, "VaultLantern", Vector3.new(1, 1, 1), origin + Vector3.new(x, 38, z), theme.LightColor, Enum.Material.SmoothPlastic, 1)
+			local light = Instance.new("PointLight")
+			light.Range = 40
+			light.Brightness = 0.35
+			light.Color = theme.LightColor
+			light.Shadows = false
+			light.Parent = lamp
+		end
+	end
+
+	local landing = model:FindFirstChild("SafeArrival") :: BasePart
 	local light = Instance.new("PointLight")
-	light.Range = 60
-	light.Brightness = 2.6
 	light.Color = theme.LightColor
+	light.Range = 28
+	light.Brightness = 0.5
 	light.Parent = landing
 
-	for _, pos in { Vector3.new(-65, 22, -45), Vector3.new(65, 22, -45), Vector3.new(-65, 22, 25), Vector3.new(65, 22, 25), Vector3.new(0, 26, -15) } do
-		local lamp = part(model, "BiomeLantern", Vector3.new(2.5, 2.5, 2.5), origin + pos, theme.LightColor, Enum.Material.Neon, false)
-		local l = Instance.new("PointLight")
-		l.Range = 95
-		l.Brightness = 1.8
-		l.Color = theme.LightColor
-		l.Parent = lamp
-	end
+	local pad = part(model, "FloorExtractionPad", Vector3.new(25, 0.2, 18), origin + Vector3.new(0, 8.1, safe.Z - 5), theme.LightColor, Enum.Material.SmoothPlastic, false)
+	pad.CanQuery = false
+	pad.CanTouch = false
+	pad.Transparency = 0.25
+	pad:SetAttribute("FloorId", id)
+	decor(model, "ExtractionPadFrame", Vector3.new(27.5, 0.14, 20.5), origin + Vector3.new(0, 8.05, safe.Z - 5), theme.TrimColor, theme.TrimMaterial)
 
-	-- Variant-specific architecture outside the central combat navigation lane
-	local scaleBoost = 1 + (idx - 1) * 0.08
-	if idx == 1 then
-		-- INTRODUCTION: Entry gateway framing the threshold + 4 perimeter columns
-		for _, side in { -1, 1 } do
-			buildBiomeProp(model, theme, origin + Vector3.new(side * 54, 0, 38), scaleBoost)
-			buildBiomeProp(model, theme, origin + Vector3.new(side * 65, 0, -20), scaleBoost)
-		end
-		part(model, "ThresholdArch", Vector3.new(114, 4, 6), origin + Vector3.new(0, 22, 38), theme.TrimColor, theme.TrimMaterial)
-		if id == 1 then
-			for _, x in { -65, 65 } do
-				part(model, "RuinsFixture", Vector3.new(12, 18, 12), origin + Vector3.new(x, 9, -20), theme.TrimColor, theme.TrimMaterial)
-			end
-		end
-	elseif idx == 2 then
-		-- EXPANDED_ENCOUNTER: 6 colonnade pillars + lateral gallery beams
-		for _, side in { -1, 1 } do
-			for _, z in { 28, -8, -44 } do
-				buildBiomeProp(model, theme, origin + Vector3.new(side * 62, 0, z), scaleBoost)
-			end
-			part(model, "GalleryBeam", Vector3.new(5, 3, 84), origin + Vector3.new(side * 62, 21, -8), theme.TrimColor, theme.TrimMaterial)
-		end
-	elseif idx == 3 then
-		-- TERRAIN_VARIATION: Flush elemental channels + 6 staggered monoliths
-		for _, side in { -1, 1 } do
-			part(model, "ElementalChannel", Vector3.new(10, 0.14, 110), origin + Vector3.new(side * 38, 0.05, -12), theme.LightColor, Enum.Material.Neon, false)
-			for _, z in { 24, -14, -50 } do
-				buildBiomeProp(model, theme, origin + Vector3.new(side * 58, 0, z), scaleBoost * 1.08)
-			end
-		end
-		local ring = part(model, "ArenaCenterInlay", Vector3.new(0.14, 34, 34), origin + Vector3.new(0, 0.05, -14), theme.AccentColor, theme.TrimMaterial, false)
-		ring.Shape = Enum.PartType.Cylinder
-		ring.CFrame = CFrame.new(origin + Vector3.new(0, 0.05, -14)) * CFrame.Angles(0, 0, math.pi / 2)
-	elseif idx == 4 then
-		-- ELITE_STRONGHOLD: Twin gatehouse bastions + fortified perimeter buttresses
-		for _, side in { -1, 1 } do
-			part(model, "BastionTower", Vector3.new(14, 28, 14), origin + Vector3.new(side * 54, 14, 30), theme.TrimColor, theme.TrimMaterial)
-			part(model, "BastionCrest", Vector3.new(16, 3, 16), origin + Vector3.new(side * 54, 29, 30), theme.AccentColor, theme.TrimMaterial)
-			buildBiomeProp(model, theme, origin + Vector3.new(side * 60, 0, -16), scaleBoost * 1.12)
-			buildBiomeProp(model, theme, origin + Vector3.new(side * 56, 0, -52), scaleBoost * 1.15)
-		end
-		part(model, "StrongholdInlay", Vector3.new(64, 0.15, 28), origin + Vector3.new(0, 0.06, -44), theme.AccentColor, theme.TrimMaterial, false)
-	else
-		-- BOSS_ARENA (Floors 5, 10, ..., 50): Ceremonial boss dais, 8 temple columns, and apex backdrop monument
-		part(model, "BossDaisFixture", Vector3.new(60, 0.3, 60), origin + Vector3.new(0, 0.12, -54), theme.AccentColor, theme.TrimMaterial, false)
-		local bossRing = part(model, "BossRunicRing", Vector3.new(0.18, 46, 46), origin + Vector3.new(0, 0.14, -54), theme.LightColor, Enum.Material.Neon, false)
-		bossRing.Shape = Enum.PartType.Cylinder
-		bossRing.CFrame = CFrame.new(origin + Vector3.new(0, 0.14, -54)) * CFrame.Angles(0, 0, math.pi / 2)
-		for _, side in { -1, 1 } do
-			for _, z in { 26, -2, -30, -58 } do
-				buildBiomeProp(model, theme, origin + Vector3.new(side * 64, 0, z), 1.35)
-			end
-		end
-		part(model, "SanctumBackdrop", Vector3.new(44, 36, 10), origin + Vector3.new(0, 18, -94), theme.TrimColor, theme.TrimMaterial)
-		part(model, "SanctumCore", Vector3.new(12, 22, 2), origin + Vector3.new(0, 20, -88), theme.LightColor, Enum.Material.Neon, false)
-		if id == 50 then
-			for _, x in { -60, 60 } do
-				part(model, "ThroneProbeFixture", Vector3.new(16, 30, 16), origin + Vector3.new(x, 15, -55), theme.TrimColor, theme.TrimMaterial)
-			end
-		end
-	end
+	local altar = part(model, "UnpackagingAltar", Vector3.new(10, 4.5, 6), origin + Vector3.new(0, 10.25, safe.Z + 5), theme.TrimColor, theme.TrimMaterial, false)
+	altar.CanQuery = false
+	decor(model, "AltarCoreCrystal", Vector3.new(3.2, 5.5, 3.2), origin + Vector3.new(0, 14.5, safe.Z + 5), theme.LightColor, Enum.Material.SmoothPlastic, 0.1)
+	decor(model, "AltarCanopyArch", Vector3.new(16, 1.8, 8), origin + Vector3.new(0, 18.5, safe.Z + 5), theme.AccentColor, theme.TrimMaterial)
 
-	-- Travel pedestals in the Arrival Safe Zone
+	local signGui = Instance.new("BillboardGui")
+	signGui.Name = "ExtractionLabel"
+	signGui.Size = UDim2.fromOffset(400, 56)
+	signGui.StudsOffset = Vector3.new(0, 9, 0)
+	signGui.MaxDistance = 110
+	signGui.Parent = altar
+	local signText = Instance.new("TextLabel")
+	signText.Size = UDim2.fromScale(1, 1)
+	signText.BackgroundTransparency = 0.25
+	signText.BackgroundColor3 = Color3.fromRGB(20, 25, 32)
+	signText.TextColor3 = theme.LightColor
+	signText.Font = Enum.Font.GothamBold
+	signText.TextSize = 16
+	signText.Text = "📦 SAFE ZONE UNPACKAGING PAD\nBring Loot & Relics Here to Unpackage"
+	signText.Parent = signGui
+
+	local extractionPrompt = Instance.new("ProximityPrompt")
+	extractionPrompt.ActionText = "Unpackage Loot & Relics"
+	extractionPrompt.ObjectText = "Floor Safe Sanctuary"
+	extractionPrompt.MaxActivationDistance = 14
+	extractionPrompt.RequiresLineOfSight = false
+	extractionPrompt.KeyboardKeyCode = Enum.KeyCode.E
+	extractionPrompt:SetAttribute("FloorExtraction", true)
+	extractionPrompt.Parent = altar
+	extractionPrompt.Triggered:Connect(function(player)
+		if _G.RelicService then _G.RelicService.ExtractInFloorSafeZone(player) end
+	end)
+
+	for _, side in { -1, 1 } do
+		part(model, "SanctuaryPillar", Vector3.new(6, 36, 6), origin + Vector3.new(side * 42, 26, safe.Z - 25), theme.TrimColor, theme.TrimMaterial)
+		decor(model, "SanctuaryPillarCap", Vector3.new(8, 3, 8), origin + Vector3.new(side * 42, 45, safe.Z - 25), theme.AccentColor, theme.TrimMaterial)
+		decor(model, "SanctuaryPillarLantern", Vector3.new(3, 4.5, 3), origin + Vector3.new(side * 42, 48.5, safe.Z - 25), theme.LightColor, Enum.Material.SmoothPlastic, 0.1)
+		part(model, "SanctuaryRearColumn", Vector3.new(5, 24, 5), origin + Vector3.new(side * 42, 20, safe.Z + 24), theme.TrimColor, theme.TrimMaterial)
+		decor(model, "SanctuarySideWall", Vector3.new(2.5, 4.5, 48), origin + Vector3.new(side * 43, 10.2, safe.Z), theme.TrimColor, theme.TrimMaterial)
+		decor(model, "SanctuaryBoundary", Vector3.new(1, 0.2, 54), origin + Vector3.new(side * 43, 8.12, safe.Z), theme.LightColor, Enum.Material.SmoothPlastic, 0.2)
+	end
+	decor(model, "SanctuaryThreshold", Vector3.new(84, 0.2, 1.2), origin + Vector3.new(0, 8.12, safe.Z - 27), theme.LightColor, Enum.Material.SmoothPlastic, 0.2)
+
 	for i, action in { "PREVIOUS", "NEXT", "SELECTOR", "HUB" } do
-		local p = part(model, action, Vector3.new(10, 7, 4), origin + Vector3.new((i - 2.5) * 17, 3.5, 111), Color3.fromRGB(105, 34, 51), Enum.Material.Marble)
+		local pedX = (i - 2.5) * 19
+		local p = part(model, action, Vector3.new(10, 7, 4), origin + Vector3.new(pedX, 11.5, safe.Z + 20), theme.TrimColor, theme.TrimMaterial)
+		decor(model, action .. "_Trim", Vector3.new(11.2, 1.2, 5.2), origin + Vector3.new(pedX, 15.2, safe.Z + 20), theme.AccentColor, theme.TrimMaterial)
+		decor(model, action .. "_Rune", Vector3.new(7.5, 4.2, 0.3), origin + Vector3.new(pedX, 11.5, safe.Z + 17.9), theme.LightColor, Enum.Material.SmoothPlastic, 0.25)
 		local prompt = Instance.new("ProximityPrompt")
 		local actionText = if action == "PREVIOUS" then "Previous Floor"
 			elseif action == "NEXT" then "Next Floor"
@@ -349,7 +509,8 @@ function Builder.Build(id: number, generation: number): any
 	local sign = Instance.new("SurfaceGui")
 	sign.Face = Enum.NormalId.Back
 	sign.CanvasSize = Vector2.new(1000, 220)
-	sign.Parent = model:FindFirstChild("WallZ")
+	local plaque = decor(model, "FloorTitlePlaque", Vector3.new(96, 14, 1), origin + Vector3.new(0, height - 18, -depth / 2 + 8), theme.CliffColor, theme.TrimMaterial, 0.25)
+	sign.Parent = plaque
 	local label = Instance.new("TextLabel")
 	label.Size = UDim2.fromScale(1, 1)
 	label.BackgroundTransparency = 1
@@ -365,6 +526,34 @@ function Builder.Build(id: number, generation: number): any
 	)
 	label.Parent = sign
 
+
+ -- Keep solid scenery out of the authored walking lanes and enemy camps.
+ -- Previously these props overlapped ramps but were ghosts; omit conflicting
+ -- pieces now that their visible surfaces have real collision.
+ local clearancePoints = {}
+ for _,link in layout.Links do
+  local a = Vector3.new(link.AX,link.AY,link.AZ)
+  local b = Vector3.new(link.BX,link.BY,link.BZ)
+  for step=0,math.ceil((b-a).Magnitude/3) do
+   table.insert(clearancePoints,origin+a:Lerp(b,step/math.ceil((b-a).Magnitude/3))+Vector3.new(0,2.5,0))
+  end
+ end
+ for _,placement in Layout.Placements(require(game.ReplicatedStorage.Shared.Config.MobCatalog).Biomes[math.ceil(id/5)],idx) do
+  table.insert(clearancePoints,origin+Vector3.new(placement.X,placement.Y+2.5,placement.Z))
+ end
+ for _,p in model:GetDescendants() do
+  if p:IsA("BasePart") and p:GetAttribute("SolidScenery") then
+   for _,point in clearancePoints do
+    local at = p.CFrame:PointToObjectSpace(point)
+    local half = p.Size/2 + Vector3.new(3,2,3)
+    if math.abs(at.X)<half.X and math.abs(at.Y)<half.Y and math.abs(at.Z)<half.Z then
+     p:Destroy()
+     break
+    end
+   end
+  end
+ end
+
 	local folder = workspace:FindFirstChild("TowerRooms") or Instance.new("Folder")
 	folder.Name = "TowerRooms"
 	folder.Parent = workspace
@@ -375,24 +564,24 @@ function Builder.Build(id: number, generation: number): any
 		RoomGeneration = generation,
 		Origin = origin,
 		Model = model,
-		Arrival = CFrame.new(origin + Vector3.new(0, 3.5, 90)),
-		Bounds = { Min = Vector3.new(-120, -4, -120), Max = Vector3.new(120, 78, 120) },
+		Arrival = CFrame.new(origin + Vector3.new(0, 11.5, safe.Z - 12)),
+		Bounds = { Min = Vector3.new(-width / 2, -16, -depth / 2), Max = Vector3.new(width / 2, height + 24, depth / 2) },
 		Zones = {
 			{
 				ZoneId = "ARRIVAL",
 				FloorId = id,
 				RoomGeneration = generation,
 				LocalPolygonXZ = {
-					Vector2.new(-40, 65),
-					Vector2.new(40, 65),
-					Vector2.new(40, 118),
-					Vector2.new(-40, 118),
+					Vector2.new(-44, safe.Z - 28),
+					Vector2.new(44, safe.Z - 28),
+					Vector2.new(44, safe.Z + 28),
+					Vector2.new(-44, safe.Z + 28),
 				},
-				MinY = -1,
-				MaxY = 15,
+				MinY = 7,
+				MaxY = 23,
 				CombatSafe = true,
-				CanBankCargo = false,
-				CanRecoverWipe = false,
+				CanBankCargo = true,
+				CanRecoverWipe = true,
 			},
 		},
 	}

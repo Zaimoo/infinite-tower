@@ -31,7 +31,7 @@ local RelicConfig: { [RelicTierId]: RelicSpec } = {
 		DespawnSeconds = 90,
 		InitialLockSeconds = 3.0,
 		Color = Color3.fromRGB(65, 210, 255),
-		Payout = { Gems = 40, Gold = 250 },
+		Payout = { Gems = 100, Gold = 250 },
 	},
 	CURSED_URN = {
 		TierId = "CURSED_URN",
@@ -43,7 +43,7 @@ local RelicConfig: { [RelicTierId]: RelicSpec } = {
 		DespawnSeconds = 120,
 		InitialLockSeconds = 3.0,
 		Color = Color3.fromRGB(255, 165, 45),
-		Payout = { Gems = 150, Gold = 1200 },
+		Payout = { Gems = 300, Gold = 1200 },
 	},
 	ABYSSAL_CORE = {
 		TierId = "ABYSSAL_CORE",
@@ -55,7 +55,7 @@ local RelicConfig: { [RelicTierId]: RelicSpec } = {
 		DespawnSeconds = 150,
 		InitialLockSeconds = 5.0,
 		Color = Color3.fromRGB(190, 65, 255),
-		Payout = { Gems = 450, Gold = 4000 },
+		Payout = { Gems = 1000, Gold = 4000 },
 	},
 	CALAMITY_HEART = {
 		TierId = "CALAMITY_HEART",

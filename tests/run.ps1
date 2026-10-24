@@ -36,6 +36,7 @@ $modulePaths = @(
     'ReplicatedStorage/Shared/Config/FacilityConfig.luau',
     'ReplicatedStorage/Shared/Config/PitBalanceConfig.luau',
     'ReplicatedStorage/Shared/Config/MobCatalog.luau',
+    'ReplicatedStorage/Shared/Config/TowerLayout.luau',
     'ReplicatedStorage/Shared/Config/TowerFloorConfig.luau',
     'ReplicatedStorage/Shared/Config/FirstBiomeCombat.luau',
     'ReplicatedStorage/Assets/TowerEnemyClips.luau',
@@ -43,6 +44,7 @@ $modulePaths = @(
     'ReplicatedStorage/Shared/Util/EnemyActionState.luau',
     'ReplicatedStorage/Shared/Util/TowerProtocol.luau',
     'ReplicatedStorage/Shared/Util/TowerRequestPolicy.luau',
+    'ReplicatedStorage/Shared/Util/TowerSanctuaryRules.luau',
     'ReplicatedStorage/Shared/Util/StatFormulas.luau',
     'ReplicatedStorage/Shared/Util/WeaponPromotion.luau',
     'ReplicatedStorage/Shared/Util/PitMath.luau',
@@ -57,7 +59,7 @@ foreach ($modulePath in $modulePaths) {
     $bundleParts.Add([System.IO.File]::ReadAllText($sourcePath))
     $bundleParts.Add("`nend)")
 }
-foreach ($suite in @('pit.spec.luau', 'forge.spec.luau', 'combat-skills.spec.luau', 'tower.spec.luau', 'tower-transport.spec.luau', 'tower-combat.spec.luau')) {
+foreach ($suite in @('pit.spec.luau', 'forge.spec.luau', 'combat-skills.spec.luau', 'tower.spec.luau', 'tower-transport.spec.luau', 'tower-combat.spec.luau', 'tower-rework.spec.luau')) {
     $bundleParts.Add('do')
     $bundleParts.Add([System.IO.File]::ReadAllText((Join-Path $PSScriptRoot $suite)))
     $bundleParts.Add("`nend")

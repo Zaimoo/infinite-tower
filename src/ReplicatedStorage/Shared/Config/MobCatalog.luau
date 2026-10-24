@@ -134,12 +134,6 @@ biome("fungal_hollow", "Fungal Hollow",
 	enemy("fungal_hollow", "ELITE", "elite_mycelial_brute", "Mycelial Brute", "HEAVY_BIPED", "Heavy mushroom biped with club-like forearms", 7, 9, 6, "WEAPON_ARC", "GROUND_AREA"),
 	enemy("fungal_hollow", "BOSS", "boss_spore_matriarch", "Spore Matriarch", "FUNGAL_COLOSSUS", "Multi-limbed fungal matriarch with expanding spore crown", 15, 16, 13, "SLAM", "GROUND_AREA"))
 
-biome("sunken_sanctuary", "Sunken Sanctuary",
-	enemy("sunken_sanctuary", "REGULAR", "mob_tide_claw", "Tide Claw", "CRUSTACEAN", "Six-legged armored crustacean with two pincers", 6, 4, 7, "CLAW"),
-	enemy("sunken_sanctuary", "REGULAR", "mob_drowned_acolyte", "Drowned Acolyte", "CASTER_BIPED", "Robed amphibious biped carrying a ritual staff", 4, 7, 4, "PROJECTILE"),
-	enemy("sunken_sanctuary", "ELITE", "elite_coral_warden", "Coral Warden", "ARMORED_BIPED", "Coral-armored biped with shield and hooked weapon", 7, 10, 6, "WEAPON_ARC", "GROUND_AREA"),
-	enemy("sunken_sanctuary", "BOSS", "boss_tidal_leviathan", "Tidal Leviathan", "SERPENT", "Long articulated body and fins; slither locomotion", 12, 13, 24, "BITE", "GROUND_AREA"))
-
 biome("ashen_dunes", "Ashen Dunes",
 	enemy("ashen_dunes", "REGULAR", "mob_dune_scarab", "Dune Scarab", "INSECT", "Six-legged scarab with biting head and shell", 5, 3, 7, "BITE"),
 	enemy("ashen_dunes", "REGULAR", "mob_ash_raider", "Ash Raider", "WEAPON_BIPED", "Cloth-wrapped biped with curved blade", 4, 7, 4, "WEAPON_ARC"),
@@ -152,23 +146,29 @@ biome("frozen_citadel", "Frozen Citadel",
 	enemy("frozen_citadel", "ELITE", "elite_glacier_knight", "Glacier Knight", "ARMORED_BIPED", "Heavy biped with shield and broad ice blade", 7, 10, 6, "WEAPON_ARC", "GROUND_AREA"),
 	enemy("frozen_citadel", "BOSS", "boss_frostbound_king", "Frostbound King", "ROYAL_BIPED", "Tall armored monarch with greatsword and articulated cloak", 11, 17, 9, "WEAPON_ARC", "GROUND_AREA"))
 
-biome("thunder_highlands", "Thunder Highlands",
-	enemy("thunder_highlands", "REGULAR", "mob_storm_talon", "Storm Talon", "AVIAN", "Two-legged raptor with wing-assisted running", 5, 6, 7, "CLAW"),
-	enemy("thunder_highlands", "REGULAR", "mob_crag_channeler", "Crag Channeler", "CASTER_BIPED", "Horned biped with storm-channeling staff", 4, 7, 4, "PROJECTILE"),
-	enemy("thunder_highlands", "ELITE", "elite_thunder_ram", "Thunder Ram", "QUADRUPED", "Heavy four-legged ram with articulated head and horns", 7, 7, 10, "RAM", "GROUND_AREA"),
-	enemy("thunder_highlands", "BOSS", "boss_storm_roc", "Storm Roc", "GIANT_AVIAN", "Giant two-legged bird; jointed wings, neck and talons", 24, 16, 17, "CLAW", "GROUND_AREA"))
-
 biome("infernal_foundry", "Infernal Foundry",
 	enemy("infernal_foundry", "REGULAR", "mob_cinder_imp", "Cinder Imp", "SMALL_BIPED", "Small horned biped with clawed hands", 4, 4, 4, "CLAW"),
 	enemy("infernal_foundry", "REGULAR", "mob_forge_construct", "Forge Construct", "ARMORED_BIPED", "Mechanical biped with jointed hammer arm", 5, 8, 5, "WEAPON_ARC"),
 	enemy("infernal_foundry", "ELITE", "elite_molten_taskmaster", "Molten Taskmaster", "HEAVY_BIPED", "Armored biped wielding a long foundry chain", 7, 11, 6, "WEAPON_ARC", "GROUND_AREA"),
 	enemy("infernal_foundry", "BOSS", "boss_ember_titan", "Ember Titan", "FORGE_COLOSSUS", "Massive furnace-bodied biped with articulated fists", 16, 21, 13, "SLAM", "GROUND_AREA"))
 
+biome("thunder_highlands", "Thunder Highlands",
+	enemy("thunder_highlands", "REGULAR", "mob_storm_talon", "Storm Talon", "AVIAN", "Two-legged raptor with wing-assisted running", 5, 6, 7, "CLAW"),
+	enemy("thunder_highlands", "REGULAR", "mob_crag_channeler", "Crag Channeler", "CASTER_BIPED", "Horned biped with storm-channeling staff", 4, 7, 4, "PROJECTILE"),
+	enemy("thunder_highlands", "ELITE", "elite_thunder_ram", "Thunder Ram", "QUADRUPED", "Heavy four-legged ram with articulated head and horns", 7, 7, 10, "RAM", "GROUND_AREA"),
+	enemy("thunder_highlands", "BOSS", "boss_storm_roc", "Storm Roc", "GIANT_AVIAN", "Giant two-legged bird; jointed wings, neck and talons", 24, 16, 17, "CLAW", "GROUND_AREA"))
+
 biome("corrupted_grove", "Corrupted Grove",
 	enemy("corrupted_grove", "REGULAR", "mob_blight_wolf", "Blight Wolf", "QUADRUPED", "Four-legged wolf with thorned spine and jaw", 4, 5, 8, "BITE"),
 	enemy("corrupted_grove", "REGULAR", "mob_thorn_weaver", "Thorn Weaver", "ROOTED_BIPED", "Branch-bodied caster with jointed tendrils", 5, 7, 5, "PROJECTILE"),
 	enemy("corrupted_grove", "ELITE", "elite_rotwood_keeper", "Rotwood Keeper", "TREANT", "Heavy walking tree with articulated root legs and branch arms", 9, 12, 8, "SLAM", "GROUND_AREA"),
 	enemy("corrupted_grove", "BOSS", "boss_blight_sovereign", "Blight Sovereign", "GROVE_COLOSSUS", "Crowned tree colossus with root limbs and grasping branches", 17, 22, 15, "SLAM", "GROUND_AREA"))
+
+biome("sunken_sanctuary", "Sunken Sanctuary",
+	enemy("sunken_sanctuary", "REGULAR", "mob_tide_claw", "Tide Claw", "CRUSTACEAN", "Six-legged armored crustacean with two pincers", 6, 4, 7, "CLAW"),
+	enemy("sunken_sanctuary", "REGULAR", "mob_drowned_acolyte", "Drowned Acolyte", "CASTER_BIPED", "Robed amphibious biped carrying a ritual staff", 4, 7, 4, "PROJECTILE"),
+	enemy("sunken_sanctuary", "ELITE", "elite_coral_warden", "Coral Warden", "ARMORED_BIPED", "Coral-armored biped with shield and hooked weapon", 7, 10, 6, "WEAPON_ARC", "GROUND_AREA"),
+	enemy("sunken_sanctuary", "BOSS", "boss_tidal_leviathan", "Tidal Leviathan", "SERPENT", "Long articulated body and fins; slither locomotion", 12, 13, 24, "BITE", "GROUND_AREA"))
 
 biome("astral_archives", "Astral Archives",
 	enemy("astral_archives", "REGULAR", "mob_rune_mite", "Rune Mite", "CRAWLER", "Low articulated crawler with floating rune shell", 5, 3, 6, "BITE"),

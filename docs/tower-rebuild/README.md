@@ -1,10 +1,10 @@
-# Tower rebuild: completed through Part 4 + Animation Polish
+# Tower rebuild: Part 4 and tower environment rework
 
-**Current milestone: Parts 1–4 and the Native Animation/Art Polish Sprint are implemented and CLI-verified.** Part 5 release/mobile/published-place certification remains deferred.
+**Current milestone: Parts 1–4, native animation work, and the tower environment rework are implemented.** The rework has CLI and Studio geometry, traversal, population, and extraction verification; see the [implementation and evidence](TOWER_REWORK_IMPLEMENTATION.md). Part 5 release/mobile/published-place certification remains deferred.
 
 ## What is implemented
 
-- **Fifty immediately available floor destinations (Floors 1–50)** across **10 five-floor biomes** (`Verdant Ruins`, `Fungal Hollow`, `Sunken Sanctuary`, `Ashen Dunes`, `Frozen Citadel`, `Thunder Highlands`, `Infernal Foundry`, `Corrupted Grove`, `Astral Archives`, `Abyssal Throne`), each with 5 layout variants (`INTRODUCTION`, `EXPANDED_ENCOUNTER`, `TERRAIN_VARIATION`, `ELITE_STRONGHOLD`, `BOSS_ARENA`), camera-isolated rooms, safe arrival platforms, travel pedestals (`PREVIOUS`, `NEXT`, `SELECTOR`, `HUB`), room-local replication, and separate player location vs. squad assignment.
+- **Fifty immediately available floor destinations (Floors 1–50)** across **10 five-floor biomes** (`Verdant Ruins`, `Fungal Hollow`, `Ashen Dunes`, `Frozen Citadel`, `Infernal Foundry`, `Thunder Highlands`, `Corrupted Grove`, `Sunken Sanctuary`, `Astral Archives`, `Abyssal Throne`), each with 5 progressively larger, tiered layout variants (`INTRODUCTION`, `EXPANDED_ENCOUNTER`, `TERRAIN_VARIATION`, `ELITE_STRONGHOLD`, `BOSS_ARENA`), floor sanctuary unpackaging, travel pedestals (`PREVIOUS`, `NEXT`, `SELECTOR`, `HUB`), room-local replication, and separate player location vs. squad assignment.
 - **Full 40-enemy executable roster** (20 regulars including 6 ranged projectile casters, 10 elites, and 10 unique biome bosses on floors `5, 10, ..., 50`) in `FirstBiomeCombat.luau`, `MobCatalog.luau`, and `TowerFloorConfig.luau`.
 - **Articulated native rigs, foot-planted pose clips, and projectile/ground telegraphs** in `TowerEnemyRigs.luau`, `TowerEnemyClips.luau`, `EnemyAnimationController.luau`, and `AttackTimeline.luau` (`ARC`, `SELF_DISC`, `TARGET_DISC`, and `PROJECTILE`).
 - **Complete Tower UI & HUD/Input integration** in `TowerController.client.luau`, `HUDController.client.luau`, `EntityRenderer.client.luau`, and `MasterController.client.luau`: biome group headers, floor badges (`●` visiting, `▲` stationed squad, `◆` boss), difficulty/reward/encounter details, Floor Boss top HUD health/phase banner, and modal click-through prevention.
@@ -22,4 +22,4 @@
 
 ## Current limits
 
-All 61 production `.luau` scripts compile cleanly (`22 KLOC -> 747 KB bytecode`) and all 108 CLI checks pass (`52 Pit`, `12 Forge`, `9 Tower foundation`, `12 Tower transport`, `23 Tower combat`). Native enemy rigs and clips are local procedural Luau modules (`LOCAL_AUTHORED_UNVERIFIED` / `LOCAL_AUTHORED_PROTOTYPE`) with no uploaded Roblox asset/animation IDs. Live Studio playtesting for the Part 4 expansion was `NOT VERIFIED (Place not open in Studio)` during this CLI session.
+Production scripts compile and the CLI suites pass, including the new rework checks. Studio evidence covers 50 rooms, 980 spawns, 78 traversal routes, and Gold/Gem/relic extraction on every floor. Native enemy rigs and clips retain their local authored asset status; the environment kits use procedural parts. Published assets, final art approval, mobile performance, and multiplayer load certification remain open.

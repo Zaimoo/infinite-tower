@@ -716,13 +716,25 @@ local towerContainer, towerBtn, towerAura, _, _ = createFloatingIconButton(
 	4,
 	nil,
 	function()
-		if _G.RequestTowerHub then
-			local ok = _G.RequestTowerHub()
-			if ok ~= false then
-				showClientToast("Teleporting to Tower Hub...")
+		local curFloor = if _G.TowerView and _G.TowerView.FloorId then _G.TowerView.FloorId else 0
+		if curFloor > 0 then
+			if _G.RequestTowerHub then
+				local ok = _G.RequestTowerHub()
+				if ok ~= false then
+					showClientToast("Teleporting to Tower Hub...")
+				end
 			end
 		else
-			showClientToast("Connecting to Tower...")
+			if _G.IsTowerSelectorOpen and _G.IsTowerSelectorOpen() then
+				if _G.CloseTowerSelector then _G.CloseTowerSelector() end
+			elseif _G.OpenTowerSelector then
+				_G.OpenTowerSelector()
+			elseif _G.RequestTowerHub then
+				local ok = _G.RequestTowerHub()
+				if ok ~= false then
+					showClientToast("Traveling to Tower...")
+				end
+			end
 		end
 	end
 )

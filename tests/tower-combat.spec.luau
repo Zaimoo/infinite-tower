@@ -2,6 +2,7 @@ local A=require(nodes["ReplicatedStorage.Shared.Util.AttackTimeline"])
 local S=require(nodes["ReplicatedStorage.Shared.Util.EnemyActionState"])
 local C=require(nodes["ReplicatedStorage.Shared.Config.FirstBiomeCombat"])
 local Clips=require(nodes["ReplicatedStorage.Assets.TowerEnemyClips"])
+local Layout=require(nodes["ReplicatedStorage.Shared.Config.TowerLayout"])
 local passed,failed=0,0
 local function test(name,fn)
 	local ok,err=pcall(fn);if ok then passed+=1;print("PASS "..name) else failed+=1;print("FAIL "..name..": "..tostring(err)) end
@@ -31,7 +32,8 @@ test("Combat registry contains all 40 complete runtime enemies, clips, and all 5
 		local bosses=0
 		for _,p in placements do
 			local spec=assert(C.Get(p.EnemyId))
-			assert(p.Z<60,"Placement inside arrival safe zone on floor "..floorId)
+			local safe=Layout.Get((floorId-1)%5+1).Sanctuary
+			assert(math.abs(p.X)>safe.Width/2 or math.abs(p.Z-safe.Z)>safe.Depth/2,"Placement inside arrival safe zone on floor "..floorId)
 			if spec.Role=="BOSS" then bosses+=1 end
 		end
 		assert(bosses==(floorId%5==0 and 1 or 0),"Invalid boss count on floor "..floorId)

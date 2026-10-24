@@ -43,7 +43,7 @@ function A.Cancel(action: any,reason: string): boolean
 end
 function A.Contains(action: any,actor: any,target: any,definition: any): boolean
 	if not A.Alive(target) or not A.Same(actor,target) or not A.Matches(actor,action.Actor) then return false end
-	if math.abs(actor.Position.Y-target.Position.Y)>8 then return false end
+	if math.abs(actor.Position.Y-target.Position.Y)>11 then return false end
 	if definition.Shape=="ARC" then
 		local d=distance(action.Origin,target.Position)
 		if d>definition.Range then return false end

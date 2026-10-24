@@ -4,6 +4,7 @@ local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
 local PathfindingService = game:GetService("PathfindingService")
 local Navigation = {}
+local TowerLayout = require(game.ReplicatedStorage.Shared.Config.TowerLayout)
 local states: {[any]: any} = setmetatable({}, {__mode = "k"}) :: any
 local computing = 0
 local RADIUS, HEIGHT, STEP_UP, MAX_DROP = 1.2, 4.8, 2.2, 3.5
@@ -80,7 +81,7 @@ end
 
 local function clearRoute(from: Vector3, goal: Vector3, group: string): boolean
 	local distance = (Vector3.new(goal.X, from.Y, goal.Z) - from).Magnitude
-	if distance > 64 or math.abs(from.Y - goal.Y) > 16 then return false end
+	if distance > 64 or math.abs(from.Y - goal.Y) > 36 then return false end
 	local at, clear = walkSegment(from, goal, distance, group)
 	return clear and (at - goal).Magnitude < 3.0
 end
@@ -130,11 +131,70 @@ local function requestPath(hero: any, state: any, goal: Vector3, now: number)
 	end)
 end
 
+-- Follow authored bridge entrances instead of cutting across solid curbs.
+local function towerRoute(hero: any, goal: Vector3): {Vector3}?
+ local floor = hero.FloorId
+ if not floor or floor < 1 then return nil end
+ local origin = Vector3.new(12000 + ((floor - 1) % 10) * 2400, 1000, 12000 + math.floor((floor - 1) / 10) * 2400)
+ local layout = TowerLayout.Get((floor - 1) % 5 + 1)
+ local function nearest(world)
+  local pos = world - origin
+  local best, score = nil, math.huge
+  for name, p in layout.Platforms do
+   local dx = math.max(0, math.abs(pos.X - p.X) - p.Width / 2)
+   local dz = math.max(0, math.abs(pos.Z - p.Z) - p.Depth / 2)
+   local d = dx * dx + dz * dz + (pos.Y - p.Y)^2
+   if d < score then best, score = name, d end
+  end
+  return best
+ end
+ local start, finish = nearest(hero.Position), nearest(goal)
+ if not start or not finish or start == finish then return nil end
+ local queue, seen = {start}, {[start] = true}
+ local prev = {}
+ local index = 1
+ while queue[index] and not seen[finish] do
+  local at = queue[index]; index += 1
+  for _, link in layout.Links do
+   local nextId = if link.From == at then link.To elseif link.To == at then link.From else nil
+   if nextId and not seen[nextId] then
+    seen[nextId] = true; prev[nextId] = {From = at, Link = link}
+    table.insert(queue, nextId)
+   end
+  end
+ end
+ if not seen[finish] then return nil end
+ local edges = {}
+ local at = finish
+ while at ~= start do table.insert(edges, 1, prev[at]); at = prev[at].From end
+ local route = {}
+ for _, edge in edges do
+  local link = edge.Link
+  local a = origin + Vector3.new(link.AX, link.AY, link.AZ)
+  local b = origin + Vector3.new(link.BX, link.BY, link.BZ)
+  if edge.From ~= link.From then a,b = b,a end
+  table.insert(route,a); table.insert(route,b)
+ end
+ return route
+end
+
 function Navigation.Step(hero: any, goal: Vector3, distance: number, now: number)
 	local state = states[hero]
 	if not state then state = {NextRequest = 0, Index = 2, BlockedCount = 0}; states[hero] = state end
 	local group = groupFor(hero)
-	local supportedGoal = Navigation.Ground(goal, group, 4, 16) or goal
+ if not state.TowerGoal or (state.TowerGoal - goal).Magnitude > 14 then
+  state.TowerGoal = goal
+  state.TowerRoute = towerRoute(hero,goal)
+  state.TowerIndex = 1
+ end
+ local route = state.TowerRoute
+ if route then
+  while route[state.TowerIndex] and (route[state.TowerIndex] - hero.Position).Magnitude < 3 do
+   state.TowerIndex += 1
+  end
+  goal = route[state.TowerIndex] or goal
+ end
+ local supportedGoal = Navigation.Ground(goal, group, 4, 16) or goal
 	goal = supportedGoal
 	local old = hero.Position
 	local destination = goal
@@ -269,7 +329,7 @@ function Navigation.Step(hero: any, goal: Vector3, distance: number, now: number
 end
 
 function Navigation.CanAttack(from: Vector3, target: Vector3, group: string?): boolean
-	if math.abs(from.Y - target.Y) > 6 then return false end
+	if math.abs(from.Y - target.Y) > 11 then return false end
 	local a, b = from + Vector3.new(0, 2.5, 0), target + Vector3.new(0, 2.5, 0)
 	return Workspace:Raycast(a, b - a, parameters(group)) == nil
 end
