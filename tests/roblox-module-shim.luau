@@ -37,7 +37,30 @@ local function require(module)
 	return loaded[module]
 end
 
-local game = {}
+local game = { ReplicatedStorage = node("ReplicatedStorage") }
+local CFrame = {}
+local cframeMeta = {}
+function CFrame.new(x, y, z)
+	return setmetatable({ X = x or 0, Y = y or 0, Z = z or 0, rx = 0, ry = 0, rz = 0 }, cframeMeta)
+end
+function CFrame.Angles(rx, ry, rz)
+	return setmetatable({ X = 0, Y = 0, Z = 0, rx = rx or 0, ry = ry or 0, rz = rz or 0 }, cframeMeta)
+end
+CFrame.identity = CFrame.new(0, 0, 0)
+cframeMeta.__mul = function(a, b)
+	return setmetatable({ X = a.X + b.X, Y = a.Y + b.Y, Z = a.Z + b.Z, rx = a.rx + b.rx, ry = a.ry + b.ry, rz = a.rz + b.rz }, cframeMeta)
+end
+function cframeMeta:Lerp(other, alpha)
+	return setmetatable({
+		X = self.X + (other.X - self.X) * alpha,
+		Y = self.Y + (other.Y - self.Y) * alpha,
+		Z = self.Z + (other.Z - self.Z) * alpha,
+		rx = self.rx + (other.rx - self.rx) * alpha,
+		ry = self.ry + (other.ry - self.ry) * alpha,
+		rz = self.rz + (other.rz - self.rz) * alpha,
+	}, cframeMeta)
+end
+cframeMeta.__index = cframeMeta
 function game:GetService(serviceName)
 	return node(serviceName)
 end

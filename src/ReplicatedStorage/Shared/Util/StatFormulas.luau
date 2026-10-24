@@ -52,7 +52,7 @@ end
 -- Canonical four-stat snapshot. Legacy base fields are never multiplied again.
 function StatFormulas.GetCombatSnapshot(hero: any, artifact: any?, inOverdrive: boolean?, _inBloodPact: boolean?): any
  local seed=HeroCatalog.Seeds[hero.TemplateId]
- local stars=B.Integer(hero.Stars,1,5) and hero.Stars or 1
+ local stars=B.Integer(hero.Stars,1,math.max(PitBalanceConfig.MaxStars, seed and seed.BaseStar or 7)) and hero.Stars or 1
  local level=B.Integer(hero.Level,1,stars*10) and hero.Level or 1
  local quality=B.Finite(hero.QualityScalar) and math.clamp(hero.QualityScalar,.9,1.15) or 1
  local growth=B.HeroPromotionMultiplier^(stars-1)*B.LevelMultiplier^(level-1)
@@ -75,7 +75,7 @@ function StatFormulas.GetEffectiveCombatStats(hero: any, inBloodPact: boolean?, 
 end
 function StatFormulas.GetEffectiveLabor(hero: any, targetFacilityAssignment: string?): number
  local seed=HeroCatalog.Seeds[hero.TemplateId]
- local stars=B.Integer(hero.Stars,1,5) and hero.Stars or 1
+ local stars=B.Integer(hero.Stars,1,math.max(PitBalanceConfig.MaxStars, seed and seed.BaseStar or 7)) and hero.Stars or 1
  local level=B.Integer(hero.Level,1,stars*10) and hero.Level or 1
  local q=B.Finite(hero.QualityScalar) and math.clamp(hero.QualityScalar,.9,1.15) or 1
  local pref=seed and seed.PreferredFacility or ""

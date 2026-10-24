@@ -16,6 +16,15 @@ end
 local function distance(a,b)
 	local x,z=a.X-b.X,a.Z-b.Z;return math.sqrt(x*x+z*z)
 end
+local function segmentDistance(p,a,b)
+	local vx,vz=b.X-a.X,b.Z-a.Z
+	local wx,wz=p.X-a.X,p.Z-a.Z
+	local len2=vx*vx+vz*vz
+	if len2<.0001 then return distance(p,a) end
+	local t=math.clamp((wx*vx+wz*vz)/len2,0,1)
+	local dx,dz=p.X-(a.X+t*vx),p.Z-(a.Z+t*vz)
+	return math.sqrt(dx*dx+dz*dz)
+end
 function A.Start(actor: any,target: any,definition: any,now: number): any
 	assert(A.Alive(actor) and A.Alive(target) and A.Same(actor,target))
 	actor.ActionCounter=(actor.ActionCounter or 0)+1
@@ -23,9 +32,10 @@ function A.Start(actor: any,target: any,definition: any,now: number): any
 	local aim=definition.Shape=="SELF_DISC" and actor.Position or target.Position
 	return {Actor=A.Identity(actor),Target=A.Identity(target),ActionSequence=actor.ActionCounter,
 		EnemyId=actor.EnemyId,AttackId=definition.Id,AnimationKey=definition.AnimationKey,
-		StartServerTime=now,WindupSeconds=definition.WindupSeconds,ImpactOffsetSeconds=definition.ImpactOffsetSeconds,
-		RecoverySeconds=definition.RecoverySeconds,Origin=actor.Position,Aim=aim,Yaw=actor.Yaw,
-		Shape=definition.Shape,Range=definition.Range,Radius=definition.Radius,Status="WINDUP",Impacted=false,Hits={}}
+		StartServerTime=now,WindupSeconds=definition.WindupSeconds,TravelSeconds=definition.TravelSeconds or 0,
+		ImpactOffsetSeconds=definition.ImpactOffsetSeconds,RecoverySeconds=definition.RecoverySeconds,
+		Origin=actor.Position,Aim=aim,Yaw=actor.Yaw,Shape=definition.Shape,Range=definition.Range,
+		Radius=definition.Radius,Status="WINDUP",Impacted=false,Hits={}}
 end
 function A.Cancel(action: any,reason: string): boolean
 	if action.Status=="CANCELED" or action.Status=="COMPLETE" then return false end
@@ -40,6 +50,8 @@ function A.Contains(action: any,actor: any,target: any,definition: any): boolean
 		if d<.01 then return true end
 		local dot=((target.Position.X-action.Origin.X)*-math.sin(action.Yaw)+(target.Position.Z-action.Origin.Z)*-math.cos(action.Yaw))/d
 		return dot>=definition.HalfArcCos
+	elseif definition.Shape=="PROJECTILE" then
+		return segmentDistance(target.Position,action.Origin,action.Aim)<=definition.Radius
 	end
 	return distance(action.Aim,target.Position)<=definition.Radius
 end

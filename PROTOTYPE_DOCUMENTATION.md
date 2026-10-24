@@ -182,6 +182,9 @@ flowchart TD
 | **14-Byte Binary Buffer Replication** | Complete & Verified | Packed snapshots broadcast $X, Z, Y$, yaw, and unit state flags in 14-byte structs with 5-byte header |
 | **Base Overhaul & Floating Islands** | Complete & Verified | 5 floating islands at $72^\circ$ spacing ($R = 540$) around Central Crimson Tower with bridge connections |
 | **Tower Traversal & Waypoint Routing** | Complete & Verified | 18 platforms with ascent ramps; server collision verified; grounded waypoint routing in `HeroNavigation` |
+| **50-Floor Isolated Tower & 10 Biome Kits** | Complete & Verified | 50 dynamic isolated rooms (`248x84x248`), 10 biome material/lighting kits x 5 layout variants (`TowerRoomBuilder`) |
+| **40 Articulated Enemy Rigs & Clips** | Complete & Verified | 40 procedural Motor6D enemy species, `plantedPose` leg counter-rotation, and `ARC`/`SELF_DISC`/`TARGET_DISC`/`PROJECTILE` attacks |
+| **Biome-Grouped Floor Selector & Boss HUD** | Complete & Verified | 10-biome grouped 50-floor selector with `◆`/`★`/`●`/`▲` badges, `Return to Hub` button, and Floor Boss top HUD banner |
 | **Shift Sprint Movement** | Complete & Verified | `[LeftShift / RightShift]` applies $3.0\times$ speed multiplier with responsive handling |
 | **Equippable Artifact & Blacksmith System**| Complete & Verified | 6 weapon types, 7 Star Tiers, 16 Rarity Tiers; interactive Blacksmith Forge station on plot |
 | **Dedicated Synthesis UI Modal** | Complete & Verified | Recipient slot, 5 donor material slots, live level preview bar, 100% deterministic imprints |

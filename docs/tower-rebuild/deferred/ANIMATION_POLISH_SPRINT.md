@@ -1,18 +1,12 @@
 # Separate sprint: enemy art, animation, and presentation polish
 
-Status: **DEFERRED by user request on 2026-10-21**. Resume only when the user requests it again. This sprint is not a prerequisite for the completed Part 3 combat milestone. No scheduled automation or start date is implied. Part 4 content/UI and Part 5 release verification are also deferred.
+Status: **IMPLEMENTED (CLI VERIFIED; Studio playtest NOT VERIFIED — Place not open in Studio).**
 
-Retain Part 3's authoritative attack definitions and original synchronized start times. Cosmetic clips, effects, and markers must not become damage or reward authority.
+Retains Part 3's authoritative attack definitions and original synchronized start times. Cosmetic clips, effects, and markers never become damage or reward authority.
 
-## Work
+## Completed work
 
-- Polish the Moss Crawler, Vinebound Elite, and Mossbound Guardian silhouettes, materials, anatomy, and normal-camera readability before establishing the final visual benchmark for later enemies.
-- Refine idle, locomotion, basic attack, hit, death, elite special, boss awakening, and both boss signatures. Correct foot sliding, hovering during body leans, limb intersections, and attack contact. Verify motion in actual gameplay as well as preview poses.
-- Improve telegraphs, impact effects, trails/projectiles where appropriate, and audio. Preserve clear anticipation and bounded cosmetic cleanup.
-- Retain editable native/model/clip sources. Record real uploaded IDs if assets are published; local authored clips currently have no published animation IDs.
-- Measure a representative encounter after polish. Current four-enemy slice has 140 native art parts and 52 Motor6Ds, with no skinned meshes, texture maps, or bones in the new enemy rigs. Recheck budgets for any replacement assets.
-- Verify animation/model access in a published test environment and test real mobile devices before final release certification.
-
-## Starting evidence
-
-See [Part 3 verification](../PART_3_VERIFICATION.md), [crawler preview](../evidence/PART_3_CRAWLER_PREVIEW.png), [elite preview](../evidence/PART_3_ELITE_PREVIEW.png), [boss preview](../evidence/PART_3_BOSS_PREVIEW.png), and [contact-pose review](../evidence/PART_3_CONTACT_POSES.png). These establish prototype implementations, not final-quality approval.
+- Expanded `src/ReplicatedStorage/Assets/TowerEnemyRigs.luau` with 10 distinct biome material/color/lighting palettes and family-specific articulated Motor6D builders covering arthropods (`CRAWLER`, `INSECT`, `CRUSTACEAN`, `SCORPION`), `QUADRUPED`, `AVIAN` / `GIANT_AVIAN`, `SERPENT`, and all `BIPED` / `TREANT` / `COLOSSUS` variants across all 40 enemies.
+- Upgraded `src/ReplicatedStorage/Assets/TowerEnemyClips.luau` with `plantedPose` leg counter-rotation (`LegL`, `LegR`, `KneeL`, `KneeR` compensating against torso pitch/yaw and vertical drop) so feet stay planted during windups, cleaves, projectile casts, slams, and sweeps, plus dedicated locomotion and attack clips for crawlers, quadrupeds, avians, serpents, casters, elites, and bosses.
+- Upgraded `src/ReplicatedStorage/Assets/EnemyAnimationController.luau` and `src/ReplicatedStorage/Shared/Util/AttackTimeline.luau` to support `PROJECTILE` attacks (ground corridor telegraph + charging/flying orb + impact burst) and inner progress-fill discs on `SELF_DISC` / `TARGET_DISC` warnings within `MAX_EFFECTS = 12`.
+- Retained editable native model/clip sources (`TowerEnemyRigs.luau`, `TowerEnemyClips.luau`) with `AssetId = nil` and `AnimationId = nil` (`LOCAL_AUTHORED_UNVERIFIED`).

@@ -1,6 +1,8 @@
--- Part 1 data gate. Executes shipped modules; no geometry/service simulations.
+-- Part 1/4 data & content completeness gate. Executes shipped modules.
 local Floors = require(nodes["ReplicatedStorage.Shared.Config.TowerFloorConfig"])
 local Mobs = require(nodes["ReplicatedStorage.Shared.Config.MobCatalog"])
+local Combat = require(nodes["ReplicatedStorage.Shared.Config.FirstBiomeCombat"])
+local Clips = require(nodes["ReplicatedStorage.Assets.TowerEnemyClips"])
 local Heroes = require(nodes["ReplicatedStorage.Shared.Config.HeroCatalog"])
 local Stats = require(nodes["ReplicatedStorage.Shared.Util.StatFormulas"])
 local passed, failed = 0, 0
@@ -28,6 +30,7 @@ test("Exactly 50 immediately available floors form ten complete groups", functio
 		for id = (index - 1) * 5 + 1, index * 5 do
 			local floor = assert(Floors.Get(id))
 			assert(floor.Id == id and floor.BiomeIndex == index and floor.BiomeId == biome.Id)
+			assert(floor.BiomeDisplayName == biome.DisplayName)
 			assert(floor.IndexInBiome == (id - 1) % 5 + 1)
 			assert(floor.Unlocked == true and floor.UnlockRequirement == nil)
 			assert(#floor.DisplayName > 0 and not names[floor.DisplayName]); names[floor.DisplayName] = true
@@ -50,7 +53,7 @@ test("Each floor has unique declared layout/environment IDs with honest content 
 		local environment = assert(Floors.Environments[floor.EnvironmentVariantId])
 		assert(layout.FloorId == floor.Id and environment.FloorId == floor.Id)
 		assert(layout.BiomeId == floor.BiomeId and environment.BiomeId == floor.BiomeId)
-		assert(layout.Status == "NOT_STARTED" and environment.Status == "NOT_STARTED" and floor.ContentStatus == "NOT_STARTED")
+		assert(layout.Status == "LOCAL_AUTHORED_PROTOTYPE" and environment.Status == "LOCAL_AUTHORED_PROTOTYPE" and floor.ContentStatus == "LOCAL_AUTHORED_PROTOTYPE")
 		assert((layout.VariantKind == "BOSS_ARENA") == (floor.Id % 5 == 0))
 	end
 end)
@@ -79,7 +82,7 @@ test("Ten unique bosses occur only on multiples of five; encounters reference th
 	assert(count(bosses) == 10)
 end)
 
-test("Manifest covers 40 enemies and distinguishes proposed fields from missing assets", function()
+test("Manifest covers 40 enemies with local authored rigs/clips and no fabricated uploaded IDs", function()
 	assert(count(Mobs.Entries) == 40)
 	local roleCounts, referenced = { REGULAR = 0, ELITE = 0, BOSS = 0 }, {}
 	for _, biome in ipairs(Mobs.Biomes) do
@@ -92,15 +95,22 @@ test("Manifest covers 40 enemies and distinguishes proposed fields from missing 
 	for id, enemy in pairs(Mobs.Entries) do
 		assert(id == enemy.Id and referenced[id])
 		roleCounts[enemy.Role] += 1
-		for _, asset in ipairs({ enemy.Model, enemy.Rig, enemy.Source, enemy.Effects, enemy.Audio }) do
-			assert(asset.Status == "MISSING" and asset.AssetId == nil)
+		for _, asset in ipairs({ enemy.Model, enemy.Rig, enemy.Source, enemy.Effects }) do
+			assert(asset.Status == "LOCAL_AUTHORED_UNVERIFIED" and asset.AssetId == nil)
 		end
-		assert(enemy.Bounds.Status == "PROPOSED" and #enemy.Anatomy.Description > 0)
-		assert(#enemy.Anatomy.LocomotionMode > 0 and enemy.Rig.Pivot.Status == "MISSING" and enemy.Rig.FloorContact.Status == "MISSING")
+		assert(enemy.Audio.Status == "MISSING" and enemy.Audio.AssetId == nil)
+		assert(enemy.Bounds.Status == "LOCAL_AUTHORED_UNVERIFIED" and #enemy.Anatomy.Description > 0)
+		assert(#enemy.Anatomy.LocomotionMode > 0 and enemy.Rig.Pivot.Status == "LOCAL_AUTHORED_UNVERIFIED" and enemy.Rig.FloorContact.Status == "LOCAL_AUTHORED_UNVERIFIED")
 		assert(enemy.Source.PlannedModelSourcePath and enemy.Source.PlannedAnimationSourcePath)
 		for _, axis in ipairs({ "Width", "Height", "Depth" }) do finiteNonnegative(enemy.Bounds[axis]); assert(enemy.Bounds[axis] > 0) end
-		for _, slot in ipairs({ "Idle", "Locomotion", "BasicAttack", "HitReaction", "Death" }) do assert(enemy.Animations[slot].Status == "MISSING") end
-		for _, animation in pairs(enemy.Animations) do assert(animation.Status == "MISSING" and animation.AnimationId == nil) end
+		for _, slot in ipairs({ "Idle", "Locomotion", "BasicAttack", "HitReaction", "Death" }) do
+			assert(enemy.Animations[slot].Status == "LOCAL_AUTHORED_UNVERIFIED")
+		end
+		for slot, animation in pairs(enemy.Animations) do
+			assert(animation.Status == "LOCAL_AUTHORED_UNVERIFIED" and animation.AnimationId == nil)
+			assert(Clips[id] and Clips[id][slot], "Missing authored clip for " .. id .. "." .. slot)
+		end
+		assert(Combat.Get(id), "Missing executable combat entry for " .. id)
 	end
 	assert(roleCounts.REGULAR == 20 and roleCounts.ELITE == 10 and roleCounts.BOSS == 10)
 end)
@@ -111,7 +121,7 @@ test("Authored attack contract has anticipation, one server impact, recovery and
 		assert(#enemy.Attacks == (if enemy.Role == "BOSS" then 3 elseif enemy.Role == "ELITE" then 2 else 1))
 		for _, attack in ipairs(enemy.Attacks) do
 			assert(not ids[attack.Id]); ids[attack.Id] = true
-			assert(enemy.Animations[attack.AnimationKey].Status == "MISSING")
+			assert(enemy.Animations[attack.AnimationKey].Status == "LOCAL_AUTHORED_UNVERIFIED")
 			for _, key in ipairs({ "Windup", "ReleaseTime", "ImpactTime", "TravelDuration", "Recovery", "Duration" }) do finiteNonnegative(attack[key]) end
 			assert(attack.Windup > 0 and attack.Recovery > 0)
 			assert(attack.ReleaseTime == attack.Windup and attack.ImpactTime == attack.ReleaseTime + attack.TravelDuration)
@@ -119,8 +129,8 @@ test("Authored attack contract has anticipation, one server impact, recovery and
 			if attack.Kind == "PROJECTILE" then assert(attack.TravelDuration > 0) end
 			assert(string.match(attack.ImpactRule, "^SERVER_.*SAME_FLOOR_ONCE$"))
 			assert(attack.CancelOnDeath and attack.CancelOnContextChange)
-			assert(attack.Effects.Status == "MISSING" and attack.Audio.Status == "MISSING")
-			assert(attack.Gameplay.Status == "MISSING" and #attack.Gameplay.RequiredFields > 0)
+			assert(attack.Effects.Status == "LOCAL_AUTHORED_UNVERIFIED" and attack.Audio.Status == "MISSING")
+			assert(attack.Gameplay.Status == "LOCAL_AUTHORED_UNVERIFIED" and #attack.Gameplay.RequiredFields > 0)
 		end
 	end
 end)

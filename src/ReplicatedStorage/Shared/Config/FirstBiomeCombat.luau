@@ -1,45 +1,224 @@
 --!strict
--- Executable Part 3 slice. The other 37 designs remain in the proposal catalog.
--- Combat is enabled on the two slice floors. Final art/animation polish is a later sprint.
-local C: any = { ReleaseEnabled = true, RespawnSeconds = 25, BossRespawnSeconds = 300,
-	AnchorLocal = Vector3.new(0, 0, 12), AcquisitionRange = 95, LeashRange = 105,
-	-- Native articulated parts and authored pose clips; no uploaded IDs are implied.
-	AssetStatus = "LOCAL_AUTHORED_UNVERIFIED", PublishedAccess = "NOT_VERIFIED", Entries = {}, Floors = {} }
-local function move(id, slot, shape, windup, recovery, range, radius, damage, cooldown)
-	return { Id=id, AnimationKey=slot, Shape=shape, WindupSeconds=windup, ImpactOffsetSeconds=windup,
-		RecoverySeconds=recovery, Range=range, Radius=radius, HalfArcCos=.05, DamageMultiplier=damage,
-		CooldownSeconds=cooldown, MaxLatenessSeconds=.45, TargetRule="QUALIFIED_LIVE_UNSAFE_SAME_ROOM",
-		ImpactRule="SCHEDULED_SERVER_SHAPE_ONCE", TelegraphGeometry=shape }
+-- Executable Part 3/4 Tower Combat registry covering all 10 biomes, 40 enemies, and 50 floors.
+-- Native articulated parts and authored pose clips; no uploaded Roblox asset IDs are implied.
+local MobCatalog = require(script.Parent.MobCatalog)
+local TowerFloorConfig = require(script.Parent.TowerFloorConfig)
+
+local C: any = {
+	ReleaseEnabled = true,
+	RespawnSeconds = 25,
+	BossRespawnSeconds = 300,
+	AnchorLocal = Vector3.new(0, 0, 12),
+	AcquisitionRange = 95,
+	LeashRange = 105,
+	AssetStatus = "LOCAL_AUTHORED_UNVERIFIED",
+	PublishedAccess = "NOT_VERIFIED",
+	Entries = {},
+	Floors = {},
+}
+
+local function move(id: string, slot: string, shape: string, windup: number, recovery: number, range: number, radius: number, damage: number, cooldown: number, travel: number?)
+	local flight = travel or 0
+	return {
+		Id = id,
+		AnimationKey = slot,
+		Shape = shape,
+		WindupSeconds = windup,
+		TravelSeconds = flight,
+		ImpactOffsetSeconds = windup + flight,
+		RecoverySeconds = recovery,
+		Range = range,
+		Radius = radius,
+		HalfArcCos = .05,
+		DamageMultiplier = damage,
+		CooldownSeconds = cooldown,
+		MaxLatenessSeconds = .45,
+		TargetRule = "QUALIFIED_LIVE_UNSAFE_SAME_ROOM",
+		ImpactRule = if shape == "PROJECTILE" then "SERVER_SWEPT_PROJECTILE_SAME_FLOOR_ONCE" else "SCHEDULED_SERVER_SHAPE_ONCE",
+		TelegraphGeometry = shape,
+	}
 end
-C.Entries.mob_moss_crawler = { EnemyId="mob_moss_crawler", Role="REGULAR", Height=3.2, RootHeight=1.3,
-	MoveSpeed=12, AggroRange=38, MaxHP=850, ATK=18, Gold=80,
-	RigFamily="SIX_LEGGED_CRAWLER", ModelSource="Assets.TowerEnemyRigs", ClipSource="Assets.TowerEnemyClips",
-	RequiredSlots={"Idle","Locomotion","BasicAttack","HitReaction","Death"},
-	Attacks={move("moss_bite","BasicAttack","ARC",.65,.65,7,0,1,1.8)} }
-C.Entries.elite_vinebound = { EnemyId="elite_vinebound", Role="ELITE", Height=8, RootHeight=4.3,
-	MoveSpeed=9, AggroRange=48, MaxHP=2200, ATK=35, Gold=210,
-	RigFamily="ROOTED_BIPED", ModelSource="Assets.TowerEnemyRigs", ClipSource="Assets.TowerEnemyClips",
-	RequiredSlots={"Idle","Locomotion","BasicAttack","HitReaction","Death","Special"},
-	Attacks={move("vine_cleave","BasicAttack","ARC",.9,.8,9,0,1,2.4),
-		move("root_bloom","Special","TARGET_DISC",1.4,1,34,9,1.25,8)} }
-C.Entries.boss_mossbound_guardian = { EnemyId="boss_mossbound_guardian", Role="BOSS", Height=17, RootHeight=8.5,
-	MoveSpeed=7, AggroRange=75, MaxHP=16326, ATK=66, Gold=991,
-	RigFamily="STONE_COLOSSUS", ModelSource="Assets.TowerEnemyRigs", ClipSource="Assets.TowerEnemyClips",
-	RequiredSlots={"Idle","Locomotion","BasicAttack","HitReaction","Death","Awakening","Signature1","Signature2"},
-	Attacks={move("guardian_crush","BasicAttack","ARC",1.1,1,13,0,1,3),
-		move("moss_quake","Signature1","SELF_DISC",1.8,1.2,22,22,1.2,10),
-		move("sweeping_roots","Signature2","TARGET_DISC",2.2,1.5,55,13,1.4,14)} }
-C.Floors[1] = { {EnemyId="mob_moss_crawler",X=-16,Z=8}, {EnemyId="mob_moss_crawler",X=18,Z=-12},
-	{EnemyId="mob_moss_crawler",X=-28,Z=-34}, {EnemyId="elite_vinebound",X=22,Z=-48} }
-C.Floors[5] = { {EnemyId="mob_moss_crawler",X=-28,Z=8}, {EnemyId="mob_moss_crawler",X=28,Z=8},
-	{EnemyId="elite_vinebound",X=-38,Z=-24}, {EnemyId="boss_mossbound_guardian",X=0,Z=-54} }
-function C.Get(id) return C.Entries[id] end
-function C.Attack(enemyId, attackId)
-	local e=C.Get(enemyId);if e then for _,a in e.Attacks do if a.Id==attackId then return a end end end
+
+local rootHeightByFamily: { [string]: number } = {
+	CRAWLER = 1.3,
+	INSECT = 1.3,
+	CRUSTACEAN = 1.6,
+	SCORPION = 2.2,
+	QUADRUPED = 2.4,
+	AVIAN = 2.8,
+	SMALL_BIPED = 2.1,
+	FUNGAL_BIPED = 3.0,
+	CASTER_BIPED = 3.5,
+	WEAPON_BIPED = 3.5,
+	ARMORED_BIPED = 3.8,
+	ROOTED_BIPED = 4.3,
+	HEAVY_BIPED = 4.6,
+	TREANT = 5.5,
+	ROYAL_BIPED = 8.0,
+	SERPENT = 4.2,
+	GIANT_AVIAN = 7.2,
+	STONE_COLOSSUS = 8.5,
+	FUNGAL_COLOSSUS = 8.0,
+	FORGE_COLOSSUS = 9.5,
+	GROVE_COLOSSUS = 9.8,
+	ARCANE_COLOSSUS = 8.8,
+	ROYAL_COLOSSUS = 9.8,
+}
+
+for enemyId, cat in pairs(MobCatalog.Entries) do
+	local role = cat.Role
+	local family = cat.Rig.ProposedFamily
+	local height = cat.Bounds.Height
+	local rootHeight = rootHeightByFamily[family] or math.max(1.3, math.round(height * 0.48 * 10) / 10)
+	local isBoss = role == "BOSS"
+	local isElite = role == "ELITE"
+	local basicAttackSpec = cat.Attacks[1]
+	local isProjectile = basicAttackSpec and basicAttackSpec.Kind == "PROJECTILE"
+
+	local requiredSlots = { "Idle", "Locomotion", "BasicAttack", "HitReaction", "Death" }
+	if isElite then
+		table.insert(requiredSlots, "Special")
+	elseif isBoss then
+		table.insert(requiredSlots, "Awakening")
+		table.insert(requiredSlots, "Signature1")
+		table.insert(requiredSlots, "Signature2")
+	end
+
+	local attacks: { any }
+	if enemyId == "mob_moss_crawler" then
+		attacks = { move("moss_bite", "BasicAttack", "ARC", .65, .65, 7, 0, 1, 1.8) }
+	elseif enemyId == "elite_vinebound" then
+		attacks = {
+			move("vine_cleave", "BasicAttack", "ARC", .9, .8, 9, 0, 1, 2.4),
+			move("root_bloom", "Special", "TARGET_DISC", 1.4, 1, 34, 9, 1.25, 8),
+		}
+	elseif enemyId == "boss_mossbound_guardian" then
+		attacks = {
+			move("guardian_crush", "BasicAttack", "ARC", 1.1, 1, 13, 0, 1, 3),
+			move("moss_quake", "Signature1", "SELF_DISC", 1.8, 1.2, 22, 22, 1.2, 10),
+			move("sweeping_roots", "Signature2", "TARGET_DISC", 2.2, 1.5, 55, 13, 1.4, 14),
+		}
+	elseif isBoss then
+		attacks = {
+			move(enemyId .. "_basic", "BasicAttack", "ARC", 1.1, 1.0, 14, 0, 1.0, 3.0),
+			move(enemyId .. "_signature_1", "Signature1", "SELF_DISC", 1.8, 1.2, 22, 22, 1.2, 10.0),
+			move(enemyId .. "_signature_2", "Signature2", "TARGET_DISC", 2.2, 1.5, 55, 13, 1.4, 14.0),
+		}
+	elseif isElite then
+		attacks = {
+			move(enemyId .. "_basic", "BasicAttack", "ARC", .9, .8, 9.5, 0, 1.0, 2.4),
+			move(enemyId .. "_special", "Special", "TARGET_DISC", 1.4, 1.0, 34, 9, 1.25, 8.0),
+		}
+	elseif isProjectile then
+		attacks = {
+			move(enemyId .. "_basic", "BasicAttack", "PROJECTILE", .65, .75, 32, 2.4, 1.0, 2.2, .35),
+		}
+	else
+		attacks = {
+			move(enemyId .. "_basic", "BasicAttack", "ARC", .68, .68, 7.5, 0, 1.0, 1.9),
+		}
+	end
+
+	C.Entries[enemyId] = {
+		EnemyId = enemyId,
+		DisplayName = cat.DisplayName,
+		BiomeId = cat.BiomeId,
+		Role = role,
+		Height = if enemyId == "mob_moss_crawler" then 3.2 else height,
+		Width = cat.Bounds.Width,
+		Depth = cat.Bounds.Depth,
+		RootHeight = rootHeight,
+		MoveSpeed = if isBoss then 7 elseif isElite then 9 elseif isProjectile then 10 else 12,
+		AggroRange = if isBoss then 75 elseif isElite then 48 elseif isProjectile then 44 else 38,
+		MaxHP = if isBoss then 16326 elseif isElite then 2200 else 850,
+		ATK = if isBoss then 66 elseif isElite then 35 else 18,
+		Gold = if isBoss then 991 elseif isElite then 210 else 80,
+		RigFamily = if enemyId == "mob_moss_crawler" then "SIX_LEGGED_CRAWLER" else family,
+		CatalogFamily = family,
+		ModelSource = "Assets.TowerEnemyRigs",
+		ClipSource = "Assets.TowerEnemyClips",
+		RequiredSlots = requiredSlots,
+		Attacks = attacks,
+	}
+end
+
+local regularCoordinates = {
+	{ X = -18, Z = 10 },
+	{ X = 18, Z = 8 },
+	{ X = -28, Z = -12 },
+	{ X = 28, Z = -14 },
+	{ X = -14, Z = -28 },
+	{ X = 16, Z = -30 },
+}
+
+for floorId = 1, TowerFloorConfig.FloorCount do
+	local floor = TowerFloorConfig.Get(floorId)
+	local biome = MobCatalog.Biomes[floor.BiomeIndex]
+	local idx = floor.IndexInBiome
+	local placements = {}
+
+	if floorId == 1 then
+		placements = {
+			{ EnemyId = biome.RegularEnemyIds[1], X = -16, Z = 8 },
+			{ EnemyId = biome.RegularEnemyIds[1], X = 18, Z = -12 },
+			{ EnemyId = biome.RegularEnemyIds[2], X = -28, Z = -34 },
+			{ EnemyId = biome.EliteEnemyId, X = 22, Z = -48 },
+		}
+	elseif idx == 5 then
+		placements = {
+			{ EnemyId = biome.RegularEnemyIds[1], X = -28, Z = 8 },
+			{ EnemyId = biome.RegularEnemyIds[2], X = 28, Z = 8 },
+			{ EnemyId = biome.EliteEnemyId, X = -38, Z = -24 },
+			{ EnemyId = biome.BossEnemyId, X = 0, Z = -54 },
+		}
+	else
+		local reg1Count = if idx == 1 then 2 elseif idx == 2 then 3 else 2
+		local reg2Count = if idx == 1 then 1 else 2
+		local coordIdx = 1
+		for _ = 1, reg1Count do
+			local pt = regularCoordinates[coordIdx]
+			coordIdx += 1
+			table.insert(placements, { EnemyId = biome.RegularEnemyIds[1], X = pt.X, Z = pt.Z })
+		end
+		for _ = 1, reg2Count do
+			local pt = regularCoordinates[coordIdx]
+			coordIdx += 1
+			table.insert(placements, { EnemyId = biome.RegularEnemyIds[2], X = pt.X, Z = pt.Z })
+		end
+		if idx == 3 then
+			table.insert(placements, { EnemyId = biome.EliteEnemyId, X = 0, Z = -44 })
+		elseif idx == 4 then
+			table.insert(placements, { EnemyId = biome.EliteEnemyId, X = -24, Z = -44 })
+			table.insert(placements, { EnemyId = biome.EliteEnemyId, X = 24, Z = -44 })
+		end
+	end
+
+	C.Floors[floorId] = placements
+end
+
+function C.Get(id: string)
+	return C.Entries[id]
+end
+
+function C.Attack(enemyId: string, attackId: string)
+	local e = C.Get(enemyId)
+	if e then
+		for _, a in e.Attacks do
+			if a.Id == attackId then
+				return a
+			end
+		end
+	end
 	return nil
 end
-local function freeze(t)
-	for _,v in pairs(t) do if type(v)=="table" and not table.isfrozen(v) then freeze(v) end end
+
+local function freeze(t: any)
+	for _, v in pairs(t) do
+		if type(v) == "table" and not table.isfrozen(v) then
+			freeze(v)
+		end
+	end
 	return table.freeze(t)
 end
+
 return freeze(C)

@@ -202,7 +202,7 @@ local function profile()
 	return {
 		SchemaVersion = 1, PlotIndex = 1,
 		Currencies = { Gold = 1000000, Gems = 10000, ResearchPoints = 1000 },
-		Heroes = { r = hero("r"), d = hero("d", "hero_jenna"), e = hero("e", "hero_catio") },
+		Heroes = { r = hero("r"), d = hero("d", "hero_jenna"), e = hero("e", "hero_catio", { Stars = 1 }) },
 		DeployedSquadOrder = {},
 		Facilities = {
 			ManaConduit = { Level = 1, AssignedHeroUUIDs = {}, UncollectedOutput = 0 },

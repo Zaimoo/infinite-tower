@@ -62,7 +62,7 @@ end)
 
 -- 1. Keyboard Hotkeys: [Q] Overdrive Whistle, [E] Emergency Recall Whistle
 UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: boolean)
-	if gameProcessed then
+	if gameProcessed or (_G.IsAnyMasterModalOpen and _G.IsAnyMasterModalOpen()) or (_G.IsTowerSelectorOpen and _G.IsTowerSelectorOpen()) then
 		return
 	end
 
@@ -91,7 +91,7 @@ end)
 
 -- 2. [Click / Tap] Focus Target Raycast in 3D Viewport
 UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: boolean)
-	if gameProcessed then
+	if gameProcessed or (_G.IsAnyMasterModalOpen and _G.IsAnyMasterModalOpen()) or (_G.IsTowerSelectorOpen and _G.IsTowerSelectorOpen()) then
 		return
 	end
 	if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then

@@ -37,6 +37,7 @@ $modulePaths = @(
     'ReplicatedStorage/Shared/Config/MobCatalog.luau',
     'ReplicatedStorage/Shared/Config/TowerFloorConfig.luau',
     'ReplicatedStorage/Shared/Config/FirstBiomeCombat.luau',
+    'ReplicatedStorage/Assets/TowerEnemyClips.luau',
     'ReplicatedStorage/Shared/Util/AttackTimeline.luau',
     'ReplicatedStorage/Shared/Util/EnemyActionState.luau',
     'ReplicatedStorage/Shared/Util/TowerProtocol.luau',

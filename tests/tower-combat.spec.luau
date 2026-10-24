@@ -1,6 +1,7 @@
 local A=require(nodes["ReplicatedStorage.Shared.Util.AttackTimeline"])
 local S=require(nodes["ReplicatedStorage.Shared.Util.EnemyActionState"])
 local C=require(nodes["ReplicatedStorage.Shared.Config.FirstBiomeCombat"])
+local Clips=require(nodes["ReplicatedStorage.Assets.TowerEnemyClips"])
 local passed,failed=0,0
 local function test(name,fn)
 	local ok,err=pcall(fn);if ok then passed+=1;print("PASS "..name) else failed+=1;print("FAIL "..name..": "..tostring(err)) end
@@ -14,10 +15,27 @@ local function fixture()
 	return m,h,d,a
 end
 local function safe(e) return e.Safe==true end
-test("Slice contains three complete runtime enemies and only floors 1 and 5",function()
-	local n=0;for _,e in pairs(C.Entries) do n+=1;assert(#e.RequiredSlots>=5);assert(e.ModelSource and e.ClipSource)
+test("Combat registry contains all 40 complete runtime enemies, clips, and all 50 floors",function()
+	local n=0;for enemyId,e in pairs(C.Entries) do n+=1;assert(#e.RequiredSlots>=5);assert(e.ModelSource and e.ClipSource)
+		local clipSet=assert(Clips[enemyId],"Missing clip set for "..enemyId)
+		for _,slot in e.RequiredSlots do
+			local frames=assert(clipSet[slot],"Missing slot "..slot.." for "..enemyId)
+			assert(Clips.Sample(frames,0) and Clips.Sample(frames,.5) and Clips.Sample(frames,.8) and Clips.Sample(frames,1))
+		end
 		for _,a in e.Attacks do assert(a.ImpactOffsetSeconds>=.6 and a.RecoverySeconds>0 and a.Range>0 and a.DamageMultiplier>0) end
-	end;assert(n==3 and C.Floors[1] and C.Floors[5] and C.Floors[50]==nil and C.ReleaseEnabled)
+	end
+	assert(n==40 and C.ReleaseEnabled)
+	for floorId=1,50 do
+		local placements=assert(C.Floors[floorId],"Missing placements on floor "..floorId)
+		assert(#placements>=3)
+		local bosses=0
+		for _,p in placements do
+			local spec=assert(C.Get(p.EnemyId))
+			assert(p.Z<60,"Placement inside arrival safe zone on floor "..floorId)
+			if spec.Role=="BOSS" then bosses+=1 end
+		end
+		assert(bosses==(floorId%5==0 and 1 or 0),"Invalid boss count on floor "..floorId)
+	end
 end)
 test("Windup sends an identity-qualified future impact without applying damage",function()
 	local m,h,d,a=fixture();local hits=0
@@ -56,6 +74,17 @@ test("Ground cast aim remains fixed and can be dodged during anticipation",funct
 	h.Position=Vector3.new(20,0,-20);local bystander=actor(3,0,-20);local hits={}
 	A.Step(a,m,h,d,11.5,safe,{h,bystander},function(v) table.insert(hits,v.NetId) end)
 	assert(#hits==1 and hits[1]==3 and a.Aim.X==0)
+end)
+test("Ranged projectile sweeps corridor at impact time and can be dodged laterally",function()
+	local m,h=actor(1,0,0),actor(2,0,-24);m.EnemyId="mob_lantern_spore"
+	local d=C.Get(m.EnemyId).Attacks[1]
+	assert(d.Shape=="PROJECTILE" and d.TravelSeconds>0 and d.ImpactOffsetSeconds==d.WindupSeconds+d.TravelSeconds)
+	local a=A.Start(m,h,d,10)
+	h.Position=Vector3.new(10,0,-24) -- dodges laterally out of corridor
+	local inCorridor=actor(3,0,-12)
+	local hits={}
+	A.Step(a,m,h,d,11.05,safe,{h,inCorridor},function(v) table.insert(hits,v.NetId) end)
+	assert(#hits==1 and hits[1]==3)
 end)
 test("Each life action counter advances and cancellation is terminal",function()
 	local m,h,d,a=fixture();assert(A.Cancel(a,"LEASH"));assert(A.Step(a,m,h,d,10.7,safe,{h},function() error("Canceled") end)==nil)
