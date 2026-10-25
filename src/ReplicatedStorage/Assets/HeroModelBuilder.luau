@@ -198,12 +198,40 @@ function HeroModelBuilder.BuildHan(): Model
 	return model
 end
 
+local function attachJennaHair(head: BasePart)
+	local hairOrange = Color3.fromRGB(180, 100, 48)
+	local hairParts = {
+		{ name = "HairBase", isWedge = false, size = Vector3.new(1.20, 0.40, 1.15), cf = CFrame.new(0, 0.42, -0.05) },
+		{ name = "HairBangs_MidL", isWedge = false, size = Vector3.new(0.24, 0.28, 0.16), cf = CFrame.new(-0.11, 0.32, -0.56) * CFrame.Angles(math.rad(-14), math.rad(4), math.rad(-6)) },
+		{ name = "HairBangs_MidR", isWedge = false, size = Vector3.new(0.24, 0.28, 0.16), cf = CFrame.new(0.11, 0.32, -0.56) * CFrame.Angles(math.rad(-14), math.rad(-4), math.rad(6)) },
+		{ name = "HairBangs_OutL", isWedge = false, size = Vector3.new(0.32, 0.34, 0.18), cf = CFrame.new(-0.35, 0.28, -0.55) * CFrame.Angles(math.rad(-12), math.rad(8), math.rad(-14)) },
+		{ name = "HairBangs_OutR", isWedge = false, size = Vector3.new(0.32, 0.34, 0.18), cf = CFrame.new(0.35, 0.28, -0.55) * CFrame.Angles(math.rad(-12), math.rad(-8), math.rad(14)) },
+		{ name = "HairSide_L", isWedge = false, size = Vector3.new(0.16, 0.82, 0.22), cf = CFrame.new(-0.55, -0.06, -0.47) * CFrame.Angles(math.rad(6), math.rad(4), math.rad(-5)) },
+		{ name = "HairSide_R", isWedge = false, size = Vector3.new(0.16, 0.82, 0.22), cf = CFrame.new(0.55, -0.06, -0.47) * CFrame.Angles(math.rad(6), math.rad(-4), math.rad(5)) },
+		{ name = "HairSideTip_L", isWedge = true, size = Vector3.new(0.16, 0.22, 0.22), cf = CFrame.new(-0.58, -0.52, -0.44) * CFrame.Angles(math.rad(186), math.rad(4), math.rad(-5)) },
+		{ name = "HairSideTip_R", isWedge = true, size = Vector3.new(0.16, 0.22, 0.22), cf = CFrame.new(0.58, -0.52, -0.44) * CFrame.Angles(math.rad(186), math.rad(-4), math.rad(5)) },
+		{ name = "HairTress_L", isWedge = false, size = Vector3.new(0.20, 0.95, 0.20), cf = CFrame.new(-0.62, -0.62, -0.32) * CFrame.Angles(math.rad(10), 0, math.rad(-8)) },
+		{ name = "HairTress_R", isWedge = false, size = Vector3.new(0.20, 0.95, 0.20), cf = CFrame.new(0.62, -0.62, -0.32) * CFrame.Angles(math.rad(10), 0, math.rad(8)) },
+		{ name = "HairTressTip_L", isWedge = true, size = Vector3.new(0.20, 0.32, 0.20), cf = CFrame.new(-0.70, -1.18, -0.24) * CFrame.Angles(math.rad(190), 0, math.rad(-8)) },
+		{ name = "HairTressTip_R", isWedge = true, size = Vector3.new(0.20, 0.32, 0.20), cf = CFrame.new(0.70, -1.18, -0.24) * CFrame.Angles(math.rad(190), 0, math.rad(8)) },
+	}
+
+	for _, spec in ipairs(hairParts) do
+		if not head:FindFirstChild(spec.name) then
+			if spec.isWedge then
+				makeWedge(head, spec.name, spec.size, spec.cf, head, hairOrange)
+			else
+				makePart(head, spec.name, spec.size, spec.cf, head, hairOrange)
+			end
+		end
+	end
+end
+
 --============================================================================
 -- HERO 2: HERO_JENNA (1★ Marksman - Wind-Scout Archer)
 --============================================================================
 function HeroModelBuilder.BuildJenna(): Model
 	local skin = Color3.fromRGB(255, 228, 205)
-	local hairMint = Color3.fromRGB(45, 135, 80)
 	local tunicGreen = Color3.fromRGB(95, 235, 145)
 	local leatherBrown = Color3.fromRGB(115, 80, 50)
 	local darkGreen = Color3.fromRGB(28, 75, 45)
@@ -225,11 +253,8 @@ function HeroModelBuilder.BuildJenna(): Model
 	lFoot.Color = leatherBrown
 	rFoot.Color = leatherBrown
 
-	-- Hair: High Twin-Tails
-	makePart(head, "HairBase", Vector3.new(1.24, 0.45, 1.24), CFrame.new(0, 0.48, -0.05), head, hairMint)
-	makePart(head, "HairBangs", Vector3.new(1.15, 0.35, 0.3), CFrame.new(0, 0.35, -0.58) * CFrame.Angles(math.rad(-10), 0, 0), head, hairMint)
-	makePart(head, "TailLeft", Vector3.new(0.35, 1.6, 0.35), CFrame.new(-0.75, 0.25, 0.2) * CFrame.Angles(0, 0, math.rad(-15)), head, hairMint)
-	makePart(head, "TailRight", Vector3.new(0.35, 1.6, 0.35), CFrame.new(0.75, 0.25, 0.2) * CFrame.Angles(0, 0, math.rad(15)), head, hairMint)
+	-- Hair: Styled Anime Ginger-Orange Framing Locks & Tresses
+	attachJennaHair(head)
 
 	-- Ranger cowl & belt
 	makePart(upperTorso, "RangerCowl", Vector3.new(1.8, 0.4, 1.1), CFrame.new(0, 0.7, 0), upperTorso, darkGreen)
@@ -684,11 +709,12 @@ function HeroModelBuilder.EnsureHeroes(): { [string]: Model }
 				existing:Destroy()
 			end
 
-			-- Check if Jenna has authored preview in workspace
+			-- Check if Jenna has authored preview in ServerStorage or workspace
 			local model: Model? = nil
 			if heroId == "hero_jenna" then
-				local mv = Workspace:FindFirstChild("ModelViewer")
-				local jp = mv and mv:FindFirstChild("JennaPreview")
+				local ss = game:GetService("ServerStorage")
+				local mv = Workspace:FindFirstChild("ModelViewer") or ss:FindFirstChild("ModelViewer")
+				local jp = (mv and mv:FindFirstChild("JennaPreview")) or (ss and ss:FindFirstChild("JennaPreview", true))
 				if jp and jp:IsA("Model") then
 					local clone = jp:Clone()
 					clone.Name = "hero_jenna"
@@ -701,6 +727,31 @@ function HeroModelBuilder.EnsureHeroes(): { [string]: Model }
 							end
 						end
 					end
+					-- Strip baked-in weapons so the hero is a clean base rig
+					local bakedWeapon = clone:FindFirstChild("EquippedWeapon")
+					if bakedWeapon then
+						bakedWeapon:Destroy()
+					end
+					local bakedLeft = clone:FindFirstChild("EquippedWeaponLeft")
+					if bakedLeft then
+						bakedLeft:Destroy()
+					end
+					local placket = clone:FindFirstChild("GoldPlacket", true)
+					if placket then
+						placket:Destroy()
+					end
+					for _, handName in ipairs({ "LeftHand", "RightHand" }) do
+						local hand = clone:FindFirstChild(handName, true)
+						if hand then
+							for _, weld in ipairs(hand:GetChildren()) do
+								if weld:IsA("WeldConstraint") or weld:IsA("Weld") or weld:IsA("Motor6D") then
+									if not weld.Part1 or not weld.Part1:IsDescendantOf(clone) or weld.Name:find("Weapon") or weld.Name:find("Bow") then
+										weld:Destroy()
+									end
+								end
+							end
+						end
+					end
 					-- Ensure parts unanchored for R15 physics
 					for _, d in ipairs(clone:GetDescendants()) do
 						if d:IsA("BasePart") then
@@ -710,6 +761,10 @@ function HeroModelBuilder.EnsureHeroes(): { [string]: Model }
 							d.Massless = true
 							d.Anchored = false
 						end
+					end
+					local head = clone:FindFirstChild("Head") :: BasePart?
+					if head then
+						attachJennaHair(head)
 					end
 					model = clone
 				end
@@ -729,6 +784,12 @@ function HeroModelBuilder.EnsureHeroes(): { [string]: Model }
 				result[heroId] = model
 			end
 		else
+			if heroId == "hero_jenna" then
+				local head = existing:FindFirstChild("Head") :: BasePart?
+				if head then
+					attachJennaHair(head)
+				end
+			end
 			result[heroId] = existing :: Model
 		end
 	end

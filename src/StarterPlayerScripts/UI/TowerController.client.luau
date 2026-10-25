@@ -1,8 +1,13 @@
 --!strict
+-- StarterPlayerScripts/UI/TowerController.client.luau
+-- Authoritative Infinite Tower Travel & Hub Floor Selector Modal.
+-- Designed to match the 50-Floor 10-Biome Gothic Modal specification.
+
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 local PromptService = game:GetService("ProximityPromptService")
 local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
 local Http = game:GetService("HttpService")
 
 local player = Players.LocalPlayer
@@ -17,68 +22,115 @@ local pending: any = nil
 local pendingActionName: string? = nil
 local lastFeedback: string? = nil
 local selected = 1
+local activeBiomeIndex = 1
 local presence: any = nil
+local render: () -> ()
 
-local gui = Instance.new("ScreenGui")
-gui.Name = "TowerTravel"
-gui.ResetOnSpawn = false
-gui.DisplayOrder = 40
-gui.Parent = player:WaitForChild("PlayerGui")
+-- Visual Palette
+local C = {
+	ObsidianDark = Color3.fromRGB(15, 12, 24),
+	ObsidianMid = Color3.fromRGB(22, 18, 34),
+	ObsidianSheen = Color3.fromRGB(36, 28, 52),
+	BorderNormal = Color3.fromRGB(65, 54, 82),
+	BorderSelected = Color3.fromRGB(192, 132, 252),
+	BorderVisiting = Color3.fromRGB(74, 222, 128),
+	BorderSquad = Color3.fromRGB(56, 189, 248),
+	TextWhite = Color3.fromRGB(255, 255, 255),
+	TextMuted = Color3.fromRGB(165, 155, 185),
+	TextDim = Color3.fromRGB(115, 105, 135),
+	GreenAccent = Color3.fromRGB(74, 222, 128),
+	GoldAccent = Color3.fromRGB(250, 204, 21),
+}
 
-local function label(parent: Instance, text: string, pos: UDim2, size: UDim2): TextLabel
-	local l = Instance.new("TextLabel")
-	l.Position = pos
-	l.Size = size
-	l.BackgroundTransparency = 1
-	l.Text = text
-	l.TextColor3 = Color3.fromRGB(235, 228, 220)
-	l.Font = Enum.Font.Gotham
-	l.TextSize = 13
-	l.TextWrapped = true
-	l.TextXAlignment = Enum.TextXAlignment.Left
-	l.Parent = parent
-	return l
+-- Biome Environmental Atmospheric Color Themes
+local BIOME_PALETTES = {
+	[1] = { Top = Color3.fromRGB(38, 70, 50), Bot = Color3.fromRGB(16, 28, 22), Accent = Color3.fromRGB(60, 115, 82) },    -- Verdant Ruins
+	[2] = { Top = Color3.fromRGB(58, 36, 78), Bot = Color3.fromRGB(22, 16, 36), Accent = Color3.fromRGB(85, 55, 120) },   -- Fungal Hollow
+	[3] = { Top = Color3.fromRGB(78, 54, 34), Bot = Color3.fromRGB(30, 20, 14), Accent = Color3.fromRGB(120, 85, 52) },  -- Ashen Dunes
+	[4] = { Top = Color3.fromRGB(32, 64, 92), Bot = Color3.fromRGB(16, 30, 44), Accent = Color3.fromRGB(56, 110, 155) },  -- Frozen Citadel
+	[5] = { Top = Color3.fromRGB(84, 32, 32), Bot = Color3.fromRGB(32, 14, 14), Accent = Color3.fromRGB(135, 48, 48) },   -- Infernal Foundry
+	[6] = { Top = Color3.fromRGB(52, 32, 88), Bot = Color3.fromRGB(22, 14, 40), Accent = Color3.fromRGB(92, 54, 142) },   -- Thunder Highlands
+	[7] = { Top = Color3.fromRGB(68, 28, 74), Bot = Color3.fromRGB(28, 12, 32), Accent = Color3.fromRGB(110, 42, 120) },  -- Corrupted Grove
+	[8] = { Top = Color3.fromRGB(24, 62, 82), Bot = Color3.fromRGB(12, 26, 36), Accent = Color3.fromRGB(42, 98, 128) },   -- Sunken Sanctuary
+	[9] = { Top = Color3.fromRGB(58, 40, 94), Bot = Color3.fromRGB(24, 16, 42), Accent = Color3.fromRGB(105, 68, 160) },  -- Astral Archives
+	[10] = { Top = Color3.fromRGB(78, 22, 38), Bot = Color3.fromRGB(30, 10, 16), Accent = Color3.fromRGB(130, 35, 62) },   -- Abyssal Throne
+}
+
+local function new<T>(className: string, props: { [string]: any }, parent: Instance?): T
+	local inst = Instance.new(className)
+	for k, v in pairs(props) do
+		if k ~= "Parent" then
+			(inst :: any)[k] = v
+		end
+	end
+	if parent then
+		inst.Parent = parent
+	end
+	return inst :: any
 end
 
-local function button(parent: Instance, text: string, pos: UDim2, size: UDim2, callback: () -> ()): TextButton
-	local b = Instance.new("TextButton")
-	b.Text = text
-	b.Position = pos
-	b.Size = size
-	b.BackgroundColor3 = Color3.fromRGB(28, 20, 38)
-	b.Name = text:gsub("[^%w]", "")
-	if b.Name == "" then b.Name = "Close" end
-	b.TextColor3 = Color3.new(1, 1, 1)
-	b.Font = Enum.Font.GothamBold
-	b.TextSize = 13
-	b.AutoButtonColor = true
-	b.Parent = parent
-	GothicBoxStyle.Apply(b, { Style = "Button", OnClick = callback })
-	return b
-end
+-- ScreenGui Setup
+local gui = new("ScreenGui", {
+	Name = "TowerTravel",
+	ResetOnSpawn = false,
+	DisplayOrder = 40,
+}, player:WaitForChild("PlayerGui"))
 
-local panel = Instance.new("Frame")
-panel.Name = "FloorSelector"
-panel.AnchorPoint = Vector2.new(.5, .5)
-panel.Position = UDim2.fromScale(.5, .5)
-panel.Size = UDim2.fromOffset(540, 500)
-panel.BackgroundColor3 = Color3.fromRGB(15, 12, 22)
-panel.Active = true
-panel.Visible = false
-panel.Parent = gui
+-- Dim Scrim Backdrop
+local scrim = new("TextButton", {
+	Name = "TowerScrim",
+	Text = "",
+	AutoButtonColor = false,
+	BackgroundColor3 = Color3.fromRGB(6, 4, 10),
+	BackgroundTransparency = 0.45,
+	Size = UDim2.fromScale(1, 1),
+	Visible = false,
+	ZIndex = 38,
+}, gui)
+
+-- Main Modal Window Container
+local panel = new("Frame", {
+	Name = "FloorSelector",
+	AnchorPoint = Vector2.new(0.5, 0.5),
+	Position = UDim2.fromScale(0.5, 0.5),
+	Size = UDim2.fromOffset(830, 560),
+	BackgroundColor3 = C.ObsidianDark,
+	Active = true,
+	Visible = false,
+	ZIndex = 40,
+}, gui)
 GothicBoxStyle.Apply(panel, { Style = "Window" })
 
-local scale = Instance.new("UIScale")
-scale.Parent = panel
-local reflow: any = nil
+-- 4 Edge Midpoint Diamond Bosses (Top, Bottom, Left, Right)
+local edgeMidpoints = {
+	UDim2.new(0.5, 0, 0, 0),
+	UDim2.new(0.5, 0, 1, 0),
+	UDim2.new(0, 0, 0.5, 0),
+	UDim2.new(1, 0, 0.5, 0),
+}
+for _, pos in ipairs(edgeMidpoints) do
+	new("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = pos,
+		Size = UDim2.fromOffset(10, 10),
+		BackgroundColor3 = Color3.fromRGB(240, 235, 250),
+		BorderSizePixel = 0,
+		Rotation = 45,
+		ZIndex = 46,
+	}, panel)
+end
+
+local scale = new("UIScale", { Scale = 1.0 }, panel)
 
 local function fit()
 	local camera = workspace.CurrentCamera
 	if camera then
-		local width, height = math.min(540, camera.ViewportSize.X - 24), math.min(500, camera.ViewportSize.Y - 84)
-		panel.Size = UDim2.fromOffset(width, height)
-		scale.Scale = 1
-		if reflow then reflow(width, height) end
+		local vp = camera.ViewportSize
+		local targetW, targetH = 830, 560
+		local scaleX = (vp.X - 24) / targetW
+		local scaleY = (vp.Y - 24) / targetH
+		local finalScale = math.clamp(math.min(scaleX, scaleY), 0.48, 1.0)
+		scale.Scale = finalScale
 	end
 end
 fit()
@@ -87,108 +139,546 @@ if workspace.CurrentCamera then
 	workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(fit)
 end
 
-local title = label(panel, "INFINITE TOWER · 50 FLOORS", UDim2.fromOffset(20, 12), UDim2.fromOffset(420, 26))
-title.Font = Enum.Font.GothamBold
-title.TextSize = 16
-local subtitle = label(panel, "10 Biomes · Select any floor to visit or station your squad", UDim2.fromOffset(20, 38), UDim2.fromOffset(480, 22))
-subtitle.TextColor3 = Color3.fromRGB(190, 178, 210)
-local detail = label(panel, "", UDim2.fromOffset(20, 286), UDim2.fromOffset(500, 88))
-local status = label(panel, "Connecting…", UDim2.fromOffset(20, 428), UDim2.fromOffset(500, 54))
+-- Close Button (Matching soft rounded translucent square with '×')
+local closeBtn = new("TextButton", {
+	Name = "Close",
+	AnchorPoint = Vector2.new(1, 0),
+	Position = UDim2.new(1, -18, 0, 18),
+	Size = UDim2.fromOffset(28, 28),
+	BackgroundColor3 = Color3.fromRGB(36, 28, 48),
+	BackgroundTransparency = 0.2,
+	AutoButtonColor = false,
+	BorderSizePixel = 0,
+	Text = "×",
+	TextColor3 = Color3.fromRGB(215, 205, 230),
+	Font = Enum.Font.GothamBold,
+	TextSize = 16,
+	ZIndex = 48,
+}, panel)
+new("UICorner", { CornerRadius = UDim.new(0, 6) }, closeBtn)
+local closeStroke = new("UIStroke", {
+	ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+	Color = Color3.fromRGB(75, 62, 95),
+	Thickness = 1.2,
+}, closeBtn)
 
-local scroll = Instance.new("ScrollingFrame")
-scroll.Name = "Floors"
-scroll.Position = UDim2.fromOffset(20, 66)
-scroll.Size = UDim2.fromOffset(500, 212)
-scroll.BackgroundColor3 = Color3.fromRGB(26, 22, 34)
-scroll.BorderSizePixel = 0
-scroll.ScrollBarThickness = 6
-scroll.Parent = panel
+closeBtn.MouseEnter:Connect(function()
+	closeStroke.Color = Color3.fromRGB(220, 175, 255)
+	closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+end)
+closeBtn.MouseLeave:Connect(function()
+	closeStroke.Color = Color3.fromRGB(75, 62, 95)
+	closeBtn.TextColor3 = Color3.fromRGB(215, 205, 230)
+end)
+closeBtn.Activated:Connect(function()
+	panel.Visible = false
+	scrim.Visible = false
+end)
 
-local biomeHeaders: { [number]: TextLabel } = {}
-local floorButtons: { [number]: TextButton } = {}
+scrim.Activated:Connect(function()
+	panel.Visible = false
+	scrim.Visible = false
+end)
 
-local function render()
-	local floor = floors.Get(selected)
-	if not floor then return end
-	local biome = mobs.Biomes[floor.BiomeIndex]
-	local info = presence and presence.Floors[selected + 1]
-	local squadSummaries = {}
-	if info and info.Squads then
-		for _, s in info.Squads do
-			table.insert(squadSummaries, string.format("%s (%d)", s.DisplayName, s.RosterSize))
+-- Title & Subtitle Header
+local titleLabel = new("TextLabel", {
+	Name = "Title",
+	Position = UDim2.fromOffset(26, 18),
+	Size = UDim2.fromOffset(500, 26),
+	BackgroundTransparency = 1,
+	Text = "INFINITE TOWER · 50 FLOORS",
+	TextColor3 = C.TextWhite,
+	Font = Enum.Font.GothamBold,
+	TextSize = 20,
+	TextXAlignment = Enum.TextXAlignment.Left,
+	ZIndex = 42,
+}, panel)
+
+local subtitleLabel = new("TextLabel", {
+	Name = "Subtitle",
+	Position = UDim2.fromOffset(26, 44),
+	Size = UDim2.fromOffset(500, 18),
+	BackgroundTransparency = 1,
+	Text = "10 Biomes · Select any floor to visit or station your squad",
+	TextColor3 = C.TextMuted,
+	Font = Enum.Font.Gotham,
+	TextSize = 13,
+	TextXAlignment = Enum.TextXAlignment.Left,
+	ZIndex = 42,
+}, panel)
+
+-- Body Layout Area (Left Column = Biome List, Right Column = Floors & Telemetry)
+local body = new("Frame", {
+	Name = "Body",
+	Position = UDim2.fromOffset(26, 72),
+	Size = UDim2.new(1, -52, 1, -90),
+	BackgroundTransparency = 1,
+	ZIndex = 41,
+}, panel)
+
+-- ============================================================================
+-- LEFT COLUMN: 10 BIOME CARDS SCROLLING FRAME
+-- ============================================================================
+local biomeScroll = new("ScrollingFrame", {
+	Name = "BiomeScroll",
+	Position = UDim2.fromScale(0, 0),
+	Size = UDim2.new(0.36, -14, 1, 0),
+	BackgroundTransparency = 1,
+	BorderSizePixel = 0,
+	ScrollBarThickness = 3,
+	ScrollBarImageColor3 = C.BorderSelected,
+	CanvasSize = UDim2.new(0, 0, 0, 10 * 100 + 8),
+	ZIndex = 42,
+}, body)
+
+-- Subtle Vertical Divider between Left & Right Columns
+local columnDivider = new("Frame", {
+	Name = "ColumnDivider",
+	Position = UDim2.new(0.36, 0, 0, 6),
+	Size = UDim2.new(0, 2, 1, -12),
+	BackgroundColor3 = Color3.fromRGB(55, 45, 72),
+	BorderSizePixel = 0,
+	ZIndex = 42,
+}, body)
+new("UICorner", { CornerRadius = UDim.new(0, 1) }, columnDivider)
+
+local biomeListLayout = new("UIListLayout", {
+	Padding = UDim.new(0, 8),
+	SortOrder = Enum.SortOrder.LayoutOrder,
+}, biomeScroll)
+
+local biomeCards: { [number]: { Root: Frame, Stroke: UIStroke, Label: TextLabel, PillStroke: UIStroke } } = {}
+
+-- ============================================================================
+-- RIGHT COLUMN: ACTIVE BIOME FLOOR SELECTION & TELEMETRY
+-- ============================================================================
+local rightPane = new("Frame", {
+	Name = "RightPane",
+	Position = UDim2.new(0.36, 14, 0, 0),
+	Size = UDim2.new(0.64, -14, 1, 0),
+	BackgroundTransparency = 1,
+	ZIndex = 42,
+}, body)
+
+-- 1. Floor Button Row (Top)
+local floorRow = new("Frame", {
+	Name = "FloorRow",
+	Position = UDim2.fromScale(0, 0),
+	Size = UDim2.new(1, 0, 0, 68),
+	BackgroundTransparency = 1,
+	ZIndex = 43,
+}, rightPane)
+
+local floorRowLayout = new("UIListLayout", {
+	FillDirection = Enum.FillDirection.Horizontal,
+	HorizontalAlignment = Enum.HorizontalAlignment.Center,
+	VerticalAlignment = Enum.VerticalAlignment.Center,
+	Padding = UDim.new(0, 10),
+	SortOrder = Enum.SortOrder.LayoutOrder,
+}, floorRow)
+
+local activeFloorButtons: { [number]: { Root: TextButton, Stroke: UIStroke, Corners: { Frame }, Number: TextLabel, FloorId: number } } = {}
+
+-- 2. Floor Details Card (Middle)
+local detailsCard = new("Frame", {
+	Name = "FloorDetailsCard",
+	Position = UDim2.fromOffset(0, 80),
+	Size = UDim2.new(1, 0, 0, 176),
+	BackgroundColor3 = Color3.fromRGB(15, 12, 22),
+	BorderSizePixel = 0,
+	ZIndex = 43,
+}, rightPane)
+new("UICorner", { CornerRadius = UDim.new(0, 6) }, detailsCard)
+local detailsStroke = new("UIStroke", {
+	ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+	Color = Color3.fromRGB(52, 42, 70),
+	Thickness = 1.2,
+}, detailsCard)
+
+-- Details Content Labels
+local detailHeader = new("TextLabel", {
+	Name = "DetailHeader",
+	Position = UDim2.fromOffset(18, 16),
+	Size = UDim2.new(1, -36, 0, 22),
+	BackgroundTransparency = 1,
+	Text = "Floor 1 · Overgrown Threshold (Verdant Ruins)",
+	TextColor3 = C.TextWhite,
+	Font = Enum.Font.GothamBold,
+	TextSize = 16,
+	TextXAlignment = Enum.TextXAlignment.Left,
+	TextTruncate = Enum.TextTruncate.AtEnd,
+	ZIndex = 45,
+}, detailsCard)
+
+local detailScaling = new("TextLabel", {
+	Name = "DetailScaling",
+	Position = UDim2.fromOffset(18, 48),
+	Size = UDim2.new(1, -36, 0, 20),
+	BackgroundTransparency = 1,
+	RichText = true,
+	Text = "Scaling: HP <font color=\"#4ADE80\">×1.00</font> · ATK <font color=\"#4ADE80\">×1.00</font> · Gold/XP <font color=\"#4ADE80\">×1.00</font>",
+	TextColor3 = Color3.fromRGB(240, 235, 248),
+	Font = Enum.Font.Gotham,
+	TextSize = 14,
+	TextXAlignment = Enum.TextXAlignment.Left,
+	ZIndex = 45,
+}, detailsCard)
+
+local detailRoster = new("TextLabel", {
+	Name = "DetailRoster",
+	Position = UDim2.fromOffset(18, 80),
+	Size = UDim2.new(1, -36, 0, 40),
+	BackgroundTransparency = 1,
+	RichText = true,
+	Text = "Roster: Moss Crawler ×5, Ruin Guardian ×5, Vinebound Elite ×1",
+	TextColor3 = Color3.fromRGB(220, 212, 235),
+	Font = Enum.Font.Gotham,
+	TextSize = 14,
+	TextWrapped = true,
+	TextXAlignment = Enum.TextXAlignment.Left,
+	ZIndex = 45,
+}, detailsCard)
+
+local detailVisitors = new("TextLabel", {
+	Name = "DetailVisitors",
+	Position = UDim2.fromOffset(18, 130),
+	Size = UDim2.new(1, -36, 0, 20),
+	BackgroundTransparency = 1,
+	Text = "Visitors: 0 · Stationed Squads: none",
+	TextColor3 = Color3.fromRGB(150, 140, 168),
+	Font = Enum.Font.Gotham,
+	TextSize = 13,
+	TextXAlignment = Enum.TextXAlignment.Left,
+	ZIndex = 45,
+}, detailsCard)
+
+-- 3. Action Buttons Row (Bottom)
+local actionRow = new("Frame", {
+	Name = "ActionRow",
+	Position = UDim2.fromOffset(0, 274),
+	Size = UDim2.new(1, 0, 0, 44),
+	BackgroundTransparency = 1,
+	ZIndex = 43,
+}, rightPane)
+
+local actionLayout = new("UIListLayout", {
+	FillDirection = Enum.FillDirection.Horizontal,
+	Padding = UDim.new(0, 10),
+	SortOrder = Enum.SortOrder.LayoutOrder,
+}, actionRow)
+
+-- 4. Status Footer
+local statusFooter = new("TextLabel", {
+	Name = "StatusFooter",
+	Position = UDim2.fromOffset(2, 332),
+	Size = UDim2.new(1, -4, 0, 40),
+	BackgroundTransparency = 1,
+	Text = "You: Hub · Squad: Following Master\n✓ HUB complete",
+	TextColor3 = Color3.fromRGB(160, 150, 180),
+	Font = Enum.Font.Gotham,
+	TextSize = 12,
+	TextWrapped = true,
+	TextXAlignment = Enum.TextXAlignment.Left,
+	ZIndex = 43,
+}, rightPane)
+
+-- ============================================================================
+-- HELPER: CREATE ORNATE ACTION BUTTON WITH CORNER & SIDE DIAMONDS
+-- ============================================================================
+local function createOrnateButton(parent: Instance, text: string, order: number, isPrimary: boolean?, onClick: () -> ()): TextButton
+	local normalStrokeColor = if isPrimary then C.BorderSelected else Color3.fromRGB(110, 95, 138)
+	local normalDiamondColor = if isPrimary then Color3.fromRGB(240, 220, 255) else Color3.fromRGB(220, 210, 240)
+	local normalTextColor = if isPrimary then Color3.fromRGB(245, 240, 255) else Color3.fromRGB(215, 205, 235)
+
+	local btn = new("TextButton", {
+		Name = text:gsub("[^%w]", "") .. "Btn",
+		LayoutOrder = order,
+		Size = UDim2.new(0.333, -7, 1, 0),
+		BackgroundColor3 = if isPrimary then Color3.fromRGB(28, 20, 42) else Color3.fromRGB(18, 14, 26),
+		AutoButtonColor = false,
+		BorderSizePixel = 0,
+		Text = text,
+		TextColor3 = normalTextColor,
+		Font = Enum.Font.GothamBold,
+		TextSize = 13,
+		ZIndex = 44,
+	}, parent)
+
+	new("UICorner", { CornerRadius = UDim.new(0, 4) }, btn)
+	local stroke = new("UIStroke", {
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+		Color = normalStrokeColor,
+		Thickness = if isPrimary then 1.5 else 1.2,
+	}, btn)
+
+	-- 4 Corner Diamond Accents + 2 Side Bracket Midpoint Diamonds
+	local bracketPositions = {
+		UDim2.fromScale(0, 0),
+		UDim2.fromScale(1, 0),
+		UDim2.fromScale(0, 1),
+		UDim2.fromScale(1, 1),
+		UDim2.new(0, 0, 0.5, 0),
+		UDim2.new(1, 0, 0.5, 0),
+	}
+	local diamondFrames: { Frame } = {}
+	for _, pos in ipairs(bracketPositions) do
+		local d = new("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = pos,
+			Size = UDim2.fromOffset(6, 6),
+			BackgroundColor3 = normalDiamondColor,
+			BorderSizePixel = 0,
+			Rotation = 45,
+			ZIndex = 45,
+		}, btn)
+		table.insert(diamondFrames, d)
+	end
+
+	-- Hover & Click Tweens
+	btn.MouseEnter:Connect(function()
+		TweenService:Create(btn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(38, 28, 58) }):Play()
+		TweenService:Create(stroke, TweenInfo.new(0.15), { Color = Color3.fromRGB(220, 175, 255) }):Play()
+		for _, d in ipairs(diamondFrames) do
+			TweenService:Create(d, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(220, 175, 255) }):Play()
 		end
-	end
+	end)
 
-	local encounterNames = {}
-	for _, enc in ipairs(floor.Encounters) do
-		local m = mobs.Get(enc.EnemyId)
-		if m then
-			table.insert(encounterNames, string.format("%s ×%d", m.DisplayName, enc.Count))
+	btn.MouseLeave:Connect(function()
+		TweenService:Create(btn, TweenInfo.new(0.15), { BackgroundColor3 = if isPrimary then Color3.fromRGB(28, 20, 42) else Color3.fromRGB(18, 14, 26) }):Play()
+		TweenService:Create(stroke, TweenInfo.new(0.15), { Color = normalStrokeColor }):Play()
+		for _, d in ipairs(diamondFrames) do
+			TweenService:Create(d, TweenInfo.new(0.15), { BackgroundColor3 = normalDiamondColor }):Play()
 		end
-	end
-	local bossEntry = floor.BossEnemyId and mobs.Get(floor.BossEnemyId) or nil
-	local bossText = if bossEntry then string.format(" · BOSS: %s", bossEntry.DisplayName) else ""
+	end)
 
-	detail.Text = string.format(
-		"Floor %d · %s (%s%s)\nScaling: HP ×%.2f · ATK ×%.2f · Gold/XP ×%.2f | Roster: %s\nVisitors: %d · Stationed Squads: %s",
-		selected,
-		floor.DisplayName,
-		floor.BiomeDisplayName or (biome and biome.DisplayName) or floor.BiomeId,
-		bossText,
-		floor.Difficulty.HPMultiplier,
-		floor.Difficulty.DamageMultiplier,
-		floor.Rewards.GoldMultiplier,
-		table.concat(encounterNames, ", "),
-		info and #info.Visitors or 0,
-		#squadSummaries > 0 and table.concat(squadSummaries, ", ") or "none"
-	)
-
-	local visitingFloor = if selfState and selfState.PlayerLocation then selfState.PlayerLocation.FloorId else 0
-	local assignedFloor = if selfState then selfState.SquadAssignment else nil
-
-	for id = 1, 50 do
-		local b = floorButtons[id]
-		if b then
-			local fInfo = presence and presence.Floors[id + 1]
-			local hasVisitors = fInfo and fInfo.Visitors and #fInfo.Visitors > 0
-			local hasSquads = fInfo and fInfo.Squads and #fInfo.Squads > 0
-			local tag = ""
-			if visitingFloor == id and assignedFloor == id then
-				tag = " ★"
-			elseif visitingFloor == id then
-				tag = " ●"
-			elseif assignedFloor == id then
-				tag = " ▲"
-			elseif id % 5 == 0 then
-				tag = " ◆"
-			elseif hasVisitors or hasSquads then
-				tag = " ·"
-			end
-			b.Text = tostring(id) .. tag
-			if id == selected then
-				b.TextColor3 = Color3.fromRGB(255, 232, 125)
-			elseif visitingFloor == id then
-				b.TextColor3 = Color3.fromRGB(125, 240, 175)
-			elseif assignedFloor == id then
-				b.TextColor3 = Color3.fromRGB(135, 215, 255)
-			elseif id % 5 == 0 then
-				b.TextColor3 = Color3.fromRGB(245, 165, 255)
-			else
-				b.TextColor3 = Color3.fromRGB(235, 228, 220)
-			end
-		end
-	end
-
-	if selfState then
-		local locStr = if visitingFloor == 0 then "Hub" else string.format("Floor %d (%s)", visitingFloor, floors.Get(visitingFloor).DisplayName)
-		local sqStr = if assignedFloor then string.format("Stationed on Floor %d", assignedFloor) else "Following Master"
-		local feedbackStr = if pending then string.format("Pending: %s…", pendingActionName or "request")
-			elseif lastFeedback then lastFeedback
-			else "Ready (● You · ▲ Squad · ◆ Boss)"
-		status.Text = string.format("You: %s · Squad: %s\n%s", locStr, sqStr, feedbackStr)
-	end
+	btn.Activated:Connect(onClick)
+	return btn
 end
 
+-- ============================================================================
+-- HELPER: CREATE ORNATE SQUARE FLOOR BUTTON (1, 2, 3, 4, 5◆)
+-- ============================================================================
+local function createFloorTile(indexInRow: number): any
+	local btn = new("TextButton", {
+		Name = "FloorSlot_" .. indexInRow,
+		LayoutOrder = indexInRow,
+		Size = UDim2.fromOffset(78, 68),
+		BackgroundColor3 = Color3.fromRGB(18, 14, 28),
+		AutoButtonColor = false,
+		BorderSizePixel = 0,
+		Text = "",
+		ZIndex = 44,
+	}, floorRow)
+
+	new("UICorner", { CornerRadius = UDim.new(0, 4) }, btn)
+	local stroke = new("UIStroke", {
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+		Color = C.BorderNormal,
+		Thickness = 1.2,
+	}, btn)
+
+	-- 4 Corner Diamonds
+	local cornerCoords = {
+		UDim2.fromScale(0, 0),
+		UDim2.fromScale(1, 0),
+		UDim2.fromScale(0, 1),
+		UDim2.fromScale(1, 1),
+	}
+	local cornerDiamonds: { Frame } = {}
+	for _, pos in ipairs(cornerCoords) do
+		local d = new("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = pos,
+			Size = UDim2.fromOffset(6, 6),
+			BackgroundColor3 = C.BorderNormal,
+			BorderSizePixel = 0,
+			Rotation = 45,
+			Active = false,
+			ZIndex = 45,
+		}, btn)
+		table.insert(cornerDiamonds, d)
+	end
+
+	local numLabel = new("TextLabel", {
+		Name = "Num",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1,
+		Text = tostring(indexInRow),
+		TextColor3 = C.TextMuted,
+		Font = Enum.Font.GothamBold,
+		TextSize = 20,
+		TextXAlignment = Enum.TextXAlignment.Center,
+		TextYAlignment = Enum.TextYAlignment.Center,
+		Active = false,
+		ZIndex = 46,
+	}, btn)
+
+	local slotData: any
+	slotData = {
+		Root = btn,
+		Stroke = stroke,
+		Corners = cornerDiamonds,
+		Number = numLabel,
+		FloorId = indexInRow,
+	}
+
+	btn.Activated:Connect(function()
+		if slotData.FloorId and slotData.FloorId > 0 then
+			selected = slotData.FloorId
+			render()
+		end
+	end)
+
+	btn.MouseEnter:Connect(function()
+		if selected ~= slotData.FloorId then
+			TweenService:Create(btn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(28, 22, 42) }):Play()
+			TweenService:Create(stroke, TweenInfo.new(0.15), { Color = Color3.fromRGB(150, 120, 190) }):Play()
+		end
+	end)
+	btn.MouseLeave:Connect(function()
+		if selected ~= slotData.FloorId then
+			TweenService:Create(btn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(18, 14, 28) }):Play()
+			TweenService:Create(stroke, TweenInfo.new(0.15), { Color = C.BorderNormal }):Play()
+		end
+	end)
+
+	return slotData
+end
+
+-- Create the 5 permanent floor slots
+for i = 1, 5 do
+	activeFloorButtons[i] = createFloorTile(i)
+end
+
+-- ============================================================================
+-- HELPER: BUILD 10 BIOME CARDS
+-- ============================================================================
+for biomeIdx, biome in ipairs(mobs.Biomes) do
+	local firstF = (biomeIdx - 1) * 5 + 1
+	local lastF = biomeIdx * 5
+	local pal = BIOME_PALETTES[biomeIdx] or BIOME_PALETTES[1]
+
+	local card = new("TextButton", {
+		Name = "BiomeCard_" .. biomeIdx,
+		LayoutOrder = biomeIdx,
+		Size = UDim2.new(1, -6, 0, 92),
+		BackgroundColor3 = pal.Bot,
+		AutoButtonColor = false,
+		BorderSizePixel = 0,
+		Text = "",
+		ClipsDescendants = true,
+		ZIndex = 43,
+	}, biomeScroll)
+
+	new("UICorner", { CornerRadius = UDim.new(0, 6) }, card)
+
+	-- Atmospheric Environmental Landscape Gradient
+	new("UIGradient", {
+		Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0.0, pal.Top),
+			ColorSequenceKeypoint.new(0.45, pal.Accent),
+			ColorSequenceKeypoint.new(1.0, pal.Bot),
+		}),
+		Rotation = 75,
+	}, card)
+
+	-- Atmospheric horizon silhouette layer
+	local horizon = new("Frame", {
+		Name = "HorizonArt",
+		Position = UDim2.new(0, 0, 0.12, 0),
+		Size = UDim2.new(1, 0, 0.68, 0),
+		BackgroundTransparency = 0.55,
+		BackgroundColor3 = Color3.fromRGB(8, 6, 12),
+		BorderSizePixel = 0,
+		Active = false,
+		ZIndex = 44,
+	}, card)
+	new("UICorner", { CornerRadius = UDim.new(0, 4) }, horizon)
+
+	-- Vignette overlay
+	local vignette = new("Frame", {
+		Name = "Vignette",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = Color3.fromRGB(10, 8, 16),
+		BackgroundTransparency = 0.65,
+		BorderSizePixel = 0,
+		Active = false,
+		ZIndex = 45,
+	}, card)
+
+	local cardStroke = new("UIStroke", {
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+		Color = C.BorderNormal,
+		Thickness = 1.2,
+	}, card)
+
+	-- Inner Artwork Border Frame
+	local innerArtFrame = new("Frame", {
+		Name = "ArtFrame",
+		Position = UDim2.fromOffset(2, 2),
+		Size = UDim2.new(1, -4, 1, -4),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		Active = false,
+		ZIndex = 45,
+	}, card)
+	new("UICorner", { CornerRadius = UDim.new(0, 4) }, innerArtFrame)
+	new("UIStroke", {
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+		Color = Color3.fromRGB(60, 50, 75),
+		Thickness = 1,
+		Transparency = 0.4,
+	}, innerArtFrame)
+
+	-- Bottom Label Pill (e.g. BIOME 1 · VERDANT RUINS (FLOORS 1–5))
+	local pill = new("Frame", {
+		Name = "TitlePill",
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, -5),
+		Size = UDim2.new(1, -12, 0, 22),
+		BackgroundColor3 = Color3.fromRGB(12, 10, 18),
+		BorderSizePixel = 0,
+		Active = false,
+		ZIndex = 46,
+	}, card)
+	new("UICorner", { CornerRadius = UDim.new(0, 4) }, pill)
+
+	local pillStroke = new("UIStroke", {
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+		Color = Color3.fromRGB(75, 62, 95),
+		Thickness = 1,
+	}, pill)
+
+	local pillText = new("TextLabel", {
+		Name = "PillText",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1,
+		Text = string.format("BIOME %d · %s (FLOORS %d–%d)", biomeIdx, string.upper(biome.DisplayName), firstF, lastF),
+		TextColor3 = C.TextMuted,
+		Font = Enum.Font.GothamBold,
+		TextSize = 10,
+		TextTruncate = Enum.TextTruncate.AtEnd,
+		Active = false,
+		ZIndex = 47,
+	}, pill)
+
+	card.Activated:Connect(function()
+		activeBiomeIndex = biomeIdx
+		selected = (biomeIdx - 1) * 5 + 1
+		render()
+	end)
+
+	biomeCards[biomeIdx] = {
+		Root = card,
+		Stroke = cardStroke,
+		Label = pillText,
+		PillStroke = pillStroke,
+	}
+end
+
+-- ============================================================================
+-- ACTION BUTTON HANDLERS
+-- ============================================================================
 local function request(action: string, id: number?)
 	if not selfState or pending then return end
 	local r = {
@@ -207,6 +697,176 @@ local function request(action: string, id: number?)
 	remotes.Request:FireServer(r)
 end
 
+local visitBtn = createOrnateButton(actionRow, "VISIT FLOOR", 1, true, function()
+	local visitingFloor = if selfState and selfState.PlayerLocation then selfState.PlayerLocation.FloorId else 0
+	if visitingFloor == selected then
+		request("HUB")
+	else
+		request("VISIT", selected)
+	end
+end)
+
+local assignBtn = createOrnateButton(actionRow, "ASSIGN SQUAD", 2, false, function()
+	request("ASSIGN", selected)
+end)
+
+local recallBtn = createOrnateButton(actionRow, "RECALL SQUAD", 3, false, function()
+	request("RECALL")
+end)
+
+-- ============================================================================
+-- RENDER & REFRESH LOGIC
+-- ============================================================================
+render = function()
+	local floor = floors.Get(selected)
+	if not floor then return end
+
+	activeBiomeIndex = math.clamp(math.floor((selected - 1) / 5) + 1, 1, 10)
+	local biome = mobs.Biomes[floor.BiomeIndex]
+	local info = presence and presence.Floors[selected + 1]
+
+	local squadSummaries = {}
+	if info and info.Squads then
+		for _, s in info.Squads do
+			table.insert(squadSummaries, string.format("%s (%d)", s.DisplayName, s.RosterSize))
+		end
+	end
+
+	local encounterNames = {}
+	for _, enc in ipairs(floor.Encounters) do
+		local m = mobs.Get(enc.EnemyId)
+		if m then
+			table.insert(encounterNames, string.format("%s ×%d", m.DisplayName, enc.Count))
+		end
+	end
+	local bossEntry = floor.BossEnemyId and mobs.Get(floor.BossEnemyId) or nil
+	local bossText = if bossEntry then string.format(" · BOSS: %s", bossEntry.DisplayName) else ""
+
+	-- 1. Update Floor Details Card
+	detailHeader.Text = string.format("Floor %d · %s (%s%s)", selected, floor.DisplayName, floor.BiomeDisplayName or (biome and biome.DisplayName) or floor.BiomeId, bossText)
+
+	detailScaling.Text = string.format(
+		"Scaling: HP <font color=\"#4ADE80\">×%.2f</font> · ATK <font color=\"#4ADE80\">×%.2f</font> · Gold/XP <font color=\"#4ADE80\">×%.2f</font>",
+		floor.Difficulty.HPMultiplier,
+		floor.Difficulty.DamageMultiplier,
+		floor.Rewards.GoldMultiplier
+	)
+
+	detailRoster.Text = string.format("Roster: %s", #encounterNames > 0 and table.concat(encounterNames, ", ") or "None")
+
+	detailVisitors.Text = string.format(
+		"Visitors: %d · Stationed Squads: %s",
+		info and #info.Visitors or 0,
+		#squadSummaries > 0 and table.concat(squadSummaries, ", ") or "none"
+	)
+
+	local visitingFloor = if selfState and selfState.PlayerLocation then selfState.PlayerLocation.FloorId else 0
+	local assignedFloor = if selfState then selfState.SquadAssignment else nil
+
+	-- 2. Update 10 Biome Cards Highlight State
+	for bIdx = 1, 10 do
+		local cardData = biomeCards[bIdx]
+		if cardData then
+			local isCurrentBiome = (bIdx == activeBiomeIndex)
+			if isCurrentBiome then
+				cardData.Stroke.Color = C.BorderSelected
+				cardData.Stroke.Thickness = 1.8
+				cardData.PillStroke.Color = C.BorderSelected
+				cardData.Label.TextColor3 = C.TextWhite
+			else
+				cardData.Stroke.Color = C.BorderNormal
+				cardData.Stroke.Thickness = 1.0
+				cardData.PillStroke.Color = Color3.fromRGB(75, 62, 95)
+				cardData.Label.TextColor3 = C.TextMuted
+			end
+		end
+	end
+
+	-- 3. Update 5 Floor Buttons of the Active Biome
+	local firstFloorOfBiome = (activeBiomeIndex - 1) * 5 + 1
+	for slotIdx = 1, 5 do
+		local fId = firstFloorOfBiome + slotIdx - 1
+		local slotData = activeFloorButtons[slotIdx]
+		if slotData then
+			local isSelectedFloor = (fId == selected)
+			local isVisiting = (visitingFloor == fId)
+			local isAssigned = (assignedFloor == fId)
+			local isBoss = (fId % 5 == 0)
+
+			local displayText = tostring(fId)
+			if isBoss then
+				displayText ..= " ◆"
+			end
+			if isVisiting and isAssigned then
+				displayText ..= " ★"
+			elseif isVisiting then
+				displayText ..= " ●"
+			elseif isAssigned then
+				displayText ..= " ▲"
+			end
+			slotData.Number.Text = displayText
+
+			-- State Colors
+			if isSelectedFloor then
+				slotData.Stroke.Color = C.BorderSelected
+				slotData.Stroke.Thickness = 1.8
+				slotData.Number.TextColor3 = C.TextWhite
+				for _, d in ipairs(slotData.Corners) do
+					d.BackgroundColor3 = C.BorderSelected
+				end
+			elseif isVisiting then
+				slotData.Stroke.Color = C.BorderVisiting
+				slotData.Stroke.Thickness = 1.5
+				slotData.Number.TextColor3 = C.GreenAccent
+				for _, d in ipairs(slotData.Corners) do
+					d.BackgroundColor3 = C.BorderVisiting
+				end
+			elseif isAssigned then
+				slotData.Stroke.Color = C.BorderSquad
+				slotData.Stroke.Thickness = 1.5
+				slotData.Number.TextColor3 = Color3.fromRGB(135, 215, 255)
+				for _, d in ipairs(slotData.Corners) do
+					d.BackgroundColor3 = C.BorderSquad
+				end
+			elseif isBoss then
+				slotData.Stroke.Color = Color3.fromRGB(150, 110, 180)
+				slotData.Stroke.Thickness = 1.2
+				slotData.Number.TextColor3 = Color3.fromRGB(240, 185, 255)
+				for _, d in ipairs(slotData.Corners) do
+					d.BackgroundColor3 = Color3.fromRGB(150, 110, 180)
+				end
+			else
+				slotData.Stroke.Color = C.BorderNormal
+				slotData.Stroke.Thickness = 1.2
+				slotData.Number.TextColor3 = C.TextMuted
+				for _, d in ipairs(slotData.Corners) do
+					d.BackgroundColor3 = C.BorderNormal
+				end
+			end
+
+			slotData.FloorId = fId
+		end
+	end
+
+	-- 4. Dynamic Action Button Text
+	if visitingFloor == selected and visitingFloor > 0 then
+		visitBtn.Text = "RETURN TO HUB"
+	else
+		visitBtn.Text = "VISIT FLOOR"
+	end
+
+	-- 5. Status Footer Readout
+	if selfState then
+		local locStr = if visitingFloor == 0 then "Hub" else string.format("Floor %d (%s)", visitingFloor, floors.Get(visitingFloor).DisplayName)
+		local sqStr = if assignedFloor then string.format("Stationed on Floor %d", assignedFloor) else "Following Master"
+		local feedbackStr = if pending then string.format("Pending: %s…", pendingActionName or "request")
+			elseif lastFeedback then lastFeedback
+			else "✓ HUB complete"
+		statusFooter.Text = string.format("You: %s · Squad: %s\n%s", locStr, sqStr, feedbackStr)
+	end
+end
+
+-- Global Control APIs
 _G.RequestTowerHub = function(): boolean
 	if not selfState then
 		warn("[TowerController] Cannot travel to Hub: selfState not ready yet")
@@ -223,6 +883,7 @@ end
 _G.OpenTowerSelector = function()
 	if _G.OpenMasterModal then _G.OpenMasterModal("NONE") end
 	panel.Visible = true
+	scrim.Visible = true
 	render()
 end
 
@@ -232,104 +893,15 @@ end
 
 _G.CloseTowerSelector = function()
 	panel.Visible = false
+	scrim.Visible = false
 end
 
-for biomeIndex, biome in ipairs(mobs.Biomes) do
-	local firstFloor = (biomeIndex - 1) * 5 + 1
-	local lastFloor = biomeIndex * 5
-	local hdr = label(
-		scroll,
-		string.format("BIOME %d · %s (FLOORS %d–%d)", biomeIndex, string.upper(biome.DisplayName), firstFloor, lastFloor),
-		UDim2.fromOffset(6, 0),
-		UDim2.fromOffset(460, 20)
-	)
-	hdr.Font = Enum.Font.GothamBold
-	hdr.TextSize = 12
-	hdr.TextColor3 = Color3.fromRGB(216, 185, 112)
-	biomeHeaders[biomeIndex] = hdr
-
-	for indexInBiome = 1, 5 do
-		local id = firstFloor + indexInBiome - 1
-		local b = button(scroll, tostring(id) .. (id % 5 == 0 and " ◆" or ""), UDim2.fromOffset(0, 0), UDim2.fromOffset(88, 34), function()
-			selected = id
-			render()
-		end)
-		b.Name = "Floor_" .. id
-		floorButtons[id] = b
-	end
-end
-
-button(panel, "Visit floor", UDim2.fromOffset(20, 380), UDim2.fromOffset(118, 40), function() request("VISIT", selected) end)
-button(panel, "Assign squad", UDim2.fromOffset(146, 380), UDim2.fromOffset(118, 40), function() request("ASSIGN", selected) end)
-button(panel, "Recall squad", UDim2.fromOffset(272, 380), UDim2.fromOffset(118, 40), function() request("RECALL") end)
-button(panel, "Return to Hub", UDim2.fromOffset(398, 380), UDim2.fromOffset(122, 40), function() request("HUB") end)
-button(panel, "×", UDim2.fromOffset(488, 8), UDim2.fromOffset(40, 32), function() panel.Visible = false end)
-
-reflow = function(width: number, height: number)
-	local compact = height < 420
-	local listY = compact and 50 or 66
-	local listH = compact and math.max(64, height - 220) or math.max(150, height - 284)
-	local detailY = listY + listH + 6
-	local detailH = compact and 56 or 82
-	local actionY = detailY + detailH + 6
-
-	title.Size = UDim2.fromOffset(width - 76, 24)
-	title.Position = UDim2.fromOffset(20, compact and 4 or 10)
-	subtitle.Size = UDim2.fromOffset(width - 40, 20)
-	subtitle.Position = UDim2.fromOffset(20, compact and 26 or 36)
-
-	scroll.Position = UDim2.fromOffset(20, listY)
-	scroll.Size = UDim2.fromOffset(width - 40, listH)
-
-	local innerWidth = width - 52
-	local col = innerWidth / 5
-	local blockHeight = 64
-	for biomeIndex = 1, 10 do
-		local blockTop = (biomeIndex - 1) * blockHeight + 4
-		local hdr = biomeHeaders[biomeIndex]
-		if hdr then
-			hdr.Position = UDim2.fromOffset(4, blockTop)
-			hdr.Size = UDim2.fromOffset(innerWidth - 8, 18)
-		end
-		for indexInBiome = 1, 5 do
-			local id = (biomeIndex - 1) * 5 + indexInBiome
-			local b = floorButtons[id]
-			if b then
-				b.Position = UDim2.fromOffset((indexInBiome - 1) * col + 2, blockTop + 20)
-				b.Size = UDim2.fromOffset(col - 4, 38)
-			end
-		end
-	end
-	scroll.CanvasSize = UDim2.fromOffset(0, 10 * blockHeight + 8)
-
-	detail.Position = UDim2.fromOffset(20, detailY)
-	detail.Size = UDim2.fromOffset(width - 40, detailH)
-
-	local actionNames = { "Visitfloor", "Assignsquad", "Recallsquad", "ReturntoHub" }
-	local actionWidth = (width - 40 - 24) / 4
-	for i, name in ipairs(actionNames) do
-		local b = panel:FindFirstChild(name)
-		if b and b:IsA("TextButton") then
-			b.Position = UDim2.fromOffset(20 + (i - 1) * (actionWidth + 8), actionY)
-			b.Size = UDim2.fromOffset(actionWidth, 40)
-		end
-	end
-
-	status.Position = UDim2.fromOffset(20, actionY + 44)
-	status.Size = UDim2.fromOffset(width - 40, math.max(28, height - actionY - 48))
-
-	local close = panel:FindFirstChild("Close")
-	if close and close:IsA("TextButton") then
-		close.Position = UDim2.fromOffset(width - 48, 4)
-		close.Size = UDim2.fromOffset(40, 36)
-	end
-end
-fit()
-
+-- Keyboard / Gamepad Navigation
 UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: boolean)
 	if not panel.Visible then return end
 	if input.KeyCode == Enum.KeyCode.Escape or input.KeyCode == Enum.KeyCode.ButtonB then
 		panel.Visible = false
+		scrim.Visible = false
 		return
 	end
 	if gameProcessed then return end
@@ -342,9 +914,11 @@ UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: 
 	end
 end)
 
+-- Remote Event Listeners
 remotes.OpenSelector.OnClientEvent:Connect(function()
 	if _G.OpenMasterModal then _G.OpenMasterModal("NONE") end
 	panel.Visible = true
+	scrim.Visible = true
 	render()
 end)
 
@@ -355,6 +929,7 @@ PromptService.PromptTriggered:Connect(function(prompt, who)
 	if action == "SELECTOR" or prompt.Name == "TowerSelectorPrompt" then
 		if _G.OpenMasterModal then _G.OpenMasterModal("NONE") end
 		panel.Visible = true
+		scrim.Visible = true
 		render()
 	elseif action == "HUB" then
 		request("HUB")

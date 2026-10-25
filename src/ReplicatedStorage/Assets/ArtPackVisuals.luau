@@ -187,9 +187,13 @@ function A.Animate(node: any, dt: number, time: number)
 	local isHoldingLoot = node.Model:GetAttribute("CarryingLoot") == true
 	local assetId = node.Model:GetAttribute("ArtPackAssetId")
 	local isMarksman = (assetId == "hero_jenna")
+	local eqType = node.Model:GetAttribute("EquippedArtifactType")
+	local eqId = node.Model:GetAttribute("EquippedArtifactId")
+	local hasBow = (eqType == "BOW") or (isMarksman and eqId ~= nil and eqId ~= "")
 
 	local moving = (node.GoalPos - node.CurrentPos).Magnitude > 0.15
 	local wave = math.sin(time * 9)
+	local breath = math.sin(time * 2)
 	local attack = node.StateEnum == 3
 
 	for name, b in pairs(node.ArtBones) do
@@ -198,49 +202,155 @@ function A.Animate(node: any, dt: number, time: number)
 			continue
 		end
 
-		local angle = 0
+		local target = CFrame.identity
+
 		if moving then
 			local sign = (name:find("Left") or name:find("L_")) and 1 or -1
-			if name:find("UpperLeg") or name:find("Hip") then
-				angle = wave * 0.45 * sign
-			elseif name:find("UpperArm") or name:find("Shoulder") then
-				if isMarksman then
-					-- When running, marksman keeps bow raised forward with athletic stride bounce
-					angle = math.sin(time * 9) * 0.08
-				else
-					angle = -wave * 0.35 * sign
+			if isMarksman then
+				if name:find("UpperLeg") or name:find("Hip") then
+					target = CFrame.Angles(wave * 0.45 * sign, 0, 0)
+				elseif name == "Waist" or name == "UpperTorso" then
+					target = CFrame.Angles(math.rad(-4) + breath * 0.02, 0, 0)
+				elseif name == "RightShoulder" or name == "RightUpperArm" then
+					target = CFrame.Angles(wave * 0.15, 0, 0)
 				end
+			elseif name:find("UpperLeg") or name:find("Hip") then
+				target = CFrame.Angles(wave * 0.45 * sign, 0, 0)
+			elseif name == "LeftShoulder" or name == "LeftUpperArm" then
+				if hasBow then
+					-- Athletic bow-forward jog
+					target = CFrame.Angles(math.rad(-38) + wave * 0.08, math.rad(-8), math.rad(12))
+				else
+					target = CFrame.Angles(-wave * 0.35 * sign, 0, 0)
+				end
+			elseif name == "LeftElbow" then
+				if hasBow then
+					target = CFrame.Angles(math.rad(-28), 0, 0)
+				end
+			elseif name == "RightShoulder" or name == "RightUpperArm" then
+				target = CFrame.Angles(wave * 0.35, math.rad(10), math.rad(-10))
+			elseif name == "RightElbow" then
+				target = CFrame.Angles(math.rad(-35) + wave * 0.15, 0, 0)
+			elseif name == "Waist" or name == "UpperTorso" then
+				target = CFrame.Angles(math.rad(-6) + breath * 0.02, 0, 0)
 			end
 		elseif attack then
-			if isMarksman then
+			if hasBow then
 				-- Marksman bow draw & snap release cycle (3.5 Hz)
 				-- 70% draw tension build-up, 10% snap release, 20% nock reset
 				local cycle = (time * 3.5) % 1.0
-				local drawTension = 0
-				if cycle < 0.7 then
-					drawTension = (cycle / 0.7) * 0.35
-				elseif cycle < 0.8 then
-					drawTension = -0.15
-				else
-					drawTension = -0.15 * (1 - (cycle - 0.8) / 0.2)
-				end
+				local drawProgress = math.clamp(cycle / 0.7, 0, 1)
+				local isRelease = cycle >= 0.7 and cycle < 0.8
+				local isReset = cycle >= 0.8
 
-				if name == "RightUpperArm" or name == "RightShoulder" then
-					angle = drawTension -- Pulls drawing arm back under arrow tension
-				elseif name == "LeftUpperArm" or name == "LeftShoulder" then
-					angle = -drawTension * 0.25 -- Subtle forward bow thrust under string tension
+				if name == "Waist" or name == "UpperTorso" then
+					target = CFrame.Angles(math.rad(-3), math.rad(-30), 0)
+				elseif name == "Neck" then
+					target = CFrame.Angles(0, math.rad(28), 0)
+				elseif name == "LeftShoulder" or name == "LeftUpperArm" then
+					-- Bow arm fully extended forward toward target
+					target = CFrame.Angles(math.rad(-72), math.rad(-12), math.rad(14))
+				elseif name == "LeftElbow" then
+					target = CFrame.Angles(math.rad(-12), 0, 0)
+				elseif name == "RightShoulder" or name == "RightUpperArm" then
+					-- Draw arm pulls string back to chin
+					local armPitch = if isRelease then math.rad(-45) elseif isReset then math.rad(-25) else (math.rad(-20) + drawProgress * math.rad(35))
+					local armRoll = if isRelease then math.rad(-15) else math.rad(-40)
+					target = CFrame.Angles(armPitch, math.rad(18), armRoll)
+				elseif name == "RightElbow" then
+					local elbowBend = if isRelease then math.rad(-30) elseif isReset then math.rad(-50) else (math.rad(-60) - drawProgress * math.rad(35))
+					target = CFrame.Angles(elbowBend, 0, math.rad(10))
 				end
 			else
 				-- Melee strike
-				if name == "RightUpperArm" or name == "RightShoulder" then
-					angle = -0.6 - math.sin(time * 7) * 0.5
+				if name == "RightShoulder" or name == "RightUpperArm" then
+					target = CFrame.Angles(-0.6 - math.sin(time * 7) * 0.5, 0, 0)
 				end
 			end
-		elseif name == "UpperTorso" or name == "Waist" then
-			angle = math.sin(time * 2) * 0.015
+		else
+			-- ================================================================
+			-- IDLE STANCE
+			-- ================================================================
+			if isMarksman then
+				-- Jenna's custom R15 rig has a sculpted archer stance baked directly into joint C0s.
+				-- Apply subtle breathing sway so the baked stance remains active and pure.
+				if name == "Waist" or name == "UpperTorso" then
+					target = CFrame.Angles(breath * 0.015, 0, 0)
+				elseif name == "LeftShoulder" or name == "LeftUpperArm" then
+					target = CFrame.Angles(breath * 0.01, 0, 0)
+				elseif name == "RightShoulder" or name == "RightUpperArm" then
+					target = CFrame.Angles(breath * 0.01, 0, 0)
+				elseif name == "Neck" then
+					target = CFrame.Angles(0, -breath * 0.008, 0)
+				end
+			elseif hasBow then
+				-- Dynamic Marksman Archer Ready Stance
+				if name == "Waist" or name == "UpperTorso" then
+					-- Body angled ~20 deg to present bow side forward with breathing sway
+					target = CFrame.Angles(math.rad(-3) + breath * 0.015, math.rad(-20), math.rad(2))
+				elseif name == "Neck" then
+					-- Counter-twist to look focused straight ahead
+					target = CFrame.Angles(math.rad(-2), math.rad(18) - breath * 0.008, 0)
+				elseif name == "LeftShoulder" or name == "LeftUpperArm" then
+					-- Bow arm extended forward & raised so bow is prominently showcased
+					target = CFrame.Angles(
+						math.rad(-48) + breath * 0.015,
+						math.rad(-12),
+						math.rad(16)
+					)
+				elseif name == "LeftElbow" then
+					-- Braced athletic bow arm extension
+					target = CFrame.Angles(math.rad(-18) + breath * 0.01, 0, math.rad(-4))
+				elseif name == "LeftWrist" then
+					-- Upright canted grip presenting bow stave cleanly in 3D space
+					target = CFrame.Angles(math.rad(-58) + breath * 0.005, math.rad(8), math.rad(8))
+				elseif name == "RightShoulder" or name == "RightUpperArm" then
+					-- Draw arm poised near bowstring, elbow flared
+					target = CFrame.Angles(
+						math.rad(-20) + breath * 0.015,
+						math.rad(12),
+						math.rad(-24)
+					)
+				elseif name == "RightElbow" then
+					-- Elbow bent bringing drawing fingers directly to the bowstring
+					target = CFrame.Angles(math.rad(-70) + breath * 0.01, 0, math.rad(6))
+				elseif name == "RightWrist" then
+					target = CFrame.Angles(math.rad(12), math.rad(-8), 0)
+				elseif name == "LeftHip" or name == "LeftUpperLeg" then
+					-- Front leg stepped slightly forward
+					target = CFrame.Angles(math.rad(-12) + breath * 0.006, math.rad(-4), math.rad(6))
+				elseif name == "LeftKnee" or name == "LeftLowerLeg" then
+					target = CFrame.Angles(math.rad(18), 0, 0)
+				elseif name == "LeftAnkle" or name == "LeftFoot" then
+					target = CFrame.Angles(math.rad(-6), 0, 0)
+				elseif name == "RightHip" or name == "RightUpperLeg" then
+					-- Back leg anchored solidly
+					target = CFrame.Angles(math.rad(10) - breath * 0.006, math.rad(6), math.rad(-8))
+				elseif name == "RightKnee" or name == "RightLowerLeg" then
+					target = CFrame.Angles(math.rad(14), 0, 0)
+				elseif name == "RightAnkle" or name == "RightFoot" then
+					target = CFrame.Angles(math.rad(-4), 0, 0)
+				end
+			else
+				-- Relaxed natural idle stance when unequipped
+				if name == "Waist" or name == "UpperTorso" then
+					target = CFrame.Angles(breath * 0.015, 0, 0)
+				elseif name == "LeftShoulder" or name == "LeftUpperArm" then
+					target = CFrame.Angles(math.rad(-4) + breath * 0.01, 0, math.rad(4))
+				elseif name == "LeftElbow" then
+					target = CFrame.Angles(math.rad(-6), 0, 0)
+				elseif name == "RightShoulder" or name == "RightUpperArm" then
+					target = CFrame.Angles(math.rad(-4) + breath * 0.01, 0, math.rad(-4))
+				elseif name == "RightElbow" then
+					target = CFrame.Angles(math.rad(-6), 0, 0)
+				elseif name == "LeftHip" or name == "LeftUpperLeg" then
+					target = CFrame.Angles(0, 0, math.rad(2))
+				elseif name == "RightHip" or name == "RightUpperLeg" then
+					target = CFrame.Angles(0, 0, math.rad(-2))
+				end
+			end
 		end
 
-		local target = CFrame.Angles(angle, 0, 0)
 		b.Transform = b.Transform:Lerp(target, math.clamp(dt * 16, 0, 1))
 	end
 end
@@ -255,6 +365,12 @@ function A.UnequipWeapon(model: Model)
 	if leftCurrent then
 		leftCurrent:Destroy()
 	end
+	if model ~= art then
+		local c2 = model:FindFirstChild("EquippedWeapon")
+		if c2 then c2:Destroy() end
+		local c3 = model:FindFirstChild("EquippedWeaponLeft")
+		if c3 then c3:Destroy() end
+	end
 	model:SetAttribute("EquippedArtifactId", nil)
 	model:SetAttribute("EquippedArtifactType", nil)
 end
@@ -263,13 +379,25 @@ function A.EquipWeapon(model: Model, weaponAssetId: string?, weaponType: string?
 	local art = model:FindFirstChild("ArtPackVisual") or model
 	if not art then return end
 
+	-- Normalize empty string to nil
+	if weaponAssetId == "" then weaponAssetId = nil end
+	if weaponType == "" then weaponType = nil end
+
 	-- Clean up previous weapon
 	A.UnequipWeapon(model)
 
 	if not weaponAssetId and not weaponType then return end
 
 	local assets = ReplicatedStorage:FindFirstChild("Assets")
-	local weaponsFolder = assets and assets:FindFirstChild("Weapons")
+	local weaponsFolder = assets and assets:FindFirstChild("Weapons") :: Folder?
+	if not weaponsFolder and assets then
+		local ok, WeaponModelBuilder = pcall(function()
+			return require(assets:WaitForChild("WeaponModelBuilder", 2))
+		end)
+		if ok and WeaponModelBuilder and type(WeaponModelBuilder.EnsureWeapons) == "function" then
+			weaponsFolder = WeaponModelBuilder.EnsureWeapons()
+		end
+	end
 	if not weaponsFolder then return end
 
 	-- Resolve template: try weaponAssetId, or map weaponType to weapon prefab
@@ -327,6 +455,33 @@ function A.EquipWeapon(model: Model, weaponAssetId: string?, weaponType: string?
 		end
 	end
 
+	-- Custom visual styling for special weapons
+	if weaponAssetId == "art_crystal_greatbow" then
+		for _, p in ipairs(wModel:GetDescendants()) do
+			if p:IsA("BasePart") then
+				if p.Name:find("Limb") or p.Name:find("Seg") or p.Name:find("Core") or p.Name:find("Tip") then
+					p.Material = Enum.Material.Neon
+					p.Color = Color3.fromRGB(80, 225, 255)
+				elseif p.Name:find("Band") or p.Name:find("Wrap") or p.Name:find("Rope") then
+					p.Material = Enum.Material.SmoothPlastic
+					p.Color = Color3.fromRGB(220, 240, 255)
+				end
+			end
+		end
+	elseif weaponAssetId == "art_recurve_composite" then
+		for _, p in ipairs(wModel:GetDescendants()) do
+			if p:IsA("BasePart") then
+				if p.Name:find("Limb") or p.Name:find("Seg") or p.Name:find("Riser") then
+					p.Material = Enum.Material.Wood
+					p.Color = Color3.fromRGB(115, 75, 45)
+				elseif p.Name:find("Band") or p.Name:find("Wrap") then
+					p.Material = Enum.Material.SmoothPlastic
+					p.Color = Color3.fromRGB(45, 35, 30)
+				end
+			end
+		end
+	end
+
 	-- Optional Rarity visual flair:
 	-- If Rarity >= 6 (Legendary+), add subtle glow or tint
 	if rarityIndex and rarityIndex >= 6 then
@@ -350,10 +505,74 @@ function A.EquipWeapon(model: Model, weaponAssetId: string?, weaponType: string?
 	local effectiveType = weaponType or (if template.Name:find("bow") then "BOW" elseif template.Name:find("sword") then "SWORD" elseif template.Name:find("dagger") then "DAGGERS" elseif template.Name:find("axe") then "AXE" elseif template.Name:find("staff") then "STAFF" else "TOME")
 
 	if effectiveType == "BOW" then
+		local primary = wModel.PrimaryPart or wModel:FindFirstChild("Handle") or wModel:FindFirstChildWhichIsA("BasePart")
+		local hunterArrow = wModel:FindFirstChild("HunterArrow", true)
+		if primary and hunterArrow then
+			local shaft = hunterArrow:FindFirstChild("ArrowShaft") :: BasePart?
+			local head = hunterArrow:FindFirstChild("ArrowHead") :: BasePart?
+			local f1 = hunterArrow:FindFirstChild("ArrowFletch_1") :: BasePart?
+			local f2 = hunterArrow:FindFirstChild("ArrowFletch_2") :: BasePart?
+			local f3 = hunterArrow:FindFirstChild("ArrowFletch_3") :: BasePart?
+			if shaft then
+				for _, d in ipairs(hunterArrow:GetDescendants()) do
+					if d:IsA("WeldConstraint") or d:IsA("Weld") or d:IsA("Motor6D") then
+						d:Destroy()
+					end
+				end
+				for _, d in ipairs(wModel:GetDescendants()) do
+					if (d:IsA("WeldConstraint") or d:IsA("Weld")) and (d.Part0 == shaft or d.Part1 == shaft) then
+						d:Destroy()
+					end
+				end
+
+				local pNock = Vector3.new(-1.25, 0.00, 0.28)
+				local pShelf = Vector3.new(0.00, 0.18, 0.28)
+				local dir = (pShelf - pNock).Unit
+				local pCenter = pNock + dir * 1.0
+
+				local shaftCFInHandle = CFrame.lookAt(pCenter, pCenter + dir, Vector3.new(0, 0, 1))
+				local shaftWorld = primary.CFrame * shaftCFInHandle
+				shaft.CFrame = shaftWorld
+
+				if head then
+					head.CFrame = shaftWorld * CFrame.new(0, -0.02, -1.06)
+					local wHead = Instance.new("WeldConstraint")
+					wHead.Part0 = shaft
+					wHead.Part1 = head
+					wHead.Parent = head
+				end
+				if f1 then
+					f1.CFrame = shaftWorld * CFrame.new(0, 0.035, 0.85)
+					local w1 = Instance.new("WeldConstraint")
+					w1.Part0 = shaft
+					w1.Part1 = f1
+					w1.Parent = f1
+				end
+				if f2 then
+					f2.CFrame = shaftWorld * CFrame.new(-0.030, -0.018, 0.85) * CFrame.Angles(0, 0, math.rad(120))
+					local w2 = Instance.new("WeldConstraint")
+					w2.Part0 = shaft
+					w2.Part1 = f2
+					w2.Parent = f2
+				end
+				if f3 then
+					f3.CFrame = shaftWorld * CFrame.new(0.030, -0.018, 0.85) * CFrame.Angles(0, 0, math.rad(-120))
+					local w3 = Instance.new("WeldConstraint")
+					w3.Part0 = shaft
+					w3.Part1 = f3
+					w3.Parent = f3
+				end
+
+				local wHandle = Instance.new("WeldConstraint")
+				wHandle.Part0 = primary
+				wHandle.Part1 = shaft
+				wHandle.Parent = shaft
+			end
+		end
+
 		if lHand then
-			local primary = wModel.PrimaryPart or wModel:FindFirstChild("Handle") or wModel:FindFirstChildWhichIsA("BasePart")
 			if primary then
-				-- Natural canted archery grip orientation: stave extends vertically, limbs arc forward, arrow points forward
+				-- Natural canted archery grip orientation: stave extends vertically up, limbs arc forward, arrow points forward
 				local bowGripOffset = CFrame.new(0, 0, 0, -0.728371143, 0.685157061, -0.00618805084, -0.647984505, -0.685861766, 0.331232011, -0.222700208, -0.245268837, -0.943533182)
 				wModel:PivotTo(lHand.CFrame * bowGripOffset)
 				local weld = Instance.new("WeldConstraint")

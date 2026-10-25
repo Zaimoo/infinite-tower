@@ -240,8 +240,12 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 		stamFill = sf
 	end
 
-	if isHero and meta and (meta.EquippedArtifactId or meta.EquippedArtifactType) then
-		ArtPackVisuals.EquipWeapon(model, meta.EquippedArtifactId, meta.EquippedArtifactType, meta.EquippedArtifactRarity)
+	if isHero then
+		if meta and (meta.EquippedArtifactId or meta.EquippedArtifactType) and meta.EquippedArtifactId ~= "" then
+			ArtPackVisuals.EquipWeapon(model, meta.EquippedArtifactId, meta.EquippedArtifactType, meta.EquippedArtifactRarity)
+		else
+			ArtPackVisuals.UnequipWeapon(model)
+		end
 	end
 
 	model.PrimaryPart = root
@@ -410,8 +414,17 @@ TowerRemotes.TowerEntityState.OnClientEvent:Connect(function(context,message)
    end
    if node then
     if node.TitleLabel then node.TitleLabel.Text=entry.IsHero and string.format("%s %s Lv.%d",entry.Name or "Hero",string.rep("★",entry.Stars or 1),entry.Level or 1) or entry.Name or "Mob" end
-    if entry.IsHero and node.Model:GetAttribute("EquippedArtifactId")~=entry.EquippedArtifactId then
-     ArtPackVisuals.EquipWeapon(node.Model,entry.EquippedArtifactId,entry.EquippedArtifactType,entry.EquippedArtifactRarity)
+    if entry.IsHero then
+     local currentArtId = node.Model:GetAttribute("EquippedArtifactId")
+     local nextArtId = entry.EquippedArtifactId
+     if nextArtId == "" then nextArtId = nil end
+     if currentArtId ~= nextArtId then
+      if nextArtId then
+       ArtPackVisuals.EquipWeapon(node.Model, nextArtId, entry.EquippedArtifactType, entry.EquippedArtifactRarity)
+      else
+       ArtPackVisuals.UnequipWeapon(node.Model)
+      end
+     end
     end
    end
   end
