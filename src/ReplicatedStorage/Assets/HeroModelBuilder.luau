@@ -684,11 +684,12 @@ function HeroModelBuilder.EnsureHeroes(): { [string]: Model }
 				existing:Destroy()
 			end
 
-			-- Check if Jenna has authored preview in workspace
+			-- Check if Jenna has authored preview in ServerStorage or workspace
 			local model: Model? = nil
 			if heroId == "hero_jenna" then
-				local mv = Workspace:FindFirstChild("ModelViewer")
-				local jp = mv and mv:FindFirstChild("JennaPreview")
+				local ss = game:GetService("ServerStorage")
+				local mv = Workspace:FindFirstChild("ModelViewer") or ss:FindFirstChild("ModelViewer")
+				local jp = (mv and mv:FindFirstChild("JennaPreview")) or (ss and ss:FindFirstChild("JennaPreview", true))
 				if jp and jp:IsA("Model") then
 					local clone = jp:Clone()
 					clone.Name = "hero_jenna"
