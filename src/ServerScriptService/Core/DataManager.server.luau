@@ -287,6 +287,41 @@ function DataManager.CreateArtifact(templateId: string, star: number?, rarity: n
 	return uuid, artifact
 end
 
+-- One weapon type per archetype: re-derive saved artifact types from their
+-- templates (legacy SWORD/SHIELD -> SWORD_SHIELD), drop removed templates such
+-- as rings, and swap heroes off weapons their archetype can no longer hold.
+function DataManager.MigrateArtifactTypes(profile: PlayerProfile)
+	for uuid, artifact in pairs(profile.Artifacts) do
+		local seed = ArtifactCatalog.Seeds[artifact.TemplateId]
+		if seed then
+			artifact.Type = seed.Type
+		else
+			local owner = artifact.EquippedHeroUUID and profile.Heroes[artifact.EquippedHeroUUID]
+			if owner and owner.EquippedArtifactUUID == uuid then
+				owner.EquippedArtifactUUID = nil
+			end
+			profile.Artifacts[uuid] = nil
+		end
+	end
+
+	for heroUUID, hero in pairs(profile.Heroes) do
+		local equipped = hero.EquippedArtifactUUID and profile.Artifacts[hero.EquippedArtifactUUID]
+		if hero.EquippedArtifactUUID and not equipped then
+			hero.EquippedArtifactUUID = nil
+		elseif equipped and not ArtifactCatalog.CanHeroEquip(hero.Archetype, equipped.Type) then
+			equipped.EquippedHeroUUID = nil
+			hero.EquippedArtifactUUID = nil
+			for uuid, candidate in pairs(profile.Artifacts) do
+				if not candidate.EquippedHeroUUID and ArtifactCatalog.CanHeroEquip(hero.Archetype, candidate.Type) then
+					candidate.EquippedHeroUUID = heroUUID
+					hero.EquippedArtifactUUID = uuid
+					break
+				end
+			end
+		end
+	end
+end
+
 function DataManager.CreateHeroFromSeed(seedId: string, forceQuality: number?): (string, HeroInstance)
 	local seed = HeroCatalog.Seeds[seedId] or HeroCatalog.Seeds.hero_han
 	local uuid = "h_" .. string.gsub(HttpService:GenerateGUID(false), "-", ""):sub(1, 10)
@@ -335,7 +370,7 @@ local function createDefaultPlayerProfile(): PlayerProfile
 
 	-- Grant 1★ starter artifacts equipped to matching starting heroes
 	local bowUUID, bowArt = DataManager.CreateArtifact("art_hunters_shortbow", 1, 1)
-	local swordUUID, swordArt = DataManager.CreateArtifact("art_iron_broadsword", 1, 1)
+	local daggerUUID, daggerArt = DataManager.CreateArtifact("art_rusty_daggers", 1, 1)
 	local axeUUID, axeArt = DataManager.CreateArtifact("art_miner_pickaxe", 1, 1)
 
 	-- Additional starter artifacts for forge crafting and fodder testing
@@ -349,8 +384,8 @@ local function createDefaultPlayerProfile(): PlayerProfile
 	jennaHero.EquippedArtifactUUID = bowUUID
 	bowArt.EquippedHeroUUID = jennaUUID
 
-	hanHero.EquippedArtifactUUID = swordUUID
-	swordArt.EquippedHeroUUID = hanUUID
+	hanHero.EquippedArtifactUUID = daggerUUID
+	daggerArt.EquippedHeroUUID = hanUUID
 
 	catioHero.EquippedArtifactUUID = axeUUID
 	axeArt.EquippedHeroUUID = catioUUID
@@ -386,7 +421,7 @@ local function createDefaultPlayerProfile(): PlayerProfile
 		},
 		Artifacts = {
 			[bowUUID] = bowArt,
-			[swordUUID] = swordArt,
+			[daggerUUID] = daggerArt,
 			[axeUUID] = axeArt,
 			[riftUUID] = riftArt,
 			[f1_UUID] = f1_Art,
@@ -456,7 +491,7 @@ function DataManager.SyncProfile(player: Player, progressionOnly: boolean?)
 	end
 	if next(profile.Artifacts) == nil then
 		local bUUID, bArt = DataManager.CreateArtifact("art_hunters_shortbow", 1, 1)
-		local sUUID, sArt = DataManager.CreateArtifact("art_iron_broadsword", 1, 1)
+		local sUUID, sArt = DataManager.CreateArtifact("art_rusty_daggers", 1, 1)
 		local aUUID, aArt = DataManager.CreateArtifact("art_miner_pickaxe", 1, 1)
 		profile.Artifacts[bUUID] = bArt
 		profile.Artifacts[sUUID] = sArt
@@ -475,6 +510,7 @@ function DataManager.SyncProfile(player: Player, progressionOnly: boolean?)
 			end
 		end
 	end
+	DataManager.MigrateArtifactTypes(profile)
 
 	-- Auto-migrate legacy SQUAD assignments or DeployedSquadOrder to SQUAD_SLOT_1..5
 	local occupiedSlots: { [number]: string } = {}

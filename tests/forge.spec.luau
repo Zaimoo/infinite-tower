@@ -30,23 +30,18 @@ test("Featured mock recipes exist with exact costs and properties", function()
 	local blade = ArtifactCatalog.Seeds.art_blade_of_the_rift
 	assert(blade ~= nil, "Blade of the Rift missing")
 	assertEqual(blade.DisplayName, "Blade of the Rift")
-	assertEqual(blade.Type, "SWORD")
+	assertEqual(blade.Type, "SWORD_SHIELD")
 	assertEqual(blade.CraftCost.IronGear, 5)
 	assertEqual(blade.CraftCost.RiftOrb, 3)
 
 	local aegis = ArtifactCatalog.Seeds.art_aegis_core
 	assert(aegis ~= nil, "Aegis Core missing")
 	assertEqual(aegis.DisplayName, "Aegis Core")
-	assertEqual(aegis.Type, "SHIELD")
+	assertEqual(aegis.Type, "SWORD_SHIELD")
 	assertEqual(aegis.CraftCost.IronGear, 8)
 	assertEqual(aegis.CraftCost.AegisGem, 2)
 
-	local ring = ArtifactCatalog.Seeds.art_ring_of_haste
-	assert(ring ~= nil, "Ring of Haste missing")
-	assertEqual(ring.DisplayName, "Ring of Haste")
-	assertEqual(ring.Type, "RING")
-	assertEqual(ring.CraftCost.StarDust, 10)
-	assertEqual(ring.CraftCost.VoidPowder, 5)
+	assert(ArtifactCatalog.Seeds.art_ring_of_haste == nil, "Rings are removed")
 end)
 
 -- 2. Crafting materials metadata
@@ -60,18 +55,43 @@ test("Crafting materials define icon and color metadata", function()
 end)
 
 -- 3. Class Restrictions
-test("Hero class restrictions allow universal rings and tank shields", function()
-	-- All archetypes can equip rings
-	for _, role in { "Marksman", "Striker", "Vanguard", "Miner", "Scholar", "Healer" } do
-		assert(ArtifactCatalog.CanHeroEquip(role, "RING"), role .. " should be able to equip RING")
+test("Each archetype equips exactly one weapon type", function()
+	local expected = {
+		Vanguard = "SWORD_SHIELD",
+		Striker = "DAGGERS",
+		Marksman = "BOW",
+		Miner = "AXE",
+		Scholar = "STAFF",
+		Healer = "TOME",
+	}
+	local weaponTypes = { "SWORD_SHIELD", "DAGGERS", "BOW", "AXE", "STAFF", "TOME" }
+	for role, allowedType in expected do
+		for _, weaponType in weaponTypes do
+			assertEqual(ArtifactCatalog.CanHeroEquip(role, weaponType :: any), weaponType == allowedType, role .. " / " .. weaponType)
+		end
+		assert(not ArtifactCatalog.CanHeroEquip(role, "RING" :: any), role .. " cannot equip RING")
+		assert(not ArtifactCatalog.CanHeroEquip(role, "SHIELD" :: any), role .. " cannot equip SHIELD")
+		assert(not ArtifactCatalog.CanHeroEquip(role, "SWORD" :: any), role .. " cannot equip legacy SWORD")
 	end
+end)
 
-	-- Vanguard and Striker can equip swords & shields
-	assert(ArtifactCatalog.CanHeroEquip("Vanguard", "SWORD"))
-	assert(ArtifactCatalog.CanHeroEquip("Vanguard", "SHIELD"))
-	assert(ArtifactCatalog.CanHeroEquip("Striker", "SWORD"))
-	assert(not ArtifactCatalog.CanHeroEquip("Marksman", "SWORD"), "Marksman cannot equip SWORD")
-	assert(ArtifactCatalog.CanHeroEquip("Marksman", "BOW"), "Marksman can equip BOW")
+test("Every catalog and banner artifact belongs to a live weapon type", function()
+	local live = {}
+	for _, weaponType in ArtifactCatalog.ArchetypeWeaponType do
+		live[weaponType] = true
+	end
+	for id, seed in ArtifactCatalog.Seeds do
+		assert(live[seed.Type], id .. " has orphan type " .. seed.Type)
+	end
+	local banner = ArtifactCatalog.Banner
+	for _, pool in { banner.Featured5Stars, banner.Pool4Stars, banner.Pool3Stars, banner.Pool12Stars } do
+		for _, id in pool do
+			assert(ArtifactCatalog.Seeds[id] ~= nil, "Banner references missing seed " .. id)
+		end
+	end
+	for _, id in ArtifactCatalog.CraftingRecipeOrder do
+		assert(ArtifactCatalog.Seeds[id] ~= nil, "Recipe order references missing seed " .. id)
+	end
 end)
 
 -- Star progression replaces enhancement; named templates cannot bypass the formula.

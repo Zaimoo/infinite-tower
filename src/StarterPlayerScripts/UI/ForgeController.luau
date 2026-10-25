@@ -54,13 +54,11 @@ local C = {
 
 local ICON_MAP: { [string]: string } = {
 	BOW = "🏹",
-	SWORD = "⚔️",
+	SWORD_SHIELD = "🛡️",
 	DAGGERS = "🗡️",
 	AXE = "🪓",
 	TOME = "📖",
 	STAFF = "🪄",
-	RING = "💍",
-	SHIELD = "🛡️",
 }
 
 local function new(className: string, props: { [string]: any }, parent: Instance?): any

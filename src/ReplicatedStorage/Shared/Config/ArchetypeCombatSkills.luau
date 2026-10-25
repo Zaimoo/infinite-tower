@@ -65,7 +65,7 @@ ArchetypeCombatSkills.Constants = {
 
 ArchetypeCombatSkills.Profiles = {
 	-- ------------------------------------------------------------------------
-	-- 1. VANGUARD (Tank | Melee 6 studs | Interval ~1.20s | Swords, Axes, Shields)
+	-- 1. VANGUARD (Tank | Melee 6 studs | Interval ~1.20s | Sword & Shield)
 	-- ------------------------------------------------------------------------
 	Vanguard = {
 		Archetype = "Vanguard",
@@ -99,7 +99,7 @@ ArchetypeCombatSkills.Profiles = {
 	} :: ArchetypeSkillProfile,
 
 	-- ------------------------------------------------------------------------
-	-- 2. STRIKER (Melee DPS | Melee 6 studs | Interval ~0.85s | Swords, Daggers, Shields)
+	-- 2. STRIKER (Melee DPS | Melee 6 studs | Interval ~0.85s | Daggers)
 	-- ------------------------------------------------------------------------
 	Striker = {
 		Archetype = "Striker",
@@ -165,7 +165,7 @@ ArchetypeCombatSkills.Profiles = {
 	} :: ArchetypeSkillProfile,
 
 	-- ------------------------------------------------------------------------
-	-- 4. MINER (Disruptor / Defense | Melee 6 studs | Interval ~1.05s | Axes, Shields)
+	-- 4. MINER (Disruptor / Defense | Melee 6 studs | Interval ~1.05s | Axes)
 	-- ------------------------------------------------------------------------
 	Miner = {
 		Archetype = "Miner",
@@ -198,7 +198,7 @@ ArchetypeCombatSkills.Profiles = {
 	} :: ArchetypeSkillProfile,
 
 	-- ------------------------------------------------------------------------
-	-- 5. HEALER (Recovery Specialist | Range 24 studs | Interval ~1.25s | Staves, Tomes)
+	-- 5. HEALER (Recovery Specialist | Range 24 studs | Interval ~1.25s | Tomes)
 	-- ------------------------------------------------------------------------
 	Healer = {
 		Archetype = "Healer",
@@ -232,7 +232,7 @@ ArchetypeCombatSkills.Profiles = {
 	} :: ArchetypeSkillProfile,
 
 	-- ------------------------------------------------------------------------
-	-- 6. SCHOLAR (Mage / Spell Specialist | Range 26 studs | Interval ~1.00s | Tomes, Staves)
+	-- 6. SCHOLAR (Mage / Spell Specialist | Range 26 studs | Interval ~1.00s | Staves)
 	-- ------------------------------------------------------------------------
 	Scholar = {
 		Archetype = "Scholar",
