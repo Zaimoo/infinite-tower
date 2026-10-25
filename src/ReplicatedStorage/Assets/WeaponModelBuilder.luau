@@ -84,6 +84,8 @@ function WeaponModelBuilder.BuildBow(): Model
 				if (p0 and p0.Name == "LeftHand") or (p1 and p1.Name == "LeftHand") then
 					d:Destroy()
 				end
+			elseif d:IsA("Beam") then
+				d.Attachment1 = nil
 			elseif d:IsA("BasePart") then
 				d.CanCollide = false
 				d.CanTouch = false
