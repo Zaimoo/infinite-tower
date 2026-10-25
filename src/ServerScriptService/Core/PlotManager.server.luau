@@ -238,12 +238,16 @@ end)
 
 local function assignPlotToPlayer(player: Player)
 	local dm = getDataManager()
-	local chosenIdx = 1
+	local chosenIdx: number? = nil
 	for i = 1, 6 do
 		if AssignedPlots[i] == nil then
 			chosenIdx = i
 			break
 		end
+	end
+	if not chosenIdx then
+		warn(string.format("[PlotManager] All plots occupied! Cannot assign plot for %s (%d)", player.Name, player.UserId))
+		return
 	end
 	AssignedPlots[chosenIdx] = player
 	PlayerToPlotIndex[player] = chosenIdx

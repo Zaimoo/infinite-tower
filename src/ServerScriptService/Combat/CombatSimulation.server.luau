@@ -1304,7 +1304,7 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 					local aoeRadius = skillProfile.Skill.Radius or 12.0
 					local splashDmg = math.round(simHero.EffectiveATK * (damageMult * 0.5))
 					for _, mob in pairs(ActiveMobsByNetId) do
-						if mob.IsAlive and mob ~= targetMob and Tower.Same(simHero, mob) and not Tower.GetSafety(mob, mob.Position).CombatSafe and getHorizontalDistance(targetPos, mob.Position) <= aoeRadius then
+						if mob.IsAlive and mob ~= targetMob and Tower.Same(simHero, mob) and not Tower.GetSafety(mob, mob.Position).CombatSafe and math.abs(targetPos.Y - mob.Position.Y) <= 15 and getHorizontalDistance(targetPos, mob.Position) <= aoeRadius then
 							mob.CurrentHP = math.max(0, mob.CurrentHP - splashDmg)
 							mob.DamageLedger[simHero.Owner.UserId] = (mob.DamageLedger[simHero.Owner.UserId] or 0) + splashDmg
 							Tower.BroadcastAt(CombatVFXRemote, mob, "HIT_SPARK", mob.Position, splashDmg, false, false)
@@ -1318,7 +1318,7 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 					local aoeRadius = skillProfile.Skill.Radius or 16.0
 					local splashDmg = math.round(simHero.EffectiveATK * (damageMult * 0.5))
 					for _, mob in pairs(ActiveMobsByNetId) do
-						if mob.IsAlive and Tower.Same(simHero, mob) and not Tower.GetSafety(mob, mob.Position).CombatSafe and getHorizontalDistance(targetPos, mob.Position) <= aoeRadius then
+						if mob.IsAlive and Tower.Same(simHero, mob) and not Tower.GetSafety(mob, mob.Position).CombatSafe and math.abs(targetPos.Y - mob.Position.Y) <= 15 and getHorizontalDistance(targetPos, mob.Position) <= aoeRadius then
 							mob.DefenseShredUntil = now + (skillProfile.Skill.Duration or 5.0)
 							if mob ~= targetMob then
 								mob.CurrentHP = math.max(0, mob.CurrentHP - splashDmg)
@@ -1335,7 +1335,7 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 					local aoeRadius = skillProfile.Skill.Radius or 20.0
 					local splashDmg = math.round(simHero.EffectiveATK * (damageMult * 0.6))
 					for _, mob in pairs(ActiveMobsByNetId) do
-						if mob.IsAlive and mob ~= targetMob and Tower.Same(simHero, mob) and not Tower.GetSafety(mob, mob.Position).CombatSafe and getHorizontalDistance(targetPos, mob.Position) <= aoeRadius then
+						if mob.IsAlive and mob ~= targetMob and Tower.Same(simHero, mob) and not Tower.GetSafety(mob, mob.Position).CombatSafe and math.abs(targetPos.Y - mob.Position.Y) <= 15 and getHorizontalDistance(targetPos, mob.Position) <= aoeRadius then
 							mob.CurrentHP = math.max(0, mob.CurrentHP - splashDmg)
 							mob.DamageLedger[simHero.Owner.UserId] = (mob.DamageLedger[simHero.Owner.UserId] or 0) + splashDmg
 							Tower.BroadcastAt(CombatVFXRemote, mob, "HIT_SPARK", mob.Position, splashDmg, false, false)
@@ -1349,7 +1349,7 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 					local aoeRadius = skillProfile.Skill.Radius or 18.0
 					local splashDmg = math.round(simHero.EffectiveATK * (damageMult * 0.5))
 					for _, mob in pairs(ActiveMobsByNetId) do
-						if mob.IsAlive and mob ~= targetMob and Tower.Same(simHero, mob) and not Tower.GetSafety(mob, mob.Position).CombatSafe and getHorizontalDistance(targetPos, mob.Position) <= aoeRadius then
+						if mob.IsAlive and mob ~= targetMob and Tower.Same(simHero, mob) and not Tower.GetSafety(mob, mob.Position).CombatSafe and math.abs(targetPos.Y - mob.Position.Y) <= 15 and getHorizontalDistance(targetPos, mob.Position) <= aoeRadius then
 							mob.CurrentHP = math.max(0, mob.CurrentHP - splashDmg)
 							mob.DamageLedger[simHero.Owner.UserId] = (mob.DamageLedger[simHero.Owner.UserId] or 0) + splashDmg
 							Tower.BroadcastAt(CombatVFXRemote, mob, "HIT_SPARK", mob.Position, splashDmg, false, false)
@@ -1397,7 +1397,7 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 					-- 10-stud front cone cleave to up to 2 other mobs
 					local hitCount = 0
 					for _, mob in pairs(ActiveMobsByNetId) do
-						if mob.IsAlive and mob ~= targetMob and Tower.Same(simHero, mob) and not Tower.GetSafety(mob, mob.Position).CombatSafe and getHorizontalDistance(simHero.Position, mob.Position) <= 10 then
+						if mob.IsAlive and mob ~= targetMob and Tower.Same(simHero, mob) and not Tower.GetSafety(mob, mob.Position).CombatSafe and math.abs(simHero.Position.Y - mob.Position.Y) <= 15 and getHorizontalDistance(simHero.Position, mob.Position) <= 10 then
 							local splashDmg = math.round(simHero.EffectiveATK * 0.50)
 							mob.CurrentHP = math.max(0, mob.CurrentHP - splashDmg)
 							mob.DamageLedger[simHero.Owner.UserId] = (mob.DamageLedger[simHero.Owner.UserId] or 0) + splashDmg
@@ -1414,7 +1414,7 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 					-- Chain Lightning to up to 2 other mobs within 14 studs
 					local chainCount = 0
 					for _, mob in pairs(ActiveMobsByNetId) do
-						if mob.IsAlive and mob ~= targetMob and Tower.Same(simHero, mob) and not Tower.GetSafety(mob, mob.Position).CombatSafe and getHorizontalDistance(targetPos, mob.Position) <= 14 then
+						if mob.IsAlive and mob ~= targetMob and Tower.Same(simHero, mob) and not Tower.GetSafety(mob, mob.Position).CombatSafe and math.abs(targetPos.Y - mob.Position.Y) <= 15 and getHorizontalDistance(targetPos, mob.Position) <= 14 then
 							local chainDmg = math.round(simHero.EffectiveATK * 0.70)
 							mob.CurrentHP = math.max(0, mob.CurrentHP - chainDmg)
 							mob.DamageLedger[simHero.Owner.UserId] = (mob.DamageLedger[simHero.Owner.UserId] or 0) + chainDmg
@@ -1430,7 +1430,7 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 				elseif simHero.Archetype == "Miner" then
 					-- Seismic Slam: 8-stud radius splash damage
 					for _, mob in pairs(ActiveMobsByNetId) do
-						if mob.IsAlive and mob ~= targetMob and Tower.Same(simHero, mob) and not Tower.GetSafety(mob, mob.Position).CombatSafe and getHorizontalDistance(targetPos, mob.Position) <= 8 then
+						if mob.IsAlive and mob ~= targetMob and Tower.Same(simHero, mob) and not Tower.GetSafety(mob, mob.Position).CombatSafe and math.abs(targetPos.Y - mob.Position.Y) <= 15 and getHorizontalDistance(targetPos, mob.Position) <= 8 then
 							local splashDmg = math.round(simHero.EffectiveATK * 0.50)
 							mob.CurrentHP = math.max(0, mob.CurrentHP - splashDmg)
 							mob.DamageLedger[simHero.Owner.UserId] = (mob.DamageLedger[simHero.Owner.UserId] or 0) + splashDmg
@@ -1444,7 +1444,7 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 				elseif simHero.Archetype == "Marksman" then
 					-- Piercing Volley: damages an additional mob along line within 32 studs
 					for _, mob in pairs(ActiveMobsByNetId) do
-						if mob.IsAlive and mob ~= targetMob and Tower.Same(simHero, mob) and not Tower.GetSafety(mob, mob.Position).CombatSafe and getHorizontalDistance(simHero.Position, mob.Position) <= 32 then
+						if mob.IsAlive and mob ~= targetMob and Tower.Same(simHero, mob) and not Tower.GetSafety(mob, mob.Position).CombatSafe and math.abs(simHero.Position.Y - mob.Position.Y) <= 15 and getHorizontalDistance(simHero.Position, mob.Position) <= 32 then
 							local pierceDmg = math.round(simHero.EffectiveATK * 0.75)
 							mob.CurrentHP = math.max(0, mob.CurrentHP - pierceDmg)
 							mob.DamageLedger[simHero.Owner.UserId] = (mob.DamageLedger[simHero.Owner.UserId] or 0) + pierceDmg
@@ -1675,17 +1675,41 @@ end
 -- Initialize Mobs & Loop
 -- Legacy tower population disabled for the isolated-room migration.
 
-Players.PlayerAdded:Connect(function(player: Player)
+local function bindCharacterCargoListeners(player: Player, char: Model)
+	local hum = char:WaitForChild("Humanoid", 5) :: Humanoid?
+	if hum then
+		hum.Died:Connect(function()
+			CombatSimulation.DropCarriedLoot(player, true)
+		end)
+	end
+	char.Destroying:Connect(function()
+		if CarrierToHeldLoot[player] then
+			CombatSimulation.DropCarriedLoot(player, true)
+		end
+	end)
+end
+
+local function handlePlayerAdded(player: Player)
+	player.CharacterAdded:Connect(function(char)
+		bindCharacterCargoListeners(player, char)
+	end)
+	if player.Character then
+		bindCharacterCargoListeners(player, player.Character)
+	end
+	player.CharacterRemoving:Connect(function()
+		if CarrierToHeldLoot[player] then
+			CombatSimulation.DropCarriedLoot(player, true)
+		end
+	end)
 	task.delay(1.0, function()
 		CombatSimulation.RebuildPlayerSquad(player)
 		broadcastMetadata(player)
 	end)
-end)
+end
+
+Players.PlayerAdded:Connect(handlePlayerAdded)
 for _, p in ipairs(Players:GetPlayers()) do
-	task.delay(0.5, function()
-		CombatSimulation.RebuildPlayerSquad(p)
-		broadcastMetadata(p)
-	end)
+	handlePlayerAdded(p)
 end
 
 Players.PlayerRemoving:Connect(function(player: Player)
@@ -1729,7 +1753,9 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 			local safety=Tower.GetSafety(location,rootPos)
 			if safety.CanBankCargo and location.BankArmed and not Tower.IsTransitioning(player) then
 				local held = CarrierToHeldLoot[player]
-				if held and SanctuaryRules.CanBank(location,held,safety,Tower.IsTransitioning(player),now) then
+				local char = player.Character
+				local hum = char and char:FindFirstChildOfClass("Humanoid")
+				if held and char and hum and hum.Health > 0 and held.Part and held.Part.Parent and SanctuaryRules.CanBank(location,held,safety,Tower.IsTransitioning(player),now) then
 					local dm = getDataManager()
 					local prof = dm.GetProfile(player)
 					if not prof then continue end

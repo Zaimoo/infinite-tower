@@ -81,17 +81,7 @@ _G.ClientCombatState = {
 	FocusedNetId = nil :: number?,
 }
 
-local function getGroundY(x: number, z: number): number
-	local r = math.sqrt(x * x + z * z)
-	if r <= 122 then
-		return 16.0
-	elseif r <= 282 then
-		return 4.0
-	elseif r <= 462 then
-		return 2.0
-	end
-	return 12.0
-end
+-- Legacy getGroundY removed in Phase 0; elevations derive from room context and Vector3 positions
 
 local function createEntityModel(netId: number, meta: any, initPos: Vector3): VisualNode
 	local isHero = (meta and meta.IsHero) or false
@@ -474,12 +464,19 @@ end)
 -- TELEGRAPH VFX (DEVOURING NOVA, ELITE AOES & WHISTLE RINGS)
 --============================================================================
 
-BossTelegraphRemote.OnClientEvent:Connect(function(context: any, telegraphType: number, originXZ: Vector2int16, radius: number, durationMs: number)
+BossTelegraphRemote.OnClientEvent:Connect(function(context: any, telegraphType: number, origin: any, radius: number, durationMs: number)
 	if not Protocol.Same(context,View) then return end
 	local durationSec = durationMs / 1000.0
-	local ox = originXZ.X
-	local oz = originXZ.Y
-	local oy = getGroundY(ox, oz) + 0.25
+	local ox: number, oy: number, oz: number
+	if typeof(origin) == "Vector3" then
+		ox, oy, oz = origin.X, origin.Y + 0.25, origin.Z
+	elseif typeof(origin) == "Vector2int16" or typeof(origin) == "Vector2" then
+		ox, oz = origin.X, origin.Y
+		local floorY = (View and View.Origin and View.Origin.Y) or 0
+		oy = floorY + 0.25
+	else
+		return
+	end
 
 	if telegraphType == 1 then
 		-- DEVOURING NOVA (3.0s Red Telegraph on Ring 3, R = 85 studs)

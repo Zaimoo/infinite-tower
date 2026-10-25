@@ -22,6 +22,7 @@ local function getDataManager(): any
 end
 
 local SyndicateService = {}
+local PlayerEspionageCooldowns: { [number]: { [number]: number } } = {} -- [callerUserId][targetUserId] = expiresAt
 
 --============================================================================
 -- WAITING ROOM ESPIONAGE (BLESS VS LEECH & 15s PURGE)
@@ -38,15 +39,43 @@ PlotEspionageEvent.OnServerEvent:Connect(function(player: Player, opCode: any, p
 
 	if opCode == 2 or opCode == 3 then
 		-- 2 = COMPLETE_BLESS (+25% output, +25 Gems)
-		-- 3 = COMPLETE_LEECH (-20% stolen output for 3m; identical visual animation!)
-		local targetOwner = (_G.PlotManager and type(plotIndex) == "number") and _G.PlotManager.GetPlotOwner(plotIndex) or player
-		local targetProf = (targetOwner and dm.GetProfile(targetOwner)) or profile
+		-- 3 = COMPLETE_LEECH (-20% stolen output for 3m)
+		if type(plotIndex) ~= "number" then return end
+		local targetOwner = _G.PlotManager and _G.PlotManager.GetPlotOwner(plotIndex)
+		if not targetOwner or targetOwner == player then
+			-- Reject self-targeting or invalid plot owner
+			return
+		end
+
+		local plotModel = PlotsFolder:FindFirstChild("Plot_" .. tostring(plotIndex)) :: Model?
+		local char = player.Character
+		local hrp = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
+		local island = plotModel and plotModel:FindFirstChild("FloatingFortressIsland")
+		local surface = island and island:FindFirstChild("IslandTopSurface") :: BasePart?
+		local plotPos = surface and surface.Position or (plotModel and plotModel:FindFirstChild("PlotSpawn") and (plotModel.PlotSpawn :: BasePart).Position)
+		if not hrp or not plotPos or (hrp.Position - plotPos).Magnitude > 95 then
+			return
+		end
+
+		local nowUnix = os.time()
+		local callerCooldowns = PlayerEspionageCooldowns[player.UserId]
+		if not callerCooldowns then
+			callerCooldowns = {}
+			PlayerEspionageCooldowns[player.UserId] = callerCooldowns
+		end
+		if callerCooldowns[targetOwner.UserId] and nowUnix < callerCooldowns[targetOwner.UserId] then
+			dm.SendToast(player, "You must wait before channeling another rune on this player's plot!", "WARN")
+			return
+		end
+		callerCooldowns[targetOwner.UserId] = nowUnix + 60
+
+		local targetProf = dm.GetProfile(targetOwner)
+		if not targetProf then return end
 		local facData = (targetProf.Facilities :: any)[facName]
 		if not facData then
 			return
 		end
 
-		local nowUnix = os.time()
 		facData.LastRuneTimestamp = nowUnix
 
 		if opCode == 2 then

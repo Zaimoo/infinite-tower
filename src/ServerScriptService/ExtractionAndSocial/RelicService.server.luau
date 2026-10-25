@@ -453,13 +453,46 @@ RunService.Heartbeat:Connect(function()
 	end
 end)
 
-Players.PlayerRemoving:Connect(function(player: Player)
+local function handleRelicCarrierDeath(player: Player)
 	local relic = CarrierToRelic[player]
 	if relic then
-		RelicService.FumbleRelicOnAoEHit(player)
+		RelicService.DropCarriedRelic(player)
 		relic.LockedUserId = nil
 		relic.LockExpiresAt = 0
 	end
+end
+
+local function bindRelicCharacter(player: Player, char: Model)
+	local hum = char:WaitForChild("Humanoid", 5) :: Humanoid?
+	if hum then
+		hum.Died:Connect(function()
+			handleRelicCarrierDeath(player)
+		end)
+	end
+	char.Destroying:Connect(function()
+		handleRelicCarrierDeath(player)
+	end)
+end
+
+local function handleRelicPlayer(player: Player)
+	player.CharacterAdded:Connect(function(char)
+		bindRelicCharacter(player, char)
+	end)
+	if player.Character then
+		bindRelicCharacter(player, player.Character)
+	end
+	player.CharacterRemoving:Connect(function()
+		handleRelicCarrierDeath(player)
+	end)
+end
+
+Players.PlayerAdded:Connect(handleRelicPlayer)
+for _, p in ipairs(Players:GetPlayers()) do
+	handleRelicPlayer(p)
+end
+
+Players.PlayerRemoving:Connect(function(player: Player)
+	handleRelicCarrierDeath(player)
 	PlayerStunnedUntil[player] = nil
 end)
 
