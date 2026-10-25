@@ -11,12 +11,12 @@
 
 ```mermaid
 flowchart TD
-    P0["Phase 0: Foundation & P1 Bug Fixes\n(Weapon ATK tick erase, AoE Z-height, Plot overwrite)"]
-    P1["Phase 1: Onboarding Engine & React-lua HUD\n(Pinned Goal Tracker, OnboardingService, v3 Profile Schema)"]
-    P2["Phase 2: Fast-Paced Combat & Feedback\n(Continuous mob spawns, hit feedback, damage popups, no Q/E)"]
-    P3["Phase 3: Floor Loop & Defeat Flow\n(Per-player progress bar, boss gate, no-revive squad wipe to plot)"]
-    P4["Phase 4: Tower PvP & Low-Stakes Duels\n(Thief flags, Retaliate duel, loser loot lockout)"]
-    P5["Phase 5: Menu Migration & Facility Idle Integration\n(React Forge, Squad, Pit, Facilities)"]
+    P0["Phase 0: Foundation & P1 Bug Fixes\n(Weapon ATK tick erase, AoE Z-height, Plot overwrite - COMPLETED)"]
+    P1["Phase 1: Fast-Paced Combat Engine & Spectacle\n(Continuous mob spawns, hit-frame sync, TTK calibration, whistle removal)"]
+    P2["Phase 2: Floor Loop, Progression Backend & Defeat Flow\n(Per-player progress bar, boss gate, no-revive squad wipe to plot)"]
+    P3["Phase 3: Tower PvP & Contested Drop Retaliation\n(Thief flags, Retaliate duel, loser loot lockout)"]
+    P4["Phase 4: Onboarding Engine, Unlocks & Idle Backend\n(Pinned quest spine, v3 Profile Schema, facility labor loop)"]
+    P5["Phase 5: Unified React-lua UI, HUD & Menu Migration\n(4-element HUD, Goal Card, Modals, Menus, Gamepad polish)"]
 
     P0 --> P1 --> P2 --> P3 --> P4 --> P5
 ```
@@ -29,23 +29,24 @@ Each phase has its own detailed, self-contained implementation specification:
 
 | Phase | Document | Focus Areas | Key Deliverables |
 | :---: | :--- | :--- | :--- |
-| **0** | [PHASE_0_FOUNDATION_AND_BUGS.md](PHASE_0_FOUNDATION_AND_BUGS.md) | Bug fixes & tooling | Fix 5 critical P1 bugs from systems review; verify Rokit/Rojo/Wally setup. |
-| **1** | [PHASE_1_ONBOARDING_AND_HUD.md](PHASE_1_ONBOARDING_AND_HUD.md) | Progression & Core UI | `OnboardingConfig`, `OnboardingService`, v3 profile schema migration, React-lua HUD with pinned Goal Tracker. |
-| **2** | [PHASE_2_COMBAT_PACING_AND_SPECTACLE.md](PHASE_2_COMBAT_PACING_AND_SPECTACLE.md) | Combat action & juice | Dynamic mob streamer, hit-frame damage synchronization, damage popups, screen shakes, removal of Q/E whistles. |
-| **3** | [PHASE_3_FLOOR_LOOP_AND_DEFEAT.md](PHASE_3_FLOOR_LOOP_AND_DEFEAT.md) | Tower loop & failure | Globally shared floors, per-player kill progress bar, boss summoning gate, full-copy boss loot, no-revive squad wipe to plot. |
-| **4** | [PHASE_4_TOWER_PVP_RETALIATION.md](PHASE_4_TOWER_PVP_RETALIATION.md) | Tower PvP & Duels | Killer-tagged mob loot, [Loot Thief] flags, non-consequential retaliation duel, loser drop lockout. |
-| **5** | [PHASE_5_MENUS_AND_IDLE_FACILITY.md](PHASE_5_MENUS_AND_IDLE_FACILITY.md) | Menus & Idle loop | Incremental React migration for Forge, Squad, Facilities, The Pit; facility-only idle claim modal; gamepad polish. |
+| **0** | [PHASE_0_FOUNDATION_AND_BUGS.md](PHASE_0_FOUNDATION_AND_BUGS.md) | Bug fixes & tooling | **COMPLETED & MERGED.** Fixed 5 critical P1 bugs; verified Rokit/Rojo/Wally setup; 14/14 tests passed. |
+| **1** | [PHASE_1_COMBAT_PACING_AND_SPECTACLE.md](PHASE_1_COMBAT_PACING_AND_SPECTACLE.md) | Combat action & tempo | Continuous mob streamer, hit-frame damage synchronization, TTK tuning, damage numbers, complete removal of Q/E whistles. |
+| **2** | [PHASE_2_FLOOR_LOOP_AND_DEFEAT.md](PHASE_2_FLOOR_LOOP_AND_DEFEAT.md) | Tower loop & failure | Globally shared floors, per-player kill progress tracking, boss summoning gate, full-copy boss loot, no-revive squad wipe to plot. |
+| **3** | [PHASE_3_TOWER_PVP_RETALIATION.md](PHASE_3_TOWER_PVP_RETALIATION.md) | Tower PvP & Duels | Killer-tagged mob loot, [Loot Thief] flags, non-consequential retaliation duel, loser drop lockout. |
+| **4** | [PHASE_4_ONBOARDING_AND_PROGRESSION.md](PHASE_4_ONBOARDING_AND_PROGRESSION.md) | Progression backend | `OnboardingConfig`, `OnboardingService`, v3 profile schema migration, system unlock gating, facility-only idle labor loop. |
+| **5** | [PHASE_5_REACT_UI_AND_MENUS.md](PHASE_5_REACT_UI_AND_MENUS.md) | Complete UI/HUD/UX Overhaul | Modern React-lua root, 4-element persistent HUD, Goal Tracker card, Defeat/Duel/Claim modals, migrated menus (Forge, Squad, Pit, Facilities), gamepad navigation, retirement of legacy `HUDController`. |
 
 ---
 
 ## 3. High-Level Principles & Architecture Contracts
 
-1. **Server Authority:** All progression state (unlocked systems, onboarding step, floor clears, kill progress, inventory, currencies) is server-authoritative. The client sends intents; the server validates and replicates via delta snapshots.
+1. **Gameplay & Systems First, UI Last:** Gameplay loops, combat feel, and network contracts are fully developed and verified first so the React-lua UI can be built against real production state with zero throwaway mocks.
 2. **Hands-Off Auto-Battling:** The Master explores and guides movement in 3D. Combat is 100% automatic—no manual skill taps, no formation management, no Q/E whistles.
-3. **Clean HUD Limit (Max 4 Persistent Elements):**
+3. **Server Authority:** All progression state (unlocked systems, onboarding step, floor clears, kill progress, inventory, currencies) is server-authoritative. The client sends intents; the server validates and replicates via delta snapshots.
+4. **Clean HUD Limit (Max 4 Persistent Elements):**
    - Top-Center: Floor Progress Bar (transitions to Boss Health Bar).
    - Top-Left: Currencies (Gold, Gems) with readable font sizes and delta popups.
    - Top-Right: Pinned "Next Goal" Quest Card.
-   - Bottom-Center: Navigation Toolbar with icons and badge indicators.
-4. **Zero-Deadweight Systems:** All 10 existing systems are preserved but locked behind progressive milestone unlocks. New players see only 1–2 systems at a time.
-5. **Low-Stakes Multiplayer:** Shared tower floors foster emergent encounters. Contested drops enable squad duels without wiping or teleporting either player; the loser is merely locked out of that single drop.
+   - Bottom-Center: Navigation Toolbar with icons and badge indicators (unlocked systems only).
+5. **Zero-Deadweight Systems:** All 10 existing systems are preserved but locked behind progressive milestone unlocks. New players see only 1–2 systems at a time.
+6. **Low-Stakes Multiplayer:** Shared tower floors foster emergent encounters. Contested drops enable squad duels without wiping or teleporting either player; the loser is merely locked out of that single drop.
