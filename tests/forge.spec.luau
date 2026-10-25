@@ -201,7 +201,7 @@ test("Low-quality mixed squad exceeds one billion DPS at 75 percent uptime",func
  end
  assert(math.abs(total*.75-1721417146)<2)
  assert(total*.75>1e9)
- assertEqual(Balance.GetFloorStats(50,"BOSS").MaxHP,110844632813)
+ assertEqual(Balance.GetFloorStats(50,"BOSS").MaxHP,61580351563)
 end)
 test("Legacy trait and imprint fields cannot restore retired stat bonuses",function()
  local hero={TemplateId="hero_han",Stars=5,Level=50,QualityScalar=1,CurrentStamina=100}

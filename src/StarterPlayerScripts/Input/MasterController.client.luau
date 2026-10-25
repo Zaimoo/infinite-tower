@@ -60,31 +60,16 @@ ProximityPromptService.PromptHidden:Connect(function(prompt: ProximityPrompt)
 	visibleInteractionPrompts[prompt] = nil
 end)
 
--- 1. Keyboard Hotkeys: [Q] Overdrive Whistle, [E] Emergency Recall Whistle
+-- 1. Keyboard Hotkeys: [R] Drop Carried Loot
 UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: boolean)
 	if gameProcessed or (_G.IsAnyMasterModalOpen and _G.IsAnyMasterModalOpen()) or (_G.IsTowerSelectorOpen and _G.IsTowerSelectorOpen()) then
 		return
 	end
 
-	if input.KeyCode == Enum.KeyCode.Q then
-		WhistleCommandRemote:FireServer(1) -- 1 = Q_OVERDRIVE
-		if _G.TriggerHUDWhistleCooldown then
-			_G.TriggerHUDWhistleCooldown("Q")
-		end
-	elseif input.KeyCode == Enum.KeyCode.R then
+	if input.KeyCode == Enum.KeyCode.R then
 		local char = LocalPlayer.Character
 		if char and (char:GetAttribute("CarryingLoot") == true or char:GetAttribute("CarryingRelic") ~= nil) then
 			DropCarriedItemRemote:FireServer()
-		end
-	elseif input.KeyCode == Enum.KeyCode.E then
-		for prompt in pairs(visibleInteractionPrompts) do
-			if prompt.Parent and prompt.Enabled and prompt.KeyboardKeyCode == Enum.KeyCode.E then
-				return
-			end
-		end
-		WhistleCommandRemote:FireServer(2) -- 2 = E_RECALL
-		if _G.TriggerHUDWhistleCooldown then
-			_G.TriggerHUDWhistleCooldown("E")
 		end
 	end
 end)

@@ -17,6 +17,7 @@ local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local FacilityConfig = require(Shared:WaitForChild("Config"):WaitForChild("FacilityConfig"))
+local TowerFloorConfig = require(Shared:WaitForChild("Config"):WaitForChild("TowerFloorConfig"))
 local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormulas"))
 local GothicBoxStyle = require(Shared:WaitForChild("Util"):WaitForChild("GothicBoxStyle"))
 local GothicVectorIcons = require(Shared:WaitForChild("Util"):WaitForChild("GothicVectorIcons"))
@@ -34,6 +35,35 @@ local LootStolenAlertRemote = CombatRemotes:WaitForChild("LootStolenAlert") :: R
 local SquadWipeStateRemote = CombatRemotes:WaitForChild("SquadWipeState") :: RemoteEvent
 local DropCarriedItemRemote = CombatRemotes:WaitForChild("DropCarriedItem") :: RemoteEvent
 local CarriedLootSyncRemote = CombatRemotes:WaitForChild("CarriedLootSync") :: RemoteEvent
+local TowerRemotes = Remotes:WaitForChild("TowerRemotes")
+local FloorProgressRemote = TowerRemotes:WaitForChild("FloorProgress") :: RemoteEvent
+local SquadDefeatedRemote = TowerRemotes:WaitForChild("SquadDefeated") :: RemoteEvent
+
+local clientFloorProgress = {
+	FloorId = 0,
+	CurrentKills = 0,
+	RequiredKills = 13,
+	BossSpawned = false,
+	BossDefeated = false,
+}
+
+FloorProgressRemote.OnClientEvent:Connect(function(progress: any)
+	if type(progress) == "table" and type(progress.FloorId) == "number" then
+		clientFloorProgress.FloorId = progress.FloorId
+		clientFloorProgress.CurrentKills = tonumber(progress.CurrentKills) or 0
+		clientFloorProgress.RequiredKills = tonumber(progress.RequiredKills) or math.max(1, math.round(12 + 0.5 * progress.FloorId))
+		clientFloorProgress.BossSpawned = progress.BossSpawned == true
+		clientFloorProgress.BossDefeated = progress.BossDefeated == true
+	end
+end)
+
+SquadDefeatedRemote.OnClientEvent:Connect(function(floorId: number)
+	squadWipeBanner.Visible = true
+	local label = squadWipeBanner:FindFirstChildWhichIsA("TextLabel")
+	if label then
+		label.Text = string.format("💀 SQUAD WIPED ON FLOOR %d! CARRIED LOOT DROPPED — TELEPORTED TO FORTRESS PLOT", floorId or 0)
+	end
+end)
 
 local ArtifactCatalog = require(Shared:WaitForChild("Config"):WaitForChild("ArtifactCatalog"))
 local ArtifactRemotes = Remotes:WaitForChild("ArtifactRemotes")
@@ -749,7 +779,9 @@ local overdriveHandle = createFloatingIconButton(
 		local qRem = math.max(0, 20.0 - (now - LastQClock))
 		if qRem <= 0 then
 			triggerHUDWhistleCooldown("Q")
-			WhistleCommandRemote:FireServer(1)
+			if WhistleCommandRemote then
+				WhistleCommandRemote:FireServer(1)
+			end
 		end
 	end
 )
@@ -767,7 +799,9 @@ local recallHandle = createFloatingIconButton(
 		local eRem = math.max(0, 6.0 - (now - LastEClock))
 		if eRem <= 0 then
 			triggerHUDWhistleCooldown("E")
-			WhistleCommandRemote:FireServer(2)
+			if WhistleCommandRemote then
+				WhistleCommandRemote:FireServer(2)
+			end
 		end
 	end
 )
@@ -1418,7 +1452,27 @@ RunService.RenderStepped:Connect(function()
 	-- 2. Update World Boss Top Banner & Devouring Nova Cast Bar
 	local floorBoss = cs and cs.FloorBoss
 	local hasFloorBoss = floorBoss and floorBoss.Enabled == true
-	bossBanner.Visible = hasFloorBoss or false
+	local curFloor = if _G.TowerView and _G.TowerView.FloorId then _G.TowerView.FloorId else 0
+	if not hasFloorBoss and curFloor > 0 then
+		bossBanner.Visible = true
+		local floorSpec = TowerFloorConfig.Get(curFloor)
+		local floorName = floorSpec and floorSpec.DisplayName or ("Floor " .. tostring(curFloor))
+		local curKills = if clientFloorProgress.FloorId == curFloor then clientFloorProgress.CurrentKills else 0
+		local reqKills = if clientFloorProgress.FloorId == curFloor and clientFloorProgress.RequiredKills > 0 then clientFloorProgress.RequiredKills else math.max(1, math.round(12 + 0.5 * curFloor))
+		local pct = math.clamp(curKills / math.max(1, reqKills), 0, 1)
+		bossTitleLabel.Text = string.format(" FLOOR %d - %s", curFloor, string.upper(floorName))
+		novaBarFill.Size = UDim2.fromScale(pct, 1)
+		novaBarFill.BackgroundColor3 = if curKills >= reqKills then Color3.fromRGB(240, 180, 50) else Color3.fromRGB(150, 95, 230)
+		if clientFloorProgress.FloorId == curFloor and clientFloorProgress.BossDefeated then
+			novaCastLabel.Text = "FLOOR BOSS DEFEATED! ADVANCE TO NEXT FLOOR"
+		elseif curKills >= reqKills then
+			novaCastLabel.Text = "BOSS SUMMONED - ENGAGE THE FLOOR BOSS!"
+		else
+			novaCastLabel.Text = string.format("MOBS DEFEATED: %d / %d (%d%%)", curKills, reqKills, math.floor(pct * 100))
+		end
+	else
+		bossBanner.Visible = hasFloorBoss or false
+	end
 	if hasFloorBoss then
 		local node = cs.VisualNodes and cs.VisualNodes[floorBoss.NetId]
 		local hpPct = if node and node.HpPermille then node.HpPermille / 10.0 else (floorBoss.CurrentHP or 1) / math.max(1, floorBoss.MaxHP or 1) * 100.0
@@ -1427,7 +1481,7 @@ RunService.RenderStepped:Connect(function()
 		bossTitleLabel.Text = string.format(" FLOOR %d BOSS · %s (PHASE %d) — HP: %.1f%%", floorNum, string.upper(floorBoss.Name or "FLOOR BOSS"), phase, hpPct)
 		novaBarFill.Size = UDim2.fromScale(math.clamp(hpPct / 100.0, 0, 1), 1)
 		novaBarFill.BackgroundColor3 = Color3.fromRGB(215, 65, 110)
-		novaCastLabel.Text = string.format("BOSS HP: %.1f%% | Watch ground telegraphs & use [E] Recall to dodge!", hpPct)
+		novaCastLabel.Text = string.format("BOSS HP: %.1f%%", hpPct)
 	end
 end)
 
