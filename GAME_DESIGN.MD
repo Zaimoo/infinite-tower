@@ -349,14 +349,16 @@ Every summoned hero rolls a `QualityScalar` $q \in [0.90, 1.15]$ applied to thei
 
 #### Archetype Foundation Table
 
-| Archetype | Base HP ($HP_0$) | Base ATK ($ATK_0$) | Attack Interval ($t_{\text{atk}}$) | Attack Range | Base Labor ($L_0$) | Permitted Weapons | Basic Attack (+5 SP) | Special Attack (+10 SP, 3rd Hit) | Skill Attack (100 SP Ultimate) |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Vanguard** (Tank) | `450` | `22` | `1.20s` | `6 studs` | `10 / min` | `SWORD`, `AXE`, `SHIELD` | Shield Strike (1.0x) | Shield Bash (1.4x front cleave + slow) | Fortress Aegis (Taunt + 40% Max HP Shield) |
-| **Striker** (Melee DPS) | `280` | `38` | `0.85s` | `6 studs` | `12 / min` | `SWORD`, `DAGGERS`, `SHIELD` | Twin Blade Slash (1.0x) | Flurry Cross (1.6x 2-hit +25% Crit) | Blade Tempest (3.2x omni-burst AoE) |
-| **Marksman** (Ranged DPS) | `210` | `34` | `0.80s` | `28 studs` | `13 / min` | `BOW` | Precision Shot (1.0x) | Piercing Volley (1.5x line pierce 32s) | Rain of Arrows (2.8x 4-tick AoE + 20% Shred) |
-| **Miner** (Gem Specialist) | `300` | `20` | `1.05s` | `6 studs` | `20 / min` | `AXE`, `SHIELD` | Heavy Maul Swing (1.0x) | Seismic Slam (1.5x 8s ground shock) | Crystalline Cataclysm (2.6x AoE + Gem Shards) |
-| **Healer** (Infirmary Spec.) | `260` | `18` | `1.25s` | `24 studs` | `18 / min` | `STAFF`, `TOME` | Holy Bolt (1.0x) | Radiant Pulse (1.2x + 8% Lowest Ally Heal) | Sanctuary Miracle (35% Squad Heal + Cleanse + Regen) |
-| **Scholar** (Spell Specialist)| `220` | `24` | `1.00s` | `26 studs` | `22 / min` | `TOME`, `STAFF` | Arcane Spark (1.0x) | Chain Lightning (1.4x bounces to 2 mobs) | Supernova Cataclysm (3.5x Meteor AoE + Burn) |
+Archetypes define a hero's **combat role, base stats, attack cadence, range, labor, and permitted weapons**. Attack moves are **not** shared per archetype: every hero carries a bespoke 3-tier kit (see Section 4.4, *Hero Combat Skill Ledger*).
+
+| Archetype | Combat Role | Base HP ($HP_0$) | Base ATK ($ATK_0$) | Attack Interval ($t_{\text{atk}}$) | Attack Range | Base Labor ($L_0$) | Permitted Weapons |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Vanguard** | Frontline Tank & Damage Absorber | `450` | `22` | `1.20s` | `6 studs` | `10 / min` | `SWORD`, `AXE`, `SHIELD` |
+| **Striker** | Agile Melee Critical DPS | `280` | `38` | `0.85s` | `6 studs` | `12 / min` | `SWORD`, `DAGGERS`, `SHIELD` |
+| **Marksman** | Long-Range Physical DPS & Armor Shredder | `210` | `34` | `0.80s` | `28 studs` | `13 / min` | `BOW` |
+| **Miner** | Heavy Blunt Disruptor & Gem Specialist | `300` | `20` | `1.05s` | `6 studs` | `20 / min` | `AXE`, `SHIELD` |
+| **Healer** | Squad Sustain & Infirmary Specialist | `260` | `18` | `1.25s` | `24 studs` | `18 / min` | `STAFF`, `TOME` |
+| **Scholar** | Elemental Catalyst & Burst Magic | `220` | `24` | `1.00s` | `26 studs` | `22 / min` | `TOME`, `STAFF` |
 
 *(Note: Rings (`RING`) are universal accessories and can be equipped by any archetype).*
 
@@ -436,23 +438,44 @@ Located inside the fortress military quarter. Stationed Trainers (`Striker` & `S
   $$\text{TrainingMultiplier} = 1 + \text{BaseBonus}_{\text{Level}} + \big(0.004 \times \sum \text{EffectiveLabor}_{\text{Training}}\big)$$
   *(Multiplies total squad $\text{FinalATK}$ and $\text{FinalHP}$ across all heroes and equipped Artifacts).*
 
-### 4.4 Archetype 3-Tier Attack Cadence & Dynamic Skill Gauge System
+### 4.4 Hero 3-Tier Attack Cadence & Dynamic Skill Gauge System
 
-In Infinite Tower, combat is server-authoritative with client prediction/interpolation. Each hero executes a 3-tier attack cadence governed by the **Dynamic Skill Gauge** (formerly Stamina):
+In Infinite Tower, combat is server-authoritative with client prediction/interpolation. **Every hero possesses a unique, bespoke 3-tier skill kit** (`Basic`, `Special`, `Skill / Ultimate`); kits are not shared across an archetype. Each hero executes its kit on a 3-tier attack cadence governed by the **Dynamic Skill Gauge** (formerly Stamina):
 
 #### 1. In-Combat Skill Gauge Rules & Cadence Mechanics
 - **Gauge Starting State & Maximum:** Heroes enter active combat with **0 Skill Gauge** (represented by the yellow billboard bar above the hero's head) that fills up to a maximum of **100**.
 - **Accrual Rules:**
   - **Tier 1: Basic Attack:** Standard auto-attack governed by base interval $t_{\text{atk}}$. Generates **+5 Skill Gauge**.
   - **Tier 2: Special Attack:** Automatically procs on every **3rd attack** (Cadence: `Basic (5) -> Basic (5) -> Special (10)`). Generates **+10 Skill Gauge**. Deals amplified damage with archetype-specific secondary mechanics (frontal cleaves, pierces, multi-slashes, chain lightning, or allied mini-heals).
-  - **Tier 3: Skill Attack (Ultimate):** When the gauge reaches **100**, the hero's next attack triggers their archetype-defining ultimate. Consumes all 100 gauge points (resetting back to **0**).
+  - **Tier 3: Skill Attack (Ultimate):** When the gauge reaches **100**, the hero's next attack triggers their signature ultimate. Consumes all 100 gauge points (resetting back to **0**).
 - **Accrual Math & Combat Rhythm:**
   - Each 3-attack cycle yields: $5 + 5 + 10 = 20\text{ Skill Gauge}$.
   - A hero requires exactly $5\text{ cycles} \times 3\text{ attacks} = 15\text{ attacks}$ ($10\text{ Basic} + 5\text{ Special}$) to reach 100 gauge points without external buffs.
   - At an average interval of $1.0\text{s}$, a hero triggers an ultimate roughly every $15\text{ seconds}$.
 - **Overdrive Whistle Synergy (`[Q]`):** Overdrive Whistle grants $+40\%$ Attack Speed for $5\text{s}$ with zero Stamina drain, compressing the time to charge and release signature Ultimates during crucial DPS/punish windows.
 
-#### 2. Detailed Archetype Combat Skill Specifications
+#### 2. Hero Combat Skill Ledger
+
+Each hero's kit is resolved by `HeroId` in `ArchetypeCombatSkills.HeroProfiles` (falling back to the archetype base profile for unknown heroes). A hero's kit inherits its archetype's damage multipliers and secondary mechanics (next table) unless it overrides them.
+
+| # | Hero | Star | Archetype | Basic (+5 SP) | Special (+10 SP, 3rd Hit) | Skill / Ultimate (100 SP) |
+| :---: | :--- | :---: | :--- | :--- | :--- | :--- |
+| 1 | **Han** (`hero_han`) | 1★ | Striker | Gale Slash | Crescent Cross-Cut | Relentless Blade Flurry |
+| 2 | **Aaron** (`hero_aaron`) | 2★ | Vanguard | Bastion Strike | Aegis Shield Bash | Fortress Bulwark |
+| 3 | **Catio** (`hero_catio`) | 3★ | Miner | Pickaxe Cleave | Resonance Tremor | Crystalline Excavation |
+| 4 | **Valeria** (`hero_valeria`) | 4★ | Healer | Emerald Bolt | Verdant Mend | Sanctuary Miracle |
+| 5 | **Ignis** (`hero_ignis`) | 5★ | Vanguard | Molten Cleave | Magma Breaker | Infernal Juggernaut |
+| 6 | **Jenna** (`hero_jenna`) | 1★ | Marksman | Wind-Step Shot | Piercing Gale Volley | Sylphid Arrow Storm |
+| 7 | **Velkist** (`hero_velkist`) | 2★ | Striker | Twin Fang Cut | Shadow Rend | Phantom Lotus Execution |
+| 8 | **Eolka** (`hero_eolka`) | 3★ | Scholar | Ruby Firebolt | Wildfire Chain | Crimson Hellfire Pillar |
+| 9 | **Morrigan** (`hero_morrigan`) | 4★ | Vanguard | Abyssal Reap | Dread Shockwave | Obsidian Bastion |
+| 10 | **Sovereign Archon** (`hero_archon`) | 5★ | Striker | Void Lance Strike | Rift Sever | Dimensional Cataclysm |
+| 11 | **Solaris** (`hero_solaris`) | 6★ | Scholar | Solar Ray | Corona Arc | Supernova Starfall |
+| 12 | **Astrea** (`hero_astrea`) | 7★ | Marksman | Astral Arrow | Nebula Piercer | Constellation Judgment |
+
+#### 3. Archetype Base Mechanics (Kit Defaults)
+
+These are the default multipliers and secondary mechanics each hero kit inherits from its archetype. The move names here are the archetype base profile names, used only as a fallback.
 
 | Archetype | Attack Tier | Move Name | Damage / Effect | Secondary Mechanics & Range | Accrual |
 | :--- | :--- | :--- | :--- | :--- | :---: |
@@ -475,7 +498,7 @@ In Infinite Tower, combat is server-authoritative with client prediction/interpo
 | | **Special** (Hit 3) | Chain Lightning | `1.4x ATK` Lightning | Arcs from primary target to up to 2 adjacent mobs within `14 studs`. | `+10` |
 | | **Skill** (100 SP) | Supernova Cataclysm | `3.5x ATK` Fire AoE | Dimensional portal drops a burning meteor on target area (`20-stud` radius), leaving lingering ground flames for `3s`. | `Resets to 0` |
 
-#### 3. Visual & Audio Combat Feedback
+#### 4. Visual & Audio Combat Feedback
 - **Billboard Gauge:** Yellow bar above hero health smoothly fills from $0 \to 100\%$.
 - **Skill Ready Indicator:** When gauge reaches $100\%$, the bar triggers a dynamic golden pulsation animation (`#FFD700`), signaling the impending ultimate.
 - **Floating Combat Text (FCT):**
