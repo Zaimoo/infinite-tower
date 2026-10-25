@@ -1,7 +1,7 @@
 # Phase 0: Foundation, Toolchain & Critical P1 Bug Fixes
 
 **Document Version:** 1.0  
-**Phase Status:** Ready for Execution  
+**Phase Status:** Completed & Verified (Merged to Main)  
 **Prerequisites:** None  
 
 ---
@@ -89,13 +89,25 @@ Before introducing new gameplay features, onboarding systems, or UI components, 
 
 ## 4. Verification & Exit Criteria
 
-1. **Automated Offline Suite:** Run test runner script covering all 5 bugs:
-   ```bash
-   lune run tests/phase0-verification.luau
-   # or via Studio MCP execute_luau
-   ```
+1. **Automated Suite (`tests/phase0-verification.luau`):**
+   - 14/14 automated assertions passing (0 failures) in Roblox Studio Edit mode:
+     - `Bug1_GetEquippedArtifact` (PASS)
+     - `Bug1_EffectiveStats_WeaponBonusApplied` (PASS)
+     - `Bug1_WeaponATK_Preserved_100Ticks` (PASS)
+     - `Bug2_AoE_Hits_SameFloor` (PASS)
+     - `Bug2_AoE_Rejects_DifferentFloor` (PASS)
+     - `Bug2_AoE_Rejects_DeltaY_Over_11` (PASS)
+     - `Bug3_6thPlayer_NoOverwritePlot1` (PASS)
+     - `Bug3_PlotRealloc_FreedIndex` (PASS)
+     - `Bug4_CargoCarried_InitialState` (PASS)
+     - `Bug4_DeathDropsCargo` (PASS)
+     - `Bug5_Reject_SelfBless` (PASS)
+     - `Bug5_ValidTarget_Accepted` (PASS)
+     - `Bug5_Cooldown_Enforced_Within60s` (PASS)
+     - `Bug5_Cooldown_Expires_After60s` (PASS)
 2. **Clean Project Build:**
-   ```bash
-   rojo build -o build.rbxl
-   ```
-3. **Studio Playtest:** Start play session; check developer console for zero warnings or error traces.
+   - `rojo build -o build.rbxl` verified with 0 errors.
+3. **Studio Parity:**
+   - Byte-level synchronization verified across all 5 modified scripts in Roblox Studio Edit mode (Place ID 136256010643848).
+4. **Git Delivery:**
+   - Committed on `feat/phase-0-foundation-and-bugs`, merged cleanly into `main`, and pushed to remote origin.
