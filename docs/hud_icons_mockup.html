@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Infinite Tower - HUD Icons Mockup</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Inter:wght@400;600;700;800;900&display=swap');
+
+  :root {
+    --obsidian: #0D0912;
+    --obsidian-card: #15101E;
+    --obsidian-light: #241A32;
+    --border-dark: #312740;
+    --border-glow: #4B3A68;
+    --text-main: #F6F4FF;
+    --text-muted: #A396BA;
+    
+    /* Authentic Game Thematic Accent Colors */
+    --color-shop: #FACC15;      /* Imperial Gold */
+    --color-squad: #38BDF8;     /* Sterling Azure / Silver */
+    --color-overdrive: #F59E0B; /* Blazing Amber / Lightning */
+    --color-recall: #22D3EE;    /* Arcane Cyan / Spatial Rift */
+    --color-tower: #C084FC;     /* Mystic Amethyst / Monolith */
+  }
+
+  body {
+    background-color: #06040A;
+    background-image: 
+      radial-gradient(circle at 50% 0%, rgba(67, 34, 102, 0.25) 0%, transparent 65%),
+      radial-gradient(circle at 80% 90%, rgba(34, 211, 238, 0.05) 0%, transparent 50%);
+    color: var(--text-main);
+    font-family: 'Inter', sans-serif;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-x: hidden;
+  }
+
+  .cinzel {
+    font-family: 'Cinzel', serif;
+  }
+
+  h2 {
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 800;
+    border-bottom: 1px solid var(--border-dark);
+    padding-bottom: 8px;
+    margin-bottom: 24px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  h2::before {
+    content: "◈";
+    color: #9D7BDB;
+    font-size: 11px;
+  }
+  
+  /* Base Action Button Wrapper */
+  .action-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+    cursor: pointer;
+    width: 72px;
+    user-select: none;
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  
+  /* Obsidian Disc Base */
+  .icon-disc {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, var(--obsidian-light) 0%, var(--obsidian-card) 55%, var(--obsidian) 100%);
+    border: 1.8px solid var(--border-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 
+      inset 0 0 14px rgba(0,0,0,0.95), 
+      inset 0 1px 2px rgba(255,255,255,0.1),
+      0 6px 14px rgba(0,0,0,0.6);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+  }
+
+  /* Filigree Ring Inset */
+  .icon-disc::before {
+    content: "";
+    position: absolute;
+    inset: 3px;
+    border-radius: 50%;
+    border: 1px dashed rgba(255, 255, 255, 0.12);
+    pointer-events: none;
+    transition: all 0.25s ease;
+  }
+  
+  /* SVGs */
+  .icon-disc svg {
+    width: 28px;
+    height: 28px;
+    filter: drop-shadow(0 0 5px currentColor);
+    transition: all 0.25s ease;
+    z-index: 1;
+  }
+  
+  /* Text Label Ribbon/Pill */
+  .label-pill {
+    background: linear-gradient(180deg, #1C1528, #0E0A16);
+    border: 1px solid var(--border-dark);
+    border-radius: 12px;
+    padding: 3px 8px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    text-shadow: 0 1px 3px #000;
+    white-space: nowrap;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.7);
+    transition: all 0.25s ease;
+  }
+  
+  /* Keybind Pill ([Q], [E]) */
+  .keybind-pill {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: radial-gradient(circle at 35% 30%, #FFFFFF, #E2DCF5);
+    color: #120C1C;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 11px;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.9), 0 0 6px rgba(255,255,255,0.4);
+    border: 1.5px solid #1E162B;
+    z-index: 4;
+  }
+
+  /* Red Alert Notification Badge for Shop */
+  .notif-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: radial-gradient(circle at 35% 30%, #FF4D6D, #D90429);
+    color: #FFFFFF;
+    border-radius: 50%;
+    width: 19px;
+    height: 19px;
+    font-size: 11px;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.8), 0 0 10px rgba(239,68,68,0.7);
+    border: 1.5px solid #FFFFFF;
+    z-index: 4;
+    animation: pulse-badge 2s infinite ease-in-out;
+  }
+
+  @keyframes pulse-badge {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.15); box-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 14px rgba(239,68,68,0.9); }
+  }
+  
+  /* Thematic Accent Colors & Strokes */
+  .btn-shop .icon-disc { border-color: var(--color-shop); color: var(--color-shop); }
+  .btn-shop .label-pill { color: var(--color-shop); border-color: rgba(250, 204, 21, 0.45); }
+
+  .btn-squad .icon-disc { border-color: var(--color-squad); color: var(--color-squad); }
+  .btn-squad .label-pill { color: var(--color-squad); border-color: rgba(56, 189, 248, 0.45); }
+  
+  .btn-overdrive .icon-disc { border-color: var(--color-overdrive); color: var(--color-overdrive); }
+  .btn-overdrive .label-pill { color: var(--color-overdrive); border-color: rgba(245, 158, 11, 0.45); }
+  
+  .btn-recall .icon-disc { border-color: var(--color-recall); color: var(--color-recall); }
+  .btn-recall .label-pill { color: var(--color-recall); border-color: rgba(34, 211, 238, 0.45); }
+  
+  .btn-tower .icon-disc { border-color: var(--color-tower); color: var(--color-tower); }
+  .btn-tower .label-pill { color: var(--color-tower); border-color: rgba(192, 132, 252, 0.45); }
+
+  /* States: Hover */
+  .action-btn.force-hover .icon-disc, .action-btn:hover:not(.cooldown):not(.btn-disabled) .icon-disc {
+    transform: scale(1.12);
+    box-shadow: 0 0 20px currentColor, inset 0 0 12px rgba(0,0,0,0.7);
+  }
+  .action-btn.force-hover .icon-disc::before, .action-btn:hover:not(.cooldown):not(.btn-disabled) .icon-disc::before {
+    border-color: rgba(255, 255, 255, 0.35);
+  }
+  .action-btn.force-hover .label-pill, .action-btn:hover:not(.cooldown):not(.btn-disabled) .label-pill {
+    transform: translateY(2px) scale(1.05);
+    background: linear-gradient(180deg, #2D1F42, #181124);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.8), 0 0 8px currentColor;
+  }
+  
+  /* States: Active / Toggled */
+  .action-btn.is-active .icon-disc {
+    transform: scale(1.08);
+    box-shadow: 0 0 24px currentColor, inset 0 0 15px rgba(255,255,255,0.25);
+    border-width: 2.2px;
+  }
+
+  /* States: Cooldown (Only applicable to Overdrive & Recall) */
+  .action-btn.cooldown {
+    cursor: not-allowed;
+  }
+  .action-btn.cooldown .icon-disc {
+    filter: grayscale(1) brightness(0.35);
+    border-color: var(--border-dark) !important;
+    transform: scale(0.94);
+    box-shadow: inset 0 0 18px rgba(0,0,0,0.95);
+  }
+  .action-btn.cooldown .label-pill {
+    filter: grayscale(1) brightness(0.45);
+    border-color: var(--border-dark) !important;
+  }
+  .action-btn.cooldown .keybind-pill {
+    opacity: 0.25;
+  }
+  .action-btn.cooldown svg {
+    opacity: 0.2;
+    filter: none;
+  }
+  
+  .cooldown-text {
+    position: absolute;
+    font-size: 20px;
+    font-weight: 900;
+    color: #F6F4FF;
+    text-shadow: 0 2px 5px #000, 0 0 10px rgba(0,0,0,0.9);
+    z-index: 3;
+    display: none;
+    font-variant-numeric: tabular-nums;
+  }
+  .action-btn.cooldown .cooldown-text {
+    display: block;
+  }
+
+  /* Matrix Cell for Instant Actions (No Cooldown) */
+  .no-cd-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    opacity: 0.45;
+  }
+  .no-cd-disc {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    border: 1.5px dashed #44375A;
+    background: rgba(14, 10, 22, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6C5D85;
+    font-size: 20px;
+    font-weight: 900;
+  }
+  .no-cd-pill {
+    background-color: transparent;
+    border: 1px dashed #3D3052;
+    border-radius: 12px;
+    padding: 2px 7px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: #796A94;
+  }
+
+  /* Sheet Grid Layout */
+  .sheet-grid {
+    display: grid;
+    grid-template-columns: 130px repeat(5, 1fr);
+    gap: 32px 16px;
+    align-items: center;
+    justify-items: center;
+    background: linear-gradient(135deg, rgba(20, 14, 32, 0.85) 0%, rgba(9, 6, 15, 0.95) 100%);
+    padding: 36px 28px;
+    border-radius: 16px;
+    border: 1.5px solid var(--border-dark);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.05);
+    width: 100%;
+  }
+  .sheet-label {
+    font-weight: 800;
+    color: var(--text-muted);
+    text-align: right;
+    width: 100%;
+    padding-right: 18px;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    justify-self: end;
+  }
+
+  /* Toast Notification */
+  #hud-toast {
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    transform: translateY(-20px);
+    opacity: 0;
+    pointer-events: none;
+  }
+  #hud-toast.show {
+    transform: translateY(0);
+    opacity: 1;
+  }
+</style>
+</head>
+<body class="p-8 pb-32">
+
+  <!-- Header Banner -->
+  <div class="w-full max-w-5xl mb-8 flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-black cinzel tracking-wider text-[#F6F4FF]">Infinite Tower <span class="text-xs tracking-widest text-[#A396BA] font-sans px-2.5 py-1 bg-[#1A1226] border border-[#3A2D50] rounded-md ml-2 align-middle">TACTICAL HUD SPEC</span></h1>
+      <p class="text-xs text-[#8E80A8] mt-1">Authentic Gothic Vector Icons & Verified Server Cooldown Mechanics</p>
+    </div>
+    <div class="text-xs text-[#8E80A8] bg-[#120D1D] border border-[#2B213A] px-3 py-1.5 rounded-lg flex items-center gap-2">
+      <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+      Client Engine: Pure Procedural Vectors
+    </div>
+  </div>
+
+  <!-- Section 1: Component States Matrix -->
+  <div class="w-full max-w-5xl mb-12">
+    <h2>1. Action Icons States Matrix (Normal, Active Hover & Verified Cooldown)</h2>
+    <div class="sheet-grid">
+      
+      <!-- NORMAL ROW -->
+      <div class="sheet-label">Normal</div>
+      
+      <!-- SHOP -->
+      <div class="action-btn btn-shop">
+        <div class="icon-disc">
+          <div class="notif-badge">!</div>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <!-- Arched Canopy Roof & Crown Apex -->
+            <path d="M12 2.5L14 4.5L12 6.5L10 4.5Z" fill="currentColor" fill-opacity="0.3"></path>
+            <path d="M4 8.5C7 6 17 6 20 8.5"></path>
+            <path d="M3 9H21"></path>
+            <!-- Vault Pillars -->
+            <path d="M6.5 9V17.5"></path>
+            <path d="M17.5 9V17.5"></path>
+            <!-- Center Vault Medallion -->
+            <circle cx="12" cy="13.2" r="3.2" stroke-width="1.5"></circle>
+            <polygon points="12,11.6 13.3,13.2 12,14.8 10.7,13.2" fill="currentColor"></polygon>
+            <!-- Plinth Base -->
+            <path d="M4 17.5H20"></path>
+            <path d="M3 20.5H21"></path>
+          </svg>
+        </div>
+        <div class="label-pill">SHOP</div>
+      </div>
+
+      <!-- SQUAD -->
+      <div class="action-btn btn-squad">
+        <div class="icon-disc">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <!-- Crossed Swords Silhouette -->
+            <path d="M4 4L7 7M17 17L20 20M19 21L21 19M16.5 19.5L19.5 16.5"></path>
+            <path d="M20 4L17 7M7 17L4 20M3 19L5 21M4.5 16.5L7.5 19.5"></path>
+            <!-- Heraldic Knight Shield -->
+            <path d="M12 4.5C8.5 4.5 7 6 7 9.5C7 14.5 10.2 18.2 12 19.5C13.8 18.2 17 14.5 17 9.5C17 6 15.5 4.5 12 4.5Z" fill="currentColor" fill-opacity="0.18"></path>
+            <!-- Shield Diamond Emblem -->
+            <polygon points="12,8 13.6,10.8 12,13.6 10.4,10.8" fill="currentColor"></polygon>
+          </svg>
+        </div>
+        <div class="label-pill">SQUAD</div>
+      </div>
+
+      <!-- OVERDRIVE -->
+      <div class="action-btn btn-overdrive">
+        <div class="icon-disc">
+          <div class="keybind-pill">Q</div>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <!-- Cardinal Energy Flares -->
+            <path d="M12 2V5.5M12 18.5V22M2 12H5.5M18.5 12H22" stroke-width="1.7"></path>
+            <!-- Diagonal Energy Flares -->
+            <path d="M5 5L7.5 7.5M16.5 16.5L19 19M5 19L7.5 16.5M16.5 7.5L19 5" stroke-width="1.3" stroke-opacity="0.75"></path>
+            <!-- Lightning Strike Core -->
+            <polygon points="13.5 5 7.5 12.5 11.5 12.5 10.5 19 16.5 11.5 12.5 11.5" fill="currentColor"></polygon>
+          </svg>
+        </div>
+        <div class="label-pill">OVERDRIVE</div>
+      </div>
+
+      <!-- RECALL -->
+      <div class="action-btn btn-recall">
+        <div class="icon-disc">
+          <div class="keybind-pill">E</div>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <!-- Concentric Spatial Ring & Cardinal Ticks -->
+            <circle cx="12" cy="12" r="8.5" stroke-width="1.6"></circle>
+            <path d="M12 2V4M12 20V22M2 12H4M20 12H22" stroke-width="2"></path>
+            <!-- Inner Gateway Orbit -->
+            <circle cx="12" cy="12" r="5" stroke-dasharray="2.5 2.5" stroke-width="1.2"></circle>
+            <!-- 4 Orbiting Rune Nodes -->
+            <circle cx="12" cy="7" r="0.9" fill="currentColor"></circle>
+            <circle cx="12" cy="17" r="0.9" fill="currentColor"></circle>
+            <circle cx="7" cy="12" r="0.9" fill="currentColor"></circle>
+            <circle cx="17" cy="12" r="0.9" fill="currentColor"></circle>
+            <!-- Sacred Center Return Beacon -->
+            <path d="M12 8L15 12H13V15.5H11V12H9L12 8Z" fill="currentColor"></path>
+          </svg>
+        </div>
+        <div class="label-pill">RECALL</div>
+      </div>
+
+      <!-- TOWER -->
+      <div class="action-btn btn-tower">
+        <div class="icon-disc">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <!-- Floating Apex Star Beacon -->
+            <polygon points="12,1.5 13.2,3 12,4.5 10.8,3" fill="currentColor"></polygon>
+            <!-- Battlements / Crenellations -->
+            <path d="M6 5.5V8.5H18V5.5M9.5 5.5V7.5M14.5 5.5V7.5" stroke-width="1.8"></path>
+            <!-- Monolith Tower Body -->
+            <path d="M7.5 8.5L8 16H16L16.5 8.5" stroke-width="1.7"></path>
+            <!-- Gothic Arrow Slit Window -->
+            <path d="M12 10.5V13.5" stroke-width="2.2"></path>
+            <!-- Rampart Fortress Base Plinth -->
+            <path d="M5.5 16H18.5V18.5H5.5V16Z" fill="currentColor" fill-opacity="0.25"></path>
+            <path d="M3.5 21H20.5" stroke-width="2"></path>
+          </svg>
+        </div>
+        <div class="label-pill">TOWER</div>
+      </div>
+
+      <!-- HOVER ROW -->
+      <div class="sheet-label">Hover (Active)</div>
+      
+      <!-- SHOP (Hover) -->
+      <div class="action-btn btn-shop force-hover">
+        <div class="icon-disc">
+          <div class="notif-badge">!</div>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2.5L14 4.5L12 6.5L10 4.5Z" fill="currentColor" fill-opacity="0.4"></path>
+            <path d="M4 8.5C7 6 17 6 20 8.5"></path>
+            <path d="M3 9H21"></path>
+            <path d="M6.5 9V17.5"></path>
+            <path d="M17.5 9V17.5"></path>
+            <circle cx="12" cy="13.2" r="3.2" stroke-width="1.5"></circle>
+            <polygon points="12,11.6 13.3,13.2 12,14.8 10.7,13.2" fill="currentColor"></polygon>
+            <path d="M4 17.5H20"></path>
+            <path d="M3 20.5H21"></path>
+          </svg>
+        </div>
+        <div class="label-pill">SHOP</div>
+      </div>
+
+      <!-- SQUAD (Hover) -->
+      <div class="action-btn btn-squad force-hover">
+        <div class="icon-disc">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 4L7 7M17 17L20 20M19 21L21 19M16.5 19.5L19.5 16.5"></path>
+            <path d="M20 4L17 7M7 17L4 20M3 19L5 21M4.5 16.5L7.5 19.5"></path>
+            <path d="M12 4.5C8.5 4.5 7 6 7 9.5C7 14.5 10.2 18.2 12 19.5C13.8 18.2 17 14.5 17 9.5C17 6 15.5 4.5 12 4.5Z" fill="currentColor" fill-opacity="0.25"></path>
+            <polygon points="12,8 13.6,10.8 12,13.6 10.4,10.8" fill="currentColor"></polygon>
+          </svg>
+        </div>
+        <div class="label-pill">SQUAD</div>
+      </div>
+
+      <!-- OVERDRIVE (Hover) -->
+      <div class="action-btn btn-overdrive force-hover">
+        <div class="icon-disc">
+          <div class="keybind-pill">Q</div>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2V5.5M12 18.5V22M2 12H5.5M18.5 12H22" stroke-width="1.7"></path>
+            <path d="M5 5L7.5 7.5M16.5 16.5L19 19M5 19L7.5 16.5M16.5 7.5L19 5" stroke-width="1.3" stroke-opacity="0.75"></path>
+            <polygon points="13.5 5 7.5 12.5 11.5 12.5 10.5 19 16.5 11.5 12.5 11.5" fill="currentColor"></polygon>
+          </svg>
+        </div>
+        <div class="label-pill">OVERDRIVE</div>
+      </div>
+
+      <!-- RECALL (Hover) -->
+      <div class="action-btn btn-recall force-hover">
+        <div class="icon-disc">
+          <div class="keybind-pill">E</div>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="8.5" stroke-width="1.6"></circle>
+            <path d="M12 2V4M12 20V22M2 12H4M20 12H22" stroke-width="2"></path>
+            <circle cx="12" cy="12" r="5" stroke-dasharray="2.5 2.5" stroke-width="1.2"></circle>
+            <circle cx="12" cy="7" r="0.9" fill="currentColor"></circle>
+            <circle cx="12" cy="17" r="0.9" fill="currentColor"></circle>
+            <circle cx="7" cy="12" r="0.9" fill="currentColor"></circle>
+            <circle cx="17" cy="12" r="0.9" fill="currentColor"></circle>
+            <path d="M12 8L15 12H13V15.5H11V12H9L12 8Z" fill="currentColor"></path>
+          </svg>
+        </div>
+        <div class="label-pill">RECALL</div>
+      </div>
+
+      <!-- TOWER (Hover) -->
+      <div class="action-btn btn-tower force-hover">
+        <div class="icon-disc">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="12,1.5 13.2,3 12,4.5 10.8,3" fill="currentColor"></polygon>
+            <path d="M6 5.5V8.5H18V5.5M9.5 5.5V7.5M14.5 5.5V7.5" stroke-width="1.8"></path>
+            <path d="M7.5 8.5L8 16H16L16.5 8.5" stroke-width="1.7"></path>
+            <path d="M12 10.5V13.5" stroke-width="2.2"></path>
+            <path d="M5.5 16H18.5V18.5H5.5V16Z" fill="currentColor" fill-opacity="0.3"></path>
+            <path d="M3.5 21H20.5" stroke-width="2"></path>
+          </svg>
+        </div>
+        <div class="label-pill">TOWER</div>
+      </div>
+
+      <!-- COOLDOWN ROW (Only Overdrive & Recall have cooldowns) -->
+      <div class="sheet-label flex flex-col items-end">
+        <span>Cooldown</span>
+        <span class="text-[9px] text-[#71638A] font-normal lowercase tracking-normal">[Q & E only]</span>
+      </div>
+      
+      <!-- SHOP (No Cooldown) -->
+      <div class="no-cd-cell" title="Instant Toggle - No Cooldown">
+        <div class="no-cd-disc">—</div>
+        <div class="no-cd-pill">NO CD</div>
+      </div>
+
+      <!-- SQUAD (No Cooldown) -->
+      <div class="no-cd-cell" title="Instant Modal - No Cooldown">
+        <div class="no-cd-disc">—</div>
+        <div class="no-cd-pill">NO CD</div>
+      </div>
+
+      <!-- OVERDRIVE (Cooldown Active) -->
+      <div class="action-btn btn-overdrive cooldown">
+        <div class="icon-disc">
+          <span class="cooldown-text">14</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2V5.5M12 18.5V22M2 12H5.5M18.5 12H22"></path>
+            <polygon points="13.5 5 7.5 12.5 11.5 12.5 10.5 19 16.5 11.5 12.5 11.5" fill="currentColor"></polygon>
+          </svg>
+        </div>
+        <div class="label-pill">OVERDRIVE</div>
+      </div>
+
+      <!-- RECALL (Cooldown Active) -->
+      <div class="action-btn btn-recall cooldown">
+        <div class="icon-disc">
+          <span class="cooldown-text">5</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="8.5" stroke-width="1.6"></circle>
+            <path d="M12 8L15 12H13V15.5H11V12H9L12 8Z" fill="currentColor"></path>
+          </svg>
+        </div>
+        <div class="label-pill">RECALL</div>
+      </div>
+
+      <!-- TOWER (No Cooldown) -->
+      <div class="no-cd-cell" title="Instant Travel - No Cooldown">
+        <div class="no-cd-disc">—</div>
+        <div class="no-cd-pill">NO CD</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Section 2: Full HUD Preview -->
+  <div class="w-full max-w-5xl relative">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="mb-0 border-b-0 pb-0">2. Interactive In-Game HUD Placement</h2>
+      <div class="text-[11px] text-[#A396BA] flex items-center gap-3">
+        <span>Click <span class="text-amber-400 font-bold">[Q]</span> or <span class="text-cyan-400 font-bold">[E]</span> to trigger ability cooldowns</span>
+        <span class="text-[#4B3A68]">|</span>
+        <span>Click <span class="text-yellow-300 font-bold">Shop</span>, <span class="text-sky-300 font-bold">Squad</span>, or <span class="text-purple-300 font-bold">Tower</span> to toggle menus</span>
+      </div>
+    </div>
+    
+    <!-- Toast Popup -->
+    <div class="absolute top-12 left-1/2 -translate-x-1/2 z-50">
+      <div id="hud-toast" class="bg-[#191126] border border-[#5E4782] text-sm text-[#F6F4FF] px-4 py-2 rounded-xl shadow-2xl flex items-center gap-2">
+        <span id="toast-icon">✨</span>
+        <span id="toast-msg">Notification</span>
+      </div>
+    </div>
+
+    <!-- Game Viewport Frame -->
+    <div class="w-full h-64 rounded-2xl border border-[#312740] relative overflow-hidden bg-[#0A0710] shadow-[0_20px_50px_rgba(0,0,0,0.8)]">
+      
+      <!-- Backdrop Scene Mimicking Game Arena -->
+      <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#1B112B] via-[#0C0816] to-[#050308] opacity-80"></div>
+      
+      <!-- Stone Floor Grid Texture Lines -->
+      <div class="absolute inset-0 opacity-15 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:32px_32px]"></div>
+
+      <!-- Top Center Boss Cast Bar (Atmospheric Element) -->
+      <div class="absolute top-4 left-1/2 -translate-x-1/2 w-80 bg-[#150F22]/90 border border-[#493666] rounded-lg px-3 py-1.5 flex flex-col gap-1 shadow-lg">
+        <div class="flex justify-between text-[10px] font-bold text-[#E2D5F8]">
+          <span>THE DIMENSIONAL SOVEREIGN</span>
+          <span class="text-purple-400">RING 3</span>
+        </div>
+        <div class="w-full h-1.5 bg-[#2B1B40] rounded-full overflow-hidden">
+          <div class="h-full bg-gradient-to-r from-purple-500 to-pink-500 w-[68%]"></div>
+        </div>
+      </div>
+
+      <!-- Floating Shop Button (Top-Left, matching Roblox client placement) -->
+      <div class="absolute top-4 left-6 flex items-center gap-3">
+        <div id="btn-hud-shop" class="action-btn btn-shop" title="Open Merchant Altar (Instant)">
+          <div class="icon-disc">
+            <div id="shop-badge" class="notif-badge">!</div>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2.5L14 4.5L12 6.5L10 4.5Z" fill="currentColor" fill-opacity="0.3"></path>
+              <path d="M4 8.5C7 6 17 6 20 8.5"></path>
+              <path d="M3 9H21"></path>
+              <path d="M6.5 9V17.5"></path>
+              <path d="M17.5 9V17.5"></path>
+              <circle cx="12" cy="13.2" r="3.2" stroke-width="1.5"></circle>
+              <polygon points="12,11.6 13.3,13.2 12,14.8 10.7,13.2" fill="currentColor"></polygon>
+              <path d="M4 17.5H20"></path>
+              <path d="M3 20.5H21"></path>
+            </svg>
+          </div>
+          <div class="label-pill">SHOP</div>
+        </div>
+      </div>
+
+      <!-- Currency Cluster (Bottom-Left, matching in-game Gothic Box Placement) -->
+      <div class="absolute bottom-5 left-6 flex items-center gap-2">
+        <div class="bg-[#120B1C]/90 border border-[#3E2E54] rounded-lg px-3 py-1.5 flex items-center gap-2 shadow-md">
+          <div class="w-4 h-4 rounded-full bg-gradient-to-tr from-amber-600 to-yellow-300 border border-yellow-200 flex items-center justify-center text-[9px] font-black text-amber-950">G</div>
+          <span class="text-xs font-bold text-amber-300">14,250</span>
+        </div>
+        <div class="bg-[#120B1C]/90 border border-[#3E2E54] rounded-lg px-3 py-1.5 flex items-center gap-2 shadow-md">
+          <div class="w-3.5 h-3.5 rotate-45 bg-gradient-to-tr from-cyan-600 to-sky-300 border border-cyan-200 flex items-center justify-center"></div>
+          <span class="text-xs font-bold text-cyan-300">1,450</span>
+        </div>
+      </div>
+
+      <!-- Center Toolbar: Squad, Overdrive, Recall, Tower -->
+      <div class="absolute bottom-5 left-1/2 -translate-x-1/2 flex items-end gap-5">
+        
+        <!-- 1. SQUAD (No Cooldown - Opens Roster Modal) -->
+        <div id="btn-hud-squad" class="action-btn btn-squad" title="Deploy Combat Squad & Roster (Instant)">
+          <div class="icon-disc">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 4L7 7M17 17L20 20M19 21L21 19M16.5 19.5L19.5 16.5"></path>
+              <path d="M20 4L17 7M7 17L4 20M3 19L5 21M4.5 16.5L7.5 19.5"></path>
+              <path d="M12 4.5C8.5 4.5 7 6 7 9.5C7 14.5 10.2 18.2 12 19.5C13.8 18.2 17 14.5 17 9.5C17 6 15.5 4.5 12 4.5Z" fill="currentColor" fill-opacity="0.2"></path>
+              <polygon points="12,8 13.6,10.8 12,13.6 10.4,10.8" fill="currentColor"></polygon>
+            </svg>
+          </div>
+          <div class="label-pill">SQUAD</div>
+        </div>
+        
+        <!-- 2. OVERDRIVE (Cooldown: 20s, Keybind [Q]) -->
+        <div id="btn-hud-overdrive" class="action-btn btn-overdrive has-cooldown" data-cd="20" title="Whistle Overdrive (+40% ASPD) - 20s Cooldown">
+          <div class="icon-disc">
+            <div class="keybind-pill">Q</div>
+            <span class="cooldown-text"></span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2V5.5M12 18.5V22M2 12H5.5M18.5 12H22" stroke-width="1.7"></path>
+              <path d="M5 5L7.5 7.5M16.5 16.5L19 19M5 19L7.5 16.5M16.5 7.5L19 5" stroke-width="1.3" stroke-opacity="0.75"></path>
+              <polygon points="13.5 5 7.5 12.5 11.5 12.5 10.5 19 16.5 11.5 12.5 11.5" fill="currentColor"></polygon>
+            </svg>
+          </div>
+          <div class="label-pill">OVERDRIVE</div>
+        </div>
+        
+        <!-- 3. RECALL (Cooldown: 6s, Keybind [E]) -->
+        <div id="btn-hud-recall" class="action-btn btn-recall has-cooldown" data-cd="6" title="Whistle Recall (Dodge AoE / Nova) - 6s Cooldown">
+          <div class="icon-disc">
+            <div class="keybind-pill">E</div>
+            <span class="cooldown-text"></span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="8.5" stroke-width="1.6"></circle>
+              <path d="M12 2V4M12 20V22M2 12H4M20 12H22" stroke-width="2"></path>
+              <circle cx="12" cy="12" r="5" stroke-dasharray="2.5 2.5" stroke-width="1.2"></circle>
+              <circle cx="12" cy="7" r="0.9" fill="currentColor"></circle>
+              <circle cx="12" cy="17" r="0.9" fill="currentColor"></circle>
+              <circle cx="7" cy="12" r="0.9" fill="currentColor"></circle>
+              <circle cx="17" cy="12" r="0.9" fill="currentColor"></circle>
+              <path d="M12 8L15 12H13V15.5H11V12H9L12 8Z" fill="currentColor"></path>
+            </svg>
+          </div>
+          <div class="label-pill">RECALL</div>
+        </div>
+        
+        <!-- 4. TOWER (No Cooldown - Teleport / Floor Hub Selector) -->
+        <div id="btn-hud-tower" class="action-btn btn-tower" title="Tower Hub & Floor Ascend (Instant)">
+          <div class="icon-disc">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="12,1.5 13.2,3 12,4.5 10.8,3" fill="currentColor"></polygon>
+              <path d="M6 5.5V8.5H18V5.5M9.5 5.5V7.5M14.5 5.5V7.5" stroke-width="1.8"></path>
+              <path d="M7.5 8.5L8 16H16L16.5 8.5" stroke-width="1.7"></path>
+              <path d="M12 10.5V13.5" stroke-width="2.2"></path>
+              <path d="M5.5 16H18.5V18.5H5.5V16Z" fill="currentColor" fill-opacity="0.25"></path>
+              <path d="M3.5 21H20.5" stroke-width="2"></path>
+            </svg>
+          </div>
+          <div class="label-pill">TOWER</div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // Toast notification helper
+    const toast = document.getElementById('hud-toast');
+    const toastMsg = document.getElementById('toast-msg');
+    const toastIcon = document.getElementById('toast-icon');
+    let toastTimeout;
+
+    function showToast(icon, msg) {
+      toastIcon.textContent = icon;
+      toastMsg.textContent = msg;
+      toast.classList.add('show');
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.remove('show');
+      }, 2600);
+    }
+
+    // Cooldown trigger helper for Overdrive and Recall only
+    function triggerCooldown(btn) {
+      if (!btn || btn.classList.contains('cooldown')) return;
+      
+      const cdDuration = parseInt(btn.getAttribute('data-cd'), 10);
+      let cd = cdDuration;
+      const textSpan = btn.querySelector('.cooldown-text');
+      
+      btn.classList.add('cooldown');
+      textSpan.textContent = cd;
+
+      const interval = setInterval(() => {
+        cd--;
+        if (cd > 0) {
+          textSpan.textContent = cd;
+        } else {
+          clearInterval(interval);
+          btn.classList.remove('cooldown');
+          textSpan.textContent = '';
+        }
+      }, 1000);
+    }
+
+    // 1. OVERDRIVE [Q] Click & Keybind
+    const overdriveBtn = document.getElementById('btn-hud-overdrive');
+    overdriveBtn.addEventListener('click', () => {
+      if (!overdriveBtn.classList.contains('cooldown')) {
+        showToast('⚡', 'Whistle: OVERDRIVE! (+40% Attack Speed for 8s)');
+        triggerCooldown(overdriveBtn);
+      }
+    });
+
+    // 2. RECALL [E] Click & Keybind
+    const recallBtn = document.getElementById('btn-hud-recall');
+    recallBtn.addEventListener('click', () => {
+      if (!recallBtn.classList.contains('cooldown')) {
+        showToast('🛡️', 'Whistle: RECALL! (Invulnerability & Squad Return)');
+        triggerCooldown(recallBtn);
+      }
+    });
+
+    // 3. SHOP (Toggle - No Cooldown)
+    const shopBtn = document.getElementById('btn-hud-shop');
+    const shopBadge = document.getElementById('shop-badge');
+    shopBtn.addEventListener('click', () => {
+      const active = shopBtn.classList.toggle('is-active');
+      if (active) {
+        if (shopBadge) shopBadge.style.display = 'none'; // clear alert
+        showToast('🏛️', 'Merchant Altar: Summoning & Vault Opened');
+      } else {
+        showToast('✖️', 'Shop Closed');
+      }
+    });
+
+    // 4. SQUAD (Toggle - No Cooldown)
+    const squadBtn = document.getElementById('btn-hud-squad');
+    squadBtn.addEventListener('click', () => {
+      const active = squadBtn.classList.toggle('is-active');
+      showToast('⚔️', active ? 'Squad Deployment & Hero Roster Opened' : 'Squad Roster Closed');
+    });
+
+    // 5. TOWER (Action - No Cooldown)
+    const towerBtn = document.getElementById('btn-hud-tower');
+    towerBtn.addEventListener('click', () => {
+      towerBtn.classList.add('is-active');
+      showToast('🏰', 'Ascending to Tower Hub (Teleporting...)');
+      setTimeout(() => towerBtn.classList.remove('is-active'), 800);
+    });
+
+    // Physical Keyboard Listener ([Q], [E], [B], [Escape])
+    window.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      
+      const key = e.key.toUpperCase();
+      if (key === 'Q') {
+        overdriveBtn.click();
+      } else if (key === 'E') {
+        recallBtn.click();
+      } else if (key === 'B') {
+        shopBtn.click();
+      } else if (key === 'ESCAPE') {
+        shopBtn.classList.remove('is-active');
+        squadBtn.classList.remove('is-active');
+        showToast('✖️', 'Closed Open Modals');
+      }
+    });
+  </script>
+</body>
+</html>
