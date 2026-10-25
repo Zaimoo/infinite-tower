@@ -1,6 +1,6 @@
 # Infinite Tower: Core Game Design & Systems Rework
 
-**Document Version:** 1.0 (Approved Rework Specification)  
+**Document Version:** 1.1 (Approved Rework Specification; synced with GDD hero kits & weapon rules)  
 **Date:** October 2026  
 **Status:** Canonical Design Direction  
 
@@ -37,7 +37,24 @@ The current game experience suffers from three core friction points:
   - Dynamic mob streaming: Continuous mob respawns keep combat constant until the kill threshold is satisfied.
 - **Spectacle & Feedback:** Dynamic damage popups (Normal, Crit, Element), hit-stop/flash effects, camera micro-shakes on major boss attacks, and instant loot bursts.
 
-### 2.2 Death & Failure Mechanics
+### 2.2 Hero Kits & Weapon Rules
+These rules match `GAME_DESIGN.MD` §4.1, §4.4 and §7.5.
+- **Per-Hero Kits:** Every hero has its own Basic, Special and Skill (ultimate). A kit takes its base numbers and mechanics from the hero's archetype, then overrides names, descriptions and, optionally, multipliers. Archetypes define only role, base stats, attack cadence, range, labor and weapon type.
+- **One Weapon per Hero:** Each hero equips a single artifact (weapon). There are no off-hand or accessory slots, and **rings are removed**.
+- **One Weapon Type per Archetype:**
+
+  | Archetype | Weapon type |
+  | :--- | :--- |
+  | Vanguard | Sword & Shield (`SWORD_SHIELD`): one combined weapon |
+  | Striker | Daggers (`DAGGERS`) |
+  | Marksman | Bow (`BOW`) |
+  | Miner | Axe (`AXE`) |
+  | Scholar (mage) | Staff (`STAFF`) |
+  | Healer | Tome (`TOME`) |
+
+- **Legacy Saves:** Old `SWORD`/`SHIELD` artifacts become `SWORD_SHIELD`, owned rings are deleted, and heroes holding a weapon their archetype can no longer use are unequipped. If the player owns a compatible unequipped weapon, the hero equips it instead.
+
+### 2.3 Death & Failure Mechanics
 - **No Mid-Run Revives:** When a hero reaches 0 HP, they collapse dramatically and remain down for the rest of that floor run (portrait greyed out on HUD).
 - **Removal of 60-Second Coma:** The debilitating 60-second coma and hospital timers are abolished.
 - **Squad Wipe Flow:**
