@@ -2,7 +2,8 @@
 -- ReplicatedStorage/Shared/Config/ArtifactCatalog.luau
 -- Authoritative configuration for Equippable Artifacts (Weapons), 7 Star Tiers, 16 Rarity Multipliers, Crafting & Forge Upgrades.
 
-export type WeaponType = "BOW" | "SWORD" | "DAGGERS" | "AXE" | "TOME" | "STAFF" | "RING" | "SHIELD"
+-- Each archetype wields exactly one weapon type (see ArchetypeRestrictions).
+export type WeaponType = "BOW" | "SWORD_SHIELD" | "DAGGERS" | "AXE" | "TOME" | "STAFF"
 
 export type RarityInfo = {
 	Index: number,
@@ -116,9 +117,9 @@ local Banner: ArtifactBannerConfig = {
 	Cost10X = 1600,
 	MaxPity = 50,
 	Featured5Stars = { "art_blade_of_the_rift", "art_aegis_core" },
-	Pool4Stars = { "art_ring_of_haste", "art_crystal_greatbow", "art_paladin_claymore" },
-	Pool3Stars = { "art_runic_longsword", "art_shadow_daggers", "art_recurve_composite" },
-	Pool12Stars = { "art_hunters_shortbow", "art_iron_broadsword", "art_battleaxe", "art_apprentice_tome" },
+	Pool4Stars = { "art_shadow_fangs", "art_crystal_greatbow", "art_paladin_claymore" },
+	Pool3Stars = { "art_runic_longsword", "art_battleaxe_cleaver", "art_recurve_composite", "art_ruby_staff" },
+	Pool12Stars = { "art_hunters_shortbow", "art_iron_broadsword", "art_rusty_daggers", "art_miner_pickaxe", "art_novice_tome" },
 }
 ArtifactCatalog.Banner = Banner
 
@@ -131,30 +132,26 @@ end
 -- 2. CLASS RESTRICTIONS (HERO ARCHETYPE -> PERMITTED WEAPON TYPES)
 --============================================================================
 
-ArtifactCatalog.ArchetypeRestrictions = {
-	Marksman = { "BOW" },
-	Striker = { "SWORD", "DAGGERS" },
-	Vanguard = { "SWORD", "AXE", "SHIELD" },
-	Miner = { "AXE", "SHIELD" },
-	Scholar = { "TOME", "STAFF" },
-	Healer = { "STAFF", "TOME" },
+-- One weapon type per archetype; a hero holds a single equipped artifact.
+local ArchetypeWeaponType: { [string]: WeaponType } = {
+	Vanguard = "SWORD_SHIELD",
+	Striker = "DAGGERS",
+	Marksman = "BOW",
+	Miner = "AXE",
+	Scholar = "STAFF",
+	Healer = "TOME",
 }
+ArtifactCatalog.ArchetypeWeaponType = ArchetypeWeaponType
+
+-- List form kept for callers that format the permitted types.
+local ArchetypeRestrictions: { [string]: { WeaponType } } = {}
+for archetype, weaponType in pairs(ArchetypeWeaponType) do
+	ArchetypeRestrictions[archetype] = { weaponType }
+end
+ArtifactCatalog.ArchetypeRestrictions = ArchetypeRestrictions
 
 function ArtifactCatalog.CanHeroEquip(heroArchetype: string, weaponType: WeaponType): boolean
-	if weaponType == "RING" then
-		return true -- Rings can be equipped by any hero archetype
-	end
-	if weaponType == "SHIELD" then
-		return heroArchetype == "Vanguard" or heroArchetype == "Striker" or heroArchetype == "Miner"
-	end
-	local allowed = ArtifactCatalog.ArchetypeRestrictions[heroArchetype]
-	if not allowed then return false end
-	for _, t in ipairs(allowed) do
-		if t == weaponType then
-			return true
-		end
-	end
-	return false
+	return ArchetypeWeaponType[heroArchetype] == weaponType
 end
 
 --============================================================================
@@ -277,9 +274,9 @@ local Seeds: { [string]: ArtifactSeed } = {
 	art_blade_of_the_rift = {
 		TemplateId = "art_blade_of_the_rift",
 		DisplayName = "Blade of the Rift",
-		Type = "SWORD",
+		Type = "SWORD_SHIELD",
 		DefaultStar = 3,
-		ModelAssetId = "weapon_sword",
+		ModelAssetId = "weapon_sword_shield",
 		Description = "A mastercrafted edge resonating with dimensional rift energy.",
 		BaseATK = 150,
 		BaseCritRate = 0.05,
@@ -288,24 +285,13 @@ local Seeds: { [string]: ArtifactSeed } = {
 	art_aegis_core = {
 		TemplateId = "art_aegis_core",
 		DisplayName = "Aegis Core",
-		Type = "SHIELD",
+		Type = "SWORD_SHIELD",
 		DefaultStar = 3,
-		ModelAssetId = "weapon_sword",
-		Description = "An impenetrable aegis matrix radiating dense warding fields.",
+		ModelAssetId = "weapon_sword_shield",
+		Description = "A warding blade paired with an impenetrable aegis matrix radiating dense fields.",
 		BaseDEF = 200,
 		BaseHP = 500,
 		CraftCost = { IronGear = 8, AegisGem = 2 },
-	},
-	art_ring_of_haste = {
-		TemplateId = "art_ring_of_haste",
-		DisplayName = "Ring of Haste",
-		Type = "RING",
-		DefaultStar = 2,
-		ModelAssetId = "weapon_daggers",
-		Description = "A swift cosmic band that bends temporal currents around the bearer.",
-		BaseSPD = 15,
-		BaseEvasion = 0.02,
-		CraftCost = { StarDust = 10, VoidPowder = 5 },
 	},
 
 	-- BOWS
@@ -337,31 +323,31 @@ local Seeds: { [string]: ArtifactSeed } = {
 		CraftCost = { RiftOrb = 4, AegisGem = 2 },
 	},
 
-	-- SWORDS
+	-- SWORD & SHIELD (VANGUARD)
 	art_iron_broadsword = {
 		TemplateId = "art_iron_broadsword",
 		DisplayName = "Iron Broadsword",
-		Type = "SWORD",
+		Type = "SWORD_SHIELD",
 		DefaultStar = 1,
-		ModelAssetId = "weapon_sword",
+		ModelAssetId = "weapon_sword_shield",
 		Description = "Standard-issue balanced iron blade favoured by frontline strikers.",
 		CraftCost = { IronGear = 4, RiftOrb = 1 },
 	},
 	art_runic_longsword = {
 		TemplateId = "art_runic_longsword",
 		DisplayName = "Runic Longsword",
-		Type = "SWORD",
+		Type = "SWORD_SHIELD",
 		DefaultStar = 2,
-		ModelAssetId = "weapon_sword",
+		ModelAssetId = "weapon_sword_shield",
 		Description = "A double-edged steel longsword etched with runic blood-grooves.",
 		CraftCost = { IronGear = 6, RiftOrb = 2 },
 	},
 	art_paladin_claymore = {
 		TemplateId = "art_paladin_claymore",
 		DisplayName = "Holy Claymore",
-		Type = "SWORD",
+		Type = "SWORD_SHIELD",
 		DefaultStar = 3,
-		ModelAssetId = "weapon_sword",
+		ModelAssetId = "weapon_sword_shield",
 		Description = "Massive consecrated two-hander capable of rending fiends asunder.",
 		CraftCost = { IronGear = 8, AegisGem = 2 },
 	},
@@ -432,7 +418,6 @@ ArtifactCatalog.Seeds = Seeds
 ArtifactCatalog.CraftingRecipeOrder = {
 	"art_blade_of_the_rift",
 	"art_aegis_core",
-	"art_ring_of_haste",
 	"art_iron_broadsword",
 	"art_runic_longsword",
 	"art_paladin_claymore",
