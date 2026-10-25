@@ -8,6 +8,7 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local SanctuaryRules = require(Shared.Util.TowerSanctuaryRules)
 local RelicConfig = require(Shared:WaitForChild("Config"):WaitForChild("RelicConfig"))
 
 local RemotesFolder = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RelicPactRemotes")
@@ -27,6 +28,7 @@ export type RelicTierId = "MANA_GEODE" | "CURSED_URN" | "ABYSSAL_CORE" | "CALAMI
 
 export type ActiveRelic = {
 	RelicId: number,
+	RewardMultiplier: number,
 	FloorId: number,
 	RoomGeneration: number,
 	TierId: RelicTierId,
@@ -174,6 +176,7 @@ function RelicService.SpawnRelic(tierId: RelicTierId, worldPos: Vector3, initial
 	local relic: ActiveRelic = {
 		FloorId=context.FloorId,RoomGeneration=context.RoomGeneration,
 		RelicId = relicId,
+		RewardMultiplier = if context.FloorId > 0 then 1 + 0.05 * (context.FloorId - 1) else 1,
 		TierId = tierId,
 		Part = part,
 		BillboardStatus = statusLbl,
@@ -228,6 +231,7 @@ function RelicService.TryPickupRelic(player: Player, relic: ActiveRelic): boolea
 	relic.Weld = weld
 	relic.Carrier = player
 	CarrierToRelic[player] = relic
+	Tower.GetState(player).BankArmed = true
 	if player.Character then
 		player.Character:SetAttribute("CarryingRelic", relic.TierId)
 	end
@@ -236,7 +240,7 @@ function RelicService.TryPickupRelic(player: Player, relic: ActiveRelic): boolea
 	local spec = RelicConfig[relic.TierId]
 
 	updateMasterMovementAttributes(player, now)
-	dm.SendToast(player, string.format("Carrying %s (-%d%% Spd)! Bring to your Extraction Pad!", spec.DisplayName, math.round(spec.WalkSpeedPenalty * 100)), "INFO")
+	dm.SendToast(player, string.format("Carrying %s (-%d%% Spd)! Bring to a Floor Safe Sanctuary or your Extraction Pad!", spec.DisplayName, math.round(spec.WalkSpeedPenalty * 100)), "INFO")
 	Tower.BroadcastAt(RelicStateRemote,relic,relic.RelicId, relic.TierId, "PICKUP", player.UserId, 0)
 	return true
 end
@@ -304,15 +308,15 @@ function RelicService.FumbleRelicOnAoEHit(carrier: Player)
 	Tower.BroadcastAt(RelicStateRemote,relic,relic.RelicId, relic.TierId, "FUMBLE", carrier.UserId, relic.LockExpiresAt)
 end
 
-local function awardRelicPayout(player: Player, spec: any, scalar: number)
+local function awardRelicPayout(player: Player, spec: any, scalar: number, rewardMultiplier: number?)
 	local dm = getDataManager()
 	local profile = dm.GetProfile(player)
 	if not profile then
 		return
 	end
 	local marketMult = dm.GetMarketMultiplier and dm.GetMarketMultiplier(player) or 1.0
-	local gems = math.round(spec.Payout.Gems * scalar)
-	local gold = math.round(spec.Payout.Gold * scalar * marketMult)
+	local gems = math.round(spec.Payout.Gems * scalar * (rewardMultiplier or 1))
+	local gold = math.round(spec.Payout.Gold * scalar * marketMult * (rewardMultiplier or 1))
 
 	profile.Currencies.Gems += gems
 	profile.Currencies.Gold += gold
@@ -351,38 +355,51 @@ local function destroyRelicInstance(relic: ActiveRelic)
 	ActiveRelics[relic.RelicId] = nil
 end
 
-function RelicService.ExtractOnPrivatePad(carrier: Player)
-	local location=Tower.GetState(carrier)
-	if location.FloorId~=0 or not location.BankArmed or Tower.IsTransitioning(carrier) then return end
+local function extractAtSanctuary(carrier: Player, floorOnly: boolean?)
+	local location = Tower.GetState(carrier)
+	if not location.BankArmed or Tower.IsTransitioning(carrier) then return end
+	if floorOnly and location.FloorId == 0 then return end
 	local relic = CarrierToRelic[carrier]
-	if not relic then
-		return
+	if not relic then return end
+	local hum, root = getCharacterParts(carrier)
+	if not hum or hum.Health <= 0 or not root or relic.Carrier ~= carrier
+		or not Tower.Same(location,relic) or os.clock() >= relic.DespawnAt then return end
+	local validPad = false
+	local event = "EXTRACT_PRIVATE"
+	if location.FloorId > 0 then
+		validPad = SanctuaryRules.CanExtractFloor(location,relic,Tower.GetSafety(location,root.Position),Tower.IsTransitioning(carrier),os.clock())
+		event = "EXTRACT_SAFE_ZONE"
+	else
+		for _, plot in PlotsFolder:GetChildren() do
+			local pad = plot:FindFirstChild("PrivateExtractionPad")
+			if plot:GetAttribute("OwnerUserId") == carrier.UserId and pad and pad:IsA("BasePart") then
+				local at = pad.CFrame:PointToObjectSpace(root.Position)
+				if math.abs(at.X)<=pad.Size.X/2+2 and math.abs(at.Z)<=pad.Size.Z/2+2 and at.Y>=-2 and at.Y<=12 then
+					validPad=true
+					break
+				end
+			end
+		end
 	end
+	if not validPad then return end
 	local dm = getDataManager()
-	local profile = dm.GetProfile(carrier)
-	if not profile then
-		return
-	end
-
- local hum,root=getCharacterParts(carrier)
- if not hum or hum.Health<=0 or not root or relic.Carrier~=carrier or not Tower.Same(location,relic) or os.clock()>=relic.DespawnAt then return end
- local validPad=false
- for _,plot in PlotsFolder:GetChildren() do
-  local pad=plot:FindFirstChild("PrivateExtractionPad")
-  if plot:GetAttribute("OwnerUserId")==carrier.UserId and pad and pad:IsA("BasePart") then
-   local at=pad.CFrame:PointToObjectSpace(root.Position)
-   if math.abs(at.X)<=pad.Size.X/2+2 and math.abs(at.Z)<=pad.Size.Z/2+2 and at.Y>=-2 and at.Y<=12 then validPad=true;break end
-  end
- end
- if not validPad then return end
- local spec = RelicConfig[relic.TierId]
- -- Remove authoritative identity before payout/replication to make reentry idempotent.
- CarrierToRelic[carrier]=nil;ActiveRelics[relic.RelicId]=nil
- awardRelicPayout(carrier, spec, 1.00)
-	Tower.BroadcastAt(RelicStateRemote,relic,relic.RelicId, relic.TierId, "EXTRACT_PRIVATE", carrier.UserId, 0)
+	if not dm.GetProfile(carrier) then return end
+	local spec = RelicConfig[relic.TierId]
+	-- Reentrant calls cannot award the same authoritative relic twice.
+	CarrierToRelic[carrier]=nil
+	ActiveRelics[relic.RelicId]=nil
+	awardRelicPayout(carrier,spec,1,relic.RewardMultiplier)
+	Tower.BroadcastAt(RelicStateRemote,relic,relic.RelicId,relic.TierId,event,carrier.UserId,0)
 	destroyRelicInstance(relic)
 end
 
+function RelicService.ExtractInFloorSafeZone(carrier: Player)
+	extractAtSanctuary(carrier,true)
+end
+
+function RelicService.ExtractOnPrivatePad(carrier: Player)
+	extractAtSanctuary(carrier)
+end
 -- Heartbeat for Relic Pickups, Billboard Timers & Extraction Pad Detection
 RunService.Heartbeat:Connect(function()
 	local now = os.clock()
@@ -415,7 +432,7 @@ RunService.Heartbeat:Connect(function()
 				end
 			end
 		else
-			-- Relic is being carried: check Private Extraction Pads on Waiting Room Plots
+			-- Carried relics extract at floor sanctuaries or the owner's Hub pad.
 			local carrier = relic.Carrier
 			local _, hrp = getCharacterParts(carrier)
 			if hrp then
@@ -424,17 +441,7 @@ RunService.Heartbeat:Connect(function()
 					relic.BillboardStatus.TextColor3 = Color3.fromRGB(255, 235, 115)
 				end
 
-				-- Check Private Extraction Pad on Carrier's Plot (or any plot if testing)
-				for _, plotModel in ipairs(PlotsFolder:GetChildren()) do
-					local ownerId = plotModel:GetAttribute("OwnerUserId")
-					if ownerId == carrier.UserId then
-						local pad = plotModel:FindFirstChild("PrivateExtractionPad") :: BasePart?
-						if pad and (hrp.Position - pad.Position).Magnitude <= 10.5 then
-							RelicService.ExtractOnPrivatePad(carrier)
-							break
-						end
-					end
-				end
+				RelicService.ExtractOnPrivatePad(carrier)
 			end
 		end
 	end

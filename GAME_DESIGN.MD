@@ -89,7 +89,8 @@ flowchart TD
    - The Master touches the drop to weld it overhead, incurring a **-15% to -45% WalkSpeed penalty** (and disabling jumping for high-tier relics).
    - If hit by an Elite/Boss AoE mid-haul, the Master is **stunned for 1s and fumbles the item** (which becomes stealable after a **3s owner-lock**).
 4. **Extract & Bank (2:45 – 3:00):**
-   - Stepping onto the Perimeter Highway (`R >= 460 studs`) or a Private Extraction Pad safely deposits cargo into permanent Gold and Gems.
+   - **Hub Banking:** Stepping onto the Perimeter Highway (`R >= 460 studs`) or a Private Extraction Pad safely deposits cargo into permanent Gold and Gems.
+   - **Floor Safe Sanctuary Banking:** Bringing physical loot (Gold/Gems) or Relics back into any floor's elevated **Floor Safe Sanctuary** automatically deposits them at the **Floor Extraction Pad** (`FloorExtractionPad`), granting 100% relic payout and Market multipliers immediately without requiring a trip back to the Hub.
    - Comatose heroes are swapped into **Infirmary Recuperation Beds**, and fresh rested heroes are rotated into the active squad via the `[AutoSwap]` toolbar action.
 
 ### 2.2 The 15-Minute Meso Loop (Fortress, Synthesis, Promotion & Forge Progression)
@@ -112,7 +113,7 @@ flowchart TD
      - **Basic Attacks:** Wide frontal arcs (`ARC`, e.g. `guardian_crush`, 13 studs).
      - **Signature 1:** Expanding circular ground shocks centered on the boss (`SELF_DISC`, e.g. `moss_quake`, 22 studs radius).
      - **Signature 2:** Ranged ground craters placed under distant heroes (`TARGET_DISC`, e.g. `sweeping_roots`, 55 studs cast range, 13 studs radius).
-     - **Ranged / Caster Regulars:** Biome ranged and caster regulars (`mob_spore_drifter`, `mob_ember_imp`, `mob_frost_archer`, `mob_tempest_wisp`, `mob_slag_thrower`, `mob_void_acolyte`) fire authoritative swept-corridor projectiles (`PROJECTILE`) with a floor corridor warning and flying orb visual.
+     - **Ranged / Caster Regulars:** Biome ranged and caster regulars (`mob_lantern_spore`, `mob_crag_channeler`, `mob_thorn_weaver`, `mob_drowned_acolyte`, `mob_astral_scribe`, `mob_void_invoker`) fire authoritative swept-corridor projectiles (`PROJECTILE`) with a floor corridor warning and flying orb visual.
    - **Tactical Counterplay ("Dodge vs. Coma"):** Masters must watch the expanding progress-fill telegraph discs, corridor warnings, and sound cues, repositioning and executing **`[E]` Emergency Recall Whistle** to yank heroes out of danger. Heroes struck by signature skills suffer severe stamina loss or a debilitating **60-second Coma**.
    - **Punish Windows:** Following major signature attacks, the boss enters an extended recovery window (1.2s–1.5s), providing active Masters the ideal moment to pop **`[Q]` Overdrive Whistle** for massive burst DPS.
 3. **Biome Clearance & Milestone Rewards:**
@@ -183,40 +184,55 @@ The world exists in two coordinated spatial contexts:
 | **Perimeter Highway** | `460 – 480 studs` (Hub) | `20 studs` paved ring road | Open to all | **Safe Zone** (No mobs). Safe banking threshold ($R \ge 460$). | Banked cargo conversion |
 | **6 Floating Fortress Plots** | `R = 650 studs` ($Y = 12$) | Expanded $260 \times 320\text{ studs}$ citadel island with grand courtyard & rear outskirts ($1.2\times$ radius expansion) | Plot Owner + Visitors | Safe Zone. Personal fortress sanctuary for recovery, banner summoning, forge ascension, and AFK outskirts guard post. | Roster Recovery, Gacha Banners, Forge, Outskirts Passive Gold & Multipliers |
 | **Safety Catch Plane** | Lower kill plane at $Y = -95$ | `2400 x 8 x 2400 studs` | Fallen players | Non-lethal catch plane; teleports fallen players safely to their PlotSpawn. | None |
-| **50 Tower Floor Rooms** | Off-map grid: $X \ge 12,000, Y = 1,000, Z \ge 12,000$ | `248 x 84 x 248 studs` each | Traversal via `TowerController` | Isolated floor-local PvE encounters; shared floor membership; safe arrival zone. | Mob drops, Gold, Gems, **Biome Boss Rare Artifact Drops** |
+| **50 Tower Floor Rooms** | Off-map grid: $X \ge 12,000, Y = 1,000, Z \ge 12,000$ (spaced $2,400\text{ studs}$) | Progressive $380 \times 130 \times 420\text{ studs}$ (F1) to $560 \times 190 \times 640\text{ studs}$ (F5) across 5 elevation tiers | Traversal via `TowerController` | Isolated floor-local PvE encounters; shared floor membership; elevated safe arrival sanctuary with instant loot unpackaging/banking. | Mob drops, Gold, Gems, **Biome Boss Rare Artifact Drops** |
 
 ### 3.3 Dynamic Tower Room Architecture & Biomes
 
-Tower floors are dynamically managed by `TowerFloorService.luau` and generated via `TowerRoomBuilder.luau`:
-- **Room Origin Formula:**
-  $$\text{Origin}(id) = \Big(12000 + ((id - 1) \bmod 10) \times 1800,\; 1000,\; 12000 + \lfloor(id - 1) / 10\rfloor \times 1800\Big)$$
-- **Enclosure & Flat Combat Floor:** Enclosed $248 \times 84 \times 248\text{ studs}$ biome-styled walls and opaque ceiling, preventing cross-floor visual overlap or raycast leakage, with a flat `CombatFloor` ($240 \times 4 \times 240\text{ studs}$ at $Y = 0$) so grounded navigation and AoE telegraphs remain unobstructed.
-- **Safe Arrival Zone:** $70 \times 0.2 \times 42\text{ studs}$ elevated landing pad at `origin + (0, 0.1, 90)` designated with `CombatSafe = true`, `CanBankCargo = false`.
-- **Travel Pedestals:** 4 ProximityPrompt interaction points on the arrival pad:
-  - `PREVIOUS`: Move to floor $id - 1$ (disabled on Floor 1).
-  - `NEXT`: Move to floor $id + 1$ (disabled on Floor 50).
-  - `SELECTOR`: Opens the full 50-floor modal selector.
-  - `HUB`: Returns player directly to their Fortress Plot.
-- **10 Biome Kits $\times$ 5 Layout Variants (`TowerFloorConfig.luau` & `TowerRoomBuilder.luau`):**
-  Every biome defines its own material, wall/floor/trim/accent/glow palette, and architectural props across 5 floor layout variants:
-  1. **`ENTRY` (1st floor of biome — Floors 1, 6, ..., 46):** Colonnade pillars, biome focal centerpiece, recessed wall niches, overhead ceiling beams, and perimeter torches.
-  2. **`CORRIDOR` (2nd floor of biome — Floors 2, 7, ..., 47):** Angled wall buttresses, overhead structural ribs, side alcoves, hanging banners, and perimeter torches.
-  3. **`CROSSING` (3rd floor of biome — Floors 3, 8, ..., 48):** Four corner obelisks, perimeter colonnade, intersecting cross ceiling ribs, wall niches, and glowing braziers.
-  4. **`BASTION` (4th floor of biome — Floors 4, 9, ..., 49):** Heavy bastion piers, interior battlements, weapon/banner alcoves, ceiling vaults, and braziers.
-  5. **`BOSS_ARENA` (5th floor of biome — Floors 5, 10, ..., 50):** 8-column ritual ring, $60 \times 2 \times 60\text{ studs}$ `BossDaisFixture` with glowing trim, vaulted ceiling ribs, boss braziers, and perimeter torches.
+Tower floors are dynamically managed by `TowerFloorService.luau` and generated via `TowerRoomBuilder.luau` in conjunction with `TowerLayout.luau` and `TowerBiomeAssets.luau`:
+- **Room Origin Spacing Formula:**
+  $$\text{Origin}(id) = \Big(12000 + ((id - 1) \bmod 10) \times 2400,\; 1000,\; 12000 + \lfloor(id - 1) / 10\rfloor \times 2400\Big)$$
+  Spaced at $2,400\text{ studs}$ along both axes so enlarged, multi-tiered rooms remain completely isolated from adjacent cameras, raycasts, and simulation heartbeats.
+- **Progressive 5-Floor Scale & Variant Progression:**
+  Each biome spans 5 floors (`IndexInBiome = 1..5`). Rather than a static flat box, each room scales progressively across 5 layout variants guided by reference concepts:
+
+| Floor in Biome | Variant Kind | Footprint ($W \times D \times H$) | Elevation Tiers | Architectural Theme | Mob Groups (Camps) | Total Mobs |
+| :---: | :--- | :---: | :---: | :--- | :---: | :---: |
+| **Floor 1** | `INTRODUCTION` | $380 \times 420 \times 130\text{ studs}$ | 3 Tiers ($Y: 0\text{ to }+12$) | Foreground courtyard, threshold entry arches, flora/crystals/dunes, north shrine. | 3 Camps | 10–12 Mobs (Includes 1 Elite on F1) |
+| **Floor 2** | `EXPANDED_ENCOUNTER` | $420 \times 470 \times 140\text{ studs}$ | 3 Tiers ($Y: 0\text{ to }+14$) | Flanking elevated colonnades and side galleries connected by side ramps. | 4 Camps | 14–16 Mobs |
+| **Floor 3** | `TERRAIN_VARIATION` | $460 \times 520 \times 155\text{ studs}$ | 4 Tiers ($Y: -4\text{ to }+18$) | Recessed elemental chasm (water/lava/mist) with arched bridge crossings and waterfalls. | 5 Camps | 18–20 Mobs (Includes 1 Elite pack) |
+| **Floor 4** | `ELITE_STRONGHOLD` | $510 \times 580 \times 170\text{ studs}$ | 4 Tiers ($Y: -4\text{ to }+22$) | Monumental flanking guardians, watchtowers, and twin upper elite bastions. | 6 Camps | 22–25 Mobs (Includes 2 Elite packs) |
+| **Floor 5** | `BOSS_ARENA` | $560 \times 640 \times 190\text{ studs}$ | 5 Tiers ($Y: -6\text{ to }+28$) | Full biome masterpiece: Apex Boss Dais, overhead centerpiece, and cascades. | 7 Camps | 25–29 Mobs (Boss + 2 Elite lieutenants) |
+
+- **Multi-Tiered Spatial Topography (`TowerLayout.luau`):**
+  Each room features 5 navigable elevation zones:
+  1. **Elevated Safe Overlook ($Y = +8$):** South landing sanctuary housing arrival and extraction fixtures.
+  2. **Foreground Basin ($Y = 0\text{ to }+2$):** Open entry courtyard and elemental basin connected by ceremonial ramps.
+  3. **Flanking Galleries & Central Crossing ($Y = +4\text{ to }+12$):** Elevated West/East terraces and split bridges over recessed elemental channels.
+  4. **Upper Bastions ($Y = +10\text{ to }+16$):** Fortified wings and guardian platforms.
+  5. **Apex Sanctum / Boss Dais ($Y = +16\text{ to }+28$):** Grand tiered staircase ascending to the biome apex or Boss arena.
+  *All slopes are restricted to $\le 15^\circ$ and stair rises to $\le 1.0\text{ stud}$ per tread, guaranteeing smooth grounded navigation for heroes (`HeroNavigation.luau`) and enemies without getting stuck.*
+- **Floor Safe Sanctuary & In-Floor Loot Unpackaging (`CanBankCargo = true`):**
+  The elevated south arrival sanctuary ($88 \times 56\text{ studs}$ at $Y = +8$) is designated with `CombatSafe = true`, `CanBankCargo = true`, and `CanRecoverWipe = true`:
+  - **`FloorExtractionPad`:** Interactive unpackaging pad and altar. Entering the sanctuary while carrying physical Gold/Gems or Relics (`BankArmed = true`) immediately unpacks and banks them into permanent profile currency with 100% relic value and the active Market multiplier (`EXTRACT_SAFE_ZONE`).
+  - **Travel Pedestals:** 4 ProximityPrompt pedestals (`PREVIOUS`, `NEXT`, `SELECTOR`, `HUB`) along the rear colonnade.
+- **Procedural Landmark Kits (`TowerBiomeAssets.luau`):**
+  Native-part procedural landmark kits for all 10 biomes (statues, bridges, falls, crystals, flora, overhead cogs, celestial orreries, chained obelisks) with local lights and zero external asset dependencies.
+- **Multi-Area Spatial Mob Camps & AI Leashing (`FirstBiomeCombat.luau`, `TowerEncounterRuntime.luau`):**
+  Enemies spawn in 3 to 7 distinct spatial camps per floor (10–29 mobs) with ground-raycasted elevations and localized leash radiuses ($60\text{ studs}$ for regular/elite packs, $95\text{ studs}$ for Boss encounters), allowing tactical, room-by-room progression without premature floor aggro pulls.
 - **Room Lifecycle:** Rooms transition through `ABSENT -> BUILDING -> READY -> RETIRING -> ABSENT` with a 60-second retirement grace period when unoccupied.
 
 #### Biome Catalog (50 Floors across 10 Biomes):
 1. **Verdant Ruins (Floors 1–5):** Overgrown Threshold, Broken Aqueduct, Rootway Crossing, Vinebound Bastion, **Mossbound Court (Biome Boss: Mossbound Guardian)**.
 2. **Fungal Hollow (Floors 6–10):** Sporelit Entry, Mycelium Galleries, Blooming Chasm, Rotcap Keep, **Matriarch's Hollow (Biome Boss: Spore Matriarch)**.
-3. **Drowned Steps (Floors 11–15):** Drowned Steps, Coral Cloister, Tidal Channels, Pearlguard Vault, **Leviathan's Basin (Biome Boss: Abyssal Leviathan)**.
-4. **Cinder Gate (Floors 16–20):** Cinder Gate, Buried Caravan, Glasswind Ravine, Sunscar Fortress, **Colossus Dais (Biome Boss: Cinder Colossus)**.
-5. **Rimefall Approach (Floors 21–25):** Rimefall Approach, Frozen Barracks, Shattered Iceway, Whiteguard Keep, **Frostbound Throne (Biome Boss: Frost Sovereign)**.
-6. **Stormgrass Rise (Floors 26–30):** Stormgrass Rise, Thunderhead Outpost, Skybridge Cliffs, Tempest Redoubt, **Roc's Eyrie (Biome Boss: Tempest Roc)**.
-7. **Slagworks Entry (Floors 31–35):** Slagworks Entry, Molten Assembly, Furnace Causeway, Ironflame Bulwark, **Titan's Crucible (Biome Boss: Slagwork Titan)**.
-8. **Blighted Verge (Floors 36–40):** Blighted Verge, Twisted Orchard, Briar Labyrinth, Heartrot Stronghold, **Sovereign's Grove (Biome Boss: Heartrot Sovereign)**.
-9. **Starlit Vestibule (Floors 41–45):** Starlit Vestibule, Orbiting Stacks, Fractured Index, Runeguard Athenaeum, **Rift Warden's Observatory (Biome Boss: Rift Warden)**.
-10. **Abyssal Descent (Floors 46–50):** Abyssal Descent, Crimson Procession, Voidspan Crossing, Dreadguard Citadel, **Overlord's Throne (Biome Boss: Abyssal Overlord)**.
+3. **Ashen Dunes (Floors 11–15):** Cinder Gate, Buried Caravan, Glasswind Ravine, Sunscar Fortress, **Colossus Dais (Biome Boss: Sandstone Colossus)**.
+4. **Frozen Citadel (Floors 16–20):** Rimefall Approach, Frozen Barracks, Shattered Iceway, Whiteguard Keep, **Frostbound Throne (Biome Boss: Frostbound King)**.
+5. **Infernal Foundry (Floors 21–25):** Slagworks Entry, Molten Assembly, Furnace Causeway, Ironflame Bulwark, **Titan's Crucible (Biome Boss: Ember Titan)**.
+6. **Thunder Highlands (Floors 26–30):** Stormgrass Rise, Thunderhead Outpost, Skybridge Cliffs, Tempest Redoubt, **Roc's Eyrie (Biome Boss: Storm Roc)**.
+7. **Corrupted Grove (Floors 31–35):** Blighted Verge, Twisted Orchard, Briar Labyrinth, Heartrot Stronghold, **Sovereign's Grove (Biome Boss: Blight Sovereign)**.
+8. **Sunken Sanctuary (Floors 36–40):** Drowned Steps, Coral Cloister, Tidal Channels, Pearlguard Vault, **Leviathan's Basin (Biome Boss: Tidal Leviathan)**.
+9. **Astral Archives (Floors 41–45):** Starlit Vestibule, Orbiting Stacks, Fractured Index, Runeguard Athenaeum, **Rift Warden's Observatory (Biome Boss: Rift Warden)**.
+10. **Abyssal Throne (Floors 46–50):** Abyssal Descent, Crimson Procession, Voidspan Crossing, Dreadguard Citadel, **Overlord's Throne (Biome Boss: Crimson Overlord)**.
+
 
 ### 3.4 Private Fortress Plot & Outskirts Architectural Layout
 
@@ -490,7 +506,7 @@ The player interface is built from modular, gothic-styled components:
 2. **Tower Navigation UI (`TowerController.client.luau`):**
    - **In-World Navigation Pedestals & Prompts:** Travel interactions are accessed in-world via ProximityPrompts (`Previous Floor`, `Next Floor`, `Floor Selector`, and `Return to Hub` pedestals on the safe arrival pad, plus the Central Crimson Tower `Choose floor` prompt in the Hub) and the bottom toolbar `[TOWER]` button.
    - **Top-Right `Return to Hub` Action Button:** Whenever the Master is visiting any Tower floor (`FloorId >= 1`), a dedicated top-right **`Return to Hub`** button (`TowerGui.ReturnHubButton`) is displayed for one-click extraction back to the Fortress Plot.
-   - **Biome-Grouped Floor Selector Modal (`FloorSelector`):** Scrollable 50-floor selector organized under 10 **Biome Header Banners** (`BIOME 1 — VERDANT RUINS (FLOORS 1–5)` through `BIOME 10 — ABYSSAL DESCENT (FLOORS 46–50)`). Each floor button displays live status badges (`◆` Boss Floor, `★` You + Squad present, `●` You present, `▲` Squad stationed) and opens a detail pane showing floor name, biome, role (`Boss Floor` / `Combat Floor`), live `Visited: N | Squads: M` presence counts, and action buttons (`Visit floor`, `Assign squad`, `Recall squad`).
+   - **Biome-Grouped Floor Selector Modal (`FloorSelector`):** Scrollable 50-floor selector organized under 10 **Biome Header Banners** (`BIOME 1 — VERDANT RUINS (FLOORS 1–5)` through `BIOME 10 — ABYSSAL THRONE (FLOORS 46–50)`). Each floor button displays live status badges (`◆` Boss Floor, `★` You + Squad present, `●` You present, `▲` Squad stationed) and opens a detail pane showing floor name, biome, role (`Boss Floor` / `Combat Floor`), live `Visited: N | Squads: M` presence counts, and action buttons (`Visit floor`, `Assign squad`, `Recall squad`).
    - **Modal Click-Through Prevention (`MasterController.client.luau`):** Viewport targeting checks `GuiService:GetGuiObjectsAtPosition` so clicking inside open UI modals or HUD buttons never leaks world-space `FocusTarget` raycasts onto mobs behind the UI.
 3. **Real-Time Combat Feedback & Boss HUD (`CombatFeedback.luau`, `EnemyAnimationController.luau`, `HUDController.client.luau`):**
    - **Tower Floor Boss Top HUD Banner:** Engaging any of the 10 Biome Bosses on Floors `5, 10, ..., 50` activates the top-center Boss HUD Banner (`_G.ClientCombatState.FloorBoss`), displaying `"FLOOR N BIOME BOSS — NAME [PHASE 1 / PHASE 2: ENRAGED]"` and a live HP bar that automatically clears on boss death or floor departure.
@@ -513,31 +529,32 @@ In **Infinite Tower**, major boss encounters take place at the apex of each biom
 | Floor | Biome Name | Biome Boss Name | Rig Family | Maximum Health | Basic Attack Damage | Signature Attack Types |
 | :---: | :--- | :--- | :--- | :---: | :---: | :--- |
 | **5** | **Verdant Ruins** | **Mossbound Guardian** | `STONE_COLOSSUS` | `22,050` | `16` | Frontal Cleave (`ARC`), Quake (`SELF_DISC`), Root Bloom (`TARGET_DISC`) |
-| **10** | **Fungal Hollow** | **Spore Matriarch** | `FUNGAL_MATRIARCH` | `76,500` | `24` | Spore Burst (`SELF_DISC`), Corrosive Cloud (`TARGET_DISC`) |
-| **15** | **Drowned Steps** | **Abyssal Leviathan** | `LEVIATHAN` | `470,813` | `106` | Tidal Sweep (`ARC`), Maelstrom (`SELF_DISC`), Geyser Strike (`TARGET_DISC`) |
-| **20** | **Cinder Gate** | **Cinder Colossus** | `FIRE_COLOSSUS` | `1,784,250` | `155` | Magma Cleave (`ARC`), Eruption (`SELF_DISC`), Fire Rain (`TARGET_DISC`) |
-| **25** | **Rimefall Approach** | **Frost Sovereign** | `FROST_GIANT` | `12,198,938` | `685` | Glacial Smash (`ARC`), Blizzard Shock (`SELF_DISC`), Ice Spikes (`TARGET_DISC`) |
-| **30** | **Stormgrass Rise** | **Tempest Roc** | `GIANT_AVIAN` | `83,724,469` | `1,006` | Gale Slash (`ARC`), Thunderclap (`SELF_DISC`), Lightning Strike (`TARGET_DISC`) |
-| **35** | **Slagworks Entry** | **Slagwork Titan** | `MAGMA_CONSTRUCT` | `950,189,344` | `4,436` | Anvil Hammer (`ARC`), Slag Quake (`SELF_DISC`), Molten Core (`TARGET_DISC`) |
-| **40** | **Blighted Verge** | **Heartrot Sovereign** | `CORRUPTED_TREANT` | `5,352,379,031` | `6,517` | Briar Whip (`ARC`), Heartrot Bloom (`SELF_DISC`), Rot Tendrils (`TARGET_DISC`) |
-| **45** | **Starlit Vestibule** | **Rift Warden** | `COSMIC_ENTITY` | `23,593,202,156` | `28,728` | Astral Sweep (`ARC`), Dimensional Rupture (`SELF_DISC`), Void Well (`TARGET_DISC`) |
-| **50** | **Abyssal Descent** | **Abyssal Overlord** | `DEMONIC_OVERLORD` | `110,844,632,813` | `42,211` | Hellfire Cleave (`ARC`), Abyssal Nova (`SELF_DISC`), Doom Pillars (`TARGET_DISC`) |
+| **10** | **Fungal Hollow** | **Spore Matriarch** | `FUNGAL_COLOSSUS` | `76,500` | `24` | Spore Burst (`SELF_DISC`), Corrosive Cloud (`TARGET_DISC`) |
+| **15** | **Ashen Dunes** | **Sandstone Colossus** | `STONE_COLOSSUS` | `470,813` | `106` | Magma Cleave (`ARC`), Sand Quake (`SELF_DISC`), Obsidian Spikes (`TARGET_DISC`) |
+| **20** | **Frozen Citadel** | **Frostbound King** | `ROYAL_BIPED` | `1,784,250` | `155` | Glacial Cleave (`ARC`), Blizzard Shock (`SELF_DISC`), Ice Spikes (`TARGET_DISC`) |
+| **25** | **Infernal Foundry** | **Ember Titan** | `FORGE_COLOSSUS` | `12,198,938` | `685` | Anvil Hammer (`ARC`), Slag Quake (`SELF_DISC`), Molten Core (`TARGET_DISC`) |
+| **30** | **Thunder Highlands** | **Storm Roc** | `GIANT_AVIAN` | `83,724,469` | `1,006` | Gale Slash (`ARC`), Thunderclap (`SELF_DISC`), Lightning Strike (`TARGET_DISC`) |
+| **35** | **Corrupted Grove** | **Blight Sovereign** | `GROVE_COLOSSUS` | `950,189,344` | `4,436` | Briar Whip (`ARC`), Heartrot Bloom (`SELF_DISC`), Rot Tendrils (`TARGET_DISC`) |
+| **40** | **Sunken Sanctuary** | **Tidal Leviathan** | `SERPENT` | `5,352,379,031` | `6,517` | Tidal Sweep (`ARC`), Maelstrom (`SELF_DISC`), Geyser Strike (`TARGET_DISC`) |
+| **45** | **Astral Archives** | **Rift Warden** | `ARCANE_COLOSSUS` | `23,593,202,156` | `28,728` | Astral Sweep (`ARC`), Dimensional Rupture (`SELF_DISC`), Void Well (`TARGET_DISC`) |
+| **50** | **Abyssal Throne** | **Crimson Overlord** | `ROYAL_COLOSSUS` | `110,844,632,813` | `42,211` | Hellfire Cleave (`ARC`), Abyssal Nova (`SELF_DISC`), Doom Pillars (`TARGET_DISC`) |
 
 ### 5.2 Full 40-Enemy Biome Roster & Procedural Rig Architecture
 Each of the 10 biomes features 4 local-authored procedural enemies (2 Regulars, 1 Elite, 1 Biome Boss = **40 enemies total** in `MobCatalog.luau` and `FirstBiomeCombat.luau`), built with biome-specific material/glow palettes in `TowerEnemyRigs.luau` and animated with planted-foot leg counter-rotation (`plantedPose`) in `TowerEnemyClips.luau`:
 
 | Biome (Floors) | Regular 1 | Regular 2 | Biome Elite | Biome Boss (5th Floor) |
 | :--- | :--- | :--- | :--- | :--- |
-| **1. Verdant Ruins (1–5)** | Moss Crawler (`CRAWLER`) | Ruin Guardian (`ARMORED_BIPED`) | Vinebound Sentinel (`HEAVY_BIPED`) | **Mossbound Guardian** (`STONE_COLOSSUS`) |
-| **2. Fungal Hollow (6–10)** | Spore Crawler (`CRAWLER`) | Spore Drifter (`CASTER_BIPED`, `PROJECTILE`) | Mycelium Brute (`HEAVY_BIPED`) | **Spore Matriarch** (`FUNGAL_MATRIARCH`) |
-| **3. Drowned Steps (11–15)** | Sunken Skitterer (`CRUSTACEAN`) | Coral Sentinel (`ARMORED_BIPED`) | Tidebound Executioner (`HEAVY_BIPED`) | **Abyssal Leviathan** (`LEVIATHAN`) |
-| **4. Cinder Gate (16–20)** | Ash Hound (`QUADRUPED`) | Ember Imp (`AGILE_BIPED`, `PROJECTILE`) | Glassflame Champion (`ARMORED_BIPED`) | **Cinder Colossus** (`FIRE_COLOSSUS`) |
-| **5. Rimefall Approach (21–25)** | Rime Wolf (`QUADRUPED`) | Frost Archer (`RANGED_BIPED`, `PROJECTILE`) | Glacial Reaver (`HEAVY_BIPED`) | **Frost Sovereign** (`FROST_GIANT`) |
-| **6. Stormgrass Rise (26–30)** | Gale Raptor (`AVIAN`) | Tempest Wisp (`CASTER_BIPED`, `PROJECTILE`) | Stormcaller Knight (`ARMORED_BIPED`) | **Tempest Roc** (`GIANT_AVIAN`) |
-| **7. Slagworks Entry (31–35)** | Cinder Automaton (`CONSTRUCT_BIPED`) | Slag Thrower (`RANGED_BIPED`, `PROJECTILE`) | Furnace Enforcer (`HEAVY_BIPED`) | **Slagwork Titan** (`MAGMA_CONSTRUCT`) |
-| **8. Blighted Verge (36–40)** | Blight Beetle (`INSECT`) | Thorn Stalker (`AGILE_BIPED`) | Briar Executioner (`HEAVY_BIPED`) | **Heartrot Sovereign** (`CORRUPTED_TREANT`) |
-| **9. Starlit Vestibule (41–45)** | Astral Drone (`CONSTRUCT_BIPED`) | Void Acolyte (`CASTER_BIPED`, `PROJECTILE`) | Runeguard Adjudicator (`ARMORED_BIPED`) | **Rift Warden** (`COSMIC_ENTITY`) |
-| **10. Abyssal Descent (46–50)** | Dread Fiend (`AGILE_BIPED`) | Blood Stalker (`SCORPION`) | Abyssal Vanguard (`HEAVY_BIPED`) | **Abyssal Overlord** (`DEMONIC_OVERLORD`) |
+| **1. Verdant Ruins (1–5)** | Moss Crawler (`CRAWLER`) | Ruin Guardian (`ARMORED_BIPED`) | Vinebound Elite (`ROOTED_BIPED`) | **Mossbound Guardian** (`STONE_COLOSSUS`) |
+| **2. Fungal Hollow (6–10)** | Spore Skitter (`CRAWLER`) | Lantern Spore (`FUNGAL_BIPED`) | Mycelial Brute (`HEAVY_BIPED`) | **Spore Matriarch** (`FUNGAL_COLOSSUS`) |
+| **3. Ashen Dunes (11–15)** | Dune Scarab (`INSECT`) | Ash Raider (`WEAPON_BIPED`) | Glass Scorpion (`SCORPION`) | **Sandstone Colossus** (`STONE_COLOSSUS`) |
+| **4. Frozen Citadel (16–20)** | Frost Hound (`QUADRUPED`) | Rime Sentry (`WEAPON_BIPED`) | Glacier Knight (`ARMORED_BIPED`) | **Frostbound King** (`ROYAL_BIPED`) |
+| **5. Infernal Foundry (21–25)** | Cinder Imp (`SMALL_BIPED`) | Forge Construct (`ARMORED_BIPED`) | Molten Taskmaster (`HEAVY_BIPED`) | **Ember Titan** (`FORGE_COLOSSUS`) |
+| **6. Thunder Highlands (26–30)** | Storm Talon (`AVIAN`) | Crag Channeler (`CASTER_BIPED`) | Thunder Ram (`QUADRUPED`) | **Storm Roc** (`GIANT_AVIAN`) |
+| **7. Corrupted Grove (31–35)** | Blight Wolf (`QUADRUPED`) | Thorn Weaver (`ROOTED_BIPED`) | Rotwood Keeper (`TREANT`) | **Blight Sovereign** (`GROVE_COLOSSUS`) |
+| **8. Sunken Sanctuary (36–40)** | Tide Claw (`CRUSTACEAN`) | Drowned Acolyte (`CASTER_BIPED`) | Coral Warden (`ARMORED_BIPED`) | **Tidal Leviathan** (`SERPENT`) |
+| **9. Astral Archives (41–45)** | Rune Mite (`CRAWLER`) | Astral Scribe (`CASTER_BIPED`) | Archive Executor (`ARMORED_BIPED`) | **Rift Warden** (`ARCANE_COLOSSUS`) |
+| **10. Abyssal Throne (46–50)** | Abyss Reaver (`WEAPON_BIPED`) | Void Invoker (`CASTER_BIPED`) | Throne Executioner (`HEAVY_BIPED`) | **Crimson Overlord** (`ROYAL_COLOSSUS`) |
+
 
 ### 5.3 Tactical Mechanics & Combat Flow ("Greed vs. Coma")
 1. **Telegraph Shapes & Timings (`AttackTimeline.luau`):**

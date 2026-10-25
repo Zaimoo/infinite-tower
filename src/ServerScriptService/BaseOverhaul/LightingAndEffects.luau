@@ -11,34 +11,34 @@ local LightingAndEffects = {}
 -- CONFIGURATION TABLE
 --============================================================================
 LightingAndEffects.Config = {
-	-- Core Lighting Properties (Readable gameplay + dramatic crimson-horizon storm)
+	-- Core Lighting Properties (Readable gameplay + dramatic crimson-horizon storm, balanced contrast)
 	ClockTime = 17.3,
-	Brightness = 2.4,
-	Ambient = Color3.fromRGB(112, 98, 104),
-	OutdoorAmbient = Color3.fromRGB(145, 122, 128),
-	ColorShift_Top = Color3.fromRGB(225, 155, 160),
-	ColorShift_Bottom = Color3.fromRGB(105, 42, 50),
-	EnvironmentDiffuseScale = 0.75,
-	EnvironmentSpecularScale = 0.80,
+	Brightness = 1.1,
+	Ambient = Color3.fromRGB(45, 40, 42),
+	OutdoorAmbient = Color3.fromRGB(60, 52, 56),
+	ColorShift_Top = Color3.fromRGB(180, 130, 135),
+	ColorShift_Bottom = Color3.fromRGB(80, 35, 42),
+	EnvironmentDiffuseScale = 0.45,
+	EnvironmentSpecularScale = 0.50,
 
-	-- Atmosphere (Dark Red Storm Horizon & Haze)
-	AtmosphereDensity = 0.08,
+	-- Atmosphere (Dark Red Storm Horizon & Haze, rich depth)
+	AtmosphereDensity = 0.16,
 	AtmosphereOffset = 0.12,
 	AtmosphereColor = Color3.fromRGB(135, 34, 44),
 	AtmosphereDecay = Color3.fromRGB(52, 16, 22),
 	AtmosphereGlare = 0,
 	AtmosphereHaze = 0,
 
-	-- ColorCorrection (Subtle contrast + warm crimson tint without washing out UI/Gameplay)
-	TintColor = Color3.fromRGB(255, 240, 242),
-	Contrast = 0.07,
-	Saturation = 0.05,
-	BrightnessOffset = 0.03,
+	-- ColorCorrection (Subtle contrast + balanced tone without washing out UI/Gameplay)
+	TintColor = Color3.fromRGB(245, 235, 238),
+	Contrast = 0.04,
+	Saturation = 0.0,
+	BrightnessOffset = 0.0,
 
-	-- Bloom (Makes the white fountain water and dull-red tower windows pop)
+	-- Bloom (Clamped and disabled so neon surfaces do not blow out the screen)
 	BloomIntensity = 0,
 	BloomSize = 10,
-	BloomThreshold = 1.5,
+	BloomThreshold = 2.0,
 }
 
 --============================================================================
@@ -93,14 +93,14 @@ function LightingAndEffects.Apply(customConfig: { [string]: any }?)
 		bloom.Name = "TowerStormBloom"
 		bloom.Parent = Lighting
 	end
- -- Keep one subtle bloom layer so glow does not stack.
- for _, effect in Lighting:GetChildren() do
-  if effect:IsA("BloomEffect") and effect ~= bloom then
-   effect.Enabled = false
-  elseif effect:IsA("BlurEffect") or effect:IsA("DepthOfFieldEffect") or effect:IsA("SunRaysEffect") then
-   effect.Enabled = false
-  end
- end
+	-- Disable competing bloom/blur layers so glow does not stack.
+	for _, effect in Lighting:GetChildren() do
+		if effect:IsA("BloomEffect") and effect ~= bloom then
+			effect.Enabled = false
+		elseif effect:IsA("BlurEffect") or effect:IsA("DepthOfFieldEffect") or effect:IsA("SunRaysEffect") then
+			effect.Enabled = false
+		end
+	end
 	bloom.Enabled = false
 	bloom.Intensity = cfg.BloomIntensity
 	bloom.Size = cfg.BloomSize

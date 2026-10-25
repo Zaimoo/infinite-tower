@@ -220,6 +220,12 @@ _G.RequestTowerHub = function(): boolean
 	return true
 end
 
+_G.OpenTowerSelector = function()
+	if _G.OpenMasterModal then _G.OpenMasterModal("NONE") end
+	panel.Visible = true
+	render()
+end
+
 _G.IsTowerSelectorOpen = function(): boolean
 	return panel.Visible
 end

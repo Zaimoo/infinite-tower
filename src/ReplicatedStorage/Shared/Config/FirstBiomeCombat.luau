@@ -2,6 +2,7 @@
 -- Executable Part 3/4 Tower Combat registry covering all 10 biomes, 40 enemies, and 50 floors.
 -- Native articulated parts and authored pose clips; no uploaded Roblox asset IDs are implied.
 local MobCatalog = require(script.Parent.MobCatalog)
+local Layout = require(script.Parent.TowerLayout)
 local TowerFloorConfig = require(script.Parent.TowerFloorConfig)
 
 local C: any = {
@@ -142,60 +143,10 @@ for enemyId, cat in pairs(MobCatalog.Entries) do
 	}
 end
 
-local regularCoordinates = {
-	{ X = -18, Z = 10 },
-	{ X = 18, Z = 8 },
-	{ X = -28, Z = -12 },
-	{ X = 28, Z = -14 },
-	{ X = -14, Z = -28 },
-	{ X = 16, Z = -30 },
-}
-
 for floorId = 1, TowerFloorConfig.FloorCount do
-	local floor = TowerFloorConfig.Get(floorId)
-	local biome = MobCatalog.Biomes[floor.BiomeIndex]
-	local idx = floor.IndexInBiome
-	local placements = {}
-
-	if floorId == 1 then
-		placements = {
-			{ EnemyId = biome.RegularEnemyIds[1], X = -16, Z = 8 },
-			{ EnemyId = biome.RegularEnemyIds[1], X = 18, Z = -12 },
-			{ EnemyId = biome.RegularEnemyIds[2], X = -28, Z = -34 },
-			{ EnemyId = biome.EliteEnemyId, X = 22, Z = -48 },
-		}
-	elseif idx == 5 then
-		placements = {
-			{ EnemyId = biome.RegularEnemyIds[1], X = -28, Z = 8 },
-			{ EnemyId = biome.RegularEnemyIds[2], X = 28, Z = 8 },
-			{ EnemyId = biome.EliteEnemyId, X = -38, Z = -24 },
-			{ EnemyId = biome.BossEnemyId, X = 0, Z = -54 },
-		}
-	else
-		local reg1Count = if idx == 1 then 2 elseif idx == 2 then 3 else 2
-		local reg2Count = if idx == 1 then 1 else 2
-		local coordIdx = 1
-		for _ = 1, reg1Count do
-			local pt = regularCoordinates[coordIdx]
-			coordIdx += 1
-			table.insert(placements, { EnemyId = biome.RegularEnemyIds[1], X = pt.X, Z = pt.Z })
-		end
-		for _ = 1, reg2Count do
-			local pt = regularCoordinates[coordIdx]
-			coordIdx += 1
-			table.insert(placements, { EnemyId = biome.RegularEnemyIds[2], X = pt.X, Z = pt.Z })
-		end
-		if idx == 3 then
-			table.insert(placements, { EnemyId = biome.EliteEnemyId, X = 0, Z = -44 })
-		elseif idx == 4 then
-			table.insert(placements, { EnemyId = biome.EliteEnemyId, X = -24, Z = -44 })
-			table.insert(placements, { EnemyId = biome.EliteEnemyId, X = 24, Z = -44 })
-		end
-	end
-
-	C.Floors[floorId] = placements
+	local floor = assert(TowerFloorConfig.Get(floorId))
+	C.Floors[floorId] = Layout.Placements(MobCatalog.Biomes[floor.BiomeIndex], floor.IndexInBiome)
 end
-
 function C.Get(id: string)
 	return C.Entries[id]
 end

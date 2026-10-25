@@ -121,7 +121,7 @@ function TowerBuilder.Build(parent: Instance?, customConfig: { [string]: any }?)
 		Position = origin + Vector3.new(0, -0.6, 0),
 		Material = Enum.Material.CrackedLava,
 		Color = Color3.fromRGB(28, 18, 22),
-		Decorative = true,
+		Decorative = false,
 		Parent = baseGroundFolder,
 	})
 	towerModel.PrimaryPart = basePlinth

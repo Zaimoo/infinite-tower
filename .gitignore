@@ -18,6 +18,5 @@ Desktop.ini
 # Logs
 *.log
 
-# Local artifacts & snapshots
+# Artifacts & snapshots
 artifacts/
-

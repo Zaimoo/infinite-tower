@@ -19,7 +19,9 @@ local HeroNavigation = require(script.Parent.Parent:WaitForChild("Core"):WaitFor
 local Tower=require(script.Parent.Parent.Core.TowerFloorService)
 Tower.Init()
 local Protocol=require(Shared.Util.TowerProtocol)
+local SanctuaryRules=require(Shared.Util.TowerSanctuaryRules)
 local FirstBiome=require(Shared.Config.FirstBiomeCombat)
+local TowerRewards=require(Shared.Config.TowerFloorConfig)
 local EncounterRuntime=require(script.Parent.TowerEncounterRuntime)
 local AttackTimeline=require(Shared.Util.AttackTimeline)
 local Encounters: any=nil
@@ -636,7 +638,7 @@ function collectPhysicalLoot(player: Player, lootId: number)
 
 	-- 2. Check if player is already holding loot
 	if CarrierToHeldLoot[player] ~= nil or (player.Character and (player.Character:GetAttribute("CarryingLoot") == true or player.Character:GetAttribute("CarryingRelic") ~= nil)) then
-		dm.SendToast(player, "⚠️ You are already carrying loot! Drop it with [R] or bank it at the Perimeter Highway or Plot first.", "WARN")
+		dm.SendToast(player, "⚠️ You are already carrying loot! Drop it with [R] or unpackage it at a Floor Safe Sanctuary or Hub bank first.", "WARN")
 		return
 	end
 
@@ -648,6 +650,7 @@ function collectPhysicalLoot(player: Player, lootId: number)
 	end
 	if (hrp.Position - loot.Part.Position).Magnitude > 12 then return end
 
+	Tower.GetState(player).BankArmed = true
 	ActiveLootDrops[lootId] = nil
 	local part = loot.Part
 	local lootType = loot.LootType
@@ -698,7 +701,7 @@ function collectPhysicalLoot(player: Player, lootId: number)
 
 	local isStolen = (killerUserId ~= 0 and killerUserId ~= player.UserId)
 	if not isStolen then
-		dm.SendToast(player, string.format("🎒 Holding %d %s (-15%% Spd)! Haul it to the Perimeter Highway to bank!", amount, lootType), "INFO")
+		dm.SendToast(player, string.format("🎒 Holding %d %s (-15%% Spd)! Bring it to a Floor Safe Sanctuary or Hub bank to unpackage!", amount, lootType), "INFO")
 	else
 		TheftGrudges[killerUserId] = TheftGrudges[killerUserId] or {}
 		TheftGrudges[killerUserId][player.UserId] = os.clock() + 180
@@ -1147,7 +1150,7 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 
 	local masterState = ActiveMasters[simHero.Owner]
 	local maxLeash = assignedRoom and FirstBiome.LeashRange or (masterState and masterState.TargetEnemyUserId ~= nil) and 150.0 or LEASH_DISTANCE
-	if getHorizontalDistance(simHero.Position, masterPos) > maxLeash or math.abs(simHero.Position.Y - masterPos.Y) > 15 then
+	if getHorizontalDistance(simHero.Position, masterPos) > maxLeash or math.abs(simHero.Position.Y - masterPos.Y) > 40 then
 		simHero.TargetNetId = nil
 		simHero.State = "FOLLOW_MASTER"
 	end
@@ -1224,7 +1227,7 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 				tracker.LastClock = now
 			end
 
-			if distToGoal > 220 and math.abs(simHero.Position.Y - masterPos.Y) > 25 then
+			if distToGoal > 220 and math.abs(simHero.Position.Y - masterPos.Y) > 40 then
 				-- Safety fallback if fallen into pit or stranded far away
 				simHero.Position = goalPos
 				HeroNavigation.Clear(simHero)
@@ -1614,6 +1617,7 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
   Tower.BroadcastAt(TowerRemotes.TowerAction,context,message)
  end,
  Damage=function(victim,damage,mob)
+  if victim.Player then return end -- The commander is not a combatant.
   if not Tower.Same(victim,mob) or Tower.GetSafety(victim,victim.Position).CombatSafe then return end
   if victim.Player then
    local hp=victim.Humanoid.Health;victim.Humanoid:TakeDamage(damage)
@@ -1636,8 +1640,17 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
   local dm = getDataManager()
   if killer and killer.Parent==Players then
    local marketMult = dm.GetMarketMultiplier and dm.GetMarketMultiplier(killer) or 1.0
-   local rewardGold = math.round(mob.GoldReward * marketMult)
-   spawnPhysicalLoot("GOLD",rewardGold,mob.Position,killer,mob.DisplayName)
+   local profile = dm.GetProfile(killer)
+   if profile then
+    local reward = TowerRewards.GetKillRewards(mob.FloorId, mob.Role)
+    profile.Currencies.Gold += math.round(reward.Gold * marketMult)
+    profile.Currencies.Gems += reward.Gems
+    dm.SyncProfile(killer)
+    local tier = TowerRewards.RollRelic(mob.FloorId, mob.Role, math.random(), math.random())
+    if tier and _G.RelicService then
+     _G.RelicService.SpawnRelic(tier, mob.Position, killer.UserId)
+    end
+   end
   end
   if (mob :: any).Role == "BOSS" and mob.FloorId and mob.FloorId % 5 == 0 then
    local bossTier = math.floor(mob.FloorId / 5)
@@ -1708,7 +1721,7 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 		stepHeroSimulation(simHero, dt, now)
 	end
 
-	-- Safe Zone Banking & Recovery Loop (R >= 460)
+	-- Sanctuary banking is scoped to the cargo's authoritative floor/generation.
 	for player, masterState in pairs(ActiveMasters) do
 		local rootPos = getMasterRootPosition(player)
 		if rootPos then
@@ -1716,10 +1729,13 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 			local safety=Tower.GetSafety(location,rootPos)
 			if safety.CanBankCargo and location.BankArmed and not Tower.IsTransitioning(player) then
 				local held = CarrierToHeldLoot[player]
-				if held then
+				if held and SanctuaryRules.CanBank(location,held,safety,Tower.IsTransitioning(player),now) then
 					local dm = getDataManager()
 					local prof = dm.GetProfile(player)
+					if not prof then continue end
+					CarrierToHeldLoot[player] = nil
 					if prof then
+						local prefix = if location.FloorId > 0 then string.format("📦 Unpackaged Field Loot at Floor %d Safe Zone: ",location.FloorId) else "🏦 Safely Banked Field Cargo: "
 						if held.LootType == "GOLD" then
 							local marketMult = dm.GetMarketMultiplier and dm.GetMarketMultiplier(player) or 1.0
 							local finalGold = math.round(held.Amount * marketMult)
@@ -1727,15 +1743,15 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 							dm.SendToast(
 								player,
 								if marketMult > 1.0
-									then string.format("🏦 Safely Banked Field Cargo: +%d GOLD (Market: +%.1f%%)!", finalGold, (marketMult - 1) * 100)
-									else string.format("🏦 Safely Banked Field Cargo: +%d GOLD!", finalGold),
+									then prefix .. string.format("+%d GOLD (Market: +%.1f%%)!", finalGold, (marketMult - 1) * 100)
+									else prefix .. string.format("+%d GOLD!", finalGold),
 								"SUCCESS"
 							)
 						elseif held.LootType == "GEMS" then
 							prof.Currencies.Gems += held.Amount
 							dm.SendToast(
 								player,
-								string.format("🏦 Safely Banked Field Cargo: +%d GEMS!", held.Amount),
+								prefix .. string.format("+%d GEMS!", held.Amount),
 								"SUCCESS"
 							)
 						end
@@ -1752,7 +1768,7 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 					clearLootCarryState(player)
 				end
 
-				if masterState.IsSquadWiped then
+				if safety.CanRecoverWipe and masterState.IsSquadWiped then
 					local hasHealthyHero = false
 					for _, h in pairs(masterState.DeployedHeroes) do
 						if h.State ~= "COMA" and h.CurrentHP > 0 then

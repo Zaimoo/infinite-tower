@@ -2,6 +2,7 @@
 -- Part 1/4 floor configuration. Names, layouts, encounters and scaling across all 50 floors.
 -- Requiring this module does not build rooms, change travel, or spawn encounters.
 local MobCatalog = require(script.Parent.MobCatalog)
+local Layout = require(script.Parent.TowerLayout)
 local StatBalance = require(script.Parent.StatBalance)
 
 export type Encounter = { EnemyId: string, Count: number }
@@ -24,7 +25,7 @@ export type Floor = {
 }
 
 local Config = {}
-Config.Version = 2
+Config.Version = 3
 Config.ContentStatus = "LOCAL_AUTHORED_PROTOTYPE"
 Config.BalanceStatus = "PROVISIONAL_NOT_PLAYTESTED"
 Config.FloorCount = 50
@@ -43,12 +44,12 @@ Config.BaseStatsByRole = table.freeze({
 local floorNames = {
 	{ "Overgrown Threshold", "Broken Aqueduct", "Rootway Crossing", "Vinebound Bastion", "Mossbound Court" },
 	{ "Sporelit Entry", "Mycelium Galleries", "Blooming Chasm", "Rotcap Keep", "Matriarch's Hollow" },
-	{ "Drowned Steps", "Coral Cloister", "Tidal Channels", "Pearlguard Vault", "Leviathan's Basin" },
 	{ "Cinder Gate", "Buried Caravan", "Glasswind Ravine", "Sunscar Fortress", "Colossus Dais" },
 	{ "Rimefall Approach", "Frozen Barracks", "Shattered Iceway", "Whiteguard Keep", "Frostbound Throne" },
-	{ "Stormgrass Rise", "Thunderhead Outpost", "Skybridge Cliffs", "Tempest Redoubt", "Roc's Eyrie" },
 	{ "Slagworks Entry", "Molten Assembly", "Furnace Causeway", "Ironflame Bulwark", "Titan's Crucible" },
+	{ "Stormgrass Rise", "Thunderhead Outpost", "Skybridge Cliffs", "Tempest Redoubt", "Roc's Eyrie" },
 	{ "Blighted Verge", "Twisted Orchard", "Briar Labyrinth", "Heartrot Stronghold", "Sovereign's Grove" },
+	{ "Drowned Steps", "Coral Cloister", "Tidal Channels", "Pearlguard Vault", "Leviathan's Basin" },
 	{ "Starlit Vestibule", "Orbiting Stacks", "Fractured Index", "Runeguard Athenaeum", "Rift Warden's Observatory" },
 	{ "Abyssal Descent", "Crimson Procession", "Voidspan Crossing", "Dreadguard Citadel", "Overlord's Throne" },
 }
@@ -63,18 +64,15 @@ for biomeIndex, biome in ipairs(MobCatalog.Biomes) do
 		local layoutId = string.format("tower_floor_%02d", id)
 		local environmentId = string.format("tower_environment_%02d", id)
 		local variantKind = variantKinds[indexInBiome]
-		local encounters: { Encounter } = {
-			table.freeze({ EnemyId = biome.RegularEnemyIds[1], Count = 2 + indexInBiome }),
-			table.freeze({ EnemyId = biome.RegularEnemyIds[2], Count = 1 + math.floor(indexInBiome / 2) }),
-		}
-		local bossId: string? = nil
-		if indexInBiome >= 3 or id == 1 then
-			table.insert(encounters, table.freeze({ EnemyId = biome.EliteEnemyId, Count = indexInBiome == 4 and 2 or 1 }))
+		local counts = {}
+		for _, placement in Layout.Placements(biome, indexInBiome) do
+			counts[placement.EnemyId] = (counts[placement.EnemyId] or 0) + 1
 		end
-		if indexInBiome == 5 then
-			bossId = biome.BossEnemyId
-			table.insert(encounters, table.freeze({ EnemyId = biome.BossEnemyId, Count = 1 }))
+		local encounters: { Encounter } = {}
+		for _, enemyId in {biome.RegularEnemyIds[1], biome.RegularEnemyIds[2], biome.EliteEnemyId, biome.BossEnemyId} do
+			if counts[enemyId] then table.insert(encounters, table.freeze({EnemyId=enemyId, Count=counts[enemyId]})) end
 		end
+		local bossId: string? = if indexInBiome==5 then biome.BossEnemyId else nil
 		layouts[layoutId] = table.freeze({
 			Id = layoutId,
 			FloorId = id,
@@ -148,6 +146,32 @@ function Config.GetEnemyStats(floorId: any, enemyId: any): any?
 		GoldReward = math.round(base.GoldReward * floor.Rewards.GoldMultiplier),
 		XPReward = math.round(base.XPReward * floor.Rewards.XPMultiplier),
 	})
+end
+
+
+-- Provisional economy: a single hero summon costs 100 gems (10 cost 900).
+-- Kill gems stay flat; gold, relic probability and relic value grow with floor.
+function Config.GetKillRewards(floorId: number, role: string): any
+ assert(Config.IsFloorId(floorId), "Invalid reward floor")
+ local base = assert(Config.BaseStatsByRole[role], "Invalid enemy role")
+ local progress = (floorId - 1) / (Config.FloorCount - 1)
+ local bonus = if role == "BOSS" then 0.20 elseif role == "ELITE" then 0.04 else 0
+ return {
+  Gold = math.round(base.GoldReward * Config.Scaling.RewardPerFloor ^ (floorId - 1)),
+  Gems = 1,
+  RelicChance = 0.02 + 0.10 * progress + bonus,
+  RelicMultiplier = 1 + 0.05 * (floorId - 1),
+  CoreChance = 0.02 + 0.18 * progress,
+  UrnChance = 0.18 + 0.22 * progress,
+ }
+end
+
+function Config.RollRelic(floorId: number, role: string, dropRoll: number, tierRoll: number): string?
+ local reward = Config.GetKillRewards(floorId, role)
+ if dropRoll >= reward.RelicChance then return nil end
+ if tierRoll < reward.CoreChance then return "ABYSSAL_CORE" end
+ if tierRoll < reward.CoreChance + reward.UrnChance then return "CURSED_URN" end
+ return "MANA_GEODE"
 end
 
 return table.freeze(Config)
