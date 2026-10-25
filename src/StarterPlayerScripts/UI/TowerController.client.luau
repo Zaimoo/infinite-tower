@@ -24,6 +24,7 @@ local lastFeedback: string? = nil
 local selected = 1
 local activeBiomeIndex = 1
 local presence: any = nil
+local render: () -> ()
 
 -- Visual Palette
 local C = {
@@ -492,6 +493,7 @@ local function createFloorTile(indexInRow: number): any
 			BackgroundColor3 = C.BorderNormal,
 			BorderSizePixel = 0,
 			Rotation = 45,
+			Active = false,
 			ZIndex = 45,
 		}, btn)
 		table.insert(cornerDiamonds, d)
@@ -507,6 +509,7 @@ local function createFloorTile(indexInRow: number): any
 		TextSize = 20,
 		TextXAlignment = Enum.TextXAlignment.Center,
 		TextYAlignment = Enum.TextYAlignment.Center,
+		Active = false,
 		ZIndex = 46,
 	}, btn)
 
@@ -526,6 +529,19 @@ local function createFloorTile(indexInRow: number): any
 		end
 	end)
 
+	btn.MouseEnter:Connect(function()
+		if selected ~= slotData.FloorId then
+			TweenService:Create(btn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(28, 22, 42) }):Play()
+			TweenService:Create(stroke, TweenInfo.new(0.15), { Color = Color3.fromRGB(150, 120, 190) }):Play()
+		end
+	end)
+	btn.MouseLeave:Connect(function()
+		if selected ~= slotData.FloorId then
+			TweenService:Create(btn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(18, 14, 28) }):Play()
+			TweenService:Create(stroke, TweenInfo.new(0.15), { Color = C.BorderNormal }):Play()
+		end
+	end)
+
 	return slotData
 end
 
@@ -533,9 +549,6 @@ end
 for i = 1, 5 do
 	activeFloorButtons[i] = createFloorTile(i)
 end
-
--- Forward declaration of render function
-local render: () -> ()
 
 -- ============================================================================
 -- HELPER: BUILD 10 BIOME CARDS
@@ -577,6 +590,7 @@ for biomeIdx, biome in ipairs(mobs.Biomes) do
 		BackgroundTransparency = 0.55,
 		BackgroundColor3 = Color3.fromRGB(8, 6, 12),
 		BorderSizePixel = 0,
+		Active = false,
 		ZIndex = 44,
 	}, card)
 	new("UICorner", { CornerRadius = UDim.new(0, 4) }, horizon)
@@ -588,6 +602,7 @@ for biomeIdx, biome in ipairs(mobs.Biomes) do
 		BackgroundColor3 = Color3.fromRGB(10, 8, 16),
 		BackgroundTransparency = 0.65,
 		BorderSizePixel = 0,
+		Active = false,
 		ZIndex = 45,
 	}, card)
 
@@ -604,6 +619,7 @@ for biomeIdx, biome in ipairs(mobs.Biomes) do
 		Size = UDim2.new(1, -4, 1, -4),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
+		Active = false,
 		ZIndex = 45,
 	}, card)
 	new("UICorner", { CornerRadius = UDim.new(0, 4) }, innerArtFrame)
@@ -622,6 +638,7 @@ for biomeIdx, biome in ipairs(mobs.Biomes) do
 		Size = UDim2.new(1, -12, 0, 22),
 		BackgroundColor3 = Color3.fromRGB(12, 10, 18),
 		BorderSizePixel = 0,
+		Active = false,
 		ZIndex = 46,
 	}, card)
 	new("UICorner", { CornerRadius = UDim.new(0, 4) }, pill)
@@ -641,6 +658,7 @@ for biomeIdx, biome in ipairs(mobs.Biomes) do
 		Font = Enum.Font.GothamBold,
 		TextSize = 10,
 		TextTruncate = Enum.TextTruncate.AtEnd,
+		Active = false,
 		ZIndex = 47,
 	}, pill)
 
