@@ -488,8 +488,8 @@ function A.EquipWeapon(model: Model, weaponAssetId: string?, weaponType: string?
 		if lHand then
 			local primary = wModel.PrimaryPart or wModel:FindFirstChild("Handle") or wModel:FindFirstChildWhichIsA("BasePart")
 			if primary then
-				-- Natural canted archery grip orientation: stave extends vertically, limbs arc forward, arrow points forward
-				local bowGripOffset = CFrame.new(0, 0, 0, -0.728371143, 0.685157061, -0.00618805084, -0.647984505, -0.685861766, 0.331232011, -0.222700208, -0.245268837, -0.943533182)
+				-- Natural canted archery grip orientation: stave extends vertically up, limbs arc forward, arrow points forward
+				local bowGripOffset = CFrame.new(0, 0, 0, -0.92564106, -0.331222355, 0.182978228, 0.369646192, -0.894904017, 0.250017732, 0.0809366852, 0.299063742, 0.950794578)
 				wModel:PivotTo(lHand.CFrame * bowGripOffset)
 				local weld = Instance.new("WeldConstraint")
 				weld.Part0 = lHand

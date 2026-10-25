@@ -57,6 +57,77 @@ end
 -- ============================================================================
 -- 1. WEAPON_BOW (Authoritative Hunter & Ranger Bow)
 -- ============================================================================
+local function alignHunterArrow(bowModel: Model, handle: BasePart)
+	local arrow = bowModel:FindFirstChild("HunterArrow", true)
+	if not arrow then return end
+
+	local shaft = arrow:FindFirstChild("ArrowShaft") :: BasePart?
+	local head = arrow:FindFirstChild("ArrowHead") :: BasePart?
+	local f1 = arrow:FindFirstChild("ArrowFletch_1") :: BasePart?
+	local f2 = arrow:FindFirstChild("ArrowFletch_2") :: BasePart?
+	local f3 = arrow:FindFirstChild("ArrowFletch_3") :: BasePart?
+
+	if not shaft then return end
+
+	-- Clean old arrow welds
+	for _, d in ipairs(bowModel:GetDescendants()) do
+		if d:IsA("WeldConstraint") or d:IsA("Weld") or d:IsA("Motor6D") then
+			local p0 = d.Part0
+			local p1 = d.Part1
+			if (p0 and p0.Name:find("Arrow")) or (p1 and p1.Name:find("Arrow")) then
+				d:Destroy()
+			end
+		end
+	end
+
+	-- Precision archery geometry:
+	-- String center at X = -1.25, Y = 0.00, Z = 0.28
+	-- Arrow shelf on riser at X = 0.00, Y = 0.18, Z = 0.28
+	local pNock = Vector3.new(-1.25, 0.00, 0.28)
+	local pShelf = Vector3.new(0.00, 0.18, 0.28)
+	local dir = (pShelf - pNock).Unit
+	local pCenter = pNock + dir * 1.0
+
+	local shaftCFInHandle = CFrame.lookAt(pCenter, pCenter + dir, Vector3.new(0, 0, 1))
+	local shaftWorld = handle.CFrame * shaftCFInHandle
+	shaft.CFrame = shaftWorld
+
+	if head then
+		head.CFrame = shaftWorld * CFrame.new(0, -0.02, -1.06)
+		local wHead = Instance.new("WeldConstraint")
+		wHead.Part0 = shaft
+		wHead.Part1 = head
+		wHead.Parent = head
+	end
+
+	if f1 then
+		f1.CFrame = shaftWorld * CFrame.new(0, 0.035, 0.85)
+		local w = Instance.new("WeldConstraint")
+		w.Part0 = shaft
+		w.Part1 = f1
+		w.Parent = f1
+	end
+	if f2 then
+		f2.CFrame = shaftWorld * CFrame.new(-0.030, -0.018, 0.85) * CFrame.Angles(0, 0, math.rad(120))
+		local w = Instance.new("WeldConstraint")
+		w.Part0 = shaft
+		w.Part1 = f2
+		w.Parent = f2
+	end
+	if f3 then
+		f3.CFrame = shaftWorld * CFrame.new(0.030, -0.018, 0.85) * CFrame.Angles(0, 0, math.rad(-120))
+		local w = Instance.new("WeldConstraint")
+		w.Part0 = shaft
+		w.Part1 = f3
+		w.Parent = f3
+	end
+
+	local wHandle = Instance.new("WeldConstraint")
+	wHandle.Part0 = handle
+	wHandle.Part1 = shaft
+	wHandle.Parent = shaft
+end
+
 function WeaponModelBuilder.BuildBow(): Model
 	-- Check if high-fidelity authored bow exists in Jenna preview or existing hero model
 	local candidate: Model? = nil
@@ -97,6 +168,7 @@ function WeaponModelBuilder.BuildBow(): Model
 		local handle = clone:FindFirstChild("Handle") :: BasePart?
 		if handle then
 			clone.PrimaryPart = handle
+			alignHunterArrow(clone, handle)
 		end
 		return clone
 	end
@@ -119,6 +191,17 @@ function WeaponModelBuilder.BuildBow(): Model
 
 	local stringPart = makePart(model, "BowString", Vector3.new(0.06, 3.4, 0.06), CFrame.new(0, 0, 0.65), stringColor)
 	weldTo(handle, stringPart)
+
+	-- Procedural HunterArrow
+	local arrowModel = Instance.new("Model")
+	arrowModel.Name = "HunterArrow"
+	arrowModel.Parent = model
+	makePart(arrowModel, "ArrowShaft", Vector3.new(0.04, 0.04, 2.0), CFrame.new(0, 0, 0), Color3.fromRGB(120, 80, 50))
+	makeWedge(arrowModel, "ArrowHead", Vector3.new(0.08, 0.12, 0.28), CFrame.new(0, 0, 0), Color3.fromRGB(90, 85, 80), Enum.Material.Slate)
+	makePart(arrowModel, "ArrowFletch_1", Vector3.new(0.01, 0.06, 0.22), CFrame.new(0, 0, 0), Color3.fromRGB(180, 175, 170))
+	makePart(arrowModel, "ArrowFletch_2", Vector3.new(0.01, 0.06, 0.22), CFrame.new(0, 0, 0), Color3.fromRGB(60, 55, 50))
+	makePart(arrowModel, "ArrowFletch_3", Vector3.new(0.01, 0.06, 0.22), CFrame.new(0, 0, 0), Color3.fromRGB(180, 175, 170))
+	alignHunterArrow(model, handle)
 
 	return model
 end
@@ -352,6 +435,12 @@ function WeaponModelBuilder.EnsureWeapons(): { [string]: Model }
 				warn(string.format("[WeaponModelBuilder] Failed to build %s: %s", weaponName, tostring(built)))
 			end
 		else
+			if weaponName == "weapon_bow" and existing:IsA("Model") then
+				local handle = existing:FindFirstChild("Handle") :: BasePart?
+				if handle then
+					alignHunterArrow(existing, handle)
+				end
+			end
 			result[weaponName] = existing :: Model
 		end
 	end
