@@ -206,7 +206,15 @@ function A.Animate(node: any, dt: number, time: number)
 
 		if moving then
 			local sign = (name:find("Left") or name:find("L_")) and 1 or -1
-			if name:find("UpperLeg") or name:find("Hip") then
+			if isMarksman then
+				if name:find("UpperLeg") or name:find("Hip") then
+					target = CFrame.Angles(wave * 0.45 * sign, 0, 0)
+				elseif name == "Waist" or name == "UpperTorso" then
+					target = CFrame.Angles(math.rad(-4) + breath * 0.02, 0, 0)
+				elseif name == "RightShoulder" or name == "RightUpperArm" then
+					target = CFrame.Angles(wave * 0.15, 0, 0)
+				end
+			elseif name:find("UpperLeg") or name:find("Hip") then
 				target = CFrame.Angles(wave * 0.45 * sign, 0, 0)
 			elseif name == "LeftShoulder" or name == "LeftUpperArm" then
 				if hasBow then
@@ -263,7 +271,19 @@ function A.Animate(node: any, dt: number, time: number)
 			-- ================================================================
 			-- IDLE STANCE
 			-- ================================================================
-			if hasBow then
+			if isMarksman then
+				-- Jenna's custom R15 rig has a sculpted archer stance baked directly into joint C0s.
+				-- Apply subtle breathing sway so the baked stance remains active and pure.
+				if name == "Waist" or name == "UpperTorso" then
+					target = CFrame.Angles(breath * 0.015, 0, 0)
+				elseif name == "LeftShoulder" or name == "LeftUpperArm" then
+					target = CFrame.Angles(breath * 0.01, 0, 0)
+				elseif name == "RightShoulder" or name == "RightUpperArm" then
+					target = CFrame.Angles(breath * 0.01, 0, 0)
+				elseif name == "Neck" then
+					target = CFrame.Angles(0, -breath * 0.008, 0)
+				end
+			elseif hasBow then
 				-- Dynamic Marksman Archer Ready Stance
 				if name == "Waist" or name == "UpperTorso" then
 					-- Body angled ~20 deg to present bow side forward with breathing sway
@@ -485,11 +505,75 @@ function A.EquipWeapon(model: Model, weaponAssetId: string?, weaponType: string?
 	local effectiveType = weaponType or (if template.Name:find("bow") then "BOW" elseif template.Name:find("sword") then "SWORD" elseif template.Name:find("dagger") then "DAGGERS" elseif template.Name:find("axe") then "AXE" elseif template.Name:find("staff") then "STAFF" else "TOME")
 
 	if effectiveType == "BOW" then
+		local primary = wModel.PrimaryPart or wModel:FindFirstChild("Handle") or wModel:FindFirstChildWhichIsA("BasePart")
+		local hunterArrow = wModel:FindFirstChild("HunterArrow", true)
+		if primary and hunterArrow then
+			local shaft = hunterArrow:FindFirstChild("ArrowShaft") :: BasePart?
+			local head = hunterArrow:FindFirstChild("ArrowHead") :: BasePart?
+			local f1 = hunterArrow:FindFirstChild("ArrowFletch_1") :: BasePart?
+			local f2 = hunterArrow:FindFirstChild("ArrowFletch_2") :: BasePart?
+			local f3 = hunterArrow:FindFirstChild("ArrowFletch_3") :: BasePart?
+			if shaft then
+				for _, d in ipairs(hunterArrow:GetDescendants()) do
+					if d:IsA("WeldConstraint") or d:IsA("Weld") or d:IsA("Motor6D") then
+						d:Destroy()
+					end
+				end
+				for _, d in ipairs(wModel:GetDescendants()) do
+					if (d:IsA("WeldConstraint") or d:IsA("Weld")) and (d.Part0 == shaft or d.Part1 == shaft) then
+						d:Destroy()
+					end
+				end
+
+				local pNock = Vector3.new(-1.25, 0.00, 0.28)
+				local pShelf = Vector3.new(0.00, 0.18, 0.28)
+				local dir = (pShelf - pNock).Unit
+				local pCenter = pNock + dir * 1.0
+
+				local shaftCFInHandle = CFrame.lookAt(pCenter, pCenter + dir, Vector3.new(0, 0, 1))
+				local shaftWorld = primary.CFrame * shaftCFInHandle
+				shaft.CFrame = shaftWorld
+
+				if head then
+					head.CFrame = shaftWorld * CFrame.new(0, -0.02, -1.06)
+					local wHead = Instance.new("WeldConstraint")
+					wHead.Part0 = shaft
+					wHead.Part1 = head
+					wHead.Parent = head
+				end
+				if f1 then
+					f1.CFrame = shaftWorld * CFrame.new(0, 0.035, 0.85)
+					local w1 = Instance.new("WeldConstraint")
+					w1.Part0 = shaft
+					w1.Part1 = f1
+					w1.Parent = f1
+				end
+				if f2 then
+					f2.CFrame = shaftWorld * CFrame.new(-0.030, -0.018, 0.85) * CFrame.Angles(0, 0, math.rad(120))
+					local w2 = Instance.new("WeldConstraint")
+					w2.Part0 = shaft
+					w2.Part1 = f2
+					w2.Parent = f2
+				end
+				if f3 then
+					f3.CFrame = shaftWorld * CFrame.new(0.030, -0.018, 0.85) * CFrame.Angles(0, 0, math.rad(-120))
+					local w3 = Instance.new("WeldConstraint")
+					w3.Part0 = shaft
+					w3.Part1 = f3
+					w3.Parent = f3
+				end
+
+				local wHandle = Instance.new("WeldConstraint")
+				wHandle.Part0 = primary
+				wHandle.Part1 = shaft
+				wHandle.Parent = shaft
+			end
+		end
+
 		if lHand then
-			local primary = wModel.PrimaryPart or wModel:FindFirstChild("Handle") or wModel:FindFirstChildWhichIsA("BasePart")
 			if primary then
 				-- Natural canted archery grip orientation: stave extends vertically up, limbs arc forward, arrow points forward
-				local bowGripOffset = CFrame.new(0, 0, 0, -0.92564106, -0.331222355, 0.182978228, 0.369646192, -0.894904017, 0.250017732, 0.0809366852, 0.299063742, 0.950794578)
+				local bowGripOffset = CFrame.new(0, 0, 0, -0.728371143, 0.685157061, -0.00618805084, -0.647984505, -0.685861766, 0.331232011, -0.222700208, -0.245268837, -0.943533182)
 				wModel:PivotTo(lHand.CFrame * bowGripOffset)
 				local weld = Instance.new("WeldConstraint")
 				weld.Part0 = lHand

@@ -710,6 +710,10 @@ function HeroModelBuilder.EnsureHeroes(): { [string]: Model }
 					if bakedLeft then
 						bakedLeft:Destroy()
 					end
+					local placket = clone:FindFirstChild("GoldPlacket", true)
+					if placket then
+						placket:Destroy()
+					end
 					for _, handName in ipairs({ "LeftHand", "RightHand" }) do
 						local hand = clone:FindFirstChild(handName, true)
 						if hand then
