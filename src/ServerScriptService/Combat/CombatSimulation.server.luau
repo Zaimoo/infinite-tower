@@ -1,6 +1,6 @@
 --!strict
 -- ServerScriptService/Combat/CombatSimulation.server.luau
--- 5 Hz (0.20s) Server-Authoritative Combat, Ring 1/2 Mob Spawner & World Boss State Machine
+-- 5 Hz (0.20s) Server-Authoritative Tower Combat & Encounter Simulation
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -8,7 +8,6 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
-local WorldBossConfig = require(Shared:WaitForChild("Config"):WaitForChild("WorldBossConfig"))
 local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormulas"))
 local ArtifactCatalog = require(Shared:WaitForChild("Config"):WaitForChild("ArtifactCatalog"))
 local ArchetypeCombatSkills = require(Shared:WaitForChild("Config"):WaitForChild("ArchetypeCombatSkills"))
@@ -67,7 +66,6 @@ local OVERDRIVE_ATK_SPEED_MULT = 1.40
 local RECALL_COOLDOWN = 6.0
 local RECALL_PACIFY_DURATION = 2.0
 
-local TowerSpawnLayout = require(ReplicatedStorage:WaitForChild("TowerSpawnLayout"))
 local COMA_DURATION_DEFAULT = 60
 
 export type HeroSimState = "FOLLOW_MASTER" | "MOVE_TO_TARGET" | "ATTACKING" | "COMA"
@@ -115,8 +113,8 @@ export type SimMob = {
 	EntityGeneration: number,
 	SpecId: string,
 	DisplayName: string,
-	MobType: "RING1_MOB" | "RING2_ELITE" | "RIFT_BOSS" | "WORLD_BOSS",
-	RingIndex: number,
+	MobType: string?,
+	RingIndex: number?,
 	Position: Vector3,
 	HomePosition: Vector3,
 	Yaw: number,
@@ -214,7 +212,6 @@ local function buildMetadataTable(): { any }
 				BornAt = (m :: any).BornAt,
 				MobType = m.MobType,
 				Name = m.DisplayName,
-				RingIndex = m.RingIndex,
 				GroundY = m.HomePosition.Y,
 				MaxHP = m.MaxHP,
 				Phase = m.Phase,
@@ -266,29 +263,6 @@ local function getHorizontalDistance(a: Vector3, b: Vector3): number
 	local dx = a.X - b.X
 	local dz = a.Z - b.Z
 	return math.sqrt(dx * dx + dz * dz)
-end
-
-local function getGroundHeightForRadius(r: number): number
-	if r <= 122 then
-		return 16.0
-	elseif r <= 282 then
-		return 4.0
-	elseif r <= 462 then
-		return 2.0
-	end
-	return 12.0
-end
-
-local function getZoneStaminaDrainPerSec(pos: Vector3): number
-	local r = math.sqrt(pos.X * pos.X + pos.Z * pos.Z)
-	if r <= 122 then
-		return 1.50 -- Ring 3
-	elseif r <= 282 then
-		return 1.20 -- Ring 2
-	elseif r <= 462 then
-		return 0.80 -- Ring 1
-	end
-	return 0.0 -- Safe Zone / Waiting Room Plot
 end
 
 local function getFormationOffset(slotIndex: number): Vector3
@@ -628,79 +602,6 @@ local function knockHeroIntoComa(simHero: SimHero, baseComaSeconds: number)
 	broadcastMetadata(nil)
 end
 
---============================================================================
--- 4. RING 1 / RING 2 MOB SPAWNER & WORLD BOSS DIRECTOR
---============================================================================
-
-local function createSimMob(specId: string, pos: Vector3, mobType: "RING1_MOB" | "RING2_ELITE"): SimMob
-	local spec = (WorldBossConfig.MobSpecs :: any)[specId]
-	local netId = allocateNetId()
-	local now = os.clock()
-	local mob: SimMob = {
-		NetId = netId,
-			FloorId = 0, RoomGeneration = 1, EntityGeneration = 1,
-		SpecId = specId,
-		DisplayName = spec and spec.Name or "Dimensional Entity",
-		MobType = mobType,
-		RingIndex = spec and spec.Ring or 1,
-		Position = pos,
-		HomePosition = pos,
-		Yaw = math.random() * math.pi * 2,
-		CurrentHP = spec and spec.MaxHP or 1000,
-		MaxHP = spec and spec.MaxHP or 1000,
-		ATK = spec and spec.ATK or 25,
-		AttackInterval = spec and spec.AttackInterval or 1.5,
-		AttackCooldown = 1.0,
-		IsAlive = true,
-		RespawnAt = 0,
-		NextAoECastTime = (spec and spec.AoECooldown and spec.AoECooldown > 0) and (now + math.random(4, 10)) or 0,
-		AoEDetonateTime = nil,
-		AoERadius = spec and spec.AoERadius or 0,
-		Phase = 1,
-		NextNovaCastTime = 0,
-		NovaDetonateTime = nil,
-		PunishWindowUntil = 0,
-		DespawnAt = nil,
-		DamageLedger = {},
-	}
-	ActiveMobsByNetId[netId] = mob
-	return mob
-end
-
-local function populateArenaMobs()
-	local towerSpawnSlot = 0
-	-- Ring 1: Outer Ruins (R = 295..445, Y = 2)
-	local ring1List = {
-		{ Id = "mob_mana_node", Count = 12, RMin = 305, RMax = 435 },
-		{ Id = "mob_ruin_crawler", Count = 14, RMin = 300, RMax = 440 },
-		{ Id = "mob_stone_sentinel", Count = 8, RMin = 295, RMax = 380 },
-	}
-	for _, group in ipairs(ring1List) do
-		for i = 1, group.Count do
-			local angle = ((i - 1) / group.Count) * (math.pi * 2) + (math.random() * 0.25)
-			local r = group.RMin + math.random() * (group.RMax - group.RMin)
-			towerSpawnSlot += 1
-			local pos = TowerSpawnLayout.Regular(towerSpawnSlot)
-			createSimMob(group.Id, pos, "RING1_MOB")
-		end
-	end
-
-	-- Ring 2: Corrupted Grove (R = 135..265, Y = 4)
-	local ring2List = {
-		{ Id = "elite_corrupted_stalker", Count = 8, RMin = 155, RMax = 260 },
-		{ Id = "elite_blighted_treant", Count = 6, RMin = 145, RMax = 240 },
-		{ Id = "elite_abyssal_exec", Count = 4, RMin = 135, RMax = 165 },
-	}
-	for _, group in ipairs(ring2List) do
-		for i = 1, group.Count do
-			local angle = ((i - 1) / group.Count) * (math.pi * 2) + 0.3
-			local r = group.RMin + math.random() * (group.RMax - group.RMin)
-			towerSpawnSlot += 1
-			local pos = TowerSpawnLayout.Regular(towerSpawnSlot)
-			createSimMob(group.Id, pos, "RING2_ELITE")
-		end
-	end
-end
 
 
 --============================================================================
@@ -971,8 +872,8 @@ local function awardParticipationXP(mob: SimMob)
 	if not hits then return end
 	local now = os.clock()
 	local cfg = PitBalance.CombatXP
-	local amount = (mob.MobType == "WORLD_BOSS" or mob.MobType == "RIFT_BOSS" or (mob :: any).Role=="BOSS") and cfg.Boss
-		or (mob.RingIndex >= 2 and cfg.Ring2 or cfg.Ring1)
+	local amount = ((mob :: any).Role == "BOSS") and cfg.Boss
+		or (((mob :: any).Role == "ELITE") and cfg.Ring2 or cfg.Ring1)
 	-- Defer profile changes until the current death/tick finishes iterating entities.
 	task.defer(function()
 		local dm = getDataManager()
@@ -998,41 +899,9 @@ end
 local function handleMobDeath(mob: SimMob, killerPlayer: Player)
 	if (mob :: any).TowerEnemy then Encounters:Death(mob,killerPlayer);return end
 	if not mob.IsAlive then return end
-	local dm = getDataManager()
 	mob.IsAlive = false
 	awardParticipationXP(mob)
-
-
-	-- Standard Mob / Elite / Rift Warden Death
-	local spec = (WorldBossConfig.MobSpecs :: any)[mob.SpecId]
-	if spec then
-		-- Point 1: Universal Physical Loot Drops
-		if spec.GoldReward and spec.GoldReward > 0 then
-			spawnPhysicalLoot("GOLD", spec.GoldReward, mob.Position, killerPlayer)
-		end
-
-		if mob.SpecId == "mob_mana_node" then
-			spawnPhysicalLoot("GEMS", math.random(15, 30), mob.Position + Vector3.new(2, 0, 0), killerPlayer)
-		elseif mob.MobType == "RING2_ELITE" then
-			spawnPhysicalLoot("GEMS", math.random(12, 25), mob.Position + Vector3.new(2, 0, 0), killerPlayer)
-		end
-
-		if _G.RelicService and spec.Drops then
-			for tierId, chance in pairs(spec.Drops) do
-				if math.random() <= chance then
-					_G.RelicService.SpawnRelic(tierId, mob.Position, killerPlayer.UserId)
-					break
-				end
-			end
-		end
-
-		if spec.RespawnTime and spec.RespawnTime > 0 then
-			mob.RespawnAt = os.clock() + spec.RespawnTime
-		else
-			ActiveMobsByNetId[mob.NetId] = nil
-		end
-	end
-
+	ActiveMobsByNetId[mob.NetId] = nil
 	broadcastMetadata(nil)
 end
 
@@ -1199,87 +1068,6 @@ WhistleCommandRemote.OnServerEvent:Connect(function(player: Player, commandCode:
 	end
 end)
 
---============================================================================
--- 7. WORLD BOSS & ELITE AOE SIMULATION
---============================================================================
-
-
-local function stepMobAndEliteAoEs(mob: SimMob, dt: number, now: number)
-	if not mob.IsAlive then
-		if mob.RespawnAt > 0 and now >= mob.RespawnAt then
-			mob.EntityGeneration+=1
-			mob.IsAlive = true
-			mob.CurrentHP = mob.MaxHP
-			mob.Position = mob.HomePosition
-			mob.RespawnAt = 0
-			broadcastMetadata(nil)
-		end
-		return
-	end
-
-
-	if mob.AoERadius > 0 and mob.NextAoECastTime > 0 then
-		local spec = (WorldBossConfig.MobSpecs :: any)[mob.SpecId]
-		local castDuration = spec and spec.AoECastTime or 2.0
-		local cooldown = spec and spec.AoECooldown or 10.0
-
-		if mob.AoEDetonateTime == nil and now >= mob.NextAoECastTime then
-			-- Only cast AoE if a hero or player is within 35 studs
-			local hasNearby = false
-			for _, p in ipairs(Players:GetPlayers()) do
-				local mPos = getMasterRootPosition(p)
-				if mPos and Tower.Same(Tower.GetState(p),mob) and not Tower.GetSafety(Tower.GetState(p),mPos).CombatSafe and getHorizontalDistance(mPos, mob.Position) <= 35 then
-					hasNearby = true
-					break
-				end
-			end
-			if hasNearby then
-				mob.AoEDetonateTime = now + castDuration
-				mob.NextAoECastTime = now + cooldown
-				Tower.BroadcastAt(BossTelegraphRemote,mob,
-					3, -- 3 = ELITE_AOE_CIRCLE
-					Vector2int16.new(math.round(mob.Position.X), math.round(mob.Position.Z)),
-					mob.AoERadius,
-					math.round(castDuration * 1000)
-				)
-			else
-				mob.NextAoECastTime = now + 2.0
-			end
-		elseif mob.AoEDetonateTime ~= nil and now >= mob.AoEDetonateTime then
-			mob.AoEDetonateTime = nil
-			-- Check Hero hits
-			local comas = {}
-			for _, simHero in pairs(ActiveHeroesByNetId) do
-				if Tower.Same(simHero,mob) and not Tower.GetSafety(simHero,simHero.Position).CombatSafe and getHorizontalDistance(simHero.Position, mob.Position) <= mob.AoERadius then
-					simHero.Stamina = math.max(0, simHero.Stamina - 15)
-					local rawDmg = mob.ATK * 2
-					local heroBarrier = simHero.BarrierHP or 0
-					if heroBarrier > 0 and (simHero.BarrierExpires or 0) > now then
-						local absorbed = math.min(heroBarrier, rawDmg)
-						simHero.BarrierHP = heroBarrier - absorbed
-						rawDmg -= absorbed
-					end
-					simHero.CurrentHP -= rawDmg
-					if simHero.CurrentHP <= 0 then
-						table.insert(comas, simHero)
-					end
-				end
-			end
-			for _, h in ipairs(comas) do
-				knockHeroIntoComa(h, COMA_DURATION_DEFAULT)
-			end
-			-- Check Relic Carrier Fumbles!
-			if _G.RelicService then
-				for _, p in ipairs(Players:GetPlayers()) do
-					local mPos = getMasterRootPosition(p)
-					if mPos and Tower.Same(Tower.GetState(p),mob) and not Tower.GetSafety(Tower.GetState(p),mPos).CombatSafe and getHorizontalDistance(mPos, mob.Position) <= mob.AoERadius then
-						_G.RelicService.FumbleRelicOnAoEHit(p)
-					end
-				end
-			end
-		end
-	end
-end
 
 --============================================================================
 -- 8. CORE 5 HZ HERO STATE MACHINE
@@ -1915,11 +1703,6 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 	accumulator = 0.0
 	local now = os.clock()
 	Encounters:Tick(dt)
-
-
-	for _, mob in pairs(ActiveMobsByNetId) do
-		if not (mob :: any).TowerEnemy then stepMobAndEliteAoEs(mob, dt, now) end
-	end
 
 	for _, simHero in pairs(ActiveHeroesByNetId) do
 		stepHeroSimulation(simHero, dt, now)

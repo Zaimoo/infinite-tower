@@ -37,7 +37,7 @@ PlotEspionageEvent.OnServerEvent:Connect(function(player: Player, opCode: any, p
 	local facName = "Infirmary"
 
 	if opCode == 2 or opCode == 3 then
-		-- 2 = COMPLETE_BLESS (+25% output, +25 Gems, +5 Honor)
+		-- 2 = COMPLETE_BLESS (+25% output, +25 Gems)
 		-- 3 = COMPLETE_LEECH (-20% stolen output for 3m; identical visual animation!)
 		local targetOwner = (_G.PlotManager and type(plotIndex) == "number") and _G.PlotManager.GetPlotOwner(plotIndex) or player
 		local targetProf = (targetOwner and dm.GetProfile(targetOwner)) or profile
@@ -53,10 +53,9 @@ PlotEspionageEvent.OnServerEvent:Connect(function(player: Player, opCode: any, p
 			-- Cooperative Blessing
 			facData.BlessedUntil = nowUnix + 180
 			facData.LastRuneWasLeech = false
-			local bonusGems = (targetProf.Social.Honor >= 50) and 28 or 25
+			local bonusGems = 25
 			profile.Currencies.Gems += bonusGems
-			dm.AdjustHonor(player, 5, false)
-			dm.SendToast(player, string.format("✨ Blessed %s (+25%% Output for 3m)! Earned +%d Gems & +5 Honor!", facName, bonusGems), "SUCCESS")
+			dm.SendToast(player, string.format("✨ Blessed %s (+25%% Output for 3m)! Earned +%d Gems!", facName, bonusGems), "SUCCESS")
 			if targetOwner and targetOwner ~= player then
 				dm.SendToast(targetOwner, string.format("⚠️ %s channeled a rune on your %s! (15s to Purge if suspicious!)", player.DisplayName, facName), "WARN")
 				dm.SyncProfile(targetOwner)
@@ -102,8 +101,7 @@ PlotEspionageEvent.OnServerEvent:Connect(function(player: Player, opCode: any, p
 					if _G.RelicService then
 						_G.RelicService.StunPlayer(thief, 3.0)
 					end
-					dm.AdjustHonor(thief, -10, false)
-					dm.SendToast(thief, "⚡ LEECH RUNE PURGED! You were stunned for 3.0s, lost -10 Honor, and dropped a Bounty Bag!", "WARN")
+					dm.SendToast(thief, "⚡ LEECH RUNE PURGED! You were stunned for 3.0s and dropped a Bounty Bag!", "WARN")
 				end
 			end
 			dm.BroadcastToast(string.format("🛡️ %s purged a Leech Rune on their %s and claimed a +50 Gem / +500 Gold Bounty Bag!", player.DisplayName, facName), "SUCCESS")

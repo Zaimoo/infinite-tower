@@ -31,7 +31,7 @@ Config.FloorCount = 50
 Config.FloorsPerBiome = 5
 Config.HubFloorId = 0 -- context only, never a playable floor/catalog record
 
--- These curves are inputs for combat integration, not existing WorldBossConfig
+-- These curves are inputs for tower combat integration
 -- replacements. Rewards stay physical; these values do not grant a travel payout.
 Config.Scaling = table.freeze({ HPPerFloor = 1.08, DamagePerFloor = 1.045, RewardPerFloor = 1.055 })
 Config.BaseStatsByRole = table.freeze({

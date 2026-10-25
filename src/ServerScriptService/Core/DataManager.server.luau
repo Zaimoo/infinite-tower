@@ -157,8 +157,8 @@ export type FacilityData = {
 }
 
 export type SocialProfile = {
-	Honor: number,
-	RogueUntilTimestamp: number,
+	Honor: number?,
+	RogueUntilTimestamp: number?,
 	PvPImmunityUntilTimestamp: number,
 	ActivePactPartnerUserId: number?,
 	LastShatterTimestamp: number,
@@ -407,8 +407,6 @@ local function createDefaultPlayerProfile(): PlayerProfile
 		LastLogoutTimestamp = os.time(),
 		LastActiveTimestamp = os.time(),
 		Social = {
-			Honor = 0,
-			RogueUntilTimestamp = 0,
 			PvPImmunityUntilTimestamp = 0,
 			LastShatterTimestamp = 0,
 			MimicIllusionMode = "TRUE_STATE",
@@ -580,30 +578,11 @@ function DataManager.ApplyCollisionGroup(player: Player)
 	end
 end
 
-function DataManager.AdjustHonor(player: Player, delta: number, markBetrayalRogue: boolean?)
-	local profile = ActiveProfiles[player]
-	if not profile then
-		return
-	end
-	profile.Social.Honor = math.clamp(profile.Social.Honor + delta, -100, 100)
-	if markBetrayalRogue then
-		profile.Social.RogueUntilTimestamp = os.time() + 300 -- 5 minutes
-		profile.Social.LastShatterTimestamp = os.time()
-		profile.Social.Stats.PactsBetrayed += 1
-	end
-	if player.Character then
-		player.Character:SetAttribute("Honor", profile.Social.Honor)
-		player.Character:SetAttribute("IsRogue", DataManager.IsPlayerRogue(player))
-	end
-	DataManager.SyncProfile(player)
+function DataManager.AdjustHonor(_player: Player, _delta: number, _markBetrayalRogue: boolean?)
 end
 
-function DataManager.IsPlayerRogue(player: Player): boolean
-	local profile = ActiveProfiles[player]
-	if not profile then
-		return false
-	end
-	return (profile.Social.Honor <= -30) or (os.time() < profile.Social.RogueUntilTimestamp)
+function DataManager.IsPlayerRogue(_player: Player): boolean
+	return false
 end
 
 function DataManager.MaxSquadSlots(_profile: PlayerProfile): number
@@ -1381,8 +1360,6 @@ local function onPlayerAdded(player: Player)
 
 	player.CharacterAdded:Connect(function(char)
 		task.wait(0.2)
-		char:SetAttribute("Honor", profile.Social.Honor)
-		char:SetAttribute("IsRogue", DataManager.IsPlayerRogue(player))
 		DataManager.ApplyCollisionGroup(player)
 		DataManager.SyncProfile(player)
 	end)

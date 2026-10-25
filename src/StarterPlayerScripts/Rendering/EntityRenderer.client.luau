@@ -11,7 +11,6 @@ local Workspace = game:GetService("Workspace")
 local LocalPlayer = Players.LocalPlayer
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local HeroCatalog = require(Shared:WaitForChild("Config"):WaitForChild("HeroCatalog"))
-local WorldBossConfig = require(Shared:WaitForChild("Config"):WaitForChild("WorldBossConfig"))
 
 local CombatRemotes = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CombatRemotes")
 local ReplicationTickRemote = CombatRemotes:WaitForChild("ReplicationTick") :: UnreliableRemoteEvent
@@ -111,12 +110,6 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 	if isHero then
 		local seed = meta and HeroCatalog.Seeds[meta.TemplateId]
 		bodyColor = (seed and seed.Color) or Color3.fromRGB(85, 175, 255)
-	else
-		local spec = meta and (WorldBossConfig.MobSpecs :: any)[meta.SpecId]
-		if spec then
-			bodySize = spec.Size or Vector3.new(4, 5.5, 4)
-			bodyColor = spec.Color or Color3.fromRGB(215, 75, 95)
-		end
 	end
 
 	local enemySpec=meta.EnemyId and FirstBiome.Get(meta.EnemyId)

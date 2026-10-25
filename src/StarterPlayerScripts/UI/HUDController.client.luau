@@ -189,15 +189,6 @@ local currencyLabel = makeLabel({
 	Parent = topBar,
 })
 
-local honorLabel = makeLabel({
-	Name = "HonorStatusBadge",
-	Size = UDim2.new(0.22, 0, 0.8, 0),
-	Position = UDim2.new(0.37, 0, 0.1, 0),
-	Text = " HONOR: 0 (NEUTRAL MASTER)",
-	TextColor3 = Color3.fromRGB(130, 225, 255),
-	Parent = topBar,
-})
-
 -- Top Right Navigation & Prototype Test Buttons
 local navButtonsFrame = makeFrame({
 	Size = UDim2.new(0.40, 0, 0.82, 0),
@@ -1231,21 +1222,6 @@ ProfileDeltaSyncEvent.OnClientEvent:Connect(function(profile: any)
 		math.floor(profile.Currencies.Gems)
 	)
 
-	local h = profile.Social.Honor
-	local isRogue = (h <= -30) or (os.time() < (profile.Social.RogueUntilTimestamp or 0))
-	if isRogue then
-		local rem = math.max(0, (profile.Social.RogueUntilTimestamp or 0) - os.time())
-		honorLabel.Text = string.format(" ROGUE MASTER (Hon: %d | %ds)", h, rem)
-		honorLabel.TextColor3 = Color3.fromRGB(255, 75, 85)
-	elseif h >= 50 then
-		honorLabel.Text = string.format(" SYNDICATE SAINT (Hon: +%d)", h)
-		honorLabel.TextColor3 = Color3.fromRGB(255, 220, 75)
-	else
-		honorLabel.Text = string.format(" HONOR: %d (NEUTRAL)", h)
-		honorLabel.TextColor3 = Color3.fromRGB(130, 225, 255)
-	end
-
-
 	if squadController and squadController:IsOpen() then
 		squadController:Refresh()
 	end
@@ -1400,7 +1376,6 @@ do
 	-- Remove top menu bar so the viewport top is unobstructed and currencies live in the bottom-left
 	topBar.Visible = false
 	currencyLabel.Visible = false
-	honorLabel.Visible = false
 
 	carriedLootPill.Parent = hudGui
 	carriedLootPill.AnchorPoint = Vector2.new(0, 1)
@@ -1683,7 +1658,6 @@ do
 		end
 
 		topBar.Visible = false
-		honorLabel.Visible = false
 
 		bossBanner.Position = UDim2.new(0.5, 0, 0, 14)
 		bossBanner.AnchorPoint = Vector2.new(0.5, 0)
