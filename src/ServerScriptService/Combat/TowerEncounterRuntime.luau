@@ -7,6 +7,8 @@ local MobCatalog = require(RS.Shared.Config.MobCatalog)
 local TowerFloorConfig = require(RS.Shared.Config.TowerFloorConfig)
 local StatBalance = require(RS.Shared.Config.StatBalance)
 local Timeline = require(RS.Shared.Util.AttackTimeline)
+local TowerProgress = require(RS.Shared.Util.TowerProgress)
+local TowerLayout = require(RS.Shared.Config.TowerLayout)
 local Runtime = {}
 
 function Runtime.new(api: any): any
@@ -85,6 +87,101 @@ function Runtime.new(api: any): any
 		end
 		return { Enabled = false }
 	end
+	function self:GetActiveBoss(floorId: number)
+		for _, m in pairs(api.Mobs) do
+			if m.TowerEnemy and m.Role == "BOSS" and m.FloorId == floorId and m.IsAlive then
+				return m
+			end
+		end
+		return nil
+	end
+	function self:SpawnBoss(floorId: number, player: any?)
+		local activeBoss = self:GetActiveBoss(floorId)
+		if activeBoss then
+			return activeBoss
+		end
+		local room = api.Tower.GetRoom(floorId)
+		if not room or room.Status ~= "READY" then
+			return nil
+		end
+		local floorSpec = TowerFloorConfig.Get(floorId)
+		if not floorSpec then
+			return nil
+		end
+		local enemyId = TowerProgress.GetFloorBossEnemyId(floorId)
+		local cat = MobCatalog.Get(enemyId)
+		local e = table.clone(Config.Get(enemyId))
+		local layout = TowerLayout.Get(floorSpec.IndexInBiome)
+		local apexPlatform = layout.Platforms.Apex or layout.Platforms.Crossing or layout.Platforms.Basin
+		local posX, posY, posZ = apexPlatform.X, apexPlatform.Y, apexPlatform.Z
+		local homePos = api.Navigation.Ground(room.Origin + Vector3.new(posX, posY + 6, posZ), nil, 2, 12) or (room.Origin + Vector3.new(posX, posY, posZ))
+
+		local maxHP, atk, gold = 12000, 55, 800
+		local floorStats = TowerFloorConfig.GetEnemyStats(floorId, enemyId)
+		if floorStats then
+			maxHP = floorStats.MaxHP
+			atk = floorStats.ATK
+			gold = floorStats.GoldReward
+		else
+			local numeric = StatBalance.GetFloorStats(floorId, "BOSS")
+			if numeric then
+				maxHP = numeric.MaxHP
+				atk = numeric.ATK
+			else
+				maxHP = math.round(12000 * (1.08 ^ (floorId - 1)))
+				atk = math.round(55 * (1.045 ^ (floorId - 1)))
+			end
+			gold = math.round(800 * (1.055 ^ (floorId - 1)))
+		end
+
+		local netId = api.Allocate()
+		local now = workspace:GetServerTimeNow()
+		local boss = {
+			NetId = netId,
+			EntityGeneration = 1,
+			FloorId = floorId,
+			RoomGeneration = room.RoomGeneration,
+			EnemyId = enemyId,
+			SpecId = enemyId,
+			DisplayName = e.DisplayName or (cat and cat.DisplayName) or "Floor Boss",
+			TowerEnemy = true,
+			Role = "BOSS",
+			MobType = "RING2_ELITE",
+			RingIndex = 3,
+			Slot = 80000 + netId,
+			LifeGeneration = 1,
+			CurrentHP = maxHP,
+			MaxHP = maxHP,
+			ATK = atk,
+			GoldReward = gold,
+			IsAlive = true,
+			State = "IDLE",
+			Yaw = math.pi,
+			Phase = 1,
+			DamageLedger = {},
+			Cooldowns = {},
+			ActionCounter = 0,
+			ActionSequence = 0,
+			RespawnAt = math.huge,
+			BornAt = now,
+			HomePosition = homePos,
+			Position = homePos,
+			LocalPosition = Vector3.new(posX, posY, posZ),
+			LeashRadius = 120,
+			CampId = "CAMP_APEX_SANCTUM",
+			SummonedByUserId = player and player.UserId or nil,
+		}
+
+		api.Mobs[netId] = boss
+		api.Send(boss, {
+			Kind = "BOSS_SPAWN",
+			Actor = Timeline.Identity(boss),
+			EnemyId = enemyId,
+			StartServerTime = now,
+		})
+		api.Changed()
+		return boss
+	end
 	function self:Death(m, killer)
 		if not m.IsAlive then return end
 		self:Cancel(m, "ACTOR_DEATH")
@@ -97,7 +194,7 @@ function Runtime.new(api: any): any
 		if ledger.PayoutClaims[key] then return end
 		ledger.PayoutClaims[key] = true
 		self.Metrics.Deaths += 1
-		m.RespawnAt = workspace:GetServerTimeNow() + (m.Role == "BOSS" and Config.BossRespawnSeconds or Config.RespawnSeconds)
+		m.RespawnAt = workspace:GetServerTimeNow() + (m.Role == "BOSS" and Config.BossRespawnSeconds or 1.0)
 		api.Send(m, { Kind = "DEATH", Actor = Timeline.Identity(m), EnemyId = m.EnemyId, StartServerTime = workspace:GetServerTimeNow(), Duration = 1.6 })
 		-- Claim before any reward/profile callback. Travel and simultaneous hits cannot retry it.
 		api.Reward(m, killer)

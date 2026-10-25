@@ -701,15 +701,28 @@ local visitBtn = createOrnateButton(actionRow, "VISIT FLOOR", 1, true, function(
 	local visitingFloor = if selfState and selfState.PlayerLocation then selfState.PlayerLocation.FloorId else 0
 	if visitingFloor == selected then
 		request("HUB")
-	else
-		request("VISIT", selected)
+		return
 	end
+	local profile = _G.CurrentProfile
+	local maxAllowed = math.max(1, if profile then (profile.MaxFloorReached or ((profile.HighestClearedFloor or 0) + 1)) else 1)
+	if selected > maxAllowed then
+		lastFeedback = string.format("Floor %d is locked! Slay Floor %d Boss first.", selected, selected - 1)
+		render()
+		return
+	end
+	request("VISIT", selected)
 end)
 
 local assignBtn = createOrnateButton(actionRow, "ASSIGN SQUAD", 2, false, function()
+	local profile = _G.CurrentProfile
+	local maxAllowed = math.max(1, if profile then (profile.MaxFloorReached or ((profile.HighestClearedFloor or 0) + 1)) else 1)
+	if selected > maxAllowed then
+		lastFeedback = string.format("Cannot assign squad to locked Floor %d!", selected)
+		render()
+		return
+	end
 	request("ASSIGN", selected)
 end)
-
 local recallBtn = createOrnateButton(actionRow, "RECALL SQUAD", 3, false, function()
 	request("RECALL")
 end)
@@ -742,16 +755,26 @@ render = function()
 	local bossEntry = floor.BossEnemyId and mobs.Get(floor.BossEnemyId) or nil
 	local bossText = if bossEntry then string.format(" · BOSS: %s", bossEntry.DisplayName) else ""
 
+	local profile = _G.CurrentProfile
+	local maxAllowed = math.max(1, if profile then (profile.MaxFloorReached or ((profile.HighestClearedFloor or 0) + 1)) else 1)
+	local isSelectedLocked = selected > maxAllowed
+
 	-- 1. Update Floor Details Card
-	detailHeader.Text = string.format("Floor %d · %s (%s%s)", selected, floor.DisplayName, floor.BiomeDisplayName or (biome and biome.DisplayName) or floor.BiomeId, bossText)
-
-	detailScaling.Text = string.format(
-		"Scaling: HP <font color=\"#4ADE80\">×%.2f</font> · ATK <font color=\"#4ADE80\">×%.2f</font> · Gold/XP <font color=\"#4ADE80\">×%.2f</font>",
-		floor.Difficulty.HPMultiplier,
-		floor.Difficulty.DamageMultiplier,
-		floor.Rewards.GoldMultiplier
-	)
-
+	if isSelectedLocked then
+		detailHeader.Text = string.format("Floor %d Â· %s (LOCKED)", selected, floor.DisplayName)
+		detailScaling.Text = string.format(
+			"LOCKED Â· Slay Floor %d Boss to unlock!",
+			selected - 1
+		)
+	else
+		detailHeader.Text = string.format("Floor %d Â· %s (%s%s)", selected, floor.DisplayName, floor.BiomeDisplayName or (biome and biome.DisplayName) or floor.BiomeId, bossText)
+		detailScaling.Text = string.format(
+			"Scaling: HP <font color=\"#4ADE80\">Ã—%.2f</font> Â· ATK <font color=\"#4ADE80\">Ã—%.2f</font> Â· Gold/XP <font color=\"#4ADE80\">Ã—%.2f</font>",
+			floor.Difficulty.HPMultiplier,
+			floor.Difficulty.DamageMultiplier,
+			floor.Rewards.GoldMultiplier
+		)
+	end
 	detailRoster.Text = string.format("Roster: %s", #encounterNames > 0 and table.concat(encounterNames, ", ") or "None")
 
 	detailVisitors.Text = string.format(
@@ -767,12 +790,19 @@ render = function()
 	for bIdx = 1, 10 do
 		local cardData = biomeCards[bIdx]
 		if cardData then
+			local firstF = (bIdx - 1) * 5 + 1
+			local isBiomeLocked = firstF > maxAllowed
 			local isCurrentBiome = (bIdx == activeBiomeIndex)
 			if isCurrentBiome then
 				cardData.Stroke.Color = C.BorderSelected
 				cardData.Stroke.Thickness = 1.8
 				cardData.PillStroke.Color = C.BorderSelected
 				cardData.Label.TextColor3 = C.TextWhite
+			elseif isBiomeLocked then
+				cardData.Stroke.Color = Color3.fromRGB(35, 28, 48)
+				cardData.Stroke.Thickness = 1.0
+				cardData.PillStroke.Color = Color3.fromRGB(40, 32, 52)
+				cardData.Label.TextColor3 = Color3.fromRGB(110, 95, 130)
 			else
 				cardData.Stroke.Color = C.BorderNormal
 				cardData.Stroke.Thickness = 1.0
@@ -781,7 +811,6 @@ render = function()
 			end
 		end
 	end
-
 	-- 3. Update 5 Floor Buttons of the Active Biome
 	local firstFloorOfBiome = (activeBiomeIndex - 1) * 5 + 1
 	for slotIdx = 1, 5 do
@@ -792,17 +821,20 @@ render = function()
 			local isVisiting = (visitingFloor == fId)
 			local isAssigned = (assignedFloor == fId)
 			local isBoss = (fId % 5 == 0)
+			local isFloorLocked = (fId > maxAllowed)
 
 			local displayText = tostring(fId)
-			if isBoss then
-				displayText ..= " ◆"
+			if isFloorLocked then
+				displayText ..= " [LOCKED]"
+			elseif isBoss then
+				displayText ..= " â—†"
 			end
 			if isVisiting and isAssigned then
-				displayText ..= " ★"
+				displayText ..= " â˜…"
 			elseif isVisiting then
-				displayText ..= " ●"
+				displayText ..= " â—"
 			elseif isAssigned then
-				displayText ..= " ▲"
+				displayText ..= " â–²"
 			end
 			slotData.Number.Text = displayText
 
@@ -813,6 +845,13 @@ render = function()
 				slotData.Number.TextColor3 = C.TextWhite
 				for _, d in ipairs(slotData.Corners) do
 					d.BackgroundColor3 = C.BorderSelected
+				end
+			elseif isFloorLocked then
+				slotData.Stroke.Color = Color3.fromRGB(38, 30, 50)
+				slotData.Stroke.Thickness = 1.0
+				slotData.Number.TextColor3 = Color3.fromRGB(90, 75, 110)
+				for _, d in ipairs(slotData.Corners) do
+					d.BackgroundColor3 = Color3.fromRGB(38, 30, 50)
 				end
 			elseif isVisiting then
 				slotData.Stroke.Color = C.BorderVisiting
@@ -847,14 +886,17 @@ render = function()
 			slotData.FloorId = fId
 		end
 	end
-
 	-- 4. Dynamic Action Button Text
-	if visitingFloor == selected and visitingFloor > 0 then
+	if isSelectedLocked then
+		visitBtn.Text = "LOCKED"
+		assignBtn.Text = "LOCKED"
+	elseif visitingFloor == selected and visitingFloor > 0 then
 		visitBtn.Text = "RETURN TO HUB"
+		assignBtn.Text = "ASSIGN SQUAD"
 	else
 		visitBtn.Text = "VISIT FLOOR"
+		assignBtn.Text = "ASSIGN SQUAD"
 	end
-
 	-- 5. Status Footer Readout
 	if selfState then
 		local locStr = if visitingFloor == 0 then "Hub" else string.format("Floor %d (%s)", visitingFloor, floors.Get(visitingFloor).DisplayName)
@@ -915,6 +957,17 @@ UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: 
 end)
 
 -- Remote Event Listeners
+
+local SyndicateRemotes = RS:WaitForChild("Remotes"):WaitForChild("SyndicateRemotes")
+local ProfileDeltaSyncEvent = SyndicateRemotes:WaitForChild("ProfileDeltaSync") :: RemoteEvent
+ProfileDeltaSyncEvent.OnClientEvent:Connect(function(profile: any)
+	if profile and not profile._PitDelta then
+		_G.CurrentProfile = profile
+		if panel.Visible then
+			render()
+		end
+	end
+end)
 remotes.OpenSelector.OnClientEvent:Connect(function()
 	if _G.OpenMasterModal then _G.OpenMasterModal("NONE") end
 	panel.Visible = true
@@ -936,7 +989,17 @@ PromptService.PromptTriggered:Connect(function(prompt, who)
 	elseif action == "PREVIOUS" and curFloor > 1 then
 		request("VISIT", curFloor - 1)
 	elseif action == "NEXT" and curFloor > 0 and curFloor < 50 then
-		request("VISIT", curFloor + 1)
+		local nextFloor = curFloor + 1
+		local profile = _G.CurrentProfile
+		local maxAllowed = math.max(1, if profile then (profile.MaxFloorReached or ((profile.HighestClearedFloor or 0) + 1)) else 1)
+		if nextFloor <= maxAllowed then
+			request("VISIT", nextFloor)
+		else
+			lastFeedback = string.format("Floor %d is locked! Slay Floor %d Boss first.", nextFloor, curFloor)
+			panel.Visible = true
+			scrim.Visible = true
+			render()
+		end
 	end
 end)
 

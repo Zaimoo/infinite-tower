@@ -49,7 +49,7 @@ for _,v in builds do
 end
 function B.GetFloorStats(floor: number, role: string): any?
 	if not B.Integer(floor,1,50) then return nil end
-	local multipliers=({REGULAR={2,.015},ELITE={8,.03},BOSS={45,.04}})[role]
+	local multipliers=({REGULAR={2,.015},ELITE={8,.03},BOSS={25,.04}})[role]
 	if not multipliers then return nil end
 	local a,b=anchors[1],anchors[#anchors]
 	for _,v in anchors do if v.Floor<=floor then a=v end;if v.Floor>=floor then b=v;break end end

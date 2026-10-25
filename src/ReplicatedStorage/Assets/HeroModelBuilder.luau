@@ -73,6 +73,37 @@ local function makeWedge(parent: Instance, name: string, size: Vector3, cfOffset
 	return w
 end
 
+-- Resets every R15 Motor6D to its neutral RigAttachment CFrames so procedural
+-- animation in ArtPackVisuals.Animate does not compound on top of baked poses.
+local function normalizeR15Joints(model: Model)
+	local prevParent = model.Parent
+	if not model:IsDescendantOf(Workspace) then
+		model.Parent = Workspace
+	end
+	local hrp = model:FindFirstChild("HumanoidRootPart") :: BasePart?
+	local prevAnchored = if hrp then hrp.Anchored else false
+	if hrp then
+		hrp.Anchored = true
+	end
+	for _, motor in ipairs(model:GetDescendants()) do
+		if motor:IsA("Motor6D") and motor.Part0 and motor.Part1 then
+			local att0 = motor.Part0:FindFirstChild(motor.Name .. "RigAttachment")
+			local att1 = motor.Part1:FindFirstChild(motor.Name .. "RigAttachment")
+			if att0 and att0:IsA("Attachment") and att1 and att1:IsA("Attachment") then
+				motor.C0 = att0.CFrame
+				motor.C1 = att1.CFrame
+				motor.Transform = CFrame.identity
+			end
+		end
+	end
+	if hrp then
+		hrp.Anchored = prevAnchored
+	end
+	if model.Parent ~= prevParent then
+		model.Parent = prevParent
+	end
+end
+
 local function createBaseR15(heroId: string, skinColor: Color3): Model
 	local desc = Instance.new("HumanoidDescription")
 	local model = Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R15)
@@ -762,6 +793,7 @@ function HeroModelBuilder.EnsureHeroes(): { [string]: Model }
 							d.Anchored = false
 						end
 					end
+					normalizeR15Joints(clone)
 					local head = clone:FindFirstChild("Head") :: BasePart?
 					if head then
 						attachJennaHair(head)
@@ -785,6 +817,7 @@ function HeroModelBuilder.EnsureHeroes(): { [string]: Model }
 			end
 		else
 			if heroId == "hero_jenna" then
+				normalizeR15Joints(existing :: Model)
 				local head = existing:FindFirstChild("Head") :: BasePart?
 				if head then
 					attachJennaHair(head)

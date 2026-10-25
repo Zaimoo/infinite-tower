@@ -24,6 +24,7 @@ local FirstBiome=require(Shared.Config.FirstBiomeCombat)
 local TowerRewards=require(Shared.Config.TowerFloorConfig)
 local EncounterRuntime=require(script.Parent.TowerEncounterRuntime)
 local AttackTimeline=require(Shared.Util.AttackTimeline)
+local TowerProgress=require(Shared.Util.TowerProgress)
 local Encounters: any=nil
 local CombatLifecycleRevision=0
 local TowerRemotes=ReplicatedStorage.Remotes.TowerRemotes
@@ -38,6 +39,10 @@ local LootStolenAlertRemote = CombatRemotes:WaitForChild("LootStolenAlert") :: R
 local SquadWipeStateRemote = CombatRemotes:WaitForChild("SquadWipeState") :: RemoteEvent
 local CarriedLootSyncRemote = CombatRemotes:WaitForChild("CarriedLootSync") :: RemoteEvent
 local PhysicalLootFolder = Workspace:WaitForChild("PhysicalLoot") :: Folder
+local FloorProgressRemote = TowerRemotes:WaitForChild("FloorProgress") :: RemoteEvent
+local SquadDefeatedRemote = TowerRemotes:WaitForChild("SquadDefeated") :: RemoteEvent
+local ActivePlayerProgress: { [Player]: TowerProgress.PlayerFloorProgress } = {}
+
 local DropCarriedItemRemote = CombatRemotes:FindFirstChild("DropCarriedItem") :: RemoteEvent?
 if not DropCarriedItemRemote then
 	DropCarriedItemRemote = Instance.new("RemoteEvent")
@@ -525,48 +530,35 @@ DropCarriedItemRemote.OnServerEvent:Connect(function(player: Player)
 	end
 end)
 
-local function knockHeroIntoComa(simHero: SimHero, baseComaSeconds: number)
+local function knockHeroIntoComa(simHero: SimHero, _baseComaSeconds: number?)
 	HeroNavigation.Clear(simHero)
 	local dm = getDataManager()
 	local profile = dm.GetProfile(simHero.Owner)
-	local effectiveComa = baseComaSeconds
+
+	-- Phase 2 Hard Death Rules: dead heroes collapse in place with CurrentHP = 0, State = "COMA"
+	-- No 60-second coma and no hospital/infirmary timers!
+	simHero.CurrentHP = 0
+	simHero.State = "COMA"
+	simHero.TargetNetId = nil
+	ProgressionAwards[simHero.NetId] = nil
 
 	if profile then
-		local inf = profile.Facilities.Infirmary
-		local sumLabor = 0
-		for _, wUUID in ipairs(inf.AssignedHeroUUIDs) do
-			local wHero = profile.Heroes[wUUID]
-			if wHero then
-				sumLabor += StatFormulas.GetEffectiveLabor(wHero, "FACILITY_INFIRMARY")
-			end
-		end
-		local _, reducedComa = StatFormulas.GetInfirmaryRates(inf.Level, sumLabor)
-		effectiveComa = math.round(reducedComa)
-
 		local heroInstance = profile.Heroes[simHero.HeroUUID]
 		if heroInstance then
-			heroInstance.CurrentStamina = 0
-			heroInstance.ComaUntilTimestamp = os.time() + effectiveComa
-			heroInstance.Assignment = "FACILITY_INFIRMARY"
+			heroInstance.ComaUntilTimestamp = nil
 		end
-	end
-
-	ProgressionAwards[simHero.NetId] = nil
-	ActiveHeroesByNetId[simHero.NetId] = nil
-	Tower.RosterChanged(simHero.Owner,math.max(0,Tower.GetState(simHero.Owner).SquadSize-1))
-	local masterState = ActiveMasters[simHero.Owner]
-	if masterState then
-		masterState.DeployedHeroes[simHero.HeroUUID] = nil
 	end
 
 	dm.SendToast(
 		simHero.Owner,
-		string.format("🚑 %s entered a %ds COMA and was warped to your Infirmary!", simHero.DisplayName, effectiveComa),
+		string.format("%s collapsed! (No mid-run revives)", simHero.DisplayName),
 		"WARN"
 	)
 	dm.SyncProfile(simHero.Owner)
 
-	-- Squad Wipe Detection: Check if ALL deployed heroes are now in Coma
+	local masterState = ActiveMasters[simHero.Owner]
+
+	-- Squad Wipe Detection: Check if ALL deployed heroes are now in Coma (CurrentHP <= 0)
 	local hasAliveHero = false
 	if masterState then
 		for _, h in pairs(masterState.DeployedHeroes) do
@@ -594,13 +586,50 @@ local function knockHeroIntoComa(simHero: SimHero, baseComaSeconds: number)
 		CarriedLootSyncRemote:FireClient(simHero.Owner, 0, 0)
 		SquadWipeStateRemote:FireClient(simHero.Owner, true)
 
+		local currentFloor = Tower.GetState(simHero.Owner).FloorId
+		if SquadDefeatedRemote then
+			SquadDefeatedRemote:FireClient(simHero.Owner, currentFloor)
+		end
+
 		dm.SendToast(
 			simHero.Owner,
-			"💀 ALL HEROES FALLEN! All carried loot dropped! Return to your Waiting Room to recover your squad.",
+			string.format("ALL HEROES FALLEN on Floor %d! Carried loot dropped. Teleporting to Fortress Plot...", currentFloor),
 			"WARN"
 		)
+
+		task.defer(function()
+			local PlotManager = require(game:GetService("ServerScriptService").Core.PlotManager)
+			PlotManager.TeleportPlayerToPlot(simHero.Owner)
+		end)
 	end
 
+	broadcastMetadata(nil)
+end
+
+local function restoreSquadOnPlot(player: Player)
+	local masterState = ActiveMasters[player]
+	if masterState then
+		for _, h in pairs(masterState.DeployedHeroes) do
+			h.CurrentHP = h.MaxHP
+			h.State = "FOLLOW_MASTER"
+			ActiveHeroesByNetId[h.NetId] = h
+		end
+		masterState.IsSquadWiped = false
+		masterState.CanCollectLoot = true
+		if player.Character then
+			player.Character:SetAttribute("SquadWiped", false)
+		end
+		SquadWipeStateRemote:FireClient(player, false)
+	end
+
+	local dm = getDataManager()
+	local profile = dm.GetProfile(player)
+	if profile then
+		for _, hero in pairs(profile.Heroes) do
+			hero.ComaUntilTimestamp = nil
+		end
+		dm.SyncProfile(player)
+	end
 	broadcastMetadata(nil)
 end
 
@@ -1070,6 +1099,22 @@ WhistleCommandRemote.OnServerEvent:Connect(function(player: Player, commandCode:
 		Tower.Recall(player)
 	end
 end)
+
+if FloorProgressRemote then
+	FloorProgressRemote.OnServerEvent:Connect(function(player: Player)
+		local progress = ActivePlayerProgress[player]
+		if progress then
+			FloorProgressRemote:FireClient(player, progress)
+		else
+			local state = Tower.GetState(player)
+			if state and state.FloorId and state.FloorId > 0 then
+				local newProg = TowerProgress.CreateProgress(state.FloorId)
+				ActivePlayerProgress[player] = newProg
+				FloorProgressRemote:FireClient(player, newProg)
+			end
+		end
+	end)
+end
 
 
 --============================================================================
@@ -1588,17 +1633,34 @@ Tower.RegisterAdapter("Combat",{
   for _,entry in saved.Heroes do for _,key in {"Position","FloorId","RoomGeneration","EntityGeneration","TargetNetId","State","PacifiedUntil","ActionSequence"} do entry.Ref[key]=entry[key] end;HeroNavigation.Clear(entry.Ref) end
  end,
  CanRecall=function(player) local m=ActiveMasters[player];return m~=nil and os.clock()-m.LastRecallClock>=RECALL_COOLDOWN end,
- Transfer=function(player,room,recall,anchor)
-  local m=ActiveMasters[player];if not m then return end
-  m.FocusedTargetNetId=nil;m.TargetEnemyUserId=nil
-  if recall then m.LastRecallClock=os.clock();ProgressionActivity[player]=os.clock() end
-  for _,h in pairs(m.DeployedHeroes) do
-   h.FloorId=room.FloorId;h.RoomGeneration=room.RoomGeneration;h.EntityGeneration+=1
-   h.Position=HeroNavigation.PlaceNear(anchor or room.Arrival.Position,getFormationOffset(h.SlotIndex))
-   h.TargetNetId=nil;h.State="FOLLOW_MASTER";h.PacifiedUntil=os.clock()+2;h.ActionSequence=0;HeroNavigation.Clear(h)
-   for _,other in pairs(ActiveHeroesByNetId) do if other.TargetNetId==h.NetId then other.TargetNetId=nil;other.State="FOLLOW_MASTER" end end
-  end
- end,
+  Transfer=function(player,room,recall,anchor)
+   local m=ActiveMasters[player];if not m then return end
+   m.FocusedTargetNetId=nil;m.TargetEnemyUserId=nil
+   if recall then m.LastRecallClock=os.clock();ProgressionActivity[player]=os.clock() end
+   for _,h in pairs(m.DeployedHeroes) do
+    h.FloorId=room.FloorId;h.RoomGeneration=room.RoomGeneration;h.EntityGeneration+=1
+    h.Position=HeroNavigation.PlaceNear(anchor or room.Arrival.Position,getFormationOffset(h.SlotIndex))
+    h.TargetNetId=nil;h.State="FOLLOW_MASTER";h.PacifiedUntil=os.clock()+2;h.ActionSequence=0;HeroNavigation.Clear(h)
+    for _,other in pairs(ActiveHeroesByNetId) do if other.TargetNetId==h.NetId then other.TargetNetId=nil;other.State="FOLLOW_MASTER" end end
+   end
+   if room.FloorId == 0 then
+    ActivePlayerProgress[player] = nil
+    restoreSquadOnPlot(player)
+   else
+    local existing = ActivePlayerProgress[player]
+    if not existing or existing.FloorId ~= room.FloorId then
+     local progress = TowerProgress.CreateProgress(room.FloorId)
+     ActivePlayerProgress[player] = progress
+     if FloorProgressRemote then
+      FloorProgressRemote:FireClient(player, progress)
+     end
+    else
+     if FloorProgressRemote then
+      FloorProgressRemote:FireClient(player, existing)
+     end
+    end
+   end
+  end,
  CaptureCargo=function(player) return CarrierToHeldLoot[player] end,
  DropCargo=function(player) CombatSimulation.DropCarriedLoot(player,true) end,
  Pins=function(id,gen)
@@ -1635,36 +1697,87 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
    if victim.CurrentHP<=0 then knockHeroIntoComa(victim,COMA_DURATION_DEFAULT) end
   end
  end,
- Reward=function(mob,killer)
-  awardParticipationXP(mob)
-  local dm = getDataManager()
-  if killer and killer.Parent==Players then
-   local marketMult = dm.GetMarketMultiplier and dm.GetMarketMultiplier(killer) or 1.0
-   local profile = dm.GetProfile(killer)
-   if profile then
-    local reward = TowerRewards.GetKillRewards(mob.FloorId, mob.Role)
-    profile.Currencies.Gold += math.round(reward.Gold * marketMult)
-    profile.Currencies.Gems += reward.Gems
-    dm.SyncProfile(killer)
-    local tier = TowerRewards.RollRelic(mob.FloorId, mob.Role, math.random(), math.random())
-    if tier and _G.RelicService then
-     _G.RelicService.SpawnRelic(tier, mob.Position, killer.UserId)
+  Reward=function(mob,killer)
+   awardParticipationXP(mob)
+   local dm = getDataManager()
+   local isBoss = (mob :: any).Role == "BOSS"
+
+   if not isBoss then
+    if killer and killer.Parent == Players then
+     local marketMult = dm.GetMarketMultiplier and dm.GetMarketMultiplier(killer) or 1.0
+     local profile = dm.GetProfile(killer)
+     if profile then
+      local reward = TowerRewards.GetKillRewards(mob.FloorId, mob.Role)
+      profile.Currencies.Gold += math.round(reward.Gold * marketMult)
+      profile.Currencies.Gems += reward.Gems
+      dm.SyncProfile(killer)
+      local tier = TowerRewards.RollRelic(mob.FloorId, mob.Role, math.random(), math.random())
+      if tier and _G.RelicService then
+       _G.RelicService.SpawnRelic(tier, mob.Position, killer.UserId)
+      end
+     end
+
+     local progress = ActivePlayerProgress[killer]
+     if not progress or progress.FloorId ~= mob.FloorId then
+      progress = TowerProgress.CreateProgress(mob.FloorId)
+      ActivePlayerProgress[killer] = progress
+      if FloorProgressRemote then
+       FloorProgressRemote:FireClient(killer, progress)
+      end
+     end
+     if progress and progress.FloorId == mob.FloorId and not progress.BossSpawned then
+      local shouldSpawn = TowerProgress.RecordKill(progress, mob.Role)
+      if FloorProgressRemote then
+       FloorProgressRemote:FireClient(killer, progress)
+      end
+      if shouldSpawn and Encounters then
+       local bossMob = Encounters:SpawnBoss(mob.FloorId, killer)
+       if bossMob then
+        progress.BossNetId = bossMob.NetId
+       end
+       dm.SendToast(killer, string.format("Floor %d Boss Summoned! Defeat it to unlock Floor %d!", mob.FloorId, mob.FloorId + 1), "WARN")
+      end
+     end
+    end
+   else
+    -- Boss Defeated: distribute full copies of uncontestable rewards to participants with >= 3% damage
+    for p, _ in pairs(ActiveMasters) do
+     local s = Tower.GetState(p)
+     if (s.FloorId == mob.FloorId or s.SquadFloorId == mob.FloorId) and p.Parent == Players then
+      local damage = (mob.DamageLedger and mob.DamageLedger[p.UserId]) or 0
+      if TowerProgress.CheckParticipation(damage, mob.MaxHP, p == killer) then
+       local marketMult = dm.GetMarketMultiplier and dm.GetMarketMultiplier(p) or 1.0
+       local profile = dm.GetProfile(p)
+       local reward = TowerRewards.GetKillRewards(mob.FloorId, "BOSS")
+       local bossGold = math.round(reward.Gold * marketMult)
+       local bossGems = reward.Gems
+       if profile then
+        profile.Currencies.Gold += bossGold
+        profile.Currencies.Gems += bossGems
+        profile.HighestClearedFloor = math.max(profile.HighestClearedFloor or 0, mob.FloorId)
+        profile.MaxFloorReached = math.max(profile.MaxFloorReached or 0, mob.FloorId + 1)
+        dm.SyncProfile(p)
+       end
+
+       if mob.FloorId % 5 == 0 then
+        local bossTier = math.floor(mob.FloorId / 5)
+        dm.RecordBiomeBossClear(p, bossTier)
+       end
+
+       local progress = ActivePlayerProgress[p]
+       if progress and progress.FloorId == mob.FloorId then
+        progress.BossDefeated = true
+        if FloorProgressRemote then
+         FloorProgressRemote:FireClient(p, progress)
+        end
+       end
+
+       dm.SendToast(p, string.format("Floor %d Boss Defeated! Unlocked Floor %d! (+%d Gold, +%d Gem)", mob.FloorId, mob.FloorId + 1, bossGold, bossGems), "SUCCESS")
+      end
+     end
     end
    end
-  end
-  if (mob :: any).Role == "BOSS" and mob.FloorId and mob.FloorId % 5 == 0 then
-   local bossTier = math.floor(mob.FloorId / 5)
-   if killer and killer.Parent == Players then
-    dm.RecordBiomeBossClear(killer, bossTier)
-   end
-   for p in pairs(ActiveMasters) do
-    local s = Tower.GetState(p)
-    if (s.FloorId == mob.FloorId or s.SquadFloorId == mob.FloorId) and p ~= killer then
-     dm.RecordBiomeBossClear(p, bossTier)
-    end
-   end
-  end
- end,
+  end,
 })
 if RunService:IsStudio() then
  CombatSimulation.DebugEncounters=Encounters
@@ -1713,6 +1826,7 @@ for _, p in ipairs(Players:GetPlayers()) do
 end
 
 Players.PlayerRemoving:Connect(function(player: Player)
+	ActivePlayerProgress[player] = nil
 	CombatSimulation.DropCarriedLoot(player,true)
 	ProgressionActivity[player] = nil
 	LastMetadataRequestByPlayer[player] = nil

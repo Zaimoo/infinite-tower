@@ -25,7 +25,11 @@ end)
 
 if okWeapons and weapons then
 	local count = 0
-	for _ in pairs(weapons) do count += 1 end
+	if typeof(weapons) == "Instance" then
+		count = #weapons:GetChildren()
+	elseif type(weapons) == "table" then
+		for _ in pairs(weapons) do count += 1 end
+	end
 	print(string.format("[HeroAssetSetup] Verified and populated %d weapon models in ReplicatedStorage.Assets.Weapons", count))
 else
 	warn("[HeroAssetSetup] Failed to populate weapon models:", tostring(weapons))
