@@ -1247,7 +1247,8 @@ RunService.RenderStepped:Connect(function()
 	end
 
 	local eRem = math.max(0, 6.0 - (now - LastEClock))
-	local novaElapsed = (cs and cs.NovaCastStartClock > 0) and (now - cs.NovaCastStartClock) or 999
+	local novaStart = cs and cs.NovaCastStartClock or 0
+	local novaElapsed = if novaStart > 0 then (now - novaStart) else 999
 	local inNovaOptimalWindow = (novaElapsed >= 1.1 and novaElapsed <= 2.8)
 
 	if inNovaOptimalWindow then
