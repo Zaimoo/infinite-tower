@@ -129,15 +129,16 @@ local function alignHunterArrow(bowModel: Model, handle: BasePart)
 end
 
 function WeaponModelBuilder.BuildBow(): Model
-	-- Check if high-fidelity authored bow exists in Jenna preview or existing hero model
+	-- Check if authoritative bow prefab exists in ReplicatedStorage Assets
 	local candidate: Model? = nil
-	local mv = Workspace:FindFirstChild("ModelViewer")
-	local jp = mv and mv:FindFirstChild("JennaPreview")
-	if jp and jp:FindFirstChild("EquippedWeapon") and jp.EquippedWeapon:IsA("Model") then
-		candidate = jp.EquippedWeapon
+	local assets = ReplicatedStorage:FindFirstChild("Assets")
+	local weaponsFolder = assets and assets:FindFirstChild("Weapons")
+	local existingBow = weaponsFolder and weaponsFolder:FindFirstChild("weapon_bow")
+	if existingBow and existingBow:IsA("Model") and #existingBow:GetChildren() > 0 then
+		candidate = existingBow
 	end
 	if not candidate then
-		local heroesFolder = ReplicatedStorage:FindFirstChild("Assets") and ReplicatedStorage.Assets:FindFirstChild("Heroes")
+		local heroesFolder = assets and assets:FindFirstChild("Heroes")
 		local jenna = heroesFolder and heroesFolder:FindFirstChild("hero_jenna")
 		if jenna and jenna:FindFirstChild("EquippedWeapon") and jenna.EquippedWeapon:IsA("Model") then
 			candidate = jenna.EquippedWeapon
