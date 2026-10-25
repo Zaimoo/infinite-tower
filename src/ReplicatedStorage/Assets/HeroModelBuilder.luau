@@ -701,6 +701,27 @@ function HeroModelBuilder.EnsureHeroes(): { [string]: Model }
 							end
 						end
 					end
+					-- Strip baked-in weapons so the hero is a clean base rig
+					local bakedWeapon = clone:FindFirstChild("EquippedWeapon")
+					if bakedWeapon then
+						bakedWeapon:Destroy()
+					end
+					local bakedLeft = clone:FindFirstChild("EquippedWeaponLeft")
+					if bakedLeft then
+						bakedLeft:Destroy()
+					end
+					for _, handName in ipairs({ "LeftHand", "RightHand" }) do
+						local hand = clone:FindFirstChild(handName, true)
+						if hand then
+							for _, weld in ipairs(hand:GetChildren()) do
+								if weld:IsA("WeldConstraint") or weld:IsA("Weld") or weld:IsA("Motor6D") then
+									if not weld.Part1 or not weld.Part1:IsDescendantOf(clone) or weld.Name:find("Weapon") or weld.Name:find("Bow") then
+										weld:Destroy()
+									end
+								end
+							end
+						end
+					end
 					-- Ensure parts unanchored for R15 physics
 					for _, d in ipairs(clone:GetDescendants()) do
 						if d:IsA("BasePart") then

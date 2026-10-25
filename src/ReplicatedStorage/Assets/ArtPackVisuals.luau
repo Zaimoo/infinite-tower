@@ -255,6 +255,12 @@ function A.UnequipWeapon(model: Model)
 	if leftCurrent then
 		leftCurrent:Destroy()
 	end
+	if model ~= art then
+		local c2 = model:FindFirstChild("EquippedWeapon")
+		if c2 then c2:Destroy() end
+		local c3 = model:FindFirstChild("EquippedWeaponLeft")
+		if c3 then c3:Destroy() end
+	end
 	model:SetAttribute("EquippedArtifactId", nil)
 	model:SetAttribute("EquippedArtifactType", nil)
 end
@@ -263,13 +269,25 @@ function A.EquipWeapon(model: Model, weaponAssetId: string?, weaponType: string?
 	local art = model:FindFirstChild("ArtPackVisual") or model
 	if not art then return end
 
+	-- Normalize empty string to nil
+	if weaponAssetId == "" then weaponAssetId = nil end
+	if weaponType == "" then weaponType = nil end
+
 	-- Clean up previous weapon
 	A.UnequipWeapon(model)
 
 	if not weaponAssetId and not weaponType then return end
 
 	local assets = ReplicatedStorage:FindFirstChild("Assets")
-	local weaponsFolder = assets and assets:FindFirstChild("Weapons")
+	local weaponsFolder = assets and assets:FindFirstChild("Weapons") :: Folder?
+	if not weaponsFolder and assets then
+		local ok, WeaponModelBuilder = pcall(function()
+			return require(assets:WaitForChild("WeaponModelBuilder", 2))
+		end)
+		if ok and WeaponModelBuilder and type(WeaponModelBuilder.EnsureWeapons) == "function" then
+			weaponsFolder = WeaponModelBuilder.EnsureWeapons()
+		end
+	end
 	if not weaponsFolder then return end
 
 	-- Resolve template: try weaponAssetId, or map weaponType to weapon prefab
@@ -324,6 +342,33 @@ function A.EquipWeapon(model: Model, weaponAssetId: string?, weaponType: string?
 			p.CanQuery = false
 			p.Massless = true
 			p.Anchored = false
+		end
+	end
+
+	-- Custom visual styling for special weapons
+	if weaponAssetId == "art_crystal_greatbow" then
+		for _, p in ipairs(wModel:GetDescendants()) do
+			if p:IsA("BasePart") then
+				if p.Name:find("Limb") or p.Name:find("Seg") or p.Name:find("Core") or p.Name:find("Tip") then
+					p.Material = Enum.Material.Neon
+					p.Color = Color3.fromRGB(80, 225, 255)
+				elseif p.Name:find("Band") or p.Name:find("Wrap") or p.Name:find("Rope") then
+					p.Material = Enum.Material.SmoothPlastic
+					p.Color = Color3.fromRGB(220, 240, 255)
+				end
+			end
+		end
+	elseif weaponAssetId == "art_recurve_composite" then
+		for _, p in ipairs(wModel:GetDescendants()) do
+			if p:IsA("BasePart") then
+				if p.Name:find("Limb") or p.Name:find("Seg") or p.Name:find("Riser") then
+					p.Material = Enum.Material.Wood
+					p.Color = Color3.fromRGB(115, 75, 45)
+				elseif p.Name:find("Band") or p.Name:find("Wrap") then
+					p.Material = Enum.Material.SmoothPlastic
+					p.Color = Color3.fromRGB(45, 35, 30)
+				end
+			end
 		end
 	end
 
