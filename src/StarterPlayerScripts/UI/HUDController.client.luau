@@ -435,10 +435,24 @@ local blacksmithModal = makeFrame({
 
 --============================================================================
 --============================================================================
--- FLOATING ACTION MENU ICONS (SQUAD, OVERDRIVE, RECALL, TOWER)
+-- FLOATING ACTION MENU ICONS (SHOP, SQUAD, OVERDRIVE, RECALL, TOWER)
 --============================================================================
-local SLATE_TEXT = Color3.fromRGB(232, 226, 245)
-local SLATE_ACTIVE = Color3.fromRGB(230, 192, 112)
+local ACTION_COLORS = {
+	Shop = Color3.fromRGB(250, 204, 21),       -- #FACC15 Gold
+	Squad = Color3.fromRGB(56, 189, 248),      -- #38BDF8 Azure
+	Overdrive = Color3.fromRGB(245, 158, 11),   -- #F59E0B Amber
+	Recall = Color3.fromRGB(34, 211, 238),     -- #22D3EE Cyan
+	Tower = Color3.fromRGB(192, 132, 252),     -- #C084FC Violet
+}
+
+local function triggerHUDWhistleCooldown(which: string)
+	if which == "Q" then
+		LastQClock = os.clock()
+	elseif which == "E" then
+		LastEClock = os.clock()
+	end
+end
+_G.TriggerHUDWhistleCooldown = triggerHUDWhistleCooldown
 
 local function showClientToast(msg: string)
 	toastCounter += 1
@@ -453,43 +467,65 @@ local function showClientToast(msg: string)
 	end)
 end
 
-local ICON_ASSETS = {
-	Squad = "rbxassetid://110935032339286",
-	Overdrive = "rbxassetid://82000429636857",
-	Recall = "rbxassetid://118937189328311",
-	Tower = "rbxassetid://126197768286000",
-}
-
+-- Floating Bottom HUD Toolbar Container
 local floatingMenuContainer = Instance.new("Frame")
 floatingMenuContainer.Name = "FloatingToolbar"
-floatingMenuContainer.Size = UDim2.fromOffset(410, 96)
-floatingMenuContainer.Position = UDim2.new(0.5, 0, 1, -12)
+floatingMenuContainer.Size = UDim2.fromOffset(416, 96)
+floatingMenuContainer.Position = UDim2.new(0.5, 0, 1, -16)
 floatingMenuContainer.AnchorPoint = Vector2.new(0.5, 1)
-floatingMenuContainer.BackgroundTransparency = 1
+floatingMenuContainer.BackgroundColor3 = Color3.fromRGB(13, 9, 18) -- #0D0912
+floatingMenuContainer.BackgroundTransparency = 0.20
+floatingMenuContainer.BorderSizePixel = 0
 floatingMenuContainer.ZIndex = 12
 floatingMenuContainer.Parent = hudGui
+
+local floatCorner = Instance.new("UICorner")
+floatCorner.CornerRadius = UDim.new(0, 16)
+floatCorner.Parent = floatingMenuContainer
+
+local floatStroke = Instance.new("UIStroke")
+floatStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+floatStroke.Color = Color3.fromRGB(49, 39, 64) -- #312740
+floatStroke.Thickness = 1.2
+floatStroke.Parent = floatingMenuContainer
 
 local floatingLayout = Instance.new("UIListLayout")
 floatingLayout.FillDirection = Enum.FillDirection.Horizontal
 floatingLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 floatingLayout.VerticalAlignment = Enum.VerticalAlignment.Center
 floatingLayout.SortOrder = Enum.SortOrder.LayoutOrder
-floatingLayout.Padding = UDim.new(0, 14)
+floatingLayout.Padding = UDim.new(0, 12)
 floatingLayout.Parent = floatingMenuContainer
+
+export type ActionButtonHandle = {
+	Container: Frame,
+	Button: ImageButton,
+	Scale: UIScale,
+	Disc: Frame?,
+	DiscStroke: UIStroke?,
+	VectorGlyph: ImageLabel?,
+	ShadowGlow: ImageLabel?,
+	KeybindPill: Frame?,
+	CooldownText: TextLabel?,
+	LabelPill: Frame,
+	PillStroke: UIStroke,
+	PillLabel: TextLabel,
+	AccentColor: Color3,
+	HasCooldown: boolean,
+}
 
 local function createFloatingIconButton(
 	name: string,
-	imageAsset: string,
 	layoutOrder: number,
 	keybindText: string?,
 	labelText: string,
 	accentColor: Color3,
 	hasCooldown: boolean,
 	onClick: () -> ()
-): (Frame, ImageButton, ImageLabel, Frame?, TextLabel?)
+): ActionButtonHandle
 	local container = Instance.new("Frame")
 	container.Name = name .. "Button"
-	container.Size = UDim2.fromOffset(72, 92)
+	container.Size = UDim2.fromOffset(64, 82)
 	container.BackgroundTransparency = 1
 	container.LayoutOrder = layoutOrder
 	container.ZIndex = 12
@@ -499,193 +535,200 @@ local function createFloatingIconButton(
 	scale.Scale = 1
 	scale.Parent = container
 
-	-- Outer aura / glow for active state or optimal window
-	local aura = Instance.new("ImageLabel")
-	aura.Name = "ActiveAura"
-	aura.Size = UDim2.fromScale(1.15, 1.15)
-	aura.Position = UDim2.fromScale(0.5, 0.35)
-	aura.AnchorPoint = Vector2.new(0.5, 0.5)
-	aura.BackgroundTransparency = 1
-	aura.Image = ""
-	aura.ImageColor3 = accentColor
-	aura.ImageTransparency = 0.4
-	aura.Visible = false
-	aura.ZIndex = 11
-	aura.Parent = container
-
-	local vectorHalo = GothicVectorIcons.CreateAura({
-		Size = UDim2.fromScale(1, 1),
-		Position = UDim2.fromScale(0.5, 0.5),
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		AccentColor = accentColor,
-		ZIndex = 11,
-		Parent = aura,
-	})
-	vectorHalo.Visible = true
-
-	local auraStroke = vectorHalo:FindFirstChild("HaloRing") and vectorHalo.HaloRing:FindFirstChild("AuraStroke") :: UIStroke?
-	aura:GetPropertyChangedSignal("ImageColor3"):Connect(function()
-		if auraStroke then auraStroke.Color = aura.ImageColor3 end
-	end)
-	aura:GetPropertyChangedSignal("ImageTransparency"):Connect(function()
-		if auraStroke then auraStroke.Transparency = aura.ImageTransparency end
-	end)
-
-	-- The circular floating badge Hitbox Button
-	local btn = Instance.new("ImageButton")
-	btn.Name = "Hitbox"
-	btn.Size = UDim2.fromOffset(60, 60)
-	btn.Position = UDim2.new(0.5, 0, 0, 2)
-	btn.AnchorPoint = Vector2.new(0.5, 0)
-	btn.BackgroundTransparency = 1
-	btn.Image = ""
-	btn.ScaleType = Enum.ScaleType.Fit
-	btn.AutoButtonColor = false
-	btn.ZIndex = 12
-	btn.Parent = container
-
-	-- Pure Procedural Vector Action Icon
-	GothicVectorIcons.Create(name, {
-		Size = UDim2.fromScale(1, 1),
-		Position = UDim2.fromScale(0.5, 0.5),
-		AnchorPoint = Vector2.new(0.5, 0.5),
+	-- Create Vector Medallion Badge Base
+	local badge = GothicVectorIcons.Create(name, {
+		Size = UDim2.fromOffset(56, 56),
+		Position = UDim2.new(0.5, 0, 0, 0),
+		AnchorPoint = Vector2.new(0.5, 0),
 		AccentColor = accentColor,
 		ZIndex = 12,
-		Parent = btn,
+		Parent = container,
 	})
 
-	-- Cooldown overlay (Only created if hasCooldown is true)
-	local cdFrame: Frame? = nil
-	local cdLabel: TextLabel? = nil
-	if hasCooldown then
-		cdFrame = Instance.new("Frame")
-		cdFrame.Name = "CooldownFrame"
-		cdFrame.Size = UDim2.fromScale(0.88, 0.88)
-		cdFrame.Position = UDim2.fromScale(0.5, 0.5)
-		cdFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-		cdFrame.BackgroundColor3 = Color3.fromRGB(12, 8, 18)
-		cdFrame.BackgroundTransparency = 0.35
-		cdFrame.BorderSizePixel = 0
-		cdFrame.Visible = false
-		cdFrame.ZIndex = 14
-		local cdCorner = Instance.new("UICorner")
-		cdCorner.CornerRadius = UDim.new(1, 0)
-		cdCorner.Parent = cdFrame
+	local disc = badge:FindFirstChild("ObsidianDisc") :: Frame?
+	local discStroke = disc and disc:FindFirstChild("DiscBorder") :: UIStroke?
+	local vectorGlyph = disc and disc:FindFirstChild("VectorGlyph") :: ImageLabel?
+	local shadowGlow = disc and disc:FindFirstChild("ShadowGlow") :: ImageLabel?
 
-		cdLabel = Instance.new("TextLabel")
-		cdLabel.Name = "CooldownLabel"
-		cdLabel.Size = UDim2.fromScale(1, 1)
-		cdLabel.BackgroundTransparency = 1
-		cdLabel.Font = Enum.Font.GothamBold
-		cdLabel.Text = ""
-		cdLabel.TextSize = 20
-		cdLabel.TextColor3 = Color3.fromRGB(255, 235, 160)
-		cdLabel.TextStrokeColor3 = Color3.fromRGB(15, 10, 25)
-		cdLabel.TextStrokeTransparency = 0.2
-		cdLabel.ZIndex = 15
-		cdLabel.Parent = cdFrame
-		cdFrame.Parent = btn
-	end
+	-- Hitbox Button on top (ZIndex 30)
+	local btn = Instance.new("ImageButton")
+	btn.Name = "Hitbox"
+	btn.Size = UDim2.fromOffset(56, 56)
+	btn.Position = UDim2.new(0.5, 0, 0, 0)
+	btn.AnchorPoint = Vector2.new(0.5, 0)
+	btn.BackgroundTransparency = 1
+	btn.AutoButtonColor = false
+	btn.ZIndex = 30
+	btn.Parent = container
 
-	-- Optional keybind pill (e.g. [Q], [E])
+	-- Optional Keybind Pill (e.g. [Q], [E]) at top-right
+	local keybindPill: Frame? = nil
 	if keybindText then
-		local pill = Instance.new("Frame")
-		pill.Name = "KeybindPill"
-		pill.Size = UDim2.fromOffset(20, 20)
-		pill.Position = UDim2.new(1, 2, 0, -2)
-		pill.AnchorPoint = Vector2.new(1, 0)
-		pill.BackgroundColor3 = Color3.fromRGB(246, 244, 255)
-		pill.BorderSizePixel = 0
-		pill.ZIndex = 16
+		keybindPill = Instance.new("Frame")
+		keybindPill.Name = "KeybindPill"
+		keybindPill.Size = UDim2.fromOffset(18, 18)
+		keybindPill.Position = UDim2.new(1, 2, 0, -2)
+		keybindPill.AnchorPoint = Vector2.new(1, 0)
+		keybindPill.BackgroundColor3 = Color3.fromRGB(246, 244, 255)
+		keybindPill.BorderSizePixel = 0
+		keybindPill.ZIndex = 32
 
-		local pillCorner = Instance.new("UICorner")
-		pillCorner.CornerRadius = UDim.new(1, 0)
-		pillCorner.Parent = pill
+		local kpCorner = Instance.new("UICorner")
+		kpCorner.CornerRadius = UDim.new(1, 0)
+		kpCorner.Parent = keybindPill
 
-		local pillStroke = Instance.new("UIStroke")
-		pillStroke.Color = Color3.fromRGB(13, 9, 18)
-		pillStroke.Thickness = 1.2
-		pillStroke.Parent = pill
+		local kpStroke = Instance.new("UIStroke")
+		kpStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		kpStroke.Color = Color3.fromRGB(13, 9, 18)
+		kpStroke.Thickness = 1
+		kpStroke.Parent = keybindPill
 
-		local pillLabel = Instance.new("TextLabel")
-		pillLabel.Size = UDim2.fromScale(1, 1)
-		pillLabel.BackgroundTransparency = 1
-		pillLabel.Font = Enum.Font.GothamBold
-		pillLabel.Text = keybindText
-		pillLabel.TextSize = 11
-		pillLabel.TextColor3 = Color3.fromRGB(13, 9, 18)
-		pillLabel.ZIndex = 17
-		pillLabel.Parent = pill
+		local kpLabel = Instance.new("TextLabel")
+		kpLabel.Size = UDim2.fromScale(1, 1)
+		kpLabel.BackgroundTransparency = 1
+		kpLabel.Font = Enum.Font.GothamBold
+		kpLabel.Text = keybindText
+		kpLabel.TextSize = 11
+		kpLabel.TextColor3 = Color3.fromRGB(13, 9, 18)
+		kpLabel.ZIndex = 33
+		kpLabel.Parent = keybindPill
 
-		pill.Parent = btn
+		keybindPill.Parent = container
 	end
 
-	-- Text Label Ribbon/Pill ("SQUAD", "OVERDRIVE", "RECALL", "TOWER")
+	-- Cooldown Countdown Overlay (Only created if hasCooldown is true)
+	local cdText: TextLabel? = nil
+	if hasCooldown and disc then
+		cdText = Instance.new("TextLabel")
+		cdText.Name = "CooldownText"
+		cdText.Size = UDim2.fromScale(1, 1)
+		cdText.Position = UDim2.fromScale(0.5, 0.5)
+		cdText.AnchorPoint = Vector2.new(0.5, 0.5)
+		cdText.BackgroundTransparency = 1
+		cdText.Font = Enum.Font.GothamBold
+		cdText.Text = ""
+		cdText.TextSize = 22
+		cdText.TextColor3 = Color3.fromRGB(246, 244, 255)
+		cdText.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+		cdText.TextStrokeTransparency = 0.2
+		cdText.Visible = false
+		cdText.ZIndex = 25
+		cdText.Parent = disc
+	end
+
+	-- Bottom Text Label Pill (SHOP, SQUAD, OVERDRIVE, RECALL, TOWER)
 	local labelPill = Instance.new("Frame")
 	labelPill.Name = "LabelPill"
-	labelPill.Size = UDim2.fromOffset(64, 18)
+	labelPill.Size = UDim2.fromOffset(60, 18)
 	labelPill.Position = UDim2.new(0.5, 0, 1, 0)
 	labelPill.AnchorPoint = Vector2.new(0.5, 1)
 	labelPill.BackgroundColor3 = Color3.fromRGB(13, 9, 18)
 	labelPill.BorderSizePixel = 0
 	labelPill.ZIndex = 14
 
-	local lCorner = Instance.new("UICorner")
-	lCorner.CornerRadius = UDim.new(1, 0)
-	lCorner.Parent = labelPill
+	local lpCorner = Instance.new("UICorner")
+	lpCorner.CornerRadius = UDim.new(1, 0)
+	lpCorner.Parent = labelPill
 
-	local lStroke = Instance.new("UIStroke")
-	lStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	lStroke.Color = accentColor
-	lStroke.Thickness = 1
-	lStroke.Transparency = 0.45
-	lStroke.Parent = labelPill
+	local lpStroke = Instance.new("UIStroke")
+	lpStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	lpStroke.Color = accentColor
+	lpStroke.Thickness = 1
+	lpStroke.Transparency = 0.5
+	lpStroke.Parent = labelPill
 
-	local lText = Instance.new("TextLabel")
-	lText.Size = UDim2.fromScale(1, 1)
-	lText.BackgroundTransparency = 1
-	lText.Font = Enum.Font.GothamBold
-	lText.Text = labelText
-	lText.TextSize = 9
-	lText.TextColor3 = accentColor
-	lText.ZIndex = 15
-	lText.Parent = labelPill
+	local lpLabel = Instance.new("TextLabel")
+	lpLabel.Size = UDim2.fromScale(1, 1)
+	lpLabel.BackgroundTransparency = 1
+	lpLabel.Font = Enum.Font.GothamBold
+	lpLabel.Text = labelText
+	lpLabel.TextSize = 9
+	lpLabel.TextColor3 = accentColor
+	lpLabel.ZIndex = 15
+	lpLabel.Parent = labelPill
 
 	labelPill.Parent = container
 
-	-- Hover & Click Tweens
+	-- Hover & Click Micro-interactions
 	local isHovered = false
 	btn.MouseEnter:Connect(function()
 		isHovered = true
-		TweenService:Create(scale, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = 1.10 }):Play()
-		TweenService:Create(lStroke, TweenInfo.new(0.18), { Transparency = 0.1 }):Play()
+		TweenService:Create(scale, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = 1.15 }):Play()
+		TweenService:Create(lpStroke, TweenInfo.new(0.2), { Transparency = 0.1 }):Play()
+		if discStroke then
+			TweenService:Create(discStroke, TweenInfo.new(0.2), { Thickness = 2.2 }):Play()
+		end
 	end)
+
 	btn.MouseLeave:Connect(function()
 		isHovered = false
-		TweenService:Create(scale, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = 1.0 }):Play()
-		TweenService:Create(lStroke, TweenInfo.new(0.18), { Transparency = 0.45 }):Play()
+		TweenService:Create(scale, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = 1.0 }):Play()
+		TweenService:Create(lpStroke, TweenInfo.new(0.2), { Transparency = 0.5 }):Play()
+		if discStroke then
+			TweenService:Create(discStroke, TweenInfo.new(0.2), { Thickness = 1.6 }):Play()
+		end
 	end)
+
 	btn.MouseButton1Down:Connect(function()
 		TweenService:Create(scale, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = 0.94 }):Play()
 	end)
+
 	btn.MouseButton1Up:Connect(function()
-		local targetScale = isHovered and 1.10 or 1.0
+		local targetScale = if isHovered then 1.15 else 1.0
 		TweenService:Create(scale, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = targetScale }):Play()
 	end)
 
 	btn.Activated:Connect(onClick)
+	btn.MouseButton1Click:Connect(onClick)
 
-	return container, btn, aura, cdFrame, cdLabel
+	return {
+		Container = container,
+		Button = btn,
+		Scale = scale,
+		Disc = disc,
+		DiscStroke = discStroke,
+		VectorGlyph = vectorGlyph,
+		ShadowGlow = shadowGlow,
+		KeybindPill = keybindPill,
+		CooldownText = cdText,
+		LabelPill = labelPill,
+		PillStroke = lpStroke,
+		PillLabel = lpLabel,
+		AccentColor = accentColor,
+		HasCooldown = hasCooldown,
+	}
 end
 
--- 1. SQUAD (Leftmost) - Azure (#38BDF8), NO COOLDOWN
-local squadContainer, squadBtn, squadAura, _, _ = createFloatingIconButton(
-	"Squad",
-	ICON_ASSETS.Squad,
+local function toggleShop()
+	if facilityController and facilityController.Root and facilityController.Root.Visible and facilityController.Current == "Summoning" then
+		facilityController:Close()
+	else
+		_G.OpenFacilityHUD("Summoning")
+	end
+end
+_G.ToggleShop = toggleShop
+_G.OpenShop = toggleShop
+
+-- 1. SHOP (Gold #FACC15, NO COOLDOWN)
+local shopHandle = createFloatingIconButton(
+	"Shop",
 	1,
 	nil,
+	"SHOP",
+	ACTION_COLORS.Shop,
+	false,
+	function()
+		toggleShop()
+	end
+)
+
+-- 2. SQUAD (Azure #38BDF8, NO COOLDOWN)
+local squadHandle = createFloatingIconButton(
+	"Squad",
+	2,
+	nil,
 	"SQUAD",
-	Color3.fromRGB(56, 189, 248),
+	ACTION_COLORS.Squad,
 	false,
 	function()
 		local isSquadOpen = squadController and squadController:IsOpen()
@@ -693,52 +736,49 @@ local squadContainer, squadBtn, squadAura, _, _ = createFloatingIconButton(
 	end
 )
 
--- 2. OVERDRIVE - Amber (#F59E0B), Keybind [Q], 20s COOLDOWN
-local overdriveContainer, overdriveBtn, overdriveAura, overdriveCdFrame, overdriveCdLabel = createFloatingIconButton(
+-- 3. OVERDRIVE (Amber #F59E0B, Keybind [Q], 20s COOLDOWN)
+local overdriveHandle = createFloatingIconButton(
 	"Overdrive",
-	ICON_ASSETS.Overdrive,
-	2,
+	3,
 	"Q",
 	"OVERDRIVE",
-	Color3.fromRGB(245, 158, 11),
+	ACTION_COLORS.Overdrive,
 	true,
 	function()
 		local now = os.clock()
 		local qRem = math.max(0, 20.0 - (now - LastQClock))
 		if qRem <= 0 then
-			LastQClock = now
+			triggerHUDWhistleCooldown("Q")
 			WhistleCommandRemote:FireServer(1)
 		end
 	end
 )
 
--- 3. RECALL - Cyan (#22D3EE), Keybind [E], 6s COOLDOWN
-local recallContainer, recallBtn, recallAura, recallCdFrame, recallCdLabel = createFloatingIconButton(
+-- 4. RECALL (Cyan #22D3EE, Keybind [E], 6s COOLDOWN)
+local recallHandle = createFloatingIconButton(
 	"Recall",
-	ICON_ASSETS.Recall,
-	3,
+	4,
 	"E",
 	"RECALL",
-	Color3.fromRGB(34, 211, 238),
+	ACTION_COLORS.Recall,
 	true,
 	function()
 		local now = os.clock()
 		local eRem = math.max(0, 6.0 - (now - LastEClock))
 		if eRem <= 0 then
-			LastEClock = now
+			triggerHUDWhistleCooldown("E")
 			WhistleCommandRemote:FireServer(2)
 		end
 	end
 )
 
--- 4. TOWER (Teleport to Tower Hub) - Violet (#C084FC), NO COOLDOWN
-local towerContainer, towerBtn, towerAura, _, _ = createFloatingIconButton(
+-- 5. TOWER (Violet #C084FC, NO COOLDOWN)
+local towerHandle = createFloatingIconButton(
 	"Tower",
-	ICON_ASSETS.Tower,
-	4,
+	5,
 	nil,
 	"TOWER",
-	Color3.fromRGB(192, 132, 252),
+	ACTION_COLORS.Tower,
 	false,
 	function()
 		local curFloor = if _G.TowerView and _G.TowerView.FloorId then _G.TowerView.FloorId else 0
@@ -764,22 +804,16 @@ local towerContainer, towerBtn, towerAura, _, _ = createFloatingIconButton(
 	end
 )
 
-_G.TriggerHUDWhistleCooldown = function(which: string)
-	if which == "Q" then
-		LastQClock = os.clock()
-	elseif which == "E" then
-		LastEClock = os.clock()
-	end
-end
-
 local function updateBottomTabHighlights()
 	local squadActive = squadController ~= nil and squadController:IsOpen()
-	squadAura.Visible = squadActive
-	if squadActive then
-		squadAura.ImageColor3 = Color3.fromRGB(230, 192, 112)
-		squadAura.ImageTransparency = 0.25
+	if squadHandle.DiscStroke then
+		squadHandle.DiscStroke.Thickness = if squadActive then 2.4 else 1.6
+		squadHandle.DiscStroke.Color = if squadActive then Color3.fromRGB(230, 192, 112) else ACTION_COLORS.Squad
 	end
+	squadHandle.PillLabel.TextColor3 = if squadActive then Color3.fromRGB(230, 192, 112) else ACTION_COLORS.Squad
+	squadHandle.PillStroke.Color = if squadActive then Color3.fromRGB(230, 192, 112) else ACTION_COLORS.Squad
 end
+
 _G.IsAnyMasterModalOpen = function(): boolean
 	if _G.IsTowerSelectorOpen and _G.IsTowerSelectorOpen() then return true end
 	if facilityController and facilityController.Root and facilityController.Root.Visible then return true end
@@ -1306,10 +1340,30 @@ RunService.RenderStepped:Connect(function()
 	-- 1. Whistle Cooldowns & Devouring Nova Recall Skill-Check Pulse
 	local qRem = math.max(0, 20.0 - (now - LastQClock))
 	if qRem > 0 then
-		overdriveCdFrame.Visible = true
-		overdriveCdLabel.Text = string.format("%.0fs", math.ceil(qRem))
+		if overdriveHandle.CooldownText then
+			overdriveHandle.CooldownText.Visible = true
+			overdriveHandle.CooldownText.Text = tostring(math.ceil(qRem))
+		end
+		if overdriveHandle.KeybindPill then overdriveHandle.KeybindPill.Visible = false end
+		if overdriveHandle.VectorGlyph then
+			overdriveHandle.VectorGlyph.ImageColor3 = Color3.fromRGB(120, 120, 130)
+			overdriveHandle.VectorGlyph.ImageTransparency = 0.7
+		end
+		if overdriveHandle.ShadowGlow then overdriveHandle.ShadowGlow.Visible = false end
+		if overdriveHandle.DiscStroke then overdriveHandle.DiscStroke.Color = Color3.fromRGB(49, 39, 64) end
+		overdriveHandle.PillStroke.Color = Color3.fromRGB(49, 39, 64)
+		overdriveHandle.PillLabel.TextColor3 = Color3.fromRGB(120, 115, 130)
 	else
-		overdriveCdFrame.Visible = false
+		if overdriveHandle.CooldownText then overdriveHandle.CooldownText.Visible = false end
+		if overdriveHandle.KeybindPill then overdriveHandle.KeybindPill.Visible = true end
+		if overdriveHandle.VectorGlyph then
+			overdriveHandle.VectorGlyph.ImageColor3 = ACTION_COLORS.Overdrive
+			overdriveHandle.VectorGlyph.ImageTransparency = 0
+		end
+		if overdriveHandle.ShadowGlow then overdriveHandle.ShadowGlow.Visible = true end
+		if overdriveHandle.DiscStroke then overdriveHandle.DiscStroke.Color = ACTION_COLORS.Overdrive end
+		overdriveHandle.PillStroke.Color = ACTION_COLORS.Overdrive
+		overdriveHandle.PillLabel.TextColor3 = ACTION_COLORS.Overdrive
 	end
 
 	local eRem = math.max(0, 6.0 - (now - LastEClock))
@@ -1318,17 +1372,47 @@ RunService.RenderStepped:Connect(function()
 	local inNovaOptimalWindow = (novaElapsed >= 1.1 and novaElapsed <= 2.8)
 
 	if inNovaOptimalWindow then
-		recallAura.Visible = true
-		recallAura.ImageColor3 = Color3.fromRGB(255, 215, 75)
-		recallAura.ImageTransparency = 0.15 + 0.15 * math.sin(now * 12)
-		recallCdFrame.Visible = false
+		if recallHandle.CooldownText then recallHandle.CooldownText.Visible = false end
+		if recallHandle.KeybindPill then recallHandle.KeybindPill.Visible = true end
+		if recallHandle.VectorGlyph then
+			recallHandle.VectorGlyph.ImageColor3 = Color3.fromRGB(255, 230, 80)
+			recallHandle.VectorGlyph.ImageTransparency = 0
+		end
+		if recallHandle.ShadowGlow then
+			recallHandle.ShadowGlow.Visible = true
+			recallHandle.ShadowGlow.ImageColor3 = Color3.fromRGB(255, 230, 80)
+		end
+		if recallHandle.DiscStroke then recallHandle.DiscStroke.Color = Color3.fromRGB(255, 230, 80) end
+		recallHandle.PillStroke.Color = Color3.fromRGB(255, 230, 80)
+		recallHandle.PillLabel.TextColor3 = Color3.fromRGB(255, 230, 80)
 	elseif eRem > 0 then
-		recallAura.Visible = false
-		recallCdFrame.Visible = true
-		recallCdLabel.Text = string.format("%.0fs", math.ceil(eRem))
+		if recallHandle.CooldownText then
+			recallHandle.CooldownText.Visible = true
+			recallHandle.CooldownText.Text = tostring(math.ceil(eRem))
+		end
+		if recallHandle.KeybindPill then recallHandle.KeybindPill.Visible = false end
+		if recallHandle.VectorGlyph then
+			recallHandle.VectorGlyph.ImageColor3 = Color3.fromRGB(120, 120, 130)
+			recallHandle.VectorGlyph.ImageTransparency = 0.7
+		end
+		if recallHandle.ShadowGlow then recallHandle.ShadowGlow.Visible = false end
+		if recallHandle.DiscStroke then recallHandle.DiscStroke.Color = Color3.fromRGB(49, 39, 64) end
+		recallHandle.PillStroke.Color = Color3.fromRGB(49, 39, 64)
+		recallHandle.PillLabel.TextColor3 = Color3.fromRGB(120, 115, 130)
 	else
-		recallAura.Visible = false
-		recallCdFrame.Visible = false
+		if recallHandle.CooldownText then recallHandle.CooldownText.Visible = false end
+		if recallHandle.KeybindPill then recallHandle.KeybindPill.Visible = true end
+		if recallHandle.VectorGlyph then
+			recallHandle.VectorGlyph.ImageColor3 = ACTION_COLORS.Recall
+			recallHandle.VectorGlyph.ImageTransparency = 0
+		end
+		if recallHandle.ShadowGlow then
+			recallHandle.ShadowGlow.Visible = true
+			recallHandle.ShadowGlow.ImageColor3 = ACTION_COLORS.Recall
+		end
+		if recallHandle.DiscStroke then recallHandle.DiscStroke.Color = ACTION_COLORS.Recall end
+		recallHandle.PillStroke.Color = ACTION_COLORS.Recall
+		recallHandle.PillLabel.TextColor3 = ACTION_COLORS.Recall
 	end
 
 	-- 2. Update World Boss Top Banner & Devouring Nova Cast Bar
@@ -1579,168 +1663,7 @@ do
 	end)
 
 
-	--============================================================================
-	-- LEFT SIDEBAR NAVIGATION (Shop Icon & Future Sidebar Tools)
-	--============================================================================
-	local leftSidebar = Instance.new("Frame")
-	leftSidebar.Name = "LeftSidebar"
-	leftSidebar.Size = UDim2.fromOffset(80, 240)
-	leftSidebar.Position = UDim2.new(0, 16, 0.40, 0)
-	leftSidebar.AnchorPoint = Vector2.new(0, 0.5)
-	leftSidebar.BackgroundTransparency = 1
-	leftSidebar.ZIndex = 12
-	leftSidebar.Parent = hudGui
-
-	local leftList = Instance.new("UIListLayout")
-	leftList.FillDirection = Enum.FillDirection.Vertical
-	leftList.HorizontalAlignment = Enum.HorizontalAlignment.Center
-	leftList.SortOrder = Enum.SortOrder.LayoutOrder
-	leftList.Padding = UDim.new(0, 12)
-	leftList.Parent = leftSidebar
-
-	-- Floating Shop Action Button with Disc and Label Pill
-	local shopBtn = Instance.new("ImageButton")
-	shopBtn.Name = "ShopIconButton"
-	shopBtn.Size = UDim2.fromOffset(72, 92)
-	shopBtn.BackgroundTransparency = 1
-	shopBtn.BorderSizePixel = 0
-	shopBtn.AutoButtonColor = false
-	shopBtn.Image = ""
-	shopBtn.ScaleType = Enum.ScaleType.Fit
-	shopBtn.LayoutOrder = 1
-	shopBtn.ZIndex = 12
-	shopBtn.Parent = leftSidebar
-
-	local shopDiscContainer = Instance.new("Frame")
-	shopDiscContainer.Name = "ShopDisc"
-	shopDiscContainer.Size = UDim2.fromOffset(60, 60)
-	shopDiscContainer.Position = UDim2.new(0.5, 0, 0, 2)
-	shopDiscContainer.AnchorPoint = Vector2.new(0.5, 0)
-	shopDiscContainer.BackgroundTransparency = 1
-	shopDiscContainer.ZIndex = 12
-	shopDiscContainer.Parent = shopBtn
-
-	-- Procedural Vector Shop Medallion (Merchant Pouch)
-	local shopVector = GothicVectorIcons.CreateShop({
-		Size = UDim2.fromScale(1, 1),
-		Position = UDim2.fromScale(0.5, 0.5),
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		ZIndex = 12,
-		Parent = shopDiscContainer,
-	})
-
-	local shopLabelPill = Instance.new("Frame")
-	shopLabelPill.Name = "LabelPill"
-	shopLabelPill.Size = UDim2.fromOffset(64, 18)
-	shopLabelPill.Position = UDim2.new(0.5, 0, 1, 0)
-	shopLabelPill.AnchorPoint = Vector2.new(0.5, 1)
-	shopLabelPill.BackgroundColor3 = Color3.fromRGB(13, 9, 18)
-	shopLabelPill.BorderSizePixel = 0
-	shopLabelPill.ZIndex = 14
-	local slCorner = Instance.new("UICorner")
-	slCorner.CornerRadius = UDim.new(1, 0)
-	slCorner.Parent = shopLabelPill
-	local slStroke = Instance.new("UIStroke")
-	slStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	slStroke.Color = Color3.fromRGB(250, 204, 21)
-	slStroke.Thickness = 1
-	slStroke.Transparency = 0.45
-	slStroke.Parent = shopLabelPill
-	local slText = Instance.new("TextLabel")
-	slText.Size = UDim2.fromScale(1, 1)
-	slText.BackgroundTransparency = 1
-	slText.Font = Enum.Font.GothamBold
-	slText.Text = "SHOP"
-	slText.TextSize = 9
-	slText.TextColor3 = Color3.fromRGB(250, 204, 21)
-	slText.ZIndex = 15
-	slText.Parent = shopLabelPill
-	shopLabelPill.Parent = shopBtn
-
-	local shopScale = Instance.new("UIScale")
-	shopScale.Scale = 1
-	shopScale.Parent = shopBtn
-
-	-- Notification Badge ("!") with breathing animation
-	local shopBadge = Instance.new("Frame")
-	shopBadge.Name = "NotificationBadge"
-	shopBadge.Size = UDim2.fromOffset(20, 20)
-	shopBadge.Position = UDim2.new(1, 2, 0, -2)
-	shopBadge.AnchorPoint = Vector2.new(1, 0)
-	shopBadge.BackgroundColor3 = Color3.fromRGB(235, 45, 65)
-	shopBadge.BorderSizePixel = 0
-	shopBadge.ZIndex = 15
-	shopBadge.Parent = shopDiscContainer
-
-	local badgeCorner = Instance.new("UICorner")
-	badgeCorner.CornerRadius = UDim.new(1, 0)
-	badgeCorner.Parent = shopBadge
-
-	local badgeStroke = Instance.new("UIStroke")
-	badgeStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	badgeStroke.Thickness = 1.5
-	badgeStroke.Color = Color3.fromRGB(255, 255, 255)
-	badgeStroke.Parent = shopBadge
-
-	local badgeLabel = Instance.new("TextLabel")
-	badgeLabel.Size = UDim2.fromScale(1, 1)
-	badgeLabel.BackgroundTransparency = 1
-	badgeLabel.Text = "!"
-	badgeLabel.Font = Enum.Font.GothamBold
-	badgeLabel.TextSize = 13
-	badgeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-	badgeLabel.ZIndex = 16
-	badgeLabel.Parent = shopBadge
-
-	local badgeTween = TweenService:Create(
-		shopBadge,
-		TweenInfo.new(1.1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
-		{ Size = UDim2.fromOffset(25, 25) }
-	)
-	badgeTween:Play()
-
-	-- Smooth Hover & Click Animations on Floating Icon
-	local shopGoldBorder = (shopVector:FindFirstChild("ObsidianDisc") and shopVector.ObsidianDisc:FindFirstChild("DiscGoldBorder")) :: UIStroke?
-	local isShopHovered = false
-	shopBtn.MouseEnter:Connect(function()
-		isShopHovered = true
-		TweenService:Create(shopScale, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1.10 }):Play()
-		if shopGoldBorder then
-			TweenService:Create(shopGoldBorder, TweenInfo.new(0.2), { Color = Color3.fromRGB(255, 238, 150) }):Play()
-		end
-	end)
-
-	shopBtn.MouseLeave:Connect(function()
-		isShopHovered = false
-		TweenService:Create(shopScale, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = 1.0 }):Play()
-		if shopGoldBorder then
-			TweenService:Create(shopGoldBorder, TweenInfo.new(0.2), { Color = Color3.fromRGB(245, 205, 95) }):Play()
-		end
-	end)
-
-	shopBtn.MouseButton1Down:Connect(function()
-		TweenService:Create(shopScale, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = 0.92 }):Play()
-	end)
-
-	shopBtn.MouseButton1Up:Connect(function()
-		local target = isShopHovered and 1.10 or 1.0
-		TweenService:Create(shopScale, TweenInfo.new(0.14, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = target }):Play()
-	end)
-
-	local function toggleShop()
-		if facilityController and facilityController.Root and facilityController.Root.Visible and facilityController.Current == "Summoning" then
-			facilityController:Close()
-		else
-			_G.OpenFacilityHUD("Summoning")
-		end
-	end
-	_G.ToggleShop = toggleShop
-	_G.OpenShop = toggleShop
-
-	shopBtn.Activated:Connect(function()
-		toggleShop()
-	end)
-
+--============================================================================
 	local modalWidths = { 1000 }
 	local function layout()
 		local cam = workspace.CurrentCamera
@@ -1752,14 +1675,7 @@ do
 		local portrait = w < 650
 		local stackPanels = portrait or h < 540
 
-		-- LeftSidebar responsive positioning & scaling
-		leftSidebar.Position = portrait and UDim2.new(0, 8, 0.38, 0) or UDim2.new(0, 16, 0.40, 0)
-		local sidebarScale = leftSidebar:FindFirstChildOfClass("UIScale") or Instance.new("UIScale", leftSidebar)
-		if h < 550 or portrait then
-			sidebarScale.Scale = math.clamp(h / 650, 0.72, 1.0)
-		else
-			sidebarScale.Scale = 1.0
-		end
+
 
 		topBar.Visible = false
 
