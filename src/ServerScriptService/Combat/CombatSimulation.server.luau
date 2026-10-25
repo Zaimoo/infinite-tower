@@ -1255,7 +1255,7 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 		if simHero.AttackCooldown <= 0 then
 			simHero.AttackCooldown = effectiveInterval
 
-			local skillProfile = ArchetypeCombatSkills.GetSkillProfile(simHero.Archetype)
+			local skillProfile = ArchetypeCombatSkills.GetSkillProfile(simHero.TemplateId, simHero.Archetype)
 			local isSkillReady = (simHero.Stamina or 0) >= ArchetypeCombatSkills.Constants.MAX_STAMINA
 
 			local attackType: "BASIC" | "SPECIAL" | "SKILL" = "BASIC"

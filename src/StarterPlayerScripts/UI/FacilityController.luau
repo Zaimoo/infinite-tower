@@ -59,13 +59,11 @@ local ARCHETYPE_ICONS: { [string]: string } = {
 
 local ARTIFACT_ICONS: { [string]: string } = {
 	BOW = "🏹",
-	SWORD = "⚔️",
+	SWORD_SHIELD = "🛡️",
 	DAGGERS = "🗡️",
 	AXE = "🪓",
 	TOME = "📖",
 	STAFF = "🪄",
-	RING = "💍",
-	SHIELD = "🛡️",
 }
 
 local DETAILS = {

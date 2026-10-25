@@ -3,11 +3,12 @@
 -- Authoritative Modular 3D Weapon Model Factory & Setup.
 -- Populates ReplicatedStorage.Assets.Weapons with modular weapon prefabs:
 --   - weapon_bow (Marksman bows: Hunter's Shortbow, Recurve, Crystal Greatbow)
---   - weapon_sword (Striker/Vanguard swords: Broadswords, Katana, Claymores)
+--   - weapon_sword (bare sword prefab, base of weapon_sword_shield)
+--   - weapon_sword_shield (Vanguard sword & shield: Broadswords, Claymores, Aegis Core)
 --   - weapon_daggers (Striker dual daggers: Rogue Daggers, Shadow Fangs)
---   - weapon_axe (Vanguard/Miner axes: Pickaxe, Battleaxes)
---   - weapon_staff (Healer/Scholar staves: Ruby Staff, Archmage Scepter)
---   - weapon_tome (Scholar tomes: Pyromancer Tome, Eldritch Grimoire)
+--   - weapon_axe (Miner axes: Pickaxe, Battleaxes)
+--   - weapon_staff (Scholar staves: Ruby Staff, Archmage Scepter)
+--   - weapon_tome (Healer tomes: Pyromancer Tome, Eldritch Grimoire)
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
@@ -246,6 +247,37 @@ function WeaponModelBuilder.BuildSword(): Model
 end
 
 -- ============================================================================
+-- 2b. WEAPON_SWORD_SHIELD (Vanguard Sword in RightHand + Kite Shield in LeftHand)
+-- ============================================================================
+function WeaponModelBuilder.BuildSwordShield(): Model
+	local model = WeaponModelBuilder.BuildSword()
+	model.Name = "weapon_sword_shield"
+
+	local steel = Color3.fromRGB(150, 158, 172)
+	local gold = Color3.fromRGB(235, 195, 60)
+
+	-- Off-hand Shield (LeftHand)
+	local shieldModel = Instance.new("Model")
+	shieldModel.Name = "OffhandShield"
+	shieldModel.Parent = model
+
+	local grip = makePart(shieldModel, "HandleS", Vector3.new(0.2, 0.6, 0.2), CFrame.new(0, 0, 0), gold)
+	shieldModel.PrimaryPart = grip
+
+	local face = makePart(shieldModel, "ShieldFace", Vector3.new(0.24, 2.6, 1.6), CFrame.new(-0.3, 0, 0), steel, Enum.Material.Metal)
+	weldTo(grip, face)
+
+	local trim = makePart(shieldModel, "ShieldTrim", Vector3.new(0.28, 2.7, 0.16), CFrame.new(-0.3, 0, 0), gold)
+	weldTo(grip, trim)
+
+	local crest = makePart(shieldModel, "ShieldCrystal", Vector3.new(0.3, 0.6, 0.6), CFrame.new(-0.36, 0.3, 0), Color3.fromRGB(120, 200, 255), Enum.Material.Neon)
+	crest.Shape = Enum.PartType.Ball
+	weldTo(grip, crest)
+
+	return model
+end
+
+-- ============================================================================
 -- 3. WEAPON_DAGGERS (Dual Rogue Trench Stilettos)
 -- ============================================================================
 function WeaponModelBuilder.BuildDaggers(): Model
@@ -411,6 +443,7 @@ function WeaponModelBuilder.EnsureWeapons(): { [string]: Model }
 	local builders: { [string]: () -> Model } = {
 		weapon_bow = WeaponModelBuilder.BuildBow,
 		weapon_sword = WeaponModelBuilder.BuildSword,
+		weapon_sword_shield = WeaponModelBuilder.BuildSwordShield,
 		weapon_daggers = WeaponModelBuilder.BuildDaggers,
 		weapon_axe = WeaponModelBuilder.BuildAxe,
 		weapon_staff = WeaponModelBuilder.BuildStaff,

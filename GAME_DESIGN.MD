@@ -19,7 +19,7 @@ In traditional gacha/simulator games, 95% of summons are discarded as worthless 
    - **Up to 5 Deployed Heroes** (all 5 slots unlocked from the start) accompany the Master into the Central Hub or are independently deployed to specific floors (1–50) of the **Infinite Tower**. Heroes charge an in-combat **Skill/Stamina Gauge** (0 to 100) through a 3-tier attack cadence (Basic -> Basic -> Special -> Skill Attack at 100), and risk a debilitating **60-second Coma** if left inside lethal AoE telegraphs.
    - **Benched Heroes** physically inhabit the player's **Fortress Plot** on recuperation beds in **The Infirmary & Barracks** (Coma recovery & rest), or can be forged powerful equipment at the **Blacksmith Forge**.
    - **Zero Dead Pulls:** Duplicate heroes across all star ranks are fed into the **Synthesis Chamber** (`SynthesisController.luau`) for EXP leveling to cap (`MaxLevel = Stars * 10`), or sacrificed at the **Promotion Altar** (`PromotionController.luau`) for **Star Promotion** ($1★ \to 7★$).
-   - **Dual Hero Banners & Artifact Ascension:** At the **Summoning Altar**, players spend Gems (`100 Gems` single / `900 Gems` 10x) on two distinct banners: **Call of the Rift** (Permanent Banner featuring 5 stars: $1★ \to 5★$) and **A Star's Arrival** (Limited Time Banner featuring 1 character per star across all 7 stars: $1★ \to 7★$). In addition, Masters spend Gems at the **Artifact Summoning Banner** (`160 Gems` single / `1,600 Gems` 10x) to pull equippable weapons, shields, and rings across **16 Rarity Tiers** (`Common` $\to$ `Origin`) which define inherent base stats. At the **Blacksmith Forge** (`ForgeController.luau`), duplicate gear and Gold are used for **Star Ascension** ($1★ \to 7★$), multiplying base stats with massive progressive multipliers up to **`8.00x`**.
+   - **Dual Hero Banners & Artifact Ascension:** At the **Summoning Altar**, players spend Gems (`100 Gems` single / `900 Gems` 10x) on two distinct banners: **Call of the Rift** (Permanent Banner featuring 5 stars: $1★ \to 5★$) and **A Star's Arrival** (Limited Time Banner featuring 1 character per star across all 7 stars: $1★ \to 7★$). In addition, Masters spend Gems at the **Artifact Summoning Banner** (`160 Gems` single / `1,600 Gems` 10x) to pull equippable archetype weapons across **16 Rarity Tiers** (`Common` $\to$ `Origin`) which define inherent base stats. At the **Blacksmith Forge** (`ForgeController.luau`), duplicate gear and Gold are used for **Star Ascension** ($1★ \to 7★$), multiplying base stats with massive progressive multipliers up to **`8.00x`**.
 
 2. **Tactical Master Agency Over AFK Whaling:**
    - The Master carries no personal weapon. Instead, the Master directs squads through battlefield commands—**`[Click / Tap]` Focus Target**, **`[Q]` Overdrive Whistle**, and **`[E]` Emergency Recall Whistle**—while physically hauling heavy, high-value **Relics** and cargo back to their plot.
@@ -97,7 +97,7 @@ flowchart TD
 1. **Facility Upkeep (Every 3–5 Minutes):**
    - Inspect Infirmary beds and swap resting heroes into active squad rotation.
 2. **Summoning & Gacha Pulls (Every 5–10 Minutes):**
-   - Spend Gems at the **Summoning Altar** on either **Call of the Rift** (1★–5★ Permanent Banner), **A Star's Arrival** (1★–7★ Limited Time Rate-Up Banner, featuring 1 character per star), or the **Artifact Banner** (`160 Gems` single / `1,600 Gems` 10x for weapons, shields, and rings across 16 Rarity Tiers).
+   - Spend Gems at the **Summoning Altar** on either **Call of the Rift** (1★–5★ Permanent Banner), **A Star's Arrival** (1★–7★ Limited Time Rate-Up Banner, featuring 1 character per star), or the **Artifact Banner** (`160 Gems` single / `1,600 Gems` 10x for archetype weapons across 16 Rarity Tiers).
    - **Synthesis Chamber (`SynthesisController.luau`):** Place a recipient hero and up to 5 fodder heroes to level up to the hero's current cap ($\text{MaxLevel} = \text{Stars} \times 10$).
    - **Promotion Altar (`PromotionController.luau`):** When a hero reaches max level, sacrifice same-rank heroes and Promotion Stones to permanently ascend star rating ($1★ \to 7★$).
 3. **Artifact Star Ascension at the Blacksmith Forge (`ForgeController.luau`):**
@@ -349,16 +349,18 @@ Every summoned hero rolls a `QualityScalar` $q \in [0.90, 1.15]$ applied to thei
 
 #### Archetype Foundation Table
 
-| Archetype | Base HP ($HP_0$) | Base ATK ($ATK_0$) | Attack Interval ($t_{\text{atk}}$) | Attack Range | Base Labor ($L_0$) | Permitted Weapons | Basic Attack (+5 SP) | Special Attack (+10 SP, 3rd Hit) | Skill Attack (100 SP Ultimate) |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Vanguard** (Tank) | `450` | `22` | `1.20s` | `6 studs` | `10 / min` | `SWORD`, `AXE`, `SHIELD` | Shield Strike (1.0x) | Shield Bash (1.4x front cleave + slow) | Fortress Aegis (Taunt + 40% Max HP Shield) |
-| **Striker** (Melee DPS) | `280` | `38` | `0.85s` | `6 studs` | `12 / min` | `SWORD`, `DAGGERS`, `SHIELD` | Twin Blade Slash (1.0x) | Flurry Cross (1.6x 2-hit +25% Crit) | Blade Tempest (3.2x omni-burst AoE) |
-| **Marksman** (Ranged DPS) | `210` | `34` | `0.80s` | `28 studs` | `13 / min` | `BOW` | Precision Shot (1.0x) | Piercing Volley (1.5x line pierce 32s) | Rain of Arrows (2.8x 4-tick AoE + 20% Shred) |
-| **Miner** (Gem Specialist) | `300` | `20` | `1.05s` | `6 studs` | `20 / min` | `AXE`, `SHIELD` | Heavy Maul Swing (1.0x) | Seismic Slam (1.5x 8s ground shock) | Crystalline Cataclysm (2.6x AoE + Gem Shards) |
-| **Healer** (Infirmary Spec.) | `260` | `18` | `1.25s` | `24 studs` | `18 / min` | `STAFF`, `TOME` | Holy Bolt (1.0x) | Radiant Pulse (1.2x + 8% Lowest Ally Heal) | Sanctuary Miracle (35% Squad Heal + Cleanse + Regen) |
-| **Scholar** (Spell Specialist)| `220` | `24` | `1.00s` | `26 studs` | `22 / min` | `TOME`, `STAFF` | Arcane Spark (1.0x) | Chain Lightning (1.4x bounces to 2 mobs) | Supernova Cataclysm (3.5x Meteor AoE + Burn) |
+Archetypes define a hero's **combat role, base stats, attack cadence, range, labor, and permitted weapons**. Attack moves are **not** shared per archetype: every hero carries a bespoke 3-tier kit (see Section 4.4, *Hero Combat Skill Ledger*).
 
-*(Note: Rings (`RING`) are universal accessories and can be equipped by any archetype).*
+| Archetype | Combat Role | Base HP ($HP_0$) | Base ATK ($ATK_0$) | Attack Interval ($t_{\text{atk}}$) | Attack Range | Base Labor ($L_0$) | Permitted Weapons |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Vanguard** | Frontline Tank & Damage Absorber | `450` | `22` | `1.20s` | `6 studs` | `10 / min` | `SWORD_SHIELD` |
+| **Striker** | Agile Melee Critical DPS | `280` | `38` | `0.85s` | `6 studs` | `12 / min` | `DAGGERS` |
+| **Marksman** | Long-Range Physical DPS & Armor Shredder | `210` | `34` | `0.80s` | `28 studs` | `13 / min` | `BOW` |
+| **Miner** | Heavy Blunt Disruptor & Gem Specialist | `300` | `20` | `1.05s` | `6 studs` | `20 / min` | `AXE` |
+| **Healer** | Squad Sustain & Infirmary Specialist | `260` | `18` | `1.25s` | `24 studs` | `18 / min` | `TOME` |
+| **Scholar** | Elemental Catalyst & Burst Magic | `220` | `24` | `1.00s` | `26 studs` | `22 / min` | `STAFF` |
+
+*(Note: Each archetype equips exactly one weapon type, and each hero holds one artifact. Sword & Shield is a single combined weapon; rings are removed. See Section 7.5.)*
 
 ### 4.2 Effective Combat & Labor Formulas
 - **Level Cap Formula:**
@@ -436,23 +438,44 @@ Located inside the fortress military quarter. Stationed Trainers (`Striker` & `S
   $$\text{TrainingMultiplier} = 1 + \text{BaseBonus}_{\text{Level}} + \big(0.004 \times \sum \text{EffectiveLabor}_{\text{Training}}\big)$$
   *(Multiplies total squad $\text{FinalATK}$ and $\text{FinalHP}$ across all heroes and equipped Artifacts).*
 
-### 4.4 Archetype 3-Tier Attack Cadence & Dynamic Skill Gauge System
+### 4.4 Hero 3-Tier Attack Cadence & Dynamic Skill Gauge System
 
-In Infinite Tower, combat is server-authoritative with client prediction/interpolation. Each hero executes a 3-tier attack cadence governed by the **Dynamic Skill Gauge** (formerly Stamina):
+In Infinite Tower, combat is server-authoritative with client prediction/interpolation. **Every hero possesses a unique, bespoke 3-tier skill kit** (`Basic`, `Special`, `Skill / Ultimate`); kits are not shared across an archetype. Each hero executes its kit on a 3-tier attack cadence governed by the **Dynamic Skill Gauge** (formerly Stamina):
 
 #### 1. In-Combat Skill Gauge Rules & Cadence Mechanics
 - **Gauge Starting State & Maximum:** Heroes enter active combat with **0 Skill Gauge** (represented by the yellow billboard bar above the hero's head) that fills up to a maximum of **100**.
 - **Accrual Rules:**
   - **Tier 1: Basic Attack:** Standard auto-attack governed by base interval $t_{\text{atk}}$. Generates **+5 Skill Gauge**.
   - **Tier 2: Special Attack:** Automatically procs on every **3rd attack** (Cadence: `Basic (5) -> Basic (5) -> Special (10)`). Generates **+10 Skill Gauge**. Deals amplified damage with archetype-specific secondary mechanics (frontal cleaves, pierces, multi-slashes, chain lightning, or allied mini-heals).
-  - **Tier 3: Skill Attack (Ultimate):** When the gauge reaches **100**, the hero's next attack triggers their archetype-defining ultimate. Consumes all 100 gauge points (resetting back to **0**).
+  - **Tier 3: Skill Attack (Ultimate):** When the gauge reaches **100**, the hero's next attack triggers their signature ultimate. Consumes all 100 gauge points (resetting back to **0**).
 - **Accrual Math & Combat Rhythm:**
   - Each 3-attack cycle yields: $5 + 5 + 10 = 20\text{ Skill Gauge}$.
   - A hero requires exactly $5\text{ cycles} \times 3\text{ attacks} = 15\text{ attacks}$ ($10\text{ Basic} + 5\text{ Special}$) to reach 100 gauge points without external buffs.
   - At an average interval of $1.0\text{s}$, a hero triggers an ultimate roughly every $15\text{ seconds}$.
 - **Overdrive Whistle Synergy (`[Q]`):** Overdrive Whistle grants $+40\%$ Attack Speed for $5\text{s}$ with zero Stamina drain, compressing the time to charge and release signature Ultimates during crucial DPS/punish windows.
 
-#### 2. Detailed Archetype Combat Skill Specifications
+#### 2. Hero Combat Skill Ledger
+
+Each hero's kit is resolved by `HeroId` in `ArchetypeCombatSkills.HeroProfiles` (falling back to the archetype base profile for unknown heroes). A hero's kit inherits its archetype's damage multipliers and secondary mechanics (next table) unless it overrides them.
+
+| # | Hero | Star | Archetype | Basic (+5 SP) | Special (+10 SP, 3rd Hit) | Skill / Ultimate (100 SP) |
+| :---: | :--- | :---: | :--- | :--- | :--- | :--- |
+| 1 | **Han** (`hero_han`) | 1★ | Striker | Gale Slash | Crescent Cross-Cut | Relentless Blade Flurry |
+| 2 | **Aaron** (`hero_aaron`) | 2★ | Vanguard | Bastion Strike | Aegis Shield Bash | Fortress Bulwark |
+| 3 | **Catio** (`hero_catio`) | 3★ | Miner | Pickaxe Cleave | Resonance Tremor | Crystalline Excavation |
+| 4 | **Valeria** (`hero_valeria`) | 4★ | Healer | Emerald Bolt | Verdant Mend | Sanctuary Miracle |
+| 5 | **Ignis** (`hero_ignis`) | 5★ | Vanguard | Molten Cleave | Magma Breaker | Infernal Juggernaut |
+| 6 | **Jenna** (`hero_jenna`) | 1★ | Marksman | Wind-Step Shot | Piercing Gale Volley | Sylphid Arrow Storm |
+| 7 | **Velkist** (`hero_velkist`) | 2★ | Striker | Twin Fang Cut | Shadow Rend | Phantom Lotus Execution |
+| 8 | **Eolka** (`hero_eolka`) | 3★ | Scholar | Ruby Firebolt | Wildfire Chain | Crimson Hellfire Pillar |
+| 9 | **Morrigan** (`hero_morrigan`) | 4★ | Vanguard | Abyssal Reap | Dread Shockwave | Obsidian Bastion |
+| 10 | **Sovereign Archon** (`hero_archon`) | 5★ | Striker | Void Lance Strike | Rift Sever | Dimensional Cataclysm |
+| 11 | **Solaris** (`hero_solaris`) | 6★ | Scholar | Solar Ray | Corona Arc | Supernova Starfall |
+| 12 | **Astrea** (`hero_astrea`) | 7★ | Marksman | Astral Arrow | Nebula Piercer | Constellation Judgment |
+
+#### 3. Archetype Base Mechanics (Kit Defaults)
+
+These are the default multipliers and secondary mechanics each hero kit inherits from its archetype. The move names here are the archetype base profile names, used only as a fallback.
 
 | Archetype | Attack Tier | Move Name | Damage / Effect | Secondary Mechanics & Range | Accrual |
 | :--- | :--- | :--- | :--- | :--- | :---: |
@@ -475,7 +498,7 @@ In Infinite Tower, combat is server-authoritative with client prediction/interpo
 | | **Special** (Hit 3) | Chain Lightning | `1.4x ATK` Lightning | Arcs from primary target to up to 2 adjacent mobs within `14 studs`. | `+10` |
 | | **Skill** (100 SP) | Supernova Cataclysm | `3.5x ATK` Fire AoE | Dimensional portal drops a burning meteor on target area (`20-stud` radius), leaving lingering ground flames for `3s`. | `Resets to 0` |
 
-#### 3. Visual & Audio Combat Feedback
+#### 4. Visual & Audio Combat Feedback
 - **Billboard Gauge:** Yellow bar above hero health smoothly fills from $0 \to 100\%$.
 - **Skill Ready Indicator:** When gauge reaches $100\%$, the bar triggers a dynamic golden pulsation animation (`#FFD700`), signaling the impending ultimate.
 - **Floating Combat Text (FCT):**
@@ -664,18 +687,21 @@ The full 1★ to 7★ path consumes 21 donor weapons plus the retained original.
   - **Blacksmith Rarity Refinement:** Forge masters can spend high quantities of Gold and Gems to refine an existing artifact's rarity tier upward.
 
 ### 7.5 Archetype Restrictions & 3D Socketing Standards
-1. **Equippable Weapon & Item Catalog:**
-   - **Swords (`SWORD`):** Permitted on `Vanguard`, `Striker`. High single-target slashing DPS.
-   - **Daggers (`DAGGERS`):** Permitted on `Striker`. High-speed dual-wield flurry attacks.
-   - **Bows (`BOW`):** Permitted on `Marksman`. Ranged single-target piercing attacks.
-   - **Axes (`AXE`):** Permitted on `Vanguard`, `Miner`. Heavy cleaving strikes.
-   - **Staves (`STAFF`):** Permitted on `Healer`, `Scholar`. Ranged mystic projectiles and aura empowerment.
-   - **Tomes (`TOME`):** Permitted on `Healer`, `Scholar`. Channeled magical bursts and restorative resonance.
-   - **Shields (`SHIELD`):** Permitted on `Vanguard`, `Striker`, `Miner`. Off-hand defensive posture and damage mitigation.
-   - **Rings (`RING`):** Universal accessory equipable by any archetype for secondary stat amplification.
-2. **Prefab Directory:** Centralized in `ReplicatedStorage.Assets.Weapons` (`weapon_bow`, `weapon_sword`, `weapon_daggers`, `weapon_axe`, `weapon_staff`, `weapon_tome`).
+1. **One Weapon Type per Archetype:** Each hero holds a single equipped artifact, and each archetype can equip exactly one weapon type. There are no off-hand or accessory slots.
+
+   | Archetype | Weapon type | Play pattern |
+   | --- | --- | --- |
+   | `Vanguard` | **Sword & Shield (`SWORD_SHIELD`)** | Main-hand slashing with an off-hand shield for defensive posture and damage mitigation. |
+   | `Striker` | **Daggers (`DAGGERS`)** | High-speed dual-wield flurry attacks. |
+   | `Marksman` | **Bow (`BOW`)** | Ranged single-target piercing attacks. |
+   | `Miner` | **Axe (`AXE`)** | Heavy cleaving strikes. |
+   | `Scholar` (Mage) | **Staff (`STAFF`)** | Ranged mystic projectiles and aura empowerment. |
+   | `Healer` | **Tome (`TOME`)** | Channeled magical bursts and restorative resonance. |
+
+   Swords and shields are a single combined weapon; legacy `SWORD` and `SHIELD` artifacts migrate to `SWORD_SHIELD`. Rings (`RING`) are removed: owned rings are deleted on load, and any hero left holding a weapon its archetype can no longer use is unequipped and given a compatible unequipped artifact if one is owned.
+2. **Prefab Directory:** Centralized in `ReplicatedStorage.Assets.Weapons` (`weapon_bow`, `weapon_sword_shield`, `weapon_daggers`, `weapon_axe`, `weapon_staff`, `weapon_tome`; `weapon_sword` remains as the bare blade the sword & shield prefab is built from).
 3. **Physical Constraints:** All weapon parts have `CanCollide = false`, `CanTouch = false`, `CanQuery = false`, `Massless = true`, `Anchored = false`, welded to an invisible PrimaryPart `Handle`.
-4. **Dynamic Socketing:** Attached to `RightHand` via `ArtPackVisuals.AttachAt`. Bows feature dual dynamic `Beam` sinew strings connecting from stave tips to `RightHand.DrawAttachment`.
+4. **Dynamic Socketing:** Attached to `RightHand` via `ArtPackVisuals.AttachAt`. Daggers socket their off-hand blade and Sword & Shield sockets its `OffhandShield` to `LeftHand` (skipped when the hero rig already sculpts a shield). Bows feature dual dynamic `Beam` sinew strings connecting from stave tips to `RightHand.DrawAttachment`.
 
 ---
 

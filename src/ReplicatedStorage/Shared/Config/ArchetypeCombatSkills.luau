@@ -45,6 +45,7 @@ export type SkillAttackDef = {
 
 export type ArchetypeSkillProfile = {
 	Archetype: "Vanguard" | "Striker" | "Marksman" | "Miner" | "Healer" | "Scholar",
+	HeroId: string?, -- Set on per-hero kits; nil on archetype base profiles
 	DisplayName: string,
 	Role: string,
 	Basic: BasicAttackDef,
@@ -64,7 +65,7 @@ ArchetypeCombatSkills.Constants = {
 
 ArchetypeCombatSkills.Profiles = {
 	-- ------------------------------------------------------------------------
-	-- 1. VANGUARD (Tank | Melee 6 studs | Interval ~1.20s | Swords, Axes, Shields)
+	-- 1. VANGUARD (Tank | Melee 6 studs | Interval ~1.20s | Sword & Shield)
 	-- ------------------------------------------------------------------------
 	Vanguard = {
 		Archetype = "Vanguard",
@@ -98,7 +99,7 @@ ArchetypeCombatSkills.Profiles = {
 	} :: ArchetypeSkillProfile,
 
 	-- ------------------------------------------------------------------------
-	-- 2. STRIKER (Melee DPS | Melee 6 studs | Interval ~0.85s | Swords, Daggers, Shields)
+	-- 2. STRIKER (Melee DPS | Melee 6 studs | Interval ~0.85s | Daggers)
 	-- ------------------------------------------------------------------------
 	Striker = {
 		Archetype = "Striker",
@@ -164,7 +165,7 @@ ArchetypeCombatSkills.Profiles = {
 	} :: ArchetypeSkillProfile,
 
 	-- ------------------------------------------------------------------------
-	-- 4. MINER (Disruptor / Defense | Melee 6 studs | Interval ~1.05s | Axes, Shields)
+	-- 4. MINER (Disruptor / Defense | Melee 6 studs | Interval ~1.05s | Axes)
 	-- ------------------------------------------------------------------------
 	Miner = {
 		Archetype = "Miner",
@@ -197,7 +198,7 @@ ArchetypeCombatSkills.Profiles = {
 	} :: ArchetypeSkillProfile,
 
 	-- ------------------------------------------------------------------------
-	-- 5. HEALER (Recovery Specialist | Range 24 studs | Interval ~1.25s | Staves, Tomes)
+	-- 5. HEALER (Recovery Specialist | Range 24 studs | Interval ~1.25s | Tomes)
 	-- ------------------------------------------------------------------------
 	Healer = {
 		Archetype = "Healer",
@@ -231,7 +232,7 @@ ArchetypeCombatSkills.Profiles = {
 	} :: ArchetypeSkillProfile,
 
 	-- ------------------------------------------------------------------------
-	-- 6. SCHOLAR (Mage / Spell Specialist | Range 26 studs | Interval ~1.00s | Tomes, Staves)
+	-- 6. SCHOLAR (Mage / Spell Specialist | Range 26 studs | Interval ~1.00s | Staves)
 	-- ------------------------------------------------------------------------
 	Scholar = {
 		Archetype = "Scholar",
@@ -267,12 +268,170 @@ ArchetypeCombatSkills.Profiles = {
 -- Fallback profile if an unknown or custom archetype is provided
 ArchetypeCombatSkills.DefaultProfile = ArchetypeCombatSkills.Profiles.Striker
 
-function ArchetypeCombatSkills.GetSkillProfile(archetype: string?): ArchetypeSkillProfile
-	if not archetype then
-		return ArchetypeCombatSkills.DefaultProfile
+-- ----------------------------------------------------------------------------
+-- PER-HERO SKILL KITS (GDD Section 4.4 Hero Combat Skill Ledger)
+-- Each hero inherits its archetype's numbers and secondary mechanics, then
+-- overrides names, descriptions, and (optionally) multipliers with a bespoke kit.
+-- ----------------------------------------------------------------------------
+type HeroKitOverride = {
+	Archetype: string,
+	Basic: { [string]: any },
+	Special: { [string]: any },
+	Skill: { [string]: any },
+}
+
+local function buildHeroProfile(heroId: string, kit: HeroKitOverride): ArchetypeSkillProfile
+	local base = ArchetypeCombatSkills.Profiles[kit.Archetype] or ArchetypeCombatSkills.DefaultProfile
+	local function merge(baseDef: { [string]: any }, override: { [string]: any }): any
+		local def = table.clone(baseDef)
+		for key, value in override do
+			def[key] = value
+		end
+		return table.freeze(def)
 	end
-	local profile = ArchetypeCombatSkills.Profiles[archetype]
-	return profile or ArchetypeCombatSkills.DefaultProfile
+	local profile = table.clone(base) :: any
+	profile.HeroId = heroId
+	profile.Basic = merge(base.Basic :: any, kit.Basic)
+	profile.Special = merge(base.Special :: any, kit.Special)
+	profile.Skill = merge(base.Skill :: any, kit.Skill)
+	return table.freeze(profile) :: ArchetypeSkillProfile
+end
+
+local HERO_KITS: { [string]: HeroKitOverride } = {
+	hero_han = {
+		Archetype = "Striker",
+		Basic = { Name = "Gale Slash" },
+		Special = { Name = "Crescent Cross-Cut" },
+		Skill = {
+			Name = "Relentless Blade Flurry",
+			Description = "Han refuses to yield, carving a relentless flurry through the primary target that deals 3.20x ATK burst damage in a 12-stud radius.",
+		},
+	},
+	hero_aaron = {
+		Archetype = "Vanguard",
+		Basic = { Name = "Bastion Strike" },
+		Special = { Name = "Aegis Shield Bash" },
+		Skill = {
+			Name = "Fortress Bulwark",
+			Description = "Aaron plants his phalanx shield, taunting enemies within 25 studs for 4s and raising a barrier equal to 40% Max HP for 6s.",
+		},
+	},
+	hero_catio = {
+		Archetype = "Miner",
+		Basic = { Name = "Pickaxe Cleave" },
+		Special = { Name = "Resonance Tremor" },
+		Skill = {
+			Name = "Crystalline Excavation",
+			Description = "Catio strikes a resonant fault line, erupting crystal spikes under all enemies within 18 studs for 2.60x ATK blunt damage and bonus gem shards.",
+		},
+	},
+	hero_valeria = {
+		Archetype = "Healer",
+		Basic = { Name = "Emerald Bolt" },
+		Special = { Name = "Verdant Mend" },
+		Skill = {
+			Name = "Sanctuary Miracle",
+			Description = "Valeria blooms an emerald sanctuary, restoring 35% Max HP to ALL deployed heroes, cleansing debuffs, and granting +3% HP/s regen for 4s.",
+		},
+	},
+	hero_ignis = {
+		Archetype = "Vanguard",
+		Basic = { Name = "Molten Cleave" },
+		Special = { Name = "Magma Breaker" },
+		Skill = {
+			Name = "Infernal Juggernaut",
+			Description = "Ignis ignites into a molten juggernaut, taunting enemies within 25 studs for 4s and encasing himself in a magma barrier equal to 40% Max HP for 6s.",
+		},
+	},
+	hero_jenna = {
+		Archetype = "Marksman",
+		Basic = { Name = "Wind-Step Shot" },
+		Special = { Name = "Piercing Gale Volley" },
+		Skill = {
+			Name = "Sylphid Arrow Storm",
+			Description = "Jenna looses a sky-flare arrow that opens a wind sigil, raining gale arrows over a 16-stud radius for 2.80x ATK and shredding enemy defense by 20% for 5s.",
+		},
+	},
+	hero_velkist = {
+		Archetype = "Striker",
+		Basic = { Name = "Twin Fang Cut" },
+		Special = { Name = "Shadow Rend" },
+		Skill = {
+			Name = "Phantom Lotus Execution",
+			Description = "Velkist blinks through the target in a blooming phantom lotus of blades, dealing 3.20x ATK burst damage in a 12-stud radius.",
+		},
+	},
+	hero_eolka = {
+		Archetype = "Scholar",
+		Basic = { Name = "Ruby Firebolt" },
+		Special = { Name = "Wildfire Chain" },
+		Skill = {
+			Name = "Crimson Hellfire Pillar",
+			Description = "Eolka calls a crimson hellfire pillar onto the target area (20-stud radius), dealing 3.50x ATK fire damage and leaving burning ground for 3s.",
+		},
+	},
+	hero_morrigan = {
+		Archetype = "Vanguard",
+		Basic = { Name = "Abyssal Reap" },
+		Special = { Name = "Dread Shockwave" },
+		Skill = {
+			Name = "Obsidian Bastion",
+			Description = "Morrigan raises an obsidian bastion, taunting enemies within 25 studs for 4s and gaining an abyssal barrier equal to 40% Max HP for 6s.",
+		},
+	},
+	hero_archon = {
+		Archetype = "Striker",
+		Basic = { Name = "Void Lance Strike" },
+		Special = { Name = "Rift Sever" },
+		Skill = {
+			Name = "Dimensional Cataclysm",
+			Description = "The Sovereign Archon tears open a dimensional rift around the target, dealing 3.20x ATK burst damage in a 12-stud radius.",
+		},
+	},
+	hero_solaris = {
+		Archetype = "Scholar",
+		Basic = { Name = "Solar Ray" },
+		Special = { Name = "Corona Arc" },
+		Skill = {
+			Name = "Supernova Starfall",
+			Description = "Solaris collapses a miniature star onto the battlefield (20-stud radius), dealing 3.50x ATK fire damage with lingering solar flames for 3s.",
+		},
+	},
+	hero_astrea = {
+		Archetype = "Marksman",
+		Basic = { Name = "Astral Arrow" },
+		Special = { Name = "Nebula Piercer" },
+		Skill = {
+			Name = "Constellation Judgment",
+			Description = "Astrea draws a constellation across the sky and fires its stars down over a 16-stud radius, dealing 2.80x ATK and shredding enemy defense by 20% for 5s.",
+		},
+	},
+}
+
+local heroProfiles: { [string]: ArchetypeSkillProfile } = {}
+for heroId, kit in HERO_KITS do
+	heroProfiles[heroId] = buildHeroProfile(heroId, kit)
+end
+ArchetypeCombatSkills.HeroProfiles = table.freeze(heroProfiles)
+
+-- Resolves a hero-specific kit first (by HeroId / TemplateId), then falls back to an
+-- archetype profile. Accepts either a HeroId or an Archetype as the first argument
+-- for backward compatibility with archetype-only callers.
+function ArchetypeCombatSkills.GetSkillProfile(heroIdOrArchetype: string?, fallbackArchetype: string?): ArchetypeSkillProfile
+	if heroIdOrArchetype then
+		local heroProfile = ArchetypeCombatSkills.HeroProfiles[heroIdOrArchetype]
+		if heroProfile then
+			return heroProfile
+		end
+		local archetypeProfile = ArchetypeCombatSkills.Profiles[heroIdOrArchetype]
+		if archetypeProfile then
+			return archetypeProfile
+		end
+	end
+	if fallbackArchetype then
+		return ArchetypeCombatSkills.Profiles[fallbackArchetype] or ArchetypeCombatSkills.DefaultProfile
+	end
+	return ArchetypeCombatSkills.DefaultProfile
 end
 
 return table.freeze(ArchetypeCombatSkills)

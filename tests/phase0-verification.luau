@@ -43,8 +43,8 @@ do
         Artifacts = {
             ["art_1"] = {
                 UUID = "art_1",
-                TemplateId = "wpn_iron_sword",
-                Type = "SWORD",
+                TemplateId = "art_rusty_daggers",
+                Type = "DAGGERS",
                 Rarity = 2,
                 Star = 2,
                 Level = 5,

@@ -419,7 +419,7 @@ function A.EquipWeapon(model: Model, weaponAssetId: string?, weaponType: string?
 	if not template and weaponType then
 		local typeMap = {
 			BOW = "weapon_bow",
-			SWORD = "weapon_sword",
+			SWORD_SHIELD = "weapon_sword_shield",
 			DAGGERS = "weapon_daggers",
 			AXE = "weapon_axe",
 			STAFF = "weapon_staff",
@@ -502,7 +502,7 @@ function A.EquipWeapon(model: Model, weaponAssetId: string?, weaponType: string?
 		end
 	end
 
-	local effectiveType = weaponType or (if template.Name:find("bow") then "BOW" elseif template.Name:find("sword") then "SWORD" elseif template.Name:find("dagger") then "DAGGERS" elseif template.Name:find("axe") then "AXE" elseif template.Name:find("staff") then "STAFF" else "TOME")
+	local effectiveType = weaponType or (if template.Name:find("bow") then "BOW" elseif template.Name:find("sword") then "SWORD_SHIELD" elseif template.Name:find("dagger") then "DAGGERS" elseif template.Name:find("axe") then "AXE" elseif template.Name:find("staff") then "STAFF" else "TOME")
 
 	if effectiveType == "BOW" then
 		local primary = wModel.PrimaryPart or wModel:FindFirstChild("Handle") or wModel:FindFirstChildWhichIsA("BasePart")
@@ -616,8 +616,36 @@ function A.EquipWeapon(model: Model, weaponAssetId: string?, weaponType: string?
 			end
 		end
 		wModel.Parent = art
+	elseif effectiveType == "SWORD_SHIELD" then
+		local shieldModel = wModel:FindFirstChild("OffhandShield")
+		if shieldModel and art:FindFirstChild("KiteShield", true) then
+			-- Rig already carries a sculpted shield (e.g. Aaron); keep only the sword
+			shieldModel:Destroy()
+		elseif shieldModel and lHand then
+			shieldModel.Name = "EquippedWeaponLeft"
+			local sPrimary = (shieldModel :: any).PrimaryPart or shieldModel:FindFirstChild("HandleS") or shieldModel:FindFirstChildWhichIsA("BasePart")
+			if sPrimary then
+				shieldModel:PivotTo(lHand.CFrame * CFrame.Angles(math.rad(-90), 0, 0))
+				local weldS = Instance.new("WeldConstraint")
+				weldS.Part0 = lHand
+				weldS.Part1 = sPrimary
+				weldS.Parent = sPrimary
+			end
+			shieldModel.Parent = art
+		end
+		if rHand then
+			local primary = wModel.PrimaryPart or wModel:FindFirstChild("Handle") or wModel:FindFirstChildWhichIsA("BasePart")
+			if primary then
+				wModel:PivotTo(rHand.CFrame * CFrame.Angles(math.rad(-90), 0, 0))
+				local weld = Instance.new("WeldConstraint")
+				weld.Part0 = rHand
+				weld.Part1 = primary
+				weld.Parent = primary
+			end
+		end
+		wModel.Parent = art
 	else
-		-- SWORD, AXE, STAFF, TOME: Main hand (RightHand)
+		-- AXE, STAFF, TOME: Main hand (RightHand)
 		if rHand then
 			local primary = wModel.PrimaryPart or wModel:FindFirstChild("Handle") or wModel:FindFirstChildWhichIsA("BasePart")
 			if primary then
