@@ -55,6 +55,20 @@ HeroSockets.SOCKETS = table.freeze({
 	}),
 } :: { [WeaponType]: { Socket } })
 
+-- Which prefab and weapon type an equipped artifact uses. `seeds` is ArtifactCatalog.Seeds
+-- (passed in so this stays pure). The artifact's own type wins over a mismatched hint.
+function HeroSockets.ResolvePrefab(artifactId: string?, weaponType: string?, seeds: { [string]: any }?): (string?, WeaponType?)
+	if artifactId == "" then artifactId = nil end
+	if weaponType == "" then weaponType = nil end
+	local seed = artifactId and seeds and seeds[artifactId]
+	local resolvedType: WeaponType? = (seed and seed.Type or weaponType) :: any
+	if not resolvedType or not HeroSockets.SOCKETS[resolvedType] then
+		return nil, nil
+	end
+	local prefab = seed and seed.ModelAssetId or HeroSockets.PREFABS[resolvedType]
+	return prefab, resolvedType
+end
+
 -- Removes the equipped weapon (and its socket welds) from a rig.
 function HeroSockets.Unequip(rig: Model)
 	local current = rig:FindFirstChild(HeroSockets.EQUIPPED_NAME)

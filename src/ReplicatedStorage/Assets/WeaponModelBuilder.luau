@@ -426,6 +426,53 @@ end
 -- ============================================================================
 -- PUBLIC ENSURE API
 -- ============================================================================
+-- ============================================================================
+-- STYLING (shared by every equip path)
+-- ============================================================================
+-- Per-artifact colour overrides and the rarity glow, applied to a cloned prefab.
+function WeaponModelBuilder.Style(wModel: Model, weaponAssetId: string?, rarityIndex: number?)
+	if weaponAssetId == "art_crystal_greatbow" then
+		for _, p in ipairs(wModel:GetDescendants()) do
+			if p:IsA("BasePart") then
+				if p.Name:find("Limb") or p.Name:find("Seg") or p.Name:find("Core") or p.Name:find("Tip") then
+					p.Material = Enum.Material.Neon
+					p.Color = Color3.fromRGB(80, 225, 255)
+				elseif p.Name:find("Band") or p.Name:find("Wrap") or p.Name:find("Rope") then
+					p.Material = Enum.Material.SmoothPlastic
+					p.Color = Color3.fromRGB(220, 240, 255)
+				end
+			end
+		end
+	elseif weaponAssetId == "art_recurve_composite" then
+		for _, p in ipairs(wModel:GetDescendants()) do
+			if p:IsA("BasePart") then
+				if p.Name:find("Limb") or p.Name:find("Seg") or p.Name:find("Riser") then
+					p.Material = Enum.Material.Wood
+					p.Color = Color3.fromRGB(115, 75, 45)
+				elseif p.Name:find("Band") or p.Name:find("Wrap") then
+					p.Material = Enum.Material.SmoothPlastic
+					p.Color = Color3.fromRGB(45, 35, 30)
+				end
+			end
+		end
+	end
+
+	-- Rarity flair: Legendary+ weapons (rarity >= 14) glow in their rarity colour.
+	if rarityIndex and rarityIndex >= 14 then
+		local Shared = ReplicatedStorage:FindFirstChild("Shared")
+		local ArtifactCatalog = Shared and require(Shared:WaitForChild("Config"):WaitForChild("ArtifactCatalog")) :: any
+		local rInfo = ArtifactCatalog and ArtifactCatalog.GetRarityInfo(rarityIndex)
+		if rInfo then
+			for _, p in ipairs(wModel:GetDescendants()) do
+				if p:IsA("BasePart") and (p.Name:find("Blade") or p.Name:find("Tip") or p.Name:find("Orb") or p.Name:find("Crystal")) then
+					p.Material = Enum.Material.Neon
+					p.Color = rInfo.Color
+				end
+			end
+		end
+	end
+end
+
 -- Returns the Weapons folder first (ArtPackVisuals relies on that), then name -> prefab.
 function WeaponModelBuilder.EnsureWeapons(): (Folder, { [string]: Model })
 	local assets = ReplicatedStorage:FindFirstChild("Assets")

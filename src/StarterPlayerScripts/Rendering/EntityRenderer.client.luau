@@ -37,6 +37,40 @@ local Generations: {[number]:number}={}
 local VisualFolder = Workspace:WaitForChild("ClientVisualEntities")
 local CombatFeedback=require(ReplicatedStorage.Assets.CombatFeedback).new(VisualFolder)
 local ArtPackVisuals = require(ReplicatedStorage:WaitForChild("Assets"):WaitForChild("ArtPackVisuals"))
+local HeroRig = ReplicatedStorage.Assets:WaitForChild("HeroRig")
+local HeroRigSpec = require(HeroRig:WaitForChild("HeroRigSpec"))
+local HeroAnimator = require(HeroRig:WaitForChild("HeroAnimator"))
+local HeroLoadout = require(HeroRig:WaitForChild("HeroLoadout"))
+
+-- Attack tier codes sent with HERO_ATTACK (CombatSimulation) -> HeroClips action states.
+local ATTACK_TIER_STATES = { [1] = "AttackBasic", [2] = "AttackSpecial", [3] = "AttackSkill" }
+local ATTACK_TIER_NAMES = { [1] = "BASIC", [2] = "SPECIAL", [3] = "SKILL" }
+
+-- The hero rig inside a rendered entity when it was built by HeroRegistry (Phase 3 rigs).
+local function heroRig(model: Model): Model?
+	local art = model:FindFirstChild("ArtPackVisual")
+	if art and art:IsA("Model") and art:GetAttribute("HeroRigVersion") ~= nil then
+		return art
+	end
+	return nil
+end
+
+local function equipHero(model: Model, meta: any)
+	local rig = heroRig(model)
+	local artifactId = meta and meta.EquippedArtifactId
+	if artifactId == "" then artifactId = nil end
+	if rig then
+		if artifactId or (meta and meta.EquippedArtifactType and meta.EquippedArtifactType ~= "") then
+			HeroLoadout.Equip(model, rig, artifactId, meta.EquippedArtifactType, meta.EquippedArtifactRarity)
+		else
+			HeroLoadout.Unequip(model, rig)
+		end
+	elseif artifactId or (meta and meta.EquippedArtifactType) then
+		ArtPackVisuals.EquipWeapon(model, artifactId, meta.EquippedArtifactType, meta.EquippedArtifactRarity)
+	else
+		ArtPackVisuals.UnequipWeapon(model)
+	end
+end
 
 type VisualNode = {
 	NetId: number,
@@ -104,7 +138,7 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 
 	local enemySpec=meta.EnemyId and FirstBiome.Get(meta.EnemyId)
 	if enemySpec then bodySize=Vector3.new(enemySpec.Role=="BOSS" and 13 or 5,enemySpec.Height,5);isBoss=enemySpec.Role=="BOSS";bodyColor=Color3.fromRGB(106,149,89) end
-	local rootOffsetY = enemySpec and enemySpec.RootHeight or isHero and 3.2 or (bodySize.Y * 0.5)
+	local rootOffsetY = enemySpec and enemySpec.RootHeight or isHero and HeroRigSpec.GROUND_OFFSET or (bodySize.Y * 0.5)
 	local root = Instance.new("Part")
 	root.Name = "HumanoidRootPart"
 	root.Size = isHero and Vector3.new(2, 2, 1) or bodySize
@@ -231,17 +265,19 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 	end
 
 	if isHero then
-		if meta and (meta.EquippedArtifactId or meta.EquippedArtifactType) and meta.EquippedArtifactId ~= "" then
-			ArtPackVisuals.EquipWeapon(model, meta.EquippedArtifactId, meta.EquippedArtifactType, meta.EquippedArtifactRarity)
-		else
-			ArtPackVisuals.UnequipWeapon(model)
-		end
+		equipHero(model, meta)
 	end
 
 	model.PrimaryPart = root
 	model.Parent = VisualFolder
 
+	-- Rigs built by HeroRegistry are posed by HeroAnimator on this client (Motor6D.Transform
+	-- does not replicate, so every client animates its own copy).
+	local rig = isHero and heroRig(model) or nil
+	local animator = rig and HeroAnimator.new(rig, { HeroId = meta and meta.TemplateId }) or nil
+
 	return {
+		HeroAnimator = animator,
 		EnemyRig=enemyRig,RootHeight=rootOffsetY,BornAt=meta.BornAt,
 		NetId = netId,
 		IsHero = isHero,
@@ -409,11 +445,9 @@ TowerRemotes.TowerEntityState.OnClientEvent:Connect(function(context,message)
      local nextArtId = entry.EquippedArtifactId
      if nextArtId == "" then nextArtId = nil end
      if currentArtId ~= nextArtId then
-      if nextArtId then
-       ArtPackVisuals.EquipWeapon(node.Model, nextArtId, entry.EquippedArtifactType, entry.EquippedArtifactRarity)
-      else
-       ArtPackVisuals.UnequipWeapon(node.Model)
-      end
+      equipHero(node.Model, entry)
+      local animator = (node :: any).HeroAnimator
+      if animator then animator:SetWeaponType(node.Model:GetAttribute("EquippedArtifactType")) end
      end
     end
    end
@@ -449,10 +483,21 @@ RunService.RenderStepped:Connect(function(dt: number)
 		else
 			node.CurrentPos = node.CurrentPos:Lerp(node.GoalPos, alpha)
 		end
-		local bodyH = (node :: any).RootHeight or node.IsHero and 3.2 or (node.RootPart.Size.Y * 0.5)
+		local bodyH = (node :: any).RootHeight or node.IsHero and HeroRigSpec.GROUND_OFFSET or (node.RootPart.Size.Y * 0.5)
 		local cf = CFrame.new(node.CurrentPos + Vector3.new(0, bodyH, 0)) * CFrame.Angles(0, node.GoalYaw, 0)
 		node.Model:PivotTo(cf)
-		if (node :: any).EnemyRig then EnemyAnimation.Step(node,dt,serverNow) else ArtPackVisuals.Animate(node, dt, os.clock()) end
+		local animator = (node :: any).HeroAnimator
+		if (node :: any).EnemyRig then
+			EnemyAnimation.Step(node,dt,serverNow)
+		elseif animator then
+			debug.profilebegin("HeroAnimator.Step")
+			local moving = (node.GoalPos - node.CurrentPos).Magnitude > 0.15
+			animator:SetLocomotion(if node.StateEnum == 4 then "Coma" elseif moving then "Move" else "Idle")
+			animator:Step(dt)
+			debug.profileend()
+		else
+			ArtPackVisuals.Animate(node, dt, os.clock())
+		end
 		local head = node.Model:FindFirstChild("Head") :: BasePart?
 		if head and not node.IsHero then
 			head.Position = cf.Position + Vector3.new(0, bodyH + (head.Size.Y * 0.45), 0)
@@ -510,9 +555,27 @@ BossTelegraphRemote.OnClientEvent:Connect(function(context: any, telegraphType: 
 	end
 end)
 
-CombatVFXRemote.OnClientEvent:Connect(function(context: any, vfxType: string, pos: Vector3, amount: number?, isOverdrive: boolean?, incoming: boolean?)
+CombatVFXRemote.OnClientEvent:Connect(function(context: any, vfxType: string, pos: Vector3, amount: number?, isOverdrive: any, incoming: any)
 	if not Protocol.Same(context,View) then return end
-	if vfxType=="HIT_SPARK" then
+	if vfxType=="HERO_ATTACK" then
+		-- HERO_ATTACK reuses the trailing slots: amount = attacker NetId, then tier code (1..3)
+		-- and the attack interval in milliseconds.
+		local node = VisualNodesByNetId[amount or -1]
+		local tier = if type(isOverdrive) == "number" then isOverdrive else 1
+		local seconds = math.clamp((if type(incoming) == "number" then incoming else 750) / 1000, 0.35, 1.2)
+		if node then
+			local animator = (node :: any).HeroAnimator
+			if animator then
+				animator:PlayAction(ATTACK_TIER_STATES[tier] or "AttackBasic", seconds)
+			else
+				-- Legacy ArtPackVisuals.Animate reads these fields.
+				(node :: any).AttackAnimTier = ATTACK_TIER_NAMES[tier] or "BASIC"
+				;(node :: any).AttackAnimStartClock = os.clock()
+				;(node :: any).AttackAnimDuration = seconds
+			end
+		end
+		return
+	elseif vfxType=="HIT_SPARK" then
 		CombatFeedback:Hit(pos,amount,isOverdrive,incoming)
 		return
 	elseif vfxType=="HIT_SPECIAL" then

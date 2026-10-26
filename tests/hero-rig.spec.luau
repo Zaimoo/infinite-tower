@@ -333,6 +333,20 @@ do
 		check(HeroSockets.PREFABS[weaponType] ~= nil, `prefab mapped for {weaponType}`)
 	end
 
+	-- Every catalog artifact resolves to a known prefab of its own weapon type (Phase 5).
+	local knownPrefabs: { [string]: boolean } = {}
+	for _, prefab in HeroSockets.PREFABS do
+		knownPrefabs[prefab] = true
+	end
+	for artifactId, seed in ArtifactCatalog.Seeds do
+		local prefab, weaponType = HeroSockets.ResolvePrefab(artifactId, nil, ArtifactCatalog.Seeds)
+		check(weaponType == seed.Type, `{artifactId} resolves to its own type {seed.Type}`)
+		check(prefab ~= nil and knownPrefabs[prefab] == true, `{artifactId} resolves to a built prefab ({tostring(prefab)})`)
+	end
+	check(select(1, HeroSockets.ResolvePrefab(nil, "BOW", ArtifactCatalog.Seeds)) == "weapon_bow", "type-only resolves to the type prefab")
+	check(select(2, HeroSockets.ResolvePrefab("", "", ArtifactCatalog.Seeds)) == nil, "empty ids resolve to nothing")
+	check(select(2, HeroSockets.ResolvePrefab(nil, "RING", ArtifactCatalog.Seeds)) == nil, "unknown weapon types resolve to nothing")
+
 	for _, bodyType in bodyTypes do
 		local byPart: { [string]: { [string]: boolean } } = {}
 		for _, attachment in layouts[bodyType].Attachments do
