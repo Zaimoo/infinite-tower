@@ -315,6 +315,31 @@ do
 	check(HeroClips.Get(nil, "BOW", "Hit") == HeroClips.Shared.Hit, "shared state fallback")
 	check(HeroClips.Get(nil, "NOT_A_WEAPON", "AttackBasic") == HeroClips.ByWeapon.UNARMED.AttackBasic, "unknown weapon falls back to UNARMED")
 	check(HeroClips.Get(nil, nil, "Idle") == HeroClips.ByWeapon.UNARMED.Idle, "no weapon uses UNARMED")
+
+	-- Signature attacks (projectile-skill-vfx-plan.md, Phase 4): every hero has its own ultimate,
+	-- each attack override carries a Release marker, and overrides only apply with the hero's weapon.
+	for heroId in HeroCostumes.ById do
+		local weapon = HeroClips.OverrideWeapon[heroId]
+		check(weapon ~= nil and HeroClips.ByWeapon[weapon] ~= nil, `{heroId} has a signature weapon`)
+		local skill = HeroClips.Overrides[heroId] and HeroClips.Overrides[heroId].AttackSkill
+		check(skill ~= nil, `{heroId} has a signature AttackSkill`)
+		check(HeroClips.Get(heroId, weapon, "AttackSkill") == skill, `{heroId} resolves its signature AttackSkill`)
+		check(HeroClips.Get(heroId, "UNARMED", "AttackSkill") == HeroClips.ByWeapon.UNARMED.AttackSkill, `{heroId} unarmed falls back to UNARMED`)
+	end
+	for heroId, states in HeroClips.Overrides do
+		for state, clip in states do
+			if string.sub(state, 1, 6) == "Attack" then
+				local release = HeroClips.Marker(clip, "Release", -1)
+				check(release > 0 and release < 1, `Overrides.{heroId}.{state} has a Release marker`)
+				if HeroClips.OverrideWeapon[heroId] == "BOW" then
+					check(HeroClips.Marker(clip, "Nock", -1) > release, `Overrides.{heroId}.{state} re-nocks after release`)
+				end
+			end
+		end
+	end
+	check(HeroClips.Get("hero_velkist", "DAGGERS", "AttackSpecial") == HeroClips.Overrides.hero_velkist.AttackSpecial, "Velkist's Shadow Rend override")
+	check(HeroClips.Get("hero_catio", "AXE", "AttackSpecial") == HeroClips.Overrides.hero_catio.AttackSpecial, "Catio's Resonance Tremor override")
+	check(HeroClips.Get("hero_han", "DAGGERS", "AttackSpecial") == HeroClips.ByWeapon.DAGGERS.AttackSpecial, "other specials use the weapon clip")
 end
 
 -- 6. Weapon sockets (Phase 2) ---------------------------------------------------

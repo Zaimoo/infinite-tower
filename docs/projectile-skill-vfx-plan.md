@@ -219,6 +219,27 @@ Each phase is its own branch and PR off `main` (`feat(combat): ...`).
 - `HeroClips.Overrides` `AttackSkill` for all 12 heroes, plus Special overrides where needed, all with markers.
 - `tests/studio-hero-model-viewer.luau` gains a "play tier" mode to review clips without combat.
 
+#### Phase 4 results (2026-10-26)
+- `HeroClips`:
+  - `WeaponPoses`: each weapon's key poses, exposed so overrides can build on them.
+  - `OVERRIDE_WEAPON` (exported as `HeroClips.OverrideWeapon`): a hero override now applies only while the hero holds its signature weapon. `HeroClips.Get` enforces this, and the server's `HeroActionTiming` reads clips through `Get`, so an unarmed hero uses the `UNARMED` clips and markers on both sides.
+  - A signature `AttackSkill` for all 12 heroes, each with its own `Release` (bows also `Nock`):
+    - Jenna: a backward wind-step leap, firing at the top of the jump.
+    - Astrea: an arched, deliberate sky shot with a held follow-through.
+    - Aaron: shield planted in a braced stance.
+    - Ignis: a two-armed roar.
+    - Morrigan: sword driven into the ground from one knee.
+    - Han: four alternating cuts and a double slash.
+    - Velkist: a coiled lunge with blades opening like lotus petals.
+    - Archon: crossed blades torn apart.
+    - Catio: an axe spin into a two-handed slam.
+    - Eolka: staff raised, then driven down in a lunge.
+    - Solaris: gather the sky, bring it together, throw it down.
+    - Valeria: tome lifted in blessing, then arms opened wide.
+  - Special overrides for Velkist (Shadow Rend dash cut) and Catio (Resonance Tremor ground strike).
+- `tests/hero-rig.spec.luau`: every hero has a signature weapon and `AttackSkill`, every attack override has a `Release` (bows `Nock` after it), unarmed heroes fall back to `UNARMED`, and the two special overrides resolve. The existing clip checks cover angle limits, joint names and matching start and end poses for all 14 new clips.
+- `tests/studio-hero-model-viewer.luau`: new `Play`, `Seconds` and `HeroId` options loop a state on the lineup by writing static poses, in Edit mode or a playtest, and print each clip's length and `Release`.
+
 ### Phase 5: Skill VFX for the other 10 heroes
 - The remaining primitives (Pillar, Shell, SlashArc, Chain, Aura, GroundRing) and catalog entries per the table above. Can be split into one PR per archetype.
 
