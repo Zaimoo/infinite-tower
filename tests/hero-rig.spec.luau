@@ -195,4 +195,39 @@ end
 -- 5. Unknown body types are rejected ------------------------------------------
 check(not pcall(HeroRigSpec.Layout, "Giant" :: any), "unknown body type errors")
 
+-- 6. Weapon sockets (Phase 2) ---------------------------------------------------
+-- Every catalog weapon type has a prefab and sockets, and every socket lands on an
+-- attachment the rig spec actually builds, on every body type.
+do
+	local HeroSockets = require(ReplicatedStorage.Assets.HeroRig.HeroSockets)
+	local ArtifactCatalog = require(ReplicatedStorage.Shared.Config.ArtifactCatalog)
+
+	local catalogTypes: { [string]: boolean } = {}
+	for _, weaponType in ArtifactCatalog.ArchetypeWeaponType do
+		catalogTypes[weaponType] = true
+	end
+	for weaponType in catalogTypes do
+		check(HeroSockets.SOCKETS[weaponType] ~= nil, `sockets defined for {weaponType}`)
+		check(HeroSockets.PREFABS[weaponType] ~= nil, `prefab mapped for {weaponType}`)
+	end
+
+	for _, bodyType in bodyTypes do
+		local byPart: { [string]: { [string]: boolean } } = {}
+		for _, attachment in layouts[bodyType].Attachments do
+			byPart[attachment.Part] = byPart[attachment.Part] or {}
+			byPart[attachment.Part][attachment.Name] = true
+		end
+		for weaponType, sockets in HeroSockets.SOCKETS do
+			check(#sockets >= 1, `{weaponType} has at least one socket`)
+			local usedRigAttachments: { [string]: boolean } = {}
+			for _, socket in sockets do
+				check(byPart[socket.RigPart] ~= nil and byPart[socket.RigPart][socket.RigAttachment] == true, `{bodyType} {weaponType} socket {socket.RigPart}.{socket.RigAttachment} exists on the rig`)
+				local key = socket.RigPart .. "." .. socket.RigAttachment
+				check(not usedRigAttachments[key], `{weaponType} uses {key} once`)
+				usedRigAttachments[key] = true
+			end
+		end
+	end
+end
+
 print(`Hero rig spec tests: {passed} passed, 0 failed`)

@@ -55,9 +55,35 @@ local function weldTo(primary: BasePart, part: BasePart)
 	return w
 end
 
+-- Socket attachments (hero-rig-rebuild-plan.md, section 3). Every Grip follows one rule:
+-- UpVector runs along the handle toward the weapon's head, LookVector is the weapon's
+-- working direction. HeroSockets welds a Grip to the hero's matching hand attachment.
+local function addSocket(part: BasePart, name: string, position: Vector3, rotationDegrees: Vector3?)
+	local existing = part:FindFirstChild(name)
+	if existing then
+		existing:Destroy()
+	end
+	local rot = rotationDegrees or Vector3.zero
+	local attachment = Instance.new("Attachment")
+	attachment.Name = name
+	attachment.CFrame = CFrame.new(position) * CFrame.Angles(math.rad(rot.X), math.rad(rot.Y), math.rad(rot.Z))
+	attachment.Parent = part
+	return attachment
+end
+
+-- Blades and axe heads sit along handle +Y with their edge facing handle +X, so the grip
+-- looks along +X (CFrame.Angles(0, -90, 0) turns -Z onto +X and keeps +Y).
+local EDGE_PLUS_X = Vector3.new(0, -90, 0)
+
 -- ============================================================================
--- 1. WEAPON_BOW (Authoritative Hunter & Ranger Bow)
+-- 1. WEAPON_BOW (Hunter & Ranger Bow)
+-- Handle space: stave along +Y (upper limb up), string behind the riser at +Z,
+-- nocked arrow flying toward -Z, resting on the riser's +X side.
 -- ============================================================================
+local BOW_STRING_Z = 0.42
+local BOW_TIP_Y = 1.84
+local ARROW_REST = Vector3.new(0.2, 0.1, 0)
+
 local function alignHunterArrow(bowModel: Model, handle: BasePart)
 	local arrow = bowModel:FindFirstChild("HunterArrow", true)
 	if not arrow then return end
@@ -81,15 +107,10 @@ local function alignHunterArrow(bowModel: Model, handle: BasePart)
 		end
 	end
 
-	-- Precision archery geometry:
-	-- String center at X = -1.25, Y = 0.00, Z = 0.28
-	-- Arrow shelf on riser at X = 0.00, Y = 0.18, Z = 0.28
-	local pNock = Vector3.new(-1.25, 0.00, 0.28)
-	local pShelf = Vector3.new(0.00, 0.18, 0.28)
-	local dir = (pShelf - pNock).Unit
-	local pCenter = pNock + dir * 1.0
-
-	local shaftCFInHandle = CFrame.lookAt(pCenter, pCenter + dir, Vector3.new(0, 0, 1))
+	-- Nock on the string, shaft (2 studs) pointing at -Z past the riser.
+	local pNock = Vector3.new(ARROW_REST.X, ARROW_REST.Y, BOW_STRING_Z)
+	local pCenter = pNock + Vector3.new(0, 0, -1.0)
+	local shaftCFInHandle = CFrame.lookAt(pCenter, pCenter + Vector3.new(0, 0, -1), Vector3.new(0, 1, 0))
 	local shaftWorld = handle.CFrame * shaftCFInHandle
 	shaft.CFrame = shaftWorld
 
@@ -130,52 +151,8 @@ local function alignHunterArrow(bowModel: Model, handle: BasePart)
 end
 
 function WeaponModelBuilder.BuildBow(): Model
-	-- Check if authoritative bow prefab exists in ReplicatedStorage Assets
-	local candidate: Model? = nil
-	local assets = ReplicatedStorage:FindFirstChild("Assets")
-	local weaponsFolder = assets and assets:FindFirstChild("Weapons")
-	local existingBow = weaponsFolder and weaponsFolder:FindFirstChild("weapon_bow")
-	if existingBow and existingBow:IsA("Model") and #existingBow:GetChildren() > 0 then
-		candidate = existingBow
-	end
-	if not candidate then
-		local heroesFolder = assets and assets:FindFirstChild("Heroes")
-		local jenna = heroesFolder and heroesFolder:FindFirstChild("hero_jenna")
-		if jenna and jenna:FindFirstChild("EquippedWeapon") and jenna.EquippedWeapon:IsA("Model") then
-			candidate = jenna.EquippedWeapon
-		end
-	end
-
-	if candidate then
-		local clone = candidate:Clone()
-		clone.Name = "weapon_bow"
-		-- Clean external character welds (keep only internal Handle welds)
-		for _, d in ipairs(clone:GetDescendants()) do
-			if d:IsA("WeldConstraint") or d:IsA("Weld") or d:IsA("Motor6D") then
-				local p0 = d.Part0
-				local p1 = d.Part1
-				if (p0 and p0.Name == "LeftHand") or (p1 and p1.Name == "LeftHand") then
-					d:Destroy()
-				end
-			elseif d:IsA("Beam") then
-				d.Attachment1 = nil
-			elseif d:IsA("BasePart") then
-				d.CanCollide = false
-				d.CanTouch = false
-				d.CanQuery = false
-				d.Massless = true
-				d.Anchored = false
-			end
-		end
-		local handle = clone:FindFirstChild("Handle") :: BasePart?
-		if handle then
-			clone.PrimaryPart = handle
-			alignHunterArrow(clone, handle)
-		end
-		return clone
-	end
-
-	-- Procedural Fallback Bow
+	-- Built from code only: no Studio-authored or hero-baked bow is consulted, so the
+	-- geometry below is the single definition the Grip attachment is measured against.
 	local model = Instance.new("Model")
 	model.Name = "weapon_bow"
 	local leatherBrown = Color3.fromRGB(115, 80, 50)
@@ -185,14 +162,21 @@ function WeaponModelBuilder.BuildBow(): Model
 	local handle = makePart(model, "Handle", Vector3.new(0.3, 0.8, 0.35), CFrame.new(0, 0, 0), leatherBrown)
 	model.PrimaryPart = handle
 
-	local topLimb = makePart(model, "BowLimbUpper", Vector3.new(0.22, 1.6, 0.25), CFrame.new(0, 1.1, 0.25) * CFrame.Angles(math.rad(-22), 0, 0), bowGreen)
+	-- Limbs bow forward from the riser and curve back so their tips meet the string.
+	local limbAngle = math.rad(22)
+	local topLimb = makePart(model, "BowLimbUpper", Vector3.new(0.22, 1.6, 0.25), CFrame.new(0, 1.1, 0.12) * CFrame.Angles(limbAngle, 0, 0), bowGreen)
 	weldTo(handle, topLimb)
 
-	local botLimb = makePart(model, "BowLimbLower", Vector3.new(0.22, 1.6, 0.25), CFrame.new(0, -1.1, 0.25) * CFrame.Angles(math.rad(22), 0, 0), bowGreen)
+	local botLimb = makePart(model, "BowLimbLower", Vector3.new(0.22, 1.6, 0.25), CFrame.new(0, -1.1, 0.12) * CFrame.Angles(-limbAngle, 0, 0), bowGreen)
 	weldTo(handle, botLimb)
 
-	local stringPart = makePart(model, "BowString", Vector3.new(0.06, 3.4, 0.06), CFrame.new(0, 0, 0.65), stringColor)
+	local stringPart = makePart(model, "BowString", Vector3.new(0.06, BOW_TIP_Y * 2, 0.06), CFrame.new(0, 0, BOW_STRING_Z), stringColor)
 	weldTo(handle, stringPart)
+
+	addSocket(handle, "Grip", Vector3.zero) -- up = upper limb, look = arrow flight (-Z)
+	addSocket(handle, "Nock", Vector3.new(ARROW_REST.X, ARROW_REST.Y, BOW_STRING_Z))
+	addSocket(handle, "TipUpper", Vector3.new(0, BOW_TIP_Y, BOW_STRING_Z))
+	addSocket(handle, "TipLower", Vector3.new(0, -BOW_TIP_Y, BOW_STRING_Z))
 
 	-- Procedural HunterArrow
 	local arrowModel = Instance.new("Model")
@@ -243,6 +227,8 @@ function WeaponModelBuilder.BuildSword(): Model
 	local rune = makePart(model, "BladeRune", Vector3.new(0.08, 2.2, 0.12), CFrame.new(0, 2.2, 0), Color3.fromRGB(120, 200, 255), Enum.Material.Neon)
 	weldTo(handle, rune)
 
+	addSocket(handle, "Grip", Vector3.zero, EDGE_PLUS_X) -- up = blade, look = edge
+
 	return model
 end
 
@@ -273,6 +259,10 @@ function WeaponModelBuilder.BuildSwordShield(): Model
 	local crest = makePart(shieldModel, "ShieldCrystal", Vector3.new(0.3, 0.6, 0.6), CFrame.new(-0.36, 0.3, 0), Color3.fromRGB(120, 200, 255), Enum.Material.Neon)
 	crest.Shape = Enum.PartType.Ball
 	weldTo(grip, crest)
+
+	-- Strapped to the forearm: the mount sits on the back of the face plate, looks out
+	-- through the face (-X) and runs up the shield's long axis (+Y).
+	addSocket(grip, "ShieldMount", Vector3.new(-0.18, 0, 0), Vector3.new(0, 90, 0))
 
 	return model
 end
@@ -324,6 +314,9 @@ function WeaponModelBuilder.BuildDaggers(): Model
 	local glowL = makePart(leftDagger, "BladeRune", Vector3.new(0.06, 1.2, 0.09), CFrame.new(0, 1.25, 0), crimsonGlow, Enum.Material.Neon)
 	weldTo(handleL, glowL)
 
+	addSocket(handle, "Grip", Vector3.zero, EDGE_PLUS_X)
+	addSocket(handleL, "Grip", Vector3.zero, EDGE_PLUS_X)
+
 	return model
 end
 
@@ -358,6 +351,10 @@ function WeaponModelBuilder.BuildAxe(): Model
 	local spike = makeWedge(model, "BackSpike", Vector3.new(0.18, 0.6, 0.4), CFrame.new(-0.4, 1.1, 0) * CFrame.Angles(0, 0, math.rad(90)), iron, Enum.Material.Metal)
 	weldTo(handle, spike)
 
+	-- Held near the butt of the haft; OffhandGrip is the second hand for two-handed swings.
+	addSocket(handle, "Grip", Vector3.new(0, -0.9, 0), EDGE_PLUS_X)
+	addSocket(handle, "OffhandGrip", Vector3.new(0, 0.2, 0), EDGE_PLUS_X)
+
 	return model
 end
 
@@ -384,6 +381,8 @@ function WeaponModelBuilder.BuildStaff(): Model
 	-- Glowing magic ruby crystal orb
 	local orb = makePart(model, "CrystalOrb", Vector3.new(0.65, 0.65, 0.65), CFrame.new(0, 2.65, 0), rubyNeon, Enum.Material.Neon)
 	weldTo(handle, orb)
+
+	addSocket(handle, "Grip", Vector3.new(0, -0.4, 0)) -- up = orb, look = crown face (-Z)
 
 	return model
 end
@@ -419,13 +418,16 @@ function WeaponModelBuilder.BuildTome(): Model
 	local rune = makePart(model, "TomeRune", Vector3.new(0.4, 0.4, 0.05), CFrame.new(0.55, 0, 0.2), flameNeon, Enum.Material.Neon)
 	weldTo(handle, rune)
 
+	addSocket(handle, "Grip", Vector3.zero, Vector3.new(0, 180, 0)) -- up = spine top, look = front cover (+Z)
+
 	return model
 end
 
 -- ============================================================================
 -- PUBLIC ENSURE API
 -- ============================================================================
-function WeaponModelBuilder.EnsureWeapons(): { [string]: Model }
+-- Returns the Weapons folder first (ArtPackVisuals relies on that), then name -> prefab.
+function WeaponModelBuilder.EnsureWeapons(): (Folder, { [string]: Model })
 	local assets = ReplicatedStorage:FindFirstChild("Assets")
 	if not assets then
 		assets = Instance.new("Folder")

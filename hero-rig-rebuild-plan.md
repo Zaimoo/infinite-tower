@@ -205,6 +205,42 @@ Each phase lands as its own PR off `main`. The game stays playable between phase
 
 **Done when:** every weapon type sits correctly on a bare rig in the reference poses. Screenshot each.
 
+#### Phase 2 results (2026-10-26)
+
+- **Weapon sockets** (`WeaponModelBuilder.luau`; geometry untouched except the bow). Every rule is `UpVector` toward the weapon's head and `LookVector` = working direction:
+
+  | Prefab | Attachments on the primary part |
+  | --- | --- |
+  | `weapon_bow` | `Grip` (handle center; up = upper limb, look = arrow flight -Z), `Nock`, `TipUpper`, `TipLower` |
+  | `weapon_sword` / `weapon_sword_shield` | `Grip` (look = edge, +X); the shield's `HandleS` gets `ShieldMount` on the back of the face plate (look out through the face) |
+  | `weapon_daggers` | `Grip` on `Handle` and on `LeftDagger.HandleL` |
+  | `weapon_axe` | `Grip` near the butt of the haft, `OffhandGrip` higher up |
+  | `weapon_staff` | `Grip` below center (look = crown face, -Z) |
+  | `weapon_tome` | `Grip` on the spine (look = front cover, +Z) |
+
+- **Bow rebuilt from code only:**
+  - `BuildBow` no longer clones a Studio-saved or Jenna-baked bow. There was none in the place, so the live bow was already the code fallback.
+  - The limbs now curve back so their tips meet the string, and `alignHunterArrow` nocks the arrow on the string pointing -Z. It used to point along +X, sideways out of the bow.
+  - The live game still equips through `ArtPackVisuals.EquipWeapon`, which re-aligns the arrow with its own legacy math. So in-game the bow only changes by its limb shape until Phase 5.
+- **`HeroSockets.luau`** (`Assets/HeroRig/`):
+  - `PREFABS` and `SOCKETS` per weapon type are plain data, checked offline.
+  - `Equip(rig, weapon, weaponType)` places each assembly and joins it with one `Weld` (`C0` = rig attachment, `C1` = weapon attachment). It honours a `ReverseGrip` attribute on daggers.
+  - `Unequip(rig)` removes the weapon.
+  - The shield mounts to `LeftLowerArm.ShieldMountAttachment` (decision 3).
+- **`EnsureWeapons` return:** it returns `(Folder, table)`; `ArtPackVisuals` relies on the folder coming first. The annotation is corrected; the `HeroAssetSetup` count fix was already on `main`.
+- **What "rest" looks like under the grip rule:** with the arm hanging, a held weapon's head points forward (thumb side) and its working direction points down the arm. With the forearm raised forward, blades point up. With the whole arm raised forward, the bow stands vertical and the arrow points at the target. Clips in Phase 4 start from this.
+- **Tests:**
+  - `hero-rig.spec.luau` now has 807 checks. Every catalog weapon type has sockets and a prefab, and every socket lands on a rig attachment on every body type.
+  - `studio-hero-rigs.luau` now has 360 checks, all passing in a playtest. Per weapon type it checks attachments coincide (< 0.05 studs, < 2°) and no weapon parts are anchored. It also checks:
+    - **Bow:** with the arm raised, the stave is vertical, the arrow points forward, and the nock sits on the string.
+    - **Sword:** the blade points up with the forearm raised.
+    - **Shield:** it faces outward, stands vertical, and sits outside the forearm.
+    - **Daggers:** reverse grip points them backward, and re-equipping replaces the previous weapon.
+    - **Axe:** it is held near the butt.
+    - **Unequip:** it clears the weapon.
+- **How the Studio test ran:** the Rojo lock was still held by another Team Create user. The playtest server fetched the five changed files from a temporary 127.0.0.1-only file server and loaded them as play-only ModuleScripts; the shared place was not changed.
+- **Screenshots:** `docs/hero-rig-rebuild/phase-2/`.
+
 ### Phase 3: Costumes for all 12 heroes
 
 - Port each hero's look from `HeroModelBuilder.BuildX` into `HeroCostumes` data. Keep colors and silhouettes; split cross-joint pieces per bone; drop any gear.
