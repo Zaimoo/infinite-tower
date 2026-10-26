@@ -319,6 +319,45 @@ Each phase lands as its own PR off `main`. The game stays playable between phase
 
 **Done when:** Hub, Fortress plot (beds, facility workers), the tower and the hero cards all show the new rigs. A multiplayer playtest with 2 clients shows no errors.
 
+#### Phase 5 results (2026-10-26)
+
+Skills consulted: `roblox-characters-animation`, `roblox-performance`, `roblox-networking`.
+
+- **`EntityRenderer`:**
+  - Heroes whose rig carries `HeroRigVersion` equip through the new `HeroLoadout` and animate through a per-node `HeroAnimator`, created once and cached on the node. Locomotion is `Coma` when the state is 4, `Move` while interpolating towards a new position, otherwise `Idle`.
+  - Other entities, and any hero without a new rig, keep the legacy `ArtPackVisuals` path.
+  - Hero root height uses `HeroRigSpec.GROUND_OFFSET` (3.0), replacing the old 3.2.
+  - The per-frame step carries a `HeroAnimator.Step` MicroProfiler label.
+- **Attack tiers:** `CombatSimulation` broadcasts `HERO_ATTACK` on the existing unreliable `CombatVFX` remote when a hero's attack fires. The payload is `(context, "HERO_ATTACK", position, NetId, tier 1..3, interval ms)`, floor-scoped through `BroadcastAt`.
+  - Clients call `PlayAction(AttackBasic|AttackSpecial|AttackSkill, interval)`, clamped to 0.35–1.2 s.
+  - Legacy rigs get the `AttackAnimTier`/`AttackAnimStartClock`/`AttackAnimDuration` fields that `ArtPackVisuals.Animate` already read but nothing set.
+  - It is cosmetic, so a dropped packet only skips one swing.
+- **`HeroLoadout.luau`** (new) resolves the prefab with the pure `HeroSockets.ResolvePrefab` (the artifact's own type wins), clones it, styles it and sockets it, and sets the entity's `EquippedArtifactId`/`Type` attributes.
+  - Weapon styling (crystal greatbow, recurve, rarity ≥ 14 glow) moved into `WeaponModelBuilder.Style`, which `ArtPackVisuals.EquipWeapon` now calls too. Behaviour is unchanged.
+- **`HeroAnimator.ApplyStaticPose`:** poses anchored clones by writing part CFrames down the joint chain, then moving welded pieces. `ViewportFrame`s never simulate joints. `HeroCard.Portrait` uses it to show each hero's `Idle` first frame (Jenna's signature stance).
+- **`PlotManager`:**
+  - Infirmary workers' rig root is now anchored. Hero templates are unanchored assemblies, so before this the cloned worker was held by nothing and fell.
+  - The sleeping pose stays as the server laying the whole model flat. A server-side `Sleep` clip would not show, because `Motor6D.Transform` does not replicate; clients would need their own animator for plot workers, which is not worth it for a static bed pose.
+- **Not changed:**
+  - `HoldingAnimationController` animates the player's own avatar (Master), not heroes.
+  - `AdventurerPatrolController` reads `HeroCatalog` only.
+- **Tests:**
+  - `hero-rig.spec.luau`: 10,945 checks. Every catalog artifact resolves to a built prefab of its own type; type-only, empty and unknown inputs resolve correctly.
+  - `studio-hero-rigs.luau`: 677 checks still pass.
+- **Live check (playtest only):**
+  - **Swap:** this branch was not synced into the shared place. The playtest server loaded the branch modules and rebuilt the templates, then the client disabled the running `EntityRenderer` and started the branch version.
+  - **Results:** the squad (Jenna, Han) rebuilt with weapons socketed by `HeroSockets` (`HeroSocket_Grip` welds), and Jenna's joints matched her signature idle exactly. With `HERO_ATTACK` events fired at the client's view context, Jenna's bow arm peaked at 145° (Skill sky aim) and Han's dagger arm at 130° (Special cross-slash).
+  - **Hero cards:** a `ViewportFrame` clone posed by `ApplyStaticPose` moved Jenna's hand into the idle carry, with costume pieces following.
+  - **Output:** no errors from the new code. The only errors came from a test command, which `require`s its own copy of `TowerFloorService`, a copy that has no rooms.
+- **Not verified:**
+  - The server's `HERO_ATTACK` broadcast inside real combat (it is compile-checked; the client side was driven by direct fires).
+  - The plot worker anchor (no infirmary workers in the test profile).
+  - A 2-client playtest. Studio MCP only starts single-client Play.
+  - Run all three in Studio after merge with Rojo synced.
+- **Screenshot:** `docs/hero-rig-rebuild/phase-5/live-squad-attacking.jpg`.
+- **Possible follow-ups:**
+  - `IKControl` for the bow draw hand (to the string) and foot planting during crouches; a shared `Hit` reaction keyed to incoming damage on a hero.
+
 ### Phase 6: Remove the old stack and update docs
 
 - Delete `HeroModelBuilder.luau`, the hero branches in `ArtPackVisuals`, `normalizeR15Joints`, the `KiteShield` special case and the `starter_iron_vanguard` alias, if unused.

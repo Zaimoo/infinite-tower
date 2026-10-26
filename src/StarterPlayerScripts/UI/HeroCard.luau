@@ -4,6 +4,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local T = require(script.Parent:WaitForChild("PitDesignTokens"))
 local HeroCatalog = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("HeroCatalog"))
 local StatFormulas = require(ReplicatedStorage.Shared.Util.StatFormulas)
+local HeroRig = ReplicatedStorage:WaitForChild("Assets"):WaitForChild("HeroRig")
+local HeroClips = require(HeroRig:WaitForChild("HeroClips"))
+local HeroAnimator = require(HeroRig:WaitForChild("HeroAnimator"))
 local HeroCard = {}
 
 function HeroCard.Portrait(parent: Instance, hero: any): GuiObject
@@ -27,6 +30,13 @@ function HeroCard.Portrait(parent: Instance, hero: any): GuiObject
 			elseif descendant:IsA("BasePart") then
 				descendant.Anchored = true
 				descendant.CanCollide = false
+			end
+		end
+		-- Viewports never simulate joints: pose the hero's idle by writing part CFrames.
+		if model:GetAttribute("HeroRigVersion") ~= nil then
+			local idle = HeroClips.Get(hero.TemplateId, nil, "Idle")
+			if idle then
+				HeroAnimator.ApplyStaticPose(model, HeroAnimator.Sample(idle, 0))
 			end
 		end
 		model.Parent = viewport

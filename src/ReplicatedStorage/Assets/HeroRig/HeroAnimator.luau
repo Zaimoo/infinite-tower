@@ -11,6 +11,7 @@
 -- The locomotion clip loops underneath; an action plays once on top with short fades. While
 -- moving, actions only drive the upper body so the legs keep walking.
 
+local HeroRigSpec = require(script.Parent:WaitForChild("HeroRigSpec"))
 local HeroRigBuilder = require(script.Parent:WaitForChild("HeroRigBuilder"))
 local HeroClips = require(script.Parent:WaitForChild("HeroClips"))
 
@@ -158,10 +159,28 @@ function HeroAnimator.Step(self: HeroAnimator, dt: number)
 	end
 end
 
--- Applies a pose immediately with no smoothing (static previews such as hero cards).
+-- Applies a pose immediately with no smoothing (rigs in the simulated world).
 function HeroAnimator.ApplyPose(self: HeroAnimator, pose: { [string]: CFrame })
 	for joint, motor in self.Joints do
 		motor.Transform = pose[joint] or CFrame.identity
+	end
+end
+
+-- Poses a rig whose parts are all anchored, such as a clone in a ViewportFrame where joints
+-- are never simulated: writes part CFrames down the joint chain, then moves every part held
+-- by a Weld (costume pieces, socketed weapon handles) after its Part0.
+function HeroAnimator.ApplyStaticPose(rig: Model, pose: { [string]: CFrame })
+	local joints = HeroRigBuilder.GetJoints(rig)
+	for _, spec in HeroRigSpec.JOINTS do
+		local motor = joints[spec.Name]
+		if motor and motor.Part0 and motor.Part1 then
+			motor.Part1.CFrame = motor.Part0.CFrame * motor.C0 * (pose[spec.Name] or CFrame.identity) * motor.C1:Inverse()
+		end
+	end
+	for _, weld in rig:GetDescendants() do
+		if weld:IsA("Weld") and weld.Part0 and weld.Part1 then
+			weld.Part1.CFrame = weld.Part0.CFrame * weld.C0 * weld.C1:Inverse()
+		end
 	end
 end
 

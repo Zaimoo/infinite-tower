@@ -112,7 +112,13 @@ local function createWorkerAvatarPart(parent: Instance, hero: any, cframe: CFram
 	local ground = cframe
 	if isSleepingInBed then ground=cframe*CFrame.new(0,1.2,0)*CFrame.Angles(math.rad(90),0,0)*CFrame.new(0,-1.9,0) end
 	local art=ArtPackVisuals.AttachAt(model,hero.TemplateId or "hero_han",ground,isSleepingInBed and .72 or 1)
-	if art then torso.Transparency=1;head.Transparency=1 end
+	if art then
+		torso.Transparency=1;head.Transparency=1
+		-- Hero rigs are unanchored assemblies; anchor the root so the worker stays on its bed
+		-- (joints keep the rest pose, since server-side Motor6D poses do not replicate).
+		local root=art:FindFirstChild("HumanoidRootPart")
+		if root and root:IsA("BasePart") then root.Anchored=true end
+	end
 end
 
 function PlotManager.RefreshPlotVisuals(player: Player)

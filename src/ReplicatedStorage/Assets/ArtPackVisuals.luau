@@ -670,52 +670,8 @@ function A.EquipWeapon(model: Model, weaponAssetId: string?, weaponType: string?
 		end
 	end
 
-	-- Custom visual styling for special weapons
-	if weaponAssetId == "art_crystal_greatbow" then
-		for _, p in ipairs(wModel:GetDescendants()) do
-			if p:IsA("BasePart") then
-				if p.Name:find("Limb") or p.Name:find("Seg") or p.Name:find("Core") or p.Name:find("Tip") then
-					p.Material = Enum.Material.Neon
-					p.Color = Color3.fromRGB(80, 225, 255)
-				elseif p.Name:find("Band") or p.Name:find("Wrap") or p.Name:find("Rope") then
-					p.Material = Enum.Material.SmoothPlastic
-					p.Color = Color3.fromRGB(220, 240, 255)
-				end
-			end
-		end
-	elseif weaponAssetId == "art_recurve_composite" then
-		for _, p in ipairs(wModel:GetDescendants()) do
-			if p:IsA("BasePart") then
-				if p.Name:find("Limb") or p.Name:find("Seg") or p.Name:find("Riser") then
-					p.Material = Enum.Material.Wood
-					p.Color = Color3.fromRGB(115, 75, 45)
-				elseif p.Name:find("Band") or p.Name:find("Wrap") then
-					p.Material = Enum.Material.SmoothPlastic
-					p.Color = Color3.fromRGB(45, 35, 30)
-				end
-			end
-		end
-	end
-
-	-- Optional Rarity visual flair:
-	-- If Rarity >= 6 (Legendary+), add subtle glow or tint
-	if rarityIndex and rarityIndex >= 6 then
-		local Shared = ReplicatedStorage:FindFirstChild("Shared")
-		local ArtifactCatalog = Shared and require(Shared:WaitForChild("Config"):WaitForChild("ArtifactCatalog"))
-		if ArtifactCatalog then
-			local rInfo = ArtifactCatalog.GetRarityInfo(rarityIndex)
-			if rInfo then
-				for _, p in ipairs(wModel:GetDescendants()) do
-					if p:IsA("BasePart") and (p.Name:find("Blade") or p.Name:find("Tip") or p.Name:find("Orb") or p.Name:find("Crystal")) then
-						if rarityIndex >= 14 then
-							p.Material = Enum.Material.Neon
-							p.Color = rInfo.Color
-						end
-					end
-				end
-			end
-		end
-	end
+	-- Per-artifact colours and rarity glow (shared with HeroLoadout)
+	require((ReplicatedStorage:WaitForChild("Assets") :: any).WeaponModelBuilder).Style(wModel, weaponAssetId, rarityIndex)
 
 	local effectiveType = weaponType or (if template.Name:find("bow") then "BOW" elseif template.Name:find("sword") then "SWORD_SHIELD" elseif template.Name:find("dagger") then "DAGGERS" elseif template.Name:find("axe") then "AXE" elseif template.Name:find("staff") then "STAFF" else "TOME")
 

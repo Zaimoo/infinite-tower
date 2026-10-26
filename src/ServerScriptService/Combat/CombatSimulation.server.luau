@@ -1312,6 +1312,12 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 				attackType = "BASIC"
 			end
 
+			-- Cosmetic cue for clients to play the hero's attack clip for this tier, timed to
+			-- the attack interval (EntityRenderer HERO_ATTACK: NetId, tier 1..3, interval ms).
+			Tower.BroadcastAt(CombatVFXRemote, simHero, "HERO_ATTACK", simHero.Position, simHero.NetId,
+				if attackType == "SKILL" then 3 elseif attackType == "SPECIAL" then 2 else 1,
+				math.round(effectiveInterval * 1000))
+
 			local damageMult = 1.0
 			local vfxRemoteType = "HIT_SPARK"
 
