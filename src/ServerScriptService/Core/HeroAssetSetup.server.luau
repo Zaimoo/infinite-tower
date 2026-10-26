@@ -1,14 +1,16 @@
 --!strict
 -- ServerScriptService/Core/HeroAssetSetup.server.luau
--- Ensures all 12 R15 anime hero models exist in ReplicatedStorage.Assets.Heroes
--- and modular 3D weapon models exist in ReplicatedStorage.Assets.Weapons on server start.
+-- Builds all 12 hero templates into ReplicatedStorage.Assets.Heroes (HeroRegistry: code-built
+-- HeroRig + HeroCostumes) and modular 3D weapon models into ReplicatedStorage.Assets.Weapons
+-- on server start.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local HeroModelBuilder = require(ReplicatedStorage:WaitForChild("Assets"):WaitForChild("HeroModelBuilder"))
-local WeaponModelBuilder = require(ReplicatedStorage:WaitForChild("Assets"):WaitForChild("WeaponModelBuilder"))
+local Assets = ReplicatedStorage:WaitForChild("Assets")
+local HeroRegistry = require(Assets:WaitForChild("HeroRig"):WaitForChild("HeroRegistry"))
+local WeaponModelBuilder = require(Assets:WaitForChild("WeaponModelBuilder"))
 
 local okHeroes, heroes = pcall(function()
-	return HeroModelBuilder.EnsureHeroes()
+	return HeroRegistry.EnsureHeroes()
 end)
 
 if okHeroes and heroes then

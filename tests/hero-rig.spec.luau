@@ -195,6 +195,45 @@ end
 -- 5. Unknown body types are rejected ------------------------------------------
 check(not pcall(HeroRigSpec.Layout, "Giant" :: any), "unknown body type errors")
 
+-- 7. Costumes (Phase 3) ---------------------------------------------------------
+do
+	local HeroCostumes = require(ReplicatedStorage.Assets.HeroRig.HeroCostumes)
+	local HeroCatalog = require(ReplicatedStorage.Shared.Config.HeroCatalog)
+
+	check(#HeroCostumes.List == 12, "12 hero costumes")
+	for heroId in HeroCatalog.Seeds do
+		check(HeroCostumes.ById[heroId] ~= nil, `costume exists for {heroId}`)
+	end
+	for _, c in HeroCostumes.List do
+		check(HeroCatalog.Seeds[c.HeroId] ~= nil, `{c.HeroId} is a catalog hero`)
+		local problems = HeroCostumes.Lint(c)
+		check(#problems == 0, `{c.HeroId} costume lints clean:\n  ` .. table.concat(problems, "\n  "))
+		local colors = HeroCostumes.BodyColors(c)
+		for _, partName in HeroRigSpec.PART_NAMES do
+			if partName ~= "HumanoidRootPart" then
+				check(colors[partName] ~= nil, `{c.HeroId} colours {partName}`)
+			end
+		end
+	end
+
+	-- The lint catches the original Jenna problem (a cuff that wraps the hand) and
+	-- accepts the same piece once it is marked Loose.
+	local base = HeroCostumes.ById.hero_han
+	local function variant(extra: { [string]: any }): any
+		local pieces = table.clone(base.Pieces)
+		local cuff: any = { Name = "BadCuff", Bone = "LeftLowerArm", Size = { 1.05, 0.6, 1.05 }, Position = { 0, -0.6, 0 }, Color = { 1, 1, 1 } }
+		for k, v in extra do
+			cuff[k] = v
+		end
+		table.insert(pieces, cuff)
+		return { HeroId = "lint_probe", BodyType = "Standard", Colors = base.Colors, Pieces = pieces }
+	end
+	local flagged = HeroCostumes.Lint(variant({}))
+	check(#flagged == 1 and string.find(flagged[1], "LeftHand", 1, true) ~= nil, "lint flags a cuff overlapping the hand")
+	check(#HeroCostumes.Lint(variant({ Loose = true })) == 0, "lint accepts the cuff when marked Loose")
+	check(#HeroCostumes.Lint(variant({ RelativeTo = "Missing" })) == 1, "lint reports a bad RelativeTo")
+end
+
 -- 6. Weapon sockets (Phase 2) ---------------------------------------------------
 -- Every catalog weapon type has a prefab and sockets, and every socket lands on an
 -- attachment the rig spec actually builds, on every body type.

@@ -216,6 +216,73 @@ return function(keepPreviews: boolean?)
 	check(probe:FindFirstChild("EquippedWeapon") == nil and probe:GetAttribute("EquippedWeaponType") == nil, "Unequip removes the weapon")
 	Sockets.Equip(probe, builders.weapon_staff(), "STAFF")
 
+	-- Costumes (Phase 3) -------------------------------------------------------------
+	local Registry = require(HeroRig.HeroRegistry)
+	local Costumes = require(HeroRig.HeroCostumes)
+	local Catalog = require(game.ReplicatedStorage.Shared.Config.HeroCatalog)
+	local Artifacts = require(game.ReplicatedStorage.Shared.Config.ArtifactCatalog)
+	for index, costume in Costumes.List do
+		local heroId = costume.HeroId
+		local label = heroId .. ": "
+		for armed = 0, 1 do
+			local pivot = CFrame.new(origin + Vector3.new((index - 6.5) * 6, Spec.GROUND_OFFSET, 30 + armed * 10))
+			local rig = Registry.Build(heroId, pivot)
+			rig.Name = heroId .. (if armed == 1 then "_armed" else "")
+			;(rig.PrimaryPart :: BasePart).Anchored = true
+			rig.Parent = folder
+			if armed == 1 then
+				local weaponType = Artifacts.ArchetypeWeaponType[Catalog.Seeds[heroId].Archetype]
+				Sockets.Equip(rig, builders[Sockets.PREFABS[weaponType]](), weaponType)
+				continue
+			end
+			settle()
+
+			local parts, meshes, scripts, decals = 0, 0, 0, 0
+			for _, d in rig:GetDescendants() do
+				if d:IsA("BasePart") then parts += 1 end
+				if d:IsA("MeshPart") or d:IsA("SpecialMesh") then meshes += 1 end
+				if d:IsA("LuaSourceContainer") then scripts += 1 end
+				if d:IsA("Decal") or d:IsA("Texture") then decals += 1 end
+			end
+			check(parts <= Costumes.PART_BUDGET, string.format("%s%d parts within budget %d", label, parts, Costumes.PART_BUDGET))
+			check(parts == #Spec.PART_NAMES + #costume.Pieces, label .. "one Part per costume piece")
+			check(meshes == 0 and scripts == 0, label .. "no meshes or scripts")
+			check(decals <= 1, label .. "only the face decal")
+			check(rig:GetAttribute("HeroId") == heroId, label .. "HeroId attribute")
+
+			-- Every piece is held by exactly one explicit Weld to the bone it is parented to.
+			local pieces = {}
+			for _, d in rig:GetDescendants() do
+				if d:IsA("BasePart") and d:GetAttribute("CostumePiece") then
+					local welds, constraints = 0, 0
+					for _, j in d:GetChildren() do
+						if j:IsA("Weld") then welds += 1 end
+						if j:IsA("WeldConstraint") then constraints += 1 end
+					end
+					local weld = d:FindFirstChildOfClass("Weld")
+					check(welds == 1 and constraints == 0 and weld ~= nil and weld.Part0 == d.Parent and weld.Part1 == d, label .. d.Name .. " has one Weld to its bone")
+					table.insert(pieces, { Part = d, Offset = (d.Parent :: BasePart).CFrame:ToObjectSpace(d.CFrame) })
+				end
+			end
+			check(#pieces == #costume.Pieces, label .. "every costume piece was built")
+
+			-- Pieces stay rigid with their bone in a pose.
+			local joints = Builder.GetJoints(rig)
+			joints.LeftShoulder.Transform = CFrame.Angles(math.rad(70), 0, math.rad(-20))
+			joints.RightElbow.Transform = CFrame.Angles(math.rad(80), 0, 0)
+			joints.Neck.Transform = CFrame.Angles(0, math.rad(30), 0)
+			joints.LeftKnee.Transform = CFrame.Angles(math.rad(-50), 0, 0)
+			settle()
+			local drift = 0
+			for _, p in pieces do
+				local now = (p.Part.Parent :: BasePart).CFrame:ToObjectSpace(p.Part.CFrame)
+				drift = math.max(drift, (now.Position - p.Offset.Position).Magnitude)
+			end
+			check(drift < 1e-3, string.format("%spieces stay attached in a pose (max drift %.4f)", label, drift))
+			Builder.ResetPose(rig)
+		end
+	end
+
 	for _, m in folder:GetChildren() do
 		if m:IsA("Model") then
 			m.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
