@@ -45,6 +45,7 @@ $modulePaths = @(
     'ReplicatedStorage/Assets/HeroRig/HeroCostumeMath.luau',
     'ReplicatedStorage/Assets/HeroRig/HeroCostumes.luau',
     'ReplicatedStorage/Assets/HeroRig/HeroClips.luau',
+    'ReplicatedStorage/Shared/Util/HeroActionTiming.luau',
     'ReplicatedStorage/Shared/Util/AttackTimeline.luau',
     'ReplicatedStorage/Shared/Util/EnemyActionState.luau',
     'ReplicatedStorage/Shared/Util/TowerProtocol.luau',
@@ -54,7 +55,9 @@ $modulePaths = @(
     'ReplicatedStorage/Shared/Util/WeaponPromotion.luau',
     'ReplicatedStorage/Shared/Util/TowerProgress.luau',
     'ReplicatedStorage/Shared/Util/PitMath.luau',
-    'ServerScriptService/Core/PitService.luau'
+    'ServerScriptService/Core/PitService.luau',
+    'ServerScriptService/Combat/HeroImpactQueue.luau',
+    'ServerScriptService/Combat/HeroSkillEffects.luau'
 )
 $bundleParts = [System.Collections.Generic.List[string]]::new()
 $bundleParts.Add([System.IO.File]::ReadAllText((Join-Path $PSScriptRoot 'roblox-module-shim.luau')))
@@ -65,7 +68,7 @@ foreach ($modulePath in $modulePaths) {
     $bundleParts.Add([System.IO.File]::ReadAllText($sourcePath))
     $bundleParts.Add("`nend)")
 }
-foreach ($suite in @('pit.spec.luau', 'forge.spec.luau', 'combat-skills.spec.luau', 'tower.spec.luau', 'tower-transport.spec.luau', 'tower-combat.spec.luau', 'tower-rework.spec.luau', 'phase1-combat-tempo.luau', 'hero-rig.spec.luau', 'phase2-floor-loop.spec.luau', 'phase2-defeat-rules.spec.luau')) {
+foreach ($suite in @('pit.spec.luau', 'forge.spec.luau', 'combat-skills.spec.luau', 'tower.spec.luau', 'tower-transport.spec.luau', 'tower-combat.spec.luau', 'tower-rework.spec.luau', 'phase1-combat-tempo.luau', 'hero-rig.spec.luau', 'phase2-floor-loop.spec.luau', 'phase2-defeat-rules.spec.luau', 'hero-action.spec.luau')) {
     $bundleParts.Add('do')
     $bundleParts.Add([System.IO.File]::ReadAllText((Join-Path $PSScriptRoot $suite)))
     $bundleParts.Add("`nend")
