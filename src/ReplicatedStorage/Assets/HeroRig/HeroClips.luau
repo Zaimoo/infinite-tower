@@ -96,6 +96,8 @@ local ATTACK_STANCE: Pose = merge(STANCE, {
 })
 
 local ByWeapon: { [string]: { [string]: Clip } } = {}
+-- Each weapon's key poses, so hero overrides can build signature clips from them.
+local WeaponPoses: { [string]: { [string]: Pose } } = {}
 
 -- UNARMED ---------------------------------------------------------------------------------
 do
@@ -150,6 +152,7 @@ do
 	local release = merge(aim, { LeftShoulder = { 96, 0, 0 }, RightShoulder = { 70, 40, -30 }, RightElbow = { 120, 0, 0 } })
 	local crouch: Pose = { LeftHip = { 40, 0, -8 }, RightHip = { -10, 0, 8 }, LeftKnee = { -55, 0, 0 }, RightKnee = { -70, 0, 0 }, LeftAnkle = { 15, 0, 0 }, RightAnkle = { 60, 0, 0 }, RootOffset = { 0, -0.55, 0 } }
 	local skyAim = merge(aim, { Waist = { 18, -10, 0 }, Neck = { 15, 10, 0 }, LeftShoulder = { 140, 0, 0 }, RightShoulder = { 138, 14, 0 } })
+	WeaponPoses.BOW = { Carry = carry, Aim = aim, Drawn = drawn, Release = release, Crouch = crouch, SkyAim = skyAim }
 	ByWeapon.BOW = {
 		Idle = breathe(carry),
 		Move = walk(carry),
@@ -181,6 +184,7 @@ do
 	local high = merge(ATTACK_STANCE, { Waist = { 4, 20, 0 }, RightShoulder = { 165, 0, 15 }, RightElbow = { 40, 0, 0 }, LeftShoulder = { 40, -25, -10 }, LeftElbow = { 80, 0, 0 } })
 	local cut = merge(ATTACK_STANCE, { Waist = { -14, -25, 0 }, RightShoulder = { 55, -20, -5 }, RightElbow = { 10, 0, 0 }, LeftShoulder = { 20, -10, -15 }, LeftElbow = { 60, 0, 0 } })
 	local bash = merge(ATTACK_STANCE, { Waist = { -8, -30, 0 }, LeftShoulder = { 85, 25, -5 }, LeftElbow = { 20, 0, 0 }, RightShoulder = { 20, 0, 25 }, RightElbow = { 60, 0, 0 } })
+	WeaponPoses.SWORD_SHIELD = { Guard = guard, High = high, Cut = cut, Bash = bash }
 	ByWeapon.SWORD_SHIELD = {
 		Idle = breathe(guard),
 		Move = walk(guard),
@@ -207,6 +211,7 @@ do
 		RightShoulder = { 12, 0, 10 }, RightElbow = { 70, 0, 0 }, RightWrist = { -30, 0, 0 },
 	})
 	local crouched = merge(ready, ATTACK_STANCE)
+	WeaponPoses.DAGGERS = { Ready = ready, Crouched = crouched }
 	ByWeapon.DAGGERS = {
 		Idle = breathe(ready, 2.6),
 		Move = walk(ready),
@@ -243,6 +248,7 @@ do
 	})
 	local windup = merge(ATTACK_STANCE, { Waist = { 8, 15, 0 }, RightShoulder = { 170, 0, 10 }, RightElbow = { 50, 0, 0 }, LeftShoulder = { 50, 0, -10 }, LeftElbow = { 60, 0, 0 } })
 	local chop = merge(ATTACK_STANCE, { Waist = { -25, -10, 0 }, RightShoulder = { 45, 0, 0 }, RightElbow = { 5, 0, 0 }, LeftShoulder = { 30, 0, -10 }, LeftElbow = { 40, 0, 0 }, RootOffset = { 0, -0.25, 0 } })
+	WeaponPoses.AXE = { Rest = rest, Windup = windup, Chop = chop }
 	ByWeapon.AXE = {
 		Idle = breathe(rest),
 		Move = walk(rest),
@@ -271,6 +277,7 @@ do
 	})
 	local cast = merge(ATTACK_STANCE, { Waist = { -4, -10, 0 }, RightShoulder = { 90, 0, 0 }, RightElbow = { 0, 0, 0 }, LeftShoulder = { 70, 0, -20 }, LeftElbow = { 20, 0, 0 } })
 	local raised = merge(ATTACK_STANCE, { Waist = { 10, 0, 0 }, Neck = { 12, 0, 0 }, RightShoulder = { 165, 0, 10 }, RightElbow = { 10, 0, 0 }, LeftShoulder = { 120, 0, -30 }, LeftElbow = { 15, 0, 0 } })
+	WeaponPoses.STAFF = { Stand = stand, Cast = cast, Raised = raised }
 	ByWeapon.STAFF = {
 		Idle = breathe(stand),
 		Move = walk(stand),
@@ -294,6 +301,7 @@ do
 		RightShoulder = { 8, 0, 8 }, RightElbow = { 20, 0, 0 },
 	})
 	local channel = merge(ATTACK_STANCE, { LeftShoulder = { 70, -10, -10 }, LeftElbow = { 40, 0, 0 }, RightShoulder = { 85, 0, 10 }, RightElbow = { 10, 0, 0 } })
+	WeaponPoses.TOME = { Read = read, Channel = channel }
 	ByWeapon.TOME = {
 		Idle = breathe(read),
 		Move = walk(read),
@@ -368,9 +376,40 @@ for weaponType, releases in RELEASE_MARKERS do
 end
 
 -- Per-hero signature overrides --------------------------------------------------------------
-local Overrides: { [string]: { [string]: Clip } } = {
-	-- Jenna's Wind-Scout ready stance: contrapposto, front foot forward, bow in a low carry.
-	hero_jenna = {
+-- Each hero's ultimate (and a few specials) gets its own clip, built from its weapon's poses
+-- (WeaponPoses). Overrides only apply while the hero holds that weapon (OVERRIDE_WEAPON), so
+-- an unarmed hero falls back to the UNARMED set on both server and client. Every attack
+-- override sets its own Markers; Release is where the server lands the hit.
+local OVERRIDE_WEAPON: { [string]: string } = {
+	hero_han = "DAGGERS",
+	hero_aaron = "SWORD_SHIELD",
+	hero_catio = "AXE",
+	hero_valeria = "TOME",
+	hero_ignis = "SWORD_SHIELD",
+	hero_jenna = "BOW",
+	hero_velkist = "DAGGERS",
+	hero_eolka = "STAFF",
+	hero_morrigan = "SWORD_SHIELD",
+	hero_archon = "DAGGERS",
+	hero_solaris = "STAFF",
+	hero_astrea = "BOW",
+}
+
+local function signature(duration: number, keys: { { any } }, markers: { [string]: number }): Clip
+	local result = clip(duration, false, keys)
+	result.Markers = markers
+	return result
+end
+
+local Overrides: { [string]: { [string]: Clip } } = {}
+
+-- Jenna (BOW): Wind-Step Shot kit. Idle is the Wind-Scout ready stance; Sylphid Arrow Storm
+-- is a backward wind-step leap that looses the flare arrow skyward at the top of the jump.
+do
+	local p = WeaponPoses.BOW
+	local tuck: Pose = { LeftHip = { 35, 0, -6 }, RightHip = { 10, 0, 6 }, LeftKnee = { -70, 0, 0 }, RightKnee = { -45, 0, 0 }, LeftAnkle = { 20, 0, 0 }, RightAnkle = { 15, 0, 0 } }
+	local airborne = merge(merge(p.SkyAim, tuck), { RootOffset = { 0, 0.4, 0.35 } })
+	Overrides.hero_jenna = {
 		Idle = breathe({
 			Waist = { -3, -18, 0 }, Neck = { 0, 16, 0 },
 			LeftShoulder = { 10, 0, -10 }, LeftElbow = { 50, 0, 0 },
@@ -378,17 +417,229 @@ local Overrides: { [string]: { [string]: Clip } } = {
 			LeftHip = { 10, -4, -4 }, LeftKnee = { -16, 0, 0 }, LeftAnkle = { 6, 0, 0 },
 			RightHip = { -8, 6, 5 }, RightKnee = { -12, 0, 0 }, RightAnkle = { 20, 0, 0 },
 		}, 3.6),
-	},
-}
+		AttackSkill = signature(1.1, {
+			{ 0, p.Carry },
+			{ 0.18, merge(merge(p.Aim, p.Crouch), { Waist = { -12, -20, 0 } }) },
+			{ 0.42, airborne },
+			{ 0.62, merge(airborne, { RightShoulder = { 136, 26, -10 }, RightElbow = { 145, 0, 0 } }) },
+			{ 0.72, merge(airborne, { LeftShoulder = { 150, 0, 0 }, RightShoulder = { 110, 45, -35 }, RightElbow = { 115, 0, 0 }, RootOffset = { 0, 0.3, 0.4 } }) },
+			{ 0.86, merge(merge(p.Release, p.Crouch), { Waist = { -14, -10, 0 } }) },
+			{ 1, p.Carry },
+		}, { Release = 0.72, Nock = 0.92 }),
+	}
+end
+
+-- Astrea (BOW): Constellation Judgment. She rises onto her toes, arches back and draws a long,
+-- deliberate shot at the sky, then holds a wide follow-through.
+do
+	local p = WeaponPoses.BOW
+	local regal = merge(p.SkyAim, { Waist = { 26, -6, 0 }, Neck = { 24, 6, 0 }, LeftHip = { 20, 0, -4 }, RightHip = { -12, 0, 4 }, LeftKnee = { -10, 0, 0 }, RightKnee = { -4, 0, 0 }, RootOffset = { 0, 0.18, 0 } })
+	Overrides.hero_astrea = {
+		AttackSkill = signature(1.1, {
+			{ 0, p.Carry },
+			{ 0.3, regal },
+			{ 0.58, merge(regal, { RightShoulder = { 140, 20, -10 }, RightElbow = { 150, 0, 0 } }) },
+			{ 0.7, merge(regal, { LeftShoulder = { 152, 0, 0 }, RightShoulder = { 105, 45, -60 }, RightElbow = { 60, 0, 0 } }) },
+			{ 0.85, merge(regal, { LeftShoulder = { 130, 0, -20 }, RightShoulder = { 95, 40, -75 }, RightElbow = { 20, 0, 0 }, Waist = { 14, -6, 0 } }) },
+			{ 1, p.Carry },
+		}, { Release = 0.7, Nock = 0.92 }),
+	}
+end
+
+-- Aaron (SWORD_SHIELD): Fortress Bulwark. Sword and shield lifted, then the shield is planted
+-- in a wide, braced stance.
+do
+	local p = WeaponPoses.SWORD_SHIELD
+	local braced: Pose = { LeftHip = { 45, 0, -14 }, RightHip = { -20, 0, 14 }, LeftKnee = { -55, 0, 0 }, RightKnee = { -40, 0, 0 }, LeftAnkle = { 10, 0, 0 }, RightAnkle = { 30, 0, 0 }, RootOffset = { 0, -0.55, 0 } }
+	local planted = merge(braced, { Waist = { -16, -10, 0 }, LeftShoulder = { 70, 15, -10 }, LeftElbow = { 25, 0, 0 }, RightShoulder = { 120, 0, 25 }, RightElbow = { 30, 0, 0 } })
+	Overrides.hero_aaron = {
+		AttackSkill = signature(1.1, {
+			{ 0, p.Guard },
+			{ 0.35, merge(p.High, { LeftShoulder = { 100, 10, -10 }, LeftElbow = { 30, 0, 0 }, RootOffset = { 0, 0.2, 0 } }) },
+			{ 0.6, planted },
+			{ 0.82, merge(planted, { Waist = { -12, -10, 0 } }) },
+			{ 1, p.Guard },
+		}, { Release = 0.6 }),
+	}
+end
+
+-- Ignis (SWORD_SHIELD): Infernal Juggernaut. Chest thrown back, then a forward roar with both
+-- arms flexed wide.
+do
+	local p = WeaponPoses.SWORD_SHIELD
+	local roar = merge(ATTACK_STANCE, { Waist = { -16, 0, 0 }, Neck = { 10, 0, 0 }, LeftShoulder = { 70, 0, -60 }, LeftElbow = { 95, 0, 0 }, RightShoulder = { 70, 0, 60 }, RightElbow = { 95, 0, 0 }, RootOffset = { 0, -0.35, 0 } })
+	Overrides.hero_ignis = {
+		AttackSkill = signature(1.1, {
+			{ 0, p.Guard },
+			{ 0.3, merge(STANCE, { Waist = { 20, 0, 0 }, Neck = { 20, 0, 0 }, LeftShoulder = { -30, 0, -40 }, LeftElbow = { 60, 0, 0 }, RightShoulder = { -30, 0, 40 }, RightElbow = { 60, 0, 0 } }) },
+			{ 0.55, roar },
+			{ 0.8, merge(roar, { Waist = { -12, 0, 0 } }) },
+			{ 1, p.Guard },
+		}, { Release = 0.55 }),
+	}
+end
+
+-- Morrigan (SWORD_SHIELD): Obsidian Bastion. Sword raised overhead, then driven into the ground
+-- from one knee.
+do
+	local p = WeaponPoses.SWORD_SHIELD
+	local kneel = merge(p.Cut, { Waist = { -34, 0, 0 }, RightShoulder = { 45, 0, 5 }, RightElbow = { 10, 0, 0 }, LeftHip = { 70, 0, -8 }, LeftKnee = { -90, 0, 0 }, RightHip = { -10, 0, 8 }, RightKnee = { -100, 0, 0 }, LeftAnkle = { 20, 0, 0 }, RightAnkle = { 60, 0, 0 }, RootOffset = { 0, -0.85, 0 } })
+	Overrides.hero_morrigan = {
+		AttackSkill = signature(1.1, {
+			{ 0, p.Guard },
+			{ 0.35, merge(p.High, { Waist = { 14, 0, 0 }, RightShoulder = { 178, 0, 0 }, RightElbow = { 5, 0, 0 }, RootOffset = { 0, 0.15, 0 } }) },
+			{ 0.6, kneel },
+			{ 0.85, kneel },
+			{ 1, p.Guard },
+		}, { Release = 0.6 }),
+	}
+end
+
+-- Han (DAGGERS): Relentless Blade Flurry. Four alternating cuts that build into a final double
+-- slash.
+do
+	local p = WeaponPoses.DAGGERS
+	local function cut(side: number, lean: number): Pose
+		if side > 0 then
+			return merge(p.Crouched, { Waist = { lean, -40, 0 }, RightShoulder = { 95, 0, -20 }, RightElbow = { 5, 0, 0 }, RightWrist = { -70, 0, 0 } })
+		end
+		return merge(p.Crouched, { Waist = { lean, 40, 0 }, LeftShoulder = { 95, 0, 20 }, LeftElbow = { 5, 0, 0 }, LeftWrist = { -70, 0, 0 } })
+	end
+	Overrides.hero_han = {
+		AttackSkill = signature(1.0, {
+			{ 0, p.Crouched },
+			{ 0.15, cut(1, -6) },
+			{ 0.3, cut(-1, -8) },
+			{ 0.45, cut(1, -10) },
+			{ 0.6, cut(-1, -12) },
+			{ 0.8, merge(p.Crouched, { Waist = { -18, 0, 0 }, LeftShoulder = { 110, 0, 35 }, RightShoulder = { 110, 0, -35 }, LeftElbow = { 5, 0, 0 }, RightElbow = { 5, 0, 0 }, RootOffset = { 0, -0.35, -0.3 } }) },
+			{ 1, p.Crouched },
+		}, { Release = 0.8 }),
+	}
+end
+
+-- Velkist (DAGGERS): Shadow Rend is a dash-through cross cut; Phantom Lotus Execution sweeps both
+-- blades outward like opening petals after a lunge.
+do
+	local p = WeaponPoses.DAGGERS
+	local coiled = merge(p.Crouched, { Waist = { 10, 0, 0 }, LeftShoulder = { -40, 0, -30 }, RightShoulder = { -40, 0, 30 }, LeftElbow = { 30, 0, 0 }, RightElbow = { 30, 0, 0 }, RootOffset = { 0, -0.4, 0.2 } })
+	local lunge = merge(p.Crouched, { Waist = { -30, 0, 0 }, LeftShoulder = { -20, 0, -20 }, RightShoulder = { -20, 0, 20 }, LeftHip = { 50, 0, -6 }, LeftKnee = { -50, 0, 0 }, RightHip = { -30, 0, 6 }, RightKnee = { -20, 0, 0 }, RootOffset = { 0, -0.3, -0.6 } })
+	Overrides.hero_velkist = {
+		AttackSpecial = signature(0.75, {
+			{ 0, p.Crouched },
+			{ 0.3, coiled },
+			{ 0.55, merge(lunge, { LeftShoulder = { 100, 0, 45 }, RightShoulder = { 100, 0, -45 }, LeftElbow = { 5, 0, 0 }, RightElbow = { 5, 0, 0 } }) },
+			{ 0.8, merge(lunge, { RootOffset = { 0, -0.25, -0.4 } }) },
+			{ 1, p.Crouched },
+		}, { Release = 0.55 }),
+		AttackSkill = signature(1.0, {
+			{ 0, p.Crouched },
+			{ 0.25, coiled },
+			{ 0.5, lunge },
+			{ 0.7, merge(lunge, { Waist = { -14, 0, 0 }, LeftShoulder = { 100, 0, -70 }, RightShoulder = { 100, 0, 70 }, LeftElbow = { 5, 0, 0 }, RightElbow = { 5, 0, 0 } }) },
+			{ 0.85, merge(lunge, { Waist = { -10, 0, 0 }, LeftShoulder = { 80, 0, -85 }, RightShoulder = { 80, 0, 85 } }) },
+			{ 1, p.Crouched },
+		}, { Release = 0.7 }),
+	}
+end
+
+-- Sovereign Archon (DAGGERS): Dimensional Cataclysm. Blades crossed overhead, then torn apart
+-- and down to rip the rift open.
+do
+	local p = WeaponPoses.DAGGERS
+	local tear = merge(p.Crouched, { Waist = { -20, 0, 0 }, LeftShoulder = { 80, 0, -90 }, RightShoulder = { 80, 0, 90 }, LeftElbow = { 10, 0, 0 }, RightElbow = { 10, 0, 0 }, RootOffset = { 0, -0.4, 0 } })
+	Overrides.hero_archon = {
+		AttackSkill = signature(1.0, {
+			{ 0, p.Crouched },
+			{ 0.35, merge(STANCE, { Waist = { 12, 0, 0 }, Neck = { 15, 0, 0 }, LeftShoulder = { 170, 0, 20 }, RightShoulder = { 170, 0, -20 }, LeftElbow = { 40, 0, 0 }, RightElbow = { 40, 0, 0 }, RootOffset = { 0, 0.3, 0 } }) },
+			{ 0.62, tear },
+			{ 0.85, merge(tear, { Waist = { -16, 0, 0 } }) },
+			{ 1, p.Crouched },
+		}, { Release = 0.62 }),
+	}
+end
+
+-- Catio (AXE): Resonance Tremor is an overhead strike into the ground; Crystalline Excavation
+-- spins the axe round once before a two-handed slam.
+do
+	local p = WeaponPoses.AXE
+	local slam = merge(p.Chop, { Waist = { -40, 0, 0 }, RightShoulder = { 30, 0, 0 }, LeftShoulder = { 35, 0, 10 }, LeftElbow = { 10, 0, 0 }, LeftHip = { 50, 0, -8 }, RightHip = { 10, 0, 8 }, LeftKnee = { -65, 0, 0 }, RightKnee = { -60, 0, 0 }, RootOffset = { 0, -0.6, 0 } })
+	Overrides.hero_catio = {
+		AttackSpecial = signature(0.9, {
+			{ 0, p.Rest },
+			{ 0.4, p.Windup },
+			{ 0.65, merge(p.Chop, { Waist = { -32, 0, 0 }, LeftKnee = { -45, 0, 0 }, RightKnee = { -40, 0, 0 }, RootOffset = { 0, -0.45, 0 } }) },
+			{ 1, p.Rest },
+		}, { Release = 0.65 }),
+		AttackSkill = signature(1.15, {
+			{ 0, p.Rest },
+			{ 0.22, merge(ATTACK_STANCE, { Waist = { 0, 60, 0 }, RightShoulder = { 90, 60, 20 }, RightElbow = { 20, 0, 0 }, LeftShoulder = { 60, 30, -10 }, LeftElbow = { 40, 0, 0 } }) },
+			{ 0.42, merge(p.Windup, { Waist = { 18, 0, 0 }, RightShoulder = { 178, 0, 0 }, LeftShoulder = { 170, 0, -5 }, LeftElbow = { 50, 0, 0 }, RootOffset = { 0, 0.25, 0 } }) },
+			{ 0.62, slam },
+			{ 0.82, merge(slam, { Waist = { -34, 0, 0 } }) },
+			{ 1, p.Rest },
+		}, { Release = 0.62 }),
+	}
+end
+
+-- Eolka (STAFF): Crimson Hellfire Pillar. Staff raised high in both hands, then driven forward
+-- and down in a lunge.
+do
+	local p = WeaponPoses.STAFF
+	local drive = merge(p.Cast, { Waist = { -22, 0, 0 }, RightShoulder = { 60, 0, 0 }, LeftShoulder = { 55, 0, 10 }, LeftElbow = { 15, 0, 0 }, LeftHip = { 45, 0, -6 }, LeftKnee = { -50, 0, 0 }, RightHip = { -20, 0, 6 }, RightKnee = { -25, 0, 0 }, RootOffset = { 0, -0.4, -0.25 } })
+	Overrides.hero_eolka = {
+		AttackSkill = signature(1.2, {
+			{ 0, p.Stand },
+			{ 0.4, merge(p.Raised, { LeftShoulder = { 170, 0, -5 }, LeftElbow = { 30, 0, 0 }, RootOffset = { 0, 0.2, 0 } }) },
+			{ 0.7, drive },
+			{ 0.85, drive },
+			{ 1, p.Stand },
+		}, { Release = 0.7 }),
+	}
+end
+
+-- Solaris (STAFF): Supernova Starfall. Arms spread to gather the sky, brought together overhead,
+-- then thrown forward to bring the star down.
+do
+	local p = WeaponPoses.STAFF
+	Overrides.hero_solaris = {
+		AttackSkill = signature(1.2, {
+			{ 0, p.Stand },
+			{ 0.35, merge(ATTACK_STANCE, { Waist = { 18, 0, 0 }, Neck = { 25, 0, 0 }, LeftShoulder = { 150, 0, -60 }, RightShoulder = { 150, 0, 60 }, LeftElbow = { 10, 0, 0 }, RightElbow = { 10, 0, 0 } }) },
+			{ 0.6, merge(ATTACK_STANCE, { Waist = { 14, 0, 0 }, Neck = { 20, 0, 0 }, LeftShoulder = { 175, 0, -5 }, RightShoulder = { 175, 0, 5 }, LeftElbow = { 15, 0, 0 }, RightElbow = { 15, 0, 0 }, RootOffset = { 0, 0.15, 0 } }) },
+			{ 0.72, merge(ATTACK_STANCE, { Waist = { -15, 0, 0 }, LeftShoulder = { 100, 0, -5 }, RightShoulder = { 100, 0, 5 }, LeftElbow = { 5, 0, 0 }, RightElbow = { 5, 0, 0 }, RootOffset = { 0, -0.2, 0 } }) },
+			{ 0.88, merge(ATTACK_STANCE, { Waist = { -10, 0, 0 }, LeftShoulder = { 85, 0, -15 }, RightShoulder = { 85, 0, 15 } }) },
+			{ 1, p.Stand },
+		}, { Release = 0.72 }),
+	}
+end
+
+-- Valeria (TOME): Sanctuary Miracle. Tome and hand lifted in blessing, then both arms opened
+-- wide as the circle forms.
+do
+	local p = WeaponPoses.TOME
+	local open = merge(ATTACK_STANCE, { Waist = { 10, 0, 0 }, Neck = { 12, 0, 0 }, LeftShoulder = { 110, 0, -70 }, LeftElbow = { 15, 0, 0 }, RightShoulder = { 110, 0, 70 }, RightElbow = { 15, 0, 0 } })
+	Overrides.hero_valeria = {
+		AttackSkill = signature(1.2, {
+			{ 0, p.Read },
+			{ 0.35, merge(p.Channel, { Neck = { 20, 0, 0 }, LeftShoulder = { 150, 0, -10 }, LeftElbow = { 20, 0, 0 }, RightShoulder = { 150, 0, 10 }, RightElbow = { 10, 0, 0 } }) },
+			{ 0.65, open },
+			{ 0.85, open },
+			{ 1, p.Read },
+		}, { Release = 0.65 }),
+	}
+end
 
 HeroClips.ByWeapon = ByWeapon
 HeroClips.Shared = Shared
 HeroClips.Overrides = Overrides
+HeroClips.OverrideWeapon = OVERRIDE_WEAPON
 
--- Resolves a state for a hero and weapon type, or nil when no clip exists.
+-- Resolves a state for a hero and weapon type, or nil when no clip exists. A hero override
+-- only applies while the hero holds its signature weapon.
 function HeroClips.Get(heroId: string?, weaponType: string?, state: string): Clip?
 	local override = heroId and Overrides[heroId]
-	if override and override[state] then
+	if override and override[state] and OVERRIDE_WEAPON[heroId :: string] == weaponType then
 		return override[state]
 	end
 	local set = ByWeapon[weaponType or "UNARMED"] or ByWeapon.UNARMED
