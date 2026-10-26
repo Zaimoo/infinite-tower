@@ -72,7 +72,7 @@ function Runtime.new(api: any): any
 	end
 	function self:BossPresentation(context)
 		for _, m in pairs(api.Mobs) do
-			if m.TowerEnemy and m.Role == "BOSS" and api.Tower.Same(m, context) then
+			if m.TowerEnemy and m.Role == "BOSS" and m.IsAlive and api.Tower.Same(m, context) then
 				return {
 					Enabled = m.IsAlive,
 					NetId = m.NetId,
@@ -170,6 +170,7 @@ function Runtime.new(api: any): any
 			LeashRadius = 120,
 			CampId = "CAMP_APEX_SANCTUM",
 			SummonedByUserId = player and player.UserId or nil,
+			Summoned = true,
 		}
 
 		api.Mobs[netId] = boss
@@ -194,11 +195,20 @@ function Runtime.new(api: any): any
 		if ledger.PayoutClaims[key] then return end
 		ledger.PayoutClaims[key] = true
 		self.Metrics.Deaths += 1
-		m.RespawnAt = workspace:GetServerTimeNow() + (m.Role == "BOSS" and Config.BossRespawnSeconds or 1.0)
+		-- Summoned bosses never respawn on a timer; the next one needs a fresh kill threshold.
+		m.RespawnAt = if m.Summoned then math.huge else workspace:GetServerTimeNow() + (m.Role == "BOSS" and Config.BossRespawnSeconds or Config.RespawnSeconds)
 		api.Send(m, { Kind = "DEATH", Actor = Timeline.Identity(m), EnemyId = m.EnemyId, StartServerTime = workspace:GetServerTimeNow(), Duration = 1.6 })
 		-- Claim before any reward/profile callback. Travel and simultaneous hits cannot retry it.
 		api.Reward(m, killer)
 		api.Changed()
+		if m.Role == "BOSS" and m.RespawnAt == math.huge then
+			task.delay(3, function()
+				if not m.IsAlive and api.Mobs[m.NetId] == m then
+					api.Mobs[m.NetId] = nil
+					api.Changed()
+				end
+			end)
+		end
 	end
 	function self:SyncRooms(now)
 		local changed = false
@@ -226,6 +236,8 @@ function Runtime.new(api: any): any
 				end
 				for slot, placement in placements do
 					local e = table.clone(Config.Get(placement.EnemyId))
+					-- Bosses and Apex Sanctum encounters are never pre-placed: each floor boss/champion is summoned strictly by a player's own kill threshold (SpawnBoss).
+					if e.Role == "BOSS" or placement.CampId == "CAMP_APEX_SANCTUM" or placement.EnemyId == TowerProgress.GetFloorBossEnemyId(floor) then continue end
 					local floorStats = TowerFloorConfig.GetEnemyStats(floor, placement.EnemyId)
 					if floorStats then
 						e.MaxHP = floorStats.MaxHP

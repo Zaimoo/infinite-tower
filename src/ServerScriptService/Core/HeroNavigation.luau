@@ -105,7 +105,7 @@ function Navigation.PlaceNear(masterRoot: Vector3, offset: Vector3, group: strin
 end
 
 local function requestPath(hero: any, state: any, goal: Vector3, now: number)
-	if state.Pending or now < state.NextRequest or computing >= 6 then return end
+	if state.Pending or now < state.NextRequest or computing >= 12 then return end
 	state.Pending, state.NextRequest = true, now + 0.35
 	computing += 1
 	local start = hero.Position
@@ -124,58 +124,84 @@ local function requestPath(hero: any, state: any, goal: Vector3, now: number)
 		computing -= 1
 		if states[hero] ~= state then path:Destroy(); return end
 		state.Pending = false
-		if ok and path.Status == Enum.PathStatus.Success and (hero.Position - start).Magnitude < 24 then
+		if ok and path.Status == Enum.PathStatus.Success then
 			state.Points, state.Index, state.Goal = path:GetWaypoints(), 2, goal
 		end
 		path:Destroy()
 	end)
 end
 
--- Follow authored bridge entrances instead of cutting across solid curbs.
+-- Follow authored bridge entrances using shortest Euclidean path across platform graph.
 local function towerRoute(hero: any, goal: Vector3): {Vector3}?
- local floor = hero.FloorId
- if not floor or floor < 1 then return nil end
- local origin = Vector3.new(12000 + ((floor - 1) % 10) * 2400, 1000, 12000 + math.floor((floor - 1) / 10) * 2400)
- local layout = TowerLayout.Get((floor - 1) % 5 + 1)
- local function nearest(world)
-  local pos = world - origin
-  local best, score = nil, math.huge
-  for name, p in layout.Platforms do
-   local dx = math.max(0, math.abs(pos.X - p.X) - p.Width / 2)
-   local dz = math.max(0, math.abs(pos.Z - p.Z) - p.Depth / 2)
-   local d = dx * dx + dz * dz + (pos.Y - p.Y)^2
-   if d < score then best, score = name, d end
-  end
-  return best
- end
- local start, finish = nearest(hero.Position), nearest(goal)
- if not start or not finish or start == finish then return nil end
- local queue, seen = {start}, {[start] = true}
- local prev = {}
- local index = 1
- while queue[index] and not seen[finish] do
-  local at = queue[index]; index += 1
-  for _, link in layout.Links do
-   local nextId = if link.From == at then link.To elseif link.To == at then link.From else nil
-   if nextId and not seen[nextId] then
-    seen[nextId] = true; prev[nextId] = {From = at, Link = link}
-    table.insert(queue, nextId)
-   end
-  end
- end
- if not seen[finish] then return nil end
- local edges = {}
- local at = finish
- while at ~= start do table.insert(edges, 1, prev[at]); at = prev[at].From end
- local route = {}
- for _, edge in edges do
-  local link = edge.Link
-  local a = origin + Vector3.new(link.AX, link.AY, link.AZ)
-  local b = origin + Vector3.new(link.BX, link.BY, link.BZ)
-  if edge.From ~= link.From then a,b = b,a end
-  table.insert(route,a); table.insert(route,b)
- end
- return route
+	local floor = hero.FloorId
+	if not floor or floor < 1 then return nil end
+	local origin = Vector3.new(12000 + ((floor - 1) % 10) * 2400, 1000, 12000 + math.floor((floor - 1) / 10) * 2400)
+	local layout = TowerLayout.Get((floor - 1) % 5 + 1)
+	local function nearest(world)
+		local pos = world - origin
+		local best, score = nil, math.huge
+		for name, p in layout.Platforms do
+			local dx = math.max(0, math.abs(pos.X - p.X) - p.Width / 2)
+			local dz = math.max(0, math.abs(pos.Z - p.Z) - p.Depth / 2)
+			local d = dx * dx + dz * dz + (pos.Y - p.Y)^2
+			if d < score then best, score = name, d end
+		end
+		return best
+	end
+	local start, finish = nearest(hero.Position), nearest(goal)
+	if not start or not finish or start == finish then return nil end
+
+	-- Dijkstra shortest path using Euclidean physical distance so heroes take the central direct route (e.g. Crossing -> Apex)
+	local dist: { [string]: number } = { [start] = 0 }
+	local prev: { [string]: { From: string, Link: any } } = {}
+	local unvisited: { [string]: boolean } = {}
+	for name in pairs(layout.Platforms) do
+		unvisited[name] = true
+		if name ~= start then dist[name] = math.huge end
+	end
+
+	while next(unvisited) do
+		local current: string?, minDist = nil, math.huge
+		for node in pairs(unvisited) do
+			if dist[node] < minDist then
+				minDist = dist[node]
+				current = node
+			end
+		end
+		if not current or current == finish or minDist == math.huge then break end
+		unvisited[current] = nil
+
+		for _, link in layout.Links do
+			local nextId = if link.From == current then link.To elseif link.To == current then link.From else nil
+			if nextId and unvisited[nextId] then
+				local pA, pB = layout.Platforms[current], layout.Platforms[nextId]
+				local linkLen = (Vector3.new(pA.X, pA.Y, pA.Z) - Vector3.new(pB.X, pB.Y, pB.Z)).Magnitude
+				local alt = dist[current] + linkLen
+				if alt < dist[nextId] then
+					dist[nextId] = alt
+					prev[nextId] = { From = current, Link = link }
+				end
+			end
+		end
+	end
+
+	if not prev[finish] then return nil end
+	local edges = {}
+	local at = finish
+	while at ~= start and prev[at] do
+		table.insert(edges, 1, prev[at])
+		at = prev[at].From
+	end
+	local route = {}
+	for _, edge in edges do
+		local link = edge.Link
+		local a = origin + Vector3.new(link.AX, link.AY, link.AZ)
+		local b = origin + Vector3.new(link.BX, link.BY, link.BZ)
+		if edge.From ~= link.From then a, b = b, a end
+		table.insert(route, a)
+		table.insert(route, b)
+	end
+	return route
 end
 
 function Navigation.Step(hero: any, goal: Vector3, distance: number, now: number)

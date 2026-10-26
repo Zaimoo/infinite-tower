@@ -47,15 +47,26 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		p.BottomSurface = Enum.SurfaceType.Smooth
 		if shape then p.Shape = shape end
 		if trans then p.Transparency = trans end
-		-- Bloom control: large Neon surfaces (sunbeams, portals, auroras, lava sheets) blow out the
-		-- screen, so render them as translucent plastic; small Neon accents are dimmed slightly.
-		if p.Material == Enum.Material.Neon then
-			local largest = math.max(size.X, size.Y, size.Z)
-			if largest > 10 then
+		-- Bloom safeguard for liquid blocks: liquid surfaces (water, lava, falls, pools, rivers, mist)
+		-- must NEVER have Neon material so bloom does NOT trigger on liquid blocks.
+		local isLiquid = name:find("Liquid") or name:find("Water") or name:find("Fall")
+			or name:find("Lava") or name:find("Sea") or name:find("Pool") or name:find("Cascade")
+			or name:find("River") or name:find("Stream") or name:find("CrucibleLava")
+			or name:find("Shoal") or name:find("BubbleGlow") or name:find("CraterMagma")
+		if isLiquid then
+			if p.Material == Enum.Material.Neon then
 				p.Material = Enum.Material.SmoothPlastic
-				p.Transparency = math.max(p.Transparency, 0.4)
+			end
+			p.Transparency = math.clamp(p.Transparency, 0.15, 0.65)
+		elseif p.Material == Enum.Material.Neon then
+			-- Bloom control for non-liquid surfaces: large Neon surfaces (sunbeams, portals, auroras)
+			-- blow out the screen, so render them as translucent plastic; small Neon accents are dimmed slightly.
+			local largest = math.max(size.X, size.Y, size.Z)
+			if largest > 8 then
+				p.Material = Enum.Material.SmoothPlastic
+				p.Transparency = math.max(p.Transparency, 0.35)
 			else
-				p.Color = p.Color:Lerp(Color3.new(0, 0, 0), 0.3)
+				p.Color = p.Color:Lerp(Color3.new(0, 0, 0), 0.25)
 			end
 		end
 		p.Parent = kit
@@ -158,8 +169,8 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		local cf = CFrame.new(at) * CFrame.Angles(0, rotY or 0, 0)
 		local main = block("CascadingFall", V(fallWidth, fallHeight, 2.4), V(0, 0, 0), color, Enum.Material.SmoothPlastic, nil, 0.45)
 		main.CFrame = CFrame.new(origin) * cf * CFrame.new(0, fallHeight / 2, 0)
-		local core = block("FallFoamCore", V(fallWidth * 0.5, fallHeight, 1.4), V(0, 0, 0), rgb(215, 230, 240), Enum.Material.SmoothPlastic, nil, 0.65)
-		core.CFrame = CFrame.new(origin) * cf * CFrame.new(0, fallHeight / 2, 0.6)
+		local core = block("FallFoamCore", V(fallWidth * 0.5, fallHeight - 0.4, 1.4), V(0, 0, 0), rgb(215, 230, 240), Enum.Material.SmoothPlastic, nil, 0.65)
+		core.CFrame = CFrame.new(origin) * cf * CFrame.new(0, fallHeight / 2 - 0.2, 0.6)
 		local mist = orb("FallSplashMist", cf:PointToWorldSpace(V(0, 2, 1.5)), V(fallWidth * 0.85, 3.5, 4.5), rgb(210, 230, 245), Enum.Material.SmoothPlastic, 0.88)
 		pointLight(mist, color, 0.15, 14)
 	end
@@ -682,11 +693,11 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			local peakH = (38 + math.sin(a) * 60) * scale
 			block("VolcanoCalderaSlope", V(25 * scale, peakH, 30 * scale), backdrop + V((k - 6) * 19 * scale, peakH / 2 - 4, -6), rgb(36, 26, 26), Enum.Material.Basalt)
 		end
-		orb("CalderaCraterMagma", backdrop + V(0, 66 * scale, -4), V(48 * scale, 18 * scale, 20 * scale), rgb(255, 112, 28), Enum.Material.Neon, 0.05)
+		orb("CalderaCraterMagma", backdrop + V(0, 66 * scale, -4), V(48 * scale, 18 * scale, 20 * scale), rgb(255, 112, 28), Enum.Material.SmoothPlastic, 0.15)
 		orb("VolcanicAshPlume1", backdrop + V(0, 86 * scale, -6), V(62 * scale, 28 * scale, 34 * scale), rgb(52, 38, 38), Enum.Material.Slate, 0.25)
 		orb("VolcanicAshPlume2", backdrop + V(12, 106 * scale, -8), V(80 * scale, 30 * scale, 42 * scale), rgb(68, 44, 42), Enum.Material.Slate, 0.35)
 		for _, s in { -1, 1 } do
-			beam("CalderaLavaRiver", backdrop + V(s * 12 * scale, 62 * scale, 4), backdrop + V(s * 38 * scale, 2, 24), 5.0 * scale, rgb(255, 105, 24), Enum.Material.Neon)
+			beam("CalderaLavaRiver", backdrop + V(s * 12 * scale, 62 * scale, 4), backdrop + V(s * 38 * scale, 2, 24), 5.0 * scale, rgb(255, 105, 24), Enum.Material.SmoothPlastic, 0.2)
 		end
 
 	elseif biome == "frozen_citadel" then
@@ -709,8 +720,8 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		end
 		cyl("SuspendedForgeRing", backdrop + V(0, 70 * scale, 2), 40 * scale, 11 * scale, theme.TrimColor, Enum.Material.Metal)
 		cyl("MoltenCrucibleVat", backdrop + V(0, 54 * scale, 2), 24 * scale, 19 * scale, rgb(48, 36, 38), Enum.Material.Metal)
-		block("CrucibleLavaCascade", V(15 * scale, 54 * scale, 9 * scale), backdrop + V(0, 26 * scale, 10), rgb(255, 118, 24), Enum.Material.Neon, nil, 0.05)
-		orb("CrucibleSplashPool", backdrop + V(0, 2, 14), V(40 * scale, 5 * scale, 28 * scale), rgb(255, 145, 35), Enum.Material.Neon, 0.1)
+		block("CrucibleLavaCascade", V(15 * scale, 54 * scale, 9 * scale), backdrop + V(0, 26 * scale, 10), rgb(255, 118, 24), Enum.Material.SmoothPlastic, nil, 0.2)
+		orb("CrucibleSplashPool", backdrop + V(0, 2, 14), V(40 * scale, 5 * scale, 28 * scale), rgb(255, 145, 35), Enum.Material.SmoothPlastic, 0.2)
 
 	elseif biome == "thunder_highlands" then
 		for k = 1, 7 do
@@ -793,6 +804,194 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		orb("EclipseCoronaHalo", eclipseAt, V(60 * scale, 60 * scale, 5 * scale), rgb(162, 95, 255), Enum.Material.SmoothPlastic, 0.45)
 		orb("BlackEclipseSphere", eclipseAt + V(0, 0, 2), V(52 * scale, 52 * scale, 12 * scale), rgb(8, 6, 14), Enum.Material.SmoothPlastic)
 		block("DescendingVioletBeam", V(5.0 * scale, 86 * scale, 5.0 * scale), backdrop + V(0, 50 * scale, 14), rgb(178, 108, 255), Enum.Material.SmoothPlastic, nil, 0.50)
+	end
+
+	-- =========================================================================
+	-- 6. BIOME-SPECIFIC ENVIRONMENTAL CLUTTER & FOLIAGE SUITE (MAKES FLOORS FULL)
+	-- =========================================================================
+	local function foliageBush(at: Vector3, bScale: number, col1: Color3?, col2: Color3?)
+		local leafA = col1 or rgb(48, 115, 52)
+		local leafB = col2 or rgb(72, 140, 60)
+		orb("FoliageBushMain", at + V(0, 2.2 * bScale, 0), V(7 * bScale, 4.5 * bScale, 7 * bScale), leafA, Enum.Material.Grass)
+		orb("FoliageBushClusterB", at + V(2.2 * bScale, 1.8 * bScale, 1.2 * bScale), V(5 * bScale, 3.8 * bScale, 5 * bScale), leafB, Enum.Material.Grass)
+		orb("FoliageBushClusterC", at + V(-1.8 * bScale, 1.5 * bScale, -1.8 * bScale), V(4.5 * bScale, 3.2 * bScale, 4.5 * bScale), leafA, Enum.Material.Grass)
+		block("BushBaseRubble", V(3 * bScale, 1.4 * bScale, 2.6 * bScale), at + V(0.5 * bScale, 0.7 * bScale, -1 * bScale), theme.CliffColor, theme.CliffMaterial)
+	end
+
+	local function stoneRuinClutter(at: Vector3, rScale: number)
+		block("BrokenMasonryBlockA", V(4.5 * rScale, 2.8 * rScale, 3.8 * rScale), at + V(0, 1.4 * rScale, 0), theme.TrimColor, theme.TrimMaterial)
+		block("BrokenMasonryBlockB", V(3.2 * rScale, 2.2 * rScale, 2.8 * rScale), at + V(2.6 * rScale, 1.1 * rScale, 1.4 * rScale), theme.CliffColor, theme.CliffMaterial)
+		cyl("FallenColumnDrum", at + V(-2.4 * rScale, 1.2 * rScale, -1.2 * rScale), 2.2 * rScale, 3.5 * rScale, theme.TrimColor, theme.TrimMaterial)
+	end
+
+	local function stoneUrnPlanter(at: Vector3, uScale: number)
+		cyl("UrnBase", at + V(0, 1.0 * uScale, 0), 2.2 * uScale, 2.0 * uScale, theme.TrimColor, theme.TrimMaterial)
+		orb("UrnBelly", at + V(0, 3.2 * uScale, 0), V(4.2 * uScale, 3.6 * uScale, 4.2 * uScale), theme.TrimColor, theme.TrimMaterial)
+		cyl("UrnRim", at + V(0, 5.0 * uScale, 0), 2.6 * uScale, 1.0 * uScale, theme.AccentColor, theme.TrimMaterial)
+		orb("UrnSpillingFoliage", at + V(0, 5.8 * uScale, 0), V(3.8 * uScale, 2.2 * uScale, 3.8 * uScale), rgb(62, 138, 68), Enum.Material.Grass)
+	end
+
+	local function mushroomClutter(at: Vector3, mScale: number, capCol: Color3, glowCol: Color3)
+		for idxM = 1, 3 do
+			local off = if idxM == 1 then V(0, 0, 0) elseif idxM == 2 then V(2.2 * mScale, 0, 1.4 * mScale) else V(-1.8 * mScale, 0, -1.2 * mScale)
+			local sz = if idxM == 1 then 1.0 else (if idxM == 2 then 0.7 else 0.5)
+			local hStem = 4.5 * mScale * sz
+			local rCap = 3.2 * mScale * sz
+			beam("SporeStalk", at + off, at + off + V(0, hStem, 0), 0.9 * mScale * sz, rgb(160, 155, 185), Enum.Material.SmoothPlastic)
+			orb("SporeCap", at + off + V(0, hStem + 1.2 * mScale * sz, 0), V(rCap * 2, 2.4 * mScale * sz, rCap * 2), capCol, Enum.Material.SmoothPlastic)
+			cyl("SporeRingGlow", at + off + V(0, hStem, 0), rCap * 0.75, 0.6 * mScale * sz, glowCol, Enum.Material.Neon, 0.2)
+		end
+		orb("SporeMushroomMound", at + V(0, 0.8 * mScale, 0), V(4.5 * mScale, 1.6 * mScale, 4.5 * mScale), theme.GroundColor, theme.GroundMaterial)
+	end
+
+	local function basaltDrift(at: Vector3, dScale: number)
+		block("BasaltBoulderA", V(5.2 * dScale, 3.6 * dScale, 4.8 * dScale), at + V(0, 1.8 * dScale, 0), rgb(32, 26, 28), Enum.Material.Basalt)
+		block("BasaltBoulderB", V(3.8 * dScale, 2.4 * dScale, 3.2 * dScale), at + V(2.8 * dScale, 1.2 * dScale, 1.6 * dScale), rgb(44, 34, 36), Enum.Material.Basalt)
+		block("BasaltBoulderC", V(2.8 * dScale, 1.8 * dScale, 2.6 * dScale), at + V(-2.4 * dScale, 0.9 * dScale, -1.8 * dScale), rgb(28, 22, 24), Enum.Material.Basalt)
+	end
+
+	local function iceCrystalClutter(at: Vector3, cScale: number)
+		for idxC = 1, 3 do
+			local off = if idxC == 1 then V(0, 0, 0) elseif idxC == 2 then V(2.0 * cScale, 0, 1.2 * cScale) else V(-1.6 * cScale, 0, -1.0 * cScale)
+			local sz = if idxC == 1 then 1.0 else (if idxC == 2 then 0.75 else 0.55)
+			local cryH = 7.5 * cScale * sz
+			local cryW = 2.2 * cScale * sz
+			block("IceCrystalSpike", V(cryW, cryH, cryW), at + off + V(0, cryH / 2, 0), rgb(165, 225, 255), Enum.Material.Ice, nil, 0.15)
+		end
+		orb("SnowdriftMound", at + V(0, 0.8 * cScale, 0), V(6.5 * cScale, 1.8 * cScale, 5.5 * cScale), rgb(225, 238, 252), Enum.Material.Sand)
+	end
+
+	local function forgeScrapClutter(at: Vector3, fScale: number)
+		block("ScrapIronIngotA", V(4.2 * fScale, 1.6 * fScale, 2.2 * fScale), at + V(0, 0.8 * fScale, 0), rgb(52, 48, 56), Enum.Material.Metal)
+		block("ScrapIronIngotB", V(3.6 * fScale, 1.4 * fScale, 2.0 * fScale), at + V(0.8 * fScale, 2.2 * fScale, 0.4 * fScale), darkGold, Enum.Material.Metal)
+		block("SlagHeapDebris", V(5.5 * fScale, 2.4 * fScale, 4.8 * fScale), at + V(-2.6 * fScale, 1.2 * fScale, 1.2 * fScale), rgb(36, 28, 30), Enum.Material.Basalt)
+		ring("DiscardedCogRim", at + V(2.4 * fScale, 1.4 * fScale, -1.8 * fScale), 2.2 * fScale, 0.5 * fScale, rgb(68, 58, 62), Enum.Material.Metal, CFrame.Angles(0.3, 0.4, 0), 0, math.pi * 2, 8)
+	end
+
+	local function highlandCairnClutter(at: Vector3, cScale: number)
+		cyl("CairnStone1", at + V(0, 0.8 * cScale, 0), 2.8 * cScale, 1.6 * cScale, theme.TrimColor, Enum.Material.Cobblestone)
+		cyl("CairnStone2", at + V(0, 2.2 * cScale, 0), 2.1 * cScale, 1.4 * cScale, theme.TrimColor, Enum.Material.Cobblestone)
+		cyl("CairnStone3", at + V(0, 3.4 * cScale, 0), 1.4 * cScale, 1.2 * cScale, theme.AccentColor, Enum.Material.Cobblestone)
+		orb("StormgrassTuftA", at + V(2.4 * cScale, 1.0 * cScale, 1.2 * cScale), V(4.2 * cScale, 2.2 * cScale, 4.2 * cScale), rgb(78, 108, 72), Enum.Material.Grass)
+		orb("StormgrassTuftB", at + V(-2.2 * cScale, 0.8 * cScale, -1.4 * cScale), V(3.6 * cScale, 1.8 * cScale, 3.6 * cScale), rgb(64, 88, 60), Enum.Material.Grass)
+	end
+
+	local function corruptedBriarClutter(at: Vector3, bScale: number)
+		ring("BlightThornLoop", at + V(0, 2.6 * bScale, 0), 3.2 * bScale, 0.8 * bScale, rgb(28, 18, 32), Enum.Material.Wood, CFrame.Angles(0.4, 0.6, 0), 0, math.pi * 1.6, 8)
+		orb("BlightSporePod", at + V(0, 1.8 * bScale, 0), V(3.6 * bScale, 2.6 * bScale, 3.6 * bScale), rgb(118, 32, 98), Enum.Material.SmoothPlastic, 0.1)
+		orb("BlightPodCore", at + V(0, 2.0 * bScale, 0), V(1.8 * bScale, 1.8 * bScale, 1.8 * bScale), rgb(255, 65, 185), Enum.Material.Neon, 0.15)
+		block("BlightRootRot", V(4.8 * bScale, 1.6 * bScale, 4.2 * bScale), at + V(1.4 * bScale, 0.8 * bScale, -1.2 * bScale), rgb(22, 16, 26), Enum.Material.Slate)
+	end
+
+	local function coralReefClutter(at: Vector3, cScale: number)
+		for idxCr = 1, 4 do
+			local a = idxCr * math.pi / 2
+			local tip = at + V(math.cos(a) * 3.2 * cScale, 5.5 * cScale, math.sin(a) * 3.2 * cScale)
+			beam("CoralBranch", at + V(0, 0.5 * cScale, 0), tip, 0.9 * cScale, if idxCr % 2 == 0 then rgb(52, 188, 204) else rgb(238, 142, 112), Enum.Material.SmoothPlastic)
+			orb("CoralTipBulb", tip, V(1.8 * cScale, 1.8 * cScale, 1.8 * cScale), if idxCr % 2 == 0 then rgb(95, 235, 245) else rgb(255, 175, 135), Enum.Material.SmoothPlastic, 0.1)
+		end
+		orb("AnemoneMound", at + V(0, 1.2 * cScale, 0), V(5.5 * cScale, 2.4 * cScale, 5.5 * cScale), rgb(165, 198, 190), Enum.Material.Limestone)
+	end
+
+	local function tomeArchiveClutter(at: Vector3, tScale: number)
+		block("TomeStackA", V(3.6 * tScale, 1.2 * tScale, 2.8 * tScale), at + V(0, 0.6 * tScale, 0), rgb(38, 48, 88), Enum.Material.SmoothPlastic)
+		block("TomeStackB", V(3.2 * tScale, 1.0 * tScale, 2.5 * tScale), at + V(0.2 * tScale, 1.6 * tScale, 0.1 * tScale), rgb(155, 45, 45), Enum.Material.SmoothPlastic)
+		block("TomeStackC", V(2.8 * tScale, 0.9 * tScale, 2.2 * tScale), at + V(-0.1 * tScale, 2.5 * tScale, 0.2 * tScale), gold, Enum.Material.Metal)
+		cyl("ScrollHeap", at + V(2.4 * tScale, 0.6 * tScale, 1.2 * tScale), 0.8 * tScale, 3.2 * tScale, rgb(235, 225, 205), Enum.Material.SmoothPlastic)
+	end
+
+	local function voidSpireClutter(at: Vector3, vScale: number)
+		block("ObsidianShardSpikeA", V(1.8 * vScale, 6.5 * vScale, 1.8 * vScale), at + V(0, 3.2 * vScale, 0), rgb(20, 16, 28), Enum.Material.Basalt)
+		block("ObsidianShardSpikeB", V(1.4 * vScale, 4.5 * vScale, 1.4 * vScale), at + V(1.8 * vScale, 2.2 * vScale, 1.2 * vScale), rgb(28, 22, 38), Enum.Material.Basalt)
+		orb("VoidCoreGlow", at + V(0, 4.2 * vScale, 0), V(1.6 * vScale, 1.6 * vScale, 1.6 * vScale), accent, Enum.Material.Neon, 0.15)
+		block("VoidCryptPlinth", V(4.5 * vScale, 1.2 * vScale, 4.5 * vScale), at + V(0, 0.6 * vScale, 0), rgb(16, 12, 22), Enum.Material.Marble)
+	end
+
+	local function spawnBiomeClutter(at: Vector3, clScale: number, variantSeed: number)
+		if biome == "verdant_ruins" then
+			if variantSeed % 3 == 0 then
+				foliageBush(at, clScale)
+			elseif variantSeed % 3 == 1 then
+				stoneRuinClutter(at, clScale)
+			else
+				stoneUrnPlanter(at, clScale)
+			end
+		elseif biome == "fungal_hollow" then
+			mushroomClutter(at, clScale, rgb(85, 58, 168), accent)
+		elseif biome == "ashen_dunes" then
+			if variantSeed % 2 == 0 then
+				basaltDrift(at, clScale)
+			else
+				block("BuriedTerracottaUrn", V(3.5 * clScale, 4.2 * clScale, 3.5 * clScale), at + V(0, 1.8 * clScale, 0), rgb(175, 95, 65), Enum.Material.Slate)
+			end
+		elseif biome == "frozen_citadel" then
+			iceCrystalClutter(at, clScale)
+		elseif biome == "infernal_foundry" then
+			forgeScrapClutter(at, clScale)
+		elseif biome == "thunder_highlands" then
+			highlandCairnClutter(at, clScale)
+		elseif biome == "corrupted_grove" then
+			corruptedBriarClutter(at, clScale)
+		elseif biome == "sunken_sanctuary" then
+			coralReefClutter(at, clScale)
+		elseif biome == "astral_archives" then
+			tomeArchiveClutter(at, clScale)
+		else
+			voidSpireClutter(at, clScale)
+		end
+	end
+
+	-- 1. Lateral clutter beds across the wide Basin terrace (flanking the central causeway)
+	for _, s in { -1, 1 } do
+		for k = 1, 6 do
+			local frac = (k - 0.5) / 6
+			local cz = basin.Z - basin.Depth * 0.38 + frac * (basin.Depth * 0.76)
+			-- Inner curb line flanking the walkway
+			local cxInner = s * (22 + (k % 2) * 6)
+			spawnBiomeClutter(V(cxInner, basin.Y, cz), 0.95 * scale, k)
+
+			-- Mid terrace clutter islands filling open spaces
+			local cxMid = s * (basin.Width * 0.28 + ((k * 7) % 18))
+			spawnBiomeClutter(V(cxMid, basin.Y, cz), 1.15 * scale, k + 1)
+		end
+	end
+
+	-- 2. Traversal Link Curb Clutter (along ramps and grand stairs)
+	for idxLink, link in layout.Links do
+		local a = V(link.AX, link.AY, link.AZ)
+		local b = V(link.BX, link.BY, link.BZ)
+		local delta = b - a
+		local flat = V(delta.X, 0, delta.Z)
+		local flatUnit = if flat.Magnitude > 0.01 then flat.Unit else V(0, 0, -1)
+		local right = V(-flatUnit.Z, 0, flatUnit.X)
+
+		for _, frac in { 0.25, 0.75 } do
+			local pt = a:Lerp(b, frac)
+			for _, side in { -1, 1 } do
+				local curbAt = pt + right * (side * (link.Width / 2 + 3.2))
+				spawnBiomeClutter(curbAt, 0.75 * scale, idxLink + side)
+			end
+		end
+	end
+
+	-- 3. Gallery Terraces Outer Corner Clutter
+	for _, gal in { layout.Platforms.WestGallery, layout.Platforms.EastGallery } do
+		if gal then
+			for _, sx in { -1, 1 } do
+				for _, sz in { -1, 1 } do
+					local cornerAt = V(gal.X + sx * (gal.Width * 0.36), gal.Y, gal.Z + sz * (gal.Depth * 0.36))
+					spawnBiomeClutter(cornerAt, 1.05 * scale, sx + sz)
+				end
+			end
+		end
+	end
+
+	-- 4. Sanctuary Safe Zone Entrance Gateway Framing
+	for _, s in { -1, 1 } do
+		local gatePos1 = V(s * 18, safe.Y, safe.Z - 20)
+		spawnBiomeClutter(gatePos1, 1.15 * scale, s)
+		local gatePos2 = V(s * 28, safe.Y, safe.Z - 22)
+		spawnBiomeClutter(gatePos2, 0.95 * scale, s + 1)
 	end
 
 	-- Keep every enemy camp completely clear of props.

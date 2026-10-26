@@ -260,12 +260,53 @@ function Builder.Build(id: number, generation: number): any
 	model:SetAttribute("CampCount", #layout.Camps)
 
 	-- Base sub-floor and sky/cavern enclosure
-	part(model, "Ground", Vector3.new(width, 4, depth), origin + Vector3.new(0, layout.Bottom - 2, 0), theme.SubFloorColor, theme.GroundMaterial)
+	part(model, "Ground", Vector3.new(width, 4, depth), origin + Vector3.new(0, layout.Bottom - 6, 0), theme.SubFloorColor, theme.GroundMaterial)
 	for _, side in { -1, 1 } do
-		part(model, "WallX", Vector3.new(6, height + 16, depth), origin + Vector3.new(side * (width / 2 + 3), height / 2 - 8, 0), theme.WallColor, theme.WallMaterial)
-		part(model, "WallZ", Vector3.new(width + 12, height + 16, 6), origin + Vector3.new(0, height / 2 - 8, side * (depth / 2 + 3)), theme.WallColor, theme.WallMaterial)
+		part(model, "WallX", Vector3.new(6, height + 16, depth + 12), origin + Vector3.new(side * (width / 2 + 3), height / 2 - 8, 0), theme.WallColor, theme.WallMaterial)
+		part(model, "WallZ", Vector3.new(width, height + 16, 6), origin + Vector3.new(0, height / 2 - 8, side * (depth / 2 + 3)), theme.WallColor, theme.WallMaterial)
 	end
-	part(model, "OpaqueCeiling", Vector3.new(width + 12, 6, depth + 12), origin + Vector3.new(0, height + 3, 0), theme.SkyColor, theme.WallMaterial)
+	-- Vaulted ceiling with natural environmental skylight aperture (allows sunlight & sunrays to enter)
+	local openW = width * 0.54
+	local openD = depth * 0.54
+	local borderX = (width - openW) / 2
+	local borderZ = (depth - openD) / 2
+
+	for _, sz in { -1, 1 } do
+		local ceilZ = decor(model, "VaultCeilingZ", Vector3.new(width + 12, 6, borderZ + 8), origin + Vector3.new(0, height + 3, sz * (depth / 2 - borderZ / 2)), theme.WallColor, theme.WallMaterial)
+		ceilZ.CastShadow = false
+	end
+	for _, sx in { -1, 1 } do
+		local ceilX = decor(model, "VaultCeilingX", Vector3.new(borderX + 8, 6, openD), origin + Vector3.new(sx * (width / 2 - borderX / 2), height + 3, 0), theme.WallColor, theme.WallMaterial)
+		ceilX.CastShadow = false
+	end
+	for _, sz in { -1, 1 } do
+		decor(model, "SkylightRimZ", Vector3.new(openW + 12, 3.5, 4), origin + Vector3.new(0, height + 1, sz * (openD / 2)), theme.TrimColor, theme.TrimMaterial)
+	end
+	for _, sx in { -1, 1 } do
+		decor(model, "SkylightRimX", Vector3.new(4, 3.5, openD + 12), origin + Vector3.new(sx * (openW / 2), height + 1, 0), theme.TrimColor, theme.TrimMaterial)
+	end
+
+	-- High-altitude natural skylight light source (casts soft sunlight/skylight down across the room)
+	local sunShaft = Instance.new("Part")
+	sunShaft.Name = "NaturalSkylightShaft"
+	sunShaft.Size = Vector3.new(openW * 0.7, 2, openD * 0.7)
+	sunShaft.Position = origin + Vector3.new(0, height + 8, -depth * 0.05)
+	sunShaft.Anchored = true
+	sunShaft.CanCollide = false
+	sunShaft.CanQuery = false
+	sunShaft.CanTouch = false
+	sunShaft.Transparency = 1
+	sunShaft.Parent = model
+
+	local naturalSpot = Instance.new("SpotLight")
+	naturalSpot.Name = "NaturalSkylightSpot"
+	naturalSpot.Face = Enum.NormalId.Bottom
+	naturalSpot.Angle = 82
+	naturalSpot.Range = height + 45
+	naturalSpot.Brightness = 1.4
+	naturalSpot.Color = theme.LightColor:Lerp(Color3.fromRGB(255, 245, 225), 0.45)
+	naturalSpot.Shadows = false
+	naturalSpot.Parent = sunShaft
 
 	local isNatural = floorSpec.BiomeId == "verdant_ruins"
 		or floorSpec.BiomeId == "fungal_hollow"
@@ -287,15 +328,19 @@ function Builder.Build(id: number, generation: number): any
 		slab:SetAttribute("TerraceId", name)
 
 		local topCenter = origin + Vector3.new(terrace.X, terrace.Y, terrace.Z)
-		decor(model, "TerraceCenterMosaic", Vector3.new(terrace.Width * 0.62, 0.08, terrace.Depth * 0.62), topCenter + Vector3.new(0, 0.02, 0), theme.TrimColor, theme.TrimMaterial)
-		decor(model, "TerraceInnerField", Vector3.new(terrace.Width * 0.52, 0.1, terrace.Depth * 0.52), topCenter + Vector3.new(0, 0.03, 0), theme.GroundColor, theme.GroundMaterial)
+		if name ~= "Sanctuary" and name ~= "Basin" then
+			decor(model, "TerraceCenterMosaic", Vector3.new(terrace.Width * 0.62, 0.12, terrace.Depth * 0.62), topCenter + Vector3.new(0, 0.08, 0), theme.TrimColor, theme.TrimMaterial)
+			decor(model, "TerraceInnerField", Vector3.new(terrace.Width * 0.52, 0.14, terrace.Depth * 0.52), topCenter + Vector3.new(0, 0.16, 0), theme.GroundColor, theme.GroundMaterial)
+		end
 
-		for _, side in { -1, 1 } do
-			decor(model, "TerraceMasonryBand", Vector3.new(terrace.Width + 2, 1.4, 2.2), topCenter + Vector3.new(0, -0.7, side * (terrace.Depth / 2)), theme.TrimColor, theme.TrimMaterial)
-			decor(model, "TerraceSideBand", Vector3.new(2.2, 1.4, terrace.Depth + 2), topCenter + Vector3.new(side * (terrace.Width / 2), -0.7, 0), theme.TrimColor, theme.TrimMaterial)
-			if thickness > 5 then
-				decor(model, "TerracePlinthZ", Vector3.new(terrace.Width + 6, thickness * 0.65, 4), origin + Vector3.new(terrace.X, layout.Bottom + thickness * 0.32 - 2, terrace.Z + side * (terrace.Depth / 2 + 1)), theme.CliffColor, theme.CliffMaterial)
-				decor(model, "TerracePlinthX", Vector3.new(4, thickness * 0.65, terrace.Depth + 6), origin + Vector3.new(terrace.X + side * (terrace.Width / 2 + 1), layout.Bottom + thickness * 0.32 - 2, terrace.Z), theme.CliffColor, theme.CliffMaterial)
+		if name ~= "Sanctuary" then
+			for _, side in { -1, 1 } do
+				decor(model, "TerraceMasonryBand", Vector3.new(terrace.Width + 2, 1.6, 2.2), topCenter + Vector3.new(0, -0.6, side * (terrace.Depth / 2)), theme.TrimColor, theme.TrimMaterial)
+				decor(model, "TerraceSideBand", Vector3.new(2.2, 1.6, math.max(1, terrace.Depth - 2.5)), topCenter + Vector3.new(side * (terrace.Width / 2), -0.6, 0), theme.TrimColor, theme.TrimMaterial)
+				if thickness > 5 then
+					decor(model, "TerracePlinthZ", Vector3.new(terrace.Width + 6, thickness * 0.65, 4), origin + Vector3.new(terrace.X, layout.Bottom + thickness * 0.32 - 2, terrace.Z + side * (terrace.Depth / 2 + 1)), theme.CliffColor, theme.CliffMaterial)
+					decor(model, "TerracePlinthX", Vector3.new(4, thickness * 0.65, math.max(1, terrace.Depth - 2.5)), origin + Vector3.new(terrace.X + side * (terrace.Width / 2 + 1), layout.Bottom + thickness * 0.32 - 2, terrace.Z), theme.CliffColor, theme.CliffMaterial)
+				end
 			end
 		end
 
@@ -305,10 +350,24 @@ function Builder.Build(id: number, generation: number): any
 					local corner = topCenter + Vector3.new(sx * (terrace.Width / 2 - 4), 0, sz * (terrace.Depth / 2 - 4))
 					if isNatural then
 						decor(model, "TerraceRockOutcrop", Vector3.new(7, 5, 7), corner + Vector3.new(0, 2.5, 0), theme.CliffColor, theme.CliffMaterial)
-						decor(model, "TerraceGlowFlora", Vector3.new(2.5, 3.2, 2.5), corner + Vector3.new(0, 5.5, 0), theme.LightColor, Enum.Material.SmoothPlastic, 0.15)
+						local flora = decor(model, "TerraceGlowFlora", Vector3.new(2.5, 3.2, 2.5), corner + Vector3.new(0, 5.5, 0), theme.LightColor, Enum.Material.SmoothPlastic, 0.15)
+						local pl = Instance.new("PointLight")
+						pl.Name = "TerraceCornerLight"
+						pl.Color = theme.LightColor
+						pl.Brightness = 0.65
+						pl.Range = 26
+						pl.Shadows = false
+						pl.Parent = flora
 					else
 						decor(model, "TerraceCornerPedestal", Vector3.new(5, 8, 5), corner + Vector3.new(0, 4, 0), theme.TrimColor, theme.TrimMaterial)
-						decor(model, "TerraceCornerBrazier", Vector3.new(3, 2.5, 3), corner + Vector3.new(0, 9, 0), theme.LightColor, Enum.Material.SmoothPlastic, 0.1)
+						local brazier = decor(model, "TerraceCornerBrazier", Vector3.new(3, 2.5, 3), corner + Vector3.new(0, 9, 0), theme.LightColor, Enum.Material.SmoothPlastic, 0.1)
+						local pl = Instance.new("PointLight")
+						pl.Name = "TerraceCornerLight"
+						pl.Color = theme.LightColor
+						pl.Brightness = 0.65
+						pl.Range = 26
+						pl.Shadows = false
+						pl.Parent = brazier
 					end
 				end
 			end
@@ -334,19 +393,19 @@ function Builder.Build(id: number, generation: number): any
 					model,
 					"GrandStairTread",
 					Vector3.new(link.Width, 2, flat.Magnitude / steps + 0.15),
-					Vector3.new(center.X, top - 1, center.Z),
+					Vector3.new(center.X, top - 1.05, center.Z),
 					theme.TrimColor,
 					theme.TrimMaterial
 				)
 				tread.CFrame = CFrame.lookAt(tread.Position, tread.Position + flat)
-				local runner = decor(model, "GrandStairRunner", Vector3.new(link.Width * 0.36, 0.08, flat.Magnitude / steps + 0.2), Vector3.new(center.X, top + 0.02, center.Z), theme.AccentColor, theme.TrimMaterial)
+				local runner = decor(model, "GrandStairRunner", Vector3.new(link.Width * 0.36, 0.12, flat.Magnitude / steps + 0.2), Vector3.new(center.X, top + 0.08, center.Z), theme.AccentColor, theme.TrimMaterial)
 				runner.CFrame = CFrame.lookAt(runner.Position, runner.Position + flat)
 			end
 		else
 			local ramp = part(model, "TraversalRamp", Vector3.new(link.Width, 2, delta.Magnitude), mid, theme.TrimColor, theme.TrimMaterial)
-			ramp.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, -1, 0)
-			local inlay = decor(model, "RampPathInlay", Vector3.new(link.Width * 0.55, 0.08, delta.Magnitude), mid, theme.AccentColor, theme.GroundMaterial)
-			inlay.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, 0.03, 0)
+			ramp.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, -1.05, 0)
+			local inlay = decor(model, "RampPathInlay", Vector3.new(link.Width * 0.55, 0.12, delta.Magnitude), mid, theme.AccentColor, theme.GroundMaterial)
+			inlay.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, 0.08, 0)
 		end
 
 		for _, side in { -1, 1 } do
@@ -355,6 +414,19 @@ function Builder.Build(id: number, generation: number): any
 			curb.CFrame = CFrame.lookAt(mid + curbOffset, b + curbOffset) * CFrame.new(0, -0.4, 0)
 			local glowStrip = decor(model, "BridgeRuneStrip", Vector3.new(0.45, 0.35, delta.Magnitude - 4), mid + curbOffset, theme.LightColor, Enum.Material.SmoothPlastic, 0.3)
 			glowStrip.CFrame = CFrame.lookAt(mid + curbOffset, b + curbOffset) * CFrame.new(0, 0.95, 0)
+		end
+		for _, frac in { 0.18, 0.82 } do
+			local pt = a:Lerp(b, frac)
+			for _, side in { -1, 1 } do
+				local lampPos = pt + right * (side * (link.Width / 2 + 1.4)) + Vector3.new(0, 1.8, 0)
+				local lamp = decor(model, "RampPostLantern", Vector3.new(1.4, 2.2, 1.4), lampPos, theme.LightColor, Enum.Material.SmoothPlastic, 0.15)
+				local pl = Instance.new("PointLight")
+				pl.Color = theme.LightColor
+				pl.Range = 22
+				pl.Brightness = 0.55
+				pl.Shadows = false
+				pl.Parent = lamp
+			end
 		end
 		for _, frac in { 0.28, 0.72 } do
 			local pt = a:Lerp(b, frac)
@@ -378,16 +450,29 @@ function Builder.Build(id: number, generation: number): any
 
 	BiomeAssets.Build(model, origin, floorSpec.BiomeId, idx, layout, theme)
 
-	for x = -width / 2 + 70, width / 2 - 50, 140 do
-		for z = -depth / 2 + 70, depth / 2 - 50, 140 do
-			local lamp = decor(model, "VaultLantern", Vector3.new(1, 1, 1), origin + Vector3.new(x, 38, z), theme.LightColor, Enum.Material.SmoothPlastic, 1)
+	for x = -width / 2 + 50, width / 2 - 40, 100 do
+		for z = -depth / 2 + 50, depth / 2 - 40, 100 do
+			local lamp = decor(model, "VaultLantern", Vector3.new(1, 1, 1), origin + Vector3.new(x, 42, z), theme.LightColor, Enum.Material.SmoothPlastic, 1)
 			local light = Instance.new("PointLight")
-			light.Range = 40
-			light.Brightness = 0.35
+			light.Range = 60
+			light.Brightness = 0.55
 			light.Color = theme.LightColor
 			light.Shadows = false
 			light.Parent = lamp
 		end
+	end
+
+	-- Sanctuary Arrival Gateway Braziers (welcoming illumination framing safe zone threshold)
+	for _, side in { -1, 1 } do
+		local torchPos = origin + Vector3.new(side * 24, safe.Y + 3.5, safe.Z - 26)
+		decor(model, "ArrivalPortalBrazierPlinth", Vector3.new(3.5, 5.5, 3.5), torchPos, theme.TrimColor, theme.TrimMaterial)
+		local flame = decor(model, "ArrivalPortalFlame", Vector3.new(2.2, 2.6, 2.2), torchPos + Vector3.new(0, 3.8, 0), theme.LightColor, Enum.Material.SmoothPlastic, 0.1)
+		local pl = Instance.new("PointLight")
+		pl.Color = theme.LightColor
+		pl.Range = 32
+		pl.Brightness = 0.85
+		pl.Shadows = false
+		pl.Parent = flame
 	end
 
 	local landing = model:FindFirstChild("SafeArrival") :: BasePart
@@ -557,6 +642,10 @@ function Builder.Build(id: number, generation: number): any
 	local folder = workspace:FindFirstChild("TowerRooms") or Instance.new("Folder")
 	folder.Name = "TowerRooms"
 	folder.Parent = workspace
+	local existing = folder:FindFirstChild(model.Name)
+	if existing then
+		existing:Destroy()
+	end
 	model.Parent = folder
 
 	return {

@@ -1,7 +1,7 @@
 --!strict
 -- LightingAndEffects.luau
--- ModuleScript: Configures Atmosphere, ColorCorrection, Bloom, and Lighting to create
--- a dark crimson storm mood around the central Tower while keeping player islands and UI readable.
+-- ModuleScript: Configures Atmosphere, ColorCorrection, Bloom, SunRays, and Lighting to create
+-- a rich, readable, atmospheric mood around the central Tower while keeping gameplay clear.
 
 local Lighting = game:GetService("Lighting")
 
@@ -11,34 +11,38 @@ local LightingAndEffects = {}
 -- CONFIGURATION TABLE
 --============================================================================
 LightingAndEffects.Config = {
-	-- Core Lighting Properties (Readable gameplay + dramatic crimson-horizon storm, balanced contrast)
-	ClockTime = 17.3,
-	Brightness = 1.1,
-	Ambient = Color3.fromRGB(45, 40, 42),
-	OutdoorAmbient = Color3.fromRGB(60, 52, 56),
-	ColorShift_Top = Color3.fromRGB(180, 130, 135),
-	ColorShift_Bottom = Color3.fromRGB(80, 35, 42),
-	EnvironmentDiffuseScale = 0.45,
-	EnvironmentSpecularScale = 0.50,
+	-- Core Lighting Properties (Readable gameplay + natural ambient fill + dramatic contrast)
+	ClockTime = 15.5,
+	Brightness = 1.35,
+	Ambient = Color3.fromRGB(64, 58, 62),
+	OutdoorAmbient = Color3.fromRGB(82, 74, 78),
+	ColorShift_Top = Color3.fromRGB(195, 150, 155),
+	ColorShift_Bottom = Color3.fromRGB(85, 42, 50),
+	EnvironmentDiffuseScale = 0.55,
+	EnvironmentSpecularScale = 0.55,
 
-	-- Atmosphere (Dark Red Storm Horizon & Haze, rich depth)
+	-- Atmosphere (Storm Horizon & Atmospheric Depth)
 	AtmosphereDensity = 0.16,
 	AtmosphereOffset = 0.12,
 	AtmosphereColor = Color3.fromRGB(135, 34, 44),
 	AtmosphereDecay = Color3.fromRGB(52, 16, 22),
-	AtmosphereGlare = 0,
-	AtmosphereHaze = 0,
+	AtmosphereGlare = 0.12,
+	AtmosphereHaze = 0.08,
 
 	-- ColorCorrection (Subtle contrast + balanced tone without washing out UI/Gameplay)
-	TintColor = Color3.fromRGB(245, 235, 238),
-	Contrast = 0.04,
-	Saturation = 0.0,
+	TintColor = Color3.fromRGB(248, 238, 240),
+	Contrast = 0.05,
+	Saturation = 0.05,
 	BrightnessOffset = 0.0,
 
-	-- Bloom (Clamped and disabled so neon surfaces do not blow out the screen)
-	BloomIntensity = 0,
-	BloomSize = 10,
-	BloomThreshold = 2.0,
+	-- Bloom (Subtle cinematic glow clamped so standard materials and liquid blocks never blow out)
+	BloomIntensity = 0.38,
+	BloomSize = 22,
+	BloomThreshold = 1.25,
+
+	-- SunRays (Natural environmental atmospheric godrays through skylights and canopy)
+	SunRaysIntensity = 0.09,
+	SunRaysSpread = 0.70,
 }
 
 --============================================================================
@@ -93,18 +97,32 @@ function LightingAndEffects.Apply(customConfig: { [string]: any }?)
 		bloom.Name = "TowerStormBloom"
 		bloom.Parent = Lighting
 	end
+	bloom.Enabled = true
+	bloom.Intensity = cfg.BloomIntensity
+	bloom.Size = cfg.BloomSize
+	bloom.Threshold = cfg.BloomThreshold
+
+	local sunRays = Lighting:FindFirstChild("TowerStormSunRays") :: SunRaysEffect?
+		or Lighting:FindFirstChildOfClass("SunRaysEffect")
+	if not sunRays then
+		sunRays = Instance.new("SunRaysEffect")
+		sunRays.Name = "TowerStormSunRays"
+		sunRays.Parent = Lighting
+	end
+	sunRays.Enabled = true
+	sunRays.Intensity = cfg.SunRaysIntensity
+	sunRays.Spread = cfg.SunRaysSpread
+
 	-- Disable competing bloom/blur layers so glow does not stack.
 	for _, effect in Lighting:GetChildren() do
 		if effect:IsA("BloomEffect") and effect ~= bloom then
 			effect.Enabled = false
-		elseif effect:IsA("BlurEffect") or effect:IsA("DepthOfFieldEffect") or effect:IsA("SunRaysEffect") then
+		elseif effect:IsA("SunRaysEffect") and effect ~= sunRays then
+			effect.Enabled = false
+		elseif effect:IsA("BlurEffect") or effect:IsA("DepthOfFieldEffect") then
 			effect.Enabled = false
 		end
 	end
-	bloom.Enabled = false
-	bloom.Intensity = cfg.BloomIntensity
-	bloom.Size = cfg.BloomSize
-	bloom.Threshold = cfg.BloomThreshold
 end
 
 return LightingAndEffects

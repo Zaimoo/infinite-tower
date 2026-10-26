@@ -38,6 +38,7 @@ local CarriedLootSyncRemote = CombatRemotes:WaitForChild("CarriedLootSync") :: R
 local TowerRemotes = Remotes:WaitForChild("TowerRemotes")
 local FloorProgressRemote = TowerRemotes:WaitForChild("FloorProgress") :: RemoteEvent
 local SquadDefeatedRemote = TowerRemotes:WaitForChild("SquadDefeated") :: RemoteEvent
+local SquadStatusRemote = TowerRemotes:WaitForChild("SquadStatus") :: RemoteEvent
 
 local clientFloorProgress = {
 	FloorId = 0,
@@ -352,8 +353,145 @@ local squadWipeText = makeLabel({
 	Parent = squadWipeBanner,
 })
 
+local partiallyDefeatedBanner: Frame? = nil
+
 SquadWipeStateRemote.OnClientEvent:Connect(function(isWiped: boolean)
 	squadWipeBanner.Visible = isWiped
+	if isWiped and partiallyDefeatedBanner then
+		partiallyDefeatedBanner.Visible = false
+	end
+end)
+
+-- Partially Defeated Squad Warning Banner & Detailed Tooltip Popover
+partiallyDefeatedBanner = makeFrame({
+	Name = "PartiallyDefeatedSquadBanner",
+	Size = UDim2.new(0, 560, 0, 48),
+	Position = UDim2.new(0.5, -280, 1, -108),
+	BackgroundColor3 = Color3.fromRGB(34, 22, 10),
+	BackgroundTransparency = 0.08,
+	Corner = 8,
+	Stroke = 1.5,
+	StrokeColor = Color3.fromRGB(245, 158, 11), -- Warning Amber
+	Visible = false,
+	Parent = hudGui,
+})
+
+local partialHeader = makeLabel({
+	Size = UDim2.new(1, -16, 0, 20),
+	Position = UDim2.new(0, 8, 0, 4),
+	Text = "⚠️ SQUAD COMPROMISED · 1/5 HEROES DOWNED",
+	TextColor3 = Color3.fromRGB(251, 191, 36), -- Gold Amber
+	TextSize = 13,
+	Font = Enum.Font.GothamBold,
+	TextScaled = false,
+	Parent = partiallyDefeatedBanner,
+})
+
+local partialSubtext = makeLabel({
+	Size = UDim2.new(1, -16, 0, 18),
+	Position = UDim2.new(0, 8, 0, 24),
+	Text = "💀 Fallen heroes revive & heal to 100% HP on Floor Travel or Hub Return!",
+	TextColor3 = Color3.fromRGB(254, 243, 199), -- Warm Amber Cream
+	TextSize = 11,
+	Font = Enum.Font.GothamMedium,
+	TextScaled = false,
+	Parent = partiallyDefeatedBanner,
+})
+
+local partialTooltipPopover = makeFrame({
+	Name = "SquadVitalityTooltip",
+	Size = UDim2.new(0, 340, 0, 160),
+	Position = UDim2.new(0.5, -170, 0, -168),
+	BackgroundColor3 = Color3.fromRGB(18, 14, 24),
+	BackgroundTransparency = 0.05,
+	Corner = 8,
+	Stroke = 1.5,
+	StrokeColor = Color3.fromRGB(245, 158, 11),
+	Visible = false,
+	Parent = partiallyDefeatedBanner,
+})
+
+local tooltipTitle = makeLabel({
+	Size = UDim2.new(1, -16, 0, 22),
+	Position = UDim2.new(0, 8, 0, 6),
+	Text = "⚔️ SQUAD VITALITY STATUS",
+	TextColor3 = Color3.fromRGB(251, 191, 36),
+	TextSize = 12,
+	Font = Enum.Font.GothamBold,
+	Parent = partialTooltipPopover,
+})
+
+local tooltipList = makeLabel({
+	Size = UDim2.new(1, -16, 0, 78),
+	Position = UDim2.new(0, 8, 0, 30),
+	Text = "Tracking squad members...",
+	TextColor3 = Color3.fromRGB(225, 220, 240),
+	TextSize = 11,
+	Font = Enum.Font.Gotham,
+	TextXAlignment = Enum.TextXAlignment.Left,
+	TextYAlignment = Enum.TextYAlignment.Top,
+	Parent = partialTooltipPopover,
+})
+
+local tooltipFooter = makeLabel({
+	Size = UDim2.new(1, -16, 0, 38),
+	Position = UDim2.new(0, 8, 1, -42),
+	Text = "💡 Tip: Floor transitions & Hub travel fully resurrect and restore 100% HP to every hero!",
+	TextColor3 = Color3.fromRGB(147, 197, 253),
+	TextSize = 10,
+	Font = Enum.Font.GothamMedium,
+	Parent = partialTooltipPopover,
+})
+
+partiallyDefeatedBanner.MouseEnter:Connect(function()
+	partialTooltipPopover.Visible = true
+end)
+partiallyDefeatedBanner.MouseLeave:Connect(function()
+	partialTooltipPopover.Visible = false
+end)
+partiallyDefeatedBanner.InputBegan:Connect(function(input: InputObject)
+	if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+		partialTooltipPopover.Visible = not partialTooltipPopover.Visible
+	end
+end)
+
+SquadStatusRemote.OnClientEvent:Connect(function(status: any)
+	if type(status) ~= "table" then return end
+	local fallen = status.FallenCount or 0
+	local total = status.TotalCount or 0
+	local alive = status.AliveCount or 0
+	local isWiped = status.IsWiped == true
+	local fallenList = status.FallenHeroes or {}
+	local statuses = status.HeroStatuses or {}
+
+	if isWiped then
+		partiallyDefeatedBanner.Visible = false
+		partialTooltipPopover.Visible = false
+		squadWipeBanner.Visible = true
+		return
+	end
+
+	squadWipeBanner.Visible = false
+
+	if fallen > 0 and alive > 0 and clientFloorProgress.FloorId > 0 then
+		partiallyDefeatedBanner.Visible = true
+		partialHeader.Text = string.format("⚠️ SQUAD COMPROMISED · %d/%d HEROES DOWNED", fallen, total)
+		local namesText = if #fallenList > 0 then table.concat(fallenList, ", ") else "Hero"
+		partialSubtext.Text = string.format("💀 Fallen: %s · Full squad revives & heals on Floor Travel or Hub Return!", namesText)
+
+		local lines = {}
+		for _, h in ipairs(statuses) do
+			if h.Alive then
+				table.insert(lines, string.format("🟢 %s (Active · %d%% HP)", h.Name, h.HpPct or 100))
+			else
+				table.insert(lines, string.format("💀 %s (Downed · Revives on Floor Travel)", h.Name))
+			end
+		end
+		tooltipList.Text = table.concat(lines, "\n")
+	else
+		partiallyDefeatedBanner.Visible = false
+		partialTooltipPopover.Visible = false
+	end
 end)
 
 -- Connected after the banner exists: an earlier connection captured an undeclared

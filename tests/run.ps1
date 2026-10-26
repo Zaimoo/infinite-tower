@@ -52,8 +52,8 @@ $modulePaths = @(
     'ReplicatedStorage/Shared/Util/TowerSanctuaryRules.luau',
     'ReplicatedStorage/Shared/Util/StatFormulas.luau',
     'ReplicatedStorage/Shared/Util/WeaponPromotion.luau',
-    'ReplicatedStorage/Shared/Util/PitMath.luau',
     'ReplicatedStorage/Shared/Util/TowerProgress.luau',
+    'ReplicatedStorage/Shared/Util/PitMath.luau',
     'ServerScriptService/Core/PitService.luau'
 )
 $bundleParts = [System.Collections.Generic.List[string]]::new()
@@ -65,7 +65,7 @@ foreach ($modulePath in $modulePaths) {
     $bundleParts.Add([System.IO.File]::ReadAllText($sourcePath))
     $bundleParts.Add("`nend)")
 }
-foreach ($suite in @('pit.spec.luau', 'forge.spec.luau', 'combat-skills.spec.luau', 'tower.spec.luau', 'tower-transport.spec.luau', 'tower-combat.spec.luau', 'tower-rework.spec.luau', 'phase1-combat-tempo.luau', 'hero-rig.spec.luau')) {
+foreach ($suite in @('pit.spec.luau', 'forge.spec.luau', 'combat-skills.spec.luau', 'tower.spec.luau', 'tower-transport.spec.luau', 'tower-combat.spec.luau', 'tower-rework.spec.luau', 'phase1-combat-tempo.luau', 'hero-rig.spec.luau', 'phase2-floor-loop.spec.luau', 'phase2-defeat-rules.spec.luau')) {
     $bundleParts.Add('do')
     $bundleParts.Add([System.IO.File]::ReadAllText((Join-Path $PSScriptRoot $suite)))
     $bundleParts.Add("`nend")

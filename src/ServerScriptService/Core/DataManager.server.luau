@@ -214,6 +214,7 @@ export type PlayerProfile = {
 	},
 	HighestClearedBiomeBoss: number?,
 	HighestClearedFloor: number?,
+	MaxFloorReached: number?,
 	LastLogoutTimestamp: number?,
 	LastActiveTimestamp: number?,
 	Social: SocialProfile,
@@ -262,6 +263,9 @@ function DataManager.EnsureFacilities(profile: any)
 	end
 	if profile.HighestClearedFloor == nil then
 		profile.HighestClearedFloor = 0
+	end
+	if profile.MaxFloorReached == nil then
+		profile.MaxFloorReached = math.max(1, (profile.HighestClearedFloor or 0) + 1)
 	end
 	if profile.LastActiveTimestamp == nil then
 		profile.LastActiveTimestamp = os.time()
@@ -439,6 +443,7 @@ local function createDefaultPlayerProfile(): PlayerProfile
 		},
 		HighestClearedBiomeBoss = 0,
 		HighestClearedFloor = 0,
+		MaxFloorReached = 1,
 		LastLogoutTimestamp = os.time(),
 		LastActiveTimestamp = os.time(),
 		Social = {

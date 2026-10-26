@@ -20,7 +20,7 @@ local remotes: any
 local function remoteFolder(): any
 	local root=RS:WaitForChild("Remotes")
 	local f=root:FindFirstChild("TowerRemotes") or Instance.new("Folder");f.Name="TowerRemotes";f.Parent=root
-	for _,name in {"Request","Response","Context","Ready","Presence","TowerEntityState","TowerAction","TowerSnapshot","OpenSelector","FloorProgress","SquadDefeated"} do
+	for _,name in {"Request","Response","Context","Ready","Presence","TowerEntityState","TowerAction","TowerSnapshot","OpenSelector","FloorProgress","SquadDefeated","SquadStatus"} do
 		if not f:FindFirstChild(name) then local e=Instance.new(name=="TowerSnapshot" and "UnreliableRemoteEvent" or "RemoteEvent");e.Name=name;e.Parent=f end
 	end
 	return f
@@ -219,8 +219,19 @@ function Service.Request(player: Player,r: any)
 	if r.CharacterGeneration~=s.CharacterGeneration or r.ExpectedLocationRevision~=s.LocationRevision or r.ExpectedSquadRevision~=s.SquadRevision then reject("STALE_REVISION");return end
 	local char=alive(player)
 	if not char then reject("CHARACTER_NOT_READY");return end
-	if not _G.DataManager or not _G.DataManager.GetProfile(player) then reject("PROFILE_NOT_READY");return end
-	local id=r.Action=="HUB" and 0 or r.Action=="RECALL" and s.FloorId or r.FloorId
+	local profile = _G.DataManager and _G.DataManager.GetProfile(player)
+	if not profile then reject('PROFILE_NOT_READY');return end
+	local id=r.Action=='HUB' and 0 or r.Action=='RECALL' and s.FloorId or r.FloorId
+	if (r.Action=='VISIT' or r.Action=='ASSIGN') and id > 0 then
+		local bypass = RunService:IsStudio() and workspace:GetAttribute('UnlockAllFloors') == true
+		if not bypass then
+			local maxAllowed = math.max(1, profile.MaxFloorReached or ((profile.HighestClearedFloor or 0) + 1))
+			if id > maxAllowed then
+				reject('FLOOR_LOCKED')
+				return
+			end
+		end
+	end
 	if r.Action=="ASSIGN" and s.SquadAssignment==id and s.SquadSize>0 then saveResult(s,r.RequestId,fp,reply(player,r.RequestId,"COMMITTED"));return end
 	local p={RequestId=r.RequestId,Fingerprint=fp,Action=r.Action,View=r.Action=="VISIT" or r.Action=="HUB",Character=char,
 		CharacterGeneration=s.CharacterGeneration,LocationRevision=s.LocationRevision,SquadRevision=s.SquadRevision,Deadline=os.clock()+8,ViewEpoch=s.ViewEpoch+1}
