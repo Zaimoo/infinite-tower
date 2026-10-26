@@ -234,6 +234,89 @@ do
 	check(#HeroCostumes.Lint(variant({ RelativeTo = "Missing" })) == 1, "lint reports a bad RelativeTo")
 end
 
+-- 8. Clips (Phase 4) --------------------------------------------------------------
+do
+	local HeroClips = require(ReplicatedStorage.Assets.HeroRig.HeroClips)
+	local HeroCostumes = require(ReplicatedStorage.Assets.HeroRig.HeroCostumes)
+	local ArtifactCatalog = require(ReplicatedStorage.Shared.Config.ArtifactCatalog)
+
+	local jointNames: { [string]: boolean } = { RootOffset = true }
+	for _, joint in HeroRigSpec.JOINTS do
+		jointNames[joint.Name] = true
+	end
+
+	local function samePose(a: { [string]: { number } }, b: { [string]: { number } }): boolean
+		for joint, value in a do
+			local other = b[joint]
+			if not other or not sameVec(value, other) then return false end
+		end
+		for joint in b do
+			if not a[joint] then return false end
+		end
+		return true
+	end
+
+	local function checkClip(label: string, clip: any, looped: boolean)
+		check(type(clip) == "table" and clip.Duration > 0, label .. " has a positive duration")
+		check(clip.Looped == looped, label .. (if looped then " loops" else " plays once"))
+		local keys = clip.Keys
+		check(#keys >= 2, label .. " has at least two keys")
+		check(keys[1].T == 0 and keys[#keys].T == 1, label .. " keys span 0..1")
+		for i = 2, #keys do
+			check(keys[i].T > keys[i - 1].T, `{label} key {i} time increases`)
+		end
+		for i, key in keys do
+			for joint, value in key.Pose do
+				check(jointNames[joint] == true, `{label} key {i} joint {joint} is a rig joint`)
+				check(#value == 3, `{label} key {i} {joint} has three components`)
+				if joint ~= "RootOffset" then
+					for _, component in value do
+						check(math.abs(component) <= 180, `{label} key {i} {joint} rotation within 180 deg`)
+					end
+				end
+				if string.find(joint, "Knee") then
+					check(value[1] <= 5, `{label} key {i} {joint} only bends backward`)
+				end
+				if string.find(joint, "Elbow") then
+					check(value[1] >= -5, `{label} key {i} {joint} does not hyperextend`)
+				end
+			end
+		end
+		-- Loops are seamless and actions return to where they started.
+		check(samePose(keys[1].Pose, keys[#keys].Pose), label .. " ends on its starting pose")
+	end
+
+	for _, weaponType in HeroClips.WEAPON_TYPES do
+		local set = HeroClips.ByWeapon[weaponType]
+		check(set ~= nil, `clips exist for {weaponType}`)
+		for _, state in HeroClips.WEAPON_STATES do
+			check(set[state] ~= nil, `{weaponType} has {state}`)
+			checkClip(`{weaponType}.{state}`, set[state], state == "Idle" or state == "Move")
+		end
+	end
+	for _, state in HeroClips.SHARED_STATES do
+		check(HeroClips.Shared[state] ~= nil, `shared {state} exists`)
+		checkClip(`Shared.{state}`, HeroClips.Shared[state], HeroClips.LOCOMOTION_STATES[state] == true)
+	end
+	for _, weaponType in ArtifactCatalog.ArchetypeWeaponType do
+		check(HeroClips.ByWeapon[weaponType] ~= nil, `catalog weapon type {weaponType} has clips`)
+	end
+	for heroId, states in HeroClips.Overrides do
+		check(HeroCostumes.ById[heroId] ~= nil, `override {heroId} is a hero`)
+		for state, clip in states do
+			check(table.find(HeroClips.WEAPON_STATES, state) ~= nil or table.find(HeroClips.SHARED_STATES, state) ~= nil, `override {heroId}.{state} is a known state`)
+			checkClip(`Overrides.{heroId}.{state}`, clip, HeroClips.LOCOMOTION_STATES[state] == true)
+		end
+	end
+
+	-- Lookup order: hero override -> weapon type -> shared -> unarmed.
+	check(HeroClips.Get("hero_jenna", "BOW", "Idle") == HeroClips.Overrides.hero_jenna.Idle, "hero override wins")
+	check(HeroClips.Get("hero_astrea", "BOW", "Idle") == HeroClips.ByWeapon.BOW.Idle, "weapon clip for heroes without an override")
+	check(HeroClips.Get(nil, "BOW", "Hit") == HeroClips.Shared.Hit, "shared state fallback")
+	check(HeroClips.Get(nil, "NOT_A_WEAPON", "AttackBasic") == HeroClips.ByWeapon.UNARMED.AttackBasic, "unknown weapon falls back to UNARMED")
+	check(HeroClips.Get(nil, nil, "Idle") == HeroClips.ByWeapon.UNARMED.Idle, "no weapon uses UNARMED")
+end
+
 -- 6. Weapon sockets (Phase 2) ---------------------------------------------------
 -- Every catalog weapon type has a prefab and sockets, and every socket lands on an
 -- attachment the rig spec actually builds, on every body type.

@@ -283,6 +283,118 @@ return function(keepPreviews: boolean?)
 		end
 	end
 
+	-- Clips and animator (Phase 4) ----------------------------------------------------
+	local Clips = require(HeroRig.HeroClips)
+	local Animator = require(HeroRig.HeroAnimator)
+	local showcase = {
+		{ "UNARMED", "hero_han" },
+		{ "BOW", "hero_jenna" },
+		{ "SWORD_SHIELD", "hero_aaron" },
+		{ "DAGGERS", "hero_han" },
+		{ "AXE", "hero_catio" },
+		{ "STAFF", "hero_eolka" },
+		{ "TOME", "hero_valeria" },
+	}
+	-- Representative frame per state for the contact sheet (attack peaks).
+	local sheetT = { Idle = 0, Move = 0, AttackBasic = 0.62, AttackSpecial = 0.6, AttackSkill = 0.62 }
+	local function insideBox(part: BasePart, point: Vector3, shrink: number): boolean
+		local p = part.CFrame:PointToObjectSpace(point)
+		local h = part.Size / 2 - Vector3.new(shrink, shrink, shrink)
+		return math.abs(p.X) < h.X and math.abs(p.Y) < h.Y and math.abs(p.Z) < h.Z
+	end
+
+	for column, entry in showcase do
+		local weaponType, heroId = entry[1], entry[2]
+		for row, state in Clips.WEAPON_STATES do
+			local label = `{weaponType}/{heroId}.{state}: `
+			local pivot = CFrame.new(origin + Vector3.new((column - 4) * 6, Spec.GROUND_OFFSET, 100 + row * 8))
+			local rig = Registry.Build(heroId, pivot)
+			rig.Name = `{weaponType}_{state}`
+			;(rig.PrimaryPart :: BasePart).Anchored = true
+			rig.Parent = folder
+			local weaponParts = {}
+			if weaponType ~= "UNARMED" then
+				local weapon = Sockets.Equip(rig, builders[Sockets.PREFABS[weaponType]](), weaponType)
+				for _, d in weapon:GetDescendants() do
+					if d:IsA("BasePart") then
+						d.CanQuery = true
+						table.insert(weaponParts, d)
+					end
+				end
+			end
+			local animator = Animator.new(rig, { HeroId = heroId, WeaponType = weaponType })
+			local clip = Clips.Get(heroId, weaponType, state)
+			check(clip ~= nil, label .. "clip resolves")
+			if not clip then continue end
+
+			local head = rig:FindFirstChild("Head") :: BasePart
+			local torso = rig:FindFirstChild("UpperTorso") :: BasePart
+			local lower = rig:FindFirstChild("LowerTorso") :: BasePart
+			local params = OverlapParams.new()
+			params.FilterType = Enum.RaycastFilterType.Include
+			params.FilterDescendantsInstances = weaponParts
+			local worstHead, worstHand = 0, 0
+			for step = 0, 10 do
+				animator:ApplyPose(Animator.Sample(clip, step / 10))
+				settle()
+				if #weaponParts > 0 and #workspace:GetPartsInPart(head, params) > 0 then
+					worstHead += 1
+				end
+				for _, handName in { "LeftHand", "RightHand" } do
+					local hand = rig:FindFirstChild(handName) :: BasePart
+					if insideBox(torso, hand.Position, 0.15) or insideBox(lower, hand.Position, 0.1) then
+						worstHand += 1
+					end
+				end
+			end
+			check(worstHead == 0, `{label}weapon stays clear of the head ({worstHead} of 11 frames touched it)`)
+			check(worstHand == 0, `{label}hands stay out of the torso ({worstHand} hand-frames inside)`)
+
+			if weaponType == "BOW" and state == "AttackBasic" then
+				-- At full draw the bow stands vertical with the arrow at the target.
+				animator:ApplyPose(Animator.Sample(clip, 0.62))
+				settle()
+				local root = rig.PrimaryPart :: BasePart
+				local handle = rig.EquippedWeapon.PrimaryPart :: BasePart
+				local stave = root.CFrame:VectorToObjectSpace((handle:FindFirstChild("TipUpper") :: Attachment).WorldPosition - (handle:FindFirstChild("TipLower") :: Attachment).WorldPosition).Unit
+				local arrow = root.CFrame:VectorToObjectSpace((rig.EquippedWeapon:FindFirstChild("ArrowShaft", true) :: BasePart).CFrame.LookVector)
+				check(stave:Dot(Vector3.yAxis) > 0.95, string.format("%sstave vertical at full draw (dot %.2f)", label, stave:Dot(Vector3.yAxis)))
+				check(arrow:Dot(Vector3.new(0, 0, -1)) > 0.9, string.format("%sarrow aims forward at full draw (dot %.2f)", label, arrow:Dot(Vector3.new(0, 0, -1))))
+			end
+
+			-- Leave the rig on its contact-sheet frame.
+			animator:ApplyPose(Animator.Sample(clip, sheetT[state]))
+		end
+	end
+
+	-- The animator itself: locomotion switches, an action that ends, upper-body masking.
+	do
+		local rig = Registry.Build("hero_jenna", CFrame.new(origin + Vector3.new(30, Spec.GROUND_OFFSET, 100)))
+		;(rig.PrimaryPart :: BasePart).Anchored = true
+		rig.Parent = folder
+		Sockets.Equip(rig, builders.weapon_bow(), "BOW")
+		local animator = Animator.new(rig)
+		check(animator.WeaponType == "BOW" and animator.HeroId == "hero_jenna", "animator reads HeroId and weapon type from the rig")
+		check(animator.LocomotionClip == Clips.Overrides.hero_jenna.Idle, "animator starts on Jenna's signature idle")
+		for _ = 1, 30 do animator:Step(1 / 60) end
+		animator:SetLocomotion("Move")
+		animator:PlayAction("AttackBasic", 0.5)
+		local legBefore = animator:Evaluate().LeftHip
+		for _ = 1, 15 do animator:Step(1 / 60) end
+		local pose = animator:Evaluate()
+		local legAction = (Clips.ByWeapon.BOW.AttackBasic.Keys[2].Pose.LeftHip)
+		local hipAngle = select(1, pose.LeftHip:ToEulerAnglesXYZ())
+		check(legBefore ~= nil and math.abs(math.deg(hipAngle) - legAction[1]) > 1, "while moving, attacks leave the legs walking")
+		for _ = 1, 30 do animator:Step(1 / 60) end
+		check(animator.Action == nil, "action clears after its duration")
+		animator:SetLocomotion("Coma")
+		for _ = 1, 60 do animator:Step(1 / 60) end
+		local root = Builder.GetJoints(rig).Root
+		check(root.Transform.Position.Y < -1, "coma lowers the body")
+		check(not pcall(function() animator:SetLocomotion("AttackBasic") end), "actions cannot be set as locomotion")
+		rig:Destroy()
+	end
+
 	for _, m in folder:GetChildren() do
 		if m:IsA("Model") then
 			m.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
