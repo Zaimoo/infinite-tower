@@ -31,7 +31,8 @@ Out of scope: hero stats, kits, gacha and the server combat simulation. The towe
 ## Target architecture
 
 ```text
-ReplicatedStorage/Assets/Heroes/            (new folder of ModuleScripts, Rojo-tracked)
+ReplicatedStorage/Assets/HeroRig/           (new folder of ModuleScripts, Rojo-tracked; not
+                                             Assets/Heroes, which holds the built templates)
   HeroRigSpec.luau        R15 skeleton: part sizes, joint positions, attachment table, axis convention
   HeroRigBuilder.luau     Builds a bare, neutral R15 rig from HeroRigSpec (+ body type)
   HeroCostumes.luau       Per-hero appearance data: colors, face, hair and costume pieces per bone
@@ -179,6 +180,18 @@ Each phase lands as its own PR off `main`. The game stays playable between phase
 - Add a pure-Luau spec test (`tests/hero-rig.spec.luau`) for the data: every joint has an attachment pair, and hands are equal across body types.
 
 **Done when:** both tests pass, and a bare rig of each body type renders upright in Studio.
+
+#### Phase 1 results (2026-10-26)
+
+- **Modules** live in `src/ReplicatedStorage/Assets/HeroRig/`, not `Assets/Heroes/`, because `ReplicatedStorage.Assets.Heroes` is the runtime folder of built templates that `HeroCard` and `ArtPackVisuals.Template` read:
+  - `HeroRigSpec.luau`: pure data and math with plain number arrays (no `Vector3`/`CFrame`), so it loads in the offline runner. It holds part names, joints, shared heights, the three body types, `HAND_SIZE`, `GRIP_ROTATION`, `AxisChecks`, and `Layout(bodyType)`.
+  - `HeroRigBuilder.luau`: `Build({ Name, BodyType, SkinColor, Pivot, AnchorRoot })`, `GetJoints(model)`, `ResetPose(model)`. It builds no Humanoid and no Animator (an Animator would overwrite `Motor6D.Transform`).
+- **Skeleton numbers:** root 3.0 above the soles (`GROUND_OFFSET`); total height 5.9. Heights are shared by all body types; Slim, Standard and Heavy change torso width and depth (1.8/2.0/2.3 × 0.9/1.0/1.2) and limb thickness (0.85/1.0/1.15). Hands are 1.0 × 0.3 × 1.0 on every type. Shoulders pivot on the arm's own axis beside the torso.
+- **Tests:**
+  - `tests/hero-rig.spec.luau` (in `tests/run.ps1`): 729 checks pass. It covers structure and build order, ground contract, pivots on parts, rig attachments as pure translations on the pivots, required sockets, grips inside the fist, left/right symmetry, limb clearance, equal hands, the axis convention via rotation math, and rejection of unknown body types.
+  - `tests/studio-hero-rigs.luau` (Server DataModel of a playtest): 315 checks pass on all three body types. It covers structure, identity-rotation `C0`/`C1`, attachments meeting at joints, the ground contract, every `AxisChecks` rule against the live engine, and grip orientation (at rest it looks down the arm with up forward; with the shoulder at +90° it looks forward with up vertical).
+- **How the Studio test ran:** Rojo could not sync, because another Team Create user holds the Rojo session lock. The modules were injected as temporary ModuleScripts into the playtest's Server DataModel from the repo files (comments stripped, code identical), and discarded when the playtest stopped. The shared place was not changed.
+- **Screenshot:** `docs/hero-rig-rebuild/phase-1/body-types-slim-standard-heavy.jpg`.
 
 ### Phase 2: Sockets and weapon prefabs
 
