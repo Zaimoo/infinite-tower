@@ -11,50 +11,56 @@ local VfxPrimitives = require(script.Parent:WaitForChild("VfxPrimitives"))
 
 local ProjectileVfx = {}
 
-local SHAFT_WOOD = Color3.fromRGB(150, 105, 65)
-local FLETCH_WHITE = Color3.fromRGB(235, 240, 235)
+local SHAFT_WOOD = Color3.fromRGB(196, 150, 100)
+local FLETCH_WHITE = Color3.fromRGB(240, 244, 240)
 
 local function add(model: Model, part: BasePart, frame: CFrame)
 	part.CFrame = frame
 	part.Parent = model
 end
 
--- Arrow: shaft, diamond head, glow at the tip, cross fletching and a trail off the tail.
--- ASTRAL draws the shaft in light instead of wood.
+-- Arrow: shaft, diamond head, a faint glow at the tip, cross fletching and a trail off the tail.
+-- ASTRAL draws the shaft in light instead of wood. Sized to read at combat camera distance
+-- (roughly 1.5x a bow's own arrow), so the silhouette, not the glow, carries the shape.
+local SHAFT_LENGTH = 3.0
+local HEAD_Z = -(SHAFT_LENGTH / 2 + 0.2)
+local TAIL_Z = SHAFT_LENGTH / 2 - 0.35
+
 local function buildArrow(kind: string, scale: number): Model
 	local model = Instance.new("Model")
 	model.Name = "Projectile_" .. kind
 
 	local astral = kind == "ASTRAL"
-	local shaft = VfxPrimitives.NewPart("Shaft", Enum.PartType.Block, if astral then Enum.Material.Neon else Enum.Material.Wood)
-	shaft.Size = Vector3.new(0.08, 0.08, 2.2) * scale
+	local shaft = VfxPrimitives.NewPart("Shaft", Enum.PartType.Block, if astral then Enum.Material.Neon else Enum.Material.SmoothPlastic)
+	shaft.Size = Vector3.new(0.14, 0.14, SHAFT_LENGTH) * scale
 	shaft.Color = SHAFT_WOOD
 	add(model, shaft, CFrame.identity)
 	model.PrimaryPart = shaft
 
+	-- A square block turned 45 degrees about the flight axis reads as a diamond tip.
 	local head = VfxPrimitives.NewPart("Head", Enum.PartType.Block, Enum.Material.Neon)
-	head.Size = Vector3.new(0.16, 0.16, 0.36) * scale
-	add(model, head, CFrame.new(0, 0, -1.2 * scale) * CFrame.Angles(0, 0, math.rad(45)))
+	head.Size = Vector3.new(0.3, 0.3, 0.6) * scale
+	add(model, head, CFrame.new(0, 0, HEAD_Z * scale) * CFrame.Angles(0, 0, math.rad(45)))
 
 	local glow = VfxPrimitives.NewPart("Glow", Enum.PartType.Ball, Enum.Material.Neon)
-	glow.Size = Vector3.one * 0.38 * scale
-	glow.Transparency = 0.45
-	add(model, glow, CFrame.new(0, 0, -1.2 * scale))
+	glow.Size = Vector3.one * 0.3 * scale
+	glow.Transparency = 0.7
+	add(model, glow, CFrame.new(0, 0, (HEAD_Z - 0.15) * scale))
 
 	for i = 1, 2 do
-		local fletch = VfxPrimitives.NewPart("Fletch" .. i, Enum.PartType.Block, if astral then Enum.Material.Neon else Enum.Material.SmoothPlastic)
-		fletch.Size = Vector3.new(0.02, 0.26, 0.42) * scale
+		local fletch = VfxPrimitives.NewPart("Fletch" .. i, Enum.PartType.Block, Enum.Material.Neon)
+		fletch.Size = Vector3.new(0.04, 0.5, 0.75) * scale
 		fletch.Color = FLETCH_WHITE
-		add(model, fletch, CFrame.new(0, 0, 0.92 * scale) * CFrame.Angles(0, 0, if i == 1 then 0 else math.pi / 2))
+		add(model, fletch, CFrame.new(0, 0, TAIL_Z * scale) * CFrame.Angles(0, 0, if i == 1 then 0 else math.pi / 2))
 	end
 
 	local top = Instance.new("Attachment")
 	top.Name = "TrailTop"
-	top.Position = Vector3.new(0, 0.18, 0.9) * scale
+	top.Position = Vector3.new(0, 0.35, TAIL_Z) * scale
 	top.Parent = shaft
 	local bottom = Instance.new("Attachment")
 	bottom.Name = "TrailBottom"
-	bottom.Position = Vector3.new(0, -0.18, 0.9) * scale
+	bottom.Position = Vector3.new(0, -0.35, TAIL_Z) * scale
 	bottom.Parent = shaft
 	local trail = Instance.new("Trail")
 	trail.Attachment0 = top
@@ -63,7 +69,7 @@ local function buildArrow(kind: string, scale: number): Model
 	trail.LightEmission = 1
 	trail.LightInfluence = 0
 	trail.MinLength = 0.05
-	trail.Transparency = NumberSequence.new(0.25, 1)
+	trail.Transparency = NumberSequence.new(0.35, 1)
 	trail.WidthScale = NumberSequence.new(1, 0.1)
 	trail.Enabled = false
 	trail.Parent = shaft
