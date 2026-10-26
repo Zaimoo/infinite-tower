@@ -4,7 +4,7 @@ Prepared 2026-10-22 from the connected **Infinite Towers: Become a Master!** Stu
 
 ## Scope and acceptance target
 
-Implement the stat calculations and hero/weapon progression in [the GDD](../../GAME_DESIGN.MD#42-effective-combat--labor-formulas) and [economy stat tables](../../economy_balancing_tables.md). Use [the calculator](stat-scaling-model.cjs), [generated reference](STAT_SCALING_TABLES.md), and [50-floor stat CSV](FLOOR_SCALING.csv) as numerical fixtures.
+Implement the stat calculations and hero/weapon progression in [the GDD](../GAME_DESIGN.MD#42-effective-combat--labor-formulas) and [economy stat tables](../economy_balancing_tables.md). Use [the calculator](stat-scaling-model.cjs), [generated reference](STAT_SCALING_TABLES.md), and [50-floor stat CSV](FLOOR_SCALING.csv) as numerical fixtures.
 
 - Four hero combat stats: movement speed, attack speed, attack damage, health.
 - Hero stars 1–5; level cap `10 * Stars`; promotion retains level and raises the cap. Combat growth is `3^(Stars-1) * 1.08^(Level-1)`.

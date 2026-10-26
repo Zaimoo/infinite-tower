@@ -650,7 +650,7 @@ At **Mythical 7★**, power is `7,000 * 16 = 112,000`, for a **2,801x trained-da
 
 These values apply to every compatible weapon type; templates select appearance/type rather than a special stat formula. Attack speed is fixed by inherent rarity, not multiplied by stars. A Common 7★ weapon has 320 power, while a Mythical 1★ has 7,000 power; a Legendary 7★ has 56,000 power and can outperform that newly acquired Mythical until it is promoted.
 
-Higher rarities retain stat definitions in [the complete weapon matrix](docs/balance/STAT_SCALING_TABLES.md#weapon-power-by-inherent-rarity-and-promoted-stars). They are outside the required floor-50 reference build; this stat revision does not change how any rarity is obtained. The current hero level cap stays 50.
+Higher rarities retain stat definitions in [the complete weapon matrix](balance/STAT_SCALING_TABLES.md#weapon-power-by-inherent-rarity-and-promoted-stars). They are outside the required floor-50 reference build; this stat revision does not change how any rarity is obtained. The current hero level cap stays 50.
 
 ### 7.3 Weapon Star Promotion (1★ to 7★)
 

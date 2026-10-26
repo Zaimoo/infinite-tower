@@ -30,12 +30,13 @@ Tower rebuild status: **Parts 1–3 are complete and verified for their recorded
 ## 📂 Project Structure
 
 ```text
-├── GAME_DESIGN.MD                    -- Document 1: Master Game Design Document (GDD)
-├── technical_architecture.md         -- Document 2: Technical Architecture & Network Contracts
-├── economy_balancing_tables.md       -- Document 3: Mathematical Economy & Balancing Tables
-├── ui_ux_wireframes.md               -- Document 4: UI/UX Wireframes & Spatial Screen Specifications
-├── PROTOTYPE_DOCUMENTATION.md        -- Prototype Implementation & Verification Document
 ├── docs/
+│   ├── GAME_DESIGN.MD                -- Document 1: Master Game Design Document (GDD)
+│   ├── technical_architecture.md     -- Document 2: Technical Architecture & Network Contracts
+│   ├── economy_balancing_tables.md   -- Document 3: Mathematical Economy & Balancing Tables
+│   ├── ui_ux_wireframes.md           -- Document 4: UI/UX Wireframes & Spatial Screen Specifications
+│   ├── PROTOTYPE_DOCUMENTATION.md    -- Prototype Implementation & Verification Document
+│   ├── hero-rig-rebuild-plan.md      -- Code-authored hero rig contract and history
 │   ├── PIT_OVERHAUL.md               -- The Pit progression, imprints, synthesis, and verification
 │   └── TOWER_NAVIGATION.md           -- Tower traversal, 18-floor navigation, and hero routing
 └── src/
