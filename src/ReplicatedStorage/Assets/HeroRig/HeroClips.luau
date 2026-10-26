@@ -17,6 +17,7 @@ export type Clip = {
 	Duration: number, -- seconds at speed 1 (attacks are rescaled to the attack interval)
 	Looped: boolean,
 	Keys: { Key },
+	Markers: { [string]: number }?, -- event name -> fraction of the clip (see RELEASE_MARKERS)
 }
 
 local HeroClips = {}
@@ -344,6 +345,28 @@ local Shared: { [string]: Clip } = {
 	}),
 }
 
+-- Attack markers -----------------------------------------------------------------------------
+-- Release: the fraction of an attack clip where the blow lands (melee) or the projectile leaves
+-- the weapon (ranged). HeroActionTiming reads it on the server to schedule the hit and on the
+-- client to time the effect, so the two cannot drift. Nock: the bow arrow is back on the string.
+-- A hero override's attack clip sets its own Markers.
+local RELEASE_MARKERS: { [string]: { [string]: number } } = {
+	UNARMED = { AttackBasic = 0.35, AttackSpecial = 0.55, AttackSkill = 0.6 },
+	BOW = { AttackBasic = 0.72, AttackSpecial = 0.78, AttackSkill = 0.72 },
+	SWORD_SHIELD = { AttackBasic = 0.62, AttackSpecial = 0.6, AttackSkill = 0.62 },
+	DAGGERS = { AttackBasic = 0.3, AttackSpecial = 0.6, AttackSkill = 0.8 },
+	AXE = { AttackBasic = 0.65, AttackSpecial = 0.68, AttackSkill = 0.62 },
+	STAFF = { AttackBasic = 0.62, AttackSpecial = 0.65, AttackSkill = 0.7 },
+	TOME = { AttackBasic = 0.65, AttackSpecial = 0.7, AttackSkill = 0.7 },
+}
+local BOW_NOCK = 0.9
+for weaponType, releases in RELEASE_MARKERS do
+	for state, release in releases do
+		local attack = ByWeapon[weaponType][state]
+		attack.Markers = if weaponType == "BOW" then { Release = release, Nock = BOW_NOCK } else { Release = release }
+	end
+end
+
 -- Per-hero signature overrides --------------------------------------------------------------
 local Overrides: { [string]: { [string]: Clip } } = {
 	-- Jenna's Wind-Scout ready stance: contrapposto, front foot forward, bow in a low carry.
@@ -370,6 +393,13 @@ function HeroClips.Get(heroId: string?, weaponType: string?, state: string): Cli
 	end
 	local set = ByWeapon[weaponType or "UNARMED"] or ByWeapon.UNARMED
 	return set[state] or Shared[state] or ByWeapon.UNARMED[state]
+end
+
+-- A clip's marker as a fraction of its length, or the fallback when the clip has none.
+function HeroClips.Marker(clip: Clip?, name: string, fallback: number): number
+	local markers = clip and clip.Markers
+	local value = markers and markers[name]
+	return if value then value else fallback
 end
 
 return table.freeze(HeroClips)

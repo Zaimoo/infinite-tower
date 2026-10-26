@@ -452,6 +452,11 @@ In Infinite Tower, combat is server-authoritative with client prediction/interpo
   - Each 3-attack cycle yields: $5 + 5 + 10 = 20\text{ Skill Gauge}$.
   - A hero requires exactly $5\text{ cycles} \times 3\text{ attacks} = 15\text{ attacks}$ ($10\text{ Basic} + 5\text{ Special}$) to reach 100 gauge points without external buffs.
   - At an average interval of $1.0\text{s}$, a hero triggers an ultimate roughly every $15\text{ seconds}$.
+- **Attack Timeline (decision → release → impact):** The 5 Hz simulation *decides* an attack (tier, target, aim point) and moves the Skill Gauge on that decision, so the cadence above never drifts. The blow lands later, resolved every server Heartbeat:
+  - **Release** is the attack clip's `Release` marker scaled to the cast time (e.g. a bow lets go at 72% of the draw). Cast time is the attack interval clamped to `0.35–1.2s`; an Ultimate holds the hero for at least its `CastSeconds` (`1.0–1.2s`), and its next attack waits for that cast to finish.
+  - **Impact** is release plus travel: `0` for melee, `distance / ProjectileSpeed` for projectiles (Marksman `95` / `120 studs/s`, Healer and Scholar `70–80 studs/s`, capped at `1s`), or a fixed delay for area skills (Marksman flare `0.35s`, Scholar meteor `0.3s`).
+  - An attack is cancelled if, by its release, the hero is in `COMA`, has left the room or was recalled. Once released it always arrives. Basic and Special attacks **fizzle** (no damage, no secondary effect) if their target died or left before impact. An Ultimate's area effects still land around the aim point.
+  - Multi-tick Ultimates split their damage evenly across ticks: Rain of Arrows lands in `4` ticks `0.15s` apart, with the defense shred applied on the first tick. Shared timing lives in `HeroActionTiming` (clip markers in `HeroClips`, delivery fields in `ArchetypeCombatSkills`).
 - **Overdrive Whistle Synergy (`[Q]`):** Overdrive Whistle grants $+40\%$ Attack Speed for $5\text{s}$ with zero Stamina drain, compressing the time to charge and release signature Ultimates during crucial DPS/punish windows.
 
 #### 2. Hero Combat Skill Ledger
@@ -504,7 +509,7 @@ These are the default multipliers and secondary mechanics each hero kit inherits
 - **Floating Combat Text (FCT):**
   - **Basic Hit:** Pale Green (`#F3FFE2`)
   - **Special Hit:** Vibrant Orange (`#FF9900`), Bold font
-  - **Skill / Ultimate Hit:** Glowing Gold (`#FFD700`), 1.25x scale, Extra Bold font
+  - **Skill / Ultimate Hit:** Glowing Gold (`#FFD700`), 1.25x scale, Extra Bold font (`HIT_SKILL`, sent for the Ultimate's primary target on every tick)
   - **Restorative Heal:** Lime Green (`#44FF88`), prefixed with `+`
   - **Protective Barrier:** Cyan (`#00E5FF`), prefixed with `🛡️ +`
 

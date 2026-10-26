@@ -586,7 +586,7 @@ CombatVFXRemote.OnClientEvent:Connect(function(context: any, vfxType: string, po
 	if not Protocol.Same(context,View) then return end
 	if vfxType=="HERO_ATTACK" then
 		-- HERO_ATTACK reuses the trailing slots: amount = attacker NetId, then tier code (1..3)
-		-- and the attack interval in milliseconds.
+		-- and the cast time in milliseconds (HeroActionTiming.CastSeconds).
 		local node = VisualNodesByNetId[amount or -1]
 		local tier = if type(isOverdrive) == "number" then isOverdrive else 1
 		local seconds = math.clamp((if type(incoming) == "number" then incoming else 750) / 1000, 0.35, 1.2)
@@ -601,7 +601,7 @@ CombatVFXRemote.OnClientEvent:Connect(function(context: any, vfxType: string, po
 	elseif vfxType=="HIT_SPECIAL" then
 		CombatFeedback:Special(pos,amount,isOverdrive,incoming)
 		return
-	elseif vfxType=="SKILL_CAST" or vfxType=="SKILL_TEMPEST" or vfxType=="SKILL_METEOR" or vfxType=="SKILL_ARROWS" or vfxType=="SKILL_CRYSTAL" or vfxType=="SKILL_SHIELD" or vfxType=="BARRIER_APPLIED" then
+	elseif vfxType=="HIT_SKILL" or vfxType=="SKILL_CAST" or vfxType=="SKILL_TEMPEST" or vfxType=="SKILL_METEOR" or vfxType=="SKILL_ARROWS" or vfxType=="SKILL_CRYSTAL" or vfxType=="SKILL_SHIELD" or vfxType=="BARRIER_APPLIED" then
 		CombatFeedback:Skill(pos,amount,vfxType)
 		return
 	elseif vfxType=="HEAL_SPARK" or vfxType=="HEAL_BURST" then

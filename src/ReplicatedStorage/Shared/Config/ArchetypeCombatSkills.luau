@@ -14,11 +14,25 @@ export type SecondaryEffectType =
 	| "ALLY_MINI_HEAL"
 	| "CHAIN_LIGHTNING"
 
+export type Delivery = "MELEE" | "PROJECTILE" | "AREA"
+
+-- Delivery timing, shared by every tier (docs/projectile-skill-vfx-plan.md). HeroActionTiming
+-- turns these into release and impact times; CombatSimulation lands the hit at impact.
+--   Delivery: how the blow reaches the target. MELEE (default) lands at the clip's Release marker.
+--   ProjectileSpeed: studs/s from release to the target (PROJECTILE).
+--   TravelSeconds: fixed release-to-impact delay (AREA: a flare arrow, a falling meteor).
+--   Ticks / TickSeconds: the impact repeats Ticks times, its damage split evenly between them.
+
 export type BasicAttackDef = {
 	Name: string,
 	DamageMultiplier: number,
 	StaminaGain: number,
 	VFXKey: string,
+	Delivery: Delivery?,
+	ProjectileSpeed: number?,
+	TravelSeconds: number?,
+	Ticks: number?,
+	TickSeconds: number?,
 }
 
 export type SpecialAttackDef = {
@@ -29,6 +43,11 @@ export type SpecialAttackDef = {
 	SecondaryEffect: SecondaryEffectType,
 	SecondaryParam: number, -- e.g. heal percentage, cone radius, chain count
 	VFXKey: string,
+	Delivery: Delivery?,
+	ProjectileSpeed: number?,
+	TravelSeconds: number?,
+	Ticks: number?,
+	TickSeconds: number?,
 }
 
 export type SkillAttackDef = {
@@ -41,6 +60,12 @@ export type SkillAttackDef = {
 	Duration: number?, -- Duration in seconds for buffs / ground effects
 	Description: string,
 	VFXKey: string,
+	CastSeconds: number?, -- minimum animation lock; the hero's next attack waits for it
+	Delivery: Delivery?,
+	ProjectileSpeed: number?,
+	TravelSeconds: number?,
+	Ticks: number?,
+	TickSeconds: number?,
 }
 
 export type ArchetypeSkillProfile = {
@@ -95,6 +120,7 @@ ArchetypeCombatSkills.Profiles = {
 			Duration = 6.0, -- 6s barrier duration, 4s taunt
 			Description = "Unleashes a resounding battle roar, taunting enemies within 25 studs for 4s, and gains a personal damage barrier equal to 40% Max HP for 6s.",
 			VFXKey = "VANGUARD_SKILL",
+			CastSeconds = 1.1,
 		},
 	} :: ArchetypeSkillProfile,
 
@@ -128,6 +154,7 @@ ArchetypeCombatSkills.Profiles = {
 			Duration = 0.6,
 			Description = "Dashes through the primary target in an omni-directional blade flurry, dealing 3.20x ATK burst damage in a 12-stud radius.",
 			VFXKey = "STRIKER_SKILL",
+			CastSeconds = 1.0,
 		},
 	} :: ArchetypeSkillProfile,
 
@@ -143,6 +170,8 @@ ArchetypeCombatSkills.Profiles = {
 			DamageMultiplier = 1.00,
 			StaminaGain = 5,
 			VFXKey = "MARKSMAN_BASIC",
+			Delivery = "PROJECTILE",
+			ProjectileSpeed = 95,
 		},
 		Special = {
 			Name = "Piercing Volley",
@@ -152,6 +181,8 @@ ArchetypeCombatSkills.Profiles = {
 			SecondaryEffect = "PIERCING_LINE",
 			SecondaryParam = 32.0, -- Pierces in line up to 32 studs
 			VFXKey = "MARKSMAN_SPECIAL",
+			Delivery = "PROJECTILE",
+			ProjectileSpeed = 120,
 		},
 		Skill = {
 			Name = "Rain of Arrows",
@@ -161,6 +192,11 @@ ArchetypeCombatSkills.Profiles = {
 			Duration = 5.0, -- 5s 20% defense shred
 			Description = "Calls down a concentrated arrow storm on the target area (16-stud radius) dealing 2.80x ATK over 4 rapid ticks and shredding enemy defense by 20% for 5s.",
 			VFXKey = "MARKSMAN_SKILL",
+			CastSeconds = 1.1,
+			Delivery = "AREA",
+			TravelSeconds = 0.35, -- flare arrow climbs, then the rain falls
+			Ticks = 4,
+			TickSeconds = 0.15,
 		},
 	} :: ArchetypeSkillProfile,
 
@@ -194,6 +230,7 @@ ArchetypeCombatSkills.Profiles = {
 			Duration = 1.0,
 			Description = "Slams the ground to summon sharp crystalline spikes under all nearby enemies within 18 studs, dealing 2.60x ATK blunt AoE damage and yielding bonus temporary Mana/Shard drops.",
 			VFXKey = "MINER_SKILL",
+			CastSeconds = 1.15,
 		},
 	} :: ArchetypeSkillProfile,
 
@@ -209,6 +246,8 @@ ArchetypeCombatSkills.Profiles = {
 			DamageMultiplier = 1.00,
 			StaminaGain = 5,
 			VFXKey = "HEALER_BASIC",
+			Delivery = "PROJECTILE",
+			ProjectileSpeed = 70,
 		},
 		Special = {
 			Name = "Radiant Pulse",
@@ -218,6 +257,8 @@ ArchetypeCombatSkills.Profiles = {
 			SecondaryEffect = "ALLY_MINI_HEAL",
 			SecondaryParam = 0.08, -- Restores 8% Max HP to lowest-HP ally within 30 studs
 			VFXKey = "HEALER_SPECIAL",
+			Delivery = "PROJECTILE",
+			ProjectileSpeed = 70,
 		},
 		Skill = {
 			Name = "Sanctuary Miracle",
@@ -228,6 +269,8 @@ ArchetypeCombatSkills.Profiles = {
 			Duration = 4.0, -- 4s duration (+3% HP/s regen)
 			Description = "Chants a divine sanctuary circle around the squad, immediately restoring 35% Max HP to ALL active deployed heroes, clearing debuffs, and granting +3% HP/s regen for 4s.",
 			VFXKey = "HEALER_SKILL",
+			CastSeconds = 1.2,
+			Delivery = "AREA",
 		},
 	} :: ArchetypeSkillProfile,
 
@@ -243,6 +286,8 @@ ArchetypeCombatSkills.Profiles = {
 			DamageMultiplier = 1.00,
 			StaminaGain = 5,
 			VFXKey = "SCHOLAR_BASIC",
+			Delivery = "PROJECTILE",
+			ProjectileSpeed = 70,
 		},
 		Special = {
 			Name = "Chain Lightning",
@@ -252,6 +297,8 @@ ArchetypeCombatSkills.Profiles = {
 			SecondaryEffect = "CHAIN_LIGHTNING",
 			SecondaryParam = 2.0, -- Chains to up to 2 adjacent mobs within 14 studs
 			VFXKey = "SCHOLAR_SPECIAL",
+			Delivery = "PROJECTILE",
+			ProjectileSpeed = 80,
 		},
 		Skill = {
 			Name = "Supernova Cataclysm",
@@ -261,6 +308,9 @@ ArchetypeCombatSkills.Profiles = {
 			Duration = 3.0, -- 3s lingering ground flames
 			Description = "Chants a dimensional portal above the battlefield, dropping a massive burning meteor on the target area (20-stud radius) that deals 3.50x ATK fire damage with burning ground flames for 3s.",
 			VFXKey = "SCHOLAR_SKILL",
+			CastSeconds = 1.2,
+			Delivery = "AREA",
+			TravelSeconds = 0.3, -- the meteor falls
 		},
 	} :: ArchetypeSkillProfile,
 }
