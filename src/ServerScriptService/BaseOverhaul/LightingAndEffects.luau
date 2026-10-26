@@ -113,6 +113,28 @@ function LightingAndEffects.Apply(customConfig: { [string]: any }?)
 	sunRays.Intensity = cfg.SunRaysIntensity
 	sunRays.Spread = cfg.SunRaysSpread
 
+	-- Sunset Skybox
+	local sky = Lighting:FindFirstChildOfClass("Sky")
+	if not sky then
+		sky = Instance.new("Sky")
+		sky.Name = "SunsetSky"
+		sky.Parent = Lighting
+	else
+		sky.Name = "SunsetSky"
+	end
+	sky.SkyboxBk = "rbxassetid://600830446"
+	sky.SkyboxDn = "rbxassetid://600831635"
+	sky.SkyboxFt = "rbxassetid://600832720"
+	sky.SkyboxLf = "rbxassetid://600886090"
+	sky.SkyboxRt = "rbxassetid://600833862"
+	sky.SkyboxUp = "rbxassetid://600835177"
+	sky.SunTextureId = "rbxasset://sky/sun.jpg"
+	sky.MoonTextureId = "rbxasset://sky/moon.jpg"
+	sky.SunAngularSize = 21
+	sky.MoonAngularSize = 11
+	sky.CelestialBodiesShown = true
+	sky.StarCount = 3000
+
 	-- Disable competing bloom/blur layers so glow does not stack.
 	for _, effect in Lighting:GetChildren() do
 		if effect:IsA("BloomEffect") and effect ~= bloom then
