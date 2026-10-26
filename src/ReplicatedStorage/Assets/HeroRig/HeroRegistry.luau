@@ -1,8 +1,8 @@
 --!strict
 -- ReplicatedStorage/Assets/HeroRig/HeroRegistry.luau
 -- Builds every hero template from code (hero-rig-rebuild-plan.md, Phase 3): a bare
--- HeroRig dressed with its HeroCostumes entry. Replaces HeroModelBuilder and the
--- Studio-only JennaPreview as the source of ReplicatedStorage.Assets.Heroes.
+-- HeroRig dressed with its HeroCostumes entry. The only source of
+-- ReplicatedStorage.Assets.Heroes.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 

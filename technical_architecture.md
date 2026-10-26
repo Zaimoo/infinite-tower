@@ -63,12 +63,23 @@ game
 │   │       ├── TowerRequestPolicy.luau -- Travel/assignment idempotency, rate limiting, and validation
 │   │       └── WeaponPromotion.luau  -- Deterministic weapon star promotion validation
 │   └── Assets                        -- Rigs, Mob Rigs, Relics, Weapons, Props, and ArtPackVisuals
-│       ├── ArtPackVisuals.luau       -- Hero & hub mob visual attachment and weapon socketing
+│       ├── ArtPackVisuals.luau       -- Art-pack template lookup/attachment; generic animator for non-hero rigs
 │       ├── CombatFeedback.luau       -- Bounded 32-label floating damage numbers and hit sparks
 │       ├── EnemyAnimationController.luau -- Procedural clip playback, progress-fill telegraphs, and PROJECTILE orbs (MAX_EFFECTS = 12)
-│       ├── HeroModelBuilder.luau     -- Procedural R15 hero model fallback builder
+│       ├── HeroRig                   -- Code-authored hero rigs (see section 6.3)
+│       │   ├── HeroRigSpec.luau      -- R15 skeleton data: body types, joints, sockets, axis convention
+│       │   ├── HeroRigBuilder.luau   -- Builds a bare neutral rig (no Humanoid, no Animator)
+│       │   ├── HeroCostumeMath.luau  -- Pure costume piece placement and box-overlap test
+│       │   ├── HeroCostumes.luau     -- All 12 heroes' appearance as data, plus a lint
+│       │   ├── HeroCostumeBuilder.luau -- Dresses a rig: one Weld per costume piece
+│       │   ├── HeroRegistry.luau     -- Builds every hero template into Assets.Heroes
+│       │   ├── HeroSockets.luau      -- Weapon sockets: one Weld between matching attachments
+│       │   ├── HeroLoadout.luau      -- Client equip: resolve, clone, style and socket a weapon
+│       │   ├── HeroClips.luau        -- Native keyframe clips per weapon type, shared states, hero overrides
+│       │   └── HeroAnimator.luau     -- Client clip player driving Motor6D.Transform; static poses for viewports
 │       ├── TowerEnemyClips.luau      -- Authored pose keyframes with plantedPose leg counter-rotation for all 40 enemies
-│       └── TowerEnemyRigs.luau       -- Articulated Motor6D rig builder across 10 biome palettes and 40 enemy species
+│       ├── TowerEnemyRigs.luau       -- Articulated Motor6D rig builder across 10 biome palettes and 40 enemy species
+│       └── WeaponModelBuilder.luau   -- Weapon prefabs with Grip/ShieldMount/Nock sockets, and shared weapon styling
 │
 ├── ServerScriptService
 │   ├── BaseOverhaul
@@ -84,7 +95,7 @@ game
 │   │   └── TowerEncounterRuntime.luau -- Room-local 50-floor AI, floor-scaled stats, boss phase transitions, and active attack timelines
 │   ├── Core
 │   │   ├── DataManager.server.luau   -- Profiles, session management, Gacha, Blacksmith upgrades, artifact persistence
-│   │   ├── HeroAssetSetup.server.luau -- Verifies and populates R15 hero models in ReplicatedStorage.Assets.Heroes
+│   │   ├── HeroAssetSetup.server.luau -- Builds hero templates (HeroRegistry) and weapon prefabs on server start
 │   │   ├── HeroNavigation.luau       -- Grounded waypoint navigation, slope and clearance verification
 │   │   ├── PitService.luau           -- Authoritative synthesis, promotion, and imprint transactions
 │   │   ├── PlotBuildingPlacement.server.luau -- Facility placement runner
@@ -106,7 +117,7 @@ game
     ├── Input
     │   └── MasterController.client.luau -- Click raycast (with UI click-through guard), [Shift] Sprint, [Q], [E] hotkeys, ProximityPrompts
     ├── Rendering
-    │   ├── EntityRenderer.client.luau -- Hub 14-byte & Tower v2 24-byte buffer unpacker, 60 FPS lerp, FloorBoss HUD sync, weapon socketing
+    │   ├── EntityRenderer.client.luau -- Hub 14-byte & Tower v2 24-byte buffer unpacker, 60 FPS lerp, FloorBoss HUD sync, hero HeroLoadout/HeroAnimator
     │   ├── HoldingAnimationController.client.luau -- Upper-arm holding pose animation for carrying physical loot
     │   └── PlotBeaconController.client.luau -- Skyward plot beacon renderer
     └── UI
@@ -308,19 +319,36 @@ Manages physical relics (`MANA_GEODE`, `CURSED_URN`, `ABYSSAL_CORE`, `CALAMITY_H
 Artifact progression is managed server-authoritatively by `DataManager.server.luau` and `BlacksmithService.server.luau`, guided by `ArtifactCatalog.luau`:
 
 ### 6.1 Data Model & Archetype Restrictions
-Weapons are categorized into 6 types with strict hero class permissions:
-- `BOW`: Marksman (`hero_jenna`)
-- `SWORD`: Striker, Vanguard (`hero_han`, `hero_velkist`, `hero_aaron`, `hero_archon`)
-- `DAGGERS`: Striker (`hero_velkist`)
-- `AXE`: Vanguard, Miner (`hero_aaron`, `hero_catio`)
-- `TOME`: Scholar, Healer (`hero_eolka`)
-- `STAFF`: Scholar, Healer (`hero_eolka`)
+Weapons are categorized into 6 types, and each archetype equips exactly one (`ArtifactCatalog.ArchetypeWeaponType`):
+- `SWORD_SHIELD`: Vanguard (`hero_aaron`, `hero_ignis`, `hero_morrigan`)
+- `DAGGERS`: Striker (`hero_han`, `hero_velkist`, `hero_archon`)
+- `BOW`: Marksman (`hero_jenna`, `hero_astrea`)
+- `AXE`: Miner (`hero_catio`)
+- `STAFF`: Scholar (`hero_eolka`, `hero_solaris`)
+- `TOME`: Healer (`hero_valeria`)
 
 ### 6.2 Deterministic 16-Tier Rarity Ascension
 - **Star Tier (1★ to 7★):** Fixed seed establishing Base Attack Power (`+15` to `+950`) and Base Attack Speed (`+5%` to `+60%`).
 - **Rarity Multiplier (1.00x to 18.00x):** Ascended at the Blacksmith Forge using Gold and Gems.
 - **Instant Stat Refresh:** Modifying an equipped weapon immediately updates `simHero.ATK` and `simHero.AttackInterval` on the next $5\text{ Hz}$ tick.
-- **3D Visual Socketing:** `ArtPackVisuals.luau` clones weapon models client-side into hero rigs and rigidly welds them to `LeftHand` or `RightHand` with dynamic string beams and arrow attachments.
+- **3D Visual Socketing:** `HeroLoadout` clones the weapon prefab client-side, styles it (`WeaponModelBuilder.Style`) and calls `HeroSockets.Equip`. Equip joins each weapon socket attachment (`Grip`, `ShieldMount`) to the matching rig attachment (`RightGripAttachment`, `LeftGripAttachment`, `LeftLowerArm.ShieldMountAttachment`) with one explicit `Weld`. Grips follow one rule: `UpVector` along the handle toward the weapon's head, `LookVector` along its working direction.
+
+### 6.3 Hero Rig Standard
+Heroes are built from code by `Assets/HeroRig` (see `hero-rig-rebuild-plan.md` for the full contract).
+- **Skeleton (`HeroRigSpec`):**
+  - 16 plain Parts and 15 `Motor6D`s whose `C0`/`C1` are pure translations, so every joint rests at identity.
+  - Body types (Slim/Standard/Heavy) change widths only; heights and hands are shared. The root sits 3.0 studs above the soles.
+  - Axis convention: shoulder/hip `+X` swings forward, elbow `+X` flexes, knee `-X` flexes, waist/neck `-X` leans forward and `+Y` turns left.
+- **Costumes (`HeroCostumes`):**
+  - Data pieces, each welded to one bone. A lint rejects pieces that overlap another bone unless marked `Loose` (cloth, hair).
+  - No meshes, scripts or gear; the face decal is the only asset ID.
+- **Templates (`HeroRegistry`):** built into `ReplicatedStorage.Assets.Heroes` by `HeroAssetSetup` on server start.
+- **Animation (`HeroClips`, `HeroAnimator`):**
+  - Native keyframe clips per weapon type (`Idle`, `Move`, `AttackBasic/Special/Skill`), plus shared states (`Hit`, `Coma`, `Carry`, `Sleep`, `Labor`) and per-hero overrides.
+  - Played on each client by `EntityRenderer`, because `Motor6D.Transform` does not replicate.
+  - The server cues attacks with `HERO_ATTACK` (NetId, tier, interval) on the `CombatVFX` remote.
+  - Viewport previews use `HeroAnimator.ApplyStaticPose`.
+- **Tests:** `tests/hero-rig.spec.luau` (offline, in `tests/run.ps1`) and `tests/studio-hero-rigs.luau` (Studio playtest). `tests/studio-hero-model-viewer.luau` builds a posed lineup of all 12 heroes.
 
 ---
 
