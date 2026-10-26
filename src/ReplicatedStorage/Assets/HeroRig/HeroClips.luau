@@ -402,4 +402,23 @@ function HeroClips.Marker(clip: Clip?, name: string, fallback: number): number
 	return if value then value else fallback
 end
 
+-- Names of the clip's markers with from < fraction <= to, in clip order. HeroAnimator calls this
+-- each frame with the action's previous and current fraction.
+function HeroClips.MarkersBetween(clip: Clip, from: number, to: number): { string }
+	local due: { string } = {}
+	local markers = clip.Markers
+	if not markers then
+		return due
+	end
+	for name, fraction in markers do
+		if fraction > from and fraction <= to then
+			table.insert(due, name)
+		end
+	end
+	table.sort(due, function(a, b)
+		return markers[a] < markers[b]
+	end)
+	return due
+end
+
 return table.freeze(HeroClips)

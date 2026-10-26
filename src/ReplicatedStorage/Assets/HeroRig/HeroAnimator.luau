@@ -6,10 +6,13 @@
 --   local animator = HeroAnimator.new(rig, { HeroId = "hero_jenna", WeaponType = "BOW" })
 --   animator:SetLocomotion("Move")          -- Idle | Move | Coma | Carry | Sleep | Labor
 --   animator:PlayAction("AttackBasic", 0.8) -- AttackBasic | AttackSpecial | AttackSkill | Hit
+--   animator.OnMarker = function(name, action) end -- clip markers ("Release", "Nock"), then "End"
 --   animator:Step(dt)                       -- every frame
 --
 -- The locomotion clip loops underneath; an action plays once on top with short fades. While
--- moving, actions only drive the upper body so the legs keep walking.
+-- moving, actions only drive the upper body so the legs keep walking. OnMarker fires as the
+-- action passes each clip marker, and "End" when the action finishes or is replaced, so a
+-- caller can always undo what a marker did (e.g. show the bow arrow again).
 
 local HeroRigSpec = require(script.Parent:WaitForChild("HeroRigSpec"))
 local HeroRigBuilder = require(script.Parent:WaitForChild("HeroRigBuilder"))
@@ -17,7 +20,14 @@ local HeroClips = require(script.Parent:WaitForChild("HeroClips"))
 
 export type Options = { HeroId: string?, WeaponType: string? }
 
-type Action = { Clip: HeroClips.Clip, Started: number, Duration: number, Name: string }
+export type Action = {
+	Clip: HeroClips.Clip,
+	Started: number,
+	Duration: number,
+	Name: string,
+	Fraction: number, -- how far markers have been fired (0..1)
+	Data: any?, -- caller data passed to PlayAction (e.g. the server's attack cue)
+}
 
 local HeroAnimator = {}
 HeroAnimator.__index = HeroAnimator
@@ -35,6 +45,7 @@ export type HeroAnimator = typeof(setmetatable({} :: {
 	LocomotionTime: number,
 	Action: Action?,
 	Clock: number,
+	OnMarker: ((name: string, action: Action) -> ())?,
 }, HeroAnimator))
 
 local function toCFrame(rotation: { number }?, offset: { number }?): CFrame
@@ -87,6 +98,7 @@ function HeroAnimator.new(rig: Model, options: Options?): HeroAnimator
 		LocomotionTime = 0,
 		Action = nil :: Action?,
 		Clock = 0,
+		OnMarker = nil :: ((name: string, action: Action) -> ())?,
 	}, HeroAnimator)
 	self.LocomotionClip = HeroClips.Get(self.HeroId, self.WeaponType, "Idle")
 	return self
@@ -107,14 +119,35 @@ function HeroAnimator.SetLocomotion(self: HeroAnimator, state: string)
 	self.LocomotionTime = 0
 end
 
--- Plays an action once. Duration defaults to the clip's own length (attacks are usually
--- passed the hero's attack interval so the swing lines up with the server's hits).
-function HeroAnimator.PlayAction(self: HeroAnimator, state: string, duration: number?)
+local function fire(self: HeroAnimator, name: string, action: Action)
+	local callback = self.OnMarker
+	if callback then
+		callback(name, action)
+	end
+end
+
+-- Plays an action once. Duration defaults to the clip's own length (attacks are passed the
+-- server's cast time so the swing lines up with the hit). startOffset starts the clip that many
+-- seconds in, for a cue that arrived late; markers before that point are skipped.
+function HeroAnimator.PlayAction(self: HeroAnimator, state: string, duration: number?, startOffset: number?, data: any?)
 	local clip = HeroClips.Get(self.HeroId, self.WeaponType, state)
 	if not clip then
 		return
 	end
-	self.Action = { Clip = clip, Started = self.Clock, Duration = math.max(0.1, duration or clip.Duration), Name = state }
+	local length = math.max(0.1, duration or clip.Duration)
+	local offset = math.clamp(startOffset or 0, 0, length)
+	local previous = self.Action
+	self.Action = {
+		Clip = clip,
+		Started = self.Clock - offset,
+		Duration = length,
+		Name = state,
+		Fraction = offset / length,
+		Data = data,
+	}
+	if previous then
+		fire(self, "End", previous)
+	end
 end
 
 -- Target pose for this frame (joint -> Transform), without smoothing. Exposed for tests.
@@ -149,8 +182,19 @@ end
 function HeroAnimator.Step(self: HeroAnimator, dt: number)
 	self.Clock += dt
 	self.LocomotionTime += dt
-	if self.Action and self.Clock - self.Action.Started >= self.Action.Duration then
-		self.Action = nil
+	local action = self.Action
+	if action then
+		local elapsed = self.Clock - action.Started
+		local t = math.clamp(elapsed / action.Duration, 0, 1)
+		local from = action.Fraction
+		action.Fraction = t
+		for _, name in HeroClips.MarkersBetween(action.Clip, from, t) do
+			fire(self, name, action)
+		end
+		if elapsed >= action.Duration and self.Action == action then
+			self.Action = nil
+			fire(self, "End", action)
+		end
 	end
 	local pose = self:Evaluate()
 	local alpha = 1 - math.exp(-HeroAnimator.SMOOTHING * dt)

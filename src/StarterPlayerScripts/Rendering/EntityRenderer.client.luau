@@ -41,8 +41,9 @@ local HeroRig = ReplicatedStorage.Assets:WaitForChild("HeroRig")
 local HeroRigSpec = require(HeroRig:WaitForChild("HeroRigSpec"))
 local HeroAnimator = require(HeroRig:WaitForChild("HeroAnimator"))
 local HeroLoadout = require(HeroRig:WaitForChild("HeroLoadout"))
+local HeroSockets = require(HeroRig:WaitForChild("HeroSockets"))
 
--- Attack tier codes sent with HERO_ATTACK (CombatSimulation) -> HeroClips action states.
+-- Attack tier codes in the HERO_CUE (TowerProtocol.EncodeHeroCue) -> HeroClips action states.
 local ATTACK_TIER_STATES = { [1] = "AttackBasic", [2] = "AttackSpecial", [3] = "AttackSkill" }
 
 -- Hero walk/idle switching (studs of interpolation gap, seconds of grace).
@@ -57,6 +58,21 @@ local function heroRig(model: Model): Model?
 		return art
 	end
 	return nil
+end
+
+-- Hides the nocked arrow on an equipped bow (WeaponModelBuilder's HunterArrow) while a shot is
+-- in the air: from an attack's Release marker until its Nock marker or the end of the action.
+local function setBowArrowHidden(rig: Model, hidden: boolean)
+	local weapon = rig:FindFirstChild(HeroSockets.EQUIPPED_NAME)
+	local arrow = weapon and weapon:FindFirstChild("HunterArrow", true)
+	if not arrow then
+		return
+	end
+	for _, part in arrow:GetDescendants() do
+		if part:IsA("BasePart") then
+			part.LocalTransparencyModifier = if hidden then 1 else 0
+		end
+	end
 end
 
 -- Heroes without a HeroRegistry rig (template missing, placeholder body) carry no weapon.
@@ -275,6 +291,18 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 	-- does not replicate, so every client animates its own copy).
 	local rig = isHero and heroRig(model) or nil
 	local animator = rig and HeroAnimator.new(rig, { HeroId = meta and meta.TemplateId }) or nil
+	if animator and rig then
+		animator.OnMarker = function(marker: string)
+			if animator.WeaponType ~= "BOW" then
+				return
+			end
+			if marker == "Release" then
+				setBowArrowHidden(rig, true)
+			elseif marker == "Nock" or marker == "End" then
+				setBowArrowHidden(rig, false)
+			end
+		end
+	end
 
 	return {
 		HeroAnimator = animator,
@@ -584,15 +612,17 @@ end)
 
 CombatVFXRemote.OnClientEvent:Connect(function(context: any, vfxType: string, pos: Vector3, amount: number?, isOverdrive: any, incoming: any)
 	if not Protocol.Same(context,View) then return end
-	if vfxType=="HERO_ATTACK" then
-		-- HERO_ATTACK reuses the trailing slots: amount = attacker NetId, then tier code (1..3)
-		-- and the cast time in milliseconds (HeroActionTiming.CastSeconds).
-		local node = VisualNodesByNetId[amount or -1]
-		local tier = if type(isOverdrive) == "number" then isOverdrive else 1
-		local seconds = math.clamp((if type(incoming) == "number" then incoming else 750) / 1000, 0.35, 1.2)
+	if vfxType=="HERO_CUE" then
+		-- Cosmetic attack cue: play the tier's clip over the server's cast time, starting late if
+		-- the cue arrived late. The animator's markers then time the bow arrow (and, later, VFX).
+		local cue = Protocol.DecodeHeroCue(pos)
+		local node = cue and VisualNodesByNetId[cue.NetId]
 		local animator = node and (node :: any).HeroAnimator
-		if animator then
-			animator:PlayAction(ATTACK_TIER_STATES[tier] or "AttackBasic", seconds)
+		if cue and animator and node.Model:GetAttribute("EntityGeneration") == cue.EntityGeneration then
+			local elapsed = math.max(0, Workspace:GetServerTimeNow() - cue.StartServerTime)
+			if elapsed < cue.CastSeconds then
+				animator:PlayAction(ATTACK_TIER_STATES[cue.Tier] or "AttackBasic", cue.CastSeconds, elapsed, cue)
+			end
 		end
 		return
 	elseif vfxType=="HIT_SPARK" then

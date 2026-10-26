@@ -96,4 +96,36 @@ function P.Decode(buf: any, expected: any): any?
 	end
 	return {Sequence=buffer.readu32(buf,28),ServerTime=time,BatchIndex=batch,BatchCount=batches,Entities=records}
 end
+-- Hero attack cue (docs/projectile-skill-vfx-plan.md, section 4): cosmetic, sent on CombatVFX when
+-- the server decides an attack. 44 bytes: u8 tag, u8 tier 1..3, u8 flags (bit0 overdrive), u8 pad,
+-- u32 attacker NetId, u32 attacker generation, u32 target NetId (0 = none), u16 cast/release/travel
+-- ms, u16 pad, f64 start server time, f32 x3 world aim.
+P.HeroCueTag = 7
+P.HeroCueBytes = 44
+function P.EncodeHeroCue(cue: any): buffer
+	assert(P.Integer(cue.Tier,1,3) and P.Integer(cue.NetId,1,U32-1) and P.Integer(cue.EntityGeneration,1,U32-1) and P.Integer(cue.TargetNetId or 0,0,U32-1))
+	assert(P.Finite(cue.StartServerTime) and P.Finite(cue.Aim.X) and P.Finite(cue.Aim.Y) and P.Finite(cue.Aim.Z))
+	local buf=buffer.create(P.HeroCueBytes)
+	buffer.writeu8(buf,0,P.HeroCueTag);buffer.writeu8(buf,1,cue.Tier);buffer.writeu8(buf,2,if cue.Overdrive then 1 else 0)
+	buffer.writeu32(buf,4,cue.NetId);buffer.writeu32(buf,8,cue.EntityGeneration);buffer.writeu32(buf,12,cue.TargetNetId or 0)
+	buffer.writeu16(buf,16,math.clamp(math.round(cue.CastSeconds*1000),1,65535))
+	buffer.writeu16(buf,18,math.clamp(math.round(cue.ReleaseSeconds*1000),0,65535))
+	buffer.writeu16(buf,20,math.clamp(math.round(cue.TravelSeconds*1000),0,65535))
+	buffer.writef64(buf,24,cue.StartServerTime)
+	buffer.writef32(buf,32,cue.Aim.X);buffer.writef32(buf,36,cue.Aim.Y);buffer.writef32(buf,40,cue.Aim.Z)
+	return buf
+end
+function P.DecodeHeroCue(buf: any): any?
+	if typeof(buf)~="buffer" or buffer.len(buf)~=P.HeroCueBytes or buffer.readu8(buf,0)~=P.HeroCueTag then return nil end
+	local tier,flags=buffer.readu8(buf,1),buffer.readu8(buf,2)
+	local id,gen=buffer.readu32(buf,4),buffer.readu32(buf,8)
+	local cast,release,travel=buffer.readu16(buf,16),buffer.readu16(buf,18),buffer.readu16(buf,20)
+	local time=buffer.readf64(buf,24)
+	local x,y,z=buffer.readf32(buf,32),buffer.readf32(buf,36),buffer.readf32(buf,40)
+	if tier<1 or tier>3 or flags>1 or id==0 or gen==0 or cast==0 or release>cast or not P.Finite(time)
+		or not P.Finite(x) or not P.Finite(y) or not P.Finite(z) then return nil end
+	local target=buffer.readu32(buf,12)
+	return {Tier=tier,Overdrive=flags==1,NetId=id,EntityGeneration=gen,TargetNetId=if target==0 then nil else target,
+		CastSeconds=cast/1000,ReleaseSeconds=release/1000,TravelSeconds=travel/1000,StartServerTime=time,Aim=Vector3.new(x,y,z)}
+end
 return table.freeze(P)

@@ -152,4 +152,57 @@ do
 	assert(taunted.TargetNetId == 60, "vanguard taunt")
 end
 
+-- Clip markers fire in order as an action advances (HeroAnimator.Step) -------------------------
+do
+	local bow = Clips.Get(nil, "BOW", "AttackBasic")
+	assert(table.concat(Clips.MarkersBetween(bow, 0, 1), ",") == "Release,Nock", "bow markers in clip order")
+	assert(#Clips.MarkersBetween(bow, 0, 0.5) == 0, "no marker before release")
+	assert(table.concat(Clips.MarkersBetween(bow, 0.5, 0.72), ",") == "Release", "release fires on its exact frame")
+	assert(#Clips.MarkersBetween(bow, 0.72, 0.8) == 0, "release fires once")
+	assert(table.concat(Clips.MarkersBetween(bow, 0.8, 1), ",") == "Nock", "nock after release")
+	assert(#Clips.MarkersBetween(Clips.Get(nil, "BOW", "Idle"), 0, 1) == 0, "looped clips carry no markers")
+end
+
+-- Hero cue protocol (TowerProtocol) ---------------------------------------------------------
+do
+	local P = require(nodes["ReplicatedStorage.Shared.Util.TowerProtocol"])
+	local cue = {
+		Tier = 3, Overdrive = true, NetId = 70001, EntityGeneration = 9, TargetNetId = 81234,
+		CastSeconds = 1.1, ReleaseSeconds = 0.792, TravelSeconds = 0.35,
+		StartServerTime = 123456.789, Aim = Vector3.new(28210.5, 1003.25, 19190.75),
+	}
+	local buf = P.EncodeHeroCue(cue)
+	assert(buffer.len(buf) == P.HeroCueBytes, "cue size")
+	local out = P.DecodeHeroCue(buf)
+	assert(out, "cue decodes")
+	assert(out.Tier == 3 and out.Overdrive == true and out.NetId == 70001 and out.EntityGeneration == 9 and out.TargetNetId == 81234, "cue ids")
+	near(out.CastSeconds, 1.1, "cue cast")
+	near(out.ReleaseSeconds, 0.792, "cue release")
+	near(out.TravelSeconds, 0.35, "cue travel")
+	near(out.StartServerTime, 123456.789, "cue server time")
+	assert(math.abs(out.Aim.X - 28210.5) < 0.01 and math.abs(out.Aim.Y - 1003.25) < 0.01 and math.abs(out.Aim.Z - 19190.75) < 0.01, "cue aim")
+
+	local untargeted = table.clone(cue)
+	untargeted.TargetNetId = nil
+	untargeted.Overdrive = false
+	local plain = P.DecodeHeroCue(P.EncodeHeroCue(untargeted))
+	assert(plain and plain.TargetNetId == nil and plain.Overdrive == false, "cue without target")
+
+	-- Malformed or hostile buffers are dropped.
+	assert(P.DecodeHeroCue("not a buffer") == nil, "non-buffer rejected")
+	assert(P.DecodeHeroCue(buffer.create(P.HeroCueBytes - 1)) == nil, "short buffer rejected")
+	local function corrupt(offset: number, write: (buffer, number) -> ())
+		local bad = P.EncodeHeroCue(cue)
+		write(bad, offset)
+		return P.DecodeHeroCue(bad)
+	end
+	assert(corrupt(0, function(b, o) buffer.writeu8(b, o, 2) end) == nil, "wrong tag rejected")
+	assert(corrupt(1, function(b, o) buffer.writeu8(b, o, 4) end) == nil, "bad tier rejected")
+	assert(corrupt(4, function(b, o) buffer.writeu32(b, o, 0) end) == nil, "zero NetId rejected")
+	assert(corrupt(18, function(b, o) buffer.writeu16(b, o, 2000) end) == nil, "release after cast rejected")
+	assert(corrupt(24, function(b, o) buffer.writef64(b, o, 0 / 0) end) == nil, "NaN time rejected")
+	assert(corrupt(36, function(b, o) buffer.writef32(b, o, math.huge) end) == nil, "infinite aim rejected")
+	assert(not pcall(P.EncodeHeroCue, (function() local bad = table.clone(cue); bad.Tier = 0; return bad end)()), "encode rejects bad tier")
+end
+
 print("hero-action.spec: ok")

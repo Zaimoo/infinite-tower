@@ -1517,11 +1517,20 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 			local ticks, tickSeconds = HeroActionTiming.Ticks(tierDef)
 			local target: any = targetMob or targetEnemyHero
 
-			-- Cosmetic cue for clients to play the hero's attack clip for this tier over its cast
-			-- time (EntityRenderer HERO_ATTACK: NetId, tier 1..3, cast ms).
-			Tower.BroadcastAt(CombatVFXRemote, simHero, "HERO_ATTACK", simHero.Position, simHero.NetId,
-				if attackType == "SKILL" then 3 elseif attackType == "SPECIAL" then 2 else 1,
-				math.round(timing.CastSeconds * 1000))
+			-- Cosmetic cue: clients play the tier's clip over the cast time and time the effect to
+			-- the same release and travel the impact queue uses (TowerProtocol.EncodeHeroCue).
+			Tower.BroadcastAt(CombatVFXRemote, simHero, "HERO_CUE", Protocol.EncodeHeroCue({
+				Tier = if attackType == "SKILL" then 3 elseif attackType == "SPECIAL" then 2 else 1,
+				Overdrive = isOverdrive,
+				NetId = simHero.NetId,
+				EntityGeneration = simHero.EntityGeneration,
+				TargetNetId = target and target.NetId,
+				CastSeconds = timing.CastSeconds,
+				ReleaseSeconds = timing.ReleaseSeconds,
+				TravelSeconds = timing.TravelSeconds,
+				StartServerTime = Workspace:GetServerTimeNow(),
+				Aim = targetPos,
+			}))
 
 			HeroImpacts:Push({
 				ReleaseAt = now + timing.ReleaseSeconds,

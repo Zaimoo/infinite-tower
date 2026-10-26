@@ -82,21 +82,22 @@ Replace the overloaded `HERO_ATTACK` arguments with one packed buffer on the sam
 
 | Field | Type | Bytes |
 | --- | --- | --- |
-| Attacker NetId | u16 | 2 |
-| Target NetId (0 = none) | u16 | 2 |
-| Tier (1–3) and flags (overdrive, fizzle-able) | u8 + u8 | 2 |
-| CastMs, ReleaseMs, TravelMs | u16 × 3 | 6 |
+| Tag (7), tier (1–3), flags (bit 0 overdrive), padding | u8 × 4 | 4 |
+| Attacker NetId, attacker generation, target NetId (0 = none) | u32 × 3 | 12 |
+| CastMs, ReleaseMs, TravelMs, padding | u16 × 4 | 8 |
 | StartServerTime | f64 | 8 |
 | Aim position | f32 × 3 | 12 |
-| **Total** | | **32** |
+| **Total** | | **44** |
+
+NetIds are u32 in the v2 protocol, so the cue uses u32 too. The attacker generation lets the client drop a cue meant for a replaced entity.
 
 - `TowerProtocol.EncodeHeroCue` and `DecodeHeroCue`. The client validates with `P.Finite` / `P.Integer` and drops anything malformed.
 - The remote is unreliable, so a lost cue only loses the visual. Damage itself is server state, and its number arrives separately with the `HIT_*` event at impact. A **late** cue fast-forwards: `elapsed = GetServerTimeNow() - StartServerTime`. The animation starts at that offset, and if `elapsed > ReleaseMs + TravelMs` the projectile is skipped.
-- Bandwidth: ≤ 30 heroes × ~1.25 cues/s × 32 B ≈ 1.2 KB/s per room worst case. Fine.
+- Bandwidth: ≤ 30 heroes × ~1.25 cues/s × 44 B ≈ 1.7 KB/s per room worst case. Fine.
 
 ### 5. Client animation (`HeroAnimator`, `HeroClips`)
 
-- `HeroAnimator:PlayAction(state, duration, startOffset?)` plus marker callbacks: `animator.MarkerReached:Connect(fn(name, action))`, or a plain `OnMarker` callback field to stay dependency-free. Fired once per action when `t` crosses the marker.
+- `HeroAnimator:PlayAction(state, duration, startOffset?, data?)` plus a plain `OnMarker(name, action)` callback field. It fires once per marker as the action passes it, then `"End"` when the action finishes or is replaced.
 - `EntityRenderer` HERO_ATTACK handler: decode the cue, `PlayAction(ATTACK_TIER_STATES[tier], CastSeconds, elapsed)`, and stash the cue on the action so the `Release` marker can spawn the VFX.
 - **Bow arrow handling:** at `Release`, hide the bow's `HunterArrow` (`LocalTransparencyModifier = 1` on its parts). Show it again at a `Nock` marker (~0.9), or when the action ends. The projectile spawns at the bow's `Nock` attachment world CFrame (`WeaponModelBuilder` already adds it).
 - **Signature clips** (`HeroClips.Overrides[heroId]`), added per hero in Phase 4. They exist for the Skill tier for all 12 heroes and the Special tier where the weapon default does not fit the move (e.g. Velkist's *Shadow Rend* blink, Catio's *Resonance Tremor* ground strike). Each keeps the `Release`/`Impact` marker. Skill clips are authored at `Skill.CastSeconds` length (1.1–1.4 s) instead of being squashed into the 0.8 s interval.
@@ -182,6 +183,14 @@ Each phase is its own branch and PR off `main` (`feat(combat): ...`).
 ### Phase 2: Cue protocol and animation markers
 - `HeroCue` buffer in `TowerProtocol` (round-trip spec in `tower-transport.spec.luau`), `HeroAnimator` start offset and markers, BOW `Release`/`Nock` markers and `HunterArrow` hide/show.
 - GDD §8: cue layout.
+
+#### Phase 2 results (2026-10-26)
+- `TowerProtocol.EncodeHeroCue` / `DecodeHeroCue` (44 bytes, layout above). Decode rejects a wrong tag or size, a bad tier or flags, zero ids, zero cast, release after cast, and non-finite time or aim.
+- `CombatSimulation` sends `HERO_CUE` (the encoded buffer) instead of the old overloaded `HERO_ATTACK` arguments. Its timing is the same `HeroActionTiming` result the impact queue uses, and its start time is `Workspace:GetServerTimeNow()`.
+- `HeroClips.MarkersBetween(clip, from, to)`, a pure helper that returns the markers crossed in clip order.
+- `HeroAnimator`: `PlayAction(state, duration, startOffset?, data?)`. A late start skips the markers it has already passed. `OnMarker` fires each marker once, then `End` on finish or replacement. `Action.Data` carries the decoded cue, ready for Phase 3 VFX.
+- `EntityRenderer`: decodes `HERO_CUE`, checks the node's `EntityGeneration`, ignores cues older than their cast, and plays the clip at the late offset. For bows, `Release` hides the `HunterArrow` (`LocalTransparencyModifier`), and `Nock` or `End` shows it again.
+- `tests/hero-action.spec.luau` gained marker-order and cue round-trip/rejection checks; all suites pass.
 
 ### Phase 3: Marksman projectiles (the headline)
 - `CombatVfx/` folder with `VfxPool`, `VfxPrimitives` (Flight, Burst, Sigil, Rain, Beam), `ProjectileVfx` and `SkillVfx`; catalog entries for Jenna, Astrea and the Marksman fallback.
