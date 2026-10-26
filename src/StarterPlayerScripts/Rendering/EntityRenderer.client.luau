@@ -45,6 +45,11 @@ local HeroLoadout = require(HeroRig:WaitForChild("HeroLoadout"))
 -- Attack tier codes sent with HERO_ATTACK (CombatSimulation) -> HeroClips action states.
 local ATTACK_TIER_STATES = { [1] = "AttackBasic", [2] = "AttackSpecial", [3] = "AttackSkill" }
 
+-- Hero walk/idle switching (studs of interpolation gap, seconds of grace).
+local MOVE_START_GAP = 0.3
+local MOVE_KEEP_GAP = 0.05
+local MOVE_GRACE = 0.35
+
 -- The hero rig inside a rendered entity when it was built by HeroRegistry (Phase 3 rigs).
 local function heroRig(model: Model): Model?
 	local art = model:FindFirstChild("ArtPackVisual")
@@ -486,8 +491,16 @@ RunService.RenderStepped:Connect(function(dt: number)
 			EnemyAnimation.Step(node,dt,serverNow)
 		elseif animator then
 			debug.profilebegin("HeroAnimator.Step")
-			local moving = (node.GoalPos - node.CurrentPos).Magnitude > 0.15
-			animator:SetLocomotion(if node.StateEnum == 4 then "Coma" elseif moving then "Move" else "Idle")
+			-- Hysteresis: positions arrive at 5 Hz, so the lerp gap dips below any single
+			-- threshold between snapshots. Start walking on a clear gap and keep walking until
+			-- the hero has been still for MOVE_GRACE, so Move/Idle do not flicker every frame.
+			local gap = (node.GoalPos - node.CurrentPos).Magnitude
+			local now = os.clock()
+			if gap > MOVE_START_GAP or ((node :: any).WalkingUntil and gap > MOVE_KEEP_GAP) then
+				(node :: any).WalkingUntil = now + MOVE_GRACE
+			end
+			local walking = ((node :: any).WalkingUntil or 0) > now
+			animator:SetLocomotion(if node.StateEnum == 4 then "Coma" elseif walking then "Move" else "Idle")
 			animator:Step(dt)
 			debug.profileend()
 		else
