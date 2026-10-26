@@ -166,7 +166,7 @@ function Controller.new(gui: ScreenGui, getProfile: () -> any, remotes: Instance
 		ZIndex = 50,
 	}, gui)
 	self.Scrim.Activated:Connect(function()
-		if not self.Busy then
+		if not self.Busy and (os.clock() - (self.OpenTime or 0) >= 0.25) then
 			self:Close()
 		end
 	end)
@@ -922,15 +922,22 @@ function Controller:Close()
 	self.Root.Visible = false
 	self.Scrim.Visible = false
 	self.RevealScrim.Visible = false
+	if _G.UpdateBottomTabHighlights then
+		_G.UpdateBottomTabHighlights()
+	end
 end
 
 function Controller:Open(facility: string)
 	if not DETAILS[facility] then return end
+	self.OpenTime = os.clock()
 	self.Current = facility
 	self.Root.Visible = true
 	self.Scrim.Visible = true
 	self.Root:SetAttribute("Facility", facility)
 	if self.Status then self.Status.Text = "" end
+	if _G.UpdateBottomTabHighlights then
+		_G.UpdateBottomTabHighlights()
+	end
 
 	local isSummon = (facility == "Summoning")
 	self.TabContainer.Visible = isSummon

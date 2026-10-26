@@ -93,7 +93,8 @@ function SquadController.new(screenGui: ScreenGui, getProfile: () -> any, remote
 		ZIndex = 30,
 	}, screenGui)
 
-	self.Scrim.MouseButton1Click:Connect(function()
+	self.Scrim.Activated:Connect(function()
+		if os.clock() - (self.OpenTime or 0) < 0.25 then return end
 		self:Close()
 	end)
 
@@ -471,6 +472,7 @@ function SquadController.SelectSlot(self: any, slotIdx: number)
 end
 
 function SquadController.Open(self: any)
+	self.OpenTime = os.clock()
 	self.Scrim.Visible = true
 	self.Root.Visible = true
 	self.SelectedSlot = 1

@@ -24,6 +24,7 @@ local lastFeedback: string? = nil
 local selected = 1
 local activeBiomeIndex = 1
 local presence: any = nil
+local lastSelectorOpenTime = 0
 local render: () -> ()
 
 -- Visual Palette
@@ -173,11 +174,18 @@ end)
 closeBtn.Activated:Connect(function()
 	panel.Visible = false
 	scrim.Visible = false
+	if _G.UpdateBottomTabHighlights then
+		_G.UpdateBottomTabHighlights()
+	end
 end)
 
 scrim.Activated:Connect(function()
+	if os.clock() - lastSelectorOpenTime < 0.25 then return end
 	panel.Visible = false
 	scrim.Visible = false
+	if _G.UpdateBottomTabHighlights then
+		_G.UpdateBottomTabHighlights()
+	end
 end)
 
 -- Title & Subtitle Header
@@ -923,10 +931,14 @@ _G.RequestTowerHub = function(): boolean
 end
 
 _G.OpenTowerSelector = function()
+	lastSelectorOpenTime = os.clock()
 	if _G.OpenMasterModal then _G.OpenMasterModal("NONE") end
 	panel.Visible = true
 	scrim.Visible = true
 	render()
+	if _G.UpdateBottomTabHighlights then
+		_G.UpdateBottomTabHighlights()
+	end
 end
 
 _G.IsTowerSelectorOpen = function(): boolean
@@ -936,6 +948,9 @@ end
 _G.CloseTowerSelector = function()
 	panel.Visible = false
 	scrim.Visible = false
+	if _G.UpdateBottomTabHighlights then
+		_G.UpdateBottomTabHighlights()
+	end
 end
 
 -- Keyboard / Gamepad Navigation
@@ -944,6 +959,9 @@ UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: 
 	if input.KeyCode == Enum.KeyCode.Escape or input.KeyCode == Enum.KeyCode.ButtonB then
 		panel.Visible = false
 		scrim.Visible = false
+		if _G.UpdateBottomTabHighlights then
+			_G.UpdateBottomTabHighlights()
+		end
 		return
 	end
 	if gameProcessed then return end

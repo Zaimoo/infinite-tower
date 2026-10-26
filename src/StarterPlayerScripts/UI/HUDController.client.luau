@@ -707,8 +707,13 @@ local function createFloatingIconButton(
 		TweenService:Create(scale, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = targetScale }):Play()
 	end)
 
-	btn.Activated:Connect(onClick)
-	btn.MouseButton1Click:Connect(onClick)
+	local lastClickTime = 0
+	btn.Activated:Connect(function()
+		local now = os.clock()
+		if now - lastClickTime < 0.25 then return end
+		lastClickTime = now
+		onClick()
+	end)
 
 	return {
 		Container = container,
@@ -733,6 +738,9 @@ local function toggleShop()
 		facilityController:Close()
 	else
 		_G.OpenFacilityHUD("Summoning")
+	end
+	if _G.UpdateBottomTabHighlights then
+		_G.UpdateBottomTabHighlights()
 	end
 end
 _G.ToggleShop = toggleShop
@@ -805,6 +813,27 @@ local recallHandle = createFloatingIconButton(
 	end
 )
 
+local function toggleTower()
+	if _G.IsTowerSelectorOpen and _G.IsTowerSelectorOpen() then
+		if _G.CloseTowerSelector then
+			_G.CloseTowerSelector()
+		end
+	else
+		if _G.OpenTowerSelector then
+			_G.OpenTowerSelector()
+		elseif _G.RequestTowerHub then
+			local ok = _G.RequestTowerHub()
+			if ok ~= false then
+				showClientToast("Traveling to Tower...")
+			end
+		end
+	end
+	if _G.UpdateBottomTabHighlights then
+		_G.UpdateBottomTabHighlights()
+	end
+end
+_G.ToggleTower = toggleTower
+
 -- 5. TOWER (Violet #C084FC, NO COOLDOWN)
 local towerHandle = createFloatingIconButton(
 	"Tower",
@@ -814,26 +843,7 @@ local towerHandle = createFloatingIconButton(
 	ACTION_COLORS.Tower,
 	false,
 	function()
-		local curFloor = if _G.TowerView and _G.TowerView.FloorId then _G.TowerView.FloorId else 0
-		if curFloor > 0 then
-			if _G.RequestTowerHub then
-				local ok = _G.RequestTowerHub()
-				if ok ~= false then
-					showClientToast("Teleporting to Tower Hub...")
-				end
-			end
-		else
-			if _G.IsTowerSelectorOpen and _G.IsTowerSelectorOpen() then
-				if _G.CloseTowerSelector then _G.CloseTowerSelector() end
-			elseif _G.OpenTowerSelector then
-				_G.OpenTowerSelector()
-			elseif _G.RequestTowerHub then
-				local ok = _G.RequestTowerHub()
-				if ok ~= false then
-					showClientToast("Traveling to Tower...")
-				end
-			end
-		end
+		toggleTower()
 	end
 )
 
@@ -845,7 +855,24 @@ local function updateBottomTabHighlights()
 	end
 	squadHandle.PillLabel.TextColor3 = if squadActive then Color3.fromRGB(230, 192, 112) else ACTION_COLORS.Squad
 	squadHandle.PillStroke.Color = if squadActive then Color3.fromRGB(230, 192, 112) else ACTION_COLORS.Squad
+
+	local shopActive = facilityController ~= nil and facilityController.Root ~= nil and facilityController.Root.Visible and facilityController.Current == "Summoning"
+	if shopHandle.DiscStroke then
+		shopHandle.DiscStroke.Thickness = if shopActive then 2.4 else 1.6
+		shopHandle.DiscStroke.Color = if shopActive then Color3.fromRGB(255, 240, 160) else ACTION_COLORS.Shop
+	end
+	shopHandle.PillLabel.TextColor3 = if shopActive then Color3.fromRGB(255, 240, 160) else ACTION_COLORS.Shop
+	shopHandle.PillStroke.Color = if shopActive then Color3.fromRGB(255, 240, 160) else ACTION_COLORS.Shop
+
+	local towerActive = _G.IsTowerSelectorOpen ~= nil and _G.IsTowerSelectorOpen()
+	if towerHandle.DiscStroke then
+		towerHandle.DiscStroke.Thickness = if towerActive then 2.4 else 1.6
+		towerHandle.DiscStroke.Color = if towerActive then Color3.fromRGB(230, 192, 112) else ACTION_COLORS.Tower
+	end
+	towerHandle.PillLabel.TextColor3 = if towerActive then Color3.fromRGB(230, 192, 112) else ACTION_COLORS.Tower
+	towerHandle.PillStroke.Color = if towerActive then Color3.fromRGB(230, 192, 112) else ACTION_COLORS.Tower
 end
+_G.UpdateBottomTabHighlights = updateBottomTabHighlights
 
 _G.IsAnyMasterModalOpen = function(): boolean
 	if _G.IsTowerSelectorOpen and _G.IsTowerSelectorOpen() then return true end
