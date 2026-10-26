@@ -512,6 +512,11 @@ These are the default multipliers and secondary mechanics each hero kit inherits
   - **Skill / Ultimate Hit:** Glowing Gold (`#FFD700`), 1.25x scale, Extra Bold font (`HIT_SKILL`, sent for the Ultimate's primary target on every tick)
   - **Restorative Heal:** Lime Green (`#44FF88`), prefixed with `+`
   - **Protective Barrier:** Cyan (`#00E5FF`), prefixed with `🛡️ +`
+- **Attack Projectiles & Skill VFX:** Cosmetic and client-side, driven by the `HERO_CUE` (§8.1) and the attack clip's `Release` marker, and landing at the server's impact time so each projectile meets its damage number. Looks are data in `SkillVfxCatalog` (per hero, falling back to the weapon type). Bow heroes (Jenna, Astrea):
+  - **Basic:** a single arrow on a light arc, homing on the target's rendered body, with an impact burst.
+  - **Special:** a 3-arrow volley. The centre arrow hits, bursts and pierces on past the target, with rings along its path; the side arrows fan out.
+  - **Skill:** a flare arrow climbs from the bow, a sigil opens over the aim point (the skill's 16-stud radius), and one wave of arrows falls per damage tick. The owner's camera shakes on the first wave.
+  - **Budget:** pooled parts, at most 160 live effects per client, and nothing drawn when an effect is more than 180 studs from the camera.
 
 ### 4.5 Master Controls & Tactical Commands
 

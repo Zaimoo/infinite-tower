@@ -197,6 +197,23 @@ Each phase is its own branch and PR off `main` (`feat(combat): ...`).
 - Arrows for Basic, Special and Skill, with impact landing in sync with the hit numbers.
 - Studio check: Jenna and Astrea squads on a floor-1 room and on a boss floor; capture screenshots of each tier.
 
+#### Phase 3 results (2026-10-26)
+- `Shared/Config/SkillVfxCatalog.luau`: palettes and tier recipes for `hero_jenna`, `hero_astrea` and the `BOW` fallback, plus `WeaponArchetype` for reading tick timing.
+- `Assets/CombatVfx/`:
+  - `VfxMath`: pure flight, pierce, fan, rain and wave maths.
+  - `VfxPool`: pooled assemblies, a server-time effect scheduler, a 160-effect cap and 180-stud culling. It lives in its own `Workspace.ClientCombatVfx` folder, because `clearView` empties `ClientVisualEntities`.
+  - `VfxPrimitives`: Flight, Burst, Disc, Sigil, FlightRing and At.
+  - `ProjectileVfx`: `ARROW` and `ASTRAL` bodies, repainted for each hero's palette on every reuse.
+  - `SkillVfx`: Basic, Special and Skill as described in GDD §4.4.4.
+- `EntityRenderer`: at the `Release` marker it plays the cue's VFX from the bow's `Nock` attachment, aimed at the target's rendered `RootPart` (falling back to the cue's aim). It steps the pool every frame and clears it with the view.
+- `CombatFeedback`: removed the unused `SpawnArrowProjectile` code and `ActiveFlights`.
+- The plan listed Rain and Beam primitives. Rain is built from Flight in `SkillVfx`, and Beam moves to Phase 5, when chains need it.
+- A cue that arrives after its release frame plays the animation from its offset but draws no projectile; the damage number still shows.
+- `tests/combat-vfx.spec.luau` registered in `tests/run.ps1`; all suites pass.
+- Playtest fixes:
+  - The real bug: `playAttackVfx` was declared above `local VisualNodesByNetId` in `EntityRenderer`, so its target lookup read a nil global. Every flight's first update errored, the error aborted the pool step, arrows never showed, and sigils were stranded on the floor. The helper now sits below that declaration, and `luau-analyze` reports no other unknown globals in the renderer or `CombatVfx`.
+  - Hardening done along the way: pooled assemblies are parked unparented instead of at y = -10,000 (below `FallenPartsDestroyHeight`), `Acquire` drops assemblies whose parts are gone, each effect's update and cleanup runs in `pcall` (with a `CombatVfx:` warning), and the attack VFX call in `EntityRenderer` is guarded.
+
 ### Phase 4: Signature skill animations
 - `HeroClips.Overrides` `AttackSkill` for all 12 heroes, plus Special overrides where needed, all with markers.
 - `tests/studio-hero-model-viewer.luau` gains a "play tier" mode to review clips without combat.
