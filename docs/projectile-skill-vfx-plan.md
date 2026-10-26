@@ -212,7 +212,7 @@ Each phase is its own branch and PR off `main` (`feat(combat): ...`).
 - `tests/combat-vfx.spec.luau` registered in `tests/run.ps1`; all suites pass.
 - Playtest fixes:
   - The real bug: `playAttackVfx` was declared above `local VisualNodesByNetId` in `EntityRenderer`, so its target lookup read a nil global. Every flight's first update errored, the error aborted the pool step, arrows never showed, and sigils were stranded on the floor. The helper now sits below that declaration, and `luau-analyze` reports no other unknown globals in the renderer or `CombatVfx`.
-  - The arrow read as a small blue sphere: the 0.08-stud shaft vanished at camera distance and the tip glow dominated. `buildArrow` now uses a 0.14 x 3-stud light shaft, a 0.3-stud diamond head, 0.5 x 0.75 fletching, a fainter 0.3 glow and a trail twice as wide.
+  - The arrow read as a small blue sphere: the 0.08-stud shaft vanished at camera distance and the tip glow dominated. After two playtest rounds `buildArrow` uses a 0.28 x 4.5-stud light shaft, a 0.6 x 1.0 diamond head, 0.9 x 1.3 fletching, a faint 0.6 glow and a 1.2-stud trail, all from named constants at the top of the builder.
   - Hardening done along the way: pooled assemblies are parked unparented instead of at y = -10,000 (below `FallenPartsDestroyHeight`), `Acquire` drops assemblies whose parts are gone, each effect's update and cleanup runs in `pcall` (with a `CombatVfx:` warning), and the attack VFX call in `EntityRenderer` is guarded.
 
 ### Phase 4: Signature skill animations
