@@ -44,7 +44,6 @@ local HeroLoadout = require(HeroRig:WaitForChild("HeroLoadout"))
 
 -- Attack tier codes sent with HERO_ATTACK (CombatSimulation) -> HeroClips action states.
 local ATTACK_TIER_STATES = { [1] = "AttackBasic", [2] = "AttackSpecial", [3] = "AttackSkill" }
-local ATTACK_TIER_NAMES = { [1] = "BASIC", [2] = "SPECIAL", [3] = "SKILL" }
 
 -- The hero rig inside a rendered entity when it was built by HeroRegistry (Phase 3 rigs).
 local function heroRig(model: Model): Model?
@@ -55,20 +54,16 @@ local function heroRig(model: Model): Model?
 	return nil
 end
 
+-- Heroes without a HeroRegistry rig (template missing, placeholder body) carry no weapon.
 local function equipHero(model: Model, meta: any)
 	local rig = heroRig(model)
+	if not rig then return end
 	local artifactId = meta and meta.EquippedArtifactId
 	if artifactId == "" then artifactId = nil end
-	if rig then
-		if artifactId or (meta and meta.EquippedArtifactType and meta.EquippedArtifactType ~= "") then
-			HeroLoadout.Equip(model, rig, artifactId, meta.EquippedArtifactType, meta.EquippedArtifactRarity)
-		else
-			HeroLoadout.Unequip(model, rig)
-		end
-	elseif artifactId or (meta and meta.EquippedArtifactType) then
-		ArtPackVisuals.EquipWeapon(model, artifactId, meta.EquippedArtifactType, meta.EquippedArtifactRarity)
+	if artifactId or (meta and meta.EquippedArtifactType and meta.EquippedArtifactType ~= "") then
+		HeroLoadout.Equip(model, rig, artifactId, meta.EquippedArtifactType, meta.EquippedArtifactRarity)
 	else
-		ArtPackVisuals.UnequipWeapon(model)
+		HeroLoadout.Unequip(model, rig)
 	end
 end
 
@@ -563,16 +558,9 @@ CombatVFXRemote.OnClientEvent:Connect(function(context: any, vfxType: string, po
 		local node = VisualNodesByNetId[amount or -1]
 		local tier = if type(isOverdrive) == "number" then isOverdrive else 1
 		local seconds = math.clamp((if type(incoming) == "number" then incoming else 750) / 1000, 0.35, 1.2)
-		if node then
-			local animator = (node :: any).HeroAnimator
-			if animator then
-				animator:PlayAction(ATTACK_TIER_STATES[tier] or "AttackBasic", seconds)
-			else
-				-- Legacy ArtPackVisuals.Animate reads these fields.
-				(node :: any).AttackAnimTier = ATTACK_TIER_NAMES[tier] or "BASIC"
-				;(node :: any).AttackAnimStartClock = os.clock()
-				;(node :: any).AttackAnimDuration = seconds
-			end
+		local animator = node and (node :: any).HeroAnimator
+		if animator then
+			animator:PlayAction(ATTACK_TIER_STATES[tier] or "AttackBasic", seconds)
 		end
 		return
 	elseif vfxType=="HIT_SPARK" then

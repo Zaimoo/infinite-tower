@@ -369,6 +369,34 @@ Skills consulted: `roblox-characters-animation`, `roblox-performance`, `roblox-n
 
 **Done when:** `grep` finds no references to the removed modules, `pwsh tests/run.ps1` and the Studio rig test pass, and docs match the code.
 
+#### Phase 6 results (2026-10-26)
+
+- **Removed:**
+  - `HeroModelBuilder.luau`, together with `normalizeR15Joints`, `JENNA_IDLE_OFFSETS`, `attachJennaHair` and the JennaPreview cloning.
+  - From `ArtPackVisuals`:
+    - **`Animate`'s hero code:** Jenna and bow branches, attack-tier poses, the Wind-Scout stance and nocked-arrow handling. `Animate` keeps a small generic walk/strike/idle for non-hero art-pack rigs.
+    - **`EquipWeapon` and `UnequipWeapon`,** including the `KiteShield` special case and the per-type grip matrices.
+  - **`EntityRenderer`'s legacy fallbacks:** the `ArtPackVisuals` equip path and the `AttackAnim*` fields. Heroes without a `HeroRegistry` rig (template missing) now render unarmed.
+- **Kept:** the `starter_iron_vanguard` → `hero_han` alias in `ArtPackVisuals`. No code uses it, but saved profiles may still carry that template id, so removing it risks unrendered heroes for no gain.
+- **Model viewer:**
+  - **New script:** `tests/studio-hero-model-viewer.luau` builds a posed lineup of all 12 heroes from `HeroRegistry`, optionally armed, with any clip state and time. Every part is anchored and posed with `HeroAnimator.ApplyStaticPose`, so it works in Edit mode too.
+  - **Studio, with your confirmation:** deleted `ServerStorage.ModelViewer.JennaPreview`; the folder keeps its `DisplayPedestal`. No other `JennaPreview` exists in the place. Studio still needs to be saved and published.
+- **Docs:**
+  - `GAME_DESIGN.MD` §7.5 now describes socket attachments, the one-`Weld` equip, the shield on the forearm, and no gear on bodies.
+  - `technical_architecture.md` has the asset tree, the setup and renderer roles, a corrected §6.1 weapon list (it predated one-weapon-per-archetype), socketing in §6.2, and a new §6.3 "Hero Rig Standard".
+  - `CLAUDE.md` layout covers `Assets/HeroRig/`.
+- **Checks:**
+  - **References:** `grep` over `src/` finds no references to the removed code, apart from one provenance comment in `HeroCostumes` noting that Jenna was rebuilt from the JennaPreview inventory.
+  - **Offline:** `pwsh tests/run.ps1` passes, with 10,945 hero rig checks.
+  - **Studio playtest:** `studio-hero-rigs.luau` passes 677 checks; the trimmed `ArtPackVisuals` loads with its remaining API (`Animate`, `Attach`, `AttachAt`, `Mesh`, `Resolve`, `SetChestState`, `Template`); and the model viewer built all 12 heroes armed and posed (screenshots in `docs/hero-rig-rebuild/phase-6/`).
+
+### Rebuild complete
+
+All six phases are merged or in review. Open follow-ups, none blocking:
+- **Unverified live:** the server's `HERO_ATTACK` broadcast in real combat, the plot-worker anchor, and a 2-client playtest, once the merged code is synced into Studio.
+- **Possible improvements:** `IKControl` for the bow draw hand and foot planting; a hero `Hit` reaction on incoming damage; richer costumes for the 11 heroes that are faithful ports of simple originals.
+- **Animations plan:** `animations-implementation-plan.md` (untracked) still describes the old `ArtPackVisuals.Animate` approach. Its items 2–3 are now covered by `HeroClips`/`HeroAnimator` and the `HERO_ATTACK` cue. The arrow projectile VFX (item 3) remain to do on top of `HeroAnimator`.
+
 ---
 
 ## Verification (every phase)

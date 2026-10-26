@@ -700,8 +700,19 @@ The full 1★ to 7★ path consumes 21 donor weapons plus the retained original.
 
    Swords and shields are a single combined weapon; legacy `SWORD` and `SHIELD` artifacts migrate to `SWORD_SHIELD`. Rings (`RING`) are removed: owned rings are deleted on load, and any hero left holding a weapon its archetype can no longer use is unequipped and given a compatible unequipped artifact if one is owned.
 2. **Prefab Directory:** Centralized in `ReplicatedStorage.Assets.Weapons` (`weapon_bow`, `weapon_sword_shield`, `weapon_daggers`, `weapon_axe`, `weapon_staff`, `weapon_tome`; `weapon_sword` remains as the bare blade the sword & shield prefab is built from).
-3. **Physical Constraints:** All weapon parts have `CanCollide = false`, `CanTouch = false`, `CanQuery = false`, `Massless = true`, `Anchored = false`, welded to an invisible PrimaryPart `Handle`.
-4. **Dynamic Socketing:** Attached to `RightHand` via `ArtPackVisuals.AttachAt`. Daggers socket their off-hand blade and Sword & Shield sockets its `OffhandShield` to `LeftHand` (skipped when the hero rig already sculpts a shield). Bows feature dual dynamic `Beam` sinew strings connecting from stave tips to `RightHand.DrawAttachment`.
+3. **Physical Constraints:** All weapon parts have `CanCollide = false`, `CanTouch = false`, `CanQuery = false`, `Massless = true`, `Anchored = false`, welded to the prefab's PrimaryPart `Handle`.
+4. **Dynamic Socketing:** Each prefab carries oriented socket attachments: `Grip` on every weapon, plus `ShieldMount` on the shield and `Nock`/`TipUpper`/`TipLower` on the bow. The client joins each one to the matching hero-rig attachment with a single `Weld` (`HeroSockets`).
+
+   | Weapon type | Main hand | Second socket |
+   | --- | --- | --- |
+   | `BOW` | Left hand grip | — (string `Nock` and limb tips for the draw) |
+   | `SWORD_SHIELD` | Right hand grip | Shield strapped to the outer left forearm |
+   | `DAGGERS` | Right hand grip | Off-hand dagger in the left hand grip |
+   | `AXE` | Right hand grip, near the butt of the haft | — (`OffhandGrip` reserved for two-handed swings) |
+   | `STAFF` | Right hand grip | — |
+   | `TOME` | Left hand grip | — |
+
+   Hero bodies never carry weapons or shields of their own; the equipped artifact is the only weapon shown.
 
 ---
 

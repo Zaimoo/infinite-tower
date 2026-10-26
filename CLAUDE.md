@@ -12,7 +12,8 @@ Also follow `AGENTS.md`. Before working on a topic, use the matching `roblox-*` 
 
 - `src/ReplicatedStorage/Shared/Config/`: authoritative data tables, including `HeroCatalog`, `ArtifactCatalog`, `ArchetypeCombatSkills`, `StatBalance`, `FacilityConfig`, `TowerFloorConfig` and `MobCatalog`.
 - `src/ReplicatedStorage/Shared/Util/`: shared logic, including `StatFormulas`, `WeaponPromotion`, `TowerProtocol` and `AttackTimeline`.
-- `src/ReplicatedStorage/Assets/`: procedural builders (`HeroModelBuilder`, `WeaponModelBuilder`, `TowerEnemyRigs`) and `ArtPackVisuals`, which handles weapon socketing and procedural animation.
+- `src/ReplicatedStorage/Assets/`: procedural builders (`WeaponModelBuilder`, `TowerEnemyRigs`), and `ArtPackVisuals` (template attachment and a generic animator for non-hero rigs).
+- `src/ReplicatedStorage/Assets/HeroRig/`: code-authored hero rigs. The pieces are `HeroRigSpec` (skeleton, sockets, axis convention), `HeroCostumes` (every hero's look as data), `HeroRegistry` (builds the templates), `HeroSockets` and `HeroLoadout` (weapons), and `HeroClips` and `HeroAnimator` (client animation). Contract and history: `hero-rig-rebuild-plan.md`.
 - `src/ServerScriptService/Core/`: `DataManager` (profiles, artifacts, equip/craft/summon remotes, save migration), plus tower floors, traversal, the Pit and offline rewards.
 - `src/ServerScriptService/Combat/`: `CombatSimulation` (the 5 Hz server-authoritative sim) and `TowerEncounterRuntime`.
 - `src/StarterPlayerScripts/`: `UI` (Forge, HUD, Squad, Facility and Tower controllers), `Rendering` (`EntityRenderer`, which interpolates at 60 FPS) and `Input`.

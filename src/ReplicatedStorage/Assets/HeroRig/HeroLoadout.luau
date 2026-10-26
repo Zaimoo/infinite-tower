@@ -1,8 +1,7 @@
 --!strict
 -- ReplicatedStorage/Assets/HeroRig/HeroLoadout.luau
 -- Equips an artifact onto a rendered hero (hero-rig-rebuild-plan.md, Phase 5): resolves the
--- weapon prefab, clones and styles it, and sockets it with HeroSockets. Replaces
--- ArtPackVisuals.EquipWeapon for rigs built by HeroRegistry.
+-- weapon prefab, clones and styles it, and sockets it with HeroSockets.
 --
 -- `entity` is the renderer's model that carries the EquippedArtifactId/Type attributes;
 -- `rig` is the hero rig inside it (ArtPackVisual).
