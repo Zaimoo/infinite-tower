@@ -41,6 +41,7 @@ local CarriedLootSyncRemote = CombatRemotes:WaitForChild("CarriedLootSync") :: R
 local PhysicalLootFolder = Workspace:WaitForChild("PhysicalLoot") :: Folder
 local FloorProgressRemote = TowerRemotes:WaitForChild("FloorProgress") :: RemoteEvent
 local SquadDefeatedRemote = TowerRemotes:WaitForChild("SquadDefeated") :: RemoteEvent
+local SquadStatusRemote = TowerRemotes:WaitForChild("SquadStatus") :: RemoteEvent
 local ActivePlayerProgress: { [Player]: TowerProgress.PlayerFloorProgress } = {}
 
 local DropCarriedItemRemote = CombatRemotes:FindFirstChild("DropCarriedItem") :: RemoteEvent?
@@ -315,6 +316,8 @@ end
 -- 3. SQUAD MANAGEMENT & COMA RECALL
 --============================================================================
 
+local syncSquadStatus: (player: Player) -> ()
+
 function CombatSimulation.RebuildPlayerSquad(player: Player)
 	local dm = getDataManager()
 	local profile = dm.GetProfile(player)
@@ -452,6 +455,7 @@ function CombatSimulation.RebuildPlayerSquad(player: Player)
 
  local size=0;for _ in pairs(masterState.DeployedHeroes) do size+=1 end
  if rosterChanged or Tower.GetState(player).SquadSize~=size then Tower.RosterChanged(player,size) end
+ syncSquadStatus(player)
  broadcastMetadata(nil)
 end
 
@@ -602,11 +606,54 @@ local function knockHeroIntoComa(simHero: SimHero, _baseComaSeconds: number?)
 			local PlotManager = _G.PlotManager
 			if PlotManager and PlotManager.TeleportPlayerToPlot then
 				PlotManager.TeleportPlayerToPlot(simHero.Owner)
+			else
+				Tower.CommitRespawn(simHero.Owner)
 			end
 		end)
 	end
 
+	syncSquadStatus(simHero.Owner)
 	broadcastMetadata(nil)
+end
+
+syncSquadStatus = function(player: Player)
+	local masterState = ActiveMasters[player]
+	if not masterState then return end
+	local total = 0
+	local alive = 0
+	local fallen = 0
+	local fallenNames = {}
+	local heroStatuses = {}
+	for _, h in pairs(masterState.DeployedHeroes) do
+		total += 1
+		local isDown = h.State == "COMA" or h.CurrentHP <= 0
+		if isDown then
+			fallen += 1
+			table.insert(fallenNames, h.DisplayName or "Hero")
+			table.insert(heroStatuses, { Name = h.DisplayName or "Hero", Alive = false, HpPct = 0 })
+		else
+			alive += 1
+			local pct = math.round((h.CurrentHP / math.max(1, h.MaxHP)) * 100)
+			table.insert(heroStatuses, { Name = h.DisplayName or "Hero", Alive = true, HpPct = pct })
+		end
+	end
+	local isWiped = total > 0 and alive == 0
+	if player.Character then
+		player.Character:SetAttribute("AliveHeroCount", alive)
+		player.Character:SetAttribute("TotalHeroCount", total)
+		player.Character:SetAttribute("FallenHeroCount", fallen)
+		player.Character:SetAttribute("SquadWiped", isWiped)
+	end
+	if SquadStatusRemote then
+		SquadStatusRemote:FireClient(player, {
+			TotalCount = total,
+			AliveCount = alive,
+			FallenCount = fallen,
+			IsWiped = isWiped,
+			FallenHeroes = fallenNames,
+			HeroStatuses = heroStatuses,
+		})
+	end
 end
 
 local function restoreSquadOnPlot(player: Player)
@@ -633,6 +680,7 @@ local function restoreSquadOnPlot(player: Player)
 		end
 		dm.SyncProfile(player)
 	end
+	syncSquadStatus(player)
 	broadcastMetadata(nil)
 end
 
@@ -1209,18 +1257,35 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 		simHero.State = "FOLLOW_MASTER"
 	end
 
+	-- Hero movement speed is fixed to the player's Humanoid WalkSpeed (16 normal, 48 sprint, or relic penalties)
+	local ownerChar = simHero.Owner.Character
+	local ownerHum = ownerChar and ownerChar:FindFirstChildOfClass("Humanoid")
+	local playerSpeed = if ownerHum then ownerHum.WalkSpeed else 16.0
+	simHero.MoveSpeed = playerSpeed
 	local isOverdrive = now < simHero.OverdriveUntil
-	local currentMoveSpeed = simHero.MoveSpeed * (isOverdrive and 1.20 or 1.0)
+	local currentMoveSpeed = playerSpeed * (isOverdrive and 1.20 or 1.0)
 
 	local targetPos, targetMob, targetEnemyHero = resolveTargetPositionAndAlive(simHero)
+	if targetMob then
+		local distMasterToMob = getHorizontalDistance(masterPos, targetMob.Position)
+		local distHeroToMaster = getHorizontalDistance(simHero.Position, masterPos)
+		-- Master must be within enemy radius (30.0 studs) for heroes to fight; if master moves away, disengage immediately
+		if distMasterToMob > 30.0 or distHeroToMaster > 35.0 then
+			simHero.TargetNetId = nil
+			simHero.State = "FOLLOW_MASTER"
+			targetPos, targetMob, targetEnemyHero = nil, nil, nil
+		end
+	end
 
 	if not targetPos and not isPacified then
-		local nearestDist = assignedRoom and FirstBiome.AcquisitionRange or 30.0
+		-- Heroes follow player at all times unless player is within radius of an enemy
+		local combatRadius = 28.0
+		local nearestDist = combatRadius
 		local nearestMobId: number? = nil
 		for netId, mob in pairs(ActiveMobsByNetId) do
 			if mob.IsAlive and Tower.Same(simHero,mob) and not Tower.GetSafety(mob,mob.Position).CombatSafe and math.abs(mob.Position.Y - simHero.Position.Y) < 12 and math.abs(mob.Position.Y - masterPos.Y) < 12 then
 				local d = getHorizontalDistance(masterPos, mob.Position)
-				if d < nearestDist then
+				if d <= nearestDist then
 					nearestDist = d
 					nearestMobId = netId
 				end
@@ -1243,43 +1308,35 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 		local goalPos = HeroNavigation.PlaceNear(masterPos, targetOffset)
 		local distToGoal = (goalPos - simHero.Position).Magnitude
 		if distToGoal > .5 then
+			-- Hero speed is fixed to player speed with a bounded trailing catch-up
 			local followSpeed = currentMoveSpeed
-			if distToGoal > 12 then
-				-- Catch-up speed so heroes keep following and catch up when master sprints
-				local sprintFactor = math.clamp((distToGoal - 12) / 28, 0, 1)
-				followSpeed = currentMoveSpeed + (48.0 - currentMoveSpeed) * sprintFactor
-				if distToGoal > 70 then
-					followSpeed = math.max(followSpeed, 54.0)
-				end
+			if distToGoal > 8.0 then
+				local catchUp = math.clamp((distToGoal - 8.0) / 24.0, 0, 0.35)
+				followSpeed = currentMoveSpeed * (1.0 + catchUp)
 			end
-			-- Anti-stuck progress tracker: if hero fails to make progress toward master for > 2.0s, safely recover near master
+
+			-- Anti-stuck progress tracker: if hero fails to make progress toward master for > 1.5s or is > 55 studs away, recover immediately
 			local tracker = HeroStuckTracking[simHero.NetId]
 			if not tracker then
 				tracker = { LastDist = distToGoal, LastClock = now }
 				HeroStuckTracking[simHero.NetId] = tracker
 			end
-			if distToGoal > 4.0 then
-				if tracker.LastDist - distToGoal > 1.5 then
-					tracker.LastDist = distToGoal
-					tracker.LastClock = now
-				elseif distToGoal - tracker.LastDist > 4.0 then
-					tracker.LastDist = distToGoal
-				elseif now - tracker.LastClock > 2.0 then
-					simHero.Position = HeroNavigation.PlaceNear(masterPos, Vector3.zero)
-					HeroNavigation.Clear(simHero)
-					tracker.LastDist = 0
-					tracker.LastClock = now
-				end
-			else
-				tracker.LastDist = distToGoal
-				tracker.LastClock = now
-			end
 
-			if distToGoal > 220 and math.abs(simHero.Position.Y - masterPos.Y) > 40 then
-				-- Safety fallback if fallen into pit or stranded far away
-				simHero.Position = goalPos
+			local isStuck = (now - tracker.LastClock > 1.5) and (tracker.LastDist - distToGoal < 1.0)
+			local isTooFar = distToGoal > 55.0 or math.abs(simHero.Position.Y - masterPos.Y) > 28.0
+
+			if isTooFar or isStuck then
+				simHero.Position = HeroNavigation.PlaceNear(masterPos, targetOffset)
 				HeroNavigation.Clear(simHero)
+				tracker.LastDist = 0
+				tracker.LastClock = now
 			else
+				if tracker.LastDist - distToGoal > 1.0 then
+					tracker.LastDist = distToGoal
+					tracker.LastClock = now
+				elseif distToGoal > tracker.LastDist + 2.0 then
+					tracker.LastDist = distToGoal
+				end
 				HeroNavigation.Step(simHero, goalPos, followSpeed * dt, now)
 			end
 		end
@@ -1613,6 +1670,23 @@ local function broadcastReplicationSnapshot(now: number)
   for _,packet in Protocol.Encode(c,byFloor[c.FloorId] or {},SnapshotSequence,Workspace:GetServerTimeNow()) do TowerRemotes.TowerSnapshot:FireClient(p,packet) end
  end
 end
+-- Summons (or joins) the floor boss for a player whose own kill threshold is met. At most one boss is alive per floor.
+local function summonFloorBoss(player: Player, progress: TowerProgress.PlayerFloorProgress)
+ if not Encounters then return end
+ local floorId = progress.FloorId
+ local existing = Encounters:GetActiveBoss(floorId)
+ local bossMob = existing or Encounters:SpawnBoss(floorId, player)
+ -- If the room is not ready, leave the summon armed so the next kill retries it.
+ progress.BossSpawned = bossMob ~= nil
+ progress.BossNetId = bossMob and bossMob.NetId or nil
+ if FloorProgressRemote then FloorProgressRemote:FireClient(player, progress) end
+ local dm = getDataManager()
+ if existing then
+  dm.SendToast(player, string.format("Floor %d Boss is already awake! Defeat it to unlock Floor %d!", floorId, floorId + 1), "WARN")
+ elseif bossMob then
+  dm.SendToast(player, string.format("Floor %d Boss Summoned! Defeat it to unlock Floor %d!", floorId, floorId + 1), "WARN")
+ end
+end
 local function squadCount(player: Player): number
  local state=ActiveMasters[player];local n=0
  if state then for _,h in pairs(state.DeployedHeroes) do if h.CurrentHP>0 and h.State~="COMA" then n+=1 end end end
@@ -1625,7 +1699,8 @@ Tower.RegisterAdapter("Combat",{
   if not m or not profile then return false end
   for uuid,h in pairs(m.DeployedHeroes) do
    local data=profile.Heroes[uuid]
-   if not data or data.Assignment~="SQUAD_SLOT_"..h.SlotIndex or (data.ComaUntilTimestamp or 0)>os.time() or h.CurrentHP<=0 then return false end
+   -- Downed (COMA) heroes still belong to the roster; partial squads may travel.
+   if not data or data.Assignment~="SQUAD_SLOT_"..h.SlotIndex or (data.ComaUntilTimestamp or 0)>os.time() then return false end
   end
   return true
  end,
@@ -1646,16 +1721,39 @@ Tower.RegisterAdapter("Combat",{
    local m=ActiveMasters[player];if not m then return end
    m.FocusedTargetNetId=nil;m.TargetEnemyUserId=nil
    if recall then m.LastRecallClock=os.clock();ProgressionActivity[player]=os.clock() end
+   local changedFloor=false
    for _,h in pairs(m.DeployedHeroes) do
+    if h.FloorId~=room.FloorId then changedFloor=true end
     h.FloorId=room.FloorId;h.RoomGeneration=room.RoomGeneration;h.EntityGeneration+=1
     h.Position=HeroNavigation.PlaceNear(anchor or room.Arrival.Position,getFormationOffset(h.SlotIndex))
-    h.TargetNetId=nil;h.State="FOLLOW_MASTER";h.PacifiedUntil=os.clock()+2;h.ActionSequence=0;HeroNavigation.Clear(h)
-    for _,other in pairs(ActiveHeroesByNetId) do if other.TargetNetId==h.NetId then other.TargetNetId=nil;other.State="FOLLOW_MASTER" end end
+    h.TargetNetId=nil
+    if h.CurrentHP > 0 and h.State ~= "COMA" then
+     h.State = "FOLLOW_MASTER"
+    else
+     h.State = "COMA"
+    end
+    h.PacifiedUntil=os.clock()+2;h.ActionSequence=0;HeroNavigation.Clear(h)
+    for _,other in pairs(ActiveHeroesByNetId) do if other.TargetNetId==h.NetId then other.TargetNetId=nil;if other.CurrentHP > 0 and other.State ~= "COMA" then other.State="FOLLOW_MASTER" end end end
    end
    if room.FloorId == 0 then
     ActivePlayerProgress[player] = nil
     restoreSquadOnPlot(player)
    else
+    -- Moving between floors fully heals and revives the squad (same-floor recalls do not).
+    if changedFloor then
+     local hadFallen = false
+     for _, h in pairs(m.DeployedHeroes) do
+      if h.State == "COMA" or h.CurrentHP < h.MaxHP then
+       hadFallen = true
+       break
+      end
+     end
+     restoreSquadOnPlot(player)
+     if hadFallen then
+      local dm = getDataManager()
+      dm.SendToast(player, "✨ Floor Transition: Squad revived and healed to full vitality!", "SUCCESS")
+     end
+    end
     local existing = ActivePlayerProgress[player]
     if not existing or existing.FloorId ~= room.FloorId then
      local progress = TowerProgress.CreateProgress(room.FloorId)
@@ -1669,6 +1767,7 @@ Tower.RegisterAdapter("Combat",{
      end
     end
    end
+   syncSquadStatus(player)
   end,
  CaptureCargo=function(player) return CarrierToHeldLoot[player] end,
  DropCargo=function(player) CombatSimulation.DropCarriedLoot(player,true) end,
@@ -1739,12 +1838,8 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
       if FloorProgressRemote then
        FloorProgressRemote:FireClient(killer, progress)
       end
-      if shouldSpawn and Encounters then
-       local bossMob = Encounters:SpawnBoss(mob.FloorId, killer)
-       if bossMob then
-        progress.BossNetId = bossMob.NetId
-       end
-       dm.SendToast(killer, string.format("Floor %d Boss Summoned! Defeat it to unlock Floor %d!", mob.FloorId, mob.FloorId + 1), "WARN")
+      if shouldSpawn then
+       summonFloorBoss(killer, progress)
       end
      end
     end
@@ -1774,15 +1869,31 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
        end
 
        local progress = ActivePlayerProgress[p]
-       if progress and progress.FloorId == mob.FloorId then
-        progress.BossDefeated = true
-        if FloorProgressRemote then
-         FloorProgressRemote:FireClient(p, progress)
-        end
+       if not progress or progress.FloorId ~= mob.FloorId then
+        progress = TowerProgress.CreateProgress(mob.FloorId)
+        ActivePlayerProgress[p] = progress
+       end
+       progress.BossDefeated = true
+       progress.BossSpawned = true
+       progress.CurrentKills = progress.RequiredKills
+       if FloorProgressRemote then
+        FloorProgressRemote:FireClient(p, progress)
        end
 
        dm.SendToast(p, string.format("Floor %d Boss Defeated! Unlocked Floor %d! (+%d Gold, +%d Gem)", mob.FloorId, mob.FloorId + 1, bossGold, bossGems), "SUCCESS")
       end
+     end
+    end
+    -- Players who earned this boss through their own threshold but fell short of 3% damage
+    -- keep their earned summon: a fresh boss appears for them once this one is cleaned up.
+    for p, progress in pairs(ActivePlayerProgress) do
+     if progress.FloorId == mob.FloorId and progress.BossSpawned and not progress.BossDefeated then
+      progress.BossNetId = nil
+      task.delay(3.5, function()
+       if ActivePlayerProgress[p] == progress and p.Parent == Players and not progress.BossDefeated then
+        summonFloorBoss(p, progress)
+       end
+      end)
      end
     end
    end

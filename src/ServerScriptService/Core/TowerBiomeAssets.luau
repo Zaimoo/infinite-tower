@@ -158,8 +158,8 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		local cf = CFrame.new(at) * CFrame.Angles(0, rotY or 0, 0)
 		local main = block("CascadingFall", V(fallWidth, fallHeight, 2.4), V(0, 0, 0), color, Enum.Material.SmoothPlastic, nil, 0.45)
 		main.CFrame = CFrame.new(origin) * cf * CFrame.new(0, fallHeight / 2, 0)
-		local core = block("FallFoamCore", V(fallWidth * 0.5, fallHeight, 1.4), V(0, 0, 0), rgb(215, 230, 240), Enum.Material.SmoothPlastic, nil, 0.65)
-		core.CFrame = CFrame.new(origin) * cf * CFrame.new(0, fallHeight / 2, 0.6)
+		local core = block("FallFoamCore", V(fallWidth * 0.5, fallHeight - 0.4, 1.4), V(0, 0, 0), rgb(215, 230, 240), Enum.Material.SmoothPlastic, nil, 0.65)
+		core.CFrame = CFrame.new(origin) * cf * CFrame.new(0, fallHeight / 2 - 0.2, 0.6)
 		local mist = orb("FallSplashMist", cf:PointToWorldSpace(V(0, 2, 1.5)), V(fallWidth * 0.85, 3.5, 4.5), rgb(210, 230, 245), Enum.Material.SmoothPlastic, 0.88)
 		pointLight(mist, color, 0.15, 14)
 	end

@@ -77,15 +77,15 @@ task.spawn(function()
 				for _, hero in pairs(profile.Heroes) do
 					-- Check Coma resolution
 					-- Older saves may hold nil here (it was once cleared to nil); treat as 0.
-				hero.ComaUntilTimestamp = hero.ComaUntilTimestamp or 0
-				if hero.ComaUntilTimestamp > 0 and nowUnix >= hero.ComaUntilTimestamp then
+					local comaTime = hero.ComaUntilTimestamp or 0
+					if comaTime > 0 and nowUnix >= comaTime then
 						hero.ComaUntilTimestamp = 0
 						hero.CurrentStamina = 50.0
 						dirty = true
 					end
 
 					-- Active Infirmary recovery vs passive bench recovery
-					if hero.Assignment == "FACILITY_INFIRMARY" and hero.ComaUntilTimestamp <= nowUnix then
+					if hero.Assignment == "FACILITY_INFIRMARY" and comaTime <= nowUnix then
 						if hero.CurrentStamina < hero.MaxStamina then
 							hero.CurrentStamina = math.min(hero.MaxStamina, hero.CurrentStamina + staminaRegenPerSec)
 							dirty = true
