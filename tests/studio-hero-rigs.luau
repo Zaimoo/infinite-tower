@@ -114,6 +114,113 @@ return function(keepPreviews: boolean?)
 		end
 	end
 
+	-- Weapon sockets (Phase 2) -------------------------------------------------------
+	local Sockets = require(HeroRig.HeroSockets)
+	local Weapons = require(game.ReplicatedStorage.Assets.WeaponModelBuilder)
+	local builders = {
+		weapon_bow = Weapons.BuildBow,
+		weapon_sword_shield = Weapons.BuildSwordShield,
+		weapon_daggers = Weapons.BuildDaggers,
+		weapon_axe = Weapons.BuildAxe,
+		weapon_staff = Weapons.BuildStaff,
+		weapon_tome = Weapons.BuildTome,
+	}
+	local function angleBetween(a: CFrame, b: CFrame): number
+		local _, angle = (a.Rotation:Inverse() * b.Rotation):ToAxisAngle()
+		return math.deg(math.abs(angle))
+	end
+
+	local weaponTypes = { "BOW", "SWORD_SHIELD", "DAGGERS", "AXE", "STAFF", "TOME" }
+	for index, weaponType in weaponTypes do
+		local label = weaponType .. ": "
+		local pivot = CFrame.new(origin + Vector3.new((index - 3.5) * 5, Spec.GROUND_OFFSET, 15))
+		local rig = Builder.Build({ Name = "HeroRig_" .. weaponType, Pivot = pivot, AnchorRoot = true })
+		rig.Parent = folder
+		local root = rig.PrimaryPart :: BasePart
+		local joints = Builder.GetJoints(rig)
+		local weapon = Sockets.Equip(rig, builders[Sockets.PREFABS[weaponType]](), weaponType)
+		settle()
+
+		check(weapon.Parent == rig and weapon.Name == "EquippedWeapon", label .. "parented as EquippedWeapon")
+		check(rig:GetAttribute("EquippedWeaponType") == weaponType, label .. "EquippedWeaponType attribute")
+		local anchored = 0
+		for _, d in weapon:GetDescendants() do
+			if d:IsA("BasePart") and d.Anchored then anchored += 1 end
+		end
+		check(anchored == 0, label .. "no anchored weapon parts")
+
+		-- Each weapon attachment coincides with its rig attachment.
+		for _, socket in Sockets.SOCKETS[weaponType] do
+			local assembly = if socket.Assembly then weapon:FindFirstChild(socket.Assembly) :: Model else weapon
+			local weaponAttachment = (assembly.PrimaryPart :: BasePart):FindFirstChild(socket.WeaponAttachment) :: Attachment
+			local rigAttachment = (rig:FindFirstChild(socket.RigPart) :: BasePart):FindFirstChild(socket.RigAttachment) :: Attachment
+			local gap = (weaponAttachment.WorldPosition - rigAttachment.WorldPosition).Magnitude
+			local turn = angleBetween(weaponAttachment.WorldCFrame, rigAttachment.WorldCFrame)
+			check(gap < 0.05, string.format("%s%s meets %s.%s (gap %.3f)", label, socket.WeaponAttachment, socket.RigPart, socket.RigAttachment, gap))
+			check(turn < 2, string.format("%s%s aligns with %s.%s (%.1f deg)", label, socket.WeaponAttachment, socket.RigPart, socket.RigAttachment, turn))
+		end
+
+		local function rootDir(v: Vector3): Vector3
+			return root.CFrame:VectorToObjectSpace(v).Unit
+		end
+		if weaponType == "BOW" then
+			-- Arm raised forward: stave vertical, nocked arrow pointing at the target.
+			joints.LeftShoulder.Transform = CFrame.Angles(math.rad(90), 0, 0)
+			settle()
+			local handle = weapon.PrimaryPart :: BasePart
+			local stave = rootDir((handle:FindFirstChild("TipUpper") :: Attachment).WorldPosition - (handle:FindFirstChild("TipLower") :: Attachment).WorldPosition)
+			local shaft = weapon:FindFirstChild("ArrowShaft", true) :: BasePart
+			local arrow = rootDir(shaft.CFrame.LookVector)
+			check(stave:Dot(Vector3.yAxis) > 0.985, string.format("%sstave vertical with the arm raised (dot %.3f)", label, stave:Dot(Vector3.yAxis)))
+			check(arrow:Dot(-Vector3.zAxis) > 0.985, string.format("%sarrow points forward with the arm raised (dot %.3f)", label, arrow:Dot(-Vector3.zAxis)))
+			local nock = (handle:FindFirstChild("Nock") :: Attachment).WorldPosition
+			local tail = shaft.Position - shaft.CFrame.LookVector * shaft.Size.Z / 2
+			check((tail - nock).Magnitude < 0.05, label .. "arrow nock sits on the string")
+			Builder.ResetPose(rig)
+		elseif weaponType == "SWORD_SHIELD" then
+			-- Forearm raised forward (elbow 90): blade points up.
+			joints.RightElbow.Transform = CFrame.Angles(math.rad(90), 0, 0)
+			settle()
+			local grip = (weapon.PrimaryPart :: BasePart):FindFirstChild("Grip") :: Attachment
+			check(rootDir(grip.WorldCFrame.UpVector):Dot(Vector3.yAxis) > 0.985, label .. "blade points up with the forearm raised")
+			Builder.ResetPose(rig)
+			settle()
+			-- Shield on the outer face of the left forearm, face out, long axis vertical.
+			local face = weapon:FindFirstChild("ShieldFace", true) :: BasePart
+			local forearm = rig:FindFirstChild("LeftLowerArm") :: BasePart
+			check(rootDir(-face.CFrame.RightVector):Dot(-Vector3.xAxis) > 0.985, label .. "shield face looks outward")
+			check(rootDir(face.CFrame.UpVector):Dot(Vector3.yAxis) > 0.985, label .. "shield long axis is vertical at rest")
+			local faceX = root.CFrame:PointToObjectSpace(face.Position).X
+			local armX = root.CFrame:PointToObjectSpace(forearm.Position).X
+			check(faceX < armX - forearm.Size.X / 2, label .. "shield sits outside the forearm")
+		elseif weaponType == "DAGGERS" then
+			-- ReverseGrip turns the blades to run back along the forearm.
+			local reversed = builders.weapon_daggers()
+			reversed:SetAttribute("ReverseGrip", true)
+			Sockets.Equip(rig, reversed, weaponType)
+			settle()
+			local grip = (reversed.PrimaryPart :: BasePart):FindFirstChild("Grip") :: Attachment
+			check(rootDir(grip.WorldCFrame.UpVector):Dot(Vector3.zAxis) > 0.985, label .. "reverse grip points the blade backward at rest")
+			check(#rig:GetChildren() > 0 and rig:FindFirstChild("EquippedWeapon") == reversed, label .. "re-equip replaces the previous weapon")
+		elseif weaponType == "AXE" then
+			local hand = rig:FindFirstChild("RightHand") :: BasePart
+			local pommel = weapon:FindFirstChild("Pommel", true) :: BasePart
+			local head = weapon:FindFirstChild("HeadCollar", true) :: BasePart
+			check((hand.Position - pommel.Position).Magnitude < (hand.Position - head.Position).Magnitude, label .. "held near the butt of the haft")
+		end
+	end
+
+	-- Unequip clears the weapon.
+	local probe = folder:FindFirstChild("HeroRig_STAFF") :: Model
+	Sockets.Unequip(probe)
+	check(probe:FindFirstChild("EquippedWeapon") == nil and probe:GetAttribute("EquippedWeaponType") == nil, "Unequip removes the weapon")
+	Sockets.Equip(probe, builders.weapon_staff(), "STAFF")
+
+	for _, m in folder:GetChildren() do
+		if m:IsA("Model") then
+			m.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
+		end
+	end
 	if not keepPreviews then
 		folder:Destroy()
 	end
