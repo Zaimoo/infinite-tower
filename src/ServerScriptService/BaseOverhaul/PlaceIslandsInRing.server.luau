@@ -161,6 +161,19 @@ local function migratePlotToIsland(plotModel: Model, islandClone: Model, islandT
 	end
 	anchorPart.CFrame = CFrame.new(islandTopCF.Position.X, islandTopCF.Position.Y, islandTopCF.Position.Z)
 
+	-- 7. Ensure Leaderboard Playtime asset is present and synced on the island
+	local leaderboard = plotModel:FindFirstChild("AvxsedPlaytimeWS")
+	if not leaderboard then
+		local rep = game:GetService("ReplicatedStorage")
+		local assets = rep:FindFirstChild("Assets")
+		local template = assets and assets:FindFirstChild("LeaderboardTemplate")
+		if template then
+			local clone = template:Clone()
+			clone.Name = "AvxsedPlaytimeWS"
+			clone.Parent = plotModel
+		end
+	end
+
 	islandClone.Parent = plotModel
 end
 
