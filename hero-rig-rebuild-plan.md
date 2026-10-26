@@ -289,6 +289,26 @@ Each phase lands as its own PR off `main`. The game stays playable between phase
 
 **Done when:** in a playtest, each weapon type idles, walks and runs its three attack tiers without limbs clipping the torso or weapons crossing the face. Check with screenshots and the FK checks from Phase 2.
 
+#### Phase 4 results (2026-10-26)
+
+- **`HeroClips.luau`** (`Assets/HeroRig/`), pure data:
+  - **Per weapon type** (`UNARMED`, `BOW`, `SWORD_SHIELD`, `DAGGERS`, `AXE`, `STAFF`, `TOME`): `Idle`, `Move`, `AttackBasic`, `AttackSpecial`, `AttackSkill`.
+  - **Shared:** `Hit`, `Coma` (kneeling slump), `Carry` (loot overhead), `Sleep` (lying on the back via the `Root` joint) and `Labor` (hammering).
+  - **Override:** `hero_jenna.Idle`, the Wind-Scout stance.
+  - **`Get(heroId, weaponType, state)`** resolves override → weapon type → shared → `UNARMED`.
+  - **Generators:** idles come from `breathe(stance)`, and walks from `walk(carry)`, which swings the legs and bobs the root while keeping the weapon carry.
+- **`HeroAnimator.luau`:**
+  - `new(rig, {HeroId?, WeaponType?})` reads `HeroId` and `EquippedWeaponType` from the rig by default.
+  - `SetLocomotion` and `SetWeaponType` change the looping clip underneath.
+  - `PlayAction(state, duration?)` plays one action on top, rescaled to the given duration (the attack interval) with 0.08 s fades. While moving, actions drive only the upper body.
+  - `Step(dt)` smooths `Motor6D.Transform` writes; `Evaluate`, `Sample` and `ApplyPose` serve static previews and tests.
+- **Authoring with the grip rule:** an arm's shoulder pitch plus elbow pitch sets the weapon's tilt from "head forward", so 90° stands a sword or staff upright. The bow aim keeps the archer's body turn in the waist. A shoulder yaw after the 90° pitch rolled the bow 18° off vertical; the Studio test caught it, and the yaw was removed.
+- **Tests:**
+  - `hero-rig.spec.luau`: 10,914 checks. Every weapon type has every state; keys are sorted 0..1; joint names are valid; rotations are within 180°. Loops and actions end on their starting pose. Knees never bend forward and elbows never hyperextend. Overrides point at real heroes, `Get` fallbacks are correct, and every catalog weapon type has clips.
+  - `studio-hero-rigs.luau`: 677 checks, all passing in a playtest. For each weapon type on its showcase hero (Han unarmed and daggers, Jenna bow, Aaron sword and shield, Catio axe, Eolka staff, Valeria tome), every state is sampled at 11 frames. The weapon never touches the head, and the hands never enter the torso. At full draw the bow is vertical with the arrow forward. The animator reads the rig's attributes, starts on Jenna's override, keeps the legs walking under an attack while moving, clears finished actions, lowers the body in `Coma`, and rejects action states as locomotion.
+- **Screenshots** (`docs/hero-rig-rebuild/phase-4/`): Jenna and Aaron posed in each state. `Motor6D.Transform` does not replicate, so previews and the live renderer must pose rigs on the client. Phase 5 runs `HeroAnimator` in `EntityRenderer`.
+- **Not wired into the game yet:** `EntityRenderer` still calls `ArtPackVisuals.Animate`. Phase 5 switches heroes to `HeroAnimator`, `HeroSockets` and `HeroRegistry`, and drives `PlayAction` from attack events (the animations plan's `HERO_ATTACK` tiers).
+
 ### Phase 5: Migrate consumers
 
 - `EntityRenderer`: switch `ArtPackVisuals.Attach/EquipWeapon/UnequipWeapon/Animate` for heroes to `HeroRegistry`, `HeroSockets` and `HeroAnimator`. Mobs and props keep using `ArtPackVisuals`.
