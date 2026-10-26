@@ -45,6 +45,11 @@ local HeroLoadout = require(HeroRig:WaitForChild("HeroLoadout"))
 -- Attack tier codes sent with HERO_ATTACK (CombatSimulation) -> HeroClips action states.
 local ATTACK_TIER_STATES = { [1] = "AttackBasic", [2] = "AttackSpecial", [3] = "AttackSkill" }
 
+-- Hero walk/idle switching (studs of interpolation gap, seconds of grace).
+local MOVE_START_GAP = 0.3
+local MOVE_KEEP_GAP = 0.05
+local MOVE_GRACE = 0.35
+
 -- The hero rig inside a rendered entity when it was built by HeroRegistry (Phase 3 rigs).
 local function heroRig(model: Model): Model?
 	local art = model:FindFirstChild("ArtPackVisual")
@@ -373,6 +378,13 @@ local function consume(buf: buffer)
    local active=Actions.Actors[ActionState.Key(e)]
    if active and not active.Terminal and active.Action then EnemyAnimation.Action(node,active.Action,View.Origin,Workspace:GetServerTimeNow()) end
   end
+  if node.IsHero and e.Position~=node.GoalPos then
+   -- Heroes glide at constant speed from where they are now to the new snapshot over one
+   -- snapshot interval, so they arrive as the next one lands (no surge-and-stall at 5 Hz).
+   local clock=os.clock();local n=node :: any
+   n.SegFrom=node.CurrentPos;n.SegStart=clock
+   n.SegDuration=math.clamp(clock-(n.LastSnapshotAt or (clock-0.2)),0.1,0.4);n.LastSnapshotAt=clock
+  end
   node.GoalPos=e.Position;node.GoalYaw=e.Yaw;node.HpPermille=e.HpPermille;node.Stamina=e.Stamina
   node.StateEnum=e.StateEnum;node.Flags=e.Flags;node.LastSeenClock=now
   if node.HPBarFill then node.HPBarFill.Size=UDim2.fromScale(e.HpPermille/1000,1) end
@@ -473,21 +485,41 @@ RunService.RenderStepped:Connect(function(dt: number)
 	end
 	local alpha = math.clamp(dt * 12.0, 0, 1)
 	for _, node in pairs(VisualNodesByNetId) do
+		local n = node :: any
+		local yaw = node.GoalYaw
 		if (node.GoalPos - node.CurrentPos).Magnitude > 35 then
 			node.CurrentPos = node.GoalPos
+			n.SegStart = nil
+		elseif node.IsHero and n.SegStart then
+			local t = math.clamp((os.clock() - n.SegStart) / n.SegDuration, 0, 1)
+			node.CurrentPos = n.SegFrom:Lerp(node.GoalPos, t)
 		else
 			node.CurrentPos = node.CurrentPos:Lerp(node.GoalPos, alpha)
 		end
+		if node.IsHero then
+			-- Turn smoothly toward the snapshot yaw along the shortest arc.
+			local diff = (node.GoalYaw - node.CurrentYaw + math.pi) % (2 * math.pi) - math.pi
+			node.CurrentYaw += diff * math.clamp(dt * 10, 0, 1)
+			yaw = node.CurrentYaw
+		end
 		local bodyH = (node :: any).RootHeight or node.IsHero and HeroRigSpec.GROUND_OFFSET or (node.RootPart.Size.Y * 0.5)
-		local cf = CFrame.new(node.CurrentPos + Vector3.new(0, bodyH, 0)) * CFrame.Angles(0, node.GoalYaw, 0)
+		local cf = CFrame.new(node.CurrentPos + Vector3.new(0, bodyH, 0)) * CFrame.Angles(0, yaw, 0)
 		node.Model:PivotTo(cf)
 		local animator = (node :: any).HeroAnimator
 		if (node :: any).EnemyRig then
 			EnemyAnimation.Step(node,dt,serverNow)
 		elseif animator then
 			debug.profilebegin("HeroAnimator.Step")
-			local moving = (node.GoalPos - node.CurrentPos).Magnitude > 0.15
-			animator:SetLocomotion(if node.StateEnum == 4 then "Coma" elseif moving then "Move" else "Idle")
+			-- Hysteresis: positions arrive at 5 Hz, so the lerp gap dips below any single
+			-- threshold between snapshots. Start walking on a clear gap and keep walking until
+			-- the hero has been still for MOVE_GRACE, so Move/Idle do not flicker every frame.
+			local gap = (node.GoalPos - node.CurrentPos).Magnitude
+			local now = os.clock()
+			if gap > MOVE_START_GAP or ((node :: any).WalkingUntil and gap > MOVE_KEEP_GAP) then
+				(node :: any).WalkingUntil = now + MOVE_GRACE
+			end
+			local walking = ((node :: any).WalkingUntil or 0) > now
+			animator:SetLocomotion(if node.StateEnum == 4 then "Coma" elseif walking then "Move" else "Idle")
 			animator:Step(dt)
 			debug.profileend()
 		else
