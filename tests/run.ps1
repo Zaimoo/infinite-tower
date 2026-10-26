@@ -42,6 +42,8 @@ $modulePaths = @(
     'ReplicatedStorage/Assets/TowerEnemyClips.luau',
     'ReplicatedStorage/Assets/HeroRig/HeroRigSpec.luau',
     'ReplicatedStorage/Assets/HeroRig/HeroSockets.luau',
+    'ReplicatedStorage/Assets/HeroRig/HeroCostumeMath.luau',
+    'ReplicatedStorage/Assets/HeroRig/HeroCostumes.luau',
     'ReplicatedStorage/Shared/Util/AttackTimeline.luau',
     'ReplicatedStorage/Shared/Util/EnemyActionState.luau',
     'ReplicatedStorage/Shared/Util/TowerProtocol.luau',

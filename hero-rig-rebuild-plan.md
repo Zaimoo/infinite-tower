@@ -250,6 +250,36 @@ Each phase lands as its own PR off `main`. The game stays playable between phase
 
 **Done when:** a side-by-side screenshot sheet of all 12 (front and side, bare and armed) matches the old looks, and the lint passes.
 
+#### Phase 3 results (2026-10-26)
+
+- **New modules** in `Assets/HeroRig/`:
+  - `HeroCostumeMath.luau`: pure piece resolution (`RelativeTo` chains, horizontal scaling from the Standard body to the hero's body type) and an exact oriented-box overlap test.
+  - `HeroCostumes.luau`: all 12 heroes as data (body type, body colours for every part, face, pieces), plus `BodyColors` and `Lint`.
+  - `HeroCostumeBuilder.luau`: builds Parts/WedgeParts, each with one explicit `Weld` to its bone.
+  - `HeroRegistry.luau`: `Build(heroId)` and `EnsureHeroes()`, which always rebuilds `ReplicatedStorage.Assets.Heroes` from code.
+- **`HeroAssetSetup`** now calls `HeroRegistry.EnsureHeroes()`. `HeroModelBuilder.luau` is no longer called and is deleted in Phase 6. JennaPreview is no longer read by any code.
+- **Body types:**
+  - Standard: Han, Catio, Morrigan, Archon, Solaris.
+  - Slim: Jenna, Velkist, Eolka, Valeria, Astrea.
+  - Heavy: Aaron, Ignis.
+- **Arms:** every hero now has sleeve and hand colours in their palette (no more default black arms).
+- **Porting changes from `HeroModelBuilder`:**
+  - **Gear removed from bodies:** Aaron's kite shield (his `SWORD_SHIELD` shield replaces it), Velkist's hand dagger, Eolka's and Valeria's staffs and Eolka's hip tome, Jenna's and Astrea's arm-welded bows, Han's katana and Catio's back pick.
+  - **Moved by the lint:** Catio's hip pouches (they sat where the hanging forearms are) and Velkist's thigh sheath (same). Archon's and Astrea's wings went higher and further back, out of the arm zone.
+  - **Loose (cloth and hair that may clip):** skirts and trims (Eolka, Valeria), capes (Morrigan, Astrea, Jenna's lower cape and coat tails), mantles and scarf (Archon, Solaris, Velkist), braids (Eolka), Jenna's long tresses, and Han's belt knot.
+- **Jenna** was rebuilt from the Phase 0 inventory with 44 pieces (60 parts, at the budget):
+  - **Hair:** the exact `attachJennaHair` offsets.
+  - **Catalogue meshes recreated from Parts:** a 4-panel hood, goggles with a brass band and cylinder lenses, a two-piece starry cape, and a crystal pauldron.
+  - **Cuffs:** they now sit fully on the forearm, clear of the hand.
+  - **Trimmed to meet the budget:** potion caps, two potions, one pouch, the strap buckle, side hair tips, coat hems and two cape stars.
+- **Lint:** `HeroCostumes.Lint` rejects unknown bones, shapes and materials, bad `RelativeTo`, non-`rbxassetid` faces, more than 60 parts, and any non-Loose piece whose oriented box overlaps another bone (shrunk by 0.1 studs, at most half of each dimension). The first sampled version missed a cuff straddling the thin hand; the exact separating-axis test catches it.
+- **Tests:**
+  - `hero-rig.spec.luau`: 1,027 checks. Every costume lints clean and matches `HeroCatalog`, body colours cover every part, and the lint catches the hand-cuff case, accepts it when marked Loose, and reports a bad `RelativeTo`.
+  - `studio-hero-rigs.luau`: 564 checks, all passing in a playtest. Per hero it checks the budget, one Part per piece, no meshes or scripts, at most the face decal, and one `Weld` per piece to its parent bone. In a mixed pose (shoulder, elbow, neck, knee), pieces stay attached with drift under 0.001 studs. It also builds an armed copy of every hero through `HeroSockets`.
+- **Live-path check (playtest only):** after `HeroRegistry.EnsureHeroes()` ran on the playtest server, `EntityRenderer` rebuilt the squad (Jenna, Han) from the new templates. The legacy `ArtPackVisuals.EquipWeapon` still put the bow in Jenna's left hand (0.05 studs) and the daggers in Han's right hand. Roots sit 3.0 above the soles, matching the renderer's assumption. Output showed no new errors. Until Phase 4–5, heroes use the legacy procedural poses and legacy grips on the new rigs, so weapon angles look generic (for example Jenna's bow is held flat at the hip).
+- **How the Studio checks ran:** this branch was not synced into the shared Team Create place, because Rojo would push unmerged code that changes the live hero models. The checks ran on files loaded into playtests from a temporary 127.0.0.1-only file server.
+- **Screenshots:** `docs/hero-rig-rebuild/phase-3/` (three front groups, Jenna front and back, armed row).
+
 ### Phase 4: Animator and clips
 
 - Write `HeroAnimator` and `HeroClips` with all states for all 6 weapon types, plus the shared states.
