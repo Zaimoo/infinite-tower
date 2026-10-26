@@ -2,7 +2,7 @@
 
 A Roblox squad-command action RPG with extraction and fortress progression, inspired by *Pick Me Up, Infinite Gacha*. The player is a **Master** who commands a squad of up to 5 gacha heroes. Squads climb a 50-floor Infinite Tower split into 10 biomes, with a Biome Boss every 5 floors. Between runs, the player develops a private Fortress Plot. Each server holds 6 players, one plot each.
 
-`GAME_DESIGN.MD` is the source of truth for design. Read the relevant section before changing a system, and update it in the same change when behaviour changes.
+`docs/GAME_DESIGN.MD` is the source of truth for design. Read the relevant section before changing a system, and update it in the same change when behaviour changes.
 
 ## Roblox skills
 
@@ -13,7 +13,7 @@ Also follow `AGENTS.md`. Before working on a topic, use the matching `roblox-*` 
 - `src/ReplicatedStorage/Shared/Config/`: authoritative data tables, including `HeroCatalog`, `ArtifactCatalog`, `ArchetypeCombatSkills`, `StatBalance`, `FacilityConfig`, `TowerFloorConfig` and `MobCatalog`.
 - `src/ReplicatedStorage/Shared/Util/`: shared logic, including `StatFormulas`, `WeaponPromotion`, `TowerProtocol` and `AttackTimeline`.
 - `src/ReplicatedStorage/Assets/`: procedural builders (`WeaponModelBuilder`, `TowerEnemyRigs`), and `ArtPackVisuals` (template attachment and a generic animator for non-hero rigs).
-- `src/ReplicatedStorage/Assets/HeroRig/`: code-authored hero rigs. The pieces are `HeroRigSpec` (skeleton, sockets, axis convention), `HeroCostumes` (every hero's look as data), `HeroRegistry` (builds the templates), `HeroSockets` and `HeroLoadout` (weapons), and `HeroClips` and `HeroAnimator` (client animation). Contract and history: `hero-rig-rebuild-plan.md`.
+- `src/ReplicatedStorage/Assets/HeroRig/`: code-authored hero rigs. The pieces are `HeroRigSpec` (skeleton, sockets, axis convention), `HeroCostumes` (every hero's look as data), `HeroRegistry` (builds the templates), `HeroSockets` and `HeroLoadout` (weapons), and `HeroClips` and `HeroAnimator` (client animation). Contract and history: `docs/hero-rig-rebuild-plan.md`.
 - `src/ServerScriptService/Core/`: `DataManager` (profiles, artifacts, equip/craft/summon remotes, save migration), plus tower floors, traversal, the Pit and offline rewards.
 - `src/ServerScriptService/Combat/`: `CombatSimulation` (the 5 Hz server-authoritative sim) and `TowerEncounterRuntime`.
 - `src/StarterPlayerScripts/`: `UI` (Forge, HUD, Squad, Facility and Tower controllers), `Rendering` (`EntityRenderer`, which interpolates at 60 FPS) and `Input`.
