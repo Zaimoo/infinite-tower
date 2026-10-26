@@ -545,7 +545,7 @@ local function knockHeroIntoComa(simHero: SimHero, _baseComaSeconds: number?)
 	if profile then
 		local heroInstance = profile.Heroes[simHero.HeroUUID]
 		if heroInstance then
-			heroInstance.ComaUntilTimestamp = nil
+			heroInstance.ComaUntilTimestamp = 0 -- schema default; nil breaks numeric comparisons
 		end
 	end
 
@@ -598,8 +598,11 @@ local function knockHeroIntoComa(simHero: SimHero, _baseComaSeconds: number?)
 		)
 
 		task.defer(function()
-			local PlotManager = require(game:GetService("ServerScriptService").Core.PlotManager)
-			PlotManager.TeleportPlayerToPlot(simHero.Owner)
+			-- PlotManager is a Script (not a ModuleScript); it publishes itself as _G.PlotManager.
+			local PlotManager = _G.PlotManager
+			if PlotManager and PlotManager.TeleportPlayerToPlot then
+				PlotManager.TeleportPlayerToPlot(simHero.Owner)
+			end
 		end)
 	end
 
@@ -626,7 +629,7 @@ local function restoreSquadOnPlot(player: Player)
 	local profile = dm.GetProfile(player)
 	if profile then
 		for _, hero in pairs(profile.Heroes) do
-			hero.ComaUntilTimestamp = nil
+			hero.ComaUntilTimestamp = 0
 		end
 		dm.SyncProfile(player)
 	end

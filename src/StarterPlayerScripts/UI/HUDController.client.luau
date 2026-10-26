@@ -57,14 +57,6 @@ FloorProgressRemote.OnClientEvent:Connect(function(progress: any)
 	end
 end)
 
-SquadDefeatedRemote.OnClientEvent:Connect(function(floorId: number)
-	squadWipeBanner.Visible = true
-	local label = squadWipeBanner:FindFirstChildWhichIsA("TextLabel")
-	if label then
-		label.Text = string.format("💀 SQUAD WIPED ON FLOOR %d! CARRIED LOOT DROPPED — TELEPORTED TO FORTRESS PLOT", floorId or 0)
-	end
-end)
-
 local ArtifactCatalog = require(Shared:WaitForChild("Config"):WaitForChild("ArtifactCatalog"))
 local ArtifactRemotes = Remotes:WaitForChild("ArtifactRemotes")
 local RequestEquipArtifactFunc = ArtifactRemotes:WaitForChild("RequestEquipArtifact") :: RemoteFunction
@@ -362,6 +354,13 @@ local squadWipeText = makeLabel({
 
 SquadWipeStateRemote.OnClientEvent:Connect(function(isWiped: boolean)
 	squadWipeBanner.Visible = isWiped
+end)
+
+-- Connected after the banner exists: an earlier connection captured an undeclared
+-- (nil) squadWipeBanner and errored on every wipe.
+SquadDefeatedRemote.OnClientEvent:Connect(function(floorId: number)
+	squadWipeBanner.Visible = true
+	squadWipeText.Text = string.format("💀 SQUAD WIPED ON FLOOR %d! CARRIED LOOT DROPPED — TELEPORTED TO FORTRESS PLOT", floorId or 0)
 end)
 
 -- Carried Field Loot Indicator

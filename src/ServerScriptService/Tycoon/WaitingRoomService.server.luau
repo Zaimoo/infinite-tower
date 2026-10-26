@@ -76,7 +76,9 @@ task.spawn(function()
 
 				for _, hero in pairs(profile.Heroes) do
 					-- Check Coma resolution
-					if hero.ComaUntilTimestamp > 0 and nowUnix >= hero.ComaUntilTimestamp then
+					-- Older saves may hold nil here (it was once cleared to nil); treat as 0.
+				hero.ComaUntilTimestamp = hero.ComaUntilTimestamp or 0
+				if hero.ComaUntilTimestamp > 0 and nowUnix >= hero.ComaUntilTimestamp then
 						hero.ComaUntilTimestamp = 0
 						hero.CurrentStamina = 50.0
 						dirty = true

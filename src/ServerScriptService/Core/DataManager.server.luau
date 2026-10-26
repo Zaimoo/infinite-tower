@@ -515,6 +515,10 @@ function DataManager.SyncProfile(player: Player, progressionOnly: boolean?)
 	-- Auto-migrate legacy SQUAD assignments or DeployedSquadOrder to SQUAD_SLOT_1..5
 	local occupiedSlots: { [number]: string } = {}
 	for uuid, h in pairs(profile.Heroes) do
+		-- Migration: coma recovery once cleared this field to nil; the schema default is 0.
+		if type(h.ComaUntilTimestamp) ~= "number" then
+			h.ComaUntilTimestamp = 0
+		end
 		local slotNum = tonumber(string.match(h.Assignment or "", "^SQUAD_SLOT_(%d+)"))
 		if slotNum and slotNum >= 1 and slotNum <= 5 then
 			occupiedSlots[slotNum] = uuid
