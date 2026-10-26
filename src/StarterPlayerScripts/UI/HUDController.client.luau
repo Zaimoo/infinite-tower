@@ -1023,6 +1023,9 @@ _G.IsAnyMasterModalOpen = function(): boolean
 	return false
 end
 _G.OpenMasterModal = function(which: string)
+	if _G.CloseSettings and _G.IsSettingsOpen and _G.IsSettingsOpen() then
+		_G.CloseSettings()
+	end
 	if _G.CloseTowerSelector then _G.CloseTowerSelector() end
 	if facilityController then facilityController:Close() end
 	if synthesisController then synthesisController:Close() end
@@ -1847,10 +1850,95 @@ do
 	ProfileDeltaSyncEvent.OnClientEvent:Connect(updateCurrency)
 	updateCurrency(CurrentProfile)
 
-	-- Keep Studio F8 development hooks available without the top menu bar
+	-- Top-right Setting Icon Button
+	local settingsButton = Instance.new("ImageButton")
+	settingsButton.Name = "SettingsButton"
+	settingsButton.AnchorPoint = Vector2.new(1, 0)
+	settingsButton.Position = UDim2.new(1, -16, 0, 12)
+	settingsButton.Size = UDim2.fromOffset(38, 38)
+	settingsButton.BackgroundColor3 = Color3.fromRGB(18, 14, 26)
+	settingsButton.BackgroundTransparency = 0.15
+	settingsButton.AutoButtonColor = false
+	settingsButton.ZIndex = 15
+	settingsButton.Parent = hudGui
+
+	local settingsCorner = Instance.new("UICorner")
+	settingsCorner.CornerRadius = UDim.new(0, 9)
+	settingsCorner.Parent = settingsButton
+
+	local settingsStroke = Instance.new("UIStroke")
+	settingsStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	settingsStroke.Thickness = 1.5
+	settingsStroke.Color = Color3.fromRGB(80, 70, 105)
+	settingsStroke.Parent = settingsButton
+
+	local gearIcon = Instance.new("ImageLabel")
+	gearIcon.Name = "GearIcon"
+	gearIcon.Image = "rbxassetid://18801194936"
+	gearIcon.AnchorPoint = Vector2.new(0.5, 0.5)
+	gearIcon.Position = UDim2.fromScale(0.5, 0.5)
+	gearIcon.Size = UDim2.fromOffset(22, 22)
+	gearIcon.BackgroundTransparency = 1
+	gearIcon.ImageColor3 = Color3.fromRGB(225, 220, 240)
+	gearIcon.ZIndex = 16
+	gearIcon.Parent = settingsButton
+
+	-- Hover and click micro-interactions
+	local origBg = Color3.fromRGB(18, 14, 26)
+	local hoverBg = Color3.fromRGB(36, 28, 50)
+	local origStroke = Color3.fromRGB(80, 70, 105)
+	local hoverStroke = Color3.fromRGB(175, 150, 235)
+
+	settingsButton.MouseEnter:Connect(function()
+		TweenService:Create(settingsButton, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			BackgroundColor3 = hoverBg,
+			Size = UDim2.fromOffset(40, 40),
+		}):Play()
+		TweenService:Create(settingsStroke, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Color = hoverStroke,
+		}):Play()
+		TweenService:Create(gearIcon, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Rotation = 30,
+			ImageColor3 = Color3.fromRGB(255, 255, 255),
+		}):Play()
+	end)
+
+	settingsButton.MouseLeave:Connect(function()
+		TweenService:Create(settingsButton, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			BackgroundColor3 = origBg,
+			Size = UDim2.fromOffset(38, 38),
+		}):Play()
+		TweenService:Create(settingsStroke, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Color = origStroke,
+		}):Play()
+		TweenService:Create(gearIcon, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Rotation = 0,
+			ImageColor3 = Color3.fromRGB(225, 220, 240),
+		}):Play()
+	end)
+
+	local function onSettingsTrigger()
+		local clickTween = TweenService:Create(settingsButton, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Size = UDim2.fromOffset(34, 34),
+		})
+		local restoreTween = TweenService:Create(settingsButton, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Size = UDim2.fromOffset(38, 38),
+		})
+		clickTween:Play()
+		clickTween.Completed:Connect(function()
+			restoreTween:Play()
+		end)
+		if _G.ToggleSettings then
+			_G.ToggleSettings()
+		end
+	end
+	settingsButton.MouseButton1Click:Connect(onSettingsTrigger)
+	settingsButton.Activated:Connect(onSettingsTrigger)
+
+	-- Keep Studio F8 development hooks available without the top menu bar (positioned to the left of settings button)
 	navButtonsFrame.Parent = hudGui
 	navButtonsFrame.AnchorPoint = Vector2.new(1, 0)
-	navButtonsFrame.Position = UDim2.new(1, -16, 0, 12)
+	navButtonsFrame.Position = UDim2.new(1, -64, 0, 12)
 	navButtonsFrame.Size = UDim2.fromOffset(240, 36)
 	local devButtons = {}
 	for _, b in navButtonsFrame:GetChildren() do

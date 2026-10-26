@@ -564,6 +564,8 @@ local function knockHeroIntoComa(simHero: SimHero, _baseComaSeconds: number?)
 	)
 	dm.SyncProfile(simHero.Owner)
 
+	Tower.BroadcastAt(CombatVFXRemote, simHero, "HERO_KO", simHero.Position, simHero.NetId)
+
 	local masterState = ActiveMasters[simHero.Owner]
 
 	-- Squad Wipe Detection: Check if ALL deployed heroes are now in Coma (CurrentHP <= 0)

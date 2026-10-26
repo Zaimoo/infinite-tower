@@ -171,6 +171,54 @@ local function playAttackVfx(rig: Model, animator: any, meta: any, cue: any)
 	})
 end
 
+local KO_ASSET_TEXTURE = "rbxassetid://10762151233"
+
+local function attachKOVFX(node: any)
+	if not node or not node.RootPart or not node.Model or not node.Model.Parent then return end
+	local existing = node.RootPart:FindFirstChild("KOAttachment")
+	if existing then return end
+
+	local att = Instance.new("Attachment")
+	att.Name = "KOAttachment"
+	att.Position = Vector3.new(0, 3.8, 0)
+	att.Parent = node.RootPart
+
+	local pe = Instance.new("ParticleEmitter")
+	pe.Name = "KOParticles"
+	pe.Texture = KO_ASSET_TEXTURE
+	pe.Size = NumberSequence.new(5)
+	pe.Transparency = NumberSequence.new(0)
+	pe.Color = ColorSequence.new(Color3.new(1, 1, 1))
+	pe.Rate = 1
+	pe.Lifetime = NumberRange.new(1, 1)
+	pe.Speed = NumberRange.new(0, 0)
+	pe.SpreadAngle = Vector2.new(0, 0)
+	pe.VelocitySpread = 0
+	pe.Acceleration = Vector3.new(0, 0, 0)
+	pe.Drag = 4.5
+	pe.LockedToPart = true
+	pe.LightEmission = 0
+	pe.LightInfluence = 0
+	pe.Orientation = Enum.ParticleOrientation.FacingCamera
+	pe.FlipbookLayout = Enum.ParticleFlipbookLayout.Grid8x8
+	pe.FlipbookMode = Enum.ParticleFlipbookMode.Loop
+	pe.FlipbookFramerate = NumberRange.new(60, 60)
+	pe.TimeScale = 1
+	pe.Brightness = 1
+	pe.Enabled = true
+	pe.Parent = att
+
+	pe:Emit(1)
+end
+
+local function removeKOVFX(node: any)
+	if not node or not node.RootPart then return end
+	local att = node.RootPart:FindFirstChild("KOAttachment")
+	if att then
+		att:Destroy()
+	end
+end
+
 local function createEntityModel(netId: number, meta: any, initPos: Vector3): VisualNode
 	local isHero = (meta and meta.IsHero) or false
 	local model = Instance.new("Model")
@@ -594,11 +642,20 @@ RunService.RenderStepped:Connect(function(dt: number)
 				(node :: any).WalkingUntil = now + MOVE_GRACE
 			end
 			local walking = ((node :: any).WalkingUntil or 0) > now
-			animator:SetLocomotion(if node.StateEnum == 4 then "Coma" elseif walking then "Move" else "Idle")
+			local isKnockedOut = node.StateEnum == 4 or (node.HpPermille ~= nil and node.HpPermille <= 0)
+			animator:SetLocomotion(if isKnockedOut then "Coma" elseif walking then "Move" else "Idle")
 			animator:Step(dt)
 			debug.profileend()
 		else
 			ArtPackVisuals.Animate(node, dt, os.clock())
+		end
+		if node.IsHero then
+			local isKnockedOut = node.StateEnum == 4 or (node.HpPermille ~= nil and node.HpPermille <= 0)
+			if isKnockedOut then
+				attachKOVFX(node)
+			else
+				removeKOVFX(node)
+			end
 		end
 		local head = node.Model:FindFirstChild("Head") :: BasePart?
 		if head and not node.IsHero then
@@ -670,6 +727,12 @@ CombatVFXRemote.OnClientEvent:Connect(function(context: any, vfxType: string, po
 			if elapsed < cue.CastSeconds then
 				animator:PlayAction(ATTACK_TIER_STATES[cue.Tier] or "AttackBasic", cue.CastSeconds, elapsed, cue)
 			end
+		end
+		return
+	elseif vfxType=="HERO_KO" then
+		local node = VisualNodesByNetId[amount or -1]
+		if node then
+			attachKOVFX(node)
 		end
 		return
 	elseif vfxType=="HIT_SPARK" then
