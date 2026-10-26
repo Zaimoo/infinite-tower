@@ -36,6 +36,10 @@ local EntitySequences: {[number]:number}={}
 local Generations: {[number]:number}={}
 local VisualFolder = Workspace:WaitForChild("ClientVisualEntities")
 local CombatFeedback=require(ReplicatedStorage.Assets.CombatFeedback).new(VisualFolder)
+local CombatVfx = ReplicatedStorage.Assets:WaitForChild("CombatVfx")
+local SkillVfx = require(CombatVfx:WaitForChild("SkillVfx"))
+-- Own folder: clearView empties VisualFolder, and pooled VFX must survive that.
+local CombatVfxPool = require(CombatVfx:WaitForChild("VfxPool")).new(Workspace)
 local ArtPackVisuals = require(ReplicatedStorage:WaitForChild("Assets"):WaitForChild("ArtPackVisuals"))
 local HeroRig = ReplicatedStorage.Assets:WaitForChild("HeroRig")
 local HeroRigSpec = require(HeroRig:WaitForChild("HeroRigSpec"))
@@ -73,6 +77,16 @@ local function setBowArrowHidden(rig: Model, hidden: boolean)
 			part.LocalTransparencyModifier = if hidden then 1 else 0
 		end
 	end
+end
+
+-- Where a shot leaves the hero: the equipped bow's Nock attachment, else the rig's chest.
+local function shotOrigin(rig: Model): Vector3
+	local weapon = rig:FindFirstChild(HeroSockets.EQUIPPED_NAME)
+	local nock = weapon and weapon:FindFirstChild("Nock", true)
+	if nock and nock:IsA("Attachment") then
+		return nock.WorldPosition
+	end
+	return rig:GetPivot().Position + Vector3.new(0, 1.5, 0)
 end
 
 -- Heroes without a HeroRegistry rig (template missing, placeholder body) carry no weapon.
@@ -132,6 +146,30 @@ _G.ClientCombatState = {
 }
 
 -- Legacy getGroundY removed in Phase 0; elevations derive from room context and Vector3 positions
+
+-- Starts a hero attack's VFX at its Release marker (CombatVfx/SkillVfx). Declared after
+-- VisualNodesByNetId so the target lookup sees that local. The projectile follows
+-- the target's rendered body while it exists and falls back to the server's aim point.
+local function playAttackVfx(rig: Model, animator: any, meta: any, cue: any)
+	local targetNetId = cue.TargetNetId
+	SkillVfx.Play(CombatVfxPool, {
+		HeroId = meta and meta.TemplateId,
+		WeaponType = animator.WeaponType,
+		Cue = cue,
+		Origin = shotOrigin(rig),
+		Target = function(): Vector3
+			local target = targetNetId and VisualNodesByNetId[targetNetId]
+			if target and target.RootPart.Parent then
+				return target.RootPart.Position
+			end
+			return cue.Aim
+		end,
+		Now = Workspace:GetServerTimeNow(),
+		Shake = if meta and meta.OwnerUserId == LocalPlayer.UserId then function(magnitude: number)
+			CombatFeedback:ScreenShake(magnitude)
+		end else nil,
+	})
+end
 
 local KO_ASSET_TEXTURE = "rbxassetid://10762151233"
 
@@ -340,7 +378,14 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 	local rig = isHero and heroRig(model) or nil
 	local animator = rig and HeroAnimator.new(rig, { HeroId = meta and meta.TemplateId }) or nil
 	if animator and rig then
-		animator.OnMarker = function(marker: string)
+		animator.OnMarker = function(marker: string, action: any)
+			if marker == "Release" and action.Data then
+				-- Cosmetic: a VFX fault must not break this frame's animation and rendering.
+				local ok, err = pcall(playAttackVfx, rig, animator, meta, action.Data)
+				if not ok then
+					warn(`CombatVfx: attack effect failed: {err}`)
+				end
+			end
 			if animator.WeaponType ~= "BOW" then
 				return
 			end
@@ -378,6 +423,7 @@ end
 
 local function clearView()
  CombatFeedback:Clear()
+ CombatVfxPool:Clear()
  EnemyAnimation.Clear()
  for _,node in pairs(DyingNodes) do node.Model:Destroy() end;table.clear(DyingNodes)
  Actions=ActionState.New();_G.ClientCombatState.EnemyActions=Actions;table.clear(PendingActions)
@@ -556,6 +602,7 @@ requestEntityMetadata()
 RunService.RenderStepped:Connect(function(dt: number)
 	CombatFeedback:Step(os.clock())
 	local serverNow=Workspace:GetServerTimeNow();EnemyAnimation.StepEffects(serverNow)
+	CombatVfxPool:Step(serverNow)
 	for key,node in pairs(DyingNodes) do
 		if serverNow>=node.DeathEnd then node.Model:Destroy();DyingNodes[key]=nil else EnemyAnimation.Step(node,dt,serverNow) end
 	end
