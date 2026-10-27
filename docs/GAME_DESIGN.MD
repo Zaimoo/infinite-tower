@@ -524,7 +524,11 @@ These are the default multipliers and secondary mechanics each hero kit inherits
     - **Miner:** a ground tremor for the Special. The ultimate raises a crystal spike cluster, plus a spike under each enemy hit.
     - **Scholar:** orb basics; the Special chains lightning to each enemy the server chained. The ultimate drops a column of fire or light that leaves 3 s of burning ground.
     - **Healer:** bolt basics; the Special sends motes of light to the healed ally. The ultimate draws a 25-stud sigil with a light column on each squad hero.
-  - **Budget:** pooled parts, at most 160 live effects per client, and nothing drawn when an effect is more than 180 studs from the camera.
+  - **Budget:** pooled parts, and nothing drawn when an effect is more than 180 studs from the camera.
+    - **Quality:** the lower of the Settings UI "Combat Effects Quality" (Graphics tab) and Roblox's own graphics level (1–3 Low, 4–6 Medium, Automatic or 7+ High). Live effects are capped at High 160, Medium 110 or Low 70 per client, and effect counts scale 100%, 60% or 35%.
+    - **Automatic drop:** quality steps down one level after 3 s of slow frames (under 35 FPS) and back up after 8 s of fast frames (over 50 FPS), never above the setting.
+    - **Other players' squads:** drawn at half detail with no decoration; their basic attacks are skipped below High.
+    - **Reduce Motion:** turns off combat camera shake.
 
 ### 4.5 Master Controls & Tactical Commands
 

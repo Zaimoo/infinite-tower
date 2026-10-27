@@ -11,14 +11,18 @@
 --   local pool = VfxPool.new(folder)
 --   local model = pool:Acquire("ARROW@1", buildArrow) -- pooled Model of anchored parts
 --   pool:Run({ Update = function(now) ... return done end, Cleanup = function() ... end })
---   pool:Step(Workspace:GetServerTimeNow())          -- every frame
+--   pool:Step(Workspace:GetServerTimeNow(), dt)      -- every frame
+--
+-- Budget (Phase 6): a VfxQuality state caps live effects and sets the detail SkillVfx draws at.
+-- The player's graphics setting is the ceiling; slow frames lower it automatically.
 
 local Workspace = game:GetService("Workspace")
+
+local VfxQuality = require(script.Parent:WaitForChild("VfxQuality"))
 
 local VfxPool = {}
 VfxPool.__index = VfxPool
 
-VfxPool.MAX_EFFECTS = 160 -- live effects (flights, bursts, rings); new ones are refused above it
 VfxPool.MAX_FREE_PER_KIND = 32 -- parked assemblies kept per kind
 VfxPool.CULL_DISTANCE = 180 -- effects with every point farther than this from the camera are skipped
 
@@ -27,17 +31,113 @@ export type Effect = {
 	Cleanup: (() -> ())?,
 }
 
+export type Stats = {
+	Live: number, -- effects running
+	Parked: number, -- assemblies waiting in the pool
+	Refused: number, -- effects refused over budget since the last Stats call
+	StepMs: number, -- smoothed Step cost, milliseconds
+	Quality: string, -- effective quality level
+	Setting: string, -- the player's quality setting
+}
+
 export type VfxPool = typeof(setmetatable({} :: {
 	Folder: Folder,
 	Free: { [string]: { Model } },
 	Effects: { Effect },
+	Quality: VfxQuality.State,
+	Refused: number,
+	StepMs: number,
+	MoveParts: { BasePart },
+	MoveFrames: { CFrame },
+	Offsets: { [Model]: { { Part: BasePart, Offset: CFrame } } },
 }, VfxPool))
 
 function VfxPool.new(parent: Instance): VfxPool
 	local folder = Instance.new("Folder")
 	folder.Name = "ClientCombatVfx"
 	folder.Parent = parent
-	return setmetatable({ Folder = folder, Free = {}, Effects = {} }, VfxPool)
+	return setmetatable({
+		Folder = folder,
+		Free = {},
+		Effects = {},
+		Quality = VfxQuality.New(),
+		Refused = 0,
+		StepMs = 0,
+		MoveParts = {},
+		MoveFrames = {},
+		Offsets = setmetatable({}, { __mode = "k" }) :: any,
+	}, VfxPool)
+end
+
+-- Queues a part's CFrame for this frame. Step writes every queued CFrame with one
+-- Workspace:BulkMoveTo, which is much cheaper than setting CFrame part by part.
+function VfxPool.Move(self: VfxPool, part: BasePart, frame: CFrame)
+	table.insert(self.MoveParts, part)
+	table.insert(self.MoveFrames, frame)
+end
+
+-- Queues a whole assembly so its PrimaryPart lands on `pivot` (a batched PivotTo). Part offsets
+-- are measured once per assembly; pooled assemblies are rigid, so they never change.
+function VfxPool.MoveModel(self: VfxPool, model: Model, pivot: CFrame)
+	local offsets = self.Offsets[model]
+	if not offsets then
+		local primary = model.PrimaryPart :: BasePart
+		offsets = {}
+		for _, d in model:GetDescendants() do
+			if d:IsA("BasePart") then
+				table.insert(offsets, { Part = d, Offset = primary.CFrame:ToObjectSpace(d.CFrame) })
+			end
+		end
+		self.Offsets[model] = offsets
+	end
+	for _, entry in offsets do
+		self:Move(entry.Part, pivot * entry.Offset)
+	end
+end
+
+local function flush(self: VfxPool)
+	if #self.MoveParts > 0 then
+		Workspace:BulkMoveTo(self.MoveParts, self.MoveFrames, Enum.BulkMoveMode.FireCFrameChanged)
+		table.clear(self.MoveParts)
+		table.clear(self.MoveFrames)
+	end
+end
+
+-- The player's graphics quality setting ("High" | "Medium" | "Low"); the ceiling for auto drops.
+function VfxPool.SetQuality(self: VfxPool, setting: any)
+	VfxQuality.SetSetting(self.Quality, VfxQuality.Parse(setting))
+end
+
+-- Detail multiplier for effect counts at the effective quality (1 = full).
+function VfxPool.Detail(self: VfxPool): number
+	return VfxQuality.Detail(self.Quality)
+end
+
+-- Live effects as a share of the budget (0..1+). Decoration is skipped when this runs high.
+function VfxPool.Pressure(self: VfxPool): number
+	return #self.Effects / VfxQuality.MaxEffects(self.Quality)
+end
+
+-- Whether optional decoration (spokes, rings, motes) should be drawn right now.
+function VfxPool.Decor(self: VfxPool): boolean
+	return self:Detail() >= VfxQuality.DECOR_DETAIL and self:Pressure() < VfxQuality.DECOR_PRESSURE
+end
+
+function VfxPool.Stats(self: VfxPool): Stats
+	local parked = 0
+	for _, free in self.Free do
+		parked += #free
+	end
+	local refused = self.Refused
+	self.Refused = 0
+	return {
+		Live = #self.Effects,
+		Parked = parked,
+		Refused = refused,
+		StepMs = self.StepMs,
+		Quality = VfxQuality.Effective(self.Quality),
+		Setting = self.Quality.Setting,
+	}
 end
 
 local function setTrails(model: Model, enabled: boolean)
@@ -99,9 +199,25 @@ function VfxPool.Release(self: VfxPool, model: Model)
 	end
 end
 
+-- Builds `count` assemblies of `kind` ahead of time so the first big skill does not hitch.
+function VfxPool.Prewarm(self: VfxPool, kind: string, build: () -> Model, count: number)
+	local free = self.Free[kind]
+	if not free then
+		free = {}
+		self.Free[kind] = free
+	end
+	while #free < math.min(count, VfxPool.MAX_FREE_PER_KIND) do
+		local model = build()
+		model:SetAttribute("VfxKind", kind)
+		setTrails(model, false)
+		table.insert(free, model)
+	end
+end
+
 -- Schedules an effect. Returns false (and runs its cleanup) when the budget is full.
 function VfxPool.Run(self: VfxPool, effect: Effect): boolean
-	if #self.Effects >= VfxPool.MAX_EFFECTS then
+	if #self.Effects >= VfxQuality.MaxEffects(self.Quality) then
+		self.Refused += 1
 		if effect.Cleanup then
 			effect.Cleanup()
 		end
@@ -126,25 +242,43 @@ function VfxPool.Visible(_self: VfxPool, ...: Vector3): boolean
 	return false
 end
 
-function VfxPool.Step(self: VfxPool, now: number)
+-- Runs every effect for this frame. `dt` (the frame's duration) drives the automatic quality drop.
+function VfxPool.Step(self: VfxPool, now: number, dt: number?)
+	if dt then
+		VfxQuality.Observe(self.Quality, dt)
+	end
 	local effects = self.Effects
 	if #effects == 0 then
+		self.StepMs *= 0.9
 		return
 	end
+	local started = os.clock()
 	debug.profilebegin("CombatVfx.Step")
 	self.Effects = {}
 	local keep: { Effect } = {}
+	local finishedEffects: { Effect } = {}
 	for _, effect in effects do
 		local ok, finished = pcall(effect.Update, now)
 		if not ok then
 			warn(`CombatVfx: effect failed: {finished}`)
 		end
 		if not ok or finished then
-			if effect.Cleanup then
-				pcall(effect.Cleanup)
-			end
+			table.insert(finishedEffects, effect)
 		else
 			table.insert(keep, effect)
+		end
+	end
+	-- Write this frame's positions in one batch, then release what finished (cleanup parks
+	-- assemblies, so it runs after their last move).
+	local moved, err = pcall(flush, self)
+	if not moved then
+		warn(`CombatVfx: batched move failed: {err}`)
+		table.clear(self.MoveParts)
+		table.clear(self.MoveFrames)
+	end
+	for _, effect in finishedEffects do
+		if effect.Cleanup then
+			pcall(effect.Cleanup)
 		end
 	end
 	-- Effects scheduled from inside an update start next frame.
@@ -153,12 +287,15 @@ function VfxPool.Step(self: VfxPool, now: number)
 	end
 	self.Effects = keep
 	debug.profileend()
+	self.StepMs += ((os.clock() - started) * 1000 - self.StepMs) * 0.1
 end
 
 -- Ends every effect (room change, view reset).
 function VfxPool.Clear(self: VfxPool)
 	local effects = self.Effects
 	self.Effects = {}
+	table.clear(self.MoveParts)
+	table.clear(self.MoveFrames)
 	for _, effect in effects do
 		if effect.Cleanup then
 			pcall(effect.Cleanup)

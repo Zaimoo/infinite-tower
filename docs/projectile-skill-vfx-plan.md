@@ -263,6 +263,41 @@ Each phase is its own branch and PR off `main` (`feat(combat): ...`).
 ### Phase 6: Polish and budget
 - Culling, caps, mobile check (`studio-part3-mobile-client.luau`), and the multiplayer check with 6 squads in a room (`studio-part3-multiplayer-*`). MicroProfiler label `CombatVfx.Step` under 1 ms at 30 heroes.
 
+#### Phase 6 results (2026-10-27)
+- `CombatVfx/VfxQuality.luau` (pure): three levels. Detail multiplies effect counts, and MaxEffects is the live-effect budget:
+
+  | Level | Detail | MaxEffects |
+  | --- | --- | --- |
+  | High | 1.0 | 160 |
+  | Medium | 0.6 | 110 |
+  | Low | 0.35 | 70 |
+
+  The player's Settings UI quality is the ceiling. If the smoothed frame time stays above 1/35 s for 3 s, the effective level drops one step. It climbs back after 8 s below 1/50 s, never above the setting. Hitches over 1 s are ignored.
+- `VfxPool`:
+  - Owns a quality state, fed by `Step(now, dt)`.
+  - Uses the effective budget.
+  - Exposes `Detail()`, `Pressure()` (live / budget) and `Decor()`, which is false below Detail 0.5 or above 60% pressure.
+  - `Stats()` returns live, parked, refused, Step ms (smoothed) and the quality level.
+  - `Prewarm(kind, build, count)` builds assemblies ahead of time.
+- `VfxPrimitives.Prewarm(pool)` builds the common assemblies ahead of time, so the first big skill does not hitch. `Sigil` takes an optional spoke count.
+- `SkillVfx`:
+  - Counts (rain arrows, slashes, spikes, motes, crystal hits) scale with detail.
+  - Decoration (sigil spokes, volley side arrows and rings, motes) is skipped when `Decor()` is false.
+  - Other players' heroes (`Owned = false`) draw at half detail with no decoration, and their basics are skipped below High.
+- `EntityRenderer`:
+  - Follows the `Settings_Quality` attribute and prewarms the pool.
+  - Steps the pool with the frame `dt`.
+  - Leaves out camera shake when `Settings_ReduceMotion` is on.
+  - Publishes stats every second as attributes on `Workspace.ClientCombatVfx` (`Live`, `Parked`, `RefusedPerSecond`, `StepMs`, `Quality`, `QualitySetting`).
+- `SettingsApp` now publishes `Settings_Quality` alongside the other `Settings_*` attributes.
+- `tests/studio-vfx-stress.client.luau`: plays fake cues for 30 heroes (all 12 kits) around the camera on a private pool and reports average and peak Step ms, peak live effects, refusals and FPS. Target: under 1 ms average Step at High.
+- `tests/combat-vfx.spec.luau` covers `VfxQuality`: parsing, cheaper levels, the timed drop and recovery, the setting ceiling, ignored hitches and count scaling.
+- Not done here (needs Studio): the stress numbers, the mobile check and the 6-squad multiplayer check. Those are the author's playtest.
+- First stress run (30 heroes, High): about 1.03 ms average, 3.1 ms peak, 59–61 peak live, 0 refused, 60 FPS. A second run meant to be at Low also reported High, which exposed two gaps that are now fixed:
+  - **Quality picker:** the Settings UI had no Quality picker (only the Performance and Cinematic presets changed it). It now has a "Combat Effects Quality" Low/Medium/High row on the Graphics tab.
+  - **Roblox graphics slider:** the VFX ignored Roblox's own graphics slider. `VfxQuality.FromRobloxLevel` maps `GameSettings.SavedQualityLevel` (1–3 Low, 4–6 Medium, Automatic or 7–10 High), and `EntityRenderer` and the stress script use the lower of that and the Settings choice.
+- Step cost: every per-frame position write in `VfxPrimitives` now goes through `VfxPool:Move` / `MoveModel`. These queue CFrames using cached part offsets, and `Step` writes them all with one `Workspace:BulkMoveTo`, then runs cleanups so assemblies are parked after their last move.
+
 ## Verification (every phase)
 
 - `pwsh tests/run.ps1`: everything compiles and all spec suites pass.

@@ -99,6 +99,7 @@ local function SettingsApp()
 		LocalPlayer:SetAttribute("Settings_DamageNumbers", settings.DamageNumbers)
 		LocalPlayer:SetAttribute("Settings_CompactMode", settings.CompactMode)
 		LocalPlayer:SetAttribute("Settings_ReduceMotion", settings.ReduceMotion)
+		LocalPlayer:SetAttribute("Settings_Quality", settings.Quality)
 		LocalPlayer:SetAttribute("Settings_Theme", settings.Theme)
 		LocalPlayer:SetAttribute("Settings_Font", settings.Font)
 
@@ -122,6 +123,7 @@ local function SettingsApp()
 		settings.DamageNumbers,
 		settings.CompactMode,
 		settings.ReduceMotion,
+		settings.Quality,
 		settings.Theme,
 		settings.Font,
 	})
@@ -441,10 +443,54 @@ local function SettingsApp()
 					}),
 				},
 			}),
+			-- Combat effects quality (CombatVfx reads Settings_Quality; Roblox's own graphics level
+			-- can lower it further).
+			EffectsQuality = e(Section, {
+				Title = "Combat Effects Quality",
+				Subtitle = "Projectiles, slashes and skill effects; Low keeps fights smooth on slower devices",
+				LayoutOrder = 2,
+				Children = {
+					QualityButtons = e("Frame", {
+						BackgroundTransparency = 1,
+						Size = UDim2.new(1, 0, 0, 42),
+						LayoutOrder = 1,
+					}, {
+						Layout = e("UIListLayout", {
+							FillDirection = Enum.FillDirection.Horizontal,
+							Padding = UDim.new(0, 12),
+							SortOrder = Enum.SortOrder.LayoutOrder,
+						}),
+						Low = e(ActionButton, {
+							Text = "Low",
+							Primary = settings.Quality == "Low",
+							AccentColor = accent,
+							Size = UDim2.new(0.31, 0, 1, 0),
+							LayoutOrder = 1,
+							OnClick = function() updateSetting("Quality", "Low") end,
+						}),
+						Medium = e(ActionButton, {
+							Text = "Medium",
+							Primary = settings.Quality == "Medium",
+							AccentColor = accent,
+							Size = UDim2.new(0.31, 0, 1, 0),
+							LayoutOrder = 2,
+							OnClick = function() updateSetting("Quality", "Medium") end,
+						}),
+						High = e(ActionButton, {
+							Text = "High",
+							Primary = settings.Quality == "High",
+							AccentColor = accent,
+							Size = UDim2.new(0.31, 0, 1, 0),
+							LayoutOrder = 3,
+							OnClick = function() updateSetting("Quality", "High") end,
+						}),
+					}),
+				},
+			}),
 			PostFx = e(Section, {
 				Title = "Post-Processing & Shaders",
 				Subtitle = "Toggle rendering shaders to optimize frame rates",
-				LayoutOrder = 2,
+				LayoutOrder = 3,
 				Children = {
 					ShadowToggle = e(Toggle, {
 						Label = "Global Dynamic Shadows",
