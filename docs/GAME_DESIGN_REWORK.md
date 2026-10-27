@@ -87,7 +87,7 @@ These rules match `GAME_DESIGN.MD` §4.1, §4.4 and §7.5.
 - **Duel Mechanics:**
   - Activating Retaliate initiates an isolated squad duel between the two Masters' heroes.
   - **Zero Consequence:** Duel knockouts do **not** trigger a squad wipe, do **not** teleport players away, and cause **no loss of progression**. Heroes instantly restore HP once the duel concludes.
-  - **The Sole Penalty:** The losing squad is **temporarily locked out of picking up the contested drop**, allowing the victor to claim their prize uninterrupted.
+  - **The Sole Penalty:** The losing side, **whether it is the drop's owner or the thief**, is **locked out of picking up the contested drop** for the rest of its lifetime. The victor becomes its owner and claims it uninterrupted.
 
 ---
 

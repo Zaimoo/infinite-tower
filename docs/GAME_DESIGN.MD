@@ -531,11 +531,11 @@ These are the default multipliers and secondary mechanics each hero kit inherits
 | Action | Keybind / Input | Description |
 | :--- | :--- | :--- |
 | **Shift Sprint** | `[LeftShift / RightShift]` | $3.0\times$ speed multiplier for rapid traversal across bridges, rings, and rooms. |
-| **Focus Target** | `[Click / Tap]` | Raycast onto any mob, boss, or thief to focus all 5 heroes' aggro. |
+| **Focus Target** | `[Click / Tap]` | Raycast onto any mob or boss to focus all 5 heroes' aggro. Clicking a Master who stole from you challenges them to a duel instead. |
 | **Overdrive Whistle** | `[Q]` / Bottom Bar | $20\text{s}$ CD. Grants $+40\%$ Attack Speed for $5\text{s}$ across all active heroes with zero Stamina drain, allowing squads to rapidly charge their Skill Gauges. |
 | **Emergency Recall** | `[E]` / Bottom Bar | $6\text{s}$ CD. Instantly warps squad to Master + $2\text{s}$ pacify (dodges lethal AoE). Yields priority to ProximityPrompts. |
 | **Drop Carried Item**| `[R]` / HUD Button | Drops carried cargo or relic on the ground; restores normal WalkSpeed. |
-| **Retaliate Attack** | `[⚔️ RETALIATE]` | Single-click HUD prompt when your drop is stolen to unleash squad PvP retaliation. |
+| **Retaliate (Duel)** | `[⚔️ RETALIATE]` / click the thief | HUD prompt (with a 3-minute countdown) when your drop is stolen. Starts a retaliation duel for that drop (§6.1). |
 
 ### 4.6 Tactical UI & HUD Architecture
 
@@ -619,13 +619,21 @@ Each of the 10 biomes features 4 local-authored procedural enemies (2 Regulars, 
 
 ## 6. CONTESTED LOOT & RETALIATION PVP
 
-### 6.1 Contested Loot & Targeted Retaliation PvP
-1. **Universal Physical Drops:** Monsters and crystal nodes drop 3D physical cargo in `Workspace.PhysicalLoot` tagged with `KillerUserId`.
+### 6.1 Contested Loot & Retaliation Duels
+Implemented by `LootDuel` (`Shared/Util`, rules and arena layout), `DuelArena` (`Combat`, arena geometry), the duel section of `CombatSimulation` and `DuelController.client.luau`. Spec: `docs/rework-plan/PHASE_3_TOWER_PVP_RETALIATION.md`.
+
+1. **Universal Physical Drops:** Monsters and crystal nodes drop 3D physical cargo in `Workspace.PhysicalLoot` tagged with `KillerUserId`. In the tower, regular and elite kills still pay their Gold and Gems directly; on top of that a killer-tagged **Bounty Bag** worth the kill's Gold drops (`LootDuel.BOUNTY_CHANCE`: 30% for regular mobs, 100% for elites) and must be carried to a sanctuary to bank.
 2. **Physical Overhead Hauling:** Picking up loot welds it overhead, slows movement by `-15%` to `-45%`, and triggers the upper-arm holding pose (`HoldingAnimationController.client.luau`).
-3. **Theft Detection & Retaliation:** Picking up another player's loot flags the player as a `[Loot Thief]` and registers a 3-minute retaliation grudge. The victim receives a real-time HUD alert with a `[⚔️ RETALIATE]` button.
-4. **Squad-vs-Squad Clash:** Clicking `[⚔️ RETALIATE]` commands your squad to attack the thief's squad at $25\%$ PvP damage scaling. The targeted squad auto-retaliates. Defeated heroes enter `COMA`.
-5. **Squad Wipe & Spilled Loot:** On squad defeat, all carried loot spills onto the ground, and field looting is locked until the Master returns to their Fortress Plot to heal in the Infirmary.
-6. **Perimeter Banking:** Reaching the perimeter highway ($R \ge 460$) or private plot pad safely banks loot into permanent Gold and Gems.
+3. **Theft Detection:** Picking up a drop tagged to someone else opens a **contest** for that drop and flags the picker as a `[Loot Thief]` (character attribute `IsLootThief` plus a nameplate everyone sees) for 3 minutes. The owner gets a `[⚔️ RETALIATE]` banner with a countdown (`TowerRemotes.LootContested`). The contest closes when the window runs out, the drop is banked or despawns, or the owner picks it back up. If the drop is stolen again, only the newest thief can be challenged.
+4. **Retaliation Duel:** The owner presses `[⚔️ RETALIATE]` (`TowerRemotes.InitiateRetaliation(dropId)`) or clicks the thief. Both Masters must be on the same floor with at least one hero standing. There is no open-field PvP: squads only fight each other inside a duel.
+   - **Arena:** A floating hex-grid island is built just under the room's ceiling bound, above the owner, so it stays inside room-local replication and clear of floor geometry. Each squad lines up in formation on its own half: melee (Vanguard, Miner, Striker) in a front row of three, ranged and support (Marksman, Scholar, Healer) in a back row of two. Each client gets a fixed high-angle camera from behind its own squad, with its heroes labelled green and the opponent orange (`DuelState` remote).
+   - **Flow:** 2.5 s line-up, then up to 40 s of automatic combat with each hero's own kit at 50% hero-vs-hero damage. Mobs ignore duelling squads. Masters are held in place, cannot bank or recall, and the drop cannot be picked up by anyone.
+   - **Victory:** Knock out every opposing hero. On timeout, the side with more total HP fraction left wins (a tie goes to the thief). A Master who leaves, travels or changes floor forfeits.
+5. **Zero-Consequence Resolution:** Duel knockouts never cause a squad wipe, teleport or progression loss. Afterwards every hero returns to its Master at its pre-duel HP and Skill Gauge.
+   - **Winner:** Becomes the drop's owner. The drop is set at the winner's feet and picked up for them if their hands are free. The thief's flag clears.
+   - **Loser lockout (owner or thief alike):** The loser is locked out of that drop for the rest of its lifetime, whichever role they had. A losing owner cannot reclaim it, and a losing thief cannot steal it again. The lockout travels with the drop when it is dropped or spilled.
+6. **Squad Wipe & Spilled Loot:** On a PvE squad defeat, all carried loot spills onto the ground, and field looting is locked until the Master returns to their Fortress Plot to heal in the Infirmary.
+7. **Perimeter Banking:** Reaching the perimeter highway ($R \ge 460$), a Floor Safe Sanctuary or the private plot pad safely banks loot into permanent Gold and Gems.
 
 ---
 
