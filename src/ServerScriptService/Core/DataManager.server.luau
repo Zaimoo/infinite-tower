@@ -15,6 +15,12 @@ local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormu
 local PitService = require(script.Parent:WaitForChild("PitService"))
 local OfflineRewardService = require(script.Parent:WaitForChild("OfflineRewardService"))
 local ArtifactCatalog = require(Shared:WaitForChild("Config"):WaitForChild("ArtifactCatalog"))
+local FortressTree = require(Shared:WaitForChild("Util"):WaitForChild("FortressTree"))
+local SummonLuck = require(Shared:WaitForChild("Util"):WaitForChild("SummonLuck"))
+local Onboarding = require(Shared:WaitForChild("Util"):WaitForChild("Onboarding"))
+local OnboardingService = require(script.Parent:WaitForChild("OnboardingService"))
+local FortressTreeService = require(script.Parent:WaitForChild("FortressTreeService"))
+local ProfileMigrations = require(script.Parent:WaitForChild("ProfileMigrations"))
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local TycoonRemotes = Remotes:WaitForChild("TycoonGachaRemotes")
@@ -84,6 +90,24 @@ if not RequestSummonArtifactFunc then
 	RequestSummonArtifactFunc.Parent = ArtifactRemotes
 end
 
+-- Phase 4 progression remotes: the Fortress Tree purchase and the onboarding goal tracker.
+local ProgressionRemotes = Remotes:FindFirstChild("ProgressionRemotes")
+if not ProgressionRemotes then
+	ProgressionRemotes = Instance.new("Folder")
+	ProgressionRemotes.Name = "ProgressionRemotes"
+	ProgressionRemotes.Parent = Remotes
+end
+local function progressionRemote(name: string, className: string): Instance
+	local existing = (ProgressionRemotes :: Instance):FindFirstChild(name)
+	if existing then return existing end
+	local remote = Instance.new(className)
+	remote.Name = name
+	remote.Parent = ProgressionRemotes
+	return remote
+end
+local UnlockTreeNodeFunc = progressionRemote("UnlockTreeNode", "RemoteFunction") :: RemoteFunction
+local OnboardingSyncEvent = progressionRemote("OnboardingSync", "RemoteEvent") :: RemoteEvent
+
 --============================================================================
 -- 1. EXPORTED TYPE DEFINITIONS
 --============================================================================
@@ -97,10 +121,10 @@ export type HeroAssignment =
 	| "SQUAD_SLOT_3"
 	| "SQUAD_SLOT_4"
 	| "SQUAD_SLOT_5"
-	| "FACILITY_INFIRMARY"
 	| "FACILITY_GUARD_POST"
 	| "FACILITY_MARKET"
 	| "FACILITY_TRAINING"
+	| "FACILITY_GODS_BLESSING"
 
 export type MimicChestMode = "TRUE_STATE" | "FOOLS_GOLD" | "VEIL_OF_POVERTY"
 
@@ -110,6 +134,7 @@ export type HeroInstance = {
 	DisplayName: string,
 	Archetype: HeroArchetype,
 	Stars: number,
+	Rarity: number?, -- Inherent rarity tier (Phase 4 §7); multiplies base stats, never changes
 	Level: number,
 	XP: number,
 	QualityScalar: number,
@@ -207,11 +232,14 @@ export type PlayerProfile = {
 	DeployedSquadOrder: { string },
 	Artifacts: { [string]: ArtifactInstance },
 	Facilities: {
-		Infirmary: FacilityData,
 		GuardPost: FacilityData,
 		Market: FacilityData,
 		TrainingGrounds: FacilityData,
+		GodsBlessing: FacilityData,
 	},
+	FortressTree: FortressTree.Tree,
+	Onboarding: Onboarding.State,
+	Unlocks: { [string]: boolean },
 	HighestClearedBiomeBoss: number?,
 	HighestClearedFloor: number?,
 	MaxFloorReached: number?,
@@ -229,34 +257,28 @@ _G.DataManager = DataManager
 print("[DataManager] _G.DataManager registered at line 145")
 local ActiveProfiles: { [Player]: PlayerProfile } = {}
 
-local function createDefaultFacility(): FacilityData
-	return {
-		Level = 1,
-		AssignedHeroUUIDs = {},
-		UncollectedOutput = 0,
-		BlessedUntil = 0,
-		LeechedUntil = 0,
-		LeechVisitorUserId = nil,
-		LastRuneTimestamp = 0,
-		LastRuneWasLeech = false,
-	}
+-- Support facilities start at level 0 (not built) until the Fortress Tree raises them.
+local function createDefaultFacility(level: number?): FacilityData
+	return ProfileMigrations.BlankFacility(level or 1)
 end
 
 function DataManager.EnsureFacilities(profile: any)
 	if not profile.Facilities then
 		profile.Facilities = {}
 	end
-	if not profile.Facilities.Infirmary then
-		profile.Facilities.Infirmary = createDefaultFacility()
-	end
+	-- The Infirmary was removed (Phase 4); its heroes return to the bench in SyncProfile.
+	profile.Facilities.Infirmary = nil
 	if not profile.Facilities.GuardPost then
 		profile.Facilities.GuardPost = createDefaultFacility()
 	end
 	if not profile.Facilities.Market then
-		profile.Facilities.Market = createDefaultFacility()
+		profile.Facilities.Market = createDefaultFacility(0)
 	end
 	if not profile.Facilities.TrainingGrounds then
-		profile.Facilities.TrainingGrounds = createDefaultFacility()
+		profile.Facilities.TrainingGrounds = createDefaultFacility(0)
+	end
+	if not profile.Facilities.GodsBlessing then
+		profile.Facilities.GodsBlessing = createDefaultFacility(0)
 	end
 	if profile.HighestClearedBiomeBoss == nil then
 		profile.HighestClearedBiomeBoss = 0
@@ -337,6 +359,7 @@ function DataManager.CreateHeroFromSeed(seedId: string, forceQuality: number?): 
 		DisplayName = seed.DisplayName,
 		Archetype = seed.Archetype :: HeroArchetype,
 		Stars = seed.BaseStar,
+		Rarity = HeroCatalog.RarityOf(seed.HeroId),
 		Level = 1,
 		XP = 0,
 		QualityScalar = q,
@@ -367,7 +390,7 @@ local function createDefaultPlayerProfile(): PlayerProfile
 	hanHero.Locked = true
 
 	local jennaUUID, jennaHero = DataManager.CreateHeroFromSeed("hero_jenna", 1.00)
-	jennaHero.Assignment = "SQUAD_SLOT_2"
+	jennaHero.Assignment = "BENCHED" -- squad slot 2 starts locked behind the Fortress Tree
 
 	local catioUUID, catioHero = DataManager.CreateHeroFromSeed("hero_catio", 1.02)
 	catioHero.Assignment = "BENCHED"
@@ -395,7 +418,7 @@ local function createDefaultPlayerProfile(): PlayerProfile
 	axeArt.EquippedHeroUUID = catioUUID
 
 	return {
-		SchemaVersion = 2,
+		SchemaVersion = ProfileMigrations.CurrentSchema,
 		PitMaterials = {
 			SoulEssence = 0,
 			PromotionStone = 0,
@@ -414,9 +437,9 @@ local function createDefaultPlayerProfile(): PlayerProfile
 		},
 
 		ArtifactBannerPity = 8, -- Initial: 42 to 5-star guarantee (50 - 8 = 42) matching mockup parity
-		HeroBannerPity = 8,
-		HeroPermanentPity = 8, -- Initial: 42 to 5-star guarantee (50 - 8 = 42) for Call of the Rift
-		HeroLimitedPity = 8, -- Initial: 42 to 7-star guarantee (50 - 8 = 42) for A Star's Arrival
+		HeroBannerPity = 0,
+		HeroPermanentPity = 0, -- Call of the Rift: Exalted Ignis guaranteed at HeroCatalog.PermanentBanner.MaxPity
+		HeroLimitedPity = 0, -- A Star's Arrival: Mythical Astrea guaranteed at HeroCatalog.LimitedBanner.MaxPity
 
 		Heroes = {
 			[hanUUID] = hanHero,
@@ -434,13 +457,16 @@ local function createDefaultPlayerProfile(): PlayerProfile
 			[f4_UUID] = f4_Art,
 			[f5_UUID] = f5_Art,
 		},
-		DeployedSquadOrder = { hanUUID, jennaUUID },
+		DeployedSquadOrder = { hanUUID },
 		Facilities = {
-			Infirmary = createDefaultFacility(),
-			GuardPost = createDefaultFacility(),
-			Market = createDefaultFacility(),
-			TrainingGrounds = createDefaultFacility(),
+			GuardPost = createDefaultFacility(1),
+			Market = createDefaultFacility(0),
+			TrainingGrounds = createDefaultFacility(0),
+			GodsBlessing = createDefaultFacility(0),
 		},
+		FortressTree = FortressTree.DefaultTree(),
+		Onboarding = Onboarding.NewState(),
+		Unlocks = { Summon = true },
 		HighestClearedBiomeBoss = 0,
 		HighestClearedFloor = 0,
 		MaxFloorReached = 1,
@@ -517,7 +543,8 @@ function DataManager.SyncProfile(player: Player, progressionOnly: boolean?)
 	end
 	DataManager.MigrateArtifactTypes(profile)
 
-	-- Auto-migrate legacy SQUAD assignments or DeployedSquadOrder to SQUAD_SLOT_1..5
+	-- Auto-migrate legacy SQUAD assignments or DeployedSquadOrder into the open squad slots
+	local openSlots = DataManager.MaxSquadSlots(profile)
 	local occupiedSlots: { [number]: string } = {}
 	for uuid, h in pairs(profile.Heroes) do
 		-- Migration: coma recovery once cleared this field to nil; the schema default is 0.
@@ -533,7 +560,7 @@ function DataManager.SyncProfile(player: Player, progressionOnly: boolean?)
 		for _, uuid in ipairs(profile.DeployedSquadOrder) do
 			local h = profile.Heroes[uuid]
 			if h and not string.find(h.Assignment or "", "^SQUAD_SLOT_") and not string.find(h.Assignment or "", "^FACILITY_") then
-				for s = 1, 5 do
+				for s = 1, openSlots do
 					if not occupiedSlots[s] then
 						h.Assignment = ("SQUAD_SLOT_" .. tostring(s)) :: HeroAssignment
 						occupiedSlots[s] = uuid
@@ -545,7 +572,7 @@ function DataManager.SyncProfile(player: Player, progressionOnly: boolean?)
 	end
 	for uuid, h in pairs(profile.Heroes) do
 		if h.Assignment == ("SQUAD" :: any) then
-			for s = 1, 5 do
+			for s = 1, openSlots do
 				if not occupiedSlots[s] then
 					h.Assignment = ("SQUAD_SLOT_" .. tostring(s)) :: HeroAssignment
 					occupiedSlots[s] = uuid
@@ -555,7 +582,16 @@ function DataManager.SyncProfile(player: Player, progressionOnly: boolean?)
 			if not string.find(h.Assignment or "", "^SQUAD_SLOT_") then
 				h.Assignment = "BENCHED"
 			end
-		elseif not h.Assignment or h.Assignment == ("" :: any) then
+		elseif not h.Assignment or h.Assignment == ("" :: any) or h.Assignment == ("FACILITY_INFIRMARY" :: any) then
+			-- Unknown, empty or removed (Infirmary) assignments return to the bench.
+			h.Assignment = "BENCHED"
+		end
+	end
+
+	-- Heroes standing in a squad slot that is no longer open go back to the bench.
+	for _, h in pairs(profile.Heroes) do
+		local slotNum = tonumber(string.match(h.Assignment or "", "^SQUAD_SLOT_(%d+)$"))
+		if slotNum and slotNum > openSlots then
 			h.Assignment = "BENCHED"
 		end
 	end
@@ -585,6 +621,7 @@ function DataManager.SyncProfile(player: Player, progressionOnly: boolean?)
 		_G.CombatSimulation.RefreshPlayerHeroStats(player)
 	end
 	ProfileDeltaSyncEvent:FireClient(player, profile)
+	OnboardingService.Push(player)
 end
 
 -- Pit operations and participation EXP send only affected heroes. Consumers merge
@@ -630,74 +667,49 @@ function DataManager.IsPlayerRogue(_player: Player): boolean
 	return false
 end
 
-function DataManager.MaxSquadSlots(_profile: PlayerProfile): number
-	return 5
+-- One slot to start; the Fortress Tree's Command branch opens the other four (Phase 4).
+function DataManager.MaxSquadSlots(profile: PlayerProfile): number
+	return FortressTree.SquadSlots(profile and profile.FortressTree)
 end
 
 --============================================================================
 -- 4. GACHA SUMMONING, THE PIT SYNTHESIS & STAR PROMOTION
 --============================================================================
 
-local function rollBannerHero(bannerId: string?): (string, HeroInstance, number)
-	local isLimited = (bannerId == "banner_a_stars_arrival" or bannerId == "A_STARS_ARRIVAL" or bannerId == "LIMITED")
-	local banner = isLimited and HeroCatalog.LimitedBanner or HeroCatalog.PermanentBanner
+local function isLimitedBanner(bannerId: string?): boolean
+	return bannerId == "banner_a_stars_arrival" or bannerId == "A_STARS_ARRIVAL" or bannerId == "LIMITED"
+end
 
-	local roll = math.random()
-	local star = 1
-
-	if isLimited then
-		-- A Star's Arrival (Limited 1★-7★)
-		-- Cumulative:
-		-- 7★: 0.003 (0.3%)
-		-- 6★: 0.015 (1.2%)
-		-- 5★: 0.050 (3.5%)
-		-- 4★: 0.115 (6.5%)
-		-- 3★: 0.250 (13.5%)
-		-- 2★: 0.500 (25.0%)
-		-- 1★: 1.000 (50.0%)
-		if roll <= 0.003 then
-			star = 7
-		elseif roll <= 0.015 then
-			star = 6
-		elseif roll <= 0.050 then
-			star = 5
-		elseif roll <= 0.115 then
-			star = 4
-		elseif roll <= 0.250 then
-			star = 3
-		elseif roll <= 0.500 then
-			star = 2
-		else
-			star = 1
-		end
-	else
-		-- Call of the Rift (Permanent 1★-5★)
-		-- Cumulative:
-		-- 5★: 0.010 (1.0%)
-		-- 4★: 0.050 (4.0%)
-		-- 3★: 0.150 (10.0%)
-		-- 2★: 0.400 (25.0%)
-		-- 1★: 1.000 (60.0%)
-		if roll <= 0.010 then
-			star = 5
-		elseif roll <= 0.050 then
-			star = 4
-		elseif roll <= 0.150 then
-			star = 3
-		elseif roll <= 0.400 then
-			star = 2
-		else
-			star = 1
+-- Summon luck from God's Blessing (Phase 4 §6.3), read when the pull is made.
+function DataManager.GetSummonLuck(player: Player): number
+	local profile = ActiveProfiles[player]
+	local blessing = profile and profile.Facilities and profile.Facilities.GodsBlessing
+	if not profile or not blessing or blessing.Level <= 0 then return 0 end
+	local sumLabor = 0
+	local now = os.time()
+	for _, uuid in ipairs(blessing.AssignedHeroUUIDs) do
+		local hero = profile.Heroes[uuid]
+		if hero and (hero.ComaUntilTimestamp or 0) <= now then
+			sumLabor += StatFormulas.GetEffectiveLabor(hero, "FACILITY_GODS_BLESSING")
 		end
 	end
+	local perks = FortressTree.PerkBonuses(profile.FortressTree)
+	return SummonLuck.Luck(blessing.Level, sumLabor, perks.BlessingLuck)
+end
 
-	local chosenId = banner.HeroesByStar[star]
+-- Rolls one rarity tier on a hero banner. Each tier holds one hero, summoned at its template star.
+-- `minTier` forces the 10-pull guarantee. Returns the new hero and the tier rolled.
+local function rollBannerHero(bannerId: string?, luck: number, minTier: number?): (string, HeroInstance, number)
+	local banner = if isLimitedBanner(bannerId) then HeroCatalog.LimitedBanner else HeroCatalog.PermanentBanner
+	local rates = SummonLuck.ApplyLuck(banner.Rates :: { number }, luck)
+	local tier = if minTier then SummonLuck.RollAtLeast(rates, minTier, math.random()) else SummonLuck.Roll(rates, math.random())
+	local chosenId = banner.HeroesByStar[tier]
 	if not chosenId then
-		local pool = HeroCatalog.PoolByStar[star] or HeroCatalog.PoolByStar[1]
+		local pool = HeroCatalog.PoolByStar[tier] or HeroCatalog.PoolByStar[1]
 		chosenId = pool[math.random(1, #pool)]
 	end
 	local uuid, hero = DataManager.CreateHeroFromSeed(chosenId)
-	return uuid, hero, star
+	return uuid, hero, tier
 end
 
 local function validateCallerPlotOwnership(player: Player, targetPlot: any?): boolean
@@ -742,47 +754,41 @@ RequestSummonFunc.OnServerInvoke = function(player: Player, arg1: any, arg2: any
 		return { Success = false, Message = "Insufficient Gems" }
 	end
 
-	local isLimited = (bannerId == "banner_a_stars_arrival" or bannerId == "A_STARS_ARRIVAL" or bannerId == "LIMITED")
+	local isLimited = isLimitedBanner(bannerId)
+	local banner = if isLimited then HeroCatalog.LimitedBanner else HeroCatalog.PermanentBanner
 	local bannerKey = isLimited and "HeroLimitedPity" or "HeroPermanentPity"
+	local topTier = banner.MaxStar
+	local featuredId = if isLimited then (banner.FeaturedHeroId or "hero_astrea") else (banner.HeroesByStar[topTier] or "hero_ignis")
 
-	if profile.HeroPermanentPity == nil then profile.HeroPermanentPity = profile.HeroBannerPity or 8 end
-	if profile.HeroLimitedPity == nil then profile.HeroLimitedPity = 8 end
+	if profile.HeroPermanentPity == nil then profile.HeroPermanentPity = profile.HeroBannerPity or 0 end
+	if profile.HeroLimitedPity == nil then profile.HeroLimitedPity = 0 end
 
 	profile.Currencies.Gems -= gemCost
 	local summonedList: { HeroInstance } = {}
+	local luck = DataManager.GetSummonLuck(player)
+	local bestTier = 0
 
-	for _ = 1, count do
-		local currentPity = profile[bannerKey] or 0
-		currentPity += 1
+	for pull = 1, count do
+		local currentPity = (profile[bannerKey] or 0) + 1
 		profile[bannerKey] = currentPity
 
 		local uuid: string
 		local hero: HeroInstance
-		local rolledStar: number
+		local tier: number
 
-		if isLimited then
-			-- Limited banner: Guaranteed 7★ Astrea at 50 pity
-			if currentPity >= 50 then
-				uuid, hero = DataManager.CreateHeroFromSeed(HeroCatalog.LimitedBanner.FeaturedHeroId or "hero_astrea")
-				profile[bannerKey] = 0
-			else
-				uuid, hero, rolledStar = rollBannerHero("A_STARS_ARRIVAL")
-				if rolledStar >= 7 then
-					profile[bannerKey] = 0
-				end
-			end
+		if currentPity >= banner.MaxPity then
+			-- Hard pity: the banner's top hero (Exalted Ignis / Mythical Astrea).
+			uuid, hero = DataManager.CreateHeroFromSeed(featuredId)
+			tier = topTier
 		else
-			-- Permanent banner: Guaranteed 5★ Ignis at 50 pity
-			if currentPity >= 50 then
-				uuid, hero = DataManager.CreateHeroFromSeed(HeroCatalog.PermanentBanner.HeroesByStar[5] or "hero_ignis")
-				profile[bannerKey] = 0
-			else
-				uuid, hero, rolledStar = rollBannerHero("CALL_OF_THE_RIFT")
-				if rolledStar >= 5 then
-					profile[bannerKey] = 0
-				end
-			end
+			-- The 10th pull of a 10x is forced to Rare or better if the first nine were not.
+			local guarantee = if count == 10 and pull == count and bestTier < banner.TenPullMinTier then banner.TenPullMinTier else nil
+			uuid, hero, tier = rollBannerHero(isLimited and "A_STARS_ARRIVAL" or "CALL_OF_THE_RIFT", luck, guarantee)
 		end
+		if tier >= topTier then
+			profile[bannerKey] = 0
+		end
+		bestTier = math.max(bestTier, tier)
 
 		profile.Heroes[uuid] = hero
 		table.insert(summonedList, hero)
@@ -791,12 +797,16 @@ RequestSummonFunc.OnServerInvoke = function(player: Player, arg1: any, arg2: any
 	-- Mirror permanent pity to legacy HeroBannerPity for backwards compatibility
 	profile.HeroBannerPity = profile.HeroPermanentPity
 
-	local pityRemaining = math.max(1, 50 - (profile[bannerKey] or 0))
+	local pityRemaining = math.max(1, banner.MaxPity - (profile[bannerKey] or 0))
 	DataManager.SyncProfile(player)
+	OnboardingService.Report(player, "HeroSummoned")
+	if luck > 0 and bestTier >= 3 and _G.PlotManager and _G.PlotManager.PulseBlessing then
+		_G.PlotManager.PulseBlessing(player)
+	end
 
 	local names = {}
 	for _, h in ipairs(summonedList) do
-		table.insert(names, string.format("%s (%d★)", h.DisplayName, h.Stars))
+		table.insert(names, string.format("%s (%s %d★)", h.DisplayName, HeroCatalog.RarityName(h.Rarity), h.Stars))
 	end
 	DataManager.SendToast(player, "Summoned: " .. table.concat(names, ", "), "SUCCESS")
 
@@ -805,8 +815,9 @@ RequestSummonFunc.OnServerInvoke = function(player: Player, arg1: any, arg2: any
 		Summoned = summonedList,
 		BannerId = isLimited and "A_STARS_ARRIVAL" or "CALL_OF_THE_RIFT",
 		PityRemaining = pityRemaining,
-		PermanentPityRemaining = math.max(1, 50 - profile.HeroPermanentPity),
-		LimitedPityRemaining = math.max(1, 50 - profile.HeroLimitedPity),
+		PermanentPityRemaining = math.max(1, HeroCatalog.PermanentBanner.MaxPity - profile.HeroPermanentPity),
+		LimitedPityRemaining = math.max(1, HeroCatalog.LimitedBanner.MaxPity - profile.HeroLimitedPity),
+		SummonLuck = luck,
 	}
 end
 
@@ -861,7 +872,16 @@ end
 	if not validateCallerPlotOwnership(player, targetPlot) then
 		return false, "Plot ownership validation failed"
 	end
-	return pit:Request(player, command, payload)
+	-- Viewing the roster stays open; changing it needs The Pit unlocked (Phase 4 onboarding).
+	if (command == "PREVIEW" or command == "COMMIT") and not OnboardingService.IsUnlocked(player, "Pit") then
+		local message = OnboardingService.LockedMessage("Pit")
+		return { Success = false, Message = message, Reason = message }
+	end
+	local response = pit:Request(player, command, payload)
+	if command == "COMMIT" and type(response) == "table" and response.Success then
+		OnboardingService.Report(player, "PitUsed")
+	end
+	return response
 end
 
 
@@ -1029,6 +1049,9 @@ function DataManager.UpgradeArtifact(player: Player, targetUUID: string, fodderU
  if ok then
   DataManager.SyncProfile(player,true)
   DataManager.SendToast(player,message,"SUCCESS")
+ else
+  -- The Forge UI does not show refusals itself, so say why (missing Gold, invalid donors...).
+  DataManager.SendToast(player,message or "The promotion could not be completed.","WARN")
  end
  return ok,message,star
 end
@@ -1040,6 +1063,9 @@ RequestCraftArtifactFunc.OnServerInvoke = function(player: Player, templateId: a
 	if type(templateId) ~= "string" then
 		return false, "Invalid parameters", nil
 	end
+	if not OnboardingService.Require(player, "Forge") then -- toasts the unlock hint
+		return false, OnboardingService.LockedMessage("Forge"), nil
+	end
 	return DataManager.CraftArtifact(player, templateId)
 end
 
@@ -1050,7 +1076,14 @@ RequestUpgradeArtifactFunc.OnServerInvoke = function(player: Player, targetUUID:
 	if type(targetUUID) ~= "string" or type(fodderUUIDs) ~= "table" then
 		return false, "Invalid parameters", nil
 	end
-	return DataManager.UpgradeArtifact(player, targetUUID, fodderUUIDs)
+	if not OnboardingService.Require(player, "Forge") then -- toasts the unlock hint
+		return false, OnboardingService.LockedMessage("Forge"), nil
+	end
+	local ok, message, star = DataManager.UpgradeArtifact(player, targetUUID, fodderUUIDs)
+	if ok then
+		OnboardingService.Report(player, "ArtifactUpgraded")
+	end
+	return ok, message, star
 end
 
 function DataManager.SummonArtifact(player: Player, pullCount: any): (boolean, string?, { any }?, number?)
@@ -1071,23 +1104,25 @@ function DataManager.SummonArtifact(player: Player, pullCount: any): (boolean, s
 
 	local cfg = ArtifactCatalog.Banner
 	local summonedList = {}
+	-- Pool tiers, lowest first: 1-2★ 50%, 3★ 35%, 4★ 12%, 5★ 3%. God's Blessing luck boosts tiers 2-4.
+	local tierRates = SummonLuck.ApplyLuck({ 0.50, 0.35, 0.12, 0.03 }, DataManager.GetSummonLuck(player))
 
 	for _ = 1, count do
 		profile.ArtifactBannerPity += 1
 		local isGuaranteed5Star = (profile.ArtifactBannerPity >= cfg.MaxPity)
-		local roll = math.random()
+		local tier = SummonLuck.Roll(tierRates, math.random())
 
 		local chosenSeed: string
 		local chosenStar: number
 
-		if isGuaranteed5Star or roll < 0.03 then
+		if isGuaranteed5Star or tier == 4 then
 			chosenSeed = cfg.Featured5Stars[math.random(1, #cfg.Featured5Stars)]
 			chosenStar = 5
 			profile.ArtifactBannerPity = 0
-		elseif roll < 0.15 then
+		elseif tier == 3 then
 			chosenSeed = cfg.Pool4Stars[math.random(1, #cfg.Pool4Stars)]
 			chosenStar = 4
-		elseif roll < 0.50 then
+		elseif tier == 2 then
 			chosenSeed = cfg.Pool3Stars[math.random(1, #cfg.Pool3Stars)]
 			chosenStar = 3
 		else
@@ -1122,6 +1157,20 @@ end
 -- 5. HERO ASSIGNMENT (SQUAD, FACILITIES, BENCH & AUTO-SWAP EXHAUSTED)
 --============================================================================
 
+-- Assignment tag -> profile.Facilities key for the Fortress Tree support facilities.
+local FACILITY_BY_TAG: { [string]: string } = {
+	FACILITY_GUARD_POST = "GuardPost",
+	FACILITY_MARKET = "Market",
+	FACILITY_TRAINING = "TrainingGrounds",
+	FACILITY_GODS_BLESSING = "GodsBlessing",
+}
+local FACILITY_NAMES: { [string]: string } = {
+	GuardPost = "The Outskirts Guard Post",
+	Market = "The Market",
+	TrainingGrounds = "The Training Grounds",
+	GodsBlessing = "God's Blessing",
+}
+
 local function removeUUIDFromFacilities(profile: PlayerProfile, uuid: string)
 	for _, fac in pairs(profile.Facilities) do
 		for i = #fac.AssignedHeroUUIDs, 1, -1 do
@@ -1143,13 +1192,16 @@ AssignHeroRoleFunc.OnServerInvoke = function(player: Player, heroUUID: any, targ
 
 	-- Special Smart Action from Document 4 Section 2.2: "AUTO_SWAP_EXHAUSTED"
 	if heroUUID == "AUTO_SWAP_EXHAUSTED" then
+		if not OnboardingService.Require(player, "Squad") then -- toasts the unlock hint
+			return false, OnboardingService.LockedMessage("Squad")
+		end
 		local maxSlots = DataManager.MaxSquadSlots(profile)
 		local swappedCount = 0
 
-		-- 1. Move any deployed hero in Coma into Infirmary
+		-- 1. Bench any deployed hero still in a Coma
 		for _, h in pairs(profile.Heroes) do
 			if string.find(h.Assignment, "^SQUAD_SLOT_") and h.ComaUntilTimestamp > os.time() then
-				h.Assignment = "FACILITY_INFIRMARY"
+				h.Assignment = "BENCHED"
 				swappedCount += 1
 			end
 		end
@@ -1197,8 +1249,33 @@ AssignHeroRoleFunc.OnServerInvoke = function(player: Player, heroUUID: any, targ
 		return false, "Hero not found"
 	end
 
-	if hero.ComaUntilTimestamp > os.time() and targetAssignment ~= "FACILITY_INFIRMARY" and targetAssignment ~= "BENCHED" then
-		return false, "Hero is in a Coma and must recover in The Infirmary!"
+	if hero.ComaUntilTimestamp > os.time() and targetAssignment ~= "BENCHED" then
+		return false, "Hero is in a Coma and must rest on the bench!"
+	end
+
+	-- Support facilities (Phase 4): locked until built in the Fortress Tree; worker slots include perks.
+	local supportFacility = FACILITY_BY_TAG[targetAssignment]
+	local isSquad = string.find(targetAssignment, "^SQUAD_SLOT_") ~= nil or targetAssignment == "SQUAD_AUTO"
+	if isSquad and not OnboardingService.Require(player, "Squad") then -- toasts the unlock hint
+		return false, OnboardingService.LockedMessage("Squad")
+	end
+	if supportFacility then
+		if not OnboardingService.Require(player, "Facilities") then -- toasts the unlock hint
+			return false, OnboardingService.LockedMessage("Facilities")
+		end
+		local facData = (profile.Facilities :: any)[supportFacility] :: FacilityData?
+		if not facData or facData.Level <= 0 then
+			return false, string.format("%s isn't built yet. Unlock it in the Fortress Tree.", FACILITY_NAMES[supportFacility])
+		end
+		local perks = FortressTree.PerkBonuses(profile.FortressTree)
+		local maxWorkers = StatFormulas.GetFacilityMaxWorkers(supportFacility, facData.Level, perks)
+		local others = 0
+		for _, uuid in ipairs(facData.AssignedHeroUUIDs) do
+			if uuid ~= heroUUID then others += 1 end
+		end
+		if others >= maxWorkers then
+			return false, string.format("%s is full! (Max %d at Lv.%d)", FACILITY_NAMES[supportFacility], maxWorkers, facData.Level)
+		end
 	end
 
 	removeUUIDFromFacilities(profile, heroUUID)
@@ -1239,47 +1316,17 @@ AssignHeroRoleFunc.OnServerInvoke = function(player: Player, heroUUID: any, targ
 		if not placed then
 			return false, string.format("All %d Squad Slots are full!", maxSlots)
 		end
-	elseif targetAssignment == "FACILITY_INFIRMARY" then
-		local facData = profile.Facilities.Infirmary
-		local cfg = FacilityConfig.UpgradeTable.Infirmary[facData.Level]
-		local maxWorkers = cfg and cfg.MaxWorkers or 5
-		if #facData.AssignedHeroUUIDs >= maxWorkers then
-			return false, string.format("The Infirmary is full! (Max %d heroes)", maxWorkers)
-		end
+	elseif supportFacility then
 		hero.Assignment = targetAssignment :: HeroAssignment
-		table.insert(facData.AssignedHeroUUIDs, heroUUID)
-
-	elseif targetAssignment == "FACILITY_GUARD_POST" then
-		local facData = profile.Facilities.GuardPost
-		local cfg = FacilityConfig.UpgradeTable.GuardPost[facData.Level]
-		local maxWorkers = cfg and cfg.MaxWorkers or 1
-		if #facData.AssignedHeroUUIDs >= maxWorkers then
-			return false, string.format("Outskirts Guard Post is full! (Max %d Adventurers at Lv.%d)", maxWorkers, facData.Level)
-		end
-		hero.Assignment = targetAssignment :: HeroAssignment
-		table.insert(facData.AssignedHeroUUIDs, heroUUID)
-
-	elseif targetAssignment == "FACILITY_MARKET" then
-		local facData = profile.Facilities.Market
-		local cfg = FacilityConfig.UpgradeTable.Market[facData.Level]
-		local maxWorkers = cfg and cfg.MaxWorkers or 1
-		if #facData.AssignedHeroUUIDs >= maxWorkers then
-			return false, string.format("The Market is full! (Max %d Merchants at Lv.%d)", maxWorkers, facData.Level)
-		end
-		hero.Assignment = targetAssignment :: HeroAssignment
-		table.insert(facData.AssignedHeroUUIDs, heroUUID)
-
-	elseif targetAssignment == "FACILITY_TRAINING" then
-		local facData = profile.Facilities.TrainingGrounds
-		local cfg = FacilityConfig.UpgradeTable.TrainingGrounds[facData.Level]
-		local maxWorkers = cfg and cfg.MaxWorkers or 1
-		if #facData.AssignedHeroUUIDs >= maxWorkers then
-			return false, string.format("The Training Grounds are full! (Max %d Trainers at Lv.%d)", maxWorkers, facData.Level)
-		end
-		hero.Assignment = targetAssignment :: HeroAssignment
-		table.insert(facData.AssignedHeroUUIDs, heroUUID)
+		table.insert(((profile.Facilities :: any)[supportFacility] :: FacilityData).AssignedHeroUUIDs, heroUUID)
 	else
 		return false, "Unknown assignment target"
+	end
+
+	if isSquad then
+		OnboardingService.Report(player, "SquadDeployed")
+	elseif supportFacility then
+		OnboardingService.Report(player, "FacilityAssigned")
 	end
 
 	DataManager.SyncProfile(player)
@@ -1299,26 +1346,9 @@ FacilityInteractEvent.OnServerEvent:Connect(function(player: Player, action: any
 		return
 	end
 
-	if action == "UPGRADE_FACILITY" and type(param) == "string" then
-		local facData = (profile.Facilities :: any)[param] :: FacilityData?
-		local upgTable = (FacilityConfig.UpgradeTable :: any)[param]
-		if not facData or not upgTable then
-			return
-		end
-		local nextLevel = facData.Level + 1
-		local nextCfg = upgTable[nextLevel]
-		if not nextCfg then
-			DataManager.SendToast(player, param .. " is already at Max Level (Lv.5)!", "INFO")
-			return
-		end
-		if profile.Currencies.Gold < nextCfg.Gold then
-			DataManager.SendToast(player, string.format("Need %d Gold to upgrade %s to Lv.%d!", nextCfg.Gold, param, nextLevel), "WARN")
-			return
-		end
-		profile.Currencies.Gold -= nextCfg.Gold
-		facData.Level = nextLevel
-		DataManager.SendToast(player, string.format("Upgraded %s to Level %d!", param, nextLevel), "SUCCESS")
-		DataManager.SyncProfile(player)
+	if action == "UPGRADE_FACILITY" then
+		-- Retired in Phase 4: facilities are unlocked and levelled only through the Fortress Tree.
+		DataManager.SendToast(player, "Upgrade facilities in the Fortress Tree at the Architect's Table.", "INFO")
 
 	elseif action == "DEV_GRANT_RESOURCES" then
 		-- Prototype helper so testers can also test mid/late-game features immediately if desired
@@ -1327,7 +1357,8 @@ FacilityInteractEvent.OnServerEvent:Connect(function(player: Player, action: any
 		profile.Currencies.Gems += 5000
 		profile.PitMaterials.PromotionStone = (profile.PitMaterials.PromotionStone or 0) + 20
 		profile.PitMaterials.SoulEssence = (profile.PitMaterials.SoulEssence or 0) + 100
-		DataManager.SendToast(player, "[Prototype Boost] +25k Gold, +1.8k Gems, +20 Promotion Stones!", "SUCCESS")
+		OnboardingService.UnlockAll(player)
+		DataManager.SendToast(player, "[Prototype Boost] +25k Gold, +5k Gems, +20 Promotion Stones, all systems unlocked!", "SUCCESS")
 		DataManager.SyncProfile(player)
 	end
 end)
@@ -1344,7 +1375,7 @@ function DataManager.GetMarketMultiplier(player: Player): number
 			sumLabor += StatFormulas.GetEffectiveLabor(hero, "FACILITY_MARKET")
 		end
 	end
-	return StatFormulas.GetMarketLootMultiplier(market.Level, sumLabor)
+	return StatFormulas.GetMarketLootMultiplier(market.Level, sumLabor, FortressTree.PerkBonuses(profile.FortressTree))
 end
 
 function DataManager.GetTrainingMultiplier(player: Player): number
@@ -1359,7 +1390,7 @@ function DataManager.GetTrainingMultiplier(player: Player): number
 			sumLabor += StatFormulas.GetEffectiveLabor(hero, "FACILITY_TRAINING")
 		end
 	end
-	return StatFormulas.GetTrainingCombatMultiplier(training.Level, sumLabor)
+	return StatFormulas.GetTrainingCombatMultiplier(training.Level, sumLabor, FortressTree.PerkBonuses(profile.FortressTree))
 end
 
 function DataManager.RecordBiomeBossClear(player: Player, bossTier: number)
@@ -1388,8 +1419,37 @@ function DataManager.GetPassiveGoldRate(player: Player): number
 		end
 	end
 	local bossTier = profile.HighestClearedBiomeBoss or 0
-	return StatFormulas.GetPassiveGoldRate(guardPost.Level, sumLabor, bossTier)
+	return StatFormulas.GetPassiveGoldRate(guardPost.Level, sumLabor, bossTier, FortressTree.PerkBonuses(profile.FortressTree))
 end
+
+-- Onboarding events reported by systems outside DataManager (tower floor clears).
+function DataManager.ReportProgress(player: Player, eventName: string)
+	OnboardingService.Report(player, eventName)
+end
+
+function DataManager.IsUnlocked(player: Player, key: string): boolean
+	return OnboardingService.IsUnlocked(player, key)
+end
+
+function DataManager.LockedMessage(key: string): string
+	return OnboardingService.LockedMessage(key)
+end
+
+OnboardingService.Init({
+	GetProfile = function(player: Player) return ActiveProfiles[player] end,
+	SendToast = DataManager.SendToast,
+	SyncProfile = function(player: Player) DataManager.SyncProfile(player) end,
+	SyncRemote = OnboardingSyncEvent,
+})
+
+FortressTreeService.Init({
+	GetProfile = function(player: Player) return ActiveProfiles[player] end,
+	SendToast = DataManager.SendToast,
+	SyncProfile = function(player: Player) DataManager.SyncProfile(player) end,
+	IsUnlocked = OnboardingService.IsUnlocked,
+	Report = OnboardingService.Report,
+	UnlockRemote = UnlockTreeNodeFunc,
+})
 
 --============================================================================
 -- 7. PLAYER LIFECYCLE INITIALIZATION
@@ -1399,6 +1459,9 @@ local function onPlayerAdded(player: Player)
 	local profile = createDefaultPlayerProfile()
 	PitService.EnsureDefaults(profile)
 	DataManager.EnsureFacilities(profile)
+	ProfileMigrations.Run(profile)
+	OnboardingService.EnsureState(profile)
+	FortressTreeService.ApplyLevels(profile)
 	ActiveProfiles[player] = profile
 
 	OfflineRewardService.ProcessLoginRewards(player, profile, DataManager)
@@ -1427,6 +1490,7 @@ Players.PlayerRemoving:Connect(function(player: Player)
 		OfflineRewardService.RecordLogout(player, profile)
 	end
 	pit:Forget(player)
+	FortressTreeService.Forget(player)
 	pendingCombatSync[player] = nil
 	ActiveProfiles[player] = nil
 end)

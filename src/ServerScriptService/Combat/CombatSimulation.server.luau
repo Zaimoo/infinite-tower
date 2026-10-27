@@ -1782,6 +1782,7 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
         profile.HighestClearedFloor = math.max(profile.HighestClearedFloor or 0, mob.FloorId)
         profile.MaxFloorReached = math.max(profile.MaxFloorReached or 0, mob.FloorId + 1)
         dm.SyncProfile(p)
+        if dm.ReportProgress then dm.ReportProgress(p, "FloorCleared") end
        end
 
        if mob.FloorId % 5 == 0 then

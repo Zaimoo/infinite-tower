@@ -35,7 +35,7 @@ PlotEspionageEvent.OnServerEvent:Connect(function(player: Player, opCode: any, p
 		return
 	end
 
-	local facName = "Infirmary"
+	local facName = "GuardPost" -- the one support facility every plot has (the Infirmary was removed)
 
 	if opCode == 2 or opCode == 3 then
 		-- 2 = COMPLETE_BLESS (+25% output, +25 Gems)

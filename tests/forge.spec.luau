@@ -185,9 +185,10 @@ test("All hero/weapon tiers are finite, monotonic and independent of legacy leve
     assert(v.AttackDamage>last);last=v.AttackDamage
     assert(v.AttackSpeed<=5);assertEqual(v.MovementSpeed,20)
     local expectedPower=Balance.RarityPower[r]*Balance.WeaponStarMultipliers[star]
-    assertEqual(v.AttackDamage,math.round(seed.BaseATK_1Star*81*1.08^49*(1+expectedPower/40)))
+    local rarity=Balance.HeroRarityCombatMultiplier^(seed.Rarity-1) -- inherent hero rarity (Phase 4 §7)
+    assertEqual(v.AttackDamage,math.round(seed.BaseATK_1Star*rarity*81*1.08^49*(1+expectedPower/40)))
     assert(math.abs(v.AttackSpeed-(1+Balance.RaritySpeed[r])/seed.AttackInterval)<1e-9)
-    assertEqual(v.Health,math.round(seed.BaseHP_1Star*81*1.08^49))
+    assertEqual(v.Health,math.round(seed.BaseHP_1Star*rarity*81*1.08^49))
    end
   end
  end
@@ -199,7 +200,8 @@ test("Low-quality mixed squad exceeds one billion DPS at 75 percent uptime",func
   local v=Stats.GetCombatSnapshot(h,{Star=7,Rarity=7})
   total+=v.DPS
  end
- assert(math.abs(total*.75-1721417146)<2)
+ -- Includes the inherent hero rarity multiplier (Aaron/Velkist 1.35x, Eolka 1.8225x; Phase 4 §7).
+ assert(math.abs(total*.75-2312856397)<2)
  assert(total*.75>1e9)
  assertEqual(Balance.GetFloorStats(50,"BOSS").MaxHP,61580351563)
 end)

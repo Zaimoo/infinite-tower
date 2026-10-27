@@ -8,11 +8,17 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local HeroCard = require(script.Parent:WaitForChild("HeroCard"))
 local GothicBoxStyle = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GothicBoxStyle"))
+local FortressTree = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("FortressTree"))
 
 local SquadController = {}
 SquadController.__index = SquadController
 
-local SQUAD_SLOTS = 5
+local SQUAD_SLOTS = 5 -- slot columns drawn; how many are open comes from the Fortress Tree
+
+-- Open slots for the current profile (1 to start, up to 5 through the Command branch).
+local function openSlots(profile: any): number
+	return FortressTree.SquadSlots(profile and profile.FortressTree)
+end
 local WIDTH, HEIGHT = 840, 640
 
 local C = {
@@ -194,7 +200,7 @@ function SquadController.new(screenGui: ScreenGui, getProfile: () -> any, remote
 	self.ActiveSquadHeader = new("TextLabel", {
 		Name = "ActiveSquadHeader",
 		Position = UDim2.new(0, 28, 0, 92),
-		Size = UDim2.new(0, 260, 0, 18),
+		Size = UDim2.new(1, -56, 0, 18), -- wide enough for the onboarding lock hint
 		BackgroundTransparency = 1,
 		Text = "ACTIVE SQUAD (0/5)",
 		Font = Enum.Font.GothamBold,
@@ -318,12 +324,17 @@ function SquadController.new(screenGui: ScreenGui, getProfile: () -> any, remote
 		new("UICorner", { CornerRadius = UDim.new(0, 4) }, actionBtn)
 		stroke(actionBtn, C.ButtonBorder, 1)
 
-		card.MouseButton1Click:Connect(function()
+		-- A locked slot sends the player to the Fortress Tree instead of selecting it.
+		local function pressSlot()
+			if i > openSlots(self.GetProfile()) then
+				self:Close()
+				if _G.OpenFacilityHUD then _G.OpenFacilityHUD("FortressTree") end
+				return
+			end
 			self:SelectSlot(i)
-		end)
-		actionBtn.MouseButton1Click:Connect(function()
-			self:SelectSlot(i)
-		end)
+		end
+		card.MouseButton1Click:Connect(pressSlot)
+		actionBtn.MouseButton1Click:Connect(pressSlot)
 
 		self.SlotCards[i] = {
 			Column = col,
@@ -539,24 +550,43 @@ function SquadController.Refresh(self: any)
 		end
 	end
 
-	self.ActiveSquadHeader.Text = string.format("ACTIVE SQUAD (%d/%d)", activeCount, SQUAD_SLOTS)
+	local open = openSlots(profile)
+	if self.SelectedSlot > open then self.SelectedSlot = 1 end
+	self.ActiveSquadHeader.Text = string.format("ACTIVE SQUAD (%d/%d)", activeCount, open)
+	if not (profile.Unlocks and profile.Unlocks.Squad) then
+		-- Phase 4 onboarding: squad changes open with the first summon.
+		self.ActiveSquadHeader.Text ..= "  ·  🔒 Summon your first hero to change your squad"
+	end
 
 	-- Render 5 Active Slots (Only rebuild portrait if hero UUID changed!)
 	for i = 1, SQUAD_SLOTS do
 		local slotData = self.SlotCards[i]
-		local hero = squadBySlot[i]
+		local locked = i > open
+		local hero = if locked then nil else squadBySlot[i]
 		local heroUUID = hero and hero.UUID or nil
 		slotData.HeroUUID = heroUUID
+		local renderKey = if locked then "__LOCKED__" else heroUUID
 
-		if slotData.RenderedHeroUUID ~= heroUUID then
-			slotData.RenderedHeroUUID = heroUUID
+		if slotData.RenderedHeroUUID ~= renderKey then
+			slotData.RenderedHeroUUID = renderKey
 			for _, c in ipairs(slotData.Portrait:GetChildren()) do
 				if c:IsA("GuiObject") then
 					c:Destroy()
 				end
 			end
 
-			if hero then
+			if locked then
+				new("TextLabel", {
+					Name = "LockedSlot",
+					Size = UDim2.fromScale(1, 1),
+					BackgroundTransparency = 1,
+					Text = "🔒",
+					Font = Enum.Font.GothamMedium,
+					TextSize = 30,
+					TextColor3 = C.TextDim,
+					ZIndex = 36,
+				}, slotData.Portrait)
+			elseif hero then
 				HeroCard.Portrait(slotData.Portrait, hero)
 			else
 				new("TextLabel", {
@@ -572,7 +602,11 @@ function SquadController.Refresh(self: any)
 			end
 		end
 
-		if hero then
+		if locked then
+			slotData.Name.Text = "[LOCKED]"
+			slotData.Info.Text = "Fortress Tree"
+			slotData.Button.Text = "UNLOCK"
+		elseif hero then
 			slotData.Name.Text = hero.DisplayName
 			slotData.Info.Text = string.format("%s Lv.%d", string.rep("★", hero.Stars or 1), hero.Level or 1)
 			slotData.Button.Text = "CHANGE"
@@ -709,7 +743,7 @@ function SquadController.Refresh(self: any)
 					self.AssignRemote:InvokeServer(hero.UUID, targetTag)
 				end
 
-				self.SelectedSlot = (targetSlot % SQUAD_SLOTS) + 1
+				self.SelectedSlot = (targetSlot % openSlots(self.GetProfile())) + 1
 				self:Refresh()
 			end)
 

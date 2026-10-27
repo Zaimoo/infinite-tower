@@ -72,6 +72,8 @@ Migrate legacy imperative menu files into declarative React components:
    - Flexible responsive layout, weapon ascension preview, stat delta comparison.
 4. **Plot Facilities (`FacilityModal.luau`):**
    - Fortress building overview, benched hero labor assignment, hourly rate tracker.
+   - **Fortress Tree view (`FortressTreeModal.luau`):** Four-branch node graph with owned, buyable and locked states, Gold costs, floor gates and perk descriptions (Phase 4 §5).
+   - God's Blessing panel with the current luck and its breakdown. The Summoning Altar shows a `Blessing +X%` badge and the boosted odds.
 5. **The Pit (`PitModal.luau`):**
    - Unified Synthesis (duplicate fodder leveling) and Promotion (star ascension).
 

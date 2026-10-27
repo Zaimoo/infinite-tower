@@ -105,9 +105,19 @@ Progression is unified into a linear, always-visible Objective Tracker pinned on
 | **5** | Put a hero to work at a facility | `FacilityAssigned` | The Pit (Synthesis) | 100 Gems |
 | **6** | Level up a hero in the Pit | `PitUsed` | Tower Floor 5 Boss | Rare Gear Box |
 
+Step 4 also unlocks the Fortress Tree, and a 7th step, **Grow your fortress** (`TreeNodeUnlocked`, 1,000 Gold), teaches it.
+
 ### 4.2 Economy & Idle Loop
 - **Facility-Driven Idle Earnings:** Idle rewards are generated strictly through **Fortress Plot Facility Labor** (`WaitingRoomService` + `OfflineRewardService`).
 - **No Secondary Idle Chest:** Progression is clear—assigning benched heroes to facilities produces gold and materials while active or offline.
+
+### 4.3 Fortress Tree, God's Blessing & Hero Rarity
+These rules match `GAME_DESIGN.MD` §4.1 and §4.3, and are specified in `rework-plan/PHASE_4_ONBOARDING_AND_PROGRESSION.md` §5–§7.
+- **Fortress Development Tree:** Support facilities are unlocked and upgraded only through a skill tree with four branches: Outskirts (Guard Post), Commerce (Market), Martial (Training Grounds) and Divine (God's Blessing). Each branch has 5 level nodes and 2 perks. Nodes cost Gold, some are gated by the highest cleared floor, and they are permanent. A facility is not in the world until it is unlocked: its site is empty ground, and buying its first node builds it with a construction reveal. Only the Guard Post stands from the start.
+- **Squad Slots:** A Master starts with one squad slot. A fifth tree branch, Command, opens slots 2–5 for Gold (slots 4 and 5 also need Floors 5 and 10). It opens after the first summon, before the rest of the tree.
+- **God's Blessing:** The Plaza Fountain gains an angel statue and becomes a facility. Stationed Acolytes (`Healer` preferred) raise summon luck on every banner, up to +50%. Luck multiplies every tier above the lowest and never touches pity.
+- **Inherent Hero Rarity:** Each hero has a fixed rarity (Common to Mythical at launch, using the weapon tier names) that multiplies its base combat and labor stats. Summoning and stars are unchanged: each hero still arrives at its template's star (Common 1★ up to Mythical 7★) and promotes as before.
+- **Lower Hero Odds:** The permanent banner's top rate drops from 1% to 0.5% (pity 50 → 80), and the limited banner's from 0.3% to 0.07% (pity 50 → 90). Every 10-pull now guarantees a Rare or higher hero.
 
 ---
 

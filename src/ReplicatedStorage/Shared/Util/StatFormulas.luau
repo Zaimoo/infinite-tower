@@ -50,6 +50,15 @@ function StatFormulas.GetPromotionGoldCost(currentStars: number): number
 	return cost and cost.Gold or 9999999
 end
 
+-- Inherent rarity tier (Phase 4 §7). Saves without the field fall back to the template's rarity.
+function StatFormulas.GetHeroRarity(hero: any): number
+	local rarity = hero and hero.Rarity
+	if B.Integer(rarity, 1, 16) then
+		return rarity
+	end
+	return HeroCatalog.RarityOf(hero and hero.TemplateId)
+end
+
 -- Canonical four-stat snapshot. Legacy base fields are never multiplied again.
 -- trainingMultiplier: from The Training Grounds (GDD Section 4.3.2.C)
 function StatFormulas.GetCombatSnapshot(hero: any, artifact: any?, inOverdrive: boolean?, _inBloodPact: boolean?, trainingMultiplier: number?): any
@@ -57,7 +66,7 @@ function StatFormulas.GetCombatSnapshot(hero: any, artifact: any?, inOverdrive: 
  local stars=B.Integer(hero.Stars,1,math.max(PitBalanceConfig.MaxStars, seed and seed.BaseStar or 7)) and hero.Stars or 1
  local level=B.Integer(hero.Level,1,stars*10) and hero.Level or 1
  local quality=B.Finite(hero.QualityScalar) and math.clamp(hero.QualityScalar,.9,1.15) or 1
- local growth=B.HeroPromotionMultiplier^(stars-1)*B.LevelMultiplier^(level-1)
+ local growth=B.HeroPromotionMultiplier^(stars-1)*B.LevelMultiplier^(level-1)*B.HeroRarityCombatMultiplier^(StatFormulas.GetHeroRarity(hero)-1)
  local power,speed=0,0
  if artifact then power,speed=ArtifactCatalog.CalculateEffectiveStats(artifact.Star,artifact.Rarity,nil,artifact.TemplateId) end
  local mult = trainingMultiplier or 1.0
@@ -82,58 +91,61 @@ function StatFormulas.GetEffectiveLabor(hero: any, targetFacilityAssignment: str
  local q=B.Finite(hero.QualityScalar) and math.clamp(hero.QualityScalar,.9,1.15) or 1
  local pref=seed and seed.PreferredFacility or ""
  local target=targetFacilityAssignment or hero.Assignment or ""
- local synergy=pref=="ALL" or (pref~="" and pref==target)
- local labor=(seed and seed.BaseLabor_1Star or 14)*q*1.35^(stars-1)*(1+.05*(level-1))*(synergy and 1.25 or 1)
+ local synergy=pref=="ALL" or (pref~="" and pref==target) or (target=="FACILITY_GODS_BLESSING" and (hero.Archetype or seed and seed.Archetype)=="Healer")
+ local rarity=B.HeroRarityLaborMultiplier^(StatFormulas.GetHeroRarity(hero)-1)
+ local labor=(seed and seed.BaseLabor_1Star or 14)*q*rarity*1.35^(stars-1)*(1+.05*(level-1))*(synergy and 1.25 or 1)
  return math.round(labor*100)/100
 end
 
--- Waiting Room Facility Output Formulas (GDD Sections 2.4 & 4.3)
--- The Infirmary: 3.0 stamina/sec base, 4.5 stamina/sec if Healer present. Coma: 60s base, 40s if Healer present.
-function StatFormulas.GetInfirmaryRates(facilityLevel: number?, sumEffectiveLabor: number?, hasHealer: boolean?): (number, number)
-	if hasHealer == true then
-		return FacilityConfig.Constants.InfirmaryHealerStaminaRegen, FacilityConfig.Constants.InfirmaryHealerComaSec
-	end
-	return FacilityConfig.Constants.InfirmaryBaseStaminaRegen, FacilityConfig.Constants.InfirmaryBaseComaSec
-end
-
 -- Passive Gold Rate: (BaseRate + 0.85 * sum(EffectiveLabor)) * (1 + 0.15 * BiomeBossTier)
-function StatFormulas.GetPassiveGoldRate(guardPostLevel: number, sumEffectiveLabor: number, biomeBossTier: number?): number
+-- `perks` is FortressTree.PerkBonuses(profile.FortressTree); omitted means no perks.
+function StatFormulas.GetPassiveGoldRate(guardPostLevel: number, sumEffectiveLabor: number, biomeBossTier: number?, perks: any?): number
 	if guardPostLevel <= 0 then return 0 end
 	local cfg = FacilityConfig.UpgradeTable.GuardPost[guardPostLevel]
-	local baseRate = cfg and cfg.BaseGoldPerMin or 30
+	local baseRate = (cfg and cfg.BaseGoldPerMin or 30) * (1 + (perks and perks.GuardPostRate or 0))
 	local bossTier = math.clamp(biomeBossTier or 0, 0, 10)
 	local rate = (baseRate + FacilityConfig.Constants.GuardPostLaborMultiplier * sumEffectiveLabor) * (1 + FacilityConfig.Constants.BiomeBossTierMultiplier * bossTier)
 	return math.round(rate * 100) / 100
 end
 
 -- Offline Gold Accumulation: min(ElapsedMinutes, MaxOfflineCapMinutes) * PassiveGoldPerMin * OfflineEfficiency
-function StatFormulas.CalculateOfflineGold(guardPostLevel: number, passiveGoldPerMin: number, elapsedMinutes: number): (number, number)
+function StatFormulas.CalculateOfflineGold(guardPostLevel: number, passiveGoldPerMin: number, elapsedMinutes: number, perks: any?): (number, number)
 	if guardPostLevel <= 0 or passiveGoldPerMin <= 0 or elapsedMinutes <= 0 then
 		return 0, 0
 	end
 	local cfg = FacilityConfig.UpgradeTable.GuardPost[guardPostLevel]
 	if not cfg then return 0, 0 end
-	local cappedMinutes = math.min(elapsedMinutes, cfg.MaxOfflineMinutes)
+	local cappedMinutes = math.min(elapsedMinutes, cfg.MaxOfflineMinutes + (perks and perks.OfflineMinutes or 0))
 	local gold = math.floor(cappedMinutes * passiveGoldPerMin * cfg.OfflineEfficiency)
 	return gold, cappedMinutes
 end
 
 -- Market Loot Multiplier: 1 + BaseBonus + (0.005 * sum(EffectiveLabor))
-function StatFormulas.GetMarketLootMultiplier(marketLevel: number, sumEffectiveLabor: number): number
+function StatFormulas.GetMarketLootMultiplier(marketLevel: number, sumEffectiveLabor: number, perks: any?): number
 	if marketLevel <= 0 then return 1.0 end
 	local cfg = FacilityConfig.UpgradeTable.Market[marketLevel]
-	local baseBonus = cfg and cfg.BaseBonus or 0
+	local baseBonus = (cfg and cfg.BaseBonus or 0) + (perks and perks.MarketBonus or 0)
 	local mult = 1.0 + baseBonus + (FacilityConfig.Constants.MarketLaborMultiplier * sumEffectiveLabor)
 	return math.round(mult * 1000) / 1000
 end
 
 -- Training Combat Multiplier: 1 + BaseBonus + (0.004 * sum(EffectiveLabor))
-function StatFormulas.GetTrainingCombatMultiplier(trainingLevel: number, sumEffectiveLabor: number): number
+function StatFormulas.GetTrainingCombatMultiplier(trainingLevel: number, sumEffectiveLabor: number, perks: any?): number
 	if trainingLevel <= 0 then return 1.0 end
 	local cfg = FacilityConfig.UpgradeTable.TrainingGrounds[trainingLevel]
-	local baseBonus = cfg and cfg.BaseBonus or 0
+	local baseBonus = (cfg and cfg.BaseBonus or 0) + (perks and perks.TrainingBonus or 0)
 	local mult = 1.0 + baseBonus + (FacilityConfig.Constants.TrainingLaborMultiplier * sumEffectiveLabor)
 	return math.round(mult * 1000) / 1000
+end
+
+-- Worker slots for a support facility: level table plus Fortress Tree perk slots. 0 while locked.
+local WORKER_PERKS = { Market = "MarketWorkers", TrainingGrounds = "TrainingWorkers", GodsBlessing = "BlessingWorkers" }
+function StatFormulas.GetFacilityMaxWorkers(facility: string, level: number, perks: any?): number
+	if level <= 0 then return 0 end
+	local tableForFacility = (FacilityConfig.UpgradeTable :: any)[facility]
+	local cfg = tableForFacility and tableForFacility[level]
+	local perkKey = WORKER_PERKS[facility]
+	return (cfg and cfg.MaxWorkers or 1) + (if perkKey and perks then perks[perkKey] or 0 else 0)
 end
 
 return StatFormulas

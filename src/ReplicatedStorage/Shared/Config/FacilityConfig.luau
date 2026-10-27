@@ -25,10 +25,11 @@ export type TrainingLevelConfig = {
 	VisualTitle: string,
 }
 
-export type InfirmaryLevelConfig = {
+export type BlessingLevelConfig = {
 	Gold: number,
 	MaxWorkers: number,
-	Beds: number,
+	BaseLuck: number,
+	VisualTitle: string,
 }
 
 local FacilityConfig = {}
@@ -38,11 +39,9 @@ FacilityConfig.Constants = {
 	BiomeBossTierMultiplier = 0.15,
 	MarketLaborMultiplier = 0.005,
 	TrainingLaborMultiplier = 0.004,
+	BlessingLaborMultiplier = 0.004,
+	MaxSummonLuck = 0.50,
 	SynergyBonus = 0.25,
-	InfirmaryBaseStaminaRegen = 3.0,
-	InfirmaryHealerStaminaRegen = 4.5,
-	InfirmaryBaseComaSec = 60,
-	InfirmaryHealerComaSec = 40,
 	PassiveGoldTickIntervalSeconds = 10,
 	PassiveGoldCycleSeconds = 60,
 }
@@ -51,25 +50,17 @@ FacilityConfig.FacilityArchetypeSynergies = {
 	GuardPost = { "Vanguard", "Marksman" },
 	Market = { "Miner" },
 	TrainingGrounds = { "Striker", "Scholar" },
-	Infirmary = { "Healer" },
+	GodsBlessing = { "Healer" },
 }
 
 FacilityConfig.AssignmentTags = {
 	GuardPost = "FACILITY_GUARD_POST",
 	Market = "FACILITY_MARKET",
 	TrainingGrounds = "FACILITY_TRAINING",
-	Infirmary = "FACILITY_INFIRMARY",
+	GodsBlessing = "FACILITY_GODS_BLESSING",
 }
 
 FacilityConfig.UpgradeTable = {
-	Infirmary = {
-		[1] = { Gold = 0, MaxWorkers = 5, Beds = 5 },
-		[2] = { Gold = 600, MaxWorkers = 5, Beds = 5 },
-		[3] = { Gold = 2000, MaxWorkers = 5, Beds = 5 },
-		[4] = { Gold = 6000, MaxWorkers = 5, Beds = 5 },
-		[5] = { Gold = 18000, MaxWorkers = 5, Beds = 5 },
-	} :: { [number]: InfirmaryLevelConfig },
-
 	GuardPost = {
 		[1] = {
 			Gold = 0,
@@ -178,6 +169,40 @@ FacilityConfig.UpgradeTable = {
 			VisualTitle = "Martial Amphitheater",
 		},
 	} :: { [number]: TrainingLevelConfig },
+
+	-- The angel on the Plaza Fountain (Phase 4 §6). Gold is the cost of the matching tree node.
+	GodsBlessing = {
+		[1] = {
+			Gold = 2500,
+			MaxWorkers = 1,
+			BaseLuck = 0.04,
+			VisualTitle = "Consecrated Angel",
+		},
+		[2] = {
+			Gold = 8000,
+			MaxWorkers = 1,
+			BaseLuck = 0.08,
+			VisualTitle = "Gilded Wings",
+		},
+		[3] = {
+			Gold = 25000,
+			MaxWorkers = 2,
+			BaseLuck = 0.14,
+			VisualTitle = "Choir of Light",
+		},
+		[4] = {
+			Gold = 70000,
+			MaxWorkers = 2,
+			BaseLuck = 0.22,
+			VisualTitle = "Radiant Halo",
+		},
+		[5] = {
+			Gold = 180000,
+			MaxWorkers = 3,
+			BaseLuck = 0.32,
+			VisualTitle = "Seraph Ascendant",
+		},
+	} :: { [number]: BlessingLevelConfig },
 }
 
 return FacilityConfig
