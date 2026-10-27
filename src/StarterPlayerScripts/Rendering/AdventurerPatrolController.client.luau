@@ -45,13 +45,16 @@ local function getPlotOrigin(): CFrame?
 	if not plots then return nil end
 	for _, plot in ipairs(plots:GetChildren()) do
 		if plot:GetAttribute("OwnerUserId") == LocalPlayer.UserId then
+			local island = plot:FindFirstChild("FloatingFortressIsland")
+			local top = island and island:FindFirstChild("IslandTopSurface")
+			if top and top:IsA("BasePart") then
+				local surfaceY = top.Position.Y + top.Size.Y / 2
+				return CFrame.new(top.Position.X, surfaceY, top.Position.Z) * top.CFrame.Rotation
+			end
 			local spawn = plot:FindFirstChild("PlotSpawn")
 			if spawn and spawn:IsA("BasePart") then
-				local island = plot:FindFirstChild("FloatingFortressIsland")
-				local top = island and island:FindFirstChild("IslandTopSurface")
-				local surfaceY = if top and top:IsA("BasePart") then top.Position.Y + top.Size.Y / 2
-					else spawn.Position.Y - spawn.Size.Y / 2
-				return CFrame.new(spawn.Position.X, surfaceY, spawn.Position.Z) * spawn.CFrame.Rotation
+				local surfaceY = spawn.Position.Y - spawn.Size.Y / 2
+				return CFrame.new(spawn.Position.X, surfaceY, spawn.Position.Z) * spawn.CFrame.Rotation * CFrame.new(0, 0, 80)
 			end
 		end
 	end

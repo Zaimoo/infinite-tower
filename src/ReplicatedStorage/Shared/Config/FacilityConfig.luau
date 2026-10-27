@@ -205,4 +205,65 @@ FacilityConfig.UpgradeTable = {
 	} :: { [number]: BlessingLevelConfig },
 }
 
+-- Waiting Room Plot Island Layout (relative to Plot Courtyard Origin at Y = 12)
+-- Note: In island local coordinates:
+--   -Z (-90) = Bridge / Front Gate (Left in reference camera view)
+--   +Z (+90) = Dividing Wall to Forest Outskirts (Right in reference camera view)
+--   +X (+130) = North / Top Wall in reference camera view
+--   -X (-130) = South / Bottom Wall in reference camera view
+FacilityConfig.FacilityLayout = {
+	Fountain = {
+		Offset = Vector3.new(0, 0, 0),
+		Radius = 16,
+	},
+	SummoningPortal = {
+		Offset = Vector3.new(78, 0, -52),
+		RotationY = math.rad(-58),
+		Radius = 22,
+		PromptText = "Summon Heroes",
+		Keybind = if Enum then Enum.KeyCode.F else ("F" :: any),
+	},
+	Leaderboard = {
+		Offset = Vector3.new(116, 0, -18),
+		RotationY = math.rad(-90),
+	},
+	Market = {
+		Offset = Vector3.new(74, 0, 44),
+		RotationY = math.rad(-145),
+		Radius = 26,
+		PromptText = "Open Market",
+		Keybind = if Enum then Enum.KeyCode.F else ("F" :: any),
+	},
+	BlacksmithForge = {
+		Offset = Vector3.new(-18, 0, 68),
+		RotationY = math.rad(180),
+		Radius = 18,
+		PromptText = "Blacksmith Forge",
+		Keybind = if Enum then Enum.KeyCode.E else ("E" :: any),
+	},
+	SynthesisChamber = {
+		Offset = Vector3.new(-68, 0, -34),
+		RotationY = math.rad(42),
+		Radius = 28,
+		PromptText = "The Pit (Synthesis)",
+		Keybind = if Enum then Enum.KeyCode.E else ("E" :: any),
+		SecondaryPromptText = "Promotion Altar",
+		SecondaryKeybind = if Enum then Enum.KeyCode.F else ("F" :: any),
+	},
+	TrainingArea = {
+		Offset = Vector3.new(-58, 0, 46),
+		RotationY = math.rad(0),
+		Radius = 26,
+		PromptText = "Training Grounds",
+		Keybind = if Enum then Enum.KeyCode.F else ("F" :: any),
+	},
+	Guardpost = {
+		Offset = Vector3.new(15, 0, 158),
+		RotationY = math.rad(0),
+		Radius = 20,
+		PromptText = "Guardpost",
+		Keybind = if Enum then Enum.KeyCode.F else ("F" :: any),
+	},
+}
+
 return FacilityConfig
