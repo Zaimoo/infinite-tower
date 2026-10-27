@@ -40,6 +40,19 @@ local CombatVfx = ReplicatedStorage.Assets:WaitForChild("CombatVfx")
 local SkillVfx = require(CombatVfx:WaitForChild("SkillVfx"))
 -- Own folder: clearView empties VisualFolder, and pooled VFX must survive that.
 local CombatVfxPool = require(CombatVfx:WaitForChild("VfxPool")).new(Workspace)
+require(CombatVfx:WaitForChild("VfxPrimitives")).Prewarm(CombatVfxPool)
+-- Combat effects quality: the lower of the Settings UI choice (published as the Settings_Quality
+-- attribute, like Reduce Motion) and Roblox's own graphics slider.
+local VfxQuality = require(CombatVfx:WaitForChild("VfxQuality"))
+local GameSettings = UserSettings().GameSettings
+local function applyVfxQuality()
+	local chosen = VfxQuality.Parse(LocalPlayer:GetAttribute("Settings_Quality"))
+	local roblox = VfxQuality.FromRobloxLevel(GameSettings.SavedQualityLevel.Value)
+	CombatVfxPool:SetQuality(VfxQuality.Lower(chosen, roblox))
+end
+applyVfxQuality()
+LocalPlayer:GetAttributeChangedSignal("Settings_Quality"):Connect(applyVfxQuality)
+GameSettings:GetPropertyChangedSignal("SavedQualityLevel"):Connect(applyVfxQuality)
 local ArtPackVisuals = require(ReplicatedStorage:WaitForChild("Assets"):WaitForChild("ArtPackVisuals"))
 local HeroRig = ReplicatedStorage.Assets:WaitForChild("HeroRig")
 local HeroRigSpec = require(HeroRig:WaitForChild("HeroRigSpec"))
@@ -206,9 +219,10 @@ local function playAttackVfx(rig: Model, animator: any, meta: any, cue: any)
 		end,
 		RecentHits = recentHits,
 		Now = Workspace:GetServerTimeNow(),
-		Shake = if meta and meta.OwnerUserId == LocalPlayer.UserId then function(magnitude: number)
+		Shake = if ownerUserId == LocalPlayer.UserId and LocalPlayer:GetAttribute("Settings_ReduceMotion") ~= true then function(magnitude: number)
 			CombatFeedback:ScreenShake(magnitude)
 		end else nil,
+		Owned = ownerUserId == LocalPlayer.UserId,
 	})
 end
 
@@ -640,11 +654,27 @@ RunService.Heartbeat:Connect(function()
 end)
 requestEntityMetadata()
 
+-- Combat VFX stats for performance checks: shown as attributes on Workspace.ClientCombatVfx
+-- (Explorer > Properties), refreshed every second.
+task.spawn(function()
+	local folder = CombatVfxPool.Folder
+	while folder.Parent do
+		task.wait(1)
+		local stats = CombatVfxPool:Stats()
+		folder:SetAttribute("Live", stats.Live)
+		folder:SetAttribute("Parked", stats.Parked)
+		folder:SetAttribute("RefusedPerSecond", stats.Refused)
+		folder:SetAttribute("StepMs", math.round(stats.StepMs * 1000) / 1000)
+		folder:SetAttribute("Quality", stats.Quality)
+		folder:SetAttribute("QualitySetting", stats.Setting)
+	end
+end)
+
 -- 60 FPS Smooth Interpolation Loop
 RunService.RenderStepped:Connect(function(dt: number)
 	CombatFeedback:Step(os.clock())
 	local serverNow=Workspace:GetServerTimeNow();EnemyAnimation.StepEffects(serverNow)
-	CombatVfxPool:Step(serverNow)
+	CombatVfxPool:Step(serverNow, dt)
 	for key,node in pairs(DyingNodes) do
 		if serverNow>=node.DeathEnd then node.Model:Destroy();DyingNodes[key]=nil else EnemyAnimation.Step(node,dt,serverNow) end
 	end

@@ -48,6 +48,7 @@ $modulePaths = @(
     'ReplicatedStorage/Shared/Util/HeroActionTiming.luau',
     'ReplicatedStorage/Shared/Config/SkillVfxCatalog.luau',
     'ReplicatedStorage/Assets/CombatVfx/VfxMath.luau',
+    'ReplicatedStorage/Assets/CombatVfx/VfxQuality.luau',
     'ReplicatedStorage/Shared/Util/AttackTimeline.luau',
     'ReplicatedStorage/Shared/Util/EnemyActionState.luau',
     'ReplicatedStorage/Shared/Util/TowerProtocol.luau',

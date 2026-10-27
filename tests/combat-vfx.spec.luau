@@ -121,4 +121,55 @@ do
 	assert(Catalog.Get("hero_jenna", "BOW", "NOT_A_TIER") == nil, "unknown tier")
 end
 
+-- Quality budget (Phase 6) ---------------------------------------------------------------------
+do
+	local Q = require(nodes["ReplicatedStorage.Assets.CombatVfx.VfxQuality"])
+	assert(Q.Parse("low") == "Low" and Q.Parse("MEDIUM") == "Medium" and Q.Parse(nil) == "High" and Q.Parse(5) == "High", "settings values parse")
+	for i = 2, #Q.ORDER do
+		local better, worse = Q.LEVELS[Q.ORDER[i - 1]], Q.LEVELS[Q.ORDER[i]]
+		assert(worse.Detail < better.Detail and worse.MaxEffects < better.MaxEffects, Q.ORDER[i] .. " is cheaper than " .. Q.ORDER[i - 1])
+	end
+
+	-- Feeds `seconds` of frames lasting `dt`; returns whether the level changed along the way.
+	local function run(state: any, seconds: number, dt: number): boolean
+		local changed = false
+		for _ = 1, math.floor(seconds / dt + 0.5) do
+			changed = Q.Observe(state, dt) or changed
+		end
+		return changed
+	end
+
+	-- Slow frames step the level down one at a time after SLOW_HOLD seconds.
+	local state = Q.New("High")
+	assert(not run(state, 2, 1 / 20) and Q.Effective(state) == "High", "two slow seconds are tolerated")
+	run(state, 2, 1 / 20)
+	assert(Q.Effective(state) == "Medium", "sustained slow frames drop to Medium")
+	run(state, 4, 1 / 20)
+	assert(Q.Effective(state) == "Low", "and then to Low")
+	run(state, 10, 1 / 20)
+	assert(Q.Effective(state) == "Low", "never below Low")
+
+	-- Fast frames climb back, one level per FAST_HOLD, never above the player's setting.
+	Q.SetSetting(state, "Medium")
+	run(state, 30, 1 / 60)
+	assert(Q.Effective(state) == "Medium", "recovery stops at the setting")
+	Q.SetSetting(state, "High")
+	assert(Q.Effective(state) == "Medium", "raising the setting waits for fast frames")
+	run(state, 10, 1 / 60)
+	assert(Q.Effective(state) == "High", "fast frames restore High")
+
+	-- Lowering the setting applies at once; hitches and bad frame times are ignored.
+	Q.SetSetting(state, "Low")
+	assert(Q.Effective(state) == "Low" and Q.Detail(state) == Q.LEVELS.Low.Detail and Q.MaxEffects(state) == Q.LEVELS.Low.MaxEffects, "a lower setting applies immediately")
+	local frame = state.FrameTime
+	assert(not Q.Observe(state, 5) and not Q.Observe(state, 0 / 0) and not Q.Observe(state, -1) and state.FrameTime == frame, "hitches and bad input are ignored")
+
+	assert(Q.Scale(6, 1) == 6 and Q.Scale(6, 0.35) == 2 and Q.Scale(1, 0.1) == 1 and Q.Scale(0, 1) == 0, "count scaling keeps at least one")
+
+	-- Roblox's graphics slider maps to a level, and the cheaper of the two choices wins.
+	assert(Q.FromRobloxLevel(0) == "High" and Q.FromRobloxLevel(1) == "Low" and Q.FromRobloxLevel(3) == "Low", "Automatic is High; 1-3 are Low")
+	assert(Q.FromRobloxLevel(4) == "Medium" and Q.FromRobloxLevel(6) == "Medium" and Q.FromRobloxLevel(7) == "High" and Q.FromRobloxLevel(10) == "High", "4-6 Medium, 7-10 High")
+	assert(Q.Lower("High", "Low") == "Low" and Q.Lower("Medium", "High") == "Medium" and Q.Lower("Low", "Low") == "Low", "the cheaper level wins")
+end
+
 print("combat-vfx.spec: ok")

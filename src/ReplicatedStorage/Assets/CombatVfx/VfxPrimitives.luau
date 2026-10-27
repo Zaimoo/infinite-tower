@@ -92,7 +92,7 @@ function VfxPrimitives.Flight(pool: VfxPool.VfxPool, options: FlightOptions): bo
 				local heading = target - options.From
 				ahead = position + (if heading.Magnitude > 1e-3 then heading.Unit else Vector3.new(0, 0, -1))
 			end
-			model:PivotTo(CFrame.lookAt(position, ahead))
+			pool:MoveModel(model, CFrame.lookAt(position, ahead))
 			if not shown then
 				shown = true
 				pool:Show(model)
@@ -178,12 +178,13 @@ function VfxPrimitives.Disc(pool: VfxPool.VfxPool, options: DiscOptions)
 end
 
 -- A flat sigil on the ground: a disc, an inner disc and turning spokes, over [startAt, endAt].
-function VfxPrimitives.Sigil(pool: VfxPool.VfxPool, center: Vector3, radius: number, palette: any, startAt: number, endAt: number)
+-- `spokes` defaults to 6; pass 0 to skip them at low quality.
+function VfxPrimitives.Sigil(pool: VfxPool.VfxPool, center: Vector3, radius: number, palette: any, startAt: number, endAt: number, spokeCount: number?)
 	local ground = CFrame.new(center + Vector3.new(0, 0.15, 0))
 	VfxPrimitives.Disc(pool, { CFrame = ground * FLAT, Radius = radius, Color = palette.Secondary, StartAt = startAt, EndAt = endAt, Grow = 0.2, Transparency = 0.45 })
 	VfxPrimitives.Disc(pool, { CFrame = (ground + Vector3.new(0, 0.05, 0)) * FLAT, Radius = radius * 0.55, Color = palette.Primary, StartAt = startAt, EndAt = endAt, Grow = 0.1, Transparency = 0.3 })
 
-	local spokes = 6
+	local spokes = spokeCount or 6
 	for i = 1, spokes do
 		local model = pool:Acquire("SPOKE", buildSpoke)
 		local part = model.PrimaryPart :: BasePart
@@ -201,7 +202,7 @@ function VfxPrimitives.Sigil(pool: VfxPool.VfxPool, center: Vector3, radius: num
 				local length = radius * 0.9 * math.min(1, t / 0.25)
 				local angle = offset + (now - startAt) * 1.6
 				part.Size = Vector3.new(0.2, 0.06, math.max(0.1, length))
-				part.CFrame = (ground + Vector3.new(0, 0.1, 0)) * CFrame.Angles(0, angle, 0) * CFrame.new(0, 0, -length / 2)
+				pool:Move(part, (ground + Vector3.new(0, 0.1, 0)) * CFrame.Angles(0, angle, 0) * CFrame.new(0, 0, -length / 2))
 				part.Transparency = 1 - 0.75 * fade
 				return t >= 1
 			end,
@@ -303,7 +304,7 @@ function VfxPrimitives.Ring(pool: VfxPool.VfxPool, options: RingOptions)
 			for i, part in list do
 				local angle = facing - arc / 2 + step * (i - 0.5)
 				part.Size = Vector3.new(math.max(0.1, length), 0.12, width)
-				part.CFrame = base * CFrame.Angles(0, angle, 0) * CFrame.new(0, 0, -radius)
+				pool:Move(part, base * CFrame.Angles(0, angle, 0) * CFrame.new(0, 0, -radius))
 				part.Transparency = transparency
 			end
 			return t >= 1
@@ -344,7 +345,7 @@ function VfxPrimitives.SlashArc(pool: VfxPool.VfxPool, frame: CFrame, radius: nu
 				local angle = -span / 2 + step * (i - 0.5)
 				local thickness = 0.3 * radius * math.sin(math.pi * u)
 				part.Size = Vector3.new(2 * radius * math.sin(step / 2) * 1.1, 0.14, math.max(0.05, thickness))
-				part.CFrame = frame * CFrame.Angles(0, angle, 0) * CFrame.new(0, 0, -radius)
+				pool:Move(part, frame * CFrame.Angles(0, angle, 0) * CFrame.new(0, 0, -radius))
 				part.Transparency = if u <= drawn then 1 - 0.9 * fade else 1
 			end
 			return t >= 1
@@ -373,7 +374,7 @@ function VfxPrimitives.Shell(pool: VfxPool.VfxPool, center: () -> Vector3, radiu
 			local t = VfxMath.Progress(startAt, endAt, now)
 			local grow = math.min(1, (now - startAt) / 0.2)
 			part.Size = Vector3.one * radius * 2 * (0.6 + 0.4 * grow)
-			part.CFrame = CFrame.new(center())
+			pool:Move(part, CFrame.new(center()))
 			part.Transparency = 1 - 0.8 * fadeIn(t, 0.05, 0.1)
 			return t >= 1
 		end,
@@ -406,7 +407,7 @@ function VfxPrimitives.Pillar(pool: VfxPool.VfxPool, base: Vector3, radius: numb
 			local after = VfxMath.Progress(impactAt, endAt, now)
 			local width = radius * 2 * (if now < impactAt then 0.6 else 1 - 0.5 * after)
 			part.Size = Vector3.new(length, width, width)
-			part.CFrame = CFrame.new(base + Vector3.new(0, height - length / 2, 0)) * UPRIGHT
+			pool:Move(part, CFrame.new(base + Vector3.new(0, height - length / 2, 0)) * UPRIGHT)
 			part.Transparency = if now < impactAt then 0.25 else 0.25 + 0.75 * after
 			return now >= endAt
 		end,
@@ -485,7 +486,7 @@ function VfxPrimitives.Spike(pool: VfxPool.VfxPool, base: Vector3, height: numbe
 			end
 			local up = math.clamp((now - at) / rise, 0, 1)
 			local fade = math.clamp((now - (at + rise + hold)) / 0.3, 0, 1)
-			part.CFrame = CFrame.new(base) * tilt * CFrame.new(0, -height / 2 + height * up * 0.95, 0)
+			pool:Move(part, CFrame.new(base) * tilt * CFrame.new(0, -height / 2 + height * up * 0.95, 0))
 			part.Transparency = 0.15 + 0.85 * fade
 			return now >= endAt
 		end,
@@ -516,7 +517,7 @@ function VfxPrimitives.Motes(pool: VfxPool.VfxPool, center: Vector3, color: Colo
 					return false
 				end
 				local t = VfxMath.Progress(at, at + length, now)
-				part.CFrame = CFrame.new(start + Vector3.new(0, 3 * t, 0))
+				pool:Move(part, CFrame.new(start + Vector3.new(0, 3 * t, 0)))
 				part.Transparency = 0.1 + 0.9 * t
 				return t >= 1
 			end,
@@ -525,6 +526,18 @@ function VfxPrimitives.Motes(pool: VfxPool.VfxPool, center: Vector3, color: Colo
 			end,
 		})
 	end
+end
+
+-- Builds the common assemblies ahead of the first fight (VfxPool.Prewarm), so the first big
+-- skill does not hitch while it creates parts.
+function VfxPrimitives.Prewarm(pool: VfxPool.VfxPool)
+	pool:Prewarm("BURST", buildBurst, 16)
+	pool:Prewarm("DISC", buildDisc, 6)
+	pool:Prewarm("SPOKE", buildSpoke, 6)
+	pool:Prewarm("RING", buildRing, 4)
+	pool:Prewarm("ARC", buildArc, 8)
+	pool:Prewarm("SPIKE", buildSpike, 8)
+	pool:Prewarm("MOTE", buildMote, 12)
 end
 
 VfxPrimitives.FLAT = FLAT

@@ -14,6 +14,7 @@ local HeroActionTiming = require(Shared:WaitForChild("Util"):WaitForChild("HeroA
 local VfxMath = require(script.Parent:WaitForChild("VfxMath"))
 local VfxPool = require(script.Parent:WaitForChild("VfxPool"))
 local VfxPrimitives = require(script.Parent:WaitForChild("VfxPrimitives"))
+local VfxQuality = require(script.Parent:WaitForChild("VfxQuality"))
 local ProjectileVfx = require(script.Parent:WaitForChild("ProjectileVfx"))
 
 local SkillVfx = {}
@@ -40,7 +41,8 @@ export type PlayArgs = {
 	-- Positions the server reported hits ("HIT") or heals ("HEAL") at, near `center`, since `since`.
 	RecentHits: ((kind: string, center: Vector3, radius: number, since: number) -> { Vector3 })?,
 	Now: number, -- server time
-	Shake: ((magnitude: number) -> ())?, -- set only for the local player's own heroes
+	Shake: ((magnitude: number) -> ())?, -- set only for the local player's own heroes (unless Reduce Motion)
+	Owned: boolean?, -- false for other players' heroes: half detail, and basics only at High quality
 }
 
 type Recipe = SkillVfxCatalog.TierRecipe
@@ -52,7 +54,14 @@ type Context = {
 	Palette: Palette,
 	StartAt: number, -- when the effect may begin (release, or now if that has passed)
 	ArriveAt: number, -- server impact time
+	Detail: number, -- count multiplier from the pool's quality (and half for other squads)
+	Decor: boolean, -- draw optional decoration (spokes, rings, motes, side arrows)
 }
+
+-- How many of `count` items to draw at this effect's detail.
+local function scaled(ctx: Context, count: number): number
+	return VfxQuality.Scale(count, ctx.Detail)
+end
 
 type Projectile = {
 	Kind: string,
@@ -173,14 +182,14 @@ local function playVolley(ctx: Context)
 		end
 	end)
 
-	if recipe.Rings then
+	if recipe.Rings and ctx.Decor then
 		local direction = cue.Aim - origin
 		for _, f in { 0.3, 0.6, 0.9 } do
 			VfxPrimitives.FlightRing(pool, VfxMath.Lerp(origin, cue.Aim, f), direction, 0.55 * (recipe.Scale or 1), palette.Secondary, startAt + f * flightTime)
 		end
 	end
 
-	local count = recipe.Count or 1
+	local count = if ctx.Decor then recipe.Count or 1 else 1
 	local spread = recipe.Spread or 6
 	local sideEnd = startAt + flightTime * (distance + pierce) / distance
 	for i = 1, count - 1 do
@@ -219,8 +228,9 @@ local function playTremor(ctx: Context)
 	local radius = recipe.Radius or 8
 	VfxPrimitives.Ring(pool, { Center = center, From = 1, To = radius, Color = palette.Primary, StartAt = ctx.ArriveAt, EndAt = ctx.ArriveAt + 0.45, Width = 1.0 })
 	VfxPrimitives.Disc(pool, { CFrame = CFrame.new(center + Vector3.new(0, 0.15, 0)) * VfxPrimitives.FLAT, Radius = radius * 0.6, Color = palette.Secondary, StartAt = ctx.ArriveAt, EndAt = ctx.ArriveAt + 0.5, Grow = 0.2, Transparency = 0.5 })
-	for i = 1, recipe.Spikes or 3 do
-		local angle = i / (recipe.Spikes or 3) * math.pi * 2 + ctx.Args.Cue.NetId
+	local spikes = scaled(ctx, recipe.Spikes or 3)
+	for i = 1, spikes do
+		local angle = i / spikes * math.pi * 2 + ctx.Args.Cue.NetId
 		local base = center + Vector3.new(math.cos(angle) * radius * 0.35, 0, math.sin(angle) * radius * 0.35)
 		VfxPrimitives.Spike(pool, base, 2.2, palette.Primary, ctx.ArriveAt + 0.03 * i, 0.25, i)
 	end
@@ -256,7 +266,9 @@ local function playMend(ctx: Context)
 	afterHits(ctx, "HEAL", self, 40, function(points: { Vector3 })
 		local now = ctx.ArriveAt + HIT_LOOKUP_DELAY
 		for _, point in points do
-			VfxPrimitives.Motes(pool, point + Vector3.new(0, 1, 0), palette.Secondary, now, 6)
+			if ctx.Decor then
+				VfxPrimitives.Motes(pool, point + Vector3.new(0, 1, 0), palette.Secondary, now, scaled(ctx, 6))
+			end
 			VfxPrimitives.Burst(pool, point + Vector3.new(0, 1.5, 0), palette.Secondary, 2.2, now, 0.3)
 		end
 	end)
@@ -282,9 +294,9 @@ local function playStorm(ctx: Context)
 	fly(pool, projectile(recipe, palette, (recipe.Scale or 1) * 1.15), origin, fixed(flareTop), ctx.StartAt, ctx.ArriveAt, 0, function(at: Vector3)
 		VfxPrimitives.Burst(pool, at, palette.Secondary, 3, ctx.ArriveAt, 0.35)
 	end)
-	VfxPrimitives.Sigil(pool, aim, radius, palette, ctx.StartAt, lastWave + SIGIL_LINGER)
+	VfxPrimitives.Sigil(pool, aim, radius, palette, ctx.StartAt, lastWave + SIGIL_LINGER, if ctx.Decor then 6 else 0)
 
-	local perWave = recipe.RainPerWave or 4
+	local perWave = scaled(ctx, recipe.RainPerWave or 4)
 	local height = recipe.RainHeight or 30
 	local body = projectile(recipe, palette)
 	local seedBase = (cue.NetId % 97) * 0.37
@@ -326,7 +338,7 @@ local function playTempest(ctx: Context)
 	if recipe.Implode then
 		VfxPrimitives.Shell(pool, fixed(center + Vector3.new(0, 1.5, 0)), 5, palette.Secondary, ctx.StartAt, at)
 	end
-	local slashes = recipe.Slashes or 6
+	local slashes = scaled(ctx, recipe.Slashes or 6)
 	for i = 1, slashes do
 		local angle = (i / slashes) * math.pi * 2
 		local offset = Vector3.new(math.cos(angle), 0, math.sin(angle)) * radius * 0.3
@@ -345,7 +357,7 @@ local function playCrystals(ctx: Context)
 	local radius = recipe.Radius or 18
 	local hold = recipe.Linger or 1.2
 	local at = ctx.ArriveAt
-	local count = recipe.Spikes or 5
+	local count = scaled(ctx, recipe.Spikes or 5)
 	VfxPrimitives.Spike(pool, center, 5, palette.Primary, at, hold, 0)
 	for i = 1, count - 1 do
 		local angle = i / (count - 1) * math.pi * 2
@@ -354,8 +366,9 @@ local function playCrystals(ctx: Context)
 	VfxPrimitives.Ring(pool, { Center = center, From = 1, To = radius, Color = palette.Secondary, StartAt = at, EndAt = at + 0.5, Width = 1.0 })
 	afterHits(ctx, "HIT", fixed(ctx.Args.Cue.Aim), radius, function(points: { Vector3 })
 		local now = at + HIT_LOOKUP_DELAY
+		local limit = scaled(ctx, 10)
 		for i, point in points do
-			if i > 10 then
+			if i > limit then
 				break
 			end
 			VfxPrimitives.Spike(pool, point, 3.6, palette.Primary, now + 0.03 * i, hold * 0.8, i + 7)
@@ -390,12 +403,14 @@ local function playSanctuary(ctx: Context)
 	local radius = recipe.Radius or 25
 	local at = ctx.ArriveAt
 	local linger = recipe.Linger or 1.2
-	VfxPrimitives.Sigil(pool, center, radius, palette, ctx.StartAt, at + linger)
+	VfxPrimitives.Sigil(pool, center, radius, palette, ctx.StartAt, at + linger, if ctx.Decor then 6 else 0)
 	VfxPrimitives.Ring(pool, { Center = center, From = 1, To = radius, Color = palette.Secondary, StartAt = at, EndAt = at + 0.6, Width = 1.0 })
 	local allies = if ctx.Args.Allies then ctx.Args.Allies() else { self() }
 	for _, ally in allies do
 		VfxPrimitives.Pillar(pool, ally, 1.2, recipe.PillarHeight or 14, palette.Secondary, at, at + 0.15, linger)
-		VfxPrimitives.Motes(pool, chest(ally), palette.Primary, at + 0.1, 8, 1.0)
+		if ctx.Decor then
+			VfxPrimitives.Motes(pool, chest(ally), palette.Primary, at + 0.1, scaled(ctx, 8), 1.0)
+		end
 	end
 end
 
@@ -431,6 +446,11 @@ function SkillVfx.Play(pool: VfxPool.VfxPool, args: PlayArgs): boolean
 	if not player or (recipe.Projectile and not ProjectileVfx.Has(recipe.Projectile)) then
 		return false
 	end
+	local owned = args.Owned ~= false
+	local detail = pool:Detail()
+	if not owned and tier == "BASIC" and detail < 1 then
+		return false -- other squads' basics are the first thing to go when the budget is tight
+	end
 	local releaseAt, arriveAt = VfxMath.FlightWindow(cue)
 	if args.Now > arriveAt + LATE_GRACE or not pool:Visible(args.Origin, cue.Aim) then
 		return false
@@ -442,6 +462,8 @@ function SkillVfx.Play(pool: VfxPool.VfxPool, args: PlayArgs): boolean
 		Palette = palette,
 		StartAt = math.max(releaseAt, args.Now),
 		ArriveAt = arriveAt,
+		Detail = if owned then detail else detail * 0.5,
+		Decor = owned and pool:Decor(),
 	})
 	return true
 end
