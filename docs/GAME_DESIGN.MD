@@ -565,11 +565,11 @@ These are the default multipliers and secondary mechanics each hero kit inherits
 | Action | Keybind / Input | Description |
 | :--- | :--- | :--- |
 | **Shift Sprint** | `[LeftShift / RightShift]` | $3.0\times$ speed multiplier for rapid traversal across bridges, rings, and rooms. |
-| **Focus Target** | `[Click / Tap]` | Raycast onto any mob, boss, or thief to focus all 5 heroes' aggro. |
+| **Focus Target** | `[Click / Tap]` | Raycast onto any mob or boss to focus all 5 heroes' aggro. Clicking a Master who stole from you challenges them to a duel instead. |
 | **Overdrive Whistle** | `[Q]` / Bottom Bar | $20\text{s}$ CD. Grants $+40\%$ Attack Speed for $5\text{s}$ across all active heroes with zero Stamina drain, allowing squads to rapidly charge their Skill Gauges. |
 | **Emergency Recall** | `[E]` / Bottom Bar | $6\text{s}$ CD. Instantly warps squad to Master + $2\text{s}$ pacify (dodges lethal AoE). Yields priority to ProximityPrompts. |
 | **Drop Carried Item**| `[R]` / HUD Button | Drops carried cargo or relic on the ground; restores normal WalkSpeed. |
-| **Retaliate Attack** | `[⚔️ RETALIATE]` | Single-click HUD prompt when your drop is stolen to unleash squad PvP retaliation. |
+| **Retaliate (Duel)** | `[⚔️ RETALIATE]` / click the thief | HUD prompt (with a 3-minute countdown) when your drop is stolen. Starts a retaliation duel for that drop (§6.1). |
 
 ### 4.6 Tactical UI & HUD Architecture
 
@@ -653,8 +653,10 @@ Each of the 10 biomes features 4 local-authored procedural enemies (2 Regulars, 
 
 ## 6. CONTESTED LOOT & RETALIATION PVP
 
-### 6.1 Contested Loot & Targeted Retaliation PvP
-1. **Universal Physical Drops:** Monsters and crystal nodes drop 3D physical cargo in `Workspace.PhysicalLoot` tagged with `KillerUserId`.
+### 6.1 Contested Loot & Retaliation Duels
+Implemented by `LootDuel` (`Shared/Util`, rules and arena layout), `DuelArena` (`Combat`, arena geometry), the duel section of `CombatSimulation` and `DuelController.client.luau`. Spec: `docs/rework-plan/PHASE_3_TOWER_PVP_RETALIATION.md`.
+
+1. **Universal Physical Drops:** Monsters and crystal nodes drop 3D physical cargo in `Workspace.PhysicalLoot` tagged with `KillerUserId`. In the tower, regular and elite kills still pay their Gold and Gems directly; on top of that a killer-tagged **Bounty Bag** worth the kill's Gold drops (`LootDuel.BOUNTY_CHANCE`: 30% for regular mobs, 100% for elites) and must be carried to a sanctuary to bank.
 2. **Physical Overhead Hauling:** Picking up loot welds it overhead, slows movement by `-15%` to `-45%`, and triggers the upper-arm holding pose (`HoldingAnimationController.client.luau`).
 3. **Theft Detection:** Picking up a drop tagged to someone else opens a **contest** for that drop and flags the picker as a `[Loot Thief]` (character attribute `IsLootThief` plus a nameplate everyone sees) for 3 minutes. The owner gets a `[⚔️ RETALIATE]` banner with a countdown (`TowerRemotes.LootContested`). The contest closes when the window runs out, the drop is banked or despawns, or the owner picks it back up. If the drop is stolen again, only the newest thief can be challenged.
 4. **Retaliation Duel:** The owner presses `[⚔️ RETALIATE]` (`TowerRemotes.InitiateRetaliation(dropId)`) or clicks the thief. Both Masters must be on the same floor with at least one hero standing. There is no open-field PvP: squads only fight each other inside a duel.

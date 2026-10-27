@@ -13,7 +13,10 @@ def get_branch_files():
     # Get modified/added files in git relative to origin/main
     try:
         res = subprocess.run(["git", "diff", "--name-only", "origin/main"], capture_output=True, text=True, check=True)
-        files = [line.strip().replace(chr(92), "/") for line in res.stdout.splitlines() if line.strip().startswith("src/") and line.strip().endswith(".luau")]
+        # New files are not in `git diff` until they are committed, so list untracked ones as well.
+        new = subprocess.run(["git", "ls-files", "--others", "--exclude-standard"], capture_output=True, text=True, check=True)
+        lines = res.stdout.splitlines() + new.stdout.splitlines()
+        files = [line.strip().replace(chr(92), "/") for line in lines if line.strip().startswith("src/") and line.strip().endswith(".luau")]
         if files:
             return set(files)
     except Exception as e:

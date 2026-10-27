@@ -31,7 +31,6 @@ local SyndicateRemotes = Remotes:WaitForChild("SyndicateRemotes")
 local WhistleCommandRemote = CombatRemotes:WaitForChild("WhistleCommand") :: RemoteEvent
 
 local FocusTargetRemote = CombatRemotes:WaitForChild("FocusTarget") :: RemoteEvent
-local LootStolenAlertRemote = CombatRemotes:WaitForChild("LootStolenAlert") :: RemoteEvent
 local SquadWipeStateRemote = CombatRemotes:WaitForChild("SquadWipeState") :: RemoteEvent
 local DropCarriedItemRemote = CombatRemotes:WaitForChild("DropCarriedItem") :: RemoteEvent
 local CarriedLootSyncRemote = CombatRemotes:WaitForChild("CarriedLootSync") :: RemoteEvent
@@ -289,7 +288,9 @@ local lootStolenText = makeLabel({
 	Parent = lootStolenBanner,
 })
 
-local currentThiefUserId = 0
+-- The banner tracks the newest contested drop; it stays up with a countdown for the whole
+-- retaliation window, and the server clears it when the drop is recovered, duelled or gone.
+local currentContest: any = nil
 local retaliateBtn = makeButton({
 	Size = UDim2.new(0.30, 0, 0.8, 0),
 	Position = UDim2.new(0.68, 0, 0.1, 0),
@@ -298,35 +299,54 @@ local retaliateBtn = makeButton({
 	Corner = 6,
 	Parent = lootStolenBanner,
 	OnClick = function()
-		if currentThiefUserId ~= 0 and _G.ClientCombatState and _G.ClientCombatState.Metadata then
-			local foundNetId = nil
-			for nId, meta in pairs(_G.ClientCombatState.Metadata) do
-				if meta.IsHero and meta.OwnerUserId == currentThiefUserId then
-					foundNetId = nId
-					break
-				end
-			end
-			if foundNetId then
-				FocusTargetRemote:FireServer(foundNetId)
-				lootStolenBanner.Visible = false
-			end
+		local remote = TowerRemotes:FindFirstChild("InitiateRetaliation")
+		if currentContest and remote and remote:IsA("RemoteEvent") then
+			remote:FireServer(currentContest.DropId)
 		end
 	end,
 })
 
-local lootAlertCounter = 0
-LootStolenAlertRemote.OnClientEvent:Connect(function(thiefUserId: number, thiefName: string, lootType: string, amount: number)
-	currentThiefUserId = thiefUserId
-	lootAlertCounter += 1
-	local myAlertId = lootAlertCounter
-	lootStolenText.Text = string.format("🚨 %s STOLE %d %s!", string.upper(thiefName), amount, lootType)
+local function refreshContestBanner()
+	local contest = currentContest
+	if not contest then
+		lootStolenBanner.Visible = false
+		return
+	end
+	local remaining = math.max(0, math.ceil(contest.ExpiresAt - os.clock()))
+	if remaining <= 0 then
+		currentContest = nil
+		lootStolenBanner.Visible = false
+		return
+	end
+	lootStolenText.Text = string.format("🚨 %s STOLE %d %s! (%d:%02d)", string.upper(contest.ThiefName), contest.Amount, contest.LootType, remaining // 60, remaining % 60)
 	lootStolenBanner.Visible = true
+end
 
-	task.delay(8.0, function()
-		if lootAlertCounter == myAlertId then
-			lootStolenBanner.Visible = false
+-- Bound in the background so a missing remote can never stall the rest of the HUD.
+task.spawn(function()
+	local LootContestedRemote = TowerRemotes:WaitForChild("LootContested") :: RemoteEvent
+	LootContestedRemote.OnClientEvent:Connect(function(message: any)
+		if type(message) ~= "table" then return end
+		if message.Kind == "STOLEN" and type(message.DropId) == "number" then
+			currentContest = {
+				DropId = message.DropId,
+				ThiefName = tostring(message.ThiefName),
+				LootType = tostring(message.LootType),
+				Amount = tonumber(message.Amount) or 0,
+				ExpiresAt = os.clock() + (tonumber(message.Seconds) or 0),
+			}
+		elseif message.Kind == "CLEAR" and currentContest and currentContest.DropId == message.DropId then
+			currentContest = nil
 		end
+		refreshContestBanner()
 	end)
+end)
+
+task.spawn(function()
+	while true do
+		task.wait(1)
+		if currentContest then refreshContestBanner() end
+	end
 end)
 
 -- Squad Wipe Recovery Lockout Banner

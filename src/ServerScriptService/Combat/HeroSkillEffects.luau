@@ -17,6 +17,9 @@ export type Context = {
 	IsCombatSafe: (any) -> boolean,
 	Broadcast: (context: any, kind: string, position: Vector3, amount: number, overdrive: boolean, incoming: boolean) -> (),
 	HandleMobDeath: (mob: any, owner: Player) -> (),
+	-- Duels pass the opposing squad as Mobs and route hits through these instead.
+	Eligible: ((target: any) -> boolean)?,
+	Damage: ((target: any, amount: number) -> ())?,
 }
 
 -- What the caller knows about the attack. Impact (from HeroImpactQueue) carries FloorId and
@@ -39,6 +42,9 @@ local function horizontal(a: Vector3, b: Vector3): number
 end
 
 local function eligible(ctx: Context, hit: Hit, mob: any): boolean
+	if ctx.Eligible then
+		return ctx.Eligible(mob) and ctx.Same(hit.Impact, mob)
+	end
 	return mob.IsAlive and ctx.Same(hit.Impact, mob) and not ctx.IsCombatSafe(mob)
 end
 
@@ -47,6 +53,10 @@ local function near(mob: any, center: Vector3, radius: number): boolean
 end
 
 local function damageMob(ctx: Context, hit: Hit, mob: any, amount: number)
+	if ctx.Damage then
+		ctx.Damage(mob, amount)
+		return
+	end
 	local owner = hit.Attacker.Owner
 	mob.CurrentHP = math.max(0, mob.CurrentHP - amount)
 	mob.DamageLedger[owner.UserId] = (mob.DamageLedger[owner.UserId] or 0) + amount

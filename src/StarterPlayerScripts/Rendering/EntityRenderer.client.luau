@@ -345,7 +345,7 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 	bb.Size = isBoss and UDim2.new(0, 240, 0, 64) or UDim2.new(0, 145, 0, 48)
 	bb.StudsOffset = Vector3.new(0, (bodySize.Y * 0.5) + (isBoss and 5.5 or 3.2), 0)
 	bb.MaxDistance = isBoss and 320 or 150
-	bb.AlwaysOnTop = isBoss
+	bb.AlwaysOnTop = isBoss or (isHero and meta and meta.DuelSide ~= nil)
 	bb.Parent = root
 
 	local bg = Instance.new("Frame")
@@ -365,10 +365,12 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 	title.BackgroundTransparency = 1
 	title.Font = Enum.Font.GothamBold
 	title.TextScaled = true
+	-- In a retaliation duel each viewer sees their own squad in green and the other in orange.
+	local duelColor = isHero and meta and meta.DuelSide and (if meta.OwnerUserId == LocalPlayer.UserId then Color3.fromRGB(120, 235, 120) else Color3.fromRGB(255, 160, 70)) or nil
 	if isHero then
 		local stars = string.rep("★", (meta and meta.Stars) or 1)
 		title.Text = string.format("%s %s Lv.%d", (meta and meta.Name) or "Hero", stars, (meta and meta.Level) or 1)
-		title.TextColor3 = Color3.fromRGB(255, 225, 95)
+		title.TextColor3 = duelColor or Color3.fromRGB(255, 225, 95)
 	else
 		title.Text = (meta and meta.Name) or "Ruin Entity"
 		title.TextColor3 = isBoss and Color3.fromRGB(255, 95, 245) or Color3.fromRGB(255, 130, 130)
@@ -385,7 +387,7 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 
 	local hpFill = Instance.new("Frame")
 	hpFill.Size = UDim2.fromScale(1, 1)
-	hpFill.BackgroundColor3 = isHero and Color3.fromRGB(65, 235, 115) or Color3.fromRGB(245, 65, 85)
+	hpFill.BackgroundColor3 = duelColor or (isHero and Color3.fromRGB(65, 235, 115) or Color3.fromRGB(245, 65, 85))
 	hpFill.BorderSizePixel = 0
 	hpFill.Parent = hpBg
 
