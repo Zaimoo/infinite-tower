@@ -67,32 +67,57 @@ end
 
 -- Catalog -------------------------------------------------------------------------------------
 do
-	local kinds = { ARROW = true, ASTRAL = true }
+	local kinds = { ARROW = true, ASTRAL = true, BOLT = true, ORB = true }
+	local projectileStyles = { SHOT = true, BOLT = true, VOLLEY = true, CHAIN = true, MEND = true, STORM = true }
+	-- Each archetype's ultimate is drawn by one style, and its radius matches the kit.
+	local skillStyle = { Marksman = "STORM", Vanguard = "BULWARK", Striker = "TEMPEST", Miner = "CRYSTALS", Scholar = "PILLAR", Healer = "SANCTUARY" }
 	local function checkRecipe(name: string, recipe: any)
 		assert(recipe.Palette and recipe.Palette.Primary and recipe.Palette.Secondary and recipe.Palette.Core, name .. " palette")
 		for _, tier in { "Basic", "Special", "Skill" } do
 			local r = recipe[tier]
-			assert(r and kinds[r.Projectile], name .. " " .. tier .. " uses a known projectile")
+			assert(r and Catalog.Styles[tier][r.Style], name .. " " .. tier .. " uses a known style")
+			if projectileStyles[r.Style] then
+				assert(kinds[r.Projectile], name .. " " .. tier .. " uses a known projectile")
+			end
 		end
-		assert((recipe.Special.Count or 1) >= 1 and (recipe.Special.Pierce or 0) >= 0, name .. " special volley")
-		assert(recipe.Skill.SigilRadius and recipe.Skill.RainPerWave and recipe.Skill.FlareHeight, name .. " skill storm")
+		if recipe.Special.Style == "VOLLEY" then
+			assert((recipe.Special.Count or 1) >= 1 and (recipe.Special.Pierce or 0) >= 0, name .. " special volley")
+		end
+		if recipe.Skill.Style == "STORM" then
+			assert(recipe.Skill.SigilRadius and recipe.Skill.RainPerWave and recipe.Skill.FlareHeight, name .. " skill storm")
+		end
 	end
-	for heroId, recipe in Catalog.Heroes do
+	local function checkRadius(name: string, recipe: any, archetype: string)
+		local profile = Skills.GetSkillProfile(archetype)
+		assert(recipe.Skill.Style == skillStyle[archetype], name .. " ultimate style matches " .. archetype)
+		local radius = if recipe.Skill.Style == "STORM" then recipe.Skill.SigilRadius else recipe.Skill.Radius
+		near(radius, profile.Skill.Radius, name .. " ultimate radius matches the kit")
+	end
+	local heroes = 0
+	for heroId, profile in Skills.HeroProfiles do
+		local recipe = Catalog.Heroes[heroId]
+		assert(recipe, heroId .. " has VFX")
+		heroes += 1
 		checkRecipe(heroId, recipe)
-		local profile = Skills.HeroProfiles[heroId]
-		assert(profile and profile.Archetype == "Marksman", heroId .. " is a bow hero with a kit")
-		near(recipe.Skill.SigilRadius, profile.Skill.Radius, heroId .. " sigil matches the skill radius")
+		checkRadius(heroId, recipe, profile.Archetype)
 	end
-	for weaponType, recipe in Catalog.Weapons do
+	assert(heroes == 12, "all twelve heroes have VFX")
+	for heroId in Catalog.Heroes do
+		assert(Skills.HeroProfiles[heroId], heroId .. " is a hero with a kit")
+	end
+	for weaponType, archetype in Catalog.WeaponArchetype do
+		local recipe = Catalog.Weapons[weaponType]
+		assert(recipe, weaponType .. " has fallback VFX")
 		checkRecipe(weaponType, recipe)
-		assert(Catalog.WeaponArchetype[weaponType], weaponType .. " maps to an archetype")
+		checkRadius(weaponType, recipe, archetype)
 	end
 
 	local recipe, palette = Catalog.Get("hero_jenna", "BOW", "SPECIAL")
 	assert(recipe == Catalog.Heroes.hero_jenna.Special and palette == Catalog.Heroes.hero_jenna.Palette, "hero recipe wins")
 	recipe = Catalog.Get("hero_unknown", "BOW", "BASIC")
 	assert(recipe == Catalog.Weapons.BOW.Basic, "weapon fallback")
-	assert(Catalog.Get("hero_unknown", "AXE", "BASIC") == nil, "no recipe for melee yet")
+	assert(Catalog.Get("hero_unknown", "AXE", "SKILL") == Catalog.Weapons.AXE.Skill, "melee weapon fallback")
+	assert(Catalog.Get(nil, "UNARMED", "BASIC") == nil, "unarmed has no recipe")
 	assert(Catalog.Get("hero_jenna", "BOW", "NOT_A_TIER") == nil, "unknown tier")
 end
 

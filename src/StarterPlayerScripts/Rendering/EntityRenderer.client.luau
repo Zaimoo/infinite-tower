@@ -150,8 +150,34 @@ _G.ClientCombatState = {
 -- Starts a hero attack's VFX at its Release marker (CombatVfx/SkillVfx). Declared after
 -- VisualNodesByNetId so the target lookup sees that local. The projectile follows
 -- the target's rendered body while it exists and falls back to the server's aim point.
+-- Where the server reported hits and heals in the last moment, so area effects (chains, crystal
+-- spikes, mends) land on the enemies and allies the server actually picked.
+local RECENT_HIT_LIMIT = 64
+local RecentHits: { { Kind: string, Position: Vector3, At: number } } = {}
+
+local function recordHit(kind: string, position: any)
+	if typeof(position) ~= "Vector3" then
+		return
+	end
+	table.insert(RecentHits, { Kind = kind, Position = position, At = Workspace:GetServerTimeNow() })
+	if #RecentHits > RECENT_HIT_LIMIT then
+		table.remove(RecentHits, 1)
+	end
+end
+
+local function recentHits(kind: string, center: Vector3, radius: number, since: number): { Vector3 }
+	local found: { Vector3 } = {}
+	for _, hit in RecentHits do
+		if hit.Kind == kind and hit.At >= since and (hit.Position - center).Magnitude <= radius then
+			table.insert(found, hit.Position)
+		end
+	end
+	return found
+end
+
 local function playAttackVfx(rig: Model, animator: any, meta: any, cue: any)
 	local targetNetId = cue.TargetNetId
+	local ownerUserId = meta and meta.OwnerUserId
 	SkillVfx.Play(CombatVfxPool, {
 		HeroId = meta and meta.TemplateId,
 		WeaponType = animator.WeaponType,
@@ -164,6 +190,21 @@ local function playAttackVfx(rig: Model, animator: any, meta: any, cue: any)
 			end
 			return cue.Aim
 		end,
+		Self = function(): Vector3
+			local node = VisualNodesByNetId[cue.NetId]
+			return if node then node.CurrentPos else rig:GetPivot().Position
+		end,
+		Allies = function(): { Vector3 }
+			local positions: { Vector3 } = {}
+			for netId, node in VisualNodesByNetId do
+				local entry = MetadataByNetId[netId]
+				if node.IsHero and node.StateEnum ~= 4 and entry and entry.OwnerUserId == ownerUserId then
+					table.insert(positions, node.CurrentPos)
+				end
+			end
+			return positions
+		end,
+		RecentHits = recentHits,
 		Now = Workspace:GetServerTimeNow(),
 		Shake = if meta and meta.OwnerUserId == LocalPlayer.UserId then function(magnitude: number)
 			CombatFeedback:ScreenShake(magnitude)
@@ -424,6 +465,7 @@ end
 local function clearView()
  CombatFeedback:Clear()
  CombatVfxPool:Clear()
+ table.clear(RecentHits)
  EnemyAnimation.Clear()
  for _,node in pairs(DyingNodes) do node.Model:Destroy() end;table.clear(DyingNodes)
  Actions=ActionState.New();_G.ClientCombatState.EnemyActions=Actions;table.clear(PendingActions)
@@ -736,15 +778,22 @@ CombatVFXRemote.OnClientEvent:Connect(function(context: any, vfxType: string, po
 		end
 		return
 	elseif vfxType=="HIT_SPARK" then
+		recordHit("HIT",pos)
 		CombatFeedback:Hit(pos,amount,isOverdrive,incoming)
 		return
 	elseif vfxType=="HIT_SPECIAL" then
+		recordHit("HIT",pos)
 		CombatFeedback:Special(pos,amount,isOverdrive,incoming)
 		return
-	elseif vfxType=="HIT_SKILL" or vfxType=="SKILL_CAST" or vfxType=="SKILL_TEMPEST" or vfxType=="SKILL_METEOR" or vfxType=="SKILL_ARROWS" or vfxType=="SKILL_CRYSTAL" or vfxType=="SKILL_SHIELD" or vfxType=="BARRIER_APPLIED" then
+	elseif vfxType=="HIT_SKILL" then
+		recordHit("HIT",pos)
+		CombatFeedback:Skill(pos,amount,vfxType)
+		return
+	elseif vfxType=="SKILL_CAST" or vfxType=="SKILL_TEMPEST" or vfxType=="SKILL_METEOR" or vfxType=="SKILL_ARROWS" or vfxType=="SKILL_CRYSTAL" or vfxType=="SKILL_SHIELD" or vfxType=="BARRIER_APPLIED" then
 		CombatFeedback:Skill(pos,amount,vfxType)
 		return
 	elseif vfxType=="HEAL_SPARK" or vfxType=="HEAL_BURST" then
+		recordHit("HEAL",pos)
 		CombatFeedback:Heal(pos,amount)
 		return
 	end

@@ -243,6 +243,23 @@ Each phase is its own branch and PR off `main` (`feat(combat): ...`).
 ### Phase 5: Skill VFX for the other 10 heroes
 - The remaining primitives (Pillar, Shell, SlashArc, Chain, Aura, GroundRing) and catalog entries per the table above. Can be split into one PR per archetype.
 
+#### Phase 5 results (2026-10-27)
+- `SkillVfxCatalog`: every tier names a `Style`, which picks a `SkillVfx` player, and the remaining fields tune it. There are entries for all 12 heroes and fallbacks for all six weapons. `Catalog.Styles` lists the valid styles per tier.
+- Styles:
+
+  | Tier | Bow | Sword and shield | Daggers | Axe | Staff | Tome |
+  | --- | --- | --- | --- | --- | --- | --- |
+  | Basic | SHOT (arrow) | SLASH (crescent) | SLASH | SLASH | BOLT (`ORB`/`BOLT`) | BOLT |
+  | Special | VOLLEY | CLEAVE (slash + 110° shockwave cone) | CROSS (two crossing crescents) | TREMOR (ground ring, disc, spikes) | CHAIN (orb, then lightning to each chained hit) | MEND (bolt, then motes on the healed ally) |
+  | Skill | STORM | BULWARK (barrier shell for 6 s + taunt shockwave to 25 studs) | TEMPEST (ring of crescents + 12-stud shockwave; Archon adds a collapsing rift) | CRYSTALS (spike cluster + a spike under each hit enemy) | PILLAR (column drops, burst, 3 s burning ground) | SANCTUARY (25-stud sigil + a light column on each squad hero) |
+
+- New primitives in `VfxPrimitives`: `Ring` (an expanding ground band, full or cone, made of 16 segments), `SlashArc` (a 9-segment crescent that sweeps on and then fades), `Shell`, `Pillar`, `Beam` (a zigzag of 4 segments), `Spike` and `Motes`, plus `Yaw`. `ProjectileVfx` gains `BOLT` and `ORB`.
+- Melee blows land on their release frame, the same moment `SkillVfx.Play` runs, so `Play` now accepts a cue up to 0.2 s past its impact.
+- Hit and heal positions (`CHAIN`, `MEND`, `CRYSTALS`): `EntityRenderer` keeps the last 64 hit and heal positions the server reported (`RecentHits`). The effect reads them 0.2 s after impact, so it lands on the enemies and allies the server actually picked. The renderer also supplies `Self` and `Allies` (the attacker's squad) as foot-level positions, matching the server's entity positions and `Cue.Aim`.
+- `tests/combat-vfx.spec.luau`: every hero and weapon has valid styles and projectiles, all 12 heroes are covered, each ultimate's style matches its archetype, and each ultimate's radius matches its kit.
+- Not built yet: dedicated Healer heal-ring and Scholar meteor projectiles. `PILLAR` draws the meteor as a column of light.
+- Playtest tweak: slashes looked small. Every crescent now goes through `SLASH_SIZE = 1.7` in `SkillVfx`, giving a basic slash about a 3.7-stud radius. `SlashArc`'s band is about twice as wide (0.3 × radius), thicker, and spans 165°.
+
 ### Phase 6: Polish and budget
 - Culling, caps, mobile check (`studio-part3-mobile-client.luau`), and the multiplayer check with 6 squads in a room (`studio-part3-multiplayer-*`). MicroProfiler label `CombatVfx.Step` under 1 ms at 30 heroes.
 

@@ -81,9 +81,71 @@ local function buildArrow(kind: string, scale: number): Model
 	return model
 end
 
+local function addTrail(primary: BasePart, halfWidth: number, z: number)
+	local top = Instance.new("Attachment")
+	top.Name = "TrailTop"
+	top.Position = Vector3.new(0, halfWidth, z)
+	top.Parent = primary
+	local bottom = Instance.new("Attachment")
+	bottom.Name = "TrailBottom"
+	bottom.Position = Vector3.new(0, -halfWidth, z)
+	bottom.Parent = primary
+	local trail = Instance.new("Trail")
+	trail.Attachment0 = top
+	trail.Attachment1 = bottom
+	trail.FaceCamera = true
+	trail.LightEmission = 1
+	trail.LightInfluence = 0
+	trail.MinLength = 0.05
+	trail.Transparency = NumberSequence.new(0.3, 1)
+	trail.WidthScale = NumberSequence.new(1, 0.1)
+	trail.Enabled = false
+	trail.Parent = primary
+end
+
+-- Bolt: a spear of light with a bright diamond tip (healers' and some casters' projectiles).
+local function buildBolt(kind: string, scale: number): Model
+	local model = Instance.new("Model")
+	model.Name = "Projectile_" .. kind
+	local core = VfxPrimitives.NewPart("Core", Enum.PartType.Block, Enum.Material.Neon)
+	core.Size = Vector3.new(0.3, 0.3, 2.6) * scale
+	add(model, core, CFrame.identity)
+	model.PrimaryPart = core
+	local head = VfxPrimitives.NewPart("Head", Enum.PartType.Block, Enum.Material.Neon)
+	head.Size = Vector3.new(0.55, 0.55, 0.9) * scale
+	add(model, head, CFrame.new(0, 0, -1.5 * scale) * CFrame.Angles(0, 0, math.rad(45)))
+	local glow = VfxPrimitives.NewPart("Glow", Enum.PartType.Ball, Enum.Material.Neon)
+	glow.Size = Vector3.one * 1.1 * scale
+	glow.Transparency = 0.65
+	add(model, glow, CFrame.new(0, 0, -1.4 * scale))
+	addTrail(core, 0.5 * scale, 1.2 * scale)
+	return model
+end
+
+-- Orb: a bright core inside a shimmering shell (casters' projectiles).
+local function buildOrb(kind: string, scale: number): Model
+	local model = Instance.new("Model")
+	model.Name = "Projectile_" .. kind
+	local core = VfxPrimitives.NewPart("Core", Enum.PartType.Ball, Enum.Material.Neon)
+	core.Size = Vector3.one * 0.9 * scale
+	add(model, core, CFrame.identity)
+	model.PrimaryPart = core
+	local glow = VfxPrimitives.NewPart("Glow", Enum.PartType.Ball, Enum.Material.Neon)
+	glow.Size = Vector3.one * 1.4 * scale
+	glow.Transparency = 0.6
+	add(model, glow, CFrame.identity)
+	local shell = VfxPrimitives.NewPart("Shell", Enum.PartType.Ball, Enum.Material.ForceField)
+	shell.Size = Vector3.one * 2.0 * scale
+	add(model, shell, CFrame.identity)
+	addTrail(core, 0.65 * scale, 0.3 * scale)
+	return model
+end
+
 ProjectileVfx.Builders = table.freeze({
 	ARROW = buildArrow,
 	ASTRAL = buildArrow,
+	BOLT = buildBolt,
+	ORB = buildOrb,
 } :: { [string]: (string, number) -> Model })
 
 function ProjectileVfx.Has(kind: string): boolean
@@ -106,7 +168,11 @@ function ProjectileVfx.Paint(model: Model, kind: string, palette: any, trailSeco
 	for _, d in model:GetDescendants() do
 		if d:IsA("BasePart") then
 			if d.Name == "Head" then
-				d.Color = if astral then palette.Core else palette.Primary
+				d.Color = if astral or kind == "BOLT" then palette.Core else palette.Primary
+			elseif d.Name == "Core" then
+				d.Color = if kind == "ORB" then palette.Core else palette.Primary
+			elseif d.Name == "Shell" then
+				d.Color = palette.Secondary
 			elseif d.Name == "Glow" then
 				d.Color = if astral then palette.Secondary else palette.Primary
 			elseif astral and d.Name == "Shaft" then
