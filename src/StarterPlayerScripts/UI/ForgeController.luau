@@ -1468,7 +1468,11 @@ function Forge:RenderUpgradeView()
 			cost.Gems
 		)
 
-		if copiesCount >= reqFodder and reqFodder > 0 then
+		if not (profile and profile.Unlocks and profile.Unlocks.Forge) then
+			-- Phase 4 onboarding: weapon promotion opens after clearing Floor 1.
+			self.EnhanceBtn.Text = "🔒 CLEAR FLOOR 1 TO UNLOCK PROMOTION"
+			applyGothicStyle(self.EnhanceBtn, "ButtonPrimary", { Disabled = true })
+		elseif copiesCount >= reqFodder and reqFodder > 0 then
 			self.EnhanceBtn.Text = string.format("⚒️ PROMOTE TO %d STARS (%d/%d)", currentStar + 1, copiesCount, reqFodder)
 			applyGothicStyle(self.EnhanceBtn, "ButtonPrimary", { Variant = "Gold", Disabled = false })
 		else

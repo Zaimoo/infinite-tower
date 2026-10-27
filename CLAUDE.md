@@ -43,7 +43,7 @@ Also follow `AGENTS.md`. Before working on a topic, use the matching `roblox-*` 
 
   There are no rings and no separate shields.
 - **Artifact rarity** is inherent (16 tiers, Common to Origin) and never upgrades. Star promotion (1★–7★, multipliers 1.0 to 16.0×) is the only upgrade, and it consumes donors of the same template. Formula: `WeaponDamageMultiplier = 1 + Power/40`. The artifact banner costs 160 Gems for one pull or 1,600 for ten. It has a 50-pull pity and guarantees at least one Rare in every ten-pull.
-- **Fortress facilities:** the Infirmary/Barracks handles stamina, rest and coma recovery. The Guard Post makes AFK/offline Gold, the Market multiplies tower loot, and the Training Grounds multiply squad combat power.
+- **Fortress facilities:** support facilities are unlocked and levelled in the Fortress Tree (which also opens squad slots 2–5). There is no Infirmary; benched heroes recover stamina passively. The Guard Post makes AFK/offline Gold, the Market multiplies tower loot, and the Training Grounds multiply squad combat power.
 - **Contested loot:** loot drops physically and has to be carried and banked. Stealing it triggers a 3-minute retaliation window for PvP at 25% damage. Defeated heroes enter `COMA`.
 
 ## Testing

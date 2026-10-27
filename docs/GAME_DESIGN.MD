@@ -17,14 +17,14 @@ In traditional gacha/simulator games, 95% of summons are discarded as worthless 
 1. **The Dual-Role Living Roster (Combat + Labor):**
    - Every hero pulled from the Summoning Altar rolls with **Combat Stats** (movement speed, attack speed, attack damage, health) and **Labor Output** (separate facility productivity), without trait or imprint bonuses.
    - **Up to 5 Deployed Heroes** (all 5 slots unlocked from the start) accompany the Master into the Central Hub or are independently deployed to specific floors (1–50) of the **Infinite Tower**. Heroes charge an in-combat **Skill/Stamina Gauge** (0 to 100) through a 3-tier attack cadence (Basic -> Basic -> Special -> Skill Attack at 100), and risk a debilitating **60-second Coma** if left inside lethal AoE telegraphs.
-   - **Benched Heroes** physically inhabit the player's **Fortress Plot** on recuperation beds in **The Infirmary & Barracks** (Coma recovery & rest), or can be forged powerful equipment at the **Blacksmith Forge**.
+   - **Benched Heroes** physically inhabit the player's **Fortress Plot**, resting on the bench, or can be forged powerful equipment at the **Blacksmith Forge**.
    - **Zero Dead Pulls:** Duplicate heroes across all star ranks are fed into the **Synthesis Chamber** (`SynthesisController.luau`) for EXP leveling to cap (`MaxLevel = Stars * 10`), or sacrificed at the **Promotion Altar** (`PromotionController.luau`) for **Star Promotion** ($1★ \to 7★$).
    - **Dual Hero Banners & Artifact Ascension:** At the **Summoning Altar**, players spend Gems (`100 Gems` single / `900 Gems` 10x) on two distinct banners: **Call of the Rift** (Permanent Banner featuring 5 stars: $1★ \to 5★$) and **A Star's Arrival** (Limited Time Banner featuring 1 character per star across all 7 stars: $1★ \to 7★$). In addition, Masters spend Gems at the **Artifact Summoning Banner** (`160 Gems` single / `1,600 Gems` 10x) to pull equippable archetype weapons across **16 Rarity Tiers** (`Common` $\to$ `Origin`) which define inherent base stats. At the **Blacksmith Forge** (`ForgeController.luau`), duplicate gear and Gold are used for **Star Ascension** ($1★ \to 7★$), multiplying base stats with massive progressive multipliers up to **`8.00x`**.
 
 2. **Tactical Master Agency Over AFK Whaling:**
    - The Master carries no personal weapon. Instead, the Master directs squads through battlefield commands—**`[Click / Tap]` Focus Target**, **`[Q]` Overdrive Whistle**, and **`[E]` Emergency Recall Whistle**—while physically hauling heavy, high-value **Relics** and cargo back to their plot.
    - Masters use **`[LeftShift]` Sprint** ($3.0\times$ speed multiplier) to cross high-elevation bridges and dodge lethal hazards.
-   - Because boss signature skill checks (the **Biome Boss** signature attacks like *Moss Quake* and *Sweeping Roots*, and elite ground telegraphs) inflict instant 50% Stamina loss or a **60-second Coma** on heroes left inside the blast zone, an AFK player will have their squad wiped and sent to the Infirmary, dropping their DPS to zero. An active Master who times **`[E]` Emergency Recall Whistle** to dodge the blast and triggers **`[Q]` Overdrive Whistle** during punish windows will consistently out-damage and out-loot an AFK whale.
+   - Because boss signature skill checks (the **Biome Boss** signature attacks like *Moss Quake* and *Sweeping Roots*, and elite ground telegraphs) inflict instant 50% Stamina loss or a **60-second Coma** on heroes left inside the blast zone, an AFK player will have their squad wiped and sent home, dropping their DPS to zero. An active Master who times **`[E]` Emergency Recall Whistle** to dodge the blast and triggers **`[Q]` Overdrive Whistle** during punish windows will consistently out-damage and out-loot an AFK whale.
 
 ### 1.3 Hybrid Retention Matrix & Core Drivers
 
@@ -33,7 +33,7 @@ In traditional gacha/simulator games, 95% of summons are discarded as worthless 
 | ***Pick Me Up, Infinite Gacha*** | Desperate squad survival, Synthesis chamber, Star Promotion, living lobby workers | Heroes suffer Stamina drain and `Coma` if mismanaged; 4★/5★ heroes require hard promotion sacrifices; War Banner plot deployment. |
 | ***Pet Simulator 99*** | Multi-unit squad grinding, tactile loot explosions, exponential progression | Replaces passive pet hovering with Stamina-managed combat squads, active whistle commands, and isolated 50-floor dynamic tower rooms. |
 | ***Blox Fruits*** | Telegraphed boss skills, live DPS leaderboards, open-world bounty hunting | **Greed vs. Coma** boss checks, 10 **Biome Bosses** (Floors 5, 10, ..., 50), and **Contested Loot & Targeted Retaliation PvP** in arena rings. |
-| ***Grow a Garden*** | Cozy-yet-competitive perimeter plots, passive production, fortress management | Dedicated private plots with Infirmary recuperation beds, War Banner squad deployment, and Forge progression. |
+| ***Grow a Garden*** | Cozy-yet-competitive perimeter plots, passive production, fortress management | Dedicated private plots with a Fortress Tree of unlockable facilities, War Banner squad deployment, and Forge progression. |
 | ***Steal an Egg*** | Physical object hauling, movement penalties, fumble & steal tension | High-tier **Relics** & cargo weld overhead, slow WalkSpeed by up to -45%, and fumble on AoE hits. |
 
 **The Intimate Server Dynamic:**
@@ -49,7 +49,7 @@ flowchart TD
         M1["Deploy 5 Rested Heroes (Hub Arena or Tower Floors 1-50)"] --> M2["Command Squad: Focus Target, [Q] Overdrive, [E] Recall Dodge"]
         M2 --> M3["Pick Up Physical Loot / Relic (-15% to -45% WalkSpeed)"]
         M3 --> M4["Haul Across Bridges or Portals to Plot Pad (Dodge AoE & Loot Thieves)"]
-        M4 --> M5["Bank Gold & Gems; Swap Exhausted Heroes into Infirmary Beds"]
+        M4 --> M5["Bank Gold & Gems; Rest Exhausted Heroes on the Bench"]
         M5 --> M1
     end
 
@@ -91,21 +91,21 @@ flowchart TD
 4. **Extract & Bank (2:45 – 3:00):**
    - **Hub Banking:** Stepping onto the Perimeter Highway (`R >= 460 studs`) or a Private Extraction Pad safely deposits cargo into permanent Gold and Gems.
    - **Floor Safe Sanctuary Banking:** Bringing physical loot (Gold/Gems) or Relics back into any floor's elevated **Floor Safe Sanctuary** automatically deposits them at the **Floor Extraction Pad** (`FloorExtractionPad`), granting 100% relic payout and Market multipliers immediately without requiring a trip back to the Hub.
-   - Comatose heroes are swapped into **Infirmary Recuperation Beds**, and fresh rested heroes are rotated into the active squad via the `[AutoSwap]` toolbar action.
+   - Comatose heroes are benched, and fresh rested heroes are rotated into the active squad via the `[AutoSwap]` toolbar action.
 
 ### 2.2 The 15-Minute Meso Loop (Fortress, Synthesis, Promotion & Forge Progression)
 1. **Facility Upkeep (Every 3–5 Minutes):**
-   - Inspect Infirmary beds and swap resting heroes into active squad rotation.
+   - Swap rested heroes from the bench into the active squad rotation.
 2. **Summoning & Gacha Pulls (Every 5–10 Minutes):**
-   - Spend Gems at the **Summoning Altar** on either **Call of the Rift** (1★–5★ Permanent Banner), **A Star's Arrival** (1★–7★ Limited Time Rate-Up Banner, featuring 1 character per star), or the **Artifact Banner** (`160 Gems` single / `1,600 Gems` 10x for archetype weapons across 16 Rarity Tiers).
+   - Spend Gems at the **Summoning Altar** on either **Call of the Rift** (Common–Exalted Permanent Banner), **A Star's Arrival** (Common–Mythical Limited Time Rate-Up Banner, featuring 1 character per rarity tier, each summoned at its matching star), or the **Artifact Banner** (`160 Gems` single / `1,600 Gems` 10x for archetype weapons across 16 Rarity Tiers).
    - **Synthesis Chamber (`SynthesisController.luau`):** Place a recipient hero and up to 5 fodder heroes to level up to the hero's current cap ($\text{MaxLevel} = \text{Stars} \times 10$).
-   - **Promotion Altar (`PromotionController.luau`):** When a hero reaches max level, sacrifice same-rank heroes and Promotion Stones to permanently ascend star rating ($1★ \to 7★$).
+   - **Promotion Altar (`PromotionController.luau`):** When a hero reaches max level, sacrifice same-rank heroes and Promotion Stones to permanently ascend star rating ($1★ \to 5★$). The hero's inherent rarity never changes.
 3. **Artifact Star Ascension at the Blacksmith Forge (`ForgeController.luau`):**
    - **Star Ascension (Multipliers):** Ascend artifacts from $1★ \to 7★$ at the Forge by sacrificing duplicate artifacts and Gold, scaling inherent base stats by progressive multipliers up to **`8.00x`**.
 
 ### 2.3 The Macro Loop (Tower Progression & Biome Boss Conquests)
 1. **Biome Traversal & Preparation:**
-   - Masters organize their 5-hero squad, equip high-rarity and high-star artifacts, and ensure full stamina in the Infirmary before entering a new Biome.
+   - Masters organize their 5-hero squad, equip high-rarity and high-star artifacts, and rest exhausted heroes on the bench before entering a new Biome.
    - Each of the 10 biomes spans 5 progressively harder floors (50 floors total) with 4 unique biome enemy species (2 Regulars, 1 Elite, and 1 Biome Boss; 40 total enemy species across the Tower). Floor 1 and the 3rd–4th floors of every biome include Elite encounters alongside Regulars. Enemy health and attack damage follow the stat-reference curve in Section 4.2. Reward scaling remains $\text{Reward} \times 1.055^{\text{Floor}-1}$; stat inflation does not change rewards.
 2. **The Biome Boss Encounter (Floors 5, 10, 15, ..., 50):**
    - The 5th floor of every biome is a dedicated **Biome Boss Arena** (`BOSS_ARENA` layout variant) featuring an 8-column ritual ring, boss braziers, and a massive boss dais fixture (`BossDaisFixture`, $60 \times 2 \times 60\text{ studs}$).
@@ -124,8 +124,9 @@ flowchart TD
 While active squad command in the Central Hub and Infinite Tower drives peak progression, the **Outskirts & Facility Loop** ensures that a Master's benched roster continuously generates value both online and offline—reinforcing the **Zero-Waste Roster Economy**.
 
 1. **Inner Fortress Stations vs. The Rear Outskirts:**
-   - **Core Main Buildings (Inner Courtyard):** Essential progression stations that every Master accesses by default in their main fortress courtyard—including the **Summoning Altar**, **War Banner**, **Synthesis Chamber**, **Promotion Altar**, **Blacksmith Forge**, and **The Infirmary & Barracks** (which operates strictly as a Main Building for Stamina & Coma recovery).
-   - **Support Facilities (Inner Fortress Wings):** Upgradeable utility and economic structures (`Level 1` $\to$ `Level 5`) located inside the fortress courtyard wings where benched heroes are stationed via `FacilityController.luau` to grant global percentage buffs:
+   - **Core Main Buildings (Inner Courtyard):** Essential progression stations that every Master accesses by default in their main fortress courtyard—including the **Summoning Altar**, **War Banner**, **Synthesis Chamber**, **Promotion Altar** and **Blacksmith Forge**.
+   - **Support Facilities (Inner Fortress Wings):** Upgradeable utility and economic structures (`Level 1` $\to$ `Level 5`) located inside the fortress courtyard wings where benched heroes are stationed via `FacilityController.luau` to grant global percentage buffs. Each is unlocked and levelled through the **Fortress Development Tree** (Section 4.3):
+     - **God's Blessing (Plaza Fountain):** An angel statue on the courtyard fountain. Stationed Acolytes (`Healer` preferred) raise **summon luck** on every Summoning Altar banner ($+4\%$ at Lv. 1 up to a $+50\%$ cap).
      - **The Market (Inner Commercial Wing):** Grants a percentage multiplier ($+5\%$ base at Lv. 1 up to $+40\%+$ with high-tier Miners) **strictly to Loot Earnings from the Towers**—amplifying Gold dropped by Infinite Tower mobs/Biome Bosses (Floors $1\text{–}50$) and the banking value of physical loot extracted from the Central Crimson Tower rings. (Does not multiply Outskirts Guard Post passive Gold).
      - **The Training Grounds (Inner Martial Wing):** Grants a percentage multiplier ($+4\%$ base at Lv. 1 up to $+32\%+$ with high-tier Strikers/Scholars) to the Master's **Overall Squad Combat Power**, multiplying total `FinalATK` and `FinalHP` (both intrinsic hero stats and equipped Artifact stats) against all monsters.
    - **The Outskirts (Southern Frontier Wilderness):** The only area located *outside* the fortress walls, reached through the rear fortress gatehouse. Houses the **Outskirts Guard Post** and wilderness patrol run.
@@ -239,7 +240,7 @@ Tower floors are dynamically managed by `TowerFloorService.luau` and generated v
 To accommodate active fortress management, squad training, commerce, and the passive Outskirts AFK loop, each of the 6 Floating Fortress Islands is expanded by **$1.2\times$** radial distance out to **$R = 650\text{ studs}$** (top surface $Y = 12$) with an enlarged citadel island footprint of **$260\text{ studs (Width)} \times 320\text{ studs (Length)}$**.
 
 The island is divided into two distinct, interconnected sectors:
-1. **The Grand Citadel & Inner Courtyard (Front / North - $260 \times 180\text{ studs}$):** Heavily fortified with $28\text{-stud}$ high crenellated stone walls, corner watch bastions, and a private entrance gatehouse facing the perimeter drawbridge. Encloses all **Core Main Buildings** (Summoning Altar, War Banner, The Pit, Blacksmith Forge, Infirmary) as well as the internal support facilities (**The Market** and **The Training Grounds**).
+1. **The Grand Citadel & Inner Courtyard (Front / North - $260 \times 180\text{ studs}$):** Heavily fortified with $28\text{-stud}$ high crenellated stone walls, corner watch bastions, and a private entrance gatehouse facing the perimeter drawbridge. Encloses all **Core Main Buildings** (Summoning Altar, War Banner, The Pit, Blacksmith Forge) as well as the internal support facilities (**The Market** and **The Training Grounds**).
 2. **The Southern Outskirts (Rear / South - $260 \times 140\text{ studs}$):** The sole exterior zone outside the fortress walls, accessed through the vaulted rear fortress gatehouse. Spans open, rugged frontier terrain, pine trees, and dirt wilderness trails housing **The Outskirts Guard Post**.
 
 ```
@@ -248,14 +249,15 @@ The island is divided into two distinct, interconnected sectors:
                                   [North Gatehouse]
                        +---------------------------------------+
                        |   Plaza & Cyan Private Extraction Pad  |
+                       |              (Plot Spawn)              |
+                       | [Summoning Altar]   [Blacksmith Forge] |
+                       | (Hero & Artifact)    & Anvil Hearth]   |
                        |                                       |
-                       | [Infirmary & Beds]   [Summoning Altar]|
-                       |                      (Hero & Artifact)|
-                       |   [Plaza Fountain]                    |
-                       | [War Banner Standard]                 |
-                       |                                       |
-                       | [The Pit / Cauldron] [Blacksmith Forge|
-                       | (Synthesis & Promo)   & Anvil Hearth] |
+                       |     [Plaza Fountain + Angel Statue]   |
+                       |           (God's Blessing)            |
+                       | [War Banner +                         |
+                       |  Architect's Table]  [The Pit]        |
+                       | (Command Post)  (Synthesis & Promo)   |
                        |                                       |
                        | [Training Grounds]       [The Market] |
                        | (Sparring & Dummies)  (Bazaar Stalls) |
@@ -281,13 +283,14 @@ The island is divided into two distinct, interconnected sectors:
    - **Beacon Pillar & Plot Spawn:** Center anchor with the Master's avatar beacon projected skyward.
 
 2. **Sector B: Grand Inner Fortress Courtyard (Core Buildings & Interior Facilities):**
-   - **Summoning Altar (East Courtyard):** Towering obsidian obelisk featuring dual runic summoning circles for the **Hero Banner** (`100 Gems` single / `900 Gems` 10x) and **Artifact Banner** (`160 Gems` single / `1,600 Gems` 10x).
-   - **Plaza Fountain & War Banner (Center Courtyard):** Central triple-tiered Gothic stone fountain in the courtyard center with water basins and blue glow, flanked to the left by the heraldic War Banner standard on a carved stone pedestal with `[F]` proximity prompt opening the **Squad Deploy UI** (`SquadController.luau`).
-   - **The Pit Sanctuary (West Courtyard):**
+   - **Courtyard Grid:** Buildings stand in a 3 x 2 grid either side of a clear walkway from the plot spawn, past the fountain, to the rear gate. Every entrance faces the fountain. North row (by the spawn): Summoning Altar and Blacksmith Forge. Middle row: the Command Post (War Banner and Architect's Table) and The Pit. South row: Training Grounds and Market, which only appear once built in the Fortress Tree.
+   - **Summoning Altar (North-West Courtyard):** Towering obsidian obelisk featuring dual runic summoning circles for the **Hero Banner** (`100 Gems` single / `900 Gems` 10x) and **Artifact Banner** (`160 Gems` single / `1,600 Gems` 10x).
+   - **Plaza Fountain, God's Blessing & War Banner (Center Courtyard):** Central triple-tiered Gothic stone fountain in the courtyard center with water basins and blue glow, crowned, once unlocked, by a **marble angel statue** with raised hands holding a lantern of light. The fountain is the **God's Blessing** facility (Section 4.3, Facility D): an `[F]` prompt opens its panel, and the angel brightens with each level. 
+   - **Command Post (West Courtyard):** The heraldic War Banner standard on a carved stone pedestal, with an `[F]` prompt opening the **Squad Deploy UI** (`SquadController.luau`), and beside it the **Architect's Table**, whose prompt opens the **Fortress Tree**.
+   - **The Pit Sanctuary (East Courtyard):**
      - **Synthesis Chamber:** Fiery cauldron station with `[F]` prompt opening the **Synthesis UI** (`SynthesisController.luau`) for feeding EXP fodder.
      - **Promotion Altar:** Consecrated marble star dais with `[F]` prompt opening the **Promotion UI** (`PromotionController.luau`) for star ascensions ($1★ \to 5★$).
-   - **The Blacksmith Forge (South-East Courtyard):** Interactive 3D station featuring an anvil, hearth coals, workbench, and prompt opening the **Forge UI** (`ForgeController.luau`) for Artifact Star Ascension ($1★ \to 7★$).
-   - **The Infirmary & Barracks (North-West Courtyard):** Dedicated Gothic stone hall containing 5 permanent recuperation beds where wounded and `Coma`-afflicted heroes rest. Resting Healer heroes project an aura accelerating stamina regeneration.
+   - **The Blacksmith Forge (North-East Courtyard):** Interactive 3D station featuring an anvil, hearth coals, workbench, and prompt opening the **Forge UI** (`ForgeController.luau`) for Artifact Star Ascension ($1★ \to 7★$).
    - **The Market (South-East Inner Wing):** Covered bazaar stalls, coin scales, and ledger counters located inside the fortress commercial quarter. Stationed workers (`Miner` preferred) boost Infinite Tower mob/boss loot drops and Hub extraction banking values ($+5\%$ to $+40\%+$).
    - **The Training Grounds (South-West Inner Wing):** Cobblestone sparring arena with weapon racks, archery targets, and training dummies located inside the fortress military quarter. Stationed trainers (`Striker` & `Scholar` preferred) boost the Master's overall squad combat power ($+4\%$ to $+32\%+$ Final ATK/HP).
 
@@ -301,51 +304,62 @@ The island is divided into two distinct, interconnected sectors:
 
 ### 4.1 Gacha Banners & Hero Roster Architecture
 
-Hero summoning at the **Summoning Altar** (`FacilityController.luau`) is partitioned into two distinct banners:
+Hero summoning at the **Summoning Altar** (`FacilityController.luau`) is partitioned into two distinct banners. Each banner rolls an **inherent rarity tier**, and each tier holds exactly one hero. Each hero is summoned at its template's star, which matches its tier (Common = 1★ up to Mythical = 7★). Rarity adds a stat multiplier on top (see *Inherent Hero Rarity* below). All hero odds can be raised by the **God's Blessing** facility (Section 4.3, Facility D).
 
-#### 1. Permanent Banner: "Call of the Rift" (5 Stars: 1★ to 5★)
-The permanent standard banner features exactly **one character for each star rating from 1★ to 5★** (5 total heroes):
+#### 1. Permanent Banner: "Call of the Rift" (Rarity Tiers 1–5)
+The permanent standard banner features exactly **one character for each rarity from Common to Exalted** (5 total heroes):
 - **Summon Cost:** `100 Gems` per single pull (`900 Gems` for 10x pull).
-- **Pity System:** Guaranteed 5★ hero within **50 summons** (`MaxPity = 50`). Natural 5★ pull resets pity counter.
+- **Pity System:** Guaranteed Exalted hero (**Ignis**) within **80 summons** (`MaxPity = 80`). A natural Exalted pull resets the pity counter.
+- **10-Pull Guarantee:** Every 10x pull includes at least one **Rare** or higher hero.
 - **Drop Rates:**
-  - `1★ Common (60.0%)`: **Han**
-  - `2★ Rare (25.0%)`: **Aaron**
-  - `3★ Epic (10.0%)`: **Catio**
-  - `4★ Legendary (4.0%)`: **Valeria**
-  - `5★ Mythic (1.0%)`: **Ignis**
+  - `Common (70.0%)`: **Han**
+  - `Uncommon (20.0%)`: **Aaron**
+  - `Rare (7.0%)`: **Catio**
+  - `Superior (2.5%)`: **Valeria**
+  - `Exalted (0.5%)`: **Ignis**
 
-#### 2. Limited Time Banner: "A Star's Arrival" (7 Stars: 1★ to 7★)
-The inaugural limited-time rate-up banner features exactly **one character for each star rating from 1★ to 7★** (7 total heroes):
+#### 2. Limited Time Banner: "A Star's Arrival" (Rarity Tiers 1–7)
+The inaugural limited-time rate-up banner features exactly **one character for each rarity from Common to Mythical** (7 total heroes):
 - **Summon Cost:** `100 Gems` per single pull (`900 Gems` for 10x pull).
-- **Pity System:** Guaranteed 7★ featured hero (**Astrea**) within **50 summons** (`MaxPity = 50`). Natural 7★ pull resets pity counter.
+- **Pity System:** Guaranteed Mythical featured hero (**Astrea**) within **90 summons** (`MaxPity = 90`). A natural Mythical pull resets the pity counter.
+- **10-Pull Guarantee:** Every 10x pull includes at least one **Rare** or higher hero.
 - **Drop Rates:**
-  - `1★ Common (50.0%)`: **Jenna**
-  - `2★ Rare (25.0%)`: **Velkist**
-  - `3★ Epic (13.5%)`: **Eolka**
-  - `4★ Legendary (6.5%)`: **Morrigan**
-  - `5★ Mythic (3.5%)`: **Sovereign Archon**
-  - `6★ Transcendent (1.2%)`: **Solaris**
-  - `7★ Primordial (0.3%)`: **Astrea (Featured 7★ Starlight Primordial)**
+  - `Common (60.0%)`: **Jenna**
+  - `Uncommon (24.0%)`: **Velkist**
+  - `Rare (10.0%)`: **Eolka**
+  - `Superior (4.2%)`: **Morrigan**
+  - `Exalted (1.4%)`: **Sovereign Archon**
+  - `Legendary (0.33%)`: **Solaris**
+  - `Mythical (0.07%)`: **Astrea (Featured Starlight Mythical)**
+
+*(These rates are lower than the pre-Phase 4 rates of 60/25/10/4/1% and 50/25/13.5/6.5/3.5/1.2/0.3%, and pity rose from 50 to 80 and 90 so it does not undo the lower odds. See `docs/rework-plan/PHASE_4_ONBOARDING_AND_PROGRESSION.md` §7.)*
 
 ---
 
-#### Launch Roster Base & Native Stats
-Every summoned hero rolls a `QualityScalar` $q \in [0.90, 1.15]$ applied to their archetype base stats. Native stats scale with Base Star $S$ according to $Stat_0 \times 1.65^{(S - 1)}$ for combat and $L_0 \times 1.35^{(S - 1)}$ for labor:
+#### Inherent Hero Rarity
+Like weapons (Section 7.1), every hero template has a fixed **inherent rarity**. For heroes it only adds a stat multiplier, and summoning and stars work as before.
+- **Rarity** uses the weapon tier names. Launch heroes span tiers 1 (Common) to 7 (Mythical), and tiers 8–16 are reserved for future heroes. Rarity can never be upgraded, rerolled or refined.
+- **Rarity multipliers:** combat stats × $1.35^{(t-1)}$ and labor × $1.12^{(t-1)}$, where $t$ is the tier.
+- **Stars are unchanged:** each hero is summoned at its template's star and promotes at The Pit up to 5★ (`PitBalanceConfig.MaxStars`); 6★ Solaris and 7★ Astrea arrive above that cap. Rarity never changes when a hero is promoted.
+- **Existing saves** keep their stars and level and gain their template's rarity.
 
-| Banner | Hero | Star | Archetype | Base HP / ATK | Native HP / ATK | Base / Native Labor | Passive Trait |
-| :--- | :--- | :---: | :--- | :--- | :--- | :--- | :--- |
-| **Call of the Rift** | **Han** | **1★** | Striker | `300` / `40` | `300` / `40` | `14` / `14.0` | **Unyielding Adaptation** (+10% ATK, -10% Stamina Drain) |
-| **Call of the Rift** | **Aaron** | **2★** | Vanguard | `450` / `28` | `743` / `46` | `16` / `21.6` | **Phalanx Guard** (+25% Max HP, -15% AoE Taken) |
-| **Call of the Rift** | **Catio** | **3★** | Miner | `280` / `24` | `762` / `65` | `20` / `36.5` | **Quartermaster's Ledger** (+25% Labor Output) |
-| **Call of the Rift** | **Valeria** | **4★** | Healer | `260` / `18` | `1,168` / `81` | `18` / `44.3` | **Sanctuary Aegis** (+30% Healing, +20% Coma Recovery) |
-| **Call of the Rift** | **Ignis** | **5★** | Vanguard | `450` / `26` | `3,335` / `193` | `16` / `53.1` | **Rift Warlord** (+35% ATK, +20% DMG Reduction) |
-| **A Star's Arrival** | **Jenna** | **1★** | Marksman | `210` / `34` | `210` / `34` | `13` / `13.0` | **Windstep Precision** (+15% ASPD, +5% Move Spd) |
-| **A Star's Arrival** | **Velkist** | **2★** | Striker | `300` / `44` | `495` / `73` | `14` / `18.9` | **Bloodthirst Frenzy** (+20% ATK, +1s Overdrive) |
-| **A Star's Arrival** | **Eolka** | **3★** | Scholar | `230` / `52` | `626` / `142` | `22` / `40.1` | **Crimson Pyromancy** (+25% ATK, +30% Labor Output) |
-| **A Star's Arrival** | **Morrigan**| **4★** | Vanguard | `450` / `24` | `2,021` / `108` | `16` / `39.4` | **Abyssal Bulwark** (+30% Max HP, +15% Reflect DMG) |
-| **A Star's Arrival** | **Archon** | **5★** | Striker | `350` / `65` | `2,594` / `482` | `25` / `83.0` | **Dimensional Dominion** (+30% Boss DMG, +25% All Labor) |
-| **A Star's Arrival** | **Solaris** | **6★** | Scholar | `240` / `55` | `2,935` / `673` | `22` / `98.6` | **Supernova Flare** (+40% ATK, +25% AoE Radius) |
-| **A Star's Arrival** | **Astrea** | **7★** | Marksman | `230` / `48` | `4,641` / `969` | `23` / `139.2` | **Cosmic Zenith** (+50% ATK, +30% ASPD, +35% Boss DMG) |
+#### Launch Roster Base & Native Stats
+Every summoned hero rolls a `QualityScalar` $q \in [0.90, 1.15]$ applied to their archetype base stats. Native stats are the stats at the hero's **summoned star $S$, Lv. 1**: $Stat_0 \times 1.35^{(t - 1)} \times 3^{(S - 1)}$ for combat and $L_0 \times 1.12^{(t - 1)} \times 1.35^{(S - 1)}$ for labor, using the live 3× star promotion multiplier:
+
+| Banner | Hero | Rarity / Summoned Star | Archetype | Base HP / ATK | Native HP / ATK | Base / Native Labor | Passive Trait |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Call of the Rift** | **Han** | **Common (1) / 1★** | Striker | `300` / `40` | `300` / `40` | `14` / `14.0` | **Unyielding Adaptation** (+10% ATK, -10% Stamina Drain) |
+| **Call of the Rift** | **Aaron** | **Uncommon (2) / 2★** | Vanguard | `450` / `28` | `1,823` / `113` | `16` / `24.2` | **Phalanx Guard** (+25% Max HP, -15% AoE Taken) |
+| **Call of the Rift** | **Catio** | **Rare (3) / 3★** | Miner | `280` / `24` | `4,593` / `394` | `20` / `45.7` | **Quartermaster's Ledger** (+25% Labor Output) |
+| **Call of the Rift** | **Valeria** | **Superior (4) / 4★** | Healer | `260` / `18` | `17,272` / `1,196` | `18` / `62.2` | **Sanctuary Aegis** (+30% Healing, +20% Coma Recovery) |
+| **Call of the Rift** | **Ignis** | **Exalted (5) / 5★** | Vanguard | `450` / `26` | `121,069` / `6,995` | `16` / `83.6` | **Rift Warlord** (+35% ATK, +20% DMG Reduction) |
+| **A Star's Arrival** | **Jenna** | **Common (1) / 1★** | Marksman | `210` / `34` | `210` / `34` | `13` / `13.0` | **Windstep Precision** (+15% ASPD, +5% Move Spd) |
+| **A Star's Arrival** | **Velkist** | **Uncommon (2) / 2★** | Striker | `300` / `44` | `1,215` / `178` | `14` / `21.2` | **Bloodthirst Frenzy** (+20% ATK, +1s Overdrive) |
+| **A Star's Arrival** | **Eolka** | **Rare (3) / 3★** | Scholar | `230` / `52` | `3,773` / `853` | `22` / `50.3` | **Crimson Pyromancy** (+25% ATK, +30% Labor Output) |
+| **A Star's Arrival** | **Morrigan** | **Superior (4) / 4★** | Vanguard | `450` / `24` | `29,894` / `1,594` | `16` / `55.3` | **Abyssal Bulwark** (+30% Max HP, +15% Reflect DMG) |
+| **A Star's Arrival** | **Archon** | **Exalted (5) / 5★** | Striker | `350` / `65` | `94,165` / `17,488` | `25` / `130.7` | **Dimensional Dominion** (+30% Boss DMG, +25% All Labor) |
+| **A Star's Arrival** | **Solaris** | **Legendary (6) / 6★** | Scholar | `240` / `55` | `261,509` / `59,929` | `22` / `173.9` | **Supernova Flare** (+40% ATK, +25% AoE Radius) |
+| **A Star's Arrival** | **Astrea** | **Mythical (7) / 7★** | Marksman | `230` / `48` | `1,014,981` / `211,822` | `23` / `274.8` | **Cosmic Zenith** (+50% ATK, +30% ASPD, +35% Boss DMG) |
 
 #### Archetype Foundation Table
 
@@ -357,7 +371,7 @@ Archetypes define a hero's **combat role, base stats, attack cadence, range, lab
 | **Striker** | Agile Melee Critical DPS | `280` | `38` | `0.85s` | `6 studs` | `12 / min` | `DAGGERS` |
 | **Marksman** | Long-Range Physical DPS & Armor Shredder | `210` | `34` | `0.80s` | `28 studs` | `13 / min` | `BOW` |
 | **Miner** | Heavy Blunt Disruptor & Gem Specialist | `300` | `20` | `1.05s` | `6 studs` | `20 / min` | `AXE` |
-| **Healer** | Squad Sustain & Infirmary Specialist | `260` | `18` | `1.25s` | `24 studs` | `18 / min` | `TOME` |
+| **Healer** | Squad Sustain & God's Blessing Acolyte | `260` | `18` | `1.25s` | `24 studs` | `18 / min` | `TOME` |
 | **Scholar** | Elemental Catalyst & Burst Magic | `220` | `24` | `1.00s` | `26 studs` | `22 / min` | `STAFF` |
 
 *(Note: Each archetype equips exactly one weapon type, and each hero holds one artifact. Sword & Shield is a single combined weapon; rings are removed. See Section 7.5.)*
@@ -365,27 +379,31 @@ Archetypes define a hero's **combat role, base stats, attack cadence, range, lab
 ### 4.2 Effective Combat & Labor Formulas
 - **Level Cap Formula:**
   $$\text{MaxLevel}(S) = S \times 10 \quad (1★ = \text{Lv.10},\; 2★ = \text{Lv.20},\; 3★ = \text{Lv.30},\; 4★ = \text{Lv.40},\; 5★ = \text{Lv.50},\; 6★ = \text{Lv.60},\; 7★ = \text{Lv.70})$$
-- **Star Promotion Multipliers:** Promoting a hero from $S \to S+1$ resets Level to `1`, increases cap by `+10`, multiplies Base Combat stats by **`1.65x`**, and multiplies Base Labor output by **`1.35x`**.
+- **Star Promotion Multipliers:** Promoting a hero from $S \to S+1$ increases the level cap by `+10`, multiplies Base Combat stats by **`3x`** (`PitBalanceConfig.Promotion.CombatMultiplier`), and multiplies Base Labor output by **`1.35x`**. Promotion never changes the hero's inherent rarity $t$.
 - **Effective Combat Stats (with Artifact Integration):**
-  $$\text{EffectiveATK} = \text{round}\Big(ATK_0 \times q \times 1.65^{(S - 1)} \times \big(1 + 0.08(L - 1)\big) \times (1 + B_{\text{TraitATK}} + B_{\text{ImprintATK}})\Big) + TotalATKBonus_{\text{Artifact}}$$
-  $$\text{EffectiveHP} = \text{round}\Big(HP_0 \times q \times 1.65^{(S - 1)} \times \big(1 + 0.08(L - 1)\big) \times (1 + B_{\text{TraitHP}} + B_{\text{ImprintHP}})\Big)$$
+  $$\text{EffectiveATK} = \text{round}\Big(ATK_0 \times q \times 1.35^{(t - 1)} \times 3^{(S - 1)} \times 1.08^{(L - 1)} \times (1 + B_{\text{TraitATK}} + B_{\text{ImprintATK}})\Big) + TotalATKBonus_{\text{Artifact}}$$
+  $$\text{EffectiveHP} = \text{round}\Big(HP_0 \times q \times 1.35^{(t - 1)} \times 3^{(S - 1)} \times 1.08^{(L - 1)} \times (1 + B_{\text{TraitHP}} + B_{\text{ImprintHP}})\Big)$$
+  *(Where $t$ is the hero's inherent rarity tier. A Common hero, $t = 1$, has the same stats as before rarity was added.)*
   $$\text{EffectiveInterval} = \max\left(0.12\text{s}, \frac{HeroBaseInterval}{1 + TotalSpeedBonus_{\text{Artifact}}}\right)$$
   $$\text{TotalATKBonus}_{\text{Artifact}} = \text{round}\Big(ATK_{\text{Base, Rarity}} \times \text{Multiplier}_{\text{Star}}\Big)$$
   $$\text{TotalSpeedBonus}_{\text{Artifact}} = ASPD_{\text{Base, Rarity}} \times \text{Multiplier}_{\text{Star}}$$
   *(Where Rarity dictates inherent base stats and Stars ($1★ \to 7★$) dictate the progressive multiplier).*
 - **Effective Labor Formula:**
-  $$\text{EffectiveLabor} = L_0 \times q \times 1.35^{(S - 1)} \times \big(1 + 0.05(L - 1)\big) \times (1 + B_{\text{Synergy}}) \times (1 + B_{\text{TraitLabor}} + B_{\text{ImprintLabor}})$$
+  $$\text{EffectiveLabor} = L_0 \times q \times 1.12^{(t - 1)} \times 1.35^{(S - 1)} \times \big(1 + 0.05(L - 1)\big) \times (1 + B_{\text{Synergy}}) \times (1 + B_{\text{TraitLabor}} + B_{\text{ImprintLabor}})$$
   *(Where $B_{\text{Synergy}} = 0.25$ when assigned to preferred facility).*
 
 ### 4.3 Fortress Outskirts & Facility Economy Formulas
 
-Progression is bifurcated between **Core Main Buildings** (free, static fortress stations) and **Upgradeable Outskirts Facilities** (`Level 1` $\to$ `Level 5`) that scale passive Gold generation and global percentage multipliers:
+Progression is bifurcated between **Core Main Buildings** (free, static fortress stations) and **Upgradeable Support Facilities** (`Level 1` $\to$ `Level 5`) that scale passive Gold generation and global percentage multipliers.
 
-#### 1. Core Main Building: The Infirmary & Barracks
-The Infirmary operates as a standard, permanent fortress fixture with 5 default recuperation beds:
-- **Base Stamina Recovery:** $3.0\text{ Stamina/sec}$ per occupied bed.
-- **Healer Synergy Aura:** $+50\%$ acceleration ($4.5\text{ Stamina/sec}$) if at least one `Healer` hero is resting in the Infirmary.
-- **Coma Duration:** Standard $60\text{ seconds}$ recovery, reduced to $40\text{ seconds}$ when a resting `Healer` is present.
+**Fortress Development Tree:** Support facilities are unlocked and upgraded only by buying nodes in the Fortress Tree, opened from the Facilities toolbar button or the **Architect's Table** beside the War Banner. The tree has one branch per facility: Outskirts (Guard Post), Commerce (Market), Martial (Training Grounds) and Divine (God's Blessing). Each branch has 5 level nodes bought in order, where a facility's level is the number of level nodes owned, plus 2 perk nodes at levels 3 and 5. Level 3, 4 and 5 nodes need Floor 5, 15 and 25 cleared, and the whole Divine branch needs Floor 5. Nodes cost Gold, are permanent and cannot be refunded. The Guard Post's level 1 node is owned from the start.
+
+**Squad slots:** every Master starts with **one** squad slot. The tree's **Command** branch opens the other four in order: slot 2 (500 Gold), slot 3 (2,000), slot 4 (6,000, Floor 5) and slot 5 (15,000, Floor 10). These nodes need only the first summon (the Squad unlock), not the Fortress Tree unlock, so a new Master can open slot 2 right away. Heroes in a slot that is not open are sent to the bench.
+
+**Facilities appear only when unlocked:** A locked support facility is not in the world. Its site is plain ground with no model, sign or prompt, and it is missing from the Facilities panel. Buying its level 1 node builds it on the plot with a short construction reveal, and each later level swaps in that level's model. The server builds the models from the owner's saved levels, so visitors see the same plot. Core Main Buildings are always present. The "Gold Upgrade Cost" columns below are the costs of the matching level nodes. The full node list and perks are in `docs/rework-plan/PHASE_4_ONBOARDING_AND_PROGRESSION.md` §5.
+
+#### 1. Hero Recovery (no Infirmary)
+The Infirmary & Barracks was removed in Phase 4: since Phase 2, a squad wipe sends the squad home at full HP, so a recovery building had nothing left to do. Benched heroes and heroes working at any support facility recover $1\text{ Stamina/sec}$ passively, and any leftover coma timer simply runs out on the bench. Old saves send Infirmary heroes back to the bench.
 
 #### 2. Upgradeable Support Facilities (Levels 1 to 5)
 
@@ -437,6 +455,22 @@ Located inside the fortress military quarter. Stationed Trainers (`Striker` & `S
 - **Training Combat Multiplier Formula:**
   $$\text{TrainingMultiplier} = 1 + \text{BaseBonus}_{\text{Level}} + \big(0.004 \times \sum \text{EffectiveLabor}_{\text{Training}}\big)$$
   *(Multiplies total squad $\text{FinalATK}$ and $\text{FinalHP}$ across all heroes and equipped Artifacts).*
+
+##### Facility D: God's Blessing (Plaza Fountain - Summon Luck)
+When unlocked, a marble angel statue holding a lantern of light rises onto the Plaza Fountain's top tier. Until the Divine branch's level 1 node is bought, the fountain is a plain fountain with no angel and no prompt. Stationed Acolytes (`Healer` preferred, $+25\%$ labor synergy) pray at the fountain to raise the Master's summon luck at the Summoning Altar:
+
+| Level | Gold Upgrade Cost | Max Workers | Base Luck ($\text{BaseLuck}$) | Visual Identity |
+| :---: | :---: | :---: | :---: | :--- |
+| **Lv. 1** | 2,500 Gold | 1 Worker | `+4%` | Cleaned marble angel, soft lantern glow, rim candles. |
+| **Lv. 2** | 8,000 Gold | 1 Worker | `+8%` | Gilded wing edges, pale-gold glowing water. |
+| **Lv. 3** | 25,000 Gold | 2 Workers | `+14%` | Choir chime and rising light motes. |
+| **Lv. 4** | 70,000 Gold | 2 Workers | `+22%` | Floating golden halo, petals drifting on the basin. |
+| **Lv. 5** | 180,000 Gold | 3 Workers | `+32%` | Spread wings and a sky beam rising from the lantern. |
+
+- **Summon Luck Formula:**
+  $$\text{Luck} = \min\Big(0.50,\; \text{BaseLuck}_{\text{Level}} + 0.004 \times \sum \text{EffectiveLabor}_{\text{Acolytes}} + \text{Perk}_{\text{Saint's Favor}}\Big)$$
+  $$p'_i = p_i \times (1 + \text{Luck}) \;\; (i \ge 2), \qquad p'_1 = 1 - \sum_{i \ge 2} p'_i$$
+  *(Applies to both hero banners and the artifact banner. Every tier above the lowest is multiplied, and the lowest tier absorbs the difference. Luck never changes pity counters, pity thresholds or 10-pull guarantees. The Saint's Favor perk adds +3%, and the total is capped at +50%.)*
 
 ### 4.4 Hero 3-Tier Attack Cadence & Dynamic Skill Gauge System
 
@@ -604,7 +638,7 @@ Each of the 10 biomes features 4 local-authored procedural enemies (2 Regulars, 
    - **`TARGET_DISC` (Targeted AoE):** Ground circle with expanding fill disc locked onto a hero's position ($1.4\text{s–}2.2\text{s}$ windup, $9\text{–}13\text{-stud}$ radius). Requires instant Master recognition and recall repositioning.
    - **`PROJECTILE` (Ranged Swept Corridor):** Aimed linear corridor ($0.75\text{s}$ windup + $0.35\text{s}$ travel time, $26\text{-stud}$ range, $2.2\text{-stud}$ corridor width). Evaluates authoritative swept-segment distance along the projectile line at `WindupSeconds + TravelSeconds`.
 2. **Coma Skill Check:**
-   - Heroes caught inside `SELF_DISC` or `TARGET_DISC` blast zones suffer instant 50% Stamina loss or fall into a **60-second Coma** (expelled back to the Fortress Infirmary).
+   - Heroes caught inside `SELF_DISC` or `TARGET_DISC` blast zones suffer instant 50% Stamina loss or fall into a **60-second Coma** (expelled back to the Fortress bench).
 3. **Punish Window:**
    - Immediately following a Signature detonation, the Biome Boss enters an exposed recovery window granting $+25\%$ damage taken for 4.0s. Active Masters trigger **`[Q]` Overdrive Whistle** to unleash $+40\%$ squad attack speed and maximize DPS output.
 
@@ -706,6 +740,7 @@ The full 1★ to 7★ path consumes 21 donor weapons plus the retained original.
   - **Legendary (Tier 6):** `0.5%`
   - **Mythical (Tier 7):** `0.1%`
   - *(Other Rarities will be available in future updates)*
+  - *(The God's Blessing summon luck bonus raises every tier above Common on this banner too; see Section 4.3, Facility D.)*
 - **Pity Safeguards:**
   - **10-Pull Guarantee:** Every 10-pull guarantees at least one **Rare (Tier 3)** or higher artifact.
   - **50-Pull Hard Pity:** If no **Legendary (Tier 6)** or higher artifact has been pulled in 49 pulls, the 50th pull guarantees a **Legendary (Tier 6)** or higher artifact.

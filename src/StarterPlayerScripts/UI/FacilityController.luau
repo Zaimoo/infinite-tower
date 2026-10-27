@@ -4,7 +4,7 @@
 --   1. HERO BANNER & ARTIFACT BANNER SUMMONING (Call of the Rift & Echoes of the Rift)
 --   2. Dynamic 50-pull pity tracking, 1X & 10X summons, rate-up hero highlights
 --   3. Summon Celebration Reveal Modal
---   4. Full backward-compatibility for Infirmary & Squad Management
+--   4. Support facility panels (Guard Post, Market, Training Grounds, God's Blessing) & Squad Management
 -- Matches the exact cosmic purple aesthetic with corner diamond accents, glowing borders, and responsive scaling.
 
 local TweenService = game:GetService("TweenService")
@@ -17,6 +17,8 @@ local FacilityConfig = require(Shared:WaitForChild("Config"):WaitForChild("Facil
 local HeroCatalog = require(Shared:WaitForChild("Config"):WaitForChild("HeroCatalog"))
 local ArtifactCatalog = require(Shared:WaitForChild("Config"):WaitForChild("ArtifactCatalog"))
 local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormulas"))
+local FortressTree = require(Shared:WaitForChild("Util"):WaitForChild("FortressTree"))
+local SummonLuck = require(Shared:WaitForChild("Util"):WaitForChild("SummonLuck"))
 local GothicBoxStyle = require(Shared:WaitForChild("Util"):WaitForChild("GothicBoxStyle"))
 
 local RemotesFolder = ReplicatedStorage:WaitForChild("Remotes")
@@ -68,12 +70,14 @@ local ARTIFACT_ICONS: { [string]: string } = {
 
 local DETAILS = {
 	Summoning = { Title = "SUMMONING", Description = "Call legendary heroes through the dimensional rift.", Color = Color3.fromRGB(192, 132, 252) },
-	Infirmary = { Title = "INFIRMARY & BARRACKS", Description = "Rest wounded heroes, restore stamina, and clear coma. Resting Healers grant a +50% recovery aura.", Color = Color3.fromRGB(100, 232, 175) },
 	SquadManagement = { Title = "SQUAD MANAGEMENT", Description = "Deploy rested heroes and bench your current squad.", Color = Color3.fromRGB(245, 128, 99) },
 	GuardPost = { Title = "OUTSKIRTS GUARD POST", Description = "Station Adventurers along the southern trail to defend the outskirts and generate passive Gold online & offline.", Color = Color3.fromRGB(130, 205, 95) },
 	Market = { Title = "THE MARKET", Description = "Station Merchants to multiply Infinite Tower mob/boss loot drops and cargo extraction banking.", Color = Color3.fromRGB(245, 195, 75) },
 	TrainingGrounds = { Title = "TRAINING GROUNDS", Description = "Station Trainers to run martial combat drills, multiplying overall squad Final ATK and Final HP.", Color = Color3.fromRGB(235, 80, 80) },
+	GodsBlessing = { Title = "GOD'S BLESSING", Description = "Station Acolytes (Healers preferred) at the angel fountain to raise your summon luck on every banner.", Color = Color3.fromRGB(255, 226, 150) },
 }
+
+-- Facility panels have no upgrade button: support facilities are levelled only in the Fortress Tree.
 
 local function new(className: string, props: { [string]: any }, parent: Instance?): any
 	local o = Instance.new(className)
@@ -261,7 +265,7 @@ function Controller.new(gui: ScreenGui, getProfile: () -> any, remotes: Instance
 		self:SetSummonTab("A_STARS_ARRIVAL")
 	end)
 
-	-- Header Title (Fallback for non-summon facilities like Infirmary / Squad)
+	-- Header Title (Fallback for non-summon facilities like the Guard Post / Squad)
 	local headerTitle = label(root, "SUMMONING", 20, C.Text, Enum.Font.GothamBold)
 	headerTitle.Name = "FacilityHeaderTitle"
 	headerTitle.Position = UDim2.fromOffset(24, 18)
@@ -285,7 +289,7 @@ function Controller.new(gui: ScreenGui, getProfile: () -> any, remotes: Instance
 	self:BuildPermanentSummonView(root)
 	self:BuildLimitedSummonView(root)
 
-	-- 7. Legacy / General Facility View (Infirmary, SquadManagement fallback)
+	-- 7. General Facility View (support facilities, SquadManagement fallback)
 	self:BuildGeneralFacilityView(root)
 
 	-- 8. Summon Reveal Modal
@@ -366,7 +370,7 @@ function Controller:BuildPermanentSummonView(root: Frame)
 	bannerTitle.TextStrokeColor3 = Color3.fromRGB(120, 80, 0)
 
 	-- Hero Pool Available Badge
-	local poolLabel = label(bannerCard, "★ Available Roster: Ignis (5★) • Valeria (4★) • Catio (3★) • Aaron (2★) • Han (1★)", 13, Color3.fromRGB(215, 185, 255), Enum.Font.GothamBold)
+	local poolLabel = label(bannerCard, "★ Roster: Ignis (Exalted 5★) • Valeria (Superior 4★) • Catio (Rare 3★) • Aaron (Uncommon 2★) • Han (Common 1★)", 12, Color3.fromRGB(215, 185, 255), Enum.Font.GothamBold)
 	poolLabel.AnchorPoint = Vector2.new(0, 1)
 	poolLabel.Position = UDim2.new(0, 24, 1, -22)
 	poolLabel.Size = UDim2.new(1, -48, 0, 22)
@@ -388,6 +392,7 @@ function Controller:BuildPermanentSummonView(root: Frame)
 	self.PermanentPityLabel = pityLabel
 
 	local timerLabel = label(infoRow, "Event: Permanent Banner", 14, C.TextLavender, Enum.Font.GothamMedium)
+	self.PermanentInfoLabel = timerLabel
 	timerLabel.AnchorPoint = Vector2.new(1, 0)
 	timerLabel.Position = UDim2.new(1, -6, 0, 4)
 	timerLabel.Size = UDim2.new(0.5, 0, 0, 20)
@@ -516,7 +521,7 @@ function Controller:BuildLimitedSummonView(root: Frame)
 	bannerTitle.TextStrokeColor3 = Color3.fromRGB(140, 85, 10)
 
 	-- Featured Rate-Up Pill Label (1★ to 7★)
-	local rateUpLabel = label(bannerCard, "★ Featured Roster: Astrea (7★) • Solaris (6★) • Archon (5★) • Morrigan (4★) • Eolka (3★) • Velkist (2★) • Jenna (1★)", 12, Color3.fromRGB(255, 215, 150), Enum.Font.GothamBold)
+	local rateUpLabel = label(bannerCard, "★ Featured: Astrea (Mythical 7★) • Solaris (Legendary 6★) • Archon (Exalted 5★) • Morrigan • Eolka • Velkist • Jenna", 12, Color3.fromRGB(255, 215, 150), Enum.Font.GothamBold)
 	rateUpLabel.AnchorPoint = Vector2.new(0, 1)
 	rateUpLabel.Position = UDim2.new(0, 24, 1, -22)
 	rateUpLabel.Size = UDim2.new(1, -48, 0, 22)
@@ -538,6 +543,7 @@ function Controller:BuildLimitedSummonView(root: Frame)
 	self.LimitedPityLabel = pityLabel
 
 	local timerLabel = label(infoRow, "Event Ends: 14d 00h", 14, Color3.fromRGB(255, 205, 130), Enum.Font.GothamMedium)
+	self.LimitedInfoLabel = timerLabel
 	timerLabel.AnchorPoint = Vector2.new(1, 0)
 	timerLabel.Position = UDim2.new(1, -6, 0, 4)
 	timerLabel.Size = UDim2.new(0.5, 0, 0, 20)
@@ -613,7 +619,7 @@ function Controller:BuildLimitedSummonView(root: Frame)
 end
 
 --============================================================================
--- LEGACY / GENERAL FACILITY VIEW (Infirmary, SquadManagement fallback)
+-- GENERAL FACILITY VIEW (support facilities, SquadManagement fallback)
 --============================================================================
 
 function Controller:BuildGeneralFacilityView(root: Frame)
@@ -907,10 +913,10 @@ function Controller:PerformSummon(bannerId: string, count: number)
 		if ok and result and result.Success then
 			self.LastSummoned = result.Summoned or {}
 			if result.PermanentPityRemaining and self.PermanentPityLabel then
-				self.PermanentPityLabel.Text = string.format("Guaranteed 5-Star in: <b>%d</b> summons", result.PermanentPityRemaining)
+				self.PermanentPityLabel.Text = string.format("Guaranteed Exalted Ignis in: <b>%d</b> summons", result.PermanentPityRemaining)
 			end
 			if result.LimitedPityRemaining and self.LimitedPityLabel then
-				self.LimitedPityLabel.Text = string.format("Guaranteed 7-Star in: <b>%d</b> summons", result.LimitedPityRemaining)
+				self.LimitedPityLabel.Text = string.format("Guaranteed Mythical Astrea in: <b>%d</b> summons", result.LimitedPityRemaining)
 			end
 			self:ShowSummonResults(self.LastSummoned, false)
 		end
@@ -978,22 +984,41 @@ function Controller:Refresh()
 
 	if self.Current == "Summoning" then
 		-- Update Permanent Banner Pity
-		local permPity = profile and (profile.HeroPermanentPity or profile.HeroBannerPity) or 8
-		local permRemaining = math.max(1, 50 - (permPity % 50))
+		local permMax = HeroCatalog.PermanentBanner.MaxPity
+		local permPity = profile and (profile.HeroPermanentPity or profile.HeroBannerPity) or 0
+		local permRemaining = math.max(1, permMax - (permPity % permMax))
 		if self.PermanentPityLabel then
-			self.PermanentPityLabel.Text = string.format("Guaranteed 5-Star in: <b>%d</b> summons", permRemaining)
+			self.PermanentPityLabel.Text = string.format("Guaranteed Exalted Ignis in: <b>%d</b> summons", permRemaining)
 		end
 
 		-- Update Limited Banner Pity
-		local limPity = profile and profile.HeroLimitedPity or 8
-		local limRemaining = math.max(1, 50 - (limPity % 50))
+		local limMax = HeroCatalog.LimitedBanner.MaxPity
+		local limPity = profile and profile.HeroLimitedPity or 0
+		local limRemaining = math.max(1, limMax - (limPity % limMax))
 		if self.LimitedPityLabel then
-			self.LimitedPityLabel.Text = string.format("Guaranteed 7-Star in: <b>%d</b> summons", limRemaining)
+			self.LimitedPityLabel.Text = string.format("Guaranteed Mythical Astrea in: <b>%d</b> summons", limRemaining)
 		end
+
+		-- God's Blessing badge: the luck the server applies to the next pull.
+		local blessing = profile and profile.Facilities and profile.Facilities.GodsBlessing
+		local luck = 0
+		if blessing and (blessing.Level or 0) > 0 then
+			local sumLabor = 0
+			for _, u in ipairs(blessing.AssignedHeroUUIDs or {}) do
+				local h = profile.Heroes[u]
+				if h and (h.ComaUntilTimestamp or 0) <= os.time() then
+					sumLabor += StatFormulas.GetEffectiveLabor(h, "FACILITY_GODS_BLESSING")
+				end
+			end
+			luck = SummonLuck.Luck(blessing.Level, sumLabor, FortressTree.PerkBonuses(profile.FortressTree).BlessingLuck)
+		end
+		local badge = if luck > 0 then string.format("✨ Blessing +%.1f%% luck", luck * 100) else "10x guarantees a Rare or better hero"
+		if self.PermanentInfoLabel then self.PermanentInfoLabel.Text = badge end
+		if self.LimitedInfoLabel then self.LimitedInfoLabel.Text = badge end
 		return
 	end
 
-	-- Infirmary or SquadManagement fallback rendering
+	-- Support facility or SquadManagement rendering
 	local info = DETAILS[self.Current]
 	if not info then return end
 
@@ -1038,18 +1063,14 @@ function Controller:Refresh()
 			end
 		end
 		local bossTier = profile.HighestClearedBiomeBoss or 0
-		local rate = StatFormulas.GetPassiveGoldRate(fac.Level, sumLabor, bossTier)
+		local perks = FortressTree.PerkBonuses(profile.FortressTree)
+		local rate = StatFormulas.GetPassiveGoldRate(fac.Level, sumLabor, bossTier, perks)
 		local cfg = FacilityConfig.UpgradeTable.GuardPost[fac.Level]
-		local nextCfg = FacilityConfig.UpgradeTable.GuardPost[fac.Level + 1]
-		local hours = cfg and math.round(cfg.MaxOfflineMinutes / 60) or 4
+		local hours = cfg and math.round((cfg.MaxOfflineMinutes + perks.OfflineMinutes) / 60) or 4
 		local eff = cfg and math.round(cfg.OfflineEfficiency * 100) or 75
 		local bossText = bossTier > 0 and string.format(" (+%d%% Boss Tier %d)", bossTier * 15, bossTier) or ""
 
 		self.Summary.Text = string.format("Guard Post Lv.%d (%s)  •  %d/%d Adventurers  •  💰 <b>%.1f Gold/min</b>%s  •  Offline Cap: %dh (%d%%)", fac.Level, cfg and cfg.VisualTitle or "Bastion", #fac.AssignedHeroUUIDs, cfg and cfg.MaxWorkers or 1, rate, bossText, hours, eff)
-		local upgrade = nextCfg and string.format("UPGRADE TO LV.%d · %d GOLD (+%d Base Gold/min, +2h Cap)", fac.Level + 1, nextCfg.Gold, nextCfg.BaseGoldPerMin - (cfg and cfg.BaseGoldPerMin or 30)) or "MAXIMUM LEVEL (LV.5)"
-		self:Button(self.Actions, "Upgrade", upgrade, UDim2.new(1, 0, 1, 0), UDim2.new(), function()
-			if nextCfg then self.Facility:FireServer("UPGRADE_FACILITY", "GuardPost") end
-		end)
 
 	elseif self.Current == "Market" then
 		local fac = profile.Facilities and profile.Facilities.Market or { Level = 1, AssignedHeroUUIDs = {} }
@@ -1060,16 +1081,12 @@ function Controller:Refresh()
 				sumLabor += StatFormulas.GetEffectiveLabor(h, "FACILITY_MARKET")
 			end
 		end
-		local mult = StatFormulas.GetMarketLootMultiplier(fac.Level, sumLabor)
+		local perks = FortressTree.PerkBonuses(profile.FortressTree)
+		local mult = StatFormulas.GetMarketLootMultiplier(fac.Level, sumLabor, perks)
 		local bonusPct = math.round((mult - 1) * 1000) / 10
 		local cfg = FacilityConfig.UpgradeTable.Market[fac.Level]
-		local nextCfg = FacilityConfig.UpgradeTable.Market[fac.Level + 1]
 
-		self.Summary.Text = string.format("Market Lv.%d (%s)  •  %d/%d Merchants  •  📦 <b>+%.1f%% Tower & Cargo Gold</b>", fac.Level, cfg and cfg.VisualTitle or "Bazaar", #fac.AssignedHeroUUIDs, cfg and cfg.MaxWorkers or 1, bonusPct)
-		local upgrade = nextCfg and string.format("UPGRADE TO LV.%d · %d GOLD (+%.0f%% Base Loot Multiplier)", fac.Level + 1, nextCfg.Gold, (nextCfg.BaseBonus - (cfg and cfg.BaseBonus or 0)) * 100) or "MAXIMUM LEVEL (LV.5)"
-		self:Button(self.Actions, "Upgrade", upgrade, UDim2.new(1, 0, 1, 0), UDim2.new(), function()
-			if nextCfg then self.Facility:FireServer("UPGRADE_FACILITY", "Market") end
-		end)
+		self.Summary.Text = string.format("Market Lv.%d (%s)  •  %d/%d Merchants  •  📦 <b>+%.1f%% Tower & Cargo Gold</b>", fac.Level, cfg and cfg.VisualTitle or "Bazaar", #fac.AssignedHeroUUIDs, StatFormulas.GetFacilityMaxWorkers("Market", fac.Level, perks), bonusPct)
 
 	elseif self.Current == "TrainingGrounds" then
 		local fac = profile.Facilities and profile.Facilities.TrainingGrounds or { Level = 1, AssignedHeroUUIDs = {} }
@@ -1080,35 +1097,26 @@ function Controller:Refresh()
 				sumLabor += StatFormulas.GetEffectiveLabor(h, "FACILITY_TRAINING")
 			end
 		end
-		local mult = StatFormulas.GetTrainingCombatMultiplier(fac.Level, sumLabor)
+		local perks = FortressTree.PerkBonuses(profile.FortressTree)
+		local mult = StatFormulas.GetTrainingCombatMultiplier(fac.Level, sumLabor, perks)
 		local bonusPct = math.round((mult - 1) * 1000) / 10
 		local cfg = FacilityConfig.UpgradeTable.TrainingGrounds[fac.Level]
-		local nextCfg = FacilityConfig.UpgradeTable.TrainingGrounds[fac.Level + 1]
 
-		self.Summary.Text = string.format("Training Grounds Lv.%d (%s)  •  %d/%d Trainers  •  ⚔️ <b>+%.1f%% Squad Final ATK & HP</b>", fac.Level, cfg and cfg.VisualTitle or "Arena", #fac.AssignedHeroUUIDs, cfg and cfg.MaxWorkers or 1, bonusPct)
-		local upgrade = nextCfg and string.format("UPGRADE TO LV.%d · %d GOLD (+%.0f%% Base Combat Multiplier)", fac.Level + 1, nextCfg.Gold, (nextCfg.BaseBonus - (cfg and cfg.BaseBonus or 0)) * 100) or "MAXIMUM LEVEL (LV.5)"
-		self:Button(self.Actions, "Upgrade", upgrade, UDim2.new(1, 0, 1, 0), UDim2.new(), function()
-			if nextCfg then self.Facility:FireServer("UPGRADE_FACILITY", "TrainingGrounds") end
-		end)
+		self.Summary.Text = string.format("Training Grounds Lv.%d (%s)  •  %d/%d Trainers  •  ⚔️ <b>+%.1f%% Squad Final ATK & HP</b>", fac.Level, cfg and cfg.VisualTitle or "Arena", #fac.AssignedHeroUUIDs, StatFormulas.GetFacilityMaxWorkers("TrainingGrounds", fac.Level, perks), bonusPct)
 
-	elseif self.Current == "Infirmary" then
-		local facility = profile.Facilities and profile.Facilities.Infirmary or { Level = 1, AssignedHeroUUIDs = {} }
-		local resting = 0
-		local hasHealer = false
-		for _, h in heroes do
-			if h.Assignment == "FACILITY_INFIRMARY" then
-				resting += 1
-				if h.Archetype == "Healer" and (h.ComaUntilTimestamp or 0) <= os.time() then
-					hasHealer = true
-				end
+	elseif self.Current == "GodsBlessing" then
+		local fac = profile.Facilities and profile.Facilities.GodsBlessing or { Level = 0, AssignedHeroUUIDs = {} }
+		local sumLabor = 0
+		for _, u in ipairs(fac.AssignedHeroUUIDs) do
+			local h = profile.Heroes[u]
+			if h and (h.ComaUntilTimestamp or 0) <= os.time() then
+				sumLabor += StatFormulas.GetEffectiveLabor(h, "FACILITY_GODS_BLESSING")
 			end
 		end
-		local regen, coma = StatFormulas.GetInfirmaryRates(facility.Level, 0, hasHealer)
-		local auraText = hasHealer and "<font color=\"#4ADE80\">💚 HEALER AURA ACTIVE (+50% Regen, 40s Coma)</font>" or "<font color=\"#A0B0C4\">Standard Recovery (3.0/s, 60s Coma)</font>"
-		self.Summary.Text = string.format("Infirmary (5 Beds)  •  %d heroes resting  •  %.1f Stamina/s  •  %s", resting, regen, auraText)
-		self:Button(self.Actions, "Upgrade", "CORE CITADEL FACILITY · 5 PERMANENT RECUPERATION BEDS", UDim2.new(1, 0, 1, 0), UDim2.new(), function()
-			-- Core Main Building: 5 permanent beds
-		end)
+		local perks = FortressTree.PerkBonuses(profile.FortressTree)
+		local luck = SummonLuck.Luck(fac.Level, sumLabor, perks.BlessingLuck)
+		local cfg = FacilityConfig.UpgradeTable.GodsBlessing[fac.Level]
+		self.Summary.Text = string.format("God's Blessing Lv.%d (%s)  •  %d/%d Acolytes  •  ✨ <b>+%.1f%% Summon Luck</b> (cap +%d%%)", fac.Level, cfg and cfg.VisualTitle or "Angel", #fac.AssignedHeroUUIDs, StatFormulas.GetFacilityMaxWorkers("GodsBlessing", fac.Level, perks), luck * 100, math.round(FacilityConfig.Constants.MaxSummonLuck * 100))
 
 	else
 		local deployed = 0
@@ -1145,13 +1153,13 @@ function Controller:Refresh()
 
 		local coma = math.max(0, (hero.ComaUntilTimestamp or 0) - os.time())
 		local status = coma > 0 and string.format("<font color=\"#EF4444\">Coma (%ds)</font>", coma) or string.format("Stamina %d%%", math.round(hero.CurrentStamina or 100))
-		local stars = string.rep("★", hero.Stars or 1)
+		local stars = HeroCatalog.RarityName(StatFormulas.GetHeroRarity(hero)) .. " " .. string.rep("★", hero.Stars or 1)
 		local archIcon = ARCHETYPE_ICONS[hero.Archetype] or "🛡️"
 
 		local labor = StatFormulas.GetEffectiveLabor(hero, currentTag or hero.Assignment)
 		local seed = HeroCatalog.Seeds[hero.TemplateId]
 		local pref = seed and seed.PreferredFacility or ""
-		local hasSynergy = currentTag and (pref == "ALL" or pref == currentTag)
+		local hasSynergy = currentTag and (pref == "ALL" or pref == currentTag or (currentTag == "FACILITY_GODS_BLESSING" and hero.Archetype == "Healer"))
 		local synergyText = hasSynergy and " <font color=\"#4ADE80\">★ +25% Synergy</font>" or ""
 
 		desc.Text = string.format("%s %s  <font color=\"#FACC15\">%s</font>  Lv.%d\n<font color=\"#A0B0C4\">%s  •  %s</font>\n<font color=\"#E2D5FC\">⛏️ Labor: <b>%.1f</b>%s</font>", archIcon, hero.DisplayName, stars, hero.Level or 1, hero.Assignment, status, labor, synergyText)
@@ -1167,9 +1175,9 @@ function Controller:Refresh()
 		elseif self.Current == "TrainingGrounds" then
 			assignTitle = "TRAIN"
 			targetAssignment = "FACILITY_TRAINING"
-		elseif self.Current == "Infirmary" then
-			assignTitle = "REST"
-			targetAssignment = "FACILITY_INFIRMARY"
+		elseif self.Current == "GodsBlessing" then
+			assignTitle = "PRAY"
+			targetAssignment = "FACILITY_GODS_BLESSING"
 		end
 
 		local uuid = hero.UUID

@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local FacilityConfig = require(Shared:WaitForChild("Config"):WaitForChild("FacilityConfig"))
 local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormulas"))
+local FortressTree = require(Shared:WaitForChild("Util"):WaitForChild("FortressTree"))
 
 local function getDataManager(): any
 	while not _G.DataManager do
@@ -60,20 +61,7 @@ task.spawn(function()
 					dirty = true
 				end
 
-				-- 1. The Infirmary & Barracks (Stamina Recovery & Coma Clearing - Section 4.3.1)
-				local inf = profile.Facilities.Infirmary
-				local hasHealer = false
-				for _, uuid in ipairs(inf.AssignedHeroUUIDs) do
-					local h = profile.Heroes[uuid]
-					if h and h.Archetype == "Healer" and (h.ComaUntilTimestamp or 0) <= nowUnix then
-						hasHealer = true
-						break
-					end
-				end
-
-				local infLabor = computeFacilitySumLabor(profile, inf, "FACILITY_INFIRMARY") * getBlessOrLeechMultiplier(inf, nowUnix)
-				local staminaRegenPerSec, _ = StatFormulas.GetInfirmaryRates(inf.Level, infLabor, hasHealer)
-
+				-- 1. Coma clearing and passive stamina recovery (the Infirmary was removed in Phase 4)
 				for _, hero in pairs(profile.Heroes) do
 					-- Check Coma resolution
 					-- Older saves may hold nil here (it was once cleared to nil); treat as 0.
@@ -84,16 +72,12 @@ task.spawn(function()
 						dirty = true
 					end
 
-					-- Active Infirmary recovery vs passive bench recovery
-					if hero.Assignment == "FACILITY_INFIRMARY" and comaTime <= nowUnix then
-						if hero.CurrentStamina < hero.MaxStamina then
-							hero.CurrentStamina = math.min(hero.MaxStamina, hero.CurrentStamina + staminaRegenPerSec)
-							dirty = true
-						end
-					elseif (hero.Assignment == "BENCHED"
+					-- Benched heroes and facility workers recover passively
+					if (hero.Assignment == "BENCHED"
 						or hero.Assignment == "FACILITY_GUARD_POST"
 						or hero.Assignment == "FACILITY_MARKET"
-						or hero.Assignment == "FACILITY_TRAINING")
+						or hero.Assignment == "FACILITY_TRAINING"
+						or hero.Assignment == "FACILITY_GODS_BLESSING")
 						and hero.CurrentStamina < hero.MaxStamina
 						and hero.ComaUntilTimestamp <= nowUnix then
 						-- Benched & Stationed Facility workers passively recover without combat stamina drain
@@ -108,7 +92,7 @@ task.spawn(function()
 					if guardPost and guardPost.Level >= 1 then
 						local gpLabor = computeFacilitySumLabor(profile, guardPost, "FACILITY_GUARD_POST") * getBlessOrLeechMultiplier(guardPost, nowUnix)
 						local bossTier = profile.HighestClearedBiomeBoss or 0
-						local goldRatePerMin = StatFormulas.GetPassiveGoldRate(guardPost.Level, gpLabor, bossTier)
+						local goldRatePerMin = StatFormulas.GetPassiveGoldRate(guardPost.Level, gpLabor, bossTier, FortressTree.PerkBonuses(profile.FortressTree))
 						local goldSubIncrement = math.round((goldRatePerMin / 60) * FacilityConfig.Constants.PassiveGoldTickIntervalSeconds * 100) / 100
 
 						if goldSubIncrement > 0 then

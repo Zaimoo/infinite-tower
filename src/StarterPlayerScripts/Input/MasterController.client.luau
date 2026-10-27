@@ -190,9 +190,5 @@ ProximityPromptService.PromptTriggered:Connect(function(prompt: ProximityPrompt,
 		if _G.OpenMasterModal then
 			_G.OpenMasterModal("BLACKSMITH")
 		end
-	elseif name == "InfirmaryInteractPrompt" then
-		task.spawn(function()
-			AssignHeroRoleFunc:InvokeServer("AUTO_SWAP_EXHAUSTED", "")
-		end)
 	end
 end)

@@ -603,6 +603,7 @@ local squadController: any = nil
 local promotionController: any = nil
 
 local facilityController: any = nil
+local fortressTreeController: any = nil
 local synthesisController: any = nil
 local forgeController: any = nil
 local refreshBlacksmithModal: () -> ()
@@ -630,6 +631,7 @@ local ACTION_COLORS = {
 	Overdrive = Color3.fromRGB(245, 158, 11),   -- #F59E0B Amber
 	Recall = Color3.fromRGB(34, 211, 238),     -- #22D3EE Cyan
 	Tower = Color3.fromRGB(192, 132, 252),     -- #C084FC Violet
+	Fortress = Color3.fromRGB(214, 180, 120),  -- Parchment: the Fortress Tree (Phase 4)
 }
 
 local function triggerHUDWhistleCooldown(which: string)
@@ -657,7 +659,7 @@ end
 -- Floating Bottom HUD Toolbar Container
 local floatingMenuContainer = Instance.new("Frame")
 floatingMenuContainer.Name = "FloatingToolbar"
-floatingMenuContainer.Size = UDim2.fromOffset(416, 96)
+floatingMenuContainer.Size = UDim2.fromOffset(494, 96)
 floatingMenuContainer.Position = UDim2.new(0.5, 0, 1, -16)
 floatingMenuContainer.AnchorPoint = Vector2.new(0.5, 1)
 floatingMenuContainer.BackgroundColor3 = Color3.fromRGB(13, 9, 18) -- #0D0912
@@ -1005,6 +1007,23 @@ local towerHandle = createFloatingIconButton(
 	end
 )
 
+-- 6. FORTRESS (Parchment, NO COOLDOWN): the Fortress Tree, also opened at the Architect's Table.
+local fortressHandle = createFloatingIconButton(
+	"Fortress",
+	6,
+	nil,
+	"FORTRESS",
+	ACTION_COLORS.Fortress,
+	false,
+	function()
+		if fortressTreeController and fortressTreeController:IsOpen() then
+			fortressTreeController:Close()
+		elseif _G.OpenFacilityHUD then
+			_G.OpenFacilityHUD("FortressTree")
+		end
+	end
+)
+
 local function updateBottomTabHighlights()
 	local squadActive = squadController ~= nil and squadController:IsOpen()
 	if squadHandle.DiscStroke then
@@ -1029,12 +1048,21 @@ local function updateBottomTabHighlights()
 	end
 	towerHandle.PillLabel.TextColor3 = if towerActive then Color3.fromRGB(230, 192, 112) else ACTION_COLORS.Tower
 	towerHandle.PillStroke.Color = if towerActive then Color3.fromRGB(230, 192, 112) else ACTION_COLORS.Tower
+
+	local fortressActive = fortressTreeController ~= nil and fortressTreeController:IsOpen()
+	if fortressHandle.DiscStroke then
+		fortressHandle.DiscStroke.Thickness = if fortressActive then 2.4 else 1.6
+		fortressHandle.DiscStroke.Color = if fortressActive then Color3.fromRGB(255, 240, 160) else ACTION_COLORS.Fortress
+	end
+	fortressHandle.PillLabel.TextColor3 = if fortressActive then Color3.fromRGB(255, 240, 160) else ACTION_COLORS.Fortress
+	fortressHandle.PillStroke.Color = if fortressActive then Color3.fromRGB(255, 240, 160) else ACTION_COLORS.Fortress
 end
 _G.UpdateBottomTabHighlights = updateBottomTabHighlights
 
 _G.IsAnyMasterModalOpen = function(): boolean
 	if _G.IsTowerSelectorOpen and _G.IsTowerSelectorOpen() then return true end
 	if facilityController and facilityController.Root and facilityController.Root.Visible then return true end
+	if fortressTreeController and fortressTreeController:IsOpen() then return true end
 	if synthesisController and synthesisController.Root and synthesisController.Root.Visible then return true end
 	if promotionController and promotionController:IsOpen() then return true end
 	if forgeController and forgeController.Root and forgeController.Root.Visible then return true end
@@ -1048,6 +1076,7 @@ _G.OpenMasterModal = function(which: string)
 	end
 	if _G.CloseTowerSelector then _G.CloseTowerSelector() end
 	if facilityController then facilityController:Close() end
+	if fortressTreeController then fortressTreeController:Close() end
 	if synthesisController then synthesisController:Close() end
 	if promotionController then promotionController:Close() end
 	if forgeController then forgeController:Close() end
@@ -1114,6 +1143,8 @@ end
 
 local FacilityController = require(script.Parent:WaitForChild("FacilityController"))
 facilityController = FacilityController.new(hudGui, function() return CurrentProfile end, TycoonRemotes)
+local FortressTreeController = require(script.Parent:WaitForChild("FortressTreeController"))
+fortressTreeController = FortressTreeController.new(hudGui, function() return CurrentProfile end, Remotes:WaitForChild("ProgressionRemotes"))
 local SynthesisController = require(script.Parent:WaitForChild("SynthesisController"))
 synthesisController = SynthesisController.new(hudGui, TycoonRemotes:WaitForChild("PitRequest") :: RemoteFunction)
 _G.SynthesisController = synthesisController
@@ -1136,6 +1167,10 @@ _G.OpenFacilityHUD = function(facility: string)
 		promotionController:Open()
 	elseif facility == "SquadManagement" or facility == "Squad" then
 		_G.OpenMasterModal("SQUAD")
+	elseif facility == "FortressTree" then
+		_G.OpenMasterModal("NONE")
+		fortressTreeController:Open()
+		updateBottomTabHighlights()
 	else
 		_G.OpenMasterModal("NONE")
 		if synthesisController then synthesisController:Close() end
@@ -1530,6 +1565,9 @@ ProfileDeltaSyncEvent.OnClientEvent:Connect(function(profile: any)
 	else CurrentProfile = profile end
 	_G.CurrentProfile = CurrentProfile
 	facilityController:Refresh()
+	if fortressTreeController and fortressTreeController:IsOpen() then
+		fortressTreeController:Refresh()
+	end
 	if synthesisController and synthesisController.Root and synthesisController.Root.Visible then
 		synthesisController:Refresh()
 	end

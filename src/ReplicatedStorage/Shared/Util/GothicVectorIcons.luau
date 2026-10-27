@@ -342,6 +342,25 @@ function GothicVectorIcons.CreateTower(opts: IconOptions?): Frame
 	return createActionBadge("VectorTowerBadge", GothicVectorIcons.ASSETS.Tower, Color3.fromRGB(192, 132, 252), opts)
 end
 
+-- Fortress Tree badge. There is no uploaded line-art asset yet, so the disc carries a text glyph.
+function GothicVectorIcons.CreateFortress(opts: IconOptions?): Frame
+	local badge = createActionBadge("VectorFortressBadge", "", Color3.fromRGB(214, 180, 120), opts)
+	local disc = badge:FindFirstChild("ObsidianDisc")
+	if disc and disc:IsA("GuiObject") then
+		new("TextLabel", {
+			Name = "FortressGlyph",
+			BackgroundTransparency = 1,
+			Size = UDim2.fromScale(0.62, 0.62),
+			Position = UDim2.fromScale(0.5, 0.5),
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Text = "🏰",
+			TextScaled = true,
+			ZIndex = disc.ZIndex + 4,
+		}, disc)
+	end
+	return badge
+end
+
 --------------------------------------------------------------------------------
 -- 8. ACTIVE AURA / HALO (Vector Circular Glow)
 --------------------------------------------------------------------------------
@@ -576,6 +595,8 @@ function GothicVectorIcons.Create(name: string, opts: IconOptions?): Frame
 		return GothicVectorIcons.CreateRecall(opts)
 	elseif n == "tower" then
 		return GothicVectorIcons.CreateTower(opts)
+	elseif n == "fortress" then
+		return GothicVectorIcons.CreateFortress(opts)
 	elseif n == "aura" then
 		return GothicVectorIcons.CreateAura(opts)
 	elseif n == "arrow" or n == "rightarrow" or n == "right_arrow" then

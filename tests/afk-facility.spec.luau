@@ -83,7 +83,7 @@ do
 	assertEq(HeroCatalog.Seeds.hero_eolka.PreferredFacility, "FACILITY_TRAINING", "Eolka (Scholar) prefers Training Grounds")
 	assertEq(HeroCatalog.Seeds.hero_solaris.PreferredFacility, "FACILITY_TRAINING", "Solaris (Scholar) prefers Training Grounds")
 
-	assertEq(HeroCatalog.Seeds.hero_valeria.PreferredFacility, "FACILITY_INFIRMARY", "Valeria (Healer) prefers The Infirmary")
+	assertEq(HeroCatalog.Seeds.hero_valeria.PreferredFacility, "FACILITY_GODS_BLESSING", "Valeria (Healer) prefers God's Blessing")
 
 	assertEq(HeroCatalog.Seeds.hero_archon.PreferredFacility, "ALL", "Archon has universal synergy (ALL)")
 	assertEq(HeroCatalog.Seeds.hero_astrea.PreferredFacility, "ALL", "Astrea has universal synergy (ALL)")
@@ -100,7 +100,8 @@ do
 		QualityScalar = 1.0,
 		Assignment = "FACILITY_GUARD_POST",
 	}
-	local baseLabor = HeroCatalog.Seeds.hero_aaron.BaseLabor_1Star
+	-- Aaron is Uncommon (tier 2): inherent rarity multiplies labor by 1.12 (Phase 4 §7).
+	local baseLabor = HeroCatalog.Seeds.hero_aaron.BaseLabor_1Star * 1.12
 	local laborWithSynergy = StatFormulas.GetEffectiveLabor(mockVanguard, "FACILITY_GUARD_POST")
 	local laborWithoutSynergy = StatFormulas.GetEffectiveLabor(mockVanguard, "FACILITY_MARKET")
 
@@ -114,7 +115,8 @@ do
 		QualityScalar = 1.0,
 		Assignment = "FACILITY_MARKET",
 	}
-	local archonBase = HeroCatalog.Seeds.hero_archon.BaseLabor_1Star
+	-- Archon is Exalted (tier 5): inherent rarity multiplies labor by 1.12^4 (Phase 4 §7).
+	local archonBase = HeroCatalog.Seeds.hero_archon.BaseLabor_1Star * 1.12 ^ 4
 	assertEq(StatFormulas.GetEffectiveLabor(mockUniversal, "FACILITY_MARKET"), math.round(archonBase * 1.25 * 100) / 100, "Universal hero receives +25% synergy anywhere")
 
 	print("PASS: EffectiveLabor awards exact +25% synergy for preferred facilities")
@@ -189,19 +191,6 @@ do
 	assertEq(multLv5_200, 2.12, "Training Lv5 with 200 labor = +112% (2.12x)")
 
 	print("PASS: Training Combat Multiplier formula matches GDD specification")
-end
-
--- 8. The Infirmary Stamina Recovery & Healer Aura (GDD Section 4.3.1)
-do
-	local baseRegen, baseComa = StatFormulas.GetInfirmaryRates(1, 0, false)
-	assertEq(baseRegen, 3.0, "Infirmary base stamina regen is 3.0/sec")
-	assertEq(baseComa, 60, "Infirmary base coma duration is 60s")
-
-	local healerRegen, healerComa = StatFormulas.GetInfirmaryRates(1, 0, true)
-	assertEq(healerRegen, 4.5, "Infirmary Healer aura grants 4.5 stamina/sec (+50%)")
-	assertEq(healerComa, 40, "Infirmary Healer aura reduces coma to 40s")
-
-	print("PASS: Infirmary recovery and Healer synergy aura match GDD Section 4.3.1")
 end
 
 -- 9. Training Multiplier Impact on Combat Snapshot (FinalATK & FinalHP)
