@@ -34,7 +34,7 @@ Each phase has its own detailed, self-contained implementation specification:
 | **2** | [PHASE_2_FLOOR_LOOP_AND_DEFEAT.md](PHASE_2_FLOOR_LOOP_AND_DEFEAT.md) | Tower loop & failure | Globally shared floors, per-player kill progress tracking, boss summoning gate, full-copy boss loot, no-revive squad wipe to plot. |
 | **3** | [PHASE_3_TOWER_PVP_RETALIATION.md](PHASE_3_TOWER_PVP_RETALIATION.md) | Tower PvP & Duels | Killer-tagged mob loot, [Loot Thief] flags, non-consequential retaliation duel, loser drop lockout. |
 | **4** | [PHASE_4_ONBOARDING_AND_PROGRESSION.md](PHASE_4_ONBOARDING_AND_PROGRESSION.md) | Progression backend | `OnboardingConfig`, `OnboardingService`, v3 profile schema migration, system unlock gating, Fortress Development Tree (facility unlocks and upgrades), God's Blessing fountain facility (summon luck), inherent hero rarity with lowered hero odds, facility-only idle labor loop. |
-| **5** | [PHASE_5_REACT_UI_AND_MENUS.md](PHASE_5_REACT_UI_AND_MENUS.md) | Complete UI/HUD/UX Overhaul | Modern React-lua root, 4-element persistent HUD, Goal Tracker card, Defeat/Duel/Claim modals, migrated menus (Forge, Squad, Pit, Facilities), gamepad navigation, retirement of legacy `HUDController`. |
+| **5** | [PHASE_5_REACT_UI_AND_MENUS.md](PHASE_5_REACT_UI_AND_MENUS.md) | Complete UI/HUD/UX Overhaul | Modern React-lua root, 4-element persistent HUD with Fortress toolbar button, Goal Tracker card, Defeat/Duel/Claim modals, React Fortress Tree hex map, rarity-aware Summon with God's Blessing odds, slot-locked Squad, migrated menus (Forge, Squad, Pit, Facilities), gamepad navigation, retirement of legacy `HUDController` and the Phase 3/4 interim UI. |
 
 ---
 
