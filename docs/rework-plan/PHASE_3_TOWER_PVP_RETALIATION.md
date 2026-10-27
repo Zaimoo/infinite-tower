@@ -1,7 +1,7 @@
 # Phase 3: Tower PvP & Contested Drop Retaliation
 
 **Document Version:** 2.0  
-**Phase Status:** Ready for Execution  
+**Phase Status:** Implemented (see GAME_DESIGN.MD §6.1)  
 **Prerequisites:** Phase 2 complete  
 
 ---
@@ -49,6 +49,7 @@ Phase 3 introduces emergent, low-stakes multiplayer friction in shared tower flo
 - Thief receives challenge notice. Both squads enter a temporary duel engagement zone.
 
 ### 3.2 Duel Mechanics
+- Squads fight on a floating hex-grid arena, lined up melee-front / ranged-back, viewed from a fixed high-angle camera behind each player's own squad.
 - Both squads battle in an isolated sparring state using their deployed 5-hero teams.
 - Tower mob aggression is suppressed during the duel.
 - **Victory Condition:** Slaying all 5 opposing heroes.
@@ -56,11 +57,12 @@ Phase 3 introduces emergent, low-stakes multiplayer friction in shared tower flo
 ### 3.3 Zero-Consequence Payout
 - **If Victim Wins:**
   - Carried drop transfers directly to the victim.
+  - Thief is locked out of the drop for its lifetime, exactly as a losing victim is.
   - Thief's `[Loot Thief]` flag is cleared.
   - Thief experiences NO wipe, NO loss of other inventory, and NO teleport.
 - **If Thief Wins:**
   - Thief retains the contested drop.
-  - Victim is locked out of reclaiming that drop.
+  - Victim is locked out of reclaiming that drop, and the thief becomes its owner.
   - Victim experiences NO wipe, NO loss of banked currencies, and NO teleport.
 - All heroes on both sides return to their pre-duel health upon duel conclusion.
 

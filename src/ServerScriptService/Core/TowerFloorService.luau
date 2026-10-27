@@ -20,7 +20,7 @@ local remotes: any
 local function remoteFolder(): any
 	local root=RS:WaitForChild("Remotes")
 	local f=root:FindFirstChild("TowerRemotes") or Instance.new("Folder");f.Name="TowerRemotes";f.Parent=root
-	for _,name in {"Request","Response","Context","Ready","Presence","TowerEntityState","TowerAction","TowerSnapshot","OpenSelector","FloorProgress","SquadDefeated","SquadStatus"} do
+	for _,name in {"Request","Response","Context","Ready","Presence","TowerEntityState","TowerAction","TowerSnapshot","OpenSelector","FloorProgress","SquadDefeated","SquadStatus","LootContested","InitiateRetaliation","DuelState"} do
 		if not f:FindFirstChild(name) then local e=Instance.new(name=="TowerSnapshot" and "UnreliableRemoteEvent" or "RemoteEvent");e.Name=name;e.Parent=f end
 	end
 	return f

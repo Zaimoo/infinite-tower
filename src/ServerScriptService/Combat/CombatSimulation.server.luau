@@ -29,6 +29,8 @@ local HeroImpactQueue=require(script.Parent.HeroImpactQueue)
 local HeroSkillEffects=require(script.Parent.HeroSkillEffects)
 local HeroImpacts=HeroImpactQueue.new()
 local TowerProgress=require(Shared.Util.TowerProgress)
+local LootDuel=require(Shared.Util.LootDuel)
+local DuelArena=require(script.Parent.DuelArena)
 local Encounters: any=nil
 local CombatLifecycleRevision=0
 local TowerRemotes=ReplicatedStorage.Remotes.TowerRemotes
@@ -39,7 +41,9 @@ local WhistleCommandRemote = CombatRemotes:WaitForChild("WhistleCommand") :: Rem
 local BossTelegraphRemote = CombatRemotes:WaitForChild("BossTelegraph") :: RemoteEvent
 local CombatVFXRemote = CombatRemotes:WaitForChild("CombatVFX") :: UnreliableRemoteEvent
 local EntityMetadataRemote = CombatRemotes:WaitForChild("EntityMetadataSync") :: RemoteEvent
-local LootStolenAlertRemote = CombatRemotes:WaitForChild("LootStolenAlert") :: RemoteEvent
+local LootContestedRemote = TowerRemotes:WaitForChild("LootContested") :: RemoteEvent
+local InitiateRetaliationRemote = TowerRemotes:WaitForChild("InitiateRetaliation") :: RemoteEvent
+local DuelStateRemote = TowerRemotes:WaitForChild("DuelState") :: RemoteEvent
 local SquadWipeStateRemote = CombatRemotes:WaitForChild("SquadWipeState") :: RemoteEvent
 local CarriedLootSyncRemote = CombatRemotes:WaitForChild("CarriedLootSync") :: RemoteEvent
 local PhysicalLootFolder = Workspace:WaitForChild("PhysicalLoot") :: Folder
@@ -116,6 +120,9 @@ export type SimHero = {
 	AttackCount: number?,
 	BarrierHP: number?,
 	BarrierExpires: number?,
+	DuelId: number?, -- set while the hero fights in a retaliation duel
+	DuelSide: LootDuel.Side?,
+	DefenseShredUntil: number?,
 }
 
 export type SimMob = {
@@ -160,7 +167,30 @@ export type MasterCombatState = {
 	IsSquadWiped: boolean,
 }
 
-local TheftGrudges: { [number]: { [number]: number } } = {} -- [victimUserId][thiefUserId] = expiresAt
+-- Contested drops (GDD 6.1): one contest per stolen drop, keyed by LootId.
+local Contests: { [number]: LootDuel.Contest } = {}
+local ThiefFlagUntil: { [Player]: number } = {}
+local LastRetaliationRequest: { [Player]: number } = {}
+local LastPickupDenial: { [Player]: number } = {}
+
+type DuelSquad = { Player: Player, Heroes: { SimHero }, Saved: { [SimHero]: any }, Frozen: any? }
+type Duel = {
+	Id: number,
+	Contest: LootDuel.Contest,
+	FloorId: number,
+	Center: Vector3,
+	Forward: Vector3,
+	Arena: Model,
+	Phase: "INTRO" | "FIGHT" | "OUTRO",
+	FightAt: number,
+	EndsAt: number,
+	OutroUntil: number,
+	Sides: { A: DuelSquad, B: DuelSquad },
+	Winner: LootDuel.Side?,
+}
+local Duels: { [number]: Duel } = {}
+local DuelByPlayer: { [Player]: Duel } = {}
+local NextDuelId = 1
 local NextLootId = 1
 local ActiveLootDrops: { [number]: any } = {}
 local CarrierToHeldLoot: { [Player]: any } = {}
@@ -209,6 +239,7 @@ local function buildMetadataTable(): { any }
 			EquippedArtifactRarity = h.EquippedArtifactRarity,
 			EquippedArtifactType = h.EquippedArtifactType,
 			EquippedArtifactStar = h.EquippedArtifactStar,
+			DuelSide = h.DuelSide,
 		})
 	end
 	for netId, m in pairs(ActiveMobsByNetId) do
@@ -510,6 +541,7 @@ function CombatSimulation.DropCarriedLoot(player: Player, openLoot: boolean?): b
 		KillerName = openLoot and "Open" or held.KillerName,
 		SpawnTime = held.SpawnTime, DespawnTime = held.DespawnTime,
 		PickupBlockedUserId = player.UserId, PickupBlockedUntil = now + 1.5,
+		LockedOut = held.LockedOut, DuelLocked = held.DuelLocked,
 	}
 	ActiveLootDrops[held.LootId] = dropped
 	if held.OriginalPrompt then
@@ -697,6 +729,58 @@ end
 -- PHYSICAL CONTESTED LOOT SYSTEM (3D MESH ASSETS & OVERHEAD HOLDING)
 --============================================================================
 
+-- [Loot Thief] marker: a character attribute for game logic plus a nameplate everyone can see.
+local function applyThiefTag(player: Player)
+	local char = player.Character
+	if not char then return end
+	local flagged = (ThiefFlagUntil[player] or 0) > os.clock()
+	char:SetAttribute("IsLootThief", flagged)
+	local head = char:FindFirstChild("Head")
+	local tag = head and head:FindFirstChild("LootThiefTag")
+	if flagged and head and not tag then
+		local bb = Instance.new("BillboardGui")
+		bb.Name = "LootThiefTag"
+		bb.Size = UDim2.fromOffset(150, 30)
+		bb.StudsOffset = Vector3.new(0, 3.2, 0)
+		bb.AlwaysOnTop = true
+		bb.MaxDistance = 220
+		local label = Instance.new("TextLabel")
+		label.Size = UDim2.fromScale(1, 1)
+		label.BackgroundColor3 = Color3.fromRGB(70, 10, 14)
+		label.BackgroundTransparency = 0.15
+		label.Text = "[Loot Thief]"
+		label.TextColor3 = Color3.fromRGB(255, 120, 110)
+		label.Font = Enum.Font.GothamBlack
+		label.TextScaled = true
+		label.Parent = bb
+		local corner = Instance.new("UICorner")
+		corner.CornerRadius = UDim.new(0, 6)
+		corner.Parent = label
+		bb.Parent = head
+	elseif not flagged and tag then
+		tag:Destroy()
+	end
+end
+
+-- The flag lasts as long as the thief's newest open contest.
+local function refreshThiefFlag(player: Player)
+	local latest = 0
+	for _, contest in pairs(Contests) do
+		if contest.ThiefUserId == player.UserId and (contest.Status == "CONTESTED" or contest.Status == "DUELING") then
+			latest = math.max(latest, contest.ExpiresAt)
+		end
+	end
+	ThiefFlagUntil[player] = if latest > os.clock() then latest else nil
+	applyThiefTag(player)
+end
+
+local function closeContestPrompt(contest: LootDuel.Contest)
+	local owner = Players:GetPlayerByUserId(contest.OwnerUserId)
+	if owner then
+		LootContestedRemote:FireClient(owner, { Kind = "CLEAR", DropId = contest.DropId })
+	end
+end
+
 function collectPhysicalLoot(player: Player, lootId: number)
 	if Tower.IsTransitioning(player) then return end
 	local loot = ActiveLootDrops[lootId]
@@ -706,6 +790,15 @@ function collectPhysicalLoot(player: Player, lootId: number)
 
 	if not Tower.Same(Tower.GetState(player),loot) or os.clock()>=loot.DespawnTime then return end
 	if loot.PickupBlockedUserId == player.UserId and os.clock() < (loot.PickupBlockedUntil or 0) then
+		return
+	end
+	local allowed, denial = LootDuel.CanPickUp(loot, player.UserId)
+	if not allowed then
+		-- Touched fires every frame while standing on the drop; toast at most every few seconds.
+		if os.clock() - (LastPickupDenial[player] or 0) > 4 then
+			LastPickupDenial[player] = os.clock()
+			getDataManager().SendToast(player, "🔒 " .. (denial or "You cannot pick this up."), "WARN")
+		end
 		return
 	end
 
@@ -777,6 +870,7 @@ function collectPhysicalLoot(player: Player, lootId: number)
 		KillerName = killerName,
 		OriginalPrompt = loot.Prompt,
 		Billboard = loot.Billboard,
+		LockedOut = loot.LockedOut,
 	}
 
 	local g = (lootType == "GOLD" and amount or 0)
@@ -785,22 +879,39 @@ function collectPhysicalLoot(player: Player, lootId: number)
 
 	Tower.BroadcastAt(CombatVFXRemote,Tower.GetState(player),"LOOT_PICKUP",hrp.Position)
 
-	local isStolen = (killerUserId ~= 0 and killerUserId ~= player.UserId)
+	local isStolen = LootDuel.IsTheft(killerUserId, player.UserId)
 	if not isStolen then
+		-- The owner took their drop back without a fight: the contest is over.
+		local contest = Contests[lootId]
+		if contest and contest.Status == "CONTESTED" and contest.OwnerUserId == player.UserId then
+			contest.Status = "RESOLVED"
+			closeContestPrompt(contest)
+			local thief = Players:GetPlayerByUserId(contest.ThiefUserId)
+			if thief then refreshThiefFlag(thief) end
+		end
 		dm.SendToast(player, string.format("🎒 Holding %d %s (-15%% Spd)! Bring it to a Floor Safe Sanctuary or Hub bank to unpackage!", amount, lootType), "INFO")
 	else
-		TheftGrudges[killerUserId] = TheftGrudges[killerUserId] or {}
-		TheftGrudges[killerUserId][player.UserId] = os.clock() + 180
-
-		char:SetAttribute("IsLootThief", true)
+		-- A re-steal replaces any older contest for this drop; the newest thief is the one challenged.
+		local previous = Contests[lootId]
+		if previous and previous.Status == "CONTESTED" then
+			previous.Status = "EXPIRED"
+			local previousThief = Players:GetPlayerByUserId(previous.ThiefUserId)
+			if previousThief then refreshThiefFlag(previousThief) end
+		end
+		local contest = LootDuel.NewContest(lootId, killerUserId, player.UserId, os.clock())
+		Contests[lootId] = contest
+		refreshThiefFlag(player)
 
 		local victimPlayer = Players:GetPlayerByUserId(killerUserId)
 		if victimPlayer then
-			dm.SendToast(victimPlayer, string.format("🚨 %s STOLE YOUR %d %s! Click them to retaliate!", player.DisplayName, amount, lootType), "WARN")
-			LootStolenAlertRemote:FireClient(victimPlayer, player.UserId, player.DisplayName, lootType, amount)
+			dm.SendToast(victimPlayer, string.format("🚨 %s STOLE YOUR %d %s! Retaliate to duel for it!", player.DisplayName, amount, lootType), "WARN")
+			LootContestedRemote:FireClient(victimPlayer, {
+				Kind = "STOLEN", DropId = lootId, ThiefUserId = player.UserId, ThiefName = player.DisplayName,
+				LootType = lootType, Amount = amount, Seconds = LootDuel.THIEF_FLAG_SECONDS,
+			})
 		end
 
-		dm.SendToast(player, string.format("⚠️ You stole %s's loot! Their squad can now attack you in retaliation!", killerName), "WARN")
+		dm.SendToast(player, string.format("⚠️ You stole %s's loot! You are a [Loot Thief] — they can challenge you to a duel for it.", killerName), "WARN")
 	end
 end
 
@@ -998,39 +1109,476 @@ end
 -- 6. MASTER COMMAND HANDLERS ([CLICK] FOCUS, [Q] OVERDRIVE, [E] RECALL)
 --============================================================================
 
-local function canEngagePvP(attacker: Player, defender: Player): (boolean, string?)
-	if attacker == defender then
-		return false, "Cannot target your own squad!"
-	end
-	local now = os.clock()
-	local atkPos = getMasterRootPosition(attacker)
-	if not atkPos then
-		return false, "Attacker position not found"
-	end
- local atkState,defState=Tower.GetState(attacker),Tower.GetState(defender)
- local defPos=getMasterRootPosition(defender)
- if not Tower.Same(atkState,defState) or not defPos or Tower.GetSafety(atkState,atkPos).CombatSafe or Tower.GetSafety(defState,defPos).CombatSafe then
-		return false, "Cannot engage in PvP inside the Safe Zone (Perimeter Highway / Plots)!"
-	end
+--============================================================================
+-- 6a. RETALIATION DUELS (GDD 6.1, docs/rework-plan/PHASE_3_TOWER_PVP_RETALIATION.md)
+-- The drop's owner challenges the thief; both squads fight on a floating hex arena above the
+-- floor while their Masters wait in place. Nobody is wiped, teleported or loses progress: heroes
+-- return to their pre-duel HP afterwards, and the loser (owner or thief) is locked out of the drop.
+--============================================================================
 
-	-- 1. Attacker has active theft grudge against defender
-	if TheftGrudges[attacker.UserId] and (TheftGrudges[attacker.UserId][defender.UserId] or 0) > now then
-		return true, nil
-	end
+local DUEL_MOVE_SPEED = 18.0
+local performHeroAttack: (simHero: SimHero, targetPos: Vector3, targetMob: SimMob?, targetEnemyHero: SimHero?, distToTarget: number, now: number, dt: number, isOverdrive: boolean) -> ()
 
-	-- 2. Defender is currently flagged as Loot Thief
-	local defChar = defender.Character
-	if defChar and defChar:GetAttribute("IsLootThief") == true then
-		return true, nil
-	end
-
-	-- 3. Mutual Retaliation: Defender previously attacked attacker
-	if TheftGrudges[defender.UserId] and (TheftGrudges[defender.UserId][attacker.UserId] or 0) > now then
-		return true, nil
-	end
-
-	return false, string.format("%s is not flagged as a Loot Thief against you!", defender.DisplayName)
+local function duelSquad(duel: Duel, side: LootDuel.Side): DuelSquad
+	return if side == "A" then duel.Sides.A else duel.Sides.B
 end
+
+local function liveDuelHeroes(squad: DuelSquad): { SimHero }
+	local alive = {}
+	for _, h in squad.Heroes do
+		if ActiveHeroesByNetId[h.NetId] == h and h.State ~= "COMA" and h.CurrentHP > 0 then
+			table.insert(alive, h)
+		end
+	end
+	return alive
+end
+
+local function squadHpFraction(squad: DuelSquad): number
+	local total = 0
+	for _, h in liveDuelHeroes(squad) do
+		total += h.CurrentHP / math.max(1, h.MaxHP)
+	end
+	return total
+end
+
+local function sendDuelState(duel: Duel, payload: { [string]: any })
+	for _, side in { "A", "B" } :: { LootDuel.Side } do
+		local squad = duelSquad(duel, side)
+		if squad.Player.Parent == Players then
+			local message = table.clone(payload)
+			message.DuelId = duel.Id
+			message.Side = side
+			message.AliveA = #liveDuelHeroes(duel.Sides.A)
+			message.AliveB = #liveDuelHeroes(duel.Sides.B)
+			DuelStateRemote:FireClient(squad.Player, message)
+		end
+	end
+end
+
+-- Masters wait where they stand for the duel: no walking off to bank the contested drop.
+local function freezeMaster(squad: DuelSquad)
+	local hum = squad.Player.Character and squad.Player.Character:FindFirstChildOfClass("Humanoid")
+	if not hum then return end
+	squad.Frozen = { Humanoid = hum, WalkSpeed = hum.WalkSpeed, JumpPower = hum.JumpPower, JumpHeight = hum.JumpHeight }
+	hum.WalkSpeed = 0
+	hum.JumpPower = 0
+	hum.JumpHeight = 0
+end
+
+local function thawMaster(squad: DuelSquad)
+	local frozen = squad.Frozen
+	squad.Frozen = nil
+	if frozen and frozen.Humanoid.Parent then
+		frozen.Humanoid.WalkSpeed = frozen.WalkSpeed
+		frozen.Humanoid.JumpPower = frozen.JumpPower
+		frozen.Humanoid.JumpHeight = frozen.JumpHeight
+	end
+end
+
+-- A contested drop either lies on the floor or rides over somebody's head.
+local function findDrop(dropId: number): (any?, Player?)
+	local ground = ActiveLootDrops[dropId]
+	if ground then
+		return ground, nil
+	end
+	for carrier, held in pairs(CarrierToHeldLoot) do
+		if held.LootId == dropId then
+			return held, carrier
+		end
+	end
+	return nil, nil
+end
+
+local function startDuel(owner: Player, contest: LootDuel.Contest): (boolean, string?)
+	local ok, reason = LootDuel.CanRetaliate(contest, owner.UserId, os.clock())
+	if not ok then return false, reason end
+	local thief = Players:GetPlayerByUserId(contest.ThiefUserId)
+	if not thief then return false, "The thief has left the server." end
+	if DuelByPlayer[owner] or DuelByPlayer[thief] then return false, "One of you is already in a duel." end
+	if Tower.IsTransitioning(owner) or Tower.IsTransitioning(thief) then return false, "Wait until both Masters have finished travelling." end
+	local ownerState, thiefState = Tower.GetState(owner), Tower.GetState(thief)
+	if ownerState.FloorId == 0 or not Tower.Same(ownerState, thiefState) then
+		return false, string.format("%s is not on your floor.", thief.DisplayName)
+	end
+	local record = findDrop(contest.DropId)
+	if not record then return false, "The stolen drop is gone." end
+	local ownerPos, thiefPos = getMasterRootPosition(owner), getMasterRootPosition(thief)
+	local room = Tower.GetRoom(ownerState.FloorId)
+	if not ActiveMasters[owner] or not ActiveMasters[thief] or not ownerPos or not thiefPos or not room then
+		return false, "The duel cannot start right now."
+	end
+
+	local squads: { [string]: DuelSquad } = {}
+	for side, player in { A = owner, B = thief } do
+		local heroes = {}
+		for _, h in pairs(ActiveMasters[player].DeployedHeroes) do
+			if h.State ~= "COMA" and h.CurrentHP > 0 and Tower.Same(h, ownerState) then
+				table.insert(heroes, h)
+			end
+		end
+		if #heroes == 0 then
+			return false, string.format("%s has no heroes standing on this floor.", if player == owner then "Your squad" else player.DisplayName)
+		end
+		table.sort(heroes, function(a, b) return a.SlotIndex < b.SlotIndex end)
+		squads[side] = { Player = player, Heroes = heroes, Saved = {} }
+	end
+
+	-- The arena floats just under the room's ceiling bound above the owner, so it stays inside
+	-- the room-local replication bounds and clear of all floor geometry.
+	local margin = DuelArena.Radius() + 10
+	local localPos = ownerPos - room.Origin
+	local min, max = room.Bounds.Min, room.Bounds.Max
+	local cx = if min.X + margin < max.X - margin then math.clamp(localPos.X, min.X + margin, max.X - margin) else (min.X + max.X) / 2
+	local cz = if min.Z + margin < max.Z - margin then math.clamp(localPos.Z, min.Z + margin, max.Z - margin) else (min.Z + max.Z) / 2
+	local center = room.Origin + Vector3.new(cx, max.Y - LootDuel.ARENA_LIFT, cz)
+	local delta = Vector3.new(thiefPos.X - ownerPos.X, 0, thiefPos.Z - ownerPos.Z)
+	local forward = if delta.Magnitude > 0.5 then delta.Unit else Vector3.new(0, 0, 1)
+
+	local id = NextDuelId
+	NextDuelId += 1
+	local now = os.clock()
+	local duel: Duel = {
+		Id = id,
+		Contest = contest,
+		FloorId = ownerState.FloorId,
+		Center = center,
+		Forward = forward,
+		Arena = DuelArena.Build(id, center, forward),
+		Phase = "INTRO",
+		FightAt = now + LootDuel.DUEL_INTRO_SECONDS,
+		EndsAt = now + LootDuel.DUEL_INTRO_SECONDS + LootDuel.DUEL_MAX_SECONDS,
+		OutroUntil = 0,
+		Sides = { A = squads.A, B = squads.B },
+		Winner = nil,
+	}
+
+	local frame = DuelArena.Frame(center, forward)
+	for _, side in { "A", "B" } :: { LootDuel.Side } do
+		local squad = duelSquad(duel, side)
+		local archetypes = {}
+		for i, h in squad.Heroes do
+			archetypes[i] = h.Archetype or "Striker"
+		end
+		local facing = if side == "A" then forward else -forward
+		for slot, index in LootDuel.FormationOrder(archetypes) do
+			local h = squad.Heroes[index]
+			squad.Saved[h] = { HP = h.CurrentHP, State = h.State, Stamina = h.Stamina, BarrierHP = h.BarrierHP,
+				BarrierExpires = h.BarrierExpires, AttackCount = h.AttackCount, FloorId = h.FloorId }
+			HeroNavigation.Clear(h)
+			h.DuelId, h.DuelSide = id, side
+			h.Position = frame:PointToWorldSpace(LootDuel.SlotLocal(side, slot)) + Vector3.new(0, DuelArena.StandHeight, 0)
+			h.Yaw = math.atan2(-facing.X, -facing.Z)
+			h.TargetNetId = nil
+			h.State = "FOLLOW_MASTER"
+			h.AttackCooldown = 0.4
+			h.PacifiedUntil = 0
+			h.BarrierHP, h.BarrierExpires = 0, 0
+			h.EntityGeneration += 1
+			for _, other in pairs(ActiveHeroesByNetId) do
+				if other.TargetNetId == h.NetId and other.DuelId ~= id then other.TargetNetId = nil end
+			end
+		end
+		freezeMaster(squad)
+		DuelByPlayer[squad.Player] = duel
+	end
+
+	Duels[id] = duel
+	contest.Status = "DUELING"
+	record.DuelLocked = true
+	closeContestPrompt(contest)
+	sendDuelState(duel, {
+		Kind = "START",
+		Center = center,
+		Forward = forward,
+		Radius = DuelArena.Radius(),
+		NameA = owner.DisplayName,
+		NameB = thief.DisplayName,
+		FightAt = Workspace:GetServerTimeNow() + LootDuel.DUEL_INTRO_SECONDS,
+		EndsAt = Workspace:GetServerTimeNow() + LootDuel.DUEL_INTRO_SECONDS + LootDuel.DUEL_MAX_SECONDS,
+	})
+	local dm = getDataManager()
+	dm.SendToast(owner, string.format("⚔️ Retaliation duel against %s! Winner takes the drop.", thief.DisplayName), "WARN")
+	dm.SendToast(thief, string.format("⚔️ %s challenged you to a retaliation duel for the stolen drop!", owner.DisplayName), "WARN")
+	broadcastMetadata(nil)
+	return true, nil
+end
+
+-- Hero-vs-hero damage inside a duel. KOs here never trigger a squad wipe.
+local function duelDamage(victim: SimHero, amount: number, kind: string, overdrive: boolean)
+	local duel = victim.DuelId and Duels[victim.DuelId]
+	if not duel or duel.Phase ~= "FIGHT" or victim.State == "COMA" or victim.CurrentHP <= 0 then return end
+	local now = os.clock()
+	local damage = amount * LootDuel.DUEL_DAMAGE_SCALE
+	if victim.DefenseShredUntil and now < victim.DefenseShredUntil then
+		damage *= 1.20
+	end
+	damage = math.max(1, math.round(damage))
+	local barrier = victim.BarrierHP or 0
+	if barrier > 0 and (victim.BarrierExpires or 0) > now then
+		local absorbed = math.min(barrier, damage)
+		victim.BarrierHP = barrier - absorbed
+		damage -= absorbed
+	end
+	local actual = math.min(victim.CurrentHP, damage)
+	victim.CurrentHP = math.max(0, victim.CurrentHP - damage)
+	Tower.BroadcastAt(CombatVFXRemote, victim, kind, victim.Position, actual, overdrive, true)
+	if victim.CurrentHP <= 0 then
+		HeroNavigation.Clear(victim)
+		victim.State = "COMA"
+		victim.TargetNetId = nil
+		Tower.BroadcastAt(CombatVFXRemote, victim, "HERO_KO", victim.Position, victim.NetId)
+		sendDuelState(duel, { Kind = "SCORE" })
+	end
+end
+
+-- Duel heroes skip leash, navigation and mob acquisition: they walk straight across the flat
+-- arena at the nearest standing enemy (or whoever taunted them) and fight with their own kit.
+local function stepDuelHero(simHero: SimHero, dt: number, now: number)
+	local duel = simHero.DuelId and Duels[simHero.DuelId]
+	if not duel or duel.Phase ~= "FIGHT" or simHero.State == "COMA" then return end
+	local enemies = liveDuelHeroes(duelSquad(duel, if simHero.DuelSide == "A" then "B" else "A"))
+	local target: SimHero? = nil
+	for _, enemy in enemies do
+		if enemy.NetId == simHero.TargetNetId then target = enemy end
+	end
+	if not target then
+		local best = math.huge
+		for _, enemy in enemies do
+			local d = getHorizontalDistance(simHero.Position, enemy.Position)
+			if d < best then best, target = d, enemy end
+		end
+	end
+	if not target or not Tower.Same(simHero, target) then return end
+	simHero.TargetNetId = target.NetId
+	local delta = target.Position - simHero.Position
+	local flat = Vector3.new(delta.X, 0, delta.Z)
+	local dist = flat.Magnitude
+	if dist > 0.01 then
+		simHero.Yaw = math.atan2(-flat.X, -flat.Z)
+	end
+	if dist > simHero.AttackRange then
+		simHero.State = "MOVE_TO_TARGET"
+		local step = math.min(dist - simHero.AttackRange * 0.85, DUEL_MOVE_SPEED * dt)
+		simHero.Position += flat.Unit * math.max(0, step)
+		return
+	end
+	simHero.State = "ATTACKING"
+	performHeroAttack(simHero, target.Position, nil, target, dist, now, dt, false)
+end
+
+-- Skill context for a duel hero: the opposing squad stands in for the mob list.
+local function duelSkillContext(simHero: SimHero, now: number): HeroSkillEffects.Context
+	local duel = simHero.DuelId and Duels[simHero.DuelId]
+	local enemies, allies = {}, {}
+	if duel then
+		for _, h in liveDuelHeroes(duelSquad(duel, if simHero.DuelSide == "A" then "B" else "A")) do
+			enemies[h.NetId] = h
+		end
+		for _, h in duelSquad(duel, simHero.DuelSide or "A").Heroes do
+			allies[h.HeroUUID] = h
+		end
+	end
+	return {
+		Mobs = enemies,
+		Squad = allies,
+		Now = now,
+		Same = Tower.Same,
+		IsCombatSafe = function(): boolean return false end,
+		Broadcast = function(context: any, kind: string, position: Vector3, amount: number, overdrive: boolean, incoming: boolean)
+			Tower.BroadcastAt(CombatVFXRemote, context, kind, position, amount, overdrive, incoming)
+		end,
+		HandleMobDeath = function() end,
+		Eligible = function(target: any): boolean
+			return target.DuelId == simHero.DuelId and target.State ~= "COMA" and target.CurrentHP > 0
+		end,
+		Damage = function(target: any, amount: number)
+			duelDamage(target, amount, "HIT_SPARK", false)
+		end,
+	}
+end
+
+-- Hands the drop to the duel's winner. The loser is locked out of it for good (LootDuel.Resolve),
+-- whether they were the owner or the thief. The drop is set at the winner's feet and picked up
+-- for them when their hands are free.
+local function applyDuelOutcome(duel: Duel)
+	local contest = duel.Contest
+	local winner = duelSquad(duel, duel.Winner or "B").Player
+	local loser = duelSquad(duel, if duel.Winner == "A" then "B" else "A").Player
+	local record, carrier = findDrop(contest.DropId)
+	LootDuel.Resolve(contest, record, winner.UserId)
+	if record then
+		record.KillerName = winner.DisplayName
+	end
+	local winnerState = Tower.GetState(winner)
+	if record and winner.Parent == Players and Tower.Same(record, winnerState) then
+		if carrier and carrier ~= winner and Tower.Same(Tower.GetState(carrier), winnerState) then
+			CombatSimulation.DropCarriedLoot(carrier)
+		end
+		local ground = ActiveLootDrops[contest.DropId]
+		local root = winner.Character and winner.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if ground and ground.Part and root then
+			ground.PickupBlockedUserId = nil
+			ground.Part.Position = Tower.GroundDrop(ground, root.Position + root.CFrame.LookVector * 4, ground.Part.Size.Y / 2)
+			collectPhysicalLoot(winner, contest.DropId)
+		end
+	end
+
+	local dm = getDataManager()
+	local ownerLost = loser.UserId == contest.OwnerUserId
+	if winner.Parent == Players then
+		dm.SendToast(winner, string.format("🏆 You won the duel against %s! The contested drop is yours.", loser.DisplayName), "SUCCESS")
+	end
+	if loser.Parent == Players then
+		dm.SendToast(loser, if ownerLost
+			then string.format("💀 You lost the duel. %s keeps the drop and you are locked out of it.", winner.DisplayName)
+			else string.format("💀 You lost the duel. %s takes the drop back and you are locked out of it.", winner.DisplayName), "WARN")
+	end
+	local thief = Players:GetPlayerByUserId(contest.ThiefUserId)
+	if thief then refreshThiefFlag(thief) end
+	closeContestPrompt(contest)
+end
+
+-- Ends the duel: squads go back to their Masters at pre-duel HP, the arena is removed and the
+-- drop changes hands.
+local function finishDuel(duel: Duel)
+	if Duels[duel.Id] ~= duel then return end
+	Duels[duel.Id] = nil
+	local now = os.clock()
+	local dm = getDataManager()
+	for _, side in { "A", "B" } :: { LootDuel.Side } do
+		local squad = duelSquad(duel, side)
+		if DuelByPlayer[squad.Player] == duel then DuelByPlayer[squad.Player] = nil end
+		thawMaster(squad)
+		local profile = dm.GetProfile(squad.Player)
+		local masterState = Tower.GetState(squad.Player)
+		local root = getMasterRootPosition(squad.Player)
+		for _, h in squad.Heroes do
+			if h.DuelId ~= duel.Id then continue end
+			h.DuelId, h.DuelSide = nil, nil
+			HeroNavigation.Clear(h)
+			local saved = squad.Saved[h]
+			if saved and h.FloorId == saved.FloorId then
+				h.CurrentHP = math.min(saved.HP, h.MaxHP)
+				h.State = saved.State
+				h.Stamina = saved.Stamina
+				h.BarrierHP, h.BarrierExpires = saved.BarrierHP, saved.BarrierExpires
+				h.AttackCount = saved.AttackCount
+				if profile and profile.Heroes[h.HeroUUID] then
+					profile.Heroes[h.HeroUUID].CurrentStamina = h.Stamina
+				end
+			end
+			if h.State ~= "COMA" then h.State = "FOLLOW_MASTER" end
+			local room = Tower.GetRoom(h.FloorId)
+			if root and Tower.Same(h, masterState) then
+				h.Position = HeroNavigation.PlaceNear(root, getFormationOffset(h.SlotIndex))
+			elseif room then
+				h.Position = room.Arrival.Position - Vector3.new(0, 3.5, 0)
+			end
+			h.TargetNetId = nil
+			h.PacifiedUntil = now + 1.5
+			h.EntityGeneration += 1
+		end
+	end
+	duel.Arena:Destroy()
+	applyDuelOutcome(duel)
+	sendDuelState(duel, { Kind = "CLEAR" })
+	for _, side in { "A", "B" } :: { LootDuel.Side } do
+		local player = duelSquad(duel, side).Player
+		if player.Parent == Players then syncSquadStatus(player) end
+	end
+	broadcastMetadata(nil)
+end
+
+local function concludeDuel(duel: Duel, winner: LootDuel.Side, reason: string)
+	duel.Winner = winner
+	duel.Phase = "OUTRO"
+	duel.OutroUntil = os.clock() + LootDuel.DUEL_OUTRO_SECONDS
+	for _, side in { "A", "B" } :: { LootDuel.Side } do
+		for _, h in duelSquad(duel, side).Heroes do
+			h.TargetNetId = nil
+			if h.State ~= "COMA" then h.State = "FOLLOW_MASTER" end
+		end
+	end
+	sendDuelState(duel, {
+		Kind = "END",
+		Winner = winner,
+		Reason = reason,
+		WinnerName = duelSquad(duel, winner).Player.DisplayName,
+		OwnerWon = winner == "A",
+		OutroSeconds = LootDuel.DUEL_OUTRO_SECONDS,
+	})
+end
+
+local function duelForfeit(duel: Duel, side: LootDuel.Side): boolean
+	local player = duelSquad(duel, side).Player
+	return player.Parent ~= Players or Tower.IsTransitioning(player) or Tower.GetState(player).FloorId ~= duel.FloorId
+end
+
+local function stepDuels(now: number)
+	for _, duel in pairs(Duels) do
+		if duel.Phase == "OUTRO" then
+			if now >= duel.OutroUntil then finishDuel(duel) end
+			continue
+		end
+		local forfeitA, forfeitB = duelForfeit(duel, "A"), duelForfeit(duel, "B")
+		if forfeitA or forfeitB then
+			-- Someone left or travelled: no outro, the remaining Master wins at once.
+			duel.Winner = if forfeitA then "B" else "A"
+			finishDuel(duel)
+		elseif duel.Phase == "INTRO" then
+			if now >= duel.FightAt then
+				duel.Phase = "FIGHT"
+				sendDuelState(duel, { Kind = "FIGHT" })
+			end
+		else
+			local a, b = duel.Sides.A, duel.Sides.B
+			local timedOut = now >= duel.EndsAt
+			local winner = LootDuel.DecideWinner(#liveDuelHeroes(a), #liveDuelHeroes(b), squadHpFraction(a), squadHpFraction(b), timedOut)
+			if winner then
+				concludeDuel(duel, winner, if timedOut then "TIMEOUT" else "KNOCKOUT")
+			end
+		end
+	end
+end
+
+-- Open contests close when their window runs out or the drop is banked or despawns.
+local function stepContests(now: number)
+	for dropId, contest in pairs(Contests) do
+		if contest.Status == "DUELING" then continue end
+		local alive = findDrop(dropId) ~= nil
+		if contest.Status == "CONTESTED" and (now >= contest.ExpiresAt or not alive) then
+			contest.Status = "EXPIRED"
+			closeContestPrompt(contest)
+			local thief = Players:GetPlayerByUserId(contest.ThiefUserId)
+			if thief then refreshThiefFlag(thief) end
+		end
+		if contest.Status ~= "CONTESTED" and not alive then
+			Contests[dropId] = nil
+		end
+	end
+	for player, untilClock in pairs(ThiefFlagUntil) do
+		if now >= untilClock then refreshThiefFlag(player) end
+	end
+end
+
+local function requestRetaliation(player: Player, contest: LootDuel.Contest?, thiefName: string?)
+	local now = os.clock()
+	if now - (LastRetaliationRequest[player] or -math.huge) < LootDuel.RETALIATE_COOLDOWN then return end
+	LastRetaliationRequest[player] = now
+	if not contest then
+		getDataManager().SendToast(player, string.format("%s has not stolen from you.", thiefName or "That player"), "WARN")
+		return
+	end
+	local ok, reason = startDuel(player, contest)
+	if not ok then
+		getDataManager().SendToast(player, reason or "The duel cannot start right now.", "WARN")
+	end
+end
+
+InitiateRetaliationRemote.OnServerEvent:Connect(function(player: Player, dropId: any)
+	if not Protocol.Integer(dropId, 1, NextLootId) then return end
+	requestRetaliation(player, Contests[dropId])
+end)
 
 FocusTargetRemote.OnServerEvent:Connect(function(player: Player, targetNetId: any, optThiefUserId: any)
  if Tower.IsTransitioning(player) then return end
@@ -1045,12 +1593,10 @@ FocusTargetRemote.OnServerEvent:Connect(function(player: Player, targetNetId: an
 	local dm = getDataManager()
 	local now = os.clock()
 
-	-- 1. Resolve enemy Player target if passed as optThiefUserId or high ID
+	-- 1. Resolve an enemy Master passed as optThiefUserId
 	local targetPlayer: Player? = nil
-	if type(optThiefUserId) == "number" and optThiefUserId > 0 then
+	if Protocol.Integer(optThiefUserId, 1, 2^53) then
 		targetPlayer = Players:GetPlayerByUserId(optThiefUserId)
-	elseif type(targetNetId) == "number" and targetNetId > 100000 then
-		targetPlayer = Players:GetPlayerByUserId(targetNetId)
 	end
 
 	-- 2. If targetNetId is an enemy hero, resolve enemy player
@@ -1061,43 +1607,21 @@ FocusTargetRemote.OnServerEvent:Connect(function(player: Player, targetNetId: an
 		end
 	end
 
-	-- 3. If targetPlayer resolved -> Retaliation Squad PvP
+	-- 3. Clicking a thief (or their hero) challenges them to a duel for their newest steal from you.
+	-- Squads never fight in the open field; PvP only happens inside a retaliation duel.
 	if targetPlayer and targetPlayer ~= player then
-		local auth, reason = canEngagePvP(player, targetPlayer)
-		if not auth then
-			dm.SendToast(player, reason or "Cannot attack target!", "WARN")
-			return
-		end
-
-		masterState.TargetEnemyUserId = targetPlayer.UserId
-
-		-- Pick target hero in enemy squad
-		local targetMasterState = ActiveMasters[targetPlayer]
-		local targetHeroNetId: number? = nil
-		if targetMasterState then
-			for _, h in pairs(targetMasterState.DeployedHeroes) do
-				if h.State ~= "COMA" and h.CurrentHP > 0 then
-					targetHeroNetId = h.NetId
-					break
-				end
+		if DuelByPlayer[player] then return end
+		local chosen: LootDuel.Contest? = nil
+		for _, contest in pairs(Contests) do
+			if contest.OwnerUserId == player.UserId and contest.ThiefUserId == targetPlayer.UserId and contest.Status == "CONTESTED"
+				and (not chosen or contest.ExpiresAt > chosen.ExpiresAt) then
+				chosen = contest
 			end
 		end
-
-		if targetHeroNetId then
-			masterState.FocusedTargetNetId = targetHeroNetId
-			for _, simHero in pairs(masterState.DeployedHeroes) do
-				if simHero.State ~= "COMA" then
-					simHero.TargetNetId = targetHeroNetId
-					simHero.PacifiedUntil = 0
-					simHero.State = "MOVE_TO_TARGET"
-				end
-			end
-			dm.SendToast(player, string.format("⚔️ Retaliating against %s's squad!", targetPlayer.DisplayName), "WARN")
-		else
-			dm.SendToast(player, string.format("%s has no active heroes deployed!", targetPlayer.DisplayName), "INFO")
-		end
+		requestRetaliation(player, chosen, targetPlayer.DisplayName)
 		return
 	end
+	if DuelByPlayer[player] then return end
 
 	-- 4. PvE Mob Targeting
 	if type(targetNetId) == "number" then
@@ -1153,6 +1677,7 @@ WhistleCommandRemote.OnServerEvent:Connect(function(player: Player, commandCode:
 		dm.SyncProfile(player)
 
 	elseif commandCode == 2 then
+		if DuelByPlayer[player] then return end
 		Tower.Recall(player)
 	end
 end)
@@ -1185,45 +1710,8 @@ local function resolveTargetPositionAndAlive(simHero: SimHero): (Vector3?, SimMo
 		if mob and mob.IsAlive and Tower.Same(simHero,mob) and not Tower.GetSafety(mob,mob.Position).CombatSafe then
 			return mob.Position, mob, nil
 		end
-		local enemyHero = ActiveHeroesByNetId[targetNetId]
-		if enemyHero and enemyHero.State ~= "COMA" and enemyHero.CurrentHP > 0 and Tower.Same(simHero,enemyHero) and not Tower.GetSafety(enemyHero,enemyHero.Position).CombatSafe then
-			return enemyHero.Position, nil, enemyHero
-		end
 	end
-
-	-- Check if Master has an active TargetEnemyUserId to switch to another living hero in that squad!
-	local masterState = ActiveMasters[simHero.Owner]
-	if masterState and masterState.TargetEnemyUserId then
-		local enemyPlayer = Players:GetPlayerByUserId(masterState.TargetEnemyUserId)
-		local enemyMasterState = enemyPlayer and ActiveMasters[enemyPlayer]
-		if enemyMasterState then
-			local nearestHero: SimHero? = nil
-			local nearestDist = 9999
-			for _, h in pairs(enemyMasterState.DeployedHeroes) do
-				if h.State ~= "COMA" and h.CurrentHP > 0 and Tower.Same(simHero,h) and not Tower.GetSafety(h,h.Position).CombatSafe then
-					local d = getHorizontalDistance(simHero.Position, h.Position)
-					if d < nearestDist then
-						nearestDist = d
-						nearestHero = h
-					end
-				end
-			end
-			if nearestHero then
-				simHero.TargetNetId = nearestHero.NetId
-				return nearestHero.Position, nil, nearestHero
-			else
-				-- All heroes in enemy squad are defeated
-				masterState.TargetEnemyUserId = nil
-				masterState.FocusedTargetNetId = nil
-				simHero.TargetNetId = nil
-				local dm = getDataManager()
-				dm.SendToast(simHero.Owner, string.format("🏆 Defeated %s's squad!", enemyPlayer.DisplayName), "SUCCESS")
-			end
-		else
-			masterState.TargetEnemyUserId = nil
-		end
-	end
-
+	-- Outside duels heroes only ever fight mobs (stepDuelHero handles hero-vs-hero).
 	return nil, nil, nil
 end
 
@@ -1239,8 +1727,11 @@ local function canReleaseHeroImpact(impact: any): boolean
 		and simHero.Owner.Parent ~= nil
 end
 
-local function heroSkillContext(owner: Player, now: number): HeroSkillEffects.Context
-	local masterState = ActiveMasters[owner]
+local function heroSkillContext(simHero: SimHero, now: number): HeroSkillEffects.Context
+	if simHero.DuelId then
+		return duelSkillContext(simHero, now)
+	end
+	local masterState = ActiveMasters[simHero.Owner]
 	return {
 		Mobs = ActiveMobsByNetId,
 		Squad = masterState and masterState.DeployedHeroes,
@@ -1270,8 +1761,9 @@ local function resolveHeroImpact(impact: any, tick: number)
 	if mob and not (mob.IsAlive and mob.EntityGeneration == impact.TargetGeneration and Tower.Same(impact, mob) and not Tower.GetSafety(mob, mob.Position).CombatSafe) then
 		mob = nil
 	end
+	-- Hero targets only exist inside a duel, and only an opponent in that same duel counts.
 	local enemyHero: SimHero? = impact.TargetHero
-	if enemyHero and not (enemyHero.State ~= "COMA" and enemyHero.CurrentHP > 0 and enemyHero.EntityGeneration == impact.TargetGeneration and Tower.Same(impact, enemyHero) and not Tower.GetSafety(enemyHero, enemyHero.Position).CombatSafe) then
+	if enemyHero and not (simHero.DuelId ~= nil and enemyHero.DuelId == simHero.DuelId and enemyHero.State ~= "COMA" and enemyHero.CurrentHP > 0 and enemyHero.EntityGeneration == impact.TargetGeneration and Tower.Same(impact, enemyHero)) then
 		enemyHero = nil
 	end
 	if not mob and not enemyHero and impact.Tier ~= "SKILL" then
@@ -1279,13 +1771,13 @@ local function resolveHeroImpact(impact: any, tick: number)
 	end
 
 	local livePos = if mob then mob.Position elseif enemyHero then enemyHero.Position else impact.Aim
-	local bonus = HeroSkillEffects.Resolve(heroSkillContext(simHero.Owner, now), {
+	local bonus = HeroSkillEffects.Resolve(heroSkillContext(simHero, now), {
 		Impact = impact,
 		Attacker = simHero,
 		Profile = impact.Profile,
 		Tier = impact.Tier,
 		Tick = tick,
-		Primary = mob,
+		Primary = mob or enemyHero,
 		Center = if impact.Tier == "SKILL" then impact.Aim else livePos,
 	})
 	local damage = math.round(impact.Atk * impact.DamageMult * bonus / impact.Ticks)
@@ -1320,36 +1812,96 @@ local function resolveHeroImpact(impact: any, tick: number)
 			handleMobDeath(mob, simHero.Owner)
 		end
 	elseif enemyHero then
-		local pvpDamage = math.max(1, math.round(damage * 0.25))
-		local heroBarrier = enemyHero.BarrierHP or 0
-		if heroBarrier > 0 and (enemyHero.BarrierExpires or 0) > now then
-			local absorbed = math.min(heroBarrier, pvpDamage)
-			enemyHero.BarrierHP = heroBarrier - absorbed
-			pvpDamage -= absorbed
-		end
-		local actualDamage=math.min(enemyHero.CurrentHP,pvpDamage)
-		enemyHero.CurrentHP = math.max(0, enemyHero.CurrentHP - pvpDamage)
-		Tower.BroadcastAt(CombatVFXRemote,enemyHero,hitKind, enemyHero.Position, actualDamage, impact.Overdrive,true)
+		duelDamage(enemyHero, damage, hitKind, impact.Overdrive)
+	end
+end
 
-		-- Defending hero and defending Master auto-retaliate
-		if enemyHero.State == "FOLLOW_MASTER" or enemyHero.TargetNetId == nil then
-			enemyHero.TargetNetId = simHero.NetId
-			enemyHero.State = "MOVE_TO_TARGET"
+-- One swing decision for a hero in range of its target: Basic/Basic/Special cadence, Skill on a
+-- full gauge, cosmetic cue now and damage at the impact frame (HeroImpactQueue). Shared by the
+-- PvE state machine and duel heroes.
+performHeroAttack = function(simHero: SimHero, targetPos: Vector3, targetMob: SimMob?, targetEnemyHero: SimHero?, distToTarget: number, now: number, dt: number, isOverdrive: boolean)
+	local profile = getDataManager().GetProfile(simHero.Owner)
+	local effectiveInterval = simHero.AttackInterval / (isOverdrive and OVERDRIVE_ATK_SPEED_MULT or 1.0)
+	simHero.AttackCooldown -= dt
+	if simHero.AttackCooldown <= 0 then
+		simHero.AttackCooldown = effectiveInterval
+
+		local skillProfile = ArchetypeCombatSkills.GetSkillProfile(simHero.TemplateId, simHero.Archetype)
+		local isSkillReady = (simHero.Stamina or 0) >= ArchetypeCombatSkills.Constants.MAX_STAMINA
+
+		local attackType: "BASIC" | "SPECIAL" | "SKILL" = "BASIC"
+		if isSkillReady then
+			attackType = "SKILL"
+		elseif ((simHero.AttackCount or 0) + 1) % skillProfile.Special.Cadence == 0 then
+			attackType = "SPECIAL"
 		end
-		local defMasterState = ActiveMasters[enemyHero.Owner]
-		if defMasterState and not defMasterState.TargetEnemyUserId then
-			defMasterState.TargetEnemyUserId = simHero.Owner.UserId
-			TheftGrudges[enemyHero.Owner.UserId] = TheftGrudges[enemyHero.Owner.UserId] or {}
-			TheftGrudges[enemyHero.Owner.UserId][simHero.Owner.UserId] = now + 180
+		local tierDef: any = if attackType == "SKILL" then skillProfile.Skill elseif attackType == "SPECIAL" then skillProfile.Special else skillProfile.Basic
+
+		-- The gauge moves on the decision so the Basic/Basic/Special cadence stays fixed;
+		-- the damage itself waits for the impact (resolveHeroImpact).
+		if attackType == "SKILL" then
+			simHero.Stamina = 0
+		else
+			simHero.AttackCount = (simHero.AttackCount or 0) + 1
+			simHero.Stamina = math.clamp((simHero.Stamina or 0) + tierDef.StaminaGain, 0, 100)
+		end
+		if profile and profile.Heroes[simHero.HeroUUID] then
+			profile.Heroes[simHero.HeroUUID].CurrentStamina = simHero.Stamina
 		end
 
-		if enemyHero.CurrentHP <= 0 then
-			knockHeroIntoComa(enemyHero, 30)
+		local timing = HeroActionTiming.For(simHero.TemplateId, simHero.EquippedArtifactType, attackType, tierDef, effectiveInterval, distToTarget)
+		if attackType == "SKILL" then
+			-- Ultimates hold the hero for their whole cast so the animation reads.
+			simHero.AttackCooldown = math.max(effectiveInterval, timing.CastSeconds)
 		end
+		local ticks, tickSeconds = HeroActionTiming.Ticks(tierDef)
+		local target: any = targetMob or targetEnemyHero
+
+		-- Cosmetic cue: clients play the tier's clip over the cast time and time the effect to
+		-- the same release and travel the impact queue uses (TowerProtocol.EncodeHeroCue).
+		Tower.BroadcastAt(CombatVFXRemote, simHero, "HERO_CUE", Protocol.EncodeHeroCue({
+			Tier = if attackType == "SKILL" then 3 elseif attackType == "SPECIAL" then 2 else 1,
+			Overdrive = isOverdrive,
+			NetId = simHero.NetId,
+			EntityGeneration = simHero.EntityGeneration,
+			TargetNetId = target and target.NetId,
+			CastSeconds = timing.CastSeconds,
+			ReleaseSeconds = timing.ReleaseSeconds,
+			TravelSeconds = timing.TravelSeconds,
+			StartServerTime = Workspace:GetServerTimeNow(),
+			Aim = targetPos,
+		}))
+
+		HeroImpacts:Push({
+			ReleaseAt = now + timing.ReleaseSeconds,
+			At = now + timing.ImpactSeconds,
+			Ticks = ticks,
+			TickSeconds = tickSeconds,
+			Tick = 0,
+			Released = false,
+			Attacker = simHero,
+			AttackerGeneration = simHero.EntityGeneration,
+			FloorId = simHero.FloorId,
+			RoomGeneration = simHero.RoomGeneration,
+			Tier = attackType,
+			Profile = skillProfile,
+			Atk = simHero.EffectiveATK,
+			DamageMult = tierDef.DamageMultiplier,
+			Overdrive = isOverdrive,
+			Origin = simHero.Position,
+			Aim = targetPos,
+			TargetMob = targetMob,
+			TargetHero = targetEnemyHero,
+			TargetGeneration = target and target.EntityGeneration,
+		})
 	end
 end
 
 local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
+	if simHero.DuelId then
+		stepDuelHero(simHero, dt, now)
+		return
+	end
 	if simHero.State == "COMA" then
 		return
 	end
@@ -1483,80 +2035,7 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 			simHero.Yaw = math.atan2(-delta.X, -delta.Z)
 		end
 
-		local effectiveInterval = simHero.AttackInterval / (isOverdrive and OVERDRIVE_ATK_SPEED_MULT or 1.0)
-		simHero.AttackCooldown -= dt
-		if simHero.AttackCooldown <= 0 then
-			simHero.AttackCooldown = effectiveInterval
-
-			local skillProfile = ArchetypeCombatSkills.GetSkillProfile(simHero.TemplateId, simHero.Archetype)
-			local isSkillReady = (simHero.Stamina or 0) >= ArchetypeCombatSkills.Constants.MAX_STAMINA
-
-			local attackType: "BASIC" | "SPECIAL" | "SKILL" = "BASIC"
-			if isSkillReady then
-				attackType = "SKILL"
-			elseif ((simHero.AttackCount or 0) + 1) % skillProfile.Special.Cadence == 0 then
-				attackType = "SPECIAL"
-			end
-			local tierDef: any = if attackType == "SKILL" then skillProfile.Skill elseif attackType == "SPECIAL" then skillProfile.Special else skillProfile.Basic
-
-			-- The gauge moves on the decision so the Basic/Basic/Special cadence stays fixed;
-			-- the damage itself waits for the impact (resolveHeroImpact).
-			if attackType == "SKILL" then
-				simHero.Stamina = 0
-			else
-				simHero.AttackCount = (simHero.AttackCount or 0) + 1
-				simHero.Stamina = math.clamp((simHero.Stamina or 0) + tierDef.StaminaGain, 0, 100)
-			end
-			if profile and profile.Heroes[simHero.HeroUUID] then
-				profile.Heroes[simHero.HeroUUID].CurrentStamina = simHero.Stamina
-			end
-
-			local timing = HeroActionTiming.For(simHero.TemplateId, simHero.EquippedArtifactType, attackType, tierDef, effectiveInterval, distToTarget)
-			if attackType == "SKILL" then
-				-- Ultimates hold the hero for their whole cast so the animation reads.
-				simHero.AttackCooldown = math.max(effectiveInterval, timing.CastSeconds)
-			end
-			local ticks, tickSeconds = HeroActionTiming.Ticks(tierDef)
-			local target: any = targetMob or targetEnemyHero
-
-			-- Cosmetic cue: clients play the tier's clip over the cast time and time the effect to
-			-- the same release and travel the impact queue uses (TowerProtocol.EncodeHeroCue).
-			Tower.BroadcastAt(CombatVFXRemote, simHero, "HERO_CUE", Protocol.EncodeHeroCue({
-				Tier = if attackType == "SKILL" then 3 elseif attackType == "SPECIAL" then 2 else 1,
-				Overdrive = isOverdrive,
-				NetId = simHero.NetId,
-				EntityGeneration = simHero.EntityGeneration,
-				TargetNetId = target and target.NetId,
-				CastSeconds = timing.CastSeconds,
-				ReleaseSeconds = timing.ReleaseSeconds,
-				TravelSeconds = timing.TravelSeconds,
-				StartServerTime = Workspace:GetServerTimeNow(),
-				Aim = targetPos,
-			}))
-
-			HeroImpacts:Push({
-				ReleaseAt = now + timing.ReleaseSeconds,
-				At = now + timing.ImpactSeconds,
-				Ticks = ticks,
-				TickSeconds = tickSeconds,
-				Tick = 0,
-				Released = false,
-				Attacker = simHero,
-				AttackerGeneration = simHero.EntityGeneration,
-				FloorId = simHero.FloorId,
-				RoomGeneration = simHero.RoomGeneration,
-				Tier = attackType,
-				Profile = skillProfile,
-				Atk = simHero.EffectiveATK,
-				DamageMult = tierDef.DamageMultiplier,
-				Overdrive = isOverdrive,
-				Origin = simHero.Position,
-				Aim = targetPos,
-				TargetMob = targetMob,
-				TargetHero = targetEnemyHero,
-				TargetGeneration = target and target.EntityGeneration,
-			})
-		end
+		performHeroAttack(simHero, targetPos, targetMob, targetEnemyHero, distToTarget, now, dt, isOverdrive)
 	end
 end
 
@@ -1709,6 +2188,7 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
  end,
  Damage=function(victim,damage,mob)
   if victim.Player then return end -- The commander is not a combatant.
+  if victim.DuelId then return end -- Mobs leave duelling squads alone.
   if not Tower.Same(victim,mob) or Tower.GetSafety(victim,victim.Position).CombatSafe then return end
   if victim.Player then
    local hp=victim.Humanoid.Health;victim.Humanoid:TakeDamage(damage)
@@ -1743,6 +2223,10 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
       local tier = TowerRewards.RollRelic(mob.FloorId, mob.Role, math.random(), math.random())
       if tier and _G.RelicService then
        _G.RelicService.SpawnRelic(tier, mob.Position, killer.UserId)
+      end
+      -- Contested Bounty Bag (GDD 6.1): tagged to the killer, anyone can carry it off.
+      if math.random() < (LootDuel.BOUNTY_CHANCE[mob.Role] or 0) and Tower.ContextAt(mob.Position) then
+       spawnPhysicalLoot("GOLD", reward.Gold, mob.Position, killer)
       end
      end
 
@@ -1841,6 +2325,12 @@ local function bindCharacterCargoListeners(player: Player, char: Model)
 			CombatSimulation.DropCarriedLoot(player, true)
 		end
 	end)
+	-- A respawned thief keeps the [Loot Thief] nameplate until the flag runs out.
+	task.spawn(function()
+		if char:WaitForChild("Head", 5) and player.Character == char then
+			applyThiefTag(player)
+		end
+	end)
 end
 
 local function handlePlayerAdded(player: Player)
@@ -1868,6 +2358,21 @@ end
 
 Players.PlayerRemoving:Connect(function(player: Player)
 	ActivePlayerProgress[player] = nil
+	-- Leaving forfeits a running duel; the drop is settled before the leaver's cargo spills.
+	local duel = DuelByPlayer[player]
+	if duel then
+		duel.Winner = if duel.Sides.A.Player == player then "B" else "A"
+		finishDuel(duel)
+	end
+	for _, contest in pairs(Contests) do
+		if contest.Status == "CONTESTED" and (contest.OwnerUserId == player.UserId or contest.ThiefUserId == player.UserId) then
+			contest.Status = "EXPIRED"
+			closeContestPrompt(contest)
+		end
+	end
+	ThiefFlagUntil[player] = nil
+	LastRetaliationRequest[player] = nil
+	LastPickupDenial[player] = nil
 	CombatSimulation.DropCarriedLoot(player,true)
 	ProgressionActivity[player] = nil
 	LastMetadataRequestByPlayer[player] = nil
@@ -1900,6 +2405,8 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 	for _, simHero in pairs(ActiveHeroesByNetId) do
 		stepHeroSimulation(simHero, dt, now)
 	end
+	stepDuels(now)
+	stepContests(now)
 
 	-- Sanctuary banking is scoped to the cargo's authoritative floor/generation.
 	for player, masterState in pairs(ActiveMasters) do
@@ -1907,7 +2414,7 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 		if rootPos then
 			local location=Tower.GetState(player)
 			local safety=Tower.GetSafety(location,rootPos)
-			if safety.CanBankCargo and location.BankArmed and not Tower.IsTransitioning(player) then
+			if safety.CanBankCargo and location.BankArmed and not Tower.IsTransitioning(player) and not DuelByPlayer[player] then
 				local held = CarrierToHeldLoot[player]
 				local char = player.Character
 				local hum = char and char:FindFirstChildOfClass("Humanoid")
@@ -1981,5 +2488,6 @@ end)
 
 CombatSimulation.SpawnPhysicalLoot = spawnPhysicalLoot
 CombatSimulation.CollectPhysicalLoot = collectPhysicalLoot
-CombatSimulation.TheftGrudges = TheftGrudges
+CombatSimulation.Contests = Contests
+CombatSimulation.StartDuel = startDuel
 _G.CombatSimulation = CombatSimulation
