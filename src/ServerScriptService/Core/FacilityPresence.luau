@@ -126,25 +126,22 @@ local function applyBuilding(plot: Instance, facility: string, level: number, pr
 	local stash = hidden[plot] or {}
 	hidden[plot] = stash
 	local stashed = stash[facility]
-	-- A freshly rebuilt folder supersedes an older hidden copy.
-	if live and stashed then
+	-- Keep courtyard architecture permanently visible in the redesigned island layout;
+	-- restore any previously stashed model back into PlotBuildings.
+	if not live and stashed and folder then
+		stashed.Parent = folder
+		stash[facility] = nil
+		live = stashed
+	elseif live and stashed then
 		stashed:Destroy()
 		stash[facility] = nil
-		stashed = nil
 	end
-	if level > 0 then
-		if not live and stashed and folder then
-			stashed.Parent = folder
-			stash[facility] = nil
-			if previous ~= nil and previous <= 0 then
-				reveal(stashed)
-			end
-		elseif live and live:IsA("Model") and previous ~= nil and level > previous then
+	if live and live:IsA("Model") and level > 0 and previous ~= nil and level > previous then
+		if previous <= 0 then
+			reveal(live)
+		else
 			upgradeBurst(live)
 		end
-	elseif live and live:IsA("Model") then
-		live.Parent = nil
-		stash[facility] = live
 	end
 end
 

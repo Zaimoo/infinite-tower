@@ -25,14 +25,14 @@ IslandBuilder.Config = {
 	InnerStalactiteCount = 12, -- Deep jagged rock points tapering toward the bottom tip
 	RandomSeed = 4042026, -- Fixed seed so all 6 cloned islands have identical geometry
 
-	-- Materials & Colors
-	TopMaterial = Enum.Material.Cobblestone,
-	TopColor = Color3.fromRGB(128, 126, 132),
+	-- Materials & Colors (Atmospheric Gothic Fortress Palette)
+	TopMaterial = Enum.Material.Slate,
+	TopColor = Color3.fromRGB(70, 74, 80),
 	RimMaterial = Enum.Material.Slate,
-	RimColor = Color3.fromRGB(98, 96, 104),
-	RockMaterial = Enum.Material.Basalt,
-	RockColorUpper = Color3.fromRGB(72, 70, 78),
-	RockColorDeep = Color3.fromRGB(42, 40, 48),
+	RimColor = Color3.fromRGB(58, 62, 68),
+	RockMaterial = Enum.Material.Slate,
+	RockColorUpper = Color3.fromRGB(65, 68, 72),
+	RockColorDeep = Color3.fromRGB(42, 45, 50),
 
 	-- Underside Cloud Wisps
 	EnableCloudWisps = true,
@@ -163,6 +163,98 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 			Parent = islandModel,
 		})
 	end
+
+	-- 1B. Raised Modular Cobblestone Path Network (Thickness = 0.25 studs, varied grey-brown hues)
+	local pathsFolder = Instance.new("Folder")
+	pathsFolder.Name = "CobblestonePaths"
+	pathsFolder.Parent = islandModel
+
+	local pathPalette = {
+		Color3.fromRGB(98, 95, 90),
+		Color3.fromRGB(84, 82, 78),
+		Color3.fromRGB(110, 105, 98),
+		Color3.fromRGB(91, 88, 84),
+	}
+	local curbColor = Color3.fromRGB(58, 60, 66)
+
+	-- Central Fountain Plaza Cobblestone Ring
+	local plazaBase = Instance.new("Part")
+	plazaBase.Shape = Enum.PartType.Cylinder
+	plazaBase.Name = "FountainPlazaCobble"
+	plazaBase.Size = Vector3.new(0.25, 44, 44)
+	plazaBase.CFrame = CFrame.new(0, 0.125, 0) * CFrame.Angles(0, 0, math.rad(90))
+	plazaBase.Anchored = true
+	plazaBase.CanCollide = false
+	plazaBase.CanTouch = false
+	plazaBase.CanQuery = false
+	plazaBase.CastShadow = false
+	plazaBase.Material = Enum.Material.Cobblestone
+	plazaBase.Color = Color3.fromRGB(96, 93, 88)
+	plazaBase.Parent = pathsFolder
+
+	local plazaRim = Instance.new("Part")
+	plazaRim.Shape = Enum.PartType.Cylinder
+	plazaRim.Name = "FountainPlazaCurb"
+	plazaRim.Size = Vector3.new(0.20, 47, 47)
+	plazaRim.CFrame = CFrame.new(0, 0.10, 0) * CFrame.Angles(0, 0, math.rad(90))
+	plazaRim.Anchored = true
+	plazaRim.CanCollide = false
+	plazaRim.CanTouch = false
+	plazaRim.CanQuery = false
+	plazaRim.CastShadow = false
+	plazaRim.Material = Enum.Material.Slate
+	plazaRim.Color = curbColor
+	plazaRim.Parent = pathsFolder
+
+	local function buildCobblePath(name: string, p0: Vector3, p1: Vector3, width: number, segments: number)
+		local dir = p1 - p0
+		local totalDist = dir.Magnitude
+		if totalDist < 1 then
+			return
+		end
+		local unit = dir.Unit
+		local segLen = totalDist / segments
+		local lookCF = CFrame.lookAt(Vector3.zero, unit)
+
+		for s = 1, segments do
+			local t = (s - 0.5) / segments
+			local pos = p0:Lerp(p1, t)
+			local jitterW = width + ((s % 2 == 0) and 0.6 or -0.4)
+			local col = pathPalette[((s - 1) % #pathPalette) + 1]
+
+			makePart({
+				Name = string.format("%s_Slab_%d", name, s),
+				Size = Vector3.new(jitterW, 0.25, segLen + 0.5),
+				CFrame = CFrame.new(pos.X, 0.125, pos.Z) * lookCF,
+				Material = Enum.Material.Cobblestone,
+				Color = col,
+				Decorative = true,
+				Parent = pathsFolder,
+			})
+
+			-- Curb stones along left & right edges
+			for _, side in ipairs({ -1, 1 }) do
+				local curbOffset = lookCF.RightVector * (side * (jitterW * 0.5 + 0.6))
+				makePart({
+					Name = string.format("%s_Curb_%d_%s", name, s, side < 0 and "L" or "R"),
+					Size = Vector3.new(1.1, 0.28, segLen * 0.92),
+					CFrame = CFrame.new(pos.X + curbOffset.X, 0.14, pos.Z + curbOffset.Z) * lookCF,
+					Material = Enum.Material.Slate,
+					Color = curbColor,
+					Decorative = true,
+					Parent = pathsFolder,
+				})
+			end
+		end
+	end
+
+	-- Radiating courtyard pathways connecting Bridge -> Fountain -> Stations & Outskirts Gate
+	buildCobblePath("Path_BridgeToFountain", Vector3.new(0, 0, -88), Vector3.new(0, 0, -18), 14, 7)
+	buildCobblePath("Path_FountainToPortal", Vector3.new(14, 0, -12), Vector3.new(74, 0, -48), 11, 6)
+	buildCobblePath("Path_FountainToMarket", Vector3.new(14, 0, 12), Vector3.new(70, 0, 42), 11, 6)
+	buildCobblePath("Path_FountainToGate", Vector3.new(6, 0, 18), Vector3.new(32, 0, 88), 12, 7)
+	buildCobblePath("Path_FountainToSynthesis", Vector3.new(-14, 0, -10), Vector3.new(-62, 0, -32), 11, 6)
+	buildCobblePath("Path_FountainToTraining", Vector3.new(-14, 0, 12), Vector3.new(-54, 0, 42), 11, 5)
 
 	-- 2. Decorative Tapered Rocky Underside (Non-collidable, low part count for mobile)
 	local undersideFolder = Instance.new("Folder")

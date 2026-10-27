@@ -59,14 +59,42 @@ end)
 ProximityPromptService.PromptHidden:Connect(function(prompt: ProximityPrompt)
 	visibleInteractionPrompts[prompt] = nil
 end)
+_G.IsFacilityPromptVisible = function(): boolean
+	return next(visibleInteractionPrompts) ~= nil
+end
 
--- 1. Keyboard Hotkeys: [R] Drop Carried Loot
+local lastQTrigger = -99
+local lastETrigger = -99
+
+-- 1. Keyboard Hotkeys: [Q] Overdrive, [E] Recall (yields to visible ProximityPrompts), [R] Drop Carried Loot
 UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: boolean)
 	if gameProcessed or (_G.IsAnyMasterModalOpen and _G.IsAnyMasterModalOpen()) or (_G.IsTowerSelectorOpen and _G.IsTowerSelectorOpen()) then
 		return
 	end
 
-	if input.KeyCode == Enum.KeyCode.R then
+	if input.KeyCode == Enum.KeyCode.Q then
+		local now = os.clock()
+		if now - lastQTrigger >= 20.0 then
+			lastQTrigger = now
+			if _G.TriggerHUDWhistleCooldown then
+				_G.TriggerHUDWhistleCooldown("Q")
+			end
+			WhistleCommandRemote:FireServer(1)
+		end
+	elseif input.KeyCode == Enum.KeyCode.E then
+		-- Yield [E] to active ProximityPrompts (Blacksmith Forge, Synthesis Chamber) when standing in range
+		if next(visibleInteractionPrompts) ~= nil then
+			return
+		end
+		local now = os.clock()
+		if now - lastETrigger >= 6.0 then
+			lastETrigger = now
+			if _G.TriggerHUDWhistleCooldown then
+				_G.TriggerHUDWhistleCooldown("E")
+			end
+			WhistleCommandRemote:FireServer(2)
+		end
+	elseif input.KeyCode == Enum.KeyCode.R then
 		local char = LocalPlayer.Character
 		if char and (char:GetAttribute("CarryingLoot") == true or char:GetAttribute("CarryingRelic") ~= nil) then
 			DropCarriedItemRemote:FireServer()
