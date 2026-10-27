@@ -517,6 +517,13 @@ These are the default multipliers and secondary mechanics each hero kit inherits
   - **Basic:** a single arrow on a light arc, homing on the target's rendered body, with an impact burst.
   - **Special:** a 3-arrow volley. The centre arrow hits, bursts and pierces on past the target, with rings along its path; the side arrows fan out.
   - **Skill:** a flare arrow climbs from the bow, a sigil opens over the aim point (the skill's 16-stud radius), and one wave of arrows falls per damage tick. The owner's camera shakes on the first wave.
+  - **Other archetypes** (palette and size per hero):
+    - **Melee basics:** a crescent slash across the target.
+    - **Vanguard:** a shockwave cone for the Special. The ultimate draws a barrier shell that lasts the 6 s barrier, plus a 25-stud taunt shockwave.
+    - **Striker:** crossing slashes for the Special. The ultimate is a ring of crescents with a 12-stud shockwave; Archon's also opens a collapsing rift.
+    - **Miner:** a ground tremor for the Special. The ultimate raises a crystal spike cluster, plus a spike under each enemy hit.
+    - **Scholar:** orb basics; the Special chains lightning to each enemy the server chained. The ultimate drops a column of fire or light that leaves 3 s of burning ground.
+    - **Healer:** bolt basics; the Special sends motes of light to the healed ally. The ultimate draws a 25-stud sigil with a light column on each squad hero.
   - **Budget:** pooled parts, at most 160 live effects per client, and nothing drawn when an effect is more than 180 studs from the camera.
 
 ### 4.5 Master Controls & Tactical Commands
