@@ -1,6 +1,8 @@
 -- Builds a hero model viewer from code (replaces the hand-made ServerStorage.ModelViewer
 -- JennaPreview). Run in Studio, Edit or playtest, after syncing src with Rojo; through Studio
--- MCP, wrap this file's body and call it: `return (function() <file> end)()({ Armed = true })`.
+-- MCP or the command bar, wrap this file's body and call it:
+-- `return (function() <file> end)()({ Armed = true })` (the file's own function needs its own
+-- `end`, so the text ends in `end end)()(...)`).
 --
 -- Options:
 --   Parent   Instance to build into (default workspace); a folder named HeroModelViewer is

@@ -217,10 +217,11 @@ do
 	end
 
 	-- The lint catches the original Jenna problem (a cuff that wraps the hand) and
-	-- accepts the same piece once it is marked Loose.
+	-- accepts the same piece once it is marked Loose. The probe carries no other pieces, so a
+	-- costume at the part budget cannot add a budget problem to the count.
 	local base = HeroCostumes.ById.hero_han
 	local function variant(extra: { [string]: any }): any
-		local pieces = table.clone(base.Pieces)
+		local pieces = {}
 		local cuff: any = { Name = "BadCuff", Bone = "LeftLowerArm", Size = { 1.05, 0.6, 1.05 }, Position = { 0, -0.6, 0 }, Color = { 1, 1, 1 } }
 		for k, v in extra do
 			cuff[k] = v
@@ -232,6 +233,36 @@ do
 	check(#flagged == 1 and string.find(flagged[1], "LeftHand", 1, true) ~= nil, "lint flags a cuff overlapping the hand")
 	check(#HeroCostumes.Lint(variant({ Loose = true })) == 0, "lint accepts the cuff when marked Loose")
 	check(#HeroCostumes.Lint(variant({ RelativeTo = "Missing" })) == 1, "lint reports a bad RelativeTo")
+
+	-- Mesh pieces: only allow-listed meshes, with the texture they ship with.
+	local listedMesh, listedTexture = next(HeroCostumes.MESHES)
+	check(listedMesh ~= nil, "at least one mesh is allow-listed")
+	local function meshProbe(mesh: any): any
+		return variant({ Loose = true, Mesh = mesh })
+	end
+	check(#HeroCostumes.Lint(meshProbe({ MeshId = listedMesh, TextureId = listedTexture, Scale = { 1, 1, 1 } })) == 0, "lint accepts a listed mesh")
+	check(#HeroCostumes.Lint(meshProbe({ MeshId = "rbxassetid://1", Scale = { 1, 1, 1 } })) == 1, "lint rejects an unlisted mesh")
+	check(#HeroCostumes.Lint(meshProbe({ MeshId = listedMesh, TextureId = "rbxassetid://1", Scale = { 1, 1, 1 } })) == 1, "lint rejects a swapped texture")
+	local hanHair = false
+	for _, p in HeroCostumes.ById.hero_han.Pieces do
+		if p.Mesh and HeroCostumes.MESHES[p.Mesh.MeshId] then
+			hanHair = true
+		end
+	end
+	check(hanHair, "Han wears the allow-listed anime hair mesh")
+
+	-- Head pieces are authored for HEAD_AUTHORED_SIZE and scale uniformly with the real head.
+	local HeroCostumeMath = require(ReplicatedStorage.Assets.HeroRig.HeroCostumeMath)
+	local hanLayout = HeroRigSpec.Layout(HeroCostumes.ById.hero_han.BodyType)
+	local k = hanLayout.Parts.Head.Size[2] / HeroRigSpec.HEAD_AUTHORED_SIZE
+	for _, entry in HeroCostumeMath.Resolve(HeroCostumes.ById.hero_han.Pieces, hanLayout) do
+		local p = entry.Piece
+		if p.Mesh then
+			check(entry.MeshScale ~= nil and near(entry.MeshScale[2], p.Mesh.Scale[2] * k), `{p.Name} mesh scales with the head`)
+			check(near(entry.Position[2], p.Position[2] * k) and near(entry.Size[1], p.Size[1] * k), `{p.Name} placement scales with the head`)
+		end
+	end
+	check(HeroCostumes.ById.hero_han.Face ~= HeroCostumes.DEFAULT_FACE, "Han has an anime face, not the default")
 end
 
 -- 8. Clips (Phase 4) --------------------------------------------------------------

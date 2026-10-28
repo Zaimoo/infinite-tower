@@ -104,12 +104,17 @@ local HEIGHTS = table.freeze({
 	UpperLeg = 1.2,
 	LowerTorso = 0.4,
 	UpperTorso = 1.6,
-	Head = 1.2,
+	Head = 1.4, -- slightly oversized (stylised) so the head reads against the bulky torsos
 	UpperArm = 1.15,
 	LowerArm = 1.05,
 	Hand = 0.3,
 	ShoulderDrop = 0.1, -- shoulder pivot sits this far below the top of UpperTorso
 })
+
+-- Head size that costume pieces on the Head (hair, hoods, hats, hair meshes) are authored
+-- for. HeroCostumeMath scales those pieces uniformly by HEIGHTS.Head / HEAD_AUTHORED_SIZE,
+-- so the head can be resized without re-authoring every costume.
+HeroRigSpec.HEAD_AUTHORED_SIZE = 1.2
 
 -- Hands are the same on every body type so every weapon grip fits every hero.
 HeroRigSpec.HAND_SIZE = table.freeze({ 1.0, HEIGHTS.Hand, 1.0 })

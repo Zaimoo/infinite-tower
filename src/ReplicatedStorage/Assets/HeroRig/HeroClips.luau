@@ -447,12 +447,22 @@ do
 end
 
 -- Aaron (SWORD_SHIELD): Fortress Bulwark. Sword and shield lifted, then the shield is planted
--- in a wide, braced stance.
+-- in a wide, braced stance. Idle is a wary crouch: shield raised in front, sword held low with
+-- the blade angled down and forward.
 do
 	local p = WeaponPoses.SWORD_SHIELD
 	local braced: Pose = { LeftHip = { 45, 0, -14 }, RightHip = { -20, 0, 14 }, LeftKnee = { -55, 0, 0 }, RightKnee = { -40, 0, 0 }, LeftAnkle = { 10, 0, 0 }, RightAnkle = { 30, 0, 0 }, RootOffset = { 0, -0.55, 0 } }
 	local planted = merge(braced, { Waist = { -16, -10, 0 }, LeftShoulder = { 70, 15, -10 }, LeftElbow = { 25, 0, 0 }, RightShoulder = { 120, 0, 25 }, RightElbow = { 30, 0, 0 } })
+	local wary: Pose = {
+		Waist = { -4, -10, 0 }, Neck = { 2, 8, 0 },
+		LeftShoulder = { 45, -30, -10 }, LeftElbow = { 85, 0, 0 },
+		RightShoulder = { 15, 0, 12 }, RightElbow = { 25, 0, 0 }, RightWrist = { -75, 0, 0 },
+		LeftHip = { 10, 0, -10 }, LeftKnee = { -22, 0, 0 }, LeftAnkle = { 12, 0, 10 },
+		RightHip = { 4, 0, 10 }, RightKnee = { -18, 0, 0 }, RightAnkle = { 10, 0, -10 },
+		RootOffset = { 0, -0.15, 0 },
+	}
 	Overrides.hero_aaron = {
+		Idle = breathe(wary, 3.2),
 		AttackSkill = signature(1.1, {
 			{ 0, p.Guard },
 			{ 0.35, merge(p.High, { LeftShoulder = { 100, 10, -10 }, LeftElbow = { 30, 0, 0 }, RootOffset = { 0, 0.2, 0 } }) },
@@ -519,12 +529,22 @@ do
 end
 
 -- Velkist (DAGGERS): Shadow Rend is a dash-through cross cut; Phantom Lotus Execution sweeps both
--- blades outward like opening petals after a lunge.
+-- blades outward like opening petals after a lunge. Idle is his showboating stance: feet planted
+-- wide, arms held out from his sides with the blades tipped up and out, head cocked.
 do
 	local p = WeaponPoses.DAGGERS
 	local coiled = merge(p.Crouched, { Waist = { 10, 0, 0 }, LeftShoulder = { -40, 0, -30 }, RightShoulder = { -40, 0, 30 }, LeftElbow = { 30, 0, 0 }, RightElbow = { 30, 0, 0 }, RootOffset = { 0, -0.4, 0.2 } })
 	local lunge = merge(p.Crouched, { Waist = { -30, 0, 0 }, LeftShoulder = { -20, 0, -20 }, RightShoulder = { -20, 0, 20 }, LeftHip = { 50, 0, -6 }, LeftKnee = { -50, 0, 0 }, RightHip = { -30, 0, 6 }, RightKnee = { -20, 0, 0 }, RootOffset = { 0, -0.3, -0.6 } })
+	local showboat: Pose = {
+		Waist = { -3, 0, 0 }, Neck = { -5, -8, 6 },
+		LeftShoulder = { 18, 0, -38 }, LeftElbow = { 62, 0, 0 }, LeftWrist = { -10, 0, 0 },
+		RightShoulder = { 18, 0, 38 }, RightElbow = { 62, 0, 0 }, RightWrist = { -10, 0, 0 },
+		LeftHip = { 6, 0, -13 }, LeftKnee = { -16, 0, 0 }, LeftAnkle = { 10, 0, 13 },
+		RightHip = { 6, 0, 13 }, RightKnee = { -16, 0, 0 }, RightAnkle = { 10, 0, -13 },
+		RootOffset = { 0, -0.12, 0 },
+	}
 	Overrides.hero_velkist = {
+		Idle = breathe(showboat, 3.0),
 		AttackSpecial = signature(0.75, {
 			{ 0, p.Crouched },
 			{ 0.3, coiled },

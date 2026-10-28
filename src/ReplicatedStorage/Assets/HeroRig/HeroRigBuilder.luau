@@ -58,6 +58,14 @@ function HeroRigBuilder.Build(options: BuildOptions?): Model
 			part.Transparency = 1
 			part.CastShadow = false
 			part.Anchored = opts.AnchorRoot == true
+		elseif partName == "Head" then
+			-- Built-in rounded "cylinder" head (no asset ID), sized by the Head part. Hair
+			-- meshes are authored for a 1.2-stud head and scaled with it (HeroCostumeMath).
+			local headMesh = Instance.new("SpecialMesh")
+			headMesh.Name = "HeadMesh"
+			headMesh.MeshType = Enum.MeshType.Head
+			headMesh.Scale = Vector3.one
+			headMesh.Parent = part
 		end
 		part.Parent = model
 		parts[partName] = part
