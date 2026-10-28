@@ -30,7 +30,7 @@ SquadController.__index = SquadController
 local SQUAD_SLOTS = 5 -- slot cards drawn; how many are open comes from the Fortress Tree
 local WIDTH, HEIGHT = 980, 668
 local SLOT_W, SLOT_H, SLOT_GAP = 172, 214, 12
-local CARD_W, CARD_H = 146, 186
+local CARD_W, CARD_H = 138, 176
 local Z = 32
 local INK = GildedGrimoire.Ink
 local TEXT = GildedGrimoire.Text
@@ -329,7 +329,7 @@ function SquadController.new(screenGui: ScreenGui, getProfile: () -> any, remote
 		ScrollBarImageColor3 = Color3.fromRGB(240, 196, 110), ScrollingDirection = Enum.ScrollingDirection.Y,
 		AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), ZIndex = Z + 2,
 	}, rosterPanel)
-	new("UIPadding", { PaddingTop = UDim.new(0, 6), PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6), PaddingBottom = UDim.new(0, 6) }, self.RosterScroll)
+	new("UIPadding", { PaddingTop = UDim.new(0, 8), PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 18), PaddingBottom = UDim.new(0, 8) }, self.RosterScroll)
 	new("UIGridLayout", {
 		CellSize = UDim2.fromOffset(CARD_W, CARD_H), CellPadding = UDim2.fromOffset(12, 12),
 		SortOrder = Enum.SortOrder.LayoutOrder,
@@ -779,7 +779,7 @@ function SquadController.BuildRosterCard(self: any, hero: any): any
 	local rail = GildedGrimoire.StateStroke(card) :: UIStroke
 
 	local portrait = new("Frame", {
-		Name = "PortraitHost", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 8), Size = UDim2.fromOffset(96, 96),
+		Name = "PortraitHost", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 8), Size = UDim2.fromOffset(84, 84),
 		BackgroundColor3 = Color3.fromRGB(14, 10, 22), ClipsDescendants = true, ZIndex = Z + 4,
 	}, card)
 	new("UICorner", { CornerRadius = UDim.new(0, 12) }, portrait)
@@ -787,21 +787,21 @@ function SquadController.BuildRosterCard(self: any, hero: any): any
 	HeroCard.Portrait(portrait, hero)
 
 	local arch = new("Frame", {
-		AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(0.5, 56, 0, 112), Size = UDim2.fromOffset(28, 28),
+		AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(0.5, 50, 0, 98), Size = UDim2.fromOffset(26, 26),
 		BackgroundTransparency = 1, ZIndex = Z + 7,
 	}, card)
 	local chipFrame, chipLabel = chip(card, {
-		AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0, 8), Size = UDim2.fromOffset(104, 20), Visible = false,
+		AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0, 8), Size = UDim2.fromOffset(84, 18), Visible = false,
 	})
 	local name = label(card, "Title", {
-		Position = UDim2.fromOffset(6, 110), Size = UDim2.new(1, -12, 0, 20), TextScaled = true, Text = "", ZIndex = Z + 5,
+		Position = UDim2.fromOffset(4, 102), Size = UDim2.new(1, -8, 0, 18), TextScaled = true, Text = "", ZIndex = Z + 5,
 	})
-	new("UITextSizeConstraint", { MaxTextSize = 15 }, name)
+	new("UITextSizeConstraint", { MaxTextSize = 14 }, name)
 	local info = label(card, "Body", {
-		Position = UDim2.fromOffset(6, 132), Size = UDim2.new(1, -12, 0, 16), TextSize = 12, Text = "", ZIndex = Z + 5,
+		Position = UDim2.fromOffset(4, 122), Size = UDim2.new(1, -8, 0, 16), TextSize = 12, Text = "", ZIndex = Z + 5,
 	})
 	local power = label(card, "Number", {
-		Position = UDim2.fromOffset(6, 152), Size = UDim2.new(1, -12, 0, 20), TextSize = 15, TextColor3 = TEXT.Gold, Text = "", ZIndex = Z + 5,
+		Position = UDim2.fromOffset(4, 140), Size = UDim2.new(1, -8, 0, 18), TextSize = 14, TextColor3 = TEXT.Gold, Text = "", ZIndex = Z + 5,
 	})
 	-- Dims heroes that can't take the slot being chosen (or are resting).
 	local shade = new("Frame", {
