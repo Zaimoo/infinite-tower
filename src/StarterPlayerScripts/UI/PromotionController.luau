@@ -29,6 +29,7 @@ local HeroCard = require(script.Parent:WaitForChild("HeroCard"))
 local StatFormulas = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("StatFormulas"))
 local PitBalanceConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("PitBalanceConfig"))
 local GothicBoxStyle = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GothicBoxStyle"))
+local GildedGrimoire = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GildedGrimoire"))
 
 local Promo = {}
 Promo.__index = Promo
@@ -191,7 +192,7 @@ local function createRightArrow(parent: Instance, size: UDim2, position: UDim2, 
 end
 
 
-local function label(parent: Instance, text: string, size: number, color: Color3, font: Enum.Font?): TextLabel
+local function label(parent: Instance, text: string, size: number, color: Color3, font: Enum.Font?, role: string?): TextLabel
 	local lbl = new("TextLabel", {
 		BackgroundTransparency = 1,
 		Text = text,
@@ -202,11 +203,24 @@ local function label(parent: Instance, text: string, size: number, color: Color3
 		RichText = true,
 	}, parent)
 	GothicBoxStyle.Font.Apply(lbl, {
-		Role = if size >= 20 then "Title" else if size >= 15 then "Header" else "Body",
+		Role = (role or if size >= 20 then "Title" else if size >= 15 then "Header" else "Body") :: any,
 		Color = color,
 		Size = size,
 	})
+	if role == "Number" then
+		GildedGrimoire.StyleText(lbl, "Number")
+	end
 	return lbl
+end
+
+-- Gilded Grimoire heading: white fading to antique gold (the text keeps its ink outline).
+local function goldText(lbl: TextLabel)
+	lbl.TextColor3 = Color3.new(1, 1, 1)
+	new("UIGradient", {
+		Name = "GrimoireGold",
+		Rotation = 90,
+		Color = ColorSequence.new(Color3.new(1, 1, 1), GildedGrimoire.Text.Gold),
+	}, lbl)
 end
 
 local function spaced(text: string): string
@@ -269,6 +283,8 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 		ZIndex = 40,
 	}, gui)
 	self.Root = root
+	-- Gilded Grimoire theme: convert this screen's legacy Gotham text (now and as it is rebuilt).
+	GildedGrimoire.Watch(root)
 
 	applyGothicStyle(root, "Window")
 
@@ -282,13 +298,12 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 	end)
 
 	-- Title: HERO PROMOTION
-	local title = label(root, spaced("HERO PROMOTION"), 24, C.Text, Enum.Font.GothamBlack)
+	local title = label(root, spaced("HERO PROMOTION"), 34, C.Text, Enum.Font.GothamBlack)
 	title.Name = "Title"
-	title.Position = UDim2.fromOffset(0, 24)
-	title.Size = UDim2.new(1, 0, 0, 36)
+	title.Position = UDim2.fromOffset(0, 18)
+	title.Size = UDim2.new(1, 0, 0, 44)
 	title.ZIndex = 42
-	title.TextStrokeColor3 = C.Border
-	title.TextStrokeTransparency = 0.45
+	goldText(title)
 	self.Title = title
 
 	--========================================================================
@@ -366,7 +381,7 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 		ZIndex = 44,
 	}, mainSlot)
 
-	self.MainQuestion = label(mainSlot, "?", 54, C.Text, Enum.Font.GothamBlack)
+	self.MainQuestion = label(mainSlot, "?", 60, C.Text, Enum.Font.GothamBlack)
 	self.MainQuestion.Size = UDim2.fromScale(1, 1)
 	self.MainQuestion.ZIndex = 45
 	self.MainQuestion.TextStrokeColor3 = C.Border
@@ -377,7 +392,7 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 		Name = "HeroBadge",
 		AnchorPoint = Vector2.new(0.5, 1),
 		Position = UDim2.new(0.5, 0, 1, -4),
-		Size = UDim2.fromOffset(90, 20),
+		Size = UDim2.fromOffset(100, 24),
 		BackgroundColor3 = Color3.fromRGB(15, 12, 22),
 		BorderSizePixel = 0,
 		Visible = false,
@@ -387,7 +402,7 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 	stroke(mainBadge, C.Border, 1, 0.3)
 	self.MainBadge = mainBadge
 
-	local mainBadgeText = label(mainBadge, "MAX LVL", 10, C.Text, Enum.Font.GothamBold)
+	local mainBadgeText = label(mainBadge, "MAX LVL", 14, C.Text, Enum.Font.GothamBold, "Number")
 	mainBadgeText.Size = UDim2.fromScale(1, 1)
 	mainBadgeText.ZIndex = 47
 	self.MainBadgeText = mainBadgeText
@@ -439,14 +454,14 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 			ZIndex = 44,
 		}, sacBtn)
 
-		local sacPlus = label(sacBtn, "+", 32, C.TextDim, Enum.Font.GothamMedium)
+		local sacPlus = label(sacBtn, "+", 40, C.TextDim, Enum.Font.GothamBlack)
 		sacPlus.Size = UDim2.fromScale(1, 1)
 		sacPlus.ZIndex = 45
 
-		local sacLevel = label(sacBtn, "", 10, C.Text, Enum.Font.GothamBold)
+		local sacLevel = label(sacBtn, "", 13, C.Text, Enum.Font.GothamBold, "Number")
 		sacLevel.AnchorPoint = Vector2.new(0.5, 1)
 		sacLevel.Position = UDim2.new(0.5, 0, 1, -3)
-		sacLevel.Size = UDim2.new(1, -4, 0, 14)
+		sacLevel.Size = UDim2.new(1, -4, 0, 18)
 		sacLevel.ZIndex = 46
 		sacLevel.Visible = false
 
@@ -480,36 +495,34 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 	local statsPanel = new("Frame", {
 		Name = "StatsDisplay",
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 404),
-		Size = UDim2.fromOffset(620, 108),
-		BackgroundColor3 = Color3.fromRGB(12, 10, 16),
-		BackgroundTransparency = 0.3,
+		Position = UDim2.new(0.5, 0, 0, 400),
+		Size = UDim2.fromOffset(640, 140),
 		BorderSizePixel = 0,
 		ZIndex = 42,
 	}, root)
-	stroke(statsPanel, C.Border, 1, 0.7)
+	GildedGrimoire.Frame(statsPanel, { Class = "Panel", Tone = "Deep" })
 
 	-- Left Stat Block (Current)
 	local leftBlock = new("Frame", {
 		Name = "StatBlockOld",
 		Position = UDim2.fromOffset(24, 10),
-		Size = UDim2.fromOffset(220, 88),
+		Size = UDim2.fromOffset(236, 120),
 		BackgroundTransparency = 1,
 		ZIndex = 43,
 	}, statsPanel)
 
 	local function makeStatRow(parent: Instance, y: number, name: string)
 		local row = new("Frame", {
-			Size = UDim2.new(1, 0, 0, 18),
+			Size = UDim2.new(1, 0, 0, 26),
 			Position = UDim2.fromOffset(0, y),
 			BackgroundTransparency = 1,
 			ZIndex = 43,
 		}, parent)
-		local nameLbl = label(row, name, 13, C.TextMuted, Enum.Font.GothamMedium)
+		local nameLbl = label(row, name, 17, C.TextMuted, Enum.Font.GothamMedium, "Body")
 		nameLbl.Size = UDim2.new(0.55, 0, 1, 0)
 		nameLbl.TextXAlignment = Enum.TextXAlignment.Left
 		nameLbl.ZIndex = 43
-		local valLbl = label(row, "", 13, C.Text, Enum.Font.GothamBold)
+		local valLbl = label(row, "", 19, C.Text, Enum.Font.GothamBold, "Number")
 		valLbl.Size = UDim2.new(0.45, 0, 1, 0)
 		valLbl.Position = UDim2.new(0.55, 0, 0, 0)
 		valLbl.TextXAlignment = Enum.TextXAlignment.Right
@@ -517,12 +530,12 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 		return valLbl
 	end
 
-	self.OldMaxLevel = makeStatRow(leftBlock, 2, "Max Level")
-	self.OldHP = makeStatRow(leftBlock, 22, "HP")
-	self.OldATK = makeStatRow(leftBlock, 42, "Base ATK")
-	self.OldStars = label(leftBlock, "★★★", 16, C.StarGold, Enum.Font.GothamBold)
-	self.OldStars.Position = UDim2.fromOffset(0, 64)
-	self.OldStars.Size = UDim2.new(1, 0, 0, 20)
+	self.OldMaxLevel = makeStatRow(leftBlock, 0, "Max Level")
+	self.OldHP = makeStatRow(leftBlock, 28, "HP")
+	self.OldATK = makeStatRow(leftBlock, 56, "Base ATK")
+	self.OldStars = label(leftBlock, "★★★", 24, C.StarGold, Enum.Font.GothamBold)
+	self.OldStars.Position = UDim2.fromOffset(0, 86)
+	self.OldStars.Size = UDim2.new(1, 0, 0, 30)
 	self.OldStars.TextXAlignment = Enum.TextXAlignment.Center
 	self.OldStars.ZIndex = 43
 
@@ -535,20 +548,20 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 		Name = "StatBlockNew",
 		AnchorPoint = Vector2.new(1, 0),
 		Position = UDim2.new(1, -24, 0, 10),
-		Size = UDim2.fromOffset(220, 88),
+		Size = UDim2.fromOffset(236, 120),
 		BackgroundTransparency = 1,
 		ZIndex = 43,
 	}, statsPanel)
 
-	self.NewMaxLevel = makeStatRow(rightBlock, 2, "Max Level")
+	self.NewMaxLevel = makeStatRow(rightBlock, 0, "Max Level")
 	self.NewMaxLevel.TextColor3 = C.SuccessGreen
-	self.NewHP = makeStatRow(rightBlock, 22, "HP")
+	self.NewHP = makeStatRow(rightBlock, 28, "HP")
 	self.NewHP.TextColor3 = C.SuccessGreen
-	self.NewATK = makeStatRow(rightBlock, 42, "Base ATK")
+	self.NewATK = makeStatRow(rightBlock, 56, "Base ATK")
 	self.NewATK.TextColor3 = C.SuccessGreen
-	self.NewStars = label(rightBlock, '★★★<font color="#39ff14">★</font>', 16, C.StarGold, Enum.Font.GothamBold)
-	self.NewStars.Position = UDim2.fromOffset(0, 64)
-	self.NewStars.Size = UDim2.new(1, 0, 0, 20)
+	self.NewStars = label(rightBlock, '★★★<font color="#39ff14">★</font>', 24, C.StarGold, Enum.Font.GothamBold)
+	self.NewStars.Position = UDim2.fromOffset(0, 86)
+	self.NewStars.Size = UDim2.new(1, 0, 0, 30)
 	self.NewStars.TextXAlignment = Enum.TextXAlignment.Center
 	self.NewStars.ZIndex = 43
 
@@ -558,56 +571,58 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 	local actionArea = new("Frame", {
 		Name = "ActionSection",
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 528),
-		Size = UDim2.new(1, 0, 0, 195),
+		Position = UDim2.new(0.5, 0, 0, 552),
+		Size = UDim2.new(1, 0, 0, 180),
 		BackgroundTransparency = 1,
 		ZIndex = 42,
 	}, root)
 	self.ActionArea = actionArea
 
 	-- 100% SUCCESS RATE
-	local rateLbl = label(actionArea, "100% SUCCESS RATE", 14, C.SuccessGreen, Enum.Font.GothamBlack)
+	local rateLbl = label(actionArea, "100% SUCCESS RATE", 20, C.SuccessGreen, Enum.Font.GothamBlack)
 	rateLbl.Position = UDim2.fromOffset(0, 0)
-	rateLbl.Size = UDim2.new(1, 0, 0, 20)
+	rateLbl.Size = UDim2.new(1, 0, 0, 26)
 	rateLbl.ZIndex = 43
-	rateLbl.TextStrokeColor3 = C.SuccessGreen
-	rateLbl.TextStrokeTransparency = 0.6
 	self.RateLabel = rateLbl
 
 	-- Requirements / Costs Label
-	local costLbl = label(actionArea, "", 12, C.TextDim, Enum.Font.GothamBold)
-	costLbl.Position = UDim2.fromOffset(0, 22)
-	costLbl.Size = UDim2.new(1, 0, 0, 20)
+	local costLbl = label(actionArea, "", 15, C.TextMuted, Enum.Font.GothamBold, "Body")
+	costLbl.Position = UDim2.fromOffset(0, 28)
+	costLbl.Size = UDim2.new(1, 0, 0, 22)
 	costLbl.ZIndex = 43
 	self.CostLabel = costLbl
 
 	-- Initiate Promotion Button (btn-action)
-	local btnWidth, btnHeight = 480, 52
+	local btnWidth, btnHeight = 480, 58
 	local btn = new("TextButton", {
 		Name = "InitiatePromotionButton",
 		Text = spaced("INITIATE PROMOTION"),
-		TextSize = 16,
+		TextSize = 22,
 		Font = Enum.Font.GothamBlack,
 		TextColor3 = C.Text,
 		BackgroundColor3 = C.Bg,
 		BorderSizePixel = 0,
 		AutoButtonColor = true,
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 48),
+		Position = UDim2.new(0.5, 0, 0, 56),
 		Size = UDim2.fromOffset(btnWidth, btnHeight),
 		ZIndex = 43,
 	}, actionArea)
 	self.ConfirmButton = btn
 	applyGothicStyle(btn, "Button")
-	self.ConfirmStroke = btn:FindFirstChildOfClass("UIStroke")
+	-- Gilded Grimoire: tint the inner gold rail for state; the outer ink outline stays black.
+	self.ConfirmStroke = GildedGrimoire.StateStroke(btn)
+	-- White label with an ink shadow, like the Summon buttons.
+	btn.TextStrokeColor3 = Color3.fromRGB(10, 6, 14)
+	btn.TextStrokeTransparency = 0.15
 
 	btn.Activated:Connect(function()
 		self:Confirm()
 	end)
 
 	-- Status Feedback
-	self.Status = label(actionArea, "", 13, C.TextDim, Enum.Font.GothamMedium)
-	self.Status.Position = UDim2.fromOffset(30, 108)
+	self.Status = label(actionArea, "", 16, C.TextMuted, Enum.Font.GothamMedium, "Body")
+	self.Status.Position = UDim2.fromOffset(30, 122)
 	self.Status.Size = UDim2.new(1, -60, 0, 36)
 	self.Status.ZIndex = 43
 
@@ -631,7 +646,9 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 		local cam = Workspace.CurrentCamera
 		if not cam then return end
 		local v = cam.ViewportSize
-		self.Scale.Scale = math.clamp(math.min((v.X - 24) / WIDTH, (v.Y - 32) / HEIGHT), 0.45, 1)
+		-- Leave 64 px above the window for The Pit's tab bar (React HUD, Phase 5).
+		self.Scale.Scale = math.clamp(math.min((v.X - 24) / WIDTH, (v.Y - 32 - 64) / HEIGHT), 0.45, 1)
+		root.Position = UDim2.new(0.5, 0, 0.5, 32)
 	end
 	local camConn: RBXScriptConnection? = nil
 	local function track()
@@ -666,9 +683,10 @@ function Promo.BuildPicker(self: any)
 	applyGothicStyle(picker, "Window")
 	self.Picker = picker
 
-	self.PickerTitle = label(picker, "", 18, C.Text, Enum.Font.GothamBlack)
-	self.PickerTitle.Position = UDim2.fromOffset(0, 16)
-	self.PickerTitle.Size = UDim2.new(1, 0, 0, 28)
+	self.PickerTitle = label(picker, "", 26, C.Text, Enum.Font.GothamBlack)
+	self.PickerTitle.Position = UDim2.fromOffset(0, 12)
+	self.PickerTitle.Size = UDim2.new(1, 0, 0, 34)
+	goldText(self.PickerTitle)
 	self.PickerTitle.ZIndex = 61
 
 	local back = new("TextButton", {
@@ -685,7 +703,7 @@ function Promo.BuildPicker(self: any)
 		picker.Visible = false
 	end)
 
-	self.PickerStatus = label(picker, "", 13, C.TextDim, Enum.Font.GothamMedium)
+	self.PickerStatus = label(picker, "", 16, C.TextMuted, Enum.Font.GothamMedium, "Body")
 	self.PickerStatus.Position = UDim2.new(0, 20, 1, -44)
 	self.PickerStatus.Size = UDim2.new(1, -40, 0, 34)
 	self.PickerStatus.ZIndex = 61
@@ -936,7 +954,7 @@ function Promo.RenderPicker(self: any)
 	end
 
 	if #heroes == 0 then
-		local empty = label(self.PickerList, isDonorMode and "No matching sacrifice materials available." or "No heroes in roster.", 14, C.TextDim, Enum.Font.GothamMedium)
+		local empty = label(self.PickerList, isDonorMode and "No matching sacrifice materials available." or "No heroes in roster.", 17, C.TextMuted, Enum.Font.GothamMedium, "Body")
 		empty.Size = UDim2.fromOffset(400, 40)
 		empty.ZIndex = 62
 	end
@@ -987,12 +1005,12 @@ function Promo.RenderPicker(self: any)
 		local portrait = HeroCard.Portrait(host, hero)
 		portrait.ZIndex = 63
 
-		local name = label(tile, hero.DisplayName or "Hero", 13, eligible and rarity or C.TextDim)
+		local name = label(tile, hero.DisplayName or "Hero", 15, eligible and rarity or C.TextDim, nil, "Title")
 		name.Position = UDim2.fromOffset(4, 94)
 		name.Size = UDim2.new(1, -8, 0, 18)
 		name.ZIndex = 63
 
-		local info = label(tile, string.format("%s  Lv.%d", stars(hero.Stars), hero.Level or 1), 11, eligible and C.Text or C.TextDim, Enum.Font.GothamMedium)
+		local info = label(tile, string.format("%s  Lv.%d", stars(hero.Stars), hero.Level or 1), 13, eligible and C.Text or C.TextDim, Enum.Font.GothamMedium, "Number")
 		info.Position = UDim2.fromOffset(4, 114)
 		info.Size = UDim2.new(1, -8, 0, 16)
 		info.ZIndex = 63
@@ -1005,7 +1023,7 @@ function Promo.RenderPicker(self: any)
 				Size = UDim2.fromScale(1, 1),
 				ZIndex = 64,
 			}, tile)
-			local tag = label(shade, tagText, 10, C.Danger)
+			local tag = label(shade, tagText, 13, C.Danger, nil, "Title")
 			tag.Size = UDim2.new(1, 0, 0, 16)
 			tag.Position = UDim2.fromOffset(0, 36)
 			tag.ZIndex = 65
@@ -1142,9 +1160,10 @@ function Promo.Render(self: any)
 		button.Text = spaced("INITIATE PROMOTION")
 	end
 
-	button.TextColor3 = (canCommit or self.Busy) and C.Text or Color3.fromRGB(120, 115, 135)
+	button.TextColor3 = (canCommit or self.Busy) and C.Text or Color3.fromRGB(206, 196, 226)
+	button.TextTransparency = if canCommit or self.Busy then 0 else 0.15
 	if self.ConfirmStroke then
-		self.ConfirmStroke.Color = canCommit and C.Border or Color3.fromRGB(80, 70, 95)
+		self.ConfirmStroke.Color = if canCommit then Color3.fromRGB(255, 226, 140) else Color3.fromRGB(150, 138, 176)
 	end
 
 	local status, color = self.Message, C.TextDim

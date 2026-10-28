@@ -62,4 +62,24 @@ function SummonLuck.RollAtLeast(rates: { number }, minTier: number, r: number): 
 	return minTier
 end
 
+-- The luck a profile's God's Blessing grants right now: level, awake Acolytes' labor and the
+-- Saint's Favor perk. Mirrors DataManager.GetSummonLuck so client previews match the server.
+function SummonLuck.ForProfile(profile: any): number
+	local blessing = profile and profile.Facilities and profile.Facilities.GodsBlessing
+	if not blessing or (blessing.Level or 0) <= 0 then
+		return 0
+	end
+	local StatFormulas = require(ReplicatedStorage.Shared.Util.StatFormulas)
+	local FortressTree = require(ReplicatedStorage.Shared.Util.FortressTree)
+	local sumLabor = 0
+	local now = os.time()
+	for _, uuid in ipairs(blessing.AssignedHeroUUIDs or {}) do
+		local hero = profile.Heroes and profile.Heroes[uuid]
+		if hero and (hero.ComaUntilTimestamp or 0) <= now then
+			sumLabor += StatFormulas.GetEffectiveLabor(hero, "FACILITY_GODS_BLESSING")
+		end
+	end
+	return SummonLuck.Luck(blessing.Level, sumLabor, FortressTree.PerkBonuses(profile.FortressTree).BlessingLuck)
+end
+
 return table.freeze(SummonLuck)

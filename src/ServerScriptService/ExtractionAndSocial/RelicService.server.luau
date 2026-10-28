@@ -10,6 +10,7 @@ local Workspace = game:GetService("Workspace")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local SanctuaryRules = require(Shared.Util.TowerSanctuaryRules)
 local RelicConfig = require(Shared:WaitForChild("Config"):WaitForChild("RelicConfig"))
+local GildedGrimoire = require(Shared:WaitForChild("Util"):WaitForChild("GildedGrimoire"))
 
 local RemotesFolder = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RelicPactRemotes")
 local RelicStateRemote = RemotesFolder:WaitForChild("RelicStateChanged") :: RemoteEvent
@@ -135,30 +136,23 @@ function RelicService.SpawnRelic(tierId: RelicTierId, worldPos: Vector3, initial
 	bb.AlwaysOnTop = (tierId == "CALAMITY_HEART" or tierId == "ABYSSAL_CORE")
 	bb.Parent = part
 
+	-- Gilded Grimoire relic plate: deep obsidian, ink outline, rail in the relic's colour.
 	local frame = Instance.new("Frame")
 	frame.Size = UDim2.fromScale(1, 1)
-	frame.BackgroundColor3 = Color3.fromRGB(14, 14, 22)
-	frame.BackgroundTransparency = 0.15
+	frame.BackgroundTransparency = 0.1
 	frame.Parent = bb
-
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 8)
-	corner.Parent = frame
-
-	local stroke = Instance.new("UIStroke")
-	stroke.Color = spec.Color
-	stroke.Thickness = 2
-	stroke.Parent = frame
+	GildedGrimoire.Frame(frame, { Class = "Card", Tone = "Deep", Rail = spec.Color })
 
 	local title = Instance.new("TextLabel")
-	title.Size = UDim2.new(1, -8, 0.42, 0)
-	title.Position = UDim2.new(0, 4, 0, 2)
+	title.Size = UDim2.new(1, -14, 0.42, 0)
+	title.Position = UDim2.new(0, 7, 0, 4)
 	title.BackgroundTransparency = 1
-	title.Text = string.format("💎 %s (%s)", string.upper(spec.DisplayName), spec.Rarity)
+	title.Text = string.format("%s (%s)", string.upper(spec.DisplayName), spec.Rarity)
 	title.TextColor3 = spec.Color
-	title.Font = Enum.Font.GothamBold
 	title.TextScaled = true
+	title.ZIndex = 3
 	title.Parent = frame
+	GildedGrimoire.StyleText(title, "Title")
 
 	local statusLbl = Instance.new("TextLabel")
 	statusLbl.Name = "StatusLabel"
@@ -166,10 +160,11 @@ function RelicService.SpawnRelic(tierId: RelicTierId, worldPos: Vector3, initial
 	statusLbl.Position = UDim2.new(0, 4, 0.44, 0)
 	statusLbl.BackgroundTransparency = 1
 	statusLbl.Text = string.format("WalkSpeed: -%d%% | Touch to Carry!", math.round(spec.WalkSpeedPenalty * 100))
-	statusLbl.TextColor3 = Color3.fromRGB(235, 235, 245)
-	statusLbl.Font = Enum.Font.GothamMedium
+	statusLbl.TextColor3 = Color3.fromRGB(236, 228, 246)
 	statusLbl.TextScaled = true
+	statusLbl.ZIndex = 3
 	statusLbl.Parent = frame
+	GildedGrimoire.StyleText(statusLbl, "Body")
 
 	local now = os.clock()
 	local context=assert(Tower.ContextAt(worldPos),"Relic spawn outside room")

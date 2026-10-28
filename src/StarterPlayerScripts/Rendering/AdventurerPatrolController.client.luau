@@ -103,7 +103,7 @@ local function createAdventurerRig(hero: any, slot: number, startPos: Vector3, e
 	lbl.Font = Enum.Font.GothamBold
 	lbl.TextSize = 12
 	lbl.TextColor3 = Color3.fromRGB(245, 225, 140)
-	lbl.Text = string.format("⚔️ %s\n<font color=\"#82CD5F\">[OUTSKIRTS ADVENTURER]</font>", hero.DisplayName)
+	lbl.Text = string.format("%s\n<font color=\"#82CD5F\">[OUTSKIRTS ADVENTURER]</font>", hero.DisplayName)
 	lbl.RichText = true
 	lbl.Parent = bb
 

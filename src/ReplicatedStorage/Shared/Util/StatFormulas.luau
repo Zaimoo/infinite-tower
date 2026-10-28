@@ -138,6 +138,25 @@ function StatFormulas.GetTrainingCombatMultiplier(trainingLevel: number, sumEffe
 	return math.round(mult * 1000) / 1000
 end
 
+-- Squad Power (Phase 5 §2.3): HeroPower = round(10 x DPS + Health), summed over deployed heroes.
+-- DPS ignores coma (a downed hero still counts toward the squad's strength).
+function StatFormulas.GetHeroPower(hero: any, artifact: any?, trainingMultiplier: number?): number
+	local v = StatFormulas.GetCombatSnapshot(hero, artifact, false, false, trainingMultiplier)
+	return math.round(10 * (v.AttackDamage / v.TickInterval) + v.Health)
+end
+
+function StatFormulas.GetSquadPower(profile: any, trainingMultiplier: number?): (number, { [string]: number })
+	local total, perHero = 0, {}
+	for uuid, hero in pairs(profile and profile.Heroes or {}) do
+		if string.find(hero.Assignment or "", "^SQUAD_SLOT_") then
+			local power = StatFormulas.GetHeroPower(hero, StatFormulas.GetEquippedArtifact(profile, hero), trainingMultiplier)
+			perHero[uuid] = power
+			total += power
+		end
+	end
+	return total, perHero
+end
+
 -- Worker slots for a support facility: level table plus Fortress Tree perk slots. 0 while locked.
 local WORKER_PERKS = { Market = "MarketWorkers", TrainingGrounds = "TrainingWorkers", GodsBlessing = "BlessingWorkers" }
 function StatFormulas.GetFacilityMaxWorkers(facility: string, level: number, perks: any?): number

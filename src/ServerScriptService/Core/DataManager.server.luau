@@ -620,8 +620,57 @@ function DataManager.SyncProfile(player: Player, progressionOnly: boolean?)
 	if progressionOnly and _G.CombatSimulation and _G.CombatSimulation.RefreshPlayerHeroStats then
 		_G.CombatSimulation.RefreshPlayerHeroStats(player)
 	end
+	DataManager.UpdateSquadPower(player)
 	ProfileDeltaSyncEvent:FireClient(player, profile)
 	OnboardingService.Push(player)
+end
+
+-- Squad Power and the player list (Phase 5 §2.3-2.4). The server computes Squad Power so the HUD
+-- badge and every player's list column agree; leaderstats writes are throttled to one per 2 s.
+local lastLeaderstatsWrite: { [Player]: number } = {}
+local function ensureLeaderstats(player: Player): (IntValue, NumberValue)
+	local folder = player:FindFirstChild("leaderstats")
+	if not folder then
+		folder = Instance.new("Folder")
+		folder.Name = "leaderstats"
+		folder.Parent = player
+	end
+	local floor = folder:FindFirstChild("Floor") :: IntValue?
+	if not floor then
+		floor = Instance.new("IntValue")
+		floor.Name = "Floor" -- first stat: Roblox sorts the player list by it
+		floor.Parent = folder
+	end
+	local power = folder:FindFirstChild("Power") :: NumberValue?
+	if not power then
+		power = Instance.new("NumberValue")
+		power.Name = "Power"
+		power.Parent = folder
+	end
+	return floor :: IntValue, power :: NumberValue
+end
+
+function DataManager.UpdateSquadPower(player: Player)
+	local profile = ActiveProfiles[player]
+	if not profile then return end
+	local total, perHero = StatFormulas.GetSquadPower(profile, DataManager.GetTrainingMultiplier(player))
+	;(profile :: any).SquadPower = total
+	;(profile :: any).SquadPowerByHero = perHero
+	local floorStat, powerStat = ensureLeaderstats(player)
+	floorStat.Value = profile.HighestClearedFloor or 0
+	local now = os.clock()
+	if powerStat.Value ~= total and now - (lastLeaderstatsWrite[player] or -99) >= 2 then
+		lastLeaderstatsWrite[player] = now
+		powerStat.Value = total
+	elseif powerStat.Value ~= total then
+		-- Catch up after the throttle window so the list never stays stale.
+		task.delay(2, function()
+			if player.Parent and ActiveProfiles[player] then
+				lastLeaderstatsWrite[player] = os.clock()
+				powerStat.Value = (ActiveProfiles[player] :: any).SquadPower or powerStat.Value
+			end
+		end)
+	end
 end
 
 -- Pit operations and participation EXP send only affected heroes. Consumers merge
@@ -639,9 +688,11 @@ function DataManager.SyncPitDelta(player: Player, changed: any, removed: any)
 	if facilityChanged and _G.PlotManager and _G.PlotManager.RefreshPlotVisuals then
 		_G.PlotManager.RefreshPlotVisuals(player)
 	end
+	DataManager.UpdateSquadPower(player)
 	ProfileDeltaSyncEvent:FireClient(player, { _PitDelta = true, Heroes = changed, Removed = removed,
 		Currencies = profile.Currencies, PitMaterials = profile.PitMaterials, PitRevision = profile.PitRevision,
-		UnlockedResearch = profile.UnlockedResearch })
+		UnlockedResearch = profile.UnlockedResearch, SquadPower = (profile :: any).SquadPower,
+		SquadPowerByHero = (profile :: any).SquadPowerByHero })
 end
 
 function DataManager.ApplyCollisionGroup(player: Player)
@@ -1491,6 +1542,7 @@ Players.PlayerRemoving:Connect(function(player: Player)
 	end
 	pit:Forget(player)
 	FortressTreeService.Forget(player)
+	lastLeaderstatsWrite[player] = nil
 	pendingCombatSync[player] = nil
 	ActiveProfiles[player] = nil
 end)

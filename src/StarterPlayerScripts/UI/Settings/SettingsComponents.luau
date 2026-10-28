@@ -1,22 +1,49 @@
 --!strict
 -- StarterPlayerScripts/UI/Settings/SettingsComponents.luau
--- Reusable React Luau Components for Settings UI
+-- Reusable React Luau Components for Settings UI, drawn in the Gilded Grimoire theme: ink-outlined
+-- panels with an inset gold rail, heavy inked titles, Cinzel body text and pill gauges. The player's
+-- accent colour (SettingsConfig.THEMES) tints rails, fills and highlights.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local UserInputService = game:GetService("UserInputService")
 local React = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("React"))
 
-local SettingsConfig = require(script.Parent:WaitForChild("SettingsConfig"))
+local Grimoire = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GildedGrimoire"))
+local Hud = require(script.Parent.Parent:WaitForChild("Hud"):WaitForChild("Components"))
 
 local e = React.createElement
 local useState = React.useState
 local useCallback = React.useCallback
 local useRef = React.useRef
 
+local Panel = Hud.Panel
+local HeavyLabel = Hud.HeavyLabel
+local Body = Hud.Body
+local INK = Grimoire.Ink
+local T = Grimoire.Tones
+
 local SettingsComponents = {}
 
+-- Shared look for the whole Settings screen.
+SettingsComponents.Panel = Panel
+SettingsComponents.HeavyLabel = HeavyLabel
+SettingsComponents.Body = Body
+
+local function numberLabel(props: { [string]: any })
+	local base: { [string]: any } = {
+		BackgroundTransparency = 1,
+		FontFace = Grimoire.Fonts.Number,
+		TextColor3 = Color3.new(1, 1, 1),
+		TextXAlignment = Enum.TextXAlignment.Left,
+	}
+	for k, v in props do base[k] = v end
+	return e("TextLabel", base, {
+		Ink = e("UIStroke", { Color = INK, Thickness = 2, LineJoinMode = Enum.LineJoinMode.Round }),
+	})
+end
+SettingsComponents.Number = numberLabel
+
 --------------------------------------------------------------------------------
--- 1. Section Container Card
+-- 1. Section Container Card (Deep panel; content sits in an inner frame so the rail is not laid out)
 --------------------------------------------------------------------------------
 function SettingsComponents.Section(props: {
 	Title: string,
@@ -24,18 +51,12 @@ function SettingsComponents.Section(props: {
 	LayoutOrder: number?,
 	Children: any?,
 })
-	local children = props.Children or {}
-	local cardChildren: { [string]: any } = {
-		Corner = e("UICorner", { CornerRadius = UDim.new(0, 14) }),
-		Stroke = e("UIStroke", {
-			Thickness = 1.2,
-			Color = Color3.fromRGB(38, 48, 76),
-		}),
+	local content: { [string]: any } = {
 		Padding = e("UIPadding", {
-			PaddingLeft = UDim.new(0, 16),
-			PaddingRight = UDim.new(0, 16),
+			PaddingLeft = UDim.new(0, 18),
+			PaddingRight = UDim.new(0, 18),
 			PaddingTop = UDim.new(0, 14),
-			PaddingBottom = UDim.new(0, 14),
+			PaddingBottom = UDim.new(0, 16),
 		}),
 		ListLayout = e("UIListLayout", {
 			FillDirection = Enum.FillDirection.Vertical,
@@ -44,46 +65,31 @@ function SettingsComponents.Section(props: {
 		}),
 		Header = e("Frame", {
 			BackgroundTransparency = 1,
-			Size = UDim2.new(1, 0, 0, if props.Subtitle then 36 else 22),
+			Size = UDim2.new(1, 0, 0, if props.Subtitle then 42 else 24),
 			LayoutOrder = 1,
 		}, {
-			Title = e("TextLabel", {
-				BackgroundTransparency = 1,
-				Text = props.Title,
-				Font = Enum.Font.GothamBlack,
-				TextSize = 16,
-				TextColor3 = Color3.fromRGB(240, 244, 255),
-				TextXAlignment = Enum.TextXAlignment.Left,
-				Size = UDim2.new(1, 0, 0, 18),
-			}),
-			Subtitle = props.Subtitle and e("TextLabel", {
-				BackgroundTransparency = 1,
-				Text = props.Subtitle,
-				Font = Enum.Font.GothamMedium,
-				TextSize = 12,
-				TextColor3 = Color3.fromRGB(135, 150, 180),
-				TextXAlignment = Enum.TextXAlignment.Left,
-				Position = UDim2.fromOffset(0, 18),
-				Size = UDim2.new(1, 0, 0, 16),
-			}),
+			Title = HeavyLabel({ Size = UDim2.new(1, 0, 0, 22), MaxSize = 19, Outline = 2.2, TextXAlignment = Enum.TextXAlignment.Left, Text = props.Title }),
+			Subtitle = if props.Subtitle then Body({ Position = UDim2.fromOffset(0, 24), Size = UDim2.new(1, 0, 0, 16), TextSize = 13,
+				TextColor3 = Grimoire.Text.Muted, Text = props.Subtitle }) else nil,
 		}),
 	}
-
-	for k, v in pairs(children) do
-		cardChildren[tostring(k)] = v
+	for k, v in pairs(props.Children or {}) do
+		content[tostring(k)] = v
 	end
 
-	return e("Frame", {
+	return Panel({
 		Name = "Section_" .. props.Title,
-		BackgroundColor3 = Color3.fromRGB(12, 17, 30),
 		Size = UDim2.new(1, 0, 0, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
 		LayoutOrder = props.LayoutOrder or 1,
-	}, cardChildren)
+		Top = T.Deep.Top, Bottom = T.Deep.Bottom, Rail = T.Deep.Rail,
+	}, {
+		Content = e("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, ZIndex = 2 }, content),
+	})
 end
 
 --------------------------------------------------------------------------------
--- 2. Interactive Slider
+-- 2. Interactive Slider (pill gauge with an ink outline and a gold knob)
 --------------------------------------------------------------------------------
 function SettingsComponents.Slider(props: {
 	Label: string,
@@ -109,27 +115,17 @@ function SettingsComponents.Slider(props: {
 	return e("Frame", {
 		Name = "Slider_" .. props.Label,
 		BackgroundTransparency = 1,
-		Size = UDim2.new(1, 0, 0, 52),
+		Size = UDim2.new(1, 0, 0, 56),
 		LayoutOrder = props.LayoutOrder or 1,
 	}, {
 		Header = e("Frame", {
 			BackgroundTransparency = 1,
-			Size = UDim2.new(1, 0, 0, 20),
+			Size = UDim2.new(1, 0, 0, 22),
 		}, {
-			Label = e("TextLabel", {
-				BackgroundTransparency = 1,
-				Text = props.Label,
-				Font = Enum.Font.GothamBold,
-				TextSize = 14,
-				TextColor3 = Color3.fromRGB(230, 235, 250),
-				TextXAlignment = Enum.TextXAlignment.Left,
-				Size = UDim2.new(0.7, 0, 1, 0),
-			}),
-			Percent = e("TextLabel", {
-				BackgroundTransparency = 1,
+			Label = Body({ Size = UDim2.new(0.7, 0, 1, 0), TextSize = 15, TextColor3 = Grimoire.Text.Parchment, Text = props.Label }),
+			Percent = numberLabel({
 				Text = string.format("%d%%", math.round(props.Value * 100)),
-				Font = Enum.Font.GothamBlack,
-				TextSize = 13,
+				TextSize = 17,
 				TextColor3 = props.AccentColor,
 				TextXAlignment = Enum.TextXAlignment.Right,
 				Position = UDim2.new(0.7, 0, 0, 0),
@@ -139,49 +135,54 @@ function SettingsComponents.Slider(props: {
 		Track = e("Frame", {
 			ref = trackRef,
 			Name = "Track",
-			BackgroundColor3 = Color3.fromRGB(20, 28, 48),
-			Position = UDim2.new(0, 0, 0, 26),
-			Size = UDim2.new(1, 0, 0, 12),
-			[React.Event.InputBegan] = function(rbx, input)
+			BackgroundColor3 = Color3.fromRGB(26, 20, 36),
+			Position = UDim2.new(0, 2, 0, 30),
+			Size = UDim2.new(1, -4, 0, 14),
+			[React.Event.InputBegan] = function(_rbx, input)
 				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 					setDragging(true)
 					updateFromInput(input.Position)
 				end
 			end,
-			[React.Event.InputEnded] = function(rbx, input)
+			[React.Event.InputEnded] = function(_rbx, input)
 				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 					setDragging(false)
 				end
 			end,
-			[React.Event.InputChanged] = function(rbx, input)
+			[React.Event.InputChanged] = function(_rbx, input)
 				if isDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
 					updateFromInput(input.Position)
 				end
 			end,
 		}, {
 			TrackCorner = e("UICorner", { CornerRadius = UDim.new(1, 0) }),
-			TrackStroke = e("UIStroke", { Thickness = 1, Color = Color3.fromRGB(40, 54, 85) }),
+			TrackInk = e("UIStroke", { Thickness = 2, Color = INK, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
 			Fill = e("Frame", {
 				BackgroundColor3 = props.AccentColor,
 				Size = UDim2.new(props.Value, 0, 1, 0),
 			}, {
 				FillCorner = e("UICorner", { CornerRadius = UDim.new(1, 0) }),
+				Shade = e("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(150, 150, 165)) }),
+				Shine = e("Frame", { Position = UDim2.new(0, 3, 0, 1), Size = UDim2.new(1, -6, 0.35, 0), BackgroundColor3 = Color3.new(1, 1, 1),
+					BackgroundTransparency = 0.6, BorderSizePixel = 0 }, { Corner = e("UICorner", { CornerRadius = UDim.new(1, 0) }) }),
 			}),
 			Knob = e("Frame", {
 				AnchorPoint = Vector2.new(0.5, 0.5),
 				Position = UDim2.new(props.Value, 0, 0.5, 0),
-				Size = UDim2.fromOffset(18, 18),
-				BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+				Size = UDim2.fromOffset(22, 22),
+				BackgroundColor3 = Color3.new(1, 1, 1),
+				ZIndex = 3,
 			}, {
 				KnobCorner = e("UICorner", { CornerRadius = UDim.new(1, 0) }),
-				KnobStroke = e("UIStroke", { Thickness = 2, Color = props.AccentColor }),
+				KnobFill = e("UIGradient", { Rotation = 90, Color = ColorSequence.new(T.Gold.Top, T.Gold.Bottom) }),
+				KnobInk = e("UIStroke", { Thickness = 2.4, Color = INK }),
 			}),
 		}),
 	})
 end
 
 --------------------------------------------------------------------------------
--- 3. Interactive Toggle Switch
+-- 3. Interactive Toggle Switch (ink-outlined pill; the gold knob slides right when on)
 --------------------------------------------------------------------------------
 function SettingsComponents.Toggle(props: {
 	Label: string,
@@ -198,7 +199,7 @@ function SettingsComponents.Toggle(props: {
 		BackgroundTransparency = 1,
 		Text = "",
 		AutoButtonColor = false,
-		Size = UDim2.new(1, 0, 0, if props.Description then 44 else 34),
+		Size = UDim2.new(1, 0, 0, if props.Description then 46 else 34),
 		LayoutOrder = props.LayoutOrder or 1,
 		[React.Event.Activated] = props.OnToggle,
 		[React.Event.MouseEnter] = function() setHovered(true) end,
@@ -206,53 +207,39 @@ function SettingsComponents.Toggle(props: {
 	}, {
 		TextGroup = e("Frame", {
 			BackgroundTransparency = 1,
-			Size = UDim2.new(1, -60, 1, 0),
+			Size = UDim2.new(1, -70, 1, 0),
 		}, {
-			Title = e("TextLabel", {
-				BackgroundTransparency = 1,
-				Text = props.Label,
-				Font = Enum.Font.GothamBold,
-				TextSize = 14,
-				TextColor3 = if isHovered then Color3.fromRGB(255, 255, 255) else Color3.fromRGB(225, 230, 245),
-				TextXAlignment = Enum.TextXAlignment.Left,
-				Size = UDim2.new(1, 0, 0, 18),
-			}),
-			Desc = props.Description and e("TextLabel", {
-				BackgroundTransparency = 1,
-				Text = props.Description,
-				Font = Enum.Font.Gotham,
-				TextSize = 12,
-				TextColor3 = Color3.fromRGB(130, 145, 175),
-				TextXAlignment = Enum.TextXAlignment.Left,
-				Position = UDim2.fromOffset(0, 18),
-				Size = UDim2.new(1, 0, 0, 16),
-			}),
+			Title = Body({ Size = UDim2.new(1, 0, 0, 20), TextSize = 15,
+				TextColor3 = if isHovered then Color3.new(1, 1, 1) else Grimoire.Text.Parchment, Text = props.Label }),
+			Desc = if props.Description then Body({ Position = UDim2.fromOffset(0, 21), Size = UDim2.new(1, 0, 0, 16), TextSize = 12,
+				TextColor3 = Grimoire.Text.Muted, Text = props.Description }) else nil,
 		}),
 		Pill = e("Frame", {
 			AnchorPoint = Vector2.new(1, 0.5),
-			Position = UDim2.new(1, 0, 0.5, 0),
-			Size = UDim2.fromOffset(48, 26),
-			BackgroundColor3 = if props.Value then props.AccentColor else Color3.fromRGB(24, 32, 54),
+			Position = UDim2.new(1, -2, 0.5, 0),
+			Size = UDim2.fromOffset(54, 28),
+			BackgroundColor3 = if props.Value then props.AccentColor else Color3.fromRGB(34, 28, 46),
 		}, {
 			PillCorner = e("UICorner", { CornerRadius = UDim.new(1, 0) }),
-			PillStroke = e("UIStroke", {
-				Thickness = 1.2,
-				Color = if props.Value then props.AccentColor else Color3.fromRGB(44, 58, 92),
-			}),
+			PillShade = e("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(150, 150, 165)) }),
+			PillInk = e("UIStroke", { Thickness = 2.4, Color = INK, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
 			Dot = e("Frame", {
 				AnchorPoint = Vector2.new(0, 0.5),
-				Position = if props.Value then UDim2.new(1, -22, 0.5, 0) else UDim2.new(0, 4, 0.5, 0),
-				Size = UDim2.fromOffset(18, 18),
-				BackgroundColor3 = if props.Value then Color3.fromRGB(15, 20, 35) else Color3.fromRGB(140, 155, 185),
+				Position = if props.Value then UDim2.new(1, -24, 0.5, 0) else UDim2.new(0, 4, 0.5, 0),
+				Size = UDim2.fromOffset(20, 20),
+				BackgroundColor3 = Color3.new(1, 1, 1),
 			}, {
 				DotCorner = e("UICorner", { CornerRadius = UDim.new(1, 0) }),
+				DotFill = e("UIGradient", { Rotation = 90, Color = if props.Value then ColorSequence.new(T.Gold.Top, T.Gold.Bottom)
+					else ColorSequence.new(Color3.fromRGB(196, 190, 206), Color3.fromRGB(104, 96, 118)) }),
+				DotInk = e("UIStroke", { Thickness = 2, Color = INK }),
 			}),
 		}),
 	})
 end
 
 --------------------------------------------------------------------------------
--- 4. Sidebar Navigation Tab Button
+-- 4. Sidebar Navigation Tab Button (active: violet panel with an accent rail and gold title)
 --------------------------------------------------------------------------------
 function SettingsComponents.TabButton(props: {
 	Name: string,
@@ -263,55 +250,27 @@ function SettingsComponents.TabButton(props: {
 	OnClick: () -> (),
 })
 	local isHovered, setHovered = useState(false)
+	local tone = if props.IsActive then T.Violet else T.Deep
 
-	return e("TextButton", {
+	return Panel({
+		Class = "TextButton",
 		Name = "Tab_" .. props.Name,
 		AutoButtonColor = false,
-		BackgroundColor3 = if props.IsActive then Color3.fromRGB(22, 34, 60) elseif isHovered then Color3.fromRGB(16, 24, 44) else Color3.fromRGB(10, 15, 28),
-		Size = UDim2.new(1, 0, 0, 52),
+		Size = UDim2.new(1, 0, 0, 56),
 		Text = "",
+		Radius = 10,
+		Top = tone.Top, Bottom = tone.Bottom,
+		Rail = if props.IsActive then props.AccentColor elseif isHovered then Grimoire.Text.Muted else Color3.fromRGB(110, 96, 140),
 		LayoutOrder = props.LayoutOrder or 1,
 		[React.Event.Activated] = props.OnClick,
 		[React.Event.MouseEnter] = function() setHovered(true) end,
 		[React.Event.MouseLeave] = function() setHovered(false) end,
 	}, {
-		Corner = e("UICorner", { CornerRadius = UDim.new(0, 12) }),
-		Stroke = e("UIStroke", {
-			Thickness = if props.IsActive then 1.5 else 1,
-			Color = if props.IsActive then props.AccentColor else Color3.fromRGB(30, 42, 68),
-		}),
-		Indicator = e("Frame", {
-			Position = UDim2.new(0, 4, 0.2, 0),
-			Size = UDim2.new(0, 4, 0.6, 0),
-			BackgroundColor3 = props.AccentColor,
-			Visible = props.IsActive,
-		}, {
-			IndCorner = e("UICorner", { CornerRadius = UDim.new(1, 0) }),
-		}),
-		Padding = e("UIPadding", {
-			PaddingLeft = UDim.new(0, 16),
-			PaddingRight = UDim.new(0, 12),
-		}),
-		Title = e("TextLabel", {
-			BackgroundTransparency = 1,
-			Text = props.Name,
-			Font = Enum.Font.GothamBlack,
-			TextSize = 15,
-			TextColor3 = if props.IsActive then props.AccentColor else Color3.fromRGB(230, 235, 248),
-			TextXAlignment = Enum.TextXAlignment.Left,
-			Position = UDim2.fromOffset(0, 8),
-			Size = UDim2.new(1, 0, 0, 18),
-		}),
-		Sub = e("TextLabel", {
-			BackgroundTransparency = 1,
-			Text = props.Subtitle,
-			Font = Enum.Font.GothamMedium,
-			TextSize = 11,
-			TextColor3 = if props.IsActive then Color3.fromRGB(180, 205, 240) else Color3.fromRGB(120, 135, 165),
-			TextXAlignment = Enum.TextXAlignment.Left,
-			Position = UDim2.fromOffset(0, 26),
-			Size = UDim2.new(1, 0, 0, 16),
-		}),
+		Title = HeavyLabel({ Position = UDim2.fromOffset(16, 8), Size = UDim2.new(1, -28, 0, 20), MaxSize = 17, Outline = 2,
+			Gold = props.IsActive, TextColor3 = if props.IsActive then Color3.new(1, 1, 1) else Grimoire.Text.Parchment,
+			TextXAlignment = Enum.TextXAlignment.Left, Text = props.Name, ZIndex = 3 }),
+		Sub = Body({ Position = UDim2.fromOffset(16, 30), Size = UDim2.new(1, -28, 0, 16), TextSize = 12, ZIndex = 3,
+			TextColor3 = if props.IsActive then Grimoire.Text.Gold else Grimoire.Text.Muted, Text = props.Subtitle }),
 	})
 end
 
@@ -325,54 +284,23 @@ function SettingsComponents.StatCard(props: {
 	AccentColor: Color3,
 	LayoutOrder: number?,
 })
-	return e("Frame", {
+	return Panel({
 		Name = "StatCard_" .. props.Title,
-		BackgroundColor3 = Color3.fromRGB(15, 22, 38),
-		Size = UDim2.new(0.31, 0, 0, 84),
+		Size = UDim2.new(0.31, 0, 0, 88),
 		LayoutOrder = props.LayoutOrder or 1,
+		Radius = 12,
+		Top = T.Deep.Top, Bottom = T.Deep.Bottom, Rail = T.Deep.Rail,
 	}, {
-		Corner = e("UICorner", { CornerRadius = UDim.new(0, 12) }),
-		Stroke = e("UIStroke", { Thickness = 1, Color = Color3.fromRGB(36, 48, 78) }),
-		Padding = e("UIPadding", {
-			PaddingLeft = UDim.new(0, 14),
-			PaddingRight = UDim.new(0, 14),
-			PaddingTop = UDim.new(0, 10),
-			PaddingBottom = UDim.new(0, 10),
-		}),
-		Title = e("TextLabel", {
-			BackgroundTransparency = 1,
-			Text = props.Title,
-			Font = Enum.Font.GothamBold,
-			TextSize = 11,
-			TextColor3 = Color3.fromRGB(140, 155, 185),
-			TextXAlignment = Enum.TextXAlignment.Left,
-			Size = UDim2.new(1, 0, 0, 14),
-		}),
-		Value = e("TextLabel", {
-			BackgroundTransparency = 1,
-			Text = props.Value,
-			Font = Enum.Font.GothamBlack,
-			TextSize = 22,
-			TextColor3 = props.AccentColor,
-			TextXAlignment = Enum.TextXAlignment.Left,
-			Position = UDim2.fromOffset(0, 16),
-			Size = UDim2.new(1, 0, 0, 26),
-		}),
-		Sub = e("TextLabel", {
-			BackgroundTransparency = 1,
-			Text = props.Subtext,
-			Font = Enum.Font.Gotham,
-			TextSize = 11,
-			TextColor3 = Color3.fromRGB(160, 175, 205),
-			TextXAlignment = Enum.TextXAlignment.Left,
-			Position = UDim2.fromOffset(0, 44),
-			Size = UDim2.new(1, 0, 0, 14),
-		}),
+		Title = Body({ Position = UDim2.fromOffset(14, 10), Size = UDim2.new(1, -28, 0, 15), TextSize = 12, TextColor3 = Grimoire.Text.Muted, Text = props.Title, ZIndex = 3 }),
+		Value = numberLabel({ Position = UDim2.fromOffset(14, 28), Size = UDim2.new(1, -28, 0, 28), TextSize = 26,
+			TextColor3 = props.AccentColor, Text = props.Value, ZIndex = 3 }),
+		Sub = Body({ Position = UDim2.fromOffset(14, 60), Size = UDim2.new(1, -28, 0, 15), TextSize = 12, Text = props.Subtext, ZIndex = 3 }),
 	})
 end
 
 --------------------------------------------------------------------------------
--- 6. Action Button (Reset, Apply, Presets)
+-- 6. Action Button (Reset, Apply, Presets): Action amethyst when primary, slate otherwise.
+-- The label is a child (a gradient on the button itself would tint its text).
 --------------------------------------------------------------------------------
 function SettingsComponents.ActionButton(props: {
 	Text: string,
@@ -384,26 +312,24 @@ function SettingsComponents.ActionButton(props: {
 })
 	local isHovered, setHovered = useState(false)
 	local isPrimary = props.Primary == true
+	local tone = if isPrimary then T.Action else T.Slate
 
-	return e("TextButton", {
+	return Panel({
+		Class = "TextButton",
 		Name = "Btn_" .. props.Text,
 		AutoButtonColor = false,
-		BackgroundColor3 = if isPrimary then props.AccentColor elseif isHovered then Color3.fromRGB(28, 40, 68) else Color3.fromRGB(18, 25, 44),
 		Size = props.Size or UDim2.new(0, 130, 0, 38),
-		Text = props.Text,
-		Font = Enum.Font.GothamBlack,
-		TextSize = 13,
-		TextColor3 = if isPrimary then Color3.fromRGB(10, 15, 25) else Color3.fromRGB(230, 235, 250),
+		Text = "",
+		Radius = 10,
+		Top = tone.Top, Bottom = tone.Bottom,
+		Rail = if isHovered then Color3.fromRGB(255, 240, 190) elseif isPrimary then T.Action.Rail else props.AccentColor,
 		LayoutOrder = props.LayoutOrder or 1,
 		[React.Event.Activated] = props.OnClick,
 		[React.Event.MouseEnter] = function() setHovered(true) end,
 		[React.Event.MouseLeave] = function() setHovered(false) end,
 	}, {
-		Corner = e("UICorner", { CornerRadius = UDim.new(0, 10) }),
-		Stroke = e("UIStroke", {
-			Thickness = 1.2,
-			Color = if isPrimary then props.AccentColor else Color3.fromRGB(45, 60, 95),
-		}),
+		Label = HeavyLabel({ Position = UDim2.fromOffset(6, 4), Size = UDim2.new(1, -12, 1, -8), MaxSize = 15, Outline = 2,
+			Gold = false, Text = props.Text, ZIndex = 3 }),
 	})
 end
 

@@ -9,6 +9,7 @@ local Workspace = game:GetService("Workspace")
 local HeroCard = require(script.Parent:WaitForChild("HeroCard"))
 local StatFormulas = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("StatFormulas"))
 local GothicBoxStyle = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GothicBoxStyle"))
+local GildedGrimoire = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GildedGrimoire"))
 
 local Synth = {}
 Synth.__index = Synth
@@ -115,6 +116,8 @@ function Synth.new(gui: ScreenGui, remote: RemoteFunction)
 		Visible = false, Active = true, ZIndex = 40,
 	}, gui)
 	self.Root = root
+	-- Gilded Grimoire theme: convert this screen's legacy Gotham text (now and as it is rebuilt).
+	GildedGrimoire.Watch(root)
 	applyGothicStyle(root, "Window")
 	self.Scale = new("UIScale", {}, root)
 
@@ -165,7 +168,11 @@ function Synth.new(gui: ScreenGui, remote: RemoteFunction)
 	applyGothicStyle(confirm, "Button")
 	confirm.Activated:Connect(function() self:Confirm() end)
 	self.ConfirmButton = confirm
-	self.ConfirmStroke = confirm:FindFirstChildOfClass("UIStroke")
+	-- Gilded Grimoire: tint the inner gold rail for state; the outer ink outline stays black.
+	self.ConfirmStroke = GildedGrimoire.StateStroke(confirm)
+	-- White label with an ink shadow, like the Summon buttons.
+	confirm.TextStrokeColor3 = Color3.fromRGB(10, 6, 14)
+	confirm.TextStrokeTransparency = 0.15
 
 	self.Status = label(root, "", 13, C.Muted, Enum.Font.GothamMedium)
 	self.Status.Position, self.Status.Size, self.Status.ZIndex = UDim2.fromOffset(40, 550), UDim2.new(1, -80, 0, 40), 42
@@ -176,7 +183,9 @@ function Synth.new(gui: ScreenGui, remote: RemoteFunction)
 		local cam = Workspace.CurrentCamera
 		if not cam then return end
 		local v = cam.ViewportSize
-		self.Scale.Scale = math.clamp(math.min((v.X - 24) / WIDTH, (v.Y - 60) / HEIGHT), 0.45, 1)
+		-- Leave 64 px above the window for The Pit's tab bar (React HUD, Phase 5).
+		self.Scale.Scale = math.clamp(math.min((v.X - 24) / WIDTH, (v.Y - 60 - 64) / HEIGHT), 0.45, 1)
+		root.Position = UDim2.new(0.5, 0, 0.5, 32)
 	end
 	local camConn: RBXScriptConnection? = nil
 	local function track()
@@ -506,9 +515,10 @@ function Synth.Render(self: any)
 	if self.Busy then button.Text = "SYNTHESIZING…"
 	elseif self.ArmedRare then button.Text = "CONFIRM — RARE HEROES WILL BE LOST"
 	else button.Text = "CONFIRM SYNTHESIZE" end
-	button.TextColor3 = (ready or self.Busy) and C.Text or C.Muted
+	button.TextColor3 = (ready or self.Busy) and C.Text or Color3.fromRGB(206, 196, 226)
+	button.TextTransparency = if ready or self.Busy then 0 else 0.15
 	if self.ConfirmStroke then
-		self.ConfirmStroke.Color = self.ArmedRare and C.Danger or C.Line
+		self.ConfirmStroke.Color = if self.ArmedRare then C.Danger elseif ready then Color3.fromRGB(255, 226, 140) else Color3.fromRGB(150, 138, 176)
 	end
 
 	local status, color = self.Message, C.Muted

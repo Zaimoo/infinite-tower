@@ -221,4 +221,21 @@ test("Phase 4: v3 migration stamps rarity, keeps stars, builds the tree and gran
 	assert(profile.Heroes.a.Rarity == 5, "migration is idempotent")
 end)
 
+test("Phase 5: Squad Power sums round(10 x DPS + Health) over deployed heroes only", function()
+	local han = { TemplateId = "hero_han", Stars = 1, Level = 1, QualityScalar = 1, Assignment = "SQUAD_SLOT_1" }
+	local jenna = { TemplateId = "hero_jenna", Stars = 1, Level = 1, QualityScalar = 1, Assignment = "SQUAD_SLOT_2", ComaUntilTimestamp = os.time() + 60 }
+	local benched = { TemplateId = "hero_ignis", Stars = 5, Level = 50, QualityScalar = 1, Assignment = "BENCHED" }
+	local profile = { Heroes = { a = han, b = jenna, c = benched }, Artifacts = {} }
+	local function expected(hero: any): number
+		local v = Stats.GetCombatSnapshot(hero)
+		return math.round(10 * (v.AttackDamage / v.TickInterval) + v.Health)
+	end
+	local total, perHero = Stats.GetSquadPower(profile, 1)
+	assert(perHero.a == expected(han) and perHero.b == expected(jenna), "a downed hero still counts")
+	assert(perHero.c == nil, "benched heroes do not count")
+	assert(total == perHero.a + perHero.b)
+	local boosted = Stats.GetSquadPower(profile, 1.2)
+	assert(boosted > total, "the Training Grounds multiplier raises Squad Power")
+end)
+
 print(string.format("phase4-progression: %d tests passed", passed))
