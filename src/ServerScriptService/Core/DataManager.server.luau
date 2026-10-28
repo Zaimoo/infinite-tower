@@ -21,6 +21,7 @@ local Onboarding = require(Shared:WaitForChild("Util"):WaitForChild("Onboarding"
 local OnboardingService = require(script.Parent:WaitForChild("OnboardingService"))
 local FortressTreeService = require(script.Parent:WaitForChild("FortressTreeService"))
 local ProfileMigrations = require(script.Parent:WaitForChild("ProfileMigrations"))
+local ProfilePersistence = require(script.Parent:WaitForChild("ProfilePersistence"))
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local TycoonRemotes = Remotes:WaitForChild("TycoonGachaRemotes")
@@ -1546,14 +1547,49 @@ FortressTreeService.Init({
 -- 7. PLAYER LIFECYCLE INITIALIZATION
 --============================================================================
 
+local AUTOSAVE_SECONDS = 120
+local persistentPlayers: { [Player]: boolean } = {}
+local releasedPlayers: { [Player]: boolean } = {}
+
+-- Checkpoint save for purchases and other high-value grants. Keeps the session lock.
+function DataManager.SaveProfile(player: Player): boolean
+	local profile = ActiveProfiles[player]
+	if not profile or not persistentPlayers[player] then return false end
+	return ProfilePersistence.Save(player.UserId, profile, false)
+end
+
+local function releaseProfile(player: Player)
+	if releasedPlayers[player] then return end
+	releasedPlayers[player] = true
+	local profile = ActiveProfiles[player]
+	if profile and persistentPlayers[player] then
+		ProfilePersistence.Save(player.UserId, profile, true)
+	end
+end
+
 local function onPlayerAdded(player: Player)
-	local profile = createDefaultPlayerProfile()
+	local loaded = ProfilePersistence.Load(player.UserId, function() return player.Parent == Players end)
+	if not loaded.Ok then
+		if player.Parent == Players then player:Kick("Could not load your save. Please rejoin. (" .. tostring(loaded.Reason) .. ")") end
+		return
+	end
+	if player.Parent ~= Players then
+		-- Left while loading: hand the lock back untouched.
+		if loaded.Persistent and loaded.Data then ProfilePersistence.Save(player.UserId, loaded.Data, true) end
+		return
+	end
+
+	local profile = if type(loaded.Data) == "table" then loaded.Data else createDefaultPlayerProfile()
 	PitService.EnsureDefaults(profile)
 	DataManager.EnsureFacilities(profile)
 	ProfileMigrations.Run(profile)
 	OnboardingService.EnsureState(profile)
 	FortressTreeService.ApplyLevels(profile)
 	ActiveProfiles[player] = profile
+	persistentPlayers[player] = loaded.Persistent or nil
+	releasedPlayers[player] = nil
+	-- Claim the new player's record right away so the first visit survives a crash.
+	if loaded.Persistent and not loaded.Data then task.spawn(DataManager.SaveProfile, player) end
 
 	OfflineRewardService.ProcessLoginRewards(player, profile, DataManager)
 
@@ -1580,11 +1616,43 @@ Players.PlayerRemoving:Connect(function(player: Player)
 	if profile then
 		OfflineRewardService.RecordLogout(player, profile)
 	end
+	releaseProfile(player)
 	pit:Forget(player)
 	FortressTreeService.Forget(player)
 	lastLeaderstatsWrite[player] = nil
 	pendingCombatSync[player] = nil
 	ActiveProfiles[player] = nil
+	persistentPlayers[player] = nil
+	releasedPlayers[player] = nil
+end)
+
+-- Autosave with jitter so six players do not all write on the same tick; refreshes the lock time.
+task.spawn(function()
+	while true do
+		task.wait(AUTOSAVE_SECONDS + math.random() * 15)
+		for player in persistentPlayers do
+			if not releasedPlayers[player] and ActiveProfiles[player] then
+				task.spawn(DataManager.SaveProfile, player)
+				task.wait(1)
+			end
+		end
+	end
+end)
+
+game:BindToClose(function()
+	local pending = 0
+	for player, profile in ActiveProfiles do
+		if persistentPlayers[player] and not releasedPlayers[player] then
+			pending += 1
+			task.spawn(function()
+				OfflineRewardService.RecordLogout(player, profile)
+				releaseProfile(player)
+				pending -= 1
+			end)
+		end
+	end
+	local deadline = os.clock() + 25
+	while pending > 0 and os.clock() < deadline do task.wait(0.1) end
 end)
 
 _G.DataManager = DataManager
