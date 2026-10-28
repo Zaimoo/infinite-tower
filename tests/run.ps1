@@ -59,6 +59,7 @@ $modulePaths = @(
     'ReplicatedStorage/Shared/Util/LootDuel.luau',
     'ReplicatedStorage/Shared/Config/FortressTreeConfig.luau',
     'ReplicatedStorage/Shared/Config/OnboardingConfig.luau',
+    'ReplicatedStorage/Shared/Config/ShopConfig.luau',
     'ReplicatedStorage/Shared/Util/FortressTree.luau',
     'ReplicatedStorage/Shared/Util/SummonLuck.luau',
     'ReplicatedStorage/Shared/Util/Onboarding.luau',

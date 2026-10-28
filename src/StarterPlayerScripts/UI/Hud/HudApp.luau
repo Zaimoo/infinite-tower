@@ -22,6 +22,7 @@ local Whistles = require(script.Parent:WaitForChild("Whistles"))
 local Components = require(script.Parent:WaitForChild("Components"))
 local HeroIndex = require(script.Parent:WaitForChild("HeroIndex"))
 local FacilityPanel = require(script.Parent:WaitForChild("FacilityPanel"))
+local ShopPanel = require(script.Parent:WaitForChild("ShopPanel"))
 
 -- Support facilities shown in the Phase 5 gothic panel.
 local PANEL_FACILITIES = { GuardPost = true, Market = true, TrainingGrounds = true, GodsBlessing = true }
@@ -163,6 +164,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 	local screen, setScreen = React.useState(props.Root.AbsoluteSize)
 	local indexOpen, setIndexOpen = React.useState(false)
 	local facilityOpen, setFacilityOpen = React.useState(nil :: string?)
+	local shopOpen, setShopOpen = React.useState(false)
 	local knownTemplates = React.useRef(nil :: { [string]: boolean }?)
 	local newHeroes, setNewHeroes = React.useState(0)
 
@@ -192,10 +194,18 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 			setIndexOpen(true)
 			setNewHeroes(0)
 		end
-		_G.IsHeroIndexOpen = function() return indexOpen or facilityOpen ~= nil end
+		_G.IsHeroIndexOpen = function() return indexOpen or facilityOpen ~= nil or shopOpen end
 		_G.CloseHeroIndex = function()
 			setIndexOpen(false)
 			setFacilityOpen(nil)
+			setShopOpen(false)
+		end
+		-- Robux Store (Phase 5): the Shop button on the Right Rail.
+		_G.OpenRobuxShop = function()
+			call("OpenMasterModal", "NONE")
+			setIndexOpen(false)
+			setFacilityOpen(nil)
+			setShopOpen(true)
 		end
 		_G.OpenFacilityPanel = function(facility: string): boolean
 			if not PANEL_FACILITIES[facility] then return false end
@@ -203,7 +213,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 			setFacilityOpen(facility)
 			return true
 		end
-	end, { indexOpen, facilityOpen })
+	end, { indexOpen, facilityOpen, shopOpen })
 
 	local profile = Store.Profile
 	local unlocks = profile and profile.Unlocks or {}
@@ -269,6 +279,8 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 	local overdriveBlocked = Whistles.Blocked("Overdrive")
 	local recallBlocked = Whistles.Blocked("Recall")
 	local rightButtons = {
+		{ Icon = "Shop", Label = "Store", Accent = Color3.fromRGB(255, 214, 110), Wiggle = not shopOpen,
+			OnActivated = function() if _G.OpenRobuxShop then _G.OpenRobuxShop() end end },
 		{ Icon = "Overdrive", Label = "Overdrive", Accent = Color3.fromRGB(245, 158, 11), KeyHint = "Q",
 			Cooldown = Whistles.Remaining("Overdrive"), CooldownTotal = Whistles.Cooldown.Overdrive,
 			Disabled = overdriveBlocked ~= nil, OnActivated = function() Whistles.Fire("Overdrive") end },
@@ -326,6 +338,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 		end)(),
 		Facility = if facilityOpen then e(FacilityPanel, { Facility = facilityOpen, Profile = profile, Width = screen.X,
 			OnClose = function() setFacilityOpen(nil) end }) else nil,
+		Shop = if shopOpen then e(ShopPanel, { Profile = profile, Width = screen.X, OnClose = function() setShopOpen(false) end }) else nil,
 		Index = if indexOpen then e(HeroIndex, { Profile = profile, Width = screen.X, OnClose = function() setIndexOpen(false) end }) else nil,
 		}, props.Overlay or props.Root),
 	})

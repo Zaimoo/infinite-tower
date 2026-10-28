@@ -110,10 +110,31 @@ function Components.RailButton(props: {
 	CooldownTotal: number?,
 	Disabled: boolean?,
 	DisabledReason: string?,
+	Wiggle: boolean?, -- a short shake every few seconds (the Store button)
 	OnActivated: () -> (),
 })
 	local Icons = require(script.Parent:WaitForChild("Icons"))
 	local scaleRef = React.useRef(nil)
+	local iconRef = React.useRef(nil)
+	React.useEffect(function()
+		if not props.Wiggle then return nil end
+		local alive = true
+		task.spawn(function()
+			while alive do
+				task.wait(2.6)
+				local icon = iconRef.current
+				if not alive or not icon then continue end
+				-- Shake: quick tilts that settle back to upright.
+				for _, angle in { -14, 12, -9, 6, -3, 0 } do
+					local tw = TweenService:Create(icon, TweenInfo.new(0.06, Enum.EasingStyle.Sine), { Rotation = angle })
+					tw:Play()
+					tw.Completed:Wait()
+					if not alive then return end
+				end
+			end
+		end)
+		return function() alive = false end
+	end, { props.Wiggle })
 	local remaining = props.Cooldown or 0
 	local dim = props.Disabled or remaining > 0
 	local size = props.Size
@@ -135,7 +156,7 @@ function Components.RailButton(props: {
 		[React.Event.MouseLeave] = function() tween(1, 0) end,
 	}, {
 		Scale = e("UIScale", { ref = scaleRef }),
-		Icon = e("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0), Size = UDim2.fromOffset(size, size), BackgroundTransparency = 1 }, {
+		Icon = e("Frame", { ref = iconRef, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0), Size = UDim2.fromOffset(size, size), BackgroundTransparency = 1 }, {
 			Art = e(Icons.Icon, { Name = props.Icon, Size = size, Dim = dim }),
 		}),
 		Label = heavyLabel({

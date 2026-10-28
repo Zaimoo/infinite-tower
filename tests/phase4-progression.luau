@@ -249,4 +249,19 @@ test("Phase 5: Recommended Power starts near a fresh squad and rises biome to bi
 	assert(Floors.RecommendedPower(0) == 0 and Floors.RecommendedPower(99) == 0, "unknown floors have no recommendation")
 end)
 
+test("Phase 5: store summon packs become Gems for players restricted from paid random items", function()
+	local Shop = require(nodes["ReplicatedStorage.Shared.Config.ShopConfig"])
+	local pack = assert(Shop.ById("pack_summon_10"))
+	local safe = Shop.SafeGrant(pack.Grant, true)
+	assert(safe.Kind == "Gems" and safe.Amount == 10 * Shop.GemsPerSummon, "restricted players get Gems")
+	assert(Shop.SafeGrant(pack.Grant, false).Kind == "Summons", "others get the summons")
+	local gems = assert(Shop.ById("gems_550"))
+	assert(Shop.SafeGrant(gems.Grant, true) == gems.Grant, "currency grants are unchanged")
+	for _, list in { Shop.Featured.Offers, Shop.Gems, Shop.Gold } do
+		for _, offer in list do
+			assert(offer.RobuxPrice > 0 and offer.Grant.Amount > 0, offer.Id .. " has a price and a grant")
+		end
+	end
+end)
+
 print(string.format("phase4-progression: %d tests passed", passed))
