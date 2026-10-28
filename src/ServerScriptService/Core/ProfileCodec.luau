@@ -42,9 +42,19 @@ function ProfileCodec.Sanitize(profile: any): any
 	return out
 end
 
+-- Studio play sessions get a fresh "studio-" JobId each run and are often killed before the release
+-- lands, so a Studio session may take over another Studio lock. Live servers use GUID JobIds.
+local function isStudioJob(jobId: string): boolean return string.sub(jobId, 1, 7) == "studio-" end
+
+function ProfileCodec.OwnsLock(lock: Lock?, jobId: string): boolean
+	if not lock then return true end
+	return lock.JobId == jobId or (isStudioJob(lock.JobId) and isStudioJob(jobId))
+end
+
 function ProfileCodec.IsLockedByOther(record: Record?, jobId: string, now: number): boolean
 	local lock = record and record.Lock
-	if not lock or lock.JobId == jobId then return false end
+	if ProfileCodec.OwnsLock(lock, jobId) then return false end
+	assert(lock)
 	return now - (lock.Time or 0) < ProfileCodec.LockTimeoutSeconds
 end
 
@@ -59,8 +69,7 @@ end
 -- UpdateAsync transform for saving. Cancels (nil) if this server lost the lock, so a stale server
 -- can never overwrite progress made elsewhere. `release` clears the lock on leave/shutdown.
 function ProfileCodec.Write(record: Record?, jobId: string, now: number, data: any, release: boolean): Record?
-	local lock = record and record.Lock
-	if lock and lock.JobId ~= jobId then return nil end
+	if not ProfileCodec.OwnsLock(record and record.Lock, jobId) then return nil end
 	return { Data = data, Lock = if release then nil else { JobId = jobId, Time = now }, SavedAt = now }
 end
 
