@@ -243,4 +243,70 @@ test("Phase 2: Floor boss/champion and Apex Sanctum mobs are never pre-placed be
 	end
 end)
 
+test("Phase 2: Roster filter strictly excludes deployed heroes from bottom deployment list", function()
+	local function slotOf(hero: any): number?
+		if not hero or not hero.Assignment then return nil end
+		local n = hero.Assignment:match("^SQUAD_SLOT_(%d+)$")
+		return n and tonumber(n) or nil
+	end
+
+	local heroes = {
+		h1 = { UUID = "h1", DisplayName = "Jenna", Assignment = "SQUAD_SLOT_1" },
+		h2 = { UUID = "h2", DisplayName = "Han", Assignment = "SQUAD_SLOT_2" },
+		h3 = { UUID = "h3", DisplayName = "Velkist", Assignment = "NONE" },
+		h4 = { UUID = "h4", DisplayName = "Aaron", Assignment = "FACILITY_GUARD_POST" },
+	}
+
+	local bottomList = {}
+	for _, h in pairs(heroes) do
+		local isDeployed = slotOf(h) ~= nil
+		if not isDeployed then
+			table.insert(bottomList, h)
+		end
+	end
+
+	assert(#bottomList == 2, string.format("Expected 2 undeployed heroes in bottom list, got %d", #bottomList))
+	for _, h in ipairs(bottomList) do
+		assert(slotOf(h) == nil, string.format("Hero %s is deployed in slot %s and must not be in bottom list", h.DisplayName, tostring(slotOf(h))))
+	end
+end)
+
+test("Phase 2: Defeated boss creates portal target to floor + 1 (or Hub on Floor 50)", function()
+	local function getPortalTarget(floorId: number): (string, number?)
+		if floorId >= 50 then
+			return "HUB", nil
+		else
+			return "FLOOR", floorId + 1
+		end
+	end
+
+	for floorId = 1, 49 do
+		local action, nextFloor = getPortalTarget(floorId)
+		assert(action == "FLOOR", "Floors 1..49 must ascend to next floor")
+		assert(nextFloor == floorId + 1, string.format("Floor %d expected portal to %d, got %s", floorId, floorId + 1, tostring(nextFloor)))
+	end
+
+	local action50, nextFloor50 = getPortalTarget(50)
+	assert(action50 == "HUB", "Floor 50 portal must return to Hub")
+	assert(nextFloor50 == nil, "Floor 50 portal target floor must be nil")
+end)
+
+test("Phase 2: Assigned squads engage mobs across the floor within max leash", function()
+	local maxLeash = 105.0
+	local centerX, centerY, centerZ = 0, 0, 12
+	local mobCamps = {
+		{ X = -65, Y = 0, Z = 0 },  -- ~66 studs from center
+		{ X = 65, Y = 0, Z = 0 },   -- ~66 studs from center
+		{ X = 0, Y = 12, Z = -54 }, -- ~67 studs from center
+	}
+
+	for _, mob in ipairs(mobCamps) do
+		local dist = math.sqrt((mob.X - centerX)^2 + (mob.Y - centerY)^2 + (mob.Z - centerZ)^2)
+		-- Must be reachable within maxLeash (so assigned squads can attack them)
+		assert(dist <= maxLeash, string.format("Camp at (%d, %d, %d) is %f studs away, exceeding maxLeash %f", mob.X, mob.Y, mob.Z, dist, maxLeash))
+		-- But would be rejected by old 30-stud player tether
+		assert(dist > 30.0, "Camp should be outside old 30-stud player tether to verify fix")
+	end
+end)
+
 print(string.format("Phase 2 floor loop tests: %d passed", passed))

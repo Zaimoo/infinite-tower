@@ -1963,13 +1963,15 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 					if isSlotted then
 						local idx = table.find(self.FodderUUIDs, uuid)
 						if idx then table.remove(self.FodderUUIDs, idx) end
+						self:RenderUpgradeView()
+						self:OpenDrawer("FODDER")
 					else
 						if #self.FodderUUIDs < req then
 							table.insert(self.FodderUUIDs, uuid)
 						end
+						self:ClosePicker()
+						self:RenderUpgradeView()
 					end
-					self:RenderUpgradeView()
-					self:OpenDrawer("FODDER")
 				end)
 			end
 		end

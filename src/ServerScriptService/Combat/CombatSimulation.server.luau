@@ -6,6 +6,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
+local HttpService = game:GetService("HttpService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormulas"))
@@ -328,6 +329,24 @@ local function getMasterRootPosition(player: Player): Vector3?
 	return hrp and hrp.Position or nil
 end
 
+local function getMasterGroundPosition(player: Player): Vector3?
+	local char = player.Character
+	if not char then return nil end
+	local hrp = char:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if not hrp then return nil end
+	local ground = HeroNavigation.Ground(hrp.Position, nil, 3, 50)
+	return ground or (hrp.Position - Vector3.new(0, 3, 0))
+end
+
+local function isPlayerJumping(player: Player): boolean
+	local char = player.Character
+	if not char then return false end
+	local hum = char:FindFirstChildOfClass("Humanoid")
+	local hrp = char:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if not hum or not hrp then return false end
+	return hum.FloorMaterial == Enum.Material.Air and hrp.AssemblyLinearVelocity.Y > 2.5
+end
+
 -- Refresh progression without rebuilding entities, resetting cooldowns, or healing.
 -- Facility output reads StatFormulas from profile data on its existing 1 Hz loop.
 function CombatSimulation.RefreshPlayerHeroStats(player: Player)
@@ -378,7 +397,7 @@ function CombatSimulation.RebuildPlayerSquad(player: Player)
 
 	local towerState=Tower.GetState(player)
  local room=Tower.GetRoom(towerState.SquadFloorId) or Tower.GetRoom(0)
- local masterPos=towerState.SquadAssignment and (room.Origin+FirstBiome.AnchorLocal+Vector3.new(0,3,0)) or getMasterRootPosition(player) or room.Arrival.Position
+ local masterPos=towerState.SquadAssignment and (room.Origin+FirstBiome.AnchorLocal+Vector3.new(0,3,0)) or getMasterGroundPosition(player) or room.Arrival.Position
 		local desiredUUIDs: { [string]: number } = {}
 
 	for slot = 1, 5 do
@@ -1913,9 +1932,20 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 	end
  local squadState=Tower.GetState(simHero.Owner)
  local assignedRoom=squadState.SquadAssignment and Tower.GetRoom(squadState.SquadFloorId)
- local masterPos=assignedRoom and (assignedRoom.Origin+FirstBiome.AnchorLocal+Vector3.new(0,3,0)) or getMasterRootPosition(simHero.Owner)
+ local masterPos=assignedRoom and (assignedRoom.Origin+FirstBiome.AnchorLocal+Vector3.new(0,3,0)) or getMasterGroundPosition(simHero.Owner)
 	if not masterPos then
 		return
+	end
+
+	-- Jump imitation: when the player jumps, squadmates perform a coordinated jump arc
+	if not assignedRoom and isPlayerJumping(simHero.Owner) and simHero.State ~= "COMA" then
+		if not simHero.JumpEnd or now >= simHero.JumpEnd then
+			simHero.JumpStart = now + (simHero.SlotIndex - 1) * 0.05
+			simHero.JumpDuration = 0.65
+			simHero.JumpHeight = 4.8
+			simHero.JumpEnd = simHero.JumpStart + simHero.JumpDuration
+			simHero.GroundBaseY = simHero.Position.Y
+		end
 	end
 
 	local dm = getDataManager()
@@ -1946,7 +1976,7 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 	-- Hero movement speed is fixed to the player's Humanoid WalkSpeed (16 normal, 48 sprint, or relic penalties)
 	local ownerChar = simHero.Owner.Character
 	local ownerHum = ownerChar and ownerChar:FindFirstChildOfClass("Humanoid")
-	local playerSpeed = if ownerHum then ownerHum.WalkSpeed else 16.0
+	local playerSpeed = if assignedRoom then 16.0 elseif ownerHum then ownerHum.WalkSpeed else 16.0
 	simHero.MoveSpeed = playerSpeed
 	local isOverdrive = now < simHero.OverdriveUntil
 	local currentMoveSpeed = playerSpeed * (isOverdrive and 1.20 or 1.0)
@@ -1955,8 +1985,13 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 	if targetMob then
 		local distMasterToMob = getHorizontalDistance(masterPos, targetMob.Position)
 		local distHeroToMaster = getHorizontalDistance(simHero.Position, masterPos)
-		-- Master must be within enemy radius (30.0 studs) for heroes to fight; if master moves away, disengage immediately
-		if distMasterToMob > 30.0 or distHeroToMaster > 35.0 then
+		-- Master must be within enemy radius (30.0 studs) for heroes to fight; if master moves away, disengage immediately.
+		-- For assigned squads, heroes roam the floor up to maxLeash.
+		if not assignedRoom and (distMasterToMob > 30.0 or distHeroToMaster > 35.0) then
+			simHero.TargetNetId = nil
+			simHero.State = "FOLLOW_MASTER"
+			targetPos, targetMob, targetEnemyHero = nil, nil, nil
+		elseif assignedRoom and distMasterToMob > maxLeash then
 			simHero.TargetNetId = nil
 			simHero.State = "FOLLOW_MASTER"
 			targetPos, targetMob, targetEnemyHero = nil, nil, nil
@@ -1964,25 +1999,42 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 	end
 
 	if not targetPos and not isPacified then
-		-- Heroes follow player at all times unless player is within radius of an enemy
-		local combatRadius = 28.0
-		local nearestDist = combatRadius
-		local nearestMobId: number? = nil
-		for netId, mob in pairs(ActiveMobsByNetId) do
-			if mob.IsAlive and Tower.Same(simHero,mob) and not Tower.GetSafety(mob,mob.Position).CombatSafe and math.abs(mob.Position.Y - simHero.Position.Y) < 12 and math.abs(mob.Position.Y - masterPos.Y) < 12 then
-				local d = getHorizontalDistance(masterPos, mob.Position)
-				if d <= nearestDist then
-					nearestDist = d
-					nearestMobId = netId
+		-- For assigned squads, assist squadmates that already have an active target
+		if assignedRoom and masterState then
+			for _, ally in pairs(masterState.DeployedHeroes) do
+				if ally.TargetNetId and ActiveMobsByNetId[ally.TargetNetId] and ActiveMobsByNetId[ally.TargetNetId].IsAlive then
+					simHero.TargetNetId = ally.TargetNetId
+					targetPos, targetMob, targetEnemyHero = resolveTargetPositionAndAlive(simHero)
+					if targetPos then
+						simHero.State = "MOVE_TO_TARGET"
+						break
+					end
 				end
 			end
 		end
-		if nearestMobId then
-			simHero.TargetNetId = nearestMobId
-			targetPos, targetMob, targetEnemyHero = resolveTargetPositionAndAlive(simHero)
-			simHero.State = "MOVE_TO_TARGET"
-		else
-			simHero.State = "FOLLOW_MASTER"
+
+		if not targetPos then
+			local combatRadius = if assignedRoom then maxLeash else 28.0
+			local nearestDist = combatRadius
+			local nearestMobId: number? = nil
+			for netId, mob in pairs(ActiveMobsByNetId) do
+				if mob.IsAlive and Tower.Same(simHero,mob) and not Tower.GetSafety(mob,mob.Position).CombatSafe then
+					if math.abs(mob.Position.Y - simHero.Position.Y) < 30 and (not assignedRoom or math.abs(mob.Position.Y - masterPos.Y) < 35) then
+						local d = if assignedRoom then getHorizontalDistance(simHero.Position, mob.Position) else getHorizontalDistance(masterPos, mob.Position)
+						if d <= nearestDist then
+							nearestDist = d
+							nearestMobId = netId
+						end
+					end
+				end
+			end
+			if nearestMobId then
+				simHero.TargetNetId = nearestMobId
+				targetPos, targetMob, targetEnemyHero = resolveTargetPositionAndAlive(simHero)
+				simHero.State = "MOVE_TO_TARGET"
+			else
+				simHero.State = "FOLLOW_MASTER"
+			end
 		end
 	end
 
@@ -2026,6 +2078,17 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 				HeroNavigation.Step(simHero, goalPos, followSpeed * dt, now)
 			end
 		end
+
+		-- Apply jump arc if jumping
+		if simHero.JumpStart and now >= simHero.JumpStart and now < simHero.JumpEnd then
+			local jumpP = (now - simHero.JumpStart) / simHero.JumpDuration
+			local jumpArc = 4 * (simHero.JumpHeight or 4.8) * jumpP * (1 - jumpP)
+			simHero.Position = Vector3.new(simHero.Position.X, (simHero.GroundBaseY or simHero.Position.Y) + jumpArc, simHero.Position.Z)
+		else
+			simHero.GroundBaseY = simHero.Position.Y
+			simHero.JumpStart = nil
+			simHero.JumpEnd = nil
+		end
 		return
 	end
 
@@ -2034,6 +2097,17 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 		simHero.State = "MOVE_TO_TARGET"
 		local stepDist = math.min(math.max(.5, distToTarget - simHero.AttackRange * .85), currentMoveSpeed * dt)
 		HeroNavigation.Step(simHero, targetPos, stepDist, now)
+
+		-- Apply jump arc if jumping while moving
+		if simHero.JumpStart and now >= simHero.JumpStart and now < simHero.JumpEnd then
+			local jumpP = (now - simHero.JumpStart) / simHero.JumpDuration
+			local jumpArc = 4 * (simHero.JumpHeight or 4.8) * jumpP * (1 - jumpP)
+			simHero.Position = Vector3.new(simHero.Position.X, (simHero.GroundBaseY or simHero.Position.Y) + jumpArc, simHero.Position.Z)
+		else
+			simHero.GroundBaseY = simHero.Position.Y
+			simHero.JumpStart = nil
+			simHero.JumpEnd = nil
+		end
 	else
 		simHero.State = "ATTACKING"
 		local delta = targetPos - simHero.Position
@@ -2092,6 +2166,136 @@ local function summonFloorBoss(player: Player, progress: TowerProgress.PlayerFlo
  elseif bossMob then
   dm.SendToast(player, string.format("Floor %d Boss Summoned! Defeat it to unlock Floor %d!", floorId, floorId + 1), "WARN")
  end
+end
+
+local function spawnFloorAscensionPortal(floorId: number, position: Vector3)
+	local room = Tower.GetRoom(floorId)
+	if not room or not room.Model then return end
+	if room.Model:FindFirstChild("FloorAscensionPortal") then return end
+
+	local nextFloorId = floorId + 1
+	local isMaxFloor = floorId >= 50
+	local groundPos = HeroNavigation.Ground(position, nil, 4, 30) or position
+
+	local portalModel = Instance.new("Model")
+	portalModel.Name = "FloorAscensionPortal"
+
+	-- Stone base plinth
+	local plinth = Instance.new("Part")
+	plinth.Name = "PortalPlinth"
+	plinth.Size = Vector3.new(12, 1.2, 12)
+	plinth.CFrame = CFrame.new(groundPos + Vector3.new(0, 0.6, 0))
+	plinth.Anchored = true
+	plinth.CanCollide = true
+	plinth.Material = Enum.Material.Slate
+	plinth.Color = Color3.fromRGB(34, 28, 48)
+	plinth.Parent = portalModel
+
+	-- Glowing outer arch
+	local arch = Instance.new("Part")
+	arch.Name = "PortalArch"
+	arch.Shape = Enum.PartType.Cylinder
+	arch.Size = Vector3.new(0.8, 11, 11)
+	arch.CFrame = CFrame.new(groundPos + Vector3.new(0, 6.5, 0)) * CFrame.Angles(0, 0, math.rad(90))
+	arch.Anchored = true
+	arch.CanCollide = false
+	arch.Material = Enum.Material.Neon
+	arch.Color = Color3.fromRGB(80, 215, 255)
+	arch.Parent = portalModel
+
+	-- Glowing inner vortex
+	local vortex = Instance.new("Part")
+	vortex.Name = "PortalVortex"
+	vortex.Shape = Enum.PartType.Cylinder
+	vortex.Size = Vector3.new(0.4, 9.2, 9.2)
+	vortex.CFrame = CFrame.new(groundPos + Vector3.new(0, 6.5, 0)) * CFrame.Angles(0, 0, math.rad(90))
+	vortex.Anchored = true
+	vortex.CanCollide = false
+	vortex.Transparency = 0.25
+	vortex.Material = Enum.Material.Neon
+	vortex.Color = Color3.fromRGB(50, 160, 255)
+	vortex.Parent = portalModel
+
+	local light = Instance.new("PointLight")
+	light.Color = Color3.fromRGB(100, 220, 255)
+	light.Range = 24
+	light.Brightness = 2.8
+	light.Parent = vortex
+
+	local pe = Instance.new("ParticleEmitter")
+	pe.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(160, 240, 255)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(60, 120, 255)),
+	})
+	pe.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.7),
+		NumberSequenceKeypoint.new(1, 0),
+	})
+	pe.Rate = 28
+	pe.Speed = NumberRange.new(2, 6)
+	pe.Lifetime = NumberRange.new(0.8, 1.8)
+	pe.Parent = vortex
+
+	-- Interaction trigger
+	local trigger = Instance.new("Part")
+	trigger.Name = "PortalTrigger"
+	trigger.Size = Vector3.new(8, 10, 8)
+	trigger.CFrame = CFrame.new(groundPos + Vector3.new(0, 5.5, 0))
+	trigger.Anchored = true
+	trigger.CanCollide = false
+	trigger.Transparency = 1
+	trigger.Parent = portalModel
+	portalModel.PrimaryPart = trigger
+
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = "AscendPrompt"
+	prompt.ActionText = if isMaxFloor then "Return to Hub" else string.format("Ascend to Floor %d", nextFloorId)
+	prompt.ObjectText = "Floor Portal"
+	prompt.KeyboardKeyCode = Enum.KeyCode.E
+	prompt.HoldDuration = 0.35
+	prompt.MaxActivationDistance = 15
+	prompt.RequiresLineOfSight = false
+	prompt.Parent = trigger
+
+	local portalDebounce: { [Player]: number } = {}
+	local function activatePortal(player: Player)
+		local now = os.clock()
+		if (portalDebounce[player] or 0) > now then return end
+		portalDebounce[player] = now + 4.0
+
+		local pState = Tower.GetState(player)
+		if not pState or pState.FloorId ~= floorId then return end
+		if Tower.IsTransitioning(player) then return end
+
+		if isMaxFloor then
+			Tower.ReturnToHub(player, {
+				ContractVersion = 1,
+				RequestId = HttpService:GenerateGUID(false),
+				CharacterGeneration = pState.CharacterGeneration,
+				ExpectedLocationRevision = pState.LocationRevision,
+				ExpectedSquadRevision = pState.SquadRevision,
+			})
+		else
+			Tower.VisitFloor(player, nextFloorId, {
+				ContractVersion = 1,
+				RequestId = HttpService:GenerateGUID(false),
+				CharacterGeneration = pState.CharacterGeneration,
+				ExpectedLocationRevision = pState.LocationRevision,
+				ExpectedSquadRevision = pState.SquadRevision,
+			})
+		end
+	end
+
+	prompt.Triggered:Connect(activatePortal)
+	trigger.Touched:Connect(function(hit)
+		local char = hit.Parent
+		local player = Players:GetPlayerFromCharacter(char)
+		if player then
+			activatePortal(player)
+		end
+	end)
+
+	portalModel.Parent = room.Model
 end
 local function squadCount(player: Player): number
  local state=ActiveMasters[player];local n=0
@@ -2296,6 +2500,7 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
       end
      end
     end
+    spawnFloorAscensionPortal(mob.FloorId, mob.Position)
     -- Players who earned this boss through their own threshold but fell short of 3% damage
     -- keep their earned summon: a fresh boss appears for them once this one is cleaned up.
     for p, progress in pairs(ActivePlayerProgress) do

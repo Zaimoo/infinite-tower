@@ -704,7 +704,8 @@ function SquadController.Refresh(self: any)
 	local power: { [string]: number } = {}
 	for _, h in pairs(profile.Heroes) do
 		power[h.UUID] = powerOf(profile, h, mult)
-		if not self.AvailableOnly or (restingSeconds(h) == 0 and not slotOf(h)) then
+		local isDeployed = slotOf(h) ~= nil
+		if not isDeployed and (not self.AvailableOnly or restingSeconds(h) == 0) then
 			table.insert(list, h)
 		end
 	end
@@ -718,7 +719,9 @@ function SquadController.Refresh(self: any)
 	self.RosterHeader.Text = if self.ChoosingSlot then string.format("CHOOSE A HERO FOR SLOT %d", self.ChoosingSlot)
 		else string.format("HEROES  (%d)", #list)
 	self.EmptyLabel.Visible = #list == 0
-	self.EmptyLabel.Text = if self.AvailableOnly then "Every ready hero is already deployed." else "No heroes yet. Summon heroes at the Summoning Altar!"
+	self.EmptyLabel.Text = if self.AvailableOnly then "Every ready hero is already deployed."
+		elseif deployed > 0 then "All available heroes are currently deployed in your squad."
+		else "No heroes yet. Summon heroes at the Summoning Altar!"
 
 	local seen: { [string]: boolean } = {}
 	for order, hero in ipairs(list) do

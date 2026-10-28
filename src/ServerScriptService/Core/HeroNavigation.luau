@@ -64,15 +64,29 @@ local function walkSegment(from: Vector3, toward: Vector3, distance: number, gro
 	for _ = 1, steps do
 		local candidate = at + direction * (travel / steps)
 		local ground = Navigation.Ground(candidate, group)
-		if not ground then return at, false end
+		if not ground then
+			-- If ordinary ground probe missed, check if entity is airborne over a lower floor/ramp
+			local deepGround = Navigation.Ground(candidate, group, 2.0, 45)
+			if deepGround and deepGround.Y < at.Y then
+				local stepDown = math.min(at.Y - deepGround.Y, math.max(MAX_DROP, 18 * (travel / distance)))
+				local nextY = at.Y - stepDown
+				if nextY - deepGround.Y < 0.5 then
+					ground = deepGround
+				else
+					ground = Vector3.new(candidate.X, nextY, candidate.Z)
+				end
+			else
+				return at, false
+			end
+		end
 		local delta = ground - at
 		-- Raise the sweep above small walkable steps; the ground probe limits step height.
 		local hit = Workspace:Blockcast(CFrame.new(at + Vector3.new(0, 3.5, 0)), Vector3.new(RADIUS * 2, 2.5, RADIUS * 2), delta, params)
 		if hit then return at, false end
 		-- Probe the leading edges so formations cannot walk off narrow bridges into the void.
 		local across = Vector3.new(-direction.Z, 0, direction.X) * (RADIUS * .8)
-		local gA = Navigation.Ground(ground + across, group, 1.5, 3.5)
-		local gB = Navigation.Ground(ground - across, group, 1.5, 3.5)
+		local gA = Navigation.Ground(ground + across, group, 2.0, 30)
+		local gB = Navigation.Ground(ground - across, group, 2.0, 30)
 		if not gA and not gB then return at, false end
 		at = ground
 	end
@@ -98,8 +112,8 @@ end
 
 function Navigation.PlaceNear(masterRoot: Vector3, offset: Vector3, group: string?): Vector3
 	local feet = masterRoot - Vector3.new(0, 3, 0)
-	local base = Navigation.Ground(feet, group, 3, 8) or feet
-	local desired = Navigation.Ground(base + offset, group)
+	local base = Navigation.Ground(feet, group, 4, 50) or feet
+	local desired = Navigation.Ground(base + offset, group, 4, 20)
 	if desired and clearRoute(base, desired, group or "Default") then return desired end
 	return base
 end
@@ -208,6 +222,16 @@ function Navigation.Step(hero: any, goal: Vector3, distance: number, now: number
 	local state = states[hero]
 	if not state then state = {NextRequest = 0, Index = 2, BlockedCount = 0}; states[hero] = state end
 	local group = groupFor(hero)
+
+	-- Ground recovery: if entity is suspended in the air without active jump, descend toward ground
+	local directGround = Navigation.Ground(hero.Position, group, 2.0, 50)
+	if directGround and hero.Position.Y > directGround.Y + 0.3 then
+		if not hero.JumpEnd or now >= hero.JumpEnd then
+			local fallSpeed = 45.0
+			local stepFall = math.min(hero.Position.Y - directGround.Y, fallSpeed * 0.2)
+			hero.Position = Vector3.new(hero.Position.X, hero.Position.Y - stepFall, hero.Position.Z)
+		end
+	end
  if not state.TowerGoal or (state.TowerGoal - goal).Magnitude > 14 then
   state.TowerGoal = goal
   state.TowerRoute = towerRoute(hero,goal)
