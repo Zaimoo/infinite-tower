@@ -239,16 +239,15 @@ FacilityConfig.FacilityLayout = {
 		RotationY = math.rad(180),
 		Radius = 18,
 		PromptText = "Blacksmith Forge",
-		Keybind = if Enum then Enum.KeyCode.E else ("E" :: any),
+		Keybind = if Enum then Enum.KeyCode.F else ("F" :: any), -- F, so it never competes with the [E] Recall hotkey
 	},
 	SynthesisChamber = {
 		Offset = Vector3.new(-68, 0, -34),
 		RotationY = math.rad(42),
 		Radius = 28,
-		PromptText = "The Pit (Synthesis)",
-		Keybind = if Enum then Enum.KeyCode.E else ("E" :: any),
-		SecondaryPromptText = "Promotion Altar",
-		SecondaryKeybind = if Enum then Enum.KeyCode.F else ("F" :: any),
+		-- One prompt for the whole Pit; Synthesis and Promotion are tabs inside its screen.
+		PromptText = "Synthesis & Promotion",
+		Keybind = if Enum then Enum.KeyCode.F else ("F" :: any),
 	},
 	TrainingArea = {
 		Offset = Vector3.new(-58, 0, 46),

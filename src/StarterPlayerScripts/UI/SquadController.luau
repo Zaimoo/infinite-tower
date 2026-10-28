@@ -8,6 +8,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local HeroCard = require(script.Parent:WaitForChild("HeroCard"))
 local GothicBoxStyle = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GothicBoxStyle"))
+local GildedGrimoire = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GildedGrimoire"))
+local GrimoireIcons = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GrimoireIcons"))
 local FortressTree = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("FortressTree"))
 
 local SquadController = {}
@@ -256,7 +258,7 @@ function SquadController.new(screenGui: ScreenGui, getProfile: () -> any, remote
 			ZIndex = 34,
 		}, col)
 		GothicBoxStyle.Apply(card, { Style = "Card" })
-		local cardStroke = card:FindFirstChildOfClass("UIStroke")
+		local cardStroke = GildedGrimoire.StateStroke(card)
 
 		-- Outer Glow for Selected Slot State
 		local glowFrame = new("Frame", {
@@ -435,7 +437,7 @@ function SquadController.new(screenGui: ScreenGui, getProfile: () -> any, remote
 		Position = UDim2.new(0, 0, 0.5, 0),
 		Size = UDim2.new(0, 210, 0, 40),
 		BackgroundColor3 = C.ButtonBg,
-		Text = "⚡ AUTO-SWAP RESTED",
+		Text = "AUTO-SWAP RESTED",
 		Font = GothicBoxStyle.Font.LegacyFont or Enum.Font.GothamBold,
 		TextSize = 11,
 		TextColor3 = C.Green,
@@ -555,7 +557,7 @@ function SquadController.Refresh(self: any)
 	self.ActiveSquadHeader.Text = string.format("ACTIVE SQUAD (%d/%d)", activeCount, open)
 	if not (profile.Unlocks and profile.Unlocks.Squad) then
 		-- Phase 4 onboarding: squad changes open with the first summon.
-		self.ActiveSquadHeader.Text ..= "  ·  🔒 Summon your first hero to change your squad"
+		self.ActiveSquadHeader.Text ..= "  ·  Summon your first hero to change your squad"
 	end
 
 	-- Render 5 Active Slots (Only rebuild portrait if hero UUID changed!)
@@ -576,16 +578,11 @@ function SquadController.Refresh(self: any)
 			end
 
 			if locked then
-				new("TextLabel", {
-					Name = "LockedSlot",
-					Size = UDim2.fromScale(1, 1),
-					BackgroundTransparency = 1,
-					Text = "🔒",
-					Font = Enum.Font.GothamMedium,
-					TextSize = 30,
-					TextColor3 = C.TextDim,
-					ZIndex = 36,
-				}, slotData.Portrait)
+				-- Drawn Gilded Grimoire padlock for slots the Fortress Tree has not opened yet.
+				local lock = GrimoireIcons.Create("Lock", 40, slotData.Portrait, 36)
+				lock.Name = "LockedSlot"
+				lock.AnchorPoint = Vector2.new(0.5, 0.5)
+				lock.Position = UDim2.fromScale(0.5, 0.5)
 			elseif hero then
 				HeroCard.Portrait(slotData.Portrait, hero)
 			else
@@ -661,7 +658,7 @@ function SquadController.Refresh(self: any)
 				ZIndex = 34,
 			}, self.RosterScroll)
 			GothicBoxStyle.Apply(card, { Style = "Card" })
-		local cardStroke = card:FindFirstChildOfClass("UIStroke")
+		local cardStroke = GildedGrimoire.StateStroke(card)
 
 			local portraitFrame = new("Frame", {
 				Name = "PortraitHost",

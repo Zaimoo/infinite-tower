@@ -28,7 +28,7 @@ The current game experience suffers from three core friction points:
 ### 2.1 Combat & Squad Rules
 - **Squad Composition:** Up to 5 summoned heroes deployed with the Master.
 - **Fully Hands-Off (Zero-Input Combat):** Heroes execute basic attacks, special abilities, and ultimates automatically upon gauge readiness.
-- **Removal of Q/E Whistles:** Legacy `[Q]` Overdrive Whistle and `[E]` Emergency Recall Whistle are completely removed from controls and HUD. The Master focuses entirely on movement, exploration, and spatial positioning.
+- **Q/E Whistles Kept:** The `[Q]` Overdrive Whistle and `[E]` Emergency Recall Whistle stay as optional active tools, on the HUD's Right Rail and bound to `Q`/`E` on Tower floors (Phase 5 §2.1). Combat itself remains automatic.
 - **Fast-Paced Combat Pacing:**
   - Standard mob TTK (time-to-kill): ~1.5 to 2.5 seconds per squad focus.
   - Elite mob TTK: ~6 to 10 seconds.
@@ -131,12 +131,15 @@ These rules match `GAME_DESIGN.MD` §4.1 and §4.3, and are specified in `rework
   - Touch targets guaranteed $\ge 44 \times 44\text{ px}$.
   - Full console / gamepad `Selectable` and D-pad navigation compatibility.
 
-### 5.2 Clean HUD Contract (Max 4 Persistent Elements)
+### 5.2 Clean HUD Contract (Seven Fixed Zones)
 1. **Top-Center:** Personal **Floor Progress Bar** (swaps to Boss Health Bar during boss encounters).
 2. **Top-Left:** Consolidated **Currencies** (Gold, Gems) with large readable numbers and delta animations.
 3. **Top-Right (or Below Currencies):** Pinned **Next Goal Tracker** card with objective progress.
-4. **Bottom-Center:** Clean **Navigation Toolbar** with labelled icons (Squad, Summon, Forge, Facilities, Tower) and notification badges.
-- *Removed from HUD:* Q/E Whistle buttons, persistent World Boss stat tables, and redundant bottom-left currency clusters.
+4. **Left Rail:** Menu buttons (Summon, Squad, Forge, Fortress, Index) with notification badges.
+5. **Right Rail:** Combat buttons (Overdrive `Q`, Recall `E`, Tower) with cooldown sweeps, anchored below the Next Goal card.
+6. **Bottom-Left:** Live **Squad Status Card**, one row per open squad slot.
+7. **Bottom-Right:** **Squad Power** badge for the active squad. The Roblox player list also shows every player's highest cleared **Floor** and **Power**.
+- *Removed from HUD:* the single bottom-centre toolbar, persistent World Boss stat tables, and redundant bottom-left currency clusters. Zones never overlap (Phase 5 §2).
 
 ---
 

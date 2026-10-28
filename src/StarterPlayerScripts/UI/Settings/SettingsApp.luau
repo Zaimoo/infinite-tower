@@ -24,6 +24,13 @@ local Toggle = SettingsComponents.Toggle
 local TabButton = SettingsComponents.TabButton
 local StatCard = SettingsComponents.StatCard
 local ActionButton = SettingsComponents.ActionButton
+-- Gilded Grimoire building blocks (shared with the Phase 5 HUD).
+local Panel = SettingsComponents.Panel
+local HeavyLabel = SettingsComponents.HeavyLabel
+local Body = SettingsComponents.Body
+local Grimoire = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GildedGrimoire"))
+local Icons = require(script.Parent.Parent:WaitForChild("Hud"):WaitForChild("Icons"))
+local Tones = Grimoire.Tones
 
 local LocalPlayer = Players.LocalPlayer
 
@@ -45,7 +52,7 @@ local function SettingsApp()
 	local statusMsg, setStatusMsg = useState("Ready. Adjust any parameter with live preview.")
 	local settings, setSettings = useState(table.clone(SettingsConfig.DEFAULTS))
 
-	local theme = SettingsConfig.THEMES[settings.Theme] or SettingsConfig.THEMES.Cyan
+	local theme = SettingsConfig.THEMES[settings.Theme] or SettingsConfig.THEMES.Gold
 	local accent = theme.Accent
 
 	----------------------------------------------------------------------------
@@ -326,15 +333,12 @@ local function SettingsApp()
 				Subtitle = "Infinite Towers • Client Runtime Synced",
 				LayoutOrder = 3,
 				Children = {
-					Info = e("TextLabel", {
-						BackgroundTransparency = 1,
+					Info = Body({
 						Text = "Every slider and toggle updates the live engine instantly. Use the tabs on the left to fine-tune sound channels, post-processing shaders, input scale, and UI palette themes.",
-						Font = Enum.Font.Gotham,
-						TextSize = 13,
-						TextColor3 = Color3.fromRGB(180, 195, 220),
+						TextSize = 14,
 						TextWrapped = true,
-						TextXAlignment = Enum.TextXAlignment.Left,
-						Size = UDim2.new(1, 0, 0, 40),
+						TextTruncate = Enum.TextTruncate.None,
+						Size = UDim2.new(1, 0, 0, 44),
 						LayoutOrder = 2,
 					}),
 				},
@@ -497,27 +501,17 @@ local function SettingsApp()
 			end,
 		}),
 
-		-- Centered Settings Window
-		Window = e("Frame", {
+		-- Centered Settings Window (Gilded Grimoire violet window)
+		Window = Panel({
 			Name = "SettingsPanel",
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			Position = UDim2.fromScale(0.5, 0.5),
 			Size = UDim2.new(0, 960, 0, 620),
-			BackgroundColor3 = Color3.fromRGB(8, 12, 22),
+			Radius = 16,
 			ZIndex = 2,
 		}, {
-			WindowCorner = e("UICorner", { CornerRadius = UDim.new(0, 24) }),
-			WindowStroke = e("UIStroke", {
-				Thickness = 1.8,
-				Color = theme.Border,
-			}),
-			WindowGradient = e("UIGradient", {
-				Rotation = 90,
-				Color = ColorSequence.new({
-					ColorSequenceKeypoint.new(0, Color3.fromRGB(12, 18, 32)),
-					ColorSequenceKeypoint.new(1, Color3.fromRGB(6, 9, 18)),
-				}),
-			}),
+			Max = e("UISizeConstraint", { MaxSize = Vector2.new(960, 620) }),
+			Content = e("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 2 }, {
 			Padding = e("UIPadding", {
 				PaddingLeft = UDim.new(0, 18),
 				PaddingRight = UDim.new(0, 18),
@@ -530,62 +524,41 @@ local function SettingsApp()
 				SortOrder = Enum.SortOrder.LayoutOrder,
 			}),
 
-			-- Top Header
-			Header = e("Frame", {
+			-- Top Header: drawn gear, gold title, crimson close button
+			Header = Panel({
 				Name = "Header",
-				BackgroundColor3 = Color3.fromRGB(14, 20, 36),
 				Size = UDim2.new(1, 0, 0, 72),
 				LayoutOrder = 1,
+				Top = Tones.Deep.Top, Bottom = Tones.Deep.Bottom, Rail = accent,
 			}, {
-				Corner = e("UICorner", { CornerRadius = UDim.new(0, 16) }),
-				Stroke = e("UIStroke", { Thickness = 1, Color = Color3.fromRGB(34, 46, 74) }),
-				AccentBar = e("Frame", {
-					Position = UDim2.new(0, 16, 0.5, -20),
-					Size = UDim2.new(0, 6, 0, 40),
-					BackgroundColor3 = accent,
-				}, {
-					Corner = e("UICorner", { CornerRadius = UDim.new(1, 0) }),
+				Gear = e("Frame", { Position = UDim2.new(0, 14, 0.5, -26), Size = UDim2.fromOffset(52, 52), BackgroundTransparency = 1, ZIndex = 3 }, {
+					Art = e(Icons.Icon, { Name = "Gear", Size = 52 }),
 				}),
 				Titles = e("Frame", {
 					BackgroundTransparency = 1,
-					Position = UDim2.new(0, 34, 0, 14),
-					Size = UDim2.new(0.75, 0, 1, -28),
+					Position = UDim2.new(0, 78, 0, 12),
+					Size = UDim2.new(0.75, 0, 1, -24),
+					ZIndex = 3,
 				}, {
-					MainTitle = e("TextLabel", {
-						BackgroundTransparency = 1,
-						Text = "SETTINGS",
-						Font = Enum.Font.GothamBlack,
-						TextSize = 22,
-						TextColor3 = Color3.fromRGB(245, 248, 255),
-						TextXAlignment = Enum.TextXAlignment.Left,
-						Size = UDim2.new(1, 0, 0, 24),
-					}),
-					SubTitle = e("TextLabel", {
-						BackgroundTransparency = 1,
-						Text = "Customize your game experience",
-						Font = Enum.Font.GothamMedium,
-						TextSize = 12,
-						TextColor3 = Color3.fromRGB(135, 155, 190),
-						TextXAlignment = Enum.TextXAlignment.Left,
-						Position = UDim2.fromOffset(0, 24),
-						Size = UDim2.new(1, 0, 0, 16),
-					}),
+					MainTitle = HeavyLabel({ Size = UDim2.new(1, 0, 0, 28), MaxSize = 26, TextXAlignment = Enum.TextXAlignment.Left,
+						Text = "S E T T I N G S", ZIndex = 3 }),
+					SubTitle = Body({ Position = UDim2.fromOffset(0, 30), Size = UDim2.new(1, 0, 0, 16), TextSize = 13,
+						TextColor3 = Grimoire.Text.Muted, Text = "Customize your game experience", ZIndex = 3 }),
 				}),
-				ExitBtn = e("TextButton", {
+				ExitBtn = Panel({
+					Class = "TextButton",
 					Name = "ExitButton",
 					AutoButtonColor = false,
 					AnchorPoint = Vector2.new(1, 0.5),
 					Position = UDim2.new(1, -16, 0.5, 0),
-					BackgroundColor3 = Color3.fromRGB(34, 24, 38),
-					Size = UDim2.fromOffset(40, 40),
-					Text = "X",
-					Font = Enum.Font.GothamBold,
-					TextSize = 18,
-					TextColor3 = Color3.fromRGB(255, 190, 205),
+					Size = UDim2.fromOffset(42, 42),
+					Text = "",
+					Radius = 10,
+					Top = Tones.Crimson.Top, Bottom = Tones.Crimson.Bottom, Rail = Tones.Crimson.Rail,
+					ZIndex = 3,
 					[React.Event.Activated] = function() setIsOpen(false) end,
 				}, {
-					Corner = e("UICorner", { CornerRadius = UDim.new(0, 12) }),
-					Stroke = e("UIStroke", { Thickness = 1.2, Color = Color3.fromRGB(120, 50, 70) }),
+					X = HeavyLabel({ Size = UDim2.fromScale(1, 1), MaxSize = 22, Gold = false, Text = "×", ZIndex = 4 }),
 				}),
 			}),
 
@@ -602,65 +575,51 @@ local function SettingsApp()
 				}),
 
 				-- Left Sidebar
-				Sidebar = e("Frame", {
+				Sidebar = Panel({
 					Name = "Sidebar",
-					BackgroundColor3 = Color3.fromRGB(12, 16, 28),
 					Size = UDim2.new(0, 230, 1, 0),
+					Top = Tones.Deep.Top, Bottom = Tones.Deep.Bottom, Rail = Tones.Deep.Rail,
 				}, {
-					Corner = e("UICorner", { CornerRadius = UDim.new(0, 16) }),
-					Stroke = e("UIStroke", { Thickness = 1, Color = Color3.fromRGB(30, 40, 68) }),
+					Content = e("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 2 }, {
 					Padding = e("UIPadding", {
-						PaddingLeft = UDim.new(0, 10),
-						PaddingRight = UDim.new(0, 10),
-						PaddingTop = UDim.new(0, 12),
+						PaddingLeft = UDim.new(0, 12),
+						PaddingRight = UDim.new(0, 12),
+						PaddingTop = UDim.new(0, 14),
 						PaddingBottom = UDim.new(0, 12),
 					}),
 					Layout = e("UIListLayout", {
 						FillDirection = Enum.FillDirection.Vertical,
-						Padding = UDim.new(0, 8),
+						Padding = UDim.new(0, 10),
+						SortOrder = Enum.SortOrder.LayoutOrder,
 					}),
 
 					-- Player Profile Card
-					ProfileCard = e("Frame", {
-						BackgroundColor3 = Color3.fromRGB(16, 22, 38),
-						Size = UDim2.new(1, 0, 0, 64),
+					ProfileCard = Panel({
+						Size = UDim2.new(1, 0, 0, 66),
 						LayoutOrder = 1,
+						Radius = 10,
+						Top = Tones.Violet.Top, Bottom = Tones.Violet.Bottom, Rail = accent,
 					}, {
-						Corner = e("UICorner", { CornerRadius = UDim.new(0, 12) }),
-						Stroke = e("UIStroke", { Thickness = 1, Color = Color3.fromRGB(36, 48, 76) }),
 						Avatar = e("ImageLabel", {
-							BackgroundTransparency = 1,
+							BackgroundColor3 = Color3.fromRGB(26, 20, 36),
 							Image = string.format("rbxthumb://type=AvatarHeadShot&id=%d&w=150&h=150", LocalPlayer.UserId),
-							Position = UDim2.fromOffset(8, 8),
+							Position = UDim2.fromOffset(10, 9),
 							Size = UDim2.fromOffset(48, 48),
+							ZIndex = 3,
 						}, {
 							Corner = e("UICorner", { CornerRadius = UDim.new(1, 0) }),
+							Ink = e("UIStroke", { Color = Grimoire.Ink, Thickness = 2.4 }),
 						}),
 						Info = e("Frame", {
 							BackgroundTransparency = 1,
-							Position = UDim2.fromOffset(64, 12),
-							Size = UDim2.new(1, -70, 0, 40),
+							Position = UDim2.fromOffset(66, 12),
+							Size = UDim2.new(1, -74, 0, 42),
+							ZIndex = 3,
 						}, {
-							Name = e("TextLabel", {
-								BackgroundTransparency = 1,
-								Text = LocalPlayer.DisplayName,
-								Font = Enum.Font.GothamBlack,
-								TextSize = 13,
-								TextColor3 = Color3.fromRGB(245, 248, 255),
-								TextXAlignment = Enum.TextXAlignment.Left,
-								TextTruncate = Enum.TextTruncate.AtEnd,
-								Size = UDim2.new(1, 0, 0, 18),
-							}),
-							User = e("TextLabel", {
-								BackgroundTransparency = 1,
-								Text = "@" .. LocalPlayer.Name,
-								Font = Enum.Font.GothamMedium,
-								TextSize = 11,
-								TextColor3 = Color3.fromRGB(130, 145, 175),
-								TextXAlignment = Enum.TextXAlignment.Left,
-								Position = UDim2.fromOffset(0, 18),
-								Size = UDim2.new(1, 0, 0, 16),
-							}),
+							Name = HeavyLabel({ Size = UDim2.new(1, 0, 0, 20), MaxSize = 15, Outline = 2, TextXAlignment = Enum.TextXAlignment.Left,
+								TextTruncate = Enum.TextTruncate.AtEnd, Text = LocalPlayer.DisplayName, ZIndex = 3 }),
+							User = Body({ Position = UDim2.fromOffset(0, 22), Size = UDim2.new(1, 0, 0, 16), TextSize = 12,
+								TextColor3 = Grimoire.Text.Muted, Text = "@" .. LocalPlayer.Name, ZIndex = 3 }),
 						}),
 					}),
 
@@ -689,6 +648,7 @@ local function SettingsApp()
 						LayoutOrder = 4,
 						OnClick = function() setActiveTab("Graphics") end,
 					}),
+					}),
 				}),
 
 				-- Right Content Scroll Area
@@ -697,45 +657,45 @@ local function SettingsApp()
 					BackgroundTransparency = 1,
 					BorderSizePixel = 0,
 					Size = UDim2.new(1, -244, 1, 0),
-					ScrollBarThickness = 4,
+					ScrollBarThickness = 5,
 					ScrollBarImageColor3 = accent,
 					CanvasSize = UDim2.new(0, 0, 0, 0),
 					AutomaticCanvasSize = Enum.AutomaticSize.Y,
 				}, {
 					Padding = e("UIPadding", {
-						PaddingRight = UDim.new(0, 8),
+						PaddingTop = UDim.new(0, 4),
+						PaddingLeft = UDim.new(0, 4),
+						PaddingRight = UDim.new(0, 10),
+						PaddingBottom = UDim.new(0, 4),
 					}),
 					Page = pageContent,
 				}),
 			}),
 
 			-- Footer (Status message + Reset / Apply buttons)
-			Footer = e("Frame", {
+			Footer = Panel({
 				Name = "Footer",
-				BackgroundColor3 = Color3.fromRGB(12, 16, 28),
 				Size = UDim2.new(1, 0, 0, 46),
 				LayoutOrder = 3,
+				Radius = 12,
+				Top = Tones.Deep.Top, Bottom = Tones.Deep.Bottom, Rail = Tones.Deep.Rail,
 			}, {
-				Corner = e("UICorner", { CornerRadius = UDim.new(0, 14) }),
-				Stroke = e("UIStroke", { Thickness = 1, Color = Color3.fromRGB(30, 40, 68) }),
+				Content = e("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 2 }, {
 				Padding = e("UIPadding", {
 					PaddingLeft = UDim.new(0, 16),
-					PaddingRight = UDim.new(0, 12),
+					PaddingRight = UDim.new(0, 8),
 				}),
-				StatusText = e("TextLabel", {
-					BackgroundTransparency = 1,
+				StatusText = Body({
 					Text = statusMsg,
-					Font = Enum.Font.GothamMedium,
-					TextSize = 12,
-					TextColor3 = Color3.fromRGB(150, 165, 195),
-					TextXAlignment = Enum.TextXAlignment.Left,
-					Size = UDim2.new(0.65, 0, 1, 0),
+					TextSize = 13,
+					TextColor3 = Grimoire.Text.Muted,
+					Size = UDim2.new(0.62, 0, 1, 0),
 				}),
 				Actions = e("Frame", {
 					BackgroundTransparency = 1,
 					AnchorPoint = Vector2.new(1, 0.5),
 					Position = UDim2.new(1, 0, 0.5, 0),
-					Size = UDim2.new(0, 240, 0, 34),
+					Size = UDim2.new(0, 280, 0, 34),
 				}, {
 					Layout = e("UIListLayout", {
 						FillDirection = Enum.FillDirection.Horizontal,
@@ -746,7 +706,7 @@ local function SettingsApp()
 						Text = "Reset Defaults",
 						Primary = false,
 						AccentColor = accent,
-						Size = UDim2.new(0, 110, 1, 0),
+						Size = UDim2.new(0, 160, 1, 0),
 						LayoutOrder = 1,
 						OnClick = resetDefaults,
 					}),
@@ -761,7 +721,9 @@ local function SettingsApp()
 				}),
 			}),
 		}),
-	})
+		}),
+	}),
+})
 end
 
 return SettingsApp

@@ -13,7 +13,7 @@ local OutskirtsBuilder = require(script.Parent:WaitForChild("OutskirtsEnvironmen
 local FacilityPresence = require(script.Parent:WaitForChild("FacilityPresence"))
 local FacilityConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("FacilityConfig"))
 
-local VERSION = 19
+local VERSION = 21 -- 21: one [F] prompt for The Pit (was Synthesis [E] + Promotion [F])
 
 local function attachPrompt(
 	parent: Instance,
@@ -188,42 +188,19 @@ function Buildings.Build(plot: Instance)
 	if pitModel then
 		pitModel:SetAttribute("Facility", "ThePit")
 	end
+	-- One [F] prompt for the whole Pit; its screen has Synthesis and Promotion tabs.
 	attachPrompt(
 		pitInteract,
 		"FacilityHUDPrompt",
-		"Synthesis",
-		"Synthesis Chamber",
-		pitCfg.PromptText or "The Pit (Synthesis)",
-		pitCfg.Keybind or Enum.KeyCode.E,
+		"Pit",
+		"The Pit",
+		pitCfg.PromptText or "Synthesis & Promotion",
+		pitCfg.Keybind or Enum.KeyCode.F,
 		16
 	)
 	syncPlotFacilityAnchor(plot, "Synthesis", pitInteract.CFrame)
-
-	-- Secondary Promotion Altar prompt at the Rotunda entrance on [F]
-	if pitModel then
-		local promoPart = Instance.new("Part")
-		promoPart.Name = "FacilityInteraction_Promotion"
-		promoPart.Size = Vector3.new(2, 2, 2)
-		promoPart.CFrame = pitCF * CFrame.new(3.6, 4.0, 14.5)
-		promoPart.Anchored = true
-		promoPart.Transparency = 1
-		promoPart.CanCollide = false
-		promoPart.CanTouch = false
-		promoPart.CanQuery = false
-		promoPart.Parent = pitModel
-
-		attachPrompt(
-			promoPart,
-			"FacilityHUDPrompt",
-			"Promotion",
-			"Promotion Altar",
-			pitCfg.SecondaryPromptText or "Ascend Stars (1★-5★)",
-			pitCfg.SecondaryKeybind or Enum.KeyCode.F,
-			16,
-			Vector2.new(0, 72)
-		)
-		syncPlotFacilityAnchor(plot, "Promotion", promoPart.CFrame)
-	end
+	-- Strip the old Promotion Altar anchor's bare prompt as well.
+	syncPlotFacilityAnchor(plot, "Promotion", pitInteract.CFrame)
 
 	-- 6. Blacksmith Forge (Open-Air Stone Hearth & Anvil against Dividing Wall)
 	local forgeCfg = layout.BlacksmithForge
@@ -239,7 +216,7 @@ function Buildings.Build(plot: Instance)
 		"Forge",
 		"Blacksmith Forge",
 		forgeCfg.PromptText or "Blacksmith Forge",
-		forgeCfg.Keybind or Enum.KeyCode.E,
+		forgeCfg.Keybind or Enum.KeyCode.F,
 		15
 	)
 	syncPlotFacilityAnchor(plot, "Blacksmith", forgeInteract.CFrame)

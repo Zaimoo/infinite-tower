@@ -12,6 +12,10 @@ local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local TycoonRemotes = Remotes:WaitForChild("TycoonGachaRemotes")
 local OfflineRewardEvent = TycoonRemotes:WaitForChild("OfflineRewardClaimed") :: RemoteEvent
+local Util = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util")
+local GothicBoxStyle = require(Util:WaitForChild("GothicBoxStyle"))
+local GildedGrimoire = require(Util:WaitForChild("GildedGrimoire"))
+local GrimoireIcons = require(Util:WaitForChild("GrimoireIcons"))
 
 local C = {
 	Scrim = Color3.fromRGB(6, 5, 10),
@@ -25,31 +29,6 @@ local C = {
 	GoldYellow = Color3.fromRGB(250, 204, 21),
 	Green = Color3.fromRGB(74, 222, 128),
 }
-
-local function stroke(parent: Instance, color: Color3, thickness: number?): UIStroke
-	local s = Instance.new("UIStroke")
-	s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	s.Color = color
-	s.Thickness = thickness or 1
-	s.Parent = parent
-	return s
-end
-
-local function cornerDiamonds(parent: GuiObject, size: number, color: Color3)
-	for _, c in { Vector2.new(0, 0), Vector2.new(1, 0), Vector2.new(0, 1), Vector2.new(1, 1) } do
-		local d = Instance.new("Frame")
-		d.Name = "CornerDiamond"
-		d.AnchorPoint = Vector2.new(0.5, 0.5)
-		d.Rotation = 45
-		d.Position = UDim2.fromScale(c.X, c.Y)
-		d.Size = UDim2.fromOffset(size, size)
-		d.BackgroundColor3 = C.Panel
-		d.BorderSizePixel = 0
-		d.ZIndex = parent.ZIndex + 2
-		stroke(d, color, 1)
-		d.Parent = parent
-	end
-end
 
 local function createModalGui(): (ScreenGui, Frame, Frame, TextLabel, TextLabel, TextLabel, TextButton)
 	local gui = Instance.new("ScreenGui")
@@ -76,23 +55,24 @@ local function createModalGui(): (ScreenGui, Frame, Frame, TextLabel, TextLabel,
 	modal.Visible = false
 	modal.Parent = gui
 
-	local modalCorner = Instance.new("UICorner")
-	modalCorner.CornerRadius = UDim.new(0, 8)
-	modalCorner.Parent = modal
-
-	stroke(modal, C.Border, 1.5)
-	cornerDiamonds(modal, 8, C.Border)
+	-- Gilded Grimoire window (ink outline, gold rail and corner studs) with theme fonts.
+	GothicBoxStyle.Apply(modal, { Style = "Window" })
+	GildedGrimoire.Watch(modal)
 
 	local title = Instance.new("TextLabel")
 	title.Name = "Title"
 	title.Size = UDim2.new(1, -40, 0, 36)
 	title.Position = UDim2.fromOffset(20, 24)
 	title.BackgroundTransparency = 1
-	title.Text = "👑 WELCOME BACK, MASTER!"
+	title.Text = "WELCOME BACK, MASTER!"
 	title.Font = Enum.Font.GothamBlack
 	title.TextSize = 22
-	title.TextColor3 = C.GoldYellow
+	title.TextColor3 = Color3.new(1, 1, 1)
 	title.Parent = modal
+	local titleGold = Instance.new("UIGradient")
+	titleGold.Rotation = 90
+	titleGold.Color = ColorSequence.new(Color3.new(1, 1, 1), GildedGrimoire.Text.Gold)
+	titleGold.Parent = title
 
 	local sub = Instance.new("TextLabel")
 	sub.Name = "Subtitle"
@@ -113,10 +93,11 @@ local function createModalGui(): (ScreenGui, Frame, Frame, TextLabel, TextLabel,
 	card.BorderSizePixel = 0
 	card.Parent = modal
 
-	local cardCorner = Instance.new("UICorner")
-	cardCorner.CornerRadius = UDim.new(0, 6)
-	cardCorner.Parent = card
-	stroke(card, C.BorderCard, 1)
+	GildedGrimoire.Frame(card, { Class = "Card", Tone = "Bronze" })
+	-- A drawn gold-coin stack beside the amount.
+	local coin = GrimoireIcons.Create("Gold", 52, card, 3)
+	coin.AnchorPoint = Vector2.new(0, 0.5)
+	coin.Position = UDim2.new(0, 24, 0, 50)
 
 	local goldDisplay = Instance.new("TextLabel")
 	goldDisplay.Name = "GoldDisplay"
@@ -155,11 +136,11 @@ local function createModalGui(): (ScreenGui, Frame, Frame, TextLabel, TextLabel,
 	claimBtn.AutoButtonColor = true
 	claimBtn.Parent = modal
 
-	local btnCorner = Instance.new("UICorner")
-	btnCorner.CornerRadius = UDim.new(0, 6)
-	btnCorner.Parent = claimBtn
-	stroke(claimBtn, C.Border, 1.2)
-	cornerDiamonds(claimBtn, 5, C.Border)
+	claimBtn.AutoButtonColor = false
+	claimBtn.TextColor3 = Color3.new(1, 1, 1)
+	GothicBoxStyle.Apply(claimBtn, { Style = "Button" })
+	claimBtn.TextStrokeColor3 = GildedGrimoire.Ink
+	claimBtn.TextStrokeTransparency = 0.15
 
 	return gui, scrim, modal, title, sub, details, claimBtn
 end
@@ -188,7 +169,7 @@ OfflineRewardEvent.OnClientEvent:Connect(function(payload: any)
 	local level = payload.GuardPostLevel or 1
 	local bossTier = payload.BiomeBossTier or 0
 
-	goldDisplayLbl.Text = string.format("💰 +%d GOLD", gold)
+	goldDisplayLbl.Text = string.format("+%d GOLD", gold)
 
 	local timeText = formatTime(offlineMin)
 	local capNotice = ""
@@ -199,7 +180,7 @@ OfflineRewardEvent.OnClientEvent:Connect(function(payload: any)
 	local bossBonusText = bossTier > 0 and string.format("  •  Boss Tier %d (+%d%%)", bossTier, bossTier * 15) or ""
 
 	detailsLbl.Text = string.format(
-		"⏳ Time Offline: <b>%s</b>%s\n🛡️ Outskirts Guard Post: <b>Lv.%d</b>%s\n📈 Passive Generation: <b>%.1f Gold / min</b>\n<font color=\"#4ADE80\">Gold has been credited directly to your treasury!</font>",
+		"Time Offline: <b>%s</b>%s\nOutskirts Guard Post: <b>Lv.%d</b>%s\nPassive Generation: <b>%.1f Gold / min</b>\n<font color=\"#4ADE80\">Gold has been credited directly to your treasury!</font>",
 		timeText,
 		capNotice,
 		level,

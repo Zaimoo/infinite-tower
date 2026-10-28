@@ -24,6 +24,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local TreeConfig = require(Shared:WaitForChild("Config"):WaitForChild("FortressTreeConfig"))
 local FortressTree = require(Shared:WaitForChild("Util"):WaitForChild("FortressTree"))
 local GothicBoxStyle = require(Shared:WaitForChild("Util"):WaitForChild("GothicBoxStyle"))
+local GrimoireIcons = require(Shared:WaitForChild("Util"):WaitForChild("GrimoireIcons"))
 
 local Controller = {}
 Controller.__index = Controller
@@ -53,16 +54,26 @@ local C = {
 	Green = Color3.fromRGB(110, 230, 140),
 }
 
--- Branch icons; perks use a sparkle, the root the citadel.
+-- Branch icons (Gilded Grimoire drawings); perks use a spark, the root the citadel.
 local ICONS: { [string]: string } = {
-	Root = "🏰",
-	Outskirts = "🏕️",
-	Commerce = "💰",
-	Martial = "⚔️",
-	Divine = "👼",
-	Command = "🚩",
-	Perk = "✨",
+	Root = "Fortress",
+	Outskirts = "Camp",
+	Commerce = "Market",
+	Martial = "Power",
+	Divine = "Blessing",
+	Command = "Banner",
+	Perk = "Spark",
 }
+
+-- Swaps the drawn icon inside a node's icon frame (rebuilt only when the name changes).
+local function setIcon(frame: Frame, name: string?)
+	if frame:GetAttribute("IconName") == (name or "") then return end
+	frame:SetAttribute("IconName", name or "")
+	frame:ClearAllChildren()
+	if name then
+		GrimoireIcons.Create(name, 34, frame, frame.ZIndex)
+	end
+end
 
 -- Pointy-top axial coordinates. The root sits at the centre; Divine winds north, Command north-east,
 -- Commerce east, Outskirts south and Martial west, with each perk beside the level it hangs from.
@@ -194,9 +205,14 @@ function Controller.new(gui: ScreenGui, getProfile: () -> any, remotes: Instance
 		return lbl
 	end
 
-	label(root, "🏰 FORTRESS TREE", 24, C.Gold, { Position = UDim2.fromOffset(24, 16), Size = UDim2.fromOffset(420, 30) })
+	local titleIcon = GrimoireIcons.Create("Fortress", 38, root, 60)
+	titleIcon.Position = UDim2.fromOffset(20, 12)
+	label(root, "FORTRESS TREE", 24, C.Gold, { Position = UDim2.fromOffset(66, 16), Size = UDim2.fromOffset(420, 30) })
 	label(root, "Drag to explore · scroll to zoom · hover for details · click to build", 13, C.Text, { Position = UDim2.fromOffset(24, 46), Size = UDim2.fromOffset(520, 18), Font = Enum.Font.GothamMedium })
 	self.GoldLabel = label(root, "", 17, C.Gold, { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -64, 0, 22), Size = UDim2.fromOffset(260, 24), TextXAlignment = Enum.TextXAlignment.Right })
+	-- A drawn gold-coin icon just left of the (right-aligned) gold amount.
+	self.GoldIcon = GrimoireIcons.Create("Gold", 28, root, 60)
+	self.GoldIcon.AnchorPoint = Vector2.new(1, 0)
 	self.Status = label(root, "", 14, C.Text, { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 24, 1, -20), Size = UDim2.new(1, -260, 0, 22), Font = Enum.Font.GothamMedium })
 
 	-- Bottom-right controls: zoom out, zoom in, recenter (the buttons also serve touch screens).
@@ -308,14 +324,12 @@ function Controller:BuildNode(canvas: Frame, node: any, at: Vector2): any
 		ZIndex = 56,
 	}, holder)
 
-	local icon = new("TextLabel", {
+	local icon = new("Frame", {
 		Name = "Icon",
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.new(0.5, 0, 0.5, -16),
-		Size = UDim2.fromOffset(34, 30),
+		Size = UDim2.fromOffset(34, 34),
 		BackgroundTransparency = 1,
-		TextScaled = true,
-		Text = "",
 		ZIndex = 57,
 	}, holder)
 	local title = new("TextLabel", {
@@ -451,7 +465,7 @@ function Controller:TooltipFor(nodeId: string): (string, string, string, string,
 			footer, color = string.format("Cost: %s Gold (you have %s)", formatGold(node.Gold), formatGold(gold)), C.Red
 		end
 	else
-		footer, color = "🔒 " .. (entry.Reason or "Locked"), C.Muted
+		footer, color = "Locked: " .. (entry.Reason or "Locked"), C.Muted
 	end
 	return node.Name, kind, node.Description, footer, color
 end
@@ -603,7 +617,8 @@ function Controller:Refresh()
 	local gold = profile and profile.Currencies and profile.Currencies.Gold or 0
 	local floor = profile and profile.HighestClearedFloor or 0
 	local unlocks = profile and profile.Unlocks
-	self.GoldLabel.Text = "💰 " .. formatGold(gold) .. " Gold"
+	self.GoldLabel.Text = formatGold(gold) .. " Gold"
+	self.GoldIcon.Position = UDim2.new(1, -64 - self.GoldLabel.TextBounds.X - 6, 0, 20)
 
 	for nodeId, entry in self.Nodes do
 		local node = entry.Node
@@ -620,11 +635,11 @@ function Controller:Refresh()
 		entry.State = state
 		entry.Reason = if state == "HIDDEN" then "Build the node before it first." else reason
 
-		local icon = if node.Kind == "ROOT" then ICONS.Root elseif node.Kind == "PERK" then ICONS.Perk else ICONS[node.Branch] or "✦"
+		local icon = if node.Kind == "ROOT" then ICONS.Root elseif node.Kind == "PERK" then ICONS.Perk else ICONS[node.Branch] or "Spark"
 		if state == "HIDDEN" then
 			paint(entry.Rim, C.RimDark)
 			paint(entry.Fill, C.Dark)
-			entry.Icon.Text = ""
+			setIcon(entry.Icon, nil)
 			entry.Title.Text = "?"
 			entry.Title.TextColor3 = Color3.fromRGB(150, 146, 158)
 			entry.Title.Size = UDim2.fromOffset(SQRT3 * HEX_RADIUS - 16, 40)
@@ -634,7 +649,7 @@ function Controller:Refresh()
 			entry.Title.Size = UDim2.fromOffset(SQRT3 * HEX_RADIUS - 16, 22)
 			entry.Title.Position = UDim2.new(0.5, 0, 0.5, 10)
 			entry.Title.TextColor3 = C.Text
-			entry.Icon.Text = icon
+			setIcon(entry.Icon, icon)
 			entry.Title.Text = if node.Kind == "ROOT" then "Citadel" else node.Name
 			if node.Kind == "ROOT" then
 				paint(entry.Rim, C.Rim)

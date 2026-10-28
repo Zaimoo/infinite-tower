@@ -41,12 +41,15 @@ Each phase has its own detailed, self-contained implementation specification:
 ## 3. High-Level Principles & Architecture Contracts
 
 1. **Gameplay & Systems First, UI Last:** Gameplay loops, combat feel, and network contracts are fully developed and verified first so the React-lua UI can be built against real production state with zero throwaway mocks.
-2. **Hands-Off Auto-Battling:** The Master explores and guides movement in 3D. Combat is 100% automatic—no manual skill taps, no formation management, no Q/E whistles.
+2. **Hands-Off Auto-Battling:** The Master explores and guides movement in 3D. Combat is 100% automatic—no manual skill taps, no formation management. The `Q`/`E` Overdrive and Recall whistles remain as optional active tools.
 3. **Server Authority:** All progression state (unlocked systems, onboarding step, floor clears, kill progress, inventory, currencies) is server-authoritative. The client sends intents; the server validates and replicates via delta snapshots.
-4. **Clean HUD Limit (Max 4 Persistent Elements):**
+4. **Clean HUD Limit (Seven Fixed Zones, never overlapping):**
    - Top-Center: Floor Progress Bar (transitions to Boss Health Bar).
    - Top-Left: Currencies (Gold, Gems) with readable font sizes and delta popups.
    - Top-Right: Pinned "Next Goal" Quest Card.
-   - Bottom-Center: Navigation Toolbar with icons and badge indicators (unlocked systems only).
+   - Left Rail: menu buttons with badges (unlocked systems only), including the Hero Index.
+   - Right Rail: Overdrive `Q`, Recall `E` and Tower, anchored below the Next Goal card.
+   - Bottom-Left: live Squad Status Card.
+   - Bottom-Right: Squad Power badge (also shown, with the highest cleared Floor, in the player list).
 5. **Zero-Deadweight Systems:** All 10 existing systems are preserved but locked behind progressive milestone unlocks. New players see only 1–2 systems at a time.
 6. **Low-Stakes Multiplayer:** Shared tower floors foster emergent encounters. Contested drops enable squad duels without wiping or teleporting either player; the loser is merely locked out of that single drop.

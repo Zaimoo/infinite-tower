@@ -39,13 +39,9 @@ local bannerSize = Instance.new("UISizeConstraint")
 bannerSize.MinSize = Vector2.new(300, 72)
 bannerSize.MaxSize = Vector2.new(560, 96)
 bannerSize.Parent = banner
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 10)
-corner.Parent = banner
-local stroke = Instance.new("UIStroke")
-stroke.Color = GOLD
-stroke.Thickness = 2
-stroke.Parent = banner
+-- Gilded Grimoire: crimson duel banner with the ink outline and gold rail; heavy inked type.
+local GildedGrimoire = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GildedGrimoire"))
+GildedGrimoire.Frame(banner, { Class = "Panel", Tone = "Crimson" })
 
 local function label(name: string, position: UDim2, size: UDim2, color: Color3, font: Enum.Font, align: Enum.TextXAlignment?): TextLabel
 	local l = Instance.new("TextLabel")
@@ -58,7 +54,9 @@ local function label(name: string, position: UDim2, size: UDim2, color: Color3, 
 	l.TextScaled = true
 	l.TextXAlignment = align or Enum.TextXAlignment.Center
 	l.Text = ""
+	l.ZIndex = 3
 	l.Parent = banner
+	GildedGrimoire.StyleText(l, if font == Enum.Font.GothamMedium then "Body" else "Title")
 	return l
 end
 
@@ -86,6 +84,8 @@ resultSub.Size = UDim2.fromScale(0.6, 0.06)
 resultSub.Font = Enum.Font.GothamBold
 resultSub.TextColor3 = Color3.new(1, 1, 1)
 resultSub.Parent = gui
+GildedGrimoire.StyleText(resultLabel, "Title")
+GildedGrimoire.StyleText(resultSub, "Body")
 
 type DuelView = { Id: number, Side: string, FightAt: number, EndsAt: number, Ended: boolean }
 local current: DuelView? = nil
@@ -129,7 +129,7 @@ end
 
 local function updateScore(message: any)
 	local mine, theirs = myCount(message)
-	scoreLabel.Text = string.format("%d ⚔ %d", mine, theirs)
+	scoreLabel.Text = string.format("%d  –  %d", mine, theirs)
 end
 
 DuelStateRemote.OnClientEvent:Connect(function(message: any)
@@ -139,7 +139,7 @@ DuelStateRemote.OnClientEvent:Connect(function(message: any)
 		current = { Id = message.DuelId, Side = message.Side, FightAt = message.FightAt or 0, EndsAt = message.EndsAt or 0, Ended = false }
 		local mine = if message.Side == "A" then message.NameA else message.NameB
 		local theirs = if message.Side == "A" then message.NameB else message.NameA
-		titleLabel.Text = "⚔ RETALIATION DUEL"
+		titleLabel.Text = "RETALIATION DUEL"
 		myLabel.Text = tostring(mine)
 		enemyLabel.Text = tostring(theirs)
 		updateScore(message)

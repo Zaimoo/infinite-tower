@@ -16,8 +16,9 @@ local ArtifactCatalog = require(Shared:WaitForChild("Config"):WaitForChild("Arti
 local StatFormulas = require(Shared.Util.StatFormulas)
 local StatBalance = require(Shared.Config.StatBalance)
 local GothicBoxStyle = require(Shared.Util.GothicBoxStyle)
-local GothicVectorIcons = require(Shared.Util.GothicVectorIcons)
-local OrnateFrameButton = require(Shared.Util.OrnateFrameButton)
+local GildedGrimoire = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GildedGrimoire"))
+local GrimoireIcons = require(Shared.Util.GrimoireIcons)
+local GrimoireSummonButton = require(Shared.Util.GrimoireSummonButton)
 
 local LocalPlayer = Players.LocalPlayer
 
@@ -178,6 +179,8 @@ function Forge.new(gui: ScreenGui, artifactRemotes: Folder, getProfile: (() -> a
 		ZIndex = 51,
 	}, gui)
 	self.Root = root
+	-- Gilded Grimoire theme: convert this screen's legacy Gotham text (now and as it is rebuilt).
+	GildedGrimoire.Watch(root)
 
 	applyGothicStyle(root, "Window")
 
@@ -449,7 +452,7 @@ function Forge:RenderAssignView()
 		new("UICorner", { CornerRadius = UDim.new(0, 8) }, emptyCard)
 		stroke(emptyCard, C.BorderDim)
 
-		local emptyTitle = label(emptyCard, "📦 NO ARTIFACTS IN INVENTORY", 18, C.Text, Enum.Font.GothamBold)
+		local emptyTitle = label(emptyCard, "NO ARTIFACTS IN INVENTORY", 18, C.Text, Enum.Font.GothamBold)
 		emptyTitle.Position = UDim2.new(0, 0, 0.25, 0)
 		emptyTitle.Size = UDim2.new(1, 0, 0, 26)
 		local sub = label(emptyCard, "Visit the <b>SUMMON</b> tab to draw weapons from the dimensional banner!", 14, C.TextLavender, Enum.Font.Gotham)
@@ -457,7 +460,7 @@ function Forge:RenderAssignView()
 		sub.Size = UDim2.new(1, 0, 0, 24)
 
 		local goBtn = new("TextButton", {
-			Text = "GO TO SUMMON ➔",
+			Text = "GO TO SUMMON",
 			Font = Enum.Font.GothamBold,
 			TextSize = 14,
 			TextColor3 = C.Text,
@@ -606,7 +609,7 @@ function Forge:BuildSummonView(root: Frame)
 	applyGothicStyle(bannerCard, "Panel")
 
 	-- Top Watermark Tag
-	local watermark = label(bannerCard, "★ 5-STAR FEATURED HERO & ARTIFACTS", 11, Color3.fromHex("#C4B8DB"), Enum.Font.GothamBold)
+	local watermark = label(bannerCard, "5-STAR FEATURED HERO & ARTIFACTS", 11, Color3.fromHex("#C4B8DB"), Enum.Font.GothamBold)
 	watermark.Position = UDim2.fromOffset(20, 16)
 	watermark.Size = UDim2.new(1, -40, 0, 18)
 	watermark.TextXAlignment = Enum.TextXAlignment.Left
@@ -777,7 +780,7 @@ function Forge:BuildSummonView(root: Frame)
 		Padding = UDim.new(0, 8),
 	}, rateUpContainer)
 
-	local rateUpPrefix = label(rateUpContainer, "▣ Rate Up:", 12, Color3.fromHex("#C084FC"), Enum.Font.GothamBold)
+	local rateUpPrefix = label(rateUpContainer, "Rate Up:", 12, Color3.fromHex("#C084FC"), Enum.Font.GothamBold)
 	rateUpPrefix.LayoutOrder = 1
 	rateUpPrefix.AutomaticSize = Enum.AutomaticSize.X
 	rateUpPrefix.Size = UDim2.new(0, 0, 1, 0)
@@ -874,12 +877,11 @@ function Forge:BuildSummonView(root: Frame)
 		ZIndex = 53,
 	}, summonView)
 
-	-- SUMMON 1X Button (Restyled via reusable OrnateFrameButton with PrimaryViolet)
-	local btn1X = OrnateFrameButton.new(btnRow, {
+	-- SUMMON 1X / 10X: the shared Gilded Grimoire summon button (same as the hero banners).
+	local btn1X = GrimoireSummonButton.new(btnRow, {
 		Name = "Summon1XBtn",
 		Title = "SUMMON 1X",
 		Cost = 160,
-		Variant = "PrimaryViolet",
 		Position = UDim2.fromScale(0, 0),
 		Size = UDim2.new(0.485, 0, 1, 0),
 		ZIndex = 54,
@@ -889,14 +891,11 @@ function Forge:BuildSummonView(root: Frame)
 		end,
 	})
 	self.Summon1XBtn = btn1X.Root
-	self.OrnateBtn1X = btn1X
 
-	-- SUMMON 10X Button (Restyled via reusable OrnateFrameButton with PrimaryGold)
-	local btn10X = OrnateFrameButton.new(btnRow, {
+	local btn10X = GrimoireSummonButton.new(btnRow, {
 		Name = "Summon10XBtn",
 		Title = "SUMMON 10X",
 		Cost = 1600,
-		Variant = "PrimaryGold",
 		AnchorPoint = Vector2.new(1, 0),
 		Position = UDim2.new(1, 0, 0, 0),
 		Size = UDim2.new(0.485, 0, 1, 0),
@@ -907,7 +906,6 @@ function Forge:BuildSummonView(root: Frame)
 		end,
 	})
 	self.Summon10XBtn = btn10X.Root
-	self.OrnateBtn10X = btn10X
 end
 
 function Forge:RenderSummonView()
@@ -964,6 +962,8 @@ function Forge:BuildSummonRevealModal(gui: ScreenGui)
 		ZIndex = 80,
 	}, gui)
 	self.RevealScrim = revealScrim
+	-- Gilded Grimoire theme: convert this screen's legacy Gotham text (now and as it is rebuilt).
+	GildedGrimoire.Watch(revealScrim)
 
 	local modal = new("Frame", {
 		Name = "SummonRevealModal",
@@ -978,9 +978,14 @@ function Forge:BuildSummonRevealModal(gui: ScreenGui)
 
 	applyGothicStyle(modal, "Window")
 
-	local revealTitle = label(modal, "✨ DIMENSIONAL ARTIFACTS SUMMONED", 20, C.GoldYellow, Enum.Font.GothamBlack)
+	local revealTitle = label(modal, "DIMENSIONAL ARTIFACTS SUMMONED", 20, C.GoldYellow, Enum.Font.GothamBlack)
 	revealTitle.Position = UDim2.new(0, 0, 0, 20)
 	revealTitle.Size = UDim2.new(1, 0, 0, 28)
+	for side = -1, 1, 2 do
+		local spark = GrimoireIcons.Create("Spark", 26, modal, revealTitle.ZIndex)
+		spark.AnchorPoint = Vector2.new(0.5, 0.5)
+		spark.Position = UDim2.new(0.5, side * 250, 0, 34)
+	end
 
 	local cardScroll = new("ScrollingFrame", {
 		Name = "RevealScroll",
@@ -1337,7 +1342,7 @@ function Forge:BuildUpgradeView(root: Frame)
 		Position = UDim2.fromScale(0, 0),
 		Size = UDim2.fromOffset(240, 46),
 		BorderSizePixel = 0,
-		Text = "⚡ AUTO-FILL FODDER",
+		Text = "AUTO-FILL FODDER",
 		Font = Enum.Font.GothamBold,
 		TextSize = 13,
 		ZIndex = 54,
@@ -1354,7 +1359,7 @@ function Forge:BuildUpgradeView(root: Frame)
 		Position = UDim2.new(1, 0, 0, 0),
 		Size = UDim2.new(1, -252, 0, 46),
 		BorderSizePixel = 0,
-		Text = "⚒️ PROMOTE TO 2 STARS (0/1)",
+		Text = "PROMOTE TO 2 STARS (0/1)",
 		Font = Enum.Font.GothamBold,
 		TextSize = 14,
 		ZIndex = 54,
@@ -1470,13 +1475,13 @@ function Forge:RenderUpgradeView()
 
 		if not (profile and profile.Unlocks and profile.Unlocks.Forge) then
 			-- Phase 4 onboarding: weapon promotion opens after clearing Floor 1.
-			self.EnhanceBtn.Text = "🔒 CLEAR FLOOR 1 TO UNLOCK PROMOTION"
+			self.EnhanceBtn.Text = "CLEAR FLOOR 1 TO UNLOCK PROMOTION"
 			applyGothicStyle(self.EnhanceBtn, "ButtonPrimary", { Disabled = true })
 		elseif copiesCount >= reqFodder and reqFodder > 0 then
-			self.EnhanceBtn.Text = string.format("⚒️ PROMOTE TO %d STARS (%d/%d)", currentStar + 1, copiesCount, reqFodder)
+			self.EnhanceBtn.Text = string.format("PROMOTE TO %d STARS (%d/%d)", currentStar + 1, copiesCount, reqFodder)
 			applyGothicStyle(self.EnhanceBtn, "ButtonPrimary", { Variant = "Gold", Disabled = false })
 		else
-			self.EnhanceBtn.Text = string.format("⚒️ PROMOTE TO %d STARS (%d/%d)", currentStar + 1, copiesCount, reqFodder)
+			self.EnhanceBtn.Text = string.format("PROMOTE TO %d STARS (%d/%d)", currentStar + 1, copiesCount, reqFodder)
 			applyGothicStyle(self.EnhanceBtn, "ButtonPrimary", { Disabled = true })
 		end
 	end
@@ -1486,6 +1491,13 @@ function Forge:RenderUpgradeView()
 		local slotFrame = self.FodderSlotFrames[i]
 		if slotFrame then
 			local plusLabel = slotFrame:FindFirstChild("PlusLabel") :: TextLabel?
+			local lockIcon = slotFrame:FindFirstChild("GrimoireIcon_Lock") :: Frame?
+			if not lockIcon then
+				lockIcon = GrimoireIcons.Create("Lock", 30, slotFrame, slotFrame.ZIndex + 1)
+				;(lockIcon :: Frame).AnchorPoint = Vector2.new(0.5, 0.5)
+				;(lockIcon :: Frame).Position = UDim2.fromScale(0.5, 0.34)
+			end
+			;(lockIcon :: Frame).Visible = false
 			local nameLabel = slotFrame:FindFirstChild("NameLabel") :: TextLabel?
 			local fUUID = self.FodderUUIDs[i]
 			local fArt = fUUID and artifacts[fUUID]
@@ -1514,9 +1526,9 @@ function Forge:RenderUpgradeView()
 			else
 				applyGothicStyle(slotFrame, "Slot", { State = "Locked" })
 				if plusLabel then
-					plusLabel.Text = "🔒"
-					plusLabel.TextColor3 = Color3.fromHex("#706484")
+					plusLabel.Text = ""
 				end
+				;(lockIcon :: Frame).Visible = true
 				if nameLabel then
 					nameLabel.Text = "Req. " .. (i + 1) .. "★"
 					nameLabel.TextColor3 = Color3.fromHex("#706484")

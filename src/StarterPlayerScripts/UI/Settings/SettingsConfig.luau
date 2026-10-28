@@ -2,7 +2,7 @@
 -- StarterPlayerScripts/UI/Settings/SettingsConfig.luau
 -- Default values, themes, and configuration for React Settings UI
 
-export type ThemeName = "Cyan" | "Purple" | "Green" | "Orange" | "Red"
+export type ThemeName = "Gold" | "Cyan" | "Purple" | "Green" | "Orange" | "Red"
 export type FontName = "Gotham" | "Arcade" | "Fredoka" | "SciFi"
 export type QualityName = "Low" | "Medium" | "High"
 export type TabName = "Overview" | "Audio" | "Graphics"
@@ -63,11 +63,18 @@ SettingsConfig.DEFAULTS = {
 	LivePreview = true,
 	Scale = 1.0,
 
-	Theme = "Cyan" :: ThemeName,
+	Theme = "Gold" :: ThemeName, -- Gilded Grimoire antique gold
 	Font = "Gotham" :: FontName,
 }
 
 SettingsConfig.THEMES = {
+	-- Gilded Grimoire default: antique gold highlights on amethyst panels.
+	Gold = {
+		Accent = Color3.fromRGB(255, 214, 110),
+		Soft = Color3.fromRGB(96, 64, 24),
+		Glow = Color3.fromRGB(240, 186, 82),
+		Border = Color3.fromRGB(240, 196, 110),
+	},
 	Cyan = {
 		Accent = Color3.fromRGB(84, 215, 255),
 		Soft = Color3.fromRGB(24, 52, 84),

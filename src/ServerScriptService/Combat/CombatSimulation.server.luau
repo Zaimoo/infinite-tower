@@ -14,6 +14,8 @@ local ArchetypeCombatSkills = require(Shared:WaitForChild("Config"):WaitForChild
 local HeroCatalog = require(Shared:WaitForChild("Config"):WaitForChild("HeroCatalog"))
 local PitBalance = require(Shared:WaitForChild("Config"):WaitForChild("PitBalanceConfig"))
 local ArtPackVisuals = require(ReplicatedStorage:WaitForChild("Assets"):WaitForChild("ArtPackVisuals"))
+local GildedGrimoire = require(Shared:WaitForChild("Util"):WaitForChild("GildedGrimoire"))
+local GrimoireIcons = require(Shared:WaitForChild("Util"):WaitForChild("GrimoireIcons"))
 local HeroNavigation = require(script.Parent.Parent:WaitForChild("Core"):WaitForChild("HeroNavigation"))
 
 local Tower=require(script.Parent.Parent.Core.TowerFloorService)
@@ -744,18 +746,22 @@ local function applyThiefTag(player: Player)
 		bb.StudsOffset = Vector3.new(0, 3.2, 0)
 		bb.AlwaysOnTop = true
 		bb.MaxDistance = 220
+		-- Gilded Grimoire crimson plate with inked heavy type.
+		local plate = Instance.new("Frame")
+		plate.Size = UDim2.fromScale(1, 1)
+		plate.BackgroundTransparency = 0.1
+		plate.Parent = bb
+		GildedGrimoire.Frame(plate, { Class = "Compact", Tone = "Crimson" })
 		local label = Instance.new("TextLabel")
-		label.Size = UDim2.fromScale(1, 1)
-		label.BackgroundColor3 = Color3.fromRGB(70, 10, 14)
-		label.BackgroundTransparency = 0.15
-		label.Text = "[Loot Thief]"
-		label.TextColor3 = Color3.fromRGB(255, 120, 110)
-		label.Font = Enum.Font.GothamBlack
+		label.Size = UDim2.new(1, -12, 1, -6)
+		label.Position = UDim2.fromOffset(6, 3)
+		label.BackgroundTransparency = 1
+		label.Text = "LOOT THIEF"
+		label.TextColor3 = Color3.fromRGB(255, 150, 140)
 		label.TextScaled = true
-		label.Parent = bb
-		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(0, 6)
-		corner.Parent = label
+		label.ZIndex = 3
+		label.Parent = plate
+		GildedGrimoire.StyleText(label, "Title")
 		bb.Parent = head
 	elseif not flagged and tag then
 		tag:Destroy()
@@ -921,7 +927,7 @@ function spawnPhysicalLoot(lootType: "GOLD" | "GEMS", amount: number, worldPos: 
 
 	local part: BasePart? = nil
 	local color = Color3.fromRGB(255, 205, 45)
-	local icon = "💰"
+	local icon = "Gold"
 
 	if lootType == "GOLD" then
 		part = ArtPackVisuals.Mesh("prop_bounty_bag")
@@ -929,14 +935,14 @@ function spawnPhysicalLoot(lootType: "GOLD" | "GEMS", amount: number, worldPos: 
 			part.Size = Vector3.new(2.4, 2.8, 1.8)
 		end
 		color = Color3.fromRGB(255, 205, 45)
-		icon = "💰"
+		icon = "Gold"
 	elseif lootType == "GEMS" then
 		part = ArtPackVisuals.Mesh("prop_rift_tether_crystal")
 		if part then
 			part.Size = Vector3.new(2.4, 3.4, 2.4)
 		end
 		color = Color3.fromRGB(0, 230, 255)
-		icon = "💎"
+		icon = "Gems"
 	end
 
 	if not part then
@@ -965,45 +971,45 @@ function spawnPhysicalLoot(lootType: "GOLD" | "GEMS", amount: number, worldPos: 
 	bb.AlwaysOnTop = false
 	bb.Parent = part
 
+	-- Gilded Grimoire loot plate: bronze for gold, teal for gems, with a drawn currency icon.
 	local frame = Instance.new("Frame")
 	frame.Size = UDim2.fromScale(1, 1)
-	frame.BackgroundColor3 = Color3.fromRGB(12, 14, 22)
-	frame.BackgroundTransparency = 0.2
+	frame.BackgroundTransparency = 0.12
 	frame.Parent = bb
+	GildedGrimoire.Frame(frame, { Class = "Compact", Tone = if lootType == "GEMS" then "Teal" else "Bronze" })
 
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 6)
-	corner.Parent = frame
-
-	local stroke = Instance.new("UIStroke")
-	stroke.Color = color
-	stroke.Thickness = 1.5
-	stroke.Parent = frame
+	local lootIcon = GrimoireIcons.Create(icon, 34, frame, 3)
+	lootIcon.AnchorPoint = Vector2.new(0, 0.5)
+	lootIcon.Position = UDim2.new(0, 6, 0.5, 0)
 
 	local titleLbl = Instance.new("TextLabel")
-	titleLbl.Size = UDim2.new(1, -6, 0.52, 0)
-	titleLbl.Position = UDim2.new(0, 3, 0, 1)
+	titleLbl.Size = UDim2.new(1, -52, 0.54, 0)
+	titleLbl.Position = UDim2.new(0, 46, 0, 3)
 	titleLbl.BackgroundTransparency = 1
-	titleLbl.Text = string.format("%s %d %s", icon, amount, lootType)
+	titleLbl.Text = string.format("%d %s", amount, if lootType == "GEMS" then "Gems" elseif lootType == "GOLD" then "Gold" else lootType)
 	titleLbl.TextColor3 = color
-	titleLbl.Font = Enum.Font.GothamBold
 	titleLbl.TextScaled = true
+	titleLbl.TextXAlignment = Enum.TextXAlignment.Left
+	titleLbl.ZIndex = 3
 	titleLbl.Parent = frame
+	GildedGrimoire.StyleText(titleLbl, "Number")
 
 	local ownerLbl = Instance.new("TextLabel")
-	ownerLbl.Size = UDim2.new(1, -6, 0.44, 0)
-	ownerLbl.Position = UDim2.new(0, 3, 0.52, 0)
+	ownerLbl.Size = UDim2.new(1, -52, 0.38, 0)
+	ownerLbl.Position = UDim2.new(0, 46, 0.56, 0)
 	ownerLbl.BackgroundTransparency = 1
 	if killerPlayer then
-		ownerLbl.Text = string.format("👤 Killer: %s", killerPlayer.DisplayName)
-		ownerLbl.TextColor3 = Color3.fromRGB(240, 220, 140)
+		ownerLbl.Text = string.format("Killer: %s", killerPlayer.DisplayName)
+		ownerLbl.TextColor3 = Color3.fromRGB(255, 226, 150)
 	else
-		ownerLbl.Text = customLabel or "🌐 OPEN LOOT (Free for All)"
-		ownerLbl.TextColor3 = Color3.fromRGB(100, 240, 180)
+		ownerLbl.Text = customLabel or "Open loot · free for all"
+		ownerLbl.TextColor3 = Color3.fromRGB(140, 245, 190)
 	end
-	ownerLbl.Font = Enum.Font.GothamMedium
 	ownerLbl.TextScaled = true
+	ownerLbl.TextXAlignment = Enum.TextXAlignment.Left
+	ownerLbl.ZIndex = 3
 	ownerLbl.Parent = frame
+	GildedGrimoire.StyleText(ownerLbl, "Body")
 
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.ActionText = "Hold / Carry"

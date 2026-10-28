@@ -20,6 +20,9 @@ local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormu
 local FortressTree = require(Shared:WaitForChild("Util"):WaitForChild("FortressTree"))
 local SummonLuck = require(Shared:WaitForChild("Util"):WaitForChild("SummonLuck"))
 local GothicBoxStyle = require(Shared:WaitForChild("Util"):WaitForChild("GothicBoxStyle"))
+local GrimoireIcons = require(Shared:WaitForChild("Util"):WaitForChild("GrimoireIcons"))
+local GrimoireSummonButton = require(Shared:WaitForChild("Util"):WaitForChild("GrimoireSummonButton"))
+local GildedGrimoire = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GildedGrimoire"))
 
 local RemotesFolder = ReplicatedStorage:WaitForChild("Remotes")
 local ArtifactRemotes = RemotesFolder:FindFirstChild("ArtifactRemotes") :: Folder?
@@ -48,15 +51,6 @@ local C = {
 	Red = Color3.fromRGB(239, 68, 68),
 	Arrow = Color3.fromRGB(140, 130, 160),
 	Underline = Color3.fromRGB(225, 150, 245),
-}
-
-local ARCHETYPE_ICONS: { [string]: string } = {
-	Vanguard = "🛡️",
-	Striker = "⚔️",
-	Marksman = "🏹",
-	Scholar = "🔮",
-	Healer = "💚",
-	Miner = "⛏️",
 }
 
 local ARTIFACT_ICONS: { [string]: string } = {
@@ -187,9 +181,11 @@ function Controller.new(gui: ScreenGui, getProfile: () -> any, remotes: Instance
 		ZIndex = 51,
 	}, gui)
 	self.Root = root
+	-- Gilded Grimoire theme: convert this screen's legacy Gotham text (now and as it is rebuilt).
+	GildedGrimoire.Watch(root)
 
 	applyGothicStyle(root, "Window")
-	self.Stroke = root:FindFirstChildOfClass("UIStroke")
+	self.Stroke = GildedGrimoire.StateStroke(root)
 
 	self.Scale = new("UIScale", {}, root)
 
@@ -201,12 +197,17 @@ function Controller.new(gui: ScreenGui, getProfile: () -> any, remotes: Instance
 	end)
 
 	-- 4. Currency / Gems Indicator in Top Bar
-	local gemCurrency = label(root, "💎 0", 14, C.GoldYellow, Enum.Font.GothamBold)
-	gemCurrency.Name = "GemCurrency"
-	gemCurrency.AnchorPoint = Vector2.new(1, 0)
-	gemCurrency.Position = UDim2.new(1, -56, 0, 20)
-	gemCurrency.Size = UDim2.new(0, 180, 0, 22)
-	gemCurrency.TextXAlignment = Enum.TextXAlignment.Right
+	-- Gems counter: a drawn Gilded Grimoire gem beside the amount.
+	local gemRow, gemCurrency = GrimoireIcons.IconText("Gems", 24, root, 53)
+	gemRow.Name = "GemCurrency"
+	gemRow.AnchorPoint = Vector2.new(1, 0)
+	gemRow.Position = UDim2.new(1, -60, 0, 18)
+	gemCurrency.Text = "0 Gems"
+	gemCurrency.TextSize = 17
+	gemCurrency.TextColor3 = C.GoldYellow
+	GildedGrimoire.StyleText(gemCurrency, "Number")
+	gemCurrency:SetAttribute("Grimoire", true)
+	self.GemCurrencyRow = gemRow
 	self.GemCurrency = gemCurrency
 
 	-- 5. Top Tab Container (CALL OF THE RIFT | A STAR'S ARRIVAL)
@@ -407,64 +408,32 @@ function Controller:BuildPermanentSummonView(root: Frame)
 		ZIndex = 53,
 	}, permView)
 
-	-- SUMMON 1X Button (100 Gems)
-	local btn1X = new("TextButton", {
+	-- SUMMON 1X Button (100 Gems): the shared Gilded Grimoire summon button.
+	GrimoireSummonButton.new(btnRow, {
 		Name = "PermSummon1XBtn",
+		Title = "SUMMON 1X",
+		Cost = 100,
 		Position = UDim2.fromScale(0, 0),
 		Size = UDim2.new(0.485, 0, 1, 0),
-		BackgroundColor3 = Color3.fromRGB(22, 18, 36),
-		BorderSizePixel = 0,
-		Text = "",
-		AutoButtonColor = false,
 		ZIndex = 54,
-	}, btnRow)
-	applyGothicStyle(btn1X, "Button")
+		OnClick = function()
+			self:PerformSummon("CALL_OF_THE_RIFT", 1)
+		end,
+	})
 
-	local t1X = label(btn1X, "SUMMON 1X", 15, Color3.fromRGB(255, 255, 255), Enum.Font.GothamBold)
-	t1X.AnchorPoint = Vector2.new(0.5, 0.5)
-	t1X.Position = UDim2.new(0.5, 0, 0.34, 0)
-	t1X.Size = UDim2.new(1, 0, 0, 20)
-	t1X.ZIndex = 56
-
-	local c1X = label(btn1X, "💎 100", 15, Color3.fromRGB(255, 255, 255), Enum.Font.GothamBold)
-	c1X.AnchorPoint = Vector2.new(0.5, 0.5)
-	c1X.Position = UDim2.new(0.5, 0, 0.72, 0)
-	c1X.Size = UDim2.new(1, 0, 0, 20)
-	c1X.ZIndex = 56
-
-	btn1X.Activated:Connect(function()
-		self:PerformSummon("CALL_OF_THE_RIFT", 1)
-	end)
-
-	-- SUMMON 10X Button (900 Gems)
-	local btn10X = new("TextButton", {
+	-- SUMMON 10X Button (900 Gems): the shared Gilded Grimoire summon button.
+	GrimoireSummonButton.new(btnRow, {
 		Name = "PermSummon10XBtn",
+		Title = "SUMMON 10X",
+		Cost = 900,
 		AnchorPoint = Vector2.new(1, 0),
 		Position = UDim2.new(1, 0, 0, 0),
 		Size = UDim2.new(0.485, 0, 1, 0),
-		BackgroundColor3 = Color3.fromRGB(22, 18, 36),
-		BorderSizePixel = 0,
-		Text = "",
-		AutoButtonColor = false,
 		ZIndex = 54,
-	}, btnRow)
-	applyGothicStyle(btn10X, "Button")
-
-	local t10X = label(btn10X, "SUMMON 10X", 15, Color3.fromRGB(255, 255, 255), Enum.Font.GothamBold)
-	t10X.AnchorPoint = Vector2.new(0.5, 0.5)
-	t10X.Position = UDim2.new(0.5, 0, 0.34, 0)
-	t10X.Size = UDim2.new(1, 0, 0, 20)
-	t10X.ZIndex = 56
-
-	local c10X = label(btn10X, "💎 900", 15, Color3.fromRGB(255, 255, 255), Enum.Font.GothamBold)
-	c10X.AnchorPoint = Vector2.new(0.5, 0.5)
-	c10X.Position = UDim2.new(0.5, 0, 0.72, 0)
-	c10X.Size = UDim2.new(1, 0, 0, 20)
-	c10X.ZIndex = 56
-
-	btn10X.Activated:Connect(function()
-		self:PerformSummon("CALL_OF_THE_RIFT", 10)
-	end)
+		OnClick = function()
+			self:PerformSummon("CALL_OF_THE_RIFT", 10)
+		end,
+	})
 end
 
 --============================================================================
@@ -558,64 +527,32 @@ function Controller:BuildLimitedSummonView(root: Frame)
 		ZIndex = 53,
 	}, limView)
 
-	-- SUMMON 1X Button (100 Gems)
-	local btn1X = new("TextButton", {
+	-- SUMMON 1X Button (100 Gems): the shared Gilded Grimoire summon button.
+	GrimoireSummonButton.new(btnRow, {
 		Name = "LimSummon1XBtn",
+		Title = "SUMMON 1X",
+		Cost = 100,
 		Position = UDim2.fromScale(0, 0),
 		Size = UDim2.new(0.485, 0, 1, 0),
-		BackgroundColor3 = Color3.fromRGB(22, 18, 36),
-		BorderSizePixel = 0,
-		Text = "",
-		AutoButtonColor = false,
 		ZIndex = 54,
-	}, btnRow)
-	applyGothicStyle(btn1X, "Button")
+		OnClick = function()
+			self:PerformSummon("A_STARS_ARRIVAL", 1)
+		end,
+	})
 
-	local t1X = label(btn1X, "SUMMON 1X", 15, Color3.fromRGB(255, 255, 255), Enum.Font.GothamBold)
-	t1X.AnchorPoint = Vector2.new(0.5, 0.5)
-	t1X.Position = UDim2.new(0.5, 0, 0.34, 0)
-	t1X.Size = UDim2.new(1, 0, 0, 20)
-	t1X.ZIndex = 56
-
-	local c1X = label(btn1X, "💎 100", 15, Color3.fromRGB(255, 255, 255), Enum.Font.GothamBold)
-	c1X.AnchorPoint = Vector2.new(0.5, 0.5)
-	c1X.Position = UDim2.new(0.5, 0, 0.72, 0)
-	c1X.Size = UDim2.new(1, 0, 0, 20)
-	c1X.ZIndex = 56
-
-	btn1X.Activated:Connect(function()
-		self:PerformSummon("A_STARS_ARRIVAL", 1)
-	end)
-
-	-- SUMMON 10X Button (900 Gems)
-	local btn10X = new("TextButton", {
+	-- SUMMON 10X Button (900 Gems): the shared Gilded Grimoire summon button.
+	GrimoireSummonButton.new(btnRow, {
 		Name = "LimSummon10XBtn",
+		Title = "SUMMON 10X",
+		Cost = 900,
 		AnchorPoint = Vector2.new(1, 0),
 		Position = UDim2.new(1, 0, 0, 0),
 		Size = UDim2.new(0.485, 0, 1, 0),
-		BackgroundColor3 = Color3.fromRGB(22, 18, 36),
-		BorderSizePixel = 0,
-		Text = "",
-		AutoButtonColor = false,
 		ZIndex = 54,
-	}, btnRow)
-	applyGothicStyle(btn10X, "Button")
-
-	local t10X = label(btn10X, "SUMMON 10X", 15, Color3.fromRGB(255, 255, 255), Enum.Font.GothamBold)
-	t10X.AnchorPoint = Vector2.new(0.5, 0.5)
-	t10X.Position = UDim2.new(0.5, 0, 0.34, 0)
-	t10X.Size = UDim2.new(1, 0, 0, 20)
-	t10X.ZIndex = 56
-
-	local c10X = label(btn10X, "💎 900", 15, Color3.fromRGB(255, 255, 255), Enum.Font.GothamBold)
-	c10X.AnchorPoint = Vector2.new(0.5, 0.5)
-	c10X.Position = UDim2.new(0.5, 0, 0.72, 0)
-	c10X.Size = UDim2.new(1, 0, 0, 20)
-	c10X.ZIndex = 56
-
-	btn10X.Activated:Connect(function()
-		self:PerformSummon("A_STARS_ARRIVAL", 10)
-	end)
+		OnClick = function()
+			self:PerformSummon("A_STARS_ARRIVAL", 10)
+		end,
+	})
 end
 
 --============================================================================
@@ -696,6 +633,8 @@ function Controller:BuildSummonRevealModal(gui: ScreenGui)
 		ZIndex = 80,
 	}, gui)
 	self.RevealScrim = revealScrim
+	-- Gilded Grimoire theme: convert this screen's legacy Gotham text (now and as it is rebuilt).
+	GildedGrimoire.Watch(revealScrim)
 
 	local modal = new("Frame", {
 		Name = "SummonRevealModal",
@@ -710,7 +649,7 @@ function Controller:BuildSummonRevealModal(gui: ScreenGui)
 
 	applyGothicStyle(modal, "Window")
 
-	local revealTitle = label(modal, "✨ DIMENSIONAL HEROES SUMMONED", 20, C.GoldYellow, Enum.Font.GothamBlack)
+	local revealTitle = label(modal, "DIMENSIONAL HEROES SUMMONED", 20, C.GoldYellow, Enum.Font.GothamBlack)
 	revealTitle.Position = UDim2.new(0, 0, 0, 20)
 	revealTitle.Size = UDim2.new(1, 0, 0, 28)
 	self.RevealTitle = revealTitle
@@ -759,7 +698,7 @@ function Controller:ShowSummonResults(summonedList: { any }, isArtifact: boolean
 		if child:IsA("GuiObject") then child:Destroy() end
 	end
 
-	self.RevealTitle.Text = isArtifact and "✨ DIMENSIONAL ARTIFACTS SUMMONED" or "✨ DIMENSIONAL HEROES SUMMONED"
+	self.RevealTitle.Text = isArtifact and "DIMENSIONAL ARTIFACTS SUMMONED" or "DIMENSIONAL HEROES SUMMONED"
 
 	for order, item in ipairs(summonedList) do
 		local card = new("Frame", {
@@ -807,7 +746,6 @@ function Controller:ShowSummonResults(summonedList: { any }, isArtifact: boolean
 		else
 			local hero = item
 			local archetype = hero.Archetype or "Striker"
-			local iconChar = ARCHETYPE_ICONS[archetype] or "⚔️"
 
 			local iconTile = new("Frame", {
 				AnchorPoint = Vector2.new(0, 0.5),
@@ -820,10 +758,10 @@ function Controller:ShowSummonResults(summonedList: { any }, isArtifact: boolean
 			new("UICorner", { CornerRadius = UDim.new(0, 6) }, iconTile)
 			stroke(iconTile, C.BorderCard)
 
-			local iconLbl = label(iconTile, iconChar, 22, C.Text)
-			iconLbl.Position = UDim2.fromScale(0, 0)
-			iconLbl.Size = UDim2.fromScale(1, 1)
-			iconLbl.TextXAlignment = Enum.TextXAlignment.Center
+			-- Drawn archetype icon (Gilded Grimoire), not an emoji.
+			local archIcon = GrimoireIcons.Create(archetype, 40, iconTile, 85)
+			archIcon.AnchorPoint = Vector2.new(0.5, 0.5)
+			archIcon.Position = UDim2.fromScale(0.5, 0.5)
 
 			local stars = string.rep("★", hero.Stars or 1)
 			local starColor = "#FACC15"
@@ -980,7 +918,7 @@ function Controller:Refresh()
 	if not self.Root.Visible then return end
 	local profile = self.GetProfile()
 	local gems = profile and profile.Currencies and profile.Currencies.Gems or 0
-	self.GemCurrency.Text = string.format("💎 %d Gems", math.floor(gems))
+	self.GemCurrency.Text = string.format("%d Gems", math.floor(gems))
 
 	if self.Current == "Summoning" then
 		-- Update Permanent Banner Pity
@@ -1012,7 +950,7 @@ function Controller:Refresh()
 			end
 			luck = SummonLuck.Luck(blessing.Level, sumLabor, FortressTree.PerkBonuses(profile.FortressTree).BlessingLuck)
 		end
-		local badge = if luck > 0 then string.format("✨ Blessing +%.1f%% luck", luck * 100) else "10x guarantees a Rare or better hero"
+		local badge = if luck > 0 then string.format("Blessing +%.1f%% luck", luck * 100) else "10x guarantees a Rare or better hero"
 		if self.PermanentInfoLabel then self.PermanentInfoLabel.Text = badge end
 		if self.LimitedInfoLabel then self.LimitedInfoLabel.Text = badge end
 		return
@@ -1070,7 +1008,7 @@ function Controller:Refresh()
 		local eff = cfg and math.round(cfg.OfflineEfficiency * 100) or 75
 		local bossText = bossTier > 0 and string.format(" (+%d%% Boss Tier %d)", bossTier * 15, bossTier) or ""
 
-		self.Summary.Text = string.format("Guard Post Lv.%d (%s)  •  %d/%d Adventurers  •  💰 <b>%.1f Gold/min</b>%s  •  Offline Cap: %dh (%d%%)", fac.Level, cfg and cfg.VisualTitle or "Bastion", #fac.AssignedHeroUUIDs, cfg and cfg.MaxWorkers or 1, rate, bossText, hours, eff)
+		self.Summary.Text = string.format("Guard Post Lv.%d (%s)  •  %d/%d Adventurers  •  <b>%.1f Gold/min</b>%s  •  Offline Cap: %dh (%d%%)", fac.Level, cfg and cfg.VisualTitle or "Bastion", #fac.AssignedHeroUUIDs, cfg and cfg.MaxWorkers or 1, rate, bossText, hours, eff)
 
 	elseif self.Current == "Market" then
 		local fac = profile.Facilities and profile.Facilities.Market or { Level = 1, AssignedHeroUUIDs = {} }
@@ -1086,7 +1024,7 @@ function Controller:Refresh()
 		local bonusPct = math.round((mult - 1) * 1000) / 10
 		local cfg = FacilityConfig.UpgradeTable.Market[fac.Level]
 
-		self.Summary.Text = string.format("Market Lv.%d (%s)  •  %d/%d Merchants  •  📦 <b>+%.1f%% Tower & Cargo Gold</b>", fac.Level, cfg and cfg.VisualTitle or "Bazaar", #fac.AssignedHeroUUIDs, StatFormulas.GetFacilityMaxWorkers("Market", fac.Level, perks), bonusPct)
+		self.Summary.Text = string.format("Market Lv.%d (%s)  •  %d/%d Merchants  •  <b>+%.1f%% Tower & Cargo Gold</b>", fac.Level, cfg and cfg.VisualTitle or "Bazaar", #fac.AssignedHeroUUIDs, StatFormulas.GetFacilityMaxWorkers("Market", fac.Level, perks), bonusPct)
 
 	elseif self.Current == "TrainingGrounds" then
 		local fac = profile.Facilities and profile.Facilities.TrainingGrounds or { Level = 1, AssignedHeroUUIDs = {} }
@@ -1102,7 +1040,7 @@ function Controller:Refresh()
 		local bonusPct = math.round((mult - 1) * 1000) / 10
 		local cfg = FacilityConfig.UpgradeTable.TrainingGrounds[fac.Level]
 
-		self.Summary.Text = string.format("Training Grounds Lv.%d (%s)  •  %d/%d Trainers  •  ⚔️ <b>+%.1f%% Squad Final ATK & HP</b>", fac.Level, cfg and cfg.VisualTitle or "Arena", #fac.AssignedHeroUUIDs, StatFormulas.GetFacilityMaxWorkers("TrainingGrounds", fac.Level, perks), bonusPct)
+		self.Summary.Text = string.format("Training Grounds Lv.%d (%s)  •  %d/%d Trainers  •  <b>+%.1f%% Squad Final ATK & HP</b>", fac.Level, cfg and cfg.VisualTitle or "Arena", #fac.AssignedHeroUUIDs, StatFormulas.GetFacilityMaxWorkers("TrainingGrounds", fac.Level, perks), bonusPct)
 
 	elseif self.Current == "GodsBlessing" then
 		local fac = profile.Facilities and profile.Facilities.GodsBlessing or { Level = 0, AssignedHeroUUIDs = {} }
@@ -1116,7 +1054,7 @@ function Controller:Refresh()
 		local perks = FortressTree.PerkBonuses(profile.FortressTree)
 		local luck = SummonLuck.Luck(fac.Level, sumLabor, perks.BlessingLuck)
 		local cfg = FacilityConfig.UpgradeTable.GodsBlessing[fac.Level]
-		self.Summary.Text = string.format("God's Blessing Lv.%d (%s)  •  %d/%d Acolytes  •  ✨ <b>+%.1f%% Summon Luck</b> (cap +%d%%)", fac.Level, cfg and cfg.VisualTitle or "Angel", #fac.AssignedHeroUUIDs, StatFormulas.GetFacilityMaxWorkers("GodsBlessing", fac.Level, perks), luck * 100, math.round(FacilityConfig.Constants.MaxSummonLuck * 100))
+		self.Summary.Text = string.format("God's Blessing Lv.%d (%s)  •  %d/%d Acolytes  •  <b>+%.1f%% Summon Luck</b> (cap +%d%%)", fac.Level, cfg and cfg.VisualTitle or "Angel", #fac.AssignedHeroUUIDs, StatFormulas.GetFacilityMaxWorkers("GodsBlessing", fac.Level, perks), luck * 100, math.round(FacilityConfig.Constants.MaxSummonLuck * 100))
 
 	else
 		local deployed = 0
@@ -1154,7 +1092,7 @@ function Controller:Refresh()
 		local coma = math.max(0, (hero.ComaUntilTimestamp or 0) - os.time())
 		local status = coma > 0 and string.format("<font color=\"#EF4444\">Coma (%ds)</font>", coma) or string.format("Stamina %d%%", math.round(hero.CurrentStamina or 100))
 		local stars = HeroCatalog.RarityName(StatFormulas.GetHeroRarity(hero)) .. " " .. string.rep("★", hero.Stars or 1)
-		local archIcon = ARCHETYPE_ICONS[hero.Archetype] or "🛡️"
+		local archIcon = string.format("<font color=\"#C4B8DB\">%s ·</font>", hero.Archetype or "Hero")
 
 		local labor = StatFormulas.GetEffectiveLabor(hero, currentTag or hero.Assignment)
 		local seed = HeroCatalog.Seeds[hero.TemplateId]
@@ -1162,7 +1100,7 @@ function Controller:Refresh()
 		local hasSynergy = currentTag and (pref == "ALL" or pref == currentTag or (currentTag == "FACILITY_GODS_BLESSING" and hero.Archetype == "Healer"))
 		local synergyText = hasSynergy and " <font color=\"#4ADE80\">★ +25% Synergy</font>" or ""
 
-		desc.Text = string.format("%s %s  <font color=\"#FACC15\">%s</font>  Lv.%d\n<font color=\"#A0B0C4\">%s  •  %s</font>\n<font color=\"#E2D5FC\">⛏️ Labor: <b>%.1f</b>%s</font>", archIcon, hero.DisplayName, stars, hero.Level or 1, hero.Assignment, status, labor, synergyText)
+		desc.Text = string.format("%s %s  <font color=\"#FACC15\">%s</font>  Lv.%d\n<font color=\"#A0B0C4\">%s  •  %s</font>\n<font color=\"#E2D5FC\">Labor: <b>%.1f</b>%s</font>", archIcon, hero.DisplayName, stars, hero.Level or 1, hero.Assignment, status, labor, synergyText)
 
 		local assignTitle = "DEPLOY"
 		local targetAssignment = "SQUAD_AUTO"

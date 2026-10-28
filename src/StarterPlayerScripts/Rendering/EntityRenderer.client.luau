@@ -11,6 +11,7 @@ local Workspace = game:GetService("Workspace")
 local LocalPlayer = Players.LocalPlayer
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local HeroCatalog = require(Shared:WaitForChild("Config"):WaitForChild("HeroCatalog"))
+local GildedGrimoire = require(Shared:WaitForChild("Util"):WaitForChild("GildedGrimoire"))
 
 local CombatRemotes = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CombatRemotes")
 local ReplicationTickRemote = CombatRemotes:WaitForChild("ReplicationTick") :: UnreliableRemoteEvent
@@ -342,70 +343,58 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 	-- World-Space BillboardGui (Name, Stars, Green HP Bar, Yellow Stamina Bar)
 	local bb = Instance.new("BillboardGui")
 	bb.Name = "UnitBillboard"
-	bb.Size = isBoss and UDim2.new(0, 240, 0, 64) or UDim2.new(0, 145, 0, 48)
+	bb.Size = isBoss and UDim2.new(0, 260, 0, 70) or UDim2.new(0, 150, 0, 52)
 	bb.StudsOffset = Vector3.new(0, (bodySize.Y * 0.5) + (isBoss and 5.5 or 3.2), 0)
 	bb.MaxDistance = isBoss and 320 or 150
 	bb.AlwaysOnTop = isBoss or (isHero and meta and meta.DuelSide ~= nil)
 	bb.Parent = root
 
+	-- Gilded Grimoire nameplate: violet for heroes, deep obsidian for mobs, crimson for bosses,
+	-- each with the ink outline and inset gold rail.
 	local bg = Instance.new("Frame")
 	bg.Size = UDim2.fromScale(1, 1)
-	bg.BackgroundColor3 = Color3.fromRGB(14, 14, 22)
-	bg.BackgroundTransparency = 0.2
+	bg.BackgroundTransparency = 0.12
 	bg.BorderSizePixel = 0
 	bg.Parent = bb
-
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 6)
-	corner.Parent = bg
+	GildedGrimoire.Frame(bg, { Class = "Compact", Tone = if isBoss then "Crimson" elseif isHero then "Violet" else "Deep" })
 
 	local title = Instance.new("TextLabel")
-	title.Size = UDim2.new(1, -6, 0.42, 0)
-	title.Position = UDim2.new(0, 3, 0, 1)
+	title.Size = UDim2.new(1, -12, 0.42, 0)
+	title.Position = UDim2.new(0, 6, 0, 3)
 	title.BackgroundTransparency = 1
-	title.Font = Enum.Font.GothamBold
 	title.TextScaled = true
+	title.ZIndex = 3
 	-- In a retaliation duel each viewer sees their own squad in green and the other in orange.
 	local duelColor = isHero and meta and meta.DuelSide and (if meta.OwnerUserId == LocalPlayer.UserId then Color3.fromRGB(120, 235, 120) else Color3.fromRGB(255, 160, 70)) or nil
 	if isHero then
 		local stars = string.rep("★", (meta and meta.Stars) or 1)
 		title.Text = string.format("%s %s Lv.%d", (meta and meta.Name) or "Hero", stars, (meta and meta.Level) or 1)
-		title.TextColor3 = duelColor or Color3.fromRGB(255, 225, 95)
+		title.TextColor3 = duelColor or Color3.fromRGB(255, 226, 140)
 	else
 		title.Text = (meta and meta.Name) or "Ruin Entity"
-		title.TextColor3 = isBoss and Color3.fromRGB(255, 95, 245) or Color3.fromRGB(255, 130, 130)
+		title.TextColor3 = isBoss and Color3.fromRGB(255, 150, 240) or Color3.fromRGB(255, 160, 150)
 	end
 	title.Parent = bg
+	GildedGrimoire.StyleText(title, "Title")
+	local cap = Instance.new("UITextSizeConstraint")
+	cap.MaxTextSize = if isBoss then 22 else 15
+	cap.Parent = title
 
-	-- HP Bar
-	local hpBg = Instance.new("Frame")
-	hpBg.Size = UDim2.new(0.92, 0, 0.22, 0)
-	hpBg.Position = UDim2.new(0.04, 0, 0.45, 0)
-	hpBg.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-	hpBg.BorderSizePixel = 0
-	hpBg.Parent = bg
+	-- HP bar: a pill gauge (green for heroes, red for mobs, the duel colour in a duel).
+	local hpBg, hpFill = GildedGrimoire.Bar(bg, duelColor or (isHero and Color3.fromRGB(110, 245, 140) or Color3.fromRGB(245, 70, 90)), if isBoss then 2.2 else 1.6)
+	hpBg.Size = if isHero then UDim2.new(1, -16, 0.2, 0) else UDim2.new(1, -16, 0.28, 0)
+	hpBg.Position = UDim2.new(0, 8, 0.5, 0)
+	hpBg.ZIndex = 3
+	hpFill.ZIndex = 4
 
-	local hpFill = Instance.new("Frame")
-	hpFill.Size = UDim2.fromScale(1, 1)
-	hpFill.BackgroundColor3 = duelColor or (isHero and Color3.fromRGB(65, 235, 115) or Color3.fromRGB(245, 65, 85))
-	hpFill.BorderSizePixel = 0
-	hpFill.Parent = hpBg
-
-	-- Stamina Bar (for Heroes) or State Subtext (for Mobs)
+	-- Skill gauge for heroes (gold; it glows when full).
 	local stamFill: Frame? = nil
 	if isHero then
-		local stBg = Instance.new("Frame")
-		stBg.Size = UDim2.new(0.92, 0, 0.18, 0)
-		stBg.Position = UDim2.new(0.04, 0, 0.72, 0)
-		stBg.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-		stBg.BorderSizePixel = 0
-		stBg.Parent = bg
-
-		local sf = Instance.new("Frame")
-		sf.Size = UDim2.fromScale(1, 1)
-		sf.BackgroundColor3 = Color3.fromRGB(255, 210, 55)
-		sf.BorderSizePixel = 0
-		sf.Parent = stBg
+		local stBg, sf = GildedGrimoire.Bar(bg, Color3.fromRGB(255, 210, 55), 1.4)
+		stBg.Size = UDim2.new(1, -16, 0.14, 0)
+		stBg.Position = UDim2.new(0, 8, 0.76, 0)
+		stBg.ZIndex = 3
+		sf.ZIndex = 4
 		stamFill = sf
 	end
 
