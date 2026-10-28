@@ -25,3 +25,6 @@ artifacts/
 # Wally packages
 Packages/
 
+
+# Blender backup files
+*.blend1
