@@ -41,5 +41,14 @@ test("persistence: write keeps or releases the lock and never overwrites another
 	check(Codec.Write({ Lock = { JobId = "B", Time = 1 } }, "A", 60, {}, true) == nil, "overwrote other server")
 end)
 
+test("persistence: a Studio session reclaims a lock left by a killed Studio session", function()
+	local left = { Data = { Gold = 7 }, Lock = { JobId = "studio-100", Time = 995 } }
+	local claim = Codec.Claim(left, "studio-200", 1000)
+	check(claim and claim.Data.Gold == 7 and claim.Lock.JobId == "studio-200", "studio lock not reclaimed")
+	check(Codec.Write(left, "studio-200", 1000, {}, true) ~= nil, "studio write refused")
+	check(Codec.Claim(left, "guid-live", 1000) == nil, "live server stole a fresh studio lock")
+	check(Codec.Claim({ Lock = { JobId = "guid-live", Time = 995 } }, "studio-200", 1000) == nil, "studio stole a live lock")
+end)
+
 print(("profile-persistence: %d passed, %d failed"):format(passed, failed))
 if failed > 0 then error("profile-persistence tests failed") end

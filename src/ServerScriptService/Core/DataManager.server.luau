@@ -1550,6 +1550,7 @@ FortressTreeService.Init({
 local AUTOSAVE_SECONDS = 120
 local persistentPlayers: { [Player]: boolean } = {}
 local releasedPlayers: { [Player]: boolean } = {}
+local savesInFlight = 0 -- releases still writing; BindToClose waits for these
 
 -- Checkpoint save for purchases and other high-value grants. Keeps the session lock.
 function DataManager.SaveProfile(player: Player): boolean
@@ -1563,7 +1564,9 @@ local function releaseProfile(player: Player)
 	releasedPlayers[player] = true
 	local profile = ActiveProfiles[player]
 	if profile and persistentPlayers[player] then
+		savesInFlight += 1
 		ProfilePersistence.Save(player.UserId, profile, true)
+		savesInFlight -= 1
 	end
 end
 
@@ -1639,20 +1642,17 @@ task.spawn(function()
 	end
 end)
 
+-- PlayerRemoving usually starts each release first, so wait on every in-flight save, not only the
+-- ones started here, or the server can close before the lock is released.
 game:BindToClose(function()
-	local pending = 0
 	for player, profile in ActiveProfiles do
 		if persistentPlayers[player] and not releasedPlayers[player] then
-			pending += 1
-			task.spawn(function()
-				OfflineRewardService.RecordLogout(player, profile)
-				releaseProfile(player)
-				pending -= 1
-			end)
+			OfflineRewardService.RecordLogout(player, profile)
+			task.spawn(releaseProfile, player)
 		end
 	end
 	local deadline = os.clock() + 25
-	while pending > 0 and os.clock() < deadline do task.wait(0.1) end
+	repeat task.wait(0.1) until savesInFlight == 0 or os.clock() > deadline
 end)
 
 _G.DataManager = DataManager
