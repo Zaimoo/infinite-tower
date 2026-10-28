@@ -455,7 +455,7 @@ function Controller:TooltipFor(nodeId: string): (string, string, string, string,
 		else string.format("%s · LEVEL %d", string.upper(branch), node.Level or 0)
 	local footer, color
 	if entry.State == "OWNED" then
-		footer, color = "✓ Built", C.Green
+		footer, color = "Built", C.Green
 	elseif entry.State == "AVAILABLE" then
 		local profile = self.GetProfile()
 		local gold = profile and profile.Currencies and profile.Currencies.Gold or 0
@@ -659,7 +659,7 @@ function Controller:Refresh()
 			elseif state == "OWNED" then
 				paint(entry.Rim, C.Rim)
 				paint(entry.Fill, C.Owned)
-				entry.Sub.Text = "✓"
+				entry.Sub.Text = "BUILT"
 				entry.Sub.TextColor3 = C.Green
 			elseif state == "AVAILABLE" then
 				paint(entry.Rim, C.Rim)

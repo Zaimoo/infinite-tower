@@ -31,10 +31,12 @@ local PitBalanceConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitFo
 local GothicBoxStyle = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GothicBoxStyle"))
 local GildedGrimoire = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GildedGrimoire"))
 
+local GrimoireIcons = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GrimoireIcons"))
+
 local Promo = {}
 Promo.__index = Promo
 
-local WIDTH, HEIGHT = 700, 740
+local WIDTH, HEIGHT = 700, 610 -- same container as Synthesis (the Pit tabs swap between them)
 
 local C = {
 	Scrim = Color3.fromRGB(6, 6, 10),
@@ -312,12 +314,14 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 	local ritualArea = new("Frame", {
 		Name = "RitualArea",
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 68),
+		Position = UDim2.new(0.5, 0, 0, 62),
 		Size = UDim2.fromOffset(320, 320),
 		BackgroundTransparency = 1,
 		ZIndex = 42,
 	}, root)
 	self.RitualArea = ritualArea
+	-- Drawn at 80% so the ritual, stats and button fit the Synthesis-sized window.
+	new("UIScale", { Scale = 0.8 }, ritualArea)
 
 	-- Outer Magic Circle (280x280)
 	local outerCircle = new("Frame", {
@@ -495,8 +499,8 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 	local statsPanel = new("Frame", {
 		Name = "StatsDisplay",
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 400),
-		Size = UDim2.fromOffset(640, 140),
+		Position = UDim2.new(0.5, 0, 0, 330),
+		Size = UDim2.fromOffset(640, 116),
 		BorderSizePixel = 0,
 		ZIndex = 42,
 	}, root)
@@ -506,14 +510,14 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 	local leftBlock = new("Frame", {
 		Name = "StatBlockOld",
 		Position = UDim2.fromOffset(24, 10),
-		Size = UDim2.fromOffset(236, 120),
+		Size = UDim2.fromOffset(236, 100),
 		BackgroundTransparency = 1,
 		ZIndex = 43,
 	}, statsPanel)
 
 	local function makeStatRow(parent: Instance, y: number, name: string)
 		local row = new("Frame", {
-			Size = UDim2.new(1, 0, 0, 26),
+			Size = UDim2.new(1, 0, 0, 24),
 			Position = UDim2.fromOffset(0, y),
 			BackgroundTransparency = 1,
 			ZIndex = 43,
@@ -531,11 +535,11 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 	end
 
 	self.OldMaxLevel = makeStatRow(leftBlock, 0, "Max Level")
-	self.OldHP = makeStatRow(leftBlock, 28, "HP")
-	self.OldATK = makeStatRow(leftBlock, 56, "Base ATK")
+	self.OldHP = makeStatRow(leftBlock, 24, "HP")
+	self.OldATK = makeStatRow(leftBlock, 48, "Base ATK")
 	self.OldStars = label(leftBlock, "★★★", 24, C.StarGold, Enum.Font.GothamBold)
-	self.OldStars.Position = UDim2.fromOffset(0, 86)
-	self.OldStars.Size = UDim2.new(1, 0, 0, 30)
+	self.OldStars.Position = UDim2.fromOffset(0, 74)
+	self.OldStars.Size = UDim2.new(1, 0, 0, 24)
 	self.OldStars.TextXAlignment = Enum.TextXAlignment.Center
 	self.OldStars.ZIndex = 43
 
@@ -548,20 +552,20 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 		Name = "StatBlockNew",
 		AnchorPoint = Vector2.new(1, 0),
 		Position = UDim2.new(1, -24, 0, 10),
-		Size = UDim2.fromOffset(236, 120),
+		Size = UDim2.fromOffset(236, 100),
 		BackgroundTransparency = 1,
 		ZIndex = 43,
 	}, statsPanel)
 
 	self.NewMaxLevel = makeStatRow(rightBlock, 0, "Max Level")
 	self.NewMaxLevel.TextColor3 = C.SuccessGreen
-	self.NewHP = makeStatRow(rightBlock, 28, "HP")
+	self.NewHP = makeStatRow(rightBlock, 24, "HP")
 	self.NewHP.TextColor3 = C.SuccessGreen
-	self.NewATK = makeStatRow(rightBlock, 56, "Base ATK")
+	self.NewATK = makeStatRow(rightBlock, 48, "Base ATK")
 	self.NewATK.TextColor3 = C.SuccessGreen
 	self.NewStars = label(rightBlock, '★★★<font color="#39ff14">★</font>', 24, C.StarGold, Enum.Font.GothamBold)
-	self.NewStars.Position = UDim2.fromOffset(0, 86)
-	self.NewStars.Size = UDim2.new(1, 0, 0, 30)
+	self.NewStars.Position = UDim2.fromOffset(0, 74)
+	self.NewStars.Size = UDim2.new(1, 0, 0, 24)
 	self.NewStars.TextXAlignment = Enum.TextXAlignment.Center
 	self.NewStars.ZIndex = 43
 
@@ -571,8 +575,8 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 	local actionArea = new("Frame", {
 		Name = "ActionSection",
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 552),
-		Size = UDim2.new(1, 0, 0, 180),
+		Position = UDim2.new(0.5, 0, 0, 454),
+		Size = UDim2.new(1, 0, 0, 150),
 		BackgroundTransparency = 1,
 		ZIndex = 42,
 	}, root)
@@ -587,13 +591,13 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 
 	-- Requirements / Costs Label
 	local costLbl = label(actionArea, "", 15, C.TextMuted, Enum.Font.GothamBold, "Body")
-	costLbl.Position = UDim2.fromOffset(0, 28)
+	costLbl.Position = UDim2.fromOffset(0, 26)
 	costLbl.Size = UDim2.new(1, 0, 0, 22)
 	costLbl.ZIndex = 43
 	self.CostLabel = costLbl
 
 	-- Initiate Promotion Button (btn-action)
-	local btnWidth, btnHeight = 480, 58
+	local btnWidth, btnHeight = 480, 52
 	local btn = new("TextButton", {
 		Name = "InitiatePromotionButton",
 		Text = spaced("INITIATE PROMOTION"),
@@ -604,7 +608,7 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 		BorderSizePixel = 0,
 		AutoButtonColor = true,
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 56),
+		Position = UDim2.new(0.5, 0, 0, 52),
 		Size = UDim2.fromOffset(btnWidth, btnHeight),
 		ZIndex = 43,
 	}, actionArea)
@@ -622,7 +626,7 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 
 	-- Status Feedback
 	self.Status = label(actionArea, "", 16, C.TextMuted, Enum.Font.GothamMedium, "Body")
-	self.Status.Position = UDim2.fromOffset(30, 122)
+	self.Status.Position = UDim2.fromOffset(30, 108)
 	self.Status.Size = UDim2.new(1, -60, 0, 36)
 	self.Status.ZIndex = 43
 
@@ -647,7 +651,7 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 		if not cam then return end
 		local v = cam.ViewportSize
 		-- Leave 64 px above the window for The Pit's tab bar (React HUD, Phase 5).
-		self.Scale.Scale = math.clamp(math.min((v.X - 24) / WIDTH, (v.Y - 32 - 64) / HEIGHT), 0.45, 1)
+		self.Scale.Scale = math.clamp(math.min((v.X - 24) / WIDTH, (v.Y - 60 - 64) / HEIGHT), 0.45, 1)
 		root.Position = UDim2.new(0.5, 0, 0.5, 32)
 	end
 	local camConn: RBXScriptConnection? = nil
@@ -698,10 +702,12 @@ function Promo.BuildPicker(self: any)
 		Position = UDim2.new(1, -48, 0, 10),
 		Size = UDim2.fromOffset(38, 38),
 		ZIndex = 61,
+		Name = "PickerClose",
 	}, picker)
 	back.Activated:Connect(function()
 		picker.Visible = false
 	end)
+	GrimoireIcons.CloseGlyph(back, 18)
 
 	self.PickerStatus = label(picker, "", 16, C.TextMuted, Enum.Font.GothamMedium, "Body")
 	self.PickerStatus.Position = UDim2.new(0, 20, 1, -44)
@@ -1137,8 +1143,8 @@ function Promo.Render(self: any)
 		local goldOk = goldOwned >= reqGold
 		local stonesOk = stonesOwned >= reqStones
 
-		local goldStr = string.format("GOLD: %s / %s %s", formatNumber(goldOwned), formatNumber(reqGold), goldOk and "✓" or "✗")
-		local stoneStr = string.format("STONES: %s / %s %s", formatNumber(stonesOwned), formatNumber(reqStones), stonesOk and "✓" or "✗")
+		local goldStr = string.format("GOLD: %s / %s %s", formatNumber(goldOwned), formatNumber(reqGold), goldOk and "(OK)" or "(NEED MORE)")
+		local stoneStr = string.format("STONES: %s / %s %s", formatNumber(stonesOwned), formatNumber(reqStones), stonesOk and "(OK)" or "(NEED MORE)")
 
 		self.CostLabel.Text = string.format(
 			'<font color="%s">%s</font>      <font color="%s">%s</font>',

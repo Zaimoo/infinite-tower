@@ -409,7 +409,15 @@ Delete once each React replacement passes its tests:
 - **Done:**
   - The facility panel redesign (§4.5) as one gothic React panel, `Hud/FacilityPanel.luau`, used by the Guard Post, Market, Training Grounds and God's Blessing prompts. It has a header with the next Fortress Tree node, the big bonus figure and breakdown, worker slots with remove buttons and a locked-slot hint, and a hero picker with a hover preview, confirmation for heroes working elsewhere, and server refusal messages.
   - A gothic Pit tab bar; the Pit windows now leave 64 px above them for it.
-- **Next:** React Summon and Squad (assignment chips, slot locks).
+  - **Squad Deploy redesign** (`UI/SquadController.luau`, still imperative, in Gilded Grimoire):
+    - **Slot cards:** a portrait with a rarity ring and archetype icon, plus power, rarity, level and resting state.
+    - **Slot buttons:** CHANGE + REMOVE on a filled slot, ASSIGN on an empty one, UNLOCK on a locked one (opens the Fortress Tree).
+    - **Choosing a hero:** CHANGE or ASSIGN highlights the heroes who can take that slot; clicking one assigns it, and a squad hero swaps slots.
+    - **Clicking a hero with no slot chosen** fills the first empty slot. When the squad is full, the hero is held and every slot offers REPLACE.
+    - **Roster:** a grid with chips for each hero's slot, facility or resting state, power/stars/level sorting, and a "ready only" filter.
+    - **Server replies:** the screen shows the AssignHeroRole result. The server now validates the slot before it removes the hero from a facility.
+  - **Tower selector:** shows each floor's **Recommended Power** (`TowerFloorConfig.RecommendedPower`) next to your Squad Power, in red when you're under it. The value is the floor roster's Σ(MaxHP + 10 × ATK) × 0.08, so Floor 1 ≈ one fresh 1★ hero (~700).
+- **Next:** React Summon (assignment chips, slot locks).
 
 **Slice 3:** Fortress Tree, Forge, Pit and duel screens in React, then delete the legacy controllers (§6).
 

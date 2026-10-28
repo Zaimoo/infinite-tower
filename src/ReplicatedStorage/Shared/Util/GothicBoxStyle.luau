@@ -7,6 +7,7 @@ local GothicFont = require(script.Parent:WaitForChild("GothicFont"))
 local GothicBoxStyle = {}
 -- Every style renders in the "Gilded Grimoire" theme (ink outline, gold rail, gradient fill).
 local Grimoire = require(script.Parent:WaitForChild("GildedGrimoire"))
+local GrimoireIcons = require(script.Parent:WaitForChild("GrimoireIcons"))
 GothicBoxStyle.Font = GothicFont
 
 -- Configured authoritative asset ID uploaded by user (nil uses procedural vector styling)
@@ -743,6 +744,7 @@ function GothicBoxStyle.CreateCloseButton(parent: GuiObject, onClose: () -> ()):
 		LineJoinMode = Enum.LineJoinMode.Round,
 	}, closeBtn)
 	Grimoire.Rail(closeBtn, Color3.fromRGB(240, 196, 110), 8, closeBtn.ZIndex)
+	GrimoireIcons.CloseGlyph(closeBtn, 16)
 	closeBtn.TextStrokeColor3 = Grimoire.Ink
 	closeBtn.TextStrokeTransparency = 0.2
 

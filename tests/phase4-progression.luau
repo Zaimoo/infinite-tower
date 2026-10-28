@@ -238,4 +238,15 @@ test("Phase 5: Squad Power sums round(10 x DPS + Health) over deployed heroes on
 	assert(boosted > total, "the Training Grounds multiplier raises Squad Power")
 end)
 
+test("Phase 5: Recommended Power starts near a fresh squad and rises biome to biome", function()
+	local Floors = require(nodes["ReplicatedStorage.Shared.Config.TowerFloorConfig"])
+	local first = Floors.RecommendedPower(1)
+	assert(first >= 500 and first <= 900, "Floor 1 matches a fresh one-star hero (~700), got " .. first)
+	-- A boss floor can out-rank the next biome's first floor, so compare one biome apart.
+	for id = 1, Floors.FloorCount - 5 do
+		assert(Floors.RecommendedPower(id + 5) > Floors.RecommendedPower(id), "Recommended Power rises a biome later, floor " .. id)
+	end
+	assert(Floors.RecommendedPower(0) == 0 and Floors.RecommendedPower(99) == 0, "unknown floors have no recommendation")
+end)
+
 print(string.format("phase4-progression: %d tests passed", passed))

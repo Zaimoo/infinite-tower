@@ -148,6 +148,26 @@ function Config.GetEnemyStats(floorId: any, enemyId: any): any?
 	})
 end
 
+-- Recommended Squad Power for a floor (Phase 5 tower hub). Each enemy counts like a hero does in
+-- StatFormulas.GetHeroPower (MaxHP + 10 x ATK), summed over the floor's roster and scaled so a
+-- fresh one-star squad (~700 power) matches Floor 1. Rounded to two significant figures.
+Config.RecommendedPowerScale = 0.08
+
+function Config.RecommendedPower(floorId: number): number
+	local floor = Config.Get(floorId)
+	if not floor then return 0 end
+	local total = 0
+	for _, encounter in ipairs(floor.Encounters) do
+		local stats = Config.GetEnemyStats(floorId, encounter.EnemyId)
+		if stats then
+			total += (stats.MaxHP + 10 * stats.ATK) * encounter.Count
+		end
+	end
+	local raw = total * Config.RecommendedPowerScale
+	if raw < 100 then return math.round(raw) end
+	local step = 10 ^ (math.floor(math.log10(raw)) - 1)
+	return math.round(raw / step) * step
+end
 
 -- Provisional economy: a single hero summon costs 100 gems (10 cost 900).
 -- Kill gems stay flat; gold, relic probability and relic value grow with floor.

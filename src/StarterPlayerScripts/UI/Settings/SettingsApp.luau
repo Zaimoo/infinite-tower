@@ -558,7 +558,9 @@ local function SettingsApp()
 					ZIndex = 3,
 					[React.Event.Activated] = function() setIsOpen(false) end,
 				}, {
-					X = HeavyLabel({ Size = UDim2.fromScale(1, 1), MaxSize = 22, Gold = false, Text = "×", ZIndex = 4 }),
+					X = e("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(18, 18), BackgroundTransparency = 1, ZIndex = 4 }, {
+						Art = e(Icons.Icon, { Name = "Close", Size = 18 }),
+					}),
 				}),
 			}),
 

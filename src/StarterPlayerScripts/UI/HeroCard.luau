@@ -101,7 +101,7 @@ function HeroCard.Update(self: any, hero: any, selected: boolean, mode: string, 
 	self.Root.BackgroundColor3 = selected and Color3.fromRGB(57, 49, 39) or T.Color.Raised
 	self.Edge.Color = selected and T.Color.Gold or rarity
 	self.Edge.Thickness = selected and 2 or 1
-	self.Name.Text = (selected and "✓ " or "") .. (hero.DisplayName or "Hero")
+	self.Name.Text = (selected and "» " or "") .. (hero.DisplayName or "Hero")
 	self.Name.TextColor3 = rarity
 	local stats = hero.Stats or hero.PitStats
 	local combat = stats or StatFormulas.GetCombatSnapshot(hero)

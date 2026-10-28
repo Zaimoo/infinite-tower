@@ -556,7 +556,11 @@ function DataManager.SyncProfile(player: Player, progressionOnly: boolean?)
 			occupiedSlots[slotNum] = uuid
 		end
 	end
-	if profile.DeployedSquadOrder then
+	-- One-time migration for saves from before squad slots. It must not run again: the order still
+	-- lists a hero the player just benched, and re-deploying it made REMOVE look broken.
+	local legacyOrder = not (profile :: any).SquadSlotsMigrated and next(occupiedSlots) == nil
+	;(profile :: any).SquadSlotsMigrated = true
+	if legacyOrder and profile.DeployedSquadOrder then
 		for _, uuid in ipairs(profile.DeployedSquadOrder) do
 			local h = profile.Heroes[uuid]
 			if h and not string.find(h.Assignment or "", "^SQUAD_SLOT_") and not string.find(h.Assignment or "", "^FACILITY_") then
@@ -1291,6 +1295,34 @@ AssignHeroRoleFunc.OnServerInvoke = function(player: Player, heroUUID: any, targ
 		return true, "Auto-swapped exhausted heroes"
 	end
 
+	-- "AUTO_BEST": deploy the strongest ready heroes (by Squad Power) from the squad and bench.
+	-- Facility workers stay at work; resting heroes are benched.
+	if heroUUID == "AUTO_BEST" then
+		if not OnboardingService.Require(player, "Squad") then -- toasts the unlock hint
+			return false, OnboardingService.LockedMessage("Squad")
+		end
+		local maxSlots = DataManager.MaxSquadSlots(profile)
+		local mult = DataManager.GetTrainingMultiplier(player)
+		local candidates: { { Hero: HeroInstance, Power: number } } = {}
+		for _, h in pairs(profile.Heroes) do
+			local inSquad = string.find(h.Assignment, "^SQUAD_SLOT_") ~= nil
+			if inSquad or h.Assignment == "BENCHED" then
+				h.Assignment = "BENCHED"
+				if h.ComaUntilTimestamp <= os.time() then
+					table.insert(candidates, { Hero = h, Power = StatFormulas.GetHeroPower(h, StatFormulas.GetEquippedArtifact(profile, h), mult) })
+				end
+			end
+		end
+		table.sort(candidates, function(a, b) return a.Power > b.Power end)
+		local placed = math.min(maxSlots, #candidates)
+		for slot = 1, placed do
+			candidates[slot].Hero.Assignment = ("SQUAD_SLOT_" .. slot) :: HeroAssignment
+		end
+		OnboardingService.Report(player, "SquadDeployed")
+		DataManager.SyncProfile(player)
+		return true, string.format("Deployed your %d strongest ready heroes.", placed)
+	end
+
 	if type(heroUUID) ~= "string" or type(targetAssignment) ~= "string" then
 		return false, "Invalid parameters"
 	end
@@ -1326,6 +1358,14 @@ AssignHeroRoleFunc.OnServerInvoke = function(player: Player, heroUUID: any, targ
 		end
 		if others >= maxWorkers then
 			return false, string.format("%s is full! (Max %d at Lv.%d)", FACILITY_NAMES[supportFacility], maxWorkers, facData.Level)
+		end
+	end
+
+	-- Validate the squad slot before touching facilities, so a refused move changes nothing.
+	if string.find(targetAssignment, "^SQUAD_SLOT_") then
+		local slotNum = tonumber(string.match(targetAssignment, "^SQUAD_SLOT_(%d+)$") or "")
+		if not slotNum or slotNum < 1 or slotNum > DataManager.MaxSquadSlots(profile) then
+			return false, "That squad slot isn't open yet."
 		end
 	end
 
