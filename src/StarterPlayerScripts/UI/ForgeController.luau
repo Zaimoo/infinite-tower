@@ -154,7 +154,7 @@ function Forge.new(gui: ScreenGui, artifactRemotes: Folder, getProfile: (() -> a
 	self.RequestUnequip = artifactRemotes:WaitForChild("RequestUnequipArtifact") :: RemoteFunction
 	self.RequestCraft = artifactRemotes:FindFirstChild("RequestCraftArtifact") :: RemoteFunction?
 
-	self.ActiveTab = "ASSIGN" :: "ASSIGN" | "SUMMON" | "UPGRADE"
+	self.ActiveTab = "SUMMON" :: "ASSIGN" | "SUMMON" | "UPGRADE"
 	self.SelectedAssignArtifactUUID = nil :: string?
 	self.SelectedTargetUUID = nil :: string?
 	self.FodderUUIDs = {} :: { string } -- Up to six same-template donor UUIDs.
@@ -217,8 +217,9 @@ function Forge.new(gui: ScreenGui, artifactRemotes: Folder, getProfile: (() -> a
 	local tabContainer = new("Frame", {
 		Name = "TabContainer",
 		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(24, 58),
-		Size = UDim2.new(0, 560, 0, 36),
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 58),
+		Size = UDim2.new(0, 510, 0, 36),
 		ZIndex = 52,
 	}, root)
 
@@ -227,7 +228,7 @@ function Forge.new(gui: ScreenGui, artifactRemotes: Folder, getProfile: (() -> a
 		Text = "ASSIGN",
 		TextSize = 13,
 		Font = Enum.Font.GothamBold,
-		TextColor3 = C.Text,
+		TextColor3 = C.TextMuted,
 		BackgroundTransparency = 1,
 		Size = UDim2.fromOffset(140, 34),
 		Position = UDim2.fromOffset(0, 0),
@@ -239,7 +240,7 @@ function Forge.new(gui: ScreenGui, artifactRemotes: Folder, getProfile: (() -> a
 		Text = "SUMMON",
 		TextSize = 13,
 		Font = Enum.Font.GothamBold,
-		TextColor3 = C.TextMuted,
+		TextColor3 = C.Text,
 		BackgroundTransparency = 1,
 		Size = UDim2.fromOffset(140, 34),
 		Position = UDim2.fromOffset(150, 0),
@@ -263,9 +264,9 @@ function Forge.new(gui: ScreenGui, artifactRemotes: Folder, getProfile: (() -> a
 		Name = "ActiveTabIndicator",
 		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
 		BorderSizePixel = 0,
-		Size = UDim2.new(0, 55, 0, 3),
+		Size = UDim2.new(0, 60, 0, 3),
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.fromOffset(52, 26),
+		Position = UDim2.fromOffset(220, 26),
 		ZIndex = 54,
 	}, tabContainer)
 	new("UICorner", { CornerRadius = UDim.new(1, 0) }, activeIndicator)
@@ -433,7 +434,7 @@ function Forge:BuildAssignView(root: Frame)
 		BackgroundTransparency = 1,
 		Position = UDim2.fromOffset(VIEW_X, VIEW_Y),
 		Size = UDim2.new(0, VIEW_W, 0, VIEW_H),
-		Visible = true,
+		Visible = false,
 		ZIndex = 52,
 	}, root)
 	self.AssignView = assignView
@@ -682,7 +683,7 @@ function Forge:BuildSummonView(root: Frame)
 		Position = UDim2.fromOffset(LEGACY_X, VIEW_Y),
 		Size = UDim2.new(0, LEGACY_W, 0, LEGACY_H),
 		ClipsDescendants = false,
-		Visible = false,
+		Visible = true,
 		ZIndex = 52,
 	}, root)
 	self.SummonView = summonView
@@ -2073,7 +2074,7 @@ end
 function Forge:Open(initialTab: ("ASSIGN" | "SUMMON" | "UPGRADE")?)
 	self.Scrim.Visible = true
 	self.Root.Visible = true
-	self:SetTab(initialTab or self.ActiveTab or "ASSIGN")
+	self:SetTab(initialTab or "SUMMON")
 end
 
 function Forge:Close()
