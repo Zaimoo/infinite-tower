@@ -7,6 +7,9 @@
 local TweenService = game:GetService("TweenService")
 
 local GothicFont = {}
+-- Text renders in the "Gilded Grimoire" theme: heavy Cinzel Decorative + ink outline for titles,
+-- Cinzel Bold for body text.
+local Grimoire = require(script.Parent:WaitForChild("GildedGrimoire"))
 
 -- Authoritative Custom Font Asset ID uploaded by user (e.g. "rbxassetid://123456789")
 -- When set, all text components dynamically load this custom font asset.
@@ -163,15 +166,12 @@ function GothicFont.Apply(textObj: TextLabel | TextButton | TextBox, opts: Apply
 		defaultColor = C.SilverDim
 	end
 
-	local fontObj = GothicFont.GetFont(weight)
-	if fontObj then
-		pcall(function()
-			(textObj :: any).FontFace = fontObj
-		end)
-	elseif GothicFont.LegacyFont then
-		pcall(function()
-			(textObj :: any).Font = GothicFont.LegacyFont
-		end)
+	local themeRole = if role == "Title" or role == "Header" or role == "Nav" or role == "Button" then "Title" else "Body"
+	if GothicFont.CustomFontAssetId and GothicFont.CustomFontAssetId ~= "" then
+		local fontObj = GothicFont.GetFont(weight)
+		if fontObj then
+			pcall(function() (textObj :: any).FontFace = fontObj end)
+		end
 	end
 	textObj.TextSize = options.Size or defaultSize
 	textObj.TextColor3 = options.Color or defaultColor
@@ -184,20 +184,18 @@ function GothicFont.Apply(textObj: TextLabel | TextButton | TextBox, opts: Apply
 		textObj.Text = GothicFont.FormatSpaced(textObj.Text)
 	end
 
-	-- Apply subtle contextual text stroke for crisp contrast against any background
-	local strokeEnabled = if options.Stroke ~= nil then options.Stroke else (role == "Title" or role == "Nav" or role == "Header" or role == "Button")
-	if strokeEnabled then
-		local existing = textObj:FindFirstChild("GothicTextStroke")
-		if not existing then
-			local stroke = Instance.new("UIStroke")
-			stroke.Name = "GothicTextStroke"
-			stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
-			stroke.Color = options.StrokeColor or C.StrokeDark
-			stroke.Thickness = options.StrokeThickness or 0.8
-			stroke.Transparency = options.StrokeTransparency or 0.25
-			stroke.Parent = textObj
+	-- Gilded Grimoire type: heavy font + ink outline for titles, Cinzel Bold body (Stroke = false
+	-- keeps a title's font but drops its outline).
+	local strokeEnabled = if options.Stroke ~= nil then options.Stroke else true
+	if not (GothicFont.CustomFontAssetId and GothicFont.CustomFontAssetId ~= "") then
+		Grimoire.StyleText(textObj, if strokeEnabled then themeRole else "Body")
+		if not strokeEnabled and themeRole == "Title" then
+			pcall(function() (textObj :: any).FontFace = Grimoire.Fonts.Title end)
 		end
 	end
+	local legacyStroke = textObj:FindFirstChild("GothicTextStroke")
+	if legacyStroke then legacyStroke:Destroy() end
+	textObj:SetAttribute("Grimoire", true)
 
 	-- Interactive hover transition for buttons
 	if textObj:IsA("GuiButton") and (role == "Nav" or role == "Button") then

@@ -5,6 +5,9 @@ B.Version = 2
 B.TickSeconds = 0.20
 B.HeroPromotionMultiplier = 3
 B.LevelMultiplier = 1.08
+-- Inherent hero rarity (Phase 4 §7): tier t multiplies base combat by 1.35^(t-1), labor by 1.12^(t-1).
+B.HeroRarityCombatMultiplier = 1.35
+B.HeroRarityLaborMultiplier = 1.12
 B.MovementSpeed = 20
 B.MaxAttackSpeed = 5
 B.WeaponPowerDivisor = 40

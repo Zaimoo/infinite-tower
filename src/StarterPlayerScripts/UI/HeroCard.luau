@@ -7,6 +7,7 @@ local StatFormulas = require(ReplicatedStorage.Shared.Util.StatFormulas)
 local HeroRig = ReplicatedStorage:WaitForChild("Assets"):WaitForChild("HeroRig")
 local HeroClips = require(HeroRig:WaitForChild("HeroClips"))
 local HeroAnimator = require(HeroRig:WaitForChild("HeroAnimator"))
+local GrimoireIcons = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GrimoireIcons"))
 local HeroCard = {}
 
 function HeroCard.Portrait(parent: Instance, hero: any): GuiObject
@@ -86,8 +87,9 @@ function HeroCard.new(parent: Instance, onSelect: (string) -> ())
 		local ornament = T.New("Frame", {AnchorPoint = Vector2.new(offset, 0), Position = UDim2.new(offset, offset == 0 and 3 or -3, 0, 3), Size = UDim2.fromOffset(7, 7), Rotation = 45, BorderSizePixel = 0, BackgroundColor3 = T.Color.Gold}, self.Root)
 		table.insert(self.Ornaments, ornament)
 	end
-	self.Crest = T.Label(self.Root, "◇", 18, T.Color.Gold)
-	self.Crest.Size, self.Crest.Position, self.Crest.TextXAlignment = UDim2.fromOffset(24, 24), UDim2.new(1, -28, 0, -2), Enum.TextXAlignment.Center
+	-- Top-rarity crest: a drawn Gilded Grimoire spark.
+	self.Crest = GrimoireIcons.Create("Spark", 22, self.Root, self.Root.ZIndex + 2)
+	self.Crest.Position = UDim2.new(1, -27, 0, 1)
 	return setmetatable(self, {__index = HeroCard})
 end
 
@@ -99,7 +101,7 @@ function HeroCard.Update(self: any, hero: any, selected: boolean, mode: string, 
 	self.Root.BackgroundColor3 = selected and Color3.fromRGB(57, 49, 39) or T.Color.Raised
 	self.Edge.Color = selected and T.Color.Gold or rarity
 	self.Edge.Thickness = selected and 2 or 1
-	self.Name.Text = (selected and "✓ " or "") .. (hero.DisplayName or "Hero")
+	self.Name.Text = (selected and "» " or "") .. (hero.DisplayName or "Hero")
 	self.Name.TextColor3 = rarity
 	local stats = hero.Stats or hero.PitStats
 	local combat = stats or StatFormulas.GetCombatSnapshot(hero)

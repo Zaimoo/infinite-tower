@@ -28,7 +28,7 @@ The current game experience suffers from three core friction points:
 ### 2.1 Combat & Squad Rules
 - **Squad Composition:** Up to 5 summoned heroes deployed with the Master.
 - **Fully Hands-Off (Zero-Input Combat):** Heroes execute basic attacks, special abilities, and ultimates automatically upon gauge readiness.
-- **Removal of Q/E Whistles:** Legacy `[Q]` Overdrive Whistle and `[E]` Emergency Recall Whistle are completely removed from controls and HUD. The Master focuses entirely on movement, exploration, and spatial positioning.
+- **Q/E Whistles Kept:** The `[Q]` Overdrive Whistle and `[E]` Emergency Recall Whistle stay as optional active tools, on the HUD's Right Rail and bound to `Q`/`E` on Tower floors (Phase 5 §2.1). Combat itself remains automatic.
 - **Fast-Paced Combat Pacing:**
   - Standard mob TTK (time-to-kill): ~1.5 to 2.5 seconds per squad focus.
   - Elite mob TTK: ~6 to 10 seconds.
@@ -87,7 +87,7 @@ These rules match `GAME_DESIGN.MD` §4.1, §4.4 and §7.5.
 - **Duel Mechanics:**
   - Activating Retaliate initiates an isolated squad duel between the two Masters' heroes.
   - **Zero Consequence:** Duel knockouts do **not** trigger a squad wipe, do **not** teleport players away, and cause **no loss of progression**. Heroes instantly restore HP once the duel concludes.
-  - **The Sole Penalty:** The losing squad is **temporarily locked out of picking up the contested drop**, allowing the victor to claim their prize uninterrupted.
+  - **The Sole Penalty:** The losing side, **whether it is the drop's owner or the thief**, is **locked out of picking up the contested drop** for the rest of its lifetime. The victor becomes its owner and claims it uninterrupted.
 
 ---
 
@@ -105,9 +105,19 @@ Progression is unified into a linear, always-visible Objective Tracker pinned on
 | **5** | Put a hero to work at a facility | `FacilityAssigned` | The Pit (Synthesis) | 100 Gems |
 | **6** | Level up a hero in the Pit | `PitUsed` | Tower Floor 5 Boss | Rare Gear Box |
 
+Step 4 also unlocks the Fortress Tree, and a 7th step, **Grow your fortress** (`TreeNodeUnlocked`, 1,000 Gold), teaches it.
+
 ### 4.2 Economy & Idle Loop
 - **Facility-Driven Idle Earnings:** Idle rewards are generated strictly through **Fortress Plot Facility Labor** (`WaitingRoomService` + `OfflineRewardService`).
 - **No Secondary Idle Chest:** Progression is clear—assigning benched heroes to facilities produces gold and materials while active or offline.
+
+### 4.3 Fortress Tree, God's Blessing & Hero Rarity
+These rules match `GAME_DESIGN.MD` §4.1 and §4.3, and are specified in `rework-plan/PHASE_4_ONBOARDING_AND_PROGRESSION.md` §5–§7.
+- **Fortress Development Tree:** Support facilities are unlocked and upgraded only through a skill tree with four branches: Outskirts (Guard Post), Commerce (Market), Martial (Training Grounds) and Divine (God's Blessing). Each branch has 5 level nodes and 2 perks. Nodes cost Gold, some are gated by the highest cleared floor, and they are permanent. A facility is not in the world until it is unlocked: its site is empty ground, and buying its first node builds it with a construction reveal. Only the Guard Post stands from the start.
+- **Squad Slots:** A Master starts with one squad slot. A fifth tree branch, Command, opens slots 2–5 for Gold (slots 4 and 5 also need Floors 5 and 10). It opens after the first summon, before the rest of the tree.
+- **God's Blessing:** The Plaza Fountain gains an angel statue and becomes a facility. Stationed Acolytes (`Healer` preferred) raise summon luck on every banner, up to +50%. Luck multiplies every tier above the lowest and never touches pity.
+- **Inherent Hero Rarity:** Each hero has a fixed rarity (Common to Mythical at launch, using the weapon tier names) that multiplies its base combat and labor stats. Summoning and stars are unchanged: each hero still arrives at its template's star (Common 1★ up to Mythical 7★) and promotes as before.
+- **Lower Hero Odds:** The permanent banner's top rate drops from 1% to 0.5% (pity 50 → 80), and the limited banner's from 0.3% to 0.07% (pity 50 → 90). Every 10-pull now guarantees a Rare or higher hero.
 
 ---
 
@@ -121,12 +131,15 @@ Progression is unified into a linear, always-visible Objective Tracker pinned on
   - Touch targets guaranteed $\ge 44 \times 44\text{ px}$.
   - Full console / gamepad `Selectable` and D-pad navigation compatibility.
 
-### 5.2 Clean HUD Contract (Max 4 Persistent Elements)
+### 5.2 Clean HUD Contract (Seven Fixed Zones)
 1. **Top-Center:** Personal **Floor Progress Bar** (swaps to Boss Health Bar during boss encounters).
 2. **Top-Left:** Consolidated **Currencies** (Gold, Gems) with large readable numbers and delta animations.
 3. **Top-Right (or Below Currencies):** Pinned **Next Goal Tracker** card with objective progress.
-4. **Bottom-Center:** Clean **Navigation Toolbar** with labelled icons (Squad, Summon, Forge, Facilities, Tower) and notification badges.
-- *Removed from HUD:* Q/E Whistle buttons, persistent World Boss stat tables, and redundant bottom-left currency clusters.
+4. **Left Rail:** Menu buttons (Summon, Squad, Forge, Fortress, Index) with notification badges.
+5. **Right Rail:** Combat buttons (Overdrive `Q`, Recall `E`, Tower) with cooldown sweeps, anchored below the Next Goal card.
+6. **Bottom-Left:** Live **Squad Status Card**, one row per open squad slot.
+7. **Bottom-Right:** **Squad Power** badge for the active squad. The Roblox player list also shows every player's highest cleared **Floor** and **Power**.
+- *Removed from HUD:* the single bottom-centre toolbar, persistent World Boss stat tables, and redundant bottom-left currency clusters. Zones never overlap (Phase 5 §2).
 
 ---
 

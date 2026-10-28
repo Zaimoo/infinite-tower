@@ -85,7 +85,7 @@ Removed when the migration completes: `HeroModelBuilder.luau`, the hero branches
 - **One bone per piece.** A piece is welded to exactly one body part with a `Weld` (explicit `C0`) and must fit inside that bone's segment. Gloves belong to the hand, cuffs to the forearm, and a cuff may not overlap the hand. The builder checks this and warns about any piece whose bounds cross a joint plane.
 - Hair, capes and long coats that must cross joints are split into one piece per bone (a cape gets an upper piece on `UpperTorso` and a lower piece on `LowerTorso`).
 - **No gear on rigs.** Weapons and shields only arrive through `HeroSockets`. Aaron's sculpted kite shield becomes his `SWORD_SHIELD` prefab's look, or a cosmetic override on the prefab, not part of his body.
-- **No scripts, decals with external IDs, or anything not built by our code.** The only asset IDs allowed are face textures listed in `HeroCostumes`.
+- **No scripts, decals with external IDs, or anything not built by our code.** The only asset IDs allowed are face textures listed in `HeroCostumes` and the allow-listed meshes in `HeroCostumes.MESHES` (see decision 1).
 
 ### 3. Socket contract (`HeroSockets` + `WeaponModelBuilder`)
 
@@ -418,6 +418,8 @@ All six phases are merged or in review. Open follow-ups, none blocking:
 ## Decisions (settled in Phase 0, 2026-10-26)
 
 1. **Parts, not meshes.** Rigs are blocky `Part`s built in code, matching the current style, reviewable and diffable. The costume format may gain an optional `MeshId` later.
+   - **Amended 2026-10-28:** heads use the built-in rounded head shape (`SpecialMesh`, `MeshType.Head`, no asset ID). Costume pieces may set `Mesh` to a FileMesh listed in `HeroCostumes.MESHES`, an allowlist of assets inspected in Studio (no scripts). The first entry is an anime hair accessory, which Han wears with an anime face decal.
+   - **Amended 2026-10-28:** the head grew from 1.2 to 1.4 studs (total height 6.1), to match the bulky bodies. Head costume pieces stay authored for 1.2 (`HEAD_AUTHORED_SIZE`) and are scaled uniformly by `HeroCostumeMath`.
 2. **Native clips, not uploaded animations.** Clips are Luau keyframe tables like `TowerEnemyClips`, so there are no asset-permission failures in live servers.
 3. **Shield on the forearm.** `SWORD_SHIELD` mounts its shield to `LeftLowerArm.ShieldMountAttachment`, not to the hand.
 4. **Per-hero clip overrides allowed.** Clips are keyed by weapon type; a hero may override any state (`HeroClips.Overrides.<heroId>.<State>`) for signature stances.

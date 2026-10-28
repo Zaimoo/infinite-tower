@@ -3,7 +3,8 @@
 -- Dresses a bare hero rig from HeroCostumes data (hero-rig-rebuild-plan.md, Phase 3).
 -- Body parts are recoloured; every costume piece is a Part/WedgePart welded to exactly one
 -- bone with an explicit Weld (C0 = piece placement in bone space), so it follows that bone
--- in any pose. No scripts, meshes or asset IDs are created apart from the face decal.
+-- in any pose. No scripts or asset IDs are created apart from the face decal and the
+-- allow-listed FileMeshes in HeroCostumes.MESHES (anime hair).
 
 local HeroRigSpec = require(script.Parent:WaitForChild("HeroRigSpec"))
 local HeroCostumeMath = require(script.Parent:WaitForChild("HeroCostumeMath"))
@@ -70,6 +71,15 @@ function HeroCostumeBuilder.Apply(rig: Model, costume: HeroCostumes.Costume)
 		part.Massless = true
 		part.Anchored = false
 		part.CastShadow = false
+		local meshScale = entry.MeshScale
+		if piece.Mesh and meshScale then
+			local mesh = Instance.new("SpecialMesh")
+			mesh.MeshType = Enum.MeshType.FileMesh
+			mesh.MeshId = piece.Mesh.MeshId
+			mesh.TextureId = piece.Mesh.TextureId or ""
+			mesh.Scale = Vector3.new(meshScale[1], meshScale[2], meshScale[3])
+			mesh.Parent = part
+		end
 
 		local placement = toCFrame(entry.Position, entry.Rotation)
 		part.CFrame = bone.CFrame * placement

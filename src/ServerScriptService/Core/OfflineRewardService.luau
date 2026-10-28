@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local FacilityConfig = require(Shared:WaitForChild("Config"):WaitForChild("FacilityConfig"))
 local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormulas"))
+local FortressTree = require(Shared:WaitForChild("Util"):WaitForChild("FortressTree"))
 
 export type OfflineRewardPayload = {
 	OfflineMinutes: number,
@@ -68,8 +69,9 @@ function OfflineRewardService.ProcessLoginRewards(player: Player, profile: any, 
 	local level = guardPost and guardPost.Level or 1
 	local sumLabor = OfflineRewardService.ComputeGuardPostLabor(profile)
 	local bossTier = profile.HighestClearedBiomeBoss or 0
-	local rate = StatFormulas.GetPassiveGoldRate(level, sumLabor, bossTier)
-	local gold, cappedMinutes = StatFormulas.CalculateOfflineGold(level, rate, elapsedMinutes)
+	local perks = FortressTree.PerkBonuses(profile.FortressTree)
+	local rate = StatFormulas.GetPassiveGoldRate(level, sumLabor, bossTier, perks)
+	local gold, cappedMinutes = StatFormulas.CalculateOfflineGold(level, rate, elapsedMinutes, perks)
 
 	profile.LastActiveTimestamp = now
 	profile.LastLogoutTimestamp = now

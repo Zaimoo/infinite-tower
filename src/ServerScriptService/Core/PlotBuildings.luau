@@ -1,202 +1,319 @@
 --!strict
 -- ServerScriptService/Core/PlotBuildings.luau
--- Waiting Room facilities & Outskirts Guard Post with F-key interactions at each entrance.
--- Implements GDD Sections 2.4, 3.2, 3.4 & 4.3 (Citadel Courtyard 260x180 + Southern Outskirts Grounds 260x140).
+-- Waiting Room Plot Island Redesign (Phase 2 & 3):
+-- Builds all redesigned gothic fortress courtyard facilities & Outskirts Guardpost,
+-- populates ReplicatedStorage.Assets.PlotFacilities prefabs, aligns the Playtime Leaderboard
+-- onto the ornate North-Wall LeaderboardBoard, and removes legacy Infirmary instances.
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Buildings = {}
 local Architecture = require(script.Parent:WaitForChild("PlotFacilityArchitecture"))
 local OutskirtsBuilder = require(script.Parent:WaitForChild("OutskirtsEnvironmentBuilder"))
-local VERSION = 15
+local FacilityPresence = require(script.Parent:WaitForChild("FacilityPresence"))
+local FacilityConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("FacilityConfig"))
 
-local definitions = {
-	-- North Courtyard: Recovery & Summoning (Symmetric Pair at Z = -35)
-	{Id = "Infirmary", Title = "INFIRMARY", Subtitle = "REST & RECOVERY", X = -75, Z = -35, Color = Color3.fromRGB(100, 232, 175)},
-	{Id = "Summoning", Title = "SUMMONING", Subtitle = "CALL OF THE RIFT", X = 75, Z = -35, Color = Color3.fromRGB(96, 191, 255)},
+local VERSION = 21 -- 21: one [F] prompt for The Pit (was Synthesis [E] + Promotion [F])
 
-	-- Center-Left Courtyard: Heraldic Squad Command Standard (Flanking the Central Fountain)
-	{Id = "SquadManagement", Title = "SQUAD DEPLOY", Subtitle = "5 ACTIVE SLOTS", X = 30, Z = 0, Color = Color3.fromRGB(245, 128, 99)},
+local function attachPrompt(
+	parent: Instance,
+	name: string,
+	hudAttr: string,
+	objectText: string,
+	actionText: string,
+	keyCode: Enum.KeyCode,
+	maxDist: number?,
+	uiOffset: Vector2?
+): ProximityPrompt
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = name
+	prompt:SetAttribute("FacilityHUD", hudAttr)
+	prompt.ObjectText = objectText
+	prompt.ActionText = actionText
+	prompt.MaxActivationDistance = maxDist or 15
+	prompt.HoldDuration = 0
+	prompt.RequiresLineOfSight = false
+	prompt.KeyboardKeyCode = keyCode
+	prompt.GamepadKeyCode = if keyCode == Enum.KeyCode.E then Enum.KeyCode.ButtonY else Enum.KeyCode.ButtonX
+	prompt.ClickablePrompt = true
+	prompt.Exclusivity = Enum.ProximityPromptExclusivity.OnePerButton
+	if uiOffset then
+		prompt.UIOffset = uiOffset
+	end
+	prompt.Parent = parent
+	return prompt
+end
 
-	-- Mid Courtyard: The Pit (Synthesis & Promotion) & The Blacksmith Forge (Symmetric Pair at Z = 28)
-	{Id = "ThePit", Title = "THE PIT", Subtitle = "SYNTHESIS & PROMOTION", X = -75, Z = 28, Color = Color3.fromRGB(177, 110, 255)},
-	{Id = "Blacksmith", Title = "BLACKSMITH FORGE", Subtitle = "ARTIFACT ASCENSION & REFINING", X = 75, Z = 28, Color = Color3.fromRGB(255, 120, 40)},
+local function syncPlotFacilityAnchor(plot: Instance, name: string, cf: CFrame)
+	local existing = plot:FindFirstChild("Facility_" .. name)
+	if existing and existing:IsA("BasePart") then
+		existing.CFrame = cf
+		existing.CanCollide = false
+		existing.CanTouch = false
+		existing.CanQuery = false
+		existing.Transparency = 1
+		-- Remove duplicate bare prompts on legacy Facility_* anchors so only the styled building prompts show
+		for _, child in ipairs(existing:GetChildren()) do
+			if child:IsA("ProximityPrompt") then
+				child:Destroy()
+			end
+		end
+	end
+end
 
-	-- South Inner Courtyard: Support Facilities (Symmetric Pair at Z = 70)
-	{Id = "TrainingGrounds", Title = "TRAINING GROUNDS", Subtitle = "MARTIAL COMBAT DRILLS", X = -75, Z = 70, Color = Color3.fromRGB(235, 80, 80)},
-	{Id = "Market", Title = "THE MARKET", Subtitle = "TOWER LOOT & COMMERCE", X = 75, Z = 70, Color = Color3.fromRGB(245, 195, 75)},
+local function alignPlaytimeBoardToWall(plot: Instance, origin: CFrame)
+	local playtimeStand = plot:FindFirstChild("AvxsedPlaytimeWS")
+	if not playtimeStand then
+		return
+	end
 
-	-- Southern Outskirts Grounds (Exterior Frontier Wilderness)
-	{Id = "GuardPost", Title = "OUTSKIRTS GUARD POST", Subtitle = "FRONTIER PATROL & PASSIVE GOLD", X = 0, Z = 160, Color = Color3.fromRGB(130, 205, 95)},
-}
+	local rigstand = playtimeStand:FindFirstChild("Rigstand")
+	local top1 = rigstand and rigstand:FindFirstChild("Top 1")
+	if top1 and top1:IsA("BasePart") then
+		local targetTop1CF = origin * CFrame.new(116.6, 6.8, -20.9) * CFrame.Angles(0, math.rad(90), 0)
+		local deltaPos = targetTop1CF.Position - top1.Position
+		if deltaPos.Magnitude > 0.05 then
+			for _, d in ipairs(playtimeStand:GetDescendants()) do
+				if d:IsA("BasePart") and d.Name ~= "ScreenPlaytime" then
+					d.CFrame = d.CFrame + deltaPos
+				end
+			end
+		end
+	end
+
+	local screen = playtimeStand:FindFirstChild("ScreenPlaytime")
+	if screen and screen:IsA("BasePart") then
+		screen.Anchored = true
+		screen.CanCollide = false
+		screen.Size = Vector3.new(9.4, 12.4, 0.5)
+		screen.Transparency = 0
+		screen.Color = Color3.fromRGB(15, 15, 18)
+		screen.Material = Enum.Material.Glass
+		screen.CFrame = origin * CFrame.new(116.2, 6.65, -31.3) * CFrame.Angles(0, math.rad(90), 0)
+	end
+end
 
 function Buildings.Build(plot: Instance)
+	-- Ensure standardized facility prefabs exist under ReplicatedStorage.Assets.PlotFacilities
+	Architecture.EnsureFacilityPrefabs()
+
+	-- Always purge removed Infirmary from plot
+	local oldInfirmaryAnchor = plot:FindFirstChild("Facility_Infirmary")
+	if oldInfirmaryAnchor then
+		oldInfirmaryAnchor:Destroy()
+	end
+
 	local existing = plot:FindFirstChild("PlotBuildings")
-	if existing and existing:GetAttribute("Version") == VERSION then return existing end
+	if existing and existing:GetAttribute("Version") == VERSION then
+		return existing
+	end
+
 	local spawn = plot:FindFirstChild("PlotSpawn")
-	if not spawn or not spawn:IsA("BasePart") then return nil end
+	if not spawn or not spawn:IsA("BasePart") then
+		return nil
+	end
 	local island = plot:FindFirstChild("FloatingFortressIsland")
 	local top = island and island:FindFirstChild("IslandTopSurface")
-	local anchorPart = if top and top:IsA("BasePart") then top
-		elseif plot:FindFirstChild("PlotFloor") and plot.PlotFloor:IsA("BasePart") then plot.PlotFloor
-		else spawn
-	local surfaceY = if top and top:IsA("BasePart") then top.Position.Y + top.Size.Y / 2
+	local surfaceY = if top and top:IsA("BasePart")
+		then top.Position.Y + top.Size.Y / 2
 		else spawn.Position.Y - spawn.Size.Y / 2
+
 	local origin: CFrame
 	if top and top:IsA("BasePart") then
 		if top.Size.Z > 200 then
-			-- Legacy 320-stud top slab centered at centerZ = 70
 			origin = CFrame.new(top.Position.X, surfaceY, top.Position.Z) * top.CFrame.Rotation * CFrame.new(0, 0, -70)
 		else
-			-- Clean 180-stud top slab centered at courtyard center Z = 0
 			origin = CFrame.new(top.Position.X, surfaceY, top.Position.Z) * top.CFrame.Rotation
 		end
 	else
 		origin = CFrame.new(spawn.Position.X, surfaceY, spawn.Position.Z) * spawn.CFrame.Rotation * CFrame.new(0, 0, 80)
 	end
+
 	local folder = Instance.new("Folder")
 	folder.Name = "PlotBuildings_Updating"
 	folder:SetAttribute("Version", VERSION)
 	folder.Parent = plot
 
-	-- Build Southern Outskirts wilderness (Lush grass meadow, winding curved trail, asymmetrical pines/oaks, wild bushes, berry shrubs & boulders)
+	local layout = FacilityConfig.FacilityLayout
+
+	-- 1. Build Eastern Forested Outskirts (28 layered conical pines, craggy rocks, winding Ground trail)
 	OutskirtsBuilder.Build(folder, origin)
 
-	for _, def in definitions do
-		local model = Instance.new("Model")
-		model.Name = "Building_" .. def.Id
-		model:SetAttribute("Facility", def.Id)
-		local position = origin:PointToWorldSpace(Vector3.new(def.X, 0, def.Z))
-		local outward = position - origin.Position
-		local frame: CFrame
-		if def.Id == "SquadManagement" or outward.Magnitude < 0.1 then
-			frame = origin * CFrame.new(def.X, 0, def.Z)
-		else
-			frame = CFrame.lookAt(position, position + outward)
-		end
-		Architecture.Build(model, frame, def.Id, def.Color)
-
-		if def.Id == "ThePit" then
-			-- Dual interactive stations for The Pit: Left is Synthesis Cauldron, Right is Promotion Altar
-			local synthPart = Instance.new("Part")
-			synthPart.Name = "FacilityInteraction_Synthesis"
-			synthPart.Size = Vector3.new(2, 2, 2)
-			synthPart.CFrame = frame * CFrame.new(-6.5, 3.5, 7)
-			synthPart.Anchored, synthPart.Transparency = true, 1
-			synthPart.CanCollide, synthPart.CanTouch, synthPart.CanQuery = false, false, true
-			synthPart.Parent = model
-
-			local synthPrompt = Instance.new("ProximityPrompt")
-			synthPrompt.Name = "FacilityHUDPrompt"
-			synthPrompt:SetAttribute("FacilityHUD", "Synthesis")
-			synthPrompt.ObjectText = "Synthesis Cauldron"
-			synthPrompt.ActionText = "Feed EXP & Imprints"
-			synthPrompt.MaxActivationDistance = 14
-			synthPrompt.HoldDuration = 0
-			synthPrompt.RequiresLineOfSight = false
-			synthPrompt.KeyboardKeyCode, synthPrompt.GamepadKeyCode = Enum.KeyCode.F, Enum.KeyCode.ButtonX
-			synthPrompt.ClickablePrompt = true
-			synthPrompt.Exclusivity = Enum.ProximityPromptExclusivity.OnePerButton
-			synthPrompt.Parent = synthPart
-
-			local promoPart = Instance.new("Part")
-			promoPart.Name = "FacilityInteraction_Promotion"
-			promoPart.Size = Vector3.new(2, 2, 2)
-			promoPart.CFrame = frame * CFrame.new(6.5, 3.5, 7)
-			promoPart.Anchored, promoPart.Transparency = true, 1
-			promoPart.CanCollide, promoPart.CanTouch, promoPart.CanQuery = false, false, true
-			promoPart.Parent = model
-
-			local promoPrompt = Instance.new("ProximityPrompt")
-			promoPrompt.Name = "FacilityHUDPrompt"
-			promoPrompt:SetAttribute("FacilityHUD", "Promotion")
-			promoPrompt.ObjectText = "Promotion Altar"
-			promoPrompt.ActionText = "Ascend Stars (1★-5★)"
-			promoPrompt.MaxActivationDistance = 14
-			promoPrompt.HoldDuration = 0
-			promoPrompt.RequiresLineOfSight = false
-			promoPrompt.KeyboardKeyCode, promoPrompt.GamepadKeyCode = Enum.KeyCode.F, Enum.KeyCode.ButtonX
-			promoPrompt.ClickablePrompt = true
-			promoPrompt.Exclusivity = Enum.ProximityPromptExclusivity.OnePerButton
-			promoPrompt.Parent = promoPart
-		else
-			local interaction = Instance.new("Part")
-			interaction.Name = "FacilityInteraction"
-			interaction.Size = Vector3.new(1, 1, 1)
-			local z = if def.Id == "Infirmary" then 13
-				elseif def.Id == "Summoning" then 4
-				elseif def.Id == "Market" then 8
-				elseif def.Id == "TrainingGrounds" then 10
-				elseif def.Id == "GuardPost" then 9
-				elseif def.Id == "Blacksmith" then 10
-				else 0
-			interaction.CFrame = frame * CFrame.new(0, 3.5, z)
-			interaction.Anchored, interaction.Transparency = true, 1
-			interaction.CanCollide, interaction.CanTouch, interaction.CanQuery = false, false, true
-			interaction.Parent = model
-			local prompt = Instance.new("ProximityPrompt")
-			prompt.Name = "FacilityHUDPrompt"
-			prompt:SetAttribute("FacilityHUD", def.Id)
-		if def.Id == "SquadManagement" then
-			prompt.ObjectText = "War Banner"
-			prompt.ActionText = "Deploy & Manage Squad"
-			prompt.MaxActivationDistance = 14
-			prompt.HoldDuration = 0
-			prompt.RequiresLineOfSight = false
-			prompt.KeyboardKeyCode, prompt.GamepadKeyCode = Enum.KeyCode.F, Enum.KeyCode.ButtonX
-		elseif def.Id == "Market" then
-			prompt.ObjectText = "The Market"
-			prompt.ActionText = "Manage Merchants & Upgrades"
-			prompt.MaxActivationDistance = 12
-			prompt.HoldDuration = 0
-			prompt.RequiresLineOfSight = false
-			prompt.KeyboardKeyCode, prompt.GamepadKeyCode = Enum.KeyCode.F, Enum.KeyCode.ButtonX
-		elseif def.Id == "TrainingGrounds" then
-			prompt.ObjectText = "Training Grounds"
-			prompt.ActionText = "Manage Trainers & Drills"
-			prompt.MaxActivationDistance = 12
-			prompt.HoldDuration = 0
-			prompt.RequiresLineOfSight = false
-			prompt.KeyboardKeyCode, prompt.GamepadKeyCode = Enum.KeyCode.F, Enum.KeyCode.ButtonX
-		elseif def.Id == "GuardPost" then
-			prompt.ObjectText = "Outskirts Guard Post"
-			prompt.ActionText = "Manage Adventurers & Defense"
-			prompt.MaxActivationDistance = 14
-			prompt.HoldDuration = 0
-			prompt.RequiresLineOfSight = false
-			prompt.KeyboardKeyCode, prompt.GamepadKeyCode = Enum.KeyCode.F, Enum.KeyCode.ButtonX
-		elseif def.Id == "Blacksmith" then
-			prompt.Name = "BlacksmithPrompt"
-			prompt.ObjectText = "Blacksmith Forge"
-			prompt.ActionText = "Upgrade & Refine Artifacts"
-			prompt.MaxActivationDistance = 14
-			prompt.HoldDuration = 0
-			prompt.RequiresLineOfSight = false
-			prompt.KeyboardKeyCode, prompt.GamepadKeyCode = Enum.KeyCode.F, Enum.KeyCode.ButtonX
-			prompt:SetAttribute("FacilityHUD", "Forge")
-		else
-			prompt.ObjectText = def.Title
-			prompt.ActionText = "Open " .. def.Id
-			prompt.MaxActivationDistance = 10
-			prompt.HoldDuration = 0
-			prompt.RequiresLineOfSight = false
-			prompt.KeyboardKeyCode, prompt.GamepadKeyCode = Enum.KeyCode.F, Enum.KeyCode.ButtonX
-		end
-		prompt.ClickablePrompt = true
-		prompt.Exclusivity = Enum.ProximityPromptExclusivity.OnePerButton
-		prompt.Parent = interaction
-		end
-		model.Parent = folder
+	-- 2. Summoning Portal (Circular Stone Stargate in NW / Bridge-Right Quadrant)
+	local summonCfg = layout.SummoningPortal
+	local summonCF = origin * CFrame.new(summonCfg.Offset) * CFrame.Angles(0, summonCfg.RotationY or math.rad(-135), 0)
+	local summonInteract = Architecture.BuildSummoning(folder, summonCF)
+	local summonModel = folder:FindFirstChild("Building_Summoning")
+	if summonModel then
+		summonModel:SetAttribute("Facility", "Summoning")
 	end
+	attachPrompt(
+		summonInteract,
+		"FacilityHUDPrompt",
+		"Summoning",
+		"Summoning Portal",
+		summonCfg.PromptText or "Summon Heroes",
+		summonCfg.Keybind or Enum.KeyCode.F,
+		16
+	)
+	syncPlotFacilityAnchor(plot, "Summoning", summonInteract.CFrame)
 
-	-- Compatibility alias models for legacy external references
-	for _, aliasName in { "Building_Synthesis", "Building_Promotion" } do
+	-- 3. Playtime Leaderboard Asset (Ground-based stands & arch along North Wall, replacing yellow board)
+	alignPlaytimeBoardToWall(plot, origin)
+
+	-- 4. Market Cluster (4-Stall Merchant Bazaar in NE Corner)
+	local marketCfg = layout.Market
+	local marketCF = origin * CFrame.new(marketCfg.Offset) * CFrame.Angles(0, marketCfg.RotationY or math.rad(-145), 0)
+	local marketInteract = Architecture.BuildMarket(folder, marketCF)
+	local marketModel = folder:FindFirstChild("Building_Market")
+	if marketModel then
+		marketModel:SetAttribute("Facility", "Market")
+	end
+	attachPrompt(
+		marketInteract,
+		"FacilityHUDPrompt",
+		"Market",
+		"The Market",
+		marketCfg.PromptText or "Open Market",
+		marketCfg.Keybind or Enum.KeyCode.F,
+		16
+	)
+	syncPlotFacilityAnchor(plot, "Market", marketInteract.CFrame)
+
+	-- 5. Synthesis Chamber / The Pit (Monumental Domed Arcane Rotunda in SW Corner)
+	local pitCfg = layout.SynthesisChamber
+	local pitCF = origin * CFrame.new(pitCfg.Offset) * CFrame.Angles(0, pitCfg.RotationY or math.rad(42), 0)
+	local pitInteract = Architecture.BuildThePit(folder, pitCF)
+	local pitModel = folder:FindFirstChild("Building_ThePit")
+	if pitModel then
+		pitModel:SetAttribute("Facility", "ThePit")
+	end
+	-- One [F] prompt for the whole Pit; its screen has Synthesis and Promotion tabs.
+	attachPrompt(
+		pitInteract,
+		"FacilityHUDPrompt",
+		"Pit",
+		"The Pit",
+		pitCfg.PromptText or "Synthesis & Promotion",
+		pitCfg.Keybind or Enum.KeyCode.F,
+		16
+	)
+	syncPlotFacilityAnchor(plot, "Synthesis", pitInteract.CFrame)
+	-- Strip the old Promotion Altar anchor's bare prompt as well.
+	syncPlotFacilityAnchor(plot, "Promotion", pitInteract.CFrame)
+
+	-- 6. Blacksmith Forge (Open-Air Stone Hearth & Anvil against Dividing Wall)
+	local forgeCfg = layout.BlacksmithForge
+	local forgeCF = origin * CFrame.new(forgeCfg.Offset) * CFrame.Angles(0, forgeCfg.RotationY or math.rad(180), 0)
+	local forgeInteract = Architecture.BuildBlacksmith(folder, forgeCF)
+	local forgeModel = folder:FindFirstChild("Building_Blacksmith")
+	if forgeModel then
+		forgeModel:SetAttribute("Facility", "Blacksmith")
+	end
+	attachPrompt(
+		forgeInteract,
+		"BlacksmithPrompt",
+		"Forge",
+		"Blacksmith Forge",
+		forgeCfg.PromptText or "Blacksmith Forge",
+		forgeCfg.Keybind or Enum.KeyCode.F,
+		15
+	)
+	syncPlotFacilityAnchor(plot, "Blacksmith", forgeInteract.CFrame)
+
+	-- 7. Training Area (28-Stud Circular Cobblestone Ring in SE Corner)
+	local trainCfg = layout.TrainingArea
+	local trainCF = origin * CFrame.new(trainCfg.Offset) * CFrame.Angles(0, trainCfg.RotationY or 0, 0)
+	local trainInteract = Architecture.BuildTrainingGrounds(folder, trainCF)
+	local trainModel = folder:FindFirstChild("Building_TrainingGrounds")
+	if trainModel then
+		trainModel:SetAttribute("Facility", "TrainingGrounds")
+	end
+	attachPrompt(
+		trainInteract,
+		"FacilityHUDPrompt",
+		"TrainingGrounds",
+		"Training Grounds",
+		trainCfg.PromptText or "Training Grounds",
+		trainCfg.Keybind or Enum.KeyCode.F,
+		16
+	)
+	syncPlotFacilityAnchor(plot, "TrainingGrounds", trainInteract.CFrame)
+
+	-- 8. Guardpost Outskirts (Timber Palisade Watch-Post & Campfire in Eastern Forest)
+	local gpCfg = layout.Guardpost
+	local gpCF = origin * CFrame.new(gpCfg.Offset) * CFrame.Angles(0, gpCfg.RotationY or 0, 0)
+	local gpInteract = Architecture.BuildGuardPost(folder, gpCF)
+	local gpModel = folder:FindFirstChild("Building_GuardPost")
+	if gpModel then
+		gpModel:SetAttribute("Facility", "GuardPost")
+	end
+	attachPrompt(
+		gpInteract,
+		"FacilityHUDPrompt",
+		"GuardPost",
+		"Outskirts Guard Post",
+		gpCfg.PromptText or "Guardpost",
+		gpCfg.Keybind or Enum.KeyCode.F,
+		16
+	)
+	syncPlotFacilityAnchor(plot, "GuardPost", gpInteract.CFrame)
+
+	-- 9. Command Post (War Banner for Squad Management & Architect's Table for Fortress Tree)
+	local bannerCF = origin * CFrame.new(-22, 0, -24)
+	local tableCF = origin * CFrame.new(-24, 0, 16) * CFrame.Angles(0, math.rad(35), 0)
+	local cmdAnchors = Architecture.BuildCommandPost(folder, bannerCF, tableCF)
+
+	attachPrompt(
+		cmdAnchors.SquadBanner,
+		"FacilityHUDPrompt",
+		"SquadManagement",
+		"War Banner",
+		"Deploy & Manage Squad",
+		Enum.KeyCode.F,
+		14
+	)
+	syncPlotFacilityAnchor(plot, "SquadManagement", cmdAnchors.SquadBanner.CFrame)
+
+	attachPrompt(
+		cmdAnchors.ArchitectTable,
+		"FacilityHUDPrompt",
+		"FortressTree",
+		"Architect's Table",
+		"Open Fortress Tree",
+		Enum.KeyCode.F,
+		14
+	)
+
+	-- Compatibility alias models for external references (Onboarding arrows & HeroNavigation)
+	for _, aliasDef in ipairs({
+		{ Name = "Building_Synthesis", Fac = "Synthesis", Ref = pitInteract },
+		{ Name = "Building_Promotion", Fac = "Promotion", Ref = pitInteract },
+		{ Name = "Building_SquadManagement", Fac = "SquadManagement", Ref = cmdAnchors.SquadBanner },
+		{ Name = "Building_ArchitectTable", Fac = "ArchitectTable", Ref = cmdAnchors.ArchitectTable },
+	}) do
 		local alias = Instance.new("Model")
-		alias.Name = aliasName
-		alias:SetAttribute("Facility", string.sub(aliasName, 10))
+		alias.Name = aliasDef.Name
+		alias:SetAttribute("Facility", aliasDef.Fac)
+		local p = Instance.new("Part")
+		p.Name = "FacilityInteraction"
+		p.Size = Vector3.new(1, 1, 1)
+		p.CFrame = aliasDef.Ref.CFrame
+		p.Anchored = true
+		p.Transparency = 1
+		p.CanCollide = false
+		p.CanTouch = false
+		p.CanQuery = false
+		p.Parent = alias
+		alias.PrimaryPart = p
 		alias.Parent = folder
 	end
 
-	if existing then existing:Destroy() end
+	if existing then
+		existing:Destroy()
+	end
 	folder.Name = "PlotBuildings"
+	FacilityPresence.Reapply(plot)
 	return folder
 end
 

@@ -5,6 +5,9 @@ local TweenService = game:GetService("TweenService")
 local GothicFont = require(script.Parent:WaitForChild("GothicFont"))
 
 local GothicBoxStyle = {}
+-- Every style renders in the "Gilded Grimoire" theme (ink outline, gold rail, gradient fill).
+local Grimoire = require(script.Parent:WaitForChild("GildedGrimoire"))
+local GrimoireIcons = require(script.Parent:WaitForChild("GrimoireIcons"))
 GothicBoxStyle.Font = GothicFont
 
 -- Configured authoritative asset ID uploaded by user (nil uses procedural vector styling)
@@ -43,12 +46,12 @@ local C = {
 	BorderCard = Color3.fromHex("#312740"),
 	BorderRailOuter = Color3.fromHex("#706484"),
 	BorderRailInner = Color3.fromHex("#443A54"),
-	PanelBgStart = Color3.fromHex("#120D1A"),
-	PanelBgEnd = Color3.fromHex("#1F162B"),
-	CardBg = Color3.fromHex("#140F1D"),
+	PanelBgStart = Color3.fromRGB(58, 38, 88),
+	PanelBgEnd = Color3.fromRGB(20, 14, 32),
+	CardBg = Color3.fromRGB(30, 22, 46),
 	SlotTop = Color3.fromHex("#0B0811"),
 	SlotBot = Color3.fromHex("#171122"),
-	ButtonDarkBg = Color3.fromHex("#161020"),
+	ButtonDarkBg = Color3.fromRGB(40, 28, 60),
 }
 
 GothicBoxStyle.Palette = C
@@ -82,6 +85,49 @@ end
 
 function GothicBoxStyle.SetCustomAsset(assetId: string?)
 	GothicBoxStyle.CustomAssetId = assetId
+end
+
+-- Gilded Grimoire finish: rounder corners, the branch's own outline moved inward as the gold rail
+-- (so its hover/state colours keep working), and a thick ink outline outside.
+local function fillTone(container: GuiObject, top: Color3, bottom: Color3, name: string)
+	local grad = Instance.new("UIGradient")
+	grad.Name = name
+	grad.Rotation = 90
+	if container:IsA("TextButton") or container:IsA("TextLabel") or container:IsA("TextBox") then
+		container.BackgroundColor3 = top:Lerp(bottom, 0.3)
+		grad.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(196, 190, 206))
+	else
+		container.BackgroundColor3 = Color3.new(1, 1, 1)
+		grad.Color = ColorSequence.new(top, bottom)
+	end
+	grad.Parent = container
+end
+
+local BRANCH_STROKES = { "GothicPanelStroke", "GothicRowStroke", "GothicSlotStroke", "GothicButtonStroke" }
+local function finish(container: GuiObject, style: string, baseZ: number): GuiObject
+	local class = if style == "ButtonPrimary" or style == "ButtonSecondary" then "Button" else style
+	local radius = Grimoire.Radius[class] or 10
+	for _, child in container:GetChildren() do
+		if child:IsA("UICorner") then child.CornerRadius = UDim.new(0, radius) end
+	end
+	local branchStroke: UIStroke? = nil
+	for _, name in BRANCH_STROKES do
+		local found = container:FindFirstChild(name)
+		if found and found:IsA("UIStroke") then branchStroke = found break end
+	end
+	local rail = Grimoire.Rail(container, nil, radius, baseZ + 1)
+	if branchStroke then
+		branchStroke.Parent = rail
+		branchStroke.Thickness = math.clamp(branchStroke.Thickness, 1.2, 2)
+	end
+	local ink = Instance.new("UIStroke")
+	ink.Name = "GrimoireInk"
+	ink.Color = Grimoire.Ink
+	ink.Thickness = Grimoire.InkWidth[class] or 2.5
+	ink.LineJoinMode = Enum.LineJoinMode.Round
+	ink.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	ink.Parent = container
+	return container
 end
 
 function GothicBoxStyle.Apply(container: GuiObject, opts: ApplyOptions?): GuiObject
@@ -118,6 +164,10 @@ function GothicBoxStyle.Apply(container: GuiObject, opts: ApplyOptions?): GuiObj
 		"GothicButtonCorner",
 		"GothicButtonStroke",
 		"GothicButtonGrad",
+		"GrimoireCorner",
+		"GrimoireFill",
+		"GrimoireInk",
+		"GrimoireRail",
 	}) do
 		local existing = container:FindFirstChild(childName)
 		if existing then
@@ -127,7 +177,6 @@ function GothicBoxStyle.Apply(container: GuiObject, opts: ApplyOptions?): GuiObj
 
 	-- Dedicated styling for Section Panels (1px notched border, dark gradient)
 	if style == "Panel" then
-		container.BackgroundColor3 = C.PanelBgStart
 		container.BackgroundTransparency = 0
 
 		new("UICorner", {
@@ -135,14 +184,7 @@ function GothicBoxStyle.Apply(container: GuiObject, opts: ApplyOptions?): GuiObj
 			CornerRadius = UDim.new(0, 6),
 		}, container)
 
-		new("UIGradient", {
-			Name = "GothicPanelGrad",
-			Color = ColorSequence.new({
-				ColorSequenceKeypoint.new(0.0, C.PanelBgStart),
-				ColorSequenceKeypoint.new(1.0, C.PanelBgEnd),
-			}),
-			Rotation = 135,
-		}, container)
+		fillTone(container, C.PanelBgStart, C.PanelBgEnd, "GothicPanelGrad")
 
 		new("UIStroke", {
 			Name = "GothicPanelStroke",
@@ -203,7 +245,7 @@ function GothicBoxStyle.Apply(container: GuiObject, opts: ApplyOptions?): GuiObj
 			ZIndex = baseZ + 2,
 		}, notchBR)
 
-		return container
+		return finish(container, style, baseZ)
 	end
 
 	-- Dedicated styling for List Row Cards (flat dark card, 1px stroke, rarity accent bar)
@@ -260,7 +302,7 @@ function GothicBoxStyle.Apply(container: GuiObject, opts: ApplyOptions?): GuiObj
 			end
 		end
 
-		return container
+		return finish(container, style, baseZ)
 	end
 
 	-- Dedicated styling for Item/Weapon Slots (rounded square, inner bevel, states: Empty/Filled/Locked)
@@ -335,7 +377,7 @@ function GothicBoxStyle.Apply(container: GuiObject, opts: ApplyOptions?): GuiObj
 			(container :: GuiButton).Activated:Connect(options.OnClick)
 		end
 
-		return container
+		return finish(container, style, baseZ)
 	end
 
 	-- Dedicated styling for Primary Buttons (Gold-Amber Gradient or Arcane Violet)
@@ -449,7 +491,7 @@ function GothicBoxStyle.Apply(container: GuiObject, opts: ApplyOptions?): GuiObj
 			end
 		end
 
-		return container
+		return finish(container, style, baseZ)
 	end
 
 	-- Dedicated styling for Secondary Buttons (Dark Outlined)
@@ -515,7 +557,7 @@ function GothicBoxStyle.Apply(container: GuiObject, opts: ApplyOptions?): GuiObj
 			end
 		end
 
-		return container
+		return finish(container, style, baseZ)
 	end
 
 	local assetId = options.AssetId or GothicBoxStyle.CustomAssetId
@@ -557,159 +599,54 @@ function GothicBoxStyle.Apply(container: GuiObject, opts: ApplyOptions?): GuiObj
 		return container
 	end
 
-	-- Procedural Vector Fallback (Clean White Gothic Frame without Purple Line)
-	container.BackgroundColor3 = C.ObsidianDark
-	container.BackgroundTransparency = 0.08
+	-- Procedural Gilded Grimoire frame (Window / Card / Button / Compact).
+	local toneKey = if style == "Button" then "Action" elseif style == "Window" then "Violet" else "Deep"
+	local tone = Grimoire.Tones[toneKey]
+	local radius = Grimoire.Radius[style] or 12
+	container.BackgroundTransparency = if style == "Window" then 0.02 else 0
 
-	-- 1. Outer Corner Radius & Subtle Gradient
-	new("UICorner", {
-		Name = "GothicMainCorner",
-		CornerRadius = UDim.new(0, math.max(1, math.floor(3 * scale))),
-	}, container)
-
-	new("UIGradient", {
-		Name = "GothicObsidianGrad",
-		Color = ColorSequence.new({
-			ColorSequenceKeypoint.new(0.0, C.ObsidianSheen),
-			ColorSequenceKeypoint.new(0.3, C.ObsidianMid),
-			ColorSequenceKeypoint.new(1.0, C.ObsidianDark),
-		}),
-		Rotation = 45,
-	}, container)
-
-	-- 2. Outer Stark White Rail
+	new("UICorner", { Name = "GothicMainCorner", CornerRadius = UDim.new(0, radius) }, container)
+	fillTone(container, tone.Top, tone.Bottom, "GothicObsidianGrad")
 	new("UIStroke", {
-		Name = "WhiteOuterRail",
+		Name = "GrimoireInk",
 		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-		Color = C.RailWhite,
-		Thickness = math.max(1.5, 2.4 * scale),
-		Transparency = 0,
+		Color = Grimoire.Ink,
+		Thickness = Grimoire.InkWidth[style] or 3,
+		LineJoinMode = Enum.LineJoinMode.Round,
 	}, container)
+	local rail = Grimoire.Rail(container, tone.Rail, radius, baseZ + 1)
+	local railStroke = rail:FindFirstChildWhichIsA("UIStroke")
 
-	-- 3. Inner White Rail (Parallel double-rail with dark groove)
-	local innerRailOffset = math.max(2, math.floor(4 * scale))
-	local innerWhiteRail = new("Frame", {
-		Name = "WhiteInnerRail",
-		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(innerRailOffset, innerRailOffset),
-		Size = UDim2.new(1, -innerRailOffset * 2, 1, -innerRailOffset * 2),
-		ZIndex = baseZ + 1,
-	}, container)
-	new("UICorner", { CornerRadius = UDim.new(0, math.max(1, math.floor(2 * scale))) }, innerWhiteRail)
-	new("UIStroke", {
-		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-		Color = C.RailInnerWhite,
-		Thickness = math.max(1, 1.3 * scale),
-		Transparency = 0.15,
-	}, innerWhiteRail)
-
-	-- 4. Simplified Gothic Accents Folder
-	local decor = new("Folder", { Name = "GothicDecorRoot" }, container)
-
-	-- 4A. Clean 4-Corner Gothic Diamond Bosses
-	local diamondSize = math.floor(18 * scale)
-	local cutoutSize = math.max(2, math.floor(8 * scale))
-	local corners = {
-		{ Name = "Corner_TL", Pos = UDim2.fromScale(0, 0) },
-		{ Name = "Corner_TR", Pos = UDim2.fromScale(1, 0) },
-		{ Name = "Corner_BL", Pos = UDim2.fromScale(0, 1) },
-		{ Name = "Corner_BR", Pos = UDim2.fromScale(1, 1) },
-	}
-
-	for _, c in ipairs(corners) do
-		local rootCorner = new("Frame", {
-			Name = c.Name,
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = c.Pos,
-			Size = UDim2.fromOffset(diamondSize, diamondSize),
-			BackgroundTransparency = 1,
-			ZIndex = baseZ + 3,
-		}, decor)
-
-		-- Main Corner Diamond Boss
-		local mainHead = new("Frame", {
-			Name = "MainHead",
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.fromScale(0.5, 0.5),
-			Size = UDim2.fromOffset(diamondSize, diamondSize),
-			BackgroundColor3 = C.RailWhite,
-			BorderSizePixel = 0,
-			Rotation = 45,
-			ZIndex = baseZ + 3,
-		}, rootCorner)
-
-		-- Concentric Obsidian Core Inset
-		new("Frame", {
-			Name = "NegativeCutout",
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.fromScale(0.5, 0.5),
-			Size = UDim2.fromOffset(cutoutSize, cutoutSize),
-			BackgroundColor3 = C.ObsidianDark,
-			BorderSizePixel = 0,
-			Rotation = 0,
-			ZIndex = baseZ + 4,
-		}, mainHead)
+	-- Gold corner studs (gothic accents), outlined in ink like the icons. Windows and cards only.
+	if style == "Window" or style == "Card" then
+		local decor = new("Folder", { Name = "GothicDecorRoot" }, container)
+		local stud = math.floor(16 * scale)
+		for _, pos in { UDim2.new(0, 6, 0, 6), UDim2.new(1, -6, 0, 6), UDim2.new(0, 6, 1, -6), UDim2.new(1, -6, 1, -6) } do
+			local head = new("Frame", {
+				Name = "CornerStud",
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = pos,
+				Size = UDim2.fromOffset(stud, stud),
+				BackgroundColor3 = Color3.new(1, 1, 1),
+				BorderSizePixel = 0,
+				Rotation = 45,
+				ZIndex = baseZ + 3,
+			}, decor)
+			new("UICorner", { CornerRadius = UDim.new(0, 3) }, head)
+			new("UIGradient", { Color = ColorSequence.new(Color3.fromRGB(255, 226, 120), Color3.fromRGB(196, 120, 24)), Rotation = 90 }, head)
+			new("UIStroke", { Color = Grimoire.Ink, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, head)
+		end
 	end
 
-	-- 4B. Center Top & Bottom Subtle Crest Notches
-	local notchW = math.floor(18 * scale)
-	local notchH = math.floor(6 * scale)
-
-	local topCenterNotch = new("Frame", {
-		Name = "TopCenterNotch",
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.new(0.5, 0, 0, 0),
-		Size = UDim2.fromOffset(notchW, notchH),
-		BackgroundColor3 = C.RailWhite,
-		BorderSizePixel = 0,
-		ZIndex = baseZ + 3,
-	}, decor)
-	new("UICorner", { CornerRadius = UDim.new(0, 2) }, topCenterNotch)
-
-	local btmCenterNotch = new("Frame", {
-		Name = "BottomCenterNotch",
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.new(0.5, 0, 1, 0),
-		Size = UDim2.fromOffset(notchW, notchH),
-		BackgroundColor3 = C.RailWhite,
-		BorderSizePixel = 0,
-		ZIndex = baseZ + 3,
-	}, decor)
-	new("UICorner", { CornerRadius = UDim.new(0, 2) }, btmCenterNotch)
-
-	-- 4C. Left & Right Rail Midpoint Barbs
-	local sideBarbSize = math.floor(10 * scale)
-	new("Frame", {
-		Name = "LeftMidBarb",
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.new(0, 0, 0.5, 0),
-		Size = UDim2.fromOffset(sideBarbSize, sideBarbSize),
-		BackgroundColor3 = C.RailWhite,
-		BorderSizePixel = 0,
-		Rotation = 45,
-		ZIndex = baseZ + 3,
-	}, decor)
-
-	new("Frame", {
-		Name = "RightMidBarb",
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.new(1, 0, 0.5, 0),
-		Size = UDim2.fromOffset(sideBarbSize, sideBarbSize),
-		BackgroundColor3 = C.RailWhite,
-		BorderSizePixel = 0,
-		Rotation = 45,
-		ZIndex = baseZ + 3,
-	}, decor)
-
-	-- 5. Interactive Hover Feedback for Buttons
+	-- Hover: the rail brightens on buttons.
 	if style == "Button" and container:IsA("GuiButton") then
 		local btn = container :: GuiButton
 		btn.AutoButtonColor = false
 		btn.MouseEnter:Connect(function()
-			TweenService:Create(container, TweenInfo.new(0.18), { BackgroundColor3 = C.ObsidianSheen }):Play()
+			if railStroke then TweenService:Create(railStroke, TweenInfo.new(0.15), { Color = Color3.fromRGB(255, 248, 200), Transparency = 0 }):Play() end
 		end)
 		btn.MouseLeave:Connect(function()
-			TweenService:Create(container, TweenInfo.new(0.18), { BackgroundColor3 = C.ObsidianDark }):Play()
+			if railStroke then TweenService:Create(railStroke, TweenInfo.new(0.15), { Color = tone.Rail, Transparency = 0.3 }):Play() end
 		end)
 		if options.OnClick then
 			btn.Activated:Connect(options.OnClick)
@@ -798,20 +735,24 @@ function GothicBoxStyle.CreateCloseButton(parent: GuiObject, onClose: () -> ()):
 		BorderSizePixel = 0,
 		ZIndex = parent.ZIndex + 15,
 	}, parent)
-	new("UICorner", { CornerRadius = UDim.new(0, 6) }, closeBtn)
-	local stroke = new("UIStroke", {
+	-- Gilded Grimoire: ink outline and an inset gold rail; hover turns it crimson.
+	new("UICorner", { CornerRadius = UDim.new(0, 8) }, closeBtn)
+	new("UIStroke", {
 		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-		Color = Color3.fromRGB(90, 75, 115),
-		Thickness = 1.2,
+		Color = Grimoire.Ink,
+		Thickness = 2.5,
+		LineJoinMode = Enum.LineJoinMode.Round,
 	}, closeBtn)
+	Grimoire.Rail(closeBtn, Color3.fromRGB(240, 196, 110), 8, closeBtn.ZIndex)
+	GrimoireIcons.CloseGlyph(closeBtn, 16)
+	closeBtn.TextStrokeColor3 = Grimoire.Ink
+	closeBtn.TextStrokeTransparency = 0.2
 
 	closeBtn.MouseEnter:Connect(function()
 		TweenService:Create(closeBtn, TweenInfo.new(0.15), { BackgroundColor3 = C.CloseRed, TextColor3 = Color3.new(1, 1, 1) }):Play()
-		TweenService:Create(stroke, TweenInfo.new(0.15), { Color = Color3.fromRGB(255, 120, 130) }):Play()
 	end)
 	closeBtn.MouseLeave:Connect(function()
 		TweenService:Create(closeBtn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(26, 20, 36), TextColor3 = C.TextDim }):Play()
-		TweenService:Create(stroke, TweenInfo.new(0.15), { Color = Color3.fromRGB(90, 75, 115) }):Play()
 	end)
 	closeBtn.Activated:Connect(onClose)
 	return closeBtn

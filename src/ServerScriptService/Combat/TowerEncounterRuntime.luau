@@ -23,9 +23,9 @@ function Runtime.new(api: any): any
 	function self:Targets(): any
 		local targets = {}
 		for _, h in pairs(api.Heroes) do
-			if Timeline.Alive(h) then table.insert(targets, h) end
+			if Timeline.Alive(h) and not h.DuelId then table.insert(targets, h) end
 		end
-		-- Only heroes participate in enemy targeting and area damage.
+		-- Only heroes participate in enemy targeting and area damage; duelling squads are off-limits.
 		return targets
 	end
 	function self:PublicAction(a, kind)

@@ -161,7 +161,131 @@ local function migratePlotToIsland(plotModel: Model, islandClone: Model, islandT
 	end
 	anchorPart.CFrame = CFrame.new(islandTopCF.Position.X, islandTopCF.Position.Y, islandTopCF.Position.Z)
 
+	-- 7. Ensure Leaderboard Playtime asset is present and placed on the ground along the North Wall
+	local leaderboard = plotModel:FindFirstChild("AvxsedPlaytimeWS")
+	if not leaderboard then
+		local rep = game:GetService("ReplicatedStorage")
+		local assets = rep:FindFirstChild("Assets")
+		local template = assets and assets:FindFirstChild("LeaderboardTemplate")
+		if template then
+			local clone = template:Clone()
+			clone.Name = "AvxsedPlaytimeWS"
+			clone.Parent = plotModel
+			leaderboard = clone
+		end
+	end
+	if leaderboard then
+		local rigstand = leaderboard:FindFirstChild("Rigstand")
+		local top1 = rigstand and rigstand:FindFirstChild("Top 1")
+		if top1 and top1:IsA("BasePart") then
+			local targetTop1CF = islandTopCF * CFrame.new(116.6, 6.8, -20.9) * CFrame.Angles(0, math.rad(90), 0)
+			local deltaPos = targetTop1CF.Position - top1.Position
+			if deltaPos.Magnitude > 0.05 then
+				for _, d in ipairs(leaderboard:GetDescendants()) do
+					if d:IsA("BasePart") and d.Name ~= "ScreenPlaytime" then
+						d.CFrame = d.CFrame + deltaPos
+					end
+				end
+			end
+		end
+
+		local screen = leaderboard:FindFirstChild("ScreenPlaytime")
+		if screen and screen:IsA("BasePart") then
+			screen.Anchored = true
+			screen.CanCollide = false
+			screen.Size = Vector3.new(9.4, 12.4, 0.5)
+			screen.Transparency = 0
+			screen.Color = Color3.fromRGB(15, 15, 18)
+			screen.Material = Enum.Material.Glass
+			screen.CFrame = islandTopCF * CFrame.new(116.2, 6.65, -31.3) * CFrame.Angles(0, math.rad(90), 0)
+		end
+	end
+
 	islandClone.Parent = plotModel
+end
+
+-- Phase 4.2: Distant Background Floating Islets (8-12 non-collidable rock islets with pines & boulders)
+local function buildDistantBackgroundIslets(container: Instance)
+	local isletsFolder = Instance.new("Folder")
+	isletsFolder.Name = "BackgroundFloatingIslets"
+	isletsFolder.Parent = container
+
+	local rng = Random.new(20261028)
+	local isletCount = 12
+	local slateColor = Color3.fromRGB(65, 68, 72)
+	local deepSlate = Color3.fromRGB(45, 48, 54)
+	local grassTop = Color3.fromRGB(48, 78, 44)
+	local pineNeedle = Color3.fromRGB(45, 75, 42)
+	local trunkBark = Color3.fromRGB(58, 42, 28)
+
+	for i = 1, isletCount do
+		-- Place around the outer horizon ring in R in [790, 980]
+		local angle = ((i - 1) / isletCount) * math.pi * 2 + math.rad(12)
+		local radius = rng:NextNumber(790, 980)
+		local elevY = rng:NextNumber(-28, 52)
+		local center = Vector3.new(
+			Config.RingCenter.X + math.cos(angle) * radius,
+			elevY,
+			Config.RingCenter.Z + math.sin(angle) * radius
+		)
+		local width = rng:NextNumber(46, 78)
+		local length = rng:NextNumber(42, 72)
+		local depth = rng:NextNumber(38, 64)
+		local yaw = rng:NextNumber(0, math.pi * 2)
+		local isletCF = CFrame.new(center) * CFrame.Angles(0, yaw, 0)
+
+		local isletModel = Instance.new("Model")
+		isletModel.Name = string.format("DistantIslet_%d", i)
+		isletModel.Parent = isletsFolder
+
+		local function decPart(name: string, size: Vector3, cf: CFrame, col: Color3, mat: Enum.Material, shape: Enum.PartType?)
+			local p = Instance.new("Part")
+			p.Name = name
+			p.Size = size
+			p.CFrame = cf
+			p.Color = col
+			p.Material = mat
+			if shape then
+				p.Shape = shape
+			end
+			p.Anchored = true
+			p.CanCollide = false
+			p.CanTouch = false
+			p.CanQuery = false
+			p.CastShadow = false
+			p.TopSurface = Enum.SurfaceType.Smooth
+			p.BottomSurface = Enum.SurfaceType.Smooth
+			p.Parent = isletModel
+			return p
+		end
+
+		-- Grass cap & upper slate mass
+		decPart("GrassCap", Vector3.new(width, 3.0, length), isletCF * CFrame.new(0, 1.5, 0), grassTop, Enum.Material.Grass)
+		decPart("UpperRock", Vector3.new(width * 0.92, depth * 0.38, length * 0.92), isletCF * CFrame.new(0, -depth * 0.19, 0), slateColor, Enum.Material.Slate)
+		decPart("MidRock", Vector3.new(width * 0.64, depth * 0.36, length * 0.64), isletCF * CFrame.new(0, -depth * 0.52, 0) * CFrame.Angles(0, 0.3, 0), slateColor:Lerp(deepSlate, 0.5), Enum.Material.Slate)
+		decPart("ApexRock", Vector3.new(width * 0.32, depth * 0.35, length * 0.32), isletCF * CFrame.new(0, -depth * 0.82, 0) * CFrame.Angles(0.15, 0.6, 0), deepSlate, Enum.Material.Slate)
+
+		-- 3 Conical Pine Trees on each distant islet
+		local treeCount = rng:NextInteger(2, 4)
+		for t = 1, treeCount do
+			local tx = rng:NextNumber(-width * 0.28, width * 0.28)
+			local tz = rng:NextNumber(-length * 0.28, length * 0.28)
+			local scale = rng:NextNumber(0.85, 1.25)
+			local treeBase = isletCF * CFrame.new(tx, 3.0, tz)
+
+			decPart("PineTrunk", Vector3.new(14 * scale, 2.2 * scale, 2.2 * scale), treeBase * CFrame.new(0, 7 * scale, 0) * CFrame.Angles(0, 0, math.pi * 0.5), trunkBark, Enum.Material.Wood, Enum.PartType.Cylinder)
+			decPart("PineTier1", Vector3.new(4.5 * scale, 14 * scale, 14 * scale), treeBase * CFrame.new(0, 8 * scale, 0) * CFrame.Angles(0, 0, math.pi * 0.5), pineNeedle, Enum.Material.Grass, Enum.PartType.Cylinder)
+			decPart("PineTier2", Vector3.new(4.0 * scale, 10 * scale, 10 * scale), treeBase * CFrame.new(0, 12 * scale, 0) * CFrame.Angles(0, 0, math.pi * 0.5), pineNeedle, Enum.Material.Grass, Enum.PartType.Cylinder)
+			decPart("PineTier3", Vector3.new(3.6 * scale, 6 * scale, 6 * scale), treeBase * CFrame.new(0, 15.5 * scale, 0) * CFrame.Angles(0, 0, math.pi * 0.5), pineNeedle, Enum.Material.Grass, Enum.PartType.Cylinder)
+		end
+
+		-- Craggy Boulders on the islet
+		for b = 1, 2 do
+			local bx = rng:NextNumber(-width * 0.32, width * 0.32)
+			local bz = rng:NextNumber(-length * 0.32, length * 0.32)
+			decPart("IsletBoulder_" .. b, Vector3.new(6, 4, 5), isletCF * CFrame.new(bx, 4.2, bz) * CFrame.Angles(0.1, b * 1.1, 0), slateColor, Enum.Material.Slate)
+		end
+	end
 end
 
 local function connectKillZoneTouch(killZone: BasePart)
@@ -260,13 +384,14 @@ local function buildOverhaul(forceRebuild: boolean?)
 		end
 	end
 
-	local OVERHAUL_VERSION = 5
+	local OVERHAUL_VERSION = 7
 	local plotsFolder = Workspace:WaitForChild("WaitingRoomPlots")
 	local existingContainer = Workspace:FindFirstChild("BaseOverhaulGeometry")
 	local plot1 = plotsFolder:FindFirstChild("Plot_1")
 	local alreadyBaked = existingContainer ~= nil
 		and existingContainer:GetAttribute("OverhaulVersion") == OVERHAUL_VERSION
 		and existingContainer:FindFirstChild("CentralCrimsonTower") ~= nil
+		and existingContainer:FindFirstChild("BackgroundFloatingIslets") ~= nil
 		and plot1 ~= nil
 		and plot1:FindFirstChild("FloatingFortressIsland") ~= nil
 		and plotsFolder:FindFirstChild("Plot_6") ~= nil
@@ -334,8 +459,9 @@ local function buildOverhaul(forceRebuild: boolean?)
 
 	masterTemplate:Destroy()
 
-	-- 3. Create Kill/Respawn Zone below the islands
+	-- 3. Create Kill/Respawn Zone below the islands + Distant Floating Background Islets
 	setupKillRespawnZone(overhaulContainer)
+	buildDistantBackgroundIslets(overhaulContainer)
 
 	-- 4. Re-teleport any currently connected players to their updated island PlotSpawn
 	if _G.PlotManager and _G.PlotManager.TeleportPlayerToPlot then

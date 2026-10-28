@@ -14,6 +14,8 @@ local player = Players.LocalPlayer
 local floors = require(RS.Shared.Config.TowerFloorConfig)
 local mobs = require(RS.Shared.Config.MobCatalog)
 local GothicBoxStyle = require(RS.Shared.Util.GothicBoxStyle)
+local GildedGrimoire = require(RS.Shared.Util.GildedGrimoire)
+local GrimoireIcons = require(RS.Shared.Util.GrimoireIcons)
 local remotes = RS:WaitForChild("Remotes"):WaitForChild("TowerRemotes")
 
 local selfState: any = nil
@@ -33,7 +35,7 @@ local C = {
 	ObsidianMid = Color3.fromRGB(22, 18, 34),
 	ObsidianSheen = Color3.fromRGB(36, 28, 52),
 	BorderNormal = Color3.fromRGB(65, 54, 82),
-	BorderSelected = Color3.fromRGB(192, 132, 252),
+	BorderSelected = Color3.fromRGB(255, 214, 110),
 	BorderVisiting = Color3.fromRGB(74, 222, 128),
 	BorderSquad = Color3.fromRGB(56, 189, 248),
 	TextWhite = Color3.fromRGB(255, 255, 255),
@@ -102,24 +104,8 @@ local panel = new("Frame", {
 }, gui)
 GothicBoxStyle.Apply(panel, { Style = "Window" })
 
--- 4 Edge Midpoint Diamond Bosses (Top, Bottom, Left, Right)
-local edgeMidpoints = {
-	UDim2.new(0.5, 0, 0, 0),
-	UDim2.new(0.5, 0, 1, 0),
-	UDim2.new(0, 0, 0.5, 0),
-	UDim2.new(1, 0, 0.5, 0),
-}
-for _, pos in ipairs(edgeMidpoints) do
-	new("Frame", {
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = pos,
-		Size = UDim2.fromOffset(10, 10),
-		BackgroundColor3 = Color3.fromRGB(240, 235, 250),
-		BorderSizePixel = 0,
-		Rotation = 45,
-		ZIndex = 46,
-	}, panel)
-end
+-- Gilded Grimoire: every label in the selector uses the theme fonts.
+GildedGrimoire.Watch(panel)
 
 local scale = new("UIScale", { Scale = 1.0 }, panel)
 
@@ -140,44 +126,14 @@ if workspace.CurrentCamera then
 	workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(fit)
 end
 
--- Close Button (Matching soft rounded translucent square with '×')
-local closeBtn = new("TextButton", {
-	Name = "Close",
-	AnchorPoint = Vector2.new(1, 0),
-	Position = UDim2.new(1, -18, 0, 18),
-	Size = UDim2.fromOffset(28, 28),
-	BackgroundColor3 = Color3.fromRGB(36, 28, 48),
-	BackgroundTransparency = 0.2,
-	AutoButtonColor = false,
-	BorderSizePixel = 0,
-	Text = "×",
-	TextColor3 = Color3.fromRGB(215, 205, 230),
-	Font = Enum.Font.GothamBold,
-	TextSize = 16,
-	ZIndex = 48,
-}, panel)
-new("UICorner", { CornerRadius = UDim.new(0, 6) }, closeBtn)
-local closeStroke = new("UIStroke", {
-	ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-	Color = Color3.fromRGB(75, 62, 95),
-	Thickness = 1.2,
-}, closeBtn)
-
-closeBtn.MouseEnter:Connect(function()
-	closeStroke.Color = Color3.fromRGB(220, 175, 255)
-	closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-end)
-closeBtn.MouseLeave:Connect(function()
-	closeStroke.Color = Color3.fromRGB(75, 62, 95)
-	closeBtn.TextColor3 = Color3.fromRGB(215, 205, 230)
-end)
-closeBtn.Activated:Connect(function()
+local function closeSelector()
 	panel.Visible = false
 	scrim.Visible = false
 	if _G.UpdateBottomTabHighlights then
 		_G.UpdateBottomTabHighlights()
 	end
-end)
+end
+GothicBoxStyle.CreateCloseButton(panel, closeSelector)
 
 scrim.Activated:Connect(function()
 	if os.clock() - lastSelectorOpenTime < 0.25 then return end
@@ -189,22 +145,25 @@ scrim.Activated:Connect(function()
 end)
 
 -- Title & Subtitle Header
+local titleIcon = GrimoireIcons.Create("Tower", 46, panel, 42)
+titleIcon.Position = UDim2.fromOffset(20, 12)
 local titleLabel = new("TextLabel", {
 	Name = "Title",
-	Position = UDim2.fromOffset(26, 18),
-	Size = UDim2.fromOffset(500, 26),
+	Position = UDim2.fromOffset(74, 14),
+	Size = UDim2.fromOffset(560, 30),
 	BackgroundTransparency = 1,
 	Text = "INFINITE TOWER · 50 FLOORS",
 	TextColor3 = C.TextWhite,
-	Font = Enum.Font.GothamBold,
-	TextSize = 20,
+	Font = Enum.Font.GothamBlack,
+	TextSize = 24,
 	TextXAlignment = Enum.TextXAlignment.Left,
 	ZIndex = 42,
 }, panel)
+new("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.new(1, 1, 1), GildedGrimoire.Text.Gold) }, titleLabel)
 
 local subtitleLabel = new("TextLabel", {
 	Name = "Subtitle",
-	Position = UDim2.fromOffset(26, 44),
+	Position = UDim2.fromOffset(74, 44),
 	Size = UDim2.fromOffset(500, 18),
 	BackgroundTransparency = 1,
 	Text = "10 Biomes · Select any floor to visit or station your squad",
@@ -234,7 +193,7 @@ local biomeScroll = new("ScrollingFrame", {
 	BackgroundTransparency = 1,
 	BorderSizePixel = 0,
 	ScrollBarThickness = 3,
-	ScrollBarImageColor3 = C.BorderSelected,
+	ScrollBarImageColor3 = Color3.fromRGB(240, 196, 110),
 	CanvasSize = UDim2.new(0, 0, 0, 10 * 100 + 8),
 	ZIndex = 42,
 }, body)
@@ -285,23 +244,17 @@ local floorRowLayout = new("UIListLayout", {
 	SortOrder = Enum.SortOrder.LayoutOrder,
 }, floorRow)
 
-local activeFloorButtons: { [number]: { Root: TextButton, Stroke: UIStroke, Corners: { Frame }, Number: TextLabel, FloorId: number } } = {}
+local activeFloorButtons: { [number]: { Root: TextButton, Stroke: UIStroke, Corners: { Frame }, Number: TextLabel, Tag: TextLabel, Lock: Frame, FloorId: number } } = {}
 
 -- 2. Floor Details Card (Middle)
 local detailsCard = new("Frame", {
 	Name = "FloorDetailsCard",
 	Position = UDim2.fromOffset(0, 80),
 	Size = UDim2.new(1, 0, 0, 176),
-	BackgroundColor3 = Color3.fromRGB(15, 12, 22),
 	BorderSizePixel = 0,
 	ZIndex = 43,
 }, rightPane)
-new("UICorner", { CornerRadius = UDim.new(0, 6) }, detailsCard)
-local detailsStroke = new("UIStroke", {
-	ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-	Color = Color3.fromRGB(52, 42, 70),
-	Thickness = 1.2,
-}, detailsCard)
+GildedGrimoire.Frame(detailsCard, { Class = "Panel", Tone = "Deep", ZIndex = 44 })
 
 -- Details Content Labels
 local detailHeader = new("TextLabel", {
@@ -310,9 +263,9 @@ local detailHeader = new("TextLabel", {
 	Size = UDim2.new(1, -36, 0, 22),
 	BackgroundTransparency = 1,
 	Text = "Floor 1 · Overgrown Threshold (Verdant Ruins)",
-	TextColor3 = C.TextWhite,
-	Font = Enum.Font.GothamBold,
-	TextSize = 16,
+	TextColor3 = GildedGrimoire.Text.Gold,
+	Font = Enum.Font.GothamBlack,
+	TextSize = 18,
 	TextXAlignment = Enum.TextXAlignment.Left,
 	TextTruncate = Enum.TextTruncate.AtEnd,
 	ZIndex = 45,
@@ -324,7 +277,7 @@ local detailScaling = new("TextLabel", {
 	Size = UDim2.new(1, -36, 0, 20),
 	BackgroundTransparency = 1,
 	RichText = true,
-	Text = "Scaling: HP <font color=\"#4ADE80\">×1.00</font> · ATK <font color=\"#4ADE80\">×1.00</font> · Gold/XP <font color=\"#4ADE80\">×1.00</font>",
+	Text = "Recommended Power: 700",
 	TextColor3 = Color3.fromRGB(240, 235, 248),
 	Font = Enum.Font.Gotham,
 	TextSize = 14,
@@ -381,7 +334,7 @@ local statusFooter = new("TextLabel", {
 	Position = UDim2.fromOffset(2, 332),
 	Size = UDim2.new(1, -4, 0, 40),
 	BackgroundTransparency = 1,
-	Text = "You: Hub · Squad: Following Master\n✓ HUB complete",
+	Text = "You: Hub · Squad: Following Master\nHub travel complete",
 	TextColor3 = Color3.fromRGB(160, 150, 180),
 	Font = Enum.Font.Gotham,
 	TextSize = 12,
@@ -394,71 +347,21 @@ local statusFooter = new("TextLabel", {
 -- HELPER: CREATE ORNATE ACTION BUTTON WITH CORNER & SIDE DIAMONDS
 -- ============================================================================
 local function createOrnateButton(parent: Instance, text: string, order: number, isPrimary: boolean?, onClick: () -> ()): TextButton
-	local normalStrokeColor = if isPrimary then C.BorderSelected else Color3.fromRGB(110, 95, 138)
-	local normalDiamondColor = if isPrimary then Color3.fromRGB(240, 220, 255) else Color3.fromRGB(220, 210, 240)
-	local normalTextColor = if isPrimary then Color3.fromRGB(245, 240, 255) else Color3.fromRGB(215, 205, 235)
-
 	local btn = new("TextButton", {
 		Name = text:gsub("[^%w]", "") .. "Btn",
 		LayoutOrder = order,
 		Size = UDim2.new(0.333, -7, 1, 0),
-		BackgroundColor3 = if isPrimary then Color3.fromRGB(28, 20, 42) else Color3.fromRGB(18, 14, 26),
 		AutoButtonColor = false,
 		BorderSizePixel = 0,
 		Text = text,
-		TextColor3 = normalTextColor,
-		Font = Enum.Font.GothamBold,
-		TextSize = 13,
+		TextColor3 = Color3.new(1, 1, 1),
+		Font = Enum.Font.GothamBlack,
+		TextSize = 15,
 		ZIndex = 44,
 	}, parent)
-
-	new("UICorner", { CornerRadius = UDim.new(0, 4) }, btn)
-	local stroke = new("UIStroke", {
-		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-		Color = normalStrokeColor,
-		Thickness = if isPrimary then 1.5 else 1.2,
-	}, btn)
-
-	-- 4 Corner Diamond Accents + 2 Side Bracket Midpoint Diamonds
-	local bracketPositions = {
-		UDim2.fromScale(0, 0),
-		UDim2.fromScale(1, 0),
-		UDim2.fromScale(0, 1),
-		UDim2.fromScale(1, 1),
-		UDim2.new(0, 0, 0.5, 0),
-		UDim2.new(1, 0, 0.5, 0),
-	}
-	local diamondFrames: { Frame } = {}
-	for _, pos in ipairs(bracketPositions) do
-		local d = new("Frame", {
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = pos,
-			Size = UDim2.fromOffset(6, 6),
-			BackgroundColor3 = normalDiamondColor,
-			BorderSizePixel = 0,
-			Rotation = 45,
-			ZIndex = 45,
-		}, btn)
-		table.insert(diamondFrames, d)
-	end
-
-	-- Hover & Click Tweens
-	btn.MouseEnter:Connect(function()
-		TweenService:Create(btn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(38, 28, 58) }):Play()
-		TweenService:Create(stroke, TweenInfo.new(0.15), { Color = Color3.fromRGB(220, 175, 255) }):Play()
-		for _, d in ipairs(diamondFrames) do
-			TweenService:Create(d, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(220, 175, 255) }):Play()
-		end
-	end)
-
-	btn.MouseLeave:Connect(function()
-		TweenService:Create(btn, TweenInfo.new(0.15), { BackgroundColor3 = if isPrimary then Color3.fromRGB(28, 20, 42) else Color3.fromRGB(18, 14, 26) }):Play()
-		TweenService:Create(stroke, TweenInfo.new(0.15), { Color = normalStrokeColor }):Play()
-		for _, d in ipairs(diamondFrames) do
-			TweenService:Create(d, TweenInfo.new(0.15), { BackgroundColor3 = normalDiamondColor }):Play()
-		end
-	end)
-
+	GothicBoxStyle.Apply(btn, { Style = if isPrimary then "Button" else "ButtonSecondary" })
+	btn.TextStrokeColor3 = GildedGrimoire.Ink
+	btn.TextStrokeTransparency = 0.15
 	btn.Activated:Connect(onClick)
 	return btn
 end
@@ -478,12 +381,10 @@ local function createFloorTile(indexInRow: number): any
 		ZIndex = 44,
 	}, floorRow)
 
-	new("UICorner", { CornerRadius = UDim.new(0, 4) }, btn)
-	local stroke = new("UIStroke", {
-		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-		Color = C.BorderNormal,
-		Thickness = 1.2,
-	}, btn)
+	GildedGrimoire.Frame(btn, { Class = "Slot", Tone = "Deep", Rail = C.BorderNormal, ZIndex = 45 })
+	-- The inner rail shows the tile state (selected, here, squad, boss); the ink outline stays black.
+	local stroke = GildedGrimoire.StateStroke(btn) :: UIStroke
+	stroke.Transparency = 0
 
 	-- 4 Corner Diamonds
 	local cornerCoords = {
@@ -497,29 +398,49 @@ local function createFloorTile(indexInRow: number): any
 		local d = new("Frame", {
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			Position = pos,
-			Size = UDim2.fromOffset(6, 6),
+			Size = UDim2.fromOffset(8, 8),
 			BackgroundColor3 = C.BorderNormal,
 			BorderSizePixel = 0,
 			Rotation = 45,
 			Active = false,
-			ZIndex = 45,
+			ZIndex = 47,
 		}, btn)
+		new("UIStroke", { Color = GildedGrimoire.Ink, Thickness = 1.5 }, d)
 		table.insert(cornerDiamonds, d)
 	end
 
 	local numLabel = new("TextLabel", {
 		Name = "Num",
-		Size = UDim2.fromScale(1, 1),
+		Position = UDim2.fromOffset(0, 6),
+		Size = UDim2.new(1, 0, 0, 34),
 		BackgroundTransparency = 1,
 		Text = tostring(indexInRow),
 		TextColor3 = C.TextMuted,
-		Font = Enum.Font.GothamBold,
-		TextSize = 20,
+		TextSize = 28,
 		TextXAlignment = Enum.TextXAlignment.Center,
 		TextYAlignment = Enum.TextYAlignment.Center,
 		Active = false,
 		ZIndex = 46,
 	}, btn)
+	numLabel:SetAttribute("Grimoire", true)
+	GildedGrimoire.StyleText(numLabel, "Number")
+	local tagLabel = new("TextLabel", {
+		Name = "Tag",
+		Position = UDim2.new(0, 4, 1, -24),
+		Size = UDim2.new(1, -8, 0, 16),
+		BackgroundTransparency = 1,
+		Text = "",
+		TextColor3 = C.TextMuted,
+		TextScaled = true,
+		Active = false,
+		ZIndex = 46,
+	}, btn)
+	tagLabel:SetAttribute("Grimoire", true)
+	GildedGrimoire.StyleText(tagLabel, "Title")
+	local lockIcon = GrimoireIcons.Create("Lock", 22, btn, 47)
+	lockIcon.AnchorPoint = Vector2.new(1, 0)
+	lockIcon.Position = UDim2.new(1, 4, 0, -6)
+	lockIcon.Visible = false
 
 	local slotData: any
 	slotData = {
@@ -527,6 +448,8 @@ local function createFloorTile(indexInRow: number): any
 		Stroke = stroke,
 		Corners = cornerDiamonds,
 		Number = numLabel,
+		Tag = tagLabel,
+		Lock = lockIcon,
 		FloorId = indexInRow,
 	}
 
@@ -539,14 +462,12 @@ local function createFloorTile(indexInRow: number): any
 
 	btn.MouseEnter:Connect(function()
 		if selected ~= slotData.FloorId then
-			TweenService:Create(btn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(28, 22, 42) }):Play()
-			TweenService:Create(stroke, TweenInfo.new(0.15), { Color = Color3.fromRGB(150, 120, 190) }):Play()
+			stroke.Thickness += 0.8
 		end
 	end)
 	btn.MouseLeave:Connect(function()
 		if selected ~= slotData.FloorId then
-			TweenService:Create(btn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(18, 14, 28) }):Play()
-			TweenService:Create(stroke, TweenInfo.new(0.15), { Color = C.BorderNormal }):Play()
+			render()
 		end
 	end)
 
@@ -578,7 +499,7 @@ for biomeIdx, biome in ipairs(mobs.Biomes) do
 		ZIndex = 43,
 	}, biomeScroll)
 
-	new("UICorner", { CornerRadius = UDim.new(0, 6) }, card)
+	new("UICorner", { CornerRadius = UDim.new(0, 10) }, card)
 
 	-- Atmospheric Environmental Landscape Gradient
 	new("UIGradient", {
@@ -614,11 +535,16 @@ for biomeIdx, biome in ipairs(mobs.Biomes) do
 		ZIndex = 45,
 	}, card)
 
-	local cardStroke = new("UIStroke", {
+	-- Gilded Grimoire: ink outline; the inset rail is the selection stroke.
+	new("UIStroke", {
 		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-		Color = C.BorderNormal,
-		Thickness = 1.2,
+		Color = GildedGrimoire.Ink,
+		Thickness = 2.5,
+		LineJoinMode = Enum.LineJoinMode.Round,
 	}, card)
+	local cardRail = GildedGrimoire.Rail(card, C.BorderNormal, 10, 46)
+	local cardStroke = cardRail:FindFirstChildOfClass("UIStroke") :: UIStroke
+	cardStroke.Transparency = 0
 
 	-- Inner Artwork Border Frame
 	local innerArtFrame = new("Frame", {
@@ -643,13 +569,13 @@ for biomeIdx, biome in ipairs(mobs.Biomes) do
 		Name = "TitlePill",
 		AnchorPoint = Vector2.new(0.5, 1),
 		Position = UDim2.new(0.5, 0, 1, -5),
-		Size = UDim2.new(1, -12, 0, 22),
+		Size = UDim2.new(1, -14, 0, 24),
 		BackgroundColor3 = Color3.fromRGB(12, 10, 18),
 		BorderSizePixel = 0,
 		Active = false,
 		ZIndex = 46,
 	}, card)
-	new("UICorner", { CornerRadius = UDim.new(0, 4) }, pill)
+	new("UICorner", { CornerRadius = UDim.new(1, 0) }, pill)
 
 	local pillStroke = new("UIStroke", {
 		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
@@ -664,7 +590,7 @@ for biomeIdx, biome in ipairs(mobs.Biomes) do
 		Text = string.format("BIOME %d · %s (FLOORS %d–%d)", biomeIdx, string.upper(biome.DisplayName), firstF, lastF),
 		TextColor3 = C.TextMuted,
 		Font = Enum.Font.GothamBold,
-		TextSize = 10,
+		TextSize = 12,
 		TextTruncate = Enum.TextTruncate.AtEnd,
 		Active = false,
 		ZIndex = 47,
@@ -687,6 +613,16 @@ end
 -- ============================================================================
 -- ACTION BUTTON HANDLERS
 -- ============================================================================
+-- 1234 -> "1.2K", 3400000 -> "3.4M" (power numbers grow very large on high floors).
+local function abbreviate(n: number): string
+	for _, unit in { { 1e12, "T" }, { 1e9, "B" }, { 1e6, "M" }, { 1e3, "K" } } do
+		if n >= unit[1] then
+			return (string.gsub(string.format("%.1f%s", n / unit[1], unit[2]), "%.0(%a)$", "%1"))
+		end
+	end
+	return tostring(math.round(n))
+end
+
 local function request(action: string, id: number?)
 	if not selfState or pending then return end
 	local r = {
@@ -757,7 +693,7 @@ render = function()
 	for _, enc in ipairs(floor.Encounters) do
 		local m = mobs.Get(enc.EnemyId)
 		if m then
-			table.insert(encounterNames, string.format("%s ×%d", m.DisplayName, enc.Count))
+			table.insert(encounterNames, string.format("%s x%d", m.DisplayName, enc.Count))
 		end
 	end
 	local bossEntry = floor.BossEnemyId and mobs.Get(floor.BossEnemyId) or nil
@@ -769,18 +705,23 @@ render = function()
 
 	-- 1. Update Floor Details Card
 	if isSelectedLocked then
-		detailHeader.Text = string.format("Floor %d Â· %s (LOCKED)", selected, floor.DisplayName)
+		detailHeader.Text = string.format("Floor %d · %s (LOCKED)", selected, floor.DisplayName)
 		detailScaling.Text = string.format(
-			"LOCKED Â· Slay Floor %d Boss to unlock!",
+			"LOCKED · Slay Floor %d Boss to unlock!",
 			selected - 1
 		)
 	else
-		detailHeader.Text = string.format("Floor %d Â· %s (%s%s)", selected, floor.DisplayName, floor.BiomeDisplayName or (biome and biome.DisplayName) or floor.BiomeId, bossText)
+		detailHeader.Text = string.format("Floor %d · %s (%s%s)", selected, floor.DisplayName, floor.BiomeDisplayName or (biome and biome.DisplayName) or floor.BiomeId, bossText)
+		-- Phase 5: the floor's Recommended Squad Power against yours (green when you meet it).
+		local recommended = floors.RecommendedPower(selected)
+		local mine = if profile then profile.SquadPower or 0 else 0
+		local ready = mine >= recommended
 		detailScaling.Text = string.format(
-			"Scaling: HP <font color=\"#4ADE80\">Ã—%.2f</font> Â· ATK <font color=\"#4ADE80\">Ã—%.2f</font> Â· Gold/XP <font color=\"#4ADE80\">Ã—%.2f</font>",
-			floor.Difficulty.HPMultiplier,
-			floor.Difficulty.DamageMultiplier,
-			floor.Rewards.GoldMultiplier
+			"Recommended Power: <font color=\"#FFD66E\"><b>%s</b></font>  ·  Your Squad: <font color=\"%s\"><b>%s</b></font>%s",
+			abbreviate(recommended),
+			if ready then "#4ADE80" else "#FF6B6B",
+			abbreviate(mine),
+			if ready then "" else "  (under-powered)"
 		)
 	end
 	detailRoster.Text = string.format("Roster: %s", #encounterNames > 0 and table.concat(encounterNames, ", ") or "None")
@@ -831,20 +772,14 @@ render = function()
 			local isBoss = (fId % 5 == 0)
 			local isFloorLocked = (fId > maxAllowed)
 
-			local displayText = tostring(fId)
-			if isFloorLocked then
-				displayText ..= " [LOCKED]"
-			elseif isBoss then
-				displayText ..= " â—†"
-			end
-			if isVisiting and isAssigned then
-				displayText ..= " â˜…"
-			elseif isVisiting then
-				displayText ..= " â—"
-			elseif isAssigned then
-				displayText ..= " â–²"
-			end
-			slotData.Number.Text = displayText
+			slotData.Number.Text = tostring(fId)
+			slotData.Tag.Text = if isFloorLocked then "LOCKED"
+				elseif isVisiting and isAssigned then "YOU + SQUAD"
+				elseif isVisiting then "YOU ARE HERE"
+				elseif isAssigned then "SQUAD"
+				elseif isBoss then "BOSS"
+				else ""
+			slotData.Lock.Visible = isFloorLocked
 
 			-- State Colors
 			if isSelectedFloor then
@@ -891,6 +826,7 @@ render = function()
 				end
 			end
 
+			slotData.Tag.TextColor3 = if isBoss and not isFloorLocked and not isSelectedFloor and not isVisiting and not isAssigned then Color3.fromRGB(255, 120, 140) else slotData.Number.TextColor3
 			slotData.FloorId = fId
 		end
 	end
@@ -911,7 +847,7 @@ render = function()
 		local sqStr = if assignedFloor then string.format("Stationed on Floor %d", assignedFloor) else "Following Master"
 		local feedbackStr = if pending then string.format("Pending: %s…", pendingActionName or "request")
 			elseif lastFeedback then lastFeedback
-			else "✓ HUB complete"
+			else "Hub travel complete"
 		statusFooter.Text = string.format("You: %s · Squad: %s\n%s", locStr, sqStr, feedbackStr)
 	end
 end
@@ -1035,9 +971,9 @@ remotes.Response.OnClientEvent:Connect(function(r)
 		pending = nil
 		pendingActionName = nil
 		if r.Status == "OK" or not r.ErrorCode then
-			lastFeedback = string.format("✓ %s complete", act)
+			lastFeedback = string.format("%s complete", act)
 		else
-			lastFeedback = string.format("⚠ %s failed: %s", act, tostring(r.ErrorCode))
+			lastFeedback = string.format("%s failed: %s", act, tostring(r.ErrorCode))
 		end
 		render()
 	end

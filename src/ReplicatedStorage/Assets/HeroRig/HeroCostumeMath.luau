@@ -9,6 +9,12 @@ local HeroRigSpec = require(script.Parent:WaitForChild("HeroRigSpec"))
 export type Vec3 = { number }
 export type Mat3 = { number } -- row-major 3x3
 
+export type MeshSpec = {
+	MeshId: string, -- must be listed in HeroCostumes.MESHES
+	TextureId: string?, -- omitted: the mesh takes the piece Color
+	Scale: Vec3, -- SpecialMesh.Scale (FileMesh renders at its native size times this)
+}
+
 export type Piece = {
 	Name: string,
 	Bone: string,
@@ -20,6 +26,7 @@ export type Piece = {
 	Material: string?, -- Enum.Material name, default SmoothPlastic
 	RelativeTo: string?, -- earlier piece on the same bone
 	Loose: boolean?, -- cloth or hair that may clip a neighbouring bone (skirts, capes, braids)
+	Mesh: MeshSpec?, -- renders a FileMesh instead of the Part shape; Size stays the lint bounds
 }
 
 export type ResolvedPiece = {
@@ -27,6 +34,7 @@ export type ResolvedPiece = {
 	Position: Vec3, -- bone space, after body-type scaling
 	Rotation: Mat3, -- bone space
 	Size: Vec3, -- after body-type scaling
+	MeshScale: Vec3?, -- piece.Mesh.Scale after head scaling
 }
 
 local M = {}
@@ -69,34 +77,44 @@ function M.BoneScale(layout: HeroRigSpec.Layout, standard: HeroRigSpec.Layout, b
 	return size[1] / base[1], size[3] / base[3]
 end
 
+-- Head pieces are authored for a HEAD_AUTHORED_SIZE head and scale uniformly (all three
+-- axes, positions, sizes and mesh scales) with the actual head.
+function M.HeadScale(layout: HeroRigSpec.Layout): number
+	return layout.Parts.Head.Size[2] / HeroRigSpec.HEAD_AUTHORED_SIZE
+end
+
 -- Bone-space placement of every piece, in authoring order. Errors on a RelativeTo that
 -- does not name an earlier piece on the same bone.
 function M.Resolve(pieces: { Piece }, layout: HeroRigSpec.Layout): { ResolvedPiece }
 	local standard = HeroRigSpec.Layout("Standard")
+	local headScale = M.HeadScale(layout)
 	local byName: { [string]: ResolvedPiece } = {}
 	local resolved: { ResolvedPiece } = {}
 	for _, piece in pieces do
+		local k = if piece.Bone == "Head" then headScale else 1
 		local localRotation = rotationMatrix(piece.Rotation)
 		local position: Vec3
 		local rotation: Mat3
 		if piece.RelativeTo then
 			local parent = byName[piece.RelativeTo]
 			assert(parent and parent.Piece.Bone == piece.Bone, `Costume piece {piece.Name}: RelativeTo {piece.RelativeTo} must be an earlier piece on {piece.Bone}`)
-			local offset = M.Apply(parent.Rotation, piece.Position)
+			local offset = M.Apply(parent.Rotation, { piece.Position[1] * k, piece.Position[2] * k, piece.Position[3] * k })
 			position = { parent.Position[1] + offset[1], parent.Position[2] + offset[2], parent.Position[3] + offset[3] }
 			rotation = M.Multiply(parent.Rotation, localRotation)
 		else
 			local sx, sz = M.BoneScale(layout, standard, piece.Bone)
-			position = { piece.Position[1] * sx, piece.Position[2], piece.Position[3] * sz }
+			position = { piece.Position[1] * sx * k, piece.Position[2] * k, piece.Position[3] * sz * k }
 			rotation = localRotation
 		end
 		local sx, sz = M.BoneScale(layout, standard, piece.Bone)
 		local horizontal = (sx + sz) / 2
+		local mesh = piece.Mesh
 		local entry: ResolvedPiece = {
 			Piece = piece,
 			Position = position,
 			Rotation = rotation,
-			Size = { piece.Size[1] * horizontal, piece.Size[2], piece.Size[3] * horizontal },
+			Size = { piece.Size[1] * horizontal * k, piece.Size[2] * k, piece.Size[3] * horizontal * k },
+			MeshScale = if mesh then { mesh.Scale[1] * k, mesh.Scale[2] * k, mesh.Scale[3] * k } else nil,
 		}
 		byName[piece.Name] = entry
 		table.insert(resolved, entry)

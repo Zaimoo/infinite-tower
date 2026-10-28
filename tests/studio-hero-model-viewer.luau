@@ -1,6 +1,8 @@
 -- Builds a hero model viewer from code (replaces the hand-made ServerStorage.ModelViewer
 -- JennaPreview). Run in Studio, Edit or playtest, after syncing src with Rojo; through Studio
--- MCP, wrap this file's body and call it: `return (function() <file> end)()({ Armed = true })`.
+-- MCP or the command bar, wrap this file's body and call it:
+-- `return (function() <file> end)()({ Armed = true })` (the file's own function needs its own
+-- `end`, so the text ends in `end end)()(...)`).
 --
 -- Options:
 --   Parent   Instance to build into (default workspace); a folder named HeroModelViewer is
@@ -10,6 +12,10 @@
 --   Armed    equip each hero's archetype weapon (default false)
 --   State    HeroClips state to pose, e.g. "Idle", "AttackBasic" (default "Idle")
 --   T        clip time 0..1 to pose (default 0)
+--   Play     loop the State clip on every hero until the folder is removed (default false);
+--            use with Armed = true and State = "AttackSkill" to review signature ultimates
+--   Seconds  loop length when playing (default: the clip's own Duration)
+--   HeroId   build only this hero (default: all twelve)
 --
 -- Every part is anchored and posed by writing CFrames (HeroAnimator.ApplyStaticPose), so the
 -- lineup also renders correctly in Edit mode and in ViewportFrames.
@@ -49,7 +55,11 @@ return function(options: { [string]: any }?)
 	local state: string = opts.State or "Idle"
 	local t: number = opts.T or 0
 	local built = {}
+	local playing = {}
 	for index, costume in Costumes.List do
+		if opts.HeroId and costume.HeroId ~= opts.HeroId then
+			continue
+		end
 		local pivot = CFrame.new(origin + Vector3.new((index - 1) * spacing, Spec.GROUND_OFFSET, 0))
 		local rig = Registry.Build(costume.HeroId, pivot)
 		local weaponType = nil
@@ -99,7 +109,31 @@ return function(options: { [string]: any }?)
 		end
 		rig.Parent = folder
 		table.insert(built, costume.HeroId)
+		if clip and opts.Play then
+			table.insert(playing, { Rig = rig, Clip = clip, Followers = followers })
+			print(string.format("[HeroModelViewer] %s %s: %.2fs, Release %.2f", costume.HeroId, state, clip.Duration, Clips.Marker(clip, "Release", -1)))
+		end
 	end
 	folder.Parent = parent
+
+	-- Loop the clips by writing static poses each frame (works in Edit mode and playtests), with
+	-- a short hold on the start pose between loops so the release frame is easy to spot.
+	if #playing > 0 then
+		local hold = 0.4
+		local started = os.clock()
+		task.spawn(function()
+			while folder.Parent do
+				for _, entry in playing do
+					local length = opts.Seconds or entry.Clip.Duration
+					local elapsed = (os.clock() - started) % (length + hold)
+					Animator.ApplyStaticPose(entry.Rig, Animator.Sample(entry.Clip, math.clamp(elapsed / length, 0, 1)))
+					for _, f in entry.Followers do
+						f.Part.CFrame = f.Primary.CFrame * f.Offset
+					end
+				end
+				task.wait()
+			end
+		end)
+	end
 	return built
 end

@@ -25,20 +25,20 @@ FountainBuilder.Config = {
 	Tier3BasinDiameter = 6.5,
 	Tier3Height = 3.5,
 
-	-- Colors & Materials
+	-- Colors & Materials (Gothic Dark Stone + Deep Sapphire Blue Water)
 	PlazaMaterial = Enum.Material.Slate,
-	PlazaColor = Color3.fromRGB(68, 70, 78),
+	PlazaColor = Color3.fromRGB(54, 58, 66),
 	InlayMaterial = Enum.Material.Basalt,
-	InlayColor = Color3.fromRGB(36, 38, 44),
-	BasinStoneMaterial = Enum.Material.Marble,
-	BasinStoneColor = Color3.fromRGB(92, 95, 105),
-	BasinRimColor = Color3.fromRGB(165, 170, 182),
+	InlayColor = Color3.fromRGB(34, 36, 42),
+	BasinStoneMaterial = Enum.Material.Slate,
+	BasinStoneColor = Color3.fromRGB(68, 72, 82),
+	BasinRimColor = Color3.fromRGB(92, 96, 108),
 
 	-- Water & Lighting
-	WaterColor = Color3.fromRGB(235, 248, 255),
-	WaterFoamColor = Color3.fromRGB(255, 255, 255),
-	LightColor = Color3.fromRGB(195, 230, 255),
-	LightBrightness = 1.6,
+	WaterColor = Color3.fromRGB(37, 99, 235),
+	WaterFoamColor = Color3.fromRGB(147, 197, 253),
+	LightColor = Color3.fromRGB(59, 130, 246),
+	LightBrightness = 1.8,
 	LightRange = 36,
 
 	-- Audio

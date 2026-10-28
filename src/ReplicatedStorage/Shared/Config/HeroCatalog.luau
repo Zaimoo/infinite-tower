@@ -2,8 +2,10 @@
 -- ReplicatedStorage/Shared/Config/HeroCatalog.luau
 -- Authoritative Hero Seed & Banner Configuration
 -- Features:
---   1. Permanent Banner: "Call of the Rift" (5 Stars: 1★ to 5★, exactly 1 character per star)
---   2. Limited Time Banner: "A Star's Arrival" (7 Stars: 1★ to 7★, exactly 1 character per star)
+--   1. Permanent Banner: "Call of the Rift" (rarity tiers 1-5, exactly 1 character per tier)
+--   2. Limited Time Banner: "A Star's Arrival" (rarity tiers 1-7, exactly 1 character per tier)
+--   3. Inherent hero rarity (Phase 4 §7): fixed per template, multiplies base stats only.
+--      Heroes are still summoned at their template's BaseStar, which equals their tier at launch.
 
 export type HeroSeed = {
 	HeroId: string,
@@ -11,6 +13,7 @@ export type HeroSeed = {
 	BannerOrigin: "STANDARD" | "WORLD_BOSS" | "LIMITED",
 	DropWeight: number, -- Relative weight within tier
 	BaseStar: number,
+	Rarity: number?, -- Inherent rarity tier (1 Common .. 7 Mythical at launch); derived from BaseStar below
 	Archetype: "Vanguard" | "Striker" | "Marksman" | "Miner" | "Healer" | "Scholar",
 	BaseHP_1Star: number,
 	BaseATK_1Star: number,
@@ -29,6 +32,8 @@ export type HeroSeed = {
 	Color: Color3,
 }
 
+local StatBalance = require(game:GetService("ReplicatedStorage").Shared.Config.StatBalance)
+
 local HeroCatalog = {}
 
 --============================================================================
@@ -40,13 +45,14 @@ HeroCatalog.PermanentBanner = {
 	Title = "CALL OF THE RIFT",
 	Subtitle = "5-STAR PERMANENT HERO BANNER",
 	MaxStar = 5,
-	MaxPity = 50,
+	MaxPity = 80,
+	TenPullMinTier = 3, -- every 10-pull includes a Rare or better hero
 	Rates = {
-		[1] = 0.600, -- 60.0% 1★ Han
-		[2] = 0.250, -- 25.0% 2★ Aaron
-		[3] = 0.100, -- 10.0% 3★ Catio
-		[4] = 0.040, -- 4.0% 4★ Valeria
-		[5] = 0.010, -- 1.0% 5★ Ignis
+		[1] = 0.700, -- 70.0% Common Han
+		[2] = 0.200, -- 20.0% Uncommon Aaron
+		[3] = 0.070, -- 7.0% Rare Catio
+		[4] = 0.025, -- 2.5% Superior Valeria
+		[5] = 0.005, -- 0.5% Exalted Ignis
 	},
 	HeroesByStar = {
 		[1] = "hero_han",
@@ -62,16 +68,17 @@ HeroCatalog.LimitedBanner = {
 	Title = "A STAR'S ARRIVAL",
 	Subtitle = "7-STAR LIMITED RATE-UP EVENT",
 	MaxStar = 7,
-	MaxPity = 50,
+	MaxPity = 90,
+	TenPullMinTier = 3, -- every 10-pull includes a Rare or better hero
 	FeaturedHeroId = "hero_astrea",
 	Rates = {
-		[1] = 0.500, -- 50.0% 1★ Jenna
-		[2] = 0.250, -- 25.0% 2★ Velkist
-		[3] = 0.135, -- 13.5% 3★ Eolka
-		[4] = 0.065, -- 6.5% 4★ Morrigan
-		[5] = 0.035, -- 3.5% 5★ Archon
-		[6] = 0.012, -- 1.2% 6★ Solaris
-		[7] = 0.003, -- 0.3% 7★ Astrea (Featured)
+		[1] = 0.6000, -- 60.0% Common Jenna
+		[2] = 0.2400, -- 24.0% Uncommon Velkist
+		[3] = 0.1000, -- 10.0% Rare Eolka
+		[4] = 0.0420, -- 4.2% Superior Morrigan
+		[5] = 0.0140, -- 1.4% Exalted Archon
+		[6] = 0.0033, -- 0.33% Legendary Solaris
+		[7] = 0.0007, -- 0.07% Mythical Astrea (Featured)
 	},
 	HeroesByStar = {
 		[1] = "hero_jenna",
@@ -176,7 +183,7 @@ HeroCatalog.Seeds = {
 		AttackRange = 24,
 		BaseLabor_1Star = 18.0,
 		NativeLabor = 44.3,
-		PreferredFacility = "FACILITY_INFIRMARY",
+		PreferredFacility = "FACILITY_GODS_BLESSING",
 		PassiveTraitName = "Sanctuary Aegis (+30% Healing, +20% Coma Recovery)",
 		TraitATKBonus = 0.0,
 		TraitHPBonus = 0.15,
@@ -365,11 +372,26 @@ HeroCatalog.Seeds = {
 	},
 }
 
+-- Hero rarity uses the weapon tier names (GDD §4.1). Tiers 8-16 are reserved for future heroes.
+HeroCatalog.RarityNames = table.freeze({ "Common", "Uncommon", "Rare", "Superior", "Exalted", "Legendary", "Mythical" })
+
 -- Derived compatibility fields; immutable one-star seeds remain authoritative.
+-- Launch heroes have one hero per tier, so the inherent rarity equals the summoned star.
 for _, seed in pairs(HeroCatalog.Seeds) do
- seed.NativeHP = math.round(seed.BaseHP_1Star * 3^(seed.BaseStar-1))
- seed.NativeATK = math.round(seed.BaseATK_1Star * 3^(seed.BaseStar-1))
+ seed.Rarity = seed.Rarity or seed.BaseStar
+ local growth = 3^(seed.BaseStar-1) * StatBalance.HeroRarityCombatMultiplier^(seed.Rarity-1)
+ seed.NativeHP = math.round(seed.BaseHP_1Star * growth)
+ seed.NativeATK = math.round(seed.BaseATK_1Star * growth)
  seed.MovementSpeed = 20
+end
+
+function HeroCatalog.RarityOf(templateId: string?): number
+	local seed = templateId and HeroCatalog.Seeds[templateId]
+	return if seed then seed.Rarity or seed.BaseStar else 1
+end
+
+function HeroCatalog.RarityName(tier: number?): string
+	return HeroCatalog.RarityNames[math.clamp(math.floor(tier or 1), 1, #HeroCatalog.RarityNames)]
 end
 
 HeroCatalog.PoolByStar = {

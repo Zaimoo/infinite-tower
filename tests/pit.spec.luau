@@ -103,13 +103,15 @@ test("Every native seed uses canonical compounded growth without retired effects
 			for _, quality in ipairs({ 0.9, 1, 1.15 }) do
 				local original = hero("native", seedId, { Level = level, QualityScalar = quality })
 				local atk, hp, dps = Stats.GetEffectiveCombatStats(original, false, false)
-				local expectedATK = math.round(seed.BaseATK_1Star * quality * 3^(seed.BaseStar-1) * 1.08^(level-1))
-				local expectedHP = math.round(seed.BaseHP_1Star * quality * 3^(seed.BaseStar-1) * 1.08^(level-1))
+				-- Inherent rarity (Phase 4 §7) multiplies base combat by 1.35 and labor by 1.12 per tier.
+				local rarityCombat, rarityLabor = 1.35^(seed.Rarity-1), 1.12^(seed.Rarity-1)
+				local expectedATK = math.round(seed.BaseATK_1Star * quality * rarityCombat * 3^(seed.BaseStar-1) * 1.08^(level-1))
+				local expectedHP = math.round(seed.BaseHP_1Star * quality * rarityCombat * 3^(seed.BaseStar-1) * 1.08^(level-1))
 				local expectedDPS = math.round((expectedATK / (math.ceil(seed.AttackInterval/.2-1e-10)*.2)) * 10) / 10
 				equal(atk, expectedATK); equal(hp, expectedHP); equal(dps, expectedDPS)
 				for _, facility in ipairs({ "BENCHED", "FACILITY_CONDUIT", "FACILITY_INFIRMARY", "FACILITY_LAB" }) do
 					local synergy = (seed.PreferredFacility == "ALL" or seed.PreferredFacility == facility) and 0.25 or 0
-					local expectedLabor = math.round(seed.BaseLabor_1Star * 1.35^(seed.BaseStar-1) * quality * (1 + 0.05 * (level - 1)) * (1 + synergy) * 100) / 100
+					local expectedLabor = math.round(seed.BaseLabor_1Star * rarityLabor * 1.35^(seed.BaseStar-1) * quality * (1 + 0.05 * (level - 1)) * (1 + synergy) * 100) / 100
 					equal(Stats.GetEffectiveLabor(original, facility), expectedLabor)
 				end
 			end

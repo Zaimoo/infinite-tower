@@ -59,11 +59,11 @@ function OutskirtsBuilder.BuildTerrainFloor(folder: Instance, origin: CFrame)
 		makePart(folder, "MeadowTone_" .. i, patch.Size, origin * CFrame.new(patch.Pos), patch.Color, Enum.Material.Grass, false)
 	end
 
-	-- Cobblestone threshold apron right outside the rear fortress gatehouse (Z = 90 to 104)
+	-- Cobblestone threshold apron right outside the rear fortress gatehouse (X = 32, Z = 90 to 104)
 	-- Smoothly transitions from citadel stone out into the wilderness
-	local apron = makePart(folder, "GatehouseApron", V(38, 0.2, 16), origin * CFrame.new(0, 0.08, 97), Color3.fromRGB(85, 88, 94), Enum.Material.Slate, true)
-	for x = -16, 16, 8 do
-		makePart(folder, "ApronPaver", V(6.5, 0.22, 14), origin * CFrame.new(x, 0.1, 97), Color3.fromRGB(70, 72, 78), Enum.Material.Basalt, false)
+	local apron = makePart(folder, "GatehouseApron", V(34, 0.2, 16), origin * CFrame.new(32, 0.08, 97), Color3.fromRGB(76, 80, 88), Enum.Material.Slate, false)
+	for x = -12, 12, 8 do
+		makePart(folder, "ApronPaver", V(6.5, 0.22, 14), origin * CFrame.new(32 + x, 0.1, 97), Color3.fromRGB(64, 66, 72), Enum.Material.Basalt, false)
 	end
 end
 
@@ -72,17 +72,17 @@ end
 --============================================================================
 function OutskirtsBuilder.BuildCurvedPath(folder: Instance, origin: CFrame)
 	-- Curve function for the east-west patrol trail
-	-- Snakes naturally across Z = 145 to Z = 175 between X = -118 and X = 118
+	-- Snakes naturally across Z = 148 to Z = 172 between X = -114 and X = 114
 	local function getPathZ(x: number): number
-		return 160 + math.sin(x * 0.038) * 15 + math.cos(x * 0.082) * 5
+		return 160 + math.sin(x * 0.038) * 12 + math.cos(x * 0.082) * 4
 	end
 
 	local numSegments = 28
-	local minX, maxX = -116, 116
+	local minX, maxX = -114, 114
 	local step = (maxX - minX) / numSegments
 
-	local dirtColor1 = Color3.fromRGB(124, 102, 76)
-	local dirtColor2 = Color3.fromRGB(140, 118, 90)
+	local dirtColor1 = Color3.fromRGB(108, 86, 62)
+	local dirtColor2 = Color3.fromRGB(122, 98, 72)
 
 	for i = 1, numSegments do
 		local x1 = minX + (i - 1) * step
@@ -95,53 +95,53 @@ function OutskirtsBuilder.BuildCurvedPath(folder: Instance, origin: CFrame)
 		local length = math.sqrt((x2 - x1) ^ 2 + (z2 - z1) ^ 2) + 2.5
 		local angleY = math.atan2(z2 - z1, x2 - x1)
 
-		local pathWidth = 16 + math.sin(i * 0.7) * 2.5
+		local pathWidth = 14 + math.sin(i * 0.7) * 2.0
 		local segColor = (i % 2 == 0) and dirtColor1 or dirtColor2
 
-		-- Main dirt path slice
+		-- Main dirt path slice (Enum.Material.Ground per spec)
 		local segCF = origin * CFrame.new(midX, 0.12, midZ) * CFrame.Angles(0, -angleY, 0)
-		makePart(folder, "WildernessPatrolTrailSeg_" .. i, V(length, 0.22, pathWidth), segCF, segColor, Enum.Material.Sand, false)
+		makePart(folder, "WildernessPatrolTrailSeg_" .. i, V(length, 0.22, pathWidth), segCF, segColor, Enum.Material.Ground, false)
 
 		-- Soft grass-dirt blend fringe along the edges
 		for _, side in {-1, 1} do
 			local fringeZ = side * (pathWidth * 0.5 + 1.2)
 			local fringeCF = segCF * CFrame.new(0, -0.04, fringeZ)
-			makePart(folder, "TrailFringe", V(length * 0.9, 0.16, 2.8), fringeCF, Color3.fromRGB(95, 110, 65), Enum.Material.LeafyGrass, false)
+			makePart(folder, "TrailFringe", V(length * 0.9, 0.16, 2.8), fringeCF, Color3.fromRGB(68, 92, 52), Enum.Material.LeafyGrass, false)
 		end
 
 		-- Periodic embedded stone pavers along the trail
 		if i % 2 == 1 then
-			local paverOffset = math.sin(i * 1.3) * 4
+			local paverOffset = math.sin(i * 1.3) * 3.5
 			local paverCF = segCF * CFrame.new(0, 0.06, paverOffset) * CFrame.Angles(0, math.rad(i * 23), 0)
-			makePart(folder, "TrailPaver", V(4.2, 0.18, 3.8), paverCF, Color3.fromRGB(105, 108, 114), Enum.Material.Slate, false)
+			makePart(folder, "TrailPaver", V(4.2, 0.18, 3.8), paverCF, Color3.fromRGB(88, 92, 98), Enum.Material.Slate, false)
 		end
 	end
 
-	-- Connector path from Gatehouse Apron (Z = 104) curving gently into the main trail (Z = 150)
-	local connectorSteps = 7
+	-- Connector path from Dividing Wall Gatehouse Apron (X = 32, Z = 100) curving gently to Guardpost & main trail (X = 15, Z = 156)
+	local connectorSteps = 8
 	for j = 1, connectorSteps do
 		local t = j / connectorSteps
-		local cz = 104 + (150 - 104) * t
-		local cx = math.sin(t * math.pi) * 8 -- gentle S-curve to the side
-		local width = 14 - t * 2
-		makePart(folder, "GateConnectorPath_" .. j, V(width, 0.20, 8.5), origin * CFrame.new(cx, 0.12, cz), dirtColor1, Enum.Material.Sand, false)
+		local cz = 100 + (156 - 100) * t
+		local cx = 32 + (15 - 32) * t + math.sin(t * math.pi) * 5
+		local width = 13 - t * 1.5
+		makePart(folder, "GateConnectorPath_" .. j, V(width, 0.20, 8.5), origin * CFrame.new(cx, 0.12, cz), dirtColor1, Enum.Material.Ground, false)
 
 		if j % 2 == 0 then
-			makePart(folder, "ConnectorPaver", V(4.5, 0.18, 4.0), origin * CFrame.new(cx + math.sin(j) * 2, 0.16, cz), Color3.fromRGB(98, 100, 106), Enum.Material.Slate, false)
+			makePart(folder, "ConnectorPaver", V(4.5, 0.18, 4.0), origin * CFrame.new(cx + math.sin(j) * 2, 0.16, cz), Color3.fromRGB(86, 90, 96), Enum.Material.Slate, false)
 		end
 	end
 end
 
 --============================================================================
--- 3. ASYMMETRICAL PROCEDURAL TREE BUILDERS
+-- 3. ASYMMETRICAL PROCEDURAL TREE BUILDERS (25-30 Layered Conical Pines)
 --============================================================================
 
 -- Ancient Mountain Pine: Tapered conifer with leaning trunk, root flares, and multi-tier conical boughs
 local function buildHighlandPine(folder: Instance, origin: CFrame, localPos: Vector3, scale: number, leanYaw: number)
-	local barkColor = Color3.fromRGB(64, 46, 32)
-	local pineNeedle1 = Color3.fromRGB(36, 68, 44)
-	local pineNeedle2 = Color3.fromRGB(44, 80, 52)
-	local pineNeedle3 = Color3.fromRGB(30, 58, 38)
+	local barkColor = Color3.fromRGB(58, 42, 28)
+	local pineNeedle1 = Color3.fromRGB(45, 75, 42)
+	local pineNeedle2 = Color3.fromRGB(52, 84, 48)
+	local pineNeedle3 = Color3.fromRGB(36, 62, 34)
 
 	local trunkH = 18 * scale
 	local trunkR = 1.35 * scale
@@ -293,39 +293,49 @@ function OutskirtsBuilder.Build(folder: Instance, origin: CFrame)
 	-- 2. Winding curved patrol path & connector
 	OutskirtsBuilder.BuildCurvedPath(folder, origin)
 
-	-- 3. Asymmetrical Trees (Natural groves, varied species, varying depths and heights)
-	-- A. Deep Southern Forest Ridge (Z = 205 to 224) - Natural organic backdrop
+	-- 3. Dense Layered Conical Pine Forest (28 Highland Conifers & Craggy Woods)
+	-- A. Deep Forest Ridge (Z = 198 to 224)
 	local backdropTrees = {
-		{ Pos = V(-118, 0, 218), Scale = 1.35, Species = "PINE", Yaw = 14 },
-		{ Pos = V(-96, 0, 212), Scale = 1.15, Species = "OAK", Yaw = 78 },
-		{ Pos = V(-74, 0, 222), Scale = 1.40, Species = "PINE", Yaw = 45 },
-		{ Pos = V(-48, 0, 208), Scale = 0.95, Species = "OAK", Yaw = 130 },
-		{ Pos = V(-22, 0, 220), Scale = 1.30, Species = "PINE", Yaw = 88 },
-		{ Pos = V(14, 0, 216), Scale = 1.25, Species = "PINE", Yaw = 32 },
-		{ Pos = V(42, 0, 224), Scale = 1.45, Species = "OAK", Yaw = 165 },
-		{ Pos = V(68, 0, 210), Scale = 1.05, Species = "PINE", Yaw = 112 },
-		{ Pos = V(94, 0, 222), Scale = 1.38, Species = "PINE", Yaw = 56 },
-		{ Pos = V(116, 0, 214), Scale = 1.20, Species = "OAK", Yaw = 205 },
+		{ Pos = V(-118, 0, 218), Scale = 1.38, Species = "PINE", Yaw = 14 },
+		{ Pos = V(-102, 0, 206), Scale = 1.18, Species = "PINE", Yaw = 78 },
+		{ Pos = V(-86, 0, 220), Scale = 1.42, Species = "PINE", Yaw = 45 },
+		{ Pos = V(-68, 0, 208), Scale = 1.12, Species = "PINE", Yaw = 130 },
+		{ Pos = V(-50, 0, 222), Scale = 1.35, Species = "PINE", Yaw = 88 },
+		{ Pos = V(-32, 0, 206), Scale = 1.20, Species = "PINE", Yaw = 15 },
+		{ Pos = V(-14, 0, 220), Scale = 1.32, Species = "PINE", Yaw = 62 },
+		{ Pos = V(6, 0, 214), Scale = 1.26, Species = "PINE", Yaw = 32 },
+		{ Pos = V(26, 0, 222), Scale = 1.44, Species = "PINE", Yaw = 165 },
+		{ Pos = V(46, 0, 208), Scale = 1.16, Species = "PINE", Yaw = 95 },
+		{ Pos = V(66, 0, 220), Scale = 1.36, Species = "PINE", Yaw = 112 },
+		{ Pos = V(86, 0, 210), Scale = 1.22, Species = "PINE", Yaw = 56 },
+		{ Pos = V(102, 0, 222), Scale = 1.40, Species = "PINE", Yaw = 140 },
+		{ Pos = V(118, 0, 212), Scale = 1.25, Species = "PINE", Yaw = 205 },
 	}
 
-	-- B. Western Wilderness Copse (Dense clustering near the west cliff)
+	-- B. South/West Wilderness Copse (Dense clustering framing the lower-right outskirts)
 	local westernGrove = {
-		{ Pos = V(-108, 0, 155), Scale = 1.20, Species = "OAK", Yaw = 40 },
-		{ Pos = V(-92, 0, 135), Scale = 1.10, Species = "PINE", Yaw = 95 },
-		{ Pos = V(-114, 0, 115), Scale = 0.90, Species = "PINE", Yaw = 160 },
+		{ Pos = V(-112, 0, 182), Scale = 1.26, Species = "PINE", Yaw = 40 },
+		{ Pos = V(-94, 0, 186), Scale = 1.15, Species = "PINE", Yaw = 95 },
+		{ Pos = V(-110, 0, 142), Scale = 1.22, Species = "PINE", Yaw = 160 },
+		{ Pos = V(-92, 0, 126), Scale = 1.08, Species = "PINE", Yaw = 210 },
+		{ Pos = V(-114, 0, 112), Scale = 0.98, Species = "PINE", Yaw = 55 },
+		{ Pos = V(-72, 0, 118), Scale = 1.05, Species = "PINE", Yaw = 125 },
 	}
 
-	-- C. Eastern Frontier Woodlands (Framing the eastern frontier)
+	-- C. North/East Frontier Woodlands (Framing the upper-right outskirts behind Market)
 	local easternGrove = {
-		{ Pos = V(102, 0, 160), Scale = 1.25, Species = "PINE", Yaw = 72 },
-		{ Pos = V(88, 0, 130), Scale = 1.15, Species = "OAK", Yaw = 120 },
-		{ Pos = V(112, 0, 110), Scale = 0.95, Species = "PINE", Yaw = 35 },
+		{ Pos = V(106, 0, 184), Scale = 1.30, Species = "PINE", Yaw = 72 },
+		{ Pos = V(88, 0, 188), Scale = 1.14, Species = "PINE", Yaw = 120 },
+		{ Pos = V(108, 0, 142), Scale = 1.24, Species = "PINE", Yaw = 35 },
+		{ Pos = V(90, 0, 126), Scale = 1.12, Species = "PINE", Yaw = 150 },
+		{ Pos = V(112, 0, 110), Scale = 1.02, Species = "PINE", Yaw = 85 },
+		{ Pos = V(72, 0, 114), Scale = 1.08, Species = "PINE", Yaw = 195 },
 	}
 
-	-- D. Standalone Landmark Trees framing the wilderness
+	-- D. Standalone Landmark Pines framing the Campfire & Palisade Watch
 	local landmarkTrees = {
-		{ Pos = V(-38, 0, 126), Scale = 0.85, Species = "PINE", Yaw = 50 },
-		{ Pos = V(48, 0, 128), Scale = 0.90, Species = "OAK", Yaw = 185 },
+		{ Pos = V(-42, 0, 128), Scale = 0.96, Species = "PINE", Yaw = 50 },
+		{ Pos = V(54, 0, 128), Scale = 1.00, Species = "PINE", Yaw = 185 },
 	}
 
 	local allTrees = { backdropTrees, westernGrove, easternGrove, landmarkTrees }

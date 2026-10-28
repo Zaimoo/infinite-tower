@@ -34,20 +34,22 @@ WallsBuilder.Config = {
 	OpeningArchHeight = 18,
 	BlockOpeningWithInvisibleBarrier = false, -- Non-collidable so players walk across bridge into fortress
 
-	-- Rear Gate Opening (Facing the Outskirts, +Z local direction)
+	-- Rear Gate Opening (Facing the Outskirts, +Z local direction, positioned between Market & Forge)
 	IncludeRearOpening = true,
+	RearGateCenterX = 32,
 	RearOpeningWidth = 24,
 	RearOpeningArchHeight = 18,
 
 	-- Invisible Backup Safety Barrier
 	InvisibleBarrierHeight = 48,
 
-	-- Materials & Colors
-	WallMaterial = Enum.Material.Brick,
-	WallColor = Color3.fromRGB(135, 133, 140),
-	TrimMaterial = Enum.Material.Cobblestone,
-	TrimColor = Color3.fromRGB(105, 103, 110),
-	BastionColor = Color3.fromRGB(115, 113, 120),
+	-- Materials & Colors (Two-Tone Gothic Fortress Masonry)
+	WallMaterial = Enum.Material.Cobblestone,
+	WallColor = Color3.fromRGB(86, 90, 98),
+	TrimMaterial = Enum.Material.Slate,
+	TrimColor = Color3.fromRGB(64, 68, 76),
+	BastionColor = Color3.fromRGB(74, 78, 86),
+	PlinthColor = Color3.fromRGB(56, 60, 68),
 }
 
 --============================================================================
@@ -155,40 +157,131 @@ function WallsBuilder.Build(parentIsland: Instance?, customConfig: { [string]: a
 		})
 	end
 
-	-- 2. Left Wall (-X) and Right Wall (+X)
-	makePart({
-		Name = "Wall_West",
-		Size = Vector3.new(cfg.WallThickness, cfg.WallHeight, cfg.PerimeterLength),
-		CFrame = CFrame.new(-halfW, wallCenterY, 0),
-		Material = cfg.WallMaterial,
-		Color = cfg.WallColor,
-		Decorative = false,
-		Parent = wallsModel,
-	})
-	populateMerlonsAlongSpan(
-		wallsModel,
-		Vector3.new(-halfW, merlonCenterY, -halfL + cfg.BastionSize),
-		Vector3.new(-halfW, merlonCenterY, halfL - cfg.BastionSize),
-		cfg.WallThickness,
-		cfg
-	)
+	-- 2. Left Wall (-X) and Right Wall (+X) with Base Plinth & Overhang Cornice
+	for _, side in ipairs({ { Name = "West", X = -halfW }, { Name = "East", X = halfW } }) do
+		makePart({
+			Name = "Wall_" .. side.Name,
+			Size = Vector3.new(cfg.WallThickness, cfg.WallHeight, cfg.PerimeterLength),
+			CFrame = CFrame.new(side.X, wallCenterY, 0),
+			Material = cfg.WallMaterial,
+			Color = cfg.WallColor,
+			Decorative = false,
+			Parent = wallsModel,
+		})
+		makePart({
+			Name = "Plinth_" .. side.Name,
+			Size = Vector3.new(cfg.WallThickness + 2.4, 4.0, cfg.PerimeterLength),
+			CFrame = CFrame.new(side.X, 2.0, 0),
+			Material = cfg.TrimMaterial,
+			Color = cfg.PlinthColor or cfg.TrimColor,
+			Decorative = true,
+			Parent = wallsModel,
+		})
+		makePart({
+			Name = "Cornice_" .. side.Name,
+			Size = Vector3.new(cfg.WallThickness + 1.8, 2.0, cfg.PerimeterLength),
+			CFrame = CFrame.new(side.X, cfg.WallHeight - 1.0, 0),
+			Material = cfg.TrimMaterial,
+			Color = cfg.TrimColor,
+			Decorative = true,
+			Parent = wallsModel,
+		})
+		populateMerlonsAlongSpan(
+			wallsModel,
+			Vector3.new(side.X, merlonCenterY, -halfL + cfg.BastionSize),
+			Vector3.new(side.X, merlonCenterY, halfL - cfg.BastionSize),
+			cfg.WallThickness,
+			cfg
+		)
+	end
 
-	makePart({
-		Name = "Wall_East",
-		Size = Vector3.new(cfg.WallThickness, cfg.WallHeight, cfg.PerimeterLength),
-		CFrame = CFrame.new(halfW, wallCenterY, 0),
-		Material = cfg.WallMaterial,
-		Color = cfg.WallColor,
-		Decorative = false,
-		Parent = wallsModel,
-	})
-	populateMerlonsAlongSpan(
-		wallsModel,
-		Vector3.new(halfW, merlonCenterY, -halfL + cfg.BastionSize),
-		Vector3.new(halfW, merlonCenterY, halfL - cfg.BastionSize),
-		cfg.WallThickness,
-		cfg
-	)
+	-- Helper for Wall Torches & Medieval Banners
+	local function addWallTorch(name: string, pos: Vector3, normalDir: Vector3)
+		local bracket = makePart({
+			Name = name .. "_Bracket",
+			Size = Vector3.new(0.6, 2.4, 0.6),
+			CFrame = CFrame.new(pos + normalDir * 0.8) * CFrame.Angles(math.rad(22), 0, 0),
+			Material = Enum.Material.Metal,
+			Color = Color3.fromRGB(36, 38, 44),
+			Decorative = true,
+			Parent = wallsModel,
+		})
+		local flame = makePart({
+			Name = name .. "_Flame",
+			Size = Vector3.new(0.9, 1.3, 0.9),
+			CFrame = bracket.CFrame * CFrame.new(0, 1.4, 0),
+			Material = Enum.Material.Neon,
+			Color = Color3.fromRGB(255, 165, 60),
+			Decorative = true,
+			Parent = wallsModel,
+		})
+		local pt = Instance.new("PointLight")
+		pt.Color = Color3.fromRGB(255, 168, 72)
+		pt.Brightness = 2.2
+		pt.Range = 22
+		pt.Shadows = false
+		pt.Parent = flame
+
+		local fireEmit = Instance.new("ParticleEmitter")
+		fireEmit.Texture = "rbxassetid://243660364"
+		fireEmit.Color = ColorSequence.new(Color3.fromRGB(255, 210, 90), Color3.fromRGB(235, 85, 25))
+		fireEmit.LightEmission = 0.9
+		fireEmit.Size = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 0.7),
+			NumberSequenceKeypoint.new(1, 0.1),
+		})
+		fireEmit.Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 0.15),
+			NumberSequenceKeypoint.new(1, 1),
+		})
+		fireEmit.Lifetime = NumberRange.new(0.4, 0.7)
+		fireEmit.Rate = 10
+		fireEmit.Speed = NumberRange.new(2, 4)
+		fireEmit.Acceleration = Vector3.new(0, 6, 0)
+		fireEmit.Parent = flame
+	end
+
+	local function addWallBanner(name: string, pos: Vector3)
+		-- Horizontal Gold Rod
+		makePart({
+			Name = name .. "_Rod",
+			Size = Vector3.new(4.6, 0.4, 0.4),
+			CFrame = CFrame.new(pos + Vector3.new(0, 5.2, -0.35)),
+			Material = Enum.Material.Metal,
+			Color = Color3.fromRGB(230, 185, 65),
+			Decorative = true,
+			Parent = wallsModel,
+		})
+		-- Crimson Fabric Drape
+		makePart({
+			Name = name .. "_Cloth",
+			Size = Vector3.new(3.8, 10.0, 0.25),
+			CFrame = CFrame.new(pos + Vector3.new(0, 0, -0.25)),
+			Material = Enum.Material.Fabric,
+			Color = Color3.fromRGB(148, 28, 32),
+			Decorative = true,
+			Parent = wallsModel,
+		})
+		-- Gold Crest Trim
+		makePart({
+			Name = name .. "_GoldBorder",
+			Size = Vector3.new(2.2, 7.6, 0.30),
+			CFrame = CFrame.new(pos + Vector3.new(0, 0.2, -0.28)),
+			Material = Enum.Material.Neon,
+			Color = Color3.fromRGB(250, 204, 21),
+			Decorative = true,
+			Parent = wallsModel,
+		})
+		makePart({
+			Name = name .. "_InnerField",
+			Size = Vector3.new(1.6, 7.0, 0.34),
+			CFrame = CFrame.new(pos + Vector3.new(0, 0.2, -0.30)),
+			Material = Enum.Material.Fabric,
+			Color = Color3.fromRGB(120, 22, 26),
+			Decorative = true,
+			Parent = wallsModel,
+		})
+	end
 
 	-- 3. Front Wall (-Z, facing the Central Tower and Drawbridge)
 	if cfg.IncludeFrontOpening then
@@ -196,24 +289,38 @@ function WallsBuilder.Build(parentIsland: Instance?, customConfig: { [string]: a
 		local leftCenterX = -(cfg.OpeningWidth * 0.5 + sideSpan * 0.5)
 		local rightCenterX = (cfg.OpeningWidth * 0.5 + sideSpan * 0.5)
 
-		makePart({
-			Name = "Wall_FrontLeft",
-			Size = Vector3.new(sideSpan, cfg.WallHeight, cfg.WallThickness),
-			CFrame = CFrame.new(leftCenterX, wallCenterY, -halfL),
-			Material = cfg.WallMaterial,
-			Color = cfg.WallColor,
-			Decorative = false,
-			Parent = wallsModel,
-		})
-		makePart({
-			Name = "Wall_FrontRight",
-			Size = Vector3.new(sideSpan, cfg.WallHeight, cfg.WallThickness),
-			CFrame = CFrame.new(rightCenterX, wallCenterY, -halfL),
-			Material = cfg.WallMaterial,
-			Color = cfg.WallColor,
-			Decorative = false,
-			Parent = wallsModel,
-		})
+		for _, seg in ipairs({
+			{ Name = "FrontLeft", X = leftCenterX, Span = sideSpan },
+			{ Name = "FrontRight", X = rightCenterX, Span = sideSpan },
+		}) do
+			makePart({
+				Name = "Wall_" .. seg.Name,
+				Size = Vector3.new(seg.Span, cfg.WallHeight, cfg.WallThickness),
+				CFrame = CFrame.new(seg.X, wallCenterY, -halfL),
+				Material = cfg.WallMaterial,
+				Color = cfg.WallColor,
+				Decorative = false,
+				Parent = wallsModel,
+			})
+			makePart({
+				Name = "Plinth_" .. seg.Name,
+				Size = Vector3.new(seg.Span, 4.0, cfg.WallThickness + 2.4),
+				CFrame = CFrame.new(seg.X, 2.0, -halfL),
+				Material = cfg.TrimMaterial,
+				Color = cfg.PlinthColor or cfg.TrimColor,
+				Decorative = true,
+				Parent = wallsModel,
+			})
+			makePart({
+				Name = "Cornice_" .. seg.Name,
+				Size = Vector3.new(seg.Span, 2.0, cfg.WallThickness + 1.8),
+				CFrame = CFrame.new(seg.X, cfg.WallHeight - 1.0, -halfL),
+				Material = cfg.TrimMaterial,
+				Color = cfg.TrimColor,
+				Decorative = true,
+				Parent = wallsModel,
+			})
+		end
 
 		-- Gate Pillars & Upper Arch Lintel
 		local lintelHeight = math.max(4, cfg.WallHeight - cfg.OpeningArchHeight)
@@ -227,13 +334,37 @@ function WallsBuilder.Build(parentIsland: Instance?, customConfig: { [string]: a
 			Parent = wallsModel,
 		})
 		for _, signX in ipairs({ -1, 1 }) do
+			local pillarX = signX * (cfg.OpeningWidth * 0.5 + 2.0)
 			makePart({
 				Name = signX < 0 and "GatePillar_Left" or "GatePillar_Right",
 				Size = Vector3.new(5.0, cfg.WallHeight + 4, cfg.WallThickness + 3.0),
-				CFrame = CFrame.new(signX * (cfg.OpeningWidth * 0.5 + 2.0), (cfg.WallHeight + 4) * 0.5, -halfL),
+				CFrame = CFrame.new(pillarX, (cfg.WallHeight + 4) * 0.5, -halfL),
 				Material = cfg.TrimMaterial,
 				Color = cfg.BastionColor,
 				Decorative = false,
+				Parent = wallsModel,
+			})
+			-- Flanking Wall Torches on Bridge Entry Pillars (Interior & Exterior)
+			addWallTorch("BridgeGateTorch_In_" .. tostring(signX), Vector3.new(pillarX, 11.5, -halfL + 4.2), Vector3.new(0, 0, 1))
+			addWallTorch("BridgeGateTorch_Out_" .. tostring(signX), Vector3.new(pillarX, 11.5, -halfL - 4.2), Vector3.new(0, 0, -1))
+		end
+
+		-- Stacked Wooden Crates & Barrels flanking inside the Bridge Entryway
+		local entryProps = {
+			{ Size = Vector3.new(3.6, 3.6, 3.6), Pos = Vector3.new(-17, 1.8, -halfL + 6.5), Yaw = 12, Color = Color3.fromRGB(122, 86, 52) },
+			{ Size = Vector3.new(3.2, 3.2, 3.2), Pos = Vector3.new(-21, 1.6, -halfL + 6.0), Yaw = -18, Color = Color3.fromRGB(108, 76, 46) },
+			{ Size = Vector3.new(2.8, 2.8, 2.8), Pos = Vector3.new(-18.5, 5.0, -halfL + 6.2), Yaw = 28, Color = Color3.fromRGB(134, 96, 58) },
+			{ Size = Vector3.new(3.6, 3.6, 3.6), Pos = Vector3.new(17, 1.8, -halfL + 6.5), Yaw = -15, Color = Color3.fromRGB(118, 82, 50) },
+			{ Size = Vector3.new(3.0, 3.0, 3.0), Pos = Vector3.new(20.8, 1.5, -halfL + 6.2), Yaw = 20, Color = Color3.fromRGB(104, 72, 44) },
+		}
+		for idx, c in ipairs(entryProps) do
+			makePart({
+				Name = "GateEntryCrate_" .. idx,
+				Size = c.Size,
+				CFrame = CFrame.new(c.Pos) * CFrame.Angles(0, math.rad(c.Yaw), 0),
+				Material = Enum.Material.WoodPlanks,
+				Color = c.Color,
+				Decorative = true,
 				Parent = wallsModel,
 			})
 		end
@@ -254,64 +385,104 @@ function WallsBuilder.Build(parentIsland: Instance?, customConfig: { [string]: a
 		)
 	end
 
-	-- 4. Rear Wall (+Z, facing the Southern Outskirts)
+	-- 4. Rear Dividing Wall (+Z, separating Courtyard from Forested Outskirts)
 	if cfg.IncludeRearOpening then
-		local rearSpan = (cfg.PerimeterWidth - cfg.RearOpeningWidth) * 0.5
-		local leftCenterX = -(cfg.RearOpeningWidth * 0.5 + rearSpan * 0.5)
-		local rightCenterX = (cfg.RearOpeningWidth * 0.5 + rearSpan * 0.5)
+		local gateX = cfg.RearGateCenterX or 32
+		local halfOpen = cfg.RearOpeningWidth * 0.5
+		local leftEdge = -cfg.PerimeterWidth * 0.5
+		local rightEdge = cfg.PerimeterWidth * 0.5
+		local gateLeftEdge = gateX - halfOpen
+		local gateRightEdge = gateX + halfOpen
 
-		makePart({
-			Name = "Wall_BackLeft",
-			Size = Vector3.new(rearSpan, cfg.WallHeight, cfg.WallThickness),
-			CFrame = CFrame.new(leftCenterX, wallCenterY, halfL),
-			Material = cfg.WallMaterial,
-			Color = cfg.WallColor,
-			Decorative = false,
-			Parent = wallsModel,
-		})
-		makePart({
-			Name = "Wall_BackRight",
-			Size = Vector3.new(rearSpan, cfg.WallHeight, cfg.WallThickness),
-			CFrame = CFrame.new(rightCenterX, wallCenterY, halfL),
-			Material = cfg.WallMaterial,
-			Color = cfg.WallColor,
-			Decorative = false,
-			Parent = wallsModel,
-		})
+		local leftSpan = gateLeftEdge - leftEdge
+		local rightSpan = rightEdge - gateRightEdge
+		local leftCenterX = leftEdge + leftSpan * 0.5
+		local rightCenterX = gateRightEdge + rightSpan * 0.5
 
-		-- Vaulted Rear Archway Lintel
+		for _, seg in ipairs({
+			{ Name = "BackLeft", X = leftCenterX, Span = leftSpan },
+			{ Name = "BackRight", X = rightCenterX, Span = rightSpan },
+		}) do
+			makePart({
+				Name = "Wall_" .. seg.Name,
+				Size = Vector3.new(seg.Span, cfg.WallHeight, cfg.WallThickness),
+				CFrame = CFrame.new(seg.X, wallCenterY, halfL),
+				Material = cfg.WallMaterial,
+				Color = cfg.WallColor,
+				Decorative = false,
+				Parent = wallsModel,
+			})
+			makePart({
+				Name = "Plinth_" .. seg.Name,
+				Size = Vector3.new(seg.Span, 4.0, cfg.WallThickness + 2.4),
+				CFrame = CFrame.new(seg.X, 2.0, halfL),
+				Material = cfg.TrimMaterial,
+				Color = cfg.PlinthColor or cfg.TrimColor,
+				Decorative = true,
+				Parent = wallsModel,
+			})
+			makePart({
+				Name = "Cornice_" .. seg.Name,
+				Size = Vector3.new(seg.Span, 2.0, cfg.WallThickness + 1.8),
+				CFrame = CFrame.new(seg.X, cfg.WallHeight - 1.0, halfL),
+				Material = cfg.TrimMaterial,
+				Color = cfg.TrimColor,
+				Decorative = true,
+				Parent = wallsModel,
+			})
+		end
+
+		-- Vaulted Rear Archway Lintel & Timber-and-Iron Gate Doors (framed open)
 		local lintelHeight = math.max(4, cfg.WallHeight - cfg.RearOpeningArchHeight)
 		makePart({
 			Name = "RearGateLintel",
 			Size = Vector3.new(cfg.RearOpeningWidth + 4, lintelHeight, cfg.WallThickness + 2),
-			CFrame = CFrame.new(0, cfg.RearOpeningArchHeight + lintelHeight * 0.5, halfL),
+			CFrame = CFrame.new(gateX, cfg.RearOpeningArchHeight + lintelHeight * 0.5, halfL),
 			Material = cfg.TrimMaterial,
 			Color = cfg.TrimColor,
 			Decorative = false,
 			Parent = wallsModel,
 		})
 		for _, signX in ipairs({ -1, 1 }) do
+			local pillarX = gateX + signX * (halfOpen + 2.0)
 			makePart({
 				Name = signX < 0 and "RearGatePillar_Left" or "RearGatePillar_Right",
 				Size = Vector3.new(5.0, cfg.WallHeight + 4, cfg.WallThickness + 3.0),
-				CFrame = CFrame.new(signX * (cfg.RearOpeningWidth * 0.5 + 2.0), (cfg.WallHeight + 4) * 0.5, halfL),
+				CFrame = CFrame.new(pillarX, (cfg.WallHeight + 4) * 0.5, halfL),
 				Material = cfg.TrimMaterial,
 				Color = cfg.BastionColor,
 				Decorative = false,
 				Parent = wallsModel,
 			})
+			-- Open Timber & Iron Gate Leaves swung into the archway
+			makePart({
+				Name = signX < 0 and "RearGateDoor_Left" or "RearGateDoor_Right",
+				Size = Vector3.new(1.2, cfg.RearOpeningArchHeight - 1.0, 9.5),
+				CFrame = CFrame.new(gateX + signX * (halfOpen - 1.2), (cfg.RearOpeningArchHeight - 1.0) * 0.5, halfL + 2.2)
+					* CFrame.Angles(0, math.rad(signX * -18), 0),
+				Material = Enum.Material.WoodPlanks,
+				Color = Color3.fromRGB(92, 62, 38),
+				Decorative = true,
+				Parent = wallsModel,
+			})
+			addWallTorch("RearGateTorch_" .. tostring(signX), Vector3.new(pillarX, 11.5, halfL - 4.2), Vector3.new(0, 0, -1))
+		end
+
+		-- Medieval Crimson & Gold Crest Banners along the Dividing Wall (flanking Forge & Market)
+		for idx, bx in ipairs({ 56, 14, -48 }) do
+			addWallBanner("DividingWallBanner_" .. idx, Vector3.new(bx, 16.0, halfL - (cfg.WallThickness * 0.5)))
 		end
 
 		populateMerlonsAlongSpan(
 			wallsModel,
 			Vector3.new(-halfW + cfg.BastionSize, merlonCenterY, halfL),
-			Vector3.new(-cfg.RearOpeningWidth * 0.5, merlonCenterY, halfL),
+			Vector3.new(gateLeftEdge, merlonCenterY, halfL),
 			cfg.WallThickness,
 			cfg
 		)
 		populateMerlonsAlongSpan(
 			wallsModel,
-			Vector3.new(cfg.RearOpeningWidth * 0.5, merlonCenterY, halfL),
+			Vector3.new(gateRightEdge, merlonCenterY, halfL),
 			Vector3.new(halfW - cfg.BastionSize, merlonCenterY, halfL),
 			cfg.WallThickness,
 			cfg
@@ -324,16 +495,21 @@ function WallsBuilder.Build(parentIsland: Instance?, customConfig: { [string]: a
 	barrierFolder.Parent = wallsModel
 
 	local bY = cfg.InvisibleBarrierHeight * 0.5
-	local rearSpan = (cfg.PerimeterWidth - cfg.RearOpeningWidth) * 0.5
-	local leftRearX = -(cfg.RearOpeningWidth * 0.5 + rearSpan * 0.5)
-	local rightRearX = (cfg.RearOpeningWidth * 0.5 + rearSpan * 0.5)
+	local gateX = cfg.RearGateCenterX or 32
+	local halfOpen = cfg.RearOpeningWidth * 0.5
+	local leftEdge = -cfg.PerimeterWidth * 0.5
+	local rightEdge = cfg.PerimeterWidth * 0.5
+	local leftSpan = (gateX - halfOpen) - leftEdge
+	local rightSpan = rightEdge - (gateX + halfOpen)
+	local leftRearX = leftEdge + leftSpan * 0.5
+	local rightRearX = (gateX + halfOpen) + rightSpan * 0.5
 
 	local barrierDefs = {
 		{ Name = "Barrier_West", Size = Vector3.new(2, cfg.InvisibleBarrierHeight, cfg.PerimeterLength + 4), Pos = Vector3.new(-halfW - 1.5, bY, 0) },
 		{ Name = "Barrier_East", Size = Vector3.new(2, cfg.InvisibleBarrierHeight, cfg.PerimeterLength + 4), Pos = Vector3.new(halfW + 1.5, bY, 0) },
-		-- Rear barriers flanking the central archway
-		{ Name = "Barrier_BackLeft", Size = Vector3.new(rearSpan, cfg.InvisibleBarrierHeight, 2), Pos = Vector3.new(leftRearX, bY, halfL + 1.5) },
-		{ Name = "Barrier_BackRight", Size = Vector3.new(rearSpan, cfg.InvisibleBarrierHeight, 2), Pos = Vector3.new(rightRearX, bY, halfL + 1.5) },
+		-- Rear barriers flanking the dividing wall gate opening
+		{ Name = "Barrier_BackLeft", Size = Vector3.new(leftSpan, cfg.InvisibleBarrierHeight, 2), Pos = Vector3.new(leftRearX, bY, halfL + 1.5) },
+		{ Name = "Barrier_BackRight", Size = Vector3.new(rightSpan, cfg.InvisibleBarrierHeight, 2), Pos = Vector3.new(rightRearX, bY, halfL + 1.5) },
 	}
 
 	for _, b in ipairs(barrierDefs) do

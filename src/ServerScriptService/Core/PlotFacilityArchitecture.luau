@@ -1,788 +1,1278 @@
 --!strict
--- Reference-inspired round sanctuaries, courtyard standard, and freestanding rift gate.
-local Architecture = {}
+-- ServerScriptService/Core/PlotFacilityArchitecture.luau
+-- Waiting Room Plot Island Redesign (Phase 2):
+-- Builds high-detail gothic fortress courtyard facilities & registers standardized prefabs under
+-- ReplicatedStorage.Assets.PlotFacilities with ground-level PrimaryPart and PromptAnchor attachments:
+--   1. SummoningPortal    (Monumental Circular Stone Stargate with #22D3EE cyan runes & light beam)
+--   2. LeaderboardBoard   (Recessed #0D0912 Obsidian Wall Board with #FACC15 gold neon trim)
+--   3. MarketCluster      (4-Stall U-Shaped Merchant Bazaar with striped awnings, barrels, crates, warm lights)
+--   4. SynthesisChamber   (Cylindrical Gothic Stone Rotunda with cyan barrier arch & #C084FC purple oculus plume)
+--   5. BlacksmithForge    (Open-Air Stone Hearth & Chimney against Dividing Wall, anvil sparks, coal, trough)
+--   6. TrainingArea       (28-Stud Circular Cobblestone Ring, split-rail fences, 4 straw dummies, bullseye target)
+--   7. GuardpostOutskirts (Timber Palisade Watch-Post, slatted roof, stone-ringed campfire & log seating)
+--   8. CommandPost        (War Banner & Architect's Table for Squad Management & Fortress Tree)
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Arch = {}
+
 local V = Vector3.new
-local stone = Color3.fromRGB(156, 160, 164)
-local pale = Color3.fromRGB(194, 192, 178)
-local shadow = Color3.fromRGB(85, 95, 104)
-local bronze = Color3.fromRGB(145, 129, 92)
-local doorColor = Color3.fromRGB(39, 62, 69)
 
-function Architecture.Build(model: Model, frame: CFrame, id: string, accent: Color3)
-	local function block(name: string, size: Vector3, cf: CFrame, color: Color3, material: Enum.Material?): Part
-		local p = Instance.new("Part")
-		p.Name, p.Size, p.CFrame = name, size, frame * cf
-		p.Anchored, p.Color, p.Material = true, color, material or Enum.Material.Limestone
-		p.TopSurface, p.BottomSurface = Enum.SurfaceType.Smooth, Enum.SurfaceType.Smooth
-		p.Parent = model
-		return p
+local function part(
+	parent: Instance,
+	name: string,
+	size: Vector3,
+	cf: CFrame,
+	color: Color3,
+	material: Enum.Material?,
+	canCollide: boolean?
+): Part
+	local p = Instance.new("Part")
+	p.Name = name
+	p.Size = size
+	p.CFrame = cf
+	p.Color = color
+	p.Material = material or Enum.Material.SmoothPlastic
+	p.Anchored = true
+	local collide = if canCollide ~= nil then canCollide else false
+	p.CanCollide = collide
+	p.CanTouch = false
+	p.CanQuery = collide
+	p.TopSurface = Enum.SurfaceType.Smooth
+	p.BottomSurface = Enum.SurfaceType.Smooth
+	p.Parent = parent
+	return p
+end
+
+local function wedge(
+	parent: Instance,
+	name: string,
+	size: Vector3,
+	cf: CFrame,
+	color: Color3,
+	material: Enum.Material?,
+	canCollide: boolean?
+): WedgePart
+	local w = Instance.new("WedgePart")
+	w.Name = name
+	w.Size = size
+	w.CFrame = cf
+	w.Color = color
+	w.Material = material or Enum.Material.SmoothPlastic
+	w.Anchored = true
+	local collide = if canCollide ~= nil then canCollide else false
+	w.CanCollide = collide
+	w.CanTouch = false
+	w.CanQuery = collide
+	w.TopSurface = Enum.SurfaceType.Smooth
+	w.BottomSurface = Enum.SurfaceType.Smooth
+	w.Parent = parent
+	return w
+end
+
+local function cylinder(
+	parent: Instance,
+	name: string,
+	radius: number,
+	height: number,
+	cf: CFrame,
+	color: Color3,
+	material: Enum.Material?,
+	canCollide: boolean?
+): Part
+	local p = part(
+		parent,
+		name,
+		V(height, radius * 2, radius * 2),
+		cf * CFrame.Angles(0, 0, math.pi / 2),
+		color,
+		material,
+		canCollide
+	)
+	p.Shape = Enum.PartType.Cylinder
+	return p
+end
+
+local function sphere(
+	parent: Instance,
+	name: string,
+	diameter: number,
+	cf: CFrame,
+	color: Color3,
+	material: Enum.Material?
+): Part
+	local p = part(parent, name, V(diameter, diameter, diameter), cf, color, material, false)
+	p.Shape = Enum.PartType.Ball
+	return p
+end
+
+local function pointLight(parent: Instance, color: Color3, brightness: number, range: number, shadows: boolean?): PointLight
+	local l = Instance.new("PointLight")
+	l.Color = color
+	l.Brightness = brightness
+	l.Range = range
+	l.Shadows = if shadows ~= nil then shadows else false
+	l.Parent = parent
+	return l
+end
+
+local function addBarrel(parent: Instance, cf: CFrame, scale: number?)
+	local s = scale or 1
+	local body = cylinder(
+		parent,
+		"WoodenBarrel",
+		1.35 * s,
+		3.2 * s,
+		cf * CFrame.new(0, 1.6 * s, 0),
+		Color3.fromRGB(112, 76, 46),
+		Enum.Material.WoodPlanks,
+		false
+	)
+	for _, dy in ipairs({ -0.9 * s, 0.9 * s }) do
+		cylinder(
+			parent,
+			"BarrelHoop",
+			1.42 * s,
+			0.25 * s,
+			cf * CFrame.new(0, 1.6 * s + dy, 0),
+			Color3.fromRGB(42, 44, 50),
+			Enum.Material.Metal,
+			false
+		)
 	end
-	local function part(name: string, size: Vector3, pos: Vector3, color: Color3, material: Enum.Material?): Part
-		return block(name, size, CFrame.new(pos), color, material)
+	return body
+end
+
+local function addWeaponRack(parent: Instance, cf: CFrame)
+	local wood = Color3.fromRGB(98, 66, 40)
+	local iron = Color3.fromRGB(168, 174, 186)
+	local darkIron = Color3.fromRGB(48, 52, 60)
+	for _, sx in ipairs({ -2.4, 2.4 }) do
+		part(parent, "RackUpright", V(0.5, 4.6, 0.5), cf * CFrame.new(sx, 2.3, 0), wood, Enum.Material.Wood, false)
+		part(parent, "RackFoot", V(0.6, 0.4, 2.2), cf * CFrame.new(sx, 0.2, 0), wood, Enum.Material.Wood, false)
 	end
-	local function cylinder(name: string, radius: number, height: number, pos: Vector3, color: Color3, material: Enum.Material?): Part
-		local p = block(name, V(height, radius * 2, radius * 2), CFrame.new(pos) * CFrame.Angles(0, 0, math.pi / 2), color, material)
-		p.Shape = Enum.PartType.Cylinder
-		return p
-	end
-	local function line(name: string, a: Vector3, b: Vector3, thickness: number, color: Color3, material: Enum.Material?): Part
-		local p = block(name, V(thickness, thickness, (b - a).Magnitude + .04), CFrame.lookAt((a + b) / 2, b), color, material)
-		p.CanCollide = false
-		return p
-	end
-	local function glow(name: string, size: Vector3, pos: Vector3): Part
-		local p = part(name, size, pos, accent, Enum.Material.Neon)
-		p.CanCollide = false
-		return p
-	end
-	local function sign(anchor: Part, title: string, subtitle: string)
-		for _, face in {Enum.NormalId.Front, Enum.NormalId.Back} do
-			local gui = Instance.new("SurfaceGui")
-			gui.Face, gui.CanvasSize, gui.Parent = face, Vector2.new(800, 200), anchor
-			local label = Instance.new("TextLabel")
-			label.Size, label.BackgroundTransparency = UDim2.fromScale(1, 1), 1
-			label.Text, label.Font, label.TextSize = title .. "\n" .. subtitle, Enum.Font.GothamBold, 44
-			label.TextColor3, label.Parent = pale, gui
-		end
-	end
-	local function arch(name: string, radius: number, centerY: number, z: number, thickness: number, color: Color3, material: Enum.Material?)
-		for i = 0, 23 do
-			local a, b = math.pi * i / 24, math.pi * (i + 1) / 24
-			line(name, V(math.cos(a) * radius, centerY + math.sin(a) * radius, z), V(math.cos(b) * radius, centerY + math.sin(b) * radius, z), thickness, color, material)
-		end
-	end
-	if id == "Infirmary" then
-		local teal = Color3.fromRGB(38, 101, 100)
-		local lightStone = Color3.fromRGB(183, 185, 168)
-		local linen = Color3.fromRGB(225, 222, 197)
-		part("WardFoundation", V(31, .7, 25), V(0, .35, 0), shadow)
-		part("InlaidWardFloor", V(29.8, .5, 23.8), V(0, .95, 0), lightStone, Enum.Material.Marble)
-		for i = 1, 3 do part("EntranceStep_" .. i, V(12 + i * 2, .35, 1.6), V(0, 1.05 - (i - 1) * .35, 12.1 + (i - 1) * 1.35), pale) end
-		part("RearMasonry", V(29, 15, 1), V(0, 8.7, -11.3), stone, Enum.Material.Brick)
-		for _, x in {-14, 14} do
-			part("WindowSillWall", V(1, 4.2, 22), V(x, 3.3, 0), stone, Enum.Material.Brick)
-			part("WindowHeaderWall", V(1, 3.7, 22), V(x, 14.35, 0), stone, Enum.Material.Brick)
-			for _, z in {-10.3, -2.8, 5, 10.5} do
-				part("StoneWindowPier", V(1.4, 11.5, 1.1), V(x, 9, z), lightStone)
-			end
-			for _, z in {-6.6, 1.1, 7.8} do
-				local pane = part("TealWardGlass", V(.14, 7, 5.5), V(x, 9, z), Color3.fromRGB(112, 182, 167), Enum.Material.Glass)
-				pane.Transparency, pane.CanCollide = .45, false
-				for _, y in {5.5, 9, 12.5} do part("WindowTransom", V(1.2, .18, 5.7), V(x, y, z), bronze, Enum.Material.Metal) end
-				part("WindowMullion", V(1.2, 7, .18), V(x, 9, z), bronze, Enum.Material.Metal)
-			end
-			part("SideCornice", V(1.8, .5, 24), V(x, 16.25, 0), pale)
-		end
-		-- Three open arches form a sheltered stone arcade across the front.
-		for _, x in {-14, -5, 5, 14} do
-			part("ArcadePlinth", V(1.7, .7, 2), V(x, 1.6, 10.7), shadow)
-			cylinder("ArcadeColumn", .52, 10.3, V(x, 7.1, 10.7), pale)
-			cylinder("ArcadeCapital", .8, .6, V(x, 12.5, 10.7), bronze)
-		end
-		for _, center in {-9.5, 0, 9.5} do
-			local radius = center == 0 and 4.5 or 4
-			for i = 0, 19 do
-				local a, b = math.pi * i / 20, math.pi * (i + 1) / 20
-				line("CarvedArcadeArch", V(center + math.cos(a) * radius, 10 + math.sin(a) * radius, 10.7), V(center + math.cos(b) * radius, 10 + math.sin(b) * radius, 10.7), .65, pale)
-			end
-		end
-		part("ArcadeEntablature", V(30, 1.4, 2.5), V(0, 15.9, 10.7), lightStone)
-		local title = part("InfirmaryInscription", V(15, 1.9, .22), V(0, 16, 12.1), teal, Enum.Material.Metal)
-		sign(title, "INFIRMARY", "HOUSE OF RECOVERY")
-		-- Copper-green pitched roofing, gold seams, and a small healing lantern tower.
-		for _, side in {-1, 1} do
-			local pitch = math.rad(-side * 19)
-			block("PitchedTealRoof", V(17.5, .6, 26), CFrame.new(side * 8.15, 19.15, 0) * CFrame.Angles(0, 0, pitch), teal, Enum.Material.Metal)
-			for _, z in {-12.7, -6.4, 0, 6.4, 12.7} do
-				block("CopperRoofSeam", V(17.6, .1, .12), CFrame.new(side * 8.15, 19.48, z) * CFrame.Angles(0, 0, pitch), bronze, Enum.Material.Metal)
-			end
-		end
-		part("RidgeCap", V(.7, .5, 26.4), V(0, 22.1, 0), bronze, Enum.Material.Metal)
-		-- Narrow stacked masonry strips close the gable beneath the roof slopes.
-		for _, z in {-11.5, 11.4} do
-			for i = 0, 29 do
-				local x = -14.5 + (i + .5) * 29 / 30
-				local h = 5.2 - math.abs(x) * .342
-				part("StoneGable", V(29 / 30 + .01, math.max(.1, h), .7), V(x, 16.6 + h / 2, z), lightStone)
-			end
-		end
-		cylinder("LanternTowerBase", 3, .6, V(0, 23, -3), pale)
-		local lantern = cylinder("HealingLantern", 2.2, 4, V(0, 25.2, -3), accent, Enum.Material.Glass)
-		lantern.Transparency, lantern.CanCollide = .3, false
-		for i = 0, 7 do
-			local a = i * math.pi / 4
-			cylinder("LanternPillar", .2, 4.5, V(math.cos(a) * 2.45, 25.2, -3 + math.sin(a) * 2.45), pale)
-		end
-		cylinder("LanternCornice", 3, .5, V(0, 27.6, -3), bronze)
-		local dome = part("TealCupola", V(6.4, 3, 6.4), V(0, 28.3, -3), teal, Enum.Material.Metal)
-		dome.Shape = Enum.PartType.Ball
-		glow("MedicalFinialVertical", V(.5, 3, .5), V(0, 31, -3))
-		glow("MedicalFinialHorizontal", V(2, .5, .5), V(0, 31.3, -3))
-		local function medicalCross(x: number, y: number, z: number, scale: number)
-			part("MedicalCrossVertical", V(.65 * scale, 2.6 * scale, .2), V(x, y, z), linen, Enum.Material.SmoothPlastic)
-			part("MedicalCrossHorizontal", V(2.1 * scale, .65 * scale, .2), V(x, y + .2 * scale, z + .02), linen, Enum.Material.SmoothPlastic)
-		end
-		for _, x in {-11, 11} do
-			part("MedicalBannerPole", V(3.5, .18, .25), V(x, 12.4, 12.2), bronze, Enum.Material.Metal)
-			part("MedicalBanner", V(2.8, 5, .12), V(x, 9.8, 12.2), teal, Enum.Material.Fabric)
-			medicalCross(x, 10, 12.35, .85)
-			-- Apothecary planters frame the entrance with silvery medicinal foliage.
-			part("HerbPlanter", V(4, 1.6, 2.4), V(x, .85, 14), shadow)
-			part("PlanterRim", V(4.3, .25, 2.7), V(x, 1.65, 14), pale)
-			for i = -1, 1 do
-				local leaf = part("MedicinalShrub", V(1.8, 1.8, 1.8), V(x + i * 1.1, 2.4 + (i == 0 and .4 or 0), 14), Color3.fromRGB(102, 142, 111), Enum.Material.Grass)
-				leaf.Shape, leaf.CanCollide = Enum.PartType.Ball, false
-			end
-		end
-		for i = 1, 5 do
-			local x = (i - 3) * 4.7
-			part("BedFrame_" .. i, V(3.7, .5, 6.4), V(x, 2.1, -5.8), bronze, Enum.Material.Wood)
-			for _, z in {-8.2, -3.4} do
-				for _, dx in {-1.4, 1.4} do part("BedLeg", V(.25, 1.1, .25), V(x + dx, 1.7, z), bronze, Enum.Material.Wood) end
-			end
-			part("Mattress_" .. i, V(3.5, .65, 6), V(x, 2.65, -5.8), linen, Enum.Material.Fabric)
-			part("TealQuilt_" .. i, V(3.55, .2, 3.7), V(x, 3.05, -4.9), teal, Enum.Material.Fabric)
-			part("Pillow_" .. i, V(2.4, .4, 1.3), V(x, 3.1, -8), Color3.fromRGB(240, 236, 220), Enum.Material.Fabric)
-			part("CarvedHeadboard", V(3.8, 2.4, .3), V(x, 3, -9), lightStone)
-		end
-		for _, x in {-7.05, -2.35, 2.35, 7.05} do
-			part("PrivacyCurtainRail", V(.12, .12, 7), V(x, 7, -5.9), bronze, Enum.Material.Metal)
-			part("GatheredPrivacyCurtain", V(.15, 4.6, 1.8), V(x, 4.6, -8.2), Color3.fromRGB(152, 184, 169), Enum.Material.Fabric)
-		end
-		part("ApothecaryCabinet", V(5, 4, 1.5), V(-10, 3.2, 3), doorColor, Enum.Material.Wood)
-		part("CabinetCounter", V(5.3, .25, 1.8), V(-10, 5.3, 3), pale, Enum.Material.Marble)
-		for i = 1, 4 do
-			cylinder("MedicineBottle", .22, .7, V(-12 + i * .8, 5.8, 3), i % 2 == 0 and accent or Color3.fromRGB(180, 146, 90), Enum.Material.Glass)
-		end
-		for _, x in {-5, 5} do
-			part("LanternBracket", V(.15, 1, .8), V(x, 10, 12), bronze, Enum.Material.Metal)
-			local lamp = part("WarmWardLantern", V(.65, 1.2, .65), V(x, 9.2, 12.4), Color3.fromRGB(255, 218, 151), Enum.Material.Neon)
-			lamp.CanCollide = false
-			local light = Instance.new("PointLight")
-			light.Color, light.Range, light.Brightness, light.Parent = lamp.Color, 10, .7, lamp
-		end
-		return
-	end
-	if id == "SquadManagement" then
-		cylinder("StandardBase", 3.2, .55, V(0, .7, 0), shadow)
-		cylinder("BaseMoulding", 2.2, .45, V(0, 1.2, 0), pale)
-		cylinder("BaseCap", 1.4, .3, V(0, 1.55, 0), bronze)
-		cylinder("BannerPole", .22, 16, V(0, 9.2, 0), bronze, Enum.Material.Metal)
-		part("Crossbar", V(7.8, .26, .26), V(0, 15.2, 0), bronze, Enum.Material.Metal)
-		for _, x in {-3.9, 3.9} do
-			local finial = part("CrossbarFinial", V(.5, .5, .5), V(x, 15.2, 0), pale, Enum.Material.Metal)
-			finial.CFrame *= CFrame.Angles(0, 0, math.rad(45))
-		end
-		-- Crossed halberds behind the banner standard
-		local s1 = cylinder("SpearShaft1", .14, 17, V(0, 9.2, -.18), bronze, Enum.Material.Metal)
-		s1.CFrame *= CFrame.Angles(0, 0, math.rad(28))
-		local s2 = cylinder("SpearShaft2", .14, 17, V(0, 9.2, -.18), bronze, Enum.Material.Metal)
-		s2.CFrame *= CFrame.Angles(0, 0, math.rad(-28))
-
-		-- Lantern bracket lighting the war standard
-		part("LanternArm", V(.15, .8, 1.4), V(0, 14.6, .8), bronze, Enum.Material.Metal)
-		local lamp = part("StandardLantern", V(.7, 1.2, .7), V(0, 13.9, 1.5), Color3.fromRGB(255, 220, 150), Enum.Material.Neon)
-		lamp.CanCollide = false
-		local light = Instance.new("PointLight")
-		light.Color, light.Range, light.Brightness, light.Parent = lamp.Color, 14, 1.0, lamp
-
-		local cloth = part("SquadBanner", V(7.0, 8.4, .12), V(0, 10.8, 0), Color3.fromRGB(135, 30, 44), Enum.Material.Fabric)
-		-- Gold embroidered border and double split tails
-		for _, x in {-3.36, 3.36} do part("EmbroideredBorder", V(.16, 8.2, .16), V(x, 10.8, .02), bronze, Enum.Material.Fabric) end
-		for _, x in {-1.8, 1.8} do part("BannerTail", V(3.3, 1.3, .12), V(x, 6.0, 0), Color3.fromRGB(135, 30, 44), Enum.Material.Fabric) end
-		local crest = part("SpearFinial", V(.9, 1.8, .9), V(0, 17.5, 0), pale, Enum.Material.Metal)
-		crest.CFrame *= CFrame.Angles(0, 0, math.rad(45))
-
-		for _, face in {Enum.NormalId.Front, Enum.NormalId.Back} do
-			local gui = Instance.new("SurfaceGui")
-			gui.Face, gui.CanvasSize, gui.Parent = face, Vector2.new(500, 700), cloth
-			local container = Instance.new("Frame")
-			container.Size = UDim2.fromScale(1, 1)
-			container.BackgroundTransparency = 1
-			container.Parent = gui
-
-			local title = Instance.new("TextLabel")
-			title.Size = UDim2.new(1, -20, 0, 130)
-			title.Position = UDim2.new(0, 10, 0, 40)
-			title.BackgroundTransparency = 1
-			title.Text = "⚔️\nSQUAD DEPLOY"
-			title.TextColor3, title.Font, title.TextSize = Color3.fromRGB(255, 235, 180), Enum.Font.GothamBold, 44
-			title.Parent = container
-
-			local divider = Instance.new("TextLabel")
-			divider.Size = UDim2.new(1, -20, 0, 40)
-			divider.Position = UDim2.new(0, 10, 0, 190)
-			divider.BackgroundTransparency = 1
-			divider.Text = "◆   ◆   ◆   ◆   ◆"
-			divider.TextColor3, divider.Font, divider.TextSize = Color3.fromRGB(245, 195, 90), Enum.Font.GothamBold, 26
-			divider.Parent = container
-
-			local sub = Instance.new("TextLabel")
-			sub.Size = UDim2.new(1, -20, 0, 80)
-			sub.Position = UDim2.new(0, 10, 0, 240)
-			sub.BackgroundTransparency = 1
-			sub.Text = "ACTIVE SQUAD\n5 COMBAT SLOTS"
-			sub.TextColor3, sub.Font, sub.TextSize = Color3.fromRGB(220, 215, 235), Enum.Font.GothamMedium, 28
-			sub.Parent = container
-		end
-		return
-	end
-	if id == "Summoning" then
-		cylinder("PortalPlatform", 12, .5, V(0, .25, 0), shadow)
-		cylinder("PortalInlay", 10.8, .16, V(0, .58, 0), pale)
-		for _, x in {-7.8, 7.8} do
-			part("PillarFoot", V(5, .8, 5), V(x, 1.05, 0), shadow)
-			part("PillarPlinth", V(4.2, 1, 4.2), V(x, 1.95, 0), pale)
-			cylinder("PillarBase", 2, .8, V(x, 2.85, 0), bronze)
-			cylinder("PortalColumn", 1.45, 15.5, V(x, 11, 0), stone)
-			for _, y in {3.5, 7.7, 12, 17.8} do cylinder("ColumnBand", 1.6, .24, V(x, y, 0), pale) end
-			glow("ColumnRunelight", V(.23, 11, .18), V(x, 10.5, 1.47))
-			cylinder("Capital", 2.1, .9, V(x, 19, 0), pale)
-			part("CapitalAbacus", V(4.5, .65, 4.5), V(x, 19.75, 0), shadow)
-		end
-		part("GateEntablature", V(21, 1.3, 5), V(0, 20.7, 0), stone)
-		part("GateCornice", V(22, .55, 5.5), V(0, 21.65, 0), pale)
-		arch("PortalArchStone", 6.2, 12.1, 0, 1.05, pale)
-		arch("PortalRunicArch", 5.55, 12.1, .1, .18, accent, Enum.Material.Neon)
-		for _, x in {-5.55, 5.55} do glow("PortalEdge", V(.18, 9.4, .18), V(x, 7.4, .1)) end
-		local membrane = glow("RiftMembrane", V(10.7, 10, .15), V(0, 7.3, 0))
-		membrane.Transparency = .62
-		for i = 0, 17 do
-			local x = -5.35 + (i + .5) * 10.7 / 18
-			local h = math.sqrt(math.max(0, 5.35 ^ 2 - x ^ 2))
-			local p = glow("ArchedRiftMembrane", V(10.7 / 18 + .01, math.max(.05, h), .15), V(x, 12.3 + h / 2, 0))
-			p.Transparency = .62
-		end
-		for _, x in {-3.6, 0, 3.6} do
-			local rune = glow("FloatingRiftRune", V(.7, .7, .2), V(x, 8 + math.abs(x) * .3, .35))
-			rune.CFrame *= CFrame.Angles(0, 0, math.pi / 4)
-		end
-		local title = part("GateInscription", V(13, 1.8, .2), V(0, 20.65, 2.62), shadow)
-		sign(title, "SUMMONING", "GATE OF THE RIFT")
-		return
-	end
-
-	if id == "Market" then
-		local woodPlank = Color3.fromRGB(115, 85, 55)
-		local darkWood = Color3.fromRGB(75, 50, 35)
-		local crimson = Color3.fromRGB(160, 35, 45)
-		local goldTone = Color3.fromRGB(225, 175, 60)
-
-		-- Wooden bazaar deck foundation
-		part("MarketDeck", V(26, .7, 20), V(0, .35, 0), darkWood, Enum.Material.WoodPlanks)
-		part("MarketInlaidFloor", V(24.5, .4, 18.5), V(0, .8, 0), woodPlank, Enum.Material.WoodPlanks)
-
-		-- Main Bazaar Stall Frame
-		for _, x in {-9.5, 9.5} do
-			for _, z in {-7, 7} do
-				cylinder("StallPillar", .55, 10, V(x, 5.8, z), darkWood, Enum.Material.Wood)
-			end
-		end
-
-		-- Twin Striped Canopy Awning
-		for i = 0, 9 do
-			local z = -7.5 + (i + 0.5) * 1.5
-			local color = (i % 2 == 0) and crimson or goldTone
-			block("AwningStripeLeft", V(10, .35, 1.5), CFrame.new(-4.8, 11, z) * CFrame.Angles(0, 0, math.rad(-12)), color, Enum.Material.Fabric)
-			block("AwningStripeRight", V(10, .35, 1.5), CFrame.new(4.8, 11, z) * CFrame.Angles(0, 0, math.rad(12)), color, Enum.Material.Fabric)
-		end
-		part("CanopyRidge", V(1.2, .6, 16.5), V(0, 12.1, 0), bronze, Enum.Material.Metal)
-
-		-- Merchant Counters & Display Tables
-		part("FrontCounter", V(18, 3.2, 2.2), V(0, 2.4, 6), darkWood, Enum.Material.Wood)
-		part("CounterTop", V(19, .4, 2.6), V(0, 4.1, 6), pale, Enum.Material.Marble)
-
-		-- Scales, Ledgers & Coin Bags on Counter
-		part("CoinScaleStand", V(.35, 2.2, .35), V(-4, 5.3, 6), bronze, Enum.Material.Metal)
-		part("CoinScaleBeam", V(2.2, .18, .18), V(-4, 6.3, 6), bronze, Enum.Material.Metal)
-		part("CoinScalePanLeft", V(1, .15, 1), V(-5, 5.7, 6), goldTone, Enum.Material.Metal)
-		part("CoinScalePanRight", V(1, .15, 1), V(-3, 5.7, 6), goldTone, Enum.Material.Metal)
-
-		local ledger = part("TradeLedger", V(1.8, .22, 1.4), V(3, 4.4, 6), Color3.fromRGB(240, 235, 215), Enum.Material.Fabric)
-		ledger.CFrame *= CFrame.Angles(0, math.rad(15), 0)
-
-		-- Cargo Crates & Sacks Stacked at the Rear
-		for _, x in {-6, -2, 4} do
-			part("CargoCrate_" .. x, V(3.2, 3.2, 3.2), V(x, 2.4, -4.5), darkWood, Enum.Material.Wood)
-			part("CrateIronBand", V(3.3, .3, 3.3), V(x, 2.4, -4.5), shadow, Enum.Material.Metal)
-		end
-		part("CargoCrateStacked", V(2.8, 2.8, 2.8), V(-4, 5.2, -4.5), darkWood, Enum.Material.Wood)
-
-		-- Hanging Brass Market Lanterns
-		for _, x in {-8, 8} do
-			part("MarketLanternArm", V(.18, .6, 1.2), V(x, 10, 7), bronze, Enum.Material.Metal)
-			local lamp = part("MarketLantern", V(.65, 1.1, .65), V(x, 9.3, 7.5), Color3.fromRGB(255, 215, 140), Enum.Material.Neon)
-			lamp.CanCollide = false
-			local light = Instance.new("PointLight")
-			light.Color, light.Range, light.Brightness, light.Parent = lamp.Color, 12, 1.0, lamp
-		end
-
-		local title = part("MarketSign", V(14, 1.8, .25), V(0, 13.2, 7.8), shadow)
-		sign(title, "THE MARKET", "BAZAAR OF COMMERCE")
-		return
-	end
-
-	if id == "TrainingGrounds" then
-		local woodTrim = Color3.fromRGB(90, 65, 45)
-		local ropeColor = Color3.fromRGB(195, 175, 135)
-		local strawColor = Color3.fromRGB(220, 195, 120)
-		local ironMetal = Color3.fromRGB(80, 85, 95)
-
-		-- Cobblestone & Sand Sparring Arena Floor
-		cylinder("ArenaFoundation", 12.5, .6, V(0, .3, 0), shadow)
-		cylinder("SandSparringRing", 11.8, .4, V(0, .6, 0), Color3.fromRGB(180, 160, 130), Enum.Material.Sand)
-		cylinder("ArenaStoneBorder", 12.2, .25, V(0, .85, 0), pale)
-
-		-- Heavy Timber Ring Posts and Boundary Ropes
-		for i = 0, 7 do
-			local angle = i * math.pi / 4
-			local x, z = math.cos(angle) * 11.2, math.sin(angle) * 11.2
-			cylinder("RingPost_" .. i, .45, 4.2, V(x, 2.7, z), woodTrim, Enum.Material.Wood)
-			for _, ry in {2.2, 3.6} do
-				local nextA = (i + 1) * math.pi / 4
-				local nx, nz = math.cos(nextA) * 11.2, math.sin(nextA) * 11.2
-				line("BoundaryRope", V(x, ry, z), V(nx, ry, nz), .14, ropeColor, Enum.Material.Fabric)
-			end
-		end
-
-		-- Straw Training Dummies with Bullseye Chestplates
-		for _, dx in {-4.5, 4.5} do
-			cylinder("DummyStand", .25, 4.2, V(dx, 2.7, -3.5), woodTrim, Enum.Material.Wood)
-			part("DummyCrossbar", V(3.2, .25, .25), V(dx, 3.6, -3.5), woodTrim, Enum.Material.Wood)
-			local body = part("DummyStrawBody", V(1.8, 2.8, 1.4), V(dx, 3.5, -3.5), strawColor, Enum.Material.Grass)
-			body.Shape = Enum.PartType.Ball
-			local head = part("DummyHead", V(1.1, 1.2, 1.1), V(dx, 5.2, -3.5), strawColor, Enum.Material.Grass)
-			head.Shape = Enum.PartType.Ball
-			-- Target plate
-			part("DummyBullseye", V(.9, .9, .15), V(dx, 3.5, -2.75), Color3.fromRGB(220, 50, 50), Enum.Material.SmoothPlastic)
-		end
-
-		-- Iron Weapon Rack with Practice Swords
-		part("WeaponRackBase", V(6, .35, 1.8), V(0, .9, -7.5), woodTrim, Enum.Material.Wood)
-		for _, x in {-2.6, 2.6} do
-			part("WeaponRackUpright", V(.35, 4.2, 1.6), V(x, 3, -7.5), woodTrim, Enum.Material.Wood)
-		end
-		part("WeaponRackBeam", V(5.5, .3, .25), V(0, 4.6, -7.5), woodTrim, Enum.Material.Wood)
-		for i = -2, 2 do
-			local sword = part("PracticeSword_" .. i, V(.2, 3.4, .45), V(i * 1.1, 3.2, -7.5), ironMetal, Enum.Material.Metal)
-			sword.CFrame *= CFrame.Angles(0, 0, math.rad(10))
-		end
-
-		-- Iron Brazier with Warm Combat Flame
-		cylinder("BrazierBase", 1.2, .5, V(0, .9, 6.5), shadow)
-		cylinder("BrazierBowl", 1.6, .9, V(0, 2.0, 6.5), ironMetal, Enum.Material.Metal)
-		local coal = part("BrazierCoal", V(2.2, .4, 2.2), V(0, 2.4, 6.5), Color3.fromRGB(255, 120, 40), Enum.Material.Neon)
-		coal.Shape = Enum.PartType.Ball
-		coal.CanCollide = false
-		local fire = Instance.new("PointLight")
-		fire.Color, fire.Range, fire.Brightness, fire.Parent = Color3.fromRGB(255, 160, 60), 16, 1.2, coal
-
-		local title = part("TrainingSign", V(14, 1.8, .25), V(0, 8.5, 9.5), shadow)
-		sign(title, "TRAINING GROUNDS", "MARTIAL DRILL ARENA")
-		return
-	end
-
-	if id == "Blacksmith" or id == "Forge" then
-		local darkIron = Color3.fromRGB(48, 52, 60)
-		local steel = Color3.fromRGB(160, 165, 175)
-		local coalOrange = Color3.fromRGB(255, 75, 15)
-		local darkTimber = Color3.fromRGB(65, 45, 30)
-
-		-- 1. Heavy Stone & Granite Foundation Platform with stepped approach
-		part("ForgeFoundation", V(26, .7, 22), V(0, .35, 0), shadow, Enum.Material.Slate)
-		part("ForgeInnerHearthDeck", V(24.5, .4, 20.5), V(0, .8, 0), Color3.fromRGB(70, 72, 78), Enum.Material.Basalt)
-		for i = 1, 3 do
-			part("ForgeStep_" .. i, V(14 + i * 2, .35, 1.4), V(0, .9 - (i - 1) * .35, 11.2 + (i - 1) * 1.2), shadow, Enum.Material.Slate)
-		end
-
-		-- 2. Heavy Stone Smelting Furnace & Gothic Chimney Stack
-		local furnaceBackZ = -6.5
-		part("FurnaceMainBody", V(9, 7.5, 6), V(0, 4.5, furnaceBackZ), Color3.fromRGB(52, 54, 60), Enum.Material.Cobblestone)
-		part("FurnaceLintel", V(9.8, .8, 6.4), V(0, 8.4, furnaceBackZ), bronze, Enum.Material.Granite)
-		part("ChimneyBase", V(5, 5, 4.5), V(0, 11, furnaceBackZ), Color3.fromRGB(45, 47, 52), Enum.Material.Cobblestone)
-		part("ChimneyStack", V(3.8, 12, 3.4), V(0, 19, furnaceBackZ), Color3.fromRGB(38, 40, 45), Enum.Material.Basalt)
-		part("ChimneyCap", V(4.6, .6, 4.2), V(0, 25.2, furnaceBackZ), bronze, Enum.Material.Granite)
-
-		-- Arch hearth opening with burning coke coals
-		part("HearthArchLeft", V(1.8, 4.2, 1.8), V(-2.8, 3.2, furnaceBackZ + 2.2), shadow, Enum.Material.Slate)
-		part("HearthArchRight", V(1.8, 4.2, 1.8), V(2.8, 3.2, furnaceBackZ + 2.2), shadow, Enum.Material.Slate)
-		part("HearthArchTop", V(6.4, 1.4, 1.8), V(0, 5.5, furnaceBackZ + 2.2), shadow, Enum.Material.Slate)
-
-		local coals = part("BlazingCoals", V(4.8, 1.4, 3.2), V(0, 1.6, furnaceBackZ + 1.2), coalOrange, Enum.Material.Neon)
-		coals.CanCollide = false
-		local forgeLight = Instance.new("PointLight")
-		forgeLight.Color = Color3.fromRGB(255, 140, 30)
-		forgeLight.Brightness = 3.5
-		forgeLight.Range = 26
-		forgeLight.Shadows = false
-		forgeLight.Parent = coals
-
-		local smoke = Instance.new("Smoke")
-		smoke.Color = Color3.fromRGB(60, 55, 55)
-		smoke.Size = 1.2
-		smoke.RiseVelocity = 12
-		smoke.Opacity = 0.4
-		smoke.Parent = part("ChimneySmokeAnchor", V(.5, .5, .5), V(0, 25.5, furnaceBackZ), shadow, Enum.Material.Metal)
-
-		-- 3. Massive Heavy Iron Anvil on Petrified Ironwood Block
-		cylinder("AnvilStump", 2.2, 2.4, V(0, 2.0, 1.0), darkTimber, Enum.Material.Wood)
-		cylinder("StumpIronBand", 2.3, .3, V(0, 2.0, 1.0), darkIron, Enum.Material.Metal)
-		part("AnvilBase", V(2.6, .8, 4.2), V(0, 3.5, 1.0), darkIron, Enum.Material.Metal)
-		part("AnvilWaist", V(1.6, 1.2, 2.6), V(0, 4.3, 1.0), darkIron, Enum.Material.Metal)
-		part("AnvilFace", V(2.4, .9, 4.8), V(0, 5.2, 1.0), steel, Enum.Material.Metal)
-		part("AnvilHorn", V(1.4, .8, 2.0), V(0, 5.2, 3.8), steel, Enum.Material.Metal)
-
-		-- Smithing Hammer on Anvil
-		local hammer = part("SmithingHammer", V(.5, .6, 1.6), V(-.4, 5.8, 1.2), steel, Enum.Material.Metal)
-		hammer.CFrame *= CFrame.Angles(0, math.rad(30), 0)
-		hammer.CanCollide = false
-
-		-- 4. Dual Quenching Troughs (Water & Oil)
-		part("WaterTroughTub", V(3.5, 2.4, 7), V(-8.5, 2.0, 0), shadow, Enum.Material.Slate)
-		local water = part("QuenchingWater", V(2.7, .2, 6.2), V(-8.5, 2.9, 0), Color3.fromRGB(65, 160, 215), Enum.Material.Glass)
-		water.Transparency = 0.35
-		water.CanCollide = false
-
-		part("OilTroughTub", V(3.5, 2.4, 7), V(8.5, 2.0, 0), shadow, Enum.Material.Slate)
-		local oil = part("TemperingOil", V(2.7, .2, 6.2), V(8.5, 2.9, 0), Color3.fromRGB(45, 35, 30), Enum.Material.SmoothPlastic)
-		oil.CanCollide = false
-
-		-- 5. Gothic Timber Canopy with Pitch Slate Eaves
-		for _, x in {-10.5, 10.5} do
-			for _, z in {-8.5, 8.5} do
-				cylinder("ForgePillar", .65, 12, V(x, 6.8, z), darkTimber, Enum.Material.Wood)
-			end
-		end
-		part("CanopyBeamLeft", V(1.2, 1.0, 18), V(-10.5, 12.8, 0), darkTimber, Enum.Material.Wood)
-		part("CanopyBeamRight", V(1.2, 1.0, 18), V(10.5, 12.8, 0), darkTimber, Enum.Material.Wood)
-		part("CanopyBeamFront", V(22, 1.0, 1.2), V(0, 12.8, 8.5), darkTimber, Enum.Material.Wood)
-		part("CanopyBeamRear", V(22, 1.0, 1.2), V(0, 12.8, -8.5), darkTimber, Enum.Material.Wood)
-
-		for _, side in {-1, 1} do
-			local pitch = math.rad(-side * 18)
-			block("SlateCanopyEave", V(13.5, .6, 20), CFrame.new(side * 6.2, 14.6, 0) * CFrame.Angles(0, 0, pitch), Color3.fromRGB(40, 42, 48), Enum.Material.Slate)
-		end
-		part("RidgeCap", V(1.2, .6, 20.4), V(0, 16.8, 0), bronze, Enum.Material.Metal)
-
-		-- 6. Hanging Lanterns & Weapon Display Racks
-		for _, x in {-7, 7} do
-			part("ForgeLanternArm", V(.18, .6, 1.2), V(x, 11.8, 8.6), bronze, Enum.Material.Metal)
-			local lamp = part("ForgeLantern", V(.7, 1.2, .7), V(x, 11.0, 9.1), Color3.fromRGB(255, 200, 120), Enum.Material.Neon)
-			lamp.CanCollide = false
-			local light = Instance.new("PointLight")
-			light.Color, light.Range, light.Brightness, light.Parent = lamp.Color, 14, 1.0, lamp
-		end
-
-		-- Weapon Racks along side walls
-		part("WeaponRackWood", V(1.2, 6.5, 5), V(-8.5, 4.5, -4), darkTimber, Enum.Material.Wood)
-		local bladeGlow = part("WeaponBladeGlow", V(.2, 4.5, .6), V(-7.8, 4.8, -4), Color3.fromRGB(120, 200, 255), Enum.Material.Neon)
-		bladeGlow.CanCollide = false
-
-		-- 7. Crafting Workbench & Metal Ingots
-		part("SmithWorkbench", V(5.5, 2.8, 2.2), V(5.5, 2.2, -4), darkTimber, Enum.Material.Wood)
-		part("BenchTop", V(5.8, .3, 2.5), V(5.5, 3.65, -4), pale, Enum.Material.Marble)
-		for i = -1, 1 do
-			local ingot = part("GoldIngot", V(.6, .3, 1.2), V(5.5 + i * .9, 3.9, -4), Color3.fromRGB(235, 185, 65), Enum.Material.Metal)
-			ingot.CanCollide = false
-		end
-
-		local title = part("ForgeSign", V(15, 1.9, .25), V(0, 14.2, 9.4), shadow)
-		sign(title, "THE BLACKSMITH", "FORGE OF ASCENSION")
-		return
-	end
-
-	if id == "ThePit" or id == "Pit" then
-		local stoneBasalt = Color3.fromRGB(48, 46, 52)
-		local marbleWhite = Color3.fromRGB(225, 222, 215)
-		local darkTimber = Color3.fromRGB(65, 45, 30)
-		local essencePurple = Color3.fromRGB(185, 80, 255)
-		local promoGold = Color3.fromRGB(255, 205, 85)
-
-		-- 1. Heavy Stone & Granite Foundation Platform (matching Blacksmith footprint: 26 x 22 studs)
-		part("PitFoundation", V(26, .7, 22), V(0, .35, 0), shadow, Enum.Material.Slate)
-		part("PitInnerRitualDeck", V(24.5, .4, 20.5), V(0, .8, 0), Color3.fromRGB(58, 55, 65), Enum.Material.Basalt)
-		for i = 1, 3 do
-			part("PitStep_" .. i, V(14 + i * 2, .35, 1.4), V(0, .9 - (i - 1) * .35, 11.2 + (i - 1) * 1.2), shadow, Enum.Material.Slate)
-		end
-
-		-- 2. Rear Gothic Sanctuary Vault Wall with Twin Arches
-		local rearWallZ = -7.5
-		part("PitRearWall", V(24, 13, 3), V(0, 7.5, rearWallZ), stoneBasalt, Enum.Material.Cobblestone)
-		part("PitRearCornice", V(25.5, .8, 3.6), V(0, 14.4, rearWallZ), bronze, Enum.Material.Granite)
-
-		-- Twin Arched Niches on the back wall
-		arch("ArchNiche_Left", 4.2, 8.5, rearWallZ + 1.2, .8, bronze)
-		arch("ArchNiche_Right", 4.2, 8.5, rearWallZ + 1.2, .8, bronze)
-
-		-- 3. Gothic Stone Canopy with Slate Shingles
-		for _, x in {-10.5, 10.5} do
-			for _, z in {-8.5, 8.5} do
-				cylinder("PitPillar", .65, 12, V(x, 6.8, z), stoneBasalt, Enum.Material.Cobblestone)
-			end
-		end
-		part("PitCanopyBeamLeft", V(1.2, 1.0, 18), V(-10.5, 12.8, 0), shadow, Enum.Material.Slate)
-		part("PitCanopyBeamRight", V(1.2, 1.0, 18), V(10.5, 12.8, 0), shadow, Enum.Material.Slate)
-		part("PitCanopyBeamFront", V(22, 1.0, 1.2), V(0, 12.8, 8.5), shadow, Enum.Material.Slate)
-		part("PitCanopyBeamRear", V(22, 1.0, 1.2), V(0, 12.8, -8.5), shadow, Enum.Material.Slate)
-
-		for _, side in {-1, 1} do
-			local pitch = math.rad(-side * 18)
-			block("PitSlateCanopyEave", V(13.5, .6, 20), CFrame.new(side * 6.2, 14.6, 0) * CFrame.Angles(0, 0, pitch), Color3.fromRGB(40, 42, 48), Enum.Material.Slate)
-		end
-		part("PitRidgeCap", V(1.2, .6, 20.4), V(0, 16.8, 0), bronze, Enum.Material.Metal)
-
-		-- 4. Left Wing: The Synthesis Cauldron (The Essence Basin)
-		local synthX = -6.5
-		cylinder("SynthesisDais", 4.8, .8, V(synthX, 1.2, 0), stoneBasalt, Enum.Material.Cobblestone)
-		cylinder("SynthesisDaisRim", 5.0, .25, V(synthX, 1.6, 0), bronze, Enum.Material.Metal)
-		cylinder("CauldronBase", 2.4, 2.2, V(synthX, 2.7, 0), Color3.fromRGB(30, 28, 36), Enum.Material.Metal)
-		cylinder("CauldronRim", 2.7, .4, V(synthX, 3.8, 0), bronze, Enum.Material.Metal)
-		local essence = part("EssencePool", V(4.6, .3, 4.6), V(synthX, 3.85, 0), essencePurple, Enum.Material.Neon)
-		essence.CanCollide = false
-		essence.Shape = Enum.PartType.Ball
-
-		local synthLight = Instance.new("PointLight")
-		synthLight.Color = essencePurple
-		synthLight.Brightness = 3.2
-		synthLight.Range = 22
-		synthLight.Shadows = false
-		synthLight.Parent = essence
-
-		local synthParticles = Instance.new("ParticleEmitter")
-		synthParticles.Name = "EssenceSparks"
-		synthParticles.Rate = 14
-		synthParticles.Lifetime = NumberRange.new(0.8, 1.6)
-		synthParticles.Speed = NumberRange.new(2, 6)
-		synthParticles.SpreadAngle = Vector2.new(30, 30)
-		synthParticles.Color = ColorSequence.new({
-			ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 120, 255)),
-			ColorSequenceKeypoint.new(0.6, Color3.fromRGB(185, 80, 255)),
-			ColorSequenceKeypoint.new(1, Color3.fromRGB(75, 20, 120)),
-		})
-		synthParticles.Size = NumberSequence.new({
-			NumberSequenceKeypoint.new(0, 0.25),
-			NumberSequenceKeypoint.new(1, 0.05),
-		})
-		synthParticles.Acceleration = Vector3.new(0, 4, 0)
-		synthParticles.Parent = essence
-
-		-- Synthesis Station Signboard
-		local synthLabel = part("SynthesisLabel", V(6.5, 1.2, .2), V(synthX, 6.2, rearWallZ + 1.6), shadow)
-		sign(synthLabel, "SYNTHESIS", "ESSENCE CAULDRON")
-
-		-- 5. Right Wing: The Promotion Altar (Hall of Ascension)
-		local promoX = 6.5
-		cylinder("PromotionDais", 4.8, .8, V(promoX, 1.2, 0), marbleWhite, Enum.Material.Marble)
-		cylinder("PromotionDaisRim", 5.0, .25, V(promoX, 1.6, 0), bronze, Enum.Material.Metal)
-		for i = 1, 3 do
-			cylinder("PromotionTier_" .. i, 3.6 - i * .65, .5, V(promoX, 1.85 + (i - 1) * .5, 0), pale, Enum.Material.Marble)
-		end
-
-		-- Floating Golden Ascension Crystal
-		local crystal = part("PromotionCrystal", V(1.4, 3.0, 1.4), V(promoX, 5.0, 0), promoGold, Enum.Material.Neon)
-		crystal.CFrame *= CFrame.Angles(0, math.rad(35), math.rad(25))
-		crystal.CanCollide = false
-
-		local promoLight = Instance.new("PointLight")
-		promoLight.Color = promoGold
-		promoLight.Brightness = 3.2
-		promoLight.Range = 22
-		promoLight.Shadows = false
-		promoLight.Parent = crystal
-
-		local promoParticles = Instance.new("ParticleEmitter")
-		promoParticles.Name = "AscensionRays"
-		promoParticles.Rate = 12
-		promoParticles.Lifetime = NumberRange.new(1.0, 2.0)
-		promoParticles.Speed = NumberRange.new(1, 4)
-		promoParticles.SpreadAngle = Vector2.new(45, 45)
-		promoParticles.Color = ColorSequence.new({
-			ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 245, 180)),
-			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 205, 85)),
-			ColorSequenceKeypoint.new(1, Color3.fromRGB(180, 120, 20)),
-		})
-		promoParticles.Size = NumberSequence.new({
-			NumberSequenceKeypoint.new(0, 0.22),
-			NumberSequenceKeypoint.new(1, 0.04),
-		})
-		promoParticles.Acceleration = Vector3.new(0, 3, 0)
-		promoParticles.Parent = crystal
-
-		-- Promotion Station Signboard
-		local promoLabel = part("PromotionLabel", V(6.5, 1.2, .2), V(promoX, 6.2, rearWallZ + 1.6), shadow)
-		sign(promoLabel, "PROMOTION", "STAR ASCENSION")
-
-		-- 6. Hanging Sanctuary Lanterns
-		for _, x in {-7, 7} do
-			part("PitLanternArm", V(.18, .6, 1.2), V(x, 11.8, 8.6), bronze, Enum.Material.Metal)
-			local lampCol = x < 0 and essencePurple or promoGold
-			local lamp = part("PitLantern", V(.7, 1.2, .7), V(x, 11.0, 9.1), lampCol, Enum.Material.Neon)
-			lamp.CanCollide = false
-			local light = Instance.new("PointLight")
-			light.Color, light.Range, light.Brightness, light.Parent = lampCol, 14, 1.0, lamp
-		end
-
-		-- 7. Main Sanctuary Facade Sign
-		local title = part("PitMainSign", V(15, 1.9, .25), V(0, 14.2, 9.4), shadow)
-		sign(title, "THE PIT", "SYNTHESIS & PROMOTION")
-		return
-	end
-
-	if id == "GuardPost" then
-		local logColor = Color3.fromRGB(92, 68, 44)
-		local timberColor = Color3.fromRGB(120, 90, 58)
-		local ironColor = Color3.fromRGB(60, 65, 75)
-		local emberColor = Color3.fromRGB(255, 105, 30)
-
-		-- Heavy Timber Bastion Base & Watchtower
-		part("BastionPlatform", V(24, .9, 18), V(0, .45, 0), timberColor, Enum.Material.WoodPlanks)
-
-		-- Sturdy Log Corner Posts
-		for _, x in {-10, 10} do
-			for _, z in {-7.5, 7.5} do
-				cylinder("BastionLogColumn", .75, 12, V(x, 6.5, z), logColor, Enum.Material.Wood)
-			end
-		end
-
-		-- Raised Watchtower Parapet & Roof
-		part("WatchPlatform", V(22, .6, 16), V(0, 12.3, 0), timberColor, Enum.Material.WoodPlanks)
-		for _, side in {-1, 1} do
-			block("WatchRoofSlab", V(13, .55, 18), CFrame.new(side * 5.6, 15.6, 0) * CFrame.Angles(0, 0, math.rad(-side * 18)), logColor, Enum.Material.Wood)
-		end
-		part("WatchRoofPeak", V(1.4, .5, 18.2), V(0, 17.5, 0), ironColor, Enum.Material.Metal)
-
-		-- Defensive Log Palisade Barricade with Sharpened Tips
-		for i = 0, 11 do
-			local x = -8.8 + (i + 0.5) * 1.6
-			local stake = cylinder("PalisadeStake_" .. i, .38, 5.2, V(x, 3.1, 7.8), logColor, Enum.Material.Wood)
-			stake.CFrame *= CFrame.Angles(math.rad(12), 0, 0)
-		end
-		part("PalisadeCrossBeam", V(18.5, .35, .35), V(0, 2.8, 7.6), ironColor, Enum.Material.Metal)
-
-		-- Central Campfire with Stone Ring & Glowing Embers
-		for i = 0, 7 do
-			local angle = i * math.pi / 4
-			part("CampfireStone_" .. i, V(1.1, .75, 1.1), V(math.cos(angle) * 2.2, 1.0, -1.5 + math.sin(angle) * 2.2), stone, Enum.Material.Slate)
-		end
-		-- Crossed Campfire Logs
-		local log1 = cylinder("CampfireLog1", .22, 3.6, V(0, 1.2, -1.5), logColor, Enum.Material.Wood)
-		log1.CFrame *= CFrame.Angles(0, math.rad(45), 0)
-		local log2 = cylinder("CampfireLog2", .22, 3.6, V(0, 1.2, -1.5), logColor, Enum.Material.Wood)
-		log2.CFrame *= CFrame.Angles(0, math.rad(-45), 0)
-
-		local embers = part("GlowingEmbers", V(2.4, .5, 2.4), V(0, 1.4, -1.5), emberColor, Enum.Material.Neon)
-		embers.Shape = Enum.PartType.Ball
-		embers.CanCollide = false
-		local fireLight = Instance.new("PointLight")
-		fireLight.Color, fireLight.Range, fireLight.Brightness, fireLight.Parent = Color3.fromRGB(255, 140, 50), 18, 1.4, embers
-
-		-- Signal Beacon Lantern on Front Parapet
-		local lanternPost = cylinder("BeaconPole", .25, 4.5, V(0, 14.5, 7.8), ironColor, Enum.Material.Metal)
-		local signalLamp = part("SignalBeacon", V(.9, 1.4, .9), V(0, 16.5, 7.8), Color3.fromRGB(255, 210, 120), Enum.Material.Neon)
-		signalLamp.CanCollide = false
-		local beaconLight = Instance.new("PointLight")
-		beaconLight.Color, beaconLight.Range, beaconLight.Brightness, beaconLight.Parent = signalLamp.Color, 20, 1.5, signalLamp
-
-		local title = part("BastionSign", V(16, 2.0, .3), V(0, 11.2, 8.4), shadow)
-		sign(title, "OUTSKIRTS GUARD POST", "FRONTIER BASTION")
-		return
-	end
-
-	-- A round classical sanctuary, with layered cornices, pilasters, and open arched doors.
-	local promotion = id == "Promotion"
-	local title = promotion and "PROMOTION" or "SYNTHESIS"
-	local stoneTone = promotion and Color3.fromRGB(177, 172, 153) or stone
-	cylinder("CircularFoundation", 14.7, .6, V(0, .3, 0), shadow)
-	cylinder("SanctuaryFloor", 14.2, 2, V(0, 1.6, 0), pale)
-	for i = 1, 5 do
-		part("BroadEntranceStep_" .. i, V(17.5, .5, 2.4), V(0, .25 + (i - 1) * .5, 21.1 - (i - 1) * 1.65), stoneTone)
-	end
-	for i = 0, 47 do
-		local angle = math.rad(38 + (i + .5) * 284 / 48)
-		block("CurvedMasonry", V(1.58, 22.2, 1.15), CFrame.new(math.sin(angle) * 13.5, 13.7, math.cos(angle) * 13.5) * CFrame.Angles(0, angle, 0), stoneTone, Enum.Material.Brick)
-	end
-	for _, y in {3.4, 12.8, 23.8, 25, 26.4, 27.3} do
-		-- The lower two mouldings stop at the entrance instead of crossing it.
-		local full = y > 22
-		local start, sweep = full and 0 or 38, full and 360 or 284
-		for i = 0, 47 do
-			local angle = math.rad(start + (i + .5) * sweep / 48)
-			local radius = y > 24 and 14.3 or 13.95
-			block("RoundCornice", V(full and 1.96 or 1.6, y > 24 and .65 or .28, .65), CFrame.new(math.sin(angle) * radius, y, math.cos(angle) * radius) * CFrame.Angles(0, angle, 0), pale)
-		end
-	end
-	cylinder("RoofSlab", 14.8, .65, V(0, 26, 0), shadow)
-	cylinder("RoofCoping", 15, .5, V(0, 27, 0), pale)
-	cylinder("RecessedRoof", 13.2, .35, V(0, 27.45, 0), shadow)
-	for _, degrees in {38, 90, 142, 194, 246, 298, 322} do
-		local a = math.rad(degrees)
-		local x, z = math.sin(a) * 14.05, math.cos(a) * 14.05
-		cylinder("ColumnFoot", 1, .55, V(x, 3, z), shadow)
-		cylinder("ColumnBase", .85, .55, V(x, 3.5, z), pale)
-		cylinder("TallStoneColumn", .59, 19, V(x, 13.25, z), pale)
-		for _, y in {4, 21.8, 22.45} do cylinder("ColumnCollar", .75, .3, V(x, y, z), bronze) end
-		cylinder("ColumnCapital", .95, .7, V(x, 23.1, z), pale)
-	end
-	local doorZ = 11
-	for _, x in {-7.2, 7.2} do
-		part("DoorJamb", V(1.1, 12, 2.2), V(x, 8.6, doorZ), pale)
-		part("ArchUprightTrim", V(.25, 12, .4), V(x * .925, 8.6, doorZ + 1.2), bronze)
-	end
-	for i = 0, 25 do
-		local x = -7.7 + (i + .5) * 15.4 / 26
-		local archY = 14.6 + math.sqrt(math.max(0, 7.7 ^ 2 - x ^ 2))
-		part("ArchSpandrel", V(15.4 / 26 + .02, 24.75 - archY, 2), V(x, (24.75 + archY) / 2, doorZ), stoneTone)
-	end
-	arch("ArchedEntranceOuter", 7.6, 14.6, doorZ + 1, 1.2, pale)
-	arch("ArchedEntranceInner", 6.7, 14.6, doorZ + 1.45, .24, bronze)
-	-- Sculpted double doors swing outward from the jambs.
-	for _, side in {-1, 1} do
-		local hinge = CFrame.new(side * 6.6, 2.6, doorZ) * CFrame.Angles(0, math.rad(side * 62), 0)
-		local leaf = block("OpenSculptedDoor", V(6.4, 12, .45), hinge * CFrame.new(-side * 3.2, 6, 0), doorColor, Enum.Material.Metal)
-		leaf.CanCollide = false
-		for _, dx in {0, -side * 6.3} do
-			block("DoorEdgeInlay", V(.16, 12, .13), hinge * CFrame.new(dx, 6, .3), bronze, Enum.Material.Metal).CanCollide = false
-		end
-		for i = 0, 11 do
-			local dx = (i + .5) * 6.4 / 12
-			local h = math.sqrt(math.max(0, 6.4 ^ 2 - (6.4 - dx) ^ 2))
-			block("DoorArchedCrown", V(6.4 / 12 + .01, math.max(h, .05), .45), hinge * CFrame.new(-side * dx, 12 + h / 2, 0), doorColor, Enum.Material.Metal).CanCollide = false
-		end
-		for _, y in {1, 5, 10} do
-			block("DoorCrossInlay", V(6.4, .16, .13), hinge * CFrame.new(-side * 3.2, y, .3), bronze, Enum.Material.Metal).CanCollide = false
-		end
-		local handle = block("DoorHandle", V(.22, 1.1, .32), hinge * CFrame.new(-side * 5.6, 5.6, .6), accent, Enum.Material.Neon)
-		handle.CanCollide = false
-	end
-	-- Stand the plaque in front of the outermost curved cornice, including its ends.
-	for _, x in {-6.4, 6.4} do
-		part("NameplateBracket", V(.32, .55, 3.6), V(x, 24.1, 14.3), bronze, Enum.Material.Metal)
-	end
-	local nameplate = part("CarvedFacilityName", V(17, 3.2, .35), V(0, 24.1, 16.35), shadow)
-	nameplate.CanCollide = false
-	local plaqueGui = Instance.new("SurfaceGui")
-	plaqueGui.Face, plaqueGui.CanvasSize = Enum.NormalId.Back, Vector2.new(1062, 200)
-	plaqueGui.AlwaysOnTop, plaqueGui.Parent = false, nameplate
-	local function plaqueLine(text: string, y: number, h: number, textSize: number)
-		local label = Instance.new("TextLabel")
-		label.Size, label.Position = UDim2.new(1, -40, 0, h), UDim2.fromOffset(20, y)
-		label.BackgroundTransparency, label.Text, label.Font = 1, text, Enum.Font.GothamBold
-		label.TextColor3, label.TextSize, label.Parent = pale, textSize, plaqueGui
-	end
-	plaqueLine(title, 14, 98, 66)
-	plaqueLine(promotion and "HALL OF ASCENSION" or "ESSENCE SANCTUM", 118, 58, 32)
-	-- A restrained interior accent identifies each sanctuary without changing its architecture.
-	cylinder("RitualDais", 4.5, .7, V(0, 3, -2), shadow)
-	cylinder("RitualDaisTrim", 4.1, .18, V(0, 3.45, -2), bronze)
-	if promotion then
-		for i = 1, 3 do cylinder("AscensionTier", 3.6 - i * .65, .55, V(0, 3.5 + i * .55, -2), pale) end
-		local crystal = glow("PromotionCrystal", V(1.4, 3, 1.4), V(0, 7, -2))
-		crystal.CFrame *= CFrame.Angles(0, 0, math.rad(35))
-	else
-		cylinder("EssenceBasin", 2.8, 1.8, V(0, 4.4, -2), doorColor, Enum.Material.Metal)
-		cylinder("EssenceRim", 3, .3, V(0, 5.3, -2), bronze, Enum.Material.Metal)
-		cylinder("EssencePool", 2.6, .15, V(0, 5.48, -2), accent, Enum.Material.Neon).CanCollide = false
+	part(parent, "RackCrossbarTop", V(5.4, 0.4, 0.5), cf * CFrame.new(0, 3.8, 0), wood, Enum.Material.Wood, false)
+	part(parent, "RackCrossbarLow", V(5.4, 0.4, 0.5), cf * CFrame.new(0, 1.4, 0), wood, Enum.Material.Wood, false)
+	for i = -2, 2 do
+		local x = i * 0.95
+		part(
+			parent,
+			"RackBlade_" .. i,
+			V(0.22, 4.0, 0.45),
+			cf * CFrame.new(x, 2.6, 0.15) * CFrame.Angles(math.rad(-8), 0, 0),
+			iron,
+			Enum.Material.Metal,
+			false
+		)
+		part(
+			parent,
+			"RackGuard_" .. i,
+			V(0.9, 0.22, 0.35),
+			cf * CFrame.new(x, 1.2, 0.25),
+			darkIron,
+			Enum.Material.Metal,
+			false
+		)
 	end
 end
 
-return Architecture
+local function finalizeFacilityModel(
+	model: Model,
+	centerCF: CFrame,
+	hullSize: Vector3,
+	promptOffset: Vector3
+): (Part, Attachment)
+	-- Ground-level PrimaryPart for standardized pivot & clean collision hull
+	local root = part(
+		model,
+		"PrimaryRoot",
+		V(hullSize.X, math.max(1, hullSize.Y), hullSize.Z),
+		centerCF * CFrame.new(0, math.max(0.5, hullSize.Y * 0.5), 0),
+		Color3.fromRGB(60, 62, 68),
+		Enum.Material.SmoothPlastic,
+		hullSize.Y > 1.5
+	)
+	root.Transparency = 1
+	model.PrimaryPart = root
+
+	local promptAnchor = Instance.new("Attachment")
+	promptAnchor.Name = "PromptAnchor"
+	promptAnchor.Position = promptOffset
+	promptAnchor.Parent = root
+
+	local interactionPart = part(
+		model,
+		"FacilityInteraction",
+		V(2, 2, 2),
+		centerCF * CFrame.new(promptOffset),
+		Color3.new(1, 1, 1),
+		Enum.Material.SmoothPlastic,
+		false
+	)
+	interactionPart.Transparency = 1
+
+	return interactionPart, promptAnchor
+end
+
+--============================================================================
+-- 2.1 SUMMONING PORTAL (`SummoningPortal` — Circular Stone Stargate)
+--============================================================================
+function Arch.BuildSummoning(folder: Instance, centerCF: CFrame): Part
+	local model = Instance.new("Model")
+	model.Name = "Building_Summoning"
+	model.Parent = folder
+
+	local darkStone = Color3.fromRGB(62, 66, 76)
+	local carvedStone = Color3.fromRGB(82, 86, 98)
+	local trimStone = Color3.fromRGB(46, 50, 58)
+	local cyanRune = Color3.fromRGB(34, 211, 238) -- #22D3EE
+	local deepCyan = Color3.fromRGB(14, 165, 233)
+
+	-- Two-tier octagonal stone plinth (Diameter = 22 studs, Height = 2.5 studs)
+	cylinder(model, "PlinthTier1", 11.5, 1.2, centerCF * CFrame.new(0, 0.6, 0), trimStone, Enum.Material.Slate, true)
+	cylinder(model, "PlinthTier2", 9.6, 1.3, centerCF * CFrame.new(0, 1.85, 0), darkStone, Enum.Material.Slate, true)
+	cylinder(
+		model,
+		"PlinthRuneRing",
+		8.8,
+		0.16,
+		centerCF * CFrame.new(0, 2.54, 0),
+		cyanRune,
+		Enum.Material.Neon,
+		false
+	)
+
+	-- Approach steps facing front (+Z of local station CFrame)
+	for step = 1, 3 do
+		local sy = step * 0.62
+		local sz = 11.2 - (step - 1) * 1.3
+		part(
+			model,
+			"PortalStep_" .. step,
+			V(8.5, 0.65, 2.0),
+			centerCF * CFrame.new(0, sy - 0.3, sz),
+			carvedStone,
+			Enum.Material.Cobblestone,
+			true
+		)
+	end
+
+	-- Flanking heavy buttress pedestals supporting the stargate ring
+	for _, sx in ipairs({ -7.8, 7.8 }) do
+		part(
+			model,
+			"RingButtress",
+			V(4.2, 6.5, 5.2),
+			centerCF * CFrame.new(sx, 5.2, 0),
+			darkStone,
+			Enum.Material.Slate,
+			true
+		)
+		part(
+			model,
+			"ButtressRune",
+			V(0.5, 4.6, 5.4),
+			centerCF * CFrame.new(sx, 5.4, 0),
+			cyanRune,
+			Enum.Material.Neon,
+			false
+		)
+	end
+
+	-- Monumental Circular Stone Ring (OuterDiameter = 18 studs, InnerDiameter = 14 studs, Thickness = 3.5 studs)
+	local ringCenter = centerCF * CFrame.new(0, 11.5, 0)
+	local ringRadius = 8.0
+	local numSegments = 16
+	for i = 1, numSegments do
+		local angle = ((i - 1) / numSegments) * math.pi * 2
+		local segCF = ringCenter
+			* CFrame.new(math.cos(angle) * ringRadius, math.sin(angle) * ringRadius, 0)
+			* CFrame.Angles(0, 0, angle + math.pi * 0.5)
+
+		-- Stone ring block
+		part(
+			model,
+			"StargateBlock_" .. i,
+			V(3.6, 2.4, 3.5),
+			segCF,
+			(i % 2 == 0) and carvedStone or darkStone,
+			Enum.Material.Slate,
+			false
+		)
+
+		-- Inset neon cyan rune band carved into front & back of each block
+		part(
+			model,
+			"StargateRune_" .. i,
+			V(2.2, 0.55, 3.68),
+			segCF,
+			cyanRune,
+			Enum.Material.Neon,
+			false
+		)
+	end
+
+	-- Apex Keystone Crown on top of the Stargate Ring
+	part(
+		model,
+		"StargateKeystone",
+		V(4.4, 3.6, 4.2),
+		ringCenter * CFrame.new(0, ringRadius + 0.6, 0),
+		trimStone,
+		Enum.Material.Slate,
+		false
+	)
+	part(
+		model,
+		"KeystoneGem",
+		V(1.8, 2.2, 4.4),
+		ringCenter * CFrame.new(0, ringRadius + 0.6, 0),
+		cyanRune,
+		Enum.Material.Neon,
+		false
+	)
+
+	-- Central Swirling Portal Disc (InnerDiameter = 14 studs)
+	local portalDisc = part(
+		model,
+		"PortalVortexDisc",
+		V(0.6, 13.8, 13.8),
+		ringCenter * CFrame.Angles(0, math.pi * 0.5, 0),
+		cyanRune,
+		Enum.Material.Neon,
+		false
+	)
+	portalDisc.Shape = Enum.PartType.Cylinder
+	portalDisc.Transparency = 0.18
+
+	local innerCore = part(
+		model,
+		"PortalInnerCore",
+		V(0.75, 9.2, 9.2),
+		ringCenter * CFrame.Angles(0, math.pi * 0.5, 0),
+		Color3.fromRGB(224, 248, 255),
+		Enum.Material.Neon,
+		false
+	)
+	innerCore.Shape = Enum.PartType.Cylinder
+	innerCore.Transparency = 0.28
+
+	-- PointLight: Color = #22D3EE, Brightness = 3, Range = 36, Shadows = true
+	pointLight(portalDisc, cyanRune, 3.0, 36, true)
+
+	-- Swirling Vortex ParticleEmitter
+	local swirlEmitter = Instance.new("ParticleEmitter")
+	swirlEmitter.Name = "PortalVortexParticles"
+	swirlEmitter.Texture = "rbxassetid://243660364"
+	swirlEmitter.Color = ColorSequence.new(Color3.fromRGB(220, 250, 255), cyanRune)
+	swirlEmitter.LightEmission = 1
+	swirlEmitter.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 2.5),
+		NumberSequenceKeypoint.new(0.5, 5.5),
+		NumberSequenceKeypoint.new(1, 1.2),
+	})
+	swirlEmitter.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.7),
+		NumberSequenceKeypoint.new(0.4, 0.25),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	swirlEmitter.Lifetime = NumberRange.new(1.2, 2.0)
+	swirlEmitter.Rate = 25
+	swirlEmitter.Speed = NumberRange.new(1.5, 4.0)
+	swirlEmitter.RotSpeed = NumberRange.new(45, 90)
+	swirlEmitter.SpreadAngle = Vector2.new(35, 35)
+	swirlEmitter.Parent = portalDisc
+
+	-- Upward Volumetric Light Column (Beam + Translucent Neon Shaft stretching Y = +2 to Y = +38)
+	local volumetricShaft = cylinder(
+		model,
+		"VolumetricLightShaft",
+		7.2,
+		34.0,
+		centerCF * CFrame.new(0, 19.5, 0),
+		cyanRune,
+		Enum.Material.Neon,
+		false
+	)
+	volumetricShaft.Transparency = 0.84
+
+	for _, angleDeg in ipairs({ 0, 90 }) do
+		local b0 = Instance.new("Attachment")
+		b0.Position = V(0, 2.0, 0)
+		b0.Orientation = V(0, angleDeg, 0)
+		b0.Parent = model:FindFirstChild("PlinthTier2")
+
+		local b1 = Instance.new("Attachment")
+		b1.Position = V(0, 38.0, 0)
+		b1.Orientation = V(0, angleDeg, 0)
+		b1.Parent = model:FindFirstChild("PlinthTier2")
+
+		local skyBeam = Instance.new("Beam")
+		skyBeam.Name = "VolumetricLightColumn_" .. angleDeg
+		skyBeam.Attachment0 = b0
+		skyBeam.Attachment1 = b1
+		skyBeam.Color = ColorSequence.new(cyanRune, deepCyan)
+		skyBeam.LightEmission = 1
+		skyBeam.LightInfluence = 0
+		skyBeam.Width0 = 13.5
+		skyBeam.Width1 = 18.0
+		skyBeam.FaceCamera = true
+		skyBeam.Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0.0, 0.42),
+			NumberSequenceKeypoint.new(0.5, 0.72),
+			NumberSequenceKeypoint.new(1.0, 1.0),
+		})
+		skyBeam.Parent = portalDisc
+	end
+
+	local interactionPart = finalizeFacilityModel(model, centerCF, V(18, 1.2, 18), V(0, 3.8, 10.5))
+	return interactionPart
+end
+
+--============================================================================
+-- 2.2 LEADERBOARD (Replaced by ground-based AvxsedPlaytimeWS)
+--============================================================================
+function Arch.BuildLeaderboard(folder: Instance, centerCF: CFrame): Model
+	local model = Instance.new("Model")
+	model.Name = "Building_Leaderboard"
+	model.Parent = folder
+	return model
+end
+
+--============================================================================
+-- 2.3 MARKET CLUSTER (`MarketCluster` — 4-Stall Merchant Bazaar)
+--============================================================================
+function Arch.BuildMarket(folder: Instance, centerCF: CFrame): Part
+	local model = Instance.new("Model")
+	model.Name = "Building_Market"
+	model.Parent = folder
+
+	local woodDark = Color3.fromRGB(96, 64, 38)
+	local woodLight = Color3.fromRGB(132, 92, 56)
+	local stoneCurb = Color3.fromRGB(78, 82, 90)
+	local warmGlow = Color3.fromRGB(255, 170, 75)
+
+	-- Cobblestone Bazaar Apron
+	part(
+		model,
+		"BazaarCobblePad",
+		V(38, 0.3, 30),
+		centerCF * CFrame.new(0, 0.15, 0),
+		stoneCurb,
+		Enum.Material.Cobblestone,
+		false
+	)
+
+	-- Helper to build an individual market stall with custom awning stripes
+	local function buildStall(stallName: string, stallCF: CFrame, stripeColorA: Color3, stripeColorB: Color3)
+		-- Wooden counter
+		part(model, stallName .. "_Counter", V(9.6, 3.2, 3.2), stallCF * CFrame.new(0, 1.6, 2.2), woodDark, Enum.Material.WoodPlanks, true)
+		part(model, stallName .. "_CounterTop", V(10.2, 0.35, 3.6), stallCF * CFrame.new(0, 3.3, 2.2), woodLight, Enum.Material.Wood, false)
+
+		-- 4 Corner Posts
+		for _, sx in ipairs({ -4.5, 4.5 }) do
+			for _, sz in ipairs({ -3.0, 3.0 }) do
+				part(model, stallName .. "_Post", V(0.65, 9.2, 0.65), stallCF * CFrame.new(sx, 4.6, sz), woodDark, Enum.Material.Wood, false)
+			end
+		end
+
+		-- Sloped Striped Awning (5 fabric panels)
+		local awningCenter = stallCF * CFrame.new(0, 9.4, 0.2) * CFrame.Angles(math.rad(14), 0, 0)
+		for s = -2, 2 do
+			local col = (s % 2 == 0) and stripeColorA or stripeColorB
+			part(
+				model,
+				stallName .. "_AwningStripe_" .. (s + 3),
+				V(2.15, 0.45, 8.2),
+				awningCenter * CFrame.new(s * 2.1, 0, 0),
+				col,
+				Enum.Material.Fabric,
+				false
+			)
+		end
+
+		-- Warm Interior PointLight (Color = (255, 170, 75), Range = 18)
+		local lantern = sphere(
+			model,
+			stallName .. "_Lantern",
+			1.1,
+			stallCF * CFrame.new(0, 7.6, 0.8),
+			warmGlow,
+			Enum.Material.Neon
+		)
+		pointLight(lantern, warmGlow, 1.8, 18, false)
+
+		-- Display goods on counter (colored fruit/relic crates)
+		for g = -1, 1 do
+			local crateCF = stallCF * CFrame.new(g * 2.8, 3.8, 2.2)
+			part(model, stallName .. "_GoodsTray", V(2.1, 0.6, 2.0), crateCF, woodDark, Enum.Material.WoodPlanks, false)
+			local goodColor = if g == -1
+				then Color3.fromRGB(220, 65, 55)
+				elseif g == 0 then Color3.fromRGB(245, 195, 55)
+				else Color3.fromRGB(75, 185, 95)
+			sphere(model, stallName .. "_RelicItem", 0.9, crateCF * CFrame.new(-0.4, 0.45, 0), goodColor, Enum.Material.SmoothPlastic)
+			sphere(model, stallName .. "_RelicItem2", 0.85, crateCF * CFrame.new(0.45, 0.42, 0.2), goodColor, Enum.Material.SmoothPlastic)
+		end
+
+		-- Merchant wooden stool behind counter
+		cylinder(model, stallName .. "_Stool", 0.9, 1.6, stallCF * CFrame.new(0, 0.8, -1.4), woodLight, Enum.Material.Wood, false)
+	end
+
+	-- 4 Market Stalls arranged in a gentle U-shape:
+	-- 1 Red/Amber striped awning, 2 Tan canvas awnings, 1 Green/White striped awning
+	buildStall(
+		"Stall_RedAmber",
+		centerCF * CFrame.new(-11.5, 0, -3.5) * CFrame.Angles(0, math.rad(28), 0),
+		Color3.fromRGB(185, 38, 38),
+		Color3.fromRGB(235, 168, 48)
+	)
+	buildStall(
+		"Stall_TanLeft",
+		centerCF * CFrame.new(-4.2, 0, -8.5) * CFrame.Angles(0, math.rad(8), 0),
+		Color3.fromRGB(212, 192, 154),
+		Color3.fromRGB(188, 166, 128)
+	)
+	buildStall(
+		"Stall_TanRight",
+		centerCF * CFrame.new(6.2, 0, -8.0) * CFrame.Angles(0, math.rad(-12), 0),
+		Color3.fromRGB(212, 192, 154),
+		Color3.fromRGB(192, 170, 132)
+	)
+	buildStall(
+		"Stall_GreenWhite",
+		centerCF * CFrame.new(12.5, 0, -1.5) * CFrame.Angles(0, math.rad(-38), 0),
+		Color3.fromRGB(42, 128, 64),
+		Color3.fromRGB(232, 232, 222)
+	)
+
+	-- 10 Surrounding Barrels & Open Fruit/Relic Crates
+	local barrelOffsets = {
+		V(-16.5, 0, 1.5),
+		V(-15.0, 0, 4.2),
+		V(-8.5, 0, -11.5),
+		V(0.8, 0, -11.8),
+		V(11.0, 0, -10.5),
+		V(16.8, 0, 2.5),
+		V(15.2, 0, 5.4),
+		V(17.5, 0, 4.8),
+	}
+	for _, bo in ipairs(barrelOffsets) do
+		addBarrel(model, centerCF * CFrame.new(bo), 0.95)
+	end
+
+	for idx, co in ipairs({ V(-13.5, 1.2, 6.2), V(13.5, 1.2, 7.0), V(1.5, 1.2, -5.5) }) do
+		part(
+			model,
+			"MarketCrate_" .. idx,
+			V(3.2, 2.4, 3.2),
+			centerCF * CFrame.new(co) * CFrame.Angles(0, math.rad(idx * 25), 0),
+			woodLight,
+			Enum.Material.WoodPlanks,
+			false
+		)
+	end
+
+	local interactionPart = finalizeFacilityModel(model, centerCF, V(26, 2.5, 18), V(0, 3.5, 5.5))
+	return interactionPart
+end
+
+--============================================================================
+-- 2.4 SYNTHESIS CHAMBER (`SynthesisChamber` — Domed Arcane Rotunda / The Pit)
+--============================================================================
+function Arch.BuildThePit(folder: Instance, centerCF: CFrame): Part
+	local model = Instance.new("Model")
+	model.Name = "Building_ThePit"
+	model.Parent = folder
+
+	local baseStone = Color3.fromRGB(64, 68, 78)
+	local columnStone = Color3.fromRGB(94, 98, 110)
+	local wallStone = Color3.fromRGB(76, 80, 92)
+	local roofSlate = Color3.fromRGB(44, 48, 58)
+	local roofRib = Color3.fromRGB(68, 72, 84)
+	local purpleLight = Color3.fromRGB(192, 132, 252) -- #C084FC
+	local purpleDeep = Color3.fromRGB(126, 34, 206) -- #7E22CE
+	local cyanBarrier = Color3.fromRGB(56, 189, 248) -- #38BDF8
+
+	-- 3-Step Circular Base (Outer Diameter = 32 studs)
+	cylinder(model, "RotundaStep1", 16.0, 1.0, centerCF * CFrame.new(0, 0.5, 0), baseStone, Enum.Material.Slate, true)
+	cylinder(model, "RotundaStep2", 14.8, 1.0, centerCF * CFrame.new(0, 1.5, 0), columnStone, Enum.Material.Slate, true)
+	cylinder(model, "RotundaStep3", 13.6, 1.0, centerCF * CFrame.new(0, 2.5, 0), baseStone, Enum.Material.Cobblestone, true)
+
+	-- Cylindrical Stone Masonry Body (leaving doorway opening on +Z facing courtyard)
+	local wallRadius = 11.4
+	local wallHeight = 13.5
+	local wallBaseY = 3.0
+	local numWallPanels = 12
+	for i = 1, numWallPanels do
+		local angle = ((i - 1) / numWallPanels) * math.pi * 2
+		-- Panel at angle ~ pi/2 (+Z local) is the arched doorway entrance
+		local sinA = math.sin(angle)
+		local cosA = math.cos(angle)
+		local isDoorway = (sinA > 0.72 and math.abs(cosA) < 0.55)
+		local panelCF = centerCF
+			* CFrame.new(cosA * wallRadius, wallBaseY + wallHeight * 0.5, sinA * wallRadius)
+			* CFrame.Angles(0, -angle + math.pi * 0.5, 0)
+
+		if not isDoorway then
+			part(
+				model,
+				"RotundaWallPanel_" .. i,
+				V(6.4, wallHeight, 2.2),
+				panelCF,
+				wallStone,
+				Enum.Material.Cobblestone,
+				true
+			)
+			-- Gothic arched window recess on alternating panels
+			if i % 2 == 0 then
+				part(
+					model,
+					"GothicWindowGlow_" .. i,
+					V(2.2, 6.8, 2.4),
+					panelCF * CFrame.new(0, 0.8, 0),
+					purpleLight,
+					Enum.Material.Neon,
+					false
+				).Transparency = 0.25
+			end
+		end
+	end
+
+	-- 8 Perimeter Stone Columns (Shape = Cylinder) + Upper Entablature Ring
+	local colRadius = 12.6
+	for c = 1, 8 do
+		local angle = ((c - 1) / 8) * math.pi * 2 + math.rad(22.5)
+		local cx = math.cos(angle) * colRadius
+		local cz = math.sin(angle) * colRadius
+		cylinder(
+			model,
+			"RotundaColumn_" .. c,
+			1.15,
+			wallHeight + 0.5,
+			centerCF * CFrame.new(cx, wallBaseY + (wallHeight + 0.5) * 0.5, cz),
+			columnStone,
+			Enum.Material.Slate,
+			false
+		)
+		part(
+			model,
+			"ColumnCapital_" .. c,
+			V(2.8, 1.1, 2.8),
+			centerCF * CFrame.new(cx, wallBaseY + wallHeight + 0.4, cz),
+			columnStone,
+			Enum.Material.Slate,
+			false
+		)
+		part(
+			model,
+			"ColumnPlinth_" .. c,
+			V(2.8, 1.1, 2.8),
+			centerCF * CFrame.new(cx, wallBaseY + 0.55, cz),
+			baseStone,
+			Enum.Material.Slate,
+			false
+		)
+	end
+
+	-- Upper Cornice Entablature Ring
+	local corniceY = wallBaseY + wallHeight + 1.2
+	cylinder(model, "RotundaCornice", 14.0, 1.6, centerCF * CFrame.new(0, corniceY, 0), columnStone, Enum.Material.Slate, false)
+
+	-- Arched Courtyard Entrance (+Z) lit from within by a bright Cyan/Blue Magical Barrier Glow (#38BDF8)
+	local doorCF = centerCF * CFrame.new(0, wallBaseY, 12.0)
+	for _, sx in ipairs({ -3.6, 3.6 }) do
+		part(model, "EntrancePillar", V(2.0, 12.2, 2.6), doorCF * CFrame.new(sx, 6.1, 0), columnStone, Enum.Material.Slate, true)
+	end
+	part(model, "EntranceArchLintel", V(9.6, 2.6, 3.0), doorCF * CFrame.new(0, 12.4, 0), columnStone, Enum.Material.Slate, false)
+	wedge(model, "EntrancePedimentL", V(2.8, 2.4, 5.0), doorCF * CFrame.new(-2.4, 14.8, 0) * CFrame.Angles(0, math.pi * 0.5, 0), baseStone, Enum.Material.Slate, false)
+	wedge(model, "EntrancePedimentR", V(2.8, 2.4, 5.0), doorCF * CFrame.new(2.4, 14.8, 0) * CFrame.Angles(0, -math.pi * 0.5, 0), baseStone, Enum.Material.Slate, false)
+
+	local barrierPortal = part(
+		model,
+		"ArcaneDoorwayBarrier",
+		V(5.4, 11.0, 0.8),
+		doorCF * CFrame.new(0, 5.5, -0.4),
+		cyanBarrier,
+		Enum.Material.Neon,
+		false
+	)
+	barrierPortal.Transparency = 0.15
+	pointLight(barrierPortal, cyanBarrier, 2.4, 22, false)
+
+	-- Ribbed Conical/Domed Roof with Dormer Vents (CanCollide = false on roof dome)
+	local domeTiers = {
+		{ R = 13.4, H = 2.2, Y = corniceY + 1.8 },
+		{ R = 11.6, H = 2.2, Y = corniceY + 3.8 },
+		{ R = 9.4, H = 2.0, Y = corniceY + 5.6 },
+		{ R = 7.0, H = 1.8, Y = corniceY + 7.2 },
+		{ R = 4.8, H = 1.4, Y = corniceY + 8.5 },
+	}
+	for idx, tier in ipairs(domeTiers) do
+		cylinder(
+			model,
+			"RotundaDomeTier_" .. idx,
+			tier.R,
+			tier.H,
+			centerCF * CFrame.new(0, tier.Y, 0),
+			(idx % 2 == 0) and roofSlate or roofRib,
+			Enum.Material.Slate,
+			false
+		)
+	end
+
+	-- 4 Dormer Vents around the Dome
+	for d = 1, 4 do
+		local dAngle = math.rad((d - 1) * 90 + 45)
+		local dCF = centerCF
+			* CFrame.new(math.cos(dAngle) * 10.5, corniceY + 4.2, math.sin(dAngle) * 10.5)
+			* CFrame.Angles(0, -dAngle + math.pi * 0.5, 0)
+		part(model, "DormerVent_" .. d, V(2.8, 2.8, 2.6), dCF, columnStone, Enum.Material.Slate, false)
+		part(model, "DormerGlow_" .. d, V(1.6, 1.8, 2.8), dCF, purpleLight, Enum.Material.Neon, false)
+	end
+
+	-- Open Oculus at Dome Apex (Radius = 4 studs) venting Purple Arcane Smoke & Energy
+	local oculusY = corniceY + 9.2
+	cylinder(model, "OculusStoneRim", 4.6, 1.1, centerCF * CFrame.new(0, oculusY, 0), columnStone, Enum.Material.Slate, false)
+	local oculusCore = cylinder(
+		model,
+		"OculusArcaneCore",
+		3.8,
+		0.8,
+		centerCF * CFrame.new(0, oculusY + 0.1, 0),
+		purpleLight,
+		Enum.Material.Neon,
+		false
+	)
+
+	-- Interior Purple PointLight at Roof Apex (Range = 32, Brightness = 2.5)
+	pointLight(oculusCore, purpleLight, 2.5, 32, false)
+
+	-- Sculpted Arcane Plume Wisps rising out of the oculus (visible in both Edit & Play modes)
+	for w = 1, 4 do
+		local wy = oculusY + w * 2.2
+		local wr = 3.4 - w * 0.45
+		local wisp = sphere(
+			model,
+			"ArcaneOculusWisp_" .. w,
+			wr * 2,
+			centerCF * CFrame.new(math.sin(w * 1.4) * 0.9, wy, math.cos(w * 1.4) * 0.9),
+			(w % 2 == 0) and purpleLight or purpleDeep,
+			Enum.Material.Neon
+		)
+		wisp.Transparency = 0.35 + w * 0.12
+	end
+
+	local oculusEmitter = Instance.new("ParticleEmitter")
+	oculusEmitter.Name = "ArcaneOculusPlume"
+	oculusEmitter.Texture = "rbxassetid://243660364"
+	oculusEmitter.Color = ColorSequence.new(purpleLight, purpleDeep)
+	oculusEmitter.LightEmission = 0.85
+	oculusEmitter.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 3.0),
+		NumberSequenceKeypoint.new(0.6, 6.2),
+		NumberSequenceKeypoint.new(1, 8.5),
+	})
+	oculusEmitter.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.2),
+		NumberSequenceKeypoint.new(0.6, 0.45),
+		NumberSequenceKeypoint.new(1, 1.0),
+	})
+	oculusEmitter.Lifetime = NumberRange.new(1.8, 3.0)
+	oculusEmitter.Rate = 22
+	oculusEmitter.Speed = NumberRange.new(6, 12)
+	oculusEmitter.SpreadAngle = Vector2.new(22, 22)
+	oculusEmitter.RotSpeed = NumberRange.new(-35, 35)
+	oculusEmitter.Parent = oculusCore
+
+	local interactionPart = finalizeFacilityModel(model, centerCF, V(24, 14, 24), V(0, 4.0, 14.5))
+	return interactionPart
+end
+
+--============================================================================
+-- 2.5 BLACKSMITH FORGE (`BlacksmithForge` — Open-Air Stone Hearth & Anvil)
+--============================================================================
+function Arch.BuildBlacksmith(folder: Instance, centerCF: CFrame): Part
+	local model = Instance.new("Model")
+	model.Name = "Building_Blacksmith"
+	model.Parent = folder
+
+	local stoneDark = Color3.fromRGB(58, 62, 70)
+	local stoneMid = Color3.fromRGB(78, 82, 92)
+	local brickHearth = Color3.fromRGB(92, 54, 48)
+	local ironAnvil = Color3.fromRGB(42, 46, 54)
+	local woodTimber = Color3.fromRGB(104, 70, 42)
+	local coalBlack = Color3.fromRGB(20, 20, 22)
+	local emberOrange = Color3.fromRGB(255, 115, 25)
+
+	-- Stone Work Platform
+	part(
+		model,
+		"ForgeStoneApron",
+		V(22, 0.5, 18),
+		centerCF * CFrame.new(0, 0.25, 0),
+		stoneDark,
+		Enum.Material.Cobblestone,
+		true
+	)
+
+	-- Heavy Stone Hearth & Chimney (Height = 22 studs) backed against the Dividing Wall (-Z of local station CFrame)
+	part(model, "HearthBase", V(11.5, 8.5, 6.8), centerCF * CFrame.new(0, 4.5, -4.8), stoneMid, Enum.Material.Cobblestone, true)
+	part(model, "HearthHood", V(10.0, 4.2, 5.8), centerCF * CFrame.new(0, 10.6, -5.0), stoneDark, Enum.Material.Slate, true)
+	part(model, "ForgeChimney", V(6.2, 10.5, 4.8), centerCF * CFrame.new(0, 17.5, -5.4), stoneMid, Enum.Material.Cobblestone, true)
+	part(model, "ChimneyCrown", V(7.2, 1.4, 5.8), centerCF * CFrame.new(0, 22.8, -5.4), stoneDark, Enum.Material.Slate, false)
+
+	-- Roaring Firebox Opening & Ember Bed
+	part(model, "FireboxBack", V(6.4, 4.6, 2.2), centerCF * CFrame.new(0, 4.4, -2.5), brickHearth, Enum.Material.Brick, false)
+	local emberBed = part(
+		model,
+		"GlowingEmbers",
+		V(5.6, 1.2, 3.2),
+		centerCF * CFrame.new(0, 2.8, -2.2),
+		emberOrange,
+		Enum.Material.Neon,
+		false
+	)
+
+	-- Hearth PointLight: Color = (255, 115, 25), Brightness = 3, Range = 28
+	pointLight(emberBed, emberOrange, 3.0, 28, true)
+
+	local fireEmit = Instance.new("ParticleEmitter")
+	fireEmit.Name = "HearthFlames"
+	fireEmit.Texture = "rbxassetid://243660364"
+	fireEmit.Color = ColorSequence.new(Color3.fromRGB(255, 220, 90), emberOrange)
+	fireEmit.LightEmission = 0.95
+	fireEmit.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 2.2),
+		NumberSequenceKeypoint.new(0.6, 1.4),
+		NumberSequenceKeypoint.new(1, 0.2),
+	})
+	fireEmit.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.15),
+		NumberSequenceKeypoint.new(1, 1.0),
+	})
+	fireEmit.Lifetime = NumberRange.new(0.5, 0.9)
+	fireEmit.Rate = 24
+	fireEmit.Speed = NumberRange.new(3, 6)
+	fireEmit.Acceleration = V(0, 8, 0)
+	fireEmit.Parent = emberBed
+
+	-- Rising Dark Smoke out of the Chimney Top
+	local chimneyFlue = part(
+		model,
+		"ChimneySmokeAnchor",
+		V(3.6, 0.5, 3.0),
+		centerCF * CFrame.new(0, 23.4, -5.4),
+		coalBlack,
+		Enum.Material.Slate,
+		false
+	)
+	local smokeEmit = Instance.new("ParticleEmitter")
+	smokeEmit.Name = "ChimneySmoke"
+	smokeEmit.Texture = "rbxassetid://243660364"
+	smokeEmit.Color = ColorSequence.new(Color3.fromRGB(58, 56, 62), Color3.fromRGB(32, 30, 36))
+	smokeEmit.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 2.4),
+		NumberSequenceKeypoint.new(1, 7.5),
+	})
+	smokeEmit.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.45),
+		NumberSequenceKeypoint.new(0.7, 0.65),
+		NumberSequenceKeypoint.new(1, 1.0),
+	})
+	smokeEmit.Lifetime = NumberRange.new(2.5, 4.0)
+	smokeEmit.Rate = 10
+	smokeEmit.Speed = NumberRange.new(4, 7)
+	smokeEmit.SpreadAngle = Vector2.new(18, 18)
+	smokeEmit.Parent = chimneyFlue
+
+	-- Forecourt: Iron Anvil on Heavy Timber Block + Spark Emitter
+	cylinder(model, "AnvilTimberBlock", 1.6, 2.2, centerCF * CFrame.new(0, 1.35, 3.2), woodTimber, Enum.Material.Wood, true)
+	part(model, "AnvilBase", V(2.4, 0.9, 1.4), centerCF * CFrame.new(0, 2.8, 3.2), ironAnvil, Enum.Material.Metal, true)
+	local anvilTop = part(
+		model,
+		"AnvilFace",
+		V(3.6, 0.9, 1.5),
+		centerCF * CFrame.new(0, 3.6, 3.2),
+		ironAnvil,
+		Enum.Material.Metal,
+		true
+	)
+
+	-- Intermittent Anvil Spark Emitter (Rate = 8, bright yellow/orange tiny particles popping outward)
+	local sparkEmit = Instance.new("ParticleEmitter")
+	sparkEmit.Name = "AnvilSparks"
+	sparkEmit.Texture = "rbxassetid://243660364"
+	sparkEmit.Color = ColorSequence.new(Color3.fromRGB(255, 240, 130), Color3.fromRGB(255, 120, 20))
+	sparkEmit.LightEmission = 1
+	sparkEmit.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.35),
+		NumberSequenceKeypoint.new(1, 0.05),
+	})
+	sparkEmit.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	sparkEmit.Lifetime = NumberRange.new(0.35, 0.65)
+	sparkEmit.Rate = 8
+	sparkEmit.Speed = NumberRange.new(7, 13)
+	sparkEmit.SpreadAngle = Vector2.new(75, 75)
+	sparkEmit.Acceleration = V(0, -28, 0)
+	sparkEmit.Parent = anvilTop
+
+	-- Water Quenching Trough (Left of Anvil)
+	part(model, "QuenchTrough", V(4.8, 2.2, 2.4), centerCF * CFrame.new(-6.2, 1.35, 2.2), stoneDark, Enum.Material.Slate, true)
+	part(
+		model,
+		"QuenchWater",
+		V(4.2, 0.3, 1.8),
+		centerCF * CFrame.new(-6.2, 2.3, 2.2),
+		Color3.fromRGB(48, 128, 195),
+		Enum.Material.Glass,
+		false
+	)
+
+	-- Coal Pile (Material = Slate, Color = (20, 20, 22))
+	sphere(model, "CoalMound1", 3.4, centerCF * CFrame.new(6.8, 1.1, -1.2), coalBlack, Enum.Material.Slate)
+	sphere(model, "CoalMound2", 2.6, centerCF * CFrame.new(8.2, 0.9, 0.4), coalBlack, Enum.Material.Slate)
+	sphere(model, "CoalEmberCore", 1.2, centerCF * CFrame.new(6.4, 1.5, -0.8), emberOrange, Enum.Material.Neon)
+
+	-- Weapon Racks & Barrels
+	addWeaponRack(model, centerCF * CFrame.new(7.5, 0.5, 4.2) * CFrame.Angles(0, math.rad(-25), 0))
+	addBarrel(model, centerCF * CFrame.new(-8.2, 0.5, -2.5), 1.0)
+	addBarrel(model, centerCF * CFrame.new(-9.5, 0.5, 0.2), 0.9)
+
+	local interactionPart = finalizeFacilityModel(model, centerCF, V(14, 4, 12), V(0, 4.2, 5.2))
+	return interactionPart
+end
+
+--============================================================================
+-- 2.6 TRAINING AREA (`TrainingArea` — Fenced Circular Cobblestone Combat Ring)
+--============================================================================
+function Arch.BuildTrainingGrounds(folder: Instance, centerCF: CFrame): Part
+	local model = Instance.new("Model")
+	model.Name = "Building_TrainingGrounds"
+	model.Parent = folder
+
+	local ringCobble = Color3.fromRGB(84, 82, 78)
+	local ringCurb = Color3.fromRGB(56, 60, 68)
+	local fenceWood = Color3.fromRGB(108, 74, 44)
+	local strawColor = Color3.fromRGB(214, 182, 102)
+	local postWood = Color3.fromRGB(88, 58, 34)
+
+	-- Sunken/Bordered Circular Cobblestone Combat Ring (Diameter = 28 studs)
+	cylinder(model, "TrainingRingBorder", 14.8, 0.45, centerCF * CFrame.new(0, 0.22, 0), ringCurb, Enum.Material.Slate, false)
+	cylinder(model, "TrainingRingFloor", 13.8, 0.52, centerCF * CFrame.new(0, 0.26, 0), ringCobble, Enum.Material.Cobblestone, false)
+	cylinder(model, "InnerSparringCircle", 8.5, 0.56, centerCF * CFrame.new(0, 0.28, 0), Color3.fromRGB(98, 94, 88), Enum.Material.Cobblestone, false)
+
+	-- 4 Curved Wooden Split-Rail Fence Segments enclosing the ring (with open entry gaps)
+	local fenceRadius = 14.2
+	for quad = 1, 4 do
+		local baseAngle = math.rad((quad - 1) * 90 + 45)
+		for sub = -1, 1 do
+			local a1 = baseAngle + math.rad(sub * 18 - 9)
+			local a2 = baseAngle + math.rad(sub * 18 + 9)
+			local p1 = V(math.cos(a1) * fenceRadius, 0, math.sin(a1) * fenceRadius)
+			local p2 = V(math.cos(a2) * fenceRadius, 0, math.sin(a2) * fenceRadius)
+			local mid = (p1 + p2) * 0.5
+			local segLen = (p2 - p1).Magnitude
+			local railCF = centerCF * CFrame.lookAt(mid, p2)
+
+			part(model, "FencePost", V(0.65, 3.4, 0.65), centerCF * CFrame.new(p1 + V(0, 1.7, 0)), postWood, Enum.Material.Wood, false)
+			if sub == 1 then
+				part(model, "FencePostEnd", V(0.65, 3.4, 0.65), centerCF * CFrame.new(p2 + V(0, 1.7, 0)), postWood, Enum.Material.Wood, false)
+			end
+			part(model, "SplitRailTop", V(0.35, 0.4, segLen + 0.3), railCF * CFrame.new(0, 2.7, 0), fenceWood, Enum.Material.WoodPlanks, false)
+			part(model, "SplitRailLow", V(0.35, 0.4, segLen + 0.3), railCF * CFrame.new(0, 1.4, 0), fenceWood, Enum.Material.WoodPlanks, false)
+		end
+	end
+
+	-- 4 Wooden T-Posed Straw Training Dummies positioned around the inner perimeter
+	local dummyAngles = { math.rad(35), math.rad(125), math.rad(215), math.rad(305) }
+	for idx, dAngle in ipairs(dummyAngles) do
+		local dPos = V(math.cos(dAngle) * 9.6, 0.5, math.sin(dAngle) * 9.6)
+		local dummyCF = centerCF * CFrame.lookAt(dPos, V(0, 0.5, 0))
+
+		cylinder(model, "DummyBase_" .. idx, 1.3, 0.35, dummyCF * CFrame.new(0, 0.18, 0), postWood, Enum.Material.Wood, false)
+		cylinder(model, "TrainingDummy_" .. idx, 0.4, 5.6, dummyCF * CFrame.new(0, 2.8, 0), postWood, Enum.Material.Wood, false)
+		part(model, "DummyCrossbar_" .. idx, V(3.8, 0.45, 0.45), dummyCF * CFrame.new(0, 4.1, 0), postWood, Enum.Material.Wood, false)
+		cylinder(model, "DummyTorso_" .. idx, 0.95, 2.5, dummyCF * CFrame.new(0, 3.5, 0), strawColor, Enum.Material.Fabric, false)
+		sphere(model, "DummyHead_" .. idx, 1.35, dummyCF * CFrame.new(0, 5.35, 0), strawColor, Enum.Material.Fabric)
+		-- Target band across dummy chest
+		cylinder(model, "DummyTargetBand_" .. idx, 0.98, 0.45, dummyCF * CFrame.new(0, 3.6, 0), Color3.fromRGB(190, 42, 42), Enum.Material.Fabric, false)
+	end
+
+	-- 1 Freestanding Circular Red-and-White Bullseye Target on the East (+Z) Side
+	local targetCF = centerCF * CFrame.new(0, 0.5, 11.8) * CFrame.Angles(math.rad(-10), 0, 0)
+	part(model, "BullseyeLegL", V(0.45, 5.2, 0.45), targetCF * CFrame.new(-1.2, 2.4, 0.4), postWood, Enum.Material.Wood, false)
+	part(model, "BullseyeLegR", V(0.45, 5.2, 0.45), targetCF * CFrame.new(1.2, 2.4, 0.4), postWood, Enum.Material.Wood, false)
+	local discCF = targetCF * CFrame.new(0, 3.6, 0) * CFrame.Angles(0, math.pi * 0.5, 0)
+	cylinder(model, "BullseyeBack", 2.2, 0.35, discCF, strawColor, Enum.Material.Wood, false)
+	cylinder(model, "BullseyeRedOuter", 1.9, 0.40, discCF, Color3.fromRGB(205, 40, 40), Enum.Material.SmoothPlastic, false)
+	cylinder(model, "BullseyeWhiteMid", 1.3, 0.44, discCF, Color3.fromRGB(240, 240, 240), Enum.Material.SmoothPlastic, false)
+	cylinder(model, "BullseyeRedCenter", 0.65, 0.48, discCF, Color3.fromRGB(215, 35, 35), Enum.Material.SmoothPlastic, false)
+
+	-- Weapon Racks along the South-West edge
+	addWeaponRack(model, centerCF * CFrame.new(-10.5, 0.4, -7.5) * CFrame.Angles(0, math.rad(45), 0))
+	addWeaponRack(model, centerCF * CFrame.new(-12.2, 0.4, -2.0) * CFrame.Angles(0, math.rad(75), 0))
+
+	-- Warm corner torch post for evening visibility
+	local torchPost = part(model, "ArenaTorchPost", V(0.7, 7.5, 0.7), centerCF * CFrame.new(11.5, 3.75, -8.5), postWood, Enum.Material.Wood, false)
+	local flame = sphere(model, "ArenaTorchFlame", 1.1, torchPost.CFrame * CFrame.new(0, 4.0, 0), Color3.fromRGB(255, 165, 65), Enum.Material.Neon)
+	pointLight(flame, Color3.fromRGB(255, 165, 65), 1.8, 22, false)
+
+	local interactionPart = finalizeFacilityModel(model, centerCF, V(4, 1.0, 4), V(0, 3.8, -11.5))
+	return interactionPart
+end
+
+--============================================================================
+-- 2.7 GUARDPOST OUTSKIRTS (`GuardpostOutskirts` — Palisade Watch & Campfire)
+--============================================================================
+function Arch.BuildGuardPost(folder: Instance, centerCF: CFrame): Part
+	local model = Instance.new("Model")
+	model.Name = "Building_GuardPost"
+	model.Parent = folder
+
+	local timberLog = Color3.fromRGB(94, 62, 36)
+	local darkTimber = Color3.fromRGB(68, 44, 26)
+	local stoneRing = Color3.fromRGB(82, 86, 94)
+	local fireWarm = Color3.fromRGB(255, 145, 50)
+
+	-- Timber Palisade Watch-Post with Slatted Wooden Roof
+	local towerCF = centerCF * CFrame.new(8.5, 0, -3.5)
+	part(model, "WatchBaseDeck", V(11.0, 1.2, 11.0), towerCF * CFrame.new(0, 0.6, 0), stoneRing, Enum.Material.Cobblestone, true)
+
+	-- 4 Corner Log Pillars & Elevated Watch Deck
+	for _, sx in ipairs({ -4.4, 4.4 }) do
+		for _, sz in ipairs({ -4.4, 4.4 }) do
+			cylinder(model, "WatchLogPillar", 0.65, 13.5, towerCF * CFrame.new(sx, 6.75, sz), darkTimber, Enum.Material.Wood, true)
+		end
+	end
+	part(model, "WatchUpperPlatform", V(10.6, 0.7, 10.6), towerCF * CFrame.new(0, 7.6, 0), timberLog, Enum.Material.WoodPlanks, true)
+
+	-- Palisade Log Parapet Rails
+	for _, side in ipairs({
+		{ Size = V(10.6, 2.6, 0.6), Offset = V(0, 9.2, -4.8) },
+		{ Size = V(10.6, 2.6, 0.6), Offset = V(0, 9.2, 4.8) },
+		{ Size = V(0.6, 2.6, 10.6), Offset = V(-4.8, 9.2, 0) },
+		{ Size = V(0.6, 2.6, 10.6), Offset = V(4.8, 9.2, 0) },
+	}) do
+		part(model, "PalisadeRail", side.Size, towerCF * CFrame.new(side.Offset), timberLog, Enum.Material.WoodPlanks, false)
+	end
+
+	-- Slatted Wooden Gable Roof
+	for s = -3, 3 do
+		part(
+			model,
+			"SlattedRoofPlank_" .. (s + 4),
+			V(12.2, 0.4, 1.55),
+			towerCF * CFrame.new(0, 14.2 - math.abs(s) * 0.35, s * 1.65) * CFrame.Angles(math.rad(s * 5), 0, 0),
+			(s % 2 == 0) and timberLog or darkTimber,
+			Enum.Material.WoodPlanks,
+			false
+		)
+	end
+
+	-- Palisade Stakeholder Fence flanking the Watch-Post
+	for p = 1, 7 do
+		local px = -14.5 + (p - 1) * 2.1
+		cylinder(model, "PalisadeStake_" .. p, 0.55, 6.2 + (p % 2) * 0.6, centerCF * CFrame.new(px, 3.1, -8.5), timberLog, Enum.Material.Wood, true)
+	end
+
+	-- Stone-Ringed Campfire & Log Seating
+	local fireCenter = centerCF * CFrame.new(-4.5, 0, 2.5)
+	for r = 1, 10 do
+		local a = ((r - 1) / 10) * math.pi * 2
+		part(
+			model,
+			"CampfireStone_" .. r,
+			V(1.4, 0.9, 1.1),
+			fireCenter * CFrame.new(math.cos(a) * 2.6, 0.45, math.sin(a) * 2.6) * CFrame.Angles(0, -a, 0),
+			stoneRing,
+			Enum.Material.Slate,
+			false
+		)
+	end
+	for l = 1, 3 do
+		local a = math.rad(l * 60)
+		cylinder(
+			model,
+			"CampfireLog_" .. l,
+			0.38,
+			3.8,
+			fireCenter * CFrame.new(0, 0.5, 0) * CFrame.Angles(math.rad(78), a, 0),
+			darkTimber,
+			Enum.Material.Wood,
+			false
+		)
+	end
+
+	local fireCore = sphere(model, "CampfireFlameCore", 1.8, fireCenter * CFrame.new(0, 1.1, 0), fireWarm, Enum.Material.Neon)
+	pointLight(fireCore, fireWarm, 2.5, 24, true)
+
+	local campFireEmit = Instance.new("ParticleEmitter")
+	campFireEmit.Name = "CampfireFlames"
+	campFireEmit.Texture = "rbxassetid://243660364"
+	campFireEmit.Color = ColorSequence.new(Color3.fromRGB(255, 225, 110), fireWarm)
+	campFireEmit.LightEmission = 0.95
+	campFireEmit.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 1.6),
+		NumberSequenceKeypoint.new(1, 0.2),
+	})
+	campFireEmit.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.1),
+		NumberSequenceKeypoint.new(1, 1.0),
+	})
+	campFireEmit.Lifetime = NumberRange.new(0.6, 1.1)
+	campFireEmit.Rate = 18
+	campFireEmit.Speed = NumberRange.new(2.5, 5.0)
+	campFireEmit.Acceleration = V(0, 6, 0)
+	campFireEmit.Parent = fireCore
+
+	-- Log Seating Benches around the Campfire
+	for _, bench in ipairs({
+		{ Offset = V(-5.2, 0.65, 0), Yaw = 90 },
+		{ Offset = V(0, 0.65, 5.2), Yaw = 0 },
+	}) do
+		local benchCF = fireCenter * CFrame.new(bench.Offset) * CFrame.Angles(0, math.rad(bench.Yaw), 0)
+		part(model, "LogBenchSeat", V(5.2, 1.1, 1.3), benchCF, timberLog, Enum.Material.Wood, false)
+	end
+
+	local interactionPart = finalizeFacilityModel(model, centerCF, V(10, 2.0, 10), V(0, 3.8, 3.5))
+	return interactionPart
+end
+
+--============================================================================
+-- 2.8 COMMAND POST (War Banner & Architect's Table for Squad & Fortress Tree)
+--============================================================================
+function Arch.BuildCommandPost(
+	folder: Instance,
+	bannerCF: CFrame,
+	tableCF: CFrame
+): { SquadBanner: Part, ArchitectTable: Part }
+	local model = Instance.new("Model")
+	model.Name = "Building_CommandPost"
+	model.Parent = folder
+
+	local stoneBase = Color3.fromRGB(64, 68, 78)
+	local goldTrim = Color3.fromRGB(235, 190, 68)
+	local crimsonFabric = Color3.fromRGB(155, 28, 34)
+	local woodOak = Color3.fromRGB(98, 66, 40)
+
+	-- 1. War Banner (`Facility_SquadManagement`)
+	cylinder(model, "WarBannerPedestal", 3.6, 1.2, bannerCF * CFrame.new(0, 0.6, 0), stoneBase, Enum.Material.Slate, true)
+	local pole = cylinder(model, "WarBannerMast", 0.35, 13.5, bannerCF * CFrame.new(0, 7.2, 0), goldTrim, Enum.Material.Metal, true)
+	part(model, "WarBannerCrossbar", V(5.2, 0.35, 0.35), bannerCF * CFrame.new(0, 12.6, 0), goldTrim, Enum.Material.Metal, false)
+	local cloth = part(
+		model,
+		"WarBannerCloth",
+		V(4.2, 8.2, 0.25),
+		bannerCF * CFrame.new(0, 8.2, 0),
+		crimsonFabric,
+		Enum.Material.Fabric,
+		false
+	)
+	part(model, "WarBannerCrest", V(2.2, 5.4, 0.32), bannerCF * CFrame.new(0, 8.4, 0), goldTrim, Enum.Material.Neon, false)
+	pointLight(cloth, goldTrim, 1.4, 16, false)
+
+	local bannerAnchor = part(model, "SquadBannerAnchor", V(2, 2, 2), bannerCF * CFrame.new(0, 3.8, 0), stoneBase, Enum.Material.SmoothPlastic, false)
+	bannerAnchor.Transparency = 1
+	model.PrimaryPart = pole
+
+	-- 2. Architect's Table (`Facility_ArchitectTable` — Fortress Tree)
+	cylinder(model, "ArchitectDais", 5.2, 0.8, tableCF * CFrame.new(0, 0.4, 0), stoneBase, Enum.Material.Slate, true)
+	part(model, "ArchitectTablePedestal", V(5.6, 2.8, 3.8), tableCF * CFrame.new(0, 2.0, 0), woodOak, Enum.Material.Wood, true)
+	local tableTop = part(model, "ArchitectTableTop", V(6.6, 0.5, 4.6), tableCF * CFrame.new(0, 3.6, 0), stoneBase, Enum.Material.Marble, true)
+	part(
+		model,
+		"BlueprintMap",
+		V(5.2, 0.12, 3.4),
+		tableCF * CFrame.new(0, 3.9, 0),
+		Color3.fromRGB(56, 189, 248),
+		Enum.Material.Neon,
+		false
+	).Transparency = 0.25
+	pointLight(tableTop, Color3.fromRGB(56, 189, 248), 1.5, 18, false)
+
+	local tableAnchor = part(model, "ArchitectTableAnchor", V(2, 2, 2), tableCF * CFrame.new(0, 3.8, 0), stoneBase, Enum.Material.SmoothPlastic, false)
+	tableAnchor.Transparency = 1
+
+	return {
+		SquadBanner = bannerAnchor,
+		ArchitectTable = tableAnchor,
+	}
+end
+
+--============================================================================
+-- 2.9 REGISTER PREFABS IN `ReplicatedStorage.Assets.PlotFacilities`
+--============================================================================
+function Arch.EnsureFacilityPrefabs(): Folder
+	local assetsFolder = ReplicatedStorage:FindFirstChild("Assets")
+	if not assetsFolder then
+		local f = Instance.new("Folder")
+		f.Name = "Assets"
+		f.Parent = ReplicatedStorage
+		assetsFolder = f
+	end
+
+	local existing = assetsFolder:FindFirstChild("PlotFacilities")
+	if existing and existing:GetAttribute("PrefabVersion") == 3 then
+		return existing :: Folder
+	end
+	if existing then
+		existing:Destroy()
+	end
+
+	local prefabs = Instance.new("Folder")
+	prefabs.Name = "PlotFacilities"
+	prefabs:SetAttribute("PrefabVersion", 3)
+	prefabs.Parent = assetsFolder
+
+	local tempHolder = Instance.new("Folder")
+
+	Arch.BuildSummoning(tempHolder, CFrame.identity)
+	local summonModel = tempHolder:FindFirstChild("Building_Summoning")
+	if summonModel then
+		summonModel.Name = "SummoningPortal"
+		summonModel.Parent = prefabs
+	end
+
+	Arch.BuildMarket(tempHolder, CFrame.identity)
+	local marketModel = tempHolder:FindFirstChild("Building_Market")
+	if marketModel then
+		marketModel.Name = "MarketCluster"
+		marketModel.Parent = prefabs
+	end
+
+	Arch.BuildThePit(tempHolder, CFrame.identity)
+	local pitModel = tempHolder:FindFirstChild("Building_ThePit")
+	if pitModel then
+		pitModel.Name = "SynthesisChamber"
+		pitModel.Parent = prefabs
+	end
+
+	Arch.BuildBlacksmith(tempHolder, CFrame.identity)
+	local forgeModel = tempHolder:FindFirstChild("Building_Blacksmith")
+	if forgeModel then
+		forgeModel.Name = "BlacksmithForge"
+		forgeModel.Parent = prefabs
+	end
+
+	Arch.BuildTrainingGrounds(tempHolder, CFrame.identity)
+	local trainingModel = tempHolder:FindFirstChild("Building_TrainingGrounds")
+	if trainingModel then
+		trainingModel.Name = "TrainingArea"
+		trainingModel.Parent = prefabs
+	end
+
+	Arch.BuildGuardPost(tempHolder, CFrame.identity)
+	local gpModel = tempHolder:FindFirstChild("Building_GuardPost")
+	if gpModel then
+		gpModel.Name = "GuardpostOutskirts"
+		gpModel.Parent = prefabs
+	end
+
+	tempHolder:Destroy()
+	return prefabs
+end
+
+return Arch

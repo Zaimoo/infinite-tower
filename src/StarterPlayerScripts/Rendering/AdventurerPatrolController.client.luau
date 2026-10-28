@@ -45,13 +45,16 @@ local function getPlotOrigin(): CFrame?
 	if not plots then return nil end
 	for _, plot in ipairs(plots:GetChildren()) do
 		if plot:GetAttribute("OwnerUserId") == LocalPlayer.UserId then
+			local island = plot:FindFirstChild("FloatingFortressIsland")
+			local top = island and island:FindFirstChild("IslandTopSurface")
+			if top and top:IsA("BasePart") then
+				local surfaceY = top.Position.Y + top.Size.Y / 2
+				return CFrame.new(top.Position.X, surfaceY, top.Position.Z) * top.CFrame.Rotation
+			end
 			local spawn = plot:FindFirstChild("PlotSpawn")
 			if spawn and spawn:IsA("BasePart") then
-				local island = plot:FindFirstChild("FloatingFortressIsland")
-				local top = island and island:FindFirstChild("IslandTopSurface")
-				local surfaceY = if top and top:IsA("BasePart") then top.Position.Y + top.Size.Y / 2
-					else spawn.Position.Y - spawn.Size.Y / 2
-				return CFrame.new(spawn.Position.X, surfaceY, spawn.Position.Z) * spawn.CFrame.Rotation
+				local surfaceY = spawn.Position.Y - spawn.Size.Y / 2
+				return CFrame.new(spawn.Position.X, surfaceY, spawn.Position.Z) * spawn.CFrame.Rotation * CFrame.new(0, 0, 80)
 			end
 		end
 	end
@@ -100,7 +103,7 @@ local function createAdventurerRig(hero: any, slot: number, startPos: Vector3, e
 	lbl.Font = Enum.Font.GothamBold
 	lbl.TextSize = 12
 	lbl.TextColor3 = Color3.fromRGB(245, 225, 140)
-	lbl.Text = string.format("⚔️ %s\n<font color=\"#82CD5F\">[OUTSKIRTS ADVENTURER]</font>", hero.DisplayName)
+	lbl.Text = string.format("%s\n<font color=\"#82CD5F\">[OUTSKIRTS ADVENTURER]</font>", hero.DisplayName)
 	lbl.RichText = true
 	lbl.Parent = bb
 

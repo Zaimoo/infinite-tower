@@ -59,14 +59,28 @@ end)
 ProximityPromptService.PromptHidden:Connect(function(prompt: ProximityPrompt)
 	visibleInteractionPrompts[prompt] = nil
 end)
+_G.IsFacilityPromptVisible = function(): boolean
+	return next(visibleInteractionPrompts) ~= nil
+end
 
--- 1. Keyboard Hotkeys: [R] Drop Carried Loot
+-- Phase 5 §2.1: whistles share one module with the HUD's Right Rail (cooldowns, Tower-floor and duel gating).
+local Whistles = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Hud"):WaitForChild("Whistles"))
+
+-- 1. Keyboard Hotkeys: [Q] Overdrive, [E] Recall (yields to visible ProximityPrompts), [R] Drop Carried Loot
 UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: boolean)
 	if gameProcessed or (_G.IsAnyMasterModalOpen and _G.IsAnyMasterModalOpen()) or (_G.IsTowerSelectorOpen and _G.IsTowerSelectorOpen()) then
 		return
 	end
 
-	if input.KeyCode == Enum.KeyCode.R then
+	if input.KeyCode == Enum.KeyCode.Q then
+		Whistles.Fire("Overdrive")
+	elseif input.KeyCode == Enum.KeyCode.E then
+		-- Yield [E] to visible ProximityPrompts that use it (e.g. the Synthesis Chamber)
+		if next(visibleInteractionPrompts) ~= nil then
+			return
+		end
+		Whistles.Fire("Recall")
+	elseif input.KeyCode == Enum.KeyCode.R then
 		local char = LocalPlayer.Character
 		if char and (char:GetAttribute("CarryingLoot") == true or char:GetAttribute("CarryingRelic") ~= nil) then
 			DropCarriedItemRemote:FireServer()
@@ -190,9 +204,5 @@ ProximityPromptService.PromptTriggered:Connect(function(prompt: ProximityPrompt,
 		if _G.OpenMasterModal then
 			_G.OpenMasterModal("BLACKSMITH")
 		end
-	elseif name == "InfirmaryInteractPrompt" then
-		task.spawn(function()
-			AssignHeroRoleFunc:InvokeServer("AUTO_SWAP_EXHAUSTED", "")
-		end)
 	end
 end)

@@ -2,7 +2,7 @@
 
 A Roblox squad-command action RPG with extraction and fortress progression, inspired by *Pick Me Up, Infinite Gacha*. The player is a **Master** who commands a squad of up to 5 gacha heroes. Squads climb a 50-floor Infinite Tower split into 10 biomes, with a Biome Boss every 5 floors. Between runs, the player develops a private Fortress Plot. Each server holds 6 players, one plot each.
 
-`GAME_DESIGN.MD` is the source of truth for design. Read the relevant section before changing a system, and update it in the same change when behaviour changes.
+`docs/GAME_DESIGN.MD` is the source of truth for design. Read the relevant section before changing a system, and update it in the same change when behaviour changes.
 
 ## Roblox skills
 
@@ -13,7 +13,7 @@ Also follow `AGENTS.md`. Before working on a topic, use the matching `roblox-*` 
 - `src/ReplicatedStorage/Shared/Config/`: authoritative data tables, including `HeroCatalog`, `ArtifactCatalog`, `ArchetypeCombatSkills`, `StatBalance`, `FacilityConfig`, `TowerFloorConfig` and `MobCatalog`.
 - `src/ReplicatedStorage/Shared/Util/`: shared logic, including `StatFormulas`, `WeaponPromotion`, `TowerProtocol` and `AttackTimeline`.
 - `src/ReplicatedStorage/Assets/`: procedural builders (`WeaponModelBuilder`, `TowerEnemyRigs`), and `ArtPackVisuals` (template attachment and a generic animator for non-hero rigs).
-- `src/ReplicatedStorage/Assets/HeroRig/`: code-authored hero rigs. The pieces are `HeroRigSpec` (skeleton, sockets, axis convention), `HeroCostumes` (every hero's look as data), `HeroRegistry` (builds the templates), `HeroSockets` and `HeroLoadout` (weapons), and `HeroClips` and `HeroAnimator` (client animation). Contract and history: `hero-rig-rebuild-plan.md`.
+- `src/ReplicatedStorage/Assets/HeroRig/`: code-authored hero rigs. The pieces are `HeroRigSpec` (skeleton, sockets, axis convention), `HeroCostumes` (every hero's look as data), `HeroRegistry` (builds the templates), `HeroSockets` and `HeroLoadout` (weapons), and `HeroClips` and `HeroAnimator` (client animation). Contract and history: `docs/hero-rig-rebuild-plan.md`.
 - `src/ServerScriptService/Core/`: `DataManager` (profiles, artifacts, equip/craft/summon remotes, save migration), plus tower floors, traversal, the Pit and offline rewards.
 - `src/ServerScriptService/Combat/`: `CombatSimulation` (the 5 Hz server-authoritative sim) and `TowerEncounterRuntime`.
 - `src/StarterPlayerScripts/`: `UI` (Forge, HUD, Squad, Facility and Tower controllers), `Rendering` (`EntityRenderer`, which interpolates at 60 FPS) and `Input`.
@@ -43,7 +43,7 @@ Also follow `AGENTS.md`. Before working on a topic, use the matching `roblox-*` 
 
   There are no rings and no separate shields.
 - **Artifact rarity** is inherent (16 tiers, Common to Origin) and never upgrades. Star promotion (1★–7★, multipliers 1.0 to 16.0×) is the only upgrade, and it consumes donors of the same template. Formula: `WeaponDamageMultiplier = 1 + Power/40`. The artifact banner costs 160 Gems for one pull or 1,600 for ten. It has a 50-pull pity and guarantees at least one Rare in every ten-pull.
-- **Fortress facilities:** the Infirmary/Barracks handles stamina, rest and coma recovery. The Guard Post makes AFK/offline Gold, the Market multiplies tower loot, and the Training Grounds multiply squad combat power.
+- **Fortress facilities:** support facilities are unlocked and levelled in the Fortress Tree (which also opens squad slots 2–5). There is no Infirmary; benched heroes recover stamina passively. The Guard Post makes AFK/offline Gold, the Market multiplies tower loot, and the Training Grounds multiply squad combat power.
 - **Contested loot:** loot drops physically and has to be carried and banked. Stealing it triggers a 3-minute retaliation window for PvP at 25% damage. Defeated heroes enter `COMA`.
 
 ## Testing

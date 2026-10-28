@@ -20,7 +20,7 @@ local remotes: any
 local function remoteFolder(): any
 	local root=RS:WaitForChild("Remotes")
 	local f=root:FindFirstChild("TowerRemotes") or Instance.new("Folder");f.Name="TowerRemotes";f.Parent=root
-	for _,name in {"Request","Response","Context","Ready","Presence","TowerEntityState","TowerAction","TowerSnapshot","OpenSelector","FloorProgress","SquadDefeated","SquadStatus"} do
+	for _,name in {"Request","Response","Context","Ready","Presence","TowerEntityState","TowerAction","TowerSnapshot","OpenSelector","FloorProgress","SquadDefeated","SquadStatus","LootContested","InitiateRetaliation","DuelState"} do
 		if not f:FindFirstChild(name) then local e=Instance.new(name=="TowerSnapshot" and "UnreliableRemoteEvent" or "RemoteEvent");e.Name=name;e.Parent=f end
 	end
 	return f
@@ -225,6 +225,16 @@ function Service.Request(player: Player,r: any)
 	if (r.Action=='VISIT' or r.Action=='ASSIGN') and id > 0 then
 		local bypass = RunService:IsStudio() and workspace:GetAttribute('UnlockAllFloors') == true
 		if not bypass then
+			-- Phase 4 onboarding: the Tower, and Floor 5 onward, open through the quest chain.
+			local dm=_G.DataManager
+			if dm and dm.IsUnlocked then
+				local gate=if not dm.IsUnlocked(player,'Tower') then 'Tower' elseif id>=5 and not dm.IsUnlocked(player,'TowerFloor5') then 'TowerFloor5' else nil
+				if gate then
+					dm.SendToast(player,'🔒 '..dm.LockedMessage(gate),'WARN')
+					reject('SYSTEM_LOCKED')
+					return
+				end
+			end
 			local maxAllowed = math.max(1, profile.MaxFloorReached or ((profile.HighestClearedFloor or 0) + 1))
 			if id > maxAllowed then
 				reject('FLOOR_LOCKED')

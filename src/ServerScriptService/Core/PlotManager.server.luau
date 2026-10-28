@@ -8,11 +8,10 @@ local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
-local HeroCatalog = require(Shared:WaitForChild("Config"):WaitForChild("HeroCatalog"))
 
 local PlotsFolder = Workspace:WaitForChild("WaitingRoomPlots")
 
-local ArtPackVisuals = require(ReplicatedStorage.Assets:WaitForChild("ArtPackVisuals"))
+local FacilityPresence = require(script.Parent:WaitForChild("FacilityPresence"))
 local PlotManager = {}
 local AssignedPlots: { [number]: Player? } = {} -- [1..6] = Player
 local PlayerToPlotIndex: { [Player]: number } = {}
@@ -76,51 +75,6 @@ function PlotManager.IsPlayerPlotOwner(player: Player, targetPlot: any?): boolea
 	return true
 end
 
-local function createWorkerAvatarPart(parent: Instance, hero: any, cframe: CFrame, isSleepingInBed: boolean?)
-	local seed = HeroCatalog.Seeds[hero.TemplateId]
-	local color = seed and seed.Color or Color3.fromRGB(110, 185, 255)
-
-	local model = Instance.new("Model")
-	model.Name = "PlotWorker_" .. tostring(hero.UUID)
-	model.Parent = parent
-
-	local torso = Instance.new("Part")
-	torso.Name = "Torso"
-	torso.Size = Vector3.new(2.0, 2.6, 1.1)
-	torso.Color = color
-	torso.Material = Enum.Material.SmoothPlastic
-	torso.Anchored = true
-	torso.CanCollide = false
-	if isSleepingInBed then
-		torso.CFrame = cframe * CFrame.new(0, 1.2, 0) * CFrame.Angles(math.rad(90), 0, 0)
-	else
-		torso.CFrame = cframe * CFrame.new(0, 2.3, 0)
-	end
-	torso.Parent = model
-
-	local head = Instance.new("Part")
-	head.Name = "Head"
-	head.Shape = Enum.PartType.Ball
-	head.Size = Vector3.new(1.4, 1.4, 1.4)
-	head.Color = Color3.fromRGB(245, 215, 190)
-	head.Material = Enum.Material.SmoothPlastic
-	head.Anchored = true
-	head.CanCollide = false
-	head.CFrame = torso.CFrame * CFrame.new(0, 2.0, 0)
-	head.Parent = model
-
-	local ground = cframe
-	if isSleepingInBed then ground=cframe*CFrame.new(0,1.2,0)*CFrame.Angles(math.rad(90),0,0)*CFrame.new(0,-1.9,0) end
-	local art=ArtPackVisuals.AttachAt(model,hero.TemplateId or "hero_han",ground,isSleepingInBed and .72 or 1)
-	if art then
-		torso.Transparency=1;head.Transparency=1
-		-- Hero rigs are unanchored assemblies; anchor the root so the worker stays on its bed
-		-- (joints keep the rest pose, since server-side Motor6D poses do not replicate).
-		local root=art:FindFirstChild("HumanoidRootPart")
-		if root and root:IsA("BasePart") then root.Anchored=true end
-	end
-end
-
 function PlotManager.RefreshPlotVisuals(player: Player)
 	local dm = getDataManager()
 	local profile = dm.GetProfile(player)
@@ -129,6 +83,15 @@ function PlotManager.RefreshPlotVisuals(player: Player)
 		return
 	end
 
+	-- Support facilities stand on the plot only once built in the Fortress Tree (Phase 4 §5.6).
+	local facilities = profile.Facilities or {}
+	local levels: { [string]: number } = {}
+	for _, name in { "Market", "TrainingGrounds", "GodsBlessing" } do
+		local data = facilities[name]
+		levels[name] = if data and type(data.Level) == "number" then data.Level else 0
+	end
+	FacilityPresence.Apply(plotModel, levels)
+
 	local workersContainer = plotModel:FindFirstChild("ActivePlotWorkers")
 	if not workersContainer then
 		workersContainer = Instance.new("Folder")
@@ -136,22 +99,13 @@ function PlotManager.RefreshPlotVisuals(player: Player)
 		workersContainer.Parent = plotModel
 	end
 	workersContainer:ClearAllChildren()
+end
 
-	-- Render Infirmary Healers & Resting/Comatose Heroes on Recuperation Beds in Building_Infirmary
-	local pb = plotModel:FindFirstChild("PlotBuildings")
-	local infModel = pb and pb:FindFirstChild("Building_Infirmary")
-	if infModel then
-		local bedIdx = 1
-		for _, hero in pairs(profile.Heroes) do
-			if hero.Assignment == "FACILITY_INFIRMARY" and bedIdx <= 5 then
-				local bedPart = (infModel:FindFirstChild("Mattress_" .. tostring(bedIdx))
-					or infModel:FindFirstChild("BedFrame_" .. tostring(bedIdx))) :: BasePart?
-				if bedPart then
-					createWorkerAvatarPart(workersContainer, hero, bedPart.CFrame, true)
-					bedIdx += 1
-				end
-			end
-		end
+-- Lantern burst on the God's Blessing angel after a lucky summon.
+function PlotManager.PulseBlessing(player: Player)
+	local plotModel = PlotManager.GetPlayerPlotModel(player)
+	if plotModel then
+		FacilityPresence.Pulse(plotModel)
 	end
 end
 
@@ -226,6 +180,14 @@ local function initializePlotModel(plotModel: Model)
 	end
 
 	setupPlotGateBarrier(plotModel)
+
+	-- The fountain is placed by the island builder, possibly after the plot's facilities were applied.
+	plotModel.ChildAdded:Connect(function(child)
+		if child.Name == "PlazaFountain" then
+			task.defer(FacilityPresence.Reapply, plotModel)
+		end
+	end)
+	FacilityPresence.Reapply(plotModel)
 end
 
 -- Initialize all current and future plots
@@ -316,6 +278,7 @@ Players.PlayerRemoving:Connect(function(player: Player)
 			if workers then
 				workers:ClearAllChildren()
 			end
+			FacilityPresence.Reset(plotModel)
 		end
 	end
 end)

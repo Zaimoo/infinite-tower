@@ -21,6 +21,8 @@ local TowerFloorConfig = require(Shared:WaitForChild("Config"):WaitForChild("Tow
 local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormulas"))
 local GothicBoxStyle = require(Shared:WaitForChild("Util"):WaitForChild("GothicBoxStyle"))
 local GothicVectorIcons = require(Shared:WaitForChild("Util"):WaitForChild("GothicVectorIcons"))
+local GildedGrimoire = require(Shared:WaitForChild("Util"):WaitForChild("GildedGrimoire"))
+local GrimoireIcons = require(Shared:WaitForChild("Util"):WaitForChild("GrimoireIcons"))
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local CombatRemotes = Remotes:WaitForChild("CombatRemotes")
@@ -31,7 +33,6 @@ local SyndicateRemotes = Remotes:WaitForChild("SyndicateRemotes")
 local WhistleCommandRemote = CombatRemotes:WaitForChild("WhistleCommand") :: RemoteEvent
 
 local FocusTargetRemote = CombatRemotes:WaitForChild("FocusTarget") :: RemoteEvent
-local LootStolenAlertRemote = CombatRemotes:WaitForChild("LootStolenAlert") :: RemoteEvent
 local SquadWipeStateRemote = CombatRemotes:WaitForChild("SquadWipeState") :: RemoteEvent
 local DropCarriedItemRemote = CombatRemotes:WaitForChild("DropCarriedItem") :: RemoteEvent
 local CarriedLootSyncRemote = CombatRemotes:WaitForChild("CarriedLootSync") :: RemoteEvent
@@ -80,6 +81,24 @@ local LastEClock = -99
 --============================================================================
 -- UI BUILDER HELPERS
 --============================================================================
+
+-- Gilded Grimoire: no emoji in the UI. Server messages may still carry them, so drop emoji
+-- code points (keeping ★ and the ✓ ✕ ✗ marks) before showing the text.
+local function stripEmoji(text: string): string
+	local ok, parts = pcall(function()
+		local out = {}
+		for _, c in utf8.codes(text) do
+			local emoji = (c >= 0x1F000 and c <= 0x1FAFF) or (c >= 0x2300 and c <= 0x23FF) or c == 0xFE0F or c == 0x200D
+				or (c >= 0x2600 and c <= 0x27BF and c ~= 0x2605 and c ~= 0x2713 and c ~= 0x2715 and c ~= 0x2717)
+			if not emoji then
+				table.insert(out, utf8.char(c))
+			end
+		end
+		return out
+	end)
+	if not ok then return text end -- not valid UTF-8: show it unchanged
+	return (string.gsub(table.concat(parts), "^%s+", ""))
+end
 
 local function makeFrame(props: { [string]: any }): Frame
 	local f = Instance.new("Frame")
@@ -187,7 +206,12 @@ local hudGui = Instance.new("ScreenGui")
 hudGui.Name = "MasterHUDScreenGui"
 hudGui.ResetOnSpawn = false
 hudGui.IgnoreGuiInset = true
+-- Phase 5: building screens live here and must draw over the React HUD zones (DisplayOrder 1)
+-- but under the React overlay (DisplayOrder 10).
+hudGui.DisplayOrder = 5
 hudGui.Parent = PlayerGui
+-- Gilded Grimoire: every legacy Gotham label in the HUD (alerts, banners) uses the theme fonts.
+GildedGrimoire.Watch(hudGui)
 
 -- Top Bar Container
 local topBar = makeFrame({
@@ -250,7 +274,8 @@ SystemToastEvent.OnClientEvent:Connect(function(msg: string, colorType: string)
 	toastCounter += 1
 	local myId = toastCounter
 	toastBanner.Visible = true
-	toastText.Text = msg
+	-- Gilded Grimoire: no emoji in the UI (server messages may still carry them).
+	toastText.Text = stripEmoji(msg)
 	if colorType == "WARN" then
 		toastText.TextColor3 = Color3.fromRGB(255, 105, 105)
 	elseif colorType == "SUCCESS" then
@@ -282,51 +307,72 @@ local lootStolenBanner = makeFrame({
 local lootStolenText = makeLabel({
 	Size = UDim2.new(0.66, 0, 0.9, 0),
 	Position = UDim2.new(0.02, 0, 0.05, 0),
-	Text = "🚨 LOOT STOLEN!",
+	Text = "LOOT STOLEN!",
 	TextColor3 = Color3.fromRGB(255, 180, 180),
 	TextSize = 13,
 	TextScaled = false,
 	Parent = lootStolenBanner,
 })
 
-local currentThiefUserId = 0
+-- The banner tracks the newest contested drop; it stays up with a countdown for the whole
+-- retaliation window, and the server clears it when the drop is recovered, duelled or gone.
+local currentContest: any = nil
 local retaliateBtn = makeButton({
 	Size = UDim2.new(0.30, 0, 0.8, 0),
 	Position = UDim2.new(0.68, 0, 0.1, 0),
 	BackgroundColor3 = Color3.fromRGB(220, 35, 45),
-	Text = "⚔️ RETALIATE",
+	Text = "RETALIATE",
 	Corner = 6,
 	Parent = lootStolenBanner,
 	OnClick = function()
-		if currentThiefUserId ~= 0 and _G.ClientCombatState and _G.ClientCombatState.Metadata then
-			local foundNetId = nil
-			for nId, meta in pairs(_G.ClientCombatState.Metadata) do
-				if meta.IsHero and meta.OwnerUserId == currentThiefUserId then
-					foundNetId = nId
-					break
-				end
-			end
-			if foundNetId then
-				FocusTargetRemote:FireServer(foundNetId)
-				lootStolenBanner.Visible = false
-			end
+		local remote = TowerRemotes:FindFirstChild("InitiateRetaliation")
+		if currentContest and remote and remote:IsA("RemoteEvent") then
+			remote:FireServer(currentContest.DropId)
 		end
 	end,
 })
 
-local lootAlertCounter = 0
-LootStolenAlertRemote.OnClientEvent:Connect(function(thiefUserId: number, thiefName: string, lootType: string, amount: number)
-	currentThiefUserId = thiefUserId
-	lootAlertCounter += 1
-	local myAlertId = lootAlertCounter
-	lootStolenText.Text = string.format("🚨 %s STOLE %d %s!", string.upper(thiefName), amount, lootType)
+local function refreshContestBanner()
+	local contest = currentContest
+	if not contest then
+		lootStolenBanner.Visible = false
+		return
+	end
+	local remaining = math.max(0, math.ceil(contest.ExpiresAt - os.clock()))
+	if remaining <= 0 then
+		currentContest = nil
+		lootStolenBanner.Visible = false
+		return
+	end
+	lootStolenText.Text = string.format("%s STOLE %d %s! (%d:%02d)", string.upper(contest.ThiefName), contest.Amount, contest.LootType, remaining // 60, remaining % 60)
 	lootStolenBanner.Visible = true
+end
 
-	task.delay(8.0, function()
-		if lootAlertCounter == myAlertId then
-			lootStolenBanner.Visible = false
+-- Bound in the background so a missing remote can never stall the rest of the HUD.
+task.spawn(function()
+	local LootContestedRemote = TowerRemotes:WaitForChild("LootContested") :: RemoteEvent
+	LootContestedRemote.OnClientEvent:Connect(function(message: any)
+		if type(message) ~= "table" then return end
+		if message.Kind == "STOLEN" and type(message.DropId) == "number" then
+			currentContest = {
+				DropId = message.DropId,
+				ThiefName = tostring(message.ThiefName),
+				LootType = tostring(message.LootType),
+				Amount = tonumber(message.Amount) or 0,
+				ExpiresAt = os.clock() + (tonumber(message.Seconds) or 0),
+			}
+		elseif message.Kind == "CLEAR" and currentContest and currentContest.DropId == message.DropId then
+			currentContest = nil
 		end
+		refreshContestBanner()
 	end)
+end)
+
+task.spawn(function()
+	while true do
+		task.wait(1)
+		if currentContest then refreshContestBanner() end
+	end
 end)
 
 -- Squad Wipe Recovery Lockout Banner
@@ -346,7 +392,7 @@ local squadWipeBanner = makeFrame({
 local squadWipeText = makeLabel({
 	Size = UDim2.new(1, -12, 1, 0),
 	Position = UDim2.new(0, 6, 0, 0),
-	Text = "💀 SQUAD DOWN! LOOTING LOCKED — RETURN TO WAITING ROOM TO HEAL/SWAP HEROES",
+	Text = "SQUAD DOWN! LOOTING LOCKED — RETURN TO WAITING ROOM TO HEAL/SWAP HEROES",
 	TextColor3 = Color3.fromRGB(255, 120, 120),
 	TextSize = 13,
 	TextScaled = false,
@@ -379,7 +425,7 @@ partiallyDefeatedBanner = makeFrame({
 local partialHeader = makeLabel({
 	Size = UDim2.new(1, -16, 0, 20),
 	Position = UDim2.new(0, 8, 0, 4),
-	Text = "⚠️ SQUAD COMPROMISED · 1/5 HEROES DOWNED",
+	Text = "SQUAD COMPROMISED · 1/5 HEROES DOWNED",
 	TextColor3 = Color3.fromRGB(251, 191, 36), -- Gold Amber
 	TextSize = 13,
 	Font = Enum.Font.GothamBold,
@@ -390,7 +436,7 @@ local partialHeader = makeLabel({
 local partialSubtext = makeLabel({
 	Size = UDim2.new(1, -16, 0, 18),
 	Position = UDim2.new(0, 8, 0, 24),
-	Text = "💀 Fallen heroes revive & heal to 100% HP on Floor Travel or Hub Return!",
+	Text = "Fallen heroes revive & heal to 100% HP on Floor Travel or Hub Return!",
 	TextColor3 = Color3.fromRGB(254, 243, 199), -- Warm Amber Cream
 	TextSize = 11,
 	Font = Enum.Font.GothamMedium,
@@ -414,7 +460,7 @@ local partialTooltipPopover = makeFrame({
 local tooltipTitle = makeLabel({
 	Size = UDim2.new(1, -16, 0, 22),
 	Position = UDim2.new(0, 8, 0, 6),
-	Text = "⚔️ SQUAD VITALITY STATUS",
+	Text = "SQUAD VITALITY STATUS",
 	TextColor3 = Color3.fromRGB(251, 191, 36),
 	TextSize = 12,
 	Font = Enum.Font.GothamBold,
@@ -436,7 +482,7 @@ local tooltipList = makeLabel({
 local tooltipFooter = makeLabel({
 	Size = UDim2.new(1, -16, 0, 38),
 	Position = UDim2.new(0, 8, 1, -42),
-	Text = "💡 Tip: Floor transitions & Hub travel fully resurrect and restore 100% HP to every hero!",
+	Text = "Tip: Floor transitions & Hub travel fully resurrect and restore 100% HP to every hero!",
 	TextColor3 = Color3.fromRGB(147, 197, 253),
 	TextSize = 10,
 	Font = Enum.Font.GothamMedium,
@@ -475,16 +521,16 @@ SquadStatusRemote.OnClientEvent:Connect(function(status: any)
 
 	if fallen > 0 and alive > 0 and clientFloorProgress.FloorId > 0 then
 		partiallyDefeatedBanner.Visible = true
-		partialHeader.Text = string.format("⚠️ SQUAD COMPROMISED · %d/%d HEROES DOWNED", fallen, total)
+		partialHeader.Text = string.format("SQUAD COMPROMISED · %d/%d HEROES DOWNED", fallen, total)
 		local namesText = if #fallenList > 0 then table.concat(fallenList, ", ") else "Hero"
-		partialSubtext.Text = string.format("💀 Fallen: %s · Full squad revives & heals on Floor Travel or Hub Return!", namesText)
+		partialSubtext.Text = string.format("Fallen: %s · Full squad revives & heals on Floor Travel or Hub Return!", namesText)
 
 		local lines = {}
 		for _, h in ipairs(statuses) do
 			if h.Alive then
-				table.insert(lines, string.format("🟢 %s (Active · %d%% HP)", h.Name, h.HpPct or 100))
+				table.insert(lines, string.format("%s (Active · %d%% HP)", h.Name, h.HpPct or 100))
 			else
-				table.insert(lines, string.format("💀 %s (Downed · Revives on Floor Travel)", h.Name))
+				table.insert(lines, string.format("%s (Downed · Revives on Floor Travel)", h.Name))
 			end
 		end
 		tooltipList.Text = table.concat(lines, "\n")
@@ -498,13 +544,13 @@ end)
 -- (nil) squadWipeBanner and errored on every wipe.
 SquadDefeatedRemote.OnClientEvent:Connect(function(floorId: number)
 	squadWipeBanner.Visible = true
-	squadWipeText.Text = string.format("💀 SQUAD WIPED ON FLOOR %d! CARRIED LOOT DROPPED — TELEPORTED TO FORTRESS PLOT", floorId or 0)
+	squadWipeText.Text = string.format("SQUAD WIPED ON FLOOR %d! CARRIED LOOT DROPPED — TELEPORTED TO FORTRESS PLOT", floorId or 0)
 end)
 
 -- Carried Field Loot Indicator
 local carriedLootPill = makeFrame({
 	Name = "CarriedLootPill",
-	Size = UDim2.fromOffset(160, 36),
+	Size = UDim2.fromOffset(230, 38),
 	Position = UDim2.fromOffset(12, 58),
 	BackgroundColor3 = Color3.fromRGB(26, 32, 46),
 	BackgroundTransparency = 0.1,
@@ -515,10 +561,13 @@ local carriedLootPill = makeFrame({
 	Parent = topBar,
 })
 
+local carriedLootIcon = GrimoireIcons.Create("Gold", 26, carriedLootPill, 3)
+carriedLootIcon.AnchorPoint = Vector2.new(0, 0.5)
+carriedLootIcon.Position = UDim2.new(0, 8, 0.5, 0)
 local carriedLootLabel = makeLabel({
-	Size = UDim2.new(1, -8, 1, 0),
-	Position = UDim2.new(0, 4, 0, 0),
-	Text = "🎒 Field: 0G, 0💎",
+	Size = UDim2.new(1, -46, 1, 0),
+	Position = UDim2.new(0, 40, 0, 0),
+	Text = "Field: 0 Gold · 0 Gems",
 	TextColor3 = Color3.fromRGB(255, 235, 145),
 	TextSize = 13,
 	TextScaled = false,
@@ -528,7 +577,7 @@ local carriedLootLabel = makeLabel({
 CarriedLootSyncRemote.OnClientEvent:Connect(function(gold: number, gems: number)
 	if gold > 0 or gems > 0 then
 		carriedLootPill.Visible = true
-		carriedLootLabel.Text = string.format("🎒 Field: %dG, %d💎", gold, gems)
+		carriedLootLabel.Text = string.format("Field: %d Gold · %d Gems", gold, gems)
 	else
 		carriedLootPill.Visible = false
 	end
@@ -555,24 +604,44 @@ local bossTitleLabel = makeLabel({
 	Parent = bossBanner,
 })
 
-local novaBarBg = makeFrame({
-	Size = UDim2.new(0.94, 0, 0.34, 0),
-	Position = UDim2.new(0.03, 0, 0.56, 0),
-	BackgroundColor3 = Color3.fromRGB(45, 30, 55),
-	Corner = 4,
-	Parent = bossBanner,
-})
-local novaBarFill = makeFrame({
-	Size = UDim2.fromScale(1, 1),
-	BackgroundColor3 = Color3.fromRGB(175, 45, 235),
-	Corner = 4,
-	Parent = novaBarBg,
-})
+local novaBarBg, novaBarFill = GildedGrimoire.Bar(bossBanner, Color3.fromRGB(175, 45, 235), 2.2)
+novaBarBg.Size = UDim2.new(1, -28, 0.36, 0)
+novaBarBg.Position = UDim2.new(0, 14, 0.52, 0)
+novaBarBg.ZIndex = 3
+novaBarFill.ZIndex = 4
 local novaCastLabel = makeLabel({
 	Size = UDim2.fromScale(1, 1),
 	Text = "Boss Encounter",
+	ZIndex = 6,
 	Parent = novaBarBg,
 })
+
+--============================================================================
+-- Gilded Grimoire: alerts and tower banners (ink outline, gold rail, toned gradient)
+--============================================================================
+GildedGrimoire.Reframe(toastBanner, { Class = "Panel", Tone = "Violet" })
+GildedGrimoire.Reframe(lootStolenBanner, { Class = "Panel", Tone = "Crimson" })
+GildedGrimoire.Reframe(squadWipeBanner, { Class = "Panel", Tone = "Crimson" })
+GildedGrimoire.Reframe(partiallyDefeatedBanner :: Frame, { Class = "Panel", Tone = "Bronze" })
+GildedGrimoire.Reframe(partialTooltipPopover, { Class = "Card", Tone = "Deep" })
+GildedGrimoire.Reframe(carriedLootPill, { Class = "Row", Tone = "Bronze" })
+GildedGrimoire.Reframe(bossBanner, { Class = "Panel", Tone = "Crimson" })
+-- Retaliate: a solid crimson button (a gradient would tint its label), framed in ink and gold.
+GildedGrimoire.Reframe(retaliateBtn, { Class = "Button", Fill = false, Rail = Color3.fromRGB(255, 214, 110) })
+retaliateBtn.BackgroundColor3 = Color3.fromRGB(196, 36, 52)
+retaliateBtn.BackgroundTransparency = 0
+retaliateBtn.TextColor3 = Color3.new(1, 1, 1)
+retaliateBtn.TextStrokeColor3 = GildedGrimoire.Ink
+retaliateBtn.TextStrokeTransparency = 0.15
+-- Headlines get the heavy title face with an ink outline.
+for _, headline in { lootStolenText, squadWipeText, partialHeader, tooltipTitle, bossTitleLabel, novaCastLabel, toastText } do
+	headline:SetAttribute("Grimoire", true)
+	GildedGrimoire.StyleText(headline, "Title")
+end
+for _, line in { partialSubtext, tooltipList, tooltipFooter } do
+	line:SetAttribute("Grimoire", true)
+	GildedGrimoire.StyleText(line, "Body")
+end
 
 
 --============================================================================
@@ -583,6 +652,7 @@ local squadController: any = nil
 local promotionController: any = nil
 
 local facilityController: any = nil
+local fortressTreeController: any = nil
 local synthesisController: any = nil
 local forgeController: any = nil
 local refreshBlacksmithModal: () -> ()
@@ -610,6 +680,7 @@ local ACTION_COLORS = {
 	Overdrive = Color3.fromRGB(245, 158, 11),   -- #F59E0B Amber
 	Recall = Color3.fromRGB(34, 211, 238),     -- #22D3EE Cyan
 	Tower = Color3.fromRGB(192, 132, 252),     -- #C084FC Violet
+	Fortress = Color3.fromRGB(214, 180, 120),  -- Parchment: the Fortress Tree (Phase 4)
 }
 
 local function triggerHUDWhistleCooldown(which: string)
@@ -637,7 +708,7 @@ end
 -- Floating Bottom HUD Toolbar Container
 local floatingMenuContainer = Instance.new("Frame")
 floatingMenuContainer.Name = "FloatingToolbar"
-floatingMenuContainer.Size = UDim2.fromOffset(416, 96)
+floatingMenuContainer.Size = UDim2.fromOffset(494, 96)
 floatingMenuContainer.Position = UDim2.new(0.5, 0, 1, -16)
 floatingMenuContainer.AnchorPoint = Vector2.new(0.5, 1)
 floatingMenuContainer.BackgroundColor3 = Color3.fromRGB(13, 9, 18) -- #0D0912
@@ -645,6 +716,9 @@ floatingMenuContainer.BackgroundTransparency = 0.20
 floatingMenuContainer.BorderSizePixel = 0
 floatingMenuContainer.ZIndex = 12
 floatingMenuContainer.Parent = hudGui
+-- Phase 5: the bottom toolbar is replaced by the React Left/Right Rails (Phase5HudController).
+-- It stays built, hidden, so the legacy highlight code keeps working until the HUD is retired.
+floatingMenuContainer.Visible = false
 
 local floatCorner = Instance.new("UICorner")
 floatCorner.CornerRadius = UDim.new(0, 16)
@@ -985,6 +1059,23 @@ local towerHandle = createFloatingIconButton(
 	end
 )
 
+-- 6. FORTRESS (Parchment, NO COOLDOWN): the Fortress Tree, also opened at the Architect's Table.
+local fortressHandle = createFloatingIconButton(
+	"Fortress",
+	6,
+	nil,
+	"FORTRESS",
+	ACTION_COLORS.Fortress,
+	false,
+	function()
+		if fortressTreeController and fortressTreeController:IsOpen() then
+			fortressTreeController:Close()
+		elseif _G.OpenFacilityHUD then
+			_G.OpenFacilityHUD("FortressTree")
+		end
+	end
+)
+
 local function updateBottomTabHighlights()
 	local squadActive = squadController ~= nil and squadController:IsOpen()
 	if squadHandle.DiscStroke then
@@ -1009,12 +1100,22 @@ local function updateBottomTabHighlights()
 	end
 	towerHandle.PillLabel.TextColor3 = if towerActive then Color3.fromRGB(230, 192, 112) else ACTION_COLORS.Tower
 	towerHandle.PillStroke.Color = if towerActive then Color3.fromRGB(230, 192, 112) else ACTION_COLORS.Tower
+
+	local fortressActive = fortressTreeController ~= nil and fortressTreeController:IsOpen()
+	if fortressHandle.DiscStroke then
+		fortressHandle.DiscStroke.Thickness = if fortressActive then 2.4 else 1.6
+		fortressHandle.DiscStroke.Color = if fortressActive then Color3.fromRGB(255, 240, 160) else ACTION_COLORS.Fortress
+	end
+	fortressHandle.PillLabel.TextColor3 = if fortressActive then Color3.fromRGB(255, 240, 160) else ACTION_COLORS.Fortress
+	fortressHandle.PillStroke.Color = if fortressActive then Color3.fromRGB(255, 240, 160) else ACTION_COLORS.Fortress
 end
 _G.UpdateBottomTabHighlights = updateBottomTabHighlights
 
 _G.IsAnyMasterModalOpen = function(): boolean
+	if _G.IsHeroIndexOpen and _G.IsHeroIndexOpen() then return true end
 	if _G.IsTowerSelectorOpen and _G.IsTowerSelectorOpen() then return true end
 	if facilityController and facilityController.Root and facilityController.Root.Visible then return true end
+	if fortressTreeController and fortressTreeController:IsOpen() then return true end
 	if synthesisController and synthesisController.Root and synthesisController.Root.Visible then return true end
 	if promotionController and promotionController:IsOpen() then return true end
 	if forgeController and forgeController.Root and forgeController.Root.Visible then return true end
@@ -1023,8 +1124,13 @@ _G.IsAnyMasterModalOpen = function(): boolean
 	return false
 end
 _G.OpenMasterModal = function(which: string)
+	if _G.CloseHeroIndex then _G.CloseHeroIndex() end
+	if _G.CloseSettings and _G.IsSettingsOpen and _G.IsSettingsOpen() then
+		_G.CloseSettings()
+	end
 	if _G.CloseTowerSelector then _G.CloseTowerSelector() end
 	if facilityController then facilityController:Close() end
+	if fortressTreeController then fortressTreeController:Close() end
 	if synthesisController then synthesisController:Close() end
 	if promotionController then promotionController:Close() end
 	if forgeController then forgeController:Close() end
@@ -1052,7 +1158,7 @@ end
 makeButton({
 	Size = UDim2.new(0, 118, 1, 0),
 	BackgroundColor3 = Color3.fromRGB(45, 115, 205),
-	Text = "⚔️ Squad Deploy",
+	Text = "Squad Deploy",
 	Corner = 6,
 	OnClick = function()
 		if squadController then
@@ -1091,6 +1197,8 @@ end
 
 local FacilityController = require(script.Parent:WaitForChild("FacilityController"))
 facilityController = FacilityController.new(hudGui, function() return CurrentProfile end, TycoonRemotes)
+local FortressTreeController = require(script.Parent:WaitForChild("FortressTreeController"))
+fortressTreeController = FortressTreeController.new(hudGui, function() return CurrentProfile end, Remotes:WaitForChild("ProgressionRemotes"))
 local SynthesisController = require(script.Parent:WaitForChild("SynthesisController"))
 synthesisController = SynthesisController.new(hudGui, TycoonRemotes:WaitForChild("PitRequest") :: RemoteFunction)
 _G.SynthesisController = synthesisController
@@ -1099,6 +1207,10 @@ local ArtifactRemotes = Remotes:WaitForChild("ArtifactRemotes") :: Folder
 forgeController = ForgeController.new(hudGui, ArtifactRemotes, function() return CurrentProfile end, updateBottomTabHighlights)
 _G.ForgeController = forgeController
 _G.OpenFacilityHUD = function(facility: string)
+	-- Phase 5: The Pit has one prompt and opens on its Synthesis tab (the React tab bar switches).
+	if facility == "Pit" or facility == "ThePit" then
+		facility = "Synthesis"
+	end
 	if facility == "Synthesis" then
 		-- Focused synthesis HUD: recipient slot, level preview and material slots.
 		_G.OpenMasterModal("NONE")
@@ -1113,6 +1225,13 @@ _G.OpenFacilityHUD = function(facility: string)
 		promotionController:Open()
 	elseif facility == "SquadManagement" or facility == "Squad" then
 		_G.OpenMasterModal("SQUAD")
+	elseif _G.OpenFacilityPanel and (facility == "GuardPost" or facility == "Market" or facility == "TrainingGrounds" or facility == "GodsBlessing") then
+		-- Phase 5 §4.5: support facilities open the gothic React panel.
+		_G.OpenFacilityPanel(facility)
+	elseif facility == "FortressTree" then
+		_G.OpenMasterModal("NONE")
+		fortressTreeController:Open()
+		updateBottomTabHighlights()
 	else
 		_G.OpenMasterModal("NONE")
 		if synthesisController then synthesisController:Close() end
@@ -1129,7 +1248,7 @@ end
 makeLabel({
 	Size = UDim2.new(0.75, 0, 0, 36),
 	Position = UDim2.new(0.02, 0, 0, 6),
-	Text = "⚒️ BLACKSMITH FORGE — HERO ARTIFACTS & 16 RARITY TIERS (COMMON -> ORIGIN)",
+	Text = "BLACKSMITH FORGE — HERO ARTIFACTS & 16 RARITY TIERS (COMMON -> ORIGIN)",
 	TextColor3 = Color3.fromRGB(255, 175, 55),
 	TextXAlignment = Enum.TextXAlignment.Left,
 	Parent = blacksmithModal,
@@ -1219,7 +1338,7 @@ local upgradeButton = makeButton({
 	Size = UDim2.new(0.96, 0, 0, 38),
 	Position = UDim2.new(0.02, 0, 0.58, 0),
 	BackgroundColor3 = Color3.fromRGB(215, 115, 30),
-	Text = "⚒️ UPGRADE RARITY",
+	Text = "UPGRADE RARITY",
 	Corner = 6,
 	OnClick = function()
 		if not CurrentProfile or not selectedArtifactUUID then return end
@@ -1344,11 +1463,11 @@ refreshBlacksmithModal = function()
 			upgradeCostLabel.Text = string.format("Cost: %d Gold, %d Gems (Have: %d G, %d Gems)", cost.Gold, cost.Gems, math.floor(haveGold), math.floor(haveGems))
 			upgradeCostLabel.TextColor3 = canAfford and Color3.fromRGB(120, 255, 120) or Color3.fromRGB(255, 120, 120)
 
-			upgradeButton.Text = string.format("⚒️ FORGE UPGRADE TO %s", nextInfo.Name:upper())
+			upgradeButton.Text = string.format("FORGE UPGRADE TO %s", nextInfo.Name:upper())
 			upgradeButton.BackgroundColor3 = canAfford and Color3.fromRGB(215, 115, 30) or Color3.fromRGB(90, 70, 65)
 			upgradeButton.AutoButtonColor = canAfford
 		else
-			nextRarityLabel.Text = "🌟 MAX RARITY ACHIEVED (16: ORIGIN)!"
+			nextRarityLabel.Text = "MAX RARITY ACHIEVED (16: ORIGIN)!"
 			nextRarityLabel.TextColor3 = Color3.fromRGB(255, 160, 245)
 			upgradeCostLabel.Text = "Maximum multiplier reached (x18.00)!"
 			upgradeCostLabel.TextColor3 = Color3.fromRGB(255, 230, 140)
@@ -1371,7 +1490,7 @@ refreshBlacksmithModal = function()
 			})
 			makeButton({
 				Size = UDim2.fromScale(1, 1),
-				Text = string.format("⚔️ UNEQUIP FROM %s", equippedHeroName),
+				Text = string.format("UNEQUIP FROM %s", equippedHeroName),
 				BackgroundColor3 = Color3.fromRGB(160, 45, 55),
 				Corner = 5,
 				OnClick = function()
@@ -1500,13 +1619,16 @@ ProfileDeltaSyncEvent.OnClientEvent:Connect(function(profile: any)
 		if not CurrentProfile then return end
 		for uuid, hero in profile.Heroes or {} do CurrentProfile.Heroes[uuid] = hero end
 		for _, uuid in profile.Removed or {} do CurrentProfile.Heroes[uuid] = nil end
-		for _, key in {"Currencies", "PitMaterials", "PitRevision", "UnlockedResearch"} do
+		for _, key in {"Currencies", "PitMaterials", "PitRevision", "UnlockedResearch", "SquadPower", "SquadPowerByHero"} do
 			if profile[key] ~= nil then CurrentProfile[key] = profile[key] end
 		end
 		profile = CurrentProfile
 	else CurrentProfile = profile end
 	_G.CurrentProfile = CurrentProfile
 	facilityController:Refresh()
+	if fortressTreeController and fortressTreeController:IsOpen() then
+		fortressTreeController:Refresh()
+	end
 	if synthesisController and synthesisController.Root and synthesisController.Root.Visible then
 		synthesisController:Refresh()
 	end
@@ -1760,6 +1882,8 @@ do
 	currencyCluster.Size = UDim2.fromOffset(0, 28)
 	currencyCluster.AnchorPoint = Vector2.new(0, 1)
 	currencyCluster.Position = UDim2.new(0, 20, 1, -20)
+	-- Phase 5: Gold and Gems are drawn by the React HUD above the Squad Status Card.
+	currencyCluster.Visible = false
 	currencyCluster.ZIndex = 8
 	currencyCluster.Parent = hudGui
 
@@ -1847,10 +1971,97 @@ do
 	ProfileDeltaSyncEvent.OnClientEvent:Connect(updateCurrency)
 	updateCurrency(CurrentProfile)
 
-	-- Keep Studio F8 development hooks available without the top menu bar
+	-- Top-right Setting Icon Button
+	local settingsButton = Instance.new("ImageButton")
+	settingsButton.Name = "SettingsButton"
+	settingsButton.AnchorPoint = Vector2.new(1, 0)
+	settingsButton.Position = UDim2.new(1, -16, 0, 12)
+	settingsButton.Size = UDim2.fromOffset(38, 38)
+	settingsButton.BackgroundColor3 = Color3.fromRGB(18, 14, 26)
+	settingsButton.BackgroundTransparency = 0.15
+	settingsButton.AutoButtonColor = false
+	settingsButton.ZIndex = 15
+	settingsButton.Parent = hudGui
+	-- Phase 5: Settings is the last Left Rail button (drawn gear); this corner button stays hidden.
+	settingsButton.Visible = false
+
+	local settingsCorner = Instance.new("UICorner")
+	settingsCorner.CornerRadius = UDim.new(0, 9)
+	settingsCorner.Parent = settingsButton
+
+	local settingsStroke = Instance.new("UIStroke")
+	settingsStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	settingsStroke.Thickness = 1.5
+	settingsStroke.Color = Color3.fromRGB(80, 70, 105)
+	settingsStroke.Parent = settingsButton
+
+	local gearIcon = Instance.new("ImageLabel")
+	gearIcon.Name = "GearIcon"
+	gearIcon.Image = "rbxassetid://18801194936"
+	gearIcon.AnchorPoint = Vector2.new(0.5, 0.5)
+	gearIcon.Position = UDim2.fromScale(0.5, 0.5)
+	gearIcon.Size = UDim2.fromOffset(22, 22)
+	gearIcon.BackgroundTransparency = 1
+	gearIcon.ImageColor3 = Color3.fromRGB(225, 220, 240)
+	gearIcon.ZIndex = 16
+	gearIcon.Parent = settingsButton
+
+	-- Hover and click micro-interactions
+	local origBg = Color3.fromRGB(18, 14, 26)
+	local hoverBg = Color3.fromRGB(36, 28, 50)
+	local origStroke = Color3.fromRGB(80, 70, 105)
+	local hoverStroke = Color3.fromRGB(175, 150, 235)
+
+	settingsButton.MouseEnter:Connect(function()
+		TweenService:Create(settingsButton, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			BackgroundColor3 = hoverBg,
+			Size = UDim2.fromOffset(40, 40),
+		}):Play()
+		TweenService:Create(settingsStroke, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Color = hoverStroke,
+		}):Play()
+		TweenService:Create(gearIcon, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Rotation = 30,
+			ImageColor3 = Color3.fromRGB(255, 255, 255),
+		}):Play()
+	end)
+
+	settingsButton.MouseLeave:Connect(function()
+		TweenService:Create(settingsButton, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			BackgroundColor3 = origBg,
+			Size = UDim2.fromOffset(38, 38),
+		}):Play()
+		TweenService:Create(settingsStroke, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Color = origStroke,
+		}):Play()
+		TweenService:Create(gearIcon, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Rotation = 0,
+			ImageColor3 = Color3.fromRGB(225, 220, 240),
+		}):Play()
+	end)
+
+	local function onSettingsTrigger()
+		local clickTween = TweenService:Create(settingsButton, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Size = UDim2.fromOffset(34, 34),
+		})
+		local restoreTween = TweenService:Create(settingsButton, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Size = UDim2.fromOffset(38, 38),
+		})
+		clickTween:Play()
+		clickTween.Completed:Connect(function()
+			restoreTween:Play()
+		end)
+		if _G.ToggleSettings then
+			_G.ToggleSettings()
+		end
+	end
+	settingsButton.MouseButton1Click:Connect(onSettingsTrigger)
+	settingsButton.Activated:Connect(onSettingsTrigger)
+
+	-- Keep Studio F8 development hooks available without the top menu bar (positioned to the left of settings button)
 	navButtonsFrame.Parent = hudGui
 	navButtonsFrame.AnchorPoint = Vector2.new(1, 0)
-	navButtonsFrame.Position = UDim2.new(1, -16, 0, 12)
+	navButtonsFrame.Position = UDim2.new(1, -64, 0, 12)
 	navButtonsFrame.Size = UDim2.fromOffset(240, 36)
 	local devButtons = {}
 	for _, b in navButtonsFrame:GetChildren() do
@@ -1900,8 +2111,6 @@ do
 		bossBanner.Position = UDim2.new(0.5, 0, 0, 14)
 		bossBanner.AnchorPoint = Vector2.new(0.5, 0)
 		bossBanner.Size = UDim2.new(0, math.min(w - 32, 720), 0, 58)
-		bossBanner.BackgroundColor3 = P.surface
-		stroke(bossBanner, Color3.fromRGB(144, 103, 199))
 		bossTitleLabel.TextSize = portrait and 12 or 15
 		bossTitleLabel.TextScaled = false
 		bossTitleLabel.TextTruncate = Enum.TextTruncate.AtEnd
