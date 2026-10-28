@@ -246,7 +246,12 @@ return function(keepPreviews: boolean?)
 			end
 			check(parts <= Costumes.PART_BUDGET, string.format("%s%d parts within budget %d", label, parts, Costumes.PART_BUDGET))
 			check(parts == #Spec.PART_NAMES + #costume.Pieces, label .. "one Part per costume piece")
-			check(meshes == 0 and scripts == 0, label .. "no meshes or scripts")
+			-- The built-in head mesh plus one FileMesh per allow-listed mesh piece.
+			local meshPieces = 0
+			for _, p in costume.Pieces do
+				if p.Mesh then meshPieces += 1 end
+			end
+			check(meshes == 1 + meshPieces and scripts == 0, label .. "only the head mesh and listed mesh pieces, no scripts")
 			check(decals <= 1, label .. "only the face decal")
 			check(rig:GetAttribute("HeroId") == heroId, label .. "HeroId attribute")
 

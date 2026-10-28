@@ -341,7 +341,9 @@ Heroes are built from code by `Assets/HeroRig` (see `hero-rig-rebuild-plan.md` f
   - Axis convention: shoulder/hip `+X` swings forward, elbow `+X` flexes, knee `-X` flexes, waist/neck `-X` leans forward and `+Y` turns left.
 - **Costumes (`HeroCostumes`):**
   - Data pieces, each welded to one bone. A lint rejects pieces that overlap another bone unless marked `Loose` (cloth, hair).
-  - No meshes, scripts or gear; the face decal is the only asset ID.
+  - No scripts or gear. Asset IDs are limited to the face decal and the FileMeshes allow-listed in `HeroCostumes.MESHES` (anime hair, attached the way an avatar accessory would be).
+  - Every head is a 1.4-stud Part, slightly oversized to suit the bulky torsos, with the built-in `SpecialMesh` head shape (`MeshType.Head`).
+  - Head pieces (hair, hoods, hair meshes) are authored for a 1.2-stud head (`HeroRigSpec.HEAD_AUTHORED_SIZE`) and scaled uniformly with the real head, so the head can be resized without re-authoring costumes.
 - **Templates (`HeroRegistry`):** built into `ReplicatedStorage.Assets.Heroes` by `HeroAssetSetup` on server start.
 - **Animation (`HeroClips`, `HeroAnimator`):**
   - Native keyframe clips per weapon type (`Idle`, `Move`, `AttackBasic/Special/Skill`), plus shared states (`Hit`, `Coma`, `Carry`, `Sleep`, `Labor`) and per-hero overrides.
