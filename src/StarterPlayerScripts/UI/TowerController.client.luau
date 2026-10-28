@@ -277,7 +277,7 @@ local detailScaling = new("TextLabel", {
 	Size = UDim2.new(1, -36, 0, 20),
 	BackgroundTransparency = 1,
 	RichText = true,
-	Text = "Scaling: HP <font color=\"#4ADE80\">×1.00</font> · ATK <font color=\"#4ADE80\">×1.00</font> · Gold/XP <font color=\"#4ADE80\">×1.00</font>",
+	Text = "Recommended Power: 700",
 	TextColor3 = Color3.fromRGB(240, 235, 248),
 	Font = Enum.Font.Gotham,
 	TextSize = 14,
@@ -334,7 +334,7 @@ local statusFooter = new("TextLabel", {
 	Position = UDim2.fromOffset(2, 332),
 	Size = UDim2.new(1, -4, 0, 40),
 	BackgroundTransparency = 1,
-	Text = "You: Hub · Squad: Following Master\n✓ HUB complete",
+	Text = "You: Hub · Squad: Following Master\nHub travel complete",
 	TextColor3 = Color3.fromRGB(160, 150, 180),
 	Font = Enum.Font.Gotham,
 	TextSize = 12,
@@ -613,6 +613,16 @@ end
 -- ============================================================================
 -- ACTION BUTTON HANDLERS
 -- ============================================================================
+-- 1234 -> "1.2K", 3400000 -> "3.4M" (power numbers grow very large on high floors).
+local function abbreviate(n: number): string
+	for _, unit in { { 1e12, "T" }, { 1e9, "B" }, { 1e6, "M" }, { 1e3, "K" } } do
+		if n >= unit[1] then
+			return (string.gsub(string.format("%.1f%s", n / unit[1], unit[2]), "%.0(%a)$", "%1"))
+		end
+	end
+	return tostring(math.round(n))
+end
+
 local function request(action: string, id: number?)
 	if not selfState or pending then return end
 	local r = {
@@ -683,7 +693,7 @@ render = function()
 	for _, enc in ipairs(floor.Encounters) do
 		local m = mobs.Get(enc.EnemyId)
 		if m then
-			table.insert(encounterNames, string.format("%s ×%d", m.DisplayName, enc.Count))
+			table.insert(encounterNames, string.format("%s x%d", m.DisplayName, enc.Count))
 		end
 	end
 	local bossEntry = floor.BossEnemyId and mobs.Get(floor.BossEnemyId) or nil
@@ -702,11 +712,16 @@ render = function()
 		)
 	else
 		detailHeader.Text = string.format("Floor %d · %s (%s%s)", selected, floor.DisplayName, floor.BiomeDisplayName or (biome and biome.DisplayName) or floor.BiomeId, bossText)
+		-- Phase 5: the floor's Recommended Squad Power against yours (green when you meet it).
+		local recommended = floors.RecommendedPower(selected)
+		local mine = if profile then profile.SquadPower or 0 else 0
+		local ready = mine >= recommended
 		detailScaling.Text = string.format(
-			"Scaling: HP <font color=\"#4ADE80\">×%.2f</font> · ATK <font color=\"#4ADE80\">×%.2f</font> · Gold/XP <font color=\"#4ADE80\">×%.2f</font>",
-			floor.Difficulty.HPMultiplier,
-			floor.Difficulty.DamageMultiplier,
-			floor.Rewards.GoldMultiplier
+			"Recommended Power: <font color=\"#FFD66E\"><b>%s</b></font>  ·  Your Squad: <font color=\"%s\"><b>%s</b></font>%s",
+			abbreviate(recommended),
+			if ready then "#4ADE80" else "#FF6B6B",
+			abbreviate(mine),
+			if ready then "" else "  (under-powered)"
 		)
 	end
 	detailRoster.Text = string.format("Roster: %s", #encounterNames > 0 and table.concat(encounterNames, ", ") or "None")
@@ -832,7 +847,7 @@ render = function()
 		local sqStr = if assignedFloor then string.format("Stationed on Floor %d", assignedFloor) else "Following Master"
 		local feedbackStr = if pending then string.format("Pending: %s…", pendingActionName or "request")
 			elseif lastFeedback then lastFeedback
-			else "✓ HUB complete"
+			else "Hub travel complete"
 		statusFooter.Text = string.format("You: %s · Squad: %s\n%s", locStr, sqStr, feedbackStr)
 	end
 end
@@ -956,7 +971,7 @@ remotes.Response.OnClientEvent:Connect(function(r)
 		pending = nil
 		pendingActionName = nil
 		if r.Status == "OK" or not r.ErrorCode then
-			lastFeedback = string.format("✓ %s complete", act)
+			lastFeedback = string.format("%s complete", act)
 		else
 			lastFeedback = string.format("%s failed: %s", act, tostring(r.ErrorCode))
 		end

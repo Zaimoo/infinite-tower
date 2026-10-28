@@ -11,6 +11,8 @@ local StatFormulas = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChi
 local GothicBoxStyle = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GothicBoxStyle"))
 local GildedGrimoire = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GildedGrimoire"))
 
+local GrimoireIcons = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GrimoireIcons"))
+
 local Synth = {}
 Synth.__index = Synth
 
@@ -235,6 +237,7 @@ function Synth.BuildPicker(self: any)
 		Position = UDim2.new(1, -50, 0, 10), Size = UDim2.fromOffset(40, 40), ZIndex = 61,
 	}, picker)
 	back.Activated:Connect(function() picker.Visible = false end)
+	GrimoireIcons.CloseGlyph(back, 18)
 	self.PickerStatus = label(picker, "", 13, C.Muted, Enum.Font.GothamMedium)
 	self.PickerStatus.Position, self.PickerStatus.Size, self.PickerStatus.ZIndex = UDim2.new(0, 20, 1, -44), UDim2.new(1, -40, 0, 34), 61
 	self.PickerList = new("ScrollingFrame", {

@@ -216,6 +216,11 @@ GrimoireIcons.Drawings = {
 		{ X = 36, Y = 22, W = 10, H = 10, Rot = 45, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 1, Outline = 1.8, Sheen = false },
 		{ X = 18, Y = 6, W = 10, H = 10, Hi = P.GoldHi, Lo = P.GoldLo, Round = true, Outline = 2 },
 	},
+	-- Close: two crossed bone-white bars (text "×"/"✕" glyphs are missing from Cinzel and draw as squares).
+	Close = {
+		{ X = 32, Y = 32, W = 12, H = 52, Rot = 45, Hi = P.White, Lo = P.StoneHi, Radius = 4 },
+		{ X = 32, Y = 32, W = 12, H = 52, Rot = -45, Hi = P.White, Lo = P.StoneHi, Radius = 4, Sheen = false },
+	},
 	-- Settings: a steel cog with a gold hub.
 	Gear = {
 		{ X = 32, Y = 32, W = 12, H = 58, Hi = P.SteelHi, Lo = P.SteelLo, Radius = 3 },
@@ -308,6 +313,17 @@ function GrimoireIcons.Create(name: string, size: number, parent: Instance?, zIn
 	canvas.Parent = root
 	if parent then root.Parent = parent end
 	return root
+end
+
+-- Turns a text close button into a drawn one: clears its "×" text and centres the Close icon.
+function GrimoireIcons.CloseGlyph(button: TextButton, size: number?): Frame
+	button.Text = ""
+	local old = button:FindFirstChild("GrimoireIcon_Close")
+	if old then old:Destroy() end
+	local icon = GrimoireIcons.Create("Close", size or 16, button, button.ZIndex + 1)
+	icon.AnchorPoint = Vector2.new(0.5, 0.5)
+	icon.Position = UDim2.fromScale(0.5, 0.5)
+	return icon
 end
 
 -- A horizontal "icon + text" row (e.g. a Gems cost): returns the row Frame and its TextLabel.

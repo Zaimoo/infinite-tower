@@ -25,7 +25,18 @@ local LocalPlayer = Players.LocalPlayer
 local Forge = {}
 Forge.__index = Forge
 
-local WIDTH, HEIGHT = 760, 530
+local WIDTH, HEIGHT = 900, 620
+-- Content area under the header and tabs (Gilded Grimoire layout).
+local VIEW_X, VIEW_Y = 24, 108
+local VIEW_W, VIEW_H = WIDTH - 48, HEIGHT - VIEW_Y - 16
+-- Summon and Upgrade keep their 616 x 372 layouts, scaled up to fill the content area.
+local LEGACY_W, LEGACY_H = 616, 372
+local LEGACY_SCALE = math.min(VIEW_W / LEGACY_W, VIEW_H / LEGACY_H)
+local LEGACY_X = VIEW_X + math.floor((VIEW_W - LEGACY_W * LEGACY_SCALE) / 2)
+-- Artifact cards on the Assign tab.
+local CARD_H, CARD_GAP = 228, 12
+-- Weapon preview on a card: about the size of the Upgrade tab's target preview (128 x 194 scaled).
+local PREVIEW_W, PREVIEW_H = 160, 200
 
 local C = {
 	Scrim = Color3.fromRGB(6, 5, 10),
@@ -125,7 +136,7 @@ end
 -- Formats artifact stat string e.g. "ATK +150 | Crit Rate +5%" matching mockup
 local function formatStatSummary(art: any): string
 	local stats = ArtifactCatalog.GetStatBreakdown(art.TemplateId, art.Star or 1, art.Rarity or 1)
-	return string.format("Power <b>%.0f</b> &nbsp;|&nbsp; Damage <b>x%.2f</b> &nbsp;|&nbsp; AtkSpd <b>+%.1f%%</b>", stats.Power, stats.DamageMultiplier, stats["Attack Speed"])
+	return string.format("Power <b>%.0f</b>  ·  Damage <b>x%.2f</b>  ·  AtkSpd <b>+%.1f%%</b>", stats.Power, stats.DamageMultiplier, stats["Attack Speed"])
 end
 
 --============================================================================
@@ -192,15 +203,22 @@ function Forge.new(gui: ScreenGui, artifactRemotes: Folder, getProfile: (() -> a
 			self:Close()
 		end
 	end)
-	closeBtn.Position = UDim2.fromOffset(658, 68)
-	closeBtn.Size = UDim2.fromOffset(26, 26)
+	local _ = closeBtn
+	local headerIcon = GrimoireIcons.Create("Forge", 46, root, 53)
+	headerIcon.Position = UDim2.fromOffset(22, 10)
+	local headerTitle = label(root, "BLACKSMITH FORGE", 26, Color3.new(1, 1, 1), Enum.Font.GothamBlack)
+	headerTitle.Position = UDim2.fromOffset(78, 14)
+	headerTitle.Size = UDim2.fromOffset(460, 32)
+	headerTitle.TextXAlignment = Enum.TextXAlignment.Left
+	headerTitle.ZIndex = 53
+	new("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.new(1, 1, 1), GildedGrimoire.Text.Gold) }, headerTitle)
 
 	-- 4. Top Header & 3 Tabs (ASSIGN | SUMMON | UPGRADE ARTIFACT)
 	local tabContainer = new("Frame", {
 		Name = "TabContainer",
 		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(72, 68),
-		Size = UDim2.new(0, 540, 0, 30),
+		Position = UDim2.fromOffset(24, 58),
+		Size = UDim2.new(0, 560, 0, 36),
 		ZIndex = 52,
 	}, root)
 
@@ -211,7 +229,7 @@ function Forge.new(gui: ScreenGui, artifactRemotes: Folder, getProfile: (() -> a
 		Font = Enum.Font.GothamBold,
 		TextColor3 = C.Text,
 		BackgroundTransparency = 1,
-		Size = UDim2.fromOffset(105, 26),
+		Size = UDim2.fromOffset(140, 34),
 		Position = UDim2.fromOffset(0, 0),
 		ZIndex = 53,
 	}, tabContainer)
@@ -223,8 +241,8 @@ function Forge.new(gui: ScreenGui, artifactRemotes: Folder, getProfile: (() -> a
 		Font = Enum.Font.GothamBold,
 		TextColor3 = C.TextMuted,
 		BackgroundTransparency = 1,
-		Size = UDim2.fromOffset(105, 26),
-		Position = UDim2.fromOffset(105, 0),
+		Size = UDim2.fromOffset(140, 34),
+		Position = UDim2.fromOffset(150, 0),
 		ZIndex = 53,
 	}, tabContainer)
 
@@ -235,8 +253,8 @@ function Forge.new(gui: ScreenGui, artifactRemotes: Folder, getProfile: (() -> a
 		Font = Enum.Font.GothamBold,
 		TextColor3 = C.TextMuted,
 		BackgroundTransparency = 1,
-		Size = UDim2.fromOffset(170, 26),
-		Position = UDim2.fromOffset(210, 0),
+		Size = UDim2.fromOffset(210, 34),
+		Position = UDim2.fromOffset(300, 0),
 		ZIndex = 53,
 	}, tabContainer)
 
@@ -256,6 +274,17 @@ function Forge.new(gui: ScreenGui, artifactRemotes: Folder, getProfile: (() -> a
 	self.SummonTabBtn = summonTabBtn
 	self.UpgradeTabBtn = upgradeTabBtn
 	self.ActiveIndicator = activeIndicator
+	-- Gilded Grimoire tabs: solid buttons (a gradient would tint the label) with ink and a rail;
+	-- StyleTabs paints the active one gold. The old underline is not used.
+	activeIndicator.Visible = false
+	for _, tab in { assignTabBtn, summonTabBtn, upgradeTabBtn } do
+		tab.BackgroundTransparency = 0
+		tab.AutoButtonColor = false
+		tab.TextSize = 16 -- >= 16 so the theme gives tabs the heavy title face
+		tab.TextStrokeColor3 = GildedGrimoire.Ink
+		tab.TextStrokeTransparency = 0.2
+		GildedGrimoire.Reframe(tab, { Class = "Button", Fill = false })
+	end
 
 	assignTabBtn.Activated:Connect(function()
 		self:SetTab("ASSIGN")
@@ -272,8 +301,8 @@ function Forge.new(gui: ScreenGui, artifactRemotes: Folder, getProfile: (() -> a
 		Name = "TabDivider",
 		BackgroundColor3 = Color3.fromRGB(55, 45, 70),
 		BorderSizePixel = 0,
-		Position = UDim2.fromOffset(72, 102),
-		Size = UDim2.new(0, 616, 0, 1),
+		Position = UDim2.fromOffset(VIEW_X, 100),
+		Size = UDim2.new(0, VIEW_W, 0, 1),
 		ZIndex = 52,
 	}, root)
 
@@ -329,9 +358,22 @@ end
 -- TAB SWITCHING
 --============================================================================
 
+function Forge:StyleTabs()
+	for key, btn in { ASSIGN = self.AssignTabBtn, SUMMON = self.SummonTabBtn, UPGRADE = self.UpgradeTabBtn } do
+		local active = self.ActiveTab == key
+		btn.BackgroundColor3 = if active then Color3.fromRGB(150, 98, 30) else Color3.fromRGB(34, 28, 46)
+		btn.TextColor3 = if active then Color3.new(1, 1, 1) else GildedGrimoire.Text.Muted
+		local rail = GildedGrimoire.StateStroke(btn)
+		if rail then
+			rail.Color = if active then Color3.fromRGB(255, 226, 140) else Color3.fromRGB(110, 96, 140)
+		end
+	end
+end
+
 function Forge:SetTab(tab: "ASSIGN" | "SUMMON" | "UPGRADE")
 	self.ActiveTab = tab
 	self:ClosePicker()
+	task.defer(function() self:StyleTabs() end)
 
 	if tab == "ASSIGN" then
 		self.AssignTabBtn.TextColor3 = C.Text
@@ -389,8 +431,8 @@ function Forge:BuildAssignView(root: Frame)
 	local assignView = new("Frame", {
 		Name = "AssignView",
 		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(72, 108),
-		Size = UDim2.new(0, 616, 0, 372),
+		Position = UDim2.fromOffset(VIEW_X, VIEW_Y),
+		Size = UDim2.new(0, VIEW_W, 0, VIEW_H),
 		Visible = true,
 		ZIndex = 52,
 	}, root)
@@ -400,29 +442,42 @@ function Forge:BuildAssignView(root: Frame)
 		Name = "AssignScroll",
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
-		Position = UDim2.fromScale(0, 0),
 		Size = UDim2.fromScale(1, 1),
-		ScrollBarThickness = 5,
-		ScrollBarImageColor3 = C.Border,
-		BottomImage = "rbxasset://textures/ui/Scroll/scroll-middle.png",
-		TopImage = "rbxasset://textures/ui/Scroll/scroll-middle.png",
-		MidImage = "rbxasset://textures/ui/Scroll/scroll-middle.png",
+		ScrollBarThickness = 6,
+		ScrollBarImageColor3 = Color3.fromRGB(240, 196, 110),
 		CanvasSize = UDim2.fromScale(0, 0),
 		AutomaticCanvasSize = Enum.AutomaticSize.Y,
 		ZIndex = 53,
 	}, assignView)
 	self.AssignScroll = scroll
-
-	local layout = new("UIListLayout", {
+	self.AssignGrid = new("UIGridLayout", {
 		SortOrder = Enum.SortOrder.LayoutOrder,
-		Padding = UDim.new(0, 10),
+		CellSize = UDim2.new(0.5, -CARD_GAP, 0, CARD_H),
+		CellPadding = UDim2.fromOffset(CARD_GAP, CARD_GAP),
+		HorizontalAlignment = Enum.HorizontalAlignment.Center,
 	}, scroll)
 	new("UIPadding", {
-		PaddingTop = UDim.new(0, 4),
+		PaddingTop = UDim.new(0, 8),
 		PaddingBottom = UDim.new(0, 16),
 		PaddingLeft = UDim.new(0, 4),
-		PaddingRight = UDim.new(0, 8),
+		PaddingRight = UDim.new(0, 10),
 	}, scroll)
+end
+
+-- One stat column on an artifact card: small caption over an inked number.
+local function statCell(parent: Instance, x: number, caption: string, value: string)
+	local cap = label(parent, caption, 11, C.TextLavender, Enum.Font.GothamMedium)
+	cap.Position = UDim2.new(x, 4, 0, 0)
+	cap.Size = UDim2.new(1 / 3, -8, 0, 15)
+	cap.TextXAlignment = Enum.TextXAlignment.Center
+	cap.ZIndex = 56
+	local val = label(parent, value, 16, C.Text, Enum.Font.GothamBlack)
+	val.Position = UDim2.new(x, 4, 0, 16)
+	val.Size = UDim2.new(1 / 3, -8, 0, 20)
+	val.TextXAlignment = Enum.TextXAlignment.Center
+	val.ZIndex = 56
+	val:SetAttribute("Grimoire", true)
+	GildedGrimoire.StyleText(val, "Number")
 end
 
 function Forge:RenderAssignView()
@@ -435,56 +490,56 @@ function Forge:RenderAssignView()
 	local artifacts = profile and profile.Artifacts or {}
 	local heroMap = profile and profile.Heroes or {}
 
-	-- Collect and sort artifacts
 	local artList = {}
 	for uuid, art in pairs(artifacts) do
 		table.insert(artList, { UUID = uuid, Art = art })
 	end
 
 	if #artList == 0 then
+		self.AssignGrid.CellSize = UDim2.new(1, -8, 0, 220)
 		local emptyCard = new("Frame", {
 			Name = "EmptyCard",
-			Size = UDim2.new(1, 0, 0, 180),
-			BackgroundColor3 = C.CardBg,
 			BorderSizePixel = 0,
 			ZIndex = 53,
 		}, scroll)
-		new("UICorner", { CornerRadius = UDim.new(0, 8) }, emptyCard)
-		stroke(emptyCard, C.BorderDim)
-
-		local emptyTitle = label(emptyCard, "NO ARTIFACTS IN INVENTORY", 18, C.Text, Enum.Font.GothamBold)
-		emptyTitle.Position = UDim2.new(0, 0, 0.25, 0)
+		GildedGrimoire.Frame(emptyCard, { Class = "Card", Tone = "Deep", ZIndex = 53 })
+		local emptyIcon = GrimoireIcons.Create("Forge", 64, emptyCard, 55)
+		emptyIcon.AnchorPoint = Vector2.new(0.5, 0)
+		emptyIcon.Position = UDim2.new(0.5, 0, 0, 18)
+		local emptyTitle = label(emptyCard, "NO ARTIFACTS IN INVENTORY", 20, C.Text, Enum.Font.GothamBlack)
+		emptyTitle.Position = UDim2.fromOffset(0, 88)
 		emptyTitle.Size = UDim2.new(1, 0, 0, 26)
+		emptyTitle.ZIndex = 55
 		local sub = label(emptyCard, "Visit the <b>SUMMON</b> tab to draw weapons from the dimensional banner!", 14, C.TextLavender, Enum.Font.Gotham)
-		sub.Position = UDim2.new(0, 0, 0.5, 0)
-		sub.Size = UDim2.new(1, 0, 0, 24)
-
+		sub.Position = UDim2.fromOffset(0, 118)
+		sub.Size = UDim2.new(1, 0, 0, 22)
+		sub.ZIndex = 55
 		local goBtn = new("TextButton", {
 			Text = "GO TO SUMMON",
-			Font = Enum.Font.GothamBold,
-			TextSize = 14,
-			TextColor3 = C.Text,
-			BackgroundColor3 = C.Panel,
-			Size = UDim2.fromOffset(170, 36),
-			Position = UDim2.new(0.5, -85, 0.72, 0),
-			ZIndex = 54,
+			Font = Enum.Font.GothamBlack,
+			TextSize = 15,
+			TextColor3 = Color3.new(1, 1, 1),
+			AnchorPoint = Vector2.new(0.5, 0),
+			Size = UDim2.fromOffset(220, 42),
+			Position = UDim2.new(0.5, 0, 0, 156),
+			ZIndex = 56,
 		}, emptyCard)
-		new("UICorner", { CornerRadius = UDim.new(0, 6) }, goBtn)
-		stroke(goBtn, C.Border)
+		applyGothicStyle(goBtn, "Button")
+		goBtn.TextStrokeColor3 = GildedGrimoire.Ink
+		goBtn.TextStrokeTransparency = 0.15
 		goBtn.Activated:Connect(function()
 			self:SetTab("SUMMON")
 		end)
 		return
 	end
+	self.AssignGrid.CellSize = UDim2.new(0.5, -CARD_GAP, 0, CARD_H)
 
-	-- Sort: Star desc, Level desc, Alphabetical
+	-- Sort: Star desc, Rarity desc, Alphabetical
 	table.sort(artList, function(a, b)
-		local aStar = a.Art.Star or 1
-		local bStar = b.Art.Star or 1
+		local aStar, bStar = a.Art.Star or 1, b.Art.Star or 1
 		if aStar ~= bStar then return aStar > bStar end
-		local aLvl = a.Art.Rarity or 1
-		local bLvl = b.Art.Rarity or 1
-		if aLvl ~= bLvl then return aLvl > bLvl end
+		local aR, bR = a.Art.Rarity or 1, b.Art.Rarity or 1
+		if aR ~= bR then return aR > bR end
 		return (a.Art.DisplayName or "") < (b.Art.DisplayName or "")
 	end)
 
@@ -494,85 +549,120 @@ function Forge:RenderAssignView()
 		local rarityInfo = ArtifactCatalog.GetRarityInfo(art.Rarity or 1)
 		local rarityColor = rarityInfo.Color
 		local equippedHero = art.EquippedHeroUUID and heroMap[art.EquippedHeroUUID]
+		local starCount = art.Star or 1
 
 		local card = new("Frame", {
 			Name = "ArtCard_" .. uuid,
-			Size = UDim2.new(1, 0, 0, 84),
-			BackgroundColor3 = C.CardBg,
 			BorderSizePixel = 0,
 			LayoutOrder = order,
 			ZIndex = 53,
 		}, scroll)
-		applyGothicStyle(card, "Row", { AccentColor = rarityColor })
+		-- Rarity reads at a glance: the card is tinted toward the rarity colour and its rail is drawn
+		-- solid in that colour; the badge below names the exact tier.
+		GildedGrimoire.Frame(card, { Class = "Card", Tone = "Deep", Rail = rarityColor, ZIndex = 53 })
+		local fill = card:FindFirstChild("GrimoireFill") :: UIGradient?
+		if fill then
+			local deep = GildedGrimoire.Tones.Deep
+			fill.Color = ColorSequence.new(deep.Top:Lerp(rarityColor, 0.28), deep.Bottom:Lerp(rarityColor, 0.08))
+		end
+		local cardRail = GildedGrimoire.StateStroke(card)
+		if cardRail then
+			cardRail.Thickness = 2.4
+			cardRail.Transparency = 0
+		end
 
-		-- Left Weapon Icon Box (Slot Style)
+		-- Weapon preview (weapon art comes later from the models; the glyph is a stand-in).
 		local iconBox = new("Frame", {
 			Name = "IconBox",
-			AnchorPoint = Vector2.new(0, 0.5),
-			Position = UDim2.new(0, 16, 0.5, 0),
-			Size = UDim2.fromOffset(56, 56),
+			Position = UDim2.fromOffset(14, 14),
+			Size = UDim2.fromOffset(PREVIEW_W, PREVIEW_H),
 			BorderSizePixel = 0,
 			ZIndex = 54,
 		}, card)
 		applyGothicStyle(iconBox, "Slot", { State = "Filled", AccentColor = rarityColor })
-
-		local iconChar = ICON_MAP[art.Type] or "⚔️"
-		local iconLabel = label(iconBox, iconChar, 26, C.Text)
+		new("UIGradient", {
+			Rotation = 90,
+			Color = ColorSequence.new(Color3.fromRGB(12, 8, 18), Color3.fromRGB(12, 8, 18):Lerp(rarityColor, 0.35)),
+		}, iconBox)
+		local iconLabel = label(iconBox, ICON_MAP[art.Type] or "⚔️", 72, C.Text)
 		iconLabel.Position = UDim2.fromScale(0, 0)
 		iconLabel.Size = UDim2.fromScale(1, 1)
 		iconLabel.TextXAlignment = Enum.TextXAlignment.Center
+		iconLabel.ZIndex = 56
 
-		-- Center Text Info
-		local infoContainer = new("Frame", {
-			Name = "Info",
-			BackgroundTransparency = 1,
-			AnchorPoint = Vector2.new(0, 0.5),
-			Position = UDim2.new(0, 88, 0.5, 0),
-			Size = UDim2.new(1, -266, 0, 50),
-			ZIndex = 54,
-		}, card)
-
-		local starCount = art.Star or 1
-		local displayName = art.DisplayName or "Artifact"
-		local titleColorHex = if starCount >= 3 or (art.Rarity or 1) >= 6 then "#FDE047" else "#F6F4FF"
-
-		local titleRichText: string
-		if equippedHero then
-			titleRichText = string.format("<font color=\"%s\"><b>%s (%d stars)</b></font>  <font color=\"#38BDF8\">[Equipped: %s]</font>", titleColorHex, displayName, starCount, equippedHero.DisplayName)
-		else
-			titleRichText = string.format("<font color=\"%s\"><b>%s (%d stars)</b></font>", titleColorHex, displayName, starCount)
+		local infoX = 14 + PREVIEW_W + 16
+		local function infoLine(text: string, size: number, color: Color3, font: Enum.Font, y: number, h: number): TextLabel
+			local l = label(card, text, size, color, font)
+			l.Position = UDim2.fromOffset(infoX, y)
+			l.Size = UDim2.new(1, -infoX - 14, 0, h)
+			l.TextXAlignment = Enum.TextXAlignment.Left
+			l.ZIndex = 56
+			return l
 		end
 
-		local nameLabel = label(infoContainer, titleRichText, 16, C.Text, Enum.Font.GothamBold)
-		nameLabel.Position = UDim2.fromOffset(0, 2)
-		nameLabel.Size = UDim2.new(1, 0, 0, 22)
-		nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+		-- Name and stars
+		infoLine(art.DisplayName or "Artifact", 21, C.Text, Enum.Font.GothamBlack, 14, 28)
+		infoLine(string.rep("★", starCount), 22, C.GoldYellow, Enum.Font.GothamBold, 44, 24)
 
-		local statSummary = formatStatSummary(art)
-		local statLabel = label(infoContainer, statSummary, 13, C.TextLavender, Enum.Font.GothamMedium)
-		statLabel.Position = UDim2.fromOffset(0, 26)
-		statLabel.Size = UDim2.new(1, 0, 0, 20)
-		statLabel.TextXAlignment = Enum.TextXAlignment.Left
+		-- Rarity badge: solid rarity colour with a dark, inked label.
+		local badge = new("Frame", {
+			Name = "RarityBadge",
+			Position = UDim2.fromOffset(infoX, 72),
+			Size = UDim2.fromOffset(0, 24),
+			AutomaticSize = Enum.AutomaticSize.X,
+			BackgroundColor3 = rarityColor,
+			BorderSizePixel = 0,
+			ZIndex = 55,
+		}, card)
+		new("UICorner", { CornerRadius = UDim.new(1, 0) }, badge)
+		new("UIStroke", { Color = GildedGrimoire.Ink, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, badge)
+		new("UIPadding", { PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) }, badge)
+		new("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(190, 190, 200)) }, badge)
+		local badgeText = new("TextLabel", {
+			BackgroundTransparency = 1,
+			AutomaticSize = Enum.AutomaticSize.X,
+			Size = UDim2.fromOffset(0, 24),
+			Text = string.upper(rarityInfo.Name or "Common"),
+			TextSize = 14,
+			TextColor3 = Color3.new(1, 1, 1),
+			ZIndex = 56,
+		}, badge)
+		badgeText:SetAttribute("Grimoire", true)
+		GildedGrimoire.StyleText(badgeText, "Title")
 
-		-- Right Button: ASSIGN ARTIFACT / CHANGE HERO
+		-- Who carries it
+		infoLine(if equippedHero then "Equipped by <b>" .. equippedHero.DisplayName .. "</b>" else "Not equipped", 14,
+			if equippedHero then C.CyanEquipped else C.TextMuted, Enum.Font.GothamMedium, 102, 20)
+
+		-- Stats strip
+		local stats = ArtifactCatalog.GetStatBreakdown(art.TemplateId, starCount, art.Rarity or 1)
+		local strip = new("Frame", {
+			Name = "Stats",
+			Position = UDim2.fromOffset(infoX, 128),
+			Size = UDim2.new(1, -infoX - 14, 0, 44),
+			BorderSizePixel = 0,
+			ZIndex = 54,
+		}, card)
+		GildedGrimoire.Frame(strip, { Class = "Row", Tone = "Violet", ZIndex = 54 })
+		statCell(strip, 0, "POWER", string.format("%.0f", stats.Power))
+		statCell(strip, 1 / 3, "DAMAGE", string.format("x%.2f", stats.DamageMultiplier))
+		statCell(strip, 2 / 3, "ATK SPD", string.format("+%.1f%%", stats["Attack Speed"]))
+
+		-- Assign / change hero
 		local assignBtn = new("TextButton", {
 			Name = "AssignBtn",
-			AnchorPoint = Vector2.new(1, 0.5),
-			Position = UDim2.new(1, -16, 0.5, 0),
-			Size = UDim2.fromOffset(164, 42),
+			Position = UDim2.fromOffset(infoX, 176),
+			Size = UDim2.new(1, -infoX - 14, 0, 38),
 			BorderSizePixel = 0,
-			Text = equippedHero and "CHANGE HERO" or "ASSIGN ARTIFACT",
-			Font = Enum.Font.GothamBold,
-			TextSize = 13,
-			ZIndex = 54,
+			Text = if equippedHero then "CHANGE HERO" else "ASSIGN TO HERO",
+			Font = Enum.Font.GothamBlack,
+			TextSize = 16,
+			TextColor3 = Color3.new(1, 1, 1),
+			ZIndex = 55,
 		}, card)
-
-		if equippedHero then
-			applyGothicStyle(assignBtn, "ButtonSecondary")
-		else
-			applyGothicStyle(assignBtn, "ButtonPrimary", { Variant = "Gold" })
-		end
-
+		applyGothicStyle(assignBtn, if equippedHero then "ButtonSecondary" else "Button")
+		assignBtn.TextStrokeColor3 = GildedGrimoire.Ink
+		assignBtn.TextStrokeTransparency = 0.15
 		assignBtn.Activated:Connect(function()
 			if self.Busy then return end
 			self.SelectedAssignArtifactUUID = uuid
@@ -589,13 +679,14 @@ function Forge:BuildSummonView(root: Frame)
 	local summonView = new("Frame", {
 		Name = "SummonView",
 		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(72, 108),
-		Size = UDim2.new(0, 616, 0, 372),
+		Position = UDim2.fromOffset(LEGACY_X, VIEW_Y),
+		Size = UDim2.new(0, LEGACY_W, 0, LEGACY_H),
 		ClipsDescendants = false,
 		Visible = false,
 		ZIndex = 52,
 	}, root)
 	self.SummonView = summonView
+	new("UIScale", { Scale = LEGACY_SCALE }, summonView)
 
 	-- 1. Main Featured Banner Card (Section Panel with Notched Borders & Cosmic Rift Art)
 	local bannerCard = new("Frame", {
@@ -1092,12 +1183,13 @@ function Forge:BuildUpgradeView(root: Frame)
 	local upgradeView = new("Frame", {
 		Name = "UpgradeView",
 		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(72, 108),
-		Size = UDim2.new(0, 616, 0, 372),
+		Position = UDim2.fromOffset(LEGACY_X, VIEW_Y),
+		Size = UDim2.new(0, LEGACY_W, 0, LEGACY_H),
 		Visible = false,
 		ZIndex = 52,
 	}, root)
 	self.UpgradeView = upgradeView
+	new("UIScale", { Scale = LEGACY_SCALE }, upgradeView)
 
 	-- Top Grid: Left Target Slot Area (240x194) & Right Preview Panel (364x194)
 	local targetArea = new("Frame", {
@@ -1644,6 +1736,7 @@ function Forge:BuildPickerDrawer(root: Frame)
 		ZIndex = 72,
 	}, header)
 	new("UICorner", { CornerRadius = UDim.new(0, 6) }, closeDrawerBtn)
+	GrimoireIcons.CloseGlyph(closeDrawerBtn, 13)
 	local drawerCloseStroke = stroke(closeDrawerBtn, Color3.fromRGB(80, 60, 110), 1)
 
 	closeDrawerBtn.MouseEnter:Connect(function()
@@ -1841,7 +1934,7 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 				new("UICorner", { CornerRadius = UDim.new(0, 4) }, lvlBadge)
 				stroke(lvlBadge, isSlotted and C.Green or C.BorderDim, 1)
 
-				local lvlText = isSlotted and "✓ SLOTTED" or string.format("%d stars", art.Star or 1)
+				local lvlText = isSlotted and "SLOTTED" or string.format("%d stars", art.Star or 1)
 				local lvlColor = isSlotted and C.Green or C.TextMuted
 				local lvlLbl = label(lvlBadge, lvlText, 11, lvlColor, Enum.Font.GothamBold)
 				lvlLbl.Position = UDim2.fromScale(0, 0)
