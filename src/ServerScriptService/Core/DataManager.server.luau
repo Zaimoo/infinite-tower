@@ -774,6 +774,54 @@ local function validateCallerPlotOwnership(player: Player, targetPlot: any?): bo
 	return true
 end
 
+-- Rolls `count` heroes on a banner (no cost): pity, the 10-pull floor and God's Blessing luck all
+-- apply. Used by Gem summons and by Robux summon packs (ShopService).
+function DataManager.RollSummons(player: Player, bannerId: string, count: number): ({ HeroInstance }, number, number, any, string, boolean)
+	local profile = ActiveProfiles[player] :: PlayerProfile
+	local isLimited = isLimitedBanner(bannerId)
+	local banner = if isLimited then HeroCatalog.LimitedBanner else HeroCatalog.PermanentBanner
+	local bannerKey = isLimited and "HeroLimitedPity" or "HeroPermanentPity"
+	local topTier = banner.MaxStar
+	local featuredId = if isLimited then (banner.FeaturedHeroId or "hero_astrea") else (banner.HeroesByStar[topTier] or "hero_ignis")
+
+	if profile.HeroPermanentPity == nil then profile.HeroPermanentPity = profile.HeroBannerPity or 0 end
+	if profile.HeroLimitedPity == nil then profile.HeroLimitedPity = 0 end
+
+	local summonedList: { HeroInstance } = {}
+	local luck = DataManager.GetSummonLuck(player)
+	local bestTier = 0
+
+	for pull = 1, count do
+		local currentPity = (profile[bannerKey] or 0) + 1
+		profile[bannerKey] = currentPity
+
+		local uuid: string
+		local hero: HeroInstance
+		local tier: number
+
+		if currentPity >= banner.MaxPity then
+			-- Hard pity: the banner's top hero (Exalted Ignis / Mythical Astrea).
+			uuid, hero = DataManager.CreateHeroFromSeed(featuredId)
+			tier = topTier
+		else
+			-- The 10th pull of a 10x is forced to Rare or better if the first nine were not.
+			local guarantee = if count == 10 and pull == count and bestTier < banner.TenPullMinTier then banner.TenPullMinTier else nil
+			uuid, hero, tier = rollBannerHero(isLimited and "A_STARS_ARRIVAL" or "CALL_OF_THE_RIFT", luck, guarantee)
+		end
+		if tier >= topTier then
+			profile[bannerKey] = 0
+		end
+		bestTier = math.max(bestTier, tier)
+
+		profile.Heroes[uuid] = hero
+		table.insert(summonedList, hero)
+	end
+
+	-- Mirror permanent pity to legacy HeroBannerPity for backwards compatibility
+	profile.HeroBannerPity = profile.HeroPermanentPity
+	return summonedList, bestTier, luck, banner, bannerKey, isLimited
+end
+
 RequestSummonFunc.OnServerInvoke = function(player: Player, arg1: any, arg2: any, arg3: any)
 	-- Support flexible calling signatures:
 	-- (player, pullCount, targetPlot, bannerId) or (player, bannerId, pullCount, targetPlot)
@@ -809,48 +857,8 @@ RequestSummonFunc.OnServerInvoke = function(player: Player, arg1: any, arg2: any
 		return { Success = false, Message = "Insufficient Gems" }
 	end
 
-	local isLimited = isLimitedBanner(bannerId)
-	local banner = if isLimited then HeroCatalog.LimitedBanner else HeroCatalog.PermanentBanner
-	local bannerKey = isLimited and "HeroLimitedPity" or "HeroPermanentPity"
-	local topTier = banner.MaxStar
-	local featuredId = if isLimited then (banner.FeaturedHeroId or "hero_astrea") else (banner.HeroesByStar[topTier] or "hero_ignis")
-
-	if profile.HeroPermanentPity == nil then profile.HeroPermanentPity = profile.HeroBannerPity or 0 end
-	if profile.HeroLimitedPity == nil then profile.HeroLimitedPity = 0 end
-
 	profile.Currencies.Gems -= gemCost
-	local summonedList: { HeroInstance } = {}
-	local luck = DataManager.GetSummonLuck(player)
-	local bestTier = 0
-
-	for pull = 1, count do
-		local currentPity = (profile[bannerKey] or 0) + 1
-		profile[bannerKey] = currentPity
-
-		local uuid: string
-		local hero: HeroInstance
-		local tier: number
-
-		if currentPity >= banner.MaxPity then
-			-- Hard pity: the banner's top hero (Exalted Ignis / Mythical Astrea).
-			uuid, hero = DataManager.CreateHeroFromSeed(featuredId)
-			tier = topTier
-		else
-			-- The 10th pull of a 10x is forced to Rare or better if the first nine were not.
-			local guarantee = if count == 10 and pull == count and bestTier < banner.TenPullMinTier then banner.TenPullMinTier else nil
-			uuid, hero, tier = rollBannerHero(isLimited and "A_STARS_ARRIVAL" or "CALL_OF_THE_RIFT", luck, guarantee)
-		end
-		if tier >= topTier then
-			profile[bannerKey] = 0
-		end
-		bestTier = math.max(bestTier, tier)
-
-		profile.Heroes[uuid] = hero
-		table.insert(summonedList, hero)
-	end
-
-	-- Mirror permanent pity to legacy HeroBannerPity for backwards compatibility
-	profile.HeroBannerPity = profile.HeroPermanentPity
+	local summonedList, bestTier, luck, banner, bannerKey, isLimited = DataManager.RollSummons(player, bannerId, count)
 
 	local pityRemaining = math.max(1, banner.MaxPity - (profile[bannerKey] or 0))
 	DataManager.SyncProfile(player)
