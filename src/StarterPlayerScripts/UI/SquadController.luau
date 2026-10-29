@@ -199,8 +199,10 @@ function SquadController.new(screenGui: ScreenGui, getProfile: () -> any, remote
 	end)
 
 	-- Window
-	self.Root = new("Frame", {
+	self.Root = new("TextButton", {
 		Name = "SquadDeployModal",
+		Text = "",
+		AutoButtonColor = false,
 		Active = true,
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.5),
@@ -209,6 +211,7 @@ function SquadController.new(screenGui: ScreenGui, getProfile: () -> any, remote
 		Visible = false,
 		ZIndex = Z - 1,
 	}, screenGui)
+	self.Root.Activated:Connect(function() end)
 	GothicBoxStyle.Apply(self.Root, { Style = "Window" })
 	self.Scale = new("UIScale", {}, self.Root)
 	local function updateScale()

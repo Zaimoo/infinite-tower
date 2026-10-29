@@ -273,8 +273,10 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 	end)
 
 	-- 2. Modal Root Frame (Ornate Gothic Box Container)
-	local root = new("Frame", {
+	local root = new("TextButton", {
 		Name = "HeroPromotionModal",
+		Text = "",
+		AutoButtonColor = false,
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.5),
 		Size = UDim2.fromOffset(WIDTH, HEIGHT),
@@ -284,6 +286,7 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 		Active = true,
 		ZIndex = 40,
 	}, gui)
+	root.Activated:Connect(function() end)
 	self.Root = root
 	-- Gilded Grimoire theme: convert this screen's legacy Gotham text (now and as it is rebuilt).
 	GildedGrimoire.Watch(root)
@@ -674,8 +677,10 @@ end
 --============================================================================
 
 function Promo.BuildPicker(self: any)
-	local picker = new("Frame", {
+	local picker = new("TextButton", {
 		Name = "HeroPickerOverlay",
+		Text = "",
+		AutoButtonColor = false,
 		BackgroundColor3 = C.Bg,
 		BorderSizePixel = 0,
 		Visible = false,
@@ -684,6 +689,7 @@ function Promo.BuildPicker(self: any)
 		Size = UDim2.new(1, -24, 1, -24),
 		ZIndex = 60,
 	}, self.Root)
+	picker.Activated:Connect(function() end)
 	applyGothicStyle(picker, "Window")
 	self.Picker = picker
 
