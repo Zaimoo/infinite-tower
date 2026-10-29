@@ -1,0 +1,7 @@
+{
+  "name": "Heroes",
+  "tree": {
+    "$className": "Folder",
+    "$ignoreUnknownInstances": true
+  }
+}
