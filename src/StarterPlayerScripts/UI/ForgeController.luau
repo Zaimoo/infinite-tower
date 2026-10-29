@@ -179,8 +179,11 @@ function Forge.new(gui: ScreenGui, artifactRemotes: Folder, getProfile: (() -> a
 	end)
 
 	-- 2. Modal Frame (Ornate Gothic Box Container)
-	local root = new("Frame", {
+	local root = new("TextButton", {
 		Name = "BlacksmithForgeModal",
+		Text = "",
+		AutoButtonColor = false,
+		Active = true,
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.5),
 		Size = UDim2.fromOffset(WIDTH, HEIGHT),
@@ -189,6 +192,7 @@ function Forge.new(gui: ScreenGui, artifactRemotes: Folder, getProfile: (() -> a
 		Visible = false,
 		ZIndex = 51,
 	}, gui)
+	root.Activated:Connect(function() end)
 	self.Root = root
 	-- Gilded Grimoire theme: convert this screen's legacy Gotham text (now and as it is rebuilt).
 	GildedGrimoire.Watch(root)

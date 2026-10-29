@@ -466,7 +466,7 @@ function Components.SquadStatusCard(props: { Rows: { any }, LockedText: string?,
 				Range = heavyLabel({ Position = UDim2.fromOffset(4, 46), Size = UDim2.new(1, -8, 0, 16), MaxSize = 13, Outline = 1.8, Gold = false,
 					Text = "Slots " .. (props.LockedRange or "") }),
 				Hint = body({ Position = UDim2.fromOffset(4, 64), Size = UDim2.new(1, -8, 0, 13), TextSize = 10, TextColor3 = Color3.fromRGB(196, 186, 214),
-					TextXAlignment = Enum.TextXAlignment.Center, Text = "Fortress Tree" }),
+					TextXAlignment = Enum.TextXAlignment.Center, Text = "Upgrades" }),
 			})
 	end
 	if props.Compact then

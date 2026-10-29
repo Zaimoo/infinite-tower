@@ -188,13 +188,15 @@ function Synth.new(gui: ScreenGui, remote: RemoteFunction)
 		Name = "SynthesisScrim", Text = "", AutoButtonColor = false, BackgroundColor3 = C.Scrim,
 		BackgroundTransparency = 0.3, Size = UDim2.fromScale(1, 1), Visible = false, ZIndex = 39,
 	}, gui)
-	self.Scrim.Activated:Connect(function() if not self.Busy then self:Close() end end)
+	-- Modal closes only via the X button; clicks on scrim or container do not dismiss the UI.
 
-	local root = new("Frame", {
+	local root = new("TextButton", {
 		Name = "SynthesisModal", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
 		Size = UDim2.fromOffset(WIDTH, HEIGHT), BackgroundColor3 = C.Panel, BorderSizePixel = 0,
+		Text = "", AutoButtonColor = false,
 		Visible = false, Active = true, ZIndex = 40,
 	}, gui)
+	root.Activated:Connect(function() end) -- Swallows clicks so clicking inside the container never closes the modal
 	self.Root = root
 	-- Gilded Grimoire theme: convert this screen's legacy Gotham text (now and as it is rebuilt).
 	GildedGrimoire.Watch(root)
@@ -303,10 +305,12 @@ function Synth.BuildSlot(self: any, parent: Instance, name: string, size: number
 end
 
 function Synth.BuildPicker(self: any)
-	local picker = new("Frame", {
+	local picker = new("TextButton", {
 		Name = "HeroPicker", BackgroundColor3 = C.Panel, BorderSizePixel = 0, Visible = false, Active = true,
 		Position = UDim2.fromOffset(14, 14), Size = UDim2.new(1, -28, 1, -28), ZIndex = 60,
+		Text = "", AutoButtonColor = false,
 	}, self.Root)
+	picker.Activated:Connect(function() end)
 	applyGothicStyle(picker, "Window")
 	self.Picker = picker
 	self.PickerTileUIs = {}

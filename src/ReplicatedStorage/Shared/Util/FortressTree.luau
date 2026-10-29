@@ -76,7 +76,7 @@ end
 
 -- Why a node's onboarding system is still closed, keyed by the node's System.
 local SYSTEM_HINTS: { [string]: string } = {
-	FortressTree = "The Fortress Tree unlocks after you upgrade a weapon at the Forge.",
+	FortressTree = "Upgrades unlock after you upgrade a weapon at the Forge.",
 	Squad = "Summon your first hero to unlock squad slots.",
 }
 

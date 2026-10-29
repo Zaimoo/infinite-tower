@@ -1059,12 +1059,12 @@ local towerHandle = createFloatingIconButton(
 	end
 )
 
--- 6. FORTRESS (Parchment, NO COOLDOWN): the Fortress Tree, also opened at the Architect's Table.
+-- 6. UPGRADES (Parchment, NO COOLDOWN): the Fortress Tree, also opened at the Architect's Table.
 local fortressHandle = createFloatingIconButton(
 	"Fortress",
 	6,
 	nil,
-	"FORTRESS",
+	"UPGRADES",
 	ACTION_COLORS.Fortress,
 	false,
 	function()

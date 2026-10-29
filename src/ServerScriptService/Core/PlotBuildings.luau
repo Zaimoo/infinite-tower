@@ -280,7 +280,7 @@ function Buildings.Build(plot: Instance)
 		"FacilityHUDPrompt",
 		"FortressTree",
 		"Architect's Table",
-		"Open Fortress Tree",
+		"Open Upgrades",
 		Enum.KeyCode.F,
 		14
 	)

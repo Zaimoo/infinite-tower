@@ -71,7 +71,7 @@ local Steps: { Step } = {
 	{
 		Id = "step_tree",
 		Title = "Grow your fortress",
-		Description = "Unlock a new node in the Fortress Tree at the Architect's Table",
+		Description = "Unlock a new node in Upgrades at the Architect's Table",
 		Event = "TreeNodeUnlocked",
 		TargetCount = 1,
 		Unlocks = {},
