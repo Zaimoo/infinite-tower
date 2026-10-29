@@ -238,7 +238,7 @@ local function ShopPanel(props: { Profile: any, Width: number, OnClose: () -> ()
 	end
 	rows.GemsHeader = sectionHeader(2, "Gems", "GEMS", "Summon heroes and artifacts")
 	rows.Gems = cardRow(3, ShopConfig.Gems, "Gems", "Teal")
-	rows.GoldHeader = sectionHeader(4, "Gold", "GOLD", "Build the Fortress Tree and promote heroes")
+	rows.GoldHeader = sectionHeader(4, "Gold", "GOLD", "Unlock upgrades and promote heroes")
 	rows.Gold = cardRow(5, ShopConfig.Gold, "Gold", "Bronze")
 
 	local profile = props.Profile

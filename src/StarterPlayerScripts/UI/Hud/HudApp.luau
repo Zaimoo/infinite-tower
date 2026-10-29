@@ -98,7 +98,7 @@ local function buildRows(profile: any): ({ any }, string?)
 	end
 	local lockedText = nil
 	if open < TreeConfig.MaxSquadSlots then
-		lockedText = string.format("Slots %d–%d · unlock in the Fortress Tree", open + 1, TreeConfig.MaxSquadSlots)
+		lockedText = string.format("Slots %d–%d · unlock in Upgrades", open + 1, TreeConfig.MaxSquadSlots)
 	end
 	return rows, lockedText
 end
@@ -267,7 +267,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 			OnActivated = function() call("OpenMasterModal", "BLACKSMITH") end })
 	end
 	if unlocks.Squad then
-		table.insert(leftButtons, { Icon = "Fortress", Label = "Fortress", Accent = Color3.fromRGB(214, 180, 120), Badge = buildableNodes(profile),
+		table.insert(leftButtons, { Icon = "Fortress", Label = "Upgrades", Accent = Color3.fromRGB(214, 180, 120), Badge = buildableNodes(profile),
 			OnActivated = function() call("OpenFacilityHUD", "FortressTree") end })
 	end
 	table.insert(leftButtons, { Icon = "Index", Label = "Index", Accent = Color3.fromRGB(180, 140, 255), Badge = newHeroes,

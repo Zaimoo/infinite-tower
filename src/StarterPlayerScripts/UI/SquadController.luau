@@ -649,7 +649,7 @@ function SquadController.Refresh(self: any)
 	self.SquadHint.Text = if not unlocked then "Summon your first hero to change your squad."
 		elseif self.ChoosingSlot then string.format("Choosing a hero for Slot %d…", self.ChoosingSlot)
 		elseif self.HeldHero then "Press REPLACE on a slot."
-		else if open < SQUAD_SLOTS then string.format("Slots %d–%d open in the Fortress Tree.", open + 1, SQUAD_SLOTS) else ""
+		else if open < SQUAD_SLOTS then string.format("Slots %d–%d open in Upgrades.", open + 1, SQUAD_SLOTS) else ""
 
 	-- Slots
 	for i = 1, SQUAD_SLOTS do
@@ -683,7 +683,7 @@ function SquadController.Refresh(self: any)
 		e.Main.Size = UDim2.new(1, -16, 0, 36)
 		if locked then
 			e.Name.Text = "LOCKED"
-			e.Info.Text = "Open in the Fortress Tree"
+			e.Info.Text = "Open in Upgrades"
 			e.Power.Text = ""
 			retone(e.Main, e.MainLabel, "Bronze", "UNLOCK")
 			e.Rail.Color = Color3.fromRGB(140, 130, 160)

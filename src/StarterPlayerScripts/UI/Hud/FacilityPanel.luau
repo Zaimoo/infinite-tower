@@ -315,7 +315,7 @@ local function FacilityPanel(props: { Facility: string, Profile: any, Width: num
 				end }, {
 				Padlock = IconAt("Lock", 40, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 24), ZIndex = 4 }),
 				Lock = Body({ Position = UDim2.fromOffset(6, 74), Size = UDim2.new(1, -12, 0, 56), TextSize = 12, TextWrapped = true, TextTruncate = Enum.TextTruncate.None,
-					TextXAlignment = Enum.TextXAlignment.Center, TextColor3 = TEXT.Muted, Text = "More slots in the\nFortress Tree", ZIndex = 4 }),
+					TextXAlignment = Enum.TextXAlignment.Center, TextColor3 = TEXT.Muted, Text = "More slots in\nUpgrades", ZIndex = 4 }),
 			})
 		end
 	end
