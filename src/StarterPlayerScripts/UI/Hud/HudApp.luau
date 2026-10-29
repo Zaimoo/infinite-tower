@@ -104,11 +104,19 @@ local function buildRows(profile: any): ({ any }, string?)
 end
 
 local function buildableNodes(profile: any): number
-	if not profile then return 0 end
+	if not profile or not (profile.Unlocks and profile.Unlocks.FortressTree) then return 0 end
+	local tree = profile.FortressTree
+	local gold = profile.Currencies and profile.Currencies.Gold or 0
+	local floor = profile.HighestClearedFloor or 0
 	local count = 0
 	for _, node in TreeConfig.Nodes do
-		if FortressTree.CanUnlock(profile.FortressTree, node.Id, profile.Currencies and profile.Currencies.Gold or 0,
-			profile.HighestClearedFloor or 0, profile.Unlocks) then
+		if node.Kind ~= "LEVEL" or node.Default then
+			continue
+		end
+		if node.Gold <= 0 or gold < node.Gold then
+			continue
+		end
+		if FortressTree.CanUnlock(tree, node.Id, gold, floor, profile.Unlocks) then
 			count += 1
 		end
 	end
