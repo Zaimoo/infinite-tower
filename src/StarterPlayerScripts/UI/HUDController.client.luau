@@ -1629,9 +1629,9 @@ ProfileDeltaSyncEvent.OnClientEvent:Connect(function(profile: any)
 	if fortressTreeController and fortressTreeController:IsOpen() then
 		fortressTreeController:Refresh()
 	end
-	if synthesisController and synthesisController.Root and synthesisController.Root.Visible then
-		synthesisController:Refresh()
-	end
+	-- Note: SynthesisController and PromotionController fetch STATE on Open()
+	-- and reconcile on COMMIT. Do NOT auto-refresh them on ProfileDeltaSyncEvent
+	-- as it fires continuously (every 3s passive gold tick, combat) and causes network/render lag.
 	if forgeController and forgeController.Root and forgeController.Root.Visible then
 		forgeController:Refresh()
 	end
@@ -1644,9 +1644,6 @@ ProfileDeltaSyncEvent.OnClientEvent:Connect(function(profile: any)
 
 	if squadController and squadController:IsOpen() then
 		squadController:Refresh()
-	end
-	if promotionController and promotionController:IsOpen() then
-		promotionController:Refresh()
 	end
 	if ((forgeController and forgeController.Root and forgeController.Root.Visible) or blacksmithModal.Visible) and refreshBlacksmithModal then
 		refreshBlacksmithModal()

@@ -335,6 +335,7 @@ test("Every donor protection applies equally to synthesis and conversion", funct
 	local protections = {
 		{ Locked = true }, { Favorite = true }, { Favorited = true },
 		{ Assignment = "SQUAD_SLOT_1" }, { Assignment = "FACILITY_CONDUIT" },
+		{ EquippedArtifactUUID = "art_test" },
 		{ ComaUntilTimestamp = os.time() + 1000 }, { IsHardAuditComa = true },
 		{ ReservedBy = "ritual" }, { Reserved = true }, { OperationReserved = true },
 		{ ReservedOperationId = "operation" }, { InCombat = true }, { IsInCombat = true },

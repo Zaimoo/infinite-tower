@@ -93,6 +93,84 @@ local function xpRatio(level: number?, xp: number?): number
 	return math.clamp((xp or 0) / StatFormulas.GetXPRequiredForNextLevel(level or 1), 0, 1)
 end
 
+local function checkDonorEligibility(hero: any, recipientUUID: string?): (boolean, string, string)
+	local uuid = hero and hero.UUID
+	if not hero or not uuid then
+		return false, "Invalid hero.", "Unavailable"
+	end
+	if recipientUUID and uuid == recipientUUID then
+		return false, "A hero cannot be its own material.", "Recipient"
+	end
+
+	local profile: any = _G.CurrentProfile
+	local profileHero = profile and profile.Heroes and profile.Heroes[uuid]
+	local effectiveHero = profileHero or hero
+
+	-- 1. Artifact equipment check (heroes equipped with weapons/artifacts cannot be consumed)
+	if (effectiveHero.EquippedArtifactUUID and effectiveHero.EquippedArtifactUUID ~= "")
+		or (hero.EquippedArtifactUUID and hero.EquippedArtifactUUID ~= "") then
+		return false, "This hero has an artifact equipped. Unequip it before using as material.", "Equipped"
+	end
+
+	-- 2. Squad deployment check (heroes equipped in squad cannot be consumed)
+	local assignment = effectiveHero.Assignment or hero.Assignment or ""
+	if string.find(assignment, "^SQUAD") then
+		return false, "This hero is deployed in your squad. Bench it before using as material.", "Deployed"
+	end
+	if profile and profile.DeployedSquadOrder and table.find(profile.DeployedSquadOrder, uuid) then
+		return false, "This hero is deployed in your squad. Bench it before using as material.", "Deployed"
+	end
+	if effectiveHero.InCombat or effectiveHero.IsInCombat or effectiveHero.ActiveCombat
+		or hero.InCombat or hero.IsInCombat or hero.ActiveCombat then
+		return false, "This hero is currently deployed in combat.", "Deployed"
+	end
+
+	-- 3. Building / facility check (heroes stationed in buildings cannot be consumed)
+	if string.find(assignment, "^FACILITY") then
+		return false, "This hero is stationed in a building. Unassign it before using as material.", "Stationed"
+	end
+	if profile and profile.Facilities then
+		for _, facility in pairs(profile.Facilities) do
+			if facility.AssignedHeroUUIDs and table.find(facility.AssignedHeroUUIDs, uuid) then
+				return false, "This hero is stationed in a building. Unassign it before using as material.", "Stationed"
+			end
+		end
+	end
+
+	-- 4. Any other non-benched assignment
+	if assignment ~= "" and assignment ~= "BENCHED" then
+		return false, "This hero is currently assigned (" .. assignment .. "). Bench it first.", "Assigned"
+	end
+
+	-- 5. Locked / Favorited
+	if effectiveHero.Locked or effectiveHero.Favorite or effectiveHero.Favorited
+		or hero.Locked or hero.Favorite or hero.Favorited then
+		return false, "This hero is protected. Unlock it deliberately before using it.", "Locked"
+	end
+
+	-- 6. Coma / Recovering
+	local coma = math.max(effectiveHero.ComaUntilTimestamp or 0, hero.ComaUntilTimestamp or 0)
+	if coma > os.time() or effectiveHero.IsHardAuditComa or hero.IsHardAuditComa then
+		return false, "This hero must recover from Coma first.", "Recovering"
+	end
+
+	-- 7. Unique / Protected
+	if effectiveHero.Unique or effectiveHero.IsUnique or effectiveHero.Protected
+		or hero.Unique or hero.IsUnique or hero.Protected
+		or effectiveHero.TemplateId == "hero_archon" or hero.TemplateId == "hero_archon" then
+		return false, "This unique hero is protected from consumption.", "Protected"
+	end
+
+	-- 8. Authoritative PitStatus check from server
+	if hero.PitStatus and hero.PitStatus.EligibleDonor == false then
+		local st = hero.PitStatus.Status or "Unavailable"
+		if st == "Facility Worker" then st = "Stationed" end
+		return false, hero.PitStatus.Reason or "This hero cannot be used as material.", st
+	end
+
+	return true, "", "Ready"
+end
+
 --============================================================================
 -- CONSTRUCTION
 --============================================================================
@@ -155,6 +233,7 @@ function Synth.new(gui: ScreenGui, remote: RemoteFunction)
 		local slot = self:BuildSlot(root, "DonorSlot" .. i, slotSize, UDim2.fromOffset(startX + (i - 1) * (slotSize + gap), 352), false)
 		slot.Button.Activated:Connect(function()
 			if self.Busy then return end
+			if not self.Recipient then return end
 			local uuid = self.Donors[i]
 			if uuid then self:RemoveDonor(uuid) else self:OpenPicker("DONOR") end
 		end)
@@ -230,18 +309,42 @@ function Synth.BuildPicker(self: any)
 	}, self.Root)
 	applyGothicStyle(picker, "Window")
 	self.Picker = picker
+	self.PickerTileUIs = {}
+
 	self.PickerTitle = label(picker, "", 18, C.Text, Enum.Font.GothamBlack)
 	self.PickerTitle.Position, self.PickerTitle.Size, self.PickerTitle.ZIndex = UDim2.fromOffset(0, 18), UDim2.new(1, 0, 0, 28), 61
+
 	local back = new("TextButton", {
 		Text = "×", TextSize = 28, Font = Enum.Font.GothamBold, TextColor3 = C.Muted, BackgroundTransparency = 1,
 		Position = UDim2.new(1, -50, 0, 10), Size = UDim2.fromOffset(40, 40), ZIndex = 61,
 	}, picker)
-	back.Activated:Connect(function() picker.Visible = false end)
+	back.Activated:Connect(function()
+		picker.Visible = false
+		self:Render()
+		self:QueuePreview()
+	end)
 	GrimoireIcons.CloseGlyph(back, 18)
-	self.PickerStatus = label(picker, "", 13, C.Muted, Enum.Font.GothamMedium)
-	self.PickerStatus.Position, self.PickerStatus.Size, self.PickerStatus.ZIndex = UDim2.new(0, 20, 1, -44), UDim2.new(1, -40, 0, 34), 61
+
+	self.PickerStatus = label(picker, "", 12, C.Muted, Enum.Font.GothamMedium)
+	self.PickerStatus.TextXAlignment = Enum.TextXAlignment.Left
+	self.PickerStatus.Position, self.PickerStatus.Size, self.PickerStatus.ZIndex = UDim2.new(0, 20, 1, -50), UDim2.new(1, -190, 0, 42), 61
+
+	local confirmBtn = new("TextButton", {
+		Name = "PickerConfirmButton", Text = "CONFIRM (0/5)", TextSize = 13, Font = Enum.Font.GothamBold,
+		TextColor3 = C.Text, BackgroundColor3 = Color3.fromRGB(15, 14, 20), BorderSizePixel = 0, AutoButtonColor = true,
+		Position = UDim2.new(1, -160, 1, -48), Size = UDim2.fromOffset(140, 38), ZIndex = 62,
+	}, picker)
+	applyGothicStyle(confirmBtn, "Button")
+	confirmBtn.Activated:Connect(function()
+		picker.Visible = false
+		self:Render()
+		self:QueuePreview()
+	end)
+	self.PickerConfirmButton = confirmBtn
+	self.PickerConfirmStroke = GildedGrimoire.StateStroke(confirmBtn)
+
 	self.PickerList = new("ScrollingFrame", {
-		BackgroundTransparency = 1, BorderSizePixel = 0, Position = UDim2.fromOffset(20, 58), Size = UDim2.new(1, -40, 1, -112),
+		BackgroundTransparency = 1, BorderSizePixel = 0, Position = UDim2.fromOffset(20, 56), Size = UDim2.new(1, -40, 1, -114),
 		CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, ScrollBarThickness = 4,
 		ScrollBarImageColor3 = C.LineDim, ScrollingDirection = Enum.ScrollingDirection.Y, ZIndex = 61,
 	}, picker)
@@ -273,7 +376,11 @@ function Synth.Refresh(self: any, attempt: number?)
 		self.State = response.State or { Heroes = {} }
 		if self.Recipient and not self.State.Heroes[self.Recipient] then self.Recipient = nil end
 		for i = #self.Donors, 1, -1 do
-			if not self.State.Heroes[self.Donors[i]] then table.remove(self.Donors, i) end
+			local uuid = self.Donors[i]
+			local hero = self.State.Heroes[uuid]
+			if not hero or not checkDonorEligibility(hero, self.Recipient, nil) then
+				table.remove(self.Donors, i)
+			end
 		end
 		self:Render()
 		if self.Picker.Visible then self:RenderPicker() end
@@ -349,62 +456,151 @@ end
 -- SELECTION
 --============================================================================
 
+function Synth.UpdatePickerHeaderAndButton(self: any)
+	local donorMode = self.PickerMode == "DONOR"
+	if donorMode then
+		local count = #self.Donors
+		self.PickerTitle.Text = spaced(string.format("SELECT MATERIAL (%d/%d)", count, DONOR_SLOTS))
+		if self.PickerConfirmButton then
+			self.PickerConfirmButton.Visible = true
+			self.PickerConfirmButton.Text = string.format("CONFIRM (%d/%d)", count, DONOR_SLOTS)
+			self.PickerConfirmButton.TextColor3 = count > 0 and C.Text or Color3.fromRGB(206, 196, 226)
+			if self.PickerConfirmStroke then
+				self.PickerConfirmStroke.Color = count > 0 and Color3.fromRGB(255, 226, 140) or Color3.fromRGB(150, 138, 176)
+			end
+		end
+		if self.PickerStatus then
+			self.PickerStatus.Size = UDim2.new(1, -190, 0, 42)
+		end
+	else
+		self.PickerTitle.Text = spaced("SELECT HERO")
+		if self.PickerConfirmButton then
+			self.PickerConfirmButton.Visible = false
+		end
+		if self.PickerStatus then
+			self.PickerStatus.Size = UDim2.new(1, -40, 0, 42)
+		end
+	end
+end
+
+function Synth.UpdateTileVisual(self: any, uuid: string)
+	local ui = self.PickerTileUIs and self.PickerTileUIs[uuid]
+	if not ui then return end
+	local isSelected = table.find(self.Donors, uuid) ~= nil
+	ui.Badge.Visible = isSelected
+	ui.Tint.Visible = isSelected
+	if isSelected then
+		ui.Stroke.Color = Color3.fromRGB(255, 215, 80)
+		ui.Stroke.Thickness = 2
+		ui.Stroke.Transparency = 0
+	else
+		ui.Stroke.Color = ui.Eligible and ui.Rarity or C.LineDim
+		ui.Stroke.Thickness = 1
+		ui.Stroke.Transparency = ui.Eligible and 0 or 0.5
+	end
+end
+
+function Synth.ToggleDonor(self: any, uuid: string)
+	local hero = self.State.Heroes[uuid] or (_G.CurrentProfile and _G.CurrentProfile.Heroes and _G.CurrentProfile.Heroes[uuid])
+	if not hero then return end
+	local donorIdx = table.find(self.Donors, uuid)
+	if donorIdx then
+		-- Deselect
+		table.remove(self.Donors, donorIdx)
+		self.PickerStatus.Text = string.format("Deselected %s (%d/%d materials).", hero.DisplayName or "Hero", #self.Donors, DONOR_SLOTS)
+		self.PickerStatus.TextColor3 = C.Muted
+	else
+		-- Check eligibility
+		local eligible, reason, _ = checkDonorEligibility(hero, self.Recipient)
+		if not eligible then
+			self.PickerStatus.Text = reason or "This hero cannot be used as material."
+			self.PickerStatus.TextColor3 = C.Danger
+			return
+		end
+		if #self.Donors >= DONOR_SLOTS then
+			self.PickerStatus.Text = string.format("All %d material slots are full. Deselect one first.", DONOR_SLOTS)
+			self.PickerStatus.TextColor3 = C.Danger
+			return
+		end
+		table.insert(self.Donors, uuid)
+		self.PickerStatus.Text = string.format("Selected %s (%d/%d materials).", hero.DisplayName or "Hero", #self.Donors, DONOR_SLOTS)
+		self.PickerStatus.TextColor3 = C.Good
+	end
+
+	self:UpdateTileVisual(uuid)
+	self:UpdatePickerHeaderAndButton()
+	self.Message = ""
+	self:Render()
+	self:QueuePreview()
+end
+
 function Synth.RemoveDonor(self: any, uuid: string)
 	local index = table.find(self.Donors, uuid)
 	if index then table.remove(self.Donors, index) end
 	self.Message = ""
+	self:UpdateTileVisual(uuid)
+	self:UpdatePickerHeaderAndButton()
 	self:QueuePreview()
+	self:Render()
 end
 
 function Synth.OpenPicker(self: any, mode: string)
 	if self.Busy then return end
 	if mode == "DONOR" and not self.Recipient then
-		mode = "RECIPIENT"
-		self.PickerMessage = "Choose the hero to synthesize first."
-	else
-		self.PickerMessage = mode == "DONOR" and "Material heroes are permanently consumed. Bench deployed or working heroes to use them." or "Choose the hero who will receive the EXP."
+		return
 	end
+	self.PickerMessage = mode == "DONOR"
+		and "Tap heroes to select or deselect as materials (up to 5)."
+		or "Choose the hero who will receive the EXP."
 	self.PickerMode = mode
 	self.Picker.Visible = true
 	self:RenderPicker()
 end
 
 function Synth.Pick(self: any, uuid: string)
-	local hero = self.State.Heroes[uuid]
+	local hero = self.State.Heroes[uuid] or (_G.CurrentProfile and _G.CurrentProfile.Heroes and _G.CurrentProfile.Heroes[uuid])
 	if not hero then return end
 	if self.PickerMode == "RECIPIENT" then
 		self.Recipient = uuid
 		local index = table.find(self.Donors, uuid)
 		if index then table.remove(self.Donors, index) end
+		self.Message = ""
+		self.Picker.Visible = false
+		self:QueuePreview()
+		self:Render()
 	else
-		local status = hero.PitStatus or {}
-		if status.EligibleDonor == false then
-			self.PickerStatus.Text = status.Reason or "This hero cannot be used as material."
-			self.PickerStatus.TextColor3 = C.Danger
-			return
-		end
-		if #self.Donors >= DONOR_SLOTS then return end
-		table.insert(self.Donors, uuid)
+		self:ToggleDonor(uuid)
 	end
-	self.Message = ""
-	self.Picker.Visible = false
-	self:QueuePreview()
 end
 
 function Synth.RenderPicker(self: any)
+	self.PickerTileUIs = {}
 	for _, child in self.PickerList:GetChildren() do
 		if child:IsA("GuiObject") then child:Destroy() end
 	end
 	local donorMode = self.PickerMode == "DONOR"
-	self.PickerTitle.Text = spaced(donorMode and "SELECT MATERIAL" or "SELECT HERO")
+	self:UpdatePickerHeaderAndButton()
 	self.PickerStatus.Text, self.PickerStatus.TextColor3 = self.PickerMessage or "", C.Muted
+	local heroMap = self.State.Heroes
+	if (not heroMap or next(heroMap) == nil) and _G.CurrentProfile and _G.CurrentProfile.Heroes then
+		heroMap = _G.CurrentProfile.Heroes
+	end
 	local heroes = {}
-	for uuid, hero in self.State.Heroes do
-		if not (donorMode and (uuid == self.Recipient or table.find(self.Donors, uuid))) then table.insert(heroes, hero) end
+	for uuid, hero in heroMap do
+		if not (donorMode and uuid == self.Recipient) then
+			table.insert(heroes, hero)
+		end
 	end
 	table.sort(heroes, function(a, b)
-		local aOk = not donorMode or (a.PitStatus and a.PitStatus.EligibleDonor) or false
-		local bOk = not donorMode or (b.PitStatus and b.PitStatus.EligibleDonor) or false
+		if donorMode then
+			local aSelected = table.find(self.Donors, a.UUID) ~= nil
+			local bSelected = table.find(self.Donors, b.UUID) ~= nil
+			if aSelected ~= bSelected then
+				return aSelected
+			end
+		end
+		local aOk = not donorMode or checkDonorEligibility(a, self.Recipient)
+		local bOk = not donorMode or checkDonorEligibility(b, self.Recipient)
 		if aOk ~= bOk then return aOk end
 		if (a.Stars or 1) ~= (b.Stars or 1) then return (a.Stars or 1) > (b.Stars or 1) end
 		if (a.Level or 1) ~= (b.Level or 1) then return (a.Level or 1) > (b.Level or 1) end
@@ -415,28 +611,83 @@ function Synth.RenderPicker(self: any)
 		empty.Size, empty.ZIndex = UDim2.fromOffset(400, 40), 62
 	end
 	for i, hero in heroes do
-		local eligible = not donorMode or not hero.PitStatus or hero.PitStatus.EligibleDonor ~= false
+		local eligible, _, tagText
+		if donorMode then
+			eligible, _, tagText = checkDonorEligibility(hero, self.Recipient)
+		else
+			eligible, _, tagText = true, "", ""
+		end
 		local rarity = RARITY[math.clamp(hero.Stars or 1, 1, 5)]
+		local isSelected = donorMode and table.find(self.Donors, hero.UUID) ~= nil
+
 		local tile = new("TextButton", {
-			Name = "Hero_" .. tostring(hero.UUID), Text = "", LayoutOrder = i, AutoButtonColor = true,
+			Name = "Hero_" .. tostring(hero.UUID), Text = "", LayoutOrder = i, AutoButtonColor = eligible,
 			BackgroundColor3 = C.Slot, BorderSizePixel = 0, ZIndex = 62,
 		}, self.PickerList)
-		stroke(tile, eligible and rarity or C.LineDim, 1, eligible and 0.1 or 0.5)
+
+		local tileStroke = stroke(
+			tile,
+			isSelected and Color3.fromRGB(255, 215, 80) or (eligible and rarity or C.LineDim),
+			isSelected and 2 or 1,
+			(isSelected or eligible) and 0 or 0.5
+		)
+
+		local tint = new("Frame", {
+			Name = "SelectedTint", BackgroundColor3 = Color3.fromRGB(255, 215, 80),
+			BackgroundTransparency = 0.88, BorderSizePixel = 0,
+			Size = UDim2.fromScale(1, 1), ZIndex = 64, Visible = isSelected,
+		}, tile)
+
 		local host = new("Frame", {
 			BackgroundTransparency = 1, ClipsDescendants = true, Position = UDim2.fromOffset(8, 6),
 			Size = UDim2.fromOffset(88, 82), ZIndex = 63,
 		}, tile)
 		local portrait = HeroCard.Portrait(host, hero)
 		portrait.ZIndex = 63
+
 		local name = label(tile, hero.DisplayName or "Hero", 13, eligible and rarity or C.Muted)
-		name.Position, name.Size, name.ZIndex = UDim2.fromOffset(4, 90), UDim2.new(1, -8, 0, 18), 63
+		name.Position, name.Size, name.ZIndex = UDim2.fromOffset(4, 90), UDim2.new(1, -8, 0, 18), 65
+
 		local info = label(tile, string.format("%s  Lv.%d", stars(hero.Stars), hero.Level or 1), 11, eligible and C.Text or C.Muted, Enum.Font.GothamMedium)
-		info.Position, info.Size, info.ZIndex = UDim2.fromOffset(4, 108), UDim2.new(1, -8, 0, 16), 63
+		info.Position, info.Size, info.ZIndex = UDim2.fromOffset(4, 108), UDim2.new(1, -8, 0, 16), 65
+
 		if not eligible then
 			local shade = new("Frame", { BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.45, BorderSizePixel = 0, Size = UDim2.fromScale(1, 1), ZIndex = 64 }, tile)
-			local tag = label(shade, (hero.PitStatus and hero.PitStatus.Status or "Unavailable"):upper(), 10, C.Danger)
+			local tag = label(shade, tagText:upper(), 10, C.Danger)
 			tag.Size, tag.Position, tag.ZIndex = UDim2.new(1, 0, 0, 16), UDim2.fromOffset(0, 36), 65
 		end
+
+		local badge = new("Frame", {
+			Name = "SelectedBadge", BackgroundColor3 = Color3.fromRGB(46, 175, 75),
+			BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0),
+			Position = UDim2.new(1, -4, 0, 4), Size = UDim2.fromOffset(22, 22),
+			ZIndex = 66, Visible = isSelected,
+		}, tile)
+		new("UICorner", { CornerRadius = UDim.new(1, 0) }, badge)
+		stroke(badge, Color3.fromRGB(240, 255, 240), 1.5, 0)
+
+		local stem1 = new("Frame", {
+			Name = "CheckStem1", BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0,
+			AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(8, 12),
+			Size = UDim2.fromOffset(3, 8), Rotation = -45, ZIndex = 67,
+		}, badge)
+		new("UICorner", { CornerRadius = UDim.new(0, 1) }, stem1)
+
+		local stem2 = new("Frame", {
+			Name = "CheckStem2", BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0,
+			AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(13, 10),
+			Size = UDim2.fromOffset(3, 14), Rotation = 45, ZIndex = 67,
+		}, badge)
+		new("UICorner", { CornerRadius = UDim.new(0, 1) }, stem2)
+
+		self.PickerTileUIs[hero.UUID] = {
+			Badge = badge,
+			Tint = tint,
+			Stroke = tileStroke,
+			Rarity = rarity,
+			Eligible = eligible,
+		}
+
 		local uuid = hero.UUID
 		tile.Activated:Connect(function() self:Pick(uuid) end)
 	end
@@ -446,9 +697,25 @@ end
 -- RENDERING
 --============================================================================
 
-function Synth.RenderSlot(self: any, slot: any, hero: any?, primary: boolean)
+function Synth.RenderSlot(self: any, slot: any, hero: any?, primary: boolean, enabled: boolean?)
+	local isEnabled = if enabled ~= nil then enabled else true
 	local id = hero and hero.UUID or nil
 	slot.Plus.Visible = hero == nil
+	slot.Button.Active = isEnabled
+	slot.Button.AutoButtonColor = isEnabled
+
+	-- Corner decor studs are dimmed when slot is locked/disabled
+	local decor = slot.Button:FindFirstChild("GothicDecorRoot")
+	if decor then
+		for _, child in decor:GetChildren() do
+			if child:IsA("GuiObject") then
+				child.BackgroundTransparency = if isEnabled then 0 else 0.8
+				local s = child:FindFirstChildOfClass("UIStroke")
+				if s then s.Transparency = if isEnabled then 0 else 0.8 end
+			end
+		end
+	end
+
 	if slot.HeroId ~= id then
 		slot.HeroId = id
 		slot.Portrait:ClearAllChildren()
@@ -463,22 +730,50 @@ function Synth.RenderSlot(self: any, slot: any, hero: any?, primary: boolean)
 		slot.Caption.TextColor3 = primary and rarity or C.Text
 		if slot.Stroke then
 			slot.Stroke.Color = primary and C.Line or rarity
+			slot.Stroke.Transparency = 0
 		end
 	else
 		slot.Caption.Text = ""
-		if slot.Stroke then
-			slot.Stroke.Color = primary and C.Line or C.LineDim
+		if not isEnabled then
+			slot.Plus.TextColor3 = Color3.fromRGB(65, 60, 75)
+			slot.Plus.TextTransparency = 0.6
+			if slot.Stroke then
+				slot.Stroke.Color = Color3.fromRGB(45, 42, 58)
+				slot.Stroke.Transparency = 0.6
+			end
+		else
+			slot.Plus.TextColor3 = primary and C.Text or C.Plus
+			slot.Plus.TextTransparency = 0
+			if slot.Stroke then
+				slot.Stroke.Color = primary and C.Line or C.LineDim
+				slot.Stroke.Transparency = 0
+			end
 		end
 	end
 end
 
 function Synth.Render(self: any)
+	local profile: any = _G.CurrentProfile
 	local heroes = self.State.Heroes or {}
+	if (not heroes or next(heroes) == nil) and profile and profile.Heroes then
+		heroes = profile.Heroes
+	end
+
+	-- Prune any donors that have become ineligible (equipped or stationed in buildings)
+	for i = #self.Donors, 1, -1 do
+		local uuid = self.Donors[i]
+		local hero = heroes[uuid] or (profile and profile.Heroes and profile.Heroes[uuid])
+		local eligible = hero and checkDonorEligibility(hero, self.Recipient)
+		if not eligible then
+			table.remove(self.Donors, i)
+		end
+	end
+
 	local recipient = self.Recipient and heroes[self.Recipient]
-	self:RenderSlot(self.RecipientSlot, recipient, true)
+	self:RenderSlot(self.RecipientSlot, recipient, true, true)
 	for i, slot in self.DonorSlots do
 		local uuid = self.Donors[i]
-		self:RenderSlot(slot, uuid and heroes[uuid], false)
+		self:RenderSlot(slot, uuid and heroes[uuid], false, recipient ~= nil)
 	end
 
 	local preview = self.Preview
@@ -555,7 +850,12 @@ end
 function Synth.Open(self: any)
 	self.Root.Visible, self.Scrim.Visible = true, true
 	self.Picker.Visible = false
+	self.Recipient = nil
+	self.Donors = {}
+	self.Preview = nil
+	self.ArmedRare = false
 	self.Message = ""
+	self.Loading = false
 	self:Render()
 	self:Refresh()
 end
@@ -565,6 +865,12 @@ function Synth.Close(self: any)
 	self.Root.Visible, self.Scrim.Visible, self.Picker.Visible = false, false, false
 	self.PreviewSerial += 1
 	self.Loading = false
+	self.Recipient = nil
+	self.Donors = {}
+	self.Preview = nil
+	self.ArmedRare = false
+	self.Message = ""
+	self:Render()
 end
 
 function Synth.IsOpen(self: any): boolean
