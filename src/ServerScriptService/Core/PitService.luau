@@ -80,8 +80,10 @@ function PitService:DonorStatus(profile: any, hero: any, recipientUUID: string?)
 	elseif (hero.ComaUntilTimestamp or 0) > os.time() or hero.IsHardAuditComa then reason, status = "This hero must recover from Coma first.", "Recovering"
 	elseif hero.ReservedBy ~= nil or hero.Reserved or hero.OperationReserved or hero.ReservedOperationId ~= nil then reason, status = "This hero is reserved by another operation.", "Reserved"
 	elseif hero.InCombat or hero.IsInCombat or hero.ActiveCombat then reason, status = "This hero is in active combat.", "Deployed"
+	elseif hero.EquippedArtifactUUID ~= nil and hero.EquippedArtifactUUID ~= "" then
+		reason, status = "Unequip this hero's artifact before using it as a donor.", "Equipped"
 	elseif hero.Assignment ~= "BENCHED" then
-		if string.sub(hero.Assignment or "", 1, 8) == "FACILITY" then reason, status = "Assign this hero to the Waiting Room before using it as a donor.", "Facility Worker"
+		if string.sub(hero.Assignment or "", 1, 8) == "FACILITY" then reason, status = "Assign this hero to the Waiting Room before using it as a donor.", "Stationed"
 		else reason, status = "Bench this deployed hero before using it as a donor.", "Deployed" end
 	end
 	-- Validate redundant indexes as well as the hero's assignment flag.
