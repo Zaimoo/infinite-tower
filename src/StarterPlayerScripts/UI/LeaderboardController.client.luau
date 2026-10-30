@@ -419,12 +419,12 @@ local function getTargetPositions(): (UDim2, UDim2)
 	local camera = workspace.CurrentCamera
 	local vp = camera and camera.ViewportSize or Vector2.new(1280, 720)
 	if vp.X < 500 then
-		local openPos = UDim2.new(0.5, 0, 0, 10)
-		local closedPos = UDim2.new(1, CARD_WIDTH + 40, 0, 10)
+		local openPos = UDim2.new(0.5, 0, 0, 4)
+		local closedPos = UDim2.new(1, CARD_WIDTH + 40, 0, 4)
 		return openPos, closedPos
 	else
-		local openPos = UDim2.new(1, -74, 0, 10)
-		local closedPos = UDim2.new(1, CARD_WIDTH + 40, 0, 10)
+		local openPos = UDim2.new(1, -4, 0, 4)
+		local closedPos = UDim2.new(1, CARD_WIDTH + 40, 0, 4)
 		return openPos, closedPos
 	end
 end
