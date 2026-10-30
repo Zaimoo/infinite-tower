@@ -78,6 +78,8 @@ test("Floor sanctuary extraction rejects unarmed stale expired transitioning or 
 	local cargo={FloorId=0,RoomGeneration=1,DespawnTime=100}
 	assert(Rules.CanBank(hub,cargo,{CanBankCargo=true},false,50))
 	assert(not Rules.CanExtractFloor(hub,cargo,{CanBankCargo=true},false,50))
+	local carriedCargo={FloorId=0,RoomGeneration=1,DespawnTime=math.huge}
+	assert(Rules.CanBank(hub,carriedCargo,{CanBankCargo=true},false,100000))
 end)
 test("Kill gems stay flat while gold and relic odds/value rise on every floor",function()
  for _,role in {"REGULAR","ELITE","BOSS"} do
