@@ -198,6 +198,28 @@ local function restingSeconds(hero: any): number
 	return math.max(0, (hero.ComaUntilTimestamp or 0) - os.time())
 end
 
+local function isDeployed(hero: any): boolean
+	local uuid = hero and hero.UUID
+	if not uuid then return false end
+
+	local profile: any = _G.CurrentProfile
+	local profileHero = profile and profile.Heroes and profile.Heroes[uuid]
+	local effectiveHero = profileHero or hero
+
+	local assignment = effectiveHero.Assignment or hero.Assignment or ""
+	if string.find(assignment, "^SQUAD") then
+		return true
+	end
+	if profile and profile.DeployedSquadOrder and table.find(profile.DeployedSquadOrder, uuid) then
+		return true
+	end
+	if effectiveHero.InCombat or effectiveHero.IsInCombat or effectiveHero.ActiveCombat
+		or hero.InCombat or hero.IsInCombat or hero.ActiveCombat then
+		return true
+	end
+	return false
+end
+
 local function checkDonorEligibility(hero: any, recipientUUID: string?): (boolean, string, string)
 	local uuid = hero and hero.UUID
 	if not hero or not uuid then
@@ -210,6 +232,7 @@ local function checkDonorEligibility(hero: any, recipientUUID: string?): (boolea
 	local profile: any = _G.CurrentProfile
 	local profileHero = profile and profile.Heroes and profile.Heroes[uuid]
 	local effectiveHero = profileHero or hero
+	local assignment = effectiveHero.Assignment or hero.Assignment or ""
 
 	-- 1. Artifact equipment check
 	if (effectiveHero.EquippedArtifactUUID and effectiveHero.EquippedArtifactUUID ~= "")
@@ -218,16 +241,8 @@ local function checkDonorEligibility(hero: any, recipientUUID: string?): (boolea
 	end
 
 	-- 2. Squad deployment check
-	local assignment = effectiveHero.Assignment or hero.Assignment or ""
-	if string.find(assignment, "^SQUAD") then
+	if isDeployed(hero) then
 		return false, "This hero is deployed in your squad. Bench it before using as material.", "Deployed"
-	end
-	if profile and profile.DeployedSquadOrder and table.find(profile.DeployedSquadOrder, uuid) then
-		return false, "This hero is deployed in your squad. Bench it before using as material.", "Deployed"
-	end
-	if effectiveHero.InCombat or effectiveHero.IsInCombat or effectiveHero.ActiveCombat
-		or hero.InCombat or hero.IsInCombat or hero.ActiveCombat then
-		return false, "This hero is currently deployed in combat.", "Deployed"
 	end
 
 	-- 3. Building / facility check
@@ -868,7 +883,7 @@ function Synth.Confirm(self: any)
 	end
 	if preview.RequiresRareConfirmation and not self.ArmedRare then
 		self.ArmedRare = true
-		self.Message = "Rare heroes are selected and will be permanently consumed. Press again to confirm."
+		self.Message = "5-Star heroes are selected and will be permanently consumed. Press again to confirm."
 		self:Render()
 		return
 	end
@@ -1016,6 +1031,10 @@ function Synth.Render(self: any)
 	local heroList = {}
 	local heroPower: { [string]: number } = {}
 	for _, h in pairs(heroes) do
+		-- Deployed heroes are never shown in the material roster
+		if isDeployed(h) then
+			continue
+		end
 		heroPower[h.UUID] = powerOf(profile, h, mult)
 		if self.ReadyOnly then
 			local eligible = (h.UUID ~= self.Recipient) and checkDonorEligibility(h, self.Recipient)
@@ -1027,17 +1046,13 @@ function Synth.Render(self: any)
 	end
 
 	table.sort(heroList, function(a, b)
-		-- Selected donors stay at the very top for clarity
-		local aSelected = table.find(self.Donors, a.UUID) ~= nil
-		local bSelected = table.find(self.Donors, b.UUID) ~= nil
-		if aSelected ~= bSelected then
-			return aSelected
-		end
-
 		local ka = if self.Sort == "Stars" then (a.Stars or 1) elseif self.Sort == "Level" then (a.Level or 1) else heroPower[a.UUID]
 		local kb = if self.Sort == "Stars" then (b.Stars or 1) elseif self.Sort == "Level" then (b.Level or 1) else heroPower[b.UUID]
 		if ka ~= kb then return ka > kb end
-		return (a.DisplayName or "") < (b.DisplayName or "")
+		if (a.DisplayName or "") ~= (b.DisplayName or "") then
+			return (a.DisplayName or "") < (b.DisplayName or "")
+		end
+		return a.UUID < b.UUID
 	end)
 
 	local selectedCount = #self.Donors
@@ -1127,7 +1142,7 @@ function Synth.Render(self: any)
 	if self.Busy then
 		retone(self.ConfirmButton.Button, self.ConfirmButton.Label, "Slate", "SYNTHESIZING…")
 	elseif self.ArmedRare then
-		retone(self.ConfirmButton.Button, self.ConfirmButton.Label, "Danger", "CONFIRM — RARE HEROES")
+		retone(self.ConfirmButton.Button, self.ConfirmButton.Label, "Danger", "CONFIRM — 5★ HEROES")
 	elseif ready then
 		retone(self.ConfirmButton.Button, self.ConfirmButton.Label, "Action", "CONFIRM SYNTHESIZE")
 	else

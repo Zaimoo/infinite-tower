@@ -438,7 +438,13 @@ test("A new preview invalidates a previous operation token", function()
 end)
 
 test("Rare donors require explicit confirmation, with no cost on rejection", function()
-	local c = context(); c.profile.Heroes.d = hero("d", "hero_eolka"); PitService.EnsureDefaults(c.profile)
+	-- 4-star and below do not require rare confirmation
+	local c4 = context(); c4.profile.Heroes.d = hero("d", "hero_morrigan"); PitService.EnsureDefaults(c4.profile)
+	local p4 = c4:preview({ Action = "CONVERSION", Donors = { "d" } })
+	equal(p4.RequiresRareConfirmation, false)
+
+	-- 5-star heroes require explicit confirmation
+	local c = context(); c.profile.Heroes.d = hero("d", "hero_ignis"); PitService.EnsureDefaults(c.profile)
 	local p = c:preview({ Action = "CONVERSION", Donors = { "d" } })
 	equal(p.RequiresRareConfirmation, true)
 	rejectedWithoutMutation(c, "COMMIT", { Token = p.Token, ConfirmRare = false })
