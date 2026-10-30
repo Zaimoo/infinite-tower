@@ -1117,7 +1117,7 @@ function Forge:BuildSummonRevealModal(gui: ScreenGui)
 
 	collectBtn.Activated:Connect(function()
 		self.RevealScrim.Visible = false
-		self:SetTab("ASSIGN") -- Take player to ASSIGN tab so they can see new artifacts!
+		self:SetTab("SUMMON")
 	end)
 end
 
