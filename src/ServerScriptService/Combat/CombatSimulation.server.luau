@@ -73,6 +73,7 @@ end
 --============================================================================
 
 local TICK_INTERVAL = 0.20 -- 5 Hz Server Heartbeat
+local FIELD_LOOT_DESPAWN_SECONDS = 90
 local MASTER_FORMATION_RADIUS = 6.0
 local LEASH_DISTANCE = 65.0
 
@@ -535,13 +536,14 @@ function CombatSimulation.DropCarriedLoot(player: Player, openLoot: boolean?): b
 	part.Parent = PhysicalLootFolder
 
 	local now = os.clock()
+	local despawnTime = now + FIELD_LOOT_DESPAWN_SECONDS
 	local dropped = {
 		LootId = held.LootId, LootType = held.LootType, Amount = held.Amount,
 		FloorId=held.FloorId,RoomGeneration=held.RoomGeneration,
 		Part = part, Prompt = held.OriginalPrompt, Billboard = held.Billboard,
 		KillerUserId = openLoot and 0 or held.KillerUserId,
 		KillerName = openLoot and "Open" or held.KillerName,
-		SpawnTime = held.SpawnTime, DespawnTime = held.DespawnTime,
+		SpawnTime = held.SpawnTime, DespawnTime = despawnTime,
 		PickupBlockedUserId = player.UserId, PickupBlockedUntil = now + 1.5,
 		LockedOut = held.LockedOut, DuelLocked = held.DuelLocked,
 	}
@@ -550,10 +552,12 @@ function CombatSimulation.DropCarriedLoot(player: Player, openLoot: boolean?): b
 		held.OriginalPrompt.ActionText = "Hold / Carry"
 		held.OriginalPrompt.Enabled = true
 	end
-	task.delay(math.max(0,held.DespawnTime-os.clock()), function()
+	task.delay(FIELD_LOOT_DESPAWN_SECONDS, function()
 		if ActiveLootDrops[held.LootId] == dropped then
 			ActiveLootDrops[held.LootId] = nil
-			part:Destroy()
+			if part and part.Parent and not part:FindFirstChildOfClass("WeldConstraint") then
+				part:Destroy()
+			end
 		end
 	end)
 	return true
@@ -867,7 +871,7 @@ function collectPhysicalLoot(player: Player, lootId: number)
 
 	CarrierToHeldLoot[player] = {
 		LootId = lootId,
-		FloorId=loot.FloorId,RoomGeneration=loot.RoomGeneration,SpawnTime=loot.SpawnTime,DespawnTime=loot.DespawnTime,
+		FloorId=loot.FloorId,RoomGeneration=loot.RoomGeneration,SpawnTime=loot.SpawnTime,DespawnTime=math.huge,
 		Part = part,
 		Weld = weld,
 		LootType = lootType,
@@ -1036,7 +1040,7 @@ function spawnPhysicalLoot(lootType: "GOLD" | "GEMS", amount: number, worldPos: 
 		KillerUserId = killerUserId,
 		KillerName = killerName,
 		SpawnTime = os.clock(),
-		DespawnTime = os.clock() + 90,
+		DespawnTime = os.clock() + FIELD_LOOT_DESPAWN_SECONDS,
 	}
 	ActiveLootDrops[lootId] = lootData
 
@@ -1056,7 +1060,7 @@ function spawnPhysicalLoot(lootType: "GOLD" | "GEMS", amount: number, worldPos: 
 		end
 	end)
 
-	task.delay(90, function()
+	task.delay(FIELD_LOOT_DESPAWN_SECONDS, function()
 		if ActiveLootDrops[lootId] == lootData then
 			ActiveLootDrops[lootId] = nil
 			if part and part.Parent and not part:FindFirstChildOfClass("WeldConstraint") then
@@ -2487,10 +2491,8 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 		end
 	end
 
- for p,held in pairs(CarrierToHeldLoot) do if now>=held.DespawnTime then
-  if held.Weld then held.Weld:Destroy() end;if held.Part then held.Part:Destroy() end;clearLootCarryState(p)
- end end
- broadcastReplicationSnapshot(now)
+	-- Carried loot does not despawn while held by a player.
+	broadcastReplicationSnapshot(now)
 end)
 
 CombatSimulation.SpawnPhysicalLoot = spawnPhysicalLoot
