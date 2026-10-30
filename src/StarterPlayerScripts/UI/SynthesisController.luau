@@ -808,6 +808,10 @@ function Synth.PressRosterHero(self: any, uuid: string)
 	-- 1. If no recipient has been chosen yet:
 	if not self.Recipient then
 		self.Recipient = uuid
+		local donorIdx = table.find(self.Donors, uuid)
+		if donorIdx then
+			table.remove(self.Donors, donorIdx)
+		end
 		self.Message = string.format("Selected %s as recipient. Choose materials below to synthesize EXP.", hero.DisplayName or "Hero")
 		self:Render()
 		self:QueuePreview()
@@ -1078,13 +1082,17 @@ function Synth.Render(self: any)
 	local heroList = {}
 	local heroPower: { [string]: number } = {}
 	for _, h in pairs(heroes) do
+		-- The selected recipient hero never shows in the material heroes section, even if equipped in squad
+		if self.Recipient and h.UUID == self.Recipient then
+			continue
+		end
 		-- Heroes stationed in buildings (Training, Guard Post, Market, Blessing, etc.) never show up
 		if isStationed(h) then
 			continue
 		end
 		heroPower[h.UUID] = powerOf(profile, h, mult)
 		if self.ReadyOnly then
-			local eligible = (h.UUID ~= self.Recipient) and checkDonorEligibility(h, self.Recipient)
+			local eligible = checkDonorEligibility(h, self.Recipient)
 			if not eligible then
 				continue
 			end
