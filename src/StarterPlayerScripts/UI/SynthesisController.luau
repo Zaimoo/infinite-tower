@@ -26,7 +26,7 @@ local Synth = {}
 Synth.__index = Synth
 
 local WIDTH, HEIGHT = 980, 668
-local CARD_W, CARD_H = 138, 176
+local CARD_W, CARD_H = 138, 178
 local Z = 40
 local INK = GildedGrimoire.Ink
 local TEXT = GildedGrimoire.Text
@@ -187,7 +187,7 @@ local function setArchetype(holder: Frame, rendered: string, archetype: string?)
 end
 
 local function stars(n: number?): string
-	return string.rep("★", math.clamp(n or 1, 1, 5))
+	return string.rep("★", math.clamp(n or 1, 1, 7))
 end
 
 local function xpRatio(level: number?, xp: number?): number
@@ -198,7 +198,29 @@ local function restingSeconds(hero: any): number
 	return math.max(0, (hero.ComaUntilTimestamp or 0) - os.time())
 end
 
-local function isDeployed(hero: any): boolean
+local function isStationed(hero: any): boolean
+	local uuid = hero and hero.UUID
+	if not uuid then return false end
+
+	local profile: any = _G.CurrentProfile
+	local profileHero = profile and profile.Heroes and profile.Heroes[uuid]
+	local effectiveHero = profileHero or hero
+
+	local assignment = effectiveHero.Assignment or hero.Assignment or ""
+	if string.find(assignment, "^FACILITY") then
+		return true
+	end
+	if profile and profile.Facilities then
+		for _, facility in pairs(profile.Facilities) do
+			if facility.AssignedHeroUUIDs and table.find(facility.AssignedHeroUUIDs, uuid) then
+				return true
+			end
+		end
+	end
+	return false
+end
+
+local function isSquad(hero: any): boolean
 	local uuid = hero and hero.UUID
 	if not uuid then return false end
 
@@ -220,6 +242,8 @@ local function isDeployed(hero: any): boolean
 	return false
 end
 
+local isDeployed = isSquad
+
 local function checkDonorEligibility(hero: any, recipientUUID: string?): (boolean, string, string)
 	local uuid = hero and hero.UUID
 	if not hero or not uuid then
@@ -240,21 +264,14 @@ local function checkDonorEligibility(hero: any, recipientUUID: string?): (boolea
 		return false, "This hero has an artifact equipped. Unequip it before using as material.", "Equipped"
 	end
 
-	-- 2. Squad deployment check
-	if isDeployed(hero) then
-		return false, "This hero is deployed in your squad. Bench it before using as material.", "Deployed"
+	-- 2. Squad deployment check (equipped in player's squad)
+	if isSquad(hero) then
+		return false, "This hero is equipped in your squad and cannot be used as material.", "Equipped"
 	end
 
-	-- 3. Building / facility check
-	if string.find(assignment, "^FACILITY") then
+	-- 3. Building / facility check (stationed in a building)
+	if isStationed(hero) then
 		return false, "This hero is stationed in a building. Unassign it before using as material.", "Stationed"
-	end
-	if profile and profile.Facilities then
-		for _, facility in pairs(profile.Facilities) do
-			if facility.AssignedHeroUUIDs and table.find(facility.AssignedHeroUUIDs, uuid) then
-				return false, "This hero is stationed in a building. Unassign it before using as material.", "Stationed"
-			end
-		end
 	end
 
 	-- 4. Any other non-benched assignment
@@ -274,10 +291,9 @@ local function checkDonorEligibility(hero: any, recipientUUID: string?): (boolea
 		return false, "This hero must recover from Coma first.", "Recovering"
 	end
 
-	-- 7. Unique / Protected
+	-- 7. Unique / Protected (hero_archon and all summonable heroes up to 7★ are allowed as materials)
 	if effectiveHero.Unique or effectiveHero.IsUnique or effectiveHero.Protected
-		or hero.Unique or hero.IsUnique or hero.Protected
-		or effectiveHero.TemplateId == "hero_archon" or hero.TemplateId == "hero_archon" then
+		or hero.Unique or hero.IsUnique or hero.Protected then
 		return false, "This unique hero is protected from consumption.", "Protected"
 	end
 
@@ -285,6 +301,7 @@ local function checkDonorEligibility(hero: any, recipientUUID: string?): (boolea
 	if hero.PitStatus and hero.PitStatus.EligibleDonor == false then
 		local st = hero.PitStatus.Status or "Unavailable"
 		if st == "Facility Worker" then st = "Stationed" end
+		if st == "Deployed" then st = "Equipped" end
 		return false, hero.PitStatus.Reason or "This hero cannot be used as material.", st
 	end
 
@@ -698,16 +715,38 @@ function Synth.BuildRosterCard(self: any, hero: any): any
 	})
 
 	local name = label(card, "Title", {
-		Position = UDim2.fromOffset(4, 102), Size = UDim2.new(1, -8, 0, 18), TextScaled = true, Text = "", ZIndex = Z + 5,
+		Position = UDim2.fromOffset(4, 98), Size = UDim2.new(1, -8, 0, 18), TextScaled = true, Text = "", ZIndex = Z + 5,
 	})
 	new("UITextSizeConstraint", { MaxTextSize = 14 }, name)
 
 	local info = label(card, "Body", {
-		Position = UDim2.fromOffset(4, 122), Size = UDim2.new(1, -8, 0, 16), TextSize = 12, Text = "", ZIndex = Z + 5,
+		Position = UDim2.fromOffset(4, 116), Size = UDim2.new(1, -8, 0, 16), TextSize = 12, Text = "", ZIndex = Z + 5,
 	})
 
 	local power = label(card, "Number", {
-		Position = UDim2.fromOffset(4, 140), Size = UDim2.new(1, -8, 0, 18), TextSize = 14, TextColor3 = TEXT.Gold, Text = "", ZIndex = Z + 5,
+		Position = UDim2.fromOffset(4, 134), Size = UDim2.new(1, -8, 0, 18), TextSize = 14, TextColor3 = TEXT.Gold, Text = "", ZIndex = Z + 5,
+	})
+
+	-- "EQUIPPED" indicator at the bottom of the hero card, just below the power level
+	local equippedPill = new("Frame", {
+		Name = "EquippedPill",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 153),
+		Size = UDim2.fromOffset(78, 18),
+		BackgroundColor3 = Color3.fromRGB(36, 22, 54),
+		BorderSizePixel = 0,
+		Visible = false,
+		ZIndex = Z + 9,
+	}, card)
+	new("UICorner", { CornerRadius = UDim.new(0, 4) }, equippedPill)
+	stroke(equippedPill, Color3.fromRGB(215, 175, 95), 1, 0)
+
+	local equippedLabel = label(equippedPill, "Title", {
+		Size = UDim2.fromScale(1, 1),
+		TextSize = 10,
+		TextColor3 = Color3.fromRGB(250, 215, 120),
+		Text = "EQUIPPED",
+		ZIndex = Z + 10,
 	})
 
 	-- Dims heroes that cannot be used as materials
@@ -756,6 +795,7 @@ function Synth.BuildRosterCard(self: any, hero: any): any
 	return {
 		Card = card, Rail = rail, Ring = ring, Arch = arch, ArchRendered = "",
 		Chip = chipFrame, ChipLabel = chipLabel, Name = name, Info = info, Power = power,
+		EquippedPill = equippedPill, EquippedLabel = equippedLabel,
 		Shade = shade, SelectedTint = selectedTint, SelectedBadge = selectedBadge,
 	}
 end
@@ -777,6 +817,13 @@ function Synth.PressRosterHero(self: any, uuid: string)
 	-- 2. If this hero is the recipient:
 	if uuid == self.Recipient then
 		self.Message = "This hero is the recipient and cannot be used as its own material."
+		self:Render()
+		return
+	end
+
+	-- 2b. If this hero is equipped in your squad:
+	if isSquad(hero) then
+		self.Message = "This hero is equipped in your squad and cannot be used as material."
 		self:Render()
 		return
 	end
@@ -1031,8 +1078,8 @@ function Synth.Render(self: any)
 	local heroList = {}
 	local heroPower: { [string]: number } = {}
 	for _, h in pairs(heroes) do
-		-- Deployed heroes are never shown in the material roster
-		if isDeployed(h) then
+		-- Heroes stationed in buildings (Training, Guard Post, Market, Blessing, etc.) never show up
+		if isStationed(h) then
 			continue
 		end
 		heroPower[h.UUID] = powerOf(profile, h, mult)
@@ -1073,6 +1120,7 @@ function Synth.Render(self: any)
 		local isRecipient = (hero.UUID == self.Recipient)
 		local isSelected = (table.find(self.Donors, hero.UUID) ~= nil)
 		local eligible, reason, tagText = checkDonorEligibility(hero, self.Recipient)
+		local inSquad = isSquad(hero)
 		local resting = restingSeconds(hero)
 		local rarity = Theme.RarityColor(hero.Stars or 1)
 
@@ -1083,30 +1131,25 @@ function Synth.Render(self: any)
 		entry.Ring.Color = rarity
 		entry.ArchRendered = setArchetype(entry.Arch, entry.ArchRendered, hero.Archetype)
 
-		-- Status chip badge (matching Image 2)
+		-- "EQUIPPED" indicator at the bottom of the hero card just below the power level
+		entry.EquippedPill.Visible = inSquad
+
+		-- Status chip badge at the top
 		local chipText, chipColor = "", TEXT.Parchment
 		if isRecipient then
 			chipText, chipColor = "RECIPIENT", TEXT.Gold
 		elseif resting > 0 then
 			chipText, chipColor = string.format("RESTING %ds", resting), TEXT.Bad
-		elseif FACILITY_LABELS[hero.Assignment or ""] then
-			chipText, chipColor = string.upper(FACILITY_LABELS[hero.Assignment]), Color3.fromRGB(150, 236, 255)
-		elseif tagText == "Deployed" then
-			chipText, chipColor = "DEPLOYED", TEXT.Bad
-		elseif tagText == "Equipped" then
-			chipText, chipColor = "EQUIPPED", Color3.fromRGB(255, 226, 140)
 		elseif tagText == "Locked" then
 			chipText, chipColor = "LOCKED", Color3.fromRGB(224, 208, 255)
-		elseif tagText ~= "Ready" and tagText ~= "" then
-			chipText, chipColor = string.upper(tagText), TEXT.Bad
 		end
 
 		entry.Chip.Visible = (chipText ~= "")
 		entry.ChipLabel.Text = chipText
 		entry.ChipLabel.TextColor3 = chipColor
 
-		-- Ineligible or Recipient heroes are shaded
-		entry.Shade.Visible = isRecipient or not eligible
+		-- Ineligible, squad-equipped, or Recipient heroes are shaded
+		entry.Shade.Visible = isRecipient or inSquad or not eligible
 
 		-- Selection visual (Gold highlighted rail & check badge, matching Image 2's Sovereign Archon highlight)
 		entry.SelectedTint.Visible = isSelected
@@ -1116,9 +1159,10 @@ function Synth.Render(self: any)
 			entry.Rail.Thickness = 2.6
 			entry.Rail.Transparency = 0
 		else
-			entry.Rail.Color = if eligible then Color3.fromRGB(200, 160, 96) else Color3.fromRGB(86, 80, 100)
+			local canUse = eligible and not inSquad and not isRecipient
+			entry.Rail.Color = if canUse then Color3.fromRGB(200, 160, 96) else Color3.fromRGB(86, 80, 100)
 			entry.Rail.Thickness = 1.4
-			entry.Rail.Transparency = if eligible then 0.2 else 0.6
+			entry.Rail.Transparency = if canUse then 0.2 else 0.6
 		end
 	end
 

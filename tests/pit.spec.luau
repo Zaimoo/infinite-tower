@@ -341,7 +341,7 @@ test("Every donor protection applies equally to synthesis and conversion", funct
 		{ ReservedBy = "ritual" }, { Reserved = true }, { OperationReserved = true },
 		{ ReservedOperationId = "operation" }, { InCombat = true }, { IsInCombat = true },
 		{ ActiveCombat = true }, { Unique = true }, { IsUnique = true }, { Protected = true },
-		{ TemplateId = "hero_archon" }, { TemplateId = "unknown-unique" },
+		{ Stars = 8 }, { TemplateId = "unknown-unique" },
 	}
 	for _, fields in ipairs(protections) do
 		for _, action in ipairs({ "SYNTHESIS", "CONVERSION" }) do
