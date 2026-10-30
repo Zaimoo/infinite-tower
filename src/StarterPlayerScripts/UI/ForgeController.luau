@@ -13,12 +13,14 @@ local Players = game:GetService("Players")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local ArtifactCatalog = require(Shared:WaitForChild("Config"):WaitForChild("ArtifactCatalog"))
+local HeroCatalog = require(Shared:WaitForChild("Config"):WaitForChild("HeroCatalog"))
 local StatFormulas = require(Shared.Util.StatFormulas)
 local StatBalance = require(Shared.Config.StatBalance)
 local GothicBoxStyle = require(Shared.Util.GothicBoxStyle)
 local GildedGrimoire = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GildedGrimoire"))
 local GrimoireIcons = require(Shared.Util.GrimoireIcons)
 local GrimoireSummonButton = require(Shared.Util.GrimoireSummonButton)
+local HeroCard = require(script.Parent:WaitForChild("HeroCard"))
 
 local LocalPlayer = Players.LocalPlayer
 
@@ -636,7 +638,7 @@ function Forge:RenderAssignView()
 		GildedGrimoire.StyleText(badgeText, "Title")
 
 		-- Who carries it
-		infoLine(if equippedHero then "Equipped by <b>" .. equippedHero.DisplayName .. "</b>" else "Not equipped", 14,
+		infoLine(if equippedHero then string.format("Equipped by <b>%s</b>  •  <font color=\"#FACC15\">Lv.%d</font>", equippedHero.DisplayName, equippedHero.Level or 1) else "Not equipped", 14,
 			if equippedHero then C.CyanEquipped else C.TextMuted, Enum.Font.GothamMedium, 102, 20)
 
 		-- Stats strip
@@ -1117,7 +1119,7 @@ function Forge:BuildSummonRevealModal(gui: ScreenGui)
 
 	collectBtn.Activated:Connect(function()
 		self.RevealScrim.Visible = false
-		self:SetTab("ASSIGN") -- Take player to ASSIGN tab so they can see new artifacts!
+		self:SetTab("SUMMON")
 	end)
 end
 
@@ -1982,79 +1984,179 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 		local art = artUUID and artifacts[artUUID]
 		if not art then return end
 
-		self.DrawerTitle.Text = string.format("ASSIGN %s TO HERO", string.upper(art.DisplayName or "ARTIFACT"))
+		self.DrawerTitle.Text = string.format("ASSIGN %s (%s) TO HERO", string.upper(art.DisplayName or "ARTIFACT"), string.upper(art.Type or "WEAPON"))
 
+		-- Collect only compatible heroes (hide incompatible ones)
+		local compatibleList = {}
 		for heroUUID, hero in pairs(heroMap) do
-			local canEquip = ArtifactCatalog.CanHeroEquip(hero.Archetype, art.Type)
+			local heroArchetype = hero.Archetype or (hero.TemplateId and HeroCatalog.Seeds[hero.TemplateId] and HeroCatalog.Seeds[hero.TemplateId].Archetype) or "Striker"
+			local canEquip = ArtifactCatalog.CanHeroEquip(heroArchetype, art.Type)
 			local isCurrentEquipped = (hero.EquippedArtifactUUID == artUUID)
+
+			if canEquip or isCurrentEquipped then
+				table.insert(compatibleList, {
+					UUID = heroUUID,
+					Hero = hero,
+					Archetype = heroArchetype,
+					IsCurrent = isCurrentEquipped,
+				})
+			end
+		end
+
+		-- Deterministic sorting: currently equipped first, then highest level, then highest stars, then name
+		table.sort(compatibleList, function(a, b)
+			if a.IsCurrent ~= b.IsCurrent then
+				return a.IsCurrent
+			end
+			local aLvl = a.Hero.Level or 1
+			local bLvl = b.Hero.Level or 1
+			if aLvl ~= bLvl then
+				return aLvl > bLvl
+			end
+			local aStars = a.Hero.Stars or 1
+			local bStars = b.Hero.Stars or 1
+			if aStars ~= bStars then
+				return aStars > bStars
+			end
+			return (a.Hero.DisplayName or "") < (b.Hero.DisplayName or "")
+		end)
+
+		if #compatibleList == 0 then
+			local emptyLbl = label(scroll, string.format("No compatible %s heroes found in your roster.", art.Type or "weapon"), 14, C.TextMuted, Enum.Font.GothamMedium)
+			emptyLbl.Position = UDim2.fromOffset(20, 50)
+			emptyLbl.Size = UDim2.new(1, -40, 0, 36)
+			emptyLbl.TextXAlignment = Enum.TextXAlignment.Center
+			return
+		end
+
+		for order, entry in ipairs(compatibleList) do
+			local heroUUID = entry.UUID
+			local hero = entry.Hero
+			local heroArchetype = entry.Archetype
+			local isCurrentEquipped = entry.IsCurrent
+
+			local starCount = hero.Stars or 1
+			local starColor = (starCount >= 5) and C.GoldYellow or ((starCount >= 4) and Color3.fromRGB(192, 132, 252) or C.TextLavender)
 
 			local card = new("Frame", {
 				Name = "HeroCard_" .. heroUUID,
-				Size = UDim2.fromOffset(150, 164),
+				Size = UDim2.fromOffset(150, 168),
 				BorderSizePixel = 0,
+				LayoutOrder = order,
 				ZIndex = 72,
 			}, scroll)
-			applyGothicStyle(card, "Row")
+			applyGothicStyle(card, "Row", { AccentColor = if isCurrentEquipped then C.Green else starColor })
 
-			local starsLbl = label(card, string.rep("★", hero.Stars or 1), 12, C.GoldYellow)
-			starsLbl.Position = UDim2.new(0, 0, 0, 8)
-			starsLbl.Size = UDim2.new(1, 0, 0, 18)
-			starsLbl.TextXAlignment = Enum.TextXAlignment.Center
+			-- Hero Icon / Portrait
+			local portraitHost = new("Frame", {
+				Name = "PortraitHost",
+				AnchorPoint = Vector2.new(0.5, 0),
+				Position = UDim2.new(0.5, 0, 0, 8),
+				Size = UDim2.fromOffset(54, 54),
+				BackgroundColor3 = Color3.fromRGB(14, 10, 22),
+				BorderSizePixel = 0,
+				ClipsDescendants = true,
+				ZIndex = 73,
+			}, card)
+			new("UICorner", { CornerRadius = UDim.new(0, 8) }, portraitHost)
+			local portStroke = stroke(portraitHost, if isCurrentEquipped then C.Green else starColor, 1.2)
+			portStroke.Transparency = 0.4
 
-			local heroNameLbl = label(card, hero.DisplayName or "Hero", 14, C.Text, Enum.Font.GothamBold)
-			heroNameLbl.Position = UDim2.new(0, 6, 0, 28)
-			heroNameLbl.Size = UDim2.new(1, -12, 0, 20)
+			pcall(HeroCard.Portrait, portraitHost, hero)
+
+			-- Level badge pill on bottom-left of portrait
+			local lvlPill = new("Frame", {
+				Name = "LevelPill",
+				AnchorPoint = Vector2.new(0, 1),
+				Position = UDim2.new(0, 2, 1, -2),
+				Size = UDim2.fromOffset(36, 15),
+				BackgroundColor3 = Color3.fromRGB(8, 6, 12),
+				BackgroundTransparency = 0.25,
+				BorderSizePixel = 0,
+				ZIndex = 75,
+			}, portraitHost)
+			new("UICorner", { CornerRadius = UDim.new(0, 4) }, lvlPill)
+			local lvlLbl = label(lvlPill, string.format("Lv.%d", hero.Level or 1), 10, C.GoldYellow, Enum.Font.GothamBold)
+			lvlLbl.Size = UDim2.fromScale(1, 1)
+			lvlLbl.TextXAlignment = Enum.TextXAlignment.Center
+			lvlLbl.ZIndex = 76
+
+			-- Archetype icon badge on bottom-right of portrait
+			local archPill = new("Frame", {
+				Name = "ArchPill",
+				AnchorPoint = Vector2.new(1, 1),
+				Position = UDim2.new(1, -2, 1, -2),
+				Size = UDim2.fromOffset(18, 18),
+				BackgroundColor3 = Color3.fromRGB(8, 6, 12),
+				BackgroundTransparency = 0.25,
+				BorderSizePixel = 0,
+				ZIndex = 75,
+			}, portraitHost)
+			new("UICorner", { CornerRadius = UDim.new(0, 4) }, archPill)
+			pcall(function()
+				GrimoireIcons.Create(heroArchetype, 14, archPill, 76)
+			end)
+
+			-- Hero Name
+			local heroNameLbl = label(card, hero.DisplayName or "Hero", 13, C.Text, Enum.Font.GothamBold)
+			heroNameLbl.Position = UDim2.new(0, 6, 0, 65)
+			heroNameLbl.Size = UDim2.new(1, -12, 0, 16)
+			heroNameLbl.TextTruncate = Enum.TextTruncate.AtEnd
 			heroNameLbl.TextXAlignment = Enum.TextXAlignment.Center
+			heroNameLbl.ZIndex = 73
 
-			local classLbl = label(card, hero.Archetype or "Class", 11, C.TextLavender)
-			classLbl.Position = UDim2.new(0, 0, 0, 50)
-			classLbl.Size = UDim2.new(1, 0, 0, 16)
-			classLbl.TextXAlignment = Enum.TextXAlignment.Center
+			-- Hero Level, Stars & Archetype subtitle
+			local heroSubLbl = label(card, string.format("<font color=\"#FACC15\">%s</font>  Lv.%d  •  %s", string.rep("★", starCount), hero.Level or 1, heroArchetype), 11, C.TextLavender, Enum.Font.GothamMedium)
+			heroSubLbl.Position = UDim2.new(0, 6, 0, 82)
+			heroSubLbl.Size = UDim2.new(1, -12, 0, 14)
+			heroSubLbl.TextTruncate = Enum.TextTruncate.AtEnd
+			heroSubLbl.TextXAlignment = Enum.TextXAlignment.Center
+			heroSubLbl.ZIndex = 73
 
+			-- Equipment Status
 			local eqArt = hero.EquippedArtifactUUID and artifacts[hero.EquippedArtifactUUID]
-			local eqStatusText = isCurrentEquipped and "Equipped: This Artifact" or (eqArt and ("Equipped: " .. (eqArt.DisplayName or "Artifact")) or "No Artifact")
-			local eqStatusLbl = label(card, eqStatusText, 10, isCurrentEquipped and C.Green or C.TextMuted, Enum.Font.Gotham)
-			eqStatusLbl.Position = UDim2.new(0, 6, 0, 72)
-			eqStatusLbl.Size = UDim2.new(1, -12, 0, 16)
+			local eqStatusText = isCurrentEquipped and "<font color=\"#4ADE80\">Equipped: This</font>" or (eqArt and ("Equipped: " .. (eqArt.DisplayName or "Artifact")) or "No Artifact")
+			local eqStatusColor = if isCurrentEquipped then C.Green else (if eqArt then C.TextLavender else C.TextMuted)
+			local eqStatusLbl = label(card, eqStatusText, 10, eqStatusColor, Enum.Font.Gotham)
+			eqStatusLbl.Position = UDim2.new(0, 6, 0, 98)
+			eqStatusLbl.Size = UDim2.new(1, -12, 0, 14)
 			eqStatusLbl.TextTruncate = Enum.TextTruncate.AtEnd
 			eqStatusLbl.TextXAlignment = Enum.TextXAlignment.Center
+			eqStatusLbl.ZIndex = 73
 
+			-- Action Button (EQUIP / UNEQUIP / SWAP)
 			local actionBtn = new("TextButton", {
 				Name = "HeroActionBtn",
 				AnchorPoint = Vector2.new(0.5, 1),
-				Position = UDim2.new(0.5, 0, 1, -10),
-				Size = UDim2.fromOffset(130, 32),
+				Position = UDim2.new(0.5, 0, 1, -8),
+				Size = UDim2.fromOffset(130, 28),
 				BorderSizePixel = 0,
-				Text = isCurrentEquipped and "UNEQUIP" or (canEquip and (hero.EquippedArtifactUUID and "SWAP" or "EQUIP") or "INCOMPATIBLE"),
+				Text = isCurrentEquipped and "UNEQUIP" or (hero.EquippedArtifactUUID and "SWAP" or "EQUIP"),
 				Font = Enum.Font.GothamBold,
 				TextSize = 12,
-				ZIndex = 73,
+				ZIndex = 74,
 			}, card)
 
 			if isCurrentEquipped then
 				applyGothicStyle(actionBtn, "ButtonSecondary")
-			elseif canEquip then
-				applyGothicStyle(actionBtn, "ButtonPrimary", { Variant = "Gold" })
 			else
-				applyGothicStyle(actionBtn, "ButtonSecondary", { Disabled = true })
+				applyGothicStyle(actionBtn, "ButtonPrimary", { Variant = "Gold" })
 			end
 
-			if canEquip or isCurrentEquipped then
-				actionBtn.Activated:Connect(function()
-					if self.Busy then return end
-					self.Busy = true
-					task.spawn(function()
-						if isCurrentEquipped then
-							self.RequestUnequip:InvokeServer(heroUUID)
-						else
-							self.RequestEquip:InvokeServer(heroUUID, artUUID)
-						end
-						self.Busy = false
-						self:ClosePicker()
-						self:Refresh()
-					end)
+			actionBtn.Activated:Connect(function()
+				if self.Busy then return end
+				self.Busy = true
+				task.spawn(function()
+					if isCurrentEquipped then
+						self.RequestUnequip:InvokeServer(heroUUID)
+					else
+						self.RequestEquip:InvokeServer(heroUUID, artUUID)
+					end
+					self.Busy = false
+					self:ClosePicker()
+					self:Refresh()
 				end)
-			end
+			end)
 		end
 	end
 end
