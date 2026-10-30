@@ -186,6 +186,12 @@ local body = new("Frame", {
 -- ============================================================================
 -- LEFT COLUMN: 10 BIOME CARDS SCROLLING FRAME
 -- ============================================================================
+local BIOME_COUNT = #mobs.Biomes
+local BIOME_CARD_HEIGHT = 92
+local BIOME_CARD_PADDING = 8
+local BIOME_SCROLL_VIEW_HEIGHT = 470
+local BIOME_CANVAS_HEIGHT = BIOME_COUNT * BIOME_CARD_HEIGHT + (BIOME_COUNT - 1) * BIOME_CARD_PADDING
+
 local biomeScroll = new("ScrollingFrame", {
 	Name = "BiomeScroll",
 	Position = UDim2.fromScale(0, 0),
@@ -194,7 +200,7 @@ local biomeScroll = new("ScrollingFrame", {
 	BorderSizePixel = 0,
 	ScrollBarThickness = 3,
 	ScrollBarImageColor3 = Color3.fromRGB(240, 196, 110),
-	CanvasSize = UDim2.new(0, 0, 0, 10 * 100 + 8),
+	CanvasSize = UDim2.new(0, 0, 0, BIOME_CANVAS_HEIGHT),
 	ZIndex = 42,
 }, body)
 
@@ -641,14 +647,42 @@ local function request(action: string, id: number?)
 	remotes.Request:FireServer(r)
 end
 
+local function getMaxAllowedFloor(): number
+	local profile = _G.CurrentProfile
+	local maxAllowed = 1
+	if profile then
+		if type(profile.MaxFloorReached) == "number" and profile.MaxFloorReached > 0 then
+			maxAllowed = math.max(maxAllowed, profile.MaxFloorReached)
+		end
+		if type(profile.HighestClearedFloor) == "number" and profile.HighestClearedFloor > 0 then
+			maxAllowed = math.max(maxAllowed, profile.HighestClearedFloor + 1)
+		end
+	end
+	local leaderstats = player:FindFirstChild("leaderstats")
+	local floorStat = leaderstats and leaderstats:FindFirstChild("Floor")
+	if floorStat and floorStat:IsA("IntValue") and floorStat.Value > 0 then
+		maxAllowed = math.max(maxAllowed, floorStat.Value + 1)
+	end
+	return math.clamp(maxAllowed, 1, floors.FloorCount)
+end
+
+local function scrollBiomeIntoView(biomeIdx: number)
+	local clampedBiome = math.clamp(biomeIdx, 1, BIOME_COUNT)
+	local cardStride = BIOME_CARD_HEIGHT + BIOME_CARD_PADDING
+	local cardCenterY = (clampedBiome - 1) * cardStride + (BIOME_CARD_HEIGHT * 0.5)
+	local maxScrollY = math.max(0, BIOME_CANVAS_HEIGHT - BIOME_SCROLL_VIEW_HEIGHT)
+	local desiredY = math.clamp(cardCenterY - (BIOME_SCROLL_VIEW_HEIGHT * 0.5), 0, maxScrollY)
+	local currentScale = if scale then scale.Scale else 1.0
+	biomeScroll.CanvasPosition = Vector2.new(0, math.round(desiredY * currentScale))
+end
+
 local visitBtn = createOrnateButton(actionRow, "VISIT FLOOR", 1, true, function()
 	local visitingFloor = if selfState and selfState.PlayerLocation then selfState.PlayerLocation.FloorId else 0
 	if visitingFloor == selected then
 		request("HUB")
 		return
 	end
-	local profile = _G.CurrentProfile
-	local maxAllowed = math.max(1, if profile then (profile.MaxFloorReached or ((profile.HighestClearedFloor or 0) + 1)) else 1)
+	local maxAllowed = getMaxAllowedFloor()
 	if selected > maxAllowed then
 		lastFeedback = string.format("Floor %d is locked! Slay Floor %d Boss first.", selected, selected - 1)
 		render()
@@ -658,8 +692,7 @@ local visitBtn = createOrnateButton(actionRow, "VISIT FLOOR", 1, true, function(
 end)
 
 local assignBtn = createOrnateButton(actionRow, "ASSIGN SQUAD", 2, false, function()
-	local profile = _G.CurrentProfile
-	local maxAllowed = math.max(1, if profile then (profile.MaxFloorReached or ((profile.HighestClearedFloor or 0) + 1)) else 1)
+	local maxAllowed = getMaxAllowedFloor()
 	if selected > maxAllowed then
 		lastFeedback = string.format("Cannot assign squad to locked Floor %d!", selected)
 		render()
@@ -700,7 +733,7 @@ render = function()
 	local bossText = if bossEntry then string.format(" · BOSS: %s", bossEntry.DisplayName) else ""
 
 	local profile = _G.CurrentProfile
-	local maxAllowed = math.max(1, if profile then (profile.MaxFloorReached or ((profile.HighestClearedFloor or 0) + 1)) else 1)
+	local maxAllowed = getMaxAllowedFloor()
 	local isSelectedLocked = selected > maxAllowed
 
 	-- 1. Update Floor Details Card
@@ -866,16 +899,24 @@ _G.RequestTowerHub = function(): boolean
 	return true
 end
 
-_G.OpenTowerSelector = function()
+local function openSelector()
 	lastSelectorOpenTime = os.clock()
 	if _G.OpenMasterModal then _G.OpenMasterModal("NONE") end
+	selected = getMaxAllowedFloor()
+	activeBiomeIndex = math.clamp(math.floor((selected - 1) / 5) + 1, 1, BIOME_COUNT)
 	panel.Visible = true
 	scrim.Visible = true
 	render()
+	scrollBiomeIntoView(activeBiomeIndex)
+	task.defer(function()
+		scrollBiomeIntoView(activeBiomeIndex)
+	end)
 	if _G.UpdateBottomTabHighlights then
 		_G.UpdateBottomTabHighlights()
 	end
 end
+
+_G.OpenTowerSelector = openSelector
 
 _G.IsTowerSelectorOpen = function(): boolean
 	return panel.Visible
@@ -923,10 +964,7 @@ ProfileDeltaSyncEvent.OnClientEvent:Connect(function(profile: any)
 	end
 end)
 remotes.OpenSelector.OnClientEvent:Connect(function()
-	if _G.OpenMasterModal then _G.OpenMasterModal("NONE") end
-	panel.Visible = true
-	scrim.Visible = true
-	render()
+	openSelector()
 end)
 
 PromptService.PromptTriggered:Connect(function(prompt, who)
@@ -934,25 +972,19 @@ PromptService.PromptTriggered:Connect(function(prompt, who)
 	local action = prompt:GetAttribute("TowerAction")
 	local curFloor = if context and context.FloorId then context.FloorId elseif selfState and selfState.PlayerLocation then selfState.PlayerLocation.FloorId else 0
 	if action == "SELECTOR" or prompt.Name == "TowerSelectorPrompt" then
-		if _G.OpenMasterModal then _G.OpenMasterModal("NONE") end
-		panel.Visible = true
-		scrim.Visible = true
-		render()
+		openSelector()
 	elseif action == "HUB" then
 		request("HUB")
 	elseif action == "PREVIOUS" and curFloor > 1 then
 		request("VISIT", curFloor - 1)
 	elseif action == "NEXT" and curFloor > 0 and curFloor < 50 then
 		local nextFloor = curFloor + 1
-		local profile = _G.CurrentProfile
-		local maxAllowed = math.max(1, if profile then (profile.MaxFloorReached or ((profile.HighestClearedFloor or 0) + 1)) else 1)
+		local maxAllowed = getMaxAllowedFloor()
 		if nextFloor <= maxAllowed then
 			request("VISIT", nextFloor)
 		else
 			lastFeedback = string.format("Floor %d is locked! Slay Floor %d Boss first.", nextFloor, curFloor)
-			panel.Visible = true
-			scrim.Visible = true
-			render()
+			openSelector()
 		end
 	end
 end)
