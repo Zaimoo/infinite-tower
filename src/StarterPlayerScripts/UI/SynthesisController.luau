@@ -482,6 +482,7 @@ function Synth.new(gui: ScreenGui, remote: RemoteFunction)
 	})
 
 	local clearBtn, clearLabel = button(root, "Slate", "CLEAR", {
+		Name = "ClearButton",
 		AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -236, 0, 608), Size = UDim2.fromOffset(130, 44), ZIndex = Z + 2,
 	})
 	clearBtn.Activated:Connect(function()
@@ -497,6 +498,7 @@ function Synth.new(gui: ScreenGui, remote: RemoteFunction)
 	self.ClearButton = { Button = clearBtn, Label = clearLabel }
 
 	local confirmBtn, confirmLabel = button(root, "Action", "CONFIRM SYNTHESIZE", {
+		Name = "ConfirmButton",
 		AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -20, 0, 608), Size = UDim2.fromOffset(210, 44), ZIndex = Z + 2,
 	})
 	confirmBtn.Activated:Connect(function() self:Confirm() end)
