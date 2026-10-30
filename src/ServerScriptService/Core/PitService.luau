@@ -74,7 +74,7 @@ function PitService:DonorStatus(profile: any, hero: any, recipientUUID: string?)
 	local reason, status = "", "Available"
 	local seed = HeroCatalog.Seeds[hero.TemplateId]
 	if hero.UUID == recipientUUID then reason, status = "A hero cannot be its own donor.", "Recipient"
-	elseif not seed or hero.TemplateId == "hero_archon" or seed.BannerOrigin == "WORLD_BOSS" or (hero.Stars or 1) > Config.MaxStars or hero.Unique or hero.IsUnique or hero.Protected then
+	elseif not seed or seed.BannerOrigin == "WORLD_BOSS" or (hero.Stars or 1) > 7 or hero.Unique or hero.IsUnique or hero.Protected then
 		reason, status = "This unique hero is protected from consumption.", "Protected"
 	elseif hero.Locked or hero.Favorite or hero.Favorited then reason, status = "This hero is protected. Unlock it deliberately before using it.", "Locked"
 	elseif (hero.ComaUntilTimestamp or 0) > os.time() or hero.IsHardAuditComa then reason, status = "This hero must recover from Coma first.", "Recovering"
