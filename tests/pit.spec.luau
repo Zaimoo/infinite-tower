@@ -306,13 +306,14 @@ test("Batch synthesis is deterministic and independent of donor order", function
 	equal(c.profile.Heroes.d, nil); equal(c.profile.Heroes.e, nil)
 end)
 
-test("Six-donor limit and exact identities are enforced", function()
+test("Donor limit and exact identities are enforced", function()
 	local c = context()
+	c.profile.Heroes.r = hero("r", "hero_han", { Stars = 5, Level = 1 })
 	local ids = {}
-	for i = 1, 7 do local id = "batch" .. i; c.profile.Heroes[id] = hero(id, "hero_jenna"); table.insert(ids, id) end
+	for i = 1, Config.MaxDonors + 1 do local id = "batch" .. i; c.profile.Heroes[id] = hero(id, "hero_jenna"); table.insert(ids, id) end
 	rejectedWithoutMutation(c, "PREVIEW", synthesis(ids))
-	table.remove(ids); local p = c:preview(synthesis(ids)); check(p.CanCommit); equal(#p.Donors, 6)
-	check(c:commit(p).Success); check(c.profile.Heroes.batch7)
+	table.remove(ids); local p = c:preview(synthesis(ids)); check(p.CanCommit); equal(#p.Donors, Config.MaxDonors)
+	check(c:commit(p).Success); check(c.profile.Heroes["batch" .. (Config.MaxDonors + 1)])
 	for _, id in ipairs(ids) do equal(c.profile.Heroes[id], nil) end
 end)
 
