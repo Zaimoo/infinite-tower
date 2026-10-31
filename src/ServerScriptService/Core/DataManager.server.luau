@@ -676,6 +676,16 @@ function DataManager.UpdateSquadPower(player: Player)
 			end
 		end)
 	end
+
+	local sss = game:GetService("ServerScriptService")
+	local powerSys = sss:FindFirstChild("PowerLeaderboardSystem")
+	local powerDS = powerSys and powerSys:FindFirstChild("PowerDataStore")
+	if powerDS then
+		local ok, mod = pcall(require, powerDS)
+		if ok and mod and (mod :: any).RecordPower then
+			(mod :: any).RecordPower(player.UserId, total)
+		end
+	end
 end
 
 -- Pit operations and participation EXP send only affected heroes. Consumers merge
@@ -1357,7 +1367,7 @@ AssignHeroRoleFunc.OnServerInvoke = function(player: Player, heroUUID: any, targ
 		end
 		local facData = (profile.Facilities :: any)[supportFacility] :: FacilityData?
 		if not facData or facData.Level <= 0 then
-			return false, string.format("%s isn't built yet. Unlock it in the Fortress Tree.", FACILITY_NAMES[supportFacility])
+			return false, string.format("%s isn't built yet. Unlock it in Upgrades.", FACILITY_NAMES[supportFacility])
 		end
 		local perks = FortressTree.PerkBonuses(profile.FortressTree)
 		local maxWorkers = StatFormulas.GetFacilityMaxWorkers(supportFacility, facData.Level, perks)
@@ -1448,7 +1458,7 @@ FacilityInteractEvent.OnServerEvent:Connect(function(player: Player, action: any
 
 	if action == "UPGRADE_FACILITY" then
 		-- Retired in Phase 4: facilities are unlocked and levelled only through the Fortress Tree.
-		DataManager.SendToast(player, "Upgrade facilities in the Fortress Tree at the Architect's Table.", "INFO")
+		DataManager.SendToast(player, "Upgrade facilities in Upgrades at the Architect's Table.", "INFO")
 
 	elseif action == "DEV_GRANT_RESOURCES" then
 		-- Prototype helper so testers can also test mid/late-game features immediately if desired

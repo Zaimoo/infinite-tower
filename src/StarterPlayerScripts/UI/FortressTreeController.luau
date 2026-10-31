@@ -23,7 +23,6 @@ local Workspace = game:GetService("Workspace")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local TreeConfig = require(Shared:WaitForChild("Config"):WaitForChild("FortressTreeConfig"))
 local FortressTree = require(Shared:WaitForChild("Util"):WaitForChild("FortressTree"))
-local GothicBoxStyle = require(Shared:WaitForChild("Util"):WaitForChild("GothicBoxStyle"))
 local GrimoireIcons = require(Shared:WaitForChild("Util"):WaitForChild("GrimoireIcons"))
 
 local Controller = {}
@@ -177,15 +176,90 @@ function Controller.new(gui: ScreenGui, getProfile: () -> any, remotes: Instance
 	}, gui)
 	self.Root = root
 	self.Board = root
-	local closeButton = GothicBoxStyle.CreateCloseButton(root, function()
-		if not self.Busy then self:Close() end
+	-- Middle-bottom Close button: fixed in front of the map, styled with vibrant crimson fill,
+	-- rounded pill frame, dark ink border, and heavy outlined text matching the game's theme.
+	local closeButton = new("TextButton", {
+		Name = "CloseButton",
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, -24),
+		Size = UDim2.fromOffset(190, 48),
+		BackgroundColor3 = Color3.fromRGB(235, 52, 52),
+		AutoButtonColor = false,
+		BorderSizePixel = 0,
+		Text = "",
+		Active = true,
+		ZIndex = 90,
+	}, root)
+	closeButton:SetAttribute("Grimoire", true)
+
+	local buttonScale = new("UIScale", { Scale = 1 }, closeButton)
+
+	new("UICorner", {
+		CornerRadius = UDim.new(0, 12),
+	}, closeButton)
+
+	new("UIStroke", {
+		Name = "Outline",
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+		Color = Color3.fromRGB(15, 10, 20),
+		Thickness = 3,
+		LineJoinMode = Enum.LineJoinMode.Round,
+	}, closeButton)
+
+	new("UIGradient", {
+		Name = "Gradient",
+		Rotation = 90,
+		Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(252, 75, 75)),
+			ColorSequenceKeypoint.new(0.45, Color3.fromRGB(235, 48, 48)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(195, 30, 30)),
+		}),
+	}, closeButton)
+
+	local closeLabel = new("TextLabel", {
+		Name = "Label",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1,
+		Text = "Close",
+		Font = Enum.Font.GothamBlack,
+		TextSize = 24,
+		TextColor3 = Color3.new(1, 1, 1),
+		TextXAlignment = Enum.TextXAlignment.Center,
+		TextYAlignment = Enum.TextYAlignment.Center,
+		Active = false,
+		ZIndex = 91,
+	}, closeButton)
+	closeLabel:SetAttribute("Grimoire", true)
+
+	new("UIStroke", {
+		Name = "TextStroke",
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual,
+		Color = Color3.fromRGB(15, 10, 20),
+		Thickness = 2.8,
+		LineJoinMode = Enum.LineJoinMode.Round,
+	}, closeLabel)
+
+	closeButton.MouseEnter:Connect(function()
+		TweenService:Create(buttonScale, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = 1.05 }):Play()
+		TweenService:Create(closeButton, TweenInfo.new(0.12), { BackgroundColor3 = Color3.fromRGB(252, 68, 68) }):Play()
 	end)
-	-- Keep the close button above map nodes panned underneath it.
-	for _, part in { closeButton :: Instance, unpack(closeButton:GetDescendants()) } do
-		if part:IsA("GuiObject") then
-			part.ZIndex += 10
+	closeButton.MouseLeave:Connect(function()
+		TweenService:Create(buttonScale, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+		TweenService:Create(closeButton, TweenInfo.new(0.12), { BackgroundColor3 = Color3.fromRGB(235, 52, 52) }):Play()
+	end)
+	closeButton.MouseButton1Down:Connect(function()
+		TweenService:Create(buttonScale, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = 0.95 }):Play()
+	end)
+	closeButton.MouseButton1Up:Connect(function()
+		TweenService:Create(buttonScale, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = 1.05 }):Play()
+	end)
+	closeButton.Activated:Connect(function()
+		if not self.Busy and not self.Dragged then
+			self:Close()
 		end
-	end
+	end)
 
 	local function label(parent: Instance, value: string, size: number, color: Color3, props: { [string]: any }?): TextLabel
 		local lbl = new("TextLabel", {
@@ -207,48 +281,9 @@ function Controller.new(gui: ScreenGui, getProfile: () -> any, remotes: Instance
 
 	local titleIcon = GrimoireIcons.Create("Fortress", 38, root, 60)
 	titleIcon.Position = UDim2.fromOffset(20, 12)
-	label(root, "FORTRESS TREE", 24, C.Gold, { Position = UDim2.fromOffset(66, 16), Size = UDim2.fromOffset(420, 30) })
+	label(root, "UPGRADES", 24, C.Gold, { Position = UDim2.fromOffset(66, 16), Size = UDim2.fromOffset(420, 30) })
 	label(root, "Drag to explore · scroll to zoom · hover for details · click to build", 13, C.Text, { Position = UDim2.fromOffset(24, 46), Size = UDim2.fromOffset(520, 18), Font = Enum.Font.GothamMedium })
-	self.GoldLabel = label(root, "", 17, C.Gold, { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -64, 0, 22), Size = UDim2.fromOffset(260, 24), TextXAlignment = Enum.TextXAlignment.Right })
-	-- A drawn gold-coin icon just left of the (right-aligned) gold amount.
-	self.GoldIcon = GrimoireIcons.Create("Gold", 28, root, 60)
-	self.GoldIcon.AnchorPoint = Vector2.new(1, 0)
-	self.Status = label(root, "", 14, C.Text, { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 24, 1, -20), Size = UDim2.new(1, -260, 0, 22), Font = Enum.Font.GothamMedium })
-
-	-- Bottom-right controls: zoom out, zoom in, recenter (the buttons also serve touch screens).
-	local controls = new("Frame", {
-		Name = "MapControls",
-		AnchorPoint = Vector2.new(1, 1),
-		Position = UDim2.new(1, -20, 1, -16),
-		Size = UDim2.fromOffset(212, 36),
-		BackgroundTransparency = 1,
-		ZIndex = 60,
-	}, root)
-	new("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Right, Padding = UDim.new(0, 8) }, controls)
-	local function control(name: string, text: string, width: number, order: number, action: () -> ())
-		local button = new("TextButton", {
-			Name = name,
-			LayoutOrder = order,
-			Size = UDim2.fromOffset(width, 36),
-			BackgroundColor3 = Color3.fromRGB(24, 20, 36),
-			BackgroundTransparency = 0.1,
-			BorderSizePixel = 0,
-			Font = Enum.Font.GothamBold,
-			TextSize = if width < 50 then 22 else 13,
-			TextColor3 = C.Text,
-			Text = text,
-			ZIndex = 60,
-		}, controls)
-		new("UICorner", { CornerRadius = UDim.new(0, 8) }, button)
-		new("UIStroke", { Color = C.Rim, Transparency = 0.6, Thickness = 1 }, button)
-		button.Activated:Connect(action)
-	end
-	control("ZoomOut", "−", 40, 1, function() self:SetZoom(self.Zoom / ZOOM_STEP, nil) end)
-	control("ZoomIn", "+", 40, 2, function() self:SetZoom(self.Zoom * ZOOM_STEP, nil) end)
-	control("Recenter", "⌖ RECENTER", 116, 3, function()
-		self:SetZoom(self.DefaultZoom, nil)
-		self:SetPan(Vector2.zero, true)
-	end)
+	self.Status = label(root, "", 14, C.Text, { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 24, 1, -20), Size = UDim2.fromOffset(360, 22), Font = Enum.Font.GothamMedium })
 
 	-- Everything on the map lives in `canvas`: screen centre + pan, scaled by the zoom.
 	local canvas = new("Frame", {
@@ -617,8 +652,6 @@ function Controller:Refresh()
 	local gold = profile and profile.Currencies and profile.Currencies.Gold or 0
 	local floor = profile and profile.HighestClearedFloor or 0
 	local unlocks = profile and profile.Unlocks
-	self.GoldLabel.Text = formatGold(gold) .. " Gold"
-	self.GoldIcon.Position = UDim2.new(1, -64 - self.GoldLabel.TextBounds.X - 6, 0, 20)
 
 	for nodeId, entry in self.Nodes do
 		local node = entry.Node

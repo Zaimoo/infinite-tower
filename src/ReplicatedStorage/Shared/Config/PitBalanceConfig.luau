@@ -2,13 +2,13 @@
 -- The Pit's tunable economy. Gems are the existing crystallized mana currency.
 local Config = {}
 
-Config.MaxDonors = 6
+Config.MaxDonors = 100
 Config.MaxStars = 5
 Config.PreviewLifetime = 45
 Config.PreviewCooldown = 0.12
 Config.StateCooldown = 0.4
 Config.LockCooldown = 0.15
-Config.RareConfirmationStars = 3
+Config.RareConfirmationStars = 5
 Config.SchemaVersion = 2
 Config.Synthesis = {
 	BaseXP = 100,

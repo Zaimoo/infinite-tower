@@ -15,7 +15,8 @@ local function getAllScreenParts(): { BasePart }
 	local plots = Workspace:FindFirstChild("WaitingRoomPlots")
 	if plots then
 		for _, plot in ipairs(plots:GetChildren()) do
-			local s = plot:FindFirstChild("ScreenPlaytime", true)
+			local pstand = plot:FindFirstChild("AvxsedPlaytimeWS")
+			local s = pstand and pstand:FindFirstChild("ScreenPlaytime")
 			if s and s:IsA("BasePart") then
 				table.insert(parts, s)
 			end

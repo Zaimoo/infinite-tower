@@ -98,17 +98,25 @@ local function buildRows(profile: any): ({ any }, string?)
 	end
 	local lockedText = nil
 	if open < TreeConfig.MaxSquadSlots then
-		lockedText = string.format("Slots %d–%d · unlock in the Fortress Tree", open + 1, TreeConfig.MaxSquadSlots)
+		lockedText = string.format("Slots %d–%d · unlock in Upgrades", open + 1, TreeConfig.MaxSquadSlots)
 	end
 	return rows, lockedText
 end
 
 local function buildableNodes(profile: any): number
-	if not profile then return 0 end
+	if not profile or not (profile.Unlocks and profile.Unlocks.FortressTree) then return 0 end
+	local tree = profile.FortressTree
+	local gold = profile.Currencies and profile.Currencies.Gold or 0
+	local floor = profile.HighestClearedFloor or 0
 	local count = 0
 	for _, node in TreeConfig.Nodes do
-		if FortressTree.CanUnlock(profile.FortressTree, node.Id, profile.Currencies and profile.Currencies.Gold or 0,
-			profile.HighestClearedFloor or 0, profile.Unlocks) then
+		if node.Kind ~= "LEVEL" or node.Default then
+			continue
+		end
+		if node.Gold <= 0 or gold < node.Gold then
+			continue
+		end
+		if FortressTree.CanUnlock(tree, node.Id, gold, floor, profile.Unlocks) then
 			count += 1
 		end
 	end
@@ -267,7 +275,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 			OnActivated = function() call("OpenMasterModal", "BLACKSMITH") end })
 	end
 	if unlocks.Squad then
-		table.insert(leftButtons, { Icon = "Fortress", Label = "Fortress", Accent = Color3.fromRGB(214, 180, 120), Badge = buildableNodes(profile),
+		table.insert(leftButtons, { Icon = "Fortress", Label = "Upgrades", Accent = Color3.fromRGB(214, 180, 120), Badge = buildableNodes(profile),
 			OnActivated = function() call("OpenFacilityHUD", "FortressTree") end })
 	end
 	table.insert(leftButtons, { Icon = "Index", Label = "Index", Accent = Color3.fromRGB(180, 140, 255), Badge = newHeroes,

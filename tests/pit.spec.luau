@@ -306,13 +306,14 @@ test("Batch synthesis is deterministic and independent of donor order", function
 	equal(c.profile.Heroes.d, nil); equal(c.profile.Heroes.e, nil)
 end)
 
-test("Six-donor limit and exact identities are enforced", function()
+test("Donor limit and exact identities are enforced", function()
 	local c = context()
+	c.profile.Heroes.r = hero("r", "hero_han", { Stars = 5, Level = 1 })
 	local ids = {}
-	for i = 1, 7 do local id = "batch" .. i; c.profile.Heroes[id] = hero(id, "hero_jenna"); table.insert(ids, id) end
+	for i = 1, Config.MaxDonors + 1 do local id = "batch" .. i; c.profile.Heroes[id] = hero(id, "hero_jenna"); table.insert(ids, id) end
 	rejectedWithoutMutation(c, "PREVIEW", synthesis(ids))
-	table.remove(ids); local p = c:preview(synthesis(ids)); check(p.CanCommit); equal(#p.Donors, 6)
-	check(c:commit(p).Success); check(c.profile.Heroes.batch7)
+	table.remove(ids); local p = c:preview(synthesis(ids)); check(p.CanCommit); equal(#p.Donors, Config.MaxDonors)
+	check(c:commit(p).Success); check(c.profile.Heroes["batch" .. (Config.MaxDonors + 1)])
 	for _, id in ipairs(ids) do equal(c.profile.Heroes[id], nil) end
 end)
 
@@ -335,11 +336,12 @@ test("Every donor protection applies equally to synthesis and conversion", funct
 	local protections = {
 		{ Locked = true }, { Favorite = true }, { Favorited = true },
 		{ Assignment = "SQUAD_SLOT_1" }, { Assignment = "FACILITY_CONDUIT" },
+		{ EquippedArtifactUUID = "art_test" },
 		{ ComaUntilTimestamp = os.time() + 1000 }, { IsHardAuditComa = true },
 		{ ReservedBy = "ritual" }, { Reserved = true }, { OperationReserved = true },
 		{ ReservedOperationId = "operation" }, { InCombat = true }, { IsInCombat = true },
 		{ ActiveCombat = true }, { Unique = true }, { IsUnique = true }, { Protected = true },
-		{ TemplateId = "hero_archon" }, { TemplateId = "unknown-unique" },
+		{ Stars = 8 }, { TemplateId = "unknown-unique" },
 	}
 	for _, fields in ipairs(protections) do
 		for _, action in ipairs({ "SYNTHESIS", "CONVERSION" }) do
@@ -436,7 +438,13 @@ test("A new preview invalidates a previous operation token", function()
 end)
 
 test("Rare donors require explicit confirmation, with no cost on rejection", function()
-	local c = context(); c.profile.Heroes.d = hero("d", "hero_eolka"); PitService.EnsureDefaults(c.profile)
+	-- 4-star and below do not require rare confirmation
+	local c4 = context(); c4.profile.Heroes.d = hero("d", "hero_morrigan"); PitService.EnsureDefaults(c4.profile)
+	local p4 = c4:preview({ Action = "CONVERSION", Donors = { "d" } })
+	equal(p4.RequiresRareConfirmation, false)
+
+	-- 5-star heroes require explicit confirmation
+	local c = context(); c.profile.Heroes.d = hero("d", "hero_ignis"); PitService.EnsureDefaults(c.profile)
 	local p = c:preview({ Action = "CONVERSION", Donors = { "d" } })
 	equal(p.RequiresRareConfirmation, true)
 	rejectedWithoutMutation(c, "COMMIT", { Token = p.Token, ConfirmRare = false })

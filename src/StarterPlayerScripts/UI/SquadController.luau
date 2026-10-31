@@ -30,7 +30,7 @@ SquadController.__index = SquadController
 local SQUAD_SLOTS = 5 -- slot cards drawn; how many are open comes from the Fortress Tree
 local WIDTH, HEIGHT = 980, 668
 local SLOT_W, SLOT_H, SLOT_GAP = 172, 214, 12
-local CARD_W, CARD_H = 146, 186
+local CARD_W, CARD_H = 138, 176
 local Z = 32
 local INK = GildedGrimoire.Ink
 local TEXT = GildedGrimoire.Text
@@ -199,8 +199,10 @@ function SquadController.new(screenGui: ScreenGui, getProfile: () -> any, remote
 	end)
 
 	-- Window
-	self.Root = new("Frame", {
+	self.Root = new("TextButton", {
 		Name = "SquadDeployModal",
+		Text = "",
+		AutoButtonColor = false,
 		Active = true,
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.5),
@@ -209,6 +211,7 @@ function SquadController.new(screenGui: ScreenGui, getProfile: () -> any, remote
 		Visible = false,
 		ZIndex = Z - 1,
 	}, screenGui)
+	self.Root.Activated:Connect(function() end)
 	GothicBoxStyle.Apply(self.Root, { Style = "Window" })
 	self.Scale = new("UIScale", {}, self.Root)
 	local function updateScale()
@@ -329,7 +332,7 @@ function SquadController.new(screenGui: ScreenGui, getProfile: () -> any, remote
 		ScrollBarImageColor3 = Color3.fromRGB(240, 196, 110), ScrollingDirection = Enum.ScrollingDirection.Y,
 		AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), ZIndex = Z + 2,
 	}, rosterPanel)
-	new("UIPadding", { PaddingTop = UDim.new(0, 6), PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6), PaddingBottom = UDim.new(0, 6) }, self.RosterScroll)
+	new("UIPadding", { PaddingTop = UDim.new(0, 8), PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 18), PaddingBottom = UDim.new(0, 8) }, self.RosterScroll)
 	new("UIGridLayout", {
 		CellSize = UDim2.fromOffset(CARD_W, CARD_H), CellPadding = UDim2.fromOffset(12, 12),
 		SortOrder = Enum.SortOrder.LayoutOrder,
@@ -444,6 +447,23 @@ function SquadController.PressSlot(self: any, i: number)
 	if self.ChoosingSlot == i then
 		self.ChoosingSlot = nil
 		self:SetStatus("")
+	elseif self.ChoosingSlot ~= nil then
+		local bySlot: { [number]: any } = {}
+		for _, h in pairs(profile.Heroes) do
+			local s = slotOf(h)
+			if s and s <= SQUAD_SLOTS then bySlot[s] = h end
+		end
+		local sourceHero = bySlot[self.ChoosingSlot]
+		if sourceHero then
+			local fromSlot = self.ChoosingSlot
+			self.ChoosingSlot = nil
+			local actionWord = if bySlot[i] then "Swapped" else "Moved"
+			self:Assign(sourceHero.UUID, "SQUAD_SLOT_" .. i, string.format("%s Slot %d and Slot %d.", actionWord, fromSlot, i))
+			return
+		else
+			self.ChoosingSlot = i
+			self:SetStatus("Choose a hero below for Slot " .. i .. ".")
+		end
 	else
 		self.ChoosingSlot = i
 		self:SetStatus("Choose a hero below for Slot " .. i .. ".")
@@ -465,6 +485,12 @@ function SquadController.PressHero(self: any, uuid: string)
 	if not hero then return end
 	if not (profile.Unlocks and profile.Unlocks.Squad) then
 		self:SetStatus("Summon your first hero to change your squad.", true)
+		return
+	end
+	if self.HeldHero == uuid then
+		self.HeldHero = nil
+		self:SetStatus("")
+		self:Refresh()
 		return
 	end
 	local resting = restingSeconds(hero)
@@ -623,7 +649,7 @@ function SquadController.Refresh(self: any)
 	self.SquadHint.Text = if not unlocked then "Summon your first hero to change your squad."
 		elseif self.ChoosingSlot then string.format("Choosing a hero for Slot %d…", self.ChoosingSlot)
 		elseif self.HeldHero then "Press REPLACE on a slot."
-		else if open < SQUAD_SLOTS then string.format("Slots %d–%d open in the Fortress Tree.", open + 1, SQUAD_SLOTS) else ""
+		else if open < SQUAD_SLOTS then string.format("Slots %d–%d open in Upgrades.", open + 1, SQUAD_SLOTS) else ""
 
 	-- Slots
 	for i = 1, SQUAD_SLOTS do
@@ -657,7 +683,7 @@ function SquadController.Refresh(self: any)
 		e.Main.Size = UDim2.new(1, -16, 0, 36)
 		if locked then
 			e.Name.Text = "LOCKED"
-			e.Info.Text = "Open in the Fortress Tree"
+			e.Info.Text = "Open in Upgrades"
 			e.Power.Text = ""
 			retone(e.Main, e.MainLabel, "Bronze", "UNLOCK")
 			e.Rail.Color = Color3.fromRGB(140, 130, 160)
@@ -667,27 +693,46 @@ function SquadController.Refresh(self: any)
 			e.Power.Text = if hero then abbreviate(powerOf(profile, hero, mult)) .. " PWR" else ""
 			retone(e.Main, e.MainLabel, "Gold", if hero then "REPLACE" else "PLACE HERE")
 			e.Rail.Color = TEXT.Gold
+		elseif self.ChoosingSlot ~= nil then
+			if choosing then
+				e.Name.Text = if hero then hero.DisplayName else "Empty"
+				e.Info.Text = if hero then string.format("%s · Lv.%d", string.rep("★", hero.Stars or 1), hero.Level or 1) else "Free slot"
+				e.Power.Text = if hero then abbreviate(powerOf(profile, hero, mult)) .. " PWR" else ""
+				retone(e.Main, e.MainLabel, "Slate", "CANCEL")
+				e.Rail.Color = TEXT.Gold
+			else
+				local sourceHero = bySlot[self.ChoosingSlot]
+				if sourceHero then
+					e.Name.Text = if hero then hero.DisplayName else "Empty"
+					e.Info.Text = if hero then string.format("%s · Lv.%d", string.rep("★", hero.Stars or 1), hero.Level or 1) else "Free slot"
+					e.Power.Text = if hero then abbreviate(powerOf(profile, hero, mult)) .. " PWR" else ""
+					retone(e.Main, e.MainLabel, "Teal", if hero then "SWAP" else "MOVE HERE")
+					e.Rail.Color = Color3.fromRGB(120, 200, 220)
+				else
+					e.Name.Text = if hero then hero.DisplayName else "Empty"
+					e.Info.Text = if hero then string.format("%s · Lv.%d", string.rep("★", hero.Stars or 1), hero.Level or 1) else "Free slot"
+					e.Power.Text = if hero then abbreviate(powerOf(profile, hero, mult)) .. " PWR" else ""
+					retone(e.Main, e.MainLabel, "Action", if hero then "CHANGE" else "ASSIGN")
+					e.Rail.Color = Color3.fromRGB(150, 138, 176)
+				end
+			end
 		elseif hero then
 			local resting = restingSeconds(hero)
 			e.Name.Text = hero.DisplayName
 			e.Info.Text = if resting > 0 then string.format("<font color=\"#FF6B6B\">Resting %ds</font>", resting)
 				else string.format("%s · %s · Lv.%d", HeroCatalog.RarityName(rarity), string.rep("★", hero.Stars or 1), hero.Level or 1)
 			e.Power.Text = abbreviate(powerOf(profile, hero, mult)) .. " PWR"
-			if choosing then
-				retone(e.Main, e.MainLabel, "Slate", "CANCEL")
-			else
-				-- CHANGE and REMOVE side by side.
-				e.Main.Size = UDim2.new(0.55, -10, 0, 36)
-				retone(e.Main, e.MainLabel, "Action", "CHANGE")
-				e.Remove.Visible = unlocked == true
-			end
-			e.Rail.Color = if choosing then TEXT.Gold else Color3.fromRGB(240, 196, 110)
+			-- CHANGE and REMOVE side by side.
+			e.Main.Size = UDim2.new(0.55, -10, 0, 36)
+			retone(e.Main, e.MainLabel, "Action", "CHANGE")
+			e.Remove.Visible = unlocked == true
+			e.Rail.Color = Color3.fromRGB(240, 196, 110)
 		else
 			e.Name.Text = "Empty"
 			e.Info.Text = "Free slot"
 			e.Power.Text = ""
-			retone(e.Main, e.MainLabel, if choosing then "Slate" else "Gold", if choosing then "CANCEL" else "ASSIGN")
-			e.Rail.Color = if choosing then TEXT.Gold else Color3.fromRGB(150, 138, 176)
+			retone(e.Main, e.MainLabel, "Gold", "ASSIGN")
+			e.Rail.Color = Color3.fromRGB(150, 138, 176)
 		end
 		e.Rail.Thickness = if choosing or self.HeldHero then 3 else 1.4
 		e.Rail.Transparency = if choosing then 0 else 0.3
@@ -699,13 +744,15 @@ function SquadController.Refresh(self: any)
 	end
 	retone(self.FilterButton.Button, self.FilterButton.Label, if self.AvailableOnly then "Gold" else "Slate", "READY ONLY")
 
-	-- Roster
+	-- Roster (active squad heroes are excluded; they are displayed and managed in ACTIVE SQUAD above)
 	local list = {}
 	local power: { [string]: number } = {}
 	for _, h in pairs(profile.Heroes) do
+		if slotOf(h) then
+			continue
+		end
 		power[h.UUID] = powerOf(profile, h, mult)
-		local isDeployed = slotOf(h) ~= nil
-		if not isDeployed and (not self.AvailableOnly or restingSeconds(h) == 0) then
+		if not self.AvailableOnly or restingSeconds(h) == 0 then
 			table.insert(list, h)
 		end
 	end
@@ -720,7 +767,7 @@ function SquadController.Refresh(self: any)
 		else string.format("HEROES  (%d)", #list)
 	self.EmptyLabel.Visible = #list == 0
 	self.EmptyLabel.Text = if self.AvailableOnly then "Every ready hero is already deployed."
-		elseif deployed > 0 then "All available heroes are currently deployed in your squad."
+		elseif deployed > 0 then "All heroes are currently deployed in the active squad."
 		else "No heroes yet. Summon heroes at the Summoning Altar!"
 
 	local seen: { [string]: boolean } = {}
@@ -731,7 +778,6 @@ function SquadController.Refresh(self: any)
 		entry.Card.LayoutOrder = order
 		entry.Card.Visible = true
 
-		local slot = slotOf(hero)
 		local resting = restingSeconds(hero)
 		local rarity = StatFormulas.GetHeroRarity(hero)
 		entry.Name.Text = hero.DisplayName
@@ -744,8 +790,6 @@ function SquadController.Refresh(self: any)
 		local chipText, chipColor = "", TEXT.Parchment
 		if resting > 0 then
 			chipText, chipColor = string.format("RESTING %ds", resting), TEXT.Bad
-		elseif slot then
-			chipText, chipColor = "SLOT " .. slot, TEXT.Gold
 		elseif FACILITY_LABELS[hero.Assignment or ""] then
 			chipText, chipColor = string.upper(FACILITY_LABELS[hero.Assignment]), Color3.fromRGB(150, 236, 255)
 		end
@@ -754,7 +798,7 @@ function SquadController.Refresh(self: any)
 		entry.ChipLabel.TextColor3 = chipColor
 
 		-- Highlight: the held hero, and who can fill the slot being chosen.
-		local selectable = resting == 0 and (self.ChoosingSlot == nil or slot ~= self.ChoosingSlot)
+		local selectable = resting == 0
 		entry.Shade.Visible = (self.ChoosingSlot ~= nil and not selectable) or resting > 0
 		entry.Rail.Color = if self.HeldHero == hero.UUID then TEXT.Gold
 			elseif self.ChoosingSlot and selectable then Color3.fromRGB(255, 226, 140)
@@ -782,7 +826,7 @@ function SquadController.BuildRosterCard(self: any, hero: any): any
 	local rail = GildedGrimoire.StateStroke(card) :: UIStroke
 
 	local portrait = new("Frame", {
-		Name = "PortraitHost", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 8), Size = UDim2.fromOffset(96, 96),
+		Name = "PortraitHost", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 8), Size = UDim2.fromOffset(84, 84),
 		BackgroundColor3 = Color3.fromRGB(14, 10, 22), ClipsDescendants = true, ZIndex = Z + 4,
 	}, card)
 	new("UICorner", { CornerRadius = UDim.new(0, 12) }, portrait)
@@ -790,21 +834,21 @@ function SquadController.BuildRosterCard(self: any, hero: any): any
 	HeroCard.Portrait(portrait, hero)
 
 	local arch = new("Frame", {
-		AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(0.5, 56, 0, 112), Size = UDim2.fromOffset(28, 28),
+		AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(0.5, 50, 0, 98), Size = UDim2.fromOffset(26, 26),
 		BackgroundTransparency = 1, ZIndex = Z + 7,
 	}, card)
 	local chipFrame, chipLabel = chip(card, {
-		AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0, 8), Size = UDim2.fromOffset(104, 20), Visible = false,
+		AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0, 8), Size = UDim2.fromOffset(84, 18), Visible = false,
 	})
 	local name = label(card, "Title", {
-		Position = UDim2.fromOffset(6, 110), Size = UDim2.new(1, -12, 0, 20), TextScaled = true, Text = "", ZIndex = Z + 5,
+		Position = UDim2.fromOffset(4, 102), Size = UDim2.new(1, -8, 0, 18), TextScaled = true, Text = "", ZIndex = Z + 5,
 	})
-	new("UITextSizeConstraint", { MaxTextSize = 15 }, name)
+	new("UITextSizeConstraint", { MaxTextSize = 14 }, name)
 	local info = label(card, "Body", {
-		Position = UDim2.fromOffset(6, 132), Size = UDim2.new(1, -12, 0, 16), TextSize = 12, Text = "", ZIndex = Z + 5,
+		Position = UDim2.fromOffset(4, 122), Size = UDim2.new(1, -8, 0, 16), TextSize = 12, Text = "", ZIndex = Z + 5,
 	})
 	local power = label(card, "Number", {
-		Position = UDim2.fromOffset(6, 152), Size = UDim2.new(1, -12, 0, 20), TextSize = 15, TextColor3 = TEXT.Gold, Text = "", ZIndex = Z + 5,
+		Position = UDim2.fromOffset(4, 140), Size = UDim2.new(1, -8, 0, 18), TextSize = 14, TextColor3 = TEXT.Gold, Text = "", ZIndex = Z + 5,
 	})
 	-- Dims heroes that can't take the slot being chosen (or are resting).
 	local shade = new("Frame", {

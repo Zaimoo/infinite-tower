@@ -466,7 +466,7 @@ function Components.SquadStatusCard(props: { Rows: { any }, LockedText: string?,
 				Range = heavyLabel({ Position = UDim2.fromOffset(4, 46), Size = UDim2.new(1, -8, 0, 16), MaxSize = 13, Outline = 1.8, Gold = false,
 					Text = "Slots " .. (props.LockedRange or "") }),
 				Hint = body({ Position = UDim2.fromOffset(4, 64), Size = UDim2.new(1, -8, 0, 13), TextSize = 10, TextColor3 = Color3.fromRGB(196, 186, 214),
-					TextXAlignment = Enum.TextXAlignment.Center, Text = "Fortress Tree" }),
+					TextXAlignment = Enum.TextXAlignment.Center, Text = "Upgrades" }),
 			})
 	end
 	if props.Compact then
@@ -495,7 +495,6 @@ function Components.PitTabs(props: { Active: string, Center: Vector2, OnSelect: 
 	local children: { [string]: any } = {
 		Layout = e("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder,
 			VerticalAlignment = Enum.VerticalAlignment.Center, HorizontalAlignment = Enum.HorizontalAlignment.Center }),
-		Title = heavyLabel({ LayoutOrder = 0, Size = UDim2.fromOffset(110, 30), MaxSize = 20, Text = "The Pit" }),
 	}
 	for i, tab in { "Synthesis", "Promotion" } do
 		local active = props.Active == tab
@@ -514,7 +513,7 @@ function Components.PitTabs(props: { Active: string, Center: Vector2, OnSelect: 
 	return panel({
 		AnchorPoint = Vector2.new(0.5, 1),
 		Position = UDim2.fromOffset(props.Center.X, props.Center.Y),
-		Size = UDim2.fromOffset(500, 56),
+		Size = UDim2.fromOffset(368, 56),
 		ZIndex = 30,
 	}, { Row = e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 }, children) })
 end

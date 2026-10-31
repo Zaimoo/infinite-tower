@@ -22,7 +22,7 @@ local LOCK_HINTS: { [string]: string } = {
 	Tower = "Deploy your squad at the War Banner to unlock the Tower.",
 	Forge = "Clear Floor 1 of the Tower to unlock the Forge.",
 	Facilities = "Upgrade a weapon at the Forge to unlock facilities.",
-	FortressTree = "Upgrade a weapon at the Forge to unlock the Fortress Tree.",
+	FortressTree = "Upgrade a weapon at the Forge to unlock Upgrades.",
 	Pit = "Put a hero to work at a facility to unlock The Pit.",
 	TowerFloor5 = "Level up a hero in The Pit to unlock Floor 5 and beyond.",
 }

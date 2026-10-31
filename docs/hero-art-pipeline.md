@@ -255,7 +255,10 @@ Overrides.hero_x = { Idle = breathe(stance, 3.0), --[[ existing attack overrides
 | Jenna | Part-built, reference-matched | store anime face | Parts (hood) | signature |
 | Han | remodelled | generated `121433999720755` | store mesh `15045614397` | weapon default |
 | Velkist | remodelled | generated `104592422151826` | ours `109684055929778` | signature (showboat) |
-| Aaron | remodelled | generated `135079238224097` | ours `84157414920224` (lowered and widened) | signature (wary guard) |
-| Others (8) | original Part-built ports | default smiley | Part blocks | weapon default |
+| Aaron | remodelled | generated `135079238224097` | ours `76088495641706` (layered anime curtain bangs + feathered nape ducktail) | signature (wary guard) |
+| Catio | remodelled | generated `hero_catio_face.png` | ours `139185116264855` (high-poly UGC shaggy anime wolf-cut) | weapon default |
+| Others (7) | original Part-built ports | default smiley | Part blocks | weapon default |
 
-**Open item:** after Aaron's hair was lowered, the user still reported scalp showing. The front and top views in Edit mode looked covered, but the side and back weren't reviewed. Next step: check those angles. If the scalp shows at the temples or back, regenerate the hair with the scalp dome reaching lower at the sides and back (`cap_keep`), rather than lowering the whole mesh further.
+**Aaron update (2026-10-28):** Generated stylized messy anime hair mesh `76088495641706` in Blender (`assets/hair/hero_hair.blend`, `tools/make_aaron_hair_v2.py`), replacing previous placeholders. Features center-left parted curtain bangs, dipping forehead strands, 5-point ridged layered clumps, and flared ducktail nape locks in Sandy Blonde (`#DEC085`). Scaled and positioned in `HeroCostumes.luau` at `{ 1.91, 1.66, 1.58 }` with offset `{ 0, 0.248, 0.061 }`. Verified in Studio across 4 angles with 0 lint errors and 16k passing spec tests.
+
+**Catio remodel (2026-10-28):** Complete rebuild from Steampunk Cat-Miner to Royal Scholar / High Archbishop based on reference image. High-poly Roblox UGC aesthetic hair modelled in Blender (`catio_hair.fbx`, `catio_hair.json`, `hero_hair.blend`, 4,844 tris / 2,558 verts) in Dark Slate Navy (`#2D334A`), featuring center-left curtain bangs, dipping central forehead strands, jaw-framing side cascades, and floating crown ahoge flyaways. Custom stoic anime face generated via PIL (`assets/faces/make_catio_face.py`). Ceremonial white & gold robe costume authored with folded hooded cowl, royal sapphire brooch with silver swag chains, boxy kimono sleeve pauldrons, pleated hakama trousers, and gold-capped heavy boots (44 costume pieces, strictly within the 60-part budget). All 16,498 spec tests pass.

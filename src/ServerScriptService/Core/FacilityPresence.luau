@@ -140,6 +140,14 @@ local function applyBuilding(plot: Instance, facility: string, level: number, pr
 			if previous ~= nil and previous <= 0 then
 				reveal(stashed)
 			end
+		elseif not live and not stashed and folder then
+			-- Self-healing: if facility was wiped from folder and not stashed, rebuild PlotBuildings
+			local ok, PlotBuildings = pcall(function()
+				return require(script.Parent:WaitForChild("PlotBuildings"))
+			end)
+			if ok and PlotBuildings then
+				PlotBuildings.Build(plot)
+			end
 		elseif live and live:IsA("Model") and previous ~= nil and level > previous then
 			upgradeBurst(live)
 		end
@@ -179,6 +187,9 @@ end
 -- Re-applies the mirrored levels without animation (after PlotBuildings is rebuilt or the fountain
 -- appears). Plots with no owner have every gated facility hidden.
 function FacilityPresence.Reapply(plot: Instance)
+	if RunService:IsEdit() then
+		return
+	end
 	for _, facility in GATED do
 		local attr = plot:GetAttribute(attributeName(facility))
 		local level = if type(attr) == "number" then attr else 0

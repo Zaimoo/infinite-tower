@@ -75,6 +75,93 @@ local function createMasterIslandTemplate(): Model
 	return template
 end
 
+local function alignPlotLeaderboards(plotModel: Instance, courtyardTopCF: CFrame)
+	-- Ensure Leaderboard Playtime asset is present and placed on the ground along the East Wall of the Courtyard
+	local leaderboard = plotModel:FindFirstChild("AvxsedPlaytimeWS")
+	if not leaderboard then
+		local rep = game:GetService("ReplicatedStorage")
+		local assets = rep:FindFirstChild("Assets")
+		local template = assets and assets:FindFirstChild("LeaderboardTemplate")
+		if template then
+			local clone = template:Clone()
+			clone.Name = "AvxsedPlaytimeWS"
+			clone.Parent = plotModel
+			leaderboard = clone
+		end
+	end
+	if leaderboard then
+		local rigstand = leaderboard:FindFirstChild("Rigstand")
+		local top1 = rigstand and rigstand:FindFirstChild("Top 1")
+		if top1 and top1:IsA("BasePart") then
+			local targetTop1CF = courtyardTopCF * CFrame.new(116.6, 6.8, -20.9) * CFrame.Angles(0, math.rad(90), 0)
+			local deltaPos = targetTop1CF.Position - top1.Position
+			if deltaPos.Magnitude > 0.05 then
+				for _, d in ipairs(leaderboard:GetDescendants()) do
+					if d:IsA("BasePart") and d.Name ~= "ScreenPlaytime" then
+						d.CFrame = d.CFrame + deltaPos
+					end
+				end
+			end
+		end
+
+		local screen = leaderboard:FindFirstChild("ScreenPlaytime")
+		if screen and screen:IsA("BasePart") then
+			screen.Anchored = true
+			screen.CanCollide = false
+			screen.Size = Vector3.new(9.4, 12.4, 0.5)
+			screen.Transparency = 0
+			screen.Color = Color3.fromRGB(15, 15, 18)
+			screen.Material = Enum.Material.Glass
+			screen.CFrame = courtyardTopCF * CFrame.new(116.2, 6.65, -31.3) * CFrame.Angles(0, math.rad(90), 0)
+		end
+	end
+
+	-- Ensure Leaderboard Power asset is present and placed on the ground along the East Wall of the Courtyard
+	local powerLeaderboard = plotModel:FindFirstChild("AvxsedPowerWS")
+	if not powerLeaderboard and leaderboard then
+		local clone = leaderboard:Clone()
+		clone.Name = "AvxsedPowerWS"
+		local s = clone:FindFirstChild("ScreenPlaytime")
+		if s then
+			s.Name = "ScreenPower"
+			local holder = s:FindFirstChild("SurfaceGui") and s.SurfaceGui:FindFirstChild("Holder")
+			local headerLbl = holder and holder:FindFirstChild("Header") and holder.Header:FindFirstChild("LabelFrame") and holder.Header.LabelFrame:FindFirstChild("HeaderLabel") :: TextLabel?
+			if headerLbl then
+				headerLbl.Text = "TOP POWER"
+			end
+		end
+		clone.Parent = plotModel
+		powerLeaderboard = clone
+	end
+	if powerLeaderboard then
+		local rigstand = powerLeaderboard:FindFirstChild("Rigstand")
+		local top1 = rigstand and rigstand:FindFirstChild("Top 1")
+		if top1 and top1:IsA("BasePart") then
+			local targetTop1CF = courtyardTopCF * CFrame.new(116.6, 6.8, 20.4) * CFrame.Angles(0, math.rad(90), 0)
+			local deltaPos = targetTop1CF.Position - top1.Position
+			if deltaPos.Magnitude > 0.05 then
+				for _, d in ipairs(powerLeaderboard:GetDescendants()) do
+					if d:IsA("BasePart") and d.Name ~= "ScreenPower" then
+						d.CFrame = d.CFrame + deltaPos
+					end
+				end
+			end
+		end
+
+		local screen = powerLeaderboard:FindFirstChild("ScreenPower") or powerLeaderboard:FindFirstChild("ScreenPlaytime")
+		if screen and screen:IsA("BasePart") then
+			screen.Name = "ScreenPower"
+			screen.Anchored = true
+			screen.CanCollide = false
+			screen.Size = Vector3.new(9.4, 12.4, 0.5)
+			screen.Transparency = 0
+			screen.Color = Color3.fromRGB(15, 15, 18)
+			screen.Material = Enum.Material.Glass
+			screen.CFrame = courtyardTopCF * CFrame.new(116.2, 6.65, 10.0) * CFrame.Angles(0, math.rad(90), 0)
+		end
+	end
+end
+
 -- Repositions a Plot_N model onto its new floating island CFrame while keeping all required children intact
 local function migratePlotToIsland(plotModel: Model, islandClone: Model, islandTopCF: CFrame)
 	-- 1. Delete old flat PlotFloor, ArenaEntryRamp, and Art_PrivateExtractionPad if present
@@ -161,45 +248,9 @@ local function migratePlotToIsland(plotModel: Model, islandClone: Model, islandT
 	end
 	anchorPart.CFrame = CFrame.new(islandTopCF.Position.X, islandTopCF.Position.Y, islandTopCF.Position.Z)
 
-	-- 7. Ensure Leaderboard Playtime asset is present and placed on the ground along the North Wall
-	local leaderboard = plotModel:FindFirstChild("AvxsedPlaytimeWS")
-	if not leaderboard then
-		local rep = game:GetService("ReplicatedStorage")
-		local assets = rep:FindFirstChild("Assets")
-		local template = assets and assets:FindFirstChild("LeaderboardTemplate")
-		if template then
-			local clone = template:Clone()
-			clone.Name = "AvxsedPlaytimeWS"
-			clone.Parent = plotModel
-			leaderboard = clone
-		end
-	end
-	if leaderboard then
-		local rigstand = leaderboard:FindFirstChild("Rigstand")
-		local top1 = rigstand and rigstand:FindFirstChild("Top 1")
-		if top1 and top1:IsA("BasePart") then
-			local targetTop1CF = islandTopCF * CFrame.new(116.6, 6.8, -20.9) * CFrame.Angles(0, math.rad(90), 0)
-			local deltaPos = targetTop1CF.Position - top1.Position
-			if deltaPos.Magnitude > 0.05 then
-				for _, d in ipairs(leaderboard:GetDescendants()) do
-					if d:IsA("BasePart") and d.Name ~= "ScreenPlaytime" then
-						d.CFrame = d.CFrame + deltaPos
-					end
-				end
-			end
-		end
-
-		local screen = leaderboard:FindFirstChild("ScreenPlaytime")
-		if screen and screen:IsA("BasePart") then
-			screen.Anchored = true
-			screen.CanCollide = false
-			screen.Size = Vector3.new(9.4, 12.4, 0.5)
-			screen.Transparency = 0
-			screen.Color = Color3.fromRGB(15, 15, 18)
-			screen.Material = Enum.Material.Glass
-			screen.CFrame = islandTopCF * CFrame.new(116.2, 6.65, -31.3) * CFrame.Angles(0, math.rad(90), 0)
-		end
-	end
+	-- 7. Align both Playtime and Power leaderboards to the courtyard East Wall
+	local courtyardTopCF = islandTopCF * CFrame.new(0, 0, -(IslandBuilder.Config.CenterOffsetZ or 70))
+	alignPlotLeaderboards(plotModel, courtyardTopCF)
 
 	islandClone.Parent = plotModel
 end
@@ -399,7 +450,22 @@ local function buildOverhaul(forceRebuild: boolean?)
 		and #plotsFolder:GetChildren() >= 6
 
 	if alreadyBaked and not forceRebuild then
-		-- Geometry was already baked in Edit mode; just hook up runtime listeners!
+		-- Geometry was already baked in Edit mode; ensure leaderboards are aligned on all plots and hook up runtime listeners!
+		for i = 1, Config.IslandCount do
+			local stepDeg = (i - 1) * (360 / Config.IslandCount)
+			local angleRad = math.rad(Config.StartAngleDeg + stepDeg)
+			local posX = Config.RingCenter.X + math.cos(angleRad) * Config.RingRadius
+			local posZ = Config.RingCenter.Z + math.sin(angleRad) * Config.RingRadius
+			local islandPos = Vector3.new(posX, Config.IslandSurfaceY, posZ)
+			local lookTarget = Vector3.new(Config.RingCenter.X, Config.IslandSurfaceY, Config.RingCenter.Z)
+			local islandTopCF = CFrame.lookAt(islandPos, lookTarget)
+			local courtyardTopCF = islandTopCF * CFrame.new(0, 0, -(IslandBuilder.Config.CenterOffsetZ or 70))
+			local pModel = plotsFolder:FindFirstChild("Plot_" .. tostring(i))
+			if pModel then
+				alignPlotLeaderboards(pModel, courtyardTopCF)
+			end
+		end
+
 		local killZone = existingContainer:FindFirstChild("IslandKillRespawnZone") :: BasePart?
 		if killZone then
 			connectKillZoneTouch(killZone)

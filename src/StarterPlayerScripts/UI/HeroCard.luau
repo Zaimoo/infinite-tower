@@ -52,6 +52,20 @@ function HeroCard.Portrait(parent: Instance, hero: any): GuiObject
 	local fallback = T.Label(parent, string.sub(hero.Archetype or "Hero", 1, 1), 32, T.Rarity[hero.Stars or 1])
 	fallback.Size = UDim2.fromScale(1, 1)
 	fallback.TextXAlignment = Enum.TextXAlignment.Center
+
+	-- If template is still loading or replicating, re-mount once available
+	task.spawn(function()
+		local a = ReplicatedStorage:WaitForChild("Assets", 3)
+		local h = a and a:WaitForChild("Heroes", 3)
+		local t = h and h:WaitForChild(hero.TemplateId or "", 3)
+		if t and t:IsA("Model") and parent and parent.Parent then
+			for _, child in parent:GetChildren() do
+				if child:IsA("GuiObject") then child:Destroy() end
+			end
+			HeroCard.Portrait(parent, hero)
+		end
+	end)
+
 	return fallback
 end
 

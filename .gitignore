@@ -28,3 +28,6 @@ Packages/
 
 # Blender backup files
 *.blend1
+
+# Python bytecode cache
+__pycache__/

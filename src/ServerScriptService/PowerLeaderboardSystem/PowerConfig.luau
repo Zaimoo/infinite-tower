@@ -1,0 +1,37 @@
+--!strict
+local RunService = game:GetService("RunService")
+
+local Config = {}
+
+Config.IS_STUDIO = RunService:IsStudio()
+Config.DS_SCOPE  = "PROD" -- Unified with PlayerProfiles_v1 so Studio and Production share accurate power leaderboards
+
+Config.DS_ORDERED_NAME = "SquadPowerTotals_V1"
+Config.DS_MAIN_NAME    = "SquadPowerData_V1"
+
+Config.SAVE_INTERVAL = 60 -- auto-save per player ke DataStore
+Config.BOARD_REFRESH = 30
+Config.TICK_INTERVAL = 1  -- update realtime numbers + countdown UpdateLabel
+
+Config.MAX_BOARD_ROWS  = 100 -- jumlah card maksimal yang ditampilin di ScreenPower
+Config.MAX_STAND_RANKS = 3
+
+Config.Paths = {
+	ScreenPowerPart = { "AvxsedPowerWS", "ScreenPower" },
+	RigstandFolder  = { "AvxsedPowerWS", "Rigstand" },
+}
+
+Config.Admin = {
+	AdminUserIds = {
+		[8789609975] = true,
+		[118832016] = true, -- AwesomePunkbro (Owner)
+	},
+	RefreshCooldown = 5,
+}
+
+Config.Topbar = {
+	Image = "rbxassetid://96714408085433",
+	Label = "",
+}
+
+return Config

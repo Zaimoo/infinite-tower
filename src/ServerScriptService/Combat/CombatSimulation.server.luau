@@ -74,6 +74,7 @@ end
 --============================================================================
 
 local TICK_INTERVAL = 0.20 -- 5 Hz Server Heartbeat
+local FIELD_LOOT_DESPAWN_SECONDS = 90
 local MASTER_FORMATION_RADIUS = 6.0
 local LEASH_DISTANCE = 65.0
 
@@ -532,6 +533,50 @@ local function clearLootCarryState(player: Player)
 	CarriedLootSyncRemote:FireClient(player, 0, 0)
 end
 
+function CombatSimulation.BankHeldLoot(player: Player, location: any?): boolean
+	local held = CarrierToHeldLoot[player]
+	if not held then return false end
+	local dm = getDataManager()
+	local prof = dm.GetProfile(player)
+	if not prof then return false end
+
+	CarrierToHeldLoot[player] = nil
+	local loc = location or Tower.GetState(player)
+	local floorId = if loc and type(loc.FloorId) == "number" then loc.FloorId else 0
+	local prefix = if floorId > 0 then string.format("📦 Unpackaged Field Loot at Floor %d Safe Zone: ", floorId) else "🏦 Safely Banked Field Cargo: "
+
+	if held.LootType == "GOLD" then
+		local marketMult = dm.GetMarketMultiplier and dm.GetMarketMultiplier(player) or 1.0
+		local finalGold = math.round(held.Amount * marketMult)
+		prof.Currencies.Gold += finalGold
+		dm.SendToast(
+			player,
+			if marketMult > 1.0
+				then prefix .. string.format("+%d GOLD (Market: +%.1f%%)!", finalGold, (marketMult - 1) * 100)
+				else prefix .. string.format("+%d GOLD!", finalGold),
+			"SUCCESS"
+		)
+	elseif held.LootType == "GEMS" then
+		prof.Currencies.Gems += held.Amount
+		dm.SendToast(
+			player,
+			prefix .. string.format("+%d GEMS!", held.Amount),
+			"SUCCESS"
+		)
+	end
+	dm.SyncProfile(player)
+
+	if held.Weld and held.Weld.Parent then
+		held.Weld:Destroy()
+	end
+	if held.Part and held.Part.Parent then
+		held.Part:Destroy()
+	end
+
+	clearLootCarryState(player)
+	return true
+end
+
 function CombatSimulation.DropCarriedLoot(player: Player, openLoot: boolean?): boolean
 	if Tower.IsTransitioning(player) then Tower.CancelPending(player,"CARGO_CHANGED") end
 	local held = CarrierToHeldLoot[player]
@@ -554,13 +599,14 @@ function CombatSimulation.DropCarriedLoot(player: Player, openLoot: boolean?): b
 	part.Parent = PhysicalLootFolder
 
 	local now = os.clock()
+	local despawnTime = now + FIELD_LOOT_DESPAWN_SECONDS
 	local dropped = {
 		LootId = held.LootId, LootType = held.LootType, Amount = held.Amount,
 		FloorId=held.FloorId,RoomGeneration=held.RoomGeneration,
 		Part = part, Prompt = held.OriginalPrompt, Billboard = held.Billboard,
 		KillerUserId = openLoot and 0 or held.KillerUserId,
 		KillerName = openLoot and "Open" or held.KillerName,
-		SpawnTime = held.SpawnTime, DespawnTime = held.DespawnTime,
+		SpawnTime = held.SpawnTime, DespawnTime = despawnTime,
 		PickupBlockedUserId = player.UserId, PickupBlockedUntil = now + 1.5,
 		LockedOut = held.LockedOut, DuelLocked = held.DuelLocked,
 	}
@@ -569,10 +615,12 @@ function CombatSimulation.DropCarriedLoot(player: Player, openLoot: boolean?): b
 		held.OriginalPrompt.ActionText = "Hold / Carry"
 		held.OriginalPrompt.Enabled = true
 	end
-	task.delay(math.max(0,held.DespawnTime-os.clock()), function()
+	task.delay(FIELD_LOOT_DESPAWN_SECONDS, function()
 		if ActiveLootDrops[held.LootId] == dropped then
 			ActiveLootDrops[held.LootId] = nil
-			part:Destroy()
+			if part and part.Parent and not part:FindFirstChildOfClass("WeldConstraint") then
+				part:Destroy()
+			end
 		end
 	end)
 	return true
@@ -886,7 +934,7 @@ function collectPhysicalLoot(player: Player, lootId: number)
 
 	CarrierToHeldLoot[player] = {
 		LootId = lootId,
-		FloorId=loot.FloorId,RoomGeneration=loot.RoomGeneration,SpawnTime=loot.SpawnTime,DespawnTime=loot.DespawnTime,
+		FloorId=loot.FloorId,RoomGeneration=loot.RoomGeneration,SpawnTime=loot.SpawnTime,DespawnTime=math.huge,
 		Part = part,
 		Weld = weld,
 		LootType = lootType,
@@ -1055,7 +1103,7 @@ function spawnPhysicalLoot(lootType: "GOLD" | "GEMS", amount: number, worldPos: 
 		KillerUserId = killerUserId,
 		KillerName = killerName,
 		SpawnTime = os.clock(),
-		DespawnTime = os.clock() + 90,
+		DespawnTime = os.clock() + FIELD_LOOT_DESPAWN_SECONDS,
 	}
 	ActiveLootDrops[lootId] = lootData
 
@@ -1075,7 +1123,7 @@ function spawnPhysicalLoot(lootType: "GOLD" | "GEMS", amount: number, worldPos: 
 		end
 	end)
 
-	task.delay(90, function()
+	task.delay(FIELD_LOOT_DESPAWN_SECONDS, function()
 		if ActiveLootDrops[lootId] == lootData then
 			ActiveLootDrops[lootId] = nil
 			if part and part.Parent and not part:FindFirstChildOfClass("WeldConstraint") then
@@ -2381,6 +2429,7 @@ Tower.RegisterAdapter("Combat",{
   end,
  CaptureCargo=function(player) return CarrierToHeldLoot[player] end,
  DropCargo=function(player) CombatSimulation.DropCarriedLoot(player,true) end,
+ StoreCargo=function(player, loc) return CombatSimulation.BankHeldLoot(player, loc) end,
  Pins=function(id,gen)
   if Encounters and Encounters:Pins(id,gen) then return true end
   for _,items in {ActiveLootDrops,CarrierToHeldLoot} do for _,item in pairs(items) do if item.FloorId==id and item.RoomGeneration==gen and item.Part and item.Part.Parent then return true end end end
@@ -2626,47 +2675,9 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 		if rootPos then
 			local location=Tower.GetState(player)
 			local safety=Tower.GetSafety(location,rootPos)
-			if safety.CanBankCargo and location.BankArmed and not Tower.IsTransitioning(player) and not DuelByPlayer[player] then
-				local held = CarrierToHeldLoot[player]
-				local char = player.Character
-				local hum = char and char:FindFirstChildOfClass("Humanoid")
-				if held and char and hum and hum.Health > 0 and held.Part and held.Part.Parent and SanctuaryRules.CanBank(location,held,safety,Tower.IsTransitioning(player),now) then
-					local dm = getDataManager()
-					local prof = dm.GetProfile(player)
-					if not prof then continue end
-					CarrierToHeldLoot[player] = nil
-					if prof then
-						local prefix = if location.FloorId > 0 then string.format("📦 Unpackaged Field Loot at Floor %d Safe Zone: ",location.FloorId) else "🏦 Safely Banked Field Cargo: "
-						if held.LootType == "GOLD" then
-							local marketMult = dm.GetMarketMultiplier and dm.GetMarketMultiplier(player) or 1.0
-							local finalGold = math.round(held.Amount * marketMult)
-							prof.Currencies.Gold += finalGold
-							dm.SendToast(
-								player,
-								if marketMult > 1.0
-									then prefix .. string.format("+%d GOLD (Market: +%.1f%%)!", finalGold, (marketMult - 1) * 100)
-									else prefix .. string.format("+%d GOLD!", finalGold),
-								"SUCCESS"
-							)
-						elseif held.LootType == "GEMS" then
-							prof.Currencies.Gems += held.Amount
-							dm.SendToast(
-								player,
-								prefix .. string.format("+%d GEMS!", held.Amount),
-								"SUCCESS"
-							)
-						end
-						dm.SyncProfile(player)
-					end
-
-					if held.Weld and held.Weld.Parent then
-						held.Weld:Destroy()
-					end
-					if held.Part and held.Part.Parent then
-						held.Part:Destroy()
-					end
-
-					clearLootCarryState(player)
+			if safety.CanBankCargo and not Tower.IsTransitioning(player) and not DuelByPlayer[player] then
+				if CarrierToHeldLoot[player] then
+					CombatSimulation.BankHeldLoot(player, location)
 				end
 
 				if safety.CanRecoverWipe and masterState.IsSquadWiped then
@@ -2692,10 +2703,8 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 		end
 	end
 
- for p,held in pairs(CarrierToHeldLoot) do if now>=held.DespawnTime then
-  if held.Weld then held.Weld:Destroy() end;if held.Part then held.Part:Destroy() end;clearLootCarryState(p)
- end end
- broadcastReplicationSnapshot(now)
+	-- Carried loot does not despawn while held by a player.
+	broadcastReplicationSnapshot(now)
 end)
 
 CombatSimulation.SpawnPhysicalLoot = spawnPhysicalLoot

@@ -519,7 +519,12 @@ function Builder.Build(id: number, generation: number): any
 	extractionPrompt:SetAttribute("FloorExtraction", true)
 	extractionPrompt.Parent = altar
 	extractionPrompt.Triggered:Connect(function(player)
-		if _G.RelicService then _G.RelicService.ExtractInFloorSafeZone(player) end
+		if _G.CombatSimulation and _G.CombatSimulation.BankHeldLoot then
+			_G.CombatSimulation.BankHeldLoot(player)
+		end
+		if _G.RelicService then
+			_G.RelicService.ExtractInFloorSafeZone(player)
+		end
 	end)
 
 	for _, side in { -1, 1 } do

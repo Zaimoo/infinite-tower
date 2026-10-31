@@ -6,6 +6,7 @@
 -- onto the ornate North-Wall LeaderboardBoard, and removes legacy Infirmary instances.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local Buildings = {}
 local Architecture = require(script.Parent:WaitForChild("PlotFacilityArchitecture"))
@@ -13,7 +14,7 @@ local OutskirtsBuilder = require(script.Parent:WaitForChild("OutskirtsEnvironmen
 local FacilityPresence = require(script.Parent:WaitForChild("FacilityPresence"))
 local FacilityConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("FacilityConfig"))
 
-local VERSION = 21 -- 21: one [F] prompt for The Pit (was Synthesis [E] + Promotion [F])
+local VERSION = 22 -- 22: ensure Market and Training Grounds are always baked into PlotBuildings
 
 local function attachPrompt(
 	parent: Instance,
@@ -93,6 +94,56 @@ local function alignPlaytimeBoardToWall(plot: Instance, origin: CFrame)
 	end
 end
 
+local function alignPowerBoardToWall(plot: Instance, origin: CFrame)
+	local powerStand = plot:FindFirstChild("AvxsedPowerWS")
+	if not powerStand then
+		local playtimeStand = plot:FindFirstChild("AvxsedPlaytimeWS")
+		if playtimeStand then
+			local clone = playtimeStand:Clone()
+			clone.Name = "AvxsedPowerWS"
+			local screen = clone:FindFirstChild("ScreenPlaytime")
+			if screen then
+				screen.Name = "ScreenPower"
+				local holder = screen:FindFirstChild("SurfaceGui") and screen.SurfaceGui:FindFirstChild("Holder")
+				local headerLbl = holder and holder:FindFirstChild("Header") and holder.Header:FindFirstChild("LabelFrame") and holder.Header.LabelFrame:FindFirstChild("HeaderLabel") :: TextLabel?
+				if headerLbl then
+					headerLbl.Text = "TOP POWER"
+				end
+			end
+			clone.Parent = plot
+			powerStand = clone
+		else
+			return
+		end
+	end
+
+	local rigstand = powerStand:FindFirstChild("Rigstand")
+	local top1 = rigstand and rigstand:FindFirstChild("Top 1")
+	if top1 and top1:IsA("BasePart") then
+		local targetTop1CF = origin * CFrame.new(116.6, 6.8, 20.4) * CFrame.Angles(0, math.rad(90), 0)
+		local deltaPos = targetTop1CF.Position - top1.Position
+		if deltaPos.Magnitude > 0.05 then
+			for _, d in ipairs(powerStand:GetDescendants()) do
+				if d:IsA("BasePart") and d.Name ~= "ScreenPower" then
+					d.CFrame = d.CFrame + deltaPos
+				end
+			end
+		end
+	end
+
+	local screen = powerStand:FindFirstChild("ScreenPower") or powerStand:FindFirstChild("ScreenPlaytime")
+	if screen and screen:IsA("BasePart") then
+		screen.Name = "ScreenPower"
+		screen.Anchored = true
+		screen.CanCollide = false
+		screen.Size = Vector3.new(9.4, 12.4, 0.5)
+		screen.Transparency = 0
+		screen.Color = Color3.fromRGB(15, 15, 18)
+		screen.Material = Enum.Material.Glass
+		screen.CFrame = origin * CFrame.new(116.2, 6.65, 10.0) * CFrame.Angles(0, math.rad(90), 0)
+	end
+end
+
 function Buildings.Build(plot: Instance)
 	-- Ensure standardized facility prefabs exist under ReplicatedStorage.Assets.PlotFacilities
 	Architecture.EnsureFacilityPrefabs()
@@ -101,11 +152,6 @@ function Buildings.Build(plot: Instance)
 	local oldInfirmaryAnchor = plot:FindFirstChild("Facility_Infirmary")
 	if oldInfirmaryAnchor then
 		oldInfirmaryAnchor:Destroy()
-	end
-
-	local existing = plot:FindFirstChild("PlotBuildings")
-	if existing and existing:GetAttribute("Version") == VERSION then
-		return existing
 	end
 
 	local spawn = plot:FindFirstChild("PlotSpawn")
@@ -127,6 +173,17 @@ function Buildings.Build(plot: Instance)
 		end
 	else
 		origin = CFrame.new(spawn.Position.X, surfaceY, spawn.Position.Z) * spawn.CFrame.Rotation * CFrame.new(0, 0, 80)
+	end
+
+	-- Always align both leaderboards to the courtyard East Wall even if PlotBuildings is already cached
+	alignPlaytimeBoardToWall(plot, origin)
+	alignPowerBoardToWall(plot, origin)
+
+	local existing = plot:FindFirstChild("PlotBuildings")
+	if existing and existing:GetAttribute("Version") == VERSION
+		and existing:FindFirstChild("Building_Market")
+		and existing:FindFirstChild("Building_TrainingGrounds") then
+		return existing
 	end
 
 	local folder = Instance.new("Folder")
@@ -158,8 +215,9 @@ function Buildings.Build(plot: Instance)
 	)
 	syncPlotFacilityAnchor(plot, "Summoning", summonInteract.CFrame)
 
-	-- 3. Playtime Leaderboard Asset (Ground-based stands & arch along North Wall, replacing yellow board)
+	-- 3. Playtime & Power Leaderboard Assets (Ground-based stands & arch along North Wall)
 	alignPlaytimeBoardToWall(plot, origin)
+	alignPowerBoardToWall(plot, origin)
 
 	-- 4. Market Cluster (4-Stall Merchant Bazaar in NE Corner)
 	local marketCfg = layout.Market
@@ -280,7 +338,7 @@ function Buildings.Build(plot: Instance)
 		"FacilityHUDPrompt",
 		"FortressTree",
 		"Architect's Table",
-		"Open Fortress Tree",
+		"Open Upgrades",
 		Enum.KeyCode.F,
 		14
 	)
@@ -313,7 +371,9 @@ function Buildings.Build(plot: Instance)
 		existing:Destroy()
 	end
 	folder.Name = "PlotBuildings"
-	FacilityPresence.Reapply(plot)
+	if not RunService:IsEdit() then
+		FacilityPresence.Reapply(plot)
+	end
 	return folder
 end
 
