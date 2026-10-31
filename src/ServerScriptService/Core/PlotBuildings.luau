@@ -371,7 +371,7 @@ function Buildings.Build(plot: Instance)
 		existing:Destroy()
 	end
 	folder.Name = "PlotBuildings"
-	if not RunService:IsEdit() then
+	if RunService:IsRunning() then
 		FacilityPresence.Reapply(plot)
 	end
 	return folder

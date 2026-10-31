@@ -163,6 +163,58 @@ local function alignPlotLeaderboards(plotModel: Instance, courtyardTopCF: CFrame
 end
 
 -- Repositions a Plot_N model onto its new floating island CFrame while keeping all required children intact
+-- Courtyard-local offsets (courtyard centre = fountain centre, -Z faces the Tower / front gate at z = -90).
+-- The fountain basin spans ~24 studs, so the spawn sits between the fountain and the front gate.
+local SPAWN_COURTYARD_OFFSET = CFrame.new(0, 0.5, -50) * CFrame.Angles(0, math.pi, 0) -- face into the fortress
+local BEACON_ANCHOR_Y = 12
+
+-- Places PlotSpawn on clear cobblestone and centres the persistent beacon anchor over the courtyard.
+-- Runs for both freshly built and pre-baked islands so stale baked positions are always corrected.
+local function alignPlotSpawnAndBeacon(plotModel: Model, islandTopCF: CFrame)
+	local courtyardTopCF = islandTopCF * CFrame.new(0, 0, -(IslandBuilder.Config.CenterOffsetZ or 70))
+
+	local plotSpawn = plotModel:FindFirstChild("PlotSpawn") :: SpawnLocation?
+	if plotSpawn then
+		plotSpawn.Anchored = true
+		plotSpawn.CanCollide = false
+		plotSpawn.Transparency = 1 -- Blends cleanly into the cobblestone floor
+		plotSpawn.Neutral = false
+		plotSpawn.CFrame = courtyardTopCF * SPAWN_COURTYARD_OFFSET
+		local decal = plotSpawn:FindFirstChildWhichIsA("Decal")
+		if decal then
+			decal.Transparency = 1
+		end
+	end
+
+	plotModel.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
+	local beaconAnchor = plotModel:FindFirstChild("PlotBeaconAnchor") :: Model?
+	if not beaconAnchor then
+		beaconAnchor = Instance.new("Model")
+		beaconAnchor.Name = "PlotBeaconAnchor"
+		beaconAnchor.Parent = plotModel
+	end
+	assert(beaconAnchor)
+	beaconAnchor.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
+
+	local anchorPart = beaconAnchor:FindFirstChild("AnchorPart") :: BasePart?
+	if not anchorPart then
+		local newPart = Instance.new("Part")
+		newPart.Name = "AnchorPart"
+		newPart.Size = Vector3.new(2, 2, 2)
+		newPart.Anchored = true
+		newPart.CanCollide = false
+		newPart.CanTouch = false
+		newPart.CanQuery = false
+		newPart.Transparency = 1
+		newPart.Parent = beaconAnchor
+		anchorPart = newPart
+	end
+	assert(anchorPart)
+	beaconAnchor.PrimaryPart = anchorPart
+	local c = courtyardTopCF.Position
+	anchorPart.CFrame = CFrame.new(c.X, BEACON_ANCHOR_Y, c.Z)
+end
+
 local function migratePlotToIsland(plotModel: Model, islandClone: Model, islandTopCF: CFrame)
 	-- 1. Delete old flat PlotFloor, ArenaEntryRamp, and Art_PrivateExtractionPad if present
 	for _, partName in ipairs({ "PlotFloor", "ArenaEntryRamp", "Art_PrivateExtractionPad" }) do
@@ -172,15 +224,7 @@ local function migratePlotToIsland(plotModel: Model, islandClone: Model, islandT
 		end
 	end
 
-	-- 2. Move PlotSpawn to the front plaza side of the island (between Fountain and Front Gate, facing the Tower)
-	local plotSpawn = plotModel:FindFirstChild("PlotSpawn") :: SpawnLocation?
-	if plotSpawn then
-		plotSpawn.Anchored = true
-		plotSpawn.CanCollide = false
-		plotSpawn.Transparency = 1 -- Blends cleanly into the cobblestone floor
-		plotSpawn.Neutral = false
-		plotSpawn.CFrame = islandTopCF * CFrame.new(0, 0.5, -80)
-	end
+	-- 2. PlotSpawn + beacon anchor are placed by alignPlotSpawnAndBeacon (step 6)
 
 	-- 3. Move PrivateExtractionPad to the inner edge near the front gate so Relic drop-off continues to work
 	local extractionPad = plotModel:FindFirstChild("PrivateExtractionPad") :: BasePart?
@@ -222,31 +266,8 @@ local function migratePlotToIsland(plotModel: Model, islandClone: Model, islandT
 		fountain.Parent = plotModel
 	end
 
-	-- 6. Ensure persistent PlotBeaconAnchor so client avatar beacons never stream out
-	plotModel.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
-	local beaconAnchor = plotModel:FindFirstChild("PlotBeaconAnchor") :: Model?
-	if not beaconAnchor then
-		beaconAnchor = Instance.new("Model")
-		beaconAnchor.Name = "PlotBeaconAnchor"
-		beaconAnchor.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
-		beaconAnchor.Parent = plotModel
-	end
-	beaconAnchor.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
-
-	local anchorPart = beaconAnchor:FindFirstChild("AnchorPart") :: BasePart?
-	if not anchorPart then
-		anchorPart = Instance.new("Part")
-		anchorPart.Name = "AnchorPart"
-		anchorPart.Size = Vector3.new(2, 2, 2)
-		anchorPart.Anchored = true
-		anchorPart.CanCollide = false
-		anchorPart.CanTouch = false
-		anchorPart.CanQuery = false
-		anchorPart.Transparency = 1
-		anchorPart.Parent = beaconAnchor
-		beaconAnchor.PrimaryPart = anchorPart
-	end
-	anchorPart.CFrame = CFrame.new(islandTopCF.Position.X, islandTopCF.Position.Y, islandTopCF.Position.Z)
+	-- 6. Place PlotSpawn on clear ground and the persistent PlotBeaconAnchor over the courtyard
+	alignPlotSpawnAndBeacon(plotModel, islandTopCF)
 
 	-- 7. Align both Playtime and Power leaderboards to the courtyard East Wall
 	local courtyardTopCF = islandTopCF * CFrame.new(0, 0, -(IslandBuilder.Config.CenterOffsetZ or 70))
@@ -463,6 +484,9 @@ local function buildOverhaul(forceRebuild: boolean?)
 			local pModel = plotsFolder:FindFirstChild("Plot_" .. tostring(i))
 			if pModel then
 				alignPlotLeaderboards(pModel, courtyardTopCF)
+				if pModel:IsA("Model") then
+					alignPlotSpawnAndBeacon(pModel, islandTopCF)
+				end
 			end
 		end
 
