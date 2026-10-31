@@ -222,7 +222,7 @@ local function migratePlotToIsland(plotModel: Model, islandClone: Model, islandT
 		local rigstand = powerLeaderboard:FindFirstChild("Rigstand")
 		local top1 = rigstand and rigstand:FindFirstChild("Top 1")
 		if top1 and top1:IsA("BasePart") then
-			local targetTop1CF = islandTopCF * CFrame.new(116.6, 6.8, -2.6) * CFrame.Angles(0, math.rad(90), 0)
+			local targetTop1CF = islandTopCF * CFrame.new(116.6, 6.8, 20.4) * CFrame.Angles(0, math.rad(90), 0)
 			local deltaPos = targetTop1CF.Position - top1.Position
 			if deltaPos.Magnitude > 0.05 then
 				for _, d in ipairs(powerLeaderboard:GetDescendants()) do
@@ -242,7 +242,7 @@ local function migratePlotToIsland(plotModel: Model, islandClone: Model, islandT
 			screen.Transparency = 0
 			screen.Color = Color3.fromRGB(15, 15, 18)
 			screen.Material = Enum.Material.Glass
-			screen.CFrame = islandTopCF * CFrame.new(116.2, 6.65, -13.0) * CFrame.Angles(0, math.rad(90), 0)
+			screen.CFrame = islandTopCF * CFrame.new(116.2, 6.65, 10.0) * CFrame.Angles(0, math.rad(90), 0)
 		end
 	end
 

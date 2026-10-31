@@ -38,6 +38,7 @@ local function buildEmptyStand(part: BasePart, rank: number)
 	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
 	gui.PixelsPerStud = 150
 	gui.LightInfluence = 0
+	gui.ZOffset = 1
 	gui.Parent = part
 
 	local root = Instance.new("Frame")
@@ -77,6 +78,7 @@ local function buildStandDisplay(part: BasePart, rank: number, userId: number, u
 	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
 	gui.PixelsPerStud = 150
 	gui.LightInfluence = 0
+	gui.ZOffset = 1
 	gui.Parent = part
 
 	local root = Instance.new("Frame")
