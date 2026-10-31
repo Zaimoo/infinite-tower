@@ -268,6 +268,73 @@ function WeaponModelBuilder.BuildSwordShield(): Model
 end
 
 -- ============================================================================
+-- 2c. WEAPON_IRON_BROADSWORD (1★ Vanguard Iron Broadsword & Buckler)
+-- ============================================================================
+function WeaponModelBuilder.BuildIronBroadsword(): Model
+	local model = Instance.new("Model")
+	model.Name = "weapon_iron_broadsword"
+
+	local polishedSteel = Color3.fromRGB(212, 216, 223)
+	local forgedIron = Color3.fromRGB(140, 146, 158)
+	local darkGrip = Color3.fromRGB(30, 29, 36)
+
+	-- Handle gripped in RightHand at (0, 0, 0)
+	local handle = makePart(model, "Handle", Vector3.new(0.24, 0.75 * 1.38, 0.24), CFrame.new(0, 0, 0), darkGrip)
+	model.PrimaryPart = handle
+
+	-- Ferrule Collar
+	local ferrule = makePart(model, "GripFerrule", Vector3.new(0.26 * 1.45, 0.08 * 1.38, 0.26 * 1.45), CFrame.new(0, 0.34 * 1.38, 0), forgedIron, Enum.Material.Metal)
+	weldTo(handle, ferrule)
+
+	-- Scent-Stopper Fishtail Pommel
+	local pommelNeck = makePart(model, "PommelNeck", Vector3.new(0.25 * 1.45, 0.12 * 1.38, 0.22 * 1.40), CFrame.new(0, -0.42 * 1.38, 0), forgedIron, Enum.Material.Metal)
+	weldTo(handle, pommelNeck)
+	local pommelBody = makePart(model, "PommelBody", Vector3.new(0.38 * 1.45, 0.22 * 1.38, 0.28 * 1.40), CFrame.new(0, -0.58 * 1.38, 0), forgedIron, Enum.Material.Metal)
+	weldTo(handle, pommelBody)
+	local pommelCap = makePart(model, "PommelCap", Vector3.new(0.28 * 1.45, 0.08 * 1.38, 0.22 * 1.40), CFrame.new(0, -0.73 * 1.38, 0), polishedSteel, Enum.Material.Metal)
+	weldTo(handle, pommelCap)
+
+	-- Cruciform Crossguard with Ecusson
+	local guard = makePart(model, "Crossguard", Vector3.new(0.95 * 1.45, 0.12 * 1.38, 0.18 * 1.40), CFrame.new(0, 0.45 * 1.38, 0), forgedIron, Enum.Material.Metal)
+	weldTo(handle, guard)
+	local ecusson = makePart(model, "GuardEcusson", Vector3.new(0.32 * 1.45, 0.18 * 1.38, 0.22 * 1.40), CFrame.new(0, 0.48 * 1.38, 0), forgedIron, Enum.Material.Metal)
+	weldTo(handle, ecusson)
+
+	-- Blade (Ricasso + Fuller + Diamond Spear Point)
+	local ricasso = makePart(model, "BladeRicasso", Vector3.new(0.28 * 1.45, 0.32 * 1.38, 0.06 * 1.40), CFrame.new(0, 0.62 * 1.38, 0), forgedIron, Enum.Material.Metal)
+	weldTo(handle, ricasso)
+	local bladeBody = makePart(model, "Blade", Vector3.new(0.26 * 1.45, 1.80 * 1.38, 0.05 * 1.40), CFrame.new(0, 1.68 * 1.38, 0), polishedSteel, Enum.Material.Metal)
+	weldTo(handle, bladeBody)
+	local fuller = makePart(model, "FullerGroove", Vector3.new(0.09 * 1.45, 1.60 * 1.38, 0.06 * 1.40), CFrame.new(0, 1.65 * 1.38, 0), forgedIron, Enum.Material.Metal)
+	weldTo(handle, fuller)
+	local upperBlade = makePart(model, "BladeDiamond", Vector3.new(0.20 * 1.45, 0.70 * 1.38, 0.04 * 1.40), CFrame.new(0, 2.90 * 1.38, 0), polishedSteel, Enum.Material.Metal)
+	weldTo(handle, upperBlade)
+	local tip = makeWedge(model, "BladeTip", Vector3.new(0.18 * 1.45, 0.35 * 1.38, 0.04 * 1.40), CFrame.new(0, 3.25 * 1.38, 0) * CFrame.Angles(0, math.pi, 0), polishedSteel, Enum.Material.Metal)
+	weldTo(handle, tip)
+
+	addSocket(handle, "Grip", Vector3.zero, EDGE_PLUS_X) -- up = blade, look = edge
+
+	-- Off-hand Buckler Shield (LeftHand)
+	local shieldModel = Instance.new("Model")
+	shieldModel.Name = "OffhandShield"
+	shieldModel.Parent = model
+
+	local gripS = makePart(shieldModel, "HandleS", Vector3.new(0.2, 0.6, 0.2), CFrame.new(0, 0, 0), forgedIron)
+	shieldModel.PrimaryPart = gripS
+
+	local plate = makePart(shieldModel, "ShieldPlate", Vector3.new(0.12, 1.8, 1.8), CFrame.new(-0.25, 0, 0), forgedIron, Enum.Material.Metal)
+	weldTo(gripS, plate)
+
+	local boss = makePart(shieldModel, "ShieldBoss", Vector3.new(0.15, 0.6, 0.6), CFrame.new(-0.33, 0, 0), polishedSteel, Enum.Material.Metal)
+	boss.Shape = Enum.PartType.Ball
+	weldTo(gripS, boss)
+
+	addSocket(gripS, "ShieldMount", Vector3.new(-0.18, 0, 0), Vector3.new(0, 90, 0))
+
+	return model
+end
+
+-- ============================================================================
 -- 3. WEAPON_DAGGERS (Dual Rogue Trench Stilettos)
 -- ============================================================================
 function WeaponModelBuilder.BuildDaggers(): Model
@@ -455,6 +522,21 @@ function WeaponModelBuilder.Style(wModel: Model, weaponAssetId: string?, rarityI
 				end
 			end
 		end
+	elseif weaponAssetId == "art_iron_broadsword" then
+		for _, p in ipairs(wModel:GetDescendants()) do
+			if p:IsA("BasePart") then
+				if p.Name:find("Blade") or p.Name:find("Tip") or p.Name:find("PommelCap") or p.Name:find("ShieldBoss") then
+					p.Material = Enum.Material.Metal
+					p.Color = Color3.fromRGB(212, 216, 223)
+				elseif p.Name:find("Fuller") or p.Name:find("Ricasso") or p.Name:find("Crossguard") or p.Name:find("Guard") or p.Name:find("Pommel") or p.Name:find("Ferrule") or p.Name:find("ShieldPlate") or p.Name:find("HandleS") then
+					p.Material = Enum.Material.Metal
+					p.Color = Color3.fromRGB(140, 146, 158)
+				elseif p.Name == "Handle" then
+					p.Material = Enum.Material.SmoothPlastic
+					p.Color = Color3.fromRGB(30, 29, 36)
+				end
+			end
+		end
 	end
 
 	-- Rarity flair: Legendary+ weapons (rarity >= 14) glow in their rarity colour.
@@ -493,6 +575,7 @@ function WeaponModelBuilder.EnsureWeapons(): (Folder, { [string]: Model })
 		weapon_bow = WeaponModelBuilder.BuildBow,
 		weapon_sword = WeaponModelBuilder.BuildSword,
 		weapon_sword_shield = WeaponModelBuilder.BuildSwordShield,
+		weapon_iron_broadsword = WeaponModelBuilder.BuildIronBroadsword,
 		weapon_daggers = WeaponModelBuilder.BuildDaggers,
 		weapon_axe = WeaponModelBuilder.BuildAxe,
 		weapon_staff = WeaponModelBuilder.BuildStaff,

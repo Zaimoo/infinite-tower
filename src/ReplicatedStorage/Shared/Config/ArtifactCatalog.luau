@@ -329,7 +329,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		DisplayName = "Iron Broadsword",
 		Type = "SWORD_SHIELD",
 		DefaultStar = 1,
-		ModelAssetId = "weapon_sword_shield",
+		ModelAssetId = "weapon_iron_broadsword",
 		Description = "Standard-issue balanced iron blade favoured by frontline strikers.",
 		CraftCost = { IronGear = 4, RiftOrb = 1 },
 	},
