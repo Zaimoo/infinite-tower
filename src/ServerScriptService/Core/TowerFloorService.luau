@@ -158,13 +158,19 @@ local function commit(player: Player)
 	end
 	local source=char:GetPivot()
 	local squadSnapshot=movingSquad and combat.CaptureSquad(player) or nil
+	local arrivalSafe = p.View and Service.GetSafety(r, r.Arrival.Position).CanBankCargo == true
 	local ok,transferError=pcall(function()
 		if p.View then
 			char:PivotTo(r.Arrival)
 			root.AssemblyLinearVelocity=Vector3.zero;root.AssemblyAngularVelocity=Vector3.zero
-			for _,entry in records do
-				local item=entry.Ref;item.Part.CFrame=r.Arrival*(source:ToObjectSpace(entry.Position))
-				item.FloorId=r.FloorId;item.RoomGeneration=r.RoomGeneration
+			if arrivalSafe and #records > 0 then
+				storeCargo(player, r)
+				records = {}
+			else
+				for _,entry in records do
+					local item=entry.Ref;item.Part.CFrame=r.Arrival*(source:ToObjectSpace(entry.Position))
+					item.FloorId=r.FloorId;item.RoomGeneration=r.RoomGeneration
+				end
 			end
 		end
 		if movingSquad then combat.Transfer(player,r,p.Action=="RECALL",(p.View or p.Action=="RECALL") and root.Position or nil) end
@@ -176,7 +182,7 @@ local function commit(player: Player)
 		finish(player,"REJECTED","TRANSFER_FAILED");return
 	end
 	if p.View then
-		s.FloorId=r.FloorId;s.RoomGeneration=r.RoomGeneration;s.LocationRevision+=1;s.ViewEpoch=p.ViewEpoch;s.BankArmed=false
+		s.FloorId=r.FloorId;s.RoomGeneration=r.RoomGeneration;s.LocationRevision+=1;s.ViewEpoch=p.ViewEpoch;s.BankArmed=(#records > 0)
 		char:SetAttribute("TowerFloorId",s.FloorId)
 	end
 	if movingSquad then
@@ -288,6 +294,9 @@ end
 local function disconnectCargo(player: Player)
 	for _,a in pairs(adapters) do if a.DropCargo then a.DropCargo(player) end end
 end
+local function storeCargo(player: Player, location: any?)
+	for _,a in pairs(adapters) do if a.StoreCargo then a.StoreCargo(player, location) end end
+end
 function Service.Init()
 	if started then return end;started=true;remotes=remoteFolder()
 	-- Edit-time previews are replaced by the authoritative lazily built rooms in Play.
@@ -328,7 +337,10 @@ function Service.Init()
 			if char and root and r and s.FloorId~=0 and not Protocol.InBounds(root.Position,r.Origin,r.Bounds) then
 				char:PivotTo(r.Arrival);root.AssemblyLinearVelocity=Vector3.zero;root.AssemblyAngularVelocity=Vector3.zero
 			end
-			if root and not Service.GetSafety(s,root.Position).CanBankCargo then s.BankArmed=true end
+			if root then
+				local carrying = (char:GetAttribute("CarryingLoot") == true) or (char:GetAttribute("CarryingRelic") ~= nil)
+				if carrying or not Service.GetSafety(s,root.Position).CanBankCargo then s.BankArmed=true end
+			end
 		end
 		for id,r in pairs(rooms) do if id~=0 and r.Status=="READY" then
 			local pinned=r.Reservations>0

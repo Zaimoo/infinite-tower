@@ -514,6 +514,50 @@ local function clearLootCarryState(player: Player)
 	CarriedLootSyncRemote:FireClient(player, 0, 0)
 end
 
+function CombatSimulation.BankHeldLoot(player: Player, location: any?): boolean
+	local held = CarrierToHeldLoot[player]
+	if not held then return false end
+	local dm = getDataManager()
+	local prof = dm.GetProfile(player)
+	if not prof then return false end
+
+	CarrierToHeldLoot[player] = nil
+	local loc = location or Tower.GetState(player)
+	local floorId = if loc and type(loc.FloorId) == "number" then loc.FloorId else 0
+	local prefix = if floorId > 0 then string.format("📦 Unpackaged Field Loot at Floor %d Safe Zone: ", floorId) else "🏦 Safely Banked Field Cargo: "
+
+	if held.LootType == "GOLD" then
+		local marketMult = dm.GetMarketMultiplier and dm.GetMarketMultiplier(player) or 1.0
+		local finalGold = math.round(held.Amount * marketMult)
+		prof.Currencies.Gold += finalGold
+		dm.SendToast(
+			player,
+			if marketMult > 1.0
+				then prefix .. string.format("+%d GOLD (Market: +%.1f%%)!", finalGold, (marketMult - 1) * 100)
+				else prefix .. string.format("+%d GOLD!", finalGold),
+			"SUCCESS"
+		)
+	elseif held.LootType == "GEMS" then
+		prof.Currencies.Gems += held.Amount
+		dm.SendToast(
+			player,
+			prefix .. string.format("+%d GEMS!", held.Amount),
+			"SUCCESS"
+		)
+	end
+	dm.SyncProfile(player)
+
+	if held.Weld and held.Weld.Parent then
+		held.Weld:Destroy()
+	end
+	if held.Part and held.Part.Parent then
+		held.Part:Destroy()
+	end
+
+	clearLootCarryState(player)
+	return true
+end
+
 function CombatSimulation.DropCarriedLoot(player: Player, openLoot: boolean?): boolean
 	if Tower.IsTransitioning(player) then Tower.CancelPending(player,"CARGO_CHANGED") end
 	local held = CarrierToHeldLoot[player]
@@ -2181,6 +2225,7 @@ Tower.RegisterAdapter("Combat",{
   end,
  CaptureCargo=function(player) return CarrierToHeldLoot[player] end,
  DropCargo=function(player) CombatSimulation.DropCarriedLoot(player,true) end,
+ StoreCargo=function(player, loc) return CombatSimulation.BankHeldLoot(player, loc) end,
  Pins=function(id,gen)
   if Encounters and Encounters:Pins(id,gen) then return true end
   for _,items in {ActiveLootDrops,CarrierToHeldLoot} do for _,item in pairs(items) do if item.FloorId==id and item.RoomGeneration==gen and item.Part and item.Part.Parent then return true end end end
@@ -2425,47 +2470,9 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 		if rootPos then
 			local location=Tower.GetState(player)
 			local safety=Tower.GetSafety(location,rootPos)
-			if safety.CanBankCargo and location.BankArmed and not Tower.IsTransitioning(player) and not DuelByPlayer[player] then
-				local held = CarrierToHeldLoot[player]
-				local char = player.Character
-				local hum = char and char:FindFirstChildOfClass("Humanoid")
-				if held and char and hum and hum.Health > 0 and held.Part and held.Part.Parent and SanctuaryRules.CanBank(location,held,safety,Tower.IsTransitioning(player),now) then
-					local dm = getDataManager()
-					local prof = dm.GetProfile(player)
-					if not prof then continue end
-					CarrierToHeldLoot[player] = nil
-					if prof then
-						local prefix = if location.FloorId > 0 then string.format("📦 Unpackaged Field Loot at Floor %d Safe Zone: ",location.FloorId) else "🏦 Safely Banked Field Cargo: "
-						if held.LootType == "GOLD" then
-							local marketMult = dm.GetMarketMultiplier and dm.GetMarketMultiplier(player) or 1.0
-							local finalGold = math.round(held.Amount * marketMult)
-							prof.Currencies.Gold += finalGold
-							dm.SendToast(
-								player,
-								if marketMult > 1.0
-									then prefix .. string.format("+%d GOLD (Market: +%.1f%%)!", finalGold, (marketMult - 1) * 100)
-									else prefix .. string.format("+%d GOLD!", finalGold),
-								"SUCCESS"
-							)
-						elseif held.LootType == "GEMS" then
-							prof.Currencies.Gems += held.Amount
-							dm.SendToast(
-								player,
-								prefix .. string.format("+%d GEMS!", held.Amount),
-								"SUCCESS"
-							)
-						end
-						dm.SyncProfile(player)
-					end
-
-					if held.Weld and held.Weld.Parent then
-						held.Weld:Destroy()
-					end
-					if held.Part and held.Part.Parent then
-						held.Part:Destroy()
-					end
-
-					clearLootCarryState(player)
+			if safety.CanBankCargo and not Tower.IsTransitioning(player) and not DuelByPlayer[player] then
+				if CarrierToHeldLoot[player] then
+					CombatSimulation.BankHeldLoot(player, location)
 				end
 
 				if safety.CanRecoverWipe and masterState.IsSquadWiped then
