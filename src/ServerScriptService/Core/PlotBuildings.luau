@@ -6,6 +6,7 @@
 -- onto the ornate North-Wall LeaderboardBoard, and removes legacy Infirmary instances.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local Buildings = {}
 local Architecture = require(script.Parent:WaitForChild("PlotFacilityArchitecture"))
@@ -13,7 +14,7 @@ local OutskirtsBuilder = require(script.Parent:WaitForChild("OutskirtsEnvironmen
 local FacilityPresence = require(script.Parent:WaitForChild("FacilityPresence"))
 local FacilityConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("FacilityConfig"))
 
-local VERSION = 21 -- 21: one [F] prompt for The Pit (was Synthesis [E] + Promotion [F])
+local VERSION = 22 -- 22: ensure Market and Training Grounds are always baked into PlotBuildings
 
 local function attachPrompt(
 	parent: Instance,
@@ -179,7 +180,9 @@ function Buildings.Build(plot: Instance)
 	alignPowerBoardToWall(plot, origin)
 
 	local existing = plot:FindFirstChild("PlotBuildings")
-	if existing and existing:GetAttribute("Version") == VERSION then
+	if existing and existing:GetAttribute("Version") == VERSION
+		and existing:FindFirstChild("Building_Market")
+		and existing:FindFirstChild("Building_TrainingGrounds") then
 		return existing
 	end
 
@@ -368,7 +371,9 @@ function Buildings.Build(plot: Instance)
 		existing:Destroy()
 	end
 	folder.Name = "PlotBuildings"
-	FacilityPresence.Reapply(plot)
+	if not RunService:IsEdit() then
+		FacilityPresence.Reapply(plot)
+	end
 	return folder
 end
 
