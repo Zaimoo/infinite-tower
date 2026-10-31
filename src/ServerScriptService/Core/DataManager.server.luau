@@ -676,6 +676,16 @@ function DataManager.UpdateSquadPower(player: Player)
 			end
 		end)
 	end
+
+	local sss = game:GetService("ServerScriptService")
+	local powerSys = sss:FindFirstChild("PowerLeaderboardSystem")
+	local powerDS = powerSys and powerSys:FindFirstChild("PowerDataStore")
+	if powerDS then
+		local ok, mod = pcall(require, powerDS)
+		if ok and mod and (mod :: any).RecordPower then
+			(mod :: any).RecordPower(player.UserId, total)
+		end
+	end
 end
 
 -- Pit operations and participation EXP send only affected heroes. Consumers merge
