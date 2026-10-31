@@ -30,7 +30,8 @@ HeroSockets.PREFABS = table.freeze({
 	AXE = "weapon_axe",
 	STAFF = "weapon_staff",
 	TOME = "weapon_tome",
-} :: { [WeaponType]: string })
+	weapon_iron_broadsword = "weapon_iron_broadsword",
+} :: { [string]: string })
 
 HeroSockets.SOCKETS = table.freeze({
 	BOW = table.freeze({
