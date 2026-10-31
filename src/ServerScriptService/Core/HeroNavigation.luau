@@ -44,6 +44,38 @@ function Navigation.Ground(position: Vector3, group: string?, up: number?, down:
 	return nil
 end
 
+-- Spawn-grade ground: the support must be an authored combat terrace (TerraceId, not the Sanctuary),
+-- the body volume must be free of scenery (a probe that starts inside a cliff passes straight through
+-- it), and a ring around the feet must stay level so nothing stands on a lip above a drop.
+function Navigation.OpenGround(position: Vector3, group: string?): Vector3?
+	local params = parameters(group)
+	local hit = Workspace:Raycast(position + Vector3.new(0, 4, 0), Vector3.new(0, -24, 0), params)
+	if not hit or hit.Normal.Y < .65 then return nil end
+	local terrace = hit.Instance:GetAttribute("TerraceId")
+	if not terrace or terrace == "Sanctuary" then return nil end
+	local ground = hit.Position
+	local overlap = OverlapParams.new()
+	overlap.FilterType, overlap.FilterDescendantsInstances = Enum.RaycastFilterType.Exclude, exclusions
+	overlap.RespectCanCollide = true
+	overlap.CollisionGroup = group or "Default"
+	if #Workspace:GetPartBoundsInBox(CFrame.new(ground + Vector3.new(0, 3.4, 0)), Vector3.new(4, 5, 4), overlap) > 0 then return nil end
+	for i = 0, 5 do
+		local a = i * math.pi / 3
+		local probe = Navigation.Ground(ground + Vector3.new(math.cos(a) * 5, 0, math.sin(a) * 5), group, 2, 3)
+		if not probe or math.abs(probe.Y - ground.Y) > 1.5 then return nil end
+	end
+	return ground
+end
+
+-- First open ground walking from `desired` toward `fallback` (e.g. the camp or terrace centre).
+function Navigation.FindOpenGround(desired: Vector3, fallback: Vector3, group: string?): Vector3?
+	for i = 0, 6 do
+		local found = Navigation.OpenGround(desired:Lerp(fallback, i / 6), group)
+		if found then return found end
+	end
+	return nil
+end
+
 local function groupFor(hero: any): string
 	local owner = hero.Owner
 	local char = owner and owner.Character

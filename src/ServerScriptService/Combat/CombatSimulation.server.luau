@@ -25,6 +25,7 @@ local Protocol=require(Shared.Util.TowerProtocol)
 local SanctuaryRules=require(Shared.Util.TowerSanctuaryRules)
 local FirstBiome=require(Shared.Config.FirstBiomeCombat)
 local TowerLayout=require(Shared.Config.TowerLayout)
+local SquadTactics=require(Shared.Util.SquadTactics)
 local TowerRewards=require(Shared.Config.TowerFloorConfig)
 local TowerHardcore=require(Shared.Config.TowerHardcoreConfig)
 local StatBalance=require(Shared.Config.StatBalance)
@@ -141,6 +142,9 @@ export type SimHero = {
 	DuelId: number?, -- set while the hero fights in a retaliation duel
 	DuelSide: LootDuel.Side?,
 	DefenseShredUntil: number?,
+	CurrentSpeed: number?, -- eased movement speed (SquadTactics.Accelerate)
+	RestingFloor: number?, -- set while a knocked-out assigned hero lies in that floor's sanctuary
+	RestingGeneration: number?,
 }
 
 export type SimMob = {
@@ -183,6 +187,8 @@ export type MasterCombatState = {
 	CarriedLoot: { Gold: number, Gems: number },
 	CanCollectLoot: boolean,
 	IsSquadWiped: boolean,
+	AssignedRegroupAt: number?, -- assigned squad fully down: when it stands up at the sanctuary
+	AssignedRegroupFloor: number?,
 }
 
 -- Contested drops (GDD 6.1): one contest per stolen drop, keyed by LootId.
@@ -224,6 +230,13 @@ end
 
 local ActiveMasters: { [Player]: MasterCombatState } = {}
 local HeroStuckTracking: { [number]: { LastDist: number, LastClock: number } } = {}
+-- Per-squad movement feel: a smoothed heading for the trailing formation, and the last time the
+-- squad fought (an assigned squad pauses to regroup after clearing a camp before moving on).
+local SquadHeading: { [Player]: { Forward: Vector3, At: number } } = setmetatable({}, { __mode = "k" }) :: any
+local SquadLastFight: { [Player]: number } = setmetatable({}, { __mode = "k" }) :: any
+local REGROUP_PAUSE_SECONDS = 1.6
+local RANGED_BACKSTEP_DISTANCE = 5.0
+local MELEE_SPACING = 2.4
 local ActiveHeroesByNetId: { [number]: SimHero } = {}
 local ActiveMobsByNetId: { [number]: SimMob } = {}
 -- Progression is awarded on a confirmed PvE death, outside the simulation's per-tick work.
@@ -416,6 +429,53 @@ local function isPlayerJumping(player: Player): boolean
 	local hrp = char:FindFirstChild("HumanoidRootPart") :: BasePart?
 	if not hum or not hrp then return false end
 	return hum.FloorMaterial == Enum.Material.Air and hrp.AssemblyLinearVelocity.Y > 2.5
+end
+
+-- Average position of a squad's standing heroes on a floor (nil when none).
+local function squadCentre(masterState: MasterCombatState?, floorId: number?): Vector3?
+	if not masterState then return nil end
+	local sum, count = Vector3.zero, 0
+	for _, h in pairs(masterState.DeployedHeroes) do
+		if h.State ~= "COMA" and h.CurrentHP > 0 and (floorId == nil or h.FloorId == floorId) then
+			sum += h.Position
+			count += 1
+		end
+	end
+	return if count > 0 then sum / count else nil
+end
+
+-- Heading the follow formation trails behind, updated once per tick. Following the Master it
+-- tracks their movement (not their facing, so turning on the spot does not swing the squad
+-- around them); an assigned squad faces where it is travelling.
+local function squadForward(player: Player, masterPos: Vector3, assigned: boolean, masterState: MasterCombatState?, now: number): Vector3
+	local entry = SquadHeading[player]
+	if entry and entry.At == now then return entry.Forward end
+	local desired: Vector3? = nil
+	if assigned then
+		local centre = squadCentre(masterState, nil)
+		local toward = centre and Vector3.new(masterPos.X - centre.X, 0, masterPos.Z - centre.Z)
+		if toward and toward.Magnitude > 4 then desired = toward.Unit end
+	else
+		local char = player.Character
+		local hrp = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if hrp then
+			local v = hrp.AssemblyLinearVelocity
+			local flat = Vector3.new(v.X, 0, v.Z)
+			if flat.Magnitude > 2 then
+				desired = flat.Unit
+			elseif not entry then
+				local look = hrp.CFrame.LookVector
+				desired = Vector3.new(look.X, 0, look.Z).Unit
+			end
+		end
+	end
+	local forward = if entry then entry.Forward else (desired or Vector3.new(0, 0, -1))
+	if desired then
+		local blended = forward:Lerp(desired, 0.35)
+		forward = if blended.Magnitude > 1e-3 then blended.Unit else desired
+	end
+	SquadHeading[player] = { Forward = forward, At = now }
+	return forward
 end
 
 -- Refresh progression without rebuilding entities, resetting cooldowns, or healing.
@@ -709,10 +769,86 @@ DropCarriedItemRemote.OnServerEvent:Connect(function(player: Player)
 	end
 end)
 
+-- Assigned-squad knockout rules (GDD 2.5) apply for as long as the squad holds its assigned floor,
+-- even while its Master stands on that floor. Only a recall (tower menu or [E]) returns it to the
+-- active loop, where heroes collapse in place and a wipe costs the run penalty.
+local function assignedSquadRoom(player: Player): any?
+	local s = Tower.GetState(player)
+	local floor = s.SquadAssignment
+	if not floor or floor <= 0 or s.SquadFloorId ~= floor then return nil end
+	return Tower.GetRoom(floor)
+end
+
+-- A row across the sanctuary, in front of the altar, one spot per slot.
+local function sanctuaryRestPosition(room: any, slotIndex: number): Vector3
+	local safe = TowerLayout.Get(((room.FloorId - 1) % 5) + 1).Sanctuary
+	local centre = room.Origin + Vector3.new(safe.X, safe.Y + 3, safe.Z - 2)
+	return HeroNavigation.PlaceNear(centre, Vector3.new(((slotIndex - 1) - 2) * 7, 0, 0))
+end
+
+local function sendToSanctuary(simHero: SimHero, room: any): boolean
+	if simHero.RestingFloor == room.FloorId and simHero.RestingGeneration == room.RoomGeneration then return false end
+	simHero.Position = sanctuaryRestPosition(room, simHero.SlotIndex)
+	simHero.EntityGeneration += 1 -- a relocation, not a walk: clients snap instead of sliding across the room
+	simHero.TargetNetId = nil
+	simHero.RestingFloor, simHero.RestingGeneration = room.FloorId, room.RoomGeneration
+	HeroNavigation.Clear(simHero)
+	return true
+end
+
+-- Runs on every knockout and every tick. Downed assigned heroes rest in the sanctuary; once the whole
+-- squad is down it is scheduled to heal fully and head back out (no recall, no wipe penalty).
+local function reconcileAssignedSquad(player: Player, masterState: MasterCombatState, now: number)
+	local room = assignedSquadRoom(player)
+	if not room then return end
+	local anyHero, anyStanding, moved = false, false, false
+	for _, h in pairs(masterState.DeployedHeroes) do
+		if not h.DuelId and h.FloorId == room.FloorId then
+			anyHero = true
+			if h.State == "COMA" or h.CurrentHP <= 0 then
+				moved = sendToSanctuary(h, room) or moved
+			else
+				anyStanding = true
+			end
+		end
+	end
+	if moved then broadcastMetadata(nil) end
+	if anyHero and not anyStanding and not masterState.AssignedRegroupAt then
+		masterState.AssignedRegroupAt = now + TowerHardcore.AssignedRegroupSeconds
+		masterState.AssignedRegroupFloor = room.FloorId
+		-- The client shows a regroup countdown banner from the SquadStatus payload.
+		syncSquadStatus(player)
+	end
+end
+
+local function finishAssignedRegroup(player: Player, masterState: MasterCombatState, now: number)
+	local at = masterState.AssignedRegroupAt
+	if not at or now < at then return end
+	local floor = masterState.AssignedRegroupFloor
+	masterState.AssignedRegroupAt, masterState.AssignedRegroupFloor = nil, nil
+	-- Recalled or reassigned in the meantime: Transfer already decided their HP.
+	if Tower.GetState(player).SquadAssignment ~= floor then return end
+	for _, h in pairs(masterState.DeployedHeroes) do
+		if h.FloorId == floor and not h.DuelId then
+			h.CurrentHP = h.MaxHP
+			h.State = "FOLLOW_MASTER"
+			h.TargetNetId = nil
+			h.PacifiedUntil = now + 1
+			h.RestingFloor, h.RestingGeneration = nil, nil
+			ActiveHeroesByNetId[h.NetId] = h
+		end
+	end
+	getDataManager().SendToast(player, string.format("Assigned squad healed and heading back out on Floor %d.", floor or 0), "SUCCESS")
+	syncSquadStatus(player)
+	broadcastMetadata(nil)
+end
+
 local function knockHeroIntoComa(simHero: SimHero, _baseComaSeconds: number?)
 	HeroNavigation.Clear(simHero)
+	simHero.RestingFloor, simHero.RestingGeneration = nil, nil
 	local dm = getDataManager()
 	local profile = dm.GetProfile(simHero.Owner)
+	local assignedRoom = assignedSquadRoom(simHero.Owner)
 
 	-- Phase 2 Hard Death Rules: dead heroes collapse in place with CurrentHP = 0, State = "COMA"
 	-- No 60-second coma and no hospital/infirmary timers!
@@ -730,7 +866,9 @@ local function knockHeroIntoComa(simHero: SimHero, _baseComaSeconds: number?)
 
 	dm.SendToast(
 		simHero.Owner,
-		string.format("%s collapsed! (No mid-run revives)", simHero.DisplayName),
+		if assignedRoom
+			then string.format("%s was knocked out and carried to the sanctuary.", simHero.DisplayName)
+			else string.format("%s collapsed! (No mid-run revives)", simHero.DisplayName),
 		"WARN"
 	)
 	dm.SyncProfile(simHero.Owner)
@@ -738,6 +876,13 @@ local function knockHeroIntoComa(simHero: SimHero, _baseComaSeconds: number?)
 	Tower.BroadcastAt(CombatVFXRemote, simHero, "HERO_KO", simHero.Position, simHero.NetId)
 
 	local masterState = ActiveMasters[simHero.Owner]
+
+	if assignedRoom and masterState then
+		reconcileAssignedSquad(simHero.Owner, masterState, os.clock())
+		syncSquadStatus(simHero.Owner)
+		broadcastMetadata(nil)
+		return
+	end
 
 	-- Squad Wipe Detection: Check if ALL deployed heroes are now in Coma (CurrentHP <= 0)
 	local hasAliveHero = false
@@ -846,7 +991,9 @@ syncSquadStatus = function(player: Player)
 			table.insert(heroStatuses, { Name = h.DisplayName or "Hero", Alive = true, HpPct = pct })
 		end
 	end
-	local isWiped = total > 0 and alive == 0
+	-- An assigned squad never wipes: it regroups at the sanctuary, so looting stays open for its Master.
+	local assignedRoom = assignedSquadRoom(player)
+	local isWiped = total > 0 and alive == 0 and not assignedRoom
 	if player.Character then
 		player.Character:SetAttribute("AliveHeroCount", alive)
 		player.Character:SetAttribute("TotalHeroCount", total)
@@ -859,6 +1006,8 @@ syncSquadStatus = function(player: Player)
 			AliveCount = alive,
 			FallenCount = fallen,
 			IsWiped = isWiped,
+			AssignedFloor = if assignedRoom then assignedRoom.FloorId else nil,
+			RegroupIn = if masterState.AssignedRegroupAt then math.max(0, masterState.AssignedRegroupAt - os.clock()) else nil,
 			FallenHeroes = fallenNames,
 			HeroStatuses = heroStatuses,
 		})
@@ -916,6 +1065,32 @@ local function reviveDownedOnTransition(player: Player)
 	if revived > 0 then
 		getDataManager().SendToast(player, string.format("%d fallen hero%s stood back up at %d%% HP.", revived, if revived == 1 then "" else "es", math.round(TowerHardcore.ReviveHPFraction * 100)), "SUCCESS")
 	end
+	syncSquadStatus(player)
+	broadcastMetadata(nil)
+end
+
+-- Recalling the squad from its assigned floor to the Master on another floor: every hero heals
+-- RecallFloorHealFraction of max HP, and downed heroes stand back up at that fraction.
+local function healSquadOnFloorRecall(player: Player)
+	local masterState = ActiveMasters[player]
+	if not masterState then return end
+	local heal = TowerHardcore.RecallFloorHealFraction
+	for _, h in pairs(masterState.DeployedHeroes) do
+		if h.State == "COMA" or h.CurrentHP <= 0 then
+			h.CurrentHP = math.max(1, math.floor(h.MaxHP * heal))
+			h.State = "FOLLOW_MASTER"
+			ActiveHeroesByNetId[h.NetId] = h
+		else
+			h.CurrentHP = math.min(h.MaxHP, h.CurrentHP + h.MaxHP * heal)
+		end
+	end
+	masterState.IsSquadWiped = false
+	masterState.CanCollectLoot = true
+	if player.Character then
+		player.Character:SetAttribute("SquadWiped", false)
+	end
+	SquadWipeStateRemote:FireClient(player, false)
+	getDataManager().SendToast(player, string.format("Squad recalled: every hero healed %d%% HP.", math.round(heal * 100)), "SUCCESS")
 	syncSquadStatus(player)
 	broadcastMetadata(nil)
 end
@@ -1805,7 +1980,8 @@ end)
 FocusTargetRemote.OnServerEvent:Connect(function(player: Player, targetNetId: any, optThiefUserId: any)
  if Tower.IsTransitioning(player) then return end
  local towerState=Tower.GetState(player)
- if towerState.SquadAssignment and towerState.FloorId~=towerState.SquadFloorId then return end
+ -- An assigned squad runs its own loop; recall it to command it again.
+ if towerState.SquadAssignment then return end
  local masterState = ActiveMasters[player]
  local masterPos = getMasterRootPosition(player)
  if not masterState or not masterPos then
@@ -1882,6 +2058,9 @@ WhistleCommandRemote.OnServerEvent:Connect(function(player: Player, commandCode:
 		-- [Q] OVERDRIVE WHISTLE (20s CD, +40% Attack Speed for 5s to accelerate Skill Charge building)
 		if (now - masterState.LastOverdriveClock) < OVERDRIVE_COOLDOWN then
 			return
+		end
+		if Tower.GetState(player).SquadAssignment then
+			return -- an assigned squad ignores Master commands until recalled
 		end
 		masterState.LastOverdriveClock = now
 		ProgressionActivity[player] = now
@@ -2119,6 +2298,42 @@ performHeroAttack = function(simHero: SimHero, targetPos: Vector3, targetMob: Si
 	end
 end
 
+-- Small in-combat repositioning for a hero already in range. Any step that would leave attack
+-- range or line of sight is undone, so footwork can never cost a swing.
+local function adjustCombatFootwork(simHero: SimHero, targetPos: Vector3, moveSpeed: number, dt: number, now: number)
+	local away = Vector3.new(simHero.Position.X - targetPos.X, 0, simHero.Position.Z - targetPos.Z)
+	if away.Magnitude < 0.05 then return end
+	local goal: Vector3? = nil
+	local speed = moveSpeed
+	if SquadTactics.IsRanged(simHero.AttackRange) then
+		if away.Magnitude < RANGED_BACKSTEP_DISTANCE then
+			goal = simHero.Position + away.Unit * 4
+			speed = moveSpeed * 0.6
+		end
+	else
+		local masterState = ActiveMasters[simHero.Owner]
+		if masterState then
+			for _, ally in pairs(masterState.DeployedHeroes) do
+				if ally ~= simHero and ally.State == "ATTACKING" and ally.FloorId == simHero.FloorId
+					and getHorizontalDistance(ally.Position, simHero.Position) < MELEE_SPACING then
+					-- Orbit around the target, the side chosen by slot so two heroes part ways.
+					local side = if simHero.SlotIndex > ally.SlotIndex then 1 else -1
+					local tangent = Vector3.new(-away.Z, 0, away.X).Unit * side
+					goal = simHero.Position + tangent * 2
+					speed = moveSpeed * 0.4
+					break
+				end
+			end
+		end
+	end
+	if not goal then return end
+	local before = simHero.Position
+	HeroNavigation.Step(simHero, goal, speed * dt, now)
+	if (simHero.Position - targetPos).Magnitude > simHero.AttackRange * 0.95 or not HeroNavigation.CanAttack(simHero.Position, targetPos) then
+		simHero.Position = before
+	end
+end
+
 local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 	if simHero.DuelId then
 		stepDuelHero(simHero, dt, now)
@@ -2199,59 +2414,90 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 	end
 
 	if not targetPos and not isPacified then
-		-- For assigned squads, assist squadmates that already have an active target
-		if assignedRoom and masterState then
+		-- Squad-aware pick (SquadTactics): melee heroes spread once a mob is crowded, ranged heroes
+		-- focus what the squad already fights, mobs on top of a squadmate get peeled first, and an
+		-- assigned squad stays together instead of splitting across camps.
+		local engaged: { [number]: number } = {}
+		local meleeEngaged: { [number]: number } = {}
+		local allies: { SimHero } = {}
+		if masterState then
 			for _, ally in pairs(masterState.DeployedHeroes) do
-				if ally.TargetNetId and ActiveMobsByNetId[ally.TargetNetId] and ActiveMobsByNetId[ally.TargetNetId].IsAlive then
-					simHero.TargetNetId = ally.TargetNetId
-					targetPos, targetMob, targetEnemyHero = resolveTargetPositionAndAlive(simHero)
-					if targetPos then
-						simHero.State = "MOVE_TO_TARGET"
-						break
+				if ally ~= simHero and ally.State ~= "COMA" and ally.CurrentHP > 0 and ally.FloorId == simHero.FloorId then
+					table.insert(allies, ally)
+					local id = ally.TargetNetId
+					if id then
+						engaged[id] = (engaged[id] or 0) + 1
+						if not SquadTactics.IsRanged(ally.AttackRange) then meleeEngaged[id] = (meleeEngaged[id] or 0) + 1 end
 					end
 				end
 			end
 		end
-
-		if not targetPos then
-			local combatRadius = if assignedRoom then maxLeash else 28.0
-			local nearestDist = combatRadius
-			local nearestMobId: number? = nil
-			for netId, mob in pairs(ActiveMobsByNetId) do
-				if mob.IsAlive and Tower.Same(simHero,mob) and not Tower.GetSafety(mob,mob.Position).CombatSafe then
-					if math.abs(mob.Position.Y - simHero.Position.Y) < 30 and (not assignedRoom or math.abs(mob.Position.Y - masterPos.Y) < 35) then
-						local d = if assignedRoom then getHorizontalDistance(simHero.Position, mob.Position) else getHorizontalDistance(masterPos, mob.Position)
-						if d <= nearestDist then
-							nearestDist = d
-							nearestMobId = netId
+		local combatRadius = if assignedRoom then maxLeash else 28.0
+		local candidates: { SquadTactics.Candidate } = {}
+		for netId, mob in pairs(ActiveMobsByNetId) do
+			if mob.IsAlive and Tower.Same(simHero,mob) and not Tower.GetSafety(mob,mob.Position).CombatSafe then
+				if math.abs(mob.Position.Y - simHero.Position.Y) < 30 and (not assignedRoom or math.abs(mob.Position.Y - masterPos.Y) < 35) then
+					local d = if assignedRoom then getHorizontalDistance(simHero.Position, mob.Position) else getHorizontalDistance(masterPos, mob.Position)
+					if d <= combatRadius then
+						local threatens = false
+						for _, ally in allies do
+							if getHorizontalDistance(ally.Position, mob.Position) < 8 then threatens = true; break end
 						end
+						table.insert(candidates, {
+							Id = netId,
+							Position = mob.Position,
+							MeleeEngaged = meleeEngaged[netId] or 0,
+							Engaged = engaged[netId] or 0,
+							ThreatensAlly = threatens,
+						})
 					end
 				end
 			end
-			if nearestMobId then
-				simHero.TargetNetId = nearestMobId
-				targetPos, targetMob, targetEnemyHero = resolveTargetPositionAndAlive(simHero)
-				simHero.State = "MOVE_TO_TARGET"
-			else
-				simHero.State = "FOLLOW_MASTER"
-			end
 		end
+		local centre = if assignedRoom then squadCentre(masterState, simHero.FloorId) else masterPos
+		local pickedId = SquadTactics.PickTarget(simHero.Position, simHero.AttackRange, candidates, centre)
+		if pickedId then
+			simHero.TargetNetId = pickedId
+			targetPos, targetMob, targetEnemyHero = resolveTargetPositionAndAlive(simHero)
+			simHero.State = "MOVE_TO_TARGET"
+			-- A short, uneven beat before the first swing so the squad does not strike in unison.
+			simHero.AttackCooldown = math.max(simHero.AttackCooldown, 0.08 + math.random() * 0.22)
+		else
+			simHero.State = "FOLLOW_MASTER"
+		end
+	end
+	if targetPos then
+		SquadLastFight[simHero.Owner] = now
 	end
 
 	if simHero.State == "FOLLOW_MASTER" or not targetPos then
-		local formation = getFormationOffset(simHero.SlotIndex)
+		-- Trailing arc behind the squad's heading rather than a fixed world-space ring.
+		local forward = squadForward(simHero.Owner, masterPos, assignedRoom ~= nil, masterState, now)
+		local formation = SquadTactics.FormationOffset(simHero.SlotIndex, forward.X, forward.Z)
 		local distToMaster = (masterPos - simHero.Position).Magnitude
 		-- When catching up from far away, tighten formation offset so squadmates file through gates and bridges cleanly
 		local targetOffset = if distToMaster > 18 then formation * math.clamp(18 / distToMaster, 0.25, 1.0) else formation
 		local goalPos = HeroNavigation.PlaceNear(masterPos, targetOffset)
 		local distToGoal = (goalPos - simHero.Position).Magnitude
-		if distToGoal > .5 then
-			-- Hero speed is fixed to player speed with a bounded trailing catch-up
-			local followSpeed = currentMoveSpeed
+		-- An assigned squad that just cleared a camp catches its breath before heading to the next.
+		local regrouping = assignedRoom ~= nil and now - (SquadLastFight[simHero.Owner] or -math.huge) < REGROUP_PAUSE_SECONDS
+		if regrouping or distToGoal <= .5 then
+			simHero.CurrentSpeed = 0
+			if regrouping then
+				HeroStuckTracking[simHero.NetId] = nil
+			end
+		end
+		if distToGoal > .5 and not regrouping then
+			-- Hero speed follows player speed with a bounded trailing catch-up, eased in and out.
+			local followSpeed = currentMoveSpeed * SquadTactics.SpeedScale(simHero.SlotIndex)
 			if distToGoal > 8.0 then
 				local catchUp = math.clamp((distToGoal - 8.0) / 24.0, 0, 0.35)
-				followSpeed = currentMoveSpeed * (1.0 + catchUp)
+				followSpeed = followSpeed * (1.0 + catchUp)
+			elseif distToGoal < 3.0 then
+				followSpeed = followSpeed * math.max(0.35, distToGoal / 3.0)
 			end
+			followSpeed = SquadTactics.Accelerate(simHero.CurrentSpeed or 0, followSpeed, dt)
+			simHero.CurrentSpeed = followSpeed
 
 			-- Anti-stuck progress tracker: if hero fails to make progress toward master for > 1.5s or is > 55 studs away, recover immediately
 			local tracker = HeroStuckTracking[simHero.NetId]
@@ -2295,8 +2541,17 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 	local distToTarget = (simHero.Position - targetPos).Magnitude
 	if distToTarget > simHero.AttackRange or not HeroNavigation.CanAttack(simHero.Position, targetPos) then
 		simHero.State = "MOVE_TO_TARGET"
-		local stepDist = math.min(math.max(.5, distToTarget - simHero.AttackRange * .85), currentMoveSpeed * dt)
-		HeroNavigation.Step(simHero, targetPos, stepDist, now)
+		-- Close on this hero's own side of the target (fanned by slot) so the squad surrounds it.
+		local goal = SquadTactics.EngagePoint(simHero.Position, targetPos, simHero.SlotIndex, simHero.AttackRange)
+		local distToGoal = getHorizontalDistance(simHero.Position, goal)
+		if distToGoal < 1.0 then
+			goal = targetPos -- at the slot but blocked (no line of sight): press in directly
+			distToGoal = math.max(.5, distToTarget - simHero.AttackRange * .85)
+		end
+		local speed = SquadTactics.Accelerate(simHero.CurrentSpeed or 0, currentMoveSpeed * SquadTactics.SpeedScale(simHero.SlotIndex), dt)
+		simHero.CurrentSpeed = speed
+		local stepDist = math.min(math.max(.5, distToGoal), speed * dt)
+		HeroNavigation.Step(simHero, goal, stepDist, now)
 
 		-- Apply jump arc if jumping while moving
 		if simHero.JumpStart and now >= simHero.JumpStart and now < simHero.JumpEnd then
@@ -2310,6 +2565,12 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 		end
 	else
 		simHero.State = "ATTACKING"
+		simHero.CurrentSpeed = 0
+		-- Footwork between swings (never during the opening of one): ranged heroes give ground
+		-- when a mob closes in, and melee heroes slide around the target off a squadmate's spot.
+		if simHero.AttackCooldown > 0.25 then
+			adjustCombatFootwork(simHero, targetPos, currentMoveSpeed, dt, now)
+		end
 		local delta = targetPos - simHero.Position
 		if delta.Magnitude > 0.01 then
 			simHero.Yaw = math.atan2(-delta.X, -delta.Z)
@@ -2539,6 +2800,8 @@ Tower.RegisterAdapter("Combat",{
    local m=ActiveMasters[player];if not m then return end
    m.FocusedTargetNetId=nil;m.TargetEnemyUserId=nil
    if recall then m.LastRecallClock=os.clock();ProgressionActivity[player]=os.clock() end
+   -- Read before TowerFloorService clears the assignment after this call.
+   local endsAssignment=recall and Tower.GetState(player).SquadAssignment~=nil
    local changedFloor=false
    for _,h in pairs(m.DeployedHeroes) do
     if h.FloorId~=room.FloorId then changedFloor=true end
@@ -2551,16 +2814,21 @@ Tower.RegisterAdapter("Combat",{
     else
      h.State = "COMA"
     end
-    h.PacifiedUntil=os.clock()+2;h.ActionSequence=0;HeroNavigation.Clear(h)
+    h.PacifiedUntil=os.clock()+2;h.ActionSequence=0;h.RestingFloor=nil;h.RestingGeneration=nil;HeroNavigation.Clear(h)
     for _,other in pairs(ActiveHeroesByNetId) do if other.TargetNetId==h.NetId then other.TargetNetId=nil;if other.CurrentHP > 0 and other.State ~= "COMA" then other.State="FOLLOW_MASTER" end end end
    end
+   m.AssignedRegroupAt=nil;m.AssignedRegroupFloor=nil
    if room.FloorId == 0 then
+    -- Recalling to (or going back to) the hub heals the squad fully.
     ActivePlayerProgress[player] = nil
     restoreSquadOnPlot(player)
    else
-    -- Moving between floors revives downed heroes at a fraction of their HP; it no longer heals anyone
-    -- (same-floor recalls do nothing). The tower sanctuary is where standing heroes recover.
-    if changedFloor then
+    -- Recalling an assigned squad back to the Master (on another floor or the same one) heals everyone
+    -- 30% of max HP, so heroes resting in the sanctuary rejoin. Other floor moves only revive downed
+    -- heroes at a fraction of their HP, and an [E] regroup of an already-active squad does nothing.
+    if endsAssignment or (changedFloor and recall) then
+     healSquadOnFloorRecall(player)
+    elseif changedFloor then
      reviveDownedOnTransition(player)
     end
     local existing = ActivePlayerProgress[player]
@@ -2848,6 +3116,12 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 
 	-- Sanctuary banking is scoped to the cargo's authoritative floor/generation.
 	for player, masterState in pairs(ActiveMasters) do
+		-- Assigned squads: knocked-out heroes (including ones that fell while the Master was still on
+		-- the floor) rest in the sanctuary, and a fully downed squad stands back up there.
+		if not Tower.IsTransitioning(player) then
+			reconcileAssignedSquad(player, masterState, now)
+			finishAssignedRegroup(player, masterState, now)
+		end
 		local rootPos = getMasterRootPosition(player)
 		if rootPos then
 			local location=Tower.GetState(player)

@@ -13,6 +13,7 @@ local Http = game:GetService("HttpService")
 local player = Players.LocalPlayer
 local floors = require(RS.Shared.Config.TowerFloorConfig)
 local mobs = require(RS.Shared.Config.MobCatalog)
+local TowerHardcore = require(RS.Shared.Config.TowerHardcoreConfig)
 local GothicBoxStyle = require(RS.Shared.Util.GothicBoxStyle)
 local GildedGrimoire = require(RS.Shared.Util.GildedGrimoire)
 local GrimoireIcons = require(RS.Shared.Util.GrimoireIcons)
@@ -629,6 +630,38 @@ local function abbreviate(n: number): string
 	return tostring(math.round(n))
 end
 
+-- Player-facing text for each request and its outcome (the server sends bare error codes).
+local ACTION_TEXT = {
+	VISIT = { Doing = "Travelling to Floor %d", Done = "Arrived on Floor %d" },
+	HUB = { Doing = "Returning to the hub", Done = "Back at the hub" },
+	ASSIGN = { Doing = "Assigning squad to Floor %d", Done = "Squad assigned to Floor %d. It fights on its own until recalled" },
+	RECALL = { Doing = "Recalling squad", Done = "Squad recalled and back with you" },
+}
+local ERROR_TEXT = {
+	RECALL_COOLDOWN = "Recall is cooling down",
+	NO_ELIGIBLE_SQUAD = "No heroes deployed. Add heroes in Squad first",
+	BOSS_LOCKED = "Travel is sealed until the boss falls",
+	FLOOR_LOCKED = "That floor is locked. Defeat the previous boss",
+	BUSY = "Another travel is already in progress",
+	STALE_REVISION = "Something changed. Try again",
+	ROSTER_CHANGED = "Your squad changed. Try again",
+	ROOM_NOT_READY = "The floor is still loading. Try again",
+	READY_TIMEOUT = "The floor took too long to load. Try again",
+	STREAMING_FAILED = "The floor took too long to load. Try again",
+	CHARACTER_NOT_READY = "Wait for your character to load",
+	PROFILE_NOT_READY = "Your profile is still loading",
+	TRANSFER_FAILED = "Travel failed. Try again",
+	UNSAFE_ARRIVAL = "Travel failed. Try again",
+	CARGO_CHANGED = "Your carried loot changed. Try again",
+}
+local function actionText(action: string, id: number?, key: "Doing" | "Done"): string
+	local entry = ACTION_TEXT[action]
+	if not entry then return action end
+	return string.format(entry[key], id or 0)
+end
+local pendingAction: string? = nil
+local pendingFloor: number? = nil
+
 local function request(action: string, id: number?)
 	if not selfState or pending then return end
 	local r = {
@@ -641,7 +674,8 @@ local function request(action: string, id: number?)
 		ExpectedSquadRevision = selfState.SquadRevision,
 	}
 	pending = r.RequestId
-	pendingActionName = if id then string.format("%s Floor %d", action, id) else action
+	pendingActionName = actionText(action, id, "Doing")
+	pendingAction, pendingFloor = action, id
 	lastFeedback = nil
 	render()
 	remotes.Request:FireServer(r)
@@ -701,6 +735,12 @@ local assignBtn = createOrnateButton(actionRow, "ASSIGN SQUAD", 2, false, functi
 	request("ASSIGN", selected)
 end)
 local recallBtn = createOrnateButton(actionRow, "RECALL SQUAD", 3, false, function()
+	-- Recall ends an assignment; an active squad is already with the Master ([E] regroups it).
+	if not (selfState and selfState.SquadAssignment) then
+		lastFeedback = "Your squad is already with you. Press E on a floor to regroup it"
+		render()
+		return
+	end
 	request("RECALL")
 end)
 
@@ -864,23 +904,34 @@ render = function()
 		end
 	end
 	-- 4. Dynamic Action Button Text
+	local assignText = if assignedFloor == selected then "ASSIGNED HERE"
+		elseif assignedFloor then "MOVE SQUAD HERE"
+		else "ASSIGN SQUAD"
 	if isSelectedLocked then
 		visitBtn.Text = "LOCKED"
 		assignBtn.Text = "LOCKED"
 	elseif visitingFloor == selected and visitingFloor > 0 then
 		visitBtn.Text = "RETURN TO HUB"
-		assignBtn.Text = "ASSIGN SQUAD"
+		assignBtn.Text = assignText
 	else
 		visitBtn.Text = "VISIT FLOOR"
-		assignBtn.Text = "ASSIGN SQUAD"
+		assignBtn.Text = assignText
+	end
+	-- Recall only means something while assigned; show the heal it gives where the Master stands.
+	if assignedFloor then
+		recallBtn.Text = if visitingFloor == 0 then "RECALL · FULL HEAL" else string.format("RECALL · +%d%% HP", math.round(TowerHardcore.RecallFloorHealFraction * 100))
+		recallBtn.TextTransparency = 0
+	else
+		recallBtn.Text = "SQUAD WITH YOU"
+		recallBtn.TextTransparency = 0.45
 	end
 	-- 5. Status Footer Readout
 	if selfState then
 		local locStr = if visitingFloor == 0 then "Hub" else string.format("Floor %d (%s)", visitingFloor, floors.Get(visitingFloor).DisplayName)
-		local sqStr = if assignedFloor then string.format("Stationed on Floor %d", assignedFloor) else "Following Master"
-		local feedbackStr = if pending then string.format("Pending: %s…", pendingActionName or "request")
+		local sqStr = if assignedFloor then string.format("Assigned to Floor %d (fights on its own)", assignedFloor) else "With you"
+		local feedbackStr = if pending then string.format("%s…", pendingActionName or "Working")
 			elseif lastFeedback then lastFeedback
-			else "Hub travel complete"
+			else "Select a floor to visit it or assign your squad there"
 		statusFooter.Text = string.format("You: %s · Squad: %s\n%s", locStr, sqStr, feedbackStr)
 	end
 end
@@ -999,13 +1050,14 @@ end)
 remotes.Response.OnClientEvent:Connect(function(r)
 	if r.RequestId ~= pending then return end
 	if r.Status ~= "PENDING" then
-		local act = pendingActionName or "Action"
+		local act, floorId = pendingAction or "", pendingFloor
 		pending = nil
 		pendingActionName = nil
+		pendingAction, pendingFloor = nil, nil
 		if r.Status == "OK" or not r.ErrorCode then
-			lastFeedback = string.format("%s complete", act)
+			lastFeedback = actionText(act, floorId, "Done")
 		else
-			lastFeedback = string.format("%s failed: %s", act, tostring(r.ErrorCode))
+			lastFeedback = ERROR_TEXT[r.ErrorCode] or string.format("Couldn't complete that (%s)", tostring(r.ErrorCode))
 		end
 		render()
 	end

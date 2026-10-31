@@ -60,11 +60,12 @@ function CampWaves.EffectivePlacements(indexInBiome: number, placements: { any }
 			for i = 1, wanted do
 				local angle = i * 2.39996 + index
 				local radius = 18 + (i % 2) * 5
+				local x, z, terrace = TowerLayout.ClampToSpawnable(indexInBiome, center.X + math.cos(angle) * radius, center.Z + math.sin(angle) * radius)
 				merged[Config.ExtraSlotBase + index * 100 + i] = {
 					EnemyId = c.Regulars[(i - 1) % #c.Regulars + 1],
-					X = center.X + math.cos(angle) * radius,
-					Y = center.Y,
-					Z = center.Z + math.sin(angle) * radius,
+					X = x,
+					Y = layout.Platforms[terrace].Y,
+					Z = z,
 					CampId = campId,
 					LeashRadius = 60,
 				}

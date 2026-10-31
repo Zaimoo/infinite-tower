@@ -356,7 +356,14 @@ local STATE_CHIPS = {
 	Down = { "Down", Color3.fromRGB(255, 90, 90) },
 	Dueling = { "Dueling", Color3.fromRGB(255, 214, 80) },
 	Resting = { "Resting", Color3.fromRGB(130, 240, 160) },
+	-- Assigned loop (GDD 2.5): a knocked-out hero resting at the floor's sanctuary, and the squad-wide regroup.
+	Sanctuary = { "Sanctuary", Color3.fromRGB(110, 235, 205) },
+	Regrouping = { "Regroup", Color3.fromRGB(110, 235, 205) },
 }
+
+-- Squad mode accents: teal while assigned (fights on its own), warm orange while active with the Master.
+Components.AssignedColor = Color3.fromRGB(64, 220, 200)
+Components.ActiveColor = Color3.fromRGB(255, 170, 90)
 
 local CARD_PAD = 10
 local HEADER_H = 22
@@ -378,7 +385,7 @@ function Components.StatusCardWidth(tiles: number, hasLocked: boolean, tileWidth
 end
 
 function Components.SquadStatusCard(props: { Rows: { any }, LockedText: string?, LockedRange: string?, Compact: boolean, TileWidth: number?,
-	OnRow: (number) -> (), OnLocked: () -> () })
+	Mode: { Text: string, Color: Color3 }?, OnRow: (number) -> (), OnLocked: () -> () })
 	local tileW = props.TileWidth or Components.StatusTileMax
 	local children: { [string]: any } = {
 		Layout = e("UIListLayout", {
@@ -469,22 +476,53 @@ function Components.SquadStatusCard(props: { Rows: { any }, LockedText: string?,
 					TextXAlignment = Enum.TextXAlignment.Center, Text = "Upgrades" }),
 			})
 	end
+	-- Squad mode pill (assigned vs with you); the card rail takes the mode colour.
+	local mode = props.Mode
+	local rail = if mode then mode.Color else nil
 	if props.Compact then
 		children.Padding = e("UIPadding", { PaddingLeft = UDim.new(0, CARD_PAD), PaddingRight = UDim.new(0, CARD_PAD) })
 		return panel({
 			AnchorPoint = Vector2.new(0, 1),
 			Position = UDim2.new(0, L.Edge, 1, -L.Edge),
 			Size = UDim2.fromOffset(20 + (#props.Rows + (if props.LockedText then 1 else 0)) * 54, 66),
-		}, { Strip = e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 }, children) })
+			Rail = rail,
+		}, {
+			Strip = e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 }, children),
+			Mode = if mode then heavyLabel({ Position = UDim2.new(0, 4, 0, -18), Size = UDim2.new(1, -8, 0, 15), MaxSize = 12, Outline = 1.8, Gold = false,
+				TextColor3 = mode.Color, TextXAlignment = Enum.TextXAlignment.Left, Text = mode.Text }) else nil,
+		})
 	end
 	return panel({
 		AnchorPoint = Vector2.new(0, 1),
 		Position = UDim2.new(0, L.Edge, 1, -L.Edge),
 		Size = UDim2.fromOffset(Components.StatusCardWidth(#props.Rows, props.LockedText ~= nil, tileW), Components.StatusCardHeight(#props.Rows, props.LockedText ~= nil, false)),
+		Rail = rail,
 	}, {
 		Header = heavyLabel({ Position = UDim2.fromOffset(CARD_PAD + 2, CARD_PAD - 3), Size = UDim2.new(1, -CARD_PAD * 2, 0, HEADER_H), MaxSize = 16, Outline = 2,
 			TextXAlignment = Enum.TextXAlignment.Left, Text = "Squad Status" }),
+		Mode = if mode then heavyLabel({ Position = UDim2.fromOffset(CARD_PAD + 2, CARD_PAD - 2), Size = UDim2.new(1, -CARD_PAD * 2 - 4, 0, HEADER_H - 2), MaxSize = 13, Outline = 1.8, Gold = false,
+			TextColor3 = mode.Color, TextXAlignment = Enum.TextXAlignment.Right, Text = mode.Text }) else nil,
 		Strip = e("Frame", { Position = UDim2.fromOffset(CARD_PAD, CARD_PAD + HEADER_H), Size = UDim2.new(1, -CARD_PAD * 2, 0, TILE_HEIGHT), BackgroundTransparency = 1 }, children),
+	})
+end
+
+--------------------------------------------------------------------------------
+-- Squad mode banner: a short centred strip when the squad switches between assigned and active,
+-- and the regroup countdown while a fully downed assigned squad heals at the sanctuary.
+--------------------------------------------------------------------------------
+function Components.ModeBanner(props: { Title: string, Body: string, Color: Color3 })
+	return panel({
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0.16, 0),
+		Size = UDim2.new(0.92, 0, 0, 64),
+		Radius = 10, Rail = props.Color, Top = Color3.fromRGB(30, 24, 44), Bottom = Color3.fromRGB(14, 10, 22),
+		ZIndex = 20,
+	}, {
+		Limit = e("UISizeConstraint", { MaxSize = Vector2.new(520, 64) }),
+		Title = heavyLabel({ Position = UDim2.fromOffset(12, 6), Size = UDim2.new(1, -24, 0, 26), MaxSize = 20, Outline = 2.2, Gold = false,
+			TextColor3 = props.Color, ZIndex = 21, Text = props.Title }),
+		Body = body({ Position = UDim2.fromOffset(12, 34), Size = UDim2.new(1, -24, 0, 22), TextSize = 13, ZIndex = 21,
+			TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = true, TextTruncate = Enum.TextTruncate.None, Text = props.Body }),
 	})
 end
 

@@ -70,16 +70,52 @@ function Layout.Get(index: number): any
 		Platforms=platforms, Links=links, Camps=camps, Sanctuary=safe}
 end
 
+-- Perimeter cliff massifs (TowerBiomeAssets) intrude ~50 studs in from each X wall, over the Basin's
+-- outer ends. Mobs never stand inside this band or within SPAWN_EDGE_MARGIN of a terrace drop.
+Layout.PERIMETER_KEEP_OUT = 60
+Layout.SPAWN_EDGE_MARGIN = 8
+
+-- Clamps a room-local XZ point onto the nearest combat terrace (never the Sanctuary), inset from its
+-- edges and kept out of the perimeter cliff band. Returns the clamped X, Z and the terrace id.
+function Layout.ClampToSpawnable(index: number, x: number, z: number, margin: number?): (number, number, string)
+	local layout = Layout.Get(index)
+	local inset = margin or Layout.SPAWN_EDGE_MARGIN
+	local limitX = layout.Width / 2 - Layout.PERIMETER_KEEP_OUT
+	local bestX, bestZ, bestId, bestD = x, z, "Basin", math.huge
+	for id, p in layout.Platforms do
+		if id ~= "Sanctuary" then
+			local halfW = math.max(0, p.Width / 2 - inset)
+			local halfD = math.max(0, p.Depth / 2 - inset)
+			local minX = math.max(p.X - halfW, -limitX)
+			local maxX = math.min(p.X + halfW, limitX)
+			if minX <= maxX then
+				local cx = math.clamp(x, minX, maxX)
+				local cz = math.clamp(z, p.Z - halfD, p.Z + halfD)
+				local d = (cx - x) ^ 2 + (cz - z) ^ 2
+				if d < bestD then bestX, bestZ, bestId, bestD = cx, cz, id, d end
+			end
+		end
+	end
+	return bestX, bestZ, bestId
+end
+
+function Layout.IsSpawnable(index: number, x: number, z: number, margin: number?): boolean
+	local cx, cz = Layout.ClampToSpawnable(index, x, z, margin)
+	return math.abs(cx - x) < 1e-3 and math.abs(cz - z) < 1e-3
+end
+
 function Layout.Placements(biome: any, index: number): {any}
 	local result = {}
-	for _, camp in Layout.Get(index).Camps do
+	local layout = Layout.Get(index)
+	for _, camp in layout.Camps do
 		for slot=1,camp.Size do
 			local enemy = biome.RegularEnemyIds[if slot%2==0 then 2 else 1]
 			if camp.Boss and slot==1 then enemy=biome.BossEnemyId
 			elseif camp.Boss and slot<=3 then enemy=biome.EliteEnemyId
 			elseif camp.Elite and slot==1 then enemy=if camp.Id=="APEX_SANCTUM" then biome.AlphaEnemyId else biome.EliteEnemyId end
 			local offsets = {{0,0},{-18,12},{18,12},{-12,-16},{12,-16}}
-			table.insert(result, {EnemyId=enemy, X=camp.X+offsets[slot][1], Y=camp.Y, Z=camp.Z+offsets[slot][2],
+			local x, z, terrace = Layout.ClampToSpawnable(index, camp.X+offsets[slot][1], camp.Z+offsets[slot][2])
+			table.insert(result, {EnemyId=enemy, X=x, Y=layout.Platforms[terrace].Y, Z=z,
 				CampId="CAMP_"..camp.Id, LeashRadius=if camp.Boss then 95 else 60})
 		end
 	end

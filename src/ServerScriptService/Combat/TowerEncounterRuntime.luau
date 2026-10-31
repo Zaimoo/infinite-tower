@@ -12,8 +12,40 @@ local CampWaves = require(RS.Shared.Util.CampWaves)
 local TowerLayout = require(RS.Shared.Config.TowerLayout)
 local Runtime = {}
 
+-- Idle life: camp members amble around home between pauses, and hesitate briefly on first sight.
+local WANDER_RADIUS = 9
+local WANDER_SPEED_SCALE = .35
+local WANDER_PAUSE_MIN, WANDER_PAUSE_SPREAD = 2.0, 3.5
+local REACTION_MIN, REACTION_SPREAD = .2, .45
+local FLANK_ANGLE = math.rad(28)
+
 function Runtime.new(api: any): any
 	local self: any = { API = api, Metrics = { Started = 0, Impacts = 0, Canceled = 0, Deaths = 0, Hits = 0 } }
+	function self:Wander(m: any, e: any, dt: number, now: number)
+		if m.Role == "BOSS" then return end
+		if not m.WanderGoal then
+			if not m.WanderAt then m.WanderAt = now + math.random() * WANDER_PAUSE_SPREAD end
+			if now < m.WanderAt then return end
+			local room = api.Tower.GetRoom(m.FloorId)
+			local floorSpec = TowerFloorConfig.Get(m.FloorId)
+			if not room or not floorSpec then return end
+			local angle, radius = math.random() * math.pi * 2, 3 + math.random() * (WANDER_RADIUS - 3)
+			local l = m.HomePosition - room.Origin + Vector3.new(math.cos(angle) * radius, 0, math.sin(angle) * radius)
+			-- Wander targets obey the same keep-out as spawns, so idle mobs never drift onto cliffs.
+			local x, z = TowerLayout.ClampToSpawnable(floorSpec.IndexInBiome, l.X, l.Z)
+			m.WanderGoal = room.Origin + Vector3.new(x, m.HomePosition.Y - room.Origin.Y, z)
+			m.WanderUntil = now + 6
+		end
+		local goal = m.WanderGoal :: Vector3
+		local before = m.Position
+		api.Navigation.Step(m, goal, e.MoveSpeed * WANDER_SPEED_SCALE * math.min(dt, .3), os.clock())
+		local flat = Vector3.new(goal.X - m.Position.X, 0, goal.Z - m.Position.Z)
+		local stalled = (m.Position - before).Magnitude < .01
+		if flat.Magnitude < 1.2 or stalled or now > m.WanderUntil then
+			m.WanderGoal = nil
+			m.WanderAt = now + WANDER_PAUSE_MIN + math.random() * WANDER_PAUSE_SPREAD
+		end
+	end
 	function self:Enabled(): boolean
 		if RunService:IsStudio() and workspace:GetAttribute("TowerCombatPreview") == false then return false end
 		return Config.ReleaseEnabled or (RunService:IsStudio() and workspace:GetAttribute("TowerCombatPreview") == true)
@@ -231,7 +263,6 @@ function Runtime.new(api: any): any
 		local ledger = api.Tower.Encounters[floorId]
 		if not room or room.Status ~= "READY" or not floorSpec or not ledger or floorSpec.IndexInBiome == 5 then return 0 end
 		local biome = MobCatalog.Biomes[floorSpec.BiomeIndex]
-		local layout = TowerLayout.Get(floorSpec.IndexInBiome)
 		ledger.Surge = ledger.Surge or {}
 		local roster = { biome.EliteEnemyId }
 		for i = 1, Config.SurgeRegulars do table.insert(roster, biome.RegularEnemyIds[(i - 1) % 2 + 1]) end
@@ -239,13 +270,15 @@ function Runtime.new(api: any): any
 		local spawned = 0
 		for _, enemyId in ipairs(roster) do
 			local ground
-			for _ = 1, 12 do
+			for _ = 1, 16 do
 				local angle = math.random() * math.pi * 2
 				local dist = Config.SurgeMinDistance + math.random() * (Config.SurgeMaxDistance - Config.SurgeMinDistance)
-				local g = api.Navigation.Ground(anchor + Vector3.new(math.cos(angle) * dist, 6, math.sin(angle) * dist), nil, 2, 12)
-				if g then
-					local l = g - room.Origin
-					if math.abs(l.X) < layout.Width / 2 - 8 and math.abs(l.Z) < layout.Depth / 2 - 8 and api.Tower.GetSafety(context, g).CombatSafe ~= true then
+				local candidate = anchor + Vector3.new(math.cos(angle) * dist, 0, math.sin(angle) * dist)
+				local l = candidate - room.Origin
+				-- Cheap layout reject first (perimeter cliffs, chasms, terrace lips), then the physical probe.
+				if TowerLayout.IsSpawnable(floorSpec.IndexInBiome, l.X, l.Z) then
+					local g = api.Navigation.OpenGround(candidate + Vector3.new(0, 10, 0))
+					if g and api.Tower.GetSafety(context, g).CombatSafe ~= true then
 						ground = g
 						break
 					end
@@ -365,7 +398,14 @@ function Runtime.new(api: any): any
 					if m.RoomGeneration ~= room.RoomGeneration then
 						m.EntityGeneration += 1
 						m.RoomGeneration = room.RoomGeneration
-						m.HomePosition = api.Navigation.Ground(room.Origin + Vector3.new(placement.X, (placement.Y or 0) + 6, placement.Z), nil, 2, 12) or room.Origin + Vector3.new(placement.X, placement.Y or 0, placement.Z)
+						local authored = room.Origin + Vector3.new(placement.X, (placement.Y or 0) + 2, placement.Z)
+						local floorSpec = TowerFloorConfig.Get(floor)
+						local terrace = floorSpec and TowerLayout.Get(floorSpec.IndexInBiome).Platforms[select(3, TowerLayout.ClampToSpawnable(floorSpec.IndexInBiome, placement.X, placement.Z))]
+						local centre = if terrace then room.Origin + Vector3.new(terrace.X, terrace.Y + 2, terrace.Z) else authored
+						-- Slide toward the terrace centre until the body clears scenery; never park a mob in a cliff.
+						m.HomePosition = api.Navigation.FindOpenGround(authored, centre)
+							or api.Navigation.Ground(room.Origin + Vector3.new(placement.X, (placement.Y or 0) + 6, placement.Z), nil, 2, 12)
+							or room.Origin + Vector3.new(placement.X, placement.Y or 0, placement.Z)
 						m.Position = if m.LastOrigin then room.Origin + m.LocalPosition else m.HomePosition
 						api.Navigation.Clear(m)
 					end
@@ -477,14 +517,29 @@ function Runtime.new(api: any): any
 			end
 		end
 		if fromHome > (m.LeashRadius or Config.LeashRange) or safe(m) or not target then
-			m.State = fromHome > 3 and "RESET" or "IDLE"
-			if fromHome > 3 then
+			m.NoticedAt = nil
+			if m.State == "RESET" and fromHome > 3 or fromHome > WANDER_RADIUS + 4 then
+				m.State = "RESET"
+				m.WanderGoal = nil
 				api.Navigation.Step(m, m.HomePosition, e.MoveSpeed * math.min(dt, .3), os.clock())
+				return
 			end
+			m.State = "IDLE"
+			self:Wander(m, e, dt, now)
 			return
 		end
+		-- Reaction beat: a mob that just spotted a hero turns and hesitates before committing,
+		-- so a camp ripples awake instead of every member lunging on the same tick.
 		local delta = target.Position - m.Position
 		m.Yaw = math.atan2(-delta.X, -delta.Z)
+		m.WanderGoal = nil
+		if not m.NoticedAt then
+			m.NoticedAt = now + REACTION_MIN + math.random() * REACTION_SPREAD
+		end
+		if now < m.NoticedAt then
+			m.State = "IDLE"
+			return
+		end
 		local chosen = nil
 		for i = #e.Attacks, 1, -1 do
 			local a = e.Attacks[i]
@@ -502,8 +557,19 @@ function Runtime.new(api: any): any
 			api.Send(m, self:PublicAction(m.Action, "START"))
 		else
 			m.State = "CHASE"
-			if nearest > e.Attacks[1].Range * .85 then
-				api.Navigation.Step(m, target.Position, e.MoveSpeed * math.min(dt, .3), os.clock())
+			local reach = e.Attacks[1].Range
+			if nearest > reach * .85 then
+				-- Fan out: each camp member closes on its own side of the target instead of
+				-- queueing along one line, so a pack surrounds the squad.
+				local away = m.Position - target.Position
+				local flat = Vector3.new(away.X, 0, away.Z)
+				local goal = target.Position
+				if flat.Magnitude > reach * 1.5 then
+					local side = (((m.Slot or 0) % 5) - 2) * FLANK_ANGLE
+					local dir = CFrame.Angles(0, side, 0):VectorToWorldSpace(flat.Unit)
+					goal = target.Position + dir * reach * .7
+				end
+				api.Navigation.Step(m, goal, e.MoveSpeed * math.min(dt, .3), os.clock())
 			end
 		end
 	end

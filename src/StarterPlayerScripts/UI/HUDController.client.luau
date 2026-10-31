@@ -436,7 +436,7 @@ local partialHeader = makeLabel({
 local partialSubtext = makeLabel({
 	Size = UDim2.new(1, -16, 0, 18),
 	Position = UDim2.new(0, 8, 0, 24),
-	Text = "Fallen heroes revive & heal to 100% HP on Floor Travel or Hub Return!",
+	Text = "Downed heroes stand back up at 30% HP on floor travel. The hub heals everyone fully.",
 	TextColor3 = Color3.fromRGB(254, 243, 199), -- Warm Amber Cream
 	TextSize = 11,
 	Font = Enum.Font.GothamMedium,
@@ -482,7 +482,7 @@ local tooltipList = makeLabel({
 local tooltipFooter = makeLabel({
 	Size = UDim2.new(1, -16, 0, 38),
 	Position = UDim2.new(0, 8, 1, -42),
-	Text = "Tip: Floor transitions & Hub travel fully resurrect and restore 100% HP to every hero!",
+	Text = "Tip: floor travel revives downed heroes at 30% HP; returning to the hub heals everyone fully.",
 	TextColor3 = Color3.fromRGB(147, 197, 253),
 	TextSize = 10,
 	Font = Enum.Font.GothamMedium,
@@ -510,6 +510,14 @@ SquadStatusRemote.OnClientEvent:Connect(function(status: any)
 	local fallenList = status.FallenHeroes or {}
 	local statuses = status.HeroStatuses or {}
 
+	-- An assigned squad never wipes and its knockouts rest at the sanctuary; the Phase 5 HUD shows that loop.
+	if type(status.AssignedFloor) == "number" then
+		partiallyDefeatedBanner.Visible = false
+		partialTooltipPopover.Visible = false
+		squadWipeBanner.Visible = false
+		return
+	end
+
 	if isWiped then
 		partiallyDefeatedBanner.Visible = false
 		partialTooltipPopover.Visible = false
@@ -523,14 +531,14 @@ SquadStatusRemote.OnClientEvent:Connect(function(status: any)
 		partiallyDefeatedBanner.Visible = true
 		partialHeader.Text = string.format("SQUAD COMPROMISED · %d/%d HEROES DOWNED", fallen, total)
 		local namesText = if #fallenList > 0 then table.concat(fallenList, ", ") else "Hero"
-		partialSubtext.Text = string.format("Fallen: %s · Full squad revives & heals on Floor Travel or Hub Return!", namesText)
+		partialSubtext.Text = string.format("Fallen: %s · They stand back up at 30%% HP on floor travel, or fully at the hub.", namesText)
 
 		local lines = {}
 		for _, h in ipairs(statuses) do
 			if h.Alive then
 				table.insert(lines, string.format("%s (Active · %d%% HP)", h.Name, h.HpPct or 100))
 			else
-				table.insert(lines, string.format("%s (Downed · Revives on Floor Travel)", h.Name))
+				table.insert(lines, string.format("%s (Downed · 30%% HP on floor travel)", h.Name))
 			end
 		end
 		tooltipList.Text = table.concat(lines, "\n")

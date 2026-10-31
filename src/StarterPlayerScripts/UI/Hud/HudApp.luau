@@ -63,7 +63,9 @@ local function buildRows(profile: any): ({ any }, string?)
 	end
 	local live = liveHeroes()
 	local now = os.time()
-	local recalled = Whistles.Remaining("Recall") > Whistles.Cooldown.Recall - 2
+	local assigned = Whistles.AssignedFloor()
+	local regroupLeft = Whistles.RegroupLeft()
+	local recalled = not assigned and Whistles.Remaining("Recall") > Whistles.Cooldown.Recall - 2
 	local rows = {}
 	for slot = 1, open do
 		local hero = bySlot[slot]
@@ -83,6 +85,12 @@ local function buildRows(profile: any): ({ any }, string?)
 				row.Gauge = info.Node.Stamina or 0
 				row.State = if info.Meta.DuelSide then "Dueling" else HERO_STATES[info.Node.StateEnum or 1] or "Idle"
 				if row.State ~= "Down" and row.State ~= "Dueling" and recalled then row.State = "Recalled" end
+				-- Assigned knockouts rest at the sanctuary instead of staying down for the run.
+				if assigned and row.State == "Down" then row.State = "Sanctuary" end
+				if regroupLeft then
+					row.State = "Regrouping"
+					row.DownSeconds = math.ceil(regroupLeft)
+				end
 			else
 				row.ShowStamina = true
 				row.HpFraction = (hero.CurrentStamina or 100) / math.max(1, hero.MaxStamina or 100)
@@ -138,6 +146,42 @@ local function pitState(host: GuiObject): (string?, Vector2?)
 	local top = window.AbsolutePosition - origin
 	-- The Pit windows leave 64 px free above them (PIT_TAB_SPACE); the tab bar sits in that gap.
 	return active, Vector2.new(top.X + window.AbsoluteSize.X / 2, math.max(56, top.Y - 8))
+end
+
+-- Mode-switch banner (assigned ↔ active) and the regroup strip while an assigned squad is fully down.
+local BANNER_SECONDS = 4.5
+local function SquadModeBanner(_props: {})
+	local banner, setBanner = React.useState(nil :: any)
+	React.useEffect(function()
+		local conn = Whistles.ModeChanged:Connect(function(floor: number?, previous: number?)
+			if floor then
+				setBanner({
+					Title = if previous then string.format("Squad moved to Floor %d", floor) else string.format("Squad assigned · Floor %d", floor),
+					Body = "It fights on its own until recalled. Knockouts rest at the sanctuary and a full wipe regroups there, with no penalty.",
+					Color = Components.AssignedColor, Until = os.clock() + BANNER_SECONDS,
+				})
+			else
+				setBanner({
+					Title = "Squad with you",
+					Body = "Your commands are live again. Knockouts stay down and a wipe ends the run.",
+					Color = Components.ActiveColor, Until = os.clock() + BANNER_SECONDS,
+				})
+			end
+		end)
+		return function() conn:Disconnect() end
+	end, {})
+	local regroupLeft, regroupFloor = Whistles.RegroupLeft()
+	if regroupLeft then
+		return e(Components.ModeBanner, {
+			Title = string.format("Squad fell on Floor %d · regrouping in %ds", regroupFloor or 0, math.ceil(regroupLeft)),
+			Body = "Healing to full at the sanctuary. No penalty while assigned.",
+			Color = Components.AssignedColor,
+		})
+	end
+	if banner and os.clock() < banner.Until then
+		return e(Components.ModeBanner, banner)
+	end
+	return nil
 end
 
 local function railSize(count: number, available: number): number
@@ -286,15 +330,18 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 
 	local overdriveBlocked = Whistles.Blocked("Overdrive")
 	local recallBlocked = Whistles.Blocked("Recall")
+	-- [E] brings an assigned squad back (ending the assignment); with an active squad it only regroups.
+	local assignedFloor = Whistles.AssignedFloor()
+	local recallLabel = if assignedFloor then string.format("Recall F%d", assignedFloor) else "Regroup"
 	local rightButtons = {
 		{ Icon = "Shop", Label = "Store", Accent = Color3.fromRGB(255, 214, 110), Wiggle = not shopOpen,
 			OnActivated = function() if _G.OpenRobuxShop then _G.OpenRobuxShop() end end },
 		{ Icon = "Overdrive", Label = "Overdrive", Accent = Color3.fromRGB(245, 158, 11), KeyHint = "Q",
 			Cooldown = Whistles.Remaining("Overdrive"), CooldownTotal = Whistles.Cooldown.Overdrive,
-			Disabled = overdriveBlocked ~= nil, OnActivated = function() Whistles.Fire("Overdrive") end },
-		{ Icon = "Recall", Label = "Recall", Accent = Color3.fromRGB(34, 211, 238), KeyHint = "E",
+			Disabled = overdriveBlocked ~= nil, DisabledReason = overdriveBlocked, OnActivated = function() Whistles.Fire("Overdrive") end },
+		{ Icon = "Recall", Label = recallLabel, Accent = Color3.fromRGB(34, 211, 238), KeyHint = "E",
 			Cooldown = Whistles.Remaining("Recall"), CooldownTotal = Whistles.Cooldown.Recall,
-			Disabled = recallBlocked ~= nil, OnActivated = function() Whistles.Fire("Recall") end },
+			Disabled = recallBlocked ~= nil, DisabledReason = recallBlocked, OnActivated = function() Whistles.Fire("Recall") end },
 	}
 	if unlocks.Tower then
 		table.insert(rightButtons, { Icon = "Tower", Label = "Tower", Accent = Color3.fromRGB(192, 132, 252),
@@ -326,6 +373,8 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 		RightRail = rail("RightRail", "Right", rightTop, rightSize, rightButtons),
 		Status = if profile then e(Components.SquadStatusCard, {
 			Rows = rows, LockedText = lockedText, LockedRange = lockedRange, Compact = compact, TileWidth = tileWidth,
+			Mode = if assignedFloor then { Text = string.format("ASSIGNED · F%d", assignedFloor), Color = Components.AssignedColor }
+				elseif Whistles.OnFloor() then { Text = "WITH YOU", Color = Components.ActiveColor } else nil,
 			OnRow = function() call("OpenMasterModal", "SQUAD") end,
 			OnLocked = function() call("OpenFacilityHUD", "FortressTree") end,
 		}) else nil,
@@ -334,6 +383,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 			Gems = profile.Currencies and profile.Currencies.Gems or 0,
 			Bottom = currencyBottom, Width = currencyWidth,
 		}) else nil,
+		ModeBanner = e(SquadModeBanner, {}),
 		Power = if profile then e(Components.SquadPowerBadge, {
 			Power = profile.SquadPower or 0, Breakdown = breakdown, Compact = compact,
 		}) else nil,

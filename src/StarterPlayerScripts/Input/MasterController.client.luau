@@ -96,6 +96,10 @@ UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: 
 	if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then
 		return
 	end
+	-- An assigned squad picks its own targets until recalled (the server ignores focus too).
+	if Whistles.AssignedFloor() then
+		return
+	end
 
 	local cam = Workspace.CurrentCamera
 	if not cam then

@@ -37,6 +37,9 @@ local EntitySequences: {[number]:number}={}
 local Generations: {[number]:number}={}
 local VisualFolder = Workspace:WaitForChild("ClientVisualEntities")
 local CombatFeedback=require(ReplicatedStorage.Assets.CombatFeedback).new(VisualFolder)
+-- Squad mode (GDD 2.5): this player's heroes get a teal outline while assigned, so they read as "not guarding you".
+local Whistles=require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Hud"):WaitForChild("Whistles"))
+local ASSIGNED_OUTLINE=Color3.fromRGB(64,220,200)
 local CombatVfx = ReplicatedStorage.Assets:WaitForChild("CombatVfx")
 local SkillVfx = require(CombatVfx:WaitForChild("SkillVfx"))
 -- Own folder: clearView empties VisualFolder, and pooled VFX must survive that.
@@ -553,7 +556,7 @@ local function consume(buf: buffer)
    end
   end
   if node.Highlight then
-   node.Highlight.OutlineColor=_G.ClientCombatState.FocusedNetId==id and Color3.fromRGB(0,255,235) or bit32.band(e.Flags,2)~=0 and Color3.fromRGB(255,195,40) or Color3.new(1,1,1)
+   node.Highlight.OutlineColor=_G.ClientCombatState.FocusedNetId==id and Color3.fromRGB(0,255,235) or bit32.band(e.Flags,2)~=0 and Color3.fromRGB(255,195,40) or (meta.IsHero and meta.OwnerUserId==LocalPlayer.UserId and Whistles.AssignedFloor()~=nil and ASSIGNED_OUTLINE) or Color3.new(1,1,1)
    node.Highlight.OutlineTransparency=meta.TowerEnemy and (_G.ClientCombatState.FocusedNetId==id and .15 or .8) or .25
   end
   if not ActionState.Expected(Actions,e,e.ActionSequence) then requestEntityMetadata() end
