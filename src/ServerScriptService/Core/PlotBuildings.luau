@@ -6,6 +6,7 @@
 -- onto the ornate North-Wall LeaderboardBoard, and removes legacy Infirmary instances.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local Buildings = {}
 local Architecture = require(script.Parent:WaitForChild("PlotFacilityArchitecture"))
@@ -13,7 +14,7 @@ local OutskirtsBuilder = require(script.Parent:WaitForChild("OutskirtsEnvironmen
 local FacilityPresence = require(script.Parent:WaitForChild("FacilityPresence"))
 local FacilityConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("FacilityConfig"))
 
-local VERSION = 21 -- 21: one [F] prompt for The Pit (was Synthesis [E] + Promotion [F])
+local VERSION = 22 -- 22: ensure Market and Training Grounds are always baked into PlotBuildings
 
 local function attachPrompt(
 	parent: Instance,
@@ -153,11 +154,6 @@ function Buildings.Build(plot: Instance)
 		oldInfirmaryAnchor:Destroy()
 	end
 
-	local existing = plot:FindFirstChild("PlotBuildings")
-	if existing and existing:GetAttribute("Version") == VERSION then
-		return existing
-	end
-
 	local spawn = plot:FindFirstChild("PlotSpawn")
 	if not spawn or not spawn:IsA("BasePart") then
 		return nil
@@ -177,6 +173,17 @@ function Buildings.Build(plot: Instance)
 		end
 	else
 		origin = CFrame.new(spawn.Position.X, surfaceY, spawn.Position.Z) * spawn.CFrame.Rotation * CFrame.new(0, 0, 80)
+	end
+
+	-- Always align both leaderboards to the courtyard East Wall even if PlotBuildings is already cached
+	alignPlaytimeBoardToWall(plot, origin)
+	alignPowerBoardToWall(plot, origin)
+
+	local existing = plot:FindFirstChild("PlotBuildings")
+	if existing and existing:GetAttribute("Version") == VERSION
+		and existing:FindFirstChild("Building_Market")
+		and existing:FindFirstChild("Building_TrainingGrounds") then
+		return existing
 	end
 
 	local folder = Instance.new("Folder")
@@ -364,7 +371,9 @@ function Buildings.Build(plot: Instance)
 		existing:Destroy()
 	end
 	folder.Name = "PlotBuildings"
-	FacilityPresence.Reapply(plot)
+	if not RunService:IsEdit() then
+		FacilityPresence.Reapply(plot)
+	end
 	return folder
 end
 

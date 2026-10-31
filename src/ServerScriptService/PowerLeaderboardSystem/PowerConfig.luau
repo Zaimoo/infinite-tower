@@ -4,7 +4,7 @@ local RunService = game:GetService("RunService")
 local Config = {}
 
 Config.IS_STUDIO = RunService:IsStudio()
-Config.DS_SCOPE  = Config.IS_STUDIO and "STUDIO" or "PROD"
+Config.DS_SCOPE  = "PROD" -- Unified with PlayerProfiles_v1 so Studio and Production share accurate power leaderboards
 
 Config.DS_ORDERED_NAME = "SquadPowerTotals_V1"
 Config.DS_MAIN_NAME    = "SquadPowerData_V1"

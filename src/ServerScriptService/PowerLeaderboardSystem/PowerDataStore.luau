@@ -10,6 +10,8 @@ local DataStoreModule = {}
 
 local ORDERED = DataStoreService:GetOrderedDataStore(Config.DS_ORDERED_NAME, Config.DS_SCOPE)
 local MAIN    = DataStoreService:GetDataStore(Config.DS_MAIN_NAME, Config.DS_SCOPE)
+local ORDERED_STUDIO = DataStoreService:GetOrderedDataStore(Config.DS_ORDERED_NAME, "STUDIO")
+local MAIN_STUDIO    = DataStoreService:GetDataStore(Config.DS_MAIN_NAME, "STUDIO")
 
 local livePower:  { [number]: number } = {}
 local lastSaveTime: { [number]: number } = {}
@@ -26,9 +28,14 @@ local function keyOf(userId: number): string
 end
 
 local function loadRaw(userId: number): number
+	if userId <= 0 then return 0 end
 	for attempt = 1, 3 do
 		local ok, result = pcall(function()
-			return MAIN:GetAsync(keyOf(userId))
+			local prodVal = MAIN:GetAsync(keyOf(userId))
+			local studioVal = MAIN_STUDIO:GetAsync(keyOf(userId))
+			local pNum = typeof(prodVal) == "number" and prodVal or 0
+			local sNum = typeof(studioVal) == "number" and studioVal or 0
+			return math.max(pNum, sNum)
 		end)
 		if ok then
 			return typeof(result) == "number" and result or 0
@@ -43,11 +50,14 @@ local function loadRaw(userId: number): number
 end
 
 local function setRaw(userId: number, totalPower: number)
+	if userId <= 0 then return end
 	for attempt = 1, 3 do
 		local ok, err = pcall(function()
 			local intVal = math.floor(totalPower)
 			MAIN:SetAsync(keyOf(userId), intVal)
 			ORDERED:SetAsync("u" .. userId, intVal)
+			MAIN_STUDIO:SetAsync(keyOf(userId), intVal)
+			ORDERED_STUDIO:SetAsync("u" .. userId, intVal)
 		end)
 		if ok then
 			lastSaveTime[userId] = os.clock()
@@ -62,7 +72,7 @@ local function setRaw(userId: number, totalPower: number)
 end
 
 function DataStoreModule.RecordPower(userId: number, power: number)
-	if typeof(power) ~= "number" or power < 0 then return end
+	if userId <= 0 or typeof(power) ~= "number" or power < 0 then return end
 	local prev = livePower[userId]
 	livePower[userId] = power
 
@@ -92,6 +102,7 @@ end
 
 function DataStoreModule.OnPlayerAdded(player: Player)
 	local userId = player.UserId
+	if userId <= 0 then return end
 	task.spawn(function()
 		local stored = loadRaw(userId)
 		if (livePower[userId] or 0) <= 0 and stored > 0 then
@@ -209,53 +220,50 @@ end
 function DataStoreModule.GetSortedTop(count: number): { { UserId: number, Power: number } }
 	-- Sync current online players before querying
 	for _, p in ipairs(Players:GetPlayers()) do
-		local ls = p:FindFirstChild("leaderstats")
-		local pwr = ls and ls:FindFirstChild("Power") :: NumberValue?
-		if pwr and pwr.Value > 0 then
-			livePower[p.UserId] = math.max(livePower[p.UserId] or 0, pwr.Value)
-		end
-	end
-
-	local ok, pages = pcall(function()
-		return ORDERED:GetSortedAsync(false, count)
-	end)
-	if not ok then
-		warn("[PowerDataStore] GetSortedAsync gagal:", pages)
-	end
-
-	local result = {}
-	local seen: { [number]: boolean } = {}
-
-	if ok and pages then
-		local raw = pages:GetCurrentPage()
-		for _, e in ipairs(raw) do
-			local uid = Utils.parseUserId(e.key)
-			if uid then
-				local stored = typeof(e.value) == "number" and e.value or 0
-				local live = livePower[uid]
-				local finalPower = math.max(stored, live or 0)
-				table.insert(result, { UserId = uid, Power = finalPower })
-				seen[uid] = true
+		if p.UserId > 0 then
+			local ls = p:FindFirstChild("leaderstats")
+			local pwr = ls and ls:FindFirstChild("Power") :: NumberValue?
+			if pwr and pwr.Value > 0 then
+				livePower[p.UserId] = math.max(livePower[p.UserId] or 0, pwr.Value)
 			end
 		end
 	end
 
-	-- Also ensure all currently tracked online players with power > 0 are represented
-	for userId, pwr in pairs(livePower) do
-		if pwr and pwr > 0 then
-			if not seen[userId] then
-				table.insert(result, { UserId = userId, Power = pwr })
-				seen[userId] = true
-			else
-				-- Update if live is higher than what was in OrderedDataStore
-				for _, r in ipairs(result) do
-					if r.UserId == userId then
-						r.Power = math.max(r.Power, pwr)
-						break
+	local byUser: { [number]: number } = {}
+
+	local function collectFromStore(store: OrderedDataStore)
+		local ok, pages = pcall(function()
+			return store:GetSortedAsync(false, count)
+		end)
+		if ok and pages then
+			local raw = pages:GetCurrentPage()
+			for _, e in ipairs(raw) do
+				local uid = Utils.parseUserId(e.key)
+				if uid and uid > 0 then
+					local stored = typeof(e.value) == "number" and e.value or 0
+					local live = livePower[uid] or 0
+					local best = math.max(stored, live, byUser[uid] or 0)
+					if best > 0 then
+						byUser[uid] = best
 					end
 				end
 			end
 		end
+	end
+
+	collectFromStore(ORDERED)
+	collectFromStore(ORDERED_STUDIO)
+
+	-- Also ensure all currently tracked online players with power > 0 are represented
+	for userId, pwr in pairs(livePower) do
+		if userId > 0 and pwr and pwr > 0 then
+			byUser[userId] = math.max(byUser[userId] or 0, pwr)
+		end
+	end
+
+	local result = {}
+	for uid, pwr in pairs(byUser) do
+		table.insert(result, { UserId = uid, Power = pwr })
 	end
 
 	table.sort(result, function(a, b) return a.Power > b.Power end)
