@@ -98,11 +98,45 @@ function DataStoreModule.OnPlayerAdded(player: Player)
 			livePower[userId] = stored
 		end
 
-		-- Check if player already has leaderstats power loaded
+		local function bindPowerStat(pwrStat: Instance)
+			if pwrStat:IsA("NumberValue") or pwrStat:IsA("IntValue") then
+				if pwrStat.Value > 0 then
+					DataStoreModule.RecordPower(userId, pwrStat.Value)
+				end
+				pwrStat:GetPropertyChangedSignal("Value"):Connect(function()
+					if pwrStat.Value > 0 then
+						DataStoreModule.RecordPower(userId, pwrStat.Value)
+					end
+				end)
+			end
+		end
+
+		local function bindLeaderstats(ls: Instance)
+			local existing = ls:FindFirstChild("Power")
+			if existing then
+				bindPowerStat(existing)
+			end
+			ls.ChildAdded:Connect(function(child)
+				if child.Name == "Power" then
+					bindPowerStat(child)
+				end
+			end)
+		end
+
 		local ls = player:FindFirstChild("leaderstats")
-		local pwrStat = ls and ls:FindFirstChild("Power") :: NumberValue?
-		if pwrStat and pwrStat.Value > 0 then
-			DataStoreModule.RecordPower(userId, pwrStat.Value)
+		if ls then
+			bindLeaderstats(ls)
+		else
+			local conn: RBXScriptConnection? = nil
+			conn = player.ChildAdded:Connect(function(child)
+				if child.Name == "leaderstats" then
+					if conn then
+						conn:Disconnect()
+						conn = nil
+					end
+					bindLeaderstats(child)
+				end
+			end)
 		end
 	end)
 end
@@ -122,10 +156,6 @@ function DataStoreModule.OnPlayerRemoving(player: Player)
 end
 
 function DataStoreModule.BindToCloseSaveAll()
-	if Config.IS_STUDIO then
-		task.wait(1)
-		return
-	end
 	for _, player in ipairs(Players:GetPlayers()) do
 		local userId = player.UserId
 		local pwr = livePower[userId]
