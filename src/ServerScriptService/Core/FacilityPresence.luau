@@ -187,7 +187,9 @@ end
 -- Re-applies the mirrored levels without animation (after PlotBuildings is rebuilt or the fountain
 -- appears). Plots with no owner have every gated facility hidden.
 function FacilityPresence.Reapply(plot: Instance)
-	if RunService:IsEdit() then
+	-- RunService:IsEdit() requires plugin capability and throws in game scripts, which used to
+	-- abort PlotManager before any plot was assigned. IsStudio + not IsRunning is the safe equivalent.
+	if RunService:IsStudio() and not RunService:IsRunning() then
 		return
 	end
 	for _, facility in GATED do
