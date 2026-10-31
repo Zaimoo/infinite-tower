@@ -352,17 +352,18 @@ end
 
 local function extractAtSanctuary(carrier: Player, floorOnly: boolean?)
 	local location = Tower.GetState(carrier)
-	if not location.BankArmed or Tower.IsTransitioning(carrier) then return end
+	if Tower.IsTransitioning(carrier) then return end
 	if floorOnly and location.FloorId == 0 then return end
 	local relic = CarrierToRelic[carrier]
 	if not relic then return end
 	local hum, root = getCharacterParts(carrier)
 	if not hum or hum.Health <= 0 or not root or relic.Carrier ~= carrier
-		or not Tower.Same(location,relic) or os.clock() >= relic.DespawnAt then return end
+		or os.clock() >= relic.DespawnAt then return end
 	local validPad = false
 	local event = "EXTRACT_PRIVATE"
 	if location.FloorId > 0 then
-		validPad = SanctuaryRules.CanExtractFloor(location,relic,Tower.GetSafety(location,root.Position),Tower.IsTransitioning(carrier),os.clock())
+		local safety = Tower.GetSafety(location, root.Position)
+		validPad = safety.CanBankCargo == true or SanctuaryRules.CanExtractFloor(location, relic, safety, Tower.IsTransitioning(carrier), os.clock())
 		event = "EXTRACT_SAFE_ZONE"
 	else
 		for _, plot in PlotsFolder:GetChildren() do
@@ -388,8 +389,34 @@ local function extractAtSanctuary(carrier: Player, floorOnly: boolean?)
 	destroyRelicInstance(relic)
 end
 
+function RelicService.StoreCarriedRelic(carrier: Player, location: any?): boolean
+	local relic = CarrierToRelic[carrier]
+	if not relic then return false end
+	local dm = getDataManager()
+	if not dm.GetProfile(carrier) then return false end
+	local spec = RelicConfig[relic.TierId]
+	if not spec then return false end
+
+	local loc = location or Tower.GetState(carrier)
+	local event = if loc and type(loc.FloorId) == "number" and loc.FloorId > 0 then "EXTRACT_SAFE_ZONE" else "EXTRACT_PRIVATE"
+	CarrierToRelic[carrier] = nil
+	ActiveRelics[relic.RelicId] = nil
+	awardRelicPayout(carrier, spec, 1, relic.RewardMultiplier)
+	Tower.BroadcastAt(RelicStateRemote, relic, relic.RelicId, relic.TierId, event, carrier.UserId, 0)
+	destroyRelicInstance(relic)
+	return true
+end
+
 function RelicService.ExtractInFloorSafeZone(carrier: Player)
-	extractAtSanctuary(carrier,true)
+	local hum, root = getCharacterParts(carrier)
+	if not root then return end
+	local loc = Tower.GetState(carrier)
+	local safety = Tower.GetSafety(loc, root.Position)
+	if safety and safety.CanBankCargo == true then
+		RelicService.StoreCarriedRelic(carrier, loc)
+	else
+		extractAtSanctuary(carrier, true)
+	end
 end
 
 function RelicService.ExtractOnPrivatePad(carrier: Player)
@@ -436,7 +463,13 @@ RunService.Heartbeat:Connect(function()
 					relic.BillboardStatus.TextColor3 = Color3.fromRGB(255, 235, 115)
 				end
 
-				RelicService.ExtractOnPrivatePad(carrier)
+				local loc = Tower.GetState(carrier)
+				local safety = Tower.GetSafety(loc, hrp.Position)
+				if safety and safety.CanBankCargo == true and not Tower.IsTransitioning(carrier) then
+					RelicService.StoreCarriedRelic(carrier, loc)
+				else
+					RelicService.ExtractOnPrivatePad(carrier)
+				end
 			end
 		end
 	end
@@ -497,6 +530,7 @@ Tower.RegisterAdapter("Relic",{
   local relic=CarrierToRelic[player]
   if relic then RelicService.DropCarriedRelic(player);relic.LockedUserId=nil;relic.LockExpiresAt=0 end
  end,
+ StoreCargo=function(player, loc) return RelicService.StoreCarriedRelic(player, loc) end,
  Pins=function(id,gen) for _,relic in pairs(ActiveRelics) do if relic.FloorId==id and relic.RoomGeneration==gen then return true end end;return false end,
 })
 if RunService:IsStudio() then RelicService.DebugRelics=function() return ActiveRelics,CarrierToRelic end end
