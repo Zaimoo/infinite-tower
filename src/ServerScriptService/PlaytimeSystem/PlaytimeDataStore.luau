@@ -8,6 +8,8 @@ local DataStoreModule = {}
 
 local ORDERED = DataStoreService:GetOrderedDataStore(Config.DS_ORDERED_NAME, Config.DS_SCOPE)
 local MAIN    = DataStoreService:GetDataStore(Config.DS_MAIN_NAME, Config.DS_SCOPE)
+local ORDERED_STUDIO = DataStoreService:GetOrderedDataStore(Config.DS_ORDERED_NAME, "STUDIO")
+local MAIN_STUDIO    = DataStoreService:GetDataStore(Config.DS_MAIN_NAME, "STUDIO")
 
 local sessionStart: { [number]: number } = {}
 local totalCache:   { [number]: number } = {}
@@ -18,9 +20,14 @@ local function keyOf(userId: number): string
 end
 
 local function loadRaw(userId: number): number
+	if userId <= 0 then return 0 end
 	for attempt = 1, 3 do
 		local ok, result = pcall(function()
-			return MAIN:GetAsync(keyOf(userId))
+			local prodVal = MAIN:GetAsync(keyOf(userId))
+			local studioVal = MAIN_STUDIO:GetAsync(keyOf(userId))
+			local pNum = typeof(prodVal) == "number" and prodVal or 0
+			local sNum = typeof(studioVal) == "number" and studioVal or 0
+			return math.max(pNum, sNum)
 		end)
 		if ok then
 			return typeof(result) == "number" and result or 0
@@ -35,10 +42,14 @@ local function loadRaw(userId: number): number
 end
 
 local function setRaw(userId: number, totalSeconds: number)
+	if userId <= 0 then return end
+	local intSec = math.floor(totalSeconds)
 	for attempt = 1, 3 do
 		local ok, err = pcall(function()
-			MAIN:SetAsync(keyOf(userId), math.floor(totalSeconds))
-			ORDERED:SetAsync("u" .. userId, math.floor(totalSeconds))
+			MAIN:SetAsync(keyOf(userId), intSec)
+			ORDERED:SetAsync("u" .. userId, intSec)
+			MAIN_STUDIO:SetAsync(keyOf(userId), intSec)
+			ORDERED_STUDIO:SetAsync("u" .. userId, intSec)
 		end)
 		if ok then return end
 		if tostring(err):find("Studio access to APIs is not allowed") then
@@ -89,6 +100,7 @@ end
 
 function DataStoreModule.OnPlayerAdded(player: Player)
 	local userId = player.UserId
+	if userId <= 0 then return end
 	task.spawn(function()
 		totalCache[userId]   = loadRaw(userId)
 		sessionStart[userId] = os.clock()
@@ -97,6 +109,7 @@ end
 
 function DataStoreModule.OnPlayerRemoving(player: Player)
 	local userId = player.UserId
+	if userId <= 0 then return end
 	local total = DataStoreModule.GetTotalSeconds(userId)
 	pendingSaves += 1
 	task.spawn(function()
@@ -108,18 +121,16 @@ function DataStoreModule.OnPlayerRemoving(player: Player)
 end
 
 function DataStoreModule.BindToCloseSaveAll()
-	if Config.IS_STUDIO then
-		task.wait(1)
-		return
-	end
 	for _, player in ipairs(Players:GetPlayers()) do
 		local userId = player.UserId
-		local total = DataStoreModule.GetTotalSeconds(userId)
-		pendingSaves += 1
-		task.spawn(function()
-			setRaw(userId, total)
-			pendingSaves -= 1
-		end)
+		if userId > 0 then
+			local total = DataStoreModule.GetTotalSeconds(userId)
+			pendingSaves += 1
+			task.spawn(function()
+				setRaw(userId, total)
+				pendingSaves -= 1
+			end)
+		end
 	end
 	local waited = 0
 	while pendingSaves > 0 and waited < 25 do
@@ -172,41 +183,42 @@ function DataStoreModule.AddPlaytimeManual(userId: number, addSeconds: number): 
 end
 
 function DataStoreModule.GetSortedTop(count: number): { { UserId: number, Seconds: number } }
-	local ok, pages = pcall(function()
-		return ORDERED:GetSortedAsync(false, count)
-	end)
-	if not ok then
-		warn("[PlaytimeDataStore] GetSortedAsync gagal:", pages)
-	end
+	local byUser: { [number]: number } = {}
 
-	local result = {}
-	if ok and pages then
-		local raw = pages:GetCurrentPage()
-		for _, e in ipairs(raw) do
-			local uid = Utils.parseUserId(e.key)
-			if uid then
-				local stored = typeof(e.value) == "number" and e.value or 0
-				local live = DataStoreModule.GetTotalSeconds(uid)
-				table.insert(result, { UserId = uid, Seconds = math.max(stored, live) })
+	local function collectFromStore(store: OrderedDataStore)
+		local ok, pages = pcall(function()
+			return store:GetSortedAsync(false, count)
+		end)
+		if ok and pages then
+			local raw = pages:GetCurrentPage()
+			for _, e in ipairs(raw) do
+				local uid = Utils.parseUserId(e.key)
+				if uid and uid > 0 then
+					local stored = typeof(e.value) == "number" and e.value or 0
+					local live = DataStoreModule.GetTotalSeconds(uid)
+					local best = math.max(stored, live, byUser[uid] or 0)
+					byUser[uid] = best
+				end
 			end
 		end
 	end
+
+	collectFromStore(ORDERED)
+	collectFromStore(ORDERED_STUDIO)
 
 	-- Also ensure all currently tracked online players are reflected even if not yet saved to OrderedDataStore
 	for userId, _ in pairs(sessionStart) do
-		local found = false
-		for _, r in ipairs(result) do
-			if r.UserId == userId then
-				found = true
-				break
-			end
-		end
-		if not found then
+		if userId > 0 then
 			local live = DataStoreModule.GetTotalSeconds(userId)
 			if live > 0 then
-				table.insert(result, { UserId = userId, Seconds = live })
+				byUser[userId] = math.max(byUser[userId] or 0, live)
 			end
 		end
+	end
+
+	local result = {}
+	for uid, secs in pairs(byUser) do
+		table.insert(result, { UserId = uid, Seconds = secs })
 	end
 
 	table.sort(result, function(a, b) return a.Seconds > b.Seconds end)

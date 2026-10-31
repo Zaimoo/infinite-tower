@@ -194,7 +194,8 @@ local function getAllRigstandFolders(): { Folder }
 	local plots = Workspace:FindFirstChild("WaitingRoomPlots")
 	if plots then
 		for _, plot in ipairs(plots:GetChildren()) do
-			local rig = plot:FindFirstChild("Rigstand", true)
+			local pstand = plot:FindFirstChild("AvxsedPlaytimeWS")
+			local rig = pstand and pstand:FindFirstChild("Rigstand")
 			if rig and rig:IsA("Folder") then
 				table.insert(folders, rig)
 			end

@@ -153,11 +153,6 @@ function Buildings.Build(plot: Instance)
 		oldInfirmaryAnchor:Destroy()
 	end
 
-	local existing = plot:FindFirstChild("PlotBuildings")
-	if existing and existing:GetAttribute("Version") == VERSION then
-		return existing
-	end
-
 	local spawn = plot:FindFirstChild("PlotSpawn")
 	if not spawn or not spawn:IsA("BasePart") then
 		return nil
@@ -177,6 +172,15 @@ function Buildings.Build(plot: Instance)
 		end
 	else
 		origin = CFrame.new(spawn.Position.X, surfaceY, spawn.Position.Z) * spawn.CFrame.Rotation * CFrame.new(0, 0, 80)
+	end
+
+	-- Always align both leaderboards to the courtyard East Wall even if PlotBuildings is already cached
+	alignPlaytimeBoardToWall(plot, origin)
+	alignPowerBoardToWall(plot, origin)
+
+	local existing = plot:FindFirstChild("PlotBuildings")
+	if existing and existing:GetAttribute("Version") == VERSION then
+		return existing
 	end
 
 	local folder = Instance.new("Folder")
