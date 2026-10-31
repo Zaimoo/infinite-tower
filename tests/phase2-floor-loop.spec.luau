@@ -16,9 +16,9 @@ end
 test("Phase 2: Floor kill progress tracks and scales across all 50 floors", function()
 	for floorId = 1, 50 do
 		local req = TowerProgress.GetRequiredKills(floorId)
-		local expected = math.round(12 + 0.5 * floorId)
+		local expected = math.round(20 + 1.2 * floorId)
 		assert(req == expected, string.format("Floor %d expected %d required kills, got %d", floorId, expected, req))
-		assert(req >= 12, "Required kills must be at least 12")
+		assert(req >= 21, "Required kills must be at least 21")
 
 		local progress = TowerProgress.CreateProgress(floorId)
 		assert(progress.FloorId == floorId, "FloorId mismatch")
@@ -27,12 +27,14 @@ test("Phase 2: Floor kill progress tracks and scales across all 50 floors", func
 		assert(progress.BossSpawned == false, "BossSpawned must start false")
 		assert(progress.BossNetId == nil, "BossNetId must start nil")
 		assert(progress.BossDefeated == false, "BossDefeated must start false")
+		assert(progress.SurgeSpawned == false, "SurgeSpawned must start false")
 	end
+	assert(TowerProgress.GetRequiredKills(1) == 21 and TowerProgress.GetRequiredKills(25) == 50 and TowerProgress.GetRequiredKills(50) == 80)
 end)
 
-test("Phase 2: Regular (+1) and Elite (+2) kills advance progress and trigger boss gate", function()
+test("Phase 2: Regular (+1) and Elite (+3) kills advance progress and trigger boss gate", function()
 	local progress = TowerProgress.CreateProgress(1)
-	local target = progress.RequiredKills -- 13 for Floor 1
+	assert(progress.RequiredKills == 21)
 
 	-- Kill 3 regular mobs (+3)
 	for _ = 1, 3 do
@@ -42,33 +44,46 @@ test("Phase 2: Regular (+1) and Elite (+2) kills advance progress and trigger bo
 	assert(progress.CurrentKills == 3, "Expected 3 kills")
 	assert(progress.BossSpawned == false)
 
-	-- Kill 4 elite mobs (+8) -> total 11
-	for _ = 1, 4 do
+	-- Kill 5 elite mobs (+15) -> total 18
+	for _ = 1, 5 do
 		local spawned = TowerProgress.RecordKill(progress, "ELITE")
 		assert(spawned == false, "Boss should not spawn yet")
 	end
-	assert(progress.CurrentKills == 11, "Expected 11 kills")
+	assert(progress.CurrentKills == 18, "Expected 18 kills")
 	assert(progress.BossSpawned == false)
 
-	-- Kill 1 elite mob (+2) -> total 13 >= target!
+	-- Kill 1 elite mob (+3) -> total 21 >= target!
 	local triggered = TowerProgress.RecordKill(progress, "ELITE")
 	assert(triggered == true, "Boss spawn condition must trigger when reaching target")
-	assert(progress.CurrentKills == 13, "Expected 13 kills")
+	assert(progress.CurrentKills == 21, "Expected 21 kills")
 	assert(progress.BossSpawned == true, "BossSpawned must be true")
 
 	-- Further kills after boss is spawned do not re-trigger boss spawn
 	local postSpawnTrigger = TowerProgress.RecordKill(progress, "REGULAR")
 	assert(postSpawnTrigger == false, "Post-spawn kills must not re-trigger boss")
-	assert(progress.CurrentKills == 13, "Kills should freeze while boss is active")
+	assert(progress.CurrentKills == 21, "Kills should freeze while boss is active")
+end)
+
+test("Phase 6: the surge pack fires once at half progress and never on Biome Boss floors", function()
+	local progress = TowerProgress.CreateProgress(3)
+	progress.CurrentKills = math.ceil(progress.RequiredKills * TowerProgress.SurgeAt) - 1
+	assert(TowerProgress.CheckSurge(progress) == false, "Below half no surge")
+	progress.CurrentKills += 1
+	assert(TowerProgress.CheckSurge(progress) == true, "Surge fires at half")
+	assert(progress.SurgeSpawned == true)
+	assert(TowerProgress.CheckSurge(progress) == false, "Surge fires once")
+	local bossFloor = TowerProgress.CreateProgress(5)
+	bossFloor.CurrentKills = bossFloor.RequiredKills - 1
+	assert(TowerProgress.CheckSurge(bossFloor) == false, "No surge on Biome Boss floors")
 end)
 
 test("Phase 2: Floor Boss template resolution covers all 50 floors", function()
-	-- Floor 1..4 in Biome 1 resolve to Elite champion
+	-- Floors 1..4 resolve to the biome Alpha, never the camp Elite or the Biome Boss (Phase 6 M3b)
 	for f = 1, 4 do
 		local bossId = TowerProgress.GetFloorBossEnemyId(f)
-		assert(bossId == "elite_vinebound", "Floor 1..4 champion mismatch")
+		assert(bossId == "alpha_vinebound" and bossId ~= "elite_vinebound", "Floor 1..4 Alpha mismatch")
 		local cat = MobCatalog.Get(bossId)
-		assert(cat and cat.BiomeId == "verdant_ruins", "Champion must belong to floor biome")
+		assert(cat and cat.BiomeId == "verdant_ruins" and cat.Alpha == true and cat.Role == "ELITE", "Alpha must belong to the floor biome")
 	end
 
 	-- Floor 5 resolves to Biome Boss
@@ -227,7 +242,8 @@ test("Phase 2: Floor boss/champion and Apex Sanctum mobs are never pre-placed be
 		for slot, placement in placements do
 			local e = FirstBiomeCombat.Get(placement.EnemyId)
 			-- Rule: Bosses and apex sanctum encounters are never pre-placed on room load
-			local isBossOrApex = e.Role == "BOSS" or placement.CampId == "CAMP_APEX_SANCTUM" or placement.EnemyId == bossEnemyId
+			-- Camp Elites are pre-placed; the floor champion is only ever summoned at the Apex.
+			local isBossOrApex = e.Role == "BOSS" or placement.CampId == "CAMP_APEX_SANCTUM"
 			if not isBossOrApex then
 				table.insert(activePlacedMobs, placement)
 			end
@@ -238,7 +254,6 @@ test("Phase 2: Floor boss/champion and Apex Sanctum mobs are never pre-placed be
 			local e = FirstBiomeCombat.Get(m.EnemyId)
 			assert(e.Role ~= "BOSS", string.format("Floor %d pre-placed a BOSS!", floorId))
 			assert(m.CampId ~= "CAMP_APEX_SANCTUM", string.format("Floor %d pre-placed in CAMP_APEX_SANCTUM!", floorId))
-			assert(m.EnemyId ~= bossEnemyId, string.format("Floor %d pre-placed floor boss %s!", floorId, bossEnemyId))
 		end
 	end
 end)

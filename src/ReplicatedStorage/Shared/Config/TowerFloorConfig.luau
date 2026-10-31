@@ -38,6 +38,7 @@ Config.Scaling = table.freeze({ HPPerFloor = 1.08, DamagePerFloor = 1.045, Rewar
 Config.BaseStatsByRole = table.freeze({
 	REGULAR = table.freeze({ MaxHP = 850, ATK = 18, GoldReward = 80, XPReward = 20 }),
 	ELITE = table.freeze({ MaxHP = 2200, ATK = 35, GoldReward = 210, XPReward = 55 }),
+	ALPHA = table.freeze({ MaxHP = 6000, ATK = 45, GoldReward = 450, XPReward = 110 }),
 	BOSS = table.freeze({ MaxHP = 12000, ATK = 55, GoldReward = 800, XPReward = 200 }),
 })
 
@@ -69,7 +70,7 @@ for biomeIndex, biome in ipairs(MobCatalog.Biomes) do
 			counts[placement.EnemyId] = (counts[placement.EnemyId] or 0) + 1
 		end
 		local encounters: { Encounter } = {}
-		for _, enemyId in {biome.RegularEnemyIds[1], biome.RegularEnemyIds[2], biome.EliteEnemyId, biome.BossEnemyId} do
+		for _, enemyId in {biome.RegularEnemyIds[1], biome.RegularEnemyIds[2], biome.EliteEnemyId, biome.AlphaEnemyId, biome.BossEnemyId} do
 			if counts[enemyId] then table.insert(encounters, table.freeze({EnemyId=enemyId, Count=counts[enemyId]})) end
 		end
 		local bossId: string? = if indexInBiome==5 then biome.BossEnemyId else nil
@@ -138,11 +139,12 @@ function Config.GetEnemyStats(floorId: any, enemyId: any): any?
 		if encounter.EnemyId == enemyId then included = true; break end
 	end
 	if not included then return nil end
-	local base = Config.BaseStatsByRole[enemy.Role]
+	local statRole = if enemy.Alpha then "ALPHA" else enemy.Role -- Floor Alphas have their own stat row
+	local base = Config.BaseStatsByRole[statRole]
 	if not base then return nil end
 	return table.freeze({
-		MaxHP = (StatBalance.GetFloorStats(floorId, enemy.Role) :: any).MaxHP,
-		ATK = (StatBalance.GetFloorStats(floorId, enemy.Role) :: any).ATK,
+		MaxHP = (StatBalance.GetFloorStats(floorId, statRole) :: any).MaxHP,
+		ATK = (StatBalance.GetFloorStats(floorId, statRole) :: any).ATK,
 		GoldReward = math.round(base.GoldReward * floor.Rewards.GoldMultiplier),
 		XPReward = math.round(base.XPReward * floor.Rewards.XPMultiplier),
 	})
@@ -151,7 +153,8 @@ end
 -- Recommended Squad Power for a floor (Phase 5 tower hub). Each enemy counts like a hero does in
 -- StatFormulas.GetHeroPower (MaxHP + 10 x ATK), summed over the floor's roster and scaled so a
 -- fresh one-star squad (~700 power) matches Floor 1. Rounded to two significant figures.
-Config.RecommendedPowerScale = 0.08
+-- Retuned in Phase 6: Floor 1 is sized to the default starter pair (Catio + Han, ~11,700 power), so it reads ~12,000.
+Config.RecommendedPowerScale = 0.28
 
 function Config.RecommendedPower(floorId: number): number
 	local floor = Config.Get(floorId)
@@ -188,7 +191,11 @@ end
 
 function Config.RollRelic(floorId: number, role: string, dropRoll: number, tierRoll: number): string?
  local reward = Config.GetKillRewards(floorId, role)
- if dropRoll >= reward.RelicChance then return nil end
+ if dropRoll >= reward.RelicChance then
+  -- Phase 6 M4: a camp Elite always leaves at least a Mana Geode, so every floor has stealable loot to fight over.
+  if role == "ELITE" then return "MANA_GEODE" end
+  return nil
+ end
  if tierRoll < reward.CoreChance then return "ABYSSAL_CORE" end
  if tierRoll < reward.CoreChance + reward.UrnChance then return "CURSED_URN" end
  return "MANA_GEODE"

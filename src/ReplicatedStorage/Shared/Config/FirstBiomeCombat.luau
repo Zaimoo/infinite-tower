@@ -7,8 +7,17 @@ local TowerFloorConfig = require(script.Parent.TowerFloorConfig)
 
 local C: any = {
 	ReleaseEnabled = true,
-	RespawnSeconds = 25,
+	RespawnSeconds = 25, -- fallback for slots outside any camp
 	BossRespawnSeconds = 300,
+	-- Phase 6 M1: a camp respawns as a wave once every member is dead.
+	CampRespawnSeconds = 10,
+	CampMaxWaitSeconds = 45, -- a lone survivor cannot hold the rest of its camp back forever
+	PlayerSpawnScale = 0.4, -- +40% camp members per extra Master on the floor
+	MaxLiveMobsPerFloor = 48, -- network budget: ~78 entities with six five-hero squads
+	ExtraSlotBase = 60000, -- scaled-in camp members; layout slots are small integers
+	SurgeRegulars = 3, -- plus one Elite, spawned when a player crosses TowerProgress.SurgeAt
+	SurgeMinDistance = 25,
+	SurgeMaxDistance = 35,
 	AnchorLocal = Vector3.new(0, 0, 12),
 	AcquisitionRange = 95,
 	LeashRange = 105,
@@ -105,6 +114,13 @@ for enemyId, cat in pairs(MobCatalog.Entries) do
 			move(enemyId .. "_signature_1", "Signature1", "SELF_DISC", 1.8, 1.2, 22, 22, 1.2, 10.0),
 			move(enemyId .. "_signature_2", "Signature2", "TARGET_DISC", 2.2, 1.5, 55, 13, 1.4, 14.0),
 		}
+	elseif cat.Alpha then
+		-- Floor Alpha: the Elite kit plus a boss-lite self quake, so it plays differently from a camp Elite.
+		attacks = {
+			move(enemyId .. "_basic", "BasicAttack", "ARC", .9, .8, 10.5, 0, 1.0, 2.2),
+			move(enemyId .. "_special", "Special", "TARGET_DISC", 1.4, 1.0, 34, 10, 1.3, 7.0),
+			move(enemyId .. "_quake", "Special", "SELF_DISC", 1.6, 1.1, 16, 16, 1.2, 11.0),
+		}
 	elseif isElite then
 		attacks = {
 			move(enemyId .. "_basic", "BasicAttack", "ARC", .9, .8, 9.5, 0, 1.0, 2.4),
@@ -125,6 +141,7 @@ for enemyId, cat in pairs(MobCatalog.Entries) do
 		DisplayName = cat.DisplayName,
 		BiomeId = cat.BiomeId,
 		Role = role,
+		Alpha = cat.Alpha == true,
 		Height = if enemyId == "mob_moss_crawler" then 3.2 else height,
 		Width = cat.Bounds.Width,
 		Depth = cat.Bounds.Depth,

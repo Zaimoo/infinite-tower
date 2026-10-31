@@ -24,8 +24,13 @@ Tower.Init()
 local Protocol=require(Shared.Util.TowerProtocol)
 local SanctuaryRules=require(Shared.Util.TowerSanctuaryRules)
 local FirstBiome=require(Shared.Config.FirstBiomeCombat)
+local TowerLayout=require(Shared.Config.TowerLayout)
 local TowerRewards=require(Shared.Config.TowerFloorConfig)
+local TowerHardcore=require(Shared.Config.TowerHardcoreConfig)
+local StatBalance=require(Shared.Config.StatBalance)
 local EncounterRuntime=require(script.Parent.TowerEncounterRuntime)
+local TowerRuns=require(script.Parent.TowerRunService)
+local TowerRun=require(Shared.Util.TowerRun)
 local AttackTimeline=require(Shared.Util.AttackTimeline)
 local HeroActionTiming=require(Shared.Util.HeroActionTiming)
 local HeroImpactQueue=require(script.Parent.HeroImpactQueue)
@@ -69,11 +74,20 @@ local function getDataManager(): any
 	return _G.DataManager
 end
 
+-- Training Grounds multiplier, reduced by Rift Attunement when a hero out-powers what its Master's highest floor allows.
+local function attunedMultiplier(player: Player, profile: any, hero: any, artifact: any?): number
+	local training = getDataManager().GetTrainingMultiplier and getDataManager().GetTrainingMultiplier(player) or 1.0
+	return StatFormulas.GetAttunedMultiplier(hero, artifact, training, StatFormulas.GetAttunementCap(profile.MaxFloorReached))
+end
+
 --============================================================================
 -- 1. CONSTANTS & SIMULATION TYPES
 --============================================================================
 
-local TICK_INTERVAL = 0.20 -- 5 Hz Server Heartbeat
+local TICK_INTERVAL = StatBalance.TickSeconds -- 10 Hz server simulation (Phase 6 M6)
+-- Snapshots stay at 5 Hz (every second tick) until a Studio profile with six busy floors clears the 25 KB/s client budget.
+local SNAPSHOT_EVERY_TICKS = 2
+local snapshotTick = 0
 local FIELD_LOOT_DESPAWN_SECONDS = 90
 local MASTER_FORMATION_RADIUS = 6.0
 local LEASH_DISTANCE = 65.0
@@ -339,6 +353,62 @@ local function getMasterGroundPosition(player: Player): Vector3?
 	return ground or (hrp.Position - Vector3.new(0, 3, 0))
 end
 
+local function getAssignedSpawnRoot(room: any): Vector3
+	if not room or (room.FloorId or 0) <= 0 then
+		return room and room.Arrival and room.Arrival.Position or Vector3.new(0, 3, 0)
+	end
+	local idx = ((room.FloorId - 1) % 5) + 1
+	local layout = TowerLayout.Get(idx)
+	local basin = layout.Platforms.Basin
+	return room.Origin + Vector3.new(basin.X, basin.Y + 3, basin.Z)
+end
+
+local function getAssignedFloorAnchor(floorId: number, room: any, masterState: MasterCombatState?): Vector3
+	local basinRoot = getAssignedSpawnRoot(room)
+	if not room or floorId <= 0 then
+		return basinRoot
+	end
+	if masterState then
+		for _, h in pairs(masterState.DeployedHeroes) do
+			if h.State ~= "COMA" and h.CurrentHP > 0 and h.TargetNetId then
+				local mob = ActiveMobsByNetId[h.TargetNetId]
+				if mob and mob.IsAlive and Tower.Same(mob, room) and not Tower.GetSafety(mob, mob.Position).CombatSafe then
+					return mob.Position + Vector3.new(0, 3, 0)
+				end
+			end
+		end
+	end
+	local refPos = basinRoot
+	if masterState then
+		local sum = Vector3.zero
+		local count = 0
+		for _, h in pairs(masterState.DeployedHeroes) do
+			if h.State ~= "COMA" and h.CurrentHP > 0 and h.FloorId == floorId then
+				sum += h.Position
+				count += 1
+			end
+		end
+		if count > 0 then
+			refPos = sum / count
+		end
+	end
+	local nearestMob: SimMob? = nil
+	local nearestDist = math.huge
+	for _, mob in pairs(ActiveMobsByNetId) do
+		if mob.IsAlive and Tower.Same(mob, room) and not Tower.GetSafety(mob, mob.Position).CombatSafe then
+			local d = (mob.Position - refPos).Magnitude
+			if d < nearestDist then
+				nearestDist = d
+				nearestMob = mob
+			end
+		end
+	end
+	if nearestMob then
+		return nearestMob.Position + Vector3.new(0, 3, 0)
+	end
+	return basinRoot
+end
+
 local function isPlayerJumping(player: Player): boolean
 	local char = player.Character
 	if not char then return false end
@@ -358,7 +428,7 @@ function CombatSimulation.RefreshPlayerHeroStats(player: Player)
 	for uuid, simHero in pairs(state.DeployedHeroes) do
 		local hero = profile.Heroes[uuid]
 		if hero then
-			local trainingMult = getDataManager().GetTrainingMultiplier and getDataManager().GetTrainingMultiplier(player) or 1.0
+			local trainingMult = attunedMultiplier(player, profile, hero, StatFormulas.GetEquippedArtifact(profile,hero))
 			local atk, hp, _, interval = StatFormulas.GetEffectiveCombatStats(hero, false, false, StatFormulas.GetEquippedArtifact(profile,hero), trainingMult)
 			metadataChanged = metadataChanged or simHero.Level ~= hero.Level or simHero.Stars ~= hero.Stars or simHero.MaxHP ~= hp
 			simHero.Level, simHero.Stars = hero.Level, hero.Stars
@@ -397,8 +467,8 @@ function CombatSimulation.RebuildPlayerSquad(player: Player)
 	end
 
 	local towerState=Tower.GetState(player)
- local room=Tower.GetRoom(towerState.SquadFloorId) or Tower.GetRoom(0)
- local masterPos=towerState.SquadAssignment and (room.Origin+FirstBiome.AnchorLocal+Vector3.new(0,3,0)) or getMasterGroundPosition(player) or room.Arrival.Position
+	local room=Tower.GetRoom(towerState.SquadFloorId) or Tower.GetRoom(0)
+	local masterPos=towerState.SquadAssignment and getAssignedFloorAnchor(towerState.SquadFloorId, room, masterState) or getMasterGroundPosition(player) or room.Arrival.Position
 		local desiredUUIDs: { [string]: number } = {}
 
 	for slot = 1, 5 do
@@ -427,7 +497,7 @@ function CombatSimulation.RebuildPlayerSquad(player: Player)
 	for uuid, slotIndex in pairs(desiredUUIDs) do
 		local heroData = profile.Heroes[uuid]
 		local artifact = heroData.EquippedArtifactUUID and profile.Artifacts and profile.Artifacts[heroData.EquippedArtifactUUID]
-		local trainingMult = dm.GetTrainingMultiplier and dm.GetTrainingMultiplier(player) or 1.0
+		local trainingMult = attunedMultiplier(player, profile, heroData, artifact)
 		local effATK, effHP, _, effInterval = StatFormulas.GetEffectiveCombatStats(heroData, false, false, artifact, trainingMult)
 		local existing = masterState.DeployedHeroes[uuid]
 		if existing then
@@ -687,34 +757,66 @@ local function knockHeroIntoComa(simHero: SimHero, _baseComaSeconds: number?)
 			simHero.Owner.Character:SetAttribute("SquadWiped", true)
 		end
 
-		CombatSimulation.DropCarriedLoot(simHero.Owner, true)
+		local towerState = Tower.GetState(simHero.Owner)
+		local wipeFloor = if towerState.SquadFloorId and towerState.SquadFloorId > 0 then towerState.SquadFloorId else towerState.FloorId
+		local playerOnWipeFloor = (towerState.FloorId == wipeFloor and wipeFloor > 0)
 
-		if _G.RelicService then
-			_G.RelicService.FumbleRelicOnAoEHit(simHero.Owner)
+		if playerOnWipeFloor then
+			-- Phase 6 wipe loss: a share of the Gold and Gems earned since the last bank is gone, and the run (and streak) ends.
+			local run = TowerRuns.Get(simHero.Owner)
+			local profile = dm.GetProfile(simHero.Owner)
+			local lossGold, lossGems = 0, 0
+			if run and profile then
+				lossGold, lossGems = TowerRun.WipeLoss(run, profile.Currencies.Gold, profile.Currencies.Gems)
+				profile.Currencies.Gold -= lossGold
+				profile.Currencies.Gems -= lossGems
+				dm.SyncProfile(simHero.Owner)
+			end
+			if run then
+				TowerRuns.End(simHero.Owner, "WIPE", lossGold, lossGems)
+				if lossGold > 0 or lossGems > 0 then
+					dm.SendToast(simHero.Owner, string.format("Wiped: lost %d Gold and %d Gems earned since you last banked. Banked loot is safe.", lossGold, lossGems), "WARN")
+				end
+			end
+			CombatSimulation.DropCarriedLoot(simHero.Owner, true)
+			if _G.RelicService then
+				_G.RelicService.FumbleRelicOnAoEHit(simHero.Owner)
+			end
+			masterState.CarriedLoot = { Gold = 0, Gems = 0 }
+			CarriedLootSyncRemote:FireClient(simHero.Owner, 0, 0)
 		end
 
-		masterState.CarriedLoot = { Gold = 0, Gems = 0 }
-		CarriedLootSyncRemote:FireClient(simHero.Owner, 0, 0)
 		SquadWipeStateRemote:FireClient(simHero.Owner, true)
-
-		local currentFloor = Tower.GetState(simHero.Owner).FloorId
 		if SquadDefeatedRemote then
-			SquadDefeatedRemote:FireClient(simHero.Owner, currentFloor)
+			SquadDefeatedRemote:FireClient(simHero.Owner, wipeFloor)
 		end
 
-		dm.SendToast(
-			simHero.Owner,
-			string.format("ALL HEROES FALLEN on Floor %d! Carried loot dropped. Teleporting to Fortress Plot...", currentFloor),
-			"WARN"
-		)
+		if playerOnWipeFloor then
+			dm.SendToast(
+				simHero.Owner,
+				string.format("ALL HEROES FALLEN on Floor %d! Carried loot dropped. Teleporting to Fortress Plot...", wipeFloor),
+				"WARN"
+			)
+		else
+			dm.SendToast(
+				simHero.Owner,
+				string.format("Assigned squad fallen on Floor %d! Squad recalled and recovered.", wipeFloor),
+				"WARN"
+			)
+		end
 
 		task.defer(function()
-			-- PlotManager is a Script (not a ModuleScript); it publishes itself as _G.PlotManager.
-			local PlotManager = _G.PlotManager
-			if PlotManager and PlotManager.TeleportPlayerToPlot then
-				PlotManager.TeleportPlayerToPlot(simHero.Owner)
-			else
-				Tower.CommitRespawn(simHero.Owner)
+			if Tower.RecallWipedSquad then
+				Tower.RecallWipedSquad(simHero.Owner)
+			end
+			if playerOnWipeFloor then
+				-- PlotManager is a Script (not a ModuleScript); it publishes itself as _G.PlotManager.
+				local PlotManager = _G.PlotManager
+				if PlotManager and PlotManager.TeleportPlayerToPlot then
+					PlotManager.TeleportPlayerToPlot(simHero.Owner)
+				else
+					Tower.CommitRespawn(simHero.Owner)
+				end
 			end
 		end)
 	end
@@ -786,6 +888,33 @@ local function restoreSquadOnPlot(player: Player)
 			hero.ComaUntilTimestamp = 0
 		end
 		dm.SyncProfile(player)
+	end
+	syncSquadStatus(player)
+	broadcastMetadata(nil)
+end
+
+-- Phase 6: a floor transition no longer restores the squad. Downed heroes stand back up at a fraction of their HP
+-- and standing heroes keep whatever damage they carry. (Going home still calls restoreSquadOnPlot.)
+local function reviveDownedOnTransition(player: Player)
+	local masterState = ActiveMasters[player]
+	if not masterState then return end
+	local revived = 0
+	for _, h in pairs(masterState.DeployedHeroes) do
+		if h.State == "COMA" or h.CurrentHP <= 0 then
+			h.CurrentHP = math.max(1, math.floor(h.MaxHP * TowerHardcore.ReviveHPFraction))
+			h.State = "FOLLOW_MASTER"
+			ActiveHeroesByNetId[h.NetId] = h
+			revived += 1
+		end
+	end
+	masterState.IsSquadWiped = false
+	masterState.CanCollectLoot = true
+	if player.Character then
+		player.Character:SetAttribute("SquadWiped", false)
+	end
+	SquadWipeStateRemote:FireClient(player, false)
+	if revived > 0 then
+		getDataManager().SendToast(player, string.format("%d fallen hero%s stood back up at %d%% HP.", revived, if revived == 1 then "" else "es", math.round(TowerHardcore.ReviveHPFraction * 100)), "SUCCESS")
 	end
 	syncSquadStatus(player)
 	broadcastMetadata(nil)
@@ -1158,7 +1287,7 @@ local function awardParticipationXP(mob: SimMob)
 			local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 			if hero and owner and owner.Parent == Players and contribution.Owner==owner and contribution.HeroUUID==hero.HeroUUID and contribution.EntityGeneration==hero.EntityGeneration and Tower.Same(contribution,mob) and humanoid and humanoid.Health > 0
 				and hero.State ~= "COMA" and hero.CurrentHP > 0
-				and now - (ProgressionActivity[owner] or -math.huge) <= cfg.ActivityWindow
+				and (Tower.GetState(owner).SquadAssignment == mob.FloorId or now - (ProgressionActivity[owner] or -math.huge) <= cfg.ActivityWindow)
 				and now - contribution.At <= cfg.ParticipationWindow
 				and contribution.Damage >= mob.MaxHP * cfg.MinimumDamageFraction
 				and now - (ProgressionAwards[netId] or -math.huge) >= cfg.AwardCooldown then
@@ -1325,6 +1454,12 @@ local function startDuel(owner: Player, contest: LootDuel.Contest): (boolean, st
 		Winner = nil,
 	}
 
+	local duelCap = math.huge
+	for _, side in { "A", "B" } :: { LootDuel.Side } do
+		local sideProfile = getDataManager().GetProfile(duelSquad(duel, side).Player)
+		duelCap = math.min(duelCap, StatFormulas.GetAttunementCap(sideProfile and sideProfile.MaxFloorReached))
+	end
+
 	local frame = DuelArena.Frame(center, forward)
 	for _, side in { "A", "B" } :: { LootDuel.Side } do
 		local squad = duelSquad(duel, side)
@@ -1336,7 +1471,18 @@ local function startDuel(owner: Player, contest: LootDuel.Contest): (boolean, st
 		for slot, index in LootDuel.FormationOrder(archetypes) do
 			local h = squad.Heroes[index]
 			squad.Saved[h] = { HP = h.CurrentHP, State = h.State, Stamina = h.Stamina, BarrierHP = h.BarrierHP,
-				BarrierExpires = h.BarrierExpires, AttackCount = h.AttackCount, FloorId = h.FloorId }
+				BarrierExpires = h.BarrierExpires, AttackCount = h.AttackCount, FloorId = h.FloorId,
+				ATK = h.EffectiveATK, MaxHP = h.MaxHP }
+			-- Rift Attunement in a duel: both squads are held to the lower of the two Masters' caps, so a premium
+			-- squad cannot simply out-power a Master who has climbed less. Restored from Saved when the duel ends.
+			local tick = math.ceil(math.max(TICK_INTERVAL, h.AttackInterval) / TICK_INTERVAL - 1e-10) * TICK_INTERVAL
+			local power = 10 * (h.EffectiveATK / tick) + h.MaxHP
+			if power > duelCap then
+				local f = duelCap / power
+				h.EffectiveATK = math.max(1, math.round(h.EffectiveATK * f))
+				h.MaxHP = math.max(1, math.round(h.MaxHP * f))
+				h.CurrentHP = math.min(h.MaxHP, math.max(1, math.round(h.CurrentHP * f)))
+			end
 			HeroNavigation.Clear(h)
 			h.DuelId, h.DuelSide = id, side
 			h.Position = frame:PointToWorldSpace(LootDuel.SlotLocal(side, slot)) + Vector3.new(0, DuelArena.StandHeight, 0)
@@ -1530,6 +1676,9 @@ local function finishDuel(duel: Duel)
 			h.DuelId, h.DuelSide = nil, nil
 			HeroNavigation.Clear(h)
 			local saved = squad.Saved[h]
+			if saved then
+				h.EffectiveATK, h.MaxHP = saved.ATK, saved.MaxHP -- undo the duel's attunement clamp
+			end
 			if saved and h.FloorId == saved.FloorId then
 				h.CurrentHP = math.min(saved.HP, h.MaxHP)
 				h.State = saved.State
@@ -1978,9 +2127,12 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 	if simHero.State == "COMA" then
 		return
 	end
- local squadState=Tower.GetState(simHero.Owner)
- local assignedRoom=squadState.SquadAssignment and Tower.GetRoom(squadState.SquadFloorId)
- local masterPos=assignedRoom and (assignedRoom.Origin+FirstBiome.AnchorLocal+Vector3.new(0,3,0)) or getMasterGroundPosition(simHero.Owner)
+	local squadState = Tower.GetState(simHero.Owner)
+	local assignedRoom = squadState.SquadAssignment and Tower.GetRoom(squadState.SquadFloorId)
+	local masterState = ActiveMasters[simHero.Owner]
+	local masterPos = if assignedRoom
+		then getAssignedFloorAnchor(squadState.SquadFloorId, assignedRoom, masterState)
+		else (getMasterGroundPosition(simHero.Owner) or (masterState and getMasterRootPosition(simHero.Owner)))
 	if not masterPos then
 		return
 	end
@@ -2000,7 +2152,7 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 	local profile = dm.GetProfile(simHero.Owner)
 	if profile and profile.Heroes[simHero.HeroUUID] then
 		local currentHero = profile.Heroes[simHero.HeroUUID]
-		local trainingMult = dm.GetTrainingMultiplier and dm.GetTrainingMultiplier(simHero.Owner) or 1.0
+		local trainingMult = attunedMultiplier(simHero.Owner, profile, currentHero, StatFormulas.GetEquippedArtifact(profile,currentHero))
 		local effATK, effHP, _, interval = StatFormulas.GetEffectiveCombatStats(currentHero, false, false, StatFormulas.GetEquippedArtifact(profile,currentHero), trainingMult)
 		simHero.AttackInterval = interval
 		simHero.CurrentHP = math.min(simHero.CurrentHP,effHP)
@@ -2314,6 +2466,12 @@ local function spawnFloorAscensionPortal(floorId: number, position: Vector3)
 		local pState = Tower.GetState(player)
 		if not pState or pState.FloorId ~= floorId then return end
 		if Tower.IsTransitioning(player) then return end
+		-- Only a Master who has cleared this floor may ascend (the prompt is shared by everyone in the room).
+		local portalProfile = getDataManager().GetProfile(player)
+		if not portalProfile or (portalProfile.HighestClearedFloor or 0) < floorId then
+			getDataManager().SendToast(player, "Defeat this floor's boss yourself to ascend.", "WARN")
+			return
+		end
 
 		if isMaxFloor then
 			Tower.ReturnToHub(player, {
@@ -2334,14 +2492,8 @@ local function spawnFloorAscensionPortal(floorId: number, position: Vector3)
 		end
 	end
 
+	-- Phase 6 M5: the portal is prompt-only. Walking through it no longer teleports you by accident.
 	prompt.Triggered:Connect(activatePortal)
-	trigger.Touched:Connect(function(hit)
-		local char = hit.Parent
-		local player = Players:GetPlayerFromCharacter(char)
-		if player then
-			activatePortal(player)
-		end
-	end)
 
 	portalModel.Parent = room.Model
 end
@@ -2352,6 +2504,14 @@ local function squadCount(player: Player): number
 end
 Tower.RegisterAdapter("Combat",{
  Count=squadCount,
+ -- Phase 6 boss lock: true while a summoned boss this Master has damaged is alive and the squad has not wiped.
+ BossLocked=function(player,floorId)
+  local boss=Encounters and Encounters:GetActiveBoss(floorId)
+  if not boss then return false end
+  if ((boss.DamageLedger and boss.DamageLedger[player.UserId]) or 0)<=0 then return false end
+  local m=ActiveMasters[player]
+  return m~=nil and not m.IsSquadWiped
+ end,
  ValidateRoster=function(player)
   local m=ActiveMasters[player];local profile=_G.DataManager.GetProfile(player)
   if not m or not profile then return false end
@@ -2383,7 +2543,8 @@ Tower.RegisterAdapter("Combat",{
    for _,h in pairs(m.DeployedHeroes) do
     if h.FloorId~=room.FloorId then changedFloor=true end
     h.FloorId=room.FloorId;h.RoomGeneration=room.RoomGeneration;h.EntityGeneration+=1
-    h.Position=HeroNavigation.PlaceNear(anchor or room.Arrival.Position,getFormationOffset(h.SlotIndex))
+    local spawnBase = anchor or (if room.FloorId > 0 then getAssignedSpawnRoot(room) else room.Arrival.Position)
+    h.Position=HeroNavigation.PlaceNear(spawnBase,getFormationOffset(h.SlotIndex))
     h.TargetNetId=nil
     if h.CurrentHP > 0 and h.State ~= "COMA" then
      h.State = "FOLLOW_MASTER"
@@ -2397,20 +2558,10 @@ Tower.RegisterAdapter("Combat",{
     ActivePlayerProgress[player] = nil
     restoreSquadOnPlot(player)
    else
-    -- Moving between floors fully heals and revives the squad (same-floor recalls do not).
+    -- Moving between floors revives downed heroes at a fraction of their HP; it no longer heals anyone
+    -- (same-floor recalls do nothing). The tower sanctuary is where standing heroes recover.
     if changedFloor then
-     local hadFallen = false
-     for _, h in pairs(m.DeployedHeroes) do
-      if h.State == "COMA" or h.CurrentHP < h.MaxHP then
-       hadFallen = true
-       break
-      end
-     end
-     restoreSquadOnPlot(player)
-     if hadFallen then
-      local dm = getDataManager()
-      dm.SendToast(player, "✨ Floor Transition: Squad revived and healed to full vitality!", "SUCCESS")
-     end
+     reviveDownedOnTransition(player)
     end
     local existing = ActivePlayerProgress[player]
     if not existing or existing.FloorId ~= room.FloorId then
@@ -2472,24 +2623,25 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
 
    if not isBoss then
     if killer and killer.Parent == Players then
+     -- Phase 6: an assigned squad farms Gold, gems and XP anywhere; relics and floor progress need its Master on the floor.
+     local masterHere = Tower.GetState(killer).FloorId == mob.FloorId
      local marketMult = dm.GetMarketMultiplier and dm.GetMarketMultiplier(killer) or 1.0
      local profile = dm.GetProfile(killer)
      if profile then
       local reward = TowerRewards.GetKillRewards(mob.FloorId, mob.Role)
-      profile.Currencies.Gold += math.round(reward.Gold * marketMult)
+      local killGold = math.round(reward.Gold * marketMult)
+      profile.Currencies.Gold += killGold
       profile.Currencies.Gems += reward.Gems
+      TowerRuns.AddEarnings(killer, killGold, reward.Gems, if masterHere then 1 else 0)
       dm.SyncProfile(killer)
       local tier = TowerRewards.RollRelic(mob.FloorId, mob.Role, math.random(), math.random())
-      if tier and _G.RelicService then
+      if masterHere and tier and _G.RelicService then
        _G.RelicService.SpawnRelic(tier, mob.Position, killer.UserId)
-      end
-      -- Contested Bounty Bag (GDD 6.1): tagged to the killer, anyone can carry it off.
-      if math.random() < (LootDuel.BOUNTY_CHANCE[mob.Role] or 0) and Tower.ContextAt(mob.Position) then
-       spawnPhysicalLoot("GOLD", reward.Gold, mob.Position, killer)
       end
      end
 
      local progress = ActivePlayerProgress[killer]
+     if masterHere then
      if not progress or progress.FloorId ~= mob.FloorId then
       progress = TowerProgress.CreateProgress(mob.FloorId)
       ActivePlayerProgress[killer] = progress
@@ -2499,6 +2651,10 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
      end
      if progress and progress.FloorId == mob.FloorId and not progress.BossSpawned then
       local shouldSpawn = TowerProgress.RecordKill(progress, mob.Role)
+      if not shouldSpawn and TowerProgress.CheckSurge(progress) then
+       Encounters:SpawnSurge(mob.FloorId, killer, mob.Position)
+       getDataManager().SendToast(killer, "A surge pack is bearing down on your squad!", "WARN")
+      end
       if FloorProgressRemote then
        FloorProgressRemote:FireClient(killer, progress)
       end
@@ -2506,19 +2662,26 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
        summonFloorBoss(killer, progress)
       end
      end
+     end
     end
    else
     -- Boss Defeated: distribute full copies of uncontestable rewards to participants with >= 3% damage
     for p, _ in pairs(ActiveMasters) do
      local s = Tower.GetState(p)
-     if (s.FloorId == mob.FloorId or s.SquadFloorId == mob.FloorId) and p.Parent == Players then
+     if s.FloorId == mob.FloorId and p.Parent == Players then -- Phase 6: only a Master standing on the floor can clear it
       local damage = (mob.DamageLedger and mob.DamageLedger[p.UserId]) or 0
       if TowerProgress.CheckParticipation(damage, mob.MaxHP, p == killer) then
        local marketMult = dm.GetMarketMultiplier and dm.GetMarketMultiplier(p) or 1.0
        local profile = dm.GetProfile(p)
        local reward = TowerRewards.GetKillRewards(mob.FloorId, "BOSS")
-       local bossGold = math.round(reward.Gold * marketMult)
-       local bossGems = reward.Gems
+       -- Phase 6 M4: the first clear of a floor is the big payout (Gold x3, gems that grow with depth, a guaranteed relic);
+       -- repeat kills only pay Gold and a coin-flip relic, so a cleared floor is a farm, not a gem fountain.
+       local firstClear = profile ~= nil and mob.FloorId > (profile.HighestClearedFloor or 0)
+       local bossTier = if mob.FloorId % 5 == 0 then math.floor(mob.FloorId / 5) else 0
+       local firstBiomeClear = bossTier > 0 and profile ~= nil and bossTier > (profile.HighestClearedBiomeBoss or 0)
+       local bossGold = math.round(reward.Gold * marketMult * (if firstClear then 3 else 1))
+       local bossGems = if firstClear then 10 + 2 * mob.FloorId else 0
+       if firstBiomeClear then bossGems += 300 * bossTier end
        if profile then
         profile.Currencies.Gold += bossGold
         profile.Currencies.Gems += bossGems
@@ -2526,11 +2689,20 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
         profile.MaxFloorReached = math.max(profile.MaxFloorReached or 0, mob.FloorId + 1)
         dm.SyncProfile(p)
         if dm.ReportProgress then dm.ReportProgress(p, "FloorCleared") end
+        TowerRuns.AddEarnings(p, bossGold, bossGems, 0)
+        TowerRuns.RecordFloorClear(p, mob.FloorId, firstClear)
+        CombatSimulation.RefreshPlayerHeroStats(p) -- a new highest floor raises the Rift Attunement cap
        end
 
-       if mob.FloorId % 5 == 0 then
-        local bossTier = math.floor(mob.FloorId / 5)
+       -- One contested relic per boss kill, tagged to the killer: guaranteed on a first clear, 50% afterwards.
+       if p == killer and _G.RelicService and (firstClear or math.random() < 0.5) then
+        local relicTier = TowerRewards.RollRelic(mob.FloorId, "BOSS", 0, math.random())
+        if relicTier then _G.RelicService.SpawnRelic(relicTier, mob.Position, p.UserId) end
+       end
+
+       if bossTier > 0 then
         dm.RecordBiomeBossClear(p, bossTier)
+        if firstBiomeClear and dm.GrantBossArtifact then dm.GrantBossArtifact(p, bossTier) end
        end
 
        local progress = ActivePlayerProgress[p]
@@ -2665,6 +2837,11 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 
 	for _, simHero in pairs(ActiveHeroesByNetId) do
 		stepHeroSimulation(simHero, dt, now)
+		-- Phase 6: the tower sanctuary is where standing heroes recover. Downed heroes only stand back up on a transition.
+		if simHero.FloorId > 0 and simHero.State ~= "COMA" and simHero.CurrentHP > 0 and simHero.CurrentHP < simHero.MaxHP
+			and not simHero.DuelId and Tower.GetSafety(simHero, simHero.Position).CanRecoverWipe == true then
+			simHero.CurrentHP = math.min(simHero.MaxHP, simHero.CurrentHP + simHero.MaxHP * TowerHardcore.SanctuaryHealPerSecond * dt)
+		end
 	end
 	stepDuels(now)
 	stepContests(now)
@@ -2675,10 +2852,23 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 		if rootPos then
 			local location=Tower.GetState(player)
 			local safety=Tower.GetSafety(location,rootPos)
+			-- Phase 6 run lifecycle: a run starts on a tower floor and ends when the Master is back in the hub or on the plot.
+			if not Tower.IsTransitioning(player) then
+				if location.FloorId > 0 then
+					TowerRuns.Ensure(player, location.FloorId)
+				elseif TowerRuns.Get(player) then
+					local summary = TowerRuns.End(player, "RETURN")
+					if summary and (summary.FloorsCleared > 0 or summary.Kills > 0) then
+						getDataManager().SendToast(player, string.format("Run over: floors %d-%d, %d cleared, best streak x%d, +%d Gold, +%d Gems",
+							summary.StartFloor, summary.HighestFloor, summary.FloorsCleared, summary.BestStreak, summary.GoldEarned + summary.RelicGold, summary.GemsEarned + summary.RelicGems), "INFO")
+					end
+				end
+			end
 			if safety.CanBankCargo and not Tower.IsTransitioning(player) and not DuelByPlayer[player] then
 				if CarrierToHeldLoot[player] then
 					CombatSimulation.BankHeldLoot(player, location)
 				end
+				TowerRuns.Bank(player) -- the sanctuary makes unbanked earnings safe from a wipe
 
 				if safety.CanRecoverWipe and masterState.IsSquadWiped then
 					local hasHealthyHero = false
@@ -2704,7 +2894,10 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 	end
 
 	-- Carried loot does not despawn while held by a player.
-	broadcastReplicationSnapshot(now)
+	snapshotTick += 1
+	if snapshotTick % SNAPSHOT_EVERY_TICKS == 0 then
+		broadcastReplicationSnapshot(now)
+	end
 end)
 
 CombatSimulation.SpawnPhysicalLoot = spawnPhysicalLoot

@@ -201,9 +201,10 @@ test("Low-quality mixed squad exceeds one billion DPS at 75 percent uptime",func
   total+=v.DPS
  end
  -- Includes the inherent hero rarity multiplier (Aaron/Velkist 1.35x, Eolka 1.8225x; Phase 4 §7).
- assert(math.abs(total*.75-2312856397)<2)
+ assert(math.abs(total*.75-2428673203)<2) -- 10 Hz tick: a 0.85s attack rounds to 0.9s, not 1.0s
  assert(total*.75>1e9)
- assertEqual(Balance.GetFloorStats(50,"BOSS").MaxHP,61580351563)
+ -- Phase 6 re-anchor: floor 50 now includes hero rarity (x3.32) and the boss-floor biome step (x1.3).
+ assertEqual(Balance.GetFloorStats(50,"BOSS").MaxHP,303887290571)
 end)
 test("Legacy trait and imprint fields cannot restore retired stat bonuses",function()
  local hero={TemplateId="hero_han",Stars=5,Level=50,QualityScalar=1,CurrentStamina=100}

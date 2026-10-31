@@ -30,6 +30,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Production Luau compilation failed.' }
 # catalog. The actual math, economy validation and transactions run as shipped.
 $modulePaths = @(
     'ReplicatedStorage/Shared/Config/StatBalance.luau',
+    'ReplicatedStorage/Shared/Config/TowerHardcoreConfig.luau',
     'ReplicatedStorage/Shared/Config/HeroCatalog.luau',
     'ReplicatedStorage/Shared/Config/ArtifactCatalog.luau',
     'ReplicatedStorage/Shared/Config/ArchetypeCombatSkills.luau',
@@ -37,6 +38,7 @@ $modulePaths = @(
     'ReplicatedStorage/Shared/Config/PitBalanceConfig.luau',
     'ReplicatedStorage/Shared/Config/MobCatalog.luau',
     'ReplicatedStorage/Shared/Config/TowerLayout.luau',
+    'ReplicatedStorage/Shared/Config/RelicConfig.luau',
     'ReplicatedStorage/Shared/Config/TowerFloorConfig.luau',
     'ReplicatedStorage/Shared/Config/FirstBiomeCombat.luau',
     'ReplicatedStorage/Assets/TowerEnemyClips.luau',
@@ -56,6 +58,8 @@ $modulePaths = @(
     'ReplicatedStorage/Shared/Util/StatFormulas.luau',
     'ReplicatedStorage/Shared/Util/WeaponPromotion.luau',
     'ReplicatedStorage/Shared/Util/TowerProgress.luau',
+    'ReplicatedStorage/Shared/Util/CampWaves.luau',
+    'ReplicatedStorage/Shared/Util/TowerRun.luau',
     'ReplicatedStorage/Shared/Util/LootDuel.luau',
     'ReplicatedStorage/Shared/Config/FortressTreeConfig.luau',
     'ReplicatedStorage/Shared/Config/OnboardingConfig.luau',
@@ -79,7 +83,7 @@ foreach ($modulePath in $modulePaths) {
     $bundleParts.Add([System.IO.File]::ReadAllText($sourcePath))
     $bundleParts.Add("`nend)")
 }
-foreach ($suite in @('pit.spec.luau', 'forge.spec.luau', 'combat-skills.spec.luau', 'tower.spec.luau', 'tower-transport.spec.luau', 'tower-combat.spec.luau', 'tower-rework.spec.luau', 'phase1-combat-tempo.luau', 'hero-rig.spec.luau', 'phase2-floor-loop.spec.luau', 'phase2-defeat-rules.spec.luau', 'hero-action.spec.luau', 'combat-vfx.spec.luau', 'phase4-progression.luau', 'profile-persistence.spec.luau')) {
+foreach ($suite in @('pit.spec.luau', 'forge.spec.luau', 'combat-skills.spec.luau', 'tower.spec.luau', 'tower-transport.spec.luau', 'tower-combat.spec.luau', 'tower-rework.spec.luau', 'phase1-combat-tempo.luau', 'hero-rig.spec.luau', 'phase2-floor-loop.spec.luau', 'phase2-defeat-rules.spec.luau', 'hero-action.spec.luau', 'combat-vfx.spec.luau', 'phase4-progression.luau', 'profile-persistence.spec.luau', 'tower-run-loop.spec.luau')) {
     $bundleParts.Add('do')
     $bundleParts.Add([System.IO.File]::ReadAllText((Join-Path $PSScriptRoot $suite)))
     $bundleParts.Add("`nend")

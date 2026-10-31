@@ -111,6 +111,18 @@ local function enemy(biome: string, role: string, id: string, name: string, fami
 	return entry
 end
 
+-- Floor Alpha: the boss of floors 1-4 in each biome. It reuses its biome Elite's rig family, larger and gilded (see
+-- TowerEnemyRigs), under its own id, so camp Elites and the floor boss are different enemies. Role stays ELITE; `Alpha`
+-- selects the ALPHA stat row and the extra signature attack.
+local function alphaOf(elite: any): any
+	local id = "alpha_" .. string.gsub(elite.Id, "^elite_", "")
+	local name = string.gsub(elite.DisplayName, " Elite$", "") .. " Alpha"
+	local entry = enemy(elite.BiomeId, "ELITE", id, name, elite.Rig.ProposedFamily, elite.Anatomy.Description .. " (Alpha: larger, gilded)",
+		elite.Bounds.Width * 1.4, elite.Bounds.Height * 1.4, elite.Bounds.Depth * 1.4, elite.Attacks[1].Kind, elite.Attacks[2].Kind)
+	entry.Alpha = true
+	return entry
+end
+
 local function biome(id: string, name: string, regular1: any, regular2: any, elite: any, boss: any)
 	table.insert(Catalog.Biomes, {
 		Id = id,
@@ -118,6 +130,7 @@ local function biome(id: string, name: string, regular1: any, regular2: any, eli
 		Status = "LOCAL_AUTHORED_UNVERIFIED",
 		RegularEnemyIds = { regular1.Id, regular2.Id },
 		EliteEnemyId = elite.Id,
+		AlphaEnemyId = alphaOf(elite).Id,
 		BossEnemyId = boss.Id,
 	})
 end

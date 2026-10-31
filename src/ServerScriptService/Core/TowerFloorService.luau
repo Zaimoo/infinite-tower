@@ -20,10 +20,16 @@ local remotes: any
 local function remoteFolder(): any
 	local root=RS:WaitForChild("Remotes")
 	local f=root:FindFirstChild("TowerRemotes") or Instance.new("Folder");f.Name="TowerRemotes";f.Parent=root
-	for _,name in {"Request","Response","Context","Ready","Presence","TowerEntityState","TowerAction","TowerSnapshot","OpenSelector","FloorProgress","SquadDefeated","SquadStatus","LootContested","InitiateRetaliation","DuelState"} do
+	for _,name in {"Request","Response","Context","Ready","Presence","TowerEntityState","TowerAction","TowerSnapshot","OpenSelector","FloorProgress","SquadDefeated","SquadStatus","LootContested","InitiateRetaliation","DuelState","RunState","RunSummary"} do
 		if not f:FindFirstChild(name) then local e=Instance.new(name=="TowerSnapshot" and "UnreliableRemoteEvent" or "RemoteEvent");e.Name=name;e.Parent=f end
 	end
 	return f
+end
+local function getRemotes(): any
+	if not remotes then
+		remotes = remoteFolder()
+	end
+	return remotes
 end
 local function createState(player: Player): any
 	local s=states[player]
@@ -37,6 +43,8 @@ end
 function Service.GetState(player: Player): any return createState(player) end
 function Service.GetRoom(id: number): any return rooms[id] end
 function Service.IsTransitioning(player: Player): boolean local s=states[player];return s~=nil and s.Pending~=nil end
+-- Masters whose view is on this floor (at least 1); drives camp scaling in the encounter runtime.
+function Service.MastersOnFloor(id: number): number local n=0;for player,s in pairs(states) do if player.Parent==Players and s.FloorId==id then n+=1 end end;return math.max(1,n) end
 function Service.RegisterAdapter(name: string,adapter: any) adapters[name]=adapter end
 function Service.EnsureRoom(id: number): any
 	if rooms[id] and rooms[id].Status=="READY" then return rooms[id] end
@@ -98,13 +106,15 @@ function Service.GetPresence(player: Player): any
 end
 local function publish()
 	presenceRevision+=1
-	if not remotes then return end
-	for p,s in pairs(states) do if p.Parent==Players and s.Subscribed then remotes.Presence:FireClient(p,Service.GetPresence(p)) end end
+	local r = getRemotes()
+	if not r then return end
+	for p,s in pairs(states) do if p.Parent==Players and s.Subscribed then r.Presence:FireClient(p,Service.GetPresence(p)) end end
 end
 local function reply(player: Player,id: string,status: string,err: string?): any
 	local s=createState(player)
 	local r={ContractVersion=1,RequestId=id,Status=status,ErrorCode=err,LocationRevision=s.LocationRevision,SquadRevision=s.SquadRevision}
-	if player.Parent==Players then remotes.Response:FireClient(player,r) end
+	local rem = getRemotes()
+	if player.Parent==Players and rem and rem:FindFirstChild("Response") then rem.Response:FireClient(player,r) end
 	return r
 end
 local function saveResult(s: any,id: string,fp: string,result: any)
@@ -116,7 +126,9 @@ local function finish(player: Player,status: string,err: string?)
 	s.Pending=nil
 	if pending.Room then pending.Room.Reservations=math.max(0,pending.Room.Reservations-1) end
 	if status~="COMMITTED" and pending.View and player.Parent==Players then
-		local c=Service.Context(player);c.Stage="ABORT";c.RequestId=pending.RequestId;remotes.Context:FireClient(player,c)
+		local c=Service.Context(player);c.Stage="ABORT";c.RequestId=pending.RequestId
+		local rem = getRemotes()
+		if rem and rem:FindFirstChild("Context") then rem.Context:FireClient(player,c) end
 	end
 	saveResult(s,pending.RequestId,pending.Fingerprint,reply(player,pending.RequestId,status,err));publish()
 end
@@ -142,7 +154,8 @@ local function commit(player: Player)
 	if not _G.DataManager or not _G.DataManager.GetProfile(player) then finish(player,"REJECTED","PROFILE_NOT_READY");return end
 	local movingSquad=not p.View or s.SquadAssignment==nil
 	if not combat.ValidateRoster(player) then finish(player,"REJECTED","ROSTER_CHANGED");return end
-	if not p.View and combat.Count(player)==0 then finish(player,"REJECTED","NO_ELIGIBLE_SQUAD");return end
+	if p.Action=="ASSIGN" and combat.Count(player)==0 then finish(player,"REJECTED","NO_ELIGIBLE_SQUAD");return end
+	if p.Action=="RECALL" and s.SquadSize==0 and combat.Count(player)==0 then finish(player,"REJECTED","NO_ELIGIBLE_SQUAD");return end
 	if p.Action=="RECALL" and not combat.CanRecall(player) then finish(player,"REJECTED","RECALL_COOLDOWN");return end
 	-- Capture live cargo now. Preparation never snapshots HP, cooldowns, or item state.
 	local records={}
@@ -189,7 +202,11 @@ local function commit(player: Player)
 		s.SquadFloorId=r.FloorId;s.SquadRoomGeneration=r.RoomGeneration;s.SquadRevision+=1
 		if p.Action=="ASSIGN" then s.SquadAssignment=r.FloorId elseif p.Action=="RECALL" then s.SquadAssignment=nil end
 	end
-	if p.View then local c=Service.Context(player);c.Stage="COMMIT";c.RequestId=p.RequestId;remotes.Context:FireClient(player,c) end
+	if p.View then
+		local c=Service.Context(player);c.Stage="COMMIT";c.RequestId=p.RequestId
+		local rem = getRemotes()
+		if rem and rem:FindFirstChild("Context") then rem.Context:FireClient(player,c) end
+	end
 	combat.BootstrapAll()
 	finish(player,"COMMITTED")
 end
@@ -205,7 +222,11 @@ function Service.Request(player: Player,r: any)
 	local fp=Policy.Fingerprint(r)
 	for id,v in pairs(s.Ledger) do if os.clock()-v.At>60 then s.Ledger[id]=nil end end
 	local stored=s.Ledger[r.RequestId]
-	if stored then if stored.Fingerprint==fp then remotes.Response:FireClient(player,stored.Result) else reply(player,r.RequestId,"REJECTED","REQUEST_ID_CONFLICT") end;return end
+	if stored then
+		local rem = getRemotes()
+		if stored.Fingerprint==fp and rem and rem:FindFirstChild("Response") then rem.Response:FireClient(player,stored.Result) else reply(player,r.RequestId,"REJECTED","REQUEST_ID_CONFLICT") end
+		return
+	end
 	if s.Pending and s.Pending.RequestId==r.RequestId then reply(player,r.RequestId,s.Pending.Fingerprint==fp and "PENDING" or "REJECTED",s.Pending.Fingerprint~=fp and "REQUEST_ID_CONFLICT" or nil);return end
 	if not take(s,r.Action=="CANCEL") then reply(player,r.RequestId,"REJECTED","RATE_LIMITED");return end
 	local function reject(e: string) saveResult(s,r.RequestId,fp,reply(player,r.RequestId,"REJECTED",e)) end
@@ -217,8 +238,10 @@ function Service.Request(player: Player,r: any)
 		if os.clock()-(s.LastSubscription or -99)<1 then reject("RATE_LIMITED");return end;s.LastSubscription=os.clock()
 		if r.Action=="RESYNC" and not Protocol.Same(r,Service.Context(player)) then reject("STALE_REVISION");return end
 		s.Subscribed=true
-		if r.Action=="PRESENCE_SUBSCRIBE" then local c=Service.Context(player);c.Stage="COMMIT";c.RequestId=r.RequestId;remotes.Context:FireClient(player,c) end
-		remotes.Presence:FireClient(player,Service.GetPresence(player));if adapters.Combat then adapters.Combat.Bootstrap(player) end
+		local rem = getRemotes()
+		if r.Action=="PRESENCE_SUBSCRIBE" and rem and rem:FindFirstChild("Context") then local c=Service.Context(player);c.Stage="COMMIT";c.RequestId=r.RequestId;rem.Context:FireClient(player,c) end
+		if rem and rem:FindFirstChild("Presence") then rem.Presence:FireClient(player,Service.GetPresence(player)) end
+		if adapters.Combat then adapters.Combat.Bootstrap(player) end
 		saveResult(s,r.RequestId,fp,reply(player,r.RequestId,"COMMITTED"));return
 	elseif r.Action=="PRESENCE_UNSUBSCRIBE" then s.Subscribed=false;saveResult(s,r.RequestId,fp,reply(player,r.RequestId,"COMMITTED"));return end
 	if s.Pending then reject("BUSY");return end
@@ -228,6 +251,11 @@ function Service.Request(player: Player,r: any)
 	local profile = _G.DataManager and _G.DataManager.GetProfile(player)
 	if not profile then reject('PROFILE_NOT_READY');return end
 	local id=r.Action=='HUB' and 0 or r.Action=='RECALL' and s.FloorId or r.FloorId
+	-- Phase 6 boss lock: once you have hurt this floor's summoned boss, travel stays sealed until it dies or your squad wipes.
+	if (r.Action=='VISIT' or r.Action=='HUB') and s.FloorId>0 and id~=s.FloorId and adapters.Combat and adapters.Combat.BossLocked and adapters.Combat.BossLocked(player,s.FloorId) then
+		if _G.DataManager and _G.DataManager.SendToast then _G.DataManager.SendToast(player,'🔒 Travel is sealed until the boss falls.','WARN') end
+		reject('BOSS_LOCKED');return
+	end
 	if (r.Action=='VISIT' or r.Action=='ASSIGN') and id > 0 then
 		local bypass = RunService:IsStudio() and workspace:GetAttribute('UnlockAllFloors') == true
 		if not bypass then
@@ -260,7 +288,8 @@ function Service.Request(player: Player,r: any)
 	local c={ContractVersion=1,RequestId=p.RequestId,Stage="PREPARE",ServerSessionId=Service.SessionId,FloorId=id,RoomGeneration=room.RoomGeneration,
 		ViewEpoch=p.ViewEpoch,CharacterGeneration=s.CharacterGeneration,Origin=room.Origin,Bounds=room.Bounds,Arrival=room.Arrival,
 		ReadyToken=p.Token,ReadyDeadline=workspace:GetServerTimeNow()+math.max(0,p.Deadline-os.clock()),LocationRevision=s.LocationRevision}
-	remotes.Context:FireClient(player,c)
+	local rem = getRemotes()
+	if rem and rem:FindFirstChild("Context") then rem.Context:FireClient(player,c) end
 	task.delay(math.max(0,p.Deadline-os.clock()),function() if states[player] and states[player].Pending==p then finish(player,"REJECTED","READY_TIMEOUT") end end)
 end
 function Service.Ready(player: Player,r: any)
@@ -270,9 +299,21 @@ function Service.Ready(player: Player,r: any)
 	if not p or not p.View or r.ContractVersion~=1 or r.RequestId~=p.RequestId or r.ReadyToken~=p.Token or r.ViewEpoch~=p.ViewEpoch or r.CharacterGeneration~=p.CharacterGeneration then return end
 	if r.Result=="READY" then commit(player) elseif r.Result=="FAILED" then finish(player,"REJECTED","STREAMING_FAILED") end
 end
-function Service.VisitFloor(player: Player,id: number,request: any) request.Action="VISIT";request.FloorId=id;Service.Request(player,request) end
-function Service.ReturnToHub(player: Player,request: any) request.Action="HUB";Service.Request(player,request) end
-function Service.AssignSquad(player: Player,id: number,request: any) request.Action="ASSIGN";request.FloorId=id;Service.Request(player,request) end
+function Service.VisitFloor(player: Player,id: number,request: any?)
+	local s=createState(player)
+	local req = request or {ContractVersion=1,RequestId=Http:GenerateGUID(false),Action="VISIT",FloorId=id,CharacterGeneration=s.CharacterGeneration,ExpectedLocationRevision=s.LocationRevision,ExpectedSquadRevision=s.SquadRevision}
+	req.Action="VISIT";req.FloorId=id;Service.Request(player,req)
+end
+function Service.ReturnToHub(player: Player,request: any?)
+	local s=createState(player)
+	local req = request or {ContractVersion=1,RequestId=Http:GenerateGUID(false),Action="HUB",CharacterGeneration=s.CharacterGeneration,ExpectedLocationRevision=s.LocationRevision,ExpectedSquadRevision=s.SquadRevision}
+	req.Action="HUB";Service.Request(player,req)
+end
+function Service.AssignSquad(player: Player,id: number,request: any?)
+	local s=createState(player)
+	local req = request or {ContractVersion=1,RequestId=Http:GenerateGUID(false),Action="ASSIGN",FloorId=id,CharacterGeneration=s.CharacterGeneration,ExpectedLocationRevision=s.LocationRevision,ExpectedSquadRevision=s.SquadRevision}
+	req.Action="ASSIGN";req.FloorId=id;Service.Request(player,req)
+end
 function Service.Recall(player: Player,request: any?)
 	local s=createState(player)
 	Service.Request(player,request or {ContractVersion=1,RequestId=Http:GenerateGUID(false),Action="RECALL",CharacterGeneration=s.CharacterGeneration,
@@ -281,6 +322,17 @@ end
 function Service.RosterChanged(player: Player,size: number)
 	local s=createState(player);Service.CancelPending(player,"ROSTER_CHANGED");s.SquadSize=size;s.SquadRevision+=1
 	if size==0 then s.SquadAssignment=nil;s.SquadFloorId=s.FloorId;s.SquadRoomGeneration=s.RoomGeneration end
+	publish()
+end
+function Service.RecallWipedSquad(player: Player)
+	local s=createState(player);Service.CancelPending(player,"SQUAD_WIPED")
+	s.SquadAssignment=nil
+	local targetRoom=rooms[s.FloorId] or rooms[0]
+	if adapters.Combat and targetRoom then
+		adapters.Combat.Transfer(player,targetRoom,false,player.Character and player.Character:GetPivot().Position)
+		s.SquadFloorId=targetRoom.FloorId;s.SquadRoomGeneration=targetRoom.RoomGeneration;s.SquadRevision+=1
+		adapters.Combat.BootstrapAll()
+	end
 	publish()
 end
 function Service.CommitRespawn(player: Player)

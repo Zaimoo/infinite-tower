@@ -11,6 +11,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local SanctuaryRules = require(Shared.Util.TowerSanctuaryRules)
 local RelicConfig = require(Shared:WaitForChild("Config"):WaitForChild("RelicConfig"))
 local GildedGrimoire = require(Shared:WaitForChild("Util"):WaitForChild("GildedGrimoire"))
+local TowerRuns = require(script.Parent.Parent:WaitForChild("Combat"):WaitForChild("TowerRunService"))
 
 local RemotesFolder = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RelicPactRemotes")
 local RelicStateRemote = RemotesFolder:WaitForChild("RelicStateChanged") :: RemoteEvent
@@ -310,11 +311,15 @@ local function awardRelicPayout(player: Player, spec: any, scalar: number, rewar
 		return
 	end
 	local marketMult = dm.GetMarketMultiplier and dm.GetMarketMultiplier(player) or 1.0
-	local gems = math.round(spec.Payout.Gems * scalar * (rewardMultiplier or 1))
-	local gold = math.round(spec.Payout.Gold * scalar * marketMult * (rewardMultiplier or 1))
+	-- Phase 6 M4: only Gold scales with the floor the relic dropped on; gems are flat per tier.
+	-- Phase 6 M5: a relic banked during a climb streak pays more, Gold and gems alike.
+	local streakMult = TowerRuns.RelicMultiplier(player)
+	local gems = math.round(spec.Payout.Gems * scalar * streakMult)
+	local gold = math.round(spec.Payout.Gold * scalar * marketMult * (rewardMultiplier or 1) * streakMult)
 
 	profile.Currencies.Gems += gems
 	profile.Currencies.Gold += gold
+	TowerRuns.AddRelicPayout(player, gold, gems)
 
 	-- Check Calamity Heart +25% Boss Hero Roll
 	if spec.TierId == "CALAMITY_HEART" and math.random() <= 0.25 then
