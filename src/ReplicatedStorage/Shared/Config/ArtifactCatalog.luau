@@ -338,7 +338,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		DisplayName = "Runic Longsword",
 		Type = "SWORD_SHIELD",
 		DefaultStar = 2,
-		ModelAssetId = "weapon_sword_shield",
+		ModelAssetId = "weapon_runic_longsword",
 		Description = "A double-edged steel longsword etched with runic blood-grooves.",
 		CraftCost = { IronGear = 6, RiftOrb = 2 },
 	},

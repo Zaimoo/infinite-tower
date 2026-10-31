@@ -335,6 +335,150 @@ function WeaponModelBuilder.BuildIronBroadsword(): Model
 end
 
 -- ============================================================================
+-- 2d. WEAPON_RUNIC_LONGSWORD (2★ Vanguard Runic Longsword & Heater Shield)
+-- ============================================================================
+function WeaponModelBuilder.BuildRunicLongsword(): Model
+	local model = Instance.new("Model")
+	model.Name = "weapon_runic_longsword"
+
+	local frostedSteel = Color3.fromRGB(203, 232, 247)
+	local darkForgedIron = Color3.fromRGB(37, 40, 48)
+	local obsidianGrip = Color3.fromRGB(24, 24, 31)
+	local runicCyan = Color3.fromRGB(0, 229, 255)
+
+	-- Handle gripped in RightHand at (0, 0, 0)
+	local handle = makePart(model, "Handle", Vector3.new(0.24, 0.80, 0.24), CFrame.new(0, 0, 0), obsidianGrip)
+	model.PrimaryPart = handle
+
+	-- Ferrule Collars
+	local topCollar = makePart(model, "GripCollarTop", Vector3.new(0.28, 0.08, 0.28), CFrame.new(0, 0.38, 0), darkForgedIron, Enum.Material.Metal)
+	weldTo(handle, topCollar)
+	local botCollar = makePart(model, "GripCollarBottom", Vector3.new(0.28, 0.08, 0.28), CFrame.new(0, -0.38, 0), darkForgedIron, Enum.Material.Metal)
+	weldTo(handle, botCollar)
+
+	-- Gothic Pommel Cage & Runic Crystal Core
+	local pommelCage = makePart(model, "PommelCage", Vector3.new(0.36, 0.35, 0.36), CFrame.new(0, -0.62, 0), darkForgedIron, Enum.Material.Metal)
+	weldTo(handle, pommelCage)
+	local pommelGem = makePart(model, "PommelGem", Vector3.new(0.22, 0.26, 0.22), CFrame.new(0, -0.62, 0), runicCyan, Enum.Material.Neon)
+	weldTo(handle, pommelGem)
+	local pommelTip = makePart(model, "PommelFinial", Vector3.new(0.12, 0.12, 0.12), CFrame.new(0, -0.82, 0), darkForgedIron, Enum.Material.Metal)
+	weldTo(handle, pommelTip)
+
+	-- 8-Point Astral Star Crossguard
+	local guardCenter = makePart(model, "CrossguardStar", Vector3.new(0.52, 0.24, 0.26), CFrame.new(0, 0.55, 0), darkForgedIron, Enum.Material.Metal)
+	weldTo(handle, guardCenter)
+	local starRune = makePart(model, "GuardStarRune", Vector3.new(0.26, 0.26, 0.28), CFrame.new(0, 0.55, 0), runicCyan, Enum.Material.Neon)
+	weldTo(handle, starRune)
+
+	-- Swept Gothic Quillons
+	local leftQuillon = makePart(model, "QuillonLeft", Vector3.new(0.48, 0.14, 0.16), CFrame.new(-0.46, 0.62, 0) * CFrame.Angles(0, 0, math.rad(-22)), darkForgedIron, Enum.Material.Metal)
+	weldTo(handle, leftQuillon)
+	local rightQuillon = makePart(model, "QuillonRight", Vector3.new(0.48, 0.14, 0.16), CFrame.new(0.46, 0.62, 0) * CFrame.Angles(0, 0, math.rad(22)), darkForgedIron, Enum.Material.Metal)
+	weldTo(handle, rightQuillon)
+
+	-- Blade (Ricasso + Fuller + Diamond Spear Point)
+	local ricasso = makePart(model, "BladeRicasso", Vector3.new(0.46, 0.25, 0.08), CFrame.new(0, 0.78, 0), frostedSteel, Enum.Material.Metal)
+	weldTo(handle, ricasso)
+	local bladeBody = makePart(model, "Blade", Vector3.new(0.40, 2.40, 0.07), CFrame.new(0, 2.05, 0), frostedSteel, Enum.Material.Metal)
+	weldTo(handle, bladeBody)
+	local fullerRune = makePart(model, "FullerRune", Vector3.new(0.16, 2.20, 0.085), CFrame.new(0, 2.05, 0), runicCyan, Enum.Material.Neon)
+	weldTo(handle, fullerRune)
+	local bladeDiamond = makePart(model, "BladeDiamond", Vector3.new(0.26, 0.55, 0.05), CFrame.new(0, 3.48, 0), frostedSteel, Enum.Material.Metal)
+	weldTo(handle, bladeDiamond)
+	local tip = makeWedge(model, "BladeTip", Vector3.new(0.22, 0.35, 0.05), CFrame.new(0, 3.92, 0) * CFrame.Angles(0, math.pi, 0), frostedSteel, Enum.Material.Metal)
+	weldTo(handle, tip)
+
+	-- Sockets & Attachments
+	addSocket(handle, "Grip", Vector3.zero, EDGE_PLUS_X)
+	local trailBottom = addSocket(handle, "TrailBottom", Vector3.new(0, 0.75, 0))
+	local trailTop = addSocket(handle, "TrailTop", Vector3.new(0, 4.10, 0))
+	local vfxCore = addSocket(handle, "VFXCore", Vector3.new(0, 2.40, 0))
+
+	-- Weapon Swing Trail
+	local trail = Instance.new("Trail")
+	trail.Name = "SwingTrail"
+	trail.Attachment0 = trailBottom
+	trail.Attachment1 = trailTop
+	trail.FaceCamera = true
+	trail.Lifetime = 0.35
+	trail.LightEmission = 1.0
+	trail.LightInfluence = 0.0
+	trail.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0.0, Color3.fromRGB(0, 229, 255)),
+		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(56, 189, 248)),
+		ColorSequenceKeypoint.new(1.0, Color3.fromRGB(30, 64, 175)),
+	})
+	trail.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0.0, 0.15),
+		NumberSequenceKeypoint.new(0.7, 0.40),
+		NumberSequenceKeypoint.new(1.0, 1.00),
+	})
+	trail.WidthScale = NumberSequence.new({
+		NumberSequenceKeypoint.new(0.0, 1.0),
+		NumberSequenceKeypoint.new(0.8, 0.75),
+		NumberSequenceKeypoint.new(1.0, 0.0),
+	})
+	trail.Enabled = false
+	trail.Parent = handle
+
+	-- VFXCore ParticleEmitter (Frost runes and ice motes)
+	local particles = Instance.new("ParticleEmitter")
+	particles.Name = "RunicAuraEmitter"
+	particles.Rate = 12
+	particles.Lifetime = NumberRange.new(0.6, 1.2)
+	particles.Speed = NumberRange.new(0.4, 1.2)
+	particles.Drag = 2.0
+	particles.SpreadAngle = Vector2.new(35, 35)
+	particles.EmissionDirection = Enum.NormalId.Top
+	particles.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0.0, Color3.fromRGB(0, 229, 255)),
+		ColorSequenceKeypoint.new(0.6, Color3.fromRGB(100, 216, 255)),
+		ColorSequenceKeypoint.new(1.0, Color3.fromRGB(15, 30, 90)),
+	})
+	particles.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0.0, 1.0),
+		NumberSequenceKeypoint.new(0.2, 0.1),
+		NumberSequenceKeypoint.new(0.8, 0.3),
+		NumberSequenceKeypoint.new(1.0, 1.0),
+	})
+	particles.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0.0, 0.25),
+		NumberSequenceKeypoint.new(0.5, 0.45),
+		NumberSequenceKeypoint.new(1.0, 0.05),
+	})
+	particles.LightEmission = 1.0
+	particles.LightInfluence = 0.0
+	particles.Parent = vfxCore
+
+	local light = Instance.new("PointLight")
+	light.Name = "RunicGlow"
+	light.Color = runicCyan
+	light.Range = 9.0
+	light.Brightness = 1.8
+	light.Shadows = false
+	light.Parent = vfxCore
+
+	-- Off-hand Heater Shield
+	local shieldModel = Instance.new("Model")
+	shieldModel.Name = "OffhandShield"
+	shieldModel.Parent = model
+
+	local gripS = makePart(shieldModel, "HandleS", Vector3.new(0.2, 0.6, 0.2), CFrame.new(0, 0, 0), darkForgedIron)
+	shieldModel.PrimaryPart = gripS
+
+	local plate = makePart(shieldModel, "ShieldPlate", Vector3.new(0.14, 2.2, 1.6), CFrame.new(-0.25, 0, 0), frostedSteel, Enum.Material.Metal)
+	weldTo(gripS, plate)
+
+	local boss = makePart(shieldModel, "ShieldBoss", Vector3.new(0.18, 0.7, 0.7), CFrame.new(-0.33, 0.2, 0), runicCyan, Enum.Material.Neon)
+	boss.Shape = Enum.PartType.Ball
+	weldTo(gripS, boss)
+
+	addSocket(gripS, "ShieldMount", Vector3.new(-0.18, 0, 0), Vector3.new(0, 90, 0))
+
+	return model
+end
+
+-- ============================================================================
 -- 3. WEAPON_DAGGERS (Dual Rogue Trench Stilettos)
 -- ============================================================================
 function WeaponModelBuilder.BuildDaggers(): Model
@@ -537,6 +681,24 @@ function WeaponModelBuilder.Style(wModel: Model, weaponAssetId: string?, rarityI
 				end
 			end
 		end
+	elseif weaponAssetId == "art_runic_longsword" or weaponAssetId == "weapon_runic_longsword" then
+		for _, p in ipairs(wModel:GetDescendants()) do
+			if p:IsA("BasePart") then
+				if p.Name:find("Rune") or p.Name:find("Gem") or p.Name:find("Aura") or p.Name:find("Boss") then
+					p.Material = Enum.Material.Neon
+					p.Color = Color3.fromRGB(0, 229, 255)
+				elseif p.Name:find("Blade") or p.Name:find("Tip") or p.Name:find("ShieldPlate") then
+					p.Material = Enum.Material.Metal
+					p.Color = Color3.fromRGB(203, 232, 247)
+				elseif p.Name:find("Guard") or p.Name:find("Quillon") or p.Name:find("Pommel") or p.Name:find("Collar") or p.Name:find("HandleS") then
+					p.Material = Enum.Material.Metal
+					p.Color = Color3.fromRGB(37, 40, 48)
+				elseif p.Name == "Handle" then
+					p.Material = Enum.Material.SmoothPlastic
+					p.Color = Color3.fromRGB(24, 24, 31)
+				end
+			end
+		end
 	end
 
 	-- Rarity flair: Legendary+ weapons (rarity >= 14) glow in their rarity colour.
@@ -576,6 +738,7 @@ function WeaponModelBuilder.EnsureWeapons(): (Folder, { [string]: Model })
 		weapon_sword = WeaponModelBuilder.BuildSword,
 		weapon_sword_shield = WeaponModelBuilder.BuildSwordShield,
 		weapon_iron_broadsword = WeaponModelBuilder.BuildIronBroadsword,
+		weapon_runic_longsword = WeaponModelBuilder.BuildRunicLongsword,
 		weapon_daggers = WeaponModelBuilder.BuildDaggers,
 		weapon_axe = WeaponModelBuilder.BuildAxe,
 		weapon_staff = WeaponModelBuilder.BuildStaff,
