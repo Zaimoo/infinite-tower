@@ -201,6 +201,51 @@ local function migratePlotToIsland(plotModel: Model, islandClone: Model, islandT
 		end
 	end
 
+	-- 8. Ensure Leaderboard Power asset is present and placed on the ground along the North Wall
+	local powerLeaderboard = plotModel:FindFirstChild("AvxsedPowerWS")
+	if not powerLeaderboard and leaderboard then
+		local clone = leaderboard:Clone()
+		clone.Name = "AvxsedPowerWS"
+		local s = clone:FindFirstChild("ScreenPlaytime")
+		if s then
+			s.Name = "ScreenPower"
+			local holder = s:FindFirstChild("SurfaceGui") and s.SurfaceGui:FindFirstChild("Holder")
+			local headerLbl = holder and holder:FindFirstChild("Header") and holder.Header:FindFirstChild("LabelFrame") and holder.Header.LabelFrame:FindFirstChild("HeaderLabel") :: TextLabel?
+			if headerLbl then
+				headerLbl.Text = "TOP POWER"
+			end
+		end
+		clone.Parent = plotModel
+		powerLeaderboard = clone
+	end
+	if powerLeaderboard then
+		local rigstand = powerLeaderboard:FindFirstChild("Rigstand")
+		local top1 = rigstand and rigstand:FindFirstChild("Top 1")
+		if top1 and top1:IsA("BasePart") then
+			local targetTop1CF = islandTopCF * CFrame.new(116.6, 6.8, -2.6) * CFrame.Angles(0, math.rad(90), 0)
+			local deltaPos = targetTop1CF.Position - top1.Position
+			if deltaPos.Magnitude > 0.05 then
+				for _, d in ipairs(powerLeaderboard:GetDescendants()) do
+					if d:IsA("BasePart") and d.Name ~= "ScreenPower" then
+						d.CFrame = d.CFrame + deltaPos
+					end
+				end
+			end
+		end
+
+		local screen = powerLeaderboard:FindFirstChild("ScreenPower") or powerLeaderboard:FindFirstChild("ScreenPlaytime")
+		if screen and screen:IsA("BasePart") then
+			screen.Name = "ScreenPower"
+			screen.Anchored = true
+			screen.CanCollide = false
+			screen.Size = Vector3.new(9.4, 12.4, 0.5)
+			screen.Transparency = 0
+			screen.Color = Color3.fromRGB(15, 15, 18)
+			screen.Material = Enum.Material.Glass
+			screen.CFrame = islandTopCF * CFrame.new(116.2, 6.65, -13.0) * CFrame.Angles(0, math.rad(90), 0)
+		end
+	end
+
 	islandClone.Parent = plotModel
 end
 
