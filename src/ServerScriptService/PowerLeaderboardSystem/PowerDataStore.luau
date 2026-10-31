@@ -241,22 +241,36 @@ function DataStoreModule.SyncHistoricalProfiles()
 		end)
 		if not okStatFormulas or not StatFormulas then return end
 
-		local ptOrdered = DataStoreService:GetOrderedDataStore("PlaytimeTotals_V1", Config.DS_SCOPE)
-		local okPT, pages = pcall(function()
-			return ptOrdered:GetSortedAsync(false, 50)
-		end)
-
-		local userIdsToScan = {}
-		if okPT and pages then
-			for _, e in ipairs(pages:GetCurrentPage()) do
-				local uid = Utils.parseUserId(e.key)
-				if uid then
-					table.insert(userIdsToScan, uid)
-				end
-			end
+		local scopesToScan = { Config.DS_SCOPE }
+		if Config.DS_SCOPE == "STUDIO" then
+			table.insert(scopesToScan, "PROD")
+		else
+			table.insert(scopesToScan, "STUDIO")
 		end
 
-		-- Also include default game founders / admins
+		local userIdsToScan = {}
+		for _, sc in ipairs(scopesToScan) do
+			pcall(function()
+				local ptOrdered = DataStoreService:GetOrderedDataStore("PlaytimeTotals_V1", sc)
+				local pages = ptOrdered:GetSortedAsync(false, 50)
+				if pages then
+					for _, e in ipairs(pages:GetCurrentPage()) do
+						local uid = Utils.parseUserId(e.key)
+						if uid and not table.find(userIdsToScan, uid) then
+							table.insert(userIdsToScan, uid)
+						end
+					end
+				end
+			end)
+		end
+
+		-- Also include known active players and admins
+		local knownUids = { 2300599854, 1002761664, 4675946455, 118832016 }
+		for _, uid in ipairs(knownUids) do
+			if not table.find(userIdsToScan, uid) then
+				table.insert(userIdsToScan, uid)
+			end
+		end
 		for uid, _ in pairs(Config.Admin.AdminUserIds) do
 			if not table.find(userIdsToScan, uid) then
 				table.insert(userIdsToScan, uid)
@@ -274,11 +288,14 @@ function DataStoreModule.SyncHistoricalProfiles()
 					return profileStore:GetAsync("User_" .. uid)
 				end)
 				if okProf and typeof(profData) == "table" then
+					local prof = (typeof(profData.Data) == "table") and profData.Data or profData
 					local squadPower = 0
-					if typeof(profData.SquadPower) == "number" and profData.SquadPower > 0 then
+					if typeof(prof.SquadPower) == "number" and prof.SquadPower > 0 then
+						squadPower = prof.SquadPower
+					elseif typeof(profData.SquadPower) == "number" and profData.SquadPower > 0 then
 						squadPower = profData.SquadPower
 					else
-						local calcPower = (StatFormulas :: any).GetSquadPower(profData)
+						local calcPower = (StatFormulas :: any).GetSquadPower(prof)
 						squadPower = calcPower or 0
 					end
 					if squadPower > 0 then

@@ -41,7 +41,13 @@ local function setCardData(card: Frame, userId: number, power: number)
 	local userLbl     = infoLabel and infoLabel:FindFirstChild("UsernameLabel") :: TextLabel?
 
 	local powerFrame  = card:FindFirstChild("TotalPowerLabelFrame") or card:FindFirstChild("TotalPlaytimeLabelFrame")
+	if powerFrame then
+		powerFrame.Name = "TotalPowerLabelFrame"
+	end
 	local powerLbl    = powerFrame and (powerFrame:FindFirstChild("TotalPowerLabel") or powerFrame:FindFirstChild("TotalPlaytimeLabel")) :: TextLabel?
+	if powerLbl then
+		powerLbl.Name = "TotalPowerLabel"
+	end
 
 	local uname, dname = Utils.getUsernamePair(userId)
 	if nameLbl then nameLbl.Text = dname end
