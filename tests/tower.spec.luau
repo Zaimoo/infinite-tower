@@ -82,12 +82,12 @@ test("Ten unique bosses occur only on multiples of five; encounters reference th
 	assert(count(bosses) == 10)
 end)
 
-test("Manifest covers 40 enemies with local authored rigs/clips and no fabricated uploaded IDs", function()
-	assert(count(Mobs.Entries) == 40)
+test("Manifest covers 50 enemies (40 plus 10 Floor Alphas) with local authored rigs/clips and no fabricated uploaded IDs", function()
+	assert(count(Mobs.Entries) == 50)
 	local roleCounts, referenced = { REGULAR = 0, ELITE = 0, BOSS = 0 }, {}
 	for _, biome in ipairs(Mobs.Biomes) do
 		assert(#biome.RegularEnemyIds == 2)
-		for _, id in ipairs({ biome.RegularEnemyIds[1], biome.RegularEnemyIds[2], biome.EliteEnemyId, biome.BossEnemyId }) do
+		for _, id in ipairs({ biome.RegularEnemyIds[1], biome.RegularEnemyIds[2], biome.EliteEnemyId, biome.AlphaEnemyId, biome.BossEnemyId }) do
 			assert(not referenced[id]); referenced[id] = true
 			assert(Mobs.Get(id).BiomeId == biome.Id)
 		end
@@ -112,13 +112,13 @@ test("Manifest covers 40 enemies with local authored rigs/clips and no fabricate
 		end
 		assert(Combat.Get(id), "Missing executable combat entry for " .. id)
 	end
-	assert(roleCounts.REGULAR == 20 and roleCounts.ELITE == 10 and roleCounts.BOSS == 10)
+	assert(roleCounts.REGULAR == 20 and roleCounts.ELITE == 20 and roleCounts.BOSS == 10) -- ELITE includes the 10 Alphas
 end)
 
 test("Authored attack contract has anticipation, one server impact, recovery and cancellation", function()
 	local ids = {}
 	for _, enemy in pairs(Mobs.Entries) do
-		assert(#enemy.Attacks == (if enemy.Role == "BOSS" then 3 elseif enemy.Role == "ELITE" then 2 else 1))
+		assert(#enemy.Attacks == (if enemy.Role == "BOSS" then 3 elseif enemy.Alpha then 2 elseif enemy.Role == "ELITE" then 2 else 1))
 		for _, attack in ipairs(enemy.Attacks) do
 			assert(not ids[attack.Id]); ids[attack.Id] = true
 			assert(enemy.Animations[attack.AnimationKey].Status == "LOCAL_AUTHORED_UNVERIFIED")
@@ -147,14 +147,15 @@ test("Invalid destinations and absent encounter IDs fail without coercion or bou
 	assert(Floors.GetEnemyStats(1, Mobs.Biomes[1].BossEnemyId) == nil)
 end)
 
-test("Every floor stat is finite/nonnegative and each role progresses monotonically", function()
+test("Every floor stat is finite/nonnegative and each role progresses biome to biome (the in-biome sawtooth may dip)", function()
 	local previous = {}
 	for id = 1, 50 do
 		local floor = Floors.Get(id)
 		for _, values in ipairs({ floor.Difficulty, floor.Rewards }) do for _, value in pairs(values) do finiteNonnegative(value) end end
 		for _, encounter in ipairs(floor.Encounters) do
 			local stats = assert(Floors.GetEnemyStats(id, encounter.EnemyId))
-			local role = Mobs.Get(encounter.EnemyId).Role
+			local mob = Mobs.Get(encounter.EnemyId)
+			local role = (if mob.Alpha then "ALPHA" else mob.Role) .. floor.IndexInBiome -- same slot of the previous biome must never be easier
 			for key, value in pairs(stats) do
 				finiteNonnegative(value); assert(value > 0 and value % 1 == 0)
 				if previous[role] then assert(value >= previous[role][key], "Scaling regressed for " .. role .. "." .. key) end
@@ -174,13 +175,13 @@ end)
 
 test("Provisional balance is measured against current starter formulas, not claimed playtested", function()
 	local totalDPS = 0
-	for _, starter in ipairs({ { Id = "hero_han", Quality = 1.05, HP = 315, ATK = 63, DPS = 63 }, { Id = "hero_jenna", Quality = 1, HP = 210, ATK = 51, DPS = 63.8 } }) do
+	for _, starter in ipairs({ { Id = "hero_han", Quality = 1.05, HP = 315, ATK = 63, DPS = 70 }, { Id = "hero_jenna", Quality = 1, HP = 210, ATK = 51, DPS = 63.8 } }) do
 		local seed = Heroes.Seeds[starter.Id]
 		local atk, hp, dps = Stats.GetEffectiveCombatStats({ TemplateId = starter.Id, Level = 1, QualityScalar = starter.Quality, BaseATK = seed.NativeATK, BaseHP = seed.NativeHP, Archetype = seed.Archetype, AttackInterval = seed.AttackInterval, CurrentStamina = 100 }, false, false, { Star = 1, Rarity = 1 })
 		assert(atk == starter.ATK and hp == starter.HP and dps == starter.DPS)
 		totalDPS += dps
 	end
-	assert(math.abs(totalDPS - 126.8) < .001)
+	assert(math.abs(totalDPS - 133.8) < .001) -- 10 Hz tick: Han's 0.81s attack now rounds to 0.9s
 	for _, id in ipairs({ 1, 5, 25, 50 }) do
 		local floor = Floors.Get(id)
 		local enemyId = floor.BossEnemyId or floor.Encounters[1].EnemyId

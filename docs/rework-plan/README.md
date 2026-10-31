@@ -18,7 +18,9 @@ flowchart TD
     P4["Phase 4: Onboarding Engine, Unlocks & Idle Backend\n(Pinned quest spine, v3 Profile Schema, facility labor loop)"]
     P5["Phase 5: Unified React-lua UI, HUD & Menu Migration\n(4-element HUD, Goal Card, Modals, Menus, Gamepad polish)"]
 
-    P0 --> P1 --> P2 --> P3 --> P4 --> P5
+    P6["Phase 6: Tower Run Loop & Economy Rebalance\n(Camp waves, floor Alphas, streak, 10 Hz sim)"]
+
+    P0 --> P1 --> P2 --> P3 --> P4 --> P5 --> P6
 ```
 
 ---
@@ -35,6 +37,7 @@ Each phase has its own detailed, self-contained implementation specification:
 | **3** | [PHASE_3_TOWER_PVP_RETALIATION.md](PHASE_3_TOWER_PVP_RETALIATION.md) | Tower PvP & Duels | Killer-tagged mob loot, [Loot Thief] flags, non-consequential retaliation duel, loser drop lockout. |
 | **4** | [PHASE_4_ONBOARDING_AND_PROGRESSION.md](PHASE_4_ONBOARDING_AND_PROGRESSION.md) | Progression backend | `OnboardingConfig`, `OnboardingService`, v3 profile schema migration, system unlock gating, Fortress Development Tree (facility unlocks and upgrades), God's Blessing fountain facility (summon luck), inherent hero rarity with lowered hero odds, facility-only idle labor loop. |
 | **5** | [PHASE_5_REACT_UI_AND_MENUS.md](PHASE_5_REACT_UI_AND_MENUS.md) | Complete UI/HUD/UX Overhaul | Modern React-lua root, 4-element persistent HUD, Goal Tracker card, Defeat/Duel/Claim modals, migrated menus (Forge, Squad, Pit, Facilities), gamepad navigation, retirement of legacy `HUDController`. |
+| **6** | [PHASE_6_TOWER_RUN_LOOP.md](PHASE_6_TOWER_RUN_LOOP.md) + [PHASE_6_TOWER_UX.md](PHASE_6_TOWER_UX.md) | Tower run loop, economy & UX | Denser Elite-led camps (landed), camp-wave respawns scaled by player count, one Floor Alpha per biome for floors 1–4 (Biome Boss on floor 5), higher threshold and enemy damage, flat relic gems with elite relic drops, first-clear and biome boss rewards, climb streak, portal rework, run summary, 10 Hz sim. |
 
 ---
 

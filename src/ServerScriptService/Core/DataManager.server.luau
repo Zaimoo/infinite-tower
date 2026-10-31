@@ -15,6 +15,8 @@ local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormu
 local PitService = require(script.Parent:WaitForChild("PitService"))
 local OfflineRewardService = require(script.Parent:WaitForChild("OfflineRewardService"))
 local ArtifactCatalog = require(Shared:WaitForChild("Config"):WaitForChild("ArtifactCatalog"))
+local TowerHardcore = require(Shared:WaitForChild("Config"):WaitForChild("TowerHardcoreConfig"))
+local TowerProgress = require(Shared:WaitForChild("Util"):WaitForChild("TowerProgress"))
 local FortressTree = require(Shared:WaitForChild("Util"):WaitForChild("FortressTree"))
 local SummonLuck = require(Shared:WaitForChild("Util"):WaitForChild("SummonLuck"))
 local Onboarding = require(Shared:WaitForChild("Util"):WaitForChild("Onboarding"))
@@ -434,7 +436,7 @@ local function createDefaultPlayerProfile(): PlayerProfile
 		PlotIndex = 1,
 		Currencies = {
 			Gold = 500,
-			Gems = 2000, -- Immediate summon testing (Doc 3 Section 5.1 & Artifact Banner)
+			Gems = TowerHardcore.StarterGems, -- Phase 6: one 10-pull with its guaranteed Rare (testers use DEV_GRANT_RESOURCES)
 		},
 
 		ArtifactBannerPity = 8, -- Initial: 42 to 5-star guarantee (50 - 8 = 42) matching mockup parity
@@ -1218,6 +1220,27 @@ function DataManager.SummonArtifact(player: Player, pullCount: any): (boolean, s
 	end
 	DataManager.SendToast(player, "Artifact Summoned: " .. table.concat(summaryNames, ", "), "SUCCESS")
 	return true, "Summon successful", summonedList, pityRemaining
+end
+
+-- Phase 6 M4: the first clear of each Biome Boss drops one artifact (1★) of a guaranteed minimum rarity tier.
+-- Tier by boss: 1-2 -> Rare, 3-4 -> Superior, 5-6 -> Exalted, 7-8 -> Legendary, 9-10 -> Mythical (capped at Mythical until
+-- higher tiers ship). The template is any weapon in the artifact banner's pools.
+function DataManager.GrantBossArtifact(player: Player, bossTier: number): ArtifactInstance?
+	local profile = ActiveProfiles[player]
+	if not profile then return nil end
+	local cfg = ArtifactCatalog.Banner
+	local pool = {}
+	for _, list in { cfg.Pool12Stars, cfg.Pool3Stars, cfg.Pool4Stars, cfg.Featured5Stars } do
+		for _, templateId in ipairs(list) do table.insert(pool, templateId) end
+	end
+	if #pool == 0 then return nil end
+	local rarity = TowerProgress.BossArtifactRarity(bossTier)
+	local uuid, artifact = DataManager.CreateArtifact(pool[math.random(1, #pool)], 1, rarity)
+	profile.Artifacts = profile.Artifacts or {}
+	profile.Artifacts[uuid] = artifact
+	DataManager.SyncProfile(player)
+	DataManager.SendToast(player, string.format("Boss reward: %s (%s)", artifact.DisplayName, ArtifactCatalog.GetRarityInfo(rarity).Name), "SUCCESS")
+	return artifact
 end
 
 RequestSummonArtifactFunc.OnServerInvoke = function(player: Player, pullCount: any, targetPlot: any?)

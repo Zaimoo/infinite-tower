@@ -52,22 +52,20 @@ function Layout.Get(index: number): any
 		table.insert(camps, {Id=id, Platform=terrace, X=p.X+(dx or 0), Y=p.Y, Z=p.Z,
 			Elite=elite or false, Boss=boss or false, Size=size or 4})
 	end
-	if index == 1 then
-		camp("FOREGROUND_WEST", "Basin", -65, false, false, 3)
-		camp("FOREGROUND_EAST", "Basin", 65)
-		camp("APEX_SANCTUM", "Apex", 0, true)
-	elseif index <= 3 then
-		camp("FOREGROUND", "Basin", 0, false, false, 3)
-		camp("WEST_GALLERY", "WestGallery", 0, index == 3)
-		camp("EAST_GALLERY", "EastGallery")
-		if index == 3 then camp("CENTRAL_CROSSING", "Crossing") end
-		camp("APEX_SANCTUM", "Apex", 0, true)
-	else
-		camp("FOREGROUND_WEST", "Basin", -65); camp("FOREGROUND_EAST", "Basin", 65)
-		camp("WEST_GALLERY", "WestGallery", 0, index == 4); camp("EAST_GALLERY", "EastGallery")
-		camp("UPPER_WEST", "WestBastion", 0, index == 4); camp("UPPER_EAST", "EastBastion", 0, index == 4)
-		if index == 5 then camp("APEX_SANCTUM", "Apex", 0, false, true, 5) end
+	-- Live camps per floor: 16 / 22 / 25 / 35 / 35 mobs, led by 1 / 2 / 3 / 4 / 4 Elites. The Basin
+	-- centre stays clear so arrivals land out of aggro. The Apex camp is never pre-placed: it marks
+	-- where the floor champion (or Biome Boss) is summoned.
+	local size = if index == 1 then 4 else 5
+	camp("BASIN_WEST", "Basin", -110, false, false, if index == 2 then 4 else size)
+	camp("BASIN_EAST", "Basin", 110, false, false, if index == 2 then 4 else size)
+	if index >= 2 then camp("CENTRAL_CROSSING", "Crossing", 0, index == 3, false, if index == 2 then 4 else 5) end
+	camp("WEST_GALLERY", "WestGallery", 0, true, false, size)
+	camp("EAST_GALLERY", "EastGallery", 0, index >= 2, false, size)
+	if index >= 4 then
+		camp("UPPER_WEST", "WestBastion", 0, true, false, 5)
+		camp("UPPER_EAST", "EastBastion", 0, true, false, 5)
 	end
+	if index == 5 then camp("APEX_SANCTUM", "Apex", 0, false, true, 5) else camp("APEX_SANCTUM", "Apex", 0, true) end
 	return {Width=w, Depth=d, Height=heights[index], Bottom=if index==5 then -6 elseif index>=3 then -4 else 0,
 		Platforms=platforms, Links=links, Camps=camps, Sanctuary=safe}
 end
@@ -79,7 +77,7 @@ function Layout.Placements(biome: any, index: number): {any}
 			local enemy = biome.RegularEnemyIds[if slot%2==0 then 2 else 1]
 			if camp.Boss and slot==1 then enemy=biome.BossEnemyId
 			elseif camp.Boss and slot<=3 then enemy=biome.EliteEnemyId
-			elseif camp.Elite and slot==1 then enemy=biome.EliteEnemyId end
+			elseif camp.Elite and slot==1 then enemy=if camp.Id=="APEX_SANCTUM" then biome.AlphaEnemyId else biome.EliteEnemyId end
 			local offsets = {{0,0},{-18,12},{18,12},{-12,-16},{12,-16}}
 			table.insert(result, {EnemyId=enemy, X=camp.X+offsets[slot][1], Y=camp.Y, Z=camp.Z+offsets[slot][2],
 				CampId="CAMP_"..camp.Id, LeashRadius=if camp.Boss then 95 else 60})

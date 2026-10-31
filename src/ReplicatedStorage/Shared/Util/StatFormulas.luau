@@ -8,6 +8,7 @@ local ArtifactCatalog = require(ReplicatedStorage:WaitForChild("Shared"):WaitFor
 local PitBalanceConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("PitBalanceConfig"))
 
 local B = require(ReplicatedStorage.Shared.Config.StatBalance)
+local TowerFloorConfig = require(ReplicatedStorage.Shared.Config.TowerFloorConfig)
 local FacilityConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("FacilityConfig"))
 local StatFormulas = {}
 
@@ -79,6 +80,36 @@ function StatFormulas.GetCombatSnapshot(hero: any, artifact: any?, inOverdrive: 
  return {AttackDamage=damage,Health=health,AttackSpeed=1/interval,MovementSpeed=seed and seed.MovementSpeed or 20,
   AttackInterval=interval,TickInterval=tickInterval,DPS=math.round(damage/tickInterval*exhaustion*10)/10,
   ATK=damage,HP=health,WeaponPower=power}
+end
+
+-- Rift Attunement (Phase 6): in the tower, one hero's power is capped by how far its Master has climbed, so a lucky or premium
+-- pull is felt without skipping a biome. The pull itself (hero, star, rarity) is never changed, and labor is not capped.
+-- The cap is about 1.5x an on-curve hero two floors ahead of the highest floor reached, and rises with every new floor.
+StatFormulas.AttunementHeadroom = 1.5
+StatFormulas.AttunementFloorsAhead = 2
+local attunementCaps: { number }? = nil
+function StatFormulas.GetAttunementCap(maxFloorReached: number?): number
+ local floor=math.clamp(math.floor(maxFloorReached or 1),1,TowerFloorConfig.FloorCount)
+ if not attunementCaps then
+  -- Climbing never lowers the cap, even where the sawtooth or a bigger expected squad would: take the running maximum.
+  local caps,best={},0
+  for f=1,TowerFloorConfig.FloorCount do
+   local ahead=math.min(TowerFloorConfig.FloorCount,f+StatFormulas.AttunementFloorsAhead)
+   best=math.max(best,StatFormulas.AttunementHeadroom*TowerFloorConfig.RecommendedPower(ahead)/B.ExpectedSquadSize(f))
+   caps[f]=best
+  end
+  attunementCaps=caps
+ end
+ return (attunementCaps :: { number })[floor]
+end
+-- The ATK/HP multiplier to apply for one hero: the Training Grounds multiplier, reduced if the hero would exceed `cap`.
+-- GetHeroPower scales linearly with this multiplier, so a single factor caps damage and health together and keeps the kit.
+function StatFormulas.GetAttunedMultiplier(hero: any, artifact: any?, trainingMultiplier: number?, cap: number?): number
+ local mult=trainingMultiplier or 1
+ if not cap then return mult end
+ local power=StatFormulas.GetHeroPower(hero,artifact,mult)
+ if power<=cap or power<=0 then return mult end
+ return mult*cap/power
 end
 function StatFormulas.GetEffectiveCombatStats(hero: any, inBloodPact: boolean?, inOverdrive: boolean?, artifact: any?, trainingMultiplier: number?): (number,number,number,number)
  local v=StatFormulas.GetCombatSnapshot(hero,artifact,inOverdrive,inBloodPact,trainingMultiplier)

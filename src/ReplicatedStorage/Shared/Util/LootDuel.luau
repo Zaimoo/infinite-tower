@@ -12,10 +12,6 @@ LootDuel.DUEL_OUTRO_SECONDS = 3.0 -- result banner before squads return to their
 LootDuel.DUEL_DAMAGE_SCALE = 0.5 -- hero-vs-hero damage multiplier
 LootDuel.RETALIATE_COOLDOWN = 3.0
 
--- Bonus contested drops: regular mob kills still pay their Gold directly; on top of that a
--- killer-tagged Bounty Bag worth the kill's Gold can drop and must be carried and banked.
-LootDuel.BOUNTY_CHANCE = table.freeze({ REGULAR = 0.30, ELITE = 1.0 })
-
 -- Arena geometry: flat-top hex grid, HEX_SIZE is centre-to-corner in studs.
 LootDuel.HEX_SIZE = 3.2
 LootDuel.ARENA_RINGS = 5

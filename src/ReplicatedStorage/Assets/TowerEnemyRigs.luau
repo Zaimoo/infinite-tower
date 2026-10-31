@@ -1,5 +1,5 @@
 --!strict
--- Editable native model source for all 40 Tower enemies across 10 biomes.
+-- Editable native model source for all 50 Tower enemies (40 plus one Floor Alpha per biome) across 10 biomes.
 -- Each limb is articulated by a named Motor6D; no uploaded asset IDs are implied.
 local Config = require(game.ReplicatedStorage.Shared.Config.FirstBiomeCombat)
 local R = {}
@@ -113,9 +113,23 @@ local function part(parent: Instance, name: string, size: Vector3, color: Color3
 	return p
 end
 
+-- Floor Alphas (the boss of floors 1-4) reuse their biome Elite's rig, larger and gilded so they read as different from camp Elites.
+local ALPHA_GOLD = Color3.fromRGB(255, 196, 72)
+local function alphaPalette(pal: Palette): Palette
+	return {
+		Primary = pal.Primary:Lerp(Color3.fromRGB(28, 22, 34), .25),
+		Secondary = pal.Secondary,
+		Accent = pal.Accent:Lerp(ALPHA_GOLD, .35),
+		Trim = pal.Trim:Lerp(ALPHA_GOLD, .6),
+		Glow = ALPHA_GOLD,
+		Mat = pal.Mat,
+	}
+end
+
 function R.Build(model: Model, root: BasePart, enemyId: string): any
 	local spec = assert(Config.Get(enemyId), "Missing tower enemy rig: " .. enemyId)
 	local pal = Palettes[spec.BiomeId] or Palettes.verdant_ruins
+	if spec.Alpha then pal = alphaPalette(pal) end
 	local family = spec.CatalogFamily or spec.RigFamily
 	local folder = Instance.new("Model")
 	folder.Name = "TowerEnemyArt"
@@ -171,7 +185,7 @@ function R.Build(model: Model, root: BasePart, enemyId: string): any
 	end
 
 	if family == "CRAWLER" or family == "INSECT" or family == "CRUSTACEAN" or family == "SCORPION" or spec.RigFamily == "SIX_LEGGED_CRAWLER" then
-		local scale = if family == "SCORPION" then 1.35 elseif family == "CRUSTACEAN" then 1.12 else 1.0
+		local scale = (if family == "SCORPION" then 1.35 elseif family == "CRUSTACEAN" then 1.12 else 1.0) * (if spec.Alpha then 1.4 else 1)
 		local function v(x: number, y: number, z: number) return Vector3.new(x, y, z) * scale end
 		local body = limb("Body", root, v(3.2, 1.5, 4.4), CFrame.new(0, .35 * scale, 0), pal.Primary, Enum.PartType.Ball)
 		for i = 1, 3 do
@@ -203,7 +217,7 @@ function R.Build(model: Model, root: BasePart, enemyId: string): any
 			end
 		end
 	elseif family == "QUADRUPED" then
-		local scale = spec.Role == "ELITE" and 1.35 or 1.0
+		local scale = if spec.Alpha then 1.8 elseif spec.Role == "ELITE" then 1.35 else 1.0
 		local function v(x: number, y: number, z: number) return Vector3.new(x, y, z) * scale end
 		local body = limb("Body", root, v(2.4, 2.1, 4.8), CFrame.new(0, .35 * scale, 0), pal.Primary)
 		detail("SpineRidge", body, v(.6, .55, 4.2), CFrame.new(0, 1.15 * scale, 0), pal.Accent)
@@ -265,7 +279,7 @@ function R.Build(model: Model, root: BasePart, enemyId: string): any
 	else
 		local boss = spec.Role == "BOSS"
 		local elite = spec.Role == "ELITE"
-		local scale = if boss then 2.0 elseif elite then 1.18 elseif family == "SMALL_BIPED" then .68 else .92
+		local scale = if boss then 2.0 elseif spec.Alpha then 1.6 elseif elite then 1.18 elseif family == "SMALL_BIPED" then .68 else .92
 		local function v(x: number, y: number, z: number) return Vector3.new(x, y, z) * scale end
 		local function cf(x: number, y: number, z: number) return CFrame.new(v(x, y, z)) end
 

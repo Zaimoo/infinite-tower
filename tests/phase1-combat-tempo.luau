@@ -244,13 +244,13 @@ do
 		string.format("Elite ratio %.2f expected ~0.20", eliteRatio)
 	)
 
-	-- Verify Kill Accounting: Regular = +1, Elite = +2
+	-- Verify Kill Accounting: Regular = +1, Elite = +3
 	local progress = TowerProgress.CreateProgress(1)
 	assertTest("KillProgress_InitialZero", progress.CurrentKills == 0)
 	TowerProgress.RecordKill(progress, "REGULAR")
 	assertTest("KillProgress_RegularPlus1", progress.CurrentKills == 1)
 	TowerProgress.RecordKill(progress, "ELITE")
-	assertTest("KillProgress_ElitePlus2", progress.CurrentKills == 3)
+	assertTest("KillProgress_ElitePlus3", progress.CurrentKills == 4)
 
 	-- Verify Boss Gate: Spawns exactly when target kills reached
 	local targetProgress = TowerProgress.CreateProgress(1)

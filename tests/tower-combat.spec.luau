@@ -16,7 +16,7 @@ local function fixture()
 	return m,h,d,a
 end
 local function safe(e) return e.Safe==true end
-test("Combat registry contains all 40 complete runtime enemies, clips, and all 50 floors",function()
+test("Combat registry contains all 50 complete runtime enemies (incl. 10 Floor Alphas), clips, and all 50 floors",function()
 	local n=0;for enemyId,e in pairs(C.Entries) do n+=1;assert(#e.RequiredSlots>=5);assert(e.ModelSource and e.ClipSource)
 		local clipSet=assert(Clips[enemyId],"Missing clip set for "..enemyId)
 		for _,slot in e.RequiredSlots do
@@ -25,7 +25,7 @@ test("Combat registry contains all 40 complete runtime enemies, clips, and all 5
 		end
 		for _,a in e.Attacks do assert(a.ImpactOffsetSeconds>=.6 and a.RecoverySeconds>0 and a.Range>0 and a.DamageMultiplier>0) end
 	end
-	assert(n==40 and C.ReleaseEnabled)
+	assert(n==50 and C.ReleaseEnabled)
 	for floorId=1,50 do
 		local placements=assert(C.Floors[floorId],"Missing placements on floor "..floorId)
 		assert(#placements>=3)

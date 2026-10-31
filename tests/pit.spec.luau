@@ -2,6 +2,7 @@
 local Config = require(nodes["ReplicatedStorage.Shared.Config.PitBalanceConfig"])
 local Catalog = require(nodes["ReplicatedStorage.Shared.Config.HeroCatalog"])
 local Stats = require(nodes["ReplicatedStorage.Shared.Util.StatFormulas"])
+local Balance = require(nodes["ReplicatedStorage.Shared.Config.StatBalance"])
 local Math = require(nodes["ReplicatedStorage.Shared.Util.PitMath"])
 local PitService = require(nodes["ServerScriptService.Core.PitService"])
 
@@ -107,7 +108,7 @@ test("Every native seed uses canonical compounded growth without retired effects
 				local rarityCombat, rarityLabor = 1.35^(seed.Rarity-1), 1.12^(seed.Rarity-1)
 				local expectedATK = math.round(seed.BaseATK_1Star * quality * rarityCombat * 3^(seed.BaseStar-1) * 1.08^(level-1))
 				local expectedHP = math.round(seed.BaseHP_1Star * quality * rarityCombat * 3^(seed.BaseStar-1) * 1.08^(level-1))
-				local expectedDPS = math.round((expectedATK / (math.ceil(seed.AttackInterval/.2-1e-10)*.2)) * 10) / 10
+				local expectedDPS = math.round((expectedATK / (math.ceil(seed.AttackInterval/Balance.TickSeconds-1e-10)*Balance.TickSeconds)) * 10) / 10
 				equal(atk, expectedATK); equal(hp, expectedHP); equal(dps, expectedDPS)
 				for _, facility in ipairs({ "BENCHED", "FACILITY_CONDUIT", "FACILITY_INFIRMARY", "FACILITY_LAB" }) do
 					local synergy = (seed.PreferredFacility == "ALL" or seed.PreferredFacility == facility) and 0.25 or 0
@@ -127,7 +128,7 @@ test("One and multiple donors apply the existing level curve", function()
 	equal(batch.Level, 3); equal(batch.XP, 63)
 	equal(original.Level, 1); equal(original.XP, 0)
 	local atk, hp, dps = Stats.GetEffectiveCombatStats(after, false, false)
-	equal(atk, 43); equal(hp, 324); equal(dps, 43)
+	equal(atk, 43); equal(hp, 324); equal(dps, 47.8) -- 43 / 0.9s (a 0.85s attack rounds up to the 10 Hz tick)
 	equal(Stats.GetEffectiveLabor(after), 14.7)
 end)
 

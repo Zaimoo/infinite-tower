@@ -35,14 +35,14 @@ test("Every terrace connects to sanctuary with broad slopes at most fifteen degr
 	end
 end)
 test("All fifty floors have supported isolated camps and matching encounter manifests",function()
-	local totals={11,15,19,24,29}
+	local totals,campCounts={20,26,29,39,40},{5,6,6,8,8}
 	for id=1,50 do
 		local floor=Floors.Get(id)
 		local room=Layout.Get(floor.IndexInBiome)
 		local camps,counts={},{}
 		for _,camp in room.Camps do camps["CAMP_"..camp.Id]=camp end
 		local placements=Combat.Floors[id]
-		assert(#placements==totals[floor.IndexInBiome] and #room.Camps==floor.IndexInBiome+2)
+		assert(#placements==totals[floor.IndexInBiome] and #room.Camps==campCounts[floor.IndexInBiome])
 		local bosses,elites=0,0
 		for _,p in placements do
 			local camp=assert(camps[p.CampId])
@@ -56,7 +56,7 @@ test("All fifty floors have supported isolated camps and matching encounter mani
 			if role=="BOSS" then bosses+=1 elseif role=="ELITE" then elites+=1 end
 		end
 		assert(bosses==(floor.IndexInBiome==5 and 1 or 0))
-		assert(elites==({1,1,2,3,2})[floor.IndexInBiome])
+		assert(elites==({2,3,4,5,6})[floor.IndexInBiome])
 		for _,e in floor.Encounters do assert(counts[e.EnemyId]==e.Count); counts[e.EnemyId]=nil end
 		assert(next(counts)==nil)
 	end
@@ -93,7 +93,8 @@ test("Kill gems stay flat while gold and relic odds/value rise on every floor",f
    end
    assert(Floors.RollRelic(floor,role,0,0)=="ABYSSAL_CORE")
    assert(Floors.RollRelic(floor,role,0,.99)=="MANA_GEODE")
-   assert(Floors.RollRelic(floor,role,reward.RelicChance,0)==nil)
+   -- Phase 6 M4: a camp Elite never walks away empty-handed; every other role can miss.
+   assert(Floors.RollRelic(floor,role,reward.RelicChance,0)==(role=="ELITE" and "MANA_GEODE" or nil))
    previous=reward
   end
  end

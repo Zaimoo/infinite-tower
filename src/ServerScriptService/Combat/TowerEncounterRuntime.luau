@@ -8,6 +8,7 @@ local TowerFloorConfig = require(RS.Shared.Config.TowerFloorConfig)
 local StatBalance = require(RS.Shared.Config.StatBalance)
 local Timeline = require(RS.Shared.Util.AttackTimeline)
 local TowerProgress = require(RS.Shared.Util.TowerProgress)
+local CampWaves = require(RS.Shared.Util.CampWaves)
 local TowerLayout = require(RS.Shared.Config.TowerLayout)
 local Runtime = {}
 
@@ -195,20 +196,85 @@ function Runtime.new(api: any): any
 		if ledger.PayoutClaims[key] then return end
 		ledger.PayoutClaims[key] = true
 		self.Metrics.Deaths += 1
-		-- Summoned bosses never respawn on a timer; the next one needs a fresh kill threshold.
-		m.RespawnAt = if m.Summoned then math.huge else workspace:GetServerTimeNow() + (m.Role == "BOSS" and Config.BossRespawnSeconds or Config.RespawnSeconds)
+		-- Summoned bosses and surge packs never respawn on a timer; the next one needs a fresh kill threshold.
+		-- Camp members wait for the rest of their camp, then SyncRooms respawns the whole camp as a wave.
+		m.DiedAt = workspace:GetServerTimeNow()
+		m.RespawnAt = if m.Summoned or (m.CampId and m.Role ~= "BOSS") then math.huge else m.DiedAt + (m.Role == "BOSS" and Config.BossRespawnSeconds or Config.RespawnSeconds)
 		api.Send(m, { Kind = "DEATH", Actor = Timeline.Identity(m), EnemyId = m.EnemyId, StartServerTime = workspace:GetServerTimeNow(), Duration = 1.6 })
 		-- Claim before any reward/profile callback. Travel and simultaneous hits cannot retry it.
 		api.Reward(m, killer)
 		api.Changed()
-		if m.Role == "BOSS" and m.RespawnAt == math.huge then
+		if m.Summoned then
 			task.delay(3, function()
 				if not m.IsAlive and api.Mobs[m.NetId] == m then
 					api.Mobs[m.NetId] = nil
+					if ledger.Surge then ledger.Surge[m.NetId] = nil end
 					api.Changed()
 				end
 			end)
 		end
+	end
+	-- Placements the floor should hold right now: the layout plus scaled-in members when several Masters share it.
+	function self:EffectivePlacements(floor, placements)
+		local masters = if api.Tower.MastersOnFloor then api.Tower.MastersOnFloor(floor) else 1
+		local floorSpec = TowerFloorConfig.Get(floor)
+		if masters <= 1 or not floorSpec then return table.clone(placements) end
+		return CampWaves.EffectivePlacements(floorSpec.IndexInBiome, placements, masters, function(enemyId)
+			local cat = Config.Get(enemyId)
+			return cat and cat.Role or nil
+		end)
+	end
+	-- Personal surge pack: one Elite and a few Regulars step out around the squad. They never respawn.
+	function self:SpawnSurge(floorId: number, player: any, anchor: Vector3)
+		local room = api.Tower.GetRoom(floorId)
+		local floorSpec = TowerFloorConfig.Get(floorId)
+		local ledger = api.Tower.Encounters[floorId]
+		if not room or room.Status ~= "READY" or not floorSpec or not ledger or floorSpec.IndexInBiome == 5 then return 0 end
+		local biome = MobCatalog.Biomes[floorSpec.BiomeIndex]
+		local layout = TowerLayout.Get(floorSpec.IndexInBiome)
+		ledger.Surge = ledger.Surge or {}
+		local roster = { biome.EliteEnemyId }
+		for i = 1, Config.SurgeRegulars do table.insert(roster, biome.RegularEnemyIds[(i - 1) % 2 + 1]) end
+		local context = { FloorId = floorId, RoomGeneration = room.RoomGeneration }
+		local spawned = 0
+		for _, enemyId in ipairs(roster) do
+			local ground
+			for _ = 1, 12 do
+				local angle = math.random() * math.pi * 2
+				local dist = Config.SurgeMinDistance + math.random() * (Config.SurgeMaxDistance - Config.SurgeMinDistance)
+				local g = api.Navigation.Ground(anchor + Vector3.new(math.cos(angle) * dist, 6, math.sin(angle) * dist), nil, 2, 12)
+				if g then
+					local l = g - room.Origin
+					if math.abs(l.X) < layout.Width / 2 - 8 and math.abs(l.Z) < layout.Depth / 2 - 8 and api.Tower.GetSafety(context, g).CombatSafe ~= true then
+						ground = g
+						break
+					end
+				end
+			end
+			local e = Config.Get(enemyId)
+			if ground and e then
+				e = table.clone(e)
+				local stats = TowerFloorConfig.GetEnemyStats(floorId, enemyId)
+				if stats then e.MaxHP, e.ATK, e.Gold = stats.MaxHP, stats.ATK, stats.GoldReward end
+				local netId = api.Allocate()
+				local now = workspace:GetServerTimeNow()
+				local m = {
+					NetId = netId, EntityGeneration = 1, FloorId = floorId, RoomGeneration = room.RoomGeneration,
+					EnemyId = enemyId, SpecId = enemyId, DisplayName = e.DisplayName, TowerEnemy = true, Role = e.Role,
+					MobType = if e.Role == "REGULAR" then "RING1_MOB" else "RING2_ELITE", RingIndex = if e.Role == "REGULAR" then 1 else 2,
+					Slot = 70000 + netId, LifeGeneration = 1, CurrentHP = e.MaxHP, MaxHP = e.MaxHP, ATK = e.ATK, GoldReward = e.Gold,
+					IsAlive = true, State = "IDLE", Yaw = math.pi, Phase = 1, DamageLedger = {}, Cooldowns = {},
+					ActionCounter = 0, ActionSequence = 0, RespawnAt = math.huge, BornAt = now,
+					HomePosition = ground, Position = ground, LocalPosition = ground - room.Origin,
+					LeashRadius = 120, CampId = "CAMP_SURGE", SummonedByUserId = player and player.UserId or nil, Summoned = true,
+				}
+				api.Mobs[netId] = m
+				ledger.Surge[netId] = m
+				spawned += 1
+			end
+		end
+		if spawned > 0 then api.Changed() end
+		return spawned
 	end
 	function self:SyncRooms(now)
 		local changed = false
@@ -234,10 +300,18 @@ function Runtime.new(api: any): any
 					end
 					room.CombatLabeled = true
 				end
-				for slot, placement in placements do
+				local effective = self:EffectivePlacements(floor, placements)
+				-- A camp is "alive" while any member lives (or has not been created yet).
+				local campAlive = {}
+				for slot, placement in effective do
+					local existing = ledger.Slots[slot]
+					if not existing or existing.IsAlive then campAlive[placement.CampId] = true end
+				end
+				for slot, placement in effective do
 					local e = table.clone(Config.Get(placement.EnemyId))
 					-- Bosses and Apex Sanctum encounters are never pre-placed: each floor boss/champion is summoned strictly by a player's own kill threshold (SpawnBoss).
-					if e.Role == "BOSS" or placement.CampId == "CAMP_APEX_SANCTUM" or placement.EnemyId == TowerProgress.GetFloorBossEnemyId(floor) then continue end
+					-- Camp Elites do spawn; a summoned champion is always Role BOSS, so they never count as it.
+					if e.Role == "BOSS" or placement.CampId == "CAMP_APEX_SANCTUM" then continue end
 					local floorStats = TowerFloorConfig.GetEnemyStats(floor, placement.EnemyId)
 					if floorStats then
 						e.MaxHP = floorStats.MaxHP
@@ -300,6 +374,9 @@ function Runtime.new(api: any): any
 						api.Mobs[m.NetId] = m
 						changed = true
 					end
+					if not m.IsAlive and m.RespawnAt == math.huge and not m.Summoned then
+						m.RespawnAt = CampWaves.ScheduleRespawn(m.DiedAt, campAlive[placement.CampId] == true, now) or math.huge
+					end
 					if not m.IsAlive and now >= m.RespawnAt then
 						m.IsAlive = true
 						m.CurrentHP = m.MaxHP
@@ -316,6 +393,13 @@ function Runtime.new(api: any): any
 						changed = true
 					end
 				end
+				-- Scaled-in members that are no longer wanted leave once they are dead.
+				for slot, m in pairs(ledger.Slots) do
+					if slot >= Config.ExtraSlotBase and not effective[slot] and not m.IsAlive then
+						if api.Mobs[m.NetId] then api.Mobs[m.NetId] = nil; changed = true end
+						ledger.Slots[slot] = nil
+					end
+				end
 			elseif ledger and ledger.Slots then
 				ledger.EncountersEnabled = false
 				if room and room.Model then
@@ -330,6 +414,12 @@ function Runtime.new(api: any): any
 						api.Mobs[m.NetId] = nil
 						changed = true
 					end
+				end
+				for netId, m in pairs(ledger.Surge or {}) do
+					self:Cancel(m, "ROOM_RETIRED_OR_DISABLED")
+					api.Mobs[netId] = nil
+					ledger.Surge[netId] = nil
+					changed = true
 				end
 			end
 		end
