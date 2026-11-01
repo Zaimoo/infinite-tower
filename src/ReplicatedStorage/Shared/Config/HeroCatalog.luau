@@ -280,7 +280,7 @@ HeroCatalog.Seeds = {
 		TraitATKBonus = 0.25,
 		TraitHPBonus = 0.0,
 		TraitLaborBonus = 0.30,
-		Color = Color3.fromRGB(255, 80, 195),
+		Color = Color3.fromRGB(220, 40, 24),
 	},
 	hero_morrigan = {
 		HeroId = "hero_morrigan",

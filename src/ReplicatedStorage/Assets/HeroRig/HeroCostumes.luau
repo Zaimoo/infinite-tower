@@ -485,19 +485,84 @@ do
 	}, "rbxassetid://104592422151826"))
 end
 
--- 8. EOLKA (3★ Scholar - Pyromancer Sorceress) --------------------------------------------
+-- 8. EOLKA (3★ Scholar - Crimson Pyromancer Sorceress) ------------------------------------
+-- Remodelled from reference image (media_1793475933976_84236ceb.jpg) & Blender rig
+-- (tools/blender/generate_crimson_pyromancer_rig.py):
+-- Warm porcelain-ivory skin (#F7DFC6), vibrant copper-orange hair (#D85224 / #F27935) with
+-- swept bangs, ornate gold crown cuff (#E4BA73), and voluminous high sweeping ponytail;
+-- high metallic gold neck collar with glowing crimson-amber ruby cabochon brooch (#FF3B1F);
+-- obsidian modesty bodice (#141118) beneath a sweetheart crimson velvet corset (#8C1D18)
+-- with gold V-piping; asymmetric black/crimson shoulder capelet with gold baroque scrollwork;
+-- wide metallic gold wrist bracers; floor-length split gothic skirt with gold filigree;
+-- and a hovering Solar Fire Orb above her right palm.
 do
-	local skin, magenta, violet, pink = { 255, 230, 220 }, { 235, 60, 175 }, { 75, 25, 85 }, { 255, 80, 195 }
+	local skin = { 247, 223, 198 }      -- #F7DFC6 Warm porcelain-ivory
+	local hairBase = { 216, 82, 36 }    -- #D85224 Copper-orange hair base
+	local hairHi = { 242, 121, 53 }     -- #F27935 Fiery orange highlights
+	local obsidian = { 20, 17, 24 }     -- #141118 Gothic obsidian cloth
+	local crimson = { 140, 29, 24 }     -- #8C1D18 Crimson velvet corset
+	local deepCrimson = { 122, 28, 24 } -- #7A1C18 Inner capelet lining
+	local gold = { 228, 186, 115 }      -- #E4BA73 Royal metallic gold filigree
+	local rubyNeon = { 255, 59, 31 }    -- #FF3B1F Glowing ruby brooch
+	local orbCore = { 255, 243, 176 }   -- #FFF3B0 Solar Fire Orb core
+	local orbFlame = { 255, 107, 26 }   -- #FF6B1A Swirling flame ribbon shell
+
 	table.insert(COSTUMES, costume("hero_eolka", "Slim", {
-		Skin = skin, UpperTorso = violet, LowerTorso = violet, UpperArm = violet, LowerArm = violet,
-		UpperLeg = violet, LowerLeg = violet, Foot = pink,
+		Skin = skin, UpperTorso = obsidian, LowerTorso = obsidian,
+		UpperArm = obsidian, LowerArm = skin, Hand = skin,
+		UpperLeg = obsidian, LowerLeg = obsidian, Foot = obsidian,
 	}, {
-		piece("HairBase", "Head", { 1.24, 0.45, 1.24 }, { 0, 0.48, -0.05 }, magenta),
-		piece("BraidL", "Head", { 0.32, 1.8, 0.32 }, { -0.7, -0.2, -0.15 }, magenta, LOOSE),
-		piece("BraidR", "Head", { 0.32, 1.8, 0.32 }, { 0.7, -0.2, -0.15 }, magenta, LOOSE),
-		piece("RobeSkirt", "LowerTorso", { 2.3, 1.3, 1.5 }, { 0, -0.45, 0 }, violet, with(LOOSE, { Material = "Fabric" })),
-		piece("RobeTrim", "LowerTorso", { 2.35, 0.2, 1.55 }, { 0, -1.05, 0 }, pink, LOOSE),
-	}))
+		-- 1. Sculpted Copper-Orange Anime Hair, Curtain Bangs, Gold Crown Cuff & High Ponytail
+		piece("HairBase", "Head", { 1.28, 0.52, 1.28 }, { 0, 0.46, 0.04 }, hairBase),
+		piece("HairBangL", "Head", { 0.42, 0.48, 0.24 }, { -0.36, 0.28, -0.56 }, hairHi, { Rotation = { 12, 18, 22 } }),
+		piece("HairBangR", "Head", { 0.42, 0.48, 0.24 }, { 0.36, 0.28, -0.56 }, hairHi, { Rotation = { 12, -18, -22 } }),
+		piece("HairCenterLock", "Head", { 0.16, 0.44, 0.16 }, { 0, 0.30, -0.62 }, hairHi, { Rotation = { 8, 0, -4 } }),
+		piece("HairSideLockL", "Head", { 0.22, 0.85, 0.24 }, { -0.60, -0.08, -0.22 }, hairBase, LOOSE),
+		piece("HairSideLockR", "Head", { 0.22, 0.85, 0.24 }, { 0.60, -0.08, -0.22 }, hairBase, LOOSE),
+		piece("EarringL", "Head", { 0.08, 0.22, 0.08 }, { -0.62, -0.18, -0.08 }, gold, with(LOOSE, METAL)),
+		piece("EarringR", "Head", { 0.08, 0.22, 0.08 }, { 0.62, -0.18, -0.08 }, gold, with(LOOSE, METAL)),
+		piece("HairGoldCuff", "Head", { 0.42, 0.16, 0.42 }, { -0.18, 0.68, 0.46 }, gold, with(LOOSE, METAL, { Rotation = { -35, 0, -18 } })),
+		piece("PonytailCrest", "Head", { 0.52, 1.45, 0.44 }, { -0.58, 0.56, 0.78 }, hairHi, with(LOOSE, { Rotation = { -28, 0, -32 } })),
+		piece("PonytailLower", "Head", { 0.46, 1.55, 0.40 }, { -0.38, 0.12, 0.88 }, hairBase, with(LOOSE, { Rotation = { -16, 0, -18 } })),
+
+		-- 2. High Gold Collar & Glowing Crimson-Amber Ruby Brooch
+		piece("GoldCollar", "UpperTorso", { 0.82, 0.26, 0.82 }, { 0, 0.82, -0.02 }, gold, METAL),
+		piece("BroochBezel", "UpperTorso", { 0.34, 0.42, 0.14 }, { 0, 0.58, -0.52 }, gold, METAL),
+		piece("RubyBroochGem", "UpperTorso", { 0.24, 0.32, 0.16 }, { 0, 0.58, -0.55 }, rubyNeon, with(NEON, { Shape = "Ball" })),
+
+		-- 3. Sweetheart Crimson Velvet Corset & Gold V-Piping
+		piece("CorsetSideL", "UpperTorso", { 0.64, 1.18, 0.98 }, { -0.44, -0.12, -0.02 }, crimson, { Material = "Fabric" }),
+		piece("CorsetSideR", "UpperTorso", { 0.64, 1.18, 0.98 }, { 0.44, -0.12, -0.02 }, crimson, { Material = "Fabric" }),
+		piece("CorsetCenterV", "UpperTorso", { 0.52, 1.22, 1.00 }, { 0, -0.10, -0.03 }, obsidian, { Material = "Fabric" }),
+		piece("CorsetGoldPipingL", "UpperTorso", { 0.07, 1.15, 0.08 }, { -0.22, -0.12, -0.52 }, gold, with(METAL, { Rotation = { 0, 0, -12 } })),
+		piece("CorsetGoldPipingR", "UpperTorso", { 0.07, 1.15, 0.08 }, { 0.22, -0.12, -0.52 }, gold, with(METAL, { Rotation = { 0, 0, 12 } })),
+		piece("CorsetWaistGoldL", "UpperTorso", { 0.68, 0.08, 1.02 }, { -0.34, -0.68, -0.02 }, gold, with(METAL, { Rotation = { 0, 0, -16 } })),
+		piece("CorsetWaistGoldR", "UpperTorso", { 0.68, 0.08, 1.02 }, { 0.34, -0.68, -0.02 }, gold, with(METAL, { Rotation = { 0, 0, 16 } })),
+
+		-- 4. Asymmetric Black & Crimson-Lined Shoulder Capelet with Gold Baroque Filigree
+		piece("CapeletBack", "UpperTorso", { 2.18, 1.45, 0.22 }, { 0, 0.10, 0.52 }, obsidian, with(LOOSE, { Material = "Fabric" })),
+		piece("CapeletLining", "UpperTorso", { 2.10, 1.38, 0.16 }, { 0, 0.08, 0.44 }, deepCrimson, with(LOOSE, { Material = "Fabric" })),
+		piece("CapeletShoulderL", "LeftUpperArm", { 1.18, 0.72, 1.14 }, { -0.08, 0.22, 0 }, obsidian, { Material = "Fabric" }),
+		piece("CapeletShoulderR", "RightUpperArm", { 1.18, 0.72, 1.14 }, { 0.08, 0.22, 0 }, obsidian, { Material = "Fabric" }),
+		piece("ShoulderFiligreeL", "LeftUpperArm", { 1.22, 0.16, 1.18 }, { -0.08, 0.48, 0 }, gold, METAL),
+		piece("ShoulderFiligreeR", "RightUpperArm", { 1.22, 0.16, 1.18 }, { 0.08, 0.48, 0 }, gold, METAL),
+
+		-- 5. Ornate Gold Wrist Bracers
+		piece("GoldBracerL", "LeftLowerArm", { 1.04, 0.36, 1.04 }, { 0, -0.26, 0 }, gold, METAL),
+		piece("GoldBracerR", "RightLowerArm", { 1.04, 0.36, 1.04 }, { 0, -0.26, 0 }, gold, METAL),
+
+		-- 6. Flowing Floor-Length Split Gothic Skirt & Gold Hip/Hem Filigree
+		piece("GothicSkirtUpper", "LowerTorso", { 1.96, 1.15, 1.26 }, { 0, -0.42, 0 }, obsidian, with(LOOSE, { Material = "Fabric" })),
+		piece("GothicSkirtLower", "LowerTorso", { 2.38, 1.35, 1.54 }, { 0, -1.48, 0.04 }, obsidian, with(LOOSE, { Material = "Fabric" })),
+		piece("SkirtHipFiligreeR", "LowerTorso", { 0.58, 0.82, 0.12 }, { 0.68, -0.52, -0.58 }, gold, with(LOOSE, METAL, { Rotation = { 0, 0, -18 } })),
+		piece("SkirtSlitFiligreeL", "LowerTorso", { 0.14, 1.65, 0.14 }, { -0.58, -1.18, -0.66 }, gold, with(LOOSE, METAL, { Rotation = { 0, 0, 12 } })),
+		piece("SkirtHemGold", "LowerTorso", { 2.42, 0.12, 1.58 }, { 0, -2.12, 0.04 }, gold, with(LOOSE, METAL)),
+
+		-- 7. Hovering Right-Hand Solar Fire Orb (CastVFXSocket Preview)
+		piece("SolarFireOrbCore", "RightHand", { 0.62, 0.62, 0.62 }, { 0, -0.52, -0.42 }, orbCore, with(LOOSE, NEON, { Shape = "Ball" })),
+		piece("SolarFireRibbonA", "RightHand", { 0.78, 0.16, 0.78 }, { 0, -0.52, -0.42 }, orbFlame, with(LOOSE, NEON, { Rotation = { 28, 0, 35 } })),
+		piece("SolarFireRibbonB", "RightHand", { 0.78, 0.16, 0.78 }, { 0, -0.52, -0.42 }, orbFlame, with(LOOSE, NEON, { Rotation = { -28, 0, -35 } })),
+	}, "rbxassetid://127108676891411"))
 end
 
 -- 9. MORRIGAN (4★ Vanguard - Void Nightblade) ---------------------------------------------
