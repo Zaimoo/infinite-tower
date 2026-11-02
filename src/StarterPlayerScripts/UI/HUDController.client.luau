@@ -1149,7 +1149,7 @@ _G.OpenMasterModal = function(which: string)
 		end
 	end
 	updateBottomTabHighlights()
-	if which == "BLACKSMITH" and refreshBlacksmithModal then
+	if which == "BLACKSMITH" and not forgeController and refreshBlacksmithModal then
 		refreshBlacksmithModal()
 	end
 end
@@ -1406,9 +1406,7 @@ artifactLayout.Padding = UDim.new(0, 6)
 artifactLayout.Parent = artifactScroll
 
 refreshBlacksmithModal = function()
-	if forgeController then
-		forgeController:Refresh()
-	end
+	if not blacksmithModal.Visible then return end
 	if not CurrentProfile then return end
 	local artifacts = CurrentProfile.Artifacts or {}
 
@@ -1645,7 +1643,7 @@ ProfileDeltaSyncEvent.OnClientEvent:Connect(function(profile: any)
 	if squadController and squadController:IsOpen() then
 		squadController:Refresh()
 	end
-	if ((forgeController and forgeController.Root and forgeController.Root.Visible) or blacksmithModal.Visible) and refreshBlacksmithModal then
+	if blacksmithModal.Visible and refreshBlacksmithModal then
 		refreshBlacksmithModal()
 	end
 end)

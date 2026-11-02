@@ -132,6 +132,7 @@ local function label(parent: Instance, text: string, size: number, color: Color3
 		Color = color,
 		Size = size,
 	})
+	lbl:SetAttribute("Grimoire", true)
 	return lbl
 end
 
@@ -162,6 +163,11 @@ function Forge.new(gui: ScreenGui, artifactRemotes: Folder, getProfile: (() -> a
 	self.FodderUUIDs = {} :: { string } -- Up to six same-template donor UUIDs.
 	self.PickerMode = "NONE" :: "NONE" | "TARGET" | "FODDER" | "EQUIP_LOADOUT"
 	self.Busy = false
+
+	self.AssignCardPool = {} :: { any }
+	self.EmptyCard = nil :: Frame?
+	self.AssignRenderGeneration = 0
+	self._lastAssignSig = nil :: string?
 
 	-- 1. Scrim Background (dims world)
 	self.Scrim = new("TextButton", {
@@ -471,13 +477,35 @@ function Forge:BuildAssignView(root: Frame)
 	}, scroll)
 end
 
+local function computeAssignSignature(artifacts: { [string]: any }?, heroes: { [string]: any }?): string
+	if not artifacts then return "nil" end
+	local count = 0
+	local equipSum = 0
+	local starSum = 0
+	local raritySum = 0
+	for _, art in pairs(artifacts) do
+		count += 1
+		starSum += (art.Star or 1)
+		raritySum += (art.Rarity or 1)
+		if art.EquippedHeroUUID then
+			equipSum += 1
+			local h = heroes and heroes[art.EquippedHeroUUID]
+			if h then
+				equipSum += (h.Level or 1)
+			end
+		end
+	end
+	return string.format("%d_%d_%d_%d", count, starSum, raritySum, equipSum)
+end
+
 -- One stat column on an artifact card: small caption over an inked number.
-local function statCell(parent: Instance, x: number, caption: string, value: string)
+local function statCell(parent: Instance, x: number, caption: string, value: string): TextLabel
 	local cap = label(parent, caption, 11, C.TextLavender, Enum.Font.GothamMedium)
 	cap.Position = UDim2.new(x, 4, 0, 0)
 	cap.Size = UDim2.new(1 / 3, -8, 0, 15)
 	cap.TextXAlignment = Enum.TextXAlignment.Center
 	cap.ZIndex = 56
+	cap:SetAttribute("Grimoire", true)
 	local val = label(parent, value, 16, C.Text, Enum.Font.GothamBlack)
 	val.Position = UDim2.new(x, 4, 0, 16)
 	val.Size = UDim2.new(1 / 3, -8, 0, 20)
@@ -485,59 +513,285 @@ local function statCell(parent: Instance, x: number, caption: string, value: str
 	val.ZIndex = 56
 	val:SetAttribute("Grimoire", true)
 	GildedGrimoire.StyleText(val, "Number")
+	return val
 end
 
-function Forge:RenderAssignView()
-	local scroll = self.AssignScroll
-	for _, child in ipairs(scroll:GetChildren()) do
-		if child:IsA("Frame") then child:Destroy() end
+type CardNode = {
+	Root: Frame,
+	Fill: UIGradient?,
+	CardRail: UIStroke?,
+	IconBox: Frame,
+	IconBoxGrad: UIGradient?,
+	IconLabel: TextLabel,
+	NameLabel: TextLabel,
+	StarsLabel: TextLabel,
+	Badge: Frame,
+	BadgeText: TextLabel,
+	CarrierLabel: TextLabel,
+	PowerVal: TextLabel,
+	DamageVal: TextLabel,
+	AtkSpdVal: TextLabel,
+	AssignBtn: TextButton,
+	LastEquippedState: boolean?,
+	CurrentUUID: string?,
+}
+
+local function createCard(scroll: Instance, onAssignClick: (node: CardNode) -> ()): CardNode
+	local card = new("Frame", {
+		Name = "ArtCard",
+		BorderSizePixel = 0,
+		ZIndex = 53,
+		Visible = false,
+	}, scroll)
+	GildedGrimoire.Frame(card, { Class = "Card", Tone = "Deep", ZIndex = 53 })
+	local fill = card:FindFirstChild("GrimoireFill") :: UIGradient?
+	local cardRail = GildedGrimoire.StateStroke(card)
+	if cardRail then
+		cardRail.Thickness = 2.4
+		cardRail.Transparency = 0
 	end
 
+	local iconBox = new("Frame", {
+		Name = "IconBox",
+		Position = UDim2.fromOffset(14, 14),
+		Size = UDim2.fromOffset(PREVIEW_W, PREVIEW_H),
+		BorderSizePixel = 0,
+		ZIndex = 54,
+	}, card)
+	applyGothicStyle(iconBox, "Slot", { State = "Filled" })
+	local iconBoxGrad = new("UIGradient", {
+		Rotation = 90,
+		Color = ColorSequence.new(Color3.fromRGB(12, 8, 18), Color3.fromRGB(12, 8, 18)),
+	}, iconBox)
+	local iconLabel = label(iconBox, "⚔️", 72, C.Text)
+	iconLabel.Position = UDim2.fromScale(0, 0)
+	iconLabel.Size = UDim2.fromScale(1, 1)
+	iconLabel.TextXAlignment = Enum.TextXAlignment.Center
+	iconLabel.ZIndex = 56
+	iconLabel:SetAttribute("Grimoire", true)
+
+	local infoX = 14 + PREVIEW_W + 16
+	local nameLabel = label(card, "", 21, C.Text, Enum.Font.GothamBlack)
+	nameLabel.Position = UDim2.fromOffset(infoX, 14)
+	nameLabel.Size = UDim2.new(1, -infoX - 14, 0, 28)
+	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+	nameLabel.ZIndex = 56
+
+	local starsLabel = label(card, "", 22, C.GoldYellow, Enum.Font.GothamBold)
+	starsLabel.Position = UDim2.fromOffset(infoX, 44)
+	starsLabel.Size = UDim2.new(1, -infoX - 14, 0, 24)
+	starsLabel.TextXAlignment = Enum.TextXAlignment.Left
+	starsLabel.ZIndex = 56
+
+	local badge = new("Frame", {
+		Name = "RarityBadge",
+		Position = UDim2.fromOffset(infoX, 72),
+		Size = UDim2.fromOffset(0, 24),
+		AutomaticSize = Enum.AutomaticSize.X,
+		BackgroundColor3 = Color3.fromRGB(180, 180, 180),
+		BorderSizePixel = 0,
+		ZIndex = 55,
+	}, card)
+	new("UICorner", { CornerRadius = UDim.new(1, 0) }, badge)
+	new("UIStroke", { Color = GildedGrimoire.Ink, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, badge)
+	new("UIPadding", { PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) }, badge)
+	new("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(190, 190, 200)) }, badge)
+	local badgeText = new("TextLabel", {
+		BackgroundTransparency = 1,
+		AutomaticSize = Enum.AutomaticSize.X,
+		Size = UDim2.fromOffset(0, 24),
+		Text = "COMMON",
+		TextSize = 14,
+		TextColor3 = Color3.new(1, 1, 1),
+		ZIndex = 56,
+	}, badge)
+	badgeText:SetAttribute("Grimoire", true)
+	GildedGrimoire.StyleText(badgeText, "Title")
+
+	local carrierLabel = label(card, "", 14, C.TextMuted, Enum.Font.GothamMedium)
+	carrierLabel.Position = UDim2.fromOffset(infoX, 102)
+	carrierLabel.Size = UDim2.new(1, -infoX - 14, 0, 20)
+	carrierLabel.TextXAlignment = Enum.TextXAlignment.Left
+	carrierLabel.ZIndex = 56
+
+	local strip = new("Frame", {
+		Name = "Stats",
+		Position = UDim2.fromOffset(infoX, 128),
+		Size = UDim2.new(1, -infoX - 14, 0, 44),
+		BorderSizePixel = 0,
+		ZIndex = 54,
+	}, card)
+	GildedGrimoire.Frame(strip, { Class = "Row", Tone = "Violet", ZIndex = 54 })
+	local powerVal = statCell(strip, 0, "POWER", "0")
+	local damageVal = statCell(strip, 1 / 3, "DAMAGE", "0")
+	local atkSpdVal = statCell(strip, 2 / 3, "ATK SPD", "0")
+
+	local assignBtn = new("TextButton", {
+		Name = "AssignBtn",
+		Position = UDim2.fromOffset(infoX, 176),
+		Size = UDim2.new(1, -infoX - 14, 0, 38),
+		BorderSizePixel = 0,
+		Text = "ASSIGN TO HERO",
+		Font = Enum.Font.GothamBlack,
+		TextSize = 16,
+		TextColor3 = Color3.new(1, 1, 1),
+		ZIndex = 55,
+	}, card)
+	applyGothicStyle(assignBtn, "Button")
+	assignBtn.TextStrokeColor3 = GildedGrimoire.Ink
+	assignBtn.TextStrokeTransparency = 0.15
+	assignBtn:SetAttribute("Grimoire", true)
+
+	local node: CardNode = {
+		Root = card,
+		Fill = fill,
+		CardRail = cardRail,
+		IconBox = iconBox,
+		IconBoxGrad = iconBoxGrad,
+		IconLabel = iconLabel,
+		NameLabel = nameLabel,
+		StarsLabel = starsLabel,
+		Badge = badge,
+		BadgeText = badgeText,
+		CarrierLabel = carrierLabel,
+		PowerVal = powerVal,
+		DamageVal = damageVal,
+		AtkSpdVal = atkSpdVal,
+		AssignBtn = assignBtn,
+		LastEquippedState = false,
+		CurrentUUID = nil,
+	}
+
+	assignBtn.Activated:Connect(function()
+		onAssignClick(node)
+	end)
+
+	return node
+end
+
+local function updateCard(node: CardNode, item: { UUID: string, Art: any }, heroMap: any, order: number)
+	local uuid = item.UUID
+	local art = item.Art
+	node.CurrentUUID = uuid
+	node.Root.Name = "ArtCard_" .. uuid
+	node.Root.LayoutOrder = order
+	node.Root.Visible = true
+
+	local rarityInfo = ArtifactCatalog.GetRarityInfo(art.Rarity or 1)
+	local rarityColor = rarityInfo.Color
+	local equippedHero = art.EquippedHeroUUID and heroMap[art.EquippedHeroUUID]
+	local starCount = art.Star or 1
+	local isEquipped = equippedHero ~= nil
+
+	if node.Fill then
+		local deep = GildedGrimoire.Tones.Deep
+		node.Fill.Color = ColorSequence.new(deep.Top:Lerp(rarityColor, 0.28), deep.Bottom:Lerp(rarityColor, 0.08))
+	end
+	if node.CardRail then
+		node.CardRail.Color = rarityColor
+	end
+	if node.IconBoxGrad then
+		node.IconBoxGrad.Color = ColorSequence.new(Color3.fromRGB(12, 8, 18), Color3.fromRGB(12, 8, 18):Lerp(rarityColor, 0.35))
+	end
+	node.IconLabel.Text = ICON_MAP[art.Type] or "⚔️"
+	node.NameLabel.Text = art.DisplayName or "Artifact"
+	node.StarsLabel.Text = string.rep("★", starCount)
+
+	node.Badge.BackgroundColor3 = rarityColor
+	node.BadgeText.Text = string.upper(rarityInfo.Name or "Common")
+
+	node.CarrierLabel.Text = if isEquipped
+		then string.format("Equipped by <b>%s</b>  •  <font color=\"#FACC15\">Lv.%d</font>", equippedHero.DisplayName, equippedHero.Level or 1)
+		else "Not equipped"
+	node.CarrierLabel.TextColor3 = if isEquipped then C.CyanEquipped else C.TextMuted
+
+	local stats = ArtifactCatalog.GetStatBreakdown(art.TemplateId, starCount, art.Rarity or 1)
+	node.PowerVal.Text = string.format("%.0f", stats.Power)
+	node.DamageVal.Text = string.format("x%.2f", stats.DamageMultiplier)
+	node.AtkSpdVal.Text = string.format("+%.1f%%", stats["Attack Speed"])
+
+	node.AssignBtn.Text = if isEquipped then "CHANGE HERO" else "ASSIGN TO HERO"
+	if node.LastEquippedState ~= isEquipped then
+		applyGothicStyle(node.AssignBtn, if isEquipped then "ButtonSecondary" else "Button")
+		node.AssignBtn.TextStrokeColor3 = GildedGrimoire.Ink
+		node.AssignBtn.TextStrokeTransparency = 0.15
+		node.AssignBtn:SetAttribute("Grimoire", true)
+		node.LastEquippedState = isEquipped
+	end
+end
+
+local CHUNK_SIZE = 12
+
+function Forge:RenderAssignView(force: boolean?)
 	local profile = self:ResolveProfile()
 	local artifacts = profile and profile.Artifacts or {}
 	local heroMap = profile and profile.Heroes or {}
+
+	local currentSig = computeAssignSignature(artifacts, heroMap)
+	if not force and self._lastAssignSig == currentSig then
+		return
+	end
+	self._lastAssignSig = currentSig
+
+	self.AssignRenderGeneration = (self.AssignRenderGeneration or 0) + 1
+	local myGen = self.AssignRenderGeneration
 
 	local artList = {}
 	for uuid, art in pairs(artifacts) do
 		table.insert(artList, { UUID = uuid, Art = art })
 	end
 
+	local scroll = self.AssignScroll
+	self.AssignCardPool = self.AssignCardPool or {}
+
 	if #artList == 0 then
+		for _, node in ipairs(self.AssignCardPool) do
+			node.Root.Visible = false
+		end
 		self.AssignGrid.CellSize = UDim2.new(1, -8, 0, 220)
-		local emptyCard = new("Frame", {
-			Name = "EmptyCard",
-			BorderSizePixel = 0,
-			ZIndex = 53,
-		}, scroll)
-		GildedGrimoire.Frame(emptyCard, { Class = "Card", Tone = "Deep", ZIndex = 53 })
-		local emptyIcon = GrimoireIcons.Create("Forge", 64, emptyCard, 55)
-		emptyIcon.AnchorPoint = Vector2.new(0.5, 0)
-		emptyIcon.Position = UDim2.new(0.5, 0, 0, 18)
-		local emptyTitle = label(emptyCard, "NO ARTIFACTS IN INVENTORY", 20, C.Text, Enum.Font.GothamBlack)
-		emptyTitle.Position = UDim2.fromOffset(0, 88)
-		emptyTitle.Size = UDim2.new(1, 0, 0, 26)
-		emptyTitle.ZIndex = 55
-		local sub = label(emptyCard, "Visit the <b>SUMMON</b> tab to draw weapons from the dimensional banner!", 14, C.TextLavender, Enum.Font.Gotham)
-		sub.Position = UDim2.fromOffset(0, 118)
-		sub.Size = UDim2.new(1, 0, 0, 22)
-		sub.ZIndex = 55
-		local goBtn = new("TextButton", {
-			Text = "GO TO SUMMON",
-			Font = Enum.Font.GothamBlack,
-			TextSize = 15,
-			TextColor3 = Color3.new(1, 1, 1),
-			AnchorPoint = Vector2.new(0.5, 0),
-			Size = UDim2.fromOffset(220, 42),
-			Position = UDim2.new(0.5, 0, 0, 156),
-			ZIndex = 56,
-		}, emptyCard)
-		applyGothicStyle(goBtn, "Button")
-		goBtn.TextStrokeColor3 = GildedGrimoire.Ink
-		goBtn.TextStrokeTransparency = 0.15
-		goBtn.Activated:Connect(function()
-			self:SetTab("SUMMON")
-		end)
+		if not self.EmptyCard then
+			local emptyCard = new("Frame", {
+				Name = "EmptyCard",
+				BorderSizePixel = 0,
+				ZIndex = 53,
+			}, scroll)
+			GildedGrimoire.Frame(emptyCard, { Class = "Card", Tone = "Deep", ZIndex = 53 })
+			local emptyIcon = GrimoireIcons.Create("Forge", 64, emptyCard, 55)
+			emptyIcon.AnchorPoint = Vector2.new(0.5, 0)
+			emptyIcon.Position = UDim2.new(0.5, 0, 0, 18)
+			local emptyTitle = label(emptyCard, "NO ARTIFACTS IN INVENTORY", 20, C.Text, Enum.Font.GothamBlack)
+			emptyTitle.Position = UDim2.fromOffset(0, 88)
+			emptyTitle.Size = UDim2.new(1, 0, 0, 26)
+			emptyTitle.ZIndex = 55
+			local sub = label(emptyCard, "Visit the <b>SUMMON</b> tab to draw weapons from the dimensional banner!", 14, C.TextLavender, Enum.Font.Gotham)
+			sub.Position = UDim2.fromOffset(0, 118)
+			sub.Size = UDim2.new(1, 0, 0, 22)
+			sub.ZIndex = 55
+			local goBtn = new("TextButton", {
+				Text = "GO TO SUMMON",
+				Font = Enum.Font.GothamBlack,
+				TextSize = 15,
+				TextColor3 = Color3.new(1, 1, 1),
+				AnchorPoint = Vector2.new(0.5, 0),
+				Size = UDim2.fromOffset(220, 42),
+				Position = UDim2.new(0.5, 0, 0, 156),
+				ZIndex = 56,
+			}, emptyCard)
+			applyGothicStyle(goBtn, "Button")
+			goBtn.TextStrokeColor3 = GildedGrimoire.Ink
+			goBtn.TextStrokeTransparency = 0.15
+			goBtn:SetAttribute("Grimoire", true)
+			goBtn.Activated:Connect(function()
+				self:SetTab("SUMMON")
+			end)
+			self.EmptyCard = emptyCard
+		end
+		self.EmptyCard.Visible = true
 		return
+	end
+
+	if self.EmptyCard then
+		self.EmptyCard.Visible = false
 	end
 	self.AssignGrid.CellSize = UDim2.new(0.5, -CARD_GAP, 0, CARD_H)
 
@@ -550,130 +804,46 @@ function Forge:RenderAssignView()
 		return (a.Art.DisplayName or "") < (b.Art.DisplayName or "")
 	end)
 
-	for order, item in ipairs(artList) do
-		local uuid = item.UUID
-		local art = item.Art
-		local rarityInfo = ArtifactCatalog.GetRarityInfo(art.Rarity or 1)
-		local rarityColor = rarityInfo.Color
-		local equippedHero = art.EquippedHeroUUID and heroMap[art.EquippedHeroUUID]
-		local starCount = art.Star or 1
+	local function onAssignClick(node: CardNode)
+		if self.Busy then return end
+		if not node.CurrentUUID then return end
+		self.SelectedAssignArtifactUUID = node.CurrentUUID
+		self:OpenDrawer("EQUIP_LOADOUT", node.CurrentUUID)
+	end
 
-		local card = new("Frame", {
-			Name = "ArtCard_" .. uuid,
-			BorderSizePixel = 0,
-			LayoutOrder = order,
-			ZIndex = 53,
-		}, scroll)
-		-- Rarity reads at a glance: the card is tinted toward the rarity colour and its rail is drawn
-		-- solid in that colour; the badge below names the exact tier.
-		GildedGrimoire.Frame(card, { Class = "Card", Tone = "Deep", Rail = rarityColor, ZIndex = 53 })
-		local fill = card:FindFirstChild("GrimoireFill") :: UIGradient?
-		if fill then
-			local deep = GildedGrimoire.Tones.Deep
-			fill.Color = ColorSequence.new(deep.Top:Lerp(rarityColor, 0.28), deep.Bottom:Lerp(rarityColor, 0.08))
+	local function renderSlice(startIdx: number, endIdx: number)
+		for order = startIdx, endIdx do
+			local item = artList[order]
+			if not item then break end
+			local node = self.AssignCardPool[order]
+			if not node then
+				node = createCard(scroll, onAssignClick)
+				self.AssignCardPool[order] = node
+			end
+			updateCard(node, item, heroMap, order)
 		end
-		local cardRail = GildedGrimoire.StateStroke(card)
-		if cardRail then
-			cardRail.Thickness = 2.4
-			cardRail.Transparency = 0
-		end
+	end
 
-		-- Weapon preview (weapon art comes later from the models; the glyph is a stand-in).
-		local iconBox = new("Frame", {
-			Name = "IconBox",
-			Position = UDim2.fromOffset(14, 14),
-			Size = UDim2.fromOffset(PREVIEW_W, PREVIEW_H),
-			BorderSizePixel = 0,
-			ZIndex = 54,
-		}, card)
-		applyGothicStyle(iconBox, "Slot", { State = "Filled", AccentColor = rarityColor })
-		new("UIGradient", {
-			Rotation = 90,
-			Color = ColorSequence.new(Color3.fromRGB(12, 8, 18), Color3.fromRGB(12, 8, 18):Lerp(rarityColor, 0.35)),
-		}, iconBox)
-		local iconLabel = label(iconBox, ICON_MAP[art.Type] or "⚔️", 72, C.Text)
-		iconLabel.Position = UDim2.fromScale(0, 0)
-		iconLabel.Size = UDim2.fromScale(1, 1)
-		iconLabel.TextXAlignment = Enum.TextXAlignment.Center
-		iconLabel.ZIndex = 56
+	-- Render first chunk immediately
+	local firstChunkEnd = math.min(#artList, CHUNK_SIZE)
+	renderSlice(1, firstChunkEnd)
 
-		local infoX = 14 + PREVIEW_W + 16
-		local function infoLine(text: string, size: number, color: Color3, font: Enum.Font, y: number, h: number): TextLabel
-			local l = label(card, text, size, color, font)
-			l.Position = UDim2.fromOffset(infoX, y)
-			l.Size = UDim2.new(1, -infoX - 14, 0, h)
-			l.TextXAlignment = Enum.TextXAlignment.Left
-			l.ZIndex = 56
-			return l
-		end
+	-- Hide any pooled cards beyond total items
+	for i = #artList + 1, #self.AssignCardPool do
+		self.AssignCardPool[i].Root.Visible = false
+	end
 
-		-- Name and stars
-		infoLine(art.DisplayName or "Artifact", 21, C.Text, Enum.Font.GothamBlack, 14, 28)
-		infoLine(string.rep("★", starCount), 22, C.GoldYellow, Enum.Font.GothamBold, 44, 24)
-
-		-- Rarity badge: solid rarity colour with a dark, inked label.
-		local badge = new("Frame", {
-			Name = "RarityBadge",
-			Position = UDim2.fromOffset(infoX, 72),
-			Size = UDim2.fromOffset(0, 24),
-			AutomaticSize = Enum.AutomaticSize.X,
-			BackgroundColor3 = rarityColor,
-			BorderSizePixel = 0,
-			ZIndex = 55,
-		}, card)
-		new("UICorner", { CornerRadius = UDim.new(1, 0) }, badge)
-		new("UIStroke", { Color = GildedGrimoire.Ink, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, badge)
-		new("UIPadding", { PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) }, badge)
-		new("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(190, 190, 200)) }, badge)
-		local badgeText = new("TextLabel", {
-			BackgroundTransparency = 1,
-			AutomaticSize = Enum.AutomaticSize.X,
-			Size = UDim2.fromOffset(0, 24),
-			Text = string.upper(rarityInfo.Name or "Common"),
-			TextSize = 14,
-			TextColor3 = Color3.new(1, 1, 1),
-			ZIndex = 56,
-		}, badge)
-		badgeText:SetAttribute("Grimoire", true)
-		GildedGrimoire.StyleText(badgeText, "Title")
-
-		-- Who carries it
-		infoLine(if equippedHero then string.format("Equipped by <b>%s</b>  •  <font color=\"#FACC15\">Lv.%d</font>", equippedHero.DisplayName, equippedHero.Level or 1) else "Not equipped", 14,
-			if equippedHero then C.CyanEquipped else C.TextMuted, Enum.Font.GothamMedium, 102, 20)
-
-		-- Stats strip
-		local stats = ArtifactCatalog.GetStatBreakdown(art.TemplateId, starCount, art.Rarity or 1)
-		local strip = new("Frame", {
-			Name = "Stats",
-			Position = UDim2.fromOffset(infoX, 128),
-			Size = UDim2.new(1, -infoX - 14, 0, 44),
-			BorderSizePixel = 0,
-			ZIndex = 54,
-		}, card)
-		GildedGrimoire.Frame(strip, { Class = "Row", Tone = "Violet", ZIndex = 54 })
-		statCell(strip, 0, "POWER", string.format("%.0f", stats.Power))
-		statCell(strip, 1 / 3, "DAMAGE", string.format("x%.2f", stats.DamageMultiplier))
-		statCell(strip, 2 / 3, "ATK SPD", string.format("+%.1f%%", stats["Attack Speed"]))
-
-		-- Assign / change hero
-		local assignBtn = new("TextButton", {
-			Name = "AssignBtn",
-			Position = UDim2.fromOffset(infoX, 176),
-			Size = UDim2.new(1, -infoX - 14, 0, 38),
-			BorderSizePixel = 0,
-			Text = if equippedHero then "CHANGE HERO" else "ASSIGN TO HERO",
-			Font = Enum.Font.GothamBlack,
-			TextSize = 16,
-			TextColor3 = Color3.new(1, 1, 1),
-			ZIndex = 55,
-		}, card)
-		applyGothicStyle(assignBtn, if equippedHero then "ButtonSecondary" else "Button")
-		assignBtn.TextStrokeColor3 = GildedGrimoire.Ink
-		assignBtn.TextStrokeTransparency = 0.15
-		assignBtn.Activated:Connect(function()
-			if self.Busy then return end
-			self.SelectedAssignArtifactUUID = uuid
-			self:OpenDrawer("EQUIP_LOADOUT", uuid)
+	-- If more cards exist, defer the remaining in chunks
+	if #artList > CHUNK_SIZE then
+		task.spawn(function()
+			local current = firstChunkEnd + 1
+			while current <= #artList do
+				task.wait()
+				if self.AssignRenderGeneration ~= myGen then return end
+				local nextEnd = math.min(#artList, current + CHUNK_SIZE - 1)
+				renderSlice(current, nextEnd)
+				current = nextEnd + 1
+			end
 		end)
 	end
 end

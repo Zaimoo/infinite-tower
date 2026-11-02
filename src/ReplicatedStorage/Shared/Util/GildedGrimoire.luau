@@ -249,6 +249,8 @@ function GildedGrimoire.Watch(root: Instance): RBXScriptConnection
 		retheme(d)
 	end
 	return root.DescendantAdded:Connect(function(d)
+		if not (d:IsA("TextLabel") or d:IsA("TextButton") or d:IsA("TextBox")) then return end
+		if d:GetAttribute("Grimoire") then return end
 		-- Wait a frame so builders finish setting Font/TextSize before we inspect them.
 		task.defer(retheme, d)
 	end)
