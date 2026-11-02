@@ -526,7 +526,7 @@ do
 		piece("PonytailLower", "Head", { 0.46, 1.55, 0.40 }, { -0.38, 0.12, 0.88 }, hairBase, with(LOOSE, { Rotation = { -16, 0, -18 } })),
 
 		-- 2. High Gold Collar & Glowing Crimson-Amber Ruby Brooch
-		piece("GoldCollar", "UpperTorso", { 0.82, 0.26, 0.82 }, { 0, 0.82, -0.02 }, gold, METAL),
+		piece("GoldCollar", "UpperTorso", { 0.82, 0.26, 0.82 }, { 0, 0.82, -0.02 }, gold, with(LOOSE, METAL)),
 		piece("BroochBezel", "UpperTorso", { 0.34, 0.42, 0.14 }, { 0, 0.58, -0.52 }, gold, METAL),
 		piece("RubyBroochGem", "UpperTorso", { 0.24, 0.32, 0.16 }, { 0, 0.58, -0.55 }, rubyNeon, with(NEON, { Shape = "Ball" })),
 
