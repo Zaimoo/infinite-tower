@@ -2,7 +2,7 @@
 -- StarterPlayerScripts/UI/SquadController.luau
 -- Squad Deploy (Phase 5, Gilded Grimoire). The player picks which heroes fight in the tower.
 --
--- Layout (900 x 560, scaled down on small screens):
+-- Layout (900 x 560, scaled to fit the screen, up to 1.35x):
 --   * Left: ACTIVE SQUAD (five compact slot cards) above the HEROES roster grid.
 --   * Right: HERO DETAILS for the focused hero: portrait, rarity, level and EXP, status, a stats
 --     overview (power, HP, ATK, DPS, attack speed, range, move speed, labor), the equipped
@@ -207,6 +207,8 @@ function SquadController.new(screenGui: ScreenGui, getProfile: () -> any, remote
 	self.Sort = "Power" :: Sort
 	self.AvailableOnly = false
 	self.RosterCards = {} -- [uuid] = card entry (cached so portraits don't flash)
+	self.DetailPortraits = {} -- [uuid] = HERO DETAILS portrait, kept so hovering doesn't rebuild rigs
+	self.DetailPortraitCount = 0
 
 	-- Scrim
 	self.Scrim = new("TextButton", {
@@ -240,9 +242,9 @@ function SquadController.new(screenGui: ScreenGui, getProfile: () -> any, remote
 	self.Root.Activated:Connect(function() end)
 	GothicBoxStyle.Apply(self.Root, { Style = "Window" })
 	self.Scale = new("UIScale", {}, self.Root)
-	-- Fit the window inside the safe area (below the top bar, clear of the bottom edge), growing up
-	-- to 1.2x on screens with room to spare.
-	self.Fit = ModalFit.Bind(self.Root, self.Scale, WIDTH, HEIGHT, { MinScale = 0.5, MaxScale = 1.2 })
+	-- Fit the window inside the safe area with tight margins (the scrim covers the HUD drawer while
+	-- it is open), growing up to 1.35x on screens with room to spare.
+	self.Fit = ModalFit.Bind(self.Root, self.Scale, WIDTH, HEIGHT, { MinScale = 0.5, MaxScale = 1.35, Margin = 12, BottomMargin = 16 })
 	GothicBoxStyle.CreateCloseButton(self.Root, function() self:Close() end)
 
 	-- Header: icon, title, subtitle and the Squad Power badge
@@ -822,10 +824,24 @@ function SquadController.RenderDetails(self: any)
 
 	if d.Rendered ~= hero.UUID then
 		d.Rendered = hero.UUID
-		for _, c in d.Portrait:GetChildren() do
-			if c:IsA("GuiObject") then c:Destroy() end
+		-- Portraits are cached per hero, so sweeping the mouse over the roster only toggles them.
+		local cached = self.DetailPortraits[hero.UUID]
+		if cached and cached.Parent == nil then -- replaced by HeroCard's late-template remount
+			self.DetailPortraits[hero.UUID] = nil
+			self.DetailPortraitCount -= 1
 		end
-		HeroCard.Portrait(d.Portrait, hero)
+		if not self.DetailPortraits[hero.UUID] and self.DetailPortraitCount >= 12 then
+			for _, v in self.DetailPortraits do v:Destroy() end
+			table.clear(self.DetailPortraits)
+			self.DetailPortraitCount = 0
+		end
+		for uuid, v in self.DetailPortraits do
+			v.Visible = uuid == hero.UUID
+		end
+		if not self.DetailPortraits[hero.UUID] then
+			self.DetailPortraits[hero.UUID] = HeroCard.Portrait(d.Portrait, hero)
+			self.DetailPortraitCount += 1
+		end
 	end
 	d.Ring.Color = color
 	d.ArchRendered = setIcon(d.Arch, d.ArchRendered, hero.Archetype, 28)

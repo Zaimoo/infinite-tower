@@ -17,6 +17,8 @@ export type Options = {
 	Top: number?, -- extra space reserved above the window (e.g. the Pit's tab bar)
 	MinScale: number?,
 	MaxScale: number?,
+	Margin: number?, -- overrides ModalFit.Margin
+	BottomMargin: number?, -- overrides ModalFit.BottomMargin
 }
 
 -- Keeps `root` centred in the safe area and `scale` fitted while the screen changes size.
@@ -28,9 +30,10 @@ function ModalFit.Bind(root: GuiObject, scale: UIScale, width: number, height: n
 		if not gui then return scale.Scale end
 		local size = gui.AbsoluteSize
 		local topBar = if gui.IgnoreGuiInset then (GuiService:GetGuiInset()).Y else 0
-		local top = topBar + ModalFit.Margin + (o.Top or 0)
-		local availH = math.max(1, size.Y - top - ModalFit.BottomMargin)
-		local availW = math.max(1, size.X - 2 * ModalFit.Margin)
+		local margin = o.Margin or ModalFit.Margin
+		local top = topBar + margin + (o.Top or 0)
+		local availH = math.max(1, size.Y - top - (o.BottomMargin or ModalFit.BottomMargin))
+		local availW = math.max(1, size.X - 2 * margin)
 		root.Position = UDim2.new(0.5, 0, 0, top + availH / 2)
 		return math.clamp(math.min(availW / width, availH / height), o.MinScale or 0.45, o.MaxScale or 1)
 	end

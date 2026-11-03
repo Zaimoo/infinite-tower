@@ -8,7 +8,141 @@ local HeroRig = ReplicatedStorage:WaitForChild("Assets"):WaitForChild("HeroRig")
 local HeroClips = require(HeroRig:WaitForChild("HeroClips"))
 local HeroAnimator = require(HeroRig:WaitForChild("HeroAnimator"))
 local GrimoireIcons = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GrimoireIcons"))
+local RunService = game:GetService("RunService")
 local HeroCard = {}
+
+-- Rig portraits are ViewportFrames holding a posed clone of the hero's rig (~50 parts). Rosters list
+-- hundreds of heroes, so a rig is only built while its portrait is on screen (every ancestor
+-- visible, and inside its ScrollingFrame's view give or take a card), a couple per frame. A
+-- portrait scrolled out of view parks its rig outside the viewport, so it costs nothing to render.
+-- The checks are cheap on purpose: reading AbsolutePosition right after a layout change forces a
+-- full layout pass (~15 ms), so a position is only read when its portrait first shows or after the
+-- engine reports it moved (scroll, sort, resize), and the visibility walk is spread over frames.
+local RIGS_PER_FRAME = 2
+local CHECKS_PER_FRAME = 40
+local SETTLE_SECONDS = 0.15 -- wait for a moving portrait (open pop, scrolling) to stop before reading layout
+type Lazy = {
+	Viewport: ViewportFrame, Template: Model, Hero: any, Model: Model?, Dead: boolean,
+	Scroll: ScrollingFrame?, Moved: boolean, MovedAt: number, WasVisible: boolean, Queued: boolean, Y: number,
+}
+local entries: { Lazy } = {}
+local cursor = 1
+local pending: { Lazy } = {}
+
+-- Every ancestor up to the ScreenGui is visible (no layout read).
+local function visible(vp: ViewportFrame): boolean
+	local node: Instance? = vp
+	while node and node:IsA("GuiObject") do
+		if not node.Visible then return false end
+		node = node.Parent
+	end
+	return node ~= nil and node:IsA("LayerCollector") and node.Enabled and node:IsDescendantOf(game)
+end
+
+-- Inside the scroll's view, give or take a card. Reads layout, so call it only when needed.
+local function inView(entry: Lazy, scroll: ScrollingFrame): boolean
+	local vp = entry.Viewport
+	local p, s = vp.AbsolutePosition, vp.AbsoluteSize
+	local sp, ss = scroll.AbsolutePosition, scroll.AbsoluteSize
+	entry.Y = p.Y
+	return p.Y + s.Y * 2 >= sp.Y and p.Y - s.Y <= sp.Y + ss.Y and p.X + s.X * 2 >= sp.X and p.X - s.X <= sp.X + ss.X
+end
+
+local function check(entry: Lazy)
+	local vp = entry.Viewport
+	local settled = os.clock() - entry.MovedAt >= SETTLE_SECONDS
+	if entry.Model then
+		-- Built: only a move can change whether it should render (a hidden window doesn't render
+		-- its viewports anyway).
+		local scroll = entry.Scroll
+		if scroll and entry.Moved and settled then
+			entry.Moved = false
+			local target = if inView(entry, scroll) then vp else nil
+			if entry.Model.Parent ~= target then entry.Model.Parent = target end
+		end
+		return
+	end
+	if entry.Queued then return end
+	local shown = visible(vp)
+	if shown and not entry.WasVisible then
+		-- Just appeared: its window is probably mid-pop, so let it settle first.
+		entry.Moved = true
+		entry.MovedAt = os.clock()
+		settled = false
+	end
+	entry.WasVisible = shown
+	if not shown then return end
+	if entry.Scroll == nil then
+		entry.Scroll = vp:FindFirstAncestorWhichIsA("ScrollingFrame")
+	end
+	local scroll = entry.Scroll
+	if scroll then
+		if not entry.Moved or not settled then return end -- unchanged since the last look, or still moving
+		entry.Moved = false
+		if not inView(entry, scroll) then return end
+	else
+		entry.Y = 0
+	end
+	entry.Queued = true
+	table.insert(pending, entry)
+end
+
+local function buildRig(entry: Lazy)
+	local vp = entry.Viewport
+	local model = entry.Template:Clone()
+	for _, descendant in model:GetDescendants() do
+		if descendant:IsA("BaseScript") then descendant:Destroy()
+		elseif descendant:IsA("BasePart") then
+			descendant.Anchored = true
+			descendant.CanCollide = false
+		end
+	end
+	-- Viewports never simulate joints: pose the hero's idle by writing part CFrames.
+	if model:GetAttribute("HeroRigVersion") ~= nil then
+		local idle = HeroClips.Get(entry.Hero.TemplateId, nil, "Idle")
+		if idle then
+			HeroAnimator.ApplyStaticPose(model, HeroAnimator.Sample(idle, 0))
+		end
+	end
+	model.Parent = vp
+	local bounds, size = model:GetBoundingBox()
+	local head = model:FindFirstChild("Head")
+	local look = if head and head:IsA("BasePart") then head.Position - Vector3.new(0, size.Y * 0.1, 0) else bounds.Position + Vector3.new(0, size.Y * 0.22, 0)
+	local forward = bounds.LookVector
+	local camera = T.New("Camera", {FieldOfView = 32, CFrame = CFrame.lookAt(look + forward * math.max(4, size.Y * 0.82), look)}, vp)
+	vp.CurrentCamera = camera
+	entry.Model = model
+end
+
+RunService.Heartbeat:Connect(function()
+	-- Look at a slice of the portraits each frame, dropping destroyed ones as we pass.
+	local n = math.min(CHECKS_PER_FRAME, #entries)
+	for _ = 1, n do
+		if cursor > #entries then cursor = 1 end
+		local entry = entries[cursor]
+		if entry.Dead then
+			entries[cursor] = entries[#entries]
+			entries[#entries] = nil
+		else
+			check(entry)
+			cursor += 1
+		end
+	end
+	-- Build the highest queued portraits first.
+	local built = 0
+	while built < RIGS_PER_FRAME and #pending > 0 do
+		local best = 1
+		for i = 2, #pending do
+			if pending[i].Y < pending[best].Y then best = i end
+		end
+		local entry = table.remove(pending, best) :: Lazy
+		entry.Queued = false
+		if not entry.Dead and not entry.Model and entry.Viewport.Parent then
+			buildRig(entry)
+			built += 1
+		end
+	end
+end)
 
 function HeroCard.Portrait(parent: Instance, hero: any): GuiObject
 	local seed = HeroCatalog.Seeds[hero.TemplateId]
@@ -25,28 +159,20 @@ function HeroCard.Portrait(parent: Instance, hero: any): GuiObject
 			Ambient = Color3.fromRGB(195, 185, 168), LightColor = Color3.fromRGB(255, 238, 212),
 			LightDirection = Vector3.new(-1, -1, -2),
 		}, parent)
-		local model = template:Clone()
-		for _, descendant in model:GetDescendants() do
-			if descendant:IsA("BaseScript") then descendant:Destroy()
-			elseif descendant:IsA("BasePart") then
-				descendant.Anchored = true
-				descendant.CanCollide = false
-			end
-		end
-		-- Viewports never simulate joints: pose the hero's idle by writing part CFrames.
-		if model:GetAttribute("HeroRigVersion") ~= nil then
-			local idle = HeroClips.Get(hero.TemplateId, nil, "Idle")
-			if idle then
-				HeroAnimator.ApplyStaticPose(model, HeroAnimator.Sample(idle, 0))
-			end
-		end
-		model.Parent = viewport
-		local bounds, size = model:GetBoundingBox()
-		local head = model:FindFirstChild("Head")
-		local look = if head and head:IsA("BasePart") then head.Position - Vector3.new(0, size.Y * 0.1, 0) else bounds.Position + Vector3.new(0, size.Y * 0.22, 0)
-		local forward = bounds.LookVector
-		local camera = T.New("Camera", {FieldOfView = 32, CFrame = CFrame.lookAt(look + forward * math.max(4, size.Y * 0.82), look)}, viewport)
-		viewport.CurrentCamera = camera
+		local entry: Lazy = {
+			Viewport = viewport, Template = template, Hero = { TemplateId = hero.TemplateId }, Model = nil, Dead = false,
+			Scroll = nil, Moved = false, MovedAt = 0, WasVisible = false, Queued = false, Y = 0,
+		}
+		table.insert(entries, entry)
+		-- Fires after layout (scroll, sort, resize, open pop), so listening costs no forced layout.
+		viewport:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
+			entry.Moved = true
+			entry.MovedAt = os.clock()
+		end)
+		viewport.Destroying:Connect(function()
+			entry.Dead = true
+			if entry.Model then entry.Model:Destroy() end
+		end)
 		return viewport
 	end
 	local fallback = T.Label(parent, string.sub(hero.Archetype or "Hero", 1, 1), 32, T.Rarity[hero.Stars or 1])
