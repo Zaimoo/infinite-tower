@@ -3,6 +3,7 @@ local Workspace    = game:GetService("Workspace")
 
 local Config = require(script.Parent:WaitForChild("PlaytimeConfig"))
 local Utils  = require(script.Parent:WaitForChild("PlaytimeUtils"))
+local SharedLeaderboards = require(script.Parent.Parent:WaitForChild("BaseOverhaul"):WaitForChild("SharedLeaderboards"))
 
 local StandBuilder = {}
 
@@ -191,15 +192,12 @@ end
 
 local function getAllRigstandFolders(): { Folder }
 	local folders = {}
-	local plots = Workspace:FindFirstChild("WaitingRoomPlots")
-	if plots then
-		for _, plot in ipairs(plots:GetChildren()) do
-			local pstand = plot:FindFirstChild("AvxsedPlaytimeWS")
-			local rig = pstand and pstand:FindFirstChild("Rigstand")
-			if rig and rig:IsA("Folder") then
-				table.insert(folders, rig)
-			end
-		end
+	-- One shared board in the Masters' Commons Leaderboard Pavilion
+	local host = SharedLeaderboards.Host()
+	local pstand = host and host:FindFirstChild("AvxsedPlaytimeWS")
+	local rig = pstand and pstand:FindFirstChild("Rigstand")
+	if rig and rig:IsA("Folder") then
+		table.insert(folders, rig)
 	end
 	if #folders == 0 then
 		local fallback = Utils.resolvePath(Config.Paths.RigstandFolder, Workspace, 2)

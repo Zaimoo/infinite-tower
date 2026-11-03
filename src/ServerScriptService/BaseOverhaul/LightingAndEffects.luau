@@ -1,49 +1,22 @@
 --!strict
 -- LightingAndEffects.luau
--- ModuleScript: Configures Atmosphere, ColorCorrection, Bloom, SunRays, and Lighting to create
--- a rich, readable, atmospheric mood around the central Tower while keeping gameplay clear.
+-- ModuleScript: Configures Atmosphere, ColorCorrection, Bloom, SunRays, and Lighting. The server applies the
+-- hopeful "Sanctuary" preset as the baseline everyone joins with; HubLightingController then blends each
+-- player's view toward "Dread" near the tower or "Storm" on the tower floors (HubLighting presets).
 
 local Lighting = game:GetService("Lighting")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local HubLighting = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("HubLighting"))
 
 local LightingAndEffects = {}
 
 --============================================================================
 -- CONFIGURATION TABLE
 --============================================================================
-LightingAndEffects.Config = {
-	-- Core Lighting Properties (Phase 4.1 Atmospheric Moody Contrast)
-	ClockTime = 14.8,
-	Brightness = 1.65,
-	Ambient = Color3.fromRGB(38, 44, 58),
-	OutdoorAmbient = Color3.fromRGB(62, 72, 90),
-	ColorShift_Top = Color3.fromRGB(165, 180, 210),
-	ColorShift_Bottom = Color3.fromRGB(48, 56, 74),
-	EnvironmentDiffuseScale = 0.60,
-	EnvironmentSpecularScale = 0.65,
-
-	-- Atmosphere (Phase 4.1 Gothic Mist & Distant Horizon)
-	AtmosphereDensity = 0.24,
-	AtmosphereOffset = 0.08,
-	AtmosphereColor = Color3.fromRGB(115, 125, 140),
-	AtmosphereDecay = Color3.fromRGB(68, 76, 92),
-	AtmosphereGlare = 0.15,
-	AtmosphereHaze = 0.45,
-
-	-- ColorCorrection (Subtle contrast + balanced tone without washing out UI/Gameplay)
-	TintColor = Color3.fromRGB(238, 242, 252),
-	Contrast = 0.08,
-	Saturation = 0.06,
-	BrightnessOffset = 0.0,
-
-	-- Bloom (Subtle cinematic glow clamped so standard materials and liquid blocks never blow out)
-	BloomIntensity = 0.42,
-	BloomSize = 24,
-	BloomThreshold = 1.15,
-
-	-- SunRays (Natural environmental atmospheric godrays through skylights and canopy)
-	SunRaysIntensity = 0.09,
-	SunRaysSpread = 0.70,
-}
+LightingAndEffects.Config = table.clone(HubLighting.Presets.Sanctuary) :: { [string]: any }
+LightingAndEffects.Config.ClockTime = HubLighting.ClockTime
+LightingAndEffects.Config.Brightness = 1.65
 
 --============================================================================
 -- APPLY FUNCTION
@@ -74,6 +47,7 @@ function LightingAndEffects.Apply(customConfig: { [string]: any }?)
 	Lighting.ColorShift_Bottom = cfg.ColorShift_Bottom
 	Lighting.EnvironmentDiffuseScale = cfg.EnvironmentDiffuseScale
 	Lighting.EnvironmentSpecularScale = cfg.EnvironmentSpecularScale
+	Lighting.ExposureCompensation = cfg.ExposureCompensation
 
 	local atmosphere = Lighting:FindFirstChild("TowerStormAtmosphere") :: Atmosphere?
 		or Lighting:FindFirstChildOfClass("Atmosphere")

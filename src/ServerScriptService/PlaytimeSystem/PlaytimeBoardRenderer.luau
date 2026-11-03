@@ -4,6 +4,7 @@ local Config          = require(script.Parent:WaitForChild("PlaytimeConfig"))
 local Utils           = require(script.Parent:WaitForChild("PlaytimeUtils"))
 local DataStoreModule  = require(script.Parent:WaitForChild("PlaytimeDataStore"))
 local StandBuilder     = require(script.Parent:WaitForChild("PlaytimeStandBuilder"))
+local SharedLeaderboards = require(script.Parent.Parent:WaitForChild("BaseOverhaul"):WaitForChild("SharedLeaderboards"))
 
 local Renderer = {}
 
@@ -12,15 +13,12 @@ local lastUpdateEpoch = os.time()
 
 local function getAllScreenParts(): { BasePart }
 	local parts = {}
-	local plots = Workspace:FindFirstChild("WaitingRoomPlots")
-	if plots then
-		for _, plot in ipairs(plots:GetChildren()) do
-			local pstand = plot:FindFirstChild("AvxsedPlaytimeWS")
-			local s = pstand and pstand:FindFirstChild("ScreenPlaytime")
-			if s and s:IsA("BasePart") then
-				table.insert(parts, s)
-			end
-		end
+	-- One shared board in the Masters' Commons Leaderboard Pavilion
+	local host = SharedLeaderboards.Host()
+	local pstand = host and host:FindFirstChild("AvxsedPlaytimeWS")
+	local s = pstand and pstand:FindFirstChild("ScreenPlaytime")
+	if s and s:IsA("BasePart") then
+		table.insert(parts, s)
 	end
 	if #parts == 0 then
 		local fallback = Utils.resolvePath(Config.Paths.ScreenPlaytimePart, Workspace, 2)

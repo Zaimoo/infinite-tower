@@ -2,8 +2,8 @@
 -- ServerScriptService/Core/PlotBuildings.luau
 -- Waiting Room Plot Island Redesign (Phase 2 & 3):
 -- Builds all redesigned gothic fortress courtyard facilities & Outskirts Guardpost,
--- populates ReplicatedStorage.Assets.PlotFacilities prefabs, aligns the Playtime Leaderboard
--- onto the ornate North-Wall LeaderboardBoard, and removes legacy Infirmary instances.
+-- populates ReplicatedStorage.Assets.PlotFacilities prefabs, and removes legacy Infirmary instances.
+-- The world leaderboards live in the Masters' Commons pavilion (BaseOverhaul/SharedLeaderboards).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -62,86 +62,9 @@ local function syncPlotFacilityAnchor(plot: Instance, name: string, cf: CFrame)
 	end
 end
 
-local function alignPlaytimeBoardToWall(plot: Instance, origin: CFrame)
-	local playtimeStand = plot:FindFirstChild("AvxsedPlaytimeWS")
-	if not playtimeStand then
-		return
-	end
-
-	local rigstand = playtimeStand:FindFirstChild("Rigstand")
-	local top1 = rigstand and rigstand:FindFirstChild("Top 1")
-	if top1 and top1:IsA("BasePart") then
-		local targetTop1CF = origin * CFrame.new(116.6, 6.8, -20.9) * CFrame.Angles(0, math.rad(90), 0)
-		local deltaPos = targetTop1CF.Position - top1.Position
-		if deltaPos.Magnitude > 0.05 then
-			for _, d in ipairs(playtimeStand:GetDescendants()) do
-				if d:IsA("BasePart") and d.Name ~= "ScreenPlaytime" then
-					d.CFrame = d.CFrame + deltaPos
-				end
-			end
-		end
-	end
-
-	local screen = playtimeStand:FindFirstChild("ScreenPlaytime")
-	if screen and screen:IsA("BasePart") then
-		screen.Anchored = true
-		screen.CanCollide = false
-		screen.Size = Vector3.new(9.4, 12.4, 0.5)
-		screen.Transparency = 0
-		screen.Color = Color3.fromRGB(15, 15, 18)
-		screen.Material = Enum.Material.Glass
-		screen.CFrame = origin * CFrame.new(116.2, 6.65, -31.3) * CFrame.Angles(0, math.rad(90), 0)
-	end
-end
-
-local function alignPowerBoardToWall(plot: Instance, origin: CFrame)
-	local powerStand = plot:FindFirstChild("AvxsedPowerWS")
-	if not powerStand then
-		local playtimeStand = plot:FindFirstChild("AvxsedPlaytimeWS")
-		if playtimeStand then
-			local clone = playtimeStand:Clone()
-			clone.Name = "AvxsedPowerWS"
-			local screen = clone:FindFirstChild("ScreenPlaytime")
-			if screen then
-				screen.Name = "ScreenPower"
-				local holder = screen:FindFirstChild("SurfaceGui") and screen.SurfaceGui:FindFirstChild("Holder")
-				local headerLbl = holder and holder:FindFirstChild("Header") and holder.Header:FindFirstChild("LabelFrame") and holder.Header.LabelFrame:FindFirstChild("HeaderLabel") :: TextLabel?
-				if headerLbl then
-					headerLbl.Text = "TOP POWER"
-				end
-			end
-			clone.Parent = plot
-			powerStand = clone
-		else
-			return
-		end
-	end
-
-	local rigstand = powerStand:FindFirstChild("Rigstand")
-	local top1 = rigstand and rigstand:FindFirstChild("Top 1")
-	if top1 and top1:IsA("BasePart") then
-		local targetTop1CF = origin * CFrame.new(116.6, 6.8, 20.4) * CFrame.Angles(0, math.rad(90), 0)
-		local deltaPos = targetTop1CF.Position - top1.Position
-		if deltaPos.Magnitude > 0.05 then
-			for _, d in ipairs(powerStand:GetDescendants()) do
-				if d:IsA("BasePart") and d.Name ~= "ScreenPower" then
-					d.CFrame = d.CFrame + deltaPos
-				end
-			end
-		end
-	end
-
-	local screen = powerStand:FindFirstChild("ScreenPower") or powerStand:FindFirstChild("ScreenPlaytime")
-	if screen and screen:IsA("BasePart") then
-		screen.Name = "ScreenPower"
-		screen.Anchored = true
-		screen.CanCollide = false
-		screen.Size = Vector3.new(9.4, 12.4, 0.5)
-		screen.Transparency = 0
-		screen.Color = Color3.fromRGB(15, 15, 18)
-		screen.Material = Enum.Material.Glass
-		screen.CFrame = origin * CFrame.new(116.2, 6.65, 10.0) * CFrame.Angles(0, math.rad(90), 0)
-	end
+-- True when two origins match closely enough that cached buildings are still in place.
+local function sameOrigin(a: any, b: CFrame): boolean
+	return typeof(a) == "CFrame" and (a.Position - b.Position).Magnitude < 0.5 and a.LookVector:Dot(b.LookVector) > 0.999
 end
 
 function Buildings.Build(plot: Instance)
@@ -175,12 +98,17 @@ function Buildings.Build(plot: Instance)
 		origin = CFrame.new(spawn.Position.X, surfaceY, spawn.Position.Z) * spawn.CFrame.Rotation * CFrame.new(0, 0, 80)
 	end
 
-	-- Always align both leaderboards to the courtyard East Wall even if PlotBuildings is already cached
-	alignPlaytimeBoardToWall(plot, origin)
-	alignPowerBoardToWall(plot, origin)
+	-- Half-finished builds from an interrupted session
+	for _, child in plot:GetChildren() do
+		if child.Name == "PlotBuildings_Updating" then
+			child:Destroy()
+		end
+	end
 
+	-- Reuse cached buildings only if they were built for this version and this island position
 	local existing = plot:FindFirstChild("PlotBuildings")
 	if existing and existing:GetAttribute("Version") == VERSION
+		and sameOrigin(existing:GetAttribute("Origin"), origin)
 		and existing:FindFirstChild("Building_Market")
 		and existing:FindFirstChild("Building_TrainingGrounds") then
 		return existing
@@ -189,6 +117,7 @@ function Buildings.Build(plot: Instance)
 	local folder = Instance.new("Folder")
 	folder.Name = "PlotBuildings_Updating"
 	folder:SetAttribute("Version", VERSION)
+	folder:SetAttribute("Origin", origin)
 	folder.Parent = plot
 
 	local layout = FacilityConfig.FacilityLayout
@@ -214,10 +143,6 @@ function Buildings.Build(plot: Instance)
 		16
 	)
 	syncPlotFacilityAnchor(plot, "Summoning", summonInteract.CFrame)
-
-	-- 3. Playtime & Power Leaderboard Assets (Ground-based stands & arch along North Wall)
-	alignPlaytimeBoardToWall(plot, origin)
-	alignPowerBoardToWall(plot, origin)
 
 	-- 4. Market Cluster (4-Stall Merchant Bazaar in NE Corner)
 	local marketCfg = layout.Market

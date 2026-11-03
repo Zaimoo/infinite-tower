@@ -7,6 +7,7 @@ local Http=game:GetService("HttpService")
 local Protocol=require(RS.Shared.Util.TowerProtocol)
 local Policy=require(RS.Shared.Util.TowerRequestPolicy)
 local Builder=require(script.Parent.TowerRoomBuilder)
+local HubLayout=require(RS.Shared.Config.HubLayout)
 local Service={}
 Service.SessionId=Http:GenerateGUID(false):gsub("-",""):lower()
 Service.Encounters={} -- retained across geometry retirement; Part 3 owns combat/reward contents
@@ -357,10 +358,10 @@ function Service.Init()
 		if previews then previews:Destroy() end
 	end
 	local zones={}
-	-- Authored polygon belt and bounded plot boxes. Distance from origin grants no privilege.
-	for i=0,23 do
-		local a,b=i*math.pi/12,(i+1)*math.pi/12
-		table.insert(zones,{ZoneId="HUB_BANK_"..i,FloorId=0,RoomGeneration=1,LocalPolygonXZ={Vector2.new(math.cos(a)*460,math.sin(a)*460),Vector2.new(math.cos(b)*460,math.sin(b)*460),Vector2.new(math.cos(b)*760,math.sin(b)*760),Vector2.new(math.cos(a)*760,math.sin(a)*760)},MinY=-10,MaxY=100,CombatSafe=true,CanBankCargo=true,CanRecoverWipe=true})
+	-- Authored Commons, bridge and causeway polygons (HubLayout) plus bounded plot boxes. Distance from origin grants no privilege.
+	for _,zone in HubLayout.BankZonePolygons() do
+		local points={};for _,p in zone.Points do table.insert(points,Vector2.new(p[1],p[2])) end
+		table.insert(zones,{ZoneId=zone.Id,FloorId=0,RoomGeneration=1,LocalPolygonXZ=points,MinY=-10,MaxY=100,CombatSafe=true,CanBankCargo=true,CanRecoverWipe=true})
 	end
 	rooms[0]={FloorId=0,RoomGeneration=1,Origin=Vector3.zero,Arrival=CFrame.lookAt(Vector3.new(0,18.5,-342),Vector3.new(0,18.5,-330)),Bounds={Min=Vector3.new(-1500,-100,-1500),Max=Vector3.new(1500,2500,1500)},Zones=zones,Status="READY",Reservations=0}
 	local plots=workspace:WaitForChild("WaitingRoomPlots")

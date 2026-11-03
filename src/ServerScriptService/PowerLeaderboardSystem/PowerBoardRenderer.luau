@@ -5,6 +5,7 @@ local Config          = require(script.Parent:WaitForChild("PowerConfig"))
 local Utils           = require(script.Parent:WaitForChild("PowerUtils"))
 local DataStoreModule  = require(script.Parent:WaitForChild("PowerDataStore"))
 local StandBuilder     = require(script.Parent:WaitForChild("PowerStandBuilder"))
+local SharedLeaderboards = require(script.Parent.Parent:WaitForChild("BaseOverhaul"):WaitForChild("SharedLeaderboards"))
 
 local Renderer = {}
 
@@ -14,15 +15,12 @@ local renderQueued    = false
 
 local function getAllScreenParts(): { BasePart }
 	local parts = {}
-	local plots = Workspace:FindFirstChild("WaitingRoomPlots")
-	if plots then
-		for _, plot in ipairs(plots:GetChildren()) do
-			local pstand = plot:FindFirstChild("AvxsedPowerWS")
-			local s = pstand and (pstand:FindFirstChild("ScreenPower") or pstand:FindFirstChild("ScreenPlaytime"))
-			if s and s:IsA("BasePart") then
-				table.insert(parts, s)
-			end
-		end
+	-- One shared board in the Masters' Commons Leaderboard Pavilion
+	local host = SharedLeaderboards.Host()
+	local pstand = host and host:FindFirstChild("AvxsedPowerWS")
+	local s = pstand and (pstand:FindFirstChild("ScreenPower") or pstand:FindFirstChild("ScreenPlaytime"))
+	if s and s:IsA("BasePart") then
+		table.insert(parts, s)
 	end
 	if #parts == 0 then
 		local fallback = Utils.resolvePath(Config.Paths.ScreenPowerPart, Workspace, 2)

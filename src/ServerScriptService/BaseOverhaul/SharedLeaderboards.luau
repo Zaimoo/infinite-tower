@@ -1,0 +1,117 @@
+--!strict
+-- SharedLeaderboards.luau
+-- The world Playtime and Power boards live once, in the Masters' Commons Leaderboard Pavilion,
+-- instead of one copy per plot. Mount() adopts an existing board (pavilion, rescued, or the first
+-- plot copy), deletes the other plot copies, and seats each board on its pavilion slot.
+
+local Workspace = game:GetService("Workspace")
+
+local SharedLeaderboards = {}
+
+local PLAYTIME = { Name = "AvxsedPlaytimeWS", Screen = "ScreenPlaytime", Slot = "BoardSlot_Playtime" }
+local POWER = { Name = "AvxsedPowerWS", Screen = "ScreenPower", Slot = "BoardSlot_Power" }
+local BOARDS = { PLAYTIME, POWER }
+
+-- The pavilion that hosts the shared boards, or nil before the hub is built.
+function SharedLeaderboards.Host(): Instance?
+	local geometry = Workspace:FindFirstChild("BaseOverhaulGeometry")
+	local commons = geometry and geometry:FindFirstChild("MastersCommons")
+	return commons and commons:FindFirstChild("LeaderboardPavilion")
+end
+
+local function findScreen(board: Instance): BasePart?
+	local screen = board:FindFirstChild("ScreenPower") or board:FindFirstChild("ScreenPlaytime")
+	return if screen and screen:IsA("BasePart") then screen else nil
+end
+
+local function powerFromPlaytime(playtime: Instance): Instance
+	local clone = playtime:Clone()
+	clone.Name = POWER.Name
+	local screen = clone:FindFirstChild("ScreenPlaytime")
+	if screen then
+		screen.Name = POWER.Screen
+		local holder = screen:FindFirstChild("SurfaceGui") and (screen :: any).SurfaceGui:FindFirstChild("Holder")
+		local header = holder and holder:FindFirstChild("Header")
+		local labelFrame = header and header:FindFirstChild("LabelFrame")
+		local headerLabel = labelFrame and labelFrame:FindFirstChild("HeaderLabel")
+		if headerLabel and headerLabel:IsA("TextLabel") then
+			headerLabel.Text = "TOP POWER"
+		end
+	end
+	return clone
+end
+
+-- Moves every part of `board` rigidly so the screen faces along the slot's LookVector,
+-- the board is centred on the slot sideways, and its lowest part rests on the slot.
+local function seat(board: Instance, screen: BasePart, slot: BasePart)
+	local parts = {}
+	for _, d in board:GetDescendants() do
+		if d:IsA("BasePart") then
+			table.insert(parts, d)
+		end
+	end
+	local slotCF = slot.CFrame
+	local align = slotCF * screen.CFrame:Inverse()
+	local minX, maxX, minY = math.huge, -math.huge, math.huge
+	for _, p in parts do
+		local lp = slotCF:PointToObjectSpace((align * p.CFrame).Position)
+		minX = math.min(minX, lp.X)
+		maxX = math.max(maxX, lp.X)
+		minY = math.min(minY, lp.Y - p.Size.Y * 0.5)
+	end
+	local shift = slotCF * CFrame.new(-(minX + maxX) * 0.5, -minY, 0) * slotCF:Inverse()
+	local move = shift * align
+	for _, p in parts do
+		p.Anchored = true
+		p.CFrame = move * p.CFrame
+	end
+end
+
+-- Detaches the boards from an old Commons so a rebuild can re-mount them.
+function SharedLeaderboards.Rescue(container: Instance?): { [string]: Instance }
+	local rescued = {}
+	local commons = container and container:FindFirstChild("MastersCommons")
+	local pavilion = commons and commons:FindFirstChild("LeaderboardPavilion")
+	if pavilion then
+		for _, spec in BOARDS do
+			local board = pavilion:FindFirstChild(spec.Name)
+			if board then
+				board.Parent = nil
+				rescued[spec.Name] = board
+			end
+		end
+	end
+	return rescued
+end
+
+function SharedLeaderboards.Mount(pavilion: Instance, plotsFolder: Instance, rescued: { [string]: Instance }?)
+	for _, spec in BOARDS do
+		local board = pavilion:FindFirstChild(spec.Name) or (rescued and rescued[spec.Name])
+		for _, plot in plotsFolder:GetChildren() do
+			local copy = plot:FindFirstChild(spec.Name)
+			if copy then
+				if board then
+					copy:Destroy()
+				else
+					board = copy
+				end
+			end
+		end
+		if not board and spec == POWER then
+			local playtime = pavilion:FindFirstChild(PLAYTIME.Name)
+			board = playtime and powerFromPlaytime(playtime)
+		end
+		local slot = pavilion:FindFirstChild(spec.Slot)
+		local screen = board and findScreen(board)
+		if board and screen and slot and slot:IsA("BasePart") then
+			screen.Name = spec.Screen
+			board.Parent = pavilion
+			seat(board, screen, slot)
+		elseif board then
+			board.Parent = pavilion
+			warn("[SharedLeaderboards] could not seat " .. spec.Name)
+		end
+	end
+end
+
+return SharedLeaderboards
