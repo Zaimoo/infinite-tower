@@ -603,11 +603,22 @@ do
 end
 
 -- Eolka (STAFF): Crimson Hellfire Pillar. Staff raised high in both hands, then driven forward
--- and down in a lunge.
+-- and down in a lunge. Idle is her poised stance: feet apart, staff held upright out at her
+-- right side (the wrist rolls it upright beside her hip), left arm loose, a slight turn and a
+-- knowing tilt of the head.
 do
 	local p = WeaponPoses.STAFF
 	local drive = merge(p.Cast, { Waist = { -22, 0, 0 }, RightShoulder = { 60, 0, 0 }, LeftShoulder = { 55, 0, 10 }, LeftElbow = { 15, 0, 0 }, LeftHip = { 45, 0, -6 }, LeftKnee = { -50, 0, 0 }, RightHip = { -20, 0, 6 }, RightKnee = { -25, 0, 0 }, RootOffset = { 0, -0.4, -0.25 } })
+	local poised: Pose = {
+		Waist = { -2, 8, 0 }, Neck = { -3, -6, 4 },
+		RightShoulder = { 10, 0, 28 }, RightElbow = { 35, 0, 0 }, RightWrist = { 45, -35, 0 },
+		LeftShoulder = { 8, 0, -18 }, LeftElbow = { 20, 0, 0 },
+		LeftHip = { 4, 0, -10 }, LeftKnee = { -10, 0, 0 }, LeftAnkle = { 6, 0, 10 },
+		RightHip = { 4, 0, 10 }, RightKnee = { -10, 0, 0 }, RightAnkle = { 6, 0, -10 },
+		RootOffset = { 0, -0.08, 0 },
+	}
 	Overrides.hero_eolka = {
+		Idle = breathe(poised, 3.4),
 		AttackSkill = signature(1.2, {
 			{ 0, p.Stand },
 			{ 0.4, merge(p.Raised, { LeftShoulder = { 170, 0, -5 }, LeftElbow = { 30, 0, 0 }, RootOffset = { 0, 0.2, 0 } }) },

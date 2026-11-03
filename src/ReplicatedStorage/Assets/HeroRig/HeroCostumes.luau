@@ -62,6 +62,8 @@ HeroCostumes.MESHES = table.freeze({
 	["rbxassetid://84157414920224"] = "",
 	-- Catio's hair, our own: CatioHair in assets/hair/hero_hair.blend, imported the same way.
 	["rbxassetid://139185116264855"] = "",
+	-- Eolka's hair, our own: tools/make_eolka_hair_ugc.py (assets/hair/eolka_hair_ugc.blend).
+	["rbxassetid://123421721359927"] = "",
 } :: { [string]: string })
 
 -- Avatar hair accessory placement: a piece centred so the accessory's HairAttachment meets
@@ -492,83 +494,72 @@ do
 end
 
 -- 8. EOLKA (3★ Scholar - Crimson Pyromancer Sorceress) ------------------------------------
--- Remodelled from reference image (media_1793475933976_84236ceb.jpg) & Blender rig
--- (tools/blender/generate_crimson_pyromancer_rig.py):
--- Warm porcelain-ivory skin (#F7DFC6), vibrant copper-orange hair (#D85224 / #F27935) with
--- swept bangs, ornate gold crown cuff (#E4BA73), and voluminous high sweeping ponytail;
--- high metallic gold neck collar with glowing crimson-amber ruby cabochon brooch (#FF3B1F);
--- obsidian modesty bodice (#141118) beneath a sweetheart crimson velvet corset (#8C1D18)
--- with gold V-piping; asymmetric black/crimson shoulder capelet with gold baroque scrollwork;
--- wide metallic gold wrist bracers; floor-length split gothic skirt with gold filigree;
--- and a hovering Solar Fire Orb above her right palm.
+-- Battle-sorceress look from her reference art: copper hair swept into a high ponytail with a
+-- gold band, high black collar with a ruby brooch, black yoke and broad pauldrons edged in gold,
+-- crimson chest panels with gold piping, gold-trimmed belt and crimson tabard, black cape with
+-- crimson lining, gold bracers, black trousers and gilded boots. Face: our own decal from
+-- assets/faces/make_eolka_face.py. Hair: our Blender mesh (tools/make_eolka_hair_ugc.py).
 do
-	local skin = { 247, 223, 198 }      -- #F7DFC6 Warm porcelain-ivory
-	local hairBase = { 216, 82, 36 }    -- #D85224 Copper-orange hair base
-	local hairHi = { 242, 121, 53 }     -- #F27935 Fiery orange highlights
-	local obsidian = { 20, 17, 24 }     -- #141118 Gothic obsidian cloth
-	local crimson = { 140, 29, 24 }     -- #8C1D18 Crimson velvet corset
-	local deepCrimson = { 122, 28, 24 } -- #7A1C18 Inner capelet lining
-	local gold = { 228, 186, 115 }      -- #E4BA73 Royal metallic gold filigree
-	local rubyNeon = { 255, 59, 31 }    -- #FF3B1F Glowing ruby brooch
-	local orbCore = { 255, 243, 176 }   -- #FFF3B0 Solar Fire Orb core
-	local orbFlame = { 255, 107, 26 }   -- #FF6B1A Swirling flame ribbon shell
-
-	table.insert(COSTUMES, costume("hero_eolka", "Slim", {
-		Skin = skin, UpperTorso = obsidian, LowerTorso = obsidian,
-		UpperArm = obsidian, LowerArm = skin, Hand = skin,
-		UpperLeg = obsidian, LowerLeg = obsidian, Foot = obsidian,
+	local skin, hair, black, crimson = { 247, 223, 198 }, { 216, 98, 40 }, { 26, 22, 28 }, { 140, 29, 34 }
+	local gold, ruby, sleeve, boot = { 214, 172, 92 }, { 255, 50, 40 }, { 78, 64, 80 }, { 48, 36, 30 }
+	table.insert(COSTUMES, costume("hero_eolka", "Standard", {
+		Skin = skin, UpperTorso = black, LowerTorso = black, UpperArm = black, LowerArm = sleeve, Hand = skin,
+		UpperLeg = black, LowerLeg = boot, Foot = boot,
 	}, {
-		-- 1. Sculpted Copper-Orange Anime Hair, Curtain Bangs, Gold Crown Cuff & High Ponytail
-		piece("HairBase", "Head", { 1.28, 0.52, 1.28 }, { 0, 0.46, 0.04 }, hairBase),
-		piece("HairBangL", "Head", { 0.42, 0.48, 0.24 }, { -0.36, 0.28, -0.56 }, hairHi, { Rotation = { 12, 18, 22 } }),
-		piece("HairBangR", "Head", { 0.42, 0.48, 0.24 }, { 0.36, 0.28, -0.56 }, hairHi, { Rotation = { 12, -18, -22 } }),
-		piece("HairCenterLock", "Head", { 0.16, 0.44, 0.16 }, { 0, 0.30, -0.62 }, hairHi, { Rotation = { 8, 0, -4 } }),
-		piece("HairSideLockL", "Head", { 0.22, 0.85, 0.24 }, { -0.60, -0.08, -0.22 }, hairBase, LOOSE),
-		piece("HairSideLockR", "Head", { 0.22, 0.85, 0.24 }, { 0.60, -0.08, -0.22 }, hairBase, LOOSE),
-		piece("EarringL", "Head", { 0.08, 0.22, 0.08 }, { -0.62, -0.18, -0.08 }, gold, with(LOOSE, METAL)),
-		piece("EarringR", "Head", { 0.08, 0.22, 0.08 }, { 0.62, -0.18, -0.08 }, gold, with(LOOSE, METAL)),
-		piece("HairGoldCuff", "Head", { 0.42, 0.16, 0.42 }, { -0.18, 0.68, 0.46 }, gold, with(LOOSE, METAL, { Rotation = { -35, 0, -18 } })),
-		piece("PonytailCrest", "Head", { 0.52, 1.45, 0.44 }, { -0.58, 0.56, 0.78 }, hairHi, with(LOOSE, { Rotation = { -28, 0, -32 } })),
-		piece("PonytailLower", "Head", { 0.46, 1.55, 0.40 }, { -0.38, 0.12, 0.88 }, hairBase, with(LOOSE, { Rotation = { -16, 0, -18 } })),
-
-		-- 2. High Gold Collar & Glowing Crimson-Amber Ruby Brooch
-		piece("GoldCollar", "UpperTorso", { 0.82, 0.26, 0.82 }, { 0, 0.82, -0.02 }, gold, with(LOOSE, METAL)),
-		piece("BroochBezel", "UpperTorso", { 0.34, 0.42, 0.14 }, { 0, 0.58, -0.52 }, gold, METAL),
-		piece("RubyBroochGem", "UpperTorso", { 0.24, 0.32, 0.16 }, { 0, 0.58, -0.55 }, rubyNeon, with(NEON, { Shape = "Ball" })),
-
-		-- 3. Sweetheart Crimson Velvet Corset & Gold V-Piping
-		piece("CorsetSideL", "UpperTorso", { 0.64, 1.18, 0.98 }, { -0.44, -0.12, -0.02 }, crimson, { Material = "Fabric" }),
-		piece("CorsetSideR", "UpperTorso", { 0.64, 1.18, 0.98 }, { 0.44, -0.12, -0.02 }, crimson, { Material = "Fabric" }),
-		piece("CorsetCenterV", "UpperTorso", { 0.52, 1.22, 1.00 }, { 0, -0.10, -0.03 }, obsidian, { Material = "Fabric" }),
-		piece("CorsetGoldPipingL", "UpperTorso", { 0.07, 1.15, 0.08 }, { -0.22, -0.12, -0.52 }, gold, with(METAL, { Rotation = { 0, 0, -12 } })),
-		piece("CorsetGoldPipingR", "UpperTorso", { 0.07, 1.15, 0.08 }, { 0.22, -0.12, -0.52 }, gold, with(METAL, { Rotation = { 0, 0, 12 } })),
-		piece("CorsetWaistGoldL", "UpperTorso", { 0.68, 0.08, 1.02 }, { -0.34, -0.68, -0.02 }, gold, with(METAL, { Rotation = { 0, 0, -16 } })),
-		piece("CorsetWaistGoldR", "UpperTorso", { 0.68, 0.08, 1.02 }, { 0.34, -0.68, -0.02 }, gold, with(METAL, { Rotation = { 0, 0, 16 } })),
-
-		-- 4. Asymmetric Black & Crimson-Lined Shoulder Capelet with Gold Baroque Filigree
-		piece("CapeletBack", "UpperTorso", { 2.18, 1.45, 0.22 }, { 0, 0.10, 0.52 }, obsidian, with(LOOSE, { Material = "Fabric" })),
-		piece("CapeletLining", "UpperTorso", { 2.10, 1.38, 0.16 }, { 0, 0.08, 0.44 }, deepCrimson, with(LOOSE, { Material = "Fabric" })),
-		piece("CapeletShoulderL", "LeftUpperArm", { 1.18, 0.72, 1.14 }, { -0.08, 0.22, 0 }, obsidian, { Material = "Fabric" }),
-		piece("CapeletShoulderR", "RightUpperArm", { 1.18, 0.72, 1.14 }, { 0.08, 0.22, 0 }, obsidian, { Material = "Fabric" }),
-		piece("ShoulderFiligreeL", "LeftUpperArm", { 1.22, 0.16, 1.18 }, { -0.08, 0.48, 0 }, gold, METAL),
-		piece("ShoulderFiligreeR", "RightUpperArm", { 1.22, 0.16, 1.18 }, { 0.08, 0.48, 0 }, gold, METAL),
-
-		-- 5. Ornate Gold Wrist Bracers
-		piece("GoldBracerL", "LeftLowerArm", { 1.04, 0.36, 1.04 }, { 0, -0.26, 0 }, gold, METAL),
-		piece("GoldBracerR", "RightLowerArm", { 1.04, 0.36, 1.04 }, { 0, -0.26, 0 }, gold, METAL),
-
-		-- 6. Flowing Floor-Length Split Gothic Skirt & Gold Hip/Hem Filigree
-		piece("GothicSkirtUpper", "LowerTorso", { 1.96, 1.15, 1.26 }, { 0, -0.42, 0 }, obsidian, with(LOOSE, { Material = "Fabric" })),
-		piece("GothicSkirtLower", "LowerTorso", { 2.38, 1.35, 1.54 }, { 0, -1.48, 0.04 }, obsidian, with(LOOSE, { Material = "Fabric" })),
-		piece("SkirtHipFiligreeR", "LowerTorso", { 0.58, 0.82, 0.12 }, { 0.68, -0.52, -0.58 }, gold, with(LOOSE, METAL, { Rotation = { 0, 0, -18 } })),
-		piece("SkirtSlitFiligreeL", "LowerTorso", { 0.14, 1.65, 0.14 }, { -0.58, -1.18, -0.66 }, gold, with(LOOSE, METAL, { Rotation = { 0, 0, 12 } })),
-		piece("SkirtHemGold", "LowerTorso", { 2.42, 0.12, 1.58 }, { 0, -2.12, 0.04 }, gold, with(LOOSE, METAL)),
-
-		-- 7. Hovering Right-Hand Solar Fire Orb (CastVFXSocket Preview)
-		piece("SolarFireOrbCore", "RightHand", { 0.62, 0.62, 0.62 }, { 0, -0.52, -0.42 }, orbCore, with(LOOSE, NEON, { Shape = "Ball" })),
-		piece("SolarFireRibbonA", "RightHand", { 0.78, 0.16, 0.78 }, { 0, -0.52, -0.42 }, orbFlame, with(LOOSE, NEON, { Rotation = { 28, 0, 35 } })),
-		piece("SolarFireRibbonB", "RightHand", { 0.78, 0.16, 0.78 }, { 0, -0.52, -0.42 }, orbFlame, with(LOOSE, NEON, { Rotation = { -28, 0, -35 } })),
-	}, "rbxassetid://127108676891411"))
+		-- Hair mesh: centred on the export's bounding box and turned 180 degrees to undo the
+		-- importer's rotation; gold band on the high ponytail.
+		piece("HairMesh", "Head", { 1.66, 1.87, 1.79 }, { 0.0006, 0.2293, 0.1851 }, hair, with(LOOSE, {
+			Rotation = { 0, 180, 0 },
+			Mesh = { MeshId = "rbxassetid://123421721359927", Scale = { 0.01, 0.01, 0.01 } },
+		})),
+		piece("HairBand", "Head", { 0.12, 0.27, 0.27 }, { 0, 0.836, 0.5376 }, gold, with(LOOSE, METAL, { Shape = "Cylinder", Rotation = { 15, 0, 90 } })),
+		-- High collar with gold rim and a ruby brooch
+		piece("HighCollar", "UpperTorso", { 1.2, 0.35, 0.95 }, { 0, 0.82, 0.05 }, black, with(LOOSE, { Material = "Fabric" })),
+		piece("CollarRim", "UpperTorso", { 1.24, 0.06, 0.99 }, { 0, 0.99, 0.05 }, gold, with(LOOSE, METAL)),
+		piece("BroochBezel", "UpperTorso", { 0.3, 0.34, 0.08 }, { 0, 0.6, -0.53 }, gold, METAL),
+		piece("RubyBrooch", "UpperTorso", { 0.2, 0.24, 0.12 }, { 0, 0.6, -0.57 }, ruby, with(NEON, { Shape = "Ball" })),
+		-- Black yoke across the shoulders, crimson chest panels with gold piping
+		piece("Yoke", "UpperTorso", { 2.06, 0.45, 1.06 }, { 0, 0.6, 0 }, black, { Material = "Fabric" }),
+		piece("YokeTrim", "UpperTorso", { 2.08, 0.06, 1.08 }, { 0, 0.37, 0 }, gold, METAL),
+		piece("ChestPanelL", "UpperTorso", { 0.55, 1.0, 0.06 }, { -0.38, -0.2, -0.51 }, crimson, { Material = "Fabric" }),
+		piece("ChestPanelR", "UpperTorso", { 0.55, 1.0, 0.06 }, { 0.38, -0.2, -0.51 }, crimson, { Material = "Fabric" }),
+		piece("PipingL", "UpperTorso", { 0.06, 1.0, 0.07 }, { -0.12, -0.2, -0.52 }, gold, with(METAL, { Rotation = { 0, 0, -6 } })),
+		piece("PipingR", "UpperTorso", { 0.06, 1.0, 0.07 }, { 0.12, -0.2, -0.52 }, gold, with(METAL, { Rotation = { 0, 0, 6 } })),
+		piece("CapeUpper", "UpperTorso", { 2.1, 1.62, 0.1 }, { 0, 0, 0.58 }, black, with(LOOSE, { Material = "Fabric" })),
+		-- Broad pauldrons edged in gold, with a gold emblem on the outer face
+		piece("PauldronL", "LeftUpperArm", { 1.4, 0.75, 1.3 }, { -0.2, 0.35, 0 }, black, { Rotation = { 0, 0, 8 } }),
+		piece("PauldronTrimL", "LeftUpperArm", { 1.44, 0.08, 1.34 }, { 0, -0.36, 0 }, gold, with(METAL, { RelativeTo = "PauldronL" })),
+		piece("PauldronEmblemL", "LeftUpperArm", { 0.04, 0.34, 0.5 }, { -0.71, 0.02, 0 }, gold, with(METAL, { RelativeTo = "PauldronL" })),
+		piece("PauldronR", "RightUpperArm", { 1.4, 0.75, 1.3 }, { 0.2, 0.35, 0 }, black, { Rotation = { 0, 0, -8 } }),
+		piece("PauldronTrimR", "RightUpperArm", { 1.44, 0.08, 1.34 }, { 0, -0.36, 0 }, gold, with(METAL, { RelativeTo = "PauldronR" })),
+		piece("PauldronEmblemR", "RightUpperArm", { 0.04, 0.34, 0.5 }, { 0.71, 0.02, 0 }, gold, with(METAL, { RelativeTo = "PauldronR" })),
+		-- Forearms: dusky sleeves, a gold ring at the elbow and double gold bracers
+		piece("ElbowRingL", "LeftLowerArm", { 1.08, 0.08, 1.08 }, { 0, 0.42, 0 }, gold, METAL),
+		piece("ElbowRingR", "RightLowerArm", { 1.08, 0.08, 1.08 }, { 0, 0.42, 0 }, gold, METAL),
+		piece("BracerUpperL", "LeftLowerArm", { 1.1, 0.12, 1.1 }, { 0, -0.18, 0 }, gold, METAL),
+		piece("BracerUpperR", "RightLowerArm", { 1.1, 0.12, 1.1 }, { 0, -0.18, 0 }, gold, METAL),
+		piece("BracerLowerL", "LeftLowerArm", { 1.1, 0.12, 1.1 }, { 0, -0.4, 0 }, gold, METAL),
+		piece("BracerLowerR", "RightLowerArm", { 1.1, 0.12, 1.1 }, { 0, -0.4, 0 }, gold, METAL),
+		-- Gold-trimmed belt, crimson tabard and the lower cape with its crimson lining
+		piece("Belt", "LowerTorso", { 2.06, 0.24, 1.06 }, { 0, 0.06, 0 }, black),
+		piece("BeltTrimTop", "LowerTorso", { 2.08, 0.05, 1.08 }, { 0, 0.19, 0 }, gold, METAL),
+		piece("BeltTrimBottom", "LowerTorso", { 2.08, 0.05, 1.08 }, { 0, -0.07, 0 }, gold, METAL),
+		piece("Tabard", "LowerTorso", { 1.0, 0.9, 0.06 }, { 0, -0.6, -0.53 }, crimson, with(LOOSE, { Material = "Fabric" })),
+		piece("TabardHem", "LowerTorso", { 1.02, 0.06, 0.07 }, { 0, -1.03, -0.54 }, gold, with(LOOSE, METAL)),
+		piece("CapeLower", "LowerTorso", { 2.1, 2.1, 0.1 }, { 0, -1.15, 0.66 }, black, with(LOOSE, { Material = "Fabric", Rotation = { -10, 0, 0 } })),
+		piece("CapeLining", "LowerTorso", { 2.0, 2.0, 0.05 }, { 0, -1.12, 0.6 }, crimson, with(LOOSE, { Material = "Fabric", Rotation = { -10, 0, 0 } })),
+		-- Gilded boots: gold cuff, a gold chevron on the shin, gold soles
+		piece("BootCuffL", "LeftLowerLeg", { 1.08, 0.1, 1.08 }, { 0, 0.55, 0 }, gold, METAL),
+		piece("BootCuffR", "RightLowerLeg", { 1.08, 0.1, 1.08 }, { 0, 0.55, 0 }, gold, METAL),
+		piece("ChevronAL", "LeftLowerLeg", { 0.4, 0.06, 0.04 }, { -0.14, 0.1, -0.52 }, gold, with(METAL, { Rotation = { 0, 0, -30 } })),
+		piece("ChevronBL", "LeftLowerLeg", { 0.4, 0.06, 0.04 }, { 0.14, 0.1, -0.52 }, gold, with(METAL, { Rotation = { 0, 0, 30 } })),
+		piece("ChevronAR", "RightLowerLeg", { 0.4, 0.06, 0.04 }, { -0.14, 0.1, -0.52 }, gold, with(METAL, { Rotation = { 0, 0, -30 } })),
+		piece("ChevronBR", "RightLowerLeg", { 0.4, 0.06, 0.04 }, { 0.14, 0.1, -0.52 }, gold, with(METAL, { Rotation = { 0, 0, 30 } })),
+		piece("BootL", "LeftFoot", { 1.08, 0.34, 1.25 }, { 0, 0.02, -0.1 }, boot),
+		piece("BootSoleL", "LeftFoot", { 1.1, 0.07, 1.28 }, { 0, -0.13, -0.1 }, gold, METAL),
+		piece("BootR", "RightFoot", { 1.08, 0.34, 1.25 }, { 0, 0.02, -0.1 }, boot),
+		piece("BootSoleR", "RightFoot", { 1.1, 0.07, 1.28 }, { 0, -0.13, -0.1 }, gold, METAL),
+	}, "rbxassetid://131976429681674"))
 end
 
 -- 9. MORRIGAN (4★ Vanguard - Void Nightblade) ---------------------------------------------
