@@ -57,7 +57,8 @@ HeroCostumes.MESHES = table.freeze({
 	["rbxassetid://109684055929778"] = "",
 	-- Aaron's hair, our own: AaronHair in assets/hair/hero_hair.blend, imported the same way.
 	["rbxassetid://76088495641706"] = "",
-	["rbxassetid://120786247877430"] = "",
+	-- Jenna's hair, our own: tools/make_jenna_hair_ugc.py (assets/hair/jenna_hair_ugc.blend).
+	["rbxassetid://107250648665529"] = "",
 	["rbxassetid://84157414920224"] = "",
 	-- Catio's hair, our own: CatioHair in assets/hair/hero_hair.blend, imported the same way.
 	["rbxassetid://139185116264855"] = "",
@@ -366,10 +367,15 @@ do
 		Skin = skin, UpperTorso = linen, LowerTorso = leather, UpperArm = linen, LowerArm = skin,
 		Hand = skin, UpperLeg = trousers, LowerLeg = slate, Foot = leather,
 	}, {
-		-- 1. Hair mesh: high-poly UGC anime hair with spiky bangs, two front tails, and back braid
-		piece("HairMesh", "Head", { 1.53, 1.81, 1.60 }, { 0, 0.082, 0.060 }, hair, with(LOOSE, {
-			Mesh = { MeshId = "rbxassetid://120786247877430", Scale = { 0.01, 0.01, 0.01 } },
+		-- 1. Hair mesh: UGC-style ribbon locks, spiky crown, side-swept fringe, face-framing locks
+		-- and a ponytail at the centre of the back. Centred on the export's bounding box and
+		-- turned 180 degrees to undo the importer's rotation; a dark band covers the hair tie.
+		-- Shrunk 8% about the head centre (mesh, offset and tie together) to hug the head.
+		piece("HairMesh", "Head", { 1.6, 2.8, 1.89 }, { 0.0018, -0.4851, 0.1636 }, hair, with(LOOSE, {
+			Rotation = { 0, 180, 0 },
+			Mesh = { MeshId = "rbxassetid://107250648665529", Scale = { 0.0092, 0.0092, 0.0092 } },
 		})),
+		piece("HairTie", "Head", { 0.11, 0.23, 0.23 }, { 0, -0.221, 0.754 }, charcoal, with(LOOSE, { Shape = "Cylinder", Rotation = { 0, 0, 90 } })),
 
 		-- 2. Linen Tunic & Collar
 		piece("TunicVNeck", "UpperTorso", { 0.36, 0.36, 0.04 }, { 0, 0.65, -0.51 }, skin, { Rotation = { 0, 0, 45 } }),
