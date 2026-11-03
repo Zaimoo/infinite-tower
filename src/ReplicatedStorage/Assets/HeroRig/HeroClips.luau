@@ -646,11 +646,18 @@ do
 end
 
 -- Valeria (TOME): Sanctuary Miracle. Tome and hand lifted in blessing, then both arms opened
--- wide as the circle forms.
+-- wide as the circle forms. Idle is her bored reading stance: tome open in the left hand at
+-- chest height off to her side, head tipped toward it, right arm hanging loose.
 do
 	local p = WeaponPoses.TOME
 	local open = merge(ATTACK_STANCE, { Waist = { 10, 0, 0 }, Neck = { 12, 0, 0 }, LeftShoulder = { 110, 0, -70 }, LeftElbow = { 15, 0, 0 }, RightShoulder = { 110, 0, 70 }, RightElbow = { 15, 0, 0 } })
+	local reading = merge(STANCE, {
+		Waist = { -2, 10, 0 }, Neck = { -8, 12, 3 },
+		LeftShoulder = { 35, -25, -14 }, LeftElbow = { 78, 0, 0 },
+		RightShoulder = { 4, 0, 6 }, RightElbow = { 12, 0, 0 },
+	})
 	Overrides.hero_valeria = {
+		Idle = breathe(reading, 3.8),
 		AttackSkill = signature(1.2, {
 			{ 0, p.Read },
 			{ 0.35, merge(p.Channel, { Neck = { 20, 0, 0 }, LeftShoulder = { 150, 0, -10 }, LeftElbow = { 20, 0, 0 }, RightShoulder = { 150, 0, 10 }, RightElbow = { 10, 0, 0 } }) },

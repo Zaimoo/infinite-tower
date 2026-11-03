@@ -64,6 +64,8 @@ HeroCostumes.MESHES = table.freeze({
 	["rbxassetid://139185116264855"] = "",
 	-- Eolka's hair, our own: tools/make_eolka_hair_ugc.py (assets/hair/eolka_hair_ugc.blend).
 	["rbxassetid://123421721359927"] = "",
+	-- Valeria's hair, our own: tools/make_valeria_hair_ugc.py (assets/hair/valeria_hair_ugc.blend).
+	["rbxassetid://119546665528137"] = "",
 } :: { [string]: string })
 
 -- Avatar hair accessory placement: a piece centred so the accessory's HairAttachment meets
@@ -322,18 +324,77 @@ do
 end
 
 -- 4. VALERIA (4★ Healer - Emerald Guardian) --------------------------------------------
+-- Sleepy field-medic priest from her reference art: fluffy shoulder-length brown hair, white and
+-- green robe with gold trim, high collar with goggles resting at the neck, white pauldrons with
+-- gold stars, a green tabard with a gold cross and stars, belt with potion vials and a herb
+-- pouch, an open white coat skirt, dark trousers, gold-rimmed knee plates and gilded boots.
+-- Face: our own decal from assets/faces/make_valeria_face.py. Hair: our Blender mesh
+-- (tools/make_valeria_hair_ugc.py).
 do
-	local skin, hair, emerald, gold, mint, white = { 255, 226, 210 }, { 240, 225, 170 }, { 60, 160, 120 }, { 255, 205, 75 }, { 100, 232, 175 }, { 240, 245, 240 }
-	table.insert(COSTUMES, costume("hero_valeria", "Slim", {
-		Skin = skin, UpperTorso = emerald, LowerTorso = emerald, UpperArm = emerald, LowerArm = skin,
-		UpperLeg = white, LowerLeg = white, Foot = gold,
+	local skin, hair, white, green, gold = { 240, 205, 172 }, { 110, 62, 32 }, { 236, 236, 232 }, { 62, 140, 118 }, { 214, 172, 92 }
+	local leather, pants, plate, boot, steel = { 78, 52, 36 }, { 60, 42, 34 }, { 58, 40, 34 }, { 52, 38, 30 }, { 150, 150, 158 }
+	local lens, potionGreen, potionPurple, pouch = { 190, 210, 215 }, { 90, 220, 120 }, { 170, 70, 220 }, { 72, 80, 50 }
+	table.insert(COSTUMES, costume("hero_valeria", "Standard", {
+		Skin = skin, UpperTorso = white, LowerTorso = white, UpperArm = white, LowerArm = white, Hand = skin,
+		UpperLeg = pants, LowerLeg = pants, Foot = boot,
 	}, {
-		piece("HairBase", "Head", { 1.24, 0.45, 1.24 }, { 0, 0.48, -0.05 }, hair),
-		piece("HairCirclet", "Head", { 1.26, 0.15, 1.26 }, { 0, 0.35, 0 }, gold, METAL),
-		piece("CircletGem", "Head", { 0.3, 0.3, 0.15 }, { 0, 0.35, -0.63 }, mint, with(NEON, { Shape = "Ball" })),
-		piece("HealerSkirt", "LowerTorso", { 2.3, 1.3, 1.5 }, { 0, -0.45, 0 }, emerald, LOOSE),
-		piece("HealerTrim", "LowerTorso", { 2.35, 0.2, 1.55 }, { 0, -1.05, 0 }, gold, LOOSE),
-	}))
+		-- Hair mesh: centred on the export's bounding box and turned 180 degrees to undo the
+		-- importer's rotation.
+		piece("HairMesh", "Head", { 1.93, 2.04, 1.8 }, { 0.0039, -0.021, 0.0966 }, hair, with(LOOSE, {
+			Rotation = { 0, 180, 0 },
+			Mesh = { MeshId = "rbxassetid://119546665528137", Scale = { 0.01, 0.01, 0.01 } },
+		})),
+		-- High collar with gold rim; goggles resting at the neck
+		piece("HighCollar", "UpperTorso", { 1.3, 0.36, 0.98 }, { 0, 0.82, 0.04 }, white, with(LOOSE, { Material = "Fabric" })),
+		piece("CollarRim", "UpperTorso", { 1.34, 0.06, 1.02 }, { 0, 0.99, 0.04 }, gold, with(LOOSE, METAL)),
+		piece("GoggleStrap", "UpperTorso", { 1.24, 0.12, 1.02 }, { 0, 0.72, 0 }, leather),
+		piece("GoggleLensL", "UpperTorso", { 0.08, 0.26, 0.26 }, { -0.17, 0.66, -0.56 }, lens, { Shape = "Cylinder", Material = "Glass", Rotation = { 0, 90, 0 } }),
+		piece("GoggleLensR", "UpperTorso", { 0.08, 0.26, 0.26 }, { 0.17, 0.66, -0.56 }, lens, { Shape = "Cylinder", Material = "Glass", Rotation = { 0, 90, 0 } }),
+		-- Green yoke with gold trim, green tabard with gold edges and a gold star
+		piece("Yoke", "UpperTorso", { 2.04, 0.3, 1.04 }, { 0, 0.62, 0 }, green, { Material = "Fabric" }),
+		piece("YokeTrim", "UpperTorso", { 2.06, 0.06, 1.06 }, { 0, 0.46, 0 }, gold, METAL),
+		piece("TabardChest", "UpperTorso", { 0.75, 1.1, 0.06 }, { 0, -0.12, -0.51 }, green, { Material = "Fabric" }),
+		piece("TabardEdgeL", "UpperTorso", { 0.06, 1.1, 0.07 }, { -0.39, -0.12, -0.52 }, gold, METAL),
+		piece("TabardEdgeR", "UpperTorso", { 0.06, 1.1, 0.07 }, { 0.39, -0.12, -0.52 }, gold, METAL),
+		piece("ChestStar", "UpperTorso", { 0.22, 0.22, 0.04 }, { 0, 0.02, -0.55 }, gold, with(METAL, { Rotation = { 0, 0, 45 } })),
+		piece("ChestCrossV", "UpperTorso", { 0.06, 0.26, 0.04 }, { 0, 0.32, -0.55 }, gold, METAL),
+		piece("ChestCrossH", "UpperTorso", { 0.18, 0.06, 0.04 }, { 0, 0.35, -0.55 }, gold, METAL),
+		-- White pauldrons with a gold rim and a gold star on the outer face
+		piece("PauldronL", "LeftUpperArm", { 1.2, 0.5, 1.16 }, { -0.1, 0.38, 0 }, white, { Material = "Fabric" }),
+		piece("PauldronTrimL", "LeftUpperArm", { 1.24, 0.07, 1.2 }, { 0, -0.25, 0 }, gold, with(METAL, { RelativeTo = "PauldronL" })),
+		piece("PauldronStarL", "LeftUpperArm", { 0.04, 0.2, 0.2 }, { -0.61, 0, 0 }, gold, with(METAL, { RelativeTo = "PauldronL", Rotation = { 45, 0, 0 } })),
+		piece("PauldronR", "RightUpperArm", { 1.2, 0.5, 1.16 }, { 0.1, 0.38, 0 }, white, { Material = "Fabric" }),
+		piece("PauldronTrimR", "RightUpperArm", { 1.24, 0.07, 1.2 }, { 0, -0.25, 0 }, gold, with(METAL, { RelativeTo = "PauldronR" })),
+		piece("PauldronStarR", "RightUpperArm", { 0.04, 0.2, 0.2 }, { 0.61, 0, 0 }, gold, with(METAL, { RelativeTo = "PauldronR", Rotation = { 45, 0, 0 } })),
+		-- Sleeves: a green band, then a broad gold cuff above the wrist
+		piece("SleeveBandL", "LeftLowerArm", { 1.08, 0.16, 1.08 }, { 0, 0.2, 0 }, green, { Material = "Fabric" }),
+		piece("SleeveBandR", "RightLowerArm", { 1.08, 0.16, 1.08 }, { 0, 0.2, 0 }, green, { Material = "Fabric" }),
+		piece("GoldCuffL", "LeftLowerArm", { 1.12, 0.22, 1.12 }, { 0, -0.3, 0 }, gold, METAL),
+		piece("GoldCuffR", "RightLowerArm", { 1.12, 0.22, 1.12 }, { 0, -0.3, 0 }, gold, METAL),
+		-- Belt with potion vials and a herb pouch
+		piece("Belt", "LowerTorso", { 2.06, 0.24, 1.06 }, { 0, 0.04, 0 }, leather),
+		piece("BeltBuckle", "LowerTorso", { 0.3, 0.2, 0.06 }, { 0, 0.04, -0.56 }, steel, METAL),
+		piece("PotionGreen", "LowerTorso", { 0.14, 0.3, 0.14 }, { -0.42, -0.1, -0.6 }, potionGreen, with(NEON, { Material = "Glass" })),
+		piece("PotionPurple", "LowerTorso", { 0.14, 0.3, 0.14 }, { -0.62, -0.1, -0.6 }, potionPurple, with(NEON, { Material = "Glass" })),
+		piece("HerbPouch", "LowerTorso", { 0.4, 0.4, 0.3 }, { 0.62, -0.08, -0.64 }, pouch, { Material = "Fabric" }),
+		-- Open white coat skirt with a long green tabard down the front
+		piece("CoatBack", "LowerTorso", { 2.12, 1.5, 0.12 }, { 0, -0.85, 0.56 }, white, with(LOOSE, { Material = "Fabric", Rotation = { -6, 0, 0 } })),
+		piece("CoatFrontL", "LowerTorso", { 0.6, 1.3, 0.08 }, { -0.72, -0.75, -0.56 }, white, with(LOOSE, { Material = "Fabric" })),
+		piece("CoatFrontR", "LowerTorso", { 0.6, 1.3, 0.08 }, { 0.72, -0.75, -0.56 }, white, with(LOOSE, { Material = "Fabric" })),
+		piece("TabardSkirt", "LowerTorso", { 0.75, 1.4, 0.06 }, { 0, -0.85, -0.56 }, green, with(LOOSE, { Material = "Fabric" })),
+		piece("TabardStar", "LowerTorso", { 0.2, 0.2, 0.04 }, { 0, -1.1, -0.6 }, gold, with(LOOSE, METAL, { Rotation = { 0, 0, 45 } })),
+		-- Legs: gold-rimmed dark knee plates, a gold greave band, boots on gold soles
+		piece("KneeRimL", "LeftLowerLeg", { 0.1, 0.6, 0.6 }, { 0, 0.42, -0.53 }, gold, with(METAL, { Shape = "Cylinder", Rotation = { 0, 90, 0 } })),
+		piece("KneePadL", "LeftLowerLeg", { 0.12, 0.48, 0.48 }, { 0.04, 0, 0 }, plate, with(METAL, { Shape = "Cylinder", RelativeTo = "KneeRimL" })),
+		piece("KneeRimR", "RightLowerLeg", { 0.1, 0.6, 0.6 }, { 0, 0.42, -0.53 }, gold, with(METAL, { Shape = "Cylinder", Rotation = { 0, 90, 0 } })),
+		piece("KneePadR", "RightLowerLeg", { 0.12, 0.48, 0.48 }, { 0.04, 0, 0 }, plate, with(METAL, { Shape = "Cylinder", RelativeTo = "KneeRimR" })),
+		piece("GreaveBandL", "LeftLowerLeg", { 1.08, 0.1, 1.08 }, { 0, -0.15, 0 }, gold, METAL),
+		piece("GreaveBandR", "RightLowerLeg", { 1.08, 0.1, 1.08 }, { 0, -0.15, 0 }, gold, METAL),
+		piece("BootL", "LeftFoot", { 1.08, 0.34, 1.25 }, { 0, 0.02, -0.1 }, boot),
+		piece("BootSoleL", "LeftFoot", { 1.1, 0.07, 1.28 }, { 0, -0.13, -0.1 }, gold, METAL),
+		piece("BootR", "RightFoot", { 1.08, 0.34, 1.25 }, { 0, 0.02, -0.1 }, boot),
+		piece("BootSoleR", "RightFoot", { 1.1, 0.07, 1.28 }, { 0, -0.13, -0.1 }, gold, METAL),
+	}, "rbxassetid://75911538426683"))
 end
 
 -- 5. IGNIS (5★ Vanguard - Blazing Berserker) -------------------------------------------
