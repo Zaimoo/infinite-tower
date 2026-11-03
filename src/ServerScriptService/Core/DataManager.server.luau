@@ -712,22 +712,6 @@ function DataManager.SyncPitDelta(player: Player, changed: any, removed: any)
 		SquadPowerByHero = (profile :: any).SquadPowerByHero })
 end
 
-function DataManager.ApplyCollisionGroup(player: Player)
-	local profile = ActiveProfiles[player]
-	local char = player.Character
-	if not profile or not char then
-		return
-	end
-	local groupName = "UnlockedRing2"
-	for _, desc in ipairs(char:GetDescendants()) do
-		if desc:IsA("BasePart") then
-			pcall(function()
-				desc.CollisionGroup = groupName
-			end)
-		end
-	end
-end
-
 function DataManager.AdjustHonor(_player: Player, _delta: number, _markBetrayalRogue: boolean?)
 end
 
@@ -1630,7 +1614,6 @@ local function onPlayerAdded(player: Player)
 
 	player.CharacterAdded:Connect(function(char)
 		task.wait(0.2)
-		DataManager.ApplyCollisionGroup(player)
 		DataManager.SyncProfile(player)
 	end)
 
