@@ -574,11 +574,21 @@ do
 end
 
 -- Sovereign Archon (DAGGERS): Dimensional Cataclysm. Blades crossed overhead, then torn apart
--- and down to rip the rift open.
+-- and down to rip the rift open. Idle is a low, wide predator's crouch: leaning in, both
+-- daggers held out at his sides pointing forward.
 do
 	local p = WeaponPoses.DAGGERS
 	local tear = merge(p.Crouched, { Waist = { -20, 0, 0 }, LeftShoulder = { 80, 0, -90 }, RightShoulder = { 80, 0, 90 }, LeftElbow = { 10, 0, 0 }, RightElbow = { 10, 0, 0 }, RootOffset = { 0, -0.4, 0 } })
+	local prowl: Pose = {
+		Waist = { -8, 0, 0 }, Neck = { 4, 0, 0 },
+		LeftShoulder = { 25, 0, -40 }, LeftElbow = { 50, 0, 0 }, LeftWrist = { -70, 0, 0 },
+		RightShoulder = { 25, 0, 40 }, RightElbow = { 50, 0, 0 }, RightWrist = { -70, 0, 0 },
+		LeftHip = { 12, 0, -16 }, LeftKnee = { -35, 0, 0 }, LeftAnkle = { 22, 0, 16 },
+		RightHip = { 10, 0, 16 }, RightKnee = { -32, 0, 0 }, RightAnkle = { 20, 0, -16 },
+		RootOffset = { 0, -0.32, 0 },
+	}
 	Overrides.hero_archon = {
+		Idle = breathe(prowl, 2.8),
 		AttackSkill = signature(1.0, {
 			{ 0, p.Crouched },
 			{ 0.35, merge(STANCE, { Waist = { 12, 0, 0 }, Neck = { 15, 0, 0 }, LeftShoulder = { 170, 0, 20 }, RightShoulder = { 170, 0, -20 }, LeftElbow = { 40, 0, 0 }, RightElbow = { 40, 0, 0 }, RootOffset = { 0, 0.3, 0 } }) },
