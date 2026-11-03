@@ -179,9 +179,10 @@ function HeroAnimator.Evaluate(self: HeroAnimator): { [string]: CFrame }
 	return pose
 end
 
-function HeroAnimator.Step(self: HeroAnimator, dt: number)
+function HeroAnimator.Step(self: HeroAnimator, dt: number, moveSpeedScale: number?)
 	self.Clock += dt
-	self.LocomotionTime += dt
+	local locoScale = if self.Locomotion == "Move" then math.clamp(moveSpeedScale or 1.0, 0.5, 2.2) else 1.0
+	self.LocomotionTime += dt * locoScale
 	local action = self.Action
 	if action then
 		local elapsed = self.Clock - action.Started

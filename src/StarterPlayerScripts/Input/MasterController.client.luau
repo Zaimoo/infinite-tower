@@ -19,17 +19,20 @@ local TycoonRemotes = Remotes:WaitForChild("TycoonGachaRemotes")
 local FocusTargetRemote = CombatRemotes:WaitForChild("FocusTarget") :: RemoteEvent
 local WhistleCommandRemote = CombatRemotes:WaitForChild("WhistleCommand") :: RemoteEvent
 local DropCarriedItemRemote = CombatRemotes:WaitForChild("DropCarriedItem") :: RemoteEvent
+local SprintStateRemote = CombatRemotes:FindFirstChild("SprintState") :: RemoteEvent?
 local FacilityInteractEvent = TycoonRemotes:WaitForChild("FacilityInteract") :: RemoteEvent
 local AssignHeroRoleFunc = TycoonRemotes:WaitForChild("AssignHeroRole") :: RemoteFunction
 
 local SPRINT_MULTIPLIER = 3.0
 local baseWalkSpeed = 16.0
 local lastAppliedSprint = false
+local lastReplicatedSprint: boolean? = nil
+local lastReplicatedCharacter: Model? = nil
 
 RunService.RenderStepped:Connect(function()
 	local char = LocalPlayer.Character
 	local hum = char and char:FindFirstChildOfClass("Humanoid")
-	if not hum then
+	if not char or not hum then
 		return
 	end
 
@@ -48,6 +51,19 @@ RunService.RenderStepped:Connect(function()
 	local targetSpeed = if shiftDown then baseWalkSpeed * SPRINT_MULTIPLIER else baseWalkSpeed
 	if math.abs(hum.WalkSpeed - targetSpeed) > 0.05 then
 		hum.WalkSpeed = targetSpeed
+	end
+
+	if shiftDown ~= lastReplicatedSprint or char ~= lastReplicatedCharacter then
+		lastReplicatedSprint = shiftDown
+		lastReplicatedCharacter = char
+		char:SetAttribute("IsSprinting", shiftDown)
+		LocalPlayer:SetAttribute("IsSprinting", shiftDown)
+		if not SprintStateRemote then
+			SprintStateRemote = CombatRemotes:FindFirstChild("SprintState") :: RemoteEvent?
+		end
+		if SprintStateRemote then
+			SprintStateRemote:FireServer(shiftDown)
+		end
 	end
 end)
 

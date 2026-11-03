@@ -68,6 +68,20 @@ if not DropCarriedItemRemote then
 	DropCarriedItemRemote.Parent = CombatRemotes
 end
 
+local SprintStateRemote = CombatRemotes:FindFirstChild("SprintState") :: RemoteEvent?
+if not SprintStateRemote then
+	SprintStateRemote = Instance.new("RemoteEvent")
+	SprintStateRemote.Name = "SprintState"
+	SprintStateRemote.Parent = CombatRemotes
+end
+SprintStateRemote.OnServerEvent:Connect(function(player: Player, isSprinting: any)
+	local sprinting = isSprinting == true
+	player:SetAttribute("IsSprinting", sprinting)
+	if player.Character then
+		player.Character:SetAttribute("IsSprinting", sprinting)
+	end
+end)
+
 local function getDataManager(): any
 	while not _G.DataManager do
 		task.wait(0.05)
@@ -91,7 +105,17 @@ local SNAPSHOT_EVERY_TICKS = 2
 local snapshotTick = 0
 local FIELD_LOOT_DESPAWN_SECONDS = 90
 local MASTER_FORMATION_RADIUS = 6.0
-local LEASH_DISTANCE = 65.0
+local FOLLOW_CATCHUP_RADIUS = 14.0
+local FOLLOW_CATCHUP_SPAN = 50.0
+local FOLLOW_CATCHUP_MAX_BONUS = 0.65
+local MASTER_SPRINT_MULTIPLIER = 3.0
+local SPRINT_FOLLOW_BUFFER = 1.05
+local SPRINT_VELOCITY_THRESHOLD = 22.0
+local LEASH_DISTANCE = 160.0
+local LEASH_TELEPORT_DISTANCE = 180.0
+local LEASH_VERTICAL_TELEPORT_DISTANCE = 45.0
+local HERO_STUCK_TIMEOUT = 3.0
+local HERO_STUCK_MIN_TICKS = 15
 
 local OVERDRIVE_COOLDOWN = 20.0
 local OVERDRIVE_DURATION = 5.0
@@ -224,7 +248,8 @@ local function allocateNetId(): number
 end
 
 local ActiveMasters: { [Player]: MasterCombatState } = {}
-local HeroStuckTracking: { [number]: { LastDist: number, LastClock: number } } = {}
+local HeroStuckTracking: { [number]: { LastPos: Vector3, LastDist: number, LastClock: number, StuckTicks: number } } = {}
+local MasterVelocityTracking: { [Player]: { LastPos: Vector3, LastClock: number, HorizontalSpeed: number } } = {}
 local ActiveHeroesByNetId: { [number]: SimHero } = {}
 local ActiveMobsByNetId: { [number]: SimMob } = {}
 -- Progression is awarded on a confirmed PvE death, outside the simulation's per-tick work.
@@ -2156,21 +2181,52 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 
 	local masterState = ActiveMasters[simHero.Owner]
 	local maxLeash = assignedRoom and FirstBiome.LeashRange or (masterState and masterState.TargetEnemyUserId ~= nil) and 150.0 or LEASH_DISTANCE
-	if getHorizontalDistance(simHero.Position, masterPos) > maxLeash or math.abs(simHero.Position.Y - masterPos.Y) > 40 then
+	if getHorizontalDistance(simHero.Position, masterPos) > maxLeash or math.abs(simHero.Position.Y - masterPos.Y) > LEASH_VERTICAL_TELEPORT_DISTANCE then
 		simHero.TargetNetId = nil
 		simHero.State = "FOLLOW_MASTER"
 	end
 
- -- Recall's aggro drop and safe zones pacify; HeroTargeting.Select drops the target while it lasts.
- local isPacified = now < simHero.PacifiedUntil or Tower.GetSafety(simHero,simHero.Position).CombatSafe==true
-
-	-- Hero movement speed is fixed to the player's Humanoid WalkSpeed (16 normal, 48 sprint, or relic penalties)
+	-- Master sprint & horizontal velocity detection (WalkSpeed, IsSprinting attribute, root velocity, and per-tick displacement)
 	local ownerChar = simHero.Owner.Character
 	local ownerHum = ownerChar and ownerChar:FindFirstChildOfClass("Humanoid")
-	local playerSpeed = if assignedRoom then 16.0 elseif ownerHum then ownerHum.WalkSpeed else 16.0
-	simHero.MoveSpeed = playerSpeed
+	local ownerHrp = ownerChar and ownerChar:FindFirstChild("HumanoidRootPart") :: BasePart?
+	local humWalkSpeed = if assignedRoom then 16.0 elseif ownerHum then ownerHum.WalkSpeed else 16.0
+	local rootVel = if not assignedRoom and ownerHrp then ownerHrp.AssemblyLinearVelocity else Vector3.zero
+	local trackedVel = if not assignedRoom and MasterVelocityTracking[simHero.Owner] then MasterVelocityTracking[simHero.Owner].HorizontalSpeed else 0.0
+	local horizVel = math.max(Vector3.new(rootVel.X, 0, rootVel.Z).Magnitude, trackedVel)
+
+	local isMasterSprinting = not assignedRoom and (
+		simHero.Owner:GetAttribute("IsSprinting") == true
+		or (ownerChar ~= nil and ownerChar:GetAttribute("IsSprinting") == true)
+		or humWalkSpeed > SPRINT_VELOCITY_THRESHOLD
+		or horizVel > SPRINT_VELOCITY_THRESHOLD
+	)
+	local effectiveMasterWalkSpeed = if assignedRoom
+		then 16.0
+		elseif isMasterSprinting and humWalkSpeed <= SPRINT_VELOCITY_THRESHOLD then humWalkSpeed * MASTER_SPRINT_MULTIPLIER
+		else humWalkSpeed
+
+	local seed = HeroCatalog.Seeds[simHero.TemplateId]
+	local heroBaseSpeed = (seed and seed.MovementSpeed) or 20.0
+	simHero.MoveSpeed = heroBaseSpeed
 	local isOverdrive = now < simHero.OverdriveUntil
-	local currentMoveSpeed = playerSpeed * (isOverdrive and 1.20 or 1.0)
+	local overdriveMult = if isOverdrive then 1.20 else 1.0
+	local baseFollowSpeed = (if assignedRoom
+		then heroBaseSpeed
+		else math.max(heroBaseSpeed, effectiveMasterWalkSpeed * SPRINT_FOLLOW_BUFFER, horizVel)) * overdriveMult
+
+	-- Recall's aggro drop and safe zones pacify; HeroTargeting.Select drops the target while it lasts.
+	-- Also disengage to follow when the Master sprints away beyond formation catch-up radius without a close focused target.
+	local distToMasterFlat = getHorizontalDistance(simHero.Position, masterPos)
+	local focusedMob = if masterState and masterState.FocusedTargetNetId then ActiveMobsByNetId[masterState.FocusedTargetNetId] else nil
+	local hasCloseFocus = focusedMob ~= nil and focusedMob.IsAlive and getHorizontalDistance(masterPos, focusedMob.Position) <= HeroTargeting.MASTER_DROP_RADIUS
+	local sprintDisengage = not assignedRoom and isMasterSprinting and distToMasterFlat > FOLLOW_CATCHUP_RADIUS and not hasCloseFocus
+	if sprintDisengage and masterState and masterState.FocusedTargetNetId and not hasCloseFocus then
+		masterState.FocusedTargetNetId = nil
+	end
+	local isPacified = now < simHero.PacifiedUntil
+		or Tower.GetSafety(simHero, simHero.Position).CombatSafe == true
+		or sprintDisengage
 
 	-- Free-following squads fight around the Master and disengage when the Master walks off;
 	-- assigned squads roam the floor up to maxLeash and join squadmates' fights.
@@ -2189,42 +2245,59 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 	if simHero.State == "FOLLOW_MASTER" or not targetPos then
 		local formation = getFormationOffset(simHero.SlotIndex)
 		local distToMaster = (masterPos - simHero.Position).Magnitude
-		-- When catching up from far away, tighten formation offset so squadmates file through gates and bridges cleanly
-		local targetOffset = if distToMaster > 18 then formation * math.clamp(18 / distToMaster, 0.25, 1.0) else formation
+		-- Slightly tighten formation offset when far away while keeping slots distinct so squadmates do not stack on bridges
+		local targetOffset = if distToMaster > 18 then formation * math.clamp(18 / distToMaster, 0.65, 1.0) else formation
 		local goalPos = HeroNavigation.PlaceNear(masterPos, targetOffset)
 		local distToGoal = (goalPos - simHero.Position).Magnitude
-		if distToGoal > .5 then
-			-- Hero speed is fixed to player speed with a bounded trailing catch-up
-			local followSpeed = currentMoveSpeed
-			if distToGoal > 8.0 then
-				local catchUp = math.clamp((distToGoal - 8.0) / 24.0, 0, 0.35)
-				followSpeed = currentMoveSpeed * (1.0 + catchUp)
-			end
+		local horizDistToGoal = getHorizontalDistance(simHero.Position, goalPos)
 
-			-- Anti-stuck progress tracker: if hero fails to make progress toward master for > 1.5s or is > 55 studs away, recover immediately
+		if distToGoal > .5 then
+			-- Rubber-band catch-up curve: v_final = v_baseFollow * (1 + clamp((D - 14) / 50, 0, 0.65))
+			local catchUpMult = if horizDistToGoal > FOLLOW_CATCHUP_RADIUS
+				then 1.0 + math.clamp((horizDistToGoal - FOLLOW_CATCHUP_RADIUS) / FOLLOW_CATCHUP_SPAN, 0.0, FOLLOW_CATCHUP_MAX_BONUS)
+				else 1.0
+			local followSpeed = baseFollowSpeed * catchUpMult
+
 			local tracker = HeroStuckTracking[simHero.NetId]
 			if not tracker then
-				tracker = { LastDist = distToGoal, LastClock = now }
+				tracker = { LastPos = simHero.Position, LastDist = distToGoal, LastClock = now, StuckTicks = 0 }
 				HeroStuckTracking[simHero.NetId] = tracker
 			end
 
-			local isStuck = (now - tracker.LastClock > 1.5) and (tracker.LastDist - distToGoal < 1.0)
-			local isTooFar = distToGoal > 55.0 or math.abs(simHero.Position.Y - masterPos.Y) > 28.0
-
-			if isTooFar or isStuck then
+			local isTooFar = distToGoal > LEASH_TELEPORT_DISTANCE or math.abs(simHero.Position.Y - masterPos.Y) > LEASH_VERTICAL_TELEPORT_DISTANCE
+			if isTooFar then
 				simHero.Position = HeroNavigation.PlaceNear(masterPos, targetOffset)
 				HeroNavigation.Clear(simHero)
+				tracker.LastPos = simHero.Position
 				tracker.LastDist = 0
 				tracker.LastClock = now
+				tracker.StuckTicks = 0
 			else
-				if tracker.LastDist - distToGoal > 1.0 then
-					tracker.LastDist = distToGoal
-					tracker.LastClock = now
-				elseif distToGoal > tracker.LastDist + 2.0 then
-					tracker.LastDist = distToGoal
-				end
 				HeroNavigation.Step(simHero, goalPos, followSpeed * dt, now)
+				local movedInWorld = (simHero.Position - tracker.LastPos).Magnitude
+				local newDistToGoal = (goalPos - simHero.Position).Magnitude
+				if movedInWorld >= 1.5 or (tracker.LastDist - newDistToGoal) > 1.0 then
+					tracker.LastPos = simHero.Position
+					tracker.LastDist = newDistToGoal
+					tracker.LastClock = now
+					tracker.StuckTicks = 0
+				else
+					tracker.StuckTicks += 1
+					local isStuck = newDistToGoal > FOLLOW_CATCHUP_RADIUS
+						and (now - tracker.LastClock > HERO_STUCK_TIMEOUT)
+						and (tracker.StuckTicks >= HERO_STUCK_MIN_TICKS)
+					if isStuck then
+						simHero.Position = HeroNavigation.PlaceNear(masterPos, targetOffset)
+						HeroNavigation.Clear(simHero)
+						tracker.LastPos = simHero.Position
+						tracker.LastDist = 0
+						tracker.LastClock = now
+						tracker.StuckTicks = 0
+					end
+				end
 			end
+		else
+			HeroStuckTracking[simHero.NetId] = nil
 		end
 
 		-- Apply jump arc if jumping
@@ -2240,10 +2313,11 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 		return
 	end
 
+	HeroStuckTracking[simHero.NetId] = nil
 	local distToTarget = (simHero.Position - targetPos).Magnitude
 	if distToTarget > simHero.AttackRange or not HeroNavigation.CanAttack(simHero.Position, targetPos) then
 		simHero.State = "MOVE_TO_TARGET"
-		local stepDist = math.min(math.max(.5, distToTarget - simHero.AttackRange * .85), currentMoveSpeed * dt)
+		local stepDist = math.min(math.max(.5, distToTarget - simHero.AttackRange * .85), baseFollowSpeed * dt)
 		HeroNavigation.Step(simHero, targetPos, stepDist, now)
 
 		-- Apply jump arc if jumping while moving
@@ -2765,11 +2839,13 @@ Players.PlayerRemoving:Connect(function(player: Player)
 	if masterState then
 		for _, simHero in pairs(masterState.DeployedHeroes) do
 			HeroNavigation.Clear(simHero)
+			HeroStuckTracking[simHero.NetId] = nil
 			ProgressionAwards[simHero.NetId] = nil
 			ActiveHeroesByNetId[simHero.NetId] = nil
 		end
 		ActiveMasters[player] = nil
 	end
+	MasterVelocityTracking[player] = nil
 end)
 
 local accumulator = 0.0
@@ -2786,6 +2862,29 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 	accumulator = 0.0
 	local now = os.clock()
 	Encounters:Tick(dt)
+
+	for player in pairs(ActiveMasters) do
+		local rootPos = getMasterRootPosition(player)
+		if rootPos then
+			local prev = MasterVelocityTracking[player]
+			if prev and dt > 0.001 then
+				local stepHoriz = getHorizontalDistance(rootPos, prev.LastPos)
+				local instSpeed = stepHoriz / dt
+				-- Ignore cross-room / recall teleports (> 120 studs/s) when estimating movement velocity
+				if instSpeed <= 120.0 then
+					prev.HorizontalSpeed = instSpeed
+				else
+					prev.HorizontalSpeed = 0.0
+				end
+				prev.LastPos = rootPos
+				prev.LastClock = now
+			else
+				MasterVelocityTracking[player] = { LastPos = rootPos, LastClock = now, HorizontalSpeed = 0.0 }
+			end
+		else
+			MasterVelocityTracking[player] = nil
+		end
+	end
 
 	for _, simHero in pairs(ActiveHeroesByNetId) do
 		stepHeroSimulation(simHero, dt, now)

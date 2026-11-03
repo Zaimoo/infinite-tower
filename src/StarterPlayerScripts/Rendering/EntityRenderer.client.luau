@@ -56,6 +56,7 @@ local ATTACK_TIER_STATES = { [1] = "AttackBasic", [2] = "AttackSpecial", [3] = "
 local MOVE_START_GAP = 0.3
 local MOVE_KEEP_GAP = 0.05
 local MOVE_GRACE = 0.35
+local TELEPORT_SNAP_DISTANCE = 85.0
 
 -- The hero rig inside a rendered entity when it was built by HeroRegistry (Phase 3 rigs).
 local function heroRig(model: Model): Model?
@@ -537,8 +538,10 @@ local function consume(buf: buffer)
    -- Heroes glide at constant speed from where they are now to the new snapshot over one
    -- snapshot interval, so they arrive as the next one lands (no surge-and-stall at 5 Hz).
    local clock=os.clock();local n=node :: any
+   local segDist=(e.Position-node.CurrentPos).Magnitude
    n.SegFrom=node.CurrentPos;n.SegStart=clock
    n.SegDuration=math.clamp(clock-(n.LastSnapshotAt or (clock-0.2)),0.1,0.4);n.LastSnapshotAt=clock
+   n.SegSpeed=if segDist<=TELEPORT_SNAP_DISTANCE then segDist/n.SegDuration else 0
   end
   node.GoalPos=e.Position;node.GoalYaw=e.Yaw;node.HpPermille=e.HpPermille;node.Stamina=e.Stamina
   node.StateEnum=e.StateEnum;node.Flags=e.Flags;node.LastSeenClock=now
@@ -643,9 +646,10 @@ RunService.RenderStepped:Connect(function(dt: number)
 	for _, node in pairs(VisualNodesByNetId) do
 		local n = node :: any
 		local yaw = node.GoalYaw
-		if (node.GoalPos - node.CurrentPos).Magnitude > 35 then
+		if (node.GoalPos - node.CurrentPos).Magnitude > TELEPORT_SNAP_DISTANCE then
 			node.CurrentPos = node.GoalPos
 			n.SegStart = nil
+			n.SegSpeed = 0
 		elseif node.IsHero and n.SegStart then
 			local t = math.clamp((os.clock() - n.SegStart) / n.SegDuration, 0, 1)
 			node.CurrentPos = n.SegFrom:Lerp(node.GoalPos, t)
@@ -655,7 +659,7 @@ RunService.RenderStepped:Connect(function(dt: number)
 		if node.IsHero then
 			-- Turn smoothly toward the snapshot yaw along the shortest arc.
 			local diff = (node.GoalYaw - node.CurrentYaw + math.pi) % (2 * math.pi) - math.pi
-			node.CurrentYaw += diff * math.clamp(dt * 10, 0, 1)
+			node.CurrentYaw += diff * math.clamp(dt * 12, 0, 1)
 			yaw = node.CurrentYaw
 		end
 		local bodyH = (node :: any).RootHeight or node.IsHero and HeroRigSpec.GROUND_OFFSET or (node.RootPart.Size.Y * 0.5)
@@ -677,9 +681,11 @@ RunService.RenderStepped:Connect(function(dt: number)
 			local walking = ((node :: any).WalkingUntil or 0) > now
 			local isKnockedOut = node.StateEnum == 4 or (node.HpPermille ~= nil and node.HpPermille <= 0)
 			animator:SetLocomotion(if isKnockedOut then "Coma" elseif walking then "Move" else "Idle")
-			animator:Step(dt)
+			local moveSpeedScale = if walking then math.clamp((n.SegSpeed or 20.0) / 20.0, 1.0, 2.2) else 1.0
+			animator:Step(dt, moveSpeedScale)
 			debug.profileend()
 		else
+			n.AnimSpeedScale = math.clamp((n.SegSpeed or 20.0) / 20.0, 1.0, 2.2)
 			ArtPackVisuals.Animate(node, dt, os.clock())
 		end
 		if node.IsHero then
