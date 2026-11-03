@@ -4,6 +4,7 @@
 -- Card and the Squad Power badge. Pure presentation; data arrives as props.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local GuiService = game:GetService("GuiService")
 local TweenService = game:GetService("TweenService")
 
 local React = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("React"))
@@ -17,6 +18,14 @@ local C = Theme.Colors
 local L = Theme.Layout
 
 local Components = {}
+
+local G = Theme.Glass
+
+local function reducedMotion(): boolean
+	local ok, on = pcall(function() return (GuiService :: any).ReducedMotionEnabled end)
+	return ok and on == true
+end
+Components.ReducedMotion = reducedMotion
 
 local function corner(radius: number)
 	return e("UICorner", { CornerRadius = UDim.new(0, radius) })
@@ -296,53 +305,151 @@ end
 local function icon(name: string, size: number, props: { [string]: any })
 	local Icons = require(script.Parent:WaitForChild("Icons"))
 	local frame: { [string]: any } = { Size = UDim2.fromOffset(size, size), BackgroundTransparency = 1, ZIndex = 4 }
-	for k, v in props do frame[k] = v end
-	return e("Frame", frame, { Art = e(Icons.Icon, { Name = name, Size = size }) })
+	for k, v in props do
+		if k ~= "Flat" then frame[k] = v end
+	end
+	return e("Frame", frame, { Art = e(Icons.Icon, { Name = name, Size = size, Flat = props.Flat }) })
 end
 Components.IconAt = icon
 
 --------------------------------------------------------------------------------
--- Next Goal card (top-right): a quest scroll icon, the step counter, the goal in heavy gothic
--- type and its reward.
+-- Clear Glass kit (HUD cards): a dark translucent body, one hairline stroke, 6 px corners, flat
+-- icons and Montserrat labels. Text stays opaque; Theme.Glass holds the contrast budget.
+--------------------------------------------------------------------------------
+local function glass(props: { [string]: any }, children: { [string]: any }?)
+	local inst: { [string]: any } = { BackgroundColor3 = G.Base, BackgroundTransparency = G.BaseTransparency, BorderSizePixel = 0 }
+	for k, v in props do
+		if k ~= "Class" and k ~= "Radius" and k ~= "StrokeRef" then inst[k] = v end
+	end
+	local kids: { [string]: any } = {
+		Corner = corner(props.Radius or G.Radius),
+		Stroke = e("UIStroke", { ref = props.StrokeRef, Color = G.Hairline, Transparency = G.HairlineTransparency, Thickness = 1,
+			ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
+	}
+	for k, v in children or {} do kids[k] = v end
+	return e(props.Class or "Frame", inst, kids)
+end
+Components.Glass = glass
+
+local function glassText(props: { [string]: any })
+	local base: { [string]: any } = {
+		BackgroundTransparency = 1,
+		FontFace = G.Fonts.Label,
+		TextColor3 = G.Text,
+		TextSize = 12,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextTruncate = Enum.TextTruncate.AtEnd,
+		RichText = true,
+	}
+	for k, v in props do base[k] = v end
+	return e("TextLabel", base)
+end
+Components.GlassText = glassText
+
+-- An uppercase section label followed by a hairline rule ("SQUAD POWER ———").
+local function sectionLabel(label: string, props: { [string]: any })
+	local frame: { [string]: any } = { BackgroundTransparency = 1 }
+	for k, v in props do frame[k] = v end
+	return e("Frame", frame, {
+		Layout = e("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder,
+			VerticalAlignment = Enum.VerticalAlignment.Center }),
+		Label = glassText({ LayoutOrder = 1, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromScale(0, 1), Text = string.upper(label),
+			TextTransparency = G.MutedTransparency, TextTruncate = Enum.TextTruncate.None }),
+		Rule = e("Frame", { LayoutOrder = 2, Size = UDim2.fromOffset(0, 1), BackgroundColor3 = G.Hairline, BackgroundTransparency = 0.6, BorderSizePixel = 0 }, {
+			Flex = e("UIFlexItem", { FlexMode = Enum.UIFlexMode.Fill }),
+		}),
+	})
+end
+Components.SectionLabel = sectionLabel
+
+-- A +/- change that rises 16 px and fades out over 0.8 s. Give it a new key per change.
+local function Floater(props: { Delta: number, Position: UDim2, Size: UDim2, TextSize: number? })
+	local ref = React.useRef(nil)
+	React.useEffect(function()
+		local label = ref.current
+		if not label then return end
+		local target: { [string]: any } = { TextTransparency = 1, TextStrokeTransparency = 1 }
+		if not reducedMotion() then target.Position = props.Position - UDim2.fromOffset(0, 16) end
+		TweenService:Create(label, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), target):Play()
+	end, {})
+	return glassText({
+		ref = ref,
+		AnchorPoint = Vector2.new(1, 1),
+		Position = props.Position,
+		Size = props.Size,
+		FontFace = G.Fonts.Number,
+		TextSize = props.TextSize or 14,
+		TextXAlignment = Enum.TextXAlignment.Right,
+		TextColor3 = if props.Delta > 0 then G.Vital else G.Danger,
+		TextStrokeColor3 = G.Base,
+		TextStrokeTransparency = 0.4,
+		ZIndex = 8,
+		Text = (if props.Delta > 0 then "+" else "−") .. abbreviate(math.abs(props.Delta)),
+	})
+end
+
+--------------------------------------------------------------------------------
+-- Next Goal card (top-right): a raised header strip ("NEXT GOAL ——— 3/7"), the goal title, its
+-- hint and its reward. The stroke flashes Royal when the goal advances.
 --------------------------------------------------------------------------------
 function Components.NextGoalCard(props: { Goal: any })
 	local goal = props.Goal
+	local strokeRef = React.useRef(nil)
+	local lastIndex = React.useRef(nil :: number?)
+	local index = goal and goal.Index
+	React.useEffect(function()
+		local previous = lastIndex.current
+		lastIndex.current = index
+		local s = strokeRef.current
+		if previous == nil or index == nil or index == previous or not s then return end
+		s.Color = G.Royal
+		s.Transparency = 0
+		s.Thickness = 2
+		TweenService:Create(s, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+			{ Color = G.Hairline, Transparency = G.HairlineTransparency, Thickness = 1 }):Play()
+	end, { index })
 	if not goal then return nil end
-	-- Reward: "Reward" then a drawn Gold / Gems icon beside each amount.
+	-- Reward: "REWARD" then a flat Gold / Gems icon beside each amount.
 	local reward: { [string]: any }? = nil
 	if type(goal.Reward) == "table" and (goal.Reward.Gold or goal.Reward.Gems) then
 		local items: { [string]: any } = {
-			Layout = e("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 5), SortOrder = Enum.SortOrder.LayoutOrder,
+			Layout = e("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder,
 				VerticalAlignment = Enum.VerticalAlignment.Center }),
-			Label = body({ LayoutOrder = 0, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 14), TextSize = 11,
-				TextColor3 = Color3.fromRGB(255, 214, 120), Text = "Reward " }),
+			Label = glassText({ LayoutOrder = 0, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromScale(0, 1), Text = "REWARD ",
+				TextTransparency = G.MutedTransparency, TextTruncate = Enum.TextTruncate.None }),
 		}
 		local order = 1
 		for _, kind in { "Gold", "Gems" } do
 			local amount = goal.Reward[kind]
 			if amount then
-				items[kind .. "Icon"] = icon(kind, 16, { LayoutOrder = order, ZIndex = 2 })
-				items[kind] = body({ LayoutOrder = order + 1, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 14), TextSize = 11,
-					TextColor3 = Color3.fromRGB(255, 214, 120), Text = abbreviate(amount) .. "  " })
+				items[kind .. "Icon"] = icon(kind, 14, { LayoutOrder = order, ZIndex = 2, Flat = true })
+				items[kind] = glassText({ LayoutOrder = order + 1, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromScale(0, 1), FontFace = G.Fonts.Number,
+					TextColor3 = G.Royal, TextTruncate = Enum.TextTruncate.None, Text = abbreviate(amount) .. "  " })
 				order += 2
 			end
 		end
 		reward = items
 	end
-	return panel({
+	return glass({
 		AnchorPoint = Vector2.new(1, 0),
 		Position = UDim2.new(1, -L.Edge, 0, L.TopZone),
 		Size = UDim2.fromOffset(L.GoalCardWidth, L.GoalCardHeight),
+		StrokeRef = strokeRef,
 	}, {
-		Scroll = icon("Goal", 58, { Position = UDim2.fromOffset(-14, -10) }),
-		Step = heavyLabel({ Position = UDim2.fromOffset(52, 6), Size = UDim2.new(1, -64, 0, 16), MaxSize = 14, Outline = 2,
-			TextXAlignment = Enum.TextXAlignment.Left, Text = string.format("Next Goal  %d/%d", goal.Index or 1, goal.Total or 1) }),
-		Title = heavyLabel({ Position = UDim2.fromOffset(52, 23), Size = UDim2.new(1, -64, 0, 24), MaxSize = 20, Gold = false,
-			TextXAlignment = Enum.TextXAlignment.Left, Text = tostring(goal.Title) }),
-		Hint = body({ Position = UDim2.fromOffset(14, 50), Size = UDim2.new(1, -28, 0, 16), TextSize = 12, Text = tostring(goal.Description) }),
-		Reward = if reward then e("Frame", { Position = UDim2.fromOffset(14, 66), Size = UDim2.new(1, -28, 0, 16), BackgroundTransparency = 1 }, reward) else nil,
+		Header = e("Frame", { Size = UDim2.new(1, 0, 0, 24), BackgroundColor3 = G.BaseRaised, BackgroundTransparency = G.RaisedTransparency, BorderSizePixel = 0 }, {
+			Corner = corner(G.Radius),
+			Shade = e("UIGradient", { Transparency = NumberSequence.new(0, 0.08), Rotation = 90 }),
+			Icon = icon("Goal", 18, { Position = UDim2.fromOffset(8, 3), Flat = true }),
+			Label = sectionLabel("Next Goal", { Position = UDim2.fromOffset(32, 0), Size = UDim2.new(1, -84, 1, 0) }),
+			Step = glassText({ AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -10, 0, 0), Size = UDim2.fromOffset(44, 24), FontFace = G.Fonts.Number,
+				TextXAlignment = Enum.TextXAlignment.Right, Text = string.format("%d/%d", goal.Index or 1, goal.Total or 1) }),
+		}),
+		Title = glassText({ Position = UDim2.fromOffset(10, 28), Size = UDim2.new(1, -20, 0, 18), FontFace = G.Fonts.Number, TextSize = 15, Text = tostring(goal.Title) }),
+		Hint = glassText({ Position = UDim2.fromOffset(10, 47), Size = UDim2.new(1, -20, 0, 15), TextTransparency = G.MutedTransparency, Text = tostring(goal.Description) }),
+		Reward = if reward then e("Frame", { Position = UDim2.fromOffset(10, 66), Size = UDim2.new(1, -20, 0, 16), BackgroundTransparency = 1 }, reward) else nil,
 	})
 end
+
 
 --------------------------------------------------------------------------------
 -- Squad Status Card (bottom-left): one tile per open slot, laid out left to right, plus one narrow
@@ -378,7 +485,7 @@ function Components.StatusCardWidth(tiles: number, hasLocked: boolean, tileWidth
 end
 
 function Components.SquadStatusCard(props: { Rows: { any }, LockedText: string?, LockedRange: string?, Compact: boolean, TileWidth: number?,
-	OnRow: (number) -> (), OnLocked: () -> () })
+	OnRow: (number) -> (), OnLocked: () -> (), Position: UDim2? })
 	local tileW = props.TileWidth or Components.StatusTileMax
 	local children: { [string]: any } = {
 		Layout = e("UIListLayout", {
@@ -473,18 +580,273 @@ function Components.SquadStatusCard(props: { Rows: { any }, LockedText: string?,
 		children.Padding = e("UIPadding", { PaddingLeft = UDim.new(0, CARD_PAD), PaddingRight = UDim.new(0, CARD_PAD) })
 		return panel({
 			AnchorPoint = Vector2.new(0, 1),
-			Position = UDim2.new(0, L.Edge, 1, -L.Edge),
+			Position = props.Position or UDim2.new(0, L.Edge, 1, -L.Edge),
 			Size = UDim2.fromOffset(20 + (#props.Rows + (if props.LockedText then 1 else 0)) * 54, 66),
 		}, { Strip = e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 }, children) })
 	end
 	return panel({
 		AnchorPoint = Vector2.new(0, 1),
-		Position = UDim2.new(0, L.Edge, 1, -L.Edge),
+		Position = props.Position or UDim2.new(0, L.Edge, 1, -L.Edge),
 		Size = UDim2.fromOffset(Components.StatusCardWidth(#props.Rows, props.LockedText ~= nil, tileW), Components.StatusCardHeight(#props.Rows, props.LockedText ~= nil, false)),
 	}, {
 		Header = heavyLabel({ Position = UDim2.fromOffset(CARD_PAD + 2, CARD_PAD - 3), Size = UDim2.new(1, -CARD_PAD * 2, 0, HEADER_H), MaxSize = 16, Outline = 2,
 			TextXAlignment = Enum.TextXAlignment.Left, Text = "Squad Status" }),
 		Strip = e("Frame", { Position = UDim2.fromOffset(CARD_PAD, CARD_PAD + HEADER_H), Size = UDim2.new(1, -CARD_PAD * 2, 0, TILE_HEIGHT), BackgroundTransparency = 1 }, children),
+	})
+end
+
+--------------------------------------------------------------------------------
+-- Clear Glass corner brackets: four 10x10 L-shaped hairlines just outside a panel's corners.
+--------------------------------------------------------------------------------
+function Components.Brackets(props: { Inset: number?, ZIndex: number? })
+	local inset = props.Inset or -3
+	local z = props.ZIndex or 8
+	local corners: { [string]: any } = {}
+	for _, spot in { { "TL", 0, 0 }, { "TR", 1, 0 }, { "BL", 0, 1 }, { "BR", 1, 1 } } do
+		local name, x, y = spot[1], spot[2], spot[3]
+		local function line(w: number, h: number)
+			return e("Frame", { AnchorPoint = Vector2.new(x, y), Position = UDim2.fromScale(x, y), Size = UDim2.fromOffset(w, h),
+				BackgroundColor3 = G.Hairline, BackgroundTransparency = 0.35, BorderSizePixel = 0, ZIndex = z })
+		end
+		corners[name] = e("Frame", {
+			AnchorPoint = Vector2.new(x, y),
+			Position = UDim2.new(x, if x == 0 then inset else -inset, y, if y == 0 then inset else -inset),
+			Size = UDim2.fromOffset(10, 10),
+			BackgroundTransparency = 1,
+			ZIndex = z,
+		}, { H = line(10, 1), V = line(1, 10) })
+	end
+	return e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = z }, corners)
+end
+
+--------------------------------------------------------------------------------
+-- Squad drawer (bottom-left): one squad view that is either a slim glass strip of portraits
+-- (collapsed) or the full Squad Status Card (expanded), never both. Expanding grows the strip up
+-- into the card; collapsing shrinks the card back down into the strip. The currency bar rides on
+-- the drawer's top edge. Size is tweened imperatively (React never sets it after mount), so a 5 Hz
+-- re-render can't snap it.
+--------------------------------------------------------------------------------
+local STRIP_H = 56
+local STRIP_PAD = 6
+local STRIP_SLOT = 44 -- hit area; the portrait inside is 36
+local STRIP_GAP = 4
+local DRAWER_GAP = 6 -- between the card and its collapse tab
+local DRAWER_TAB = 44 -- the collapse tab beside the expanded card
+local CLIP_PAD = 4 -- room for the card's outer ink stroke inside the clip
+local DRAWER_TWEEN = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+Components.DrawerTween = DRAWER_TWEEN.Time
+Components.DrawerTabWidth = DRAWER_GAP + DRAWER_TAB -- the expanded card's extra width
+
+local function stripWidth(slots: number, hasLocked: boolean): number
+	local count = slots + (if hasLocked then 1 else 0) + 1 -- + the chevron tab
+	return STRIP_PAD * 2 + count * STRIP_SLOT + (count - 1) * STRIP_GAP
+end
+
+-- Height of the drawer: the strip when collapsed, the card when expanded.
+function Components.DrawerHeight(expanded: boolean, cardHeight: number): number
+	return if expanded then math.max(cardHeight, STRIP_H) else STRIP_H
+end
+
+local function stateColor(state: string?): Color3
+	local chip = STATE_CHIPS[state or "Idle"] or STATE_CHIPS.Idle
+	return chip[2]
+end
+
+local function stripSlot(row: any, index: number, hovered: boolean, onHover: (number?) -> (), onOpen: () -> ())
+	local children: { [string]: any } = {}
+	if row.Hero then
+		local down = row.State == "Down"
+		children.Face = e("Frame", { Position = UDim2.fromOffset(4, 2), Size = UDim2.fromOffset(36, 36), BackgroundColor3 = G.Base,
+			BackgroundTransparency = 0.2, ClipsDescendants = true, ZIndex = 2 }, {
+			Corner = corner(G.TileRadius),
+			Art = e(Portrait, { TemplateId = row.TemplateId, Archetype = row.Archetype, Stars = row.Stars }),
+			-- Down: dimmed with the coma countdown, so it never relies on colour alone.
+			Down = if down then e("TextLabel", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = G.Base, BackgroundTransparency = 0.3,
+				FontFace = G.Fonts.Number, TextColor3 = G.Danger, TextSize = 12, ZIndex = 4,
+				Text = if row.DownSeconds then string.format("%ds", row.DownSeconds) else "DOWN" }) else nil,
+		})
+		children.Ring = e("Frame", { Position = UDim2.fromOffset(4, 2), Size = UDim2.fromOffset(36, 36), BackgroundTransparency = 1, ZIndex = 5 }, {
+			Corner = corner(G.TileRadius), Stroke = stroke(Theme.RarityColor(row.Rarity), 2),
+		})
+		children.Dot = e("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(39, 4), Size = UDim2.fromOffset(9, 9),
+			BackgroundColor3 = stateColor(row.State), BorderSizePixel = 0, ZIndex = 6 }, {
+			Corner = e("UICorner", { CornerRadius = UDim.new(1, 0) }), Ring = stroke(G.Base, 1.5),
+		})
+		children.Hp = e("Frame", { Position = UDim2.fromOffset(4, 42), Size = UDim2.fromOffset(36, 3), BackgroundColor3 = G.Base,
+			BackgroundTransparency = 0.2, BorderSizePixel = 0, ZIndex = 2 }, {
+			Fill = e("Frame", { Size = UDim2.fromScale(math.clamp(row.HpFraction or 1, 0, 1), 1), BorderSizePixel = 0,
+				BackgroundColor3 = if row.ShowStamina then G.Royal else G.Vital }),
+		})
+	else
+		children.Empty = e("TextLabel", { Position = UDim2.fromOffset(4, 2), Size = UDim2.fromOffset(36, 36), BackgroundColor3 = G.BaseRaised,
+			BackgroundTransparency = G.RaisedTransparency, FontFace = G.Fonts.Number, Text = "+", TextColor3 = G.Text, TextSize = 20, ZIndex = 2 }, {
+			Corner = corner(G.TileRadius), Stroke = stroke(G.Hairline, 1, 0.6),
+		})
+	end
+	return e("TextButton", {
+		LayoutOrder = index,
+		Size = UDim2.fromOffset(STRIP_SLOT, STRIP_H - 8),
+		BackgroundTransparency = 1,
+		Text = "",
+		AutoButtonColor = false,
+		Selectable = true,
+		[React.Event.MouseEnter] = function() onHover(index) end,
+		[React.Event.MouseLeave] = function() onHover(nil) end,
+		[React.Event.SelectionGained] = function() onHover(index) end,
+		[React.Event.SelectionLost] = function() onHover(nil) end,
+		-- Mouse: hover shows the tooltip, so a click opens the Squad screen. Touch: first tap shows it.
+		[React.Event.Activated] = function()
+			if hovered or not row.Hero then onOpen() else onHover(index) end
+		end,
+	}, children)
+end
+
+local function stripTooltip(row: any, index: number)
+	local hp = math.floor(math.clamp(row.HpFraction or 1, 0, 1) * 100 + 0.5)
+	local state = (STATE_CHIPS[row.State or "Idle"] or STATE_CHIPS.Idle)[1] .. (if row.DownSeconds then string.format(" %ds", row.DownSeconds) else "")
+	return e("Frame", {
+		AnchorPoint = Vector2.new(0, 1),
+		Position = UDim2.new(0, STRIP_PAD + (index - 1) * (STRIP_SLOT + STRIP_GAP), 1, -(STRIP_H + 6)),
+		Size = UDim2.fromOffset(170, 64),
+		BackgroundColor3 = G.Base,
+		BackgroundTransparency = 0.15,
+		BorderSizePixel = 0,
+		ZIndex = 20,
+	}, {
+		Corner = corner(G.Radius),
+		Stroke = stroke(G.Hairline, 1, G.HairlineTransparency),
+		Name = e("TextLabel", { Position = UDim2.fromOffset(10, 6), Size = UDim2.new(1, -20, 0, 18), BackgroundTransparency = 1, FontFace = G.Fonts.Display,
+			Text = row.Name, TextColor3 = Theme.RarityColor(row.Rarity), TextSize = 15, TextXAlignment = Enum.TextXAlignment.Left,
+			TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 21 }),
+		Info = e("TextLabel", { Position = UDim2.fromOffset(10, 25), Size = UDim2.new(1, -20, 0, 15), BackgroundTransparency = 1, FontFace = G.Fonts.Label,
+			Text = string.format("Lv.%d · %d★ %s", row.Level, row.Stars, row.RarityName), TextColor3 = G.Text, TextSize = 12,
+			TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 21 }),
+		Hp = e("TextLabel", { Position = UDim2.fromOffset(10, 42), Size = UDim2.new(1, -20, 0, 15), BackgroundTransparency = 1, FontFace = G.Fonts.Label,
+			Text = string.format("%s %d%% · %s", if row.ShowStamina then "Stamina" else "HP", hp, state), TextColor3 = G.Text,
+			TextTransparency = 0.2, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 21 }),
+	})
+end
+
+-- A drawn chevron: up (expand) or down (collapse).
+local function chevron(up: boolean, order: number, onToggle: () -> ())
+	local function bar(side: number)
+		return e("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, side * 4, 0.5, 0), Size = UDim2.fromOffset(12, 2),
+			Rotation = side * (if up then 40 else -40), BackgroundColor3 = G.Text, BorderSizePixel = 0, ZIndex = 3 })
+	end
+	return e("TextButton", {
+		LayoutOrder = order,
+		Size = UDim2.fromOffset(STRIP_SLOT, STRIP_H - 8),
+		BackgroundColor3 = G.BaseRaised,
+		BackgroundTransparency = G.RaisedTransparency,
+		Text = "",
+		AutoButtonColor = false,
+		Selectable = true,
+		[React.Event.Activated] = function() onToggle() end,
+	}, {
+		Corner = corner(G.TileRadius),
+		Stroke = stroke(G.Hairline, 1, G.HairlineTransparency),
+		Left = bar(-1),
+		Right = bar(1),
+	})
+end
+
+function Components.SquadDrawer(props: {
+	Rows: { any },
+	LockedText: string?,
+	LockedRange: string?,
+	Compact: boolean,
+	TileWidth: number?,
+	CardHeight: number,
+	Expanded: boolean,
+	Above: any?, -- the currency bar, riding on the drawer's top edge
+	OnToggle: () -> (),
+	OnRow: (number) -> (),
+	OnLocked: () -> (),
+})
+	local shellRef = React.useRef(nil)
+	local mounted = React.useRef(false)
+	local hoverSlot, setHoverSlot = React.useState(nil :: number?)
+	local showCard, setShowCard = React.useState(props.Expanded)
+
+	local hasLocked = props.LockedText ~= nil
+	local cardWidth = if props.Compact then 20 + (#props.Rows + (if hasLocked then 1 else 0)) * 54
+		else Components.StatusCardWidth(#props.Rows, hasLocked, props.TileWidth or Components.StatusTileMax)
+	local width = if props.Expanded then cardWidth + Components.DrawerTabWidth else stripWidth(#props.Rows, hasLocked)
+	local height = Components.DrawerHeight(props.Expanded, props.CardHeight)
+
+	React.useEffect(function()
+		-- Expanding swaps to the card at once (it is revealed bottom-up as the drawer grows);
+		-- collapsing keeps the card until the drawer has shrunk, then swaps back to the strip.
+		if props.Expanded then
+			setShowCard(true)
+			setHoverSlot(nil)
+		end
+		local shell = shellRef.current
+		if not shell then return nil end
+		local size = UDim2.fromOffset(width, height)
+		if not mounted.current or reducedMotion() then
+			mounted.current = true
+			shell.Size = size
+			if not props.Expanded then setShowCard(false) end
+			return nil
+		end
+		local tween = TweenService:Create(shell, DRAWER_TWEEN, { Size = size })
+		local conn = tween.Completed:Connect(function(state)
+			if state == Enum.PlaybackState.Completed and not props.Expanded then setShowCard(false) end
+		end)
+		tween:Play()
+		return function() conn:Disconnect() end
+	end, { props.Expanded, width, height } :: { any })
+
+	local slots: { [string]: any } = {
+		Layout = e("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, STRIP_GAP), SortOrder = Enum.SortOrder.LayoutOrder,
+			VerticalAlignment = Enum.VerticalAlignment.Center }),
+		Padding = e("UIPadding", { PaddingLeft = UDim.new(0, STRIP_PAD), PaddingRight = UDim.new(0, STRIP_PAD) }),
+	}
+	for i, row in props.Rows do
+		slots["Slot" .. i] = stripSlot(row, i, hoverSlot == i, setHoverSlot, function() props.OnRow(row.Slot) end)
+	end
+	if hasLocked then
+		slots.Locked = e("TextButton", { LayoutOrder = 98, Size = UDim2.fromOffset(STRIP_SLOT, STRIP_H - 8), BackgroundTransparency = 1, Text = "",
+			Selectable = true, [React.Event.Activated] = function() props.OnLocked() end }, {
+			Lock = icon("Lock", 32, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.45) }),
+		})
+	end
+	slots.Chevron = chevron(true, 99, props.OnToggle)
+
+	local hoveredRow = if hoverSlot and not showCard then props.Rows[hoverSlot] else nil
+	return e("Frame", {
+		ref = shellRef,
+		AnchorPoint = Vector2.new(0, 1),
+		Position = UDim2.new(0, L.Edge, 1, -L.Edge),
+		BackgroundTransparency = 1,
+	}, {
+		Brackets = e(Components.Brackets, {}),
+		Above = if props.Above then e("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromOffset(0, -8), Size = UDim2.new(1, 0, 0, Components.CurrencyBarHeight),
+			BackgroundTransparency = 1 }, { Bar = props.Above }) else nil,
+		Clip = e("Frame", { Position = UDim2.fromOffset(-CLIP_PAD, -CLIP_PAD), Size = UDim2.new(1, CLIP_PAD * 2, 1, CLIP_PAD * 2),
+			BackgroundTransparency = 1, ClipsDescendants = true }, {
+			Card = if showCard then e("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, CLIP_PAD, 1, -CLIP_PAD),
+				Size = UDim2.fromOffset(cardWidth, props.CardHeight), BackgroundTransparency = 1 }, {
+				Status = e(Components.SquadStatusCard, {
+					Rows = props.Rows, LockedText = props.LockedText, LockedRange = props.LockedRange, Compact = props.Compact, TileWidth = props.TileWidth,
+					OnRow = props.OnRow, OnLocked = props.OnLocked, Position = UDim2.fromScale(0, 1),
+				}),
+				-- Collapse tab, bottom-aligned just right of the card.
+				Collapse = e("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(1, DRAWER_GAP, 1, 0), Size = UDim2.fromOffset(DRAWER_TAB, STRIP_H - 8),
+					BackgroundTransparency = 1 }, {
+					Tab = chevron(false, 1, props.OnToggle),
+				}),
+			}) else nil,
+			Strip = if not showCard then e("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, CLIP_PAD, 1, -CLIP_PAD),
+				Size = UDim2.fromOffset(stripWidth(#props.Rows, hasLocked), STRIP_H), BackgroundColor3 = G.Base,
+				BackgroundTransparency = G.BaseTransparency, BorderSizePixel = 0 }, {
+				Corner = corner(G.Radius),
+				Stroke = stroke(G.Hairline, 1, G.HairlineTransparency),
+				Row = e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 }, slots),
+			}) else nil,
+		}),
+		Tooltip = if hoveredRow and hoveredRow.Hero then stripTooltip(hoveredRow, hoverSlot :: number) else nil,
 	})
 end
 
@@ -519,73 +881,76 @@ function Components.PitTabs(props: { Active: string, Center: Vector2, OnSelect: 
 end
 
 --------------------------------------------------------------------------------
--- Currency bar (Gold and Gems), sitting directly above the Squad Status Card: each chip is a
--- cartoon panel with its icon breaking out over the left edge and the value in heavy type.
+-- Currency bar (Gold and Gems), riding on the Squad drawer: two glass chips, each a flat icon and
+-- the value, with a change floater above.
 --------------------------------------------------------------------------------
-local function CurrencyChip(props: { Icon: string, Value: number, Order: number, Top: Color3, Bottom: Color3, Rail: Color3 })
+local function CurrencyChip(props: { Icon: string, Value: number, Order: number, Color: Color3 })
 	local shown, setShown = React.useState(props.Value)
 	local delta, setDelta = React.useState(0)
+	local serial, setSerial = React.useState(0)
 	React.useEffect(function()
 		if props.Value == shown then return end
 		setDelta(props.Value - shown)
 		setShown(props.Value)
+		setSerial(serial + 1)
 		local alive = true
-		task.delay(1.4, function() if alive then setDelta(0) end end)
+		task.delay(0.9, function() if alive then setDelta(0) end end)
 		return function() alive = false end
 	end, { props.Value })
-	return e("Frame", { LayoutOrder = props.Order, Size = UDim2.new(0.5, -6, 1, 0), BackgroundTransparency = 1 }, {
-		Body = panel({ Position = UDim2.fromOffset(14, 4), Size = UDim2.new(1, -14, 1, -4), Radius = 10, Top = props.Top, Bottom = props.Bottom, Rail = props.Rail }, {
-			Value = heavyLabel({ Position = UDim2.fromOffset(30, 0), Size = UDim2.new(1, -36, 1, 0), MaxSize = 20, Outline = 2.2,
-				TextXAlignment = Enum.TextXAlignment.Left, Text = abbreviate(shown) }),
+	return e("Frame", { LayoutOrder = props.Order, Size = UDim2.new(0.5, -4, 1, 0), BackgroundTransparency = 1 }, {
+		Body = glass({ AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), Size = UDim2.new(1, 0, 0, 32) }, {
+			Icon = icon(props.Icon, 20, { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 8, 0.5, 0), Flat = true }),
+			Value = glassText({ Position = UDim2.fromOffset(34, 0), Size = UDim2.new(1, -42, 1, 0), FontFace = G.Fonts.Number, TextSize = 16,
+				TextColor3 = props.Color, Text = abbreviate(shown) }),
 		}),
-		Icon = icon(props.Icon, 40, { Position = UDim2.fromOffset(-4, -2), ZIndex = 6 }),
-		Floater = if delta ~= 0 then heavyLabel({ AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -4, 0, 0), Size = UDim2.fromOffset(110, 18), MaxSize = 16,
-			Outline = 2, Gold = false, TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = if delta > 0 then Color3.fromRGB(120, 255, 140) else Color3.fromRGB(255, 100, 100),
-			Text = (if delta > 0 then "+" else "−") .. abbreviate(math.abs(delta)) }) else nil,
+		["Floater" .. serial] = if delta ~= 0 then e(Floater, { Delta = delta, Position = UDim2.new(1, -4, 1, -34), Size = UDim2.fromOffset(110, 16) }) else nil,
 	})
 end
 
 Components.CurrencyBarHeight = 40
 
-function Components.CurrencyBar(props: { Gold: number, Gems: number, Bottom: number, Width: number })
+function Components.CurrencyBar(props: { Gold: number, Gems: number, Bottom: number?, Width: number, Position: UDim2? })
 	return e("Frame", {
 		AnchorPoint = Vector2.new(0, 1),
-		Position = UDim2.new(0, L.Edge, 1, -props.Bottom),
+		Position = props.Position or UDim2.new(0, L.Edge, 1, -(props.Bottom or 0)),
 		Size = UDim2.fromOffset(props.Width, Components.CurrencyBarHeight),
 		BackgroundTransparency = 1,
 	}, {
-		Layout = e("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 12), SortOrder = Enum.SortOrder.LayoutOrder }),
-		Gold = e(CurrencyChip, { Icon = "Gold", Value = props.Gold, Order = 1, Top = Color3.fromRGB(96, 64, 24), Bottom = Color3.fromRGB(34, 20, 10), Rail = Color3.fromRGB(255, 214, 110) }),
-		Gems = e(CurrencyChip, { Icon = "Gems", Value = props.Gems, Order = 2, Top = Color3.fromRGB(28, 70, 104), Bottom = Color3.fromRGB(10, 20, 40), Rail = Color3.fromRGB(150, 236, 255) }),
+		Layout = e("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
+		Gold = e(CurrencyChip, { Icon = "Gold", Value = props.Gold, Order = 1, Color = G.Royal }),
+		Gems = e(CurrencyChip, { Icon = "Gems", Value = props.Gems, Order = 2, Color = G.Text }),
 	})
 end
 
 --------------------------------------------------------------------------------
--- Squad Power badge (bottom-right): crossed-swords icon breaking out over the left edge, the value
--- in heavy gold type, a change floater and a per-hero breakdown on hover.
+-- Squad Power badge (bottom-right): a glass card with "SQUAD POWER ———", the value in Cinzel, a
+-- change floater and a per-hero breakdown on hover. Phones show the icon and number only.
 --------------------------------------------------------------------------------
 function Components.SquadPowerBadge(props: { Power: number, Breakdown: { { Name: string, Power: number } }, Compact: boolean })
 	local shown, setShown = React.useState(props.Power)
 	local delta, setDelta = React.useState(0)
+	local serial, setSerial = React.useState(0)
 	local hover, setHover = React.useState(false)
 	React.useEffect(function()
 		if props.Power == shown then return end
 		setDelta(props.Power - shown)
 		setShown(props.Power)
+		setSerial(serial + 1)
 		local alive = true
-		task.delay(1.6, function()
+		task.delay(0.9, function()
 			if alive then setDelta(0) end
 		end)
 		return function() alive = false end
 	end, { props.Power })
 
+	local royal = G.Royal:ToHex()
 	local rows: { [string]: any } = {
 		Layout = e("UIListLayout", { Padding = UDim.new(0, 2), SortOrder = Enum.SortOrder.LayoutOrder }),
 		Padding = e("UIPadding", { PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 8), PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) }),
 	}
 	for i, entry in props.Breakdown do
-		rows["R" .. i] = body({ LayoutOrder = i, Size = UDim2.new(1, 0, 0, 16), TextSize = 12,
-			Text = string.format("%s  <font color=\"#FFD86E\">%s</font>", entry.Name, abbreviate(entry.Power)) })
+		rows["R" .. i] = glassText({ LayoutOrder = i, Size = UDim2.new(1, 0, 0, 16), ZIndex = 6,
+			Text = string.format("%s  <font color=\"#%s\">%s</font>", entry.Name, royal, abbreviate(entry.Power)) })
 	end
 	local width = if props.Compact then 130 else L.PowerBadgeWidth
 	local height = if props.Compact then 44 else L.PowerBadgeHeight
@@ -600,24 +965,130 @@ function Components.SquadPowerBadge(props: { Power: number, Breakdown: { { Name:
 		[React.Event.MouseLeave] = function() setHover(false) end,
 		[React.Event.Activated] = function() setHover(not hover) end,
 	}, {
-		Body = panel({ Position = UDim2.fromOffset(20, 0), Size = UDim2.new(1, -20, 1, 0), Radius = 12,
-			Top = Color3.fromRGB(96, 30, 40), Bottom = Color3.fromRGB(30, 10, 18), Rail = Color3.fromRGB(255, 214, 110) }, {
-			Label = if not props.Compact then heavyLabel({ Position = UDim2.fromOffset(34, 5), Size = UDim2.new(1, -42, 0, 15), MaxSize = 12, Outline = 1.8,
-				Gold = false, TextColor3 = Color3.fromRGB(255, 214, 160), TextXAlignment = Enum.TextXAlignment.Left, Text = "Squad Power" }) else nil,
-			Value = heavyLabel({ Position = UDim2.fromOffset(34, if props.Compact then 4 else 19), Size = UDim2.new(1, -42, 0, if props.Compact then 34 else 32),
-				MaxSize = 26, Outline = 2.4, TextXAlignment = Enum.TextXAlignment.Left, Text = abbreviate(shown) }),
+		Body = glass({ Size = UDim2.fromScale(1, 1) }, {
+			Icon = icon("Power", if props.Compact then 24 else 30, { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 10, 0.5, 0), Flat = true }),
+			Label = if not props.Compact then sectionLabel("Squad Power", { Position = UDim2.fromOffset(48, 6), Size = UDim2.new(1, -58, 0, 14) }) else nil,
+			Value = glassText({ Position = UDim2.fromOffset(if props.Compact then 42 else 48, if props.Compact then 0 else 21),
+				Size = UDim2.new(1, if props.Compact then -50 else -58, 0, if props.Compact then height else 30), FontFace = G.Fonts.Display,
+				TextSize = if props.Compact then 20 else 24, Text = abbreviate(shown) }),
 		}),
-		Icon = icon("Power", if props.Compact then 44 else 56, { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, -6, 0.5, 0), ZIndex = 6 }),
-		Floater = if delta ~= 0 then heavyLabel({ AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -6, 0, -2), Size = UDim2.fromOffset(130, 20), MaxSize = 18,
-			Outline = 2.2, Gold = false, TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = if delta > 0 then Color3.fromRGB(120, 255, 140) else Color3.fromRGB(255, 100, 100),
-			Text = (if delta > 0 then "+" else "−") .. abbreviate(math.abs(delta)) }) else nil,
-		Tooltip = if hover and #props.Breakdown > 0 then panel({
+		["Floater" .. serial] = if delta ~= 0 then e(Floater, { Delta = delta, Position = UDim2.new(1, -6, 0, -2), Size = UDim2.fromOffset(130, 18), TextSize = 16 }) else nil,
+		Tooltip = if hover and #props.Breakdown > 0 then glass({
 			AnchorPoint = Vector2.new(1, 1),
-			Position = UDim2.new(1, 0, 0, -26),
+			Position = UDim2.new(1, 0, 0, -24),
 			Size = UDim2.fromOffset(230, 16 + #props.Breakdown * 18),
-			Radius = 10,
+			BackgroundTransparency = 0.15,
 			ZIndex = 5,
 		}, rows) else nil,
+	})
+end
+
+
+
+--------------------------------------------------------------------------------
+-- Leaderboard (top-right, under the Next Goal card): a glass panel with "PLAYERS 6/6 ———" and one
+-- row per player (avatar, display name, @username, F{floor} · {power}); the local player's row is
+-- marked Royal. Collapsed, it is just the header pill. Rows come from LeaderboardController.
+--------------------------------------------------------------------------------
+local LB_HEADER = 32
+local LB_ROW = 40
+local LB_PAD = 4
+local LB_PILL_WIDTH = 150
+Components.LeaderboardWidth = L.GoalCardWidth
+
+-- Height of the panel with `rows` visible rows (0 = the collapsed pill).
+function Components.LeaderboardHeight(rows: number): number
+	return if rows <= 0 then LB_HEADER else LB_HEADER + rows * LB_ROW + LB_PAD * 2
+end
+
+-- 950, 12.4K, 3.1M: short enough for the row's right column.
+local function compactNumber(n: number): string
+	if n >= 1e9 then return string.format("%.1fB", n / 1e9) end
+	if n >= 1e6 then return string.format("%.1fM", n / 1e6) end
+	if n >= 1e4 then return string.format("%.1fK", n / 1e3) end
+	return abbreviate(n)
+end
+
+local function leaderboardRow(row: any, order: number)
+	return e("Frame", {
+		LayoutOrder = order,
+		Size = UDim2.new(1, 0, 0, LB_ROW),
+		BackgroundColor3 = G.Royal,
+		BackgroundTransparency = if row.IsLocal then 0.88 else 1,
+		BorderSizePixel = 0,
+	}, {
+		Accent = if row.IsLocal then e("Frame", { Size = UDim2.new(0, 2, 1, -8), Position = UDim2.fromOffset(0, 4), BackgroundColor3 = G.Royal, BorderSizePixel = 0 }) else nil,
+		Avatar = e("ImageLabel", {
+			AnchorPoint = Vector2.new(0, 0.5),
+			Position = UDim2.new(0, 10, 0.5, 0),
+			Size = UDim2.fromOffset(28, 28),
+			BackgroundColor3 = G.BaseRaised,
+			BackgroundTransparency = G.RaisedTransparency,
+			Image = string.format("rbxthumb://type=AvatarHeadShot&id=%d&w=150&h=150", row.UserId),
+		}, {
+			Corner = e("UICorner", { CornerRadius = UDim.new(1, 0) }),
+			Ring = stroke(if row.IsLocal then G.Royal else G.Hairline, 1, if row.IsLocal then 0 else 0.6),
+		}),
+		Name = glassText({ Position = UDim2.fromOffset(46, 4), Size = UDim2.new(1, -140, 0, 17), TextSize = 13,
+			TextColor3 = if row.IsLocal then G.Royal else G.Text, Text = row.DisplayName }),
+		User = glassText({ Position = UDim2.fromOffset(46, 21), Size = UDim2.new(1, -140, 0, 15), TextTransparency = G.MutedTransparency,
+			Text = "@" .. row.Name .. (if row.IsLocal then " · You" else "") }),
+		Stats = glassText({ AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -10, 0, 0), Size = UDim2.new(0, 88, 1, 0), FontFace = G.Fonts.Number,
+			TextSize = 12, TextXAlignment = Enum.TextXAlignment.Right, Text = string.format("F%d · %s", row.Floor or 0, compactNumber(row.Power or 0)) }),
+	})
+end
+
+function Components.Leaderboard(props: { Players: { any }, Max: number, Top: number, Rows: number, Pill: boolean, OnToggle: (() -> ())? })
+	local count = #props.Players
+	local open = props.Rows > 0
+	local width = if open then Components.LeaderboardWidth else LB_PILL_WIDTH
+	local list: { [string]: any } = {
+		Layout = e("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder }),
+	}
+	if open then
+		for i, row in props.Players do
+			list["P" .. i] = leaderboardRow(row, i)
+		end
+	end
+	local function chevronBar(side: number)
+		return e("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, side * 3, 0.5, 0), Size = UDim2.fromOffset(9, 2),
+			Rotation = side * (if open then -40 else 40), BackgroundColor3 = G.Text, BorderSizePixel = 0 })
+	end
+	return glass({
+		Name = "LeaderboardPanel",
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -L.Edge, 0, props.Top),
+		Size = UDim2.fromOffset(width, Components.LeaderboardHeight(props.Rows)),
+	}, {
+		Brackets = e(Components.Brackets, {}),
+		Header = e("TextButton", {
+			Size = UDim2.new(1, 0, 0, LB_HEADER),
+			BackgroundColor3 = G.BaseRaised,
+			BackgroundTransparency = if open then G.RaisedTransparency else 1,
+			BorderSizePixel = 0,
+			Text = "",
+			AutoButtonColor = false,
+			Selectable = props.OnToggle ~= nil,
+			Active = props.OnToggle ~= nil,
+			[React.Event.Activated] = function() if props.OnToggle then props.OnToggle() end end,
+		}, {
+			Corner = corner(G.Radius),
+			Label = sectionLabel(string.format("Players %d/%d", count, props.Max), { Position = UDim2.fromOffset(10, 0),
+				Size = UDim2.new(1, if props.Pill then -20 else -40, 1, 0) }),
+			Chevron = if not props.Pill then e("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -8, 0.5, 0), Size = UDim2.fromOffset(16, 16),
+				BackgroundTransparency = 1 }, { Left = chevronBar(-1), Right = chevronBar(1) }) else nil,
+		}),
+		List = if open then e("ScrollingFrame", {
+			Position = UDim2.fromOffset(0, LB_HEADER + LB_PAD),
+			Size = UDim2.new(1, 0, 0, props.Rows * LB_ROW),
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			CanvasSize = UDim2.fromOffset(0, count * LB_ROW),
+			ScrollBarThickness = if count > props.Rows then 3 else 0,
+			ScrollBarImageColor3 = G.Hairline,
+			ScrollBarImageTransparency = 0.5,
+			ScrollingDirection = Enum.ScrollingDirection.Y,
+		}, list) else nil,
 	})
 end
 

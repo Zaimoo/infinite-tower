@@ -54,11 +54,46 @@ GildedGrimoire.Fonts = {
 	Body = font("Cinzel", Enum.FontWeight.Bold, Enum.Font.GothamBold), -- sentences, details
 }
 
+-- "Clear Glass": the HUD's thin hairline panels with a dark translucent body over the world. The
+-- React HUD reads these as Hud/Theme.Glass; imperative HUD pieces use GlassFrame / GlassText below.
+GildedGrimoire.Glass = table.freeze({
+	Base = Color3.fromHex("#0D0912"), -- panel body
+	BaseRaised = Color3.fromHex("#261C32"), -- header strip, tile background
+	Hairline = Color3.fromHex("#F6F4FF"), -- 1px stroke, at HairlineTransparency
+	Text = Color3.fromHex("#F6F4FF"),
+	TextMuted = Color3.fromHex("#F6F4FF"), -- at MutedTransparency
+	Arcane = Color3.fromHex("#C084FC"), -- active, selected, focused; skill gauge
+	Royal = Color3.fromHex("#FACC15"), -- currency, primary action, full gauge, local player
+	Danger = Color3.fromHex("#EF4444"), -- down, badges, boss HP, loot stolen
+	Vital = Color3.fromHex("#4ADE80"), -- HP, positive deltas
+	-- Contrast budget: over a white sky, a 0.35 body composites to ~#626166. Muted text at 0.15
+	-- composites to ~#E0DFE6 there, about 4.6:1; at 0.45 it would fall near 3:1.
+	BaseTransparency = 0.35,
+	RaisedTransparency = 0.25,
+	BackplateTransparency = 0.7, -- empty or decorative backplates only
+	HairlineTransparency = 0.82,
+	MutedTransparency = 0.15,
+	HoverDrop = 0.1, -- body transparency drop on hover
+	Radius = 6,
+	TileRadius = 4,
+	Tween = TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+	Fonts = table.freeze({
+		Label = font("Montserrat", Enum.FontWeight.SemiBold, Enum.Font.GothamMedium), -- UI chrome
+		Number = font("Montserrat", Enum.FontWeight.Bold, Enum.Font.GothamBold), -- numbers, headlines
+		Display = font("Cinzel", Enum.FontWeight.Bold, Enum.Font.GothamBold), -- hero names, Squad Power
+	}),
+})
+
 -- Frames a GuiObject in the theme: ink outline, gold rail, gradient fill, rounded corners.
 -- opts.Class picks InkWidth/Radius ("Panel" default); opts.Tone a key of Tones; opts.Rail overrides
 -- the rail colour; opts.Fill = false keeps the object's own background. Safe to call again.
 function GildedGrimoire.Frame(frame: GuiObject, opts: { Class: string?, Tone: string?, Rail: Color3?, Fill: boolean?, ZIndex: number? }?)
 	local o = opts or {}
+	if o.Tone == "Glass" then
+		-- Clear Glass: opts.Rail becomes the accent bar's colour.
+		GildedGrimoire.GlassFrame(frame, { Accent = o.Rail })
+		return frame :: any
+	end
 	local class = o.Class or "Panel"
 	local tone = GildedGrimoire.Tones[o.Tone or "Violet"] or GildedGrimoire.Tones.Violet
 	local radius = GildedGrimoire.Radius[class] or 12
@@ -127,6 +162,91 @@ function GildedGrimoire.Reframe(frame: GuiObject, opts: { Class: string?, Tone: 
 		end
 	end
 	return GildedGrimoire.Frame(frame, opts)
+end
+
+-- Clear Glass panel: removes any Grimoire or legacy framing (corner, outline, gradient fill, rail),
+-- then gives `frame` the glass body, a 6 px corner and one hairline stroke. opts.Accent adds a 2px
+-- meaning bar down the left edge; opts.Raised uses the header/tile body; opts.Transparency
+-- overrides the body (0.1–0.15 for tooltips and modals that must read on their own). Safe to call again.
+function GildedGrimoire.GlassFrame(frame: GuiObject, opts: { Accent: Color3?, Raised: boolean?, Transparency: number?, Radius: number? }?)
+	local o = opts or {}
+	local g = GildedGrimoire.Glass
+	for _, child in frame:GetChildren() do
+		local legacyStroke = child:IsA("UIStroke") and child.ApplyStrokeMode == Enum.ApplyStrokeMode.Border
+		local legacyFill = child:IsA("UIGradient")
+		local ours = child.Name == "GrimoireRail" or child.Name == "GlassAccent"
+		if child:IsA("UICorner") or legacyStroke or legacyFill or ours then
+			child:Destroy()
+		end
+	end
+	frame.BackgroundColor3 = if o.Raised then g.BaseRaised else g.Base
+	frame.BackgroundTransparency = o.Transparency or (if o.Raised then g.RaisedTransparency else g.BaseTransparency)
+	frame.BorderSizePixel = 0
+	local corner = Instance.new("UICorner")
+	corner.Name = "GlassCorner"
+	corner.CornerRadius = UDim.new(0, o.Radius or g.Radius)
+	corner.Parent = frame
+	local stroke = Instance.new("UIStroke")
+	stroke.Name = "GlassStroke"
+	stroke.Color = g.Hairline
+	stroke.Transparency = g.HairlineTransparency
+	stroke.Thickness = 1
+	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	stroke.Parent = frame
+	if o.Accent then
+		local accent = Instance.new("Frame")
+		accent.Name = "GlassAccent"
+		accent.BackgroundColor3 = o.Accent
+		accent.BorderSizePixel = 0
+		accent.Position = UDim2.fromOffset(0, 6)
+		accent.Size = UDim2.new(0, 2, 1, -12)
+		accent.ZIndex = frame.ZIndex + 1
+		accent.Active = false
+		accent.Parent = frame
+	end
+end
+
+-- Clear Glass text: Montserrat (Bold for "Title"/"Number", SemiBold for "Body"), no ink outline,
+-- a soft dark stroke for legibility, and no gradient tint. Marks it so Watch leaves it alone.
+function GildedGrimoire.GlassText(obj: TextLabel | TextButton | TextBox, role: string?)
+	local g = GildedGrimoire.Glass
+	obj:SetAttribute("Grimoire", true)
+	pcall(function()
+		(obj :: any).FontFace = if role == "Title" or role == "Number" then g.Fonts.Number else g.Fonts.Label
+	end)
+	for _, child in obj:GetChildren() do
+		if child.Name == "GrimoireTextInk" or child:IsA("UIGradient") then child:Destroy() end
+	end
+	obj.TextStrokeColor3 = g.Base
+	obj.TextStrokeTransparency = 0.6
+end
+
+-- GlassText for `root` and every text object inside it: big or scaled text becomes "Title".
+function GildedGrimoire.GlassTexts(root: Instance)
+	for _, d in { root, table.unpack(root:GetDescendants()) } do
+		if d:IsA("TextLabel") or d:IsA("TextButton") or d:IsA("TextBox") then
+			GildedGrimoire.GlassText(d, if d.TextScaled or d.TextSize >= 18 then "Title" else "Body")
+		end
+	end
+end
+
+-- Flattens a GildedGrimoire.Bar track for glass: dark track, hairline edge, flat fill, no shine.
+function GildedGrimoire.GlassBar(track: Frame)
+	local g = GildedGrimoire.Glass
+	track.BackgroundColor3 = g.Base
+	track.BackgroundTransparency = 0.2
+	local ink = track:FindFirstChild("GrimoireInk") :: UIStroke?
+	if ink then
+		ink.Color = g.Hairline
+		ink.Thickness = 1
+		ink.Transparency = 0.6
+	end
+	local fill = track:FindFirstChild("Fill")
+	if fill then
+		for _, child in fill:GetChildren() do
+			if child:IsA("UIGradient") or child.Name == "Shine" then child:Destroy() end
+		end
+	end
 end
 
 -- A pill-shaped gauge: ink-outlined dark track, a fill shaded top to bottom (its BackgroundColor3

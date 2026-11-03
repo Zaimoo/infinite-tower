@@ -3,6 +3,9 @@
 -- Phase 5 HUD tokens: the obsidian-gold palette, rarity frame colours, archetype icons and the
 -- fixed-zone layout metrics shared by every HUD component.
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local GildedGrimoire = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GildedGrimoire"))
+
 local Theme = {}
 
 Theme.Colors = table.freeze({
@@ -60,6 +63,10 @@ Theme.Layout = table.freeze({
 	StatusRowHeight = 56,
 	StatusWidth = 300,
 })
+
+-- "Clear Glass" (HUD zones only): defined once in Shared/Util/GildedGrimoire so imperative HUD
+-- pieces (banners, the duel and offline-reward popups) share the same tokens.
+Theme.Glass = GildedGrimoire.Glass
 
 Theme.Font = Enum.Font.GothamBold
 Theme.FontBody = Enum.Font.GothamMedium

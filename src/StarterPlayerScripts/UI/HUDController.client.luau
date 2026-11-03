@@ -617,26 +617,29 @@ local novaCastLabel = makeLabel({
 })
 
 --============================================================================
--- Gilded Grimoire: alerts and tower banners (ink outline, gold rail, toned gradient)
+-- Clear Glass: alerts and tower banners share the HUD's glass (GildedGrimoire.Glass); a 2px
+-- accent bar on the left carries the meaning colour.
 --============================================================================
-GildedGrimoire.Reframe(toastBanner, { Class = "Panel", Tone = "Violet" })
-GildedGrimoire.Reframe(lootStolenBanner, { Class = "Panel", Tone = "Crimson" })
-GildedGrimoire.Reframe(squadWipeBanner, { Class = "Panel", Tone = "Crimson" })
-GildedGrimoire.Reframe(partiallyDefeatedBanner :: Frame, { Class = "Panel", Tone = "Bronze" })
-GildedGrimoire.Reframe(partialTooltipPopover, { Class = "Card", Tone = "Deep" })
-GildedGrimoire.Reframe(carriedLootPill, { Class = "Row", Tone = "Bronze" })
-GildedGrimoire.Reframe(bossBanner, { Class = "Panel", Tone = "Crimson" })
--- Retaliate: a solid crimson button (a gradient would tint its label), framed in ink and gold.
-GildedGrimoire.Reframe(retaliateBtn, { Class = "Button", Fill = false, Rail = Color3.fromRGB(255, 214, 110) })
-retaliateBtn.BackgroundColor3 = Color3.fromRGB(196, 36, 52)
+local Glass = GildedGrimoire.Glass
+GildedGrimoire.Reframe(toastBanner, { Tone = "Glass", Rail = Glass.Arcane })
+GildedGrimoire.Reframe(lootStolenBanner, { Tone = "Glass", Rail = Glass.Danger })
+GildedGrimoire.Reframe(squadWipeBanner, { Tone = "Glass", Rail = Glass.Danger })
+GildedGrimoire.Reframe(partiallyDefeatedBanner :: Frame, { Tone = "Glass", Rail = Glass.Royal })
+GildedGrimoire.GlassFrame(partialTooltipPopover, { Transparency = 0.12 })
+GildedGrimoire.Reframe(carriedLootPill, { Tone = "Glass", Rail = Glass.Royal })
+GildedGrimoire.Reframe(bossBanner, { Tone = "Glass", Rail = Glass.Danger })
+GildedGrimoire.GlassBar(novaBarBg)
+-- Retaliate: a solid Danger button with a hairline edge.
+GildedGrimoire.GlassFrame(retaliateBtn)
+retaliateBtn.BackgroundColor3 = Glass.Danger
 retaliateBtn.BackgroundTransparency = 0
-retaliateBtn.TextColor3 = Color3.new(1, 1, 1)
-retaliateBtn.TextStrokeColor3 = GildedGrimoire.Ink
-retaliateBtn.TextStrokeTransparency = 0.15
--- Headlines get the heavy title face with an ink outline.
-for _, headline in { lootStolenText, squadWipeText, partialHeader, tooltipTitle, bossTitleLabel, novaCastLabel, toastText } do
-	headline:SetAttribute("Grimoire", true)
-	GildedGrimoire.StyleText(headline, "Title")
+retaliateBtn.TextColor3 = Glass.Text
+-- Every label in these banners moves to Montserrat; headlines take the bold weight.
+for _, banner in { toastBanner, lootStolenBanner, squadWipeBanner, partiallyDefeatedBanner :: Frame, partialTooltipPopover, carriedLootPill, bossBanner } do
+	GildedGrimoire.GlassTexts(banner)
+end
+for _, headline in { lootStolenText, squadWipeText, partialHeader, tooltipTitle, bossTitleLabel, novaCastLabel, toastText, retaliateBtn } do
+	GildedGrimoire.GlassText(headline, "Title")
 end
 for _, line in { partialSubtext, tooltipList, tooltipFooter } do
 	line:SetAttribute("Grimoire", true)
@@ -1743,7 +1746,7 @@ RunService.RenderStepped:Connect(function()
 		local pct = math.clamp(curKills / math.max(1, reqKills), 0, 1)
 		bossTitleLabel.Text = string.format(" FLOOR %d - %s", curFloor, string.upper(floorName))
 		novaBarFill.Size = UDim2.fromScale(pct, 1)
-		novaBarFill.BackgroundColor3 = if curKills >= reqKills then Color3.fromRGB(240, 180, 50) else Color3.fromRGB(150, 95, 230)
+		novaBarFill.BackgroundColor3 = if curKills >= reqKills then GildedGrimoire.Glass.Royal else GildedGrimoire.Glass.Arcane
 		if clientFloorProgress.FloorId == curFloor and clientFloorProgress.BossDefeated then
 			novaCastLabel.Text = "FLOOR BOSS DEFEATED! ADVANCE TO NEXT FLOOR"
 		elseif curKills >= reqKills then
@@ -1761,7 +1764,7 @@ RunService.RenderStepped:Connect(function()
 		local floorNum = floorBoss.FloorId or (_G.TowerView and _G.TowerView.FloorId) or 5
 		bossTitleLabel.Text = string.format(" FLOOR %d BOSS · %s (PHASE %d) — HP: %.1f%%", floorNum, string.upper(floorBoss.Name or "FLOOR BOSS"), phase, hpPct)
 		novaBarFill.Size = UDim2.fromScale(math.clamp(hpPct / 100.0, 0, 1), 1)
-		novaBarFill.BackgroundColor3 = Color3.fromRGB(215, 65, 110)
+		novaBarFill.BackgroundColor3 = GildedGrimoire.Glass.Danger
 		novaCastLabel.Text = string.format("BOSS HP: %.1f%%", hpPct)
 	end
 end)

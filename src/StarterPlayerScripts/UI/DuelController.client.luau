@@ -39,9 +39,9 @@ local bannerSize = Instance.new("UISizeConstraint")
 bannerSize.MinSize = Vector2.new(300, 72)
 bannerSize.MaxSize = Vector2.new(560, 96)
 bannerSize.Parent = banner
--- Gilded Grimoire: crimson duel banner with the ink outline and gold rail; heavy inked type.
+-- Clear Glass: the HUD glass body with a Danger accent bar; Montserrat type.
 local GildedGrimoire = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GildedGrimoire"))
-GildedGrimoire.Frame(banner, { Class = "Panel", Tone = "Crimson" })
+GildedGrimoire.GlassFrame(banner, { Accent = GildedGrimoire.Glass.Danger })
 
 local function label(name: string, position: UDim2, size: UDim2, color: Color3, font: Enum.Font, align: Enum.TextXAlignment?): TextLabel
 	local l = Instance.new("TextLabel")
@@ -56,7 +56,7 @@ local function label(name: string, position: UDim2, size: UDim2, color: Color3, 
 	l.Text = ""
 	l.ZIndex = 3
 	l.Parent = banner
-	GildedGrimoire.StyleText(l, if font == Enum.Font.GothamMedium then "Body" else "Title")
+	GildedGrimoire.GlassText(l, if font == Enum.Font.GothamMedium then "Body" else "Title")
 	return l
 end
 
@@ -84,8 +84,11 @@ resultSub.Size = UDim2.fromScale(0.6, 0.06)
 resultSub.Font = Enum.Font.GothamBold
 resultSub.TextColor3 = Color3.new(1, 1, 1)
 resultSub.Parent = gui
-GildedGrimoire.StyleText(resultLabel, "Title")
-GildedGrimoire.StyleText(resultSub, "Body")
+GildedGrimoire.GlassText(resultLabel, "Title")
+GildedGrimoire.GlassText(resultSub, "Body")
+-- The result floats over the world with no panel, so it keeps a stronger stroke.
+resultLabel.TextStrokeTransparency = 0.3
+resultSub.TextStrokeTransparency = 0.3
 
 type DuelView = { Id: number, Side: string, FightAt: number, EndsAt: number, Ended: boolean }
 local current: DuelView? = nil

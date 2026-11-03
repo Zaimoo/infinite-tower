@@ -18,7 +18,8 @@ local OUTLINE = GrimoireIcons.Ink
 
 type ShapeSpec = GrimoireIcons.ShapeSpec
 
-local function shape(s: ShapeSpec, z: number)
+-- `flat` (Clear Glass cards): a hairline outline and no sheen. `px` is one rendered pixel in grid units.
+local function shape(s: ShapeSpec, z: number, flat: boolean, px: number)
 	return e("Frame", {
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromOffset(s.X, s.Y),
@@ -30,8 +31,8 @@ local function shape(s: ShapeSpec, z: number)
 	}, {
 		Corner = e("UICorner", { CornerRadius = if s.Round then UDim.new(1, 0) else UDim.new(0, s.Radius or 3) }),
 		Gradient = e("UIGradient", { Color = ColorSequence.new(s.Hi, s.Lo), Rotation = 90 }),
-		Outline = e("UIStroke", { Color = OUTLINE, Thickness = s.Outline or 2.6, LineJoinMode = Enum.LineJoinMode.Round }),
-		Sheen = if s.Sheen ~= false then e("Frame", {
+		Outline = e("UIStroke", { Color = OUTLINE, Thickness = if flat then px else s.Outline or 2.6, LineJoinMode = Enum.LineJoinMode.Round }),
+		Sheen = if s.Sheen ~= false and not flat then e("Frame", {
 			Position = UDim2.new(0.14, 0, 0.1, 0),
 			Size = UDim2.new(0.42, 0, 0.18, 0),
 			BackgroundColor3 = Color3.new(1, 1, 1),
@@ -43,14 +44,14 @@ local function shape(s: ShapeSpec, z: number)
 end
 
 -- `name` is a GrimoireIcons drawing (or alias); `size` is the rendered icon size in pixels.
-function Icons.Icon(props: { Name: string, Size: number, Dim: boolean? })
+function Icons.Icon(props: { Name: string, Size: number, Dim: boolean?, Flat: boolean? })
 	local drawing = GrimoireIcons.Resolve(props.Name)
 	local children: { [string]: any } = {
 		Scale = e("UIScale", { Scale = props.Size / 64 }),
 	}
 	if drawing then
 		for i, spec in drawing do
-			children["S" .. i] = shape(spec, i)
+			children["S" .. i] = shape(spec, i, props.Flat == true, 64 / props.Size)
 		end
 	end
 	-- A CanvasGroup lets a cooling-down or locked icon dim and desaturate as one piece.

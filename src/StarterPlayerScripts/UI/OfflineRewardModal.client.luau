@@ -13,7 +13,6 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local TycoonRemotes = Remotes:WaitForChild("TycoonGachaRemotes")
 local OfflineRewardEvent = TycoonRemotes:WaitForChild("OfflineRewardClaimed") :: RemoteEvent
 local Util = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util")
-local GothicBoxStyle = require(Util:WaitForChild("GothicBoxStyle"))
 local GildedGrimoire = require(Util:WaitForChild("GildedGrimoire"))
 local GrimoireIcons = require(Util:WaitForChild("GrimoireIcons"))
 
@@ -55,9 +54,8 @@ local function createModalGui(): (ScreenGui, Frame, Frame, TextLabel, TextLabel,
 	modal.Visible = false
 	modal.Parent = gui
 
-	-- Gilded Grimoire window (ink outline, gold rail and corner studs) with theme fonts.
-	GothicBoxStyle.Apply(modal, { Style = "Window" })
-	GildedGrimoire.Watch(modal)
+	-- Clear Glass: the HUD glass, near-opaque so the summary reads on its own; Montserrat type.
+	GildedGrimoire.GlassFrame(modal, { Transparency = 0.12 })
 
 	local title = Instance.new("TextLabel")
 	title.Name = "Title"
@@ -93,7 +91,7 @@ local function createModalGui(): (ScreenGui, Frame, Frame, TextLabel, TextLabel,
 	card.BorderSizePixel = 0
 	card.Parent = modal
 
-	GildedGrimoire.Frame(card, { Class = "Card", Tone = "Bronze" })
+	GildedGrimoire.GlassFrame(card, { Raised = true, Accent = GildedGrimoire.Glass.Royal })
 	-- A drawn gold-coin stack beside the amount.
 	local coin = GrimoireIcons.Create("Gold", 52, card, 3)
 	coin.AnchorPoint = Vector2.new(0, 0.5)
@@ -137,10 +135,15 @@ local function createModalGui(): (ScreenGui, Frame, Frame, TextLabel, TextLabel,
 	claimBtn.Parent = modal
 
 	claimBtn.AutoButtonColor = false
-	claimBtn.TextColor3 = Color3.new(1, 1, 1)
-	GothicBoxStyle.Apply(claimBtn, { Style = "Button" })
-	claimBtn.TextStrokeColor3 = GildedGrimoire.Ink
-	claimBtn.TextStrokeTransparency = 0.15
+	-- The primary call to action: a solid Royal button with dark text.
+	GildedGrimoire.GlassFrame(claimBtn)
+	claimBtn.BackgroundColor3 = GildedGrimoire.Glass.Royal
+	claimBtn.BackgroundTransparency = 0
+	claimBtn.TextColor3 = GildedGrimoire.Glass.Base
+	GildedGrimoire.GlassTexts(modal)
+	GildedGrimoire.GlassText(title, "Title")
+	GildedGrimoire.GlassText(claimBtn, "Title")
+	claimBtn.TextStrokeTransparency = 1
 
 	return gui, scrim, modal, title, sub, details, claimBtn
 end
