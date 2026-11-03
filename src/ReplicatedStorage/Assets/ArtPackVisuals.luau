@@ -205,7 +205,9 @@ function A.Animate(node: any, dt: number, time: number)
 	-- animated by HeroRig/HeroAnimator.
 	local isHoldingLoot = node.Model:GetAttribute("CarryingLoot") == true
 	local moving = (node.GoalPos - node.CurrentPos).Magnitude > 0.15
-	local wave = math.sin(time * 9)
+	local speedScale = math.clamp((node :: any).AnimSpeedScale or 1.0, 1.0, 2.2)
+	local strideScale = math.clamp(1.0 + (speedScale - 1.0) * 0.35, 1.0, 1.45)
+	local wave = math.sin(time * 9 * speedScale) * strideScale
 	local breath = math.sin(time * 2)
 	local attack = node.StateEnum == 3
 

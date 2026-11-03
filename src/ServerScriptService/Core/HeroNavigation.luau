@@ -95,9 +95,15 @@ end
 
 local function clearRoute(from: Vector3, goal: Vector3, group: string): boolean
 	local distance = (Vector3.new(goal.X, from.Y, goal.Z) - from).Magnitude
-	if distance > 64 or math.abs(from.Y - goal.Y) > 36 then return false end
-	local at, clear = walkSegment(from, goal, distance, group)
-	return clear and (at - goal).Magnitude < 3.0
+	if distance > 180 or math.abs(from.Y - goal.Y) > 45 then return false end
+	local probeDist = math.min(distance, 36)
+	local at, clear = walkSegment(from, goal, probeDist, group)
+	if not clear then return false end
+	if distance <= 36 then
+		return (at - goal).Magnitude < 3.0
+	end
+	local flatMoved = Vector3.new(at.X - from.X, 0, at.Z - from.Z).Magnitude
+	return math.abs(flatMoved - probeDist) < 1.5
 end
 
 function Navigation.Clear(hero: any)
@@ -139,7 +145,22 @@ local function requestPath(hero: any, state: any, goal: Vector3, now: number)
 		if states[hero] ~= state then path:Destroy(); return end
 		state.Pending = false
 		if ok and path.Status == Enum.PathStatus.Success then
-			state.Points, state.Index, state.Goal = path:GetWaypoints(), 2, goal
+			local wps = path:GetWaypoints()
+			local bestIdx = 2
+			local bestDist = math.huge
+			local curPos = hero.Position
+			for i = 2, #wps do
+				local wp = wps[i].Position
+				local d = Vector2.new(wp.X - curPos.X, wp.Z - curPos.Z).Magnitude
+				if d < bestDist then
+					bestDist = d
+					bestIdx = i
+				end
+			end
+			if bestDist < 3.0 and bestIdx < #wps then
+				bestIdx += 1
+			end
+			state.Points, state.Index, state.Goal = wps, bestIdx, goal
 		end
 		path:Destroy()
 	end)
@@ -232,141 +253,185 @@ function Navigation.Step(hero: any, goal: Vector3, distance: number, now: number
 			hero.Position = Vector3.new(hero.Position.X, hero.Position.Y - stepFall, hero.Position.Z)
 		end
 	end
- if not state.TowerGoal or (state.TowerGoal - goal).Magnitude > 14 then
-  state.TowerGoal = goal
-  state.TowerRoute = towerRoute(hero,goal)
-  state.TowerIndex = 1
- end
- local route = state.TowerRoute
- if route then
-  while route[state.TowerIndex] and (route[state.TowerIndex] - hero.Position).Magnitude < 3 do
-   state.TowerIndex += 1
-  end
-  goal = route[state.TowerIndex] or goal
- end
- local supportedGoal = Navigation.Ground(goal, group, 4, 16) or goal
-	goal = supportedGoal
-	local old = hero.Position
-	local destination = goal
-	if clearRoute(old, goal, group) then
-		state.Points = nil
-		state.Goal = nil
-		state.BlockedCount = 0
-	else
-		if not state.Points or not state.Goal or (state.Goal - goal).Magnitude > 14 then
-			requestPath(hero, state, goal, now)
-		end
-		local points = state.Points
-		if points then
-			while points[state.Index] do
-				local wpPos = points[state.Index].Position
-				local flatDist = Vector2.new(wpPos.X - hero.Position.X, wpPos.Z - hero.Position.Z).Magnitude
-				if flatDist < 2.0 then
-					state.Index += 1
-				elseif flatDist < 4.0 and points[state.Index + 1] and clearRoute(hero.Position, points[state.Index + 1].Position, group) then
-					state.Index += 1
-				else
-					break
-				end
+
+	if not state.TowerGoal or (state.TowerGoal - goal).Magnitude > 14 then
+		state.TowerGoal = goal
+		state.TowerRoute = towerRoute(hero, goal)
+		state.TowerIndex = 1
+	end
+
+	local startPosition = hero.Position
+	-- Split high-velocity sprint/catch-up steps (> 4.5 studs) into internal sub-steps so
+	-- heroes smoothly advance across 4-stud waypoints and corners without tunneling or clamping.
+	local subSteps = math.max(1, math.ceil(distance / 4.5))
+	local subStepDist = distance / subSteps
+	local anyClear = false
+
+	for _ = 1, subSteps do
+		local subGoal = goal
+		local route = state.TowerRoute
+		if route then
+			while route[state.TowerIndex] and (route[state.TowerIndex] - hero.Position).Magnitude < 3.5 do
+				state.TowerIndex += 1
 			end
-			local point = points[state.Index]
-			if point then
-				local wpPos = point.Position
-				if wpPos.Y - hero.Position.Y > STEP_UP then
-					-- Waypoint is elevated on railing / obstacle. Probe laterally perpendicular to path.
-					local nextPt = points[state.Index + 1] or points[state.Index]
-					local tangent = nextPt.Position - wpPos
-					local flatTangent = Vector2.new(tangent.X, tangent.Z)
-					local dir = flatTangent.Magnitude > 0.01 and flatTangent.Unit or Vector2.new(0, 1)
-					local lateral = Vector3.new(-dir.Y, 0, dir.X)
-					local resolved = nil
-					for _, side in {-1, 1} do
-						local probePos = wpPos + lateral * (side * 3.0)
-						local floor = Navigation.Ground(Vector3.new(probePos.X, hero.Position.Y + 1, probePos.Z), group, 2, 8)
-						if floor and math.abs(floor.Y - hero.Position.Y) <= 2.5 then
-							resolved = floor
-							break
+			subGoal = route[state.TowerIndex] or goal
+		end
+		subGoal = Navigation.Ground(subGoal, group, 4, 16) or subGoal
+
+		local old = hero.Position
+		if (Vector3.new(subGoal.X - old.X, 0, subGoal.Z - old.Z)).Magnitude < 0.05 then
+			anyClear = true
+			break
+		end
+
+		local destination = subGoal
+		if clearRoute(old, subGoal, group) then
+			state.Points = nil
+			state.Goal = nil
+			state.BlockedCount = 0
+		else
+			if not state.Points or not state.Goal or (state.Goal - subGoal).Magnitude > 28 then
+				requestPath(hero, state, subGoal, now)
+			end
+			local points = state.Points
+			if points then
+				while points[state.Index] do
+					local wpPos = points[state.Index].Position
+					local flatVec = Vector2.new(wpPos.X - hero.Position.X, wpPos.Z - hero.Position.Z)
+					local flatDist = flatVec.Magnitude
+					local nextWp = points[state.Index + 1]
+					local passedWp = false
+					if nextWp then
+						local segVec = Vector2.new(nextWp.Position.X - wpPos.X, nextWp.Position.Z - wpPos.Z)
+						if segVec.Magnitude > 0.05 and flatVec:Dot(segVec) < 0 then
+							passedWp = true
 						end
 					end
-					destination = resolved or Vector3.new(wpPos.X, hero.Position.Y, wpPos.Z)
-				else
-					local floor = Navigation.Ground(wpPos, group, 2, 8)
-					destination = floor or wpPos
+					if flatDist < 2.5 or passedWp then
+						state.Index += 1
+					elseif flatDist < 5.5 and nextWp and clearRoute(hero.Position, nextWp.Position, group) then
+						state.Index += 1
+					else
+						break
+					end
 				end
-			else
-				state.Points = nil
-				destination = goal
-			end
-		else
-			destination = goal
-		end
-	end
-	local nextPosition, clear = walkSegment(old, destination, distance, group)
-	if not clear then
-		-- Obstacle avoidance: if moving directly toward destination is blocked by a railing/corner,
-		-- try angled (30, 45, 60 deg) and lateral steers with full and fractional step lengths to slip around corners
-		local flat = Vector3.new(destination.X - old.X, 0, destination.Z - old.Z)
-		if flat.Magnitude > 0.05 then
-			local dir = flat.Unit
-			local lateral = Vector3.new(-dir.Z, 0, dir.X)
-			local testAngles = {
-				{ fwd = 0.866, lat = 0.5 },
-				{ fwd = 0.707, lat = 0.707 },
-				{ fwd = 0.500, lat = 0.866 },
-				{ fwd = 0.000, lat = 1.000 },
-			}
-			for _, test in ipairs(testAngles) do
-				for _, side in {-1, 1} do
-					local steerDir = (dir * test.fwd + lateral * (side * test.lat)).Unit
-					for _, frac in {1.0, 0.65} do
-						local trialStep = distance * frac
-						if trialStep > 0.3 then
-							local trialPos, trialClear = walkSegment(old, old + steerDir * trialStep, trialStep, group)
-							if (trialPos - old).Magnitude > 0.2 then
-								nextPosition = trialPos
-								clear = trialClear
+				local point = points[state.Index]
+				if point then
+					local wpPos = point.Position
+					if wpPos.Y - hero.Position.Y > STEP_UP then
+						-- Waypoint is elevated on railing / obstacle. Probe laterally perpendicular to path.
+						local nextPt = points[state.Index + 1] or points[state.Index]
+						local tangent = nextPt.Position - wpPos
+						local flatTangent = Vector2.new(tangent.X, tangent.Z)
+						local dir = flatTangent.Magnitude > 0.01 and flatTangent.Unit or Vector2.new(0, 1)
+						local lateral = Vector3.new(-dir.Y, 0, dir.X)
+						local resolved = nil
+						for _, side in {-1, 1} do
+							local probePos = wpPos + lateral * (side * 3.0)
+							local floor = Navigation.Ground(Vector3.new(probePos.X, hero.Position.Y + 1, probePos.Z), group, 2, 8)
+							if floor and math.abs(floor.Y - hero.Position.Y) <= 2.5 then
+								resolved = floor
 								break
 							end
 						end
+						destination = resolved or Vector3.new(wpPos.X, hero.Position.Y, wpPos.Z)
+					else
+						local floor = Navigation.Ground(wpPos, group, 2, 8)
+						destination = floor or wpPos
+					end
+				else
+					state.Points = nil
+					destination = subGoal
+				end
+			else
+				destination = subGoal
+			end
+		end
+
+		local nextPosition, clear = walkSegment(old, destination, subStepDist, group)
+		if not clear then
+			-- Obstacle avoidance: if moving directly toward destination is blocked by a railing/corner,
+			-- preserve any partial forward progress and try angled (30, 45, 60 deg) and lateral steers.
+			local steerOrigin = nextPosition
+			local progressed = (steerOrigin - old).Magnitude
+			local remainingStep = math.max(0.4, subStepDist - progressed)
+			local flat = Vector3.new(destination.X - steerOrigin.X, 0, destination.Z - steerOrigin.Z)
+			if flat.Magnitude > 0.05 then
+				local dir = flat.Unit
+				local lateral = Vector3.new(-dir.Z, 0, dir.X)
+				local testAngles = {
+					{ fwd = 0.866, lat = 0.5 },
+					{ fwd = 0.707, lat = 0.707 },
+					{ fwd = 0.500, lat = 0.866 },
+					{ fwd = 0.000, lat = 1.000 },
+				}
+				for _, test in ipairs(testAngles) do
+					for _, side in {-1, 1} do
+						local steerDir = (dir * test.fwd + lateral * (side * test.lat)).Unit
+						for _, frac in {1.0, 0.65} do
+							local trialStep = remainingStep * frac
+							if trialStep > 0.3 then
+								local trialPos, trialClear = walkSegment(steerOrigin, steerOrigin + steerDir * trialStep, trialStep, group)
+								if (trialPos - steerOrigin).Magnitude > 0.2 then
+									nextPosition = trialPos
+									clear = trialClear
+									break
+								end
+							end
+						end
+						if clear then break end
 					end
 					if clear then break end
 				end
-				if clear then break end
 			end
 		end
-	end
-	-- Sweep against other heroes too, so a fast tick cannot move through a squadmate.
-	for other in pairs(states) do
-		if other ~= hero and other.FloorId==hero.FloorId and other.RoomGeneration==hero.RoomGeneration and other.State ~= "COMA" and other.Position and math.abs(other.Position.Y - nextPosition.Y) < 3 then
-			local movement = Vector3.new(nextPosition.X - old.X, 0, nextPosition.Z - old.Z)
-			local offset = Vector3.new(other.Position.X - old.X, 0, other.Position.Z - old.Z)
-			local function clearance(delta: Vector3): number
-				local t = delta.Magnitude > .01 and math.clamp(offset:Dot(delta) / delta:Dot(delta), 0, 1) or 0
-				return (offset - delta * t).Magnitude
-			end
-			if movement.Magnitude > .01 and clearance(movement) < 1.8 and offset:Dot(movement) > 0 and offset.Magnitude < 2.2 then
-				local sideways = Vector3.new(-movement.Z, 0, movement.X).Unit * movement.Magnitude
-				local yielded = old
-				for _, side in {1, -1} do
-					local trial, safe = walkSegment(old, old + sideways * side, movement.Magnitude, group)
-					local trialDelta = Vector3.new(trial.X - old.X, 0, trial.Z - old.Z)
-					if safe and clearance(trialDelta) >= math.min(1.8, offset.Magnitude - .01) then yielded = trial; break end
+
+		-- Sweep against other heroes so combat units do not stack, without halting squadmates sprinting in formation.
+		local isFollowingMaster = hero.State == "FOLLOW_MASTER"
+		for other in pairs(states) do
+			if other ~= hero and other.FloorId == hero.FloorId and other.RoomGeneration == hero.RoomGeneration and other.State ~= "COMA" and other.Position and math.abs(other.Position.Y - nextPosition.Y) < 3 then
+				local movement = Vector3.new(nextPosition.X - old.X, 0, nextPosition.Z - old.Z)
+				local offset = Vector3.new(other.Position.X - old.X, 0, other.Position.Z - old.Z)
+				local function clearance(delta: Vector3): number
+					local t = delta.Magnitude > .01 and math.clamp(offset:Dot(delta) / delta:Dot(delta), 0, 1) or 0
+					return (offset - delta * t).Magnitude
 				end
-				if yielded == old and offset.Magnitude > 1.2 then
-					local stepLen = math.min(movement.Magnitude, math.max(0, offset.Magnitude - 1.2))
-					if stepLen > 0.01 then
-						local trial, safe = walkSegment(old, old + movement.Unit * stepLen, stepLen, group)
-						if safe then yielded = trial end
+				if movement.Magnitude > .01 and clearance(movement) < 1.8 and offset:Dot(movement) > 0 and offset.Magnitude < 2.2 then
+					local fwdUnit = movement.Unit
+					local latUnit = Vector3.new(-fwdUnit.Z, 0, fwdUnit.X)
+					local yielded = if isFollowingMaster then nextPosition else old
+					for _, side in {1, -1} do
+						local veerDir = if isFollowingMaster then (fwdUnit * 0.85 + latUnit * (0.52 * side)).Unit else latUnit * side
+						local trial, safe = walkSegment(old, old + veerDir * movement.Magnitude, movement.Magnitude, group)
+						local trialDelta = Vector3.new(trial.X - old.X, 0, trial.Z - old.Z)
+						if safe and clearance(trialDelta) >= math.min(1.8, offset.Magnitude - .01) then
+							yielded = trial
+							break
+						end
 					end
+					if not isFollowingMaster and yielded == old and offset.Magnitude > 1.2 then
+						local stepLen = math.min(movement.Magnitude, math.max(0, offset.Magnitude - 1.2))
+						if stepLen > 0.01 then
+							local trial, safe = walkSegment(old, old + fwdUnit * stepLen, stepLen, group)
+							if safe then yielded = trial end
+						end
+					end
+					nextPosition = yielded
 				end
-				nextPosition = yielded
 			end
 		end
+
+		hero.Position = nextPosition
+		if clear or (nextPosition - old).Magnitude > 0.25 then
+			anyClear = true
+		else
+			break
+		end
 	end
-	hero.Position = nextPosition
-	local moved = nextPosition - old
+
+	local moved = hero.Position - startPosition
 	if moved.Magnitude > .02 then hero.Yaw = math.atan2(-moved.X, -moved.Z) end
-	if not clear then
+	if not anyClear then
 		state.BlockedCount = (state.BlockedCount or 0) + 1
 		if state.BlockedCount >= 6 then
 			state.Points = nil
