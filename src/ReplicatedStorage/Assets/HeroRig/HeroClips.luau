@@ -490,11 +490,21 @@ do
 end
 
 -- Morrigan (SWORD_SHIELD): Obsidian Bastion. Sword raised overhead, then driven into the ground
--- from one knee.
+-- from one knee. Idle is a stoic, planted guard: shield up in front, sword held low with the
+-- blade angled down and forward.
 do
 	local p = WeaponPoses.SWORD_SHIELD
 	local kneel = merge(p.Cut, { Waist = { -34, 0, 0 }, RightShoulder = { 45, 0, 5 }, RightElbow = { 10, 0, 0 }, LeftHip = { 70, 0, -8 }, LeftKnee = { -90, 0, 0 }, RightHip = { -10, 0, 8 }, RightKnee = { -100, 0, 0 }, LeftAnkle = { 20, 0, 0 }, RightAnkle = { 60, 0, 0 }, RootOffset = { 0, -0.85, 0 } })
+	local planted: Pose = {
+		Waist = { 0, -6, 0 }, Neck = { -2, 4, 0 },
+		LeftShoulder = { 50, -30, -12 }, LeftElbow = { 80, 0, 0 },
+		RightShoulder = { 20, 0, 14 }, RightElbow = { 30, 0, 0 }, RightWrist = { -85, 0, 0 },
+		LeftHip = { 6, 0, -8 }, LeftKnee = { -12, 0, 0 }, LeftAnkle = { 6, 0, 8 },
+		RightHip = { 2, 0, 8 }, RightKnee = { -10, 0, 0 }, RightAnkle = { 8, 0, -8 },
+		RootOffset = { 0, -0.1, 0 },
+	}
 	Overrides.hero_morrigan = {
+		Idle = breathe(planted, 3.6),
 		AttackSkill = signature(1.1, {
 			{ 0, p.Guard },
 			{ 0.35, merge(p.High, { Waist = { 14, 0, 0 }, RightShoulder = { 178, 0, 0 }, RightElbow = { 5, 0, 0 }, RootOffset = { 0, 0.15, 0 } }) },

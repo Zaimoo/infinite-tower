@@ -66,6 +66,8 @@ HeroCostumes.MESHES = table.freeze({
 	["rbxassetid://123421721359927"] = "",
 	-- Valeria's hair, our own: tools/make_valeria_hair_ugc.py (assets/hair/valeria_hair_ugc.blend).
 	["rbxassetid://119546665528137"] = "",
+	-- Morrigan's hair, our own: tools/make_morrigan_hair_ugc.py (assets/hair/morrigan_hair_ugc.blend).
+	["rbxassetid://132434150044694"] = "",
 } :: { [string]: string })
 
 -- Avatar hair accessory placement: a piece centred so the accessory's HairAttachment meets
@@ -624,16 +626,69 @@ do
 end
 
 -- 9. MORRIGAN (4★ Vanguard - Void Nightblade) ---------------------------------------------
+-- Grim veteran knight from his reference art: black hair swept up and back into spikes with
+-- long locks flaring behind the shoulders, a black scarf, a riveted steel breastplate with
+-- leather straps, layered pauldrons, steel vambraces, a belt with pouches, steel tassets,
+-- greaves and sabatons over a dark undersuit. Face: our own decal from
+-- assets/faces/make_morrigan_face.py. Hair: our Blender mesh (tools/make_morrigan_hair_ugc.py).
 do
-	local skin, raven, purple, amethyst = { 240, 235, 245 }, { 25, 20, 35 }, { 60, 35, 80 }, { 160, 100, 240 }
-	table.insert(COSTUMES, costume("hero_morrigan", "Standard", {
-		Skin = skin, UpperTorso = purple, LowerTorso = purple, UpperArm = purple, LowerArm = purple,
-		UpperLeg = purple, LowerLeg = purple, Foot = raven,
+	local skin, hair, steel, darkSteel = { 226, 186, 150 }, { 20, 20, 24 }, { 150, 152, 160 }, { 92, 94, 102 }
+	local under, leather, scarf = { 42, 42, 46 }, { 88, 56, 38 }, { 24, 24, 28 }
+	table.insert(COSTUMES, costume("hero_morrigan", "Heavy", {
+		Skin = skin, UpperTorso = under, LowerTorso = under, UpperArm = under, LowerArm = under, Hand = leather,
+		UpperLeg = under, LowerLeg = steel, Foot = darkSteel,
 	}, {
-		piece("HairBase", "Head", { 1.24, 0.45, 1.24 }, { 0, 0.48, -0.05 }, raven),
-		piece("NightCape", "UpperTorso", { 2.2, 2.8, 0.3 }, { 0, -0.2, 0.68 }, purple, with(LOOSE, { Material = "Fabric" })),
-		piece("AmethystBrooch", "UpperTorso", { 0.4, 0.4, 0.2 }, { 0, 0.6, -0.58 }, amethyst, with(NEON, { Shape = "Ball" })),
-	}))
+		-- Hair mesh: centred on the export's bounding box and turned 180 degrees to undo the
+		-- importer's rotation.
+		piece("HairMesh", "Head", { 2.29, 2.36, 1.68 }, { -0.0145, 0.0653, 0.0604 }, hair, with(LOOSE, {
+			Rotation = { 0, 180, 0 },
+			Mesh = { MeshId = "rbxassetid://132434150044694", Scale = { 0.01, 0.01, 0.01 } },
+		})),
+		-- Black scarf wrapped at the neck, draping onto the chest
+		piece("ScarfWrap", "UpperTorso", { 1.5, 0.42, 1.18 }, { 0, 0.78, 0 }, scarf, with(LOOSE, { Material = "Fabric" })),
+		piece("ScarfDrape", "UpperTorso", { 1.1, 0.32, 0.2 }, { 0, 0.55, -0.52 }, scarf, with(LOOSE, { Material = "Fabric" })),
+		-- Steel breastplate with a centre ridge, abdomen plate, back plate and leather straps
+		piece("Breastplate", "UpperTorso", { 1.9, 1.1, 0.18 }, { 0, 0, -0.5 }, steel, METAL),
+		piece("ChestRidge", "UpperTorso", { 0.08, 0.9, 0.06 }, { 0, 0, -0.6 }, darkSteel, METAL),
+		piece("Backplate", "UpperTorso", { 1.9, 1.3, 0.14 }, { 0, 0.05, 0.5 }, steel, METAL),
+		piece("AbdomenPlate", "UpperTorso", { 1.7, 0.42, 0.16 }, { 0, -0.62, -0.5 }, steel, METAL),
+		piece("AbdomenEdge", "UpperTorso", { 1.72, 0.05, 0.17 }, { 0, -0.4, -0.5 }, darkSteel, METAL),
+		piece("StrapL", "UpperTorso", { 0.16, 0.9, 0.08 }, { -0.62, 0.35, -0.6 }, leather, { Rotation = { 0, 0, 10 } }),
+		piece("StrapR", "UpperTorso", { 0.16, 0.9, 0.08 }, { 0.62, 0.35, -0.6 }, leather, { Rotation = { 0, 0, -10 } }),
+		-- Layered pauldrons with a leather band below, steel vambraces with a dark rim
+		piece("PauldronL", "LeftUpperArm", { 1.35, 0.55, 1.3 }, { -0.15, 0.42, 0 }, steel, with(METAL, { Rotation = { 0, 0, 10 } })),
+		piece("PauldronLowerL", "LeftUpperArm", { 1.32, 0.28, 1.27 }, { 0, -0.34, 0 }, steel, with(METAL, { RelativeTo = "PauldronL" })),
+		piece("ArmBandL", "LeftUpperArm", { 1.08, 0.12, 1.08 }, { 0, -0.3, 0 }, leather),
+		piece("PauldronR", "RightUpperArm", { 1.35, 0.55, 1.3 }, { 0.15, 0.42, 0 }, steel, with(METAL, { Rotation = { 0, 0, -10 } })),
+		piece("PauldronLowerR", "RightUpperArm", { 1.32, 0.28, 1.27 }, { 0, -0.34, 0 }, steel, with(METAL, { RelativeTo = "PauldronR" })),
+		piece("ArmBandR", "RightUpperArm", { 1.08, 0.12, 1.08 }, { 0, -0.3, 0 }, leather),
+		piece("VambraceL", "LeftLowerArm", { 1.12, 0.62, 1.12 }, { 0, -0.12, 0 }, steel, METAL),
+		piece("VambraceRimL", "LeftLowerArm", { 1.14, 0.06, 1.14 }, { 0, 0.2, 0 }, darkSteel, METAL),
+		piece("VambraceR", "RightLowerArm", { 1.12, 0.62, 1.12 }, { 0, -0.12, 0 }, steel, METAL),
+		piece("VambraceRimR", "RightLowerArm", { 1.14, 0.06, 1.14 }, { 0, 0.2, 0 }, darkSteel, METAL),
+		-- Belt with a steel buckle and two flapped pouches, steel tassets over the hips
+		piece("Belt", "LowerTorso", { 2.06, 0.26, 1.08 }, { 0, 0.04, 0 }, leather),
+		piece("BeltBuckle", "LowerTorso", { 0.32, 0.2, 0.06 }, { 0, 0.04, -0.57 }, steel, METAL),
+		piece("PouchL", "LowerTorso", { 0.42, 0.4, 0.28 }, { -0.62, -0.06, -0.66 }, leather),
+		piece("PouchFlapL", "LowerTorso", { 0.44, 0.15, 0.3 }, { 0, 0.16, -0.01 }, leather, { RelativeTo = "PouchL" }),
+		piece("PouchR", "LowerTorso", { 0.42, 0.4, 0.28 }, { 0.62, -0.06, -0.66 }, leather),
+		piece("PouchFlapR", "LowerTorso", { 0.44, 0.15, 0.3 }, { 0, 0.16, -0.01 }, leather, { RelativeTo = "PouchR" }),
+		piece("TassetL", "LowerTorso", { 0.75, 0.6, 0.08 }, { -0.55, -0.42, -0.56 }, steel, with(LOOSE, METAL, { Rotation = { -8, 0, 0 } })),
+		piece("TassetR", "LowerTorso", { 0.75, 0.6, 0.08 }, { 0.55, -0.42, -0.56 }, steel, with(LOOSE, METAL, { Rotation = { -8, 0, 0 } })),
+		-- Legs: thigh straps, knee guards, greaves with a dark rim, steel sabatons
+		piece("ThighStrapL", "LeftUpperLeg", { 1.05, 0.1, 1.05 }, { 0, -0.15, 0 }, leather),
+		piece("ThighStrapR", "RightUpperLeg", { 1.05, 0.1, 1.05 }, { 0, -0.15, 0 }, leather),
+		piece("KneeGuardL", "LeftLowerLeg", { 0.9, 0.42, 0.16 }, { 0, 0.48, -0.55 }, steel, METAL),
+		piece("KneeGuardR", "RightLowerLeg", { 0.9, 0.42, 0.16 }, { 0, 0.48, -0.55 }, steel, METAL),
+		piece("GreaveL", "LeftLowerLeg", { 1.08, 0.7, 1.08 }, { 0, -0.15, 0 }, steel, METAL),
+		piece("GreaveRimL", "LeftLowerLeg", { 1.1, 0.06, 1.1 }, { 0, 0.2, 0 }, darkSteel, METAL),
+		piece("GreaveR", "RightLowerLeg", { 1.08, 0.7, 1.08 }, { 0, -0.15, 0 }, steel, METAL),
+		piece("GreaveRimR", "RightLowerLeg", { 1.1, 0.06, 1.1 }, { 0, 0.2, 0 }, darkSteel, METAL),
+		piece("SabatonL", "LeftFoot", { 1.1, 0.36, 1.3 }, { 0, 0.02, -0.12 }, steel, METAL),
+		piece("SabatonSoleL", "LeftFoot", { 1.12, 0.06, 1.32 }, { 0, -0.14, -0.12 }, darkSteel, METAL),
+		piece("SabatonR", "RightFoot", { 1.1, 0.36, 1.3 }, { 0, 0.02, -0.12 }, steel, METAL),
+		piece("SabatonSoleR", "RightFoot", { 1.12, 0.06, 1.32 }, { 0, -0.14, -0.12 }, darkSteel, METAL),
+	}, "rbxassetid://134987323511884"))
 end
 
 -- 10. SOVEREIGN ARCHON (5★ Striker - World Boss Hybrid) -----------------------------------
