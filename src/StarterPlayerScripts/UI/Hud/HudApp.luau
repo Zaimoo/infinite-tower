@@ -424,8 +424,8 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 	-- layer that reaches into the bar reports y = -58): shift the top-bar rect into that space.
 	local guiInset = (GuiService:GetGuiInset())
 	local goalBlock = if goal then L.GoalCardHeight + L.ZoneGap else 0
-	local goalTop = L.Edge
-	local rightTop = L.Edge + goalBlock
+	local goalTop = L.TopZone
+	local rightTop = L.TopZone + goalBlock
 	-- Pit tabs (Synthesis / Promotion): centred in the free part of Roblox's top bar under the window.
 	-- If they don't fit there, they straddle the window's top edge.
 	local pitHost = props.Overlay or props.Root
