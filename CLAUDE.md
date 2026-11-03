@@ -28,7 +28,7 @@ Also follow `AGENTS.md`. Before working on a topic, use the matching `roblox-*` 
 
 ## Core design facts
 
-- **Heroes** have combat stats plus a labor output used by facilities. Hero banners: *Call of the Rift* (permanent, 1★–5★) and *A Star's Arrival* (limited, 1★–7★). Both cost 100 Gems for one pull or 900 for ten. The level cap is 50.
+- **Heroes** have combat stats plus a labor output used by facilities. Hero banners: *Call of the Rift* (permanent, 1★–5★) and *A Star's Arrival* (limited, 1★–7★). Call of the Rift costs 100 Gems for one pull or 900 for ten, and A Star's Arrival 200 or 1,800 (`Cost1X`/`Cost10X` on each banner). The level cap is 50.
 - **Archetypes** set role, base stats, attack interval, range, labor and weapon type. Each hero has its own Basic/Special/Skill kit (`ArchetypeCombatSkills`, keyed by hero, falling back to archetype). Basic and Special attacks charge a 0–100 skill gauge.
 - **Artifacts are weapons.** Each hero equips one, and each archetype allows exactly one weapon type:
 
@@ -44,6 +44,7 @@ Also follow `AGENTS.md`. Before working on a topic, use the matching `roblox-*` 
   There are no rings and no separate shields.
 - **Artifact rarity** is inherent (16 tiers, Common to Origin) and never upgrades. Star promotion (1★–7★, multipliers 1.0 to 16.0×) is the only upgrade, and it consumes donors of the same template. Formula: `WeaponDamageMultiplier = 1 + Power/40`. The artifact banner costs 160 Gems for one pull or 1,600 for ten. It has a 50-pull pity and guarantees at least one Rare in every ten-pull.
 - **Fortress facilities:** support facilities are unlocked and levelled in the Fortress Tree (which also opens squad slots 2–5). There is no Infirmary; benched heroes recover stamina passively. The Guard Post makes AFK/offline Gold, the Market multiplies tower loot, and the Training Grounds multiply squad combat power.
+- **Relics:** a Mana Geode is the 100-Gem baseline (Urn 300, Core 1,000, Heart 5,000), scaled by floor. Abyssal Cores drop only from Elites and Calamity Hearts only from Alphas and Biome Bosses (`TowerFloorConfig.RelicDrops`).
 - **Contested loot:** loot drops physically and has to be carried and banked. Stealing it triggers a 3-minute retaliation window for PvP at 25% damage. Defeated heroes enter `COMA`.
 
 ## Testing

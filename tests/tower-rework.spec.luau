@@ -82,21 +82,35 @@ test("Floor sanctuary extraction rejects unarmed stale expired transitioning or 
 	assert(Rules.CanBank(hub,carriedCargo,{CanBankCargo=true},false,100000))
 end)
 test("Kill gems stay flat while gold and relic odds/value rise on every floor",function()
- for _,role in {"REGULAR","ELITE","BOSS"} do
+ local top={REGULAR="CURSED_URN",ELITE="ABYSSAL_CORE",ALPHA="CALAMITY_HEART",BOSS="CALAMITY_HEART"}
+ for _,role in {"REGULAR","ELITE","ALPHA","BOSS"} do
   local previous=nil
   for floor=1,50 do
    local reward=Floors.GetKillRewards(floor,role)
    assert(reward.Gems==1 and reward.RelicChance>0 and reward.RelicChance<1)
    if previous then
     assert(reward.Gold>previous.Gold and reward.RelicChance>previous.RelicChance)
-    assert(reward.RelicMultiplier>previous.RelicMultiplier)
+    assert(reward.RelicMultiplier>previous.RelicMultiplier and reward.GemMultiplier>previous.GemMultiplier)
    end
-   assert(Floors.RollRelic(floor,role,0,0)=="ABYSSAL_CORE")
+   -- Each role's best relic sits at the bottom of the tier roll; a high roll is always a Geode.
+   assert(Floors.RollRelic(floor,role,0,0)==top[role],role.." top relic")
    assert(Floors.RollRelic(floor,role,0,.99)=="MANA_GEODE")
-   -- Phase 6 M4: a camp Elite never walks away empty-handed; every other role can miss.
-   assert(Floors.RollRelic(floor,role,reward.RelicChance,0)==(role=="ELITE" and "MANA_GEODE" or nil))
+   -- Every role can miss now, camp Elites included; a dropRoll of 0 always drops (boss first clears).
+   assert(Floors.RollRelic(floor,role,reward.RelicChance,0)==nil)
    previous=reward
   end
  end
+end)
+test("Relic tiers are role-exclusive: Cores from Elites, Hearts from Alphas and Biome Bosses",function()
+ for floor=1,50 do
+  local r,e,a,b=Floors.GetKillRewards(floor,"REGULAR"),Floors.GetKillRewards(floor,"ELITE"),Floors.GetKillRewards(floor,"ALPHA"),Floors.GetKillRewards(floor,"BOSS")
+  assert(r.RelicChance<e.RelicChance and e.RelicChance<a.RelicChance,"drop chance rises Regular < Elite < Alpha")
+  assert(e.CoreChance>0 and r.CoreChance==0 and a.CoreChance==0 and b.CoreChance==0,"only Elites drop Cores")
+  assert(a.HeartChance>0 and b.HeartChance>a.HeartChance and r.HeartChance==0 and e.HeartChance==0,"Hearts come from Alphas and Biome Bosses")
+ end
+ local gold1,gems1=Floors.RelicFloorMultipliers(1)
+ local gold50,gems50=Floors.RelicFloorMultipliers(50)
+ assert(gold1==1 and gems1==1 and math.abs(gems50-1.98)<1e-9 and math.abs(gold50-3.45)<1e-9)
+ assert(select(2,Floors.RelicFloorMultipliers(0))==1,"hub relics are unscaled")
 end)
 print(string.format("Tower rework tests: %d passed",passed))

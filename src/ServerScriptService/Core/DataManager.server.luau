@@ -847,7 +847,8 @@ RequestSummonFunc.OnServerInvoke = function(player: Player, arg1: any, arg2: any
 	end
 
 	local count = (pullCount == 10) and 10 or 1
-	local gemCost = (count == 10) and 900 or 100
+	local costBanner = if isLimitedBanner(bannerId) then HeroCatalog.LimitedBanner else HeroCatalog.PermanentBanner
+	local gemCost = if count == 10 then costBanner.Cost10X else costBanner.Cost1X
 
 	if profile.Currencies.Gems < gemCost then
 		DataManager.SendToast(player, string.format("Need %d Gems to Summon!", gemCost), "WARN")

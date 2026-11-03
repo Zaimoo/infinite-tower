@@ -118,14 +118,14 @@ end)
 test("Phase 4: boosted odds keep summing to 1 and match the spec table", function()
 	local base = HeroCatalog.LimitedBanner.Rates :: { number }
 	local boosted = SummonLuck.ApplyLuck(base, 0.48)
-	local expected = { 0.408, 0.3552, 0.148, 0.06216, 0.02072, 0.004884, 0.001036 }
+	local expected = { 0.424872, 0.3552, 0.1406, 0.05624, 0.01776, 0.00444, 0.000888 }
 	local sum = 0
 	for i, rate in boosted do
 		sum += rate
 		assert(near(rate, expected[i], 1e-9), "tier " .. i)
 	end
 	assert(near(sum, 1, 1e-12))
-	assert(base[1] == 0.6, "ApplyLuck never mutates the catalog")
+	assert(base[1] == 0.6114, "ApplyLuck never mutates the catalog")
 	for _, banner in { HeroCatalog.PermanentBanner, HeroCatalog.LimitedBanner } do
 		local total = 0
 		for _, rate in SummonLuck.ApplyLuck(banner.Rates :: { number }, FacilityConfig.Constants.MaxSummonLuck) do
@@ -170,9 +170,11 @@ end)
 
 test("Phase 4: hero banners use the lowered odds, raised pity and a Rare 10-pull floor", function()
 	local perm, lim = HeroCatalog.PermanentBanner, HeroCatalog.LimitedBanner
-	assert(perm.MaxPity == 80 and lim.MaxPity == 90)
+	assert(perm.MaxPity == 120 and lim.MaxPity == 100)
 	assert(perm.TenPullMinTier == 3 and lim.TenPullMinTier == 3)
-	assert(near(perm.Rates[5], 0.005) and near(lim.Rates[7], 0.0007))
+	assert(near(perm.Rates[5], 0.0033) and near(lim.Rates[7], 0.0006))
+	assert(perm.Cost1X == 100 and perm.Cost10X == 900, "Call of the Rift costs 100 / 900")
+	assert(lim.Cost1X == 200 and lim.Cost10X == 1800, "A Star's Arrival costs 200 / 1,800")
 	for _, banner in { perm, lim } do
 		local sum = 0
 		for _, rate in banner.Rates do sum += rate end
@@ -253,7 +255,7 @@ test("Phase 5: store summon packs become Gems for players restricted from paid r
 	local Shop = require(nodes["ReplicatedStorage.Shared.Config.ShopConfig"])
 	local pack = assert(Shop.ById("pack_summon_10"))
 	local safe = Shop.SafeGrant(pack.Grant, true)
-	assert(safe.Kind == "Gems" and safe.Amount == 10 * Shop.GemsPerSummon, "restricted players get Gems")
+	assert(safe.Kind == "Gems" and safe.Amount == 10 * Shop.GemsPerSummon(pack.Grant.Banner) and Shop.GemsPerSummon("A_STARS_ARRIVAL") == 200, "restricted players get Gems")
 	assert(Shop.SafeGrant(pack.Grant, false).Kind == "Summons", "others get the summons")
 	local gems = assert(Shop.ById("gems_550"))
 	assert(Shop.SafeGrant(gems.Grant, true) == gems.Grant, "currency grants are unchanged")

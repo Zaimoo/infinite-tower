@@ -1,8 +1,9 @@
 --!strict
 -- ReplicatedStorage/Shared/Config/RelicConfig.luau
 -- Physical Relic Extraction Table from Document 1 & Document 2.
--- Phase 6 M4: gem payouts are flat per tier (they no longer scale with floor; only Gold does) and were retuned
--- so a Master farming at ~15 kills/min earns about 2,000 / 4,500 / 10,000 gems per hour at floors 1 / 25 / 50.
+-- Relic economy rebalance: a Mana Geode is the 100-gem baseline (one permanent hero pull) and each tier is worth
+-- about 3x the one below. Payout values are the floor 1 base; TowerFloorConfig.RelicFloorMultipliers scales Gems and
+-- Gold by the floor the relic dropped on. Who drops which tier lives in TowerFloorConfig.RelicDrops.
 
 export type RelicTierId = "MANA_GEODE" | "CURSED_URN" | "ABYSSAL_CORE" | "CALAMITY_HEART"
 
@@ -31,9 +32,9 @@ local RelicConfig: { [RelicTierId]: RelicSpec } = {
 		DisableJump = false,
 		TriggersSaboteurSnare = false,
 		DespawnSeconds = 90,
-		InitialLockSeconds = 3.0,
+		InitialLockSeconds = 5.0,
 		Color = Color3.fromRGB(65, 210, 255),
-		Payout = { Gems = 10, Gold = 250 },
+		Payout = { Gems = 100, Gold = 250 },
 	},
 	CURSED_URN = {
 		TierId = "CURSED_URN",
@@ -43,33 +44,33 @@ local RelicConfig: { [RelicTierId]: RelicSpec } = {
 		DisableJump = false,
 		TriggersSaboteurSnare = true,
 		DespawnSeconds = 120,
-		InitialLockSeconds = 3.0,
+		InitialLockSeconds = 5.0,
 		Color = Color3.fromRGB(255, 165, 45),
-		Payout = { Gems = 30, Gold = 1200 },
+		Payout = { Gems = 300, Gold = 1200 },
 	},
 	ABYSSAL_CORE = {
 		TierId = "ABYSSAL_CORE",
 		DisplayName = "Abyssal Core",
-		Rarity = "Mythic",
+		Rarity = "Elite Exclusive",
 		WalkSpeedPenalty = 0.35,
 		DisableJump = true,
 		TriggersSaboteurSnare = true,
 		DespawnSeconds = 150,
 		InitialLockSeconds = 5.0,
 		Color = Color3.fromRGB(190, 65, 255),
-		Payout = { Gems = 300, Gold = 4000 },
+		Payout = { Gems = 1000, Gold = 4000 },
 	},
 	CALAMITY_HEART = {
 		TierId = "CALAMITY_HEART",
 		DisplayName = "The Calamity Heart",
-		Rarity = "World Boss Exclusive",
+		Rarity = "Alpha Exclusive",
 		WalkSpeedPenalty = 0.45,
 		DisableJump = true,
 		TriggersSaboteurSnare = true,
 		DespawnSeconds = 180,
 		InitialLockSeconds = 15.0, -- 15s Rank #1 DPS Lock
 		Color = Color3.fromRGB(255, 30, 65),
-		Payout = { Gems = 1500, Gold = 15000 },
+		Payout = { Gems = 5000, Gold = 15000 },
 	},
 }
 

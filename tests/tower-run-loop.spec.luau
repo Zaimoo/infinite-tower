@@ -152,41 +152,51 @@ end)
 
 local RelicConfig = require(nodes["ReplicatedStorage.Shared.Config.RelicConfig"])
 
--- Expected gems per kill: the flat kill gem, plus the relic roll's expected payout, with a camp Elite's guaranteed Geode.
+-- Expected gems per hour on repeat farming. One boss cycle is round(20 + 1.2 x floor) kill points (Regular 1,
+-- Elite 3) plus the boss itself, which takes about as long as 15 kills; 900 kill-equivalents fit in an hour.
 local KILLS_PER_HOUR = 900 -- ~15 kills/min
 local ELITE_SHARE = 0.08
-local function gemsPerKill(floorId: number, role: string): number
+local BOSS_KILL_EQUIVALENT = 15
+local function relicValue(floorId: number, role: string): number
 	local reward = Floors.GetKillRewards(floorId, role)
-	local geode, urn, core = RelicConfig.MANA_GEODE.Payout.Gems, RelicConfig.CURSED_URN.Payout.Gems, RelicConfig.ABYSSAL_CORE.Payout.Gems
-	local tiers = reward.CoreChance * core + reward.UrnChance * urn + (1 - reward.CoreChance - reward.UrnChance) * geode
-	local value = reward.Gems + reward.RelicChance * tiers
-	if role == "ELITE" then value += (1 - reward.RelicChance) * geode end
-	return value
+	local tiers = reward.HeartChance * RelicConfig.CALAMITY_HEART.Payout.Gems + reward.CoreChance * RelicConfig.ABYSSAL_CORE.Payout.Gems
+		+ reward.UrnChance * RelicConfig.CURSED_URN.Payout.Gems
+		+ (1 - reward.HeartChance - reward.CoreChance - reward.UrnChance) * RelicConfig.MANA_GEODE.Payout.Gems
+	return reward.RelicChance * tiers * reward.GemMultiplier
 end
 local function gemsPerHour(floorId: number): number
-	return KILLS_PER_HOUR * ((1 - ELITE_SHARE) * gemsPerKill(floorId, "REGULAR") + ELITE_SHARE * gemsPerKill(floorId, "ELITE"))
+	local killsPerBoss = math.round(20 + 1.2 * floorId) / ((1 - ELITE_SHARE) + ELITE_SHARE * 3)
+	local bosses = KILLS_PER_HOUR / (killsPerBoss + BOSS_KILL_EQUIVALENT)
+	local kills = bosses * killsPerBoss
+	local perKill = 1 + (1 - ELITE_SHARE) * relicValue(floorId, "REGULAR") + ELITE_SHARE * relicValue(floorId, "ELITE")
+	return kills * perKill + bosses * relicValue(floorId, if floorId % 5 == 0 then "BOSS" else "ALPHA")
 end
 
-test("Phase 6 M4: gem income per hour sits near the 2,000 / 4,500 / 10,000 targets and never falls with depth", function()
-	for floorId, target in { [1] = 2000, [25] = 4500, [50] = 10000 } do
+test("Relic economy: gem income sits near 2,900 / 6,800 / 12,700 per hour on Alpha floors and rises with depth", function()
+	for floorId, target in { [1] = 2900, [26] = 6800, [49] = 12700 } do
 		local rate = gemsPerHour(floorId)
-		assert(math.abs(rate - target) / target <= 0.25, string.format("floor %d earns %d gems/h, target %d", floorId, rate, target))
+		assert(math.abs(rate - target) / target <= 0.20, string.format("floor %d earns %d gems/h, target %d", floorId, rate, target))
 	end
+	-- Biome Boss floors pay a bonus, so compare Alpha floors with each other and each Biome Boss floor with the floor before it.
 	local last = 0
 	for floorId = 1, 50 do
 		local rate = gemsPerHour(floorId)
-		assert(rate >= last, "gem income never falls with depth")
-		last = rate
+		if floorId % 5 == 0 then
+			assert(rate >= gemsPerHour(floorId - 1), "a Biome Boss floor pays at least its Alpha floors")
+		else
+			assert(rate >= last, "gem income never falls with depth")
+			last = rate
+		end
 	end
-	-- Relic gems are flat per tier; only Gold scales with the floor.
-	assert(RelicConfig.MANA_GEODE.Payout.Gems < RelicConfig.CURSED_URN.Payout.Gems and RelicConfig.CURSED_URN.Payout.Gems < RelicConfig.ABYSSAL_CORE.Payout.Gems)
-	-- A camp Elite always drops a relic on every floor.
-	for floorId = 1, 50 do
-		assert(Floors.RollRelic(floorId, "ELITE", 0.999999, 0.5) ~= nil)
-		assert(Floors.RollRelic(floorId, "REGULAR", 0.999999, 0.5) == nil)
+	-- A Mana Geode is the 100-gem baseline and every tier pays more than the one below.
+	assert(RelicConfig.MANA_GEODE.Payout.Gems == 100)
+	assert(RelicConfig.MANA_GEODE.Payout.Gems < RelicConfig.CURSED_URN.Payout.Gems and RelicConfig.CURSED_URN.Payout.Gems < RelicConfig.ABYSSAL_CORE.Payout.Gems
+		and RelicConfig.ABYSSAL_CORE.Payout.Gems < RelicConfig.CALAMITY_HEART.Payout.Gems)
+	-- Tower drops stay owner-locked for at least 5 seconds.
+	for _, tier in { "MANA_GEODE", "CURSED_URN", "ABYSSAL_CORE", "CALAMITY_HEART" } do
+		assert((RelicConfig :: any)[tier].InitialLockSeconds >= 5, tier .. " lock")
 	end
 end)
-
 
 test("Phase 6 M4: Biome Boss first-clear artifacts are Rare or better and capped at Mythical", function()
 	local expected = { 3, 3, 4, 4, 5, 5, 6, 6, 7, 7 }
