@@ -8,7 +8,6 @@
 
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -21,6 +20,9 @@ local GildedGrimoire = require(ReplicatedStorage:WaitForChild("Shared"):WaitForC
 local GrimoireIcons = require(Shared.Util.GrimoireIcons)
 local GrimoireSummonButton = require(Shared.Util.GrimoireSummonButton)
 local HeroCard = require(script.Parent:WaitForChild("HeroCard"))
+local ModalFit = require(script.Parent:WaitForChild("ModalFit"))
+local SummonReveal = require(script.Parent:WaitForChild("SummonReveal"))
+local UIFeel = require(script.Parent:WaitForChild("UIFeel"))
 
 local LocalPlayer = Players.LocalPlayer
 
@@ -136,12 +138,6 @@ local function label(parent: Instance, text: string, size: number, color: Color3
 	return lbl
 end
 
--- Formats artifact stat string e.g. "ATK +150 | Crit Rate +5%" matching mockup
-local function formatStatSummary(art: any): string
-	local stats = ArtifactCatalog.GetStatBreakdown(art.TemplateId, art.Star or 1, art.Rarity or 1)
-	return string.format("Power <b>%.0f</b>  ·  Damage <b>x%.2f</b>  ·  AtkSpd <b>+%.1f%%</b>", stats.Power, stats.DamageMultiplier, stats["Attack Speed"])
-end
-
 --============================================================================
 -- CONSTRUCTOR
 --============================================================================
@@ -175,7 +171,7 @@ function Forge.new(gui: ScreenGui, artifactRemotes: Folder, getProfile: (() -> a
 		Text = "",
 		AutoButtonColor = false,
 		BackgroundColor3 = C.Scrim,
-		BackgroundTransparency = 0.35,
+		BackgroundTransparency = 1, -- no dim behind the window; still catches outside clicks
 		Size = UDim2.fromScale(1, 1),
 		Visible = false,
 		ZIndex = 50,
@@ -334,23 +330,8 @@ function Forge.new(gui: ScreenGui, artifactRemotes: Folder, getProfile: (() -> a
 	-- 9. SUMMON RESULTS CELEBRATION MODAL
 	self:BuildSummonRevealModal(gui)
 
-	-- Responsive scale tracking
-	local function resize()
-		local cam = Workspace.CurrentCamera
-		if not cam then return end
-		local v = cam.ViewportSize
-		self.Scale.Scale = math.clamp(math.min((v.X - 20) / WIDTH, (v.Y - 40) / HEIGHT), 0.45, 1)
-	end
-	local camConn: RBXScriptConnection? = nil
-	local function track()
-		if camConn then camConn:Disconnect() end
-		if Workspace.CurrentCamera then
-			camConn = Workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(resize)
-		end
-		resize()
-	end
-	Workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(track)
-	track()
+	-- Fit the window inside the safe area (below the top bar, clear of the bottom edge).
+	ModalFit.Bind(root, self.Scale, WIDTH, HEIGHT)
 
 	return self
 end
@@ -1195,161 +1176,64 @@ function Forge:PerformSummon(count: number)
 	local profile = self:ResolveProfile()
 	local cost = (count == 10) and 1600 or 160
 
+	local deny = function()
+		local row = self.Summon1XBtn and self.Summon1XBtn.Parent
+		UIFeel.Deny(if row and row:IsA("GuiObject") then row else nil)
+	end
 	if not profile or not profile.Currencies or (profile.Currencies.Gems or 0) < cost then
-		-- Flash error feedback
+		deny()
+		if self.PityLabel then
+			UIFeel.Pop(self.PityLabel, 0.12)
+		end
 		return
 	end
 
+	local ownedBefore: { [string]: boolean } = {}
+	for _, art in profile.Artifacts or {} do
+		if art.TemplateId then ownedBefore[art.TemplateId] = true end
+	end
 	self.Busy = true
 	task.spawn(function()
-		local success, msg, summonedList, pityRemaining = self.RequestSummon:InvokeServer(count)
+		local ok, success, _msg, summonedList, pityRemaining = pcall(function()
+			return self.RequestSummon:InvokeServer(count)
+		end)
 		self.Busy = false
-		if success and summonedList and #summonedList > 0 then
+		if ok and success and summonedList and #summonedList > 0 then
 			if pityRemaining and self.PityLabel then
 				self.PityLabel.Text = string.format("Guaranteed 5-Star in: <b>%d</b> summons", pityRemaining)
 			end
-			self:ShowSummonResults(summonedList)
+			self:ShowSummonResults(summonedList, ownedBefore)
+		else
+			deny()
 		end
 		self:Refresh()
 	end)
 end
 
 --============================================================================
--- SUMMON CELEBRATION / REVEAL MODAL
+-- SUMMON REVEAL (shared with the hero banners: one animated beat per pull, see SummonReveal.luau)
 --============================================================================
 
 function Forge:BuildSummonRevealModal(gui: ScreenGui)
-	local revealScrim = new("TextButton", {
-		Name = "SummonRevealScrim",
-		Text = "",
-		AutoButtonColor = false,
-		BackgroundColor3 = C.Scrim,
-		BackgroundTransparency = 0.25,
-		Size = UDim2.fromScale(1, 1),
-		Visible = false,
-		ZIndex = 80,
-	}, gui)
-	self.RevealScrim = revealScrim
-	-- Gilded Grimoire theme: convert this screen's legacy Gotham text (now and as it is rebuilt).
-	GildedGrimoire.Watch(revealScrim)
-
-	local modal = new("Frame", {
-		Name = "SummonRevealModal",
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(0.5, 0.5),
-		Size = UDim2.fromOffset(680, 440),
-		BackgroundColor3 = C.Panel,
-		BorderSizePixel = 0,
-		ZIndex = 81,
-	}, revealScrim)
-	self.RevealModal = modal
-
-	applyGothicStyle(modal, "Window")
-
-	local revealTitle = label(modal, "DIMENSIONAL ARTIFACTS SUMMONED", 20, C.GoldYellow, Enum.Font.GothamBlack)
-	revealTitle.Position = UDim2.new(0, 0, 0, 20)
-	revealTitle.Size = UDim2.new(1, 0, 0, 28)
-	for side = -1, 1, 2 do
-		local spark = GrimoireIcons.Create("Spark", 26, modal, revealTitle.ZIndex)
-		spark.AnchorPoint = Vector2.new(0.5, 0.5)
-		spark.Position = UDim2.new(0.5, side * 250, 0, 34)
-	end
-
-	local cardScroll = new("ScrollingFrame", {
-		Name = "RevealScroll",
-		BackgroundTransparency = 1,
-		BorderSizePixel = 0,
-		Position = UDim2.fromOffset(24, 64),
-		Size = UDim2.new(1, -48, 1, -140),
-		ScrollBarThickness = 4,
-		ScrollBarImageColor3 = C.Border,
-		AutomaticCanvasSize = Enum.AutomaticSize.Y,
-		CanvasSize = UDim2.fromScale(0, 0),
-		ZIndex = 82,
-	}, modal)
-	self.RevealScroll = cardScroll
-
-	new("UIListLayout", {
-		SortOrder = Enum.SortOrder.LayoutOrder,
-		Padding = UDim.new(0, 8),
-	}, cardScroll)
-
-	local collectBtn = new("TextButton", {
-		Name = "CollectBtn",
-		AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5, 0, 1, -20),
-		Size = UDim2.fromOffset(200, 44),
-		BorderSizePixel = 0,
-		Text = "COLLECT ARTIFACTS",
-		Font = Enum.Font.GothamBold,
-		TextSize = 14,
-		ZIndex = 82,
-	}, modal)
-	applyGothicStyle(collectBtn, "ButtonPrimary", { Variant = "Gold" })
-
-	collectBtn.Activated:Connect(function()
-		self.RevealScrim.Visible = false
-		self:SetTab("SUMMON")
-	end)
+	self.Reveal = SummonReveal.new(gui)
 end
 
-function Forge:ShowSummonResults(summonedList: { any })
-	local scroll = self.RevealScroll
-	for _, c in ipairs(scroll:GetChildren()) do
-		if c:IsA("Frame") then c:Destroy() end
-	end
-
-	for order, art in ipairs(summonedList) do
-		-- Star Rating string
-		local starCount = art.Star or 1
-		local starStr = string.rep("★", starCount)
-		local starColor = (starCount >= 5) and C.GoldYellow or ((starCount >= 4) and Color3.fromRGB(192, 132, 252) or C.TextLavender)
-
-		local row = new("Frame", {
-			Name = "ResultRow_" .. order,
-			Size = UDim2.new(1, -4, 0, 64),
-			BackgroundColor3 = C.CardBg,
-			BorderSizePixel = 0,
-			LayoutOrder = order,
-			ZIndex = 83,
-		}, scroll)
-		applyGothicStyle(row, "Row", { AccentColor = starColor })
-
-		-- Left Icon Box (Slot)
-		local iconBox = new("Frame", {
-			Position = UDim2.fromOffset(10, 8),
-			Size = UDim2.fromOffset(48, 48),
-			BorderSizePixel = 0,
-			ZIndex = 84,
-		}, row)
-		applyGothicStyle(iconBox, "Slot", { State = "Filled", AccentColor = starColor })
-
-		local iconChar = ICON_MAP[art.Type] or "⚔️"
-		local iconLabel = label(iconBox, iconChar, 22, starColor)
-		iconLabel.Position = UDim2.fromScale(0, 0)
-		iconLabel.Size = UDim2.fromScale(1, 1)
-
-		-- Text Info
-		local info = new("Frame", {
-			BackgroundTransparency = 1,
-			Position = UDim2.fromOffset(68, 8),
-			Size = UDim2.new(1, -80, 0, 48),
-			ZIndex = 84,
-		}, row)
-
-		local nameLabel = label(info, string.format("%s  <font color=\"#FACC15\">%s</font>", art.DisplayName, starStr), 15, C.Text, Enum.Font.GothamBold)
-		nameLabel.Position = UDim2.fromOffset(0, 2)
-		nameLabel.Size = UDim2.new(1, 0, 0, 20)
-		nameLabel.TextXAlignment = Enum.TextXAlignment.Left
-
-		local statsSummary = formatStatSummary(art)
-		local statLabel = label(info, statsSummary, 12, C.TextLavender, Enum.Font.GothamMedium)
-		statLabel.Position = UDim2.fromOffset(0, 24)
-		statLabel.Size = UDim2.new(1, 0, 0, 18)
-		statLabel.TextXAlignment = Enum.TextXAlignment.Left
-	end
-
-	self.RevealScrim.Visible = true
+-- `ownedBefore`: artifact templates owned before the pull (for the NEW badge).
+function Forge:ShowSummonResults(summonedList: { any }, ownedBefore: { [string]: boolean }?)
+	local seen = table.clone(ownedBefore or {})
+	self.Reveal:Play(summonedList, true, {
+		IsNew = function(art: any): boolean
+			local id = art.TemplateId
+			if not ownedBefore or not id or seen[id] then return false end
+			seen[id] = true
+			return true
+		end,
+		Cost1 = 160,
+		Cost10 = 1600,
+		OnAgain = function(count: number)
+			self:PerformSummon(count)
+		end,
+	})
 end
 
 --============================================================================

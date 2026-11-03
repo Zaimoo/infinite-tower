@@ -23,6 +23,7 @@ local GothicBoxStyle = require(Shared:WaitForChild("Util"):WaitForChild("GothicB
 local GothicVectorIcons = require(Shared:WaitForChild("Util"):WaitForChild("GothicVectorIcons"))
 local GildedGrimoire = require(Shared:WaitForChild("Util"):WaitForChild("GildedGrimoire"))
 local GrimoireIcons = require(Shared:WaitForChild("Util"):WaitForChild("GrimoireIcons"))
+local UIFeel = require(script.Parent:WaitForChild("UIFeel"))
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local CombatRemotes = Remotes:WaitForChild("CombatRemotes")
@@ -270,24 +271,50 @@ local toastText = makeLabel({
 })
 
 local toastCounter = 0
-SystemToastEvent.OnClientEvent:Connect(function(msg: string, colorType: string)
+local toastScale = Instance.new("UIScale")
+toastScale.Parent = toastBanner
+
+-- Toasts pop in (overshoot, sound, haptic for warnings), hold, then shrink away.
+-- A new toast while one is showing re-pops in place instead of stacking.
+local function playToast(msg: string, color: Color3, holdSeconds: number, isWarn: boolean)
 	toastCounter += 1
 	local myId = toastCounter
-	toastBanner.Visible = true
 	-- Gilded Grimoire: no emoji in the UI (server messages may still carry them).
 	toastText.Text = stripEmoji(msg)
-	if colorType == "WARN" then
-		toastText.TextColor3 = Color3.fromRGB(255, 105, 105)
-	elseif colorType == "SUCCESS" then
-		toastText.TextColor3 = Color3.fromRGB(95, 250, 145)
+	toastText.TextColor3 = color
+	toastBanner.Visible = true
+	if UIFeel.ReducedMotion() then
+		toastScale.Scale = 1
 	else
-		toastText.TextColor3 = Color3.fromRGB(135, 225, 255)
+		toastScale.Scale = 0.6
+		TweenService:Create(toastScale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
 	end
-	task.delay(4.5, function()
+	UIFeel.Sfx(if isWarn then "Error" else "ToastIn")
+	if isWarn then
+		UIFeel.Haptic("Notify")
+		UIFeel.Shake(toastBanner, 2.5, 0.3)
+	end
+	task.delay(holdSeconds, function()
+		if toastCounter ~= myId then return end
+		if UIFeel.ReducedMotion() then
+			toastBanner.Visible = false
+			return
+		end
+		local out = TweenService:Create(toastScale, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Scale = 0 })
+		out:Play()
+		out.Completed:Wait()
 		if toastCounter == myId then
 			toastBanner.Visible = false
+			toastScale.Scale = 1
 		end
 	end)
+end
+
+SystemToastEvent.OnClientEvent:Connect(function(msg: string, colorType: string)
+	local color = if colorType == "WARN" then Color3.fromRGB(255, 105, 105)
+		elseif colorType == "SUCCESS" then Color3.fromRGB(95, 250, 145)
+		else Color3.fromRGB(135, 225, 255)
+	playToast(msg, color, 4.5, colorType == "WARN")
 end)
 
 -- Loot Stolen Retaliation Banner
@@ -696,16 +723,7 @@ end
 _G.TriggerHUDWhistleCooldown = triggerHUDWhistleCooldown
 
 local function showClientToast(msg: string)
-	toastCounter += 1
-	local myId = toastCounter
-	toastBanner.Visible = true
-	toastText.Text = msg
-	toastText.TextColor3 = Color3.fromRGB(135, 225, 255)
-	task.delay(3.5, function()
-		if toastCounter == myId then
-			toastBanner.Visible = false
-		end
-	end)
+	playToast(msg, Color3.fromRGB(135, 225, 255), 3.5, false)
 end
 
 -- Floating Bottom HUD Toolbar Container
@@ -1808,7 +1826,7 @@ do
 	modalBackdrop.Text = ""
 	modalBackdrop.AutoButtonColor = false
 	modalBackdrop.BackgroundColor3 = Color3.fromRGB(3, 6, 13)
-	modalBackdrop.BackgroundTransparency = 0.24
+	modalBackdrop.BackgroundTransparency = 1 -- no dim behind modals
 	modalBackdrop.Size = UDim2.fromScale(1, 1)
 	modalBackdrop.Visible = false
 	modalBackdrop.ZIndex = 10

@@ -7,6 +7,7 @@
 -- Rail, and rail buttons shrink (never below 44 px) to fit.
 
 local ContextActionService = game:GetService("ContextActionService")
+local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -150,8 +151,8 @@ local function pitState(host: GuiObject): (string?, Vector2?)
 	if not active or not window then return nil, nil end
 	local origin = host.AbsolutePosition
 	local top = window.AbsolutePosition - origin
-	-- The Pit windows leave 64 px free above them (PIT_TAB_SPACE); the tab bar sits in that gap.
-	return active, Vector2.new(top.X + window.AbsoluteSize.X / 2, math.max(56, top.Y - 8))
+	-- The window's top-centre, in the host's coordinates (the tab bar's fallback spot).
+	return active, Vector2.new(top.X + window.AbsoluteSize.X / 2, top.Y)
 end
 
 local function railSize(count: number, available: number): number
@@ -211,6 +212,14 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 	local suppressAuto, setSuppressAuto = React.useState(false)
 	local layoutOpen, setLayoutOpen = React.useState(Store.DrawerExpanded)
 	local toggleRef = React.useRef(nil :: (() -> ())?)
+	-- Leaderboard: nil follows the default (collapsed while the goal card shows), else the player's choice.
+	local boardChoice, setBoardChoice = React.useState(Store.LeaderboardOpen)
+	local boardToggleRef = React.useRef(nil :: (() -> ())?)
+	-- Re-render when Roblox's top bar changes (the layout reads GuiService.TopbarInset live).
+	React.useEffect(function()
+		local conn = GuiService:GetPropertyChangedSignal("TopbarInset"):Connect(function() setTick(os.clock()) end)
+		return function() conn:Disconnect() end
+	end, {})
 
 	React.useEffect(function()
 		local conns = {
@@ -349,7 +358,15 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 			if toggleRef.current then toggleRef.current() end
 			return Enum.ContextActionResult.Sink
 		end, false, Enum.KeyCode.C, Enum.KeyCode.ButtonY)
+		-- Tab toggles the leaderboard (the CoreGui player list is disabled).
+		ContextActionService:BindAction("HudLeaderboard", function(_, state)
+			if state ~= Enum.UserInputState.Begin then return Enum.ContextActionResult.Pass end
+			if (_G.IsAnyMasterModalOpen and _G.IsAnyMasterModalOpen()) or not boardToggleRef.current then return Enum.ContextActionResult.Pass end
+			boardToggleRef.current()
+			return Enum.ContextActionResult.Sink
+		end, false, Enum.KeyCode.Tab)
 		return function()
+			ContextActionService:UnbindAction("HudLeaderboard")
 			ContextActionService:UnbindAction("HudSquadDrawer")
 			for _, c in conns do c:Disconnect() end
 		end
@@ -400,10 +417,71 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 	local currencyBottom = L.Edge + Components.DrawerHeight(drawerOpen or layoutOpen, cardHeight) + currencyGap
 	local currencyWidth = if compact then math.max(200, 16 + (#rows + (if lockedText then 1 else 0)) * 52)
 		else math.clamp(Components.StatusCardWidth(#rows, lockedText ~= nil, tileWidth), 260, 360)
-	local leftTop = L.TopZone
+	-- Both rails start at the top of the safe area, just under Roblox's top bar.
+	local leftTop = L.Edge
 	local leftBottom = screen.Y - currencyBottom - Components.CurrencyBarHeight - L.StackGap
 	local rightBottom = screen.Y - L.Edge - powerHeight - L.StackGap
-	local rightTop = L.TopZone + (if goal then L.GoalCardHeight + L.ZoneGap else 0)
+	-- Top right, top to bottom: the leaderboard, in Roblox's top bar beside its right-hand buttons (its
+	-- header centred in the strip, never wider than the free part), then the Next Goal card, then the
+	-- Right Rail. Without room in the top bar the order is goal card, leaderboard, rail. The leaderboard
+	-- shows only as many rows as fit above the rail at its minimum button size, and drops to its pill if
+	-- none fit; phones always get the pill. Positions are in the Root's coordinates unless noted.
+	-- Free part of Roblox's top bar, in screen pixels: the leaderboard sits at its right end. Read live,
+	-- because it can still be empty when the HUD first renders. If Roblox reports no free area, use the
+	-- whole strip (GetGuiInset height) up to 12 px from the right edge: with the CoreGui player list off,
+	-- the right end of the bar is empty.
+	local topbar = GuiService.TopbarInset
+	if topbar.Width <= 0 or topbar.Height <= 0 then
+		local cam = workspace.CurrentCamera
+		local strip = (GuiService:GetGuiInset()).Y
+		topbar = Rect.new(0, 0, (if cam then cam.ViewportSize.X else screen.X) - 4, strip)
+	end
+	local boardHost = LocalPlayer.PlayerGui:FindFirstChild("CustomLeaderboardGui") :: LayerCollector?
+	-- TopbarInset is in screen pixels, but AbsolutePosition is measured from below the top bar (a
+	-- layer that reaches into the bar reports y = -58): shift the top-bar rect into that space.
+	local guiInset = (GuiService:GetGuiInset())
+	local rootOrigin = props.Root.AbsolutePosition
+	local hostOrigin = if boardHost then boardHost.AbsolutePosition else rootOrigin
+	local boardInTopbar = boardHost ~= nil and topbar.Height >= Components.LeaderboardHeaderHeight
+		and topbar.Width >= Components.LeaderboardPillWidth + 16
+	local goalBlock = if goal then L.GoalCardHeight + L.ZoneGap else 0
+	local boardTop = if boardInTopbar then topbar.Min.Y - guiInset.Y + (topbar.Height - Components.LeaderboardHeaderHeight) / 2 - rootOrigin.Y
+		else L.Edge + goalBlock
+	local boardWanted = if phone then false elseif boardChoice ~= nil then boardChoice else goal == nil
+	local boardRows = 0
+	if boardWanted then
+		local railMin = #rightButtons * (math.ceil(L.RailButtonMin * 1.2) + L.RailGap)
+		local room = rightBottom - boardTop - L.ZoneGap - railMin - (if boardInTopbar then goalBlock else 0)
+		boardRows = #Store.Players
+		while boardRows > 0 and Components.LeaderboardHeight(boardRows) > room do
+			boardRows -= 1
+		end
+	end
+	boardToggleRef.current = if phone then nil else function()
+		Store.LeaderboardOpen = not boardWanted
+		setBoardChoice(not boardWanted)
+	end
+	local boardBottom = boardTop + Components.LeaderboardHeight(boardRows)
+	local goalTop = if boardInTopbar then math.max(L.Edge, boardBottom + L.ZoneGap) else L.Edge
+	local rightTop = if boardInTopbar then math.max(L.Edge, boardBottom + L.ZoneGap) + goalBlock else boardBottom + L.ZoneGap
+	-- Pit tabs (Synthesis / Promotion): centred in Roblox's top bar under the window, kept between
+	-- Roblox's left buttons and the leaderboard. If they don't fit there, they straddle the window's top edge.
+	local pitHost = props.Overlay or props.Root
+	local pitActive, pitTop = pitState(pitHost)
+	local pitCenter: Vector2? = nil
+	if pitActive and pitTop then
+		local hostOrigin2 = pitHost.AbsolutePosition
+		local tabs = Components.PitTabsSize
+		local boardWidth = math.min(if boardRows > 0 then Components.LeaderboardWidth else Components.LeaderboardPillWidth, topbar.Width - 16)
+		local stripLeft = topbar.Min.X - guiInset.X + 8
+		local stripRight = (if boardInTopbar then topbar.Max.X - guiInset.X - 8 - boardWidth else topbar.Max.X - guiInset.X) - 8
+		if topbar.Height >= tabs.Y and stripRight - stripLeft >= tabs.X then
+			local x = math.clamp(pitTop.X + hostOrigin2.X, stripLeft + tabs.X / 2, stripRight - tabs.X / 2)
+			pitCenter = Vector2.new(x - hostOrigin2.X, topbar.Min.Y - guiInset.Y + topbar.Height / 2 - hostOrigin2.Y)
+		else
+			pitCenter = pitTop
+		end
+	end
 	local leftSize = railSize(#leftButtons, leftBottom - leftTop)
 	local rightSize = railSize(#rightButtons, rightBottom - rightTop)
 
@@ -415,7 +493,16 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 	table.sort(breakdown, function(a, b) return a.Power > b.Power end)
 
 	return e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 }, {
-		Goal = e(Components.NextGoalCard, { Goal = goal }),
+		Goal = e(Components.NextGoalCard, { Goal = goal, Top = goalTop }),
+		-- Drawn into LeaderboardController's ScreenGui (DisplayOrder 8) when it exists.
+		Leaderboard = ReactRoblox.createPortal({
+			Panel = e(Components.Leaderboard, {
+				Players = Store.Players, Max = Players.MaxPlayers, Top = boardTop + rootOrigin.Y - hostOrigin.Y, Rows = boardRows, Pill = phone,
+				Right = if boardInTopbar then topbar.Max.X - guiInset.X - hostOrigin.X - 8 else nil,
+				MaxWidth = if boardInTopbar then topbar.Width - 16 else nil,
+				OnToggle = if phone then nil else function() if boardToggleRef.current then boardToggleRef.current() end end,
+			}),
+		}, LocalPlayer.PlayerGui:FindFirstChild("CustomLeaderboardGui") or props.Root),
 		LeftRail = rail("LeftRail", "Left", leftTop, leftSize, leftBottom - leftTop, leftButtons),
 		RightRail = rail("RightRail", "Right", rightTop, rightSize, rightBottom - rightTop, rightButtons),
 		Status = if profile then e(Components.SquadDrawer, {
@@ -436,9 +523,8 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 		-- Screens and the Pit tabs render above the building screens; the zones above stay behind them.
 		Overlay = ReactRoblox.createPortal({
 		PitTabs = (function()
-			local active, anchor = pitState(props.Root)
-			if not active or not anchor then return nil end
-			return e(Components.PitTabs, { Active = active, Center = anchor, OnSelect = function(tab) call("OpenFacilityHUD", tab) end })
+			if not pitActive or not pitCenter then return nil end
+			return e(Components.PitTabs, { Active = pitActive, Center = pitCenter, OnSelect = function(tab) call("OpenFacilityHUD", tab) end })
 		end)(),
 		Facility = if facilityOpen then e(FacilityPanel, { Facility = facilityOpen, Profile = profile, Width = screen.X,
 			OnClose = function() setFacilityOpen(nil) end }) else nil,

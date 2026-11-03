@@ -15,6 +15,7 @@ local OfflineRewardEvent = TycoonRemotes:WaitForChild("OfflineRewardClaimed") ::
 local Util = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util")
 local GildedGrimoire = require(Util:WaitForChild("GildedGrimoire"))
 local GrimoireIcons = require(Util:WaitForChild("GrimoireIcons"))
+local UIFeel = require(script.Parent:WaitForChild("UIFeel"))
 
 local C = {
 	Scrim = Color3.fromRGB(6, 5, 10),
@@ -40,7 +41,7 @@ local function createModalGui(): (ScreenGui, Frame, Frame, TextLabel, TextLabel,
 	scrim.Name = "Scrim"
 	scrim.Size = UDim2.fromScale(1, 1)
 	scrim.BackgroundColor3 = C.Scrim
-	scrim.BackgroundTransparency = 0.35
+	scrim.BackgroundTransparency = 1 -- no dim behind the popup
 	scrim.Visible = false
 	scrim.Parent = gui
 
@@ -172,7 +173,7 @@ OfflineRewardEvent.OnClientEvent:Connect(function(payload: any)
 	local level = payload.GuardPostLevel or 1
 	local bossTier = payload.BiomeBossTier or 0
 
-	goldDisplayLbl.Text = string.format("+%d GOLD", gold)
+	goldDisplayLbl.Text = "+0 GOLD"
 
 	local timeText = formatTime(offlineMin)
 	local capNotice = ""
@@ -197,6 +198,19 @@ OfflineRewardEvent.OnClientEvent:Connect(function(payload: any)
 	TweenService:Create(modal, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
 		Position = UDim2.fromScale(0.5, 0.5)
 	}):Play()
+	-- The total ticks up, then lands with a pop, a coin burst and the reward sound.
+	task.delay(0.25, function()
+		UIFeel.CountUp(goldDisplayLbl, 0, gold, 0.9, "+%d GOLD")
+		task.wait(0.9)
+		goldDisplayLbl.Text = string.format("+%d GOLD", gold)
+		UIFeel.Pop(goldDisplayLbl, 0.2)
+		UIFeel.Sfx("Reward")
+		UIFeel.Haptic("Notify")
+		local card = goldDisplayLbl.Parent
+		if card and card:IsA("GuiObject") then
+			UIFeel.Burst(card, UDim2.fromScale(0.5, 0.5), C.GoldYellow, 12, goldDisplayLbl.ZIndex + 1, 120)
+		end
+	end)
 end)
 
 claimBtn.Activated:Connect(function()

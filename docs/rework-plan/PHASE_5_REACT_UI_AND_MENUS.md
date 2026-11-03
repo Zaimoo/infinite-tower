@@ -60,10 +60,10 @@ OD Overdrive [Q] · RC Recall [E] · TW Tower
      - **Squad:** an open slot with no hero.
      - **Forge:** a promotion you can afford.
      - **Index:** a newly owned hero you haven't viewed yet.
-   - **Placement:** the rail is vertically centred in the space between the currency bar and the Squad Status Card.
+   - **Placement:** the rail starts at the top of the safe area (12 px under Roblox's top bar) and is vertically centred in the space down to the currency bar above the Squad Status Card.
 5. **Right Rail — Combat (vertical, right edge):**
    - **Overdrive `[Q]`, Recall `[E]` and Tower.** Overdrive and Recall show their key or gamepad glyph, plus a radial cooldown sweep with the seconds left (§2.1).
-   - **No overlap with the Next Goal card:** the rail's top is anchored to the card's bottom edge plus a 16 px gap. It moves up when the card is hidden (the chain is complete) and down when the card grows.
+   - **No overlap with the cards above it:** the rail's top is anchored to the bottom of the leaderboard and Next Goal card stack plus a 16 px gap. It moves up when the card is hidden (the chain is complete) and down when the card grows.
    - **Short screens:** buttons shrink, but never below 44×44 px. If even 44 px buttons don't fit in one column, the rail wraps into extra columns (growing inward from its screen edge), so it never reaches the cards below.
 6. **Bottom-Left — Squad Status Card:** the live state of every squad slot (§2.2).
 7. **Bottom-Right — Squad Power badge:** the squad's overall power (§2.3). The Right Rail's bottom stops 12 px above it, so the two never overlap.
@@ -168,11 +168,11 @@ The Roblox player list (top-right, opened with `Tab`) gains two columns for ever
 
 - **Server only:** `DataManager` creates the `leaderstats` folder on join (an `IntValue` named `Floor` and a `NumberValue` named `Power`) and writes both. Clients never write them.
 - **Sorting:** `Floor` first, then `Power`, then name.
-- **Panel (Clear Glass):** the CoreGui player list is disabled. `LeaderboardController` owns `CustomLeaderboardGui` (DisplayOrder 8), tracks `leaderstats` and publishes sorted rows to `Store.Players`. HudApp draws `Components.Leaderboard` into that ScreenGui through a portal:
+- **Panel (Clear Glass):** the CoreGui player list is disabled. `LeaderboardController` owns `CustomLeaderboardGui` (DisplayOrder 8, `ScreenInsets = DeviceSafeInsets` so it can reach into Roblox's top bar), tracks `leaderstats` and publishes sorted rows to `Store.Players`. HudApp draws `Components.Leaderboard` into that ScreenGui through a portal:
   - A raised header `PLAYERS 6/6 ———` with a chevron, then one 40 px row per player: round avatar headshot, display name, `@username`, and `F{floor} · {power}` on the right. The local player's row has a `Royal` tint, accent bar and name, and `· You`. Corner brackets frame the panel.
   - **Collapsed**, it is just the header pill (150 px). `Tab` (`ContextActionService` action `HudLeaderboard`, passes while a master modal is open) or a click on the header toggles it. The choice persists for the session in `Store.LeaderboardOpen`.
   - **Default:** collapsed while the Next Goal card shows, open once the onboarding chain is complete. Phones (< 700 px wide) always show the pill.
-- **Placement:** the top-right zone stacks, top to bottom: the Next Goal card, the leaderboard, then the Right Rail. The leaderboard's top follows the goal card (16 px gap), and its height feeds the rail's `rightTop`. It shows only as many rows as fit above the Right Rail at its 44 px minimum (the rest scroll), and drops to the pill when none fit, so it never overlaps the card or the rail.
+- **Placement:** the leaderboard sits **in Roblox's top bar**, right-aligned 8 px left of Roblox's right-hand buttons, using the free part of the strip from `GuiService.TopbarInset` (it follows the buttons when they change). Its header is centred in the strip and never wider than the free part (minus 16 px), so it never covers Roblox's buttons; the open list hangs down from it. Below it, the top-right zone stacks the Next Goal card and then the Right Rail (16 px gaps), and the board's height feeds the rail's `rightTop`. If the free strip is narrower than the pill (150 px + 16), it falls back to the old order: Next Goal card, leaderboard, Right Rail. It shows only as many rows as fit above the Right Rail at its 44 px minimum (the rest scroll), and drops to the pill when none fit, so it never overlaps the card or the rail.
 
 ---
 
@@ -236,7 +236,7 @@ Migrate legacy imperative menu files into declarative React components:
    - Locked until Floor 1 is cleared (`profile.Unlocks.Forge`): the promote button reads "🔒 CLEAR FLOOR 1 TO UNLOCK PROMOTION".
    - Every refused promotion shows its reason.
 4. **Fortress Tree (`FortressTreeModal.luau`), replacing `FortressTreeController.luau`:**
-   - **Layout:** a full-screen, windowless hex map over a light dim of the world. The orange Citadel sits in the centre, with five branches winding out from it:
+   - **Layout:** a full-screen, windowless hex map drawn straight over the world (no dim). The orange Citadel sits in the centre, with five branches winding out from it:
      - Divine goes north.
      - Command goes north-east.
      - Commerce goes east.
@@ -432,7 +432,7 @@ Delete once each React replacement passes its tests:
 **Slice 2 (in progress):**
 - **Done:**
   - The facility panel redesign (§4.5) as one gothic React panel, `Hud/FacilityPanel.luau`, used by the Guard Post, Market, Training Grounds and God's Blessing prompts. It has a header with the next Fortress Tree node, the big bonus figure and breakdown, worker slots with remove buttons and a locked-slot hint, and a hero picker with a hover preview, confirmation for heroes working elsewhere, and server refusal messages.
-  - A gothic Pit tab bar; the Pit windows now leave 64 px above them for it.
+  - A gothic Pit tab bar (Synthesis / Promotion, `Components.PitTabs`, 300 × 46). It sits in Roblox's top bar, centred under the window and kept between Roblox's left buttons and the leaderboard; if the free strip is too narrow it straddles the window's top edge. The Pit windows reserve no space above themselves, and Synthesis may grow to 1.25× on large screens.
   - **Squad Deploy redesign** (`UI/SquadController.luau`, still imperative, in Gilded Grimoire):
     - **Slot cards:** a portrait with a rarity ring and archetype icon, plus power, rarity, level and resting state.
     - **Slot buttons:** CHANGE + REMOVE on a filled slot, ASSIGN on an empty one, UNLOCK on a locked one (opens the Fortress Tree).
@@ -440,6 +440,21 @@ Delete once each React replacement passes its tests:
     - **Clicking a hero with no slot chosen** fills the first empty slot. When the squad is full, the hero is held and every slot offers REPLACE.
     - **Roster:** a grid with chips for each hero's slot, facility or resting state, power/stars/level sorting, and a "ready only" filter.
     - **Server replies:** the screen shows the AssignHeroRole result. The server now validates the slot before it removes the hero from a facility.
+    - **Compact layout with Hero Details (2026-11-03):** the window is 900 × 560 (was 980 × 668). Squad slots and roster cards sit in a left column; a **HERO DETAILS** panel on the right shows the hovered or clicked hero (default: the first squad hero). It has the portrait, rarity, archetype, level and EXP bar, assignment and stamina, a stats overview (Power, HP, ATK, DPS, attack speed, range, move speed, labor, all with the equipped weapon and the Training Grounds multiplier), the **equipped weapon** (name, star, rarity, power, damage multiplier and speed bonus, or the weapon type the hero can use) and the passive trait. Slot cards also show the weapon's rarity and star. Clicking a filled slot's card focuses the hero; its CHANGE and X (bench) buttons do the actions.
+  - **Summoning redesign (2026-11-03, `UI/FacilityController.luau` + `UI/SummonReveal.luau`):**
+    - **Banner card:** the featured hero's portrait on a rarity halo with a name plate, the banner title, and a roster strip with one portrait per tier (name and drop rate). Portraits are built the first time a banner is shown.
+    - **Pity bar** under the card, the God's Blessing badge and the 10x rule beside it. Summon buttons show the cost in red when you can't afford it and "SUMMONING…" while busy; refusals (not enough Gems, server errors) show on a status line instead of failing silently.
+    - **Per-pull reveal:** each pull charges a rift orb that takes the rarity colour, flashes, then flips in a card (portrait, rarity tag, name, stars, archetype, base HP/ATK/DPS). Superior and better pulls charge longer, pulse more and spin light rays. Tap to go to the next pull, or SKIP; a 10x ends on a results grid that pops in card by card with the best pull named. The server no longer sends a "Summoned: …" toast, which spoiled the reveal.
+    - **Reveal polish (2026-11-03):** a 10x opens with a rift tease tinted by the batch's best pull ("A blinding light answers your call…" when a Legendary+ is inside). Cards flip from a card back to the face; stars pop in one by one with rising ticks; first copies of a template get a **NEW!** badge. Superior+ cards keep turning rays, a glow and a foil shimmer; Legendary+ adds a sparkle burst, a card shake and a heavy haptic. A tap during a beat fast-forwards it. Keyboard/gamepad: Space/Enter/A continue, B/Backspace skip or close. The end screen has **AGAIN 1X / AGAIN 10X** beside CONTINUE.
+    - **Forge artifact banner** uses the same reveal (it used to show a static list). Artifact pulls are all Common rarity, so their colour and emphasis come from the star (4★ violet and shiny, 5★ gold jackpot). The server's "Artifact Summoned: …" toast is gone too.
+  - **UI feel layer (2026-11-03, `UI/UIFeel.luau`, `UI/UIFeelController.client.luau`, `UI/UIAssets.luau`):**
+    - Every `GuiButton` in PlayerGui gets a hover grow (1.04), a press squash (0.93) with a springy release, a click sound and a `UIClick` haptic (HapticEffect on phones and gamepads, the gamepad motor as a fallback). Gamepad selection counts as hover. Buttons that already own a `UIScale` keep their own animation and only get sound and haptic; full-screen catchers get nothing; `NoFeel = true` opts out; `FeelSound` swaps the click.
+    - Every `ModalFit` window pops in (92% → 100%, Back ease) when it opens.
+    - Refusals (not enough Gems, failed summons) shake the button row and play the error sound and a haptic. Toasts pop in and shrink out; warning toasts shake. Offline rewards count up and land with a coin burst.
+    - Reduce Motion (Roblox's setting or the in-game toggle) drops springs, shakes, bursts and shimmers; sound and haptics stay.
+    - All sounds play through `SoundService.SFX`, which UIFeel creates, so the Settings SFX slider now works. Audio and art slots live in `UIAssets.luau`; empty slots are silent or fall back to the drawn look. See `docs/ui/UI_ASSET_REQUESTS.md`.
+  - **Synthesis two-column layout (2026-11-03, `UI/SynthesisController.luau`):** the window is 920 × 600. The left column is a big card for the hero being levelled (portrait, name, rarity, level preview, live EXP bar, EXP summary) with a **SELECT HERO / CHANGE HERO** button that opens the hero picker; the right column holds the material heroes, with the same sorting, "ready only" filter and protections as before.
+  - **No dim, safe-area fit (2026-11-03):** no screen darkens the world behind it any more. The full-screen catchers stay (fully transparent), so a click outside a window still closes it. Imperative windows (Summoning and its reveal, Squad, Forge, Synthesis, Promotion, the Tower selector) are placed by `UI/ModalFit.luau`: centred below Roblox's top bar with a 24 px margin and a 56 px bottom margin, scaled down when they do not fit. The React panels (facility panels, Shop, Hero Index) use the same margins: the window is the safe area minus 24 px at the top and sides and 56 px at the bottom.
   - **Tower selector:** shows each floor's **Recommended Power** (`TowerFloorConfig.RecommendedPower`) next to your Squad Power, in red when you're under it. The value is the floor roster's Σ(MaxHP + 10 × ATK) × 0.08, so Floor 1 ≈ one fresh 1★ hero (~700).
 - **Next:** React Summon (assignment chips, slot locks).
 

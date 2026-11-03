@@ -415,7 +415,7 @@ end
 -- Next Goal card (top-right): a raised header strip ("NEXT GOAL ——— 3/7"), the goal title, its
 -- hint and its reward. The stroke flashes Royal when the goal advances.
 --------------------------------------------------------------------------------
-function Components.NextGoalCard(props: { Goal: any })
+function Components.NextGoalCard(props: { Goal: any, Top: number? })
 	local goal = props.Goal
 	local strokeRef = React.useRef(nil)
 	local lastIndex = React.useRef(nil :: number?)
@@ -455,7 +455,7 @@ function Components.NextGoalCard(props: { Goal: any })
 	end
 	return glass({
 		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -L.Edge, 0, L.TopZone),
+		Position = UDim2.new(1, -L.Edge, 0, props.Top or L.TopZone),
 		Size = UDim2.fromOffset(L.GoalCardWidth, L.GoalCardHeight),
 		StrokeRef = strokeRef,
 	}, {
@@ -915,6 +915,9 @@ end
 --------------------------------------------------------------------------------
 -- The Pit tab navigator: Synthesis | Promotion, centred just above the open Pit screen.
 --------------------------------------------------------------------------------
+-- Compact enough to sit in Roblox's top bar (HudApp centres it there, or on the window's top edge).
+Components.PitTabsSize = Vector2.new(300, 46)
+
 function Components.PitTabs(props: { Active: string, Center: Vector2, OnSelect: (string) -> () })
 	local children: { [string]: any } = {
 		Layout = e("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder,
@@ -924,20 +927,20 @@ function Components.PitTabs(props: { Active: string, Center: Vector2, OnSelect: 
 		local active = props.Active == tab
 		local tone = if active then Grimoire.Tones.Gold else Grimoire.Tones.Slate
 		children[tab] = panel({
-			Class = "TextButton", LayoutOrder = i, Size = UDim2.fromOffset(168, 40), Text = "", AutoButtonColor = false, Selectable = true,
+			Class = "TextButton", LayoutOrder = i, Size = UDim2.fromOffset(134, 34), Text = "", AutoButtonColor = false, Selectable = true,
 			Radius = 10, Top = tone.Top, Bottom = tone.Bottom, Rail = tone.Rail,
 			[React.Event.Activated] = function()
 				if not active then props.OnSelect(tab) end
 			end,
 		}, {
-			Label = heavyLabel({ Size = UDim2.fromScale(1, 1), MaxSize = 17, Gold = not active, Outline = 2.2, ZIndex = 4,
+			Label = heavyLabel({ Size = UDim2.fromScale(1, 1), MaxSize = 15, Gold = not active, Outline = 2.2, ZIndex = 4,
 				TextColor3 = if active then Color3.new(1, 1, 1) else Grimoire.Text.Muted, Text = tab }),
 		})
 	end
 	return panel({
-		AnchorPoint = Vector2.new(0.5, 1),
+		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromOffset(props.Center.X, props.Center.Y),
-		Size = UDim2.fromOffset(368, 56),
+		Size = UDim2.fromOffset(Components.PitTabsSize.X, Components.PitTabsSize.Y),
 		ZIndex = 30,
 	}, { Row = e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 }, children) })
 end
@@ -1048,7 +1051,7 @@ end
 
 
 --------------------------------------------------------------------------------
--- Leaderboard (top-right, under the Next Goal card): a glass panel with "PLAYERS 6/6 ———" and one
+-- Leaderboard (top-right: in Roblox's top bar when there is room, else under the Next Goal card): a glass panel with "PLAYERS 6/6 ———" and one
 -- row per player (avatar, display name, @username, F{floor} · {power}); the local player's row is
 -- marked Royal. Collapsed, it is just the header pill. Rows come from LeaderboardController.
 --------------------------------------------------------------------------------
@@ -1056,6 +1059,8 @@ local LB_HEADER = 32
 local LB_ROW = 40
 local LB_PAD = 4
 local LB_PILL_WIDTH = 150
+Components.LeaderboardPillWidth = LB_PILL_WIDTH
+Components.LeaderboardHeaderHeight = LB_HEADER
 Components.LeaderboardWidth = L.GoalCardWidth
 
 -- Height of the panel with `rows` visible rows (0 = the collapsed pill).
@@ -1100,10 +1105,11 @@ local function leaderboardRow(row: any, order: number)
 	})
 end
 
-function Components.Leaderboard(props: { Players: { any }, Max: number, Top: number, Rows: number, Pill: boolean, OnToggle: (() -> ())? })
+function Components.Leaderboard(props: { Players: { any }, Max: number, Top: number, Rows: number, Pill: boolean, OnToggle: (() -> ())?,
+	Right: number?, MaxWidth: number? }) -- Right: x of the right edge in the host's coordinates (default: the safe-area edge)
 	local count = #props.Players
 	local open = props.Rows > 0
-	local width = if open then Components.LeaderboardWidth else LB_PILL_WIDTH
+	local width = math.min(if open then Components.LeaderboardWidth else LB_PILL_WIDTH, props.MaxWidth or math.huge)
 	local list: { [string]: any } = {
 		Layout = e("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder }),
 	}
@@ -1119,7 +1125,7 @@ function Components.Leaderboard(props: { Players: { any }, Max: number, Top: num
 	return glass({
 		Name = "LeaderboardPanel",
 		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -L.Edge, 0, props.Top),
+		Position = if props.Right then UDim2.fromOffset(props.Right, props.Top) else UDim2.new(1, -L.Edge, 0, props.Top),
 		Size = UDim2.fromOffset(width, Components.LeaderboardHeight(props.Rows)),
 	}, {
 		Brackets = e(Components.Brackets, {}),

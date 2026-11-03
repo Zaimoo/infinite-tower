@@ -246,12 +246,12 @@ local function ShopPanel(props: { Profile: any, Width: number, OnClose: () -> ()
 	local gold = profile and profile.Currencies and profile.Currencies.Gold or 0
 
 	return e("TextButton", {
-		Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(6, 5, 10), BackgroundTransparency = 0.35, Text = "", AutoButtonColor = false, ZIndex = 20,
+		Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(6, 5, 10), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, ZIndex = 20,
 		[React.Event.Activated] = function() props.OnClose() end,
 	}, {
 		Window = Panel({
 			Class = "TextButton", Text = "", AutoButtonColor = false, -- swallows clicks so they don't reach the scrim
-			AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.new(0.94, 0, 0.9, 0), Radius = 16, ZIndex = 21,
+			AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, -16), Size = UDim2.new(1, -48, 1, -80), Radius = 16, ZIndex = 21,
 		}, {
 			Max = e("UISizeConstraint", { MaxSize = Vector2.new(1040, 760) }),
 			Icon = IconAt("Shop", 66, { Position = UDim2.fromOffset(16, -14), ZIndex = 26 }),

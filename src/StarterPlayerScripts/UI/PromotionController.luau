@@ -23,9 +23,9 @@
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Workspace = game:GetService("Workspace")
 
 local HeroCard = require(script.Parent:WaitForChild("HeroCard"))
+local ModalFit = require(script.Parent:WaitForChild("ModalFit"))
 local StatFormulas = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("StatFormulas"))
 local PitBalanceConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("PitBalanceConfig"))
 local GothicBoxStyle = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GothicBoxStyle"))
@@ -261,7 +261,7 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 		Text = "",
 		AutoButtonColor = false,
 		BackgroundColor3 = C.Scrim,
-		BackgroundTransparency = 0.35,
+		BackgroundTransparency = 1, -- no dim behind the window; still catches outside clicks
 		Size = UDim2.fromScale(1, 1),
 		Visible = false,
 		ZIndex = 39,
@@ -648,25 +648,9 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 		end
 	end)
 
-	-- Responsive Viewport Sizing
-	local function resize()
-		local cam = Workspace.CurrentCamera
-		if not cam then return end
-		local v = cam.ViewportSize
-		-- Leave 64 px above the window for The Pit's tab bar (React HUD, Phase 5).
-		self.Scale.Scale = math.clamp(math.min((v.X - 24) / WIDTH, (v.Y - 60 - 64) / HEIGHT), 0.45, 1)
-		root.Position = UDim2.new(0.5, 0, 0.5, 32)
-	end
-	local camConn: RBXScriptConnection? = nil
-	local function track()
-		if camConn then camConn:Disconnect() end
-		if Workspace.CurrentCamera then
-			camConn = Workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(resize)
-		end
-		resize()
-	end
-	Workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(track)
-	track()
+	-- Fit the window inside the safe area. The Pit's tab bar sits in Roblox's top bar (React HUD), so no
+	-- space is reserved above the window.
+	ModalFit.Bind(root, self.Scale, WIDTH, HEIGHT)
 
 	self:Render()
 	return self
