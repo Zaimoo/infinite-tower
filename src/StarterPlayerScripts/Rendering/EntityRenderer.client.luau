@@ -12,6 +12,7 @@ local LocalPlayer = Players.LocalPlayer
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local HeroCatalog = require(Shared:WaitForChild("Config"):WaitForChild("HeroCatalog"))
 local GildedGrimoire = require(Shared:WaitForChild("Util"):WaitForChild("GildedGrimoire"))
+local BillboardThemes = require(Shared.Config:WaitForChild("BillboardThemes"))
 
 local CombatRemotes = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CombatRemotes")
 local ReplicationTickRemote = CombatRemotes:WaitForChild("ReplicationTick") :: UnreliableRemoteEvent
@@ -332,9 +333,13 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 		head.Position = root.Position + Vector3.new(0, 1.8, 0)
 		head.Parent = model
 	end
+	-- Heroes are themed by inherent rarity, mobs by tier (Normal, Elite, Alpha, Biome Boss).
+	local theme = if isHero then BillboardThemes.Hero(HeroCatalog.RarityOf(meta and meta.TemplateId)) else BillboardThemes.Mob[BillboardThemes.MobTier(enemySpec)]
+	if not isHero and not enemySpec and meta and (meta.MobType == "WORLD_BOSS" or meta.MobType == "RIFT_BOSS") then theme = BillboardThemes.Mob.BIOME_BOSS end
+
 	local hl = Instance.new("Highlight")
 	hl.FillColor = bodyColor
-	hl.OutlineColor = isHero and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(255, 90, 90)
+	hl.OutlineColor = theme.Accent:Lerp(Color3.new(1, 1, 1), if isHero then 0.45 else 0.2)
 	hl.FillTransparency = 1
 	hl.OutlineTransparency = 0.25
 	hl.Adornee = art or model
@@ -343,20 +348,15 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 	-- World-Space BillboardGui (Name, Stars, Green HP Bar, Yellow Stamina Bar)
 	local bb = Instance.new("BillboardGui")
 	bb.Name = "UnitBillboard"
-	bb.Size = isBoss and UDim2.new(0, 260, 0, 70) or UDim2.new(0, 150, 0, 52)
+	bb.Size = BillboardThemes.BillboardSize(theme)
 	bb.StudsOffset = Vector3.new(0, (bodySize.Y * 0.5) + (isBoss and 5.5 or 3.2), 0)
-	bb.MaxDistance = isBoss and 320 or 150
-	bb.AlwaysOnTop = isBoss or (isHero and meta and meta.DuelSide ~= nil)
+	bb.MaxDistance = theme.MaxDistance
+	bb.AlwaysOnTop = theme.AlwaysOnTop or (isHero and meta ~= nil and meta.DuelSide ~= nil)
 	bb.Parent = root
 
-	-- Gilded Grimoire nameplate: violet for heroes, deep obsidian for mobs, crimson for bosses,
-	-- each with the ink outline and inset gold rail.
-	local bg = Instance.new("Frame")
-	bg.Size = UDim2.fromScale(1, 1)
-	bg.BackgroundTransparency = 0.12
-	bg.BorderSizePixel = 0
-	bg.Parent = bb
-	GildedGrimoire.Frame(bg, { Class = "Compact", Tone = if isBoss then "Crimson" elseif isHero then "Violet" else "Deep" })
+	-- Gilded Grimoire nameplate in the theme's tone and rail, with its rarity / tier badge above.
+	local bg = BillboardThemes.Plate(bb, theme, GildedGrimoire.StyleText)
+	GildedGrimoire.Frame(bg, { Class = "Compact", Tone = theme.Tone, Rail = theme.Rail })
 
 	local title = Instance.new("TextLabel")
 	title.Size = UDim2.new(1, -12, 0.42, 0)
@@ -369,10 +369,10 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 	if isHero then
 		local stars = string.rep("★", (meta and meta.Stars) or 1)
 		title.Text = string.format("%s %s Lv.%d", (meta and meta.Name) or "Hero", stars, (meta and meta.Level) or 1)
-		title.TextColor3 = duelColor or Color3.fromRGB(255, 226, 140)
+		if duelColor then title.TextColor3 = duelColor else BillboardThemes.PaintTitle(title, theme) end
 	else
 		title.Text = (meta and meta.Name) or "Ruin Entity"
-		title.TextColor3 = isBoss and Color3.fromRGB(255, 150, 240) or Color3.fromRGB(255, 160, 150)
+		BillboardThemes.PaintTitle(title, theme)
 	end
 	title.Parent = bg
 	GildedGrimoire.StyleText(title, "Title")
@@ -380,8 +380,8 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 	cap.MaxTextSize = if isBoss then 22 else 15
 	cap.Parent = title
 
-	-- HP bar: a pill gauge (green for heroes, red for mobs, the duel colour in a duel).
-	local hpBg, hpFill = GildedGrimoire.Bar(bg, duelColor or (isHero and Color3.fromRGB(110, 245, 140) or Color3.fromRGB(245, 70, 90)), if isBoss then 2.2 else 1.6)
+	-- HP bar: a pill gauge (green for heroes, the tier accent for mobs, the duel colour in a duel).
+	local hpBg, hpFill = GildedGrimoire.Bar(bg, duelColor or (if isHero then Color3.fromRGB(110, 245, 140) else theme.Accent), if isBoss then 2.2 else 1.6)
 	hpBg.Size = if isHero then UDim2.new(1, -16, 0.2, 0) else UDim2.new(1, -16, 0.28, 0)
 	hpBg.Position = UDim2.new(0, 8, 0.5, 0)
 	hpBg.ZIndex = 3

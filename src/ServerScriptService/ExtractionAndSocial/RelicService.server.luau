@@ -12,6 +12,7 @@ local SanctuaryRules = require(Shared.Util.TowerSanctuaryRules)
 local RelicConfig = require(Shared:WaitForChild("Config"):WaitForChild("RelicConfig"))
 local TowerFloorConfig = require(Shared.Config:WaitForChild("TowerFloorConfig"))
 local GildedGrimoire = require(Shared:WaitForChild("Util"):WaitForChild("GildedGrimoire"))
+local BillboardThemes = require(Shared.Config:WaitForChild("BillboardThemes"))
 local TowerRuns = require(script.Parent.Parent:WaitForChild("Combat"):WaitForChild("TowerRunService"))
 
 local RemotesFolder = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RelicPactRemotes")
@@ -130,27 +131,25 @@ function RelicService.SpawnRelic(tierId: RelicTierId, worldPos: Vector3, initial
 	part.Parent = PhysicalRelicsFolder
 
 	-- World-Space Relic Billboard (Doc 4 Section 5.1)
+	-- Themed by rarity (Config/BillboardThemes): tone, rail, title gradient and a rarity badge above the plate.
+	local theme = BillboardThemes.Relic[tierId] or BillboardThemes.Relic.MANA_GEODE
 	local bb = Instance.new("BillboardGui")
 	bb.Name = "RelicBillboard"
-	bb.Size = UDim2.new(0, 210, 0, 84)
+	bb.Size = BillboardThemes.BillboardSize(theme)
 	bb.StudsOffset = Vector3.new(0, 4.6, 0)
-	bb.MaxDistance = 240
-	bb.AlwaysOnTop = (tierId == "CALAMITY_HEART" or tierId == "ABYSSAL_CORE")
+	bb.MaxDistance = theme.MaxDistance
+	bb.AlwaysOnTop = theme.AlwaysOnTop
 	bb.Parent = part
 
-	-- Gilded Grimoire relic plate: deep obsidian, ink outline, rail in the relic's colour.
-	local frame = Instance.new("Frame")
-	frame.Size = UDim2.fromScale(1, 1)
-	frame.BackgroundTransparency = 0.1
-	frame.Parent = bb
-	GildedGrimoire.Frame(frame, { Class = "Card", Tone = "Deep", Rail = spec.Color })
+	local frame = BillboardThemes.Plate(bb, theme, GildedGrimoire.StyleText)
+	GildedGrimoire.Frame(frame, { Class = "Card", Tone = theme.Tone, Rail = theme.Rail })
 
 	local title = Instance.new("TextLabel")
 	title.Size = UDim2.new(1, -14, 0.34, 0)
 	title.Position = UDim2.new(0, 7, 0, 4)
 	title.BackgroundTransparency = 1
-	title.Text = string.format("%s (%s)", string.upper(spec.DisplayName), spec.Rarity)
-	title.TextColor3 = spec.Color
+	title.Text = string.upper(spec.DisplayName)
+	BillboardThemes.PaintTitle(title, theme)
 	title.TextScaled = true
 	title.ZIndex = 3
 	title.Parent = frame
