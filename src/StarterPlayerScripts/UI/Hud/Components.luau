@@ -346,6 +346,29 @@ local function glassText(props: { [string]: any })
 end
 Components.GlassText = glassText
 
+-- A slim Clear Glass bar: dark translucent track, hairline border, flat vibrant fill.
+local function glassBar(fraction: number, color: Color3, order: number, height: number, glow: boolean?)
+	return e("Frame", {
+		LayoutOrder = order,
+		Size = UDim2.new(1, 0, 0, height),
+		BackgroundColor3 = G.Base,
+		BackgroundTransparency = 0.45,
+		BorderSizePixel = 0,
+	}, {
+		Corner = corner(math.max(2, math.floor(height / 2))),
+		Stroke = stroke(G.Hairline, 1, 0.75),
+		Fill = if fraction > 0 then e("Frame", {
+			Size = UDim2.fromScale(math.clamp(fraction, 0.02, 1), 1),
+			BackgroundColor3 = color,
+			BorderSizePixel = 0,
+		}, {
+			Corner = corner(math.max(2, math.floor(height / 2))),
+			Glow = if glow then stroke(Color3.fromRGB(255, 250, 180), 1.5, 0.2) else nil,
+		}) else nil,
+	})
+end
+Components.GlassBar = glassBar
+
 -- An uppercase section label followed by a hairline rule ("SQUAD POWER ———").
 local function sectionLabel(label: string, props: { [string]: any })
 	local frame: { [string]: any } = { BackgroundTransparency = 1 }
@@ -501,60 +524,76 @@ function Components.SquadStatusCard(props: { Rows: { any }, LockedText: string?,
 		local chipText = chip[1] .. (if row.DownSeconds then string.format(" %ds", row.DownSeconds) else "")
 		if props.Compact then
 			children["Slot" .. i] = e("TextButton", {
-				LayoutOrder = i, Size = UDim2.fromOffset(48, 48), BackgroundColor3 = Color3.fromRGB(24, 18, 36), Text = "", AutoButtonColor = false,
+				LayoutOrder = i, Size = UDim2.fromOffset(48, 48), BackgroundColor3 = G.BaseRaised, BackgroundTransparency = G.RaisedTransparency,
+				BorderSizePixel = 0, Text = "", AutoButtonColor = false,
 				[React.Event.Activated] = function() props.OnRow(row.Slot) end,
 			}, {
-				Corner = corner(24),
-				Ink = e("UIStroke", { Color = INK, Thickness = 3, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
-				Ring = e("Frame", { Position = UDim2.fromOffset(2, 2), Size = UDim2.new(1, -4, 1, -4), BackgroundTransparency = 1 }, {
-					Corner = corner(22), Stroke = stroke(if row.Hero then rarity else C.Border, 2),
-				}),
-				Art = if row.Hero then e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ClipsDescendants = true }, {
-					Corner = corner(24),
-					Portrait = e(Portrait, { TemplateId = row.TemplateId, Archetype = row.Archetype, Stars = row.Stars }),
-				}) else heavyLabel({ Size = UDim2.fromScale(1, 1), Text = "+", MaxSize = 26 }),
-				Hp = if row.Hero then e("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 1, 2), Size = UDim2.fromOffset(40, 7), BackgroundTransparency = 1 }, {
-					Bar = chunkyBar(row.HpFraction or 1, if row.ShowStamina then C.Gauge else Color3.fromRGB(120, 255, 140), Color3.fromRGB(30, 150, 70), 1, 7),
+				Corner = corner(G.TileRadius),
+				Stroke = stroke(if row.Hero then rarity else G.Hairline, 1, if row.Hero then 0.25 else 0.7),
+				Ring = if row.Hero then e("Frame", { Position = UDim2.fromOffset(2, 2), Size = UDim2.new(1, -4, 1, -4), BackgroundTransparency = 1 }, {
+					Corner = corner(G.TileRadius), Stroke = stroke(rarity, 1.4, 0.2),
 				}) else nil,
-				Arch = if row.Hero then icon(row.Archetype or "Striker", 20, { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 6, 0, -6), ZIndex = 6 }) else nil,
+				Art = if row.Hero then e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ClipsDescendants = true }, {
+					Corner = corner(G.TileRadius),
+					Portrait = e(Portrait, { TemplateId = row.TemplateId, Archetype = row.Archetype, Stars = row.Stars }),
+				}) else glassText({ Size = UDim2.fromScale(1, 1), FontFace = G.Fonts.Number, Text = "+", TextSize = 22,
+					TextColor3 = G.TextMuted, TextTransparency = 0.3, TextXAlignment = Enum.TextXAlignment.Center }),
+				Hp = if row.Hero then e("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 1, 2), Size = UDim2.fromOffset(40, 5), BackgroundTransparency = 1 }, {
+					Bar = glassBar(row.HpFraction or 1, if row.ShowStamina then G.Royal else G.Vital, 1, 5),
+				}) else nil,
+				Arch = if row.Hero then icon(row.Archetype or "Striker", 18, { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 4, 0, -4), ZIndex = 6, Flat = true }) else nil,
 			})
 		elseif row.Hero then
-			children["Slot" .. i] = panel({
-				Class = "TextButton", LayoutOrder = i, Size = UDim2.fromOffset(tileW, TILE_HEIGHT), Text = "", AutoButtonColor = false, Selectable = true,
-				Radius = 9, Rail = rarity, Top = Color3.fromRGB(46, 32, 70), Bottom = Color3.fromRGB(18, 12, 28),
+			children["Slot" .. i] = e("TextButton", {
+				LayoutOrder = i, Size = UDim2.fromOffset(tileW, TILE_HEIGHT),
+				BackgroundColor3 = G.BaseRaised,
+				BackgroundTransparency = G.RaisedTransparency,
+				BorderSizePixel = 0,
+				Text = "", AutoButtonColor = false, Selectable = true,
 				[React.Event.Activated] = function() props.OnRow(row.Slot) end,
 			}, {
-				Portrait = e("Frame", { Position = UDim2.fromOffset(6, 6), Size = UDim2.fromOffset(44, 44), BackgroundColor3 = Color3.fromRGB(12, 8, 18), ClipsDescendants = true, ZIndex = 2 }, {
-					Corner = corner(8),
-					Ink = e("UIStroke", { Color = INK, Thickness = 2.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
+				Corner = corner(G.TileRadius),
+				Stroke = stroke(G.Hairline, 1, G.HairlineTransparency),
+				RarityAccent = e("Frame", {
+					Position = UDim2.fromOffset(0, 6),
+					Size = UDim2.new(0, 2, 1, -12),
+					BackgroundColor3 = rarity,
+					BorderSizePixel = 0,
+					ZIndex = 2,
+				}),
+				Portrait = e("Frame", { Position = UDim2.fromOffset(7, 6), Size = UDim2.fromOffset(44, 44), BackgroundColor3 = G.Base,
+					BackgroundTransparency = 0.2, ClipsDescendants = true, ZIndex = 2 }, {
+					Corner = corner(G.TileRadius),
 					Art = e(Portrait, { TemplateId = row.TemplateId, Archetype = row.Archetype, Stars = row.Stars }),
 				}),
-				RarityRing = e("Frame", { Position = UDim2.fromOffset(6, 6), Size = UDim2.fromOffset(44, 44), BackgroundTransparency = 1, ZIndex = 3 }, {
-					Corner = corner(8), Stroke = stroke(rarity, 1.6),
+				RarityRing = e("Frame", { Position = UDim2.fromOffset(7, 6), Size = UDim2.fromOffset(44, 44), BackgroundTransparency = 1, ZIndex = 3 }, {
+					Corner = corner(G.TileRadius), Stroke = stroke(rarity, 1.4, 0.2),
 				}),
-				Arch = icon(row.Archetype or "Striker", 22, { Position = UDim2.fromOffset(34, 34), ZIndex = 5 }),
-				Name = heavyLabel({ Position = UDim2.fromOffset(56, 5), Size = UDim2.new(1, -60, 0, 18), MaxSize = 15, Outline = 2, Gold = false,
-					TextXAlignment = Enum.TextXAlignment.Left, Text = row.Name }),
-				Info = body({ Position = UDim2.fromOffset(56, 23), Size = UDim2.new(1, -60, 0, 13), TextSize = 11, TextColor3 = rarity,
-					Text = string.format("%s %d★ · Lv.%d", row.RarityName, row.Stars, row.Level) }),
-				Chip = heavyLabel({ Position = UDim2.fromOffset(56, 37), Size = UDim2.new(1, -60, 0, 14), MaxSize = 12, Outline = 1.6, Gold = false,
-					TextColor3 = chip[2], TextXAlignment = Enum.TextXAlignment.Left, Text = chipText .. (if row.ShowStamina then " · Sta" else "") }),
-				Bars = e("Frame", { Position = UDim2.fromOffset(8, 57), Size = UDim2.new(1, -16, 0, 20), BackgroundTransparency = 1 }, {
+				Arch = icon(row.Archetype or "Striker", 18, { Position = UDim2.fromOffset(35, 34), ZIndex = 5, Flat = true }),
+				Name = glassText({ Position = UDim2.fromOffset(58, 5), Size = UDim2.new(1, -62, 0, 18), FontFace = G.Fonts.Number, TextSize = 13,
+					TextColor3 = G.Text, Text = row.Name, ZIndex = 2 }),
+				Info = glassText({ Position = UDim2.fromOffset(58, 23), Size = UDim2.new(1, -62, 0, 14), FontFace = G.Fonts.Label, TextSize = 11,
+					TextColor3 = rarity, Text = string.format("%s %d★ · Lv.%d", row.RarityName, row.Stars, row.Level), ZIndex = 2 }),
+				Chip = glassText({ Position = UDim2.fromOffset(58, 37), Size = UDim2.new(1, -62, 0, 14), FontFace = G.Fonts.Label, TextSize = 11,
+					TextColor3 = chip[2], Text = chipText .. (if row.ShowStamina then " · Sta" else ""), ZIndex = 2 }),
+				Bars = e("Frame", { Position = UDim2.fromOffset(8, 57), Size = UDim2.new(1, -16, 0, 20), BackgroundTransparency = 1, ZIndex = 2 }, {
 					Layout = e("UIListLayout", { Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder }),
-					Hp = chunkyBar(row.HpFraction or 1, if row.ShowStamina then Color3.fromRGB(255, 230, 110) else Color3.fromRGB(120, 255, 140),
-						if row.ShowStamina then Color3.fromRGB(210, 140, 20) else Color3.fromRGB(30, 150, 70), 1, 9),
-					Gauge = chunkyBar((row.Gauge or 0) / 100, Color3.fromRGB(220, 160, 255), Color3.fromRGB(110, 40, 190), 2, 7, (row.Gauge or 0) >= 100),
+					Hp = glassBar(row.HpFraction or 1, if row.ShowStamina then G.Royal else G.Vital, 1, 6),
+					Gauge = glassBar((row.Gauge or 0) / 100, if (row.Gauge or 0) >= 100 then G.Royal else G.Arcane, 2, 5, (row.Gauge or 0) >= 100),
 				}),
 			})
 		else
-			children["Slot" .. i] = panel({
-				Class = "TextButton", LayoutOrder = i, Size = UDim2.fromOffset(tileW, TILE_HEIGHT), Text = "", AutoButtonColor = true, Selectable = true,
-				Radius = 9, Top = Color3.fromRGB(34, 26, 48), Bottom = Color3.fromRGB(16, 12, 24),
+			children["Slot" .. i] = e("TextButton", {
+				LayoutOrder = i, Size = UDim2.fromOffset(tileW, TILE_HEIGHT), Text = "", AutoButtonColor = false, Selectable = true,
+				BackgroundColor3 = G.BaseRaised, BackgroundTransparency = G.RaisedTransparency, BorderSizePixel = 0,
 				[React.Event.Activated] = function() props.OnRow(row.Slot) end,
 			}, {
-				Plus = heavyLabel({ Position = UDim2.fromOffset(0, 10), Size = UDim2.new(1, 0, 0, 34), MaxSize = 32, Text = "+" }),
-				Label = heavyLabel({ Position = UDim2.fromOffset(4, 48), Size = UDim2.new(1, -8, 0, 18), MaxSize = 14, Outline = 2, Gold = false,
-					Text = string.format("Assign slot %d", row.Slot) }),
+				Corner = corner(G.TileRadius),
+				Stroke = stroke(G.Hairline, 1, 0.7),
+				Plus = glassText({ Position = UDim2.fromOffset(0, 10), Size = UDim2.new(1, 0, 0, 32), FontFace = G.Fonts.Number, TextSize = 28,
+					TextColor3 = G.TextMuted, TextTransparency = 0.3, TextXAlignment = Enum.TextXAlignment.Center, Text = "+" }),
+				Label = glassText({ Position = UDim2.fromOffset(4, 46), Size = UDim2.new(1, -8, 0, 18), FontFace = G.Fonts.Label, TextSize = 12,
+					TextColor3 = G.TextMuted, TextTransparency = 0.2, TextXAlignment = Enum.TextXAlignment.Center, Text = string.format("Assign slot %d", row.Slot) }),
 			})
 		end
 	end
@@ -563,34 +602,35 @@ function Components.SquadStatusCard(props: { Rows: { any }, LockedText: string?,
 			then e("TextButton", {
 				LayoutOrder = 99, Size = UDim2.fromOffset(44, 48), BackgroundTransparency = 1, Text = "",
 				[React.Event.Activated] = function() props.OnLocked() end,
-			}, { Lock = icon("Lock", 40, { Position = UDim2.fromOffset(2, 4) }) })
-			else panel({
-				Class = "TextButton", LayoutOrder = 99, Size = UDim2.fromOffset(LOCKED_TILE, TILE_HEIGHT), Text = "", AutoButtonColor = true,
-				Radius = 9, Top = Color3.fromRGB(30, 24, 42), Bottom = Color3.fromRGB(14, 10, 22), Rail = Color3.fromRGB(140, 130, 160),
+			}, { Lock = icon("Lock", 36, { Position = UDim2.fromOffset(4, 6), Flat = true }) })
+			else e("TextButton", {
+				LayoutOrder = 99, Size = UDim2.fromOffset(LOCKED_TILE, TILE_HEIGHT), Text = "", AutoButtonColor = false,
+				BackgroundColor3 = G.BaseRaised, BackgroundTransparency = G.RaisedTransparency, BorderSizePixel = 0,
 				[React.Event.Activated] = function() props.OnLocked() end,
 			}, {
-				Lock = icon("Lock", 38, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 6) }),
-				Range = heavyLabel({ Position = UDim2.fromOffset(4, 46), Size = UDim2.new(1, -8, 0, 16), MaxSize = 13, Outline = 1.8, Gold = false,
-					Text = "Slots " .. (props.LockedRange or "") }),
-				Hint = body({ Position = UDim2.fromOffset(4, 64), Size = UDim2.new(1, -8, 0, 13), TextSize = 10, TextColor3 = Color3.fromRGB(196, 186, 214),
-					TextXAlignment = Enum.TextXAlignment.Center, Text = "Upgrades" }),
+				Corner = corner(G.TileRadius),
+				Stroke = stroke(G.Hairline, 1, 0.75),
+				Lock = icon("Lock", 32, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 8), Flat = true }),
+				Range = glassText({ Position = UDim2.fromOffset(4, 46), Size = UDim2.new(1, -8, 0, 16), FontFace = G.Fonts.Number, TextSize = 12,
+					TextColor3 = G.Text, TextXAlignment = Enum.TextXAlignment.Center, Text = "Slots " .. (props.LockedRange or "") }),
+				Hint = glassText({ Position = UDim2.fromOffset(4, 64), Size = UDim2.new(1, -8, 0, 14), FontFace = G.Fonts.Label, TextSize = 10,
+					TextColor3 = G.TextMuted, TextTransparency = 0.3, TextXAlignment = Enum.TextXAlignment.Center, Text = "Upgrades" }),
 			})
 	end
 	if props.Compact then
 		children.Padding = e("UIPadding", { PaddingLeft = UDim.new(0, CARD_PAD), PaddingRight = UDim.new(0, CARD_PAD) })
-		return panel({
+		return glass({
 			AnchorPoint = Vector2.new(0, 1),
 			Position = props.Position or UDim2.new(0, L.Edge, 1, -L.Edge),
 			Size = UDim2.fromOffset(20 + (#props.Rows + (if props.LockedText then 1 else 0)) * 54, 66),
 		}, { Strip = e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 }, children) })
 	end
-	return panel({
+	return glass({
 		AnchorPoint = Vector2.new(0, 1),
 		Position = props.Position or UDim2.new(0, L.Edge, 1, -L.Edge),
 		Size = UDim2.fromOffset(Components.StatusCardWidth(#props.Rows, props.LockedText ~= nil, tileW), Components.StatusCardHeight(#props.Rows, props.LockedText ~= nil, false)),
 	}, {
-		Header = heavyLabel({ Position = UDim2.fromOffset(CARD_PAD + 2, CARD_PAD - 3), Size = UDim2.new(1, -CARD_PAD * 2, 0, HEADER_H), MaxSize = 16, Outline = 2,
-			TextXAlignment = Enum.TextXAlignment.Left, Text = "Squad Status" }),
+		Header = sectionLabel("Squad Status", { Position = UDim2.fromOffset(CARD_PAD + 2, CARD_PAD - 4), Size = UDim2.new(1, -CARD_PAD * 2, 0, HEADER_H) }),
 		Strip = e("Frame", { Position = UDim2.fromOffset(CARD_PAD, CARD_PAD + HEADER_H), Size = UDim2.new(1, -CARD_PAD * 2, 0, TILE_HEIGHT), BackgroundTransparency = 1 }, children),
 	})
 end
@@ -728,26 +768,44 @@ local function stripTooltip(row: any, index: number)
 end
 
 -- A drawn chevron: up (expand) or down (collapse).
-local function chevron(up: boolean, order: number, onToggle: () -> ())
-	local function bar(side: number)
-		return e("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, side * 4, 0.5, 0), Size = UDim2.fromOffset(12, 2),
-			Rotation = side * (if up then 40 else -40), BackgroundColor3 = G.Text, BorderSizePixel = 0, ZIndex = 3 })
+-- When `not up` or `triple`, renders 3 stacked downward chevrons.
+local function chevron(up: boolean, order: number, onToggle: () -> (), triple: boolean?, size: UDim2?, radius: number?)
+	local function bar(side: number, yOff: number?, len: number?)
+		return e("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.new(0.5, side * 3.5, 0.5, yOff or 0),
+			Size = UDim2.fromOffset(len or 12, 2),
+			Rotation = side * (if up then 40 else -40),
+			BackgroundColor3 = G.Text,
+			BorderSizePixel = 0,
+			ZIndex = 3,
+		})
+	end
+	local kids: { [string]: any } = {
+		Corner = corner(radius or G.TileRadius),
+		Stroke = stroke(G.Hairline, 1, G.HairlineTransparency),
+	}
+	if triple or not up then
+		-- 3 down arrows stacked vertically: top (-8px), middle (0px), bottom (+8px)
+		for _, yOff in { -8, 0, 8 } do
+			kids["Arr" .. yOff .. "L"] = bar(-1, yOff, 10)
+			kids["Arr" .. yOff .. "R"] = bar(1, yOff, 10)
+		end
+	else
+		kids.Left = bar(-1, 0, 12)
+		kids.Right = bar(1, 0, 12)
 	end
 	return e("TextButton", {
 		LayoutOrder = order,
-		Size = UDim2.fromOffset(STRIP_SLOT, STRIP_H - 8),
+		Size = size or UDim2.fromOffset(STRIP_SLOT, STRIP_H - 8),
 		BackgroundColor3 = G.BaseRaised,
 		BackgroundTransparency = G.RaisedTransparency,
+		BorderSizePixel = 0,
 		Text = "",
 		AutoButtonColor = false,
 		Selectable = true,
 		[React.Event.Activated] = function() onToggle() end,
-	}, {
-		Corner = corner(G.TileRadius),
-		Stroke = stroke(G.Hairline, 1, G.HairlineTransparency),
-		Left = bar(-1),
-		Right = bar(1),
-	})
+	}, kids)
 end
 
 function Components.SquadDrawer(props: {
@@ -832,10 +890,14 @@ function Components.SquadDrawer(props: {
 					Rows = props.Rows, LockedText = props.LockedText, LockedRange = props.LockedRange, Compact = props.Compact, TileWidth = props.TileWidth,
 					OnRow = props.OnRow, OnLocked = props.OnLocked, Position = UDim2.fromScale(0, 1),
 				}),
-				-- Collapse tab, bottom-aligned just right of the card.
-				Collapse = e("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(1, DRAWER_GAP, 1, 0), Size = UDim2.fromOffset(DRAWER_TAB, STRIP_H - 8),
-					BackgroundTransparency = 1 }, {
-					Tab = chevron(false, 1, props.OnToggle),
+				-- Collapse tab: full height matching the card, spanning top-to-bottom inside the corner outlines.
+				Collapse = e("Frame", {
+					AnchorPoint = Vector2.new(0, 0),
+					Position = UDim2.new(1, DRAWER_GAP, 0, 0),
+					Size = UDim2.new(0, DRAWER_TAB, 1, 0),
+					BackgroundTransparency = 1,
+				}, {
+					Tab = chevron(false, 1, props.OnToggle, true, UDim2.fromScale(1, 1), G.Radius),
 				}),
 			}) else nil,
 			Strip = if not showCard then e("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, CLIP_PAD, 1, -CLIP_PAD),

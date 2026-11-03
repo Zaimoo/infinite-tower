@@ -211,9 +211,6 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 	local suppressAuto, setSuppressAuto = React.useState(false)
 	local layoutOpen, setLayoutOpen = React.useState(Store.DrawerExpanded)
 	local toggleRef = React.useRef(nil :: (() -> ())?)
-	-- Leaderboard: nil follows the default (collapsed while the goal card shows), else the player's choice.
-	local boardChoice, setBoardChoice = React.useState(Store.LeaderboardOpen)
-	local boardToggleRef = React.useRef(nil :: (() -> ())?)
 
 	React.useEffect(function()
 		local conns = {
@@ -352,15 +349,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 			if toggleRef.current then toggleRef.current() end
 			return Enum.ContextActionResult.Sink
 		end, false, Enum.KeyCode.C, Enum.KeyCode.ButtonY)
-		-- Tab toggles the leaderboard (the CoreGui player list is disabled).
-		ContextActionService:BindAction("HudLeaderboard", function(_, state)
-			if state ~= Enum.UserInputState.Begin then return Enum.ContextActionResult.Pass end
-			if (_G.IsAnyMasterModalOpen and _G.IsAnyMasterModalOpen()) or not boardToggleRef.current then return Enum.ContextActionResult.Pass end
-			boardToggleRef.current()
-			return Enum.ContextActionResult.Sink
-		end, false, Enum.KeyCode.Tab)
 		return function()
-			ContextActionService:UnbindAction("HudLeaderboard")
 			ContextActionService:UnbindAction("HudSquadDrawer")
 			for _, c in conns do c:Disconnect() end
 		end
@@ -414,25 +403,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 	local leftTop = L.TopZone
 	local leftBottom = screen.Y - currencyBottom - Components.CurrencyBarHeight - L.StackGap
 	local rightBottom = screen.Y - L.Edge - powerHeight - L.StackGap
-	-- Top right, top to bottom: Next Goal card, leaderboard, Right Rail. The leaderboard shows only
-	-- as many rows as fit above the rail at its minimum button size, and drops to its pill if none
-	-- fit; phones always get the pill.
-	local boardTop = L.TopZone + (if goal then L.GoalCardHeight + L.ZoneGap else 0)
-	local boardWanted = if phone then false elseif boardChoice ~= nil then boardChoice else goal == nil
-	local boardRows = 0
-	if boardWanted then
-		local railMin = #rightButtons * (math.ceil(L.RailButtonMin * 1.2) + L.RailGap)
-		local room = rightBottom - boardTop - L.ZoneGap - railMin
-		boardRows = #Store.Players
-		while boardRows > 0 and Components.LeaderboardHeight(boardRows) > room do
-			boardRows -= 1
-		end
-	end
-	boardToggleRef.current = if phone then nil else function()
-		Store.LeaderboardOpen = not boardWanted
-		setBoardChoice(not boardWanted)
-	end
-	local rightTop = boardTop + Components.LeaderboardHeight(boardRows) + L.ZoneGap
+	local rightTop = L.TopZone + (if goal then L.GoalCardHeight + L.ZoneGap else 0)
 	local leftSize = railSize(#leftButtons, leftBottom - leftTop)
 	local rightSize = railSize(#rightButtons, rightBottom - rightTop)
 
@@ -445,13 +416,6 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 
 	return e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 }, {
 		Goal = e(Components.NextGoalCard, { Goal = goal }),
-		-- Drawn into LeaderboardController's ScreenGui (DisplayOrder 8) when it exists.
-		Leaderboard = ReactRoblox.createPortal({
-			Panel = e(Components.Leaderboard, {
-				Players = Store.Players, Max = Players.MaxPlayers, Top = boardTop, Rows = boardRows, Pill = phone,
-				OnToggle = if phone then nil else function() if boardToggleRef.current then boardToggleRef.current() end end,
-			}),
-		}, LocalPlayer.PlayerGui:FindFirstChild("CustomLeaderboardGui") or props.Root),
 		LeftRail = rail("LeftRail", "Left", leftTop, leftSize, leftBottom - leftTop, leftButtons),
 		RightRail = rail("RightRail", "Right", rightTop, rightSize, rightBottom - rightTop, rightButtons),
 		Status = if profile then e(Components.SquadDrawer, {
