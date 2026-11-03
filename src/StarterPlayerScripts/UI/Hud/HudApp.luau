@@ -3,9 +3,12 @@
 -- Phase 5 HUD root (§2): Left Rail (menus), Right Rail (combat), Next Goal card, Squad Status Card,
 -- Squad Power badge and the Hero Index modal. Zones are placed from the live screen size so they
 -- never overlap: the Right Rail starts below the goal card and stops above the power badge, the
--- Left Rail stops above the status card, and rail buttons shrink (never below 44 px) to fit.
+-- Left Rail stops above the status card, the leaderboard stacks between the goal card and the Right
+-- Rail, and rail buttons shrink (never below 44 px) to fit.
 
+local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
+local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local React = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("React"))
@@ -103,6 +106,17 @@ local function buildRows(profile: any): ({ any }, string?)
 	return rows, lockedText
 end
 
+-- The legacy squad alerts (HUDController) that should open the Squad drawer while they show.
+local function squadAlertShowing(): boolean
+	local hud = LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild("MasterHUDScreenGui")
+	if not hud then return false end
+	for _, name in { "PartiallyDefeatedSquadBanner", "SquadWipeRecoveryBanner" } do
+		local banner = hud:FindFirstChild(name)
+		if banner and banner:IsA("GuiObject") and banner.Visible then return true end
+	end
+	return false
+end
+
 local function buildableNodes(profile: any): number
 	if not profile or not (profile.Unlocks and profile.Unlocks.FortressTree) then return 0 end
 	local tree = profile.FortressTree
@@ -147,10 +161,24 @@ local function railSize(count: number, available: number): number
 	return math.clamp(math.floor(per), L.RailButtonMin, L.RailButton)
 end
 
-local function rail(name: string, side: "Left" | "Right", top: number, size: number, buttons: { any })
+-- A rail of `size` buttons inside `available` px of height. When even 44 px buttons don't fit in one
+-- column (short screens), the rail wraps into extra columns, growing inward from its screen edge,
+-- so it never runs into the cards below it.
+local function rail(name: string, side: "Left" | "Right", top: number, size: number, available: number, buttons: { any })
+	local cellW = size + 24
+	local cellH = size + math.floor(math.floor(size * 0.36) * 0.55) -- RailButton's own height
+	local perColumn = math.max(1, math.floor((available + L.RailGap) / (cellH + L.RailGap)))
+	local columns = math.max(1, math.ceil(#buttons / perColumn))
+	local rows = math.min(#buttons, perColumn)
 	local children: { [string]: any } = {
-		Layout = e("UIListLayout", { Padding = UDim.new(0, L.RailGap), SortOrder = Enum.SortOrder.LayoutOrder,
-			HorizontalAlignment = Enum.HorizontalAlignment.Center }),
+		Layout = e("UIGridLayout", {
+			CellSize = UDim2.fromOffset(cellW, cellH),
+			CellPadding = UDim2.fromOffset(L.RailGap, L.RailGap),
+			FillDirection = Enum.FillDirection.Vertical,
+			FillDirectionMaxCells = perColumn,
+			SortOrder = Enum.SortOrder.LayoutOrder,
+			StartCorner = if side == "Left" then Enum.StartCorner.TopLeft else Enum.StartCorner.TopRight,
+		}),
 	}
 	for i, b in buttons do
 		b.Order = i
@@ -161,7 +189,7 @@ local function rail(name: string, side: "Left" | "Right", top: number, size: num
 		Name = name,
 		AnchorPoint = Vector2.new(if side == "Left" then 0 else 1, 0),
 		Position = if side == "Left" then UDim2.fromOffset(L.Edge, top) else UDim2.new(1, -L.Edge, 0, top),
-		Size = UDim2.fromOffset(size + 24, #buttons * (math.ceil(size * 1.2) + L.RailGap)),
+		Size = UDim2.fromOffset(columns * cellW + (columns - 1) * L.RailGap, rows * cellH + (rows - 1) * L.RailGap),
 		BackgroundTransparency = 1,
 	}, children)
 end
@@ -175,6 +203,17 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 	local shopOpen, setShopOpen = React.useState(false)
 	local knownTemplates = React.useRef(nil :: { [string]: boolean }?)
 	local newHeroes, setNewHeroes = React.useState(0)
+	-- Squad drawer: the player's choice (kept in Store), plus a danger auto-expand that collapses
+	-- 4 s after the danger clears. `layoutOpen` trails a collapse until the slide finishes, so the
+	-- Left Rail never grows into the drawer mid-tween.
+	local userOpen, setUserOpen = React.useState(Store.DrawerExpanded)
+	local autoOpen, setAutoOpen = React.useState(false)
+	local suppressAuto, setSuppressAuto = React.useState(false)
+	local layoutOpen, setLayoutOpen = React.useState(Store.DrawerExpanded)
+	local toggleRef = React.useRef(nil :: (() -> ())?)
+	-- Leaderboard: nil follows the default (collapsed while the goal card shows), else the player's choice.
+	local boardChoice, setBoardChoice = React.useState(Store.LeaderboardOpen)
+	local boardToggleRef = React.useRef(nil :: (() -> ())?)
 
 	React.useEffect(function()
 		local conns = {
@@ -253,7 +292,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 	-- The status card grows to the right with each open slot. Tiles shrink to stay clear of the
 	-- Squad Power badge; if even the smallest tiles would reach it, use the compact portrait strip.
 	local lockedRange = if lockedText then string.format("%d–%d", #rows + 1, TreeConfig.MaxSquadSlots) else nil
-	local roomForCard = screen.X - 2 * L.Edge - L.PowerBadgeWidth - L.ZoneGap
+	local roomForCard = screen.X - 2 * L.Edge - L.PowerBadgeWidth - L.ZoneGap - Components.DrawerTabWidth
 	local tileWidth = Components.StatusTileMax
 	if not compact then
 		local fixed = Components.StatusCardWidth(0, lockedText ~= nil, 0) + #rows * 6
@@ -261,6 +300,71 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 		if tileWidth < Components.StatusTileMin then compact = true end
 	end
 	local cardHeight = Components.StatusCardHeight(#rows, lockedText ~= nil, compact)
+
+	-- Danger (a hero Down, or a squad alert) opens the drawer; phones stay collapsed unless tapped.
+	local phone = screen.X < 700
+	local danger = squadAlertShowing()
+	for _, r in rows do if r.State == "Down" then danger = true end end
+	local drawerOpen = userOpen or (autoOpen and not phone)
+	React.useEffect(function()
+		if danger then
+			if not suppressAuto then setAutoOpen(true) end
+			return nil
+		end
+		setSuppressAuto(false)
+		local alive = true
+		task.delay(4, function() if alive then setAutoOpen(false) end end)
+		return function() alive = false end
+	end, { danger })
+	React.useEffect(function()
+		if drawerOpen then
+			setLayoutOpen(true)
+			return nil
+		end
+		local alive = true
+		task.delay(Components.DrawerTween, function() if alive then setLayoutOpen(false) end end)
+		return function() alive = false end
+	end, { drawerOpen })
+	toggleRef.current = function()
+		if drawerOpen then
+			-- Closing during danger keeps it closed until that danger clears.
+			setUserOpen(false)
+			setAutoOpen(false)
+			if danger then setSuppressAuto(true) end
+			Store.DrawerExpanded = false
+		else
+			setUserOpen(true)
+			Store.DrawerExpanded = true
+		end
+	end
+	-- C / gamepad Y toggle the drawer. They pass through while a modal is open, and Y also passes
+	-- while a ProximityPrompt (which uses Y on gamepads) is on screen.
+	React.useEffect(function()
+		local prompts: { [ProximityPrompt]: boolean } = {}
+		local conns = {
+			ProximityPromptService.PromptShown:Connect(function(prompt) prompts[prompt] = true end),
+			ProximityPromptService.PromptHidden:Connect(function(prompt) prompts[prompt] = nil end),
+		}
+		ContextActionService:BindAction("HudSquadDrawer", function(_, state, input)
+			if state ~= Enum.UserInputState.Begin then return Enum.ContextActionResult.Pass end
+			local modal = _G.IsAnyMasterModalOpen and _G.IsAnyMasterModalOpen()
+			if modal or (input.KeyCode == Enum.KeyCode.ButtonY and next(prompts) ~= nil) then return Enum.ContextActionResult.Pass end
+			if toggleRef.current then toggleRef.current() end
+			return Enum.ContextActionResult.Sink
+		end, false, Enum.KeyCode.C, Enum.KeyCode.ButtonY)
+		-- Tab toggles the leaderboard (the CoreGui player list is disabled).
+		ContextActionService:BindAction("HudLeaderboard", function(_, state)
+			if state ~= Enum.UserInputState.Begin then return Enum.ContextActionResult.Pass end
+			if (_G.IsAnyMasterModalOpen and _G.IsAnyMasterModalOpen()) or not boardToggleRef.current then return Enum.ContextActionResult.Pass end
+			boardToggleRef.current()
+			return Enum.ContextActionResult.Sink
+		end, false, Enum.KeyCode.Tab)
+		return function()
+			ContextActionService:UnbindAction("HudLeaderboard")
+			ContextActionService:UnbindAction("HudSquadDrawer")
+			for _, c in conns do c:Disconnect() end
+		end
+	end, {})
 	local powerHeight = if compact then 40 else L.PowerBadgeHeight
 
 	local leftButtons = {
@@ -301,15 +405,34 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 			OnActivated = function() call("ToggleTower") end })
 	end
 
-	-- Gold and Gems sit directly above the status card; the Left Rail stops above both.
+	-- Gold and Gems ride on the Squad drawer's top edge; the Left Rail stops above both. The rail
+	-- uses the drawer's height until a collapse has finished sliding (`layoutOpen`).
 	local currencyGap = 8
-	local currencyBottom = L.Edge + cardHeight + currencyGap
+	local currencyBottom = L.Edge + Components.DrawerHeight(drawerOpen or layoutOpen, cardHeight) + currencyGap
 	local currencyWidth = if compact then math.max(200, 16 + (#rows + (if lockedText then 1 else 0)) * 52)
 		else math.clamp(Components.StatusCardWidth(#rows, lockedText ~= nil, tileWidth), 260, 360)
 	local leftTop = L.TopZone
 	local leftBottom = screen.Y - currencyBottom - Components.CurrencyBarHeight - L.StackGap
-	local rightTop = L.TopZone + (if goal then L.GoalCardHeight + L.ZoneGap else 0)
 	local rightBottom = screen.Y - L.Edge - powerHeight - L.StackGap
+	-- Top right, top to bottom: Next Goal card, leaderboard, Right Rail. The leaderboard shows only
+	-- as many rows as fit above the rail at its minimum button size, and drops to its pill if none
+	-- fit; phones always get the pill.
+	local boardTop = L.TopZone + (if goal then L.GoalCardHeight + L.ZoneGap else 0)
+	local boardWanted = if phone then false elseif boardChoice ~= nil then boardChoice else goal == nil
+	local boardRows = 0
+	if boardWanted then
+		local railMin = #rightButtons * (math.ceil(L.RailButtonMin * 1.2) + L.RailGap)
+		local room = rightBottom - boardTop - L.ZoneGap - railMin
+		boardRows = #Store.Players
+		while boardRows > 0 and Components.LeaderboardHeight(boardRows) > room do
+			boardRows -= 1
+		end
+	end
+	boardToggleRef.current = if phone then nil else function()
+		Store.LeaderboardOpen = not boardWanted
+		setBoardChoice(not boardWanted)
+	end
+	local rightTop = boardTop + Components.LeaderboardHeight(boardRows) + L.ZoneGap
 	local leftSize = railSize(#leftButtons, leftBottom - leftTop)
 	local rightSize = railSize(#rightButtons, rightBottom - rightTop)
 
@@ -322,17 +445,26 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 
 	return e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 }, {
 		Goal = e(Components.NextGoalCard, { Goal = goal }),
-		LeftRail = rail("LeftRail", "Left", leftTop, leftSize, leftButtons),
-		RightRail = rail("RightRail", "Right", rightTop, rightSize, rightButtons),
-		Status = if profile then e(Components.SquadStatusCard, {
+		-- Drawn into LeaderboardController's ScreenGui (DisplayOrder 8) when it exists.
+		Leaderboard = ReactRoblox.createPortal({
+			Panel = e(Components.Leaderboard, {
+				Players = Store.Players, Max = Players.MaxPlayers, Top = boardTop, Rows = boardRows, Pill = phone,
+				OnToggle = if phone then nil else function() if boardToggleRef.current then boardToggleRef.current() end end,
+			}),
+		}, LocalPlayer.PlayerGui:FindFirstChild("CustomLeaderboardGui") or props.Root),
+		LeftRail = rail("LeftRail", "Left", leftTop, leftSize, leftBottom - leftTop, leftButtons),
+		RightRail = rail("RightRail", "Right", rightTop, rightSize, rightBottom - rightTop, rightButtons),
+		Status = if profile then e(Components.SquadDrawer, {
 			Rows = rows, LockedText = lockedText, LockedRange = lockedRange, Compact = compact, TileWidth = tileWidth,
+			CardHeight = cardHeight, Expanded = drawerOpen,
+			OnToggle = function() if toggleRef.current then toggleRef.current() end end,
 			OnRow = function() call("OpenMasterModal", "SQUAD") end,
 			OnLocked = function() call("OpenFacilityHUD", "FortressTree") end,
-		}) else nil,
-		Currency = if profile then e(Components.CurrencyBar, {
-			Gold = profile.Currencies and profile.Currencies.Gold or 0,
-			Gems = profile.Currencies and profile.Currencies.Gems or 0,
-			Bottom = currencyBottom, Width = currencyWidth,
+			Above = e(Components.CurrencyBar, {
+				Gold = profile.Currencies and profile.Currencies.Gold or 0,
+				Gems = profile.Currencies and profile.Currencies.Gems or 0,
+				Width = currencyWidth, Position = UDim2.fromScale(0, 1),
+			}),
 		}) else nil,
 		Power = if profile then e(Components.SquadPowerBadge, {
 			Power = profile.SquadPower or 0, Breakdown = breakdown, Compact = compact,

@@ -64,7 +64,7 @@ OD Overdrive [Q] · RC Recall [E] · TW Tower
 5. **Right Rail — Combat (vertical, right edge):**
    - **Overdrive `[Q]`, Recall `[E]` and Tower.** Overdrive and Recall show their key or gamepad glyph, plus a radial cooldown sweep with the seconds left (§2.1).
    - **No overlap with the Next Goal card:** the rail's top is anchored to the card's bottom edge plus a 16 px gap. It moves up when the card is hidden (the chain is complete) and down when the card grows.
-   - **Short screens:** buttons shrink, but never below 44×44 px, so the rail never reaches the card.
+   - **Short screens:** buttons shrink, but never below 44×44 px. If even 44 px buttons don't fit in one column, the rail wraps into extra columns (growing inward from its screen edge), so it never reaches the cards below.
 6. **Bottom-Left — Squad Status Card:** the live state of every squad slot (§2.2).
 7. **Bottom-Right — Squad Power badge:** the squad's overall power (§2.3). The Right Rail's bottom stops 12 px above it, so the two never overlap.
 
@@ -86,6 +86,17 @@ The legacy single bottom-centre bar is retired; the bottom centre stays clear fo
 - **Size and hover:** icons are 72 px and shrink to fit the rail (never below 44 px). Hovering grows the button 10%.
 
 ### 2.0b HUD Card Style
+**Clear Glass (current) for the Next Goal card, the Gold and Gems chips, the Squad Power badge and the Squad drawer strip.** The rail buttons and the expanded Squad Status tiles keep the Gilded Grimoire look below.
+- **Panels** (`Components.Glass`): `Theme.Glass.Base` at 0.35 transparency, one 1px `Hairline` stroke, 6 px corners, no body gradient. The goal card has a raised header strip (`BaseRaised`) with a faint top-to-bottom shade.
+- **Text** (`Components.GlassText`): Montserrat SemiBold for labels, Montserrat Bold for numbers, Cinzel Bold for the Squad Power number only. Explicit `TextSize`, never scaled; 12 px minimum.
+- **Section labels** (`Components.SectionLabel`): uppercase muted text followed by a hairline rule (`SQUAD POWER ———`, `NEXT GOAL ——— 3/7`).
+- **Contrast:** muted text sits at 0.15 transparency (not the brief's 0.45) so it keeps about 4.6:1 over a white sky behind the 0.35 body. Text is otherwise opaque.
+- **Colour roles:** Gold values and goal rewards in `Royal`, Gems in `Text`, positive floaters `Vital`, negative `Danger`.
+- **Icons:** the same drawings, flattened (`Icons.Icon` `Flat`: 1px outline, no sheen), sitting inside the card instead of breaking out over its edge.
+- **Motion:** change floaters rise 16 px and fade over 0.8 s (fade only with Reduced Motion). The goal card's stroke flashes `Royal` and settles back to a hairline when the goal advances.
+- **Phones:** the Squad Power badge shows the icon and number only.
+
+*Gilded Grimoire (rail buttons, expanded status tiles, and previously all cards):*
 All HUD cards share the rail buttons' cartoon-gothic look: the Next Goal card, the Squad Status Card, the Gold and Gems chips and the Squad Power badge.
 - **Panels:** an obsidian-violet gradient, a thick black outline and a thin inset gold rail (`Components.Panel`). Gold chips are tinted bronze, Gems teal, and Squad Power crimson.
 - **Text:**
@@ -128,6 +139,15 @@ The whistles stay in the game; Phase 5 removes only their old bottom-bar placeme
 - **Phone layout:** the card collapses to a strip of hero portraits with an HP line and an archetype corner icon; tap to expand.
 - **Position:** anchored bottom-left above the safe-area inset, with the Gold/Gems bar 8 px above it. The left rail stops 12 px above the currency bar, and neither overlaps the drop-cargo button.
 
+#### 2.2a Squad drawer (`Components.SquadDrawer`)
+The card above now lives in a pull-up drawer, styled in Clear Glass (`Theme.Glass`) with corner brackets (`Components.Brackets`). The drawer shows **one** squad view at a time: the compact strip or the detailed card, never both.
+- **Collapsed (default):** one slim glass strip (56 px). Per open slot: a 36 px portrait with a 2px rarity ring, a 3px HP line under it (stamina off-floor, in gold) and a state dot. A Down hero is dimmed and shows the coma countdown, so Down never relies on colour alone. Empty slots show `+`; locked slots show the padlock. A chevron tab at the end toggles the drawer.
+- **Tooltip:** hovering (or gamepad-selecting) a portrait shows name, rarity colour, `Lv · ★ · rarity`, HP or stamina % and the state. On touch the first tap shows it and the second opens the Squad modal.
+- **Expanded:** the strip turns into the full card (above). The drawer grows from the strip's height to the card's in 200 ms (Quad Out; instant with `GuiService.ReducedMotionEnabled`), revealing the card bottom-up. Collapsing shrinks it back and then swaps to the strip. A 44 px collapse tab sits just right of the card, so tile fitting reserves `Components.DrawerTabWidth`.
+- **Toggle:** the chevron, `C` or gamepad `ButtonY` (`ContextActionService` action `HudSquadDrawer`). The keys pass through while a master modal is open, and `ButtonY` also passes while a ProximityPrompt is showing. The choice persists for the session in `Store.DrawerExpanded`.
+- **Auto-expand:** the drawer opens when a squad hero is Down or the squad-compromised / squad-wipe banner shows, and closes 4 s after the danger clears unless the player opened it. Closing it during danger keeps it closed until that danger clears. Phones (< 700 px wide) never auto-expand.
+- **Layout:** the Gold/Gems bar is a child of the drawer, so it rides its top edge through the change. The Left Rail is sized from the drawer's height (strip or card) and keeps the expanded height until a collapse has finished, so the two never overlap mid-tween. No extra loop: the drawer reads the HUD's existing 5 Hz tick.
+
 ### 2.3 Squad Power Badge
 **Squad Power** is one number for the whole active squad:
 $$\text{HeroPower} = \text{round}\big(10 \times \text{DPS} + \text{Health}\big) \qquad \text{SquadPower} = \sum_{\text{deployed heroes}} \text{HeroPower}$$
@@ -147,8 +167,12 @@ The Roblox player list (top-right, opened with `Tab`) gains two columns for ever
 | **Power** | That player's Squad Power (§2.3), shown abbreviated (`12.4K`, `3.1M`) | Their squad, heroes, weapons or Training Grounds change; throttled to at most once every 2 s |
 
 - **Server only:** `DataManager` creates the `leaderstats` folder on join (an `IntValue` named `Floor` and a `NumberValue` named `Power`) and writes both. Clients never write them.
-- **Sorting:** Roblox sorts by the first stat, so `Floor` comes first, then `Power` breaks ties visually.
-- **Placement:** the player list opens over the top-right, where the Next Goal card sits. While the list is open, the card stays where it is, under the list. No HUD zone moves.
+- **Sorting:** `Floor` first, then `Power`, then name.
+- **Panel (Clear Glass):** the CoreGui player list is disabled. `LeaderboardController` owns `CustomLeaderboardGui` (DisplayOrder 8), tracks `leaderstats` and publishes sorted rows to `Store.Players`. HudApp draws `Components.Leaderboard` into that ScreenGui through a portal:
+  - A raised header `PLAYERS 6/6 ———` with a chevron, then one 40 px row per player: round avatar headshot, display name, `@username`, and `F{floor} · {power}` on the right. The local player's row has a `Royal` tint, accent bar and name, and `· You`. Corner brackets frame the panel.
+  - **Collapsed**, it is just the header pill (150 px). `Tab` (`ContextActionService` action `HudLeaderboard`, passes while a master modal is open) or a click on the header toggles it. The choice persists for the session in `Store.LeaderboardOpen`.
+  - **Default:** collapsed while the Next Goal card shows, open once the onboarding chain is complete. Phones (< 700 px wide) always show the pill.
+- **Placement:** the top-right zone stacks, top to bottom: the Next Goal card, the leaderboard, then the Right Rail. The leaderboard's top follows the goal card (16 px gap), and its height feeds the rail's `rightTop`. It shows only as many rows as fit above the Right Rail at its 44 px minimum (the rest scroll), and drops to the pill when none fit, so it never overlaps the card or the rail.
 
 ---
 

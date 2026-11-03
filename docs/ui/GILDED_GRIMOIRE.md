@@ -29,8 +29,28 @@ The source of truth is `src/ReplicatedStorage/Shared/Util/GildedGrimoire.luau`.
 
 ## Where it's used
 
-- The HUD rails, Next Goal card, Squad Status Card, Gold/Gems bar and Squad Power badge.
+- The HUD rails and the expanded Squad Status tiles. The Next Goal card, Gold/Gems bar, Squad Power badge and the Squad drawer strip now use **Clear Glass** (`Theme.Glass` in `UI/Hud/Theme.luau`; see `PHASE_5_REACT_UI_AND_MENUS.md` §2.0b).
 - The Pit tabs, the facility panel and the Hero Index.
 - The Settings screen (gear on the Left Rail): panels, tabs, sliders, toggles and buttons. Its accent setting defaults to antique gold.
-- In the tower: the Tower selector (floor tiles, biome cards, details panel, actions), hero and monster nameplates with pill HP and skill gauges (`GildedGrimoire.Bar`), the boss and floor-progress banner, alert banners (toasts, loot stolen, squad down, squad compromised), the carried-loot pill, the duel banner and the offline-reward popup. Legacy frames are converted with `GildedGrimoire.Reframe`, which strips their old outline first.
+- In the tower: the Tower selector (floor tiles, biome cards, details panel, actions) and hero and monster nameplates with pill HP and skill gauges (`GildedGrimoire.Bar`). The boss and floor-progress banner, alert banners (toasts, loot stolen, squad down, squad compromised, the squad-vitality tooltip), the carried-loot pill, the duel banner and the offline-reward popup now use **Clear Glass** (below).
 - Through the reskinned gothic kit: Summoning, Synthesis, Promotion, the Forge, and every other screen built with `GothicBoxStyle` or `GothicFont`.
+
+## Clear Glass (HUD zones)
+
+The HUD's on-screen zones use a lighter style, **Clear Glass**, instead of the chunky framing above. Its tokens live once in `GildedGrimoire.Glass` (the React HUD reads them as `Hud/Theme.Glass`):
+
+| Token | Value | Use |
+| :--- | :--- | :--- |
+| `Base` | `#0D0912` at 0.35 transparency | Panel body |
+| `BaseRaised` | `#261C32` at 0.25 | Header strips, tiles |
+| `Hairline` | `#F6F4FF` at 0.82 | The single 1px stroke on every panel |
+| `Text` / muted | `#F6F4FF`, muted at 0.15 | Text (kept near-opaque for 4.5:1 over a bright sky) |
+| `Arcane` | `#C084FC` | Active / focused; the floor kill bar |
+| `Royal` | `#FACC15` | Currency, primary action, the local player, a full kill bar |
+| `Danger` | `#EF4444` | Down, badges, boss HP, loot stolen |
+| `Vital` | `#4ADE80` | HP, positive deltas |
+
+- **Panels:** 6 px corners, one hairline stroke, no gradients or ink. A 2px accent bar down the left edge carries the meaning colour on alert banners.
+- **Type:** Montserrat SemiBold for labels, Montserrat Bold for numbers and headlines, Cinzel Bold only for hero names and the Squad Power number.
+- **Where:** the Next Goal card, Gold/Gems chips, Squad Power badge, the Squad drawer strip, the leaderboard, and the imperative banners and popups listed above. The HUD rails and the expanded Squad Status tiles stay in Gilded Grimoire.
+- **Imperative code:** `GildedGrimoire.Reframe(frame, { Tone = "Glass", Rail = accent })` or `GildedGrimoire.GlassFrame(frame, opts)` for panels, `GlassText` / `GlassTexts` for labels, `GlassBar` to flatten a `GildedGrimoire.Bar`. React code uses `Hud/Components` (`Glass`, `GlassText`, `SectionLabel`, `Brackets`).
