@@ -385,11 +385,8 @@ function TowerBuilder.Build(parent: Instance?, customConfig: { [string]: any }?)
 		redEmbers.Parent = emitterPart
 	end
 
- -- Ring2WidthMatch: widen horizontally while preserving tower height and taper.
- local arena = workspace:FindFirstChild("ArenaRings")
- local ring2 = arena and arena:FindFirstChild("Ring2_CorruptedGrove")
- local floor = ring2 and ring2:FindFirstChild("Ring2_Floor")
- local targetDiameter = if floor and floor:IsA("BasePart") then floor.Size.Y else 650
+ -- Widen horizontally to a 650-stud footprint while preserving tower height and taper.
+ local targetDiameter = 650
  local horizontalScale = targetDiameter / cfg.BaseDiameter
  local partCount = 0
  for _, part in towerModel:GetDescendants() do

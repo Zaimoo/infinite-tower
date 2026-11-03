@@ -110,21 +110,9 @@ function B.Build()
 	local approachFront = Vector3.new(0, y, -358)
 	span("TowerEntranceApproach", Vector3.new(0, y, -radius - 1), approachFront, HubLayout.CausewayWidth, true)
 
-	-- 2. Rock-solid circular tower base foundation slab (700x700 studs)
+	-- 2. Legacy square plaza slab poked into Plot_1 and Plot_6; the tower's CrackedGroundSlab is the floor
 	local oldPlaza = world:FindFirstChild("TowerPlazaFoundation")
 	if oldPlaza then oldPlaza:Destroy() end
-	local plaza = Instance.new("Part")
-	plaza.Name = "TowerPlazaFoundation"
-	plaza.Size = Vector3.new(700, 2.4, 700)
-	plaza.Position = Vector3.new(0, 15, 0)
-	plaza.Anchored = true
-	plaza.CanCollide = true
-	plaza.CanQuery = true
-	plaza.Material = Enum.Material.Slate
-	plaza.Color = Color3.fromRGB(35, 26, 32)
-	plaza.TopSurface = Enum.SurfaceType.Smooth
-	plaza.BottomSurface = Enum.SurfaceType.Smooth
-	plaza.Parent = world
 
 	-- 3. Grand Entrance Arrival Platform (seamlessly joins bridge at -358, gate at -332, foyer to -290)
 	local oldArrival = world:FindFirstChild("TowerHubArrival")

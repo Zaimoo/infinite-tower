@@ -35,9 +35,6 @@ local Config = {
 	-- Horseshoe Layout around The Masters' Commons (positions live in HubLayout, GDD Section 3.2)
 	IslandCount = #HubLayout.PlotBearingsDeg,
 
-	-- Existing Plot & Environment Visibility
-	HideOldPerimeterHighway = true, -- Hides flat connecting highway segments so islands float over open sky
-	HideOldFlatCenterArena = true, -- Hides flat Ring1/Ring2 floors & ruin props so islands float over open sky around the central Tower
 
 	-- Kill / Respawn Safety Zone below the whole hub
 	KillZoneCentre = HubLayout.KillZoneCentre,
@@ -47,33 +44,6 @@ local Config = {
 --============================================================================
 -- HELPER FUNCTIONS
 --============================================================================
-local function hideInstanceVisuals(inst: Instance)
-	if inst:IsA("BasePart") then
-		inst.Transparency = 1
-		inst.CanCollide = false
-		inst.CanTouch = false
-		inst.CanQuery = false
-		inst.CastShadow = false
-	elseif inst:IsA("ProximityPrompt") or inst:IsA("BillboardGui") or inst:IsA("SurfaceGui") or inst:IsA("Highlight") or inst:IsA("ParticleEmitter") or inst:IsA("Beam") then
-		(inst :: any).Enabled = false
-	elseif inst:IsA("Decal") or inst:IsA("Texture") then
-		inst.Transparency = 1
-	end
-	for _, d in ipairs(inst:GetDescendants()) do
-		if d:IsA("BasePart") then
-			d.Transparency = 1
-			d.CanCollide = false
-			d.CanTouch = false
-			d.CanQuery = false
-			d.CastShadow = false
-		elseif d:IsA("ProximityPrompt") or d:IsA("BillboardGui") or d:IsA("SurfaceGui") or d:IsA("Highlight") or d:IsA("ParticleEmitter") or d:IsA("Beam") then
-			(d :: any).Enabled = false
-		elseif d:IsA("Decal") or d:IsA("Texture") then
-			d.Transparency = 1
-		end
-	end
-end
-
 local function createMasterIslandTemplate(): Model
 	local template = IslandBuilder.Build()
 	WallsBuilder.Build(template)
@@ -350,43 +320,6 @@ end
 function HubOverhaul.Build(forceRebuild: boolean?): (Instance, boolean)
 	-- Always apply lighting & atmospheric effects
 	LightingAndEffects.Apply()
-
-	-- Hide old PerimeterHighway and flat Arena discs if configured (non-destructive)
-	if Config.HideOldPerimeterHighway then
-		local highway = Workspace:FindFirstChild("PerimeterHighway")
-		if highway then
-			hideInstanceVisuals(highway)
-		end
-	end
-
-	if Config.HideOldFlatCenterArena then
-		local artEnv = Workspace:FindFirstChild("ArtPackEnvironment")
-		if artEnv then
-			hideInstanceVisuals(artEnv)
-		end
-		local arenaRings = Workspace:FindFirstChild("ArenaRings")
-		if arenaRings then
-			local r1 = arenaRings:FindFirstChild("Ring1_OuterRuins")
-			local r2 = arenaRings:FindFirstChild("Ring2_CorruptedGrove")
-			local r3 = arenaRings:FindFirstChild("Ring3_CenterBossAltar")
-			if r1 then
-				hideInstanceVisuals(r1)
-			end
-			if r2 then
-				hideInstanceVisuals(r2)
-			end
-			if r3 then
-				for _, child in ipairs(r3:GetChildren()) do
-					if child.Name ~= "Ring3_ObsidianAltar" then
-						hideInstanceVisuals(child)
-					else
-						child.Color = Color3.fromRGB(22, 16, 20)
-						child.Material = Enum.Material.Basalt
-					end
-				end
-			end
-		end
-	end
 
 	local OVERHAUL_VERSION = HubOverhaul.Version
 	local plotsFolder = Workspace:WaitForChild("WaitingRoomPlots")
