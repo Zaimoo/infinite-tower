@@ -474,11 +474,21 @@ do
 end
 
 -- Ignis (SWORD_SHIELD): Infernal Juggernaut. Chest thrown back, then a forward roar with both
--- arms flexed wide.
+-- arms flexed wide. Idle is his cocky brawler stance: feet wide, left fist thrust forward (the
+-- shield on that forearm leading), sword held low at his right side.
 do
 	local p = WeaponPoses.SWORD_SHIELD
 	local roar = merge(ATTACK_STANCE, { Waist = { -16, 0, 0 }, Neck = { 10, 0, 0 }, LeftShoulder = { 70, 0, -60 }, LeftElbow = { 95, 0, 0 }, RightShoulder = { 70, 0, 60 }, RightElbow = { 95, 0, 0 }, RootOffset = { 0, -0.35, 0 } })
+	local brawler: Pose = {
+		Waist = { -4, -12, 0 }, Neck = { 0, 10, 3 },
+		LeftShoulder = { 72, 0, -8 }, LeftElbow = { 22, 0, 0 },
+		RightShoulder = { 10, 0, 12 }, RightElbow = { 35, 0, 0 }, RightWrist = { -60, 0, 0 },
+		LeftHip = { 14, 0, -10 }, LeftKnee = { -18, 0, 0 }, LeftAnkle = { 4, 0, 10 },
+		RightHip = { -6, 0, 12 }, RightKnee = { -14, 0, 0 }, RightAnkle = { 18, 0, -12 },
+		RootOffset = { 0, -0.14, 0 },
+	}
 	Overrides.hero_ignis = {
+		Idle = breathe(brawler, 3.0),
 		AttackSkill = signature(1.1, {
 			{ 0, p.Guard },
 			{ 0.3, merge(STANCE, { Waist = { 20, 0, 0 }, Neck = { 20, 0, 0 }, LeftShoulder = { -30, 0, -40 }, LeftElbow = { 60, 0, 0 }, RightShoulder = { -30, 0, 40 }, RightElbow = { 60, 0, 0 } }) },
@@ -574,11 +584,21 @@ do
 end
 
 -- Sovereign Archon (DAGGERS): Dimensional Cataclysm. Blades crossed overhead, then torn apart
--- and down to rip the rift open.
+-- and down to rip the rift open. Idle is a low, wide predator's crouch: leaning in, both
+-- daggers held out at his sides pointing forward.
 do
 	local p = WeaponPoses.DAGGERS
 	local tear = merge(p.Crouched, { Waist = { -20, 0, 0 }, LeftShoulder = { 80, 0, -90 }, RightShoulder = { 80, 0, 90 }, LeftElbow = { 10, 0, 0 }, RightElbow = { 10, 0, 0 }, RootOffset = { 0, -0.4, 0 } })
+	local prowl: Pose = {
+		Waist = { -8, 0, 0 }, Neck = { 4, 0, 0 },
+		LeftShoulder = { 25, 0, -40 }, LeftElbow = { 50, 0, 0 }, LeftWrist = { -70, 0, 0 },
+		RightShoulder = { 25, 0, 40 }, RightElbow = { 50, 0, 0 }, RightWrist = { -70, 0, 0 },
+		LeftHip = { 12, 0, -16 }, LeftKnee = { -35, 0, 0 }, LeftAnkle = { 22, 0, 16 },
+		RightHip = { 10, 0, 16 }, RightKnee = { -32, 0, 0 }, RightAnkle = { 20, 0, -16 },
+		RootOffset = { 0, -0.32, 0 },
+	}
 	Overrides.hero_archon = {
+		Idle = breathe(prowl, 2.8),
 		AttackSkill = signature(1.0, {
 			{ 0, p.Crouched },
 			{ 0.35, merge(STANCE, { Waist = { 12, 0, 0 }, Neck = { 15, 0, 0 }, LeftShoulder = { 170, 0, 20 }, RightShoulder = { 170, 0, -20 }, LeftElbow = { 40, 0, 0 }, RightElbow = { 40, 0, 0 }, RootOffset = { 0, 0.3, 0 } }) },
