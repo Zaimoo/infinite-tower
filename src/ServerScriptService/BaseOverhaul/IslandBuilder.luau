@@ -42,58 +42,9 @@ IslandBuilder.Config = {
 	}),
 }
 
---============================================================================
--- HELPER FUNCTIONS
---============================================================================
-local function makePart(props: { [string]: any }): Part
-	local p = Instance.new("Part")
-	p.Anchored = true
-	p.TopSurface = Enum.SurfaceType.Smooth
-	p.BottomSurface = Enum.SurfaceType.Smooth
-	local isDecorative = props.Decorative == true
-	if isDecorative then
-		p.CanCollide = false
-		p.CanTouch = false
-		p.CanQuery = false
-		p.CastShadow = false
-	else
-		p.CanCollide = true
-		p.CanTouch = true
-		p.CanQuery = true
-	end
-	for k, v in pairs(props) do
-		if k ~= "Decorative" and k ~= "Parent" then
-			(p :: any)[k] = v
-		end
-	end
-	p.Parent = props.Parent
-	return p
-end
-
-local function makeWedge(props: { [string]: any }): WedgePart
-	local w = Instance.new("WedgePart")
-	w.Anchored = true
-	w.TopSurface = Enum.SurfaceType.Smooth
-	w.BottomSurface = Enum.SurfaceType.Smooth
-	local isDecorative = props.Decorative == true
-	if isDecorative then
-		w.CanCollide = false
-		w.CanTouch = false
-		w.CanQuery = false
-		w.CastShadow = false
-	else
-		w.CanCollide = true
-		w.CanTouch = true
-		w.CanQuery = true
-	end
-	for k, v in pairs(props) do
-		if k ~= "Decorative" and k ~= "Parent" then
-			(w :: any)[k] = v
-		end
-	end
-	w.Parent = props.Parent
-	return w
-end
+local PartKit = require(script.Parent:WaitForChild("PartKit"))
+local makePart = PartKit.Part
+local makeWedge = PartKit.Wedge
 
 --============================================================================
 -- BUILDER

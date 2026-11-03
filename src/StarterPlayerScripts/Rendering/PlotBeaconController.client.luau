@@ -21,8 +21,9 @@ local PlotsFolder = Workspace:WaitForChild("WaitingRoomPlots")
 --------------------------------------------------------------------------------
 -- TUNABLE RANGE CONSTANTS
 --------------------------------------------------------------------------------
--- Beacons are visible across the entire waiting room / lobby ring from any island.
--- The ring radius is ~650 studs (diameter ~1300 studs, max diagonal distance ~1800 studs).
+-- Beacons are visible across the whole hub from any island.
+-- The plots form a horseshoe around the Masters' Commons (HubLayout): plot to plot is at most ~1000 studs,
+-- and the far side of the tower walkway is ~1700 studs from the farthest plot.
 -- Range of 3500 studs ensures all players' beacons are fully visible from anywhere in the lobby.
 local OTHER_BEACON_MAX_DISTANCE = 3500
 local LOCAL_BEACON_MAX_DISTANCE = 3500

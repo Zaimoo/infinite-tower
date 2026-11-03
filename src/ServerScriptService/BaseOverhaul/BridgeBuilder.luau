@@ -1,3 +1,7 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local HubLayout = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("HubLayout"))
+local CausewayBuilder = require(script.Parent:WaitForChild("CausewayBuilder"))
+
 local B = {}
 
 function B.Build()
@@ -28,25 +32,38 @@ function B.Build()
 		return p
 	end
 
-	local function span(n: string, a: Vector3, b: Vector3, w: number, rails: boolean, railInset: number?, railEndInset: number?)
+	-- Plot bridges belong to the hopeful fortress side: pale warm stone and cream marble rails
+	local SANCTUARY_DECK = { Color = Color3.fromRGB(168, 156, 138), Material = Enum.Material.Cobblestone }
+	local SANCTUARY_RAIL = { Color = Color3.fromRGB(226, 216, 192), Material = Enum.Material.Marble }
+
+	local function span(n: string, a: Vector3, b: Vector3, w: number, rails: boolean, railInset: number?, railEndInset: number?, sanctuary: boolean?)
 		local cf = CFrame.lookAt((a + b) / 2, b)
 		local len = (b - a).Magnitude + 1
-		part(n, Vector3.new(w, 2, len), cf * CFrame.new(0, -1, 0), false)
+		local deck = part(n, Vector3.new(w, 2, len), cf * CFrame.new(0, -1, 0), false)
+		if sanctuary then
+			deck.Color, deck.Material = SANCTUARY_DECK.Color, SANCTUARY_DECK.Material
+		end
 		if rails then
 			local rA = if railInset then a + (b - a).Unit * railInset else a
 			local rB = if railEndInset then b - (b - a).Unit * railEndInset else b
 			local rLen = (rB - rA).Magnitude + 1
 			local rCf = CFrame.lookAt((rA + rB) / 2, rB)
 			for _, side in { -1, 1 } do
-				part(n .. "_Rail", Vector3.new(1, 4, rLen), rCf * CFrame.new(side * (w / 2 - 0.5), 2, 0), true)
+				local rail = part(n .. "_Rail", Vector3.new(1, 4, rLen), rCf * CFrame.new(side * (w / 2 - 0.5), 2, 0), true)
+				if sanctuary then
+					rail.Color, rail.Material = SANCTUARY_RAIL.Color, SANCTUARY_RAIL.Material
+				end
 			end
 		end
 	end
 
-	local radius = 375
-	local y = 16
-	local angles = {}
-	for i = 1, 6 do
+	local radius = HubLayout.TowerWalkwayRadius
+	local y = HubLayout.TowerWalkwayY
+	local surfaceY = HubLayout.IslandSurfaceY
+
+	-- Plot gate -> Masters' Commons rim, one straight bridge per plot (both ends at the island surface)
+	local connected = 0
+	for i = 1, #HubLayout.PlotBearingsDeg do
 		local plot = workspace.WaitingRoomPlots:FindFirstChild("Plot_" .. i)
 		if plot then
 			local island = plot:WaitForChild("FloatingFortressIsland", 10)
@@ -54,10 +71,10 @@ function B.Build()
 				local walls = island:FindFirstChild("FortressWalls")
 				local gate = walls and walls:FindFirstChild("GateLintel")
 				if gate and gate:IsA("BasePart") then
-					local a = math.atan2(gate.Position.Z, gate.Position.X)
-					table.insert(angles, a)
-					local start = Vector3.new(gate.Position.X, 12, gate.Position.Z) - gate.CFrame.LookVector * 4
-					span("IslandBridge_" .. i, start, Vector3.new(math.cos(a) * (radius - 1), y, math.sin(a) * (radius - 1)), 18, true, 4, 18)
+					connected += 1
+					local start = Vector3.new(gate.Position.X, surfaceY, gate.Position.Z) - gate.CFrame.LookVector * 4
+					local landing = HubLayout.BearingPoint(HubLayout.PlotBearingsDeg[i], HubLayout.ParkRadius - 2)
+					span("IslandBridge_" .. i, start, landing, HubLayout.PlotBridgeWidth, true, 4, 6, true)
 					local edgeBarriers = walls:FindFirstChild("InvisibleEdgeBarriers")
 					local barrier = edgeBarriers and edgeBarriers:FindFirstChild("Barrier_Front")
 					if barrier then barrier.CanCollide = false barrier.CanTouch = false end
@@ -65,6 +82,10 @@ function B.Build()
 			end
 		end
 	end
+
+	-- Pilgrim's Causeway: tower walkway -> Commons South Gate (gentle 16 -> 12 slope)
+	CausewayBuilder.Build(f)
+	local angles = { -math.pi / 2 }
 
 	local function near(a: number, b: number, t: number): boolean
 		return math.abs(math.atan2(math.sin(a - b), math.cos(a - b))) < t
@@ -87,7 +108,7 @@ function B.Build()
 
 	-- 1. Bridge approach from walkway to entrance terrace
 	local approachFront = Vector3.new(0, y, -358)
-	span("TowerEntranceApproach", Vector3.new(0, y, -radius - 1), approachFront, 28, true)
+	span("TowerEntranceApproach", Vector3.new(0, y, -radius - 1), approachFront, HubLayout.CausewayWidth, true)
 
 	-- 2. Rock-solid circular tower base foundation slab (700x700 studs)
 	local oldPlaza = world:FindFirstChild("TowerPlazaFoundation")
@@ -182,7 +203,7 @@ function B.Build()
 		slab.CanCollide = true
 	end
 
-	f:SetAttribute("ConnectedIslandCount", #angles)
+	f:SetAttribute("ConnectedIslandCount", connected)
 	return f
 end
 
