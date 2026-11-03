@@ -34,6 +34,7 @@ local TowerRun=require(Shared.Util.TowerRun)
 local AttackTimeline=require(Shared.Util.AttackTimeline)
 local HeroActionTiming=require(Shared.Util.HeroActionTiming)
 local HeroImpactQueue=require(script.Parent.HeroImpactQueue)
+local HeroTargeting=require(script.Parent.HeroTargeting)
 local HeroSkillEffects=require(script.Parent.HeroSkillEffects)
 local HeroImpacts=HeroImpactQueue.new()
 local TowerProgress=require(Shared.Util.TowerProgress)
@@ -1925,16 +1926,9 @@ end
 -- 8. CORE 5 HZ HERO STATE MACHINE
 --============================================================================
 
-local function resolveTargetPositionAndAlive(simHero: SimHero): (Vector3?, SimMob?, SimHero?)
-	local targetNetId = simHero.TargetNetId
-	if targetNetId then
-		local mob = ActiveMobsByNetId[targetNetId]
-		if mob and mob.IsAlive and Tower.Same(simHero,mob) and not Tower.GetSafety(mob,mob.Position).CombatSafe then
-			return mob.Position, mob, nil
-		end
-	end
-	-- Outside duels heroes only ever fight mobs (stepDuelHero handles hero-vs-hero).
-	return nil, nil, nil
+-- Mobs a hero may auto-target: alive, in the hero's room generation and outside safe zones.
+local function isHostileMob(simHero: SimHero, mob: SimMob): boolean
+	return mob.IsAlive and Tower.Same(simHero, mob) and not Tower.GetSafety(mob, mob.Position).CombatSafe
 end
 
 -- A hero attack scheduled by stepHeroSimulation is cancelled if, by its release frame, the
@@ -2167,11 +2161,8 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 		simHero.State = "FOLLOW_MASTER"
 	end
 
+ -- Recall's aggro drop and safe zones pacify; HeroTargeting.Select drops the target while it lasts.
  local isPacified = now < simHero.PacifiedUntil or Tower.GetSafety(simHero,simHero.Position).CombatSafe==true
-	if isPacified then
-		simHero.TargetNetId = nil
-		simHero.State = "FOLLOW_MASTER"
-	end
 
 	-- Hero movement speed is fixed to the player's Humanoid WalkSpeed (16 normal, 48 sprint, or relic penalties)
 	local ownerChar = simHero.Owner.Character
@@ -2181,62 +2172,19 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 	local isOverdrive = now < simHero.OverdriveUntil
 	local currentMoveSpeed = playerSpeed * (isOverdrive and 1.20 or 1.0)
 
-	local targetPos, targetMob, targetEnemyHero = resolveTargetPositionAndAlive(simHero)
-	if targetMob then
-		local distMasterToMob = getHorizontalDistance(masterPos, targetMob.Position)
-		local distHeroToMaster = getHorizontalDistance(simHero.Position, masterPos)
-		-- Master must be within enemy radius (30.0 studs) for heroes to fight; if master moves away, disengage immediately.
-		-- For assigned squads, heroes roam the floor up to maxLeash.
-		if not assignedRoom and (distMasterToMob > 30.0 or distHeroToMaster > 35.0) then
-			simHero.TargetNetId = nil
-			simHero.State = "FOLLOW_MASTER"
-			targetPos, targetMob, targetEnemyHero = nil, nil, nil
-		elseif assignedRoom and distMasterToMob > maxLeash then
-			simHero.TargetNetId = nil
-			simHero.State = "FOLLOW_MASTER"
-			targetPos, targetMob, targetEnemyHero = nil, nil, nil
+	-- Free-following squads fight around the Master and disengage when the Master walks off;
+	-- assigned squads roam the floor up to maxLeash and join squadmates' fights.
+	local engage: HeroTargeting.Context = { MasterPos = masterPos, Assigned = assignedRoom ~= nil, Leash = maxLeash }
+	local assist: { number }? = nil
+	if assignedRoom and masterState then
+		assist = {}
+		for _, ally in pairs(masterState.DeployedHeroes) do
+			if ally ~= simHero and ally.TargetNetId then table.insert(assist, ally.TargetNetId) end
 		end
 	end
-
-	if not targetPos and not isPacified then
-		-- For assigned squads, assist squadmates that already have an active target
-		if assignedRoom and masterState then
-			for _, ally in pairs(masterState.DeployedHeroes) do
-				if ally.TargetNetId and ActiveMobsByNetId[ally.TargetNetId] and ActiveMobsByNetId[ally.TargetNetId].IsAlive then
-					simHero.TargetNetId = ally.TargetNetId
-					targetPos, targetMob, targetEnemyHero = resolveTargetPositionAndAlive(simHero)
-					if targetPos then
-						simHero.State = "MOVE_TO_TARGET"
-						break
-					end
-				end
-			end
-		end
-
-		if not targetPos then
-			local combatRadius = if assignedRoom then maxLeash else 28.0
-			local nearestDist = combatRadius
-			local nearestMobId: number? = nil
-			for netId, mob in pairs(ActiveMobsByNetId) do
-				if mob.IsAlive and Tower.Same(simHero,mob) and not Tower.GetSafety(mob,mob.Position).CombatSafe then
-					if math.abs(mob.Position.Y - simHero.Position.Y) < 30 and (not assignedRoom or math.abs(mob.Position.Y - masterPos.Y) < 35) then
-						local d = if assignedRoom then getHorizontalDistance(simHero.Position, mob.Position) else getHorizontalDistance(masterPos, mob.Position)
-						if d <= nearestDist then
-							nearestDist = d
-							nearestMobId = netId
-						end
-					end
-				end
-			end
-			if nearestMobId then
-				simHero.TargetNetId = nearestMobId
-				targetPos, targetMob, targetEnemyHero = resolveTargetPositionAndAlive(simHero)
-				simHero.State = "MOVE_TO_TARGET"
-			else
-				simHero.State = "FOLLOW_MASTER"
-			end
-		end
-	end
+	local targetMob: SimMob? = HeroTargeting.Select(simHero, ActiveMobsByNetId, engage, isHostileMob, isPacified, assist)
+	local targetPos: Vector3? = targetMob and targetMob.Position
+	local targetEnemyHero: SimHero? = nil -- outside duels heroes only ever fight mobs (stepDuelHero handles hero-vs-hero)
 
 	if simHero.State == "FOLLOW_MASTER" or not targetPos then
 		local formation = getFormationOffset(simHero.SlotIndex)

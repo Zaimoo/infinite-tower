@@ -618,6 +618,8 @@ These are the default multipliers and secondary mechanics each hero kit inherits
 
 *The Overdrive and Recall hotkeys are bound only on Tower floors, never while typing, in a modal or in a duel. Recall yields to a visible ProximityPrompt on the same key. The `Q`/`E` bindings are specified in Phase 5 (`docs/rework-plan/PHASE_5_REACT_UI_AND_MENUS.md` §2.1); until then only the HUD buttons fire the whistles.*
 
+**Hero Auto-Targeting (`HeroTargeting.luau`).** Every 5 Hz tick, each hero that is not pacified or downed keeps its target while it is alive, in the same room and outside safe zones. Otherwise it picks the nearest eligible mob. A free-following squad picks up mobs within $28	ext{ studs}$ of the Master, or within the hero's own attack range, and drops a fight once the mob is $30	ext{ studs}$ from the Master (unless the mob is still inside that hero's attack range) or the hero is $35	ext{ studs}$ from the Master. An assigned squad first joins a squadmate's target, then roams up to its floor leash. A hero with no target forgets its cached NetId, so a camp mob that respawns under the same NetId is acquired fresh on the next tick. After an Emergency Recall the $2	ext{s}$ pacify clears every target, and heroes pick up the nearest mob on the first tick after it ends.
+
 ### 4.6 Tactical UI & HUD Architecture
 
 The player interface is built from modular, gothic-styled components:
