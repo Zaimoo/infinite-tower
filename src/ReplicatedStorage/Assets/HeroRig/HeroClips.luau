@@ -474,11 +474,21 @@ do
 end
 
 -- Ignis (SWORD_SHIELD): Infernal Juggernaut. Chest thrown back, then a forward roar with both
--- arms flexed wide.
+-- arms flexed wide. Idle is his cocky brawler stance: feet wide, left fist thrust forward (the
+-- shield on that forearm leading), sword held low at his right side.
 do
 	local p = WeaponPoses.SWORD_SHIELD
 	local roar = merge(ATTACK_STANCE, { Waist = { -16, 0, 0 }, Neck = { 10, 0, 0 }, LeftShoulder = { 70, 0, -60 }, LeftElbow = { 95, 0, 0 }, RightShoulder = { 70, 0, 60 }, RightElbow = { 95, 0, 0 }, RootOffset = { 0, -0.35, 0 } })
+	local brawler: Pose = {
+		Waist = { -4, -12, 0 }, Neck = { 0, 10, 3 },
+		LeftShoulder = { 72, 0, -8 }, LeftElbow = { 22, 0, 0 },
+		RightShoulder = { 10, 0, 12 }, RightElbow = { 35, 0, 0 }, RightWrist = { -60, 0, 0 },
+		LeftHip = { 14, 0, -10 }, LeftKnee = { -18, 0, 0 }, LeftAnkle = { 4, 0, 10 },
+		RightHip = { -6, 0, 12 }, RightKnee = { -14, 0, 0 }, RightAnkle = { 18, 0, -12 },
+		RootOffset = { 0, -0.14, 0 },
+	}
 	Overrides.hero_ignis = {
+		Idle = breathe(brawler, 3.0),
 		AttackSkill = signature(1.1, {
 			{ 0, p.Guard },
 			{ 0.3, merge(STANCE, { Waist = { 20, 0, 0 }, Neck = { 20, 0, 0 }, LeftShoulder = { -30, 0, -40 }, LeftElbow = { 60, 0, 0 }, RightShoulder = { -30, 0, 40 }, RightElbow = { 60, 0, 0 } }) },

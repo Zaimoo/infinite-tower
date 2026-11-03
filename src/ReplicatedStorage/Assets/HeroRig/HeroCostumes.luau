@@ -70,6 +70,8 @@ HeroCostumes.MESHES = table.freeze({
 	["rbxassetid://132434150044694"] = "",
 	-- Archon's hair, our own: tools/make_archon_hair_ugc.py (assets/hair/archon_hair_ugc.blend).
 	["rbxassetid://139133902834118"] = "",
+	-- Ignis's hair, our own: tools/make_ignis_hair_ugc.py (assets/hair/ignis_hair_ugc.blend).
+	["rbxassetid://101701313703578"] = "",
 } :: { [string]: string })
 
 -- Avatar hair accessory placement: a piece centred so the accessory's HairAttachment meets
@@ -402,20 +404,73 @@ do
 end
 
 -- 5. IGNIS (5★ Vanguard - Blazing Berserker) -------------------------------------------
+-- Brawler from his reference art: short spiky golden hair swept over, a tattered dark cowl, a
+-- riveted dark armour core between red tabard panels with gold edges and flame emblems, bare
+-- arms with dark steel pauldrons and studded leather bracers, a heavy belt with a pouch and
+-- hanging chains, a tattered red loincloth, gold-rimmed knee plates, greaves and sabatons.
+-- (The reference's flaming fist is an effect, not costume.) Face: our own decal from
+-- assets/faces/make_ignis_face.py. Hair: our Blender mesh (tools/make_ignis_hair_ugc.py).
 do
-	local skin, flame, crimson, magma = { 255, 218, 190 }, { 255, 80, 20 }, { 150, 25, 25 }, { 255, 160, 40 }
+	local skin, hair, dark, darkSteel, red = { 236, 198, 160 }, { 220, 150, 60 }, { 40, 36, 36 }, { 64, 66, 74 }, { 150, 36, 32 }
+	local gold, leather, chain, pants, cowl, flame = { 196, 156, 70 }, { 92, 62, 44 }, { 130, 132, 140 }, { 58, 48, 44 }, { 52, 46, 44 }, { 250, 120, 40 }
 	table.insert(COSTUMES, costume("hero_ignis", "Heavy", {
-		Skin = skin, UpperTorso = crimson, LowerTorso = crimson, UpperArm = crimson, LowerArm = crimson,
-		UpperLeg = crimson, LowerLeg = crimson, Foot = magma,
+		Skin = skin, UpperTorso = dark, LowerTorso = pants, UpperArm = skin, LowerArm = skin, Hand = skin,
+		UpperLeg = pants, LowerLeg = pants, Foot = darkSteel,
 	}, {
-		piece("HairBase", "Head", { 1.24, 0.45, 1.24 }, { 0, 0.48, -0.05 }, flame),
-		piece("FlameHorn1", "Head", { 0.35, 0.9, 0.35 }, { -0.35, 0.85, 0.1 }, magma, with(WEDGE, NEON, { Rotation = { 25, 0, -15 } })),
-		piece("FlameHorn2", "Head", { 0.35, 0.9, 0.35 }, { 0.35, 0.85, 0.1 }, magma, with(WEDGE, NEON, { Rotation = { 25, 0, 15 } })),
-		piece("ChestPlate", "UpperTorso", { 2.1, 1.4, 1.2 }, { 0, 0.05, 0 }, crimson, METAL),
-		piece("MagmaCore", "UpperTorso", { 0.6, 0.6, 0.2 }, { 0, 0.1, -0.62 }, magma, with(NEON, { Shape = "Ball" })),
-		piece("PauldronL", "LeftUpperArm", { 1.35, 0.8, 1.35 }, { -0.25, 0.45, 0 }, magma, NEON),
-		piece("PauldronR", "RightUpperArm", { 1.35, 0.8, 1.35 }, { 0.25, 0.45, 0 }, magma, NEON),
-	}))
+		-- Hair mesh: centred on the export's bounding box and turned 180 degrees to undo the
+		-- importer's rotation.
+		piece("HairMesh", "Head", { 1.59, 1.83, 1.63 }, { -0.0074, 0.6105, 0.0364 }, hair, with(LOOSE, {
+			Rotation = { 0, 180, 0 },
+			Mesh = { MeshId = "rbxassetid://101701313703578", Scale = { 0.01, 0.01, 0.01 } },
+		})),
+		-- Tattered cowl at the neck
+		piece("CowlWrap", "UpperTorso", { 1.6, 0.42, 1.2 }, { 0, 0.78, 0 }, cowl, with(LOOSE, { Material = "Fabric" })),
+		piece("CowlDrape", "UpperTorso", { 1.3, 0.4, 0.12 }, { 0, 0.5, -0.56 }, cowl, with(LOOSE, { Material = "Fabric" })),
+		-- Riveted dark armour core between red tabard panels with gold edges and flame emblems
+		piece("ArmourCore", "UpperTorso", { 1.0, 1.3, 0.12 }, { 0, -0.1, -0.5 }, darkSteel, METAL),
+		piece("TabardL", "UpperTorso", { 0.45, 1.45, 0.08 }, { -0.62, -0.05, -0.53 }, red, { Material = "Fabric" }),
+		piece("TabardR", "UpperTorso", { 0.45, 1.45, 0.08 }, { 0.62, -0.05, -0.53 }, red, { Material = "Fabric" }),
+		piece("TabardEdgeL", "UpperTorso", { 0.05, 1.45, 0.09 }, { -0.38, -0.05, -0.54 }, gold, METAL),
+		piece("TabardEdgeR", "UpperTorso", { 0.05, 1.45, 0.09 }, { 0.38, -0.05, -0.54 }, gold, METAL),
+		piece("FlameEmblemL", "UpperTorso", { 0.18, 0.3, 0.04 }, { -0.62, 0.25, -0.58 }, flame, NEON),
+		piece("FlameEmblemR", "UpperTorso", { 0.18, 0.3, 0.04 }, { 0.62, 0.25, -0.58 }, flame, NEON),
+		-- Dark steel pauldrons with gold trim and a gold flame emblem; studded leather bracers
+		piece("PauldronL", "LeftUpperArm", { 1.4, 0.6, 1.35 }, { -0.22, 0.42, 0 }, darkSteel, with(METAL, { Rotation = { 0, 0, 10 } })),
+		piece("PauldronTrimL", "LeftUpperArm", { 1.44, 0.07, 1.39 }, { 0, -0.3, 0 }, gold, with(METAL, { RelativeTo = "PauldronL" })),
+		piece("PauldronFlameL", "LeftUpperArm", { 0.04, 0.34, 0.3 }, { -0.72, 0.02, 0 }, gold, with(METAL, { RelativeTo = "PauldronL" })),
+		piece("PauldronR", "RightUpperArm", { 1.4, 0.6, 1.35 }, { 0.22, 0.42, 0 }, darkSteel, with(METAL, { Rotation = { 0, 0, -10 } })),
+		piece("PauldronTrimR", "RightUpperArm", { 1.44, 0.07, 1.39 }, { 0, -0.3, 0 }, gold, with(METAL, { RelativeTo = "PauldronR" })),
+		piece("PauldronFlameR", "RightUpperArm", { 0.04, 0.34, 0.3 }, { 0.72, 0.02, 0 }, gold, with(METAL, { RelativeTo = "PauldronR" })),
+		piece("BracerL", "LeftLowerArm", { 1.12, 0.7, 1.12 }, { 0, -0.1, 0 }, leather),
+		piece("BracerRimL", "LeftLowerArm", { 1.14, 0.06, 1.14 }, { 0, 0.24, 0 }, chain, METAL),
+		piece("BracerR", "RightLowerArm", { 1.12, 0.7, 1.12 }, { 0, -0.1, 0 }, leather),
+		piece("BracerRimR", "RightLowerArm", { 1.14, 0.06, 1.14 }, { 0, 0.24, 0 }, chain, METAL),
+		-- Heavy belt with a pouch and hanging chains; tattered red loincloth with gold edges
+		piece("Belt", "LowerTorso", { 2.08, 0.3, 1.08 }, { 0, 0.04, 0 }, leather),
+		piece("BeltBuckle", "LowerTorso", { 0.36, 0.24, 0.06 }, { 0, 0.04, -0.57 }, chain, METAL),
+		piece("Pouch", "LowerTorso", { 0.42, 0.4, 0.3 }, { -0.62, -0.06, -0.66 }, leather),
+		piece("ChainL", "LowerTorso", { 0.6, 0.06, 0.06 }, { -0.7, -0.25, -0.56 }, chain, with(LOOSE, METAL, { Rotation = { 0, 0, -25 } })),
+		piece("ChainR", "LowerTorso", { 0.6, 0.06, 0.06 }, { 0.7, -0.25, -0.56 }, chain, with(LOOSE, METAL, { Rotation = { 0, 0, 25 } })),
+		piece("Loincloth", "LowerTorso", { 0.9, 0.95, 0.06 }, { 0, -0.62, -0.56 }, red, with(LOOSE, { Material = "Fabric" })),
+		piece("LoinEdgeL", "LowerTorso", { 0.05, 0.95, 0.07 }, { -0.45, -0.62, -0.57 }, gold, with(LOOSE, METAL)),
+		piece("LoinEdgeR", "LowerTorso", { 0.05, 0.95, 0.07 }, { 0.45, -0.62, -0.57 }, gold, with(LOOSE, METAL)),
+		piece("LoinTatterL", "LowerTorso", { 0.06, 0.3, 0.4 }, { -0.2, -1.2, -0.56 }, red, with(WEDGE, LOOSE, { Material = "Fabric", Rotation = { 0, 90, 180 } })),
+		piece("LoinTatterR", "LowerTorso", { 0.06, 0.3, 0.4 }, { 0.2, -1.2, -0.56 }, red, with(WEDGE, LOOSE, { Material = "Fabric", Rotation = { 0, -90, 180 } })),
+		piece("LoinBack", "LowerTorso", { 2.0, 0.9, 0.08 }, { 0, -0.55, 0.56 }, red, with(LOOSE, { Material = "Fabric", Rotation = { -6, 0, 0 } })),
+		-- Legs: gold-rimmed knee plates, dark greaves, leg wraps, steel sabatons with gold soles
+		piece("KneeRimL", "LeftLowerLeg", { 0.1, 0.6, 0.6 }, { 0, 0.42, -0.53 }, gold, with(METAL, { Shape = "Cylinder", Rotation = { 0, 90, 0 } })),
+		piece("KneePadL", "LeftLowerLeg", { 0.12, 0.48, 0.48 }, { 0.04, 0, 0 }, darkSteel, with(METAL, { Shape = "Cylinder", RelativeTo = "KneeRimL" })),
+		piece("KneeRimR", "RightLowerLeg", { 0.1, 0.6, 0.6 }, { 0, 0.42, -0.53 }, gold, with(METAL, { Shape = "Cylinder", Rotation = { 0, 90, 0 } })),
+		piece("KneePadR", "RightLowerLeg", { 0.12, 0.48, 0.48 }, { 0.04, 0, 0 }, darkSteel, with(METAL, { Shape = "Cylinder", RelativeTo = "KneeRimR" })),
+		piece("GreaveL", "LeftLowerLeg", { 1.1, 0.7, 1.1 }, { 0, -0.15, 0 }, darkSteel, METAL),
+		piece("GreaveR", "RightLowerLeg", { 1.1, 0.7, 1.1 }, { 0, -0.15, 0 }, darkSteel, METAL),
+		piece("LegWrapL", "LeftLowerLeg", { 1.06, 0.1, 1.06 }, { 0, 0.22, 0 }, leather),
+		piece("LegWrapR", "RightLowerLeg", { 1.06, 0.1, 1.06 }, { 0, 0.22, 0 }, leather),
+		piece("SabatonL", "LeftFoot", { 1.1, 0.36, 1.3 }, { 0, 0.02, -0.12 }, darkSteel, METAL),
+		piece("SabatonSoleL", "LeftFoot", { 1.12, 0.06, 1.32 }, { 0, -0.14, -0.12 }, gold, METAL),
+		piece("SabatonR", "RightFoot", { 1.1, 0.36, 1.3 }, { 0, 0.02, -0.12 }, darkSteel, METAL),
+		piece("SabatonSoleR", "RightFoot", { 1.12, 0.06, 1.32 }, { 0, -0.14, -0.12 }, gold, METAL),
+	}, "rbxassetid://137040425989997"))
 end
 
 -- 6. JENNA (1★ Marksman - Wind-Scout Archer) ---------------------------------------------
