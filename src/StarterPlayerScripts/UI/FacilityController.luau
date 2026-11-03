@@ -316,6 +316,12 @@ local BANNER_VIEWS = {
 	},
 }
 
+-- Gem price of a 1x / 10x summon on a banner (the server charges the same values from HeroCatalog).
+local function summonCost(bannerId: string, count: number): number
+	local banner = (BANNER_VIEWS[bannerId] or BANNER_VIEWS.CALL_OF_THE_RIFT).Banner
+	return if count == 10 then banner.Cost10X else banner.Cost1X
+end
+
 local function featuredOf(banner: any): (string, number)
 	local top = banner.MaxStar
 	return banner.FeaturedHeroId or banner.HeroesByStar[top], top
@@ -483,7 +489,7 @@ function Controller:BuildBannerView(root: Frame, key: string)
 		local b = GrimoireSummonButton.new(btnRow, {
 			Name = string.format("%sSummon%dXBtn", def.Prefix, count),
 			Title = string.format("SUMMON %dX", count),
-			Cost = if count == 10 then 900 else 100,
+			Cost = summonCost(key, count),
 			AnchorPoint = Vector2.new(i - 1, 0),
 			Position = UDim2.fromScale(i - 1, 0),
 			Size = UDim2.new(0.485, 0, 1, 0),
@@ -607,8 +613,8 @@ function Controller:ShowSummonResults(summonedList: { any }, bannerId: string, o
 			seen[id] = true -- two copies in one 10x: only the first is NEW
 			return true
 		end,
-		Cost1 = 100,
-		Cost10 = 900,
+		Cost1 = summonCost(bannerId, 1),
+		Cost10 = summonCost(bannerId, 10),
 		OnAgain = function(count: number)
 			self:PerformSummon(bannerId, count)
 		end,
@@ -684,7 +690,7 @@ end
 function Controller:PerformSummon(bannerId: string, count: number)
 	if self.Busy then return end
 	local profile = self.GetProfile()
-	local cost = (count == 10) and 900 or 100
+	local cost = summonCost(bannerId, count)
 	local gems = profile and profile.Currencies and profile.Currencies.Gems or 0
 	if gems < cost then
 		self:SetSummonStatus(bannerId, string.format("You need %d Gems for this summon (you have %d).", cost, math.floor(gems)), true)
@@ -791,7 +797,7 @@ function Controller:Refresh()
 				seed and seed.DisplayName or "hero", math.max(1, banner.MaxPity - done))
 			TweenService:Create(bv.PityFill, TweenInfo.new(0.3, Enum.EasingStyle.Quad), { Size = UDim2.fromScale(done / banner.MaxPity, 1) }):Play()
 			for count, b in bv.Buttons do
-				local cost = if count == 10 then 900 else 100
+				local cost = summonCost(key, count)
 				b.TitleLabel.Text = if self.Busy then "SUMMONING…" else string.format("SUMMON %dX", count)
 				b.CostLabel.TextColor3 = if gems >= cost then Color3.new(1, 1, 1) else C.Red
 				b.Root.AutoButtonColor = false

@@ -19,7 +19,7 @@ In traditional gacha/simulator games, 95% of summons are discarded as worthless 
    - **Up to 5 Deployed Heroes** (all 5 slots unlocked from the start) accompany the Master into the Central Hub or are independently deployed to specific floors (1–50) of the **Infinite Tower**. Heroes charge an in-combat **Skill/Stamina Gauge** (0 to 100) through a 3-tier attack cadence (Basic -> Basic -> Special -> Skill Attack at 100), and risk a debilitating **Downed state** (down until the squad changes floor, goes home or wipes) if left inside lethal AoE telegraphs.
    - **Benched Heroes** physically inhabit the player's **Fortress Plot**, resting on the bench, or can be forged powerful equipment at the **Blacksmith Forge**.
    - **Zero Dead Pulls:** Duplicate heroes across all star ranks are fed into the **Synthesis Chamber** (`SynthesisController.luau`) for EXP leveling to cap (`MaxLevel = Stars * 10`), or sacrificed at the **Promotion Altar** (`PromotionController.luau`) for **Star Promotion** ($1★ \to 7★$).
-   - **Dual Hero Banners & Artifact Ascension:** At the **Summoning Altar**, players spend Gems (`100 Gems` single / `900 Gems` 10x) on two distinct banners: **Call of the Rift** (Permanent Banner featuring 5 stars: $1★ \to 5★$) and **A Star's Arrival** (Limited Time Banner featuring 1 character per star across all 7 stars: $1★ \to 7★$). In addition, Masters spend Gems at the **Artifact Summoning Banner** (`160 Gems` single / `1,600 Gems` 10x) to pull equippable archetype weapons across **16 Rarity Tiers** (`Common` $\to$ `Origin`) which define inherent base stats. At the **Blacksmith Forge** (`ForgeController.luau`), duplicate gear and Gold are used for **Star Ascension** ($1★ \to 7★$), multiplying base stats with massive progressive multipliers up to **`16.00x`**.
+   - **Dual Hero Banners & Artifact Ascension:** At the **Summoning Altar**, players spend Gems on two distinct banners (Call of the Rift `100` / `900` Gems, A Star's Arrival `200` / `1,800` Gems for 1x / 10x): **Call of the Rift** (Permanent Banner featuring 5 stars: $1★ \to 5★$) and **A Star's Arrival** (Limited Time Banner featuring 1 character per star across all 7 stars: $1★ \to 7★$). In addition, Masters spend Gems at the **Artifact Summoning Banner** (`160 Gems` single / `1,600 Gems` 10x) to pull equippable archetype weapons across **16 Rarity Tiers** (`Common` $\to$ `Origin`) which define inherent base stats. At the **Blacksmith Forge** (`ForgeController.luau`), duplicate gear and Gold are used for **Star Ascension** ($1★ \to 7★$), multiplying base stats with massive progressive multipliers up to **`16.00x`**.
 
 2. **Tactical Master Agency Over AFK Whaling:**
    - The Master carries no personal weapon. Instead, the Master directs squads through battlefield commands—**`[Click / Tap]` Focus Target**, **`[Q]` Overdrive Whistle**, and **`[E]` Emergency Recall Whistle**—while physically hauling heavy, high-value **Relics** and cargo back to their plot.
@@ -85,9 +85,9 @@ flowchart TD
    - To accelerate clears and rapidly charge Skill Attacks, the Master triggers **`[Q]` Overdrive Whistle** (`20s CD`), granting **+40% Attack Speed** for `5s` with zero stamina cost.
    - When an Elite or Boss telegraphs a red ground AoE or ranged projectile (`ARC`, `SELF_DISC`, `TARGET_DISC`, or swept-corridor `PROJECTILE`), the Master triggers **`[E]` Emergency Recall Whistle** (`6s CD`), warping all 5 heroes to the Master's safe position and dropping their aggro for `2s`.
 3. **Physical Loot Haul (2:00 – 2:45):**
-   - Defeating mobs/Elites spawns physical Relic drops in `Workspace.PhysicalLoot` (**Mana Geodes**, **Cursed Urns**, and **Abyssal Cores**).
+   - Defeating mobs, Elites and bosses spawns physical Relic drops in `Workspace.PhysicalRelics`: **Mana Geodes** and **Cursed Urns** from anything, **Abyssal Cores** only from Elites, and **Calamity Hearts** only from Alphas and Biome Bosses (see §5.5 Relic Drops).
    - The Master touches the drop to weld it overhead, incurring a **-15% to -45% WalkSpeed penalty** (and disabling jumping for high-tier relics).
-   - If hit by an Elite/Boss AoE mid-haul, the Master is **stunned for 1s and fumbles the item** (which becomes stealable after a **3s owner-lock**).
+   - If hit by an Elite/Boss AoE mid-haul, the Master is **stunned for 1s and fumbles the item** (which becomes stealable after a **5s owner-lock**).
 4. **Extract & Bank (2:45 – 3:00):**
    - **Hub Banking:** Stepping onto the Masters' Commons, a plot bridge, the Pilgrim's Causeway, your plot, or a Private Extraction Pad safely deposits cargo into permanent Gold and Gems.
    - **Floor Safe Sanctuary Banking:** Bringing physical loot (Gold/Gems) or Relics back into any floor's elevated **Floor Safe Sanctuary** automatically deposits them at the **Floor Extraction Pad** (`FloorExtractionPad`), granting 100% relic payout and Market multipliers immediately without requiring a trip back to the Hub.
@@ -142,7 +142,7 @@ A **run** starts when a Master first stands on a tower floor and ends when they 
 1. **Floors keep moving.** A floor holds 16 / 22 / 25 / 35 / 35 live mobs (floors 1–5 of a biome) in 4–7 camps. A camp respawns as one wave 10 s after its last member dies (a lone survivor cannot hold it back past 45 s). Each extra Master on the floor adds 40% more members to every camp, up to 48 live mobs. When a Master's kill progress crosses 50% (floors 1–4 only), a personal **surge pack** (1 Elite and 3 Regulars) steps out near their squad.
 2. **A longer climb.** A floor boss is summoned after `round(20 + 1.2 × floor)` kill points (a Regular is 1, a camp Elite 3). The boss of floors 1–4 is the biome's **Alpha**, a larger, gilded elite with its own name, stats and a self-quake attack; the 5th floor is the **Biome Boss**. Enemy strength is anchored to the squad a player is expected to have (2 heroes at floor 1, 3 by floor 5, 4 by floor 10, 5 from floor 15, hero rarity included), with a per-biome sawtooth (×0.85, 0.95, 1.05, 1.15, 1.30 by floor in the biome). Floor 1 is sized to the default starter pair, and new profiles start with 900 Gems (one 10-pull).
 3. **Penalties, never losing what you own.** A knocked-out hero stays down until the squad **changes floor** (it stands back up at 30% HP), returns home, or wipes. Floor changes no longer heal anyone; the tower sanctuary heals standing heroes (10% HP per second). After a floor's summoned boss has been damaged, the floor's travel stays sealed until it dies or the squad wipes. A **wipe** costs the carried relic, the streak and 25% of the Gold and Gems earned since the last bank. Heroes, weapons and banked currency are never lost.
-4. **Banking and the climb streak.** Entering a sanctuary or pad banks everything. Each floor cleared in a row adds +10% (up to +100%) to the value of relics banked during the run; banking does not reset the streak, only the end of the run does. Relics are the contested loot: a camp Elite always leaves at least a Mana Geode, and relic Gems are flat per tier (10 / 30 / 300) while their Gold scales with the floor.
+4. **Banking and the climb streak.** Entering a sanctuary or pad banks everything. Each floor cleared in a row adds +10% (up to +100%) to the value of relics banked during the run; banking does not reset the streak, only the end of the run does. Relics are the contested loot: each enemy role has its own drop table (§5.5 Relic Drops), and relic Gems (base 100 / 300 / 1,000 / 5,000) and Gold both scale with the floor.
 5. **Rift Attunement.** In the tower and in retaliation duels, one hero's power is capped at about 1.5× an on-curve hero two floors above the Master's highest floor reached, so a lucky or premium pull is felt without skipping a biome. Duels use the lower of the two Masters' caps. Facility labor is never capped, and the pull itself (hero, star, rarity) never changes.
 6. **Assigned squads farm.** An assigned squad earns kill Gold, Gems and XP anywhere, but relics, kill progress, boss summons and floor unlocks need its Master standing on the floor.
 7. **Simulation rate.** The tower simulation runs at 10 Hz (attack intervals round up to 0.1 s); snapshots to clients stay at 5 Hz until a Studio profile clears the bandwidth budget.
@@ -299,7 +299,7 @@ The island is divided into two distinct, interconnected sectors:
 
 2. **Sector B: Grand Inner Fortress Courtyard (Core Buildings & Interior Facilities):**
    - **Courtyard Grid:** Buildings stand in a 3 x 2 grid either side of a clear walkway from the plot spawn, past the fountain, to the rear gate. Every entrance faces the fountain. North row (by the spawn): Summoning Altar and Blacksmith Forge. Middle row: the Command Post (War Banner and Architect's Table) and The Pit. South row: Training Grounds and Market, which only appear once built in the Fortress Tree.
-   - **Summoning Altar (North-West Courtyard):** Towering obsidian obelisk featuring dual runic summoning circles for the **Hero Banner** (`100 Gems` single / `900 Gems` 10x) and **Artifact Banner** (`160 Gems` single / `1,600 Gems` 10x).
+   - **Summoning Altar (North-West Courtyard):** Towering obsidian obelisk featuring dual runic summoning circles for the **Hero Banners** (Call of the Rift `100 Gems` single / `900 Gems` 10x; A Star's Arrival `200 Gems` / `1,800 Gems`) and **Artifact Banner** (`160 Gems` single / `1,600 Gems` 10x).
    - **Plaza Fountain, God's Blessing & War Banner (Center Courtyard):** Central triple-tiered Gothic stone fountain in the courtyard center with water basins and blue glow, crowned, once unlocked, by a **marble angel statue** with raised hands holding a lantern of light. The fountain is the **God's Blessing** facility (Section 4.3, Facility D): an `[F]` prompt opens its panel, and the angel brightens with each level. 
    - **Command Post (West Courtyard):** The heraldic War Banner standard on a carved stone pedestal, with an `[F]` prompt opening the **Squad Deploy UI** (`SquadController.luau`), and beside it the **Architect's Table**, whose prompt opens the **Fortress Tree**.
    - **The Pit Sanctuary (East Courtyard):**
@@ -354,30 +354,30 @@ Hero summoning at the **Summoning Altar** (`FacilityController.luau`) is partiti
 #### 1. Permanent Banner: "Call of the Rift" (Rarity Tiers 1–5)
 The permanent standard banner features exactly **one character for each rarity from Common to Exalted** (5 total heroes):
 - **Summon Cost:** `100 Gems` per single pull (`900 Gems` for 10x pull).
-- **Pity System:** Guaranteed Exalted hero (**Ignis**) within **80 summons** (`MaxPity = 80`). A natural Exalted pull resets the pity counter.
+- **Pity System:** Guaranteed Exalted hero (**Ignis**) within **120 summons** (`MaxPity = 120`). A natural Exalted pull resets the pity counter.
 - **10-Pull Guarantee:** Every 10x pull includes at least one **Rare** or higher hero.
 - **Drop Rates:**
-  - `Common (70.0%)`: **Han**
-  - `Uncommon (20.0%)`: **Aaron**
-  - `Rare (7.0%)`: **Catio**
-  - `Superior (2.5%)`: **Valeria**
-  - `Exalted (0.5%)`: **Ignis**
+  - `Common (75.32%)`: **Han**
+  - `Uncommon (18.0%)`: **Aaron**
+  - `Rare (4.7%)`: **Catio**
+  - `Superior (1.65%)`: **Valeria**
+  - `Exalted (0.33%)`: **Ignis**
 
 #### 2. Limited Time Banner: "A Star's Arrival" (Rarity Tiers 1–7)
 The inaugural limited-time rate-up banner features exactly **one character for each rarity from Common to Mythical** (7 total heroes):
-- **Summon Cost:** `100 Gems` per single pull (`900 Gems` for 10x pull).
-- **Pity System:** Guaranteed Mythical featured hero (**Astrea**) within **90 summons** (`MaxPity = 90`). A natural Mythical pull resets the pity counter.
+- **Summon Cost:** `200 Gems` per single pull (`1,800 Gems` for 10x pull).
+- **Pity System:** Guaranteed Mythical featured hero (**Astrea**) within **100 summons** (`MaxPity = 100`). A natural Mythical pull resets the pity counter.
 - **10-Pull Guarantee:** Every 10x pull includes at least one **Rare** or higher hero.
 - **Drop Rates:**
-  - `Common (60.0%)`: **Jenna**
+  - `Common (61.14%)`: **Jenna**
   - `Uncommon (24.0%)`: **Velkist**
-  - `Rare (10.0%)`: **Eolka**
-  - `Superior (4.2%)`: **Morrigan**
-  - `Exalted (1.4%)`: **Sovereign Archon**
-  - `Legendary (0.33%)`: **Solaris**
-  - `Mythical (0.07%)`: **Astrea (Featured Starlight Mythical)**
+  - `Rare (9.5%)`: **Eolka**
+  - `Superior (3.8%)`: **Morrigan**
+  - `Exalted (1.2%)`: **Sovereign Archon**
+  - `Legendary (0.30%)`: **Solaris**
+  - `Mythical (0.06%)`: **Astrea (Featured Starlight Mythical)**
 
-*(These rates are lower than the pre-Phase 4 rates of 60/25/10/4/1% and 50/25/13.5/6.5/3.5/1.2/0.3%, and pity rose from 50 to 80 and 90 so it does not undo the lower odds. See `docs/rework-plan/PHASE_4_ONBOARDING_AND_PROGRESSION.md` §7.)*
+*(The relic economy rebalance raised Gem income about 1.3–1.5×, so both banners were tightened to keep hours of play per hero at or above the old pace: Call of the Rift from 70/20/7/2.5/0.5% with pity 80, and A Star's Arrival from 60/24/10/4.2/1.4/0.33/0.07% with pity 90 and a 100-Gem price. See `docs/relic-loot-rebalance-plan.md`. Earlier history: `docs/rework-plan/PHASE_4_ONBOARDING_AND_PROGRESSION.md` §7.)*
 
 ---
 
@@ -697,9 +697,27 @@ Each of the 10 biomes features 4 local-authored procedural enemies (2 Regulars, 
 ### 5.4 Biome Boss Loot & Progression Ledger
 - **Summoning, not respawning:** a floor's boss (the biome **Alpha** on floors 1–4, the **Biome Boss** on floor 5) is summoned for a Master whose own kill progress reaches the floor threshold. It never respawns on a timer. Repeat kills need a fresh threshold.
 - **First clear of a floor** (the big payout): Gold ×3, `10 + 2 × floor` Gems, and a guaranteed Relic tagged to the killer.
-- **Repeat kills:** Gold at the normal rate, a 50% chance of a Relic, and no bonus Gems, so a cleared floor is a farm, not a Gem source.
+- **Repeat kills:** Gold at the normal rate, a 20% → 40% chance of a Relic (floor 1 → 50), and no bonus Gems, so a cleared floor is a farm, not a Gem source.
+- **Boss relics:** Alphas and Biome Bosses are the only source of the **Calamity Heart** (Alpha 2% → 5% of their relics, Biome Boss 4% → 10%); the rest are Cursed Urns and Mana Geodes. A first Biome Boss clear always drops at least a Cursed Urn.
 - **First clear of a Biome Boss** (floors 5, 10, …, 50), on top of the above: `300 × biome number` Gems and one artifact (1★) of a guaranteed minimum rarity: Rare for biomes 1–2, Superior for 3–4, Exalted for 5–6, Legendary for 7–8, Mythical for 9–10. The tier is capped at Mythical until higher tiers ship after launch. Alphas do not drop artifacts.
 - **Floor advancement:** defeating a floor's boss opens the next floor on the Floor Selector and raises the Master's Rift Attunement cap (Section 2.5).
+
+### 5.5 Relic Drops
+Relics are the contested tower loot (`TowerFloorConfig.RelicDrops`, `RelicConfig`). Each value runs linearly from floor 1 to floor 50; whatever share is left over is a Mana Geode.
+
+| Enemy | Drop chance | Calamity Heart | Abyssal Core | Cursed Urn |
+| --- | --- | --- | --- | --- |
+| Regular | 0.6% → 1.6% | — | — | 12% → 25% |
+| Camp Elite | 6% → 14% | — | 6% → 15% | 30% → 40% |
+| Alpha (floors 1–4 of a biome) | 20% → 40% (100% on first clear) | 2% → 5% | — | 45% → 55% |
+| Biome Boss | 20% → 40% (100% on first clear) | 4% → 10% | — | 45% → 55% |
+
+- **Payouts** (floor 1 base): Mana Geode `100` Gems / `250` Gold, Cursed Urn `300` / `1,200`, Abyssal Core `1,000` / `4,000`, Calamity Heart `5,000` / `15,000`. A Geode is worth one Call of the Rift pull.
+- **Floor scaling:** Gems ×`(1 + 0.02 × (floor − 1))` (×1.98 on floor 50), Gold ×`(1 + 0.05 × (floor − 1))`. The Market multiplies Gold, and the climb streak multiplies both. The relic's billboard shows its base value at that floor.
+- **Owner lock:** a fresh drop is locked to its killer for `5s` (Calamity Heart `15s`), and a fumbled relic for `5s`.
+- **Calamity Heart bonus:** extracting one has a 10% chance to grant a 5★ Sovereign Archon.
+- **Income target:** about 2,900 / 6,800 / 12,700 Gems an hour of repeat farming on Alpha floors 1 / 26 / 49, with Biome Boss floors paying a little more (`tests/tower-run-loop.spec.luau`).
+- **Visuals:** the server replicates an invisible relic root; each client builds the relic's model (`RelicModelBuilder`: a cracked crystal geode, a rune-banded urn, a caged void core, a crystal-spiked heart) with an outline glow, point light, rising motes, a vertical loot beam, a pulsing ground ring, idle bob and spin, and a spawn burst (`RelicVisualController`). Rarer tiers get a brighter light, taller beam and more motes; the beam, ring and bob hide while the relic is carried.
 
 ---
 

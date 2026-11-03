@@ -11,7 +11,7 @@
 --   Gems / Gold: added to the profile's Currencies.
 --   Summons:     free pulls on a hero banner. These are paid random items, so players whose
 --                PolicyService marks paid random items as restricted never see them, and the
---                server converts any such purchase into Gems (GemsPerSummon each).
+--                server converts any such purchase into Gems (the banner's 1x price per summon).
 
 export type Grant = { Kind: "Gems" | "Gold" | "Summons", Amount: number, Banner: string? }
 
@@ -27,7 +27,13 @@ export type Offer = {
 
 local ShopConfig = {}
 
-ShopConfig.GemsPerSummon = 100
+local HeroCatalog = require(game:GetService("ReplicatedStorage").Shared.Config.HeroCatalog)
+
+-- Gems a restricted player gets per summon: the 1x price of the banner the pack pulls on.
+function ShopConfig.GemsPerSummon(banner: string?): number
+	local catalog = if banner == "A_STARS_ARRIVAL" then HeroCatalog.LimitedBanner else HeroCatalog.PermanentBanner
+	return catalog.Cost1X
+end
 
 -- Featured limited pack: summons on A Star's Arrival, showcasing its top heroes.
 ShopConfig.Featured = table.freeze({
@@ -80,7 +86,7 @@ end
 -- Summons granted to a player who may not buy paid random items become Gems instead.
 function ShopConfig.SafeGrant(grant: Grant, paidRandomRestricted: boolean): Grant
 	if grant.Kind == "Summons" and paidRandomRestricted then
-		return { Kind = "Gems", Amount = grant.Amount * ShopConfig.GemsPerSummon }
+		return { Kind = "Gems", Amount = grant.Amount * ShopConfig.GemsPerSummon(grant.Banner) }
 	end
 	return grant
 end

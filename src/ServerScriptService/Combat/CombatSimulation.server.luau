@@ -2694,9 +2694,13 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
         CombatSimulation.RefreshPlayerHeroStats(p) -- a new highest floor raises the Rift Attunement cap
        end
 
-       -- One contested relic per boss kill, tagged to the killer: guaranteed on a first clear, 50% afterwards.
-       if p == killer and _G.RelicService and (firstClear or math.random() < 0.5) then
-        local relicTier = TowerRewards.RollRelic(mob.FloorId, "BOSS", 0, math.random())
+       -- One contested relic roll per boss kill, tagged to the killer: guaranteed on a first clear, the boss's drop
+       -- chance afterwards. Alphas (floors 1-4 of a biome) and Biome Bosses drop the Calamity Heart; a first
+       -- Biome Boss clear pays at least a Cursed Urn.
+       if p == killer and _G.RelicService then
+        local relicRole = if bossTier > 0 then "BOSS" else "ALPHA"
+        local relicTier = TowerRewards.RollRelic(mob.FloorId, relicRole, if firstClear then 0 else math.random(), math.random())
+        if relicTier == "MANA_GEODE" and firstBiomeClear then relicTier = "CURSED_URN" end
         if relicTier then _G.RelicService.SpawnRelic(relicTier, mob.Position, p.UserId) end
        end
 

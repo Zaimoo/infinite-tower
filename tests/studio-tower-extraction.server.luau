@@ -50,11 +50,12 @@ local ok,err=xpcall(function()
 		root.CFrame=room.Arrival
 		relics.ExtractInFloorSafeZone(player)
 		local spec=RelicConfig.MANA_GEODE
-		local gold=math.round(spec.Payout.Gold*dm.GetMarketMultiplier(player))
-		assert(profile.Currencies.Gold==beforeGold+gold and profile.Currencies.Gems==beforeGems+spec.Payout.Gems,"Relic payout incorrect "..id)
+		local gold=math.round(spec.Payout.Gold*dm.GetMarketMultiplier(player)*relic.RewardMultiplier)
+		local gems=math.round(spec.Payout.Gems*relic.GemMultiplier)
+		assert(profile.Currencies.Gold==beforeGold+gold and profile.Currencies.Gems==beforeGems+gems,"Relic payout incorrect "..id)
 		assert(char:GetAttribute("CarryingRelic")==nil and not relic.Part.Parent,"Relic was not cleaned up")
 		relics.ExtractInFloorSafeZone(player)
-		assert(profile.Currencies.Gold==beforeGold+gold and profile.Currencies.Gems==beforeGems+spec.Payout.Gems,"Duplicate extraction paid")
+		assert(profile.Currencies.Gold==beforeGold+gold and profile.Currencies.Gems==beforeGems+gems,"Duplicate extraction paid")
 		results.RelicExtractions+=1; results.IdempotencyChecks+=1
 		local _,mobs=combat.DebugEntities()
 		local n=0

@@ -3,6 +3,7 @@ local deadline=os.clock()+20
 repeat task.wait(.1) until (_G.CombatSimulation and _G.RelicService and _G.DataManager) or os.clock()>deadline
 local dm,combat,relics=_G.DataManager,_G.CombatSimulation,_G.RelicService
 assert(dm and combat and relics,"Runtime failed to initialize")
+local RelicGems=require(game.ReplicatedStorage.Shared.Config.RelicConfig).MANA_GEODE.Payout.Gems
 local player=game.Players:GetPlayers()[1]
 local profile=dm.GetProfile(player)
 local Tower=require(game.ServerScriptService.Core.TowerFloorService)
@@ -58,7 +59,7 @@ local ok,err=xpcall(function()
   assert(profile.Currencies.Gems==beforeGems,"Unsafe extraction paid")
   root.CFrame=room.Arrival
   relics.ExtractInFloorSafeZone(player)
-  local expected=math.round(100*(1+.05*(id-1)))
+  local expected=math.round(RelicGems*(1+.02*(id-1)))
   assert(profile.Currencies.Gems==beforeGems+expected,"Wrong scaled relic payout "..id)
   relics.ExtractInFloorSafeZone(player)
   assert(profile.Currencies.Gems==beforeGems+expected,"Duplicate relic payout")

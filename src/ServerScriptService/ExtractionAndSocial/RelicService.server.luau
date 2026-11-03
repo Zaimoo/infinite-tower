@@ -10,6 +10,7 @@ local Workspace = game:GetService("Workspace")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local SanctuaryRules = require(Shared.Util.TowerSanctuaryRules)
 local RelicConfig = require(Shared:WaitForChild("Config"):WaitForChild("RelicConfig"))
+local TowerFloorConfig = require(Shared.Config:WaitForChild("TowerFloorConfig"))
 local GildedGrimoire = require(Shared:WaitForChild("Util"):WaitForChild("GildedGrimoire"))
 local TowerRuns = require(script.Parent.Parent:WaitForChild("Combat"):WaitForChild("TowerRunService"))
 
@@ -30,7 +31,8 @@ export type RelicTierId = "MANA_GEODE" | "CURSED_URN" | "ABYSSAL_CORE" | "CALAMI
 
 export type ActiveRelic = {
 	RelicId: number,
-	RewardMultiplier: number,
+	RewardMultiplier: number, -- Gold multiplier from the floor the relic dropped on
+	GemMultiplier: number, -- Gem multiplier from the floor the relic dropped on
 	FloorId: number,
 	RoomGeneration: number,
 	TierId: RelicTierId,
@@ -48,9 +50,9 @@ export type ActiveRelic = {
 local BASE_WALKSPEED = 16.0
 local BASE_JUMPPOWER = 50.0
 local FUMBLE_STUN_SECONDS = 1.0
-local FUMBLE_OWNER_LOCK_SECONDS = 3.0
+local FUMBLE_OWNER_LOCK_SECONDS = 5.0
+local HEART_ARCHON_CHANCE = 0.10 -- Hearts drop from Alphas now, so a free Exalted Archon stays a rare jackpot
 
-local ArtPackVisuals = require(ReplicatedStorage.Assets:WaitForChild("ArtPackVisuals"))
 local Tower=require(script.Parent.Parent.Core.TowerFloorService)
 Tower.Init()
 local RelicService = {}
@@ -107,32 +109,31 @@ end
 
 function RelicService.SpawnRelic(tierId: RelicTierId, worldPos: Vector3, initialOwnerUserId: number?): ActiveRelic
 	local spec = RelicConfig[tierId] or RelicConfig.MANA_GEODE
+	local context=assert(Tower.ContextAt(worldPos),"Relic spawn outside room")
+	local goldMult, gemMult = TowerFloorConfig.RelicFloorMultipliers(context.FloorId)
 	local relicId = NextRelicId
 	NextRelicId += 1
 
-	local part = ArtPackVisuals.Mesh(tierId) or Instance.new("Part")
+	-- Invisible authoritative root: pickup range, welds, ground drops and the billboard hang off it.
+	-- Each client builds the relic's model and effects around it (RelicVisualController).
+	local part = Instance.new("Part")
 	part.Name = string.format("Relic_%s_%d", tierId, relicId)
-	if part:IsA("Part") then part.Shape = (tierId == "CALAMITY_HEART" or tierId == "ABYSSAL_CORE") and Enum.PartType.Ball or Enum.PartType.Block end
-	if part:IsA("MeshPart") then part.Size *= ((tierId=="CALAMITY_HEART") and 4.2 or 3.8)/math.max(part.Size.Y,.01)
-	else part.Size = (tierId == "CALAMITY_HEART") and Vector3.new(4.2, 4.2, 4.2) or Vector3.new(3.2, 3.8, 3.2) end
+	part.Size = (tierId == "CALAMITY_HEART") and Vector3.new(4.2, 4.2, 4.2) or Vector3.new(3.2, 3.8, 3.2)
 	part.Position = Vector3.new(worldPos.X, math.max(3.5, worldPos.Y + 2.2), worldPos.Z)
-	part.Color = part:IsA("MeshPart") and Color3.new(1,1,1) or spec.Color
-	part.Material = part:IsA("MeshPart") and Enum.Material.SmoothPlastic or Enum.Material.Neon
+	part.Transparency = 1
 	part.Anchored = true
 	part.CanCollide = false
+	part.CanQuery = false
+	part.CanTouch = false
+	part:SetAttribute("RelicTier", tierId)
+	part:SetAttribute("RelicCarried", false)
 	part.Parent = PhysicalRelicsFolder
-
-	local highlight = Instance.new("Highlight")
-	highlight.FillColor = spec.Color
-	highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-	highlight.FillTransparency = 1
-	highlight.Parent = part
 
 	-- World-Space Relic Billboard (Doc 4 Section 5.1)
 	local bb = Instance.new("BillboardGui")
 	bb.Name = "RelicBillboard"
-	bb.Size = UDim2.new(0, 210, 0, 68)
-	bb.StudsOffset = Vector3.new(0, 4.2, 0)
+	bb.Size = UDim2.new(0, 210, 0, 84)
+	bb.StudsOffset = Vector3.new(0, 4.6, 0)
 	bb.MaxDistance = 240
 	bb.AlwaysOnTop = (tierId == "CALAMITY_HEART" or tierId == "ABYSSAL_CORE")
 	bb.Parent = part
@@ -145,7 +146,7 @@ function RelicService.SpawnRelic(tierId: RelicTierId, worldPos: Vector3, initial
 	GildedGrimoire.Frame(frame, { Class = "Card", Tone = "Deep", Rail = spec.Color })
 
 	local title = Instance.new("TextLabel")
-	title.Size = UDim2.new(1, -14, 0.42, 0)
+	title.Size = UDim2.new(1, -14, 0.34, 0)
 	title.Position = UDim2.new(0, 7, 0, 4)
 	title.BackgroundTransparency = 1
 	title.Text = string.format("%s (%s)", string.upper(spec.DisplayName), spec.Rarity)
@@ -155,10 +156,23 @@ function RelicService.SpawnRelic(tierId: RelicTierId, worldPos: Vector3, initial
 	title.Parent = frame
 	GildedGrimoire.StyleText(title, "Title")
 
+	-- Base value at this floor, before Market and climb-streak bonuses.
+	local valueLbl = Instance.new("TextLabel")
+	valueLbl.Name = "ValueLabel"
+	valueLbl.Size = UDim2.new(1, -14, 0.24, 0)
+	valueLbl.Position = UDim2.new(0, 7, 0.36, 0)
+	valueLbl.BackgroundTransparency = 1
+	valueLbl.Text = string.format("≈ %d Gems · %d Gold", math.round(spec.Payout.Gems * gemMult), math.round(spec.Payout.Gold * goldMult))
+	valueLbl.TextColor3 = Color3.fromRGB(255, 226, 140)
+	valueLbl.TextScaled = true
+	valueLbl.ZIndex = 3
+	valueLbl.Parent = frame
+	GildedGrimoire.StyleText(valueLbl, "Body")
+
 	local statusLbl = Instance.new("TextLabel")
 	statusLbl.Name = "StatusLabel"
-	statusLbl.Size = UDim2.new(1, -8, 0.54, 0)
-	statusLbl.Position = UDim2.new(0, 4, 0.44, 0)
+	statusLbl.Size = UDim2.new(1, -8, 0.36, 0)
+	statusLbl.Position = UDim2.new(0, 4, 0.62, 0)
 	statusLbl.BackgroundTransparency = 1
 	statusLbl.Text = string.format("WalkSpeed: -%d%% | Touch to Carry!", math.round(spec.WalkSpeedPenalty * 100))
 	statusLbl.TextColor3 = Color3.fromRGB(236, 228, 246)
@@ -168,11 +182,11 @@ function RelicService.SpawnRelic(tierId: RelicTierId, worldPos: Vector3, initial
 	GildedGrimoire.StyleText(statusLbl, "Body")
 
 	local now = os.clock()
-	local context=assert(Tower.ContextAt(worldPos),"Relic spawn outside room")
 	local relic: ActiveRelic = {
 		FloorId=context.FloorId,RoomGeneration=context.RoomGeneration,
 		RelicId = relicId,
-		RewardMultiplier = if context.FloorId > 0 then 1 + 0.05 * (context.FloorId - 1) else 1,
+		RewardMultiplier = goldMult,
+		GemMultiplier = gemMult,
 		TierId = tierId,
 		Part = part,
 		BillboardStatus = statusLbl,
@@ -226,6 +240,7 @@ function RelicService.TryPickupRelic(player: Player, relic: ActiveRelic): boolea
 
 	relic.Weld = weld
 	relic.Carrier = player
+	relic.Part:SetAttribute("RelicCarried", true)
 	CarrierToRelic[player] = relic
 	Tower.GetState(player).BankArmed = true
 	if player.Character then
@@ -258,6 +273,7 @@ function RelicService.DropCarriedRelic(carrier: Player): boolean
 	relic.Part.Anchored = true
 	relic.Part.Position = Tower.GroundDrop(relic,position,relic.Part.Size.Y/2)
 	relic.Carrier = nil
+	relic.Part:SetAttribute("RelicCarried", false)
 	CarrierToRelic[carrier] = nil
 	relic.LockedUserId = nil
 	relic.LockExpiresAt = 0
@@ -286,6 +302,7 @@ function RelicService.FumbleRelicOnAoEHit(carrier: Player)
 	local dropPos = hrp and (hrp.Position + Vector3.new(2, 0, 2)) or relic.Part.Position
 
 	relic.Carrier = nil
+	relic.Part:SetAttribute("RelicCarried", false)
 	CarrierToRelic[carrier] = nil
 	if carrier.Character then
 		carrier.Character:SetAttribute("CarryingRelic", nil)
@@ -300,32 +317,32 @@ function RelicService.FumbleRelicOnAoEHit(carrier: Player)
 	updateMasterMovementAttributes(carrier, now)
 
 	local dm = getDataManager()
-	dm.SendToast(carrier, "💥 AoE Hit! Stunned 1.0s & Fumbled Relic (3.0s Owner-Lock before stealable)!", "WARN")
+	dm.SendToast(carrier, string.format("💥 AoE Hit! Stunned %.1fs & Fumbled Relic (%.1fs Owner-Lock before stealable)!", FUMBLE_STUN_SECONDS, FUMBLE_OWNER_LOCK_SECONDS), "WARN")
 	Tower.BroadcastAt(RelicStateRemote,relic,relic.RelicId, relic.TierId, "FUMBLE", carrier.UserId, relic.LockExpiresAt)
 end
 
-local function awardRelicPayout(player: Player, spec: any, scalar: number, rewardMultiplier: number?)
+local function awardRelicPayout(player: Player, spec: any, scalar: number, rewardMultiplier: number?, gemMultiplier: number?)
 	local dm = getDataManager()
 	local profile = dm.GetProfile(player)
 	if not profile then
 		return
 	end
 	local marketMult = dm.GetMarketMultiplier and dm.GetMarketMultiplier(player) or 1.0
-	-- Phase 6 M4: only Gold scales with the floor the relic dropped on; gems are flat per tier.
+	-- Gold and Gems both scale with the floor the relic dropped on (separate slopes, TowerFloorConfig).
 	-- Phase 6 M5: a relic banked during a climb streak pays more, Gold and gems alike.
 	local streakMult = TowerRuns.RelicMultiplier(player)
-	local gems = math.round(spec.Payout.Gems * scalar * streakMult)
+	local gems = math.round(spec.Payout.Gems * scalar * (gemMultiplier or 1) * streakMult)
 	local gold = math.round(spec.Payout.Gold * scalar * marketMult * (rewardMultiplier or 1) * streakMult)
 
 	profile.Currencies.Gems += gems
 	profile.Currencies.Gold += gold
 	TowerRuns.AddRelicPayout(player, gold, gems)
 
-	-- Check Calamity Heart +25% Boss Hero Roll
-	if spec.TierId == "CALAMITY_HEART" and math.random() <= 0.25 then
+	-- Calamity Heart: a small chance of a free Exalted Archon
+	if spec.TierId == "CALAMITY_HEART" and math.random() <= HEART_ARCHON_CHANCE then
 		local uuid, archon = dm.CreateHeroFromSeed("hero_archon", 1.10)
 		profile.Heroes[uuid] = archon
-		dm.BroadcastToast(string.format("👑 %s extracted THE CALAMITY HEART and rolled 3★ SOVEREIGN ARCHON!", player.DisplayName), "SUCCESS")
+		dm.BroadcastToast(string.format("👑 %s extracted THE CALAMITY HEART and rolled 5★ SOVEREIGN ARCHON!", player.DisplayName), "SUCCESS")
 	end
 
 	dm.SendToast(
@@ -389,7 +406,7 @@ local function extractAtSanctuary(carrier: Player, floorOnly: boolean?)
 	-- Reentrant calls cannot award the same authoritative relic twice.
 	CarrierToRelic[carrier]=nil
 	ActiveRelics[relic.RelicId]=nil
-	awardRelicPayout(carrier,spec,1,relic.RewardMultiplier)
+	awardRelicPayout(carrier,spec,1,relic.RewardMultiplier,relic.GemMultiplier)
 	Tower.BroadcastAt(RelicStateRemote,relic,relic.RelicId,relic.TierId,event,carrier.UserId,0)
 	destroyRelicInstance(relic)
 end
@@ -406,7 +423,7 @@ function RelicService.StoreCarriedRelic(carrier: Player, location: any?): boolea
 	local event = if loc and type(loc.FloorId) == "number" and loc.FloorId > 0 then "EXTRACT_SAFE_ZONE" else "EXTRACT_PRIVATE"
 	CarrierToRelic[carrier] = nil
 	ActiveRelics[relic.RelicId] = nil
-	awardRelicPayout(carrier, spec, 1, relic.RewardMultiplier)
+	awardRelicPayout(carrier, spec, 1, relic.RewardMultiplier, relic.GemMultiplier)
 	Tower.BroadcastAt(RelicStateRemote, relic, relic.RelicId, relic.TierId, event, carrier.UserId, 0)
 	destroyRelicInstance(relic)
 	return true
