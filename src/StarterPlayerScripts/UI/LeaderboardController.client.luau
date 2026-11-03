@@ -34,7 +34,10 @@ screenGui.Name = "CustomLeaderboardGui"
 screenGui.ResetOnSpawn = false
 screenGui.DisplayOrder = 8
 screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-screenGui.ScreenInsets = Enum.ScreenInsets.CoreUISafeInsets
+-- Not inset below Roblox's top bar, so the leaderboard can sit in it, right side (HudApp places it
+-- inside GuiService.TopbarInset, clear of Roblox's buttons).
+screenGui.ScreenInsets = Enum.ScreenInsets.DeviceSafeInsets
+screenGui.IgnoreGuiInset = true
 screenGui.Parent = PlayerGui
 
 -- 3. Player tracking: Floor first, then Power, then name.

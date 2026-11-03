@@ -462,14 +462,14 @@ local function FacilityPanel(props: { Facility: string, Profile: any, Width: num
 	})
 
 	return e("TextButton", {
-		Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(6, 5, 10), BackgroundTransparency = 0.35, Text = "", AutoButtonColor = false, ZIndex = 20,
+		Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(6, 5, 10), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, ZIndex = 20,
 		[React.Event.Activated] = function() props.OnClose() end,
 	}, {
 		Window = Panel({
 			Class = "TextButton", Text = "", AutoButtonColor = false, -- swallows clicks so they don't reach the scrim
 			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.fromScale(0.5, 0.5),
-			Size = UDim2.new(0.94, 0, 0.9, 0),
+			Position = UDim2.new(0.5, 0, 0.5, -16), -- 24 px top and side margins, 56 px at the bottom (as ModalFit)
+			Size = UDim2.new(1, -48, 1, -80),
 			Radius = 16,
 			Rail = tone.Rail,
 			ZIndex = 21,

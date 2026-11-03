@@ -276,7 +276,7 @@ function Controller.new(gui: ScreenGui, getProfile: () -> any, remotes: Instance
 	self.Scrim = new("Frame", {
 		Name = "FortressTreeScrim",
 		BackgroundColor3 = C.Scrim,
-		BackgroundTransparency = 0.55,
+		BackgroundTransparency = 1, -- no dim behind the map
 		Size = UDim2.fromScale(1, 1),
 		Visible = false,
 		ZIndex = 50,

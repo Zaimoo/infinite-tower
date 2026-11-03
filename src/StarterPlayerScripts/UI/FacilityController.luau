@@ -2,14 +2,13 @@
 -- StarterPlayerScripts/UI/FacilityController.luau
 -- Authoritative Facility HUD featuring:
 --   1. HERO BANNER & ARTIFACT BANNER SUMMONING (Call of the Rift & Echoes of the Rift)
---   2. Dynamic 50-pull pity tracking, 1X & 10X summons, rate-up hero highlights
---   3. Summon Celebration Reveal Modal
+--   2. Banner cards with the featured hero, a per-tier roster with drop rates, pity bar, 1X & 10X summons
+--   3. Per-pull animated reveal (SummonReveal.luau)
 --   4. Support facility panels (Guard Post, Market, Training Grounds, God's Blessing) & Squad Management
 -- Matches the exact cosmic purple aesthetic with corner diamond accents, glowing borders, and responsive scaling.
 
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -23,6 +22,11 @@ local GothicBoxStyle = require(Shared:WaitForChild("Util"):WaitForChild("GothicB
 local GrimoireIcons = require(Shared:WaitForChild("Util"):WaitForChild("GrimoireIcons"))
 local GrimoireSummonButton = require(Shared:WaitForChild("Util"):WaitForChild("GrimoireSummonButton"))
 local GildedGrimoire = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GildedGrimoire"))
+local HeroCard = require(script.Parent:WaitForChild("HeroCard"))
+local ModalFit = require(script.Parent:WaitForChild("ModalFit"))
+local Theme = require(script.Parent:WaitForChild("Hud"):WaitForChild("Theme"))
+local SummonReveal = require(script.Parent:WaitForChild("SummonReveal"))
+local UIFeel = require(script.Parent:WaitForChild("UIFeel"))
 
 local RemotesFolder = ReplicatedStorage:WaitForChild("Remotes")
 local ArtifactRemotes = RemotesFolder:FindFirstChild("ArtifactRemotes") :: Folder?
@@ -51,15 +55,6 @@ local C = {
 	Red = Color3.fromRGB(239, 68, 68),
 	Arrow = Color3.fromRGB(140, 130, 160),
 	Underline = Color3.fromRGB(225, 150, 245),
-}
-
-local ARTIFACT_ICONS: { [string]: string } = {
-	BOW = "🏹",
-	SWORD_SHIELD = "🛡️",
-	DAGGERS = "🗡️",
-	AXE = "🪓",
-	TOME = "📖",
-	STAFF = "🪄",
 }
 
 local DETAILS = {
@@ -158,7 +153,7 @@ function Controller.new(gui: ScreenGui, getProfile: () -> any, remotes: Instance
 		Text = "",
 		AutoButtonColor = false,
 		BackgroundColor3 = C.Scrim,
-		BackgroundTransparency = 0.35,
+		BackgroundTransparency = 1, -- no dim behind the window; still catches outside clicks
 		Size = UDim2.fromScale(1, 1),
 		Visible = false,
 		ZIndex = 50,
@@ -296,263 +291,240 @@ function Controller.new(gui: ScreenGui, getProfile: () -> any, remotes: Instance
 	-- 8. Summon Reveal Modal
 	self:BuildSummonRevealModal(gui)
 
-	-- Responsive scale tracking
-	local function resize()
-		local cam = Workspace.CurrentCamera
-		if not cam then return end
-		local v = cam.ViewportSize
-		self.Scale.Scale = math.clamp(math.min((v.X - 20) / WIDTH, (v.Y - 40) / HEIGHT), 0.45, 1)
-	end
-	local camConn: RBXScriptConnection? = nil
-	local function track()
-		if camConn then camConn:Disconnect() end
-		if Workspace.CurrentCamera then
-			camConn = Workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(resize)
-		end
-		resize()
-	end
-	Workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(track)
-	track()
+	-- Fit the window inside the safe area (below the top bar, clear of the bottom edge).
+	ModalFit.Bind(root, self.Scale, WIDTH, HEIGHT)
 
 	return self
 end
 
 --============================================================================
--- SECTION 1: PERMANENT BANNER VIEW ("CALL OF THE RIFT" - 5 STARS)
+-- SECTION 1: HERO BANNER VIEWS ("CALL OF THE RIFT" 1★–5★, "A STAR'S ARRIVAL" 1★–7★)
 --============================================================================
 
-function Controller:BuildPermanentSummonView(root: Frame)
-	local permView = new("Frame", {
-		Name = "PermanentSummonView",
-		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(16, 72),
-		Size = UDim2.new(1, -32, 1, -82),
-		Visible = false,
-		ZIndex = 52,
-	}, root)
-	self.PermanentSummonView = permView
+-- Per-banner look. Both views share one builder; portraits are built lazily the first time a
+-- view is shown, so each view owns at most eight hero viewports.
+local BANNER_VIEWS = {
+	CALL_OF_THE_RIFT = {
+		Name = "PermanentSummonView", Prefix = "Perm", Banner = HeroCatalog.PermanentBanner,
+		Tag = "PERMANENT HERO BANNER  ·  1★ – 5★", TitleColor = Color3.fromRGB(250, 204, 21), Stroke = Color3.fromRGB(120, 80, 0),
+		Gradient = { Color3.fromRGB(28, 19, 50), Color3.fromRGB(20, 14, 36), Color3.fromRGB(12, 9, 22) },
+	},
+	A_STARS_ARRIVAL = {
+		Name = "LimitedSummonView", Prefix = "Lim", Banner = HeroCatalog.LimitedBanner,
+		Tag = "LIMITED RATE-UP EVENT  ·  1★ – 7★", TitleColor = Color3.fromRGB(255, 220, 100), Stroke = Color3.fromRGB(140, 85, 10),
+		Gradient = { Color3.fromRGB(44, 25, 68), Color3.fromRGB(28, 16, 44), Color3.fromRGB(14, 10, 24) },
+	},
+}
 
-	-- 1. Main Featured Banner Card
-	local bannerCard = new("Frame", {
-		Name = "PermanentBannerCard",
-		Position = UDim2.fromOffset(0, 0),
-		Size = UDim2.new(1, 0, 0, 246),
-		BackgroundColor3 = Color3.fromRGB(19, 14, 34),
-		BorderSizePixel = 0,
-		ZIndex = 53,
-	}, permView)
-
-	applyGothicStyle(bannerCard, "Card")
-
-	-- Cosmic Indigo Gradient
-	new("UIGradient", {
-		Color = ColorSequence.new({
-			ColorSequenceKeypoint.new(0.0, Color3.fromRGB(28, 19, 50)),
-			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(20, 14, 36)),
-			ColorSequenceKeypoint.new(1.0, Color3.fromRGB(12, 9, 22)),
-		}),
-		Rotation = 35,
-	}, bannerCard)
-
-	-- Top Watermark
-	local watermark = label(bannerCard, "★ 5-STAR PERMANENT HERO BANNER", 15, Color3.fromRGB(230, 220, 255), Enum.Font.GothamBold)
-	watermark.TextTransparency = 0.55
-	watermark.Position = UDim2.fromOffset(24, 18)
-	watermark.Size = UDim2.new(1, -48, 0, 20)
-	watermark.TextXAlignment = Enum.TextXAlignment.Left
-
-	-- Big Glowing Banner Title
-	local bannerTitle = label(bannerCard, "CALL OF THE RIFT", 36, C.GoldYellow, Enum.Font.GothamBlack)
-	bannerTitle.AnchorPoint = Vector2.new(0, 0.5)
-	bannerTitle.Position = UDim2.new(0, 24, 0.48, -4)
-	bannerTitle.Size = UDim2.new(1, -48, 0, 44)
-	bannerTitle.TextXAlignment = Enum.TextXAlignment.Left
-	bannerTitle.TextStrokeTransparency = 0.35
-	bannerTitle.TextStrokeColor3 = Color3.fromRGB(120, 80, 0)
-
-	-- Hero Pool Available Badge
-	local poolLabel = label(bannerCard, "★ Roster: Ignis (Exalted 5★) • Valeria (Superior 4★) • Catio (Rare 3★) • Aaron (Uncommon 2★) • Han (Common 1★)", 12, Color3.fromRGB(215, 185, 255), Enum.Font.GothamBold)
-	poolLabel.AnchorPoint = Vector2.new(0, 1)
-	poolLabel.Position = UDim2.new(0, 24, 1, -22)
-	poolLabel.Size = UDim2.new(1, -48, 0, 22)
-	poolLabel.TextXAlignment = Enum.TextXAlignment.Left
-
-	-- 2. Info Row (Guaranteed 5★ Pity & Permanent Tag)
-	local infoRow = new("Frame", {
-		Name = "PermanentInfoRow",
-		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(0, 258),
-		Size = UDim2.new(1, 0, 0, 28),
-		ZIndex = 53,
-	}, permView)
-
-	local pityLabel = label(infoRow, "Guaranteed 5-Star in: <b>42</b> summons", 14, C.TextLavender, Enum.Font.GothamMedium)
-	pityLabel.Position = UDim2.fromOffset(6, 4)
-	pityLabel.Size = UDim2.new(0.5, 0, 0, 20)
-	pityLabel.TextXAlignment = Enum.TextXAlignment.Left
-	self.PermanentPityLabel = pityLabel
-
-	local timerLabel = label(infoRow, "Event: Permanent Banner", 14, C.TextLavender, Enum.Font.GothamMedium)
-	self.PermanentInfoLabel = timerLabel
-	timerLabel.AnchorPoint = Vector2.new(1, 0)
-	timerLabel.Position = UDim2.new(1, -6, 0, 4)
-	timerLabel.Size = UDim2.new(0.5, 0, 0, 20)
-	timerLabel.TextXAlignment = Enum.TextXAlignment.Right
-
-	-- 3. Summon Buttons Container (100 / 900 Gems)
-	local btnRow = new("Frame", {
-		Name = "PermanentButtonRow",
-		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(0, 296),
-		Size = UDim2.new(1, 0, 0, 76),
-		ZIndex = 53,
-	}, permView)
-
-	-- SUMMON 1X Button (100 Gems): the shared Gilded Grimoire summon button.
-	GrimoireSummonButton.new(btnRow, {
-		Name = "PermSummon1XBtn",
-		Title = "SUMMON 1X",
-		Cost = 100,
-		Position = UDim2.fromScale(0, 0),
-		Size = UDim2.new(0.485, 0, 1, 0),
-		ZIndex = 54,
-		OnClick = function()
-			self:PerformSummon("CALL_OF_THE_RIFT", 1)
-		end,
-	})
-
-	-- SUMMON 10X Button (900 Gems): the shared Gilded Grimoire summon button.
-	GrimoireSummonButton.new(btnRow, {
-		Name = "PermSummon10XBtn",
-		Title = "SUMMON 10X",
-		Cost = 900,
-		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, 0, 0, 0),
-		Size = UDim2.new(0.485, 0, 1, 0),
-		ZIndex = 54,
-		OnClick = function()
-			self:PerformSummon("CALL_OF_THE_RIFT", 10)
-		end,
-	})
+local function featuredOf(banner: any): (string, number)
+	local top = banner.MaxStar
+	return banner.FeaturedHeroId or banner.HeroesByStar[top], top
 end
 
---============================================================================
--- SECTION 2: LIMITED BANNER VIEW ("A STAR'S ARRIVAL" - 1★ TO 7★)
---============================================================================
+local function rateText(rate: number): string
+	local pct = rate * 100
+	return if pct >= 10 then string.format("%d%%", math.round(pct))
+		elseif pct >= 1 then string.format("%.1f%%", pct)
+		else (string.gsub(string.format("%.2f", pct), "0$", "")) .. "%"
+end
 
-function Controller:BuildLimitedSummonView(root: Frame)
-	local limView = new("Frame", {
-		Name = "LimitedSummonView",
+function Controller:BuildBannerView(root: Frame, key: string)
+	local def = BANNER_VIEWS[key]
+	local banner = def.Banner
+	local featuredId, topTier = featuredOf(banner)
+	local featuredSeed = HeroCatalog.Seeds[featuredId]
+	local topColor = Theme.RarityColor(topTier)
+
+	local view = new("Frame", {
+		Name = def.Name,
 		BackgroundTransparency = 1,
 		Position = UDim2.fromOffset(16, 72),
 		Size = UDim2.new(1, -32, 1, -82),
 		Visible = false,
 		ZIndex = 52,
 	}, root)
-	self.LimitedSummonView = limView
 
-	-- 1. Main Featured Banner Card
-	local bannerCard = new("Frame", {
-		Name = "LimitedBannerCard",
-		Position = UDim2.fromOffset(0, 0),
-		Size = UDim2.new(1, 0, 0, 246),
-		BackgroundColor3 = Color3.fromRGB(24, 16, 38),
+	-- 1. Banner card: title and roster on the left, the featured hero on the right.
+	local card = new("Frame", {
+		Name = def.Prefix .. "BannerCard",
+		Size = UDim2.new(1, 0, 0, 240),
+		BackgroundColor3 = def.Gradient[2],
 		BorderSizePixel = 0,
+		ClipsDescendants = true,
 		ZIndex = 53,
-	}, limView)
-
-	applyGothicStyle(bannerCard, "Card")
-
-	-- Celestial Gold / Amethyst Gradient
+	}, view)
+	applyGothicStyle(card, "Card")
 	new("UIGradient", {
 		Color = ColorSequence.new({
-			ColorSequenceKeypoint.new(0.0, Color3.fromRGB(44, 25, 68)),
-			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(28, 16, 44)),
-			ColorSequenceKeypoint.new(1.0, Color3.fromRGB(14, 10, 24)),
+			ColorSequenceKeypoint.new(0.0, def.Gradient[1]),
+			ColorSequenceKeypoint.new(0.5, def.Gradient[2]),
+			ColorSequenceKeypoint.new(1.0, def.Gradient[3]),
 		}),
 		Rotation = 35,
-	}, bannerCard)
+	}, card)
 
-	-- Top Watermark
-	local watermark = label(bannerCard, "★ 7-STAR LIMITED RATE-UP EVENT", 15, Color3.fromRGB(255, 235, 180), Enum.Font.GothamBold)
-	watermark.TextTransparency = 0.50
-	watermark.Position = UDim2.fromOffset(24, 18)
-	watermark.Size = UDim2.new(1, -48, 0, 20)
-	watermark.TextXAlignment = Enum.TextXAlignment.Left
+	-- Featured hero: a rarity-coloured halo behind a large portrait, with a name plate.
+	local halo = new("Frame", {
+		Name = "FeaturedHalo", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(1, -118, 0, 112),
+		Size = UDim2.fromOffset(250, 250), BackgroundColor3 = topColor, BackgroundTransparency = 0.82, BorderSizePixel = 0, ZIndex = 54,
+	}, card)
+	new("UICorner", { CornerRadius = UDim.new(1, 0) }, halo)
+	new("UIGradient", { Transparency = NumberSequence.new(0, 0.6), Rotation = 90 }, halo)
+	local featuredHost = new("Frame", {
+		Name = "FeaturedPortrait", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -18, 0, 10),
+		Size = UDim2.fromOffset(200, 196), BackgroundTransparency = 1, ZIndex = 55,
+	}, card)
+	local plate = new("Frame", {
+		Name = "FeaturedPlate", AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(1, -118, 1, -10),
+		Size = UDim2.fromOffset(196, 28), BackgroundColor3 = Color3.fromRGB(14, 10, 22), BorderSizePixel = 0, ZIndex = 57,
+	}, card)
+	new("UICorner", { CornerRadius = UDim.new(1, 0) }, plate)
+	stroke(plate, topColor, 1.6)
+	local plateLabel = label(plate, string.format("%s  ·  %s %d★", featuredSeed and featuredSeed.DisplayName or "Featured",
+		HeroCatalog.RarityName(topTier), topTier), 13, topColor, Enum.Font.GothamBold)
+	plateLabel.Size = UDim2.fromScale(1, 1)
+	plateLabel.ZIndex = 58
 
-	-- Big Glowing Banner Title
-	local bannerTitle = label(bannerCard, "A STAR'S ARRIVAL", 36, Color3.fromRGB(255, 220, 100), Enum.Font.GothamBlack)
-	bannerTitle.AnchorPoint = Vector2.new(0, 0.5)
-	bannerTitle.Position = UDim2.new(0, 24, 0.48, -4)
-	bannerTitle.Size = UDim2.new(1, -48, 0, 44)
-	bannerTitle.TextXAlignment = Enum.TextXAlignment.Left
-	bannerTitle.TextStrokeTransparency = 0.35
-	bannerTitle.TextStrokeColor3 = Color3.fromRGB(140, 85, 10)
+	local tag = label(card, def.Tag, 13, Color3.fromRGB(230, 220, 255), Enum.Font.GothamBold)
+	tag.TextTransparency = 0.35
+	tag.Position = UDim2.fromOffset(22, 16)
+	tag.Size = UDim2.new(1, -270, 0, 18)
+	tag.TextXAlignment = Enum.TextXAlignment.Left
+	tag.ZIndex = 56
 
-	-- Featured Rate-Up Pill Label (1★ to 7★)
-	local rateUpLabel = label(bannerCard, "★ Featured: Astrea (Mythical 7★) • Solaris (Legendary 6★) • Archon (Exalted 5★) • Morrigan • Eolka • Velkist • Jenna", 12, Color3.fromRGB(255, 215, 150), Enum.Font.GothamBold)
-	rateUpLabel.AnchorPoint = Vector2.new(0, 1)
-	rateUpLabel.Position = UDim2.new(0, 24, 1, -22)
-	rateUpLabel.Size = UDim2.new(1, -48, 0, 22)
-	rateUpLabel.TextXAlignment = Enum.TextXAlignment.Left
+	local title = label(card, banner.Title, 36, def.TitleColor, Enum.Font.GothamBlack)
+	title.Position = UDim2.fromOffset(22, 40)
+	title.Size = UDim2.new(1, -270, 0, 44)
+	title.TextXAlignment = Enum.TextXAlignment.Left
+	title.TextStrokeTransparency = 0.35
+	title.TextStrokeColor3 = def.Stroke
+	title.ZIndex = 56
 
-	-- 2. Info Row (Guaranteed 7★ Pity & Timer)
-	local infoRow = new("Frame", {
-		Name = "LimitedInfoRow",
-		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(0, 258),
-		Size = UDim2.new(1, 0, 0, 28),
-		ZIndex = 53,
-	}, limView)
+	local blurb = label(card, string.format("Featured: <b>%s</b>, %s %d★. Every hero below can drop.",
+		featuredSeed and featuredSeed.DisplayName or "Hero", HeroCatalog.RarityName(topTier), topTier), 13, C.TextLavender, Enum.Font.GothamMedium)
+	blurb.Position = UDim2.fromOffset(22, 88)
+	blurb.Size = UDim2.new(1, -270, 0, 18)
+	blurb.TextXAlignment = Enum.TextXAlignment.Left
+	blurb.ZIndex = 56
 
-	local pityLabel = label(infoRow, "Guaranteed 7-Star in: <b>42</b> summons", 14, Color3.fromRGB(255, 230, 180), Enum.Font.GothamMedium)
-	pityLabel.Position = UDim2.fromOffset(6, 4)
-	pityLabel.Size = UDim2.new(0.5, 0, 0, 20)
+	-- Roster strip: one portrait chip per tier (highest first) with its drop rate.
+	local strip = new("Frame", {
+		Name = "RosterStrip", Position = UDim2.fromOffset(18, 118), Size = UDim2.new(1, -262, 0, 112),
+		BackgroundTransparency = 1, ZIndex = 56,
+	}, card)
+	new("UIListLayout", {
+		FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder,
+		VerticalAlignment = Enum.VerticalAlignment.Bottom,
+	}, strip)
+	local chipSize = if banner.MaxStar > 5 then 54 else 66
+	local portraitHosts: { { Host: Frame, TemplateId: string, Tier: number } } = {}
+	for tier = banner.MaxStar, 1, -1 do
+		local id = banner.HeroesByStar[tier]
+		local seed = HeroCatalog.Seeds[id]
+		local color = Theme.RarityColor(tier)
+		local cell = new("Frame", {
+			Name = "Tier" .. tier, LayoutOrder = banner.MaxStar - tier, Size = UDim2.fromOffset(chipSize, chipSize + 38),
+			BackgroundTransparency = 1, ZIndex = 56,
+		}, strip)
+		local host = new("Frame", {
+			Name = "Portrait", Size = UDim2.fromOffset(chipSize, chipSize), BackgroundColor3 = color:Lerp(Color3.fromRGB(10, 6, 16), 0.75),
+			BorderSizePixel = 0, ClipsDescendants = true, ZIndex = 57,
+		}, cell)
+		new("UICorner", { CornerRadius = UDim.new(0, 10) }, host)
+		new("UIStroke", { Color = color, Thickness = if tier == topTier then 2.6 else 1.8, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, host)
+		table.insert(portraitHosts, { Host = host, TemplateId = id, Tier = tier })
+		local nameLbl = label(cell, seed and seed.DisplayName or "?", 12, color, Enum.Font.GothamBold)
+		nameLbl.Position = UDim2.fromOffset(-6, chipSize + 2)
+		nameLbl.Size = UDim2.new(1, 12, 0, 16)
+		nameLbl.ZIndex = 57
+		local rate = label(cell, rateText(banner.Rates[tier] or 0), 11, C.TextMuted, Enum.Font.GothamMedium)
+		rate.Position = UDim2.fromOffset(-6, chipSize + 19)
+		rate.Size = UDim2.new(1, 12, 0, 15)
+		rate.ZIndex = 57
+	end
+
+	-- 2. Pity row: text and a progress bar on the left, the Blessing badge and 10x rule on the right.
+	local pityLabel = label(view, "", 14, C.TextLavender, Enum.Font.GothamMedium)
+	pityLabel.Position = UDim2.fromOffset(6, 250)
+	pityLabel.Size = UDim2.new(0.58, 0, 0, 20)
 	pityLabel.TextXAlignment = Enum.TextXAlignment.Left
-	self.LimitedPityLabel = pityLabel
+	local pityTrack, pityFill = GildedGrimoire.Bar(view, topColor)
+	pityTrack.Position = UDim2.fromOffset(6, 276)
+	pityTrack.Size = UDim2.new(0.58, 0, 0, 12)
+	pityTrack.ZIndex = 53
+	pityFill.ZIndex = 54
+	pityFill.Size = UDim2.fromScale(0, 1)
 
-	local timerLabel = label(infoRow, "Event Ends: 14d 00h", 14, Color3.fromRGB(255, 205, 130), Enum.Font.GothamMedium)
-	self.LimitedInfoLabel = timerLabel
-	timerLabel.AnchorPoint = Vector2.new(1, 0)
-	timerLabel.Position = UDim2.new(1, -6, 0, 4)
-	timerLabel.Size = UDim2.new(0.5, 0, 0, 20)
-	timerLabel.TextXAlignment = Enum.TextXAlignment.Right
+	local infoLabel = label(view, "", 14, C.TextLavender, Enum.Font.GothamMedium)
+	infoLabel.AnchorPoint = Vector2.new(1, 0)
+	infoLabel.Position = UDim2.new(1, -6, 0, 250)
+	infoLabel.Size = UDim2.new(0.4, 0, 0, 20)
+	infoLabel.TextXAlignment = Enum.TextXAlignment.Right
+	local guarantee = label(view, string.format("10x guarantees a %s or better hero", HeroCatalog.RarityName(banner.TenPullMinTier)), 12, C.TextMuted, Enum.Font.GothamMedium)
+	guarantee.AnchorPoint = Vector2.new(1, 0)
+	guarantee.Position = UDim2.new(1, -6, 0, 272)
+	guarantee.Size = UDim2.new(0.4, 0, 0, 18)
+	guarantee.TextXAlignment = Enum.TextXAlignment.Right
 
-	-- 3. Summon Buttons Container (100 / 900 Gems)
+	-- 3. Status line (refusals, busy) and the two summon buttons (100 / 900 Gems).
+	local status = label(view, "", 13, C.TextMuted, Enum.Font.GothamMedium)
+	status.Position = UDim2.fromOffset(6, 296)
+	status.Size = UDim2.new(1, -12, 0, 20)
+
 	local btnRow = new("Frame", {
-		Name = "LimitedButtonRow",
+		Name = def.Prefix .. "ButtonRow",
 		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(0, 296),
-		Size = UDim2.new(1, 0, 0, 76),
+		Position = UDim2.fromOffset(0, 322),
+		Size = UDim2.new(1, 0, 0, 84),
 		ZIndex = 53,
-	}, limView)
+	}, view)
+	local buttons = {}
+	for i, count in { 1, 10 } do
+		local b = GrimoireSummonButton.new(btnRow, {
+			Name = string.format("%sSummon%dXBtn", def.Prefix, count),
+			Title = string.format("SUMMON %dX", count),
+			Cost = if count == 10 then 900 else 100,
+			AnchorPoint = Vector2.new(i - 1, 0),
+			Position = UDim2.fromScale(i - 1, 0),
+			Size = UDim2.new(0.485, 0, 1, 0),
+			ZIndex = 54,
+			OnClick = function()
+				self:PerformSummon(key, count)
+			end,
+		})
+		-- Hover/press spring, click sound and haptic come from UIFeel.
+		buttons[count] = b
+	end
 
-	-- SUMMON 1X Button (100 Gems): the shared Gilded Grimoire summon button.
-	GrimoireSummonButton.new(btnRow, {
-		Name = "LimSummon1XBtn",
-		Title = "SUMMON 1X",
-		Cost = 100,
-		Position = UDim2.fromScale(0, 0),
-		Size = UDim2.new(0.485, 0, 1, 0),
-		ZIndex = 54,
-		OnClick = function()
-			self:PerformSummon("A_STARS_ARRIVAL", 1)
-		end,
-	})
+	self.BannerViews = self.BannerViews or {}
+	self.BannerViews[key] = {
+		View = view, Pity = pityLabel, PityFill = pityFill, Info = infoLabel, Status = status, Buttons = buttons,
+		FeaturedHost = featuredHost, FeaturedId = featuredId, TopTier = topTier, Portraits = portraitHosts, PortraitsBuilt = false,
+	}
+	return view
+end
 
-	-- SUMMON 10X Button (900 Gems): the shared Gilded Grimoire summon button.
-	GrimoireSummonButton.new(btnRow, {
-		Name = "LimSummon10XBtn",
-		Title = "SUMMON 10X",
-		Cost = 900,
-		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, 0, 0, 0),
-		Size = UDim2.new(0.485, 0, 1, 0),
-		ZIndex = 54,
-		OnClick = function()
-			self:PerformSummon("A_STARS_ARRIVAL", 10)
-		end,
-	})
+-- Builds a view's hero portraits the first time it is shown.
+function Controller:EnsureBannerPortraits(key: string)
+	local bv = self.BannerViews and self.BannerViews[key]
+	if not bv or bv.PortraitsBuilt then return end
+	bv.PortraitsBuilt = true
+	HeroCard.Portrait(bv.FeaturedHost, { TemplateId = bv.FeaturedId, Stars = bv.TopTier })
+	for _, p in bv.Portraits do
+		HeroCard.Portrait(p.Host, { TemplateId = p.TemplateId, Stars = p.Tier })
+	end
+end
+
+function Controller:BuildPermanentSummonView(root: Frame)
+	self.PermanentSummonView = self:BuildBannerView(root, "CALL_OF_THE_RIFT")
+	self.PermanentPityLabel = self.BannerViews.CALL_OF_THE_RIFT.Pity
+	self.PermanentInfoLabel = self.BannerViews.CALL_OF_THE_RIFT.Info
+end
+
+function Controller:BuildLimitedSummonView(root: Frame)
+	self.LimitedSummonView = self:BuildBannerView(root, "A_STARS_ARRIVAL")
+	self.LimitedPityLabel = self.BannerViews.A_STARS_ARRIVAL.Pity
+	self.LimitedInfoLabel = self.BannerViews.A_STARS_ARRIVAL.Info
 end
 
 --============================================================================
@@ -618,180 +590,37 @@ function Controller:BuildGeneralFacilityView(root: Frame)
 end
 
 --============================================================================
--- SUMMON REVEAL CELEBRATION MODAL
+-- SUMMON REVEAL (one animated beat per pull; see SummonReveal.luau)
 --============================================================================
 
 function Controller:BuildSummonRevealModal(gui: ScreenGui)
-	local revealScrim = new("TextButton", {
-		Name = "SummonRevealScrim",
-		Text = "",
-		AutoButtonColor = false,
-		BackgroundColor3 = C.Scrim,
-		BackgroundTransparency = 0.25,
-		Size = UDim2.fromScale(1, 1),
-		Visible = false,
-		ZIndex = 80,
-	}, gui)
-	self.RevealScrim = revealScrim
-	-- Gilded Grimoire theme: convert this screen's legacy Gotham text (now and as it is rebuilt).
-	GildedGrimoire.Watch(revealScrim)
-
-	local modal = new("Frame", {
-		Name = "SummonRevealModal",
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(0.5, 0.5),
-		Size = UDim2.fromOffset(680, 440),
-		BackgroundColor3 = C.Panel,
-		BorderSizePixel = 0,
-		ZIndex = 81,
-	}, revealScrim)
-	self.RevealModal = modal
-
-	applyGothicStyle(modal, "Window")
-
-	local revealTitle = label(modal, "DIMENSIONAL HEROES SUMMONED", 20, C.GoldYellow, Enum.Font.GothamBlack)
-	revealTitle.Position = UDim2.new(0, 0, 0, 20)
-	revealTitle.Size = UDim2.new(1, 0, 0, 28)
-	self.RevealTitle = revealTitle
-
-	local cardScroll = new("ScrollingFrame", {
-		Name = "RevealScroll",
-		BackgroundTransparency = 1,
-		BorderSizePixel = 0,
-		Position = UDim2.fromOffset(24, 64),
-		Size = UDim2.new(1, -48, 1, -140),
-		ScrollBarThickness = 4,
-		ScrollBarImageColor3 = C.Border,
-		AutomaticCanvasSize = Enum.AutomaticSize.Y,
-		CanvasSize = UDim2.fromScale(0, 0),
-		ZIndex = 82,
-	}, modal)
-	self.RevealScroll = cardScroll
-
-	new("UIListLayout", {
-		SortOrder = Enum.SortOrder.LayoutOrder,
-		Padding = UDim.new(0, 8),
-	}, cardScroll)
-
-	local collectBtn = new("TextButton", {
-		Name = "CollectBtn",
-		AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5, 0, 1, -22),
-		Size = UDim2.fromOffset(220, 42),
-		BackgroundColor3 = Color3.fromRGB(28, 22, 44),
-		BorderSizePixel = 0,
-		Text = "COLLECT & CONTINUE",
-		Font = Enum.Font.GothamBold,
-		TextSize = 14,
-		TextColor3 = C.GoldYellow,
-		ZIndex = 82,
-	}, modal)
-	applyGothicStyle(collectBtn, "Button")
-
-	collectBtn.Activated:Connect(function()
-		self.RevealScrim.Visible = false
-	end)
+	self.Reveal = SummonReveal.new(gui)
 end
 
-function Controller:ShowSummonResults(summonedList: { any }, isArtifact: boolean?)
-	for _, child in self.RevealScroll:GetChildren() do
-		if child:IsA("GuiObject") then child:Destroy() end
+-- `ownedBefore` is the set of hero templates owned before the pull (for the NEW badge).
+function Controller:ShowSummonResults(summonedList: { any }, bannerId: string, ownedBefore: { [string]: boolean })
+	local seen = table.clone(ownedBefore)
+	self.Reveal:Play(summonedList, false, {
+		IsNew = function(hero: any): boolean
+			local id = hero.TemplateId
+			if not id or seen[id] then return false end
+			seen[id] = true -- two copies in one 10x: only the first is NEW
+			return true
+		end,
+		Cost1 = 100,
+		Cost10 = 900,
+		OnAgain = function(count: number)
+			self:PerformSummon(bannerId, count)
+		end,
+	})
+end
+
+local function ownedTemplates(profile: any): { [string]: boolean }
+	local owned = {}
+	for _, h in (profile and profile.Heroes) or {} do
+		if h.TemplateId then owned[h.TemplateId] = true end
 	end
-
-	self.RevealTitle.Text = isArtifact and "DIMENSIONAL ARTIFACTS SUMMONED" or "DIMENSIONAL HEROES SUMMONED"
-
-	for order, item in ipairs(summonedList) do
-		local card = new("Frame", {
-			Name = "ResultCard_" .. order,
-			Size = UDim2.new(1, 0, 0, 72),
-			BackgroundColor3 = C.CardBg,
-			BorderSizePixel = 0,
-			LayoutOrder = order,
-			ZIndex = 83,
-		}, self.RevealScroll)
-		new("UICorner", { CornerRadius = UDim.new(0, 6) }, card)
-		stroke(card, C.BorderCard, 1)
-
-		if isArtifact then
-			local art = item
-			local iconChar = ARTIFACT_ICONS[art.Type] or "⚔️"
-			local iconTile = new("Frame", {
-				AnchorPoint = Vector2.new(0, 0.5),
-				Position = UDim2.new(0, 12, 0.5, 0),
-				Size = UDim2.fromOffset(48, 48),
-				BackgroundColor3 = Color3.fromRGB(18, 15, 28),
-				BorderSizePixel = 0,
-				ZIndex = 84,
-			}, card)
-			new("UICorner", { CornerRadius = UDim.new(0, 6) }, iconTile)
-			stroke(iconTile, C.BorderCard)
-
-			local iconLbl = label(iconTile, iconChar, 22, C.Text)
-			iconLbl.Position = UDim2.fromScale(0, 0)
-			iconLbl.Size = UDim2.fromScale(1, 1)
-			iconLbl.TextXAlignment = Enum.TextXAlignment.Center
-
-			local stars = string.rep("★", art.Star or 1)
-			local nameText = string.format("%s  <font color=\"#FACC15\">%s</font>", art.DisplayName or "Artifact", stars)
-			local nameLbl = label(card, nameText, 15, C.Text, Enum.Font.GothamBold)
-			nameLbl.Position = UDim2.fromOffset(72, 12)
-			nameLbl.Size = UDim2.new(1, -90, 0, 22)
-			nameLbl.TextXAlignment = Enum.TextXAlignment.Left
-
-			local subText = string.format("Level +%d  •  Tier %d  •  Equippable Weapon", art.Level or 0, art.Rarity or 1)
-			local subLbl = label(card, subText, 13, C.TextLavender, Enum.Font.GothamMedium)
-			subLbl.Position = UDim2.fromOffset(72, 36)
-			subLbl.Size = UDim2.new(1, -90, 0, 18)
-			subLbl.TextXAlignment = Enum.TextXAlignment.Left
-		else
-			local hero = item
-			local archetype = hero.Archetype or "Striker"
-
-			local iconTile = new("Frame", {
-				AnchorPoint = Vector2.new(0, 0.5),
-				Position = UDim2.new(0, 12, 0.5, 0),
-				Size = UDim2.fromOffset(48, 48),
-				BackgroundColor3 = Color3.fromRGB(18, 15, 28),
-				BorderSizePixel = 0,
-				ZIndex = 84,
-			}, card)
-			new("UICorner", { CornerRadius = UDim.new(0, 6) }, iconTile)
-			stroke(iconTile, C.BorderCard)
-
-			-- Drawn archetype icon (Gilded Grimoire), not an emoji.
-			local archIcon = GrimoireIcons.Create(archetype, 40, iconTile, 85)
-			archIcon.AnchorPoint = Vector2.new(0.5, 0.5)
-			archIcon.Position = UDim2.fromScale(0.5, 0.5)
-
-			local stars = string.rep("★", hero.Stars or 1)
-			local starColor = "#FACC15"
-			if hero.Stars == 7 then
-				starColor = "#E0B0FF"
-			elseif hero.Stars == 6 then
-				starColor = "#FFD700"
-			elseif hero.Stars == 5 then
-				starColor = "#C084FC"
-			elseif hero.Stars == 4 then
-				starColor = "#60A5FA"
-			elseif hero.Stars == 3 then
-				starColor = "#34D399"
-			end
-			local nameText = string.format("%s  <font color=\"%s\">%s</font>  <font color=\"#9CA3AF\" size=\"12\">[%s]</font>", hero.DisplayName or "Hero", starColor, stars, archetype)
-			local nameLbl = label(card, nameText, 15, C.Text, Enum.Font.GothamBold)
-			nameLbl.Position = UDim2.fromOffset(72, 12)
-			nameLbl.Size = UDim2.new(1, -90, 0, 22)
-			nameLbl.TextXAlignment = Enum.TextXAlignment.Left
-
-			local trait = hero.PassiveTrait or "Combat Ready"
-			local subText = string.format("HP: %d  |  ATK: %d  •  %s", math.round(hero.BaseHP or 100), math.round(hero.BaseATK or 10), trait)
-			local subLbl = label(card, subText, 12, C.TextLavender, Enum.Font.GothamMedium)
-			subLbl.Position = UDim2.fromOffset(72, 36)
-			subLbl.Size = UDim2.new(1, -90, 0, 18)
-			subLbl.TextXAlignment = Enum.TextXAlignment.Left
-		end
-	end
-
-	self.RevealScrim.Visible = true
+	return owned
 end
 
 --============================================================================
@@ -831,18 +660,42 @@ function Controller:SetSummonTab(tab: "CALL_OF_THE_RIFT" | "A_STARS_ARRIVAL")
 
 	self.PermanentSummonView.Visible = isCall
 	self.LimitedSummonView.Visible = not isCall
+	self:EnsureBannerPortraits(tab)
 	self:Refresh()
+end
+
+-- A refused summon: the button row shakes, the status line pops, error sound and haptic.
+function Controller:DenySummon(bannerId: string)
+	local bv = self.BannerViews and self.BannerViews[bannerId]
+	if not bv then return end
+	local row = bv.Buttons[1] and bv.Buttons[1].Root.Parent
+	UIFeel.Deny(if row and row:IsA("GuiObject") then row else nil)
+	UIFeel.Pop(bv.Status, 0.12)
+end
+
+-- Shows a line under a banner's pity row: refusals in red, everything else muted.
+function Controller:SetSummonStatus(bannerId: string, text: string, isError: boolean?)
+	local bv = self.BannerViews and self.BannerViews[bannerId]
+	if not bv then return end
+	bv.Status.Text = text
+	bv.Status.TextColor3 = if isError then C.Red else C.TextMuted
 end
 
 function Controller:PerformSummon(bannerId: string, count: number)
 	if self.Busy then return end
 	local profile = self.GetProfile()
 	local cost = (count == 10) and 900 or 100
-	if not profile or not profile.Currencies or (profile.Currencies.Gems or 0) < cost then
+	local gems = profile and profile.Currencies and profile.Currencies.Gems or 0
+	if gems < cost then
+		self:SetSummonStatus(bannerId, string.format("You need %d Gems for this summon (you have %d).", cost, math.floor(gems)), true)
+		self:DenySummon(bannerId)
 		return
 	end
 
+	local ownedBefore = ownedTemplates(profile)
 	self.Busy = true
+	self:SetSummonStatus(bannerId, "Opening the rift…")
+	self:Refresh()
 	task.spawn(function()
 		local ok, result = pcall(function()
 			return self.Summon:InvokeServer(count, nil, bannerId)
@@ -850,13 +703,14 @@ function Controller:PerformSummon(bannerId: string, count: number)
 		self.Busy = false
 		if ok and result and result.Success then
 			self.LastSummoned = result.Summoned or {}
-			if result.PermanentPityRemaining and self.PermanentPityLabel then
-				self.PermanentPityLabel.Text = string.format("Guaranteed Exalted Ignis in: <b>%d</b> summons", result.PermanentPityRemaining)
-			end
-			if result.LimitedPityRemaining and self.LimitedPityLabel then
-				self.LimitedPityLabel.Text = string.format("Guaranteed Mythical Astrea in: <b>%d</b> summons", result.LimitedPityRemaining)
-			end
-			self:ShowSummonResults(self.LastSummoned, false)
+			self:SetSummonStatus(bannerId, "")
+			self:ShowSummonResults(self.LastSummoned, bannerId, ownedBefore)
+		elseif ok then
+			self:SetSummonStatus(bannerId, tostring(result and result.Message or "The summon was refused."), true)
+			self:DenySummon(bannerId)
+		else
+			self:SetSummonStatus(bannerId, "Couldn't reach the server. Try again.", true)
+			self:DenySummon(bannerId)
 		end
 		self:Refresh()
 	end)
@@ -865,7 +719,7 @@ end
 function Controller:Close()
 	self.Root.Visible = false
 	self.Scrim.Visible = false
-	self.RevealScrim.Visible = false
+	self.Reveal:Close()
 	if _G.UpdateBottomTabHighlights then
 		_G.UpdateBottomTabHighlights()
 	end
@@ -891,7 +745,9 @@ function Controller:Open(facility: string)
 	self.LimitedSummonView.Visible = isSummon and (self.ActiveSummonTab == "A_STARS_ARRIVAL")
 	self.GeneralFacilityView.Visible = not isSummon
 
-	if not isSummon then
+	if isSummon then
+		self:EnsureBannerPortraits(self.ActiveSummonTab)
+	else
 		local info = DETAILS[facility]
 		self.HeaderTitle.Text = info.Title
 		self.HeaderTitle.TextColor3 = info.Color
@@ -921,20 +777,25 @@ function Controller:Refresh()
 	self.GemCurrency.Text = string.format("%d Gems", math.floor(gems))
 
 	if self.Current == "Summoning" then
-		-- Update Permanent Banner Pity
-		local permMax = HeroCatalog.PermanentBanner.MaxPity
-		local permPity = profile and (profile.HeroPermanentPity or profile.HeroBannerPity) or 0
-		local permRemaining = math.max(1, permMax - (permPity % permMax))
-		if self.PermanentPityLabel then
-			self.PermanentPityLabel.Text = string.format("Guaranteed Exalted Ignis in: <b>%d</b> summons", permRemaining)
-		end
-
-		-- Update Limited Banner Pity
-		local limMax = HeroCatalog.LimitedBanner.MaxPity
-		local limPity = profile and profile.HeroLimitedPity or 0
-		local limRemaining = math.max(1, limMax - (limPity % limMax))
-		if self.LimitedPityLabel then
-			self.LimitedPityLabel.Text = string.format("Guaranteed Mythical Astrea in: <b>%d</b> summons", limRemaining)
+		-- Pity text and bar, and the buttons' affordability / busy state, per banner.
+		local pityCount = {
+			CALL_OF_THE_RIFT = profile and (profile.HeroPermanentPity or profile.HeroBannerPity) or 0,
+			A_STARS_ARRIVAL = profile and profile.HeroLimitedPity or 0,
+		}
+		for key, bv in self.BannerViews do
+			local banner = BANNER_VIEWS[key].Banner
+			local featuredId, topTier = featuredOf(banner)
+			local seed = HeroCatalog.Seeds[featuredId]
+			local done = pityCount[key] % banner.MaxPity
+			bv.Pity.Text = string.format("Guaranteed %s %s in <b>%d</b> summons", HeroCatalog.RarityName(topTier),
+				seed and seed.DisplayName or "hero", math.max(1, banner.MaxPity - done))
+			TweenService:Create(bv.PityFill, TweenInfo.new(0.3, Enum.EasingStyle.Quad), { Size = UDim2.fromScale(done / banner.MaxPity, 1) }):Play()
+			for count, b in bv.Buttons do
+				local cost = if count == 10 then 900 else 100
+				b.TitleLabel.Text = if self.Busy then "SUMMONING…" else string.format("SUMMON %dX", count)
+				b.CostLabel.TextColor3 = if gems >= cost then Color3.new(1, 1, 1) else C.Red
+				b.Root.AutoButtonColor = false
+			end
 		end
 
 		-- God's Blessing badge: the luck the server applies to the next pull.
@@ -950,7 +811,7 @@ function Controller:Refresh()
 			end
 			luck = SummonLuck.Luck(blessing.Level, sumLabor, FortressTree.PerkBonuses(profile.FortressTree).BlessingLuck)
 		end
-		local badge = if luck > 0 then string.format("Blessing +%.1f%% luck", luck * 100) else "10x guarantees a Rare or better hero"
+		local badge = if luck > 0 then string.format("<font color=\"#FFE296\">Blessing +%.1f%% luck</font>", luck * 100) else "No Blessing luck active"
 		if self.PermanentInfoLabel then self.PermanentInfoLabel.Text = badge end
 		if self.LimitedInfoLabel then self.LimitedInfoLabel.Text = badge end
 		return

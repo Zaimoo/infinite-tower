@@ -14,6 +14,7 @@ local player = Players.LocalPlayer
 local floors = require(RS.Shared.Config.TowerFloorConfig)
 local mobs = require(RS.Shared.Config.MobCatalog)
 local GothicBoxStyle = require(RS.Shared.Util.GothicBoxStyle)
+local ModalFit = require(script.Parent:WaitForChild("ModalFit"))
 local GildedGrimoire = require(RS.Shared.Util.GildedGrimoire)
 local GrimoireIcons = require(RS.Shared.Util.GrimoireIcons)
 local remotes = RS:WaitForChild("Remotes"):WaitForChild("TowerRemotes")
@@ -85,7 +86,7 @@ local scrim = new("TextButton", {
 	Text = "",
 	AutoButtonColor = false,
 	BackgroundColor3 = Color3.fromRGB(6, 4, 10),
-	BackgroundTransparency = 0.45,
+	BackgroundTransparency = 1,
 	Size = UDim2.fromScale(1, 1),
 	Visible = false,
 	ZIndex = 38,
@@ -109,22 +110,8 @@ GildedGrimoire.Watch(panel)
 
 local scale = new("UIScale", { Scale = 1.0 }, panel)
 
-local function fit()
-	local camera = workspace.CurrentCamera
-	if camera then
-		local vp = camera.ViewportSize
-		local targetW, targetH = 830, 560
-		local scaleX = (vp.X - 24) / targetW
-		local scaleY = (vp.Y - 24) / targetH
-		local finalScale = math.clamp(math.min(scaleX, scaleY), 0.48, 1.0)
-		scale.Scale = finalScale
-	end
-end
-fit()
-workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(fit)
-if workspace.CurrentCamera then
-	workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(fit)
-end
+-- Fit the selector inside the safe area (below the top bar, clear of the bottom edge).
+ModalFit.Bind(panel, scale, 830, 560, { MinScale = 0.48 })
 
 local function closeSelector()
 	panel.Visible = false

@@ -4,18 +4,25 @@ Screens and HUD pieces that still need a rework pass. Move an item to **Done** w
 
 ## Open
 
-### Summon Heroes
-Better UI, a reveal animation per pull instead of a simple alert, and general Roblox UI polish.
+### Assets for the feel layer
+The code is wired; the art and audio are not uploaded. Fill the slots in `UI/UIAssets.luau` from `docs/ui/UI_ASSET_REQUESTS.md`. Until then the UI is silent (apart from the click) and uses drawn fallbacks.
 
-### Squad UI
-The Squad screen has no stats overview, doesn't show the equipped weapon, and is missing other relevant hero details.
-
-### Synthesis
-Make it two columns:
-- **Left:** a big card for the selected hero, with a way to select or change that hero.
-- **Right:** the heroes to synthesize with.
+### Window close transitions
+Windows pop in through `ModalFit`, but still vanish instantly on close. Each controller's `Close` would need to wait for a shrink tween first.
 
 ## Done
+
+### UI feel layer and reveal polish (2026-11-03)
+Hover and press springs, click sounds and haptics on every button, window open pops, refusal shakes, animated toasts, the offline reward count-up, and a richer per-pull reveal (tease, card flip, star pops, NEW badge, jackpot effects, AGAIN buttons). The Forge artifact banner uses the same reveal now. See `PHASE_5_REACT_UI_AND_MENUS.md`, Slice 2.
+
+### Summon Heroes (2026-11-03)
+The banner card shows the featured hero, a per-tier roster with drop rates and a pity bar. Each pull now plays its own reveal (rift orb, rarity flash, card flip; rarer pulls get rays and more pulses), with SKIP and a 10x results grid (`UI/SummonReveal.luau`). Unaffordable or refused summons say why. See `PHASE_5_REACT_UI_AND_MENUS.md`, Slice 2.
+
+### Squad UI (2026-11-03)
+Down to 900 × 560, with a Hero Details panel: stats overview, the equipped weapon, level and EXP, assignment, stamina and trait. Slot cards show the weapon too.
+
+### Synthesis (2026-11-03)
+Two columns: a big recipient card with SELECT / CHANGE HERO on the left, the material heroes on the right.
 
 ### Squad Status HUD (2026-11-03)
 It is now a pull-up drawer (`Components.SquadDrawer`, `PHASE_5_REACT_UI_AND_MENUS.md` §2.2a). Collapsed, it is a compact portrait strip with a hover or tap tooltip. Expanding turns the strip into the detailed card and collapsing turns it back, so only one squad view is ever on screen.

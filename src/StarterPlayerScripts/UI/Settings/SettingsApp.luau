@@ -493,7 +493,7 @@ local function SettingsApp()
 			AutoButtonColor = false,
 			Text = "",
 			BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-			BackgroundTransparency = 0.45,
+			BackgroundTransparency = 1,
 			Size = UDim2.fromScale(1, 1),
 			ZIndex = 1,
 			[React.Event.Activated] = function()

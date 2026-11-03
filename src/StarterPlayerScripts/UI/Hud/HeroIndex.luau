@@ -345,14 +345,14 @@ local function HeroIndex(props: { Profile: any, Width: number, OnClose: () -> ()
 	return e("Frame", {
 		Size = UDim2.fromScale(1, 1),
 		BackgroundColor3 = Color3.fromRGB(6, 5, 10),
-		BackgroundTransparency = 0.35,
+		BackgroundTransparency = 1,
 		Active = true,
 		ZIndex = 20,
 	}, {
 		Window = Panel({
 			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.fromScale(0.5, 0.5),
-			Size = UDim2.new(0.92, 0, 0.88, 0),
+			Position = UDim2.new(0.5, 0, 0.5, -16), -- 24 px top and side margins, 56 px at the bottom (as ModalFit)
+			Size = UDim2.new(1, -48, 1, -80),
 			Radius = 16,
 			Active = true,
 		}, {

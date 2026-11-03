@@ -2,8 +2,9 @@
 -- StarterPlayerScripts/UI/SynthesisController.luau
 -- Focused Synthesis HUD opened from the Synthesis chamber's [F] prompt.
 -- Layout:
---   * Top: Recipient hero card, name, level preview, live animated XP bar.
---   * Center: Heroes roster panel (Image 2 style) with sorting (Power/Stars/Level),
+--   * Left column: a big card for the recipient (the hero being levelled), with SELECT / CHANGE HERO,
+--     its name, level preview and live animated XP bar.
+--   * Right column: the material heroes to synthesize with, sortable (Power/Stars/Level),
 --     "READY ONLY" filter, and cards displaying power, archetype, stars, and facility chips.
 --   * Multi-select materials with no 5-hero limit.
 --   * Deployed, facility-assigned, equipped, locked, coma, and recipient heroes are protected.
@@ -11,10 +12,10 @@
 
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local HeroCard = require(script.Parent:WaitForChild("HeroCard"))
+local ModalFit = require(script.Parent:WaitForChild("ModalFit"))
 local Theme = require(script.Parent:WaitForChild("Hud"):WaitForChild("Theme"))
 local GothicBoxStyle = require(Shared:WaitForChild("Util"):WaitForChild("GothicBoxStyle"))
 local GildedGrimoire = require(Shared:WaitForChild("Util"):WaitForChild("GildedGrimoire"))
@@ -25,8 +26,9 @@ local PitBalanceConfig = require(Shared:WaitForChild("Config"):WaitForChild("Pit
 local Synth = {}
 Synth.__index = Synth
 
-local WIDTH, HEIGHT = 980, 668
-local CARD_W, CARD_H = 138, 178
+local WIDTH, HEIGHT = 920, 600
+local LEFT_W = 300 -- recipient column; the materials roster fills the rest
+local CARD_W, CARD_H = 124, 160
 local Z = 40
 local INK = GildedGrimoire.Ink
 local TEXT = GildedGrimoire.Text
@@ -330,7 +332,7 @@ function Synth.new(gui: ScreenGui, remote: RemoteFunction)
 
 	self.Scrim = new("TextButton", {
 		Name = "SynthesisScrim", Text = "", AutoButtonColor = false, BackgroundColor3 = C.Scrim,
-		BackgroundTransparency = 0.45, Size = UDim2.fromScale(1, 1), Visible = false, ZIndex = Z - 2,
+		BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Visible = false, ZIndex = Z - 2,
 	}, gui)
 
 	local root = new("TextButton", {
@@ -362,74 +364,74 @@ function Synth.new(gui: ScreenGui, remote: RemoteFunction)
 
 	GothicBoxStyle.CreateCloseButton(root, function() if not self.Busy then self:Close() end end)
 
-	-- Top Recipient Hero Panel
+	-- LEFT COLUMN: the recipient as a big card, with a button to select or change it.
 	local recipientPanel = new("Frame", {
-		Name = "RecipientPanel", Position = UDim2.fromOffset(20, 62), Size = UDim2.new(1, -40, 0, 126),
+		Name = "RecipientPanel", Position = UDim2.fromOffset(16, 62), Size = UDim2.fromOffset(LEFT_W, 474),
 		BorderSizePixel = 0, ZIndex = Z,
 	}, root)
 	GildedGrimoire.Frame(recipientPanel, { Class = "Panel", Tone = "Deep", ZIndex = Z })
 	self.RecipientPanel = recipientPanel
 
-	-- Recipient Slot Card
+	local recipHeading = label(recipientPanel, "Title", {
+		Position = UDim2.fromOffset(14, 8), Size = UDim2.new(1, -28, 0, 20), TextSize = 16,
+		TextXAlignment = Enum.TextXAlignment.Left, Text = "HERO TO LEVEL UP", ZIndex = Z + 2,
+	})
+	gold(recipHeading)
+
+	-- Big portrait card; clicking it opens the hero picker too.
 	local recipCard = new("TextButton", {
 		Name = "RecipientSlot", Text = "", AutoButtonColor = false, BorderSizePixel = 0,
-		Position = UDim2.fromOffset(14, 10), Size = UDim2.fromOffset(88, 106), ZIndex = Z + 2,
+		Position = UDim2.fromOffset(12, 34), Size = UDim2.new(1, -24, 0, 232), ZIndex = Z + 2,
 	}, recipientPanel)
 	GildedGrimoire.Frame(recipCard, { Class = "Card", Tone = "Violet", ZIndex = Z + 2 })
 	local recipRail = GildedGrimoire.StateStroke(recipCard) :: UIStroke
 
 	local recipPortrait = new("Frame", {
-		Name = "PortraitHost", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 8), Size = UDim2.fromOffset(68, 68),
+		Name = "PortraitHost", Position = UDim2.fromOffset(8, 8), Size = UDim2.new(1, -16, 1, -16),
 		BackgroundColor3 = Color3.fromRGB(14, 10, 22), ClipsDescendants = true, ZIndex = Z + 3,
 	}, recipCard)
 	new("UICorner", { CornerRadius = UDim.new(0, 10) }, recipPortrait)
-	local recipRing = new("UIStroke", { Color = INK, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, recipPortrait)
+	local recipRing = new("UIStroke", { Color = INK, Thickness = 2.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, recipPortrait)
 
 	local recipPlus = label(recipPortrait, "Title", {
-		Size = UDim2.fromScale(1, 1), TextSize = 34, TextColor3 = TEXT.Muted, Text = "+", ZIndex = Z + 4,
+		Size = UDim2.new(1, 0, 1, -30), TextSize = 64, TextColor3 = TEXT.Muted, Text = "+", ZIndex = Z + 4,
+	})
+	local recipHint = label(recipPortrait, "Body", {
+		AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 0, 1, -28), Size = UDim2.new(1, 0, 0, 18),
+		TextSize = 13, TextColor3 = TEXT.Muted, Text = "Choose a hero to level up", ZIndex = Z + 4,
 	})
 
 	local recipArch = new("Frame", {
-		AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(0.5, 40, 0, 80), Size = UDim2.fromOffset(22, 22),
+		AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -6, 1, -6), Size = UDim2.fromOffset(36, 36),
 		BackgroundTransparency = 1, ZIndex = Z + 6,
 	}, recipCard)
-
-	local recipBtnLabel = label(recipCard, "Title", {
-		Position = UDim2.fromOffset(4, 82), Size = UDim2.new(1, -8, 0, 18), TextSize = 11, TextColor3 = TEXT.Parchment, Text = "SELECT", ZIndex = Z + 4,
-	})
 
 	recipCard.Activated:Connect(function()
 		if self.Busy then return end
 		self:OpenPicker("RECIPIENT")
 	end)
 
-	self.RecipientSlot = {
-		Card = recipCard, Rail = recipRail, Portrait = recipPortrait, Ring = recipRing,
-		Plus = recipPlus, Arch = recipArch, ArchRendered = "", BtnLabel = recipBtnLabel,
-		HeroUUID = nil :: string?, Rendered = "__UNSET__",
-	}
-
-	-- Recipient Details & Stats
+	-- Recipient details: name, rarity line, level preview, live XP bar and the EXP summary.
 	self.RecipientName = label(recipientPanel, "Title", {
-		Position = UDim2.fromOffset(116, 12), Size = UDim2.fromOffset(400, 22),
-		TextSize = 18, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = TEXT.Parchment, Text = "No Recipient Selected", ZIndex = Z + 2,
+		Position = UDim2.fromOffset(14, 272), Size = UDim2.new(1, -28, 0, 24),
+		TextSize = 20, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = TEXT.Parchment, Text = "No Hero Selected", ZIndex = Z + 2,
 	})
 	gold(self.RecipientName)
 
 	self.RecipientInfo = label(recipientPanel, "Body", {
-		Position = UDim2.fromOffset(116, 36), Size = UDim2.fromOffset(400, 16),
-		TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = TEXT.Muted, Text = "Tap slot to choose a hero to level up", ZIndex = Z + 2,
+		Position = UDim2.fromOffset(14, 298), Size = UDim2.new(1, -28, 0, 16),
+		TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = TEXT.Muted, Text = "", ZIndex = Z + 2,
 	})
 
 	self.LevelLabel = label(recipientPanel, "Title", {
-		AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -18, 0, 12), Size = UDim2.fromOffset(360, 22),
-		TextSize = 16, TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = TEXT.Parchment, Text = "Lv. —", ZIndex = Z + 2,
+		Position = UDim2.fromOffset(14, 318), Size = UDim2.new(1, -28, 0, 20),
+		TextSize = 15, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = TEXT.Parchment, Text = "Lv. —", ZIndex = Z + 2,
 	})
 
 	-- Live XP Bar
 	local bar = new("Frame", {
 		Name = "XPBar", BackgroundColor3 = Color3.fromRGB(12, 10, 18), BorderSizePixel = 0, ClipsDescendants = true,
-		Position = UDim2.fromOffset(116, 58), Size = UDim2.new(1, -134, 0, 18), ZIndex = Z + 2,
+		Position = UDim2.fromOffset(14, 342), Size = UDim2.new(1, -28, 0, 18), ZIndex = Z + 2,
 	}, recipientPanel)
 	new("UICorner", { CornerRadius = UDim.new(0, 4) }, bar)
 	new("UIStroke", { Color = INK, Thickness = 1.8, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, bar)
@@ -444,38 +446,55 @@ function Synth.new(gui: ScreenGui, remote: RemoteFunction)
 	})
 
 	self.SummaryLine = label(recipientPanel, "Body", {
-		Position = UDim2.fromOffset(116, 82), Size = UDim2.new(1, -134, 0, 36),
-		TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = TEXT.Muted,
-		Text = "Tap heroes below to select materials for EXP.", ZIndex = Z + 2,
+		Position = UDim2.fromOffset(14, 366), Size = UDim2.new(1, -28, 0, 44), TextWrapped = true,
+		TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, TextColor3 = TEXT.Muted,
+		Text = "", ZIndex = Z + 2,
 	})
 
-	-- Center Roster Panel (Image 2 style)
+	local pickBtn, pickLabel = button(recipientPanel, "Gold", "SELECT HERO", {
+		Name = "SelectRecipientButton", AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -14),
+		Size = UDim2.new(1, -28, 0, 42), ZIndex = Z + 2,
+	})
+	pickBtn.Activated:Connect(function()
+		if self.Busy then return end
+		self:OpenPicker("RECIPIENT")
+	end)
+
+	self.RecipientSlot = {
+		Card = recipCard, Rail = recipRail, Portrait = recipPortrait, Ring = recipRing,
+		Plus = recipPlus, Hint = recipHint, Arch = recipArch, ArchRendered = "",
+		Button = pickBtn, BtnLabel = pickLabel,
+		HeroUUID = nil :: string?, Rendered = "__UNSET__",
+	}
+
+	-- RIGHT COLUMN: material heroes to synthesize with.
 	local rosterPanel = new("Frame", {
-		Name = "RosterPanel", Position = UDim2.fromOffset(20, 196), Size = UDim2.new(1, -40, 0, 400),
+		Name = "RosterPanel", Position = UDim2.fromOffset(16 + LEFT_W + 10, 62), Size = UDim2.new(1, -(16 + LEFT_W + 10 + 16), 0, 474),
 		BorderSizePixel = 0, ZIndex = Z,
 	}, root)
 	GildedGrimoire.Frame(rosterPanel, { Class = "Panel", Tone = "Deep", ZIndex = Z })
 	self.RosterPanel = rosterPanel
 
 	self.RosterHeader = label(rosterPanel, "Title", {
-		Position = UDim2.fromOffset(18, 10), Size = UDim2.fromOffset(470, 24), TextSize = 18,
-		TextXAlignment = Enum.TextXAlignment.Left, Text = "HEROES", ZIndex = Z + 2,
+		Position = UDim2.fromOffset(14, 8), Size = UDim2.fromOffset(250, 20), TextSize = 16,
+		TextXAlignment = Enum.TextXAlignment.Left, Text = "MATERIALS", ZIndex = Z + 2,
 	})
 	gold(self.RosterHeader)
 
 	-- Sort and filter chips (Power, Stars, Level, Ready Only)
 	local controls = new("Frame", {
-		AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 8), Size = UDim2.fromOffset(430, 28),
+		AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -12, 0, 6), Size = UDim2.fromOffset(290, 24),
 		BackgroundTransparency = 1, ZIndex = Z + 2,
 	}, rosterPanel)
 	new("UIListLayout", {
 		FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Right,
-		Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder, VerticalAlignment = Enum.VerticalAlignment.Center,
+		Padding = UDim.new(0, 5), SortOrder = Enum.SortOrder.LayoutOrder, VerticalAlignment = Enum.VerticalAlignment.Center,
 	}, controls)
 
 	self.SortButtons = {}
 	for order, key in { "Power", "Stars", "Level" } do
-		local b, l = button(controls, "Slate", string.upper(key), { LayoutOrder = order, Size = UDim2.fromOffset(78, 28), ZIndex = Z + 3 })
+		local b, l = button(controls, "Slate", string.upper(key), { LayoutOrder = order, Size = UDim2.fromOffset(58, 24), ZIndex = Z + 3 })
+		l.TextSize = 11
 		b.Activated:Connect(function()
 			self.Sort = key :: Sort
 			self:Render()
@@ -483,7 +502,8 @@ function Synth.new(gui: ScreenGui, remote: RemoteFunction)
 		self.SortButtons[key] = { Button = b, Label = l }
 	end
 
-	local fb, fl = button(controls, "Slate", "READY ONLY", { LayoutOrder = 4, Size = UDim2.fromOffset(120, 28), ZIndex = Z + 3 })
+	local fb, fl = button(controls, "Slate", "READY ONLY", { LayoutOrder = 4, Size = UDim2.fromOffset(92, 24), ZIndex = Z + 3 })
+	fl.TextSize = 11
 	fb.Activated:Connect(function()
 		self.ReadyOnly = not self.ReadyOnly
 		self:Render()
@@ -491,31 +511,31 @@ function Synth.new(gui: ScreenGui, remote: RemoteFunction)
 	self.FilterButton = { Button = fb, Label = fl }
 
 	self.RosterScroll = new("ScrollingFrame", {
-		Name = "RosterScroll", Position = UDim2.fromOffset(12, 42), Size = UDim2.new(1, -24, 1, -50),
-		BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 6,
+		Name = "RosterScroll", Position = UDim2.fromOffset(8, 36), Size = UDim2.new(1, -16, 1, -42),
+		BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 5,
 		ScrollBarImageColor3 = Color3.fromRGB(240, 196, 110), ScrollingDirection = Enum.ScrollingDirection.Y,
 		AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), ZIndex = Z + 2,
 	}, rosterPanel)
-	new("UIPadding", { PaddingTop = UDim.new(0, 8), PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 18), PaddingBottom = UDim.new(0, 8) }, self.RosterScroll)
+	new("UIPadding", { PaddingTop = UDim.new(0, 8), PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 12), PaddingBottom = UDim.new(0, 8) }, self.RosterScroll)
 	new("UIGridLayout", {
-		CellSize = UDim2.fromOffset(CARD_W, CARD_H), CellPadding = UDim2.fromOffset(12, 12),
+		CellSize = UDim2.fromOffset(CARD_W, CARD_H), CellPadding = UDim2.fromOffset(10, 10),
 		SortOrder = Enum.SortOrder.LayoutOrder,
 	}, self.RosterScroll)
 
 	self.EmptyLabel = label(rosterPanel, "Body", {
-		Position = UDim2.fromOffset(0, 60), Size = UDim2.new(1, 0, 1, -68), TextSize = 15, TextColor3 = TEXT.Muted,
+		Position = UDim2.fromOffset(16, 60), Size = UDim2.new(1, -32, 1, -68), TextSize = 14, TextWrapped = true, TextColor3 = TEXT.Muted,
 		Text = "No material heroes available.", Visible = false, ZIndex = Z + 3,
 	})
 
 	-- Footer: Status message, Clear selection, Confirm Synthesize button
 	self.Status = label(root, "Body", {
-		Position = UDim2.fromOffset(24, 608), Size = UDim2.new(1, -420, 0, 48), TextSize = 13,
+		Position = UDim2.fromOffset(22, 546), Size = UDim2.new(1, -410, 0, 42), TextSize = 13,
 		TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true, TextColor3 = TEXT.Muted, ZIndex = Z + 2, Text = "",
 	})
 
 	local clearBtn, clearLabel = button(root, "Slate", "CLEAR", {
 		Name = "ClearButton",
-		AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -236, 0, 608), Size = UDim2.fromOffset(130, 44), ZIndex = Z + 2,
+		AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -232, 0, 546), Size = UDim2.fromOffset(130, 40), ZIndex = Z + 2,
 	})
 	clearBtn.Activated:Connect(function()
 		if self.Busy then return end
@@ -531,28 +551,16 @@ function Synth.new(gui: ScreenGui, remote: RemoteFunction)
 
 	local confirmBtn, confirmLabel = button(root, "Action", "CONFIRM SYNTHESIZE", {
 		Name = "ConfirmButton",
-		AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -20, 0, 608), Size = UDim2.fromOffset(210, 44), ZIndex = Z + 2,
+		AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 546), Size = UDim2.fromOffset(206, 40), ZIndex = Z + 2,
 	})
 	confirmBtn.Activated:Connect(function() self:Confirm() end)
 	self.ConfirmButton = { Button = confirmBtn, Label = confirmLabel }
 
 	self:BuildPicker()
 
-	local function resize()
-		local cam = Workspace.CurrentCamera
-		if not cam then return end
-		local v = cam.ViewportSize
-		self.Scale.Scale = math.clamp(math.min((v.X - 24) / WIDTH, (v.Y - 60 - 64) / HEIGHT), 0.45, 1)
-		root.Position = UDim2.new(0.5, 0, 0.5, 32)
-	end
-	local camConn: RBXScriptConnection? = nil
-	local function track()
-		if camConn then camConn:Disconnect() end
-		if Workspace.CurrentCamera then camConn = Workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(resize) end
-		resize()
-	end
-	Workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(track)
-	track()
+	-- Fit the window inside the safe area. The Pit's tab bar sits in Roblox's top bar (React HUD), so no
+	-- space is reserved above the window; on large screens it grows up to 1.25x.
+	ModalFit.Bind(root, self.Scale, WIDTH, HEIGHT, { MaxScale = 1.25 })
 
 	self:Render()
 	return self
@@ -686,7 +694,7 @@ function Synth.RenderPicker(self: any)
 end
 
 --============================================================================
--- ROSTER CARD (Center Panel Cards, Image 2 style)
+-- MATERIAL CARD (right column)
 --============================================================================
 
 function Synth.BuildRosterCard(self: any, hero: any): any
@@ -698,7 +706,7 @@ function Synth.BuildRosterCard(self: any, hero: any): any
 	local rail = GildedGrimoire.StateStroke(card) :: UIStroke
 
 	local portraitHost = new("Frame", {
-		Name = "PortraitHost", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 8), Size = UDim2.fromOffset(84, 84),
+		Name = "PortraitHost", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 8), Size = UDim2.fromOffset(76, 76),
 		BackgroundColor3 = Color3.fromRGB(14, 10, 22), ClipsDescendants = true, ZIndex = Z + 3,
 	}, card)
 	new("UICorner", { CornerRadius = UDim.new(0, 12) }, portraitHost)
@@ -706,7 +714,7 @@ function Synth.BuildRosterCard(self: any, hero: any): any
 	HeroCard.Portrait(portraitHost, hero)
 
 	local arch = new("Frame", {
-		AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(0.5, 50, 0, 98), Size = UDim2.fromOffset(26, 26),
+		AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(0.5, 46, 0, 90), Size = UDim2.fromOffset(24, 24),
 		BackgroundTransparency = 1, ZIndex = Z + 7,
 	}, card)
 
@@ -715,24 +723,24 @@ function Synth.BuildRosterCard(self: any, hero: any): any
 	})
 
 	local name = label(card, "Title", {
-		Position = UDim2.fromOffset(4, 98), Size = UDim2.new(1, -8, 0, 18), TextScaled = true, Text = "", ZIndex = Z + 5,
+		Position = UDim2.fromOffset(4, 88), Size = UDim2.new(1, -8, 0, 17), TextScaled = true, Text = "", ZIndex = Z + 5,
 	})
-	new("UITextSizeConstraint", { MaxTextSize = 14 }, name)
+	new("UITextSizeConstraint", { MaxTextSize = 13 }, name)
 
 	local info = label(card, "Body", {
-		Position = UDim2.fromOffset(4, 116), Size = UDim2.new(1, -8, 0, 16), TextSize = 12, Text = "", ZIndex = Z + 5,
+		Position = UDim2.fromOffset(4, 105), Size = UDim2.new(1, -8, 0, 14), TextSize = 11, Text = "", ZIndex = Z + 5,
 	})
 
 	local power = label(card, "Number", {
-		Position = UDim2.fromOffset(4, 134), Size = UDim2.new(1, -8, 0, 18), TextSize = 14, TextColor3 = TEXT.Gold, Text = "", ZIndex = Z + 5,
+		Position = UDim2.fromOffset(4, 120), Size = UDim2.new(1, -8, 0, 16), TextSize = 13, TextColor3 = TEXT.Gold, Text = "", ZIndex = Z + 5,
 	})
 
 	-- "EQUIPPED" indicator at the bottom of the hero card, just below the power level
 	local equippedPill = new("Frame", {
 		Name = "EquippedPill",
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 153),
-		Size = UDim2.fromOffset(78, 18),
+		Position = UDim2.new(0.5, 0, 0, 139),
+		Size = UDim2.fromOffset(78, 16),
 		BackgroundColor3 = Color3.fromRGB(36, 22, 54),
 		BorderSizePixel = 0,
 		Visible = false,
@@ -995,16 +1003,16 @@ function Synth.Render(self: any)
 
 	local recipient = self.Recipient and (heroes[self.Recipient] or (profile and profile.Heroes and profile.Heroes[self.Recipient]))
 
-	-- 1. Render Top Recipient Slot & Details
+	-- 1. Left column: the recipient card and its details
 	local recipSlot = self.RecipientSlot
-	local recipId = recipient and recipient.UUID or nil
 	recipSlot.Plus.Visible = recipient == nil
+	recipSlot.Hint.Visible = recipient == nil
 
 	local recipKey = if recipient then recipient.UUID else "__EMPTY__"
 	if recipSlot.Rendered ~= recipKey then
 		recipSlot.Rendered = recipKey
 		for _, c in recipSlot.Portrait:GetChildren() do
-			if c:IsA("GuiObject") and c ~= recipSlot.Plus then c:Destroy() end
+			if c:IsA("GuiObject") and c ~= recipSlot.Plus and c ~= recipSlot.Hint then c:Destroy() end
 		end
 		if recipient then
 			HeroCard.Portrait(recipSlot.Portrait, recipient)
@@ -1012,9 +1020,9 @@ function Synth.Render(self: any)
 	end
 	recipSlot.ArchRendered = setArchetype(recipSlot.Arch, recipSlot.ArchRendered, recipient and recipient.Archetype)
 
-	local recipRarity = recipient and Theme.RarityColor(recipient.Stars or 1) or INK
+	local recipRarity = recipient and Theme.RarityColor(StatFormulas.GetHeroRarity(recipient)) or INK
 	recipSlot.Ring.Color = if recipient then recipRarity else INK
-	recipSlot.BtnLabel.Text = if recipient then "CHANGE" else "SELECT"
+	retone(recipSlot.Button, recipSlot.BtnLabel, if recipient then "Slate" else "Gold", if recipient then "CHANGE HERO" else "SELECT HERO")
 	recipSlot.Rail.Color = if recipient then TEXT.Gold else Color3.fromRGB(150, 138, 176)
 
 	local preview = self.Preview
@@ -1027,7 +1035,7 @@ function Synth.Render(self: any)
 	if recipient then
 		self.RecipientName.Text = recipient.DisplayName or "Hero"
 		self.RecipientInfo.Text = string.format("%s  ·  %s  ·  %s", stars(recipient.Stars), recipient.Archetype or "", abbreviate(powerOf(profile, recipient, mult)) .. " PWR")
-		self.RecipientInfo.TextColor3 = Theme.RarityColor(recipient.Stars or 1)
+		self.RecipientInfo.TextColor3 = recipRarity
 
 		local level, xp = recipient.Level or 1, recipient.XP or 0
 		local currentRatio = xpRatio(level, xp)
@@ -1059,17 +1067,17 @@ function Synth.Render(self: any)
 		elseif #self.Donors > 0 then
 			self.SummaryLine.Text = string.format("Selected %d material%s. Calculating preview…", #self.Donors, if #self.Donors == 1 then "" else "s")
 		else
-			self.SummaryLine.Text = '<font color="#A59BB9">Select material heroes from the roster below to level up.</font>'
+			self.SummaryLine.Text = '<font color="#A59BB9">Select material heroes on the right to grant EXP.</font>'
 		end
 	else
-		self.RecipientName.Text = "No Recipient Selected"
-		self.RecipientInfo.Text = "Tap the slot on the left to choose who receives EXP"
+		self.RecipientName.Text = "No Hero Selected"
+		self.RecipientInfo.Text = "Pick the hero who receives the EXP"
 		self.RecipientInfo.TextColor3 = TEXT.Muted
 		self.LevelLabel.Text = '<font color="#96929F">Lv. —</font>'
 		self.CurrentFill.Size = UDim2.fromScale(0, 1)
 		self.GainFill.Size = UDim2.fromScale(0, 1)
 		self.XPText.Text = ""
-		self.SummaryLine.Text = '<font color="#A59BB9">Tap the card above or click any hero below to select recipient.</font>'
+		self.SummaryLine.Text = '<font color="#A59BB9">Press SELECT HERO, or click a hero on the right.</font>'
 	end
 
 	-- 2. Sort / filter buttons
@@ -1078,7 +1086,7 @@ function Synth.Render(self: any)
 	end
 	retone(self.FilterButton.Button, self.FilterButton.Label, if self.ReadyOnly then "Gold" else "Slate", "READY ONLY")
 
-	-- 3. Center Roster Panel (Hero cards)
+	-- 3. Right column: material hero cards
 	local heroList = {}
 	local heroPower: { [string]: number } = {}
 	for _, h in pairs(heroes) do
@@ -1111,7 +1119,7 @@ function Synth.Render(self: any)
 	end)
 
 	local selectedCount = #self.Donors
-	self.RosterHeader.Text = string.format("HEROES  (%d)%s", #heroList,
+	self.RosterHeader.Text = string.format("MATERIALS  (%d)%s", #heroList,
 		if selectedCount > 0 then string.format("  ·  %d SELECTED", selectedCount) else "")
 
 	self.EmptyLabel.Visible = #heroList == 0
@@ -1194,7 +1202,7 @@ function Synth.Render(self: any)
 	if self.Busy then
 		retone(self.ConfirmButton.Button, self.ConfirmButton.Label, "Slate", "SYNTHESIZING…")
 	elseif self.ArmedRare then
-		retone(self.ConfirmButton.Button, self.ConfirmButton.Label, "Danger", "CONFIRM — 5★ HEROES")
+		retone(self.ConfirmButton.Button, self.ConfirmButton.Label, "Crimson", "CONFIRM — 5★ HEROES")
 	elseif ready then
 		retone(self.ConfirmButton.Button, self.ConfirmButton.Label, "Action", "CONFIRM SYNTHESIZE")
 	else

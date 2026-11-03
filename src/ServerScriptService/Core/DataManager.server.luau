@@ -880,12 +880,7 @@ RequestSummonFunc.OnServerInvoke = function(player: Player, arg1: any, arg2: any
 		_G.PlotManager.PulseBlessing(player)
 	end
 
-	local names = {}
-	for _, h in ipairs(summonedList) do
-		table.insert(names, string.format("%s (%s %d★)", h.DisplayName, HeroCatalog.RarityName(h.Rarity), h.Stars))
-	end
-	DataManager.SendToast(player, "Summoned: " .. table.concat(names, ", "), "SUCCESS")
-
+	-- No success toast: the client plays a per-pull reveal, and a toast would spoil it.
 	return {
 		Success = true,
 		Summoned = summonedList,
@@ -1214,11 +1209,7 @@ function DataManager.SummonArtifact(player: Player, pullCount: any): (boolean, s
 	DataManager.SyncProfile(player)
 
 	local pityRemaining = math.max(1, cfg.MaxPity - profile.ArtifactBannerPity)
-	local summaryNames = {}
-	for _, art in ipairs(summonedList) do
-		table.insert(summaryNames, string.format("%s (%d★)", art.DisplayName, art.Star or 1))
-	end
-	DataManager.SendToast(player, "Artifact Summoned: " .. table.concat(summaryNames, ", "), "SUCCESS")
+	-- No "Summoned: …" toast: it would spoil the client's per-pull reveal.
 	return true, "Summon successful", summonedList, pityRemaining
 end
 
