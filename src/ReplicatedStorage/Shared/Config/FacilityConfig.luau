@@ -217,9 +217,13 @@ FacilityConfig.FacilityLayout = {
 		Radius = 16,
 	},
 	SummoningPortal = {
-		Offset = Vector3.new(78, 0, -52),
-		RotationY = math.rad(-58),
-		Radius = 22,
+		Offset = Vector3.new(115.5, 0, -73.0),
+		RotationY = math.rad(-57.71),
+		Radius = 24,
+		Dimensions = Vector3.new(24.0, 26.5, 17.55), -- Width=24, Height=26.5 (below 28-stud wall), Depth=17.55 (flush in +X,-Z wall corner)
+		DoorOpenAngleDeg = 80,
+		ProximityOpenRadius = 24,
+		PromptOffset = Vector3.new(0, 2.0, 6.0),
 		PromptText = "Summon Heroes",
 		Keybind = if Enum then Enum.KeyCode.F else ("F" :: any),
 	},

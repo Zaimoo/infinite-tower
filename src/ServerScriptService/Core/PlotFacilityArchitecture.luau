@@ -215,217 +215,554 @@ local function finalizeFacilityModel(
 end
 
 --============================================================================
--- 2.1 SUMMONING PORTAL (`SummoningPortal` — Circular Stone Stargate)
+-- 2.1 SUMMONING PORTAL (`SummoningPortal` — Wall-Mounted Gothic Corner Portal)
 --============================================================================
 function Arch.BuildSummoning(folder: Instance, centerCF: CFrame): Part
+	local ReplicatedStorage = game:GetService("ReplicatedStorage")
 	local model = Instance.new("Model")
 	model.Name = "Building_Summoning"
+	model:SetAttribute("PortalState", "Closed")
 	model.Parent = folder
 
-	local darkStone = Color3.fromRGB(62, 66, 76)
-	local carvedStone = Color3.fromRGB(82, 86, 98)
-	local trimStone = Color3.fromRGB(46, 50, 58)
-	local cyanRune = Color3.fromRGB(34, 211, 238) -- #22D3EE
-	local deepCyan = Color3.fromRGB(14, 165, 233)
+	-- 4 Material Zones (Step 4)
+	local zone1Slate    = Color3.fromRGB(24, 21, 29)   -- #18151D Deep weathered slate-stone
+	local zone1Ashlar   = Color3.fromRGB(36, 32, 44)   -- Highlighted ashlar block courses
+	local zone2Obsidian = Color3.fromRGB(44, 37, 56)   -- #2C2538 Aged dark-bronze/obsidian relief
+	local zone3RuneGlow = Color3.fromRGB(34, 211, 238) -- #22D3EE Closed state seam & rune inlays
+	local zone4Vortex   = Color3.fromRGB(0, 229, 255)  -- #00E5FF Intense electric cyan vortex & conduits
+	local deepAstral    = Color3.fromRGB(13, 71, 161)  -- #0D47A1 Deep vortex outer gradient
 
-	-- Two-tier octagonal stone plinth (Diameter = 22 studs, Height = 2.5 studs)
-	cylinder(model, "PlinthTier1", 11.5, 1.2, centerCF * CFrame.new(0, 0.6, 0), trimStone, Enum.Material.Slate, true)
-	cylinder(model, "PlinthTier2", 9.6, 1.3, centerCF * CFrame.new(0, 1.85, 0), darkStone, Enum.Material.Slate, true)
-	cylinder(
-		model,
-		"PlinthRuneRing",
-		8.8,
-		0.16,
-		centerCF * CFrame.new(0, 2.54, 0),
-		cyanRune,
-		Enum.Material.Neon,
-		false
-	)
+	-- Check if imported Blender FBX MeshParts exist in ReplicatedStorage.Assets.CustomFacilityMeshes.SummoningPortal
+	local assetsFolder = ReplicatedStorage:FindFirstChild("Assets")
+	local customMeshes = assetsFolder and assetsFolder:FindFirstChild("CustomFacilityMeshes")
+	local importedTemplate = customMeshes and customMeshes:FindFirstChild("SummoningPortal")
 
-	-- Approach steps facing front (+Z of local station CFrame)
-	for step = 1, 3 do
-		local sy = step * 0.62
-		local sz = 11.2 - (step - 1) * 1.3
-		part(
-			model,
-			"PortalStep_" .. step,
-			V(8.5, 0.65, 2.0),
-			centerCF * CFrame.new(0, sy - 0.3, sz),
-			carvedStone,
-			Enum.Material.Cobblestone,
-			true
+	if importedTemplate and importedTemplate:IsA("Model") then
+		local clonedMeshModel = importedTemplate:Clone()
+		-- Imported FBX has front along -Z and rear corner wedge along +Z; rotate 180 deg so Front is +Z (facing Plot Center)
+		clonedMeshModel:PivotTo(centerCF * CFrame.Angles(0, math.pi, 0))
+
+		local frameMesh = clonedMeshModel:FindFirstChild("Portal_Frame_StaticMesh", true)
+		local doorsGroup = clonedMeshModel:FindFirstChild("Portal_Doors_ClosedMesh", true)
+		local vortexMesh = clonedMeshModel:FindFirstChild("Portal_Active_VortexMesh", true)
+
+		if doorsGroup then
+			doorsGroup.Parent = model
+			for _, leafInfo in ipairs({
+				{ Name = "Portal_Door_Left", IsLeft = true, HingeX = -5.5 },
+				{ Name = "Portal_Door_Right", IsLeft = false, HingeX = 5.5 },
+			}) do
+				local leaf = doorsGroup:FindFirstChild(leafInfo.Name, true)
+				if leaf and leaf:IsA("BasePart") then
+					leaf.Anchored = true
+					leaf.CanCollide = false
+					leaf.Material = Enum.Material.Metal
+					leaf.Color = zone2Obsidian
+
+					local closedCF = leaf.CFrame
+					local hingeCF = centerCF * CFrame.new(leafInfo.HingeX, closedCF.Position.Y - centerCF.Position.Y, 3.6)
+					local relToHinge = hingeCF:ToObjectSpace(closedCF)
+					-- Swing outwards (+Z toward courtyard): Left door (-X hinge, dx>0) uses -80 deg, Right door (+X hinge, dx<0) uses +80 deg
+					local openAngle = math.rad(if leafInfo.IsLeft then -80 else 80)
+					local openCF = (hingeCF * CFrame.Angles(0, openAngle, 0)) * relToHinge
+
+					leaf:SetAttribute("ClosedCFrame", closedCF)
+					leaf:SetAttribute("OpenCFrame", openCF)
+					leaf:SetAttribute("HingeCFrame", hingeCF)
+					leaf:SetAttribute("OpenAngleRad", openAngle)
+				end
+			end
+			-- Glowing vertical center seam between the closed MeshPart doors
+			part(doorsGroup, "CenterSeamNeon", V(0.18, 18.8, 1.12), centerCF * CFrame.new(0, 11.4, 3.70), zone4Vortex, Enum.Material.Neon, false)
+		end
+
+		if vortexMesh and vortexMesh:IsA("BasePart") then
+			vortexMesh.Anchored = true
+			vortexMesh.CanCollide = false
+			vortexMesh.Material = Enum.Material.Neon
+			vortexMesh.Color = zone4Vortex
+			vortexMesh.Transparency = 0.12
+			vortexMesh.Parent = model
+		end
+
+		if frameMesh and frameMesh:IsA("BasePart") then
+			frameMesh.Anchored = true
+			frameMesh.CanCollide = true
+			frameMesh.Material = Enum.Material.Slate
+			frameMesh.Color = zone1Ashlar
+			frameMesh.Parent = model
+		end
+
+		clonedMeshModel:Destroy()
+
+		-- Add Neon Rune Inlays, Floor Conduits & Light-Tight Backing Shield around the imported 3D MeshParts
+		local inlaysGroup = Instance.new("Folder")
+		inlaysGroup.Name = "Portal_Neon_Inlays"
+		inlaysGroup.Parent = model
+
+		-- Light-tight dark backing shield behind the vortex so players never see behind the corner wall
+		part(inlaysGroup, "BackingWallShield", V(13.2, 20.2, 0.50), centerCF * CFrame.new(0, 11.6, -2.35), zone1Slate, Enum.Material.Slate, false)
+
+		-- Central Astral Core & Crackling Lightning Ribbons inside the vortex recess
+		local vortexCenterCF = centerCF * CFrame.new(0, 11.4, -1.05)
+		local eyeCore = sphere(
+			inlaysGroup,
+			"PortalEyeCore",
+			3.8,
+			vortexCenterCF * CFrame.new(0, 0, 0.25),
+			Color3.fromRGB(224, 248, 255),
+			Enum.Material.Neon
 		)
-	end
+		eyeCore.Transparency = 0.15
+		for b = 1, 8 do
+			local angle = ((b - 1) / 8) * math.pi * 2 + 0.35
+			local rx = math.cos(angle) * 3.4
+			local ry = math.sin(angle) * 5.8
+			part(
+				inlaysGroup,
+				"VortexLightningArc_" .. b,
+				V(0.18, 4.2, 0.18),
+				vortexCenterCF * CFrame.new(rx, ry, 0.35) * CFrame.Angles(0, 0, angle + 0.65),
+				zone4Vortex,
+				Enum.Material.Neon,
+				false
+			)
+		end
 
-	-- Flanking heavy buttress pedestals supporting the stargate ring
-	for _, sx in ipairs({ -7.8, 7.8 }) do
-		part(
-			model,
-			"RingButtress",
-			V(4.2, 6.5, 5.2),
-			centerCF * CFrame.new(sx, 5.2, 0),
-			darkStone,
-			Enum.Material.Slate,
-			true
-		)
-		part(
-			model,
-			"ButtressRune",
-			V(0.5, 4.6, 5.4),
-			centerCF * CFrame.new(sx, 5.4, 0),
-			cyanRune,
+		-- Step & Side Floor Neon Conduits
+		for step = 1, 3 do
+			local idx = step - 1
+			local stepH = 0.62
+			local cy = (idx + 0.5) * stepH
+			local cz = 8.8 - idx * 1.45
+			local sw = 13.6 - idx * 0.6
+			part(inlaysGroup, "StepRuneConduit_" .. step, V(sw - 1.2, 0.14, 0.14), centerCF * CFrame.new(0, cy + 0.18, cz + 0.86), zone4Vortex, Enum.Material.Neon, false)
+		end
+		for _, sideSign in ipairs({ -1, 1 }) do
+			local conduitCF = centerCF * CFrame.new(sideSign * 8.4, 0.35, 7.4) * CFrame.Angles(0, sideSign * 0.28, 0)
+			part(inlaysGroup, "SideConduitGlow", V(0.85, 0.18, 4.0), conduitCF * CFrame.new(0, 0.38, 0), zone4Vortex, Enum.Material.Neon, false)
+			part(inlaysGroup, "PilasterRuneStrip", V(0.44, 9.8, 0.28), centerCF * CFrame.new(sideSign * 6.45, 8.2, 4.72), zone3RuneGlow, Enum.Material.Neon, false)
+			part(inlaysGroup, "SpandrelRune", V(1.4, 1.0, 0.26), centerCF * CFrame.new(sideSign * 8.2, 22.1, 4.95), zone3RuneGlow, Enum.Material.Neon, false)
+		end
+		for i = 1, 8 do
+			local a = -0.60 + ((i - 0.5) / 8) * 1.20
+			local r = 10.15
+			part(
+				inlaysGroup,
+				"ThresholdRuneArc_" .. i,
+				V(1.55, 0.16, 0.55),
+				centerCF * CFrame.new(math.sin(a) * r, 0.08, math.cos(a) * r) * CFrame.Angles(0, a, 0),
+				zone4Vortex,
+				Enum.Material.Neon,
+				false
+			)
+		end
+		for i = 1, 16 do
+			local t = (i - 0.5) / 16
+			local isRight = t <= 0.5
+			local u = if isRight then (t * 2.0) else ((1.0 - t) * 2.0)
+			local angle = u * (math.pi * 0.5)
+			local signX = if isRight then 1 else -1
+			local innerX = signX * 5.5 * (math.cos(angle) ^ 0.82)
+			local innerY = 13.5 + (21.2 - 13.5) * (math.sin(angle) ^ 0.92)
+			local outerX = signX * 9.4 * (math.cos(angle) ^ 0.82)
+			local outerY = 13.5 + (24.2 - 13.5) * (math.sin(angle) ^ 0.92)
+			local roll = math.atan2(outerY - innerY, outerX - innerX)
+			part(
+				inlaysGroup,
+				"ArchRuneTrim_" .. i,
+				V(0.45, 1.75, 0.55),
+				centerCF * CFrame.new(innerX * 1.08, innerY + 0.35, 4.82) * CFrame.Angles(0, 0, roll),
+				zone3RuneGlow,
+				Enum.Material.Neon,
+				false
+			)
+		end
+		part(inlaysGroup, "KeystoneRuneGem", V(1.1, 2.1, 0.42), centerCF * CFrame.new(0, 22.5, 5.42), zone3RuneGlow, Enum.Material.Neon, false)
+		part(inlaysGroup, "TopFriezeRuneStrip", V(18.0, 0.28, 0.26), centerCF * CFrame.new(0, 24.3, 5.10), zone3RuneGlow, Enum.Material.Neon, false)
+	else
+		-- Sub-Mesh 1 Container: Portal_Frame_StaticMesh (Procedural Fallback)
+		local frameGroup = Instance.new("Model")
+		frameGroup.Name = "Portal_Frame_StaticMesh"
+		frameGroup.Parent = model
+
+		-- 1A. Stepped Pedestal Plinth & Glowing Cyan Floor Conduits (Y = 0.0 to 2.0)
+		part(frameGroup, "PlinthTier1", V(24.0, 1.1, 13.8), centerCF * CFrame.new(0, 0.55, 0.4), zone1Slate, Enum.Material.Slate, true)
+		local plinthTop = part(frameGroup, "PlinthTier2", V(21.6, 1.0, 11.8), centerCF * CFrame.new(0, 1.50, 0.2), zone1Ashlar, Enum.Material.Slate, true)
+		frameGroup.PrimaryPart = plinthTop
+
+		-- 3 Front Approach Steps (+Z facing Courtyard & Path_FountainToPortal)
+		for step = 1, 3 do
+			local idx = step - 1
+			local stepH = 0.62
+			local cy = (idx + 0.5) * stepH
+			local cz = 8.8 - idx * 1.45
+			local sw = 13.6 - idx * 0.6
+			part(frameGroup, "PortalStep_" .. step, V(sw, stepH, 1.65), centerCF * CFrame.new(0, cy, cz), zone1Ashlar, Enum.Material.Cobblestone, true)
+			part(frameGroup, "StepRuneConduit_" .. step, V(sw - 1.2, 0.14, 0.12), centerCF * CFrame.new(0, cy + 0.12, cz + 0.84), zone4Vortex, Enum.Material.Neon, false)
+		end
+
+		-- Side Light-Channel Conduits connecting floor paths to portal base
+		for _, sideSign in ipairs({ -1, 1 }) do
+			local conduitCF = centerCF * CFrame.new(sideSign * 8.4, 0.35, 7.4) * CFrame.Angles(0, sideSign * 0.28, 0)
+			part(frameGroup, "SideConduitCurb", V(2.2, 0.70, 4.2), conduitCF, zone2Obsidian, Enum.Material.Slate, false)
+			part(frameGroup, "SideConduitGlow", V(0.85, 0.16, 4.0), conduitCF * CFrame.new(0, 0.36, 0), zone4Vortex, Enum.Material.Neon, false)
+			part(frameGroup, "PlinthLateralRune", V(0.65, 0.14, 4.8), centerCF * CFrame.new(sideSign * 7.8, 2.04, 3.8), zone4Vortex, Enum.Material.Neon, false)
+		end
+
+		-- Threshold Runic Floor Arc in front of bottom step
+		for i = 1, 8 do
+			local a = -0.60 + ((i - 0.5) / 8) * 1.20
+			local r = 10.05
+			part(
+				frameGroup,
+				"ThresholdRuneArc_" .. i,
+				V(1.55, 0.16, 0.55),
+				centerCF * CFrame.new(math.sin(a) * r, 0.08, math.cos(a) * r) * CFrame.Angles(0, a, 0),
+				zone4Vortex,
+				Enum.Material.Neon,
+				false
+			)
+		end
+
+		-- 1B. Flush Corner / Wall-Hugging Rear Masonry Housing (Z = -7.2 to -2.1)
+		part(frameGroup, "RearWallHousing", V(22.8, 24.5, 2.2), centerCF * CFrame.new(0, 12.25, -3.1), zone1Slate, Enum.Material.Slate, true)
+		part(frameGroup, "RearCornerWedgePlug", V(14.0, 24.0, 3.4), centerCF * CFrame.new(0, 12.0, -5.6), zone1Slate, Enum.Material.Slate, true)
+
+		-- 1C. Towering Gothic Buttress Piers, Engaged Columns & Coursed Ashlar Stonework (H = 26.5 studs)
+		for _, sideSign in ipairs({ -1, 1 }) do
+			local pierX = sideSign * 8.35
+			part(frameGroup, "GothicPierMain", V(5.5, 22.0, 7.0), centerCF * CFrame.new(pierX, 13.0, 1.3), zone1Slate, Enum.Material.Slate, true)
+			part(frameGroup, "GothicPierPlinth", V(6.3, 3.2, 7.4), centerCF * CFrame.new(pierX, 3.6, 1.6), zone2Obsidian, Enum.Material.Slate, true)
+			part(frameGroup, "GothicPierImpost", V(6.2, 1.1, 7.3), centerCF * CFrame.new(pierX, 13.6, 1.6), zone2Obsidian, Enum.Material.Slate, false)
+			part(frameGroup, "GothicPierCap", V(3.4, 1.4, 7.0), centerCF * CFrame.new(sideSign * 9.6, 24.4, 1.5), zone2Obsidian, Enum.Material.Slate, false)
+
+			-- Engaged Outer Gothic Column
+			local colX = sideSign * 10.65
+			part(frameGroup, "EngagedColPedestal", V(2.4, 3.6, 2.4), centerCF * CFrame.new(colX, 3.8, 4.65), zone2Obsidian, Enum.Material.Slate, false)
+			cylinder(frameGroup, "EngagedColLower", 0.92, 7.6, centerCF * CFrame.new(colX, 9.4, 4.65), zone2Obsidian, Enum.Material.Slate, false)
+			cylinder(frameGroup, "EngagedColCapital", 1.22, 1.1, centerCF * CFrame.new(colX, 13.75, 4.65), zone2Obsidian, Enum.Material.Slate, false)
+			cylinder(frameGroup, "EngagedColUpper", 0.80, 9.3, centerCF * CFrame.new(colX, 18.95, 4.65), zone2Obsidian, Enum.Material.Slate, false)
+
+			-- Recessed Vertical Rune Inlay Channel & Carved Glyphs
+			local runeX = sideSign * 6.45
+			part(frameGroup, "PilasterRuneStrip", V(0.44, 9.8, 0.25), centerCF * CFrame.new(runeX, 8.2, 4.65), zone3RuneGlow, Enum.Material.Neon, false)
+			for rIdx = 1, 7 do
+				local ry = 3.6 + (rIdx - 1) * 1.48
+				part(frameGroup, "PilasterRuneBar_" .. rIdx, V(0.72, 0.20, 0.30), centerCF * CFrame.new(runeX, ry, 4.74), zone2Obsidian, Enum.Material.Slate, false)
+			end
+
+			-- Weathered Coursed Ashlar Stone Relief Blocks
+			for course = 1, 10 do
+				local cy = 3.0 + (course - 1) * 2.05
+				local xShift = if course % 2 == 0 then 0.35 else -0.35
+				local bx = sideSign * (8.8 + xShift * 0.45)
+				part(frameGroup, "AshlarBlock_" .. course, V(2.6, 0.88, 0.45), centerCF * CFrame.new(bx, cy, 4.60), zone1Ashlar, Enum.Material.Slate, false)
+			end
+
+			-- Spandrel Gothic Tracery Medallions
+			local spX = sideSign * 8.2
+			part(frameGroup, "SpandrelFrame", V(3.2, 2.2, 0.35), centerCF * CFrame.new(spX, 22.1, 4.78), zone2Obsidian, Enum.Material.Slate, false)
+			part(frameGroup, "SpandrelRune", V(1.4, 1.0, 0.22), centerCF * CFrame.new(spX, 22.1, 4.92), zone3RuneGlow, Enum.Material.Neon, false)
+		end
+
+		-- 1D. Pointed Gothic Arch Voussoirs, Inner Soffit Vault & Apex Keystone (Y = 13.5 to 24.2)
+		local archSegments = 16
+		for i = 1, archSegments do
+			local t = (i - 0.5) / archSegments
+			local isRight = t <= 0.5
+			local u = if isRight then (t * 2.0) else ((1.0 - t) * 2.0)
+			local angle = u * (math.pi * 0.5)
+			local signX = if isRight then 1 else -1
+
+			local innerX = signX * 5.5 * (math.cos(angle) ^ 0.82)
+			local innerY = 13.5 + (21.2 - 13.5) * (math.sin(angle) ^ 0.92)
+			local outerX = signX * 9.4 * (math.cos(angle) ^ 0.82)
+			local outerY = 13.5 + (24.2 - 13.5) * (math.sin(angle) ^ 0.92)
+
+			local midX = (innerX + outerX) * 0.5
+			local midY = (innerY + outerY) * 0.5
+			local roll = math.atan2(outerY - innerY, outerX - innerX)
+			local blockCol = if i % 2 == 0 then zone2Obsidian else zone1Ashlar
+
+			part(
+				frameGroup,
+				"ArchVoussoir_" .. i,
+				V(3.8, 1.85, 6.8),
+				centerCF * CFrame.new(midX, midY, 1.4) * CFrame.Angles(0, 0, roll),
+				blockCol,
+				Enum.Material.Slate,
+				false
+			)
+			part(
+				frameGroup,
+				"ArchRuneTrim_" .. i,
+				V(0.45, 1.75, 0.52),
+				centerCF * CFrame.new(innerX * 1.08, innerY + 0.35, 4.78) * CFrame.Angles(0, 0, roll),
+				zone3RuneGlow,
+				Enum.Material.Neon,
+				false
+			)
+		end
+
+		-- Apex Keystone & Top Peaked Gothic Pediment (Y = 22.6 to 26.5)
+		part(frameGroup, "ArchKeystone", V(2.8, 3.4, 4.4), centerCF * CFrame.new(0, 22.6, 3.2), zone2Obsidian, Enum.Material.Slate, false)
+		part(frameGroup, "KeystoneRuneGem", V(1.1, 2.1, 0.38), centerCF * CFrame.new(0, 22.5, 5.38), zone3RuneGlow, Enum.Material.Neon, false)
+		part(frameGroup, "TopEntablatureBeam", V(22.4, 1.4, 7.2), centerCF * CFrame.new(0, 24.3, 1.4), zone1Slate, Enum.Material.Slate, false)
+		part(frameGroup, "TopFriezeRuneStrip", V(18.0, 0.28, 0.22), centerCF * CFrame.new(0, 24.3, 5.05), zone3RuneGlow, Enum.Material.Neon, false)
+		part(frameGroup, "PedimentCrown", V(14.0, 1.6, 6.6), centerCF * CFrame.new(0, 25.7, 1.6), zone2Obsidian, Enum.Material.Slate, false)
+
+		--========================================================================
+		-- Sub-Mesh 2: Portal_Doors_ClosedMesh (Hinged Left & Right Winged Doors)
+		--========================================================================
+		local doorsGroup = Instance.new("Model")
+		doorsGroup.Name = "Portal_Doors_ClosedMesh"
+		doorsGroup.Parent = model
+
+		local function buildWingedDoorLeaf(leafName: string, isLeft: boolean): Model
+			local leafModel = Instance.new("Model")
+			leafModel.Name = leafName
+			leafModel.Parent = doorsGroup
+
+			local sign = if isLeft then 1 else -1 -- Direction from hinge toward center seam
+			local hingeWorldCF = centerCF * CFrame.new(if isLeft then -5.5 else 5.5, 2.0, 3.6)
+
+			local hingeRoot = part(leafModel, "HingePivot", V(0.5, 18.0, 0.68), hingeWorldCF * CFrame.new(0, 9.0, 0), zone2Obsidian, Enum.Material.Slate, false)
+			hingeRoot.Transparency = 1
+			leafModel.PrimaryPart = hingeRoot
+
+			-- Store Closed and Open (80 deg outward swing) CFrames for TweenService in PortalEffectController
+			local openAngle = math.rad(if isLeft then -80 else 80)
+			leafModel:SetAttribute("ClosedCFrame", hingeRoot.CFrame)
+			leafModel:SetAttribute("OpenCFrame", hingeWorldCF * CFrame.Angles(0, openAngle, 0) * CFrame.new(0, 9.0, 0))
+
+			-- Arched Door Slab Strips
+			local doorW = 5.44
+			local strips = 4
+			for s = 1, strips do
+				local u = (s - 0.5) / strips
+				local stripW = doorW / strips + 0.05
+				local lx = sign * (u * doorW)
+				local wx = if isLeft then (-5.5 + u * doorW) else (5.5 - u * doorW)
+				local ratio = math.clamp(math.abs(wx) / 5.5, 0, 1)
+				local archAngle = math.acos(ratio ^ (1 / 0.82))
+				local stripH = (13.5 + (21.2 - 13.5) * (math.sin(archAngle) ^ 0.92)) - 2.0 - 0.15
+
+				part(
+					leafModel,
+					"DoorSlab_" .. s,
+					V(stripW, stripH, 0.68),
+					hingeWorldCF * CFrame.new(lx, stripH * 0.5, 0),
+					zone2Obsidian,
+					Enum.Material.Slate,
+					true
+				)
+			end
+
+			-- Glowing Vertical Center Seam Edge & Astragal Moulding
+			local seamX = sign * (doorW - 0.07)
+			part(leafModel, "CenterSeamNeon", V(0.14, 18.8, 0.82), hingeWorldCF * CFrame.new(seamX, 9.4, 0), zone4Vortex, Enum.Material.Neon, false)
+			part(leafModel, "CenterAstragalRune", V(0.22, 18.4, 0.22), hingeWorldCF * CFrame.new(sign * (doorW - 0.24), 9.2, 0.36), zone3RuneGlow, Enum.Material.Neon, false)
+
+			-- 3 Tiers of Sculpted Angelic / Seraph Wing Filigree + Glowing Cyan Fissures (image_88350b.jpg)
+			for tierIdx, tierBaseY in ipairs({ 1.4, 6.2, 11.4 }) do
+				for f = 1, 5 do
+					local ft = (f - 1) / 4
+					local midX = sign * (doorW * (0.72 - ft * 0.12))
+					local midY = tierBaseY + ft * 3.8 + 1.1
+					local tiltZ = sign * math.rad(34 - ft * 8)
+
+					local featherCF = hingeWorldCF * CFrame.new(midX, midY, 0.38) * CFrame.Angles(0, 0, tiltZ)
+					part(
+						leafModel,
+						string.format("WingFeather_T%d_%d", tierIdx, f),
+						V(3.2, 0.38, 0.28),
+						featherCF,
+						zone2Obsidian,
+						Enum.Material.Metal,
+						false
+					)
+					part(
+						leafModel,
+						string.format("WingFissure_T%d_%d", tierIdx, f),
+						V(2.9, 0.12, 0.20),
+						featherCF * CFrame.new(0, -0.22, -0.02),
+						zone3RuneGlow,
+						Enum.Material.Neon,
+						false
+					)
+				end
+			end
+
+			return leafModel
+		end
+
+		buildWingedDoorLeaf("Portal_Door_Left", true)
+		buildWingedDoorLeaf("Portal_Door_Right", false)
+
+		--========================================================================
+		-- Sub-Mesh 3: Portal_Active_VortexMesh (Swirling Vortex + Backing Shield)
+		--========================================================================
+		local vortexGroup = Instance.new("Model")
+		vortexGroup.Name = "Portal_Active_VortexMesh"
+		vortexGroup.Parent = model
+
+		local vortexCenterCF = centerCF * CFrame.new(0, 11.4, -1.55)
+
+		-- Light-Tight Dark Backing Wall Shield (Z = -2.15, prevents seeing behind castle wall)
+		part(vortexGroup, "BackingWallShield", V(12.6, 19.8, 0.45), centerCF * CFrame.new(0, 11.4, -2.05), zone1Slate, Enum.Material.Slate, false)
+
+		-- Central Swirling Portal Disc & Core
+		local portalDisc = part(
+			vortexGroup,
+			"PortalVortexDisc",
+			V(0.55, 18.2, 10.8),
+			vortexCenterCF * CFrame.Angles(0, math.pi * 0.5, 0),
+			deepAstral,
 			Enum.Material.Neon,
 			false
 		)
-	end
+		portalDisc.Transparency = 0.12
+		vortexGroup.PrimaryPart = portalDisc
 
-	-- Monumental Circular Stone Ring (OuterDiameter = 18 studs, InnerDiameter = 14 studs, Thickness = 3.5 studs)
-	local ringCenter = centerCF * CFrame.new(0, 11.5, 0)
-	local ringRadius = 8.0
-	local numSegments = 16
-	for i = 1, numSegments do
-		local angle = ((i - 1) / numSegments) * math.pi * 2
-		local segCF = ringCenter
-			* CFrame.new(math.cos(angle) * ringRadius, math.sin(angle) * ringRadius, 0)
-			* CFrame.Angles(0, 0, angle + math.pi * 0.5)
-
-		-- Stone ring block
-		part(
-			model,
-			"StargateBlock_" .. i,
-			V(3.6, 2.4, 3.5),
-			segCF,
-			(i % 2 == 0) and carvedStone or darkStone,
-			Enum.Material.Slate,
-			false
-		)
-
-		-- Inset neon cyan rune band carved into front & back of each block
-		part(
-			model,
-			"StargateRune_" .. i,
-			V(2.2, 0.55, 3.68),
-			segCF,
-			cyanRune,
+		local innerCore = part(
+			vortexGroup,
+			"PortalInnerCore",
+			V(0.70, 13.6, 7.8),
+			vortexCenterCF * CFrame.Angles(0, math.pi * 0.5, 0),
+			zone4Vortex,
 			Enum.Material.Neon,
 			false
 		)
+		innerCore.Transparency = 0.18
+
+		local eyeCore = sphere(
+			vortexGroup,
+			"PortalEyeCore",
+			3.8,
+			vortexCenterCF * CFrame.new(0, 0, 0.25),
+			Color3.fromRGB(224, 248, 255),
+			Enum.Material.Neon
+		)
+		eyeCore.Transparency = 0.15
+
+		-- 8 Crackling 3D Lightning Arc Ribbons inside the vortex recess
+		for b = 1, 8 do
+			local angle = ((b - 1) / 8) * math.pi * 2 + 0.35
+			local rx = math.cos(angle) * 3.4
+			local ry = math.sin(angle) * 5.8
+			part(
+				vortexGroup,
+				"VortexLightningArc_" .. b,
+				V(0.18, 4.2, 0.18),
+				vortexCenterCF * CFrame.new(rx, ry, 0.35) * CFrame.Angles(0, 0, angle + 0.65),
+				zone4Vortex,
+				Enum.Material.Neon,
+				false
+			)
+		end
 	end
 
-	-- Apex Keystone Crown on top of the Stargate Ring
-	part(
-		model,
-		"StargateKeystone",
-		V(4.4, 3.6, 4.2),
-		ringCenter * CFrame.new(0, ringRadius + 0.6, 0),
-		trimStone,
-		Enum.Material.Slate,
-		false
-	)
-	part(
-		model,
-		"KeystoneGem",
-		V(1.8, 2.2, 4.4),
-		ringCenter * CFrame.new(0, ringRadius + 0.6, 0),
-		cyanRune,
-		Enum.Material.Neon,
-		false
-	)
+	--========================================================================
+	-- Standard Sockets & VFX Instances (Step 3)
+	--========================================================================
+	local interactionPart, promptAnchor = finalizeFacilityModel(model, centerCF, V(21.6, 2.0, 11.8), V(0, 2.0, 6.0))
+	local primaryRoot = model.PrimaryPart :: Part
 
-	-- Central Swirling Portal Disc (InnerDiameter = 14 studs)
-	local portalDisc = part(
-		model,
-		"PortalVortexDisc",
-		V(0.6, 13.8, 13.8),
-		ringCenter * CFrame.Angles(0, math.pi * 0.5, 0),
-		cyanRune,
-		Enum.Material.Neon,
-		false
-	)
-	portalDisc.Shape = Enum.PartType.Cylinder
-	portalDisc.Transparency = 0.18
+	local function makeSocket(name: string, localOffset: Vector3): Attachment
+		local att = Instance.new("Attachment")
+		att.Name = name
+		att.Position = localOffset - V(0, 1.0, 0) -- Relative to PrimaryRoot center at Y = 1.0
+		att.Parent = primaryRoot
+		return att
+	end
 
-	local innerCore = part(
-		model,
-		"PortalInnerCore",
-		V(0.75, 9.2, 9.2),
-		ringCenter * CFrame.Angles(0, math.pi * 0.5, 0),
-		Color3.fromRGB(224, 248, 255),
-		Enum.Material.Neon,
-		false
-	)
-	innerCore.Shape = Enum.PartType.Cylinder
-	innerCore.Transparency = 0.28
+	local centerVFXSocket  = makeSocket("CenterVFXSocket", V(0, 11.5, 1.2))
+	local skyBeamBase      = makeSocket("SkyBeamBaseSocket", V(0, 25.0, -0.5))
+	local skyBeamTop       = makeSocket("SkyBeamTopSocket", V(0, 68.0, -0.5))
+	local _wallBackAnchor  = makeSocket("WallBackAnchor", V(0, 12.0, 0.0))
+	promptAnchor.Position  = V(0, 1.0, 6.0) -- World (0, 2.0, 6.0) relative to centerCF
 
-	-- PointLight: Color = #22D3EE, Brightness = 3, Range = 36, Shadows = true
-	pointLight(portalDisc, cyanRune, 3.0, 36, true)
+	-- PointLight on CenterVFXSocket
+	local portalLight = pointLight(centerVFXSocket, zone4Vortex, 2.4, 38, true)
+	portalLight.Name = "PortalPointLight"
 
 	-- Swirling Vortex ParticleEmitter
 	local swirlEmitter = Instance.new("ParticleEmitter")
 	swirlEmitter.Name = "PortalVortexParticles"
 	swirlEmitter.Texture = "rbxassetid://243660364"
-	swirlEmitter.Color = ColorSequence.new(Color3.fromRGB(220, 250, 255), cyanRune)
+	swirlEmitter.Color = ColorSequence.new(Color3.fromRGB(220, 250, 255), zone4Vortex)
 	swirlEmitter.LightEmission = 1
 	swirlEmitter.Size = NumberSequence.new({
 		NumberSequenceKeypoint.new(0, 2.5),
-		NumberSequenceKeypoint.new(0.5, 5.5),
-		NumberSequenceKeypoint.new(1, 1.2),
+		NumberSequenceKeypoint.new(0.5, 6.0),
+		NumberSequenceKeypoint.new(1, 1.4),
 	})
 	swirlEmitter.Transparency = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 0.7),
-		NumberSequenceKeypoint.new(0.4, 0.25),
+		NumberSequenceKeypoint.new(0, 0.65),
+		NumberSequenceKeypoint.new(0.4, 0.22),
 		NumberSequenceKeypoint.new(1, 1),
 	})
 	swirlEmitter.Lifetime = NumberRange.new(1.2, 2.0)
-	swirlEmitter.Rate = 25
-	swirlEmitter.Speed = NumberRange.new(1.5, 4.0)
-	swirlEmitter.RotSpeed = NumberRange.new(45, 90)
+	swirlEmitter.Rate = 28
+	swirlEmitter.Speed = NumberRange.new(1.5, 4.5)
+	swirlEmitter.RotSpeed = NumberRange.new(55, 110)
 	swirlEmitter.SpreadAngle = Vector2.new(35, 35)
-	swirlEmitter.Parent = portalDisc
+	swirlEmitter.Parent = centerVFXSocket
 
-	-- Upward Volumetric Light Column (Beam + Translucent Neon Shaft stretching Y = +2 to Y = +38)
+	-- Upward Volumetric Sky-Beam Column rising above the portal crown (preserving beacon column from image_882daa.jpg)
 	local volumetricShaft = cylinder(
 		model,
 		"VolumetricLightShaft",
-		7.2,
-		34.0,
-		centerCF * CFrame.new(0, 19.5, 0),
-		cyanRune,
+		5.2,
+		42.0,
+		centerCF * CFrame.new(0, 46.0, -0.5),
+		zone3RuneGlow,
 		Enum.Material.Neon,
 		false
 	)
-	volumetricShaft.Transparency = 0.84
+	volumetricShaft.Transparency = 0.88
 
-	for _, angleDeg in ipairs({ 0, 90 }) do
-		local b0 = Instance.new("Attachment")
-		b0.Position = V(0, 2.0, 0)
-		b0.Orientation = V(0, angleDeg, 0)
-		b0.Parent = model:FindFirstChild("PlinthTier2")
+	local skyBeam = Instance.new("Beam")
+	skyBeam.Name = "VolumetricSkyColumnBeam"
+	skyBeam.Attachment0 = skyBeamBase
+	skyBeam.Attachment1 = skyBeamTop
+	skyBeam.Color = ColorSequence.new(zone4Vortex, deepAstral)
+	skyBeam.LightEmission = 1
+	skyBeam.LightInfluence = 0
+	skyBeam.Width0 = 13.0
+	skyBeam.Width1 = 17.5
+	skyBeam.FaceCamera = true
+	skyBeam.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0.0, 0.42),
+		NumberSequenceKeypoint.new(0.5, 0.72),
+		NumberSequenceKeypoint.new(1.0, 1.0),
+	})
+	skyBeam.Parent = primaryRoot
 
-		local b1 = Instance.new("Attachment")
-		b1.Position = V(0, 38.0, 0)
-		b1.Orientation = V(0, angleDeg, 0)
-		b1.Parent = model:FindFirstChild("PlinthTier2")
-
-		local skyBeam = Instance.new("Beam")
-		skyBeam.Name = "VolumetricLightColumn_" .. angleDeg
-		skyBeam.Attachment0 = b0
-		skyBeam.Attachment1 = b1
-		skyBeam.Color = ColorSequence.new(cyanRune, deepCyan)
-		skyBeam.LightEmission = 1
-		skyBeam.LightInfluence = 0
-		skyBeam.Width0 = 13.5
-		skyBeam.Width1 = 18.0
-		skyBeam.FaceCamera = true
-		skyBeam.Transparency = NumberSequence.new({
-			NumberSequenceKeypoint.new(0.0, 0.42),
-			NumberSequenceKeypoint.new(0.5, 0.72),
+	-- Outward Volumetric God-Ray Beams spilling down the steps onto the courtyard floor (enabled when doors open)
+	for rayIdx = 1, 4 do
+		local spreadX = (rayIdx - 2.5) * 3.2
+		local rayTarget = makeSocket("GodRayFloorSocket_" .. rayIdx, V(spreadX, 0.15, 10.2))
+		local godRay = Instance.new("Beam")
+		godRay.Name = "GodRayBeam_" .. rayIdx
+		godRay.Attachment0 = centerVFXSocket
+		godRay.Attachment1 = rayTarget
+		godRay.Color = ColorSequence.new(zone4Vortex, zone3RuneGlow)
+		godRay.LightEmission = 1
+		godRay.LightInfluence = 0
+		godRay.Width0 = 2.4
+		godRay.Width1 = 5.8
+		godRay.FaceCamera = true
+		godRay.Enabled = false
+		godRay.Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0.0, 0.68),
+			NumberSequenceKeypoint.new(0.6, 0.85),
 			NumberSequenceKeypoint.new(1.0, 1.0),
 		})
-		skyBeam.Parent = portalDisc
+		godRay.Parent = primaryRoot
 	end
 
-	local interactionPart = finalizeFacilityModel(model, centerCF, V(18, 1.2, 18), V(0, 3.8, 10.5))
 	return interactionPart
 end
 
@@ -1215,7 +1552,7 @@ function Arch.EnsureFacilityPrefabs(): Folder
 	end
 
 	local existing = assetsFolder:FindFirstChild("PlotFacilities")
-	if existing and existing:GetAttribute("PrefabVersion") == 3 then
+	if existing and existing:GetAttribute("PrefabVersion") == 4 then
 		return existing :: Folder
 	end
 	if existing then
@@ -1224,7 +1561,7 @@ function Arch.EnsureFacilityPrefabs(): Folder
 
 	local prefabs = Instance.new("Folder")
 	prefabs.Name = "PlotFacilities"
-	prefabs:SetAttribute("PrefabVersion", 3)
+	prefabs:SetAttribute("PrefabVersion", 4)
 	prefabs.Parent = assetsFolder
 
 	local tempHolder = Instance.new("Folder")

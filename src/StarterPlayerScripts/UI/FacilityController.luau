@@ -709,6 +709,15 @@ function Controller:PerformSummon(bannerId: string, count: number)
 		self.Busy = false
 		if ok and result and result.Success then
 			self.LastSummoned = result.Summoned or {}
+			if _G.PortalEffectController and _G.PortalEffectController.TriggerSummonBurst then
+				local topPulledStars = 1
+				for _, h in ipairs(self.LastSummoned) do
+					if type(h) == "table" and (h.Stars or 1) > topPulledStars then
+						topPulledStars = h.Stars or 1
+					end
+				end
+				_G.PortalEffectController.TriggerSummonBurst(nil, topPulledStars)
+			end
 			self:SetSummonStatus(bannerId, "")
 			self:ShowSummonResults(self.LastSummoned, bannerId, ownedBefore)
 		elseif ok then

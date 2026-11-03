@@ -14,7 +14,7 @@ local OutskirtsBuilder = require(script.Parent:WaitForChild("OutskirtsEnvironmen
 local FacilityPresence = require(script.Parent:WaitForChild("FacilityPresence"))
 local FacilityConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("FacilityConfig"))
 
-local VERSION = 22 -- 22: ensure Market and Training Grounds are always baked into PlotBuildings
+local VERSION = 25 -- 25: Wall-Mounted Gothic Corner Summoning Portal with outward-opening doors
 
 local function attachPrompt(
 	parent: Instance,
