@@ -17,18 +17,10 @@ Store.Profile = nil :: any
 Store.Goal = nil :: any -- OnboardingSync.Step, or nil once the chain is complete
 Store.Revision = 0
 Store.DrawerExpanded = false -- the player's Squad drawer choice, kept for the session
-Store.Players = {} :: { any } -- leaderboard rows from LeaderboardController, sorted
-Store.LeaderboardOpen = nil :: boolean? -- the player's leaderboard choice (nil until they toggle it)
 
 local function bump()
 	Store.Revision += 1
 	changed:Fire(Store.Revision)
-end
-
--- LeaderboardController publishes { UserId, DisplayName, Name, Floor, Power, IsLocal } rows here.
-function Store.SetPlayers(rows: { any })
-	Store.Players = rows
-	bump()
 end
 
 -- HUDController merges Pit deltas into _G.CurrentProfile; read it after that handler has run.

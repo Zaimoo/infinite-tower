@@ -240,8 +240,9 @@ function SquadController.new(screenGui: ScreenGui, getProfile: () -> any, remote
 	self.Root.Activated:Connect(function() end)
 	GothicBoxStyle.Apply(self.Root, { Style = "Window" })
 	self.Scale = new("UIScale", {}, self.Root)
-	-- Fit the window inside the safe area (below the top bar, clear of the bottom edge).
-	self.Fit = ModalFit.Bind(self.Root, self.Scale, WIDTH, HEIGHT, { MinScale = 0.5 })
+	-- Fit the window inside the safe area (below the top bar, clear of the bottom edge), growing up
+	-- to 1.2x on screens with room to spare.
+	self.Fit = ModalFit.Bind(self.Root, self.Scale, WIDTH, HEIGHT, { MinScale = 0.5, MaxScale = 1.2 })
 	GothicBoxStyle.CreateCloseButton(self.Root, function() self:Close() end)
 
 	-- Header: icon, title, subtitle and the Squad Power badge
