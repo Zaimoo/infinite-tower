@@ -25,6 +25,13 @@ GildedGrimoire.Tones = table.freeze({
 	Crimson = table.freeze({ Top = Color3.fromRGB(96, 30, 40), Bottom = Color3.fromRGB(30, 10, 18), Rail = Color3.fromRGB(255, 214, 110) }),
 	Slate = table.freeze({ Top = Color3.fromRGB(34, 28, 46), Bottom = Color3.fromRGB(16, 12, 24), Rail = Color3.fromRGB(140, 130, 160) }),
 	Gold = table.freeze({ Top = Color3.fromRGB(255, 220, 110), Bottom = Color3.fromRGB(214, 128, 24), Rail = Color3.fromRGB(255, 248, 200) }),
+	-- Tier tones for world billboards (Config/BillboardThemes): relic rarity and mob tier.
+	Jade = table.freeze({ Top = Color3.fromRGB(26, 84, 40), Bottom = Color3.fromRGB(8, 28, 14), Rail = Color3.fromRGB(120, 230, 120) }),
+	Azure = table.freeze({ Top = Color3.fromRGB(24, 66, 104), Bottom = Color3.fromRGB(8, 18, 38), Rail = Color3.fromRGB(120, 220, 255) }),
+	Amber = table.freeze({ Top = Color3.fromRGB(112, 66, 16), Bottom = Color3.fromRGB(38, 18, 6), Rail = Color3.fromRGB(255, 196, 90) }),
+	Void = table.freeze({ Top = Color3.fromRGB(72, 28, 112), Bottom = Color3.fromRGB(20, 8, 38), Rail = Color3.fromRGB(210, 130, 255) }),
+	Gilded = table.freeze({ Top = Color3.fromRGB(100, 76, 22), Bottom = Color3.fromRGB(34, 22, 6), Rail = Color3.fromRGB(255, 226, 130) }),
+	Blood = table.freeze({ Top = Color3.fromRGB(116, 14, 32), Bottom = Color3.fromRGB(34, 4, 12), Rail = Color3.fromRGB(255, 214, 110) }),
 	-- Bright amethyst for generic action buttons (confirm, initiate), so they stand out from panels.
 	Action = table.freeze({ Top = Color3.fromRGB(134, 86, 204), Bottom = Color3.fromRGB(62, 36, 112), Rail = Color3.fromRGB(255, 226, 140) }),
 })
