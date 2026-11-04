@@ -3,6 +3,7 @@
 -- Every decorative part has CanCollide=false, CanQuery=false, CanTouch=false so it never
 -- obstructs HeroNavigation raycasts, pathfinding, or grounded mob spawn checks.
 local PropClearance = require(script.Parent.TowerPropClearance)
+local TowerLayout = require(game.ReplicatedStorage.Shared.Config.TowerLayout)
 local Assets = {}
 local V = Vector3.new
 local rgb = Color3.fromRGB
@@ -608,8 +609,11 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 	local stairMid = V(0, (crossing.Y + apex.Y) * 0.5, (crossing.Z - crossing.Depth * 0.5 + apex.Z + apex.Depth * 0.5) * 0.5)
 
 	-- The piers rise from the chasm floor beside the ramp; the crown stays at its old height above the ramp.
+	-- Tagged RampArch: it straddles the walkway on purpose, so walkway clearance leaves it alone.
 	local function rampArch(mid: Vector3, span: number, rise: number, depthSize: number, color: Color3)
-		arch(V(mid.X, bottom, mid.Z), span, rise + (mid.Y - 2 - bottom), depthSize, color, theme.TrimMaterial, 0)
+		group("RampArch", function()
+			arch(V(mid.X, bottom, mid.Z), span, rise + (mid.Y - 2 - bottom), depthSize, color, theme.TrimMaterial, 0)
+		end)
 	end
 	rampArch(ramp1Mid, 42, 28 * scale, 8, theme.TrimColor)
 	rampArch(ramp2Mid, 38, 30 * scale, 8, theme.TrimColor)
@@ -628,16 +632,45 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 		{ X = 62, Z = (crossing.Z + apex.Z) * 0.5, H = 28, Scale = 1.25 },  -- Upper Grand-Stair Chasm Island
 	}
 
+	-- Islands keep off every walkway (TowerLayout.Lanes): each one tries its authored spot first, then
+	-- steps outward or along the room until its footprint is clear, and is left out if nothing fits.
+	local lanes = TowerLayout.Lanes(index)
+	local function footprintClear(x: number, z: number, halfX: number, halfZ: number): boolean
+		local radius = math.sqrt(halfX * halfX + halfZ * halfZ)
+		for _, lane in lanes do
+			local dx, dz = lane.BX - lane.AX, lane.BZ - lane.AZ
+			local lengthSq = math.max(dx * dx + dz * dz, 1e-6)
+			local t = math.clamp(((x - lane.AX) * dx + (z - lane.AZ) * dz) / lengthSq, 0, 1)
+			local px, pz = lane.AX + dx * t - x, lane.AZ + dz * t - z
+			if px * px + pz * pz < (lane.HalfWidth + radius) ^ 2 then
+				return false
+			end
+		end
+		return true
+	end
+
 	for idxIsland, isl in innerIslands do
 		for _, s in { -1, 1 } do
-			local islPos = V(s * isl.X, bottom, isl.Z)
+			local islX: number?, islZ: number = nil, isl.Z
+			for _, dz in { 0, 12, -12, 24, -24 } do
+				for _, step in { 0, 8, 16, 24, 32, 40, 48 } do
+					if footprintClear(s * (isl.X + step), isl.Z + dz, 16 * scale, 17 * scale) then
+						islX, islZ = s * (isl.X + step), isl.Z + dz
+						break
+					end
+				end
+				if islX then break end
+			end
+			if not islX then continue end
+			local islPos = V(islX, bottom, islZ)
 			local islH = isl.H * scale - bottom
 			-- Stepped rocky/masonry island rising out of the chasm right beside the central path. The island,
 			-- its waterfall and the landmark on its crown are one prop, so they are cleared together.
 			group("ChasmIsland", function()
 				block("InteriorChasmIslandBase", V(32 * scale, islH, 34 * scale), islPos + V(0, islH / 2, 0), cliffColor, cliffMat)
 				block("InteriorChasmIslandCrown", V(26 * scale, 4, 28 * scale), islPos + V(0, islH + 1, 0), theme.GroundColor, theme.GroundMaterial)
-				waterfall(islPos + V(-s * 14 * scale, 0, 0), 8 * scale, islH, liquidColor, if s > 0 then -math.pi / 2 else math.pi / 2)
+				-- On the island's outer face, away from the central ramps.
+				waterfall(islPos + V(s * 14 * scale, 0, 0), 8 * scale, islH, liquidColor, if s > 0 then math.pi / 2 else -math.pi / 2)
 				-- Capped so tree roots (17 x scale) stay on the 26 x scale crown instead of hanging in the air.
 				populateLandmark(islPos + V(0, islH + 3, 0), math.min(isl.Scale, 0.72) * scale, idxIsland, s)
 			end)
@@ -1100,7 +1133,8 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 			local frac = (k - 0.5) / 6
 			local cz = basin.Z - basin.Depth * 0.38 + frac * (basin.Depth * 0.76)
 			-- Inner curb line flanking the walkway
-			local cxInner = s * (22 + (k % 2) * 6)
+			-- Outside the 40-stud causeway lane (clutter reaches about 5 studs from its centre).
+			local cxInner = s * (28 + (k % 2) * 6)
 			spawnBiomeClutter(V(cxInner, basin.Y, cz), 0.95 * scale, k)
 
 			-- Mid terrace clutter islands filling open spaces
@@ -1123,9 +1157,10 @@ function Assets.Build(parent: Instance, origin: Vector3, biome: string, index: n
 
 	-- 4. Sanctuary Safe Zone Entrance Gateway Framing
 	for _, s in { -1, 1 } do
-		local gatePos1 = V(s * 18, safe.Y, safe.Z - 20)
+		-- Beside the pillars, outside the 36-stud Sanctuary exit lane.
+		local gatePos1 = V(s * 30, safe.Y, safe.Z - 18)
 		spawnBiomeClutter(gatePos1, 1.15 * scale, s)
-		local gatePos2 = V(s * 28, safe.Y, safe.Z - 22)
+		local gatePos2 = V(s * 35, safe.Y, safe.Z - 8)
 		spawnBiomeClutter(gatePos2, 0.95 * scale, s + 1)
 	end
 

@@ -2,7 +2,7 @@
 -- Whole-prop clearance for tower floors. Compound props (a tree, a spire, an island and what stands on
 -- it) are Models tagged with a PropKind attribute. When any part of a prop conflicts with a camp or a
 -- walking lane, the whole prop goes, so no canopy, cap or spire tip is left floating in the air.
--- Loose parts that belong to no prop are judged on their own.
+-- Loose parts that belong to no prop are judged on their own. Settle lowers props that hover.
 local PropClearance = {}
 
 export type HitTest = (part: BasePart) -> boolean
@@ -40,6 +40,45 @@ function PropClearance.Apply(root: Instance, hits: HitTest): number
 		end
 	end
 	return removed
+end
+
+-- True when two oriented boxes overlap (separating axis test over the 15 candidate axes).
+function PropClearance.BoxesOverlap(cfA: CFrame, sizeA: Vector3, cfB: CFrame, sizeB: Vector3): boolean
+	local halfA, halfB = sizeA / 2, sizeB / 2
+	local offset = cfB.Position - cfA.Position
+	if offset.Magnitude > halfA.Magnitude + halfB.Magnitude then
+		return false
+	end
+	local axesA = { cfA.RightVector, cfA.UpVector, cfA.LookVector }
+	local axesB = { cfB.RightVector, cfB.UpVector, cfB.LookVector }
+	local extentA = { halfA.X, halfA.Y, halfA.Z }
+	local extentB = { halfB.X, halfB.Y, halfB.Z }
+	local function separated(axis: Vector3): boolean
+		local length = axis.Magnitude
+		if length < 1e-6 then
+			return false -- parallel edges: covered by the face axes
+		end
+		axis /= length
+		local reachA, reachB = 0, 0
+		for i = 1, 3 do
+			reachA += extentA[i] * math.abs(axesA[i]:Dot(axis))
+			reachB += extentB[i] * math.abs(axesB[i]:Dot(axis))
+		end
+		return math.abs(offset:Dot(axis)) > reachA + reachB
+	end
+	for i = 1, 3 do
+		if separated(axesA[i]) or separated(axesB[i]) then
+			return false
+		end
+	end
+	for i = 1, 3 do
+		for j = 1, 3 do
+			if separated(axesA[i]:Cross(axesB[j])) then
+				return false
+			end
+		end
+	end
+	return true
 end
 
 -- The props that clearance and settling act on: PropKind Models with no PropKind ancestor below `root`.

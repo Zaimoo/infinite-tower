@@ -70,6 +70,30 @@ function Layout.Get(index: number): any
 		Platforms=platforms, Links=links, Camps=camps, Sanctuary=safe}
 end
 
+-- Walkways that must stay clear of scenery: every ramp and stair (with a 3-stud shoulder), a 20 x 20
+-- landing pad at each end of every link, the Basin causeway and the Sanctuary exit. Each lane is a box
+-- from A to B (local floor coordinates, Y = walking surface) that is HalfWidth to each side and spans
+-- Below studs under the surface to Above studs over it. Plain numbers, so specs can read it directly.
+function Layout.Lanes(index: number): {any}
+	local room = Layout.Get(index)
+	local lanes = {}
+	local function lane(id, ax, ay, az, bx, by, bz, halfWidth)
+		table.insert(lanes, {Id=id, AX=ax, AY=ay, AZ=az, BX=bx, BY=by, BZ=bz, HalfWidth=halfWidth, Below=2, Above=14})
+	end
+	for _, link in room.Links do
+		local dx, dz = link.BX-link.AX, link.BZ-link.AZ
+		local length = math.sqrt(dx*dx+dz*dz)
+		local ux, uz = dx/length, dz/length
+		lane(link.From.."_"..link.To, link.AX, link.AY, link.AZ, link.BX, link.BY, link.BZ, link.Width/2+3)
+		lane(link.From.."_"..link.To.."_LandingA", link.AX-ux*10, link.AY, link.AZ-uz*10, link.AX+ux*10, link.AY, link.AZ+uz*10, 10)
+		lane(link.From.."_"..link.To.."_LandingB", link.BX-ux*10, link.BY, link.BZ-uz*10, link.BX+ux*10, link.BY, link.BZ+uz*10, 10)
+	end
+	local basin, safe = room.Platforms.Basin, room.Sanctuary
+	lane("BasinCauseway", 0, basin.Y, basin.Z+basin.Depth/2, 0, basin.Y, basin.Z-basin.Depth/2, 20)
+	lane("SanctuaryExit", 0, safe.Y, safe.Z-12, 0, safe.Y, safe.Z-safe.Depth/2, 18)
+	return lanes
+end
+
 function Layout.Placements(biome: any, index: number): {any}
 	local result = {}
 	for _, camp in Layout.Get(index).Camps do

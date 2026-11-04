@@ -34,6 +34,28 @@ test("Every terrace connects to sanctuary with broad slopes at most fifteen degr
 		end
 	end
 end)
+test("Every walkway is covered by a clear lane with landing pads, the causeway and the Sanctuary exit",function()
+	for i=1,5 do
+		local room=Layout.Get(i)
+		local lanes=Layout.Lanes(i)
+		local byId={}
+		for _,lane in lanes do
+			assert(not byId[lane.Id],"Duplicate lane "..lane.Id)
+			byId[lane.Id]=lane
+			assert(lane.HalfWidth>=10 and lane.Below>0 and lane.Above>=14)
+			assert(math.abs(lane.AX)<=room.Width/2 and math.abs(lane.BX)<=room.Width/2)
+			assert(math.abs(lane.AZ)<=room.Depth/2 and math.abs(lane.BZ)<=room.Depth/2)
+		end
+		for _,link in room.Links do
+			local id=link.From.."_"..link.To
+			local lane=assert(byId[id],"Missing lane "..id)
+			assert(lane.HalfWidth>=link.Width/2+3 and lane.AY==link.AY and lane.BY==link.BY)
+			assert(byId[id.."_LandingA"] and byId[id.."_LandingB"])
+		end
+		assert(#lanes==#room.Links*3+2)
+		assert(byId.BasinCauseway.HalfWidth>=20 and byId.SanctuaryExit.HalfWidth>=18)
+	end
+end)
 test("All fifty floors have supported isolated camps and matching encounter manifests",function()
 	local totals,campCounts={20,26,29,39,40},{5,6,6,8,8}
 	for id=1,50 do
