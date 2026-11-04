@@ -270,60 +270,9 @@ end
 --============================================================================
 
 local Seeds: { [string]: ArtifactSeed } = {
-	-- FEATURED RECIPES (FROM MOCKUP)
-	art_blade_of_the_rift = {
-		TemplateId = "art_blade_of_the_rift",
-		DisplayName = "Blade of the Rift",
-		Type = "SWORD_SHIELD",
-		DefaultStar = 3,
-		ModelAssetId = "weapon_sword_shield",
-		Description = "A mastercrafted edge resonating with dimensional rift energy.",
-		BaseATK = 150,
-		BaseCritRate = 0.05,
-		CraftCost = { IronGear = 5, RiftOrb = 3 },
-	},
-	art_aegis_core = {
-		TemplateId = "art_aegis_core",
-		DisplayName = "Aegis Core",
-		Type = "SWORD_SHIELD",
-		DefaultStar = 3,
-		ModelAssetId = "weapon_sword_shield",
-		Description = "A warding blade paired with an impenetrable aegis matrix radiating dense fields.",
-		BaseDEF = 200,
-		BaseHP = 500,
-		CraftCost = { IronGear = 8, AegisGem = 2 },
-	},
-
-	-- BOWS
-	art_hunters_shortbow = {
-		TemplateId = "art_hunters_shortbow",
-		DisplayName = "Hunter's Shortbow",
-		Type = "BOW",
-		DefaultStar = 1,
-		ModelAssetId = "weapon_bow",
-		Description = "A lightweight hunting bow, balanced and easy to handle in scouts' hands.",
-		CraftCost = { IronGear = 4, StarDust = 4 },
-	},
-	art_recurve_composite = {
-		TemplateId = "art_recurve_composite",
-		DisplayName = "Wind-Scout Recurve",
-		Type = "BOW",
-		DefaultStar = 2,
-		ModelAssetId = "weapon_bow",
-		Description = "Reinforced composite bow layered with flexible ashwood and horn.",
-		CraftCost = { IronGear = 6, RiftOrb = 2 },
-	},
-	art_crystal_greatbow = {
-		TemplateId = "art_crystal_greatbow",
-		DisplayName = "Crystal Greatbow",
-		Type = "BOW",
-		DefaultStar = 3,
-		ModelAssetId = "weapon_bow",
-		Description = "Gleaming crystalline limbs that hum with condensed atmospheric mana.",
-		CraftCost = { RiftOrb = 4, AegisGem = 2 },
-	},
-
-	-- SWORD & SHIELD (VANGUARD)
+	--========================================================================
+	-- 1. SWORDS / SWORD & SHIELD (Vanguard: Aaron, Morrigan, Ignis)
+	--========================================================================
 	art_iron_broadsword = {
 		TemplateId = "art_iron_broadsword",
 		DisplayName = "Iron Broadsword",
@@ -351,8 +300,50 @@ local Seeds: { [string]: ArtifactSeed } = {
 		Description = "Massive consecrated two-hander capable of rending fiends asunder.",
 		CraftCost = { IronGear = 8, AegisGem = 2 },
 	},
+	art_blade_of_the_rift = {
+		TemplateId = "art_blade_of_the_rift",
+		DisplayName = "Blade of the Rift",
+		Type = "SWORD_SHIELD",
+		DefaultStar = 3,
+		ModelAssetId = "weapon_sword_shield",
+		Description = "A mastercrafted edge resonating with dimensional rift energy.",
+		BaseATK = 150,
+		BaseCritRate = 0.05,
+		CraftCost = { IronGear = 5, RiftOrb = 3 },
+	},
+	art_aegis_core = {
+		TemplateId = "art_aegis_core",
+		DisplayName = "Aegis Core",
+		Type = "SWORD_SHIELD",
+		DefaultStar = 3,
+		ModelAssetId = "weapon_sword_shield",
+		Description = "A warding blade paired with an impenetrable aegis matrix radiating dense fields.",
+		BaseDEF = 200,
+		BaseHP = 500,
+		CraftCost = { IronGear = 8, AegisGem = 2 },
+	},
+	art_astral_executioner = {
+		TemplateId = "art_astral_executioner",
+		DisplayName = "Astral Executioner",
+		Type = "SWORD_SHIELD",
+		DefaultStar = 6,
+		ModelAssetId = "weapon_sword_shield",
+		Description = "Slender celestial blade with golden sunburst guard paired with a radiant tower shield.",
+		CraftCost = { RiftOrb = 15, AegisGem = 12 },
+	},
+	art_genesis_worldbreaker = {
+		TemplateId = "art_genesis_worldbreaker",
+		DisplayName = "Worldbreaker Bastion",
+		Type = "SWORD_SHIELD",
+		DefaultStar = 7,
+		ModelAssetId = "weapon_sword_shield",
+		Description = "Massive cosmic blade infused with swirling galaxy nebula shaders and a colossal rift barrier.",
+		CraftCost = { RiftOrb = 25, AegisGem = 20 },
+	},
 
-	-- DAGGERS
+	--========================================================================
+	-- 2. DAGGERS (Striker: Han, Velkist, Sovereign Archon)
+	--========================================================================
 	art_rusty_daggers = {
 		TemplateId = "art_rusty_daggers",
 		DisplayName = "Rogue Daggers",
@@ -371,8 +362,55 @@ local Seeds: { [string]: ArtifactSeed } = {
 		Description = "Twin obsidian stilettos that leave faint trails of abyssal smoke.",
 		CraftCost = { StarDust = 6, VoidPowder = 4 },
 	},
+	art_viper_kris = {
+		TemplateId = "art_viper_kris",
+		DisplayName = "Viper Kris",
+		Type = "DAGGERS",
+		DefaultStar = 3,
+		ModelAssetId = "weapon_daggers",
+		Description = "Flamboyant wave-bladed kris daggers with venomous emerald inlays and serpent-head pommels.",
+		CraftCost = { IronGear = 6, VoidPowder = 4 },
+	},
+	art_phantom_edge = {
+		TemplateId = "art_phantom_edge",
+		DisplayName = "Phantom Edge",
+		Type = "DAGGERS",
+		DefaultStar = 4,
+		ModelAssetId = "weapon_daggers",
+		Description = "Semitransparent spiritual glass blades with ornate silver filigree crossguards.",
+		CraftCost = { StarDust = 8, VoidPowder = 6 },
+	},
+	art_bloodthirst_twinblades = {
+		TemplateId = "art_bloodthirst_twinblades",
+		DisplayName = "Bloodthirst Twinblades",
+		Type = "DAGGERS",
+		DefaultStar = 5,
+		ModelAssetId = "weapon_daggers",
+		Description = "Jagged crimson demonic blades with arterial bone hilts suited for fierce frenzy strikes.",
+		CraftCost = { RiftOrb = 10, VoidPowder = 8 },
+	},
+	art_eclipse_daggers = {
+		TemplateId = "art_eclipse_daggers",
+		DisplayName = "Eclipse Daggers",
+		Type = "DAGGERS",
+		DefaultStar = 6,
+		ModelAssetId = "weapon_daggers",
+		Description = "Opposing celestial twins: one forged of lunar silver, one of solar gold, with crescent guards.",
+		CraftCost = { StarDust = 15, VoidPowder = 12 },
+	},
+	art_abyssal_ravagers = {
+		TemplateId = "art_abyssal_ravagers",
+		DisplayName = "Abyssal Ravagers",
+		Type = "DAGGERS",
+		DefaultStar = 7,
+		ModelAssetId = "weapon_daggers",
+		Description = "Floating dark-matter phantom daggers tethered by purple lightning arcs around the hero's wrists.",
+		CraftCost = { VoidPowder = 25, RiftOrb = 20 },
+	},
 
-	-- AXES
+	--========================================================================
+	-- 3. AXES (Miner: Catio)
+	--========================================================================
 	art_miner_pickaxe = {
 		TemplateId = "art_miner_pickaxe",
 		DisplayName = "Prospector's Cleaver",
@@ -391,16 +429,130 @@ local Seeds: { [string]: ArtifactSeed } = {
 		Description = "Beveled dual-headed axe built to smash through heavy shields.",
 		CraftCost = { IronGear = 8, AegisGem = 2 },
 	},
+	art_canyon_splitter = {
+		TemplateId = "art_canyon_splitter",
+		DisplayName = "Canyon Splitter",
+		Type = "AXE",
+		DefaultStar = 3,
+		ModelAssetId = "weapon_axe",
+		Description = "Asymmetrical heavy dwarven greataxe embedded with raw gemstone clusters along the spine.",
+		CraftCost = { IronGear = 10, AegisGem = 4 },
+	},
+	art_magma_behemoth = {
+		TemplateId = "art_magma_behemoth",
+		DisplayName = "Magma Cleaver",
+		Type = "AXE",
+		DefaultStar = 4,
+		ModelAssetId = "weapon_axe",
+		Description = "Volcanic black basalt head cracked with molten orange lava veins and an obsidian spike tip.",
+		CraftCost = { IronGear = 12, RiftOrb = 6 },
+	},
+	art_titan_earthshaker = {
+		TemplateId = "art_titan_earthshaker",
+		DisplayName = "Titan Earthshaker",
+		Type = "AXE",
+		DefaultStar = 5,
+		ModelAssetId = "weapon_axe",
+		Description = "Monumental runic double axe with runic dwarven script glowing along the beveled cutting edges.",
+		CraftCost = { AegisGem = 12, RiftOrb = 8 },
+	},
+	art_valkyrie_waraxe = {
+		TemplateId = "art_valkyrie_waraxe",
+		DisplayName = "Valkyrie Waraxe",
+		Type = "AXE",
+		DefaultStar = 6,
+		ModelAssetId = "weapon_axe",
+		Description = "Elegant winged golden waraxe with braided platinum shaft and cyan celestial gems.",
+		CraftCost = { StarDust = 15, AegisGem = 12 },
+	},
+	art_world_carver = {
+		TemplateId = "art_world_carver",
+		DisplayName = "World Carver",
+		Type = "AXE",
+		DefaultStar = 7,
+		ModelAssetId = "weapon_axe",
+		Description = "Monolithic dark-matter greataxe crackling with rift lightning that leaves trailing space rifts when swung.",
+		CraftCost = { RiftOrb = 25, VoidPowder = 20 },
+	},
 
-	-- TOMES & STAVES (SCHOLAR / HEALER)
-	art_novice_tome = {
-		TemplateId = "art_novice_tome",
-		DisplayName = "Novice Pyromancer Tome",
-		Type = "TOME",
+	--========================================================================
+	-- 4. BOWS (Marksman: Jenna, Astrea)
+	--========================================================================
+	art_hunters_shortbow = {
+		TemplateId = "art_hunters_shortbow",
+		DisplayName = "Hunter's Shortbow",
+		Type = "BOW",
 		DefaultStar = 1,
-		ModelAssetId = "weapon_tome",
-		Description = "Leatherbound grimoire inscribed with foundational flame incantations.",
-		CraftCost = { StarDust = 5, RiftOrb = 2 },
+		ModelAssetId = "weapon_bow",
+		Description = "A lightweight hunting bow, balanced and easy to handle in scouts' hands.",
+		CraftCost = { IronGear = 4, StarDust = 4 },
+	},
+	art_recurve_composite = {
+		TemplateId = "art_recurve_composite",
+		DisplayName = "Wind-Scout Recurve",
+		Type = "BOW",
+		DefaultStar = 2,
+		ModelAssetId = "weapon_bow",
+		Description = "Reinforced composite bow layered with flexible ashwood and horn.",
+		CraftCost = { IronGear = 6, RiftOrb = 2 },
+	},
+	art_crystal_greatbow = {
+		TemplateId = "art_crystal_greatbow",
+		DisplayName = "Crystal Greatbow",
+		Type = "BOW",
+		DefaultStar = 3,
+		ModelAssetId = "weapon_bow",
+		Description = "Gleaming crystalline limbs that hum with condensed atmospheric mana.",
+		CraftCost = { RiftOrb = 4, AegisGem = 2 },
+	},
+	art_stormstrider_longbow = {
+		TemplateId = "art_stormstrider_longbow",
+		DisplayName = "Stormstrider Longbow",
+		Type = "BOW",
+		DefaultStar = 4,
+		ModelAssetId = "weapon_bow",
+		Description = "Tall elven recurve longbow inlaid with storm-silver alloy and eagle-wing riser accents.",
+		CraftCost = { StarDust = 8, RiftOrb = 4 },
+	},
+	art_phoenix_flatbow = {
+		TemplateId = "art_phoenix_flatbow",
+		DisplayName = "Phoenix Greatbow",
+		Type = "BOW",
+		DefaultStar = 5,
+		ModelAssetId = "weapon_bow",
+		Description = "Swept crimson and gold recurve limbs shaped like phoenix wings, emitting ember heat shimmer.",
+		CraftCost = { StarDust = 12, RiftOrb = 8 },
+	},
+	art_celestial_zenith = {
+		TemplateId = "art_celestial_zenith",
+		DisplayName = "Celestial Zenith",
+		Type = "BOW",
+		DefaultStar = 6,
+		ModelAssetId = "weapon_bow",
+		Description = "Pristine white marble and polished gold riser with floating orbital ring sights.",
+		CraftCost = { StarDust = 18, AegisGem = 10 },
+	},
+	art_astrea_cosmic_bow = {
+		TemplateId = "art_astrea_cosmic_bow",
+		DisplayName = "Cosmic Sagittarius",
+		Type = "BOW",
+		DefaultStar = 7,
+		ModelAssetId = "weapon_bow",
+		Description = "Astrea's signature relic: Stave composed of pure starlight constellation lines; nocks pure energy lances.",
+		CraftCost = { StarDust = 25, RiftOrb = 20 },
+	},
+
+	--========================================================================
+	-- 5. STAVES (Scholar: Eolka, Solaris)
+	--========================================================================
+	art_apprentice_cane = {
+		TemplateId = "art_apprentice_cane",
+		DisplayName = "Apprentice Wand-Staff",
+		Type = "STAFF",
+		DefaultStar = 1,
+		ModelAssetId = "weapon_staff",
+		Description = "Simple polished birch cane tipped with a rough copper socket holding a foggy quartz focus.",
+		CraftCost = { IronGear = 4, StarDust = 3 },
 	},
 	art_ruby_staff = {
 		TemplateId = "art_ruby_staff",
@@ -410,6 +562,118 @@ local Seeds: { [string]: ArtifactSeed } = {
 		ModelAssetId = "weapon_staff",
 		Description = "Staff tipped with an uncut igneous crystal that amplifies spellcasting cadence.",
 		CraftCost = { StarDust = 8, RiftOrb = 3 },
+	},
+	art_frostweaver_scepter = {
+		TemplateId = "art_frostweaver_scepter",
+		DisplayName = "Frostweaver Scepter",
+		Type = "STAFF",
+		DefaultStar = 3,
+		ModelAssetId = "weapon_staff",
+		Description = "Twisted pale driftwood shaft topped with an intricate snowflake crystal cluster radiating frost mist.",
+		CraftCost = { StarDust = 8, AegisGem = 3 },
+	},
+	art_archmage_rod = {
+		TemplateId = "art_archmage_rod",
+		DisplayName = "Archmage Caduceus",
+		Type = "STAFF",
+		DefaultStar = 4,
+		ModelAssetId = "weapon_staff",
+		Description = "Entwined twin brass serpent bodies ascending an obsidian shaft toward an arcane prism head.",
+		CraftCost = { RiftOrb = 8, StarDust = 6 },
+	},
+	art_infernal_pillar = {
+		TemplateId = "art_infernal_pillar",
+		DisplayName = "Pillar of Muspelheim",
+		Type = "STAFF",
+		DefaultStar = 5,
+		ModelAssetId = "weapon_staff",
+		Description = "Dark iron battle-staff with open caged brazier head containing an eternal roiling flame core.",
+		CraftCost = { RiftOrb = 12, VoidPowder = 6 },
+	},
+	art_solaris_sunburst = {
+		TemplateId = "art_solaris_sunburst",
+		DisplayName = "Solaris Sun Scepter",
+		Type = "STAFF",
+		DefaultStar = 6,
+		ModelAssetId = "weapon_staff",
+		Description = "Solaris's signature staff: Crown shaped as a radiant golden solar eclipse with rotating orbital flares.",
+		CraftCost = { StarDust = 16, RiftOrb = 12 },
+	},
+	art_chronos_stave = {
+		TemplateId = "art_chronos_stave",
+		DisplayName = "Chronos Time-Weft",
+		Type = "STAFF",
+		DefaultStar = 7,
+		ModelAssetId = "weapon_staff",
+		Description = "Ornate gothic astronomical clockwork mechanism rotating in 3D around an unmoving singularity core.",
+		CraftCost = { RiftOrb = 25, StarDust = 20 },
+	},
+
+	--========================================================================
+	-- 6. TOMES (Healer: Valeria)
+	--========================================================================
+	art_novice_tome = {
+		TemplateId = "art_novice_tome",
+		DisplayName = "Novice Pyromancer Tome",
+		Type = "TOME",
+		DefaultStar = 1,
+		ModelAssetId = "weapon_tome",
+		Description = "Leatherbound grimoire inscribed with foundational flame incantations.",
+		CraftCost = { StarDust = 5, RiftOrb = 2 },
+	},
+	art_cleric_scripture = {
+		TemplateId = "art_cleric_scripture",
+		DisplayName = "Acolyte Scripture",
+		Type = "TOME",
+		DefaultStar = 2,
+		ModelAssetId = "weapon_tome",
+		Description = "White calfskin cover stamped with silver holy wards; cloth ribbon bookmarks dangling from spine.",
+		CraftCost = { StarDust = 6, AegisGem = 2 },
+	},
+	art_hermetic_grimoire = {
+		TemplateId = "art_hermetic_grimoire",
+		DisplayName = "Hermetic Grimoire",
+		Type = "TOME",
+		DefaultStar = 3,
+		ModelAssetId = "weapon_tome",
+		Description = "Aged midnight-blue velvet book bound in carved wrought-iron corner brackets with glowing alchemy circle.",
+		CraftCost = { StarDust = 8, RiftOrb = 4 },
+	},
+	art_valeria_sanctuary = {
+		TemplateId = "art_valeria_sanctuary",
+		DisplayName = "Sanctuary Gospel",
+		Type = "TOME",
+		DefaultStar = 4,
+		ModelAssetId = "weapon_tome",
+		Description = "Valeria's signature grimoire: Ornate gold-leaf spine with emerald gem centerpiece emitting restorative healing motes.",
+		CraftCost = { AegisGem = 8, StarDust = 6 },
+	},
+	art_necronomicon_pages = {
+		TemplateId = "art_necronomicon_pages",
+		DisplayName = "Codex of the Deep",
+		Type = "TOME",
+		DefaultStar = 5,
+		ModelAssetId = "weapon_tome",
+		Description = "Grotesque dark-leather tome with living demonic eye embedded on the cover that blinks periodically.",
+		CraftCost = { VoidPowder = 12, RiftOrb = 8 },
+	},
+	art_seraphic_psalms = {
+		TemplateId = "art_seraphic_psalms",
+		DisplayName = "Seraphic Liturgy",
+		Type = "TOME",
+		DefaultStar = 6,
+		ModelAssetId = "weapon_tome",
+		Description = "Heavy gilded cathedral tome that floats opened with radiating translucent golden wings extending from the spine.",
+		CraftCost = { AegisGem = 15, StarDust = 12 },
+	},
+	art_akashic_records = {
+		TemplateId = "art_akashic_records",
+		DisplayName = "Akashic Infinity",
+		Type = "TOME",
+		DefaultStar = 7,
+		ModelAssetId = "weapon_tome",
+		Description = "Boundless astral codex without physical covers: multiple floating holographic pages orbiting an ethereal singularity.",
+		CraftCost = { RiftOrb = 25, AegisGem = 20 },
 	},
 }
 ArtifactCatalog.Seeds = Seeds
@@ -430,6 +694,40 @@ ArtifactCatalog.CraftingRecipeOrder = {
 	"art_battleaxe_cleaver",
 	"art_novice_tome",
 	"art_ruby_staff",
+	-- Additional Vanguard Swords
+	"art_astral_executioner",
+	"art_genesis_worldbreaker",
+	-- Additional Striker Daggers
+	"art_viper_kris",
+	"art_phantom_edge",
+	"art_bloodthirst_twinblades",
+	"art_eclipse_daggers",
+	"art_abyssal_ravagers",
+	-- Additional Miner Axes
+	"art_canyon_splitter",
+	"art_magma_behemoth",
+	"art_titan_earthshaker",
+	"art_valkyrie_waraxe",
+	"art_world_carver",
+	-- Additional Marksman Bows
+	"art_stormstrider_longbow",
+	"art_phoenix_flatbow",
+	"art_celestial_zenith",
+	"art_astrea_cosmic_bow",
+	-- Additional Scholar Staves
+	"art_apprentice_cane",
+	"art_frostweaver_scepter",
+	"art_archmage_rod",
+	"art_infernal_pillar",
+	"art_solaris_sunburst",
+	"art_chronos_stave",
+	-- Additional Healer Tomes
+	"art_cleric_scripture",
+	"art_hermetic_grimoire",
+	"art_valeria_sanctuary",
+	"art_necronomicon_pages",
+	"art_seraphic_psalms",
+	"art_akashic_records",
 }
 
 return ArtifactCatalog
