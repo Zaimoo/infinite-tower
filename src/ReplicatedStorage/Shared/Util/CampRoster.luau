@@ -6,6 +6,7 @@
 -- 2. A floor has a fixed number of Elites, but which areas they lead is random, and an Elite moves to
 --    another cleared area when its camp's wave comes back. A camp that is fighting never changes.
 -- 3. Members stand at scattered points inside their area, re-rolled each wave.
+-- 4. About half the camps also field one support Regular (Phase D), re-rolled each wave.
 local CampRoster = {}
 
 export type Rng = () -> number -- uniform in [0, 1)
@@ -54,6 +55,30 @@ function CampRoster.DealType(rng: Rng, bag: { string }, pool: { string }): strin
 		end
 	end
 	return table.remove(bag) :: string
+end
+
+-- Which camps field a support Regular (Phase D): each camp about half the time, never more than
+-- half of the camps (rounded up).
+function CampRoster.AssignSupports(rng: Rng, campIds: { string }): { [string]: boolean }
+	local cap = math.ceil(#campIds / 2)
+	local chosen: { [string]: boolean } = {}
+	local count = 0
+	for _, campId in shuffled(rng, campIds) do
+		if count < cap and rng() < 0.5 then
+			chosen[campId] = true
+			count += 1
+		end
+	end
+	return chosen
+end
+
+-- Whether a camp fields a support in its next wave, keeping the floor within the cap.
+function CampRoster.RerollSupport(rng: Rng, campId: string, supports: { [string]: boolean }, campCount: number): boolean
+	local others = 0
+	for otherId in supports do
+		if otherId ~= campId then others += 1 end
+	end
+	return others < math.ceil(campCount / 2) and rng() < 0.5
 end
 
 -- Which eligible camps an Elite leads. `upper` marks camps above the Basin; with `needUpper` at least

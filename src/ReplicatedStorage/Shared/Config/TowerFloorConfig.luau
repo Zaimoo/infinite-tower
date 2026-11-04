@@ -138,7 +138,8 @@ function Config.GetEnemyStats(floorId: any, enemyId: any): any?
 	for _, encounter in ipairs(floor.Encounters) do
 		if encounter.EnemyId == enemyId then included = true; break end
 	end
-	if not included then return nil end
+	-- Supports (Phase D) join camps at runtime, so they are not in the placement manifest.
+	if not included and not enemy.Support then return nil end
 	local statRole = if enemy.Alpha then "ALPHA" else enemy.Role -- Floor Alphas have their own stat row
 	local base = Config.BaseStatsByRole[statRole]
 	if not base then return nil end
