@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Infinite Tower - Tower Event HUD Mockup</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Cinzel+Decorative:wght@900&family=Montserrat:wght@500;600;700&display=swap');
+:root {
+  --base: rgba(13, 9, 18, 0.65);
+  --base-raised: rgba(38, 28, 50, 0.75);
+  --hair: rgba(246, 244, 255, 0.18);
+  --text: #F6F4FF;
+  --muted: rgba(246, 244, 255, 0.85);
+  --royal: #FACC15;
+  --arcane: #C084FC;
+  --danger: #EF4444;
+  --ink: #0A060E;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: #06040A; color: var(--text); font-family: 'Montserrat', sans-serif; display: flex; flex-direction: column; align-items: center; padding: 24px 12px 60px; }
+h1 { font-family: 'Cinzel', serif; font-weight: 900; font-size: 22px; letter-spacing: 1px; margin: 0 0 4px; color: #FFE27A; }
+.sub { color: #A396BA; font-size: 13px; margin: 0 0 18px; }
+h2 { font-family: 'Montserrat'; text-transform: uppercase; letter-spacing: 2px; color: #A396BA; font-size: 12px; font-weight: 700; border-bottom: 1px solid #312740; padding-bottom: 6px; margin: 34px 0 16px; width: 960px; }
+.controls { width: 960px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; font-size: 12px; }
+.controls .group { display: flex; gap: 4px; align-items: center; margin-right: 14px; }
+.controls .lbl { color: #A396BA; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-right: 4px; }
+.controls button, .controls select { background: #15101E; color: var(--text); border: 1px solid #4B3A68; border-radius: 6px; padding: 5px 10px; font: 600 12px 'Montserrat'; cursor: pointer; }
+.controls button.on { background: #3B2A55; border-color: var(--royal); color: #FFE27A; }
+
+/* Fake viewport */
+.viewport { position: relative; width: 960px; height: 540px; border-radius: 10px; overflow: hidden; border: 1px solid #312740;
+  background: linear-gradient(180deg, #98C6B8 0%, #B9D3B0 38%, #5E7A4E 39%, #40583A 70%, #2B3B28 100%); }
+.viewport.phone { width: 667px; height: 375px; }
+.viewport .scenery { position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 120px 60px at 50% 40%, rgba(255,232,165,0.55), transparent 70%),
+    linear-gradient(90deg, transparent 0 46%, rgba(132,138,118,0.9) 46% 54%, transparent 54%) 0 52% / 100% 48% no-repeat; }
+.hint { position: absolute; font-size: 11px; color: rgba(255,255,255,0.55); font-weight: 600; }
+
+/* Glass */
+.glass { background: var(--base); border: 1px solid var(--hair); border-radius: 6px; backdrop-filter: blur(2px); }
+.section { display: flex; align-items: center; gap: 6px; font: 600 11px 'Montserrat'; text-transform: uppercase; color: var(--muted); letter-spacing: 0.4px; }
+.section::after { content: ""; flex: 1; height: 1px; background: rgba(246,244,255,0.4); }
+
+/* Bottom-right stack */
+.stack { position: absolute; right: 12px; bottom: 12px; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.rail { position: absolute; right: 12px; top: 104px; display: flex; flex-direction: column; gap: 6px; }
+.rail .btn { width: 60px; height: 60px; border-radius: 50%; background: rgba(13,9,18,0.55); border: 1px solid var(--hair); }
+.goal { position: absolute; right: 12px; top: 12px; width: 300px; height: 80px; }
+.drawer { position: absolute; left: 12px; bottom: 12px; width: 330px; height: 76px; }
+.currency { position: absolute; left: 12px; bottom: 96px; width: 260px; height: 30px; }
+
+.badge { position: relative; width: 200px; cursor: pointer; padding: 6px 10px 9px 48px; user-select: none; transition: border-color .2s; }
+.badge.compact { width: 130px; padding: 0 10px 0 42px; height: 40px; display: flex; align-items: center; }
+.badge .icon { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); }
+.badge .toprow { display: flex; align-items: center; gap: 6px; }
+.badge .toprow .section { flex: 1; }
+.badge.compact .toprow { flex: 1; justify-content: flex-end; }
+.badge .row { display: flex; align-items: baseline; margin-top: 1px; }
+.badge .name { font: 700 15px 'Cinzel', serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.badge .timer { font: 700 13px 'Cinzel', serif; color: var(--royal); font-variant-numeric: tabular-nums; }
+.badge.calm .name, .badge.calm .timer { color: var(--muted); }
+.badge.compact .timer { font-size: 17px; }
+.badge .featured { font: 600 10px 'Montserrat'; color: var(--muted); margin-top: 1px; }
+.badge .bar { position: absolute; left: 10px; right: 10px; bottom: 4px; height: 3px; border-radius: 2px; background: rgba(13,9,18,0.55); border: 1px solid rgba(246,244,255,0.1); overflow: hidden; }
+.badge .bar i { display: block; height: 100%; border-radius: 2px; transition: width 1s linear; }
+.badge.warning { animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { border-color: rgba(250,204,21,0.25); } 50% { border-color: rgba(250,204,21,0.95); } }
+.badge.active .icon { animation: iconglow 4s ease-in-out infinite; }
+@keyframes iconglow { 0%,100% { filter: drop-shadow(0 0 0 transparent); } 50% { filter: drop-shadow(0 0 6px var(--accent)); } }
+
+.power { width: 200px; height: 58px; position: relative; padding: 6px 10px 0 48px; }
+.power .val { font: 700 24px 'Cinzel', serif; margin-top: 1px; }
+.power.compact { width: 130px; height: 44px; padding: 0 0 0 42px; display: flex; align-items: center; }
+.power.compact .val { font-size: 20px; }
+.power .icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); }
+
+/* Tooltip */
+.tip { position: absolute; right: 0; bottom: calc(100% + 8px); width: 260px; padding: 10px 12px 10px; background: rgba(13,9,18,0.85); z-index: 5; display: none; cursor: default; }
+.badge.showtip .tip { display: block; }
+.tip .head { display: flex; align-items: center; gap: 8px; }
+.tip .title { font: 900 16px 'Cinzel', serif; background: linear-gradient(180deg, #FFFFFF, #FFD678); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.tip .scope { font: 600 11px 'Montserrat'; color: var(--muted); margin: 6px 0 6px; }
+.tip .desc { font: italic 500 12px/1.45 'Montserrat'; color: var(--text); margin-bottom: 7px; }
+.tip ul { margin: 0; padding: 0; list-style: none; }
+.tip li { font: 600 11.5px/1.5 'Montserrat'; display: flex; gap: 6px; }
+.tip li::before { content: "◆"; font-size: 8px; line-height: 17px; color: currentColor; }
+.tip li.mob { color: #FF8A8A; }
+.tip li.reward { color: var(--royal); }
+.tip .foot { font: 500 10.5px/1.4 'Montserrat'; color: rgba(246,244,255,0.6); border-top: 1px solid rgba(246,244,255,0.15); margin-top: 8px; padding-top: 6px; }
+
+/* Pop-up */
+.popup { position: absolute; left: 50%; top: 38%; width: 440px; height: 160px; transform: translate(-50%, -50%) scale(.85); opacity: 0; pointer-events: none;
+  display: flex; align-items: center; gap: 18px; padding: 0 26px; background: rgba(13,9,18,0.78); border-radius: 12px; border: 1.5px solid var(--accent, var(--royal)); }
+.popup::before { content: ""; position: absolute; left: 6px; right: 6px; top: 6px; bottom: 6px; border-radius: 8px; border: 1px solid rgba(255,226,120,0.25); pointer-events: none; }
+.popup.show { animation: popin .35s cubic-bezier(.34,1.56,.64,1) forwards, popout .4s ease-in 3.85s forwards; }
+@keyframes popin { from { opacity: 0; transform: translate(-50%,-50%) scale(.85); } to { opacity: 1; transform: translate(-50%,-50%) scale(1); } }
+@keyframes popout { from { opacity: 1; transform: translate(-50%,-50%) scale(1); } to { opacity: 0; transform: translate(-50%,-50%) scale(1); } }
+.popup .iconwrap { position: relative; width: 96px; height: 96px; flex: none; display: flex; align-items: center; justify-content: center; }
+.popup .rays { position: absolute; inset: -8px; border-radius: 50%; animation: spin 12s linear infinite;
+  background: repeating-conic-gradient(from 0deg, rgba(255,214,120,0.55) 0deg 4deg, transparent 4deg 45deg);
+  -webkit-mask: radial-gradient(circle, transparent 30%, #000 32%, #000 60%, transparent 72%); mask: radial-gradient(circle, transparent 30%, #000 32%, #000 60%, transparent 72%); }
+@keyframes spin { to { transform: rotate(360deg); } }
+.popup .eyebrow { font: 700 10px 'Montserrat'; letter-spacing: 3px; color: var(--muted); text-transform: uppercase; }
+.popup .ptitle { font: 900 26px 'Cinzel Decorative', 'Cinzel', serif; letter-spacing: 1px; line-height: 1.15; margin: 3px 0 5px;
+  background: linear-gradient(180deg, #FFFFFF 10%, #FFDC6E 55%, #D68018 100%); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-stroke: 0.6px rgba(10,6,14,0.6); }
+.popup .pdesc { font: 600 12.5px/1.4 'Montserrat'; color: var(--text); }
+.popup .pscope { font: 600 11px 'Montserrat'; color: var(--muted); margin-top: 6px; }
+
+/* Icon renderer */
+.ico { position: relative; width: 64px; height: 64px; transform-origin: 0 0; }
+.ico .s { position: absolute; transform: translate(-50%, -50%); }
+.ico .s .sheen { position: absolute; left: 14%; top: 10%; width: 42%; height: 18%; border-radius: 999px; background: rgba(255,255,255,0.45); }
+.iconbox { position: relative; overflow: visible; }
+
+/* Icon sheet */
+.sheet { width: 960px; display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
+.cell { background: #15101E; border: 1px solid #312740; border-radius: 10px; padding: 14px 6px 10px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.cell .sizes { display: flex; align-items: flex-end; gap: 10px; }
+.cell .nm { font: 700 11px 'Montserrat'; color: #E8E2F5; text-align: center; }
+.cell .id { font: 500 10px 'Consolas', monospace; color: #8F82A8; }
+.cell .sw { width: 28px; height: 4px; border-radius: 2px; }
+.light .cell { background: #C9D9CF; border-color: #9AB0A3; }
+.light .cell .nm { color: #1E2A22; }
+.notes { width: 960px; color: #A396BA; font-size: 12px; line-height: 1.6; margin-top: 10px; }
+.notes code { color: #E8E2F5; }
+</style>
+</head>
+<body>
+<h1>Tower Event HUD</h1>
+<p class="sub">Mockup for plan section 7.6. Hover (or click) the event badge for its tooltip. Everything is drawn from shapes, no image assets.</p>
+
+<div class="controls">
+  <div class="group"><span class="lbl">Phase</span>
+    <button data-phase="CALM">Calm</button><button data-phase="WARNING">Warning</button><button data-phase="ACTIVE" class="on">Active</button></div>
+  <div class="group"><span class="lbl">Event</span><select id="evsel"></select></div>
+  <div class="group"><span class="lbl">Size</span><button data-size="desktop" class="on">Desktop</button><button data-size="phone">Phone</button></div>
+  <div class="group"><button id="playpop">Play start pop-up</button></div>
+</div>
+
+<div class="viewport" id="vp">
+  <div class="scenery"></div>
+  <div class="goal glass"><span class="hint" style="left:12px;top:10px">Next Goal card</span></div>
+  <div class="rail" id="rail"></div>
+  <div class="currency glass"><span class="hint" style="left:10px;top:8px">Gold / Gems</span></div>
+  <div class="drawer glass"><span class="hint" style="left:12px;top:10px">Squad drawer</span></div>
+  <div class="stack">
+    <div class="badge glass active" id="badge">
+      <div class="iconbox icon" id="badgeIcon"></div>
+      <div class="toprow"><div class="section" id="badgeLabel">Tower event</div><span class="timer" id="badgeTimer"></span></div>
+      <div class="row"><span class="name" id="badgeName"></span></div>
+      <div class="featured" id="badgeFeatured"></div>
+      <div class="bar" id="badgeBar"><i></i></div>
+      <div class="tip glass" id="tip"></div>
+    </div>
+    <div class="power glass" id="power">
+      <div class="iconbox icon" id="powerIcon"></div>
+      <div class="section" id="powerLabel">Squad power</div>
+      <div class="val">12,480</div>
+    </div>
+  </div>
+  <div class="popup" id="popup">
+    <div class="iconwrap"><div class="rays"></div><div class="iconbox" id="popIcon"></div></div>
+    <div>
+      <div class="eyebrow">Tower event begins</div>
+      <div class="ptitle" id="popTitle"></div>
+      <div class="pdesc" id="popDesc"></div>
+      <div class="pscope" id="popScope"></div>
+    </div>
+  </div>
+</div>
+
+<h2>Event icons: 76, 30 and 18 px (dark HUD)</h2>
+<div class="sheet" id="sheetDark"></div>
+<h2>Same icons over a bright sky (contrast check)</h2>
+<div class="sheet light" id="sheetLight"></div>
+<p class="notes">Shape data below is in the <code>GrimoireIcons.Drawings</code> format (64 grid, centre X/Y, W/H, Rot, Radius, Round, Outline, Sheen), so it ports to Luau line for line. Accent swatch under each icon is the event's stroke and bar colour.</p>
+
+<script>
+const P = {
+  GoldHi:'#FFE278', GoldLo:'#C47818', VioletHi:'#D696FF', VioletLo:'#6022AA', SteelHi:'#ECEEF8', SteelLo:'#787C92',
+  IronHi:'#6E6A7C', IronLo:'#262230', EmberHi:'#FFC45A', EmberLo:'#DC3C14', StoneHi:'#C4BECE', StoneLo:'#686076',
+  CyanHi:'#AAFAFF', CyanLo:'#148CC8', BloodHi:'#FF6E6E', BloodLo:'#96101E', PageHi:'#FFF8E2', PageLo:'#D6C4A0',
+  Dark:'#1C1628', White:'#FFFFFF'
+};
+const S = (X,Y,W,H,hi,lo,o={}) => Object.assign({X,Y,W,H,Hi:P[hi]||hi,Lo:P[lo]||lo},o);
+
+const Drawings = {
+  Power: [
+    S(32,30,8,54,'SteelHi','SteelLo',{Rot:42,Radius:2}), S(32,30,8,54,'SteelHi','SteelLo',{Rot:-42,Radius:2}),
+    S(18,46,20,7,'GoldHi','GoldLo',{Rot:42,Radius:2,Outline:2,Sheen:false}), S(46,46,20,7,'GoldHi','GoldLo',{Rot:-42,Radius:2,Outline:2,Sheen:false}),
+    S(32,32,22,22,'BloodHi','BloodLo',{Round:true}), S(32,32,9,9,'GoldHi','GoldLo',{Rot:45,Radius:1,Outline:1.8,Sheen:false}),
+  ],
+  EventCalamity: [
+    S(32,33,48,48,'BloodHi','BloodLo',{Round:true}),
+    S(42,25,34,34,'IronLo','Dark',{Round:true,Sheen:false,Outline:2}),
+    S(18,46,6,6,'EmberHi','EmberLo',{Round:true,Outline:1.6,Sheen:false}),
+    S(12,14,9,9,'GoldHi','GoldLo',{Rot:45,Radius:1,Outline:2,Sheen:false}),
+    S(54,52,7,7,'GoldHi','GoldLo',{Rot:45,Radius:1,Outline:1.8,Sheen:false}),
+  ],
+  EventEliteTide: [
+    S(19,15,10,10,'GoldHi','GoldLo',{Rot:45,Radius:2,Sheen:false}), S(32,11,12,12,'GoldHi','GoldLo',{Rot:45,Radius:2,Sheen:false}), S(45,15,10,10,'GoldHi','GoldLo',{Rot:45,Radius:2,Sheen:false}),
+    S(32,22,36,9,'GoldHi','GoldLo',{Radius:2}),
+    S(32,52,24,24,'SteelHi','SteelLo',{Rot:45,Radius:5,Sheen:false}),
+    S(32,41,36,24,'SteelHi','SteelLo',{Radius:6}),
+    S(32,44,13,13,'VioletHi','VioletLo',{Rot:45,Radius:2,Outline:2}),
+  ],
+  EventRelicRain: [
+    S(15,16,5,22,'EmberHi','EmberLo',{Rot:-35,Radius:2,Outline:1.6,Sheen:false}),
+    S(31,9,5,20,'EmberHi','EmberLo',{Rot:-35,Radius:2,Outline:1.6,Sheen:false}),
+    S(43,28,5,18,'EmberHi','EmberLo',{Rot:-35,Radius:2,Outline:1.6,Sheen:false}),
+    S(23,30,15,15,'VioletHi','VioletLo',{Rot:45,Radius:3}),
+    S(39,22,13,13,'CyanHi','CyanLo',{Rot:45,Radius:3}),
+    S(50,40,12,12,'GoldHi','GoldLo',{Rot:45,Radius:3}),
+    S(18,52,9,9,'GoldHi','GoldLo',{Rot:45,Radius:1,Outline:2,Sheen:false}),
+    S(36,54,6,6,'PageHi','PageLo',{Rot:45,Radius:1,Outline:1.6,Sheen:false}),
+  ],
+  EventSwarm: [
+    S(17,36,24,24,'StoneHi','StoneLo',{Round:true}),
+    S(47,36,24,24,'StoneHi','StoneLo',{Round:true}),
+    S(32,24,28,28,'StoneHi','StoneLo',{Round:true}),
+    S(12,36,5,5,'EmberHi','EmberLo',{Round:true,Outline:1.4,Sheen:false}), S(20,36,5,5,'EmberHi','EmberLo',{Round:true,Outline:1.4,Sheen:false}),
+    S(44,36,5,5,'EmberHi','EmberLo',{Round:true,Outline:1.4,Sheen:false}), S(52,36,5,5,'EmberHi','EmberLo',{Round:true,Outline:1.4,Sheen:false}),
+    S(26,23,6,6,'EmberHi','EmberLo',{Round:true,Outline:1.5,Sheen:false}), S(38,23,6,6,'EmberHi','EmberLo',{Round:true,Outline:1.5,Sheen:false}),
+    S(22,50,5,22,'BloodHi','BloodLo',{Rot:30,Radius:2,Outline:2,Sheen:false}),
+    S(32,52,5,22,'BloodHi','BloodLo',{Rot:30,Radius:2,Outline:2,Sheen:false}),
+    S(42,50,5,22,'BloodHi','BloodLo',{Rot:30,Radius:2,Outline:2,Sheen:false}),
+  ],
+  EventGoldenTide: [
+    S(32,54,42,10,'GoldHi','GoldLo',{Radius:5,Sheen:false}),
+    S(30,45,42,10,'GoldHi','GoldLo',{Radius:5,Sheen:false}),
+    S(33,36,42,10,'GoldHi','GoldLo',{Radius:5}),
+    S(32,17,26,26,'GoldHi','GoldLo',{Round:true}),
+    S(32,17,11,11,'GoldLo','GoldHi',{Rot:45,Radius:1,Outline:1.8,Sheen:false}),
+    S(54,10,7,7,'PageHi','PageLo',{Rot:45,Radius:1,Outline:1.6,Sheen:false}),
+  ],
+  EventAlphaHunt: [
+    S(32,33,56,56,'CyanHi','CyanLo',{Round:true,Outline:2,Sheen:false}),
+    S(32,33,46,46,'Dark','IronLo',{Round:true,Outline:1.6,Sheen:false}),
+    S(15,15,8,24,'GoldHi','GoldLo',{Rot:-38,Radius:4}),
+    S(49,15,8,24,'GoldHi','GoldLo',{Rot:38,Radius:4}),
+    S(32,46,18,10,'StoneHi','StoneLo',{Radius:3,Sheen:false}),
+    S(32,31,30,26,'StoneHi','StoneLo',{Radius:12}),
+    S(25,32,7,7,'EmberHi','EmberLo',{Round:true,Outline:1.8,Sheen:false}),
+    S(39,32,7,7,'EmberHi','EmberLo',{Round:true,Outline:1.8,Sheen:false}),
+  ],
+  EventHourglass: [
+    S(14,32,4,44,'GoldHi','GoldLo',{Radius:2,Outline:2,Sheen:false,Rot:-8}),
+    S(50,32,4,44,'GoldHi','GoldLo',{Radius:2,Outline:2,Sheen:false,Rot:-8}),
+    S(34,21,20,20,'PageHi','StoneHi',{Rot:45,Radius:5}),
+    S(30,43,20,20,'PageHi','StoneHi',{Rot:45,Radius:5}),
+    S(34,18,10,5,'VioletHi','VioletLo',{Radius:2,Outline:1.6,Sheen:false,Rot:-8}),
+    S(30,48,13,8,'VioletHi','VioletLo',{Radius:3,Outline:1.6,Sheen:false,Rot:-8}),
+    S(34,9,36,7,'GoldHi','GoldLo',{Radius:2,Rot:-8}),
+    S(30,55,36,7,'GoldHi','GoldLo',{Radius:2,Rot:-8}),
+  ],
+};
+
+const Events = {
+  CALAMITY_HOUR: { Name:'Calamity Hour', Icon:'EventCalamity', Accent:P.BloodLo, Scope:'Whole tower · floors 6–50',
+    Desc:'The tower stirs. Monsters grow fiercer, and relics answer the bold.',
+    Mob:['Monsters: +60% HP, +35% ATK (floor 6+)','Elites gain an extra affix'], Reward:['Relic drop chance ×2','Better relic tiers'], Featured:false },
+  ELITE_TIDE: { Name:'Elite Tide', Icon:'EventEliteTide', Accent:P.GoldLo, Scope:'Featured biome',
+    Desc:'Champions answer the call. Every camp marches under an Elite.',
+    Mob:['Every camp is Elite-led','Elites gain an extra affix'], Reward:['Abyssal Core chance ×1.5'], Featured:true },
+  RELIC_RAIN: { Name:'Relic Rain', Icon:'EventRelicRain', Accent:P.VioletLo, Scope:'Featured biome',
+    Desc:'Shards of the old world fall from the vaults. Claim them before rivals do.',
+    Mob:[], Reward:['A relic meteor lands every 30 s','Contested: carry and bank to keep it'], Featured:true },
+  SWARM: { Name:'Swarm', Icon:'EventSwarm', Accent:P.EmberLo, Scope:'Whole tower',
+    Desc:'The nests overflow. Camps return faster and in greater numbers.',
+    Mob:['Camps respawn in 4 s','+1 monster per camp'], Reward:['Kill progress ×1.5'], Featured:false },
+  GOLDEN_TIDE: { Name:'Golden Tide', Icon:'EventGoldenTide', Accent:P.GoldHi, Scope:'Whole tower',
+    Desc:'The vaults spill over. Every kill rings with coin.',
+    Mob:[], Reward:['Gold ×2','Market bonus still applies'], Featured:false },
+  ALPHA_HUNT: { Name:'Alpha Hunt', Icon:'EventAlphaHunt', Accent:P.CyanLo, Scope:'Featured biome',
+    Desc:'The Alphas leave their thrones to hunt the halls.',
+    Mob:['Each floor’s Alpha roams the lanes'], Reward:['Calamity Heart chance ×2 on roaming Alphas'], Featured:true },
+};
+
+function renderIcon(host, name, size) {
+  host.innerHTML = '';
+  host.style.width = size + 'px'; host.style.height = size + 'px';
+  const ico = document.createElement('div'); ico.className = 'ico';
+  ico.style.transform = `scale(${size/64})`;
+  (Drawings[name] || []).forEach(s => {
+    const d = document.createElement('div'); d.className = 's';
+    d.style.left = s.X + 'px'; d.style.top = s.Y + 'px'; d.style.width = s.W + 'px'; d.style.height = s.H + 'px';
+    d.style.transform = `translate(-50%,-50%) rotate(${s.Rot||0}deg)`;
+    d.style.borderRadius = s.Round ? '50%' : (s.Radius ?? 3) + 'px';
+    d.style.background = `linear-gradient(180deg, ${s.Hi}, ${s.Lo})`;
+    d.style.boxShadow = `0 0 0 ${s.Outline ?? 2.6}px var(--ink)`;
+    if (s.Sheen !== false) { const sh = document.createElement('div'); sh.className = 'sheen'; d.appendChild(sh); }
+    ico.appendChild(d);
+  });
+  host.appendChild(ico);
+}
+
+const state = { phase:'ACTIVE', event:'CALAMITY_HOUR', size:'desktop', left:272, total:300, tip:false };
+const biome = 'Frozen Citadel';
+const fmt = s => `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
+
+const sel = document.getElementById('evsel');
+Object.entries(Events).forEach(([id,ev]) => { const o = document.createElement('option'); o.value = id; o.textContent = ev.Name; sel.appendChild(o); });
+
+function tipHtml(ev) {
+  if (state.phase === 'CALM') {
+    return `<div class="head"><div class="iconbox" id="tipIcon"></div><div class="title">The tower is calm</div></div>
+      <div class="desc" style="margin-top:8px">Next event in ${fmt(state.left)}. Events are announced 60 seconds before they begin.</div>`;
+  }
+  const lines = ev.Mob.map(t=>`<li class="mob">${t}</li>`).join('') + ev.Reward.map(t=>`<li class="reward">${t}</li>`).join('');
+  const scope = ev.Featured ? `Featured biome: ${biome}` : ev.Scope;
+  const when = state.phase === 'WARNING' ? `<div class="scope" style="color:var(--royal)">Begins in ${fmt(state.left)}</div>` : '';
+  return `<div class="head"><div class="iconbox" id="tipIcon"></div><div class="title">${ev.Name}</div></div>
+    <div class="scope">${scope}</div>${when}<div class="desc">${ev.Desc}</div><ul>${lines}</ul>
+    <div class="foot">Monsters that appear during the event keep its bonus until defeated.</div>`;
+}
+
+function render() {
+  const ev = Events[state.event];
+  const compact = state.size === 'phone';
+  const badge = document.getElementById('badge');
+  badge.className = `badge glass ${state.phase.toLowerCase()}${compact?' compact':''}${state.tip?' showtip':''}`;
+  badge.style.setProperty('--accent', ev.Accent);
+  badge.style.borderColor = state.phase === 'ACTIVE' ? ev.Accent : '';
+  renderIcon(document.getElementById('badgeIcon'), state.phase === 'CALM' ? 'EventHourglass' : ev.Icon, compact ? 24 : 30);
+  document.getElementById('badgeLabel').style.display = compact ? 'none' : '';
+  const name = state.phase === 'CALM' ? 'Next event' : state.phase === 'WARNING' ? `${ev.Name} in` : ev.Name;
+  document.getElementById('badgeName').textContent = compact ? '' : name;
+  document.getElementById('badgeName').style.display = compact ? 'none' : '';
+  document.getElementById('badgeTimer').textContent = fmt(state.left);
+  const feat = document.getElementById('badgeFeatured');
+  feat.textContent = (!compact && state.phase !== 'CALM' && ev.Featured) ? `Featured: ${biome}` : '';
+  feat.style.display = feat.textContent ? '' : 'none';
+  const bar = document.getElementById('badgeBar');
+  bar.style.display = (state.phase === 'CALM' || compact) ? 'none' : '';
+  const frac = state.phase === 'WARNING' ? 1 - state.left/60 : state.left/state.total;
+  bar.firstElementChild.style.width = (Math.max(0.02, frac)*100) + '%';
+  bar.firstElementChild.style.background = state.phase === 'WARNING' ? P.GoldHi : ev.Accent;
+  const tip = document.getElementById('tip');
+  tip.innerHTML = tipHtml(ev);
+  const ti = document.getElementById('tipIcon'); if (ti) renderIcon(ti, state.phase === 'CALM' ? 'EventHourglass' : ev.Icon, 36);
+  const power = document.getElementById('power');
+  power.className = `power glass${compact?' compact':''}`;
+  document.getElementById('powerLabel').style.display = compact ? 'none' : '';
+  renderIcon(document.getElementById('powerIcon'), 'Power', compact ? 24 : 30);
+  document.getElementById('vp').className = `viewport${compact?' phone':''}`;
+  const rail = document.getElementById('rail'); rail.innerHTML = '';
+  const railCount = compact ? 2 : 4; for (let i=0;i<railCount;i++){ const b=document.createElement('div'); b.className='btn'; rail.appendChild(b); }
+  document.querySelectorAll('[data-phase]').forEach(b => b.classList.toggle('on', b.dataset.phase === state.phase));
+  document.querySelectorAll('[data-size]').forEach(b => b.classList.toggle('on', b.dataset.size === state.size));
+  sel.value = state.event;
+}
+
+function setPhase(p) {
+  state.phase = p;
+  state.left = p === 'CALM' ? 760 : p === 'WARNING' ? 45 : 272;
+  render();
+}
+
+function playPopup() {
+  const ev = Events[state.event];
+  const pop = document.getElementById('popup');
+  pop.style.setProperty('--accent', ev.Accent);
+  renderIcon(document.getElementById('popIcon'), ev.Icon, 76);
+  document.getElementById('popTitle').textContent = ev.Name.toUpperCase();
+  document.getElementById('popDesc').textContent = ev.Desc;
+  document.getElementById('popScope').textContent = `${ev.Featured ? 'Featured biome: ' + biome : ev.Scope} · 5:00`;
+  pop.classList.remove('show'); void pop.offsetWidth; pop.classList.add('show');
+}
+
+document.querySelectorAll('[data-phase]').forEach(b => b.onclick = () => setPhase(b.dataset.phase));
+document.querySelectorAll('[data-size]').forEach(b => b.onclick = () => { state.size = b.dataset.size; render(); });
+sel.onchange = () => { state.event = sel.value; render(); };
+document.getElementById('playpop').onclick = () => { setPhase('ACTIVE'); state.left = 300; render(); playPopup(); };
+const badgeEl = document.getElementById('badge');
+badgeEl.onmouseenter = () => { state.tip = true; render(); };
+badgeEl.onmouseleave = () => { state.tip = false; render(); };
+badgeEl.onclick = () => { state.tip = !state.tip; render(); };
+
+setInterval(() => {
+  state.left -= 1;
+  if (state.left <= 0) {
+    if (state.phase === 'WARNING') { state.phase = 'ACTIVE'; state.left = 300; render(); playPopup(); return; }
+    if (state.phase === 'ACTIVE') { state.phase = 'CALM'; state.left = 900; }
+    else { state.phase = 'WARNING'; state.left = 60; }
+  }
+  render();
+}, 1000);
+
+const order = ['EventCalamity','EventEliteTide','EventRelicRain','EventSwarm','EventGoldenTide','EventAlphaHunt','EventHourglass'];
+const nameOf = id => (Object.values(Events).find(e => e.Icon === id) || {Name:'Calm'}).Name;
+const accentOf = id => (Object.values(Events).find(e => e.Icon === id) || {Accent:P.GoldLo}).Accent;
+['sheetDark','sheetLight'].forEach(sheetId => {
+  const sheet = document.getElementById(sheetId);
+  order.forEach(id => {
+    const c = document.createElement('div'); c.className = 'cell';
+    const sizes = document.createElement('div'); sizes.className = 'sizes';
+    [76,30,18].forEach(sz => { const h = document.createElement('div'); h.className='iconbox'; renderIcon(h, id, sz); sizes.appendChild(h); });
+    c.appendChild(sizes);
+    c.insertAdjacentHTML('beforeend', `<div class="nm">${nameOf(id)}</div><div class="id">${id}</div><div class="sw" style="background:${accentOf(id)}"></div>`);
+    sheet.appendChild(c);
+  });
+});
+
+render();
+setTimeout(playPopup, 600);
+</script>
+</body>
+</html>
