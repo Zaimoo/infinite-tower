@@ -8,8 +8,18 @@ local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local HubLayout = require(Shared:WaitForChild("Config"):WaitForChild("HubLayout"))
 
 local PlotsFolder = Workspace:WaitForChild("WaitingRoomPlots")
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local TeleportRequest = Remotes:FindFirstChild("TeleportRequest") :: RemoteEvent?
+if not TeleportRequest then
+	TeleportRequest = Instance.new("RemoteEvent")
+	TeleportRequest.Name = "TeleportRequest"
+	TeleportRequest.Parent = Remotes
+end
+
+local LastTeleportAt: { [Player]: number } = {}
 
 local FacilityPresence = require(script.Parent:WaitForChild("FacilityPresence"))
 local PlotManager = {}
@@ -118,9 +128,103 @@ function PlotManager.TeleportPlayerToPlot(player: Player)
 	local char = player.Character
 	local hrp = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
 	if spawnLoc and hrp then
-		hrp.CFrame = spawnLoc.CFrame * CFrame.new(0, 4, 0)
-		require(script.Parent.TowerFloorService).CommitRespawn(player)
+		local targetCFrame = spawnLoc.CFrame * CFrame.new(0, 4, 0)
+		char:PivotTo(targetCFrame)
+		hrp.AssemblyLinearVelocity = Vector3.zero
+		hrp.AssemblyAngularVelocity = Vector3.zero
+		local TowerFloorService = require(script.Parent.TowerFloorService)
+		TowerFloorService.ExitToOverworld(player, targetCFrame.Position, true)
 	end
+end
+
+function PlotManager.TeleportPlayerToHub(player: Player)
+	local char = player.Character
+	local hrp = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if not char or not hrp then
+		return
+	end
+
+	local hubCenter = HubLayout.ParkCentre + Vector3.new(0, 3.5, 16)
+	local angle = (player.UserId % 8) * (math.pi / 4)
+	local scatter = Vector3.new(math.cos(angle) * 3, 0, math.sin(angle) * 3)
+	local spawnPos = hubCenter + scatter
+	local lookTarget = spawnPos + Vector3.new(0, 0, 10)
+	local targetCFrame = CFrame.lookAt(spawnPos, lookTarget)
+
+	char:PivotTo(targetCFrame)
+	hrp.AssemblyLinearVelocity = Vector3.zero
+	hrp.AssemblyAngularVelocity = Vector3.zero
+
+	local TowerFloorService = require(script.Parent.TowerFloorService)
+	TowerFloorService.ExitToOverworld(player, spawnPos, false)
+end
+
+if TeleportRequest then
+	TeleportRequest.OnServerEvent:Connect(function(player: Player, destination: any)
+		if destination ~= "Island" and destination ~= "Hub" then
+			return
+		end
+
+		local char = player.Character
+		local hrp = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
+		local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+		if not char or not hrp or not humanoid or humanoid.Health <= 0 then
+			return
+		end
+
+		-- 1. Cooldown guard (3.0s per player)
+		local now = os.clock()
+		local last = LastTeleportAt[player] or 0
+		if now - last < 3.0 then
+			return
+		end
+
+		-- 2. Duel guard
+		if _G.CombatSimulation and _G.CombatSimulation.IsInDuel and _G.CombatSimulation.IsInDuel(player) then
+			local dm = getDataManager()
+			if dm and dm.SendToast then
+				dm.SendToast(player, "Cannot fast-travel during a duel!", "WARN")
+			end
+			return
+		end
+
+		-- 3. Boss lock guard (while inside the Tower)
+		local TowerFloorService = require(script.Parent.TowerFloorService)
+		local state = TowerFloorService.GetState(player)
+		if state and state.FloorId and state.FloorId > 0 then
+			if _G.CombatSimulation and _G.CombatSimulation.IsBossLocked and _G.CombatSimulation.IsBossLocked(player, state.FloorId) then
+				local dm = getDataManager()
+				if dm and dm.SendToast then
+					dm.SendToast(player, "🔒 Travel is sealed until the boss falls.", "WARN")
+				end
+				return
+			end
+		end
+
+		-- 4. Contested cargo guard: drop carried loot/relic prior to teleporting
+		local carrying = (char:GetAttribute("CarryingLoot") == true) or (char:GetAttribute("CarryingRelic") ~= nil)
+		if carrying then
+			if _G.CombatSimulation and _G.CombatSimulation.DropCarriedLoot then
+				_G.CombatSimulation.DropCarriedLoot(player, true)
+			end
+			if _G.RelicService and _G.RelicService.DropCarriedRelic then
+				_G.RelicService.DropCarriedRelic(player)
+			end
+			local dm = getDataManager()
+			if dm and dm.SendToast then
+				dm.SendToast(player, "Contested cargo dropped before fast travel.", "INFO")
+			end
+		end
+
+		-- 5. Execute teleport
+		LastTeleportAt[player] = now
+		if destination == "Island" then
+			PlotManager.TeleportPlayerToPlot(player)
+			PlotManager.RefreshPlotVisuals(player)
+		elseif destination == "Hub" then
+			PlotManager.TeleportPlayerToHub(player)
+		end
+	end)
 end
 
 local function setupPlotGateBarrier(plotModel: Model)
@@ -261,6 +365,7 @@ end
 Players.PlayerAdded:Connect(assignPlotToPlayer)
 
 Players.PlayerRemoving:Connect(function(player: Player)
+	LastTeleportAt[player] = nil
 	local idx = PlayerToPlotIndex[player]
 	if idx then
 		AssignedPlots[idx] = nil
