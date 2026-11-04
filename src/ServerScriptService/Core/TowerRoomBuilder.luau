@@ -5,6 +5,7 @@
 local Config = require(game.ReplicatedStorage.Shared.Config.TowerFloorConfig)
 local Layout = require(game.ReplicatedStorage.Shared.Config.TowerLayout)
 local BiomeAssets = require(script.Parent.TowerBiomeAssets)
+local PropClearance = require(script.Parent.TowerPropClearance)
 local Builder = {}
 
 export type BiomeTheme = {
@@ -232,6 +233,15 @@ local function decor(parent: Instance, name: string, size: Vector3, pos: Vector3
 	return p
 end
 
+-- A compound decor piece (see TowerPropClearance): its parts are cleared together, never one by one.
+local function propGroup(parent: Instance, kind: string): Model
+	local prop = Instance.new("Model")
+	prop.Name = kind
+	prop:SetAttribute("PropKind", kind)
+	prop.Parent = parent
+	return prop
+end
+
 function Builder.Build(id: number, generation: number): any
 	assert(Config.IsFloorId(id))
 	local floorSpec = assert(Config.Get(id))
@@ -349,8 +359,9 @@ function Builder.Build(id: number, generation: number): any
 				for _, sz in { -1, 1 } do
 					local corner = topCenter + Vector3.new(sx * (terrace.Width / 2 - 4), 0, sz * (terrace.Depth / 2 - 4))
 					if isNatural then
-						decor(model, "TerraceRockOutcrop", Vector3.new(7, 5, 7), corner + Vector3.new(0, 2.5, 0), theme.CliffColor, theme.CliffMaterial)
-						local flora = decor(model, "TerraceGlowFlora", Vector3.new(2.5, 3.2, 2.5), corner + Vector3.new(0, 5.5, 0), theme.LightColor, Enum.Material.SmoothPlastic, 0.15)
+						local outcrop = propGroup(model, "TerraceOutcrop")
+						decor(outcrop, "TerraceRockOutcrop", Vector3.new(7, 5, 7), corner + Vector3.new(0, 2.5, 0), theme.CliffColor, theme.CliffMaterial)
+						local flora = decor(outcrop, "TerraceGlowFlora", Vector3.new(2.5, 3.2, 2.5), corner + Vector3.new(0, 5.5, 0), theme.LightColor, Enum.Material.SmoothPlastic, 0.15)
 						local pl = Instance.new("PointLight")
 						pl.Name = "TerraceCornerLight"
 						pl.Color = theme.LightColor
@@ -359,8 +370,9 @@ function Builder.Build(id: number, generation: number): any
 						pl.Shadows = false
 						pl.Parent = flora
 					else
-						decor(model, "TerraceCornerPedestal", Vector3.new(5, 8, 5), corner + Vector3.new(0, 4, 0), theme.TrimColor, theme.TrimMaterial)
-						local brazier = decor(model, "TerraceCornerBrazier", Vector3.new(3, 2.5, 3), corner + Vector3.new(0, 9, 0), theme.LightColor, Enum.Material.SmoothPlastic, 0.1)
+						local pedestal = propGroup(model, "TerraceBrazier")
+						decor(pedestal, "TerraceCornerPedestal", Vector3.new(5, 8, 5), corner + Vector3.new(0, 4, 0), theme.TrimColor, theme.TrimMaterial)
+						local brazier = decor(pedestal, "TerraceCornerBrazier", Vector3.new(3, 2.5, 3), corner + Vector3.new(0, 9, 0), theme.LightColor, Enum.Material.SmoothPlastic, 0.1)
 						local pl = Instance.new("PointLight")
 						pl.Name = "TerraceCornerLight"
 						pl.Color = theme.LightColor
@@ -409,16 +421,18 @@ function Builder.Build(id: number, generation: number): any
 		end
 
 		for _, side in { -1, 1 } do
-			local curbOffset = right * (side * (link.Width / 2 + 1.4))
-			local curb = decor(model, "BridgeCurb", Vector3.new(2.2, 2.6, delta.Magnitude), mid + curbOffset, theme.TrimColor, theme.TrimMaterial)
+			-- On the ramp's edge (not beside it, where nothing holds it up).
+			local curbOffset = right * (side * (link.Width / 2 - 1.1))
+			local curbGroup = propGroup(model, "BridgeCurb")
+			local curb = decor(curbGroup, "BridgeCurb", Vector3.new(2.2, 2.6, delta.Magnitude), mid + curbOffset, theme.TrimColor, theme.TrimMaterial)
 			curb.CFrame = CFrame.lookAt(mid + curbOffset, b + curbOffset) * CFrame.new(0, -0.4, 0)
-			local glowStrip = decor(model, "BridgeRuneStrip", Vector3.new(0.45, 0.35, delta.Magnitude - 4), mid + curbOffset, theme.LightColor, Enum.Material.SmoothPlastic, 0.3)
+			local glowStrip = decor(curbGroup, "BridgeRuneStrip", Vector3.new(0.45, 0.35, delta.Magnitude - 4), mid + curbOffset, theme.LightColor, Enum.Material.SmoothPlastic, 0.3)
 			glowStrip.CFrame = CFrame.lookAt(mid + curbOffset, b + curbOffset) * CFrame.new(0, 0.95, 0)
 		end
 		for _, frac in { 0.18, 0.82 } do
 			local pt = a:Lerp(b, frac)
 			for _, side in { -1, 1 } do
-				local lampPos = pt + right * (side * (link.Width / 2 + 1.4)) + Vector3.new(0, 1.8, 0)
+				local lampPos = pt + right * (side * (link.Width / 2 - 1.1)) + Vector3.new(0, 1.8, 0)
 				local lamp = decor(model, "RampPostLantern", Vector3.new(1.4, 2.2, 1.4), lampPos, theme.LightColor, Enum.Material.SmoothPlastic, 0.15)
 				local pl = Instance.new("PointLight")
 				pl.Color = theme.LightColor
@@ -631,18 +645,19 @@ function Builder.Build(id: number, generation: number): any
  for _,placement in Layout.Placements(require(game.ReplicatedStorage.Shared.Config.MobCatalog).Biomes[math.ceil(id/5)],idx) do
   table.insert(clearancePoints,origin+Vector3.new(placement.X,placement.Y+2.5,placement.Z))
  end
- for _,p in model:GetDescendants() do
-  if p:IsA("BasePart") and p:GetAttribute("SolidScenery") then
-   for _,point in clearancePoints do
-    local at = p.CFrame:PointToObjectSpace(point)
-    local half = p.Size/2 + Vector3.new(3,2,3)
-    if math.abs(at.X)<half.X and math.abs(at.Y)<half.Y and math.abs(at.Z)<half.Z then
-     p:Destroy()
-     break
-    end
+ -- A solid part in the way removes its whole prop (TowerPropClearance), so nothing is left floating.
+ local function inLane(p: BasePart): boolean
+  if not p:GetAttribute("SolidScenery") then return false end
+  for _,point in clearancePoints do
+   local at = p.CFrame:PointToObjectSpace(point)
+   local half = p.Size/2 + Vector3.new(3,2,3)
+   if math.abs(at.X)<half.X and math.abs(at.Y)<half.Y and math.abs(at.Z)<half.Z then
+    return true
    end
   end
+  return false
  end
+ local laneCleared = PropClearance.Apply(model, inLane)
 
 	local folder = workspace:FindFirstChild("TowerRooms") or Instance.new("Folder")
 	folder.Name = "TowerRooms"
@@ -652,6 +667,18 @@ function Builder.Build(id: number, generation: number): any
 		existing:Destroy()
 	end
 	model.Parent = folder
+
+	-- No prop floats: lower anything hovering onto the support under it (settling raycasts, so the room
+	-- is in the Workspace now). A lowered prop can land in a camp or lane, so clear both again after.
+	local lowered, dropped = PropClearance.Settle(model, BiomeAssets.AirborneKinds, 1.5, 80)
+	local kit = model:FindFirstChild("BiomeAssets")
+	if kit then
+		kit:SetAttribute("PropsClearedForCamps", (kit:GetAttribute("PropsClearedForCamps") or 0) + PropClearance.Apply(kit, BiomeAssets.CampHitTest(origin, layout)))
+	end
+	laneCleared += PropClearance.Apply(model, inLane)
+	model:SetAttribute("PropsClearedForLanes", laneCleared)
+	model:SetAttribute("PropsLowered", lowered)
+	model:SetAttribute("PropsDroppedUnsupported", dropped)
 
 	return {
 		FloorId = id,
