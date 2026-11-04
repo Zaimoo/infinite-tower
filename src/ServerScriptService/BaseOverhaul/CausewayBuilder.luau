@@ -113,7 +113,7 @@ function CausewayBuilder.Build(parent: Instance): Model
 	for _, side in { -1, 1 } do
 		local x = side * (W * 0.5 - 1)
 		makePart({ Name = "Parapet", Size = Vector3.new(2, 3.5, L), CFrame = frame * CFrame.new(x, 1.75, 0), Color = OBSIDIAN, Material = Enum.Material.Basalt, Parent = walls })
-		local barrier = makePart({ Name = "Barrier", Size = Vector3.new(1, 12, L), CFrame = frame * CFrame.new(side * (W * 0.5 + 0.5), 6, 0), Transparency = 1, CastShadow = false, Parent = walls })
+		local barrier = makePart({ Name = "Barrier", Size = Vector3.new(1, 20, L), CFrame = frame * CFrame.new(side * (W * 0.5 + 0.5), 10, 0), Transparency = 1, CastShadow = false, Parent = walls })
 		barrier.CanQuery = false
 		barrier.CanTouch = false
 		local caps = math.floor(L / 6)

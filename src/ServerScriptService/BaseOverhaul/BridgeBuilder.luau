@@ -61,9 +61,9 @@ function B.Build()
 	local y = HubLayout.TowerWalkwayY
 	local surfaceY = HubLayout.IslandSurfaceY
 
-	-- Plot gate -> Masters' Commons rim, one straight bridge per plot (both ends at the island surface)
+	-- Plot gate -> Cloister Commons outer edge, one short straight bridge per plot (both ends at the island surface)
 	local connected = 0
-	for i = 1, #HubLayout.PlotBearingsDeg do
+	for i = 1, HubLayout.PlotCount do
 		local plot = workspace.WaitingRoomPlots:FindFirstChild("Plot_" .. i)
 		if plot then
 			local island = plot:WaitForChild("FloatingFortressIsland", 10)
@@ -73,7 +73,8 @@ function B.Build()
 				if gate and gate:IsA("BasePart") then
 					connected += 1
 					local start = Vector3.new(gate.Position.X, surfaceY, gate.Position.Z) - gate.CFrame.LookVector * 4
-					local landing = HubLayout.BearingPoint(HubLayout.PlotBearingsDeg[i], HubLayout.ParkRadius - 2)
+					local slot = HubLayout.PlotSlots[i]
+					local landing = HubLayout.HubLandingPoint(i) - Vector3.new(slot.DX, 0, slot.DZ) * 2
 					span("IslandBridge_" .. i, start, landing, HubLayout.PlotBridgeWidth, true, 4, 6, true)
 					local edgeBarriers = walls:FindFirstChild("InvisibleEdgeBarriers")
 					local barrier = edgeBarriers and edgeBarriers:FindFirstChild("Barrier_Front")
@@ -110,7 +111,7 @@ function B.Build()
 	local approachFront = Vector3.new(0, y, -358)
 	span("TowerEntranceApproach", Vector3.new(0, y, -radius - 1), approachFront, HubLayout.CausewayWidth, true)
 
-	-- 2. Legacy square plaza slab poked into Plot_1 and Plot_6; the tower's CrackedGroundSlab is the floor
+	-- 2. Legacy square plaza slab poked into the plots; the tower's CrackedGroundSlab is the floor
 	local oldPlaza = world:FindFirstChild("TowerPlazaFoundation")
 	if oldPlaza then oldPlaza:Destroy() end
 

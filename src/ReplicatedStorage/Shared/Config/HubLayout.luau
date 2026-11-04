@@ -1,9 +1,10 @@
 --!strict
 -- HubLayout.luau
 -- Single source of truth for Central Hub world geometry (GDD §3.1, §3.2, §3.5).
--- The Masters' Commons park sits north of the tower gate; the 6 fortress plots form a
--- horseshoe around it with the open side facing the tower. Bearings are measured from
--- the park centre in degrees: 0 = north (-Z, away from the tower), positive = east (+X).
+-- The Cloister Commons is a hollow rounded rectangle north of the tower gate: a 120-stud walkable band
+-- around an open void, with a garden island in the middle joined by four footbridges. Ten fortress
+-- plots line its outside (3 per long side, 2 on the north edge, 2 on the north corners).
+-- Hub-local frame: origin at HubCentre, +X east, -Z north (away from the tower).
 
 local HubLayout = {}
 
@@ -12,89 +13,148 @@ HubLayout.TowerWalkwayY = 16
 HubLayout.TowerWalkwayRadius = 375
 HubLayout.TowerClearRadius = 420 -- No plot geometry may come closer to the tower centre
 
--- The Masters' Commons
-HubLayout.ParkCentre = Vector3.new(0, 12, -650)
-HubLayout.ParkRadius = 170
+-- Cloister Commons
+HubLayout.HubCentre = Vector3.new(0, 12, -1036)
+HubLayout.ParkCentre = HubLayout.HubCentre -- Fast travel and background islets centre on the hub
+HubLayout.HubHalfX = 420
+HubLayout.HubHalfZ = 560
+HubLayout.OuterCornerRadius = 160
+HubLayout.BandWidth = 120
+HubLayout.VoidHalfX = HubLayout.HubHalfX - HubLayout.BandWidth -- 300
+HubLayout.VoidHalfZ = HubLayout.HubHalfZ - HubLayout.BandWidth -- 440
+HubLayout.VoidCornerRadius = HubLayout.OuterCornerRadius - HubLayout.BandWidth -- 40, concentric with the outer corners
+HubLayout.IslandHalfX = 170
+HubLayout.IslandHalfZ = 250
+HubLayout.IslandCornerRadius = 30
+HubLayout.FootbridgeWidth = 20
 
--- Plot horseshoe (Plot_1 .. Plot_6, west to east through north)
-HubLayout.PlotBearingsDeg = { -120, -72, -24, 24, 72, 120 }
-HubLayout.PlotCentreRadius = 478 -- Island bounding-box centre (IslandRoot) distance from the park centre
+-- Plots
+HubLayout.PlotCount = 10
 HubLayout.PlotHalfWidth = 130
 HubLayout.PlotHalfDepth = 168
 HubLayout.PlotBridgeWidth = 18
+HubLayout.PlotBridgeLength = 40
+HubLayout.PlotSpacing = 284 -- Centre to centre along a straight side (260 wide + 24 gap)
+HubLayout.PlotGateWidth = 20
+-- Fill nearest-to-the-gate first so small servers cluster by the tower
+HubLayout.AssignmentOrder = { 1, 10, 2, 9, 3, 8, 4, 7, 5, 6 }
 
--- Pilgrim's Causeway: tower walkway -> Commons South Gate (deck width; bastions and statues stand outside it)
+-- Pilgrim's Causeway: tower walkway -> Cloister South Gate (deck width; bastions and statues stand outside it)
 HubLayout.CausewayWidth = 40
 HubLayout.CausewayTowerZ = -(375 + 11) -- Outer edge of the tower walkway
-HubLayout.SouthGateBearingDeg = 180
 HubLayout.SouthGateWidth = 44
-HubLayout.BoulevardWidth = 28 -- Pilgrim's Way inside the park
-HubLayout.PlotGateWidth = 20
+HubLayout.BoulevardWidth = 28 -- Pilgrim's Way across the south band
 
 -- Safety catch plane & background horizon
-HubLayout.KillZoneCentre = Vector3.new(0, -95, -500)
-HubLayout.KillZoneSize = Vector3.new(3400, 8, 3400)
-HubLayout.IsletRingMin = 1450
-HubLayout.IsletRingMax = 1650
+HubLayout.KillZoneCentre = Vector3.new(0, -95, -950)
+HubLayout.KillZoneSize = Vector3.new(2400, 8, 3400)
+HubLayout.IsletRingMin = 1250
+HubLayout.IsletRingMax = 1450
 
--- Unit direction (x, z) for a bearing in degrees.
-function HubLayout.BearingDir(deg: number): (number, number)
-	local r = math.rad(deg)
-	return math.sin(r), -math.cos(r)
+local SQRT_HALF = math.sqrt(0.5)
+
+-- Hub-local (x, z) -> world point at height y (default island surface).
+function HubLayout.HubPoint(x: number, z: number, y: number?): Vector3
+	local c = HubLayout.HubCentre
+	return Vector3.new(c.X + x, y or HubLayout.IslandSurfaceY, c.Z + z)
 end
 
--- World point at `radius` studs from the park centre along `deg`, at height y (default island surface).
-function HubLayout.BearingPoint(deg: number, radius: number, y: number?): Vector3
-	local dx, dz = HubLayout.BearingDir(deg)
-	local c = HubLayout.ParkCentre
-	return Vector3.new(c.X + dx * radius, y or HubLayout.IslandSurfaceY, c.Z + dz * radius)
+-- Each plot's hub-local centre and outward direction (unit x, z). Plot_1..3 west (south to north),
+-- Plot_4 north-west corner, Plot_5..6 north, Plot_7 north-east corner, Plot_8..10 east (north to south).
+local function buildPlotSlots(): { { X: number, Z: number, DX: number, DZ: number } }
+	local slots = {}
+	local reach = HubLayout.PlotBridgeLength + HubLayout.PlotHalfDepth
+	local sideX = HubLayout.HubHalfX + reach
+	local northZ = -(HubLayout.HubHalfZ + reach)
+	local s = HubLayout.PlotSpacing
+	local cornerR = HubLayout.OuterCornerRadius + reach
+	local cx, cz = HubLayout.HubHalfX - HubLayout.OuterCornerRadius, HubLayout.HubHalfZ - HubLayout.OuterCornerRadius
+	for _, z in { s, 0, -s } do
+		table.insert(slots, { X = -sideX, Z = z, DX = -1, DZ = 0 })
+	end
+	table.insert(slots, { X = -cx - SQRT_HALF * cornerR, Z = -cz - SQRT_HALF * cornerR, DX = -SQRT_HALF, DZ = -SQRT_HALF })
+	for _, x in { -s * 0.5, s * 0.5 } do
+		table.insert(slots, { X = x, Z = northZ, DX = 0, DZ = -1 })
+	end
+	table.insert(slots, { X = cx + SQRT_HALF * cornerR, Z = -cz - SQRT_HALF * cornerR, DX = SQRT_HALF, DZ = -SQRT_HALF })
+	for _, z in { -s, 0, s } do
+		table.insert(slots, { X = sideX, Z = z, DX = 1, DZ = 0 })
+	end
+	return slots
 end
+HubLayout.PlotSlots = buildPlotSlots()
 
 function HubLayout.PlotCentre(index: number): Vector3
-	return HubLayout.BearingPoint(HubLayout.PlotBearingsDeg[index], HubLayout.PlotCentreRadius)
+	local slot = HubLayout.PlotSlots[index]
+	return HubLayout.HubPoint(slot.X, slot.Z)
 end
 
--- IslandRoot CFrame for Plot_N: centred on its bearing, front (-Z local) facing the park centre.
+-- IslandRoot CFrame for Plot_N: front (-Z local) faces back across its bridge into the hub.
 function HubLayout.PlotIslandCFrame(index: number): CFrame
-	local c = HubLayout.ParkCentre
-	return CFrame.lookAt(HubLayout.PlotCentre(index), Vector3.new(c.X, HubLayout.IslandSurfaceY, c.Z))
+	local slot = HubLayout.PlotSlots[index]
+	local centre = HubLayout.PlotCentre(index)
+	return CFrame.lookAt(centre, centre - Vector3.new(slot.DX, 0, slot.DZ))
 end
 
--- Point on the park rim where Plot_N's bridge lands.
-function HubLayout.ParkGatePoint(index: number): Vector3
-	return HubLayout.BearingPoint(HubLayout.PlotBearingsDeg[index], HubLayout.ParkRadius)
+-- Point on the hub's outer edge where Plot_N's bridge lands.
+function HubLayout.HubLandingPoint(index: number): Vector3
+	local slot = HubLayout.PlotSlots[index]
+	local back = HubLayout.PlotHalfDepth + HubLayout.PlotBridgeLength
+	return HubLayout.HubPoint(slot.X - slot.DX * back, slot.Z - slot.DZ * back)
 end
 
+-- World Z of the hub's south edge, where the causeway lands.
 function HubLayout.CausewayParkZ(): number
-	return HubLayout.ParkCentre.Z + HubLayout.ParkRadius
+	return HubLayout.HubCentre.Z + HubLayout.HubHalfZ
 end
 
--- Safe, bankable hub zones as world XZ polygons: the Commons (24-gon), each plot bridge, and the causeway.
--- Plot interiors get their own zones from PlotSpawn in TowerFloorService.
-HubLayout.BridgeZoneOuterRadius = 345 -- Reaches past each plot's front gate (about 328 from the park centre)
-
-function HubLayout.BankZonePolygons(): { { Id: string, Points: { { number } } } }
-	local c = HubLayout.ParkCentre
-	local zones = {}
-	local park = {}
-	for i = 0, 23 do
-		local a = i * math.pi / 12
-		local r = HubLayout.ParkRadius + 2
-		table.insert(park, { c.X + math.cos(a) * r, c.Z + math.sin(a) * r })
+-- The 4 XZ corners of Plot_N's island footprint (for overlap and clearance checks).
+function HubLayout.PlotCorners(index: number): { { number } }
+	local slot = HubLayout.PlotSlots[index]
+	local fx, fz = slot.DX, slot.DZ
+	local px, pz = -fz, fx
+	local centre = HubLayout.PlotCentre(index)
+	local out = {}
+	for _, sgn in { { -1, -1 }, { 1, -1 }, { 1, 1 }, { -1, 1 } } do
+		local w, d = sgn[1] * HubLayout.PlotHalfWidth, sgn[2] * HubLayout.PlotHalfDepth
+		table.insert(out, { centre.X + px * w + fx * d, centre.Z + pz * w + fz * d })
 	end
-	table.insert(zones, { Id = "HUB_COMMONS", Points = park })
+	return out
+end
+
+-- Safe, bankable hub zones as world XZ polygons: the four band strips, the island, the four footbridges,
+-- each plot bridge and the causeway. The void is deliberately not covered. Plot interiors get their own
+-- zones from PlotSpawn in TowerFloorService.
+function HubLayout.BankZonePolygons(): { { Id: string, Points: { { number } } } }
+	local c = HubLayout.HubCentre
+	local zones = {}
+	local function box(id: string, x0: number, z0: number, x1: number, z1: number)
+		table.insert(zones, { Id = id, Points = { { c.X + x0, c.Z + z0 }, { c.X + x1, c.Z + z0 }, { c.X + x1, c.Z + z1 }, { c.X + x0, c.Z + z1 } } })
+	end
+	local hx, hz, vx, vz = HubLayout.HubHalfX + 2, HubLayout.HubHalfZ + 2, HubLayout.VoidHalfX, HubLayout.VoidHalfZ
+	box("HUB_BAND_SOUTH", -hx, vz, hx, hz)
+	box("HUB_BAND_NORTH", -hx, -hz, hx, -vz)
+	box("HUB_BAND_WEST", -hx, -vz, -vx, vz)
+	box("HUB_BAND_EAST", vx, -vz, hx, vz)
+	local ix, iz, fw = HubLayout.IslandHalfX + 2, HubLayout.IslandHalfZ + 2, HubLayout.FootbridgeWidth * 0.5 + 2
+	box("HUB_ISLAND", -ix, -iz, ix, iz)
+	box("HUB_FOOTBRIDGE_W", -vx - 2, -fw, -ix, fw)
+	box("HUB_FOOTBRIDGE_E", ix, -fw, vx + 2, fw)
+	box("HUB_FOOTBRIDGE_N", -fw, -vz - 2, fw, -iz)
+	box("HUB_FOOTBRIDGE_S", -fw, iz, fw, vz + 2)
 	local half = HubLayout.PlotBridgeWidth * 0.5 + 2
-	for i, deg in HubLayout.PlotBearingsDeg do
-		local fx, fz = HubLayout.BearingDir(deg)
+	for i, slot in HubLayout.PlotSlots do
+		local fx, fz = slot.DX, slot.DZ
 		local px, pz = -fz, fx
-		local r0, r1 = HubLayout.ParkRadius - 4, HubLayout.BridgeZoneOuterRadius
+		local land = HubLayout.HubLandingPoint(i)
+		local r0, r1 = -4, HubLayout.PlotBridgeLength + 6 -- from just inside the hub edge to past the plot gate
 		table.insert(zones, {
 			Id = "HUB_BRIDGE_" .. i,
 			Points = {
-				{ c.X + fx * r0 - px * half, c.Z + fz * r0 - pz * half },
-				{ c.X + fx * r1 - px * half, c.Z + fz * r1 - pz * half },
-				{ c.X + fx * r1 + px * half, c.Z + fz * r1 + pz * half },
-				{ c.X + fx * r0 + px * half, c.Z + fz * r0 + pz * half },
+				{ land.X + fx * r0 - px * half, land.Z + fz * r0 - pz * half },
+				{ land.X + fx * r1 - px * half, land.Z + fz * r1 - pz * half },
+				{ land.X + fx * r1 + px * half, land.Z + fz * r1 + pz * half },
+				{ land.X + fx * r0 + px * half, land.Z + fz * r0 + pz * half },
 			},
 		})
 	end
@@ -102,20 +162,6 @@ function HubLayout.BankZonePolygons(): { { Id: string, Points: { { number } } } 
 	local z0, z1 = HubLayout.CausewayParkZ() - 4, HubLayout.CausewayTowerZ + 2
 	table.insert(zones, { Id = "HUB_CAUSEWAY", Points = { { -w, z0 }, { w, z0 }, { w, z1 }, { -w, z1 } } })
 	return zones
-end
-
--- The 4 XZ corners of Plot_N's island footprint (for overlap and clearance checks).
-function HubLayout.PlotCorners(index: number): { { number } }
-	local deg = HubLayout.PlotBearingsDeg[index]
-	local fx, fz = HubLayout.BearingDir(deg) -- outward from the park
-	local px, pz = -fz, fx -- perpendicular
-	local centre = HubLayout.PlotCentre(index)
-	local out = {}
-	for _, s in { { -1, -1 }, { 1, -1 }, { 1, 1 }, { -1, 1 } } do
-		local w, d = s[1] * HubLayout.PlotHalfWidth, s[2] * HubLayout.PlotHalfDepth
-		table.insert(out, { centre.X + px * w + fx * d, centre.Z + pz * w + fz * d })
-	end
-	return out
 end
 
 return HubLayout

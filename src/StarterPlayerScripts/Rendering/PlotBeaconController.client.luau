@@ -22,8 +22,8 @@ local PlotsFolder = Workspace:WaitForChild("WaitingRoomPlots")
 -- TUNABLE RANGE CONSTANTS
 --------------------------------------------------------------------------------
 -- Beacons are visible across the whole hub from any island.
--- The plots form a horseshoe around the Masters' Commons (HubLayout): plot to plot is at most ~1000 studs,
--- and the far side of the tower walkway is ~1700 studs from the farthest plot.
+-- The 10 plots ring the Cloister Commons (HubLayout): plot to plot is at most ~1600 studs,
+-- and the far side of the tower walkway is ~2400 studs from the farthest plot.
 -- Range of 3500 studs ensures all players' beacons are fully visible from anywhere in the lobby.
 local OTHER_BEACON_MAX_DISTANCE = 3500
 local LOCAL_BEACON_MAX_DISTANCE = 3500

@@ -1,5 +1,7 @@
 # Hub Re-layout: The Masters' Commons
 
+> **Superseded** by `docs/cloister-hub-10-plots-plan.md` (10 plots around the Cloister Commons). Kept for history.
+
 Status: **Phases 1–6 implemented.** Phase 7 (stretch goals) is still to do. Phase 5 was baked into the open place in Studio and has to be saved from Studio.
 
 As built, the build differs from the plan below in these ways:

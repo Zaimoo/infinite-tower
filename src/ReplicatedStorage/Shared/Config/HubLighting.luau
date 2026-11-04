@@ -1,6 +1,6 @@
 --!strict
 -- HubLighting.luau
--- Lighting presets and where each applies (GDD §3.6). The plots and the Masters' Commons sit in a warm,
+-- Lighting presets and where each applies (GDD §3.6). The plots and the Cloister Commons sit in a warm,
 -- hopeful "Sanctuary" light; the Crimson Tower and its causeway sink into a dark "Dread" light; the
 -- off-map tower floors keep the original "Storm" grade. The server applies Sanctuary as the baseline
 -- (LightingAndEffects); each client blends by where its character stands (HubLightingController).
@@ -131,9 +131,9 @@ local Presets: { [string]: Preset } = {
 HubLighting.Presets = Presets
 
 -- Dread fades in between these distances from the tower centre: full on the walkway ring (R 375 ± 11),
--- none by the Commons' south edge (R 480) and beyond, so the causeway walk is the transition.
+-- none by the Cloister's south edge (R 476) and beyond, so the causeway walk is the transition.
 HubLighting.DreadFullRadius = 395
-HubLighting.DreadNoneRadius = 500
+HubLighting.DreadNoneRadius = 470
 HubLighting.FloorsBeyond = 6000 -- Off-map tower floors start at X, Z >= 12000
 
 -- Returns the preset name a position sits in, and the Dread weight (0..1) when in the hub.

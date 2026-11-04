@@ -406,7 +406,8 @@ end)
 local function assignPlotToPlayer(player: Player)
 	local dm = getDataManager()
 	local chosenIdx: number? = nil
-	for i = 1, 6 do
+	-- Nearest-to-the-gate first, so small servers cluster by the tower (HubLayout.AssignmentOrder)
+	for _, i in HubLayout.AssignmentOrder do
 		if AssignedPlots[i] == nil then
 			chosenIdx = i
 			break
