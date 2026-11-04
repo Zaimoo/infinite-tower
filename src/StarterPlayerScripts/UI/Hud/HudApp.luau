@@ -11,6 +11,7 @@ local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 
 local React = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("React"))
 local ReactRoblox = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("ReactRoblox"))
@@ -25,6 +26,7 @@ local Store = require(script.Parent:WaitForChild("Store"))
 local Whistles = require(script.Parent:WaitForChild("Whistles"))
 local Components = require(script.Parent:WaitForChild("Components"))
 local HeroIndex = require(script.Parent:WaitForChild("HeroIndex"))
+local BackpackPanel = require(script.Parent:WaitForChild("BackpackPanel"))
 local FacilityPanel = require(script.Parent:WaitForChild("FacilityPanel"))
 local ShopPanel = require(script.Parent:WaitForChild("ShopPanel"))
 
@@ -227,6 +229,15 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 	local indexOpen, setIndexOpen = React.useState(false)
 	local facilityOpen, setFacilityOpen = React.useState(nil :: string?)
 	local shopOpen, setShopOpen = React.useState(false)
+	local backpackOpen, setBackpackOpen = React.useState(false)
+	local backpackButton = React.useRef(nil :: GuiButton?)
+	local closeBackpack = React.useCallback(function() setBackpackOpen(false) end, {})
+	local returnBackpackFocus = React.useCallback(function()
+		local button = backpackButton.current
+		if button and UserInputService.PreferredInput == Enum.PreferredInput.Gamepad then
+			GuiService.SelectedObject = button
+		end
+	end, {})
 	local knownTemplates = React.useRef(nil :: { [string]: boolean }?)
 	local newHeroes, setNewHeroes = React.useState(0)
 	-- Squad drawer: the player's choice (kept in Store), plus a danger auto-expand that collapses
@@ -262,6 +273,15 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 			for _, c in conns do c:Disconnect() end
 		end
 	end, {})
+
+	React.useEffect(function()
+		_G.IsBackpackOpen = function() return backpackOpen end
+		_G.CloseBackpack = closeBackpack
+		return function()
+			_G.IsBackpackOpen = nil
+			_G.CloseBackpack = nil
+		end
+	end, { backpackOpen, closeBackpack })
 
 	React.useEffect(function()
 		_G.OpenHeroIndex = function()
@@ -420,6 +440,16 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 			end,
 		},
 		{
+			Icon = "Backpack",
+			Label = "Backpack",
+			Accent = Color3.fromRGB(243, 199, 119),
+			ButtonRef = backpackButton,
+			OnActivated = function()
+				call("OpenMasterModal", "NONE")
+				setBackpackOpen(true)
+			end,
+		},
+		{
 			Icon = "Gear",
 			Label = "Settings",
 			Accent = Color3.fromRGB(163, 150, 186), -- #A396BA Muted Silver/Bronze
@@ -556,6 +586,9 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 			OnClose = function() setFacilityOpen(nil) end }) else nil,
 		Shop = if shopOpen then e(ShopPanel, { Profile = profile, Width = screen.X, OnClose = function() setShopOpen(false) end }) else nil,
 		Index = if indexOpen then e(HeroIndex, { Profile = profile, Width = screen.X, OnClose = function() setIndexOpen(false) end }) else nil,
+		Backpack = if backpackOpen then e(BackpackPanel, {
+			Width = screen.X, Height = screen.Y, OnClose = closeBackpack, ReturnFocus = returnBackpackFocus,
+		}) else nil,
 		}, props.Overlay or props.Root),
 	})
 end

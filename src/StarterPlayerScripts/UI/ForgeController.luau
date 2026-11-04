@@ -18,6 +18,11 @@ local StatBalance = require(Shared.Config.StatBalance)
 local GothicBoxStyle = require(Shared.Util.GothicBoxStyle)
 local GildedGrimoire = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GildedGrimoire"))
 local GrimoireIcons = require(Shared.Util.GrimoireIcons)
+local ArtifactPreview = require(script.Parent.ArtifactPreview)
+
+local function showArtifact(label: TextLabel, templateId: string?)
+	label.TextTransparency = if ArtifactPreview.Show(label, templateId) then 1 else 0
+end
 local GrimoireSummonButton = require(Shared.Util.GrimoireSummonButton)
 local HeroCard = require(script.Parent:WaitForChild("HeroCard"))
 local ModalFit = require(script.Parent:WaitForChild("ModalFit"))
@@ -675,6 +680,7 @@ local function updateCard(node: CardNode, item: { UUID: string, Art: any }, hero
 		node.IconBoxGrad.Color = ColorSequence.new(Color3.fromRGB(12, 8, 18), Color3.fromRGB(12, 8, 18):Lerp(rarityColor, 0.35))
 	end
 	node.IconLabel.Text = ICON_MAP[art.Type] or "⚔️"
+	showArtifact(node.IconLabel, art.TemplateId)
 	node.NameLabel.Text = art.DisplayName or "Artifact"
 	node.StarsLabel.Text = string.rep("★", starCount)
 
@@ -1539,6 +1545,7 @@ function Forge:RenderUpgradeView()
 	local target = self.SelectedTargetUUID and artifacts[self.SelectedTargetUUID]
 	if not target then
 		self.TargetIcon.Text = "⚔️"
+		showArtifact(self.TargetIcon, nil)
 		self.TargetName.Text = "NO ARTIFACT"
 		self.TargetLevel.Text = "Click to pick"
 		if self.StatRows then
@@ -1566,6 +1573,7 @@ function Forge:RenderUpgradeView()
 	-- Update Target Slot Card
 	local iconChar = ICON_MAP[target.Type] or "⚔️"
 	self.TargetIcon.Text = iconChar
+	showArtifact(self.TargetIcon, target.TemplateId)
 	self.TargetName.Text = target.DisplayName or "Artifact"
 	self.TargetLevel.Text = string.format("%s · %d★", rarityInfo.Name, currentStar)
 	if self.TargetSlotFrame then
@@ -1654,6 +1662,7 @@ function Forge:RenderUpgradeView()
 			local nameLabel = slotFrame:FindFirstChild("NameLabel") :: TextLabel?
 			local fUUID = self.FodderUUIDs[i]
 			local fArt = fUUID and artifacts[fUUID]
+			if plusLabel then showArtifact(plusLabel, fArt and fArt.TemplateId) end
 
 			if fArt then
 				local fRarity = ArtifactCatalog.GetRarityInfo(fArt.Rarity or 1)
@@ -1895,6 +1904,7 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 			iconLbl.Position = UDim2.fromScale(0, 0)
 			iconLbl.Size = UDim2.fromScale(1, 1)
 			iconLbl.TextXAlignment = Enum.TextXAlignment.Center
+			showArtifact(iconLbl, art.TemplateId)
 
 			local nameLbl = label(card, art.DisplayName or "Artifact", 11, C.Text, Enum.Font.GothamBold)
 			nameLbl.Position = UDim2.new(0, 6, 0, 60)
@@ -1975,6 +1985,7 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 				iconLbl.Position = UDim2.fromScale(0, 0)
 				iconLbl.Size = UDim2.fromScale(1, 1)
 				iconLbl.TextXAlignment = Enum.TextXAlignment.Center
+				showArtifact(iconLbl, art.TemplateId)
 
 				local nameLbl = label(card, art.DisplayName or "Artifact", 11, C.Text, Enum.Font.GothamBold)
 				nameLbl.Position = UDim2.new(0, 6, 0, 60)

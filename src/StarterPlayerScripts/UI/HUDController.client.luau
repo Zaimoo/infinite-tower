@@ -1133,6 +1133,7 @@ end
 _G.UpdateBottomTabHighlights = updateBottomTabHighlights
 
 _G.IsAnyMasterModalOpen = function(): boolean
+	if _G.IsBackpackOpen and _G.IsBackpackOpen() then return true end
 	if _G.IsHeroIndexOpen and _G.IsHeroIndexOpen() then return true end
 	if _G.IsTowerSelectorOpen and _G.IsTowerSelectorOpen() then return true end
 	if facilityController and facilityController.Root and facilityController.Root.Visible then return true end
@@ -1145,6 +1146,7 @@ _G.IsAnyMasterModalOpen = function(): boolean
 	return false
 end
 _G.OpenMasterModal = function(which: string)
+	if _G.CloseBackpack then _G.CloseBackpack() end
 	if _G.CloseHeroIndex then _G.CloseHeroIndex() end
 	if _G.CloseSettings and _G.IsSettingsOpen and _G.IsSettingsOpen() then
 		_G.CloseSettings()
