@@ -1891,16 +1891,21 @@ do
 	carriedLootPill.Position = UDim2.new(0, 16, 1, -74)
 	carriedLootPill.ZIndex = 8
 
-	-- Bottom-left Gold & Diamond Currency Display (Pure icon + numeric text without box containers)
+	-- Bottom-left Gold & Diamond Currency Display
+	-- Total row width locked to Squad container bar width (W_squad = 296px).
+	-- Two equal split pills with 8px gap: (296 - 8) / 2 = 144px -> UDim2.new(0.5, -4, 1, 0).
+	local SQUAD_BAR_WIDTH = 296
+	local CURRENCY_GAP = 8
+	local CURRENCY_HEIGHT = 32
+
 	local currencyCluster = Instance.new("Frame")
 	currencyCluster.Name = "CurrencyCluster"
 	currencyCluster.BackgroundTransparency = 1
 	currencyCluster.BorderSizePixel = 0
-	currencyCluster.AutomaticSize = Enum.AutomaticSize.XY
-	currencyCluster.Size = UDim2.fromOffset(0, 28)
+	currencyCluster.Size = UDim2.fromOffset(SQUAD_BAR_WIDTH, CURRENCY_HEIGHT)
 	currencyCluster.AnchorPoint = Vector2.new(0, 1)
 	currencyCluster.Position = UDim2.new(0, 20, 1, -20)
-	-- Phase 5: Gold and Gems are drawn by the React HUD above the Squad Status Card.
+	-- Phase 5: Gold and Gems are drawn by the React HUD (HudApp/Components) above the Squad Status Card.
 	currencyCluster.Visible = false
 	currencyCluster.ZIndex = 8
 	currencyCluster.Parent = hudGui
@@ -1910,7 +1915,7 @@ do
 	clusterLayout.FillDirection = Enum.FillDirection.Horizontal
 	clusterLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	clusterLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-	clusterLayout.Padding = UDim.new(0, 20)
+	clusterLayout.Padding = UDim.new(0, CURRENCY_GAP)
 	clusterLayout.Parent = currencyCluster
 
 	local currencyFields: { [string]: TextLabel } = {}
@@ -1923,10 +1928,15 @@ do
 		row.Name = item[1] .. "Display"
 		row.BackgroundTransparency = 1
 		row.BorderSizePixel = 0
-		row.AutomaticSize = Enum.AutomaticSize.X
-		row.Size = UDim2.fromOffset(0, 28)
+		row.Size = UDim2.new(0.5, -math.floor(CURRENCY_GAP / 2), 1, 0)
 		row.LayoutOrder = i
 		row.Parent = currencyCluster
+
+		local rowPadding = Instance.new("UIPadding")
+		rowPadding.Name = "RowPadding"
+		rowPadding.PaddingLeft = UDim.new(0, 10)
+		rowPadding.PaddingRight = UDim.new(0, 10)
+		rowPadding.Parent = row
 
 		local rowLayout = Instance.new("UIListLayout")
 		rowLayout.Name = "RowLayout"
@@ -1937,9 +1947,9 @@ do
 		rowLayout.Parent = row
 
 		local icon = GothicVectorIcons.Create(item[1] :: string, {
-			Size = UDim2.fromOffset(24, 24),
+			Size = UDim2.fromOffset(20, 20),
 			Position = UDim2.fromOffset(0, 0),
-			AnchorPoint = Vector2.new(0, 0),
+			AnchorPoint = Vector2.new(0, 0.5),
 			ZIndex = 11,
 			Parent = row,
 		})
@@ -1949,13 +1959,12 @@ do
 		lbl.Name = item[1] .. "Value"
 		lbl.BackgroundTransparency = 1
 		lbl.BorderSizePixel = 0
-		lbl.AutomaticSize = Enum.AutomaticSize.X
-		lbl.Size = UDim2.fromOffset(0, 24)
+		lbl.Size = UDim2.new(1, -26, 1, 0)
 		lbl.LayoutOrder = 2
 		lbl.Text = if item[1] == "Gold" then "500" else "300"
 		lbl.TextColor3 = item[2] :: Color3
 		lbl.Font = Enum.Font.Fantasy
-		lbl.TextSize = 18
+		lbl.TextSize = 16
 		lbl.TextScaled = false
 		lbl.TextStrokeColor3 = Color3.fromRGB(12, 8, 18)
 		lbl.TextStrokeTransparency = 0.2
@@ -1963,6 +1972,10 @@ do
 		lbl.TextYAlignment = Enum.TextYAlignment.Center
 		lbl.ZIndex = 11
 		lbl.Parent = row
+
+		local textConstraint = Instance.new("UITextSizeConstraint")
+		textConstraint.MaxTextSize = 18
+		textConstraint.Parent = lbl
 
 		currencyFields[item[1] :: string] = lbl
 	end
@@ -2144,8 +2157,9 @@ do
 		local isNarrow = w < 720
 		currencyCluster.AnchorPoint = Vector2.new(0, 1)
 		currencyCluster.Position = if isNarrow then UDim2.new(0, 14, 1, -100) else UDim2.new(0, 20, 1, -20)
+		currencyCluster.Size = UDim2.fromOffset(SQUAD_BAR_WIDTH, CURRENCY_HEIGHT)
 		local moneyScale = currencyCluster:FindFirstChildOfClass("UIScale") or Instance.new("UIScale", currencyCluster)
-		moneyScale.Scale = portrait and math.min(1, (w - 48) / 258) or 1
+		moneyScale.Scale = portrait and math.min(1, (w - 48) / SQUAD_BAR_WIDTH) or 1
 
 		local menuScale = floatingMenuContainer:FindFirstChildOfClass("UIScale") or Instance.new("UIScale", floatingMenuContainer)
 		if w < 540 then
