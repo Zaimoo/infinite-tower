@@ -10,6 +10,7 @@
 ### 1.1 Launch Roster & World Boss Exclusive Seed Table
 - **Banner Pool Cost:** `100 Gems` (Single Pull) | `900 Gems` (10x Pull).
 - **Banner Drop Rates:** `1★ Common (70%)`, `2★ Rare (25%)`, `3★ Epic (5%)`. `4★` and `5★` are obtained exclusively via **Star Promotion**.
+- **Superseded (1★ summons):** every hero is now summoned at 1★ and its rarity tier $t$ multiplies combat by $c_t \times 4.05^{(t-1)}$ and labor by $c_t \times 1.512^{(t-1)}$ ($c_t = 1$ up to Rare, 0.5 from Superior). See `GAME_DESIGN.MD` §4.1 for the live roster; the table below is historical.
 - **Stat Normalization Note:** In the table below, **Native Star Stats** show the exact stats when summoned at their base Star tier (`Level 1`, `QualityScalar = 1.00`), while **1★ Base Equivalent** shows the underlying $S=1$ seed values before the $3^{(S-1)}$ (Combat) and $1.35^{(S-1)}$ (Labor) Star Promotion multipliers.
 
 | Hero ID | Hero Name | Origin / Banner Pool | Base Star | Archetype | Native Health (Lv.1) | Native Attack Damage (Lv.1) | 1★ Base HP | 1★ Base ATK | Attack Interval (s) | Attacks / Sec | Movement Speed (Studs/sec) | Native Base DPS (Lv.1) | Attack Range (Studs) | Native Base Labor (/min) | 1★ Base Labor (/min) | Preferred Facility (+25% Labor) |
@@ -30,15 +31,15 @@
 ### 2.1 Core Progression Formulas (Google Sheets Ready)
 - **Max Level Cap:** `MaxLevel = Stars * 10`
 - **XP Required for Level $L \to L+1$:** `=ROUND(50 * (L ^ 1.45), 0)`
-- **Synthesis ("The Pit") Fodder Base XP:** `base = (100 * (3 ^ (FodderStars - 1))) + (25 * FodderLevel)`
+- **Synthesis ("The Pit") Fodder Base XP:** `base = (100 * (3 ^ (EffectiveStars - 1))) + (25 * FodderLevel)`, where `EffectiveStars = MIN(7, Stars + Rarity - 1)`
 - **Level Efficiency Scaling:** `efficiency = MAX(0.55, 1 - 0.025 * MAX(0, RecipientLevel - FodderLevel - 5))`
-- **Star Promotion Multipliers (Per Star above 1★):** `CombatMult = 3 ^ (Stars - 1)` | `LaborMult = 1.35 ^ (Stars - 1)`
+- **Star Promotion Multipliers (Per Star above 1★):** `CombatMult = 1.5 ^ (Stars - 1)` | `LaborMult = 1.35 ^ (Stars - 1)`
 - **Level Stat Scaling:** `+8% compounded damage and health per Level above 1` (`1.08 ^ (L - 1)`) | `+5% Labor Output per Level above 1` (`1 + 0.05 * (L - 1)`)
 
 - **Promotion:** Keep the current level; increase its cap by 10. Derive damage/health once from immutable one-star seeds, with no trait or imprint factor.
 - **Weapon Power:** `=InherentRarityPower*WeaponStarMultiplier`; inherent rarity stays fixed and stars progress from 1 to 7. There are no enhancement levels.
-- **Attack Damage:** `=ROUND(SeedDamage*Quality*3^(Stars-1)*1.08^(Level-1)*(1+WeaponPower/40),0)`
-- **Health:** `=ROUND(SeedHealth*Quality*3^(Stars-1)*1.08^(Level-1),0)`
+- **Attack Damage:** `=ROUND(SeedDamage*Quality*RarityCombat*1.5^(Stars-1)*1.08^(Level-1)*(1+WeaponPower/40),0)`
+- **Health:** `=ROUND(SeedHealth*Quality*RarityCombat*1.5^(Stars-1)*1.08^(Level-1),0)`
 - **Attack Speed:** `=MIN(5,BaseAttackSpeed*(1+InherentRaritySpeedBonus)*OverdriveMultiplier)` attacks/s. Stars and levels do not multiply speed.
 - **Movement Speed:** 20 studs/s for launch heroes; it does not inherit exponential damage/health growth.
 - **5 Hz DPS:** `TickInterval=0.20*CEILING((1/AttackSpeed)/0.20,1)`; `DPS=AttackDamage/TickInterval`. Use a small floating-point tolerance at exact tick boundaries, as in the calculator.

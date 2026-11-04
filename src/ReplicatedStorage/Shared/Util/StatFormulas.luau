@@ -36,7 +36,7 @@ function StatFormulas.CalculateSynthesisXP(fodderStars: number, fodderLevel: num
 	return (config.BaseXP * (config.StarMultiplier ^ (fodderStars - 1))) + (config.LevelXP * fodderLevel)
 end
 
--- Star Promotion Multipliers: 3^(S-1) Combat, 1.35^(S-1) Labor
+-- Star Promotion Multipliers: 1.5^(S-1) Combat, 1.35^(S-1) Labor (heroes are summoned at 1★)
 function StatFormulas.GetPromotionCombatMult(stars: number): number
 	return PitBalanceConfig.Promotion.CombatMultiplier ^ (stars - 1)
 end
@@ -64,10 +64,10 @@ end
 -- trainingMultiplier: from The Training Grounds (GDD Section 4.3.2.C)
 function StatFormulas.GetCombatSnapshot(hero: any, artifact: any?, inOverdrive: boolean?, _inBloodPact: boolean?, trainingMultiplier: number?): any
  local seed=HeroCatalog.Seeds[hero.TemplateId]
- local stars=B.Integer(hero.Stars,1,math.max(PitBalanceConfig.MaxStars, seed and seed.BaseStar or 7)) and hero.Stars or 1
+ local stars=B.Integer(hero.Stars,1,PitBalanceConfig.MaxStars) and hero.Stars or 1
  local level=B.Integer(hero.Level,1,stars*10) and hero.Level or 1
  local quality=B.Finite(hero.QualityScalar) and math.clamp(hero.QualityScalar,.9,1.15) or 1
- local growth=B.HeroPromotionMultiplier^(stars-1)*B.LevelMultiplier^(level-1)*B.HeroRarityCombatMultiplier^(StatFormulas.GetHeroRarity(hero)-1)
+ local growth=B.HeroPromotionMultiplier^(stars-1)*B.LevelMultiplier^(level-1)*B.HeroRarityCombat(StatFormulas.GetHeroRarity(hero))
  local power,speed=0,0
  if artifact then power,speed=ArtifactCatalog.CalculateEffectiveStats(artifact.Star,artifact.Rarity,nil,artifact.TemplateId) end
  local mult = trainingMultiplier or 1.0
@@ -117,14 +117,14 @@ function StatFormulas.GetEffectiveCombatStats(hero: any, inBloodPact: boolean?, 
 end
 function StatFormulas.GetEffectiveLabor(hero: any, targetFacilityAssignment: string?): number
  local seed=HeroCatalog.Seeds[hero.TemplateId]
- local stars=B.Integer(hero.Stars,1,math.max(PitBalanceConfig.MaxStars, seed and seed.BaseStar or 7)) and hero.Stars or 1
+ local stars=B.Integer(hero.Stars,1,PitBalanceConfig.MaxStars) and hero.Stars or 1
  local level=B.Integer(hero.Level,1,stars*10) and hero.Level or 1
  local q=B.Finite(hero.QualityScalar) and math.clamp(hero.QualityScalar,.9,1.15) or 1
  local pref=seed and seed.PreferredFacility or ""
  local target=targetFacilityAssignment or hero.Assignment or ""
  local synergy=pref=="ALL" or (pref~="" and pref==target) or (target=="FACILITY_GODS_BLESSING" and (hero.Archetype or seed and seed.Archetype)=="Healer")
- local rarity=B.HeroRarityLaborMultiplier^(StatFormulas.GetHeroRarity(hero)-1)
- local labor=(seed and seed.BaseLabor_1Star or 14)*q*rarity*1.35^(stars-1)*(1+.05*(level-1))*(synergy and 1.25 or 1)
+ local rarity=B.HeroRarityLabor(StatFormulas.GetHeroRarity(hero))
+ local labor=(seed and seed.BaseLabor_1Star or 14)*q*rarity*PitBalanceConfig.Promotion.LaborMultiplier^(stars-1)*(1+.05*(level-1))*(synergy and 1.25 or 1)
  return math.round(labor*100)/100
 end
 

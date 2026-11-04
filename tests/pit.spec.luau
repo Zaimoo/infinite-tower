@@ -100,26 +100,49 @@ end)
 
 test("Every native seed uses canonical compounded growth without retired effects", function()
 	for seedId, seed in pairs(Catalog.Seeds) do
-		for level = 1, seed.BaseStar * 10 do
-			for _, quality in ipairs({ 0.9, 1, 1.15 }) do
-				local original = hero("native", seedId, { Level = level, QualityScalar = quality })
-				local atk, hp, dps = Stats.GetEffectiveCombatStats(original, false, false)
-				-- Inherent rarity (Phase 4 §7) multiplies base combat by 1.35 and labor by 1.12 per tier.
-				local rarityCombat, rarityLabor = 1.35^(seed.Rarity-1), 1.12^(seed.Rarity-1)
-				local expectedATK = math.round(seed.BaseATK_1Star * quality * rarityCombat * 3^(seed.BaseStar-1) * 1.08^(level-1))
-				local expectedHP = math.round(seed.BaseHP_1Star * quality * rarityCombat * 3^(seed.BaseStar-1) * 1.08^(level-1))
-				local expectedDPS = math.round((expectedATK / (math.ceil(seed.AttackInterval/Balance.TickSeconds-1e-10)*Balance.TickSeconds)) * 10) / 10
-				equal(atk, expectedATK); equal(hp, expectedHP); equal(dps, expectedDPS)
-				for _, facility in ipairs({ "BENCHED", "FACILITY_CONDUIT", "FACILITY_INFIRMARY", "FACILITY_LAB" }) do
-					local synergy = (seed.PreferredFacility == "ALL" or seed.PreferredFacility == facility) and 0.25 or 0
-					local expectedLabor = math.round(seed.BaseLabor_1Star * rarityLabor * 1.35^(seed.BaseStar-1) * quality * (1 + 0.05 * (level - 1)) * (1 + synergy) * 100) / 100
-					equal(Stats.GetEffectiveLabor(original, facility), expectedLabor)
+		equal(seed.BaseStar, 1, seedId .. " is summoned at 1 star")
+		-- Rarity folds in the old summon-star bonus: 100% for Common-Rare, 50% from Superior up.
+		local comp = seed.Rarity <= 3 and 1 or 0.5
+		local rarityCombat = comp * (3 * 1.35)^(seed.Rarity-1)
+		local rarityLabor = comp * (1.35 * 1.12)^(seed.Rarity-1)
+		for _, stars in ipairs({ 1, 4, 7 }) do
+			for level = 1, stars * 10, 3 do
+				for _, quality in ipairs({ 0.9, 1, 1.15 }) do
+					local original = hero("native", seedId, { Stars = stars, Level = level, QualityScalar = quality })
+					local atk, hp, dps = Stats.GetEffectiveCombatStats(original, false, false)
+					local expectedATK = math.round(seed.BaseATK_1Star * quality * rarityCombat * 1.5^(stars-1) * 1.08^(level-1))
+					local expectedHP = math.round(seed.BaseHP_1Star * quality * rarityCombat * 1.5^(stars-1) * 1.08^(level-1))
+					local expectedDPS = math.round((expectedATK / (math.ceil(seed.AttackInterval/Balance.TickSeconds-1e-10)*Balance.TickSeconds)) * 10) / 10
+					equal(atk, expectedATK); equal(hp, expectedHP); equal(dps, expectedDPS)
+					for _, facility in ipairs({ "BENCHED", "FACILITY_CONDUIT", "FACILITY_INFIRMARY", "FACILITY_LAB" }) do
+						local synergy = (seed.PreferredFacility == "ALL" or seed.PreferredFacility == facility) and 0.25 or 0
+						local expectedLabor = math.round(seed.BaseLabor_1Star * rarityLabor * 1.35^(stars-1) * quality * (1 + 0.05 * (level - 1)) * (1 + synergy) * 100) / 100
+						equal(Stats.GetEffectiveLabor(original, facility), expectedLabor)
+					end
 				end
 			end
 		end
 	end
 end)
 
+test("A 1-star pull keeps its old summoned power: 100% to Rare, 50% from Superior", function()
+	for seedId, seed in pairs(Catalog.Seeds) do
+		local now = Stats.GetHeroPower(hero("p", seedId, { Stars = 1 }))
+		-- Old rule: summoned at star = tier, 3x per star, 1.35x per tier.
+		local g = 3^(seed.Rarity-1) * 1.35^(seed.Rarity-1)
+		local tick = math.ceil(seed.AttackInterval/Balance.TickSeconds-1e-10)*Balance.TickSeconds
+		local old = 10 * math.round(seed.BaseATK_1Star * g) / tick + math.round(seed.BaseHP_1Star * g)
+		local want = seed.Rarity <= 3 and 1 or 0.5
+		check(math.abs(now / old - want) < 0.002, string.format("%s ratio %.4f", seedId, now / old))
+	end
+end)
+
+test("A rare donor is worth its old summon star in The Pit", function()
+	local astrea = hero("d", "hero_astrea", { Stars = 1 })
+	equal(Math.EffectiveStars(astrea), 7)
+	equal(Math.EffectiveStars(hero("h", "hero_han", { Stars = 3 })), 3)
+	equal(Math.GetConversionYield(astrea), 2916)
+end)
 test("One and multiple donors apply the existing level curve", function()
 	local original = hero("r")
 	local after = Math.AdvanceXP(original, 125)
@@ -149,14 +172,14 @@ end)
 test("Promotion applies one multiplier and releases reserve through real levels", function()
 	local before = hero("r", "hero_han", { Level = 10, OverflowXP = 3027, InheritedImprints = { melee_memory = 1 } })
 	local after = Math.Promote(before)
-	equal(after.Stars, 2); equal(after.BaseATK, 120); equal(after.BaseHP, 900); equal(after.BaseLabor, 18.9)
+	equal(after.Stars, 2); equal(after.BaseATK, 60); equal(after.BaseHP, 450); equal(after.BaseLabor, 18.9)
 	equal(after.Level, 12); equal(after.XP, 0); equal(after.OverflowXP, 0)
 	equal(after.PassiveTrait, before.PassiveTrait); equal(after.InheritedImprints.melee_memory, 1)
 	equal(before.Stars, 1); equal(before.BaseATK, 40)
 	local atk, hp = Stats.GetEffectiveCombatStats(after, false, false)
-	equal(atk, math.round(120 * 1.08^11)); equal(hp, math.round(900 * 1.08^11))
+	equal(atk, math.round(60 * 1.08^11)); equal(hp, math.round(450 * 1.08^11))
 	local repeatATK, repeatHP = Stats.GetEffectiveCombatStats(after, false, false)
-	equal(repeatATK, atk); equal(repeatHP, hp); equal(after.BaseATK, 120)
+	equal(repeatATK, atk); equal(repeatHP, hp); equal(after.BaseATK, 60)
 	close(Stats.GetEffectiveLabor(after, "FACILITY_CONDUIT"), 29.3, 0.00001)
 end)
 
@@ -205,7 +228,7 @@ local function profile()
 	return {
 		SchemaVersion = 1, PlotIndex = 1,
 		Currencies = { Gold = 1000000, Gems = 10000, ResearchPoints = 1000 },
-		Heroes = { r = hero("r"), d = hero("d", "hero_jenna"), e = hero("e", "hero_catio", { Stars = 1 }) },
+		Heroes = { r = hero("r"), d = hero("d", "hero_jenna"), e = hero("e", "hero_jenna") },
 		DeployedSquadOrder = {},
 		Facilities = {
 			ManaConduit = { Level = 1, AssignedHeroUUIDs = {}, UncollectedOutput = 0 },
@@ -522,7 +545,7 @@ test("Valid promotion charges exact resources, preserves traits and cannot repea
 	local p = c:preview({ Action = "PROMOTION", Recipient = "r" }); check(p.CanCommit)
 	equal(p.Costs.Gold, 1500); equal(p.Costs.PromotionStone, 1)
 	check(c:commit(p).Success); equal(c.profile.Currencies.Gold, 998500); equal(c.profile.PitMaterials.PromotionStone, 99)
-	equal(c.profile.Heroes.r.Stars, 2); equal(c.profile.Heroes.r.BaseATK, 120)
+	equal(c.profile.Heroes.r.Stars, 2); equal(c.profile.Heroes.r.BaseATK, 60)
 	equal(c.profile.Heroes.r.BaseLabor, 18.9); equal(c.profile.Heroes.r.InheritedImprints.melee_memory, 1)
 	equal(c.profile.Heroes.r.PassiveTrait, Catalog.Seeds.hero_han.PassiveTraitName)
 	rejectedWithoutMutation(c, "COMMIT", { Token = p.Token })
@@ -771,7 +794,7 @@ test("Missing profiles, unknown commands and forgotten sessions fail safely", fu
 end)
 
 test("Higher-rarity hero promotion preserves inherent rarity combat and labor multipliers", function()
-	local eorka = hero("e", "hero_valeria", { Level = 40 })
+	local eorka = hero("e", "hero_valeria", { Stars = 4, Level = 40 })
 	equal(eorka.Stars, 4)
 
 	local beforeATK, beforeHP = Stats.GetEffectiveCombatStats(eorka, false, false)

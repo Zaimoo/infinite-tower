@@ -925,7 +925,7 @@ function Promo.RenderPicker(self: any)
 			tagText = "NEED LV." .. ((hero.Stars or 1) * 10)
 		end
 
-		local rarity = RARITY[math.clamp(hero.Stars or 1, 1, #RARITY)]
+		local rarity = RARITY[math.clamp(StatFormulas.GetHeroRarity(hero), 1, #RARITY)]
 		local tile = new("TextButton", {
 			Name = "Hero_" .. tostring(hero.UUID),
 			Text = "",
@@ -1003,7 +1003,7 @@ function Promo.Render(self: any)
 	self.HeroName.Text = if recipient then recipient.DisplayName or "Hero" else "Select a hero"
 	if recipient then
 		self.MainQuestion.Visible = false
-		local rarity = RARITY[math.clamp(recipient.Stars or 1, 1, #RARITY)]
+		local rarity = RARITY[math.clamp(StatFormulas.GetHeroRarity(recipient), 1, #RARITY)]
 		self.MainStroke.Color = rarity
 		self.MainRank.Text = stars(recipient.Stars)
 

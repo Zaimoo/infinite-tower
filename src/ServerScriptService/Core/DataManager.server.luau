@@ -361,7 +361,7 @@ function DataManager.CreateHeroFromSeed(seedId: string, forceQuality: number?): 
 		TemplateId = seed.HeroId,
 		DisplayName = seed.DisplayName,
 		Archetype = seed.Archetype :: HeroArchetype,
-		Stars = seed.BaseStar,
+		Stars = seed.BaseStar, -- every hero is summoned at 1★
 		Rarity = HeroCatalog.RarityOf(seed.HeroId),
 		Level = 1,
 		XP = 0,
@@ -381,7 +381,7 @@ function DataManager.CreateHeroFromSeed(seedId: string, forceQuality: number?): 
 		Favorite = false,
 		OverflowXP = 0,
 		InheritedImprints = {},
-		ImprintCapacity = math.ceil(seed.BaseStar / 2),
+		ImprintCapacity = math.ceil(seed.Rarity / 2),
 		SynthesisHistory = { DonorsConsumed = 0, XPGained = 0, ImprintsPerformed = 0, Promotions = 0 },
 	}
 	return uuid, hero

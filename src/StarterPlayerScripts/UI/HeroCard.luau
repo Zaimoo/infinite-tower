@@ -195,7 +195,7 @@ function HeroCard.Portrait(parent: Instance, hero: any, fullBody: boolean?): Gui
 	if type(portrait) == "string" and portrait ~= "" then
 		fallback = portraitImage(parent, portrait)
 	else
-		local placeholder = T.Label(parent, string.sub(hero.Archetype or "Hero", 1, 1), 32, T.Rarity[hero.Stars or 1])
+		local placeholder = T.Label(parent, string.sub(hero.Archetype or "Hero", 1, 1), 32, T.Rarity[math.clamp(StatFormulas.GetHeroRarity(hero), 1, #T.Rarity)])
 		placeholder.Size = UDim2.fromScale(1, 1)
 		placeholder.TextXAlignment = Enum.TextXAlignment.Center
 		fallback = placeholder
@@ -257,7 +257,7 @@ end
 function HeroCard.Update(self: any, hero: any, selected: boolean, mode: string, textSize: number?)
 	self.Hero = hero
 	local stars = math.clamp(hero.Stars or 1, 1, 5)
-	local rarity = T.Rarity[stars]
+	local rarity = T.Rarity[math.clamp(StatFormulas.GetHeroRarity(hero), 1, #T.Rarity)]
 	self.Root.Visible = true
 	self.Root.BackgroundColor3 = selected and Color3.fromRGB(57, 49, 39) or T.Color.Raised
 	self.Edge.Color = selected and T.Color.Gold or rarity

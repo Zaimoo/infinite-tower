@@ -3,11 +3,29 @@
 local B = {}
 B.Version = 2
 B.TickSeconds = 0.10 -- Phase 6 M6: 10 Hz simulation (was 5 Hz). Attack intervals round up to this tick.
-B.HeroPromotionMultiplier = 3
+-- Every hero is summoned at 1★; promotion at The Pit multiplies combat by 1.5 per star (was 3).
+B.HeroSummonStar = 1
+B.HeroPromotionMultiplier = 1.5
 B.LevelMultiplier = 1.08
--- Inherent hero rarity (Phase 4 §7): tier t multiplies base combat by 1.35^(t-1), labor by 1.12^(t-1).
+-- Inherent hero rarity (Phase 4 §7). Heroes used to be summoned at a star equal to their tier, so tier t carried
+-- 3^(t-1) from stars on top of 1.35^(t-1) (labor: 1.35^(t-1) on top of 1.12^(t-1)). Now that every pull is 1★,
+-- the rarity factor folds that old star bonus in, scaled by RarityStarCompensation: Common to Rare keep 100% of their
+-- old summoned power (so the early floors stay easy), Superior and above get 50%.
 B.HeroRarityCombatMultiplier = 1.35
 B.HeroRarityLaborMultiplier = 1.12
+B.LegacySummonCombatMultiplier = 3
+B.LegacySummonLaborMultiplier = 1.35
+B.RarityStarCompensationFullTier = 3 -- tiers up to and including this one keep 100%
+B.RarityStarCompensation = 0.5 -- tiers above it
+function B.RarityCompensation(tier: number): number
+	return if tier <= B.RarityStarCompensationFullTier then 1 else B.RarityStarCompensation
+end
+function B.HeroRarityCombat(tier: number): number
+	return B.RarityCompensation(tier) * (B.LegacySummonCombatMultiplier * B.HeroRarityCombatMultiplier) ^ (tier - 1)
+end
+function B.HeroRarityLabor(tier: number): number
+	return B.RarityCompensation(tier) * (B.LegacySummonLaborMultiplier * B.HeroRarityLaborMultiplier) ^ (tier - 1)
+end
 B.MovementSpeed = 20
 B.MaxAttackSpeed = 5
 B.WeaponPowerDivisor = 40
@@ -41,14 +59,14 @@ function B.Format(value: any): string
 end
 -- Expected builds are stat fixtures, never grants or acquisition restrictions (Phase 6 re-anchor).
 -- Each row is {floor, squad size, hero stars, hero level, hero rarity tier, weapon rarity tier, weapon stars}.
--- Squad size follows the Fortress Tree slots a player is expected to have by then (2 at floor 1, 5 from floor 15),
--- and hero rarity counts, because a pull is summoned at its template's star with its rarity bonus. Floor 1 is sized
--- to the default starter pair (a Rare plus a Common, Common weapons), so it no longer falls over to a fresh profile.
+-- Squad size follows the Fortress Tree slots a player is expected to have by then (2 at floor 1, 5 from floor 15).
+-- The enemy curve is frozen at its pre-1★-summon values: these rows use the legacy rule (summoned at star = tier,
+-- 3x per star), so the 1★ summon and 1.5x promotion change hero power without moving any floor's enemies.
 local builds={{1,2,2,5,2,1,1},{5,3,2,10,2,2,1},{10,4,3,10,3,3,1},{15,5,3,25,3,3,2},{20,5,4,25,4,4,1},
 	{25,5,4,35,4,4,3},{30,5,5,35,5,5,2},{35,5,5,45,5,5,4},{40,5,5,50,5,6,3},{45,5,5,50,5,6,6},{50,5,5,50,5,7,7}}
 local anchors={}
 for _,v in builds do
-	local g=B.HeroPromotionMultiplier^(v[3]-1)*B.LevelMultiplier^(v[4]-1)*B.HeroRarityCombatMultiplier^(v[5]-1)
+	local g=B.LegacySummonCombatMultiplier^(v[3]-1)*B.LevelMultiplier^(v[4]-1)*B.HeroRarityCombatMultiplier^(v[5]-1)
 	local power=B.RarityPower[v[6]]*B.WeaponStarMultipliers[v[7]]
 	local damage=math.round(40*g*(1+power/B.WeaponPowerDivisor))
 	local interval=B.ScheduledInterval(.85/(1+B.RaritySpeed[v[6]]))
