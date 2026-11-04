@@ -13,6 +13,7 @@ local TowerLayout = require(RS.Shared.Config.TowerLayout)
 local CampRoster = require(RS.Shared.Util.CampRoster)
 local SupportRules = require(RS.Shared.Util.SupportRules)
 local PatrolPath = require(RS.Shared.Util.PatrolPath)
+local AffixRules = require(RS.Shared.Util.AffixRules)
 local Runtime = {}
 
 function Runtime.new(api: any): any
@@ -206,6 +207,7 @@ function Runtime.new(api: any): any
 		api.Send(m, { Kind = "DEATH", Actor = Timeline.Identity(m), EnemyId = m.EnemyId, StartServerTime = workspace:GetServerTimeNow(), Duration = 1.6 })
 		-- Claim before any reward/profile callback. Travel and simultaneous hits cannot retry it.
 		api.Reward(m, killer)
+		if AffixRules.Has(m, "SPLITTING") then self:SpawnSplit(m) end
 		api.Changed()
 		if m.Summoned then
 			task.delay(3, function()
@@ -215,6 +217,74 @@ function Runtime.new(api: any): any
 					api.Changed()
 				end
 			end)
+		end
+	end
+	-- Living affixed Elites in the same room as `m` (for WARDED and COMMANDER auras).
+	function self:AffixedNear(m)
+		local list = {}
+		for _, o in pairs(api.Mobs) do
+			if o.TowerEnemy and o.IsAlive and o.Affixes and Timeline.Same(o, m) then table.insert(list, o) end
+		end
+		return list
+	end
+	-- Affixes are a chance summon (Phase F): a camp Elite may emerge affixed each time it spawns. Any
+	-- other mob is plain. Sets the name plate and announces an affixed Elite to the floor.
+	-- Timed tower events (Phase G): stamp the running event's modifiers on a mob as it spawns. The mob
+	-- keeps them (stats and rewards) until it dies, even if the event ends first.
+	function self:StampEvent(m)
+		local mods = _G.TowerEvents and _G.TowerEvents.GetMods(m.FloorId) or nil
+		m.EventMods = mods
+		if mods then
+			m.MaxHP = math.round(m.MaxHP * (mods.HP or 1))
+			m.CurrentHP = m.MaxHP
+			m.ATK = math.max(1, math.round(m.ATK * (mods.ATK or 1)))
+		end
+		return mods
+	end
+	function self:RollAffixes(m, e, plan, floorSpec, now)
+		local mods = self:StampEvent(m)
+		local affixes = {}
+		if e.Role == "ELITE" and not e.Alpha and plan and floorSpec then
+			affixes = AffixRules.Roll(plan.Rng, floorSpec.BiomeIndex, mods ~= nil and mods.ForceAffix == true)
+		end
+		AffixRules.Prepare(m, affixes, workspace:GetServerTimeNow())
+		local cat = MobCatalog.Get(m.EnemyId)
+		m.DisplayName = AffixRules.DisplayName(e.DisplayName or (cat and cat.DisplayName) or m.EnemyId, affixes)
+		if #affixes > 0 and api.Announce then
+			api.Announce(m.FloorId, string.format("A %s has emerged! It drops relics %dx as often.", m.DisplayName, AffixRules.RelicDropMultiplier))
+		end
+	end
+	-- SPLITTING: two Regulars of the Elite's biome step out where it fell. They never respawn and give
+	-- no kill progress, so splitting cannot be farmed for boss summons.
+	function self:SpawnSplit(parent)
+		local room = api.Tower.GetRoom(parent.FloorId)
+		local floorSpec = TowerFloorConfig.Get(parent.FloorId)
+		local ledger = api.Tower.Encounters[parent.FloorId]
+		if not room or room.Status ~= "READY" or not floorSpec or not ledger then return end
+		local biome = MobCatalog.Biomes[floorSpec.BiomeIndex]
+		ledger.Surge = ledger.Surge or {}
+		for i = 1, AffixRules.SplitCount do
+			local enemyId = biome.RegularEnemyIds[(i - 1) % #biome.RegularEnemyIds + 1]
+			local e = Config.Get(enemyId)
+			local stats = TowerFloorConfig.GetEnemyStats(parent.FloorId, enemyId)
+			local side = if i == 1 then -4 else 4
+			local ground = api.Navigation.Ground(parent.Position + Vector3.new(side, 6, 0), nil, 2, 12) or parent.Position
+			local netId = api.Allocate()
+			local now = workspace:GetServerTimeNow()
+			local m = {
+				NetId = netId, EntityGeneration = 1, FloorId = parent.FloorId, RoomGeneration = room.RoomGeneration,
+				EnemyId = enemyId, SpecId = enemyId, DisplayName = e.DisplayName, TowerEnemy = true, Role = e.Role,
+				MobType = "RING1_MOB", RingIndex = 1, Slot = 90000 + netId, LifeGeneration = 1,
+				CurrentHP = stats and stats.MaxHP or e.MaxHP, MaxHP = stats and stats.MaxHP or e.MaxHP,
+				ATK = stats and stats.ATK or e.ATK, GoldReward = stats and stats.GoldReward or e.Gold,
+				IsAlive = true, State = "IDLE", Yaw = parent.Yaw or math.pi, Phase = 1, DamageLedger = {}, Cooldowns = {},
+				ActionCounter = 0, ActionSequence = 0, RespawnAt = math.huge, BornAt = now,
+				HomePosition = ground, Position = ground, LocalPosition = ground - room.Origin,
+				LeashRadius = 60, CampId = "CAMP_SPLIT", Summoned = true, NoKillCredit = true,
+			}
+			api.Mobs[netId] = m
+			ledger.Surge[netId] = m
+			self:StampEvent(m)
 		end
 	end
 	-- Placements the floor should hold right now: the layout plus scaled-in members when several Masters share it.
@@ -279,6 +349,7 @@ function Runtime.new(api: any): any
 				}
 				api.Mobs[netId] = m
 				ledger.Surge[netId] = m
+				self:StampEvent(m)
 				spawned += 1
 			end
 		end
@@ -510,13 +581,14 @@ function Runtime.new(api: any): any
 						end
 					end
 				end
+				local floorMods = _G.TowerEvents and _G.TowerEvents.GetMods(floor) or nil
 				for slot, placement in effective do
 					local plan = roster.Camps[placement.CampId] or roster.Patrols[placement.CampId]
 					local enemyId = placement.EnemyId
 					local localPos = Vector3.new(placement.X, placement.Y or 0, placement.Z)
 					if plan then
 						enemyId = if placement.Support then roster.Biome.SupportEnemyId
-							elseif slot == plan.LeaderSlot and roster.Elites[placement.CampId] then roster.Biome.EliteEnemyId
+							elseif slot == plan.LeaderSlot and (roster.Elites[placement.CampId] or (floorMods and floorMods.AllCampsElite)) then roster.Biome.EliteEnemyId
 							else memberType(plan, slot, roster.Biome.RegularEnemyIds)
 						localPos = memberOffset(plan, slot)
 					end
@@ -583,6 +655,7 @@ function Runtime.new(api: any): any
 							m.DiedAt = now
 							m.RespawnAt = campRespawnAt[placement.CampId] or math.huge
 						end
+						if m.IsAlive then self:RollAffixes(m, e, plan, TowerFloorConfig.Get(floor), now) end
 						ledger.Slots[slot] = m
 						if e.Role == "BOSS" then ledger.BossGeneration = m.LifeGeneration end
 					end
@@ -608,6 +681,8 @@ function Runtime.new(api: any): any
 						m.RespawnAt = CampWaves.ScheduleRespawn(m.DiedAt, campAlive[placement.CampId] == true, now) or math.huge
 						if placement.Patrol and m.RespawnAt ~= math.huge then
 							m.RespawnAt += Config.PatrolRespawnSeconds - Config.CampRespawnSeconds
+						elseif floorMods and floorMods.RespawnSeconds and m.RespawnAt ~= math.huge then
+							m.RespawnAt += floorMods.RespawnSeconds - Config.CampRespawnSeconds
 						end
 					end
 					-- A wiped patrol waits while anyone stands near its route start.
@@ -625,13 +700,15 @@ function Runtime.new(api: any): any
 							m.Role = e.Role
 							m.MobType = e.Role == "REGULAR" and "RING1_MOB" or "RING2_ELITE"
 							m.RingIndex = e.Role == "REGULAR" and 1 or 2
-							m.MaxHP = e.MaxHP
-							m.ATK = e.ATK
-							m.GoldReward = e.Gold
 						end
+						m.MaxHP = e.MaxHP
+						m.ATK = e.ATK
+						m.GoldReward = e.Gold
 						m.HomePosition = api.Navigation.Ground(room.Origin + localPos + Vector3.new(0, 6, 0), nil, 2, 12) or room.Origin + localPos
 						SupportRules.Reset(m)
 						m.IsAlive = true
+						m.CurrentHP = m.MaxHP
+						self:RollAffixes(m, e, plan, TowerFloorConfig.Get(floor), now)
 						m.CurrentHP = m.MaxHP
 						m.Position = m.HomePosition
 						m.EntityGeneration += 1
@@ -694,7 +771,10 @@ function Runtime.new(api: any): any
 	-- spent). Returns the damage left to apply.
 	function self:OnMobHit(m, damage)
 		if not m.TowerEnemy then return damage end
-		damage = SupportRules.Absorb(m, damage, workspace:GetServerTimeNow())
+		local serverNow = workspace:GetServerTimeNow()
+		damage = math.round(damage * AffixRules.AuraDefense(m, self:AffixedNear(m)))
+		if m.Affixes then damage = AffixRules.Absorb(m, damage, serverNow) end
+		damage = SupportRules.Absorb(m, damage, serverNow)
 		if m.Action and m.Action.Status == "WINDUP" then
 			local spec = Config.Get(m.EnemyId)
 			local definition = spec and spec.Support and Config.Attack(m.EnemyId, m.Action.AttackId)
@@ -780,7 +860,12 @@ function Runtime.new(api: any): any
 			local onHit = function(v, mult)
 				if not api.Navigation.CanAttack(m.Position, v.Position) then return end
 				self.Metrics.Hits += 1
-				api.Damage(v, math.max(1, math.round(m.ATK * mult * SupportRules.AtkMultiplier(m, now))), m)
+				local amount = math.max(1, math.round(m.ATK * mult * SupportRules.AtkMultiplier(m, now)
+					* AffixRules.AtkMultiplier(m) * AffixRules.AuraAtk(m, self:AffixedNear(m))))
+				api.Damage(v, amount, m)
+				if AffixRules.Has(m, "VAMPIRIC") then
+					m.CurrentHP = math.min(m.MaxHP, m.CurrentHP + math.round(amount * AffixRules.VampiricFraction))
+				end
 			end
 			if allyCast then
 				candidates = if definition.Shape == "ALLY_AURA" then self:Allies(m, definition.Radius, true) elseif target then { target } else {}
@@ -813,7 +898,8 @@ function Runtime.new(api: any): any
 				end
 			end
 		end
-		local speed = e.MoveSpeed * SupportRules.SpeedMultiplier(m, now)
+		if m.Affixes then AffixRules.Regen(m, workspace:GetServerTimeNow()) end
+		local speed = e.MoveSpeed * SupportRules.SpeedMultiplier(m, now) * AffixRules.SpeedMultiplier(m)
 		if fromHome > (m.LeashRadius or Config.LeashRange) or safe(m) or not target then
 			m.State = if fromHome <= 3 then "IDLE" elseif m.Patrol then "PATROL" else "RESET"
 			if fromHome > 3 then
@@ -841,7 +927,7 @@ function Runtime.new(api: any): any
 			m.Action = Timeline.Start(m, target, chosen, now)
 			m.ActionSequence = m.Action.ActionSequence
 			m.State = "WINDUP"
-			m.Cooldowns[chosen.Id] = now + chosen.CooldownSeconds
+			m.Cooldowns[chosen.Id] = now + chosen.CooldownSeconds * AffixRules.CooldownMultiplier(m)
 			self.Metrics.Started += 1
 			api.Send(m, self:PublicAction(m.Action, "START"))
 		else

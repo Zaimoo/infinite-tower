@@ -276,6 +276,83 @@ GrimoireIcons.Drawings = {
 		{ X = 16, Y = 26, W = 6, H = 6, Rot = 45, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 1, Outline = 1.5 },
 		{ X = 48, Y = 26, W = 6, H = 6, Rot = 45, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 1, Outline = 1.5 },
 	},
+
+	-- Timed tower events (Phase G; mockup: docs/ui/tower-event-hud-mockup.html).
+	-- Calamity Hour: a blood moon half-eclipsed by a dark disc, with gold and ember sparks.
+	EventCalamity = {
+		{ X = 32, Y = 33, W = 48, H = 48, Hi = P.BloodHi, Lo = P.BloodLo, Round = true },
+		{ X = 42, Y = 25, W = 34, H = 34, Hi = P.IronLo, Lo = P.Dark, Round = true, Sheen = false, Outline = 2 },
+		{ X = 18, Y = 46, W = 6, H = 6, Hi = P.EmberHi, Lo = P.EmberLo, Round = true, Outline = 1.6, Sheen = false },
+		{ X = 12, Y = 14, W = 9, H = 9, Rot = 45, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 1, Outline = 2, Sheen = false },
+		{ X = 54, Y = 52, W = 7, H = 7, Rot = 45, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 1, Outline = 1.8, Sheen = false },
+	},
+	-- Elite Tide: a gold crown over a steel shield with a violet gem.
+	EventEliteTide = {
+		{ X = 19, Y = 15, W = 10, H = 10, Rot = 45, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 2, Sheen = false },
+		{ X = 32, Y = 11, W = 12, H = 12, Rot = 45, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 2, Sheen = false },
+		{ X = 45, Y = 15, W = 10, H = 10, Rot = 45, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 2, Sheen = false },
+		{ X = 32, Y = 22, W = 36, H = 9, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 2 },
+		{ X = 32, Y = 52, W = 24, H = 24, Rot = 45, Hi = P.SteelHi, Lo = P.SteelLo, Radius = 5, Sheen = false },
+		{ X = 32, Y = 41, W = 36, H = 24, Hi = P.SteelHi, Lo = P.SteelLo, Radius = 6 },
+		{ X = 32, Y = 44, W = 13, H = 13, Rot = 45, Hi = P.VioletHi, Lo = P.VioletLo, Radius = 2, Outline = 2 },
+	},
+	-- Relic Rain: three falling crystals with ember trails and a gold spark.
+	EventRelicRain = {
+		{ X = 15, Y = 16, W = 5, H = 22, Rot = -35, Hi = P.EmberHi, Lo = P.EmberLo, Radius = 2, Outline = 1.6, Sheen = false },
+		{ X = 31, Y = 9, W = 5, H = 20, Rot = -35, Hi = P.EmberHi, Lo = P.EmberLo, Radius = 2, Outline = 1.6, Sheen = false },
+		{ X = 43, Y = 28, W = 5, H = 18, Rot = -35, Hi = P.EmberHi, Lo = P.EmberLo, Radius = 2, Outline = 1.6, Sheen = false },
+		{ X = 23, Y = 30, W = 15, H = 15, Rot = 45, Hi = P.VioletHi, Lo = P.VioletLo, Radius = 3 },
+		{ X = 39, Y = 22, W = 13, H = 13, Rot = 45, Hi = P.CyanHi, Lo = P.CyanLo, Radius = 3 },
+		{ X = 50, Y = 40, W = 12, H = 12, Rot = 45, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 3 },
+		{ X = 18, Y = 52, W = 9, H = 9, Rot = 45, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 1, Outline = 2, Sheen = false },
+		{ X = 36, Y = 54, W = 6, H = 6, Rot = 45, Hi = P.PageHi, Lo = P.PageLo, Radius = 1, Outline = 1.6, Sheen = false },
+	},
+	-- Swarm: three stone heads with ember eyes behind blood-red claw slashes.
+	EventSwarm = {
+		{ X = 17, Y = 36, W = 24, H = 24, Hi = P.StoneHi, Lo = P.StoneLo, Round = true },
+		{ X = 47, Y = 36, W = 24, H = 24, Hi = P.StoneHi, Lo = P.StoneLo, Round = true },
+		{ X = 32, Y = 24, W = 28, H = 28, Hi = P.StoneHi, Lo = P.StoneLo, Round = true },
+		{ X = 12, Y = 36, W = 5, H = 5, Hi = P.EmberHi, Lo = P.EmberLo, Round = true, Outline = 1.4, Sheen = false },
+		{ X = 20, Y = 36, W = 5, H = 5, Hi = P.EmberHi, Lo = P.EmberLo, Round = true, Outline = 1.4, Sheen = false },
+		{ X = 44, Y = 36, W = 5, H = 5, Hi = P.EmberHi, Lo = P.EmberLo, Round = true, Outline = 1.4, Sheen = false },
+		{ X = 52, Y = 36, W = 5, H = 5, Hi = P.EmberHi, Lo = P.EmberLo, Round = true, Outline = 1.4, Sheen = false },
+		{ X = 26, Y = 23, W = 6, H = 6, Hi = P.EmberHi, Lo = P.EmberLo, Round = true, Outline = 1.5, Sheen = false },
+		{ X = 38, Y = 23, W = 6, H = 6, Hi = P.EmberHi, Lo = P.EmberLo, Round = true, Outline = 1.5, Sheen = false },
+		{ X = 22, Y = 50, W = 5, H = 22, Rot = 30, Hi = P.BloodHi, Lo = P.BloodLo, Radius = 2, Outline = 2, Sheen = false },
+		{ X = 32, Y = 52, W = 5, H = 22, Rot = 30, Hi = P.BloodHi, Lo = P.BloodLo, Radius = 2, Outline = 2, Sheen = false },
+		{ X = 42, Y = 50, W = 5, H = 22, Rot = 30, Hi = P.BloodHi, Lo = P.BloodLo, Radius = 2, Outline = 2, Sheen = false },
+	},
+	-- Golden Tide: a stack of coins under an upright coin.
+	EventGoldenTide = {
+		{ X = 32, Y = 54, W = 42, H = 10, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 5, Sheen = false },
+		{ X = 30, Y = 45, W = 42, H = 10, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 5, Sheen = false },
+		{ X = 33, Y = 36, W = 42, H = 10, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 5 },
+		{ X = 32, Y = 17, W = 26, H = 26, Hi = P.GoldHi, Lo = P.GoldLo, Round = true },
+		{ X = 32, Y = 17, W = 11, H = 11, Rot = 45, Hi = P.GoldLo, Lo = P.GoldHi, Radius = 1, Outline = 1.8, Sheen = false },
+		{ X = 54, Y = 10, W = 7, H = 7, Rot = 45, Hi = P.PageHi, Lo = P.PageLo, Radius = 1, Outline = 1.6, Sheen = false },
+	},
+	-- Alpha Hunt: a gilded horned skull inside a cyan target ring.
+	EventAlphaHunt = {
+		{ X = 32, Y = 33, W = 56, H = 56, Hi = P.CyanHi, Lo = P.CyanLo, Round = true, Outline = 2, Sheen = false },
+		{ X = 32, Y = 33, W = 46, H = 46, Hi = P.Dark, Lo = P.IronLo, Round = true, Outline = 1.6, Sheen = false },
+		{ X = 15, Y = 15, W = 8, H = 24, Rot = -38, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 4 },
+		{ X = 49, Y = 15, W = 8, H = 24, Rot = 38, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 4 },
+		{ X = 32, Y = 46, W = 18, H = 10, Hi = P.StoneHi, Lo = P.StoneLo, Radius = 3, Sheen = false },
+		{ X = 32, Y = 31, W = 30, H = 26, Hi = P.StoneHi, Lo = P.StoneLo, Radius = 12 },
+		{ X = 25, Y = 32, W = 7, H = 7, Hi = P.EmberHi, Lo = P.EmberLo, Round = true, Outline = 1.8, Sheen = false },
+		{ X = 39, Y = 32, W = 7, H = 7, Hi = P.EmberHi, Lo = P.EmberLo, Round = true, Outline = 1.8, Sheen = false },
+	},
+	-- Calm (no event yet): a leaning gold-framed hourglass with violet sand.
+	EventHourglass = {
+		{ X = 14, Y = 32, W = 4, H = 44, Rot = -8, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 2, Outline = 2, Sheen = false },
+		{ X = 50, Y = 32, W = 4, H = 44, Rot = -8, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 2, Outline = 2, Sheen = false },
+		{ X = 34, Y = 21, W = 20, H = 20, Rot = 45, Hi = P.PageHi, Lo = P.StoneHi, Radius = 5 },
+		{ X = 30, Y = 43, W = 20, H = 20, Rot = 45, Hi = P.PageHi, Lo = P.StoneHi, Radius = 5 },
+		{ X = 34, Y = 18, W = 10, H = 5, Rot = -8, Hi = P.VioletHi, Lo = P.VioletLo, Radius = 2, Outline = 1.6, Sheen = false },
+		{ X = 30, Y = 48, W = 13, H = 8, Rot = -8, Hi = P.VioletHi, Lo = P.VioletLo, Radius = 3, Outline = 1.6, Sheen = false },
+		{ X = 34, Y = 9, W = 36, H = 7, Rot = -8, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 2 },
+		{ X = 30, Y = 55, W = 36, H = 7, Rot = -8, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 2 },
+	},
 }
 
 -- Aliases so callers can use game names directly.
