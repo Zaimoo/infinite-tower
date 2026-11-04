@@ -342,7 +342,7 @@ do
 
 	-- Lookup order: hero override -> weapon type -> shared -> unarmed.
 	check(HeroClips.Get("hero_jenna", "BOW", "Idle") == HeroClips.Overrides.hero_jenna.Idle, "hero override wins")
-	check(HeroClips.Get("hero_astrea", "BOW", "Idle") == HeroClips.ByWeapon.BOW.Idle, "weapon clip for heroes without an override")
+	check(HeroClips.Get("hero_han", "DAGGERS", "Idle") == HeroClips.ByWeapon.DAGGERS.Idle, "weapon clip for heroes without an override")
 	check(HeroClips.Get(nil, "BOW", "Hit") == HeroClips.Shared.Hit, "shared state fallback")
 	check(HeroClips.Get(nil, "NOT_A_WEAPON", "AttackBasic") == HeroClips.ByWeapon.UNARMED.AttackBasic, "unknown weapon falls back to UNARMED")
 	check(HeroClips.Get(nil, nil, "Idle") == HeroClips.ByWeapon.UNARMED.Idle, "no weapon uses UNARMED")
