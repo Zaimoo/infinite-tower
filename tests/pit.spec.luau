@@ -47,7 +47,7 @@ test("Existing level curve and all five caps remain intact", function()
 	equal(Stats.GetXPRequiredForNextLevel(1), 50)
 	equal(Stats.GetXPRequiredForNextLevel(2), 137)
 	equal(Stats.GetXPRequiredForNextLevel(9), 1210)
-	for stars = 1, 5 do equal(Stats.GetMaxLevel(stars), stars * 10) end
+	for stars = 1, 7 do equal(Stats.GetMaxLevel(stars), stars * 10) end
 end)
 
 test("Fresh donor value, affinity, research and efficiency have exact results", function()
@@ -142,8 +142,8 @@ test("Cap overflow is stored exactly and excess is reported", function()
 end)
 
 test("Five stars never exceed level 50 or create a future-tier reserve", function()
-	local result, overflow = Math.AdvanceXP(hero("r", "hero_han", { Stars = 5, Level = 50 }), 10000)
-	equal(result.Level, 50); equal(result.XP, 0); equal(result.OverflowXP, 0); equal(overflow.Rejected, 10000)
+	local result, overflow = Math.AdvanceXP(hero("r", "hero_han", { Stars = 7, Level = 70 }), 10000)
+	equal(result.Level, 70); equal(result.XP, 0); equal(result.OverflowXP, 0); equal(overflow.Rejected, 10000)
 end)
 
 test("Promotion applies one multiplier and releases reserve through real levels", function()
@@ -486,7 +486,7 @@ test("Delta construction failure cannot misreport an already committed transacti
 end)
 
 test("Recipient recovery/reservation and overflow reject before donors are lost", function()
-	for _, fields in ipairs({ { ComaUntilTimestamp = os.time() + 1000 }, { ReservedBy = "operation" }, { Level = 10, OverflowXP = 3027 }, { Stars = 5, Level = 50 } }) do
+	for _, fields in ipairs({ { ComaUntilTimestamp = os.time() + 1000 }, { ReservedBy = "operation" }, { Level = 10, OverflowXP = 3027 }, { Stars = 7, Level = 70 } }) do
 		local c = context(); for key, value in pairs(fields) do c.profile.Heroes.r[key] = value end
 		rejectedWithoutMutation(c, "PREVIEW", synthesis())
 	end
@@ -512,7 +512,7 @@ test("Promotion validates cap, Gold, stones and five-star ceiling without resear
 		function(p) p.Heroes.r.Level = 9 end,
 		function(p) p.Currencies.Gold = 1499 end,
 		function(p) p.PitMaterials.PromotionStone = 0 end,
-		function(p) p.Heroes.r.Stars = 5; p.Heroes.r.Level = 50 end,
+		function(p) p.Heroes.r.Stars = 7; p.Heroes.r.Level = 70 end,
 	}
 	for _, mutate in ipairs(scenarios) do
 		local c = context(); c.profile.Heroes.r.Level = 10; mutate(c.profile)
@@ -521,6 +521,21 @@ test("Promotion validates cap, Gold, stones and five-star ceiling without resear
 	local c = context(); c.profile.Heroes.r.Stars = 4; c.profile.Heroes.r.Level = 40
 	local p = c:preview({ Action = "PROMOTION", Recipient = "r" }); check(p.CanCommit); check(c:commit(p).Success)
 	equal(c.profile.Heroes.r.Stars, 5); equal(Math.GetImprintCapacity(c.profile.Heroes.r), 3)
+	local cDonor = context(); cDonor.profile.Heroes.r.Level = 10
+	rejectedWithoutMutation(cDonor, "PREVIEW", { Action = "PROMOTION", Recipient = "r", Donors = { "d" } })
+	for _, tier in ipairs({ { Stars = 5, Gold = 450000, Stones = 40 }, { Stars = 6, Gold = 1250000, Stones = 85 } }) do
+		local cTier = context()
+		cTier.profile.Currencies.Gold = 5000000
+		cTier.profile.PitMaterials.PromotionStone = 500
+		cTier.profile.Heroes.r.Stars = tier.Stars
+		cTier.profile.Heroes.r.Level = tier.Stars * 10
+		local pTier = cTier:preview({ Action = "PROMOTION", Recipient = "r" })
+		check(pTier.CanCommit)
+		equal(pTier.Costs.Gold, tier.Gold)
+		equal(pTier.Costs.PromotionStone, tier.Stones)
+		check(cTier:commit(pTier).Success)
+		equal(cTier.profile.Heroes.r.Stars, tier.Stars + 1)
+	end
 end)
 
 test("Current profiles promote without retired research currency or lab facilities", function()
@@ -566,14 +581,14 @@ test("Focused imprint has guaranteed server-derived rank, half EXP and exact con
 end)
 
 test("Five-star level-50 heroes receive explicitly disclosed memory-only imprints", function()
-	local c = context(); c.profile.Heroes.r.Stars = 5; c.profile.Heroes.r.Level = 50
+	local c = context(); c.profile.Heroes.r.Stars = 7; c.profile.Heroes.r.Level = 70
 	c.profile.Heroes.d = hero("d"); PitService.EnsureDefaults(c.profile)
 	local beforeATK = Stats.GetEffectiveCombatStats(c.profile.Heroes.r, false, false)
 	local p = c:preview({ Action = "IMPRINT", Recipient = "r", Donors = { "d" }, Imprint = "melee_memory" })
 	check(p.CanCommit); equal(p.XP.MemoryOnly, true); equal(p.XP.Final, 0); check(#p.Warnings > 0)
-	equal(p.After.Level, 50); equal(p.After.XP, 0); equal(p.After.OverflowXP, 0)
+	equal(p.After.Level, 70); equal(p.After.XP, 0); equal(p.After.OverflowXP, 0)
 	check(c:commit(p).Success); equal(c.profile.Heroes.d, nil)
-	equal(c.profile.Heroes.r.InheritedImprints.melee_memory, 1); equal(c.profile.Heroes.r.Level, 50)
+	equal(c.profile.Heroes.r.InheritedImprints.melee_memory, 1); equal(c.profile.Heroes.r.Level, 70)
 	equal((Stats.GetEffectiveCombatStats(c.profile.Heroes.r, false, false)), beforeATK)
 	equal(c.profile.Currencies.Gold, 999800); equal(c.profile.PitMaterials.ImprintCatalyst, 99)
 	rejectedWithoutMutation(c, "COMMIT", { Token = p.Token })
@@ -731,6 +746,40 @@ test("Missing profiles, unknown commands and forgotten sessions fail safely", fu
 	local p = c:preview(synthesis()); c.service:Forget(c.player)
 	rejectedWithoutMutation(c, "COMMIT", { Token = p.Token })
 	equal(c.service.LastPreview[c.player], nil); equal(c.service.Locks[c.player], nil)
+end)
+
+test("Higher-rarity hero promotion preserves inherent rarity combat and labor multipliers", function()
+	local eorka = hero("e", "hero_valeria", { Level = 40 })
+	equal(eorka.Stars, 4)
+
+	local beforeATK, beforeHP = Stats.GetEffectiveCombatStats(eorka, false, false)
+	local beforeLabor = Stats.GetEffectiveLabor(eorka)
+	local promoted = Math.Promote(eorka)
+	local afterATK, afterHP = Stats.GetEffectiveCombatStats(promoted, false, false)
+	local afterLabor = Stats.GetEffectiveLabor(promoted)
+
+	equal(promoted.Stars, 5)
+	check(afterHP > beforeHP, "Promoted 4★ -> 5★ hero must gain HP instead of losing rarity multiplier")
+	check(afterATK > beforeATK, "Promoted 4★ -> 5★ hero must gain ATK instead of losing rarity multiplier")
+	check(afterLabor > beforeLabor, "Promoted 4★ -> 5★ hero must gain Labor instead of losing rarity multiplier")
+end)
+
+test("Tower floor first-clear and repeat Promotion Stone drops scale deterministically", function()
+	local TowerFloorConfig = require(nodes["ReplicatedStorage.Shared.Config.TowerFloorConfig"])
+
+	-- First-clear guaranteed stones (50 floors total, 5 floors per biome)
+	equal(TowerFloorConfig.GetFirstClearPromotionStones(3, "ALPHA"), 1)
+	equal(TowerFloorConfig.GetFirstClearPromotionStones(5, "BOSS"), 3)
+	equal(TowerFloorConfig.GetFirstClearPromotionStones(25, "BOSS"), 7)
+	equal(TowerFloorConfig.GetFirstClearPromotionStones(50, "BOSS"), 12)
+	equal(TowerFloorConfig.GetFirstClearPromotionStones(0, "ALPHA"), 0)
+
+	-- Repeat kills
+	equal(TowerFloorConfig.RollPromotionStones(1, "REGULAR", 0.001, 1.0), 0)
+	equal(TowerFloorConfig.RollPromotionStones(10, "ELITE", 0.01, 0.5), 1)
+	equal(TowerFloorConfig.RollPromotionStones(10, "ELITE", 0.99, 0.5), 0)
+	equal(TowerFloorConfig.RollPromotionStones(40, "BOSS", 0.10, 0.25), 3)
+	equal(TowerFloorConfig.RollPromotionStones(10, "BOSS", 0.99, 0.5), 0)
 end)
 
 print(string.format("Pit regression tests: %d passed, %d failed", passed, failed))

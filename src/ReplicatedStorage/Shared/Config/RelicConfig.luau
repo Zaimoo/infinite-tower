@@ -20,6 +20,7 @@ export type RelicSpec = {
 	Payout: {
 		Gems: number,
 		Gold: number,
+		PromotionStones: number?,
 	},
 }
 
@@ -34,7 +35,7 @@ local RelicConfig: { [RelicTierId]: RelicSpec } = {
 		DespawnSeconds = 90,
 		InitialLockSeconds = 5.0,
 		Color = Color3.fromRGB(65, 210, 255),
-		Payout = { Gems = 100, Gold = 250 },
+		Payout = { Gems = 100, Gold = 250, PromotionStones = 0 },
 	},
 	CURSED_URN = {
 		TierId = "CURSED_URN",
@@ -46,7 +47,7 @@ local RelicConfig: { [RelicTierId]: RelicSpec } = {
 		DespawnSeconds = 120,
 		InitialLockSeconds = 5.0,
 		Color = Color3.fromRGB(255, 165, 45),
-		Payout = { Gems = 300, Gold = 1200 },
+		Payout = { Gems = 300, Gold = 1200, PromotionStones = 1 },
 	},
 	ABYSSAL_CORE = {
 		TierId = "ABYSSAL_CORE",
@@ -58,7 +59,7 @@ local RelicConfig: { [RelicTierId]: RelicSpec } = {
 		DespawnSeconds = 150,
 		InitialLockSeconds = 5.0,
 		Color = Color3.fromRGB(190, 65, 255),
-		Payout = { Gems = 1000, Gold = 4000 },
+		Payout = { Gems = 1000, Gold = 4000, PromotionStones = 2 },
 	},
 	CALAMITY_HEART = {
 		TierId = "CALAMITY_HEART",
@@ -70,7 +71,7 @@ local RelicConfig: { [RelicTierId]: RelicSpec } = {
 		DespawnSeconds = 180,
 		InitialLockSeconds = 15.0, -- 15s Rank #1 DPS Lock
 		Color = Color3.fromRGB(255, 30, 65),
-		Payout = { Gems = 5000, Gold = 15000 },
+		Payout = { Gems = 5000, Gold = 15000, PromotionStones = 5 },
 	},
 }
 

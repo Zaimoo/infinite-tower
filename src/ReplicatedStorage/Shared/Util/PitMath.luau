@@ -61,7 +61,7 @@ function PitMath.GetConversionYield(hero: any): number
 	for id, rank in pairs(hero.InheritedImprints or {}) do
 		if Config.Imprints.Definitions[id] and type(rank) == "number" then ranks += math.clamp(math.floor(rank), 0, Config.Imprints.MaxRank) end
 	end
-	return cfg.BaseEssence[hero.Stars] + math.floor((hero.Level - 1) / cfg.LevelsPerBonus) * cfg.EssencePerInvestmentLevel + ranks * cfg.EssencePerImprintRank
+	return (cfg.BaseEssence[hero.Stars] or cfg.BaseEssence[5] or 324) + math.floor((hero.Level - 1) / cfg.LevelsPerBonus) * cfg.EssencePerInvestmentLevel + ranks * cfg.EssencePerImprintRank
 end
 
 function PitMath.GetImprintCapacity(hero: any): number
@@ -95,12 +95,15 @@ end
 function PitMath.Promote(hero: any): (any, any)
 	local result = PitMath.Copy(hero)
 	result.Stars += 1
- local seed=Catalog.Seeds[result.TemplateId]
- if seed then
-  result.BaseHP=math.round(seed.BaseHP_1Star*3^(result.Stars-1))
-  result.BaseATK=math.round(seed.BaseATK_1Star*3^(result.Stars-1))
-  result.BaseLabor=math.round(seed.BaseLabor_1Star*1.35^(result.Stars-1)*100)/100
- end
+	local seed = Catalog.Seeds[result.TemplateId]
+	if seed then
+		local rarity = Stats.GetHeroRarity(result)
+		local rarityCombat = 1.35 ^ (rarity - 1)
+		local rarityLabor = 1.12 ^ (rarity - 1)
+		result.BaseHP = math.round(seed.BaseHP_1Star * 3 ^ (result.Stars - 1) * rarityCombat)
+		result.BaseATK = math.round(seed.BaseATK_1Star * 3 ^ (result.Stars - 1) * rarityCombat)
+		result.BaseLabor = math.round(seed.BaseLabor_1Star * 1.35 ^ (result.Stars - 1) * rarityLabor * 100) / 100
+	end
 	return PitMath.AdvanceXP(result, 0)
 end
 

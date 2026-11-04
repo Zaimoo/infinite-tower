@@ -161,7 +161,9 @@ function RelicService.SpawnRelic(tierId: RelicTierId, worldPos: Vector3, initial
 	valueLbl.Size = UDim2.new(1, -14, 0.24, 0)
 	valueLbl.Position = UDim2.new(0, 7, 0.36, 0)
 	valueLbl.BackgroundTransparency = 1
-	valueLbl.Text = string.format("≈ %d Gems · %d Gold", math.round(spec.Payout.Gems * gemMult), math.round(spec.Payout.Gold * goldMult))
+	local stoneBonus = spec.Payout.PromotionStones or 0
+	local stoneSuffix = if stoneBonus > 0 then string.format(" · +%d Stone%s", stoneBonus, if stoneBonus == 1 then "" else "s") else ""
+	valueLbl.Text = string.format("≈ %d Gems · %d Gold%s", math.round(spec.Payout.Gems * gemMult), math.round(spec.Payout.Gold * goldMult), stoneSuffix)
 	valueLbl.TextColor3 = Color3.fromRGB(255, 226, 140)
 	valueLbl.TextScaled = true
 	valueLbl.ZIndex = 3
@@ -332,9 +334,14 @@ local function awardRelicPayout(player: Player, spec: any, scalar: number, rewar
 	local streakMult = TowerRuns.RelicMultiplier(player)
 	local gems = math.round(spec.Payout.Gems * scalar * (gemMultiplier or 1) * streakMult)
 	local gold = math.round(spec.Payout.Gold * scalar * marketMult * (rewardMultiplier or 1) * streakMult)
+	local stones = spec.Payout.PromotionStones or 0
 
 	profile.Currencies.Gems += gems
 	profile.Currencies.Gold += gold
+	if stones > 0 then
+		profile.PitMaterials = profile.PitMaterials or {}
+		profile.PitMaterials.PromotionStone = (profile.PitMaterials.PromotionStone or 0) + stones
+	end
 	TowerRuns.AddRelicPayout(player, gold, gems)
 
 	-- Calamity Heart: a small chance of a free Exalted Archon
@@ -344,9 +351,10 @@ local function awardRelicPayout(player: Player, spec: any, scalar: number, rewar
 		dm.BroadcastToast(string.format("👑 %s extracted THE CALAMITY HEART and rolled 5★ SOVEREIGN ARCHON!", player.DisplayName), "SUCCESS")
 	end
 
+	local stoneText = if stones > 0 then string.format(", +%d Promotion Stone%s", stones, if stones == 1 then "" else "s") else ""
 	dm.SendToast(
 		player,
-		string.format("Extracted %s (%d%%): +%d Gems, +%d Gold!", spec.DisplayName, math.round(scalar * 100), gems, gold),
+		string.format("Extracted %s (%d%%): +%d Gems, +%d Gold%s!", spec.DisplayName, math.round(scalar * 100), gems, gold, stoneText),
 		"SUCCESS"
 	)
 	dm.SyncProfile(player)
