@@ -29,6 +29,7 @@ local HeroIndex = require(script.Parent:WaitForChild("HeroIndex"))
 local BackpackPanel = require(script.Parent:WaitForChild("BackpackPanel"))
 local FacilityPanel = require(script.Parent:WaitForChild("FacilityPanel"))
 local ShopPanel = require(script.Parent:WaitForChild("ShopPanel"))
+local TowerEventHud = require(script.Parent:WaitForChild("TowerEventHud"))
 
 -- Support facilities shown in the Phase 5 gothic panel.
 local PANEL_FACILITIES = { GuardPost = true, Market = true, TrainingGrounds = true, GodsBlessing = true }
@@ -405,7 +406,6 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 			for _, c in conns do c:Disconnect() end
 		end
 	end, {})
-	local powerHeight = if compact then 40 else L.PowerBadgeHeight
 
 	local leftButtons = {
 		{
@@ -513,7 +513,11 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 	-- Both rails start at the top of the safe area, just under Roblox's top bar.
 	local leftTop = L.Edge
 	local leftBottom = screen.Y - currencyBottom - Components.CurrencyBarHeight - L.StackGap
-	local rightBottom = screen.Y - L.Edge - powerHeight - L.StackGap
+	-- The timed tower event badge (Phase G) sits 8 px above Squad Power; the Right Rail stops above both.
+	local powerDrawn = if compact then 44 else L.PowerBadgeHeight
+	local eventBottom = L.Edge + powerDrawn + 8
+	local eventHeight = if compact then 40 else L.EventBadgeHeight
+	local rightBottom = screen.Y - eventBottom - eventHeight - L.StackGap
 	-- Top right, top to bottom: the Next Goal card, then the Right Rail. Positions are in the Root's
 	-- coordinates unless noted.
 	-- Free part of Roblox's top bar, in screen pixels. Read live, because it can still be empty when the
@@ -573,6 +577,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 				Position = UDim2.fromScale(0, 1),
 			}),
 		}) else nil,
+		TowerEvent = e(TowerEventHud.Badge, { Compact = compact, Bottom = eventBottom }),
 		Power = if profile then e(Components.SquadPowerBadge, {
 			Power = profile.SquadPower or 0, Breakdown = breakdown, Compact = compact,
 		}) else nil,
@@ -585,6 +590,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 		Facility = if facilityOpen then e(FacilityPanel, { Facility = facilityOpen, Profile = profile, Width = screen.X,
 			OnClose = function() setFacilityOpen(nil) end }) else nil,
 		Shop = if shopOpen then e(ShopPanel, { Profile = profile, Width = screen.X, OnClose = function() setShopOpen(false) end }) else nil,
+		TowerEventPopup = e(TowerEventHud.Popup, { Blocked = facilityOpen ~= nil or shopOpen or indexOpen }),
 		Index = if indexOpen then e(HeroIndex, { Profile = profile, Width = screen.X, OnClose = function() setIndexOpen(false) end }) else nil,
 		Backpack = if backpackOpen then e(BackpackPanel, {
 			Width = screen.X, Height = screen.Y, OnClose = closeBackpack, ReturnFocus = returnBackpackFocus,
