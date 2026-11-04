@@ -3,7 +3,6 @@
 -- Dedicated Hero Promotion Ritual UI (Promotion Stones + Gold only, 1★ -> 7★ Ascension):
 --   Authoritative RemoteFunction: PitRequest (STATE -> PREVIEW -> COMMIT).
 
-local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -23,6 +22,9 @@ Promo.__index = Promo
 local WIDTH, HEIGHT = 700, 610 -- same container as Synthesis (the Pit tabs swap between them)
 local STONE_IMAGE = UIAssets.Images.PromotionStone
 local ORBIT_PERIOD = 2.8
+local HERO_CENTER = UDim2.fromScale(0.5, 0.5)
+local FINAL_CHARGE_TIME = 0.16
+local RANK_REVEAL_DELAY = 0.55
 
 local C = {
 	Scrim = Color3.fromRGB(6, 6, 10),
@@ -393,6 +395,13 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 	mainBadgeText.ZIndex = 47
 	self.MainBadgeText = mainBadgeText
 
+	local mainRank = label(mainSlot, "", 21, C.StarGold, nil, "Number")
+	mainRank.Name = "HeroStarRank"
+	mainRank.Position = UDim2.new(0, -16, 0, -29)
+	mainRank.Size = UDim2.new(1, 32, 0, 27)
+	mainRank.ZIndex = 47
+	self.MainRank = mainRank
+
 	mainSlot.Activated:Connect(function()
 		self:OpenPicker()
 	end)
@@ -528,6 +537,7 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 		ZIndex = 44,
 	}, stoneCost)
 	local stoneCaption = label(stoneCost, "PROMOTION\nSTONES", 12, C.TextMuted, Enum.Font.GothamBold, "Body")
+	self.StoneCaption = stoneCaption
 	stoneCaption.Position = UDim2.fromOffset(38, 0)
 	stoneCaption.Size = UDim2.fromOffset(83, 32)
 	stoneCaption.TextXAlignment = Enum.TextXAlignment.Left
@@ -697,7 +707,7 @@ end
 function Promo.Refresh(self: any, attempt: number?)
 	task.spawn(function()
 		local response = self:Request("STATE")
-		if not self.Root.Visible then return end
+		if not self.Root.Visible or self.Busy then return end
 		if not response.Success then
 			if (attempt or 0) < 3 then
 				task.delay(0.5, function() self:Refresh((attempt or 0) + 1) end)
@@ -766,16 +776,23 @@ function Promo.Confirm(self: any)
 	end
 
 	self.Busy = true
+	local recipientId = self.Recipient
 	self:Render()
 	task.spawn(function()
 		local response = self:Request("COMMIT", { Token = preview.Token, ConfirmRare = true })
-		self.Busy = false
 		self.Preview = nil
+		local revealRank = false
 		if response.Success then
 			local result = response.Result or {}
 			local after = result.After
-			local hero = self.State.Heroes[self.Recipient]
+			local hero = self.State.Heroes[recipientId]
 			local newStars = after and after.Stars or ((hero and hero.Stars or 1) + 1)
+			local costs = result.Costs or preview.Costs
+			local stoneCount = costs and costs.PromotionStone or 0
+			if self.Root.Parent and self.Root.Visible and not UIFeel.ReducedMotion() then
+				self:PlayAscension(stoneCount)
+				revealRank = self.Root.Parent ~= nil and self.Root.Visible
+			end
 			self.Message = string.format("Ascension complete! %s has ascended to %s rank!", hero and hero.DisplayName or "Hero", stars(newStars))
 			local delta = response.Delta
 			if delta then
@@ -788,11 +805,18 @@ function Promo.Confirm(self: any)
 				if delta.Currencies then self.State.Currencies = delta.Currencies end
 				if delta.Materials then self.State.Materials = delta.Materials end
 			end
-			self:Celebrate()
+			if after and hero and not (delta and delta.Heroes and delta.Heroes[recipientId]) then
+				local updated = table.clone(hero)
+				updated.Stars, updated.Level, updated.XP, updated.Stats = newStars, after.Level, after.XP, after
+				self.State.Heroes[recipientId] = updated
+			end
 		else
 			self.Message = response.Message or "The promotion was rejected. Review requirements."
 		end
+		self.Busy = false
+		if not self.Root.Parent then return end
 		self:Render()
+		if revealRank then UIFeel.Pop(self.MainRank, 0.3) end
 		task.delay(0.5, function()
 			if self.Root.Visible and not self.Busy then
 				self:Refresh()
@@ -814,7 +838,7 @@ end
 
 function Promo.Pick(self: any, uuid: string)
 	local hero = self.State.Heroes[uuid]
-	if not hero then return end
+	if self.Busy or not hero then return end
 	self:StopStoneOrbit()
 	self.Recipient = uuid
 	self.Message = ""
@@ -929,12 +953,14 @@ function Promo.Render(self: any)
 
 	-- 1. Main Recipient Center Slot
 	self.MainPortraitHost:ClearAllChildren()
+	self.MainRank.Visible = recipient ~= nil
 	if recipient then
 		self.MainQuestion.Visible = false
 		local p = HeroCard.Portrait(self.MainPortraitHost, recipient)
 		p.ZIndex = 44
 		local rarity = RARITY[math.clamp(recipient.Stars or 1, 1, #RARITY)]
 		self.MainStroke.Color = rarity
+		self.MainRank.Text = stars(recipient.Stars)
 
 		local maxLevel = (recipient.Stars or 1) * 10
 		local isCapped = (recipient.Level or 1) >= maxLevel
@@ -1007,6 +1033,7 @@ function Promo.Render(self: any)
 		self:StopStoneOrbit()
 	end
 	self.StoneCost.Visible = not atMaxRank
+	self.StoneCaption.Text = "PROMOTION\nSTONES"
 	if atMaxRank then
 		self.CostLabel.Position = UDim2.fromOffset(0, 23)
 		self.CostLabel.Size = UDim2.new(1, 0, 0, 32)
@@ -1050,7 +1077,9 @@ function Promo.Render(self: any)
 	end
 
 	local status, color = self.Message, C.TextDim
-	if status == "" then
+	if self.Busy then
+		status = "Channeling the promotion ritual…"
+	elseif status == "" then
 		if not recipient then
 			status = "Tap the center slot to select a hero for promotion."
 		elseif self.Loading then
@@ -1090,18 +1119,117 @@ function Promo.UpdateStoneOrbit(self: any, dt: number)
 	end
 end
 
+local function absorptionTime(index: number, count: number): number
+	-- Let the first few stones read clearly, then pick up the pace for high-rank costs.
+	return math.max(0.042, 0.38 / count ^ 0.65) + 0.23 * math.exp(-(index - 1) / 3.5)
+end
+
+function Promo.PlayAscension(self: any, count: number)
+	local startAngle = (self.OrbitElapsed or 0) / ORBIT_PERIOD * math.pi * 2
+	self:StopStoneOrbit()
+	if count > 0 then
+		local stone = new("ImageLabel", {
+			Name = "AbsorbingStone",
+			Image = STONE_IMAGE,
+			ScaleType = Enum.ScaleType.Fit,
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			BackgroundTransparency = 1,
+			ZIndex = 50,
+		}, self.RitualArea)
+		self.StoneCaption.Text = "STONES\nABSORBED"
+		self.StoneCount.Text = string.format("0 / %d", count)
+		self.Status.Text = "The hero is absorbing Promotion Stones…"
+		self.Status.TextColor3 = C.TextMuted
+
+		local landed, elapsed, shakePhase = 0, 0, 0
+		local duration = absorptionTime(1, count)
+		while self.Root.Parent and self.Root.Visible do
+			if landed == count and elapsed >= FINAL_CHARGE_TIME then break end
+
+			local charge = landed / count
+			local swing = 1.5 + 5 * charge
+			self.MainSlot.Rotation = math.sin(shakePhase) * swing * charge
+			self.MainSlot.Position = HERO_CENTER + UDim2.fromOffset(math.cos(shakePhase) * swing * charge, 0)
+			stone.Visible = landed < count
+			if stone.Visible then
+				local angle = startAngle + landed * 2.4
+				local progress = elapsed / duration
+				local remaining = 1 - progress ^ 2
+				local size = 16 + 26 * remaining
+				stone.Position = HERO_CENTER + UDim2.fromOffset(math.cos(angle) * 108 * remaining, (math.sin(angle) * 58 + 18) * remaining)
+				stone.Size = UDim2.fromOffset(size, size)
+				stone.Rotation = math.cos(angle) * 16 + progress * 45
+				stone.ImageTransparency = 0.55 * progress ^ 4
+			end
+
+			local dt = RunService.RenderStepped:Wait()
+			elapsed += dt
+			shakePhase += dt * (4 + 10 * charge) * math.pi * 2
+			local previous = landed
+			while landed < count and elapsed >= duration do
+				elapsed -= duration
+				landed += 1
+				duration = absorptionTime(landed + 1, count)
+			end
+			if landed ~= previous then
+				self.StoneCount.Text = string.format("%d / %d", landed, count)
+			end
+		end
+		stone:Destroy()
+		self.MainSlot.Position = HERO_CENTER
+		self.MainSlot.Rotation = 0
+	end
+
+	if not self.Root.Parent or not self.Root.Visible then return end
+	self:Celebrate()
+	task.wait(RANK_REVEAL_DELAY)
+end
+
 function Promo.Celebrate(self: any)
-	local flash = new("Frame", {
-		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-		BackgroundTransparency = 0.2,
-		BorderSizePixel = 0,
+	local burst = new("Frame", {
+		Name = "AscensionFirework",
+		BackgroundTransparency = 1,
 		Size = UDim2.fromScale(1, 1),
-		ZIndex = 48,
-	}, self.MainSlot)
-	local tween = TweenService:Create(flash, TweenInfo.new(0.8, Enum.EasingStyle.Quad), { BackgroundTransparency = 1 })
-	tween:Play()
-	tween.Completed:Connect(function()
-		flash:Destroy()
+		ZIndex = 51,
+	}, self.RitualArea)
+	local flash = new("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = HERO_CENTER,
+		BackgroundColor3 = Color3.fromRGB(255, 241, 201),
+		BackgroundTransparency = 0.12,
+		BorderSizePixel = 0,
+		Size = UDim2.fromOffset(68, 68),
+		ZIndex = 52,
+	}, burst)
+	new("UICorner", { CornerRadius = UDim.new(0.5, 0) }, flash)
+	UIFeel.Tween(flash, 0.32, { Size = UDim2.fromOffset(206, 206), BackgroundTransparency = 1 }, Enum.EasingStyle.Quart)
+	task.wait(0.07)
+	if not burst.Parent then return end
+	UIFeel.Burst(burst, HERO_CENTER, C.StarGold, 12, 53, 125)
+	for i = 1, 16 do
+		local angle = i * math.pi / 8
+		local radius = if i % 2 == 0 then 124 else 91
+		local star = new("TextLabel", {
+			Name = "FireworkStar",
+			Text = "★",
+			Font = Enum.Font.GothamBlack,
+			TextSize = if i % 2 == 0 then 27 else 19,
+			TextColor3 = if i % 2 == 0 then C.StarGold else Color3.fromRGB(238, 177, 255),
+			TextStrokeColor3 = C.SlotBg,
+			TextStrokeTransparency = 0.3,
+			BackgroundTransparency = 1,
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = HERO_CENTER,
+			Size = UDim2.fromOffset(36, 36),
+			ZIndex = 54,
+		}, burst)
+		star:SetAttribute("Grimoire", true)
+		local x, y = math.cos(angle) * radius, math.sin(angle) * radius
+		UIFeel.Tween(star, 0.43, { Position = HERO_CENTER + UDim2.fromOffset(x, y), Rotation = x * 0.7 }, Enum.EasingStyle.Quart)
+		UIFeel.Tween(star, 0.84, { TextTransparency = 1, TextStrokeTransparency = 1 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+	end
+	task.delay(0.9, function()
+		burst:Destroy()
 	end)
 end
 
@@ -1110,6 +1238,7 @@ end
 --============================================================================
 
 function Promo.Open(self: any)
+	if self.Busy then return end
 	self.Root.Visible = true
 	self.Scrim.Visible = true
 	self.Picker.Visible = false
@@ -1125,6 +1254,8 @@ end
 function Promo.Close(self: any)
 	if self.Busy then return end
 	self:StopStoneOrbit()
+	local firework = self.RitualArea:FindFirstChild("AscensionFirework")
+	if firework then firework:Destroy() end
 	self.Root.Visible = false
 	self.Scrim.Visible = false
 	self.Picker.Visible = false
