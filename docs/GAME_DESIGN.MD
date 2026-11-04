@@ -89,7 +89,7 @@ flowchart TD
    - The Master holds the drop's **Carry** prompt (E, 0.35 s) to weld it overhead, incurring a **-15% to -45% WalkSpeed penalty** (and disabling jumping for high-tier relics). Relics are never picked up by walking over them.
    - If hit by an Elite/Boss AoE mid-haul, the Master is **stunned for 1s and fumbles the item** (which becomes stealable after a **5s owner-lock**).
 4. **Extract & Bank (2:45 – 3:00):**
-   - **Hub Banking:** Stepping onto the Masters' Commons, a plot bridge, the Pilgrim's Causeway, your plot, or a Private Extraction Pad safely deposits cargo into permanent Gold and Gems.
+   - **Hub Banking:** Stepping onto the Cloister Commons (band, island or footbridges), a plot bridge, the Pilgrim's Causeway, your plot, or a Private Extraction Pad safely deposits cargo into permanent Gold and Gems.
    - **Floor Safe Sanctuary Banking:** Bringing physical loot (Gold/Gems) or Relics back into any floor's elevated **Floor Safe Sanctuary** automatically deposits them at the **Floor Extraction Pad** (`FloorExtractionPad`), granting 100% relic payout and Market multipliers immediately without requiring a trip back to the Hub.
    - Comatose heroes are benched, and fresh rested heroes are rotated into the active squad via the `[AutoSwap]` toolbar action.
 
@@ -154,32 +154,28 @@ A **run** starts when a Master first stands on a tower floor and ends when they 
 ### 3.1 Dual-Mode Spatial Architecture
 
 The world exists in two coordinated spatial contexts:
-1. **The Central Hub & Masters' Commons (World Coordinates):** Landmark Central Crimson Tower, the Masters' Commons park in front of the tower gate, and the 6 player fortress plots in a horseshoe around the park. All hub geometry comes from `HubLayout.luau`.
+1. **The Central Hub & Cloister Commons (World Coordinates):** Landmark Central Crimson Tower, the Cloister Commons (a hollow rounded-rectangle hub) in front of the tower gate, and the 10 player fortress plots around its outer edge. All hub geometry comes from `HubLayout.luau`.
 2. **The 50 Dynamic Isolated Tower Floors (Off-Map Isolated Grid):** Server-managed dynamic encounter rooms for vertical climbing and Biome Boss arenas.
 
 ```
-                       CENTRAL HUB: MASTERS' COMMONS & FORTRESS HORSESHOE
-                                         N (-Z)
-                       +------------+               +------------+
-                       |  PLOT 3    |               |  PLOT 4    |   bearings measured
-                       |  -24°      |               |  +24°      |   from the park centre
-                       +-----\------+               +------/-----+
-                              \ (Bridge)       (Bridge)  /
-        +------------+         \    . ' ' ' ' ' .      /         +------------+
-        |  PLOT 2    |==========  '               '  ===========  |  PLOT 5    |
-        |  -72°      |  (Bridge) '  THE MASTERS'    '  (Bridge)   |  +72°      |
-        +------------+           '    COMMONS       '             +------------+
-                                 '  C = (0,12,-650)  '
-        +------------+  (Bridge)  '   R = 170       '  (Bridge)   +------------+
-        |  PLOT 1    |==========    ' . . +--+ . . '  ===========  |  PLOT 6    |
-        |  -120°     |                    |  | Pilgrim's Causeway  |  +120°     |
-        +------------+                    |  | (28 wide)           +------------+
-                                   +------+--+------+
-                                   |  GATE (0,-332) |
-                              +----+----------------+----+
-                              |   CENTRAL CRIMSON TOWER  |  walkway ring R = 375
-                              +--------------------------+
-                                         S (+Z)
+                    CENTRAL HUB: CLOISTER COMMONS & 10 FORTRESS PLOTS
+                                     N (-Z)
+                            PLOT 5          PLOT 6
+                 PLOT 4 ╭───────────────────────────╮ PLOT 7     (corner plots at 45°)
+                       │ ══════ north band ══════ │
+                       │ ║  ┌─────────────────┐ ║ │
+                PLOT 3 ═│ ║  │   ~ the void ~  │ ║ │═ PLOT 8
+                       │ ║  │  ┌───────────┐  │ ║ │
+                PLOT 2 ═│ ║==│==│  ISLAND   │==│==║ │═ PLOT 9     == footbridges
+                       │ ║  │  │dais + pool│  │ ║ │
+                       │ ║  │  └───────────┘  │ ║ │
+                PLOT 1 ═│ ║  └─────────────────┘ ║ │═ PLOT 10
+                       │ ═══ Grand Terrace ═══    │
+                       ╰────────────┬─────────────╯   hub 840 x 1120, centre (0, 12, -1036)
+                                    │ Pilgrim's Causeway (90 long, 40 wide)
+                             [ GATE (0,-332) ]
+                        ( CENTRAL CRIMSON TOWER  0,0 )  walkway ring R = 375
+                                     S (+Z)
 
                =======================================================
                OFF-MAP INFINITE TOWER ROOMS (Isolated Dynamic Grid)
@@ -193,11 +189,11 @@ The world exists in two coordinated spatial contexts:
 | Zone Name | Radial Distance / Coordinate Space | Dimensions | Access Rule | Combat & PvP Rules | Primary Drops |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Central Crimson Tower** | Centred at `(0, 0)`, ~650-stud footprint, walkway ring at `R = 375` ($Y = 16$) | Central multi-level landmark on its round CrackedGroundSlab | Open to all | No mobs in the hub. The gate portal (north, `z = -332`) opens the floor selector for the Infinite Tower. | None |
-| **Hub Banking Zones** | `HubLayout.BankZonePolygons()`: the Commons, the 6 plot bridges and the Pilgrim's Causeway, plus a box around each PlotSpawn | Authored polygons (`TowerFloorService`) | Open to all | **Safe Zone** (No mobs). Entering one banks carried cargo. | Banked cargo conversion |
-| **The Masters' Commons** | Park centred at `(0, 12, -650)`, `R = 170 studs` | Round public park island in front of the tower gate (Section 3.5) | Open to all | Safe Zone. Social hub every player crosses between their plot and the tower. | None |
-| **Pilgrim's Causeway** | `z = -386` to `-480` on the gate axis | `40 studs` wide, slopes from $Y = 16$ to $Y = 12$ (`CausewayBuilder.luau`) | Open to all | Safe Zone. Joins the tower walkway to the Commons South Gate (44 wide). An obsidian deck with a crimson rune channel whose glow rolls toward the tower, spiked parapets, three pairs of fire-crowned pylons joined by arcs of crimson energy, two crested arches with hanging cages, two hooded Warden statues at the tower end, and spikes, chains, embers and red mist hanging into the void below. | None |
-| **6 Floating Fortress Plots** | Horseshoe around the Commons: bearings $-120°, -72°, -24°, +24°, +72°, +120°$ from the park centre, island centres at `478 studs` ($Y = 12$) | Expanded $260 \times 320\text{ studs}$ citadel island with grand courtyard & rear outskirts; each faces the park and joins its rim by an 18-stud bridge | Plot Owner + Visitors | Safe Zone. Personal fortress sanctuary for recovery, banner summoning, forge ascension, and AFK outskirts guard post. | Roster Recovery, Gacha Banners, Forge, Outskirts Passive Gold & Multipliers |
-| **Safety Catch Plane** | Lower kill plane at $Y = -95$, centred on `(0, -500)` | `3400 x 8 x 3400 studs` | Fallen players | Non-lethal catch plane; teleports fallen players safely to their PlotSpawn. | None |
+| **Hub Banking Zones** | `HubLayout.BankZonePolygons()`: the four band strips, the island, the four footbridges, the 10 plot bridges and the Pilgrim's Causeway, plus a box around each PlotSpawn. The void is never a bank zone | Authored polygons (`TowerFloorService`) | Open to all | **Safe Zone** (No mobs). Entering one banks carried cargo. | Banked cargo conversion |
+| **The Cloister Commons** | Rounded rectangle centred at `(0, 12, -1036)`: X ±420, Z −1596 to −476, outer corners R 160 | A 120-stud walkable band around an open void (600 × 880, corners R 40), with a 340 × 500 garden island in the middle joined by four footbridges (Section 3.5) | Open to all | Safe Zone. The social hub every player crosses between their plot and the tower. | None |
+| **Pilgrim's Causeway** | `z = -386` to `-476` on the gate axis | `40 studs` wide, slopes from $Y = 16$ to $Y = 12$ (`CausewayBuilder.luau`) | Open to all | Safe Zone. Joins the tower walkway to the cloister's South Gate (44 wide). An obsidian deck with a crimson rune channel whose glow rolls toward the tower, spiked parapets, three pairs of fire-crowned pylons joined by arcs of crimson energy, two crested arches with hanging cages, two hooded Warden statues at the tower end, and spikes, chains, embers and red mist hanging into the void below. | None |
+| **10 Floating Fortress Plots** | Around the cloister's outer edge (`HubLayout.PlotSlots`): 3 per long side (x ±628), 2 on the north edge, 2 on the north corners at 45°. Neighbours at least 24 studs apart, nearest point to the tower about 770 ($Y = 12$) | Expanded $260 \times 320\text{ studs}$ citadel island with grand courtyard & rear outskirts; each faces into the hub and joins its edge by a 40-stud bridge | Plot Owner + Visitors | Safe Zone. Personal fortress sanctuary for recovery, banner summoning, forge ascension, and AFK outskirts guard post. Assigned nearest-to-the-gate first: 1, 10, 2, 9, 3, 8, 4, 7, 5, 6. | Roster Recovery, Gacha Banners, Forge, Outskirts Passive Gold & Multipliers |
+| **Safety Catch Plane** | Lower kill plane at $Y = -95$, centred on `(0, -950)` | `2400 x 8 x 3400 studs`, tiled (parts cap at 2048) | Fallen players | Non-lethal catch plane; teleports fallen players safely to their PlotSpawn. | None |
 | **50 Tower Floor Rooms** | Off-map grid: $X \ge 12,000, Y = 1,000, Z \ge 12,000$ (spaced $2,400\text{ studs}$) | Progressive $380 \times 130 \times 420\text{ studs}$ (F1) to $560 \times 190 \times 640\text{ studs}$ (F5) across 5 elevation tiers | Traversal via `TowerController` | Isolated floor-local PvE encounters; shared floor membership; elevated safe arrival sanctuary with instant loot unpackaging/banking. | Mob drops, Gold, Gems, **Biome Boss Rare Artifact Drops** |
 
 ### 3.3 Dynamic Tower Room Architecture & Biomes
@@ -279,14 +275,14 @@ Tower floors are dynamically managed by `TowerFloorService.luau` and generated v
 
 ### 3.4 Private Fortress Plot & Outskirts Architectural Layout
 
-To accommodate active fortress management, squad training, commerce, and the passive Outskirts AFK loop, each of the 6 Floating Fortress Islands sits in the horseshoe around the Masters' Commons (Section 3.2, top surface $Y = 12$), faces the park centre, and has a citadel island footprint of **$260\text{ studs (Width)} \times 320\text{ studs (Length)}$**.
+To accommodate active fortress management, squad training, commerce, and the passive Outskirts AFK loop, each of the 10 Floating Fortress Islands sits on the outer edge of the Cloister Commons (Section 3.2, top surface $Y = 12$), faces into the hub, and has a citadel island footprint of **$260\text{ studs (Width)} \times 320\text{ studs (Length)}$**.
 
 The island is divided into two distinct, interconnected sectors:
 1. **The Grand Citadel & Inner Courtyard (Front / North - $260 \times 180\text{ studs}$):** Heavily fortified with $28\text{-stud}$ high crenellated stone walls, corner watch bastions, and a private entrance gatehouse facing the perimeter drawbridge. Encloses all **Core Main Buildings** (Summoning Altar, War Banner, The Pit, Blacksmith Forge) as well as the internal support facilities (**The Market** and **The Training Grounds**).
 2. **The Southern Outskirts (Rear / South - $260 \times 140\text{ studs}$):** The sole exterior zone outside the fortress walls, accessed through the vaulted rear fortress gatehouse. Spans open, rugged frontier terrain, pine trees, and dirt wilderness trails housing **The Outskirts Guard Post**.
 
 ```
-                        FRONT (Facing the Masters' Commons)
+                        FRONT (Facing the Cloister Commons)
                                         | (Bridge)
                                   [North Gatehouse]
                        +---------------------------------------+
@@ -320,7 +316,7 @@ The island is divided into two distinct, interconnected sectors:
 #### Detailed Sector Breakdown:
 
 1. **Sector A: Arrival Ramp, Gatehouse & Extraction Plaza (North Front):**
-   - **Drawbridge & Gate:** An 18-stud bridge connects the fortress gate to its landing on the Masters' Commons rim. Features an owner-locked collision barrier preventing unauthorized plot infiltration.
+   - **Drawbridge & Gate:** A 40-stud bridge connects the fortress gate to its landing on the Cloister Commons' outer edge. Features an owner-locked collision barrier preventing unauthorized plot infiltration.
    - **Plaza & Extraction Pad:** Glowing cyan illuminated deposit zone ($24 \times 1 \times 24\text{ studs}$) for banking carried relics, geodes, and urns into permanent Gold and Gems.
    - **Beacon Pillar & Plot Spawn:** Center anchor with the Master's avatar beacon projected skyward.
 
@@ -340,23 +336,20 @@ The island is divided into two distinct, interconnected sectors:
    - **Rear Fortress Archway:** A $24\text{-stud}$ wide vaulted stone passage connecting the inner fortress courtyard directly to the open wilderness behind the citadel.
    - **The Outskirts Guard Post (South Perimeter):** Heavy timber bastion, log palisade barricade, and campfire situated along the winding wilderness trail amidst lush rolling meadow grass, asymmetrical ancient pines, broadleaf oaks, wild berry shrubs, and mossy granite boulders. Stationed Adventurers (`Vanguard` & `Marksman` preferred) venture out along the curved patrol trail to battle ambient wildlife in a lightweight visual loop, auto-generating online Gold every 60 seconds and logging offline accumulation. Only the Outskirts and its Guard Post lie outside the fortress walls.
 
-### 3.5 The Masters' Commons (Central Park)
+### 3.5 The Cloister Commons (Central Hub)
 
-A round public park island ($R = 170$, top surface $Y = 12$), built by `CommonsBuilder.luau`, in front of the tower gate. Every player crosses it on the way from their plot to the tower, so it is the hub's social space. It is a Safe Zone: no mobs and no PvP.
+A hollow rounded rectangle (840 × 1120, top surface $Y = 12$), built by `CloisterBuilder.luau`, in front of the tower gate. A 120-stud walkable band runs all the way round an open void, and a garden island floats in the middle. Every player crosses it between their plot and the tower, so it is the hub's social space. It is a Safe Zone: no mobs and no PvP. The scene model is still named `MastersCommons`.
 
-- **Edge:** a slate rim wall with crenels and an invisible edge barrier, 24 lamp pylons, and seven openings. Six openings lead to the plot bridges, each with a gate landing that has banners in the plot's colour and a nameplate showing the owner. The seventh is the **South Gate**, a pair of 30-stud pylons with an arch reading *The Infinite Tower*, which opens onto the Pilgrim's Causeway.
-- **Masters' Loop:** a cobblestone promenade ring ($R$ 138–156) that joins every gate. Six radial paths, lined with hedges and flower beds, run from the Loop to the centre.
-- **Wayfinder Dais (centre):** a marble compass-rose plaza with cyan arrows pointing to each plot, and a three-tier dais. On the dais stands the Statue of the First Master, sword raised toward the tower, beneath a floating cyan Wayfinder Crystal. Five squad plinths and benches surround it.
-- **Pilgrim's Way (south):** a 28-stud boulevard with a crimson runner, braziers and banners, running from the dais to the 44-stud South Gate, where the Pilgrim's Causeway (Section 3.2) continues to the tower.
-- **Wedges between the paths:**
-  - North: a Reflecting Pool with stepping stones, a footbridge, lily pads, willows and a fountain jet.
-  - North-west and north-east: two Lantern Orchards.
-  - East: the Leaderboard Pavilion, home of the hub's only world leaderboards (`SharedLeaderboards.luau`). Top Playtime faces the dais and Top Power faces the Loop, back to back on a centre wall. Plots no longer carry their own copies.
-  - West: a Gazebo and Bandstand.
-  - South-west: the Biome Stones, a circle of 10 menhirs, one per tower biome.
-  - South-east: the Overlook Terrace, a 4-stud raised terrace with telescopes aimed at the tower.
+- **Outer edge:** a slate rim wall with crenels, lamp pylons and a 20-stud invisible barrier (taller than a jump from the wall top). It has 11 openings: one gate landing per plot (banners in the plot's colour, a nameplate showing the owner, a cyan rune) and the **South Gate**, a pair of 30-stud pylons with an arch reading *The Infinite Tower*, where the Pilgrim's Causeway arrives.
+- **The band:** a cobbled promenade runs down its centre line, with spurs to every landing and footbridge.
+  - **Grand Terrace (south):** the Pilgrim's Way (braziers, crimson banners, a crimson runner leading on to the dais), the **Leaderboard Pavilion** on the inner side (Top Playtime faces the promenade, Top Power faces the void, `SharedLeaderboards.luau`), and the **Overlook Terrace** on the outer side, with telescopes aimed at the tower.
+  - **West band:** landings for Plots 1–3, a **Lantern Orchard** and the **Gazebo**.
+  - **East band:** landings for Plots 8–10, the **Biome Stones** (10 menhirs, one per tower biome) and a second **Lantern Orchard**.
+  - **North band:** landings for Plots 5 and 6, flower gardens and benches. The corner landings serve Plots 4 and 7.
+- **The void:** open sky inside the band, with a balustrade and a 20-stud invisible barrier on both edges. Cloud wisps drift below. It is never a bank zone.
+- **Centre island (340 × 500):** joined to the band by four footbridges (pale stone, timber planks, marble rails, hanging lanterns). It holds the **Wayfinder Dais**: a compass-rose plaza with 10 cyan arrows pointing to the plots, the Statue of the First Master with sword raised toward the tower, the floating Wayfinder Crystal, and five squad plinths. To the north is the **Reflecting Pool** with stepping stones, a footbridge, lily pads, willows and a fountain jet.
 
-All slopes are $\le 15°$ and steps $\le 1$ stud, except the terrace, which is reached by ramps.
+All slopes are $\le 15°$ and steps $\le 1$ stud, except the overlook, which is reached by ramps. Plots fill nearest-to-the-gate first (`HubLayout.AssignmentOrder`). The farthest plots (5 and 6) are about 1,600 studs' walk from the gate.
 
 ### 3.6 Hub Lighting: Sanctuary and Dread
 
@@ -364,11 +357,11 @@ The hub's lighting tells the story: the fortresses are a refuge, the tower is a 
 
 | Preset | Where | Look |
 | :--- | :--- | :--- |
-| **Sanctuary** | Plots, bridges and the Masters' Commons | Golden afternoon: warm sun, soft blue bounce light, clear air, saturated colour, gentle bloom and sun rays, exposure +0.3 |
+| **Sanctuary** | Plots, bridges and the Cloister Commons | Golden afternoon: warm sun, soft blue bounce light, clear air, saturated colour, gentle bloom and sun rays, exposure +0.3 |
 | **Dread** | The tower walkway and the tower itself | Crimson murk: dark red ambient, heavy haze, drained colour, strong contrast, red glows that bloom, exposure −0.45 |
 | **Storm** | Off-map tower floors | The original moody storm grade, unchanged |
 
-Dread fades in by distance from the tower centre: none beyond 500 studs (the Commons' south edge and every plot centre), full within 395 (the walkway). Crossing the Pilgrim's Causeway is the transition, so the light drains as players approach the tower and returns as they walk home. The presets adjust `ExposureCompensation`, not `Brightness`, so the Settings brightness slider keeps working. The plot bridges use pale warm stone and cream marble rails; crimson is reserved for the tower side.
+Dread fades in by distance from the tower centre: none beyond 470 studs (the cloister's south edge at 476 and every plot), full within 395 (the walkway). Crossing the Pilgrim's Causeway is the transition, so the light drains as players approach the tower and returns as they walk home. The presets adjust `ExposureCompensation`, not `Brightness`, so the Settings brightness slider keeps working. The plot bridges use pale warm stone and cream marble rails; crimson is reserved for the tower side.
 
 ---
 
@@ -780,7 +773,7 @@ Implemented by `LootDuel` (`Shared/Util`, rules and arena layout), `DuelArena` (
    - **Winner:** Becomes the drop's owner. The drop is set at the winner's feet and picked up for them if their hands are free. The thief's flag clears.
    - **Loser lockout (owner or thief alike):** The loser is locked out of that drop for the rest of its lifetime, whichever role they had. A losing owner cannot reclaim it, and a losing thief cannot steal it again. The lockout travels with the drop when it is dropped or spilled.
 6. **Squad Wipe & Spilled Loot:** On a PvE squad defeat, all carried loot spills onto the ground, and field looting is locked until the Master returns to their Fortress Plot (there is no Infirmary; see §4.3). The run ends with a wipe: the streak is lost and 25% of the Gold and Gems earned since the last bank is lost.
-7. **Hub Banking:** Reaching a hub banking zone (the Masters' Commons, its bridges or the Pilgrim's Causeway), a Floor Safe Sanctuary or the private plot pad safely banks loot into permanent Gold and Gems.
+7. **Hub Banking:** Reaching a hub banking zone (the Cloister Commons band, island or footbridges, a plot bridge or the Pilgrim's Causeway), a Floor Safe Sanctuary or the private plot pad safely banks loot into permanent Gold and Gems.
 
 ---
 

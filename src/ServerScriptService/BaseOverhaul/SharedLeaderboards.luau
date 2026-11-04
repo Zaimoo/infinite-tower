@@ -1,12 +1,17 @@
 --!strict
 -- SharedLeaderboards.luau
--- The world Playtime and Power boards live once, in the Masters' Commons Leaderboard Pavilion,
+-- The world Playtime and Power boards live once, in the Cloister Commons Leaderboard Pavilion,
 -- instead of one copy per plot. Mount() adopts an existing board (pavilion, rescued, or the first
--- plot copy), deletes the other plot copies, and seats each board on its pavilion slot.
+-- plot copy) or builds one in code (LeaderboardBoardBuilder), deletes the other plot copies, and seats
+-- and scales each board on its pavilion slot.
 
 local Workspace = game:GetService("Workspace")
 
+local LeaderboardBoardBuilder = require(script.Parent:WaitForChild("LeaderboardBoardBuilder"))
+
 local SharedLeaderboards = {}
+
+SharedLeaderboards.BoardScale = 1.6 -- Boards are drawn this much larger than the original art (pavilion is sized for it)
 
 local PLAYTIME = { Name = "AvxsedPlaytimeWS", Screen = "ScreenPlaytime", Slot = "BoardSlot_Playtime" }
 local POWER = { Name = "AvxsedPowerWS", Screen = "ScreenPower", Slot = "BoardSlot_Power" }
@@ -22,23 +27,6 @@ end
 local function findScreen(board: Instance): BasePart?
 	local screen = board:FindFirstChild("ScreenPower") or board:FindFirstChild("ScreenPlaytime")
 	return if screen and screen:IsA("BasePart") then screen else nil
-end
-
-local function powerFromPlaytime(playtime: Instance): Instance
-	local clone = playtime:Clone()
-	clone.Name = POWER.Name
-	local screen = clone:FindFirstChild("ScreenPlaytime")
-	if screen then
-		screen.Name = POWER.Screen
-		local holder = screen:FindFirstChild("SurfaceGui") and (screen :: any).SurfaceGui:FindFirstChild("Holder")
-		local header = holder and holder:FindFirstChild("Header")
-		local labelFrame = header and header:FindFirstChild("LabelFrame")
-		local headerLabel = labelFrame and labelFrame:FindFirstChild("HeaderLabel")
-		if headerLabel and headerLabel:IsA("TextLabel") then
-			headerLabel.Text = "TOP POWER"
-		end
-	end
-	return clone
 end
 
 -- Moves every part of `board` rigidly so the screen faces along the slot's LookVector,
@@ -64,6 +52,28 @@ local function seat(board: Instance, screen: BasePart, slot: BasePart)
 	for _, p in parts do
 		p.Anchored = true
 		p.CFrame = move * p.CFrame
+	end
+
+	-- Grow the board about its slot to BoardScale. The scale already applied is stored on the board,
+	-- so re-seating on every server start never compounds it.
+	local current = board:GetAttribute("BoardScale")
+	local factor = SharedLeaderboards.BoardScale / (if type(current) == "number" and current > 0 then current else 1)
+	if math.abs(factor - 1) > 1e-3 then
+		for _, p in parts do
+			local rel = slotCF:ToObjectSpace(p.CFrame)
+			p.Size *= factor
+			p.CFrame = slotCF * (CFrame.new(rel.Position * factor) * rel.Rotation)
+		end
+		for _, d in board:GetDescendants() do
+			if d:IsA("SurfaceGui") and d.SizingMode == Enum.SurfaceGuiSizingMode.PixelsPerStud then
+				d.PixelsPerStud /= factor -- same layout, drawn larger
+			elseif d:IsA("Light") then
+				(d :: any).Range *= factor
+			elseif d:IsA("Attachment") then
+				d.Position *= factor
+			end
+		end
+		board:SetAttribute("BoardScale", SharedLeaderboards.BoardScale)
 	end
 end
 
@@ -97,9 +107,9 @@ function SharedLeaderboards.Mount(pavilion: Instance, plotsFolder: Instance, res
 				end
 			end
 		end
-		if not board and spec == POWER then
-			local playtime = pavilion:FindFirstChild(PLAYTIME.Name)
-			board = playtime and powerFromPlaytime(playtime)
+		if not board then
+			-- No board anywhere: build one in code (LeaderboardBoardBuilder), so the hub can never lose it
+			board = LeaderboardBoardBuilder.Build(if spec == POWER then "Power" else "Playtime")
 		end
 		local slot = pavilion:FindFirstChild(spec.Slot)
 		local screen = board and findScreen(board)

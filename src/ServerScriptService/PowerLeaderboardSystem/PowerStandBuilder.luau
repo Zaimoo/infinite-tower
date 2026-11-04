@@ -24,6 +24,13 @@ local NAME_GRADIENTS = {
 local RANK_TEXT = { "1ST PLACE", "2ND PLACE", "3RD PLACE" }
 local RANK_SIZE = { 216, 174, 174 }
 
+-- 150 px per stud at the board's original size; a board scaled up by SharedLeaderboards keeps the same layout
+local function standPixelsPerStud(part: BasePart): number
+	local board = part:FindFirstAncestor("AvxsedPowerWS")
+	local scale = board and board:GetAttribute("BoardScale")
+	return 150 / (if type(scale) == "number" and scale > 0 then scale else 1)
+end
+
 local function clearStand(part: BasePart)
 	local old1 = part:FindFirstChild("PowerDisplay")
 	if old1 then old1:Destroy() end
@@ -40,7 +47,7 @@ local function buildEmptyStand(part: BasePart, rank: number)
 	gui.Adornee = part
 	gui.Face = Enum.NormalId.Front
 	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-	gui.PixelsPerStud = 150
+	gui.PixelsPerStud = standPixelsPerStud(part)
 	gui.LightInfluence = 0
 	gui.ZOffset = 1
 	gui.Parent = part
@@ -80,7 +87,7 @@ local function buildStandDisplay(part: BasePart, rank: number, userId: number, u
 	gui.Adornee = part
 	gui.Face = Enum.NormalId.Front
 	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-	gui.PixelsPerStud = 150
+	gui.PixelsPerStud = standPixelsPerStud(part)
 	gui.LightInfluence = 0
 	gui.ZOffset = 1
 	gui.Parent = part

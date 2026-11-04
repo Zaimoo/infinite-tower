@@ -396,7 +396,7 @@ function Service.Init()
 		local points={};for _,p in zone.Points do table.insert(points,Vector2.new(p[1],p[2])) end
 		table.insert(zones,{ZoneId=zone.Id,FloorId=0,RoomGeneration=1,LocalPolygonXZ=points,MinY=-10,MaxY=100,CombatSafe=true,CanBankCargo=true,CanRecoverWipe=true})
 	end
-	rooms[0]={FloorId=0,RoomGeneration=1,Origin=Vector3.zero,Arrival=CFrame.lookAt(Vector3.new(0,18.5,-342),Vector3.new(0,18.5,-330)),Bounds={Min=Vector3.new(-1500,-100,-1500),Max=Vector3.new(1500,2500,1500)},Zones=zones,Status="READY",Reservations=0}
+	rooms[0]={FloorId=0,RoomGeneration=1,Origin=Vector3.zero,Arrival=CFrame.lookAt(Vector3.new(0,18.5,-342),Vector3.new(0,18.5,-330)),Bounds={Min=Vector3.new(-1600,-100,-2100),Max=Vector3.new(1600,2500,1600)},Zones=zones,Status="READY",Reservations=0}
 	local plots=workspace:WaitForChild("WaitingRoomPlots")
 	for _,plot in plots:GetChildren() do local spawn=plot:FindFirstChild("PlotSpawn");if spawn and spawn:IsA("BasePart") then
 		local p=spawn.Position;table.insert(zones,{ZoneId=plot.Name,FloorId=0,RoomGeneration=1,LocalPolygonXZ={Vector2.new(p.X-60,p.Z-60),Vector2.new(p.X+60,p.Z-60),Vector2.new(p.X+60,p.Z+60),Vector2.new(p.X-60,p.Z+60)},MinY=p.Y-15,MaxY=p.Y+60,CombatSafe=true,CanBankCargo=true,CanRecoverWipe=true})

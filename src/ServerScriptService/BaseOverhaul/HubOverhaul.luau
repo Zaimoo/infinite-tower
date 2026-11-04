@@ -3,10 +3,10 @@
 -- ModuleScript: builds the whole Central Hub. Build() runs both at server start (from
 -- PlaceIslandsInRing.server.luau) and from Studio's Edit mode to bake the geometry into the place.
 -- 1. Builds the centerpiece Black & Red Tower and applies Storm Lighting/Effects.
--- 2. Builds The Masters' Commons, the public park island in front of the tower gate (CommonsBuilder).
+-- 2. Builds the Cloister Commons, the hollow rounded-rectangle hub in front of the tower gate (CloisterBuilder).
 -- 3. Builds one reusable Floating Island template (Island + Fortress Walls + Default Plaza Fountain) and clones it 6 times.
--- 4. Places the 6 islands in a horseshoe around the Commons (HubLayout), each facing the park centre.
--- 5. Moves Plot_1 .. Plot_6 onto their islands while preserving existing ownership, PlotSpawn, PrivateExtractionPad,
+-- 4. Places the 10 islands around the cloister's outer edge (HubLayout.PlotSlots), each facing into the hub.
+-- 5. Moves Plot_1 .. Plot_10 onto their islands while preserving existing ownership, PlotSpawn, PrivateExtractionPad,
 --    and facility objects so PlotManager, RelicService, CombatSimulation, and MasterController keep working untouched.
 -- 6. Creates a Kill/Respawn Zone below the hub that safely returns anyone who falls to their PlotSpawn.
 
@@ -22,18 +22,18 @@ local WallsBuilder = require(BaseOverhaulFolder:WaitForChild("WallsBuilder"))
 local FountainBuilder = require(BaseOverhaulFolder:WaitForChild("FountainBuilder"))
 local TowerBuilder = require(BaseOverhaulFolder:WaitForChild("TowerBuilder"))
 local LightingAndEffects = require(BaseOverhaulFolder:WaitForChild("LightingAndEffects"))
-local CommonsBuilder = require(BaseOverhaulFolder:WaitForChild("CommonsBuilder"))
+local CloisterBuilder = require(BaseOverhaulFolder:WaitForChild("CloisterBuilder"))
 local SharedLeaderboards = require(BaseOverhaulFolder:WaitForChild("SharedLeaderboards"))
 
 local HubOverhaul = {}
-HubOverhaul.Version = 13 -- Bump to force a rebuild of baked geometry
+HubOverhaul.Version = 14 -- Bump to force a rebuild of baked geometry
 
 --============================================================================
 -- CONFIGURATION TABLE
 --============================================================================
 local Config = {
-	-- Horseshoe Layout around The Masters' Commons (positions live in HubLayout, GDD Section 3.2)
-	IslandCount = #HubLayout.PlotBearingsDeg,
+	-- Ten plots around the Cloister Commons (positions live in HubLayout, GDD Section 3.2)
+	IslandCount = HubLayout.PlotCount,
 
 
 	-- Kill / Respawn Safety Zone below the whole hub
@@ -332,9 +332,9 @@ function HubOverhaul.Build(forceRebuild: boolean?): (Instance, boolean)
 		and existingContainer:FindFirstChild("MastersCommons") ~= nil
 		and plot1 ~= nil
 		and plot1:FindFirstChild("FloatingFortressIsland") ~= nil
-		and plotsFolder:FindFirstChild("Plot_6") ~= nil
-		and plotsFolder.Plot_6:FindFirstChild("FloatingFortressIsland") ~= nil
-		and #plotsFolder:GetChildren() >= 6
+		and plotsFolder:FindFirstChild("Plot_" .. Config.IslandCount) ~= nil
+		and (plotsFolder:FindFirstChild("Plot_" .. Config.IslandCount) :: Instance):FindFirstChild("FloatingFortressIsland") ~= nil
+		and #plotsFolder:GetChildren() >= Config.IslandCount
 
 	if alreadyBaked and not forceRebuild then
 		-- Geometry was already baked in Edit mode; re-seat spawns, beacons and the shared leaderboards
@@ -365,10 +365,10 @@ function HubOverhaul.Build(forceRebuild: boolean?): (Instance, boolean)
 	-- 1. Build Central Black & Red Tower
 	TowerBuilder.Build(overhaulContainer)
 
-	-- 2. Build The Masters' Commons in front of the tower gate
-	CommonsBuilder.Build(overhaulContainer)
+	-- 2. Build the Cloister Commons in front of the tower gate
+	CloisterBuilder.Build(overhaulContainer)
 
-	-- 3. Build 1 Master Island Template & clone it onto each horseshoe slot around the Commons
+	-- 3. Build 1 Master Island Template & clone it onto each plot slot around the cloister
 	local masterTemplate = createMasterIslandTemplate()
 
 	for i = 1, Config.IslandCount do
@@ -406,7 +406,7 @@ function HubOverhaul.Build(forceRebuild: boolean?): (Instance, boolean)
 	-- 5. One shared Playtime + Power board pair in the Commons pavilion (replaces the per-plot copies)
 	mountLeaderboards(overhaulContainer, plotsFolder, rescued)
 
-	print("[BaseOverhaul] Masters' Commons + 6 Floating Fortress Islands + Central Crimson Tower generated successfully.")
+	print("[BaseOverhaul] Cloister Commons + 10 Floating Fortress Islands + Central Crimson Tower generated successfully.")
 	return overhaulContainer, true
 end
 
@@ -437,7 +437,7 @@ function HubOverhaul.StartRuntime(container: Instance, rebuilt: boolean)
 	end
 	local commons = container:FindFirstChild("MastersCommons")
 	if commons then
-		CommonsBuilder.BindGateTablets(commons, Workspace:WaitForChild("WaitingRoomPlots"))
+		CloisterBuilder.BindGateTablets(commons, Workspace:WaitForChild("WaitingRoomPlots"))
 	end
 	if rebuilt then
 		-- Islands may have moved under buildings that PlotBuildingPlacement already placed

@@ -1,6 +1,6 @@
 # Infinite Tower: Become a Master!
 
-A Roblox squad-command action RPG with extraction and fortress progression, inspired by *Pick Me Up, Infinite Gacha*. The player is a **Master** who commands a squad of up to 5 gacha heroes. Squads climb a 50-floor Infinite Tower split into 10 biomes, with a Biome Boss every 5 floors. Between runs, the player develops a private Fortress Plot. Each server holds 6 players, one plot each.
+A Roblox squad-command action RPG with extraction and fortress progression, inspired by *Pick Me Up, Infinite Gacha*. The player is a **Master** who commands a squad of up to 5 gacha heroes. Squads climb a 50-floor Infinite Tower split into 10 biomes, with a Biome Boss every 5 floors. Between runs, the player develops a private Fortress Plot. Each server holds 10 players, one plot each, around the Cloister Commons hub in front of the tower (`HubLayout`).
 
 `docs/GAME_DESIGN.MD` is the source of truth for design. Read the relevant section before changing a system, and update it in the same change when behaviour changes.
 
