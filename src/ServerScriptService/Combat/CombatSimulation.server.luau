@@ -2655,6 +2655,12 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
       profile.Currencies.Gold += killGold
       profile.Currencies.Gems += reward.Gems
       TowerRuns.AddEarnings(killer, killGold, reward.Gems, if masterHere then 1 else 0)
+      local stones = TowerRewards.RollPromotionStones(mob.FloorId, mob.Role, math.random(), math.random())
+      if stones > 0 then
+       profile.PitMaterials = profile.PitMaterials or {}
+       profile.PitMaterials.PromotionStone = (profile.PitMaterials.PromotionStone or 0) + stones
+       dm.SendToast(killer, string.format("✨ +%d Promotion Stone%s dropped from %s!", stones, if stones == 1 then "" else "s", mob.DisplayName or "Elite"), "SUCCESS")
+      end
       dm.SyncProfile(killer)
       local tier = TowerRewards.RollRelic(mob.FloorId, mob.Role, math.random(), math.random())
       if masterHere and tier and _G.RelicService then
@@ -2704,9 +2710,17 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
        local bossGold = math.round(reward.Gold * marketMult * (if firstClear then 3 else 1))
        local bossGems = if firstClear then 10 + 2 * mob.FloorId else 0
        if firstBiomeClear then bossGems += 300 * bossTier end
+       local stoneRole = if bossTier > 0 then "BOSS" else "ALPHA"
+       local bossStones = if firstClear
+        then TowerRewards.GetFirstClearPromotionStones(mob.FloorId, stoneRole)
+        else TowerRewards.RollPromotionStones(mob.FloorId, stoneRole, math.random(), math.random())
        if profile then
         profile.Currencies.Gold += bossGold
         profile.Currencies.Gems += bossGems
+        if bossStones > 0 then
+         profile.PitMaterials = profile.PitMaterials or {}
+         profile.PitMaterials.PromotionStone = (profile.PitMaterials.PromotionStone or 0) + bossStones
+        end
         profile.HighestClearedFloor = math.max(profile.HighestClearedFloor or 0, mob.FloorId)
         profile.MaxFloorReached = math.max(profile.MaxFloorReached or 0, mob.FloorId + 1)
         dm.SyncProfile(p)
@@ -2743,7 +2757,8 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
         FloorProgressRemote:FireClient(p, progress)
        end
 
-       dm.SendToast(p, string.format("Floor %d Boss Defeated! Unlocked Floor %d! (+%d Gold, +%d Gem)", mob.FloorId, mob.FloorId + 1, bossGold, bossGems), "SUCCESS")
+       local stoneText = if bossStones > 0 then string.format(", +%d Promotion Stone%s", bossStones, if bossStones == 1 then "" else "s") else ""
+       dm.SendToast(p, string.format("Floor %d Boss Defeated! Unlocked Floor %d! (+%d Gold, +%d Gem%s)", mob.FloorId, mob.FloorId + 1, bossGold, bossGems, stoneText), "SUCCESS")
       end
      end
     end

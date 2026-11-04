@@ -197,22 +197,6 @@ function PitService:Build(profile: any, request: any): (any, any)
 			end
 			seen[uuid] = true
 		end
-	elseif action == "PROMOTION" and #donorIds > 0 then
-		local seen = {}
-		for _, uuid in ipairs(donorIds) do
-			local donor = profile.Heroes[uuid]
-			if seen[uuid] then reject("Each sacrifice material must be a different hero instance.")
-			elseif not donor then reject("A selected sacrifice material is no longer in your roster.")
-			elseif recipient and donor.Stars ~= recipient.Stars then reject("Sacrifice materials must be the same rank (" .. recipient.Stars .. "★).")
-			else
-				local eligibility = self:DonorStatus(profile, donor, request.Recipient)
-				if not eligibility.EligibleDonor then reject(donor.DisplayName .. ": " .. eligibility.Reason) end
-				table.insert(preview.Donors, Math.Copy(donor))
-				table.insert(staged.Remove, uuid)
-				if donor.Stars >= Config.RareConfirmationStars then preview.RequiresRareConfirmation = true end
-			end
-			seen[uuid] = true
-		end
 	elseif #donorIds > 0 then reject("This operation does not consume heroes. Clear the donor selection.") end
 
 	if action == "SYNTHESIS" or action == "IMPRINT" then
@@ -278,7 +262,7 @@ function PitService:Build(profile: any, request: any): (any, any)
 	elseif action == "PROMOTION" then
 		if recipient then
 			local rule = Config.Promotion[recipient.Stars]
-			if recipient.Stars >= Config.MaxStars or not rule then reject("This hero has reached the maximum 5★ rank.")
+			if recipient.Stars >= Config.MaxStars or not rule then reject("This hero has reached the maximum " .. Config.MaxStars .. "★ rank.")
 			else
 				preview.Costs = { Gold = rule.Gold, PromotionStone = rule.PromotionStone }
 				preview.Requirements = { { Label = "Reach the current level cap", Current = recipient.Level, Required = recipient.Stars * 10, Met = recipient.Level >= recipient.Stars * 10 } }
