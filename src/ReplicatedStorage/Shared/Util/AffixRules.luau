@@ -50,10 +50,10 @@ function AffixRules.AffixCount(biomeIndex: number): number
 	return if biomeIndex >= 7 then 2 else 1
 end
 
--- Rolls whether an Elite spawns affixed and, if so, which affixes. `rng` returns [0, 1).
--- Returns an empty list for a plain Elite.
-function AffixRules.Roll(rng: () -> number, biomeIndex: number): { string }
-	if rng() >= AffixRules.SpawnChance(biomeIndex) then
+-- Rolls whether an Elite spawns affixed and, if so, which affixes. `rng` returns [0, 1). `force`
+-- (Calamity Hour, Phase G) skips the chance. Returns an empty list for a plain Elite.
+function AffixRules.Roll(rng: () -> number, biomeIndex: number, force: boolean?): { string }
+	if not force and rng() >= AffixRules.SpawnChance(biomeIndex) then
 		return {}
 	end
 	local chosen: { string } = {}

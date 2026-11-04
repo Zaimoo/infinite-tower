@@ -229,10 +229,23 @@ function Runtime.new(api: any): any
 	end
 	-- Affixes are a chance summon (Phase F): a camp Elite may emerge affixed each time it spawns. Any
 	-- other mob is plain. Sets the name plate and announces an affixed Elite to the floor.
+	-- Timed tower events (Phase G): stamp the running event's modifiers on a mob as it spawns. The mob
+	-- keeps them (stats and rewards) until it dies, even if the event ends first.
+	function self:StampEvent(m)
+		local mods = _G.TowerEvents and _G.TowerEvents.GetMods(m.FloorId) or nil
+		m.EventMods = mods
+		if mods then
+			m.MaxHP = math.round(m.MaxHP * (mods.HP or 1))
+			m.CurrentHP = m.MaxHP
+			m.ATK = math.max(1, math.round(m.ATK * (mods.ATK or 1)))
+		end
+		return mods
+	end
 	function self:RollAffixes(m, e, plan, floorSpec, now)
+		local mods = self:StampEvent(m)
 		local affixes = {}
 		if e.Role == "ELITE" and not e.Alpha and plan and floorSpec then
-			affixes = AffixRules.Roll(plan.Rng, floorSpec.BiomeIndex)
+			affixes = AffixRules.Roll(plan.Rng, floorSpec.BiomeIndex, mods ~= nil and mods.ForceAffix == true)
 		end
 		AffixRules.Prepare(m, affixes, workspace:GetServerTimeNow())
 		local cat = MobCatalog.Get(m.EnemyId)
@@ -271,6 +284,7 @@ function Runtime.new(api: any): any
 			}
 			api.Mobs[netId] = m
 			ledger.Surge[netId] = m
+			self:StampEvent(m)
 		end
 	end
 	-- Placements the floor should hold right now: the layout plus scaled-in members when several Masters share it.
@@ -335,6 +349,7 @@ function Runtime.new(api: any): any
 				}
 				api.Mobs[netId] = m
 				ledger.Surge[netId] = m
+				self:StampEvent(m)
 				spawned += 1
 			end
 		end
@@ -566,13 +581,14 @@ function Runtime.new(api: any): any
 						end
 					end
 				end
+				local floorMods = _G.TowerEvents and _G.TowerEvents.GetMods(floor) or nil
 				for slot, placement in effective do
 					local plan = roster.Camps[placement.CampId] or roster.Patrols[placement.CampId]
 					local enemyId = placement.EnemyId
 					local localPos = Vector3.new(placement.X, placement.Y or 0, placement.Z)
 					if plan then
 						enemyId = if placement.Support then roster.Biome.SupportEnemyId
-							elseif slot == plan.LeaderSlot and roster.Elites[placement.CampId] then roster.Biome.EliteEnemyId
+							elseif slot == plan.LeaderSlot and (roster.Elites[placement.CampId] or (floorMods and floorMods.AllCampsElite)) then roster.Biome.EliteEnemyId
 							else memberType(plan, slot, roster.Biome.RegularEnemyIds)
 						localPos = memberOffset(plan, slot)
 					end
@@ -665,6 +681,8 @@ function Runtime.new(api: any): any
 						m.RespawnAt = CampWaves.ScheduleRespawn(m.DiedAt, campAlive[placement.CampId] == true, now) or math.huge
 						if placement.Patrol and m.RespawnAt ~= math.huge then
 							m.RespawnAt += Config.PatrolRespawnSeconds - Config.CampRespawnSeconds
+						elseif floorMods and floorMods.RespawnSeconds and m.RespawnAt ~= math.huge then
+							m.RespawnAt += floorMods.RespawnSeconds - Config.CampRespawnSeconds
 						end
 					end
 					-- A wiped patrol waits while anyone stands near its route start.
@@ -682,10 +700,10 @@ function Runtime.new(api: any): any
 							m.Role = e.Role
 							m.MobType = e.Role == "REGULAR" and "RING1_MOB" or "RING2_ELITE"
 							m.RingIndex = e.Role == "REGULAR" and 1 or 2
-							m.MaxHP = e.MaxHP
-							m.ATK = e.ATK
-							m.GoldReward = e.Gold
 						end
+						m.MaxHP = e.MaxHP
+						m.ATK = e.ATK
+						m.GoldReward = e.Gold
 						m.HomePosition = api.Navigation.Ground(room.Origin + localPos + Vector3.new(0, 6, 0), nil, 2, 12) or room.Origin + localPos
 						SupportRules.Reset(m)
 						m.IsAlive = true
