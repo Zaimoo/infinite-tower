@@ -50,11 +50,12 @@ function TowerProgress.GetKillProgressValue(role: string): number
 end
 
 -- Advances player kill progress and returns true if boss spawn condition was just triggered
-function TowerProgress.RecordKill(progress: PlayerFloorProgress, role: string): boolean
+-- `mult` (optional) scales the kill's progress, e.g. the Swarm event's x1.5.
+function TowerProgress.RecordKill(progress: PlayerFloorProgress, role: string, mult: number?): boolean
 	if progress.BossSpawned or progress.BossDefeated then
 		return false
 	end
-	local add = TowerProgress.GetKillProgressValue(role)
+	local add = TowerProgress.GetKillProgressValue(role) * (mult or 1)
 	progress.CurrentKills += add
 	if progress.CurrentKills >= progress.RequiredKills then
 		progress.BossSpawned = true

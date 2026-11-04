@@ -215,12 +215,23 @@ function Config.GetKillRewards(floorId: number, role: string): any
 end
 
 -- A dropRoll of 0 forces a drop (boss first clears). Tiers are checked from the top: Heart, Core, Urn, then Geode.
-function Config.RollRelic(floorId: number, role: string, dropRoll: number, tierRoll: number): string?
+-- `mods` (optional, a timed tower event's TowerEventConfig.Mods) can scale the drop chance and the Heart
+-- and Core shares, and upgrade Geodes to Urns and an Elite's Urns to Cores. Hearts stay Alpha/Boss-only
+-- and Cores Elite-only, because a zero share stays zero and Urn upgrades need role ELITE.
+function Config.RollRelic(floorId: number, role: string, dropRoll: number, tierRoll: number, mods: any?): string?
  local reward = Config.GetKillRewards(floorId, role)
- if dropRoll >= reward.RelicChance and dropRoll > 0 then return nil end
- if tierRoll < reward.HeartChance then return "CALAMITY_HEART" end
- if tierRoll < reward.HeartChance + reward.CoreChance then return "ABYSSAL_CORE" end
- if tierRoll < reward.HeartChance + reward.CoreChance + reward.UrnChance then return "CURSED_URN" end
+ local m = mods or {}
+ if dropRoll >= math.min(1, reward.RelicChance * (m.DropMult or 1)) and dropRoll > 0 then return nil end
+ local heart = reward.HeartChance * (m.HeartMult or 1)
+ local core = reward.CoreChance * (m.CoreMult or 1)
+ local shift = (tierRoll * 7919) % 1 -- a second, independent-looking roll for event upgrades
+ if tierRoll < heart then return "CALAMITY_HEART" end
+ if tierRoll < heart + core then return "ABYSSAL_CORE" end
+ if tierRoll < heart + core + reward.UrnChance then
+  if role == "ELITE" and m.UrnUpgrade and shift < m.UrnUpgrade then return "ABYSSAL_CORE" end
+  return "CURSED_URN"
+ end
+ if m.GeodeUpgrade and shift < m.GeodeUpgrade then return "CURSED_URN" end
  return "MANA_GEODE"
 end
 

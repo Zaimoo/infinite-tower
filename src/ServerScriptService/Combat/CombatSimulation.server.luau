@@ -2668,13 +2668,14 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
      local profile = dm.GetProfile(killer)
      if profile then
       local reward = TowerRewards.GetKillRewards(mob.FloorId, mob.Role)
-      local killGold = math.round(reward.Gold * marketMult * AffixRules.GoldMultiplierFor(mob))
+      local eventMods = (mob :: any).EventMods -- stamped at spawn by a timed tower event (Phase G)
+      local killGold = math.round(reward.Gold * marketMult * AffixRules.GoldMultiplierFor(mob) * (eventMods and eventMods.GoldMult or 1))
       profile.Currencies.Gold += killGold
       profile.Currencies.Gems += reward.Gems
       TowerRuns.AddEarnings(killer, killGold, reward.Gems, if masterHere then 1 else 0)
       dm.SyncProfile(killer)
       -- An affixed Elite (Phase F) drops relics far more often; tiers stay by role, so Cores stay Elite-only.
-      local tier = TowerRewards.RollRelic(mob.FloorId, mob.Role, AffixRules.DropRoll(mob, math.random()), math.random())
+      local tier = TowerRewards.RollRelic(mob.FloorId, mob.Role, AffixRules.DropRoll(mob, math.random()), math.random(), eventMods)
       if masterHere and tier and _G.RelicService then
        _G.RelicService.SpawnRelic(tier, mob.Position, killer.UserId)
       end
@@ -2690,7 +2691,8 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
       end
      end
      if progress and progress.FloorId == mob.FloorId and not progress.BossSpawned and not (mob :: any).NoKillCredit then
-      local shouldSpawn = TowerProgress.RecordKill(progress, mob.Role)
+      local stamped = (mob :: any).EventMods
+      local shouldSpawn = TowerProgress.RecordKill(progress, mob.Role, stamped and stamped.KillMult or nil)
       if not shouldSpawn and TowerProgress.CheckSurge(progress) then
        Encounters:SpawnSurge(mob.FloorId, killer, mob.Position)
        getDataManager().SendToast(killer, "A surge pack is bearing down on your squad!", "WARN")
@@ -2739,7 +2741,8 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
        -- Biome Boss clear pays at least a Cursed Urn.
        if p == killer and _G.RelicService then
         local relicRole = if bossTier > 0 then "BOSS" else "ALPHA"
-        local relicTier = TowerRewards.RollRelic(mob.FloorId, relicRole, if firstClear then 0 else math.random(), math.random())
+        local relicTier = TowerRewards.RollRelic(mob.FloorId, relicRole, if firstClear then 0 else math.random(), math.random(),
+         _G.TowerEvents and _G.TowerEvents.GetMods(mob.FloorId) or nil) -- Alpha Hunt raises the Heart share
         if relicTier == "MANA_GEODE" and firstBiomeClear then relicTier = "CURSED_URN" end
         if relicTier then _G.RelicService.SpawnRelic(relicTier, mob.Position, p.UserId) end
        end
