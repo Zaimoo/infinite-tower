@@ -26,6 +26,7 @@ local SanctuaryRules=require(Shared.Util.TowerSanctuaryRules)
 local SupportRules=require(Shared.Util.SupportRules)
 local FirstBiome=require(Shared.Config.FirstBiomeCombat)
 local TowerLayout=require(Shared.Config.TowerLayout)
+local PortalAssets=require(Shared.Config.TowerPortalAssets)
 local TowerRewards=require(Shared.Config.TowerFloorConfig)
 local TowerHardcore=require(Shared.Config.TowerHardcoreConfig)
 local StatBalance=require(Shared.Config.StatBalance)
@@ -39,6 +40,8 @@ local HeroTargeting=require(script.Parent.HeroTargeting)
 local HeroSkillEffects=require(script.Parent.HeroSkillEffects)
 local HeroImpacts=HeroImpactQueue.new()
 local TowerProgress=require(Shared.Util.TowerProgress)
+local TowerRoomBuilder=require(script.Parent.Parent:WaitForChild("Core"):WaitForChild("TowerRoomBuilder"))
+local TowerPortalKit=require(script.Parent.Parent:WaitForChild("Core"):WaitForChild("TowerPortalKit"))
 local LootDuel=require(Shared.Util.LootDuel)
 local DuelArena=require(script.Parent.DuelArena)
 local Encounters: any=nil
@@ -2399,134 +2402,114 @@ local function summonFloorBoss(player: Player, progress: TowerProgress.PlayerFlo
  end
 end
 
-local function spawnFloorAscensionPortal(floorId: number, position: Vector3)
+-- Phase H: when a floor's boss falls, two portals rise at the back of the Apex (TowerLayout.PortalSpots),
+-- built with TowerPortalKit in the biome's colours: Ascend (or Return to Hub on floor 50) and Rerun,
+-- which sends the Master back to this floor's Sanctuary with a fresh kill counter. Both need the Master
+-- to have cleared this floor themselves; both are hold-to-use prompts with a debounce.
+local function spawnFloorAscensionPortal(floorId: number, _position: Vector3?)
 	local room = Tower.GetRoom(floorId)
 	if not room or not room.Model then return end
 	if room.Model:FindFirstChild("FloorAscensionPortal") then return end
+	local floorSpec = TowerRewards.Get(floorId)
+	if not floorSpec then return end
 
 	local nextFloorId = floorId + 1
 	local isMaxFloor = floorId >= 50
-	local groundPos = HeroNavigation.Ground(position, nil, 4, 30) or position
+	local theme = TowerRoomBuilder.Theme(floorSpec.BiomeId)
+	local stone, gold = TowerPortalKit.Palette(theme)
+	local spots = TowerLayout.PortalSpots(floorSpec.IndexInBiome)
 
-	local portalModel = Instance.new("Model")
-	portalModel.Name = "FloorAscensionPortal"
+	local holder = Instance.new("Model")
+	holder.Name = "FloorAscensionPortal"
+	holder.Parent = room.Model
 
-	-- Stone base plinth
-	local plinth = Instance.new("Part")
-	plinth.Name = "PortalPlinth"
-	plinth.Size = Vector3.new(12, 1.2, 12)
-	plinth.CFrame = CFrame.new(groundPos + Vector3.new(0, 0.6, 0))
-	plinth.Anchored = true
-	plinth.CanCollide = true
-	plinth.Material = Enum.Material.Slate
-	plinth.Color = Color3.fromRGB(34, 28, 48)
-	plinth.Parent = portalModel
-
-	-- Glowing outer arch
-	local arch = Instance.new("Part")
-	arch.Name = "PortalArch"
-	arch.Shape = Enum.PartType.Cylinder
-	arch.Size = Vector3.new(0.8, 11, 11)
-	arch.CFrame = CFrame.new(groundPos + Vector3.new(0, 6.5, 0)) * CFrame.Angles(0, 0, math.rad(90))
-	arch.Anchored = true
-	arch.CanCollide = false
-	arch.Material = Enum.Material.Neon
-	arch.Color = Color3.fromRGB(80, 215, 255)
-	arch.Parent = portalModel
-
-	-- Glowing inner vortex
-	local vortex = Instance.new("Part")
-	vortex.Name = "PortalVortex"
-	vortex.Shape = Enum.PartType.Cylinder
-	vortex.Size = Vector3.new(0.4, 9.2, 9.2)
-	vortex.CFrame = CFrame.new(groundPos + Vector3.new(0, 6.5, 0)) * CFrame.Angles(0, 0, math.rad(90))
-	vortex.Anchored = true
-	vortex.CanCollide = false
-	vortex.Transparency = 0.25
-	vortex.Material = Enum.Material.Neon
-	vortex.Color = Color3.fromRGB(50, 160, 255)
-	vortex.Parent = portalModel
-
-	local light = Instance.new("PointLight")
-	light.Color = Color3.fromRGB(100, 220, 255)
-	light.Range = 24
-	light.Brightness = 2.8
-	light.Parent = vortex
-
-	local pe = Instance.new("ParticleEmitter")
-	pe.Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, Color3.fromRGB(160, 240, 255)),
-		ColorSequenceKeypoint.new(1, Color3.fromRGB(60, 120, 255)),
-	})
-	pe.Size = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 0.7),
-		NumberSequenceKeypoint.new(1, 0),
-	})
-	pe.Rate = 28
-	pe.Speed = NumberRange.new(2, 6)
-	pe.Lifetime = NumberRange.new(0.8, 1.8)
-	pe.Parent = vortex
-
-	-- Interaction trigger
-	local trigger = Instance.new("Part")
-	trigger.Name = "PortalTrigger"
-	trigger.Size = Vector3.new(8, 10, 8)
-	trigger.CFrame = CFrame.new(groundPos + Vector3.new(0, 5.5, 0))
-	trigger.Anchored = true
-	trigger.CanCollide = false
-	trigger.Transparency = 1
-	trigger.Parent = portalModel
-	portalModel.PrimaryPart = trigger
-
-	local prompt = Instance.new("ProximityPrompt")
-	prompt.Name = "AscendPrompt"
-	prompt.ActionText = if isMaxFloor then "Return to Hub" else string.format("Ascend to Floor %d", nextFloorId)
-	prompt.ObjectText = "Floor Portal"
-	prompt.KeyboardKeyCode = Enum.KeyCode.E
-	prompt.HoldDuration = 0.35
-	prompt.MaxActivationDistance = 15
-	prompt.RequiresLineOfSight = false
-	prompt.Parent = trigger
-
-	local portalDebounce: { [Player]: number } = {}
-	local function activatePortal(player: Player)
+	local debounce: { [Player]: number } = {}
+	local function travelRequest(state: any): any
+		return {
+			ContractVersion = 1,
+			RequestId = HttpService:GenerateGUID(false),
+			CharacterGeneration = state.CharacterGeneration,
+			ExpectedLocationRevision = state.LocationRevision,
+			ExpectedSquadRevision = state.SquadRevision,
+		}
+	end
+	-- Shared gate: on this floor, not travelling, cleared it themselves, and not spamming.
+	local function allowed(player: Player): any
 		local now = os.clock()
-		if (portalDebounce[player] or 0) > now then return end
-		portalDebounce[player] = now + 4.0
-
-		local pState = Tower.GetState(player)
-		if not pState or pState.FloorId ~= floorId then return end
-		if Tower.IsTransitioning(player) then return end
-		-- Only a Master who has cleared this floor may ascend (the prompt is shared by everyone in the room).
-		local portalProfile = getDataManager().GetProfile(player)
-		if not portalProfile or (portalProfile.HighestClearedFloor or 0) < floorId then
-			getDataManager().SendToast(player, "Defeat this floor's boss yourself to ascend.", "WARN")
-			return
+		if (debounce[player] or 0) > now then return nil end
+		debounce[player] = now + 4.0
+		local state = Tower.GetState(player)
+		if not state or state.FloorId ~= floorId or Tower.IsTransitioning(player) then return nil end
+		local profile = getDataManager().GetProfile(player)
+		if not profile or (profile.HighestClearedFloor or 0) < floorId then
+			getDataManager().SendToast(player, "Defeat this floor's boss yourself to use its portals.", "WARN")
+			return nil
 		end
-
-		if isMaxFloor then
-			Tower.ReturnToHub(player, {
-				ContractVersion = 1,
-				RequestId = HttpService:GenerateGUID(false),
-				CharacterGeneration = pState.CharacterGeneration,
-				ExpectedLocationRevision = pState.LocationRevision,
-				ExpectedSquadRevision = pState.SquadRevision,
-			})
-		else
-			Tower.VisitFloor(player, nextFloorId, {
-				ContractVersion = 1,
-				RequestId = HttpService:GenerateGUID(false),
-				CharacterGeneration = pState.CharacterGeneration,
-				ExpectedLocationRevision = pState.LocationRevision,
-				ExpectedSquadRevision = pState.SquadRevision,
-			})
-		end
+		return state
 	end
 
-	-- Phase 6 M5: the portal is prompt-only. Walking through it no longer teleports you by accident.
-	prompt.Triggered:Connect(activatePortal)
+	local function portal(spotName: string, glow: Color3, actionText: string, objectText: string, onUse: (Player, any) -> ())
+		local spot = spots[spotName]
+		local ground = HeroNavigation.Ground(room.Origin + Vector3.new(spot.X, spot.Y + 6, spot.Z), nil, 2, 12)
+			or room.Origin + Vector3.new(spot.X, spot.Y, spot.Z)
+		local _, trigger = TowerPortalKit.Build(holder, CFrame.new(ground), {
+			Name = "BossPortal_" .. spotName,
+			TriggerName = "PortalTrigger",
+			Scale = PortalAssets.BossScale,
+			Glow = glow,
+			Stone = stone,
+			Gold = gold,
+			StoneMaterial = theme.TrimMaterial,
+		})
+		local prompt = Instance.new("ProximityPrompt")
+		prompt.Name = spotName .. "Prompt"
+		prompt.ActionText = actionText
+		prompt.ObjectText = objectText
+		prompt.KeyboardKeyCode = Enum.KeyCode.E
+		prompt.HoldDuration = 0.35
+		prompt.MaxActivationDistance = 15
+		prompt.RequiresLineOfSight = false
+		prompt.Parent = trigger
+		prompt.Triggered:Connect(function(player: Player)
+			local state = allowed(player)
+			if state then onUse(player, state) end
+		end)
+	end
 
-	portalModel.Parent = room.Model
+	portal("Ascend", theme.LightColor, if isMaxFloor then "Return to Hub" else string.format("Ascend to Floor %d", nextFloorId), "Floor Portal",
+		function(player, state)
+			if isMaxFloor then
+				Tower.ReturnToHub(player, travelRequest(state))
+			else
+				Tower.VisitFloor(player, nextFloorId, travelRequest(state))
+			end
+		end)
+
+	portal("Rerun", Color3.fromRGB(120, 245, 150), string.format("Rerun Floor %d", floorId), "Floor Portal",
+		function(player, state)
+			-- A fresh kill counter for this floor, no leftover surge pack, then back to the Sanctuary.
+			local progress = TowerProgress.CreateProgress(floorId)
+			ActivePlayerProgress[player] = progress
+			if FloorProgressRemote then FloorProgressRemote:FireClient(player, progress) end
+			local ledger = Tower.Encounters and Tower.Encounters[floorId]
+			if ledger and ledger.Surge then
+				for netId, m in pairs(ledger.Surge) do
+					if m.SummonedByUserId == player.UserId then
+						ActiveMobsByNetId[netId] = nil
+						ledger.Surge[netId] = nil
+					end
+				end
+			end
+			getDataManager().SendToast(player, string.format("Rerunning Floor %d: the kill counter starts again.", floorId), "INFO")
+			Tower.VisitFloor(player, floorId, travelRequest(state))
+		end)
+
+	for _, p in Players:GetPlayers() do
+		local state = Tower.GetState(p)
+		if state and state.FloorId == floorId then
+			getDataManager().SendToast(p, "Portals opened at the back of the Apex: Ascend or Rerun.", "SUCCESS")
+		end
+	end
 end
 local function squadCount(player: Player): number
  local state=ActiveMasters[player];local n=0

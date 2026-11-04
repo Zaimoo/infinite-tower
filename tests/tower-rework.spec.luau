@@ -52,7 +52,7 @@ test("Every walkway is covered by a clear lane with landing pads, the causeway a
 			assert(lane.HalfWidth>=link.Width/2+3 and lane.AY==link.AY and lane.BY==link.BY)
 			assert(byId[id.."_LandingA"] and byId[id.."_LandingB"])
 		end
-		assert(#lanes==#room.Links*3+2)
+		assert(#lanes==#room.Links*3+4) -- links, two landings each, causeway, exit, two boss portal spots
 		assert(byId.BasinCauseway.HalfWidth>=20 and byId.SanctuaryExit.HalfWidth>=18)
 	end
 end)
