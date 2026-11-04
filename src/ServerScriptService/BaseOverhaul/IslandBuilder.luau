@@ -26,9 +26,9 @@ IslandBuilder.Config = {
 	RandomSeed = 4042026, -- Fixed seed so all 6 cloned islands have identical geometry
 
 	-- Materials & Colors (Atmospheric Gothic Fortress Palette)
-	TopMaterial = Enum.Material.Slate,
+	TopMaterial = Enum.Material.Cobblestone,
 	TopColor = Color3.fromRGB(70, 74, 80),
-	RimMaterial = Enum.Material.Slate,
+	RimMaterial = Enum.Material.Cobblestone,
 	RimColor = Color3.fromRGB(58, 62, 68),
 	RockMaterial = Enum.Material.Slate,
 	RockColorUpper = Color3.fromRGB(65, 68, 72),
@@ -177,7 +177,7 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 				Name = string.format("%s_Slab_%d", name, s),
 				Size = Vector3.new(jitterW, 0.25, segLen + 0.5),
 				CFrame = CFrame.new(pos.X, 0.125, pos.Z) * lookCF,
-				Material = Enum.Material.Cobblestone,
+				Material = Enum.Material.Limestone,
 				Color = col,
 				Decorative = true,
 				Parent = pathsFolder,
@@ -202,6 +202,7 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 	-- Radiating courtyard pathways connecting Bridge -> Fountain -> Stations & Outskirts Gate
 	buildCobblePath("Path_BridgeToFountain", Vector3.new(0, 0, -88), Vector3.new(0, 0, -18), 14, 7)
 	buildCobblePath("Path_FountainToPortal", Vector3.new(14, 0, -12), Vector3.new(106, 0, -67), 11, 9)
+	buildCobblePath("Path_FountainToForge", Vector3.new(18, 0, -2), Vector3.new(90, 0, -4), 11, 7)
 	buildCobblePath("Path_FountainToMarket", Vector3.new(14, 0, 12), Vector3.new(70, 0, 42), 11, 6)
 	buildCobblePath("Path_FountainToGate", Vector3.new(6, 0, 18), Vector3.new(32, 0, 88), 12, 7)
 	buildCobblePath("Path_FountainToSynthesis", Vector3.new(-14, 0, -10), Vector3.new(-62, 0, -32), 11, 6)

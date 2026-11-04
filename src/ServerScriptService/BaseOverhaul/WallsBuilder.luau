@@ -20,8 +20,8 @@ WallsBuilder.Config = {
 	-- Wall Geometry (GDD Section 3.4: 28-stud high crenellated stone walls)
 	WallHeight = 28,
 	WallThickness = 6,
-	BastionSize = 12,
-	BastionHeight = 34,
+	BastionSize = 20,
+	BastionHeight = 38,
 
 	-- Crenellations (Merlons on top of the wall)
 	MerlonWidth = 6,
@@ -141,24 +141,57 @@ function WallsBuilder.Build(parentIsland: Instance?, customConfig: { [string]: a
 			Name = string.format("CornerBastion_%d", i),
 			Size = Vector3.new(cfg.BastionSize, cfg.BastionHeight, cfg.BastionSize),
 			CFrame = CFrame.new(cPos.X, cfg.BastionHeight * 0.5, cPos.Z),
-			Material = cfg.TrimMaterial,
+			Material = cfg.WallMaterial,
 			Color = cfg.BastionColor,
 			Decorative = false,
 			Parent = wallsModel,
 		})
 		makePart({
+			Name = string.format("CornerBastionPlinth_%d", i),
+			Size = Vector3.new(cfg.BastionSize + 2.8, 5.0, cfg.BastionSize + 2.8),
+			CFrame = CFrame.new(cPos.X, 2.5, cPos.Z),
+			Material = cfg.TrimMaterial,
+			Color = cfg.PlinthColor or cfg.TrimColor,
+			Decorative = true,
+			Parent = wallsModel,
+		})
+		makePart({
 			Name = string.format("CornerBastionCap_%d", i),
-			Size = Vector3.new(cfg.BastionSize + 2, 2.5, cfg.BastionSize + 2),
+			Size = Vector3.new(cfg.BastionSize + 2.4, 2.5, cfg.BastionSize + 2.4),
 			CFrame = CFrame.new(cPos.X, cfg.BastionHeight + 1.25, cPos.Z),
 			Material = cfg.TrimMaterial,
 			Color = cfg.TrimColor,
 			Decorative = true,
 			Parent = wallsModel,
 		})
+		-- 8 Battlement Merlons crowning each Corner Bastion Tower
+		local bHalf = (cfg.BastionSize + 1.2) * 0.5
+		local bMerlonY = cfg.BastionHeight + 2.5 + 2.0
+		local mStep = bHalf * 0.92
+		for _, mOff in ipairs({
+			{ dx = -bHalf, dz = -mStep, sx = 3.2, sz = 4.6 },
+			{ dx = -bHalf, dz =  mStep, sx = 3.2, sz = 4.6 },
+			{ dx =  bHalf, dz = -mStep, sx = 3.2, sz = 4.6 },
+			{ dx =  bHalf, dz =  mStep, sx = 3.2, sz = 4.6 },
+			{ dx = -mStep, dz = -bHalf, sx = 4.6, sz = 3.2 },
+			{ dx =  mStep, dz = -bHalf, sx = 4.6, sz = 3.2 },
+			{ dx = -mStep, dz =  bHalf, sx = 4.6, sz = 3.2 },
+			{ dx =  mStep, dz =  bHalf, sx = 4.6, sz = 3.2 },
+		}) do
+			makePart({
+				Name = string.format("BastionMerlon_%d", i),
+				Size = Vector3.new(mOff.sx, 4.0, mOff.sz),
+				CFrame = CFrame.new(cPos.X + mOff.dx, bMerlonY, cPos.Z + mOff.dz),
+				Material = cfg.TrimMaterial,
+				Color = cfg.TrimColor,
+				Decorative = true,
+				Parent = wallsModel,
+			})
+		end
 	end
 
-	-- 2. Left Wall (-X) and Right Wall (+X) with Base Plinth & Overhang Cornice
-	for _, side in ipairs({ { Name = "West", X = -halfW }, { Name = "East", X = halfW } }) do
+	-- 2. Left Wall (-X) and Right Wall (+X) with Base Plinth, Overhang Cornice & Wall Torches
+	for _, side in ipairs({ { Name = "West", X = -halfW, NormalX = 1 }, { Name = "East", X = halfW, NormalX = -1 } }) do
 		makePart({
 			Name = "Wall_" .. side.Name,
 			Size = Vector3.new(cfg.WallThickness, cfg.WallHeight, cfg.PerimeterLength),
@@ -471,6 +504,14 @@ function WallsBuilder.Build(parentIsland: Instance?, customConfig: { [string]: a
 		-- Medieval Crimson & Gold Crest Banners along the Dividing Wall (flanking Forge & Market)
 		for idx, bx in ipairs({ 56, 14, -48 }) do
 			addWallBanner("DividingWallBanner_" .. idx, Vector3.new(bx, 16.0, halfL - (cfg.WallThickness * 0.5)))
+		end
+
+		-- Interior Wall Torches along North (+X) and South (-X) Fortress Walls
+		for idx, tz in ipairs({ -52, 48 }) do
+			addWallTorch("NorthWallTorch_" .. idx, Vector3.new(halfW - 3.2, 11.5, tz), Vector3.new(-1, 0, 0))
+		end
+		for idx, tz in ipairs({ -52, 0, 52 }) do
+			addWallTorch("SouthWallTorch_" .. idx, Vector3.new(-halfW + 3.2, 11.5, tz), Vector3.new(1, 0, 0))
 		end
 
 		populateMerlonsAlongSpan(

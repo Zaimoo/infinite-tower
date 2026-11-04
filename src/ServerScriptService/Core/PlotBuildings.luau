@@ -14,7 +14,7 @@ local OutskirtsBuilder = require(script.Parent:WaitForChild("OutskirtsEnvironmen
 local FacilityPresence = require(script.Parent:WaitForChild("FacilityPresence"))
 local FacilityConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("FacilityConfig"))
 
-local VERSION = 25 -- 25: Wall-Mounted Gothic Corner Summoning Portal with outward-opening doors
+local VERSION = 27 -- 27: North Wall Blacksmith House (X=108, Z=-4), Cobblestone Ground & Crenellated Corner Towers
 
 local function attachPrompt(
 	parent: Instance,

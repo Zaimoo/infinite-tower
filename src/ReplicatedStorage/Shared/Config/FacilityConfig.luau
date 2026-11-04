@@ -239,9 +239,9 @@ FacilityConfig.FacilityLayout = {
 		Keybind = if Enum then Enum.KeyCode.F else ("F" :: any),
 	},
 	BlacksmithForge = {
-		Offset = Vector3.new(-18, 0, 68),
-		RotationY = math.rad(180),
-		Radius = 18,
+		Offset = Vector3.new(108, 0, -4),
+		RotationY = math.rad(-90),
+		Radius = 22,
 		PromptText = "Blacksmith Forge",
 		Keybind = if Enum then Enum.KeyCode.F else ("F" :: any), -- F, so it never competes with the [E] Recall hotkey
 	},
