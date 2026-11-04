@@ -72,6 +72,8 @@ HeroCostumes.MESHES = table.freeze({
 	["rbxassetid://139133902834118"] = "",
 	-- Ignis's hair, our own: tools/make_ignis_hair_ugc.py (assets/hair/ignis_hair_ugc.blend).
 	["rbxassetid://101701313703578"] = "",
+	-- Solaris's hair, our own: tools/make_solaris_hair_ugc.py (assets/hair/solaris_hair_ugc.blend).
+	["rbxassetid://116753377442189"] = "",
 } :: { [string]: string })
 
 -- Avatar hair accessory placement: a piece centred so the accessory's HairAttachment meets
@@ -821,17 +823,75 @@ do
 end
 
 -- 11. SOLARIS (6★ Scholar - Sun Priest) ----------------------------------------------------
+-- Sun priestess from her reference art: long wavy copper hair, a dark fur collar over a gold
+-- torc, a black and crimson bodice with gold trim, black sleeves with gold cuffs and an armband,
+-- an ember belt with a gold sigil, crimson and flame-orange tabards over black skirts, dark knee
+-- plates and flame-orange boots. Behind her, a gold sun frame with ember gems and two crimson
+-- banners. Face: our own decal from assets/faces/make_solaris_face.py. Hair: our Blender mesh
+-- (tools/make_solaris_hair_ugc.py).
 do
-	local skin, hair, white, gold, glow, sand = { 255, 235, 215 }, { 255, 215, 60 }, { 250, 248, 240 }, { 255, 195, 0 }, { 255, 255, 180 }, { 235, 225, 200 }
+	local skin, hair, black, crimson, flame = { 214, 170, 132 }, { 205, 96, 42 }, { 32, 24, 26 }, { 128, 30, 28 }, { 230, 112, 34 }
+	local gold, fur, ember, plate, boot = { 214, 166, 70 }, { 62, 42, 34 }, { 255, 110, 30 }, { 58, 46, 42 }, { 200, 80, 34 }
 	table.insert(COSTUMES, costume("hero_solaris", "Standard", {
-		Skin = skin, UpperTorso = white, LowerTorso = white, UpperArm = white, LowerArm = skin,
-		UpperLeg = white, LowerLeg = sand, Foot = gold,
+		Skin = skin, UpperTorso = black, LowerTorso = black, UpperArm = skin, LowerArm = black, Hand = flame,
+		UpperLeg = black, LowerLeg = boot, Foot = boot,
 	}, {
-		piece("HairBase", "Head", { 1.24, 0.45, 1.24 }, { 0, 0.48, -0.05 }, hair),
-		piece("SunCrown", "Head", { 1.6, 0.15, 1.6 }, { 0, 1.1, 0 }, gold, NEON),
-		piece("SunCrownCore", "Head", { 0.6, 0.25, 0.6 }, { 0, 0, 0 }, glow, with(NEON, { Shape = "Ball", RelativeTo = "SunCrown" })),
-		piece("SolarMantle", "UpperTorso", { 2.3, 0.4, 1.3 }, { 0, 0.75, 0 }, gold, with(LOOSE, { Material = "Fabric" })),
-	}))
+		-- Hair mesh: centred on the export's bounding box and turned 180 degrees to undo the
+		-- importer's rotation.
+		piece("HairMesh", "Head", { 1.9, 2.59, 1.78 }, { 0.0063, -0.2546, 0.108 }, hair, with(LOOSE, {
+			Rotation = { 0, 180, 0 },
+			Mesh = { MeshId = "rbxassetid://116753377442189", Scale = { 0.01, 0.01, 0.01 } },
+		})),
+		-- Fur collar over a gold torc
+		piece("FurCollar", "UpperTorso", { 2.2, 0.4, 1.3 }, { 0, 0.74, 0.04 }, fur, with(LOOSE, { Material = "Fabric" })),
+		piece("Torc", "UpperTorso", { 0.9, 0.14, 0.8 }, { 0, 0.92, 0 }, gold, with(LOOSE, METAL)),
+		-- Bodice: crimson panel with gold trim and a gold V
+		piece("BodicePanel", "UpperTorso", { 1.0, 1.0, 0.06 }, { 0, -0.05, -0.51 }, crimson, { Material = "Fabric" }),
+		piece("BodiceTrimL", "UpperTorso", { 0.05, 1.0, 0.07 }, { -0.5, -0.05, -0.52 }, gold, METAL),
+		piece("BodiceTrimR", "UpperTorso", { 0.05, 1.0, 0.07 }, { 0.5, -0.05, -0.52 }, gold, METAL),
+		piece("BodiceVL", "UpperTorso", { 0.5, 0.06, 0.07 }, { -0.2, 0.32, -0.53 }, gold, with(METAL, { Rotation = { 0, 0, -35 } })),
+		piece("BodiceVR", "UpperTorso", { 0.5, 0.06, 0.07 }, { 0.2, 0.32, -0.53 }, gold, with(METAL, { Rotation = { 0, 0, 35 } })),
+		piece("EmberGlow", "UpperTorso", { 0.16, 0.16, 0.04 }, { 0, -0.2, -0.55 }, ember, with(NEON, { Rotation = { 0, 0, 45 } })),
+		-- Arms: a gold-trimmed armband on the left, black sleeves with gold cuffs
+		piece("ArmbandL", "LeftUpperArm", { 1.08, 0.18, 1.08 }, { 0, -0.1, 0 }, black),
+		piece("ArmbandTrimL", "LeftUpperArm", { 1.1, 0.05, 1.1 }, { 0, 0.01, 0 }, gold, METAL),
+		piece("SleeveCuffL", "LeftLowerArm", { 1.1, 0.12, 1.1 }, { 0, 0.42, 0 }, gold, METAL),
+		piece("SleeveCuffR", "RightLowerArm", { 1.1, 0.12, 1.1 }, { 0, 0.42, 0 }, gold, METAL),
+		piece("WristCuffL", "LeftLowerArm", { 1.1, 0.1, 1.1 }, { 0, -0.42, 0 }, gold, METAL),
+		piece("WristCuffR", "RightLowerArm", { 1.1, 0.1, 1.1 }, { 0, -0.42, 0 }, gold, METAL),
+		-- Ember belt with a gold sigil; crimson and flame tabards over black skirts
+		piece("Belt", "LowerTorso", { 2.08, 0.26, 1.08 }, { 0, 0.04, 0 }, flame),
+		piece("BeltTrim", "LowerTorso", { 2.1, 0.05, 1.1 }, { 0, 0.18, 0 }, gold, METAL),
+		piece("BeltSigil", "LowerTorso", { 0.24, 0.24, 0.06 }, { 0, 0.04, -0.56 }, gold, with(METAL, { Rotation = { 0, 0, 45 } })),
+		piece("TabardFront", "LowerTorso", { 0.6, 1.5, 0.06 }, { 0, -0.85, -0.56 }, crimson, with(LOOSE, { Material = "Fabric" })),
+		piece("TabardFlame", "LowerTorso", { 0.24, 0.5, 0.04 }, { 0, -0.95, -0.6 }, ember, with(LOOSE, NEON)),
+		piece("TabardTip", "LowerTorso", { 0.06, 0.3, 0.6 }, { 0, -1.75, -0.56 }, crimson, with(WEDGE, LOOSE, { Material = "Fabric", Rotation = { 0, 90, 180 } })),
+		piece("SkirtL", "LowerTorso", { 0.7, 1.4, 0.08 }, { -0.66, -0.8, -0.54 }, black, with(LOOSE, { Material = "Fabric" })),
+		piece("SkirtR", "LowerTorso", { 0.7, 1.4, 0.08 }, { 0.66, -0.8, -0.54 }, black, with(LOOSE, { Material = "Fabric" })),
+		piece("SkirtTrimL", "LowerTorso", { 0.06, 1.4, 0.09 }, { -0.32, -0.8, -0.55 }, flame, with(LOOSE, METAL)),
+		piece("SkirtTrimR", "LowerTorso", { 0.06, 1.4, 0.09 }, { 0.32, -0.8, -0.55 }, flame, with(LOOSE, METAL)),
+		piece("SkirtBack", "LowerTorso", { 2.1, 1.6, 0.1 }, { 0, -0.9, 0.58 }, black, with(LOOSE, { Material = "Fabric", Rotation = { -6, 0, 0 } })),
+		-- Legs: dark knee plates, gold-rimmed flame boots
+		piece("KneePlateL", "LeftLowerLeg", { 0.85, 0.5, 0.14 }, { 0, 0.44, -0.55 }, plate, METAL),
+		piece("KneePlateR", "RightLowerLeg", { 0.85, 0.5, 0.14 }, { 0, 0.44, -0.55 }, plate, METAL),
+		piece("BootCuffL", "LeftLowerLeg", { 1.08, 0.1, 1.08 }, { 0, 0.08, 0 }, gold, METAL),
+		piece("BootCuffR", "RightLowerLeg", { 1.08, 0.1, 1.08 }, { 0, 0.08, 0 }, gold, METAL),
+		piece("BootSoleL", "LeftFoot", { 1.1, 0.07, 1.28 }, { 0, -0.13, -0.08 }, crimson),
+		piece("BootSoleR", "RightFoot", { 1.1, 0.07, 1.28 }, { 0, -0.13, -0.08 }, crimson),
+		-- Sun frame behind her: a gold arch over the head with flame spires and ember gems,
+		-- and two crimson banners hanging from gold posts.
+		piece("FrameArchL", "UpperTorso", { 0.26, 2.2, 0.18 }, { -1.35, 1.75, 1.35 }, gold, with(LOOSE, METAL, { Rotation = { 0, 0, -16 } })),
+		piece("FrameArchR", "UpperTorso", { 0.26, 2.2, 0.18 }, { 1.35, 1.75, 1.35 }, gold, with(LOOSE, METAL, { Rotation = { 0, 0, 16 } })),
+		piece("FrameTop", "UpperTorso", { 2.1, 0.26, 0.18 }, { 0, 2.85, 1.35 }, gold, with(LOOSE, METAL)),
+		piece("FrameCrest", "UpperTorso", { 0.18, 0.7, 0.5 }, { 0, 3.3, 1.35 }, gold, with(LOOSE, METAL, WEDGE, { Rotation = { 0, 90, 0 } })),
+		piece("FrameGemTop", "UpperTorso", { 0.3, 0.3, 0.12 }, { 0, 2.85, 1.24 }, ember, with(LOOSE, NEON, { Shape = "Ball" })),
+		piece("FrameGemL", "UpperTorso", { 0.26, 0.26, 0.12 }, { -1.42, 1.9, 1.24 }, ember, with(LOOSE, NEON, { Shape = "Ball" })),
+		piece("FrameGemR", "UpperTorso", { 0.26, 0.26, 0.12 }, { 1.42, 1.9, 1.24 }, ember, with(LOOSE, NEON, { Shape = "Ball" })),
+		piece("BannerPostL", "UpperTorso", { 0.2, 1.3, 0.2 }, { -3.25, 1.1, 1.1 }, gold, with(LOOSE, METAL)),
+		piece("BannerPostR", "UpperTorso", { 0.2, 1.3, 0.2 }, { 3.25, 1.1, 1.1 }, gold, with(LOOSE, METAL)),
+		piece("BannerL", "UpperTorso", { 0.8, 2.6, 0.05 }, { -3.25, -0.8, 1.1 }, crimson, with(LOOSE, { Material = "Fabric" })),
+		piece("BannerR", "UpperTorso", { 0.8, 2.6, 0.05 }, { 3.25, -0.8, 1.1 }, crimson, with(LOOSE, { Material = "Fabric" })),
+	}, "rbxassetid://89614314986771"))
 end
 
 -- 12. ASTREA (7★ Marksman - Featured Astral Star-Gazer) -----------------------------------
