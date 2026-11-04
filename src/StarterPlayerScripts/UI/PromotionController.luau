@@ -9,6 +9,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local HeroCard = require(script.Parent:WaitForChild("HeroCard"))
 local ModalFit = require(script.Parent:WaitForChild("ModalFit"))
+local UIAssets = require(script.Parent:WaitForChild("UIAssets"))
+local UIFeel = require(script.Parent:WaitForChild("UIFeel"))
 local StatFormulas = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("StatFormulas"))
 local PitBalanceConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("PitBalanceConfig"))
 local GothicBoxStyle = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GothicBoxStyle"))
@@ -19,6 +21,8 @@ local Promo = {}
 Promo.__index = Promo
 
 local WIDTH, HEIGHT = 700, 610 -- same container as Synthesis (the Pit tabs swap between them)
+local STONE_IMAGE = UIAssets.Images.PromotionStone
+local ORBIT_DURATION = 2.4
 
 local C = {
 	Scrim = Color3.fromRGB(6, 6, 10),
@@ -393,6 +397,18 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 		self:OpenPicker()
 	end)
 
+	self.OrbitStones = table.create(5)
+	for i = 1, 5 do
+		self.OrbitStones[i] = new("ImageLabel", {
+			Name = "OrbitStone" .. i,
+			Image = STONE_IMAGE,
+			ScaleType = Enum.ScaleType.Fit,
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			BackgroundTransparency = 1,
+			Visible = false,
+		}, ritualArea)
+	end
+
 	--========================================================================
 	-- STATS DISPLAY PANEL (Before & After Stats Panel)
 	--========================================================================
@@ -483,17 +499,59 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 
 	local rateLbl = label(actionArea, "100% SUCCESS RATE", 20, C.SuccessGreen, Enum.Font.GothamBlack)
 	rateLbl.Position = UDim2.fromOffset(0, 0)
-	rateLbl.Size = UDim2.new(1, 0, 0, 26)
+	rateLbl.Size = UDim2.new(1, 0, 0, 22)
 	rateLbl.ZIndex = 43
 	self.RateLabel = rateLbl
 
 	local costLbl = label(actionArea, "", 15, C.TextMuted, Enum.Font.GothamBold, "Body")
-	costLbl.Position = UDim2.fromOffset(0, 26)
-	costLbl.Size = UDim2.new(1, 0, 0, 22)
 	costLbl.ZIndex = 43
 	self.CostLabel = costLbl
 
-	local btnWidth, btnHeight = 480, 52
+	local stoneCost = new("Frame", {
+		Name = "PromotionStoneCost",
+		Position = UDim2.new(0.5, 5, 0, 23),
+		Size = UDim2.fromOffset(266, 32),
+		BackgroundColor3 = C.SlotBg,
+		BorderSizePixel = 0,
+		ZIndex = 43,
+	}, actionArea)
+	self.StoneCost = stoneCost
+	new("UICorner", { CornerRadius = UDim.new(0, 7) }, stoneCost)
+	self.StoneCostBorder = stroke(stoneCost, C.Border, 1.5, 0.25)
+	new("ImageLabel", {
+		Name = "StoneIcon",
+		Image = STONE_IMAGE,
+		ScaleType = Enum.ScaleType.Fit,
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(4, 0),
+		Size = UDim2.fromOffset(32, 32),
+		ZIndex = 44,
+	}, stoneCost)
+	local stoneCaption = label(stoneCost, "PROMOTION\nSTONES", 12, C.TextMuted, Enum.Font.GothamBold, "Body")
+	stoneCaption.Position = UDim2.fromOffset(38, 0)
+	stoneCaption.Size = UDim2.fromOffset(83, 32)
+	stoneCaption.TextXAlignment = Enum.TextXAlignment.Left
+	stoneCaption.ZIndex = 44
+	self.StoneCount = new("TextLabel", {
+		Name = "StoneCount",
+		Font = Enum.Font.GothamBlack,
+		TextSize = 23,
+		Text = "",
+		TextTruncate = Enum.TextTruncate.AtEnd,
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(126, 0),
+		Size = UDim2.new(1, -134, 1, 0),
+		ZIndex = 44,
+	}, stoneCost)
+	self.StoneCount:SetAttribute("Grimoire", true)
+	new("UIStroke", {
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual,
+		Color = Color3.fromRGB(9, 5, 14),
+		LineJoinMode = Enum.LineJoinMode.Round,
+		Thickness = 3,
+	}, self.StoneCount)
+
+	local btnWidth, btnHeight = 480, 48
 	local btn = new("TextButton", {
 		Name = "InitiatePromotionButton",
 		Text = spaced("INITIATE PROMOTION"),
@@ -504,7 +562,7 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 		BorderSizePixel = 0,
 		AutoButtonColor = true,
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 52),
+		Position = UDim2.new(0.5, 0, 0, 58),
 		Size = UDim2.fromOffset(btnWidth, btnHeight),
 		ZIndex = 43,
 	}, actionArea)
@@ -527,13 +585,19 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 
 	self.OuterAngle = 0
 	self.InnerAngle = 0
-	RunService.RenderStepped:Connect(function(dt: number)
+	local ritualAnimation = RunService.RenderStepped:Connect(function(dt: number)
 		if self.Root.Visible then
 			self.OuterAngle = (self.OuterAngle + dt * 24) % 360
 			self.InnerAngle = (self.InnerAngle - dt * 36) % 360
 			self.OuterCircle.Rotation = self.OuterAngle
 			self.InnerCircle.Rotation = self.InnerAngle
+			if self.OrbitElapsed then
+				self:UpdateStoneOrbit(dt)
+			end
 		end
+	end)
+	root.Destroying:Once(function()
+		ritualAnimation:Disconnect()
 	end)
 
 	ModalFit.Bind(root, self.Scale, WIDTH, HEIGHT)
@@ -751,6 +815,7 @@ end
 function Promo.Pick(self: any, uuid: string)
 	local hero = self.State.Heroes[uuid]
 	if not hero then return end
+	self:StopStoneOrbit()
 	self.Recipient = uuid
 	self.Message = ""
 	self.Picker.Visible = false
@@ -931,30 +996,34 @@ function Promo.Render(self: any)
 	local goldOwned = currencies.Gold or 0
 	local stonesOwned = materials.PromotionStone or 0
 
-	if recipient then
-		local rule = PitBalanceConfig.Promotion[recipient.Stars]
-		if not rule or (recipient.Stars or 1) >= maxStars then
-			self.CostLabel.Text = '<font color="#39ff14">MAXIMUM CELESTIAL 7★ RANK ACHIEVED</font>'
-		else
-			local reqGold = rule.Gold or 1500
-			local reqStones = rule.PromotionStone or 1
-
-			local goldOk = goldOwned >= reqGold
-			local stonesOk = stonesOwned >= reqStones
-
-			local goldStr = string.format("GOLD: %s / %s %s", formatNumber(goldOwned), formatNumber(reqGold), goldOk and "(OK)" or "(NEED MORE)")
-			local stoneStr = string.format("STONES: %s / %s %s", formatNumber(stonesOwned), formatNumber(reqStones), stonesOk and "(OK)" or "(NEED MORE)")
-
-			self.CostLabel.Text = string.format(
-				'<font color="%s">%s</font>      <font color="%s">%s</font>',
-				goldOk and "#39ff14" or "#ff5f55",
-				goldStr,
-				stonesOk and "#39ff14" or "#ff5f55",
-				stoneStr
-			)
-		end
+	local rule = recipient and PitBalanceConfig.Promotion[recipient.Stars]
+	local atMaxRank = recipient ~= nil and (not rule or (recipient.Stars or 1) >= maxStars)
+	self.StoneCost.Visible = not atMaxRank
+	if atMaxRank then
+		self.CostLabel.Position = UDim2.fromOffset(0, 23)
+		self.CostLabel.Size = UDim2.new(1, 0, 0, 32)
+		self.CostLabel.Text = '<font color="#39ff14">MAXIMUM CELESTIAL 7★ RANK ACHIEVED</font>'
 	else
-		self.CostLabel.Text = string.format("GOLD OWNED: %s   ·   PROMOTION STONES: %s", formatNumber(goldOwned), formatNumber(stonesOwned))
+		self.CostLabel.Position = UDim2.new(0.5, -271, 0, 23)
+		self.CostLabel.Size = UDim2.fromOffset(266, 32)
+		local stoneColor = C.TextMuted
+		if rule then
+			local reqGold, reqStones = rule.Gold or 1500, rule.PromotionStone or 1
+			self.CostLabel.Text = string.format(
+				'<font color="%s">GOLD: %s / %s</font>',
+				if goldOwned >= reqGold then "#39ff14" else "#ff5f55",
+				formatNumber(goldOwned),
+				formatNumber(reqGold)
+			)
+			self.StoneCount.Text = string.format("%s / %s", formatNumber(stonesOwned), formatNumber(reqStones))
+			stoneColor = if stonesOwned >= reqStones then C.Good else C.Danger
+		else
+			self.CostLabel.Text = "GOLD OWNED: " .. formatNumber(goldOwned)
+			self.StoneCount.Text = formatNumber(stonesOwned)
+		end
+		self.StoneCount.TextColor3 = stoneColor
+		self.StoneCostBorder.Color = stoneColor
+		self.StoneCost.BackgroundColor3 = C.SlotBg:Lerp(stoneColor, 0.12)
 	end
 
 	-- 4. Action Button & Feedback Status
@@ -990,7 +1059,38 @@ function Promo.Render(self: any)
 	self.Status.TextColor3 = color
 end
 
+function Promo.StopStoneOrbit(self: any)
+	self.OrbitElapsed = nil
+	for _, stone in self.OrbitStones do
+		stone.Visible = false
+	end
+end
+
+function Promo.UpdateStoneOrbit(self: any, dt: number)
+	local elapsed = self.OrbitElapsed + dt
+	if elapsed >= ORBIT_DURATION then
+		self:StopStoneOrbit()
+		return
+	end
+	self.OrbitElapsed = elapsed
+	local alpha = math.min(elapsed / 0.15, (ORBIT_DURATION - elapsed) / 0.45, 1)
+	for i, stone in self.OrbitStones do
+		local angle = (elapsed / 1.45 + (i - 1) / #self.OrbitStones) * math.pi * 2
+		local depth = math.sin(angle)
+		local size = 35 + 10 * depth
+		stone.Size = UDim2.fromOffset(size, size)
+		stone.Position = UDim2.new(0.5, math.cos(angle) * 108, 0.5, depth * 58 + 26 - elapsed * 19)
+		stone.Rotation = math.cos(angle) * 16
+		stone.ZIndex = if depth > 0 then 49 else 42
+		stone.ImageTransparency = 1 - alpha * (0.85 + 0.15 * depth)
+		stone.Visible = true
+	end
+end
+
 function Promo.Celebrate(self: any)
+	if self.Root.Visible and STONE_IMAGE ~= "" and not UIFeel.ReducedMotion() then
+		self.OrbitElapsed = 0
+	end
 	local flash = new("Frame", {
 		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
 		BackgroundTransparency = 0.2,
@@ -1024,6 +1124,7 @@ end
 
 function Promo.Close(self: any)
 	if self.Busy then return end
+	self:StopStoneOrbit()
 	self.Root.Visible = false
 	self.Scrim.Visible = false
 	self.Picker.Visible = false
