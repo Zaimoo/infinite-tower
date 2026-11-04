@@ -373,6 +373,9 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 		if duelColor then title.TextColor3 = duelColor else BillboardThemes.PaintTitle(title, theme) end
 	else
 		title.Text = (meta and meta.Name) or "Ruin Entity"
+		if enemySpec and enemySpec.Support then
+			title.Text ..= " · Support" -- Phase D: tells players which mob to focus first
+		end
 		BillboardThemes.PaintTitle(title, theme)
 	end
 	title.Parent = bg

@@ -5,6 +5,13 @@ local Config = require(game.ReplicatedStorage.Shared.Config.FirstBiomeCombat)
 local Controller = {}
 local effects: { [string]: any } = {}
 local MAX_EFFECTS = 12
+-- Support kits (Phase D) draw in their own calm colours, never the orange/red of a danger telegraph.
+local KIT_COLORS = {
+	MEND = Color3.fromRGB(120, 245, 150),
+	WARD = Color3.fromRGB(110, 210, 255),
+	ROUSE = Color3.fromRGB(255, 196, 80),
+}
+local SHIELD_FLAG, ROUSE_FLAG = 8, 16
 
 local function clearEffect(key: string)
 	local effect = effects[key]
@@ -59,14 +66,33 @@ function Controller.Action(node: any, action: any, origin: Vector3, now: number)
 	model.Name = "EnemyWarning_" .. key
 	local worldOrigin = origin + action.Origin + Vector3.new(0, .13, 0)
 	local worldAim = origin + action.Aim + Vector3.new(0, .13, 0)
-	local color = if action.Shape == "PROJECTILE" then Color3.fromRGB(168, 120, 255)
+	local spec = Config.Get(action.EnemyId)
+	local kitColor = spec and spec.Support and KIT_COLORS[spec.Support]
+	local color = if kitColor then kitColor
+		elseif action.Shape == "PROJECTILE" then Color3.fromRGB(168, 120, 255)
 		elseif action.Shape == "SELF_DISC" then Color3.fromRGB(255, 92, 68)
 		else Color3.fromRGB(240, 136, 56)
 
 	local progressDisc: Part? = nil
 	local projectileOrb: Part? = nil
 
-	if action.Shape == "ARC" then
+	if action.Shape == "ALLY_BEAM" then
+		-- A thin rising beam from the caster to the ally it is mending or warding, and a ring under the ally.
+		local from, to = worldOrigin + Vector3.new(0, 3, 0), worldAim + Vector3.new(0, 3, 0)
+		local length = math.max(.5, (to - from).Magnitude)
+		groundPart(model, Vector3.new(.3, .3, length), CFrame.lookAt((from + to) / 2, to), color, .25)
+		for i = 0, 11 do
+			local a = i * math.pi / 6
+			groundPart(model, Vector3.new(1.4, .08, .2), CFrame.new(worldAim + Vector3.new(math.sin(a) * 3, 0, math.cos(a) * 3)) * CFrame.Angles(0, a, 0), color, .2)
+		end
+	elseif action.Shape == "ALLY_AURA" then
+		-- A ring at the aura's edge: allies inside it are roused.
+		local radius = action.Radius or 18
+		for i = 0, 23 do
+			local a = i * math.pi / 12
+			groundPart(model, Vector3.new(radius * .27, .08, .22), CFrame.new(worldOrigin + Vector3.new(math.sin(a) * radius, 0, math.cos(a) * radius)) * CFrame.Angles(0, a, 0), color, .25)
+		end
+	elseif action.Shape == "ARC" then
 		local cf = CFrame.new(worldOrigin) * CFrame.Angles(0, action.Yaw, 0)
 		for i = 0, 10 do
 			local a = -math.pi * .47 + i * math.pi * .94 / 10
@@ -151,9 +177,46 @@ function Controller.Death(node: any, at: number)
 	for _, p in node.EnemyRig.Parts do p.CanQuery = false end
 end
 
+-- A WARD shield bubble and a ROUSE glow, shown while the snapshot flags say so (Phase D).
+local function supportGlow(node: any, rig: any)
+	local flags = node.Flags or 0
+	local shielded = bit32.band(flags, SHIELD_FLAG) ~= 0 and not node.DeathAt
+	local roused = bit32.band(flags, ROUSE_FLAG) ~= 0 and not node.DeathAt
+	if (shielded or roused) and not rig.SupportBubble then
+		local size = math.max(rig.Spec.Width or 5, rig.Spec.Height or 6) + 2
+		local bubble = Instance.new("Part")
+		bubble.Name = "SupportBubble"
+		bubble.Shape = Enum.PartType.Ball
+		bubble.Size = Vector3.new(size, size, size)
+		bubble.Material = Enum.Material.ForceField
+		bubble.CanCollide, bubble.CanTouch, bubble.CanQuery, bubble.CastShadow = false, false, false, false
+		bubble.Massless = true
+		bubble.CFrame = rig.Root.CFrame * CFrame.new(0, (rig.Spec.Height or 6) / 2 - (rig.Spec.RootHeight or 3), 0)
+		local weld = Instance.new("WeldConstraint")
+		weld.Part0, weld.Part1 = rig.Root, bubble
+		weld.Parent = bubble
+		local glow = Instance.new("PointLight")
+		glow.Range, glow.Brightness = 10, 1.2
+		glow.Parent = bubble
+		bubble.Parent = rig.Model
+		rig.SupportBubble = bubble
+	end
+	local bubble = rig.SupportBubble
+	if bubble then
+		bubble.Transparency = if shielded or roused then .35 else 1
+		bubble.Color = if shielded then KIT_COLORS.WARD else KIT_COLORS.ROUSE
+		local light = bubble:FindFirstChildWhichIsA("PointLight")
+		if light then
+			light.Enabled = shielded or roused
+			light.Color = bubble.Color
+		end
+	end
+end
+
 function Controller.Step(node: any, dt: number, now: number)
 	local rig = node.EnemyRig
 	if not rig then return end
+	supportGlow(node, rig)
 	local clips = Clips[rig.EnemyId]
 	local frames = clips.Idle
 	local phase = (now % 3) / 3

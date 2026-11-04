@@ -4,6 +4,7 @@
 local MobCatalog = require(script.Parent.MobCatalog)
 local Layout = require(script.Parent.TowerLayout)
 local TowerFloorConfig = require(script.Parent.TowerFloorConfig)
+local SupportRules = require(script.Parent.Parent.Util.SupportRules)
 
 local C: any = {
 	ReleaseEnabled = true,
@@ -14,6 +15,7 @@ local C: any = {
 	CampMaxWaitSeconds = 45, -- a lone survivor cannot hold the rest of its camp back forever
 	PlayerSpawnScale = 0.4, -- +40% camp members per extra Master on the floor
 	MaxLiveMobsPerFloor = 48, -- network budget: ~78 entities with six five-hero squads
+	SupportSlotBase = 50000, -- a camp's support member (Phase D): SupportSlotBase + camp index
 	ExtraSlotBase = 60000, -- scaled-in camp members; layout slots are small integers
 	SurgeRegulars = 3, -- plus one Elite, spawned when a player crosses TowerProgress.SurgeAt
 	SurgeMinDistance = 25,
@@ -126,6 +128,13 @@ for enemyId, cat in pairs(MobCatalog.Entries) do
 			move(enemyId .. "_basic", "BasicAttack", "ARC", .9, .8, 9.5, 0, 1.0, 2.4),
 			move(enemyId .. "_special", "Special", "TARGET_DISC", 1.4, 1.0, 34, 9, 1.25, 8.0),
 		}
+	elseif cat.Support then
+		-- Support (Phase D): its kit cast first, then a weak bolt it only uses once no ally is left.
+		local kit = SupportRules.Kits[cat.Support]
+		attacks = {
+			move(enemyId .. "_kit", "BasicAttack", kit.Shape, kit.Windup, kit.Recovery, kit.Range, kit.Radius, 0, kit.Cooldown),
+			move(enemyId .. "_bolt", "BasicAttack", "PROJECTILE", .65, .75, 28, 2.4, 1.0, 2.6, .35),
+		}
 	elseif isProjectile then
 		attacks = {
 			move(enemyId .. "_basic", "BasicAttack", "PROJECTILE", .65, .75, 32, 2.4, 1.0, 2.2, .35),
@@ -142,14 +151,15 @@ for enemyId, cat in pairs(MobCatalog.Entries) do
 		BiomeId = cat.BiomeId,
 		Role = role,
 		Alpha = cat.Alpha == true,
+		Support = cat.Support,
 		Height = if enemyId == "mob_moss_crawler" then 3.2 else height,
 		Width = cat.Bounds.Width,
 		Depth = cat.Bounds.Depth,
 		RootHeight = rootHeight,
-		MoveSpeed = if isBoss then 7 elseif isElite then 9 elseif isProjectile then 10 else 12,
-		AggroRange = if isBoss then 75 elseif isElite then 48 elseif isProjectile then 44 else 38,
-		MaxHP = if isBoss then 16326 elseif isElite then 2200 else 850,
-		ATK = if isBoss then 66 elseif isElite then 35 else 18,
+		MoveSpeed = if isBoss then 7 elseif isElite then 9 elseif cat.Support then 10 elseif isProjectile then 10 else 12,
+		AggroRange = if isBoss then 75 elseif isElite then 48 elseif cat.Support then 46 elseif isProjectile then 44 else 38,
+		MaxHP = if isBoss then 16326 elseif isElite then 2200 elseif cat.Support then math.round(850 * SupportRules.HpScale) else 850,
+		ATK = if isBoss then 66 elseif isElite then 35 elseif cat.Support then math.round(18 * SupportRules.AtkScale) else 18,
 		Gold = if isBoss then 991 elseif isElite then 210 else 80,
 		RigFamily = if enemyId == "mob_moss_crawler" then "SIX_LEGGED_CRAWLER" else family,
 		CatalogFamily = family,
