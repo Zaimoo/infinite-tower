@@ -23,6 +23,7 @@ local CHECKS_PER_FRAME = 40
 local SETTLE_SECONDS = 0.15 -- wait for a moving portrait (open pop, scrolling) to stop before reading layout
 type Lazy = {
 	Viewport: ViewportFrame, Template: Model, Hero: any, Model: Model?, Dead: boolean,
+	FullBody: boolean?,
 	Scroll: ScrollingFrame?, Moved: boolean, MovedAt: number, WasVisible: boolean, Queued: boolean, Y: number,
 }
 local entries: { Lazy } = {}
@@ -106,10 +107,20 @@ local function buildRig(entry: Lazy)
 	end
 	model.Parent = vp
 	local bounds, size = model:GetBoundingBox()
-	local head = model:FindFirstChild("Head")
-	local look = if head and head:IsA("BasePart") then head.Position - Vector3.new(0, size.Y * 0.1, 0) else bounds.Position + Vector3.new(0, size.Y * 0.22, 0)
 	local forward = bounds.LookVector
-	local camera = T.New("Camera", {FieldOfView = 32, CFrame = CFrame.lookAt(look + forward * math.max(4, size.Y * 0.82), look)}, vp)
+	local look: Vector3
+	local distance: number
+	local fieldOfView = 32
+	if entry.FullBody then
+		look = bounds.Position
+		forward = (forward + bounds.RightVector * 0.16 + Vector3.new(0, 0.06, 0)).Unit
+		distance = math.max(size.X, size.Y) * 0.55 / math.tan(math.rad(fieldOfView / 2)) + size.Z * 0.5
+	else
+		local head = model:FindFirstChild("Head")
+		look = if head and head:IsA("BasePart") then head.Position - Vector3.new(0, size.Y * 0.1, 0) else bounds.Position + Vector3.new(0, size.Y * 0.22, 0)
+		distance = math.max(4, size.Y * 0.82)
+	end
+	local camera = T.New("Camera", {FieldOfView = fieldOfView, CFrame = CFrame.lookAt(look + forward * distance, look)}, vp)
 	vp.CurrentCamera = camera
 	entry.Model = model
 end
@@ -144,11 +155,15 @@ RunService.Heartbeat:Connect(function()
 	end
 end)
 
-function HeroCard.Portrait(parent: Instance, hero: any): GuiObject
+local function portraitImage(parent: Instance, image: string): ImageLabel
+	return T.New("ImageLabel", {BackgroundTransparency = 1, Image = image, ScaleType = Enum.ScaleType.Crop, Size = UDim2.fromScale(1, 1)}, parent)
+end
+
+function HeroCard.Portrait(parent: Instance, hero: any, fullBody: boolean?): GuiObject
 	local seed = HeroCatalog.Seeds[hero.TemplateId]
 	local portrait = hero.Portrait or (seed and seed.Portrait)
-	if type(portrait) == "string" and portrait ~= "" then
-		return T.New("ImageLabel", {BackgroundTransparency = 1, Image = portrait, ScaleType = Enum.ScaleType.Crop, Size = UDim2.fromScale(1, 1)}, parent)
+	if not fullBody and type(portrait) == "string" and portrait ~= "" then
+		return portraitImage(parent, portrait)
 	end
 	local assets = ReplicatedStorage:FindFirstChild("Assets")
 	local folder = assets and assets:FindFirstChild("Heroes")
@@ -161,6 +176,7 @@ function HeroCard.Portrait(parent: Instance, hero: any): GuiObject
 		}, parent)
 		local entry: Lazy = {
 			Viewport = viewport, Template = template, Hero = { TemplateId = hero.TemplateId }, Model = nil, Dead = false,
+			FullBody = fullBody,
 			Scroll = nil, Moved = false, MovedAt = 0, WasVisible = false, Queued = false, Y = 0,
 		}
 		table.insert(entries, entry)
@@ -175,20 +191,25 @@ function HeroCard.Portrait(parent: Instance, hero: any): GuiObject
 		end)
 		return viewport
 	end
-	local fallback = T.Label(parent, string.sub(hero.Archetype or "Hero", 1, 1), 32, T.Rarity[hero.Stars or 1])
-	fallback.Size = UDim2.fromScale(1, 1)
-	fallback.TextXAlignment = Enum.TextXAlignment.Center
+	local fallback: GuiObject
+	if type(portrait) == "string" and portrait ~= "" then
+		fallback = portraitImage(parent, portrait)
+	else
+		local placeholder = T.Label(parent, string.sub(hero.Archetype or "Hero", 1, 1), 32, T.Rarity[hero.Stars or 1])
+		placeholder.Size = UDim2.fromScale(1, 1)
+		placeholder.TextXAlignment = Enum.TextXAlignment.Center
+		fallback = placeholder
+	end
 
 	-- If template is still loading or replicating, re-mount once available
 	task.spawn(function()
 		local a = ReplicatedStorage:WaitForChild("Assets", 3)
 		local h = a and a:WaitForChild("Heroes", 3)
 		local t = h and h:WaitForChild(hero.TemplateId or "", 3)
-		if t and t:IsA("Model") and parent and parent.Parent then
-			for _, child in parent:GetChildren() do
-				if child:IsA("GuiObject") then child:Destroy() end
-			end
-			HeroCard.Portrait(parent, hero)
+		if t and t:IsA("Model") and parent.Parent and fallback.Parent == parent then
+			local view = HeroCard.Portrait(parent, hero, fullBody)
+			view.ZIndex = fallback.ZIndex
+			fallback:Destroy()
 		end
 	end)
 

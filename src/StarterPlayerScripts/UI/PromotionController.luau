@@ -335,14 +335,14 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 	glow(innerCircle, 6, C.BorderGlow, 0.7)
 	self.InnerCircle = innerCircle
 
-	-- Main Hero Center Slot (136x136)
+	-- Main hero model and rank
 	local mainSlot = new("TextButton", {
 		Name = "MainHeroSlot",
 		Text = "",
 		AutoButtonColor = true,
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.5),
-		Size = UDim2.fromOffset(136, 136),
+		Size = UDim2.fromOffset(152, 164),
 		BackgroundColor3 = C.SlotBg,
 		BorderSizePixel = 0,
 		ZIndex = 43,
@@ -360,12 +360,12 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 	}, mainSlot)
 	stroke(mainInset, C.Border, 1, 0.8)
 
-	self.MainPortraitHost = new("Frame", {
-		Name = "PortraitHost",
+	self.MainModelHost = new("Frame", {
+		Name = "HeroModelHost",
 		BackgroundTransparency = 1,
 		ClipsDescendants = true,
 		Position = UDim2.fromOffset(4, 4),
-		Size = UDim2.new(1, -8, 1, -8),
+		Size = UDim2.new(1, -8, 1, -30),
 		ZIndex = 44,
 	}, mainSlot)
 
@@ -952,12 +952,20 @@ function Promo.Render(self: any)
 	local maxStars = PitBalanceConfig.MaxStars or 7
 
 	-- 1. Main Recipient Center Slot
-	self.MainPortraitHost:ClearAllChildren()
+	local selectedId = recipient and self.Recipient
+	local templateId = recipient and recipient.TemplateId
+	local portrait = recipient and recipient.Portrait
+	if self.ModelRecipient ~= selectedId or self.ModelTemplate ~= templateId or self.ModelPortrait ~= portrait then
+		self.ModelRecipient, self.ModelTemplate, self.ModelPortrait = selectedId, templateId, portrait
+		self.MainModelHost:ClearAllChildren()
+		if recipient then
+			local view = HeroCard.Portrait(self.MainModelHost, recipient, true)
+			view.ZIndex = 44
+		end
+	end
 	self.MainRank.Visible = recipient ~= nil
 	if recipient then
 		self.MainQuestion.Visible = false
-		local p = HeroCard.Portrait(self.MainPortraitHost, recipient)
-		p.ZIndex = 44
 		local rarity = RARITY[math.clamp(recipient.Stars or 1, 1, #RARITY)]
 		self.MainStroke.Color = rarity
 		self.MainRank.Text = stars(recipient.Stars)
