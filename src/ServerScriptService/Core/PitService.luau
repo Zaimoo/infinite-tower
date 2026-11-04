@@ -243,15 +243,26 @@ function PitService:Build(profile: any, request: any): (any, any)
 				preview.FailureResult = "Guaranteed inheritance. The donor is consumed once; there is no failure roll."
 			end
 			local after, overflow = Math.AdvanceXP(recipient, xp.Final)
-			if overflow.Rejected > 0 then reject("This EXP would exceed the reserve. Use fewer donors or promote the recipient first.") end
-			if after.OverflowXP > 0 then table.insert(preview.Warnings, "Excess EXP is stored in the bounded reserve and released on promotion.") end
+			xp.Applied = xp.Final
+			if overflow.Rejected > 0 then
+				if action == "SYNTHESIS" then
+					preview.RequiresOverflowConfirmation = true
+					-- Legacy heroes may already have excess EXP. Count only this award's loss.
+					local discarded = math.min(xp.Final, overflow.Rejected)
+					xp.Applied -= discarded
+					table.insert(preview.Warnings, string.format("This synthesis exceeds the EXP cap. %d EXP will be lost.", discarded))
+				else
+					reject("This EXP would exceed the reserve. Use fewer donors or promote the recipient first.")
+				end
+			end
+			if after.OverflowXP > (recipient.OverflowXP or 0) then table.insert(preview.Warnings, "EXP added to the reserve is released on promotion.") end
 			if action == "IMPRINT" and preview.SelectedImprint then
 				local option = preview.SelectedImprint
 				after.InheritedImprints[option.Id] = option.CurrentRank + 1
 				after.SynthesisHistory.ImprintsPerformed = (after.SynthesisHistory.ImprintsPerformed or 0) + 1
 			end
 			after.SynthesisHistory.DonorsConsumed = (after.SynthesisHistory.DonorsConsumed or 0) + #preview.Donors
-			after.SynthesisHistory.XPGained = (after.SynthesisHistory.XPGained or 0) + xp.Final
+			after.SynthesisHistory.XPGained = (after.SynthesisHistory.XPGained or 0) + xp.Applied
 			preview.XP, preview.Overflow, preview.After = xp, overflow, Math.Snapshot(after, profile)
 			staged.Heroes[recipient.UUID] = after
 		end
@@ -298,7 +309,7 @@ function PitService:Build(profile: any, request: any): (any, any)
 		local bucket = if staged.Currencies[currency] ~= nil then staged.Currencies else staged.Materials
 		bucket[currency] = (bucket[currency] or 0) + amount
 	end
-	if preview.RequiresRareConfirmation then table.insert(preview.Warnings, "Rare heroes are selected. Confirm each donor's identity before proceeding.") end
+	if preview.RequiresRareConfirmation then table.insert(preview.Warnings, "Rare heroes are selected and will be permanently consumed.") end
 	return preview, staged
 end
 
@@ -385,6 +396,7 @@ function PitService:Request(player: any, command: any, payload: any): any
 			local preview, staged = self:Build(profile, stored.Request)
 			if not preview.CanCommit then return fail(preview.Reason) end
 			if preview.RequiresRareConfirmation and payload.ConfirmRare ~= true then return fail("Confirm the rare donor warning before consuming these heroes.") end
+			if preview.RequiresOverflowConfirmation and payload.ConfirmOverflow ~= true then return fail("Confirm the EXP cap warning before consuming these heroes.") end
 			-- All possible failures precede these assignments. Preserve unrelated
 			-- profile fields and do not yield between deductions and roster updates.
 			for _, uuid in ipairs(staged.Remove) do profile.Heroes[uuid] = nil end

@@ -19,6 +19,7 @@ export type Options = {
 	MaxScale: number?,
 	Margin: number?, -- overrides ModalFit.Margin
 	BottomMargin: number?, -- overrides ModalFit.BottomMargin
+	DesignSize: ((Vector2) -> Vector2)?, -- choose a layout for the available space
 }
 
 -- Keeps `root` centred in the safe area and `scale` fitted while the screen changes size.
@@ -34,8 +35,14 @@ function ModalFit.Bind(root: GuiObject, scale: UIScale, width: number, height: n
 		local top = topBar + margin + (o.Top or 0)
 		local availH = math.max(1, size.Y - top - (o.BottomMargin or ModalFit.BottomMargin))
 		local availW = math.max(1, size.X - 2 * margin)
+		local designWidth, designHeight = width, height
+		if o.DesignSize then
+			local design = o.DesignSize(Vector2.new(availW, availH))
+			designWidth, designHeight = design.X, design.Y
+			root.Size = UDim2.fromOffset(designWidth, designHeight)
+		end
 		root.Position = UDim2.new(0.5, 0, 0, top + availH / 2)
-		return math.clamp(math.min(availW / width, availH / height), o.MinScale or 0.45, o.MaxScale or 1)
+		return math.clamp(math.min(availW / designWidth, availH / designHeight), o.MinScale or 0.45, o.MaxScale or 1)
 	end
 	local function apply()
 		scale.Scale = fit()

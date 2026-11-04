@@ -12,6 +12,8 @@
 
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local GuiService = game:GetService("GuiService")
+local UserInputService = game:GetService("UserInputService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local HeroCard = require(script.Parent:WaitForChild("HeroCard"))
@@ -322,7 +324,6 @@ function Synth.new(gui: ScreenGui, remote: RemoteFunction)
 	self.Donors = {} :: { string }
 	self.Preview = nil
 	self.Busy = false
-	self.ArmedRare = false
 	self.PreviewSerial = 0
 	self.Message = ""
 	self.Tweens = {}
@@ -542,7 +543,6 @@ function Synth.new(gui: ScreenGui, remote: RemoteFunction)
 		if #self.Donors > 0 then
 			self.Donors = {}
 			self.Message = ""
-			self.ArmedRare = false
 			self:Render()
 			self:QueuePreview()
 		end
@@ -557,6 +557,7 @@ function Synth.new(gui: ScreenGui, remote: RemoteFunction)
 	self.ConfirmButton = { Button = confirmBtn, Label = confirmLabel }
 
 	self:BuildPicker()
+	self:BuildPopup()
 
 	-- Fit the window inside the safe area. The Pit's tab bar sits in Roblox's top bar (React HUD), so no
 	-- space is reserved above the window; on large screens it grows up to 1.25x.
@@ -564,6 +565,70 @@ function Synth.new(gui: ScreenGui, remote: RemoteFunction)
 
 	self:Render()
 	return self
+end
+
+function Synth.BuildPopup(self: any)
+	local popupZ = Z + 40
+	local popup = new("TextButton", {
+		Name = "SynthesisPopup", Text = "", AutoButtonColor = false, Selectable = false, Active = true,
+		Size = UDim2.fromScale(1, 1), BackgroundColor3 = C.Scrim, BackgroundTransparency = 0.25,
+		BorderSizePixel = 0, Visible = false, ZIndex = popupZ,
+	}, self.Root)
+	local panel = new("Frame", {
+		Name = "Dialog", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromOffset(544, 290), BackgroundColor3 = C.Panel, BorderSizePixel = 0, ZIndex = popupZ + 1,
+		SelectionGroup = true,
+		SelectionBehaviorUp = Enum.SelectionBehavior.Stop, SelectionBehaviorDown = Enum.SelectionBehavior.Stop,
+		SelectionBehaviorLeft = Enum.SelectionBehavior.Stop, SelectionBehaviorRight = Enum.SelectionBehavior.Stop,
+	}, popup)
+	GothicBoxStyle.Apply(panel, { Style = "Window" })
+	self.PopupTitle = label(panel, "Title", {
+		Name = "Title", Position = UDim2.fromOffset(22, 16), Size = UDim2.new(1, -44, 0, 28),
+		TextSize = 22, TextColor3 = TEXT.Gold, ZIndex = popupZ + 2,
+	})
+	self.PopupMessage = label(panel, "Body", {
+		Name = "Message", Position = UDim2.fromOffset(24, 50), Size = UDim2.new(1, -48, 0, 170),
+		TextScaled = true, TextWrapped = true, TextTruncate = Enum.TextTruncate.None, RichText = false,
+		ZIndex = popupZ + 2,
+	})
+	new("UITextSizeConstraint", { MinTextSize = 12, MaxTextSize = 17 }, self.PopupMessage)
+	self.PopupDismiss, self.PopupDismissLabel = button(panel, "Slate", "OK", {
+		Name = "Dismiss", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 1, -60),
+		Size = UDim2.fromOffset(146, 44), ZIndex = popupZ + 2,
+	})
+	self.PopupProceed, self.PopupProceedLabel = button(panel, "Action", "SYNTHESIZE", {
+		Name = "Proceed", Position = UDim2.new(0.5, -2, 1, -60),
+		Size = UDim2.fromOffset(208, 44), ZIndex = popupZ + 2,
+	})
+	self.PopupDismiss.Activated:Connect(function() self:DismissPopup() end)
+	self.PopupProceed.Activated:Connect(function()
+		local proceed = self.PopupAction
+		self:DismissPopup()
+		if proceed then proceed() end
+	end)
+	self.Popup = popup
+end
+
+function Synth.ShowPopup(self: any, title: string, message: string, proceedText: string?, proceed: (() -> ())?)
+	self.PopupTitle.Text = title
+	self.PopupMessage.Text = message
+	self.PopupAction = proceed
+	self.PopupProceed.Visible = proceed ~= nil
+	self.PopupDismissLabel.Text = if proceed then "CANCEL" else "OK"
+	self.PopupDismiss.Position = UDim2.new(0.5, if proceed then -87 else 0, 1, -60)
+	if proceedText then self.PopupProceedLabel.Text = proceedText end
+	self.Popup.Visible = true
+	if UserInputService.PreferredInput == Enum.PreferredInput.Gamepad then
+		GuiService.SelectedObject = self.PopupDismiss
+	end
+end
+
+function Synth.DismissPopup(self: any)
+	if GuiService.SelectedObject and GuiService.SelectedObject:IsDescendantOf(self.Popup) then
+		GuiService.SelectedObject = nil
+	end
+	self.Popup.Visible = false
+	self.PopupAction = nil
 end
 
 --============================================================================
@@ -809,7 +874,7 @@ function Synth.BuildRosterCard(self: any, hero: any): any
 end
 
 function Synth.PressRosterHero(self: any, uuid: string)
-	if self.Busy then return end
+	if self.Busy or self.Popup.Visible then return end
 	local hero = self.State.Heroes[uuid] or (_G.CurrentProfile and _G.CurrentProfile.Heroes and _G.CurrentProfile.Heroes[uuid])
 	if not hero then return end
 
@@ -828,15 +893,13 @@ function Synth.PressRosterHero(self: any, uuid: string)
 
 	-- 2. If this hero is the recipient:
 	if uuid == self.Recipient then
-		self.Message = "This hero is the recipient and cannot be used as its own material."
-		self:Render()
+		self:ShowPopup("MATERIAL UNAVAILABLE", "This hero is the recipient and cannot be used as its own material.")
 		return
 	end
 
 	-- 2b. If this hero is equipped in your squad:
 	if isSquad(hero) then
-		self.Message = "This hero is equipped in your squad and cannot be used as material."
-		self:Render()
+		self:ShowPopup("MATERIAL UNAVAILABLE", "This hero is equipped in your squad and cannot be used as material.")
 		return
 	end
 
@@ -845,7 +908,6 @@ function Synth.PressRosterHero(self: any, uuid: string)
 	if donorIdx then
 		table.remove(self.Donors, donorIdx)
 		self.Message = ""
-		self.ArmedRare = false
 		self:Render()
 		self:QueuePreview()
 		return
@@ -854,23 +916,20 @@ function Synth.PressRosterHero(self: any, uuid: string)
 	-- 4. Check eligibility as a donor material:
 	local eligible, reason, _ = checkDonorEligibility(hero, self.Recipient)
 	if not eligible then
-		self.Message = reason or "This hero cannot be used as material."
-		self:Render()
+		self:ShowPopup("MATERIAL UNAVAILABLE", reason)
 		return
 	end
 
 	-- 5. Check against server limit
 	local maxLimit = PitBalanceConfig.MaxDonors or 100
 	if #self.Donors >= maxLimit then
-		self.Message = string.format("Maximum material limit (%d) reached.", maxLimit)
-		self:Render()
+		self:ShowPopup("MATERIAL LIMIT", string.format("Maximum material limit (%d) reached.", maxLimit))
 		return
 	end
 
 	-- 6. Add to materials!
 	table.insert(self.Donors, uuid)
 	self.Message = ""
-	self.ArmedRare = false
 	self:Render()
 	self:QueuePreview()
 end
@@ -911,10 +970,10 @@ end
 function Synth.QueuePreview(self: any)
 	self.PreviewSerial += 1
 	local serial = self.PreviewSerial
-	self.Preview, self.ArmedRare = nil, false
-	if not self.Recipient or #self.Donors == 0 then self:Render(); return end
-	self.Loading = true
+	self.Preview, self.PreviewError = nil, nil
+	self.Loading = self.Recipient ~= nil and #self.Donors > 0
 	self:Render()
+	if not self.Loading then return end
 	task.delay(0.2, function()
 		if serial ~= self.PreviewSerial or not self.Root.Visible then return end
 		local response = self:Request("PREVIEW", { Action = "SYNTHESIS", Recipient = self.Recipient, Donors = table.clone(self.Donors) })
@@ -925,35 +984,57 @@ function Synth.QueuePreview(self: any)
 		end
 		self.Loading = false
 		self.Preview = response.Preview
-		if not response.Success then self.Message = response.Message or "Preview unavailable." end
+		if not response.Success then self.PreviewError = response.Message or "Preview unavailable." end
 		self:Render()
 	end)
 end
 
 function Synth.Confirm(self: any)
-	if self.Busy or self.Loading then return end
+	if self.Busy or self.Loading or self.Popup.Visible then return end
 	local preview = self.Preview
-	if not self.Recipient then self.Message = "Choose the hero who will receive the EXP."; self:Render(); return end
-	if #self.Donors == 0 then self.Message = "Select at least one material hero from the roster below."; self:Render(); return end
-	if not preview or not preview.CanCommit then
-		self.Message = preview and preview.Reason or "Complete the synthesis requirements."
-		self:Render()
+	if not self.Recipient then
+		self:ShowPopup("SYNTHESIS UNAVAILABLE", "Choose the hero who will receive the EXP.")
 		return
 	end
-	if preview.RequiresRareConfirmation and not self.ArmedRare then
-		self.ArmedRare = true
-		self.Message = "5-Star heroes are selected and will be permanently consumed. Press again to confirm."
-		self:Render()
+	if #self.Donors == 0 then
+		self:ShowPopup("SYNTHESIS UNAVAILABLE", "Select at least one material hero from the roster.")
+		return
+	end
+	if not preview or not preview.CanCommit then
+		self:ShowPopup("SYNTHESIS UNAVAILABLE", if preview then preview.Reason else self.PreviewError or "Synthesis preview unavailable. Please try again.")
+		if not preview then self:QueuePreview() end
+		return
+	end
+	if #preview.Warnings > 0 then
+		local overflow = preview.RequiresOverflowConfirmation == true
+		self:ShowPopup(if overflow then "EXP CAP EXCEEDED" else "SYNTHESIS WARNING", table.concat(preview.Warnings, "\n\n"),
+			if overflow then "SYNTHESIZE ANYWAY" else "SYNTHESIZE", function()
+				self:Commit(preview)
+			end)
+		return
+	end
+	self:Commit(preview)
+end
+
+function Synth.Commit(self: any, preview: any)
+	if self.Busy or not self.Root.Visible then return end
+	if preview ~= self.Preview or #preview.Donors ~= #self.Donors then
+		self:ShowPopup("SELECTION CHANGED", "Review the updated preview before synthesizing.")
+		self:QueuePreview()
 		return
 	end
 	self.Busy = true
 	self:Render()
 	task.spawn(function()
-		local response = self:Request("COMMIT", { Token = preview.Token, ConfirmRare = true })
-		self.Busy, self.ArmedRare, self.Preview = false, false, nil
+		local response = self:Request("COMMIT", {
+			Token = preview.Token,
+			ConfirmRare = preview.RequiresRareConfirmation == true,
+			ConfirmOverflow = preview.RequiresOverflowConfirmation == true,
+		})
+		self.Busy, self.Preview = false, nil
 		if response.Success then
 			local result = response.Result or {}
-			local gained = result.XP and result.XP.Final or 0
+			local gained = result.XP and (result.XP.Applied or result.XP.Final) or 0
 			local before, after = result.Before, result.After
 			self.Message = string.format("Synthesis complete! +%d EXP%s", gained,
 				(before and after and after.Level > before.Level) and string.format("  ·  Lv. %d → Lv. %d", before.Level, after.Level) or "")
@@ -965,7 +1046,7 @@ function Synth.Confirm(self: any)
 			self.Donors = {}
 			self:Celebrate()
 		else
-			self.Message = response.Message or "The synthesis was rejected. Review your selection."
+			self:ShowPopup("SYNTHESIS UNAVAILABLE", response.Message or "The synthesis was rejected. Review your selection.")
 		end
 		self:Render()
 		task.delay(0.5, function() if self.Root.Visible and not self.Busy then self:Refresh() end end)
@@ -1028,6 +1109,7 @@ function Synth.Render(self: any)
 	local preview = self.Preview
 	local before = preview and preview.Before
 	local after = preview and preview.After
+	local gained = preview and preview.XP and (preview.XP.Applied or preview.XP.Final) or 0
 
 	for _, t in self.Tweens do t:Cancel() end
 	table.clear(self.Tweens)
@@ -1050,7 +1132,7 @@ function Synth.Render(self: any)
 			end
 			self.LevelLabel.Text = string.format('Lv. %d  <font color="#39E81E">→  Lv. %d</font>%s', before.Level, after.Level,
 				if after.Level > before.Level then string.format(" (+%d Lvls)", after.Level - before.Level) else "")
-			self.XPText.Text = string.format("%d / %d EXP (+%d EXP)", after.XP or 0, StatFormulas.GetXPRequiredForNextLevel(after.Level), preview.XP and preview.XP.Final or 0)
+			self.XPText.Text = string.format("%d / %d EXP (+%d EXP)", after.XP or 0, StatFormulas.GetXPRequiredForNextLevel(after.Level), gained)
 		else
 			self.LevelLabel.Text = string.format("Lv. %d  (Cap: Lv. %d)", level, (recipient.Stars or 1) * 10)
 			self.XPText.Text = string.format("%d / %d EXP", xp, StatFormulas.GetXPRequiredForNextLevel(level))
@@ -1063,7 +1145,7 @@ function Synth.Render(self: any)
 
 		if #self.Donors > 0 and preview and preview.XP then
 			self.SummaryLine.Text = string.format('<b><font color="#4ADE80">+%s EXP</font></b> from %d material%s  ·  Efficiency: %d%%',
-				abbreviate(preview.XP.Final or 0), #self.Donors, if #self.Donors == 1 then "" else "s", math.floor((preview.XP.Efficiency or 1) * 100 + 0.5))
+				abbreviate(gained), #self.Donors, if #self.Donors == 1 then "" else "s", math.floor((preview.XP.Efficiency or 1) * 100 + 0.5))
 		elseif #self.Donors > 0 then
 			self.SummaryLine.Text = string.format("Selected %d material%s. Calculating preview…", #self.Donors, if #self.Donors == 1 then "" else "s")
 		else
@@ -1201,8 +1283,6 @@ function Synth.Render(self: any)
 
 	if self.Busy then
 		retone(self.ConfirmButton.Button, self.ConfirmButton.Label, "Slate", "SYNTHESIZING…")
-	elseif self.ArmedRare then
-		retone(self.ConfirmButton.Button, self.ConfirmButton.Label, "Crimson", "CONFIRM — 5★ HEROES")
 	elseif ready then
 		retone(self.ConfirmButton.Button, self.ConfirmButton.Label, "Action", "CONFIRM SYNTHESIZE")
 	else
@@ -1211,18 +1291,10 @@ function Synth.Render(self: any)
 
 	-- Status line
 	local status, color = self.Message, TEXT.Muted
-	if status == "" then
-		if self.Loading then
-			status = "Calculating synthesis preview…"
-		elseif preview and not preview.CanCommit then
-			status, color = preview.Reason or "Requirements not met.", TEXT.Bad
-		elseif preview and preview.Warnings and preview.Warnings[1] then
-			status, color = tostring(preview.Warnings[1]), Color3.fromRGB(255, 204, 100)
-		end
+	if self.Loading then
+		status = "Calculating synthesis preview…"
 	elseif status:find("complete") then
 		color = C.Good
-	elseif self.ArmedRare or status:find("reject") or status:find("cannot") or status:find("protected") then
-		color = TEXT.Bad
 	end
 	self.Status.Text, self.Status.TextColor3 = status, color
 end
@@ -1242,12 +1314,12 @@ end
 --============================================================================
 
 function Synth.Open(self: any)
+	self:DismissPopup()
 	self.Root.Visible, self.Scrim.Visible = true, true
 	self.Picker.Visible = false
 	self.Recipient = nil
 	self.Donors = {}
-	self.Preview = nil
-	self.ArmedRare = false
+	self.Preview, self.PreviewError = nil, nil
 	self.Message = ""
 	self.Loading = false
 	self:Render()
@@ -1256,13 +1328,13 @@ end
 
 function Synth.Close(self: any)
 	if self.Busy then return end
+	self:DismissPopup()
 	self.Root.Visible, self.Scrim.Visible, self.Picker.Visible = false, false, false
 	self.PreviewSerial += 1
 	self.Loading = false
 	self.Recipient = nil
 	self.Donors = {}
-	self.Preview = nil
-	self.ArmedRare = false
+	self.Preview, self.PreviewError = nil, nil
 	self.Message = ""
 	self:Render()
 end

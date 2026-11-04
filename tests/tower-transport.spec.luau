@@ -39,13 +39,19 @@ end)
 test("Encoder rejects overflow NaN and invalid identities without clamping",function()
 	for _,value in {3276.8,math.huge,0/0} do local bad=table.clone(e);bad.Position=c.Origin+Vector3.new(value,0,0);assert(not pcall(P.Encode,c,{bad},1,1)) end
 	local bad=table.clone(e);bad.NetId=0;assert(not pcall(P.Encode,c,{bad},1,1))
+	local badFlags=table.clone(e);badFlags.Flags=P.MaxFlags+1;assert(not pcall(P.Encode,c,{badFlags},1,1))
 end)
-test("Decoder rejects bad HP flags batch ranges versions and nonfinite clocks",function()
+test("Decoder accepts support and affixed Elite snapshot flags and rejects bad HP flags batch ranges versions and nonfinite clocks",function()
+	for _,validFlag in {0,7,8,16,24,32,40,48,56,P.MaxFlags} do
+		local v=table.clone(e);v.Flags=validFlag
+		local pkt=assert(P.Decode(P.Encode(c,{v},1,1)[1],c))
+		assert(pkt.Entities[1].Flags==validFlag)
+	end
 	for _,change in {
 		function(b) buffer.writeu8(b,0,1) end,function(b) buffer.writeu16(b,2,45) end,
 		function(b) buffer.writeu16(b,40,0) end,function(b) buffer.writeu16(b,42,0) end,
 		function(b) buffer.writef64(b,32,math.huge) end,function(b) buffer.writeu16(b,62,1001) end,
-		function(b) buffer.writeu8(b,65,16) end,function(b) buffer.writeu32(b,50,0) end,
+		function(b) buffer.writeu8(b,65,P.MaxFlags+1) end,function(b) buffer.writeu32(b,50,0) end,
 	} do local b=P.Encode(c,{e},1,1)[1];change(b);assert(P.Decode(b,c)==nil) end
 end)
 test("Sequence ordering tolerates wrap and rejects duplicate stale half-range packets",function()
