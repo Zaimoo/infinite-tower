@@ -15,7 +15,7 @@ function Layout.Get(index: number): any
 		platforms[id] = p
 		return p
 	end
-	local safe = platform("Sanctuary", 0, 8, d/2-34, 88, 56)
+	local safe = platform("Sanctuary", 0, 8, d/2-34, 128, 56)
 	platform("Basin", 0, 0, d*.18, w-32, d*.22)
 	platform("WestGallery", -w*.28, 8, -d*.06, 84, 76)
 	platform("EastGallery", w*.28, 8, -d*.06, 84, 76)
@@ -148,7 +148,22 @@ function Layout.Lanes(index: number): {any}
 	local basin, safe = room.Platforms.Basin, room.Sanctuary
 	lane("BasinCauseway", 0, basin.Y, basin.Z+basin.Depth/2, 0, basin.Y, basin.Z-basin.Depth/2, 20)
 	lane("SanctuaryExit", 0, safe.Y, safe.Z-12, 0, safe.Y, safe.Z-safe.Depth/2, 18)
+	-- The boss portals' spots (Phase H) are kept clear the same way.
+	for id, spot in Layout.PortalSpots(index) do
+		lane("Portal"..id, spot.X, spot.Y, spot.Z-5, spot.X, spot.Y, spot.Z+5, 10)
+	end
 	return lanes
+end
+
+-- Where the boss portals rise when a floor's boss falls (Phase H): side by side at the back of the
+-- Apex terrace, facing the arena. Ascend leads up (or home from floor 50); Rerun replays the floor.
+function Layout.PortalSpots(index: number): {[string]: {X: number, Y: number, Z: number}}
+	local apex = Layout.Get(index).Platforms.Apex
+	local z = apex.Z - apex.Depth/2 + 12
+	return {
+		Ascend = {X=16, Y=apex.Y, Z=z},
+		Rerun = {X=-16, Y=apex.Y, Z=z},
+	}
 end
 
 function Layout.Placements(biome: any, index: number): {any}
