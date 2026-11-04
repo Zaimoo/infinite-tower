@@ -252,6 +252,30 @@ GrimoireIcons.Drawings = {
 		{ X = 32, Y = 32, W = 52, H = 12, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 6, Sheen = false },
 		{ X = 32, Y = 32, W = 22, H = 22, Rot = 45, Hi = P.White, Lo = P.GoldHi, Radius = 4 },
 	},
+	-- Island: a floating fortress island with emerald turf and a glowing cyan portal tower.
+	Island = {
+		{ X = 32, Y = 50, W = 28, H = 20, Rot = 45, Hi = P.IronHi, Lo = P.IronLo, Radius = 4 },
+		{ X = 32, Y = 43, W = 48, H = 14, Hi = P.StoneHi, Lo = P.StoneLo, Radius = 4 },
+		{ X = 32, Y = 36, W = 50, H = 8, Hi = P.LeafHi, Lo = P.LeafLo, Radius = 3 },
+		{ X = 32, Y = 24, W = 22, H = 20, Hi = P.CyanHi, Lo = P.CyanLo, Radius = 3 },
+		{ X = 25, Y = 13, W = 6, H = 6, Hi = P.CyanHi, Lo = P.CyanLo, Radius = 1 },
+		{ X = 39, Y = 13, W = 6, H = 6, Hi = P.CyanHi, Lo = P.CyanLo, Radius = 1 },
+		{ X = 32, Y = 27, W = 8, H = 12, Hi = P.Dark, Lo = P.Dark, Radius = 3, Outline = 1.6, Sheen = false },
+		{ X = 32, Y = 11, W = 8, H = 8, Rot = 45, Hi = P.White, Lo = P.CyanHi, Radius = 1, Outline = 1.6 },
+	},
+	-- Hub: the Masters' Commons sword-in-stone dais with glowing cyan blade and gold compass accents.
+	Hub = {
+		{ X = 32, Y = 53, W = 46, H = 10, Hi = P.StoneHi, Lo = P.StoneLo, Radius = 3 },
+		{ X = 32, Y = 46, W = 32, H = 8, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 3 },
+		{ X = 32, Y = 40, W = 20, H = 7, Hi = P.StoneHi, Lo = P.StoneLo, Radius = 2, Sheen = false },
+		{ X = 32, Y = 25, W = 8, H = 26, Hi = P.CyanHi, Lo = P.CyanLo, Radius = 2 },
+		{ X = 32, Y = 24, W = 3, H = 20, Hi = P.White, Lo = P.CyanHi, Radius = 1, Outline = 1.2, Sheen = false },
+		{ X = 32, Y = 14, W = 22, H = 5, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 2 },
+		{ X = 32, Y = 9, W = 4, H = 7, Hi = P.BloodHi, Lo = P.BloodLo, Radius = 1, Sheen = false },
+		{ X = 32, Y = 5, W = 7, H = 7, Round = true, Hi = P.GoldHi, Lo = P.GoldLo, Outline = 1.8 },
+		{ X = 16, Y = 26, W = 6, H = 6, Rot = 45, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 1, Outline = 1.5 },
+		{ X = 48, Y = 26, W = 6, H = 6, Rot = 45, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 1, Outline = 1.5 },
+	},
 }
 
 -- Aliases so callers can use game names directly.

@@ -2951,8 +2951,57 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 	end
 end)
 
+local function warpSquad(player: Player, targetPos: Vector3, isIsland: boolean)
+	local masterState = ActiveMasters[player]
+	if not masterState then return end
+	masterState.FocusedTargetNetId = nil
+	masterState.TargetEnemyUserId = nil
+	for _, h in pairs(masterState.DeployedHeroes) do
+		h.FloorId = 0
+		h.RoomGeneration = 1
+		h.EntityGeneration += 1
+		h.Position = HeroNavigation.PlaceNear(targetPos, getFormationOffset(h.SlotIndex))
+		h.TargetNetId = nil
+		if h.CurrentHP > 0 and h.State ~= "COMA" then
+			h.State = "FOLLOW_MASTER"
+		else
+			h.State = "COMA"
+		end
+		h.PacifiedUntil = os.clock() + 2
+		h.ActionSequence = 0
+		HeroNavigation.Clear(h)
+		for _, other in pairs(ActiveHeroesByNetId) do
+			if other.TargetNetId == h.NetId then
+				other.TargetNetId = nil
+				if other.CurrentHP > 0 and other.State ~= "COMA" then
+					other.State = "FOLLOW_MASTER"
+				end
+			end
+		end
+	end
+	if isIsland then
+		restoreSquadOnPlot(player)
+	end
+end
+
+local function isPlayerInDuel(player: Player): boolean
+	return DuelByPlayer[player] ~= nil
+end
+
+local function isBossLocked(player: Player, floorId: number): boolean
+	local boss = Encounters and Encounters:GetActiveBoss(floorId)
+	if not boss then return false end
+	if ((boss.DamageLedger and boss.DamageLedger[player.UserId]) or 0) <= 0 then return false end
+	local m = ActiveMasters[player]
+	return m ~= nil and not m.IsSquadWiped
+end
+
 CombatSimulation.SpawnPhysicalLoot = spawnPhysicalLoot
 CombatSimulation.CollectPhysicalLoot = collectPhysicalLoot
 CombatSimulation.Contests = Contests
 CombatSimulation.StartDuel = startDuel
+CombatSimulation.WarpSquad = warpSquad
+CombatSimulation.IsInDuel = isPlayerInDuel
+CombatSimulation.IsBossLocked = isBossLocked
+CombatSimulation.RestoreSquadOnPlot = restoreSquadOnPlot
 _G.CombatSimulation = CombatSimulation
