@@ -570,7 +570,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 			Above = e(Components.CurrencyBar, {
 				Gold = profile.Currencies and profile.Currencies.Gold or 0,
 				Gems = profile.Currencies and profile.Currencies.Gems or 0,
-				Width = currencyWidth, Position = UDim2.fromScale(0, 1),
+				Position = UDim2.fromScale(0, 1),
 			}),
 		}) else nil,
 		Power = if profile then e(Components.SquadPowerBadge, {
