@@ -6,6 +6,7 @@
 local AngelStatue = {}
 
 local MODEL_NAME = "Facility_GodsBlessing"
+local PROMPT_VERSION = 1
 local MARBLE = Color3.fromRGB(232, 228, 220)
 local GOLD = Color3.fromRGB(240, 196, 92)
 local LIGHT = Color3.fromRGB(255, 232, 170)
@@ -80,6 +81,7 @@ local function build(plot: Instance, level: number): Model?
 	model.Name = MODEL_NAME
 	model:SetAttribute("Facility", "GodsBlessing")
 	model:SetAttribute("Level", level)
+	model:SetAttribute("PromptVersion", PROMPT_VERSION)
 	model.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
 
 	local base = CFrame.new(top)
@@ -200,13 +202,19 @@ local function build(plot: Instance, level: number): Model?
 	end
 
 	-- [F] prompt on the fountain: the God's Blessing facility panel.
-	local interaction = part(model, { Name = "FacilityInteraction", Size = Vector3.new(1, 1, 1), CFrame = CFrame.new(fountainCenter.X, top.Y - 7, fountainCenter.Z), Transparency = 1, CanQuery = true })
+	local promptY = if rim and rim:IsA("BasePart") then rim.Position.Y + rim.Size.X / 2 + 1.5 else top.Y
+	local interaction = part(model, {
+		Name = "FacilityInteraction",
+		Size = Vector3.one,
+		CFrame = CFrame.new(fountainCenter.X, promptY, fountainCenter.Z),
+		Transparency = 1,
+	})
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.Name = "FacilityHUDPrompt"
 	prompt:SetAttribute("FacilityHUD", "GodsBlessing")
 	prompt.ObjectText = "God's Blessing"
 	prompt.ActionText = "Pray & Assign Acolytes"
-	prompt.MaxActivationDistance = 16
+	prompt.MaxActivationDistance = 18
 	prompt.HoldDuration = 0
 	prompt.RequiresLineOfSight = false
 	prompt.KeyboardKeyCode, prompt.GamepadKeyCode = Enum.KeyCode.F, Enum.KeyCode.ButtonX
@@ -232,7 +240,7 @@ function AngelStatue.Apply(plot: Instance, level: number): Model?
 		if existing then existing:Destroy() end
 		return nil
 	end
-	if existing and existing:GetAttribute("Level") == level then
+	if existing and existing:GetAttribute("Level") == level and existing:GetAttribute("PromptVersion") == PROMPT_VERSION then
 		return existing
 	end
 	if existing then existing:Destroy() end

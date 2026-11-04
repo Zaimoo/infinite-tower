@@ -196,6 +196,60 @@ local function isPromptOnOwnedPlot(prompt: ProximityPrompt): boolean
 	return true
 end
 
+-- Keep prompts that cannot open for this player out of Roblox's OnePerButton selection.
+-- Keep Enabled under server control so construction reveals still gate interaction.
+task.spawn(function()
+	local plots = Workspace:WaitForChild("WaitingRoomPlots")
+	local distances: { [ProximityPrompt]: number } = {}
+
+	local function update(prompt: Instance)
+		if not prompt:IsA("ProximityPrompt") then return end
+		if prompt.Name ~= "FacilityHUDPrompt" and prompt.Name ~= "BlacksmithPrompt" and prompt.Name ~= "SummonAltarPrompt" then return end
+		if isPromptOnOwnedPlot(prompt) then
+			local distance = distances[prompt]
+			if distance then
+				prompt.MaxActivationDistance = distance
+				distances[prompt] = nil
+			end
+		elseif not distances[prompt] then
+			distances[prompt] = prompt.MaxActivationDistance
+			prompt.MaxActivationDistance = 0
+		end
+	end
+
+	local ownership: { [Instance]: RBXScriptConnection } = {}
+	local function watch(plot: Instance)
+		local function refresh()
+			for _, descendant in plot:GetDescendants() do
+				update(descendant)
+			end
+		end
+		ownership[plot] = plot:GetAttributeChangedSignal("OwnerUserId"):Connect(refresh)
+		refresh()
+	end
+	plots.DescendantAdded:Connect(update)
+	plots.DescendantRemoving:Connect(function(instance)
+		if instance:IsA("ProximityPrompt") then
+			local distance = distances[instance]
+			if distance then
+				instance.MaxActivationDistance = distance
+				distances[instance] = nil
+			end
+		end
+	end)
+	plots.ChildAdded:Connect(watch)
+	plots.ChildRemoved:Connect(function(plot)
+		local connection = ownership[plot]
+		if connection then
+			connection:Disconnect()
+			ownership[plot] = nil
+		end
+	end)
+	for _, plot in plots:GetChildren() do
+		watch(plot)
+	end
+end)
+
 -- 3. Plot Facility ProximityPrompt Handler
 ProximityPromptService.PromptTriggered:Connect(function(prompt: ProximityPrompt, playerWhoTriggered: Player)
 	if playerWhoTriggered ~= LocalPlayer then

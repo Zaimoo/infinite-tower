@@ -6,7 +6,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
-local HttpService = game:GetService("HttpService")
+local BossPortals = require(script.Parent.BossPortals)
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormulas"))
@@ -2390,134 +2390,47 @@ local function summonFloorBoss(player: Player, progress: TowerProgress.PlayerFlo
  end
 end
 
-local function spawnFloorAscensionPortal(floorId: number, position: Vector3)
+local function spawnBossPortals(floorId: number, bossHome: Vector3)
 	local room = Tower.GetRoom(floorId)
-	if not room or not room.Model then return end
-	if room.Model:FindFirstChild("FloorAscensionPortal") then return end
+	if not room or not room.Model or room.Model:FindFirstChild("BossPortals") then return end
 
-	local nextFloorId = floorId + 1
-	local isMaxFloor = floorId >= 50
-	local groundPos = HeroNavigation.Ground(position, nil, 4, 30) or position
+	local pair = Instance.new("Folder")
+	pair.Name = "BossPortals"
+	local groundParams = RaycastParams.new()
+	groundParams.FilterType = Enum.RaycastFilterType.Include
+	groundParams.FilterDescendantsInstances = { room.Model }
 
-	local portalModel = Instance.new("Model")
-	portalModel.Name = "FloorAscensionPortal"
+	-- The Apex approach is from +Z. Anchor the exits behind the boss's home.
+	for _, retry in { false, true } do
+		local spot = bossHome + Vector3.new(if retry then 10 else -10, 0, -19)
+		local ground = workspace:Raycast(spot + Vector3.new(0, 6, 0), Vector3.new(0, -14, 0), groundParams)
+		local model, prompt, trigger = BossPortals.Build(CFrame.new(ground and ground.Position or spot), floorId, retry)
+		prompt.Triggered:Connect(function(player: Player)
+			local state = Tower.GetState(player)
+			if not Tower.Same(state, room) or Tower.IsTransitioning(player) or not prompt:IsDescendantOf(workspace) then return end
+			local character = player.Character
+			local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+			local root = character and character:FindFirstChild("HumanoidRootPart")
+			if not humanoid or humanoid.Health <= 0 or not root or not root:IsA("BasePart")
+				or (root.Position - trigger.Position).Magnitude > prompt.MaxActivationDistance then return end
 
-	-- Stone base plinth
-	local plinth = Instance.new("Part")
-	plinth.Name = "PortalPlinth"
-	plinth.Size = Vector3.new(12, 1.2, 12)
-	plinth.CFrame = CFrame.new(groundPos + Vector3.new(0, 0.6, 0))
-	plinth.Anchored = true
-	plinth.CanCollide = true
-	plinth.Material = Enum.Material.Slate
-	plinth.Color = Color3.fromRGB(34, 28, 48)
-	plinth.Parent = portalModel
+			local progress = ActivePlayerProgress[player]
+			if not progress or progress.FloorId ~= floorId or not progress.BossDefeated then
+				getDataManager().SendToast(player, "Defeat this floor's boss to use its portals.", "WARN")
+				return
+			end
 
-	-- Glowing outer arch
-	local arch = Instance.new("Part")
-	arch.Name = "PortalArch"
-	arch.Shape = Enum.PartType.Cylinder
-	arch.Size = Vector3.new(0.8, 11, 11)
-	arch.CFrame = CFrame.new(groundPos + Vector3.new(0, 6.5, 0)) * CFrame.Angles(0, 0, math.rad(90))
-	arch.Anchored = true
-	arch.CanCollide = false
-	arch.Material = Enum.Material.Neon
-	arch.Color = Color3.fromRGB(80, 215, 255)
-	arch.Parent = portalModel
-
-	-- Glowing inner vortex
-	local vortex = Instance.new("Part")
-	vortex.Name = "PortalVortex"
-	vortex.Shape = Enum.PartType.Cylinder
-	vortex.Size = Vector3.new(0.4, 9.2, 9.2)
-	vortex.CFrame = CFrame.new(groundPos + Vector3.new(0, 6.5, 0)) * CFrame.Angles(0, 0, math.rad(90))
-	vortex.Anchored = true
-	vortex.CanCollide = false
-	vortex.Transparency = 0.25
-	vortex.Material = Enum.Material.Neon
-	vortex.Color = Color3.fromRGB(50, 160, 255)
-	vortex.Parent = portalModel
-
-	local light = Instance.new("PointLight")
-	light.Color = Color3.fromRGB(100, 220, 255)
-	light.Range = 24
-	light.Brightness = 2.8
-	light.Parent = vortex
-
-	local pe = Instance.new("ParticleEmitter")
-	pe.Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, Color3.fromRGB(160, 240, 255)),
-		ColorSequenceKeypoint.new(1, Color3.fromRGB(60, 120, 255)),
-	})
-	pe.Size = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 0.7),
-		NumberSequenceKeypoint.new(1, 0),
-	})
-	pe.Rate = 28
-	pe.Speed = NumberRange.new(2, 6)
-	pe.Lifetime = NumberRange.new(0.8, 1.8)
-	pe.Parent = vortex
-
-	-- Interaction trigger
-	local trigger = Instance.new("Part")
-	trigger.Name = "PortalTrigger"
-	trigger.Size = Vector3.new(8, 10, 8)
-	trigger.CFrame = CFrame.new(groundPos + Vector3.new(0, 5.5, 0))
-	trigger.Anchored = true
-	trigger.CanCollide = false
-	trigger.Transparency = 1
-	trigger.Parent = portalModel
-	portalModel.PrimaryPart = trigger
-
-	local prompt = Instance.new("ProximityPrompt")
-	prompt.Name = "AscendPrompt"
-	prompt.ActionText = if isMaxFloor then "Return to Hub" else string.format("Ascend to Floor %d", nextFloorId)
-	prompt.ObjectText = "Floor Portal"
-	prompt.KeyboardKeyCode = Enum.KeyCode.E
-	prompt.HoldDuration = 0.35
-	prompt.MaxActivationDistance = 15
-	prompt.RequiresLineOfSight = false
-	prompt.Parent = trigger
-
-	local portalDebounce: { [Player]: number } = {}
-	local function activatePortal(player: Player)
-		local now = os.clock()
-		if (portalDebounce[player] or 0) > now then return end
-		portalDebounce[player] = now + 4.0
-
-		local pState = Tower.GetState(player)
-		if not pState or pState.FloorId ~= floorId then return end
-		if Tower.IsTransitioning(player) then return end
-		-- Only a Master who has cleared this floor may ascend (the prompt is shared by everyone in the room).
-		local portalProfile = getDataManager().GetProfile(player)
-		if not portalProfile or (portalProfile.HighestClearedFloor or 0) < floorId then
-			getDataManager().SendToast(player, "Defeat this floor's boss yourself to ascend.", "WARN")
-			return
-		end
-
-		if isMaxFloor then
-			Tower.ReturnToHub(player, {
-				ContractVersion = 1,
-				RequestId = HttpService:GenerateGUID(false),
-				CharacterGeneration = pState.CharacterGeneration,
-				ExpectedLocationRevision = pState.LocationRevision,
-				ExpectedSquadRevision = pState.SquadRevision,
-			})
-		else
-			Tower.VisitFloor(player, nextFloorId, {
-				ContractVersion = 1,
-				RequestId = HttpService:GenerateGUID(false),
-				CharacterGeneration = pState.CharacterGeneration,
-				ExpectedLocationRevision = pState.LocationRevision,
-				ExpectedSquadRevision = pState.SquadRevision,
-			})
-		end
+			if retry then
+				Tower.RetryFloor(player, floorId)
+			elseif floorId == 50 then
+				Tower.ReturnToHub(player)
+			else
+				Tower.VisitFloor(player, floorId + 1)
+			end
+		end)
+		model.Parent = pair
 	end
-
-	-- Phase 6 M5: the portal is prompt-only. Walking through it no longer teleports you by accident.
-	prompt.Triggered:Connect(activatePortal)
-
-	portalModel.Parent = room.Model
+	pair.Parent = room.Model
 end
 local function squadCount(player: Player): number
  local state=ActiveMasters[player];local n=0
@@ -2600,6 +2513,11 @@ Tower.RegisterAdapter("Combat",{
    end
    syncSquadStatus(player)
   end,
+ ResetFloorProgress=function(player, floorId)
+  local progress = TowerProgress.CreateProgress(floorId)
+  ActivePlayerProgress[player] = progress
+  FloorProgressRemote:FireClient(player, progress)
+ end,
  CaptureCargo=function(player) return CarrierToHeldLoot[player] end,
  DropCargo=function(player) CombatSimulation.DropCarriedLoot(player,true) end,
  StoreCargo=function(player, loc) return CombatSimulation.BankHeldLoot(player, loc) end,
@@ -2747,7 +2665,7 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
       end
      end
     end
-    spawnFloorAscensionPortal(mob.FloorId, mob.Position)
+    spawnBossPortals(mob.FloorId, mob.HomePosition)
     -- Players who earned this boss through their own threshold but fell short of 3% damage
     -- keep their earned summon: a fresh boss appears for them once this one is cleaned up.
     for p, progress in pairs(ActivePlayerProgress) do
