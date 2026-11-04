@@ -22,7 +22,7 @@ Promo.__index = Promo
 
 local WIDTH, HEIGHT = 700, 610 -- same container as Synthesis (the Pit tabs swap between them)
 local STONE_IMAGE = UIAssets.Images.PromotionStone
-local ORBIT_DURATION = 2.4
+local ORBIT_PERIOD = 2.8
 
 local C = {
 	Scrim = Color3.fromRGB(6, 6, 10),
@@ -998,6 +998,14 @@ function Promo.Render(self: any)
 
 	local rule = recipient and PitBalanceConfig.Promotion[recipient.Stars]
 	local atMaxRank = recipient ~= nil and (not rule or (recipient.Stars or 1) >= maxStars)
+	if self.Root.Visible and rule and not atMaxRank and STONE_IMAGE ~= "" and not UIFeel.ReducedMotion() then
+		if self.OrbitElapsed == nil then
+			self.OrbitElapsed = 0
+			self:UpdateStoneOrbit(0)
+		end
+	elseif self.OrbitElapsed then
+		self:StopStoneOrbit()
+	end
 	self.StoneCost.Visible = not atMaxRank
 	if atMaxRank then
 		self.CostLabel.Position = UDim2.fromOffset(0, 23)
@@ -1067,30 +1075,22 @@ function Promo.StopStoneOrbit(self: any)
 end
 
 function Promo.UpdateStoneOrbit(self: any, dt: number)
-	local elapsed = self.OrbitElapsed + dt
-	if elapsed >= ORBIT_DURATION then
-		self:StopStoneOrbit()
-		return
-	end
+	local elapsed = (self.OrbitElapsed + dt) % ORBIT_PERIOD
 	self.OrbitElapsed = elapsed
-	local alpha = math.min(elapsed / 0.15, (ORBIT_DURATION - elapsed) / 0.45, 1)
 	for i, stone in self.OrbitStones do
-		local angle = (elapsed / 1.45 + (i - 1) / #self.OrbitStones) * math.pi * 2
+		local angle = (elapsed / ORBIT_PERIOD + (i - 1) / #self.OrbitStones) * math.pi * 2
 		local depth = math.sin(angle)
 		local size = 35 + 10 * depth
 		stone.Size = UDim2.fromOffset(size, size)
-		stone.Position = UDim2.new(0.5, math.cos(angle) * 108, 0.5, depth * 58 + 26 - elapsed * 19)
+		stone.Position = UDim2.new(0.5, math.cos(angle) * 108, 0.5, depth * 58 + 18)
 		stone.Rotation = math.cos(angle) * 16
 		stone.ZIndex = if depth > 0 then 49 else 42
-		stone.ImageTransparency = 1 - alpha * (0.85 + 0.15 * depth)
+		stone.ImageTransparency = 0.15 - 0.15 * depth
 		stone.Visible = true
 	end
 end
 
 function Promo.Celebrate(self: any)
-	if self.Root.Visible and STONE_IMAGE ~= "" and not UIFeel.ReducedMotion() then
-		self.OrbitElapsed = 0
-	end
 	local flash = new("Frame", {
 		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
 		BackgroundTransparency = 0.2,
