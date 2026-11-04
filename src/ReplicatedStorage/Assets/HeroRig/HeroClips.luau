@@ -660,10 +660,21 @@ do
 end
 
 -- Solaris (STAFF): Supernova Starfall. Arms spread to gather the sky, brought together overhead,
--- then thrown forward to bring the star down.
+-- then thrown forward to bring the star down. Idle is her serene stance: staff upright beside
+-- her right hip (the arm angles measured for Eolka's idle), left hand held palm-up in front of
+-- her as if cradling a sun.
 do
 	local p = WeaponPoses.STAFF
+	local sunward: Pose = {
+		Waist = { 0, 6, 0 }, Neck = { -4, -4, 0 },
+		RightShoulder = { 10, 0, 28 }, RightElbow = { 35, 0, 0 }, RightWrist = { 45, -35, 0 },
+		LeftShoulder = { 30, 0, -6 }, LeftElbow = { 80, 0, 0 }, LeftWrist = { 0, 0, 0 },
+		LeftHip = { 2, 0, -6 }, LeftKnee = { -6, 0, 0 }, LeftAnkle = { 4, 0, 6 },
+		RightHip = { 2, 0, 6 }, RightKnee = { -6, 0, 0 }, RightAnkle = { 4, 0, -6 },
+		RootOffset = { 0, -0.04, 0 },
+	}
 	Overrides.hero_solaris = {
+		Idle = breathe(sunward, 3.6),
 		AttackSkill = signature(1.2, {
 			{ 0, p.Stand },
 			{ 0.35, merge(ATTACK_STANCE, { Waist = { 18, 0, 0 }, Neck = { 25, 0, 0 }, LeftShoulder = { 150, 0, -60 }, RightShoulder = { 150, 0, 60 }, LeftElbow = { 10, 0, 0 }, RightElbow = { 10, 0, 0 } }) },
