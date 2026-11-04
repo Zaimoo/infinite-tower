@@ -49,8 +49,10 @@ function Layout.Get(index: number): any
 	local camps = {}
 	local function camp(id, terrace, dx, elite, boss, size)
 		local p = platforms[terrace]
+		-- Radius: members scatter this far from the centre (CampRoster), staying 6 studs inside the terrace.
 		table.insert(camps, {Id=id, Platform=terrace, X=p.X+(dx or 0), Y=p.Y, Z=p.Z,
-			Elite=elite or false, Boss=boss or false, Size=size or 4})
+			Elite=elite or false, Boss=boss or false, Size=size or 4,
+			Radius=math.min(20, p.Width/2-math.abs(dx or 0)-6, p.Depth/2-6)})
 	end
 	-- Live camps per floor: 16 / 22 / 25 / 35 / 35 mobs, led by 1 / 2 / 3 / 4 / 4 Elites. The Basin
 	-- centre stays clear so arrivals land out of aggro. The Apex camp is never pre-placed: it marks
@@ -66,8 +68,13 @@ function Layout.Get(index: number): any
 		camp("UPPER_EAST", "EastBastion", 0, true, false, 5)
 	end
 	if index == 5 then camp("APEX_SANCTUM", "Apex", 0, false, true, 5) else camp("APEX_SANCTUM", "Apex", 0, true) end
+	-- Live Elites per floor (1 / 2 / 3 / 4 / 4). The runtime decides which areas they lead (CampRoster).
+	local eliteCount = 0
+	for _, c in camps do
+		if c.Elite and c.Id ~= "APEX_SANCTUM" then eliteCount += 1 end
+	end
 	return {Width=w, Depth=d, Height=heights[index], Bottom=if index==5 then -6 elseif index>=3 then -4 else 0,
-		Platforms=platforms, Links=links, Camps=camps, Sanctuary=safe}
+		Platforms=platforms, Links=links, Camps=camps, Sanctuary=safe, EliteCount=eliteCount}
 end
 
 -- Walkways that must stay clear of scenery: every ramp and stair (with a 3-stud shoulder), a 20 x 20
