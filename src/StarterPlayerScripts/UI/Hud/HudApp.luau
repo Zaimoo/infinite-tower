@@ -508,8 +508,6 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 	-- uses the drawer's height until a collapse has finished sliding (`layoutOpen`).
 	local currencyGap = 8
 	local currencyBottom = L.Edge + Components.DrawerHeight(drawerOpen or layoutOpen, cardHeight) + currencyGap
-	local currencyWidth = if compact then math.max(200, 16 + (#rows + (if lockedText then 1 else 0)) * 52)
-		else math.clamp(Components.StatusCardWidth(#rows, lockedText ~= nil, tileWidth), 260, 360)
 	-- Both rails start at the top of the safe area, just under Roblox's top bar.
 	local leftTop = L.Edge
 	local leftBottom = screen.Y - currencyBottom - Components.CurrencyBarHeight - L.StackGap
