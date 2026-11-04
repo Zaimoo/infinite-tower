@@ -14,7 +14,7 @@ local OutskirtsBuilder = require(script.Parent:WaitForChild("OutskirtsEnvironmen
 local FacilityPresence = require(script.Parent:WaitForChild("FacilityPresence"))
 local FacilityConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("FacilityConfig"))
 
-local VERSION = 28 -- 28: Remove exterior portal sky-beam VFX & update cobblestone/paver ground texture
+local VERSION = 29 -- 29: Solid collision on Blacksmith Forge & coursed ashlar Gothic fortress walls
 
 local function attachPrompt(
 	parent: Instance,

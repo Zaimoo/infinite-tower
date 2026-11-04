@@ -26,7 +26,7 @@ local CommonsBuilder = require(BaseOverhaulFolder:WaitForChild("CommonsBuilder")
 local SharedLeaderboards = require(BaseOverhaulFolder:WaitForChild("SharedLeaderboards"))
 
 local HubOverhaul = {}
-HubOverhaul.Version = 12 -- Bump to force a rebuild of baked geometry
+HubOverhaul.Version = 13 -- Bump to force a rebuild of baked geometry
 
 --============================================================================
 -- CONFIGURATION TABLE

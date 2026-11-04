@@ -20,12 +20,12 @@ WallsBuilder.Config = {
 	-- Wall Geometry (GDD Section 3.4: 28-stud high crenellated stone walls)
 	WallHeight = 28,
 	WallThickness = 6,
-	BastionSize = 20,
-	BastionHeight = 38,
+	BastionSize = 22,
+	BastionHeight = 40,
 
 	-- Crenellations (Merlons on top of the wall)
-	MerlonWidth = 6,
-	MerlonHeight = 4.0,
+	MerlonWidth = 6.2,
+	MerlonHeight = 4.2,
 	MerlonSpacing = 12,
 
 	-- Front Gate Opening (Facing the Tower, -Z local direction)
@@ -43,13 +43,13 @@ WallsBuilder.Config = {
 	-- Invisible Backup Safety Barrier
 	InvisibleBarrierHeight = 48,
 
-	-- Materials & Colors (Two-Tone Gothic Fortress Masonry)
-	WallMaterial = Enum.Material.Cobblestone,
-	WallColor = Color3.fromRGB(86, 90, 98),
+	-- Materials & Colors (Dark Gothic Castle Masonry matching reference)
+	WallMaterial = Enum.Material.Slate,
+	WallColor = Color3.fromRGB(68, 72, 78),
 	TrimMaterial = Enum.Material.Slate,
-	TrimColor = Color3.fromRGB(64, 68, 76),
-	BastionColor = Color3.fromRGB(74, 78, 86),
-	PlinthColor = Color3.fromRGB(56, 60, 68),
+	TrimColor = Color3.fromRGB(54, 58, 64),
+	BastionColor = Color3.fromRGB(62, 66, 72),
+	PlinthColor = Color3.fromRGB(48, 52, 58),
 }
 
 --============================================================================
@@ -107,7 +107,86 @@ local function populateMerlonsAlongSpan(
 			Decorative = true,
 			Parent = parent,
 		})
+		makePart({
+			Name = "WallMerlonCap",
+			Size = Vector3.new(wallThickness + 1.3, 0.75, cfg.MerlonWidth + 0.5),
+			CFrame = CFrame.new(pos + Vector3.new(0, cfg.MerlonHeight * 0.5 + 0.35, 0)) * CFrame.Angles(0, yaw, 0),
+			Material = cfg.TrimMaterial,
+			Color = Color3.fromRGB(82, 86, 92),
+			Decorative = true,
+			Parent = parent,
+		})
 	end
+end
+
+local function populateAshlarWallFace(
+	parent: Instance,
+	namePrefix: string,
+	centerPos: Vector3,
+	spanLen: number,
+	wallHeight: number,
+	wallThickness: number,
+	alongZ: boolean
+)
+	local blockPal = {
+		Color3.fromRGB(74, 78, 84),
+		Color3.fromRGB(62, 66, 72),
+		Color3.fromRGB(82, 86, 92),
+		Color3.fromRGB(56, 60, 66),
+		Color3.fromRGB(68, 72, 78),
+	}
+	local rows = 6
+	local startY = 4.2
+	local availH = wallHeight - 6.6
+	local rowH = availH / rows
+	local targetBlockLen = 10.5
+	local cols = math.max(2, math.floor(spanLen / targetBlockLen))
+	local blockLen = spanLen / cols
+
+	for r = 1, rows do
+		local cy = startY + (r - 0.5) * rowH
+		local stagger = (r % 2 == 0) and (blockLen * 0.35) or 0
+		for c = 1, cols do
+			local localOffset = -spanLen * 0.5 + (c - 0.5) * blockLen + stagger
+			local bLen = blockLen - 0.35
+			if localOffset + bLen * 0.5 > spanLen * 0.5 then
+				bLen = (spanLen * 0.5 - (localOffset - bLen * 0.5)) - 0.2
+				localOffset = spanLen * 0.5 - bLen * 0.5 - 0.1
+			end
+			if bLen > 1.8 then
+				local col = blockPal[((r * 3 + c * 5) % #blockPal) + 1]
+				local bSize = if alongZ
+					then Vector3.new(wallThickness + 0.45, rowH - 0.28, bLen)
+					else Vector3.new(bLen, rowH - 0.28, wallThickness + 0.45)
+				local bPos = if alongZ
+					then Vector3.new(centerPos.X, cy, centerPos.Z + localOffset)
+					else Vector3.new(centerPos.X + localOffset, cy, centerPos.Z)
+				makePart({
+					Name = string.format("%s_Ashlar_%d_%d", namePrefix, r, c),
+					Size = bSize,
+					CFrame = CFrame.new(bPos),
+					Material = Enum.Material.Slate,
+					Color = col,
+					Decorative = true,
+					Parent = parent,
+				})
+			end
+		end
+	end
+
+	-- Horizontal mid-height ashlar stringcourse molding
+	local bandSize = if alongZ
+		then Vector3.new(wallThickness + 1.0, 0.9, spanLen)
+		else Vector3.new(spanLen, 0.9, wallThickness + 1.0)
+	makePart({
+		Name = namePrefix .. "_Stringcourse",
+		Size = bandSize,
+		CFrame = CFrame.new(centerPos.X, 15.0, centerPos.Z),
+		Material = Enum.Material.Slate,
+		Color = Color3.fromRGB(84, 88, 94),
+		Decorative = true,
+		Parent = parent,
+	})
 end
 
 --============================================================================
@@ -146,10 +225,64 @@ function WallsBuilder.Build(parentIsland: Instance?, customConfig: { [string]: a
 			Decorative = false,
 			Parent = wallsModel,
 		})
+		-- Coursed Ashlar Stone Rings on Corner Bastion Tower
+		local bRingPal = {
+			Color3.fromRGB(74, 78, 84),
+			Color3.fromRGB(60, 64, 70),
+			Color3.fromRGB(82, 86, 92),
+			Color3.fromRGB(54, 58, 64),
+		}
+		for ring = 1, 7 do
+			local ry = 4.8 + (ring - 0.5) * 4.4
+			local rExpand = (ring % 2 == 1) and 0.45 or 0.15
+			makePart({
+				Name = string.format("CornerBastionCourse_%d_%d", i, ring),
+				Size = Vector3.new(cfg.BastionSize + rExpand, 4.1, cfg.BastionSize + rExpand),
+				CFrame = CFrame.new(cPos.X, ry, cPos.Z),
+				Material = Enum.Material.Slate,
+				Color = bRingPal[((ring + i) % #bRingPal) + 1],
+				Decorative = true,
+				Parent = wallsModel,
+			})
+		end
+		-- Gothic Slit Windows on Bastion Tower Upper Faces
+		for _, faceDir in ipairs({ Vector3.new(1, 0, 0), Vector3.new(-1, 0, 0), Vector3.new(0, 0, 1), Vector3.new(0, 0, -1) }) do
+			local slitPos = Vector3.new(cPos.X, 26.5, cPos.Z) + faceDir * (cfg.BastionSize * 0.5 + 0.25)
+			local slitSize = if math.abs(faceDir.X) > 0.5
+				then Vector3.new(0.4, 5.2, 1.8)
+				else Vector3.new(1.8, 5.2, 0.4)
+			makePart({
+				Name = string.format("BastionSlitWindow_%d", i),
+				Size = slitSize,
+				CFrame = CFrame.new(slitPos),
+				Material = Enum.Material.Slate,
+				Color = Color3.fromRGB(24, 26, 30),
+				Decorative = true,
+				Parent = wallsModel,
+			})
+		end
 		makePart({
 			Name = string.format("CornerBastionPlinth_%d", i),
-			Size = Vector3.new(cfg.BastionSize + 2.8, 5.0, cfg.BastionSize + 2.8),
-			CFrame = CFrame.new(cPos.X, 2.5, cPos.Z),
+			Size = Vector3.new(cfg.BastionSize + 3.2, 5.2, cfg.BastionSize + 3.2),
+			CFrame = CFrame.new(cPos.X, 2.6, cPos.Z),
+			Material = cfg.TrimMaterial,
+			Color = cfg.PlinthColor or cfg.TrimColor,
+			Decorative = true,
+			Parent = wallsModel,
+		})
+		makePart({
+			Name = string.format("CornerBastionMidBelt_%d", i),
+			Size = Vector3.new(cfg.BastionSize + 1.6, 1.2, cfg.BastionSize + 1.6),
+			CFrame = CFrame.new(cPos.X, 21.0, cPos.Z),
+			Material = cfg.TrimMaterial,
+			Color = Color3.fromRGB(84, 88, 94),
+			Decorative = true,
+			Parent = wallsModel,
+		})
+		makePart({
+			Name = string.format("CornerBastionCorbel_%d", i),
+			Size = Vector3.new(cfg.BastionSize + 1.8, 1.8, cfg.BastionSize + 1.8),
+			CFrame = CFrame.new(cPos.X, cfg.BastionHeight - 0.9, cPos.Z),
 			Material = cfg.TrimMaterial,
 			Color = cfg.PlinthColor or cfg.TrimColor,
 			Decorative = true,
@@ -157,40 +290,48 @@ function WallsBuilder.Build(parentIsland: Instance?, customConfig: { [string]: a
 		})
 		makePart({
 			Name = string.format("CornerBastionCap_%d", i),
-			Size = Vector3.new(cfg.BastionSize + 2.4, 2.5, cfg.BastionSize + 2.4),
-			CFrame = CFrame.new(cPos.X, cfg.BastionHeight + 1.25, cPos.Z),
+			Size = Vector3.new(cfg.BastionSize + 3.0, 2.6, cfg.BastionSize + 3.0),
+			CFrame = CFrame.new(cPos.X, cfg.BastionHeight + 1.3, cPos.Z),
 			Material = cfg.TrimMaterial,
-			Color = cfg.TrimColor,
+			Color = Color3.fromRGB(78, 82, 88),
 			Decorative = true,
 			Parent = wallsModel,
 		})
-		-- 8 Battlement Merlons crowning each Corner Bastion Tower
-		local bHalf = (cfg.BastionSize + 1.2) * 0.5
-		local bMerlonY = cfg.BastionHeight + 2.5 + 2.0
-		local mStep = bHalf * 0.92
+		-- 12 Battlement Merlons crowning each Corner Bastion Tower (4 Corner L-Merlons + 8 Side Merlons)
+		local bHalf = (cfg.BastionSize + 1.6) * 0.5
+		local bMerlonY = cfg.BastionHeight + 2.6 + 2.1
 		for _, mOff in ipairs({
-			{ dx = -bHalf, dz = -mStep, sx = 3.2, sz = 4.6 },
-			{ dx = -bHalf, dz =  mStep, sx = 3.2, sz = 4.6 },
-			{ dx =  bHalf, dz = -mStep, sx = 3.2, sz = 4.6 },
-			{ dx =  bHalf, dz =  mStep, sx = 3.2, sz = 4.6 },
-			{ dx = -mStep, dz = -bHalf, sx = 4.6, sz = 3.2 },
-			{ dx =  mStep, dz = -bHalf, sx = 4.6, sz = 3.2 },
-			{ dx = -mStep, dz =  bHalf, sx = 4.6, sz = 3.2 },
-			{ dx =  mStep, dz =  bHalf, sx = 4.6, sz = 3.2 },
+			{ dx = -bHalf, dz = -bHalf, sx = 3.6, sz = 3.6 },
+			{ dx = -bHalf, dz =  bHalf, sx = 3.6, sz = 3.6 },
+			{ dx =  bHalf, dz = -bHalf, sx = 3.6, sz = 3.6 },
+			{ dx =  bHalf, dz =  bHalf, sx = 3.6, sz = 3.6 },
+			{ dx = -bHalf, dz =  0,     sx = 3.2, sz = 4.6 },
+			{ dx =  bHalf, dz =  0,     sx = 3.2, sz = 4.6 },
+			{ dx =  0,     dz = -bHalf, sx = 4.6, sz = 3.2 },
+			{ dx =  0,     dz =  bHalf, sx = 4.6, sz = 3.2 },
 		}) do
 			makePart({
 				Name = string.format("BastionMerlon_%d", i),
-				Size = Vector3.new(mOff.sx, 4.0, mOff.sz),
+				Size = Vector3.new(mOff.sx, 4.2, mOff.sz),
 				CFrame = CFrame.new(cPos.X + mOff.dx, bMerlonY, cPos.Z + mOff.dz),
 				Material = cfg.TrimMaterial,
 				Color = cfg.TrimColor,
 				Decorative = true,
 				Parent = wallsModel,
 			})
+			makePart({
+				Name = string.format("BastionMerlonCap_%d", i),
+				Size = Vector3.new(mOff.sx + 0.5, 0.7, mOff.sz + 0.5),
+				CFrame = CFrame.new(cPos.X + mOff.dx, bMerlonY + 2.4, cPos.Z + mOff.dz),
+				Material = cfg.TrimMaterial,
+				Color = Color3.fromRGB(84, 88, 94),
+				Decorative = true,
+				Parent = wallsModel,
+			})
 		end
 	end
 
-	-- 2. Left Wall (-X) and Right Wall (+X) with Base Plinth, Overhang Cornice & Wall Torches
+	-- 2. Left Wall (-X) and Right Wall (+X) with Base Plinth, Coursed Ashlar Blocks, Overhang Cornice & Merlons
 	for _, side in ipairs({ { Name = "West", X = -halfW, NormalX = 1 }, { Name = "East", X = halfW, NormalX = -1 } }) do
 		makePart({
 			Name = "Wall_" .. side.Name,
@@ -201,10 +342,19 @@ function WallsBuilder.Build(parentIsland: Instance?, customConfig: { [string]: a
 			Decorative = false,
 			Parent = wallsModel,
 		})
+		populateAshlarWallFace(
+			wallsModel,
+			"Wall_" .. side.Name,
+			Vector3.new(side.X, wallCenterY, 0),
+			cfg.PerimeterLength - cfg.BastionSize * 1.6,
+			cfg.WallHeight,
+			cfg.WallThickness,
+			true
+		)
 		makePart({
 			Name = "Plinth_" .. side.Name,
-			Size = Vector3.new(cfg.WallThickness + 2.4, 4.0, cfg.PerimeterLength),
-			CFrame = CFrame.new(side.X, 2.0, 0),
+			Size = Vector3.new(cfg.WallThickness + 2.6, 4.2, cfg.PerimeterLength),
+			CFrame = CFrame.new(side.X, 2.1, 0),
 			Material = cfg.TrimMaterial,
 			Color = cfg.PlinthColor or cfg.TrimColor,
 			Decorative = true,
@@ -212,10 +362,10 @@ function WallsBuilder.Build(parentIsland: Instance?, customConfig: { [string]: a
 		})
 		makePart({
 			Name = "Cornice_" .. side.Name,
-			Size = Vector3.new(cfg.WallThickness + 1.8, 2.0, cfg.PerimeterLength),
-			CFrame = CFrame.new(side.X, cfg.WallHeight - 1.0, 0),
+			Size = Vector3.new(cfg.WallThickness + 2.2, 2.2, cfg.PerimeterLength),
+			CFrame = CFrame.new(side.X, cfg.WallHeight - 1.1, 0),
 			Material = cfg.TrimMaterial,
-			Color = cfg.TrimColor,
+			Color = Color3.fromRGB(78, 82, 88),
 			Decorative = true,
 			Parent = wallsModel,
 		})
@@ -335,10 +485,19 @@ function WallsBuilder.Build(parentIsland: Instance?, customConfig: { [string]: a
 				Decorative = false,
 				Parent = wallsModel,
 			})
+			populateAshlarWallFace(
+				wallsModel,
+				"Wall_" .. seg.Name,
+				Vector3.new(seg.X, wallCenterY, -halfL),
+				math.max(12, seg.Span - cfg.BastionSize * 0.9),
+				cfg.WallHeight,
+				cfg.WallThickness,
+				false
+			)
 			makePart({
 				Name = "Plinth_" .. seg.Name,
-				Size = Vector3.new(seg.Span, 4.0, cfg.WallThickness + 2.4),
-				CFrame = CFrame.new(seg.X, 2.0, -halfL),
+				Size = Vector3.new(seg.Span, 4.2, cfg.WallThickness + 2.6),
+				CFrame = CFrame.new(seg.X, 2.1, -halfL),
 				Material = cfg.TrimMaterial,
 				Color = cfg.PlinthColor or cfg.TrimColor,
 				Decorative = true,
@@ -346,10 +505,10 @@ function WallsBuilder.Build(parentIsland: Instance?, customConfig: { [string]: a
 			})
 			makePart({
 				Name = "Cornice_" .. seg.Name,
-				Size = Vector3.new(seg.Span, 2.0, cfg.WallThickness + 1.8),
-				CFrame = CFrame.new(seg.X, cfg.WallHeight - 1.0, -halfL),
+				Size = Vector3.new(seg.Span, 2.2, cfg.WallThickness + 2.2),
+				CFrame = CFrame.new(seg.X, cfg.WallHeight - 1.1, -halfL),
 				Material = cfg.TrimMaterial,
-				Color = cfg.TrimColor,
+				Color = Color3.fromRGB(78, 82, 88),
 				Decorative = true,
 				Parent = wallsModel,
 			})
@@ -445,10 +604,19 @@ function WallsBuilder.Build(parentIsland: Instance?, customConfig: { [string]: a
 				Decorative = false,
 				Parent = wallsModel,
 			})
+			populateAshlarWallFace(
+				wallsModel,
+				"Wall_" .. seg.Name,
+				Vector3.new(seg.X, wallCenterY, halfL),
+				math.max(12, seg.Span - cfg.BastionSize * 0.9),
+				cfg.WallHeight,
+				cfg.WallThickness,
+				false
+			)
 			makePart({
 				Name = "Plinth_" .. seg.Name,
-				Size = Vector3.new(seg.Span, 4.0, cfg.WallThickness + 2.4),
-				CFrame = CFrame.new(seg.X, 2.0, halfL),
+				Size = Vector3.new(seg.Span, 4.2, cfg.WallThickness + 2.6),
+				CFrame = CFrame.new(seg.X, 2.1, halfL),
 				Material = cfg.TrimMaterial,
 				Color = cfg.PlinthColor or cfg.TrimColor,
 				Decorative = true,
@@ -456,10 +624,10 @@ function WallsBuilder.Build(parentIsland: Instance?, customConfig: { [string]: a
 			})
 			makePart({
 				Name = "Cornice_" .. seg.Name,
-				Size = Vector3.new(seg.Span, 2.0, cfg.WallThickness + 1.8),
-				CFrame = CFrame.new(seg.X, cfg.WallHeight - 1.0, halfL),
+				Size = Vector3.new(seg.Span, 2.2, cfg.WallThickness + 2.2),
+				CFrame = CFrame.new(seg.X, cfg.WallHeight - 1.1, halfL),
 				Material = cfg.TrimMaterial,
-				Color = cfg.TrimColor,
+				Color = Color3.fromRGB(78, 82, 88),
 				Decorative = true,
 				Parent = wallsModel,
 			})
@@ -506,12 +674,40 @@ function WallsBuilder.Build(parentIsland: Instance?, customConfig: { [string]: a
 			addWallBanner("DividingWallBanner_" .. idx, Vector3.new(bx, 16.0, halfL - (cfg.WallThickness * 0.5)))
 		end
 
-		-- Interior Wall Torches along North (+X) and South (-X) Fortress Walls
+		-- Interior Wall Torches & Courtyard Perimeter Props matching reference layout
 		for idx, tz in ipairs({ -52, 48 }) do
 			addWallTorch("NorthWallTorch_" .. idx, Vector3.new(halfW - 3.2, 11.5, tz), Vector3.new(-1, 0, 0))
 		end
 		for idx, tz in ipairs({ -52, 0, 52 }) do
 			addWallTorch("SouthWallTorch_" .. idx, Vector3.new(-halfW + 3.2, 11.5, tz), Vector3.new(1, 0, 0))
+		end
+		for idx, tx in ipairs({ -56, 56 }) do
+			addWallTorch("WestWallTorch_" .. idx, Vector3.new(tx, 11.5, -halfL + 3.8), Vector3.new(0, 0, 1))
+		end
+		for idx, tx in ipairs({ -44, -8, 68 }) do
+			addWallTorch("EastWallTorch_" .. idx, Vector3.new(tx, 11.5, halfL - 3.8), Vector3.new(0, 0, -1))
+		end
+
+		-- Stacked Wooden Barrels, Crates & Weapon Racks along West (-Z) and East (+Z) Fortress Walls
+		local wallCrateClusters = {
+			{ Size = Vector3.new(3.4, 3.4, 3.4), Pos = Vector3.new(46, 1.7, -halfL + 6.2), Yaw = 14 },
+			{ Size = Vector3.new(3.0, 3.0, 3.0), Pos = Vector3.new(50.2, 1.5, -halfL + 5.8), Yaw = -22 },
+			{ Size = Vector3.new(2.8, 2.8, 2.8), Pos = Vector3.new(47.8, 4.8, -halfL + 6.0), Yaw = 8 },
+			{ Size = Vector3.new(3.6, 3.6, 3.6), Pos = Vector3.new(-48, 1.8, -halfL + 6.2), Yaw = -16 },
+			{ Size = Vector3.new(3.2, 3.2, 3.2), Pos = Vector3.new(-52.5, 1.6, -halfL + 5.9), Yaw = 24 },
+			{ Size = Vector3.new(3.4, 3.4, 3.4), Pos = Vector3.new(-42, 1.7, halfL - 6.2), Yaw = 19 },
+			{ Size = Vector3.new(3.0, 3.0, 3.0), Pos = Vector3.new(-37.8, 1.5, halfL - 5.8), Yaw = -12 },
+		}
+		for idx, wc in ipairs(wallCrateClusters) do
+			makePart({
+				Name = "WallSideCrate_" .. idx,
+				Size = wc.Size,
+				CFrame = CFrame.new(wc.Pos) * CFrame.Angles(0, math.rad(wc.Yaw), 0),
+				Material = Enum.Material.WoodPlanks,
+				Color = Color3.fromRGB(114, 78, 48),
+				Decorative = false,
+				Parent = wallsModel,
+			})
 		end
 
 		populateMerlonsAlongSpan(
