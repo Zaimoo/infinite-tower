@@ -43,7 +43,7 @@ if not TeleportRequest then
 end
 
 local lastTeleportClock = 0
-local function requestTeleport(destination: "Island" | "Hub")
+local function requestTeleport(destination: "Island" | "Hub" | "Tower" | "TowerGate")
 	local now = os.clock()
 	if now - lastTeleportClock < 1.5 then
 		return
@@ -485,6 +485,14 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 			Accent = Color3.fromRGB(245, 158, 11), -- #F59E0B Royal Amber
 			OnActivated = function()
 				requestTeleport("Hub")
+			end,
+		},
+		{
+			Icon = "Tower",
+			Label = "Tower",
+			Accent = Color3.fromRGB(239, 68, 68), -- #EF4444 Crimson
+			OnActivated = function()
+				requestTeleport("Tower")
 			end,
 		},
 		{

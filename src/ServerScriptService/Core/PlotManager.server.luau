@@ -254,9 +254,48 @@ function PlotManager.TeleportPlayerToHub(player: Player)
 	TowerFloorService.ExitToOverworld(player, spawnPos, false)
 end
 
+function PlotManager.TeleportPlayerToTower(player: Player)
+	local char = player.Character
+	local hrp = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if not char or not hrp then
+		return
+	end
+
+	-- Prefer actual TowerHubArrival or EntrancePortalTrigger in workspace if available
+	local arrivalPart = workspace:FindFirstChild("TowerHubArrival", true) :: BasePart?
+	local portalTrigger = workspace:FindFirstChild("EntrancePortalTrigger", true) :: BasePart?
+
+	local basePos: Vector3
+	local lookTarget: Vector3
+
+	if portalTrigger and arrivalPart then
+		local gateZ = portalTrigger.Position.Z
+		basePos = Vector3.new(portalTrigger.Position.X, arrivalPart.Position.Y + arrivalPart.Size.Y * 0.5, gateZ - 10)
+		lookTarget = Vector3.new(portalTrigger.Position.X, basePos.Y, gateZ)
+	elseif arrivalPart then
+		basePos = Vector3.new(arrivalPart.Position.X, arrivalPart.Position.Y + arrivalPart.Size.Y * 0.5, arrivalPart.Position.Z - 15)
+		lookTarget = Vector3.new(arrivalPart.Position.X, basePos.Y, arrivalPart.Position.Z)
+	else
+		basePos = Vector3.new(0, 16.2, -342)
+		lookTarget = Vector3.new(0, 16.2, -332)
+	end
+
+	local angle = (player.UserId % 8) * (math.pi / 4)
+	local scatter = Vector3.new(math.cos(angle) * 3, 0, math.sin(angle) * 2)
+	local spawnPos = basePos + scatter + Vector3.new(0, 3.5, 0)
+	local targetCFrame = CFrame.lookAt(spawnPos, Vector3.new(lookTarget.X, spawnPos.Y, lookTarget.Z))
+
+	char:PivotTo(targetCFrame)
+	hrp.AssemblyLinearVelocity = Vector3.zero
+	hrp.AssemblyAngularVelocity = Vector3.zero
+
+	local TowerFloorService = require(script.Parent.TowerFloorService)
+	TowerFloorService.ExitToOverworld(player, spawnPos, false)
+end
+
 if TeleportRequest then
 	TeleportRequest.OnServerEvent:Connect(function(player: Player, destination: any)
-		if destination ~= "Island" and destination ~= "Hub" then
+		if destination ~= "Island" and destination ~= "Hub" and destination ~= "Tower" and destination ~= "TowerGate" then
 			return
 		end
 
@@ -318,6 +357,8 @@ if TeleportRequest then
 			PlotManager.RefreshPlotVisuals(player)
 		elseif destination == "Hub" then
 			PlotManager.TeleportPlayerToHub(player)
+		elseif destination == "Tower" or destination == "TowerGate" then
+			PlotManager.TeleportPlayerToTower(player)
 		end
 	end)
 end
