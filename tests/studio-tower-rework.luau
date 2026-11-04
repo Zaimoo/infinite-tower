@@ -17,7 +17,7 @@ return function(firstFloor: number, lastFloor: number, keepPreviews: boolean?)
 		params.FilterType=Enum.RaycastFilterType.Include; params.FilterDescendantsInstances={room.Model}; params.RespectCanCollide=true
 		assert(Protocol.InZone(room.Arrival.Position,room.Origin,room.Zones[1]),"Unsafe arrival "..id)
 		assert(room.Zones[1].CanBankCargo and room.Zones[1].CanRecoverWipe)
-		assert(room.Model:FindFirstChild("FloorExtractionPad"))
+		assert(room.Model:FindFirstChild("TravelPortal_NEXT"), "Missing Sanctuary travel portals")
 		for _,p in Combat.Floors[id] do
 			local hit=workspace:Raycast(room.Origin+Vector3.new(p.X,p.Y+6,p.Z),Vector3.new(0,-12,0),params)
 			assert(hit and math.abs(hit.Position.Y-room.Origin.Y-p.Y)<.2,"Unsupported spawn "..id.." "..p.CampId)

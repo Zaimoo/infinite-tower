@@ -6,6 +6,8 @@ local Config = require(game.ReplicatedStorage.Shared.Config.TowerFloorConfig)
 local Layout = require(game.ReplicatedStorage.Shared.Config.TowerLayout)
 local BiomeAssets = require(script.Parent.TowerBiomeAssets)
 local PropClearance = require(script.Parent.TowerPropClearance)
+local PortalKit = require(script.Parent.TowerPortalKit)
+local PortalAssets = require(game.ReplicatedStorage.Shared.Config.TowerPortalAssets)
 local Builder = {}
 
 export type BiomeTheme = {
@@ -198,6 +200,11 @@ local Themes: { [string]: BiomeTheme } = {
 		PropKind = "THRONE_SPIRE",
 	},
 }
+
+-- A biome's theme (for the boss portals, which CombatSimulation builds after a boss falls).
+function Builder.Theme(biomeId: string): BiomeTheme
+	return Themes[biomeId] or Themes.verdant_ruins
+end
 
 function Builder.Origin(id: number): Vector3
 	if id == 0 then return Vector3.zero end
@@ -532,66 +539,88 @@ function Builder.Build(id: number, generation: number): any
 	light.Brightness = 0.5
 	light.Parent = landing
 
-	local pad = part(model, "FloorExtractionPad", Vector3.new(25, 0.2, 18), origin + Vector3.new(0, 8.1, safe.Z - 5), theme.LightColor, Enum.Material.SmoothPlastic, false)
-	pad.CanQuery = false
-	pad.CanTouch = false
-	pad.Transparency = 0.25
-	pad:SetAttribute("FloorId", id)
-	decor(model, "ExtractionPadFrame", Vector3.new(27.5, 0.14, 20.5), origin + Vector3.new(0, 8.05, safe.Z - 5), theme.TrimColor, theme.TrimMaterial)
-
-	local altar = part(model, "UnpackagingAltar", Vector3.new(10, 4.5, 6), origin + Vector3.new(0, 10.25, safe.Z + 5), theme.TrimColor, theme.TrimMaterial, false)
-	altar.CanQuery = false
-	decor(model, "AltarCoreCrystal", Vector3.new(3.2, 5.5, 3.2), origin + Vector3.new(0, 14.5, safe.Z + 5), theme.LightColor, Enum.Material.SmoothPlastic, 0.1)
-	decor(model, "AltarCanopyArch", Vector3.new(16, 1.8, 8), origin + Vector3.new(0, 18.5, safe.Z + 5), theme.AccentColor, theme.TrimMaterial)
-
-	local signGui = Instance.new("BillboardGui")
-	signGui.Name = "ExtractionLabel"
-	signGui.Size = UDim2.fromOffset(400, 56)
-	signGui.StudsOffset = Vector3.new(0, 9, 0)
-	signGui.MaxDistance = 110
-	signGui.Parent = altar
-	local signText = Instance.new("TextLabel")
-	signText.Size = UDim2.fromScale(1, 1)
-	signText.BackgroundTransparency = 0.25
-	signText.BackgroundColor3 = Color3.fromRGB(20, 25, 32)
-	signText.TextColor3 = theme.LightColor
-	signText.Font = Enum.Font.GothamBold
-	signText.TextSize = 16
-	signText.Text = "📦 SAFE ZONE UNPACKAGING PAD\nBring Loot & Relics Here to Unpackage"
-	signText.Parent = signGui
-
-	local extractionPrompt = Instance.new("ProximityPrompt")
-	extractionPrompt.ActionText = "Unpackage Loot & Relics"
-	extractionPrompt.ObjectText = "Floor Safe Sanctuary"
-	extractionPrompt.MaxActivationDistance = 14
-	extractionPrompt.RequiresLineOfSight = false
-	extractionPrompt.KeyboardKeyCode = Enum.KeyCode.E
-	extractionPrompt:SetAttribute("FloorExtraction", true)
-	extractionPrompt.Parent = altar
-	extractionPrompt.Triggered:Connect(function(player)
-		if _G.CombatSimulation and _G.CombatSimulation.BankHeldLoot then
-			_G.CombatSimulation.BankHeldLoot(player)
-		end
-		if _G.RelicService then
-			_G.RelicService.ExtractInFloorSafeZone(player)
-		end
-	end)
+	-- Loot and relics bank automatically anywhere inside the Sanctuary (CombatSimulation / RelicService
+	-- check the ARRIVAL zone's CanBankCargo), so the floor needs no altar or pad in the middle.
+	local halfW, halfD = safe.Width / 2, safe.Depth / 2
 
 	for _, side in { -1, 1 } do
-		part(model, "SanctuaryPillar", Vector3.new(6, 36, 6), origin + Vector3.new(side * 42, 26, safe.Z - 25), theme.TrimColor, theme.TrimMaterial)
-		decor(model, "SanctuaryPillarCap", Vector3.new(8, 3, 8), origin + Vector3.new(side * 42, 45, safe.Z - 25), theme.AccentColor, theme.TrimMaterial)
-		decor(model, "SanctuaryPillarLantern", Vector3.new(3, 4.5, 3), origin + Vector3.new(side * 42, 48.5, safe.Z - 25), theme.LightColor, Enum.Material.SmoothPlastic, 0.1)
-		part(model, "SanctuaryRearColumn", Vector3.new(5, 24, 5), origin + Vector3.new(side * 42, 20, safe.Z + 24), theme.TrimColor, theme.TrimMaterial)
-		decor(model, "SanctuarySideWall", Vector3.new(2.5, 4.5, 48), origin + Vector3.new(side * 43, 10.2, safe.Z), theme.TrimColor, theme.TrimMaterial)
-		decor(model, "SanctuaryBoundary", Vector3.new(1, 0.2, 54), origin + Vector3.new(side * 43, 8.12, safe.Z), theme.LightColor, Enum.Material.SmoothPlastic, 0.2)
+		part(model, "SanctuaryPillar", Vector3.new(6, 36, 6), origin + Vector3.new(side * (halfW - 2), 26, safe.Z - halfD + 3), theme.TrimColor, theme.TrimMaterial)
+		decor(model, "SanctuaryPillarCap", Vector3.new(8, 3, 8), origin + Vector3.new(side * (halfW - 2), 45, safe.Z - halfD + 3), theme.AccentColor, theme.TrimMaterial)
+		decor(model, "SanctuaryPillarLantern", Vector3.new(3, 4.5, 3), origin + Vector3.new(side * (halfW - 2), 48.5, safe.Z - halfD + 3), theme.LightColor, Enum.Material.SmoothPlastic, 0.1)
+		decor(model, "SanctuarySideWall", Vector3.new(2.5, 4.5, safe.Depth - 8), origin + Vector3.new(side * (halfW - 1), 10.2, safe.Z), theme.TrimColor, theme.TrimMaterial)
 	end
-	decor(model, "SanctuaryThreshold", Vector3.new(84, 0.2, 1.2), origin + Vector3.new(0, 8.12, safe.Z - 27), theme.LightColor, Enum.Material.SmoothPlastic, 0.2)
 
+	-- Phase H: a glowing square traces the ARRIVAL zone exactly (the Sanctuary's footprint), on a darker
+	-- trim band, with a gap in the front edge for the exit, framed by two small pylons.
+	local rimY = safe.Y + 0.18
+	local glowColor = theme.LightColor
+	local bandColor = theme.TrimColor:Lerp(Color3.new(0, 0, 0), 0.45)
+	local function rim(name: string, size: Vector3, at: Vector3)
+		decor(model, name .. "Band", Vector3.new(size.X + (if size.X > size.Z then 1.2 else 1.2), 0.25, size.Z + (if size.Z > size.X then 1.2 else 1.2)), origin + at - Vector3.new(0, 0.06, 0), bandColor, theme.TrimMaterial)
+		decor(model, name, size, origin + at, glowColor, Enum.Material.Neon, 0.1)
+	end
+	for _, side in { -1, 1 } do
+		rim("SanctuaryRimSide", Vector3.new(1.2, 0.35, safe.Depth), Vector3.new(side * halfW, rimY, safe.Z))
+		rim("SanctuaryRimBack", Vector3.new(halfW, 0.35, 1.2), Vector3.new(side * halfW / 2, rimY, safe.Z + halfD))
+		rim("SanctuaryRimFront", Vector3.new(halfW - 18, 0.35, 1.2), Vector3.new(side * (halfW + 18) / 2, rimY, safe.Z - halfD))
+		decor(model, "SanctuaryGatePylon", Vector3.new(2.2, 3.2, 2.2), origin + Vector3.new(side * 18, safe.Y + 1.6, safe.Z - halfD), theme.TrimColor, theme.TrimMaterial)
+		decor(model, "SanctuaryGateGem", Vector3.new(1.4, 1.4, 1.4), origin + Vector3.new(side * 18, safe.Y + 3.9, safe.Z - halfD), glowColor, Enum.Material.Neon, 0.1)
+	end
+	-- Corner beacons: a pylon with a crystal cap and a faint light column up to the skylight, so the
+	-- Sanctuary can be found from anywhere on the floor.
+	for _, sx in { -1, 1 } do
+		for _, sz in { -1, 1 } do
+			local at = Vector3.new(sx * halfW, safe.Y, safe.Z + sz * halfD)
+			decor(model, "SanctuaryBeaconPylon", Vector3.new(3, 4, 3), origin + at + Vector3.new(0, 2, 0), theme.TrimColor, theme.TrimMaterial)
+			local crystal = decor(model, "SanctuaryBeaconCrystal", Vector3.new(1.8, 2.6, 1.8), origin + at + Vector3.new(0, 5.3, 0), glowColor, Enum.Material.Neon, 0.05)
+			crystal.CFrame *= CFrame.Angles(0, math.rad(45), 0)
+			local light = Instance.new("PointLight")
+			light.Color, light.Range, light.Brightness = glowColor, 18, 1
+			light.Parent = crystal
+			local columnHeight = height - safe.Y - 6
+			local column = decor(model, "SanctuaryBeaconColumn", Vector3.new(1.5, columnHeight, 1.5), origin + at + Vector3.new(0, 6.6 + columnHeight / 2, 0), glowColor, Enum.Material.SmoothPlastic, 0.75)
+			column.CastShadow = false
+		end
+	end
+	local labelAnchor = decor(model, "SanctuaryLabelAnchor", Vector3.new(1, 1, 1), origin + Vector3.new(0, safe.Y + 9, safe.Z - halfD), glowColor, Enum.Material.SmoothPlastic, 1)
+	local sanctuaryLabel = Instance.new("BillboardGui")
+	sanctuaryLabel.Name = "SanctuaryLabel"
+	sanctuaryLabel.Size = UDim2.fromOffset(190, 34)
+	sanctuaryLabel.MaxDistance = 160
+	sanctuaryLabel.LightInfluence = 0
+	sanctuaryLabel.Parent = labelAnchor
+	local sanctuaryText = Instance.new("TextLabel")
+	sanctuaryText.Size = UDim2.fromScale(1, 1)
+	sanctuaryText.BackgroundTransparency = 1
+	sanctuaryText.Font = Enum.Font.GothamBold
+	sanctuaryText.TextScaled = true
+	sanctuaryText.TextColor3 = glowColor
+	sanctuaryText.TextStrokeTransparency = 0.4
+	sanctuaryText.Text = "SANCTUARY"
+	sanctuaryText.Parent = sanctuaryLabel
+
+	-- Phase H: the four travel stations are portals (TowerPortalKit). Each keeps its trigger named for its
+	-- action and its prompt's TowerAction attribute, so TowerController is unchanged.
+	local portalStone, portalGold = PortalKit.Palette(theme)
+	local portalGlow = {
+		PREVIOUS = theme.LightColor:Lerp(Color3.new(0, 0, 0), 0.4),
+		NEXT = theme.LightColor,
+		SELECTOR = Color3.fromRGB(255, 214, 120),
+		HUB = Color3.fromRGB(240, 244, 255),
+	}
 	for i, action in { "PREVIOUS", "NEXT", "SELECTOR", "HUB" } do
-		local pedX = (i - 2.5) * 19
-		local p = part(model, action, Vector3.new(10, 7, 4), origin + Vector3.new(pedX, 11.5, safe.Z + 20), theme.TrimColor, theme.TrimMaterial)
-		decor(model, action .. "_Trim", Vector3.new(11.2, 1.2, 5.2), origin + Vector3.new(pedX, 15.2, safe.Z + 20), theme.AccentColor, theme.TrimMaterial)
-		decor(model, action .. "_Rune", Vector3.new(7.5, 4.2, 0.3), origin + Vector3.new(pedX, 11.5, safe.Z + 17.9), theme.LightColor, Enum.Material.SmoothPlastic, 0.25)
+		local pedX = (i - 2.5) * PortalAssets.SanctuarySpacing
+		local dormant = (action == "PREVIOUS" and id == 1) or (action == "NEXT" and id == 50)
+		local _, p = PortalKit.Build(model, CFrame.new(origin + Vector3.new(pedX, safe.Y, safe.Z + 20)), {
+			Name = "TravelPortal_" .. action,
+			TriggerName = action,
+			Scale = PortalAssets.SanctuaryScale,
+			Glow = portalGlow[action],
+			Stone = portalStone,
+			Gold = portalGold,
+			StoneMaterial = theme.TrimMaterial,
+			Dormant = dormant,
+		})
 		local prompt = Instance.new("ProximityPrompt")
 		local actionText = if action == "PREVIOUS" then "Previous Floor"
 			elseif action == "NEXT" then "Next Floor"
@@ -614,7 +643,7 @@ function Builder.Build(id: number, generation: number): any
 		local bg = Instance.new("BillboardGui")
 		bg.Name = "PedestalLabel"
 		bg.Size = UDim2.fromOffset(130, 28)
-		bg.StudsOffset = Vector3.new(0, 4.5, 0)
+		bg.StudsOffset = Vector3.new(0, 6.5 * PortalAssets.SanctuaryScale / 0.8, 0)
 		bg.AlwaysOnTop = false
 		bg.MaxDistance = 50
 		bg.Parent = p
@@ -734,10 +763,10 @@ function Builder.Build(id: number, generation: number): any
 				FloorId = id,
 				RoomGeneration = generation,
 				LocalPolygonXZ = {
-					Vector2.new(-44, safe.Z - 28),
-					Vector2.new(44, safe.Z - 28),
-					Vector2.new(44, safe.Z + 28),
-					Vector2.new(-44, safe.Z + 28),
+					Vector2.new(-safe.Width / 2, safe.Z - safe.Depth / 2),
+					Vector2.new(safe.Width / 2, safe.Z - safe.Depth / 2),
+					Vector2.new(safe.Width / 2, safe.Z + safe.Depth / 2),
+					Vector2.new(-safe.Width / 2, safe.Z + safe.Depth / 2),
 				},
 				MinY = 7,
 				MaxY = 23,
