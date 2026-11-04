@@ -10,6 +10,7 @@ local Timeline = require(RS.Shared.Util.AttackTimeline)
 local TowerProgress = require(RS.Shared.Util.TowerProgress)
 local CampWaves = require(RS.Shared.Util.CampWaves)
 local TowerLayout = require(RS.Shared.Config.TowerLayout)
+local CampRoster = require(RS.Shared.Util.CampRoster)
 local Runtime = {}
 
 function Runtime.new(api: any): any
@@ -276,6 +277,65 @@ function Runtime.new(api: any): any
 		if spawned > 0 then api.Changed() end
 		return spawned
 	end
+	-- The floor's camp roster (CampRoster): which Regular type each member is (every camp holds all of
+	-- the biome's Regulars), which camps an Elite leads, and where each member stands. Created once per floor ledger; a camp's next wave is planned the
+	-- moment its last member dies, so a camp that is fighting never changes.
+	function self:Roster(floor, room, ledger)
+		if ledger.Roster then return ledger.Roster end
+		local floorSpec = TowerFloorConfig.Get(floor)
+		local layout = TowerLayout.Get(floorSpec.IndexInBiome)
+		local biome = MobCatalog.Biomes[floorSpec.BiomeIndex]
+		local campIds, upper, layoutCamps = {}, {}, {}
+		for _, camp in layout.Camps do
+			if camp.Id ~= "APEX_SANCTUM" then
+				local id = "CAMP_" .. camp.Id
+				table.insert(campIds, id)
+				upper[id] = camp.Platform ~= "Basin"
+				layoutCamps[id] = camp
+			end
+		end
+		local rng = CampRoster.Rng(CampRoster.Seed(floor, room.RoomGeneration, 0, 0))
+		local roster = {
+			Biome = biome,
+			CampIds = campIds,
+			Elites = CampRoster.AssignElites(rng, campIds, layout.EliteCount, upper, floorSpec.IndexInBiome >= 3),
+			Camps = {},
+		}
+		for index, id in campIds do
+			local camp = layoutCamps[id]
+			roster.Camps[id] = {
+				Index = index, Center = Vector3.new(camp.X, camp.Y, camp.Z), Radius = camp.Radius,
+				Types = {}, Bag = {}, Wave = 0, Offsets = {}, Rolled = true,
+				Rng = CampRoster.Rng(CampRoster.Seed(floor, room.RoomGeneration, index, 0)),
+			}
+		end
+		for slot, placement in ipairs(Config.Floors[floor]) do
+			local plan = roster.Camps[placement.CampId]
+			if plan and not plan.LeaderSlot then plan.LeaderSlot = slot end
+		end
+		ledger.Roster = roster
+		return roster
+	end
+	-- A camp member's Regular type this wave, dealt on first use from the camp's shuffled bag.
+	local function memberType(plan, slot, pool)
+		local enemyId = plan.Types[slot]
+		if not enemyId then
+			enemyId = CampRoster.DealType(plan.Rng, plan.Bag, pool)
+			plan.Types[slot] = enemyId
+		end
+		return enemyId
+	end
+	-- Where a camp member stands this wave, relative to the room origin. Rolled on first use.
+	local function memberOffset(plan, slot)
+		local offset = plan.Offsets[slot]
+		if not offset then
+			local taken = {}
+			for _, other in plan.Offsets do table.insert(taken, other) end
+			offset = CampRoster.RollOffsets(plan.Rng, plan.Radius, 1, 8, taken)[1]
+			plan.Offsets[slot] = offset
+		end
+		return plan.Center + Vector3.new(offset.X, 0, offset.Z)
+	end
 	function self:SyncRooms(now)
 		local changed = false
 		for floor, placements in pairs(Config.Floors) do
@@ -301,18 +361,51 @@ function Runtime.new(api: any): any
 					room.CombatLabeled = true
 				end
 				local effective = self:EffectivePlacements(floor, placements)
+				local roster = self:Roster(floor, room, ledger)
 				-- A camp is "alive" while any member lives (or has not been created yet).
 				local campAlive = {}
 				for slot, placement in effective do
 					local existing = ledger.Slots[slot]
 					if not existing or existing.IsAlive then campAlive[placement.CampId] = true end
 				end
+				-- A camp whose last member just died plans its next wave now: a fresh mix of Regular types,
+				-- new spots, and its Elite (if any) moves to another cleared camp.
+				for campId, plan in roster.Camps do
+					if campAlive[campId] then
+						plan.Rolled = false
+					elseif not plan.Rolled then
+						plan.Rolled = true
+						plan.Wave += 1
+						local rng = CampRoster.Rng(CampRoster.Seed(floor, room.RoomGeneration, plan.Index, plan.Wave))
+						plan.Types = {}
+						plan.Bag = {}
+						plan.Offsets = {}
+						plan.Rng = rng
+						if roster.Elites[campId] then
+							local cleared = {}
+							for otherId in roster.Camps do cleared[otherId] = not campAlive[otherId] end
+							local target = CampRoster.MoveElite(rng, campId, roster.Elites, roster.CampIds, cleared)
+							if target ~= campId then
+								roster.Elites[campId] = nil
+								roster.Elites[target] = true
+							end
+						end
+					end
+				end
 				for slot, placement in effective do
-					local e = table.clone(Config.Get(placement.EnemyId))
+					local plan = roster.Camps[placement.CampId]
+					local enemyId = placement.EnemyId
+					local localPos = Vector3.new(placement.X, placement.Y or 0, placement.Z)
+					if plan then
+						enemyId = if slot == plan.LeaderSlot and roster.Elites[placement.CampId] then roster.Biome.EliteEnemyId
+							else memberType(plan, slot, roster.Biome.RegularEnemyIds)
+						localPos = memberOffset(plan, slot)
+					end
+					local e = table.clone(Config.Get(enemyId))
 					-- Bosses and Apex Sanctum encounters are never pre-placed: each floor boss/champion is summoned strictly by a player's own kill threshold (SpawnBoss).
 					-- Camp Elites do spawn; a summoned champion is always Role BOSS, so they never count as it.
 					if e.Role == "BOSS" or placement.CampId == "CAMP_APEX_SANCTUM" then continue end
-					local floorStats = TowerFloorConfig.GetEnemyStats(floor, placement.EnemyId)
+					local floorStats = TowerFloorConfig.GetEnemyStats(floor, enemyId)
 					if floorStats then
 						e.MaxHP = floorStats.MaxHP
 						e.ATK = floorStats.ATK
@@ -355,7 +448,7 @@ function Runtime.new(api: any): any
 							ActionSequence = 0,
 							RespawnAt = 0,
 							BornAt = now,
-							LocalPosition = Vector3.new(placement.X, placement.Y or 0, placement.Z),
+							LocalPosition = localPos,
 						}
 						ledger.Slots[slot] = m
 						if e.Role == "BOSS" then ledger.BossGeneration = m.LifeGeneration end
@@ -365,7 +458,7 @@ function Runtime.new(api: any): any
 					if m.RoomGeneration ~= room.RoomGeneration then
 						m.EntityGeneration += 1
 						m.RoomGeneration = room.RoomGeneration
-						m.HomePosition = api.Navigation.Ground(room.Origin + Vector3.new(placement.X, (placement.Y or 0) + 6, placement.Z), nil, 2, 12) or room.Origin + Vector3.new(placement.X, placement.Y or 0, placement.Z)
+						m.HomePosition = api.Navigation.Ground(room.Origin + localPos + Vector3.new(0, 6, 0), nil, 2, 12) or room.Origin + localPos
 						m.Position = if m.LastOrigin then room.Origin + m.LocalPosition else m.HomePosition
 						api.Navigation.Clear(m)
 					end
@@ -378,6 +471,21 @@ function Runtime.new(api: any): any
 						m.RespawnAt = CampWaves.ScheduleRespawn(m.DiedAt, campAlive[placement.CampId] == true, now) or math.huge
 					end
 					if not m.IsAlive and now >= m.RespawnAt then
+						-- The wave's plan may give this slot a new type and a new spot. The EntityGeneration
+						-- bump below makes clients rebuild the model from the new metadata.
+						if m.EnemyId ~= e.EnemyId then
+							local cat = MobCatalog.Get(e.EnemyId)
+							m.EnemyId = e.EnemyId
+							m.SpecId = e.EnemyId
+							m.DisplayName = e.DisplayName or (cat and cat.DisplayName) or e.EnemyId
+							m.Role = e.Role
+							m.MobType = e.Role == "REGULAR" and "RING1_MOB" or "RING2_ELITE"
+							m.RingIndex = e.Role == "REGULAR" and 1 or 2
+							m.MaxHP = e.MaxHP
+							m.ATK = e.ATK
+							m.GoldReward = e.Gold
+						end
+						m.HomePosition = api.Navigation.Ground(room.Origin + localPos + Vector3.new(0, 6, 0), nil, 2, 12) or room.Origin + localPos
 						m.IsAlive = true
 						m.CurrentHP = m.MaxHP
 						m.Position = m.HomePosition
