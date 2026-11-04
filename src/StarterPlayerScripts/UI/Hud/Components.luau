@@ -830,9 +830,10 @@ function Components.SquadDrawer(props: {
 	local showCard, setShowCard = React.useState(props.Expanded)
 
 	local hasLocked = props.LockedText ~= nil
+	local collapsedWidth = stripWidth(#props.Rows, hasLocked)
 	local cardWidth = if props.Compact then 20 + (#props.Rows + (if hasLocked then 1 else 0)) * 54
 		else Components.StatusCardWidth(#props.Rows, hasLocked, props.TileWidth or Components.StatusTileMax)
-	local width = if props.Expanded then cardWidth + Components.DrawerTabWidth else stripWidth(#props.Rows, hasLocked)
+	local width = if props.Expanded then cardWidth + Components.DrawerTabWidth else collapsedWidth
 	local height = Components.DrawerHeight(props.Expanded, props.CardHeight)
 
 	React.useEffect(function()
@@ -883,7 +884,7 @@ function Components.SquadDrawer(props: {
 		BackgroundTransparency = 1,
 	}, {
 		Brackets = e(Components.Brackets, {}),
-		Above = if props.Above then e("Frame", { Name = "CurrencyRowWrapper", AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromOffset(0, -8), Size = UDim2.new(1, 0, 0, Components.CurrencyBarHeight),
+		Above = if props.Above then e("Frame", { Name = "CurrencyRowWrapper", AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromOffset(0, -8), Size = UDim2.fromOffset(collapsedWidth, Components.CurrencyBarHeight),
 			BackgroundTransparency = 1 }, { Bar = props.Above }) else nil,
 		Clip = e("Frame", { Position = UDim2.fromOffset(-CLIP_PAD, -CLIP_PAD), Size = UDim2.new(1, CLIP_PAD * 2, 1, CLIP_PAD * 2),
 			BackgroundTransparency = 1, ClipsDescendants = true }, {
@@ -904,7 +905,7 @@ function Components.SquadDrawer(props: {
 				}),
 			}) else nil,
 			Strip = if not showCard then e("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, CLIP_PAD, 1, -CLIP_PAD),
-				Size = UDim2.fromOffset(stripWidth(#props.Rows, hasLocked), STRIP_H), BackgroundColor3 = G.Base,
+				Size = UDim2.fromOffset(collapsedWidth, STRIP_H), BackgroundColor3 = G.Base,
 				BackgroundTransparency = G.BaseTransparency, BorderSizePixel = 0 }, {
 				Corner = corner(G.Radius),
 				Stroke = stroke(G.Hairline, 1, G.HairlineTransparency),
