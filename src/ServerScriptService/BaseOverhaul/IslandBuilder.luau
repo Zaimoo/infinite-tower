@@ -27,9 +27,9 @@ IslandBuilder.Config = {
 
 	-- Materials & Colors (Atmospheric Gothic Fortress Palette)
 	TopMaterial = Enum.Material.Cobblestone,
-	TopColor = Color3.fromRGB(70, 74, 80),
+	TopColor = Color3.fromRGB(78, 82, 86),
 	RimMaterial = Enum.Material.Cobblestone,
-	RimColor = Color3.fromRGB(58, 62, 68),
+	RimColor = Color3.fromRGB(62, 66, 70),
 	RockMaterial = Enum.Material.Slate,
 	RockColorUpper = Color3.fromRGB(65, 68, 72),
 	RockColorDeep = Color3.fromRGB(42, 45, 50),
@@ -115,18 +115,25 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 		})
 	end
 
-	-- 1B. Raised Modular Cobblestone Path Network (Thickness = 0.25 studs, varied grey-brown hues)
+	-- 1B. Raised Modular Cobblestone Path Network (Thickness = 0.25 studs, dark cobble center + square stone block borders)
 	local pathsFolder = Instance.new("Folder")
 	pathsFolder.Name = "CobblestonePaths"
 	pathsFolder.Parent = islandModel
 
 	local pathPalette = {
-		Color3.fromRGB(98, 95, 90),
-		Color3.fromRGB(84, 82, 78),
-		Color3.fromRGB(110, 105, 98),
-		Color3.fromRGB(91, 88, 84),
+		Color3.fromRGB(76, 80, 84),
+		Color3.fromRGB(84, 88, 92),
+		Color3.fromRGB(70, 74, 78),
+		Color3.fromRGB(80, 84, 88),
 	}
-	local curbColor = Color3.fromRGB(58, 60, 66)
+	local curbBlockPalette = {
+		Color3.fromRGB(98, 100, 104),
+		Color3.fromRGB(86, 88, 92),
+		Color3.fromRGB(108, 110, 114),
+		Color3.fromRGB(92, 94, 98),
+		Color3.fromRGB(78, 80, 84),
+	}
+	local curbColor = Color3.fromRGB(88, 90, 94)
 
 	-- Central Fountain Plaza Cobblestone Ring
 	local plazaBase = Instance.new("Part")
@@ -140,7 +147,7 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 	plazaBase.CanQuery = false
 	plazaBase.CastShadow = false
 	plazaBase.Material = Enum.Material.Cobblestone
-	plazaBase.Color = Color3.fromRGB(96, 93, 88)
+	plazaBase.Color = Color3.fromRGB(82, 86, 90)
 	plazaBase.Parent = pathsFolder
 
 	local plazaRim = Instance.new("Part")
@@ -153,7 +160,7 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 	plazaRim.CanTouch = false
 	plazaRim.CanQuery = false
 	plazaRim.CastShadow = false
-	plazaRim.Material = Enum.Material.Slate
+	plazaRim.Material = Enum.Material.Pavement
 	plazaRim.Color = curbColor
 	plazaRim.Parent = pathsFolder
 
@@ -170,31 +177,66 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 		for s = 1, segments do
 			local t = (s - 0.5) / segments
 			local pos = p0:Lerp(p1, t)
-			local jitterW = width + ((s % 2 == 0) and 0.6 or -0.4)
 			local col = pathPalette[((s - 1) % #pathPalette) + 1]
 
+			-- Center dark irregular cobblestone bed
 			makePart({
 				Name = string.format("%s_Slab_%d", name, s),
-				Size = Vector3.new(jitterW, 0.25, segLen + 0.5),
-				CFrame = CFrame.new(pos.X, 0.125, pos.Z) * lookCF,
-				Material = Enum.Material.Limestone,
+				Size = Vector3.new(width, 0.24, segLen - 0.35),
+				CFrame = CFrame.new(pos.X, 0.12, pos.Z) * lookCF,
+				Material = Enum.Material.Cobblestone,
 				Color = col,
 				Decorative = true,
 				Parent = pathsFolder,
 			})
 
-			-- Curb stones along left & right edges
-			for _, side in ipairs({ -1, 1 }) do
-				local curbOffset = lookCF.RightVector * (side * (jitterW * 0.5 + 0.6))
+			-- Transverse stone divider header band between cobblestone bays
+			if s < segments then
+				local bandPos = p0:Lerp(p1, s / segments)
 				makePart({
-					Name = string.format("%s_Curb_%d_%s", name, s, side < 0 and "L" or "R"),
-					Size = Vector3.new(1.1, 0.28, segLen * 0.92),
-					CFrame = CFrame.new(pos.X + curbOffset.X, 0.14, pos.Z + curbOffset.Z) * lookCF,
-					Material = Enum.Material.Slate,
-					Color = curbColor,
+					Name = string.format("%s_Divider_%d", name, s),
+					Size = Vector3.new(width - 0.2, 0.26, 0.75),
+					CFrame = CFrame.new(bandPos.X, 0.13, bandPos.Z) * lookCF,
+					Material = Enum.Material.Pavement,
+					Color = Color3.fromRGB(96, 98, 102),
 					Decorative = true,
 					Parent = pathsFolder,
 				})
+			end
+
+			-- Double-course square stone curb blocks flanking left & right edges
+			local subBlocks = math.max(3, math.floor(segLen / 2.6))
+			local blockLen = segLen / subBlocks
+			for b = 1, subBlocks do
+				local bt = ((s - 1) + (b - 0.5) / subBlocks) / segments
+				local bPos = p0:Lerp(p1, bt)
+				for _, side in ipairs({ -1, 1 }) do
+					-- Inner raised curb course
+					local innerOffset = lookCF.RightVector * (side * (width * 0.5 + 0.85))
+					local innerCol = curbBlockPalette[((s + b) % #curbBlockPalette) + 1]
+					makePart({
+						Name = string.format("%s_CurbInner_%d_%d_%s", name, s, b, side < 0 and "L" or "R"),
+						Size = Vector3.new(1.55, 0.32, blockLen * 0.90),
+						CFrame = CFrame.new(bPos.X + innerOffset.X, 0.16, bPos.Z + innerOffset.Z) * lookCF,
+						Material = Enum.Material.Pavement,
+						Color = innerCol,
+						Decorative = true,
+						Parent = pathsFolder,
+					})
+
+					-- Outer square paver border course
+					local outerOffset = lookCF.RightVector * (side * (width * 0.5 + 2.55))
+					local outerCol = curbBlockPalette[((s + b + 2) % #curbBlockPalette) + 1]
+					makePart({
+						Name = string.format("%s_CurbOuter_%d_%d_%s", name, s, b, side < 0 and "L" or "R"),
+						Size = Vector3.new(1.65, 0.26, blockLen * 0.88),
+						CFrame = CFrame.new(bPos.X + outerOffset.X, 0.13, bPos.Z + outerOffset.Z) * lookCF,
+						Material = Enum.Material.Pavement,
+						Color = outerCol,
+						Decorative = true,
+						Parent = pathsFolder,
+					})
+				end
 			end
 		end
 	end

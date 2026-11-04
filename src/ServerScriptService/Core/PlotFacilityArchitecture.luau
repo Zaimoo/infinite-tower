@@ -678,8 +678,6 @@ function Arch.BuildSummoning(folder: Instance, centerCF: CFrame): Part
 	end
 
 	local centerVFXSocket  = makeSocket("CenterVFXSocket", V(0, 11.5, 1.2))
-	local skyBeamBase      = makeSocket("SkyBeamBaseSocket", V(0, 25.0, -0.5))
-	local skyBeamTop       = makeSocket("SkyBeamTopSocket", V(0, 68.0, -0.5))
 	local _wallBackAnchor  = makeSocket("WallBackAnchor", V(0, 12.0, 0.0))
 	promptAnchor.Position  = V(0, 1.0, 6.0) -- World (0, 2.0, 6.0) relative to centerCF
 
@@ -709,36 +707,6 @@ function Arch.BuildSummoning(folder: Instance, centerCF: CFrame): Part
 	swirlEmitter.RotSpeed = NumberRange.new(55, 110)
 	swirlEmitter.SpreadAngle = Vector2.new(35, 35)
 	swirlEmitter.Parent = centerVFXSocket
-
-	-- Upward Volumetric Sky-Beam Column rising above the portal crown (preserving beacon column from image_882daa.jpg)
-	local volumetricShaft = cylinder(
-		model,
-		"VolumetricLightShaft",
-		5.2,
-		42.0,
-		centerCF * CFrame.new(0, 46.0, -0.5),
-		zone3RuneGlow,
-		Enum.Material.Neon,
-		false
-	)
-	volumetricShaft.Transparency = 0.88
-
-	local skyBeam = Instance.new("Beam")
-	skyBeam.Name = "VolumetricSkyColumnBeam"
-	skyBeam.Attachment0 = skyBeamBase
-	skyBeam.Attachment1 = skyBeamTop
-	skyBeam.Color = ColorSequence.new(zone4Vortex, deepAstral)
-	skyBeam.LightEmission = 1
-	skyBeam.LightInfluence = 0
-	skyBeam.Width0 = 13.0
-	skyBeam.Width1 = 17.5
-	skyBeam.FaceCamera = true
-	skyBeam.Transparency = NumberSequence.new({
-		NumberSequenceKeypoint.new(0.0, 0.42),
-		NumberSequenceKeypoint.new(0.5, 0.72),
-		NumberSequenceKeypoint.new(1.0, 1.0),
-	})
-	skyBeam.Parent = primaryRoot
 
 	-- Outward Volumetric God-Ray Beams spilling down the steps onto the courtyard floor (enabled when doors open)
 	for rayIdx = 1, 4 do
@@ -1827,7 +1795,7 @@ function Arch.EnsureFacilityPrefabs(): Folder
 	end
 
 	local existing = assetsFolder:FindFirstChild("PlotFacilities")
-	if existing and existing:GetAttribute("PrefabVersion") == 5 then
+	if existing and existing:GetAttribute("PrefabVersion") == 6 then
 		return existing :: Folder
 	end
 	if existing then
@@ -1836,7 +1804,7 @@ function Arch.EnsureFacilityPrefabs(): Folder
 
 	local prefabs = Instance.new("Folder")
 	prefabs.Name = "PlotFacilities"
-	prefabs:SetAttribute("PrefabVersion", 5)
+	prefabs:SetAttribute("PrefabVersion", 6)
 	prefabs.Parent = assetsFolder
 
 	local tempHolder = Instance.new("Folder")
