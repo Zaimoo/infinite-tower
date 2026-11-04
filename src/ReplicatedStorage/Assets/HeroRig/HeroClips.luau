@@ -430,11 +430,22 @@ do
 end
 
 -- Astrea (BOW): Constellation Judgment. She rises onto her toes, arches back and draws a long,
--- deliberate shot at the sky, then holds a wide follow-through.
+-- deliberate shot at the sky, then holds a wide follow-through. Idle is her poised stance: the
+-- bow held upright at her left side (shoulder + elbow pitch of 90 stands it vertical), the
+-- right hand relaxed low as if holding an arrow, a gentle tilt of the head.
 do
 	local p = WeaponPoses.BOW
 	local regal = merge(p.SkyAim, { Waist = { 26, -6, 0 }, Neck = { 24, 6, 0 }, LeftHip = { 20, 0, -4 }, RightHip = { -12, 0, 4 }, LeftKnee = { -10, 0, 0 }, RightKnee = { -4, 0, 0 }, RootOffset = { 0, 0.18, 0 } })
+	local poised: Pose = {
+		Waist = { 0, -6, 0 }, Neck = { -4, 6, 3 },
+		LeftShoulder = { 14, 0, -16 }, LeftElbow = { 76, 0, 0 },
+		RightShoulder = { 12, 0, 12 }, RightElbow = { 30, 0, 0 },
+		LeftHip = { 6, 0, -6 }, LeftKnee = { -8, 0, 0 }, LeftAnkle = { 2, 0, 6 },
+		RightHip = { -2, 0, 6 }, RightKnee = { -6, 0, 0 }, RightAnkle = { 8, 0, -6 },
+		RootOffset = { 0, -0.06, 0 },
+	}
 	Overrides.hero_astrea = {
+		Idle = breathe(poised, 3.6),
 		AttackSkill = signature(1.1, {
 			{ 0, p.Carry },
 			{ 0.3, regal },

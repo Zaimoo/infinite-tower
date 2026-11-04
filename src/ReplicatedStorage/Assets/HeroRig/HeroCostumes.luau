@@ -74,6 +74,8 @@ HeroCostumes.MESHES = table.freeze({
 	["rbxassetid://101701313703578"] = "",
 	-- Solaris's hair, our own: tools/make_solaris_hair_ugc.py (assets/hair/solaris_hair_ugc.blend).
 	["rbxassetid://116753377442189"] = "",
+	-- Astrea's hair, our own: tools/make_astrea_hair_ugc.py (assets/hair/astrea_hair_ugc.blend).
+	["rbxassetid://108726871571153"] = "",
 } :: { [string]: string })
 
 -- Avatar hair accessory placement: a piece centred so the accessory's HairAttachment meets
@@ -895,18 +897,75 @@ do
 end
 
 -- 12. ASTREA (7★ Marksman - Featured Astral Star-Gazer) -----------------------------------
+-- Astral archer from her reference art: very long wavy silver-blue hair with star ornaments, a
+-- halo of stars behind her head, an off-shoulder lavender gown with silver trim and a star
+-- brooch, bell sleeves, a silver belt with a star clasp, a sheer layered overskirt, a quiver at
+-- her left hip, lavender trousers and pale blue boots with gold trim. Face: our own decal from
+-- assets/faces/make_astrea_face.py. Hair: our Blender mesh (tools/make_astrea_hair_ugc.py).
 do
-	local skin, silver, dark, star, cyan = { 245, 240, 255 }, { 230, 235, 255 }, { 35, 25, 55 }, { 235, 220, 255 }, { 120, 230, 255 }
-	table.insert(COSTUMES, costume("hero_astrea", "Slim", {
-		Skin = skin, UpperTorso = dark, LowerTorso = dark, UpperArm = dark, LowerArm = dark,
-		UpperLeg = dark, LowerLeg = dark, Foot = dark,
+	local skin, hair, lavender, lilac, silver = { 238, 200, 168 }, { 200, 212, 236 }, { 170, 170, 220 }, { 196, 196, 236 }, { 214, 218, 232 }
+	local star, gold, leather, boot, glow = { 120, 190, 255 }, { 214, 176, 90 }, { 42, 38, 46 }, { 176, 196, 228 }, { 170, 220, 255 }
+	table.insert(COSTUMES, costume("hero_astrea", "Standard", {
+		Skin = skin, UpperTorso = lavender, LowerTorso = lavender, UpperArm = lavender, LowerArm = lavender, Hand = skin,
+		UpperLeg = lilac, LowerLeg = boot, Foot = boot,
 	}, {
-		piece("HairBase", "Head", { 1.24, 0.45, 1.24 }, { 0, 0.48, -0.05 }, silver),
-		piece("StarlightTiara", "Head", { 1.26, 0.2, 1.26 }, { 0, 0.4, 0 }, star, NEON),
-		piece("AstralCloak", "UpperTorso", { 2.3, 2.9, 0.35 }, { 0, -0.2, 0.7 }, dark, with(LOOSE, { Material = "Fabric" })),
-		piece("StarWingL", "UpperTorso", { 0.15, 2.8, 0.9 }, { -1.3, 0.95, 1.3 }, cyan, with(NEON, { Rotation = { 0, -20, -30 } })),
-		piece("StarWingR", "UpperTorso", { 0.15, 2.8, 0.9 }, { 1.3, 0.95, 1.3 }, cyan, with(NEON, { Rotation = { 0, 20, 30 } })),
-	}))
+		-- Hair mesh: centred on the export's bounding box and turned 180 degrees to undo the
+		-- importer's rotation.
+		piece("HairMesh", "Head", { 2.31, 5.02, 2.11 }, { -0.0118, -1.4656, 0.1972 }, hair, with(LOOSE, {
+			Rotation = { 0, 180, 0 },
+			Mesh = { MeshId = "rbxassetid://108726871571153", Scale = { 0.01, 0.01, 0.01 } },
+		})),
+		-- Star ornaments in the hair and crystal earrings
+		piece("HairStarL", "Head", { 0.08, 0.3, 0.3 }, { -0.62, 0.32, -0.15 }, star, with(NEON, { Rotation = { 45, 0, 0 } })),
+		piece("HairStarR", "Head", { 0.08, 0.3, 0.3 }, { 0.62, 0.32, -0.15 }, star, with(NEON, { Rotation = { 45, 0, 0 } })),
+		piece("EarringL", "Head", { 0.06, 0.2, 0.06 }, { -0.6, -0.3, -0.1 }, glow, with(LOOSE, NEON)),
+		piece("EarringR", "Head", { 0.06, 0.2, 0.06 }, { 0.6, -0.3, -0.1 }, glow, with(LOOSE, NEON)),
+		-- Halo of stars behind her head
+		piece("HaloStar1", "UpperTorso", { 0.14, 0.14, 0.14 }, { -0.95, 1.95, 0.75 }, glow, with(LOOSE, NEON, { Shape = "Ball" })),
+		piece("HaloStar2", "UpperTorso", { 0.14, 0.14, 0.14 }, { -0.7, 2.45, 0.75 }, glow, with(LOOSE, NEON, { Shape = "Ball" })),
+		piece("HaloStar3", "UpperTorso", { 0.14, 0.14, 0.14 }, { -0.25, 2.72, 0.75 }, glow, with(LOOSE, NEON, { Shape = "Ball" })),
+		piece("HaloStar4", "UpperTorso", { 0.14, 0.14, 0.14 }, { 0.25, 2.72, 0.75 }, glow, with(LOOSE, NEON, { Shape = "Ball" })),
+		piece("HaloStar5", "UpperTorso", { 0.14, 0.14, 0.14 }, { 0.7, 2.45, 0.75 }, glow, with(LOOSE, NEON, { Shape = "Ball" })),
+		piece("HaloStar6", "UpperTorso", { 0.14, 0.14, 0.14 }, { 0.95, 1.95, 0.75 }, glow, with(LOOSE, NEON, { Shape = "Ball" })),
+		piece("HaloCrown", "UpperTorso", { 0.06, 0.5, 0.5 }, { 0, 3.05, 0.75 }, star, with(LOOSE, NEON, { Rotation = { 45, 0, 0 } })),
+		-- Off-shoulder bodice: bare shoulders, silver neckline, star brooch, silver seams
+		piece("BareShoulders", "UpperTorso", { 2.02, 0.26, 1.02 }, { 0, 0.68, 0 }, skin),
+		piece("NecklineTrim", "UpperTorso", { 2.06, 0.08, 1.06 }, { 0, 0.52, 0 }, silver, METAL),
+		piece("StarBrooch", "UpperTorso", { 0.04, 0.3, 0.3 }, { 0, 0.32, -0.53 }, star, with(NEON, { Rotation = { 0, 90, 45 } })),
+		piece("SeamL", "UpperTorso", { 0.05, 0.8, 0.05 }, { -0.3, -0.2, -0.52 }, silver, METAL),
+		piece("SeamR", "UpperTorso", { 0.05, 0.8, 0.05 }, { 0.3, -0.2, -0.52 }, silver, METAL),
+		-- Arms: bare shoulder caps, silver bands, flared bell sleeves with silver hems
+		piece("ShoulderCapL", "LeftUpperArm", { 1.02, 0.3, 1.02 }, { 0, 0.42, 0 }, skin),
+		piece("ShoulderCapR", "RightUpperArm", { 1.02, 0.3, 1.02 }, { 0, 0.42, 0 }, skin),
+		piece("ArmBandL", "LeftUpperArm", { 1.06, 0.1, 1.06 }, { 0, 0.24, 0 }, silver, METAL),
+		piece("ArmBandR", "RightUpperArm", { 1.06, 0.1, 1.06 }, { 0, 0.24, 0 }, silver, METAL),
+		piece("BellSleeveL", "LeftLowerArm", { 1.35, 0.85, 1.35 }, { 0, 0.05, 0 }, lilac, with(LOOSE, { Material = "Fabric" })),
+		piece("BellSleeveR", "RightLowerArm", { 1.35, 0.85, 1.35 }, { 0, 0.05, 0 }, lilac, with(LOOSE, { Material = "Fabric" })),
+		piece("SleeveHemL", "LeftLowerArm", { 1.38, 0.06, 1.38 }, { 0, -0.36, 0 }, silver, with(LOOSE, METAL)),
+		piece("SleeveHemR", "RightLowerArm", { 1.38, 0.06, 1.38 }, { 0, -0.36, 0 }, silver, with(LOOSE, METAL)),
+		-- Silver belt with a star clasp
+		piece("Belt", "LowerTorso", { 2.06, 0.18, 1.06 }, { 0, 0.1, 0 }, silver, METAL),
+		piece("StarClasp", "LowerTorso", { 0.04, 0.26, 0.26 }, { 0.4, 0.1, -0.55 }, star, with(NEON, { Rotation = { 0, 90, 45 } })),
+		-- Sheer layered overskirt: open front panels, a wrap drape, a long back
+		piece("OverskirtL", "LowerTorso", { 0.75, 1.9, 0.06 }, { -0.65, -1.05, -0.56 }, lilac, with(LOOSE, { Material = "Glass" })),
+		piece("OverskirtR", "LowerTorso", { 0.75, 1.9, 0.06 }, { 0.65, -1.05, -0.56 }, lilac, with(LOOSE, { Material = "Glass" })),
+		piece("WrapDrape", "LowerTorso", { 1.2, 1.0, 0.07 }, { 0.15, -0.55, -0.58 }, lavender, with(LOOSE, { Material = "Fabric", Rotation = { 0, 0, -12 } })),
+		piece("SkirtBack", "LowerTorso", { 2.2, 2.2, 0.1 }, { 0, -1.2, 0.6 }, lavender, with(LOOSE, { Material = "Fabric", Rotation = { -8, 0, 0 } })),
+		piece("HemL", "LowerTorso", { 0.75, 0.06, 0.07 }, { -0.65, -2.0, -0.57 }, silver, with(LOOSE, METAL)),
+		piece("HemR", "LowerTorso", { 0.75, 0.06, 0.07 }, { 0.65, -2.0, -0.57 }, silver, with(LOOSE, METAL)),
+		-- Quiver at her left hip with a gold rim and glowing crystal fletching
+		piece("Quiver", "LowerTorso", { 0.4, 1.4, 0.4 }, { -1.2, -0.45, 0.2 }, leather, with(LOOSE, { Shape = "Cylinder", Rotation = { 0, 0, 80 } })),
+		piece("QuiverRim", "LowerTorso", { 0.44, 0.1, 0.44 }, { -1.24, 0.25, 0.2 }, gold, with(LOOSE, METAL, { Rotation = { 0, 0, -10 } })),
+		piece("FletchA", "LowerTorso", { 0.06, 0.32, 0.18 }, { -1.22, 0.45, 0.14 }, glow, with(LOOSE, NEON)),
+		piece("FletchB", "LowerTorso", { 0.06, 0.32, 0.18 }, { -1.28, 0.42, 0.28 }, glow, with(LOOSE, NEON)),
+		-- Boots: gold V trim and cuff, gold soles
+		piece("BootCuffL", "LeftLowerLeg", { 1.08, 0.1, 1.08 }, { 0, 0.32, 0 }, gold, METAL),
+		piece("BootCuffR", "RightLowerLeg", { 1.08, 0.1, 1.08 }, { 0, 0.32, 0 }, gold, METAL),
+		piece("BootStarL", "LeftLowerLeg", { 0.22, 0.22, 0.04 }, { 0, 0.05, -0.54 }, gold, with(METAL, { Rotation = { 0, 0, 45 } })),
+		piece("BootStarR", "RightLowerLeg", { 0.22, 0.22, 0.04 }, { 0, 0.05, -0.54 }, gold, with(METAL, { Rotation = { 0, 0, 45 } })),
+		piece("BootSoleL", "LeftFoot", { 1.1, 0.07, 1.28 }, { 0, -0.13, -0.08 }, gold, METAL),
+		piece("BootSoleR", "RightFoot", { 1.1, 0.07, 1.28 }, { 0, -0.13, -0.08 }, gold, METAL),
+	}, "rbxassetid://139763198478294"))
 end
 
 HeroCostumes.List = table.freeze(COSTUMES)
