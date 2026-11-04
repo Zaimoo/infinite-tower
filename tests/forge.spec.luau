@@ -94,6 +94,23 @@ test("Every catalog and banner artifact belongs to a live weapon type", function
 	end
 end)
 
+test("All 42 master catalog weapons across 6 archetypes are registered with valid metadata", function()
+	local countsByType: { [string]: number } = {}
+	local totalSeeds = 0
+	for id, seed in ArtifactCatalog.Seeds do
+		totalSeeds += 1
+		countsByType[seed.Type] = (countsByType[seed.Type] or 0) + 1
+		assert(seed.DisplayName and #seed.DisplayName > 0, id .. " missing DisplayName")
+		assert(seed.Description and #seed.Description > 0, id .. " missing Description")
+		assert(seed.DefaultStar >= 1 and seed.DefaultStar <= 7, id .. " invalid DefaultStar")
+		assert(seed.ModelAssetId and #seed.ModelAssetId > 0, id .. " missing ModelAssetId")
+	end
+	assertEqual(totalSeeds, 42, "Master catalog must have exactly 42 weapons")
+	for _role, weaponType in ArtifactCatalog.ArchetypeWeaponType do
+		assertEqual(countsByType[weaponType], 7, string.format("Weapon type %s must have exactly 7 weapons", weaponType))
+	end
+end)
+
 -- Star progression replaces enhancement; named templates cannot bypass the formula.
 test("Mythical power and speed are inherent and ignore enhancement fields",function()
  for _,id in {"art_blade_of_the_rift","art_iron_broadsword","art_crystal_greatbow"} do
