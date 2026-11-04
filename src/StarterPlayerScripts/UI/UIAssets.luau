@@ -8,6 +8,8 @@
 local UIAssets = {}
 
 UIAssets.Images = table.freeze({
+	-- Backpack materials
+	PromotionStone = "rbxassetid://78914267684294",
 	-- Summon reveal
 	RevealRays = "", -- 1024² additive sunburst, white on transparent; tinted by rarity and spun.
 	RevealGlow = "", -- 512² soft radial glow, white centre to transparent edge.

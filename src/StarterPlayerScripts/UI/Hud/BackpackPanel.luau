@@ -1,6 +1,7 @@
 --!strict
 -- The Backpack lives in the Phase 5 HUD overlay and reads the existing profile store.
 local ContextActionService = game:GetService("ContextActionService")
+local ContentProvider = game:GetService("ContentProvider")
 local GuiService = game:GetService("GuiService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
@@ -12,6 +13,7 @@ local Components = require(script.Parent.Components)
 local Model = require(script.Parent.BackpackModel)
 local Portrait = require(script.Parent.Portrait)
 local ArtifactPreview = require(script.Parent.Parent.ArtifactPreview)
+local UIAssets = require(script.Parent.Parent.UIAssets)
 local Store = require(script.Parent.Store)
 
 type Tab = Model.Tab
@@ -26,6 +28,7 @@ local MUTED = Grimoire.Text.Muted
 local TABS: { Tab } = { "Artifacts", "Heroes", "Materials" }
 local CLOSE_ACTION = "InfiniteTowersBackpackBack"
 local EMPTY = { Artifacts = "No artifacts owned yet.", Heroes = "No heroes owned yet.", Materials = "No materials owned yet." }
+local PROMOTION_STONE_IMAGE = UIAssets.Images.PromotionStone
 
 local lastTab: Tab = "Artifacts"
 
@@ -64,12 +67,38 @@ local function Weapon(props: { TemplateId: string, Size: number })
 	return e("Frame", { ref = host, Size = UDim2.fromOffset(props.Size, props.Size), BackgroundTransparency = 1 })
 end
 
+local function PromotionStoneIcon(props: { Size: number, Fallback: string })
+	local imageLoaded, setImageLoaded = React.useState(false)
+	React.useEffect(function()
+		local function update()
+			setImageLoaded(ContentProvider:GetAssetFetchStatus(PROMOTION_STONE_IMAGE) == Enum.AssetFetchStatus.Success)
+		end
+		local connection = ContentProvider:GetAssetFetchStatusChangedSignal(PROMOTION_STONE_IMAGE):Connect(update)
+		update()
+		return function() connection:Disconnect() end
+	end, {})
+	local size = UDim2.fromOffset(props.Size, props.Size)
+	return e("Frame", { Size = size, BackgroundTransparency = 1 }, {
+		Fallback = if imageLoaded then nil else Components.IconAt(props.Fallback, props.Size, {}),
+		Icon = e("ImageLabel", {
+			Name = "PromotionStoneIcon",
+			Image = PROMOTION_STONE_IMAGE,
+			Size = size,
+			ScaleType = Enum.ScaleType.Fit,
+			BackgroundTransparency = 1,
+		}),
+	})
+end
+
 local function illustration(row: Row, size: number)
 	if row.TemplateId then
 		return e(Portrait, { TemplateId = row.TemplateId, Archetype = row.Archetype, Stars = row.Stars, Size = UDim2.fromOffset(size, size) })
 	end
 	if row.Icon == "Forge" and row.ArtifactTemplateId then
 		return e(Weapon, { TemplateId = row.ArtifactTemplateId, Size = size })
+	end
+	if row.Id == "PromotionStone" and PROMOTION_STONE_IMAGE ~= "" then
+		return e(PromotionStoneIcon, { Size = size, Fallback = row.Icon })
 	end
 	return Components.IconAt(row.Icon, size, {})
 end
