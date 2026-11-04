@@ -228,6 +228,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 	local _, setTick = React.useState(0)
 	local screen, setScreen = React.useState(props.Root.AbsoluteSize)
 	local indexOpen, setIndexOpen = React.useState(false)
+	local indexInitialMode, setIndexInitialMode = React.useState("HEROES" :: "HEROES" | "WEAPONS")
 	local facilityOpen, setFacilityOpen = React.useState(nil :: string?)
 	local shopOpen, setShopOpen = React.useState(false)
 	local backpackOpen, setBackpackOpen = React.useState(false)
@@ -285,10 +286,18 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 	end, { backpackOpen, closeBackpack })
 
 	React.useEffect(function()
-		_G.OpenHeroIndex = function()
+		_G.OpenHeroIndex = function(mode: ("HEROES" | "WEAPONS")?)
 			call("OpenMasterModal", "NONE")
+			if mode == "WEAPONS" or mode == "HEROES" then
+				setIndexInitialMode(mode)
+			end
 			setIndexOpen(true)
 			setNewHeroes(0)
+		end
+		_G.OpenWeaponIndex = function()
+			call("OpenMasterModal", "NONE")
+			setIndexInitialMode("WEAPONS")
+			setIndexOpen(true)
 		end
 		_G.IsHeroIndexOpen = function() return indexOpen or facilityOpen ~= nil or shopOpen end
 		_G.CloseHeroIndex = function()
@@ -589,7 +598,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 			OnClose = function() setFacilityOpen(nil) end }) else nil,
 		Shop = if shopOpen then e(ShopPanel, { Profile = profile, Width = screen.X, OnClose = function() setShopOpen(false) end }) else nil,
 		TowerEventPopup = e(TowerEventHud.Popup, { Blocked = facilityOpen ~= nil or shopOpen or indexOpen }),
-		Index = if indexOpen then e(HeroIndex, { Profile = profile, Width = screen.X, OnClose = function() setIndexOpen(false) end }) else nil,
+		Index = if indexOpen then e(HeroIndex, { Profile = profile, Width = screen.X, InitialMode = indexInitialMode, OnClose = function() setIndexOpen(false) end }) else nil,
 		Backpack = if backpackOpen then e(BackpackPanel, {
 			Width = screen.X, Height = screen.Y, OnClose = closeBackpack, ReturnFocus = returnBackpackFocus,
 		}) else nil,
