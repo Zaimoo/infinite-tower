@@ -24,8 +24,35 @@ local HeroClips = {}
 
 HeroClips.WEAPON_TYPES = table.freeze({ "UNARMED", "BOW", "SWORD_SHIELD", "DAGGERS", "AXE", "STAFF", "TOME" })
 HeroClips.WEAPON_STATES = table.freeze({ "Idle", "Move", "AttackBasic", "AttackSpecial", "AttackSkill" })
-HeroClips.SHARED_STATES = table.freeze({ "Hit", "Coma", "Carry", "Sleep", "Labor" })
-HeroClips.LOCOMOTION_STATES = table.freeze({ Idle = true, Move = true, Coma = true, Carry = true, Sleep = true, Labor = true })
+HeroClips.SHARED_STATES = table.freeze({
+	"Hit",
+	"Coma",
+	"Carry",
+	"Sleep",
+	"Labor",
+	"MarketHawker",
+	"MarketStock",
+	"MarketCarry",
+	"MarketAppraiser",
+	"MarketLedger",
+	"TrainingKata",
+	"TrainingCoach",
+})
+HeroClips.LOCOMOTION_STATES = table.freeze({
+	Idle = true,
+	Move = true,
+	Coma = true,
+	Carry = true,
+	Sleep = true,
+	Labor = true,
+	MarketHawker = true,
+	MarketStock = true,
+	MarketCarry = true,
+	MarketAppraiser = true,
+	MarketLedger = true,
+	TrainingKata = true,
+	TrainingCoach = true,
+})
 
 -- Joints an action may drive while the hero is moving (legs keep walking).
 HeroClips.UPPER_BODY = table.freeze({
@@ -351,6 +378,195 @@ local Shared: { [string]: Clip } = {
 		{ 0.5, merge(STANCE, { Waist = { -22, 0, 0 }, RightShoulder = { 55, 0, 0 }, RightElbow = { 20, 0, 0 }, LeftShoulder = { 50, 0, 0 }, LeftElbow = { 25, 0, 0 } }) },
 		{ 1, merge(STANCE, { Waist = { -10, 0, 0 }, RightShoulder = { 130, 0, 0 }, RightElbow = { 60, 0, 0 }, LeftShoulder = { 120, 0, 0 }, LeftElbow = { 70, 0, 0 } }) },
 	}),
+	-- Market Slot 1 (Bazaar Hawker): beckons shoppers and sweeps across counter wares.
+	MarketHawker = (function(): Clip
+		local hawkerBase = merge(STANCE, {
+			Waist = { -4, 8, 0 }, Neck = { 2, -6, 0 },
+			LeftShoulder = { 28, -12, -10 }, LeftElbow = { 65, 0, 0 },
+			RightShoulder = { 35, 10, 12 }, RightElbow = { 55, 0, 0 },
+		})
+		return clip(2.6, true, {
+			{ 0, hawkerBase },
+			{ 0.28, merge(STANCE, {
+				Waist = { 4, -14, 0 }, Neck = { 6, -12, 0 },
+				LeftShoulder = { 95, -22, -8 }, LeftElbow = { 115, 0, 0 },
+				RightShoulder = { 138, 12, 24 }, RightElbow = { 25, 0, 0 },
+				RootOffset = { 0, 0.05, 0 },
+			}) },
+			{ 0.56, merge(STANCE, {
+				Waist = { -10, 12, 0 }, Neck = { -4, 10, 0 },
+				LeftShoulder = { 68, -28, -22 }, LeftElbow = { 20, 0, 0 },
+				RightShoulder = { 72, 26, 22 }, RightElbow = { 18, 0, 0 },
+				RootOffset = { 0, -0.04, 0 },
+			}) },
+			{ 0.80, merge(STANCE, {
+				Waist = { -6, -6, 0 }, Neck = { -8, -4, 0 },
+				LeftShoulder = { 22, -10, -12 }, LeftElbow = { 70, 0, 0 },
+				RightShoulder = { 62, -14, 16 }, RightElbow = { 35, 0, 0 },
+			}) },
+			{ 1, hawkerBase },
+		})
+	end)(),
+	-- Market Slot 2 (Crate Stockist): scoops bundles, lifts onto the counter, straightens stack.
+	MarketStock = (function(): Clip
+		local stockBase = merge(STANCE, {
+			Waist = { -8, 0, 0 }, Neck = { -8, 0, 0 },
+			LeftShoulder = { 46, -10, -8 }, LeftElbow = { 62, 0, 0 },
+			RightShoulder = { 46, 10, 8 }, RightElbow = { 62, 0, 0 },
+		})
+		return clip(2.2, true, {
+			{ 0, stockBase },
+			{ 0.25, merge(STANCE, {
+				Waist = { -22, -8, 0 }, Neck = { -14, -6, 0 },
+				LeftHip = { 24, 0, -4 }, RightHip = { 18, 0, 4 },
+				LeftKnee = { -34, 0, 0 }, RightKnee = { -30, 0, 0 },
+				LeftShoulder = { 58, -6, -6 }, LeftElbow = { 40, 0, 0 },
+				RightShoulder = { 58, 6, 6 }, RightElbow = { 40, 0, 0 },
+				RootOffset = { 0, -0.26, 0 },
+			}) },
+			{ 0.55, merge(STANCE, {
+				Waist = { -6, 6, 0 }, Neck = { -4, 6, 0 },
+				LeftShoulder = { 84, -8, -10 }, LeftElbow = { 28, 0, 0 },
+				RightShoulder = { 86, 8, 10 }, RightElbow = { 24, 0, 0 },
+				RootOffset = { 0, 0.03, 0 },
+			}) },
+			{ 0.78, merge(STANCE, {
+				Waist = { -12, 10, 0 }, Neck = { -10, 8, 0 },
+				LeftShoulder = { 64, -18, -12 }, LeftElbow = { 48, 0, 0 },
+				RightShoulder = { 70, -10, 14 }, RightElbow = { 44, 0, 0 },
+			}) },
+			{ 1, stockBase },
+		})
+	end)(),
+	-- Market Slot 2 hauling walk: chest-height two-handed crate carry with walking legs.
+	MarketCarry = walk(merge(STANCE, {
+		Waist = { -6, 0, 0 }, Neck = { -4, 0, 0 },
+		LeftShoulder = { 82, -16, -6 }, LeftElbow = { 62, 0, 0 },
+		RightShoulder = { 82, 16, 6 }, RightElbow = { 62, 0, 0 },
+	})),
+	-- Market Slot 3 (Relic Appraiser): lifts artifact toward the light, examines, polishes.
+	MarketAppraiser = (function(): Clip
+		local appraiseBase = merge(STANCE, {
+			Waist = { -4, -6, 0 }, Neck = { -10, 8, 0 },
+			LeftShoulder = { 48, -16, -8 }, LeftElbow = { 78, 0, 0 },
+			RightShoulder = { 34, 14, 10 }, RightElbow = { 68, 0, 0 },
+		})
+		return clip(3.0, true, {
+			{ 0, appraiseBase },
+			{ 0.30, merge(STANCE, {
+				Waist = { 4, -10, 0 }, Neck = { 8, 14, -8 },
+				LeftShoulder = { 92, -14, -6 }, LeftElbow = { 62, 0, 0 },
+				RightShoulder = { 42, 12, 12 }, RightElbow = { 82, 0, 0 },
+				RootOffset = { 0, 0.03, 0 },
+			}) },
+			{ 0.62, merge(STANCE, {
+				Waist = { -8, 4, 0 }, Neck = { -14, 4, 6 },
+				LeftShoulder = { 56, -18, -8 }, LeftElbow = { 74, 0, 0 },
+				RightShoulder = { 66, 22, -6 }, RightElbow = { 72, 0, 0 },
+			}) },
+			{ 0.84, merge(STANCE, {
+				Waist = { -2, -4, 0 }, Neck = { -18, 6, 0 },
+				LeftShoulder = { 50, -16, -8 }, LeftElbow = { 76, 0, 0 },
+				RightShoulder = { 38, 16, 8 }, RightElbow = { 64, 0, 0 },
+			}) },
+			{ 1, appraiseBase },
+		})
+	end)(),
+	-- Market Slot 4 (Quartermaster Ledger): holds open book in left arm, tallies & scribes.
+	MarketLedger = (function(): Clip
+		local ledgerBase = merge(STANCE, {
+			Waist = { -6, -4, 0 }, Neck = { -14, 6, 0 },
+			LeftShoulder = { 38, -18, -6 }, LeftElbow = { 82, 0, 0 },
+			RightShoulder = { 44, 18, -4 }, RightElbow = { 76, 0, 0 },
+		})
+		return clip(2.7, true, {
+			{ 0, ledgerBase },
+			{ 0.24, merge(STANCE, {
+				Waist = { 2, 10, 0 }, Neck = { 4, 14, 0 },
+				LeftShoulder = { 36, -18, -6 }, LeftElbow = { 84, 0, 0 },
+				RightShoulder = { 78, -6, 10 }, RightElbow = { 28, 0, 0 },
+			}) },
+			{ 0.52, merge(STANCE, {
+				Waist = { -8, -6, 0 }, Neck = { -16, 8, 0 },
+				LeftShoulder = { 40, -18, -6 }, LeftElbow = { 80, 0, 0 },
+				RightShoulder = { 52, 26, -10 }, RightElbow = { 86, 0, 0 },
+			}) },
+			{ 0.74, merge(STANCE, {
+				Waist = { -8, -2, 0 }, Neck = { -16, 2, 0 },
+				LeftShoulder = { 40, -18, -6 }, LeftElbow = { 80, 0, 0 },
+				RightShoulder = { 48, 12, 2 }, RightElbow = { 78, 0, 0 },
+			}) },
+			{ 1, ledgerBase },
+		})
+	end)(),
+	-- Training Slot 3 (Martial Kata): horse-stance ward, lunging strike, crescent overhead block.
+	TrainingKata = (function(): Clip
+		local kataBase = merge(ATTACK_STANCE, {
+			Waist = { -4, -12, 0 }, Neck = { 0, 12, 0 },
+			LeftShoulder = { 54, -14, -12 }, LeftElbow = { 78, 0, 0 },
+			RightShoulder = { 38, 12, 14 }, RightElbow = { 92, 0, 0 },
+		})
+		return clip(2.8, true, {
+			{ 0, kataBase },
+			{ 0.25, merge(ATTACK_STANCE, {
+				Waist = { -8, 22, 0 }, Neck = { -2, -18, 0 },
+				LeftHip = { 28, 0, -14 }, RightHip = { 24, 0, 14 },
+				LeftKnee = { -44, 0, 0 }, RightKnee = { -42, 0, 0 },
+				LeftAnkle = { 16, 0, 0 }, RightAnkle = { 16, 0, 0 },
+				LeftShoulder = { 76, -24, -18 }, LeftElbow = { 42, 0, 0 },
+				RightShoulder = { 24, 20, 22 }, RightElbow = { 105, 0, 0 },
+				RootOffset = { 0, -0.32, 0 },
+			}) },
+			{ 0.55, merge(ATTACK_STANCE, {
+				Waist = { -16, -26, 0 }, Neck = { 4, 22, 0 },
+				LeftHip = { 36, 0, -8 }, RightHip = { -18, 0, 8 },
+				LeftKnee = { -46, 0, 0 }, RightKnee = { -16, 0, 0 },
+				LeftAnkle = { 12, 0, 0 }, RightAnkle = { 28, 0, 0 },
+				LeftShoulder = { 28, -10, -20 }, LeftElbow = { 88, 0, 0 },
+				RightShoulder = { 92, -8, -4 }, RightElbow = { 8, 0, 0 },
+				RootOffset = { 0, -0.24, -0.18 },
+			}) },
+			{ 0.80, merge(ATTACK_STANCE, {
+				Waist = { 6, 8, 0 }, Neck = { 6, -6, 0 },
+				LeftHip = { 16, 0, -6 }, RightHip = { -10, 0, 6 },
+				LeftKnee = { -20, 0, 0 }, RightKnee = { -18, 0, 0 },
+				LeftAnkle = { 6, 0, 0 }, RightAnkle = { 20, 0, 0 },
+				LeftShoulder = { 138, 0, -18 }, LeftElbow = { 34, 0, 0 },
+				RightShoulder = { 68, 16, 18 }, RightElbow = { 56, 0, 0 },
+				RootOffset = { 0, -0.06, 0 },
+			}) },
+			{ 1, kataBase },
+		})
+	end)(),
+	-- Training Slot 4 (Drill Sergeant): points cadence, surveys sparring circle, rallies fist-to-palm.
+	TrainingCoach = (function(): Clip
+		local coachBase = merge(STANCE, {
+			Waist = { 4, -8, 0 }, Neck = { 2, 10, 0 },
+			LeftShoulder = { -8, 12, -16 }, LeftElbow = { 58, 0, 0 },
+			RightShoulder = { 22, 8, 12 }, RightElbow = { 64, 0, 0 },
+		})
+		return clip(2.5, true, {
+			{ 0, coachBase },
+			{ 0.28, merge(STANCE, {
+				Waist = { -4, -18, 0 }, Neck = { 2, 16, 0 },
+				LeftShoulder = { -10, 14, -18 }, LeftElbow = { 62, 0, 0 },
+				RightShoulder = { 94, -6, 6 }, RightElbow = { 6, 0, 0 },
+				RootOffset = { 0, 0.04, 0 },
+			}) },
+			{ 0.56, merge(STANCE, {
+				Waist = { 4, 16, 0 }, Neck = { 4, -14, 0 },
+				LeftShoulder = { 46, -12, -10 }, LeftElbow = { 68, 0, 0 },
+				RightShoulder = { 62, 18, 14 }, RightElbow = { 52, 0, 0 },
+			}) },
+			{ 0.78, merge(STANCE, {
+				Waist = { -6, 0, 0 }, Neck = { -4, 0, 0 },
+				LeftShoulder = { 58, -22, -6 }, LeftElbow = { 76, 0, 0 },
+				RightShoulder = { 60, 22, 6 }, RightElbow = { 78, 0, 0 },
+				RootOffset = { 0, -0.04, 0 },
+			}) },
+			{ 1, coachBase },
+		})
+	end)(),
 }
 
 -- Attack markers -----------------------------------------------------------------------------

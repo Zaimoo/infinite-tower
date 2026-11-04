@@ -124,57 +124,73 @@ function PlotManager.RefreshPlotVisuals(player: Player)
 		workersContainer.Parent = plotModel
 	end
 
-	local assignedUUIDs: { string } = if guardPost and type(guardPost.AssignedHeroUUIDs) == "table"
-		then guardPost.AssignedHeroUUIDs
-		else {}
 	local heroes = profile.Heroes or {}
 	local artifacts = profile.Artifacts or {}
 	local keepNames: { [string]: boolean } = {}
 
-	for slotIndex, uuid in ipairs(assignedUUIDs) do
-		local hero = heroes[uuid]
-		if not hero then
-			continue
+	local function setAttrIfChanged(inst: Instance, attrName: string, attrValue: any)
+		if inst:GetAttribute(attrName) ~= attrValue then
+			inst:SetAttribute(attrName, attrValue)
 		end
-		local childName = "Worker_" .. tostring(uuid)
-		keepNames[childName] = true
+	end
 
-		local entry = workersContainer:FindFirstChild(childName)
-		if not entry or not entry:IsA("Configuration") then
-			if entry then
-				entry:Destroy()
+	local function syncFacilityWorkers(facilityName: string, assignedList: any)
+		if type(assignedList) ~= "table" then
+			return
+		end
+		for slotIndex, uuid in ipairs(assignedList) do
+			local hero = heroes[uuid]
+			if not hero then
+				continue
 			end
-			local created = Instance.new("Configuration")
-			created.Name = childName
-			entry = created
-		end
+			local childName = "Worker_" .. tostring(uuid)
+			keepNames[childName] = true
 
-		local seed = HeroCatalog.Seeds[hero.TemplateId]
-		local archetype = hero.Archetype or (seed and seed.Archetype) or "Vanguard"
-		local rarity = hero.Rarity or HeroCatalog.RarityOf(hero.TemplateId)
-		local artUUID = hero.EquippedArtifactUUID
-		local artifact = if artUUID and artUUID ~= "" then artifacts[artUUID] else nil
-		local artifactId = if artifact and type(artifact.TemplateId) == "string" then artifact.TemplateId else ""
-		local artifactType = if artifact and type(artifact.Type) == "string"
-			then artifact.Type
-			else OutskirtsRules.DefaultWeaponForArchetype(archetype)
-		local artifactRarity = if artifact and type(artifact.Rarity) == "number" then artifact.Rarity else 1
+			local entry = workersContainer:FindFirstChild(childName)
+			if not entry or not entry:IsA("Configuration") then
+				if entry then
+					entry:Destroy()
+				end
+				local created = Instance.new("Configuration")
+				created.Name = childName
+				entry = created
+			end
 
-		entry:SetAttribute("Facility", "GuardPost")
-		entry:SetAttribute("Slot", slotIndex)
-		entry:SetAttribute("UUID", tostring(uuid))
-		entry:SetAttribute("TemplateId", tostring(hero.TemplateId or "hero_han"))
-		entry:SetAttribute("Archetype", tostring(archetype))
-		entry:SetAttribute("Rarity", rarity)
-		entry:SetAttribute("Stars", hero.Stars or 1)
-		entry:SetAttribute("Level", hero.Level or 1)
-		entry:SetAttribute("EquippedArtifactId", artifactId)
-		entry:SetAttribute("EquippedArtifactType", artifactType)
-		entry:SetAttribute("EquippedArtifactRarity", artifactRarity)
-		entry:SetAttribute("ComaUntilTimestamp", hero.ComaUntilTimestamp or 0)
-		if entry.Parent ~= workersContainer then
-			entry.Parent = workersContainer
+			local seed = HeroCatalog.Seeds[hero.TemplateId]
+			local archetype = hero.Archetype or (seed and seed.Archetype) or "Vanguard"
+			local rarity = hero.Rarity or HeroCatalog.RarityOf(hero.TemplateId)
+			local artUUID = hero.EquippedArtifactUUID
+			local artifact = if artUUID and artUUID ~= "" then artifacts[artUUID] else nil
+			local artifactId = if artifact and type(artifact.TemplateId) == "string" then artifact.TemplateId else ""
+			local artifactType = if artifact and type(artifact.Type) == "string"
+				then artifact.Type
+				else OutskirtsRules.DefaultWeaponForArchetype(archetype)
+			local artifactRarity = if artifact and type(artifact.Rarity) == "number" then artifact.Rarity else 1
+
+			setAttrIfChanged(entry, "Facility", facilityName)
+			setAttrIfChanged(entry, "Slot", slotIndex)
+			setAttrIfChanged(entry, "UUID", tostring(uuid))
+			setAttrIfChanged(entry, "TemplateId", tostring(hero.TemplateId or "hero_han"))
+			setAttrIfChanged(entry, "Archetype", tostring(archetype))
+			setAttrIfChanged(entry, "Rarity", rarity)
+			setAttrIfChanged(entry, "Stars", hero.Stars or 1)
+			setAttrIfChanged(entry, "Level", hero.Level or 1)
+			setAttrIfChanged(entry, "EquippedArtifactId", artifactId)
+			setAttrIfChanged(entry, "EquippedArtifactType", artifactType)
+			setAttrIfChanged(entry, "EquippedArtifactRarity", artifactRarity)
+			setAttrIfChanged(entry, "ComaUntilTimestamp", hero.ComaUntilTimestamp or 0)
+			if entry.Parent ~= workersContainer then
+				entry.Parent = workersContainer
+			end
 		end
+	end
+
+	syncFacilityWorkers("GuardPost", guardPost and guardPost.AssignedHeroUUIDs)
+	if (levels.Market or 0) > 0 and facilities.Market then
+		syncFacilityWorkers("Market", facilities.Market.AssignedHeroUUIDs)
+	end
+	if (levels.TrainingGrounds or 0) > 0 and facilities.TrainingGrounds then
+		syncFacilityWorkers("TrainingGrounds", facilities.TrainingGrounds.AssignedHeroUUIDs)
 	end
 
 	for _, child in ipairs(workersContainer:GetChildren()) do
@@ -184,6 +200,9 @@ function PlotManager.RefreshPlotVisuals(player: Player)
 	end
 	if plotModel:GetAttribute("OutskirtsSynced") ~= true then
 		plotModel:SetAttribute("OutskirtsSynced", true)
+	end
+	if plotModel:GetAttribute("PlotWorkersSynced") ~= true then
+		plotModel:SetAttribute("PlotWorkersSynced", true)
 	end
 end
 
@@ -454,6 +473,7 @@ Players.PlayerRemoving:Connect(function(player: Player)
 			plotModel:SetAttribute("OutskirtsBiomeId", nil)
 			plotModel:SetAttribute("GuardPostLevel", nil)
 			plotModel:SetAttribute("OutskirtsSynced", false)
+			plotModel:SetAttribute("PlotWorkersSynced", false)
 			local anchor = plotModel:FindFirstChild("PlotBeaconAnchor") :: Model?
 			if anchor then
 				anchor:SetAttribute("OwnerUserId", 0)

@@ -23,6 +23,7 @@ local FirstBiomeCombat = require(Shared:WaitForChild("Config"):WaitForChild("Fir
 local TreeConfig = require(Shared:WaitForChild("Config"):WaitForChild("FortressTreeConfig"))
 local FortressTree = require(Shared:WaitForChild("Util"):WaitForChild("FortressTree"))
 local OutskirtsRules = require(Shared:WaitForChild("Util"):WaitForChild("OutskirtsRules"))
+local FacilityWorkerRules = require(Shared:WaitForChild("Util"):WaitForChild("FacilityWorkerRules"))
 local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormulas"))
 local SummonLuck = require(Shared:WaitForChild("Util"):WaitForChild("SummonLuck"))
 local Grimoire = require(Shared:WaitForChild("Util"):WaitForChild("GildedGrimoire"))
@@ -520,6 +521,484 @@ local function OutskirtsPreviewStage(props: { Profile: any, AssignedUUIDs: { str
 	})
 end
 
+-- Live looping ViewportFrame diorama for The Market (`LIVE BAZAAR`) and Training Grounds (`LIVE DRILLS`),
+-- rendering up to 4 stationed workers simultaneously performing their distinct per-slot animations.
+local function FacilityWorkersPreviewStage(props: {
+	Facility: string,
+	Profile: any,
+	AssignedUUIDs: { string },
+	MaxWorkers: number,
+	DeploySerial: number,
+})
+	local vpRef = React.useRef(nil :: ViewportFrame?)
+	local strokeRef = React.useRef(nil :: UIStroke?)
+	local deployRef = React.useRef(props.DeploySerial)
+	deployRef.current = props.DeploySerial
+
+	local isMarket = props.Facility == "Market"
+	local railTone = if isMarket then Tones.Bronze.Rail else Tones.Crimson.Rail
+	local profile = props.Profile
+
+	local shownEntries: { { Slot: number, Hero: any } } = {}
+	for slotIdx, uuid in ipairs(props.AssignedUUIDs) do
+		local h = profile.Heroes and profile.Heroes[uuid]
+		if h then
+			table.insert(shownEntries, { Slot = math.clamp(slotIdx, 1, 4), Hero = h })
+			if #shownEntries >= 4 then
+				break
+			end
+		end
+	end
+
+	local sigParts: { string } = { props.Facility }
+	for _, entry in ipairs(shownEntries) do
+		local h = entry.Hero
+		table.insert(sigParts, string.format("%d:%s:%s", entry.Slot, tostring(h.UUID), tostring(h.EquippedArtifactUUID or "")))
+	end
+	local signature = table.concat(sigParts, "|")
+
+	React.useEffect(function()
+		local vp = vpRef.current
+		if not vp then
+			return
+		end
+		for _, child in ipairs(vp:GetChildren()) do
+			if not child:IsA("UICorner") and not child:IsA("UIStroke") then
+				child:Destroy()
+			end
+		end
+
+		local heroesFolder = Assets:FindFirstChild("Heroes")
+		if not heroesFolder or #heroesFolder:GetChildren() == 0 then
+			pcall(HeroRegistry.EnsureHeroes)
+			heroesFolder = Assets:FindFirstChild("Heroes")
+		end
+
+		local world = Instance.new("Model")
+		world.Name = props.Facility .. "StageDiorama"
+
+		local function addAnchoredPart(
+			name: string,
+			size: Vector3,
+			cf: CFrame,
+			color: Color3,
+			material: Enum.Material,
+			shape: Enum.PartType?
+		): Part
+			local p = Instance.new("Part")
+			p.Name = name
+			p.Shape = shape or Enum.PartType.Block
+			p.Size = size
+			p.CFrame = cf
+			p.Anchored = true
+			p.CanCollide = false
+			p.Color = color
+			p.Material = material
+			p.Parent = world
+			return p
+		end
+
+		local dummyPivot = CFrame.new(5.1, 0.1, 0.25)
+		local dummyMovingParts: { { Part: BasePart, Offset: CFrame } } = {}
+
+		if isMarket then
+			-- Cobblestone Bazaar Apron + Striped Stall Counter + Goods Trays
+			addAnchoredPart("CobbleFloor", Vector3.new(21, 0.4, 8.5), CFrame.new(0, -0.2, 0), Color3.fromRGB(78, 82, 90), Enum.Material.Cobblestone)
+			addAnchoredPart("CounterBody", Vector3.new(15.2, 2.0, 1.5), CFrame.new(0, 1.0, 2.1), Color3.fromRGB(96, 64, 38), Enum.Material.WoodPlanks)
+			addAnchoredPart("CounterTop", Vector3.new(15.8, 0.28, 1.85), CFrame.new(0, 2.12, 2.1), Color3.fromRGB(132, 92, 56), Enum.Material.Wood)
+			local goodColors = {
+				Color3.fromRGB(220, 65, 55),
+				Color3.fromRGB(245, 195, 55),
+				Color3.fromRGB(95, 205, 225),
+				Color3.fromRGB(75, 185, 95),
+			}
+			for g = 1, 4 do
+				local gx = -5.1 + (g - 1) * 3.4
+				addAnchoredPart("Tray_" .. g, Vector3.new(1.7, 0.36, 1.1), CFrame.new(gx, 2.4, 2.1), Color3.fromRGB(96, 64, 38), Enum.Material.WoodPlanks)
+				addAnchoredPart("Good_" .. g, Vector3.new(0.62, 0.62, 0.62), CFrame.new(gx - 0.25, 2.72, 2.1), goodColors[g], Enum.Material.SmoothPlastic, Enum.PartType.Ball)
+				addAnchoredPart("GoodB_" .. g, Vector3.new(0.56, 0.56, 0.56), CFrame.new(gx + 0.28, 2.68, 2.18), goodColors[g], Enum.Material.SmoothPlastic, Enum.PartType.Ball)
+			end
+			addAnchoredPart("SupplyCrate", Vector3.new(2.1, 1.7, 2.0), CFrame.new(-7.4, 0.85, -1.5) * CFrame.Angles(0, math.rad(22), 0), Color3.fromRGB(132, 92, 56), Enum.Material.WoodPlanks)
+		else
+			-- Bordered Cobblestone Combat Ring + Wobbling Straw Dummy + Bullseye Target
+			addAnchoredPart("ArenaFloor", Vector3.new(23, 0.4, 14), CFrame.new(0, -0.2, 0), Color3.fromRGB(84, 82, 78), Enum.Material.Cobblestone)
+			addAnchoredPart("InnerRing", Vector3.new(0.18, 12.6, 12.6), CFrame.new(-0.4, 0.04, 0) * CFrame.Angles(0, 0, math.pi * 0.5), Color3.fromRGB(102, 96, 88), Enum.Material.Cobblestone, Enum.PartType.Cylinder)
+
+			addAnchoredPart("DummyBase", Vector3.new(0.32, 1.9, 1.9), dummyPivot * CFrame.new(0, 0.16, 0) * CFrame.Angles(0, 0, math.pi * 0.5), Color3.fromRGB(88, 58, 34), Enum.Material.Wood, Enum.PartType.Cylinder)
+			local post = addAnchoredPart("DummyPost", Vector3.new(4.8, 0.55, 0.55), dummyPivot * CFrame.new(0, 2.4, 0) * CFrame.Angles(0, 0, math.pi * 0.5), Color3.fromRGB(88, 58, 34), Enum.Material.Wood, Enum.PartType.Cylinder)
+			local bar = addAnchoredPart("DummyArms", Vector3.new(0.38, 0.38, 3.0), dummyPivot * CFrame.new(0, 3.55, 0), Color3.fromRGB(88, 58, 34), Enum.Material.Wood)
+			local torso = addAnchoredPart("DummyTorso", Vector3.new(2.1, 1.55, 1.55), dummyPivot * CFrame.new(0, 3.0, 0) * CFrame.Angles(0, 0, math.pi * 0.5), Color3.fromRGB(214, 182, 102), Enum.Material.Fabric, Enum.PartType.Cylinder)
+			local band = addAnchoredPart("DummyBand", Vector3.new(0.38, 1.62, 1.62), dummyPivot * CFrame.new(0, 3.1, 0) * CFrame.Angles(0, 0, math.pi * 0.5), Color3.fromRGB(190, 42, 42), Enum.Material.Fabric, Enum.PartType.Cylinder)
+			local head = addAnchoredPart("DummyHead", Vector3.new(1.18, 1.18, 1.18), dummyPivot * CFrame.new(0, 4.55, 0), Color3.fromRGB(214, 182, 102), Enum.Material.Fabric, Enum.PartType.Ball)
+			for _, dp in ipairs({ post, bar, torso, band, head }) do
+				table.insert(dummyMovingParts, { Part = dp, Offset = dummyPivot:ToObjectSpace(dp.CFrame) })
+			end
+
+			local bullCF = CFrame.new(6.8, 3.0, -1.85) * CFrame.Angles(0, math.rad(25), 0)
+			addAnchoredPart("BullOuter", Vector3.new(0.32, 2.7, 2.7), bullCF * CFrame.Angles(0, math.pi * 0.5, 0), Color3.fromRGB(205, 40, 40), Enum.Material.SmoothPlastic, Enum.PartType.Cylinder)
+			addAnchoredPart("BullMid", Vector3.new(0.36, 1.75, 1.75), bullCF * CFrame.Angles(0, math.pi * 0.5, 0), Color3.fromRGB(240, 240, 240), Enum.Material.SmoothPlastic, Enum.PartType.Cylinder)
+			addAnchoredPart("BullCenter", Vector3.new(0.40, 0.85, 0.85), bullCF * CFrame.Angles(0, math.pi * 0.5, 0), Color3.fromRGB(215, 35, 35), Enum.Material.SmoothPlastic, Enum.PartType.Cylinder)
+		end
+
+		local spark = addAnchoredPart(
+			"StageSpark",
+			Vector3.new(0.85, 0.85, 0.85),
+			if isMarket then CFrame.new(0, 3.1, 2.1) else CFrame.new(4.5, 3.2, 0.25),
+			if isMarket then Color3.fromRGB(255, 214, 92) else Color3.fromRGB(255, 196, 98),
+			Enum.Material.Neon,
+			Enum.PartType.Ball
+		)
+		spark.Transparency = 1
+
+		local marketPoses = {
+			CFrame.new(-5.2, 3.0, 0.05) * CFrame.Angles(0, math.pi - 0.18, 0),
+			CFrame.new(-1.8, 3.0, -0.15) * CFrame.Angles(0, math.pi - 0.06, 0),
+			CFrame.new(1.8, 3.0, -0.15) * CFrame.Angles(0, math.pi + 0.06, 0),
+			CFrame.new(5.2, 3.0, 0.05) * CFrame.Angles(0, math.pi + 0.18, 0),
+		}
+		local trainingPoses = {
+			CFrame.new(1.4, 3.0, 0.35) * CFrame.Angles(0, -math.pi * 0.5, 0),
+			CFrame.new(-1.5, 3.0, -0.85) * CFrame.Angles(0, -math.pi * 0.44, 0),
+			CFrame.new(-4.3, 3.0, 0.45) * CFrame.Angles(0, math.pi * 0.76, 0),
+			CFrame.new(-6.7, 3.0, -0.45) * CFrame.Angles(0, math.pi * 0.68, 0),
+		}
+
+		type StageActor = {
+			Slot: number,
+			Rig: Model,
+			Animator: HeroAnimator.HeroAnimator,
+			BaseCF: CFrame,
+			NextActionAt: number,
+		}
+		local stageActors: { StageActor } = {}
+
+		local function weldStageProp(rig: Model, slotNum: number)
+			if not isMarket then
+				return
+			end
+			if slotNum == 2 then
+				local ut = rig:FindFirstChild("UpperTorso") :: BasePart?
+				if ut then
+					local crate = Instance.new("Part")
+					crate.Size = Vector3.new(1.45, 0.85, 1.1)
+					crate.Color = Color3.fromRGB(138, 96, 56)
+					crate.Material = Enum.Material.WoodPlanks
+					crate.Anchored = true
+					crate.CanCollide = false
+					crate.Parent = rig
+					local w = Instance.new("Weld")
+					w.Part0 = ut
+					w.Part1 = crate
+					w.C0 = CFrame.new(0, -0.15, -1.15)
+					w.Parent = crate
+				end
+			elseif slotNum == 3 then
+				local lh = rig:FindFirstChild("LeftHand") :: BasePart?
+				if lh then
+					local orb = Instance.new("Part")
+					orb.Shape = Enum.PartType.Ball
+					orb.Size = Vector3.new(0.62, 0.62, 0.62)
+					orb.Color = Color3.fromRGB(115, 232, 255)
+					orb.Material = Enum.Material.Neon
+					orb.Anchored = true
+					orb.CanCollide = false
+					orb.Parent = rig
+					local grip = lh:FindFirstChild("LeftGripAttachment") :: Attachment?
+					local w = Instance.new("Weld")
+					w.Part0 = lh
+					w.Part1 = orb
+					w.C0 = if grip then grip.CFrame * CFrame.new(0, 0.32, 0) else CFrame.new(0, -0.1, -0.25)
+					w.Parent = orb
+				end
+			elseif slotNum == 4 then
+				local lh = rig:FindFirstChild("LeftHand") :: BasePart?
+				if lh then
+					local book = Instance.new("Part")
+					book.Size = Vector3.new(1.05, 0.14, 0.82)
+					book.Color = Color3.fromRGB(238, 226, 198)
+					book.Material = Enum.Material.SmoothPlastic
+					book.Anchored = true
+					book.CanCollide = false
+					book.Parent = rig
+					local grip = lh:FindFirstChild("LeftGripAttachment") :: Attachment?
+					local w = Instance.new("Weld")
+					w.Part0 = lh
+					w.Part1 = book
+					w.C0 = if grip
+						then grip.CFrame * CFrame.new(0, 0.24, 0.06) * CFrame.Angles(math.rad(-75), 0, 0)
+						else CFrame.new(0, 0.12, -0.3)
+					w.Parent = book
+				end
+			end
+		end
+
+		for _, entry in ipairs(shownEntries) do
+			local h = entry.Hero
+			local slotNum = entry.Slot
+			local slotSpec = FacilityWorkerRules.GetSlotSpec(props.Facility, slotNum)
+			local template = heroesFolder and heroesFolder:FindFirstChild(tostring(h.TemplateId or "hero_han"))
+			if not template and heroesFolder then
+				template = heroesFolder:FindFirstChild("hero_han")
+			end
+			if template and template:IsA("Model") and slotSpec then
+				local rig = template:Clone()
+				local seed = HeroCatalog.Seeds[h.TemplateId]
+				local archetype = h.Archetype or (seed and seed.Archetype) or "Vanguard"
+				local artUUID = h.EquippedArtifactUUID
+				local art = if artUUID and profile.Artifacts then profile.Artifacts[artUUID] else nil
+				local weaponType = if art and type(art.Type) == "string"
+					then art.Type
+					else FacilityWorkerRules.ResolveHeroWeaponType(archetype, nil)
+				local artId = if art and type(art.TemplateId) == "string" then art.TemplateId else nil
+				local artRarity = if art and type(art.Rarity) == "number" then art.Rarity else 1
+
+				local hostEntity = Instance.new("Model")
+				hostEntity.Name = "StageWorker_" .. slotNum
+				rig.Parent = hostEntity
+
+				local animWeapon = "UNARMED"
+				if slotSpec.EquipHeroWeapon then
+					local resolved = HeroLoadout.Equip(hostEntity, rig, artId, weaponType, artRarity)
+					animWeapon = resolved or weaponType
+				else
+					HeroLoadout.Unequip(hostEntity, rig)
+					weldStageProp(rig, slotNum)
+				end
+
+				for _, desc in ipairs(hostEntity:GetDescendants()) do
+					if desc:IsA("BaseScript") then
+						desc:Destroy()
+					elseif desc:IsA("BasePart") then
+						desc.Anchored = true
+						desc.CanCollide = false
+					end
+				end
+
+				local poseList = if isMarket then marketPoses else trainingPoses
+				local baseCF = poseList[slotNum] or poseList[1]
+				local hrp = rig:FindFirstChild("HumanoidRootPart") :: BasePart?
+				if hrp then
+					hrp.CFrame = baseCF
+				else
+					rig:PivotTo(baseCF)
+				end
+
+				local animator = HeroAnimator.new(rig, {
+					HeroId = h.TemplateId,
+					WeaponType = animWeapon,
+				})
+				local initLoco = if isMarket
+					then slotSpec.PrimaryClip
+					elseif slotNum == 3 then "TrainingKata"
+					elseif slotNum == 4 then "TrainingCoach"
+					else "Idle"
+				animator:SetLocomotion(initLoco)
+				HeroAnimator.ApplyStaticPose(rig, animator:Evaluate())
+				hostEntity.Parent = world
+
+				table.insert(stageActors, {
+					Slot = slotNum,
+					Rig = rig,
+					Animator = animator,
+					BaseCF = baseCF,
+					NextActionAt = 0.55 + (slotNum - 1) * 0.65,
+				})
+			end
+		end
+
+		world.Parent = vp
+
+		local cam = Instance.new("Camera")
+		cam.FieldOfView = 30
+		cam.CFrame = if isMarket
+			then CFrame.lookAt(Vector3.new(0, 4.7, 17.6), Vector3.new(0, 2.75, 0.3))
+			else CFrame.lookAt(Vector3.new(0.1, 4.7, 18.2), Vector3.new(0.2, 2.85, 0))
+		cam.Parent = vp
+		vp.CurrentCamera = cam
+
+		local clock = 0
+		local lastDeploySeen = deployRef.current
+		local flashTimer = 0
+		local sparkTimer = 0
+		local dummyHitClock = -10
+		local actionCounter = 0
+
+		local conn = RunService.RenderStepped:Connect(function(dt: number)
+			local stepDt = math.min(dt, 0.08)
+			clock += stepDt
+
+			if deployRef.current ~= lastDeploySeen then
+				lastDeploySeen = deployRef.current
+				flashTimer = 0.55
+				sparkTimer = 0.42
+				if not isMarket then
+					dummyHitClock = clock
+					for _, actor in ipairs(stageActors) do
+						actor.Animator:PlayAction("AttackSpecial", 0.78)
+						actor.NextActionAt = clock + 1.4
+					end
+				end
+			end
+
+			if strokeRef.current then
+				if flashTimer > 0 then
+					flashTimer = math.max(0, flashTimer - stepDt)
+					strokeRef.current.Color = TEXT.Gold
+					strokeRef.current.Thickness = 2.6
+				else
+					strokeRef.current.Color = railTone
+					strokeRef.current.Thickness = 1.4
+				end
+			end
+
+			for _, actor in ipairs(stageActors) do
+				local hrp = actor.Rig:FindFirstChild("HumanoidRootPart") :: BasePart?
+				if isMarket then
+					if actor.Slot == 1 then
+						actor.Animator:SetLocomotion("MarketHawker")
+						if hrp then
+							hrp.CFrame = actor.BaseCF * CFrame.new(math.sin(clock * 1.4) * 0.45, 0, 0)
+						end
+					elseif actor.Slot == 2 then
+						local haulPhase = (clock % 5.2) > 3.2
+						actor.Animator:SetLocomotion(if haulPhase then "MarketCarry" else "MarketStock")
+						if hrp then
+							local zShift = if haulPhase then -math.sin(((clock % 5.2) - 3.2) / 2.0 * math.pi) * 0.75 else 0
+							hrp.CFrame = actor.BaseCF * CFrame.new(0, 0, zShift)
+						end
+					elseif actor.Slot == 3 then
+						actor.Animator:SetLocomotion("MarketAppraiser")
+					else
+						actor.Animator:SetLocomotion("MarketLedger")
+					end
+					if clock >= actor.NextActionAt then
+						actor.NextActionAt = clock + 2.8
+						sparkTimer = 0.30
+						spark.CFrame = actor.BaseCF * CFrame.new(0, 0.3, -1.8)
+					end
+				else
+					if actor.Slot == 1 then
+						actor.Animator:SetLocomotion("Idle")
+						if clock >= actor.NextActionAt then
+							actionCounter += 1
+							local act = if actionCounter % 3 == 0 then "AttackSkill" elseif actionCounter % 2 == 0 then "AttackSpecial" else "AttackBasic"
+							actor.Animator:PlayAction(act, 0.80)
+							actor.NextActionAt = clock + 1.55
+							dummyHitClock = clock + 0.26
+							sparkTimer = 0.36
+						end
+					elseif actor.Slot == 2 then
+						local kataWindow = (clock % 5.6) > 3.4
+						actor.Animator:SetLocomotion(if kataWindow then "TrainingKata" else "Idle")
+						if not kataWindow and clock >= actor.NextActionAt then
+							actor.Animator:PlayAction("AttackSpecial", 0.82)
+							actor.NextActionAt = clock + 1.75
+						end
+					elseif actor.Slot == 3 then
+						actor.Animator:SetLocomotion("TrainingKata")
+						if clock >= actor.NextActionAt then
+							actor.Animator:PlayAction("AttackBasic", 0.75)
+							actor.NextActionAt = clock + 3.6
+						end
+					else
+						actor.Animator:SetLocomotion("TrainingCoach")
+						if hrp then
+							hrp.CFrame = actor.BaseCF * CFrame.new(math.sin(clock * 1.1) * 0.4, 0, 0)
+						end
+					end
+
+					if actor.Slot == 1 and hrp then
+						local lunge = if actor.Animator.Action
+							then math.sin(math.clamp((actor.Animator.Clock - actor.Animator.Action.Started) / actor.Animator.Action.Duration, 0, 1) * math.pi) * 0.55
+							else 0
+						hrp.CFrame = actor.BaseCF * CFrame.new(0, 0, -lunge)
+					end
+				end
+
+				actor.Animator.Clock += stepDt
+				actor.Animator.LocomotionTime += stepDt * (if flashTimer > 0 then 1.35 else 1.0)
+				if actor.Animator.Action and (actor.Animator.Clock - actor.Animator.Action.Started) >= actor.Animator.Action.Duration then
+					actor.Animator.Action = nil
+				end
+				HeroAnimator.ApplyStaticPose(actor.Rig, actor.Animator:Evaluate())
+			end
+
+			if not isMarket and #dummyMovingParts > 0 then
+				local hitElapsed = clock - dummyHitClock
+				if hitElapsed >= 0 and hitElapsed < 0.68 then
+					local tilt = math.rad(13) * math.exp(-6.0 * hitElapsed) * math.sin(24 * hitElapsed)
+					local rotPivot = CFrame.new(dummyPivot.Position) * CFrame.Angles(0, 0, -tilt) * dummyPivot.Rotation
+					for _, item in ipairs(dummyMovingParts) do
+						item.Part.CFrame = rotPivot * item.Offset
+					end
+				else
+					for _, item in ipairs(dummyMovingParts) do
+						item.Part.CFrame = dummyPivot * item.Offset
+					end
+				end
+			end
+
+			if sparkTimer > 0 then
+				sparkTimer = math.max(0, sparkTimer - stepDt)
+				spark.Transparency = 0.25 + 0.75 * (1 - math.min(1, sparkTimer * 3))
+				spark.Size = Vector3.one * (0.55 + (1 - sparkTimer) * 1.5)
+			else
+				spark.Transparency = 1
+			end
+		end)
+
+		return function()
+			conn:Disconnect()
+			world:Destroy()
+			cam:Destroy()
+		end
+	end, { signature } :: { any })
+
+	local activeRoleBadge: string
+	if #shownEntries == 0 then
+		activeRoleBadge = if isMarket then "NO MERCHANTS STATIONED" else "NO TRAINERS STATIONED"
+	else
+		local roleNames: { string } = {}
+		for _, entry in ipairs(shownEntries) do
+			local spec = FacilityWorkerRules.GetSlotSpec(props.Facility, entry.Slot)
+			if spec then
+				table.insert(roleNames, string.upper(spec.RoleTitle))
+			end
+		end
+		activeRoleBadge = table.concat(roleNames, " · ")
+	end
+
+	return Panel({ LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 124), Top = Tones.Deep.Top, Bottom = Tones.Deep.Bottom, Rail = railTone }, {
+		Caption = Heavy({ Position = UDim2.fromOffset(18, 8), Size = UDim2.new(0.38, 0, 0, 18), MaxSize = 14, Outline = 2,
+			TextXAlignment = Enum.TextXAlignment.Left, Text = if isMarket then "LIVE BAZAAR" else "LIVE DRILLS", ZIndex = 4 }),
+		Roles = Body({ AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -18, 0, 9), Size = UDim2.new(0.62, -18, 0, 16),
+			TextSize = 11, TextColor3 = TEXT.Gold, TextXAlignment = Enum.TextXAlignment.Right, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 4,
+			Text = activeRoleBadge }),
+		Stage = e("ViewportFrame", {
+			ref = vpRef,
+			Position = UDim2.fromOffset(12, 30),
+			Size = UDim2.new(1, -24, 1, -38),
+			BackgroundColor3 = if isMarket then Color3.fromRGB(22, 17, 13) else Color3.fromRGB(22, 14, 15),
+			BackgroundTransparency = 0.12,
+			Ambient = Color3.fromRGB(174, 168, 158),
+			LightColor = Color3.fromRGB(255, 236, 202),
+			LightDirection = Vector3.new(-0.8, -1.2, -1.6),
+			ZIndex = 3,
+		}, {
+			Corner = e("UICorner", { CornerRadius = UDim.new(0, 8) }),
+			Border = e("UIStroke", { ref = strokeRef, Color = railTone, Thickness = 1.4 }),
+		}),
+		EmptyHint = if #shownEntries == 0 then Body({
+			Position = UDim2.fromOffset(22, 58), Size = UDim2.new(0.58, 0, 0, 34), TextSize = 12, TextWrapped = true,
+			TextColor3 = TEXT.Parchment,
+			Text = if isMarket
+				then "Station Merchants to open Bazaar stalls & boost Tower Gold"
+				else "Station Trainers to run combat drills & boost Squad ATK/HP",
+			ZIndex = 5,
+		}) else nil,
+	})
+end
+
 local function FacilityPanel(props: { Facility: string, Profile: any, Width: number, OnClose: () -> () })
 	local info = FACILITIES[props.Facility]
 	local hovered, setHovered = React.useState(nil :: string?)
@@ -569,7 +1048,7 @@ local function FacilityPanel(props: { Facility: string, Profile: any, Width: num
 				say("Couldn't reach the server. Try again.", true)
 			elseif success then
 				local hero = profile.Heroes[uuid]
-				if target ~= "BENCHED" and props.Facility == "GuardPost" then
+				if target ~= "BENCHED" and (props.Facility == "GuardPost" or props.Facility == "Market" or props.Facility == "TrainingGrounds") then
 					setDeploySerial(function(prev: number)
 						return prev + 1
 					end)
@@ -685,6 +1164,13 @@ local function FacilityPanel(props: { Facility: string, Profile: any, Width: num
 		then e(OutskirtsPreviewStage, {
 			Profile = profile,
 			AssignedUUIDs = assigned,
+			DeploySerial = deploySerial,
+		})
+		elseif props.Facility == "Market" or props.Facility == "TrainingGrounds" then e(FacilityWorkersPreviewStage, {
+			Facility = props.Facility,
+			Profile = profile,
+			AssignedUUIDs = assigned,
+			MaxWorkers = maxWorkers,
 			DeploySerial = deploySerial,
 		})
 		else nil
