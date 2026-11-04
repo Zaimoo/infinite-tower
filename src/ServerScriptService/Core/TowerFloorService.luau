@@ -139,9 +139,6 @@ local function alive(player: Player): (Model?,BasePart?)
 	if not h or h.Health<=0 or not root or not root:IsA("BasePart") then return nil,nil end
 	return c,root
 end
-local function storeCargo(player: Player, location: any?)
-	for _,a in pairs(adapters) do if a.StoreCargo then a.StoreCargo(player, location) end end
-end
 local function commit(player: Player)
 	local s=states[player];local p=s and s.Pending;if not p then return end
 	local char,root=alive(player)
@@ -211,7 +208,6 @@ local function commit(player: Player)
 		local rem = getRemotes()
 		if rem and rem:FindFirstChild("Context") then rem.Context:FireClient(player,c) end
 	end
-	if p.Retry then combat.ResetFloorProgress(player, r.FloorId) end
 	combat.BootstrapAll()
 	finish(player,"COMMITTED")
 end
@@ -220,7 +216,7 @@ local function take(s: any,control: boolean): boolean
 	local now=os.clock();s[tk]=math.min(4,s[tk]+(now-s[at])*2);s[at]=now
 	if s[tk]<1 then return false end;s[tk]-=1;return true
 end
-local function request(player: Player,r: any,retry: boolean?)
+function Service.Request(player: Player,r: any)
 	local s=createState(player)
 	local ok,err=Policy.Validate(r)
 	if not ok then if take(s,true) then reply(player,type(r)=="table" and type(r.RequestId)=="string" and r.RequestId:sub(1,64) or "INVALID","REJECTED",err) end;return end
@@ -257,7 +253,7 @@ local function request(player: Player,r: any,retry: boolean?)
 	if not profile then reject('PROFILE_NOT_READY');return end
 	local id=r.Action=='HUB' and 0 or r.Action=='RECALL' and s.FloorId or r.FloorId
 	-- Phase 6 boss lock: once you have hurt this floor's summoned boss, travel stays sealed until it dies or your squad wipes.
-	if (r.Action=='VISIT' or r.Action=='HUB') and s.FloorId>0 and (id~=s.FloorId or retry) and adapters.Combat and adapters.Combat.BossLocked and adapters.Combat.BossLocked(player,s.FloorId) then
+	if (r.Action=='VISIT' or r.Action=='HUB') and s.FloorId>0 and id~=s.FloorId and adapters.Combat and adapters.Combat.BossLocked and adapters.Combat.BossLocked(player,s.FloorId) then
 		if _G.DataManager and _G.DataManager.SendToast then _G.DataManager.SendToast(player,'🔒 Travel is sealed until the boss falls.','WARN') end
 		reject('BOSS_LOCKED');return
 	end
@@ -282,7 +278,7 @@ local function request(player: Player,r: any,retry: boolean?)
 		end
 	end
 	if r.Action=="ASSIGN" and s.SquadAssignment==id and s.SquadSize>0 then saveResult(s,r.RequestId,fp,reply(player,r.RequestId,"COMMITTED"));return end
-	local p={RequestId=r.RequestId,Fingerprint=fp,Action=r.Action,Retry=retry,View=r.Action=="VISIT" or r.Action=="HUB",Character=char,
+	local p={RequestId=r.RequestId,Fingerprint=fp,Action=r.Action,View=r.Action=="VISIT" or r.Action=="HUB",Character=char,
 		CharacterGeneration=s.CharacterGeneration,LocationRevision=s.LocationRevision,SquadRevision=s.SquadRevision,Deadline=os.clock()+8,ViewEpoch=s.ViewEpoch+1}
 	s.Pending=p;reply(player,r.RequestId,"PENDING");publish()
 	local success,room=pcall(function() return id==0 and rooms[0] or Service.EnsureRoom(id) end)
@@ -297,9 +293,6 @@ local function request(player: Player,r: any,retry: boolean?)
 	if rem and rem:FindFirstChild("Context") then rem.Context:FireClient(player,c) end
 	task.delay(math.max(0,p.Deadline-os.clock()),function() if states[player] and states[player].Pending==p then finish(player,"REJECTED","READY_TIMEOUT") end end)
 end
-function Service.Request(player: Player,r: any)
-	request(player,r)
-end
 function Service.Ready(player: Player,r: any)
 	local s=states[player];if not s or not take(s,true) or type(r)~="table" then return end
 	for k in pairs(r) do if not ({ContractVersion=true,RequestId=true,ReadyToken=true,ViewEpoch=true,CharacterGeneration=true,Result=true})[k] then return end end
@@ -311,20 +304,6 @@ function Service.VisitFloor(player: Player,id: number,request: any?)
 	local s=createState(player)
 	local req = request or {ContractVersion=1,RequestId=Http:GenerateGUID(false),Action="VISIT",FloorId=id,CharacterGeneration=s.CharacterGeneration,ExpectedLocationRevision=s.LocationRevision,ExpectedSquadRevision=s.SquadRevision}
 	req.Action="VISIT";req.FloorId=id;Service.Request(player,req)
-end
--- Retry uses the normal sanctuary arrival, with a reset only after the visit commits.
-function Service.RetryFloor(player: Player, floorId: number)
-	local s = states[player]
-	if not s or s.FloorId ~= floorId or floorId <= 0 then return end
-	request(player, {
-		ContractVersion = 1,
-		RequestId = Http:GenerateGUID(false),
-		Action = "VISIT",
-		FloorId = floorId,
-		CharacterGeneration = s.CharacterGeneration,
-		ExpectedLocationRevision = s.LocationRevision,
-		ExpectedSquadRevision = s.SquadRevision,
-	}, true)
 end
 function Service.ReturnToHub(player: Player,request: any?)
 	local s=createState(player)
@@ -367,6 +346,9 @@ function Service.CommitRespawn(player: Player)
 end
 local function disconnectCargo(player: Player)
 	for _,a in pairs(adapters) do if a.DropCargo then a.DropCargo(player) end end
+end
+local function storeCargo(player: Player, location: any?)
+	for _,a in pairs(adapters) do if a.StoreCargo then a.StoreCargo(player, location) end end
 end
 function Service.Init()
 	if started then return end;started=true;remotes=remoteFolder()
