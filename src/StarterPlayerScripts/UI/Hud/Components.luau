@@ -334,7 +334,7 @@ local function glass(props: { [string]: any }, children: { [string]: any }?)
 end
 Components.Glass = glass
 
-local function glassText(props: { [string]: any })
+local function glassText(props: { [string]: any }, children: { [string]: any }?)
 	local base: { [string]: any } = {
 		BackgroundTransparency = 1,
 		FontFace = G.Fonts.Label,
@@ -345,7 +345,7 @@ local function glassText(props: { [string]: any })
 		RichText = true,
 	}
 	for k, v in props do base[k] = v end
-	return e("TextLabel", base)
+	return e("TextLabel", base, children)
 end
 Components.GlassText = glassText
 
@@ -883,7 +883,7 @@ function Components.SquadDrawer(props: {
 		BackgroundTransparency = 1,
 	}, {
 		Brackets = e(Components.Brackets, {}),
-		Above = if props.Above then e("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromOffset(0, -8), Size = UDim2.new(1, 0, 0, Components.CurrencyBarHeight),
+		Above = if props.Above then e("Frame", { Name = "CurrencyRowWrapper", AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromOffset(0, -8), Size = UDim2.new(1, 0, 0, Components.CurrencyBarHeight),
 			BackgroundTransparency = 1 }, { Bar = props.Above }) else nil,
 		Clip = e("Frame", { Position = UDim2.fromOffset(-CLIP_PAD, -CLIP_PAD), Size = UDim2.new(1, CLIP_PAD * 2, 1, CLIP_PAD * 2),
 			BackgroundTransparency = 1, ClipsDescendants = true }, {
@@ -965,11 +965,22 @@ local function CurrencyChip(props: { Icon: string, Value: number, Order: number,
 		task.delay(0.9, function() if alive then setDelta(0) end end)
 		return function() alive = false end
 	end, { props.Value })
-	return e("Frame", { LayoutOrder = props.Order, Size = UDim2.new(0.5, -4, 1, 0), BackgroundTransparency = 1 }, {
+	return e("Frame", { Name = props.Icon .. "Pill", LayoutOrder = props.Order, Size = UDim2.new(0.5, -4, 1, 0), BackgroundTransparency = 1 }, {
 		Body = glass({ AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), Size = UDim2.new(1, 0, 0, 32) }, {
-			Icon = icon(props.Icon, 20, { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 8, 0.5, 0), Flat = true }),
-			Value = glassText({ Position = UDim2.fromOffset(34, 0), Size = UDim2.new(1, -42, 1, 0), FontFace = G.Fonts.Number, TextSize = 16,
-				TextColor3 = props.Color, Text = abbreviate(shown) }),
+			Padding = e("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) }),
+			Icon = icon(props.Icon, 20, { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 0, 0.5, 0), Flat = true }),
+			Value = glassText({
+				Position = UDim2.fromOffset(26, 0),
+				Size = UDim2.new(1, -26, 1, 0),
+				FontFace = G.Fonts.Number,
+				TextSize = 16,
+				TextScaled = false,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				TextColor3 = props.Color,
+				Text = abbreviate(shown),
+			}, {
+				Constraint = e("UITextSizeConstraint", { MaxTextSize = 18 }),
+			}),
 		}),
 		["Floater" .. serial] = if delta ~= 0 then e(Floater, { Delta = delta, Position = UDim2.new(1, -4, 1, -34), Size = UDim2.fromOffset(110, 16) }) else nil,
 	})
@@ -977,14 +988,20 @@ end
 
 Components.CurrencyBarHeight = 40
 
-function Components.CurrencyBar(props: { Gold: number, Gems: number, Bottom: number?, Width: number, Position: UDim2? })
+function Components.CurrencyBar(props: { Gold: number, Gems: number, Bottom: number?, Width: number?, Position: UDim2? })
 	return e("Frame", {
+		Name = "CurrencyRow",
 		AnchorPoint = Vector2.new(0, 1),
 		Position = props.Position or UDim2.new(0, L.Edge, 1, -(props.Bottom or 0)),
-		Size = UDim2.fromOffset(props.Width, Components.CurrencyBarHeight),
+		Size = if props.Width then UDim2.fromOffset(props.Width, Components.CurrencyBarHeight) else UDim2.fromScale(1, 1),
 		BackgroundTransparency = 1,
 	}, {
-		Layout = e("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
+		Layout = e("UIListLayout", {
+			FillDirection = Enum.FillDirection.Horizontal,
+			Padding = UDim.new(0, 8),
+			SortOrder = Enum.SortOrder.LayoutOrder,
+			VerticalAlignment = Enum.VerticalAlignment.Center,
+		}),
 		Gold = e(CurrencyChip, { Icon = "Gold", Value = props.Gold, Order = 1, Color = G.Royal }),
 		Gems = e(CurrencyChip, { Icon = "Gems", Value = props.Gems, Order = 2, Color = G.Text }),
 	})
