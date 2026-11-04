@@ -24,6 +24,7 @@ Tower.Init()
 local Protocol=require(Shared.Util.TowerProtocol)
 local SanctuaryRules=require(Shared.Util.TowerSanctuaryRules)
 local SupportRules=require(Shared.Util.SupportRules)
+local AffixRules=require(Shared.Util.AffixRules)
 local FirstBiome=require(Shared.Config.FirstBiomeCombat)
 local TowerLayout=require(Shared.Config.TowerLayout)
 local TowerRewards=require(Shared.Config.TowerFloorConfig)
@@ -2373,7 +2374,8 @@ local function broadcastReplicationSnapshot(now: number)
   local hero=e.Owner~=nil;local entry=table.clone(e)
   entry.StateEnum=hero and (STATE_TO_ENUM[e.State] or 1) or (e.TowerEnemy and ({IDLE=20,CHASE=21,WINDUP=22,RECOVERY=23,RESET=24,PATROL=25})[e.State] or (10+(e.Phase or 1)))
   entry.Flags=hero and (1+(now<e.OverdriveUntil and 2 or 0)+(now<e.PacifiedUntil and 4 or 0))
-   or (e.TowerEnemy and ((SupportRules.Shielded(e,serverNow) and 8 or 0)+(SupportRules.Roused(e,serverNow) and 16 or 0))) or 0
+   or (e.TowerEnemy and ((SupportRules.Shielded(e,serverNow) and 8 or 0)+(SupportRules.Roused(e,serverNow) and 16 or 0)
+    +(AffixRules.IsAffixed(e) and 32 or 0))) or 0
   byFloor[e.FloorId]=byFloor[e.FloorId] or {};table.insert(byFloor[e.FloorId],entry)
  end end
  for _,p in Players:GetPlayers() do
@@ -2623,6 +2625,12 @@ if RunService:IsStudio() then CombatSimulation.DebugEntities=function() return A
 
 Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=ActiveMobsByNetId,Navigation=HeroNavigation,Allocate=allocateNetId,
  Changed=bootstrapAll,
+ Announce=function(floorId,text)
+  for _,p in Players:GetPlayers() do
+   local s=Tower.GetState(p)
+   if s and s.FloorId==floorId then getDataManager().SendToast(p,text,"WARN") end
+  end
+ end,
  Send=function(context,message)
   CombatLifecycleRevision+=1;message.LifecycleRevision=CombatLifecycleRevision
   Tower.BroadcastAt(TowerRemotes.TowerAction,context,message)
@@ -2660,12 +2668,13 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
      local profile = dm.GetProfile(killer)
      if profile then
       local reward = TowerRewards.GetKillRewards(mob.FloorId, mob.Role)
-      local killGold = math.round(reward.Gold * marketMult)
+      local killGold = math.round(reward.Gold * marketMult * AffixRules.GoldMultiplierFor(mob))
       profile.Currencies.Gold += killGold
       profile.Currencies.Gems += reward.Gems
       TowerRuns.AddEarnings(killer, killGold, reward.Gems, if masterHere then 1 else 0)
       dm.SyncProfile(killer)
-      local tier = TowerRewards.RollRelic(mob.FloorId, mob.Role, math.random(), math.random())
+      -- An affixed Elite (Phase F) drops relics far more often; tiers stay by role, so Cores stay Elite-only.
+      local tier = TowerRewards.RollRelic(mob.FloorId, mob.Role, AffixRules.DropRoll(mob, math.random()), math.random())
       if masterHere and tier and _G.RelicService then
        _G.RelicService.SpawnRelic(tier, mob.Position, killer.UserId)
       end
@@ -2680,7 +2689,7 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
        FloorProgressRemote:FireClient(killer, progress)
       end
      end
-     if progress and progress.FloorId == mob.FloorId and not progress.BossSpawned then
+     if progress and progress.FloorId == mob.FloorId and not progress.BossSpawned and not (mob :: any).NoKillCredit then
       local shouldSpawn = TowerProgress.RecordKill(progress, mob.Role)
       if not shouldSpawn and TowerProgress.CheckSurge(progress) then
        Encounters:SpawnSurge(mob.FloorId, killer, mob.Position)
