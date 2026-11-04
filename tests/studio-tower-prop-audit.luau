@@ -5,7 +5,9 @@
 -- A prop is "orphaned" when one of its pieces survives without the piece that holds it up: a canopy
 -- without its trunk, a spire tip without its shaft, an arch top without its piers. A prop is
 -- "floating" when nothing is within 1.5 studs under any of its lowest parts (props that hang by design,
--- TowerBiomeAssets.AirborneKinds, are skipped). Both counts must be 0 on every floor.
+-- TowerBiomeAssets.AirborneKinds, are skipped). A prop "blocks a walkway" when any of its parts stands on
+-- a ramp, stair, landing pad, the Basin causeway or the Sanctuary exit (TowerRoomBuilder.WalkwayHitTest).
+-- All three counts must be 0 on every floor.
 --
 -- Studio caches modules it has already required. If you re-run after editing src, pass
 -- `freshCopy = true` so the builder is required from a fresh clone of the modules.
@@ -16,8 +18,12 @@ return function(firstFloor: number, lastFloor: number, keepPreviews: boolean?, f
 		local folder = Instance.new("Folder")
 		folder.Name = "PropAuditCore"
 		for _, name in { "TowerRoomBuilder", "TowerBiomeAssets", "TowerPropClearance" } do
-			core[name]:Clone().Parent = folder
+			local copy = core[name]:Clone()
+			-- TowerLayout is cached too: point the copies at a fresh copy of it.
+			copy.Source = copy.Source:gsub("game%.ReplicatedStorage%.Shared%.Config%.TowerLayout", "script.Parent.TowerLayout")
+			copy.Parent = folder
 		end
+		game.ReplicatedStorage.Shared.Config.TowerLayout:Clone().Parent = folder
 		folder.Parent = game:GetService("ServerStorage")
 		core, scratch = folder, folder
 	end
@@ -42,7 +48,7 @@ return function(firstFloor: number, lastFloor: number, keepPreviews: boolean?, f
 	end
 
 	local report = {}
-	local totals = { Orphans = 0, LooseFamilyParts = 0, Props = 0, ClearedCamps = 0, ClearedLanes = 0, Floating = 0, Lowered = 0 }
+	local totals = { Orphans = 0, LooseFamilyParts = 0, Props = 0, ClearedCamps = 0, ClearedLanes = 0, Floating = 0, Lowered = 0, OnWalkway = 0 }
 
 	-- Smallest gap between a prop's lowest parts and whatever is under them (nil: nothing below).
 	local function supportGap(prop: Instance, params: RaycastParams): number?
@@ -80,6 +86,25 @@ return function(firstFloor: number, lastFloor: number, keepPreviews: boolean?, f
 		end
 		local params = RaycastParams.new()
 		params.FilterType = Enum.RaycastFilterType.Exclude
+
+		-- Scenery still standing on a walkway after the build's own clearance.
+		local onWalkway = Builder.WalkwayHitTest(model, room.Origin, (id - 1) % 5 + 1)
+		local blocking: { [Instance]: boolean } = {}
+		local blockingNames: { string } = {}
+		for _, d in model:GetDescendants() do
+			if d:IsA("BasePart") and onWalkway(d) then
+				local unit = d
+				local node = d.Parent
+				while node and node ~= model do
+					if node:GetAttribute("PropKind") ~= nil then unit = node end
+					node = node.Parent
+				end
+				if not blocking[unit] then
+					blocking[unit] = true
+					table.insert(blockingNames, unit.Name)
+				end
+			end
+		end
 
 		-- Every compound piece must sit inside a PropKind group.
 		for _, d in model:GetDescendants() do
@@ -142,14 +167,16 @@ return function(firstFloor: number, lastFloor: number, keepPreviews: boolean?, f
 		totals.ClearedLanes += clearedLanes
 		totals.Floating += #floating
 		totals.Lowered += model:GetAttribute("PropsLowered") or 0
-		table.insert(report, string.format("F%02d %-17s props %4d | cleared camps %3d lanes %3d | lowered %3d | loose %d | orphans %s | floating %d %s",
+		totals.OnWalkway += #blockingNames
+		table.insert(report, string.format("F%02d %-17s props %4d | cleared camps %3d lanes %3d | lowered %3d | loose %d | orphans %s | floating %d %s | on walkway %d %s",
 			id, model:GetAttribute("BiomeId"), props, clearedCamps, clearedLanes, model:GetAttribute("PropsLowered") or 0, loose,
-			if #orphanText > 0 then table.concat(orphanText, ",") else "0", #floating, table.concat(floating, " ")))
+			if #orphanText > 0 then table.concat(orphanText, ",") else "0", #floating, table.concat(floating, " "),
+			#blockingNames, table.concat(blockingNames, " ")))
 		if not keepPreviews then model:Destroy() end
 		task.wait()
 	end
-	table.insert(report, string.format("TOTAL props %d | cleared camps %d lanes %d | lowered %d | loose family parts %d | orphans %d | floating %d",
-		totals.Props, totals.ClearedCamps, totals.ClearedLanes, totals.Lowered, totals.LooseFamilyParts, totals.Orphans, totals.Floating))
+	table.insert(report, string.format("TOTAL props %d | cleared camps %d lanes %d | lowered %d | loose family parts %d | orphans %d | floating %d | on walkway %d",
+		totals.Props, totals.ClearedCamps, totals.ClearedLanes, totals.Lowered, totals.LooseFamilyParts, totals.Orphans, totals.Floating, totals.OnWalkway))
 	if scratch then scratch:Destroy() end
 	return table.concat(report, "\n")
 end
