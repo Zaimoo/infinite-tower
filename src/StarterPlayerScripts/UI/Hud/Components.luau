@@ -120,6 +120,7 @@ function Components.RailButton(props: {
 	Disabled: boolean?,
 	DisabledReason: string?,
 	Wiggle: boolean?, -- a short shake every few seconds (the Store button)
+	ButtonRef: any?,
 	OnActivated: () -> (),
 })
 	local Icons = require(script.Parent:WaitForChild("Icons"))
@@ -154,6 +155,8 @@ function Components.RailButton(props: {
 		end
 	end
 	return e("TextButton", {
+		Name = props.Icon .. "RailButton",
+		ref = props.ButtonRef,
 		LayoutOrder = props.Order,
 		Size = UDim2.fromOffset(size + 24, size + math.floor(labelH * 0.55)),
 		BackgroundTransparency = 1,

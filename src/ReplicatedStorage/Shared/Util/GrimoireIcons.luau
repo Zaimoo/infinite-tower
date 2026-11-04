@@ -236,6 +236,14 @@ GrimoireIcons.Drawings = {
 		{ X = 32, Y = 32, W = 46, H = 46, Rot = 45, Hi = P.White, Lo = P.StoneHi, Radius = 12 },
 		{ X = 32, Y = 32, W = 20, H = 20, Rot = 45, Hi = P.Dark, Lo = P.Dark, Radius = 4, Outline = 2, Sheen = false },
 	},
+	-- Backpack: a leather satchel with a gold clasp.
+	Backpack = {
+		{ X = 32, Y = 13, W = 20, H = 14, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 6 },
+		{ X = 32, Y = 34, W = 43, H = 44, Hi = P.GoldLo, Lo = P.Dark, Radius = 10 },
+		{ X = 32, Y = 25, W = 44, H = 22, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 7 },
+		{ X = 32, Y = 44, W = 28, H = 17, Hi = P.GoldLo, Lo = P.Dark, Radius = 5 },
+		{ X = 32, Y = 34, W = 10, H = 12, Hi = P.SteelHi, Lo = P.GoldLo, Radius = 3 },
+	},
 	-- Settings: a steel cog with a gold hub.
 	Gear = {
 		{ X = 32, Y = 32, W = 12, H = 58, Hi = P.SteelHi, Lo = P.SteelLo, Radius = 3 },

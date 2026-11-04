@@ -137,9 +137,16 @@ local function SettingsApp()
 	-- Global APIs and Listeners
 	----------------------------------------------------------------------------
 	useEffect(function()
-		_G.OpenSettings = function() setIsOpen(true) end
+		local function openSettings()
+			if _G.CloseBackpack then _G.CloseBackpack() end
+			setIsOpen(true)
+		end
+		local function toggleSettings()
+			if isOpen then setIsOpen(false) else openSettings() end
+		end
+		_G.OpenSettings = openSettings
 		_G.CloseSettings = function() setIsOpen(false) end
-		_G.ToggleSettings = function() setIsOpen(function(prev) return not prev end) end
+		_G.ToggleSettings = toggleSettings
 		_G.IsSettingsOpen = function() return isOpen end
 
 		-- Escape key closes UI
@@ -156,7 +163,7 @@ local function SettingsApp()
 			if btn.Name == "SettingsButton" and btn:IsA("GuiButton") and not boundButtons[btn] then
 				boundButtons[btn] = true
 				btn.Activated:Connect(function()
-					setIsOpen(function(prev) return not prev end)
+					if _G.ToggleSettings then _G.ToggleSettings() end
 				end)
 			end
 		end

@@ -21,6 +21,7 @@ local GuiService = game:GetService("GuiService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local HeroCard = require(script.Parent:WaitForChild("HeroCard"))
+local ArtifactPreview = require(script.Parent.ArtifactPreview)
 local ModalFit = require(script.Parent:WaitForChild("ModalFit"))
 local UIFeel = require(script.Parent:WaitForChild("UIFeel"))
 local UIAssets = require(script.Parent:WaitForChild("UIAssets"))
@@ -73,6 +74,7 @@ type Item = {
 	Emphasis: number, -- 0 common beat, 1 shiny (Superior+ / 4★ artifact), 2 jackpot (Legendary+ / 5★ artifact)
 	New: boolean,
 	Hero: any?,
+	ArtifactTemplateId: string?,
 }
 
 local function new(className: string, props: { [string]: any }, parent: Instance?): any
@@ -118,6 +120,7 @@ local function describe(raw: any, isArtifact: boolean, isNew: boolean): Item
 			TierName = string.upper(info.Name) .. string.format("  ·  %d★", star),
 			Stars = star,
 			Icon = WEAPON_ICON[raw.Type or ""] or "Forge",
+			ArtifactTemplateId = raw.TemplateId,
 			Kind = (string.gsub(raw.Type or "WEAPON", "_", " & ")),
 			Sub = string.format("Weapon  ·  Power %d", math.round((ArtifactCatalog.CalculateEffectiveStats(star, rarity, nil, raw.TemplateId)))),
 			Emphasis = emphasis,
@@ -489,7 +492,7 @@ function SummonReveal.FillCard(self: any, item: Item)
 	clearGui(self.Portrait)
 	if item.Hero then
 		HeroCard.Portrait(self.Portrait, item.Hero)
-	else
+	elseif not ArtifactPreview.Show(self.Portrait, item.ArtifactTemplateId) then
 		local icon = GrimoireIcons.Create(item.Icon, 140, self.Portrait, Z + 8)
 		icon.AnchorPoint = Vector2.new(0.5, 0.5)
 		icon.Position = UDim2.fromScale(0.5, 0.5)
@@ -689,7 +692,7 @@ function SummonReveal.MiniCard(self: any, item: Item, order: number)
 	new("UIStroke", { Color = item.Color, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, host)
 	if item.Hero then
 		HeroCard.Portrait(host, item.Hero)
-	else
+	elseif not ArtifactPreview.Show(host, item.ArtifactTemplateId) then
 		local icon = GrimoireIcons.Create(item.Icon, 72, host, Z + 7)
 		icon.AnchorPoint = Vector2.new(0.5, 0.5)
 		icon.Position = UDim2.fromScale(0.5, 0.5)
