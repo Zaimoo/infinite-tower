@@ -242,6 +242,42 @@ local function propGroup(parent: Instance, kind: string): Model
 	return prop
 end
 
+-- Hit test for scenery standing on a walkway (TowerLayout.Lanes: ramps, stairs, landing pads, the Basin
+-- causeway and the Sanctuary exit). It judges biome scenery and corner decor; the walkway structure
+-- itself (terraces, ramps, curbs, inlays), ramp arches and faint light shafts are exempt.
+local WalkwayExemptKinds = { BridgeCurb = true, RampArch = true }
+local WalkwayExemptNames = { BasinCentralCauseway = true, BasinCausewayInlay = true }
+function Builder.WalkwayHitTest(model: Instance, origin: Vector3, index: number): (BasePart) -> boolean
+	local boxes = {}
+	for _, lane in Layout.Lanes(index) do
+		local a = origin + Vector3.new(lane.AX, lane.AY, lane.AZ)
+		local b = origin + Vector3.new(lane.BX, lane.BY, lane.BZ)
+		local frame = CFrame.lookAt((a + b) / 2, b) * CFrame.new(0, (lane.Above - lane.Below) / 2, 0)
+		table.insert(boxes, { CFrame = frame, Size = Vector3.new(lane.HalfWidth * 2, lane.Below + lane.Above, (b - a).Magnitude) })
+	end
+	local kit = model:FindFirstChild("BiomeAssets")
+	return function(part: BasePart): boolean
+		if part.Transparency >= 0.85 or WalkwayExemptNames[part.Name] then
+			return false
+		end
+		local unit = PropClearance.UnitOf(part, model)
+		if unit == part then
+			-- A loose part: only biome scenery, never the room's own floors, ramps and trim.
+			if not (kit and part:IsDescendantOf(kit)) then
+				return false
+			end
+		elseif WalkwayExemptKinds[unit:GetAttribute("PropKind")] then
+			return false
+		end
+		for _, box in boxes do
+			if PropClearance.BoxesOverlap(part.CFrame, part.Size, box.CFrame, box.Size) then
+				return true
+			end
+		end
+		return false
+	end
+end
+
 function Builder.Build(id: number, generation: number): any
 	assert(Config.IsFloorId(id))
 	local floorSpec = assert(Config.Get(id))
@@ -657,7 +693,12 @@ function Builder.Build(id: number, generation: number): any
   end
   return false
  end
- local laneCleared = PropClearance.Apply(model, inLane)
+ -- Scenery standing on a walkway goes too (whole), solid or not: the ramps and paths stay clear.
+ local onWalkway = Builder.WalkwayHitTest(model, origin, idx)
+ local function blocksLane(p: BasePart): boolean
+  return inLane(p) or onWalkway(p)
+ end
+ local laneCleared = PropClearance.Apply(model, blocksLane)
 
 	local folder = workspace:FindFirstChild("TowerRooms") or Instance.new("Folder")
 	folder.Name = "TowerRooms"
@@ -675,7 +716,7 @@ function Builder.Build(id: number, generation: number): any
 	if kit then
 		kit:SetAttribute("PropsClearedForCamps", (kit:GetAttribute("PropsClearedForCamps") or 0) + PropClearance.Apply(kit, BiomeAssets.CampHitTest(origin, layout)))
 	end
-	laneCleared += PropClearance.Apply(model, inLane)
+	laneCleared += PropClearance.Apply(model, blocksLane)
 	model:SetAttribute("PropsClearedForLanes", laneCleared)
 	model:SetAttribute("PropsLowered", lowered)
 	model:SetAttribute("PropsDroppedUnsupported", dropped)

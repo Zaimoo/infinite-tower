@@ -31,6 +31,31 @@ local ShopPanel = require(script.Parent:WaitForChild("ShopPanel"))
 -- Support facilities shown in the Phase 5 gothic panel.
 local PANEL_FACILITIES = { GuardPost = true, Market = true, TrainingGrounds = true, GodsBlessing = true }
 
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local TeleportRequest: RemoteEvent? = Remotes:FindFirstChild("TeleportRequest") :: RemoteEvent?
+if not TeleportRequest then
+	task.spawn(function()
+		TeleportRequest = Remotes:WaitForChild("TeleportRequest", 10) :: RemoteEvent?
+	end)
+end
+
+local lastTeleportClock = 0
+local function requestTeleport(destination: "Island" | "Hub")
+	local now = os.clock()
+	if now - lastTeleportClock < 1.5 then
+		return
+	end
+	lastTeleportClock = now
+	if not TeleportRequest then
+		TeleportRequest = Remotes:FindFirstChild("TeleportRequest") :: RemoteEvent?
+	end
+	if TeleportRequest then
+		TeleportRequest:FireServer(destination)
+	else
+		warn("[HudApp] TeleportRequest remote not found!")
+	end
+end
+
 local e = React.createElement
 local L = Theme.Layout
 local LocalPlayer = Players.LocalPlayer
@@ -363,42 +388,91 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 	local powerHeight = if compact then 40 else L.PowerBadgeHeight
 
 	local leftButtons = {
-		{ Icon = "Summon", Label = "Summon", Accent = Color3.fromRGB(250, 204, 21), OnActivated = function() call("OpenFacilityHUD", "Summoning") end },
+		{
+			Icon = "Shop",
+			Label = "Store",
+			Accent = Color3.fromRGB(250, 204, 21), -- #FACC15 Gold
+			Wiggle = not shopOpen,
+			OnActivated = function()
+				if _G.OpenRobuxShop then
+					_G.OpenRobuxShop()
+				end
+			end,
+		},
+		{
+			Icon = "Fortress",
+			Label = "Upgrades",
+			Accent = Color3.fromRGB(192, 132, 252), -- #C084FC Violet
+			Badge = buildableNodes(profile),
+			OnActivated = function()
+				call("OpenFacilityHUD", "FortressTree")
+			end,
+		},
+		{
+			Icon = "Index",
+			Label = "Index",
+			Accent = Color3.fromRGB(251, 191, 36), -- #FBBF24 Amber / Gold
+			Badge = newHeroes,
+			OnActivated = function()
+				if _G.OpenHeroIndex then
+					_G.OpenHeroIndex()
+				end
+			end,
+		},
+		{
+			Icon = "Gear",
+			Label = "Settings",
+			Accent = Color3.fromRGB(163, 150, 186), -- #A396BA Muted Silver/Bronze
+			OnActivated = function()
+				call("ToggleSettings")
+			end,
+		},
 	}
-	if unlocks.Squad then
-		table.insert(leftButtons, { Icon = "Squad", Label = "Squad", Accent = Color3.fromRGB(56, 189, 248), Badge = emptySlots,
-			OnActivated = function() call("OpenMasterModal", "SQUAD") end })
-	end
-	if unlocks.Forge then
-		table.insert(leftButtons, { Icon = "Forge", Label = "Forge", Accent = Color3.fromRGB(255, 120, 40),
-			OnActivated = function() call("OpenMasterModal", "BLACKSMITH") end })
-	end
-	if unlocks.Squad then
-		table.insert(leftButtons, { Icon = "Fortress", Label = "Upgrades", Accent = Color3.fromRGB(214, 180, 120), Badge = buildableNodes(profile),
-			OnActivated = function() call("OpenFacilityHUD", "FortressTree") end })
-	end
-	table.insert(leftButtons, { Icon = "Index", Label = "Index", Accent = Color3.fromRGB(180, 140, 255), Badge = newHeroes,
-		OnActivated = function() if _G.OpenHeroIndex then _G.OpenHeroIndex() end end })
-	-- Settings closes the Left Rail (it replaced the old floating gear in the top-right corner).
-	table.insert(leftButtons, { Icon = "Gear", Label = "Settings", Accent = Color3.fromRGB(200, 196, 220),
-		OnActivated = function() call("ToggleSettings") end })
 
 	local overdriveBlocked = Whistles.Blocked("Overdrive")
 	local recallBlocked = Whistles.Blocked("Recall")
 	local rightButtons = {
-		{ Icon = "Shop", Label = "Store", Accent = Color3.fromRGB(255, 214, 110), Wiggle = not shopOpen,
-			OnActivated = function() if _G.OpenRobuxShop then _G.OpenRobuxShop() end end },
-		{ Icon = "Overdrive", Label = "Overdrive", Accent = Color3.fromRGB(245, 158, 11), KeyHint = "Q",
-			Cooldown = Whistles.Remaining("Overdrive"), CooldownTotal = Whistles.Cooldown.Overdrive,
-			Disabled = overdriveBlocked ~= nil, OnActivated = function() Whistles.Fire("Overdrive") end },
-		{ Icon = "Recall", Label = "Recall", Accent = Color3.fromRGB(34, 211, 238), KeyHint = "E",
-			Cooldown = Whistles.Remaining("Recall"), CooldownTotal = Whistles.Cooldown.Recall,
-			Disabled = recallBlocked ~= nil, OnActivated = function() Whistles.Fire("Recall") end },
+		{
+			Icon = "Island",
+			Label = "Island",
+			Accent = Color3.fromRGB(52, 211, 153), -- #34D399 Emerald
+			OnActivated = function()
+				requestTeleport("Island")
+			end,
+		},
+		{
+			Icon = "Hub",
+			Label = "Hub",
+			Accent = Color3.fromRGB(245, 158, 11), -- #F59E0B Royal Amber
+			OnActivated = function()
+				requestTeleport("Hub")
+			end,
+		},
+		{
+			Icon = "Overdrive",
+			Label = "Overdrive",
+			Accent = Color3.fromRGB(245, 158, 11),
+			KeyHint = "Q",
+			Cooldown = Whistles.Remaining("Overdrive"),
+			CooldownTotal = Whistles.Cooldown.Overdrive,
+			Disabled = overdriveBlocked ~= nil,
+			OnActivated = function()
+				Whistles.Fire("Overdrive")
+			end,
+		},
+		{
+			Icon = "Recall",
+			Label = "Recall",
+			Accent = Color3.fromRGB(34, 211, 238),
+			KeyHint = "E",
+			Cooldown = Whistles.Remaining("Recall"),
+			CooldownTotal = Whistles.Cooldown.Recall,
+			Disabled = recallBlocked ~= nil,
+			OnActivated = function()
+				Whistles.Fire("Recall")
+			end,
+		},
 	}
-	if unlocks.Tower then
-		table.insert(rightButtons, { Icon = "Tower", Label = "Tower", Accent = Color3.fromRGB(192, 132, 252),
-			OnActivated = function() call("ToggleTower") end })
-	end
 
 	-- Gold and Gems ride on the Squad drawer's top edge; the Left Rail stops above both. The rail
 	-- uses the drawer's height until a collapse has finished sliding (`layoutOpen`).

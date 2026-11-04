@@ -344,9 +344,42 @@ function Service.CommitRespawn(player: Player)
 	if remotes then local c=Service.Context(player);c.Stage="COMMIT";c.RequestId="RESPAWN";remotes.Context:FireClient(player,c) end
 	if adapters.Combat then adapters.Combat.BootstrapAll() end;publish()
 end
+function Service.ExitToOverworld(player: Player, targetPos: Vector3, isIsland: boolean)
+	local s = createState(player)
+	Service.CancelPending(player, "FAST_TRAVEL")
+	s.FloorId = 0
+	s.RoomGeneration = 1
+	s.LocationRevision += 1
+	s.ViewEpoch += 1
+	s.BankArmed = false
+	if player.Character then
+		player.Character:SetAttribute("TowerFloorId", 0)
+	end
+	s.SquadFloorId = 0
+	s.SquadRoomGeneration = 1
+	s.SquadRevision += 1
+	s.SquadAssignment = nil
+	if _G.CombatSimulation and _G.CombatSimulation.WarpSquad then
+		_G.CombatSimulation.WarpSquad(player, targetPos, isIsland)
+	elseif adapters.Combat then
+		adapters.Combat.Transfer(player, rooms[0], false, targetPos)
+	end
+	local rem = getRemotes()
+	if rem and rem:FindFirstChild("Context") then
+		local c = Service.Context(player)
+		c.Stage = "COMMIT"
+		c.RequestId = "FAST_TRAVEL"
+		rem.Context:FireClient(player, c)
+	end
+	if adapters.Combat then
+		adapters.Combat.BootstrapAll()
+	end
+	publish()
+end
 local function disconnectCargo(player: Player)
 	for _,a in pairs(adapters) do if a.DropCargo then a.DropCargo(player) end end
 end
+Service.DisconnectCargo = disconnectCargo
 local function storeCargo(player: Player, location: any?)
 	for _,a in pairs(adapters) do if a.StoreCargo then a.StoreCargo(player, location) end end
 end
