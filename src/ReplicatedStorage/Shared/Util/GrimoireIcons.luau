@@ -131,13 +131,19 @@ GrimoireIcons.Drawings = {
 		{ X = 32, Y = 42, W = 40, H = 30, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 5 },
 		{ X = 32, Y = 42, W = 7, H = 12, Hi = P.Dark, Lo = P.Dark, Radius = 3, Outline = 1.6, Sheen = false },
 	},
-	-- Tower: an obsidian spire with a violet window and a gold finial.
+	-- Tower: the Infinite Crimson Tower with stone dais, obsidian spires, high arched window, glowing crimson gate and gold finial.
 	Tower = {
-		{ X = 32, Y = 42, W = 22, H = 40, Hi = P.IronHi, Lo = P.IronLo, Radius = 3 },
-		{ X = 32, Y = 20, W = 18, H = 18, Rot = 45, Hi = P.VioletHi, Lo = P.VioletLo, Radius = 2 },
-		{ X = 32, Y = 40, W = 8, H = 12, Hi = P.VioletHi, Lo = P.VioletLo, Radius = 4, Outline = 2, Sheen = false },
-		{ X = 32, Y = 7, W = 7, H = 7, Rot = 45, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 1, Outline = 2 },
-		{ X = 32, Y = 60, W = 34, H = 7, Hi = P.StoneHi, Lo = P.StoneLo, Radius = 2 },
+		{ X = 32, Y = 59, W = 42, H = 8, Hi = P.StoneHi, Lo = P.StoneLo, Radius = 3 },
+		{ X = 18, Y = 45, W = 9, H = 22, Hi = P.IronHi, Lo = P.IronLo, Radius = 2 },
+		{ X = 46, Y = 45, W = 9, H = 22, Hi = P.IronHi, Lo = P.IronLo, Radius = 2 },
+		{ X = 18, Y = 32, W = 7, H = 7, Rot = 45, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 1, Outline = 1.6 },
+		{ X = 46, Y = 32, W = 7, H = 7, Rot = 45, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 1, Outline = 1.6 },
+		{ X = 32, Y = 38, W = 22, H = 36, Hi = P.IronHi, Lo = P.IronLo, Radius = 3 },
+		{ X = 32, Y = 18, W = 18, H = 18, Rot = 45, Hi = P.VioletHi, Lo = P.VioletLo, Radius = 2 },
+		{ X = 32, Y = 6, W = 7, H = 7, Rot = 45, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 1, Outline = 2 },
+		{ X = 32, Y = 30, W = 6, H = 10, Hi = P.VioletHi, Lo = P.VioletLo, Radius = 3, Outline = 1.8, Sheen = false },
+		{ X = 32, Y = 51, W = 10, H = 12, Hi = P.BloodHi, Lo = P.BloodLo, Radius = 5, Outline = 2, Sheen = false },
+		{ X = 32, Y = 52, W = 5, H = 8, Hi = P.EmberHi, Lo = P.BloodHi, Radius = 2.5, Outline = 1.2, Sheen = false },
 	},
 
 	-- Archetypes ------------------------------------------------------------------------------
@@ -367,7 +373,7 @@ GrimoireIcons.Drawings = {
 local ALIAS: { [string]: string } = {
 	Root = "Fortress", Outskirts = "Camp", Commerce = "Market", Martial = "Power", Divine = "Blessing",
 	Command = "Banner", Perk = "Spark", GuardPost = "Camp", TrainingGrounds = "Power", GodsBlessing = "Blessing",
-	Training = "Power", Gem = "Gems",
+	Training = "Power", Gem = "Gems", TowerGate = "Tower", Gate = "Tower",
 }
 
 function GrimoireIcons.Resolve(name: string): { ShapeSpec }?
