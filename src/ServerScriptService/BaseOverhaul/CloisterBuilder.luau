@@ -194,6 +194,12 @@ local function edgeCF(root: CFrame, x: number, z: number, nx: number, nz: number
 	return CFrame.lookAt(pos, pos - Vector3.new(nx, 0, nz))
 end
 
+-- Pieces that must overlap (corner slices, curved wall pieces) would flicker if their faces shared a height
+-- (z-fighting). Each gets a tiny drop that cycles through 6 levels, so no overlapping pair matches.
+local function layerDrop(index: number, step: number?): number
+	return (index % 6 + 1) * (step or 0.025)
+end
+
 -- Invisible safety barriers must stand higher than a jump made from the top of a 3-4 stud wall
 local BARRIER_HEIGHT = 20
 
@@ -233,9 +239,12 @@ end
 local function edgeWall(parent: Instance, root: CFrame, hx: number, hz: number, r: number, inset: number, height: number, openings: { { number } }, outwardIsDrop: boolean)
 	local barriers = folder("InvisibleEdgeBarriers", parent)
 	local barrierZ = if outwardIsDrop then 1.6 else -1.6
-	local function emit(x: number, z: number, nx: number, nz: number, len: number)
+	local pieceIndex = 0
+	local function emit(x: number, z: number, nx: number, nz: number, len: number, isArc: boolean?)
+		pieceIndex += 1
 		local cf = edgeCF(root, x - nx * inset, z - nz * inset, nx, nz, 0)
-		makePart({ Name = "EdgeWall", Size = Vector3.new(len + 0.6, height, 2), CFrame = cf * CFrame.new(0, height * 0.5, 0), Color = SLATE, Material = Enum.Material.Slate, Parent = parent })
+		local h = if isArc then height + layerDrop(pieceIndex, 0.03) else height
+		makePart({ Name = "EdgeWall", Size = Vector3.new(len + 0.6, h, 2 + (if isArc then pieceIndex % 3 * 0.02 else 0)), CFrame = cf * CFrame.new(0, h * 0.5, 0), Color = SLATE, Material = Enum.Material.Slate, Parent = parent })
 		local barrier = makePart({ Name = "Barrier", Size = Vector3.new(len + 0.6, BARRIER_HEIGHT, 1), CFrame = cf * CFrame.new(0, BARRIER_HEIGHT * 0.5, barrierZ), Transparency = 1, CastShadow = false, Parent = barriers })
 		barrier.CanQuery = false
 		barrier.CanTouch = false
@@ -263,7 +272,7 @@ local function edgeWall(parent: Instance, root: CFrame, hx: number, hz: number, 
 		end
 		if isArc then
 			flush()
-			emit(x, z, nx, nz, len)
+			emit(x, z, nx, nz, len, true)
 			return
 		end
 		local r0 = run
@@ -315,26 +324,36 @@ local function buildGround(model: Model, root: CFrame, cfg: typeof(CloisterBuild
 	local th = cfg.TopThickness
 	local first: Part? = nil
 
-	-- Band: slices from the outer edge inward, exactly one band wide (corners are concentric arcs)
-	walkRoundedRect(hx, hz, ro, 200, function(x, z, nx, nz, len)
-		local cf = edgeCF(root, x - nx * band * 0.5, z - nz * band * 0.5, nx, nz, 0)
-		local slab = makePart({ Name = "BandSurface", Size = Vector3.new(len + 0.6, th, band), CFrame = cf * CFrame.new(0, -th * 0.5, 0), Color = GRASS, Material = Enum.Material.Grass, Parent = f })
+	-- Band: slices from the outer edge inward, exactly one band wide (corners are concentric arcs).
+	-- Coplanar overlapping faces flicker (z-fighting), so straight slices meet edge to edge and the
+	-- overlapping corner slices step a few hundredths of a stud below their neighbours.
+	local arcIndex = 0
+	walkRoundedRect(hx, hz, ro, 200, function(x, z, nx, nz, len, isArc)
+		arcIndex += if isArc then 1 else 0
+		local top = if isArc then -layerDrop(arcIndex) else 0
+		local cf = edgeCF(root, x - nx * band * 0.5, z - nz * band * 0.5, nx, nz, top)
+		local slab = makePart({ Name = "BandSurface", Size = Vector3.new(if isArc then len + 0.6 else len, th, band), CFrame = cf * CFrame.new(0, -th * 0.5, 0), Color = GRASS, Material = Enum.Material.Grass, Parent = f })
 		first = first or slab
 	end, 16)
-	-- Stone kerb along both band edges
+	-- Stone kerb along the band's outer edge, standing 0.1 proud of the grass so their side faces never coincide
+	local kerbIndex = 0
 	walkRoundedRect(hx, hz, ro, 400, function(x, z, nx, nz, len)
-		makePart({ Name = "OuterKerb", Size = Vector3.new(len + 0.6, th - 0.1, 6), CFrame = edgeCF(root, x - nx * 3, z - nz * 3, nx, nz, -0.05) * CFrame.new(0, -(th - 0.1) * 0.5, 0), Color = SLATE, Material = Enum.Material.Slate, Parent = f })
+		kerbIndex += 1
+		makePart({ Name = "OuterKerb", Size = Vector3.new(len + 0.6, th - 0.1, 6), CFrame = edgeCF(root, x - nx * 2.9, z - nz * 2.9, nx, nz, -0.3 - layerDrop(kerbIndex)) * CFrame.new(0, -(th - 0.1) * 0.5, 0), Color = SLATE, Material = Enum.Material.Slate, Parent = f })
 	end, 16)
 
 	-- Centre island: solid rounded rectangle
 	local ix, iz, ir = HubLayout.IslandHalfX, HubLayout.IslandHalfZ, HubLayout.IslandCornerRadius
 	makePart({ Name = "IslandSurface", Size = Vector3.new(ix * 2, th, (iz - ir) * 2), CFrame = root * CFrame.new(0, -th * 0.5, 0), Color = GRASS, Material = Enum.Material.Grass, Parent = f })
-	makePart({ Name = "IslandSurface", Size = Vector3.new((ix - ir) * 2, th, iz * 2), CFrame = root * CFrame.new(0, -th * 0.5, 0), Color = GRASS, Material = Enum.Material.Grass, Parent = f })
+	for _, side in { -1, 1 } do
+		makePart({ Name = "IslandSurface", Size = Vector3.new((ix - ir) * 2, th, ir), CFrame = root * CFrame.new(0, -th * 0.5, side * (iz - ir * 0.5)), Color = GRASS, Material = Enum.Material.Grass, Parent = f })
+	end
 	for _, q in { { 1, 1 }, { -1, 1 }, { 1, -1 }, { -1, -1 } } do
-		cylinderY("IslandCorner", ir, th, 0, root * CFrame.new(q[1] * (ix - ir), 0, q[2] * (iz - ir)), GRASS, Enum.Material.Grass, false, f)
+		cylinderY("IslandCorner", ir, th, -0.06, root * CFrame.new(q[1] * (ix - ir), 0, q[2] * (iz - ir)), GRASS, Enum.Material.Grass, false, f)
 	end
 	walkRoundedRect(ix, iz, ir, 400, function(x, z, nx, nz, len)
-		makePart({ Name = "IslandKerb", Size = Vector3.new(len + 0.6, th - 0.1, 5), CFrame = edgeCF(root, x - nx * 2.5, z - nz * 2.5, nx, nz, -0.05) * CFrame.new(0, -(th - 0.1) * 0.5, 0), Color = SLATE, Material = Enum.Material.Slate, Parent = f })
+		kerbIndex += 1
+		makePart({ Name = "IslandKerb", Size = Vector3.new(len + 0.6, th - 0.1, 5), CFrame = edgeCF(root, x - nx * 2.4, z - nz * 2.4, nx, nz, -0.3 - layerDrop(kerbIndex)) * CFrame.new(0, -(th - 0.1) * 0.5, 0), Color = SLATE, Material = Enum.Material.Slate, Parent = f })
 	end, 8)
 
 	-- Rocky undersides: chunks under the band, a tapered mass under the island
@@ -392,25 +411,27 @@ local function buildEdges(model: Model, root: CFrame, cfg: typeof(CloisterBuilde
 	local walk = folder("Promenade", model)
 	local mid = HubLayout.BandWidth * 0.5
 	local k = 0
-	walkRoundedRect(hx - mid, hz - mid, ro - mid, 80, function(x, z, nx, nz, len)
+	walkRoundedRect(hx - mid, hz - mid, ro - mid, 80, function(x, z, nx, nz, len, isArc)
 		k += 1
-		makePart({ Name = "PromenadeSlab", Size = Vector3.new(len + 0.4, 0.24, cfg.PathWidth), CFrame = edgeCF(root, x, z, nx, nz, 0.12), Color = if k % 2 == 0 then COBBLE else COBBLE:Lerp(SLATE, 0.2), Material = Enum.Material.Cobblestone, Decorative = true, Parent = walk })
+		-- Corner pieces only overlap their neighbours at this radius, so two levels below the straights suffice
+		local thick = if isArc then (if k % 2 == 0 then 0.2 else 0.16) else 0.24
+		makePart({ Name = "PromenadeSlab", Size = Vector3.new(if isArc then len + 0.4 else len, thick, cfg.PathWidth), CFrame = edgeCF(root, x, z, nx, nz, thick * 0.5), Color = if k % 2 == 0 then COBBLE else COBBLE:Lerp(SLATE, 0.2), Material = Enum.Material.Cobblestone, Decorative = true, Parent = walk })
 	end, 10)
 	local c = HubLayout.HubCentre
 	for i = 1, HubLayout.PlotCount do
 		local slot = HubLayout.PlotSlots[i]
 		local land = HubLayout.HubLandingPoint(i)
 		local lx, lz = land.X - c.X, land.Z - c.Z
-		flatStrip("LandingSpur", root, lx, lz, lx - slot.DX * mid, lz - slot.DZ * mid, cfg.PathWidth, 0.13, 0.26, COBBLE, Enum.Material.Cobblestone, walk)
+		flatStrip("LandingSpur", root, lx, lz, lx - slot.DX * mid, lz - slot.DZ * mid, cfg.PathWidth, 0.15, 0.3, COBBLE, Enum.Material.Cobblestone, walk)
 	end
 	for _, o in voidOpenings() do
 		local len = math.sqrt(o[1] ^ 2 + o[2] ^ 2)
 		local ux, uz = o[1] / len, o[2] / len
-		flatStrip("FootbridgeSpur", root, o[1], o[2], o[1] + ux * mid, o[2] + uz * mid, cfg.PathWidth, 0.13, 0.26, COBBLE, Enum.Material.Cobblestone, walk)
+		flatStrip("FootbridgeSpur", root, o[1], o[2], o[1] + ux * mid, o[2] + uz * mid, cfg.PathWidth, 0.15, 0.3, COBBLE, Enum.Material.Cobblestone, walk)
 	end
 	-- Island paths: a cross joining the four footbridges
 	flatStrip("IslandPath", root, -HubLayout.IslandHalfX, 0, HubLayout.IslandHalfX, 0, cfg.PathWidth, 0.12, 0.24, COBBLE, Enum.Material.Cobblestone, walk)
-	flatStrip("IslandPath", root, 0, -HubLayout.IslandHalfZ, 0, HubLayout.IslandHalfZ, cfg.PathWidth, 0.12, 0.24, COBBLE, Enum.Material.Cobblestone, walk)
+	flatStrip("IslandPath", root, 0, -HubLayout.IslandHalfZ, 0, HubLayout.IslandHalfZ, cfg.PathWidth, 0.15, 0.3, COBBLE, Enum.Material.Cobblestone, walk)
 end
 
 --============================================================================
@@ -425,7 +446,7 @@ local function buildFootbridges(model: Model, root: CFrame)
 		local b = Vector3.new(isl[1], 0, isl[2])
 		local len = (b - a).Magnitude + 6
 		local cf = root * CFrame.lookAt((a + b) * 0.5, b)
-		makePart({ Name = "FootbridgeDeck", Size = Vector3.new(w, 1.2, len), CFrame = cf * CFrame.new(0, -0.6, 0), Color = Color3.fromRGB(168, 156, 138), Material = Enum.Material.Cobblestone, Parent = f })
+		makePart({ Name = "FootbridgeDeck", Size = Vector3.new(w, 1.2, len), CFrame = cf * CFrame.new(0, -0.68, 0), Color = Color3.fromRGB(168, 156, 138), Material = Enum.Material.Cobblestone, Parent = f })
 		makePart({ Name = "FootbridgePlanks", Size = Vector3.new(w - 6, 0.2, len - 4), CFrame = cf * CFrame.new(0, 0.1, 0), Color = WOOD, Material = Enum.Material.WoodPlanks, Decorative = true, Parent = f })
 		makePart({ Name = "FootbridgeKeel", Size = Vector3.new(w * 0.5, 4, len - 8), CFrame = cf * CFrame.new(0, -3, 0), Color = SLATE, Material = Enum.Material.Slate, Decorative = true, Parent = f })
 		for _, side in { -1, 1 } do
@@ -455,7 +476,7 @@ local function buildLandings(model: Model, root: CFrame, cfg: typeof(CloisterBui
 		local g = folder("Gate_" .. index, landings)
 		g:SetAttribute("PlotIndex", index)
 		local apron = edgeCF(root, land.X - c.X - slot.DX * 8, land.Z - c.Z - slot.DZ * 8, slot.DX, slot.DZ, 0)
-		makePart({ Name = "Apron", Size = Vector3.new(26, 0.26, 16), CFrame = apron * CFrame.new(0, 0.13, 0), Color = COBBLE, Material = Enum.Material.Cobblestone, Decorative = true, Parent = g })
+		makePart({ Name = "Apron", Size = Vector3.new(26, 0.36, 16), CFrame = apron * CFrame.new(0, 0.18, 0), Color = COBBLE, Material = Enum.Material.Cobblestone, Decorative = true, Parent = g })
 		local rune = cylinderY("GateRune", 4, 0.1, 0.32, apron, CYAN, Enum.Material.Neon, true, g)
 		rune.Transparency = 0.35
 		for _, side in { -1, 1 } do
@@ -491,8 +512,8 @@ local function buildGrandTerrace(model: Model, root: CFrame)
 	local f = folder("PilgrimsWay", model)
 	local hz, vz = HubLayout.HubHalfZ, HubLayout.VoidHalfZ
 	local w = HubLayout.BoulevardWidth
-	flatStrip("Boulevard", root, 0, hz, 0, vz, w, 0.14, 0.28, COBBLE, Enum.Material.Cobblestone, f)
-	flatStrip("CrimsonRunner", root, 0, hz, 0, -HubLayout.IslandHalfZ * 0.2, 10, 0.3, 0.1, CRIMSON, Enum.Material.Granite, f)
+	flatStrip("Boulevard", root, 0, hz, 0, vz, w, 0.18, 0.36, COBBLE, Enum.Material.Cobblestone, f)
+	flatStrip("CrimsonRunner", root, 0, hz, 0, -HubLayout.IslandHalfZ * 0.2, 10, 0.4, 0.06, CRIMSON, Enum.Material.Granite, f)
 	for k = 0, 1 do
 		for _, side in { -1, 1 } do
 			local bz = hz - 30 - k * 50
@@ -748,7 +769,7 @@ local function buildDais(model: Model, root: CFrame, cfg: typeof(CloisterBuilder
 
 	-- Compass rose: 4 crimson strips through the centre
 	for i = 0, 3 do
-		makePart({ Name = "CompassStrip", Size = Vector3.new(1.6, 0.06, cfg.PlazaRadius * 2 - 4), CFrame = root * CFrame.new(0, 0.32, 0) * CFrame.Angles(0, math.rad(i * 45), 0), Color = CRIMSON, Material = Enum.Material.Granite, Decorative = true, Parent = f })
+		makePart({ Name = "CompassStrip", Size = Vector3.new(1.6, 0.06, cfg.PlazaRadius * 2 - 4), CFrame = root * CFrame.new(0, 0.32 + i * 0.015, 0) * CFrame.Angles(0, math.rad(i * 45), 0), Color = CRIMSON, Material = Enum.Material.Granite, Decorative = true, Parent = f })
 	end
 	-- Cyan arrows down each plot's path
 	for index = 1, HubLayout.PlotCount do
@@ -847,7 +868,7 @@ local function buildPool(model: Model, root: CFrame)
 		local a = math.rad(i * 11.25)
 		local len = 2 * (poolR + 1) * math.tan(math.rad(5.625)) + 0.3
 		local pos = pc * CFrame.new(math.sin(a) * (poolR + 1), 0.6, -math.cos(a) * (poolR + 1))
-		makePart({ Name = "Coping", Size = Vector3.new(len, 1.2, 2), CFrame = CFrame.lookAt(pos.Position, (pc * CFrame.new(0, 0.6, 0)).Position), Color = SLATE, Material = Enum.Material.Slate, Parent = f })
+		makePart({ Name = "Coping", Size = Vector3.new(len, 1.2 + (i % 2) * 0.04, 2), CFrame = CFrame.lookAt(pos.Position, (pc * CFrame.new(0, 0.6, 0)).Position), Color = SLATE, Material = Enum.Material.Slate, Parent = f })
 	end
 	-- Stepping stones east-west (the footbridge carries the centre)
 	for _, x in { -19, -13, -7, 7, 13, 19 } do
@@ -1001,7 +1022,7 @@ local function buildOverlook(model: Model, root: CFrame)
 		})
 		for _, zr in { { -15, -4 }, { 4, 15 } } do
 			local len = zr[2] - zr[1]
-			makePart({ Name = "Balustrade", Size = Vector3.new(1, 3, len), CFrame = t * CFrame.new(side * 21.5, h + 1.5, (zr[1] + zr[2]) * 0.5), Color = SLATE_DARK, Material = Enum.Material.Slate, Parent = f })
+			makePart({ Name = "Balustrade", Size = Vector3.new(1, 3.06, len), CFrame = t * CFrame.new(side * 21.5, h + 1.53, (zr[1] + zr[2]) * 0.5), Color = SLATE_DARK, Material = Enum.Material.Slate, Parent = f })
 		end
 		-- Crimson banners at the outer corners
 		local pole = t * CFrame.new(side * 20, h, 13.5)

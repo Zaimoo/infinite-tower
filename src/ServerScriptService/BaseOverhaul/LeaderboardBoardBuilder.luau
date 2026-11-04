@@ -107,9 +107,9 @@ local function framePanel(parent: Instance, cf: CFrame, size: Vector3, crest: bo
 	for _, side in { -1, 1 } do
 		PartKit.Part({ Name = "Post", Size = Vector3.new(0.7, h + 2, 0.9), CFrame = cf * CFrame.new(side * (w * 0.5 + 0.35), 0, 0), Color = OBSIDIAN, Material = Enum.Material.Basalt, Decorative = true, Parent = parent })
 	end
-	PartKit.Part({ Name = "Beam", Size = Vector3.new(w + 2.2, 0.8, 1.1), CFrame = cf * CFrame.new(0, h * 0.5 + 0.6, 0), Color = OBSIDIAN, Material = Enum.Material.Basalt, Decorative = true, Parent = parent })
+	PartKit.Part({ Name = "Beam", Size = Vector3.new(w + 2.2, 0.9, 1.1), CFrame = cf * CFrame.new(0, h * 0.5 + 0.65, 0), Color = OBSIDIAN, Material = Enum.Material.Basalt, Decorative = true, Parent = parent })
 	PartKit.Part({ Name = "BeamTrim", Size = Vector3.new(w + 2.4, 0.2, 1.2), CFrame = cf * CFrame.new(0, h * 0.5 + 0.15, 0), Color = GOLD, Material = Enum.Material.Metal, Decorative = true, Parent = parent })
-	PartKit.Part({ Name = "Sill", Size = Vector3.new(w + 1.6, 0.5, 1), CFrame = cf * CFrame.new(0, -h * 0.5 - 0.25, 0), Color = STONE, Material = Enum.Material.Slate, Decorative = true, Parent = parent })
+	PartKit.Part({ Name = "Sill", Size = Vector3.new(w + 1.6, 0.5, 1), CFrame = cf * CFrame.new(0, -h * 0.5 - 0.27, 0), Color = STONE, Material = Enum.Material.Slate, Decorative = true, Parent = parent })
 	if crest then
 		local gem = PartKit.Part({ Name = "CrestGem", Size = Vector3.new(1.2, 1.2, 0.4), CFrame = cf * CFrame.new(0, h * 0.5 + 1.6, -0.1) * CFrame.Angles(0, 0, math.rad(45)), Color = GOLD, Material = Enum.Material.Neon, Decorative = true, Parent = parent })
 		new("PointLight", { Color = LANTERN, Range = 12, Brightness = 1.2, Shadows = false, Parent = gem })
