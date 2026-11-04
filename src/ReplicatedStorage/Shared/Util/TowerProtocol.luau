@@ -1,6 +1,7 @@
 --!strict
 -- Shared v2 codec. No legacy stride guessing or position clamping.
-local P = { Version = 2, HeaderBytes = 46, RecordBytes = 24, BatchSize = 32 }
+-- Snapshot Flags bits: 1 hero, 2 overdrive, 4 pacified, 8 shielded (WARD / SHIELDED), 16 roused, 32 affixed Elite.
+local P = { Version = 2, HeaderBytes = 46, RecordBytes = 24, BatchSize = 32, MaxFlags = 63 }
 local U32 = 4294967296
 function P.Finite(n: any): boolean
 	return type(n) == "number" and n == n and math.abs(n) < math.huge
@@ -59,7 +60,7 @@ function P.Encode(context: any, entities: {any}, sequence: number, serverTime: n
 			local e=entities[(batch-1)*P.BatchSize+j]
 			local v=e.Position-context.Origin
 			for _,n in {v.X,v.Y,v.Z} do assert(P.Finite(n) and math.abs(n)<=3276.7,"Out-of-range tower entity") end
-			assert(P.Integer(e.NetId,1,U32-1) and P.Integer(e.EntityGeneration,1,U32-1))
+			assert(P.Integer(e.NetId,1,U32-1) and P.Integer(e.EntityGeneration,1,U32-1) and P.Integer(e.Flags or 0,0,P.MaxFlags))
 			local o=46+(j-1)*24
 			buffer.writeu32(buf,o,e.NetId);buffer.writeu32(buf,o+4,e.EntityGeneration)
 			buffer.writei16(buf,o+8,math.round(v.X*10));buffer.writei16(buf,o+10,math.round(v.Y*10));buffer.writei16(buf,o+12,math.round(v.Z*10))
@@ -87,7 +88,7 @@ function P.Decode(buf: any, expected: any): any?
 		local o=46+(i-1)*24
 		local id,gen=buffer.readu32(buf,o),buffer.readu32(buf,o+4)
 		local flags=buffer.readu8(buf,o+19)
-		if id==0 or gen==0 or seen[id] or flags>15 or buffer.readu16(buf,o+16)>1000 or buffer.readu8(buf,o+18)>100 then return nil end
+		if id==0 or gen==0 or seen[id] or flags>P.MaxFlags or buffer.readu16(buf,o+16)>1000 or buffer.readu8(buf,o+18)>100 then return nil end
 		seen[id]=true
 		local pos=expected.Origin+Vector3.new(buffer.readi16(buf,o+8)/10,buffer.readi16(buf,o+10)/10,buffer.readi16(buf,o+12)/10)
 		if not P.InBounds(pos,expected.Origin,expected.Bounds) then return nil end

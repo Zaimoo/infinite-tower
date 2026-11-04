@@ -60,6 +60,7 @@ Theme.Layout = table.freeze({
 	RailGap = 6,
 	PowerBadgeHeight = 58,
 	PowerBadgeWidth = 200,
+	EventBadgeHeight = 52, -- timed tower event badge (Phase G), stacked above Squad Power
 	StatusRowHeight = 56,
 	StatusWidth = 300,
 })

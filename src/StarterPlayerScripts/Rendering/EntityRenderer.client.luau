@@ -607,7 +607,11 @@ TowerRemotes.TowerEntityState.OnClientEvent:Connect(function(context,message)
     node.Model:Destroy();node=replacement;VisualNodesByNetId[id]=node
    end
    if node then
-    if node.TitleLabel then node.TitleLabel.Text=entry.IsHero and string.format("%s %s Lv.%d",entry.Name or "Hero",string.rep("★",entry.Stars or 1),entry.Level or 1) or entry.Name or "Mob" end
+    if node.TitleLabel then
+     local spec = entry.EnemyId and FirstBiome.Get(entry.EnemyId)
+     local suffix = if not entry.IsHero and spec and spec.Support then " · Support" else ""
+     node.TitleLabel.Text = if entry.IsHero then string.format("%s %s Lv.%d",entry.Name or "Hero",string.rep("★",entry.Stars or 1),entry.Level or 1) else (entry.Name or "Mob") .. suffix
+    end
     if entry.IsHero then
      local currentArtId = node.Model:GetAttribute("EquippedArtifactId")
      local nextArtId = entry.EquippedArtifactId

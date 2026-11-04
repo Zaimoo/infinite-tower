@@ -11,7 +11,8 @@ local KIT_COLORS = {
 	WARD = Color3.fromRGB(110, 210, 255),
 	ROUSE = Color3.fromRGB(255, 196, 80),
 }
-local SHIELD_FLAG, ROUSE_FLAG = 8, 16
+local SHIELD_FLAG, ROUSE_FLAG, AFFIX_FLAG = 8, 16, 32
+local AFFIX_COLOR = Color3.fromRGB(255, 120, 70)
 
 local function clearEffect(key: string)
 	local effect = effects[key]
@@ -213,10 +214,41 @@ local function supportGlow(node: any, rig: any)
 	end
 end
 
+-- An affixed Elite (Phase F) stands in a slowly turning crimson-gold ring, so it reads at a distance.
+local function affixGlow(node: any, rig: any, now: number)
+	local affixed = bit32.band(node.Flags or 0, AFFIX_FLAG) ~= 0 and not node.DeathAt
+	if affixed and not rig.AffixRing then
+		local radius = math.max(rig.Spec.Width or 5, rig.Spec.Depth or 5) * 0.8 + 1.5
+		local ring = Instance.new("Part")
+		ring.Name = "AffixRing"
+		ring.Shape = Enum.PartType.Cylinder
+		ring.Size = Vector3.new(0.15, radius * 2, radius * 2)
+		ring.Material = Enum.Material.Neon
+		ring.Color = AFFIX_COLOR
+		ring.CanCollide, ring.CanTouch, ring.CanQuery, ring.CastShadow = false, false, false, false
+		ring.Massless = true
+		local weld = Instance.new("WeldConstraint")
+		ring.CFrame = rig.Root.CFrame * CFrame.new(0, 0.1 - (rig.Spec.RootHeight or 3), 0) * CFrame.Angles(0, 0, math.pi / 2)
+		weld.Part0, weld.Part1 = rig.Root, ring
+		weld.Parent = ring
+		local light = Instance.new("PointLight")
+		light.Color, light.Range, light.Brightness = AFFIX_COLOR, 14, 1.6
+		light.Parent = ring
+		ring.Parent = rig.Model
+		rig.AffixRing = ring
+	end
+	if rig.AffixRing then
+		rig.AffixRing.Transparency = if affixed then 0.55 + 0.2 * math.sin(now * 3) else 1
+		local light = rig.AffixRing:FindFirstChildWhichIsA("PointLight")
+		if light then light.Enabled = affixed end
+	end
+end
+
 function Controller.Step(node: any, dt: number, now: number)
 	local rig = node.EnemyRig
 	if not rig then return end
 	supportGlow(node, rig)
+	affixGlow(node, rig, now)
 	local clips = Clips[rig.EnemyId]
 	local frames = clips.Idle
 	local phase = (now % 3) / 3
