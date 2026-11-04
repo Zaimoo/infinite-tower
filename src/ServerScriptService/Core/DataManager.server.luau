@@ -424,7 +424,7 @@ local function createDefaultPlayerProfile(): PlayerProfile
 		SchemaVersion = ProfileMigrations.CurrentSchema,
 		PitMaterials = {
 			SoulEssence = 0,
-			PromotionStone = 0,
+			PromotionStone = 2,
 			ImprintCatalyst = 0,
 			IronGear = 25,
 			RiftOrb = 10,

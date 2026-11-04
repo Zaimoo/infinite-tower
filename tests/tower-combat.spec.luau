@@ -16,16 +16,17 @@ local function fixture()
 	return m,h,d,a
 end
 local function safe(e) return e.Safe==true end
-test("Combat registry contains all 50 complete runtime enemies (incl. 10 Floor Alphas), clips, and all 50 floors",function()
+test("Combat registry contains all 60 complete runtime enemies (incl. 10 Floor Alphas and 10 supports), clips, and all 50 floors",function()
 	local n=0;for enemyId,e in pairs(C.Entries) do n+=1;assert(#e.RequiredSlots>=5);assert(e.ModelSource and e.ClipSource)
 		local clipSet=assert(Clips[enemyId],"Missing clip set for "..enemyId)
 		for _,slot in e.RequiredSlots do
 			local frames=assert(clipSet[slot],"Missing slot "..slot.." for "..enemyId)
 			assert(Clips.Sample(frames,0) and Clips.Sample(frames,.5) and Clips.Sample(frames,.8) and Clips.Sample(frames,1))
 		end
-		for _,a in e.Attacks do assert(a.ImpactOffsetSeconds>=.6 and a.RecoverySeconds>0 and a.Range>0 and a.DamageMultiplier>0) end
+		-- A support's kit cast deals no damage (it heals, shields or rouses allies); every other move does.
+		for _,a in e.Attacks do assert(a.ImpactOffsetSeconds>=.6 and a.RecoverySeconds>0 and a.Range>0 and (a.DamageMultiplier>0 or (e.Support~=nil and a.Shape:sub(1,4)=="ALLY"))) end
 	end
-	assert(n==50 and C.ReleaseEnabled)
+	assert(n==60 and C.ReleaseEnabled)
 	for floorId=1,50 do
 		local placements=assert(C.Floors[floorId],"Missing placements on floor "..floorId)
 		assert(#placements>=3)

@@ -82,12 +82,13 @@ test("Ten unique bosses occur only on multiples of five; encounters reference th
 	assert(count(bosses) == 10)
 end)
 
-test("Manifest covers 50 enemies (40 plus 10 Floor Alphas) with local authored rigs/clips and no fabricated uploaded IDs", function()
-	assert(count(Mobs.Entries) == 50)
+test("Manifest covers 60 enemies (40 plus 10 Floor Alphas and 10 supports) with local authored rigs/clips and no fabricated uploaded IDs", function()
+	assert(count(Mobs.Entries) == 60)
 	local roleCounts, referenced = { REGULAR = 0, ELITE = 0, BOSS = 0 }, {}
 	for _, biome in ipairs(Mobs.Biomes) do
 		assert(#biome.RegularEnemyIds == 2)
-		for _, id in ipairs({ biome.RegularEnemyIds[1], biome.RegularEnemyIds[2], biome.EliteEnemyId, biome.AlphaEnemyId, biome.BossEnemyId }) do
+		assert(Mobs.Get(biome.SupportEnemyId).Support ~= nil)
+		for _, id in ipairs({ biome.RegularEnemyIds[1], biome.RegularEnemyIds[2], biome.EliteEnemyId, biome.AlphaEnemyId, biome.BossEnemyId, biome.SupportEnemyId }) do
 			assert(not referenced[id]); referenced[id] = true
 			assert(Mobs.Get(id).BiomeId == biome.Id)
 		end
@@ -112,7 +113,7 @@ test("Manifest covers 50 enemies (40 plus 10 Floor Alphas) with local authored r
 		end
 		assert(Combat.Get(id), "Missing executable combat entry for " .. id)
 	end
-	assert(roleCounts.REGULAR == 20 and roleCounts.ELITE == 20 and roleCounts.BOSS == 10) -- ELITE includes the 10 Alphas
+	assert(roleCounts.REGULAR == 30 and roleCounts.ELITE == 20 and roleCounts.BOSS == 10) -- ELITE includes the 10 Alphas; REGULAR the 10 supports
 end)
 
 test("Authored attack contract has anticipation, one server impact, recovery and cancellation", function()

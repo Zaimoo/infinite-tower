@@ -43,6 +43,10 @@ export type ActiveRelic = {
 	Carrier: Player?,
 	LockedUserId: number?,
 	LockExpiresAt: number,
+	-- "SPAWN": a fresh drop is sealed for everyone (its killer too) until LockExpiresAt.
+	-- "FUMBLE": only LockedUserId may take it back until LockExpiresAt.
+	LockKind: string?,
+	Prompt: ProximityPrompt?,
 	DespawnAt: number,
 	PickupBlockedUserId: number?,
 	PickupBlockedUntil: number?,
@@ -161,7 +165,9 @@ function RelicService.SpawnRelic(tierId: RelicTierId, worldPos: Vector3, initial
 	valueLbl.Size = UDim2.new(1, -14, 0.24, 0)
 	valueLbl.Position = UDim2.new(0, 7, 0.36, 0)
 	valueLbl.BackgroundTransparency = 1
-	valueLbl.Text = string.format("≈ %d Gems · %d Gold", math.round(spec.Payout.Gems * gemMult), math.round(spec.Payout.Gold * goldMult))
+	local stoneBonus = spec.Payout.PromotionStones or 0
+	local stoneSuffix = if stoneBonus > 0 then string.format(" · +%d Stone%s", stoneBonus, if stoneBonus == 1 then "" else "s") else ""
+	valueLbl.Text = string.format("≈ %d Gems · %d Gold%s", math.round(spec.Payout.Gems * gemMult), math.round(spec.Payout.Gold * goldMult), stoneSuffix)
 	valueLbl.TextColor3 = Color3.fromRGB(255, 226, 140)
 	valueLbl.TextScaled = true
 	valueLbl.ZIndex = 3
@@ -173,12 +179,24 @@ function RelicService.SpawnRelic(tierId: RelicTierId, worldPos: Vector3, initial
 	statusLbl.Size = UDim2.new(1, -8, 0.36, 0)
 	statusLbl.Position = UDim2.new(0, 4, 0.62, 0)
 	statusLbl.BackgroundTransparency = 1
-	statusLbl.Text = string.format("WalkSpeed: -%d%% | Touch to Carry!", math.round(spec.WalkSpeedPenalty * 100))
+	statusLbl.Text = string.format("WalkSpeed: -%d%% | Hold E to Carry", math.round(spec.WalkSpeedPenalty * 100))
 	statusLbl.TextColor3 = Color3.fromRGB(236, 228, 246)
 	statusLbl.TextScaled = true
 	statusLbl.ZIndex = 3
 	statusLbl.Parent = frame
 	GildedGrimoire.StyleText(statusLbl, "Body")
+
+	-- Relics are carried on purpose: hold the prompt. Walking past one never picks it up.
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = "CarryRelicPrompt"
+	prompt.ActionText = "Carry"
+	prompt.ObjectText = spec.DisplayName
+	prompt.KeyboardKeyCode = Enum.KeyCode.E
+	prompt.HoldDuration = 0.35
+	prompt.MaxActivationDistance = 9.5
+	prompt.RequiresLineOfSight = false
+	prompt.Enabled = initialOwnerUserId == nil -- a fresh kill drop is sealed first
+	prompt.Parent = part
 
 	local now = os.clock()
 	local relic: ActiveRelic = {
@@ -193,8 +211,13 @@ function RelicService.SpawnRelic(tierId: RelicTierId, worldPos: Vector3, initial
 		Carrier = nil,
 		LockedUserId = initialOwnerUserId,
 		LockExpiresAt = initialOwnerUserId and (now + spec.InitialLockSeconds) or 0,
+		LockKind = initialOwnerUserId and "SPAWN" or nil,
+		Prompt = prompt,
 		DespawnAt = now + spec.DespawnSeconds,
 	}
+	prompt.Triggered:Connect(function(player: Player)
+		RelicService.TryPickupRelic(player, relic)
+	end)
 
 	ActiveRelics[relicId] = relic
 	Tower.BroadcastAt(RelicStateRemote,relic,relicId, tierId, "SPAWN", initialOwnerUserId, relic.LockExpiresAt)
@@ -212,8 +235,11 @@ function RelicService.TryPickupRelic(player: Player, relic: ActiveRelic): boolea
 	if now < (PlayerStunnedUntil[player] or 0) then
 		return false
 	end
-	if relic.LockedUserId and relic.LockedUserId ~= player.UserId and now < relic.LockExpiresAt then
-		return false
+	if relic.LockedUserId and now < relic.LockExpiresAt then
+		-- A fresh drop is sealed for everyone, its killer included. A fumble lock keeps it for the fumbler.
+		if relic.LockKind ~= "FUMBLE" or relic.LockedUserId ~= player.UserId then
+			return false
+		end
 	end
 	if player.Character and player.Character:GetAttribute("SquadWiped") == true then
 		local dm = getDataManager()
@@ -311,6 +337,7 @@ function RelicService.FumbleRelicOnAoEHit(carrier: Player)
 	relic.Part.Position = Tower.GroundDrop(relic,dropPos,relic.Part.Size.Y/2)
 	relic.LockedUserId = carrier.UserId
 	relic.LockExpiresAt = now + FUMBLE_OWNER_LOCK_SECONDS
+	relic.LockKind = "FUMBLE"
 
 	PlayerStunnedUntil[carrier] = math.max(PlayerStunnedUntil[carrier] or 0, now + FUMBLE_STUN_SECONDS)
 	updateMasterMovementAttributes(carrier, now)
@@ -332,9 +359,14 @@ local function awardRelicPayout(player: Player, spec: any, scalar: number, rewar
 	local streakMult = TowerRuns.RelicMultiplier(player)
 	local gems = math.round(spec.Payout.Gems * scalar * (gemMultiplier or 1) * streakMult)
 	local gold = math.round(spec.Payout.Gold * scalar * marketMult * (rewardMultiplier or 1) * streakMult)
+	local stones = spec.Payout.PromotionStones or 0
 
 	profile.Currencies.Gems += gems
 	profile.Currencies.Gold += gold
+	if stones > 0 then
+		profile.PitMaterials = profile.PitMaterials or {}
+		profile.PitMaterials.PromotionStone = (profile.PitMaterials.PromotionStone or 0) + stones
+	end
 	TowerRuns.AddRelicPayout(player, gold, gems)
 
 	-- Calamity Heart: a small chance of a free Exalted Archon
@@ -344,9 +376,10 @@ local function awardRelicPayout(player: Player, spec: any, scalar: number, rewar
 		dm.BroadcastToast(string.format("👑 %s extracted THE CALAMITY HEART and rolled 5★ SOVEREIGN ARCHON!", player.DisplayName), "SUCCESS")
 	end
 
+	local stoneText = if stones > 0 then string.format(", +%d Promotion Stone%s", stones, if stones == 1 then "" else "s") else ""
 	dm.SendToast(
 		player,
-		string.format("Extracted %s (%d%%): +%d Gems, +%d Gold!", spec.DisplayName, math.round(scalar * 100), gems, gold),
+		string.format("Extracted %s (%d%%): +%d Gems, +%d Gold%s!", spec.DisplayName, math.round(scalar * 100), gems, gold, stoneText),
 		"SUCCESS"
 	)
 	dm.SyncProfile(player)
@@ -456,26 +489,25 @@ RunService.Heartbeat:Connect(function()
 			else
 				if relic.BillboardStatus then
 					local remDespawn = math.max(0, math.ceil(relic.DespawnAt - now))
-					if relic.LockedUserId and now < relic.LockExpiresAt then
+					if relic.LockedUserId and now < relic.LockExpiresAt and relic.LockKind ~= "FUMBLE" then
+						relic.BillboardStatus.Text = string.format("🔒 SEALED: %.1fs | Despawn: %ds", relic.LockExpiresAt - now, remDespawn)
+						relic.BillboardStatus.TextColor3 = Color3.fromRGB(255, 175, 45)
+					elseif relic.LockedUserId and now < relic.LockExpiresAt then
 						relic.BillboardStatus.Text = string.format("🔒 LOCKED: %.1fs | Despawn: %ds", relic.LockExpiresAt - now, remDespawn)
 						relic.BillboardStatus.TextColor3 = Color3.fromRGB(255, 175, 45)
 					else
-						relic.BillboardStatus.Text = string.format("🔓 STEALABLE NOW! (-%d%% Spd) | %ds", math.round(spec.WalkSpeedPenalty * 100), remDespawn)
+						relic.BillboardStatus.Text = string.format("🔓 HOLD E TO CARRY (-%d%% Spd) | %ds", math.round(spec.WalkSpeedPenalty * 100), remDespawn)
 						relic.BillboardStatus.TextColor3 = Color3.fromRGB(95, 255, 135)
 					end
 				end
-
-				for _, player in ipairs(Players:GetPlayers()) do
-					local _, hrp = getCharacterParts(player)
-					if hrp and (hrp.Position - relic.Part.Position).Magnitude <= 6.8 then
-						if RelicService.TryPickupRelic(player, relic) then
-							break
-						end
-					end
+				-- Pickup is only ever through the prompt (Triggered above); there is no walk-over pickup.
+				if relic.Prompt then
+					relic.Prompt.Enabled = not (relic.LockedUserId and now < relic.LockExpiresAt and relic.LockKind ~= "FUMBLE")
 				end
 			end
 		else
 			-- Carried relics extract at floor sanctuaries or the owner's Hub pad.
+			if relic.Prompt then relic.Prompt.Enabled = false end
 			local carrier = relic.Carrier
 			local _, hrp = getCharacterParts(carrier)
 			if hrp then

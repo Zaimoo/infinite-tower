@@ -23,6 +23,7 @@ local Tower=require(script.Parent.Parent.Core.TowerFloorService)
 Tower.Init()
 local Protocol=require(Shared.Util.TowerProtocol)
 local SanctuaryRules=require(Shared.Util.TowerSanctuaryRules)
+local SupportRules=require(Shared.Util.SupportRules)
 local FirstBiome=require(Shared.Config.FirstBiomeCombat)
 local TowerLayout=require(Shared.Config.TowerLayout)
 local TowerRewards=require(Shared.Config.TowerFloorConfig)
@@ -1987,6 +1988,9 @@ local function heroSkillContext(simHero: SimHero, now: number): HeroSkillEffects
 		HandleMobDeath = function(mob: any, killer: Player)
 			handleMobDeath(mob, killer)
 		end,
+		Absorb = function(mob: any, amount: number): number
+			return if Encounters then Encounters:OnMobHit(mob, amount) else amount
+		end,
 	}
 end
 
@@ -2027,6 +2031,9 @@ local function resolveHeroImpact(impact: any, tick: number)
 	if mob then
 		if mob.DefenseShredUntil and now < mob.DefenseShredUntil then
 			damage = math.round(damage * 1.20)
+		end
+		if Encounters then
+			damage = Encounters:OnMobHit(mob, damage) -- WARD shields soak first; a hit interrupts a support's cast
 		end
 		local actualDamage = math.min(mob.CurrentHP, damage)
 		local participation = ProgressionHits[mob.NetId]
@@ -2354,6 +2361,7 @@ local STATE_TO_ENUM: { [HeroSimState]: number } = {
 
 local function broadcastReplicationSnapshot(now: number)
  SnapshotSequence=(SnapshotSequence+1)%4294967296
+ local serverNow=Workspace:GetServerTimeNow()
  local byFloor={}
  for _,collection in {ActiveHeroesByNetId,ActiveMobsByNetId} do for _,e in pairs(collection) do
   if e.IsAlive==false then continue end
@@ -2363,8 +2371,9 @@ local function broadcastReplicationSnapshot(now: number)
    warn("Tower entity recovered outside bounds",e.NetId);e.Position=room.Arrival.Position-Vector3.new(0,3.5,0);HeroNavigation.Clear(e)
   end
   local hero=e.Owner~=nil;local entry=table.clone(e)
-  entry.StateEnum=hero and (STATE_TO_ENUM[e.State] or 1) or (e.TowerEnemy and ({IDLE=20,CHASE=21,WINDUP=22,RECOVERY=23,RESET=24})[e.State] or (10+(e.Phase or 1)))
-  entry.Flags=hero and (1+(now<e.OverdriveUntil and 2 or 0)+(now<e.PacifiedUntil and 4 or 0)) or 0
+  entry.StateEnum=hero and (STATE_TO_ENUM[e.State] or 1) or (e.TowerEnemy and ({IDLE=20,CHASE=21,WINDUP=22,RECOVERY=23,RESET=24,PATROL=25})[e.State] or (10+(e.Phase or 1)))
+  entry.Flags=hero and (1+(now<e.OverdriveUntil and 2 or 0)+(now<e.PacifiedUntil and 4 or 0))
+   or (e.TowerEnemy and ((SupportRules.Shielded(e,serverNow) and 8 or 0)+(SupportRules.Roused(e,serverNow) and 16 or 0))) or 0
   byFloor[e.FloorId]=byFloor[e.FloorId] or {};table.insert(byFloor[e.FloorId],entry)
  end end
  for _,p in Players:GetPlayers() do
@@ -2655,6 +2664,12 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
       profile.Currencies.Gold += killGold
       profile.Currencies.Gems += reward.Gems
       TowerRuns.AddEarnings(killer, killGold, reward.Gems, if masterHere then 1 else 0)
+      local stones = TowerRewards.RollPromotionStones(mob.FloorId, mob.Role, math.random(), math.random())
+      if stones > 0 then
+       profile.PitMaterials = profile.PitMaterials or {}
+       profile.PitMaterials.PromotionStone = (profile.PitMaterials.PromotionStone or 0) + stones
+       dm.SendToast(killer, string.format("✨ +%d Promotion Stone%s dropped from %s!", stones, if stones == 1 then "" else "s", mob.DisplayName or "Elite"), "SUCCESS")
+      end
       dm.SyncProfile(killer)
       local tier = TowerRewards.RollRelic(mob.FloorId, mob.Role, math.random(), math.random())
       if masterHere and tier and _G.RelicService then
@@ -2704,9 +2719,17 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
        local bossGold = math.round(reward.Gold * marketMult * (if firstClear then 3 else 1))
        local bossGems = if firstClear then 10 + 2 * mob.FloorId else 0
        if firstBiomeClear then bossGems += 300 * bossTier end
+       local stoneRole = if bossTier > 0 then "BOSS" else "ALPHA"
+       local bossStones = if firstClear
+        then TowerRewards.GetFirstClearPromotionStones(mob.FloorId, stoneRole)
+        else TowerRewards.RollPromotionStones(mob.FloorId, stoneRole, math.random(), math.random())
        if profile then
         profile.Currencies.Gold += bossGold
         profile.Currencies.Gems += bossGems
+        if bossStones > 0 then
+         profile.PitMaterials = profile.PitMaterials or {}
+         profile.PitMaterials.PromotionStone = (profile.PitMaterials.PromotionStone or 0) + bossStones
+        end
         profile.HighestClearedFloor = math.max(profile.HighestClearedFloor or 0, mob.FloorId)
         profile.MaxFloorReached = math.max(profile.MaxFloorReached or 0, mob.FloorId + 1)
         dm.SyncProfile(p)
@@ -2743,7 +2766,8 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
         FloorProgressRemote:FireClient(p, progress)
        end
 
-       dm.SendToast(p, string.format("Floor %d Boss Defeated! Unlocked Floor %d! (+%d Gold, +%d Gem)", mob.FloorId, mob.FloorId + 1, bossGold, bossGems), "SUCCESS")
+       local stoneText = if bossStones > 0 then string.format(", +%d Promotion Stone%s", bossStones, if bossStones == 1 then "" else "s") else ""
+       dm.SendToast(p, string.format("Floor %d Boss Defeated! Unlocked Floor %d! (+%d Gold, +%d Gem%s)", mob.FloorId, mob.FloorId + 1, bossGold, bossGems, stoneText), "SUCCESS")
       end
      end
     end

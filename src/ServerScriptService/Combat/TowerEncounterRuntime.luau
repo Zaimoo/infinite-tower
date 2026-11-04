@@ -11,6 +11,8 @@ local TowerProgress = require(RS.Shared.Util.TowerProgress)
 local CampWaves = require(RS.Shared.Util.CampWaves)
 local TowerLayout = require(RS.Shared.Config.TowerLayout)
 local CampRoster = require(RS.Shared.Util.CampRoster)
+local SupportRules = require(RS.Shared.Util.SupportRules)
+local PatrolPath = require(RS.Shared.Util.PatrolPath)
 local Runtime = {}
 
 function Runtime.new(api: any): any
@@ -236,6 +238,8 @@ function Runtime.new(api: any): any
 		ledger.Surge = ledger.Surge or {}
 		local roster = { biome.EliteEnemyId }
 		for i = 1, Config.SurgeRegulars do table.insert(roster, biome.RegularEnemyIds[(i - 1) % 2 + 1]) end
+		-- From biome 3 a support replaces the last Regular (1 Elite, 2 Regulars, 1 support).
+		if floorSpec.BiomeIndex >= 3 and biome.SupportEnemyId then roster[#roster] = biome.SupportEnemyId end
 		local context = { FloorId = floorId, RoomGeneration = room.RoomGeneration }
 		local spawned = 0
 		for _, enemyId in ipairs(roster) do
@@ -257,6 +261,10 @@ function Runtime.new(api: any): any
 				e = table.clone(e)
 				local stats = TowerFloorConfig.GetEnemyStats(floorId, enemyId)
 				if stats then e.MaxHP, e.ATK, e.Gold = stats.MaxHP, stats.ATK, stats.GoldReward end
+				if e.Support then
+					e.MaxHP = math.round(e.MaxHP * SupportRules.HpScale)
+					e.ATK = math.max(1, math.round(e.ATK * SupportRules.AtkScale))
+				end
 				local netId = api.Allocate()
 				local now = workspace:GetServerTimeNow()
 				local m = {
@@ -295,10 +303,14 @@ function Runtime.new(api: any): any
 			end
 		end
 		local rng = CampRoster.Rng(CampRoster.Seed(floor, room.RoomGeneration, 0, 0))
+		-- Supports (Phase D) start on the third floor of the first biome.
+		local supportsEligible = biome.SupportEnemyId ~= nil and (floorSpec.BiomeIndex > 1 or floorSpec.IndexInBiome >= 3)
 		local roster = {
 			Biome = biome,
 			CampIds = campIds,
 			Elites = CampRoster.AssignElites(rng, campIds, layout.EliteCount, upper, floorSpec.IndexInBiome >= 3),
+			SupportsEligible = supportsEligible,
+			Supports = if supportsEligible then CampRoster.AssignSupports(rng, campIds) else {},
 			Camps = {},
 		}
 		for index, id in campIds do
@@ -313,8 +325,76 @@ function Runtime.new(api: any): any
 			local plan = roster.Camps[placement.CampId]
 			if plan and not plan.LeaderSlot then plan.LeaderSlot = slot end
 		end
+		-- Patrols (Phase E): the Basin loop on every floor, plus one other route from the third floor of a
+		-- biome. Three mixed fighters walk it; from biome 4 a patrol may bring the floor's support.
+		local routes = TowerLayout.PatrolRoutes(floorSpec.IndexInBiome)
+		local routeIds = { "BASIN_LOOP" }
+		if floorSpec.IndexInBiome >= 3 then
+			local others = {}
+			for id in routes do
+				if id ~= "BASIN_LOOP" then table.insert(others, id) end
+			end
+			table.sort(others)
+			if #others > 0 then table.insert(routeIds, others[math.floor(rng() * #others) + 1]) end
+		end
+		roster.Patrols, roster.PatrolOrder = {}, {}
+		for k, routeId in routeIds do
+			local id = "PATROL_" .. routeId
+			local route = routes[routeId]
+			local offsets = {}
+			for i, o in PatrolPath.Formation do offsets[Config.PatrolSlotBase + k * 10 + i] = o end
+			local patrolRng = CampRoster.Rng(CampRoster.Seed(floor, room.RoomGeneration, 100 + k, 0))
+			roster.Patrols[id] = {
+				Index = 100 + k, Slot = k, Route = route, Walk = PatrolPath.Start(route),
+				Center = Vector3.new(route[1].X, route[1].Y, route[1].Z),
+				Types = {}, Bag = {}, Wave = 0, Offsets = offsets, Rolled = true, Rng = patrolRng,
+				Support = supportsEligible and floorSpec.BiomeIndex >= 4 and patrolRng() < 0.5,
+			}
+			table.insert(roster.PatrolOrder, id)
+		end
 		ledger.Roster = roster
 		return roster
+	end
+	-- Patrols: replan a wiped patrol (fresh type mix, maybe a support, back to the route start), and
+	-- walk each living patrol's anchor along its route while it is not fighting.
+	function self:StepPatrols(floor, room, ledger, roster, now)
+		for _, id in roster.PatrolOrder do
+			local plan = roster.Patrols[id]
+			local alive, engaged, settled = false, false, true
+			for i = 1, #PatrolPath.Formation do
+				local m = ledger.Slots[Config.PatrolSlotBase + plan.Slot * 10 + i]
+				if m and m.IsAlive then
+					alive = true
+					if m.Action or m.State == "CHASE" or m.State == "WINDUP" or m.State == "RECOVERY" then engaged = true end
+					if m.HomePosition and (m.Position - m.HomePosition).Magnitude > 6 then settled = false end
+				end
+			end
+			local created = ledger.Slots[Config.PatrolSlotBase + plan.Slot * 10 + 1] ~= nil
+			if alive or not created then
+				plan.Rolled = false
+			elseif not plan.Rolled then
+				plan.Rolled = true
+				plan.Wave += 1
+				plan.Rng = CampRoster.Rng(CampRoster.Seed(floor, room.RoomGeneration, plan.Index, plan.Wave))
+				plan.Types, plan.Bag = {}, {}
+				plan.Support = roster.SupportsEligible and roster.Biome.SupportEnemyId ~= nil
+					and (TowerFloorConfig.Get(floor) :: any).BiomeIndex >= 4 and plan.Rng() < 0.5
+				plan.Walk = PatrolPath.Start(plan.Route)
+			end
+			local dt = math.clamp(now - (plan.LastStep or now), 0, 0.5)
+			plan.LastStep = now
+			if alive and not engaged and settled then
+				PatrolPath.Advance(plan.Route, plan.Walk, PatrolPath.Speed * dt)
+			end
+			plan.Center = Vector3.new(plan.Walk.X, plan.Walk.Y, plan.Walk.Z)
+		end
+	end
+	-- True while a Master or hero stands within `radius` of a world point on this floor.
+	local function heroNear(floor, point, radius)
+		for _, h in pairs(api.Heroes) do
+			if h.FloorId == floor and h.Position and (h.Position - point).Magnitude <= radius then return true end
+		end
+		return false
 	end
 	-- A camp member's Regular type this wave, dealt on first use from the camp's shuffled bag.
 	local function memberType(plan, slot, pool)
@@ -362,11 +442,46 @@ function Runtime.new(api: any): any
 				end
 				local effective = self:EffectivePlacements(floor, placements)
 				local roster = self:Roster(floor, room, ledger)
-				-- A camp is "alive" while any member lives (or has not been created yet).
+				-- Each camp the roster gives a support fields one more member, within the live-mob budget.
+				local live = 0
+				for _, placement in effective do
+					if placement.CampId ~= "CAMP_APEX_SANCTUM" then live += 1 end
+				end
+				for campId in roster.Supports do
+					local plan = roster.Camps[campId]
+					if plan and live < Config.MaxLiveMobsPerFloor then
+						effective[Config.SupportSlotBase + plan.Index] = {
+							EnemyId = roster.Biome.SupportEnemyId, X = plan.Center.X, Y = plan.Center.Y, Z = plan.Center.Z,
+							CampId = campId, LeashRadius = 60, Support = true,
+						}
+						live += 1
+					end
+				end
+				self:StepPatrols(floor, room, ledger, roster, now)
+				for _, id in roster.PatrolOrder do
+					local plan = roster.Patrols[id]
+					local size = if plan.Support then 4 else 3
+					if live + size <= Config.MaxLiveMobsPerFloor then
+						for i = 1, size do
+							effective[Config.PatrolSlotBase + plan.Slot * 10 + i] = {
+								EnemyId = roster.Biome.RegularEnemyIds[1], X = plan.Center.X, Y = plan.Center.Y, Z = plan.Center.Z,
+								CampId = id, LeashRadius = Config.PatrolLeash, Patrol = id, Support = i == 4,
+							}
+						end
+						live += size
+					end
+				end
+				-- A camp is "alive" while any member lives (or has not been created yet). A support slot
+				-- that does not exist yet does not count: it joins with the camp's next wave.
 				local campAlive = {}
+				local campRespawnAt = {}
 				for slot, placement in effective do
 					local existing = ledger.Slots[slot]
-					if not existing or existing.IsAlive then campAlive[placement.CampId] = true end
+					if (not existing and not placement.Support) or (existing and existing.IsAlive) then
+						campAlive[placement.CampId] = true
+					elseif existing and existing.RespawnAt ~= math.huge then
+						campRespawnAt[placement.CampId] = math.max(campRespawnAt[placement.CampId] or 0, existing.RespawnAt)
+					end
 				end
 				-- A camp whose last member just died plans its next wave now: a fresh mix of Regular types,
 				-- new spots, and its Elite (if any) moves to another cleared camp.
@@ -381,6 +496,9 @@ function Runtime.new(api: any): any
 						plan.Bag = {}
 						plan.Offsets = {}
 						plan.Rng = rng
+						if roster.SupportsEligible then
+							roster.Supports[campId] = CampRoster.RerollSupport(rng, campId, roster.Supports, #roster.CampIds) or nil
+						end
 						if roster.Elites[campId] then
 							local cleared = {}
 							for otherId in roster.Camps do cleared[otherId] = not campAlive[otherId] end
@@ -393,11 +511,12 @@ function Runtime.new(api: any): any
 					end
 				end
 				for slot, placement in effective do
-					local plan = roster.Camps[placement.CampId]
+					local plan = roster.Camps[placement.CampId] or roster.Patrols[placement.CampId]
 					local enemyId = placement.EnemyId
 					local localPos = Vector3.new(placement.X, placement.Y or 0, placement.Z)
 					if plan then
-						enemyId = if slot == plan.LeaderSlot and roster.Elites[placement.CampId] then roster.Biome.EliteEnemyId
+						enemyId = if placement.Support then roster.Biome.SupportEnemyId
+							elseif slot == plan.LeaderSlot and roster.Elites[placement.CampId] then roster.Biome.EliteEnemyId
 							else memberType(plan, slot, roster.Biome.RegularEnemyIds)
 						localPos = memberOffset(plan, slot)
 					end
@@ -417,8 +536,15 @@ function Runtime.new(api: any): any
 							e.ATK = numeric.ATK
 						end
 					end
+					if e.Support then
+						e.MaxHP = math.round(e.MaxHP * SupportRules.HpScale)
+						e.ATK = math.max(1, math.round(e.ATK * SupportRules.AtkScale))
+					end
 					local m = ledger.Slots[slot]
+					local joinsLater = false
 					if not m then
+						-- A support added to a cleared camp waits and returns with the camp's next wave.
+						joinsLater = placement.Support == true and not campAlive[placement.CampId]
 						local cat = MobCatalog.Get(e.EnemyId)
 						m = {
 							NetId = api.Allocate(),
@@ -450,11 +576,22 @@ function Runtime.new(api: any): any
 							BornAt = now,
 							LocalPosition = localPos,
 						}
+						if joinsLater then
+							m.IsAlive = false
+							m.CurrentHP = 0
+							m.State = "DEAD"
+							m.DiedAt = now
+							m.RespawnAt = campRespawnAt[placement.CampId] or math.huge
+						end
 						ledger.Slots[slot] = m
 						if e.Role == "BOSS" then ledger.BossGeneration = m.LifeGeneration end
 					end
 					m.LeashRadius = placement.LeashRadius or Config.LeashRange
 					m.CampId = placement.CampId
+					m.Patrol = placement.Patrol
+					if placement.Patrol and m.IsAlive and m.RoomGeneration == room.RoomGeneration then
+						m.HomePosition = api.Navigation.Ground(room.Origin + localPos + Vector3.new(0, 6, 0), nil, 2, 12) or room.Origin + localPos
+					end
 					if m.RoomGeneration ~= room.RoomGeneration then
 						m.EntityGeneration += 1
 						m.RoomGeneration = room.RoomGeneration
@@ -469,6 +606,13 @@ function Runtime.new(api: any): any
 					end
 					if not m.IsAlive and m.RespawnAt == math.huge and not m.Summoned then
 						m.RespawnAt = CampWaves.ScheduleRespawn(m.DiedAt, campAlive[placement.CampId] == true, now) or math.huge
+						if placement.Patrol and m.RespawnAt ~= math.huge then
+							m.RespawnAt += Config.PatrolRespawnSeconds - Config.CampRespawnSeconds
+						end
+					end
+					-- A wiped patrol waits while anyone stands near its route start.
+					if placement.Patrol and not m.IsAlive and now >= m.RespawnAt and heroNear(floor, room.Origin + localPos, Config.PatrolClearRadius) then
+						m.RespawnAt = now + 2
 					end
 					if not m.IsAlive and now >= m.RespawnAt then
 						-- The wave's plan may give this slot a new type and a new spot. The EntityGeneration
@@ -486,6 +630,7 @@ function Runtime.new(api: any): any
 							m.GoldReward = e.Gold
 						end
 						m.HomePosition = api.Navigation.Ground(room.Origin + localPos + Vector3.new(0, 6, 0), nil, 2, 12) or room.Origin + localPos
+						SupportRules.Reset(m)
 						m.IsAlive = true
 						m.CurrentHP = m.MaxHP
 						m.Position = m.HomePosition
@@ -503,7 +648,7 @@ function Runtime.new(api: any): any
 				end
 				-- Scaled-in members that are no longer wanted leave once they are dead.
 				for slot, m in pairs(ledger.Slots) do
-					if slot >= Config.ExtraSlotBase and not effective[slot] and not m.IsAlive then
+					if slot >= Config.PatrolSlotBase and not effective[slot] and not m.IsAlive then
 						if api.Mobs[m.NetId] then api.Mobs[m.NetId] = nil; changed = true end
 						ledger.Slots[slot] = nil
 					end
@@ -533,6 +678,75 @@ function Runtime.new(api: any): any
 		end
 		if changed then api.Changed() end
 	end
+	-- Living tower mobs in the same room as `m`, within `radius`. ROUSE's aura includes the caster.
+	function self:Allies(m, radius, includeSelf)
+		local allies = {}
+		for _, o in pairs(api.Mobs) do
+			if o.TowerEnemy and o.IsAlive and (includeSelf or o ~= m) and Timeline.Same(o, m)
+				and (o.Position - m.Position).Magnitude <= radius then
+				table.insert(allies, o)
+			end
+		end
+		return allies
+	end
+	-- Called by the combat sim for every hero hit on a mob, before HP is taken. A WARD shield soaks
+	-- what it can, and a hit during a support's cast windup interrupts the cast (its cooldown stays
+	-- spent). Returns the damage left to apply.
+	function self:OnMobHit(m, damage)
+		if not m.TowerEnemy then return damage end
+		damage = SupportRules.Absorb(m, damage, workspace:GetServerTimeNow())
+		if m.Action and m.Action.Status == "WINDUP" then
+			local spec = Config.Get(m.EnemyId)
+			local definition = spec and spec.Support and Config.Attack(m.EnemyId, m.Action.AttackId)
+			if definition and definition.Shape:sub(1, 4) == "ALLY" then
+				self:Cancel(m, "INTERRUPTED")
+				m.State = "IDLE"
+			end
+		end
+		return damage
+	end
+	-- A support's turn (no action running): cast its kit when there is something to cast on, else hold
+	-- KiteGap behind its nearest ally, away from the squad. Returns false when it has no ally left, so
+	-- it falls back to its weak bolt like an ordinary Regular.
+	function self:StepSupport(m, e, target, targets, now, dt)
+		local allies = self:Allies(m, SupportRules.AllyRange, false)
+		if #allies == 0 then return false end
+		local kitMove = e.Attacks[1]
+		if now >= (m.Cooldowns[kitMove.Id] or 0) then
+			local squad = {}
+			for _, t in targets do
+				if Timeline.Alive(t) and api.Tower.Same(m, t) then table.insert(squad, t.Position) end
+			end
+			local castOn = SupportRules.PickTarget(e.Support, m, allies, squad, now)
+			if castOn then
+				if castOn ~= m then
+					local toAlly = castOn.Position - m.Position
+					m.Yaw = math.atan2(-toAlly.X, -toAlly.Z)
+				end
+				m.Action = Timeline.Start(m, castOn, kitMove, now)
+				m.ActionSequence = m.Action.ActionSequence
+				m.State = "WINDUP"
+				m.Cooldowns[kitMove.Id] = now + kitMove.CooldownSeconds
+				self.Metrics.Started += 1
+				api.Send(m, self:PublicAction(m.Action, "START"))
+				return true
+			end
+		end
+		local anchor, anchorDistance = allies[1], math.huge
+		for _, ally in allies do
+			local d = (ally.Position - m.Position).Magnitude
+			if d < anchorDistance then anchor, anchorDistance = ally, d end
+		end
+		local spot = SupportRules.KitePoint(anchor.Position, target.Position)
+		local goal = Vector3.new(spot.X, anchor.Position.Y, spot.Z)
+		local toHero = target.Position - m.Position
+		m.Yaw = math.atan2(-toHero.X, -toHero.Z)
+		m.State = "CHASE"
+		if (goal - m.Position).Magnitude > 3 and (goal - m.HomePosition).Magnitude < (m.LeashRadius or Config.LeashRange) * 0.8 then
+			api.Navigation.Step(m, goal, e.MoveSpeed * SupportRules.SpeedMultiplier(m, now) * math.min(dt, .3), os.clock())
+		end
+		return true
+	end
 	function self:Step(m, dt, now, targets)
 		if not m.IsAlive then return end
 		local e = Config.Get(m.EnemyId)
@@ -550,16 +764,31 @@ function Runtime.new(api: any): any
 		local function safe(v) return self:Safe(v) end
 		if m.Action then
 			local action = m.Action
-			local target = nil
-			for _, t in targets do
-				if Timeline.Matches(t, action.Target) then target = t; break end
-			end
 			local definition = Config.Attack(m.EnemyId, action.AttackId)
-			local result = Timeline.Step(action, m, target, definition, now, safe, targets, function(v, mult)
+			local allyCast = definition ~= nil and definition.Shape:sub(1, 4) == "ALLY"
+			local target = nil
+			if allyCast then
+				-- A support's kit targets an ally mob (or itself, for ROUSE's aura).
+				local mob = api.Mobs[action.Target.NetId]
+				if mob and Timeline.Matches(mob, action.Target) then target = mob end
+			else
+				for _, t in targets do
+					if Timeline.Matches(t, action.Target) then target = t; break end
+				end
+			end
+			local candidates = targets
+			local onHit = function(v, mult)
 				if not api.Navigation.CanAttack(m.Position, v.Position) then return end
 				self.Metrics.Hits += 1
-				api.Damage(v, math.max(1, math.round(m.ATK * mult)), m)
-			end)
+				api.Damage(v, math.max(1, math.round(m.ATK * mult * SupportRules.AtkMultiplier(m, now))), m)
+			end
+			if allyCast then
+				candidates = if definition.Shape == "ALLY_AURA" then self:Allies(m, definition.Radius, true) elseif target then { target } else {}
+				onHit = function(v)
+					SupportRules.Apply(e.Support, v, now)
+				end
+			end
+			local result = Timeline.Step(action, m, target, definition, now, safe, candidates, onHit)
 			if result then
 				if result == "IMPACT" then self.Metrics.Impacts += 1
 				elseif result == "CANCEL" then self.Metrics.Canceled += 1 end
@@ -584,18 +813,25 @@ function Runtime.new(api: any): any
 				end
 			end
 		end
+		local speed = e.MoveSpeed * SupportRules.SpeedMultiplier(m, now)
 		if fromHome > (m.LeashRadius or Config.LeashRange) or safe(m) or not target then
-			m.State = fromHome > 3 and "RESET" or "IDLE"
+			m.State = if fromHome <= 3 then "IDLE" elseif m.Patrol then "PATROL" else "RESET"
 			if fromHome > 3 then
-				api.Navigation.Step(m, m.HomePosition, e.MoveSpeed * math.min(dt, .3), os.clock())
+				api.Navigation.Step(m, m.HomePosition, speed * math.min(dt, .3), os.clock())
 			end
+			return
+		end
+		if e.Support and self:StepSupport(m, e, target, targets, now, dt) then
 			return
 		end
 		local delta = target.Position - m.Position
 		m.Yaw = math.atan2(-delta.X, -delta.Z)
 		local chosen = nil
+		local chaseRange = math.huge
 		for i = #e.Attacks, 1, -1 do
 			local a = e.Attacks[i]
+			if a.Shape:sub(1, 4) == "ALLY" then continue end -- support kits are cast in StepSupport
+			chaseRange = math.min(chaseRange, a.Range)
 			if now >= (m.Cooldowns[a.Id] or 0) and nearest <= a.Range and api.Navigation.CanAttack(m.Position, target.Position) then
 				chosen = a
 				break
@@ -610,8 +846,8 @@ function Runtime.new(api: any): any
 			api.Send(m, self:PublicAction(m.Action, "START"))
 		else
 			m.State = "CHASE"
-			if nearest > e.Attacks[1].Range * .85 then
-				api.Navigation.Step(m, target.Position, e.MoveSpeed * math.min(dt, .3), os.clock())
+			if nearest > chaseRange * .85 then
+				api.Navigation.Step(m, target.Position, speed * math.min(dt, .3), os.clock())
 			end
 		end
 	end

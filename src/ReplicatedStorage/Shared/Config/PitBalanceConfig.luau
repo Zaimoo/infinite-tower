@@ -3,7 +3,7 @@
 local Config = {}
 
 Config.MaxDonors = 100
-Config.MaxStars = 5
+Config.MaxStars = 7
 Config.PreviewLifetime = 45
 Config.PreviewCooldown = 0.12
 Config.StateCooldown = 0.4
@@ -29,9 +29,11 @@ Config.Promotion = {
 	[2] = { Gold = 7500, PromotionStone = 3 },
 	[3] = { Gold = 35000, PromotionStone = 8 },
 	[4] = { Gold = 150000, PromotionStone = 18 },
+	[5] = { Gold = 450000, PromotionStone = 40 },
+	[6] = { Gold = 1250000, PromotionStone = 85 },
 }
 Config.Conversion = {
-	BaseEssence = { [1] = 4, [2] = 12, [3] = 36, [4] = 108, [5] = 324 },
+	BaseEssence = { [1] = 4, [2] = 12, [3] = 36, [4] = 108, [5] = 324, [6] = 972, [7] = 2916 },
 	LevelsPerBonus = 5,
 	EssencePerInvestmentLevel = 1,
 	EssencePerImprintRank = 2,
@@ -44,7 +46,7 @@ Config.Imprints = {
 	GoldCost = 200,
 	CatalystCost = 1,
 	MaxRank = 3,
-	SlotsByStar = { 1, 1, 2, 2, 3 },
+	SlotsByStar = { 1, 1, 2, 2, 3, 3, 3 },
 	BonusCaps = { ATK = 0.12, HP = 0.12, Labor = 0.15 },
 	Definitions = {
 		melee_memory = { Name = "Blade Discipline", Category = "Combat", Description = "+2% ATK per rank for melee specialists.", DonorRoles = { Striker = true }, RecipientRoles = { Striker = true, Vanguard = true }, Effect = { ATK = 0.02 } },

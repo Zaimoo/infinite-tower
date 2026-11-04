@@ -20,6 +20,8 @@ export type Context = {
 	-- Duels pass the opposing squad as Mobs and route hits through these instead.
 	Eligible: ((target: any) -> boolean)?,
 	Damage: ((target: any, amount: number) -> ())?,
+	-- Tower mobs: damage left after shields, and support cast interrupts (TowerEncounterRuntime:OnMobHit).
+	Absorb: ((mob: any, amount: number) -> number)?,
 }
 
 -- What the caller knows about the attack. Impact (from HeroImpactQueue) carries FloorId and
@@ -53,6 +55,9 @@ local function near(mob: any, center: Vector3, radius: number): boolean
 end
 
 local function damageMob(ctx: Context, hit: Hit, mob: any, amount: number)
+	if ctx.Absorb then
+		amount = ctx.Absorb(mob, amount) -- tower shields soak first; a hit can interrupt a support's cast
+	end
 	if ctx.Damage then
 		ctx.Damage(mob, amount)
 		return

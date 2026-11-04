@@ -1,23 +1,6 @@
 --!strict
 -- StarterPlayerScripts/UI/PromotionController.luau
--- Dedicated Hero Promotion Ritual UI matching the Gothic Ascension Mockup and HTML specifications:
---   Palette: --ui-bg: rgba(17, 14, 23, 0.95), --ui-border: #c8a2c8, --ui-glow: rgba(200, 162, 200, 0.5),
---            --slot-bg: rgba(20, 20, 30, 0.6), --success-green: #39ff14
---   Layout:
---     1. Header: "HERO PROMOTION" (gothic title, wide letter-spacing, purple glow)
---     2. Ritual Area (320x320 circular layout):
---        - Outer dashed magic circle (280x280) with slow clockwise rotation
---        - Inner magic circle (190x190) with reverse counter-clockwise rotation
---        - Main Hero Center Slot (120x120) with "?" placeholder and intense glow
---        - 3 Orbiting Sacrifice Material Slots (75x75) at radius ~130px (Top, Bottom-Right, Bottom-Left)
---     3. Stats Display Panel:
---        - Left (Current): Max Level, HP, Base ATK, Gold Stars
---        - Center Arrow: Procedural vector arrow facing right with purple glow
---        - Right (Upgraded): Max Level, HP, Base ATK, Green Star in neon #39ff14
---     4. Action Area:
---        - "100% SUCCESS RATE" in neon green (#39ff14)
---        - Requirements / Costs indicator (Gold & Promotion Stones)
---        - "INITIATE PROMOTION" button with corner diamonds and gothic styling
+-- Dedicated Hero Promotion Ritual UI (Promotion Stones + Gold only, 1★ -> 7★ Ascension):
 --   Authoritative RemoteFunction: PitRequest (STATE -> PREVIEW -> COMMIT).
 
 local TweenService = game:GetService("TweenService")
@@ -30,7 +13,6 @@ local StatFormulas = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChi
 local PitBalanceConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("PitBalanceConfig"))
 local GothicBoxStyle = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GothicBoxStyle"))
 local GildedGrimoire = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GildedGrimoire"))
-
 local GrimoireIcons = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GrimoireIcons"))
 
 local Promo = {}
@@ -60,6 +42,8 @@ local RARITY = {
 	Color3.fromRGB(115, 165, 218),
 	Color3.fromRGB(180, 142, 218),
 	Color3.fromRGB(228, 193, 111),
+	Color3.fromRGB(240, 110, 95),
+	Color3.fromRGB(130, 235, 255),
 }
 
 local function new(className: string, props: { [string]: any }, parent: Instance?): any
@@ -94,10 +78,6 @@ end
 
 local function applyGothicStyle(container: GuiObject, style: "Window" | "Card" | "Button" | "Compact")
 	return GothicBoxStyle.Apply(container, { Style = style })
-end
-
-local function cornerDiamonds(parent: GuiObject, size: number)
-	-- Handled automatically by GothicBoxStyle
 end
 
 local function createRightArrow(parent: Instance, size: UDim2, position: UDim2, color: Color3): Frame
@@ -179,7 +159,7 @@ local function createRightArrow(parent: Instance, size: UDim2, position: UDim2, 
 	new("UICorner", { CornerRadius = UDim.new(1, 0) }, wingBottom)
 
 	-- Seamless Vertex Tip
-	local tip = new("Frame", {
+	new("Frame", {
 		Name = "Tip",
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.new(1, -10.5, 0.5, 0),
@@ -192,7 +172,6 @@ local function createRightArrow(parent: Instance, size: UDim2, position: UDim2, 
 
 	return root
 end
-
 
 local function label(parent: Instance, text: string, size: number, color: Color3, font: Enum.Font?, role: string?): TextLabel
 	local lbl = new("TextLabel", {
@@ -215,7 +194,6 @@ local function label(parent: Instance, text: string, size: number, color: Color3
 	return lbl
 end
 
--- Gilded Grimoire heading: white fading to antique gold (the text keeps its ink outline).
 local function goldText(lbl: TextLabel)
 	lbl.TextColor3 = Color3.new(1, 1, 1)
 	new("UIGradient", {
@@ -230,7 +208,8 @@ local function spaced(text: string): string
 end
 
 local function stars(n: number?): string
-	return string.rep("★", math.clamp(n or 1, 1, 5))
+	local maxStars = PitBalanceConfig.MaxStars or 7
+	return string.rep("★", math.clamp(n or 1, 1, maxStars))
 end
 
 local function formatNumber(n: number?): string
@@ -248,7 +227,6 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 	self.Remote = remote
 	self.State = { Heroes = {}, Resources = {}, Currencies = {}, Materials = {} }
 	self.Recipient = nil
-	self.Donors = {}
 	self.Preview = nil
 	self.Busy = false
 	self.Loading = false
@@ -261,7 +239,7 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 		Text = "",
 		AutoButtonColor = false,
 		BackgroundColor3 = C.Scrim,
-		BackgroundTransparency = 1, -- no dim behind the window; still catches outside clicks
+		BackgroundTransparency = 1,
 		Size = UDim2.fromScale(1, 1),
 		Visible = false,
 		ZIndex = 39,
@@ -288,15 +266,13 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 	}, gui)
 	root.Activated:Connect(function() end)
 	self.Root = root
-	-- Gilded Grimoire theme: convert this screen's legacy Gotham text (now and as it is rebuilt).
 	GildedGrimoire.Watch(root)
 
 	applyGothicStyle(root, "Window")
 
 	self.Scale = new("UIScale", {}, root)
 
-	-- Close Button (High contrast gothic rounded square with Latin 'X')
-	local close = GothicBoxStyle.CreateCloseButton(root, function()
+	GothicBoxStyle.CreateCloseButton(root, function()
 		if not self.Busy then
 			self:Close()
 		end
@@ -312,7 +288,7 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 	self.Title = title
 
 	--========================================================================
-	-- RITUAL AREA (Circular Layout 320x320)
+	-- RITUAL AREA (Circular Altar Layout — No Hero Sacrifices)
 	--========================================================================
 	local ritualArea = new("Frame", {
 		Name = "RitualArea",
@@ -323,7 +299,6 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 		ZIndex = 42,
 	}, root)
 	self.RitualArea = ritualArea
-	-- Drawn at 80% so the ritual, stats and button fit the Synthesis-sized window.
 	new("UIScale", { Scale = 0.8 }, ritualArea)
 
 	-- Outer Magic Circle (280x280)
@@ -354,14 +329,14 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 	glow(innerCircle, 6, C.BorderGlow, 0.7)
 	self.InnerCircle = innerCircle
 
-	-- Main Hero Center Slot (120x120)
+	-- Main Hero Center Slot (136x136)
 	local mainSlot = new("TextButton", {
 		Name = "MainHeroSlot",
 		Text = "",
 		AutoButtonColor = true,
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.5),
-		Size = UDim2.fromOffset(120, 120),
+		Size = UDim2.fromOffset(136, 136),
 		BackgroundColor3 = C.SlotBg,
 		BorderSizePixel = 0,
 		ZIndex = 43,
@@ -399,7 +374,7 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 		Name = "HeroBadge",
 		AnchorPoint = Vector2.new(0.5, 1),
 		Position = UDim2.new(0.5, 0, 1, -4),
-		Size = UDim2.fromOffset(100, 24),
+		Size = UDim2.fromOffset(112, 24),
 		BackgroundColor3 = Color3.fromRGB(15, 12, 22),
 		BorderSizePixel = 0,
 		Visible = false,
@@ -415,86 +390,8 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 	self.MainBadgeText = mainBadgeText
 
 	mainSlot.Activated:Connect(function()
-		self:OpenPicker("RECIPIENT")
+		self:OpenPicker()
 	end)
-
-	-- Orbiting Sacrifice Slots (Radius = 130px)
-	-- Slot 1: Top (0°)
-	-- Slot 2: Bottom Right (120°)
-	-- Slot 3: Bottom Left (240°)
-	self.SacrificeSlots = {}
-	local slotPositions = {
-		UDim2.new(0.5, 0, 0.5, -130),
-		UDim2.new(0.5, 112, 0.5, 65),
-		UDim2.new(0.5, -112, 0.5, 65),
-	}
-
-	for i = 1, 3 do
-		local sacBtn = new("TextButton", {
-			Name = "SacrificeSlot_" .. i,
-			Text = "",
-			AutoButtonColor = true,
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = slotPositions[i],
-			Size = UDim2.fromOffset(75, 75),
-			BackgroundColor3 = C.SlotBg,
-			BorderSizePixel = 0,
-			ZIndex = 43,
-		}, ritualArea)
-
-		local sacStroke = stroke(sacBtn, C.SlotBorder, 1.5, 0.6)
-		local sacInset = new("Frame", {
-			Name = "Inset",
-			BackgroundTransparency = 1,
-			Position = UDim2.fromOffset(2, 2),
-			Size = UDim2.new(1, -4, 1, -4),
-			ZIndex = 44,
-		}, sacBtn)
-		stroke(sacInset, C.Border, 1, 0.85)
-
-		local sacHost = new("Frame", {
-			Name = "PortraitHost",
-			BackgroundTransparency = 1,
-			ClipsDescendants = true,
-			Position = UDim2.fromOffset(3, 3),
-			Size = UDim2.new(1, -6, 1, -6),
-			ZIndex = 44,
-		}, sacBtn)
-
-		local sacPlus = label(sacBtn, "+", 40, C.TextDim, Enum.Font.GothamBlack)
-		sacPlus.Size = UDim2.fromScale(1, 1)
-		sacPlus.ZIndex = 45
-
-		local sacLevel = label(sacBtn, "", 13, C.Text, Enum.Font.GothamBold, "Number")
-		sacLevel.AnchorPoint = Vector2.new(0.5, 1)
-		sacLevel.Position = UDim2.new(0.5, 0, 1, -3)
-		sacLevel.Size = UDim2.new(1, -4, 0, 18)
-		sacLevel.ZIndex = 46
-		sacLevel.Visible = false
-
-		local slotIdx = i
-		sacBtn.Activated:Connect(function()
-			local donorUUID = self.Donors[slotIdx]
-			if donorUUID then
-				self:RemoveDonor(donorUUID)
-			else
-				if not self.Recipient then
-					self.Message = "Select a main hero first."
-					self:Render()
-				else
-					self:OpenPicker("DONOR")
-				end
-			end
-		end)
-
-		table.insert(self.SacrificeSlots, {
-			Button = sacBtn,
-			Stroke = sacStroke,
-			Host = sacHost,
-			Plus = sacPlus,
-			Level = sacLevel,
-		})
-	end
 
 	--========================================================================
 	-- STATS DISPLAY PANEL (Before & After Stats Panel)
@@ -539,16 +436,15 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 
 	self.OldMaxLevel = makeStatRow(leftBlock, 0, "Max Level")
 	self.OldHP = makeStatRow(leftBlock, 24, "HP")
-	self.OldATK = makeStatRow(leftBlock, 48, "Base ATK")
-	self.OldStars = label(leftBlock, "★★★", 24, C.StarGold, Enum.Font.GothamBold)
+	self.OldATK = makeStatRow(leftBlock, 48, "ATK")
+	self.OldStars = label(leftBlock, "★★★", 22, C.StarGold, Enum.Font.GothamBold)
 	self.OldStars.Position = UDim2.fromOffset(0, 74)
 	self.OldStars.Size = UDim2.new(1, 0, 0, 24)
 	self.OldStars.TextXAlignment = Enum.TextXAlignment.Center
 	self.OldStars.ZIndex = 43
 
-	-- Center Arrow (Procedural Gothic Vector Arrow facing right: Current Stats ➔ Upgraded Stats)
-	local arrow = createRightArrow(statsPanel, UDim2.fromOffset(60, 32), UDim2.fromScale(0.5, 0.5), C.Border)
-	self.Arrow = arrow
+	-- Center Arrow (Current Stats ➔ Upgraded Stats)
+	self.Arrow = createRightArrow(statsPanel, UDim2.fromOffset(60, 32), UDim2.fromScale(0.5, 0.5), C.Border)
 
 	-- Right Stat Block (Upgraded)
 	local rightBlock = new("Frame", {
@@ -564,9 +460,9 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 	self.NewMaxLevel.TextColor3 = C.SuccessGreen
 	self.NewHP = makeStatRow(rightBlock, 24, "HP")
 	self.NewHP.TextColor3 = C.SuccessGreen
-	self.NewATK = makeStatRow(rightBlock, 48, "Base ATK")
+	self.NewATK = makeStatRow(rightBlock, 48, "ATK")
 	self.NewATK.TextColor3 = C.SuccessGreen
-	self.NewStars = label(rightBlock, '★★★<font color="#39ff14">★</font>', 24, C.StarGold, Enum.Font.GothamBold)
+	self.NewStars = label(rightBlock, '★★★<font color="#39ff14">★</font>', 22, C.StarGold, Enum.Font.GothamBold)
 	self.NewStars.Position = UDim2.fromOffset(0, 74)
 	self.NewStars.Size = UDim2.new(1, 0, 0, 24)
 	self.NewStars.TextXAlignment = Enum.TextXAlignment.Center
@@ -585,21 +481,18 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 	}, root)
 	self.ActionArea = actionArea
 
-	-- 100% SUCCESS RATE
 	local rateLbl = label(actionArea, "100% SUCCESS RATE", 20, C.SuccessGreen, Enum.Font.GothamBlack)
 	rateLbl.Position = UDim2.fromOffset(0, 0)
 	rateLbl.Size = UDim2.new(1, 0, 0, 26)
 	rateLbl.ZIndex = 43
 	self.RateLabel = rateLbl
 
-	-- Requirements / Costs Label
 	local costLbl = label(actionArea, "", 15, C.TextMuted, Enum.Font.GothamBold, "Body")
 	costLbl.Position = UDim2.fromOffset(0, 26)
 	costLbl.Size = UDim2.new(1, 0, 0, 22)
 	costLbl.ZIndex = 43
 	self.CostLabel = costLbl
 
-	-- Initiate Promotion Button (btn-action)
 	local btnWidth, btnHeight = 480, 52
 	local btn = new("TextButton", {
 		Name = "InitiatePromotionButton",
@@ -617,9 +510,7 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 	}, actionArea)
 	self.ConfirmButton = btn
 	applyGothicStyle(btn, "Button")
-	-- Gilded Grimoire: tint the inner gold rail for state; the outer ink outline stays black.
 	self.ConfirmStroke = GildedGrimoire.StateStroke(btn)
-	-- White label with an ink shadow, like the Summon buttons.
 	btn.TextStrokeColor3 = Color3.fromRGB(10, 6, 14)
 	btn.TextStrokeTransparency = 0.15
 
@@ -627,16 +518,13 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 		self:Confirm()
 	end)
 
-	-- Status Feedback
 	self.Status = label(actionArea, "", 16, C.TextMuted, Enum.Font.GothamMedium, "Body")
 	self.Status.Position = UDim2.fromOffset(30, 108)
 	self.Status.Size = UDim2.new(1, -60, 0, 36)
 	self.Status.ZIndex = 43
 
-	-- Build Picker Overlay
 	self:BuildPicker()
 
-	-- Animated Magic Circles via RenderStepped
 	self.OuterAngle = 0
 	self.InnerAngle = 0
 	RunService.RenderStepped:Connect(function(dt: number)
@@ -648,8 +536,6 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 		end
 	end)
 
-	-- Fit the window inside the safe area. The Pit's tab bar sits in Roblox's top bar (React HUD), so no
-	-- space is reserved above the window.
 	ModalFit.Bind(root, self.Scale, WIDTH, HEIGHT)
 
 	self:Render()
@@ -758,11 +644,6 @@ function Promo.Refresh(self: any, attempt: number?)
 		if self.Recipient and not self.State.Heroes[self.Recipient] then
 			self.Recipient = nil
 		end
-		for i = #self.Donors, 1, -1 do
-			if not self.State.Heroes[self.Donors[i]] then
-				table.remove(self.Donors, i)
-			end
-		end
 		self:Render()
 		if self.Picker.Visible then
 			self:RenderPicker()
@@ -787,7 +668,7 @@ function Promo.QueuePreview(self: any)
 		local response = self:Request("PREVIEW", {
 			Action = "PROMOTION",
 			Recipient = self.Recipient,
-			Donors = table.clone(self.Donors),
+			Donors = {},
 		})
 		if serial ~= self.PreviewSerial then return end
 		if not response.Success and tostring(response.Message):find("wait") then
@@ -840,8 +721,9 @@ function Promo.Confirm(self: any)
 				for _, uuid in delta.Removed or {} do
 					self.State.Heroes[uuid] = nil
 				end
+				if delta.Currencies then self.State.Currencies = delta.Currencies end
+				if delta.Materials then self.State.Materials = delta.Materials end
 			end
-			self.Donors = {}
 			self:Celebrate()
 		else
 			self.Message = response.Message or "The promotion was rejected. Review requirements."
@@ -859,25 +741,9 @@ end
 -- SELECTION & PICKER
 --============================================================================
 
-function Promo.RemoveDonor(self: any, uuid: string)
-	local idx = table.find(self.Donors, uuid)
-	if idx then
-		table.remove(self.Donors, idx)
-	end
-	self.Message = ""
-	self:QueuePreview()
-end
-
-function Promo.OpenPicker(self: any, mode: string)
+function Promo.OpenPicker(self: any)
 	if self.Busy then return end
-	self.PickerMode = mode
-	if mode == "RECIPIENT" then
-		self.PickerMessage = "Choose a hero at maximum level to promote."
-	else
-		local recipient = self.Recipient and self.State.Heroes[self.Recipient]
-		local rank = recipient and recipient.Stars or 1
-		self.PickerMessage = string.format("Sacrifice materials must be %s rank and will be consumed.", stars(rank))
-	end
+	self.PickerMessage = "Choose a hero at maximum level to promote with Promotion Stones & Gold."
 	self.Picker.Visible = true
 	self:RenderPicker()
 end
@@ -885,15 +751,7 @@ end
 function Promo.Pick(self: any, uuid: string)
 	local hero = self.State.Heroes[uuid]
 	if not hero then return end
-	if self.PickerMode == "RECIPIENT" then
-		self.Recipient = uuid
-		self.Donors = {}
-	else
-		if table.find(self.Donors, uuid) then return end
-		if #self.Donors < 3 then
-			table.insert(self.Donors, uuid)
-		end
-	end
+	self.Recipient = uuid
 	self.Message = ""
 	self.Picker.Visible = false
 	self:QueuePreview()
@@ -903,83 +761,46 @@ function Promo.RenderPicker(self: any)
 	for _, child in self.PickerList:GetChildren() do
 		if child:IsA("GuiObject") then child:Destroy() end
 	end
-	local isDonorMode = self.PickerMode == "DONOR"
-	local recipient = self.Recipient and self.State.Heroes[self.Recipient]
 
-	if isDonorMode then
-		self.PickerTitle.Text = spaced("SELECT SACRIFICE MATERIAL")
-	else
-		self.PickerTitle.Text = spaced("SELECT HERO TO PROMOTE")
-	end
+	local maxStars = PitBalanceConfig.MaxStars or 7
+	self.PickerTitle.Text = spaced("SELECT HERO TO PROMOTE")
 	self.PickerStatus.Text = self.PickerMessage or ""
 
 	local heroes = {}
-	for uuid, hero in self.State.Heroes do
-		if isDonorMode then
-			if uuid ~= self.Recipient and not table.find(self.Donors, uuid) then
-				table.insert(heroes, hero)
-			end
-		else
-			table.insert(heroes, hero)
-		end
+	for _, hero in self.State.Heroes do
+		table.insert(heroes, hero)
 	end
 
-	if isDonorMode then
-		local targetRank = recipient and (recipient.Stars or 1) or 1
-		table.sort(heroes, function(a, b)
-			local aMatch = (a.Stars or 1) == targetRank
-			local bMatch = (b.Stars or 1) == targetRank
-			if aMatch ~= bMatch then return aMatch end
-			local aOk = not a.PitStatus or a.PitStatus.EligibleDonor ~= false
-			local bOk = not b.PitStatus or b.PitStatus.EligibleDonor ~= false
-			if aOk ~= bOk then return aOk end
-			return tostring(a.UUID) < tostring(b.UUID)
-		end)
-	else
-		table.sort(heroes, function(a, b)
-			local aMax = (a.Stars or 1) >= 5
-			local bMax = (b.Stars or 1) >= 5
-			if aMax ~= bMax then return not aMax end
-			local aCap = (a.Level or 1) >= (a.Stars or 1) * 10
-			local bCap = (b.Level or 1) >= (b.Stars or 1) * 10
-			if aCap ~= bCap then return aCap end
-			if (a.Stars or 1) ~= (b.Stars or 1) then return (a.Stars or 1) > (b.Stars or 1) end
-			if (a.Level or 1) ~= (b.Level or 1) then return (a.Level or 1) > (b.Level or 1) end
-			return tostring(a.UUID) < tostring(b.UUID)
-		end)
-	end
+	table.sort(heroes, function(a, b)
+		local aMax = (a.Stars or 1) >= maxStars
+		local bMax = (b.Stars or 1) >= maxStars
+		if aMax ~= bMax then return not aMax end
+		local aCap = (a.Level or 1) >= (a.Stars or 1) * 10
+		local bCap = (b.Level or 1) >= (b.Stars or 1) * 10
+		if aCap ~= bCap then return aCap end
+		if (a.Stars or 1) ~= (b.Stars or 1) then return (a.Stars or 1) > (b.Stars or 1) end
+		if (a.Level or 1) ~= (b.Level or 1) then return (a.Level or 1) > (b.Level or 1) end
+		return tostring(a.UUID) < tostring(b.UUID)
+	end)
 
 	if #heroes == 0 then
-		local empty = label(self.PickerList, isDonorMode and "No matching sacrifice materials available." or "No heroes in roster.", 17, C.TextMuted, Enum.Font.GothamMedium, "Body")
+		local empty = label(self.PickerList, "No heroes in roster.", 17, C.TextMuted, Enum.Font.GothamMedium, "Body")
 		empty.Size = UDim2.fromOffset(400, 40)
 		empty.ZIndex = 62
 	end
 
 	for i, hero in heroes do
-		local eligible = true
+		local isMax = (hero.Stars or 1) >= maxStars
+		local isCapped = (hero.Level or 1) >= (hero.Stars or 1) * 10
+		local eligible = not isMax and isCapped
 		local tagText: string? = nil
-		if isDonorMode then
-			local targetRank = recipient and (recipient.Stars or 1) or 1
-			if (hero.Stars or 1) ~= targetRank then
-				eligible = false
-				tagText = "WRONG RANK"
-			elseif hero.PitStatus and hero.PitStatus.EligibleDonor == false then
-				eligible = false
-				tagText = (hero.PitStatus.Status or "UNAVAILABLE"):upper()
-			end
-		else
-			local isMax = (hero.Stars or 1) >= 5
-			local isCapped = (hero.Level or 1) >= (hero.Stars or 1) * 10
-			if isMax then
-				eligible = false
-				tagText = "MAX RANK"
-			elseif not isCapped then
-				eligible = false
-				tagText = "NEED LV." .. ((hero.Stars or 1) * 10)
-			end
+		if isMax then
+			tagText = "MAX RANK"
+		elseif not isCapped then
+			tagText = "NEED LV." .. ((hero.Stars or 1) * 10)
 		end
 
-		local rarity = RARITY[math.clamp(hero.Stars or 1, 1, 5)]
+		local rarity = RARITY[math.clamp(hero.Stars or 1, 1, #RARITY)]
 		local tile = new("TextButton", {
 			Name = "Hero_" .. tostring(hero.UUID),
 			Text = "",
@@ -1027,7 +848,6 @@ function Promo.RenderPicker(self: any)
 
 		local uuid = hero.UUID
 		tile.Activated:Connect(function()
-			if isDonorMode and not eligible then return end
 			self:Pick(uuid)
 		end)
 	end
@@ -1040,6 +860,7 @@ end
 function Promo.Render(self: any)
 	local heroes = self.State.Heroes or {}
 	local recipient = self.Recipient and heroes[self.Recipient]
+	local maxStars = PitBalanceConfig.MaxStars or 7
 
 	-- 1. Main Recipient Center Slot
 	self.MainPortraitHost:ClearAllChildren()
@@ -1047,7 +868,7 @@ function Promo.Render(self: any)
 		self.MainQuestion.Visible = false
 		local p = HeroCard.Portrait(self.MainPortraitHost, recipient)
 		p.ZIndex = 44
-		local rarity = RARITY[math.clamp(recipient.Stars or 1, 1, 5)]
+		local rarity = RARITY[math.clamp(recipient.Stars or 1, 1, #RARITY)]
 		self.MainStroke.Color = rarity
 
 		local maxLevel = (recipient.Stars or 1) * 10
@@ -1060,42 +881,24 @@ function Promo.Render(self: any)
 		self.MainBadge.Visible = false
 	end
 
-	-- 2. 3 Orbiting Sacrifice Slots
-	for i = 1, 3 do
-		local slotData = self.SacrificeSlots[i]
-		local donorUUID = self.Donors[i]
-		local donorHero = donorUUID and heroes[donorUUID]
-
-		slotData.Host:ClearAllChildren()
-		if donorHero then
-			slotData.Plus.Visible = false
-			local dp = HeroCard.Portrait(slotData.Host, donorHero)
-			dp.ZIndex = 44
-			local rarity = RARITY[math.clamp(donorHero.Stars or 1, 1, 5)]
-			slotData.Stroke.Color = rarity
-			slotData.Stroke.Transparency = 0.2
-			slotData.Level.Visible = true
-			slotData.Level.Text = string.format("Lv.%d", donorHero.Level or 1)
-		else
-			slotData.Plus.Visible = true
-			slotData.Stroke.Color = C.SlotBorder
-			slotData.Stroke.Transparency = 0.6
-			slotData.Level.Visible = false
-		end
-	end
-
-	-- 3. Stats Display Panel (Before & After Stats)
+	-- 2. Stats Display Panel (Before & After Stats)
 	local preview = self.Preview
 	if recipient then
-		local curStars = math.clamp(recipient.Stars or 1, 1, 4)
+		local curStars = math.clamp(recipient.Stars or 1, 1, maxStars)
+		local nextStars = math.min(maxStars, curStars + 1)
 		local curMaxLvl = curStars * 10
-		local nextMaxLvl = (curStars + 1) * 10
+		local nextMaxLvl = nextStars * 10
 
-		local oldHP = math.floor(recipient.BaseHP or 1000)
-		local oldATK = math.floor(recipient.BaseATK or 100)
+		local beforeSnap = (preview and preview.Before) or recipient.Stats or StatFormulas.GetCombatSnapshot(recipient)
+		local oldHP = math.floor(beforeSnap.HP or beforeSnap.Health or recipient.BaseHP or 1000)
+		local oldATK = math.floor(beforeSnap.ATK or beforeSnap.AttackDamage or recipient.BaseATK or 100)
 
-		local newHP = preview and preview.After and preview.After.HP or math.round(oldHP * PitBalanceConfig.Promotion.CombatMultiplier)
-		local newATK = preview and preview.After and preview.After.ATK or math.round(oldATK * PitBalanceConfig.Promotion.CombatMultiplier)
+		local newHP = if curStars >= maxStars
+			then oldHP
+			else (preview and preview.After and preview.After.HP) or math.round(oldHP * PitBalanceConfig.Promotion.CombatMultiplier)
+		local newATK = if curStars >= maxStars
+			then oldATK
+			else (preview and preview.After and preview.After.ATK) or math.round(oldATK * PitBalanceConfig.Promotion.CombatMultiplier)
 
 		self.OldMaxLevel.Text = tostring(curMaxLvl)
 		self.OldHP.Text = formatNumber(oldHP)
@@ -1105,21 +908,24 @@ function Promo.Render(self: any)
 		self.NewMaxLevel.Text = tostring(nextMaxLvl)
 		self.NewHP.Text = formatNumber(newHP)
 		self.NewATK.Text = formatNumber(newATK)
-		self.NewStars.Text = string.format('%s<font color="#39ff14">★</font>', string.rep("★", curStars))
+		if curStars >= maxStars then
+			self.NewStars.Text = string.rep("★", curStars)
+		else
+			self.NewStars.Text = string.format('%s<font color="#39ff14">★</font>', string.rep("★", curStars))
+		end
 	else
-		-- Example mockup display values when no hero is slotted
 		self.OldMaxLevel.Text = "30"
 		self.OldHP.Text = "1,250"
 		self.OldATK.Text = "150"
 		self.OldStars.Text = "★★★"
 
 		self.NewMaxLevel.Text = "40"
-		self.NewHP.Text = "1,850"
-		self.NewATK.Text = "280"
+		self.NewHP.Text = "3,750"
+		self.NewATK.Text = "450"
 		self.NewStars.Text = '★★★<font color="#39ff14">★</font>'
 	end
 
-	-- 4. Costs / Requirements Display
+	-- 3. Costs / Requirements Display
 	local currencies = self.State.Currencies or {}
 	local materials = self.State.Materials or self.State.PitMaterials or {}
 	local goldOwned = currencies.Gold or 0
@@ -1127,27 +933,31 @@ function Promo.Render(self: any)
 
 	if recipient then
 		local rule = PitBalanceConfig.Promotion[recipient.Stars]
-		local reqGold = rule and rule.Gold or 1500
-		local reqStones = rule and rule.PromotionStone or 1
+		if not rule or (recipient.Stars or 1) >= maxStars then
+			self.CostLabel.Text = '<font color="#39ff14">MAXIMUM CELESTIAL 7★ RANK ACHIEVED</font>'
+		else
+			local reqGold = rule.Gold or 1500
+			local reqStones = rule.PromotionStone or 1
 
-		local goldOk = goldOwned >= reqGold
-		local stonesOk = stonesOwned >= reqStones
+			local goldOk = goldOwned >= reqGold
+			local stonesOk = stonesOwned >= reqStones
 
-		local goldStr = string.format("GOLD: %s / %s %s", formatNumber(goldOwned), formatNumber(reqGold), goldOk and "(OK)" or "(NEED MORE)")
-		local stoneStr = string.format("STONES: %s / %s %s", formatNumber(stonesOwned), formatNumber(reqStones), stonesOk and "(OK)" or "(NEED MORE)")
+			local goldStr = string.format("GOLD: %s / %s %s", formatNumber(goldOwned), formatNumber(reqGold), goldOk and "(OK)" or "(NEED MORE)")
+			local stoneStr = string.format("STONES: %s / %s %s", formatNumber(stonesOwned), formatNumber(reqStones), stonesOk and "(OK)" or "(NEED MORE)")
 
-		self.CostLabel.Text = string.format(
-			'<font color="%s">%s</font>      <font color="%s">%s</font>',
-			goldOk and "#39ff14" or "#ff5f55",
-			goldStr,
-			stonesOk and "#39ff14" or "#ff5f55",
-			stoneStr
-		)
+			self.CostLabel.Text = string.format(
+				'<font color="%s">%s</font>      <font color="%s">%s</font>',
+				goldOk and "#39ff14" or "#ff5f55",
+				goldStr,
+				stonesOk and "#39ff14" or "#ff5f55",
+				stoneStr
+			)
+		end
 	else
 		self.CostLabel.Text = string.format("GOLD OWNED: %s   ·   PROMOTION STONES: %s", formatNumber(goldOwned), formatNumber(stonesOwned))
 	end
 
-	-- 5. Action Button & Feedback Status
+	-- 4. Action Button & Feedback Status
 	local canCommit = preview ~= nil and preview.CanCommit == true and not self.Loading and not self.Busy
 	local button = self.ConfirmButton
 	if self.Busy then
@@ -1204,7 +1014,6 @@ function Promo.Open(self: any)
 	self.Scrim.Visible = true
 	self.Picker.Visible = false
 	self.Recipient = nil
-	self.Donors = {}
 	self.Preview = nil
 	self.Message = ""
 	self.Busy = false

@@ -138,7 +138,8 @@ function Config.GetEnemyStats(floorId: any, enemyId: any): any?
 	for _, encounter in ipairs(floor.Encounters) do
 		if encounter.EnemyId == enemyId then included = true; break end
 	end
-	if not included then return nil end
+	-- Supports (Phase D) join camps at runtime, so they are not in the placement manifest.
+	if not included and not enemy.Support then return nil end
 	local statRole = if enemy.Alpha then "ALPHA" else enemy.Role -- Floor Alphas have their own stat row
 	local base = Config.BaseStatsByRole[statRole]
 	if not base then return nil end
@@ -177,50 +178,89 @@ end
 -- and Biome Bosses ("BOSS") are the only source of Calamity Hearts. Whatever share is left over is a Mana Geode.
 -- Tuned with RelicConfig payouts to ~2,900 / 6,800 / 12,700 gems per hour on Alpha floors 1 / 26 / 49.
 Config.RelicDrops = table.freeze({
- REGULAR = table.freeze({ Drop = { 0.006, 0.016 }, Heart = { 0, 0 }, Core = { 0, 0 }, Urn = { 0.12, 0.25 } }),
- ELITE = table.freeze({ Drop = { 0.06, 0.14 }, Heart = { 0, 0 }, Core = { 0.06, 0.15 }, Urn = { 0.30, 0.40 } }),
- ALPHA = table.freeze({ Drop = { 0.20, 0.40 }, Heart = { 0.02, 0.05 }, Core = { 0, 0 }, Urn = { 0.45, 0.55 } }),
- BOSS = table.freeze({ Drop = { 0.20, 0.40 }, Heart = { 0.04, 0.10 }, Core = { 0, 0 }, Urn = { 0.45, 0.55 } }),
+	REGULAR = table.freeze({ Drop = { 0.006, 0.016 }, Heart = { 0, 0 }, Core = { 0, 0 }, Urn = { 0.12, 0.25 } }),
+	ELITE = table.freeze({ Drop = { 0.06, 0.14 }, Heart = { 0, 0 }, Core = { 0.06, 0.15 }, Urn = { 0.30, 0.40 } }),
+	ALPHA = table.freeze({ Drop = { 0.20, 0.40 }, Heart = { 0.02, 0.05 }, Core = { 0, 0 }, Urn = { 0.45, 0.55 } }),
+	BOSS = table.freeze({ Drop = { 0.20, 0.40 }, Heart = { 0.04, 0.10 }, Core = { 0, 0 }, Urn = { 0.45, 0.55 } }),
 })
+
+-- Promotion Stone drop tables by enemy role. Each pair is { floor 1, floor 50 }, interpolated linearly with depth.
+Config.PromotionStoneDrops = table.freeze({
+	REGULAR = table.freeze({ Chance = { 0, 0 }, Min = 0, Max = 0 }),
+	ELITE = table.freeze({ Chance = { 0.04, 0.08 }, Min = 1, Max = 1 }),
+	ALPHA = table.freeze({ Chance = { 0.30, 0.70 }, Min = 1, Max = 2 }),
+	BOSS = table.freeze({ Chance = { 0.60, 1.00 }, Min = 1, Max = 3 }),
+})
+
+-- Guaranteed Promotion Stones awarded on the first clear of a floor's apex encounter.
+function Config.GetFirstClearPromotionStones(floorId: number, role: string?): number
+	if not Config.IsFloorId(floorId) then return 0 end
+	local biomeIndex = math.ceil(floorId / Config.FloorsPerBiome)
+	local isBiomeBoss = (floorId % Config.FloorsPerBiome == 0) or role == "BOSS"
+	if isBiomeBoss then
+		return 2 + biomeIndex -- 3 on Floor 5, 4 on Floor 10 ... 12 on Floor 50
+	end
+	return 1 + math.floor((biomeIndex - 1) / 3) -- 1 in Biomes 1-3, 2 in Biomes 4-6, 3 in Biomes 7-9, 4 in Biome 10
+end
+
+-- Repeat-kill Promotion Stone roll for Elites, Floor Alphas, and Biome Bosses.
+function Config.RollPromotionStones(floorId: number, role: string, roll: number, countRoll: number?): number
+	if not Config.IsFloorId(floorId) then return 0 end
+	local drops = Config.PromotionStoneDrops[role]
+	if not drops or drops.Max <= 0 then return 0 end
+	local progress = (floorId - 1) / (Config.FloorCount - 1)
+	local chance = drops.Chance[1] + (drops.Chance[2] - drops.Chance[1]) * progress
+	if roll >= chance then return 0 end
+	local biomeIndex = math.ceil(floorId / Config.FloorsPerBiome)
+	if role == "ALPHA" then
+		return if biomeIndex >= 6 and (countRoll or 0) < 0.5 then 2 else 1
+	elseif role == "BOSS" then
+		if biomeIndex >= 7 then
+			return if (countRoll or 0) < 0.5 then 3 else 2
+		end
+		return if (countRoll or 0) < 0.5 then 2 else 1
+	end
+	return drops.Min
+end
 
 -- Relic payouts scale with the floor the relic dropped on: Gold x(1 + 0.05 per floor), Gems x(1 + 0.02 per floor).
 Config.RelicGoldFloorScaling = 0.05
 Config.RelicGemFloorScaling = 0.02
 
 function Config.RelicFloorMultipliers(floorId: number): (number, number)
- if not Config.IsFloorId(floorId) then return 1, 1 end
- return 1 + Config.RelicGoldFloorScaling * (floorId - 1), 1 + Config.RelicGemFloorScaling * (floorId - 1)
+	if not Config.IsFloorId(floorId) then return 1, 1 end
+	return 1 + Config.RelicGoldFloorScaling * (floorId - 1), 1 + Config.RelicGemFloorScaling * (floorId - 1)
 end
 
 -- Kill gems stay flat; gold, relic probability and relic value grow with floor.
 -- `role` is REGULAR, ELITE, ALPHA or BOSS (Biome Boss).
 function Config.GetKillRewards(floorId: number, role: string): any
- assert(Config.IsFloorId(floorId), "Invalid reward floor")
- local drops = assert(Config.RelicDrops[role], "Invalid enemy role")
- local base = assert(Config.BaseStatsByRole[role], "Invalid enemy role")
- local progress = (floorId - 1) / (Config.FloorCount - 1)
- local function at(pair: { number }): number return pair[1] + (pair[2] - pair[1]) * progress end
- local goldMult, gemMult = Config.RelicFloorMultipliers(floorId)
- return {
-  Gold = math.round(base.GoldReward * Config.Scaling.RewardPerFloor ^ (floorId - 1)),
-  Gems = 1,
-  RelicChance = at(drops.Drop),
-  RelicMultiplier = goldMult,
-  GemMultiplier = gemMult,
-  HeartChance = at(drops.Heart),
-  CoreChance = at(drops.Core),
-  UrnChance = at(drops.Urn),
- }
+	assert(Config.IsFloorId(floorId), "Invalid reward floor")
+	local drops = assert(Config.RelicDrops[role], "Invalid enemy role")
+	local base = assert(Config.BaseStatsByRole[role], "Invalid enemy role")
+	local progress = (floorId - 1) / (Config.FloorCount - 1)
+	local function at(pair: { number }): number return pair[1] + (pair[2] - pair[1]) * progress end
+	local goldMult, gemMult = Config.RelicFloorMultipliers(floorId)
+	return {
+		Gold = math.round(base.GoldReward * Config.Scaling.RewardPerFloor ^ (floorId - 1)),
+		Gems = 1,
+		RelicChance = at(drops.Drop),
+		RelicMultiplier = goldMult,
+		GemMultiplier = gemMult,
+		HeartChance = at(drops.Heart),
+		CoreChance = at(drops.Core),
+		UrnChance = at(drops.Urn),
+	}
 end
 
 -- A dropRoll of 0 forces a drop (boss first clears). Tiers are checked from the top: Heart, Core, Urn, then Geode.
 function Config.RollRelic(floorId: number, role: string, dropRoll: number, tierRoll: number): string?
- local reward = Config.GetKillRewards(floorId, role)
- if dropRoll >= reward.RelicChance and dropRoll > 0 then return nil end
- if tierRoll < reward.HeartChance then return "CALAMITY_HEART" end
- if tierRoll < reward.HeartChance + reward.CoreChance then return "ABYSSAL_CORE" end
- if tierRoll < reward.HeartChance + reward.CoreChance + reward.UrnChance then return "CURSED_URN" end
- return "MANA_GEODE"
+	local reward = Config.GetKillRewards(floorId, role)
+	if dropRoll >= reward.RelicChance and dropRoll > 0 then return nil end
+	if tierRoll < reward.HeartChance then return "CALAMITY_HEART" end
+	if tierRoll < reward.HeartChance + reward.CoreChance then return "ABYSSAL_CORE" end
+	if tierRoll < reward.HeartChance + reward.CoreChance + reward.UrnChance then return "CURSED_URN" end
+	return "MANA_GEODE"
 end
 
 return table.freeze(Config)
