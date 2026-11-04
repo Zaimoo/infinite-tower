@@ -13,16 +13,27 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ContextActionService = game:GetService("ContextActionService")
+local RunService = game:GetService("RunService")
 
 local React = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("React"))
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local FacilityConfig = require(Shared:WaitForChild("Config"):WaitForChild("FacilityConfig"))
 local HeroCatalog = require(Shared:WaitForChild("Config"):WaitForChild("HeroCatalog"))
+local FirstBiomeCombat = require(Shared:WaitForChild("Config"):WaitForChild("FirstBiomeCombat"))
 local TreeConfig = require(Shared:WaitForChild("Config"):WaitForChild("FortressTreeConfig"))
 local FortressTree = require(Shared:WaitForChild("Util"):WaitForChild("FortressTree"))
+local OutskirtsRules = require(Shared:WaitForChild("Util"):WaitForChild("OutskirtsRules"))
 local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormulas"))
 local SummonLuck = require(Shared:WaitForChild("Util"):WaitForChild("SummonLuck"))
 local Grimoire = require(Shared:WaitForChild("Util"):WaitForChild("GildedGrimoire"))
+
+local Assets = ReplicatedStorage:WaitForChild("Assets")
+local TowerEnemyRigs = require(Assets:WaitForChild("TowerEnemyRigs"))
+local TowerEnemyClips = require(Assets:WaitForChild("TowerEnemyClips"))
+local HeroRigFolder = Assets:WaitForChild("HeroRig")
+local HeroRegistry = require(HeroRigFolder:WaitForChild("HeroRegistry"))
+local HeroAnimator = require(HeroRigFolder:WaitForChild("HeroAnimator"))
+local HeroLoadout = require(HeroRigFolder:WaitForChild("HeroLoadout"))
 
 local Theme = require(script.Parent:WaitForChild("Theme"))
 local Portrait = require(script.Parent:WaitForChild("Portrait"))
@@ -164,6 +175,351 @@ local function breakdownRow(order: number, caption: string, value: string)
 	})
 end
 
+-- Live looping ViewportFrame diorama for the Outskirts Guard Post showing stationed Adventurers
+-- clashing with a biome raider from the player's highest unlocked Tower floor/biome.
+local function OutskirtsPreviewStage(props: { Profile: any, AssignedUUIDs: { string }, DeploySerial: number })
+	local vpRef = React.useRef(nil :: ViewportFrame?)
+	local strokeRef = React.useRef(nil :: UIStroke?)
+	local deployRef = React.useRef(props.DeploySerial)
+	deployRef.current = props.DeploySerial
+
+	local profile = props.Profile
+	local frontier = OutskirtsRules.ResolveFrontierInfo(profile.HighestClearedFloor, profile.MaxFloorReached)
+
+	local shownHeroes: { any } = {}
+	for _, uuid in ipairs(props.AssignedUUIDs) do
+		local h = profile.Heroes and profile.Heroes[uuid]
+		if h then
+			table.insert(shownHeroes, h)
+			if #shownHeroes >= 2 then
+				break
+			end
+		end
+	end
+	local heroKeyParts: { string } = {}
+	for _, h in ipairs(shownHeroes) do
+		table.insert(heroKeyParts, string.format("%s:%s", tostring(h.UUID), tostring(h.EquippedArtifactUUID or "")))
+	end
+	local heroSignature = table.concat(heroKeyParts, ",")
+
+	React.useEffect(function()
+		local vp = vpRef.current
+		if not vp then
+			return
+		end
+		for _, child in ipairs(vp:GetChildren()) do
+			if not child:IsA("UICorner") and not child:IsA("UIStroke") then
+				child:Destroy()
+			end
+		end
+
+		local heroesFolder = Assets:FindFirstChild("Heroes")
+		if not heroesFolder or #heroesFolder:GetChildren() == 0 then
+			pcall(HeroRegistry.EnsureHeroes)
+			heroesFolder = Assets:FindFirstChild("Heroes")
+		end
+
+		local world = Instance.new("Model")
+		world.Name = "OutskirtsStageDiorama"
+
+		-- Meadow & dirt trail plinth + Guard Post palisade stakes on the left
+		local meadow = Instance.new("Part")
+		meadow.Size = Vector3.new(20, 0.4, 7.5)
+		meadow.CFrame = CFrame.new(0, -0.2, 0)
+		meadow.Anchored = true
+		meadow.CanCollide = false
+		meadow.Color = Color3.fromRGB(68, 108, 52)
+		meadow.Material = Enum.Material.Grass
+		meadow.Parent = world
+
+		local trail = Instance.new("Part")
+		trail.Size = Vector3.new(17.5, 0.14, 3.6)
+		trail.CFrame = CFrame.new(0, 0.04, 0)
+		trail.Anchored = true
+		trail.CanCollide = false
+		trail.Color = Color3.fromRGB(112, 88, 64)
+		trail.Material = Enum.Material.Ground
+		trail.Parent = world
+
+		for s = 1, 3 do
+			local stake = Instance.new("Part")
+			stake.Shape = Enum.PartType.Cylinder
+			stake.Size = Vector3.new(3.8 + (s % 2) * 0.5, 0.65, 0.65)
+			stake.CFrame = CFrame.new(-7.4 + (s - 1) * 0.9, 1.8, -1.6 + (s - 1) * 0.8) * CFrame.Angles(0, 0, math.pi * 0.5)
+			stake.Anchored = true
+			stake.CanCollide = false
+			stake.Color = Color3.fromRGB(94, 62, 36)
+			stake.Material = Enum.Material.Wood
+			stake.Parent = world
+		end
+
+		local spark = Instance.new("Part")
+		spark.Name = "ClashSpark"
+		spark.Shape = Enum.PartType.Ball
+		spark.Size = Vector3.new(0.9, 0.9, 0.9)
+		spark.CFrame = CFrame.new(0.2, 2.6, 0)
+		spark.Anchored = true
+		spark.CanCollide = false
+		spark.Color = Color3.fromRGB(255, 218, 98)
+		spark.Material = Enum.Material.Neon
+		spark.Transparency = 1
+		spark.Parent = world
+
+		-- Stationed Adventurer R15 clones
+		local heroActors: { { Rig: Model, Animator: HeroAnimator.HeroAnimator, BaseCF: CFrame, NextSwingAt: number } } = {}
+		local slotPositions = {
+			CFrame.new(-3.2, 3.0, 0.35) * CFrame.Angles(0, -math.pi * 0.5, 0),
+			CFrame.new(-5.4, 3.0, -1.15) * CFrame.Angles(0, -math.pi * 0.46, 0),
+		}
+		for idx, h in ipairs(shownHeroes) do
+			local template = heroesFolder and heroesFolder:FindFirstChild(tostring(h.TemplateId or "hero_han"))
+			if not template and heroesFolder then
+				template = heroesFolder:FindFirstChild("hero_han")
+			end
+			if template and template:IsA("Model") then
+				local rig = template:Clone()
+				local seed = HeroCatalog.Seeds[h.TemplateId]
+				local archetype = h.Archetype or (seed and seed.Archetype) or "Vanguard"
+				local artUUID = h.EquippedArtifactUUID
+				local art = if artUUID and profile.Artifacts then profile.Artifacts[artUUID] else nil
+				local weaponType = if art and type(art.Type) == "string"
+					then art.Type
+					else OutskirtsRules.DefaultWeaponForArchetype(archetype)
+				local artId = if art and type(art.TemplateId) == "string" then art.TemplateId else nil
+				local artRarity = if art and type(art.Rarity) == "number" then art.Rarity else 1
+
+				local hostEntity = Instance.new("Model")
+				hostEntity.Name = "StageHero_" .. idx
+				rig.Parent = hostEntity
+				local resolved = HeroLoadout.Equip(hostEntity, rig, artId, weaponType, artRarity)
+
+				for _, desc in ipairs(hostEntity:GetDescendants()) do
+					if desc:IsA("BaseScript") then
+						desc:Destroy()
+					elseif desc:IsA("BasePart") then
+						desc.Anchored = true
+						desc.CanCollide = false
+					end
+				end
+
+				local baseCF = slotPositions[idx] or slotPositions[1]
+				local hrp = rig:FindFirstChild("HumanoidRootPart") :: BasePart?
+				if hrp then
+					hrp.CFrame = baseCF
+				else
+					rig:PivotTo(baseCF)
+				end
+
+				local animator = HeroAnimator.new(rig, {
+					HeroId = h.TemplateId,
+					WeaponType = resolved or weaponType,
+				})
+				animator:SetLocomotion("Move")
+				HeroAnimator.ApplyStaticPose(rig, animator:Evaluate())
+				hostEntity.Parent = world
+
+				table.insert(heroActors, {
+					Rig = rig,
+					Animator = animator,
+					BaseCF = baseCF,
+					NextSwingAt = 0.65 + (idx - 1) * 0.9,
+				})
+			end
+		end
+
+		-- Frontier Biome Preview Enemy Rig
+		local enemyId = frontier.PreviewEnemyId
+		local combatSpec = FirstBiomeCombat.Get(enemyId)
+
+		local mobModel = Instance.new("Model")
+		mobModel.Name = "StageFrontierMob"
+		local mobRoot = Instance.new("Part")
+		mobRoot.Name = "HumanoidRootPart"
+		mobRoot.Size = Vector3.new(1, 1, 1)
+		mobRoot.Transparency = 1
+		mobRoot.Anchored = true
+		mobRoot.CanCollide = false
+		mobRoot.CFrame = CFrame.new(0, 8, 0)
+		mobRoot.Parent = mobModel
+		mobModel.PrimaryPart = mobRoot
+
+		local enemyRig = TowerEnemyRigs.Build(mobModel, mobRoot, enemyId)
+		local _, rawExtents = mobModel:GetBoundingBox()
+		local rigScale = if rawExtents.Y > 5.8 then (5.8 / rawExtents.Y) else 1.0
+		if rigScale ~= 1.0 then
+			mobModel:ScaleTo(rigScale)
+			for _, joint in pairs(enemyRig.Joints) do
+				joint.Bind = joint.Motor.C0
+			end
+		end
+		local scaledCF, scaledExtents = mobModel:GetBoundingBox()
+		local rawFootOffset = mobRoot.Position.Y - (scaledCF.Position.Y - scaledExtents.Y * 0.5)
+		local fallbackRootH = ((combatSpec and combatSpec.RootHeight) or 3.2) * rigScale
+		local footOffset = if rawExtents.Y > 0.2 then math.clamp(rawFootOffset, 0.5, 6.2) else fallbackRootH
+		local mobBaseCF = CFrame.new(3.5, 0.12 + footOffset, 0.15) * CFrame.Angles(0, math.pi * 0.5, 0)
+		mobModel:PivotTo(mobBaseCF)
+
+		type StaticLink = { Kind: string, Motor: Motor6D?, Part0: BasePart, Part1: BasePart, Rel: CFrame? }
+		local mobLinks: { StaticLink } = {}
+		for _, part in ipairs(enemyRig.Parts) do
+			if part:IsA("BasePart") then
+				part.Anchored = true
+				part.CanCollide = false
+				local weld = part:FindFirstChildWhichIsA("WeldConstraint")
+				if weld and weld.Part0 and weld.Part1 == part then
+					table.insert(mobLinks, {
+						Kind = "Weld",
+						Motor = nil,
+						Part0 = weld.Part0,
+						Part1 = part,
+						Rel = weld.Part0.CFrame:ToObjectSpace(part.CFrame),
+					})
+				else
+					for _, joint in pairs(enemyRig.Joints) do
+						if joint.Motor.Part1 == part and joint.Motor.Part0 then
+							table.insert(mobLinks, {
+								Kind = "Motor",
+								Motor = joint.Motor,
+								Part0 = joint.Motor.Part0,
+								Part1 = part,
+								Rel = nil,
+							})
+							break
+						end
+					end
+				end
+			end
+		end
+		mobModel.Parent = world
+		world.Parent = vp
+
+		local cam = Instance.new("Camera")
+		cam.FieldOfView = 30
+		cam.CFrame = CFrame.lookAt(Vector3.new(0, 4.1, 15.8), Vector3.new(0.1, 2.5, 0))
+		cam.Parent = vp
+		vp.CurrentCamera = cam
+
+		local clock = 0
+		local lastDeploySeen = deployRef.current
+		local flashTimer = 0
+		local mobHitTimer = 0
+		local swingCounter = 0
+
+		local conn = RunService.RenderStepped:Connect(function(dt: number)
+			local stepDt = math.min(dt, 0.08)
+			clock += stepDt
+
+			if deployRef.current ~= lastDeploySeen then
+				lastDeploySeen = deployRef.current
+				flashTimer = 0.55
+				for _, actor in ipairs(heroActors) do
+					actor.Animator:PlayAction("AttackSpecial", 0.78)
+					actor.NextSwingAt = clock + 1.5
+				end
+				mobHitTimer = 0.32
+			end
+
+			if strokeRef.current then
+				if flashTimer > 0 then
+					flashTimer = math.max(0, flashTimer - stepDt)
+					strokeRef.current.Color = TEXT.Gold
+					strokeRef.current.Thickness = 2.6
+				else
+					strokeRef.current.Color = Tones.Teal.Rail
+					strokeRef.current.Thickness = 1.4
+				end
+			end
+
+			for idx, actor in ipairs(heroActors) do
+				if clock >= actor.NextSwingAt then
+					swingCounter += 1
+					local state = if swingCounter % 3 == 0 then "AttackSpecial" else "AttackBasic"
+					actor.Animator:PlayAction(state, 0.76)
+					actor.NextSwingAt = clock + 1.95 + (idx - 1) * 0.35
+					mobHitTimer = 0.42
+				end
+				actor.Animator.Clock += stepDt
+				actor.Animator.LocomotionTime += stepDt * 1.05
+				if actor.Animator.Action and (actor.Animator.Clock - actor.Animator.Action.Started) >= actor.Animator.Action.Duration then
+					actor.Animator.Action = nil
+				end
+				local lunge = if actor.Animator.Action then math.sin(math.clamp((actor.Animator.Clock - actor.Animator.Action.Started) / actor.Animator.Action.Duration, 0, 1) * math.pi) * 0.55 else 0
+				local hrp = actor.Rig:FindFirstChild("HumanoidRootPart") :: BasePart?
+				if hrp then
+					hrp.CFrame = actor.BaseCF * CFrame.new(0, 0, -lunge)
+				end
+				HeroAnimator.ApplyStaticPose(actor.Rig, actor.Animator:Evaluate())
+			end
+
+			local clips = TowerEnemyClips[enemyId]
+			if clips then
+				local frames = clips.Locomotion or clips.Idle
+				local phase = (clock * 0.85) % 1
+				if #heroActors > 0 and mobHitTimer > 0 then
+					mobHitTimer = math.max(0, mobHitTimer - stepDt)
+					if mobHitTimer < 0.24 then
+						frames = clips.HitReaction or frames
+						phase = 1 - (mobHitTimer / 0.24)
+					end
+					spark.Transparency = 0.2 + 0.8 * (1 - math.min(1, mobHitTimer * 3))
+					spark.Size = Vector3.one * (0.6 + (1 - mobHitTimer) * 1.8)
+				else
+					spark.Transparency = 1
+					if (clock % 2.8) > 2.0 and clips.BasicAttack then
+						frames = clips.BasicAttack
+						phase = ((clock % 2.8) - 2.0) / 0.8
+					end
+				end
+				local sway = math.sin(clock * 2.2) * 0.28
+				mobRoot.CFrame = mobBaseCF * CFrame.new(0, 0, -sway)
+				local poses = TowerEnemyClips.Sample(frames, phase)
+				for name, joint in pairs(enemyRig.Joints) do
+					joint.Motor.C0 = joint.Bind * (poses[name] or CFrame.identity)
+				end
+				for _, link in ipairs(mobLinks) do
+					if link.Kind == "Motor" and link.Motor then
+						link.Part1.CFrame = link.Part0.CFrame * link.Motor.C0 * link.Motor.C1:Inverse()
+					elseif link.Rel then
+						link.Part1.CFrame = link.Part0.CFrame * link.Rel
+					end
+				end
+			end
+		end)
+
+		return function()
+			conn:Disconnect()
+			world:Destroy()
+			cam:Destroy()
+		end
+	end, { heroSignature, frontier.PreviewEnemyId } :: { any })
+
+	return Panel({ LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 124), Top = Tones.Deep.Top, Bottom = Tones.Deep.Bottom, Rail = Tones.Teal.Rail }, {
+		Caption = Heavy({ Position = UDim2.fromOffset(18, 8), Size = UDim2.new(0.45, 0, 0, 18), MaxSize = 14, Outline = 2,
+			TextXAlignment = Enum.TextXAlignment.Left, Text = "LIVE PATROL", ZIndex = 4 }),
+		Biome = Body({ AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -18, 0, 9), Size = UDim2.new(0.55, -18, 0, 16),
+			TextSize = 12, TextColor3 = TEXT.Gold, TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 4,
+			Text = string.format("FLOOR %d · %s", frontier.FloorId, string.upper(frontier.BiomeDisplayName)) }),
+		Stage = e("ViewportFrame", {
+			ref = vpRef,
+			Position = UDim2.fromOffset(12, 30),
+			Size = UDim2.new(1, -24, 1, -38),
+			BackgroundColor3 = Color3.fromRGB(14, 20, 18),
+			BackgroundTransparency = 0.12,
+			Ambient = Color3.fromRGB(168, 178, 162),
+			LightColor = Color3.fromRGB(255, 238, 206),
+			LightDirection = Vector3.new(-1, -1.2, -1.6),
+			ZIndex = 3,
+		}, {
+			Corner = e("UICorner", { CornerRadius = UDim.new(0, 8) }),
+			Border = e("UIStroke", { ref = strokeRef, Color = Tones.Teal.Rail, Thickness = 1.4 }),
+		}),
+		EmptyHint = if #shownHeroes == 0 then Body({
+			Position = UDim2.fromOffset(22, 58), Size = UDim2.new(0.52, 0, 0, 34), TextSize = 12, TextWrapped = true,
+			TextColor3 = TEXT.Parchment, Text = "Station an Adventurer to defend the Outskirts", ZIndex = 5,
+		}) else nil,
+	})
+end
+
 local function FacilityPanel(props: { Facility: string, Profile: any, Width: number, OnClose: () -> () })
 	local info = FACILITIES[props.Facility]
 	local hovered, setHovered = React.useState(nil :: string?)
@@ -172,6 +528,7 @@ local function FacilityPanel(props: { Facility: string, Profile: any, Width: num
 	local isError, setIsError = React.useState(false)
 	local busy, setBusy = React.useState(false)
 	local filter, setFilter = React.useState("All" :: Filter)
+	local deploySerial, setDeploySerial = React.useState(0)
 
 	React.useEffect(function()
 		ContextActionService:BindAction(CLOSE_ACTION, function(_, state)
@@ -212,6 +569,11 @@ local function FacilityPanel(props: { Facility: string, Profile: any, Width: num
 				say("Couldn't reach the server. Try again.", true)
 			elseif success then
 				local hero = profile.Heroes[uuid]
+				if target ~= "BENCHED" and props.Facility == "GuardPost" then
+					setDeploySerial(function(prev: number)
+						return prev + 1
+					end)
+				end
 				say(if target == "BENCHED" then string.format("%s returned to the bench.", hero and hero.DisplayName or "Hero")
 					else string.format("%s now works here.", hero and hero.DisplayName or "Hero"))
 			else
@@ -319,7 +681,14 @@ local function FacilityPanel(props: { Facility: string, Profile: any, Width: num
 			})
 		end
 	end
-	local slotPanel = Panel({ LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 214), Top = Tones.Deep.Top, Bottom = Tones.Deep.Bottom, Rail = Tones.Deep.Rail }, {
+	local stagePanel = if props.Facility == "GuardPost"
+		then e(OutskirtsPreviewStage, {
+			Profile = profile,
+			AssignedUUIDs = assigned,
+			DeploySerial = deploySerial,
+		})
+		else nil
+	local slotPanel = Panel({ LayoutOrder = 3, Size = UDim2.new(1, 0, 0, 214), Top = Tones.Deep.Top, Bottom = Tones.Deep.Bottom, Rail = Tones.Deep.Rail }, {
 		Caption = Heavy({ Position = UDim2.fromOffset(18, 12), Size = UDim2.new(1, -36, 0, 18), MaxSize = 15, Outline = 2, TextXAlignment = Enum.TextXAlignment.Left,
 			Text = string.format("WORKERS  %d/%d", #assigned, maxWorkers), ZIndex = 3 }),
 		Row = e("ScrollingFrame", { Position = UDim2.fromOffset(16, 40), Size = UDim2.new(1, -32, 0, 168), BackgroundTransparency = 1, BorderSizePixel = 0,
@@ -419,7 +788,7 @@ local function FacilityPanel(props: { Facility: string, Profile: any, Width: num
 			[React.Event.Activated] = function() setFilter(key :: Filter) end },
 			if filter == key then "Gold" else "Slate", if key == "Best" then "BEST FIT" else string.upper(key), 12)
 	end
-	local picker = Panel({ LayoutOrder = 3, Size = if narrow then UDim2.new(1, 0, 0, 420) else UDim2.fromScale(1, 1),
+	local picker = Panel({ LayoutOrder = 4, Size = if narrow then UDim2.new(1, 0, 0, 420) else UDim2.fromScale(1, 1),
 		Top = Tones.Deep.Top, Bottom = Tones.Deep.Bottom, Rail = Tones.Deep.Rail }, {
 		Caption = Heavy({ Position = UDim2.fromOffset(18, 12), Size = UDim2.new(1, -300, 0, 20), MaxSize = 16, Outline = 2, TextXAlignment = Enum.TextXAlignment.Left,
 			Text = string.format("ASSIGN %sS", string.upper(info.Worker)), ZIndex = 3 }),
@@ -437,13 +806,15 @@ local function FacilityPanel(props: { Facility: string, Profile: any, Width: num
 		body = e("ScrollingFrame", { Position = UDim2.fromOffset(20, 108), Size = UDim2.new(1, -40, 1, -156), BackgroundTransparency = 1, BorderSizePixel = 0,
 			ScrollBarThickness = 4, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), ZIndex = 23 }, {
 			Layout = e("UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder }),
-			Bonus = bonus, Slots = slotPanel, Picker = picker,
+			Bonus = bonus, Stage = stagePanel, Slots = slotPanel, Picker = picker,
 		})
 	else
 		body = e("Frame", { Position = UDim2.fromOffset(20, 108), Size = UDim2.new(1, -40, 1, -156), BackgroundTransparency = 1, ZIndex = 23 }, {
-			Left = e("Frame", { Size = UDim2.new(0.44, -8, 1, 0), BackgroundTransparency = 1, ZIndex = 23 }, {
-				Layout = e("UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder }),
-				Bonus = bonus, Slots = slotPanel,
+			Left = e("ScrollingFrame", { Size = UDim2.new(0.44, -8, 1, 0), BackgroundTransparency = 1, BorderSizePixel = 0,
+				ScrollBarThickness = 4, ScrollBarImageColor3 = Color3.fromRGB(240, 196, 110),
+				AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), ZIndex = 23 }, {
+				Layout = e("UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
+				Bonus = bonus, Stage = stagePanel, Slots = slotPanel,
 			}),
 			Right = e("Frame", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(1, 0), Size = UDim2.new(0.56, -8, 1, 0), BackgroundTransparency = 1, ZIndex = 23 }, {
 				Picker = picker,
