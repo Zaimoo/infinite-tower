@@ -2,6 +2,7 @@
 local AffixRules = require(nodes["ReplicatedStorage.Shared.Util.AffixRules"])
 local CampRoster = require(nodes["ReplicatedStorage.Shared.Util.CampRoster"])
 local Floors = require(nodes["ReplicatedStorage.Shared.Config.TowerFloorConfig"])
+local Protocol = require(nodes["ReplicatedStorage.Shared.Util.TowerProtocol"])
 local passed = 0
 local function test(name: string, fn: () -> ())
 	fn()
@@ -83,6 +84,26 @@ end)
 test("Name plates lead with the affix names", function()
 	assert(AffixRules.DisplayName("Glacier Knight", { "FRENZIED", "HASTED" }) == "Frenzied, Hasted Glacier Knight")
 	assert(AffixRules.DisplayName("Glacier Knight", {}) == "Glacier Knight")
+end)
+
+test("Affixed Elite snapshot flags decode cleanly so affixed Elites render visibly on the client", function()
+	local ctx = {
+		ServerSessionId = "0123456789abcdef0123456789abcdef",
+		FloorId = 6, RoomGeneration = 1, ViewEpoch = 1,
+		Origin = Vector3.new(2000, 100, 2000),
+		Bounds = { Min = Vector3.new(-200, -40, -200), Max = Vector3.new(200, 120, 200) },
+	}
+	-- 32 = affixed Elite, 40 = affixed + shielded, 48 = affixed + roused, 56 = affixed + shielded + roused.
+	for _, flags in { 32, 40, 48, 56 } do
+		local elite = {
+			NetId = 4101, EntityGeneration = 1,
+			Position = ctx.Origin + Vector3.new(12, 4, -18),
+			CurrentHP = 1000, MaxHP = 1000, Stamina = 100,
+			Flags = flags, StateEnum = 20, ActionSequence = 0, Yaw = math.pi,
+		}
+		local packet = assert(Protocol.Decode(Protocol.Encode(ctx, { elite }, 1, 10.0)[1], ctx), "Snapshot dropped for flags=" .. flags)
+		assert(packet.Entities[1].Flags == flags)
+	end
 end)
 
 print("Affix tests: " .. passed .. " passed, 0 failed")

@@ -178,6 +178,7 @@ function Runtime.new(api: any): any
 			Summoned = true,
 		}
 
+		self:StampEvent(boss)
 		api.Mobs[netId] = boss
 		api.Send(boss, {
 			Kind = "BOSS_SPAWN",

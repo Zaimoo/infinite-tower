@@ -2377,7 +2377,7 @@ local function broadcastReplicationSnapshot(now: number)
   local hero=e.Owner~=nil;local entry=table.clone(e)
   entry.StateEnum=hero and (STATE_TO_ENUM[e.State] or 1) or (e.TowerEnemy and ({IDLE=20,CHASE=21,WINDUP=22,RECOVERY=23,RESET=24,PATROL=25})[e.State] or (10+(e.Phase or 1)))
   entry.Flags=hero and (1+(now<e.OverdriveUntil and 2 or 0)+(now<e.PacifiedUntil and 4 or 0))
-   or (e.TowerEnemy and ((SupportRules.Shielded(e,serverNow) and 8 or 0)+(SupportRules.Roused(e,serverNow) and 16 or 0)
+   or (e.TowerEnemy and (((SupportRules.Shielded(e,serverNow) or (e.AffixShield or 0)>0) and 8 or 0)+(SupportRules.Roused(e,serverNow) and 16 or 0)
     +(AffixRules.IsAffixed(e) and 32 or 0))) or 0
   byFloor[e.FloorId]=byFloor[e.FloorId] or {};table.insert(byFloor[e.FloorId],entry)
  end end
@@ -2710,7 +2710,8 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
        local firstClear = profile ~= nil and mob.FloorId > (profile.HighestClearedFloor or 0)
        local bossTier = if mob.FloorId % 5 == 0 then math.floor(mob.FloorId / 5) else 0
        local firstBiomeClear = bossTier > 0 and profile ~= nil and bossTier > (profile.HighestClearedBiomeBoss or 0)
-       local bossGold = math.round(reward.Gold * marketMult * (if firstClear then 3 else 1))
+       local bossEventMods = (mob :: any).EventMods
+       local bossGold = math.round(reward.Gold * marketMult * (if firstClear then 3 else 1) * (bossEventMods and bossEventMods.GoldMult or 1))
        local bossGems = if firstClear then 10 + 2 * mob.FloorId else 0
        if firstBiomeClear then bossGems += 300 * bossTier end
        local stoneRole = if bossTier > 0 then "BOSS" else "ALPHA"
@@ -2739,7 +2740,7 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
        if p == killer and _G.RelicService then
         local relicRole = if bossTier > 0 then "BOSS" else "ALPHA"
         local relicTier = TowerRewards.RollRelic(mob.FloorId, relicRole, if firstClear then 0 else math.random(), math.random(),
-         _G.TowerEvents and _G.TowerEvents.GetMods(mob.FloorId) or nil) -- Alpha Hunt raises the Heart share
+         bossEventMods) -- Stamped at spawn (Alpha Hunt raises the Heart share; Calamity Hour raises tiers)
         if relicTier == "MANA_GEODE" and firstBiomeClear then relicTier = "CURSED_URN" end
         if relicTier then _G.RelicService.SpawnRelic(relicTier, mob.Position, p.UserId) end
        end
