@@ -193,7 +193,7 @@ function PitService:Build(profile: any, request: any): (any, any)
 				if not eligibility.EligibleDonor then reject(donor.DisplayName .. ": " .. eligibility.Reason) end
 				table.insert(preview.Donors, Math.Copy(donor))
 				table.insert(staged.Remove, uuid)
-				if donor.Stars >= Config.RareConfirmationStars then preview.RequiresRareConfirmation = true end
+				if Math.EffectiveStars(donor) >= Config.RareConfirmationStars then preview.RequiresRareConfirmation = true end
 			end
 			seen[uuid] = true
 		end

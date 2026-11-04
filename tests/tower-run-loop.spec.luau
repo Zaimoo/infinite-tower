@@ -79,9 +79,9 @@ local Floors = require(nodes["ReplicatedStorage.Shared.Config.TowerFloorConfig"]
 local Balance = require(nodes["ReplicatedStorage.Shared.Config.StatBalance"])
 local Hardcore = require(nodes["ReplicatedStorage.Shared.Config.TowerHardcoreConfig"])
 
--- The default starter pair: Catio (3-star Rare) and Han (1-star Common) with Common 1-star weapons, Lv. 1.
+-- The default starter pair: Catio (1-star Rare, full old 3-star power) and Han (1-star Common) with Common 1-star weapons, Lv. 1.
 local function starterPower(): number
-	local catio = { TemplateId = "hero_catio", Stars = 3, Level = 1, QualityScalar = 1.02, Rarity = 3, ComaUntilTimestamp = 0 }
+	local catio = { TemplateId = "hero_catio", Stars = 1, Level = 1, QualityScalar = 1.02, Rarity = 3, ComaUntilTimestamp = 0 }
 	local han = { TemplateId = "hero_han", Stars = 1, Level = 1, QualityScalar = 1.05, Rarity = 1, ComaUntilTimestamp = 0 }
 	return StatFormulas.GetHeroPower(catio, { Star = 1, Rarity = 1, TemplateId = "art_miner_pickaxe" })
 		+ StatFormulas.GetHeroPower(han, { Star = 1, Rarity = 1, TemplateId = "art_rusty_daggers" })
@@ -92,7 +92,7 @@ test("Phase 6 M3: floor 1 is sized to the default starter pair, not a full squad
 	local rec1 = Floors.RecommendedPower(1)
 	assert(math.abs(starter - rec1) / rec1 <= 0.2, string.format("starter %d vs floor 1 recommendation %d", starter, rec1))
 	-- After the 900-gem starter 10-pull (one extra Rare) with three slots open, the squad still sits under floor 3.
-	local catio = { TemplateId = "hero_catio", Stars = 3, Level = 1, QualityScalar = 1, Rarity = 3, ComaUntilTimestamp = 0 }
+	local catio = { TemplateId = "hero_catio", Stars = 1, Level = 1, QualityScalar = 1, Rarity = 3, ComaUntilTimestamp = 0 }
 	local pulled = starter + StatFormulas.GetHeroPower(catio, { Star = 1, Rarity = 1, TemplateId = "art_miner_pickaxe" })
 	assert(pulled <= Floors.RecommendedPower(3), string.format("squad after the starter pull %d vs floor 3 recommendation %d", pulled, Floors.RecommendedPower(3)))
 	assert(Hardcore.StarterGems == 900)
@@ -244,7 +244,7 @@ end)
 
 
 test("Phase 6: Rift Attunement caps one hero's tower power by the Master's highest floor and rises as they climb", function()
-	local astrea = { TemplateId = "hero_astrea", Stars = 7, Level = 1, QualityScalar = 1, Rarity = 7, ComaUntilTimestamp = 0 }
+	local astrea = { TemplateId = "hero_astrea", Stars = 1, Level = 1, QualityScalar = 1, Rarity = 7, ComaUntilTimestamp = 0 }
 	local weapon = { Star = 1, Rarity = 1, TemplateId = "art_hunters_shortbow" }
 	local raw = StatFormulas.GetHeroPower(astrea, weapon)
 	local last = 0
@@ -265,7 +265,7 @@ test("Phase 6: Rift Attunement caps one hero's tower power by the Master's highe
 	assert(capped.AttackInterval == full.AttackInterval and capped.AttackSpeed == full.AttackSpeed)
 	assert(math.abs(capped.Health / full.Health - mult) < 1e-3 and math.abs(capped.AttackDamage / full.AttackDamage - mult) < 1e-3)
 	-- Heroes under the cap are untouched, and the starter pair is under floor 1's cap.
-	local catio = { TemplateId = "hero_catio", Stars = 3, Level = 1, QualityScalar = 1, Rarity = 3, ComaUntilTimestamp = 0 }
+	local catio = { TemplateId = "hero_catio", Stars = 1, Level = 1, QualityScalar = 1, Rarity = 3, ComaUntilTimestamp = 0 }
 	assert(StatFormulas.GetAttunedMultiplier(catio, { Star = 1, Rarity = 1, TemplateId = "art_miner_pickaxe" }, 1.2, StatFormulas.GetAttunementCap(1)) == 1.2)
 	assert(StatFormulas.GetAttunedMultiplier(astrea, weapon, 1.2, nil) == 1.2, "no cap means no change")
 	-- Labor is not capped: the effective labor formula does not take the cap at all.

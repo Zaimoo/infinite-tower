@@ -722,7 +722,7 @@ function Synth.RenderPicker(self: any)
 
 	for i, hero in heroes do
 		local isCurrent = hero.UUID == self.Recipient
-		local rarity = Theme.RarityColor(hero.Stars or 1)
+		local rarity = Theme.RarityColor(StatFormulas.GetHeroRarity(hero))
 
 		local tile = new("TextButton", {
 			Name = "Hero_" .. tostring(hero.UUID), Text = "", LayoutOrder = i, AutoButtonColor = true,
@@ -1220,7 +1220,7 @@ function Synth.Render(self: any)
 		local eligible, reason, tagText = checkDonorEligibility(hero, self.Recipient)
 		local inSquad = isSquad(hero)
 		local resting = restingSeconds(hero)
-		local rarity = Theme.RarityColor(hero.Stars or 1)
+		local rarity = Theme.RarityColor(StatFormulas.GetHeroRarity(hero))
 
 		entry.Name.Text = hero.DisplayName or "Hero"
 		entry.Info.Text = string.format("%s · Lv.%d", stars(hero.Stars), hero.Level or 1)

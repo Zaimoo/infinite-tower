@@ -5,15 +5,15 @@
 --   1. Permanent Banner: "Call of the Rift" (rarity tiers 1-5, exactly 1 character per tier)
 --   2. Limited Time Banner: "A Star's Arrival" (rarity tiers 1-7, exactly 1 character per tier)
 --   3. Inherent hero rarity (Phase 4 §7): fixed per template, multiplies base stats only.
---      Heroes are still summoned at their template's BaseStar, which equals their tier at launch.
+--      Every hero is summoned at 1★ (BaseStar); its rarity factor carries the power its tier used to get from stars.
 
 export type HeroSeed = {
 	HeroId: string,
 	DisplayName: string,
 	BannerOrigin: "STANDARD" | "WORLD_BOSS" | "LIMITED",
 	DropWeight: number, -- Relative weight within tier
-	BaseStar: number,
-	Rarity: number?, -- Inherent rarity tier (1 Common .. 7 Mythical at launch); derived from BaseStar below
+	BaseStar: number, -- summon star; 1 for every hero
+	Rarity: number, -- Inherent rarity tier (1 Common .. 7 Mythical at launch); never changes
 	Archetype: "Vanguard" | "Striker" | "Marksman" | "Miner" | "Healer" | "Scholar",
 	BaseHP_1Star: number,
 	BaseATK_1Star: number,
@@ -114,6 +114,7 @@ HeroCatalog.Seeds = {
 		BannerOrigin = "STANDARD",
 		DropWeight = 60.0,
 		BaseStar = 1,
+		Rarity = 1,
 		Archetype = "Striker",
 		BaseHP_1Star = 300,
 		BaseATK_1Star = 40,
@@ -135,7 +136,8 @@ HeroCatalog.Seeds = {
 		DisplayName = "Aaron",
 		BannerOrigin = "STANDARD",
 		DropWeight = 25.0,
-		BaseStar = 2,
+		BaseStar = 1,
+		Rarity = 2,
 		Archetype = "Vanguard",
 		BaseHP_1Star = 450,
 		BaseATK_1Star = 28,
@@ -157,7 +159,8 @@ HeroCatalog.Seeds = {
 		DisplayName = "Catio",
 		BannerOrigin = "STANDARD",
 		DropWeight = 10.0,
-		BaseStar = 3,
+		BaseStar = 1,
+		Rarity = 3,
 		Archetype = "Miner",
 		BaseHP_1Star = 280,
 		BaseATK_1Star = 24,
@@ -179,7 +182,8 @@ HeroCatalog.Seeds = {
 		DisplayName = "Valeria",
 		BannerOrigin = "STANDARD",
 		DropWeight = 4.0,
-		BaseStar = 4,
+		BaseStar = 1,
+		Rarity = 4,
 		Archetype = "Healer",
 		BaseHP_1Star = 260,
 		BaseATK_1Star = 18,
@@ -201,7 +205,8 @@ HeroCatalog.Seeds = {
 		DisplayName = "Ignis",
 		BannerOrigin = "STANDARD",
 		DropWeight = 1.0,
-		BaseStar = 5,
+		BaseStar = 1,
+		Rarity = 5,
 		Archetype = "Vanguard",
 		BaseHP_1Star = 450,
 		BaseATK_1Star = 26,
@@ -228,6 +233,7 @@ HeroCatalog.Seeds = {
 		BannerOrigin = "LIMITED",
 		DropWeight = 50.0,
 		BaseStar = 1,
+		Rarity = 1,
 		Archetype = "Marksman",
 		BaseHP_1Star = 210,
 		BaseATK_1Star = 34,
@@ -249,7 +255,8 @@ HeroCatalog.Seeds = {
 		DisplayName = "Velkist",
 		BannerOrigin = "LIMITED",
 		DropWeight = 25.0,
-		BaseStar = 2,
+		BaseStar = 1,
+		Rarity = 2,
 		Archetype = "Striker",
 		BaseHP_1Star = 300,
 		BaseATK_1Star = 44,
@@ -271,7 +278,8 @@ HeroCatalog.Seeds = {
 		DisplayName = "Eolka",
 		BannerOrigin = "LIMITED",
 		DropWeight = 13.5,
-		BaseStar = 3,
+		BaseStar = 1,
+		Rarity = 3,
 		Archetype = "Scholar",
 		BaseHP_1Star = 230,
 		BaseATK_1Star = 52,
@@ -293,7 +301,8 @@ HeroCatalog.Seeds = {
 		DisplayName = "Morrigan",
 		BannerOrigin = "LIMITED",
 		DropWeight = 6.5,
-		BaseStar = 4,
+		BaseStar = 1,
+		Rarity = 4,
 		Archetype = "Vanguard",
 		BaseHP_1Star = 450,
 		BaseATK_1Star = 24,
@@ -315,7 +324,8 @@ HeroCatalog.Seeds = {
 		DisplayName = "Sovereign Archon",
 		BannerOrigin = "LIMITED",
 		DropWeight = 3.5,
-		BaseStar = 5,
+		BaseStar = 1,
+		Rarity = 5,
 		Archetype = "Striker",
 		BaseHP_1Star = 350,
 		BaseATK_1Star = 65,
@@ -337,7 +347,8 @@ HeroCatalog.Seeds = {
 		DisplayName = "Solaris",
 		BannerOrigin = "LIMITED",
 		DropWeight = 1.2,
-		BaseStar = 6,
+		BaseStar = 1,
+		Rarity = 6,
 		Archetype = "Scholar",
 		BaseHP_1Star = 240,
 		BaseATK_1Star = 55,
@@ -359,7 +370,8 @@ HeroCatalog.Seeds = {
 		DisplayName = "Astrea",
 		BannerOrigin = "LIMITED",
 		DropWeight = 0.3,
-		BaseStar = 7,
+		BaseStar = 1,
+		Rarity = 7,
 		Archetype = "Marksman",
 		BaseHP_1Star = 230,
 		BaseATK_1Star = 48,
@@ -382,10 +394,9 @@ HeroCatalog.Seeds = {
 HeroCatalog.RarityNames = table.freeze({ "Common", "Uncommon", "Rare", "Superior", "Exalted", "Legendary", "Mythical" })
 
 -- Derived compatibility fields; immutable one-star seeds remain authoritative.
--- Launch heroes have one hero per tier, so the inherent rarity equals the summoned star.
+-- Native stats are the stats at the summon star (1★), Lv. 1, quality 1.
 for _, seed in pairs(HeroCatalog.Seeds) do
- seed.Rarity = seed.Rarity or seed.BaseStar
- local growth = 3^(seed.BaseStar-1) * StatBalance.HeroRarityCombatMultiplier^(seed.Rarity-1)
+ local growth = StatBalance.HeroPromotionMultiplier^(seed.BaseStar-1) * StatBalance.HeroRarityCombat(seed.Rarity)
  seed.NativeHP = math.round(seed.BaseHP_1Star * growth)
  seed.NativeATK = math.round(seed.BaseATK_1Star * growth)
  seed.MovementSpeed = 20
@@ -393,7 +404,7 @@ end
 
 function HeroCatalog.RarityOf(templateId: string?): number
 	local seed = templateId and HeroCatalog.Seeds[templateId]
-	return if seed then seed.Rarity or seed.BaseStar else 1
+	return if seed then seed.Rarity else 1
 end
 
 function HeroCatalog.RarityName(tier: number?): string

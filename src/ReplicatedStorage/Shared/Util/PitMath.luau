@@ -3,6 +3,7 @@
 local Config = require(script.Parent.Parent.Config.PitBalanceConfig)
 local Stats = require(script.Parent.StatFormulas)
 local Catalog = require(script.Parent.Parent.Config.HeroCatalog)
+local Balance = require(script.Parent.Parent.Config.StatBalance)
 local PitMath = {}
 
 function PitMath.Copy(value: any): any
@@ -10,6 +11,13 @@ function PitMath.Copy(value: any): any
 	local result = {}
 	for key, child in pairs(value) do result[key] = PitMath.Copy(child) end
 	return result
+end
+
+-- A hero's worth as fodder: its stars plus the stars its rarity used to be summoned at, so a 1★ Mythical still
+-- feeds and converts like the 7★ it used to arrive as.
+function PitMath.EffectiveStars(hero: any): number
+	local stars = if type(hero.Stars) == "number" then hero.Stars else 1
+	return math.clamp(stars + Stats.GetHeroRarity(hero) - 1, 1, Config.MaxStars)
 end
 
 function PitMath.GetOverflowCapacity(hero: any): number
@@ -24,7 +32,7 @@ end
 
 function PitMath.GetSynthesisXP(donor: any, recipient: any, research: any): any
 	local balance = Config.Synthesis
-	local base = balance.BaseXP * balance.StarMultiplier ^ (donor.Stars - 1) + balance.LevelXP * donor.Level
+	local base = balance.BaseXP * balance.StarMultiplier ^ (PitMath.EffectiveStars(donor) - 1) + balance.LevelXP * donor.Level
 	local gap = math.max(0, recipient.Level - donor.Level - balance.EfficiencyGrace)
 	local efficiency = math.max(balance.MinimumEfficiency, 1 - gap * balance.EfficiencyLossPerLevel)
 	local researchBonus = research and research.EssenceAttunement and balance.ResearchBonus or 0
@@ -61,11 +69,11 @@ function PitMath.GetConversionYield(hero: any): number
 	for id, rank in pairs(hero.InheritedImprints or {}) do
 		if Config.Imprints.Definitions[id] and type(rank) == "number" then ranks += math.clamp(math.floor(rank), 0, Config.Imprints.MaxRank) end
 	end
-	return (cfg.BaseEssence[hero.Stars] or cfg.BaseEssence[5] or 324) + math.floor((hero.Level - 1) / cfg.LevelsPerBonus) * cfg.EssencePerInvestmentLevel + ranks * cfg.EssencePerImprintRank
+	return (cfg.BaseEssence[PitMath.EffectiveStars(hero)] or cfg.BaseEssence[5] or 324) + math.floor((hero.Level - 1) / cfg.LevelsPerBonus) * cfg.EssencePerInvestmentLevel + ranks * cfg.EssencePerImprintRank
 end
 
 function PitMath.GetImprintCapacity(hero: any): number
-	return Config.Imprints.SlotsByStar[hero.Stars] or 1
+	return Config.Imprints.SlotsByStar[PitMath.EffectiveStars(hero)] or 1
 end
 
 function PitMath.GetImprintOptions(donor: any, recipient: any, research: any): { any }
@@ -79,7 +87,7 @@ function PitMath.GetImprintOptions(donor: any, recipient: any, research: any): {
 			local rank = (recipient.InheritedImprints or {})[id] or 0
 			local reason = ""
 			if not definition.RecipientRoles[recipient.Archetype] then reason = "This memory is incompatible with the recipient's role."
-			elseif recipient.Stars < (definition.MinimumStars or 1) then reason = "Promote the recipient before inheriting this memory."
+			elseif PitMath.EffectiveStars(recipient) < (definition.MinimumStars or 1) then reason = "Promote the recipient before inheriting this memory."
 			elseif definition.Research and not research[definition.Research] then reason = "Unlock Memory Studies in the Dimensional Lab."
 			elseif rank >= Config.Imprints.MaxRank then reason = "This memory is already at maximum proficiency."
 			elseif rank == 0 and used >= PitMath.GetImprintCapacity(recipient) then reason = "All inherited memory slots are filled. Promote for more capacity." end
@@ -98,11 +106,12 @@ function PitMath.Promote(hero: any): (any, any)
 	local seed = Catalog.Seeds[result.TemplateId]
 	if seed then
 		local rarity = Stats.GetHeroRarity(result)
-		local rarityCombat = 1.35 ^ (rarity - 1)
-		local rarityLabor = 1.12 ^ (rarity - 1)
-		result.BaseHP = math.round(seed.BaseHP_1Star * 3 ^ (result.Stars - 1) * rarityCombat)
-		result.BaseATK = math.round(seed.BaseATK_1Star * 3 ^ (result.Stars - 1) * rarityCombat)
-		result.BaseLabor = math.round(seed.BaseLabor_1Star * 1.35 ^ (result.Stars - 1) * rarityLabor * 100) / 100
+		local rarityCombat = Balance.HeroRarityCombat(rarity)
+		local rarityLabor = Balance.HeroRarityLabor(rarity)
+		local starCombat = Config.Promotion.CombatMultiplier ^ (result.Stars - 1)
+		result.BaseHP = math.round(seed.BaseHP_1Star * starCombat * rarityCombat)
+		result.BaseATK = math.round(seed.BaseATK_1Star * starCombat * rarityCombat)
+		result.BaseLabor = math.round(seed.BaseLabor_1Star * Config.Promotion.LaborMultiplier ^ (result.Stars - 1) * rarityLabor * 100) / 100
 	end
 	return PitMath.AdvanceXP(result, 0)
 end

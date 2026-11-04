@@ -97,7 +97,7 @@ flowchart TD
 1. **Facility Upkeep (Every 3–5 Minutes):**
    - Swap rested heroes from the bench into the active squad rotation.
 2. **Summoning & Gacha Pulls (Every 5–10 Minutes):**
-   - Spend Gems at the **Summoning Altar** on either **Call of the Rift** (Common–Exalted Permanent Banner), **A Star's Arrival** (Common–Mythical Limited Time Rate-Up Banner, featuring 1 character per rarity tier, each summoned at its matching star), or the **Artifact Banner** (`160 Gems` single / `1,600 Gems` 10x for archetype weapons across 16 Rarity Tiers).
+   - Spend Gems at the **Summoning Altar** on either **Call of the Rift** (Common–Exalted Permanent Banner), **A Star's Arrival** (Common–Mythical Limited Time Rate-Up Banner, featuring 1 character per rarity tier, each summoned at 1★), or the **Artifact Banner** (`160 Gems` single / `1,600 Gems` 10x for archetype weapons across 16 Rarity Tiers).
    - **Synthesis Chamber (`SynthesisController.luau`):** Place a recipient hero and up to 5 fodder heroes to level up to the hero's current cap ($\text{MaxLevel} = \text{Stars} \times 10$).
    - **Promotion Altar (`PromotionController.luau`):** When a hero reaches max level, sacrifice same-rank heroes and Promotion Stones to permanently ascend star rating ($1★ \to 5★$). The hero's inherent rarity never changes.
 3. **Artifact Star Ascension at the Blacksmith Forge (`ForgeController.luau`):**
@@ -140,7 +140,7 @@ While active squad command in the Central Hub and Infinite Tower drives peak pro
 A **run** starts when a Master first stands on a tower floor and ends when they return to the hub or their plot, their squad wipes, or they disconnect. Spec: `docs/rework-plan/PHASE_6_TOWER_RUN_LOOP.md`.
 
 1. **Floors keep moving.** A floor holds 16 / 22 / 25 / 35 / 35 live mobs (floors 1–5 of a biome) in 4–7 camps. Every camp mixes all of the biome's Regular types, about half the camps add one support Regular (Phase D), and the floor's 1 / 2 / 3 / 4 / 4 Elites lead randomly chosen camps (see the camp roster rule in §5). A camp respawns as one wave 10 s after its last member dies (a lone survivor cannot hold it back past 45 s). Each extra Master on the floor adds 40% more members to every camp, up to 48 live mobs. When a Master's kill progress crosses 50% (floors 1–4 only), a personal **surge pack** (1 Elite and 3 Regulars) steps out near their squad.
-2. **A longer climb.** A floor boss is summoned after `round(20 + 1.2 × floor)` kill points (a Regular is 1, a camp Elite 3). The boss of floors 1–4 is the biome's **Alpha**, a larger, gilded elite with its own name, stats and a self-quake attack; the 5th floor is the **Biome Boss**. Enemy strength is anchored to the squad a player is expected to have (2 heroes at floor 1, 3 by floor 5, 4 by floor 10, 5 from floor 15, hero rarity included), with a per-biome sawtooth (×0.85, 0.95, 1.05, 1.15, 1.30 by floor in the biome). Floor 1 is sized to the default starter pair, and new profiles start with 900 Gems (one 10-pull).
+2. **A longer climb.** A floor boss is summoned after `round(20 + 1.2 × floor)` kill points (a Regular is 1, a camp Elite 3). The boss of floors 1–4 is the biome's **Alpha**, a larger, gilded elite with its own name, stats and a self-quake attack; the 5th floor is the **Biome Boss**. Enemy strength is anchored to the squad a player is expected to have (2 heroes at floor 1, 3 by floor 5, 4 by floor 10, 5 from floor 15, hero rarity included; the curve is frozen at its values from before heroes were summoned at 1★), with a per-biome sawtooth (×0.85, 0.95, 1.05, 1.15, 1.30 by floor in the biome). Floor 1 is sized to the default starter pair, and new profiles start with 900 Gems (one 10-pull).
 3. **Penalties, never losing what you own.** A knocked-out hero stays down until the squad **changes floor** (it stands back up at 30% HP), returns home, or wipes. Floor changes no longer heal anyone; the tower sanctuary heals standing heroes (10% HP per second). After a floor's summoned boss has been damaged, the floor's travel stays sealed until it dies or the squad wipes. A **wipe** costs the carried relic, the streak and 25% of the Gold and Gems earned since the last bank. Heroes, weapons and banked currency are never lost.
 4. **Banking and the climb streak.** Entering a sanctuary or pad banks everything. Each floor cleared in a row adds +10% (up to +100%) to the value of relics banked during the run; banking does not reset the streak, only the end of the run does. Relics are the contested loot: each enemy role has its own drop table (§5.5 Relic Drops), and relic Gems (base 100 / 300 / 1,000 / 5,000) and Gold both scale with the floor.
 5. **Rift Attunement.** In the tower and in retaliation duels, one hero's power is capped at about 1.5× an on-curve hero two floors above the Master's highest floor reached, so a lucky or premium pull is felt without skipping a biome. Duels use the lower of the two Masters' caps. Facility labor is never capped, and the pull itself (hero, star, rarity) never changes.
@@ -376,7 +376,7 @@ Dread fades in by distance from the tower centre: none beyond 500 studs (the Com
 
 ### 4.1 Gacha Banners & Hero Roster Architecture
 
-Hero summoning at the **Summoning Altar** (`FacilityController.luau`) is partitioned into two distinct banners. Each banner rolls an **inherent rarity tier**, and each tier holds exactly one hero. Each hero is summoned at its template's star, which matches its tier (Common = 1★ up to Mythical = 7★). Rarity adds a stat multiplier on top (see *Inherent Hero Rarity* below). All hero odds can be raised by the **God's Blessing** facility (Section 4.3, Facility D).
+Hero summoning at the **Summoning Altar** (`FacilityController.luau`) is partitioned into two distinct banners. Each banner rolls an **inherent rarity tier**, and each tier holds exactly one hero. Every hero is summoned at **1★**, whatever its tier, and its rarity sets how strong that 1★ hero is (see *Inherent Hero Rarity* below). Stars are earned only by promotion at The Pit. All hero odds can be raised by the **God's Blessing** facility (Section 4.3, Facility D).
 
 #### 1. Permanent Banner: "Call of the Rift" (Rarity Tiers 1–5)
 The permanent standard banner features exactly **one character for each rarity from Common to Exalted** (5 total heroes):
@@ -409,29 +409,32 @@ The inaugural limited-time rate-up banner features exactly **one character for e
 ---
 
 #### Inherent Hero Rarity
-Like weapons (Section 7.1), every hero template has a fixed **inherent rarity**. For heroes it only adds a stat multiplier, and summoning and stars work as before.
+Like weapons (Section 7.1), every hero template has a fixed **inherent rarity**. For heroes it sets a stat multiplier; every hero is summoned at 1★.
 - **Rarity** uses the weapon tier names. Launch heroes span tiers 1 (Common) to 7 (Mythical), and tiers 8–16 are reserved for future heroes. Rarity can never be upgraded, rerolled or refined.
-- **Rarity multipliers:** combat stats × $1.35^{(t-1)}$ and labor × $1.12^{(t-1)}$, where $t$ is the tier.
-- **Stars are unchanged:** each hero is summoned at its template's star and promotes at The Pit up to 5★ (`PitBalanceConfig.MaxStars`); 6★ Solaris and 7★ Astrea arrive above that cap. Rarity never changes when a hero is promoted.
-- **Existing saves** keep their stars and level and gain their template's rarity.
+- **Rarity multipliers:** heroes used to be summoned at a star equal to their tier, which gave tier $t$ an extra $3^{(t-1)}$ combat and $1.35^{(t-1)}$ labor. That bonus now lives in the rarity multiplier, scaled by a compensation factor $c_t$:
+  $$R_{\text{combat}}(t) = c_t \times (3 \times 1.35)^{(t-1)} \qquad R_{\text{labor}}(t) = c_t \times (1.35 \times 1.12)^{(t-1)}$$
+  where $c_t = 1$ for Common, Uncommon and Rare (they keep 100% of their old summoned power, so the early floors stay easy) and $c_t = 0.5$ from Superior up (`StatBalance.RarityStarCompensation`). A fresh Superior (×33.2) still beats a fresh Rare (×16.4).
+- **Stars:** every hero is summoned at 1★ (`StatBalance.HeroSummonStar`) and promotes at The Pit up to 7★ (`PitBalanceConfig.MaxStars`), at ×1.5 combat per star. Rarity never changes when a hero is promoted.
+- **The Pit** values a donor at its *effective star*, Stars + Rarity − 1 (capped at 7), for synthesis XP, Soul Essence, imprint slots and the rare-donor confirmation, so a 1★ Mythical still feeds like the 7★ it used to arrive as.
+- **Existing saves (schema v4)** drop the stars a hero got for free at summon ($t - 1$) and keep any promotions bought on top. Levels above the new cap ($Stars \times 10$) are clamped.
 
 #### Launch Roster Base & Native Stats
-Every summoned hero rolls a `QualityScalar` $q \in [0.90, 1.15]$ applied to their archetype base stats. Native stats are the stats at the hero's **summoned star $S$, Lv. 1**: $Stat_0 \times 1.35^{(t - 1)} \times 3^{(S - 1)}$ for combat and $L_0 \times 1.12^{(t - 1)} \times 1.35^{(S - 1)}$ for labor, using the live 3× star promotion multiplier:
+Every summoned hero rolls a `QualityScalar` $q \in [0.90, 1.15]$ applied to their archetype base stats. Native stats are the stats at the summoned **1★, Lv. 1**: $Stat_0 \times R_{\text{combat}}(t)$ for combat and $L_0 \times R_{\text{labor}}(t)$ for labor (without facility synergy):
 
 | Banner | Hero | Rarity / Summoned Star | Archetype | Base HP / ATK | Native HP / ATK | Base / Native Labor | Passive Trait |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Call of the Rift** | **Han** | **Common (1) / 1★** | Striker | `300` / `40` | `300` / `40` | `14` / `14.0` | **Unyielding Adaptation** (+10% ATK, -10% Stamina Drain) |
-| **Call of the Rift** | **Aaron** | **Uncommon (2) / 2★** | Vanguard | `450` / `28` | `1,823` / `113` | `16` / `24.2` | **Phalanx Guard** (+25% Max HP, -15% AoE Taken) |
-| **Call of the Rift** | **Catio** | **Rare (3) / 3★** | Miner | `280` / `24` | `4,593` / `394` | `20` / `45.7` | **Quartermaster's Ledger** (+25% Labor Output) |
-| **Call of the Rift** | **Valeria** | **Superior (4) / 4★** | Healer | `260` / `18` | `17,272` / `1,196` | `18` / `62.2` | **Sanctuary Aegis** (+30% Healing, +20% Coma Recovery) |
-| **Call of the Rift** | **Ignis** | **Exalted (5) / 5★** | Vanguard | `450` / `26` | `121,069` / `6,995` | `16` / `83.6` | **Rift Warlord** (+35% ATK, +20% DMG Reduction) |
+| **Call of the Rift** | **Aaron** | **Uncommon (2) / 1★** | Vanguard | `450` / `28` | `1,823` / `113` | `16` / `24.2` | **Phalanx Guard** (+25% Max HP, -15% AoE Taken) |
+| **Call of the Rift** | **Catio** | **Rare (3) / 1★** | Miner | `280` / `24` | `4,593` / `394` | `20` / `45.7` | **Quartermaster's Ledger** (+25% Labor Output) |
+| **Call of the Rift** | **Valeria** | **Superior (4) / 1★** | Healer | `260` / `18` | `8,636` / `598` | `18` / `31.1` | **Sanctuary Aegis** (+30% Healing, +20% Coma Recovery) |
+| **Call of the Rift** | **Ignis** | **Exalted (5) / 1★** | Vanguard | `450` / `26` | `60,534` / `3,498` | `16` / `41.8` | **Rift Warlord** (+35% ATK, +20% DMG Reduction) |
 | **A Star's Arrival** | **Jenna** | **Common (1) / 1★** | Marksman | `210` / `34` | `210` / `34` | `13` / `13.0` | **Windstep Precision** (+15% ASPD, +5% Move Spd) |
-| **A Star's Arrival** | **Velkist** | **Uncommon (2) / 2★** | Striker | `300` / `44` | `1,215` / `178` | `14` / `21.2` | **Bloodthirst Frenzy** (+20% ATK, +1s Overdrive) |
-| **A Star's Arrival** | **Eolka** | **Rare (3) / 3★** | Scholar | `230` / `52` | `3,773` / `853` | `22` / `50.3` | **Crimson Pyromancy** (+25% ATK, +30% Labor Output) |
-| **A Star's Arrival** | **Morrigan** | **Superior (4) / 4★** | Vanguard | `450` / `24` | `29,894` / `1,594` | `16` / `55.3` | **Abyssal Bulwark** (+30% Max HP, +15% Reflect DMG) |
-| **A Star's Arrival** | **Archon** | **Exalted (5) / 5★** | Striker | `350` / `65` | `94,165` / `17,488` | `25` / `130.7` | **Dimensional Dominion** (+30% Boss DMG, +25% All Labor) |
-| **A Star's Arrival** | **Solaris** | **Legendary (6) / 6★** | Scholar | `240` / `55` | `261,509` / `59,929` | `22` / `173.9` | **Supernova Flare** (+40% ATK, +25% AoE Radius) |
-| **A Star's Arrival** | **Astrea** | **Mythical (7) / 7★** | Marksman | `230` / `48` | `1,014,981` / `211,822` | `23` / `274.8` | **Cosmic Zenith** (+50% ATK, +30% ASPD, +35% Boss DMG) |
+| **A Star's Arrival** | **Velkist** | **Uncommon (2) / 1★** | Striker | `300` / `44` | `1,215` / `178` | `14` / `21.2` | **Bloodthirst Frenzy** (+20% ATK, +1s Overdrive) |
+| **A Star's Arrival** | **Eolka** | **Rare (3) / 1★** | Scholar | `230` / `52` | `3,773` / `853` | `22` / `50.3` | **Crimson Pyromancy** (+25% ATK, +30% Labor Output) |
+| **A Star's Arrival** | **Morrigan** | **Superior (4) / 1★** | Vanguard | `450` / `24` | `14,947` / `797` | `16` / `27.6` | **Abyssal Bulwark** (+30% Max HP, +15% Reflect DMG) |
+| **A Star's Arrival** | **Archon** | **Exalted (5) / 1★** | Striker | `350` / `65` | `47,082` / `8,744` | `25` / `65.3` | **Dimensional Dominion** (+30% Boss DMG, +25% All Labor) |
+| **A Star's Arrival** | **Solaris** | **Legendary (6) / 1★** | Scholar | `240` / `55` | `130,754` / `29,965` | `22` / `86.9` | **Supernova Flare** (+40% ATK, +25% AoE Radius) |
+| **A Star's Arrival** | **Astrea** | **Mythical (7) / 1★** | Marksman | `230` / `48` | `507,491` / `105,911` | `23` / `137.4` | **Cosmic Zenith** (+50% ATK, +30% ASPD, +35% Boss DMG) |
 
 #### Archetype Foundation Table
 
@@ -451,17 +454,17 @@ Archetypes define a hero's **combat role, base stats, attack cadence, range, lab
 ### 4.2 Effective Combat & Labor Formulas
 - **Level Cap Formula:**
   $$\text{MaxLevel}(S) = S \times 10 \quad (1★ = \text{Lv.10},\; 2★ = \text{Lv.20},\; 3★ = \text{Lv.30},\; 4★ = \text{Lv.40},\; 5★ = \text{Lv.50},\; 6★ = \text{Lv.60},\; 7★ = \text{Lv.70})$$
-- **Star Promotion Multipliers:** Promoting a hero from $S \to S+1$ increases the level cap by `+10`, multiplies Base Combat stats by **`3x`** (`PitBalanceConfig.Promotion.CombatMultiplier`), and multiplies Base Labor output by **`1.35x`**. Promotion never changes the hero's inherent rarity $t$.
+- **Star Promotion Multipliers:** Promoting a hero from $S \to S+1$ increases the level cap by `+10`, multiplies Base Combat stats by **`1.5x`** (`PitBalanceConfig.Promotion.CombatMultiplier`, `StatBalance.HeroPromotionMultiplier`), and multiplies Base Labor output by **`1.35x`**. Promotion never changes the hero's inherent rarity $t$.
 - **Effective Combat Stats (with Artifact Integration):**
-  $$\text{EffectiveATK} = \text{round}\Big(ATK_0 \times q \times 1.35^{(t - 1)} \times 3^{(S - 1)} \times 1.08^{(L - 1)} \times (1 + B_{\text{TraitATK}} + B_{\text{ImprintATK}})\Big) + TotalATKBonus_{\text{Artifact}}$$
-  $$\text{EffectiveHP} = \text{round}\Big(HP_0 \times q \times 1.35^{(t - 1)} \times 3^{(S - 1)} \times 1.08^{(L - 1)} \times (1 + B_{\text{TraitHP}} + B_{\text{ImprintHP}})\Big)$$
-  *(Where $t$ is the hero's inherent rarity tier. A Common hero, $t = 1$, has the same stats as before rarity was added.)*
+  $$\text{EffectiveATK} = \text{round}\Big(ATK_0 \times q \times R_{\text{combat}}(t) \times 1.5^{(S - 1)} \times 1.08^{(L - 1)} \times (1 + B_{\text{TraitATK}} + B_{\text{ImprintATK}})\Big) + TotalATKBonus_{\text{Artifact}}$$
+  $$\text{EffectiveHP} = \text{round}\Big(HP_0 \times q \times R_{\text{combat}}(t) \times 1.5^{(S - 1)} \times 1.08^{(L - 1)} \times (1 + B_{\text{TraitHP}} + B_{\text{ImprintHP}})\Big)$$
+  *(Where $t$ is the hero's inherent rarity tier and $R$ is defined under *Inherent Hero Rarity*. A Common hero, $t = 1$, has $R = 1$.)*
   $$\text{EffectiveInterval} = \max\left(0.12\text{s}, \frac{HeroBaseInterval}{1 + TotalSpeedBonus_{\text{Artifact}}}\right)$$
   $$\text{TotalATKBonus}_{\text{Artifact}} = \text{round}\Big(ATK_{\text{Base, Rarity}} \times \text{Multiplier}_{\text{Star}}\Big)$$
   $$\text{TotalSpeedBonus}_{\text{Artifact}} = ASPD_{\text{Base, Rarity}} \times \text{Multiplier}_{\text{Star}}$$
   *(Where Rarity dictates inherent base stats and Stars ($1★ \to 7★$) dictate the progressive multiplier).*
 - **Effective Labor Formula:**
-  $$\text{EffectiveLabor} = L_0 \times q \times 1.12^{(t - 1)} \times 1.35^{(S - 1)} \times \big(1 + 0.05(L - 1)\big) \times (1 + B_{\text{Synergy}}) \times (1 + B_{\text{TraitLabor}} + B_{\text{ImprintLabor}})$$
+  $$\text{EffectiveLabor} = L_0 \times q \times R_{\text{labor}}(t) \times 1.35^{(S - 1)} \times \big(1 + 0.05(L - 1)\big) \times (1 + B_{\text{Synergy}}) \times (1 + B_{\text{TraitLabor}} + B_{\text{ImprintLabor}})$$
   *(Where $B_{\text{Synergy}} = 0.25$ when assigned to preferred facility).*
 
 ### 4.3 Fortress Outskirts & Facility Economy Formulas
