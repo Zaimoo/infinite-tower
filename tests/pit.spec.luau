@@ -485,14 +485,36 @@ test("Delta construction failure cannot misreport an already committed transacti
 	equal(c.service.Locks[c.player], nil)
 end)
 
-test("Recipient recovery/reservation and overflow reject before donors are lost", function()
-	for _, fields in ipairs({ { ComaUntilTimestamp = os.time() + 1000 }, { ReservedBy = "operation" }, { Level = 10, OverflowXP = 3027 }, { Stars = 7, Level = 70 } }) do
+test("Recipient recovery and reservation reject before donors are lost", function()
+	for _, fields in ipairs({ { ComaUntilTimestamp = os.time() + 1000 }, { ReservedBy = "operation" } }) do
 		local c = context(); for key, value in pairs(fields) do c.profile.Heroes.r[key] = value end
 		rejectedWithoutMutation(c, "PREVIEW", synthesis())
 	end
 	local c = context(); c.profile.Heroes.r.Level = 9; c.profile.Heroes.r.XP = 1190
 	local p = c:preview(synthesis()); check(p.CanCommit); check(c:commit(p).Success)
 	equal(c.profile.Heroes.r.Level, 10); equal(c.profile.Heroes.r.OverflowXP, 96)
+end)
+
+test("Synthesis above the EXP cap requires confirmation and only credits applied EXP", function()
+	for _, scenario in ipairs({
+		{ Stars = 1, Level = 10, Reserve = 3000, ExpectedReserve = 3027, Applied = 27 },
+		{ Stars = 7, Level = 70, Reserve = 0, ExpectedReserve = 0, Applied = 0 },
+	}) do
+		local c = context()
+		local recipient = c.profile.Heroes.r
+		recipient.Stars, recipient.Level, recipient.OverflowXP = scenario.Stars, scenario.Level, scenario.Reserve
+		local p = c:preview(synthesis())
+		check(p.CanCommit); check(p.RequiresOverflowConfirmation)
+		check(p.Overflow.Rejected > 0); equal(p.XP.Applied, scenario.Applied)
+		rejectedWithoutMutation(c, "COMMIT", { Token = p.Token, ConfirmOverflow = "true" })
+		rejectedWithoutMutation(c, "COMMIT", { Token = p.Token, ConfirmOverflow = true })
+		p = c:preview(synthesis())
+		check(c:commit(p, { ConfirmOverflow = true }).Success)
+		equal(c.profile.Heroes.d, nil)
+		equal(c.profile.Heroes.r.Level, scenario.Level)
+		equal(c.profile.Heroes.r.OverflowXP, scenario.ExpectedReserve)
+		equal(c.profile.Heroes.r.SynthesisHistory.XPGained, scenario.Applied)
+	end
 end)
 
 test("Valid promotion charges exact resources, preserves traits and cannot repeat", function()
