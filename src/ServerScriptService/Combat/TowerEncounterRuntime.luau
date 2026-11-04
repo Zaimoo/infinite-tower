@@ -12,6 +12,7 @@ local CampWaves = require(RS.Shared.Util.CampWaves)
 local TowerLayout = require(RS.Shared.Config.TowerLayout)
 local CampRoster = require(RS.Shared.Util.CampRoster)
 local SupportRules = require(RS.Shared.Util.SupportRules)
+local PatrolPath = require(RS.Shared.Util.PatrolPath)
 local Runtime = {}
 
 function Runtime.new(api: any): any
@@ -324,8 +325,76 @@ function Runtime.new(api: any): any
 			local plan = roster.Camps[placement.CampId]
 			if plan and not plan.LeaderSlot then plan.LeaderSlot = slot end
 		end
+		-- Patrols (Phase E): the Basin loop on every floor, plus one other route from the third floor of a
+		-- biome. Three mixed fighters walk it; from biome 4 a patrol may bring the floor's support.
+		local routes = TowerLayout.PatrolRoutes(floorSpec.IndexInBiome)
+		local routeIds = { "BASIN_LOOP" }
+		if floorSpec.IndexInBiome >= 3 then
+			local others = {}
+			for id in routes do
+				if id ~= "BASIN_LOOP" then table.insert(others, id) end
+			end
+			table.sort(others)
+			if #others > 0 then table.insert(routeIds, others[math.floor(rng() * #others) + 1]) end
+		end
+		roster.Patrols, roster.PatrolOrder = {}, {}
+		for k, routeId in routeIds do
+			local id = "PATROL_" .. routeId
+			local route = routes[routeId]
+			local offsets = {}
+			for i, o in PatrolPath.Formation do offsets[Config.PatrolSlotBase + k * 10 + i] = o end
+			local patrolRng = CampRoster.Rng(CampRoster.Seed(floor, room.RoomGeneration, 100 + k, 0))
+			roster.Patrols[id] = {
+				Index = 100 + k, Slot = k, Route = route, Walk = PatrolPath.Start(route),
+				Center = Vector3.new(route[1].X, route[1].Y, route[1].Z),
+				Types = {}, Bag = {}, Wave = 0, Offsets = offsets, Rolled = true, Rng = patrolRng,
+				Support = supportsEligible and floorSpec.BiomeIndex >= 4 and patrolRng() < 0.5,
+			}
+			table.insert(roster.PatrolOrder, id)
+		end
 		ledger.Roster = roster
 		return roster
+	end
+	-- Patrols: replan a wiped patrol (fresh type mix, maybe a support, back to the route start), and
+	-- walk each living patrol's anchor along its route while it is not fighting.
+	function self:StepPatrols(floor, room, ledger, roster, now)
+		for _, id in roster.PatrolOrder do
+			local plan = roster.Patrols[id]
+			local alive, engaged, settled = false, false, true
+			for i = 1, #PatrolPath.Formation do
+				local m = ledger.Slots[Config.PatrolSlotBase + plan.Slot * 10 + i]
+				if m and m.IsAlive then
+					alive = true
+					if m.Action or m.State == "CHASE" or m.State == "WINDUP" or m.State == "RECOVERY" then engaged = true end
+					if m.HomePosition and (m.Position - m.HomePosition).Magnitude > 6 then settled = false end
+				end
+			end
+			local created = ledger.Slots[Config.PatrolSlotBase + plan.Slot * 10 + 1] ~= nil
+			if alive or not created then
+				plan.Rolled = false
+			elseif not plan.Rolled then
+				plan.Rolled = true
+				plan.Wave += 1
+				plan.Rng = CampRoster.Rng(CampRoster.Seed(floor, room.RoomGeneration, plan.Index, plan.Wave))
+				plan.Types, plan.Bag = {}, {}
+				plan.Support = roster.SupportsEligible and roster.Biome.SupportEnemyId ~= nil
+					and (TowerFloorConfig.Get(floor) :: any).BiomeIndex >= 4 and plan.Rng() < 0.5
+				plan.Walk = PatrolPath.Start(plan.Route)
+			end
+			local dt = math.clamp(now - (plan.LastStep or now), 0, 0.5)
+			plan.LastStep = now
+			if alive and not engaged and settled then
+				PatrolPath.Advance(plan.Route, plan.Walk, PatrolPath.Speed * dt)
+			end
+			plan.Center = Vector3.new(plan.Walk.X, plan.Walk.Y, plan.Walk.Z)
+		end
+	end
+	-- True while a Master or hero stands within `radius` of a world point on this floor.
+	local function heroNear(floor, point, radius)
+		for _, h in pairs(api.Heroes) do
+			if h.FloorId == floor and h.Position and (h.Position - point).Magnitude <= radius then return true end
+		end
+		return false
 	end
 	-- A camp member's Regular type this wave, dealt on first use from the camp's shuffled bag.
 	local function memberType(plan, slot, pool)
@@ -388,6 +457,20 @@ function Runtime.new(api: any): any
 						live += 1
 					end
 				end
+				self:StepPatrols(floor, room, ledger, roster, now)
+				for _, id in roster.PatrolOrder do
+					local plan = roster.Patrols[id]
+					local size = if plan.Support then 4 else 3
+					if live + size <= Config.MaxLiveMobsPerFloor then
+						for i = 1, size do
+							effective[Config.PatrolSlotBase + plan.Slot * 10 + i] = {
+								EnemyId = roster.Biome.RegularEnemyIds[1], X = plan.Center.X, Y = plan.Center.Y, Z = plan.Center.Z,
+								CampId = id, LeashRadius = Config.PatrolLeash, Patrol = id, Support = i == 4,
+							}
+						end
+						live += size
+					end
+				end
 				-- A camp is "alive" while any member lives (or has not been created yet). A support slot
 				-- that does not exist yet does not count: it joins with the camp's next wave.
 				local campAlive = {}
@@ -428,7 +511,7 @@ function Runtime.new(api: any): any
 					end
 				end
 				for slot, placement in effective do
-					local plan = roster.Camps[placement.CampId]
+					local plan = roster.Camps[placement.CampId] or roster.Patrols[placement.CampId]
 					local enemyId = placement.EnemyId
 					local localPos = Vector3.new(placement.X, placement.Y or 0, placement.Z)
 					if plan then
@@ -505,6 +588,10 @@ function Runtime.new(api: any): any
 					end
 					m.LeashRadius = placement.LeashRadius or Config.LeashRange
 					m.CampId = placement.CampId
+					m.Patrol = placement.Patrol
+					if placement.Patrol and m.IsAlive and m.RoomGeneration == room.RoomGeneration then
+						m.HomePosition = api.Navigation.Ground(room.Origin + localPos + Vector3.new(0, 6, 0), nil, 2, 12) or room.Origin + localPos
+					end
 					if m.RoomGeneration ~= room.RoomGeneration then
 						m.EntityGeneration += 1
 						m.RoomGeneration = room.RoomGeneration
@@ -519,6 +606,13 @@ function Runtime.new(api: any): any
 					end
 					if not m.IsAlive and m.RespawnAt == math.huge and not m.Summoned then
 						m.RespawnAt = CampWaves.ScheduleRespawn(m.DiedAt, campAlive[placement.CampId] == true, now) or math.huge
+						if placement.Patrol and m.RespawnAt ~= math.huge then
+							m.RespawnAt += Config.PatrolRespawnSeconds - Config.CampRespawnSeconds
+						end
+					end
+					-- A wiped patrol waits while anyone stands near its route start.
+					if placement.Patrol and not m.IsAlive and now >= m.RespawnAt and heroNear(floor, room.Origin + localPos, Config.PatrolClearRadius) then
+						m.RespawnAt = now + 2
 					end
 					if not m.IsAlive and now >= m.RespawnAt then
 						-- The wave's plan may give this slot a new type and a new spot. The EntityGeneration
@@ -554,7 +648,7 @@ function Runtime.new(api: any): any
 				end
 				-- Scaled-in members that are no longer wanted leave once they are dead.
 				for slot, m in pairs(ledger.Slots) do
-					if slot >= Config.SupportSlotBase and not effective[slot] and not m.IsAlive then
+					if slot >= Config.PatrolSlotBase and not effective[slot] and not m.IsAlive then
 						if api.Mobs[m.NetId] then api.Mobs[m.NetId] = nil; changed = true end
 						ledger.Slots[slot] = nil
 					end
@@ -721,7 +815,7 @@ function Runtime.new(api: any): any
 		end
 		local speed = e.MoveSpeed * SupportRules.SpeedMultiplier(m, now)
 		if fromHome > (m.LeashRadius or Config.LeashRange) or safe(m) or not target then
-			m.State = fromHome > 3 and "RESET" or "IDLE"
+			m.State = if fromHome <= 3 then "IDLE" elseif m.Patrol then "PATROL" else "RESET"
 			if fromHome > 3 then
 				api.Navigation.Step(m, m.HomePosition, speed * math.min(dt, .3), os.clock())
 			end

@@ -81,6 +81,56 @@ end
 -- landing pad at each end of every link, the Basin causeway and the Sanctuary exit. Each lane is a box
 -- from A to B (local floor coordinates, Y = walking surface) that is HalfWidth to each side and spans
 -- Below studs under the surface to Above studs over it. Plain numbers, so specs can read it directly.
+-- Patrol routes (Phase E): walkable waypoint paths (local coordinates, Y = walking surface) that a
+-- patrol walks back and forth. They follow terraces and link centrelines, never use the Sanctuary link
+-- and keep to the back half of the Basin, away from the arrival ramp.
+--   BASIN_LOOP     every floor: Basin west -> foot of the Crossing ramp -> Basin east
+--   GALLERY_WEST/EAST  floor 3 on: Gallery centre -> along its link -> Apex (floor 3) or Bastion (4-5)
+--   BASTION_RING   floors 4-5: West Bastion -> Apex edge -> East Bastion
+function Layout.PatrolRoutes(index: number): {[string]: {{X: number, Y: number, Z: number}}}
+	local room = Layout.Get(index)
+	local p = room.Platforms
+	local function point(x, y, z) return {X=x, Y=y, Z=z} end
+	local function linkBetween(from, to)
+		for _, link in room.Links do
+			if link.From == from and link.To == to then return link end
+		end
+		return nil
+	end
+	local basin = p.Basin
+	local backZ = basin.Z - basin.Depth*0.3
+	local routes = {
+		BASIN_LOOP = {
+			point(-room.Width*0.22, basin.Y, backZ),
+			point(0, basin.Y, basin.Z - basin.Depth*0.4),
+			point(room.Width*0.22, basin.Y, backZ),
+		},
+	}
+	if index >= 3 then
+		for _, side in {"West", "East"} do
+			local gallery = p[side.."Gallery"]
+			local link = assert(linkBetween(side.."Gallery", if index >= 4 then side.."Bastion" else "Apex"))
+			routes["GALLERY_"..string.upper(side)] = {
+				point(gallery.X, gallery.Y, gallery.Z),
+				point(link.AX, link.AY, link.AZ),
+				point(link.BX, link.BY, link.BZ),
+			}
+		end
+	end
+	if index >= 4 then
+		local west, east = assert(linkBetween("WestBastion", "Apex")), assert(linkBetween("EastBastion", "Apex"))
+		routes.BASTION_RING = {
+			point(p.WestBastion.X, p.WestBastion.Y, p.WestBastion.Z),
+			point(west.AX, west.AY, west.AZ),
+			point(west.BX, west.BY, west.BZ),
+			point(east.BX, east.BY, east.BZ),
+			point(east.AX, east.AY, east.AZ),
+			point(p.EastBastion.X, p.EastBastion.Y, p.EastBastion.Z),
+		}
+	end
+	return routes
+end
+
 function Layout.Lanes(index: number): {any}
 	local room = Layout.Get(index)
 	local lanes = {}
