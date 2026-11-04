@@ -314,13 +314,12 @@ function PortalEffectController.SetState(portalModel: Model, newState: PortalSta
 		beam.Enabled = isActive
 	end
 
-	-- 5. Vertical Sky-Beam Column intensification
+	-- 5. Ensure any legacy exterior sky-beam column or shaft is hidden
 	for _, skyBeam in ipairs(managed.SkyBeams) do
-		skyBeam.Width0 = if isActive then 15.0 else 12.0
-		skyBeam.Width1 = if isActive then 20.0 else 16.0
+		skyBeam.Enabled = false
 	end
 	if managed.VolumetricShaft then
-		managed.VolumetricShaft.Transparency = if isActive then 0.78 else 0.88
+		managed.VolumetricShaft.Transparency = 1
 	end
 end
 
