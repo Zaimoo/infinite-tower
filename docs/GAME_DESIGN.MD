@@ -99,7 +99,7 @@ flowchart TD
 2. **Summoning & Gacha Pulls (Every 5–10 Minutes):**
    - Spend Gems at the **Summoning Altar** on either **Call of the Rift** (Common–Exalted Permanent Banner), **A Star's Arrival** (Common–Mythical Limited Time Rate-Up Banner, featuring 1 character per rarity tier, each summoned at 1★), or the **Artifact Banner** (`160 Gems` single / `1,600 Gems` 10x for archetype weapons across 16 Rarity Tiers).
    - **Synthesis Chamber (`SynthesisController.luau`):** Place a recipient hero and up to 5 fodder heroes to level up to the hero's current cap ($\text{MaxLevel} = \text{Stars} \times 10$).
-   - **Promotion Altar (`PromotionController.luau`):** When a hero reaches max level, sacrifice same-rank heroes and Promotion Stones to permanently ascend star rating ($1★ \to 5★$). The hero's inherent rarity never changes.
+   - **Promotion Altar (`PromotionController.luau`):** When a hero reaches max level, spend Gold and Promotion Stones (5 for 1★→2★, +5 per star: 5/10/15/20/25/30, `PitBalanceConfig.Promotion`) to permanently ascend star rating ($1★ \to 7★$). The hero restarts at Lv. 1 of its new star but keeps every stat it had (see Section 4.2). The hero's inherent rarity never changes.
 3. **Artifact Star Ascension at the Blacksmith Forge (`ForgeController.luau`):**
    - **Star Ascension (Multipliers):** Ascend artifacts from $1★ \to 7★$ at the Forge by sacrificing duplicate artifacts and Gold, scaling inherent base stats by progressive multipliers up to **`16.00x`**.
 
@@ -454,17 +454,17 @@ Archetypes define a hero's **combat role, base stats, attack cadence, range, lab
 ### 4.2 Effective Combat & Labor Formulas
 - **Level Cap Formula:**
   $$\text{MaxLevel}(S) = S \times 10 \quad (1★ = \text{Lv.10},\; 2★ = \text{Lv.20},\; 3★ = \text{Lv.30},\; 4★ = \text{Lv.40},\; 5★ = \text{Lv.50},\; 6★ = \text{Lv.60},\; 7★ = \text{Lv.70})$$
-- **Star Promotion Multipliers:** Promoting a hero from $S \to S+1$ increases the level cap by `+10`, multiplies Base Combat stats by **`1.5x`** (`PitBalanceConfig.Promotion.CombatMultiplier`, `StatBalance.HeroPromotionMultiplier`), and multiplies Base Labor output by **`1.35x`**. Promotion never changes the hero's inherent rarity $t$.
+- **Star Promotion Multipliers:** Promoting a hero from $S \to S+1$ resets it to **Lv. 1** and raises the level cap by `+10`. The levels it had are **banked** ($B_L$ += $L - 1$, saved as `BankedLevels`) and keep counting toward stat growth, so no stat drops; promotion then multiplies Base Combat stats by **`1.5x`** (`PitBalanceConfig.Promotion.CombatMultiplier`, `StatBalance.HeroPromotionMultiplier`), and multiplies Base Labor output by **`1.35x`**. Promotion never changes the hero's inherent rarity $t$.
 - **Effective Combat Stats (with Artifact Integration):**
-  $$\text{EffectiveATK} = \text{round}\Big(ATK_0 \times q \times R_{\text{combat}}(t) \times 1.5^{(S - 1)} \times 1.08^{(L - 1)} \times (1 + B_{\text{TraitATK}} + B_{\text{ImprintATK}})\Big) + TotalATKBonus_{\text{Artifact}}$$
-  $$\text{EffectiveHP} = \text{round}\Big(HP_0 \times q \times R_{\text{combat}}(t) \times 1.5^{(S - 1)} \times 1.08^{(L - 1)} \times (1 + B_{\text{TraitHP}} + B_{\text{ImprintHP}})\Big)$$
+  $$\text{EffectiveATK} = \text{round}\Big(ATK_0 \times q \times R_{\text{combat}}(t) \times 1.5^{(S - 1)} \times 1.08^{(L - 1 + B_L)} \times (1 + B_{\text{TraitATK}} + B_{\text{ImprintATK}})\Big) + TotalATKBonus_{\text{Artifact}}$$
+  $$\text{EffectiveHP} = \text{round}\Big(HP_0 \times q \times R_{\text{combat}}(t) \times 1.5^{(S - 1)} \times 1.08^{(L - 1 + B_L)} \times (1 + B_{\text{TraitHP}} + B_{\text{ImprintHP}})\Big)$$
   *(Where $t$ is the hero's inherent rarity tier and $R$ is defined under *Inherent Hero Rarity*. A Common hero, $t = 1$, has $R = 1$.)*
   $$\text{EffectiveInterval} = \max\left(0.12\text{s}, \frac{HeroBaseInterval}{1 + TotalSpeedBonus_{\text{Artifact}}}\right)$$
   $$\text{TotalATKBonus}_{\text{Artifact}} = \text{round}\Big(ATK_{\text{Base, Rarity}} \times \text{Multiplier}_{\text{Star}}\Big)$$
   $$\text{TotalSpeedBonus}_{\text{Artifact}} = ASPD_{\text{Base, Rarity}} \times \text{Multiplier}_{\text{Star}}$$
   *(Where Rarity dictates inherent base stats and Stars ($1★ \to 7★$) dictate the progressive multiplier).*
 - **Effective Labor Formula:**
-  $$\text{EffectiveLabor} = L_0 \times q \times R_{\text{labor}}(t) \times 1.35^{(S - 1)} \times \big(1 + 0.05(L - 1)\big) \times (1 + B_{\text{Synergy}}) \times (1 + B_{\text{TraitLabor}} + B_{\text{ImprintLabor}})$$
+  $$\text{EffectiveLabor} = L_0 \times q \times R_{\text{labor}}(t) \times 1.35^{(S - 1)} \times \big(1 + 0.05(L - 1 + B_L)\big) \times (1 + B_{\text{Synergy}}) \times (1 + B_{\text{TraitLabor}} + B_{\text{ImprintLabor}})$$
   *(Where $B_{\text{Synergy}} = 0.25$ when assigned to preferred facility).*
 
 ### 4.3 Fortress Outskirts & Facility Economy Formulas

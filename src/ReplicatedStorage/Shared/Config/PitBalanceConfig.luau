@@ -25,12 +25,13 @@ Config.Synthesis = {
 Config.Promotion = {
 	CombatMultiplier = 1.5, -- matches StatBalance.HeroPromotionMultiplier (heroes are summoned at 1★)
 	LaborMultiplier = 1.35,
-	[1] = { Gold = 1500, PromotionStone = 1 },
-	[2] = { Gold = 7500, PromotionStone = 3 },
-	[3] = { Gold = 35000, PromotionStone = 8 },
-	[4] = { Gold = 150000, PromotionStone = 18 },
-	[5] = { Gold = 450000, PromotionStone = 40 },
-	[6] = { Gold = 1250000, PromotionStone = 85 },
+	-- Promotion Stones: 5 for 1★→2★, +5 per star after that.
+	[1] = { Gold = 1500, PromotionStone = 5 },
+	[2] = { Gold = 7500, PromotionStone = 10 },
+	[3] = { Gold = 35000, PromotionStone = 15 },
+	[4] = { Gold = 150000, PromotionStone = 20 },
+	[5] = { Gold = 450000, PromotionStone = 25 },
+	[6] = { Gold = 1250000, PromotionStone = 30 },
 }
 Config.Conversion = {
 	BaseEssence = { [1] = 4, [2] = 12, [3] = 36, [4] = 108, [5] = 324, [6] = 972, [7] = 2916 },

@@ -169,18 +169,29 @@ test("Five stars never exceed level 50 or create a future-tier reserve", functio
 	equal(result.Level, 70); equal(result.XP, 0); equal(result.OverflowXP, 0); equal(overflow.Rejected, 10000)
 end)
 
-test("Promotion applies one multiplier and releases reserve through real levels", function()
+test("Promotion resets to level 1, banks the old levels and releases reserve through real levels", function()
 	local before = hero("r", "hero_han", { Level = 10, OverflowXP = 3027, InheritedImprints = { melee_memory = 1 } })
 	local after = Math.Promote(before)
 	equal(after.Stars, 2); equal(after.BaseATK, 60); equal(after.BaseHP, 450); equal(after.BaseLabor, 18.9)
-	equal(after.Level, 12); equal(after.XP, 0); equal(after.OverflowXP, 0)
+	equal(after.BankedLevels, 9); equal(after.OverflowXP, 0)
+	-- The 3,027 reserve EXP is spent from Lv. 1 of the new star.
+	local level, xp = 1, 3027
+	while xp >= Stats.GetXPRequiredForNextLevel(level) do xp -= Stats.GetXPRequiredForNextLevel(level); level += 1 end
+	equal(after.Level, level); equal(after.XP, xp)
 	equal(after.PassiveTrait, before.PassiveTrait); equal(after.InheritedImprints.melee_memory, 1)
-	equal(before.Stars, 1); equal(before.BaseATK, 40)
+	equal(before.Stars, 1); equal(before.BaseATK, 40); equal(before.Level, 10)
 	local atk, hp = Stats.GetEffectiveCombatStats(after, false, false)
-	equal(atk, math.round(60 * 1.08^11)); equal(hp, math.round(450 * 1.08^11))
+	equal(atk, math.round(40 * (1.5 * 1.08^(level - 1 + 9) * 1))); equal(hp, math.round(300 * (1.5 * 1.08^(level - 1 + 9) * 1)))
 	local repeatATK, repeatHP = Stats.GetEffectiveCombatStats(after, false, false)
 	equal(repeatATK, atk); equal(repeatHP, hp); equal(after.BaseATK, 60)
-	close(Stats.GetEffectiveLabor(after, "FACILITY_CONDUIT"), 29.3, 0.00001)
+	-- Promoting with no reserve: Lv. 1 of the new star keeps every stat the capped hero had.
+	local capped = hero("c", "hero_han", { Level = 10 })
+	local reset = Math.Promote(capped)
+	equal(reset.Level, 1); equal(reset.XP, 0)
+	local oldATK, oldHP = Stats.GetEffectiveCombatStats(capped, false, false)
+	local newATK, newHP = Stats.GetEffectiveCombatStats(reset, false, false)
+	check(newATK >= oldATK and newHP >= oldHP, "promotion never lowers stats")
+	check(Stats.GetEffectiveLabor(reset) >= Stats.GetEffectiveLabor(capped), "promotion never lowers labor")
 end)
 
 test("Conversion rewards are deterministic and account for bounded investment", function()
@@ -543,9 +554,10 @@ end)
 test("Valid promotion charges exact resources, preserves traits and cannot repeat", function()
 	local c = context(); c.profile.Heroes.r.Level = 10; c.profile.Heroes.r.InheritedImprints = { melee_memory = 1 }
 	local p = c:preview({ Action = "PROMOTION", Recipient = "r" }); check(p.CanCommit)
-	equal(p.Costs.Gold, 1500); equal(p.Costs.PromotionStone, 1)
-	check(c:commit(p).Success); equal(c.profile.Currencies.Gold, 998500); equal(c.profile.PitMaterials.PromotionStone, 99)
+	equal(p.Costs.Gold, 1500); equal(p.Costs.PromotionStone, 5)
+	check(c:commit(p).Success); equal(c.profile.Currencies.Gold, 998500); equal(c.profile.PitMaterials.PromotionStone, 95)
 	equal(c.profile.Heroes.r.Stars, 2); equal(c.profile.Heroes.r.BaseATK, 60)
+	equal(c.profile.Heroes.r.Level, 1); equal(c.profile.Heroes.r.BankedLevels, 9)
 	equal(c.profile.Heroes.r.BaseLabor, 18.9); equal(c.profile.Heroes.r.InheritedImprints.melee_memory, 1)
 	equal(c.profile.Heroes.r.PassiveTrait, Catalog.Seeds.hero_han.PassiveTraitName)
 	rejectedWithoutMutation(c, "COMMIT", { Token = p.Token })
@@ -556,7 +568,7 @@ test("Promotion validates cap, Gold, stones and five-star ceiling without resear
 	local scenarios = {
 		function(p) p.Heroes.r.Level = 9 end,
 		function(p) p.Currencies.Gold = 1499 end,
-		function(p) p.PitMaterials.PromotionStone = 0 end,
+		function(p) p.PitMaterials.PromotionStone = 4 end,
 		function(p) p.Heroes.r.Stars = 7; p.Heroes.r.Level = 70 end,
 	}
 	for _, mutate in ipairs(scenarios) do
@@ -568,7 +580,7 @@ test("Promotion validates cap, Gold, stones and five-star ceiling without resear
 	equal(c.profile.Heroes.r.Stars, 5); equal(Math.GetImprintCapacity(c.profile.Heroes.r), 3)
 	local cDonor = context(); cDonor.profile.Heroes.r.Level = 10
 	rejectedWithoutMutation(cDonor, "PREVIEW", { Action = "PROMOTION", Recipient = "r", Donors = { "d" } })
-	for _, tier in ipairs({ { Stars = 5, Gold = 450000, Stones = 40 }, { Stars = 6, Gold = 1250000, Stones = 85 } }) do
+	for _, tier in ipairs({ { Stars = 1, Gold = 1500, Stones = 5 }, { Stars = 3, Gold = 35000, Stones = 15 }, { Stars = 5, Gold = 450000, Stones = 25 }, { Stars = 6, Gold = 1250000, Stones = 30 } }) do
 		local cTier = context()
 		cTier.profile.Currencies.Gold = 5000000
 		cTier.profile.PitMaterials.PromotionStone = 500

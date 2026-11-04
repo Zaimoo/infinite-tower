@@ -54,6 +54,7 @@ function ProfileMigrations.ToV4(profile: any)
 	for _, hero in pairs(profile.Heroes or {}) do
 		local rarity = hero.Rarity or HeroCatalog.RarityOf(hero.TemplateId)
 		hero.Rarity = rarity
+		hero.BankedLevels = hero.BankedLevels or 0
 		local stars = if type(hero.Stars) == "number" then math.floor(hero.Stars) else 1
 		hero.Stars = math.max(1, stars - (rarity - 1))
 		local cap = hero.Stars * 10

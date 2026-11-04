@@ -51,6 +51,13 @@ function StatFormulas.GetPromotionGoldCost(currentStars: number): number
 	return cost and cost.Gold or 9999999
 end
 
+-- Levels a hero banked at each promotion. Promotion resets the hero to Lv. 1 but keeps every level it had as stat
+-- growth, so stats and labor never drop: growth uses Level - 1 + BankedLevels.
+function StatFormulas.GetBankedLevels(hero: any): number
+	local banked = hero and hero.BankedLevels
+	return if B.Integer(banked, 0, 1000) then banked else 0
+end
+
 -- Inherent rarity tier (Phase 4 §7). Saves without the field fall back to the template's rarity.
 function StatFormulas.GetHeroRarity(hero: any): number
 	local rarity = hero and hero.Rarity
@@ -67,7 +74,7 @@ function StatFormulas.GetCombatSnapshot(hero: any, artifact: any?, inOverdrive: 
  local stars=B.Integer(hero.Stars,1,PitBalanceConfig.MaxStars) and hero.Stars or 1
  local level=B.Integer(hero.Level,1,stars*10) and hero.Level or 1
  local quality=B.Finite(hero.QualityScalar) and math.clamp(hero.QualityScalar,.9,1.15) or 1
- local growth=B.HeroPromotionMultiplier^(stars-1)*B.LevelMultiplier^(level-1)*B.HeroRarityCombat(StatFormulas.GetHeroRarity(hero))
+ local growth=B.HeroPromotionMultiplier^(stars-1)*B.LevelMultiplier^(level-1+StatFormulas.GetBankedLevels(hero))*B.HeroRarityCombat(StatFormulas.GetHeroRarity(hero))
  local power,speed=0,0
  if artifact then power,speed=ArtifactCatalog.CalculateEffectiveStats(artifact.Star,artifact.Rarity,nil,artifact.TemplateId) end
  local mult = trainingMultiplier or 1.0
@@ -124,7 +131,7 @@ function StatFormulas.GetEffectiveLabor(hero: any, targetFacilityAssignment: str
  local target=targetFacilityAssignment or hero.Assignment or ""
  local synergy=pref=="ALL" or (pref~="" and pref==target) or (target=="FACILITY_GODS_BLESSING" and (hero.Archetype or seed and seed.Archetype)=="Healer")
  local rarity=B.HeroRarityLabor(StatFormulas.GetHeroRarity(hero))
- local labor=(seed and seed.BaseLabor_1Star or 14)*q*rarity*PitBalanceConfig.Promotion.LaborMultiplier^(stars-1)*(1+.05*(level-1))*(synergy and 1.25 or 1)
+ local labor=(seed and seed.BaseLabor_1Star or 14)*q*rarity*PitBalanceConfig.Promotion.LaborMultiplier^(stars-1)*(1+.05*(level-1+StatFormulas.GetBankedLevels(hero)))*(synergy and 1.25 or 1)
  return math.round(labor*100)/100
 end
 

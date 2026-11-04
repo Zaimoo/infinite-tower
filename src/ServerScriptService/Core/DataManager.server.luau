@@ -155,6 +155,7 @@ export type HeroInstance = {
 	Locked: boolean,
 	Favorite: boolean,
 	OverflowXP: number,
+	BankedLevels: number?, -- levels kept as stat growth when promotion reset the hero to Lv. 1
 	InheritedImprints: { [string]: number },
 	ImprintCapacity: number,
 	SynthesisHistory: any,
@@ -380,6 +381,7 @@ function DataManager.CreateHeroFromSeed(seedId: string, forceQuality: number?): 
 		Locked = false,
 		Favorite = false,
 		OverflowXP = 0,
+		BankedLevels = 0,
 		InheritedImprints = {},
 		ImprintCapacity = math.ceil(seed.Rarity / 2),
 		SynthesisHistory = { DonorsConsumed = 0, XPGained = 0, ImprintsPerformed = 0, Promotions = 0 },

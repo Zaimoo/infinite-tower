@@ -103,6 +103,10 @@ end
 function PitMath.Promote(hero: any): (any, any)
 	local result = PitMath.Copy(hero)
 	result.Stars += 1
+	-- The hero restarts at Lv. 1 of its new star; the levels it had are banked as stat growth, so nothing is lost.
+	result.BankedLevels = Stats.GetBankedLevels(result) + math.max(0, (result.Level or 1) - 1)
+	result.Level = 1
+	result.XP = 0
 	local seed = Catalog.Seeds[result.TemplateId]
 	if seed then
 		local rarity = Stats.GetHeroRarity(result)

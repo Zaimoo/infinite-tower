@@ -110,7 +110,7 @@ function PitService:State(profile: any): any
 		local copy = Math.Copy(hero)
 		copy.PitStatus = self:DonorStatus(profile, hero)
 		copy.Stats = Math.Snapshot(hero, profile)
-		copy.SynthesisXPValue = Config.Synthesis.BaseXP * Config.Synthesis.StarMultiplier ^ (hero.Stars - 1) + Config.Synthesis.LevelXP * hero.Level
+		copy.SynthesisXPValue = Config.Synthesis.BaseXP * Config.Synthesis.StarMultiplier ^ (Math.EffectiveStars(hero) - 1) + Config.Synthesis.LevelXP * hero.Level
 		heroes[uuid] = copy
 	end
 	local resources = Math.Copy(profile.Currencies)
@@ -127,7 +127,7 @@ function PitService:Delta(profile: any, changed: any, removed: any): any
 		local copy = Math.Copy(hero)
 		copy.PitStatus = self:DonorStatus(profile, hero)
 		copy.Stats = Math.Snapshot(hero, profile)
-		copy.SynthesisXPValue = Config.Synthesis.BaseXP * Config.Synthesis.StarMultiplier ^ (hero.Stars - 1) + Config.Synthesis.LevelXP * hero.Level
+		copy.SynthesisXPValue = Config.Synthesis.BaseXP * Config.Synthesis.StarMultiplier ^ (Math.EffectiveStars(hero) - 1) + Config.Synthesis.LevelXP * hero.Level
 		heroes[uuid] = copy
 	end
 	local resources = Math.Copy(profile.Currencies)
@@ -287,6 +287,7 @@ function PitService:Build(profile: any, request: any): (any, any)
 				after.ImprintCapacity = Math.GetImprintCapacity(after)
 				after.SynthesisHistory.Promotions = (after.SynthesisHistory.Promotions or 0) + 1
 				preview.After, preview.Overflow = Math.Snapshot(after, profile), overflow
+				table.insert(preview.Warnings, "The hero restarts at Lv. 1 of its new star. Its stats are kept.")
 				staged.Heroes[recipient.UUID] = after
 			end
 		end
