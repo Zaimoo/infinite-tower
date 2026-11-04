@@ -301,7 +301,7 @@ for enemyId, spec in pairs(Config.Entries) do
 		local clips: any = {
 			Idle = idle,
 			Locomotion = walk,
-			BasicAttack = if isBoss then slam elseif isProjectile then projectileCast else cleave,
+			BasicAttack = if isBoss then slam elseif spec.Support then cast elseif isProjectile then projectileCast else cleave,
 			HitReaction = hit,
 			Death = death,
 		}

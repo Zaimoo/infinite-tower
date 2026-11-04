@@ -333,6 +333,16 @@ function R.Build(model: Model, root: BasePart, enemyId: string): any
 		end
 	end
 
+	if spec.Support then
+		-- Support Regulars (Phase D) wear a floating halo of glowing beads, readable from a distance.
+		local haloY = spec.Height - spec.RootHeight + 1.1
+		for i = 1, 8 do
+			local a = i * math.pi / 4
+			detail("SupportHaloBead", root, Vector3.new(.45, .45, .45), CFrame.new(math.cos(a) * 1.15, haloY, math.sin(a) * 1.15), pal.Glow, Enum.PartType.Ball, Enum.Material.Neon)
+		end
+		detail("SupportHaloCore", root, Vector3.new(.6, .6, .6), CFrame.new(0, haloY + .1, 0), pal.Trim, Enum.PartType.Ball, Enum.Material.Neon)
+	end
+
 	model:SetAttribute("TowerEnemyId", enemyId)
 	model:SetAttribute("ArtPackAssetId", enemyId)
 	folder:SetAttribute("Source", "TowerEnemyRigs.luau")
