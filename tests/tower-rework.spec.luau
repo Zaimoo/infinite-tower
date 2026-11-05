@@ -52,8 +52,41 @@ test("Every walkway is covered by a clear lane with landing pads, the causeway a
 			assert(lane.HalfWidth>=link.Width/2+3 and lane.AY==link.AY and lane.BY==link.BY)
 			assert(byId[id.."_LandingA"] and byId[id.."_LandingB"])
 		end
-		assert(#lanes==#room.Links*3+4) -- links, two landings each, causeway, exit, two boss portal spots
+		assert(#lanes==(#room.Links+#room.ReturnLinks)*3+4)
 		assert(byId.BasinCauseway.HalfWidth>=20 and byId.SanctuaryExit.HalfWidth>=18)
+	end
+end)
+
+test("Connectors have full width landings and keep inclined shoulders outside upper slabs",function()
+	for index=1,5 do
+		local room=Layout.Get(index)
+		for _,link in room.Links do
+			assert(link.Id==link.From.."_"..link.To and link.UsableWidth>20)
+			for _,name in {"LandingA","LandingB"}do
+				local pad=link[name]
+				assert(pad.Width>=link.Width+8 and pad.AY==pad.BY)
+				assert(math.sqrt((pad.BX-pad.AX)^2+(pad.BZ-pad.AZ)^2)>=20)
+				local terrace=room.Platforms[if name=="LandingA" then link.From else link.To]
+				local x,z=if name=="LandingA" then pad.AX else pad.BX,if name=="LandingA" then pad.AZ else pad.BZ
+				for _,side in {-1,0,1}do
+					local px,pz=x-link.UZ*side*pad.Width/2,z+link.UX*side*pad.Width/2
+					assert(math.abs(px-terrace.X)<=terrace.Width/2 and math.abs(pz-terrace.Z)<=terrace.Depth/2,"Landing shoulder fails to overlap terrace: "..link.Id)
+				end
+			end
+			if link.AY~=link.BY then
+				local from=link.AY>link.BY
+				local upper=room.Platforms[if from then link.From else link.To]
+				local x,z=if from then link.AX else link.BX,if from then link.AZ else link.BZ
+				for _,side in {-1,0,1}do
+					local px,pz=x-link.UZ*side*link.Width/2,z+link.UX*side*link.Width/2
+					assert(math.abs(px-upper.X)>upper.Width/2 or math.abs(pz-upper.Z)>upper.Depth/2,"Upper deck intersects terrace: "..link.Id)
+				end
+			end
+		end
+		for _,link in room.ReturnLinks do
+			assert(link.AY==room.Bottom-4 and link.BY==0)
+			assert(math.abs(link.BY-link.AY)/(link.BZ-link.AZ)<=math.tan(math.rad(15)))
+		end
 	end
 end)
 test("All fifty floors have supported isolated camps and matching encounter manifests",function()

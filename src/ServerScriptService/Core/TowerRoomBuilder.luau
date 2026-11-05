@@ -255,6 +255,7 @@ end
 -- itself (terraces, ramps, curbs, inlays), ramp arches and faint light shafts are exempt.
 local WalkwayExemptKinds = { BridgeCurb = true, RampArch = true }
 local WalkwayExemptNames = { BasinCentralCauseway = true, BasinCausewayInlay = true }
+local WalkwayEdgeTrim = { TerraceMasonryBand = true, TerraceSideBand = true }
 function Builder.WalkwayHitTest(model: Instance, origin: Vector3, index: number): (BasePart) -> boolean
 	local boxes = {}
 	for _, lane in Layout.Lanes(index) do
@@ -271,7 +272,7 @@ function Builder.WalkwayHitTest(model: Instance, origin: Vector3, index: number)
 		local unit = PropClearance.UnitOf(part, model)
 		if unit == part then
 			-- A loose part: only biome scenery, never the room's own floors, ramps and trim.
-			if not (kit and part:IsDescendantOf(kit)) then
+			if not (kit and part:IsDescendantOf(kit)) and not WalkwayEdgeTrim[part.Name] then
 				return false
 			end
 		elseif WalkwayExemptKinds[unit:GetAttribute("PropKind")] then
@@ -430,6 +431,17 @@ function Builder.Build(id: number, generation: number): any
 		end
 	end
 
+	local function structure(p: BasePart, id: string)
+		p:SetAttribute("NavigationStructure",true)
+		p:SetAttribute("ConnectorId",id)
+	end
+	local function landing(pad: any, id: string)
+		local a=origin+Vector3.new(pad.AX,pad.AY,pad.AZ)
+		local b=origin+Vector3.new(pad.BX,pad.BY,pad.BZ)
+		local p=part(model,"TraversalLanding",Vector3.new(pad.Width,2,(b-a).Magnitude),(a+b)/2,theme.TrimColor,theme.TrimMaterial)
+		p.CFrame=CFrame.lookAt((a+b)/2,b)*CFrame.new(0,-1,0)
+		structure(p,id)
+	end
 	for _, link in layout.Links do
 		local a = origin + Vector3.new(link.AX, link.AY, link.AZ)
 		local b = origin + Vector3.new(link.BX, link.BY, link.BZ)
@@ -438,6 +450,8 @@ function Builder.Build(id: number, generation: number): any
 		local flat = Vector3.new(delta.X, 0, delta.Z)
 		local flatUnit = if flat.Magnitude > 0.01 then flat.Unit else Vector3.new(0, 0, -1)
 		local right = Vector3.new(-flatUnit.Z, 0, flatUnit.X)
+		landing(link.LandingA,link.Id)
+		landing(link.LandingB,link.Id)
 
 		if link.From == "Crossing" and link.To == "Apex" then
 			local steps = math.max(1, math.ceil(math.abs(delta.Y)))
@@ -449,17 +463,19 @@ function Builder.Build(id: number, generation: number): any
 					model,
 					"GrandStairTread",
 					Vector3.new(link.Width, 2, flat.Magnitude / steps + 0.15),
-					Vector3.new(center.X, top - 1.05, center.Z),
+					Vector3.new(center.X, top - 1, center.Z),
 					theme.TrimColor,
 					theme.TrimMaterial
 				)
 				tread.CFrame = CFrame.lookAt(tread.Position, tread.Position + flat)
+				structure(tread,link.Id)
 				local runner = decor(model, "GrandStairRunner", Vector3.new(link.Width * 0.36, 0.12, flat.Magnitude / steps + 0.2), Vector3.new(center.X, top + 0.08, center.Z), theme.AccentColor, theme.TrimMaterial)
 				runner.CFrame = CFrame.lookAt(runner.Position, runner.Position + flat)
 			end
 		else
 			local ramp = part(model, "TraversalRamp", Vector3.new(link.Width, 2, delta.Magnitude), mid, theme.TrimColor, theme.TrimMaterial)
-			ramp.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, -1.05, 0)
+			ramp.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, -1, 0)
+			structure(ramp,link.Id)
 			local inlay = decor(model, "RampPathInlay", Vector3.new(link.Width * 0.55, 0.12, delta.Magnitude), mid, theme.AccentColor, theme.GroundMaterial)
 			inlay.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, 0.08, 0)
 		end
@@ -468,7 +484,7 @@ function Builder.Build(id: number, generation: number): any
 			-- On the ramp's edge (not beside it, where nothing holds it up).
 			local curbOffset = right * (side * (link.Width / 2 - 1.1))
 			local curbGroup = propGroup(model, "BridgeCurb")
-			local curb = decor(curbGroup, "BridgeCurb", Vector3.new(2.2, 2.6, delta.Magnitude), mid + curbOffset, theme.TrimColor, theme.TrimMaterial)
+			local curb = decor(curbGroup, "BridgeCurb", Vector3.new(2.2, 2.6, math.max(1,delta.Magnitude-4)), mid + curbOffset, theme.TrimColor, theme.TrimMaterial)
 			curb.CFrame = CFrame.lookAt(mid + curbOffset, b + curbOffset) * CFrame.new(0, -0.4, 0)
 			local glowStrip = decor(curbGroup, "BridgeRuneStrip", Vector3.new(0.45, 0.35, delta.Magnitude - 4), mid + curbOffset, theme.LightColor, Enum.Material.SmoothPlastic, 0.3)
 			glowStrip.CFrame = CFrame.lookAt(mid + curbOffset, b + curbOffset) * CFrame.new(0, 0.95, 0)
@@ -496,14 +512,14 @@ function Builder.Build(id: number, generation: number): any
 		end
 	end
 
-	if layout.Bottom < 0 then
-		local basin = layout.Platforms.Basin
-		for _, side in { -1, 1 } do
-			local a = origin + Vector3.new(side * width * 0.37, layout.Bottom, basin.Z - basin.Depth / 2 - 28)
-			local b = origin + Vector3.new(side * width * 0.37, 0, basin.Z - basin.Depth / 2 + 4)
-			local ramp = part(model, "BasinReturnRamp", Vector3.new(32, 2, (b - a).Magnitude), (a + b) / 2, theme.GroundColor, theme.GroundMaterial)
+	for _, link in layout.ReturnLinks do
+			local a = origin + Vector3.new(link.AX,link.AY,link.AZ)
+			local b = origin + Vector3.new(link.BX,link.BY,link.BZ)
+			local ramp = part(model, "BasinReturnRamp", Vector3.new(link.Width, 2, (b - a).Magnitude), (a + b) / 2, theme.GroundColor, theme.GroundMaterial)
 			ramp.CFrame = CFrame.lookAt((a + b) / 2, b) * CFrame.new(0, -1, 0)
-		end
+			structure(ramp,link.Id)
+			landing(link.LandingA,link.Id)
+			landing(link.LandingB,link.Id)
 	end
 
 	BiomeAssets.Build(model, origin, floorSpec.BiomeId, idx, layout, theme)

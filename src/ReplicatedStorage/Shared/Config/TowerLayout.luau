@@ -6,6 +6,19 @@ local depths = {420, 470, 520, 580, 640}
 local heights = {130, 140, 155, 170, 190}
 local apexHeights = {12, 14, 18, 22, 28}
 
+-- Landings extend into the terrace, away from the inclined section. Their full
+-- footprints are shared by the builder and scenery clearance.
+local function landings(link: any, ux: number, uz: number, lengthA: number, lengthB: number)
+	link.Id = link.From.."_"..link.To
+	link.Kind = if link.From == "Crossing" and link.To == "Apex" then "STAIRS" else "RAMP"
+	link.UsableWidth = link.Width - 6.8 -- curbs plus body clearance on both sides
+	link.UX, link.UZ = ux, uz
+	link.LandingA = {AX=link.AX-ux*lengthA, AY=link.AY, AZ=link.AZ-uz*lengthA,
+		BX=link.AX+ux*.05, BY=link.AY, BZ=link.AZ+uz*.05, Width=link.Width+8}
+	link.LandingB = {AX=link.BX-ux*.05, AY=link.BY, AZ=link.BZ-uz*.05,
+		BX=link.BX+ux*lengthB, BY=link.BY, BZ=link.BZ+uz*lengthB, Width=link.Width+8}
+end
+
 function Layout.Get(index: number): any
 	assert(index >= 1 and index <= 5 and index % 1 == 0)
 	local w, d = widths[index], depths[index]
@@ -29,13 +42,28 @@ function Layout.Get(index: number): any
 		local p, q = platforms[a], platforms[b]
 		local dx, dz = q.X-p.X, q.Z-p.Z
 		local length = math.sqrt(dx*dx+dz*dz)
-		-- Start/end inside the terrace edge; keep a broad landing at each end.
-		local insetA = math.min(p.Width/2 / math.max(math.abs(dx)/length,.001), p.Depth/2 / math.max(math.abs(dz)/length,.001))-4
-		local insetB = math.min(q.Width/2 / math.max(math.abs(dx)/length,.001), q.Depth/2 / math.max(math.abs(dz)/length,.001))-4
+		local ux, uz = dx/length, dz/length
+		local function edge(terrace, halfWidth)
+			return math.min((terrace.Width/2+math.abs(uz)*halfWidth)/math.max(math.abs(ux),.001),
+				(terrace.Depth/2+math.abs(ux)*halfWidth)/math.max(math.abs(uz),.001))
+		end
+		local edgeA, edgeB = edge(p,0), edge(q,0)
+		local insetA, insetB = edgeA-4, edgeB-4
+		-- Keep the inclined deck wholly outside the UPPER slab, including its
+		-- diagonal shoulders. A flat landing bridges back into that slab.
+		if p.Y > q.Y then insetA = edge(p,14)+1 end
+		if q.Y > p.Y then insetB = edge(q,14)+1 end
 		local run = length-insetA-insetB
+		local extra = math.max(0,math.abs(q.Y-p.Y)/math.tan(math.rad(15))+1-run)
+		-- The lower end can overlap its slab without creating a raised lip:
+		-- the deck approaches that slab from above. Extend there on short links.
+		if p.Y>q.Y then insetB-=extra else insetA-=extra end
+		run=length-insetA-insetB
 		assert(math.abs(q.Y-p.Y)/run <= math.tan(math.rad(15)), a.." ramp too steep")
-		table.insert(links, {From=a, To=b, AX=p.X+dx/length*insetA, AZ=p.Z+dz/length*insetA, AY=p.Y,
-			BX=q.X-dx/length*insetB, BZ=q.Z-dz/length*insetB, BY=q.Y, Width=28})
+		local connector = {From=a, To=b, AX=p.X+ux*insetA, AZ=p.Z+uz*insetA, AY=p.Y,
+			BX=q.X-ux*insetB, BZ=q.Z-uz*insetB, BY=q.Y, Width=28}
+		landings(connector,ux,uz,math.max(20,2*math.abs(insetA-edgeA)+12),math.max(20,2*math.abs(insetB-edgeB)+12))
+		table.insert(links, connector)
 	end
 	link("Sanctuary", "Basin")
 	link("Basin", "WestGallery"); link("Basin", "EastGallery"); link("Basin", "Crossing")
@@ -73,7 +101,19 @@ function Layout.Get(index: number): any
 	for _, c in camps do
 		if c.Elite and c.Id ~= "APEX_SANCTUM" then eliteCount += 1 end
 	end
-	return {Width=w, Depth=d, Height=heights[index], Bottom=if index==5 then -6 elseif index>=3 then -4 else 0,
+	local bottom = if index==5 then -6 elseif index>=3 then -4 else 0
+	local returns = {}
+	if bottom < 0 then
+		local basin = platforms.Basin
+		for _, side in {-1,1} do
+			local x, z = side*w*.37, basin.Z-basin.Depth/2
+			local connector = {From=if side<0 then "ChasmWest" else "ChasmEast",To="Basin",
+				AX=x,AY=bottom-4,AZ=z-44,BX=x,BY=0,BZ=z-1,Width=32}
+			landings(connector,0,1,20,20)
+			table.insert(returns,connector)
+		end
+	end
+	return {Width=w, Depth=d, Height=heights[index], Bottom=bottom, ReturnLinks=returns,
 		Platforms=platforms, Links=links, Camps=camps, Sanctuary=safe, EliteCount=eliteCount}
 end
 
@@ -137,13 +177,17 @@ function Layout.Lanes(index: number): {any}
 	local function lane(id, ax, ay, az, bx, by, bz, halfWidth)
 		table.insert(lanes, {Id=id, AX=ax, AY=ay, AZ=az, BX=bx, BY=by, BZ=bz, HalfWidth=halfWidth, Below=2, Above=14})
 	end
-	for _, link in room.Links do
+	local connectors = table.clone(room.Links)
+	for _, link in room.ReturnLinks do table.insert(connectors,link) end
+	for _, link in connectors do
 		local dx, dz = link.BX-link.AX, link.BZ-link.AZ
 		local length = math.sqrt(dx*dx+dz*dz)
 		local ux, uz = dx/length, dz/length
 		lane(link.From.."_"..link.To, link.AX, link.AY, link.AZ, link.BX, link.BY, link.BZ, link.Width/2+3)
-		lane(link.From.."_"..link.To.."_LandingA", link.AX-ux*10, link.AY, link.AZ-uz*10, link.AX+ux*10, link.AY, link.AZ+uz*10, 10)
-		lane(link.From.."_"..link.To.."_LandingB", link.BX-ux*10, link.BY, link.BZ-uz*10, link.BX+ux*10, link.BY, link.BZ+uz*10, 10)
+		for _, name in {"LandingA","LandingB"} do
+			local pad = link[name]
+			lane(link.Id.."_"..name,pad.AX,pad.AY,pad.AZ,pad.BX,pad.BY,pad.BZ,pad.Width/2+3)
+		end
 	end
 	local basin, safe = room.Platforms.Basin, room.Sanctuary
 	lane("BasinCauseway", 0, basin.Y, basin.Z+basin.Depth/2, 0, basin.Y, basin.Z-basin.Depth/2, 20)
