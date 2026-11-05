@@ -62,6 +62,20 @@ local function spaced(text: string): string
 	return table.concat(words, "   ")
 end
 
+-- Rarity colours like Rare blue and Superior purple are too dark for small text on a dark card.
+local CATALOG_TEXT = Color3.fromRGB(246, 242, 255)
+local CATALOG_SUBTEXT = Color3.fromRGB(214, 204, 232)
+local function readable(color: Color3): Color3
+	return color:Lerp(Color3.new(1, 1, 1), 0.4)
+end
+
+-- Small text reads muddy with the Body role's ink stroke; drop it.
+local function plainText(obj: TextLabel)
+	obj.TextStrokeTransparency = 1
+	local ink = obj:FindFirstChild("GrimoireTextInk")
+	if ink then ink:Destroy() end
+end
+
 -- 54.9 -> "54.9", 0.1 -> "0.1", 0.05 -> "0.05"
 local function formatPercent(pct: number): string
 	if pct >= 10 then return string.format("%.1f", pct) end
@@ -1526,7 +1540,7 @@ function Forge:RenderSummonRates(luck: number)
 			pill = new("Frame", { Name = "Tier" .. tier, LayoutOrder = tier, BackgroundColor3 = GildedGrimoire.Ink, BackgroundTransparency = 0.35, BorderSizePixel = 0, ZIndex = 58 }, grid)
 			new("UICorner", { CornerRadius = UDim.new(0, 6) }, pill)
 			new("UIStroke", { Color = info.Color, Thickness = 1.4, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, pill)
-			local txt = label(pill, "", 11, info.Color, Enum.Font.GothamBold)
+			local txt = label(pill, "", 11, readable(info.Color), Enum.Font.GothamBold)
 			txt.Name = "Text"
 			txt.Size = UDim2.fromScale(1, 1)
 			txt.TextXAlignment = Enum.TextXAlignment.Center
@@ -3002,6 +3016,8 @@ function Forge:BuildArtifactsModal(gui: ScreenGui)
 	rulesLabel.Size = UDim2.new(1, -24, 0, 22)
 	rulesLabel.TextXAlignment = Enum.TextXAlignment.Left
 	rulesLabel.ZIndex = 68
+	rulesLabel.TextColor3 = CATALOG_SUBTEXT
+	plainText(rulesLabel)
 	self.ModalRulesLabel = rulesLabel
 
 	-- Filter Tabs Row
@@ -3114,12 +3130,15 @@ function Forge:RenderArtifactsRates()
 			ZIndex = 69,
 		}, self.ModalRatesRow)
 		new("UICorner", { CornerRadius = UDim.new(0, 5) }, pill)
-		new("UIStroke", { Color = rInfo.Color, Thickness = 1.2 }, pill)
+		new("UIStroke", { Color = rInfo.Color, Thickness = 1.2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, pill)
 		new("UIPadding", { PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6) }, pill)
 
-		local tLbl = label(pill, string.format("%s %s%%", rInfo.Name, formatPercent(pct)), 11, rInfo.Color, Enum.Font.GothamBold)
-		tLbl.Size = UDim2.fromScale(1, 1)
+		local tLbl = label(pill, string.format("%s %s%%", rInfo.Name, formatPercent(pct)), 12, readable(rInfo.Color), Enum.Font.GothamBold)
+		tLbl.AutomaticSize = Enum.AutomaticSize.X -- the pill takes its width from the text
+		tLbl.Size = UDim2.new(0, 0, 1, 0)
+		tLbl.TextTruncate = Enum.TextTruncate.None
 		tLbl.ZIndex = 70
+		plainText(tLbl)
 	end
 
 	if luck > 0 and self.ModalRulesLabel then
@@ -3153,7 +3172,7 @@ local function catalogCard(parent: Instance, seed: any, chance: number, owned: b
 	iconLbl.ZIndex = 70
 	showArtifact(iconLbl, seed.TemplateId)
 
-	local nameLbl = label(card, seed.DisplayName, 14, C.Text, Enum.Font.GothamBlack)
+	local nameLbl = label(card, seed.DisplayName, 14, CATALOG_TEXT, Enum.Font.GothamBlack)
 	nameLbl.Position = UDim2.fromOffset(84, 10)
 	nameLbl.Size = UDim2.new(1, -150, 0, 18)
 	nameLbl.TextXAlignment = Enum.TextXAlignment.Left
@@ -3161,24 +3180,27 @@ local function catalogCard(parent: Instance, seed: any, chance: number, owned: b
 	nameLbl.FontFace = GildedGrimoire.Fonts.Title
 
 	local variant = if seed.IsHighStat then "Enhanced  ·  +20% power" else "Standard"
-	local variantLbl = label(card, variant, 11, if seed.IsHighStat then GildedGrimoire.Text.Gold else C.TextLavender, Enum.Font.GothamBold)
+	local variantLbl = label(card, variant, 11, if seed.IsHighStat then Color3.fromRGB(255, 214, 120) else CATALOG_SUBTEXT, Enum.Font.GothamBold)
 	variantLbl.Position = UDim2.fromOffset(84, 30)
 	variantLbl.Size = UDim2.new(1, -94, 0, 15)
 	variantLbl.TextXAlignment = Enum.TextXAlignment.Left
 	variantLbl.ZIndex = 69
+	plainText(variantLbl)
 
-	local statsLbl = label(card, string.format("Power <b>%s</b>   Dmg <b>x%.2f</b>   Spd <b>+%.1f%%</b>", StatBalance.Format(stats.Power), stats.DamageMultiplier, stats["Attack Speed"]), 11, C.Text, Enum.Font.GothamMedium)
+	local statsLbl = label(card, string.format("Power <b>%s</b>   Dmg <b>x%.2f</b>   Spd <b>+%.1f%%</b>", StatBalance.Format(stats.Power), stats.DamageMultiplier, stats["Attack Speed"]), 12, CATALOG_TEXT, Enum.Font.GothamMedium)
 	statsLbl.Position = UDim2.fromOffset(84, 48)
 	statsLbl.Size = UDim2.new(1, -94, 0, 15)
 	statsLbl.TextXAlignment = Enum.TextXAlignment.Left
 	statsLbl.ZIndex = 69
+	plainText(statsLbl)
 
-	local oddsLbl = label(card, string.format("<b>%s%%</b> per pull", formatPercent(chance)), 11, info.Color, Enum.Font.GothamBold)
+	local oddsLbl = label(card, string.format("<b>%s%%</b> per pull", formatPercent(chance)), 12, readable(info.Color), Enum.Font.GothamBold)
 	oddsLbl.AnchorPoint = Vector2.new(1, 0)
 	oddsLbl.Position = UDim2.new(1, -12, 0, 10)
 	oddsLbl.Size = UDim2.fromOffset(110, 16)
 	oddsLbl.TextXAlignment = Enum.TextXAlignment.Right
 	oddsLbl.ZIndex = 69
+	plainText(oddsLbl)
 
 	if owned then
 		local stud = new("Frame", {
@@ -3197,7 +3219,7 @@ local function catalogCard(parent: Instance, seed: any, chance: number, owned: b
 		t.FontFace = GildedGrimoire.Fonts.Title
 	end
 
-	local lore = label(card, seed.Description or "", 10, C.TextMuted, Enum.Font.Gotham)
+	local lore = label(card, seed.Description or "", 11, CATALOG_SUBTEXT, Enum.Font.Gotham)
 	lore.Position = UDim2.fromOffset(10, 80)
 	lore.Size = UDim2.new(1, if owned then -84 else -20, 0, 28)
 	lore.TextWrapped = true
@@ -3205,6 +3227,7 @@ local function catalogCard(parent: Instance, seed: any, chance: number, owned: b
 	lore.TextXAlignment = Enum.TextXAlignment.Left
 	lore.TextYAlignment = Enum.TextYAlignment.Top
 	lore.ZIndex = 69
+	plainText(lore)
 end
 
 -- The catalog grouped by tier, rarest first: a tier header (live chance), then each archetype's
@@ -3236,18 +3259,19 @@ function Forge:RenderArtifactsCatalog(filter: string)
 			ZIndex = 68,
 		}, scroll)
 		GildedGrimoire.Frame(header, { Class = "Row", Tone = "Violet", Rail = info.Color, ZIndex = 68 })
-		local name = label(header, string.upper(info.Name), 15, info.Color, Enum.Font.GothamBlack)
+		local name = label(header, string.upper(info.Name), 15, readable(info.Color), Enum.Font.GothamBlack)
 		name.Position = UDim2.fromOffset(14, 0)
 		name.Size = UDim2.new(0.5, 0, 1, 0)
 		name.TextXAlignment = Enum.TextXAlignment.Left
 		name.ZIndex = 70
 		name.FontFace = GildedGrimoire.Fonts.Title
-		local odds = label(header, string.format("<b>%s%%</b> for this tier  ·  %s%% per archetype", formatPercent(rates[tier] * 100), formatPercent(rates[tier] * 100 / typeCount)), 12, C.Text, Enum.Font.GothamMedium)
+		local odds = label(header, string.format("<b>%s%%</b> for this tier  ·  %s%% per archetype", formatPercent(rates[tier] * 100), formatPercent(rates[tier] * 100 / typeCount)), 12, CATALOG_TEXT, Enum.Font.GothamMedium)
 		odds.AnchorPoint = Vector2.new(1, 0)
 		odds.Position = UDim2.new(1, -14, 0, 0)
 		odds.Size = UDim2.new(0.6, 0, 1, 0)
 		odds.TextXAlignment = Enum.TextXAlignment.Right
 		odds.ZIndex = 70
+		plainText(odds)
 
 		for _, weaponType in ipairs(ArtifactCatalog.ArchetypeOrder) do
 			if filter == "ALL" or filter == weaponType then
