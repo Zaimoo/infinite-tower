@@ -514,6 +514,14 @@ local function buildGrandTerrace(model: Model, root: CFrame)
 	local w = HubLayout.BoulevardWidth
 	flatStrip("Boulevard", root, 0, hz, 0, vz, w, 0.18, 0.36, COBBLE, Enum.Material.Cobblestone, f)
 	flatStrip("CrimsonRunner", root, 0, hz, 0, -HubLayout.IslandHalfZ * 0.2, 10, 0.4, 0.06, CRIMSON, Enum.Material.Granite, f)
+	makePart({
+		Name = "HubArrival",
+		Size = Vector3.new(10, 1, 6),
+		CFrame = root * CFrame.new(0, 0.4, 61),
+		Transparency = 1,
+		Decorative = true,
+		Parent = f,
+	})
 	for k = 0, 1 do
 		for _, side in { -1, 1 } do
 			local bz = hz - 30 - k * 50
