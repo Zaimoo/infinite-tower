@@ -499,7 +499,7 @@ function Forge:BuildAssignView(root: Frame)
 		ZIndex = 54,
 	}, headerBar)
 	new("UICorner", { CornerRadius = UDim.new(0, 8) }, sellToggleBtn)
-	new("UIStroke", { Color = Color3.fromRGB(160, 120, 50), Thickness = 1.5 }, sellToggleBtn)
+	new("UIStroke", { Color = Color3.fromRGB(160, 120, 50), Thickness = 1.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, sellToggleBtn)
 	grimoireButtonText(sellToggleBtn)
 	self.SellToggleBtn = sellToggleBtn
 	sellToggleBtn.Activated:Connect(function()
@@ -792,7 +792,7 @@ local function createCard(scroll: Instance, onAssignClick: (node: CardNode) -> (
 		ZIndex = 56,
 	}, card)
 	new("UICorner", { CornerRadius = UDim.new(0, 8) }, sellBtn)
-	local sellStroke = new("UIStroke", { Color = Color3.fromRGB(120, 90, 160), Thickness = 1.5 }, sellBtn)
+	local sellStroke = new("UIStroke", { Color = Color3.fromRGB(120, 90, 160), Thickness = 1.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, sellBtn)
 	grimoireButtonText(sellBtn)
 
 	local node: CardNode = {
