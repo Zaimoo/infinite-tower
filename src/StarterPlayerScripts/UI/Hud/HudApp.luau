@@ -228,7 +228,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 	local _, setTick = React.useState(0)
 	local screen, setScreen = React.useState(props.Root.AbsoluteSize)
 	local indexOpen, setIndexOpen = React.useState(false)
-	local indexInitialMode, setIndexInitialMode = React.useState("HEROES" :: "HEROES" | "WEAPONS")
+	local indexInitialMode, setIndexInitialMode = React.useState("HEROES" :: "HEROES" | "ARTIFACTS")
 	local facilityOpen, setFacilityOpen = React.useState(nil :: string?)
 	local shopOpen, setShopOpen = React.useState(false)
 	local backpackOpen, setBackpackOpen = React.useState(false)
@@ -286,17 +286,17 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 	end, { backpackOpen, closeBackpack })
 
 	React.useEffect(function()
-		_G.OpenHeroIndex = function(mode: ("HEROES" | "WEAPONS")?)
+		_G.OpenHeroIndex = function(mode: string?)
 			call("OpenMasterModal", "NONE")
-			if mode == "WEAPONS" or mode == "HEROES" then
-				setIndexInitialMode(mode)
+			if mode == "ARTIFACTS" or mode == "HEROES" then
+				setIndexInitialMode(mode :: any)
 			end
 			setIndexOpen(true)
 			setNewHeroes(0)
 		end
-		_G.OpenWeaponIndex = function()
+		_G.OpenArtifactIndex = function()
 			call("OpenMasterModal", "NONE")
-			setIndexInitialMode("WEAPONS")
+			setIndexInitialMode("ARTIFACTS")
 			setIndexOpen(true)
 		end
 		_G.IsHeroIndexOpen = function() return indexOpen or facilityOpen ~= nil or shopOpen end

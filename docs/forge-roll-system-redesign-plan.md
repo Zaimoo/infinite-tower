@@ -90,11 +90,11 @@ Formula: `SellPrice = Base(tier) × (1 + 0.5 × (Star − 1))`. This is unchange
 
 Expected value per pull: **≈ 445 Gold at no luck (9.9% of the 10x per-pull price)**, **≈ 657 Gold at +50% luck (14.6%)**. Add a spec that asserts `EV(MaxSummonLuck) < 0.15 × Cost10X / 10`, so later price changes can't reopen the loop.
 
-### 3.2 Promotion donors — decision needed
+### 3.2 Promotion donors — decided: same tier and type
 
-Promotion consumes copies of the **same template**. With 84 templates, a specific Exalted Enhanced weapon drops at about 0.02 × 1/6 × 0.4 ≈ **0.13%** per pull. Reaching 7★ needs 21 more copies, and the 50-item cap limits how many you can bank. Mythical stars are effectively out of reach.
+Promotion consumed copies of the **same template**. With 84 templates, a specific Exalted Enhanced weapon drops at about 0.02 × 1/6 × 0.4 ≈ **0.13%** per pull, and 7★ needs 21 donors, so high-tier stars were out of reach.
 
-Recommended: accept donors of the **same tier and weapon type** (either variant). That means 1 in 6 of a tier's drops can feed a given weapon, instead of 1 in 15 or 1 in 10. `WeaponPromotion` and the Upgrade picker filter change; CLAUDE.md's "same template" line changes with it. If you'd rather keep same-template donors, keep the rule and note the expected pull counts in the GDD.
+**Decision (done):** a donor is any weapon of the **same rarity tier and weapon type**, either variant (`WeaponPromotion.IsDonorFor`). The Upgrade picker and auto-fill use the same check; auto-fill spends low stars first and Standard before Enhanced. GDD §7 and CLAUDE.md say so.
 
 ### 3.3 Starting Gold
 
@@ -177,7 +177,7 @@ The Forge still runs on the old cosmic-purple palette (`C.Border #C084FC`, raw `
 - Body grouped by **tier**, highest first: a tier header row (rarity colour, name, live %, per-weapon %), then the Standard and Enhanced cards side by side for each archetype. Per-weapon odds = `rate(tier) / 6 × 0.6` or `× 0.4`; showing them is the clearest odds disclosure.
 - Each card: preview, name, variant tag, 1★ Power / Dmg / Spd, a one-line description (full text on hover), and an **Owned** stud if the player has one.
 
-### 5.6 Weapon Index (`HeroIndex.luau`)
+### 5.6 Artifact Index (`HeroIndex.luau`)
 
 - Acquisition line reads from config: `"Blacksmith Forge · " .. StatBalance.Format(Banner.Cost1X) .. " Gold"` instead of a hard-coded string.
 - Show the per-weapon drop rate (as in §5.5) and the sell price at 1★.
@@ -202,6 +202,8 @@ Static checking: `luau-compile` doesn't catch the `self` crash. Add a `luau-anal
 
 ## 7. Implementation order
 
+**Status (2026-11-05): all steps done.** Hotfix #151; fonts #152; server polish #153; donor rule #154; client fixes #155; Gilded Grimoire UI #156; Artifact Index acquisition #157 and rename #158; cleanup #159; Backpack caps #160; docs in the PR that lands the stack on `main`. Everything still needs a Studio playtest (§8).
+
 1. **Hotfix (P0)**: bugs 1–4 and the new sell table, with their specs. Ship this alone; it unbreaks the Assign tab and closes the Gold exploit.
 2. **Server polish**: pity luck, nil-seed guard, migration, lock remote, dead remote removal.
 3. **Client correctness**: bugs 5–6 and 9–12.
@@ -211,7 +213,7 @@ Static checking: `luau-compile` doesn't catch the `self` crash. Add a `luau-anal
 7. **Docs**: GDD (Summoning Altar line, biome boss artifact line, sell table, donor rule if changed) and CLAUDE.md core facts.
 8. `pwsh tests/run.ps1`, then a Studio playtest.
 
-Decision needed before step 2: the donor rule in §3.2.
+The donor rule (§3.2) is decided: same tier and type.
 
 ---
 

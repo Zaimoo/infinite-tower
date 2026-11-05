@@ -19,7 +19,7 @@ In traditional gacha/simulator games, 95% of summons are discarded as worthless 
    - **Up to 5 Deployed Heroes** (all 5 slots unlocked from the start) accompany the Master into the Central Hub or are independently deployed to specific floors (1–50) of the **Infinite Tower**. Heroes charge an in-combat **Skill/Stamina Gauge** (0 to 100) through a 3-tier attack cadence (Basic -> Basic -> Special -> Skill Attack at 100), and risk a debilitating **Downed state** (down until the squad changes floor, goes home or wipes) if left inside lethal AoE telegraphs.
    - **Benched Heroes** physically inhabit the player's **Fortress Plot**, resting on the bench, or can be forged powerful equipment at the **Blacksmith Forge**.
    - **Zero Dead Pulls:** Duplicate heroes across all star ranks are fed into the **Synthesis Chamber** (`SynthesisController.luau`) for EXP leveling to cap (`MaxLevel = Stars * 10`), or sacrificed at the **Promotion Altar** (`PromotionController.luau`) for **Star Promotion** ($1★ \to 7★$). Both heroes and artifacts feature a baseline inventory space limit of **50 items**.
-   - **Dual Hero Banners & Artifact Gacha:** At the **Summoning Altar**, players spend Gems on two distinct hero banners (Call of the Rift `100` / `900` Gems, A Star's Arrival `200` / `1,800` Gems for 1x / 10x): **Call of the Rift** (Permanent Banner featuring 5 stars: $1★ \to 5★$) and **A Star's Arrival** (Limited Time Banner featuring 1 character per star across all 7 stars: $1★ \to 7★$). In addition, Masters visit the **Blacksmith Forge** (`ForgeController.luau`) to summon equippable archetype weapons using **Gold** (`5,000 Gold` single / `45,000 Gold` 10x) across an **84-Weapon Roster** (2 weapons per archetype per rarity tier across 7 launch tiers, featuring Standard $1.00\times$ and Enhanced $1.20\times$ variants). All summoned weapons drop at **1★** baseline with inherent rarity tiers. At the Forge, duplicate gear and Gold are used for **Star Ascension** ($1★ \to 7★$), scaling base stats up to **`16.00x`**, while unneeded artifacts can be **sold for Gold** to manage inventory limits.
+   - **Dual Hero Banners & Artifact Gacha:** At the **Summoning Altar**, players spend Gems on two distinct hero banners (Call of the Rift `100` / `900` Gems, A Star's Arrival `200` / `1,800` Gems for 1x / 10x): **Call of the Rift** (Permanent Banner featuring 5 stars: $1★ \to 5★$) and **A Star's Arrival** (Limited Time Banner featuring 1 character per star across all 7 stars: $1★ \to 7★$). In addition, Masters visit the **Blacksmith Forge** (`ForgeController.luau`) to summon equippable archetype weapons using **Gold** (`5,000 Gold` single / `45,000 Gold` 10x) across an **84-Weapon Roster** (2 weapons per archetype per rarity tier across 7 launch tiers, featuring Standard $1.00\times$ and Enhanced $1.20\times$ variants). All summoned weapons drop at **1★** baseline with inherent rarity tiers. At the Forge, donor weapons of the same rarity and weapon type, plus Gold, are used for **Star Ascension** ($1★ \to 7★$), scaling base stats up to **`16.00x`**, while unneeded artifacts can be **sold for Gold** to manage inventory limits.
 
 2. **Tactical Master Agency Over AFK Whaling:**
    - The Master carries no personal weapon. Instead, the Master directs squads through battlefield commands—**`[Click / Tap]` Focus Target**, **`[Q]` Overdrive Whistle**, and **`[E]` Emergency Recall Whistle**—while physically hauling heavy, high-value **Relics** and cargo back to their plot.
@@ -101,8 +101,9 @@ flowchart TD
    - **Synthesis Chamber (`SynthesisController.luau`):** Place a recipient hero and up to 5 fodder heroes to level up to the hero's current cap ($\text{MaxLevel} = \text{Stars} \times 10$).
    - **Promotion Altar (`PromotionController.luau`):** When a hero reaches max level, sacrifice same-rank heroes and Promotion Stones to permanently ascend star rating ($1★ \to 5★$). The hero's inherent rarity never changes.
 3. **Artifact Star Ascension & Liquidation at the Blacksmith Forge (`ForgeController.luau`):**
-   - **Star Ascension (Multipliers):** Ascend artifacts from $1★ \to 7★$ at the Forge by sacrificing duplicate artifacts and Gold, scaling inherent base stats by progressive multipliers up to **`16.00x`**.
+   - **Star Ascension (Multipliers):** Ascend artifacts from $1★ \to 7★$ at the Forge by sacrificing donor weapons of the same rarity tier and weapon type (either variant) and Gold, scaling inherent base stats by progressive multipliers up to **`16.00x`**.
    - **Artifact Liquidation (Selling):** Sell unequipped, unlocked weapons for Gold directly from the Assign tab to maintain the 50-item inventory limit.
+   - **Locking & odds disclosure:** Any weapon can be locked from its Assign card; locked weapons can't be sold or picked by the sell quick-selects ("Common", "≤ Uncommon"), and every sale asks for confirmation (in red when it includes Exalted or better). The Summon tab shows the live, God's-Blessing-adjusted chance of each tier, and the "View all weapons & odds" window lists every weapon's exact per-pull chance (tier chance ÷ 6 archetypes × 60% Standard or 40% Enhanced). The banner has no rate-up and no end date.
 
 ### 2.3 The Macro Loop (Tower Progression & Biome Boss Conquests)
 1. **Biome Traversal & Preparation:**
@@ -323,7 +324,7 @@ The island is divided into two distinct, interconnected sectors:
 
 2. **Sector B: Grand Inner Fortress Courtyard (Core Buildings & Interior Facilities):**
    - **Courtyard Grid:** Buildings stand in a 3 x 2 grid either side of a clear walkway from the plot spawn, past the fountain, to the rear gate. Every entrance faces the fountain. North row (by the spawn): Summoning Altar and Blacksmith Forge. Middle row: the Command Post (War Banner and Architect's Table) and The Pit. South row: Training Grounds and Market, which only appear once built in the Fortress Tree.
-   - **Summoning Altar (North-West Courtyard):** Towering obsidian obelisk featuring dual runic summoning circles for the **Hero Banners** (Call of the Rift `100 Gems` single / `900 Gems` 10x; A Star's Arrival `200 Gems` / `1,800 Gems`) and **Artifact Banner** (`160 Gems` single / `1,600 Gems` 10x).
+   - **Summoning Altar (North-West Courtyard):** Towering obsidian obelisk featuring dual runic summoning circles for the **Hero Banners** (Call of the Rift `100 Gems` single / `900 Gems` 10x; A Star's Arrival `200 Gems` / `1,800 Gems`) The **Artifact Banner** is not here: it is the Gold banner at the Blacksmith Forge (`5,000 Gold` single / `45,000 Gold` 10x, §7).
    - **Plaza Fountain, God's Blessing & War Banner (Center Courtyard):** Central triple-tiered Gothic stone fountain in the courtyard center with water basins and blue glow, crowned, once unlocked, by a **marble angel statue** with raised hands holding a lantern of light. The fountain is the **God's Blessing** facility (Section 4.3, Facility D): an `[F]` prompt opens its panel, and the angel brightens with each level. 
    - **Command Post (West Courtyard):** The heraldic War Banner standard on a carved stone pedestal, with an `[F]` prompt opening the **Squad Deploy UI** (`SquadController.luau`), and beside it the **Architect's Table**, whose prompt opens the **Fortress Tree**.
    - **The Pit Sanctuary (East Courtyard):**
@@ -735,7 +736,7 @@ Supports have 70% of a Regular's HP and 50% of its ATK, move at 10 and aggro at 
 - **First clear of a floor** (the big payout): Gold ×3, `10 + 2 × floor` Gems, and a guaranteed Relic tagged to the killer.
 - **Repeat kills:** Gold at the normal rate, a 20% → 40% chance of a Relic (floor 1 → 50), and no bonus Gems, so a cleared floor is a farm, not a Gem source.
 - **Boss relics:** Alphas and Biome Bosses are the only source of the **Calamity Heart** (Alpha 2% → 5% of their relics, Biome Boss 4% → 10%); the rest are Cursed Urns and Mana Geodes. A first Biome Boss clear always drops at least a Cursed Urn.
-- **First clear of a Biome Boss** (floors 5, 10, …, 50), on top of the above: `300 × biome number` Gems and one artifact (1★) of a guaranteed minimum rarity: Rare for biomes 1–2, Superior for 3–4, Exalted for 5–6, Legendary for 7–8, Mythical for 9–10. The tier is capped at Mythical until higher tiers ship after launch. Alphas do not drop artifacts.
+- **First clear of a Biome Boss** (floors 5, 10, …, 50), on top of the above: `300 × biome number` Gems. Bosses, Alphas and other mobs never drop artifacts: every artifact comes from the Blacksmith Forge Gold banner (§7).
 - **Floor advancement:** defeating a floor's boss opens the next floor on the Floor Selector and raises the Master's Rift Attunement cap (Section 2.5).
 
 ### 5.5 Relic Drops
@@ -786,7 +787,7 @@ An **artifact is a weapon**, with one equipped artifact UUID per hero. Its rarit
 
 1. **Inherent Rarity:** Sets base weapon power and a fixed attack-speed bonus across 7 launch tiers (`Common` to `Mythical`, scalable up to 16 tiers). Rarity cannot be upgraded, rerolled, or refined on the same UUID.
 2. **Progressive Stars (1★ to 7★):** Multiply power by **1.00 / 1.60 / 2.50 / 4.00 / 6.50 / 10.00 / 16.00x**. Each promotion retains the recipient's rarity, template, and owner.
-3. **1★ Universal Baseline:** All summoned weapons drop at **1★** regardless of their inherent rarity tier. Star promotion from $1★ \to 7★$ is conducted exclusively at the Blacksmith Forge by sacrificing duplicate weapon copies of the same template.
+3. **1★ Universal Baseline:** All summoned weapons drop at **1★** regardless of their inherent rarity tier. Star promotion from $1★ \to 7★$ is conducted exclusively at the Blacksmith Forge by sacrificing donor weapons of the same rarity tier and weapon type. Either variant counts: a Standard Exalted bow can feed an Enhanced Exalted bow and vice versa. Promotion needs 1, 2, 3, 4, 5 and 6 donors per step (21 to reach 7★).
 4. **Hard 50-Item Capacity Limits:**
    - Heroes and Artifacts share a baseline inventory limit of **50 items each** (`StatBalance.MaxHeroInventory = 50`, `StatBalance.MaxArtifactInventory = 50`).
    - If a Master's current inventory plus the incoming summon count exceeds 50, the transaction is rejected by the server with an inventory full notice.
@@ -808,21 +809,23 @@ The artifact catalog features an exhaustive **84-Weapon Roster** (6 Hero Archety
 
 | Tier | Rarity | Standard Base Power (1★) | Standard ATK Speed | Enhanced Base Power (1★) | Enhanced ATK Speed | 1★ Base Sell Price |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: |
-| **1** | **Common** | 20 | $+5.0\%$ | 24 | $+6.0\%$ | 1,000 Gold |
-| **2** | **Uncommon** | 60 | $+7.5\%$ | 72 | $+9.0\%$ | 2,500 Gold |
-| **3** | **Rare** | 180 | $+10.0\%$ | 216 | $+12.0\%$ | 6,000 Gold |
-| **4** | **Superior** | 540 | $+13.0\%$ | 648 | $+15.0\%$ | 15,000 Gold |
-| **5** | **Exalted** | 1,400 | $+16.5\%$ | 1,680 | $+18.5\%$ | 40,000 Gold |
-| **6** | **Legendary** | 3,500 | $+20.0\%$ | 4,200 | $+22.5\%$ | 100,000 Gold |
-| **7** | **Mythical** | 7,000 | $+30.0\%$ | 8,400 | $+35.0\%$ | 300,000 Gold |
+| **1** | **Common** | 20 | $+5.0\%$ | 24 | $+6.0\%$ | 100 Gold |
+| **2** | **Uncommon** | 60 | $+7.5\%$ | 72 | $+9.0\%$ | 250 Gold |
+| **3** | **Rare** | 180 | $+10.0\%$ | 216 | $+12.0\%$ | 600 Gold |
+| **4** | **Superior** | 540 | $+13.0\%$ | 648 | $+15.0\%$ | 1,500 Gold |
+| **5** | **Exalted** | 1,400 | $+16.5\%$ | 1,680 | $+18.5\%$ | 5,000 Gold |
+| **6** | **Legendary** | 3,500 | $+20.0\%$ | 4,200 | $+22.5\%$ | 12,000 Gold |
+| **7** | **Mythical** | 7,000 | $+30.0\%$ | 8,400 | $+35.0\%$ | 40,000 Gold |
 
-*(Full weapon names, wielders, and concept art descriptions across all 84 items are indexed in `ArtifactCatalog.luau` and the Weapon Index compendium `HeroIndex.luau`)*.
+Sell prices are kept low on purpose: at the +50% luck cap, selling everything a pull gives returns under 15% of its cost (a spec enforces this), so summoning and selling can never make Gold.
+
+*(Full weapon names, wielders, and concept art descriptions across all 84 items are indexed in `ArtifactCatalog.luau` and the Artifact Index compendium `HeroIndex.luau`)*.
 
 Higher rarities (Tiers 8–16) retain stat formulas in [the complete weapon matrix](balance/STAT_SCALING_TABLES.md#weapon-power-by-inherent-rarity-and-promoted-stars) for future expansions; launch gameplay focuses on Tiers 1–7.
 
 ### 7.3 Weapon Star Promotion (1★ to 7★)
 
-Promotion consumes other copies of the **same weapon template**, of any rarity or star rank, plus the listed Gold/Gems. The recipient's inherent rarity never changes. Reject locked, equipped, duplicate, or recipient-as-donor UUIDs. Consumed donors return no previous investment. No random success roll applies.
+Promotion consumes other weapons of the **same rarity tier and weapon type** (either the Standard or Enhanced variant, any star rank), plus the listed Gold/Gems (`WeaponPromotion.IsDonorFor`). The recipient's inherent rarity never changes. Reject locked, equipped, duplicate, or recipient-as-donor UUIDs. Consumed donors return no previous investment. No random success roll applies.
 
 | Result stars | Power multiplier | Donors for this step | Gold | Gems |
 | --- | --- | --- | --- | --- |
@@ -859,7 +862,8 @@ The full 1★ to 7★ path consumes 21 donor weapons plus the retained original.
   3. Roll Variant (60% Standard, 40% High-Stat Enhanced).
   4. Instantiate weapon at 1★.
 - **Legacy Purge:** Crafting materials (`IronGear`, etc.) and milestone boss equipment drops are completely removed; all weapon acquisition occurs through the Forge banner and star ascension.
-- **Weapon Index Compendium:** All 84 weapons are fully cataloged in `HeroIndex.luau` with live collection tracking (`Collected X / 84 weapons`), category filtering, and 3D preview displays.
+- **Artifact Index Compendium:** All 84 weapons are cataloged in `HeroIndex.luau` under the Index's **ARTIFACTS** tab, with live collection tracking (`Collected X / 84 artifacts`), category filtering, 3D previews, and each weapon's acquisition line (price, exact per-pull chance, 1★ sell price).
+- **Inventory caps in the Backpack:** the Backpack tabs read `Artifacts X/50` and `Heroes X/50`, turning amber at 45 and red at 50 with a note on where to make room.
 
 ### 7.5 Archetype Restrictions & 3D Socketing Standards
 1. **One Weapon Type per Archetype:** Each hero holds a single equipped artifact, and each archetype can equip exactly one weapon type. There are no off-hand or accessory slots.

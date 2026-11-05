@@ -1,10 +1,11 @@
 --!strict
 -- StarterPlayerScripts/UI/ForgeController.luau
--- Authoritative Blacksmith Forge HUD featuring 3 Sections:
---   1. ASSIGN (Inventory list of all owned artifacts with stats & 1-click hero assignment)
---   2. SUMMON (Dimensional banner gacha for artifacts: 1X & 10X pulls, 50-pull pity counter, rate-up featured items)
---   3. UPGRADE ARTIFACT (Promote weapon stars with up to 6 duplicate copies)
--- Matches exact cosmic purple aesthetic with corner diamond accents, glowing borders, and responsive scaling.
+-- Blacksmith Forge, in Gilded Grimoire (docs/ui/GILDED_GRIMOIRE.md). Three tabs:
+--   1. ASSIGN: owned weapons with archetype filters, sort, lock, equip, and sell mode (quick picks + confirm).
+--   2. SUMMON: the Gold artifact banner with live odds, a Legendary/Mythical showcase, 120-pull Exalted+
+--      and 10-pull Rare+ counters, and inventory-aware 1x/10x buttons. "View all weapons & odds" opens
+--      the catalog window grouped by tier with per-weapon chances.
+--   3. UPGRADE: star promotion with up to six donors of the same rarity tier and weapon type.
 
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -14,6 +15,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local ArtifactCatalog = require(Shared:WaitForChild("Config"):WaitForChild("ArtifactCatalog"))
 local HeroCatalog = require(Shared:WaitForChild("Config"):WaitForChild("HeroCatalog"))
 local StatFormulas = require(Shared.Util.StatFormulas)
+local WeaponPromotion = require(Shared.Util.WeaponPromotion)
 local StatBalance = require(Shared.Config.StatBalance)
 local GothicBoxStyle = require(Shared.Util.GothicBoxStyle)
 local GildedGrimoire = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GildedGrimoire"))
@@ -21,8 +23,64 @@ local GrimoireIcons = require(Shared.Util.GrimoireIcons)
 local ArtifactPreview = require(script.Parent.ArtifactPreview)
 local SummonLuck = require(Shared.Util.SummonLuck)
 
+local ARCHETYPE_ICON: { [string]: string } = {
+	SWORD_SHIELD = "Vanguard",
+	DAGGERS = "Striker",
+	BOW = "Marksman",
+	AXE = "Miner",
+	STAFF = "Scholar",
+	TOME = "Healer",
+}
+
+-- Shows the weapon's 3D preview in `label`, or its drawn archetype icon when the model is missing.
+-- The label's own text is never shown (Gilded Grimoire has no emoji).
 local function showArtifact(label: TextLabel, templateId: string?)
-	label.TextTransparency = if ArtifactPreview.Show(label, templateId) then 1 else 0
+	label.Text = ""
+	local shown = ArtifactPreview.Show(label, templateId)
+	local seed = templateId and ArtifactCatalog.Seeds[templateId]
+	local want = if not shown and seed then ARCHETYPE_ICON[seed.Type] else nil
+	local fallback = label:FindFirstChild("WeaponFallbackIcon")
+	if fallback and fallback:GetAttribute("Icon") ~= want then
+		fallback:Destroy()
+		fallback = nil
+	end
+	if want and not fallback then
+		local icon = GrimoireIcons.Create(want, math.max(24, label.TextSize), label, label.ZIndex + 1)
+		icon.Name = "WeaponFallbackIcon"
+		icon.AnchorPoint = Vector2.new(0.5, 0.5)
+		icon.Position = UDim2.fromScale(0.5, 0.5)
+		icon:SetAttribute("Icon", want)
+	end
+end
+
+-- "ECHOES OF THE RIFT" -> "E C H O E S   O F   T H E   R I F T" (Gilded Grimoire screen titles).
+local function spaced(text: string): string
+	local words = {}
+	for word in string.gmatch(text, "%S+") do
+		table.insert(words, (string.gsub(word, "(.)", "%1 "):sub(1, -2)))
+	end
+	return table.concat(words, "   ")
+end
+
+-- Rarity colours like Rare blue and Superior purple are too dark for small text on a dark card.
+local CATALOG_TEXT = Color3.fromRGB(246, 242, 255)
+local CATALOG_SUBTEXT = Color3.fromRGB(214, 204, 232)
+local function readable(color: Color3): Color3
+	return color:Lerp(Color3.new(1, 1, 1), 0.4)
+end
+
+-- Small text reads muddy with the Body role's ink stroke; drop it.
+local function plainText(obj: TextLabel)
+	obj.TextStrokeTransparency = 1
+	local ink = obj:FindFirstChild("GrimoireTextInk")
+	if ink then ink:Destroy() end
+end
+
+-- 54.9 -> "54.9", 0.1 -> "0.1", 0.05 -> "0.05"
+local function formatPercent(pct: number): string
+	if pct >= 10 then return string.format("%.1f", pct) end
+	if pct >= 0.1 then return (string.gsub(string.format("%.2f", pct), "0$", "")) end
+	return string.format("%.3f", pct)
 end
 local GrimoireSummonButton = require(Shared.Util.GrimoireSummonButton)
 local HeroCard = require(script.Parent:WaitForChild("HeroCard"))
@@ -75,12 +133,12 @@ local C = {
 }
 
 local ICON_MAP: { [string]: string } = {
-	BOW = "🏹",
-	SWORD_SHIELD = "🛡️",
-	DAGGERS = "🗡️",
-	AXE = "🪓",
-	TOME = "📖",
-	STAFF = "🪄",
+	BOW = "",
+	SWORD_SHIELD = "",
+	DAGGERS = "",
+	AXE = "",
+	TOME = "",
+	STAFF = "",
 }
 
 local function new(className: string, props: { [string]: any }, parent: Instance?): any
@@ -117,6 +175,15 @@ local function applyGothicStyle(container: GuiObject, style: GothicBoxStyle.Goth
 	local options = opts or {}
 	options.Style = style
 	return GothicBoxStyle.Apply(container, options)
+end
+
+-- Re-tones a button in place (safe to call on every render): Gilded Grimoire frame in `tone`, with any
+-- legacy GothicBoxStyle gradient removed so only one fill applies.
+local function toneButton(btn: GuiObject, tone: string)
+	for _, child in btn:GetChildren() do
+		if child:IsA("UIGradient") and child.Name ~= "GrimoireFill" then child:Destroy() end
+	end
+	GildedGrimoire.Reframe(btn, { Class = "Button", Tone = tone, ZIndex = btn.ZIndex + 1 })
 end
 
 local function cornerDiamonds(parent: GuiObject, size: number, color: Color3?)
@@ -172,13 +239,16 @@ function Forge.new(gui: ScreenGui, artifactRemotes: Folder, getProfile: (() -> a
 	self.RequestSell = artifactRemotes:WaitForChild("RequestSellArtifacts") :: RemoteFunction
 	self.SellMode = false
 	self.SelectedSellUUIDs = {} :: { [string]: boolean }
+	self.RequestToggleLock = artifactRemotes:WaitForChild("RequestToggleArtifactLock") :: RemoteFunction
+	self.AssignFilter = "ALL" -- "ALL" or a WeaponType
+	self.AssignSort = "RARITY" :: "RARITY" | "STARS" | "POWER"
 	self.ArtifactsModal = nil :: any
 	self.ArtifactsModalFilter = "ALL"
 
 	self.ActiveTab = "SUMMON" :: "ASSIGN" | "SUMMON" | "UPGRADE"
 	self.SelectedAssignArtifactUUID = nil :: string?
 	self.SelectedTargetUUID = nil :: string?
-	self.FodderUUIDs = {} :: { string } -- Up to six same-template donor UUIDs.
+	self.FodderUUIDs = {} :: { string } -- Up to six donor UUIDs (same rarity tier and weapon type).
 	self.PickerMode = "NONE" :: "NONE" | "TARGET" | "FODDER" | "EQUIP_LOADOUT"
 	self.Busy = false
 
@@ -242,6 +312,26 @@ function Forge.new(gui: ScreenGui, artifactRemotes: Folder, getProfile: (() -> a
 	headerTitle.TextXAlignment = Enum.TextXAlignment.Left
 	headerTitle.ZIndex = 53
 	new("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.new(1, 1, 1), GildedGrimoire.Text.Gold) }, headerTitle)
+
+	-- Gold chip: the banner, promotions and selling all spend or pay Gold.
+	local goldChip = new("Frame", {
+		Name = "GoldChip",
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -70, 0, 16),
+		Size = UDim2.fromOffset(150, 34),
+		BorderSizePixel = 0,
+		ZIndex = 53,
+	}, root)
+	GildedGrimoire.Frame(goldChip, { Class = "Compact", Tone = "Bronze", ZIndex = 53 })
+	local goldRow, goldText = GrimoireIcons.IconText("Gold", 22, goldChip, 55)
+	goldRow.AnchorPoint = Vector2.new(0.5, 0.5)
+	goldRow.Position = UDim2.fromScale(0.5, 0.5)
+	goldText.TextColor3 = Color3.new(1, 1, 1)
+	goldText.TextSize = 17
+	GildedGrimoire.StyleText(goldText, "Number")
+	goldText:SetAttribute("Grimoire", true)
+	self.GoldChipText = goldText
+	self.LastGold = nil :: number?
 
 	-- 4. Top Header & 3 Tabs (ASSIGN | SUMMON | UPGRADE ARTIFACT)
 	local tabContainer = new("Frame", {
@@ -485,6 +575,69 @@ function Forge:BuildAssignView(root: Frame)
 	capLabel.ZIndex = 55
 	self.CapacityLabel = capLabel
 
+	-- Archetype filter chips and a sort toggle (hidden in sell mode, which needs the room).
+	local filterRow = new("Frame", {
+		Name = "FilterRow",
+		Position = UDim2.fromOffset(182, 2),
+		Size = UDim2.fromOffset(420, 30),
+		BackgroundTransparency = 1,
+		ZIndex = 54,
+	}, headerBar)
+	new("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder, VerticalAlignment = Enum.VerticalAlignment.Center }, filterRow)
+	self.AssignFilterRow = filterRow
+	self.AssignFilterChips = {}
+	local filterKeys: { string } = { "ALL" }
+	for _, weaponType in ipairs(ArtifactCatalog.ArchetypeOrder) do
+		table.insert(filterKeys, weaponType)
+	end
+	for order, key in ipairs(filterKeys) do
+		local chip = new("TextButton", {
+			Name = "Filter_" .. key,
+			LayoutOrder = order,
+			Size = UDim2.fromOffset(if key == "ALL" then 46 else 32, 30),
+			Text = if key == "ALL" then "ALL" else "",
+			Font = Enum.Font.GothamBlack,
+			TextSize = 12,
+			TextColor3 = Color3.new(1, 1, 1),
+			BorderSizePixel = 0,
+			ZIndex = 55,
+		}, filterRow)
+		applyGothicStyle(chip, "ButtonSecondary")
+		chip.FontFace = GildedGrimoire.Fonts.Title
+		chip:SetAttribute("Grimoire", true)
+		if key ~= "ALL" then
+			local icon = GrimoireIcons.Create(ARCHETYPE_ICON[key], 22, chip, 57)
+			icon.AnchorPoint = Vector2.new(0.5, 0.5)
+			icon.Position = UDim2.fromScale(0.5, 0.5)
+		end
+		chip.Activated:Connect(function()
+			self.AssignFilter = key
+			self:StyleAssignFilters()
+			self:RenderAssignView(true)
+		end)
+		self.AssignFilterChips[key] = chip
+	end
+	local sortBtn = new("TextButton", {
+		Name = "SortBtn",
+		LayoutOrder = 20,
+		Size = UDim2.fromOffset(110, 30),
+		Text = "SORT: RARITY",
+		Font = Enum.Font.GothamBlack,
+		TextSize = 12,
+		TextColor3 = Color3.new(1, 1, 1),
+		BorderSizePixel = 0,
+		ZIndex = 55,
+	}, filterRow)
+	applyGothicStyle(sortBtn, "ButtonSecondary")
+	grimoireButtonText(sortBtn)
+	self.AssignSortBtn = sortBtn
+	sortBtn.Activated:Connect(function()
+		self.AssignSort = if self.AssignSort == "RARITY" then "STARS" elseif self.AssignSort == "STARS" then "POWER" else "RARITY"
+		sortBtn.Text = "SORT: " .. self.AssignSort
+		self:RenderAssignView(true)
+	end)
+	task.defer(function() self:StyleAssignFilters() end)
+
 	local sellToggleBtn = new("TextButton", {
 		Name = "SellToggleBtn",
 		AnchorPoint = Vector2.new(1, 0),
@@ -510,7 +663,7 @@ function Forge:BuildAssignView(root: Frame)
 		Name = "SellControls",
 		AnchorPoint = Vector2.new(1, 0),
 		Position = UDim2.new(1, 0, 0, 2),
-		Size = UDim2.new(0, 480, 0, 30),
+		Size = UDim2.new(0, 600, 0, 30),
 		BackgroundTransparency = 1,
 		Visible = false,
 		ZIndex = 54,
@@ -519,7 +672,7 @@ function Forge:BuildAssignView(root: Frame)
 
 	local sellValuation = label(sellControls, "Selected 0  ·  0 Gold", 12, Color3.fromRGB(255, 220, 120), Enum.Font.GothamBold)
 	sellValuation.Position = UDim2.fromOffset(0, 0)
-	sellValuation.Size = UDim2.new(1, -260, 1, 0)
+	sellValuation.Size = UDim2.new(1, -350, 1, 0)
 	sellValuation.TextXAlignment = Enum.TextXAlignment.Right
 	sellValuation.ZIndex = 55
 	sellValuation.FontFace = GildedGrimoire.Fonts.Number
@@ -530,10 +683,10 @@ function Forge:BuildAssignView(root: Frame)
 	self.SellValuationLabel = sellValuation
 
 	local selectAllBtn = new("TextButton", {
-		Name = "SelectAllBtn",
-		Position = UDim2.new(1, -250, 0, 0),
-		Size = UDim2.fromOffset(70, 30),
-		Text = "ALL",
+		Name = "SelectCommonBtn",
+		Position = UDim2.new(1, -340, 0, 0),
+		Size = UDim2.fromOffset(80, 30),
+		Text = "COMMON",
 		Font = Enum.Font.GothamBold,
 		TextSize = 12,
 		TextColor3 = C.Text,
@@ -544,7 +697,15 @@ function Forge:BuildAssignView(root: Frame)
 	new("UICorner", { CornerRadius = UDim.new(0, 6) }, selectAllBtn)
 	grimoireButtonText(selectAllBtn)
 	selectAllBtn.Activated:Connect(function()
-		self:SelectAllUnequippedForSell()
+		self:SelectAllUnequippedForSell(1)
+	end)
+	local selectUncommonBtn = selectAllBtn:Clone()
+	selectUncommonBtn.Name = "SelectUncommonBtn"
+	selectUncommonBtn.Text = "≤ UNCOMMON"
+	selectUncommonBtn.Position = UDim2.new(1, -255, 0, 0)
+	selectUncommonBtn.Parent = sellControls
+	selectUncommonBtn.Activated:Connect(function()
+		self:SelectAllUnequippedForSell(2)
 	end)
 
 	local confirmSellBtn = new("TextButton", {
@@ -560,6 +721,7 @@ function Forge:BuildAssignView(root: Frame)
 		ZIndex = 55,
 	}, sellControls)
 	new("UICorner", { CornerRadius = UDim.new(0, 6) }, confirmSellBtn)
+	toneButton(confirmSellBtn, "Crimson")
 	grimoireButtonText(confirmSellBtn)
 	self.ConfirmSellBtn = confirmSellBtn
 	confirmSellBtn.Activated:Connect(function()
@@ -611,25 +773,17 @@ function Forge:BuildAssignView(root: Frame)
 	}, scroll)
 end
 
+-- Changes whenever any card would look different: which artifacts exist, their stars, lock and
+-- carrier (and the carrier's level). Sums used to collide, e.g. sell one Common and summon another.
 local function computeAssignSignature(artifacts: { [string]: any }?, heroes: { [string]: any }?): string
 	if not artifacts then return "nil" end
-	local count = 0
-	local equipSum = 0
-	local starSum = 0
-	local raritySum = 0
-	for _, art in pairs(artifacts) do
-		count += 1
-		starSum += (art.Star or 1)
-		raritySum += (art.Rarity or 1)
-		if art.EquippedHeroUUID then
-			equipSum += 1
-			local h = heroes and heroes[art.EquippedHeroUUID]
-			if h then
-				equipSum += (h.Level or 1)
-			end
-		end
+	local parts = {}
+	for uuid, art in pairs(artifacts) do
+		local hero = art.EquippedHeroUUID and heroes and heroes[art.EquippedHeroUUID]
+		table.insert(parts, string.format("%s:%d:%s:%s:%d", uuid, art.Star or 1, if art.Locked then "L" else "", art.EquippedHeroUUID or "", hero and hero.Level or 0))
 	end
-	return string.format("%d_%d_%d_%d", count, starSum, raritySum, equipSum)
+	table.sort(parts)
+	return table.concat(parts, "|")
 end
 
 -- One stat column on an artifact card: small caption over an inked number.
@@ -668,11 +822,13 @@ type CardNode = {
 	AssignBtn: TextButton,
 	SellBtn: TextButton,
 	SellStroke: UIStroke?,
+	LockBtn: TextButton,
+	LockIcon: Frame,
 	LastEquippedState: boolean?,
 	CurrentUUID: string?,
 }
 
-local function createCard(scroll: Instance, onAssignClick: (node: CardNode) -> ()): CardNode
+local function createCard(scroll: Instance, onAssignClick: (node: CardNode) -> (), onLockClick: (node: CardNode) -> ()): CardNode
 	local card = new("Frame", {
 		Name = "ArtCard",
 		BorderSizePixel = 0,
@@ -699,7 +855,7 @@ local function createCard(scroll: Instance, onAssignClick: (node: CardNode) -> (
 		Rotation = 90,
 		Color = ColorSequence.new(Color3.fromRGB(12, 8, 18), Color3.fromRGB(12, 8, 18)),
 	}, iconBox)
-	local iconLabel = label(iconBox, "⚔️", 72, C.Text)
+	local iconLabel = label(iconBox, "", 72, C.Text)
 	iconLabel.Position = UDim2.fromScale(0, 0)
 	iconLabel.Size = UDim2.fromScale(1, 1)
 	iconLabel.TextXAlignment = Enum.TextXAlignment.Center
@@ -709,7 +865,23 @@ local function createCard(scroll: Instance, onAssignClick: (node: CardNode) -> (
 	local infoX = 14 + PREVIEW_W + 16
 	local nameLabel = label(card, "", 21, C.Text, Enum.Font.GothamBlack)
 	nameLabel.Position = UDim2.fromOffset(infoX, 14)
-	nameLabel.Size = UDim2.new(1, -infoX - 14, 0, 28)
+	nameLabel.Size = UDim2.new(1, -infoX - 58, 0, 28)
+
+	-- Lock: a locked weapon can't be sold or picked by the quick-select buttons.
+	local lockBtn = new("TextButton", {
+		Name = "LockBtn",
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -12, 0, 12),
+		Size = UDim2.fromOffset(38, 34),
+		Text = "",
+		AutoButtonColor = false,
+		BorderSizePixel = 0,
+		ZIndex = 57,
+	}, card)
+	applyGothicStyle(lockBtn, "ButtonSecondary")
+	local lockIcon = GrimoireIcons.Create("Lock", 22, lockBtn, 59)
+	lockIcon.AnchorPoint = Vector2.new(0.5, 0.5)
+	lockIcon.Position = UDim2.fromScale(0.5, 0.5)
 	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
 	nameLabel.ZIndex = 56
 
@@ -813,12 +985,19 @@ local function createCard(scroll: Instance, onAssignClick: (node: CardNode) -> (
 		AssignBtn = assignBtn,
 		SellBtn = sellBtn,
 		SellStroke = sellStroke,
+		LockBtn = lockBtn,
+		LockIcon = lockIcon,
 		LastEquippedState = false,
 		CurrentUUID = nil,
 	}
 
 	assignBtn.Activated:Connect(function()
 		onAssignClick(node)
+	end)
+	lockBtn.Activated:Connect(function()
+		if node.CurrentUUID then
+			onLockClick(node)
+		end
 	end)
 
 	sellBtn.Activated:Connect(function()
@@ -854,10 +1033,14 @@ local function updateCard(self: any, node: CardNode, item: { UUID: string, Art: 
 	if node.IconBoxGrad then
 		node.IconBoxGrad.Color = ColorSequence.new(Color3.fromRGB(12, 8, 18), Color3.fromRGB(12, 8, 18):Lerp(rarityColor, 0.35))
 	end
-	node.IconLabel.Text = ICON_MAP[art.Type] or "⚔️"
+	node.IconLabel.Text = ICON_MAP[art.Type] or ""
 	showArtifact(node.IconLabel, art.TemplateId)
 	node.NameLabel.Text = art.DisplayName or "Artifact"
-	node.StarsLabel.Text = string.rep("★", starCount)
+	local seed = ArtifactCatalog.Seeds[art.TemplateId]
+	local variant = if seed and seed.IsHighStat then "  <font size=\"14\" color=\"#E4BA73\">ENHANCED +20%</font>" else ""
+	node.StarsLabel.RichText = true
+	node.StarsLabel.Text = string.rep("★", starCount) .. variant
+	toneButton(node.LockBtn, if art.Locked then "Gold" else "Slate")
 
 	node.Badge.BackgroundColor3 = rarityColor
 	node.BadgeText.Text = string.upper(rarityInfo.Name or "Common")
@@ -896,6 +1079,9 @@ local function updateCard(self: any, node: CardNode, item: { UUID: string, Art: 
 		else
 			node.Root.BackgroundTransparency = 0
 			local isSelected = self.SelectedSellUUIDs[uuid] == true
+			if node.CardRail then
+				node.CardRail.Color = if isSelected then GildedGrimoire.Tones.Crimson.Top else rarityColor
+			end
 			if isSelected then
 				node.SellBtn.Text = string.format("SELECTED  ·  +%s GOLD", StatBalance.Format(sellPrice))
 				node.SellBtn.BackgroundColor3 = Color3.fromRGB(160, 50, 50)
@@ -922,6 +1108,13 @@ function Forge:RenderAssignView(force: boolean?)
 	local artifacts = profile and profile.Artifacts or {}
 	local heroMap = profile and profile.Heroes or {}
 
+	for uuid in pairs(self.SelectedSellUUIDs) do
+		local art = artifacts[uuid]
+		if not art or art.EquippedHeroUUID or art.Locked then
+			self.SelectedSellUUIDs[uuid] = nil
+		end
+	end
+
 	local currentSig = computeAssignSignature(artifacts, heroMap)
 	if not force and self._lastAssignSig == currentSig then
 		return
@@ -932,17 +1125,24 @@ function Forge:RenderAssignView(force: boolean?)
 	local myGen = self.AssignRenderGeneration
 
 	local artList = {}
+	local totalCount = 0
 	for uuid, art in pairs(artifacts) do
-		table.insert(artList, { UUID = uuid, Art = art })
+		totalCount += 1
+		if self.AssignFilter == "ALL" or art.Type == self.AssignFilter then
+			table.insert(artList, { UUID = uuid, Art = art })
+		end
 	end
 
-	local artCount = #artList
+	local artCount = totalCount
 	local maxArt = StatBalance.MaxArtifactInventory or 50
 	if self.CapacityLabel then
 		self.CapacityLabel.Text = string.format("Artifacts: %d / %d", artCount, maxArt)
 		if artCount >= maxArt then
 			self.CapacityLabel.TextColor3 = Color3.fromRGB(248, 113, 113)
 			if self.CapacityStroke then self.CapacityStroke.Color = Color3.fromRGB(239, 68, 68) end
+		elseif artCount >= maxArt - 5 then
+			self.CapacityLabel.TextColor3 = Color3.fromRGB(251, 191, 36)
+			if self.CapacityStroke then self.CapacityStroke.Color = Color3.fromRGB(217, 119, 6) end
 		else
 			self.CapacityLabel.TextColor3 = C.TextLavender
 			if self.CapacityStroke then self.CapacityStroke.Color = Color3.fromRGB(80, 60, 110) end
@@ -953,6 +1153,13 @@ function Forge:RenderAssignView(force: boolean?)
 	local scroll = self.AssignScroll
 	self.AssignCardPool = self.AssignCardPool or {}
 
+	if #artList == 0 and totalCount > 0 then
+		for _, node in ipairs(self.AssignCardPool) do
+			node.Root.Visible = false
+		end
+		if self.EmptyCard then self.EmptyCard.Visible = false end
+		return
+	end
 	if #artList == 0 then
 		for _, node in ipairs(self.AssignCardPool) do
 			node.Root.Visible = false
@@ -1004,14 +1211,45 @@ function Forge:RenderAssignView(force: boolean?)
 	end
 	self.AssignGrid.CellSize = UDim2.new(0.5, -CARD_GAP, 0, CARD_H)
 
-	-- Sort: Star desc, Rarity desc, Alphabetical
+	-- Sort by the chosen key, then rarity, stars, power and name.
+	local power: { [string]: number } = {}
+	for _, item in artList do
+		power[item.UUID] = ArtifactCatalog.GetStatBreakdown(item.Art.TemplateId, item.Art.Star or 1, item.Art.Rarity or 1).Power
+	end
+	local sortKey = self.AssignSort
 	table.sort(artList, function(a, b)
-		local aStar, bStar = a.Art.Star or 1, b.Art.Star or 1
-		if aStar ~= bStar then return aStar > bStar end
 		local aR, bR = a.Art.Rarity or 1, b.Art.Rarity or 1
+		local aS, bS = a.Art.Star or 1, b.Art.Star or 1
+		local aP, bP = power[a.UUID], power[b.UUID]
+		if sortKey == "STARS" and aS ~= bS then return aS > bS end
+		if sortKey == "POWER" and aP ~= bP then return aP > bP end
 		if aR ~= bR then return aR > bR end
-		return (a.Art.DisplayName or "") < (b.Art.DisplayName or "")
+		if aS ~= bS then return aS > bS end
+		if aP ~= bP then return aP > bP end
+		if (a.Art.DisplayName or "") ~= (b.Art.DisplayName or "") then return (a.Art.DisplayName or "") < (b.Art.DisplayName or "") end
+		return a.UUID < b.UUID
 	end)
+
+	local function onLockClick(node: CardNode)
+		if self.Busy then return end
+		local uuid = node.CurrentUUID
+		local prof = self:ResolveProfile()
+		local art = uuid and prof and prof.Artifacts and prof.Artifacts[uuid]
+		if not art then return end
+		local want = not art.Locked
+		art.Locked = want -- optimistic; the server's profile sync overwrites it
+		if want then self.SelectedSellUUIDs[uuid] = nil end
+		self:RenderAssignView(true)
+		task.spawn(function()
+			local ok, success = pcall(function()
+				return self.RequestToggleLock:InvokeServer(uuid, want)
+			end)
+			if not (ok and success) then
+				art.Locked = not want
+				self:RenderAssignView(true)
+			end
+		end)
+	end
 
 	local function onAssignClick(node: CardNode)
 		if self.Busy then return end
@@ -1036,7 +1274,7 @@ function Forge:RenderAssignView(force: boolean?)
 			if not item then break end
 			local node = self.AssignCardPool[order]
 			if not node then
-				node = createCard(scroll, onAssignClick)
+				node = createCard(scroll, onAssignClick, onLockClick)
 				self.AssignCardPool[order] = node
 			end
 			updateCard(self, node, item, heroMap, order)
@@ -1084,297 +1322,159 @@ function Forge:BuildSummonView(root: Frame)
 	self.SummonView = summonView
 	new("UIScale", { Scale = LEGACY_SCALE }, summonView)
 
-	-- 1. Main Featured Banner Card (Section Panel with Notched Borders & Cosmic Rift Art)
+	-- 1. Banner panel: title, live odds, catalog button, and a showcase of the rarest weapons.
 	local bannerCard = new("Frame", {
 		Name = "BannerCard",
-		Position = UDim2.fromOffset(0, 0),
-		Size = UDim2.new(1, 0, 0, 246),
+		Size = UDim2.new(1, 0, 0, 226),
 		BorderSizePixel = 0,
 		ZIndex = 53,
 	}, summonView)
 	self.BannerCard = bannerCard
-	applyGothicStyle(bannerCard, "Panel")
+	GildedGrimoire.Frame(bannerCard, { Class = "Panel", Tone = "Violet", ZIndex = 53 })
 
-	-- Top Watermark Tag
-	local watermark = label(bannerCard, "5-STAR FEATURED HERO & ARTIFACTS", 11, Color3.fromHex("#C4B8DB"), Enum.Font.GothamBold)
-	watermark.Position = UDim2.fromOffset(20, 16)
-	watermark.Size = UDim2.new(1, -40, 0, 18)
-	watermark.TextXAlignment = Enum.TextXAlignment.Left
-	watermark.ZIndex = 56
+	local cfg = ArtifactCatalog.Banner
+	local title = label(bannerCard, spaced(cfg.Title), 22, Color3.new(1, 1, 1), Enum.Font.GothamBlack)
+	title.Position = UDim2.fromOffset(20, 14)
+	title.Size = UDim2.fromOffset(380, 30)
+	title.TextXAlignment = Enum.TextXAlignment.Left
+	title.ZIndex = 56
+	title.FontFace = GildedGrimoire.Fonts.Title
+	new("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.new(1, 1, 1), GildedGrimoire.Text.Gold) }, title)
 
-	-- Procedural Cosmic Rift & Glowing Greatsword Focal Art Container
-	local riftContainer = new("Frame", {
-		Name = "RiftArtContainer",
-		AnchorPoint = Vector2.new(1, 0.5),
-		Position = UDim2.new(1, -24, 0.5, 0),
-		Size = UDim2.fromOffset(210, 210),
-		BackgroundTransparency = 1,
-		ClipsDescendants = false,
-		ZIndex = 54,
-	}, bannerCard)
+	local subtitle = label(bannerCard, "84 weapons  ·  every archetype  ·  all drop at 1★", 12, C.TextLavender, Enum.Font.GothamMedium)
+	subtitle.Position = UDim2.fromOffset(20, 46)
+	subtitle.Size = UDim2.fromOffset(380, 18)
+	subtitle.TextXAlignment = Enum.TextXAlignment.Left
+	subtitle.ZIndex = 56
 
-	-- Arcane Vortex
-	local vortex = new("Frame", {
-		Name = "RiftVortex",
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(0.5, 0.5),
-		Size = UDim2.fromOffset(190, 190),
-		BackgroundColor3 = Color3.fromHex("#C084FC"),
-		BackgroundTransparency = 0.55,
-		BorderSizePixel = 0,
-		ZIndex = 54,
-	}, riftContainer)
-	new("UICorner", { CornerRadius = UDim.new(1, 0) }, vortex)
-	new("UIGradient", {
-		Color = ColorSequence.new({
-			ColorSequenceKeypoint.new(0.0, Color3.fromHex("#7E22CE")),
-			ColorSequenceKeypoint.new(0.35, Color3.fromHex("#C084FC")),
-			ColorSequenceKeypoint.new(0.70, Color3.fromHex("#FAF5FF")),
-			ColorSequenceKeypoint.new(1.0, Color3.fromHex("#581C87")),
-		}),
-		Transparency = NumberSequence.new({
-			NumberSequenceKeypoint.new(0.0, 0.8),
-			NumberSequenceKeypoint.new(0.4, 0.15),
-			NumberSequenceKeypoint.new(1.0, 0.85),
-		}),
-		Rotation = 45,
-	}, vortex)
-
-	-- Deep Rift Core
-	local riftCore = new("Frame", {
-		Name = "RiftCore",
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(0.5, 0.5),
-		Size = UDim2.fromOffset(94, 94),
-		BackgroundColor3 = Color3.fromHex("#07030C"),
+	-- Live drop rates, one pill per tier (filled by RenderSummonRates).
+	local rateBox = new("Frame", {
+		Name = "RateStrip",
+		Position = UDim2.fromOffset(16, 72),
+		Size = UDim2.fromOffset(392, 70),
 		BorderSizePixel = 0,
 		ZIndex = 55,
-	}, riftContainer)
-	new("UICorner", { CornerRadius = UDim.new(1, 0) }, riftCore)
-	new("UIStroke", {
-		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-		Color = Color3.fromHex("#C084FC"),
-		Thickness = 2.5,
-		Transparency = 0.2,
-	}, riftCore)
-
-	-- Glowing Greatsword Silhouette tilted at 28 degrees
-	local swordRoot = new("Frame", {
-		Name = "SwordSilhouette",
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(0.5, 0.5),
-		Size = UDim2.fromOffset(36, 140),
-		BackgroundTransparency = 1,
-		Rotation = 28,
-		ZIndex = 56,
-	}, riftContainer)
-
-	local blade = new("Frame", {
-		Name = "Blade",
-		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.fromScale(0.5, 0),
-		Size = UDim2.new(0, 16, 0, 92),
-		BackgroundColor3 = Color3.fromHex("#2E1065"),
-		BorderSizePixel = 0,
-		ZIndex = 56,
-	}, swordRoot)
-	new("UICorner", { CornerRadius = UDim.new(0, 3) }, blade)
-	new("UIStroke", {
-		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-		Color = Color3.fromHex("#F0ABFC"),
-		Thickness = 1.8,
-	}, blade)
-
-	local spine = new("Frame", {
-		Name = "Spine",
-		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.fromScale(0.5, 0.05),
-		Size = UDim2.new(0, 2, 0, 82),
-		BackgroundColor3 = Color3.fromHex("#FAF5FF"),
-		BorderSizePixel = 0,
-		ZIndex = 57,
-	}, blade)
-	new("UICorner", { CornerRadius = UDim.new(1, 0) }, spine)
-
-	local guard = new("Frame", {
-		Name = "Crossguard",
-		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 90),
-		Size = UDim2.fromOffset(40, 8),
-		BackgroundColor3 = Color3.fromHex("#581C87"),
-		BorderSizePixel = 0,
-		ZIndex = 57,
-	}, swordRoot)
-	new("UICorner", { CornerRadius = UDim.new(0, 2) }, guard)
-	new("UIStroke", {
-		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-		Color = Color3.fromHex("#E879F9"),
-		Thickness = 1.5,
-	}, guard)
-
-	local hilt = new("Frame", {
-		Name = "Hilt",
-		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 98),
-		Size = UDim2.fromOffset(6, 22),
-		BackgroundColor3 = Color3.fromHex("#3B0764"),
-		BorderSizePixel = 0,
-		ZIndex = 57,
-	}, swordRoot)
-	new("UICorner", { CornerRadius = UDim.new(0, 1) }, hilt)
-
-	local pommel = new("Frame", {
-		Name = "Pommel",
-		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 120),
-		Size = UDim2.fromOffset(10, 10),
-		BackgroundColor3 = Color3.fromHex("#F0ABFC"),
-		BorderSizePixel = 0,
-		Rotation = 45,
-		ZIndex = 58,
-	}, swordRoot)
-	new("UICorner", { CornerRadius = UDim.new(0, 2) }, pommel)
-
-	-- Banner Bottom Row (Title + Rate-Up Chips)
-	local bannerBottom = new("Frame", {
-		Name = "BannerBottomRow",
-		AnchorPoint = Vector2.new(0, 1),
-		Position = UDim2.new(0, 20, 1, -14),
-		Size = UDim2.new(1, -40, 0, 56),
-		BackgroundTransparency = 1,
-		ZIndex = 56,
 	}, bannerCard)
-
-	local bannerTitle = label(bannerBottom, "ECHOES OF THE RIFT", 26, C.GoldYellow, Enum.Font.GothamBlack)
-	bannerTitle.Position = UDim2.fromOffset(0, 0)
-	bannerTitle.Size = UDim2.new(0, 320, 0, 28)
-	bannerTitle.TextXAlignment = Enum.TextXAlignment.Left
-	bannerTitle.ZIndex = 56
-
-	-- Rate-Up Row with supported symbol and chips
-	local rateUpContainer = new("Frame", {
-		Name = "RateUpRow",
-		Position = UDim2.fromOffset(0, 30),
-		Size = UDim2.new(1, 0, 0, 24),
+	GildedGrimoire.Frame(rateBox, { Class = "Row", Tone = "Deep", ZIndex = 55 })
+	local rateGrid = new("Frame", {
+		Name = "Pills",
 		BackgroundTransparency = 1,
-		ZIndex = 56,
-	}, bannerBottom)
-
-	local rateUpLayout = new("UIListLayout", {
-		FillDirection = Enum.FillDirection.Horizontal,
-		VerticalAlignment = Enum.VerticalAlignment.Center,
+		Position = UDim2.fromOffset(10, 8),
+		Size = UDim2.new(1, -20, 1, -16),
+		ZIndex = 57,
+	}, rateBox)
+	new("UIGridLayout", {
+		CellSize = UDim2.new(0.25, -4, 0.5, -3),
+		CellPadding = UDim2.fromOffset(4, 6),
 		SortOrder = Enum.SortOrder.LayoutOrder,
-		Padding = UDim.new(0, 8),
-	}, rateUpContainer)
+	}, rateGrid)
+	self.SummonRateGrid = rateGrid
 
-	local rateUpPrefix = label(rateUpContainer, "Rate Up:", 12, Color3.fromHex("#C084FC"), Enum.Font.GothamBold)
-	rateUpPrefix.LayoutOrder = 1
-	rateUpPrefix.AutomaticSize = Enum.AutomaticSize.X
-	rateUpPrefix.Size = UDim2.new(0, 0, 1, 0)
-
-	local chip1 = new("Frame", {
-		Name = "ChipGold",
-		LayoutOrder = 2,
-		BackgroundColor3 = Color3.fromRGB(18, 13, 26),
-		BackgroundTransparency = 0.15,
-		BorderSizePixel = 0,
-		AutomaticSize = Enum.AutomaticSize.X,
-		Size = UDim2.new(0, 0, 0, 22),
-		ZIndex = 56,
-	}, rateUpContainer)
-	new("UICorner", { CornerRadius = UDim.new(1, 0) }, chip1)
-	new("UIStroke", { Color = Color3.fromHex("#EAB308"), Thickness = 1 }, chip1)
-	new("UIPadding", { PaddingLeft = UDim.new(0, 9), PaddingRight = UDim.new(0, 9) }, chip1)
-	local chip1Lbl = label(chip1, "Blade of the Rift (Tier 6)", 11, Color3.fromHex("#FDE047"), Enum.Font.GothamBold)
-	chip1Lbl.Size = UDim2.fromScale(1, 1)
-
-	local chip2 = new("Frame", {
-		Name = "ChipViolet",
-		LayoutOrder = 3,
-		BackgroundColor3 = Color3.fromRGB(18, 13, 26),
-		BackgroundTransparency = 0.15,
-		BorderSizePixel = 0,
-		AutomaticSize = Enum.AutomaticSize.X,
-		Size = UDim2.new(0, 0, 0, 22),
-		ZIndex = 56,
-	}, rateUpContainer)
-	new("UICorner", { CornerRadius = UDim.new(1, 0) }, chip2)
-	new("UIStroke", { Color = Color3.fromHex("#A855F7"), Thickness = 1 }, chip2)
-	new("UIPadding", { PaddingLeft = UDim.new(0, 9), PaddingRight = UDim.new(0, 9) }, chip2)
-	local chip2Lbl = label(chip2, "Genesis Sunderer (Tier 7)", 11, Color3.fromHex("#E9D5FF"), Enum.Font.GothamBold)
-	chip2Lbl.Size = UDim2.fromScale(1, 1)
+	local blessing = label(bannerCard, "", 12, GildedGrimoire.Text.Gold, Enum.Font.GothamBold)
+	blessing.Position = UDim2.fromOffset(20, 148)
+	blessing.Size = UDim2.fromOffset(380, 18)
+	blessing.TextXAlignment = Enum.TextXAlignment.Left
+	blessing.ZIndex = 56
+	self.SummonBlessingLabel = blessing
 
 	local viewArtBtn = new("TextButton", {
 		Name = "ViewArtifactsBtn",
-		AnchorPoint = Vector2.new(1, 0.5),
-		Position = UDim2.new(1, 0, 0.5, 0),
-		Size = UDim2.fromOffset(145, 34),
-		BackgroundColor3 = Color3.fromRGB(28, 20, 42),
-		Text = "VIEW ARTIFACTS",
+		Position = UDim2.fromOffset(16, 176),
+		Size = UDim2.fromOffset(250, 36),
+		Text = "VIEW ALL WEAPONS & ODDS",
 		Font = Enum.Font.GothamBlack,
-		TextSize = 13,
-		TextColor3 = C.GoldYellow,
+		TextSize = 14,
+		TextColor3 = Color3.new(1, 1, 1),
 		BorderSizePixel = 0,
 		ZIndex = 58,
-	}, bannerBottom)
-	new("UICorner", { CornerRadius = UDim.new(0, 8) }, viewArtBtn)
-	new("UIStroke", { Color = C.GoldYellow, Thickness = 1.5 }, viewArtBtn)
+	}, bannerCard)
+	applyGothicStyle(viewArtBtn, "ButtonSecondary")
+	viewArtBtn.FontFace = GildedGrimoire.Fonts.Title
+	viewArtBtn.TextStrokeColor3 = GildedGrimoire.Ink
+	viewArtBtn.TextStrokeTransparency = 0.3
+	viewArtBtn:SetAttribute("Grimoire", true)
 	viewArtBtn.Activated:Connect(function()
 		self:OpenArtifactsModal()
 	end)
 
-	-- 2. Info Row (Guaranteed Pity & Timer)
-	local infoRow = new("Frame", {
-		Name = "InfoRow",
-		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(0, 252),
-		Size = UDim2.new(1, 0, 0, 18),
-		ZIndex = 53,
-	}, summonView)
+	-- Showcase: cycles the Legendary and Mythical weapons (real items, not a fake rate-up).
+	local showcase = new("Frame", {
+		Name = "Showcase",
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -16, 0, 16),
+		Size = UDim2.fromOffset(176, 196),
+		BorderSizePixel = 0,
+		ZIndex = 55,
+	}, bannerCard)
+	GildedGrimoire.Frame(showcase, { Class = "Card", Tone = "Deep", ZIndex = 55 })
+	self.ShowcaseRail = GildedGrimoire.StateStroke(showcase)
+	local showcaseHost = label(showcase, "", 48, C.Text)
+	showcaseHost.Position = UDim2.fromOffset(8, 8)
+	showcaseHost.Size = UDim2.new(1, -16, 0, 132)
+	showcaseHost.ZIndex = 57
+	self.ShowcaseHost = showcaseHost
+	local showcaseName = label(showcase, "", 13, C.Text, Enum.Font.GothamBold)
+	showcaseName.Position = UDim2.fromOffset(6, 144)
+	showcaseName.Size = UDim2.new(1, -12, 0, 18)
+	showcaseName.TextXAlignment = Enum.TextXAlignment.Center
+	showcaseName.ZIndex = 57
+	self.ShowcaseName = showcaseName
+	local showcaseTier = label(showcase, "", 11, C.Text, Enum.Font.GothamBold)
+	showcaseTier.Position = UDim2.fromOffset(6, 166)
+	showcaseTier.Size = UDim2.new(1, -12, 0, 16)
+	showcaseTier.TextXAlignment = Enum.TextXAlignment.Center
+	showcaseTier.ZIndex = 57
+	self.ShowcaseTier = showcaseTier
 
-	local pityLabel = label(infoRow, "Guaranteed Exalted+ in: <b>120</b> summons", 13, Color3.fromHex("#A396BA"), Enum.Font.GothamMedium)
-	pityLabel.Position = UDim2.fromOffset(2, 0)
-	pityLabel.Size = UDim2.new(0.5, 0, 1, 0)
+	self.ShowcaseIds = {}
+	for _, id in ipairs(ArtifactCatalog.CatalogOrder) do
+		local seed = ArtifactCatalog.Seeds[id]
+		if seed and seed.RarityTier >= 6 then table.insert(self.ShowcaseIds, id) end
+	end
+	self.ShowcaseIndex = 0
+	self:AdvanceShowcase()
+	task.spawn(function()
+		while self.Root and self.Root.Parent do
+			task.wait(3.5)
+			if self.Root.Visible and summonView.Visible then
+				self:AdvanceShowcase()
+			end
+		end
+	end)
+
+	-- 2. Pity and status.
+	local pityLabel = label(summonView, "Exalted+ guaranteed in <b>120</b>", 13, C.TextLavender, Enum.Font.GothamMedium)
+	pityLabel.Position = UDim2.fromOffset(2, 234)
+	pityLabel.Size = UDim2.fromOffset(300, 18)
 	pityLabel.TextXAlignment = Enum.TextXAlignment.Left
+	pityLabel.ZIndex = 53
 	self.PityLabel = pityLabel
 
-	local timerLabel = label(infoRow, "Event Ends: <b>2d 14h</b>", 13, Color3.fromHex("#A396BA"), Enum.Font.GothamMedium)
-	timerLabel.AnchorPoint = Vector2.new(1, 0)
-	timerLabel.Position = UDim2.new(1, -2, 0, 0)
-	timerLabel.Size = UDim2.new(0.5, 0, 1, 0)
-	timerLabel.TextXAlignment = Enum.TextXAlignment.Right
+	local statusLabel = label(summonView, "Artifacts: <b>0 / 50</b>", 13, C.TextLavender, Enum.Font.GothamMedium)
+	statusLabel.AnchorPoint = Vector2.new(1, 0)
+	statusLabel.Position = UDim2.new(1, -2, 0, 234)
+	statusLabel.Size = UDim2.fromOffset(310, 18)
+	statusLabel.TextXAlignment = Enum.TextXAlignment.Right
+	statusLabel.ZIndex = 53
+	self.SummonStatusLabel = statusLabel
 
-	-- Pity Bar Progress Track
-	local pityTrack = new("Frame", {
-		Name = "PityBarTrack",
-		Position = UDim2.fromOffset(0, 272),
-		Size = UDim2.new(0, 340, 0, 8),
-		BackgroundColor3 = Color3.fromHex("#120D1A"),
-		BorderSizePixel = 0,
-		ZIndex = 53,
-	}, summonView)
-	new("UICorner", { CornerRadius = UDim.new(1, 0) }, pityTrack)
-	new("UIStroke", { Color = Color3.fromHex("#6D5B87"), Thickness = 1 }, pityTrack)
-
-	local pityFill = new("Frame", {
-		Name = "PityBarFill",
-		Position = UDim2.fromOffset(0, 0),
-		Size = UDim2.new(0.02, 0, 1, 0),
-		BackgroundColor3 = Color3.fromHex("#C084FC"),
-		BorderSizePixel = 0,
-		ZIndex = 54,
-	}, pityTrack)
-	new("UICorner", { CornerRadius = UDim.new(1, 0) }, pityFill)
-	new("UIGradient", {
-		Color = ColorSequence.new({
-			ColorSequenceKeypoint.new(0.0, Color3.fromHex("#7E22CE")),
-			ColorSequenceKeypoint.new(0.6, Color3.fromHex("#C084FC")),
-			ColorSequenceKeypoint.new(1.0, Color3.fromHex("#FEF08A")),
-		}),
-	}, pityFill)
+	local pityTrack, pityFill = GildedGrimoire.Bar(summonView, C.GoldYellow)
+	pityTrack.Position = UDim2.fromOffset(2, 258)
+	pityTrack.Size = UDim2.fromOffset(360, 12)
+	pityTrack.ZIndex = 53
+	pityFill.ZIndex = 54
+	pityFill.Size = UDim2.fromScale(0.02, 1)
 	self.PityFill = pityFill
 
-	-- 3. Summon Buttons Row (SUMMON 1X / SUMMON 10X)
+	local rareLabel = label(summonView, "Rare+ guaranteed in <b>10</b>", 12, C.TextLavender, Enum.Font.GothamMedium)
+	rareLabel.AnchorPoint = Vector2.new(1, 0)
+	rareLabel.Position = UDim2.new(1, -2, 0, 255)
+	rareLabel.Size = UDim2.fromOffset(230, 18)
+	rareLabel.TextXAlignment = Enum.TextXAlignment.Right
+	rareLabel.ZIndex = 53
+	self.RarePityLabel = rareLabel
+
+	-- 3. Summon buttons.
 	local btnRow = new("Frame", {
 		Name = "ButtonRow",
 		Position = UDim2.fromOffset(0, 288),
@@ -1383,11 +1483,10 @@ function Forge:BuildSummonView(root: Frame)
 		ZIndex = 53,
 	}, summonView)
 
-	-- SUMMON 1X / 10X: Gold currency gacha buttons (5,000 Gold / 45,000 Gold)
 	local btn1X = GrimoireSummonButton.new(btnRow, {
 		Name = "Summon1XBtn",
 		Title = "SUMMON 1X",
-		Cost = 5000,
+		Cost = StatBalance.Format(cfg.Cost1X),
 		Icon = "Gold",
 		Position = UDim2.fromScale(0, 0),
 		Size = UDim2.new(0.485, 0, 1, 0),
@@ -1402,7 +1501,7 @@ function Forge:BuildSummonView(root: Frame)
 	local btn10X = GrimoireSummonButton.new(btnRow, {
 		Name = "Summon10XBtn",
 		Title = "SUMMON 10X",
-		Cost = 45000,
+		Cost = StatBalance.Format(cfg.Cost10X),
 		Icon = "Gold",
 		AnchorPoint = Vector2.new(1, 0),
 		Position = UDim2.new(1, 0, 0, 0),
@@ -1416,19 +1515,102 @@ function Forge:BuildSummonView(root: Frame)
 	self.Summon10XBtn = btn10X.Root
 end
 
+function Forge:AdvanceShowcase()
+	local ids = self.ShowcaseIds
+	if not ids or #ids == 0 then return end
+	self.ShowcaseIndex = (self.ShowcaseIndex % #ids) + 1
+	local seed = ArtifactCatalog.Seeds[ids[self.ShowcaseIndex]]
+	local info = ArtifactCatalog.GetRarityInfo(seed.RarityTier)
+	showArtifact(self.ShowcaseHost, seed.TemplateId)
+	self.ShowcaseName.Text = seed.DisplayName
+	self.ShowcaseTier.Text = string.format("%s  ·  %s", string.upper(info.Name), seed.Variant or "Standard")
+	self.ShowcaseTier.TextColor3 = info.Color
+	if self.ShowcaseRail then self.ShowcaseRail.Color = info.Color end
+end
+
+-- One rarity-coloured pill per tier with the live (luck-boosted) chance.
+function Forge:RenderSummonRates(luck: number)
+	local grid = self.SummonRateGrid
+	if not grid then return end
+	local rates = SummonLuck.ApplyLuck(ArtifactCatalog.Banner.BaseRarityRates, luck)
+	for tier = 1, #rates do
+		local info = ArtifactCatalog.GetRarityInfo(tier)
+		local pill = grid:FindFirstChild("Tier" .. tier)
+		if not pill then
+			pill = new("Frame", { Name = "Tier" .. tier, LayoutOrder = tier, BackgroundColor3 = GildedGrimoire.Ink, BackgroundTransparency = 0.35, BorderSizePixel = 0, ZIndex = 58 }, grid)
+			new("UICorner", { CornerRadius = UDim.new(0, 6) }, pill)
+			new("UIStroke", { Color = info.Color, Thickness = 1.4, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, pill)
+			local txt = label(pill, "", 11, readable(info.Color), Enum.Font.GothamBold)
+			txt.Name = "Text"
+			txt.Size = UDim2.fromScale(1, 1)
+			txt.TextXAlignment = Enum.TextXAlignment.Center
+			txt.ZIndex = 59
+			txt.FontFace = GildedGrimoire.Fonts.Number
+		end
+		(pill:FindFirstChild("Text") :: TextLabel).Text = string.format("%s %s%%", info.Name, formatPercent(rates[tier] * 100))
+	end
+end
+
+-- Why a pull of `count` can't happen right now, or nil if it can.
+function Forge:SummonBlockReason(count: number): string?
+	local profile = self:ResolveProfile()
+	if not profile then return "Profile not loaded" end
+	local cfg = ArtifactCatalog.Banner
+	local cost = if count == 10 then cfg.Cost10X else cfg.Cost1X
+	local owned = 0
+	for _ in pairs(profile.Artifacts or {}) do owned += 1 end
+	local cap = StatBalance.MaxArtifactInventory
+	if owned + count > cap then
+		return if owned >= cap
+			then string.format("Inventory full (%d / %d): sell or promote weapons", owned, cap)
+			else string.format("Room for %d more: a 10x needs 10 free slots", cap - owned)
+	end
+	if ((profile.Currencies and profile.Currencies.Gold) or 0) < cost then
+		return string.format("Need %s Gold", StatBalance.Format(cost))
+	end
+	return nil
+end
+
 function Forge:RenderSummonView()
 	local profile = self:ResolveProfile()
+	local owned = 0
+	for _ in pairs((profile and profile.Artifacts) or {}) do owned += 1 end
+	local cap = StatBalance.MaxArtifactInventory
+	local block1, block10 = self:SummonBlockReason(1), self:SummonBlockReason(10)
+	for btn, blocked in { [self.Summon1XBtn] = block1, [self.Summon10XBtn] = block10 } do
+		if btn then
+			toneButton(btn, if blocked then "Slate" else "Action")
+		end
+	end
+	if self.SummonStatusLabel then
+		local reason = block10 or block1
+		local isFull = owned + 10 > cap
+		self.SummonStatusLabel.Text = if isFull and reason then reason else string.format("Artifacts: <b>%d / %d</b>", owned, cap)
+		self.SummonStatusLabel.TextColor3 = if owned >= cap then C.Red elseif owned >= cap - 5 then C.GoldDeep else C.TextLavender
+	end
 	local pity = profile and profile.ArtifactBannerPity or 0
 	local maxPity = ArtifactCatalog.Banner.MaxPity or 120
 	local remaining = math.max(1, maxPity - (pity % maxPity))
 	local progress = math.clamp((maxPity - remaining) / maxPity, 0.02, 1)
 
 	if self.PityLabel then
-		self.PityLabel.Text = string.format("Guaranteed Exalted+ in: <b>%d</b> summons", remaining)
+		self.PityLabel.Text = string.format("Exalted+ guaranteed in <b>%d</b>", remaining)
 	end
 	if self.PityFill then
 		self.PityFill.Size = UDim2.new(progress, 0, 1, 0)
 	end
+	if self.RarePityLabel then
+		local rarePity = profile and profile.ArtifactBanner10Pity or 0
+		self.RarePityLabel.Text = string.format("Rare+ guaranteed in <b>%d</b>", math.max(1, 10 - rarePity))
+	end
+	local luck = SummonLuck.ForProfile(profile)
+	self:RenderSummonRates(luck)
+	if self.SummonBlessingLabel then
+		self.SummonBlessingLabel.Text = if luck > 0
+			then string.format("God's Blessing: +%s%% to every tier above Common", formatPercent(luck * 100))
+			else "Assign Acolytes to God's Blessing to raise these odds"
+	end
+	self:RenderGoldChip()
 end
 
 function Forge:PerformSummon(count: number)
@@ -1441,8 +1623,12 @@ function Forge:PerformSummon(count: number)
 		local row = self.Summon1XBtn and self.Summon1XBtn.Parent
 		UIFeel.Deny(if row and row:IsA("GuiObject") then row else nil)
 	end
-	if not profile or not profile.Currencies or (profile.Currencies.Gold or 0) < cost then
+	if not profile or self:SummonBlockReason(count) then
 		deny()
+		if self.SummonStatusLabel then
+			self.SummonStatusLabel.Text = self:SummonBlockReason(count) or ""
+			UIFeel.Pop(self.SummonStatusLabel, 0.12)
+		end
 		if self.PityLabel then
 			UIFeel.Pop(self.PityLabel, 0.12)
 		end
@@ -1461,7 +1647,7 @@ function Forge:PerformSummon(count: number)
 		self.Busy = false
 		if ok and success and summonedList and #summonedList > 0 then
 			if pityRemaining and self.PityLabel then
-				self.PityLabel.Text = string.format("Guaranteed Exalted+ in: <b>%d</b> summons", pityRemaining)
+				self.PityLabel.Text = string.format("Exalted+ guaranteed in <b>%d</b>", pityRemaining)
 			end
 			self:ShowSummonResults(summonedList, ownedBefore)
 		else
@@ -1533,7 +1719,7 @@ function Forge:BuildUpgradeView(root: Frame)
 	applyGothicStyle(targetSlot, "Slot", { State = "Filled" })
 	self.TargetSlotFrame = targetSlot
 
-	local targetIcon = label(targetSlot, "🪓", 56, C.Text)
+	local targetIcon = label(targetSlot, "", 56, C.Text)
 	targetIcon.Name = "TargetIcon"
 	targetIcon.Position = UDim2.fromScale(0, 0)
 	targetIcon.Size = UDim2.fromScale(1, 1)
@@ -1681,7 +1867,7 @@ function Forge:BuildUpgradeView(root: Frame)
 		ZIndex = 54,
 	}, previewPanel)
 
-	local footerLabel = label(previewPanel, "Copies: <b>0/1</b>  |  Gold: <b>500</b>  |  Gems: <b>0</b>", 12, Color3.fromHex("#A396BA"), Enum.Font.Gotham)
+	local footerLabel = label(previewPanel, "Donors: <b>0/1</b>  ·  Gold: <b>500</b>", 12, Color3.fromHex("#A396BA"), Enum.Font.Gotham)
 	footerLabel.Position = UDim2.fromOffset(16, 160)
 	footerLabel.Size = UDim2.new(1, -32, 0, 24)
 	footerLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -1799,7 +1985,7 @@ function Forge:RenderUpgradeView()
 
 	local target = self.SelectedTargetUUID and artifacts[self.SelectedTargetUUID]
 	if not target then
-		self.TargetIcon.Text = "⚔️"
+		self.TargetIcon.Text = ""
 		showArtifact(self.TargetIcon, nil)
 		self.TargetName.Text = "NO ARTIFACT"
 		self.TargetLevel.Text = "Click to pick"
@@ -1813,8 +1999,8 @@ function Forge:RenderUpgradeView()
 			self.StatRows.DPS.Old.Text = "—"
 			self.StatRows.DPS.New.Text = "—"
 		end
-		self.FodderReqLabel.Text = "Copies: <b>0/0</b>  |  Gold: <b>0</b>  |  Gems: <b>0</b>"
-		applyGothicStyle(self.EnhanceBtn, "ButtonPrimary", { Disabled = true })
+		self.FodderReqLabel.Text = "Donors: <b>0/0</b>"
+		toneButton(self.EnhanceBtn, "Slate")
 		self.EnhanceBtn.Text = "NO ARTIFACT SELECTED"
 		return
 	end
@@ -1822,11 +2008,23 @@ function Forge:RenderUpgradeView()
 	local currentStar = target.Star or 1
 	local maxStars = ArtifactCatalog.MaxStars or 7
 	local reqFodder = ArtifactCatalog.GetFodderRequirement(currentStar)
+
+	-- Drop donors that were sold, equipped, locked or no longer match the target.
+	for i = #self.FodderUUIDs, 1, -1 do
+		local uuid = self.FodderUUIDs[i]
+		local art = artifacts[uuid]
+		if uuid == self.SelectedTargetUUID or not art or art.EquippedHeroUUID or art.Locked or not WeaponPromotion.IsDonorFor(target, art) then
+			table.remove(self.FodderUUIDs, i)
+		end
+	end
+	while #self.FodderUUIDs > reqFodder do
+		table.remove(self.FodderUUIDs)
+	end
 	local rarityInfo = ArtifactCatalog.GetRarityInfo(target.Rarity or 1)
 	local rarityColor = rarityInfo.Color
 
 	-- Update Target Slot Card
-	local iconChar = ICON_MAP[target.Type] or "⚔️"
+	local iconChar = ICON_MAP[target.Type] or ""
 	self.TargetIcon.Text = iconChar
 	showArtifact(self.TargetIcon, target.TemplateId)
 	self.TargetName.Text = target.DisplayName or "Artifact"
@@ -1878,27 +2076,27 @@ function Forge:RenderUpgradeView()
 	if isMaxRank then
 		self.FodderReqLabel.Text = "<font color=\"#E4BA73\"><b>MAXIMUM 7-STAR RANK REACHED</b></font>"
 		self.EnhanceBtn.Text = "MAX STARS REACHED"
-		applyGothicStyle(self.EnhanceBtn, "ButtonPrimary", { Disabled = true })
+		toneButton(self.EnhanceBtn, "Slate")
 	else
 		self.FodderReqLabel.Text = string.format(
-			"Copies: <font color=\"%s\"><b>%d/%d</b></font>  |  Gold: <b>%s</b>  |  Gems: <b>%d</b>",
+			"Donors: <font color=\"%s\"><b>%d/%d</b></font>  ·  Gold: <b>%s</b>%s",
 			copiesColor,
 			copiesCount,
 			reqFodder,
 			StatBalance.Format(cost.Gold),
-			cost.Gems
+			if (cost.Gems or 0) > 0 then string.format("  ·  Gems: <b>%s</b>", StatBalance.Format(cost.Gems)) else ""
 		)
 
 		if not (profile and profile.Unlocks and profile.Unlocks.Forge) then
 			-- Phase 4 onboarding: weapon promotion opens after clearing Floor 1.
 			self.EnhanceBtn.Text = "CLEAR FLOOR 1 TO UNLOCK PROMOTION"
-			applyGothicStyle(self.EnhanceBtn, "ButtonPrimary", { Disabled = true })
+			toneButton(self.EnhanceBtn, "Slate")
 		elseif copiesCount >= reqFodder and reqFodder > 0 then
 			self.EnhanceBtn.Text = string.format("PROMOTE TO %d STARS (%d/%d)", currentStar + 1, copiesCount, reqFodder)
-			applyGothicStyle(self.EnhanceBtn, "ButtonPrimary", { Variant = "Gold", Disabled = false })
+			toneButton(self.EnhanceBtn, "Gold")
 		else
 			self.EnhanceBtn.Text = string.format("PROMOTE TO %d STARS (%d/%d)", currentStar + 1, copiesCount, reqFodder)
-			applyGothicStyle(self.EnhanceBtn, "ButtonPrimary", { Disabled = true })
+			toneButton(self.EnhanceBtn, "Slate")
 		end
 	end
 
@@ -1923,7 +2121,7 @@ function Forge:RenderUpgradeView()
 				local fRarity = ArtifactCatalog.GetRarityInfo(fArt.Rarity or 1)
 				applyGothicStyle(slotFrame, "Slot", { State = "Filled", AccentColor = fRarity.Color })
 				if plusLabel then
-					plusLabel.Text = ICON_MAP[fArt.Type] or "⚔️"
+					plusLabel.Text = ICON_MAP[fArt.Type] or ""
 					plusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 				end
 				if nameLabel then
@@ -1966,19 +2164,21 @@ function Forge:AutoFillFodder()
 
 	table.clear(self.FodderUUIDs)
 
-	-- Prefer lower rarity/star copies of the same weapon.
+	-- Donors share the target's rarity and type. Spend low stars first, and Standard before Enhanced.
 	local candidates = {}
 	for uuid, art in pairs(artifacts) do
-		if uuid ~= self.SelectedTargetUUID and not art.EquippedHeroUUID and not art.Locked and target and art.TemplateId == target.TemplateId then
+		if uuid ~= self.SelectedTargetUUID and not art.EquippedHeroUUID and not art.Locked and target and WeaponPromotion.IsDonorFor(target, art) then
 			table.insert(candidates, { UUID = uuid, Art = art })
 		end
 	end
 
 	table.sort(candidates, function(a, b)
-		local aRarity = a.Art.Rarity or 1
-		local bRarity = b.Art.Rarity or 1
-		if aRarity ~= bRarity then return aRarity < bRarity end
-		return (a.Art.Star or 1) < (b.Art.Star or 1)
+		local aStar, bStar = a.Art.Star or 1, b.Art.Star or 1
+		if aStar ~= bStar then return aStar < bStar end
+		local aSeed, bSeed = ArtifactCatalog.Seeds[a.Art.TemplateId], ArtifactCatalog.Seeds[b.Art.TemplateId]
+		local aEnh, bEnh = aSeed ~= nil and aSeed.IsHighStat, bSeed ~= nil and bSeed.IsHighStat
+		if aEnh ~= bEnh then return not aEnh end
+		return a.UUID < b.UUID
 	end)
 
 	for i = 1, math.min(reqFodder, #candidates) do
@@ -2154,7 +2354,7 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 			}, card)
 			applyGothicStyle(iconTile, "Slot", { State = "Filled", AccentColor = rarityInfo.Color })
 
-			local iconChar = ICON_MAP[art.Type] or "⚔️"
+			local iconChar = ICON_MAP[art.Type] or ""
 			local iconLbl = label(iconTile, iconChar, 24, C.Text)
 			iconLbl.Position = UDim2.fromScale(0, 0)
 			iconLbl.Size = UDim2.fromScale(1, 1)
@@ -2208,12 +2408,12 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 			end)
 		end
 	elseif mode == "FODDER" then
-		self.DrawerTitle.Text = "SELECT SAME-WEAPON COPIES (RARITY STAYS FIXED)"
+		self.DrawerTitle.Text = "SELECT DONORS: SAME RARITY AND WEAPON TYPE"
 		local target = self.SelectedTargetUUID and artifacts[self.SelectedTargetUUID]
 		local req = target and ArtifactCatalog.GetFodderRequirement(target.Star or 1) or 0
 
 		for uuid, art in pairs(artifacts) do
-			if uuid ~= self.SelectedTargetUUID and not art.EquippedHeroUUID and not art.Locked and target and art.TemplateId == target.TemplateId then
+			if uuid ~= self.SelectedTargetUUID and not art.EquippedHeroUUID and not art.Locked and target and WeaponPromotion.IsDonorFor(target, art) then
 				local isSlotted = table.find(self.FodderUUIDs, uuid) ~= nil
 				local rarityInfo = ArtifactCatalog.GetRarityInfo(art.Rarity or 1)
 
@@ -2235,7 +2435,7 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 				}, card)
 				applyGothicStyle(iconTile, "Slot", { State = "Filled", AccentColor = rarityInfo.Color })
 
-				local iconChar = ICON_MAP[art.Type] or "⚔️"
+				local iconChar = ICON_MAP[art.Type] or ""
 				local iconLbl = label(iconTile, iconChar, 24, C.Text)
 				iconLbl.Position = UDim2.fromScale(0, 0)
 				iconLbl.Size = UDim2.fromScale(1, 1)
@@ -2507,6 +2707,7 @@ end
 
 function Forge:Close()
 	self:ClosePicker()
+	self:CloseArtifactsModal()
 	self.Scrim.Visible = false
 	self.Root.Visible = false
 	if self.OnClose then
@@ -2514,8 +2715,20 @@ function Forge:Close()
 	end
 end
 
+function Forge:RenderGoldChip()
+	if not self.GoldChipText then return end
+	local profile = self:ResolveProfile()
+	local gold = (profile and profile.Currencies and profile.Currencies.Gold) or 0
+	self.GoldChipText.Text = StatBalance.Format(gold)
+	if self.LastGold and gold ~= self.LastGold and self.GoldChipText.Parent then
+		UIFeel.Pop(self.GoldChipText.Parent :: GuiObject, 0.1)
+	end
+	self.LastGold = gold
+end
+
 function Forge:Refresh()
 	if not self.Root.Visible then return end
+	self:RenderGoldChip()
 	if self.ActiveTab == "ASSIGN" then
 		self:RenderAssignView()
 	elseif self.ActiveTab == "SUMMON" then
@@ -2533,10 +2746,18 @@ end
 -- SECTION 4: SELLING ARTIFACTS & "VIEW ARTIFACTS" MODAL
 --============================================================================
 
+function Forge:StyleAssignFilters()
+	for key, chip in self.AssignFilterChips or {} do
+		local active = self.AssignFilter == key
+		toneButton(chip, if active then "Gold" else "Slate")
+	end
+end
+
 function Forge:ToggleSellMode(enable: boolean?)
 	self.SellMode = if enable ~= nil then enable else not self.SellMode
 	self.SelectedSellUUIDs = {}
 	if self.SellControls then self.SellControls.Visible = self.SellMode end
+	if self.AssignFilterRow then self.AssignFilterRow.Visible = not self.SellMode end
 	if self.SellToggleBtn then self.SellToggleBtn.Visible = not self.SellMode end
 	self:RenderAssignView(true)
 end
@@ -2557,18 +2778,120 @@ function Forge:UpdateSellValuationDisplay()
 	self.SellValuationLabel.Text = string.format("Selected %d  ·  %s Gold", count, StatBalance.Format(totalVal))
 end
 
-function Forge:SelectAllUnequippedForSell()
+-- Selects every unequipped, unlocked weapon at or below `maxRarity` (in the current filter).
+function Forge:SelectAllUnequippedForSell(maxRarity: number?)
 	local profile = self:ResolveProfile()
 	local artifacts = profile and profile.Artifacts or {}
+	local cap = maxRarity or 2
 	for uuid, art in pairs(artifacts) do
-		if not art.EquippedHeroUUID and not art.Locked then
+		local inFilter = self.AssignFilter == "ALL" or art.Type == self.AssignFilter
+		if inFilter and (art.Rarity or 1) <= cap and not art.EquippedHeroUUID and not art.Locked then
 			self.SelectedSellUUIDs[uuid] = true
 		end
 	end
 	self:RenderAssignView(true)
 end
 
+-- Asks before selling. The dialog turns red when the selection includes Exalted or better.
 function Forge:ConfirmSellArtifacts()
+	if self.Busy then return end
+	local profile = self:ResolveProfile()
+	local artifacts = profile and profile.Artifacts or {}
+	local count, total, best = 0, 0, 1
+	for uuid, sel in pairs(self.SelectedSellUUIDs) do
+		local art = sel and artifacts[uuid]
+		if art then
+			count += 1
+			total += ArtifactCatalog.CalculateSellPrice(art.Rarity or 1, art.Star or 1)
+			best = math.max(best, art.Rarity or 1)
+		end
+	end
+	if count == 0 then return end
+	self:ShowSellDialog(count, total, best)
+end
+
+function Forge:ShowSellDialog(count: number, total: number, bestRarity: number)
+	if not self.SellDialog then
+		local scrim = new("TextButton", {
+			Name = "SellDialogScrim",
+			Text = "",
+			AutoButtonColor = false,
+			BackgroundColor3 = Color3.new(0, 0, 0),
+			BackgroundTransparency = 0.45,
+			Size = UDim2.fromScale(1, 1),
+			ZIndex = 90,
+		}, self.Root)
+		local box = new("TextButton", {
+			Name = "SellDialog",
+			Text = "",
+			AutoButtonColor = false,
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0.5, 0.5),
+			Size = UDim2.fromOffset(420, 200),
+			BorderSizePixel = 0,
+			ZIndex = 91,
+		}, scrim)
+		GildedGrimoire.Frame(box, { Class = "Panel", Tone = "Deep", ZIndex = 91 })
+		local heading = label(box, "SELL WEAPONS?", 22, Color3.new(1, 1, 1), Enum.Font.GothamBlack)
+		heading.Position = UDim2.fromOffset(0, 18)
+		heading.Size = UDim2.new(1, 0, 0, 30)
+		heading.TextXAlignment = Enum.TextXAlignment.Center
+		heading.ZIndex = 93
+		heading.FontFace = GildedGrimoire.Fonts.Title
+		local body = label(box, "", 15, C.Text, Enum.Font.GothamMedium)
+		body.Position = UDim2.fromOffset(20, 58)
+		body.Size = UDim2.new(1, -40, 0, 56)
+		body.TextWrapped = true
+		body.TextXAlignment = Enum.TextXAlignment.Center
+		body.ZIndex = 93
+		local yes = new("TextButton", {
+			Name = "ConfirmBtn",
+			AnchorPoint = Vector2.new(1, 1),
+			Position = UDim2.new(0.5, -8, 1, -18),
+			Size = UDim2.fromOffset(170, 42),
+			Text = "SELL",
+			Font = Enum.Font.GothamBlack,
+			TextSize = 18,
+			TextColor3 = Color3.new(1, 1, 1),
+			BorderSizePixel = 0,
+			ZIndex = 93,
+		}, box)
+		toneButton(yes, "Crimson")
+		grimoireButtonText(yes, "Title")
+		local no = new("TextButton", {
+			Name = "CancelBtn",
+			AnchorPoint = Vector2.new(0, 1),
+			Position = UDim2.new(0.5, 8, 1, -18),
+			Size = UDim2.fromOffset(170, 42),
+			Text = "KEEP",
+			Font = Enum.Font.GothamBlack,
+			TextSize = 18,
+			TextColor3 = Color3.new(1, 1, 1),
+			BorderSizePixel = 0,
+			ZIndex = 93,
+		}, box)
+		applyGothicStyle(no, "ButtonSecondary")
+		grimoireButtonText(no, "Title")
+		scrim.Activated:Connect(function() scrim.Visible = false end)
+		box.Activated:Connect(function() end)
+		no.Activated:Connect(function() scrim.Visible = false end)
+		yes.Activated:Connect(function()
+			scrim.Visible = false
+			self:SellSelectedArtifacts()
+		end)
+		self.SellDialog = { Scrim = scrim, Body = body, Rail = GildedGrimoire.StateStroke(box) }
+	end
+	local d = self.SellDialog
+	local warn = bestRarity >= 5
+	local info = ArtifactCatalog.GetRarityInfo(bestRarity)
+	d.Body.Text = string.format("Sell <b>%d</b> weapon%s for <font color=\"#FACC15\"><b>%s Gold</b></font>?%s",
+		count, if count == 1 then "" else "s", StatBalance.Format(total),
+		if warn then string.format("\n<font color=\"#F87171\">Includes %s or better. This can't be undone.</font>", info.Name) else "")
+	if d.Rail then d.Rail.Color = if warn then GildedGrimoire.Tones.Crimson.Top else GildedGrimoire.Text.Gold end
+	d.Scrim.Visible = true
+end
+
+function Forge:SellSelectedArtifacts()
 	if self.Busy then return end
 	local uuids = {}
 	for uuid, sel in pairs(self.SelectedSellUUIDs) do
@@ -2586,19 +2909,20 @@ function Forge:ConfirmSellArtifacts()
 			self.SellMode = false
 			if self.SellControls then self.SellControls.Visible = false end
 			if self.SellToggleBtn then self.SellToggleBtn.Visible = true end
+			if self.AssignFilterRow then self.AssignFilterRow.Visible = true end
 		end
 		self:Refresh()
 	end)
 end
 
 local ARCHETYPE_FILTER_KEYS = {
-	{ Key = "ALL", Title = "ALL (84)" },
-	{ Key = "SWORD_SHIELD", Title = "VANGUARD (14)" },
-	{ Key = "DAGGERS", Title = "STRIKER (14)" },
-	{ Key = "BOW", Title = "MARKSMAN (14)" },
-	{ Key = "AXE", Title = "MINER (14)" },
-	{ Key = "STAFF", Title = "SCHOLAR (14)" },
-	{ Key = "TOME", Title = "HEALER (14)" },
+	{ Key = "ALL", Title = "ALL 84" },
+	{ Key = "SWORD_SHIELD", Title = "VANGUARD" },
+	{ Key = "DAGGERS", Title = "STRIKER" },
+	{ Key = "BOW", Title = "MARKSMAN" },
+	{ Key = "AXE", Title = "MINER" },
+	{ Key = "STAFF", Title = "SCHOLAR" },
+	{ Key = "TOME", Title = "HEALER" },
 }
 
 function Forge:BuildArtifactsModal(gui: ScreenGui)
@@ -2613,8 +2937,12 @@ function Forge:BuildArtifactsModal(gui: ScreenGui)
 		ZIndex = 65,
 	}, gui)
 
-	local win = new("Frame", {
+	-- A TextButton (not a Frame) so clicks inside the window don't fall through to the scrim.
+	local win = new("TextButton", {
 		Name = "ArtifactsCatalogWindow",
+		Text = "",
+		AutoButtonColor = false,
+		Active = true,
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.5),
 		Size = UDim2.fromOffset(840, 540),
@@ -2623,12 +2951,15 @@ function Forge:BuildArtifactsModal(gui: ScreenGui)
 		ZIndex = 66,
 	}, scrim)
 	GildedGrimoire.Frame(win, { Class = "Window", Tone = "Deep", ZIndex = 66 })
+	win.Activated:Connect(function() end)
+	self.ArtifactsModalScale = new("UIScale", {}, win)
+	ModalFit.Bind(win, self.ArtifactsModalScale, 840, 540)
 
 	-- Header
 	local headerIcon = GrimoireIcons.Create("Forge", 36, win, 68)
 	headerIcon.Position = UDim2.fromOffset(18, 12)
 
-	local headerTitle = label(win, "ARTIFACT BANNER CATALOG & LIVE ODDS", 20, Color3.new(1, 1, 1), Enum.Font.GothamBlack)
+	local headerTitle = label(win, "ALL WEAPONS & ODDS", 20, Color3.new(1, 1, 1), Enum.Font.GothamBlack)
 	headerTitle.Position = UDim2.fromOffset(62, 16)
 	headerTitle.Size = UDim2.fromOffset(450, 26)
 	headerTitle.TextXAlignment = Enum.TextXAlignment.Left
@@ -2647,7 +2978,8 @@ function Forge:BuildArtifactsModal(gui: ScreenGui)
 		BorderSizePixel = 0,
 		ZIndex = 68,
 	}, win)
-	new("UICorner", { CornerRadius = UDim.new(0, 8) }, closeBtn)
+	toneButton(closeBtn, "Crimson")
+	GrimoireIcons.CloseGlyph(closeBtn, 16)
 	closeBtn.Activated:Connect(function()
 		self:CloseArtifactsModal()
 	end)
@@ -2679,11 +3011,13 @@ function Forge:BuildArtifactsModal(gui: ScreenGui)
 	}, ratesRow)
 	self.ModalRatesRow = ratesRow
 
-	local rulesLabel = label(ratesBox, "• 120-Pull Hard Pity: Guaranteed Exalted (Tier 5) or higher   • 60% Standard / 40% Enhanced (+20% Power, +Spd)   • All 1★ Baseline", 12, C.TextLavender, Enum.Font.GothamMedium)
+	local rulesLabel = label(ratesBox, "Exalted+ guaranteed by pull 120  ·  Rare+ in every 10  ·  60% Standard / 40% Enhanced  ·  all drop at 1★", 12, C.TextLavender, Enum.Font.GothamMedium)
 	rulesLabel.Position = UDim2.fromOffset(12, 38)
 	rulesLabel.Size = UDim2.new(1, -24, 0, 22)
 	rulesLabel.TextXAlignment = Enum.TextXAlignment.Left
 	rulesLabel.ZIndex = 68
+	rulesLabel.TextColor3 = CATALOG_SUBTEXT
+	plainText(rulesLabel)
 	self.ModalRulesLabel = rulesLabel
 
 	-- Filter Tabs Row
@@ -2704,8 +3038,8 @@ function Forge:BuildArtifactsModal(gui: ScreenGui)
 	for _, entry in ipairs(ARCHETYPE_FILTER_KEYS) do
 		local tabBtn = new("TextButton", {
 			Name = "Tab_" .. entry.Key,
-			Size = UDim2.fromOffset(108, 30),
-			Text = entry.Title,
+			Size = UDim2.fromOffset(108, 32),
+			Text = if entry.Key == "ALL" then entry.Title else "      " .. entry.Title,
 			Font = Enum.Font.GothamBold,
 			TextSize = 11,
 			TextColor3 = if entry.Key == "ALL" then C.GoldYellow else C.TextMuted,
@@ -2713,19 +3047,17 @@ function Forge:BuildArtifactsModal(gui: ScreenGui)
 			BorderSizePixel = 0,
 			ZIndex = 68,
 		}, tabsRow)
-		new("UICorner", { CornerRadius = UDim.new(0, 6) }, tabBtn)
-		local stroke = new("UIStroke", {
-			Color = if entry.Key == "ALL" then C.GoldYellow else Color3.fromRGB(60, 45, 80),
-			Thickness = 1,
-		}, tabBtn)
+		toneButton(tabBtn, if entry.Key == "ALL" then "Gold" else "Slate")
+		grimoireButtonText(tabBtn)
+		if entry.Key ~= "ALL" then
+			local icon = GrimoireIcons.Create(ARCHETYPE_ICON[entry.Key], 20, tabBtn, 71)
+			icon.AnchorPoint = Vector2.new(0, 0.5)
+			icon.Position = UDim2.new(0, 6, 0.5, 0)
+		end
 		tabBtn.Activated:Connect(function()
 			self.ArtifactsModalFilter = entry.Key
 			for k, b in pairs(self.ModalTabBtns) do
-				local active = (k == entry.Key)
-				b.TextColor3 = if active then C.GoldYellow else C.TextMuted
-				b.BackgroundColor3 = if active then Color3.fromRGB(45, 30, 65) else Color3.fromRGB(24, 18, 32)
-				local str = b:FindFirstChildOfClass("UIStroke")
-				if str then str.Color = if active then C.GoldYellow else Color3.fromRGB(60, 45, 80) end
+				toneButton(b, if k == entry.Key then "Gold" else "Slate")
 			end
 			self:RenderArtifactsCatalog(entry.Key)
 		end)
@@ -2747,12 +3079,7 @@ function Forge:BuildArtifactsModal(gui: ScreenGui)
 	}, win)
 	self.ModalCatalogScroll = scroll
 
-	local grid = new("UIGridLayout", {
-		SortOrder = Enum.SortOrder.LayoutOrder,
-		CellSize = UDim2.new(0.5, -6, 0, 118),
-		CellPadding = UDim2.fromOffset(12, 10),
-		HorizontalAlignment = Enum.HorizontalAlignment.Center,
-	}, scroll)
+	new("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 8) }, scroll)
 	new("UIPadding", {
 		PaddingTop = UDim.new(0, 4),
 		PaddingBottom = UDim.new(0, 16),
@@ -2803,93 +3130,165 @@ function Forge:RenderArtifactsRates()
 			ZIndex = 69,
 		}, self.ModalRatesRow)
 		new("UICorner", { CornerRadius = UDim.new(0, 5) }, pill)
-		new("UIStroke", { Color = rInfo.Color, Thickness = 1.2 }, pill)
+		new("UIStroke", { Color = rInfo.Color, Thickness = 1.2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, pill)
 		new("UIPadding", { PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6) }, pill)
 
-		local tLbl = label(pill, string.format("%s: %.1f%%", rInfo.Name, pct), 11, rInfo.Color, Enum.Font.GothamBold)
-		tLbl.Size = UDim2.fromScale(1, 1)
+		local tLbl = label(pill, string.format("%s %s%%", rInfo.Name, formatPercent(pct)), 12, readable(rInfo.Color), Enum.Font.GothamBold)
+		tLbl.AutomaticSize = Enum.AutomaticSize.X -- the pill takes its width from the text
+		tLbl.Size = UDim2.new(0, 0, 1, 0)
+		tLbl.TextTruncate = Enum.TextTruncate.None
 		tLbl.ZIndex = 70
+		plainText(tLbl)
 	end
 
 	if luck > 0 and self.ModalRulesLabel then
-		self.ModalRulesLabel.Text = string.format("• God's Blessing Luck Active: +%.1f%% upper tiers   • 120 Pity: Guaranteed Exalted+   • 60%% Standard / 40%% Enhanced", luck * 100)
+		self.ModalRulesLabel.Text = string.format("God's Blessing: +%s%% above Common  ·  Exalted+ by pull 120  ·  Rare+ in every 10  ·  60/40 Standard/Enhanced", formatPercent(luck * 100))
 	end
 end
 
+-- One weapon card in the catalog window: preview, name, variant, 1★ stats, per-weapon odds and an
+-- Owned marker. `chance` is this exact weapon's drop chance per pull, in percent.
+local function catalogCard(parent: Instance, seed: any, chance: number, owned: boolean, order: number)
+	local info = ArtifactCatalog.GetRarityInfo(seed.RarityTier)
+	local stats = ArtifactCatalog.GetStatBreakdown(seed.TemplateId, 1, seed.RarityTier)
+	local card = new("Frame", {
+		Name = "Card_" .. seed.TemplateId,
+		LayoutOrder = order,
+		Size = UDim2.new(0.5, -6, 1, 0),
+		BorderSizePixel = 0,
+		ZIndex = 68,
+	}, parent)
+	GildedGrimoire.Frame(card, { Class = "Card", Tone = "Deep", Rail = info.Color, ZIndex = 68 })
+
+	local iconBox = new("Frame", {
+		Position = UDim2.fromOffset(10, 10),
+		Size = UDim2.fromOffset(64, 64),
+		BorderSizePixel = 0,
+		ZIndex = 69,
+	}, card)
+	GildedGrimoire.Frame(iconBox, { Class = "Slot", Tone = "Violet", Rail = info.Color, ZIndex = 69 })
+	local iconLbl = label(iconBox, "", 34, C.Text)
+	iconLbl.Size = UDim2.fromScale(1, 1)
+	iconLbl.ZIndex = 70
+	showArtifact(iconLbl, seed.TemplateId)
+
+	local nameLbl = label(card, seed.DisplayName, 14, CATALOG_TEXT, Enum.Font.GothamBlack)
+	nameLbl.Position = UDim2.fromOffset(84, 10)
+	nameLbl.Size = UDim2.new(1, -150, 0, 18)
+	nameLbl.TextXAlignment = Enum.TextXAlignment.Left
+	nameLbl.ZIndex = 69
+	nameLbl.FontFace = GildedGrimoire.Fonts.Title
+
+	local variant = if seed.IsHighStat then "Enhanced  ·  +20% power" else "Standard"
+	local variantLbl = label(card, variant, 11, if seed.IsHighStat then Color3.fromRGB(255, 214, 120) else CATALOG_SUBTEXT, Enum.Font.GothamBold)
+	variantLbl.Position = UDim2.fromOffset(84, 30)
+	variantLbl.Size = UDim2.new(1, -94, 0, 15)
+	variantLbl.TextXAlignment = Enum.TextXAlignment.Left
+	variantLbl.ZIndex = 69
+	plainText(variantLbl)
+
+	local statsLbl = label(card, string.format("Power <b>%s</b>   Dmg <b>x%.2f</b>   Spd <b>+%.1f%%</b>", StatBalance.Format(stats.Power), stats.DamageMultiplier, stats["Attack Speed"]), 12, CATALOG_TEXT, Enum.Font.GothamMedium)
+	statsLbl.Position = UDim2.fromOffset(84, 48)
+	statsLbl.Size = UDim2.new(1, -94, 0, 15)
+	statsLbl.TextXAlignment = Enum.TextXAlignment.Left
+	statsLbl.ZIndex = 69
+	plainText(statsLbl)
+
+	local oddsLbl = label(card, string.format("<b>%s%%</b> per pull", formatPercent(chance)), 12, readable(info.Color), Enum.Font.GothamBold)
+	oddsLbl.AnchorPoint = Vector2.new(1, 0)
+	oddsLbl.Position = UDim2.new(1, -12, 0, 10)
+	oddsLbl.Size = UDim2.fromOffset(110, 16)
+	oddsLbl.TextXAlignment = Enum.TextXAlignment.Right
+	oddsLbl.ZIndex = 69
+	plainText(oddsLbl)
+
+	if owned then
+		local stud = new("Frame", {
+			Name = "OwnedStud",
+			AnchorPoint = Vector2.new(1, 1),
+			Position = UDim2.new(1, -10, 1, -8),
+			Size = UDim2.fromOffset(62, 20),
+			BorderSizePixel = 0,
+			ZIndex = 70,
+		}, card)
+		GildedGrimoire.Frame(stud, { Class = "Compact", Tone = "Jade", ZIndex = 70 })
+		local t = label(stud, "OWNED", 10, Color3.new(1, 1, 1), Enum.Font.GothamBlack)
+		t.Size = UDim2.fromScale(1, 1)
+		t.TextXAlignment = Enum.TextXAlignment.Center
+		t.ZIndex = 72
+		t.FontFace = GildedGrimoire.Fonts.Title
+	end
+
+	local lore = label(card, seed.Description or "", 11, CATALOG_SUBTEXT, Enum.Font.Gotham)
+	lore.Position = UDim2.fromOffset(10, 80)
+	lore.Size = UDim2.new(1, if owned then -84 else -20, 0, 28)
+	lore.TextWrapped = true
+	lore.TextTruncate = Enum.TextTruncate.AtEnd
+	lore.TextXAlignment = Enum.TextXAlignment.Left
+	lore.TextYAlignment = Enum.TextYAlignment.Top
+	lore.ZIndex = 69
+	plainText(lore)
+end
+
+-- The catalog grouped by tier, rarest first: a tier header (live chance), then each archetype's
+-- Standard and Enhanced weapons side by side.
 function Forge:RenderArtifactsCatalog(filter: string)
 	local scroll = self.ModalCatalogScroll
 	if not scroll then return end
 	for _, child in ipairs(scroll:GetChildren()) do
-		if child:IsA("Frame") and child.Name:sub(1, 8) == "CardMod_" then
-			child:Destroy()
-		end
+		if child:IsA("GuiObject") then child:Destroy() end
 	end
 
-	local order = ArtifactCatalog.CatalogOrder or {}
-	local count = 0
+	local profile = self:ResolveProfile()
+	local owned: { [string]: boolean } = {}
+	for _, art in (profile and profile.Artifacts) or {} do
+		if art.TemplateId then owned[art.TemplateId] = true end
+	end
+	local rates = SummonLuck.ApplyLuck(ArtifactCatalog.Banner.BaseRarityRates, SummonLuck.ForProfile(profile))
+	local typeCount = #ArtifactCatalog.ArchetypeOrder
 
-	for i, templateId in ipairs(order) do
-		local seed = ArtifactCatalog.Seeds[templateId]
-		if seed and (filter == "ALL" or seed.Type == filter) then
-			count += 1
-			local tier = seed.RarityTier or 1
-			local rInfo = ArtifactCatalog.GetRarityInfo(tier)
-			local rColor = rInfo.Color
-			local stats = ArtifactCatalog.GetStatBreakdown(templateId, 1, tier)
+	local order = 0
+	for tier = #rates, 1, -1 do
+		local info = ArtifactCatalog.GetRarityInfo(tier)
+		order += 1
+		local header = new("Frame", {
+			Name = "Tier" .. tier,
+			LayoutOrder = order,
+			Size = UDim2.new(1, 0, 0, 32),
+			BorderSizePixel = 0,
+			ZIndex = 68,
+		}, scroll)
+		GildedGrimoire.Frame(header, { Class = "Row", Tone = "Violet", Rail = info.Color, ZIndex = 68 })
+		local name = label(header, string.upper(info.Name), 15, readable(info.Color), Enum.Font.GothamBlack)
+		name.Position = UDim2.fromOffset(14, 0)
+		name.Size = UDim2.new(0.5, 0, 1, 0)
+		name.TextXAlignment = Enum.TextXAlignment.Left
+		name.ZIndex = 70
+		name.FontFace = GildedGrimoire.Fonts.Title
+		local odds = label(header, string.format("<b>%s%%</b> for this tier  ·  %s%% per archetype", formatPercent(rates[tier] * 100), formatPercent(rates[tier] * 100 / typeCount)), 12, CATALOG_TEXT, Enum.Font.GothamMedium)
+		odds.AnchorPoint = Vector2.new(1, 0)
+		odds.Position = UDim2.new(1, -14, 0, 0)
+		odds.Size = UDim2.new(0.6, 0, 1, 0)
+		odds.TextXAlignment = Enum.TextXAlignment.Right
+		odds.ZIndex = 70
+		plainText(odds)
 
-			local card = new("Frame", {
-				Name = "CardMod_" .. templateId,
-				LayoutOrder = count,
-				BackgroundColor3 = Color3.fromRGB(18, 14, 26),
-				BorderSizePixel = 0,
-				ZIndex = 68,
-			}, scroll)
-			new("UICorner", { CornerRadius = UDim.new(0, 8) }, card)
-			new("UIStroke", { Color = rColor, Thickness = 1.5 }, card)
-
-			-- Left icon box
-			local iconBox = new("Frame", {
-				Position = UDim2.fromOffset(8, 8),
-				Size = UDim2.fromOffset(48, 48),
-				BackgroundColor3 = Color3.fromRGB(12, 8, 18),
-				BorderSizePixel = 0,
-				ZIndex = 69,
-			}, card)
-			new("UICorner", { CornerRadius = UDim.new(0, 6) }, iconBox)
-			local iconLbl = label(iconBox, ICON_MAP[seed.Type] or "⚔️", 28, C.Text)
-			iconLbl.Size = UDim2.fromScale(1, 1)
-			iconLbl.ZIndex = 70
-			showArtifact(iconLbl, templateId)
-
-			-- Name & Variant
-			local nameLbl = label(card, seed.DisplayName, 13, C.Text, Enum.Font.GothamBlack)
-			nameLbl.Position = UDim2.fromOffset(64, 8)
-			nameLbl.Size = UDim2.new(1, -72, 0, 18)
-			nameLbl.TextXAlignment = Enum.TextXAlignment.Left
-			nameLbl.ZIndex = 69
-
-			-- Rarity & Variant tag
-			local variantTag = label(card, string.format("%s · %s", rInfo.Name, seed.Variant or "Standard"), 11, rColor, Enum.Font.GothamBold)
-			variantTag.Position = UDim2.fromOffset(64, 26)
-			variantTag.Size = UDim2.new(1, -72, 0, 16)
-			variantTag.TextXAlignment = Enum.TextXAlignment.Left
-			variantTag.ZIndex = 69
-
-			-- Stats row
-			local statsLbl = label(card, string.format("Power: <b>%.0f</b>  |  Dmg: <b>x%.2f</b>  |  Spd: <b>+%.1f%%</b>", stats.Power, stats.DamageMultiplier, stats["Attack Speed"]), 11, C.GoldYellow, Enum.Font.GothamMedium)
-			statsLbl.Position = UDim2.fromOffset(64, 44)
-			statsLbl.Size = UDim2.new(1, -72, 0, 16)
-			statsLbl.TextXAlignment = Enum.TextXAlignment.Left
-			statsLbl.ZIndex = 69
-
-			-- Concept Lore
-			local loreLbl = label(card, seed.Description or "A legendary weapon forged in the crucible.", 10, C.TextMuted, Enum.Font.Gotham)
-			loreLbl.Position = UDim2.fromOffset(8, 64)
-			loreLbl.Size = UDim2.new(1, -16, 0, 48)
-			loreLbl.TextXAlignment = Enum.TextXAlignment.Left
-			loreLbl.TextYAlignment = Enum.TextYAlignment.Top
-			loreLbl.TextWrapped = true
-			loreLbl.ZIndex = 69
+		for _, weaponType in ipairs(ArtifactCatalog.ArchetypeOrder) do
+			if filter == "ALL" or filter == weaponType then
+				local std, enh = ArtifactCatalog.GetTierPair(tier, weaponType)
+				order += 1
+				local row = new("Frame", {
+					Name = string.format("Row_%d_%s", tier, weaponType),
+					LayoutOrder = order,
+					Size = UDim2.new(1, 0, 0, 116),
+					BackgroundTransparency = 1,
+					ZIndex = 67,
+				}, scroll)
+				new("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 12), SortOrder = Enum.SortOrder.LayoutOrder }, row)
+				local perType = rates[tier] / typeCount * 100
+				if std then catalogCard(row, std, perType * 0.6, owned[std.TemplateId] == true, 1) end
+				if enh then catalogCard(row, enh, perType * 0.4, owned[enh.TemplateId] == true, 2) end
+			end
 		end
 	end
 end

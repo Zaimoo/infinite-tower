@@ -5,6 +5,7 @@ local Config = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config")
 local HeroCatalog = require(Config:WaitForChild("HeroCatalog"))
 local ArtifactCatalog = require(Config:WaitForChild("ArtifactCatalog"))
 local PitBalance = require(Config:WaitForChild("PitBalanceConfig"))
+local StatBalance = require(Config:WaitForChild("StatBalance"))
 
 export type Tab = "Artifacts" | "Heroes" | "Materials"
 export type Row = {
@@ -19,7 +20,6 @@ local MATERIALS: { [string]: { Name: string, Description: string, Icon: string }
 	SoulEssence = { Name = "Soul Essence", Description = "Earned by converting heroes at the Pit. Used in Pit material recipes.", Icon = "Summon" },
 	ImprintCatalyst = { Name = PitBalance.Recipes.ImprintCatalyst.Name, Description = "Used for Focused Imprint at the Pit.", Icon = "Spark" },
 }
-local FORGE_ICONS = { IronGear = "Gear", RiftOrb = "Summon", AegisGem = "Gems", StarDust = "Spark", VoidPowder = "Summon" }
 local ASSIGNMENTS = {
 	FACILITY_GUARD_POST = "Guard Post", FACILITY_MARKET = "Market",
 	FACILITY_TRAINING = "Training Grounds", FACILITY_GODS_BLESSING = "God's Blessing",
@@ -48,6 +48,19 @@ end
 
 local Model = {}
 
+-- How many heroes and artifacts the player holds against the inventory caps (50 each). Summons that
+-- would go past a cap are refused by the server.
+export type Capacity = { Have: number, Max: number }
+function Model.Capacity(profile: any): { Heroes: Capacity, Artifacts: Capacity }
+	local heroes, artifacts = 0, 0
+	for _ in (profile and profile.Heroes) or {} do heroes += 1 end
+	for _ in (profile and profile.Artifacts) or {} do artifacts += 1 end
+	return {
+		Heroes = { Have = heroes, Max = StatBalance.MaxHeroInventory },
+		Artifacts = { Have = artifacts, Max = StatBalance.MaxArtifactInventory },
+	}
+end
+
 function Model.Build(profile: any, tab: Tab): { Row }?
 	if not profile then return nil end
 	local rows: { Row } = {}
@@ -60,13 +73,12 @@ function Model.Build(profile: any, tab: Tab): { Row }?
 			local count = number(amount, 0)
 			if type(id) ~= "string" or (id ~= "PromotionStone" and count == 0) then continue end
 			local pit = MATERIALS[id]
-			local forge = ArtifactCatalog.CraftingMaterials[id]
 			table.insert(rows, {
-				Id = id, Name = if pit then pit.Name elseif forge then forge.Name else readable(id),
+				Id = id, Name = if pit then pit.Name else readable(id),
 				Summary = ("%d owned"):format(count),
-				Description = if pit then pit.Description elseif forge then "Used in Forge recipes. " .. forge.Description else "Stored in your materials.",
-				Icon = if pit then pit.Icon else FORGE_ICONS[id] or "Gems",
-				Color = if forge then forge.Color else GOLD, Rarity = if id == "PromotionStone" then 1 else 0, Stars = 0,
+				Description = if pit then pit.Description else "Stored in your materials.",
+				Icon = if pit then pit.Icon else "Gems",
+				Color = GOLD, Rarity = if id == "PromotionStone" then 1 else 0, Stars = 0,
 			})
 		end
 	elseif tab == "Artifacts" then
