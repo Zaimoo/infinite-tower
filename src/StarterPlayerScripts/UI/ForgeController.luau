@@ -178,13 +178,20 @@ local function applyGothicStyle(container: GuiObject, style: GothicBoxStyle.Goth
 	return GothicBoxStyle.Apply(container, options)
 end
 
--- Re-tones a button in place (safe to call on every render): Gilded Grimoire frame in `tone`, with any
--- legacy GothicBoxStyle gradient removed so only one fill applies.
+-- Re-tones a button in place (safe to call on every render): Gilded Grimoire frame in `tone`.
+-- A UIGradient on a TextButton also tints its own text, so buttons that carry text get a solid
+-- fill (the tone's top colour, a little shaded) instead of the gradient; others keep the gradient.
 local function toneButton(btn: GuiObject, tone: string)
 	for _, child in btn:GetChildren() do
-		if child:IsA("UIGradient") and child.Name ~= "GrimoireFill" then child:Destroy() end
+		if child:IsA("UIGradient") then child:Destroy() end
 	end
-	GildedGrimoire.Reframe(btn, { Class = "Button", Tone = tone, ZIndex = btn.ZIndex + 1 })
+	local hasText = (btn:IsA("TextButton") or btn:IsA("TextLabel")) and (btn :: any).Text ~= ""
+	GildedGrimoire.Reframe(btn, { Class = "Button", Tone = tone, Fill = not hasText, ZIndex = btn.ZIndex + 1 })
+	if hasText then
+		local t = GildedGrimoire.Tones[tone] or GildedGrimoire.Tones.Slate
+		btn.BackgroundColor3 = t.Top:Lerp(t.Bottom, 0.3)
+		btn.BackgroundTransparency = 0
+	end
 end
 
 -- Filter tabs and chips: the active one is Gold with dark ink text (light text vanishes on gold),
