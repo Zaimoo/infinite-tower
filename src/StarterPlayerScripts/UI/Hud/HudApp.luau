@@ -193,12 +193,21 @@ end
 -- A rail of `size` buttons inside `available` px of height. When even 44 px buttons don't fit in one
 -- column (short screens), the rail wraps into extra columns, growing inward from its screen edge,
 -- so it never runs into the cards below it.
-local function rail(name: string, side: "Left" | "Right", top: number, size: number, available: number, buttons: { any })
+local function rail(name: string, side: "Left" | "Right", top: number, bottom: number, size: number, available: number, buttons: { any }, screenY: number)
 	local cellW = size + 24
 	local cellH = size + math.floor(math.floor(size * 0.36) * 0.55) -- RailButton's own height
 	local perColumn = math.max(1, math.floor((available + L.RailGap) / (cellH + L.RailGap)))
 	local columns = math.max(1, math.ceil(#buttons / perColumn))
 	local rows = math.min(#buttons, perColumn)
+	local totalW = columns * cellW + (columns - 1) * L.RailGap
+	local totalH = rows * cellH + (rows - 1) * L.RailGap
+
+	-- Vertically center the rail on the screen, clamped safely between top and bottom boundaries
+	local desiredCenterY = screenY * 0.5
+	local minY = top + totalH / 2
+	local maxY = bottom - totalH / 2
+	local centerY = if maxY >= minY then math.clamp(desiredCenterY, minY, maxY) else (top + bottom) / 2
+
 	local children: { [string]: any } = {
 		Layout = e("UIGridLayout", {
 			CellSize = UDim2.fromOffset(cellW, cellH),
@@ -216,9 +225,9 @@ local function rail(name: string, side: "Left" | "Right", top: number, size: num
 	end
 	return e("Frame", {
 		Name = name,
-		AnchorPoint = Vector2.new(if side == "Left" then 0 else 1, 0),
-		Position = if side == "Left" then UDim2.fromOffset(L.Edge, top) else UDim2.new(1, -L.Edge, 0, top),
-		Size = UDim2.fromOffset(columns * cellW + (columns - 1) * L.RailGap, rows * cellH + (rows - 1) * L.RailGap),
+		AnchorPoint = Vector2.new(if side == "Left" then 0 else 1, 0.5),
+		Position = if side == "Left" then UDim2.fromOffset(L.Edge, math.round(centerY)) else UDim2.new(1, -L.Edge, 0, math.round(centerY)),
+		Size = UDim2.fromOffset(totalW, totalH),
 		BackgroundTransparency = 1,
 	}, children)
 end
@@ -570,8 +579,8 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 
 	return e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 }, {
 		Goal = e(Components.NextGoalCard, { Goal = goal, Top = goalTop }),
-		LeftRail = rail("LeftRail", "Left", leftTop, leftSize, leftBottom - leftTop, leftButtons),
-		RightRail = rail("RightRail", "Right", rightTop, rightSize, rightBottom - rightTop, rightButtons),
+		LeftRail = rail("LeftRail", "Left", leftTop, leftBottom, leftSize, leftBottom - leftTop, leftButtons, screen.Y),
+		RightRail = rail("RightRail", "Right", rightTop, rightBottom, rightSize, rightBottom - rightTop, rightButtons, screen.Y),
 		Status = if profile then e(Components.SquadDrawer, {
 			Rows = rows, LockedText = lockedText, LockedRange = lockedRange, Compact = compact, TileWidth = tileWidth,
 			CardHeight = cardHeight, Expanded = drawerOpen,
