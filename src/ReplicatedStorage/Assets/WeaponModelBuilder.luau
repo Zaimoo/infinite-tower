@@ -5123,6 +5123,8 @@ end
 -- STYLING (shared by every equip path)
 -- ============================================================================
 -- Per-artifact colour overrides and the rarity glow, applied to a cloned prefab.
+local DAGGER_STYLES: { [string]: any } = nil :: any
+
 function WeaponModelBuilder.Style(wModel: Model, weaponAssetId: string?, rarityIndex: number?)
 	if weaponAssetId == "art_crystal_greatbow" then
 		for _, p in ipairs(wModel:GetDescendants()) do
@@ -5286,7 +5288,7 @@ type DaggerStyleData = {
 	Runes: { DaggerAccentRune }?,
 }
 
-local DAGGER_STYLES: { [string]: DaggerStyleData } = {
+DAGGER_STYLES = {
 	art_rusty_daggers = {
 		PrimaryMaterial = Enum.Material.Metal,
 		PrimaryColor = Color3.fromRGB(125, 128, 135),

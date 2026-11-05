@@ -133,10 +133,15 @@ local function equipHero(model: Model, meta: any)
 	if not rig then return end
 	local artifactId = meta and meta.EquippedArtifactId
 	if artifactId == "" then artifactId = nil end
-	if artifactId or (meta and meta.EquippedArtifactType and meta.EquippedArtifactType ~= "") then
-		HeroLoadout.Equip(model, rig, artifactId, meta.EquippedArtifactType, meta.EquippedArtifactRarity)
-	else
-		HeroLoadout.Unequip(model, rig)
+	local ok, err = pcall(function()
+		if artifactId or (meta and meta.EquippedArtifactType and meta.EquippedArtifactType ~= "") then
+			HeroLoadout.Equip(model, rig, artifactId, meta.EquippedArtifactType, meta.EquippedArtifactRarity)
+		else
+			HeroLoadout.Unequip(model, rig)
+		end
+	end)
+	if not ok then
+		warn(`EntityRenderer: equipHero failed for entity {model.Name}: {err}`)
 	end
 end
 
