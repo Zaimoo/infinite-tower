@@ -239,11 +239,22 @@ function PlotManager.TeleportPlayerToHub(player: Player)
 		return
 	end
 
-	local hubCenter = HubLayout.ParkCentre + Vector3.new(0, 3.5, 16)
-	local angle = (player.UserId % 8) * (math.pi / 4)
-	local scatter = Vector3.new(math.cos(angle) * 3, 0, math.sin(angle) * 3)
-	local spawnPos = hubCenter + scatter
-	local lookTarget = spawnPos + Vector3.new(0, 0, 10)
+	local arrivalPart = workspace:FindFirstChild("HubArrival", true) :: BasePart?
+	local basePos: Vector3
+	if arrivalPart then
+		basePos = arrivalPart.Position + Vector3.new(0, 3.4, 0)
+	elseif (HubLayout :: any).HubArrival then
+		basePos = (HubLayout :: any).HubArrival
+	else
+		basePos = Vector3.new(0, HubLayout.IslandSurfaceY + 3.8, -975)
+	end
+
+	-- Slight horizontal scatter across the 10-stud red runner so multiple players don't overlap
+	local scatterIndex = (player.UserId % 5) - 2
+	local spawnPos = Vector3.new(basePos.X + scatterIndex * 1.5, basePos.Y, basePos.Z)
+
+	-- Look north towards the Wayfinder Dais & Statue plinth
+	local lookTarget = Vector3.new(0, spawnPos.Y, HubLayout.ParkCentre.Z)
 	local targetCFrame = CFrame.lookAt(spawnPos, lookTarget)
 
 	char:PivotTo(targetCFrame)
@@ -306,10 +317,10 @@ if TeleportRequest then
 			return
 		end
 
-		-- 1. Cooldown guard (3.0s per player)
+		-- 1. Cooldown guard (1.5s per player to match HUD debounce)
 		local now = os.clock()
 		local last = LastTeleportAt[player] or 0
-		if now - last < 3.0 then
+		if now - last < 1.5 then
 			return
 		end
 

@@ -137,6 +137,15 @@ test("Hub bank zones cover the band, island, footbridges, plot bridges and cause
 	assert(Protocol.InZone(Vector3.new(0, 14, (Hub.CausewayTowerZ + Hub.CausewayParkZ()) / 2), origin, zones.HUB_CAUSEWAY), "causeway not covered")
 	assert(not inAny(Hub.HubPoint((Hub.IslandHalfX + Hub.VoidHalfX) / 2, 100)), "the void must not be a bank zone")
 	assert(not inAny(Vector3.new(0, 16, -300)), "tower arrival must not be a bank zone")
+	assert(inAny(Hub.HubArrival), "HubArrival must be inside a bankable hub zone")
+end)
+
+test("HubArrival is placed on the red runner at the south entrance of the dais", function()
+	assert(Hub.HubArrival ~= nil, "HubArrival must be defined")
+	assert(math.abs(Hub.HubArrival.X) < 0.1, "HubArrival must be aligned on X = 0")
+	assert(Hub.HubArrival.Z > Hub.HubCentre.Z, "HubArrival must be south of the Dais center (+Z)")
+	local distFromPlazaCenter = math.abs(Hub.HubArrival.Z - Hub.HubCentre.Z)
+	assert(distFromPlazaCenter >= 56 and distFromPlazaCenter <= 65, "HubArrival must be right at the south entrance to the Dais")
 end)
 
 test("Lighting: plots and the cloister are Sanctuary, the walkway is Dread, the causeway blends, floors are Storm", function()
