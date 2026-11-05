@@ -458,14 +458,6 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 				setBackpackOpen(true)
 			end,
 		},
-		{
-			Icon = "Gear",
-			Label = "Settings",
-			Accent = Color3.fromRGB(163, 150, 186), -- #A396BA Muted Silver/Bronze
-			OnActivated = function()
-				call("ToggleSettings")
-			end,
-		},
 	}
 
 	local overdriveBlocked = Whistles.Blocked("Overdrive")
