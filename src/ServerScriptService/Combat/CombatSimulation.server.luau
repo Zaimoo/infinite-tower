@@ -122,6 +122,9 @@ local LEASH_TELEPORT_DISTANCE = 180.0
 local LEASH_VERTICAL_TELEPORT_DISTANCE = 45.0
 local HERO_STUCK_TIMEOUT = 3.0
 local HERO_STUCK_MIN_TICKS = 15
+-- Effective combat stats come from the profile (level, stars, weapon, training, attunement cap). They
+-- change rarely, so each hero re-derives them at most this often instead of every sim tick.
+local STAT_REFRESH_SECONDS = 1.0
 
 local OVERDRIVE_COOLDOWN = 20.0
 local OVERDRIVE_DURATION = 5.0
@@ -154,6 +157,7 @@ export type SimHero = {
 	EffectiveATK: number,
 	AttackRange: number,
 	AttackInterval: number,
+	StatsRefreshAt: number?,
 	MoveSpeed: number,
 	Stamina: number,
 	SlotIndex: number,
@@ -2179,17 +2183,20 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 		end
 	end
 
-	local dm = getDataManager()
-	local profile = dm.GetProfile(simHero.Owner)
-	if profile and profile.Heroes[simHero.HeroUUID] then
-		local currentHero = profile.Heroes[simHero.HeroUUID]
-		local trainingMult = attunedMultiplier(simHero.Owner, profile, currentHero, StatFormulas.GetEquippedArtifact(profile,currentHero))
-		local effATK, effHP, _, interval = StatFormulas.GetEffectiveCombatStats(currentHero, false, false, StatFormulas.GetEquippedArtifact(profile,currentHero), trainingMult)
-		simHero.AttackInterval = interval
-		simHero.CurrentHP = math.min(simHero.CurrentHP,effHP)
-		simHero.EffectiveATK = effATK
-		simHero.MaxHP = effHP
+	if now >= (simHero.StatsRefreshAt or 0) then
+		simHero.StatsRefreshAt = now + STAT_REFRESH_SECONDS
+		local profile = getDataManager().GetProfile(simHero.Owner)
+		local currentHero = profile and profile.Heroes[simHero.HeroUUID]
+		if currentHero then
+			local artifact = StatFormulas.GetEquippedArtifact(profile, currentHero)
+			local trainingMult = attunedMultiplier(simHero.Owner, profile, currentHero, artifact)
+			local effATK, effHP, _, interval = StatFormulas.GetEffectiveCombatStats(currentHero, false, false, artifact, trainingMult)
+			simHero.AttackInterval = interval
+			simHero.EffectiveATK = effATK
+			simHero.MaxHP = effHP
+		end
 	end
+	simHero.CurrentHP = math.min(simHero.CurrentHP, simHero.MaxHP)
 
 	local masterState = ActiveMasters[simHero.Owner]
 	local maxLeash = assignedRoom and FirstBiome.LeashRange or (masterState and masterState.TargetEnemyUserId ~= nil) and 150.0 or LEASH_DISTANCE
