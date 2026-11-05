@@ -5125,6 +5125,7 @@ end
 -- Forward declarations for weapon style tables defined below
 local DAGGER_STYLES: { [string]: any }
 local AXE_STYLES: { [string]: any }
+local STAFF_STYLES: { [string]: any }
 
 -- Per-artifact colour overrides and the rarity glow, applied to a cloned prefab.
 local DAGGER_STYLES: { [string]: any } = nil :: any
@@ -5223,6 +5224,18 @@ function WeaponModelBuilder.Style(wModel: Model, weaponAssetId: string?, rarityI
 	local axeStyle = (AXE_STYLES and weaponAssetId) and AXE_STYLES[weaponAssetId]
 	if axeStyle and axeStyle.Parts then
 		for partName, pStyle in pairs(axeStyle.Parts) do
+			local part = wModel:FindFirstChild(partName) :: BasePart?
+			if part then
+				if pStyle.Material then part.Material = pStyle.Material end
+				if pStyle.Color then part.Color = pStyle.Color end
+			end
+		end
+	end
+
+	-- Mage Staves (Batch 5) Styling Hook
+	local staffStyle = (STAFF_STYLES and weaponAssetId) and STAFF_STYLES[weaponAssetId]
+	if staffStyle and staffStyle.Parts then
+		for partName, pStyle in pairs(staffStyle.Parts) do
 			local part = wModel:FindFirstChild(partName) :: BasePart?
 			if part then
 				if pStyle.Material then part.Material = pStyle.Material end
@@ -6599,6 +6612,580 @@ function WeaponModelBuilder.BuildGenesisSundererArtifact(): Model
 	return makeMeshAxe("art_genesis_sunderer")
 end
 
+-- MAGE STAVES (Batch 5) - 14 Modular 3D Anime Staves, Scepters & Spindles
+export type StaffPartData = {
+	Name: string,
+	MeshId: string,
+	Size: Vector3,
+	Offset: Vector3,
+	Mat: Enum.Material,
+	Color: Color3,
+}
+
+export type StaffMeshData = {
+	GripPos: Vector3,
+	TipPos: Vector3,
+	BasePos: Vector3,
+	CorePos: Vector3,
+	Parts: { StaffPartData },
+}
+
+local STAFF_MESH_DATA: { [string]: StaffMeshData } = {
+	art_apprentice_cane = {
+		GripPos = Vector3.new(0.0000, 0.0000, 0.0000),
+		TipPos = Vector3.new(0.0000, 0.0000, 1.9000),
+		BasePos = Vector3.new(0.0000, 0.0000, -1.5000),
+		CorePos = Vector3.new(0.0000, 0.0000, 1.7500),
+		Parts = {
+			{ Name = "ArcaneCore", MeshId = "rbxassetid://75594269387003", Size = Vector3.new(0.3600, 0.3600, 0.3600), Offset = Vector3.new(0.0000, 1.7500, 0.0000), Mat = Enum.Material.Glass, Color = Color3.fromRGB(225, 230, 235) },
+			{ Name = "Crown", MeshId = "rbxassetid://125313355802453", Size = Vector3.new(0.2835, 0.5247, 0.2800), Offset = Vector3.new(-0.0032, 1.5173, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(195, 125, 90) },
+			{ Name = "Handle", MeshId = "rbxassetid://110710633020146", Size = Vector3.new(0.1485, 0.8000, 0.1500), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Wood, Color = Color3.fromRGB(195, 175, 140) },
+			{ Name = "Pommel", MeshId = "rbxassetid://127542811256816", Size = Vector3.new(0.1584, 0.4250, 0.1600), Offset = Vector3.new(0.0000, -1.4625, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(180, 115, 80) },
+			{ Name = "Shaft", MeshId = "rbxassetid://117267202012633", Size = Vector3.new(0.1386, 2.6000, 0.1400), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Wood, Color = Color3.fromRGB(195, 175, 140) },
+			{ Name = "ShaftBands", MeshId = "rbxassetid://129430507986241", Size = Vector3.new(0.1800, 0.8640, 0.1782), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(180, 115, 80) },
+		},
+	},
+	art_archmage_rod = {
+		GripPos = Vector3.new(0.0000, 0.0000, 0.0000),
+		TipPos = Vector3.new(0.0000, 0.0000, 2.7000),
+		BasePos = Vector3.new(0.0000, 0.0000, -2.0000),
+		CorePos = Vector3.new(0.0000, 0.0000, 2.3500),
+		Parts = {
+			{ Name = "ArcaneCore", MeshId = "rbxassetid://73035057637400", Size = Vector3.new(0.3800, 0.3800, 0.3800), Offset = Vector3.new(0.0000, 2.3500, 0.0000), Mat = Enum.Material.Neon, Color = Color3.fromRGB(160, 90, 255) },
+			{ Name = "CaduceusWings", MeshId = "rbxassetid://105120652300312", Size = Vector3.new(0.9218, 0.5717, 0.0900), Offset = Vector3.new(0.0000, 2.3602, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(240, 200, 85) },
+			{ Name = "Crown", MeshId = "rbxassetid://113124309966825", Size = Vector3.new(0.3600, 0.3500, 0.3600), Offset = Vector3.new(0.0000, 1.8500, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(235, 195, 80) },
+			{ Name = "FocusProngs", MeshId = "rbxassetid://101040304600981", Size = Vector3.new(0.4661, 0.8049, 0.4368), Offset = Vector3.new(0.0000, 2.3144, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(215, 175, 60) },
+			{ Name = "Handle", MeshId = "rbxassetid://107588427599063", Size = Vector3.new(0.1800, 0.9000, 0.1800), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Wood, Color = Color3.fromRGB(25, 25, 30) },
+			{ Name = "Pommel", MeshId = "rbxassetid://104547152506622", Size = Vector3.new(0.3000, 0.4950, 0.3000), Offset = Vector3.new(0.0000, -1.8225, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(225, 185, 70) },
+			{ Name = "Shaft", MeshId = "rbxassetid://111174941719215", Size = Vector3.new(0.1700, 3.3000, 0.1700), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Wood, Color = Color3.fromRGB(25, 25, 30) },
+			{ Name = "ShaftBands", MeshId = "rbxassetid://105818649481766", Size = Vector3.new(0.2440, 2.3429, 0.2440), Offset = Vector3.new(0.0000, 0.6000, -0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(225, 185, 70) },
+		},
+	},
+	art_chronomancers_spindle = {
+		GripPos = Vector3.new(0.0000, 0.0000, 0.0000),
+		TipPos = Vector3.new(0.0000, 0.0000, 2.6500),
+		BasePos = Vector3.new(0.0000, 0.0000, -2.0000),
+		CorePos = Vector3.new(0.0000, 0.0000, 2.3500),
+		Parts = {
+			{ Name = "ArcaneCore", MeshId = "rbxassetid://71690734843269", Size = Vector3.new(0.3200, 0.4800, 0.3200), Offset = Vector3.new(0.0000, 2.3500, 0.0000), Mat = Enum.Material.Neon, Color = Color3.fromRGB(250, 210, 90) },
+			{ Name = "Crown", MeshId = "rbxassetid://77355294530423", Size = Vector3.new(0.4000, 0.3500, 0.4000), Offset = Vector3.new(0.0000, 1.8500, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(210, 170, 75) },
+			{ Name = "FocusProngs", MeshId = "rbxassetid://126119887551655", Size = Vector3.new(0.4457, 0.4457, 0.6100), Offset = Vector3.new(0.0000, 2.3500, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(230, 185, 80) },
+			{ Name = "Handle", MeshId = "rbxassetid://88208276463651", Size = Vector3.new(0.1800, 0.9000, 0.1800), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(190, 150, 65) },
+			{ Name = "OrbitalRings", MeshId = "rbxassetid://124530086612399", Size = Vector3.new(0.7476, 0.4500, 0.7422), Offset = Vector3.new(0.0000, 2.3500, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(195, 155, 65) },
+			{ Name = "Pommel", MeshId = "rbxassetid://115502749216905", Size = Vector3.new(0.3000, 0.4000, 0.3000), Offset = Vector3.new(0.0000, -1.7750, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(160, 120, 50) },
+			{ Name = "Shaft", MeshId = "rbxassetid://104308157991665", Size = Vector3.new(0.1700, 3.3000, 0.1700), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(190, 150, 65) },
+			{ Name = "ShaftBands", MeshId = "rbxassetid://132679879855233", Size = Vector3.new(0.2440, 2.3440, 0.2440), Offset = Vector3.new(0.0000, 0.6000, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(190, 150, 65) },
+		},
+	},
+	art_chronos_stave = {
+		GripPos = Vector3.new(0.0000, 0.0000, 0.0000),
+		TipPos = Vector3.new(0.0000, 0.0000, 2.8000),
+		BasePos = Vector3.new(0.0000, 0.0000, -2.1500),
+		CorePos = Vector3.new(0.0000, 0.0000, 2.4500),
+		Parts = {
+			{ Name = "ArcaneCore", MeshId = "rbxassetid://101064696461869", Size = Vector3.new(0.4400, 0.4400, 0.4400), Offset = Vector3.new(0.0000, 2.4500, 0.0000), Mat = Enum.Material.Neon, Color = Color3.fromRGB(80, 230, 255) },
+			{ Name = "Crown", MeshId = "rbxassetid://131099756829563", Size = Vector3.new(0.4400, 0.4000, 0.4400), Offset = Vector3.new(0.0000, 2.0000, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(200, 215, 230) },
+			{ Name = "Handle", MeshId = "rbxassetid://115216547118104", Size = Vector3.new(0.1900, 0.9500, 0.1900), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(215, 225, 238) },
+			{ Name = "OrbitalRings", MeshId = "rbxassetid://75645079066811", Size = Vector3.new(0.9600, 0.9280, 0.9493), Offset = Vector3.new(0.0000, 2.4500, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(240, 195, 80) },
+			{ Name = "Pommel", MeshId = "rbxassetid://98307644125535", Size = Vector3.new(0.2559, 0.4679, 0.3440), Offset = Vector3.new(0.0000, -1.9440, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(180, 195, 215) },
+			{ Name = "Shaft", MeshId = "rbxassetid://100842711001797", Size = Vector3.new(0.1800, 3.6000, 0.1800), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(215, 225, 238) },
+			{ Name = "ShaftBands", MeshId = "rbxassetid://80007321371577", Size = Vector3.new(0.2660, 2.6000, 0.2660), Offset = Vector3.new(0.0000, 0.6250, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(235, 190, 75) },
+		},
+	},
+	art_eye_of_singularity = {
+		GripPos = Vector3.new(0.0000, 0.0000, 0.0000),
+		TipPos = Vector3.new(0.0000, 0.0000, 2.9000),
+		BasePos = Vector3.new(0.0000, 0.0000, -2.3000),
+		CorePos = Vector3.new(0.0000, 0.0000, 2.6000),
+		Parts = {
+			{ Name = "ArcaneCore", MeshId = "rbxassetid://87131108470982", Size = Vector3.new(0.8642, 0.5000, 0.8887), Offset = Vector3.new(0.0000, 2.6000, 0.0000), Mat = Enum.Material.Neon, Color = Color3.fromRGB(195, 85, 255) },
+			{ Name = "Crown", MeshId = "rbxassetid://89809975884823", Size = Vector3.new(0.5000, 0.4500, 0.5000), Offset = Vector3.new(0.0000, 2.1000, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(65, 32, 95) },
+			{ Name = "FloatingShards", MeshId = "rbxassetid://107092125986460", Size = Vector3.new(1.2254, 0.7565, 1.2279), Offset = Vector3.new(0.0000, 2.6014, 0.0000), Mat = Enum.Material.Glass, Color = Color3.fromRGB(225, 140, 255) },
+			{ Name = "FocusProngs", MeshId = "rbxassetid://84098327727934", Size = Vector3.new(0.8415, 0.9437, 0.7395), Offset = Vector3.new(0.0000, 2.6000, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(90, 45, 135) },
+			{ Name = "Handle", MeshId = "rbxassetid://103181149788400", Size = Vector3.new(0.2000, 1.0000, 0.2000), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Glass, Color = Color3.fromRGB(15, 12, 22) },
+			{ Name = "Pommel", MeshId = "rbxassetid://105669166263285", Size = Vector3.new(0.2600, 0.7250, 0.2600), Offset = Vector3.new(0.0000, -2.1625, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(48, 25, 75) },
+			{ Name = "Shaft", MeshId = "rbxassetid://75393092124747", Size = Vector3.new(0.1900, 3.7500, 0.1900), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Glass, Color = Color3.fromRGB(15, 12, 22) },
+			{ Name = "ShaftBands", MeshId = "rbxassetid://72058804288441", Size = Vector3.new(0.2860, 2.9054, 0.2860), Offset = Vector3.new(0.0000, 0.7250, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(75, 40, 110) },
+		},
+	},
+	art_frostweaver_scepter = {
+		GripPos = Vector3.new(0.0000, 0.0000, 0.0000),
+		TipPos = Vector3.new(0.0000, 0.0000, 2.4000),
+		BasePos = Vector3.new(0.0000, 0.0000, -1.8000),
+		CorePos = Vector3.new(0.0000, 0.0000, 2.1500),
+		Parts = {
+			{ Name = "ArcaneCore", MeshId = "rbxassetid://121023718862452", Size = Vector3.new(0.5305, 0.2400, 0.5389), Offset = Vector3.new(0.0000, 2.1500, 0.0000), Mat = Enum.Material.Neon, Color = Color3.fromRGB(130, 220, 255) },
+			{ Name = "Crown", MeshId = "rbxassetid://119568997697910", Size = Vector3.new(0.3683, 0.5965, 0.3853), Offset = Vector3.new(-0.0294, 1.7733, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(200, 210, 225) },
+			{ Name = "Handle", MeshId = "rbxassetid://85891739453945", Size = Vector3.new(0.1700, 0.9000, 0.1700), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Wood, Color = Color3.fromRGB(215, 220, 225) },
+			{ Name = "OrbitalRings", MeshId = "rbxassetid://115209279565436", Size = Vector3.new(0.8400, 0.0400, 0.8400), Offset = Vector3.new(0.0000, 2.1500, 0.0000), Mat = Enum.Material.Glass, Color = Color3.fromRGB(180, 235, 255) },
+			{ Name = "Pommel", MeshId = "rbxassetid://115165221322985", Size = Vector3.new(0.2600, 0.4350, 0.2600), Offset = Vector3.new(0.0000, -1.6925, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(190, 200, 215) },
+			{ Name = "Shaft", MeshId = "rbxassetid://94593230355800", Size = Vector3.new(0.1600, 3.0600, 0.1600), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Wood, Color = Color3.fromRGB(215, 220, 225) },
+			{ Name = "ShaftBands", MeshId = "rbxassetid://73476339612412", Size = Vector3.new(0.2260, 2.0851, 0.2260), Offset = Vector3.new(0.0000, 0.5250, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(190, 200, 215) },
+		},
+	},
+	art_glacial_monolith = {
+		GripPos = Vector3.new(0.0000, 0.0000, 0.0000),
+		TipPos = Vector3.new(0.0000, 0.0000, 2.4000),
+		BasePos = Vector3.new(0.0000, 0.0000, -1.9500),
+		CorePos = Vector3.new(0.0000, 0.0000, 2.1500),
+		Parts = {
+			{ Name = "ArcaneCore", MeshId = "rbxassetid://116141917102328", Size = Vector3.new(0.3989, 0.4000, 0.4000), Offset = Vector3.new(0.0000, 2.1500, 0.0000), Mat = Enum.Material.Neon, Color = Color3.fromRGB(60, 225, 255) },
+			{ Name = "Crown", MeshId = "rbxassetid://86060257379879", Size = Vector3.new(0.2835, 0.6823, 0.3490), Offset = Vector3.new(0.0001, 1.9161, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(180, 205, 230) },
+			{ Name = "FloatingShards", MeshId = "rbxassetid://86792468462979", Size = Vector3.new(1.0165, 0.5180, 0.9021), Offset = Vector3.new(0.0000, 2.1508, 0.0000), Mat = Enum.Material.Glass, Color = Color3.fromRGB(190, 240, 255) },
+			{ Name = "Handle", MeshId = "rbxassetid://78434635409130", Size = Vector3.new(0.1795, 0.9000, 0.1800), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Glass, Color = Color3.fromRGB(70, 160, 215) },
+			{ Name = "Pommel", MeshId = "rbxassetid://77334523433098", Size = Vector3.new(0.2194, 0.6500, 0.2200), Offset = Vector3.new(0.0000, -1.8500, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(170, 195, 220) },
+			{ Name = "Shaft", MeshId = "rbxassetid://116447884325823", Size = Vector3.new(0.1695, 3.1500, 0.1700), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Glass, Color = Color3.fromRGB(70, 160, 215) },
+			{ Name = "ShaftBands", MeshId = "rbxassetid://104824244866298", Size = Vector3.new(0.2400, 2.2100, 0.2393), Offset = Vector3.new(0.0000, 0.5649, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(170, 195, 220) },
+		},
+	},
+	art_infernal_pillar = {
+		GripPos = Vector3.new(0.0000, 0.0000, 0.0000),
+		TipPos = Vector3.new(0.0000, 0.0000, 2.7000),
+		BasePos = Vector3.new(0.0000, 0.0000, -2.0500),
+		CorePos = Vector3.new(0.0000, 0.0000, 2.3500),
+		Parts = {
+			{ Name = "ArcaneCore", MeshId = "rbxassetid://117862777979265", Size = Vector3.new(0.4391, 0.4400, 0.4400), Offset = Vector3.new(0.0000, 2.3500, 0.0000), Mat = Enum.Material.Neon, Color = Color3.fromRGB(255, 60, 20) },
+			{ Name = "Crown", MeshId = "rbxassetid://107864296147271", Size = Vector3.new(0.4391, 0.3800, 0.4400), Offset = Vector3.new(0.0000, 1.9000, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(50, 40, 45) },
+			{ Name = "FocusProngs", MeshId = "rbxassetid://136468241674461", Size = Vector3.new(0.5895, 0.5987, 0.5771), Offset = Vector3.new(-0.0293, 2.2935, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(180, 50, 25) },
+			{ Name = "Handle", MeshId = "rbxassetid://70992733344132", Size = Vector3.new(0.1896, 0.9500, 0.1900), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(28, 26, 30) },
+			{ Name = "OrbitalRings", MeshId = "rbxassetid://133836208107331", Size = Vector3.new(0.7405, 0.3898, 0.7098), Offset = Vector3.new(0.0000, 2.3500, 0.0000), Mat = Enum.Material.Neon, Color = Color3.fromRGB(255, 140, 30) },
+			{ Name = "Pommel", MeshId = "rbxassetid://97011549577768", Size = Vector3.new(0.2395, 0.6350, 0.2400), Offset = Vector3.new(0.0000, -1.9575, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(45, 38, 42) },
+			{ Name = "Shaft", MeshId = "rbxassetid://117620485596053", Size = Vector3.new(0.1796, 3.4500, 0.1800), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(28, 26, 30) },
+			{ Name = "ShaftBands", MeshId = "rbxassetid://115248856737213", Size = Vector3.new(0.2580, 2.4473, 0.2575), Offset = Vector3.new(0.0000, 0.6000, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(180, 50, 25) },
+		},
+	},
+	art_omega_archon_caduceus = {
+		GripPos = Vector3.new(0.0000, 0.0000, 0.0000),
+		TipPos = Vector3.new(0.0000, 0.0000, 3.0000),
+		BasePos = Vector3.new(0.0000, 0.0000, -2.3500),
+		CorePos = Vector3.new(0.0000, 0.0000, 2.6500),
+		Parts = {
+			{ Name = "ArcaneCore", MeshId = "rbxassetid://124633983012337", Size = Vector3.new(0.5000, 0.5000, 0.5000), Offset = Vector3.new(0.0000, 2.6500, 0.0000), Mat = Enum.Material.Neon, Color = Color3.fromRGB(255, 245, 200) },
+			{ Name = "Crown", MeshId = "rbxassetid://80798890341841", Size = Vector3.new(0.5200, 0.4500, 0.5200), Offset = Vector3.new(0.0000, 2.1000, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(255, 215, 90) },
+			{ Name = "FocusProngs", MeshId = "rbxassetid://107673575815355", Size = Vector3.new(1.5655, 0.9901, 0.1000), Offset = Vector3.new(0.0000, 2.5234, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(250, 205, 80) },
+			{ Name = "Handle", MeshId = "rbxassetid://103181149788400", Size = Vector3.new(0.2000, 1.0000, 0.2000), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(245, 240, 230) },
+			{ Name = "OrbitalRings", MeshId = "rbxassetid://114668873044934", Size = Vector3.new(1.0514, 0.4408, 0.7227), Offset = Vector3.new(0.0000, 2.6500, 0.0000), Mat = Enum.Material.Neon, Color = Color3.fromRGB(175, 130, 255) },
+			{ Name = "Pommel", MeshId = "rbxassetid://112586924003879", Size = Vector3.new(0.3800, 0.5000, 0.3800), Offset = Vector3.new(0.0000, -2.0500, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(255, 210, 85) },
+			{ Name = "Shaft", MeshId = "rbxassetid://75393092124747", Size = Vector3.new(0.1900, 3.7500, 0.1900), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(245, 240, 230) },
+			{ Name = "ShaftBands", MeshId = "rbxassetid://71460876799025", Size = Vector3.new(0.2860, 2.9060, 0.2860), Offset = Vector3.new(0.0000, 0.7250, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(255, 210, 85) },
+		},
+	},
+	art_pyromancers_torch_rod = {
+		GripPos = Vector3.new(0.0000, 0.0000, 0.0000),
+		TipPos = Vector3.new(0.0000, 0.0000, 2.3000),
+		BasePos = Vector3.new(0.0000, 0.0000, -1.8000),
+		CorePos = Vector3.new(0.0000, 0.0000, 1.9500),
+		Parts = {
+			{ Name = "ArcaneCore", MeshId = "rbxassetid://90609655843176", Size = Vector3.new(0.3186, 0.3200, 0.3200), Offset = Vector3.new(0.0000, 1.9500, 0.0000), Mat = Enum.Material.Neon, Color = Color3.fromRGB(255, 95, 20) },
+			{ Name = "Crown", MeshId = "rbxassetid://86505835860389", Size = Vector3.new(0.3983, 0.3000, 0.4000), Offset = Vector3.new(0.0000, 1.6000, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(50, 52, 58) },
+			{ Name = "FocusProngs", MeshId = "rbxassetid://111311324740364", Size = Vector3.new(0.5064, 0.5665, 0.4466), Offset = Vector3.new(0.0000, 1.9583, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(60, 62, 70) },
+			{ Name = "Handle", MeshId = "rbxassetid://94116964109412", Size = Vector3.new(0.1693, 0.9000, 0.1700), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(40, 42, 48) },
+			{ Name = "Pommel", MeshId = "rbxassetid://71371851079709", Size = Vector3.new(0.1991, 0.5500, 0.2000), Offset = Vector3.new(0.0000, -1.7000, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(55, 58, 65) },
+			{ Name = "Shaft", MeshId = "rbxassetid://123895618170373", Size = Vector3.new(0.1593, 2.9500, 0.1600), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(40, 42, 48) },
+			{ Name = "ShaftBands", MeshId = "rbxassetid://78741677961967", Size = Vector3.new(0.2260, 1.9151, 0.2250), Offset = Vector3.new(0.0000, 0.4600, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(190, 140, 50) },
+		},
+	},
+	art_ruby_staff = {
+		GripPos = Vector3.new(0.0000, 0.0000, 0.0000),
+		TipPos = Vector3.new(0.0000, 0.0000, 2.3000),
+		BasePos = Vector3.new(0.0000, 0.0000, -1.7000),
+		CorePos = Vector3.new(0.0000, 0.0000, 2.0500),
+		Parts = {
+			{ Name = "ArcaneCore", MeshId = "rbxassetid://79317759674677", Size = Vector3.new(0.4000, 0.4000, 0.4000), Offset = Vector3.new(0.0000, 2.0500, 0.0000), Mat = Enum.Material.Neon, Color = Color3.fromRGB(240, 30, 80) },
+			{ Name = "Crown", MeshId = "rbxassetid://80722231690598", Size = Vector3.new(0.3600, 0.5050, 0.3600), Offset = Vector3.new(0.0000, 1.6226, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(165, 115, 70) },
+			{ Name = "FocusProngs", MeshId = "rbxassetid://87850337613471", Size = Vector3.new(0.3541, 0.5010, 0.3070), Offset = Vector3.new(-0.0441, 1.9467, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(175, 120, 75) },
+			{ Name = "Handle", MeshId = "rbxassetid://72754428785273", Size = Vector3.new(0.1700, 0.8500, 0.1700), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Wood, Color = Color3.fromRGB(85, 55, 35) },
+			{ Name = "Pommel", MeshId = "rbxassetid://92909408308738", Size = Vector3.new(0.2600, 0.4350, 0.2600), Offset = Vector3.new(0.0000, -1.5925, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(150, 105, 60) },
+			{ Name = "Shaft", MeshId = "rbxassetid://76223130521129", Size = Vector3.new(0.1600, 2.8400, 0.1600), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Wood, Color = Color3.fromRGB(85, 55, 35) },
+			{ Name = "ShaftBands", MeshId = "rbxassetid://94140276730837", Size = Vector3.new(0.2120, 1.8312, 0.2120), Offset = Vector3.new(0.0000, 0.4500, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(150, 105, 60) },
+		},
+	},
+	art_scholars_spire = {
+		GripPos = Vector3.new(0.0000, 0.0000, 0.0000),
+		TipPos = Vector3.new(0.0000, 0.0000, 2.2000),
+		BasePos = Vector3.new(0.0000, 0.0000, -1.6000),
+		CorePos = Vector3.new(0.0000, 0.0000, 1.9500),
+		Parts = {
+			{ Name = "ArcaneCore", MeshId = "rbxassetid://126221139389673", Size = Vector3.new(0.3200, 0.5250, 0.3200), Offset = Vector3.new(0.0000, 1.9675, 0.0000), Mat = Enum.Material.Neon, Color = Color3.fromRGB(245, 160, 40) },
+			{ Name = "Crown", MeshId = "rbxassetid://104821740261482", Size = Vector3.new(0.3167, 0.4250, 0.3200), Offset = Vector3.new(0.0000, 1.5375, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(220, 180, 85) },
+			{ Name = "Handle", MeshId = "rbxassetid://128894348282340", Size = Vector3.new(0.1584, 0.8500, 0.1600), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Wood, Color = Color3.fromRGB(120, 70, 45) },
+			{ Name = "Pommel", MeshId = "rbxassetid://117910379280759", Size = Vector3.new(0.2178, 0.3800, 0.2200), Offset = Vector3.new(0.0000, -1.5400, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(210, 170, 75) },
+			{ Name = "Shaft", MeshId = "rbxassetid://72197993371952", Size = Vector3.new(0.1485, 2.7500, 0.1500), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Wood, Color = Color3.fromRGB(120, 70, 45) },
+			{ Name = "ShaftBands", MeshId = "rbxassetid://107632089654087", Size = Vector3.new(0.2000, 1.7300, 0.1980), Offset = Vector3.new(0.0000, 0.4000, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(210, 170, 75) },
+		},
+	},
+	art_solaris_sunburst = {
+		GripPos = Vector3.new(0.0000, 0.0000, 0.0000),
+		TipPos = Vector3.new(0.0000, 0.0000, 2.8000),
+		BasePos = Vector3.new(0.0000, 0.0000, -2.1500),
+		CorePos = Vector3.new(0.0000, 0.0000, 2.4500),
+		Parts = {
+			{ Name = "ArcaneCore", MeshId = "rbxassetid://113396609524774", Size = Vector3.new(0.4800, 0.4800, 0.4800), Offset = Vector3.new(0.0000, 2.4500, 0.0000), Mat = Enum.Material.Neon, Color = Color3.fromRGB(255, 235, 175) },
+			{ Name = "Crown", MeshId = "rbxassetid://114544498744736", Size = Vector3.new(0.4800, 0.4000, 0.4800), Offset = Vector3.new(0.0000, 2.0000, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(240, 185, 55) },
+			{ Name = "Handle", MeshId = "rbxassetid://115216547118104", Size = Vector3.new(0.1900, 0.9500, 0.1900), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(245, 195, 65) },
+			{ Name = "OrbitalRings", MeshId = "rbxassetid://132589338472028", Size = Vector3.new(1.1067, 1.0062, 1.0295), Offset = Vector3.new(0.0000, 2.4500, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(255, 205, 80) },
+			{ Name = "Pommel", MeshId = "rbxassetid://74918919692492", Size = Vector3.new(0.4018, 0.4800, 0.4018), Offset = Vector3.new(0.0000, -1.9500, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(255, 215, 95) },
+			{ Name = "Shaft", MeshId = "rbxassetid://100842711001797", Size = Vector3.new(0.1800, 3.6000, 0.1800), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(245, 195, 65) },
+			{ Name = "ShaftBands", MeshId = "rbxassetid://80007321371577", Size = Vector3.new(0.2660, 2.6000, 0.2660), Offset = Vector3.new(0.0000, 0.6250, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(255, 215, 95) },
+		},
+	},
+	art_void_channeler = {
+		GripPos = Vector3.new(0.0000, 0.0000, 0.0000),
+		TipPos = Vector3.new(0.0000, 0.0000, 2.7000),
+		BasePos = Vector3.new(0.0000, 0.0000, -2.0500),
+		CorePos = Vector3.new(0.0000, 0.0000, 2.3500),
+		Parts = {
+			{ Name = "ArcaneCore", MeshId = "rbxassetid://127168285935259", Size = Vector3.new(0.4400, 0.4400, 0.4400), Offset = Vector3.new(0.0000, 2.3500, 0.0000), Mat = Enum.Material.Neon, Color = Color3.fromRGB(170, 50, 250) },
+			{ Name = "Crown", MeshId = "rbxassetid://105220951861446", Size = Vector3.new(0.4400, 0.3800, 0.4400), Offset = Vector3.new(0.0000, 1.9000, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(60, 32, 85) },
+			{ Name = "FocusProngs", MeshId = "rbxassetid://140393742595376", Size = Vector3.new(0.4505, 0.6471, 0.6066), Offset = Vector3.new(-0.0006, 2.3414, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(80, 40, 115) },
+			{ Name = "Handle", MeshId = "rbxassetid://75304298934818", Size = Vector3.new(0.1900, 0.9500, 0.1900), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Slate, Color = Color3.fromRGB(22, 18, 28) },
+			{ Name = "OrbitalRings", MeshId = "rbxassetid://94607134565170", Size = Vector3.new(0.8648, 0.4661, 0.8886), Offset = Vector3.new(0.0000, 2.3500, 0.0000), Mat = Enum.Material.Neon, Color = Color3.fromRGB(215, 110, 255) },
+			{ Name = "Pommel", MeshId = "rbxassetid://105978967739468", Size = Vector3.new(0.2800, 0.5000, 0.2800), Offset = Vector3.new(0.0000, -1.8900, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(55, 30, 75) },
+			{ Name = "Shaft", MeshId = "rbxassetid://72626563061645", Size = Vector3.new(0.1800, 3.4500, 0.1800), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Slate, Color = Color3.fromRGB(22, 18, 28) },
+			{ Name = "ShaftBands", MeshId = "rbxassetid://114910144631413", Size = Vector3.new(0.2580, 2.4473, 0.2580), Offset = Vector3.new(0.0000, 0.6000, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(75, 40, 100) },
+		},
+	},
+}
+
+type StaffPartStyle = {
+	Material: Enum.Material?,
+	Color: Color3?,
+}
+
+type StaffStyleData = {
+	RarityTier: number,
+	Parts: { [string]: StaffPartStyle },
+}
+
+STAFF_STYLES = {
+	art_apprentice_cane = {
+		RarityTier = 1,
+		Parts = {
+			ArcaneCore = { Material = Enum.Material.Glass, Color = Color3.fromRGB(225, 230, 235) },
+			Crown = { Material = Enum.Material.Metal, Color = Color3.fromRGB(195, 125, 90) },
+			Handle = { Material = Enum.Material.Wood, Color = Color3.fromRGB(195, 175, 140) },
+			Pommel = { Material = Enum.Material.Metal, Color = Color3.fromRGB(180, 115, 80) },
+			Shaft = { Material = Enum.Material.Wood, Color = Color3.fromRGB(195, 175, 140) },
+			ShaftBands = { Material = Enum.Material.Metal, Color = Color3.fromRGB(180, 115, 80) },
+		},
+	},
+	art_archmage_rod = {
+		RarityTier = 4,
+		Parts = {
+			ArcaneCore = { Material = Enum.Material.Neon, Color = Color3.fromRGB(160, 90, 255) },
+			CaduceusWings = { Material = Enum.Material.Metal, Color = Color3.fromRGB(240, 200, 85) },
+			Crown = { Material = Enum.Material.Metal, Color = Color3.fromRGB(235, 195, 80) },
+			FocusProngs = { Material = Enum.Material.Metal, Color = Color3.fromRGB(215, 175, 60) },
+			Handle = { Material = Enum.Material.Wood, Color = Color3.fromRGB(25, 25, 30) },
+			Pommel = { Material = Enum.Material.Metal, Color = Color3.fromRGB(225, 185, 70) },
+			Shaft = { Material = Enum.Material.Wood, Color = Color3.fromRGB(25, 25, 30) },
+			ShaftBands = { Material = Enum.Material.Metal, Color = Color3.fromRGB(225, 185, 70) },
+		},
+	},
+	art_chronomancers_spindle = {
+		RarityTier = 4,
+		Parts = {
+			ArcaneCore = { Material = Enum.Material.Neon, Color = Color3.fromRGB(250, 210, 90) },
+			Crown = { Material = Enum.Material.Metal, Color = Color3.fromRGB(210, 170, 75) },
+			FocusProngs = { Material = Enum.Material.Metal, Color = Color3.fromRGB(230, 185, 80) },
+			Handle = { Material = Enum.Material.Metal, Color = Color3.fromRGB(190, 150, 65) },
+			OrbitalRings = { Material = Enum.Material.Metal, Color = Color3.fromRGB(195, 155, 65) },
+			Pommel = { Material = Enum.Material.Metal, Color = Color3.fromRGB(160, 120, 50) },
+			Shaft = { Material = Enum.Material.Metal, Color = Color3.fromRGB(190, 150, 65) },
+			ShaftBands = { Material = Enum.Material.Metal, Color = Color3.fromRGB(190, 150, 65) },
+		},
+	},
+	art_chronos_stave = {
+		RarityTier = 6,
+		Parts = {
+			ArcaneCore = { Material = Enum.Material.Neon, Color = Color3.fromRGB(80, 230, 255) },
+			Crown = { Material = Enum.Material.Metal, Color = Color3.fromRGB(200, 215, 230) },
+			Handle = { Material = Enum.Material.Metal, Color = Color3.fromRGB(215, 225, 238) },
+			OrbitalRings = { Material = Enum.Material.Metal, Color = Color3.fromRGB(240, 195, 80) },
+			Pommel = { Material = Enum.Material.Metal, Color = Color3.fromRGB(180, 195, 215) },
+			Shaft = { Material = Enum.Material.Metal, Color = Color3.fromRGB(215, 225, 238) },
+			ShaftBands = { Material = Enum.Material.Metal, Color = Color3.fromRGB(235, 190, 75) },
+		},
+	},
+	art_eye_of_singularity = {
+		RarityTier = 7,
+		Parts = {
+			ArcaneCore = { Material = Enum.Material.Neon, Color = Color3.fromRGB(195, 85, 255) },
+			Crown = { Material = Enum.Material.Metal, Color = Color3.fromRGB(65, 32, 95) },
+			FloatingShards = { Material = Enum.Material.Glass, Color = Color3.fromRGB(225, 140, 255) },
+			FocusProngs = { Material = Enum.Material.Metal, Color = Color3.fromRGB(90, 45, 135) },
+			Handle = { Material = Enum.Material.Glass, Color = Color3.fromRGB(15, 12, 22) },
+			Pommel = { Material = Enum.Material.Metal, Color = Color3.fromRGB(48, 25, 75) },
+			Shaft = { Material = Enum.Material.Glass, Color = Color3.fromRGB(15, 12, 22) },
+			ShaftBands = { Material = Enum.Material.Metal, Color = Color3.fromRGB(75, 40, 110) },
+		},
+	},
+	art_frostweaver_scepter = {
+		RarityTier = 3,
+		Parts = {
+			ArcaneCore = { Material = Enum.Material.Neon, Color = Color3.fromRGB(130, 220, 255) },
+			Crown = { Material = Enum.Material.Metal, Color = Color3.fromRGB(200, 210, 225) },
+			Handle = { Material = Enum.Material.Wood, Color = Color3.fromRGB(215, 220, 225) },
+			OrbitalRings = { Material = Enum.Material.Glass, Color = Color3.fromRGB(180, 235, 255) },
+			Pommel = { Material = Enum.Material.Metal, Color = Color3.fromRGB(190, 200, 215) },
+			Shaft = { Material = Enum.Material.Wood, Color = Color3.fromRGB(215, 220, 225) },
+			ShaftBands = { Material = Enum.Material.Metal, Color = Color3.fromRGB(190, 200, 215) },
+		},
+	},
+	art_glacial_monolith = {
+		RarityTier = 3,
+		Parts = {
+			ArcaneCore = { Material = Enum.Material.Neon, Color = Color3.fromRGB(60, 225, 255) },
+			Crown = { Material = Enum.Material.Metal, Color = Color3.fromRGB(180, 205, 230) },
+			FloatingShards = { Material = Enum.Material.Glass, Color = Color3.fromRGB(190, 240, 255) },
+			Handle = { Material = Enum.Material.Glass, Color = Color3.fromRGB(70, 160, 215) },
+			Pommel = { Material = Enum.Material.Metal, Color = Color3.fromRGB(170, 195, 220) },
+			Shaft = { Material = Enum.Material.Glass, Color = Color3.fromRGB(70, 160, 215) },
+			ShaftBands = { Material = Enum.Material.Metal, Color = Color3.fromRGB(170, 195, 220) },
+		},
+	},
+	art_infernal_pillar = {
+		RarityTier = 5,
+		Parts = {
+			ArcaneCore = { Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 60, 20) },
+			Crown = { Material = Enum.Material.Metal, Color = Color3.fromRGB(50, 40, 45) },
+			FocusProngs = { Material = Enum.Material.Metal, Color = Color3.fromRGB(180, 50, 25) },
+			Handle = { Material = Enum.Material.Metal, Color = Color3.fromRGB(28, 26, 30) },
+			OrbitalRings = { Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 140, 30) },
+			Pommel = { Material = Enum.Material.Metal, Color = Color3.fromRGB(45, 38, 42) },
+			Shaft = { Material = Enum.Material.Metal, Color = Color3.fromRGB(28, 26, 30) },
+			ShaftBands = { Material = Enum.Material.Metal, Color = Color3.fromRGB(180, 50, 25) },
+		},
+	},
+	art_omega_archon_caduceus = {
+		RarityTier = 7,
+		Parts = {
+			ArcaneCore = { Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 245, 200) },
+			Crown = { Material = Enum.Material.Metal, Color = Color3.fromRGB(255, 215, 90) },
+			FocusProngs = { Material = Enum.Material.Metal, Color = Color3.fromRGB(250, 205, 80) },
+			Handle = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(245, 240, 230) },
+			OrbitalRings = { Material = Enum.Material.Neon, Color = Color3.fromRGB(175, 130, 255) },
+			Pommel = { Material = Enum.Material.Metal, Color = Color3.fromRGB(255, 210, 85) },
+			Shaft = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(245, 240, 230) },
+			ShaftBands = { Material = Enum.Material.Metal, Color = Color3.fromRGB(255, 210, 85) },
+		},
+	},
+	art_pyromancers_torch_rod = {
+		RarityTier = 2,
+		Parts = {
+			ArcaneCore = { Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 95, 20) },
+			Crown = { Material = Enum.Material.Metal, Color = Color3.fromRGB(50, 52, 58) },
+			FocusProngs = { Material = Enum.Material.Metal, Color = Color3.fromRGB(60, 62, 70) },
+			Handle = { Material = Enum.Material.Metal, Color = Color3.fromRGB(40, 42, 48) },
+			Pommel = { Material = Enum.Material.Metal, Color = Color3.fromRGB(55, 58, 65) },
+			Shaft = { Material = Enum.Material.Metal, Color = Color3.fromRGB(40, 42, 48) },
+			ShaftBands = { Material = Enum.Material.Metal, Color = Color3.fromRGB(190, 140, 50) },
+		},
+	},
+	art_ruby_staff = {
+		RarityTier = 2,
+		Parts = {
+			ArcaneCore = { Material = Enum.Material.Neon, Color = Color3.fromRGB(240, 30, 80) },
+			Crown = { Material = Enum.Material.Metal, Color = Color3.fromRGB(165, 115, 70) },
+			FocusProngs = { Material = Enum.Material.Metal, Color = Color3.fromRGB(175, 120, 75) },
+			Handle = { Material = Enum.Material.Wood, Color = Color3.fromRGB(85, 55, 35) },
+			Pommel = { Material = Enum.Material.Metal, Color = Color3.fromRGB(150, 105, 60) },
+			Shaft = { Material = Enum.Material.Wood, Color = Color3.fromRGB(85, 55, 35) },
+			ShaftBands = { Material = Enum.Material.Metal, Color = Color3.fromRGB(150, 105, 60) },
+		},
+	},
+	art_scholars_spire = {
+		RarityTier = 1,
+		Parts = {
+			ArcaneCore = { Material = Enum.Material.Neon, Color = Color3.fromRGB(245, 160, 40) },
+			Crown = { Material = Enum.Material.Metal, Color = Color3.fromRGB(220, 180, 85) },
+			Handle = { Material = Enum.Material.Wood, Color = Color3.fromRGB(120, 70, 45) },
+			Pommel = { Material = Enum.Material.Metal, Color = Color3.fromRGB(210, 170, 75) },
+			Shaft = { Material = Enum.Material.Wood, Color = Color3.fromRGB(120, 70, 45) },
+			ShaftBands = { Material = Enum.Material.Metal, Color = Color3.fromRGB(210, 170, 75) },
+		},
+	},
+	art_solaris_sunburst = {
+		RarityTier = 6,
+		Parts = {
+			ArcaneCore = { Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 235, 175) },
+			Crown = { Material = Enum.Material.Metal, Color = Color3.fromRGB(240, 185, 55) },
+			Handle = { Material = Enum.Material.Metal, Color = Color3.fromRGB(245, 195, 65) },
+			OrbitalRings = { Material = Enum.Material.Metal, Color = Color3.fromRGB(255, 205, 80) },
+			Pommel = { Material = Enum.Material.Metal, Color = Color3.fromRGB(255, 215, 95) },
+			Shaft = { Material = Enum.Material.Metal, Color = Color3.fromRGB(245, 195, 65) },
+			ShaftBands = { Material = Enum.Material.Metal, Color = Color3.fromRGB(255, 215, 95) },
+		},
+	},
+	art_void_channeler = {
+		RarityTier = 5,
+		Parts = {
+			ArcaneCore = { Material = Enum.Material.Neon, Color = Color3.fromRGB(170, 50, 250) },
+			Crown = { Material = Enum.Material.Metal, Color = Color3.fromRGB(60, 32, 85) },
+			FocusProngs = { Material = Enum.Material.Metal, Color = Color3.fromRGB(80, 40, 115) },
+			Handle = { Material = Enum.Material.Slate, Color = Color3.fromRGB(22, 18, 28) },
+			OrbitalRings = { Material = Enum.Material.Neon, Color = Color3.fromRGB(215, 110, 255) },
+			Pommel = { Material = Enum.Material.Metal, Color = Color3.fromRGB(55, 30, 75) },
+			Shaft = { Material = Enum.Material.Slate, Color = Color3.fromRGB(22, 18, 28) },
+			ShaftBands = { Material = Enum.Material.Metal, Color = Color3.fromRGB(75, 40, 100) },
+		},
+	},
+} :: { [string]: StaffStyleData }
+
+local function makeMeshStaff(name: string): Model
+	local assets = ReplicatedStorage:FindFirstChild("Assets")
+	local weaponsFolder = assets and assets:FindFirstChild("Weapons")
+	local existing = weaponsFolder and weaponsFolder:FindFirstChild(name)
+	if existing and existing:IsA("Model") then
+		return existing:Clone()
+	end
+
+	local data = STAFF_MESH_DATA[name]
+	assert(data, `No staff mesh data for {name}`)
+
+	local model = Instance.new("Model")
+	model.Name = name
+
+	local style = STAFF_STYLES and STAFF_STYLES[name]
+	local handlePart: MeshPart?
+
+	for _, pInfo in ipairs(data.Parts) do
+		local p = Instance.new("MeshPart")
+		p.Name = pInfo.Name
+		pcall(function()
+			p.MeshId = pInfo.MeshId
+		end)
+		p.Size = pInfo.Size
+		p.CFrame = CFrame.new(pInfo.Offset)
+
+		local pStyle = style and style.Parts and style.Parts[pInfo.Name]
+		p.Material = (pStyle and pStyle.Material) or pInfo.Mat or Enum.Material.Wood
+		p.Color = (pStyle and pStyle.Color) or pInfo.Color or Color3.fromRGB(150, 150, 150)
+
+		p.CanCollide = false
+		p.CanTouch = false
+		p.CanQuery = false
+		p.Massless = true
+		p.Anchored = false
+		p.CastShadow = false
+		p.Parent = model
+
+		if pInfo.Name == "Handle" then
+			handlePart = p
+			model.PrimaryPart = p
+		end
+	end
+
+	assert(handlePart, `Handle part missing for {name}`)
+
+	-- Weld all child parts to the primary Handle
+	for _, child in ipairs(model:GetChildren()) do
+		if child:IsA("BasePart") and child ~= handlePart then
+			local weld = Instance.new("WeldConstraint")
+			weld.Name = "Weld_" .. child.Name
+			weld.Part0 = handlePart
+			weld.Part1 = child
+			weld.Parent = handlePart
+		end
+	end
+
+	-- Sockets: Grip, Tip, VfxTip, VfxBase, VfxCore
+	local grip = Instance.new("Attachment")
+	grip.Name = "Grip"
+	grip.CFrame = CFrame.fromMatrix(data.GripPos, Vector3.new(0, 1, 0), Vector3.new(0, 0, 1), Vector3.new(-1, 0, 0))
+	grip.Parent = handlePart
+
+	local tip = Instance.new("Attachment")
+	tip.Name = "Tip"
+	tip.CFrame = CFrame.new(data.TipPos)
+	tip.Parent = handlePart
+
+	local vfxTip = Instance.new("Attachment")
+	vfxTip.Name = "VfxTip"
+	vfxTip.CFrame = CFrame.new(data.TipPos)
+	vfxTip.Parent = handlePart
+
+	local vfxBase = Instance.new("Attachment")
+	vfxBase.Name = "VfxBase"
+	vfxBase.CFrame = CFrame.new(data.BasePos)
+	vfxBase.Parent = handlePart
+
+	local vfxCore = Instance.new("Attachment")
+	vfxCore.Name = "VfxCore"
+	vfxCore.CFrame = CFrame.new(data.CorePos)
+	vfxCore.Parent = handlePart
+
+	-- Apply client-side weapon VFX (glints, lights, auras, trails)
+	local combatVfx = assets and assets:FindFirstChild("CombatVfx")
+	local weaponVfxMod = combatVfx and combatVfx:FindFirstChild("WeaponVfx")
+	if weaponVfxMod then
+		local ok, WeaponVfx = pcall(require, weaponVfxMod)
+		if ok and WeaponVfx and WeaponVfx.Apply then
+			local rarity = style and style.RarityTier or 1
+			WeaponVfx.Apply(model, "STAFF", rarity, name)
+		end
+	end
+
+	return model
+end
+
+function WeaponModelBuilder.BuildApprenticeCaneArtifact(): Model
+	return makeMeshStaff("art_apprentice_cane")
+end
+
+function WeaponModelBuilder.BuildArchmageRodArtifact(): Model
+	return makeMeshStaff("art_archmage_rod")
+end
+
+function WeaponModelBuilder.BuildChronomancersSpindleArtifact(): Model
+	return makeMeshStaff("art_chronomancers_spindle")
+end
+
+function WeaponModelBuilder.BuildChronosStaveArtifact(): Model
+	return makeMeshStaff("art_chronos_stave")
+end
+
+function WeaponModelBuilder.BuildEyeOfSingularityArtifact(): Model
+	return makeMeshStaff("art_eye_of_singularity")
+end
+
+function WeaponModelBuilder.BuildFrostweaverScepterArtifact(): Model
+	return makeMeshStaff("art_frostweaver_scepter")
+end
+
+function WeaponModelBuilder.BuildGlacialMonolithArtifact(): Model
+	return makeMeshStaff("art_glacial_monolith")
+end
+
+function WeaponModelBuilder.BuildInfernalPillarArtifact(): Model
+	return makeMeshStaff("art_infernal_pillar")
+end
+
+function WeaponModelBuilder.BuildOmegaArchonCaduceusArtifact(): Model
+	return makeMeshStaff("art_omega_archon_caduceus")
+end
+
+function WeaponModelBuilder.BuildPyromancersTorchRodArtifact(): Model
+	return makeMeshStaff("art_pyromancers_torch_rod")
+end
+
+function WeaponModelBuilder.BuildRubyStaffArtifact(): Model
+	return makeMeshStaff("art_ruby_staff")
+end
+
+function WeaponModelBuilder.BuildScholarsSpireArtifact(): Model
+	return makeMeshStaff("art_scholars_spire")
+end
+
+function WeaponModelBuilder.BuildSolarisSunburstArtifact(): Model
+	return makeMeshStaff("art_solaris_sunburst")
+end
+
+function WeaponModelBuilder.BuildVoidChannelerArtifact(): Model
+	return makeMeshStaff("art_void_channeler")
+end
+
+
 
 
 -- Returns the Weapons folder first (ArtPackVisuals relies on that), then name -> prefab.
@@ -6681,6 +7268,21 @@ function WeaponModelBuilder.EnsureWeapons(): (Folder, { [string]: Model })
 		art_world_shaper = WeaponModelBuilder.BuildWorldShaperArtifact,
 		art_world_carver = WeaponModelBuilder.BuildWorldCarverArtifact,
 		art_genesis_sunderer = WeaponModelBuilder.BuildGenesisSundererArtifact,
+		-- Mage Staves (Batch 5)
+		art_apprentice_cane = WeaponModelBuilder.BuildApprenticeCaneArtifact,
+		art_scholars_spire = WeaponModelBuilder.BuildScholarsSpireArtifact,
+		art_ruby_staff = WeaponModelBuilder.BuildRubyStaffArtifact,
+		art_pyromancers_torch_rod = WeaponModelBuilder.BuildPyromancersTorchRodArtifact,
+		art_frostweaver_scepter = WeaponModelBuilder.BuildFrostweaverScepterArtifact,
+		art_glacial_monolith = WeaponModelBuilder.BuildGlacialMonolithArtifact,
+		art_archmage_rod = WeaponModelBuilder.BuildArchmageRodArtifact,
+		art_chronomancers_spindle = WeaponModelBuilder.BuildChronomancersSpindleArtifact,
+		art_infernal_pillar = WeaponModelBuilder.BuildInfernalPillarArtifact,
+		art_void_channeler = WeaponModelBuilder.BuildVoidChannelerArtifact,
+		art_solaris_sunburst = WeaponModelBuilder.BuildSolarisSunburstArtifact,
+		art_chronos_stave = WeaponModelBuilder.BuildChronosStaveArtifact,
+		art_eye_of_singularity = WeaponModelBuilder.BuildEyeOfSingularityArtifact,
+		art_omega_archon_caduceus = WeaponModelBuilder.BuildOmegaArchonCaduceusArtifact,
 		weapon_daggers = WeaponModelBuilder.BuildDaggers,
 		weapon_axe = WeaponModelBuilder.BuildAxe,
 		weapon_staff = WeaponModelBuilder.BuildStaff,
