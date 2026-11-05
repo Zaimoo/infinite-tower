@@ -7716,9 +7716,11 @@ local function makeMeshTome(name: string): Model
 	end
 
 	-- Sockets: Grip, Tip, VfxTip, VfxBase, VfxCore
+	-- Tomes float horizontally above the upturned open palm with pages facing skyward
+	local floatOffset = 0.75
 	local grip = Instance.new("Attachment")
 	grip.Name = "Grip"
-	grip.CFrame = CFrame.identity
+	grip.CFrame = CFrame.new(0, -floatOffset, 0) * CFrame.Angles(math.rad(90), 0, math.rad(-90))
 	grip.Parent = handlePart
 
 	local tip = Instance.new("Attachment")
