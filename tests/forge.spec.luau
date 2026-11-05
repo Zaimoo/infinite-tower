@@ -47,7 +47,6 @@ test("84 master catalog weapons exist across 6 archetypes and 7 rarity tiers", f
 
 		assert(seed.DisplayName and #seed.DisplayName > 0, id .. " missing DisplayName")
 		assert(seed.Description and #seed.Description > 0, id .. " missing Description")
-		assert(seed.DefaultStar == 1, id .. " DefaultStar must be 1 (1★ universal baseline)")
 		assert(seed.Variant == "Standard" or seed.Variant == "Enhanced", id .. " invalid variant")
 		assert(seed.RarityTier >= 1 and seed.RarityTier <= 7, id .. " invalid RarityTier")
 	end

@@ -19,7 +19,6 @@ local MATERIALS: { [string]: { Name: string, Description: string, Icon: string }
 	SoulEssence = { Name = "Soul Essence", Description = "Earned by converting heroes at the Pit. Used in Pit material recipes.", Icon = "Summon" },
 	ImprintCatalyst = { Name = PitBalance.Recipes.ImprintCatalyst.Name, Description = "Used for Focused Imprint at the Pit.", Icon = "Spark" },
 }
-local FORGE_ICONS = { IronGear = "Gear", RiftOrb = "Summon", AegisGem = "Gems", StarDust = "Spark", VoidPowder = "Summon" }
 local ASSIGNMENTS = {
 	FACILITY_GUARD_POST = "Guard Post", FACILITY_MARKET = "Market",
 	FACILITY_TRAINING = "Training Grounds", FACILITY_GODS_BLESSING = "God's Blessing",
@@ -60,13 +59,12 @@ function Model.Build(profile: any, tab: Tab): { Row }?
 			local count = number(amount, 0)
 			if type(id) ~= "string" or (id ~= "PromotionStone" and count == 0) then continue end
 			local pit = MATERIALS[id]
-			local forge = ArtifactCatalog.CraftingMaterials[id]
 			table.insert(rows, {
-				Id = id, Name = if pit then pit.Name elseif forge then forge.Name else readable(id),
+				Id = id, Name = if pit then pit.Name else readable(id),
 				Summary = ("%d owned"):format(count),
-				Description = if pit then pit.Description elseif forge then "Used in Forge recipes. " .. forge.Description else "Stored in your materials.",
-				Icon = if pit then pit.Icon else FORGE_ICONS[id] or "Gems",
-				Color = if forge then forge.Color else GOLD, Rarity = if id == "PromotionStone" then 1 else 0, Stars = 0,
+				Description = if pit then pit.Description else "Stored in your materials.",
+				Icon = if pit then pit.Icon else "Gems",
+				Color = GOLD, Rarity = if id == "PromotionStone" then 1 else 0, Stars = 0,
 			})
 		end
 	elseif tab == "Artifacts" then

@@ -428,11 +428,6 @@ local function createDefaultPlayerProfile(): PlayerProfile
 			SoulEssence = 0,
 			PromotionStone = 2,
 			ImprintCatalyst = 0,
-			IronGear = 25,
-			RiftOrb = 10,
-			AegisGem = 8,
-			StarDust = 35,
-			VoidPowder = 15,
 		},
 		PitRevision = 0,
 		PlotIndex = 1,
@@ -497,13 +492,6 @@ end
 function DataManager.GetProfile(player: Player): PlayerProfile?
 	local profile = ActiveProfiles[player]
 	if profile and (profile.SchemaVersion or 1) < 2 then PitService.EnsureDefaults(profile) end
-	if profile and profile.PitMaterials then
-		if profile.PitMaterials.IronGear == nil then profile.PitMaterials.IronGear = 25 end
-		if profile.PitMaterials.RiftOrb == nil then profile.PitMaterials.RiftOrb = 10 end
-		if profile.PitMaterials.AegisGem == nil then profile.PitMaterials.AegisGem = 8 end
-		if profile.PitMaterials.StarDust == nil then profile.PitMaterials.StarDust = 35 end
-		if profile.PitMaterials.VoidPowder == nil then profile.PitMaterials.VoidPowder = 15 end
-	end
 	return profile
 end
 
@@ -548,6 +536,12 @@ function DataManager.SyncProfile(player: Player, progressionOnly: boolean?)
 		end
 	end
 	DataManager.MigrateArtifactTypes(profile)
+	-- Crafting was removed with the Gold banner: drop its old materials from the Backpack.
+	if profile.PitMaterials then
+		for _, id in { "IronGear", "RiftOrb", "AegisGem", "StarDust", "VoidPowder" } do
+			profile.PitMaterials[id] = nil
+		end
+	end
 	-- Forge Gold banner migration: rarity is inherent to the template, every artifact has a Locked
 	-- flag, and the banner counters exist and sit below their guarantees.
 	for _, art in pairs(profile.Artifacts) do
@@ -977,13 +971,6 @@ function DataManager.GetArtifacts(player: Player): { [string]: ArtifactInstance 
 	local profile = ActiveProfiles[player]
 	if not profile then return {} end
 	if not profile.Artifacts then profile.Artifacts = {} end
-	if profile and profile.PitMaterials then
-		if profile.PitMaterials.IronGear == nil then profile.PitMaterials.IronGear = 25 end
-		if profile.PitMaterials.RiftOrb == nil then profile.PitMaterials.RiftOrb = 10 end
-		if profile.PitMaterials.AegisGem == nil then profile.PitMaterials.AegisGem = 8 end
-		if profile.PitMaterials.StarDust == nil then profile.PitMaterials.StarDust = 35 end
-		if profile.PitMaterials.VoidPowder == nil then profile.PitMaterials.VoidPowder = 15 end
-	end
 	return profile.Artifacts
 end
 
