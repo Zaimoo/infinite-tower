@@ -612,25 +612,17 @@ function Forge:BuildAssignView(root: Frame)
 	}, scroll)
 end
 
+-- Changes whenever any card would look different: which artifacts exist, their stars, lock and
+-- carrier (and the carrier's level). Sums used to collide, e.g. sell one Common and summon another.
 local function computeAssignSignature(artifacts: { [string]: any }?, heroes: { [string]: any }?): string
 	if not artifacts then return "nil" end
-	local count = 0
-	local equipSum = 0
-	local starSum = 0
-	local raritySum = 0
-	for _, art in pairs(artifacts) do
-		count += 1
-		starSum += (art.Star or 1)
-		raritySum += (art.Rarity or 1)
-		if art.EquippedHeroUUID then
-			equipSum += 1
-			local h = heroes and heroes[art.EquippedHeroUUID]
-			if h then
-				equipSum += (h.Level or 1)
-			end
-		end
+	local parts = {}
+	for uuid, art in pairs(artifacts) do
+		local hero = art.EquippedHeroUUID and heroes and heroes[art.EquippedHeroUUID]
+		table.insert(parts, string.format("%s:%d:%s:%s:%d", uuid, art.Star or 1, if art.Locked then "L" else "", art.EquippedHeroUUID or "", hero and hero.Level or 0))
 	end
-	return string.format("%d_%d_%d_%d", count, starSum, raritySum, equipSum)
+	table.sort(parts)
+	return table.concat(parts, "|")
 end
 
 -- One stat column on an artifact card: small caption over an inked number.
@@ -923,6 +915,13 @@ function Forge:RenderAssignView(force: boolean?)
 	local artifacts = profile and profile.Artifacts or {}
 	local heroMap = profile and profile.Heroes or {}
 
+	for uuid in pairs(self.SelectedSellUUIDs) do
+		local art = artifacts[uuid]
+		if not art or art.EquippedHeroUUID or art.Locked then
+			self.SelectedSellUUIDs[uuid] = nil
+		end
+	end
+
 	local currentSig = computeAssignSignature(artifacts, heroMap)
 	if not force and self._lastAssignSig == currentSig then
 		return
@@ -944,6 +943,9 @@ function Forge:RenderAssignView(force: boolean?)
 		if artCount >= maxArt then
 			self.CapacityLabel.TextColor3 = Color3.fromRGB(248, 113, 113)
 			if self.CapacityStroke then self.CapacityStroke.Color = Color3.fromRGB(239, 68, 68) end
+		elseif artCount >= maxArt - 5 then
+			self.CapacityLabel.TextColor3 = Color3.fromRGB(251, 191, 36)
+			if self.CapacityStroke then self.CapacityStroke.Color = Color3.fromRGB(217, 119, 6) end
 		else
 			self.CapacityLabel.TextColor3 = C.TextLavender
 			if self.CapacityStroke then self.CapacityStroke.Color = Color3.fromRGB(80, 60, 110) end
@@ -1339,11 +1341,13 @@ function Forge:BuildSummonView(root: Frame)
 	pityLabel.TextXAlignment = Enum.TextXAlignment.Left
 	self.PityLabel = pityLabel
 
-	local timerLabel = label(infoRow, "Event Ends: <b>2d 14h</b>", 13, Color3.fromHex("#A396BA"), Enum.Font.GothamMedium)
-	timerLabel.AnchorPoint = Vector2.new(1, 0)
-	timerLabel.Position = UDim2.new(1, -2, 0, 0)
-	timerLabel.Size = UDim2.new(0.5, 0, 1, 0)
-	timerLabel.TextXAlignment = Enum.TextXAlignment.Right
+	-- Inventory and affordability status (replaces a hard-coded event timer: the banner never ends).
+	local statusLabel = label(infoRow, "Artifacts: <b>0 / 50</b>", 13, Color3.fromHex("#A396BA"), Enum.Font.GothamMedium)
+	statusLabel.AnchorPoint = Vector2.new(1, 0)
+	statusLabel.Position = UDim2.new(1, -2, 0, 0)
+	statusLabel.Size = UDim2.new(0.5, 0, 1, 0)
+	statusLabel.TextXAlignment = Enum.TextXAlignment.Right
+	self.SummonStatusLabel = statusLabel
 
 	-- Pity Bar Progress Track
 	local pityTrack = new("Frame", {
@@ -1417,8 +1421,43 @@ function Forge:BuildSummonView(root: Frame)
 	self.Summon10XBtn = btn10X.Root
 end
 
+-- Why a pull of `count` can't happen right now, or nil if it can.
+function Forge:SummonBlockReason(count: number): string?
+	local profile = self:ResolveProfile()
+	if not profile then return "Profile not loaded" end
+	local cfg = ArtifactCatalog.Banner
+	local cost = if count == 10 then cfg.Cost10X else cfg.Cost1X
+	local owned = 0
+	for _ in pairs(profile.Artifacts or {}) do owned += 1 end
+	local cap = StatBalance.MaxArtifactInventory
+	if owned + count > cap then
+		return if owned >= cap
+			then string.format("Inventory full (%d / %d): sell or promote weapons", owned, cap)
+			else string.format("Room for %d more: a 10x needs 10 free slots", cap - owned)
+	end
+	if ((profile.Currencies and profile.Currencies.Gold) or 0) < cost then
+		return string.format("Need %s Gold", StatBalance.Format(cost))
+	end
+	return nil
+end
+
 function Forge:RenderSummonView()
 	local profile = self:ResolveProfile()
+	local owned = 0
+	for _ in pairs((profile and profile.Artifacts) or {}) do owned += 1 end
+	local cap = StatBalance.MaxArtifactInventory
+	local block1, block10 = self:SummonBlockReason(1), self:SummonBlockReason(10)
+	for btn, blocked in { [self.Summon1XBtn] = block1, [self.Summon10XBtn] = block10 } do
+		if btn then
+			applyGothicStyle(btn, "Button", { Disabled = blocked ~= nil })
+		end
+	end
+	if self.SummonStatusLabel then
+		local reason = block10 or block1
+		local isFull = owned + 10 > cap
+		self.SummonStatusLabel.Text = if isFull and reason then reason else string.format("Artifacts: <b>%d / %d</b>", owned, cap)
+		self.SummonStatusLabel.TextColor3 = if owned >= cap then C.Red elseif owned >= cap - 5 then C.GoldDeep else C.TextLavender
+	end
 	local pity = profile and profile.ArtifactBannerPity or 0
 	local maxPity = ArtifactCatalog.Banner.MaxPity or 120
 	local remaining = math.max(1, maxPity - (pity % maxPity))
@@ -1442,8 +1481,12 @@ function Forge:PerformSummon(count: number)
 		local row = self.Summon1XBtn and self.Summon1XBtn.Parent
 		UIFeel.Deny(if row and row:IsA("GuiObject") then row else nil)
 	end
-	if not profile or not profile.Currencies or (profile.Currencies.Gold or 0) < cost then
+	if not profile or self:SummonBlockReason(count) then
 		deny()
+		if self.SummonStatusLabel then
+			self.SummonStatusLabel.Text = self:SummonBlockReason(count) or ""
+			UIFeel.Pop(self.SummonStatusLabel, 0.12)
+		end
 		if self.PityLabel then
 			UIFeel.Pop(self.PityLabel, 0.12)
 		end
@@ -1823,6 +1866,18 @@ function Forge:RenderUpgradeView()
 	local currentStar = target.Star or 1
 	local maxStars = ArtifactCatalog.MaxStars or 7
 	local reqFodder = ArtifactCatalog.GetFodderRequirement(currentStar)
+
+	-- Drop donors that were sold, equipped, locked or no longer match the target.
+	for i = #self.FodderUUIDs, 1, -1 do
+		local uuid = self.FodderUUIDs[i]
+		local art = artifacts[uuid]
+		if uuid == self.SelectedTargetUUID or not art or art.EquippedHeroUUID or art.Locked or not WeaponPromotion.IsDonorFor(target, art) then
+			table.remove(self.FodderUUIDs, i)
+		end
+	end
+	while #self.FodderUUIDs > reqFodder do
+		table.remove(self.FodderUUIDs)
+	end
 	local rarityInfo = ArtifactCatalog.GetRarityInfo(target.Rarity or 1)
 	local rarityColor = rarityInfo.Color
 
@@ -2510,6 +2565,7 @@ end
 
 function Forge:Close()
 	self:ClosePicker()
+	self:CloseArtifactsModal()
 	self.Scrim.Visible = false
 	self.Root.Visible = false
 	if self.OnClose then
@@ -2616,8 +2672,12 @@ function Forge:BuildArtifactsModal(gui: ScreenGui)
 		ZIndex = 65,
 	}, gui)
 
-	local win = new("Frame", {
+	-- A TextButton (not a Frame) so clicks inside the window don't fall through to the scrim.
+	local win = new("TextButton", {
 		Name = "ArtifactsCatalogWindow",
+		Text = "",
+		AutoButtonColor = false,
+		Active = true,
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.5),
 		Size = UDim2.fromOffset(840, 540),
@@ -2626,6 +2686,9 @@ function Forge:BuildArtifactsModal(gui: ScreenGui)
 		ZIndex = 66,
 	}, scrim)
 	GildedGrimoire.Frame(win, { Class = "Window", Tone = "Deep", ZIndex = 66 })
+	win.Activated:Connect(function() end)
+	self.ArtifactsModalScale = new("UIScale", {}, win)
+	ModalFit.Bind(win, self.ArtifactsModalScale, 840, 540)
 
 	-- Header
 	local headerIcon = GrimoireIcons.Create("Forge", 36, win, 68)
