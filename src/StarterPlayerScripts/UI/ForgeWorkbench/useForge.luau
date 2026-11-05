@@ -178,6 +178,7 @@ local function useForge(props: Types.Props)
 		SetHero = setHeroId, SetMode = setMode, SelectTarget = selectTarget,
 		ToggleMaterial = toggleMaterial, AutoFill = autoFill, ToggleLock = toggleLock,
 		Equip = equip, Unequip = unequip, Upgrade = upgrade, UndoLast = undoLast, Reconcile = reconcile,
+		Explain = function(text: string) setMessage(text); setSuccess(false) end,
 	}
 end
 
