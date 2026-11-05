@@ -34,7 +34,6 @@ Tower status: all 50 floors across 10 biomes are playable, with a Biome Boss eve
 │   ├── GAME_DESIGN.MD                -- Document 1: Master Game Design Document (GDD)
 │   ├── economy_balancing_tables.md   -- Document 3: Mathematical Economy & Balancing Tables
 │   ├── hero-rig-rebuild-plan.md      -- Code-authored hero rig contract and history
-│   ├── PIT_OVERHAUL.md               -- The Pit progression, imprints, synthesis, and verification
 │   ├── rework-plan/                  -- Phased rework specs (phases 3–6)
 │   ├── ui/                           -- Gilded Grimoire UI style, asset requests, backlog
 │   └── prompts/                      -- Reusable prompts (e.g. artifact remodel + VFX)
@@ -78,5 +77,5 @@ Tower status: all 50 floors across 10 biomes are playable, with a Biome Boss eve
 2. Scripts are synced via Rojo from `src/` to `ServerScriptService`, `StarterPlayer.StarterPlayerScripts`, and `ReplicatedStorage`.
 3. Press **F5 (Play)** to playtest the full loop: Gacha summoning, deploying squads, fighting mobs on the Central Crimson Tower, contested loot hauling, Blacksmith weapon ascension, and World Boss encounters.
 
-The Pit supports batch synthesis, focused imprints, material-based star promotion, and hero conversion. See [the Pit implementation and playtest guide](docs/PIT_OVERHAUL.md) for formulas, schema compatibility, test commands, and Studio checks. Profiles remain **session-only**.
+The Pit supports batch synthesis, focused imprints, material-based star promotion, and hero conversion. See `docs/GAME_DESIGN.MD` §2.2 for the rules. Profiles remain **session-only**.
 
