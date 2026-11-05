@@ -11,6 +11,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
+local HubPresence = require(script.Parent:WaitForChild("HubPresence"))
 
 local LocalPlayer = Players.LocalPlayer
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -193,30 +194,7 @@ local function shotOrigin(rig: Model?, fallbackRoot: BasePart): Vector3
 	return fallbackRoot.Position + Vector3.new(0, 1.5, 0)
 end
 
-local function resolvePlotOrigin(plot: Model): CFrame?
-	local buildings = plot:FindFirstChild("PlotBuildings")
-	if buildings then
-		local attr = buildings:GetAttribute("Origin")
-		if typeof(attr) == "CFrame" then
-			return attr
-		end
-	end
-	local island = plot:FindFirstChild("FloatingFortressIsland")
-	local top = island and island:FindFirstChild("IslandTopSurface")
-	if top and top:IsA("BasePart") then
-		local surfaceY = top.Position.Y + top.Size.Y * 0.5
-		if top.Size.Z > 200 then
-			return CFrame.new(top.Position.X, surfaceY, top.Position.Z) * top.CFrame.Rotation * CFrame.new(0, 0, -70)
-		end
-		return CFrame.new(top.Position.X, surfaceY, top.Position.Z) * top.CFrame.Rotation
-	end
-	local spawn = plot:FindFirstChild("PlotSpawn")
-	if spawn and spawn:IsA("BasePart") then
-		local surfaceY = spawn.Position.Y - spawn.Size.Y * 0.5
-		return CFrame.new(spawn.Position.X, surfaceY, spawn.Position.Z) * spawn.CFrame.Rotation * CFrame.new(0, 0, 80)
-	end
-	return nil
-end
+local resolvePlotOrigin = HubPresence.ResolvePlotOrigin
 
 local function lerpAngle(a: number, b: number, t: number): number
 	local diff = (b - a + math.pi) % (math.pi * 2) - math.pi
@@ -1226,8 +1204,15 @@ local function stepAdventurerPatrol(dt: number)
 
 	OutskirtsVfxPool:Step(Workspace:GetServerTimeNow())
 
+	if HubPresence.InTower() then
+		for _, director in pairs(Directors) do
+			setDirectorParked(director, true)
+		end
+		return
+	end
+
 	for _, director in pairs(Directors) do
-		local origin = resolvePlotOrigin(director.Plot)
+		local origin = HubPresence.CachedOrigin(director.Plot, now)
 		if not origin then
 			continue
 		end
