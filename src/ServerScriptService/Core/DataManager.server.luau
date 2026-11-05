@@ -66,11 +66,11 @@ if not RequestUnequipArtifactFunc then
 	RequestUnequipArtifactFunc.Parent = ArtifactRemotes
 end
 
-local RequestUpgradeRarityFunc = ArtifactRemotes:FindFirstChild("RequestUpgradeRarity") :: RemoteFunction?
-if not RequestUpgradeRarityFunc then
-	RequestUpgradeRarityFunc = Instance.new("RemoteFunction")
-	RequestUpgradeRarityFunc.Name = "RequestUpgradeRarity"
-	RequestUpgradeRarityFunc.Parent = ArtifactRemotes
+local RequestToggleArtifactLockFunc = ArtifactRemotes:FindFirstChild("RequestToggleArtifactLock") :: RemoteFunction?
+if not RequestToggleArtifactLockFunc then
+	RequestToggleArtifactLockFunc = Instance.new("RemoteFunction")
+	RequestToggleArtifactLockFunc.Name = "RequestToggleArtifactLock"
+	RequestToggleArtifactLockFunc.Parent = ArtifactRemotes
 end
 
 local RequestSellArtifactsFunc = ArtifactRemotes:FindFirstChild("RequestSellArtifacts") :: RemoteFunction?
@@ -548,6 +548,22 @@ function DataManager.SyncProfile(player: Player, progressionOnly: boolean?)
 		end
 	end
 	DataManager.MigrateArtifactTypes(profile)
+	-- Forge Gold banner migration: rarity is inherent to the template, every artifact has a Locked
+	-- flag, and the banner counters exist and sit below their guarantees.
+	for _, art in pairs(profile.Artifacts) do
+		local seed = ArtifactCatalog.Seeds[art.TemplateId]
+		if seed and art.Rarity ~= seed.RarityTier then
+			art.Rarity = seed.RarityTier
+		end
+		if type(art.Locked) ~= "boolean" then
+			art.Locked = false
+		end
+	end
+	local maxPity = ArtifactCatalog.Banner.MaxPity
+	if type(profile.ArtifactBannerPity) ~= "number" then profile.ArtifactBannerPity = 0 end
+	profile.ArtifactBannerPity = math.clamp(math.floor(profile.ArtifactBannerPity), 0, maxPity - 1)
+	if type(profile.ArtifactBanner10Pity) ~= "number" then profile.ArtifactBanner10Pity = 0 end
+	profile.ArtifactBanner10Pity = math.clamp(math.floor(profile.ArtifactBanner10Pity), 0, 9)
 
 	-- Auto-migrate legacy SQUAD assignments or DeployedSquadOrder into the open squad slots
 	local openSlots = DataManager.MaxSquadSlots(profile)
@@ -1034,8 +1050,15 @@ function DataManager.UnequipArtifact(player: Player, heroUUID: string): (boolean
 	return true, string.format("Unequipped weapon from %s", hero.DisplayName)
 end
 
-function DataManager.UpgradeArtifactRarity(_player: Player, _artifactUUID: string): (boolean, string?, number?)
- return false,"Rarity is inherent; promote weapon stars instead",nil
+-- Locked artifacts can't be sold (and sell-all skips them). Returns the new lock state.
+function DataManager.SetArtifactLocked(player: Player, artifactUUID: string, locked: boolean): (boolean, string?, boolean?)
+	local profile = ActiveProfiles[player]
+	if not profile then return false, "Profile not loaded", nil end
+	local art = profile.Artifacts and profile.Artifacts[artifactUUID]
+	if not art then return false, "Artifact not found", nil end
+	art.Locked = locked
+	DataManager.SyncProfile(player)
+	return true, if locked then "Locked" else "Unlocked", locked
 end
 
 RequestEquipArtifactFunc.OnServerInvoke = function(player: Player, heroUUID: any, artifactUUID: any, targetPlot: any?)
@@ -1058,14 +1081,14 @@ RequestUnequipArtifactFunc.OnServerInvoke = function(player: Player, heroUUID: a
 	return DataManager.UnequipArtifact(player, heroUUID)
 end
 
-RequestUpgradeRarityFunc.OnServerInvoke = function(player: Player, artifactUUID: any, targetPlot: any?)
+RequestToggleArtifactLockFunc.OnServerInvoke = function(player: Player, artifactUUID: any, locked: any, targetPlot: any?)
 	if not validateCallerPlotOwnership(player, targetPlot) then
 		return false, "Plot ownership validation failed", nil
 	end
-	if type(artifactUUID) ~= "string" then
+	if type(artifactUUID) ~= "string" or #artifactUUID > 64 or type(locked) ~= "boolean" then
 		return false, "Invalid parameters", nil
 	end
-	return DataManager.UpgradeArtifactRarity(player, artifactUUID)
+	return DataManager.SetArtifactLocked(player, artifactUUID, locked)
 end
 
 function DataManager.SellArtifacts(player: Player, artifactUUIDs: { string }): (boolean, string?, number?, number?)
@@ -1169,6 +1192,15 @@ RequestUpgradeArtifactFunc.OnServerInvoke = function(player: Player, targetUUID:
 	return ok, message, star
 end
 
+-- The banner rolls a tier and a weapon type, then a variant. Fail at server start, not after taking
+-- a player's Gold, if any tier/type pair is missing a weapon.
+for tier = 1, #ArtifactCatalog.Banner.BaseRarityRates do
+	for _, weaponType in ipairs(ArtifactCatalog.ArchetypeTypes) do
+		local std, enh = ArtifactCatalog.GetTierPair(tier, weaponType)
+		assert(std and enh, string.format("ArtifactCatalog is missing a tier %d %s weapon", tier, weaponType))
+	end
+end
+
 function DataManager.SummonArtifact(player: Player, pullCount: any): (boolean, string?, { any }?, number?)
 	local profile = ActiveProfiles[player]
 	if not profile then return false, "Profile not loaded", nil, nil end
@@ -1211,16 +1243,8 @@ function DataManager.SummonArtifact(player: Player, pullCount: any): (boolean, s
 
 		local tier: number
 		if isGuaranteedExalted then
-			-- 120-pull Hard Pity: Exalted (Tier 5) or higher guaranteed.
-			-- Relative rates for pity roll: Exalted (2.0%), Legendary (0.5%), Mythical (0.1%) -> sum = 0.026
-			local r = math.random() * 0.026
-			if r < 0.020 then
-				tier = 5
-			elseif r < 0.025 then
-				tier = 6
-			else
-				tier = 7
-			end
+			-- 120-pull hard pity: Exalted or higher, split by the luck-boosted rates of those tiers.
+			tier = SummonLuck.RollAtLeast(tierRates, cfg.PityRarity, math.random())
 		elseif isGuaranteedRare then
 			tier = SummonLuck.RollAtLeast(tierRates, 3, math.random())
 		else
@@ -1243,7 +1267,8 @@ function DataManager.SummonArtifact(player: Player, pullCount: any): (boolean, s
 		local stdSeed, enhSeed = ArtifactCatalog.GetTierPair(tier, chosenType)
 
 		-- Variant roll: 60% Standard, 40% Enhanced
-		local chosenSeed = (math.random() <= 0.60) and stdSeed or enhSeed
+		local chosenSeed = if math.random() <= 0.60 then (stdSeed or enhSeed) else (enhSeed or stdSeed)
+		assert(chosenSeed, string.format("No artifact for tier %d %s", tier, chosenType)) -- the load-time check makes this unreachable
 
 		-- All summoned artifacts start at 1★ baseline
 		local uuid, artifact = DataManager.CreateArtifact(chosenSeed.TemplateId, 1, tier)

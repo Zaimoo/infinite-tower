@@ -148,6 +148,23 @@ test("Baseline inventory capacity for Heroes and Artifacts is 50", function()
 	assertEqual(Balance.MaxArtifactInventory, 50, "MaxArtifactInventory must be 50")
 end)
 
+test("The 120-pull pity roll only lands Exalted or higher and follows the luck-boosted rates", function()
+	local banner = ArtifactCatalog.Banner
+	local plain = SummonLuck.ApplyLuck(banner.BaseRarityRates, 0)
+	local lucky = SummonLuck.ApplyLuck(banner.BaseRarityRates, 0.5)
+	for i = 0, 999 do
+		local tier = SummonLuck.RollAtLeast(lucky, banner.PityRarity, i / 1000)
+		assert(tier >= banner.PityRarity and tier <= #lucky, "pity roll out of range: " .. tier)
+	end
+	-- Luck scales every upper tier equally, so the Exalted/Legendary/Mythical split is unchanged by luck.
+	local function mythicShare(rates: { number }): number
+		return rates[7] / (rates[5] + rates[6] + rates[7])
+	end
+	assert(math.abs(mythicShare(plain) - mythicShare(lucky)) < 1e-9, "luck should not skew the pity split")
+	assertEqual(SummonLuck.RollAtLeast(plain, banner.PityRarity, 0), 7, "lowest roll is the rarest tier")
+	assertEqual(SummonLuck.RollAtLeast(plain, banner.PityRarity, 0.999), 5, "highest roll is Exalted")
+end)
+
 -- 5. Artifact Selling Valuation
 test("Artifact sell price calculates accurately across all 7 tiers and star levels", function()
 	assertEqual(ArtifactCatalog.CalculateSellPrice(1, 1), 100)
