@@ -61,6 +61,8 @@ export type Options = {
 	OnAgain: ((count: number) -> ())?, -- results screen: SUMMON AGAIN x1 / x10
 	Cost1: number?,
 	Cost10: number?,
+	Currency: string?,
+	Icon: string?,
 }
 
 type Item = {
@@ -754,6 +756,24 @@ function SummonReveal.ShowResults(self: any, items: { Item })
 	end)
 end
 
+local function updateButtonIcon(button: any, iconName: string, zIndex: number?)
+	if button.SetIcon then
+		button.SetIcon(iconName)
+		return
+	end
+	local row = button.Root and button.Root:FindFirstChild("IconText")
+	if row then
+		for _, child in row:GetChildren() do
+			if child:IsA("Frame") and string.sub(child.Name, 1, 13) == "GrimoireIcon_" then
+				child:Destroy()
+			end
+		end
+		local z = zIndex or (button.Root and (button.Root.ZIndex + 2)) or 56
+		local newIcon = GrimoireIcons.Create(iconName, 22, row, z)
+		newIcon.LayoutOrder = 1
+	end
+end
+
 -- CONTINUE always; SUMMON AGAIN x1 / x10 when the caller wired OnAgain.
 function SummonReveal.ShowActions(self: any)
 	local opts: Options = self.Options
@@ -761,8 +781,11 @@ function SummonReveal.ShowActions(self: any)
 	self.Again1.Root.Visible = canAgain
 	self.Again10.Root.Visible = canAgain
 	if canAgain then
-		self.Again1.SetCost(opts.Cost1 or 100)
-		self.Again10.SetCost(opts.Cost10 or 900)
+		local iconName = opts.Icon or opts.Currency or (if self.IsArtifact then "Gold" else "Gems")
+		updateButtonIcon(self.Again1, iconName, Z + 42)
+		updateButtonIcon(self.Again10, iconName, Z + 42)
+		self.Again1.SetCost(opts.Cost1 or (if self.IsArtifact then 5000 else 100))
+		self.Again10.SetCost(opts.Cost10 or (if self.IsArtifact then 45000 else 900))
 	end
 	self.Actions.Visible = true
 	UIFeel.PopIn(self.Actions, 0.6, 0.3)
@@ -784,6 +807,7 @@ function SummonReveal.Play(self: any, list: { any }, isArtifact: boolean?, opts:
 	self.Run += 1
 	local run = self.Run
 	self.Options = opts or {}
+	self.IsArtifact = isArtifact == true
 	self.Fast = false
 	local isNew = self.Options.IsNew
 	local items: { Item } = {}
@@ -836,6 +860,7 @@ function SummonReveal.Close(self: any)
 	self.WaitingForTap = false
 	self.Fast = false
 	self.Items = nil
+	self.IsArtifact = false
 	self.Scrim.Visible = false
 	self.Flash.BackgroundTransparency = 1
 	if GuiService.SelectedObject and GuiService.SelectedObject:IsDescendantOf(self.Scrim) then
