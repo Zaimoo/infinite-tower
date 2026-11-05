@@ -92,6 +92,21 @@ HeroSockets.PREFABS = table.freeze({
 	art_world_shaper = "art_world_shaper",
 	art_world_carver = "art_world_carver",
 	art_genesis_sunderer = "art_genesis_sunderer",
+	-- Mage Staves (Batch 5)
+	art_apprentice_cane = "art_apprentice_cane",
+	art_scholars_spire = "art_scholars_spire",
+	art_ruby_staff = "art_ruby_staff",
+	art_pyromancers_torch_rod = "art_pyromancers_torch_rod",
+	art_frostweaver_scepter = "art_frostweaver_scepter",
+	art_glacial_monolith = "art_glacial_monolith",
+	art_archmage_rod = "art_archmage_rod",
+	art_chronomancers_spindle = "art_chronomancers_spindle",
+	art_infernal_pillar = "art_infernal_pillar",
+	art_void_channeler = "art_void_channeler",
+	art_solaris_sunburst = "art_solaris_sunburst",
+	art_chronos_stave = "art_chronos_stave",
+	art_eye_of_singularity = "art_eye_of_singularity",
+	art_omega_archon_caduceus = "art_omega_archon_caduceus",
 } :: { [string]: string })
 
 HeroSockets.SOCKETS = table.freeze({
