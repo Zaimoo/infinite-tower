@@ -144,6 +144,18 @@ local function label(parent: Instance, text: string, size: number, color: Color3
 	return lbl
 end
 
+-- Gilded Grimoire text for the sell controls: Cinzel Heavy without a text stroke, scaled down
+-- to fit (Cinzel runs wider than Gotham) and marked so GildedGrimoire.Watch leaves it alone.
+local function grimoireButtonText(obj: TextButton | TextLabel, role: "Title" | "Number" | "Body"?)
+	obj.FontFace = GildedGrimoire.Fonts[role or "Number"]
+	obj.TextStrokeTransparency = 1 -- a text stroke on scaled Cinzel reads as a blurry glow
+	local maxSize = obj.TextSize
+	obj.TextScaled = true
+	new("UITextSizeConstraint", { MaxTextSize = maxSize, MinTextSize = 9 }, obj)
+	new("UIPadding", { PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6), PaddingTop = UDim.new(0, 4), PaddingBottom = UDim.new(0, 4) }, obj)
+	obj:SetAttribute("Grimoire", true)
+end
+
 --============================================================================
 -- CONSTRUCTOR
 --============================================================================
@@ -488,6 +500,7 @@ function Forge:BuildAssignView(root: Frame)
 	}, headerBar)
 	new("UICorner", { CornerRadius = UDim.new(0, 8) }, sellToggleBtn)
 	new("UIStroke", { Color = Color3.fromRGB(160, 120, 50), Thickness = 1.5 }, sellToggleBtn)
+	grimoireButtonText(sellToggleBtn)
 	self.SellToggleBtn = sellToggleBtn
 	sellToggleBtn.Activated:Connect(function()
 		self:ToggleSellMode()
@@ -504,11 +517,16 @@ function Forge:BuildAssignView(root: Frame)
 	}, headerBar)
 	self.SellControls = sellControls
 
-	local sellValuation = label(sellControls, "Selected: 0  |  Value: 0 Gold", 12, Color3.fromRGB(255, 220, 120), Enum.Font.GothamBold)
+	local sellValuation = label(sellControls, "Selected 0  ·  0 Gold", 12, Color3.fromRGB(255, 220, 120), Enum.Font.GothamBold)
 	sellValuation.Position = UDim2.fromOffset(0, 0)
 	sellValuation.Size = UDim2.new(1, -260, 1, 0)
 	sellValuation.TextXAlignment = Enum.TextXAlignment.Right
 	sellValuation.ZIndex = 55
+	sellValuation.FontFace = GildedGrimoire.Fonts.Number
+	sellValuation.TextStrokeTransparency = 1
+	for _, child in sellValuation:GetChildren() do
+		if child:IsA("UIStroke") then child:Destroy() end
+	end
 	self.SellValuationLabel = sellValuation
 
 	local selectAllBtn = new("TextButton", {
@@ -524,6 +542,7 @@ function Forge:BuildAssignView(root: Frame)
 		ZIndex = 55,
 	}, sellControls)
 	new("UICorner", { CornerRadius = UDim.new(0, 6) }, selectAllBtn)
+	grimoireButtonText(selectAllBtn)
 	selectAllBtn.Activated:Connect(function()
 		self:SelectAllUnequippedForSell()
 	end)
@@ -541,6 +560,7 @@ function Forge:BuildAssignView(root: Frame)
 		ZIndex = 55,
 	}, sellControls)
 	new("UICorner", { CornerRadius = UDim.new(0, 6) }, confirmSellBtn)
+	grimoireButtonText(confirmSellBtn)
 	self.ConfirmSellBtn = confirmSellBtn
 	confirmSellBtn.Activated:Connect(function()
 		self:ConfirmSellArtifacts()
@@ -559,6 +579,7 @@ function Forge:BuildAssignView(root: Frame)
 		ZIndex = 55,
 	}, sellControls)
 	new("UICorner", { CornerRadius = UDim.new(0, 6) }, cancelSellBtn)
+	grimoireButtonText(cancelSellBtn, "Body")
 	cancelSellBtn.Activated:Connect(function()
 		self:ToggleSellMode(false)
 	end)
@@ -772,6 +793,7 @@ local function createCard(scroll: Instance, onAssignClick: (node: CardNode) -> (
 	}, card)
 	new("UICorner", { CornerRadius = UDim.new(0, 8) }, sellBtn)
 	local sellStroke = new("UIStroke", { Color = Color3.fromRGB(120, 90, 160), Thickness = 1.5 }, sellBtn)
+	grimoireButtonText(sellBtn)
 
 	local node: CardNode = {
 		Root = card,
@@ -875,12 +897,12 @@ local function updateCard(self: any, node: CardNode, item: { UUID: string, Art: 
 			node.Root.BackgroundTransparency = 0
 			local isSelected = self.SelectedSellUUIDs[uuid] == true
 			if isSelected then
-				node.SellBtn.Text = string.format("✓ SELECTED (+%d G)", sellPrice)
+				node.SellBtn.Text = string.format("SELECTED  ·  +%s GOLD", StatBalance.Format(sellPrice))
 				node.SellBtn.BackgroundColor3 = Color3.fromRGB(160, 50, 50)
 				node.SellBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 				if node.SellStroke then node.SellStroke.Color = Color3.fromRGB(255, 200, 80) end
 			else
-				node.SellBtn.Text = string.format("SELECT (+%d G)", sellPrice)
+				node.SellBtn.Text = string.format("SELECT  ·  +%s GOLD", StatBalance.Format(sellPrice))
 				node.SellBtn.BackgroundColor3 = Color3.fromRGB(45, 30, 60)
 				node.SellBtn.TextColor3 = Color3.fromRGB(255, 220, 120)
 				if node.SellStroke then node.SellStroke.Color = Color3.fromRGB(120, 90, 160) end
@@ -2532,7 +2554,7 @@ function Forge:UpdateSellValuationDisplay()
 			count += 1
 		end
 	end
-	self.SellValuationLabel.Text = string.format("Selected: %d  |  Value: %s Gold", count, tostring(totalVal))
+	self.SellValuationLabel.Text = string.format("Selected %d  ·  %s Gold", count, StatBalance.Format(totalVal))
 end
 
 function Forge:SelectAllUnequippedForSell()
