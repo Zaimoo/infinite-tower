@@ -319,30 +319,74 @@ do
 	}
 end
 
--- TOME (left hand) --------------------------------------------------------------------------
+-- TOME (floating open book above left hand, right off-hand orb casting) --------------------
 do
-	-- Book held open in front of the chest, right hand relaxed.
+	-- Healer Stance: open grimoire levitates above the upturned, open left palm at mid-chest.
+	-- Right hand relaxed in casting readiness.
 	local read = merge(STANCE, {
-		Neck = { -10, 0, 0 },
-		LeftShoulder = { 30, -15, -5 }, LeftElbow = { 70, 0, 0 },
-		RightShoulder = { 8, 0, 8 }, RightElbow = { 20, 0, 0 },
+		Waist = { -2, 6, 0 },
+		Neck = { -8, 8, 2 },
+		LeftShoulder = { 26, -14, -8 },
+		LeftElbow = { 76, 0, 0 },
+		LeftWrist = { 10, -90, 0 }, -- palm flat, fully open, facing skyward beneath floating tome
+		RightShoulder = { 6, 0, 8 },
+		RightElbow = { 16, 0, 0 },
+		RightWrist = { 0, 0, 0 },
 	})
-	local channel = merge(ATTACK_STANCE, { LeftShoulder = { 70, -10, -10 }, LeftElbow = { 40, 0, 0 }, RightShoulder = { 85, 0, 10 }, RightElbow = { 10, 0, 0 } })
-	WeaponPoses.TOME = { Read = read, Channel = channel }
+	-- Channel: left hand keeps floating tome steady; right hand pulls back gathering orb energy
+	local gather = merge(ATTACK_STANCE, {
+		Waist = { 0, 16, 0 },
+		Neck = { 0, -6, 0 },
+		LeftShoulder = { 30, -10, -6 },
+		LeftElbow = { 78, 0, 0 },
+		LeftWrist = { 10, -90, 0 },
+		RightShoulder = { 32, 18, 22 },
+		RightElbow = { 85, 0, 0 },
+		RightWrist = { 15, 0, 0 },
+	})
+	-- Release: right off-hand thrusts open palm forward towards the enemy, releasing the orb
+	local release = merge(ATTACK_STANCE, {
+		Waist = { -6, -14, 0 },
+		Neck = { 2, 8, 0 },
+		LeftShoulder = { 28, -12, -6 },
+		LeftElbow = { 75, 0, 0 },
+		LeftWrist = { 10, -90, 0 },
+		RightShoulder = { 92, -6, 4 },
+		RightElbow = { 10, 0, 0 },
+		RightWrist = { -15, 0, 0 },
+	})
+	local followThrough = merge(ATTACK_STANCE, {
+		Waist = { -4, -8, 0 },
+		LeftShoulder = { 28, -12, -6 },
+		LeftElbow = { 75, 0, 0 },
+		LeftWrist = { 10, -90, 0 },
+		RightShoulder = { 75, 0, 12 },
+		RightElbow = { 25, 0, 0 },
+	})
+
+	WeaponPoses.TOME = { Read = read, Channel = gather, Release = release }
 	ByWeapon.TOME = {
 		Idle = breathe(read),
 		Move = walk(read),
-		AttackBasic = clip(0.8, false, { { 0, read }, { 0.45, channel }, { 0.65, merge(channel, { RightShoulder = { 92, 0, 10 }, Waist = { -6, 0, 0 } }) }, { 1, read } }),
-		AttackSpecial = clip(0.9, false, {
+		AttackBasic = clip(0.8, false, {
 			{ 0, read },
-			{ 0.45, merge(channel, { RightShoulder = { 60, 0, 60 }, RightElbow = { 10, 0, 0 } }) },
-			{ 0.7, merge(channel, { RightShoulder = { 100, 0, 0 }, Waist = { -8, 0, 0 } }) },
+			{ 0.28, gather },
+			{ 0.55, release },
+			{ 0.72, followThrough },
+			{ 1, read },
+		}),
+		AttackSpecial = clip(0.95, false, {
+			{ 0, read },
+			{ 0.32, merge(gather, { LeftShoulder = { 42, -6, -10 }, RightShoulder = { 65, 24, 38 }, RightElbow = { 95, 0, 0 }, Waist = { 4, 22, 0 } }) },
+			{ 0.65, merge(release, { RightShoulder = { 102, -8, 0 }, RightElbow = { 6, 0, 0 }, Waist = { -8, -18, 0 }, RootOffset = { 0, -0.06, -0.04 } }) },
+			{ 0.82, followThrough },
 			{ 1, read },
 		}),
 		AttackSkill = clip(1.2, false, {
 			{ 0, read },
-			{ 0.4, merge(channel, { LeftShoulder = { 160, 0, -10 }, LeftElbow = { 10, 0, 0 }, Waist = { 12, 0, 0 }, Neck = { 15, 0, 0 } }) },
-			{ 0.7, merge(channel, { LeftShoulder = { 165, 0, -10 }, RightShoulder = { 165, 0, 10 }, LeftElbow = { 10, 0, 0 }, Waist = { 15, 0, 0 } }) },
+			{ 0.35, merge(gather, { LeftShoulder = { 135, 0, -15 }, LeftElbow = { 15, 0, 0 }, RightShoulder = { 135, 0, 15 }, RightElbow = { 15, 0, 0 }, Waist = { 12, 0, 0 }, Neck = { 18, 0, 0 } }) },
+			{ 0.65, merge(ATTACK_STANCE, { LeftShoulder = { 110, 0, -65 }, LeftElbow = { 12, 0, 0 }, RightShoulder = { 110, 0, 65 }, RightElbow = { 12, 0, 0 }, Waist = { -8, 0, 0 }, RootOffset = { 0, -0.15, 0 } }) },
+			{ 0.85, merge(ATTACK_STANCE, { LeftShoulder = { 70, 0, -35 }, RightShoulder = { 70, 0, 35 }, Waist = { -2, 0, 0 } }) },
 			{ 1, read },
 		}),
 	}
@@ -581,7 +625,7 @@ local RELEASE_MARKERS: { [string]: { [string]: number } } = {
 	DAGGERS = { AttackBasic = 0.3, AttackSpecial = 0.6, AttackSkill = 0.8 },
 	AXE = { AttackBasic = 0.65, AttackSpecial = 0.68, AttackSkill = 0.62 },
 	STAFF = { AttackBasic = 0.62, AttackSpecial = 0.65, AttackSkill = 0.7 },
-	TOME = { AttackBasic = 0.65, AttackSpecial = 0.7, AttackSkill = 0.7 },
+	TOME = { AttackBasic = 0.55, AttackSpecial = 0.65, AttackSkill = 0.65 },
 }
 local BOW_NOCK = 0.9
 for weaponType, releases in RELEASE_MARKERS do
@@ -913,22 +957,21 @@ do
 	}
 end
 
--- Valeria (TOME): Sanctuary Miracle. Tome and hand lifted in blessing, then both arms opened
--- wide as the circle forms. Idle is her bored reading stance: tome open in the left hand at
--- chest height off to her side, head tipped toward it, right arm hanging loose.
+-- Valeria (TOME): Sanctuary Miracle. Tome hovers above open upturned left palm, right hand gestures.
+-- Idle retains her characteristic poise: floating grimoire above palm, thoughtful head tilt, relaxed posture.
 do
 	local p = WeaponPoses.TOME
-	local open = merge(ATTACK_STANCE, { Waist = { 10, 0, 0 }, Neck = { 12, 0, 0 }, LeftShoulder = { 110, 0, -70 }, LeftElbow = { 15, 0, 0 }, RightShoulder = { 110, 0, 70 }, RightElbow = { 15, 0, 0 } })
+	local open = merge(ATTACK_STANCE, { Waist = { 10, 0, 0 }, Neck = { 12, 0, 0 }, LeftShoulder = { 110, 0, -70 }, LeftElbow = { 15, 0, 0 }, LeftWrist = { 10, -90, 0 }, RightShoulder = { 110, 0, 70 }, RightElbow = { 15, 0, 0 } })
 	local reading = merge(STANCE, {
 		Waist = { -2, 10, 0 }, Neck = { -8, 12, 3 },
-		LeftShoulder = { 35, -25, -14 }, LeftElbow = { 78, 0, 0 },
+		LeftShoulder = { 28, -20, -10 }, LeftElbow = { 76, 0, 0 }, LeftWrist = { 10, -90, 0 },
 		RightShoulder = { 4, 0, 6 }, RightElbow = { 12, 0, 0 },
 	})
 	Overrides.hero_valeria = {
 		Idle = breathe(reading, 3.8),
 		AttackSkill = signature(1.2, {
 			{ 0, p.Read },
-			{ 0.35, merge(p.Channel, { Neck = { 20, 0, 0 }, LeftShoulder = { 150, 0, -10 }, LeftElbow = { 20, 0, 0 }, RightShoulder = { 150, 0, 10 }, RightElbow = { 10, 0, 0 } }) },
+			{ 0.35, merge(p.Channel, { Neck = { 20, 0, 0 }, LeftShoulder = { 150, 0, -10 }, LeftElbow = { 20, 0, 0 }, LeftWrist = { 10, -90, 0 }, RightShoulder = { 150, 0, 10 }, RightElbow = { 10, 0, 0 } }) },
 			{ 0.65, open },
 			{ 0.85, open },
 			{ 1, p.Read },
