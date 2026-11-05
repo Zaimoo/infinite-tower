@@ -59,7 +59,7 @@ function P.Encode(context: any, entities: {any}, sequence: number, serverTime: n
 		for j=1,count do
 			local e=entities[(batch-1)*P.BatchSize+j]
 			local v=e.Position-context.Origin
-			for _,n in {v.X,v.Y,v.Z} do assert(P.Finite(n) and math.abs(n)<=3276.7,"Out-of-range tower entity") end
+			assert(P.Finite(v.X) and math.abs(v.X)<=3276.7 and P.Finite(v.Y) and math.abs(v.Y)<=3276.7 and P.Finite(v.Z) and math.abs(v.Z)<=3276.7,"Out-of-range tower entity")
 			assert(P.Integer(e.NetId,1,U32-1) and P.Integer(e.EntityGeneration,1,U32-1) and P.Integer(e.Flags or 0,0,P.MaxFlags))
 			local o=46+(j-1)*24
 			buffer.writeu32(buf,o,e.NetId);buffer.writeu32(buf,o+4,e.EntityGeneration)
@@ -72,6 +72,19 @@ function P.Encode(context: any, entities: {any}, sequence: number, serverTime: n
 		table.insert(packets,buf)
 	end
 	return packets
+end
+-- Players on the same floor and room generation get the same packets except for the header's
+-- ViewEpoch (offset 24). Copy already-encoded packets and patch that field instead of re-encoding.
+function P.WithViewEpoch(packets: {buffer}, viewEpoch: number): {buffer}
+	assert(P.Integer(viewEpoch,0,U32-1))
+	local out = table.create(#packets)
+	for i, src in packets do
+		local buf = buffer.create(buffer.len(src))
+		buffer.copy(buf,0,src)
+		buffer.writeu32(buf,24,viewEpoch)
+		out[i] = buf
+	end
+	return out
 end
 function P.Decode(buf: any, expected: any): any?
 	if typeof(buf) ~= "buffer" or buffer.len(buf)<46 then return nil end

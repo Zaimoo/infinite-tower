@@ -54,6 +54,18 @@ test("Decoder accepts support and affixed Elite snapshot flags and rejects bad H
 		function(b) buffer.writeu8(b,65,P.MaxFlags+1) end,function(b) buffer.writeu32(b,50,0) end,
 	} do local b=P.Encode(c,{e},1,1)[1];change(b);assert(P.Decode(b,c)==nil) end
 end)
+test("Shared floor encode patched to another ViewEpoch is byte-identical to a direct encode",function()
+	local entities={}
+	for i=1,40 do local v=table.clone(e);v.NetId=i;v.Position=c.Origin+Vector3.new(i*0.7,1.5,-i*0.3);entities[i]=v end
+	local shared=P.Encode(c,entities,77,321.5)
+	local other=table.clone(c);other.ViewEpoch=c.ViewEpoch+5
+	local direct=P.Encode(other,entities,77,321.5)
+	local patched=P.WithViewEpoch(shared,other.ViewEpoch)
+	assert(#patched==#direct and #patched==2)
+	for i=1,#direct do assert(buffer.tostring(patched[i])==buffer.tostring(direct[i]),"batch "..i.." differs") end
+	assert(buffer.readu32(shared[1],24)==c.ViewEpoch,"source packets must not be mutated")
+	assert(P.Decode(patched[1],other)~=nil and P.Decode(patched[1],c)==nil)
+end)
 test("Sequence ordering tolerates wrap and rejects duplicate stale half-range packets",function()
 	assert(P.Newer(0,4294967295));assert(P.Newer(9,8));assert(not P.Newer(8,8));assert(not P.Newer(8,9));assert(not P.Newer(2147483648,0))
 end)
