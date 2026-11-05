@@ -19,7 +19,16 @@ export type Context = {
 	MasterPos: Vector3,
 	Assigned: boolean, -- squad assigned to a floor: heroes roam up to Leash studs from the anchor
 	Leash: number,
+	Now: number?,
+	RouteCost: ((from: Vector3, to: Vector3) -> number)?,
 }
+
+local function rejected(hero: any,netId: number,mob: any,ctx: Context): boolean
+	local entry=hero.NavigationRejectedTargets and hero.NavigationRejectedTargets[netId]
+	if not entry or not ctx.Now then return false end
+	return ctx.Now<entry.Until and entry.Generation==(mob.EntityGeneration or 0)
+		and entry.FloorId==mob.FloorId and entry.RoomGeneration==mob.RoomGeneration
+end
 
 local function flat(a: Vector3, b: Vector3): number
 	local dx, dz = a.X - b.X, a.Z - b.Z
@@ -45,14 +54,14 @@ function HeroTargeting.Acquire(hero: any, mobs: { [number]: any }, ctx: Context,
 	end
 	local bestId: number?, bestDist = nil, math.huge
 	for netId, mob in pairs(mobs) do
-		if not eligible(hero, mob) or math.abs(mob.Position.Y - hero.Position.Y) >= HeroTargeting.MAX_HERO_HEIGHT_GAP then
+		if rejected(hero,netId,mob,ctx) or not eligible(hero, mob) or math.abs(mob.Position.Y - hero.Position.Y) >= HeroTargeting.MAX_HERO_HEIGHT_GAP then
 			continue
 		end
 		local heroDist = flat(hero.Position, mob.Position)
 		local dist: number
 		if ctx.Assigned then
 			if math.abs(mob.Position.Y - ctx.MasterPos.Y) >= HeroTargeting.MAX_MASTER_HEIGHT_GAP or heroDist > ctx.Leash then continue end
-			dist = heroDist
+			dist = if ctx.RouteCost then ctx.RouteCost(hero.Position, mob.Position) else heroDist
 		else
 			local masterDist = flat(ctx.MasterPos, mob.Position)
 			if masterDist > HeroTargeting.MASTER_ACQUIRE_RADIUS and heroDist > hero.AttackRange then continue end
@@ -84,7 +93,7 @@ end
 function HeroTargeting.Select(hero: any, mobs: { [number]: any }, ctx: Context, eligible: (hero: any, mob: any) -> boolean, pacified: boolean, assist: { number }?): any?
 	local function usable(netId: number?): any?
 		local mob = if netId then mobs[netId] else nil
-		if mob and eligible(hero, mob) and HeroTargeting.CanEngage(hero, mob, ctx) then return mob end
+		if mob and not rejected(hero,netId :: number,mob,ctx) and eligible(hero, mob) and HeroTargeting.CanEngage(hero, mob, ctx) then return mob end
 		return nil
 	end
 	local target = if pacified then nil else usable(hero.TargetNetId)
