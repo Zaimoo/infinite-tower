@@ -9,20 +9,21 @@ local IslandBuilder = {}
 -- CONFIGURATION TABLE
 --============================================================================
 IslandBuilder.Config = {
-	-- Top Buildable Surface Dimensions (Citadel Courtyard: 260 x 180 studs; Outskirts: 260 x 140 studs)
-	TopWidth = 260, -- X dimension (studs)
-	TopLength = 180, -- Courtyard walking surface Z dimension (studs) [-90, +90]
-	CitadelLength = 180, -- Z dimension of cobblestone Courtyard (studs) [-90, +90]
-	TotalLength = 320, -- Full island footprint [-90, +230] supporting rocky underside
+	-- Top Buildable Surface Dimensions (Citadel Courtyard: 160 x 120 studs; Outskirts: 160 x 100 studs)
+	TopWidth = 160, -- X dimension (studs)
+	TopLength = 120, -- Courtyard walking surface Z dimension (studs) [-60, +60]
+	CitadelLength = 120, -- Z dimension of cobblestone Courtyard (studs) [-60, +60]
+	TotalLength = 220, -- Full island footprint [-60, +160] supporting rocky underside
 	TopThickness = 6, -- Thickness of the top stone slab (studs)
-	CenterOffsetZ = 70, -- Midpoint between Citadel [-90, +90] and Outskirts [+90, +230]
-	chamferSize = 22, -- Corner bevel size to give a fortress silhouette
+	CenterOffsetZ = 100, -- Anchor offset for IslandRoot so front gate lands flush at bridge
+	UndersideCenterZ = 50, -- Midpoint between Citadel [-60, +60] and Outskirts [+60, +160]
+	chamferSize = 16, -- Corner bevel size to give a fortress silhouette
 
 	-- Underside Rock Formation
-	UndersideDepth = 135, -- Total depth of the tapered rocky mass below the top slab
-	UndersideLayers = 6, -- Number of stepped rock tiers tapering inward
-	OuterSpireCount = 20, -- Jagged rock spires around the upper/mid underside perimeter
-	InnerStalactiteCount = 12, -- Deep jagged rock points tapering toward the bottom tip
+	UndersideDepth = 95, -- Total depth of the tapered rocky mass below the top slab
+	UndersideLayers = 5, -- Number of stepped rock tiers tapering inward
+	OuterSpireCount = 16, -- Jagged rock spires around the upper/mid underside perimeter
+	InnerStalactiteCount = 10, -- Deep jagged rock points tapering toward the bottom tip
 	RandomSeed = 4042026, -- Fixed seed so all 6 cloned islands have identical geometry
 
 	-- Materials & Colors (Atmospheric Gothic Fortress Palette)
@@ -63,12 +64,13 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 	local islandModel = Instance.new("Model")
 	islandModel.Name = "FloatingFortressIsland"
 
-	local centerZ = cfg.CenterOffsetZ or 70
-	local courtyardL = cfg.CitadelLength or cfg.TopLength or 180
-	local totalL = cfg.TotalLength or 320
+	local centerZ = cfg.CenterOffsetZ or 100
+	local undersideZ = cfg.UndersideCenterZ or 50
+	local courtyardL = cfg.CitadelLength or cfg.TopLength or 120
+	local totalL = cfg.TotalLength or 220
 
-	-- Invisible Island Anchor at geometric center of entire island mass (centerZ = 70)
-	-- Serves as PrimaryPart so pivoting to RingRadius R=650 places courtyard at R=580 and outskirts at R=740
+	-- Invisible Island Anchor at geometric center of entire island mass (centerZ = 100)
+	-- Serves as PrimaryPart so pivoting to RingRadius aligns front gate with the bridge
 	local islandRoot = makePart({
 		Name = "IslandRoot",
 		Size = Vector3.new(2, 2, 2),
@@ -242,13 +244,14 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 	end
 
 	-- Radiating courtyard pathways connecting Bridge -> Fountain -> Stations & Outskirts Gate
-	buildCobblePath("Path_BridgeToFountain", Vector3.new(0, 0, -88), Vector3.new(0, 0, -18), 14, 7)
-	buildCobblePath("Path_FountainToPortal", Vector3.new(14, 0, -12), Vector3.new(106, 0, -67), 11, 9)
-	buildCobblePath("Path_FountainToForge", Vector3.new(18, 0, -2), Vector3.new(90, 0, -4), 11, 7)
-	buildCobblePath("Path_FountainToMarket", Vector3.new(14, 0, 12), Vector3.new(70, 0, 42), 11, 6)
-	buildCobblePath("Path_FountainToGate", Vector3.new(6, 0, 18), Vector3.new(32, 0, 88), 12, 7)
-	buildCobblePath("Path_FountainToSynthesis", Vector3.new(-14, 0, -10), Vector3.new(-62, 0, -32), 11, 6)
-	buildCobblePath("Path_FountainToTraining", Vector3.new(-14, 0, 12), Vector3.new(-54, 0, 42), 11, 5)
+	buildCobblePath("Path_BridgeToFountain", Vector3.new(0, 0, -56), Vector3.new(0, 0, -18), 13, 5)
+	buildCobblePath("Path_FountainToPortal", Vector3.new(14, 0, -10), Vector3.new(42, 0, -30), 10, 5)
+	buildCobblePath("Path_FountainToForge", Vector3.new(18, 0, -2), Vector3.new(44, 0, -2), 10, 4)
+	buildCobblePath("Path_FountainToMarket", Vector3.new(14, 0, 10), Vector3.new(36, 0, 26), 10, 4)
+	buildCobblePath("Path_FountainToGate", Vector3.new(6, 0, 18), Vector3.new(14, 0, 56), 11, 5)
+	buildCobblePath("Path_FountainToSynthesis", Vector3.new(-14, 0, -8), Vector3.new(-34, 0, -20), 10, 4)
+	buildCobblePath("Path_FountainToTraining", Vector3.new(-14, 0, 10), Vector3.new(-28, 0, 24), 10, 4)
+	buildCobblePath("Path_FountainToSouthWall", Vector3.new(-18, 0, 0), Vector3.new(-54, 0, 0), 11, 5)
 
 	-- 2. Decorative Tapered Rocky Underside (Non-collidable, low part count for mobile)
 	local undersideFolder = Instance.new("Folder")
@@ -269,7 +272,7 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 		makePart({
 			Name = string.format("RockTier_%d", layer),
 			Size = Vector3.new(layerW, layerHeight + 2, layerL),
-			CFrame = CFrame.new(0, currentY - layerHeight * 0.5, centerZ) * CFrame.Angles(0, yawJitter, 0),
+			CFrame = CFrame.new(0, currentY - layerHeight * 0.5, undersideZ) * CFrame.Angles(0, yawJitter, 0),
 			Material = cfg.RockMaterial,
 			Color = col,
 			Decorative = true,
@@ -284,7 +287,7 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 		local rx = (cfg.TopWidth * 0.44) * rng:NextNumber(0.86, 1.02)
 		local rz = (totalL * 0.44) * rng:NextNumber(0.86, 1.02)
 		local px = math.cos(angle) * rx
-		local pz = centerZ + math.sin(angle) * rz
+		local pz = undersideZ + math.sin(angle) * rz
 		local spireH = rng:NextNumber(34, 58)
 		local spireW = rng:NextNumber(18, 28)
 		local spireD = rng:NextNumber(16, 24)
@@ -309,7 +312,7 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 		local angle = ((i - 1) / cfg.InnerStalactiteCount) * (math.pi * 2) + 0.25
 		local radius = rng:NextNumber(20, 50)
 		local px = math.cos(angle) * radius
-		local pz = centerZ + math.sin(angle) * radius
+		local pz = undersideZ + math.sin(angle) * radius
 		local pointH = rng:NextNumber(42, 68)
 		local pointW = rng:NextNumber(12, 20)
 
@@ -329,7 +332,7 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 	makeWedge({
 		Name = "CentralApexSpike",
 		Size = Vector3.new(26, 60, 26),
-		CFrame = CFrame.new(0, -cfg.UndersideDepth + 12, centerZ) * CFrame.Angles(math.rad(180), math.rad(45), 0),
+		CFrame = CFrame.new(0, -cfg.UndersideDepth + 12, undersideZ) * CFrame.Angles(math.rad(180), math.rad(45), 0),
 		Material = cfg.RockMaterial,
 		Color = cfg.RockColorDeep,
 		Decorative = true,
@@ -341,7 +344,7 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 		local cloudAnchor = makePart({
 			Name = "UndersideCloudEmitter",
 			Size = Vector3.new(4, 1, 4),
-			CFrame = CFrame.new(0, -cfg.TopThickness - 22, centerZ),
+			CFrame = CFrame.new(0, -cfg.TopThickness - 22, undersideZ),
 			Transparency = 1,
 			Decorative = true,
 			Parent = undersideFolder,

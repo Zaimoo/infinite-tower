@@ -37,14 +37,14 @@ local FacilityWorkerRules = {}
 
 FacilityWorkerRules.Facilities = table.freeze({
 	Market = table.freeze({
-		Center = Vector3.new(74, 0, 44),
+		Center = Vector3.new(42, 0, 30),
 		RotationY = math.rad(-145),
 		FloorY = 0.30,
 		BuildingName = "Building_Market",
 		LevelAttr = "FacilityLevel_Market",
 	}),
 	TrainingGrounds = table.freeze({
-		Center = Vector3.new(-58, 0, 46),
+		Center = Vector3.new(-38, 0, 30),
 		RotationY = 0,
 		FloorY = 0.56,
 		BuildingName = "Building_TrainingGrounds",
@@ -56,10 +56,10 @@ FacilityWorkerRules.PlazaFountainCenter = Vector3.new(0, 0, 0)
 FacilityWorkerRules.PlazaFountainClearRadius = 16.5
 
 FacilityWorkerRules.CourtyardBounds = table.freeze({
-	MinX = -96,
-	MaxX = 96,
-	MinZ = -90,
-	MaxZ = 92,
+	MinX = -75,
+	MaxX = 75,
+	MinZ = -55,
+	MaxZ = 55,
 })
 
 FacilityWorkerRules.DefaultArchetypeWeapons = table.freeze({
@@ -114,16 +114,16 @@ local function makeStallStation(
 	return makeStation("Market", lPos, lLook)
 end
 
--- Courtyard run-in paths start clear of PlazaFountain (radius 16) and lead to each facility apron.
+-- Courtyard run-in paths start clear of PlazaFountain (radius 16.5) and lead to each facility apron.
 FacilityWorkerRules.CourtyardRunIn = table.freeze({
 	Market = table.freeze({
-		Vector3.new(20, 0, 9),
-		Vector3.new(44, 0, 22),
+		Vector3.new(14, 0, 10),
+		Vector3.new(26, 0, 18),
 		FacilityWorkerRules.FacilityToPlot("Market", Vector3.new(0, 0.30, 6.8)),
 	}),
 	TrainingGrounds = table.freeze({
-		Vector3.new(-19, 0, 8),
-		Vector3.new(-42, 0, 21),
+		Vector3.new(-14, 0, 10),
+		Vector3.new(-26, 0, 18),
 		FacilityWorkerRules.FacilityToPlot("TrainingGrounds", Vector3.new(0, 0.56, -15.0)),
 		FacilityWorkerRules.FacilityToPlot("TrainingGrounds", Vector3.new(0, 0.56, -10.5)),
 	}),

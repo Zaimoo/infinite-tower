@@ -207,20 +207,20 @@ FacilityConfig.UpgradeTable = {
 
 -- Waiting Room Plot Island Layout (relative to Plot Courtyard Origin at Y = 12)
 -- Note: In island local coordinates:
---   -Z (-90) = Bridge / Front Gate (Left in reference camera view)
---   +Z (+90) = Dividing Wall to Forest Outskirts (Right in reference camera view)
---   +X (+130) = North / Top Wall in reference camera view
---   -X (-130) = South / Bottom Wall in reference camera view
+--   -Z (-60) = Bridge / Front Gate (Left in reference camera view)
+--   +Z (+60) = Dividing Wall to Forest Outskirts (Right in reference camera view)
+--   +X (+80) = North / Top Wall in reference camera view
+--   -X (-80) = South / Bottom Wall in reference camera view
 FacilityConfig.FacilityLayout = {
 	Fountain = {
 		Offset = Vector3.new(0, 0, 0),
 		Radius = 16,
 	},
 	SummoningPortal = {
-		Offset = Vector3.new(115.5, 0, -73.0),
-		RotationY = math.rad(-57.71),
+		Offset = Vector3.new(48, 0, -34),
+		RotationY = math.rad(-55),
 		Radius = 24,
-		Dimensions = Vector3.new(24.0, 26.5, 17.55), -- Width=24, Height=26.5 (below 28-stud wall), Depth=17.55 (flush in +X,-Z wall corner)
+		Dimensions = Vector3.new(24.0, 26.5, 17.55),
 		DoorOpenAngleDeg = 80,
 		ProximityOpenRadius = 24,
 		PromptOffset = Vector3.new(0, 2.0, 6.0),
@@ -228,25 +228,25 @@ FacilityConfig.FacilityLayout = {
 		Keybind = if Enum then Enum.KeyCode.F else ("F" :: any),
 	},
 	Leaderboard = {
-		Offset = Vector3.new(116, 0, -18),
+		Offset = Vector3.new(52, 0, -12),
 		RotationY = math.rad(-90),
 	},
 	Market = {
-		Offset = Vector3.new(74, 0, 44),
+		Offset = Vector3.new(42, 0, 30),
 		RotationY = math.rad(-145),
 		Radius = 26,
 		PromptText = "Open Market",
 		Keybind = if Enum then Enum.KeyCode.F else ("F" :: any),
 	},
 	BlacksmithForge = {
-		Offset = Vector3.new(108, 0, -4),
+		Offset = Vector3.new(54, 0, -2),
 		RotationY = math.rad(-90),
 		Radius = 22,
 		PromptText = "Blacksmith Forge",
 		Keybind = if Enum then Enum.KeyCode.F else ("F" :: any), -- F, so it never competes with the [E] Recall hotkey
 	},
 	SynthesisChamber = {
-		Offset = Vector3.new(-68, 0, -34),
+		Offset = Vector3.new(-44, 0, -28),
 		RotationY = math.rad(42),
 		Radius = 28,
 		-- One prompt for the whole Pit; Synthesis and Promotion are tabs inside its screen.
@@ -254,14 +254,14 @@ FacilityConfig.FacilityLayout = {
 		Keybind = if Enum then Enum.KeyCode.F else ("F" :: any),
 	},
 	TrainingArea = {
-		Offset = Vector3.new(-58, 0, 46),
+		Offset = Vector3.new(-38, 0, 30),
 		RotationY = math.rad(0),
 		Radius = 26,
 		PromptText = "Training Grounds",
 		Keybind = if Enum then Enum.KeyCode.F else ("F" :: any),
 	},
 	Guardpost = {
-		Offset = Vector3.new(15, 0, 158),
+		Offset = Vector3.new(12, 0, 115),
 		RotationY = math.rad(0),
 		Radius = 20,
 		PromptText = "Guardpost",

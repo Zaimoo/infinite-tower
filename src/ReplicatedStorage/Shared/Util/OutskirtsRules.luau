@@ -44,10 +44,10 @@ export type SpawnLane = {
 local OutskirtsRules = {}
 
 OutskirtsRules.Bounds = table.freeze({
-	MinX = -120,
-	MaxX = 120,
-	MinZ = 96,
-	MaxZ = 220,
+	MinX = -75,
+	MaxX = 75,
+	MinZ = 62,
+	MaxZ = 158,
 })
 
 OutskirtsRules.Timing = table.freeze({
@@ -58,51 +58,51 @@ OutskirtsRules.Timing = table.freeze({
 	MobAttackInterval = 1.65,
 })
 
-OutskirtsRules.GuardPostCenter = Vector3.new(15, 0, 158)
+OutskirtsRules.GuardPostCenter = Vector3.new(12, 0, 115)
 
 OutskirtsRules.GatehouseRunIn = table.freeze({
-	Vector3.new(32, 0, 100),
-	Vector3.new(27, 0, 126),
-	Vector3.new(18, 0, 150),
+	Vector3.new(14, 0, 68),
+	Vector3.new(13, 0, 88),
+	Vector3.new(12, 0, 110),
 })
 
 OutskirtsRules.BuildingAttackTargets = table.freeze({
-	Vector3.new(8, 0, 152),
-	Vector3.new(15.5, 0, 165.5),
-	Vector3.new(23.5, 0, 161.5),
+	Vector3.new(6, 0, 110),
+	Vector3.new(12.5, 0, 120.5),
+	Vector3.new(18.5, 0, 117.5),
 })
 
 OutskirtsRules.CampfireRestSlots = table.freeze({
-	Vector3.new(5.5, 0, 160.5),
-	Vector3.new(10.5, 0, 165.8),
-	Vector3.new(7.2, 0, 164.2),
-	Vector3.new(13.8, 0, 163.5),
-	Vector3.new(6.0, 0, 157.2),
+	Vector3.new(4.5, 0, 116.5),
+	Vector3.new(8.5, 0, 120.8),
+	Vector3.new(5.8, 0, 119.5),
+	Vector3.new(10.8, 0, 119.0),
+	Vector3.new(5.0, 0, 114.2),
 })
 
 OutskirtsRules.DefenderSlots = table.freeze({
-	table.freeze({ Rally = Vector3.new(15, 0, 170), PatrolMinX = -4, PatrolMaxX = 30 }),
-	table.freeze({ Rally = Vector3.new(4, 0, 169), PatrolMinX = -36, PatrolMaxX = -4 }),
-	table.freeze({ Rally = Vector3.new(27, 0, 169), PatrolMinX = 28, PatrolMaxX = 60 }),
-	table.freeze({ Rally = Vector3.new(-6, 0, 167), PatrolMinX = -66, PatrolMaxX = -34 }),
-	table.freeze({ Rally = Vector3.new(37, 0, 167), PatrolMinX = 56, PatrolMaxX = 86 }),
+	table.freeze({ Rally = Vector3.new(12, 0, 124), PatrolMinX = -5, PatrolMaxX = 25 }),
+	table.freeze({ Rally = Vector3.new(3, 0, 123), PatrolMinX = -30, PatrolMaxX = -5 }),
+	table.freeze({ Rally = Vector3.new(22, 0, 123), PatrolMinX = 22, PatrolMaxX = 50 }),
+	table.freeze({ Rally = Vector3.new(-6, 0, 121), PatrolMinX = -55, PatrolMaxX = -28 }),
+	table.freeze({ Rally = Vector3.new(30, 0, 121), PatrolMinX = 45, PatrolMaxX = 68 }),
 } :: { DefenderSlot })
 
 OutskirtsRules.SpawnLanes = table.freeze({
 	table.freeze({
-		Spawn = Vector3.new(-40, 0, 210),
-		Mid = Vector3.new(-16, 0, 188),
-		BuildingTarget = Vector3.new(8, 0, 152),
+		Spawn = Vector3.new(-30, 0, 150),
+		Mid = Vector3.new(-12, 0, 134),
+		BuildingTarget = Vector3.new(6, 0, 110),
 	}),
 	table.freeze({
-		Spawn = Vector3.new(16, 0, 214),
-		Mid = Vector3.new(16, 0, 190),
-		BuildingTarget = Vector3.new(15.5, 0, 165.5),
+		Spawn = Vector3.new(12, 0, 152),
+		Mid = Vector3.new(12, 0, 135),
+		BuildingTarget = Vector3.new(12.5, 0, 120.5),
 	}),
 	table.freeze({
-		Spawn = Vector3.new(54, 0, 210),
-		Mid = Vector3.new(38, 0, 188),
-		BuildingTarget = Vector3.new(23.5, 0, 161.5),
+		Spawn = Vector3.new(42, 0, 150),
+		Mid = Vector3.new(30, 0, 134),
+		BuildingTarget = Vector3.new(18.5, 0, 117.5),
 	}),
 } :: { SpawnLane })
 
@@ -117,11 +117,11 @@ OutskirtsRules.DefaultArchetypeWeapons = table.freeze({
 
 -- Exact east-west wilderness dirt trail curve from OutskirtsEnvironmentBuilder.
 function OutskirtsRules.TrailZ(x: number): number
-	return 160 + math.sin(x * 0.038) * 12 + math.cos(x * 0.082) * 4
+	return 110 + math.sin(x * 0.055) * 8 + math.cos(x * 0.11) * 3
 end
 
 function OutskirtsRules.TrailPoint(x: number): Vector3
-	local clampedX = math.clamp(x, -110, 110)
+	local clampedX = math.clamp(x, -68, 68)
 	return Vector3.new(clampedX, 0, OutskirtsRules.TrailZ(clampedX))
 end
 
