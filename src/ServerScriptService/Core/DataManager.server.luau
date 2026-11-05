@@ -25,6 +25,11 @@ local OnboardingService = require(script.Parent:WaitForChild("OnboardingService"
 local FortressTreeService = require(script.Parent:WaitForChild("FortressTreeService"))
 local ProfileMigrations = require(script.Parent:WaitForChild("ProfileMigrations"))
 local ProfilePersistence = require(script.Parent:WaitForChild("ProfilePersistence"))
+local ForgeTransactions = require(script.Parent:WaitForChild("ForgeTransactions"))
+local forgeTransactions = ForgeTransactions.new({
+	Clock = function() return workspace:GetServerTimeNow() end,
+	GenerateToken = function() return HttpService:GenerateGUID(false) end,
+})
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local TycoonRemotes = Remotes:WaitForChild("TycoonGachaRemotes")
@@ -92,6 +97,13 @@ if not RequestSummonArtifactFunc then
 	RequestSummonArtifactFunc = Instance.new("RemoteFunction")
 	RequestSummonArtifactFunc.Name = "RequestSummonArtifact"
 	RequestSummonArtifactFunc.Parent = ArtifactRemotes
+end
+
+local ForgeWorkbenchRequest = ArtifactRemotes:FindFirstChild("ForgeWorkbenchRequest") :: RemoteFunction?
+if not ForgeWorkbenchRequest then
+	ForgeWorkbenchRequest = Instance.new("RemoteFunction")
+	ForgeWorkbenchRequest.Name = "ForgeWorkbenchRequest"
+	ForgeWorkbenchRequest.Parent = ArtifactRemotes
 end
 
 -- Phase 4 progression remotes: the Fortress Tree purchase and the onboarding goal tracker.
@@ -641,6 +653,7 @@ function DataManager.SyncProfile(player: Player, progressionOnly: boolean?)
 		_G.CombatSimulation.RefreshPlayerHeroStats(player)
 	end
 	DataManager.UpdateSquadPower(player)
+	forgeTransactions.Snapshot(profile)
 	ProfileDeltaSyncEvent:FireClient(player, profile)
 	OnboardingService.Push(player)
 end
@@ -719,7 +732,8 @@ function DataManager.SyncPitDelta(player: Player, changed: any, removed: any)
 		_G.PlotManager.RefreshPlotVisuals(player)
 	end
 	DataManager.UpdateSquadPower(player)
-	ProfileDeltaSyncEvent:FireClient(player, { _PitDelta = true, Heroes = changed, Removed = removed,
+	local forgeSnapshot = forgeTransactions.Snapshot(profile)
+	ProfileDeltaSyncEvent:FireClient(player, { _PitDelta = true, Heroes = changed, Removed = removed, ForgeRevision = forgeSnapshot.Revision,
 		Currencies = profile.Currencies, PitMaterials = profile.PitMaterials, PitRevision = profile.PitRevision,
 		UnlockedResearch = profile.UnlockedResearch, SquadPower = (profile :: any).SquadPower,
 		SquadPowerByHero = (profile :: any).SquadPowerByHero })
@@ -1177,6 +1191,32 @@ RequestUpgradeArtifactFunc.OnServerInvoke = function(player: Player, targetUUID:
 		OnboardingService.Report(player, "ArtifactUpgraded")
 	end
 	return ok, message, star
+end
+
+-- The new workbench uses one authoritative, idempotent command endpoint. Legacy summon/sell
+-- endpoints remain available; their changes are included in the next structural revision.
+(ForgeWorkbenchRequest :: RemoteFunction).OnServerInvoke = function(player: Player, action: any, payload: any, targetPlot: any?)
+	local profile = ActiveProfiles[player]
+	if not profile then error("Profile is still loading. Please reopen the Forge.") end
+	if not validateCallerPlotOwnership(player, targetPlot) then error("Plot ownership validation failed") end
+	if action == "STATE" then
+		return forgeTransactions.Read(profile)
+	elseif action == "RECONCILE" then
+		return forgeTransactions.Reconcile(profile, payload)
+	elseif action ~= "EXECUTE" then
+		error("Invalid Forge action")
+	end
+	local result, committed = forgeTransactions.Execute(profile, payload, OnboardingService.IsUnlocked(player, "Forge"))
+	-- The mutation and its receipt are complete before synchronization can yield or call other systems.
+	if committed then
+		task.defer(function()
+			if ActiveProfiles[player] ~= profile then return end
+			local kind = payload.Kind
+			DataManager.SyncProfile(player, kind == "UPGRADE" or kind == "LOCK")
+			if kind == "UPGRADE" then OnboardingService.Report(player, "ArtifactUpgraded") end
+		end)
+	end
+	return result
 end
 
 -- The banner rolls a tier and a weapon type, then a variant. Fail at server start, not after taking
@@ -1690,6 +1730,7 @@ Players.PlayerRemoving:Connect(function(player: Player)
 		OfflineRewardService.RecordLogout(player, profile)
 	end
 	releaseProfile(player)
+	if profile then forgeTransactions.Forget(profile) end
 	pit:Forget(player)
 	FortressTreeService.Forget(player)
 	lastLeaderstatsWrite[player] = nil
