@@ -439,8 +439,8 @@ function Builder.Build(id: number, generation: number): any
 		local a=origin+Vector3.new(pad.AX,pad.AY,pad.AZ)
 		local b=origin+Vector3.new(pad.BX,pad.BY,pad.BZ)
 		local p=part(model,"TraversalLanding",Vector3.new(pad.Width,2,(b-a).Magnitude),(a+b)/2,theme.TrimColor,theme.TrimMaterial)
-		-- Top sits 0.05 above the terrace/ramp planes so coplanar faces never z-fight at joins.
-		p.CFrame=CFrame.lookAt((a+b)/2,b)*CFrame.new(0,-0.95,0)
+		-- Landing tops sit 0.08 above terrace planes (ramps 0.04) so coplanar faces never z-fight at joins.
+		p.CFrame=CFrame.lookAt((a+b)/2,b)*CFrame.new(0,-0.92,0)
 		structure(p,id)
 	end
 	for _, link in layout.Links do
@@ -475,10 +475,10 @@ function Builder.Build(id: number, generation: number): any
 			end
 		else
 			local ramp = part(model, "TraversalRamp", Vector3.new(link.Width, 2, delta.Magnitude), mid, theme.TrimColor, theme.TrimMaterial)
-			ramp.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, -1, 0)
+			ramp.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, -0.96, 0)
 			structure(ramp,link.Id)
 			local inlay = decor(model, "RampPathInlay", Vector3.new(link.Width * 0.55, 0.12, delta.Magnitude), mid, theme.AccentColor, theme.GroundMaterial)
-			inlay.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, 0.08, 0)
+			inlay.CFrame = CFrame.lookAt(mid, b) * CFrame.new(0, 0.14, 0)
 		end
 
 		for _, side in { -1, 1 } do
