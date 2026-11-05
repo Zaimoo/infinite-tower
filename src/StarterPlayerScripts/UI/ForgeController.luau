@@ -187,6 +187,17 @@ local function toneButton(btn: GuiObject, tone: string)
 	GildedGrimoire.Reframe(btn, { Class = "Button", Tone = tone, ZIndex = btn.ZIndex + 1 })
 end
 
+-- Filter tabs and chips: the active one is Gold with dark ink text (light text vanishes on gold),
+-- the rest are Slate with near-white text.
+local FILTER_TEXT = Color3.fromRGB(240, 234, 250)
+local FILTER_TEXT_ACTIVE = Color3.fromRGB(30, 18, 6)
+local function styleFilter(btn: GuiObject, active: boolean)
+	toneButton(btn, if active then "Gold" else "Slate")
+	if btn:IsA("TextButton") then
+		btn.TextColor3 = if active then FILTER_TEXT_ACTIVE else FILTER_TEXT
+	end
+end
+
 local function cornerDiamonds(parent: GuiObject, size: number, color: Color3?)
 	-- Styled automatically by GothicBoxStyle
 end
@@ -2793,7 +2804,7 @@ end
 function Forge:StyleAssignFilters()
 	for key, chip in self.AssignFilterChips or {} do
 		local active = self.AssignFilter == key
-		toneButton(chip, if active then "Gold" else "Slate")
+		styleFilter(chip, active)
 	end
 end
 
@@ -3091,8 +3102,8 @@ function Forge:BuildArtifactsModal(gui: ScreenGui)
 			BorderSizePixel = 0,
 			ZIndex = 68,
 		}, tabsRow)
-		toneButton(tabBtn, if entry.Key == "ALL" then "Gold" else "Slate")
 		grimoireButtonText(tabBtn)
+		styleFilter(tabBtn, entry.Key == "ALL")
 		if entry.Key ~= "ALL" then
 			local icon = GrimoireIcons.Create(ARCHETYPE_ICON[entry.Key], 20, tabBtn, 71)
 			icon.AnchorPoint = Vector2.new(0, 0.5)
@@ -3101,7 +3112,7 @@ function Forge:BuildArtifactsModal(gui: ScreenGui)
 		tabBtn.Activated:Connect(function()
 			self.ArtifactsModalFilter = entry.Key
 			for k, b in pairs(self.ModalTabBtns) do
-				toneButton(b, if k == entry.Key then "Gold" else "Slate")
+				styleFilter(b, k == entry.Key)
 			end
 			self:RenderArtifactsCatalog(entry.Key)
 		end)
@@ -3141,6 +3152,9 @@ end
 function Forge:OpenArtifactsModal()
 	if not self.ArtifactsModal then return end
 	self.ArtifactsModal.Visible = true
+	for key, tab in self.ModalTabBtns or {} do
+		styleFilter(tab, key == (self.ArtifactsModalFilter or "ALL"))
+	end
 	self:RenderArtifactsRates()
 	self:RenderArtifactsCatalog(self.ArtifactsModalFilter or "ALL")
 end
