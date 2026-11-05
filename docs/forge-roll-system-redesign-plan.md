@@ -202,6 +202,8 @@ Static checking: `luau-compile` doesn't catch the `self` crash. Add a `luau-anal
 
 ## 7. Implementation order
 
+**Status (2026-11-05): all steps done.** Hotfix #151; fonts #152; server polish #153; donor rule #154; client fixes #155; Gilded Grimoire UI #156; Artifact Index acquisition #157 and rename #158; cleanup #159; Backpack caps #160; docs in the PR that lands the stack on `main`. Everything still needs a Studio playtest (§8).
+
 1. **Hotfix (P0)**: bugs 1–4 and the new sell table, with their specs. Ship this alone; it unbreaks the Assign tab and closes the Gold exploit.
 2. **Server polish**: pity luck, nil-seed guard, migration, lock remote, dead remote removal.
 3. **Client correctness**: bugs 5–6 and 9–12.
