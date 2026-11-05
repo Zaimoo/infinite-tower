@@ -107,6 +107,21 @@ HeroSockets.PREFABS = table.freeze({
 	art_chronos_stave = "art_chronos_stave",
 	art_eye_of_singularity = "art_eye_of_singularity",
 	art_omega_archon_caduceus = "art_omega_archon_caduceus",
+	-- Healer Tomes (Batch 6)
+	art_novice_tome = "art_novice_tome",
+	art_acolytes_litany = "art_acolytes_litany",
+	art_cleric_scripture = "art_cleric_scripture",
+	art_mendicants_psalter = "art_mendicants_psalter",
+	art_hermetic_grimoire = "art_hermetic_grimoire",
+	art_restorative_codex = "art_restorative_codex",
+	art_valeria_sanctuary = "art_valeria_sanctuary",
+	art_seraphs_testament = "art_seraphs_testament",
+	art_necronomicon_pages = "art_necronomicon_pages",
+	art_lifebinders_chronicle = "art_lifebinders_chronicle",
+	art_seraphic_psalms = "art_seraphic_psalms",
+	art_divine_providence = "art_divine_providence",
+	art_akashic_records = "art_akashic_records",
+	art_book_of_primordial_genesis = "art_book_of_primordial_genesis",
 } :: { [string]: string })
 
 HeroSockets.SOCKETS = table.freeze({

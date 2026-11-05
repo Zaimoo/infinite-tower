@@ -5126,6 +5126,7 @@ end
 local DAGGER_STYLES: { [string]: any }
 local AXE_STYLES: { [string]: any }
 local STAFF_STYLES: { [string]: any }
+local TOME_STYLES: { [string]: any }
 
 -- Per-artifact colour overrides and the rarity glow, applied to a cloned prefab.
 local DAGGER_STYLES: { [string]: any } = nil :: any
@@ -5236,6 +5237,18 @@ function WeaponModelBuilder.Style(wModel: Model, weaponAssetId: string?, rarityI
 	local staffStyle = (STAFF_STYLES and weaponAssetId) and STAFF_STYLES[weaponAssetId]
 	if staffStyle and staffStyle.Parts then
 		for partName, pStyle in pairs(staffStyle.Parts) do
+			local part = wModel:FindFirstChild(partName) :: BasePart?
+			if part then
+				if pStyle.Material then part.Material = pStyle.Material end
+				if pStyle.Color then part.Color = pStyle.Color end
+			end
+		end
+	end
+
+	-- Healer Tomes (Batch 6) Styling Hook
+	local tomeStyle = (TOME_STYLES and weaponAssetId) and TOME_STYLES[weaponAssetId]
+	if tomeStyle and tomeStyle.Parts then
+		for partName, pStyle in pairs(tomeStyle.Parts) do
 			local part = wModel:FindFirstChild(partName) :: BasePart?
 			if part then
 				if pStyle.Material then part.Material = pStyle.Material end
@@ -7185,6 +7198,620 @@ function WeaponModelBuilder.BuildVoidChannelerArtifact(): Model
 	return makeMeshStaff("art_void_channeler")
 end
 
+export type TomePartData = {
+	Name: string,
+	MeshId: string,
+	Size: Vector3,
+	Offset: Vector3,
+	Mat: Enum.Material,
+	Color: Color3,
+}
+
+export type TomeMeshData = {
+	GripPos: Vector3,
+	TipPos: Vector3,
+	BasePos: Vector3,
+	CorePos: Vector3,
+	Parts: { TomePartData },
+}
+
+local TOME_MESH_DATA: { [string]: TomeMeshData } = {
+art_novice_tome = {
+		GripPos = Vector3.new(0.0000, 0.0000, 0.0000),
+		TipPos = Vector3.new(0.0000, 0.6500, 0.0000),
+		BasePos = Vector3.new(0.0000, 0.3500, 0.0000),
+		CorePos = Vector3.new(0.0000, 0.5500, 0.0000),
+		Parts = {
+			{ Name = "Bookmark", MeshId = "rbxassetid://70434820513447", Size = Vector3.new(0.1399, 0.5820, 0.8000), Offset = Vector3.new(-0.0047, 0.2890, 0.4000), Mat = Enum.Material.Fabric, Color = Color3.fromRGB(165, 35, 35) },
+			{ Name = "CornerBrackets", MeshId = "rbxassetid://76498378989143", Size = Vector3.new(1.1966, 0.0965, 1.1000), Offset = Vector3.new(0.0000, 0.5500, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(175, 125, 75) },
+			{ Name = "Cover", MeshId = "rbxassetid://83009149870534", Size = Vector3.new(1.1901, 0.2249, 1.1000), Offset = Vector3.new(0.0000, 0.4758, 0.0000), Mat = Enum.Material.Leather, Color = Color3.fromRGB(115, 65, 45) },
+			{ Name = "Handle", MeshId = "rbxassetid://84070404356820", Size = Vector3.new(0.1200, 0.1200, 0.1200), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Plastic, Color = Color3.fromRGB(163, 162, 165) },
+			{ Name = "Pages", MeshId = "rbxassetid://100403073886843", Size = Vector3.new(1.1400, 0.3052, 1.0400), Offset = Vector3.new(0.0000, 0.5526, 0.0000), Mat = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(242, 235, 215) },
+			{ Name = "Spine", MeshId = "rbxassetid://129398393562292", Size = Vector3.new(0.1800, 0.0900, 1.0500), Offset = Vector3.new(0.0000, 0.3350, 0.0000), Mat = Enum.Material.Leather, Color = Color3.fromRGB(85, 45, 30) },
+		},
+	},
+	art_acolytes_litany = {
+		GripPos = Vector3.new(0.0000, 0.0000, 0.0000),
+		TipPos = Vector3.new(0.0000, 0.6500, 0.0000),
+		BasePos = Vector3.new(0.0000, 0.3500, 0.0000),
+		CorePos = Vector3.new(0.0000, 0.5500, 0.0000),
+		Parts = {
+			{ Name = "Bookmark", MeshId = "rbxassetid://113679044760475", Size = Vector3.new(0.1417, 0.5840, 0.8000), Offset = Vector3.new(-0.0031, 0.2880, 0.4000), Mat = Enum.Material.Fabric, Color = Color3.fromRGB(45, 95, 165) },
+			{ Name = "CornerBrackets", MeshId = "rbxassetid://107532235906954", Size = Vector3.new(1.2361, 0.1042, 1.1200), Offset = Vector3.new(0.0000, 0.5546, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(195, 145, 85) },
+			{ Name = "Cover", MeshId = "rbxassetid://131006700819476", Size = Vector3.new(1.2291, 0.2339, 1.1200), Offset = Vector3.new(0.0000, 0.4789, 0.0000), Mat = Enum.Material.Leather, Color = Color3.fromRGB(55, 75, 95) },
+			{ Name = "Handle", MeshId = "rbxassetid://84070404356820", Size = Vector3.new(0.1200, 0.1200, 0.1200), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Plastic, Color = Color3.fromRGB(163, 162, 165) },
+			{ Name = "Pages", MeshId = "rbxassetid://73148971893273", Size = Vector3.new(1.1800, 0.3217, 1.0600), Offset = Vector3.new(0.0000, 0.5609, 0.0000), Mat = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(245, 238, 220) },
+			{ Name = "Spine", MeshId = "rbxassetid://130901321299982", Size = Vector3.new(0.1900, 0.0950, 1.0800), Offset = Vector3.new(0.0000, 0.3325, 0.0000), Mat = Enum.Material.Leather, Color = Color3.fromRGB(40, 55, 75) },
+			{ Name = "SpineClasps", MeshId = "rbxassetid://100360622211975", Size = Vector3.new(0.2360, 0.1180, 0.4200), Offset = Vector3.new(0.0000, 0.3210, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(195, 145, 85) },
+		},
+	},
+	art_cleric_scripture = {
+		GripPos = Vector3.new(0.0000, 0.0000, 0.0000),
+		TipPos = Vector3.new(0.0000, 0.6500, 0.0000),
+		BasePos = Vector3.new(0.0000, 0.3500, 0.0000),
+		CorePos = Vector3.new(0.0000, 0.5500, 0.0000),
+		Parts = {
+			{ Name = "Bookmark", MeshId = "rbxassetid://114826877345466", Size = Vector3.new(0.1503, 0.5850, 0.8000), Offset = Vector3.new(-0.0049, 0.2875, 0.4000), Mat = Enum.Material.Fabric, Color = Color3.fromRGB(195, 155, 45) },
+			{ Name = "CornerBrackets", MeshId = "rbxassetid://137069433320337", Size = Vector3.new(1.2752, 0.1103, 1.1600), Offset = Vector3.new(0.0000, 0.5592, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(210, 175, 95) },
+			{ Name = "Cover", MeshId = "rbxassetid://91519269250482", Size = Vector3.new(1.2678, 0.2420, 1.1600), Offset = Vector3.new(0.0000, 0.4820, 0.0000), Mat = Enum.Material.Leather, Color = Color3.fromRGB(135, 45, 45) },
+			{ Name = "FiligreeTrim", MeshId = "rbxassetid://120333985823925", Size = Vector3.new(1.2721, 0.2553, 1.1600), Offset = Vector3.new(0.0000, 0.4820, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(225, 185, 105) },
+			{ Name = "Handle", MeshId = "rbxassetid://84070404356820", Size = Vector3.new(0.1200, 0.1200, 0.1200), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Plastic, Color = Color3.fromRGB(163, 162, 165) },
+			{ Name = "Pages", MeshId = "rbxassetid://122129191132157", Size = Vector3.new(1.2200, 0.3382, 1.1000), Offset = Vector3.new(0.0000, 0.5691, 0.0000), Mat = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(245, 240, 225) },
+			{ Name = "Spine", MeshId = "rbxassetid://97936797175706", Size = Vector3.new(0.2000, 0.1000, 1.1200), Offset = Vector3.new(0.0000, 0.3300, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(180, 185, 195) },
+			{ Name = "SpineClasps", MeshId = "rbxassetid://75228823810554", Size = Vector3.new(0.2460, 0.1230, 0.6250), Offset = Vector3.new(0.0000, 0.3185, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(210, 175, 95) },
+		},
+	},
+	art_mendicants_psalter = {
+		GripPos = Vector3.new(0.0000, 0.0000, 0.0000),
+		TipPos = Vector3.new(0.0000, 0.6500, 0.0000),
+		BasePos = Vector3.new(0.0000, 0.3500, 0.0000),
+		CorePos = Vector3.new(0.0000, 0.5500, 0.0000),
+		Parts = {
+			{ Name = "Bookmark", MeshId = "rbxassetid://71385529613534", Size = Vector3.new(0.1536, 0.5850, 0.8000), Offset = Vector3.new(-0.0041, 0.2875, 0.4000), Mat = Enum.Material.Fabric, Color = Color3.fromRGB(50, 150, 95) },
+			{ Name = "CornerBrackets", MeshId = "rbxassetid://132843153551217", Size = Vector3.new(1.3142, 0.1164, 1.1800), Offset = Vector3.new(0.0000, 0.5638, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(220, 185, 110) },
+			{ Name = "Cover", MeshId = "rbxassetid://72144177174455", Size = Vector3.new(1.3064, 0.2501, 1.1800), Offset = Vector3.new(0.0000, 0.4851, 0.0000), Mat = Enum.Material.Leather, Color = Color3.fromRGB(45, 85, 65) },
+			{ Name = "FiligreeTrim", MeshId = "rbxassetid://113339563040234", Size = Vector3.new(1.3112, 0.2649, 1.1800), Offset = Vector3.new(0.0000, 0.4851, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(230, 195, 120) },
+			{ Name = "Handle", MeshId = "rbxassetid://84070404356820", Size = Vector3.new(0.1200, 0.1200, 0.1200), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Plastic, Color = Color3.fromRGB(163, 162, 165) },
+			{ Name = "Pages", MeshId = "rbxassetid://95988683187791", Size = Vector3.new(1.2600, 0.3547, 1.1200), Offset = Vector3.new(0.0000, 0.5774, 0.0000), Mat = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(245, 240, 225) },
+			{ Name = "Spine", MeshId = "rbxassetid://125779446386391", Size = Vector3.new(0.2100, 0.1050, 1.1500), Offset = Vector3.new(0.0000, 0.3275, 0.0000), Mat = Enum.Material.Leather, Color = Color3.fromRGB(30, 60, 45) },
+			{ Name = "SpineClasps", MeshId = "rbxassetid://115718283358568", Size = Vector3.new(0.2560, 0.1280, 0.7550), Offset = Vector3.new(0.0000, 0.3160, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(220, 185, 110) },
+		},
+	},
+	art_hermetic_grimoire = {
+		GripPos = Vector3.new(0.0000, 0.0000, 0.0000),
+		TipPos = Vector3.new(0.0000, 0.6500, 0.0000),
+		BasePos = Vector3.new(0.0000, 0.3500, 0.0000),
+		CorePos = Vector3.new(0.0000, 0.5500, 0.0000),
+		Parts = {
+			{ Name = "Bookmark", MeshId = "rbxassetid://71385529613534", Size = Vector3.new(0.1536, 0.5850, 0.8000), Offset = Vector3.new(-0.0041, 0.2875, 0.4000), Mat = Enum.Material.Fabric, Color = Color3.fromRGB(150, 75, 225) },
+			{ Name = "CornerBrackets", MeshId = "rbxassetid://126990767785596", Size = Vector3.new(1.3142, 0.1164, 1.2000), Offset = Vector3.new(0.0000, 0.5639, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(215, 220, 235) },
+			{ Name = "Cover", MeshId = "rbxassetid://123286733584154", Size = Vector3.new(1.3064, 0.2501, 1.2000), Offset = Vector3.new(0.0000, 0.4851, 0.0000), Mat = Enum.Material.Slate, Color = Color3.fromRGB(38, 30, 52) },
+			{ Name = "FiligreeTrim", MeshId = "rbxassetid://136605537045315", Size = Vector3.new(1.3112, 0.2649, 1.2000), Offset = Vector3.new(0.0000, 0.4851, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(225, 230, 245) },
+			{ Name = "Handle", MeshId = "rbxassetid://84070404356820", Size = Vector3.new(0.1200, 0.1200, 0.1200), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Plastic, Color = Color3.fromRGB(163, 162, 165) },
+			{ Name = "Pages", MeshId = "rbxassetid://85442372248780", Size = Vector3.new(1.2600, 0.3547, 1.1400), Offset = Vector3.new(0.0000, 0.5774, 0.0000), Mat = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(240, 235, 225) },
+			{ Name = "RunicGlyph", MeshId = "rbxassetid://72522635118448", Size = Vector3.new(0.4400, 0.0200, 0.4400), Offset = Vector3.new(0.0000, 0.6600, 0.0000), Mat = Enum.Material.Neon, Color = Color3.fromRGB(140, 100, 255) },
+			{ Name = "Spine", MeshId = "rbxassetid://134505530502706", Size = Vector3.new(0.2100, 0.1050, 1.1600), Offset = Vector3.new(0.0000, 0.3275, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(185, 190, 205) },
+			{ Name = "SpineClasps", MeshId = "rbxassetid://132083828419660", Size = Vector3.new(0.2560, 0.1280, 0.7660), Offset = Vector3.new(0.0000, 0.3160, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(215, 220, 235) },
+		},
+	},
+	art_restorative_codex = {
+		GripPos = Vector3.new(0.0000, 0.0000, 0.0000),
+		TipPos = Vector3.new(0.0000, 0.6500, 0.0000),
+		BasePos = Vector3.new(0.0000, 0.3500, 0.0000),
+		CorePos = Vector3.new(0.0000, 0.5500, 0.0000),
+		Parts = {
+			{ Name = "Bookmark", MeshId = "rbxassetid://121857356491320", Size = Vector3.new(0.1600, 0.5860, 0.8000), Offset = Vector3.new(-0.0047, 0.2870, 0.4000), Mat = Enum.Material.Fabric, Color = Color3.fromRGB(60, 200, 130) },
+			{ Name = "CornerBrackets", MeshId = "rbxassetid://95107926555683", Size = Vector3.new(1.3532, 0.1226, 1.2200), Offset = Vector3.new(0.0000, 0.5685, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(225, 195, 110) },
+			{ Name = "Cover", MeshId = "rbxassetid://109958374659820", Size = Vector3.new(1.3451, 0.2582, 1.2200), Offset = Vector3.new(0.0000, 0.4882, 0.0000), Mat = Enum.Material.Leather, Color = Color3.fromRGB(30, 65, 55) },
+			{ Name = "FiligreeTrim", MeshId = "rbxassetid://130316082086085", Size = Vector3.new(1.3504, 0.2745, 1.2200), Offset = Vector3.new(0.0000, 0.4882, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(235, 205, 125) },
+			{ Name = "Handle", MeshId = "rbxassetid://84070404356820", Size = Vector3.new(0.1200, 0.1200, 0.1200), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Plastic, Color = Color3.fromRGB(163, 162, 165) },
+			{ Name = "Pages", MeshId = "rbxassetid://92955019694497", Size = Vector3.new(1.3000, 0.3712, 1.1600), Offset = Vector3.new(0.0000, 0.5856, 0.0000), Mat = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(245, 242, 230) },
+			{ Name = "RestorationSeal", MeshId = "rbxassetid://88592307972424", Size = Vector3.new(0.5000, 0.0220, 0.5000), Offset = Vector3.new(0.0000, 0.6800, 0.0000), Mat = Enum.Material.Neon, Color = Color3.fromRGB(80, 255, 160) },
+			{ Name = "Spine", MeshId = "rbxassetid://94016010268972", Size = Vector3.new(0.2200, 0.1100, 1.1800), Offset = Vector3.new(0.0000, 0.3250, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(205, 175, 95) },
+			{ Name = "SpineClasps", MeshId = "rbxassetid://92950697657214", Size = Vector3.new(0.2660, 0.1330, 0.7780), Offset = Vector3.new(0.0000, 0.3135, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(225, 195, 110) },
+		},
+	},
+	art_valeria_sanctuary = {
+		GripPos = Vector3.new(0.0000, 0.0000, 0.0000),
+		TipPos = Vector3.new(0.0000, 0.6500, 0.0000),
+		BasePos = Vector3.new(0.0000, 0.3500, 0.0000),
+		CorePos = Vector3.new(0.0000, 0.5500, 0.0000),
+		Parts = {
+			{ Name = "Bookmark", MeshId = "rbxassetid://121857356491320", Size = Vector3.new(0.1600, 0.5860, 0.8000), Offset = Vector3.new(-0.0047, 0.2870, 0.4000), Mat = Enum.Material.Fabric, Color = Color3.fromRGB(235, 185, 65) },
+			{ Name = "CornerBrackets", MeshId = "rbxassetid://85361847004775", Size = Vector3.new(1.3918, 0.1241, 1.2400), Offset = Vector3.new(0.0000, 0.5747, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(245, 205, 95) },
+			{ Name = "Cover", MeshId = "rbxassetid://90674464028086", Size = Vector3.new(1.3834, 0.2653, 1.2400), Offset = Vector3.new(0.0000, 0.4913, 0.0000), Mat = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(248, 246, 242) },
+			{ Name = "FiligreeTrim", MeshId = "rbxassetid://75629923293174", Size = Vector3.new(1.3890, 0.2824, 1.2400), Offset = Vector3.new(0.0000, 0.4913, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(255, 215, 110) },
+			{ Name = "Handle", MeshId = "rbxassetid://84070404356820", Size = Vector3.new(0.1200, 0.1200, 0.1200), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Plastic, Color = Color3.fromRGB(163, 162, 165) },
+			{ Name = "Pages", MeshId = "rbxassetid://121100559883288", Size = Vector3.new(1.3400, 0.3777, 1.1800), Offset = Vector3.new(0.0000, 0.5889, 0.0000), Mat = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(255, 250, 240) },
+			{ Name = "SanctuaryHalo", MeshId = "rbxassetid://128524984333190", Size = Vector3.new(0.5600, 0.0220, 0.5600), Offset = Vector3.new(0.0000, 0.7000, 0.0000), Mat = Enum.Material.Neon, Color = Color3.fromRGB(90, 255, 160) },
+			{ Name = "SeraphWings", MeshId = "rbxassetid://135630210539140", Size = Vector3.new(3.2191, 1.1653, 1.0388), Offset = Vector3.new(0.0000, 1.0101, 0.3119), Mat = Enum.Material.Metal, Color = Color3.fromRGB(250, 210, 100) },
+			{ Name = "Spine", MeshId = "rbxassetid://96935436788270", Size = Vector3.new(0.2200, 0.1100, 1.2000), Offset = Vector3.new(0.0000, 0.3250, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(235, 195, 85) },
+			{ Name = "SpineClasps", MeshId = "rbxassetid://131369980874718", Size = Vector3.new(0.2660, 0.1330, 0.7950), Offset = Vector3.new(0.0000, 0.3135, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(245, 205, 95) },
+		},
+	},
+	art_seraphs_testament = {
+		GripPos = Vector3.new(0.0000, 0.0000, 0.0000),
+		TipPos = Vector3.new(0.0000, 0.6500, 0.0000),
+		BasePos = Vector3.new(0.0000, 0.3500, 0.0000),
+		CorePos = Vector3.new(0.0000, 0.5500, 0.0000),
+		Parts = {
+			{ Name = "Bookmark", MeshId = "rbxassetid://118361856042498", Size = Vector3.new(0.1649, 0.5860, 0.8000), Offset = Vector3.new(-0.0047, 0.2870, 0.4000), Mat = Enum.Material.Fabric, Color = Color3.fromRGB(240, 190, 70) },
+			{ Name = "CornerBrackets", MeshId = "rbxassetid://131552819260211", Size = Vector3.new(1.4303, 0.1287, 1.2600), Offset = Vector3.new(0.0000, 0.5793, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(245, 210, 105) },
+			{ Name = "Cover", MeshId = "rbxassetid://120585099317218", Size = Vector3.new(1.4218, 0.2724, 1.2600), Offset = Vector3.new(0.0000, 0.4943, 0.0000), Mat = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(230, 235, 245) },
+			{ Name = "FiligreeTrim", MeshId = "rbxassetid://126044313521164", Size = Vector3.new(1.4276, 0.2903, 1.2600), Offset = Vector3.new(0.0000, 0.4943, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(255, 220, 115) },
+			{ Name = "Handle", MeshId = "rbxassetid://84070404356820", Size = Vector3.new(0.1200, 0.1200, 0.1200), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Plastic, Color = Color3.fromRGB(163, 162, 165) },
+			{ Name = "Pages", MeshId = "rbxassetid://127948239243587", Size = Vector3.new(1.3800, 0.3942, 1.2000), Offset = Vector3.new(0.0000, 0.5971, 0.0000), Mat = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(255, 252, 245) },
+			{ Name = "SanctuaryHalo", MeshId = "rbxassetid://115648178985400", Size = Vector3.new(0.6000, 0.0240, 0.6000), Offset = Vector3.new(0.0000, 0.7200, 0.0000), Mat = Enum.Material.Neon, Color = Color3.fromRGB(255, 235, 120) },
+			{ Name = "SeraphWings", MeshId = "rbxassetid://114380859981557", Size = Vector3.new(3.5950, 1.3185, 1.1712), Offset = Vector3.new(0.0000, 1.0968, 0.3781), Mat = Enum.Material.Metal, Color = Color3.fromRGB(255, 215, 110) },
+			{ Name = "Spine", MeshId = "rbxassetid://85448768420489", Size = Vector3.new(0.2300, 0.1150, 1.2200), Offset = Vector3.new(0.0000, 0.3225, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(240, 205, 95) },
+			{ Name = "SpineClasps", MeshId = "rbxassetid://75836294542369", Size = Vector3.new(0.2760, 0.1380, 0.8070), Offset = Vector3.new(0.0000, 0.3110, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(245, 210, 105) },
+		},
+	},
+	art_necronomicon_pages = {
+		GripPos = Vector3.new(0.0000, 0.0000, 0.0000),
+		TipPos = Vector3.new(0.0000, 0.6500, 0.0000),
+		BasePos = Vector3.new(0.0000, 0.3500, 0.0000),
+		CorePos = Vector3.new(0.0000, 0.5500, 0.0000),
+		Parts = {
+			{ Name = "Bookmark", MeshId = "rbxassetid://118361856042498", Size = Vector3.new(0.1649, 0.5860, 0.8000), Offset = Vector3.new(-0.0047, 0.2870, 0.4000), Mat = Enum.Material.Fabric, Color = Color3.fromRGB(110, 30, 160) },
+			{ Name = "CornerBrackets", MeshId = "rbxassetid://71456563301244", Size = Vector3.new(1.4503, 0.1348, 1.2800), Offset = Vector3.new(0.0000, 0.5809, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(75, 55, 95) },
+			{ Name = "Cover", MeshId = "rbxassetid://88786755935426", Size = Vector3.new(1.4414, 0.2774, 1.2800), Offset = Vector3.new(0.0000, 0.4958, 0.0000), Mat = Enum.Material.Slate, Color = Color3.fromRGB(22, 18, 28) },
+			{ Name = "EyeCore", MeshId = "rbxassetid://74048539739148", Size = Vector3.new(0.6386, 0.3800, 0.6355), Offset = Vector3.new(0.0000, 0.7500, 0.0000), Mat = Enum.Material.Neon, Color = Color3.fromRGB(180, 50, 255) },
+			{ Name = "FiligreeTrim", MeshId = "rbxassetid://128438840799932", Size = Vector3.new(1.4477, 0.2968, 1.2800), Offset = Vector3.new(0.0000, 0.4958, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(85, 60, 105) },
+			{ Name = "FloatingPages", MeshId = "rbxassetid://111109041164339", Size = Vector3.new(1.9217, 0.6153, 1.0104), Offset = Vector3.new(0.0000, 0.7937, -0.0172), Mat = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(225, 210, 195) },
+			{ Name = "Handle", MeshId = "rbxassetid://84070404356820", Size = Vector3.new(0.1200, 0.1200, 0.1200), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Plastic, Color = Color3.fromRGB(163, 162, 165) },
+			{ Name = "Pages", MeshId = "rbxassetid://82659118792565", Size = Vector3.new(1.4000, 0.3974, 1.2200), Offset = Vector3.new(0.0000, 0.5987, 0.0000), Mat = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(215, 205, 190) },
+			{ Name = "Spine", MeshId = "rbxassetid://86399621851408", Size = Vector3.new(0.2300, 0.1150, 1.2400), Offset = Vector3.new(0.0000, 0.3225, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(60, 45, 75) },
+			{ Name = "SpineClasps", MeshId = "rbxassetid://72148173474081", Size = Vector3.new(0.2760, 0.1380, 0.9017), Offset = Vector3.new(0.0000, 0.3110, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(75, 55, 95) },
+		},
+	},
+	art_lifebinders_chronicle = {
+		GripPos = Vector3.new(0.0000, 0.0000, 0.0000),
+		TipPos = Vector3.new(0.0000, 0.6500, 0.0000),
+		BasePos = Vector3.new(0.0000, 0.3500, 0.0000),
+		CorePos = Vector3.new(0.0000, 0.5500, 0.0000),
+		Parts = {
+			{ Name = "Bookmark", MeshId = "rbxassetid://80762239333486", Size = Vector3.new(0.1697, 0.5860, 0.8000), Offset = Vector3.new(-0.0046, 0.2870, 0.4000), Mat = Enum.Material.Fabric, Color = Color3.fromRGB(50, 180, 90) },
+			{ Name = "CornerBrackets", MeshId = "rbxassetid://114750590269506", Size = Vector3.new(1.4703, 0.1410, 1.3000), Offset = Vector3.new(0.0000, 0.5824, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(115, 175, 95) },
+			{ Name = "Cover", MeshId = "rbxassetid://71986493530691", Size = Vector3.new(1.4611, 0.2824, 1.3000), Offset = Vector3.new(0.0000, 0.4974, 0.0000), Mat = Enum.Material.Wood, Color = Color3.fromRGB(48, 36, 26) },
+			{ Name = "FiligreeTrim", MeshId = "rbxassetid://100906111322806", Size = Vector3.new(1.4679, 0.3033, 1.3000), Offset = Vector3.new(0.0000, 0.4974, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(125, 195, 105) },
+			{ Name = "FloatingPages", MeshId = "rbxassetid://130596792555257", Size = Vector3.new(2.3524, 0.8840, 1.4076), Offset = Vector3.new(0.0000, 0.9401, 0.1658), Mat = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(245, 240, 225) },
+			{ Name = "Handle", MeshId = "rbxassetid://84070404356820", Size = Vector3.new(0.1200, 0.1200, 0.1200), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Plastic, Color = Color3.fromRGB(163, 162, 165) },
+			{ Name = "LifeCore", MeshId = "rbxassetid://113381293266049", Size = Vector3.new(0.7106, 0.4200, 0.7075), Offset = Vector3.new(0.0000, 0.7800, 0.0000), Mat = Enum.Material.Neon, Color = Color3.fromRGB(60, 255, 130) },
+			{ Name = "Pages", MeshId = "rbxassetid://81602094197052", Size = Vector3.new(1.4200, 0.4107, 1.2400), Offset = Vector3.new(0.0000, 0.6053, 0.0000), Mat = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(245, 240, 225) },
+			{ Name = "Spine", MeshId = "rbxassetid://116288409572909", Size = Vector3.new(0.2400, 0.1200, 1.2600), Offset = Vector3.new(0.0000, 0.3200, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(85, 135, 80) },
+			{ Name = "SpineClasps", MeshId = "rbxassetid://75910468612378", Size = Vector3.new(0.2860, 0.1430, 0.9200), Offset = Vector3.new(0.0000, 0.3085, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(115, 175, 95) },
+		},
+	},
+	art_seraphic_psalms = {
+		GripPos = Vector3.new(0.0000, 0.0000, 0.0000),
+		TipPos = Vector3.new(0.0000, 0.6500, 0.0000),
+		BasePos = Vector3.new(0.0000, 0.3500, 0.0000),
+		CorePos = Vector3.new(0.0000, 0.5500, 0.0000),
+		Parts = {
+			{ Name = "Bookmark", MeshId = "rbxassetid://127644695462590", Size = Vector3.new(0.1702, 0.5860, 0.8000), Offset = Vector3.new(-0.0048, 0.2870, 0.4000), Mat = Enum.Material.Fabric, Color = Color3.fromRGB(255, 200, 70) },
+			{ Name = "CornerBrackets", MeshId = "rbxassetid://80562861479502", Size = Vector3.new(1.5094, 0.1471, 1.3200), Offset = Vector3.new(0.0000, 0.5870, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(255, 215, 95) },
+			{ Name = "Cover", MeshId = "rbxassetid://123267179213886", Size = Vector3.new(1.4997, 0.2905, 1.3200), Offset = Vector3.new(0.0000, 0.5005, 0.0000), Mat = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(255, 252, 245) },
+			{ Name = "FiligreeTrim", MeshId = "rbxassetid://90309867017701", Size = Vector3.new(1.5070, 0.3129, 1.3200), Offset = Vector3.new(0.0000, 0.5005, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(255, 225, 115) },
+			{ Name = "FloatingPages", MeshId = "rbxassetid://70373241649912", Size = Vector3.new(1.9447, 0.6438, 1.0536), Offset = Vector3.new(0.0000, 0.8367, -0.0166), Mat = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(255, 252, 245) },
+			{ Name = "Handle", MeshId = "rbxassetid://84070404356820", Size = Vector3.new(0.1200, 0.1200, 0.1200), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Plastic, Color = Color3.fromRGB(163, 162, 165) },
+			{ Name = "OrbitalRings", MeshId = "rbxassetid://136054410739306", Size = Vector3.new(2.2442, 0.7802, 1.8653), Offset = Vector3.new(0.0000, 0.6600, 0.0000), Mat = Enum.Material.Neon, Color = Color3.fromRGB(255, 235, 130) },
+			{ Name = "Pages", MeshId = "rbxassetid://79644130933813", Size = Vector3.new(1.4600, 0.4272, 1.2600), Offset = Vector3.new(0.0000, 0.6136, 0.0000), Mat = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(255, 255, 250) },
+			{ Name = "SeraphWings", MeshId = "rbxassetid://85609698372381", Size = Vector3.new(3.9708, 1.4717, 1.3036), Offset = Vector3.new(0.0000, 1.1833, 0.4443), Mat = Enum.Material.Metal, Color = Color3.fromRGB(255, 220, 110) },
+			{ Name = "Spine", MeshId = "rbxassetid://76804668800054", Size = Vector3.new(0.2400, 0.1200, 1.2800), Offset = Vector3.new(0.0000, 0.3200, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(255, 215, 95) },
+			{ Name = "SpineClasps", MeshId = "rbxassetid://135644866195702", Size = Vector3.new(0.2860, 0.1430, 0.9333), Offset = Vector3.new(0.0000, 0.3085, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(255, 215, 95) },
+		},
+	},
+	art_divine_providence = {
+		GripPos = Vector3.new(0.0000, 0.0000, 0.0000),
+		TipPos = Vector3.new(0.0000, 0.6500, 0.0000),
+		BasePos = Vector3.new(0.0000, 0.3500, 0.0000),
+		CorePos = Vector3.new(0.0000, 0.5500, 0.0000),
+		Parts = {
+			{ Name = "Bookmark", MeshId = "rbxassetid://105356489567088", Size = Vector3.new(0.1752, 0.5860, 0.8000), Offset = Vector3.new(-0.0048, 0.2870, 0.4000), Mat = Enum.Material.Fabric, Color = Color3.fromRGB(90, 190, 255) },
+			{ Name = "CornerBrackets", MeshId = "rbxassetid://91284503876603", Size = Vector3.new(1.5484, 0.1532, 1.3400), Offset = Vector3.new(0.0000, 0.5917, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(250, 215, 105) },
+			{ Name = "Cover", MeshId = "rbxassetid://125966296382542", Size = Vector3.new(1.5384, 0.2986, 1.3400), Offset = Vector3.new(0.0000, 0.5036, 0.0000), Mat = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(245, 248, 255) },
+			{ Name = "FiligreeTrim", MeshId = "rbxassetid://70665577798241", Size = Vector3.new(1.5462, 0.3225, 1.3400), Offset = Vector3.new(0.0000, 0.5036, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(255, 225, 120) },
+			{ Name = "FloatingPages", MeshId = "rbxassetid://86850595817390", Size = Vector3.new(2.3638, 0.9072, 1.4401), Offset = Vector3.new(0.0000, 0.9837, 0.1665), Mat = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(255, 255, 255) },
+			{ Name = "Handle", MeshId = "rbxassetid://84070404356820", Size = Vector3.new(0.1200, 0.1200, 0.1200), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Plastic, Color = Color3.fromRGB(163, 162, 165) },
+			{ Name = "OrbitalRings", MeshId = "rbxassetid://86964013371522", Size = Vector3.new(2.4033, 0.8313, 1.9815), Offset = Vector3.new(0.0000, 0.6800, 0.0000), Mat = Enum.Material.Neon, Color = Color3.fromRGB(130, 235, 255) },
+			{ Name = "Pages", MeshId = "rbxassetid://112040369356684", Size = Vector3.new(1.5000, 0.4437, 1.2800), Offset = Vector3.new(0.0000, 0.6218, 0.0000), Mat = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(255, 255, 255) },
+			{ Name = "SeraphWings", MeshId = "rbxassetid://121369466415466", Size = Vector3.new(4.3467, 1.6249, 1.4361), Offset = Vector3.new(0.0000, 1.2700, 0.5106), Mat = Enum.Material.Metal, Color = Color3.fromRGB(255, 225, 120) },
+			{ Name = "Spine", MeshId = "rbxassetid://80242731102271", Size = Vector3.new(0.2500, 0.1250, 1.3000), Offset = Vector3.new(0.0000, 0.3175, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(240, 210, 100) },
+			{ Name = "SpineClasps", MeshId = "rbxassetid://139770697073942", Size = Vector3.new(0.2960, 0.1480, 1.0136), Offset = Vector3.new(0.0000, 0.3060, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(250, 215, 105) },
+		},
+	},
+	art_akashic_records = {
+		GripPos = Vector3.new(0.0000, 0.0000, 0.0000),
+		TipPos = Vector3.new(0.0000, 0.6500, 0.0000),
+		BasePos = Vector3.new(0.0000, 0.3500, 0.0000),
+		CorePos = Vector3.new(0.0000, 0.5500, 0.0000),
+		Parts = {
+			{ Name = "AkashicCore", MeshId = "rbxassetid://128483124962588", Size = Vector3.new(0.7826, 0.4800, 0.7795), Offset = Vector3.new(0.0000, 0.8400, 0.0000), Mat = Enum.Material.Neon, Color = Color3.fromRGB(210, 140, 255) },
+			{ Name = "AstralWings", MeshId = "rbxassetid://87261705430703", Size = Vector3.new(4.7226, 1.7782, 1.5689), Offset = Vector3.new(0.0000, 1.3566, 0.5770), Mat = Enum.Material.Metal, Color = Color3.fromRGB(235, 205, 255) },
+			{ Name = "Bookmark", MeshId = "rbxassetid://128876542275091", Size = Vector3.new(0.1794, 0.5860, 0.8000), Offset = Vector3.new(-0.0044, 0.2870, 0.4000), Mat = Enum.Material.Fabric, Color = Color3.fromRGB(175, 95, 245) },
+			{ Name = "CornerBrackets", MeshId = "rbxassetid://80159821255257", Size = Vector3.new(1.5874, 0.1594, 1.3600), Offset = Vector3.new(0.0000, 0.5963, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(215, 185, 255) },
+			{ Name = "Cover", MeshId = "rbxassetid://114020803989715", Size = Vector3.new(1.5770, 0.3067, 1.3600), Offset = Vector3.new(0.0000, 0.5067, 0.0000), Mat = Enum.Material.Slate, Color = Color3.fromRGB(18, 16, 26) },
+			{ Name = "FiligreeTrim", MeshId = "rbxassetid://74925817421973", Size = Vector3.new(1.5853, 0.3321, 1.3600), Offset = Vector3.new(0.0000, 0.5067, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(225, 195, 255) },
+			{ Name = "FloatingPages", MeshId = "rbxassetid://140424173710973", Size = Vector3.new(2.7642, 1.1515, 1.8213), Offset = Vector3.new(0.0000, 1.1192, 0.3463), Mat = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(248, 245, 255) },
+			{ Name = "Handle", MeshId = "rbxassetid://84070404356820", Size = Vector3.new(0.1200, 0.1200, 0.1200), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Plastic, Color = Color3.fromRGB(163, 162, 165) },
+			{ Name = "OrbitalRings", MeshId = "rbxassetid://98856433300698", Size = Vector3.new(2.5677, 0.8914, 2.1228), Offset = Vector3.new(0.0000, 0.7000, 0.0000), Mat = Enum.Material.Neon, Color = Color3.fromRGB(160, 100, 255) },
+			{ Name = "Pages", MeshId = "rbxassetid://101649895517789", Size = Vector3.new(1.5400, 0.4602, 1.3000), Offset = Vector3.new(0.0000, 0.6301, 0.0000), Mat = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(245, 240, 255) },
+			{ Name = "Spine", MeshId = "rbxassetid://126530548776398", Size = Vector3.new(0.2600, 0.1300, 1.3200), Offset = Vector3.new(0.0000, 0.3150, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(195, 165, 255) },
+			{ Name = "SpineClasps", MeshId = "rbxassetid://88820334383639", Size = Vector3.new(0.3060, 0.1530, 1.0279), Offset = Vector3.new(0.0000, 0.3035, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(215, 185, 255) },
+		},
+	},
+	art_book_of_primordial_genesis = {
+		GripPos = Vector3.new(0.0000, 0.0000, 0.0000),
+		TipPos = Vector3.new(0.0000, 0.6500, 0.0000),
+		BasePos = Vector3.new(0.0000, 0.3500, 0.0000),
+		CorePos = Vector3.new(0.0000, 0.5500, 0.0000),
+		Parts = {
+			{ Name = "Bookmark", MeshId = "rbxassetid://91867669562903", Size = Vector3.new(0.1853, 0.5860, 0.8000), Offset = Vector3.new(-0.0049, 0.2870, 0.4000), Mat = Enum.Material.Fabric, Color = Color3.fromRGB(255, 215, 80) },
+			{ Name = "CornerBrackets", MeshId = "rbxassetid://75143299607661", Size = Vector3.new(1.6455, 0.1655, 1.4000), Offset = Vector3.new(0.0000, 0.6040, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(255, 220, 100) },
+			{ Name = "Cover", MeshId = "rbxassetid://112052534727982", Size = Vector3.new(1.6347, 0.3178, 1.4000), Offset = Vector3.new(0.0000, 0.5114, 0.0000), Mat = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(255, 255, 255) },
+			{ Name = "FiligreeTrim", MeshId = "rbxassetid://134663644543832", Size = Vector3.new(1.6435, 0.3448, 1.4000), Offset = Vector3.new(0.0000, 0.5114, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(255, 230, 120) },
+			{ Name = "FloatingPages", MeshId = "rbxassetid://109638003288168", Size = Vector3.new(3.1842, 1.3798, 2.2010), Offset = Vector3.new(0.0000, 1.2440, 0.5157), Mat = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(255, 255, 255) },
+			{ Name = "GenesisPrism", MeshId = "rbxassetid://101914424115025", Size = Vector3.new(0.8546, 0.5200, 0.8515), Offset = Vector3.new(0.0000, 0.8800, 0.0000), Mat = Enum.Material.Neon, Color = Color3.fromRGB(255, 255, 255) },
+			{ Name = "GenesisWings", MeshId = "rbxassetid://87638125812851", Size = Vector3.new(5.0985, 1.9314, 1.7019), Offset = Vector3.new(0.0000, 1.4531, 0.6435), Mat = Enum.Material.Metal, Color = Color3.fromRGB(255, 230, 120) },
+			{ Name = "Handle", MeshId = "rbxassetid://84070404356820", Size = Vector3.new(0.1200, 0.1200, 0.1200), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Plastic, Color = Color3.fromRGB(163, 162, 165) },
+			{ Name = "OrbitalRings", MeshId = "rbxassetid://86405071626722", Size = Vector3.new(2.7508, 0.9529, 2.2696), Offset = Vector3.new(0.0000, 0.7200, 0.0000), Mat = Enum.Material.Neon, Color = Color3.fromRGB(80, 245, 255) },
+			{ Name = "Pages", MeshId = "rbxassetid://129367485344852", Size = Vector3.new(1.6000, 0.4799, 1.3400), Offset = Vector3.new(0.0000, 0.6400, 0.0000), Mat = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(255, 255, 255) },
+			{ Name = "Spine", MeshId = "rbxassetid://118392714839887", Size = Vector3.new(0.2700, 0.1350, 1.3500), Offset = Vector3.new(0.0000, 0.3125, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(255, 220, 100) },
+			{ Name = "SpineClasps", MeshId = "rbxassetid://96075446779420", Size = Vector3.new(0.3160, 0.1580, 1.0543), Offset = Vector3.new(0.0000, 0.3010, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(255, 220, 100) },
+		},
+	},
+}
+
+TOME_STYLES = {
+art_novice_tome = {
+		RarityTier = 1,
+		Parts = {
+			Bookmark = { Material = Enum.Material.Fabric, Color = Color3.fromRGB(165, 35, 35) },
+			CornerBrackets = { Material = Enum.Material.Metal, Color = Color3.fromRGB(175, 125, 75) },
+			Cover = { Material = Enum.Material.Leather, Color = Color3.fromRGB(115, 65, 45) },
+			Pages = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(242, 235, 215) },
+			Spine = { Material = Enum.Material.Leather, Color = Color3.fromRGB(85, 45, 30) },
+		},
+	},
+	art_acolytes_litany = {
+		RarityTier = 1,
+		Parts = {
+			Bookmark = { Material = Enum.Material.Fabric, Color = Color3.fromRGB(45, 95, 165) },
+			CornerBrackets = { Material = Enum.Material.Metal, Color = Color3.fromRGB(195, 145, 85) },
+			Cover = { Material = Enum.Material.Leather, Color = Color3.fromRGB(55, 75, 95) },
+			Pages = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(245, 238, 220) },
+			Spine = { Material = Enum.Material.Leather, Color = Color3.fromRGB(40, 55, 75) },
+			SpineClasps = { Material = Enum.Material.Metal, Color = Color3.fromRGB(195, 145, 85) },
+		},
+	},
+	art_cleric_scripture = {
+		RarityTier = 2,
+		Parts = {
+			Bookmark = { Material = Enum.Material.Fabric, Color = Color3.fromRGB(195, 155, 45) },
+			CornerBrackets = { Material = Enum.Material.Metal, Color = Color3.fromRGB(210, 175, 95) },
+			Cover = { Material = Enum.Material.Leather, Color = Color3.fromRGB(135, 45, 45) },
+			FiligreeTrim = { Material = Enum.Material.Metal, Color = Color3.fromRGB(225, 185, 105) },
+			Pages = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(245, 240, 225) },
+			Spine = { Material = Enum.Material.Metal, Color = Color3.fromRGB(180, 185, 195) },
+			SpineClasps = { Material = Enum.Material.Metal, Color = Color3.fromRGB(210, 175, 95) },
+		},
+	},
+	art_mendicants_psalter = {
+		RarityTier = 2,
+		Parts = {
+			Bookmark = { Material = Enum.Material.Fabric, Color = Color3.fromRGB(50, 150, 95) },
+			CornerBrackets = { Material = Enum.Material.Metal, Color = Color3.fromRGB(220, 185, 110) },
+			Cover = { Material = Enum.Material.Leather, Color = Color3.fromRGB(45, 85, 65) },
+			FiligreeTrim = { Material = Enum.Material.Metal, Color = Color3.fromRGB(230, 195, 120) },
+			Pages = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(245, 240, 225) },
+			Spine = { Material = Enum.Material.Leather, Color = Color3.fromRGB(30, 60, 45) },
+			SpineClasps = { Material = Enum.Material.Metal, Color = Color3.fromRGB(220, 185, 110) },
+		},
+	},
+	art_hermetic_grimoire = {
+		RarityTier = 3,
+		Parts = {
+			Bookmark = { Material = Enum.Material.Fabric, Color = Color3.fromRGB(150, 75, 225) },
+			CornerBrackets = { Material = Enum.Material.Metal, Color = Color3.fromRGB(215, 220, 235) },
+			Cover = { Material = Enum.Material.Slate, Color = Color3.fromRGB(38, 30, 52) },
+			FiligreeTrim = { Material = Enum.Material.Metal, Color = Color3.fromRGB(225, 230, 245) },
+			Pages = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(240, 235, 225) },
+			RunicGlyph = { Material = Enum.Material.Neon, Color = Color3.fromRGB(140, 100, 255) },
+			Spine = { Material = Enum.Material.Metal, Color = Color3.fromRGB(185, 190, 205) },
+			SpineClasps = { Material = Enum.Material.Metal, Color = Color3.fromRGB(215, 220, 235) },
+		},
+	},
+	art_restorative_codex = {
+		RarityTier = 3,
+		Parts = {
+			Bookmark = { Material = Enum.Material.Fabric, Color = Color3.fromRGB(60, 200, 130) },
+			CornerBrackets = { Material = Enum.Material.Metal, Color = Color3.fromRGB(225, 195, 110) },
+			Cover = { Material = Enum.Material.Leather, Color = Color3.fromRGB(30, 65, 55) },
+			FiligreeTrim = { Material = Enum.Material.Metal, Color = Color3.fromRGB(235, 205, 125) },
+			Pages = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(245, 242, 230) },
+			RestorationSeal = { Material = Enum.Material.Neon, Color = Color3.fromRGB(80, 255, 160) },
+			Spine = { Material = Enum.Material.Metal, Color = Color3.fromRGB(205, 175, 95) },
+			SpineClasps = { Material = Enum.Material.Metal, Color = Color3.fromRGB(225, 195, 110) },
+		},
+	},
+	art_valeria_sanctuary = {
+		RarityTier = 4,
+		Parts = {
+			Bookmark = { Material = Enum.Material.Fabric, Color = Color3.fromRGB(235, 185, 65) },
+			CornerBrackets = { Material = Enum.Material.Metal, Color = Color3.fromRGB(245, 205, 95) },
+			Cover = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(248, 246, 242) },
+			FiligreeTrim = { Material = Enum.Material.Metal, Color = Color3.fromRGB(255, 215, 110) },
+			Pages = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(255, 250, 240) },
+			SanctuaryHalo = { Material = Enum.Material.Neon, Color = Color3.fromRGB(90, 255, 160) },
+			SeraphWings = { Material = Enum.Material.Metal, Color = Color3.fromRGB(250, 210, 100) },
+			Spine = { Material = Enum.Material.Metal, Color = Color3.fromRGB(235, 195, 85) },
+			SpineClasps = { Material = Enum.Material.Metal, Color = Color3.fromRGB(245, 205, 95) },
+		},
+	},
+	art_seraphs_testament = {
+		RarityTier = 4,
+		Parts = {
+			Bookmark = { Material = Enum.Material.Fabric, Color = Color3.fromRGB(240, 190, 70) },
+			CornerBrackets = { Material = Enum.Material.Metal, Color = Color3.fromRGB(245, 210, 105) },
+			Cover = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(230, 235, 245) },
+			FiligreeTrim = { Material = Enum.Material.Metal, Color = Color3.fromRGB(255, 220, 115) },
+			Pages = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(255, 252, 245) },
+			SanctuaryHalo = { Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 235, 120) },
+			SeraphWings = { Material = Enum.Material.Metal, Color = Color3.fromRGB(255, 215, 110) },
+			Spine = { Material = Enum.Material.Metal, Color = Color3.fromRGB(240, 205, 95) },
+			SpineClasps = { Material = Enum.Material.Metal, Color = Color3.fromRGB(245, 210, 105) },
+		},
+	},
+	art_necronomicon_pages = {
+		RarityTier = 5,
+		Parts = {
+			Bookmark = { Material = Enum.Material.Fabric, Color = Color3.fromRGB(110, 30, 160) },
+			CornerBrackets = { Material = Enum.Material.Metal, Color = Color3.fromRGB(75, 55, 95) },
+			Cover = { Material = Enum.Material.Slate, Color = Color3.fromRGB(22, 18, 28) },
+			EyeCore = { Material = Enum.Material.Neon, Color = Color3.fromRGB(180, 50, 255) },
+			FiligreeTrim = { Material = Enum.Material.Metal, Color = Color3.fromRGB(85, 60, 105) },
+			FloatingPages = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(225, 210, 195) },
+			Pages = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(215, 205, 190) },
+			Spine = { Material = Enum.Material.Metal, Color = Color3.fromRGB(60, 45, 75) },
+			SpineClasps = { Material = Enum.Material.Metal, Color = Color3.fromRGB(75, 55, 95) },
+		},
+	},
+	art_lifebinders_chronicle = {
+		RarityTier = 5,
+		Parts = {
+			Bookmark = { Material = Enum.Material.Fabric, Color = Color3.fromRGB(50, 180, 90) },
+			CornerBrackets = { Material = Enum.Material.Metal, Color = Color3.fromRGB(115, 175, 95) },
+			Cover = { Material = Enum.Material.Wood, Color = Color3.fromRGB(48, 36, 26) },
+			FiligreeTrim = { Material = Enum.Material.Metal, Color = Color3.fromRGB(125, 195, 105) },
+			FloatingPages = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(245, 240, 225) },
+			LifeCore = { Material = Enum.Material.Neon, Color = Color3.fromRGB(60, 255, 130) },
+			Pages = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(245, 240, 225) },
+			Spine = { Material = Enum.Material.Metal, Color = Color3.fromRGB(85, 135, 80) },
+			SpineClasps = { Material = Enum.Material.Metal, Color = Color3.fromRGB(115, 175, 95) },
+		},
+	},
+	art_seraphic_psalms = {
+		RarityTier = 6,
+		Parts = {
+			Bookmark = { Material = Enum.Material.Fabric, Color = Color3.fromRGB(255, 200, 70) },
+			CornerBrackets = { Material = Enum.Material.Metal, Color = Color3.fromRGB(255, 215, 95) },
+			Cover = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(255, 252, 245) },
+			FiligreeTrim = { Material = Enum.Material.Metal, Color = Color3.fromRGB(255, 225, 115) },
+			FloatingPages = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(255, 252, 245) },
+			OrbitalRings = { Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 235, 130) },
+			Pages = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(255, 255, 250) },
+			SeraphWings = { Material = Enum.Material.Metal, Color = Color3.fromRGB(255, 220, 110) },
+			Spine = { Material = Enum.Material.Metal, Color = Color3.fromRGB(255, 215, 95) },
+			SpineClasps = { Material = Enum.Material.Metal, Color = Color3.fromRGB(255, 215, 95) },
+		},
+	},
+	art_divine_providence = {
+		RarityTier = 6,
+		Parts = {
+			Bookmark = { Material = Enum.Material.Fabric, Color = Color3.fromRGB(90, 190, 255) },
+			CornerBrackets = { Material = Enum.Material.Metal, Color = Color3.fromRGB(250, 215, 105) },
+			Cover = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(245, 248, 255) },
+			FiligreeTrim = { Material = Enum.Material.Metal, Color = Color3.fromRGB(255, 225, 120) },
+			FloatingPages = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(255, 255, 255) },
+			OrbitalRings = { Material = Enum.Material.Neon, Color = Color3.fromRGB(130, 235, 255) },
+			Pages = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(255, 255, 255) },
+			SeraphWings = { Material = Enum.Material.Metal, Color = Color3.fromRGB(255, 225, 120) },
+			Spine = { Material = Enum.Material.Metal, Color = Color3.fromRGB(240, 210, 100) },
+			SpineClasps = { Material = Enum.Material.Metal, Color = Color3.fromRGB(250, 215, 105) },
+		},
+	},
+	art_akashic_records = {
+		RarityTier = 7,
+		Parts = {
+			AkashicCore = { Material = Enum.Material.Neon, Color = Color3.fromRGB(210, 140, 255) },
+			AstralWings = { Material = Enum.Material.Metal, Color = Color3.fromRGB(235, 205, 255) },
+			Bookmark = { Material = Enum.Material.Fabric, Color = Color3.fromRGB(175, 95, 245) },
+			CornerBrackets = { Material = Enum.Material.Metal, Color = Color3.fromRGB(215, 185, 255) },
+			Cover = { Material = Enum.Material.Slate, Color = Color3.fromRGB(18, 16, 26) },
+			FiligreeTrim = { Material = Enum.Material.Metal, Color = Color3.fromRGB(225, 195, 255) },
+			FloatingPages = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(248, 245, 255) },
+			OrbitalRings = { Material = Enum.Material.Neon, Color = Color3.fromRGB(160, 100, 255) },
+			Pages = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(245, 240, 255) },
+			Spine = { Material = Enum.Material.Metal, Color = Color3.fromRGB(195, 165, 255) },
+			SpineClasps = { Material = Enum.Material.Metal, Color = Color3.fromRGB(215, 185, 255) },
+		},
+	},
+	art_book_of_primordial_genesis = {
+		RarityTier = 7,
+		Parts = {
+			Bookmark = { Material = Enum.Material.Fabric, Color = Color3.fromRGB(255, 215, 80) },
+			CornerBrackets = { Material = Enum.Material.Metal, Color = Color3.fromRGB(255, 220, 100) },
+			Cover = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(255, 255, 255) },
+			FiligreeTrim = { Material = Enum.Material.Metal, Color = Color3.fromRGB(255, 230, 120) },
+			FloatingPages = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(255, 255, 255) },
+			GenesisPrism = { Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 255, 255) },
+			GenesisWings = { Material = Enum.Material.Metal, Color = Color3.fromRGB(255, 230, 120) },
+			OrbitalRings = { Material = Enum.Material.Neon, Color = Color3.fromRGB(80, 245, 255) },
+			Pages = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(255, 255, 255) },
+			Spine = { Material = Enum.Material.Metal, Color = Color3.fromRGB(255, 220, 100) },
+			SpineClasps = { Material = Enum.Material.Metal, Color = Color3.fromRGB(255, 220, 100) },
+		},
+	},
+}
+
+local function makeMeshTome(name: string): Model
+	local assets = ReplicatedStorage:FindFirstChild("Assets")
+	local weaponsFolder = assets and assets:FindFirstChild("Weapons")
+	local existing = weaponsFolder and weaponsFolder:FindFirstChild(name)
+	if existing and existing:IsA("Model") then
+		return existing:Clone()
+	end
+
+	local data = TOME_MESH_DATA[name]
+	assert(data, `No tome mesh data for {name}`)
+
+	local model = Instance.new("Model")
+	model.Name = name
+
+	local style = TOME_STYLES and TOME_STYLES[name]
+	local handlePart: MeshPart?
+
+	for _, pInfo in ipairs(data.Parts) do
+		local p = Instance.new("MeshPart")
+		p.Name = pInfo.Name
+		pcall(function()
+			p.MeshId = pInfo.MeshId
+		end)
+		p.Size = pInfo.Size
+		p.CFrame = CFrame.new(pInfo.Offset)
+
+		local pStyle = style and style.Parts and style.Parts[pInfo.Name]
+		p.Material = (pStyle and pStyle.Material) or pInfo.Mat or Enum.Material.SmoothPlastic
+		p.Color = (pStyle and pStyle.Color) or pInfo.Color or Color3.fromRGB(200, 200, 200)
+
+		p.CanCollide = false
+		p.CanTouch = false
+		p.CanQuery = false
+		p.Massless = true
+		p.Anchored = false
+		p.CastShadow = false
+		if pInfo.Name == "Handle" then
+			p.Transparency = 1
+		end
+		p.Parent = model
+
+		if pInfo.Name == "Handle" then
+			handlePart = p
+			model.PrimaryPart = p
+		end
+	end
+
+	assert(handlePart, `Handle part missing for {name}`)
+
+	-- Weld all child parts to the primary Handle
+	for _, child in ipairs(model:GetChildren()) do
+		if child:IsA("BasePart") and child ~= handlePart then
+			local weld = Instance.new("WeldConstraint")
+			weld.Name = "Weld_" .. child.Name
+			weld.Part0 = handlePart
+			weld.Part1 = child
+			weld.Parent = handlePart
+		end
+	end
+
+	-- Sockets: Grip, Tip, VfxTip, VfxBase, VfxCore
+	local grip = Instance.new("Attachment")
+	grip.Name = "Grip"
+	grip.CFrame = CFrame.identity
+	grip.Parent = handlePart
+
+	local tip = Instance.new("Attachment")
+	tip.Name = "Tip"
+	tip.CFrame = CFrame.new(data.TipPos)
+	tip.Parent = handlePart
+
+	local vfxTip = Instance.new("Attachment")
+	vfxTip.Name = "VfxTip"
+	vfxTip.CFrame = CFrame.new(data.TipPos)
+	vfxTip.Parent = handlePart
+
+	local vfxBase = Instance.new("Attachment")
+	vfxBase.Name = "VfxBase"
+	vfxBase.CFrame = CFrame.new(data.BasePos)
+	vfxBase.Parent = handlePart
+
+	local vfxCore = Instance.new("Attachment")
+	vfxCore.Name = "VfxCore"
+	vfxCore.CFrame = CFrame.new(data.CorePos)
+	vfxCore.Parent = handlePart
+
+	-- Apply client-side weapon VFX (glints, lights, auras, trails)
+	local combatVfx = assets and assets:FindFirstChild("CombatVfx")
+	local weaponVfxMod = combatVfx and combatVfx:FindFirstChild("WeaponVfx")
+	if weaponVfxMod then
+		local ok, WeaponVfx = pcall(require, weaponVfxMod)
+		if ok and WeaponVfx and WeaponVfx.Apply then
+			local rarity = style and style.RarityTier or 1
+			WeaponVfx.Apply(model, "TOME", rarity, name)
+		end
+	end
+
+	return model
+end
+
+function WeaponModelBuilder.BuildNoviceTomeArtifact(): Model
+	return makeMeshTome("art_novice_tome")
+end
+
+function WeaponModelBuilder.BuildAcolytesLitanyArtifact(): Model
+	return makeMeshTome("art_acolytes_litany")
+end
+
+function WeaponModelBuilder.BuildClericScriptureArtifact(): Model
+	return makeMeshTome("art_cleric_scripture")
+end
+
+function WeaponModelBuilder.BuildMendicantsPsalterArtifact(): Model
+	return makeMeshTome("art_mendicants_psalter")
+end
+
+function WeaponModelBuilder.BuildHermeticGrimoireArtifact(): Model
+	return makeMeshTome("art_hermetic_grimoire")
+end
+
+function WeaponModelBuilder.BuildRestorativeCodexArtifact(): Model
+	return makeMeshTome("art_restorative_codex")
+end
+
+function WeaponModelBuilder.BuildValeriaSanctuaryArtifact(): Model
+	return makeMeshTome("art_valeria_sanctuary")
+end
+
+function WeaponModelBuilder.BuildSeraphsTestamentArtifact(): Model
+	return makeMeshTome("art_seraphs_testament")
+end
+
+function WeaponModelBuilder.BuildNecronomiconPagesArtifact(): Model
+	return makeMeshTome("art_necronomicon_pages")
+end
+
+function WeaponModelBuilder.BuildLifebindersChronicleArtifact(): Model
+	return makeMeshTome("art_lifebinders_chronicle")
+end
+
+function WeaponModelBuilder.BuildSeraphicPsalmsArtifact(): Model
+	return makeMeshTome("art_seraphic_psalms")
+end
+
+function WeaponModelBuilder.BuildDivineProvidenceArtifact(): Model
+	return makeMeshTome("art_divine_providence")
+end
+
+function WeaponModelBuilder.BuildAkashicRecordsArtifact(): Model
+	return makeMeshTome("art_akashic_records")
+end
+
+function WeaponModelBuilder.BuildBookOfPrimordialGenesisArtifact(): Model
+	return makeMeshTome("art_book_of_primordial_genesis")
+end
+
+
 
 
 
@@ -7268,6 +7895,21 @@ function WeaponModelBuilder.EnsureWeapons(): (Folder, { [string]: Model })
 		art_world_shaper = WeaponModelBuilder.BuildWorldShaperArtifact,
 		art_world_carver = WeaponModelBuilder.BuildWorldCarverArtifact,
 		art_genesis_sunderer = WeaponModelBuilder.BuildGenesisSundererArtifact,
+		-- Healer Tomes (Batch 6)
+		art_novice_tome = WeaponModelBuilder.BuildNoviceTomeArtifact,
+		art_acolytes_litany = WeaponModelBuilder.BuildAcolytesLitanyArtifact,
+		art_cleric_scripture = WeaponModelBuilder.BuildClericScriptureArtifact,
+		art_mendicants_psalter = WeaponModelBuilder.BuildMendicantsPsalterArtifact,
+		art_hermetic_grimoire = WeaponModelBuilder.BuildHermeticGrimoireArtifact,
+		art_restorative_codex = WeaponModelBuilder.BuildRestorativeCodexArtifact,
+		art_valeria_sanctuary = WeaponModelBuilder.BuildValeriaSanctuaryArtifact,
+		art_seraphs_testament = WeaponModelBuilder.BuildSeraphsTestamentArtifact,
+		art_necronomicon_pages = WeaponModelBuilder.BuildNecronomiconPagesArtifact,
+		art_lifebinders_chronicle = WeaponModelBuilder.BuildLifebindersChronicleArtifact,
+		art_seraphic_psalms = WeaponModelBuilder.BuildSeraphicPsalmsArtifact,
+		art_divine_providence = WeaponModelBuilder.BuildDivineProvidenceArtifact,
+		art_akashic_records = WeaponModelBuilder.BuildAkashicRecordsArtifact,
+		art_book_of_primordial_genesis = WeaponModelBuilder.BuildBookOfPrimordialGenesisArtifact,
 		-- Mage Staves (Batch 5)
 		art_apprentice_cane = WeaponModelBuilder.BuildApprenticeCaneArtifact,
 		art_scholars_spire = WeaponModelBuilder.BuildScholarsSpireArtifact,

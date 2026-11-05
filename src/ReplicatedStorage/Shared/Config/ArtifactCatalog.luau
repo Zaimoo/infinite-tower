@@ -328,7 +328,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = false,
 		StatMultiplier = 1.00,
 		SpeedBonusAdditive = 0.000,
-		ModelAssetId = "weapon_tome",
+		ModelAssetId = "art_novice_tome",
 		Description = "Pocket calfskin booklet inscribed with foundational cleansing scriptures and linen clasp.",
 	},
 	art_acolytes_litany = {
@@ -339,7 +339,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = true,
 		StatMultiplier = 1.20,
 		SpeedBonusAdditive = 0.010,
-		ModelAssetId = "weapon_tome",
+		ModelAssetId = "art_acolytes_litany",
 		Description = "Embossed pigskin codex with stamped brass corner fittings and soothing verse marginalia.",
 	},
 	art_runic_longsword = {
@@ -460,7 +460,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = false,
 		StatMultiplier = 1.00,
 		SpeedBonusAdditive = 0.000,
-		ModelAssetId = "weapon_tome",
+		ModelAssetId = "art_cleric_scripture",
 		Description = "White calfskin volume with silver-embossed holy wards and trailing azure silk bookmark ribbons.",
 	},
 	art_mendicants_psalter = {
@@ -471,7 +471,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = true,
 		StatMultiplier = 1.20,
 		SpeedBonusAdditive = 0.015,
-		ModelAssetId = "weapon_tome",
+		ModelAssetId = "art_mendicants_psalter",
 		Description = "Gold-leafed prayerbook with illuminated margins depicting dawn light and soothing aura petals.",
 	},
 	art_paladin_spatha = {
@@ -592,7 +592,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = false,
 		StatMultiplier = 1.00,
 		SpeedBonusAdditive = 0.000,
-		ModelAssetId = "weapon_tome",
+		ModelAssetId = "art_hermetic_grimoire",
 		Description = "Aged midnight-blue velvet book bound in wrought-iron brackets with a glowing alchemy circle.",
 	},
 	art_restorative_codex = {
@@ -603,7 +603,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = true,
 		StatMultiplier = 1.20,
 		SpeedBonusAdditive = 0.020,
-		ModelAssetId = "weapon_tome",
+		ModelAssetId = "art_restorative_codex",
 		Description = "Embossed silver-leaf volume that floats open, turning pages automatically upon mana contact.",
 	},
 	art_crystal_claymore = {
@@ -724,7 +724,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = false,
 		StatMultiplier = 1.00,
 		SpeedBonusAdditive = 0.000,
-		ModelAssetId = "weapon_tome",
+		ModelAssetId = "art_valeria_sanctuary",
 		Description = "Valeria's signature grimoire style: Gold-leaf spine with emerald centerpiece emitting restorative motes.",
 	},
 	art_seraphs_testament = {
@@ -735,7 +735,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = true,
 		StatMultiplier = 1.20,
 		SpeedBonusAdditive = 0.020,
-		ModelAssetId = "weapon_tome",
+		ModelAssetId = "art_seraphs_testament",
 		Description = "Gilded cathedral tome whose pages radiate warm golden feathered halos when healing spells are cast.",
 	},
 	art_paladin_claymore = {
@@ -856,7 +856,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = false,
 		StatMultiplier = 1.00,
 		SpeedBonusAdditive = 0.000,
-		ModelAssetId = "weapon_tome",
+		ModelAssetId = "art_necronomicon_pages",
 		Description = "Aged forbidden leather tome with an iridescent demonic eye on the cover that blinks rhythmically.",
 	},
 	art_lifebinders_chronicle = {
@@ -867,7 +867,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = true,
 		StatMultiplier = 1.20,
 		SpeedBonusAdditive = 0.020,
-		ModelAssetId = "weapon_tome",
+		ModelAssetId = "art_lifebinders_chronicle",
 		Description = "Living wooden-covered grimoire entwined with blooming sacred vines that shed luminescent pollen.",
 	},
 	art_blade_of_the_rift = {
@@ -988,7 +988,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = false,
 		StatMultiplier = 1.00,
 		SpeedBonusAdditive = 0.000,
-		ModelAssetId = "weapon_tome",
+		ModelAssetId = "art_seraphic_psalms",
 		Description = "Heavy gilded cathedral tome that floats opened with radiating translucent golden wings extending from the spine.",
 	},
 	art_divine_providence = {
@@ -999,7 +999,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = true,
 		StatMultiplier = 1.20,
 		SpeedBonusAdditive = 0.025,
-		ModelAssetId = "weapon_tome",
+		ModelAssetId = "art_divine_providence",
 		Description = "Radiant crystalline codex made of prism diamond leaves that project prismatic restorative beams.",
 	},
 	art_astral_executioner = {
@@ -1120,7 +1120,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = false,
 		StatMultiplier = 1.00,
 		SpeedBonusAdditive = 0.000,
-		ModelAssetId = "weapon_tome",
+		ModelAssetId = "art_akashic_records",
 		Description = "Boundless astral codex without covers: floating holographic tablets orbiting an ethereal singularity.",
 	},
 	art_book_of_primordial_genesis = {
@@ -1131,7 +1131,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = true,
 		StatMultiplier = 1.20,
 		SpeedBonusAdditive = 0.050,
-		ModelAssetId = "weapon_tome",
+		ModelAssetId = "art_book_of_primordial_genesis",
 		Description = "Transcendent scripture of life itself, written in eternal light that resurrects fallen allies and grants immortality.",
 	},
 }

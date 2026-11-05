@@ -109,8 +109,8 @@ SkillVfxCatalog.Weapons = table.freeze({
 	},
 	TOME = {
 		Palette = { Primary = rgb(255, 245, 190), Secondary = rgb(120, 255, 160), Core = rgb(255, 255, 240) },
-		Basic = { Style = "BOLT", Projectile = "BOLT", Scale = 1.0, Arc = 0.15, Trail = 0.18, Impact = 1.6 },
-		Special = { Style = "MEND", Projectile = "BOLT", Scale = 1.1, Arc = 0.1, Trail = 0.2, Impact = 2.0 },
+		Basic = { Style = "BOLT", Projectile = "ORB", Scale = 1.0, Arc = 0.15, Trail = 0.18, Impact = 1.6 },
+		Special = { Style = "MEND", Projectile = "ORB", Scale = 1.1, Arc = 0.1, Trail = 0.2, Impact = 2.0 },
 		Skill = { Style = "SANCTUARY", Radius = 25, PillarHeight = 14, Linger = 1.2, Impact = 3 },
 	},
 } :: { [string]: Recipe })
@@ -207,8 +207,8 @@ SkillVfxCatalog.Heroes = table.freeze({
 	-- Emerald Bolt / Verdant Mend / Sanctuary Miracle: emerald and soft gold.
 	hero_valeria = {
 		Palette = { Primary = rgb(90, 255, 150), Secondary = rgb(255, 235, 150), Core = rgb(235, 255, 240) },
-		Basic = { Style = "BOLT", Projectile = "BOLT", Scale = 1.0, Arc = 0.15, Trail = 0.2, Impact = 1.6 },
-		Special = { Style = "MEND", Projectile = "BOLT", Scale = 1.1, Arc = 0.1, Trail = 0.22, Impact = 2.0 },
+		Basic = { Style = "BOLT", Projectile = "ORB", Scale = 1.0, Arc = 0.15, Trail = 0.2, Impact = 1.6 },
+		Special = { Style = "MEND", Projectile = "ORB", Scale = 1.1, Arc = 0.1, Trail = 0.22, Impact = 2.0 },
 		Skill = { Style = "SANCTUARY", Radius = 25, PillarHeight = 16, Linger = 1.4, Impact = 3 },
 	},
 } :: { [string]: Recipe })
