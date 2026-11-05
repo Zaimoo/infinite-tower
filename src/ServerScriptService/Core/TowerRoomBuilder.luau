@@ -5,6 +5,7 @@
 local Config = require(game.ReplicatedStorage.Shared.Config.TowerFloorConfig)
 local Layout = require(game.ReplicatedStorage.Shared.Config.TowerLayout)
 local BiomeAssets = require(script.Parent.TowerBiomeAssets)
+local StaticGeometry = require(script.Parent.StaticGeometry)
 local PropClearance = require(script.Parent.TowerPropClearance)
 local PortalKit = require(script.Parent.TowerPortalKit)
 local PortalAssets = require(game.ReplicatedStorage.Shared.Config.TowerPortalAssets)
@@ -749,6 +750,8 @@ function Builder.Build(id: number, generation: number): any
 	model:SetAttribute("PropsClearedForLanes", laneCleared)
 	model:SetAttribute("PropsLowered", lowered)
 	model:SetAttribute("PropsDroppedUnsupported", dropped)
+	-- After settling: the settle raycasts and lane checks are done, so trim engine work on the scenery.
+	StaticGeometry.Apply(model)
 
 	return {
 		FloorId = id,

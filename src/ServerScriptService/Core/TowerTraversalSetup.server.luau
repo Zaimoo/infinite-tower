@@ -2,6 +2,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Service = require(script.Parent.TowerFloorService)
+local StaticGeometry = require(script.Parent.StaticGeometry)
 Service.Init()
 
 local geometry = workspace:WaitForChild("BaseOverhaulGeometry")
@@ -57,6 +58,7 @@ local function apply(model: Instance)
 					if sel then sel:FireClient(player) end
 				end)
 
+				StaticGeometry.MarkNeedsTouch(p)
 				p.Touched:Connect(function(hit)
 					local player = Players:GetPlayerFromCharacter(hit.Parent)
 					if player then

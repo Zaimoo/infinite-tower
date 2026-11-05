@@ -18,6 +18,7 @@ local HubLayout = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild(
 
 local BaseOverhaulFolder = script.Parent
 local IslandBuilder = require(BaseOverhaulFolder:WaitForChild("IslandBuilder"))
+local StaticGeometry = require(script.Parent.Parent:WaitForChild("Core"):WaitForChild("StaticGeometry"))
 local WallsBuilder = require(BaseOverhaulFolder:WaitForChild("WallsBuilder"))
 local FountainBuilder = require(BaseOverhaulFolder:WaitForChild("FountainBuilder"))
 local TowerBuilder = require(BaseOverhaulFolder:WaitForChild("TowerBuilder"))
@@ -244,6 +245,7 @@ end
 
 local function connectKillZoneTouch(killZone: BasePart)
 	local debounce: { [Player]: number } = {}
+	StaticGeometry.MarkNeedsTouch(killZone)
 	killZone.Touched:Connect(function(hit: BasePart)
 		local char = hit.Parent
 		if not char then
@@ -406,6 +408,8 @@ function HubOverhaul.Build(forceRebuild: boolean?): (Instance, boolean)
 	-- 5. One shared Playtime + Power board pair in the Commons pavilion (replaces the per-plot copies)
 	mountLeaderboards(overhaulContainer, plotsFolder, rescued)
 
+	StaticGeometry.Apply(overhaulContainer)
+	StaticGeometry.Apply(plotsFolder)
 	print("[BaseOverhaul] Cloister Commons + 10 Floating Fortress Islands + Central Crimson Tower generated successfully.")
 	return overhaulContainer, true
 end

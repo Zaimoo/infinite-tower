@@ -1278,6 +1278,8 @@ function spawnPhysicalLoot(lootType: "GOLD" | "GEMS", amount: number, worldPos: 
 
 	prompt.Triggered:Connect(onCollect)
 
+	part:SetAttribute("NeedsTouch", true) -- StaticGeometry.Apply leaves it touchable
+	part.CanTouch = true
 	part.Touched:Connect(function(hit)
 		local char = hit.Parent
 		if char then
