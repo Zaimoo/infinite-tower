@@ -85,4 +85,17 @@ test("Unreachable targets are skipped until cooldown, generation or room changes
 	h.TargetNetId=nil;ctx.Now=10;blocked.EntityGeneration=5
 	assert(T.Select(h,{[1]=blocked},ctx,eligible,false)==blocked,"respawn under the same NetId is fresh")
 end)
+test("Assigned target acquisition prefers lower connector route cost over shorter straight-line distance across a chasm",function()
+	local h=hero(0,0);local chasmMob,rampMob=mob(12,0),mob(22,0)
+	local ctx={
+		MasterPos=Vector3.new(0,0,0),
+		Assigned=true,
+		Leash=95,
+		Now=0,
+		RouteCost=function(_from,to)
+			return if to.X==12 then 85 else 28
+		end,
+	}
+	assert(T.Select(h,{[1]=chasmMob,[2]=rampMob},ctx,eligible,false)==rampMob and h.TargetNetId==2)
+end)
 print(string.format("Hero targeting tests: %d passed, %d failed",passed,failed));assert(failed==0)

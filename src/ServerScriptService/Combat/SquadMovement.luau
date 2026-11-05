@@ -800,6 +800,507 @@ function SquadMovement.PlanActiveFollow(
 	}
 end
 
+function SquadMovement.RouteCost(floorId: number, fromPos: Vector3, toPos: Vector3, origin: Vector3?): number
+	local g = graphFor(floorId)
+	if not g then
+		return dist3(fromPos, toPos)
+	end
+	local orig = origin or defaultOrigin(floorId)
+	local fromLocal = { X = fromPos.X - orig.X, Y = fromPos.Y - orig.Y, Z = fromPos.Z - orig.Z }
+	local toLocal = { X = toPos.X - orig.X, Y = toPos.Y - orig.Y, Z = toPos.Z - orig.Z }
+	local route = Graph.Route(g, fromLocal, toLocal)
+	if not route or #route == 0 then
+		return math.huge
+	end
+	return Graph.Remaining(route, 1, fromLocal)
+end
+
+local function isHeroTargetRejected(hero: any, netId: number, mob: any, now: number): boolean
+	local entry = hero and hero.NavigationRejectedTargets and hero.NavigationRejectedTargets[netId]
+	if not entry then
+		return false
+	end
+	return now < entry.Until
+		and entry.Generation == (mob.EntityGeneration or 0)
+		and entry.FloorId == mob.FloorId
+		and entry.RoomGeneration == mob.RoomGeneration
+end
+
+local function collectOrderedHeroes(heroes: any, floorId: number, roomGen: number?): { any }
+	local list = {}
+	if not heroes then
+		return list
+	end
+	for _, h in pairs(heroes) do
+		if h and h.State ~= "COMA" and (h.CurrentHP == nil or h.CurrentHP > 0) then
+			if (not h.FloorId or h.FloorId == floorId) and (not roomGen or not h.RoomGeneration or h.RoomGeneration == roomGen) then
+				table.insert(list, h)
+			end
+		end
+	end
+	table.sort(list, function(a, b)
+		local sa, sb = a.SlotIndex or 99, b.SlotIndex or 99
+		if sa ~= sb then
+			return sa < sb
+		end
+		return (a.NetId or 0) < (b.NetId or 0)
+	end)
+	return list
+end
+
+local function resolveEngagementLanding(floorId: number, worldPos: Vector3, origin: Vector3): Vector3
+	local g = graphFor(floorId)
+	if not g then
+		return worldPos
+	end
+	local lp = { X = worldPos.X - origin.X, Y = worldPos.Y - origin.Y, Z = worldPos.Z - origin.Z }
+	local loc, link = locatePoint(floorId, worldPos, origin)
+	if link and loc and loc.T then
+		-- When engagement occurs on a ramp/stairs, place idle regroup anchor on the nearest landing endpoint
+		if loc.T < 0.5 then
+			return v3(origin.X + link.AX, origin.Y + link.AY, origin.Z + link.AZ)
+		else
+			return v3(origin.X + link.BX, origin.Y + link.BY, origin.Z + link.BZ)
+		end
+	end
+	return worldPos
+end
+
+function SquadMovement.SelectAssignedAnchor(ownerKey: any, input: {
+	FloorId: number,
+	RoomGeneration: number?,
+	Origin: Vector3?,
+	DefaultSpawnPosition: Vector3,
+	Heroes: any?,
+	Mobs: { [number]: any }?,
+	FocusedTargetNetId: number?,
+	Now: number,
+	IsMobEligible: ((mob: any) -> boolean)?,
+	PlaceOnGround: ((Vector3, Vector3) -> Vector3)?,
+}): {
+	AnchorPosition: Vector3,
+	RegroupAnchor: Vector3,
+	ObjectiveNetId: number?,
+	ObjectiveMob: any?,
+	Retained: boolean,
+}
+	local floorId = input.FloorId or 0
+	local roomGen = input.RoomGeneration or 1
+	local now = input.Now
+	local spawnPos = input.DefaultSpawnPosition
+	if floorId <= 0 then
+		return {
+			AnchorPosition = spawnPos,
+			RegroupAnchor = spawnPos,
+			ObjectiveNetId = nil,
+			ObjectiveMob = nil,
+			Retained = false,
+		}
+	end
+
+	local state = ownerKey and masterStates[ownerKey]
+	if not state or state.FloorId ~= floorId or state.RoomGeneration ~= roomGen or state.Assigned ~= true then
+		state = newMasterState(floorId, roomGen, true)
+		if ownerKey ~= nil then
+			masterStates[ownerKey] = state
+		end
+	end
+	local origin = input.Origin or state.Origin or defaultOrigin(floorId)
+	state.Origin = origin
+
+	if state.LastAssignedAnchorClock == now and state.LastAssignedResult then
+		return state.LastAssignedResult
+	end
+
+	local heroes = collectOrderedHeroes(input.Heroes or state.RegisteredHeroes, floorId, roomGen)
+	local mobs = input.Mobs or {}
+	local isEligible = input.IsMobEligible
+	local rejectedBySquad = state.SquadRejectedTargets or {}
+	state.SquadRejectedTargets = rejectedBySquad
+	for id, entry in pairs(rejectedBySquad) do
+		if entry.Until <= now or entry.FloorId ~= floorId or entry.RoomGeneration ~= roomGen then
+			rejectedBySquad[id] = nil
+		end
+	end
+
+	local function usableObjective(netId: number?): any?
+		if not netId then
+			return nil
+		end
+		local mob = mobs[netId]
+		if not mob or not mob.IsAlive then
+			return nil
+		end
+		if mob.FloorId and mob.FloorId ~= floorId then
+			return nil
+		end
+		if mob.RoomGeneration and mob.RoomGeneration ~= roomGen then
+			return nil
+		end
+		if isEligible and not isEligible(mob) then
+			return nil
+		end
+		local sqEntry = rejectedBySquad[netId]
+		if sqEntry and now < sqEntry.Until and sqEntry.Generation == (mob.EntityGeneration or 0) then
+			return nil
+		end
+		if #heroes > 0 then
+			local anyCanTry = false
+			for _, h in ipairs(heroes) do
+				if not isHeroTargetRejected(h, netId, mob, now) then
+					anyCanTry = true
+					break
+				end
+			end
+			if not anyCanTry then
+				return nil
+			end
+		end
+		return mob
+	end
+
+	local chosenId: number? = nil
+	local chosenMob: any? = nil
+	local retained = false
+
+	-- 1. Focused target takes top priority if eligible
+	if input.FocusedTargetNetId then
+		local m = usableObjective(input.FocusedTargetNetId)
+		if m then
+			chosenId = input.FocusedTargetNetId
+			chosenMob = m
+		end
+	end
+
+	-- 2. Retain current squad engagement objective while still valid
+	if not chosenMob and state.AssignedObjectiveNetId then
+		local m = usableObjective(state.AssignedObjectiveNetId)
+		if m and state.AssignedObjectiveGeneration == (m.EntityGeneration or 0) then
+			chosenId = state.AssignedObjectiveNetId
+			chosenMob = m
+			retained = true
+		end
+	end
+
+	-- 3. Adopt a valid combat target already held by an active non-stranded squadmate (deterministic slot order)
+	if not chosenMob then
+		for _, h in ipairs(heroes) do
+			if h.NavigationStatus ~= "UNREACHABLE" and h.TargetNetId then
+				local m = usableObjective(h.TargetNetId)
+				if m and not isHeroTargetRejected(h, h.TargetNetId, m, now) then
+					chosenId = h.TargetNetId
+					chosenMob = m
+					break
+				end
+			end
+		end
+	end
+
+	-- 4. Compute non-dragged reference position (excluding recovering/stranded heroes and minority stragglers)
+	local refPos = state.LastEngagementPlatformPosition or spawnPos
+	if #heroes > 0 then
+		local healthy = {}
+		for _, h in ipairs(heroes) do
+			if h.NavigationStatus ~= "UNREACHABLE" and h.NavigationStatus ~= "REPATH" and (h.NoProgressSeconds or 0) < 1.0 then
+				table.insert(healthy, h)
+			end
+		end
+		if #healthy > 0 then
+			-- Group healthy heroes by platform/connector location key so a trailing minority cannot pull the anchor back
+			local clusters: { [string]: { Count: number, SumX: number, SumY: number, SumZ: number, FirstSlot: number } } = {}
+			local bestClusterKey: string? = nil
+			local bestClusterCount = -1
+			local bestClusterSlot = 999
+			for _, h in ipairs(healthy) do
+				local loc = locatePoint(floorId, h.Position, origin)
+				local key = if loc then loc.Key else "WORLD"
+				local c = clusters[key]
+				if not c then
+					c = { Count = 0, SumX = 0, SumY = 0, SumZ = 0, FirstSlot = h.SlotIndex or 99 }
+					clusters[key] = c
+				end
+				c.Count += 1
+				c.SumX += h.Position.X
+				c.SumY += h.Position.Y
+				c.SumZ += h.Position.Z
+				if c.Count > bestClusterCount or (c.Count == bestClusterCount and c.FirstSlot < bestClusterSlot) then
+					bestClusterKey = key
+					bestClusterCount = c.Count
+					bestClusterSlot = c.FirstSlot
+				end
+			end
+			if bestClusterKey and clusters[bestClusterKey] then
+				local c = clusters[bestClusterKey]
+				refPos = v3(c.SumX / c.Count, c.SumY / c.Count, c.SumZ / c.Count)
+			end
+		end
+	end
+
+	-- 5. Select next eligible objective using connector graph connectivity and route cost
+	if not chosenMob then
+		local bestCost = math.huge
+		local bestId: number? = nil
+		local bestCandidate: any? = nil
+		for netId, _ in pairs(mobs) do
+			local candidate = usableObjective(netId)
+			if candidate then
+				local cost = SquadMovement.RouteCost(floorId, refPos, candidate.Position, origin)
+				if cost < math.huge then
+					if cost < bestCost or (cost == bestCost and bestId ~= nil and netId < bestId) then
+						bestCost = cost
+						bestId = netId
+						bestCandidate = candidate
+					end
+				end
+			end
+		end
+		chosenId = bestId
+		chosenMob = bestCandidate
+	end
+
+	local anchorPos = spawnPos
+	local regroupAnchor = state.LastEngagementPlatformPosition or refPos
+	if chosenMob then
+		state.AssignedObjectiveNetId = chosenId
+		state.AssignedObjectiveGeneration = chosenMob.EntityGeneration or 0
+		anchorPos = chosenMob.Position
+		local landingPos = resolveEngagementLanding(floorId, chosenMob.Position, origin)
+		if input.PlaceOnGround then
+			landingPos = input.PlaceOnGround(landingPos, v3(0, 0, 0))
+		end
+		regroupAnchor = landingPos
+		state.LastEngagementPlatformPosition = landingPos
+	else
+		state.AssignedObjectiveNetId = nil
+		state.AssignedObjectiveGeneration = nil
+		anchorPos = regroupAnchor
+	end
+
+	local result = {
+		AnchorPosition = anchorPos,
+		RegroupAnchor = regroupAnchor,
+		ObjectiveNetId = chosenId,
+		ObjectiveMob = chosenMob,
+		Retained = retained,
+	}
+	state.LastAssignedAnchorClock = now
+	state.LastAssignedResult = result
+	return result
+end
+
+function SquadMovement.BuildAssignedAssistList(ownerKey: any, hero: any, heroes: any?): { number }
+	local list = {}
+	local seen: { [number]: boolean } = {}
+	local state = ownerKey and masterStates[ownerKey]
+	if state and state.AssignedObjectiveNetId then
+		seen[state.AssignedObjectiveNetId] = true
+		table.insert(list, state.AssignedObjectiveNetId)
+	end
+	local ordered = collectOrderedHeroes(heroes or (state and state.RegisteredHeroes), hero and hero.FloorId or 0, hero and hero.RoomGeneration)
+	for _, ally in ipairs(ordered) do
+		if ally ~= hero and ally.TargetNetId and not seen[ally.TargetNetId] then
+			seen[ally.TargetNetId] = true
+			table.insert(list, ally.TargetNetId)
+		end
+	end
+	return list
+end
+
+function SquadMovement.PlanAssignedRegroup(
+	ownerKey: any,
+	hero: any,
+	regroupAnchor: Vector3,
+	now: number,
+	helpers: {
+		HeroBaseSpeed: number?,
+		Overdrive: boolean?,
+		PlaceOnGround: ((Vector3, Vector3) -> Vector3)?,
+	}?
+): FollowPlan
+	local opts = helpers or {}
+	local placeOnGround = opts.PlaceOnGround
+	local floorId = hero.FloorId or 0
+	local roomGen = hero.RoomGeneration or 1
+	local state = ownerKey and masterStates[ownerKey]
+	if not state or state.FloorId ~= floorId or state.RoomGeneration ~= roomGen or state.Assigned ~= true then
+		state = newMasterState(floorId, roomGen, true)
+		if ownerKey ~= nil then
+			masterStates[ownerKey] = state
+		end
+	end
+	state.RegisteredHeroes = state.RegisteredHeroes or {}
+	state.RegisteredHeroes[hero.NetId or hero] = hero
+
+	local origin = state.Origin or (if floorId > 0 then defaultOrigin(floorId) else v3(0, 0, 0))
+	local _, anchorLink = locatePoint(floorId, regroupAnchor, origin)
+	local usableWidth = if anchorLink then anchorLink.UsableWidth else nil
+	local distToAnchor = dist3(regroupAnchor, hero.Position)
+	local goalPos, offset = SquadMovement.ResolveSlotGoal(
+		regroupAnchor,
+		hero.SlotIndex or 1,
+		state.Forward,
+		usableWidth,
+		distToAnchor,
+		placeOnGround
+	)
+	local routeLag = flatDist(hero.Position, goalPos)
+	local speed = SquadMovement.ComputeSpeed({
+		Assigned = true,
+		HeroBaseSpeed = opts.HeroBaseSpeed or hero.MoveSpeed,
+		Overdrive = opts.Overdrive,
+		RouteLag = routeLag,
+	})
+	return {
+		Goal = goalPos,
+		TerminalGoal = goalPos,
+		FormationOffset = offset,
+		RouteLag = routeLag,
+		FollowSpeed = speed.FollowSpeed,
+		BaseFollowSpeed = speed.BaseFollowSpeed,
+		IsSprinting = false,
+		UsableWidth = usableWidth,
+		UseGraphFallback = false,
+		CursorSeq = 0,
+	}
+end
+
+function SquadMovement.FindAlternativeAttackPosition(
+	hero: any,
+	targetPos: Vector3,
+	helpers: {
+		PlaceOnGround: ((Vector3, Vector3) -> Vector3)?,
+		CanAttack: ((Vector3, Vector3) -> boolean)?,
+		CanShortcut: ((Vector3, Vector3) -> boolean)?,
+	}?
+): Vector3?
+	local opts = helpers or {}
+	local attackRange = hero.AttackRange or 6.0
+	local placeOnGround = opts.PlaceOnGround
+	local canAttack = opts.CanAttack
+	local canShortcut = opts.CanShortcut
+
+	local toHero = unitFlat(hero.Position.X - targetPos.X, hero.Position.Z - targetPos.Z, v3(0, 0, 1))
+	local right = v3(-toHero.Z, 0, toHero.X)
+	local radii = { math.max(2.0, attackRange * 0.80), math.max(1.8, attackRange * 0.55) }
+	local angles = {
+		{ 1.0, 0.0 },
+		{ 0.707, 0.707 },
+		{ 0.707, -0.707 },
+		{ 0.0, 1.0 },
+		{ 0.0, -1.0 },
+		{ -0.707, 0.707 },
+		{ -0.707, -0.707 },
+		{ -1.0, 0.0 },
+	}
+
+	local bestPos: Vector3? = nil
+	local bestScore = math.huge
+	for _, r in ipairs(radii) do
+		for _, ang in ipairs(angles) do
+			local dirX = toHero.X * ang[1] + right.X * ang[2]
+			local dirZ = toHero.Z * ang[1] + right.Z * ang[2]
+			local offset = v3(dirX * r, 0, dirZ * r)
+			local cand = if placeOnGround then placeOnGround(targetPos, offset) else (targetPos + offset)
+			local dTarget = dist3(cand, targetPos)
+			local dHero = flatDist(cand, hero.Position)
+			if dTarget <= attackRange and dHero > 1.2 then
+				local losOk = if canAttack then canAttack(cand, targetPos) else true
+				if losOk then
+					local walkOk = if canShortcut then canShortcut(hero.Position, cand) else true
+					local cost = if walkOk
+						then dHero
+						else SquadMovement.RouteCost(hero.FloorId or 0, hero.Position, cand) + 25.0
+					if cost < bestScore then
+						bestScore = cost
+						bestPos = cand
+					end
+				end
+			end
+		end
+	end
+	return bestPos
+end
+
+function SquadMovement.RejectTarget(ownerKey: any, hero: any, targetMob: any, now: number, excludeSeconds: number?)
+	if not hero or not targetMob then
+		return
+	end
+	local ttl = excludeSeconds or 5.0
+	local failures = hero.NavigationRejectedTargets or {}
+	for id, entry in pairs(failures) do
+		if entry.Until <= now then
+			failures[id] = nil
+		end
+	end
+	failures[targetMob.NetId] = {
+		Until = now + ttl,
+		Generation = targetMob.EntityGeneration or 0,
+		FloorId = targetMob.FloorId,
+		RoomGeneration = targetMob.RoomGeneration,
+	}
+	hero.NavigationRejectedTargets = failures
+	hero.AlternativeAttackGoal = nil
+	hero.TargetNetId = nil
+	if hero.State ~= "COMA" then
+		hero.State = "FOLLOW_MASTER"
+	end
+	local state = ownerKey and masterStates[ownerKey]
+	if state and state.AssignedObjectiveNetId == targetMob.NetId then
+		state.LastAssignedAnchorClock = nil
+	end
+end
+
+function SquadMovement.HandleCombatMoveOutcome(
+	ownerKey: any,
+	hero: any,
+	targetMob: any,
+	outcome: any,
+	now: number,
+	helpers: {
+		ExcludeSeconds: number?,
+		PlaceOnGround: ((Vector3, Vector3) -> Vector3)?,
+		CanAttack: ((Vector3, Vector3) -> boolean)?,
+		CanShortcut: ((Vector3, Vector3) -> boolean)?,
+		ClearNavigation: ((any) -> ())?,
+	}?
+): { Action: string, Goal: Vector3? }
+	local opts = helpers or {}
+	if not outcome or outcome.Status ~= "UNREACHABLE" or not targetMob then
+		if outcome and outcome.Status == "ARRIVED" then
+			hero.AlternativeAttackGoal = nil
+		end
+		return { Action = "CONTINUE", Goal = nil }
+	end
+
+	local alt = hero.AlternativeAttackGoal
+	local mobGen = targetMob.EntityGeneration or 0
+	local alreadyTriedAlt = alt ~= nil and alt.NetId == targetMob.NetId and alt.Generation == mobGen
+	if not alreadyTriedAlt then
+		local altPos = SquadMovement.FindAlternativeAttackPosition(hero, targetMob.Position, {
+			PlaceOnGround = opts.PlaceOnGround,
+			CanAttack = opts.CanAttack,
+			CanShortcut = opts.CanShortcut,
+		})
+		if altPos and flatDist(altPos, hero.Position) > 1.2 then
+			hero.AlternativeAttackGoal = {
+				NetId = targetMob.NetId,
+				Generation = mobGen,
+				Position = altPos,
+			}
+			if opts.ClearNavigation then
+				opts.ClearNavigation(hero)
+			end
+			return { Action = "RETRY_ALTERNATIVE", Goal = altPos }
+		end
+	end
+
+	if opts.ClearNavigation then
+		opts.ClearNavigation(hero)
+	end
+	SquadMovement.RejectTarget(ownerKey, hero, targetMob, now, opts.ExcludeSeconds)
+	return { Action = "REJECTED", Goal = nil }
+end
+
 function SquadMovement.DebugState(ownerKey: any): any
 	local state = ownerKey and masterStates[ownerKey]
 	if not state then
@@ -816,6 +1317,7 @@ function SquadMovement.DebugState(ownerKey: any): any
 		HeadLocationKey = state.HeadLocationKey,
 		HeadConnectorId = state.HeadConnectorId,
 		HeadUsableWidth = state.HeadUsableWidth,
+		AssignedObjectiveNetId = state.AssignedObjectiveNetId,
 	}
 end
 

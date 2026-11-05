@@ -267,4 +267,142 @@ test("Combat disengagement rejoins a forward trail point and server route lag ex
 	SquadMovement.Reset(owner)
 end)
 
+test("Assigned anchor retains valid objective, uses connector route cost across chasms, and ignores stranded-hero drag", function()
+	local owner = {}
+	SquadMovement.Reset(owner)
+	local layout = Layout.Get(3) -- Floor 18 uses variant 3
+	local origin = v3(0, 0, 0)
+	local basin = layout.Platforms.Basin
+	local east = layout.Platforms.EastGallery
+	local north = layout.Platforms.NorthSpire
+	local basinPos = v3(basin.X, basin.Y, basin.Z)
+	local eastPos = v3(east.X, east.Y, east.Z)
+	local northPos = v3(north.X, north.Y, north.Z)
+
+	local h1 = { NetId = 1, SlotIndex = 1, FloorId = 18, RoomGeneration = 1, Position = basinPos + v3(2, 0, 0), CurrentHP = 100, State = "FOLLOW_MASTER", MoveSpeed = 20 }
+	local h2 = { NetId = 2, SlotIndex = 2, FloorId = 18, RoomGeneration = 1, Position = basinPos + v3(-2, 0, 0), CurrentHP = 100, State = "FOLLOW_MASTER", MoveSpeed = 20 }
+	-- Stranded hero far away on NorthSpire in UNREACHABLE state must not drag the squad reference point away from Basin
+	local h3 = { NetId = 3, SlotIndex = 3, FloorId = 18, RoomGeneration = 1, Position = northPos, CurrentHP = 100, State = "FOLLOW_MASTER", NavigationStatus = "UNREACHABLE", NoProgressSeconds = 3.5, MoveSpeed = 20 }
+	local heroes = { h1, h2, h3 }
+
+	local mobEast = { NetId = 101, FloorId = 18, RoomGeneration = 1, EntityGeneration = 1, IsAlive = true, Position = eastPos }
+	local mobNorth = { NetId = 102, FloorId = 18, RoomGeneration = 1, EntityGeneration = 1, IsAlive = true, Position = northPos }
+	local mobs = { [101] = mobEast, [102] = mobNorth }
+
+	-- Route cost from Basin to EastGallery (direct ramp) is shorter than Basin -> SouthWatch -> WestVault -> NorthSpire
+	local costEast = SquadMovement.RouteCost(18, basinPos, eastPos, origin)
+	local costNorth = SquadMovement.RouteCost(18, basinPos, northPos, origin)
+	assert(costEast < costNorth, "RouteCost did not prefer direct ramp over multi-hop path")
+
+	local sel1 = SquadMovement.SelectAssignedAnchor(owner, {
+		FloorId = 18,
+		RoomGeneration = 1,
+		Origin = origin,
+		DefaultSpawnPosition = basinPos,
+		Heroes = heroes,
+		Mobs = mobs,
+		Now = 1.0,
+	})
+	assert(sel1.ObjectiveNetId == 101, "Assigned anchor did not pick lowest route-cost objective from healthy cluster")
+
+	-- Same-tick cache returns identical table without recomputing
+	local selSameTick = SquadMovement.SelectAssignedAnchor(owner, {
+		FloorId = 18,
+		RoomGeneration = 1,
+		Origin = origin,
+		DefaultSpawnPosition = basinPos,
+		Heroes = heroes,
+		Mobs = mobs,
+		Now = 1.0,
+	})
+	assert(selSameTick == sel1, "Assigned anchor did not reuse per-tick cached result")
+
+	-- Retain current objective on subsequent tick even if heroes move closer to another mob
+	h1.Position = northPos + v3(4, 0, 0)
+	h2.Position = northPos + v3(-4, 0, 0)
+	local selRetained = SquadMovement.SelectAssignedAnchor(owner, {
+		FloorId = 18,
+		RoomGeneration = 1,
+		Origin = origin,
+		DefaultSpawnPosition = basinPos,
+		Heroes = heroes,
+		Mobs = mobs,
+		Now = 1.2,
+	})
+	assert(selRetained.ObjectiveNetId == 101 and selRetained.Retained == true, "Valid assigned objective was not retained")
+
+	-- When retained objective dies, advance to next reachable objective (102)
+	mobEast.IsAlive = false
+	local selNext = SquadMovement.SelectAssignedAnchor(owner, {
+		FloorId = 18,
+		RoomGeneration = 1,
+		Origin = origin,
+		DefaultSpawnPosition = basinPos,
+		Heroes = heroes,
+		Mobs = mobs,
+		Now = 1.4,
+	})
+	assert(selNext.ObjectiveNetId == 102 and selNext.Retained == false, "Did not transition to next eligible objective after target death")
+
+	-- Assist list is deterministic and leads with the squad's chosen objective
+	h2.TargetNetId = 102
+	local assist = SquadMovement.BuildAssignedAssistList(owner, h1, heroes)
+	assert(#assist == 1 and assist[1] == 102, "Assist list did not deduplicate and lead with squad objective")
+
+	-- Regroup speed operates independently of owner sprint attributes
+	local regroupPlan = SquadMovement.PlanAssignedRegroup(owner, h1, selNext.RegroupAnchor, 1.4, {
+		HeroBaseSpeed = 20,
+		Overdrive = false,
+		PlaceOnGround = function(base, off) return base + off end,
+	})
+	assert(regroupPlan.IsSprinting == false and regroupPlan.BaseFollowSpeed == 20, "Assigned regroup depended on owner sprint state")
+	SquadMovement.Reset(owner)
+end)
+
+test("Combat move outcome tries alternative supported attack position before generation-scoped target rejection", function()
+	local owner = {}
+	SquadMovement.Reset(owner)
+	local hero = {
+		NetId = 1,
+		SlotIndex = 1,
+		FloorId = 18,
+		RoomGeneration = 1,
+		Position = v3(0, 0, 0),
+		AttackRange = 14,
+		State = "MOVE_TO_TARGET",
+		TargetNetId = 55,
+	}
+	local mob = {
+		NetId = 55,
+		FloorId = 18,
+		RoomGeneration = 1,
+		EntityGeneration = 3,
+		IsAlive = true,
+		Position = v3(20, 0, 0),
+	}
+
+	-- First UNREACHABLE outcome for a ranged hero finds an alternative attack position within AttackRange
+	local firstOutcome = SquadMovement.HandleCombatMoveOutcome(owner, hero, mob, { Status = "UNREACHABLE" }, 10.0, {
+		ExcludeSeconds = 5.0,
+		PlaceOnGround = function(base, off) return base + off end,
+		CanAttack = function(from, to) return dist(from, to) <= 14 end,
+		CanShortcut = function() return true end,
+	})
+	assert(firstOutcome.Action == "RETRY_ALTERNATIVE" and firstOutcome.Goal ~= nil, "Did not attempt alternative attack position first")
+	assert(hero.AlternativeAttackGoal ~= nil and hero.TargetNetId == 55, "Cleared target prematurely before trying alternative attack position")
+
+	-- Second UNREACHABLE outcome on the same target generation rejects the target for ExcludeSeconds
+	local secondOutcome = SquadMovement.HandleCombatMoveOutcome(owner, hero, mob, { Status = "UNREACHABLE" }, 11.0, {
+		ExcludeSeconds = 5.0,
+		PlaceOnGround = function(base, off) return base + off end,
+		CanAttack = function(from, to) return dist(from, to) <= 14 end,
+		CanShortcut = function() return true end,
+	})
+	assert(secondOutcome.Action == "REJECTED", "Did not reject target after alternative attack position also failed")
+	assert(hero.TargetNetId == nil and hero.State == "FOLLOW_MASTER", "Rejected target did not return hero to FOLLOW_MASTER")
+	local rej = hero.NavigationRejectedTargets and hero.NavigationRejectedTargets[55]
+	assert(rej ~= nil and rej.Until == 16.0 and rej.Generation == 3, "Generation-scoped target exclusion not recorded")
+	SquadMovement.Reset(owner)
+end)
+
 print(string.format("Squad movement tests: %d passed", passed))
