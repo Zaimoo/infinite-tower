@@ -97,21 +97,21 @@ function LightingAndEffects.Apply(customConfig: { [string]: any }?)
 	sunRays.Intensity = cfg.SunRaysIntensity
 	sunRays.Spread = cfg.SunRaysSpread
 
-	-- Sunset Skybox
+	-- Dune Skybox (Celestial Twilight Sky)
 	local sky = Lighting:FindFirstChildOfClass("Sky")
 	if not sky then
 		sky = Instance.new("Sky")
-		sky.Name = "SunsetSky"
+		sky.Name = "DuneSky"
 		sky.Parent = Lighting
 	else
-		sky.Name = "SunsetSky"
+		sky.Name = "DuneSky"
 	end
-	sky.SkyboxBk = "rbxassetid://600830446"
-	sky.SkyboxDn = "rbxassetid://600831635"
-	sky.SkyboxFt = "rbxassetid://600832720"
-	sky.SkyboxLf = "rbxassetid://600886090"
-	sky.SkyboxRt = "rbxassetid://600833862"
-	sky.SkyboxUp = "rbxassetid://600835177"
+	sky.SkyboxBk = "rbxassetid://119761561936004"
+	sky.SkyboxDn = "rbxassetid://112913253029218"
+	sky.SkyboxFt = "rbxassetid://71766471664507"
+	sky.SkyboxLf = "rbxassetid://73469705958603"
+	sky.SkyboxRt = "rbxassetid://130460752130304"
+	sky.SkyboxUp = "rbxassetid://73402351227920"
 	sky.SunTextureId = "rbxasset://sky/sun.jpg"
 	sky.MoonTextureId = "rbxasset://sky/moon.jpg"
 	sky.SunAngularSize = 21
