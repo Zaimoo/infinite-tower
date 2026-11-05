@@ -54,7 +54,7 @@ end
 track("CommonsSpinner", addSpinner, spinners)
 track("CausewayPulse", addPulser, pulsers)
 
-RunService.RenderStepped:Connect(function()
+local function stepCommons()
 	local t = os.clock()
 	if next(spinners) ~= nil then
 		local bob = math.sin(t * math.pi * 2 / BOB_PERIOD) * BOB_HEIGHT
@@ -71,4 +71,9 @@ RunService.RenderStepped:Connect(function()
 			part.Transparency = math.min(0.95, p.Base + dim * PULSE_DEPTH)
 		end
 	end
+end
+RunService.RenderStepped:Connect(function()
+	debug.profilebegin("Commons")
+	stepCommons()
+	debug.profileend()
 end)

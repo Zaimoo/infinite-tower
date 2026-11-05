@@ -1,4 +1,5 @@
 --!strict
+debug.setmemorycategory("AdventurerPatrol")
 -- StarterPlayerScripts/Rendering/AdventurerPatrolController.client.luau
 -- Client-rendered physical & visual Outskirts Guard Post wave defense loop:
 --   * Spawns full costumed R15 hero rigs + weapons for stationed Guard Post Adventurers
@@ -1217,7 +1218,7 @@ PlotsFolder.ChildRemoved:Connect(function(child: Instance)
 	end
 end)
 
-RunService.RenderStepped:Connect(function(dt: number)
+local function stepAdventurerPatrol(dt: number)
 	local frameDt = math.min(dt, 0.1)
 	local now = os.clock()
 	local camera = Workspace.CurrentCamera
@@ -1266,4 +1267,9 @@ RunService.RenderStepped:Connect(function(dt: number)
 			stepDirector(director, origin, frameDt, now)
 		end
 	end
+end
+RunService.RenderStepped:Connect(function(dt: number)
+	debug.profilebegin("AdventurerPatrol")
+	stepAdventurerPatrol(dt)
+	debug.profileend()
 end)

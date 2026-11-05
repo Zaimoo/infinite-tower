@@ -102,7 +102,7 @@ end
 local dreadW, stormW = targetWeights()
 local lastDread, lastStorm = -1, -1
 
-RunService.RenderStepped:Connect(function(dt: number)
+local function stepHubLighting(dt: number)
 	local wantDread, wantStorm = targetWeights()
 	local k = 1 - math.exp(-BLEND_RATE * dt)
 	dreadW += (wantDread - dreadW) * k
@@ -113,4 +113,9 @@ RunService.RenderStepped:Connect(function(dt: number)
 	lastDread, lastStorm = dreadW, stormW
 	local hub = mix(Presets.Sanctuary, Presets.Dread, dreadW)
 	apply(mix(hub, Presets.Storm, stormW))
+end
+RunService.RenderStepped:Connect(function(dt: number)
+	debug.profilebegin("HubLighting")
+	stepHubLighting(dt)
+	debug.profileend()
 end)

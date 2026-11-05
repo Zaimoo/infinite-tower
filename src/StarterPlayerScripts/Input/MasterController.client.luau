@@ -29,7 +29,7 @@ local lastAppliedSprint = false
 local lastReplicatedSprint: boolean? = nil
 local lastReplicatedCharacter: Model? = nil
 
-RunService.RenderStepped:Connect(function()
+local function stepSprint()
 	local char = LocalPlayer.Character
 	local hum = char and char:FindFirstChildOfClass("Humanoid")
 	if not char or not hum then
@@ -65,6 +65,11 @@ RunService.RenderStepped:Connect(function()
 			SprintStateRemote:FireServer(shiftDown)
 		end
 	end
+end
+RunService.RenderStepped:Connect(function()
+	debug.profilebegin("MasterController.Sprint")
+	stepSprint()
+	debug.profileend()
 end)
 
 -- Facility interactions take priority over Recall while their prompt is visible.

@@ -1,4 +1,5 @@
 --!strict
+debug.setmemorycategory("RelicVisuals")
 -- StarterPlayerScripts/Rendering/RelicVisualController.client.luau
 -- Draws every relic in Workspace.PhysicalRelics. The server only replicates an invisible root (hitbox,
 -- billboard, RelicTier / RelicCarried attributes); this builds the tier's model from RelicModelBuilder
@@ -116,7 +117,7 @@ for _, child in PhysicalRelics:GetChildren() do
 	attach(child)
 end
 
-RunService.RenderStepped:Connect(function()
+local function stepRelicVisuals()
 	local now = os.clock()
 	local camera = Workspace.CurrentCamera
 	local eye = if camera then camera.CFrame.Position else Vector3.zero
@@ -160,4 +161,9 @@ RunService.RenderStepped:Connect(function()
 			light.Brightness = brightness
 		end
 	end
+end
+RunService.RenderStepped:Connect(function()
+	debug.profilebegin("RelicVisuals")
+	stepRelicVisuals()
+	debug.profileend()
 end)

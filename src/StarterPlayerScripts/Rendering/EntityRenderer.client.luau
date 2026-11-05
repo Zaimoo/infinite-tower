@@ -1,4 +1,5 @@
 --!strict
+debug.setmemorycategory("EntityRenderer")
 -- StarterPlayerScripts/Rendering/EntityRenderer.client.luau
 -- Unpacks 5 Hz Binary Buffer Snapshots & Interpolates Hero/Mob/Boss Visuals at 60 FPS (RenderStepped)
 
@@ -634,15 +635,20 @@ TowerRemotes.TowerEntityState.OnClientEvent:Connect(function(context,message)
  end
 end)
 -- Reliable full roster cuts define existence. Packet loss only freezes poses and requests resync.
-RunService.Heartbeat:Connect(function()
+local function stepResyncCheck()
  local now=os.clock()
  if Assembly and now-Assembly.Started>3 then Assembly=nil;requestEntityMetadata() end
  for _,node in pairs(VisualNodesByNetId) do if now-node.LastSeenClock>1 then requestEntityMetadata() end end
+end
+RunService.Heartbeat:Connect(function()
+	debug.profilebegin("EntityRenderer.Resync")
+	stepResyncCheck()
+	debug.profileend()
 end)
 requestEntityMetadata()
 
 -- 60 FPS Smooth Interpolation Loop
-RunService.RenderStepped:Connect(function(dt: number)
+local function stepRender(dt: number)
 	CombatFeedback:Step(os.clock())
 	local serverNow=Workspace:GetServerTimeNow();EnemyAnimation.StepEffects(serverNow)
 	CombatVfxPool:Step(serverNow)
@@ -708,6 +714,11 @@ RunService.RenderStepped:Connect(function(dt: number)
 			head.Position = cf.Position + Vector3.new(0, bodyH + (head.Size.Y * 0.45), 0)
 		end
 	end
+end
+RunService.RenderStepped:Connect(function(dt: number)
+	debug.profilebegin("EntityRenderer.Render")
+	stepRender(dt)
+	debug.profileend()
 end)
 
 --============================================================================

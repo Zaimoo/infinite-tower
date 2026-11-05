@@ -1,4 +1,5 @@
 --!strict
+debug.setmemorycategory("FacilityWorkers")
 -- StarterPlayerScripts/Rendering/FacilityWorkerController.client.luau
 -- Client-rendered physical & visual loop for stationed workers in:
 --   * The Market (`Building_Market`) — Slots 1..4: Hawker, Crate Stockist, Relic Appraiser, Ledger Scribe
@@ -1480,7 +1481,7 @@ if PlotsFolder then
 	PlotsFolder.ChildAdded:Connect(registerPlot)
 end
 
-RunService.RenderStepped:Connect(function(dt: number)
+local function stepFacilityWorkers(dt: number)
 	local clampedDt = math.min(dt, 0.1)
 	local nowClock = os.clock()
 	local nowUnix = os.time()
@@ -1535,6 +1536,11 @@ RunService.RenderStepped:Connect(function(dt: number)
 			stepPlotDirector(director, origin, nowClock, nowUnix, clampedDt)
 		end
 	end
+end
+RunService.RenderStepped:Connect(function(dt: number)
+	debug.profilebegin("FacilityWorkers")
+	stepFacilityWorkers(dt)
+	debug.profileend()
 end)
 
 _G.FacilityWorkerState = {

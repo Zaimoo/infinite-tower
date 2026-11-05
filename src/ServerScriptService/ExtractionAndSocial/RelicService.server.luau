@@ -476,8 +476,32 @@ end
 function RelicService.ExtractOnPrivatePad(carrier: Player)
 	extractAtSanctuary(carrier)
 end
+-- Billboard and prompt writes replicate to every client, so only write when the value changes.
+local LOCKED_COLOR = Color3.fromRGB(255, 175, 45)
+local OPEN_COLOR = Color3.fromRGB(95, 255, 135)
+local CARRIED_COLOR = Color3.fromRGB(255, 235, 115)
+local lastStatusText: { [any]: string } = setmetatable({}, { __mode = "k" }) :: any
+
+local function setStatus(relic: any, text: string, color: Color3)
+	local label = relic.BillboardStatus
+	if not label or lastStatusText[relic] == text then
+		return
+	end
+	lastStatusText[relic] = text
+	label.Text = text
+	if label.TextColor3 ~= color then
+		label.TextColor3 = color
+	end
+end
+
+local function setPromptEnabled(prompt: ProximityPrompt, enabled: boolean)
+	if prompt.Enabled ~= enabled then
+		prompt.Enabled = enabled
+	end
+end
+
 -- Heartbeat for Relic Pickups, Billboard Timers & Extraction Pad Detection
-RunService.Heartbeat:Connect(function()
+local function stepRelics()
 	local now = os.clock()
 
 	for _, relic in pairs(ActiveRelics) do
@@ -488,32 +512,30 @@ RunService.Heartbeat:Connect(function()
 				destroyRelicInstance(relic)
 			else
 				if relic.BillboardStatus then
+					-- Whole seconds only: the label replicates to every client, so it should change at most once a second.
 					local remDespawn = math.max(0, math.ceil(relic.DespawnAt - now))
+					local remLock = math.max(0, math.ceil(relic.LockExpiresAt - now))
 					if relic.LockedUserId and now < relic.LockExpiresAt and relic.LockKind ~= "FUMBLE" then
-						relic.BillboardStatus.Text = string.format("🔒 SEALED: %.1fs | Despawn: %ds", relic.LockExpiresAt - now, remDespawn)
-						relic.BillboardStatus.TextColor3 = Color3.fromRGB(255, 175, 45)
+						setStatus(relic, `🔒 SEALED: {remLock}s | Despawn: {remDespawn}s`, LOCKED_COLOR)
 					elseif relic.LockedUserId and now < relic.LockExpiresAt then
-						relic.BillboardStatus.Text = string.format("🔒 LOCKED: %.1fs | Despawn: %ds", relic.LockExpiresAt - now, remDespawn)
-						relic.BillboardStatus.TextColor3 = Color3.fromRGB(255, 175, 45)
+						setStatus(relic, `🔒 LOCKED: {remLock}s | Despawn: {remDespawn}s`, LOCKED_COLOR)
 					else
-						relic.BillboardStatus.Text = string.format("🔓 HOLD E TO CARRY (-%d%% Spd) | %ds", math.round(spec.WalkSpeedPenalty * 100), remDespawn)
-						relic.BillboardStatus.TextColor3 = Color3.fromRGB(95, 255, 135)
+						setStatus(relic, `🔓 HOLD E TO CARRY (-{math.round(spec.WalkSpeedPenalty * 100)}% Spd) | {remDespawn}s`, OPEN_COLOR)
 					end
 				end
 				-- Pickup is only ever through the prompt (Triggered above); there is no walk-over pickup.
 				if relic.Prompt then
-					relic.Prompt.Enabled = not (relic.LockedUserId and now < relic.LockExpiresAt and relic.LockKind ~= "FUMBLE")
+					setPromptEnabled(relic.Prompt, not (relic.LockedUserId and now < relic.LockExpiresAt and relic.LockKind ~= "FUMBLE"))
 				end
 			end
 		else
 			-- Carried relics extract at floor sanctuaries or the owner's Hub pad.
-			if relic.Prompt then relic.Prompt.Enabled = false end
+			if relic.Prompt then setPromptEnabled(relic.Prompt, false) end
 			local carrier = relic.Carrier
 			local _, hrp = getCharacterParts(carrier)
 			if hrp then
 				if relic.BillboardStatus then
-					relic.BillboardStatus.Text = string.format("CARRIED BY %s (-%d%% SPD)", carrier.DisplayName, math.round(spec.WalkSpeedPenalty * 100))
-					relic.BillboardStatus.TextColor3 = Color3.fromRGB(255, 235, 115)
+					setStatus(relic, `CARRIED BY {carrier.DisplayName} (-{math.round(spec.WalkSpeedPenalty * 100)}% SPD)`, CARRIED_COLOR)
 				end
 
 				local loc = Tower.GetState(carrier)
@@ -532,6 +554,11 @@ RunService.Heartbeat:Connect(function()
 			updateMasterMovementAttributes(player, now)
 		end
 	end
+end
+RunService.Heartbeat:Connect(function()
+	debug.profilebegin("RelicService")
+	stepRelics()
+	debug.profileend()
 end)
 
 local function handleRelicCarrierDeath(player: Player)

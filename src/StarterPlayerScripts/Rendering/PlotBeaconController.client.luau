@@ -356,7 +356,7 @@ end)
 
 -- Single Heartbeat loop: smooth camera fade (beacon position is fixed in the sky)
 local lastPeriodicSync = 0
-RunService.Heartbeat:Connect(function()
+local function stepPlotBeacons()
 	local now = os.clock()
 
 	local char = LocalPlayer.Character
@@ -407,4 +407,9 @@ RunService.Heartbeat:Connect(function()
 			end
 		end
 	end
+end
+RunService.Heartbeat:Connect(function()
+	debug.profilebegin("PlotBeacon")
+	stepPlotBeacons()
+	debug.profileend()
 end)
