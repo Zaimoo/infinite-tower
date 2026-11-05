@@ -97,7 +97,7 @@ function LightingAndEffects.Apply(customConfig: { [string]: any }?)
 	sunRays.Intensity = cfg.SunRaysIntensity
 	sunRays.Spread = cfg.SunRaysSpread
 
-	-- Rune Forest Skybox
+	-- Rune Forest Skybox (Seam-locked 360-degree celestial twilight & lower cloud abyss)
 	local sky = Lighting:FindFirstChildOfClass("Sky")
 	if not sky then
 		sky = Instance.new("Sky")
@@ -106,18 +106,18 @@ function LightingAndEffects.Apply(customConfig: { [string]: any }?)
 	else
 		sky.Name = "RuneForestSky"
 	end
-	sky.SkyboxBk = "rbxassetid://73287257796967"
-	sky.SkyboxDn = "rbxassetid://95571517151564"
-	sky.SkyboxFt = "rbxassetid://93852950520084"
-	sky.SkyboxLf = "rbxassetid://73675662307776"
-	sky.SkyboxRt = "rbxassetid://111303043418465"
-	sky.SkyboxUp = "rbxassetid://84372379620971"
+	sky.SkyboxBk = "rbxassetid://102457485250501"
+	sky.SkyboxDn = "rbxassetid://126001739364141"
+	sky.SkyboxFt = "rbxassetid://115133175100254"
+	sky.SkyboxLf = "rbxassetid://100884692865292"
+	sky.SkyboxRt = "rbxassetid://76480889044734"
+	sky.SkyboxUp = "rbxassetid://102372269012606"
 	sky.SunTextureId = "rbxasset://sky/sun.jpg"
 	sky.MoonTextureId = "rbxasset://sky/moon.jpg"
 	sky.SunAngularSize = 21
 	sky.MoonAngularSize = 11
-	sky.CelestialBodiesShown = true
-	sky.StarCount = 3000
+	sky.CelestialBodiesShown = false
+	sky.StarCount = 0
 
 	-- Disable competing bloom/blur layers so glow does not stack.
 	for _, effect in Lighting:GetChildren() do
