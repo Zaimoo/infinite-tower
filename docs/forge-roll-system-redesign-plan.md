@@ -49,8 +49,8 @@ Ranked by severity. File references are to the current branch.
 7. **The banner advertises things that don't exist.** The Summon tab still shows "5-STAR FEATURED HERO & ARTIFACTS", "Rate Up" chips for Blade of the Rift and Genesis Sunderer, and a hard-coded "Event Ends: 2d 14h". There is no rate-up and no end date. Showing a rate-up that the server doesn't apply is misleading odds disclosure on a paid random item.
    **Fix:** remove the chips and the timer (§5.2 replaces them with real rates).
 
-8. **Pity ignores God's Blessing.** The 120th pull uses fixed weights (`r * 0.026`), so luck doesn't move the split between Exalted, Legendary and Mythical on the pity pull.
-   **Fix:** `tier = SummonLuck.RollAtLeast(tierRates, cfg.PityRarity, math.random())`. Drop the magic numbers.
+8. **The pity roll hard-codes its odds.** The 120th pull used fixed weights (`r * 0.026`). Luck multiplies every upper tier by the same factor, so this happened to match the luck-adjusted split, but it would drift silently if the rates changed.
+   **Fix (done):** `tier = SummonLuck.RollAtLeast(tierRates, cfg.PityRarity, math.random())`.
 
 9. **The cap gives no client feedback.** The plan's amber-at-45 state isn't built, the summon buttons stay enabled when full, and `PerformSummon` doesn't check the cap. A full player gets a silent shake plus a server toast. The 10x button should disable at 41+.
 

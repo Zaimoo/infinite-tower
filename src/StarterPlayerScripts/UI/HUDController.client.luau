@@ -64,7 +64,6 @@ local ArtifactCatalog = require(Shared:WaitForChild("Config"):WaitForChild("Arti
 local ArtifactRemotes = Remotes:WaitForChild("ArtifactRemotes")
 local RequestEquipArtifactFunc = ArtifactRemotes:WaitForChild("RequestEquipArtifact") :: RemoteFunction
 local RequestUnequipArtifactFunc = ArtifactRemotes:WaitForChild("RequestUnequipArtifact") :: RemoteFunction
-local RequestUpgradeRarityFunc = ArtifactRemotes:WaitForChild("RequestUpgradeRarity") :: RemoteFunction
 
 local RequestSummonFunc = TycoonRemotes:WaitForChild("RequestSummon") :: RemoteFunction
 local AssignHeroRoleFunc = TycoonRemotes:WaitForChild("AssignHeroRole") :: RemoteFunction
@@ -1329,58 +1328,6 @@ local statsDetailLabel = makeLabel({
 	Parent = forgeDetailFrame,
 })
 
-local upgradeForgeFrame = makeFrame({
-	Size = UDim2.new(0.96, 0, 0, 110),
-	Position = UDim2.new(0.02, 0, 0.38, 0),
-	BackgroundColor3 = Color3.fromRGB(40, 32, 38),
-	Corner = 8,
-	Stroke = 1,
-	StrokeColor = Color3.fromRGB(200, 120, 40),
-	Parent = forgeDetailFrame,
-})
-
-local nextRarityLabel = makeLabel({
-	Size = UDim2.new(0.96, 0, 0, 24),
-	Position = UDim2.new(0.02, 0, 0.06, 0),
-	Text = "Next Rarity Preview: None",
-	TextColor3 = Color3.fromRGB(255, 215, 120),
-	TextXAlignment = Enum.TextXAlignment.Left,
-	Parent = upgradeForgeFrame,
-})
-
-local upgradeCostLabel = makeLabel({
-	Size = UDim2.new(0.96, 0, 0, 24),
-	Position = UDim2.new(0.02, 0, 0.30, 0),
-	Text = "Cost: 0 Gold, 0 Gems",
-	TextColor3 = Color3.fromRGB(255, 255, 255),
-	TextXAlignment = Enum.TextXAlignment.Left,
-	Parent = upgradeForgeFrame,
-})
-
-local upgradeButton = makeButton({
-	Size = UDim2.new(0.96, 0, 0, 38),
-	Position = UDim2.new(0.02, 0, 0.58, 0),
-	BackgroundColor3 = Color3.fromRGB(215, 115, 30),
-	Text = "UPGRADE RARITY",
-	Corner = 6,
-	OnClick = function()
-		if not CurrentProfile or not selectedArtifactUUID then return end
-		local sel = CurrentProfile.Artifacts and CurrentProfile.Artifacts[selectedArtifactUUID]
-		if not sel or sel.Rarity >= 16 then return end
-		local cost = ArtifactCatalog.GetUpgradeCost(sel.Rarity)
-		if not cost then return end
-		local haveGold = CurrentProfile.Currencies.Gold or 0
-		local haveGems = CurrentProfile.Currencies.Gems or 0
-		if haveGold >= cost.Gold and haveGems >= cost.Gems then
-			task.spawn(function()
-				local success, msg = RequestUpgradeRarityFunc:InvokeServer(sel.UUID)
-				if refreshBlacksmithModal then refreshBlacksmithModal() end
-			end)
-		end
-	end,
-	Parent = upgradeForgeFrame,
-})
-
 -- Equip / Unequip Section
 local heroEquipHeader = makeLabel({
 	Size = UDim2.new(0.96, 0, 0, 24),
@@ -1469,33 +1416,6 @@ refreshBlacksmithModal = function()
 			equippedHeroName
 		)
 
-		local nextRarity = sel.Rarity + 1
-		local cost = ArtifactCatalog.GetUpgradeCost(sel.Rarity)
-		if nextRarity <= 16 and cost then
-			local nextInfo = ArtifactCatalog.GetRarityInfo(nextRarity)
-			local nextEffATK, nextEffSpd = ArtifactCatalog.CalculateEffectiveStats(sel.Star, nextRarity)
-			nextRarityLabel.Text = string.format("Next: %s (x%0.2f) -> +%d ATK, +%0.1f%% Spd", nextInfo.Name, nextInfo.Multiplier, nextEffATK, nextEffSpd * 100)
-			nextRarityLabel.TextColor3 = nextInfo.Color
-
-			local haveGold = CurrentProfile.Currencies.Gold or 0
-			local haveGems = CurrentProfile.Currencies.Gems or 0
-			local canAfford = haveGold >= cost.Gold and haveGems >= cost.Gems
-
-			upgradeCostLabel.Text = string.format("Cost: %d Gold, %d Gems (Have: %d G, %d Gems)", cost.Gold, cost.Gems, math.floor(haveGold), math.floor(haveGems))
-			upgradeCostLabel.TextColor3 = canAfford and Color3.fromRGB(120, 255, 120) or Color3.fromRGB(255, 120, 120)
-
-			upgradeButton.Text = string.format("FORGE UPGRADE TO %s", nextInfo.Name:upper())
-			upgradeButton.BackgroundColor3 = canAfford and Color3.fromRGB(215, 115, 30) or Color3.fromRGB(90, 70, 65)
-			upgradeButton.AutoButtonColor = canAfford
-		else
-			nextRarityLabel.Text = "MAX RARITY ACHIEVED (16: ORIGIN)!"
-			nextRarityLabel.TextColor3 = Color3.fromRGB(255, 160, 245)
-			upgradeCostLabel.Text = "Maximum multiplier reached (x18.00)!"
-			upgradeCostLabel.TextColor3 = Color3.fromRGB(255, 230, 140)
-			upgradeButton.Text = "MAX RARITY REACHED"
-			upgradeButton.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
-		end
-
 		for _, c in ipairs(heroEquipScroll:GetChildren()) do
 			if c:IsA("Frame") then c:Destroy() end
 		end
@@ -1565,9 +1485,6 @@ refreshBlacksmithModal = function()
 		artifactTitleLabel.Text = "No Artifacts in Inventory"
 		rarityBadgeLabel.Text = "Defeat Bosses or Visit Waiting Room to obtain Artifacts!"
 		statsDetailLabel.Text = ""
-		nextRarityLabel.Text = ""
-		upgradeCostLabel.Text = ""
-		upgradeButton.Text = "NO ARTIFACT SELECTED"
 		heroEquipScroll:ClearAllChildren()
 	end
 
