@@ -2,12 +2,13 @@
 -- StarterPlayerScripts/UI/ForgeController.luau
 -- Blacksmith Forge, in Gilded Grimoire (docs/ui/GILDED_GRIMOIRE.md). Three tabs:
 --   1. ASSIGN: owned weapons with archetype filters, sort, lock, equip, and sell mode (quick picks + confirm).
---   2. SUMMON: the Gold artifact banner with live odds, a Legendary/Mythical showcase, 120-pull Exalted+
+--   2. SUMMON: the Gold artifact banner with a carousel of every Mythical weapon, 120-pull Exalted+
 --      and 10-pull Rare+ counters, and inventory-aware 1x/10x buttons. "View all weapons & odds" opens
 --      the catalog window grouped by tier with per-weapon chances.
 --   3. UPGRADE: star promotion with up to six donors of the same rarity tier and weapon type.
 
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 
@@ -1322,7 +1323,7 @@ function Forge:BuildSummonView(root: Frame)
 	self.SummonView = summonView
 	new("UIScale", { Scale = LEGACY_SCALE }, summonView)
 
-	-- 1. Banner panel: title, live odds, catalog button, and a showcase of the rarest weapons.
+	-- 1. Banner panel: title, catalog button, and a carousel of every Mythical weapon.
 	local bannerCard = new("Frame", {
 		Name = "BannerCard",
 		Size = UDim2.new(1, 0, 0, 226),
@@ -1335,7 +1336,7 @@ function Forge:BuildSummonView(root: Frame)
 	local cfg = ArtifactCatalog.Banner
 	local title = label(bannerCard, spaced(cfg.Title), 22, Color3.new(1, 1, 1), Enum.Font.GothamBlack)
 	title.Position = UDim2.fromOffset(20, 14)
-	title.Size = UDim2.fromOffset(380, 30)
+	title.Size = UDim2.fromOffset(360, 30)
 	title.TextXAlignment = Enum.TextXAlignment.Left
 	title.ZIndex = 56
 	title.FontFace = GildedGrimoire.Fonts.Title
@@ -1347,43 +1348,15 @@ function Forge:BuildSummonView(root: Frame)
 	subtitle.TextXAlignment = Enum.TextXAlignment.Left
 	subtitle.ZIndex = 56
 
-	-- Live drop rates, one pill per tier (filled by RenderSummonRates).
-	local rateBox = new("Frame", {
-		Name = "RateStrip",
-		Position = UDim2.fromOffset(16, 72),
-		Size = UDim2.fromOffset(392, 70),
-		BorderSizePixel = 0,
-		ZIndex = 55,
-	}, bannerCard)
-	GildedGrimoire.Frame(rateBox, { Class = "Row", Tone = "Deep", ZIndex = 55 })
-	local rateGrid = new("Frame", {
-		Name = "Pills",
-		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(10, 8),
-		Size = UDim2.new(1, -20, 1, -16),
-		ZIndex = 57,
-	}, rateBox)
-	new("UIGridLayout", {
-		CellSize = UDim2.new(0.25, -4, 0.5, -3),
-		CellPadding = UDim2.fromOffset(4, 6),
-		SortOrder = Enum.SortOrder.LayoutOrder,
-	}, rateGrid)
-	self.SummonRateGrid = rateGrid
-
-	local blessing = label(bannerCard, "", 12, GildedGrimoire.Text.Gold, Enum.Font.GothamBold)
-	blessing.Position = UDim2.fromOffset(20, 148)
-	blessing.Size = UDim2.fromOffset(380, 18)
-	blessing.TextXAlignment = Enum.TextXAlignment.Left
-	blessing.ZIndex = 56
-	self.SummonBlessingLabel = blessing
-
+	-- Catalog button, top right (the full odds live in the catalog window).
 	local viewArtBtn = new("TextButton", {
 		Name = "ViewArtifactsBtn",
-		Position = UDim2.fromOffset(16, 176),
-		Size = UDim2.fromOffset(250, 36),
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -16, 0, 16),
+		Size = UDim2.fromOffset(200, 32),
 		Text = "VIEW ALL WEAPONS & ODDS",
 		Font = Enum.Font.GothamBlack,
-		TextSize = 14,
+		TextSize = 12,
 		TextColor3 = Color3.new(1, 1, 1),
 		BorderSizePixel = 0,
 		ZIndex = 58,
@@ -1397,49 +1370,76 @@ function Forge:BuildSummonView(root: Frame)
 		self:OpenArtifactsModal()
 	end)
 
-	-- Showcase: cycles the Legendary and Mythical weapons (real items, not a fake rate-up).
-	local showcase = new("Frame", {
-		Name = "Showcase",
-		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -16, 0, 16),
-		Size = UDim2.fromOffset(176, 196),
-		BorderSizePixel = 0,
+	-- Mythical carousel: every Mythical weapon rolls past. The centre one is large and spins;
+	-- the others are shadow silhouettes that shrink and fade towards the edges.
+	local carousel = new("Frame", {
+		Name = "MythicalCarousel",
+		Position = UDim2.fromOffset(16, 66),
+		Size = UDim2.new(1, -32, 0, 128),
+		BackgroundTransparency = 1,
+		ClipsDescendants = true,
 		ZIndex = 55,
 	}, bannerCard)
-	GildedGrimoire.Frame(showcase, { Class = "Card", Tone = "Deep", ZIndex = 55 })
-	self.ShowcaseRail = GildedGrimoire.StateStroke(showcase)
-	local showcaseHost = label(showcase, "", 48, C.Text)
-	showcaseHost.Position = UDim2.fromOffset(8, 8)
-	showcaseHost.Size = UDim2.new(1, -16, 0, 132)
-	showcaseHost.ZIndex = 57
-	self.ShowcaseHost = showcaseHost
-	local showcaseName = label(showcase, "", 13, C.Text, Enum.Font.GothamBold)
-	showcaseName.Position = UDim2.fromOffset(6, 144)
-	showcaseName.Size = UDim2.new(1, -12, 0, 18)
-	showcaseName.TextXAlignment = Enum.TextXAlignment.Center
-	showcaseName.ZIndex = 57
-	self.ShowcaseName = showcaseName
-	local showcaseTier = label(showcase, "", 11, C.Text, Enum.Font.GothamBold)
-	showcaseTier.Position = UDim2.fromOffset(6, 166)
-	showcaseTier.Size = UDim2.new(1, -12, 0, 16)
-	showcaseTier.TextXAlignment = Enum.TextXAlignment.Center
-	showcaseTier.ZIndex = 57
-	self.ShowcaseTier = showcaseTier
+	self.Carousel = carousel
 
-	self.ShowcaseIds = {}
+	local mythicColor = ArtifactCatalog.GetRarityInfo(7).Color
+	local halo = new("Frame", {
+		Name = "CenterHalo",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.56),
+		Size = UDim2.fromOffset(170, 120),
+		BackgroundColor3 = mythicColor,
+		BackgroundTransparency = 0.78,
+		BorderSizePixel = 0,
+		ZIndex = 55,
+	}, carousel)
+	new("UICorner", { CornerRadius = UDim.new(1, 0) }, halo)
+	new("UIGradient", {
+		Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 0),
+			NumberSequenceKeypoint.new(0.6, 0.5),
+			NumberSequenceKeypoint.new(1, 1),
+		}),
+	}, halo)
+	self.CarouselHalo = halo
+
+	self.CarouselSlots = {} :: { any }
 	for _, id in ipairs(ArtifactCatalog.CatalogOrder) do
 		local seed = ArtifactCatalog.Seeds[id]
-		if seed and seed.RarityTier >= 6 then table.insert(self.ShowcaseIds, id) end
+		if seed and seed.RarityTier == 7 then
+			local host = label(carousel, "", 40, C.Text)
+			host.Name = "Slot_" .. id
+			host.AnchorPoint = Vector2.new(0.5, 0.5)
+			host.ZIndex = 57
+			host.Visible = false
+			showArtifact(host, id)
+			table.insert(self.CarouselSlots, { Id = id, Seed = seed, Host = host })
+		end
 	end
-	self.ShowcaseIndex = 0
-	self:AdvanceShowcase()
+	self.CarouselCenter = 1
+
+	local nameLabel = label(bannerCard, "", 15, Color3.new(1, 1, 1), Enum.Font.GothamBlack)
+	nameLabel.AnchorPoint = Vector2.new(0.5, 0)
+	nameLabel.Position = UDim2.new(0.5, 0, 0, 194)
+	nameLabel.Size = UDim2.new(1, -40, 0, 20)
+	nameLabel.TextXAlignment = Enum.TextXAlignment.Center
+	nameLabel.ZIndex = 58
+	nameLabel.FontFace = GildedGrimoire.Fonts.Title
+	self.CarouselName = nameLabel
+
+	self:LayoutCarousel(false)
 	task.spawn(function()
 		while self.Root and self.Root.Parent do
-			task.wait(3.5)
-			if self.Root.Visible and summonView.Visible then
-				self:AdvanceShowcase()
+			task.wait(2.8)
+			if self.Root.Visible and summonView.Visible and #self.CarouselSlots > 1 then
+				self.CarouselCenter = (self.CarouselCenter % #self.CarouselSlots) + 1
+				self:LayoutCarousel(true)
 			end
 		end
+	end)
+	RunService.RenderStepped:Connect(function(dt)
+		if not (self.Root.Visible and summonView.Visible) then return end
+		self:SpinCarouselCenter(dt)
 	end)
 
 	-- 2. Pity and status.
@@ -1515,40 +1515,91 @@ function Forge:BuildSummonView(root: Frame)
 	self.Summon10XBtn = btn10X.Root
 end
 
-function Forge:AdvanceShowcase()
-	local ids = self.ShowcaseIds
-	if not ids or #ids == 0 then return end
-	self.ShowcaseIndex = (self.ShowcaseIndex % #ids) + 1
-	local seed = ArtifactCatalog.Seeds[ids[self.ShowcaseIndex]]
-	local info = ArtifactCatalog.GetRarityInfo(seed.RarityTier)
-	showArtifact(self.ShowcaseHost, seed.TemplateId)
-	self.ShowcaseName.Text = seed.DisplayName
-	self.ShowcaseTier.Text = string.format("%s  ·  %s", string.upper(info.Name), seed.Variant or "Standard")
-	self.ShowcaseTier.TextColor3 = info.Color
-	if self.ShowcaseRail then self.ShowcaseRail.Color = info.Color end
+-- Carousel geometry by distance from the centre slot: x offset from the middle, square size, and
+-- how see-through the silhouette is. Slots further than 2 away wait off-stage, hidden.
+local CAROUSEL_SLOTS: { [number]: { X: number, Size: number, Fade: number } } = {
+	[0] = { X = 0, Size = 128, Fade = 0 },
+	[1] = { X = 148, Size = 84, Fade = 0.15 },
+	[2] = { X = 248, Size = 58, Fade = 0.45 },
+	[3] = { X = 320, Size = 40, Fade = 1 },
+}
+
+-- The weapon's 3D model inside its preview viewport, with its rest pivot and bounding-box centre.
+local function carouselModel(slot: any): (Model?, CFrame?, Vector3?)
+	local viewport = slot.Host:FindFirstChild("ArtifactModelPreview")
+	local model = viewport and viewport:FindFirstChildWhichIsA("Model")
+	if not model then return nil, nil, nil end
+	if not slot.RestPivot then
+		slot.RestPivot = model:GetPivot()
+		slot.Center = (model:GetBoundingBox()).Position
+	end
+	return model, slot.RestPivot, slot.Center
 end
 
--- One rarity-coloured pill per tier with the live (luck-boosted) chance.
-function Forge:RenderSummonRates(luck: number)
-	local grid = self.SummonRateGrid
-	if not grid then return end
-	local rates = SummonLuck.ApplyLuck(ArtifactCatalog.Banner.BaseRarityRates, luck)
-	for tier = 1, #rates do
-		local info = ArtifactCatalog.GetRarityInfo(tier)
-		local pill = grid:FindFirstChild("Tier" .. tier)
-		if not pill then
-			pill = new("Frame", { Name = "Tier" .. tier, LayoutOrder = tier, BackgroundColor3 = GildedGrimoire.Ink, BackgroundTransparency = 0.35, BorderSizePixel = 0, ZIndex = 58 }, grid)
-			new("UICorner", { CornerRadius = UDim.new(0, 6) }, pill)
-			new("UIStroke", { Color = info.Color, Thickness = 1.4, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, pill)
-			local txt = label(pill, "", 11, readable(info.Color), Enum.Font.GothamBold)
-			txt.Name = "Text"
-			txt.Size = UDim2.fromScale(1, 1)
-			txt.TextXAlignment = Enum.TextXAlignment.Center
-			txt.ZIndex = 59
-			txt.FontFace = GildedGrimoire.Fonts.Number
-		end
-		(pill:FindFirstChild("Text") :: TextLabel).Text = string.format("%s %s%%", info.Name, formatPercent(rates[tier] * 100))
+-- Silhouette: the viewport image tinted black. The centre slot shows the real colours.
+local function setSilhouette(slot: any, on: boolean, fade: number)
+	local viewport = slot.Host:FindFirstChild("ArtifactModelPreview") :: ViewportFrame?
+	if viewport then
+		viewport.ImageColor3 = if on then Color3.new(0, 0, 0) else Color3.new(1, 1, 1)
+		viewport.ImageTransparency = fade
 	end
+	local fallback = slot.Host:FindFirstChild("WeaponFallbackIcon") :: GuiObject?
+	if fallback then
+		fallback.Visible = not on -- drawn icons can't be tinted; hide them off-centre
+	end
+end
+
+function Forge:LayoutCarousel(animate: boolean)
+	local slots = self.CarouselSlots
+	local n = #slots
+	if n == 0 then return end
+	local info = TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	for i, slot in ipairs(slots) do
+		-- Signed distance from the centre, wrapped so the carousel loops.
+		local d = (i - self.CarouselCenter) % n
+		if d > n / 2 then d -= n end
+		local geo = CAROUSEL_SLOTS[math.min(math.abs(d), 3)]
+		local sign = if d < 0 then -1 else 1
+		local position = UDim2.new(0.5, sign * geo.X, 0.56, 0)
+		local size = UDim2.fromOffset(geo.Size, geo.Size)
+		local onStage = math.abs(d) <= 2
+		slot.Host.ZIndex = 60 - math.abs(d)
+		local viewport = slot.Host:FindFirstChild("ArtifactModelPreview")
+		if viewport then viewport.ZIndex = slot.Host.ZIndex + 1 end
+		setSilhouette(slot, d ~= 0, geo.Fade)
+		if d ~= 0 then
+			-- Leaving the centre: put the model back at rest.
+			local model, rest = carouselModel(slot)
+			if model and rest then model:PivotTo(rest) end
+		end
+		if animate and onStage and slot.Host.Visible then
+			TweenService:Create(slot.Host, info, { Position = position, Size = size }):Play()
+		else
+			slot.Host.Position = position
+			slot.Host.Size = size
+		end
+		slot.Host.Visible = onStage
+	end
+	local center = slots[self.CarouselCenter]
+	self.CarouselAngle = 0
+	if self.CarouselName then
+		self.CarouselName.Text = string.format("%s  <font color=\"#F2A6A6\" size=\"12\">MYTHICAL · %s</font>",
+			center.Seed.DisplayName, string.upper(center.Seed.Variant or "Standard"))
+		self.CarouselName.RichText = true
+	end
+	if animate and self.CarouselHalo then
+		UIFeel.Pop(self.CarouselHalo, 0.08)
+	end
+end
+
+-- Turns the centre weapon slowly around its own vertical axis.
+function Forge:SpinCarouselCenter(dt: number)
+	local slot = self.CarouselSlots and self.CarouselSlots[self.CarouselCenter]
+	if not slot then return end
+	local model, rest, center = carouselModel(slot)
+	if not (model and rest and center) then return end
+	self.CarouselAngle = ((self.CarouselAngle or 0) + dt * 1.1) % (2 * math.pi)
+	model:PivotTo(CFrame.new(center) * CFrame.Angles(0, self.CarouselAngle, 0) * CFrame.new(-center) * rest)
 end
 
 -- Why a pull of `count` can't happen right now, or nil if it can.
@@ -1602,13 +1653,6 @@ function Forge:RenderSummonView()
 	if self.RarePityLabel then
 		local rarePity = profile and profile.ArtifactBanner10Pity or 0
 		self.RarePityLabel.Text = string.format("Rare+ guaranteed in <b>%d</b>", math.max(1, 10 - rarePity))
-	end
-	local luck = SummonLuck.ForProfile(profile)
-	self:RenderSummonRates(luck)
-	if self.SummonBlessingLabel then
-		self.SummonBlessingLabel.Text = if luck > 0
-			then string.format("God's Blessing: +%s%% to every tier above Common", formatPercent(luck * 100))
-			else "Assign Acolytes to God's Blessing to raise these odds"
 	end
 	self:RenderGoldChip()
 end
