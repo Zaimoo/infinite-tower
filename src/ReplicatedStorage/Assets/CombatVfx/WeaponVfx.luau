@@ -105,15 +105,15 @@ function WeaponVfx.Apply(model: Model, weaponType: string?, rarityIndex: number?
 		local glintUpper = Instance.new("ParticleEmitter")
 		glintUpper.Name = GLINT_EMITTER_NAME .. "_Upper"
 		glintUpper:SetAttribute(VFX_TAG, true)
-		glintUpper.Rate = math.clamp(profile.MoteRate * 0.5, 2, 5)
+		glintUpper.Rate = math.clamp(profile.MoteRate * 0.4, 1, 3)
 		glintUpper.Lifetime = NumberRange.new(0.5, 1.0)
 		glintUpper.Speed = NumberRange.new(0.15, 0.45)
 		glintUpper.SpreadAngle = Vector2.new(180, 180)
 		glintUpper.Color = colorSeq
 		glintUpper.Transparency = NumberSequence.new({
 			NumberSequenceKeypoint.new(0.0, 1.0),
-			NumberSequenceKeypoint.new(0.2, 0.15),
-			NumberSequenceKeypoint.new(0.7, 0.40),
+			NumberSequenceKeypoint.new(0.2, 0.40),
+			NumberSequenceKeypoint.new(0.7, 0.65),
 			NumberSequenceKeypoint.new(1.0, 1.0),
 		})
 		glintUpper.Size = NumberSequence.new({
@@ -121,8 +121,8 @@ function WeaponVfx.Apply(model: Model, weaponType: string?, rarityIndex: number?
 			NumberSequenceKeypoint.new(0.5, 0.28),
 			NumberSequenceKeypoint.new(1.0, 0.0),
 		})
-		glintUpper.LightEmission = 0.85
-		glintUpper.LightInfluence = 0.15
+		glintUpper.LightEmission = 0.45
+		glintUpper.LightInfluence = 0.55
 		glintUpper.Parent = vfxTip
 
 		local glintLower = glintUpper:Clone()
@@ -137,11 +137,11 @@ function WeaponVfx.Apply(model: Model, weaponType: string?, rarityIndex: number?
 		trail.Attachment1 = vfxTip
 		trail.FaceCamera = true
 		trail.Lifetime = if band >= 4 then 0.28 elseif band >= 2 then 0.22 else 0.18
-		trail.LightEmission = 0.85
-		trail.LightInfluence = 0.15
+		trail.LightEmission = 0.50
+		trail.LightInfluence = 0.50
 		trail.Color = colorSeq
 		trail.Transparency = NumberSequence.new({
-			NumberSequenceKeypoint.new(0.0, if band >= 4 then 0.10 elseif band >= 2 then 0.18 else 0.28),
+			NumberSequenceKeypoint.new(0.0, if band >= 4 then 0.25 elseif band >= 2 then 0.32 else 0.40),
 			NumberSequenceKeypoint.new(0.6, 0.45),
 			NumberSequenceKeypoint.new(1.0, 1.0),
 		})
@@ -177,17 +177,17 @@ function WeaponVfx.Apply(model: Model, weaponType: string?, rarityIndex: number?
 		motes.Color = colorSeq
 		motes.Transparency = NumberSequence.new({
 			NumberSequenceKeypoint.new(0.0, 1.0),
-			NumberSequenceKeypoint.new(0.2, 0.20),
-			NumberSequenceKeypoint.new(0.8, 0.50),
+			NumberSequenceKeypoint.new(0.2, 0.45),
+			NumberSequenceKeypoint.new(0.8, 0.70),
 			NumberSequenceKeypoint.new(1.0, 1.0),
 		})
 		motes.Size = NumberSequence.new({
-			NumberSequenceKeypoint.new(0.0, 0.15),
-			NumberSequenceKeypoint.new(0.5, 0.32),
-			NumberSequenceKeypoint.new(1.0, 0.08),
+			NumberSequenceKeypoint.new(0.0, 0.10),
+			NumberSequenceKeypoint.new(0.5, 0.22),
+			NumberSequenceKeypoint.new(1.0, 0.05),
 		})
-		motes.LightEmission = 0.85
-		motes.LightInfluence = 0.15
+		motes.LightEmission = 0.45
+		motes.LightInfluence = 0.55
 		motes.Parent = vfxCore
 	end
 
@@ -209,17 +209,17 @@ function WeaponVfx.Apply(model: Model, weaponType: string?, rarityIndex: number?
 		})
 		aura.Transparency = NumberSequence.new({
 			NumberSequenceKeypoint.new(0.0, 1.0),
-			NumberSequenceKeypoint.new(0.2, 0.40),
-			NumberSequenceKeypoint.new(0.7, 0.60),
+			NumberSequenceKeypoint.new(0.2, 0.65),
+			NumberSequenceKeypoint.new(0.7, 0.80),
 			NumberSequenceKeypoint.new(1.0, 1.0),
 		})
 		aura.Size = NumberSequence.new({
-			NumberSequenceKeypoint.new(0.0, 0.22),
-			NumberSequenceKeypoint.new(0.5, 0.50),
-			NumberSequenceKeypoint.new(1.0, 0.12),
+			NumberSequenceKeypoint.new(0.0, 0.15),
+			NumberSequenceKeypoint.new(0.5, 0.35),
+			NumberSequenceKeypoint.new(1.0, 0.08),
 		})
-		aura.LightEmission = 0.85
-		aura.LightInfluence = 0.15
+		aura.LightEmission = 0.35
+		aura.LightInfluence = 0.65
 		aura.Parent = vfxCore
 
 		-- Band 4+: Stave tip auras for full-body radiance

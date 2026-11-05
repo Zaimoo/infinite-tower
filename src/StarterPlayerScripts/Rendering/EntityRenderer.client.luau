@@ -42,29 +42,6 @@ local RenderGroundParams = RaycastParams.new()
 RenderGroundParams.FilterType = Enum.RaycastFilterType.Exclude
 RenderGroundParams.IgnoreWater = true
 
-local function clampInterpolatedGroundY(pos: Vector3, fromPos: Vector3, goalPos: Vector3, model: Model): Vector3
-	if math.abs(goalPos.Y - fromPos.Y) < 0.35 then
-		return pos
-	end
-	local flatSpan = Vector3.new(goalPos.X - fromPos.X, 0, goalPos.Z - fromPos.Z).Magnitude
-	if flatSpan < 0.25 or flatSpan > TELEPORT_SNAP_DISTANCE then
-		return pos
-	end
-	local filter = { VisualFolder, model }
-	if LocalPlayer and LocalPlayer.Character then
-		table.insert(filter, LocalPlayer.Character)
-	end
-	RenderGroundParams.FilterDescendantsInstances = filter
-	local hit = Workspace:Raycast(pos + Vector3.new(0, 3.2, 0), Vector3.new(0, -6.4, 0), RenderGroundParams)
-	if hit and hit.Instance and hit.Instance.CanCollide and hit.Normal.Y >= 0.65 then
-		local minY = math.min(fromPos.Y, goalPos.Y) - 0.6
-		local maxY = math.max(fromPos.Y, goalPos.Y) + 1.6
-		if hit.Position.Y >= minY and hit.Position.Y <= maxY and math.abs(hit.Position.Y - pos.Y) <= 2.2 then
-			return Vector3.new(pos.X, math.max(pos.Y, hit.Position.Y), pos.Z)
-		end
-	end
-	return pos
-end
 local CombatFeedback=require(ReplicatedStorage.Assets.CombatFeedback).new(VisualFolder)
 local CombatVfx = ReplicatedStorage.Assets:WaitForChild("CombatVfx")
 local SkillVfx = require(CombatVfx:WaitForChild("SkillVfx"))
@@ -92,6 +69,30 @@ local TELEPORT_SNAP_DISTANCE = 85.0
 local LOD_FULL_RATE_DISTANCE = 140
 local LOD_STEP_SECONDS = 1 / 15
 local HIGHLIGHT_DISTANCE = 180
+
+local function clampInterpolatedGroundY(pos: Vector3, fromPos: Vector3, goalPos: Vector3, model: Model): Vector3
+	if math.abs(goalPos.Y - fromPos.Y) < 0.35 then
+		return pos
+	end
+	local flatSpan = Vector3.new(goalPos.X - fromPos.X, 0, goalPos.Z - fromPos.Z).Magnitude
+	if flatSpan < 0.25 or flatSpan > TELEPORT_SNAP_DISTANCE then
+		return pos
+	end
+	local filter = { VisualFolder, model }
+	if LocalPlayer and LocalPlayer.Character then
+		table.insert(filter, LocalPlayer.Character)
+	end
+	RenderGroundParams.FilterDescendantsInstances = filter
+	local hit = Workspace:Raycast(pos + Vector3.new(0, 3.2, 0), Vector3.new(0, -6.4, 0), RenderGroundParams)
+	if hit and hit.Instance and hit.Instance.CanCollide and hit.Normal.Y >= 0.65 then
+		local minY = math.min(fromPos.Y, goalPos.Y) - 0.6
+		local maxY = math.max(fromPos.Y, goalPos.Y) + 1.6
+		if hit.Position.Y >= minY and hit.Position.Y <= maxY and math.abs(hit.Position.Y - pos.Y) <= 2.2 then
+			return Vector3.new(pos.X, math.max(pos.Y, hit.Position.Y), pos.Z)
+		end
+	end
+	return pos
+end
 
 -- The hero rig inside a rendered entity when it was built by HeroRegistry (Phase 3 rigs).
 local function heroRig(model: Model): Model?
