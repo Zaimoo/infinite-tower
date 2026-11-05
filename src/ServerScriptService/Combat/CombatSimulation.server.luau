@@ -1,4 +1,5 @@
 --!strict
+debug.setmemorycategory("CombatSim")
 -- ServerScriptService/Combat/CombatSimulation.server.luau
 -- 5 Hz (0.20s) Server-Authoritative Tower Combat & Encounter Simulation
 
@@ -2868,7 +2869,7 @@ Players.PlayerRemoving:Connect(function(player: Player)
 end)
 
 local accumulator = 0.0
-RunService.Heartbeat:Connect(function(deltaTime: number)
+local function stepCombatHeartbeat(deltaTime: number)
 	-- Movement/acquisition stays at 5 Hz; scheduled contacts resolve each heartbeat.
 	Encounters:StepActions()
 	HeroImpacts:Drain(os.clock(), canReleaseHeroImpact, resolveHeroImpact)
@@ -2880,7 +2881,9 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 	local dt = accumulator
 	accumulator = 0.0
 	local now = os.clock()
+	debug.profilebegin("CombatSim.Encounters")
 	Encounters:Tick(dt)
+	debug.profileend()
 
 	for player in pairs(ActiveMasters) do
 		local rootPos = getMasterRootPosition(player)
@@ -2905,6 +2908,7 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 		end
 	end
 
+	debug.profilebegin("CombatSim.Heroes")
 	for _, simHero in pairs(ActiveHeroesByNetId) do
 		stepHeroSimulation(simHero, dt, now)
 		-- Phase 6: the tower sanctuary is where standing heroes recover. Downed heroes only stand back up on a transition.
@@ -2913,6 +2917,7 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 			simHero.CurrentHP = math.min(simHero.MaxHP, simHero.CurrentHP + simHero.MaxHP * TowerHardcore.SanctuaryHealPerSecond * dt)
 		end
 	end
+	debug.profileend()
 	stepDuels(now)
 	stepContests(now)
 
@@ -2966,8 +2971,15 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 	-- Carried loot does not despawn while held by a player.
 	snapshotTick += 1
 	if snapshotTick % SNAPSHOT_EVERY_TICKS == 0 then
+		debug.profilebegin("CombatSim.Snapshot")
 		broadcastReplicationSnapshot(now)
+		debug.profileend()
 	end
+end
+RunService.Heartbeat:Connect(function(deltaTime: number)
+	debug.profilebegin("CombatSim.Heartbeat")
+	stepCombatHeartbeat(deltaTime)
+	debug.profileend()
 end)
 
 local function warpSquad(player: Player, targetPos: Vector3, isIsland: boolean)

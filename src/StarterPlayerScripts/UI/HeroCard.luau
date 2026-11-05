@@ -125,7 +125,7 @@ local function buildRig(entry: Lazy)
 	entry.Model = model
 end
 
-RunService.Heartbeat:Connect(function()
+local function stepLazyRigs()
 	-- Look at a slice of the portraits each frame, dropping destroyed ones as we pass.
 	local n = math.min(CHECKS_PER_FRAME, #entries)
 	for _ = 1, n do
@@ -153,6 +153,11 @@ RunService.Heartbeat:Connect(function()
 			built += 1
 		end
 	end
+end
+RunService.Heartbeat:Connect(function()
+	debug.profilebegin("HeroCard.LazyRigs")
+	stepLazyRigs()
+	debug.profileend()
 end)
 
 local function portraitImage(parent: Instance, image: string): ImageLabel
