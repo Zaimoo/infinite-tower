@@ -178,13 +178,31 @@ local function applyGothicStyle(container: GuiObject, style: GothicBoxStyle.Goth
 	return GothicBoxStyle.Apply(container, options)
 end
 
--- Re-tones a button in place (safe to call on every render): Gilded Grimoire frame in `tone`, with any
--- legacy GothicBoxStyle gradient removed so only one fill applies.
+-- Re-tones a button in place (safe to call on every render): Gilded Grimoire frame in `tone`.
+-- A UIGradient on a TextButton also tints its own text, so buttons that carry text get a solid
+-- fill (the tone's top colour, a little shaded) instead of the gradient; others keep the gradient.
 local function toneButton(btn: GuiObject, tone: string)
 	for _, child in btn:GetChildren() do
-		if child:IsA("UIGradient") and child.Name ~= "GrimoireFill" then child:Destroy() end
+		if child:IsA("UIGradient") then child:Destroy() end
 	end
-	GildedGrimoire.Reframe(btn, { Class = "Button", Tone = tone, ZIndex = btn.ZIndex + 1 })
+	local hasText = (btn:IsA("TextButton") or btn:IsA("TextLabel")) and (btn :: any).Text ~= ""
+	GildedGrimoire.Reframe(btn, { Class = "Button", Tone = tone, Fill = not hasText, ZIndex = btn.ZIndex + 1 })
+	if hasText then
+		local t = GildedGrimoire.Tones[tone] or GildedGrimoire.Tones.Slate
+		btn.BackgroundColor3 = t.Top:Lerp(t.Bottom, 0.3)
+		btn.BackgroundTransparency = 0
+	end
+end
+
+-- Filter tabs and chips: the active one is Gold with dark ink text (light text vanishes on gold),
+-- the rest are Slate with near-white text.
+local FILTER_TEXT = Color3.fromRGB(240, 234, 250)
+local FILTER_TEXT_ACTIVE = Color3.fromRGB(30, 18, 6)
+local function styleFilter(btn: GuiObject, active: boolean)
+	toneButton(btn, if active then "Gold" else "Slate")
+	if btn:IsA("TextButton") then
+		btn.TextColor3 = if active then FILTER_TEXT_ACTIVE else FILTER_TEXT
+	end
 end
 
 local function cornerDiamonds(parent: GuiObject, size: number, color: Color3?)
@@ -2793,7 +2811,7 @@ end
 function Forge:StyleAssignFilters()
 	for key, chip in self.AssignFilterChips or {} do
 		local active = self.AssignFilter == key
-		toneButton(chip, if active then "Gold" else "Slate")
+		styleFilter(chip, active)
 	end
 end
 
@@ -2989,7 +3007,7 @@ function Forge:BuildArtifactsModal(gui: ScreenGui)
 		Active = true,
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.5),
-		Size = UDim2.fromOffset(840, 540),
+		Size = UDim2.fromOffset(WIDTH, HEIGHT), -- same size as the Forge window
 		BackgroundColor3 = C.Panel,
 		BorderSizePixel = 0,
 		ZIndex = 66,
@@ -2997,7 +3015,7 @@ function Forge:BuildArtifactsModal(gui: ScreenGui)
 	GildedGrimoire.Frame(win, { Class = "Window", Tone = "Deep", ZIndex = 66 })
 	win.Activated:Connect(function() end)
 	self.ArtifactsModalScale = new("UIScale", {}, win)
-	ModalFit.Bind(win, self.ArtifactsModalScale, 840, 540)
+	ModalFit.Bind(win, self.ArtifactsModalScale, WIDTH, HEIGHT)
 
 	-- Header
 	local headerIcon = GrimoireIcons.Create("Forge", 36, win, 68)
@@ -3091,8 +3109,8 @@ function Forge:BuildArtifactsModal(gui: ScreenGui)
 			BorderSizePixel = 0,
 			ZIndex = 68,
 		}, tabsRow)
-		toneButton(tabBtn, if entry.Key == "ALL" then "Gold" else "Slate")
 		grimoireButtonText(tabBtn)
+		styleFilter(tabBtn, entry.Key == "ALL")
 		if entry.Key ~= "ALL" then
 			local icon = GrimoireIcons.Create(ARCHETYPE_ICON[entry.Key], 20, tabBtn, 71)
 			icon.AnchorPoint = Vector2.new(0, 0.5)
@@ -3101,7 +3119,7 @@ function Forge:BuildArtifactsModal(gui: ScreenGui)
 		tabBtn.Activated:Connect(function()
 			self.ArtifactsModalFilter = entry.Key
 			for k, b in pairs(self.ModalTabBtns) do
-				toneButton(b, if k == entry.Key then "Gold" else "Slate")
+				styleFilter(b, k == entry.Key)
 			end
 			self:RenderArtifactsCatalog(entry.Key)
 		end)
@@ -3141,6 +3159,9 @@ end
 function Forge:OpenArtifactsModal()
 	if not self.ArtifactsModal then return end
 	self.ArtifactsModal.Visible = true
+	for key, tab in self.ModalTabBtns or {} do
+		styleFilter(tab, key == (self.ArtifactsModalFilter or "ALL"))
+	end
 	self:RenderArtifactsRates()
 	self:RenderArtifactsCatalog(self.ArtifactsModalFilter or "ALL")
 end
