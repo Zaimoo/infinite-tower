@@ -3007,7 +3007,7 @@ function Forge:BuildArtifactsModal(gui: ScreenGui)
 		Active = true,
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.5),
-		Size = UDim2.fromOffset(WIDTH, HEIGHT) -- same size as the Forge window,
+		Size = UDim2.fromOffset(WIDTH, HEIGHT), -- same size as the Forge window
 		BackgroundColor3 = C.Panel,
 		BorderSizePixel = 0,
 		ZIndex = 66,
