@@ -439,7 +439,8 @@ function Builder.Build(id: number, generation: number): any
 		local a=origin+Vector3.new(pad.AX,pad.AY,pad.AZ)
 		local b=origin+Vector3.new(pad.BX,pad.BY,pad.BZ)
 		local p=part(model,"TraversalLanding",Vector3.new(pad.Width,2,(b-a).Magnitude),(a+b)/2,theme.TrimColor,theme.TrimMaterial)
-		p.CFrame=CFrame.lookAt((a+b)/2,b)*CFrame.new(0,-1,0)
+		-- Top sits 0.05 above the terrace/ramp planes so coplanar faces never z-fight at joins.
+		p.CFrame=CFrame.lookAt((a+b)/2,b)*CFrame.new(0,-0.95,0)
 		structure(p,id)
 	end
 	for _, link in layout.Links do
