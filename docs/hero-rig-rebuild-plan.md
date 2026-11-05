@@ -17,7 +17,7 @@ Out of scope: hero stats, kits, gacha and the server combat simulation. The towe
 | Problem | Where | Effect |
 | --- | --- | --- |
 | Two incompatible sources per hero | `HeroModelBuilder.BuildX()` vs the Studio-only `ServerStorage.ModelViewer.JennaPreview` | Jenna's live rig is a clone of a hand-made Studio model with baked aiming rotations in `Motor6D.C0`. The builder now patches it at runtime (`normalizeR15Joints`, `JENNA_IDLE_OFFSETS`). |
-| Unsafe Studio asset | `JennaPreview.RightUpperArm.CrystalPauldron.LightConfig` | Obfuscated external module loader (P1 in `docs/reviews/2026-10-21/CURRENT_SYSTEMS_REVIEW.md`). `EnsureHeroes` strips it on clone, but the source model still carries it. |
+| Unsafe Studio asset | `JennaPreview.RightUpperArm.CrystalPauldron.LightConfig` | Obfuscated external module loader (P1 in the 2026-10-21 systems review, since removed). `EnsureHeroes` strips it on clone, but the source model still carries it. |
 | Rigs from `CreateHumanoidModelFromDescription` | `createBaseR15` | Part sizes and attachment positions come from Roblox's default bundle, not from us. The Humanoid is created and then destroyed. |
 | Cosmetics cross joints | e.g. Jenna's `LeatherCuff` is welded to the forearm but wraps the hand | Any wrist rotation visibly twists the hand out of its glove. |
 | Rigs carry gear | Aaron's sculpted `KiteShield`; a baked `EquippedWeapon` on JennaPreview | `EquipWeapon` needs special cases (skip the shield "if the rig already sculpts one"). |
@@ -144,7 +144,7 @@ Each phase lands as its own PR off `main`. The game stays playable between phase
   - Deleted the three flat copies in `ServerStorage.TowerRebuildPart2Recovery_20261021.Sources` (named `ReplicatedStorage.Assets.Heroes.hero_jenna.RightUpperArm.CrystalPauldron.LightConfig`, `...LightConfig.Type`, `...LightConfig.EasyConfigurati`).
   - A full-place scan afterwards finds nothing named `LightConfig` or `EasyConfiguration*`. The `CrystalPauldron` part itself (geometry only) remains.
 - **Parked:** `feat/jenna-idle-stance` holds local commit `79b7661` (idle stance, Weld bow grip, tiered bow attacks, arrow VFX, `HERO_ATTACK`, `HeroAssetSetup` count fix). It is not pushed and not for merge.
-- **Reference screenshots** of all 12 current heroes are in `docs/hero-rig-rebuild/reference/` (3 front groups, side lineup, Jenna close-up).
+- **Reference screenshots** of all 12 current heroes were captured during the rebuild (3 front groups, side lineup, Jenna close-up) and removed in the docs cleanup.
 - **Measurements from the current rigs:**
   - `HumanoidRootPart` sits **3.19** studs above the soles, not 3.0. The new spec should pick one value and make `EntityRenderer` and `ArtPackVisuals.Attach` agree with it.
   - Part counts: Jenna 70; the other 11 heroes 19–30. Jenna is over the 60-part budget.
@@ -191,7 +191,7 @@ Each phase lands as its own PR off `main`. The game stays playable between phase
   - `tests/hero-rig.spec.luau` (in `tests/run.ps1`): 729 checks pass. It covers structure and build order, ground contract, pivots on parts, rig attachments as pure translations on the pivots, required sockets, grips inside the fist, left/right symmetry, limb clearance, equal hands, the axis convention via rotation math, and rejection of unknown body types.
   - `tests/studio-hero-rigs.luau` (Server DataModel of a playtest): 315 checks pass on all three body types. It covers structure, identity-rotation `C0`/`C1`, attachments meeting at joints, the ground contract, every `AxisChecks` rule against the live engine, and grip orientation (at rest it looks down the arm with up forward; with the shoulder at +90° it looks forward with up vertical).
 - **How the Studio test ran:** Rojo could not sync, because another Team Create user holds the Rojo session lock. The modules were injected as temporary ModuleScripts into the playtest's Server DataModel from the repo files (comments stripped, code identical), and discarded when the playtest stopped. The shared place was not changed.
-- **Screenshot:** `docs/hero-rig-rebuild/phase-1/body-types-slim-standard-heavy.jpg`.
+- **Screenshots:** removed in the docs cleanup.
 
 ### Phase 2: Sockets and weapon prefabs
 
@@ -239,7 +239,7 @@ Each phase lands as its own PR off `main`. The game stays playable between phase
     - **Axe:** it is held near the butt.
     - **Unequip:** it clears the weapon.
 - **How the Studio test ran:** the Rojo lock was still held by another Team Create user. The playtest server fetched the five changed files from a temporary 127.0.0.1-only file server and loaded them as play-only ModuleScripts; the shared place was not changed.
-- **Screenshots:** `docs/hero-rig-rebuild/phase-2/`.
+- **Screenshots:** removed in the docs cleanup.
 
 ### Phase 3: Costumes for all 12 heroes
 
@@ -278,7 +278,7 @@ Each phase lands as its own PR off `main`. The game stays playable between phase
   - `studio-hero-rigs.luau`: 564 checks, all passing in a playtest. Per hero it checks the budget, one Part per piece, no meshes or scripts, at most the face decal, and one `Weld` per piece to its parent bone. In a mixed pose (shoulder, elbow, neck, knee), pieces stay attached with drift under 0.001 studs. It also builds an armed copy of every hero through `HeroSockets`.
 - **Live-path check (playtest only):** after `HeroRegistry.EnsureHeroes()` ran on the playtest server, `EntityRenderer` rebuilt the squad (Jenna, Han) from the new templates. The legacy `ArtPackVisuals.EquipWeapon` still put the bow in Jenna's left hand (0.05 studs) and the daggers in Han's right hand. Roots sit 3.0 above the soles, matching the renderer's assumption. Output showed no new errors. Until Phase 4–5, heroes use the legacy procedural poses and legacy grips on the new rigs, so weapon angles look generic (for example Jenna's bow is held flat at the hip).
 - **How the Studio checks ran:** this branch was not synced into the shared Team Create place, because Rojo would push unmerged code that changes the live hero models. The checks ran on files loaded into playtests from a temporary 127.0.0.1-only file server.
-- **Screenshots:** `docs/hero-rig-rebuild/phase-3/` (three front groups, Jenna front and back, armed row).
+- **Screenshots:** removed in the docs cleanup.
 
 ### Phase 4: Animator and clips
 
@@ -306,7 +306,7 @@ Each phase lands as its own PR off `main`. The game stays playable between phase
 - **Tests:**
   - `hero-rig.spec.luau`: 10,914 checks. Every weapon type has every state; keys are sorted 0..1; joint names are valid; rotations are within 180°. Loops and actions end on their starting pose. Knees never bend forward and elbows never hyperextend. Overrides point at real heroes, `Get` fallbacks are correct, and every catalog weapon type has clips.
   - `studio-hero-rigs.luau`: 677 checks, all passing in a playtest. For each weapon type on its showcase hero (Han unarmed and daggers, Jenna bow, Aaron sword and shield, Catio axe, Eolka staff, Valeria tome), every state is sampled at 11 frames. The weapon never touches the head, and the hands never enter the torso. At full draw the bow is vertical with the arrow forward. The animator reads the rig's attributes, starts on Jenna's override, keeps the legs walking under an attack while moving, clears finished actions, lowers the body in `Coma`, and rejects action states as locomotion.
-- **Screenshots** (`docs/hero-rig-rebuild/phase-4/`): Jenna and Aaron posed in each state. `Motor6D.Transform` does not replicate, so previews and the live renderer must pose rigs on the client. Phase 5 runs `HeroAnimator` in `EntityRenderer`.
+- **Screenshots** (removed in the docs cleanup): Jenna and Aaron posed in each state. `Motor6D.Transform` does not replicate, so previews and the live renderer must pose rigs on the client. Phase 5 runs `HeroAnimator` in `EntityRenderer`.
 - **Not wired into the game yet:** `EntityRenderer` still calls `ArtPackVisuals.Animate`. Phase 5 switches heroes to `HeroAnimator`, `HeroSockets` and `HeroRegistry`, and drives `PlayAction` from attack events (the animations plan's `HERO_ATTACK` tiers).
 
 ### Phase 5: Migrate consumers
@@ -333,7 +333,7 @@ Skills consulted: `roblox-characters-animation`, `roblox-performance`, `roblox-n
   - Legacy rigs get the `AttackAnimTier`/`AttackAnimStartClock`/`AttackAnimDuration` fields that `ArtPackVisuals.Animate` already read but nothing set.
   - It is cosmetic, so a dropped packet only skips one swing.
 - **`HeroLoadout.luau`** (new) resolves the prefab with the pure `HeroSockets.ResolvePrefab` (the artifact's own type wins), clones it, styles it and sockets it, and sets the entity's `EquippedArtifactId`/`Type` attributes.
-  - Weapon styling (crystal greatbow, recurve, rarity ≥ 14 glow) moved into `WeaponModelBuilder.Style`, which `ArtPackVisuals.EquipWeapon` now calls too. Behaviour is unchanged.
+  - Weapon styling (crystal greatbow, recurve, rarity ≥ 14 glow, since lowered to ≥ 5) moved into `WeaponModelBuilder.Style`, which `ArtPackVisuals.EquipWeapon` now calls too. Behaviour is unchanged.
 - **`HeroAnimator.ApplyStaticPose`:** poses anchored clones by writing part CFrames down the joint chain, then moving welded pieces. `ViewportFrame`s never simulate joints. `HeroCard.Portrait` uses it to show each hero's `Idle` first frame (Jenna's signature stance).
 - **`PlotManager`:**
   - Infirmary workers' rig root is now anchored. Hero templates are unanchored assemblies, so before this the cloned worker was held by nothing and fell.
@@ -354,7 +354,7 @@ Skills consulted: `roblox-characters-animation`, `roblox-performance`, `roblox-n
   - The plot worker anchor (no infirmary workers in the test profile).
   - A 2-client playtest. Studio MCP only starts single-client Play.
   - Run all three in Studio after merge with Rojo synced.
-- **Screenshot:** `docs/hero-rig-rebuild/phase-5/live-squad-attacking.jpg`.
+- **Screenshots:** removed in the docs cleanup.
 - **Possible follow-ups:**
   - `IKControl` for the bow draw hand (to the string) and foot planting during crouches; a shared `Hit` reaction keyed to incoming damage on a hero.
 
@@ -388,7 +388,7 @@ Skills consulted: `roblox-characters-animation`, `roblox-performance`, `roblox-n
 - **Checks:**
   - **References:** `grep` over `src/` finds no references to the removed code, apart from one provenance comment in `HeroCostumes` noting that Jenna was rebuilt from the JennaPreview inventory.
   - **Offline:** `pwsh tests/run.ps1` passes, with 10,945 hero rig checks.
-  - **Studio playtest:** `studio-hero-rigs.luau` passes 677 checks; the trimmed `ArtPackVisuals` loads with its remaining API (`Animate`, `Attach`, `AttachAt`, `Mesh`, `Resolve`, `SetChestState`, `Template`); and the model viewer built all 12 heroes armed and posed (screenshots in `docs/hero-rig-rebuild/phase-6/`).
+  - **Studio playtest:** `studio-hero-rigs.luau` passes 677 checks; the trimmed `ArtPackVisuals` loads with its remaining API (`Animate`, `Attach`, `AttachAt`, `Mesh`, `Resolve`, `SetChestState`, `Template`); and the model viewer built all 12 heroes armed and posed (screenshots in screenshots removed in the docs cleanup).
 
 ### Rebuild complete
 

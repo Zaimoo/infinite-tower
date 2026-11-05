@@ -244,7 +244,7 @@ Overrides.hero_x = { Idle = breathe(stance, 3.0), --[[ existing attack overrides
 - [ ] Hair imported by the user; orientation verified; added to `MESHES`; piece placed; fit checked from four sides (§4.5)
 - [ ] Idle stance override added; clip tests pass (§4.6)
 - [ ] `pwsh tests/run.ps1` passes; Studio lineup reviewed; temporary objects removed (§4.7)
-- [ ] Docs updated if a contract changed (`hero-rig-rebuild-plan.md` decisions, `technical_architecture.md` §6.3)
+- [ ] Docs updated if a contract changed (`hero-rig-rebuild-plan.md` decisions)
 
 ---
 
