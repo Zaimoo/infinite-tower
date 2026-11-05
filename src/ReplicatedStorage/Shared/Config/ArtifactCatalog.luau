@@ -184,20 +184,20 @@ for tier, info in pairs(Rarities) do
 end
 
 local RarityBaseSellPrice: { [number]: number } = {
-	[1] = 1000,
-	[2] = 2500,
-	[3] = 6000,
-	[4] = 15000,
-	[5] = 40000,
-	[6] = 100000,
-	[7] = 300000,
+	[1] = 100,
+	[2] = 250,
+	[3] = 600,
+	[4] = 1500,
+	[5] = 5000,
+	[6] = 12000,
+	[7] = 40000,
 }
 ArtifactCatalog.RarityBaseSellPrice = RarityBaseSellPrice
 
 function ArtifactCatalog.CalculateSellPrice(rarity: number, star: number): number
 	local r = math.clamp(math.floor(rarity or 1), 1, 7)
 	local s = math.clamp(math.floor(star or 1), 1, 7)
-	local basePrice = RarityBaseSellPrice[r] or 1000
+	local basePrice = RarityBaseSellPrice[r] or 100
 	return math.floor(basePrice * (1 + 0.5 * (s - 1)))
 end
 

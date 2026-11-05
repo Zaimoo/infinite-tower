@@ -1,193 +1,243 @@
-# Implementation Plan: Blacksmith Forge Roll System Redesign (Full 84-Weapon Matrix & Index Integration)
+# Forge Roll System Redesign — Revision 2 (audit, fixes, Gilded Grimoire UI)
 
-An architectural, economic, and visual redesign of the Blacksmith Forge Artifact Summoning system in *Infinite Tower*, transitioning from the legacy Gems/Crafting model into a pure Gold-driven Gacha economy with inherent rarity tiers, 1★ summon baselines, God's Blessing luck scaling, 50-item inventory limits, artifact liquidation (selling for Gold), 120-pull Exalted+ hard pity, a comprehensive **84-weapon roster** (2 artifacts per archetype per rarity tier), full **Weapon Index compendium integration** (`HeroIndex.luau`), banner catalog inspection, and complete removal of legacy crafting and boss-drop systems.
+Revision 1 of this plan (commit `fd126ed`) moved the Blacksmith Forge to a Gold banner with an 84-weapon roster, 1★ drops, a 120-pull Exalted+ pity, selling and a 50-item cap. Most of it shipped in `1394c97`. This revision records what the audit of that commit found, fixes what is broken, re-tunes the sell economy, and redesigns the Forge screens in **Gilded Grimoire** (`docs/ui/GILDED_GRIMOIRE.md`).
 
----
-
-## 1. Executive Summary & Goals
-
-| Core Area | Current State | Target Redesign |
-| :--- | :--- | :--- |
-| **Summon Currency** | Gems (160 / 1,600) | **Gold**: 5,000 Gold (1x) / 45,000 Gold (10x) (10% bulk discount) |
-| **Summon Luck** | Applied to 4 star pools (`{ 0.50, 0.35, 0.12, 0.03 }`) | Fully integrated with **7 Rarity Tiers** via `SummonLuck.ApplyLuck` powered by God's Blessing |
-| **Inventory Limits** | Unbounded table additions | **Hard cap of 50** for both Heroes and Artifacts (reject summons when full) |
-| **Rolled Star Rank** | Dropped as 1★, 2★, 3★, 4★, or 5★ depending on seed | **All summoned artifacts drop at 1★**; star progression ($1★ \to 7★$) is exclusive to Forge duplicate promotion |
-| **Artifact Roster** | 42 templates spread across 6 archetypes with crafting costs | **84 Weapons total**: Strictly **2 artifacts per archetype per rarity tier** (6 archetypes $\times$ 7 tiers $\times$ 2 variants: 1 Standard $1.00\times$ power, 1 Enhanced $1.20\times$ power) |
-| **Weapon Index** | 42 hardcoded items tied to deprecated crafting recipe order | **Full 84-weapon compendium integration in `HeroIndex.luau`**: category tags (84 Total, 14 per Archetype), `CatalogOrder` sequence, live collection progress, and Forge Gacha acquisition display |
-| **Banner Pity** | 50 pulls guaranteed 5★ weapon | **120 pulls guaranteed Exalted (Tier 5+) or higher** (matching Hero banner `MaxPity = 120`); 10-pull guarantees Rare (Tier 3+) |
-| **Artifact Disposal** | None (only consumed as promotion donors) | **Sell for Gold** (single & multi-select liquidation) |
-| **Banner Inspection** | Static banner visual with no in-engine odds sheet | **"View Artifacts" modal panel** with archetype & rarity tabs, displaying full catalog, live drop rates, and stat comparisons |
-| **Legacy Code** | Crafting materials (`IronGear`, etc.), boss drops (`GrantBossArtifact`) | **Completely purged** from codebase, data models, remotes, and test suites |
-| **Documentation** | GDD §7 still discusses Gems, 42 weapons, and boss drops | **GDD §4 & §7 fully updated** with new economy and rules |
+The 84-weapon roster itself is unchanged and is kept as the appendix. `ArtifactCatalog.luau` is now its source of truth.
 
 ---
 
-## 2. Architecture & Data Schema Changes
+## 1. What shipped and works
 
-### 2.1 Artifact Catalog Configuration (`ArtifactCatalog.luau`)
+| Area | State |
+| :--- | :--- |
+| Roster | 84 seeds, 2 per archetype per tier, `CatalogOrder` matches `Seeds` exactly, `RosterByTierAndType` and `GetTierPair` resolve every pair. Every legacy template ID survived, so old references still resolve. |
+| Banner config | Gold, 5,000 / 45,000, `MaxPity = 120`, `PityRarity = 5`, 7-tier `BaseRarityRates` (sum 1.0). |
+| Server summon | Gold deduction, cap check before deduction, luck via `SummonLuck.ApplyLuck`, 10-pull Rare+ guarantee (rolling counter `ArtifactBanner10Pity`), pity reset on Exalted+, uniform archetype, 60/40 variant, 1★ drops, onboarding report, Blessing pulse. |
+| Hero cap | `RequestSummon` rejects pulls past 50 heroes. |
+| Selling | `RequestSellArtifacts` remote with plot, onboarding, equipped and locked guards. |
+| Cleanup | `CraftArtifact`, `GrantBossArtifact`, `BossArtifactRarity` and the CombatSimulation hook are gone. |
+| Index | 84-weapon tags, `CatalogOrder` enumeration, rarity from `seed.RarityTier`. |
+| Tests | `tests/run.ps1` compiles and every suite passes. |
+
+---
+
+## 2. Bugs found (fix first)
+
+Ranked by severity. File references are to the current branch.
+
+### P0 — breaks play or the economy
+
+1. **Assign tab crashes whenever it renders a card.** `updateCard` in `ForgeController.luau` (≈ line 811) is a plain `local function`, but its sell-mode block reads `self.SellMode` and `self.SelectedSellUUIDs`. There is no `self` in scope, so every render throws `attempt to index nil`. The Assign tab, sell mode and the equip flow all die with it. The compile-only test run cannot catch this.
+   **Fix:** pass the controller in (`updateCard(self, node, item, heroMap, order)`) or pass `sellMode` and `selected` as arguments. Fix the call in `renderSlice`.
+
+2. **Selling duplicates a UUID's payout.** `DataManager.SellArtifacts` iterates the client list without de-duplicating. `{ uuid, uuid, uuid }` pays three times for one weapon. That is a Gold dupe exploit.
+   **Fix:** build a `seen` set; skip repeats. Also cap the list at `StatBalance.MaxArtifactInventory` entries and reject non-string entries outright.
+
+3. **Selling returns more Gold than a summon costs, so luck makes Gold infinite.** With the Revision 1 sell table, the expected sell value of one pull is about **4,320 Gold at zero luck** (86% of 5,000, 96% of the 10x price per pull). At the `MaxSummonLuck` of +50%, it is about **5,980 Gold per pull**, above the 4,500 a 10x costs per pull. A player with a levelled God's Blessing can summon and sell in a loop for profit and farm pity for free. See §3 for the new table.
+
+4. **The starter Blade of the Rift is a Legendary labelled Common.** `createDefaultPlayerProfile` calls `CreateArtifact("art_blade_of_the_rift", 3, 1)`. The explicit `1` overrides the seed's `RarityTier = 6`, so the card says Common while the template is a Legendary. If the rarity were fixed instead, new players would start with a 3★ Legendary.
+   **Fix:** stop passing rarity at all (`CreateArtifact` already defaults to `seed.RarityTier`), and swap the starter for a Common or Uncommon weapon. Make `CreateArtifact` ignore any rarity that disagrees with the seed, since rarity is inherent.
+
+### P1 — wrong behaviour, misleading UI
+
+5. **"View Artifacts" closes when you click inside it.** The window is a plain `Frame` parented to the scrim `TextButton`. Frames don't sink input, so a click on a card, tab gap or scroll area falls through to the scrim and closes the modal.
+   **Fix:** make the window a `TextButton` with `AutoButtonColor = false` and an empty `Activated` handler, like the Forge root, or parent it beside the scrim instead of inside it.
+
+6. **The catalog modal is not fitted or closed with the Forge.** It is a fixed 840 × 540 frame with no `UIScale`/`ModalFit`, so it overflows phones. `Forge:Close` doesn't hide it, so closing the Forge can leave it floating.
+   **Fix:** `ModalFit.Bind` it; call `CloseArtifactsModal` from `Close`.
+
+7. **The banner advertises things that don't exist.** The Summon tab still shows "5-STAR FEATURED HERO & ARTIFACTS", "Rate Up" chips for Blade of the Rift and Genesis Sunderer, and a hard-coded "Event Ends: 2d 14h". There is no rate-up and no end date. Showing a rate-up that the server doesn't apply is misleading odds disclosure on a paid random item.
+   **Fix:** remove the chips and the timer (§5.2 replaces them with real rates).
+
+8. **Pity ignores God's Blessing.** The 120th pull uses fixed weights (`r * 0.026`), so luck doesn't move the split between Exalted, Legendary and Mythical on the pity pull.
+   **Fix:** `tier = SummonLuck.RollAtLeast(tierRates, cfg.PityRarity, math.random())`. Drop the magic numbers.
+
+9. **The cap gives no client feedback.** The plan's amber-at-45 state isn't built, the summon buttons stay enabled when full, and `PerformSummon` doesn't check the cap. A full player gets a silent shake plus a server toast. The 10x button should disable at 41+.
+
+10. **Sell-mode selection can go stale.** After a sell, summon or equip from another screen, `SelectedSellUUIDs` can hold UUIDs that no longer exist or are now equipped. The valuation label skips missing ones but not newly equipped ones, and the server will reject the whole batch.
+    **Fix:** prune the selection in `RenderAssignView` against the current profile.
+
+11. **The assign signature misses state.** `computeAssignSignature` sums counts, stars and rarities. Selling one artifact and summoning another of the same rarity and star gives the same signature, so the list doesn't redraw. Use a sorted join of `uuid:star:equipped`, or a revision counter bumped by `SyncProfile`.
+
+12. **The Upgrade view can target a sold weapon.** `SelectedTargetUUID` and `FodderUUIDs` aren't cleared when those artifacts disappear. Prune them in `RenderUpgradeView`.
+
+### P2 — leftovers and documentation drift
+
+13. Dead code: `ArtifactCatalog.CraftingMaterials = {}`, the `CraftingRecipeOrder` alias, `BlacksmithUpgradeCosts`/`GetUpgradeCost`, `DefaultStar` on every seed, `RequestUpgradeRarity` (server + `HUDController` line 1376), `formatCraftCost` in `HeroIndex`, the `FORGE_ICONS` crafting map and `CraftingMaterials` lookup in `BackpackModel`. Remove them in one pass.
+14. The Revision 1 sell table contradicts its own formula (7★ Common: table 25,000, formula 4,000) and labels donor counts per star wrong (promotion uses 1/2/3/4/5/6 donors, 21 in total to 7★). Replaced in §3.
+15. `GAME_DESIGN.MD` still says the Artifact Banner costs **160 / 1,600 Gems** (Summoning Altar, ≈ line 326) and that **first Biome Boss clears drop an artifact** (≈ line 738). `CLAUDE.md` still says 160/1,600 Gems and a 50-pull pity.
+16. The header comment of `ForgeController.luau` still says "50-pull pity counter, rate-up featured items" and "cosmic purple aesthetic".
+
+---
+
+## 3. Economy fixes
+
+### 3.1 Sell prices
+
+Selling is a way to clear space and get a little back, never a refund. Target: the expected sell value of a pull stays **under 15% of its cost even at maximum luck**.
+
+| Tier | Old 1★ price | **New 1★ price** |
+| :--- | ---: | ---: |
+| Common | 1,000 | **100** |
+| Uncommon | 2,500 | **250** |
+| Rare | 6,000 | **600** |
+| Superior | 15,000 | **1,500** |
+| Exalted | 40,000 | **5,000** |
+| Legendary | 100,000 | **12,000** |
+| Mythical | 300,000 | **40,000** |
+
+Formula: `SellPrice = Base(tier) × (1 + 0.5 × (Star − 1))`. This is unchanged. A 7★ weapon contains 22 copies but sells for 4× base, so promotion is never a Gold farm.
+
+Expected value per pull: **≈ 445 Gold at no luck (9.9% of the 10x per-pull price)**, **≈ 657 Gold at +50% luck (14.6%)**. Add a spec that asserts `EV(MaxSummonLuck) < 0.15 × Cost10X / 10`, so later price changes can't reopen the loop.
+
+### 3.2 Promotion donors — decision needed
+
+Promotion consumes copies of the **same template**. With 84 templates, a specific Exalted Enhanced weapon drops at about 0.02 × 1/6 × 0.4 ≈ **0.13%** per pull. Reaching 7★ needs 21 more copies, and the 50-item cap limits how many you can bank. Mythical stars are effectively out of reach.
+
+Recommended: accept donors of the **same tier and weapon type** (either variant). That means 1 in 6 of a tier's drops can feed a given weapon, instead of 1 in 15 or 1 in 10. `WeaponPromotion` and the Upgrade picker filter change; CLAUDE.md's "same template" line changes with it. If you'd rather keep same-template donors, keep the rule and note the expected pull counts in the GDD.
+
+### 3.3 Starting Gold
+
+New profiles start with 500 Gold and get 1,000 for clearing Floor 1, so the first Forge summon is several Guard Post sessions away. The Forge onboarding step (`ArtifactUpgraded`) still works from the starter duplicates. No change needed, but note the first-summon timing in the GDD so it stays a decision.
+
+---
+
+## 4. Server changes
+
+`DataManager.server.luau`:
+
+- `SellArtifacts`: de-duplicate, cap list length, validate every entry is a string, keep all-or-nothing on equipped/locked. Return the new Gold total so the client can float the delta.
+- `SummonArtifact`: pity via `RollAtLeast(tierRates, cfg.PityRarity, …)`. Guard against a nil seed from `GetTierPair` (fall back to the other variant, then error loudly) so a roster gap can't take Gold without granting a weapon.
+- `CreateArtifact`: rarity always from the seed.
+- `createDefaultPlayerProfile`: Common or Uncommon starter weapons only, all at seed rarity.
+- `SyncProfile` migration (profiles aren't persisted yet, but keep the schema honest): clamp `Rarity` to the seed's `RarityTier`, default `ArtifactBanner10Pity` to 0, remap an old `ArtifactBannerPity` above 119 to 119.
+- Remove `RequestUpgradeRarity` and `UpgradeArtifactRarity`.
+
+---
+
+## 5. Gilded Grimoire UI redesign
+
+The Forge still runs on the old cosmic-purple palette (`C.Border #C084FC`, raw `Color3.fromHex` violets), Gotham fonts, rounded `UICorner` buttons and emoji. Gilded Grimoire forbids all three. Rules for every Forge surface:
+
+- Frames through `GildedGrimoire.Frame(obj, { Class, Tone })`: **Window** for the Forge and the catalog, **Panel** for sections, **Card** for artifacts, **Button**/**Compact** for controls. No bare `UICorner` + `UIStroke` boxes.
+- Tones carry meaning: **Bronze** for anything Gold (prices, sell value, Gold chip), **Crimson** for the destructive sell confirm, **Gold** for the primary action, **Action** for summon buttons (via `GrimoireSummonButton`), **Slate** for disabled or locked, **Deep** for nested panels.
+- Fonts: `GildedGrimoire.Fonts.Title / Number / Body` only. Numbers through `StyleText(…, "Number")`.
+- Icons: `GrimoireIcons` only. Replace `ICON_MAP` emoji with the archetype drawings (`Vanguard`, `Striker`, `Marksman`, `Miner`, `Scholar`, `Healer`) or the weapon preview from `ArtifactPreview`. Replace `✓`, `✕`, `⚒️` with drawn icons or `GothicBoxStyle.CreateCloseButton`.
+- Rarity colour is an accent (card rail, badge, tier header), not a fill.
+- Bars through `GildedGrimoire.Bar`.
+
+### 5.1 Header
+
+- Keep the Forge icon and the gold-gradient title. Add a **Bronze Gold chip** at the top right (`GrimoireIcons.IconText("Gold", …)`) showing current Gold, with green/red floaters on change.
+- Tabs stay as they are (`StyleTabs`), but drop the dead underline tween code in `SetTab`.
+
+### 5.2 Summon tab
 
 ```
-+----------------------------------------------------------------------------------------------------+
-|                                    ARTIFACT CATALOG RESTRUCTURE                                     |
-+----------------------------------------------------------------------------------------------------+
-| Banner Config:                                                                                     |
-|   Currency = "Gold"                                                                                |
-|   Cost1X = 5,000                                                                                   |
-|   Cost10X = 45,000 (10% bulk discount)                                                             |
-|   MaxPity = 120 (Guarantees Exalted Tier 5+ or higher, matching Hero banner)                        |
-|   PityRarity = 5 (Exalted)                                                                         |
-|   BaseRarityRates = { 0.549, 0.250, 0.120, 0.055, 0.020, 0.005, 0.001 }                         |
-|                                                                                                    |
-| 84-Weapon Roster (6 Archetypes × 7 Tiers × 2 Variants):                                            |
-|   • Standard Variant (1.00x Base Power / Standard ATK Speed)                                      |
-|   • High-Stat Variant (1.20x Base Power / +2.0% to +5.0% bonus ATK Speed)                           |
-|   • Archetypes: Vanguard, Striker, Marksman, Miner, Scholar, Healer                                |
-|   • Master CatalogOrder: Ordered array of all 84 seed keys for Index & UI enumeration              |
-|                                                                                                    |
-| Purged Legacy Tables:                                                                              |
-|   ❌ CraftingMaterials (IronGear, RiftOrb, AegisGem, StarDust, VoidPowder)                          |
-|   ❌ CraftCost properties on seeds                                                                 |
-|   ❌ CraftingRecipeOrder list (replaced by CatalogOrder)                                          |
-|   ❌ Variable DefaultStar (all normalized to 1)                                                    |
-+----------------------------------------------------------------------------------------------------+
+┌─ Panel (Violet, gold rail) ─────────────────────────────────────────┐
+│  E C H O E S   O F   T H E   R I F T                [ Banner icon ] │
+│  84 weapons · every archetype · all drop at 1★                      │
+│  ┌ Deep ─────────────────────────────────────────────────────────┐  │
+│  │ Common 54.9 · Uncommon 25.0 · Rare 12.0 · Superior 5.5 ·      │  │
+│  │ Exalted 2.0 · Legendary 0.5 · Mythical 0.1   (+X% Blessing)   │  │
+│  └───────────────────────────────────────────────────────────────┘  │
+│  Showcase: rotating ArtifactPreview of one Legendary/Mythical seed  │
+│                                      [ VIEW ALL WEAPONS & ODDS ]    │
+└─────────────────────────────────────────────────────────────────────┘
+  Exalted+ guaranteed in 87      ▕██████████░░░░░░░░░░▏ 33 / 120
+  Rare+ guaranteed in 6 pulls
+  [ SUMMON 1X  ● 5,000 ]                [ SUMMON 10X  ● 45,000 ]
 ```
 
-#### New Seed Schema
-```luau
-export type ArtifactSeed = {
-    TemplateId: string,
-    DisplayName: string,
-    Type: WeaponType,           -- "BOW" | "SWORD_SHIELD" | "DAGGERS" | "AXE" | "TOME" | "STAFF"
-    RarityTier: number,         -- 1 (Common) to 7 (Mythical)
-    IsHighStat: boolean,        -- true if the enhanced variant of this tier
-    StatMultiplier: number,     -- 1.00 for standard, 1.20 for high-stat variant
-    SpeedBonusAdditive: number, -- Flat additive attack speed bonus (e.g. +0.03 = +3%)
-    ModelAssetId: string,       -- Reference key in ReplicatedStorage.Assets.Weapons
-    Description: string,        -- Lore and aesthetic profile
-}
-```
+- Remove the watermark, the Rate Up chips, the fake timer, and the procedural rift vortex (its purple gradients clash with the theme).
+- Rate strip: one rarity-coloured pill per tier, live from `SummonLuck.ForProfile` (same as the modal). When luck > 0, show a small **Blessing** icon and `+X%`.
+- Showcase: a slow-rotating `ArtifactPreview` that cycles the 12 Legendary and Mythical seeds every few seconds, with name and tier badge. That replaces the fake "featured" art with real content.
+- Pity: `GildedGrimoire.Bar`, glowing gold at 100+. A second line shows the 10-pull counter from `ArtifactBanner10Pity`.
+- Summon buttons: `GrimoireSummonButton` with `Icon = "Gold"`. Disabled (Slate) with a reason line when Gold is short or the inventory can't fit the pull. 10x disables at 41+ artifacts.
 
-### 2.2 Inventory Baseline Limits (50 Heroes / 50 Artifacts)
-- **Constants** (`StatBalance.luau`):
-  - `StatBalance.MaxHeroInventory = 50`
-  - `StatBalance.MaxArtifactInventory = 50`
-- **Server Enforcement (`DataManager.server.luau`)**:
-  - `RequestSummonFunc` (Heroes): Pre-flight check `countCurrentHeroes(profile) + pullCount <= 50`. If exceeded, reject transaction with toast: `"Hero inventory full! Maximum capacity is 50."`
-  - `DataManager.SummonArtifact`: Pre-flight check `countCurrentArtifacts(profile) + pullCount <= 50`. If exceeded, reject transaction with toast: `"Artifact inventory full! Maximum capacity is 50."`
-- **Client UI Feedback**:
-  - Forge HUD shows dynamic capacity pill: `Artifacts: X / 50`. Turns amber at $\ge 45$, red at $50$. Summon buttons are disabled with tooltip when full.
+### 5.3 Assign tab
 
----
+- Header row: **capacity pill** (`Artifacts 37 / 50`): Deep normally, Bronze rail at 45+, Crimson at 50, with the full-inventory hint "Sell or promote weapons to make room".
+- Filter and sort chips: archetype icons (All + 6) and sort by Rarity / Stars / Power. Replace the current Star-first sort with Rarity, then Stars, then Power.
+- Card: rarity rail and badge, weapon preview, name in Title font, stars as drawn icons, variant tag (`Enhanced +20%`), three stat cells, carrier line. Add a **lock toggle** (Lock icon) so players can protect weapons from sell-all. This needs a small `RequestToggleArtifactLock` remote; `Locked` already exists on the instance.
+- Sell mode: the header swaps to `Selected 6 · ● 1,850` (Bronze), **Select all Common** / **Select all ≤ Uncommon** quick picks (safer than all), **Sell** (Crimson) and **Cancel**. Selected cards get a Crimson rail and a check stud; equipped or locked cards go Slate with the reason.
+- Confirm dialog: one Gilded Grimoire dialog before any sell, listing the count and total. Show it in red when the selection includes Exalted or above.
 
-## 3. Rarity-Based Gacha, God's Blessing & 120-Pull Exalted+ Pity
+### 5.4 Upgrade tab
 
-### 3.1 Base Drop Chances & Pity Contract
+- Keep the layout, re-skin it: target slot as a Card with the rarity rail, donor slots as Slot frames with the archetype icon as placeholder, the preview rows with Number fonts and green deltas.
+- Footer: show Gems only when the step costs Gems (4★ and up).
+- If §3.2 is accepted, the donor picker lists same-tier, same-type weapons and labels the other variant.
 
-| Rarity Tier | Name | Base Probability | 10-Pull Guarantee | 120-Pull Hard Pity |
-| :---: | :--- | :---: | :---: | :---: |
-| **Tier 1** | **Common** | `54.9%` (0.549) | Ineligible | Ineligible |
-| **Tier 2** | **Uncommon** | `25.0%` (0.250) | Ineligible | Ineligible |
-| **Tier 3** | **Rare** | `12.0%` (0.120) | Guaranteed minimum if no $\ge$ Tier 3 in pull 1–9 | Ineligible |
-| **Tier 4** | **Superior** | `5.5%` (0.055) | Eligible | Ineligible |
-| **Tier 5** | **Exalted** | `2.0%` (0.020) | Eligible | **100% Guaranteed on 120th pull** (resets pity) |
-| **Tier 6** | **Legendary** | `0.5%` (0.005) | Eligible | Eligible (resets pity) |
-| **Tier 7** | **Mythical** | `0.1%` (0.001) | Eligible | Eligible (resets pity) |
+### 5.5 "View all weapons & odds" modal
 
-### 3.2 God's Blessing Summon Luck Integration
-Summon luck from assigned Acolytes in God's Blessing is calculated via `DataManager.GetSummonLuck(player)` / `SummonLuck.ForProfile(profile)`.
-- Base rates are dynamically adjusted via `SummonLuck.ApplyLuck`:
-  $$\text{BoostedRate}_i = \text{BaseRate}_i \times (1 + \text{Luck}) \quad \text{for } i \in [2, 7]$$
-  $$\text{CommonRate} = \max\left(0, 1 - \sum_{i=2}^{7} \text{BoostedRate}_i\right)$$
-- **120-Pull Hard Pity Enforcement**:
-  - If `profile.ArtifactBannerPity >= 120`, the roll is clamped to Tier 5 (Exalted), Tier 6 (Legendary), or Tier 7 (Mythical) using their relative weights ($\approx 76.9\%$ Exalted, $19.2\%$ Legendary, $3.9\%$ Mythical).
-  - Any natural or pity pull of an **Exalted (Tier 5), Legendary (Tier 6), or Mythical (Tier 7)** artifact resets `profile.ArtifactBannerPity` to `0`.
-- **10-Pull Guarantee**:
-  - `SummonLuck.RollAtLeast(rates, 3, math.random())` guarantees at least one Rare (Tier 3) or higher within a 10-pull batch if none rolled in pulls 1–9.
+- Window frame, `CreateCloseButton`, `ModalFit`, input-sinking window (bug 5), closes with the Forge (bug 6).
+- Top: the live rate strip and rules line (pity 120 Exalted+, 10-pull Rare+, 60/40 variant, 1★).
+- Archetype tabs with icons and counts (All 84, each 14).
+- Body grouped by **tier**, highest first: a tier header row (rarity colour, name, live %, per-weapon %), then the Standard and Enhanced cards side by side for each archetype. Per-weapon odds = `rate(tier) / 6 × 0.6` or `× 0.4`; showing them is the clearest odds disclosure.
+- Each card: preview, name, variant tag, 1★ Power / Dmg / Spd, a one-line description (full text on hover), and an **Owned** stud if the player has one.
 
-### 3.3 Two-Stage Roll Selection (Rarity -> Archetype -> Variant)
-Once a pull is initiated:
-1. **Rarity Roll**: Roll tier $T \in [1, 7]$ (incorporating luck, 10-pull guarantee, or 120-pull pity).
-2. **Archetype Roll**: Uniformly select one of the 6 archetypes ($1/6$ chance each: Vanguard, Striker, Marksman, Miner, Scholar, Healer).
-3. **Variant Roll**: Between the 2 artifacts defined for $(T, \text{Archetype})$:
-   - **Standard Variant ($1.00\times$)**: `60%` chance
-   - **Enhanced High-Stat Variant ($1.20\times$)**: `40%` chance
-4. **Instantiate**: Create artifact at **1★** with inherent `Rarity = T`, `IsHighStat`, and `StatMultiplier`.
+### 5.6 Weapon Index (`HeroIndex.luau`)
+
+- Acquisition line reads from config: `"Blacksmith Forge · " .. StatBalance.Format(Banner.Cost1X) .. " Gold"` instead of a hard-coded string.
+- Show the per-weapon drop rate (as in §5.5) and the sell price at 1★.
+- Delete `formatCraftCost`.
 
 ---
 
-## 4. Artifact Liquidation System (Selling for Gold)
+## 6. Tests
 
-To prevent players from hitting the 50-item inventory cap and to establish an active Gold recycling loop, an explicit **Sell Artifacts** mechanism is implemented.
+Add to `tests/forge.spec.luau`:
 
-### 4.1 Sell Payout Valuation
+- Sell de-duplication: the same UUID three times pays once.
+- Sell EV bound at `MaxSummonLuck` (§3.1).
+- Pity roll uses luck: `RollAtLeast` with boosted rates never returns below 5.
+- Every `(tier, type)` pair has both variants (guards the nil-seed path).
+- `CreateArtifact` always uses seed rarity.
+- Starter profile contains no weapon above Uncommon.
 
-| Rarity Tier | 1★ Base Sell Price | 2★ (1 donor) | 3★ (3 donors) | 4★ (6 donors) | 5★ (10 donors) | 6★ (15 donors) | 7★ (21 donors) |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Common (1)** | **1,000 Gold** | 1,500 Gold | 2,500 Gold | 4,500 Gold | 8,000 Gold | 14,000 Gold | 25,000 Gold |
-| **Uncommon (2)**| **2,500 Gold** | 3,750 Gold | 6,250 Gold | 11,250 Gold | 20,000 Gold | 35,000 Gold | 60,000 Gold |
-| **Rare (3)** | **6,000 Gold** | 9,000 Gold | 15,000 Gold | 27,000 Gold | 48,000 Gold | 84,000 Gold | 150,000 Gold |
-| **Superior (4)**| **15,000 Gold**| 22,500 Gold | 37,500 Gold | 67,500 Gold | 120,000 Gold| 210,000 Gold| 375,000 Gold |
-| **Exalted (5)** | **40,000 Gold**| 60,000 Gold | 100,000 Gold| 180,000 Gold| 320,000 Gold| 560,000 Gold| 1,000,000 Gold |
-| **Legendary (6)**|**100,000 Gold**| 150,000 Gold| 250,000 Gold| 450,000 Gold| 800,000 Gold| 1,400,000 Gold| 2,500,000 Gold |
-| **Mythical (7)**| **300,000 Gold**| 450,000 Gold| 750,000 Gold| 1,350,000 Gold| 2,400,000 Gold| 4,200,000 Gold| 7,500,000 Gold |
-
-$$\text{SellPrice}(\text{Rarity}, \text{Star}) = \text{BasePrice}(\text{Rarity}) \times (1 + 0.5 \times (\text{Star} - 1))$$
-
-### 4.2 Security Guards
-- **Equipped Guard**: An artifact currently equipped to a hero (`artifact.EquippedHeroUUID ~= nil`) cannot be selected or sold.
-- **Lock Guard**: An artifact marked as favorite/locked (`artifact.Locked == true`) cannot be selected or sold.
-- **Atomic Execution**: Multiple artifacts are sold in one atomic transaction under the session lock; missing or foreign UUIDs safely fail without mutating data.
-- **Remote Endpoint**: `RequestSellArtifactsFunc.OnServerInvoke(player, { uuid1, uuid2, ... })` returning `(success, message, goldEarned)`.
+Static checking: `luau-compile` doesn't catch the `self` crash. Add a `luau-analyze` pass over `src/StarterPlayerScripts/UI/ForgeController.luau` (and ideally all `--!strict` files) to `tests/run.ps1`. The undefined-global warning would have caught bug 1.
 
 ---
 
-## 5. UI / UX Redesign in Blacksmith Forge & Weapon Index
+## 7. Implementation order
 
-### 5.1 Blacksmith Forge HUD (`ForgeController.luau`)
-1. **Currency Display**:
-   - Single Pull: `5,000 Gold` (Gold coin icon, formatted value).
-   - 10-Pull: `45,000 Gold` (Gold coin icon, `"SAVE 10%"` badge).
-2. **Pity Label & Track**:
-   - Updates text to: `"Guaranteed Exalted+ in: <b>%d</b> summons"`.
-   - Track fills from $0 \to 120$ (matching Hero Limited Banner).
-3. **"View Artifacts" Catalog & Odds Sheet Modal**:
-   - Header with active God's Blessing luck multiplier (`+X.X% Luck Active`).
-   - Archetype filter chips: `[ALL] [VANGUARD] [STRIKER] [MARKSMAN] [MINER] [SCHOLAR] [HEALER]`.
-   - Rarity breakdown showing exact drop rates and side-by-side Standard vs. Enhanced cards with lore.
-4. **Assign Tab Sell Mode**:
-   - Dynamic inventory capacity pill: `Artifacts: X / 50`.
-   - `"SELL ARTIFACTS"` selection mode enabling multi-select liquidation for Gold.
+1. **Hotfix (P0)**: bugs 1–4 and the new sell table, with their specs. Ship this alone; it unbreaks the Assign tab and closes the Gold exploit.
+2. **Server polish**: pity luck, nil-seed guard, migration, lock remote, dead remote removal.
+3. **Client correctness**: bugs 5–6 and 9–12.
+4. **Gilded Grimoire pass**: header, Summon, Assign, Upgrade, modal (§5.1–5.5).
+5. **Index**: §5.6.
+6. **Cleanup**: P2 item 13.
+7. **Docs**: GDD (Summoning Altar line, biome boss artifact line, sell table, donor rule if changed) and CLAUDE.md core facts.
+8. `pwsh tests/run.ps1`, then a Studio playtest.
 
-### 5.2 Weapon Index Compendium (`HeroIndex.luau`)
-The client compendium (`HeroIndex.luau`) is updated to register all 84 weapons:
-1. **Category Headers & Counts**:
-   - `ALL`: `Tag = "MASTER CATALOG · 84 WEAPONS"`
-   - `SWORD_SHIELD`: `Tag = "VANGUARD · 14 WEAPONS"`
-   - `DAGGERS`: `Tag = "STRIKER · 14 WEAPONS"`
-   - `AXE`: `Tag = "MINER · 14 WEAPONS"`
-   - `BOW`: `Tag = "MARKSMAN · 14 WEAPONS"`
-   - `STAFF`: `Tag = "SCHOLAR · 14 WEAPONS"`
-   - `TOME`: `Tag = "HEALER · 14 WEAPONS"`
-   - `BANNER`: `Tag = "ARTIFACT GACHA · 84 WEAPONS"`
-2. **Catalog Enumeration**:
-   - Switches `weaponsOfCategory` from iterating `CraftingRecipeOrder` to iterating `ArtifactCatalog.CatalogOrder` (listing all 84 keys in structured order).
-3. **Card & Detail Rendering**:
-   - Uses `seed.RarityTier` for rarity badge and theme colors (`ArtifactCatalog.GetRarityInfo(seed.RarityTier)`).
-   - Card displays: `"Common · Standard"`, `"Exalted · Enhanced (+20%)"`, etc.
-   - Replaces the legacy "FORGE CRAFTING COST" section with:
-     `weaponDetail.Acquisition = section(5, "ACQUISITION", "Blacksmith Forge Gacha (5,000 Gold)", 46)`.
-4. **Collection Counter**:
-   - Correctly reports: `Collected X / 84 weapons` with progress bar fill.
+Decision needed before step 2: the donor rule in §3.2.
 
 ---
 
-## 6. The Complete 84-Weapon Roster (2 per Archetype per Rarity)
+## 8. How to test (Studio)
+
+1. Open the Forge, go to **Assign**: cards render, no errors in Output.
+2. Toggle sell mode, select two weapons, sell: Gold rises by exactly the shown total (new prices), cards disappear, capacity drops.
+3. Try to sell an equipped or locked weapon: it can't be selected.
+4. With 41+ artifacts, the 10x button is disabled with a reason; at 50, both are.
+5. Summon 1x and 10x with enough Gold: every result is 1★, the 10x contains a Rare or better, the pity bar moves.
+6. Set `ArtifactBannerPity = 119` (DEV command or Studio MCP) and pull once: Exalted or above, pity resets.
+7. Open **View all weapons & odds**: click inside cards and tabs and it stays open; tabs filter; percentages match the rate strip; closing the Forge closes it.
+8. New profile: no starter weapon is labelled above Uncommon.
+9. Resize to the mobile preset: the Forge and the modal fit the screen.
+
+---
+
+## Appendix — The 84-weapon roster (unchanged from Revision 1)
+
+Display names below are the plan's; a few template IDs keep legacy names (for example `art_rusty_daggers` is Rogue Daggers, `art_necronomicon_pages` is Codex of the Deep). `ArtifactCatalog.luau` is authoritative.
 
 The roster defines exactly **2 artifacts per archetype for every rarity tier** ($6 \times 7 \times 2 = 84$ weapons), ensuring that every single hero class has immediate weapon options at every progression milestone.
 
 ---
 
-### Tier 1: Common (`#B0B0B0`) — 54.9% Base Rate
+#### Tier 1: Common (`#B0B0B0`) — 54.9% Base Rate
 *Base Stats: Standard = 20 Power, $+5.0\%$ ATK SPD | Enhanced = 24 Power, $+6.0\%$ ATK SPD*
 
 1. **Vanguard (`SWORD_SHIELD`)**:
@@ -211,7 +261,7 @@ The roster defines exactly **2 artifacts per archetype for every rarity tier** (
 
 ---
 
-### Tier 2: Uncommon (`#4BB543`) — 25.0% Base Rate
+#### Tier 2: Uncommon (`#4BB543`) — 25.0% Base Rate
 *Base Stats: Standard = 60 Power, $+7.5\%$ ATK SPD | Enhanced = 72 Power, $+9.0\%$ ATK SPD*
 
 7. **Vanguard (`SWORD_SHIELD`)**:
@@ -235,7 +285,7 @@ The roster defines exactly **2 artifacts per archetype for every rarity tier** (
 
 ---
 
-### Tier 3: Rare (`#2980B9`) — 12.0% Base Rate
+#### Tier 3: Rare (`#2980B9`) — 12.0% Base Rate
 *Base Stats: Standard = 180 Power, $+10.0\%$ ATK SPD | Enhanced = 216 Power, $+12.0\%$ ATK SPD*
 
 13. **Vanguard (`SWORD_SHIELD`)**:
@@ -259,7 +309,7 @@ The roster defines exactly **2 artifacts per archetype for every rarity tier** (
 
 ---
 
-### Tier 4: Superior (`#8E44AD`) — 5.5% Base Rate
+#### Tier 4: Superior (`#8E44AD`) — 5.5% Base Rate
 *Base Stats: Standard = 540 Power, $+13.0\%$ ATK SPD | Enhanced = 648 Power, $+15.0\%$ ATK SPD*
 
 19. **Vanguard (`SWORD_SHIELD`)**:
@@ -283,7 +333,7 @@ The roster defines exactly **2 artifacts per archetype for every rarity tier** (
 
 ---
 
-### Tier 5: Exalted (`#D35400`) — 2.0% Base Rate (Hard Pity Target)
+#### Tier 5: Exalted (`#D35400`) — 2.0% Base Rate (Hard Pity Target)
 *Base Stats: Standard = 1,400 Power, $+16.5\%$ ATK SPD | Enhanced = 1,680 Power, $+18.5\%$ ATK SPD*
 
 25. **Vanguard (`SWORD_SHIELD`)**:
@@ -307,7 +357,7 @@ The roster defines exactly **2 artifacts per archetype for every rarity tier** (
 
 ---
 
-### Tier 6: Legendary (`#F1C40F`) — 0.5% Base Rate (Hard Pity Eligible)
+#### Tier 6: Legendary (`#F1C40F`) — 0.5% Base Rate (Hard Pity Eligible)
 *Base Stats: Standard = 3,500 Power, $+20.0\%$ ATK SPD | Enhanced = 4,200 Power, $+22.5\%$ ATK SPD*
 
 31. **Vanguard (`SWORD_SHIELD`)**:
@@ -331,7 +381,7 @@ The roster defines exactly **2 artifacts per archetype for every rarity tier** (
 
 ---
 
-### Tier 7: Mythical (`#E74C3C`) — 0.1% Base Rate (Hard Pity Eligible)
+#### Tier 7: Mythical (`#E74C3C`) — 0.1% Base Rate (Hard Pity Eligible)
 *Base Stats: Standard = 7,000 Power, $+30.0\%$ ATK SPD | Enhanced = 8,400 Power, $+35.0\%$ ATK SPD*
 
 37. **Vanguard (`SWORD_SHIELD`)**:
@@ -354,118 +404,3 @@ The roster defines exactly **2 artifacts per archetype for every rarity tier** (
     - **Enhanced: Book of Primordial Genesis**: Transcendent scripture of life itself, written in eternal light that resurrects fallen allies and grants immortality.
 
 ---
-
-## 7. Deprecation & Cleanup Plan
-
-### 7.1 Unused Code Removal
-1. **Crafting Materials & Costs**:
-   - Delete `CraftingMaterials` dictionary from `src/ReplicatedStorage/Shared/Config/ArtifactCatalog.luau`.
-   - Remove `CraftCost` property from `ArtifactSeed` type and all seed definitions.
-   - Replace `ArtifactCatalog.CraftingRecipeOrder` with `ArtifactCatalog.CatalogOrder`.
-   - Remove `RequestCraftArtifactFunc` and `DataManager.CraftArtifact` in `src/ServerScriptService/Core/DataManager.server.luau`.
-   - Remove `self.RequestCraft` in `src/StarterPlayerScripts/UI/ForgeController.luau`.
-   - Update `HeroIndex.luau` to display `"Obtained via Blacksmith Forge Summons (Gold)"` instead of crafting cost.
-2. **Guaranteed Boss Artifact Drops**:
-   - Remove `DataManager.GrantBossArtifact` in `src/ServerScriptService/Core/DataManager.server.luau`.
-   - Remove `TowerProgress.BossArtifactRarity` in `src/ReplicatedStorage/Shared/Util/TowerProgress.luau`.
-   - Remove boss artifact drop hook in `src/ServerScriptService/Combat/CombatSimulation.server.luau` line 2750 (`if firstBiomeClear and dm.GrantBossArtifact then ... end`).
-3. **Test Suite Modernization**:
-   - Refactor `tests/forge.spec.luau`: Replace recipe/crafting tests with tests for Gold pricing (5k/45k), 84-weapon roster verification (2 per archetype per rarity tier), `CatalogOrder` completeness, 1★ baseline, stat multiplier variance, 120-pull Exalted+ pity, and selling calculations.
-   - Update `tests/tower-run-loop.spec.luau`: Remove `BossArtifactRarity` assertions.
-
----
-
-## 8. Game Design Document (GDD) Updates
-
-The following sections of `docs/GAME_DESIGN.MD` will be revised:
-- **Section 4.3 (God's Blessing Facility)**: Clarify that summon luck directly scales the 7 artifact rarity tiers on the Gold banner.
-- **Section 7.1 & 7.2 (Artifact Acquisition & Rarity Tiers)**:
-  - Document that artifacts are **never crafted** and **only summoned** with Gold (5,000 / 45,000).
-  - Detail the **full 84-weapon catalog structure** (2 weapons per archetype per rarity tier across all 7 launch tiers), standard ($1.00\times$) and enhanced ($1.20\times$) stat variants.
-  - Document compendium indexing across all 84 weapons in the Weapon Index.
-  - State the **50-item inventory cap** on both heroes and artifacts.
-  - Define the **Artifact Selling schedule** for Gold liquidation.
-- **Section 7.3 (Weapon Star Promotion)**: Reiterate that all weapons drop at 1★ and ascend through $1★ \to 7★$ exclusively via duplicate consumption.
-- **Section 7.4 (Artifact Banner)**: Replace the old Gem costs with Gold, document the **120-pull Exalted+ rarity pity** (matching the Hero Limited Banner), 10-pull Rare guarantee, and God's Blessing luck formula. Remove biome boss milestone gear drops.
-
----
-
-## 9. Step-by-Step Implementation Sequence
-
-```mermaid
-flowchart TD
-    A["Step 1: Update GDD (docs/GAME_DESIGN.MD)"] --> B["Step 2: Data Catalog Refactor (ArtifactCatalog.luau & StatBalance.luau)"]
-    B --> C["Step 3: Server Economy & Inventory Caps (DataManager.server.luau)"]
-    C --> D["Step 4: Selling Remote & Payout Logic (DataManager & Remotes)"]
-    D --> E["Step 5: Cleanup Deprecated Crafting & Boss Drops"]
-    E --> F["Step 6: Blacksmith Forge UI Redesign (ForgeController.luau)"]
-    F --> G["Step 7: Weapon Index Integration (HeroIndex.luau)"]
-    G --> H["Step 8: Update Tests & Verification (tests/forge.spec.luau & tests/run.ps1)"]
-```
-
-1. **Step 1: Update the Game Design Document (`docs/GAME_DESIGN.MD`)**:
-   - Update Sections 2, 4.3, 7.1, 7.2, 7.3, and 7.4.
-   - Authoritatively document:
-     - Gold summon costs: 5,000 Gold (1x) / 45,000 Gold (10x).
-     - 120-pull hard pity guaranteeing Exalted (Tier 5) or higher (matching Hero Limited Banner).
-     - Full 84-weapon matrix: 2 artifacts per archetype for each of the 7 launch rarity tiers (1 Standard $1.00\times$, 1 Enhanced $1.20\times$).
-     - 50-item baseline inventory caps for both Heroes and Artifacts.
-     - Artifact Selling liquidation for Gold.
-     - 1★ universal drop baseline (all promotion occurs through duplicate consumption at the Forge).
-     - Full Weapon Index compendium integration.
-     - Removal of legacy crafting materials, recipe tables, and biome boss milestone weapon drops.
-2. **Step 2: Data Model & Catalog Refactor (`ArtifactCatalog.luau` & `StatBalance.luau`)**:
-   - Update `StatBalance`: `MaxHeroInventory = 50`, `MaxArtifactInventory = 50`.
-   - Update `ArtifactCatalog.Banner`: `Cost1X = 5000`, `Cost10X = 45000`, `Currency = "Gold"`, `MaxPity = 120`, `PityRarity = 5` (Exalted).
-   - Define the complete 84-weapon `Seeds` catalog (2 artifacts per archetype for each of the 7 rarity tiers), each configured with `IsHighStat`, `StatMultiplier = 1.00` or `1.20`, and `SpeedBonusAdditive`.
-   - Expose `ArtifactCatalog.CatalogOrder`: Array of all 84 seed IDs.
-   - Update `GetStatBreakdown` to multiply power by `seed.StatMultiplier`.
-   - Purge `CraftingMaterials` and `CraftCost`.
-3. **Step 3: Server Summoning & Inventory Cap (`DataManager.server.luau`)**:
-   - Enforce 50-item inventory cap for Heroes (`RequestSummonFunc`) and Artifacts (`SummonArtifact`).
-   - Refactor `DataManager.SummonArtifact`:
-     - Deduct Gold (5,000 / 45,000).
-     - Scale 7 rarity tiers with `SummonLuck.ApplyLuck`.
-     - Implement 10-pull guarantee (Rare+) and 120-pull hard pity (Exalted+).
-     - Reset pity counter to 0 on any Exalted, Legendary, or Mythical pull.
-     - Roll archetype (1 of 6), then roll variant (60% Standard / 40% HighStat).
-     - Spawn all artifacts with `Star = 1`.
-4. **Step 4: Selling Endpoint**:
-   - Add `RequestSellArtifacts` remote in `ArtifactRemotes`.
-   - Implement `DataManager.SellArtifacts` with lock/equipped validations and Gold credit.
-5. **Step 5: Codebase Cleanup**:
-   - Delete `CraftArtifact`, `GrantBossArtifact`, and `TowerProgress.BossArtifactRarity`.
-   - Clean call sites in `CombatSimulation.server.luau`, `HeroIndex.luau`, `BackpackModel.luau`.
-6. **Step 6: Forge UI Overhaul (`ForgeController.luau`)**:
-   - Update Summon buttons to Gold (5,000 / 45,000).
-   - Update Pity counter to display Exalted+ rarity countdown (`X / 120`).
-   - Build `"VIEW ARTIFACTS"` catalog & drop-rate subpanel modal with Archetype tabs and Standard vs. Enhanced comparisons.
-   - Add Sell button, multi-select checkboxes, and capacity pill (`X / 50`) to Assign tab.
-7. **Step 7: Weapon Index Integration (`HeroIndex.luau`)**:
-   - Update `WEAPON_CATEGORIES` tags (84 Total, 14 per Archetype).
-   - Wire `weaponsOfCategory` to `ArtifactCatalog.CatalogOrder`.
-   - Render rarity and variant badge (`"Common · Standard"`, `"Mythical · Enhanced"`).
-   - Update detail acquisition to `"Blacksmith Forge Gacha (5,000 Gold)"`.
-8. **Step 8: Test Suite & Rojo Build**:
-   - Update `tests/forge.spec.luau` and `tests/tower-run-loop.spec.luau`.
-   - Run `powershell -File tests/run.ps1` to ensure 100% PASS and clean bytecode compilation.
-   - Run `rojo build -o build.rbxl`.
-
----
-
-## 10. Verification Checklist
-
-- [x] `powershell -File tests/run.ps1` compiles and all tests pass with 0 errors.
-- [x] Attempting 1x summon with $< 5,000$ Gold fails with insufficient Gold toast.
-- [x] Attempting 10x summon with $< 45,000$ Gold fails with insufficient Gold toast.
-- [x] Summoning with $\ge 50$ artifacts or $\ge 50$ heroes is rejected with inventory full toast.
-- [x] Every summoned weapon has `Star == 1`.
-- [x] Every rolled weapon belongs to the 84-item roster with correct rarity, archetype, and stat multiplier.
-- [x] Every archetype has exactly 2 artifacts per rarity tier (1 Standard, 1 Enhanced).
-- [x] 120th pull without an Exalted+ guarantees a Tier 5 (Exalted), Tier 6 (Legendary), or Tier 7 (Mythical) artifact and resets pity.
-- [x] Natural pull of Exalted, Legendary, or Mythical resets pity to 0.
-- [x] Selling an unequipped artifact removes it and credits exact Gold.
-- [x] Equipped and locked artifacts cannot be selected or sold.
-- [x] "View Artifacts" modal opens, allows archetype filtering, renders all 7 tiers with live percentages, and displays both variants per archetype with concept descriptions.
-- [x] `HeroIndex.luau` lists all 84 weapons across the All and 6 Archetype categories with correct 14-item tags and collection counts.
-- [x] `rojo build -o build.rbxl` executes with code 0.

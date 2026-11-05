@@ -150,30 +150,39 @@ end)
 
 -- 5. Artifact Selling Valuation
 test("Artifact sell price calculates accurately across all 7 tiers and star levels", function()
-	-- Common (Tier 1): Base 1,000 Gold
-	assertEqual(ArtifactCatalog.CalculateSellPrice(1, 1), 1000)
-	assertEqual(ArtifactCatalog.CalculateSellPrice(1, 2), 1500)
-	assertEqual(ArtifactCatalog.CalculateSellPrice(1, 3), 2000)
+	assertEqual(ArtifactCatalog.CalculateSellPrice(1, 1), 100)
+	assertEqual(ArtifactCatalog.CalculateSellPrice(1, 2), 150)
+	assertEqual(ArtifactCatalog.CalculateSellPrice(1, 3), 200)
+	assertEqual(ArtifactCatalog.CalculateSellPrice(2, 1), 250)
+	assertEqual(ArtifactCatalog.CalculateSellPrice(3, 1), 600)
+	assertEqual(ArtifactCatalog.CalculateSellPrice(3, 3), 1200)
+	assertEqual(ArtifactCatalog.CalculateSellPrice(4, 1), 1500)
+	assertEqual(ArtifactCatalog.CalculateSellPrice(5, 1), 5000)
+	assertEqual(ArtifactCatalog.CalculateSellPrice(6, 1), 12000)
+	assertEqual(ArtifactCatalog.CalculateSellPrice(7, 1), 40000)
+	assertEqual(ArtifactCatalog.CalculateSellPrice(7, 7), 160000) -- 40,000 * (1 + 0.5 * 6)
+end)
 
-	-- Uncommon (Tier 2): Base 2,500 Gold
-	assertEqual(ArtifactCatalog.CalculateSellPrice(2, 1), 2500)
+test("Selling a pull is worth under 15% of its cost even at maximum summon luck", function()
+	local FacilityConfig = require(ReplicatedStorage.Shared.Config.FacilityConfig)
+	local banner = ArtifactCatalog.Banner
+	local perPullCost = math.min(banner.Cost1X, banner.Cost10X / 10)
+	local rates = SummonLuck.ApplyLuck(banner.BaseRarityRates, FacilityConfig.Constants.MaxSummonLuck)
+	local ev = 0
+	for tier, rate in ipairs(rates) do
+		ev += rate * ArtifactCatalog.CalculateSellPrice(tier, 1)
+	end
+	assert(ev < 0.15 * perPullCost, string.format("sell EV %.0f is not under 15%% of %d", ev, perPullCost))
+end)
 
-	-- Rare (Tier 3): Base 6,000 Gold
-	assertEqual(ArtifactCatalog.CalculateSellPrice(3, 1), 6000)
-	assertEqual(ArtifactCatalog.CalculateSellPrice(3, 3), 12000)
-
-	-- Superior (Tier 4): Base 15,000 Gold
-	assertEqual(ArtifactCatalog.CalculateSellPrice(4, 1), 15000)
-
-	-- Exalted (Tier 5): Base 40,000 Gold
-	assertEqual(ArtifactCatalog.CalculateSellPrice(5, 1), 40000)
-
-	-- Legendary (Tier 6): Base 100,000 Gold
-	assertEqual(ArtifactCatalog.CalculateSellPrice(6, 1), 100000)
-
-	-- Mythical (Tier 7): Base 300,000 Gold
-	assertEqual(ArtifactCatalog.CalculateSellPrice(7, 1), 300000)
-	assertEqual(ArtifactCatalog.CalculateSellPrice(7, 7), 1200000) -- 300,000 * (1 + 0.5 * 6) = 1,200,000
+test("Every rarity tier and weapon type has both a Standard and an Enhanced weapon", function()
+	for tier = 1, 7 do
+		for _, weaponType in ipairs(ArtifactCatalog.ArchetypeTypes) do
+			local std, enh = ArtifactCatalog.GetTierPair(tier, weaponType)
+			assert(std and not std.IsHighStat, string.format("tier %d %s lacks a Standard weapon", tier, weaponType))
+			assert(enh and enh.IsHighStat, string.format("tier %d %s lacks an Enhanced weapon", tier, weaponType))
+		end
+	end
 end)
 
 -- 6. Weapon Star Progression & Fodder Rules

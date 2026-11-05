@@ -311,7 +311,7 @@ function DataManager.CreateArtifact(templateId: string, star: number?, rarity: n
 		DisplayName = seed.DisplayName,
 		Type = seed.Type,
 		Star = star or 1,
-		Rarity = rarity or seed.RarityTier or 1,
+		Rarity = seed.RarityTier or rarity or 1, -- rarity is inherent to the template
 		EquippedHeroUUID = nil,
 		Locked = false,
 	}
@@ -406,7 +406,7 @@ local function createDefaultPlayerProfile(): PlayerProfile
 	local axeUUID, axeArt = DataManager.CreateArtifact("art_miner_pickaxe", 1, 1)
 
 	-- Additional starter artifacts for forge crafting and fodder testing
-	local riftUUID, riftArt = DataManager.CreateArtifact("art_blade_of_the_rift", 3, 1)
+	local riftUUID, riftArt = DataManager.CreateArtifact("art_runic_longsword", 1)
 	local f1_UUID, f1_Art = DataManager.CreateArtifact("art_iron_broadsword", 1, 1)
 	local f2_UUID, f2_Art = DataManager.CreateArtifact("art_rusty_daggers", 1, 1)
 	local f3_UUID, f3_Art = DataManager.CreateArtifact("art_hunters_shortbow", 1, 1)
@@ -1076,12 +1076,21 @@ function DataManager.SellArtifacts(player: Player, artifactUUIDs: { string }): (
 		return false, "No artifacts selected for sale", 0, 0
 	end
 
+	if #artifactUUIDs > StatBalance.MaxArtifactInventory then
+		return false, "Too many artifacts selected", 0, 0
+	end
+
 	local totalGold = 0
 	local soldCount = 0
 	local toDelete = {}
+	local seen: { [string]: boolean } = {}
 
 	for _, uuid in ipairs(artifactUUIDs) do
-		if type(uuid) == "string" then
+		if type(uuid) ~= "string" then
+			return false, "Invalid artifact id", 0, 0
+		end
+		if not seen[uuid] then
+			seen[uuid] = true
 			local art = profile.Artifacts[uuid]
 			if art then
 				if art.EquippedHeroUUID then

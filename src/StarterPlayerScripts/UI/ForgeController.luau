@@ -808,7 +808,7 @@ local function createCard(scroll: Instance, onAssignClick: (node: CardNode) -> (
 	return node
 end
 
-local function updateCard(node: CardNode, item: { UUID: string, Art: any }, heroMap: any, order: number)
+local function updateCard(self: any, node: CardNode, item: { UUID: string, Art: any }, heroMap: any, order: number)
 	local uuid = item.UUID
 	local art = item.Art
 	node.CurrentUUID = uuid
@@ -1017,7 +1017,7 @@ function Forge:RenderAssignView(force: boolean?)
 				node = createCard(scroll, onAssignClick)
 				self.AssignCardPool[order] = node
 			end
-			updateCard(node, item, heroMap, order)
+			updateCard(self, node, item, heroMap, order)
 		end
 	end
 
