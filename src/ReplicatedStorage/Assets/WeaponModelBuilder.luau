@@ -47,6 +47,40 @@ local function makeWedge(parent: Instance, name: string, size: Vector3, cf: CFra
 	return p
 end
 
+local function makeCylinder(parent: Instance, name: string, lengthY: number, diameter: number, cf: CFrame, color: Color3, material: Enum.Material?): Part
+	local p = Instance.new("Part")
+	p.Name = name
+	p.Shape = Enum.PartType.Cylinder
+	p.Size = Vector3.new(lengthY, diameter, diameter)
+	p.CFrame = cf * CFrame.Angles(0, 0, math.rad(90))
+	p.Color = color
+	p.Material = material or Enum.Material.SmoothPlastic
+	p.CanCollide = false
+	p.CanTouch = false
+	p.CanQuery = false
+	p.Massless = true
+	p.Anchored = false
+	p.Parent = parent
+	return p
+end
+
+local function makeBall(parent: Instance, name: string, diameter: number, cf: CFrame, color: Color3, material: Enum.Material?): Part
+	local p = Instance.new("Part")
+	p.Name = name
+	p.Shape = Enum.PartType.Ball
+	p.Size = Vector3.new(diameter, diameter, diameter)
+	p.CFrame = cf
+	p.Color = color
+	p.Material = material or Enum.Material.SmoothPlastic
+	p.CanCollide = false
+	p.CanTouch = false
+	p.CanQuery = false
+	p.Massless = true
+	p.Anchored = false
+	p.Parent = parent
+	return p
+end
+
 local function weldTo(primary: BasePart, part: BasePart)
 	local w = Instance.new("WeldConstraint")
 	w.Part0 = primary
@@ -108,7 +142,8 @@ local function alignHunterArrow(bowModel: Model, handle: BasePart)
 	end
 
 	-- Nock on the string, shaft (2 studs) pointing at -Z past the riser.
-	local pNock = Vector3.new(ARROW_REST.X, ARROW_REST.Y, BOW_STRING_Z)
+	local nockAtt = handle:FindFirstChild("Nock") :: Attachment?
+	local pNock = if nockAtt then nockAtt.Position else Vector3.new(ARROW_REST.X, ARROW_REST.Y, BOW_STRING_Z)
 	local pCenter = pNock + Vector3.new(0, 0, -1.0)
 	local shaftCFInHandle = CFrame.lookAt(pCenter, pCenter + Vector3.new(0, 0, -1), Vector3.new(0, 1, 0))
 	local shaftWorld = handle.CFrame * shaftCFInHandle
@@ -150,6 +185,18 @@ local function alignHunterArrow(bowModel: Model, handle: BasePart)
 	wHandle.Parent = shaft
 end
 
+local function createHunterArrow(parentModel: Model, handle: BasePart)
+	local arrowModel = Instance.new("Model")
+	arrowModel.Name = "HunterArrow"
+	arrowModel.Parent = parentModel
+	makePart(arrowModel, "ArrowShaft", Vector3.new(0.04, 0.04, 2.0), CFrame.new(0, 0, 0), Color3.fromRGB(120, 80, 50))
+	makeWedge(arrowModel, "ArrowHead", Vector3.new(0.08, 0.12, 0.28), CFrame.new(0, 0, 0), Color3.fromRGB(90, 85, 80), Enum.Material.Slate)
+	makePart(arrowModel, "ArrowFletch_1", Vector3.new(0.01, 0.06, 0.22), CFrame.new(0, 0, 0), Color3.fromRGB(180, 175, 170))
+	makePart(arrowModel, "ArrowFletch_2", Vector3.new(0.01, 0.06, 0.22), CFrame.new(0, 0, 0), Color3.fromRGB(60, 55, 50))
+	makePart(arrowModel, "ArrowFletch_3", Vector3.new(0.01, 0.06, 0.22), CFrame.new(0, 0, 0), Color3.fromRGB(180, 175, 170))
+	alignHunterArrow(parentModel, handle)
+end
+
 function WeaponModelBuilder.BuildBow(): Model
 	-- Built from code only: no Studio-authored or hero-baked bow is consulted, so the
 	-- geometry below is the single definition the Grip attachment is measured against.
@@ -178,23 +225,2095 @@ function WeaponModelBuilder.BuildBow(): Model
 	addSocket(handle, "TipUpper", Vector3.new(0, BOW_TIP_Y, BOW_STRING_Z))
 	addSocket(handle, "TipLower", Vector3.new(0, -BOW_TIP_Y, BOW_STRING_Z))
 
-	-- Procedural HunterArrow
-	local arrowModel = Instance.new("Model")
-	arrowModel.Name = "HunterArrow"
-	arrowModel.Parent = model
-	makePart(arrowModel, "ArrowShaft", Vector3.new(0.04, 0.04, 2.0), CFrame.new(0, 0, 0), Color3.fromRGB(120, 80, 50))
-	makeWedge(arrowModel, "ArrowHead", Vector3.new(0.08, 0.12, 0.28), CFrame.new(0, 0, 0), Color3.fromRGB(90, 85, 80), Enum.Material.Slate)
-	makePart(arrowModel, "ArrowFletch_1", Vector3.new(0.01, 0.06, 0.22), CFrame.new(0, 0, 0), Color3.fromRGB(180, 175, 170))
-	makePart(arrowModel, "ArrowFletch_2", Vector3.new(0.01, 0.06, 0.22), CFrame.new(0, 0, 0), Color3.fromRGB(60, 55, 50))
-	makePart(arrowModel, "ArrowFletch_3", Vector3.new(0.01, 0.06, 0.22), CFrame.new(0, 0, 0), Color3.fromRGB(180, 175, 170))
-	alignHunterArrow(model, handle)
+	createHunterArrow(model, handle)
 
 	return model
 end
 
 -- ============================================================================
--- 2. WEAPON_SWORD (Iron Broadsword / Katana / Greatsword)
+-- Hunter's Shortbow (art_hunters_shortbow)
 -- ============================================================================
+-- ============================================================================
+-- 1. Hunter's Shortbow (art_hunters_shortbow) - Common Standard
+-- ============================================================================
+function WeaponModelBuilder.BuildHuntersShortbow(): Model
+	local model = Instance.new("Model")
+	model.Name = "art_hunters_shortbow"
+
+	local woodAsh = Color3.fromRGB(155, 115, 75)
+	local woodTaper = Color3.fromRGB(140, 105, 65)
+	local leatherBrown = Color3.fromRGB(90, 60, 35)
+	local boneWhite = Color3.fromRGB(235, 230, 215)
+	local brassGold = Color3.fromRGB(195, 155, 75)
+	local hornDark = Color3.fromRGB(45, 40, 38)
+	local stringColor = Color3.fromRGB(225, 215, 195)
+
+	-- Contoured Ash Riser & Arrow Rest
+	local handle = makePart(model, "Handle", Vector3.new(0.24, 0.70, 0.28), CFrame.new(0, 0, 0), woodAsh, Enum.Material.Wood)
+	model.PrimaryPart = handle
+
+	local shelf = makePart(model, "ArrowShelf_Bone", Vector3.new(0.08, 0.12, 0.18), CFrame.new(0.14, 0.10, -0.06), boneWhite, Enum.Material.SmoothPlastic)
+	weldTo(handle, shelf)
+
+	-- Leather Grip Wrap Bands & Brass Collars
+	local wrap1 = makePart(model, "GripWrap_1", Vector3.new(0.26, 0.12, 0.30), CFrame.new(0, 0.18, 0), leatherBrown, Enum.Material.Fabric)
+	weldTo(handle, wrap1)
+	local wrap2 = makePart(model, "GripWrap_2", Vector3.new(0.27, 0.12, 0.31), CFrame.new(0, 0.06, 0), leatherBrown, Enum.Material.Fabric)
+	weldTo(handle, wrap2)
+	local wrap3 = makePart(model, "GripWrap_3", Vector3.new(0.27, 0.12, 0.31), CFrame.new(0, -0.06, 0), leatherBrown, Enum.Material.Fabric)
+	weldTo(handle, wrap3)
+	local wrap4 = makePart(model, "GripWrap_4", Vector3.new(0.26, 0.12, 0.30), CFrame.new(0, -0.18, 0), leatherBrown, Enum.Material.Fabric)
+	weldTo(handle, wrap4)
+	local collarTop = makePart(model, "GripCollar_Top", Vector3.new(0.26, 0.05, 0.30), CFrame.new(0, 0.28, 0), brassGold, Enum.Material.Metal)
+	weldTo(handle, collarTop)
+	local collarBot = makePart(model, "GripCollar_Bot", Vector3.new(0.26, 0.05, 0.30), CFrame.new(0, -0.28, 0), brassGold, Enum.Material.Metal)
+	weldTo(handle, collarBot)
+
+	-- Upper Limb: 4 curved & tapered ash segments
+	local lu1 = makePart(model, "LimbU_1", Vector3.new(0.22, 0.38, 0.24), CFrame.new(0, 0.50, 0.03) * CFrame.Angles(math.rad(7), 0, 0), woodAsh, Enum.Material.Wood)
+	weldTo(handle, lu1)
+	local lu2 = makePart(model, "LimbU_2", Vector3.new(0.20, 0.38, 0.22), CFrame.new(0, 0.84, 0.10) * CFrame.Angles(math.rad(15), 0, 0), woodAsh, Enum.Material.Wood)
+	weldTo(handle, lu2)
+	local lu3 = makePart(model, "LimbU_3", Vector3.new(0.18, 0.38, 0.20), CFrame.new(0, 1.18, 0.22) * CFrame.Angles(math.rad(24), 0, 0), woodTaper, Enum.Material.Wood)
+	weldTo(handle, lu3)
+	local lu4 = makePart(model, "LimbU_4", Vector3.new(0.16, 0.40, 0.18), CFrame.new(0, 1.50, 0.38) * CFrame.Angles(math.rad(34), 0, 0), woodTaper, Enum.Material.Wood)
+	weldTo(handle, lu4)
+
+	-- Lower Limb: 4 curved & tapered ash segments
+	local ll1 = makePart(model, "LimbL_1", Vector3.new(0.22, 0.38, 0.24), CFrame.new(0, -0.50, 0.03) * CFrame.Angles(-math.rad(7), 0, 0), woodAsh, Enum.Material.Wood)
+	weldTo(handle, ll1)
+	local ll2 = makePart(model, "LimbL_2", Vector3.new(0.20, 0.38, 0.22), CFrame.new(0, -0.84, 0.10) * CFrame.Angles(-math.rad(15), 0, 0), woodAsh, Enum.Material.Wood)
+	weldTo(handle, ll2)
+	local ll3 = makePart(model, "LimbL_3", Vector3.new(0.18, 0.38, 0.20), CFrame.new(0, -1.18, 0.22) * CFrame.Angles(-math.rad(24), 0, 0), woodTaper, Enum.Material.Wood)
+	weldTo(handle, ll3)
+	local ll4 = makePart(model, "LimbL_4", Vector3.new(0.16, 0.40, 0.18), CFrame.new(0, -1.50, 0.38) * CFrame.Angles(-math.rad(34), 0, 0), woodTaper, Enum.Material.Wood)
+	weldTo(handle, ll4)
+
+	-- Horn Tip Nocks
+	local tipUpper = makePart(model, "TipNock_Upper", Vector3.new(0.14, 0.22, 0.18), CFrame.new(0, 1.72, 0.50) * CFrame.Angles(math.rad(42), 0, 0), hornDark, Enum.Material.Slate)
+	weldTo(handle, tipUpper)
+	local tipLower = makePart(model, "TipNock_Lower", Vector3.new(0.14, 0.22, 0.18), CFrame.new(0, -1.72, 0.50) * CFrame.Angles(-math.rad(42), 0, 0), hornDark, Enum.Material.Slate)
+	weldTo(handle, tipLower)
+
+	-- Bowstring
+	local bowString = makePart(model, "BowString", Vector3.new(0.04, 3.50, 0.04), CFrame.new(0, 0, 0.52), stringColor, Enum.Material.Fabric)
+	weldTo(handle, bowString)
+
+	addSocket(handle, "Grip", Vector3.zero)
+	addSocket(handle, "Nock", Vector3.new(ARROW_REST.X, ARROW_REST.Y, 0.52))
+	addSocket(handle, "TipUpper", Vector3.new(0, 1.75, 0.52))
+	addSocket(handle, "TipLower", Vector3.new(0, -1.75, 0.52))
+	addSocket(handle, "VfxTip", Vector3.new(0, 1.75, 0.52))
+	addSocket(handle, "VfxBase", Vector3.new(0, -1.75, 0.52))
+	addSocket(handle, "VfxCore", Vector3.zero)
+	addSocket(handle, "VfxNock", Vector3.new(ARROW_REST.X, ARROW_REST.Y, 0.52))
+
+	createHunterArrow(model, handle)
+	return model
+end
+
+-- ============================================================================
+-- 2. Reinforced Longbow (art_reinforced_longbow) - Common Enhanced
+-- ============================================================================
+function WeaponModelBuilder.BuildReinforcedLongbow(): Model
+	local model = Instance.new("Model")
+	model.Name = "art_reinforced_longbow"
+
+	local woodYew = Color3.fromRGB(120, 55, 30)
+	local woodAsh = Color3.fromRGB(150, 105, 65)
+	local ironDark = Color3.fromRGB(65, 68, 72)
+	local ironRivet = Color3.fromRGB(140, 145, 150)
+	local hornBlack = Color3.fromRGB(30, 28, 26)
+	local stringColor = Color3.fromRGB(230, 225, 210)
+
+	-- Yew Riser
+	local handle = makePart(model, "Handle", Vector3.new(0.26, 0.76, 0.30), CFrame.new(0, 0, 0), woodYew, Enum.Material.Wood)
+	model.PrimaryPart = handle
+
+	-- Wrought Iron Riser Sleeves & Rivets
+	local sleeve1 = makePart(model, "IronSleeve_1", Vector3.new(0.28, 0.10, 0.32), CFrame.new(0, 0.22, 0), ironDark, Enum.Material.Metal)
+	weldTo(handle, sleeve1)
+	local rivet1 = makePart(model, "Rivet_1", Vector3.new(0.30, 0.05, 0.08), CFrame.new(0, 0.22, 0.14), ironRivet, Enum.Material.Metal)
+	weldTo(handle, rivet1)
+	local sleeve2 = makePart(model, "IronSleeve_2", Vector3.new(0.29, 0.10, 0.33), CFrame.new(0, 0.08, 0), ironDark, Enum.Material.Metal)
+	weldTo(handle, sleeve2)
+	local rivet2 = makePart(model, "Rivet_2", Vector3.new(0.31, 0.05, 0.08), CFrame.new(0, 0.08, 0.15), ironRivet, Enum.Material.Metal)
+	weldTo(handle, rivet2)
+	local sleeve3 = makePart(model, "IronSleeve_3", Vector3.new(0.29, 0.10, 0.33), CFrame.new(0, -0.08, 0), ironDark, Enum.Material.Metal)
+	weldTo(handle, sleeve3)
+	local rivet3 = makePart(model, "Rivet_3", Vector3.new(0.31, 0.05, 0.08), CFrame.new(0, -0.08, 0.15), ironRivet, Enum.Material.Metal)
+	weldTo(handle, rivet3)
+	local sleeve4 = makePart(model, "IronSleeve_4", Vector3.new(0.28, 0.10, 0.32), CFrame.new(0, -0.22, 0), ironDark, Enum.Material.Metal)
+	weldTo(handle, sleeve4)
+	local rivet4 = makePart(model, "Rivet_4", Vector3.new(0.30, 0.05, 0.08), CFrame.new(0, -0.22, 0.14), ironRivet, Enum.Material.Metal)
+	weldTo(handle, rivet4)
+
+	local arrowPlate = makePart(model, "IronArrowPlate", Vector3.new(0.08, 0.14, 0.18), CFrame.new(0.15, 0.10, -0.07), ironDark, Enum.Material.Metal)
+	weldTo(handle, arrowPlate)
+
+	-- Upper Limb: 5 tapered ash/yew segments with progressive pitch
+	local lu1 = makePart(model, "LimbU_1", Vector3.new(0.24, 0.38, 0.26), CFrame.new(0, 0.52, 0.02) * CFrame.Angles(math.rad(5), 0, 0), woodAsh, Enum.Material.Wood)
+	weldTo(handle, lu1)
+	local lu2 = makePart(model, "LimbU_2", Vector3.new(0.22, 0.38, 0.24), CFrame.new(0, 0.88, 0.07) * CFrame.Angles(math.rad(11), 0, 0), woodAsh, Enum.Material.Wood)
+	weldTo(handle, lu2)
+	local lu3 = makePart(model, "LimbU_3", Vector3.new(0.20, 0.38, 0.22), CFrame.new(0, 1.23, 0.16) * CFrame.Angles(math.rad(18), 0, 0), woodYew, Enum.Material.Wood)
+	weldTo(handle, lu3)
+	local lu4 = makePart(model, "LimbU_4", Vector3.new(0.18, 0.38, 0.20), CFrame.new(0, 1.56, 0.29) * CFrame.Angles(math.rad(26), 0, 0), woodYew, Enum.Material.Wood)
+	weldTo(handle, lu4)
+	local lu5 = makePart(model, "LimbU_5", Vector3.new(0.16, 0.40, 0.18), CFrame.new(0, 1.88, 0.45) * CFrame.Angles(math.rad(35), 0, 0), woodYew, Enum.Material.Wood)
+	weldTo(handle, lu5)
+	local limbBandU = makePart(model, "LimbBand_U", Vector3.new(0.22, 0.06, 0.24), CFrame.new(0, 1.23, 0.16) * CFrame.Angles(math.rad(18), 0, 0), ironDark, Enum.Material.Metal)
+	weldTo(handle, limbBandU)
+
+	-- Lower Limb: 5 tapered ash/yew segments
+	local ll1 = makePart(model, "LimbL_1", Vector3.new(0.24, 0.38, 0.26), CFrame.new(0, -0.52, 0.02) * CFrame.Angles(-math.rad(5), 0, 0), woodAsh, Enum.Material.Wood)
+	weldTo(handle, ll1)
+	local ll2 = makePart(model, "LimbL_2", Vector3.new(0.22, 0.38, 0.24), CFrame.new(0, -0.88, 0.07) * CFrame.Angles(-math.rad(11), 0, 0), woodAsh, Enum.Material.Wood)
+	weldTo(handle, ll2)
+	local ll3 = makePart(model, "LimbL_3", Vector3.new(0.20, 0.38, 0.22), CFrame.new(0, -1.23, 0.16) * CFrame.Angles(-math.rad(18), 0, 0), woodYew, Enum.Material.Wood)
+	weldTo(handle, ll3)
+	local ll4 = makePart(model, "LimbL_4", Vector3.new(0.18, 0.38, 0.20), CFrame.new(0, -1.56, 0.29) * CFrame.Angles(-math.rad(26), 0, 0), woodYew, Enum.Material.Wood)
+	weldTo(handle, ll4)
+	local ll5 = makePart(model, "LimbL_5", Vector3.new(0.16, 0.40, 0.18), CFrame.new(0, -1.88, 0.45) * CFrame.Angles(-math.rad(35), 0, 0), woodYew, Enum.Material.Wood)
+	weldTo(handle, ll5)
+	local limbBandL = makePart(model, "LimbBand_L", Vector3.new(0.22, 0.06, 0.24), CFrame.new(0, -1.23, 0.16) * CFrame.Angles(-math.rad(18), 0, 0), ironDark, Enum.Material.Metal)
+	weldTo(handle, limbBandL)
+
+	-- Buffalo Horn 2-Piece Nocks
+	local hornBaseU = makePart(model, "HornNock_U1", Vector3.new(0.15, 0.18, 0.17), CFrame.new(0, 2.06, 0.58) * CFrame.Angles(math.rad(44), 0, 0), hornBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, hornBaseU)
+	local hornTipU = makePart(model, "HornNock_U2", Vector3.new(0.12, 0.16, 0.14), CFrame.new(0, 2.18, 0.68) * CFrame.Angles(math.rad(52), 0, 0), hornBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, hornTipU)
+	local hornBaseL = makePart(model, "HornNock_L1", Vector3.new(0.15, 0.18, 0.17), CFrame.new(0, -2.06, 0.58) * CFrame.Angles(-math.rad(44), 0, 0), hornBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, hornBaseL)
+	local hornTipL = makePart(model, "HornNock_L2", Vector3.new(0.12, 0.16, 0.14), CFrame.new(0, -2.18, 0.68) * CFrame.Angles(-math.rad(52), 0, 0), hornBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, hornTipL)
+
+	-- Waxed Linen Bowstring
+	local bowString = makePart(model, "BowString", Vector3.new(0.045, 4.30, 0.045), CFrame.new(0, 0, 0.68), stringColor, Enum.Material.Fabric)
+	weldTo(handle, bowString)
+
+	addSocket(handle, "Grip", Vector3.zero)
+	addSocket(handle, "Nock", Vector3.new(ARROW_REST.X, ARROW_REST.Y, 0.68))
+	addSocket(handle, "TipUpper", Vector3.new(0, 2.18, 0.68))
+	addSocket(handle, "TipLower", Vector3.new(0, -2.18, 0.68))
+	addSocket(handle, "VfxTip", Vector3.new(0, 2.18, 0.68))
+	addSocket(handle, "VfxBase", Vector3.new(0, -2.18, 0.68))
+	addSocket(handle, "VfxCore", Vector3.zero)
+	addSocket(handle, "VfxNock", Vector3.new(ARROW_REST.X, ARROW_REST.Y, 0.68))
+
+	createHunterArrow(model, handle)
+	return model
+end
+
+-- ============================================================================
+-- 3. Recurve Composite (art_recurve_composite) - Uncommon Standard
+-- ============================================================================
+function WeaponModelBuilder.BuildRecurveComposite(): Model
+	local model = Instance.new("Model")
+	model.Name = "art_recurve_composite"
+
+	local hornBelly = Color3.fromRGB(50, 42, 36)
+	local birchBack = Color3.fromRGB(195, 175, 140)
+	local boneWhite = Color3.fromRGB(240, 235, 220)
+	local raySkin = Color3.fromRGB(60, 80, 75)
+	local goldAccent = Color3.fromRGB(210, 170, 80)
+	local stringColor = Color3.fromRGB(245, 240, 230)
+
+	-- Ray-skin Wrapped Riser
+	local handle = makePart(model, "Handle", Vector3.new(0.24, 0.68, 0.28), CFrame.new(0, 0, 0), raySkin, Enum.Material.SmoothPlastic)
+	model.PrimaryPart = handle
+
+	local collarTop = makePart(model, "HandleCollar_Top", Vector3.new(0.26, 0.06, 0.30), CFrame.new(0, 0.26, 0), goldAccent, Enum.Material.Metal)
+	weldTo(handle, collarTop)
+	local collarBot = makePart(model, "HandleCollar_Bot", Vector3.new(0.26, 0.06, 0.30), CFrame.new(0, -0.26, 0), goldAccent, Enum.Material.Metal)
+	weldTo(handle, collarBot)
+	local arrowRest = makePart(model, "BoneArrowRest", Vector3.new(0.08, 0.12, 0.16), CFrame.new(0.14, 0.08, -0.06), boneWhite, Enum.Material.SmoothPlastic)
+	weldTo(handle, arrowRest)
+	local hornWedgeU = makePart(model, "GripWedge_U", Vector3.new(0.18, 0.10, 0.22), CFrame.new(0, 0.32, 0.04), hornBelly, Enum.Material.SmoothPlastic)
+	weldTo(handle, hornWedgeU)
+	local hornWedgeL = makePart(model, "GripWedge_L", Vector3.new(0.18, 0.10, 0.22), CFrame.new(0, -0.32, 0.04), hornBelly, Enum.Material.SmoothPlastic)
+	weldTo(handle, hornWedgeL)
+
+	-- Upper Limb: Steppe Reflex-Recurve (reflex forward then recurve back)
+	local ru1 = makePart(model, "LimbU_Reflex1", Vector3.new(0.22, 0.32, 0.22), CFrame.new(0, 0.46, -0.03) * CFrame.Angles(-math.rad(6), 0, 0), birchBack, Enum.Material.Wood)
+	weldTo(handle, ru1)
+	local ru2 = makePart(model, "LimbU_Reflex2", Vector3.new(0.20, 0.32, 0.20), CFrame.new(0, 0.74, -0.08) * CFrame.Angles(-math.rad(12), 0, 0), birchBack, Enum.Material.Wood)
+	weldTo(handle, ru2)
+	local ru3 = makePart(model, "LimbU_Knee", Vector3.new(0.19, 0.30, 0.19), CFrame.new(0, 1.02, -0.07) * CFrame.Angles(math.rad(8), 0, 0), hornBelly, Enum.Material.SmoothPlastic)
+	weldTo(handle, ru3)
+	local ru4 = makePart(model, "LimbU_Recurve1", Vector3.new(0.18, 0.32, 0.18), CFrame.new(0, 1.28, 0.06) * CFrame.Angles(math.rad(26), 0, 0), birchBack, Enum.Material.Wood)
+	weldTo(handle, ru4)
+	local ru5 = makePart(model, "LimbU_Recurve2", Vector3.new(0.16, 0.32, 0.16), CFrame.new(0, 1.54, 0.26) * CFrame.Angles(math.rad(40), 0, 0), birchBack, Enum.Material.Wood)
+	weldTo(handle, ru5)
+
+	-- Upper Horn Belly Laminate Plates
+	local bellyU1 = makePart(model, "BellyPlate_U1", Vector3.new(0.16, 0.40, 0.04), CFrame.new(0, 0.60, 0.08) * CFrame.Angles(-math.rad(8), 0, 0), hornBelly, Enum.Material.SmoothPlastic)
+	weldTo(handle, bellyU1)
+	local bellyU2 = makePart(model, "BellyPlate_U2", Vector3.new(0.15, 0.40, 0.04), CFrame.new(0, 1.38, 0.22) * CFrame.Angles(math.rad(30), 0, 0), hornBelly, Enum.Material.SmoothPlastic)
+	weldTo(handle, bellyU2)
+	local stringPadU = makePart(model, "StringPad_U", Vector3.new(0.10, 0.12, 0.06), CFrame.new(0, 1.64, 0.34) * CFrame.Angles(math.rad(45), 0, 0), hornBelly, Enum.Material.SmoothPlastic)
+	weldTo(handle, stringPadU)
+
+	-- Lower Limb: Steppe Reflex-Recurve
+	local rl1 = makePart(model, "LimbL_Reflex1", Vector3.new(0.22, 0.32, 0.22), CFrame.new(0, -0.46, -0.03) * CFrame.Angles(math.rad(6), 0, 0), birchBack, Enum.Material.Wood)
+	weldTo(handle, rl1)
+	local rl2 = makePart(model, "LimbL_Reflex2", Vector3.new(0.20, 0.32, 0.20), CFrame.new(0, -0.74, -0.08) * CFrame.Angles(math.rad(12), 0, 0), birchBack, Enum.Material.Wood)
+	weldTo(handle, rl2)
+	local rl3 = makePart(model, "LimbL_Knee", Vector3.new(0.19, 0.30, 0.19), CFrame.new(0, -1.02, -0.07) * CFrame.Angles(-math.rad(8), 0, 0), hornBelly, Enum.Material.SmoothPlastic)
+	weldTo(handle, rl3)
+	local rl4 = makePart(model, "LimbL_Recurve1", Vector3.new(0.18, 0.32, 0.18), CFrame.new(0, -1.28, 0.06) * CFrame.Angles(-math.rad(26), 0, 0), birchBack, Enum.Material.Wood)
+	weldTo(handle, rl4)
+	local rl5 = makePart(model, "LimbL_Recurve2", Vector3.new(0.16, 0.32, 0.16), CFrame.new(0, -1.54, 0.26) * CFrame.Angles(-math.rad(40), 0, 0), birchBack, Enum.Material.Wood)
+	weldTo(handle, rl5)
+
+	-- Lower Horn Belly Laminate Plates
+	local bellyL1 = makePart(model, "BellyPlate_L1", Vector3.new(0.16, 0.40, 0.04), CFrame.new(0, -0.60, 0.08) * CFrame.Angles(math.rad(8), 0, 0), hornBelly, Enum.Material.SmoothPlastic)
+	weldTo(handle, bellyL1)
+	local bellyL2 = makePart(model, "BellyPlate_L2", Vector3.new(0.15, 0.40, 0.04), CFrame.new(0, -1.38, 0.22) * CFrame.Angles(-math.rad(30), 0, 0), hornBelly, Enum.Material.SmoothPlastic)
+	weldTo(handle, bellyL2)
+	local stringPadL = makePart(model, "StringPad_L", Vector3.new(0.10, 0.12, 0.06), CFrame.new(0, -1.64, 0.34) * CFrame.Angles(-math.rad(45), 0, 0), hornBelly, Enum.Material.SmoothPlastic)
+	weldTo(handle, stringPadL)
+
+	-- Bone Syyahs (Static Ears) & String Bridges
+	local syyahBaseU = makePart(model, "SyyahU_Base", Vector3.new(0.14, 0.24, 0.14), CFrame.new(0, 1.76, 0.44) * CFrame.Angles(math.rad(50), 0, 0), boneWhite, Enum.Material.SmoothPlastic)
+	weldTo(handle, syyahBaseU)
+	local syyahBladeU = makePart(model, "SyyahU_Blade", Vector3.new(0.10, 0.26, 0.12), CFrame.new(0, 1.94, 0.58) * CFrame.Angles(math.rad(58), 0, 0), boneWhite, Enum.Material.SmoothPlastic)
+	weldTo(handle, syyahBladeU)
+	local bridgeU = makePart(model, "StringBridge_U", Vector3.new(0.08, 0.06, 0.10), CFrame.new(0, 1.82, 0.48), goldAccent, Enum.Material.Metal)
+	weldTo(handle, bridgeU)
+
+	local syyahBaseL = makePart(model, "SyyahL_Base", Vector3.new(0.14, 0.24, 0.14), CFrame.new(0, -1.76, 0.44) * CFrame.Angles(-math.rad(50), 0, 0), boneWhite, Enum.Material.SmoothPlastic)
+	weldTo(handle, syyahBaseL)
+	local syyahBladeL = makePart(model, "SyyahL_Blade", Vector3.new(0.10, 0.26, 0.12), CFrame.new(0, -1.94, 0.58) * CFrame.Angles(-math.rad(58), 0, 0), boneWhite, Enum.Material.SmoothPlastic)
+	weldTo(handle, syyahBladeL)
+	local bridgeL = makePart(model, "StringBridge_L", Vector3.new(0.08, 0.06, 0.10), CFrame.new(0, -1.82, 0.48), goldAccent, Enum.Material.Metal)
+	weldTo(handle, bridgeL)
+
+	-- Bowstring
+	local bowString = makePart(model, "BowString", Vector3.new(0.045, 3.86, 0.045), CFrame.new(0, 0, 0.58), stringColor, Enum.Material.Fabric)
+	weldTo(handle, bowString)
+
+	addSocket(handle, "Grip", Vector3.zero)
+	addSocket(handle, "Nock", Vector3.new(ARROW_REST.X, ARROW_REST.Y, 0.58))
+	addSocket(handle, "TipUpper", Vector3.new(0, 1.94, 0.58))
+	addSocket(handle, "TipLower", Vector3.new(0, -1.94, 0.58))
+	addSocket(handle, "VfxTip", Vector3.new(0, 1.94, 0.58))
+	addSocket(handle, "VfxBase", Vector3.new(0, -1.94, 0.58))
+	addSocket(handle, "VfxCore", Vector3.zero)
+	addSocket(handle, "VfxNock", Vector3.new(ARROW_REST.X, ARROW_REST.Y, 0.58))
+
+	createHunterArrow(model, handle)
+	return model
+end
+
+-- ============================================================================
+-- 4. Gale Force Composite (art_gale_force_composite) - Uncommon Enhanced
+-- ============================================================================
+function WeaponModelBuilder.BuildGaleForceComposite(): Model
+	local model = Instance.new("Model")
+	model.Name = "art_gale_force_composite"
+
+	local jadeGreen = Color3.fromRGB(60, 145, 110)
+	local jadePale = Color3.fromRGB(115, 185, 150)
+	local silverMetal = Color3.fromRGB(220, 230, 235)
+	local aeroTeal = Color3.fromRGB(40, 105, 95)
+	local stringColor = Color3.fromRGB(215, 245, 240)
+
+	-- Aerodynamic Cutaway Riser
+	local handle = makePart(model, "Handle", Vector3.new(0.24, 0.72, 0.30), CFrame.new(0, 0, 0), aeroTeal, Enum.Material.SmoothPlastic)
+	model.PrimaryPart = handle
+
+	-- Jade Silk Wraps & Silver Ferrules
+	local wrap1 = makePart(model, "JadeWrap_1", Vector3.new(0.26, 0.10, 0.32), CFrame.new(0, 0.20, 0), jadeGreen, Enum.Material.Fabric)
+	weldTo(handle, wrap1)
+	local wrap2 = makePart(model, "JadeWrap_2", Vector3.new(0.27, 0.10, 0.33), CFrame.new(0, 0.07, 0), jadeGreen, Enum.Material.Fabric)
+	weldTo(handle, wrap2)
+	local wrap3 = makePart(model, "JadeWrap_3", Vector3.new(0.27, 0.10, 0.33), CFrame.new(0, -0.07, 0), jadeGreen, Enum.Material.Fabric)
+	weldTo(handle, wrap3)
+	local wrap4 = makePart(model, "JadeWrap_4", Vector3.new(0.26, 0.10, 0.32), CFrame.new(0, -0.20, 0), jadeGreen, Enum.Material.Fabric)
+	weldTo(handle, wrap4)
+
+	local ferruleTop = makePart(model, "Ferrule_Top", Vector3.new(0.26, 0.05, 0.32), CFrame.new(0, 0.28, 0), silverMetal, Enum.Material.Metal)
+	weldTo(handle, ferruleTop)
+	local ferruleBot = makePart(model, "Ferrule_Bot", Vector3.new(0.26, 0.05, 0.32), CFrame.new(0, -0.28, 0), silverMetal, Enum.Material.Metal)
+	weldTo(handle, ferruleBot)
+	local ringTop = makePart(model, "JadeRing_Top", Vector3.new(0.27, 0.03, 0.33), CFrame.new(0, 0.32, 0), jadePale, Enum.Material.SmoothPlastic)
+	weldTo(handle, ringTop)
+	local ringBot = makePart(model, "JadeRing_Bot", Vector3.new(0.27, 0.03, 0.33), CFrame.new(0, -0.32, 0), jadePale, Enum.Material.SmoothPlastic)
+	weldTo(handle, ringBot)
+	local windVane = makePart(model, "WindArrowShelf", Vector3.new(0.08, 0.14, 0.18), CFrame.new(0.14, 0.09, -0.07), silverMetal, Enum.Material.Metal)
+	weldTo(handle, windVane)
+
+	-- Upper Aero Limbs: 5 tapered jade segments
+	local lu1 = makePart(model, "LimbU_1", Vector3.new(0.22, 0.34, 0.22), CFrame.new(0, 0.48, -0.02) * CFrame.Angles(-math.rad(4), 0, 0), jadeGreen, Enum.Material.SmoothPlastic)
+	weldTo(handle, lu1)
+	local lu2 = makePart(model, "LimbU_2", Vector3.new(0.20, 0.34, 0.20), CFrame.new(0, 0.78, -0.05) * CFrame.Angles(-math.rad(10), 0, 0), jadeGreen, Enum.Material.SmoothPlastic)
+	weldTo(handle, lu2)
+	local lu3 = makePart(model, "LimbU_3", Vector3.new(0.18, 0.34, 0.18), CFrame.new(0, 1.08, -0.02) * CFrame.Angles(math.rad(10), 0, 0), jadePale, Enum.Material.SmoothPlastic)
+	weldTo(handle, lu3)
+	local lu4 = makePart(model, "LimbU_4", Vector3.new(0.16, 0.34, 0.16), CFrame.new(0, 1.36, 0.13) * CFrame.Angles(math.rad(28), 0, 0), jadePale, Enum.Material.SmoothPlastic)
+	weldTo(handle, lu4)
+	local lu5 = makePart(model, "LimbU_5", Vector3.new(0.14, 0.34, 0.14), CFrame.new(0, 1.62, 0.34) * CFrame.Angles(math.rad(44), 0, 0), jadePale, Enum.Material.SmoothPlastic)
+	weldTo(handle, lu5)
+
+	-- Upper Raised Dorsal Ribs
+	local ribU1 = makePart(model, "DorsalRib_U1", Vector3.new(0.06, 0.36, 0.08), CFrame.new(0, 0.78, -0.12) * CFrame.Angles(-math.rad(10), 0, 0), silverMetal, Enum.Material.Metal)
+	weldTo(handle, ribU1)
+	local ribU2 = makePart(model, "DorsalRib_U2", Vector3.new(0.05, 0.36, 0.08), CFrame.new(0, 1.36, 0.06) * CFrame.Angles(math.rad(28), 0, 0), silverMetal, Enum.Material.Metal)
+	weldTo(handle, ribU2)
+
+	-- Swept Falcon Winglet Vanes (Upper)
+	local wingU1 = makePart(model, "Winglet_U1", Vector3.new(0.04, 0.22, 0.16), CFrame.new(0.10, 1.12, 0.04) * CFrame.Angles(math.rad(18), math.rad(20), 0), silverMetal, Enum.Material.Metal)
+	weldTo(handle, wingU1)
+	local wingU2 = makePart(model, "Winglet_U2", Vector3.new(0.04, 0.22, 0.16), CFrame.new(-0.10, 1.12, 0.04) * CFrame.Angles(math.rad(18), -math.rad(20), 0), silverMetal, Enum.Material.Metal)
+	weldTo(handle, wingU2)
+
+	-- Lower Aero Limbs: 5 tapered jade segments
+	local ll1 = makePart(model, "LimbL_1", Vector3.new(0.22, 0.34, 0.22), CFrame.new(0, -0.48, -0.02) * CFrame.Angles(math.rad(4), 0, 0), jadeGreen, Enum.Material.SmoothPlastic)
+	weldTo(handle, ll1)
+	local ll2 = makePart(model, "LimbL_2", Vector3.new(0.20, 0.34, 0.20), CFrame.new(0, -0.78, -0.05) * CFrame.Angles(math.rad(10), 0, 0), jadeGreen, Enum.Material.SmoothPlastic)
+	weldTo(handle, ll2)
+	local ll3 = makePart(model, "LimbL_3", Vector3.new(0.18, 0.34, 0.18), CFrame.new(0, -1.08, -0.02) * CFrame.Angles(-math.rad(10), 0, 0), jadePale, Enum.Material.SmoothPlastic)
+	weldTo(handle, ll3)
+	local ll4 = makePart(model, "LimbL_4", Vector3.new(0.16, 0.34, 0.16), CFrame.new(0, -1.36, 0.13) * CFrame.Angles(-math.rad(28), 0, 0), jadePale, Enum.Material.SmoothPlastic)
+	weldTo(handle, ll4)
+	local ll5 = makePart(model, "LimbL_5", Vector3.new(0.14, 0.34, 0.14), CFrame.new(0, -1.62, 0.34) * CFrame.Angles(-math.rad(44), 0, 0), jadePale, Enum.Material.SmoothPlastic)
+	weldTo(handle, ll5)
+
+	-- Lower Raised Dorsal Ribs
+	local ribL1 = makePart(model, "DorsalRib_L1", Vector3.new(0.06, 0.36, 0.08), CFrame.new(0, -0.78, -0.12) * CFrame.Angles(math.rad(10), 0, 0), silverMetal, Enum.Material.Metal)
+	weldTo(handle, ribL1)
+	local ribL2 = makePart(model, "DorsalRib_L2", Vector3.new(0.05, 0.36, 0.08), CFrame.new(0, -1.36, 0.06) * CFrame.Angles(-math.rad(28), 0, 0), silverMetal, Enum.Material.Metal)
+	weldTo(handle, ribL2)
+
+	-- Swept Falcon Winglet Vanes (Lower)
+	local wingL1 = makePart(model, "Winglet_L1", Vector3.new(0.04, 0.22, 0.16), CFrame.new(0.10, -1.12, 0.04) * CFrame.Angles(-math.rad(18), math.rad(20), 0), silverMetal, Enum.Material.Metal)
+	weldTo(handle, wingL1)
+	local wingL2 = makePart(model, "Winglet_L2", Vector3.new(0.04, 0.22, 0.16), CFrame.new(-0.10, -1.12, 0.04) * CFrame.Angles(-math.rad(18), -math.rad(20), 0), silverMetal, Enum.Material.Metal)
+	weldTo(handle, wingL2)
+
+	-- Silver Falcon-Beak Tips
+	local beakBaseU = makePart(model, "BeakTip_U1", Vector3.new(0.14, 0.22, 0.14), CFrame.new(0, 1.84, 0.48) * CFrame.Angles(math.rad(52), 0, 0), silverMetal, Enum.Material.Metal)
+	weldTo(handle, beakBaseU)
+	local beakTipU = makePart(model, "BeakTip_U2", Vector3.new(0.10, 0.22, 0.12), CFrame.new(0, 1.98, 0.60) * CFrame.Angles(math.rad(62), 0, 0), silverMetal, Enum.Material.Metal)
+	weldTo(handle, beakTipU)
+
+	local beakBaseL = makePart(model, "BeakTip_L1", Vector3.new(0.14, 0.22, 0.14), CFrame.new(0, -1.84, 0.48) * CFrame.Angles(-math.rad(52), 0, 0), silverMetal, Enum.Material.Metal)
+	weldTo(handle, beakBaseL)
+	local beakTipL = makePart(model, "BeakTip_L2", Vector3.new(0.10, 0.22, 0.12), CFrame.new(0, -1.98, 0.60) * CFrame.Angles(-math.rad(62), 0, 0), silverMetal, Enum.Material.Metal)
+	weldTo(handle, beakTipL)
+
+	-- Bowstring
+	local bowString = makePart(model, "BowString", Vector3.new(0.045, 3.96, 0.045), CFrame.new(0, 0, 0.60), stringColor, Enum.Material.Fabric)
+	weldTo(handle, bowString)
+
+	addSocket(handle, "Grip", Vector3.zero)
+	addSocket(handle, "Nock", Vector3.new(ARROW_REST.X, ARROW_REST.Y, 0.60))
+	addSocket(handle, "TipUpper", Vector3.new(0, 1.98, 0.60))
+	addSocket(handle, "TipLower", Vector3.new(0, -1.98, 0.60))
+	addSocket(handle, "VfxTip", Vector3.new(0, 1.98, 0.60))
+	addSocket(handle, "VfxBase", Vector3.new(0, -1.98, 0.60))
+	addSocket(handle, "VfxCore", Vector3.zero)
+	addSocket(handle, "VfxNock", Vector3.new(ARROW_REST.X, ARROW_REST.Y, 0.60))
+
+	createHunterArrow(model, handle)
+	return model
+end
+
+-- ============================================================================
+-- 5. Stormstrider Longbow (art_stormstrider_longbow) - Rare Standard
+-- ============================================================================
+function WeaponModelBuilder.BuildStormstriderLongbow(): Model
+	local model = Instance.new("Model")
+	model.Name = "art_stormstrider_longbow"
+
+	local stormBlack = Color3.fromRGB(32, 35, 42)
+	local stormBlue = Color3.fromRGB(45, 75, 125)
+	local tsukaWrap = Color3.fromRGB(20, 22, 28)
+	local lightningGold = Color3.fromRGB(240, 205, 75)
+	local copperWire = Color3.fromRGB(195, 115, 65)
+	local ironDark = Color3.fromRGB(70, 75, 82)
+	local stringColor = Color3.fromRGB(180, 215, 255)
+
+	-- Low-set Asymmetrical Daikyu Grip & Tsuka-ito Wrap
+	local handle = makePart(model, "Handle", Vector3.new(0.24, 0.70, 0.30), CFrame.new(0, 0, 0), stormBlack, Enum.Material.SmoothPlastic)
+	model.PrimaryPart = handle
+
+	local wrap1 = makePart(model, "TsukaWrap_1", Vector3.new(0.26, 0.10, 0.32), CFrame.new(0, 0.20, 0), tsukaWrap, Enum.Material.Fabric)
+	weldTo(handle, wrap1)
+	local wrap2 = makePart(model, "TsukaWrap_2", Vector3.new(0.27, 0.10, 0.33), CFrame.new(0, 0.07, 0), tsukaWrap, Enum.Material.Fabric)
+	weldTo(handle, wrap2)
+	local wrap3 = makePart(model, "TsukaWrap_3", Vector3.new(0.27, 0.10, 0.33), CFrame.new(0, -0.07, 0), tsukaWrap, Enum.Material.Fabric)
+	weldTo(handle, wrap3)
+	local wrap4 = makePart(model, "TsukaWrap_4", Vector3.new(0.26, 0.10, 0.32), CFrame.new(0, -0.20, 0), tsukaWrap, Enum.Material.Fabric)
+	weldTo(handle, wrap4)
+
+	local stormCrest = makePart(model, "StormCrestCollar", Vector3.new(0.28, 0.06, 0.34), CFrame.new(0, 0.28, 0), lightningGold, Enum.Material.Metal)
+	weldTo(handle, stormCrest)
+	local menuki1 = makePart(model, "MenukiDragon_1", Vector3.new(0.10, 0.12, 0.14), CFrame.new(0.12, 0.05, 0), lightningGold, Enum.Material.Metal)
+	weldTo(handle, menuki1)
+	local menuki2 = makePart(model, "MenukiDragon_2", Vector3.new(0.10, 0.12, 0.14), CFrame.new(-0.12, -0.05, 0), lightningGold, Enum.Material.Metal)
+	weldTo(handle, menuki2)
+	local stormShelf = makePart(model, "StormShelf", Vector3.new(0.08, 0.14, 0.18), CFrame.new(0.14, 0.10, -0.07), ironDark, Enum.Material.Metal)
+	weldTo(handle, stormShelf)
+
+	-- Upper Arch: 8 expansive curved segments (daikyu 2:1 ratio, sweeps up to Y=+3.0)
+	local lu1 = makePart(model, "LimbU_1", Vector3.new(0.22, 0.38, 0.24), CFrame.new(0, 0.50, 0.02) * CFrame.Angles(math.rad(4), 0, 0), stormBlue, Enum.Material.SmoothPlastic)
+	weldTo(handle, lu1)
+	local lu2 = makePart(model, "LimbU_2", Vector3.new(0.21, 0.38, 0.23), CFrame.new(0, 0.86, 0.05) * CFrame.Angles(math.rad(8), 0, 0), stormBlue, Enum.Material.SmoothPlastic)
+	weldTo(handle, lu2)
+	local lu3 = makePart(model, "LimbU_3", Vector3.new(0.20, 0.38, 0.22), CFrame.new(0, 1.22, 0.11) * CFrame.Angles(math.rad(13), 0, 0), stormBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, lu3)
+	local lu4 = makePart(model, "LimbU_4", Vector3.new(0.19, 0.38, 0.20), CFrame.new(0, 1.58, 0.20) * CFrame.Angles(math.rad(18), 0, 0), stormBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, lu4)
+	local lu5 = makePart(model, "LimbU_5", Vector3.new(0.18, 0.38, 0.19), CFrame.new(0, 1.94, 0.32) * CFrame.Angles(math.rad(24), 0, 0), stormBlue, Enum.Material.SmoothPlastic)
+	weldTo(handle, lu5)
+	local lu6 = makePart(model, "LimbU_6", Vector3.new(0.17, 0.38, 0.18), CFrame.new(0, 2.28, 0.48) * CFrame.Angles(math.rad(31), 0, 0), stormBlue, Enum.Material.SmoothPlastic)
+	weldTo(handle, lu6)
+	local lu7 = makePart(model, "LimbU_7", Vector3.new(0.16, 0.38, 0.17), CFrame.new(0, 2.60, 0.68) * CFrame.Angles(math.rad(39), 0, 0), stormBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, lu7)
+	local lu8 = makePart(model, "LimbU_8", Vector3.new(0.15, 0.40, 0.16), CFrame.new(0, 2.90, 0.92) * CFrame.Angles(math.rad(48), 0, 0), stormBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, lu8)
+
+	-- Upper Lightning Spine Plates (5 plates along dorsal back)
+	local sp1 = makePart(model, "SpinePlate_1", Vector3.new(0.08, 0.36, 0.08), CFrame.new(0, 0.86, -0.06) * CFrame.Angles(math.rad(8), 0, 0), lightningGold, Enum.Material.Metal)
+	weldTo(handle, sp1)
+	local sp2 = makePart(model, "SpinePlate_2", Vector3.new(0.07, 0.36, 0.08), CFrame.new(0, 1.58, 0.09) * CFrame.Angles(math.rad(18), 0, 0), lightningGold, Enum.Material.Metal)
+	weldTo(handle, sp2)
+	local sp3 = makePart(model, "SpinePlate_3", Vector3.new(0.06, 0.36, 0.08), CFrame.new(0, 2.28, 0.37) * CFrame.Angles(math.rad(31), 0, 0), lightningGold, Enum.Material.Metal)
+	weldTo(handle, sp3)
+	local sp4 = makePart(model, "SpinePlate_4", Vector3.new(0.05, 0.36, 0.08), CFrame.new(0, 2.60, 0.57) * CFrame.Angles(math.rad(39), 0, 0), lightningGold, Enum.Material.Metal)
+	weldTo(handle, sp4)
+
+	-- Copper Wire Bindings (Upper & Lower)
+	local wire1 = makePart(model, "WireBinding_1", Vector3.new(0.24, 0.06, 0.26), CFrame.new(0, 1.22, 0.11) * CFrame.Angles(math.rad(13), 0, 0), copperWire, Enum.Material.Metal)
+	weldTo(handle, wire1)
+	local wire2 = makePart(model, "WireBinding_2", Vector3.new(0.21, 0.06, 0.22), CFrame.new(0, 1.94, 0.32) * CFrame.Angles(math.rad(24), 0, 0), copperWire, Enum.Material.Metal)
+	weldTo(handle, wire2)
+	local wire3 = makePart(model, "WireBinding_3", Vector3.new(0.20, 0.06, 0.21), CFrame.new(0, 2.28, 0.48) * CFrame.Angles(math.rad(31), 0, 0), copperWire, Enum.Material.Metal)
+	weldTo(handle, wire3)
+
+	-- Upper Lightning Claw Tips (3-piece assembly)
+	local clawBaseU = makePart(model, "Claw_U1", Vector3.new(0.14, 0.22, 0.14), CFrame.new(0, 3.12, 1.10) * CFrame.Angles(math.rad(56), 0, 0), lightningGold, Enum.Material.Metal)
+	weldTo(handle, clawBaseU)
+	local clawTipU = makePart(model, "Claw_U2", Vector3.new(0.10, 0.24, 0.12), CFrame.new(0, 3.26, 1.24) * CFrame.Angles(math.rad(66), 0, 0), lightningGold, Enum.Material.Metal)
+	weldTo(handle, clawTipU)
+	local clawSpurU = makePart(model, "Claw_U3", Vector3.new(0.06, 0.14, 0.10), CFrame.new(0, 3.06, 1.22) * CFrame.Angles(-math.rad(30), 0, 0), lightningGold, Enum.Material.Metal)
+	weldTo(handle, clawSpurU)
+
+	-- Lower Limb: 5 compact counter-recoil segments
+	local ll1 = makePart(model, "LimbL_1", Vector3.new(0.22, 0.34, 0.24), CFrame.new(0, -0.48, 0.02) * CFrame.Angles(-math.rad(6), 0, 0), stormBlue, Enum.Material.SmoothPlastic)
+	weldTo(handle, ll1)
+	local ll2 = makePart(model, "LimbL_2", Vector3.new(0.21, 0.34, 0.23), CFrame.new(0, -0.80, 0.06) * CFrame.Angles(-math.rad(14), 0, 0), stormBlue, Enum.Material.SmoothPlastic)
+	weldTo(handle, ll2)
+	local ll3 = makePart(model, "LimbL_3", Vector3.new(0.20, 0.34, 0.22), CFrame.new(0, -1.12, 0.15) * CFrame.Angles(-math.rad(23), 0, 0), stormBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, ll3)
+	local ll4 = makePart(model, "LimbL_4", Vector3.new(0.18, 0.34, 0.20), CFrame.new(0, -1.42, 0.29) * CFrame.Angles(-math.rad(33), 0, 0), stormBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, ll4)
+	local ll5 = makePart(model, "LimbL_5", Vector3.new(0.16, 0.36, 0.18), CFrame.new(0, -1.70, 0.48) * CFrame.Angles(-math.rad(44), 0, 0), stormBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, ll5)
+
+	-- Lower Wire Binding & Ground Iron Boot
+	local wire4 = makePart(model, "WireBinding_4", Vector3.new(0.22, 0.06, 0.24), CFrame.new(0, -0.80, 0.06) * CFrame.Angles(-math.rad(14), 0, 0), copperWire, Enum.Material.Metal)
+	weldTo(handle, wire4)
+	local wire5 = makePart(model, "WireBinding_5", Vector3.new(0.22, 0.06, 0.24), CFrame.new(0, -1.12, 0.15) * CFrame.Angles(-math.rad(23), 0, 0), copperWire, Enum.Material.Metal)
+	weldTo(handle, wire5)
+	local boot1 = makePart(model, "GroundBoot_1", Vector3.new(0.18, 0.20, 0.20), CFrame.new(0, -1.90, 0.62) * CFrame.Angles(-math.rad(52), 0, 0), ironDark, Enum.Material.Metal)
+	weldTo(handle, boot1)
+	local boot2 = makePart(model, "GroundBoot_2", Vector3.new(0.14, 0.18, 0.16), CFrame.new(0, -2.02, 0.74) * CFrame.Angles(-math.rad(60), 0, 0), ironDark, Enum.Material.Metal)
+	weldTo(handle, boot2)
+	local bootSpike = makePart(model, "GroundBoot_Spike", Vector3.new(0.08, 0.14, 0.08), CFrame.new(0, -2.14, 0.82) * CFrame.Angles(-math.rad(68), 0, 0), lightningGold, Enum.Material.Metal)
+	weldTo(handle, bootSpike)
+
+	-- Storm-wire Bowstring
+	local bowString = makePart(model, "BowString", Vector3.new(0.045, 5.30, 0.045), CFrame.new(0, 0.60, 0.85) * CFrame.Angles(math.rad(5), 0, 0), stringColor, Enum.Material.Fabric)
+	weldTo(handle, bowString)
+
+	addSocket(handle, "Grip", Vector3.zero)
+	addSocket(handle, "Nock", Vector3.new(ARROW_REST.X, ARROW_REST.Y, 0.85))
+	addSocket(handle, "TipUpper", Vector3.new(0, 3.26, 1.24))
+	addSocket(handle, "TipLower", Vector3.new(0, -2.02, 0.74))
+	addSocket(handle, "VfxTip", Vector3.new(0, 3.26, 1.24))
+	addSocket(handle, "VfxBase", Vector3.new(0, -2.02, 0.74))
+	addSocket(handle, "VfxCore", Vector3.zero)
+	addSocket(handle, "VfxNock", Vector3.new(ARROW_REST.X, ARROW_REST.Y, 0.85))
+
+	createHunterArrow(model, handle)
+	return model
+end
+
+-- ============================================================================
+-- 6. Thunderhead Recurve (art_thunderhead_recurve) - Rare Enhanced
+-- ============================================================================
+function WeaponModelBuilder.BuildThunderheadRecurve(): Model
+	local model = Instance.new("Model")
+	model.Name = "art_thunderhead_recurve"
+
+	local bronzeDark = Color3.fromRGB(150, 95, 45)
+	local bronzeBright = Color3.fromRGB(195, 135, 65)
+	local copperBright = Color3.fromRGB(225, 125, 65)
+	local vulcaniteBlack = Color3.fromRGB(30, 30, 32)
+	local steelClamp = Color3.fromRGB(120, 125, 135)
+	local sparkGold = Color3.fromRGB(255, 220, 90)
+	local stringColor = Color3.fromRGB(240, 185, 100)
+
+	-- Cast Bronze Heavy Riser
+	local handle = makePart(model, "Handle", Vector3.new(0.26, 0.72, 0.32), CFrame.new(0, 0, 0), bronzeDark, Enum.Material.Metal)
+	model.PrimaryPart = handle
+
+	-- Knurled Vulcanite Grip & Dial Plate
+	local vWrap1 = makePart(model, "VulcaniteGrip_1", Vector3.new(0.28, 0.12, 0.34), CFrame.new(0, 0.16, 0), vulcaniteBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, vWrap1)
+	local vWrap2 = makePart(model, "VulcaniteGrip_2", Vector3.new(0.29, 0.12, 0.35), CFrame.new(0, 0.04, 0), vulcaniteBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, vWrap2)
+	local vWrap3 = makePart(model, "VulcaniteGrip_3", Vector3.new(0.28, 0.12, 0.34), CFrame.new(0, -0.08, 0), vulcaniteBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, vWrap3)
+
+	local voltDial = makePart(model, "VoltDialPlate", Vector3.new(0.12, 0.14, 0.08), CFrame.new(-0.14, 0.06, 0), steelClamp, Enum.Material.Metal)
+	weldTo(handle, voltDial)
+	local dialGlass = makePart(model, "VoltDialGlass", Vector3.new(0.08, 0.10, 0.04), CFrame.new(-0.17, 0.06, 0), sparkGold, Enum.Material.Glass)
+	weldTo(handle, dialGlass)
+	local dialNeedle = makePart(model, "VoltDialNeedle", Vector3.new(0.02, 0.08, 0.02), CFrame.new(-0.17, 0.06, 0) * CFrame.Angles(0, 0, math.rad(30)), copperBright, Enum.Material.Metal)
+	weldTo(handle, dialNeedle)
+	local arrowRest = makePart(model, "BronzeArrowRest", Vector3.new(0.08, 0.14, 0.18), CFrame.new(0.15, 0.08, -0.08), bronzeBright, Enum.Material.Metal)
+	weldTo(handle, arrowRest)
+
+	-- Upper Stepped Bronze Limbs (6 segments)
+	local lu1 = makePart(model, "LimbU_1", Vector3.new(0.24, 0.34, 0.24), CFrame.new(0, 0.48, 0.02) * CFrame.Angles(math.rad(5), 0, 0), bronzeDark, Enum.Material.Metal)
+	weldTo(handle, lu1)
+	local lu2 = makePart(model, "LimbU_2", Vector3.new(0.22, 0.34, 0.22), CFrame.new(0, 0.78, 0.06) * CFrame.Angles(math.rad(11), 0, 0), bronzeDark, Enum.Material.Metal)
+	weldTo(handle, lu2)
+	local lu3 = makePart(model, "LimbU_3", Vector3.new(0.20, 0.34, 0.20), CFrame.new(0, 1.08, 0.14) * CFrame.Angles(math.rad(19), 0, 0), bronzeBright, Enum.Material.Metal)
+	weldTo(handle, lu3)
+	local lu4 = makePart(model, "LimbU_4", Vector3.new(0.18, 0.34, 0.18), CFrame.new(0, 1.36, 0.26) * CFrame.Angles(math.rad(28), 0, 0), bronzeBright, Enum.Material.Metal)
+	weldTo(handle, lu4)
+	local lu5 = makePart(model, "LimbU_5", Vector3.new(0.16, 0.34, 0.16), CFrame.new(0, 1.62, 0.42) * CFrame.Angles(math.rad(40), 0, 0), bronzeDark, Enum.Material.Metal)
+	weldTo(handle, lu5)
+	local lu6 = makePart(model, "LimbU_6", Vector3.new(0.14, 0.36, 0.14), CFrame.new(0, 1.86, 0.62) * CFrame.Angles(math.rad(54), 0, 0), bronzeDark, Enum.Material.Metal)
+	weldTo(handle, lu6)
+
+	-- Upper Copper Induction Coil (4 toroidal rings + 2 steel clamps + jumper)
+	local coilU1 = makePart(model, "CoilU_1", Vector3.new(0.24, 0.07, 0.24), CFrame.new(0, 0.96, 0.10) * CFrame.Angles(math.rad(15), 0, 0), copperBright, Enum.Material.Metal)
+	weldTo(handle, coilU1)
+	local coilU2 = makePart(model, "CoilU_2", Vector3.new(0.24, 0.07, 0.24), CFrame.new(0, 1.05, 0.13) * CFrame.Angles(math.rad(18), 0, 0), copperBright, Enum.Material.Metal)
+	weldTo(handle, coilU2)
+	local coilU3 = makePart(model, "CoilU_3", Vector3.new(0.23, 0.07, 0.23), CFrame.new(0, 1.14, 0.16) * CFrame.Angles(math.rad(21), 0, 0), copperBright, Enum.Material.Metal)
+	weldTo(handle, coilU3)
+	local coilU4 = makePart(model, "CoilU_4", Vector3.new(0.23, 0.07, 0.23), CFrame.new(0, 1.23, 0.20) * CFrame.Angles(math.rad(24), 0, 0), copperBright, Enum.Material.Metal)
+	weldTo(handle, coilU4)
+	local clampU1 = makePart(model, "ClampU_1", Vector3.new(0.26, 0.05, 0.26), CFrame.new(0, 0.90, 0.08) * CFrame.Angles(math.rad(13), 0, 0), steelClamp, Enum.Material.Metal)
+	weldTo(handle, clampU1)
+	local clampU2 = makePart(model, "ClampU_2", Vector3.new(0.25, 0.05, 0.25), CFrame.new(0, 1.29, 0.23) * CFrame.Angles(math.rad(26), 0, 0), steelClamp, Enum.Material.Metal)
+	weldTo(handle, clampU2)
+	local jumperU = makePart(model, "CoilJumper_U", Vector3.new(0.04, 0.38, 0.04), CFrame.new(0.12, 1.10, 0.16) * CFrame.Angles(math.rad(20), 0, 0), copperBright, Enum.Material.Metal)
+	weldTo(handle, jumperU)
+
+	-- Upper Discharge Capacitor & Prongs
+	local termU = makePart(model, "Terminal_U", Vector3.new(0.12, 0.20, 0.12), CFrame.new(0, 2.04, 0.76) * CFrame.Angles(math.rad(62), 0, 0), steelClamp, Enum.Material.Metal)
+	weldTo(handle, termU)
+	local prongU1 = makePart(model, "Prong_U1", Vector3.new(0.05, 0.22, 0.05), CFrame.new(0.06, 2.16, 0.86) * CFrame.Angles(math.rad(70), math.rad(10), 0), copperBright, Enum.Material.Metal)
+	weldTo(handle, prongU1)
+	local prongU2 = makePart(model, "Prong_U2", Vector3.new(0.05, 0.22, 0.05), CFrame.new(-0.06, 2.16, 0.86) * CFrame.Angles(math.rad(70), -math.rad(10), 0), copperBright, Enum.Material.Metal)
+	weldTo(handle, prongU2)
+
+	-- Lower Stepped Bronze Limbs (6 segments)
+	local ll1 = makePart(model, "LimbL_1", Vector3.new(0.24, 0.34, 0.24), CFrame.new(0, -0.48, 0.02) * CFrame.Angles(-math.rad(5), 0, 0), bronzeDark, Enum.Material.Metal)
+	weldTo(handle, ll1)
+	local ll2 = makePart(model, "LimbL_2", Vector3.new(0.22, 0.34, 0.22), CFrame.new(0, -0.78, 0.06) * CFrame.Angles(-math.rad(11), 0, 0), bronzeDark, Enum.Material.Metal)
+	weldTo(handle, ll2)
+	local ll3 = makePart(model, "LimbL_3", Vector3.new(0.20, 0.34, 0.20), CFrame.new(0, -1.08, 0.14) * CFrame.Angles(-math.rad(19), 0, 0), bronzeBright, Enum.Material.Metal)
+	weldTo(handle, ll3)
+	local ll4 = makePart(model, "LimbL_4", Vector3.new(0.18, 0.34, 0.18), CFrame.new(0, -1.36, 0.26) * CFrame.Angles(-math.rad(28), 0, 0), bronzeBright, Enum.Material.Metal)
+	weldTo(handle, ll4)
+	local ll5 = makePart(model, "LimbL_5", Vector3.new(0.16, 0.34, 0.16), CFrame.new(0, -1.62, 0.42) * CFrame.Angles(-math.rad(40), 0, 0), bronzeDark, Enum.Material.Metal)
+	weldTo(handle, ll5)
+	local ll6 = makePart(model, "LimbL_6", Vector3.new(0.14, 0.36, 0.14), CFrame.new(0, -1.86, 0.62) * CFrame.Angles(-math.rad(54), 0, 0), bronzeDark, Enum.Material.Metal)
+	weldTo(handle, ll6)
+
+	-- Lower Copper Induction Coil
+	local coilL1 = makePart(model, "CoilL_1", Vector3.new(0.24, 0.07, 0.24), CFrame.new(0, -0.96, 0.10) * CFrame.Angles(-math.rad(15), 0, 0), copperBright, Enum.Material.Metal)
+	weldTo(handle, coilL1)
+	local coilL2 = makePart(model, "CoilL_2", Vector3.new(0.24, 0.07, 0.24), CFrame.new(0, -1.05, 0.13) * CFrame.Angles(-math.rad(18), 0, 0), copperBright, Enum.Material.Metal)
+	weldTo(handle, coilL2)
+	local coilL3 = makePart(model, "CoilL_3", Vector3.new(0.23, 0.07, 0.23), CFrame.new(0, -1.14, 0.16) * CFrame.Angles(-math.rad(21), 0, 0), copperBright, Enum.Material.Metal)
+	weldTo(handle, coilL3)
+	local coilL4 = makePart(model, "CoilL_4", Vector3.new(0.23, 0.07, 0.23), CFrame.new(0, -1.23, 0.20) * CFrame.Angles(-math.rad(24), 0, 0), copperBright, Enum.Material.Metal)
+	weldTo(handle, coilL4)
+	local clampL1 = makePart(model, "ClampL_1", Vector3.new(0.26, 0.05, 0.26), CFrame.new(0, -0.90, 0.08) * CFrame.Angles(-math.rad(13), 0, 0), steelClamp, Enum.Material.Metal)
+	weldTo(handle, clampL1)
+	local clampL2 = makePart(model, "ClampL_2", Vector3.new(0.25, 0.05, 0.25), CFrame.new(0, -1.29, 0.23) * CFrame.Angles(-math.rad(26), 0, 0), steelClamp, Enum.Material.Metal)
+	weldTo(handle, clampL2)
+	local jumperL = makePart(model, "CoilJumper_L", Vector3.new(0.04, 0.38, 0.04), CFrame.new(0.12, -1.10, 0.16) * CFrame.Angles(-math.rad(20), 0, 0), copperBright, Enum.Material.Metal)
+	weldTo(handle, jumperL)
+
+	-- Lower Discharge Capacitor & Prongs
+	local termL = makePart(model, "Terminal_L", Vector3.new(0.12, 0.20, 0.12), CFrame.new(0, -2.04, 0.76) * CFrame.Angles(-math.rad(62), 0, 0), steelClamp, Enum.Material.Metal)
+	weldTo(handle, termL)
+	local prongL1 = makePart(model, "Prong_L1", Vector3.new(0.05, 0.22, 0.05), CFrame.new(0.06, -2.16, 0.86) * CFrame.Angles(-math.rad(70), math.rad(10), 0), copperBright, Enum.Material.Metal)
+	weldTo(handle, prongL1)
+	local prongL2 = makePart(model, "Prong_L2", Vector3.new(0.05, 0.22, 0.05), CFrame.new(-0.06, -2.16, 0.86) * CFrame.Angles(-math.rad(70), -math.rad(10), 0), copperBright, Enum.Material.Metal)
+	weldTo(handle, prongL2)
+
+	-- Twisted Copper-Core Bowstring
+	local bowString = makePart(model, "BowString", Vector3.new(0.045, 4.30, 0.045), CFrame.new(0, 0, 0.82), stringColor, Enum.Material.Fabric)
+	weldTo(handle, bowString)
+
+	addSocket(handle, "Grip", Vector3.zero)
+	addSocket(handle, "Nock", Vector3.new(ARROW_REST.X, ARROW_REST.Y, 0.82))
+	addSocket(handle, "TipUpper", Vector3.new(0, 2.16, 0.86))
+	addSocket(handle, "TipLower", Vector3.new(0, -2.16, 0.86))
+	addSocket(handle, "VfxTip", Vector3.new(0, 2.16, 0.86))
+	addSocket(handle, "VfxBase", Vector3.new(0, -2.16, 0.86))
+	addSocket(handle, "VfxCore", Vector3.zero)
+	addSocket(handle, "VfxNock", Vector3.new(ARROW_REST.X, ARROW_REST.Y, 0.82))
+
+	createHunterArrow(model, handle)
+	return model
+end
+
+-- ============================================================================
+-- 7. Crystal Greatbow (art_crystal_greatbow) - Superior Standard
+-- ============================================================================
+function WeaponModelBuilder.BuildCrystalGreatbow(): Model
+	local model = Instance.new("Model")
+	model.Name = "art_crystal_greatbow"
+
+	local platinumSilver = Color3.fromRGB(225, 230, 240)
+	local platinumDark = Color3.fromRGB(165, 175, 190)
+	local velvetViolet = Color3.fromRGB(75, 25, 110)
+	local amethystCrystal = Color3.fromRGB(175, 105, 245)
+	local amethystPale = Color3.fromRGB(215, 165, 255)
+	local stringColor = Color3.fromRGB(235, 215, 255)
+
+	-- Chiseled Platinum Socket Cradle & Violet Velvet Wrap
+	local handle = makePart(model, "Handle", Vector3.new(0.26, 0.74, 0.32), CFrame.new(0, 0, 0), platinumSilver, Enum.Material.Metal)
+	model.PrimaryPart = handle
+
+	local vWrap1 = makePart(model, "VelvetWrap_1", Vector3.new(0.28, 0.10, 0.34), CFrame.new(0, 0.20, 0), velvetViolet, Enum.Material.Fabric)
+	weldTo(handle, vWrap1)
+	local vWrap2 = makePart(model, "VelvetWrap_2", Vector3.new(0.29, 0.10, 0.35), CFrame.new(0, 0.07, 0), velvetViolet, Enum.Material.Fabric)
+	weldTo(handle, vWrap2)
+	local vWrap3 = makePart(model, "VelvetWrap_3", Vector3.new(0.29, 0.10, 0.35), CFrame.new(0, -0.07, 0), velvetViolet, Enum.Material.Fabric)
+	weldTo(handle, vWrap3)
+	local vWrap4 = makePart(model, "VelvetWrap_4", Vector3.new(0.28, 0.10, 0.34), CFrame.new(0, -0.20, 0), velvetViolet, Enum.Material.Fabric)
+	weldTo(handle, vWrap4)
+
+	local ferruleTop = makePart(model, "PlatFerrule_Top", Vector3.new(0.28, 0.06, 0.34), CFrame.new(0, 0.28, 0), platinumDark, Enum.Material.Metal)
+	weldTo(handle, ferruleTop)
+	local ferruleBot = makePart(model, "PlatFerrule_Bot", Vector3.new(0.28, 0.06, 0.34), CFrame.new(0, -0.28, 0), platinumDark, Enum.Material.Metal)
+	weldTo(handle, ferruleBot)
+	local crystalShelf = makePart(model, "CrystalShelf", Vector3.new(0.08, 0.14, 0.18), CFrame.new(0.15, 0.09, -0.08), amethystCrystal, Enum.Material.Glass)
+	weldTo(handle, crystalShelf)
+
+	-- Upper Platinum Exoskeleton Spine (5 segments)
+	local spineU1 = makePart(model, "ExoSpineU_1", Vector3.new(0.12, 0.36, 0.12), CFrame.new(0, 0.50, -0.06) * CFrame.Angles(math.rad(6), 0, 0), platinumSilver, Enum.Material.Metal)
+	weldTo(handle, spineU1)
+	local spineU2 = makePart(model, "ExoSpineU_2", Vector3.new(0.11, 0.36, 0.11), CFrame.new(0, 0.82, -0.03) * CFrame.Angles(math.rad(14), 0, 0), platinumSilver, Enum.Material.Metal)
+	weldTo(handle, spineU2)
+	local spineU3 = makePart(model, "ExoSpineU_3", Vector3.new(0.10, 0.36, 0.10), CFrame.new(0, 1.14, 0.05) * CFrame.Angles(math.rad(24), 0, 0), platinumSilver, Enum.Material.Metal)
+	weldTo(handle, spineU3)
+	local spineU4 = makePart(model, "ExoSpineU_4", Vector3.new(0.09, 0.36, 0.09), CFrame.new(0, 1.44, 0.20) * CFrame.Angles(math.rad(36), 0, 0), platinumSilver, Enum.Material.Metal)
+	weldTo(handle, spineU4)
+	local spineU5 = makePart(model, "ExoSpineU_5", Vector3.new(0.08, 0.38, 0.08), CFrame.new(0, 1.72, 0.42) * CFrame.Angles(math.rad(50), 0, 0), platinumSilver, Enum.Material.Metal)
+	weldTo(handle, spineU5)
+
+	-- Upper Exoskeleton Clamp Collars
+	local clampU1 = makePart(model, "ExoClampU_1", Vector3.new(0.24, 0.05, 0.24), CFrame.new(0, 0.65, -0.04) * CFrame.Angles(math.rad(10), 0, 0), platinumDark, Enum.Material.Metal)
+	weldTo(handle, clampU1)
+	local clampU2 = makePart(model, "ExoClampU_2", Vector3.new(0.22, 0.05, 0.22), CFrame.new(0, 0.98, 0.01) * CFrame.Angles(math.rad(19), 0, 0), platinumDark, Enum.Material.Metal)
+	weldTo(handle, clampU2)
+	local clampU3 = makePart(model, "ExoClampU_3", Vector3.new(0.20, 0.05, 0.20), CFrame.new(0, 1.29, 0.12) * CFrame.Angles(math.rad(30), 0, 0), platinumDark, Enum.Material.Metal)
+	weldTo(handle, clampU3)
+	local clampU4 = makePart(model, "ExoClampU_4", Vector3.new(0.18, 0.05, 0.18), CFrame.new(0, 1.58, 0.31) * CFrame.Angles(math.rad(43), 0, 0), platinumDark, Enum.Material.Metal)
+	weldTo(handle, clampU4)
+
+	-- Upper Hexagonal Amethyst Shards (6 crystals)
+	local shardU1 = makePart(model, "AmethystU_1", Vector3.new(0.18, 0.32, 0.18), CFrame.new(0, 0.50, 0.06) * CFrame.Angles(math.rad(6), math.rad(30), 0), amethystCrystal, Enum.Material.Glass)
+	weldTo(handle, shardU1)
+	local shardU2 = makePart(model, "AmethystU_2", Vector3.new(0.17, 0.32, 0.17), CFrame.new(0, 0.82, 0.09) * CFrame.Angles(math.rad(14), math.rad(30), 0), amethystPale, Enum.Material.Glass)
+	weldTo(handle, shardU2)
+	local shardU3 = makePart(model, "AmethystU_3", Vector3.new(0.16, 0.32, 0.16), CFrame.new(0, 1.14, 0.17) * CFrame.Angles(math.rad(24), math.rad(30), 0), amethystCrystal, Enum.Material.Glass)
+	weldTo(handle, shardU3)
+	local shardU4 = makePart(model, "AmethystU_4", Vector3.new(0.15, 0.32, 0.15), CFrame.new(0, 1.44, 0.32) * CFrame.Angles(math.rad(36), math.rad(30), 0), amethystPale, Enum.Material.Glass)
+	weldTo(handle, shardU4)
+	local shardU5 = makePart(model, "AmethystU_5", Vector3.new(0.14, 0.32, 0.14), CFrame.new(0, 1.72, 0.54) * CFrame.Angles(math.rad(50), math.rad(30), 0), amethystCrystal, Enum.Material.Glass)
+	weldTo(handle, shardU5)
+	local shardU6 = makePart(model, "AmethystU_6", Vector3.new(0.12, 0.34, 0.12), CFrame.new(0, 1.96, 0.80) * CFrame.Angles(math.rad(62), math.rad(30), 0), amethystPale, Enum.Material.Glass)
+	weldTo(handle, shardU6)
+
+	-- Upper Crystal Accent Thorns
+	local thornU1 = makePart(model, "ThornU_1", Vector3.new(0.06, 0.16, 0.10), CFrame.new(0.12, 0.98, 0.08) * CFrame.Angles(math.rad(19), math.rad(35), 0), amethystCrystal, Enum.Material.Glass)
+	weldTo(handle, thornU1)
+	local thornU2 = makePart(model, "ThornU_2", Vector3.new(0.06, 0.16, 0.10), CFrame.new(-0.12, 0.98, 0.08) * CFrame.Angles(math.rad(19), -math.rad(35), 0), amethystCrystal, Enum.Material.Glass)
+	weldTo(handle, thornU2)
+
+	-- Upper Prism Tip Assembly
+	local tipU1 = makePart(model, "PrismTipU_1", Vector3.new(0.14, 0.22, 0.14), CFrame.new(0, 2.12, 0.96) * CFrame.Angles(math.rad(70), 0, 0), platinumSilver, Enum.Material.Metal)
+	weldTo(handle, tipU1)
+	local tipU2 = makePart(model, "PrismTipU_2", Vector3.new(0.08, 0.24, 0.08), CFrame.new(0, 2.24, 1.08) * CFrame.Angles(math.rad(76), 0, 0), amethystPale, Enum.Material.Glass)
+	weldTo(handle, tipU2)
+
+	-- Lower Platinum Exoskeleton Spine (5 segments)
+	local spineL1 = makePart(model, "ExoSpineL_1", Vector3.new(0.12, 0.36, 0.12), CFrame.new(0, -0.50, -0.06) * CFrame.Angles(-math.rad(6), 0, 0), platinumSilver, Enum.Material.Metal)
+	weldTo(handle, spineL1)
+	local spineL2 = makePart(model, "ExoSpineL_2", Vector3.new(0.11, 0.36, 0.11), CFrame.new(0, -0.82, -0.03) * CFrame.Angles(-math.rad(14), 0, 0), platinumSilver, Enum.Material.Metal)
+	weldTo(handle, spineL2)
+	local spineL3 = makePart(model, "ExoSpineL_3", Vector3.new(0.10, 0.36, 0.10), CFrame.new(0, -1.14, 0.05) * CFrame.Angles(-math.rad(24), 0, 0), platinumSilver, Enum.Material.Metal)
+	weldTo(handle, spineL3)
+	local spineL4 = makePart(model, "ExoSpineL_4", Vector3.new(0.09, 0.36, 0.09), CFrame.new(0, -1.44, 0.20) * CFrame.Angles(-math.rad(36), 0, 0), platinumSilver, Enum.Material.Metal)
+	weldTo(handle, spineL4)
+	local spineL5 = makePart(model, "ExoSpineL_5", Vector3.new(0.08, 0.38, 0.08), CFrame.new(0, -1.72, 0.42) * CFrame.Angles(-math.rad(50), 0, 0), platinumSilver, Enum.Material.Metal)
+	weldTo(handle, spineL5)
+
+	-- Lower Exoskeleton Clamp Collars
+	local clampL1 = makePart(model, "ExoClampL_1", Vector3.new(0.24, 0.05, 0.24), CFrame.new(0, -0.65, -0.04) * CFrame.Angles(-math.rad(10), 0, 0), platinumDark, Enum.Material.Metal)
+	weldTo(handle, clampL1)
+	local clampL2 = makePart(model, "ExoClampL_2", Vector3.new(0.22, 0.05, 0.22), CFrame.new(0, -0.98, 0.01) * CFrame.Angles(-math.rad(19), 0, 0), platinumDark, Enum.Material.Metal)
+	weldTo(handle, clampL2)
+	local clampL3 = makePart(model, "ExoClampL_3", Vector3.new(0.20, 0.05, 0.20), CFrame.new(0, -1.29, 0.12) * CFrame.Angles(-math.rad(30), 0, 0), platinumDark, Enum.Material.Metal)
+	weldTo(handle, clampL3)
+	local clampL4 = makePart(model, "ExoClampL_4", Vector3.new(0.18, 0.05, 0.18), CFrame.new(0, -1.58, 0.31) * CFrame.Angles(-math.rad(43), 0, 0), platinumDark, Enum.Material.Metal)
+	weldTo(handle, clampL4)
+
+	-- Lower Hexagonal Amethyst Shards (6 crystals)
+	local shardL1 = makePart(model, "AmethystL_1", Vector3.new(0.18, 0.32, 0.18), CFrame.new(0, -0.50, 0.06) * CFrame.Angles(-math.rad(6), math.rad(30), 0), amethystCrystal, Enum.Material.Glass)
+	weldTo(handle, shardL1)
+	local shardL2 = makePart(model, "AmethystL_2", Vector3.new(0.17, 0.32, 0.17), CFrame.new(0, -0.82, 0.09) * CFrame.Angles(-math.rad(14), math.rad(30), 0), amethystPale, Enum.Material.Glass)
+	weldTo(handle, shardL2)
+	local shardL3 = makePart(model, "AmethystL_3", Vector3.new(0.16, 0.32, 0.16), CFrame.new(0, -1.14, 0.17) * CFrame.Angles(-math.rad(24), math.rad(30), 0), amethystCrystal, Enum.Material.Glass)
+	weldTo(handle, shardL3)
+	local shardL4 = makePart(model, "AmethystL_4", Vector3.new(0.15, 0.32, 0.15), CFrame.new(0, -1.44, 0.32) * CFrame.Angles(-math.rad(36), math.rad(30), 0), amethystPale, Enum.Material.Glass)
+	weldTo(handle, shardL4)
+	local shardL5 = makePart(model, "AmethystL_5", Vector3.new(0.14, 0.32, 0.14), CFrame.new(0, -1.72, 0.54) * CFrame.Angles(-math.rad(50), math.rad(30), 0), amethystCrystal, Enum.Material.Glass)
+	weldTo(handle, shardL5)
+	local shardL6 = makePart(model, "AmethystL_6", Vector3.new(0.12, 0.34, 0.12), CFrame.new(0, -1.96, 0.80) * CFrame.Angles(-math.rad(62), math.rad(30), 0), amethystPale, Enum.Material.Glass)
+	weldTo(handle, shardL6)
+
+	-- Lower Crystal Accent Thorns
+	local thornL1 = makePart(model, "ThornL_1", Vector3.new(0.06, 0.16, 0.10), CFrame.new(0.12, -0.98, 0.08) * CFrame.Angles(-math.rad(19), math.rad(35), 0), amethystCrystal, Enum.Material.Glass)
+	weldTo(handle, thornL1)
+	local thornL2 = makePart(model, "ThornL_2", Vector3.new(0.06, 0.16, 0.10), CFrame.new(-0.12, -0.98, 0.08) * CFrame.Angles(-math.rad(19), -math.rad(35), 0), amethystCrystal, Enum.Material.Glass)
+	weldTo(handle, thornL2)
+
+	-- Lower Prism Tip Assembly
+	local tipL1 = makePart(model, "PrismTipL_1", Vector3.new(0.14, 0.22, 0.14), CFrame.new(0, -2.12, 0.96) * CFrame.Angles(-math.rad(70), 0, 0), platinumSilver, Enum.Material.Metal)
+	weldTo(handle, tipL1)
+	local tipL2 = makePart(model, "PrismTipL_2", Vector3.new(0.08, 0.24, 0.08), CFrame.new(0, -2.24, 1.08) * CFrame.Angles(-math.rad(76), 0, 0), amethystPale, Enum.Material.Glass)
+	weldTo(handle, tipL2)
+
+	-- Harmonic Silver Bowstring
+	local bowString = makePart(model, "BowString", Vector3.new(0.045, 4.46, 0.045), CFrame.new(0, 0, 1.04), stringColor, Enum.Material.Fabric)
+	weldTo(handle, bowString)
+
+	addSocket(handle, "Grip", Vector3.zero)
+	addSocket(handle, "Nock", Vector3.new(ARROW_REST.X, ARROW_REST.Y, 1.04))
+	addSocket(handle, "TipUpper", Vector3.new(0, 2.24, 1.08))
+	addSocket(handle, "TipLower", Vector3.new(0, -2.24, 1.08))
+	addSocket(handle, "VfxTip", Vector3.new(0, 2.24, 1.08))
+	addSocket(handle, "VfxBase", Vector3.new(0, -2.24, 1.08))
+	addSocket(handle, "VfxCore", Vector3.zero)
+	addSocket(handle, "VfxNock", Vector3.new(ARROW_REST.X, ARROW_REST.Y, 1.04))
+
+	createHunterArrow(model, handle)
+	return model
+end
+
+-- ============================================================================
+-- 8. Prismatic Arbalest (art_prismatic_arbalest) - Superior Enhanced
+-- ============================================================================
+function WeaponModelBuilder.BuildPrismaticArbalest(): Model
+	local model = Instance.new("Model")
+	model.Name = "art_prismatic_arbalest"
+
+	local darkMagnesium = Color3.fromRGB(55, 60, 68)
+	local anodizedRed = Color3.fromRGB(185, 45, 55)
+	local brassCam = Color3.fromRGB(215, 175, 75)
+	local carbonBlack = Color3.fromRGB(28, 28, 30)
+	local opticGreen = Color3.fromRGB(80, 235, 120)
+	local opticAmber = Color3.fromRGB(245, 160, 40)
+	local stringColor = Color3.fromRGB(220, 225, 235)
+
+	-- CNC Machined Skeleton Riser
+	local handle = makePart(model, "Handle", Vector3.new(0.26, 0.76, 0.34), CFrame.new(0, 0, 0), darkMagnesium, Enum.Material.Metal)
+	model.PrimaryPart = handle
+
+	-- Skeleton Window Cutouts (4 parts)
+	local win1 = makePart(model, "Window_1", Vector3.new(0.28, 0.08, 0.16), CFrame.new(0, 0.22, 0.04), carbonBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, win1)
+	local win2 = makePart(model, "Window_2", Vector3.new(0.28, 0.08, 0.16), CFrame.new(0, 0.08, 0.04), carbonBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, win2)
+	local win3 = makePart(model, "Window_3", Vector3.new(0.28, 0.08, 0.16), CFrame.new(0, -0.08, 0.04), carbonBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, win3)
+	local win4 = makePart(model, "Window_4", Vector3.new(0.28, 0.08, 0.16), CFrame.new(0, -0.22, 0.04), carbonBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, win4)
+
+	-- Riser Machined Truss Ribs
+	local ribM1 = makePart(model, "TrussRib_1", Vector3.new(0.06, 0.24, 0.06), CFrame.new(0.10, 0.15, -0.04), anodizedRed, Enum.Material.Metal)
+	weldTo(handle, ribM1)
+	local ribM2 = makePart(model, "TrussRib_2", Vector3.new(0.06, 0.24, 0.06), CFrame.new(0.10, -0.15, -0.04), anodizedRed, Enum.Material.Metal)
+	weldTo(handle, ribM2)
+
+	-- Multi-Pin Optical Sight Bracket & Pins (Green + Amber)
+	local sightBracket = makePart(model, "SightBracket", Vector3.new(0.06, 0.22, 0.18), CFrame.new(0.18, 0.14, -0.10), darkMagnesium, Enum.Material.Metal)
+	weldTo(handle, sightBracket)
+	local sightRing = makePart(model, "SightRing", Vector3.new(0.04, 0.18, 0.18), CFrame.new(0.22, 0.14, -0.16), anodizedRed, Enum.Material.Metal)
+	weldTo(handle, sightRing)
+	local sightPin1 = makePart(model, "SightPin_1", Vector3.new(0.03, 0.06, 0.03), CFrame.new(0.22, 0.16, -0.16), opticGreen, Enum.Material.Neon)
+	weldTo(handle, sightPin1)
+	local sightPin2 = makePart(model, "SightPin_2", Vector3.new(0.03, 0.06, 0.03), CFrame.new(0.22, 0.12, -0.16), opticAmber, Enum.Material.Neon)
+	weldTo(handle, sightPin2)
+
+	-- Forward Stabilizer Rod, Bushing & Weighted Dampener
+	local stabMount = makePart(model, "StabMount", Vector3.new(0.12, 0.12, 0.08), CFrame.new(0, 0, -0.16), anodizedRed, Enum.Material.Metal)
+	weldTo(handle, stabMount)
+	local stabRod = makePart(model, "StabRod", Vector3.new(0.06, 0.06, 0.44), CFrame.new(0, 0, -0.38), darkMagnesium, Enum.Material.Metal)
+	weldTo(handle, stabRod)
+	local stabWeight = makePart(model, "StabWeight", Vector3.new(0.14, 0.14, 0.12), CFrame.new(0, 0, -0.66), anodizedRed, Enum.Material.Metal)
+	weldTo(handle, stabWeight)
+
+	-- Limb Hinge Pockets & Anodized Washers
+	local pocketU = makePart(model, "LimbPocket_U", Vector3.new(0.28, 0.12, 0.28), CFrame.new(0, 0.42, 0.04), anodizedRed, Enum.Material.Metal)
+	weldTo(handle, pocketU)
+	local washerU = makePart(model, "PocketWasher_U", Vector3.new(0.24, 0.04, 0.12), CFrame.new(0, 0.48, 0.04), brassCam, Enum.Material.Metal)
+	weldTo(handle, washerU)
+
+	local pocketL = makePart(model, "LimbPocket_L", Vector3.new(0.28, 0.12, 0.28), CFrame.new(0, -0.42, 0.04), anodizedRed, Enum.Material.Metal)
+	weldTo(handle, pocketL)
+	local washerL = makePart(model, "PocketWasher_L", Vector3.new(0.24, 0.04, 0.12), CFrame.new(0, -0.48, 0.04), brassCam, Enum.Material.Metal)
+	weldTo(handle, washerL)
+
+	-- Quad Split Limbs: Upper Left & Right (parallel beams, 3 segments each)
+	local ul_L1 = makePart(model, "SplitU_L1", Vector3.new(0.08, 0.36, 0.14), CFrame.new(0.09, 0.62, 0.06) * CFrame.Angles(math.rad(8), 0, 0), carbonBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, ul_L1)
+	local ul_L2 = makePart(model, "SplitU_L2", Vector3.new(0.07, 0.36, 0.12), CFrame.new(0.09, 0.94, 0.13) * CFrame.Angles(math.rad(18), 0, 0), carbonBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, ul_L2)
+	local ul_L3 = makePart(model, "SplitU_L3", Vector3.new(0.06, 0.38, 0.10), CFrame.new(0.09, 1.26, 0.28) * CFrame.Angles(math.rad(30), 0, 0), darkMagnesium, Enum.Material.Metal)
+	weldTo(handle, ul_L3)
+
+	local ul_R1 = makePart(model, "SplitU_R1", Vector3.new(0.08, 0.36, 0.14), CFrame.new(-0.09, 0.62, 0.06) * CFrame.Angles(math.rad(8), 0, 0), carbonBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, ul_R1)
+	local ul_R2 = makePart(model, "SplitU_R2", Vector3.new(0.07, 0.36, 0.12), CFrame.new(-0.09, 0.94, 0.13) * CFrame.Angles(math.rad(18), 0, 0), carbonBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, ul_R2)
+	local ul_R3 = makePart(model, "SplitU_R3", Vector3.new(0.06, 0.38, 0.10), CFrame.new(-0.09, 1.26, 0.28) * CFrame.Angles(math.rad(30), 0, 0), darkMagnesium, Enum.Material.Metal)
+	weldTo(handle, ul_R3)
+
+	-- Upper Limb Dampener Pods
+	local dampU_L = makePart(model, "DampenerU_L", Vector3.new(0.06, 0.12, 0.10), CFrame.new(0.12, 0.94, 0.13), anodizedRed, Enum.Material.SmoothPlastic)
+	weldTo(handle, dampU_L)
+	local dampU_R = makePart(model, "DampenerU_R", Vector3.new(0.06, 0.12, 0.10), CFrame.new(-0.12, 0.94, 0.13), anodizedRed, Enum.Material.SmoothPlastic)
+	weldTo(handle, dampU_R)
+
+	-- Upper Multi-Lobe Eccentric Cam Assembly
+	local camDiscU = makePart(model, "CamU_Disc", Vector3.new(0.06, 0.28, 0.28), CFrame.new(0, 1.48, 0.44) * CFrame.Angles(math.rad(30), 0, 0), brassCam, Enum.Material.Metal)
+	weldTo(handle, camDiscU)
+	local camLobeU = makePart(model, "CamU_Lobe", Vector3.new(0.08, 0.18, 0.22), CFrame.new(0, 1.54, 0.50) * CFrame.Angles(math.rad(45), 0, 0), anodizedRed, Enum.Material.Metal)
+	weldTo(handle, camLobeU)
+	local camAxleU = makePart(model, "CamU_Axle", Vector3.new(0.24, 0.04, 0.04), CFrame.new(0, 1.48, 0.44), darkMagnesium, Enum.Material.Metal)
+	weldTo(handle, camAxleU)
+	local camBearU = makePart(model, "CamU_Bearing", Vector3.new(0.10, 0.08, 0.08), CFrame.new(0, 1.48, 0.44), brassCam, Enum.Material.Metal)
+	weldTo(handle, camBearU)
+
+	-- Quad Split Limbs: Lower Left & Right
+	local ll_L1 = makePart(model, "SplitL_L1", Vector3.new(0.08, 0.36, 0.14), CFrame.new(0.09, -0.62, 0.06) * CFrame.Angles(-math.rad(8), 0, 0), carbonBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, ll_L1)
+	local ll_L2 = makePart(model, "SplitL_L2", Vector3.new(0.07, 0.36, 0.12), CFrame.new(0.09, -0.94, 0.13) * CFrame.Angles(-math.rad(18), 0, 0), carbonBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, ll_L2)
+	local ll_L3 = makePart(model, "SplitL_L3", Vector3.new(0.06, 0.38, 0.10), CFrame.new(0.09, -1.26, 0.28) * CFrame.Angles(-math.rad(30), 0, 0), darkMagnesium, Enum.Material.Metal)
+	weldTo(handle, ll_L3)
+
+	local ll_R1 = makePart(model, "SplitL_R1", Vector3.new(0.08, 0.36, 0.14), CFrame.new(-0.09, -0.62, 0.06) * CFrame.Angles(-math.rad(8), 0, 0), carbonBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, ll_R1)
+	local ll_R2 = makePart(model, "SplitL_R2", Vector3.new(0.07, 0.36, 0.12), CFrame.new(-0.09, -0.94, 0.13) * CFrame.Angles(-math.rad(18), 0, 0), carbonBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, ll_R2)
+	local ll_R3 = makePart(model, "SplitL_R3", Vector3.new(0.06, 0.38, 0.10), CFrame.new(-0.09, -1.26, 0.28) * CFrame.Angles(-math.rad(30), 0, 0), darkMagnesium, Enum.Material.Metal)
+	weldTo(handle, ll_R3)
+
+	-- Lower Limb Dampener Pods
+	local dampL_L = makePart(model, "DampenerL_L", Vector3.new(0.06, 0.12, 0.10), CFrame.new(0.12, -0.94, 0.13), anodizedRed, Enum.Material.SmoothPlastic)
+	weldTo(handle, dampL_L)
+	local dampL_R = makePart(model, "DampenerL_R", Vector3.new(0.06, 0.12, 0.10), CFrame.new(-0.12, -0.94, 0.13), anodizedRed, Enum.Material.SmoothPlastic)
+	weldTo(handle, dampL_R)
+
+	-- Lower Multi-Lobe Eccentric Cam Assembly
+	local camDiscL = makePart(model, "CamL_Disc", Vector3.new(0.06, 0.28, 0.28), CFrame.new(0, -1.48, 0.44) * CFrame.Angles(-math.rad(30), 0, 0), brassCam, Enum.Material.Metal)
+	weldTo(handle, camDiscL)
+	local camLobeL = makePart(model, "CamL_Lobe", Vector3.new(0.08, 0.18, 0.22), CFrame.new(0, -1.54, 0.50) * CFrame.Angles(-math.rad(45), 0, 0), anodizedRed, Enum.Material.Metal)
+	weldTo(handle, camLobeL)
+	local camAxleL = makePart(model, "CamL_Axle", Vector3.new(0.24, 0.04, 0.04), CFrame.new(0, -1.48, 0.44), darkMagnesium, Enum.Material.Metal)
+	weldTo(handle, camAxleL)
+	local camBearL = makePart(model, "CamL_Bearing", Vector3.new(0.10, 0.08, 0.08), CFrame.new(0, -1.48, 0.44), brassCam, Enum.Material.Metal)
+	weldTo(handle, camBearL)
+
+	-- Cable Guard Rod, Slider Block & Dual Buss Cables
+	local cableRod = makePart(model, "CableGuardRod", Vector3.new(0.04, 0.04, 0.44), CFrame.new(-0.12, 0.10, 0.28), darkMagnesium, Enum.Material.Metal)
+	weldTo(handle, cableRod)
+	local cableSlide = makePart(model, "CableSlider", Vector3.new(0.08, 0.08, 0.08), CFrame.new(-0.12, 0.10, 0.38), anodizedRed, Enum.Material.Metal)
+	weldTo(handle, cableSlide)
+
+	local buss1 = makePart(model, "BussCable_1", Vector3.new(0.03, 3.00, 0.03), CFrame.new(-0.10, 0, 0.40) * CFrame.Angles(math.rad(6), 0, 0), stringColor, Enum.Material.Fabric)
+	weldTo(handle, buss1)
+	local buss2 = makePart(model, "BussCable_2", Vector3.new(0.03, 3.00, 0.03), CFrame.new(-0.14, 0, 0.40) * CFrame.Angles(-math.rad(6), 0, 0), stringColor, Enum.Material.Fabric)
+	weldTo(handle, buss2)
+	local silencer1 = makePart(model, "StringSilencer_1", Vector3.new(0.08, 0.08, 0.08), CFrame.new(0, 0.60, 0.58), carbonBlack, Enum.Material.Fabric)
+	weldTo(handle, silencer1)
+	local silencer2 = makePart(model, "StringSilencer_2", Vector3.new(0.08, 0.08, 0.08), CFrame.new(0, -0.60, 0.58), carbonBlack, Enum.Material.Fabric)
+	weldTo(handle, silencer2)
+
+	-- Main Power String
+	local bowString = makePart(model, "BowString", Vector3.new(0.045, 3.12, 0.045), CFrame.new(0, 0, 0.58), stringColor, Enum.Material.Fabric)
+	weldTo(handle, bowString)
+
+	addSocket(handle, "Grip", Vector3.zero)
+	addSocket(handle, "Nock", Vector3.new(ARROW_REST.X, ARROW_REST.Y, 0.58))
+	addSocket(handle, "TipUpper", Vector3.new(0, 1.54, 0.58))
+	addSocket(handle, "TipLower", Vector3.new(0, -1.54, 0.58))
+	addSocket(handle, "VfxTip", Vector3.new(0, 1.54, 0.58))
+	addSocket(handle, "VfxBase", Vector3.new(0, -1.54, 0.58))
+	addSocket(handle, "VfxCore", Vector3.zero)
+	addSocket(handle, "VfxNock", Vector3.new(ARROW_REST.X, ARROW_REST.Y, 0.58))
+
+	createHunterArrow(model, handle)
+	return model
+end
+
+-- ============================================================================
+-- 9. Phoenix Flatbow (art_phoenix_flatbow) - Exalted Standard
+-- ============================================================================
+function WeaponModelBuilder.BuildPhoenixFlatbow(): Model
+	local model = Instance.new("Model")
+	model.Name = "art_phoenix_flatbow"
+
+	local solarGold = Color3.fromRGB(245, 185, 45)
+	local carmineRed = Color3.fromRGB(180, 35, 40)
+	local flameOrange = Color3.fromRGB(235, 105, 30)
+	local volcanicAsh = Color3.fromRGB(45, 40, 42)
+	local rubyGlow = Color3.fromRGB(255, 60, 80)
+	local stringColor = Color3.fromRGB(255, 205, 120)
+
+	-- Golden Phoenix Claw Riser & Ruby Heart
+	local handle = makePart(model, "Handle", Vector3.new(0.26, 0.76, 0.32), CFrame.new(0, 0, 0), solarGold, Enum.Material.Metal)
+	model.PrimaryPart = handle
+
+	local rubyHeart = makePart(model, "RubyHeartGem", Vector3.new(0.12, 0.16, 0.14), CFrame.new(0, 0.05, -0.10), rubyGlow, Enum.Material.Neon)
+	weldTo(handle, rubyHeart)
+	local breastplate = makePart(model, "CrestBreastplate", Vector3.new(0.22, 0.28, 0.08), CFrame.new(0, 0.12, -0.06), solarGold, Enum.Material.Metal)
+	weldTo(handle, breastplate)
+	local emberCore = makePart(model, "EmberCoreGlow", Vector3.new(0.10, 0.10, 0.10), CFrame.new(0, -0.12, -0.08), flameOrange, Enum.Material.Neon)
+	weldTo(handle, emberCore)
+
+	local talon1 = makePart(model, "Talon_1", Vector3.new(0.08, 0.14, 0.12), CFrame.new(0.12, 0.22, 0.08) * CFrame.Angles(0, math.rad(25), 0), volcanicAsh, Enum.Material.SmoothPlastic)
+	weldTo(handle, talon1)
+	local talon2 = makePart(model, "Talon_2", Vector3.new(0.08, 0.14, 0.12), CFrame.new(-0.12, 0.22, 0.08) * CFrame.Angles(0, -math.rad(25), 0), volcanicAsh, Enum.Material.SmoothPlastic)
+	weldTo(handle, talon2)
+	local talon3 = makePart(model, "Talon_3", Vector3.new(0.08, 0.14, 0.12), CFrame.new(0.12, -0.22, 0.08) * CFrame.Angles(0, math.rad(25), 0), volcanicAsh, Enum.Material.SmoothPlastic)
+	weldTo(handle, talon3)
+	local talon4 = makePart(model, "Talon_4", Vector3.new(0.08, 0.14, 0.12), CFrame.new(-0.12, -0.22, 0.08) * CFrame.Angles(0, -math.rad(25), 0), volcanicAsh, Enum.Material.SmoothPlastic)
+	weldTo(handle, talon4)
+	local arrowRest = makePart(model, "PhoenixArrowRest", Vector3.new(0.08, 0.14, 0.18), CFrame.new(0.15, 0.09, -0.08), solarGold, Enum.Material.Metal)
+	weldTo(handle, arrowRest)
+
+	-- Upper Carmine Core Stave (6 segments)
+	local cu1 = makePart(model, "CoreU_1", Vector3.new(0.24, 0.34, 0.22), CFrame.new(0, 0.48, 0.02) * CFrame.Angles(math.rad(5), 0, 0), carmineRed, Enum.Material.SmoothPlastic)
+	weldTo(handle, cu1)
+	local cu2 = makePart(model, "CoreU_2", Vector3.new(0.22, 0.34, 0.20), CFrame.new(0, 0.78, 0.06) * CFrame.Angles(math.rad(11), 0, 0), carmineRed, Enum.Material.SmoothPlastic)
+	weldTo(handle, cu2)
+	local cu3 = makePart(model, "CoreU_3", Vector3.new(0.20, 0.34, 0.18), CFrame.new(0, 1.08, 0.13) * CFrame.Angles(math.rad(18), 0, 0), carmineRed, Enum.Material.SmoothPlastic)
+	weldTo(handle, cu3)
+	local cu4 = makePart(model, "CoreU_4", Vector3.new(0.18, 0.34, 0.16), CFrame.new(0, 1.36, 0.24) * CFrame.Angles(math.rad(27), 0, 0), carmineRed, Enum.Material.SmoothPlastic)
+	weldTo(handle, cu4)
+	local cu5 = makePart(model, "CoreU_5", Vector3.new(0.16, 0.34, 0.14), CFrame.new(0, 1.62, 0.38) * CFrame.Angles(math.rad(38), 0, 0), carmineRed, Enum.Material.SmoothPlastic)
+	weldTo(handle, cu5)
+	local cu6 = makePart(model, "CoreU_6", Vector3.new(0.14, 0.36, 0.12), CFrame.new(0, 1.86, 0.56) * CFrame.Angles(math.rad(50), 0, 0), carmineRed, Enum.Material.SmoothPlastic)
+	weldTo(handle, cu6)
+
+	-- Upper Tiered Splayed Feather Blades
+	local plumeU1_1 = makePart(model, "PlumeU1_Base", Vector3.new(0.06, 0.28, 0.18), CFrame.new(0.12, 0.76, -0.04) * CFrame.Angles(math.rad(10), math.rad(25), 0), flameOrange, Enum.Material.SmoothPlastic)
+	weldTo(handle, plumeU1_1)
+	local plumeU1_2 = makePart(model, "PlumeU1_Tip", Vector3.new(0.04, 0.24, 0.14), CFrame.new(0.16, 0.96, -0.06) * CFrame.Angles(math.rad(18), math.rad(35), 0), solarGold, Enum.Material.Metal)
+	weldTo(handle, plumeU1_2)
+
+	local plumeU2_1 = makePart(model, "PlumeU2_Base", Vector3.new(0.06, 0.28, 0.18), CFrame.new(-0.12, 0.76, -0.04) * CFrame.Angles(math.rad(10), -math.rad(25), 0), flameOrange, Enum.Material.SmoothPlastic)
+	weldTo(handle, plumeU2_1)
+	local plumeU2_2 = makePart(model, "PlumeU2_Tip", Vector3.new(0.04, 0.24, 0.14), CFrame.new(-0.16, 0.96, -0.06) * CFrame.Angles(math.rad(18), -math.rad(35), 0), solarGold, Enum.Material.Metal)
+	weldTo(handle, plumeU2_2)
+
+	local plumeU3_1 = makePart(model, "PlumeU3_Base", Vector3.new(0.06, 0.30, 0.18), CFrame.new(0.14, 1.32, 0.12) * CFrame.Angles(math.rad(25), math.rad(25), 0), flameOrange, Enum.Material.SmoothPlastic)
+	weldTo(handle, plumeU3_1)
+	local plumeU3_2 = makePart(model, "PlumeU3_Tip", Vector3.new(0.04, 0.26, 0.14), CFrame.new(0.18, 1.54, 0.16) * CFrame.Angles(math.rad(36), math.rad(35), 0), solarGold, Enum.Material.Metal)
+	weldTo(handle, plumeU3_2)
+
+	local plumeU4_1 = makePart(model, "PlumeU4_Base", Vector3.new(0.06, 0.30, 0.18), CFrame.new(-0.14, 1.32, 0.12) * CFrame.Angles(math.rad(25), -math.rad(25), 0), flameOrange, Enum.Material.SmoothPlastic)
+	weldTo(handle, plumeU4_1)
+	local plumeU4_2 = makePart(model, "PlumeU4_Tip", Vector3.new(0.04, 0.26, 0.14), CFrame.new(-0.18, 1.54, 0.16) * CFrame.Angles(math.rad(36), -math.rad(35), 0), solarGold, Enum.Material.Metal)
+	weldTo(handle, plumeU4_2)
+
+	local featherU_A = makePart(model, "FeatherEdgeU_1", Vector3.new(0.04, 0.26, 0.10), CFrame.new(0.16, 1.05, 0.06) * CFrame.Angles(math.rad(20), math.rad(30), 0), solarGold, Enum.Material.Metal)
+	weldTo(handle, featherU_A)
+	local featherU_B = makePart(model, "FeatherEdgeU_2", Vector3.new(0.04, 0.26, 0.10), CFrame.new(-0.16, 1.05, 0.06) * CFrame.Angles(math.rad(20), -math.rad(30), 0), solarGold, Enum.Material.Metal)
+	weldTo(handle, featherU_B)
+	local featherU_C = makePart(model, "FeatherEdgeU_3", Vector3.new(0.04, 0.26, 0.10), CFrame.new(0.18, 1.70, 0.30) * CFrame.Angles(math.rad(42), math.rad(30), 0), solarGold, Enum.Material.Metal)
+	weldTo(handle, featherU_C)
+	local featherU_D = makePart(model, "FeatherEdgeU_4", Vector3.new(0.04, 0.26, 0.10), CFrame.new(-0.18, 1.70, 0.30) * CFrame.Angles(math.rad(42), -math.rad(30), 0), solarGold, Enum.Material.Metal)
+	weldTo(handle, featherU_D)
+
+	-- Upper Gold Filigree Trim Ribs & Heat Channels
+	local trimU1 = makePart(model, "TrimU_1", Vector3.new(0.06, 0.34, 0.08), CFrame.new(0, 0.78, 0.12) * CFrame.Angles(math.rad(11), 0, 0), solarGold, Enum.Material.Metal)
+	weldTo(handle, trimU1)
+	local trimU2 = makePart(model, "TrimU_2", Vector3.new(0.05, 0.34, 0.08), CFrame.new(0, 1.36, 0.30) * CFrame.Angles(math.rad(27), 0, 0), solarGold, Enum.Material.Metal)
+	weldTo(handle, trimU2)
+	local channelU = makePart(model, "SolarChannel_U", Vector3.new(0.05, 0.80, 0.05), CFrame.new(0, 1.10, -0.04) * CFrame.Angles(math.rad(18), 0, 0), rubyGlow, Enum.Material.Neon)
+	weldTo(handle, channelU)
+
+	-- Upper Eagle-Beak Crown Tips
+	local beakBaseU = makePart(model, "BeakU_Base", Vector3.new(0.14, 0.22, 0.14), CFrame.new(0, 2.06, 0.70) * CFrame.Angles(math.rad(60), 0, 0), solarGold, Enum.Material.Metal)
+	weldTo(handle, beakBaseU)
+	local beakHookU = makePart(model, "BeakU_Hook", Vector3.new(0.08, 0.22, 0.12), CFrame.new(0, 2.18, 0.82) * CFrame.Angles(math.rad(72), 0, 0), volcanicAsh, Enum.Material.SmoothPlastic)
+	weldTo(handle, beakHookU)
+	local beakCombU = makePart(model, "BeakU_Comb", Vector3.new(0.04, 0.16, 0.12), CFrame.new(0, 2.02, 0.82) * CFrame.Angles(math.rad(40), 0, 0), rubyGlow, Enum.Material.Neon)
+	weldTo(handle, beakCombU)
+
+	-- Lower Carmine Core Stave (6 segments)
+	local cl1 = makePart(model, "CoreL_1", Vector3.new(0.24, 0.34, 0.22), CFrame.new(0, -0.48, 0.02) * CFrame.Angles(-math.rad(5), 0, 0), carmineRed, Enum.Material.SmoothPlastic)
+	weldTo(handle, cl1)
+	local cl2 = makePart(model, "CoreL_2", Vector3.new(0.22, 0.34, 0.20), CFrame.new(0, -0.78, 0.06) * CFrame.Angles(-math.rad(11), 0, 0), carmineRed, Enum.Material.SmoothPlastic)
+	weldTo(handle, cl2)
+	local cl3 = makePart(model, "CoreL_3", Vector3.new(0.20, 0.34, 0.18), CFrame.new(0, -1.08, 0.13) * CFrame.Angles(-math.rad(18), 0, 0), carmineRed, Enum.Material.SmoothPlastic)
+	weldTo(handle, cl3)
+	local cl4 = makePart(model, "CoreL_4", Vector3.new(0.18, 0.34, 0.16), CFrame.new(0, -1.36, 0.24) * CFrame.Angles(-math.rad(27), 0, 0), carmineRed, Enum.Material.SmoothPlastic)
+	weldTo(handle, cl4)
+	local cl5 = makePart(model, "CoreL_5", Vector3.new(0.16, 0.34, 0.14), CFrame.new(0, -1.62, 0.38) * CFrame.Angles(-math.rad(38), 0, 0), carmineRed, Enum.Material.SmoothPlastic)
+	weldTo(handle, cl5)
+	local cl6 = makePart(model, "CoreL_6", Vector3.new(0.14, 0.36, 0.12), CFrame.new(0, -1.86, 0.56) * CFrame.Angles(-math.rad(50), 0, 0), carmineRed, Enum.Material.SmoothPlastic)
+	weldTo(handle, cl6)
+
+	-- Lower Tiered Splayed Feather Blades
+	local plumeL1_1 = makePart(model, "PlumeL1_Base", Vector3.new(0.06, 0.28, 0.18), CFrame.new(0.12, -0.76, -0.04) * CFrame.Angles(-math.rad(10), math.rad(25), 0), flameOrange, Enum.Material.SmoothPlastic)
+	weldTo(handle, plumeL1_1)
+	local plumeL1_2 = makePart(model, "PlumeL1_Tip", Vector3.new(0.04, 0.24, 0.14), CFrame.new(0.16, -0.96, -0.06) * CFrame.Angles(-math.rad(18), math.rad(35), 0), solarGold, Enum.Material.Metal)
+	weldTo(handle, plumeL1_2)
+
+	local plumeL2_1 = makePart(model, "PlumeL2_Base", Vector3.new(0.06, 0.28, 0.18), CFrame.new(-0.12, -0.76, -0.04) * CFrame.Angles(-math.rad(10), -math.rad(25), 0), flameOrange, Enum.Material.SmoothPlastic)
+	weldTo(handle, plumeL2_1)
+	local plumeL2_2 = makePart(model, "PlumeL2_Tip", Vector3.new(0.04, 0.24, 0.14), CFrame.new(-0.16, -0.96, -0.06) * CFrame.Angles(-math.rad(18), -math.rad(35), 0), solarGold, Enum.Material.Metal)
+	weldTo(handle, plumeL2_2)
+
+	local plumeL3_1 = makePart(model, "PlumeL3_Base", Vector3.new(0.06, 0.30, 0.18), CFrame.new(0.14, -1.32, 0.12) * CFrame.Angles(-math.rad(25), math.rad(25), 0), flameOrange, Enum.Material.SmoothPlastic)
+	weldTo(handle, plumeL3_1)
+	local plumeL3_2 = makePart(model, "PlumeL3_Tip", Vector3.new(0.04, 0.26, 0.14), CFrame.new(0.18, -1.54, 0.16) * CFrame.Angles(-math.rad(36), math.rad(35), 0), solarGold, Enum.Material.Metal)
+	weldTo(handle, plumeL3_2)
+
+	local plumeL4_1 = makePart(model, "PlumeL4_Base", Vector3.new(0.06, 0.30, 0.18), CFrame.new(-0.14, -1.32, 0.12) * CFrame.Angles(-math.rad(25), -math.rad(25), 0), flameOrange, Enum.Material.SmoothPlastic)
+	weldTo(handle, plumeL4_1)
+	local plumeL4_2 = makePart(model, "PlumeL4_Tip", Vector3.new(0.04, 0.26, 0.14), CFrame.new(-0.18, -1.54, 0.16) * CFrame.Angles(-math.rad(36), -math.rad(35), 0), solarGold, Enum.Material.Metal)
+	weldTo(handle, plumeL4_2)
+
+	local featherL_A = makePart(model, "FeatherEdgeL_1", Vector3.new(0.04, 0.26, 0.10), CFrame.new(0.16, -1.05, 0.06) * CFrame.Angles(-math.rad(20), math.rad(30), 0), solarGold, Enum.Material.Metal)
+	weldTo(handle, featherL_A)
+	local featherL_B = makePart(model, "FeatherEdgeL_2", Vector3.new(0.04, 0.26, 0.10), CFrame.new(-0.16, -1.05, 0.06) * CFrame.Angles(-math.rad(20), -math.rad(30), 0), solarGold, Enum.Material.Metal)
+	weldTo(handle, featherL_B)
+	local featherL_C = makePart(model, "FeatherEdgeL_3", Vector3.new(0.04, 0.26, 0.10), CFrame.new(0.18, -1.70, 0.30) * CFrame.Angles(-math.rad(42), math.rad(30), 0), solarGold, Enum.Material.Metal)
+	weldTo(handle, featherL_C)
+	local featherL_D = makePart(model, "FeatherEdgeL_4", Vector3.new(0.04, 0.26, 0.10), CFrame.new(-0.18, -1.70, 0.30) * CFrame.Angles(-math.rad(42), -math.rad(30), 0), solarGold, Enum.Material.Metal)
+	weldTo(handle, featherL_D)
+
+	-- Lower Gold Filigree Trim Ribs & Heat Channels
+	local trimL1 = makePart(model, "TrimL_1", Vector3.new(0.06, 0.34, 0.08), CFrame.new(0, -0.78, 0.12) * CFrame.Angles(-math.rad(11), 0, 0), solarGold, Enum.Material.Metal)
+	weldTo(handle, trimL1)
+	local trimL2 = makePart(model, "TrimL_2", Vector3.new(0.05, 0.34, 0.08), CFrame.new(0, -1.36, 0.30) * CFrame.Angles(-math.rad(27), 0, 0), solarGold, Enum.Material.Metal)
+	weldTo(handle, trimL2)
+	local channelL = makePart(model, "SolarChannel_L", Vector3.new(0.05, 0.80, 0.05), CFrame.new(0, -1.10, -0.04) * CFrame.Angles(-math.rad(18), 0, 0), rubyGlow, Enum.Material.Neon)
+	weldTo(handle, channelL)
+
+	-- Lower Eagle-Beak Crown Tips
+	local beakBaseL = makePart(model, "BeakL_Base", Vector3.new(0.14, 0.22, 0.14), CFrame.new(0, -2.06, 0.70) * CFrame.Angles(-math.rad(60), 0, 0), solarGold, Enum.Material.Metal)
+	weldTo(handle, beakBaseL)
+	local beakHookL = makePart(model, "BeakL_Hook", Vector3.new(0.08, 0.22, 0.12), CFrame.new(0, -2.18, 0.82) * CFrame.Angles(-math.rad(72), 0, 0), volcanicAsh, Enum.Material.SmoothPlastic)
+	weldTo(handle, beakHookL)
+	local beakCombL = makePart(model, "BeakL_Comb", Vector3.new(0.04, 0.16, 0.12), CFrame.new(0, -2.02, 0.82) * CFrame.Angles(-math.rad(40), 0, 0), rubyGlow, Enum.Material.Neon)
+	weldTo(handle, beakCombL)
+
+	-- Spun Solar Flame Bowstring
+	local bowString = makePart(model, "BowString", Vector3.new(0.045, 4.36, 0.045), CFrame.new(0, 0, 0.78), stringColor, Enum.Material.Fabric)
+	weldTo(handle, bowString)
+
+	addSocket(handle, "Grip", Vector3.zero)
+	addSocket(handle, "Nock", Vector3.new(ARROW_REST.X, ARROW_REST.Y, 0.78))
+	addSocket(handle, "TipUpper", Vector3.new(0, 2.18, 0.82))
+	addSocket(handle, "TipLower", Vector3.new(0, -2.18, 0.82))
+	addSocket(handle, "VfxTip", Vector3.new(0, 2.18, 0.82))
+	addSocket(handle, "VfxBase", Vector3.new(0, -2.18, 0.82))
+	addSocket(handle, "VfxCore", Vector3.zero)
+	addSocket(handle, "VfxNock", Vector3.new(ARROW_REST.X, ARROW_REST.Y, 0.78))
+
+	createHunterArrow(model, handle)
+	return model
+end
+
+-- ============================================================================
+-- 10. Solar Flare Recurve (art_solar_flare_recurve) - Exalted Enhanced
+-- ============================================================================
+function WeaponModelBuilder.BuildSolarFlareRecurve(): Model
+	local model = Instance.new("Model")
+	model.Name = "art_solar_flare_recurve"
+
+	local auricGold = Color3.fromRGB(245, 195, 55)
+	local solarBronze = Color3.fromRGB(175, 105, 45)
+	local coronaGlow = Color3.fromRGB(255, 155, 40)
+	local heatWhite = Color3.fromRGB(255, 240, 200)
+	local copperPipe = Color3.fromRGB(215, 115, 55)
+	local darkRadiator = Color3.fromRGB(45, 38, 35)
+	local stringColor = Color3.fromRGB(255, 230, 160)
+
+	-- Auric Bronze Sunburst Hub (Center Core + 6 Radial Rays)
+	local handle = makePart(model, "Handle", Vector3.new(0.26, 0.74, 0.32), CFrame.new(0, 0, 0), solarBronze, Enum.Material.Metal)
+	model.PrimaryPart = handle
+
+	local sunHub = makePart(model, "SunburstHub", Vector3.new(0.32, 0.32, 0.16), CFrame.new(0, 0, -0.06), auricGold, Enum.Material.Metal)
+	weldTo(handle, sunHub)
+	local hubCore = makePart(model, "HubCoreGlow", Vector3.new(0.18, 0.18, 0.18), CFrame.new(0, 0, -0.08), heatWhite, Enum.Material.Neon)
+	weldTo(handle, hubCore)
+
+	local ray1 = makePart(model, "Ray_1", Vector3.new(0.06, 0.22, 0.08), CFrame.new(0.18, 0.18, -0.06) * CFrame.Angles(0, 0, -math.rad(45)), auricGold, Enum.Material.Metal)
+	weldTo(handle, ray1)
+	local ray2 = makePart(model, "Ray_2", Vector3.new(0.06, 0.22, 0.08), CFrame.new(-0.18, 0.18, -0.06) * CFrame.Angles(0, 0, math.rad(45)), auricGold, Enum.Material.Metal)
+	weldTo(handle, ray2)
+	local ray3 = makePart(model, "Ray_3", Vector3.new(0.06, 0.22, 0.08), CFrame.new(0.18, -0.18, -0.06) * CFrame.Angles(0, 0, math.rad(45)), auricGold, Enum.Material.Metal)
+	weldTo(handle, ray3)
+	local ray4 = makePart(model, "Ray_4", Vector3.new(0.06, 0.22, 0.08), CFrame.new(-0.18, -0.18, -0.06) * CFrame.Angles(0, 0, -math.rad(45)), auricGold, Enum.Material.Metal)
+	weldTo(handle, ray4)
+	local hubClamp1 = makePart(model, "HubClamp_1", Vector3.new(0.28, 0.05, 0.12), CFrame.new(0, 0.26, -0.04), solarBronze, Enum.Material.Metal)
+	weldTo(handle, hubClamp1)
+	local hubClamp2 = makePart(model, "HubClamp_2", Vector3.new(0.28, 0.05, 0.12), CFrame.new(0, -0.26, -0.04), solarBronze, Enum.Material.Metal)
+	weldTo(handle, hubClamp2)
+	local arrowRest = makePart(model, "SolarArrowRest", Vector3.new(0.08, 0.14, 0.18), CFrame.new(0.15, 0.09, -0.08), auricGold, Enum.Material.Metal)
+	weldTo(handle, arrowRest)
+
+	-- Upper Recurve Bronze Limbs (6 segments)
+	local lu1 = makePart(model, "LimbU_1", Vector3.new(0.24, 0.34, 0.22), CFrame.new(0, 0.48, 0.02) * CFrame.Angles(math.rad(5), 0, 0), solarBronze, Enum.Material.Metal)
+	weldTo(handle, lu1)
+	local lu2 = makePart(model, "LimbU_2", Vector3.new(0.22, 0.34, 0.20), CFrame.new(0, 0.78, 0.06) * CFrame.Angles(math.rad(11), 0, 0), solarBronze, Enum.Material.Metal)
+	weldTo(handle, lu2)
+	local lu3 = makePart(model, "LimbU_3", Vector3.new(0.20, 0.34, 0.18), CFrame.new(0, 1.08, 0.14) * CFrame.Angles(math.rad(20), 0, 0), auricGold, Enum.Material.Metal)
+	weldTo(handle, lu3)
+	local lu4 = makePart(model, "LimbU_4", Vector3.new(0.18, 0.34, 0.16), CFrame.new(0, 1.36, 0.28) * CFrame.Angles(math.rad(32), 0, 0), auricGold, Enum.Material.Metal)
+	weldTo(handle, lu4)
+	local lu5 = makePart(model, "LimbU_5", Vector3.new(0.16, 0.34, 0.14), CFrame.new(0, 1.62, 0.46) * CFrame.Angles(math.rad(46), 0, 0), solarBronze, Enum.Material.Metal)
+	weldTo(handle, lu5)
+	local lu6 = makePart(model, "LimbU_6", Vector3.new(0.14, 0.36, 0.12), CFrame.new(0, 1.86, 0.68) * CFrame.Angles(math.rad(60), 0, 0), solarBronze, Enum.Material.Metal)
+	weldTo(handle, lu6)
+
+	-- Upper Miniature Solar Corona Disc (Center + 8 Pointed Rays)
+	local coronaDiscU = makePart(model, "CoronaU_Center", Vector3.new(0.22, 0.22, 0.08), CFrame.new(0, 1.24, 0.18) * CFrame.Angles(math.rad(25), 0, 0), coronaGlow, Enum.Material.Neon)
+	weldTo(handle, coronaDiscU)
+	local cRayU1 = makePart(model, "CoronaU_Ray1", Vector3.new(0.05, 0.18, 0.06), CFrame.new(0.14, 1.24, 0.18) * CFrame.Angles(math.rad(25), 0, -math.rad(35)), auricGold, Enum.Material.Metal)
+	weldTo(handle, cRayU1)
+	local cRayU2 = makePart(model, "CoronaU_Ray2", Vector3.new(0.05, 0.18, 0.06), CFrame.new(-0.14, 1.24, 0.18) * CFrame.Angles(math.rad(25), 0, math.rad(35)), auricGold, Enum.Material.Metal)
+	weldTo(handle, cRayU2)
+	local cRayU3 = makePart(model, "CoronaU_Ray3", Vector3.new(0.05, 0.16, 0.06), CFrame.new(0.10, 1.36, 0.18) * CFrame.Angles(math.rad(25), 0, -math.rad(70)), auricGold, Enum.Material.Metal)
+	weldTo(handle, cRayU3)
+	local cRayU4 = makePart(model, "CoronaU_Ray4", Vector3.new(0.05, 0.16, 0.06), CFrame.new(-0.10, 1.36, 0.18) * CFrame.Angles(math.rad(25), 0, math.rad(70)), auricGold, Enum.Material.Metal)
+	weldTo(handle, cRayU4)
+	local cRayU5 = makePart(model, "CoronaU_Ray5", Vector3.new(0.04, 0.14, 0.05), CFrame.new(0.12, 1.12, 0.18) * CFrame.Angles(math.rad(25), 0, -math.rad(15)), heatWhite, Enum.Material.Neon)
+	weldTo(handle, cRayU5)
+	local cRayU6 = makePart(model, "CoronaU_Ray6", Vector3.new(0.04, 0.14, 0.05), CFrame.new(-0.12, 1.12, 0.18) * CFrame.Angles(math.rad(25), 0, math.rad(15)), heatWhite, Enum.Material.Neon)
+	weldTo(handle, cRayU6)
+
+	-- Upper Heat Sink Radiator Fins (dorsal cooling plates)
+	local radU1 = makePart(model, "HeatSinkU_1", Vector3.new(0.04, 0.16, 0.14), CFrame.new(0, 0.68, -0.08) * CFrame.Angles(math.rad(10), 0, 0), darkRadiator, Enum.Material.Metal)
+	weldTo(handle, radU1)
+	local radU2 = makePart(model, "HeatSinkU_2", Vector3.new(0.04, 0.16, 0.14), CFrame.new(0, 0.94, -0.04) * CFrame.Angles(math.rad(16), 0, 0), darkRadiator, Enum.Material.Metal)
+	weldTo(handle, radU2)
+	local radU3 = makePart(model, "HeatSinkU_3", Vector3.new(0.04, 0.16, 0.14), CFrame.new(0, 1.48, 0.18) * CFrame.Angles(math.rad(38), 0, 0), darkRadiator, Enum.Material.Metal)
+	weldTo(handle, radU3)
+	local radU4 = makePart(model, "HeatSinkU_4", Vector3.new(0.04, 0.16, 0.14), CFrame.new(0, 1.74, 0.36) * CFrame.Angles(math.rad(52), 0, 0), darkRadiator, Enum.Material.Metal)
+	weldTo(handle, radU4)
+
+	-- Upper Copper Heat Pipe & Conduit
+	local pipeU = makePart(model, "HeatPipe_U", Vector3.new(0.06, 1.20, 0.06), CFrame.new(0.12, 1.08, 0.10) * CFrame.Angles(math.rad(22), 0, 0), copperPipe, Enum.Material.Metal)
+	weldTo(handle, pipeU)
+	local pipeU_Elbow = makePart(model, "HeatPipeElbow_U", Vector3.new(0.08, 0.08, 0.10), CFrame.new(0.12, 1.68, 0.32), copperPipe, Enum.Material.Metal)
+	weldTo(handle, pipeU_Elbow)
+
+	-- Upper Sun-Lance Flared Tip
+	local lanceBaseU = makePart(model, "LanceTipU_Base", Vector3.new(0.14, 0.22, 0.14), CFrame.new(0, 2.06, 0.84) * CFrame.Angles(math.rad(70), 0, 0), auricGold, Enum.Material.Metal)
+	weldTo(handle, lanceBaseU)
+	local lanceSpikeU = makePart(model, "LanceTipU_Spike", Vector3.new(0.08, 0.24, 0.08), CFrame.new(0, 2.20, 0.96) * CFrame.Angles(math.rad(78), 0, 0), heatWhite, Enum.Material.Neon)
+	weldTo(handle, lanceSpikeU)
+	local lanceFlangeU = makePart(model, "LanceTipU_Flange", Vector3.new(0.20, 0.06, 0.12), CFrame.new(0, 2.00, 0.80) * CFrame.Angles(math.rad(66), 0, 0), auricGold, Enum.Material.Metal)
+	weldTo(handle, lanceFlangeU)
+	local flameWispU = makePart(model, "FlameWisp_U", Vector3.new(0.04, 0.20, 0.08), CFrame.new(0, 2.14, 0.88) * CFrame.Angles(math.rad(82), 0, 0), coronaGlow, Enum.Material.Neon)
+	weldTo(handle, flameWispU)
+
+	-- Lower Recurve Bronze Limbs (6 segments)
+	local ll1 = makePart(model, "LimbL_1", Vector3.new(0.24, 0.34, 0.22), CFrame.new(0, -0.48, 0.02) * CFrame.Angles(-math.rad(5), 0, 0), solarBronze, Enum.Material.Metal)
+	weldTo(handle, ll1)
+	local ll2 = makePart(model, "LimbL_2", Vector3.new(0.22, 0.34, 0.20), CFrame.new(0, -0.78, 0.06) * CFrame.Angles(-math.rad(11), 0, 0), solarBronze, Enum.Material.Metal)
+	weldTo(handle, ll2)
+	local ll3 = makePart(model, "LimbL_3", Vector3.new(0.20, 0.34, 0.18), CFrame.new(0, -1.08, 0.14) * CFrame.Angles(-math.rad(20), 0, 0), auricGold, Enum.Material.Metal)
+	weldTo(handle, ll3)
+	local ll4 = makePart(model, "LimbL_4", Vector3.new(0.18, 0.34, 0.16), CFrame.new(0, -1.36, 0.28) * CFrame.Angles(-math.rad(32), 0, 0), auricGold, Enum.Material.Metal)
+	weldTo(handle, ll4)
+	local ll5 = makePart(model, "LimbL_5", Vector3.new(0.16, 0.34, 0.14), CFrame.new(0, -1.62, 0.46) * CFrame.Angles(-math.rad(46), 0, 0), solarBronze, Enum.Material.Metal)
+	weldTo(handle, ll5)
+	local ll6 = makePart(model, "LimbL_6", Vector3.new(0.14, 0.36, 0.12), CFrame.new(0, -1.86, 0.68) * CFrame.Angles(-math.rad(60), 0, 0), solarBronze, Enum.Material.Metal)
+	weldTo(handle, ll6)
+
+	-- Lower Miniature Solar Corona Disc
+	local coronaDiscL = makePart(model, "CoronaL_Center", Vector3.new(0.22, 0.22, 0.08), CFrame.new(0, -1.24, 0.18) * CFrame.Angles(-math.rad(25), 0, 0), coronaGlow, Enum.Material.Neon)
+	weldTo(handle, coronaDiscL)
+	local cRayL1 = makePart(model, "CoronaL_Ray1", Vector3.new(0.05, 0.18, 0.06), CFrame.new(0.14, -1.24, 0.18) * CFrame.Angles(-math.rad(25), 0, math.rad(35)), auricGold, Enum.Material.Metal)
+	weldTo(handle, cRayL1)
+	local cRayL2 = makePart(model, "CoronaL_Ray2", Vector3.new(0.05, 0.18, 0.06), CFrame.new(-0.14, -1.24, 0.18) * CFrame.Angles(-math.rad(25), 0, -math.rad(35)), auricGold, Enum.Material.Metal)
+	weldTo(handle, cRayL2)
+	local cRayL3 = makePart(model, "CoronaL_Ray3", Vector3.new(0.05, 0.16, 0.06), CFrame.new(0.10, -1.36, 0.18) * CFrame.Angles(-math.rad(25), 0, math.rad(70)), auricGold, Enum.Material.Metal)
+	weldTo(handle, cRayL3)
+	local cRayL4 = makePart(model, "CoronaL_Ray4", Vector3.new(0.05, 0.16, 0.06), CFrame.new(-0.10, -1.36, 0.18) * CFrame.Angles(-math.rad(25), 0, -math.rad(70)), auricGold, Enum.Material.Metal)
+	weldTo(handle, cRayL4)
+	local cRayL5 = makePart(model, "CoronaL_Ray5", Vector3.new(0.04, 0.14, 0.05), CFrame.new(0.12, -1.12, 0.18) * CFrame.Angles(-math.rad(25), 0, math.rad(15)), heatWhite, Enum.Material.Neon)
+	weldTo(handle, cRayL5)
+	local cRayL6 = makePart(model, "CoronaL_Ray6", Vector3.new(0.04, 0.14, 0.05), CFrame.new(-0.12, -1.12, 0.18) * CFrame.Angles(-math.rad(25), 0, -math.rad(15)), heatWhite, Enum.Material.Neon)
+	weldTo(handle, cRayL6)
+
+	-- Lower Heat Sink Radiator Fins
+	local radL1 = makePart(model, "HeatSinkL_1", Vector3.new(0.04, 0.16, 0.14), CFrame.new(0, -0.68, -0.08) * CFrame.Angles(-math.rad(10), 0, 0), darkRadiator, Enum.Material.Metal)
+	weldTo(handle, radL1)
+	local radL2 = makePart(model, "HeatSinkL_2", Vector3.new(0.04, 0.16, 0.14), CFrame.new(0, -0.94, -0.04) * CFrame.Angles(-math.rad(16), 0, 0), darkRadiator, Enum.Material.Metal)
+	weldTo(handle, radL2)
+	local radL3 = makePart(model, "HeatSinkL_3", Vector3.new(0.04, 0.16, 0.14), CFrame.new(0, -1.48, 0.18) * CFrame.Angles(-math.rad(38), 0, 0), darkRadiator, Enum.Material.Metal)
+	weldTo(handle, radL3)
+	local radL4 = makePart(model, "HeatSinkL_4", Vector3.new(0.04, 0.16, 0.14), CFrame.new(0, -1.74, 0.36) * CFrame.Angles(-math.rad(52), 0, 0), darkRadiator, Enum.Material.Metal)
+	weldTo(handle, radL4)
+
+	-- Lower Copper Heat Pipe & Conduit
+	local pipeL = makePart(model, "HeatPipe_L", Vector3.new(0.06, 1.20, 0.06), CFrame.new(0.12, -1.08, 0.10) * CFrame.Angles(-math.rad(22), 0, 0), copperPipe, Enum.Material.Metal)
+	weldTo(handle, pipeL)
+	local pipeL_Elbow = makePart(model, "HeatPipeElbow_L", Vector3.new(0.08, 0.08, 0.10), CFrame.new(0.12, -1.68, 0.32), copperPipe, Enum.Material.Metal)
+	weldTo(handle, pipeL_Elbow)
+
+	-- Lower Sun-Lance Flared Tip
+	local lanceBaseL = makePart(model, "LanceTipL_Base", Vector3.new(0.14, 0.22, 0.14), CFrame.new(0, -2.06, 0.84) * CFrame.Angles(-math.rad(70), 0, 0), auricGold, Enum.Material.Metal)
+	weldTo(handle, lanceBaseL)
+	local lanceSpikeL = makePart(model, "LanceTipL_Spike", Vector3.new(0.08, 0.24, 0.08), CFrame.new(0, -2.20, 0.96) * CFrame.Angles(-math.rad(78), 0, 0), heatWhite, Enum.Material.Neon)
+	weldTo(handle, lanceSpikeL)
+	local lanceFlangeL = makePart(model, "LanceTipL_Flange", Vector3.new(0.20, 0.06, 0.12), CFrame.new(0, -2.00, 0.80) * CFrame.Angles(-math.rad(66), 0, 0), auricGold, Enum.Material.Metal)
+	weldTo(handle, lanceFlangeL)
+	local flameWispL = makePart(model, "FlameWisp_L", Vector3.new(0.04, 0.20, 0.08), CFrame.new(0, -2.14, 0.88) * CFrame.Angles(-math.rad(82), 0, 0), coronaGlow, Enum.Material.Neon)
+	weldTo(handle, flameWispL)
+
+	local radClampU = makePart(model, "RadClamp_U", Vector3.new(0.08, 0.05, 0.16), CFrame.new(0, 1.20, -0.06), solarBronze, Enum.Material.Metal)
+	weldTo(handle, radClampU)
+	local radClampL = makePart(model, "RadClamp_L", Vector3.new(0.08, 0.05, 0.16), CFrame.new(0, -1.20, -0.06), solarBronze, Enum.Material.Metal)
+	weldTo(handle, radClampL)
+	local solarGlowU = makePart(model, "SolarGlow_U", Vector3.new(0.06, 0.12, 0.06), CFrame.new(0, 1.50, 0.40), heatWhite, Enum.Material.Neon)
+	weldTo(handle, solarGlowU)
+	local solarGlowL = makePart(model, "SolarGlow_L", Vector3.new(0.06, 0.12, 0.06), CFrame.new(0, -1.50, 0.40), heatWhite, Enum.Material.Neon)
+	weldTo(handle, solarGlowL)
+	-- White-Gold Plasma Bowstring
+	local bowString = makePart(model, "BowString", Vector3.new(0.045, 4.40, 0.045), CFrame.new(0, 0, 0.90), stringColor, Enum.Material.Fabric)
+	weldTo(handle, bowString)
+
+	addSocket(handle, "Grip", Vector3.zero)
+	addSocket(handle, "Nock", Vector3.new(ARROW_REST.X, ARROW_REST.Y, 0.90))
+	addSocket(handle, "TipUpper", Vector3.new(0, 2.20, 0.96))
+	addSocket(handle, "TipLower", Vector3.new(0, -2.20, 0.96))
+	addSocket(handle, "VfxTip", Vector3.new(0, 2.20, 0.96))
+	addSocket(handle, "VfxBase", Vector3.new(0, -2.20, 0.96))
+	addSocket(handle, "VfxCore", Vector3.zero)
+	addSocket(handle, "VfxNock", Vector3.new(ARROW_REST.X, ARROW_REST.Y, 0.90))
+
+	createHunterArrow(model, handle)
+	return model
+end
+
+-- ============================================================================
+-- 11. Celestial Zenith (art_celestial_zenith) - Legendary Standard
+-- ============================================================================
+function WeaponModelBuilder.BuildCelestialZenith(): Model
+	local model = Instance.new("Model")
+	model.Name = "art_celestial_zenith"
+
+	local marbleWhite = Color3.fromRGB(242, 245, 248)
+	local astralGold = Color3.fromRGB(235, 185, 55)
+	local starlightCyan = Color3.fromRGB(160, 230, 255)
+	local starlightCore = Color3.fromRGB(220, 248, 255)
+	local lapisLazuli = Color3.fromRGB(35, 60, 130)
+	local stringColor = Color3.fromRGB(225, 245, 255)
+
+	-- Fluted Marble Column Riser with Doric Capital & Base
+	local handle = makePart(model, "Handle", Vector3.new(0.26, 0.76, 0.30), CFrame.new(0, 0, 0), marbleWhite, Enum.Material.Marble)
+	model.PrimaryPart = handle
+
+	local colCapital = makePart(model, "ColCapital", Vector3.new(0.32, 0.08, 0.36), CFrame.new(0, 0.34, 0), astralGold, Enum.Material.Metal)
+	weldTo(handle, colCapital)
+	local colBase = makePart(model, "ColBase", Vector3.new(0.32, 0.08, 0.36), CFrame.new(0, -0.34, 0), astralGold, Enum.Material.Metal)
+	weldTo(handle, colBase)
+
+	local colFlute1 = makePart(model, "ColFlute_1", Vector3.new(0.04, 0.60, 0.04), CFrame.new(0.13, 0, 0.12), astralGold, Enum.Material.Metal)
+	weldTo(handle, colFlute1)
+	local colFlute2 = makePart(model, "ColFlute_2", Vector3.new(0.04, 0.60, 0.04), CFrame.new(-0.13, 0, 0.12), astralGold, Enum.Material.Metal)
+	weldTo(handle, colFlute2)
+	local colFlute3 = makePart(model, "ColFlute_3", Vector3.new(0.04, 0.60, 0.04), CFrame.new(0.13, 0, -0.12), astralGold, Enum.Material.Metal)
+	weldTo(handle, colFlute3)
+	local colFlute4 = makePart(model, "ColFlute_4", Vector3.new(0.04, 0.60, 0.04), CFrame.new(-0.13, 0, -0.12), astralGold, Enum.Material.Metal)
+	weldTo(handle, colFlute4)
+
+	-- Outer Armillary Ring (8 segments)
+	local ring1 = makePart(model, "Astrolabe_1", Vector3.new(0.04, 0.22, 0.06), CFrame.new(0.24, 0.12, 0) * CFrame.Angles(0, 0, math.rad(22)), astralGold, Enum.Material.Metal)
+	weldTo(handle, ring1)
+	local ring2 = makePart(model, "Astrolabe_2", Vector3.new(0.04, 0.22, 0.06), CFrame.new(0.24, -0.12, 0) * CFrame.Angles(0, 0, -math.rad(22)), astralGold, Enum.Material.Metal)
+	weldTo(handle, ring2)
+	local ring3 = makePart(model, "Astrolabe_3", Vector3.new(0.04, 0.22, 0.06), CFrame.new(-0.24, 0.12, 0) * CFrame.Angles(0, 0, -math.rad(22)), astralGold, Enum.Material.Metal)
+	weldTo(handle, ring3)
+	local ring4 = makePart(model, "Astrolabe_4", Vector3.new(0.04, 0.22, 0.06), CFrame.new(-0.24, -0.12, 0) * CFrame.Angles(0, 0, math.rad(22)), astralGold, Enum.Material.Metal)
+	weldTo(handle, ring4)
+	local ring5 = makePart(model, "Astrolabe_5", Vector3.new(0.22, 0.04, 0.06), CFrame.new(0.12, 0.24, 0) * CFrame.Angles(0, 0, -math.rad(22)), astralGold, Enum.Material.Metal)
+	weldTo(handle, ring5)
+	local ring6 = makePart(model, "Astrolabe_6", Vector3.new(0.22, 0.04, 0.06), CFrame.new(-0.12, 0.24, 0) * CFrame.Angles(0, 0, math.rad(22)), astralGold, Enum.Material.Metal)
+	weldTo(handle, ring6)
+	local ring7 = makePart(model, "Astrolabe_7", Vector3.new(0.22, 0.04, 0.06), CFrame.new(0.12, -0.24, 0) * CFrame.Angles(0, 0, math.rad(22)), astralGold, Enum.Material.Metal)
+	weldTo(handle, ring7)
+	local ring8 = makePart(model, "Astrolabe_8", Vector3.new(0.22, 0.04, 0.06), CFrame.new(-0.12, -0.24, 0) * CFrame.Angles(0, 0, -math.rad(22)), astralGold, Enum.Material.Metal)
+	weldTo(handle, ring8)
+
+	-- Inner Armillary Ring (6 segments)
+	local inRing1 = makePart(model, "InnerRing_1", Vector3.new(0.03, 0.16, 0.04), CFrame.new(0.15, 0.08, 0) * CFrame.Angles(0, 0, math.rad(30)), marbleWhite, Enum.Material.SmoothPlastic)
+	weldTo(handle, inRing1)
+	local inRing2 = makePart(model, "InnerRing_2", Vector3.new(0.03, 0.16, 0.04), CFrame.new(0.15, -0.08, 0) * CFrame.Angles(0, 0, -math.rad(30)), marbleWhite, Enum.Material.SmoothPlastic)
+	weldTo(handle, inRing2)
+	local inRing3 = makePart(model, "InnerRing_3", Vector3.new(0.03, 0.16, 0.04), CFrame.new(-0.15, 0.08, 0) * CFrame.Angles(0, 0, -math.rad(30)), marbleWhite, Enum.Material.SmoothPlastic)
+	weldTo(handle, inRing3)
+	local inRing4 = makePart(model, "InnerRing_4", Vector3.new(0.03, 0.16, 0.04), CFrame.new(-0.15, -0.08, 0) * CFrame.Angles(0, 0, math.rad(30)), marbleWhite, Enum.Material.SmoothPlastic)
+	weldTo(handle, inRing4)
+	local inRing5 = makePart(model, "InnerRing_5", Vector3.new(0.16, 0.03, 0.04), CFrame.new(0, 0.16, 0), marbleWhite, Enum.Material.SmoothPlastic)
+	weldTo(handle, inRing5)
+	local inRing6 = makePart(model, "InnerRing_6", Vector3.new(0.16, 0.03, 0.04), CFrame.new(0, -0.16, 0), marbleWhite, Enum.Material.SmoothPlastic)
+	weldTo(handle, inRing6)
+
+	local gimbalX = makePart(model, "GimbalAxle_X", Vector3.new(0.56, 0.04, 0.04), CFrame.new(0, 0, 0), astralGold, Enum.Material.Metal)
+	weldTo(handle, gimbalX)
+	local gimbalY = makePart(model, "GimbalAxle_Y", Vector3.new(0.04, 0.56, 0.04), CFrame.new(0, 0, 0), astralGold, Enum.Material.Metal)
+	weldTo(handle, gimbalY)
+	local gemCenter = makePart(model, "AstrolabeCore", Vector3.new(0.14, 0.14, 0.14), CFrame.new(0, 0, -0.06), starlightCyan, Enum.Material.Neon)
+	weldTo(handle, gemCenter)
+	local arrowRest = makePart(model, "CelestialArrowRest", Vector3.new(0.08, 0.14, 0.18), CFrame.new(0.15, 0.09, -0.08), astralGold, Enum.Material.Metal)
+	weldTo(handle, arrowRest)
+
+	-- Upper Alabaster Marble Limbs (8 curved segments)
+	local lu1 = makePart(model, "LimbU_1", Vector3.new(0.22, 0.32, 0.22), CFrame.new(0, 0.48, 0.02) * CFrame.Angles(math.rad(4), 0, 0), marbleWhite, Enum.Material.Marble)
+	weldTo(handle, lu1)
+	local lu2 = makePart(model, "LimbU_2", Vector3.new(0.21, 0.32, 0.21), CFrame.new(0, 0.78, 0.05) * CFrame.Angles(math.rad(8), 0, 0), marbleWhite, Enum.Material.Marble)
+	weldTo(handle, lu2)
+	local lu3 = makePart(model, "LimbU_3", Vector3.new(0.20, 0.32, 0.20), CFrame.new(0, 1.08, 0.10) * CFrame.Angles(math.rad(13), 0, 0), marbleWhite, Enum.Material.Marble)
+	weldTo(handle, lu3)
+	local lu4 = makePart(model, "LimbU_4", Vector3.new(0.19, 0.32, 0.19), CFrame.new(0, 1.38, 0.18) * CFrame.Angles(math.rad(19), 0, 0), marbleWhite, Enum.Material.Marble)
+	weldTo(handle, lu4)
+	local lu5 = makePart(model, "LimbU_5", Vector3.new(0.18, 0.32, 0.18), CFrame.new(0, 1.66, 0.29) * CFrame.Angles(math.rad(26), 0, 0), marbleWhite, Enum.Material.Marble)
+	weldTo(handle, lu5)
+	local lu6 = makePart(model, "LimbU_6", Vector3.new(0.17, 0.32, 0.17), CFrame.new(0, 1.94, 0.43) * CFrame.Angles(math.rad(34), 0, 0), marbleWhite, Enum.Material.Marble)
+	weldTo(handle, lu6)
+	local lu7 = makePart(model, "LimbU_7", Vector3.new(0.16, 0.32, 0.16), CFrame.new(0, 2.20, 0.61) * CFrame.Angles(math.rad(43), 0, 0), marbleWhite, Enum.Material.Marble)
+	weldTo(handle, lu7)
+	local lu8 = makePart(model, "LimbU_8", Vector3.new(0.15, 0.34, 0.15), CFrame.new(0, 2.44, 0.83) * CFrame.Angles(math.rad(54), 0, 0), marbleWhite, Enum.Material.Marble)
+	weldTo(handle, lu8)
+
+	-- Upper Inlaid Gold Filigree Spine Ribs
+	local filU1 = makePart(model, "FiligreeU_1", Vector3.new(0.06, 0.30, 0.06), CFrame.new(0, 0.78, 0.10) * CFrame.Angles(math.rad(8), 0, 0), astralGold, Enum.Material.Metal)
+	weldTo(handle, filU1)
+	local filU2 = makePart(model, "FiligreeU_2", Vector3.new(0.06, 0.30, 0.06), CFrame.new(0, 1.38, 0.23) * CFrame.Angles(math.rad(19), 0, 0), astralGold, Enum.Material.Metal)
+	weldTo(handle, filU2)
+	local filU3 = makePart(model, "FiligreeU_3", Vector3.new(0.05, 0.30, 0.06), CFrame.new(0, 1.94, 0.48) * CFrame.Angles(math.rad(34), 0, 0), astralGold, Enum.Material.Metal)
+	weldTo(handle, filU3)
+	local filU4 = makePart(model, "FiligreeU_4", Vector3.new(0.05, 0.30, 0.06), CFrame.new(0, 2.20, 0.66) * CFrame.Angles(math.rad(43), 0, 0), astralGold, Enum.Material.Metal)
+	weldTo(handle, filU4)
+
+	-- Upper Celestial Spire Tip & Hanging Teardrop
+	local spireBaseU = makePart(model, "SpireU_Base", Vector3.new(0.14, 0.20, 0.14), CFrame.new(0, 2.62, 0.98) * CFrame.Angles(math.rad(64), 0, 0), astralGold, Enum.Material.Metal)
+	weldTo(handle, spireBaseU)
+	local spireTipU = makePart(model, "SpireU_Tip", Vector3.new(0.06, 0.26, 0.06), CFrame.new(0, 2.76, 1.12) * CFrame.Angles(math.rad(72), 0, 0), starlightCore, Enum.Material.Neon)
+	weldTo(handle, spireTipU)
+	local pendU_Ring = makePart(model, "PendRing_U", Vector3.new(0.06, 0.06, 0.06), CFrame.new(0, 2.56, 1.02), astralGold, Enum.Material.Metal)
+	weldTo(handle, pendU_Ring)
+	local pendU_Chain = makePart(model, "PendChain_U", Vector3.new(0.03, 0.08, 0.03), CFrame.new(0, 2.52, 1.04), astralGold, Enum.Material.Metal)
+	weldTo(handle, pendU_Chain)
+	local pendU = makePart(model, "Pendulum_U", Vector3.new(0.08, 0.16, 0.08), CFrame.new(0, 2.46, 1.06) * CFrame.Angles(0, 0, math.rad(45)), lapisLazuli, Enum.Material.SmoothPlastic)
+	weldTo(handle, pendU)
+
+	-- Lower Alabaster Marble Limbs (8 curved segments)
+	local ll1 = makePart(model, "LimbL_1", Vector3.new(0.22, 0.32, 0.22), CFrame.new(0, -0.48, 0.02) * CFrame.Angles(-math.rad(4), 0, 0), marbleWhite, Enum.Material.Marble)
+	weldTo(handle, ll1)
+	local ll2 = makePart(model, "LimbL_2", Vector3.new(0.21, 0.32, 0.21), CFrame.new(0, -0.78, 0.05) * CFrame.Angles(-math.rad(8), 0, 0), marbleWhite, Enum.Material.Marble)
+	weldTo(handle, ll2)
+	local ll3 = makePart(model, "LimbL_3", Vector3.new(0.20, 0.32, 0.20), CFrame.new(0, -1.08, 0.10) * CFrame.Angles(-math.rad(13), 0, 0), marbleWhite, Enum.Material.Marble)
+	weldTo(handle, ll3)
+	local ll4 = makePart(model, "LimbL_4", Vector3.new(0.19, 0.32, 0.19), CFrame.new(0, -1.38, 0.18) * CFrame.Angles(-math.rad(19), 0, 0), marbleWhite, Enum.Material.Marble)
+	weldTo(handle, ll4)
+	local ll5 = makePart(model, "LimbL_5", Vector3.new(0.18, 0.32, 0.18), CFrame.new(0, -1.66, 0.29) * CFrame.Angles(-math.rad(26), 0, 0), marbleWhite, Enum.Material.Marble)
+	weldTo(handle, ll5)
+	local ll6 = makePart(model, "LimbL_6", Vector3.new(0.17, 0.32, 0.17), CFrame.new(0, -1.94, 0.43) * CFrame.Angles(-math.rad(34), 0, 0), marbleWhite, Enum.Material.Marble)
+	weldTo(handle, ll6)
+	local ll7 = makePart(model, "LimbL_7", Vector3.new(0.16, 0.32, 0.16), CFrame.new(0, -2.20, 0.61) * CFrame.Angles(-math.rad(43), 0, 0), marbleWhite, Enum.Material.Marble)
+	weldTo(handle, ll7)
+	local ll8 = makePart(model, "LimbL_8", Vector3.new(0.15, 0.34, 0.15), CFrame.new(0, -2.44, 0.83) * CFrame.Angles(-math.rad(54), 0, 0), marbleWhite, Enum.Material.Marble)
+	weldTo(handle, ll8)
+
+	-- Lower Inlaid Gold Filigree Spine Ribs
+	local filL1 = makePart(model, "FiligreeL_1", Vector3.new(0.06, 0.30, 0.06), CFrame.new(0, -0.78, 0.10) * CFrame.Angles(-math.rad(8), 0, 0), astralGold, Enum.Material.Metal)
+	weldTo(handle, filL1)
+	local filL2 = makePart(model, "FiligreeL_2", Vector3.new(0.06, 0.30, 0.06), CFrame.new(0, -1.38, 0.23) * CFrame.Angles(-math.rad(19), 0, 0), astralGold, Enum.Material.Metal)
+	weldTo(handle, filL2)
+	local filL3 = makePart(model, "FiligreeL_3", Vector3.new(0.05, 0.30, 0.06), CFrame.new(0, -1.94, 0.48) * CFrame.Angles(-math.rad(34), 0, 0), astralGold, Enum.Material.Metal)
+	weldTo(handle, filL3)
+	local filL4 = makePart(model, "FiligreeL_4", Vector3.new(0.05, 0.30, 0.06), CFrame.new(0, -2.20, 0.66) * CFrame.Angles(-math.rad(43), 0, 0), astralGold, Enum.Material.Metal)
+	weldTo(handle, filL4)
+
+	-- Lower Celestial Spire Tip & Hanging Teardrop
+	local spireBaseL = makePart(model, "SpireL_Base", Vector3.new(0.14, 0.20, 0.14), CFrame.new(0, -2.62, 0.98) * CFrame.Angles(-math.rad(64), 0, 0), astralGold, Enum.Material.Metal)
+	weldTo(handle, spireBaseL)
+	local spireTipL = makePart(model, "SpireL_Tip", Vector3.new(0.06, 0.26, 0.06), CFrame.new(0, -2.76, 1.12) * CFrame.Angles(-math.rad(72), 0, 0), starlightCore, Enum.Material.Neon)
+	weldTo(handle, spireTipL)
+	local pendL_Ring = makePart(model, "PendRing_L", Vector3.new(0.06, 0.06, 0.06), CFrame.new(0, -2.56, 1.02), astralGold, Enum.Material.Metal)
+	weldTo(handle, pendL_Ring)
+	local pendL_Chain = makePart(model, "PendChain_L", Vector3.new(0.03, 0.08, 0.03), CFrame.new(0, -2.52, 1.04), astralGold, Enum.Material.Metal)
+	weldTo(handle, pendL_Chain)
+	local pendL = makePart(model, "Pendulum_L", Vector3.new(0.08, 0.16, 0.08), CFrame.new(0, -2.46, 1.06) * CFrame.Angles(0, 0, math.rad(45)), lapisLazuli, Enum.Material.SmoothPlastic)
+	weldTo(handle, pendL)
+
+	local compassNeedleU = makePart(model, "CompassNeedle_U", Vector3.new(0.02, 0.22, 0.02), CFrame.new(0, 0.18, 0.08), starlightCyan, Enum.Material.Neon)
+	weldTo(handle, compassNeedleU)
+	local compassNeedleL = makePart(model, "CompassNeedle_L", Vector3.new(0.02, 0.22, 0.02), CFrame.new(0, -0.18, 0.08), starlightCyan, Enum.Material.Neon)
+	weldTo(handle, compassNeedleL)
+	local meridianStar1 = makePart(model, "MeridianStar_1", Vector3.new(0.06, 0.06, 0.06), CFrame.new(0.18, 0, 0.08), starlightCore, Enum.Material.Neon)
+	weldTo(handle, meridianStar1)
+	local meridianStar2 = makePart(model, "MeridianStar_2", Vector3.new(0.06, 0.06, 0.06), CFrame.new(-0.18, 0, 0.08), starlightCore, Enum.Material.Neon)
+	weldTo(handle, meridianStar2)
+	local meridianCenter = makePart(model, "MeridianCenter_Pin", Vector3.new(0.08, 0.08, 0.08), CFrame.new(0, 0, 0.08), astralGold, Enum.Material.Metal)
+	weldTo(handle, meridianCenter)
+	-- Spun Starlight Chord Bowstring
+	local bowString = makePart(model, "BowString", Vector3.new(0.045, 5.50, 0.045), CFrame.new(0, 0, 1.08), stringColor, Enum.Material.Fabric)
+	weldTo(handle, bowString)
+
+	addSocket(handle, "Grip", Vector3.zero)
+	addSocket(handle, "Nock", Vector3.new(ARROW_REST.X, ARROW_REST.Y, 1.08))
+	addSocket(handle, "TipUpper", Vector3.new(0, 2.76, 1.12))
+	addSocket(handle, "TipLower", Vector3.new(0, -2.76, 1.12))
+	addSocket(handle, "VfxTip", Vector3.new(0, 2.76, 1.12))
+	addSocket(handle, "VfxBase", Vector3.new(0, -2.76, 1.12))
+	addSocket(handle, "VfxCore", Vector3.zero)
+	addSocket(handle, "VfxNock", Vector3.new(ARROW_REST.X, ARROW_REST.Y, 1.08))
+
+	createHunterArrow(model, handle)
+	return model
+end
+
+-- ============================================================================
+-- 12. Supernova Greatbow (art_supernova_greatbow) - Legendary Enhanced
+-- ============================================================================
+function WeaponModelBuilder.BuildSupernovaGreatbow(): Model
+	local model = Instance.new("Model")
+	model.Name = "art_supernova_greatbow"
+
+	local darkTitanium = Color3.fromRGB(42, 45, 52)
+	local titaniumBright = Color3.fromRGB(130, 140, 155)
+	local obsidianBlack = Color3.fromRGB(22, 22, 26)
+	local voidCore = Color3.fromRGB(15, 10, 25)
+	local magneticPurple = Color3.fromRGB(145, 65, 235)
+	local singularityGlow = Color3.fromRGB(205, 135, 255)
+	local stringColor = Color3.fromRGB(195, 140, 245)
+
+	-- Heavy Titanium Riser & Magnetic Claws
+	local handle = makePart(model, "Handle", Vector3.new(0.30, 0.80, 0.36), CFrame.new(0, 0, 0), darkTitanium, Enum.Material.Metal)
+	model.PrimaryPart = handle
+
+	-- Central Void Singularity Core & Containment Rings
+	local voidSphere = makePart(model, "VoidSphere", Vector3.new(0.28, 0.28, 0.28), CFrame.new(0, 0, -0.06), voidCore, Enum.Material.Glass)
+	weldTo(handle, voidSphere)
+	local singGlow = makePart(model, "SingularityGlow", Vector3.new(0.18, 0.18, 0.18), CFrame.new(0, 0, -0.06), singularityGlow, Enum.Material.Neon)
+	weldTo(handle, singGlow)
+
+	local claw1 = makePart(model, "MagClaw_1", Vector3.new(0.06, 0.20, 0.12), CFrame.new(0.16, 0.16, -0.06) * CFrame.Angles(0, 0, -math.rad(45)), titaniumBright, Enum.Material.Metal)
+	weldTo(handle, claw1)
+	local claw2 = makePart(model, "MagClaw_2", Vector3.new(0.06, 0.20, 0.12), CFrame.new(-0.16, 0.16, -0.06) * CFrame.Angles(0, 0, math.rad(45)), titaniumBright, Enum.Material.Metal)
+	weldTo(handle, claw2)
+	local claw3 = makePart(model, "MagClaw_3", Vector3.new(0.06, 0.20, 0.12), CFrame.new(0.16, -0.16, -0.06) * CFrame.Angles(0, 0, math.rad(45)), titaniumBright, Enum.Material.Metal)
+	weldTo(handle, claw3)
+	local claw4 = makePart(model, "MagClaw_4", Vector3.new(0.06, 0.20, 0.12), CFrame.new(-0.16, -0.16, -0.06) * CFrame.Angles(0, 0, -math.rad(45)), titaniumBright, Enum.Material.Metal)
+	weldTo(handle, claw4)
+
+	local contRingU = makePart(model, "ContRing_U", Vector3.new(0.32, 0.06, 0.32), CFrame.new(0, 0.30, 0), magneticPurple, Enum.Material.Neon)
+	weldTo(handle, contRingU)
+	local contRingL = makePart(model, "ContRing_L", Vector3.new(0.32, 0.06, 0.32), CFrame.new(0, -0.30, 0), magneticPurple, Enum.Material.Neon)
+	weldTo(handle, contRingL)
+	local damperU = makePart(model, "RecoilDamper_U", Vector3.new(0.10, 0.12, 0.10), CFrame.new(0, 0.38, 0.08), darkTitanium, Enum.Material.Metal)
+	weldTo(handle, damperU)
+	local damperL = makePart(model, "RecoilDamper_L", Vector3.new(0.10, 0.12, 0.10), CFrame.new(0, -0.38, 0.08), darkTitanium, Enum.Material.Metal)
+	weldTo(handle, damperL)
+	local strut1 = makePart(model, "RecoilStrut_1", Vector3.new(0.06, 0.20, 0.06), CFrame.new(0.12, 0.24, 0.12), titaniumBright, Enum.Material.Metal)
+	weldTo(handle, strut1)
+	local strut2 = makePart(model, "RecoilStrut_2", Vector3.new(0.06, 0.20, 0.06), CFrame.new(-0.12, 0.24, 0.12), titaniumBright, Enum.Material.Metal)
+	weldTo(handle, strut2)
+	local strut3 = makePart(model, "RecoilStrut_3", Vector3.new(0.06, 0.20, 0.06), CFrame.new(0.12, -0.24, 0.12), titaniumBright, Enum.Material.Metal)
+	weldTo(handle, strut3)
+	local strut4 = makePart(model, "RecoilStrut_4", Vector3.new(0.06, 0.20, 0.06), CFrame.new(-0.12, -0.24, 0.12), titaniumBright, Enum.Material.Metal)
+	weldTo(handle, strut4)
+	local arrowRest = makePart(model, "SupernovaArrowRest", Vector3.new(0.08, 0.16, 0.20), CFrame.new(0.16, 0.10, -0.09), darkTitanium, Enum.Material.Metal)
+	weldTo(handle, arrowRest)
+
+	-- Upper Quad Obsidian Split Rail Beams (Left & Right twin rails, 5 segments each)
+	local rul1 = makePart(model, "RailUL_1", Vector3.new(0.08, 0.34, 0.16), CFrame.new(0.11, 0.50, 0.04) * CFrame.Angles(math.rad(6), 0, 0), obsidianBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, rul1)
+	local rul2 = makePart(model, "RailUL_2", Vector3.new(0.07, 0.34, 0.15), CFrame.new(0.11, 0.82, 0.09) * CFrame.Angles(math.rad(13), 0, 0), obsidianBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, rul2)
+	local rul3 = makePart(model, "RailUL_3", Vector3.new(0.06, 0.34, 0.14), CFrame.new(0.11, 1.14, 0.18) * CFrame.Angles(math.rad(22), 0, 0), obsidianBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, rul3)
+	local rul4 = makePart(model, "RailUL_4", Vector3.new(0.06, 0.34, 0.13), CFrame.new(0.11, 1.44, 0.32) * CFrame.Angles(math.rad(33), 0, 0), obsidianBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, rul4)
+	local rul5 = makePart(model, "RailUL_5", Vector3.new(0.05, 0.36, 0.12), CFrame.new(0.11, 1.72, 0.52) * CFrame.Angles(math.rad(46), 0, 0), obsidianBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, rul5)
+
+	local rur1 = makePart(model, "RailUR_1", Vector3.new(0.08, 0.34, 0.16), CFrame.new(-0.11, 0.50, 0.04) * CFrame.Angles(math.rad(6), 0, 0), obsidianBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, rur1)
+	local rur2 = makePart(model, "RailUR_2", Vector3.new(0.07, 0.34, 0.15), CFrame.new(-0.11, 0.82, 0.09) * CFrame.Angles(math.rad(13), 0, 0), obsidianBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, rur2)
+	local rur3 = makePart(model, "RailUR_3", Vector3.new(0.06, 0.34, 0.14), CFrame.new(-0.11, 1.14, 0.18) * CFrame.Angles(math.rad(22), 0, 0), obsidianBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, rur3)
+	local rur4 = makePart(model, "RailUR_4", Vector3.new(0.06, 0.34, 0.13), CFrame.new(-0.11, 1.44, 0.32) * CFrame.Angles(math.rad(33), 0, 0), obsidianBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, rur4)
+	local rur5 = makePart(model, "RailUR_5", Vector3.new(0.05, 0.36, 0.12), CFrame.new(-0.11, 1.72, 0.52) * CFrame.Angles(math.rad(46), 0, 0), obsidianBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, rur5)
+
+	-- Upper Titanium Spacer Blocks & Magnetic Acceleration Coils (4 coils per limb)
+	local spcU1 = makePart(model, "SpacerU_1", Vector3.new(0.24, 0.06, 0.18), CFrame.new(0, 0.82, 0.09) * CFrame.Angles(math.rad(13), 0, 0), titaniumBright, Enum.Material.Metal)
+	weldTo(handle, spcU1)
+	local spcU2 = makePart(model, "SpacerU_2", Vector3.new(0.22, 0.06, 0.16), CFrame.new(0, 1.44, 0.32) * CFrame.Angles(math.rad(33), 0, 0), titaniumBright, Enum.Material.Metal)
+	weldTo(handle, spcU2)
+
+	local coilU1 = makePart(model, "MagCoilU_1", Vector3.new(0.18, 0.10, 0.10), CFrame.new(0, 0.66, 0.06) * CFrame.Angles(math.rad(9), 0, 0), magneticPurple, Enum.Material.Neon)
+	weldTo(handle, coilU1)
+	local coilU2 = makePart(model, "MagCoilU_2", Vector3.new(0.18, 0.10, 0.10), CFrame.new(0, 1.14, 0.18) * CFrame.Angles(math.rad(22), 0, 0), magneticPurple, Enum.Material.Neon)
+	weldTo(handle, coilU2)
+	local coilU3 = makePart(model, "MagCoilU_3", Vector3.new(0.16, 0.10, 0.10), CFrame.new(0, 1.58, 0.42) * CFrame.Angles(math.rad(40), 0, 0), magneticPurple, Enum.Material.Neon)
+	weldTo(handle, coilU3)
+	local tieU1 = makePart(model, "RailTieU_1", Vector3.new(0.26, 0.04, 0.14), CFrame.new(0, 1.00, 0.14) * CFrame.Angles(math.rad(18), 0, 0), titaniumBright, Enum.Material.Metal)
+	weldTo(handle, tieU1)
+	local tieU2 = makePart(model, "RailTieU_2", Vector3.new(0.24, 0.04, 0.12), CFrame.new(0, 1.30, 0.25) * CFrame.Angles(math.rad(28), 0, 0), titaniumBright, Enum.Material.Metal)
+	weldTo(handle, tieU2)
+
+	-- Massive Upper Flared Monolithic Siege Tips
+	local tipU_Base = makePart(model, "SiegeTipU_Anchor", Vector3.new(0.26, 0.22, 0.22), CFrame.new(0, 1.94, 0.72) * CFrame.Angles(math.rad(58), 0, 0), darkTitanium, Enum.Material.Metal)
+	weldTo(handle, tipU_Base)
+	local tipU_HornL = makePart(model, "SiegeTipU_HornL", Vector3.new(0.06, 0.26, 0.14), CFrame.new(0.12, 2.10, 0.86) * CFrame.Angles(math.rad(68), math.rad(18), 0), obsidianBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, tipU_HornL)
+	local tipU_HornR = makePart(model, "SiegeTipU_HornR", Vector3.new(0.06, 0.26, 0.14), CFrame.new(-0.12, 2.10, 0.86) * CFrame.Angles(math.rad(68), -math.rad(18), 0), obsidianBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, tipU_HornR)
+	local tipU_Spike = makePart(model, "SiegeTipU_Spike", Vector3.new(0.08, 0.30, 0.08), CFrame.new(0, 2.18, 0.92) * CFrame.Angles(math.rad(74), 0, 0), singularityGlow, Enum.Material.Neon)
+	weldTo(handle, tipU_Spike)
+	local ventU1 = makePart(model, "PlasmaVent_U1", Vector3.new(0.04, 0.12, 0.06), CFrame.new(0.14, 1.88, 0.68) * CFrame.Angles(math.rad(58), 0, 0), magneticPurple, Enum.Material.Neon)
+	weldTo(handle, ventU1)
+	local ventU2 = makePart(model, "PlasmaVent_U2", Vector3.new(0.04, 0.12, 0.06), CFrame.new(-0.14, 1.88, 0.68) * CFrame.Angles(math.rad(58), 0, 0), magneticPurple, Enum.Material.Neon)
+	weldTo(handle, ventU2)
+
+	-- Lower Quad Obsidian Split Rail Beams (Left & Right twin rails, 5 segments each)
+	local rll1 = makePart(model, "RailLL_1", Vector3.new(0.08, 0.34, 0.16), CFrame.new(0.11, -0.50, 0.04) * CFrame.Angles(-math.rad(6), 0, 0), obsidianBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, rll1)
+	local rll2 = makePart(model, "RailLL_2", Vector3.new(0.07, 0.34, 0.15), CFrame.new(0.11, -0.82, 0.09) * CFrame.Angles(-math.rad(13), 0, 0), obsidianBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, rll2)
+	local rll3 = makePart(model, "RailLL_3", Vector3.new(0.06, 0.34, 0.14), CFrame.new(0.11, -1.14, 0.18) * CFrame.Angles(-math.rad(22), 0, 0), obsidianBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, rll3)
+	local rll4 = makePart(model, "RailLL_4", Vector3.new(0.06, 0.34, 0.13), CFrame.new(0.11, -1.44, 0.32) * CFrame.Angles(-math.rad(33), 0, 0), obsidianBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, rll4)
+	local rll5 = makePart(model, "RailLL_5", Vector3.new(0.05, 0.36, 0.12), CFrame.new(0.11, -1.72, 0.52) * CFrame.Angles(-math.rad(46), 0, 0), obsidianBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, rll5)
+
+	local rlr1 = makePart(model, "RailLR_1", Vector3.new(0.08, 0.34, 0.16), CFrame.new(-0.11, -0.50, 0.04) * CFrame.Angles(-math.rad(6), 0, 0), obsidianBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, rlr1)
+	local rlr2 = makePart(model, "RailLR_2", Vector3.new(0.07, 0.34, 0.15), CFrame.new(-0.11, -0.82, 0.09) * CFrame.Angles(-math.rad(13), 0, 0), obsidianBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, rlr2)
+	local rlr3 = makePart(model, "RailLR_3", Vector3.new(0.06, 0.34, 0.14), CFrame.new(-0.11, -1.14, 0.18) * CFrame.Angles(-math.rad(22), 0, 0), obsidianBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, rlr3)
+	local rlr4 = makePart(model, "RailLR_4", Vector3.new(0.06, 0.34, 0.13), CFrame.new(-0.11, -1.44, 0.32) * CFrame.Angles(-math.rad(33), 0, 0), obsidianBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, rlr4)
+	local rlr5 = makePart(model, "RailLR_5", Vector3.new(0.05, 0.36, 0.12), CFrame.new(-0.11, -1.72, 0.52) * CFrame.Angles(-math.rad(46), 0, 0), obsidianBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, rlr5)
+
+	-- Lower Titanium Spacer Blocks & Magnetic Acceleration Coils
+	local spcL1 = makePart(model, "SpacerL_1", Vector3.new(0.24, 0.06, 0.18), CFrame.new(0, -0.82, 0.09) * CFrame.Angles(-math.rad(13), 0, 0), titaniumBright, Enum.Material.Metal)
+	weldTo(handle, spcL1)
+	local spcL2 = makePart(model, "SpacerL_2", Vector3.new(0.22, 0.06, 0.16), CFrame.new(0, -1.44, 0.32) * CFrame.Angles(-math.rad(33), 0, 0), titaniumBright, Enum.Material.Metal)
+	weldTo(handle, spcL2)
+
+	local coilL1 = makePart(model, "MagCoilL_1", Vector3.new(0.18, 0.10, 0.10), CFrame.new(0, -0.66, 0.06) * CFrame.Angles(-math.rad(9), 0, 0), magneticPurple, Enum.Material.Neon)
+	weldTo(handle, coilL1)
+	local coilL2 = makePart(model, "MagCoilL_2", Vector3.new(0.18, 0.10, 0.10), CFrame.new(0, -1.14, 0.18) * CFrame.Angles(-math.rad(22), 0, 0), magneticPurple, Enum.Material.Neon)
+	weldTo(handle, coilL2)
+	local coilL3 = makePart(model, "MagCoilL_3", Vector3.new(0.16, 0.10, 0.10), CFrame.new(0, -1.58, 0.42) * CFrame.Angles(-math.rad(40), 0, 0), magneticPurple, Enum.Material.Neon)
+	weldTo(handle, coilL3)
+	local tieL1 = makePart(model, "RailTieL_1", Vector3.new(0.26, 0.04, 0.14), CFrame.new(0, -1.00, 0.14) * CFrame.Angles(-math.rad(18), 0, 0), titaniumBright, Enum.Material.Metal)
+	weldTo(handle, tieL1)
+	local tieL2 = makePart(model, "RailTieL_2", Vector3.new(0.24, 0.04, 0.12), CFrame.new(0, -1.30, 0.25) * CFrame.Angles(-math.rad(28), 0, 0), titaniumBright, Enum.Material.Metal)
+	weldTo(handle, tieL2)
+
+	-- Massive Lower Flared Monolithic Siege Tips
+	local tipL_Base = makePart(model, "SiegeTipL_Anchor", Vector3.new(0.26, 0.22, 0.22), CFrame.new(0, -1.94, 0.72) * CFrame.Angles(-math.rad(58), 0, 0), darkTitanium, Enum.Material.Metal)
+	weldTo(handle, tipL_Base)
+	local tipL_HornL = makePart(model, "SiegeTipL_HornL", Vector3.new(0.06, 0.26, 0.14), CFrame.new(0.12, -2.10, 0.86) * CFrame.Angles(-math.rad(68), math.rad(18), 0), obsidianBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, tipL_HornL)
+	local tipL_HornR = makePart(model, "SiegeTipL_HornR", Vector3.new(0.06, 0.26, 0.14), CFrame.new(-0.12, -2.10, 0.86) * CFrame.Angles(-math.rad(68), -math.rad(18), 0), obsidianBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, tipL_HornR)
+	local tipL_Spike = makePart(model, "SiegeTipL_Spike", Vector3.new(0.08, 0.30, 0.08), CFrame.new(0, -2.18, 0.92) * CFrame.Angles(-math.rad(74), 0, 0), singularityGlow, Enum.Material.Neon)
+	weldTo(handle, tipL_Spike)
+	local ventL1 = makePart(model, "PlasmaVent_L1", Vector3.new(0.04, 0.12, 0.06), CFrame.new(0.14, -1.88, 0.68) * CFrame.Angles(-math.rad(58), 0, 0), magneticPurple, Enum.Material.Neon)
+	weldTo(handle, ventL1)
+	local ventL2 = makePart(model, "PlasmaVent_L2", Vector3.new(0.04, 0.12, 0.06), CFrame.new(-0.14, -1.88, 0.68) * CFrame.Angles(-math.rad(58), 0, 0), magneticPurple, Enum.Material.Neon)
+	weldTo(handle, ventL2)
+
+	local barbU1 = makePart(model, "HornBarb_U1", Vector3.new(0.04, 0.16, 0.08), CFrame.new(0.16, 2.22, 0.88) * CFrame.Angles(math.rad(70), math.rad(25), 0), obsidianBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, barbU1)
+	local barbU2 = makePart(model, "HornBarb_U2", Vector3.new(0.04, 0.16, 0.08), CFrame.new(-0.16, 2.22, 0.88) * CFrame.Angles(math.rad(70), -math.rad(25), 0), obsidianBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, barbU2)
+	local barbL1 = makePart(model, "HornBarb_L1", Vector3.new(0.04, 0.16, 0.08), CFrame.new(0.16, -2.22, 0.88) * CFrame.Angles(-math.rad(70), math.rad(25), 0), obsidianBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, barbL1)
+	local barbL2 = makePart(model, "HornBarb_L2", Vector3.new(0.04, 0.16, 0.08), CFrame.new(-0.16, -2.22, 0.88) * CFrame.Angles(-math.rad(70), -math.rad(25), 0), obsidianBlack, Enum.Material.SmoothPlastic)
+	weldTo(handle, barbL2)
+	local injectorU = makePart(model, "FluxInjector_U", Vector3.new(0.08, 0.10, 0.08), CFrame.new(0, 0.44, -0.06), magneticPurple, Enum.Material.Neon)
+	weldTo(handle, injectorU)
+	local injectorL = makePart(model, "FluxInjector_L", Vector3.new(0.08, 0.10, 0.08), CFrame.new(0, -0.44, -0.06), magneticPurple, Enum.Material.Neon)
+	weldTo(handle, injectorL)
+	-- Magnetic Flux Bowstring
+	local bowString = makePart(model, "BowString", Vector3.new(0.045, 4.40, 0.045), CFrame.new(0, 0, 0.86), stringColor, Enum.Material.Fabric)
+	weldTo(handle, bowString)
+
+	addSocket(handle, "Grip", Vector3.zero)
+	addSocket(handle, "Nock", Vector3.new(ARROW_REST.X, ARROW_REST.Y, 0.86))
+	addSocket(handle, "TipUpper", Vector3.new(0, 2.18, 0.92))
+	addSocket(handle, "TipLower", Vector3.new(0, -2.18, 0.92))
+	addSocket(handle, "VfxTip", Vector3.new(0, 2.18, 0.92))
+	addSocket(handle, "VfxBase", Vector3.new(0, -2.18, 0.92))
+	addSocket(handle, "VfxCore", Vector3.zero)
+	addSocket(handle, "VfxNock", Vector3.new(ARROW_REST.X, ARROW_REST.Y, 0.86))
+
+	createHunterArrow(model, handle)
+	return model
+end
+
+-- ============================================================================
+-- 13. Astrea Cosmic Bow (art_astrea_cosmic_bow) - Origin Standard
+-- ============================================================================
+function WeaponModelBuilder.BuildAstreaCosmicBow(): Model
+	local model = Instance.new("Model")
+	model.Name = "art_astrea_cosmic_bow"
+
+	local astralIndigo = Color3.fromRGB(30, 22, 60)
+	local starSilver = Color3.fromRGB(225, 235, 255)
+	local starlightGold = Color3.fromRGB(250, 215, 95)
+	local nebulaPurple = Color3.fromRGB(155, 75, 235)
+	local starGlass = Color3.fromRGB(195, 225, 255)
+	local stringColor = Color3.fromRGB(215, 235, 255)
+
+	-- Astral Indigo Pivot Hub & Cosmic Star Disc
+	local handle = makePart(model, "Handle", Vector3.new(0.26, 0.74, 0.32), CFrame.new(0, 0, 0), astralIndigo, Enum.Material.Metal)
+	model.PrimaryPart = handle
+
+	local starDisc = makePart(model, "StarDisc_Center", Vector3.new(0.32, 0.32, 0.12), CFrame.new(0, 0, -0.06), starlightGold, Enum.Material.Metal)
+	weldTo(handle, starDisc)
+	local starDiscRing = makePart(model, "StarDisc_Ring", Vector3.new(0.40, 0.40, 0.06), CFrame.new(0, 0, -0.06), nebulaPurple, Enum.Material.Neon)
+	weldTo(handle, starDiscRing)
+
+	local ray1 = makePart(model, "StarRay_1", Vector3.new(0.06, 0.26, 0.06), CFrame.new(0.20, 0.20, -0.06) * CFrame.Angles(0, 0, -math.rad(45)), starSilver, Enum.Material.Metal)
+	weldTo(handle, ray1)
+	local ray2 = makePart(model, "StarRay_2", Vector3.new(0.06, 0.26, 0.06), CFrame.new(-0.20, 0.20, -0.06) * CFrame.Angles(0, 0, math.rad(45)), starSilver, Enum.Material.Metal)
+	weldTo(handle, ray2)
+	local ray3 = makePart(model, "StarRay_3", Vector3.new(0.06, 0.26, 0.06), CFrame.new(0.20, -0.20, -0.06) * CFrame.Angles(0, 0, math.rad(45)), starSilver, Enum.Material.Metal)
+	weldTo(handle, ray3)
+	local ray4 = makePart(model, "StarRay_4", Vector3.new(0.06, 0.26, 0.06), CFrame.new(-0.20, -0.20, -0.06) * CFrame.Angles(0, 0, -math.rad(45)), starSilver, Enum.Material.Metal)
+	weldTo(handle, ray4)
+	local orbSeg1 = makePart(model, "Orbit_1", Vector3.new(0.04, 0.18, 0.04), CFrame.new(0.24, 0, -0.06), starGlass, Enum.Material.Glass)
+	weldTo(handle, orbSeg1)
+	local orbSeg2 = makePart(model, "Orbit_2", Vector3.new(0.04, 0.18, 0.04), CFrame.new(-0.24, 0, -0.06), starGlass, Enum.Material.Glass)
+	weldTo(handle, orbSeg2)
+	local arrowRest = makePart(model, "CosmicArrowRest", Vector3.new(0.08, 0.14, 0.18), CFrame.new(0.15, 0.09, -0.08), starlightGold, Enum.Material.Metal)
+	weldTo(handle, arrowRest)
+
+	-- Upper Open Tetrahedral Space-Frame Vector Truss
+	-- 7 Diamond-faceted Star Glass Nodes
+	local nodeU1 = makePart(model, "StarNodeU_1", Vector3.new(0.16, 0.16, 0.16), CFrame.new(0, 0.50, 0.02) * CFrame.Angles(math.rad(6), math.rad(45), 0), starGlass, Enum.Material.Glass)
+	weldTo(handle, nodeU1)
+	local nodeU2 = makePart(model, "StarNodeU_2", Vector3.new(0.15, 0.15, 0.15), CFrame.new(0, 0.78, 0.05) * CFrame.Angles(math.rad(11), math.rad(45), 0), nebulaPurple, Enum.Material.Neon)
+	weldTo(handle, nodeU2)
+	local nodeU3 = makePart(model, "StarNodeU_3", Vector3.new(0.14, 0.14, 0.14), CFrame.new(0, 1.06, 0.11) * CFrame.Angles(math.rad(18), math.rad(45), 0), starGlass, Enum.Material.Glass)
+	weldTo(handle, nodeU3)
+	local nodeU4 = makePart(model, "StarNodeU_4", Vector3.new(0.14, 0.14, 0.14), CFrame.new(0, 1.34, 0.20) * CFrame.Angles(math.rad(26), math.rad(45), 0), nebulaPurple, Enum.Material.Neon)
+	weldTo(handle, nodeU4)
+	local nodeU5 = makePart(model, "StarNodeU_5", Vector3.new(0.13, 0.13, 0.13), CFrame.new(0, 1.62, 0.34) * CFrame.Angles(math.rad(36), math.rad(45), 0), starGlass, Enum.Material.Glass)
+	weldTo(handle, nodeU5)
+	local nodeU6 = makePart(model, "StarNodeU_6", Vector3.new(0.12, 0.12, 0.12), CFrame.new(0, 1.88, 0.52) * CFrame.Angles(math.rad(48), math.rad(45), 0), nebulaPurple, Enum.Material.Neon)
+	weldTo(handle, nodeU6)
+	local nodeU7 = makePart(model, "StarNodeU_7", Vector3.new(0.11, 0.11, 0.11), CFrame.new(0, 2.12, 0.74) * CFrame.Angles(math.rad(62), math.rad(45), 0), starGlass, Enum.Material.Glass)
+	weldTo(handle, nodeU7)
+
+	-- Upper Vector Truss Struts (Dual cross-braced struts between nodes)
+	local tu1_L = makePart(model, "TrussU1_L", Vector3.new(0.05, 0.32, 0.05), CFrame.new(0.08, 0.64, 0.03) * CFrame.Angles(math.rad(8), math.rad(15), 0), starSilver, Enum.Material.Metal)
+	weldTo(handle, tu1_L)
+	local tu1_R = makePart(model, "TrussU1_R", Vector3.new(0.05, 0.32, 0.05), CFrame.new(-0.08, 0.64, 0.03) * CFrame.Angles(math.rad(8), -math.rad(15), 0), starSilver, Enum.Material.Metal)
+	weldTo(handle, tu1_R)
+
+	local tu2_L = makePart(model, "TrussU2_L", Vector3.new(0.05, 0.32, 0.05), CFrame.new(0.08, 0.92, 0.08) * CFrame.Angles(math.rad(15), math.rad(15), 0), astralIndigo, Enum.Material.Metal)
+	weldTo(handle, tu2_L)
+	local tu2_R = makePart(model, "TrussU2_R", Vector3.new(0.05, 0.32, 0.05), CFrame.new(-0.08, 0.92, 0.08) * CFrame.Angles(math.rad(15), -math.rad(15), 0), astralIndigo, Enum.Material.Metal)
+	weldTo(handle, tu2_R)
+
+	local tu3_L = makePart(model, "TrussU3_L", Vector3.new(0.04, 0.32, 0.04), CFrame.new(0.07, 1.20, 0.15) * CFrame.Angles(math.rad(22), math.rad(15), 0), starSilver, Enum.Material.Metal)
+	weldTo(handle, tu3_L)
+	local tu3_R = makePart(model, "TrussU3_R", Vector3.new(0.04, 0.32, 0.04), CFrame.new(-0.07, 1.20, 0.15) * CFrame.Angles(math.rad(22), -math.rad(15), 0), starSilver, Enum.Material.Metal)
+	weldTo(handle, tu3_R)
+
+	local tu4_L = makePart(model, "TrussU4_L", Vector3.new(0.04, 0.32, 0.04), CFrame.new(0.06, 1.48, 0.27) * CFrame.Angles(math.rad(31), math.rad(15), 0), astralIndigo, Enum.Material.Metal)
+	weldTo(handle, tu4_L)
+	local tu4_R = makePart(model, "TrussU4_R", Vector3.new(0.04, 0.32, 0.04), CFrame.new(-0.06, 1.48, 0.27) * CFrame.Angles(math.rad(31), -math.rad(15), 0), astralIndigo, Enum.Material.Metal)
+	weldTo(handle, tu4_R)
+
+	local tu5_L = makePart(model, "TrussU5_L", Vector3.new(0.04, 0.32, 0.04), CFrame.new(0.05, 1.75, 0.43) * CFrame.Angles(math.rad(42), math.rad(15), 0), starSilver, Enum.Material.Metal)
+	weldTo(handle, tu5_L)
+	local tu5_R = makePart(model, "TrussU5_R", Vector3.new(0.04, 0.32, 0.04), CFrame.new(-0.05, 1.75, 0.43) * CFrame.Angles(math.rad(42), -math.rad(15), 0), starSilver, Enum.Material.Metal)
+	weldTo(handle, tu5_R)
+
+	local tu6_L = makePart(model, "TrussU6_L", Vector3.new(0.04, 0.32, 0.04), CFrame.new(0.05, 2.00, 0.63) * CFrame.Angles(math.rad(55), math.rad(15), 0), astralIndigo, Enum.Material.Metal)
+	weldTo(handle, tu6_L)
+	local tu6_R = makePart(model, "TrussU6_R", Vector3.new(0.04, 0.32, 0.04), CFrame.new(-0.05, 2.00, 0.63) * CFrame.Angles(math.rad(55), -math.rad(15), 0), astralIndigo, Enum.Material.Metal)
+	weldTo(handle, tu6_R)
+
+	-- Upper Web Cross Braces (4 diagonal stabilizers)
+	local webU1 = makePart(model, "WebU_1", Vector3.new(0.03, 0.24, 0.03), CFrame.new(0, 0.78, 0.08) * CFrame.Angles(math.rad(15), 0, math.rad(45)), starlightGold, Enum.Material.Metal)
+	weldTo(handle, webU1)
+	local webU2 = makePart(model, "WebU_2", Vector3.new(0.03, 0.24, 0.03), CFrame.new(0, 1.34, 0.24) * CFrame.Angles(math.rad(30), 0, -math.rad(45)), starlightGold, Enum.Material.Metal)
+	weldTo(handle, webU2)
+
+	-- Upper Dorsal Starlight Spine Guides
+	local sguideU1 = makePart(model, "SpineGuideU_1", Vector3.new(0.04, 0.34, 0.06), CFrame.new(0, 0.84, -0.04) * CFrame.Angles(math.rad(13), 0, 0), starlightGold, Enum.Material.Metal)
+	weldTo(handle, sguideU1)
+	local sguideU2 = makePart(model, "SpineGuideU_2", Vector3.new(0.04, 0.34, 0.06), CFrame.new(0, 1.50, 0.18) * CFrame.Angles(math.rad(33), 0, 0), starlightGold, Enum.Material.Metal)
+	weldTo(handle, sguideU2)
+
+	-- Upper 5-Piece 4-Pointed Star Crown
+	local starCrownU_C = makePart(model, "StarCrownU_Center", Vector3.new(0.12, 0.12, 0.12), CFrame.new(0, 2.24, 0.88) * CFrame.Angles(math.rad(66), 0, 0), starlightGold, Enum.Material.Neon)
+	weldTo(handle, starCrownU_C)
+	local starCrownU_N = makePart(model, "StarCrownU_North", Vector3.new(0.06, 0.22, 0.06), CFrame.new(0, 2.38, 0.98) * CFrame.Angles(math.rad(74), 0, 0), starSilver, Enum.Material.Metal)
+	weldTo(handle, starCrownU_N)
+	local starCrownU_S = makePart(model, "StarCrownU_South", Vector3.new(0.05, 0.14, 0.05), CFrame.new(0, 2.12, 0.80) * CFrame.Angles(math.rad(56), 0, 0), starSilver, Enum.Material.Metal)
+	weldTo(handle, starCrownU_S)
+	local starCrownU_E = makePart(model, "StarCrownU_East", Vector3.new(0.05, 0.14, 0.05), CFrame.new(0.12, 2.24, 0.88) * CFrame.Angles(math.rad(66), 0, -math.rad(90)), starSilver, Enum.Material.Metal)
+	weldTo(handle, starCrownU_E)
+	local starCrownU_W = makePart(model, "StarCrownU_West", Vector3.new(0.05, 0.14, 0.05), CFrame.new(-0.12, 2.24, 0.88) * CFrame.Angles(math.rad(66), 0, math.rad(90)), starSilver, Enum.Material.Metal)
+	weldTo(handle, starCrownU_W)
+
+	-- Lower Open Tetrahedral Space-Frame Vector Truss
+	local nodeL1 = makePart(model, "StarNodeL_1", Vector3.new(0.16, 0.16, 0.16), CFrame.new(0, -0.50, 0.02) * CFrame.Angles(-math.rad(6), math.rad(45), 0), starGlass, Enum.Material.Glass)
+	weldTo(handle, nodeL1)
+	local nodeL2 = makePart(model, "StarNodeL_2", Vector3.new(0.15, 0.15, 0.15), CFrame.new(0, -0.78, 0.05) * CFrame.Angles(-math.rad(11), math.rad(45), 0), nebulaPurple, Enum.Material.Neon)
+	weldTo(handle, nodeL2)
+	local nodeL3 = makePart(model, "StarNodeL_3", Vector3.new(0.14, 0.14, 0.14), CFrame.new(0, -1.06, 0.11) * CFrame.Angles(-math.rad(18), math.rad(45), 0), starGlass, Enum.Material.Glass)
+	weldTo(handle, nodeL3)
+	local nodeL4 = makePart(model, "StarNodeL_4", Vector3.new(0.14, 0.14, 0.14), CFrame.new(0, -1.34, 0.20) * CFrame.Angles(-math.rad(26), math.rad(45), 0), nebulaPurple, Enum.Material.Neon)
+	weldTo(handle, nodeL4)
+	local nodeL5 = makePart(model, "StarNodeL_5", Vector3.new(0.13, 0.13, 0.13), CFrame.new(0, -1.62, 0.34) * CFrame.Angles(-math.rad(36), math.rad(45), 0), starGlass, Enum.Material.Glass)
+	weldTo(handle, nodeL5)
+	local nodeL6 = makePart(model, "StarNodeL_6", Vector3.new(0.12, 0.12, 0.12), CFrame.new(0, -1.88, 0.52) * CFrame.Angles(-math.rad(48), math.rad(45), 0), nebulaPurple, Enum.Material.Neon)
+	weldTo(handle, nodeL6)
+	local nodeL7 = makePart(model, "StarNodeL_7", Vector3.new(0.11, 0.11, 0.11), CFrame.new(0, -2.12, 0.74) * CFrame.Angles(-math.rad(62), math.rad(45), 0), starGlass, Enum.Material.Glass)
+	weldTo(handle, nodeL7)
+
+	-- Lower Vector Truss Struts
+	local tl1_L = makePart(model, "TrussL1_L", Vector3.new(0.05, 0.32, 0.05), CFrame.new(0.08, -0.64, 0.03) * CFrame.Angles(-math.rad(8), math.rad(15), 0), starSilver, Enum.Material.Metal)
+	weldTo(handle, tl1_L)
+	local tl1_R = makePart(model, "TrussL1_R", Vector3.new(0.05, 0.32, 0.05), CFrame.new(-0.08, -0.64, 0.03) * CFrame.Angles(-math.rad(8), -math.rad(15), 0), starSilver, Enum.Material.Metal)
+	weldTo(handle, tl1_R)
+
+	local tl2_L = makePart(model, "TrussL2_L", Vector3.new(0.05, 0.32, 0.05), CFrame.new(0.08, -0.92, 0.08) * CFrame.Angles(-math.rad(15), math.rad(15), 0), astralIndigo, Enum.Material.Metal)
+	weldTo(handle, tl2_L)
+	local tl2_R = makePart(model, "TrussL2_R", Vector3.new(0.05, 0.32, 0.05), CFrame.new(-0.08, -0.92, 0.08) * CFrame.Angles(-math.rad(15), -math.rad(15), 0), astralIndigo, Enum.Material.Metal)
+	weldTo(handle, tl2_R)
+
+	local tl3_L = makePart(model, "TrussL3_L", Vector3.new(0.04, 0.32, 0.04), CFrame.new(0.07, -1.20, 0.15) * CFrame.Angles(-math.rad(22), math.rad(15), 0), starSilver, Enum.Material.Metal)
+	weldTo(handle, tl3_L)
+	local tl3_R = makePart(model, "TrussL3_R", Vector3.new(0.04, 0.32, 0.04), CFrame.new(-0.07, -1.20, 0.15) * CFrame.Angles(-math.rad(22), -math.rad(15), 0), starSilver, Enum.Material.Metal)
+	weldTo(handle, tl3_R)
+
+	local tl4_L = makePart(model, "TrussL4_L", Vector3.new(0.04, 0.32, 0.04), CFrame.new(0.06, -1.48, 0.27) * CFrame.Angles(-math.rad(31), math.rad(15), 0), astralIndigo, Enum.Material.Metal)
+	weldTo(handle, tl4_L)
+	local tl4_R = makePart(model, "TrussL4_R", Vector3.new(0.04, 0.32, 0.04), CFrame.new(-0.06, -1.48, 0.27) * CFrame.Angles(-math.rad(31), -math.rad(15), 0), astralIndigo, Enum.Material.Metal)
+	weldTo(handle, tl4_R)
+
+	local tl5_L = makePart(model, "TrussL5_L", Vector3.new(0.04, 0.32, 0.04), CFrame.new(0.05, -1.75, 0.43) * CFrame.Angles(-math.rad(42), math.rad(15), 0), starSilver, Enum.Material.Metal)
+	weldTo(handle, tl5_L)
+	local tl5_R = makePart(model, "TrussL5_R", Vector3.new(0.04, 0.32, 0.04), CFrame.new(-0.05, -1.75, 0.43) * CFrame.Angles(-math.rad(42), -math.rad(15), 0), starSilver, Enum.Material.Metal)
+	weldTo(handle, tl5_R)
+
+	local tl6_L = makePart(model, "TrussL6_L", Vector3.new(0.04, 0.32, 0.04), CFrame.new(0.05, -2.00, 0.63) * CFrame.Angles(-math.rad(55), math.rad(15), 0), astralIndigo, Enum.Material.Metal)
+	weldTo(handle, tl6_L)
+	local tl6_R = makePart(model, "TrussL6_R", Vector3.new(0.04, 0.32, 0.04), CFrame.new(-0.05, -2.00, 0.63) * CFrame.Angles(-math.rad(55), -math.rad(15), 0), astralIndigo, Enum.Material.Metal)
+	weldTo(handle, tl6_R)
+
+	-- Lower Web Cross Braces
+	local webL1 = makePart(model, "WebL_1", Vector3.new(0.03, 0.24, 0.03), CFrame.new(0, -0.78, 0.08) * CFrame.Angles(-math.rad(15), 0, math.rad(45)), starlightGold, Enum.Material.Metal)
+	weldTo(handle, webL1)
+	local webL2 = makePart(model, "WebL_2", Vector3.new(0.03, 0.24, 0.03), CFrame.new(0, -1.34, 0.24) * CFrame.Angles(-math.rad(30), 0, -math.rad(45)), starlightGold, Enum.Material.Metal)
+	weldTo(handle, webL2)
+
+	-- Lower Dorsal Starlight Spine Guides
+	local sguideL1 = makePart(model, "SpineGuideL_1", Vector3.new(0.04, 0.34, 0.06), CFrame.new(0, -0.84, -0.04) * CFrame.Angles(-math.rad(13), 0, 0), starlightGold, Enum.Material.Metal)
+	weldTo(handle, sguideL1)
+	local sguideL2 = makePart(model, "SpineGuideL_2", Vector3.new(0.04, 0.34, 0.06), CFrame.new(0, -1.50, 0.18) * CFrame.Angles(-math.rad(33), 0, 0), starlightGold, Enum.Material.Metal)
+	weldTo(handle, sguideL2)
+
+	-- Lower 5-Piece 4-Pointed Star Crown
+	local starCrownL_C = makePart(model, "StarCrownL_Center", Vector3.new(0.12, 0.12, 0.12), CFrame.new(0, -2.24, 0.88) * CFrame.Angles(-math.rad(66), 0, 0), starlightGold, Enum.Material.Neon)
+	weldTo(handle, starCrownL_C)
+	local starCrownL_N = makePart(model, "StarCrownL_North", Vector3.new(0.06, 0.22, 0.06), CFrame.new(0, -2.38, 0.98) * CFrame.Angles(-math.rad(74), 0, 0), starSilver, Enum.Material.Metal)
+	weldTo(handle, starCrownL_N)
+	local starCrownL_S = makePart(model, "StarCrownL_South", Vector3.new(0.05, 0.14, 0.05), CFrame.new(0, -2.12, 0.80) * CFrame.Angles(-math.rad(56), 0, 0), starSilver, Enum.Material.Metal)
+	weldTo(handle, starCrownL_S)
+	local starCrownL_E = makePart(model, "StarCrownL_East", Vector3.new(0.05, 0.14, 0.05), CFrame.new(0.12, -2.24, 0.88) * CFrame.Angles(-math.rad(66), 0, -math.rad(90)), starSilver, Enum.Material.Metal)
+	weldTo(handle, starCrownL_E)
+	local starCrownL_W = makePart(model, "StarCrownL_West", Vector3.new(0.05, 0.14, 0.05), CFrame.new(-0.12, -2.24, 0.88) * CFrame.Angles(-math.rad(66), 0, math.rad(90)), starSilver, Enum.Material.Metal)
+	weldTo(handle, starCrownL_W)
+
+	local auraPrismU1 = makePart(model, "AuraPrismU_1", Vector3.new(0.06, 0.14, 0.06), CFrame.new(0.10, 1.20, 0.20) * CFrame.Angles(math.rad(20), math.rad(45), 0), starGlass, Enum.Material.Glass)
+	weldTo(handle, auraPrismU1)
+	local auraPrismU2 = makePart(model, "AuraPrismU_2", Vector3.new(0.06, 0.14, 0.06), CFrame.new(-0.10, 1.20, 0.20) * CFrame.Angles(math.rad(20), -math.rad(45), 0), starGlass, Enum.Material.Glass)
+	weldTo(handle, auraPrismU2)
+	local auraPrismL1 = makePart(model, "AuraPrismL_1", Vector3.new(0.06, 0.14, 0.06), CFrame.new(0.10, -1.20, 0.20) * CFrame.Angles(-math.rad(20), math.rad(45), 0), starGlass, Enum.Material.Glass)
+	weldTo(handle, auraPrismL1)
+	local auraPrismL2 = makePart(model, "AuraPrismL_2", Vector3.new(0.06, 0.14, 0.06), CFrame.new(-0.10, -1.20, 0.20) * CFrame.Angles(-math.rad(20), -math.rad(45), 0), starGlass, Enum.Material.Glass)
+	weldTo(handle, auraPrismL2)
+	local hubGemU = makePart(model, "HubGem_U", Vector3.new(0.08, 0.08, 0.08), CFrame.new(0, 0.36, -0.06), starlightGold, Enum.Material.Neon)
+	weldTo(handle, hubGemU)
+	local hubGemL = makePart(model, "HubGem_L", Vector3.new(0.08, 0.08, 0.08), CFrame.new(0, -0.36, -0.06), starlightGold, Enum.Material.Neon)
+	weldTo(handle, hubGemL)
+	-- Quantum Starlight Bowstring
+	local bowString = makePart(model, "BowString", Vector3.new(0.045, 4.76, 0.045), CFrame.new(0, 0, 0.94), stringColor, Enum.Material.Fabric)
+	weldTo(handle, bowString)
+
+	addSocket(handle, "Grip", Vector3.zero)
+	addSocket(handle, "Nock", Vector3.new(ARROW_REST.X, ARROW_REST.Y, 0.94))
+	addSocket(handle, "TipUpper", Vector3.new(0, 2.38, 0.98))
+	addSocket(handle, "TipLower", Vector3.new(0, -2.38, 0.98))
+	addSocket(handle, "VfxTip", Vector3.new(0, 2.38, 0.98))
+	addSocket(handle, "VfxBase", Vector3.new(0, -2.38, 0.98))
+	addSocket(handle, "VfxCore", Vector3.zero)
+	addSocket(handle, "VfxNock", Vector3.new(ARROW_REST.X, ARROW_REST.Y, 0.94))
+
+	createHunterArrow(model, handle)
+	return model
+end
+
+-- ============================================================================
+-- 14. Infinity Genesis Bow (art_infinity_genesis_bow) - Origin Enhanced
+-- ============================================================================
+function WeaponModelBuilder.BuildInfinityGenesisBow(): Model
+	local model = Instance.new("Model")
+	model.Name = "art_infinity_genesis_bow"
+
+	local chronoPlatinum = Color3.fromRGB(235, 240, 252)
+	local chronoGold = Color3.fromRGB(255, 215, 80)
+	local eventHorizonDark = Color3.fromRGB(18, 12, 32)
+	local singularityCore = Color3.fromRGB(240, 160, 255)
+	local temporalCyan = Color3.fromRGB(120, 235, 255)
+	local mobiusGlass = Color3.fromRGB(180, 220, 255)
+	local stringColor = Color3.fromRGB(245, 235, 255)
+
+	-- Chrono-Platinum Riser Cradle & Temporal Anchors
+	local handle = makePart(model, "Handle", Vector3.new(0.26, 0.76, 0.34), CFrame.new(0, 0, 0), chronoPlatinum, Enum.Material.Metal)
+	model.PrimaryPart = handle
+
+	-- Central Singularity Event Horizon Ring (8 octagonal glass facets + center bead)
+	local eh1 = makePart(model, "Torus_1", Vector3.new(0.04, 0.16, 0.06), CFrame.new(0.18, 0.08, -0.06) * CFrame.Angles(0, 0, math.rad(22)), mobiusGlass, Enum.Material.Glass)
+	weldTo(handle, eh1)
+	local eh2 = makePart(model, "Torus_2", Vector3.new(0.04, 0.16, 0.06), CFrame.new(0.18, -0.08, -0.06) * CFrame.Angles(0, 0, -math.rad(22)), mobiusGlass, Enum.Material.Glass)
+	weldTo(handle, eh2)
+	local eh3 = makePart(model, "Torus_3", Vector3.new(0.04, 0.16, 0.06), CFrame.new(-0.18, 0.08, -0.06) * CFrame.Angles(0, 0, -math.rad(22)), mobiusGlass, Enum.Material.Glass)
+	weldTo(handle, eh3)
+	local eh4 = makePart(model, "Torus_4", Vector3.new(0.04, 0.16, 0.06), CFrame.new(-0.18, -0.08, -0.06) * CFrame.Angles(0, 0, math.rad(22)), mobiusGlass, Enum.Material.Glass)
+	weldTo(handle, eh4)
+	local eh5 = makePart(model, "Torus_5", Vector3.new(0.16, 0.04, 0.06), CFrame.new(0.08, 0.18, -0.06) * CFrame.Angles(0, 0, -math.rad(22)), mobiusGlass, Enum.Material.Glass)
+	weldTo(handle, eh5)
+	local eh6 = makePart(model, "Torus_6", Vector3.new(0.16, 0.04, 0.06), CFrame.new(-0.08, 0.18, -0.06) * CFrame.Angles(0, 0, math.rad(22)), mobiusGlass, Enum.Material.Glass)
+	weldTo(handle, eh6)
+	local eh7 = makePart(model, "Torus_7", Vector3.new(0.16, 0.04, 0.06), CFrame.new(0.08, -0.18, -0.06) * CFrame.Angles(0, 0, math.rad(22)), mobiusGlass, Enum.Material.Glass)
+	weldTo(handle, eh7)
+	local eh8 = makePart(model, "Torus_8", Vector3.new(0.16, 0.04, 0.06), CFrame.new(-0.08, -0.18, -0.06) * CFrame.Angles(0, 0, -math.rad(22)), mobiusGlass, Enum.Material.Glass)
+	weldTo(handle, eh8)
+
+	local singBead = makePart(model, "SingularityBead", Vector3.new(0.16, 0.16, 0.16), CFrame.new(0, 0, -0.06), singularityCore, Enum.Material.Neon)
+	weldTo(handle, singBead)
+	local needle1 = makePart(model, "Needle_1", Vector3.new(0.03, 0.12, 0.03), CFrame.new(0.10, 0.10, -0.06) * CFrame.Angles(0, 0, -math.rad(45)), chronoGold, Enum.Material.Metal)
+	weldTo(handle, needle1)
+	local needle2 = makePart(model, "Needle_2", Vector3.new(0.03, 0.12, 0.03), CFrame.new(-0.10, 0.10, -0.06) * CFrame.Angles(0, 0, math.rad(45)), chronoGold, Enum.Material.Metal)
+	weldTo(handle, needle2)
+	local needle3 = makePart(model, "Needle_3", Vector3.new(0.03, 0.12, 0.03), CFrame.new(0.10, -0.10, -0.06) * CFrame.Angles(0, 0, math.rad(45)), chronoGold, Enum.Material.Metal)
+	weldTo(handle, needle3)
+	local needle4 = makePart(model, "Needle_4", Vector3.new(0.03, 0.12, 0.03), CFrame.new(-0.10, -0.10, -0.06) * CFrame.Angles(0, 0, -math.rad(45)), chronoGold, Enum.Material.Metal)
+	weldTo(handle, needle4)
+
+	local anchorU = makePart(model, "Anchor_U", Vector3.new(0.30, 0.06, 0.32), CFrame.new(0, 0.32, 0), chronoGold, Enum.Material.Metal)
+	weldTo(handle, anchorU)
+	local anchorL = makePart(model, "Anchor_L", Vector3.new(0.30, 0.06, 0.32), CFrame.new(0, -0.32, 0), chronoGold, Enum.Material.Metal)
+	weldTo(handle, anchorL)
+	local arrowRest = makePart(model, "GenesisArrowRest", Vector3.new(0.08, 0.16, 0.20), CFrame.new(0.15, 0.10, -0.08), chronoGold, Enum.Material.Metal)
+	weldTo(handle, arrowRest)
+
+	-- Upper Mobius Continuous Loop Rails (Forward Path 7 segs + Return Path 7 segs)
+	local muf1 = makePart(model, "MobiusUF_1", Vector3.new(0.07, 0.28, 0.12), CFrame.new(0.09, 0.46, 0.02) * CFrame.Angles(math.rad(5), math.rad(8), 0), chronoPlatinum, Enum.Material.Metal)
+	weldTo(handle, muf1)
+	local muf2 = makePart(model, "MobiusUF_2", Vector3.new(0.06, 0.28, 0.11), CFrame.new(0.10, 0.72, 0.05) * CFrame.Angles(math.rad(10), math.rad(12), 0), chronoPlatinum, Enum.Material.Metal)
+	weldTo(handle, muf2)
+	local muf3 = makePart(model, "MobiusUF_3", Vector3.new(0.06, 0.28, 0.10), CFrame.new(0.10, 0.98, 0.10) * CFrame.Angles(math.rad(16), math.rad(18), 0), chronoGold, Enum.Material.Metal)
+	weldTo(handle, muf3)
+	local muf4 = makePart(model, "MobiusUF_4", Vector3.new(0.05, 0.28, 0.09), CFrame.new(0.09, 1.24, 0.19) * CFrame.Angles(math.rad(24), math.rad(24), 0), chronoGold, Enum.Material.Metal)
+	weldTo(handle, muf4)
+	local muf5 = makePart(model, "MobiusUF_5", Vector3.new(0.05, 0.28, 0.09), CFrame.new(0.08, 1.48, 0.32) * CFrame.Angles(math.rad(34), math.rad(28), 0), chronoPlatinum, Enum.Material.Metal)
+	weldTo(handle, muf5)
+	local muf6 = makePart(model, "MobiusUF_6", Vector3.new(0.05, 0.28, 0.08), CFrame.new(0.06, 1.70, 0.48) * CFrame.Angles(math.rad(46), math.rad(32), 0), chronoPlatinum, Enum.Material.Metal)
+	weldTo(handle, muf6)
+	local muf7 = makePart(model, "MobiusUF_7", Vector3.new(0.05, 0.30, 0.08), CFrame.new(0.04, 1.90, 0.66) * CFrame.Angles(math.rad(58), math.rad(34), 0), chronoPlatinum, Enum.Material.Metal)
+	weldTo(handle, muf7)
+
+	local mur1 = makePart(model, "MobiusUR_1", Vector3.new(0.07, 0.28, 0.12), CFrame.new(-0.09, 0.46, 0.02) * CFrame.Angles(math.rad(5), -math.rad(8), 0), chronoPlatinum, Enum.Material.Metal)
+	weldTo(handle, mur1)
+	local mur2 = makePart(model, "MobiusUR_2", Vector3.new(0.06, 0.28, 0.11), CFrame.new(-0.10, 0.72, 0.05) * CFrame.Angles(math.rad(10), -math.rad(12), 0), chronoPlatinum, Enum.Material.Metal)
+	weldTo(handle, mur2)
+	local mur3 = makePart(model, "MobiusUR_3", Vector3.new(0.06, 0.28, 0.10), CFrame.new(-0.10, 0.98, 0.10) * CFrame.Angles(math.rad(16), -math.rad(18), 0), chronoGold, Enum.Material.Metal)
+	weldTo(handle, mur3)
+	local mur4 = makePart(model, "MobiusUR_4", Vector3.new(0.05, 0.28, 0.09), CFrame.new(-0.09, 1.24, 0.19) * CFrame.Angles(math.rad(24), -math.rad(24), 0), chronoGold, Enum.Material.Metal)
+	weldTo(handle, mur4)
+	local mur5 = makePart(model, "MobiusUR_5", Vector3.new(0.05, 0.28, 0.09), CFrame.new(-0.08, 1.48, 0.32) * CFrame.Angles(math.rad(34), -math.rad(28), 0), chronoPlatinum, Enum.Material.Metal)
+	weldTo(handle, mur5)
+	local mur6 = makePart(model, "MobiusUR_6", Vector3.new(0.05, 0.28, 0.08), CFrame.new(-0.06, 1.70, 0.48) * CFrame.Angles(math.rad(46), -math.rad(32), 0), chronoPlatinum, Enum.Material.Metal)
+	weldTo(handle, mur6)
+	local mur7 = makePart(model, "MobiusUR_7", Vector3.new(0.05, 0.30, 0.08), CFrame.new(-0.04, 1.90, 0.66) * CFrame.Angles(math.rad(58), -math.rad(34), 0), chronoPlatinum, Enum.Material.Metal)
+	weldTo(handle, mur7)
+
+	-- Upper Orbital Rail Couplers (Quantum lock clips)
+	local coupU1 = makePart(model, "CouplerU_1", Vector3.new(0.24, 0.05, 0.14), CFrame.new(0, 0.72, 0.05) * CFrame.Angles(math.rad(10), 0, 0), temporalCyan, Enum.Material.Neon)
+	weldTo(handle, coupU1)
+	local coupU2 = makePart(model, "CouplerU_2", Vector3.new(0.22, 0.05, 0.13), CFrame.new(0, 1.24, 0.19) * CFrame.Angles(math.rad(24), 0, 0), temporalCyan, Enum.Material.Neon)
+	weldTo(handle, coupU2)
+	local coupU3 = makePart(model, "CouplerU_3", Vector3.new(0.20, 0.05, 0.12), CFrame.new(0, 1.70, 0.48) * CFrame.Angles(math.rad(46), 0, 0), temporalCyan, Enum.Material.Neon)
+	weldTo(handle, coupU3)
+
+	-- Upper Chrono-Resonance Harmonic Fins & Crystals
+	local finU1 = makePart(model, "ChronoFinU_1", Vector3.new(0.04, 0.22, 0.16), CFrame.new(0.12, 1.10, 0.18) * CFrame.Angles(math.rad(20), math.rad(20), 0), mobiusGlass, Enum.Material.Glass)
+	weldTo(handle, finU1)
+	local finU2 = makePart(model, "ChronoFinU_2", Vector3.new(0.04, 0.22, 0.16), CFrame.new(-0.12, 1.10, 0.18) * CFrame.Angles(math.rad(20), -math.rad(20), 0), mobiusGlass, Enum.Material.Glass)
+	weldTo(handle, finU2)
+	local finU3 = makePart(model, "ChronoFinU_3", Vector3.new(0.04, 0.20, 0.14), CFrame.new(0.10, 1.56, 0.38) * CFrame.Angles(math.rad(38), math.rad(20), 0), mobiusGlass, Enum.Material.Glass)
+	weldTo(handle, finU3)
+	local finU4 = makePart(model, "ChronoFinU_4", Vector3.new(0.04, 0.20, 0.14), CFrame.new(-0.10, 1.56, 0.38) * CFrame.Angles(math.rad(38), -math.rad(20), 0), mobiusGlass, Enum.Material.Glass)
+	weldTo(handle, finU4)
+
+	-- Upper Interlocking Crown Finials
+	local crownU_Base = makePart(model, "CrownU_Base", Vector3.new(0.22, 0.20, 0.18), CFrame.new(0, 2.06, 0.76) * CFrame.Angles(math.rad(66), 0, 0), chronoPlatinum, Enum.Material.Metal)
+	weldTo(handle, crownU_Base)
+	local crownU_Pin = makePart(model, "CrownU_Pinnacle", Vector3.new(0.08, 0.26, 0.08), CFrame.new(0, 2.20, 0.90) * CFrame.Angles(math.rad(74), 0, 0), temporalCyan, Enum.Material.Neon)
+	weldTo(handle, crownU_Pin)
+	local crownU_WingL = makePart(model, "CrownU_WingL", Vector3.new(0.04, 0.20, 0.12), CFrame.new(0.10, 2.12, 0.84) * CFrame.Angles(math.rad(70), math.rad(25), 0), chronoGold, Enum.Material.Metal)
+	weldTo(handle, crownU_WingL)
+	local crownU_WingR = makePart(model, "CrownU_WingR", Vector3.new(0.04, 0.20, 0.12), CFrame.new(-0.10, 2.12, 0.84) * CFrame.Angles(math.rad(70), -math.rad(25), 0), chronoGold, Enum.Material.Metal)
+	weldTo(handle, crownU_WingR)
+
+	-- Lower Mobius Continuous Loop Rails (Forward Path 7 segs + Return Path 7 segs)
+	local mlf1 = makePart(model, "MobiusLF_1", Vector3.new(0.07, 0.28, 0.12), CFrame.new(0.09, -0.46, 0.02) * CFrame.Angles(-math.rad(5), math.rad(8), 0), chronoPlatinum, Enum.Material.Metal)
+	weldTo(handle, mlf1)
+	local mlf2 = makePart(model, "MobiusLF_2", Vector3.new(0.06, 0.28, 0.11), CFrame.new(0.10, -0.72, 0.05) * CFrame.Angles(-math.rad(10), math.rad(12), 0), chronoPlatinum, Enum.Material.Metal)
+	weldTo(handle, mlf2)
+	local mlf3 = makePart(model, "MobiusLF_3", Vector3.new(0.06, 0.28, 0.10), CFrame.new(0.10, -0.98, 0.10) * CFrame.Angles(-math.rad(16), math.rad(18), 0), chronoGold, Enum.Material.Metal)
+	weldTo(handle, mlf3)
+	local mlf4 = makePart(model, "MobiusLF_4", Vector3.new(0.05, 0.28, 0.09), CFrame.new(0.09, -1.24, 0.19) * CFrame.Angles(-math.rad(24), math.rad(24), 0), chronoGold, Enum.Material.Metal)
+	weldTo(handle, mlf4)
+	local mlf5 = makePart(model, "MobiusLF_5", Vector3.new(0.05, 0.28, 0.09), CFrame.new(0.08, -1.48, 0.32) * CFrame.Angles(-math.rad(34), math.rad(28), 0), chronoPlatinum, Enum.Material.Metal)
+	weldTo(handle, mlf5)
+	local mlf6 = makePart(model, "MobiusLF_6", Vector3.new(0.05, 0.28, 0.08), CFrame.new(0.06, -1.70, 0.48) * CFrame.Angles(-math.rad(46), math.rad(32), 0), chronoPlatinum, Enum.Material.Metal)
+	weldTo(handle, mlf6)
+	local mlf7 = makePart(model, "MobiusLF_7", Vector3.new(0.05, 0.30, 0.08), CFrame.new(0.04, -1.90, 0.66) * CFrame.Angles(-math.rad(58), math.rad(34), 0), chronoPlatinum, Enum.Material.Metal)
+	weldTo(handle, mlf7)
+
+	local mlr1 = makePart(model, "MobiusLR_1", Vector3.new(0.07, 0.28, 0.12), CFrame.new(-0.09, -0.46, 0.02) * CFrame.Angles(-math.rad(5), -math.rad(8), 0), chronoPlatinum, Enum.Material.Metal)
+	weldTo(handle, mlr1)
+	local mlr2 = makePart(model, "MobiusLR_2", Vector3.new(0.06, 0.28, 0.11), CFrame.new(-0.10, -0.72, 0.05) * CFrame.Angles(-math.rad(10), -math.rad(12), 0), chronoPlatinum, Enum.Material.Metal)
+	weldTo(handle, mlr2)
+	local mlr3 = makePart(model, "MobiusLR_3", Vector3.new(0.06, 0.28, 0.10), CFrame.new(-0.10, -0.98, 0.10) * CFrame.Angles(-math.rad(16), -math.rad(18), 0), chronoGold, Enum.Material.Metal)
+	weldTo(handle, mlr3)
+	local mlr4 = makePart(model, "MobiusLR_4", Vector3.new(0.05, 0.28, 0.09), CFrame.new(-0.09, -1.24, 0.19) * CFrame.Angles(-math.rad(24), -math.rad(24), 0), chronoGold, Enum.Material.Metal)
+	weldTo(handle, mlr4)
+	local mlr5 = makePart(model, "MobiusLR_5", Vector3.new(0.05, 0.28, 0.09), CFrame.new(-0.08, -1.48, 0.32) * CFrame.Angles(-math.rad(34), -math.rad(28), 0), chronoPlatinum, Enum.Material.Metal)
+	weldTo(handle, mlr5)
+	local mlr6 = makePart(model, "MobiusLR_6", Vector3.new(0.05, 0.28, 0.08), CFrame.new(-0.06, -1.70, 0.48) * CFrame.Angles(-math.rad(46), -math.rad(32), 0), chronoPlatinum, Enum.Material.Metal)
+	weldTo(handle, mlr6)
+	local mlr7 = makePart(model, "MobiusLR_7", Vector3.new(0.05, 0.30, 0.08), CFrame.new(-0.04, -1.90, 0.66) * CFrame.Angles(-math.rad(58), -math.rad(34), 0), chronoPlatinum, Enum.Material.Metal)
+	weldTo(handle, mlr7)
+
+	-- Lower Orbital Rail Couplers
+	local coupL1 = makePart(model, "CouplerL_1", Vector3.new(0.24, 0.05, 0.14), CFrame.new(0, -0.72, 0.05) * CFrame.Angles(-math.rad(10), 0, 0), temporalCyan, Enum.Material.Neon)
+	weldTo(handle, coupL1)
+	local coupL2 = makePart(model, "CouplerL_2", Vector3.new(0.22, 0.05, 0.13), CFrame.new(0, -1.24, 0.19) * CFrame.Angles(-math.rad(24), 0, 0), temporalCyan, Enum.Material.Neon)
+	weldTo(handle, coupL2)
+	local coupL3 = makePart(model, "CouplerL_3", Vector3.new(0.20, 0.05, 0.12), CFrame.new(0, -1.70, 0.48) * CFrame.Angles(-math.rad(46), 0, 0), temporalCyan, Enum.Material.Neon)
+	weldTo(handle, coupL3)
+
+	-- Lower Chrono-Resonance Harmonic Fins & Crystals
+	local finL1 = makePart(model, "ChronoFinL_1", Vector3.new(0.04, 0.22, 0.16), CFrame.new(0.12, -1.10, 0.18) * CFrame.Angles(-math.rad(20), math.rad(20), 0), mobiusGlass, Enum.Material.Glass)
+	weldTo(handle, finL1)
+	local finL2 = makePart(model, "ChronoFinL_2", Vector3.new(0.04, 0.22, 0.16), CFrame.new(-0.12, -1.10, 0.18) * CFrame.Angles(-math.rad(20), -math.rad(20), 0), mobiusGlass, Enum.Material.Glass)
+	weldTo(handle, finL2)
+	local finL3 = makePart(model, "ChronoFinL_3", Vector3.new(0.04, 0.20, 0.14), CFrame.new(0.10, -1.56, 0.38) * CFrame.Angles(-math.rad(38), math.rad(20), 0), mobiusGlass, Enum.Material.Glass)
+	weldTo(handle, finL3)
+	local finL4 = makePart(model, "ChronoFinL_4", Vector3.new(0.04, 0.20, 0.14), CFrame.new(-0.10, -1.56, 0.38) * CFrame.Angles(-math.rad(38), -math.rad(20), 0), mobiusGlass, Enum.Material.Glass)
+	weldTo(handle, finL4)
+
+	-- Lower Interlocking Crown Finials
+	local crownL_Base = makePart(model, "CrownL_Base", Vector3.new(0.22, 0.20, 0.18), CFrame.new(0, -2.06, 0.76) * CFrame.Angles(-math.rad(66), 0, 0), chronoPlatinum, Enum.Material.Metal)
+	weldTo(handle, crownL_Base)
+	local crownL_Pin = makePart(model, "CrownL_Pinnacle", Vector3.new(0.08, 0.26, 0.08), CFrame.new(0, -2.20, 0.90) * CFrame.Angles(-math.rad(74), 0, 0), temporalCyan, Enum.Material.Neon)
+	weldTo(handle, crownL_Pin)
+	local crownL_WingL = makePart(model, "CrownL_WingL", Vector3.new(0.04, 0.20, 0.12), CFrame.new(0.10, -2.12, 0.84) * CFrame.Angles(-math.rad(70), math.rad(25), 0), chronoGold, Enum.Material.Metal)
+	weldTo(handle, crownL_WingL)
+	local crownL_WingR = makePart(model, "CrownL_WingR", Vector3.new(0.04, 0.20, 0.12), CFrame.new(-0.10, -2.12, 0.84) * CFrame.Angles(-math.rad(70), -math.rad(25), 0), chronoGold, Enum.Material.Metal)
+	weldTo(handle, crownL_WingR)
+
+	local qLockU1 = makePart(model, "QuantumLockU_1", Vector3.new(0.14, 0.04, 0.08), CFrame.new(0, 0.98, 0.10), temporalCyan, Enum.Material.Neon)
+	weldTo(handle, qLockU1)
+	local qLockU2 = makePart(model, "QuantumLockU_2", Vector3.new(0.12, 0.04, 0.08), CFrame.new(0, 1.48, 0.32), temporalCyan, Enum.Material.Neon)
+	weldTo(handle, qLockU2)
+	local qLockL1 = makePart(model, "QuantumLockL_1", Vector3.new(0.14, 0.04, 0.08), CFrame.new(0, -0.98, 0.10), temporalCyan, Enum.Material.Neon)
+	weldTo(handle, qLockL1)
+	local qLockL2 = makePart(model, "QuantumLockL_2", Vector3.new(0.12, 0.04, 0.08), CFrame.new(0, -1.48, 0.32), temporalCyan, Enum.Material.Neon)
+	weldTo(handle, qLockL2)
+	local bolt1 = makePart(model, "AnchorBolt_1", Vector3.new(0.06, 0.06, 0.06), CFrame.new(0.12, 0.32, 0.10), chronoGold, Enum.Material.Metal)
+	weldTo(handle, bolt1)
+	local bolt2 = makePart(model, "AnchorBolt_2", Vector3.new(0.06, 0.06, 0.06), CFrame.new(-0.12, 0.32, 0.10), chronoGold, Enum.Material.Metal)
+	weldTo(handle, bolt2)
+	local bolt3 = makePart(model, "AnchorBolt_3", Vector3.new(0.06, 0.06, 0.06), CFrame.new(0.12, -0.32, 0.10), chronoGold, Enum.Material.Metal)
+	weldTo(handle, bolt3)
+	local bolt4 = makePart(model, "AnchorBolt_4", Vector3.new(0.06, 0.06, 0.06), CFrame.new(-0.12, -0.32, 0.10), chronoGold, Enum.Material.Metal)
+	weldTo(handle, bolt4)
+	local flowGuide = makePart(model, "TemporalFlowGuide", Vector3.new(0.08, 0.28, 0.08), CFrame.new(0, 0, 0.12), singularityCore, Enum.Material.Neon)
+	weldTo(handle, flowGuide)
+	-- Temporal Filament Bowstring
+	local bowString = makePart(model, "BowString", Vector3.new(0.045, 4.40, 0.045), CFrame.new(0, 0, 0.86), stringColor, Enum.Material.Fabric)
+	weldTo(handle, bowString)
+
+	addSocket(handle, "Grip", Vector3.zero)
+	addSocket(handle, "Nock", Vector3.new(ARROW_REST.X, ARROW_REST.Y, 0.86))
+	addSocket(handle, "TipUpper", Vector3.new(0, 2.20, 0.90))
+	addSocket(handle, "TipLower", Vector3.new(0, -2.20, 0.90))
+	addSocket(handle, "VfxTip", Vector3.new(0, 2.20, 0.90))
+	addSocket(handle, "VfxBase", Vector3.new(0, -2.20, 0.90))
+	addSocket(handle, "VfxCore", Vector3.zero)
+	addSocket(handle, "VfxNock", Vector3.new(ARROW_REST.X, ARROW_REST.Y, 0.86))
+
+	createHunterArrow(model, handle)
+	return model
+end
+
 function WeaponModelBuilder.BuildSword(): Model
 	local model = Instance.new("Model")
 	model.Name = "weapon_sword"
@@ -478,6 +2597,2369 @@ function WeaponModelBuilder.BuildRunicLongsword(): Model
 	return model
 end
 
+
+-- ============================================================================
+-- VANGUARD ARTIFACT WEAPONS (ALL 14 SWORDS & SHIELDS)
+-- ============================================================================
+
+function WeaponModelBuilder.BuildIronBroadswordArtifact(): Model
+	local model = Instance.new("Model")
+	model.Name = "art_iron_broadsword"
+
+	local castIron = Color3.fromRGB(115, 118, 125)
+	local steelEdge = Color3.fromRGB(175, 180, 190)
+	local leatherDark = Color3.fromRGB(75, 52, 38)
+	local darkWood = Color3.fromRGB(105, 75, 48)
+	local bandedIron = Color3.fromRGB(85, 88, 95)
+
+	
+
+-- Sword Assembly (14 parts: chivalric broadsword with converging wedge tip)
+	local handle = Instance.new("Part")
+	handle.Name = "Handle"
+	handle.Size = Vector3.new(0.20, 0.85, 0.20)
+	handle.CFrame = CFrame.new(0, 0, 0)
+	handle.Transparency = 1
+	handle.CanCollide = false
+	handle.Massless = true
+	handle.Parent = model
+	model.PrimaryPart = handle
+
+	local gripCyl = makeCylinder(model, "GripCylinder", 0.76, 0.18, CFrame.new(0, 0, 0), leatherDark)
+	weldTo(handle, gripCyl)
+	local gripWrap = makeCylinder(model, "GripWrap", 0.24, 0.20, CFrame.new(0, 0, 0), leatherDark)
+	weldTo(handle, gripWrap)
+
+	local pommelBall = makeBall(model, "PommelBall", 0.32, CFrame.new(0, -0.54, 0), bandedIron, Enum.Material.Metal)
+	weldTo(handle, pommelBall)
+	local pommelFinial = makeBall(model, "PommelFinial", 0.14, CFrame.new(0, -0.70, 0), castIron, Enum.Material.Metal)
+	weldTo(handle, pommelFinial)
+
+	local guardCenter = makePart(model, "GuardCenter", Vector3.new(0.26, 0.18, 0.22), CFrame.new(0, 0.46, 0), bandedIron, Enum.Material.Metal)
+	weldTo(handle, guardCenter)
+	local quillonL = makePart(model, "QuillonL", Vector3.new(0.16, 0.10, 0.42), CFrame.new(0, 0.48, 0.35) * CFrame.Angles(math.rad(6), 0, 0), castIron, Enum.Material.Metal)
+	weldTo(handle, quillonL)
+	local quillonR = makePart(model, "QuillonR", Vector3.new(0.16, 0.10, 0.42), CFrame.new(0, 0.48, -0.35) * CFrame.Angles(math.rad(-6), 0, 0), castIron, Enum.Material.Metal)
+	weldTo(handle, quillonR)
+
+	local ricasso = makePart(model, "Ricasso", Vector3.new(0.42, 0.35, 0.07), CFrame.new(0, 0.70, 0), castIron, Enum.Material.Metal)
+	weldTo(handle, ricasso)
+	local fuller = makePart(model, "BladeFuller", Vector3.new(0.16, 2.10, 0.065), CFrame.new(0, 1.90, 0), castIron, Enum.Material.Metal)
+	weldTo(handle, fuller)
+	local edgeFwd = makePart(model, "BladeEdgeFwd", Vector3.new(0.16, 2.05, 0.045), CFrame.new(0.14, 1.90, 0), steelEdge, Enum.Material.Metal)
+	weldTo(handle, edgeFwd)
+	local edgeBack = makePart(model, "BladeEdgeBack", Vector3.new(0.16, 2.05, 0.045), CFrame.new(-0.14, 1.90, 0), steelEdge, Enum.Material.Metal)
+	weldTo(handle, edgeBack)
+
+	local tipFwd = makeWedge(model, "TipFwd", Vector3.new(0.045, 0.45, 0.22), CFrame.new(0.11, 3.15, 0) * CFrame.Angles(0, math.rad(-90), 0), steelEdge, Enum.Material.Metal)
+	weldTo(handle, tipFwd)
+	local tipBack = makeWedge(model, "TipBack", Vector3.new(0.045, 0.45, 0.22), CFrame.new(-0.11, 3.15, 0) * CFrame.Angles(0, math.rad(90), 0), steelEdge, Enum.Material.Metal)
+	weldTo(handle, tipBack)
+
+	addSocket(handle, "Grip", Vector3.new(0, 0, 0), Vector3.new(0, -90, 0))
+	addSocket(handle, "Tip", Vector3.new(0, 3.40, 0), Vector3.new(0, 0, 0))
+	addSocket(handle, "VfxTip", Vector3.new(0, 3.40, 0))
+	addSocket(handle, "VfxBase", Vector3.new(0, 0.65, 0))
+	addSocket(handle, "VfxCore", Vector3.new(0, 0.46, 0))
+
+	local shieldModel = Instance.new("Model")
+	shieldModel.Name = "OffhandShield"
+	shieldModel.Parent = model
+
+	local shieldHandle = makePart(shieldModel, "HandleS", Vector3.new(0.20, 0.60, 0.20), CFrame.new(0, 0, 0), leatherDark)
+	shieldModel.PrimaryPart = shieldHandle
+
+	local faceCenter = makePart(shieldModel, "ShieldFaceCenter", Vector3.new(0.16, 2.30, 1.20), CFrame.new(-0.28, 0, 0), darkWood, Enum.Material.Wood)
+	weldTo(shieldHandle, faceCenter)
+	local faceTop = makePart(shieldModel, "ShieldFaceTop", Vector3.new(0.16, 0.40, 1.10), CFrame.new(-0.28, 1.30, 0), darkWood, Enum.Material.Wood)
+	weldTo(shieldHandle, faceTop)
+	local faceBottom = makePart(shieldModel, "ShieldFaceBottom", Vector3.new(0.16, 0.60, 0.80), CFrame.new(-0.28, -1.35, 0), darkWood, Enum.Material.Wood)
+	weldTo(shieldHandle, faceBottom)
+
+	local rimTop = makePart(shieldModel, "ShieldRimTop", Vector3.new(0.20, 0.14, 1.26), CFrame.new(-0.30, 1.50, 0), bandedIron, Enum.Material.Metal)
+	weldTo(shieldHandle, rimTop)
+	local rimLeft = makePart(shieldModel, "ShieldRimLeft", Vector3.new(0.20, 2.70, 0.14), CFrame.new(-0.30, 0.05, 0.62), bandedIron, Enum.Material.Metal)
+	weldTo(shieldHandle, rimLeft)
+	local rimRight = makePart(shieldModel, "ShieldRimRight", Vector3.new(0.20, 2.70, 0.14), CFrame.new(-0.30, 0.05, -0.62), bandedIron, Enum.Material.Metal)
+	weldTo(shieldHandle, rimRight)
+
+	local bossIron = makePart(shieldModel, "ShieldBossIron", Vector3.new(0.26, 0.50, 0.50), CFrame.new(-0.35, 0.20, 0), castIron, Enum.Material.Metal)
+	weldTo(shieldHandle, bossIron)
+	local bossSpike = makePart(shieldModel, "ShieldBossSpike", Vector3.new(0.30, 0.22, 0.22), CFrame.new(-0.42, 0.20, 0), bandedIron, Enum.Material.Metal)
+	weldTo(shieldHandle, bossSpike)
+
+	local strapUpper = makePart(shieldModel, "ShieldStrapUpper", Vector3.new(0.14, 0.12, 0.42), CFrame.new(-0.10, 0.25, 0), leatherDark)
+	weldTo(shieldHandle, strapUpper)
+	local strapLower = makePart(shieldModel, "ShieldStrapLower", Vector3.new(0.14, 0.12, 0.42), CFrame.new(-0.10, -0.25, 0), leatherDark)
+	weldTo(shieldHandle, strapLower)
+	local bracketPlate = makePart(shieldModel, "ShieldBracketPlate", Vector3.new(0.16, 0.50, 0.16), CFrame.new(-0.16, 0, 0), bandedIron, Enum.Material.Metal)
+	weldTo(shieldHandle, bracketPlate)
+
+	addSocket(shieldHandle, "ShieldMount", Vector3.new(-0.18, 0, 0), Vector3.new(0, 90, 0))
+	addSocket(shieldHandle, "VfxShieldCenter", Vector3.new(-0.38, 0.10, 0))
+
+	return model
+end
+
+
+function WeaponModelBuilder.BuildTemperedBastardSword(): Model
+	local model = Instance.new("Model")
+	model.Name = "art_tempered_bastard_sword"
+
+	local darkSteel = Color3.fromRGB(85, 90, 100)
+	local temperedEdge = Color3.fromRGB(195, 202, 215)
+	local brassInlay = Color3.fromRGB(185, 145, 65)
+	local gripCord = Color3.fromRGB(55, 42, 35)
+	local rimPlate = Color3.fromRGB(130, 135, 145)
+
+	
+
+-- Sword Assembly (18 parts: tempered hand-and-a-half bastard sword with brass quillons)
+	local handle = Instance.new("Part")
+	handle.Name = "Handle"
+	handle.Size = Vector3.new(0.20, 0.95, 0.20)
+	handle.CFrame = CFrame.new(0, 0, 0)
+	handle.Transparency = 1
+	handle.CanCollide = false
+	handle.Massless = true
+	handle.Parent = model
+	model.PrimaryPart = handle
+
+	local gripCyl = makeCylinder(model, "GripCylinder", 0.88, 0.18, CFrame.new(0, 0, 0), gripCord)
+	weldTo(handle, gripCyl)
+	local gripWrap1 = makeCylinder(model, "GripWrap1", 0.12, 0.20, CFrame.new(0, -0.22, 0), brassInlay, Enum.Material.Metal)
+	weldTo(handle, gripWrap1)
+	local gripWrap2 = makeCylinder(model, "GripWrap2", 0.12, 0.20, CFrame.new(0, 0.22, 0), brassInlay, Enum.Material.Metal)
+	weldTo(handle, gripWrap2)
+
+	local pommelNeck = makeCylinder(model, "PommelNeck", 0.10, 0.22, CFrame.new(0, -0.52, 0), darkSteel, Enum.Material.Metal)
+	weldTo(handle, pommelNeck)
+	local pommelBall = makeBall(model, "PommelBall", 0.34, CFrame.new(0, -0.66, 0), darkSteel, Enum.Material.Metal)
+	weldTo(handle, pommelBall)
+	local pommelFinial = makeBall(model, "PommelFinial", 0.14, CFrame.new(0, -0.84, 0), brassInlay, Enum.Material.Metal)
+	weldTo(handle, pommelFinial)
+
+	local guardCenter = makePart(model, "GuardCenter", Vector3.new(0.28, 0.20, 0.22), CFrame.new(0, 0.52, 0), darkSteel, Enum.Material.Metal)
+	weldTo(handle, guardCenter)
+	local guardEcusson = makePart(model, "GuardEcusson", Vector3.new(0.22, 0.26, 0.08), CFrame.new(0, 0.54, 0.10), brassInlay, Enum.Material.Metal)
+	weldTo(handle, guardEcusson)
+	local quillonL = makePart(model, "QuillonL", Vector3.new(0.18, 0.12, 0.46), CFrame.new(0, 0.54, 0.38) * CFrame.Angles(math.rad(8), 0, 0), temperedEdge, Enum.Material.Metal)
+	weldTo(handle, quillonL)
+	local quillonR = makePart(model, "QuillonR", Vector3.new(0.18, 0.12, 0.46), CFrame.new(0, 0.54, -0.38) * CFrame.Angles(math.rad(-8), 0, 0), temperedEdge, Enum.Material.Metal)
+	weldTo(handle, quillonR)
+	local finialL = makeBall(model, "QuillonFinialL", 0.15, CFrame.new(0, 0.60, 0.64), brassInlay, Enum.Material.Metal)
+	weldTo(handle, finialL)
+	local finialR = makeBall(model, "QuillonFinialR", 0.15, CFrame.new(0, 0.60, -0.64), brassInlay, Enum.Material.Metal)
+	weldTo(handle, finialR)
+
+	local ricasso = makePart(model, "Ricasso", Vector3.new(0.44, 0.45, 0.075), CFrame.new(0, 0.82, 0), darkSteel, Enum.Material.Metal)
+	weldTo(handle, ricasso)
+	local fuller = makePart(model, "BladeFuller", Vector3.new(0.16, 2.60, 0.065), CFrame.new(0, 2.30, 0), darkSteel, Enum.Material.Metal)
+	weldTo(handle, fuller)
+	local edgeFwd = makePart(model, "BladeEdgeFwd", Vector3.new(0.18, 2.50, 0.045), CFrame.new(0.15, 2.30, 0), temperedEdge, Enum.Material.Metal)
+	weldTo(handle, edgeFwd)
+	local edgeBack = makePart(model, "BladeEdgeBack", Vector3.new(0.18, 2.50, 0.045), CFrame.new(-0.15, 2.30, 0), temperedEdge, Enum.Material.Metal)
+	weldTo(handle, edgeBack)
+
+	local tipFwd = makeWedge(model, "TipFwd", Vector3.new(0.045, 0.50, 0.24), CFrame.new(0.12, 3.80, 0) * CFrame.Angles(0, math.rad(-90), 0), temperedEdge, Enum.Material.Metal)
+	weldTo(handle, tipFwd)
+	local tipBack = makeWedge(model, "TipBack", Vector3.new(0.045, 0.50, 0.24), CFrame.new(-0.12, 3.80, 0) * CFrame.Angles(0, math.rad(90), 0), temperedEdge, Enum.Material.Metal)
+	weldTo(handle, tipBack)
+
+	addSocket(handle, "Grip", Vector3.new(0, 0, 0), Vector3.new(0, -90, 0))
+	addSocket(handle, "Tip", Vector3.new(0, 4.05, 0), Vector3.new(0, 0, 0))
+	addSocket(handle, "VfxTip", Vector3.new(0, 4.05, 0))
+	addSocket(handle, "VfxBase", Vector3.new(0, 0.75, 0))
+	addSocket(handle, "VfxCore", Vector3.new(0, 0.52, 0))
+
+	local shieldModel = Instance.new("Model")
+	shieldModel.Name = "OffhandShield"
+	shieldModel.Parent = model
+
+	local shieldHandle = makePart(shieldModel, "HandleS", Vector3.new(0.20, 0.60, 0.20), CFrame.new(0, 0, 0), gripCord)
+	shieldModel.PrimaryPart = shieldHandle
+
+	local bucklerPlate = makePart(shieldModel, "BucklerPlate", Vector3.new(0.20, 1.80, 1.80), CFrame.new(-0.28, 0, 0), darkSteel, Enum.Material.Metal)
+	weldTo(shieldHandle, bucklerPlate)
+	local rimTop = makePart(shieldModel, "BucklerRimTop", Vector3.new(0.24, 0.22, 1.70), CFrame.new(-0.30, 0.90, 0), rimPlate, Enum.Material.Metal)
+	weldTo(shieldHandle, rimTop)
+	local rimBottom = makePart(shieldModel, "BucklerRimBottom", Vector3.new(0.24, 0.22, 1.70), CFrame.new(-0.30, -0.90, 0), rimPlate, Enum.Material.Metal)
+	weldTo(shieldHandle, rimBottom)
+	local rimLeft = makePart(shieldModel, "BucklerRimLeft", Vector3.new(0.24, 1.70, 0.22), CFrame.new(-0.30, 0, 0.90), rimPlate, Enum.Material.Metal)
+	weldTo(shieldHandle, rimLeft)
+	local rimRight = makePart(shieldModel, "BucklerRimRight", Vector3.new(0.24, 1.70, 0.22), CFrame.new(-0.30, 0, -0.90), rimPlate, Enum.Material.Metal)
+	weldTo(shieldHandle, rimRight)
+
+	local bossDome = makePart(shieldModel, "BossDome", Vector3.new(0.28, 0.72, 0.72), CFrame.new(-0.36, 0, 0), temperedEdge, Enum.Material.Metal)
+	weldTo(shieldHandle, bossDome)
+	local bossPoint = makePart(shieldModel, "BossPoint", Vector3.new(0.34, 0.32, 0.32), CFrame.new(-0.44, 0, 0), brassInlay, Enum.Material.Metal)
+	weldTo(shieldHandle, bossPoint)
+
+	local stud1 = makePart(shieldModel, "Stud1", Vector3.new(0.26, 0.16, 0.16), CFrame.new(-0.32, 0.60, 0.60), brassInlay, Enum.Material.Metal)
+	weldTo(shieldHandle, stud1)
+	local stud2 = makePart(shieldModel, "Stud2", Vector3.new(0.26, 0.16, 0.16), CFrame.new(-0.32, -0.60, 0.60), brassInlay, Enum.Material.Metal)
+	weldTo(shieldHandle, stud2)
+	local stud3 = makePart(shieldModel, "Stud3", Vector3.new(0.26, 0.16, 0.16), CFrame.new(-0.32, 0.60, -0.60), brassInlay, Enum.Material.Metal)
+	weldTo(shieldHandle, stud3)
+	local stud4 = makePart(shieldModel, "Stud4", Vector3.new(0.26, 0.16, 0.16), CFrame.new(-0.32, -0.60, -0.60), brassInlay, Enum.Material.Metal)
+	weldTo(shieldHandle, stud4)
+
+	local armBrace = makePart(shieldModel, "ArmBrace", Vector3.new(0.18, 0.50, 0.22), CFrame.new(-0.16, 0, 0), darkSteel, Enum.Material.Metal)
+	weldTo(shieldHandle, armBrace)
+	local strapTop = makePart(shieldModel, "StrapTop", Vector3.new(0.14, 0.14, 0.38), CFrame.new(-0.10, 0.22, 0), gripCord)
+	weldTo(shieldHandle, strapTop)
+	local strapBot = makePart(shieldModel, "StrapBot", Vector3.new(0.14, 0.14, 0.38), CFrame.new(-0.10, -0.22, 0), gripCord)
+	weldTo(shieldHandle, strapBot)
+
+	addSocket(shieldHandle, "ShieldMount", Vector3.new(-0.18, 0, 0), Vector3.new(0, 90, 0))
+	addSocket(shieldHandle, "VfxShieldCenter", Vector3.new(-0.46, 0.10, 0))
+
+	return model
+end
+
+
+function WeaponModelBuilder.BuildRunicLongswordArtifact(): Model
+	local model = Instance.new("Model")
+	model.Name = "art_runic_longsword"
+
+	local cobaltSteel = Color3.fromRGB(45, 68, 105)
+	local runicSilver = Color3.fromRGB(205, 215, 230)
+	local emeraldRune = Color3.fromRGB(45, 215, 125)
+	local goldBanding = Color3.fromRGB(215, 175, 65)
+	local darkGrip = Color3.fromRGB(35, 42, 55)
+
+	
+
+-- Sword Assembly (20 parts: runic longsword with flowing emerald fuller and cobalt steel crossguard)
+	local handle = Instance.new("Part")
+	handle.Name = "Handle"
+	handle.Size = Vector3.new(0.20, 1.05, 0.20)
+	handle.CFrame = CFrame.new(0, 0, 0)
+	handle.Transparency = 1
+	handle.CanCollide = false
+	handle.Massless = true
+	handle.Parent = model
+	model.PrimaryPart = handle
+
+	local gripCyl = makeCylinder(model, "GripCylinder", 0.98, 0.18, CFrame.new(0, 0, 0), darkGrip)
+	weldTo(handle, gripCyl)
+	local gripWrap1 = makeCylinder(model, "GripWrap1", 0.12, 0.20, CFrame.new(0, -0.25, 0), goldBanding, Enum.Material.Metal)
+	weldTo(handle, gripWrap1)
+	local gripWrap2 = makeCylinder(model, "GripWrap2", 0.12, 0.20, CFrame.new(0, 0.25, 0), goldBanding, Enum.Material.Metal)
+	weldTo(handle, gripWrap2)
+
+	local pommelNeck = makeCylinder(model, "PommelNeck", 0.10, 0.22, CFrame.new(0, -0.56, 0), cobaltSteel, Enum.Material.Metal)
+	weldTo(handle, pommelNeck)
+	local pommelBall = makeBall(model, "PommelBall", 0.34, CFrame.new(0, -0.72, 0), cobaltSteel, Enum.Material.Metal)
+	weldTo(handle, pommelBall)
+	local pommelGem = makeBall(model, "PommelGem", 0.16, CFrame.new(0, -0.90, 0), emeraldRune, Enum.Material.Neon)
+	weldTo(handle, pommelGem)
+
+	local guardCenter = makePart(model, "GuardCenter", Vector3.new(0.30, 0.22, 0.24), CFrame.new(0, 0.56, 0), cobaltSteel, Enum.Material.Metal)
+	weldTo(handle, guardCenter)
+	local guardEcusson = makePart(model, "GuardEcusson", Vector3.new(0.24, 0.28, 0.10), CFrame.new(0, 0.58, 0.10), emeraldRune, Enum.Material.Neon)
+	weldTo(handle, guardEcusson)
+	local quillonL = makePart(model, "QuillonL", Vector3.new(0.18, 0.12, 0.48), CFrame.new(0, 0.58, 0.40) * CFrame.Angles(math.rad(8), 0, 0), cobaltSteel, Enum.Material.Metal)
+	weldTo(handle, quillonL)
+	local quillonR = makePart(model, "QuillonR", Vector3.new(0.18, 0.12, 0.48), CFrame.new(0, 0.58, -0.40) * CFrame.Angles(math.rad(-8), 0, 0), cobaltSteel, Enum.Material.Metal)
+	weldTo(handle, quillonR)
+	local finialL = makeBall(model, "QuillonFinialL", 0.16, CFrame.new(0, 0.65, 0.66), goldBanding, Enum.Material.Metal)
+	weldTo(handle, finialL)
+	local finialR = makeBall(model, "QuillonFinialR", 0.16, CFrame.new(0, 0.65, -0.66), goldBanding, Enum.Material.Metal)
+	weldTo(handle, finialR)
+
+	local ricasso = makePart(model, "Ricasso", Vector3.new(0.46, 0.50, 0.075), CFrame.new(0, 0.88, 0), cobaltSteel, Enum.Material.Metal)
+	weldTo(handle, ricasso)
+	local fuller = makePart(model, "BladeFuller", Vector3.new(0.16, 2.90, 0.065), CFrame.new(0, 2.50, 0), runicSilver, Enum.Material.Metal)
+	weldTo(handle, fuller)
+	local runeChannel = makePart(model, "RuneChannel", Vector3.new(0.06, 2.40, 0.075), CFrame.new(0, 2.45, 0), emeraldRune, Enum.Material.Neon)
+	weldTo(handle, runeChannel)
+	local edgeFwd = makePart(model, "BladeEdgeFwd", Vector3.new(0.18, 2.80, 0.045), CFrame.new(0.16, 2.50, 0), runicSilver, Enum.Material.Metal)
+	weldTo(handle, edgeFwd)
+	local edgeBack = makePart(model, "BladeEdgeBack", Vector3.new(0.18, 2.80, 0.045), CFrame.new(-0.16, 2.50, 0), runicSilver, Enum.Material.Metal)
+	weldTo(handle, edgeBack)
+
+	local tipFwd = makeWedge(model, "TipFwd", Vector3.new(0.045, 0.52, 0.25), CFrame.new(0.12, 4.18, 0) * CFrame.Angles(0, math.rad(-90), 0), runicSilver, Enum.Material.Metal)
+	weldTo(handle, tipFwd)
+	local tipBack = makeWedge(model, "TipBack", Vector3.new(0.045, 0.52, 0.25), CFrame.new(-0.12, 4.18, 0) * CFrame.Angles(0, math.rad(90), 0), runicSilver, Enum.Material.Metal)
+	weldTo(handle, tipBack)
+	local tipSpine = makePart(model, "TipSpine", Vector3.new(0.045, 0.52, 0.045), CFrame.new(0, 4.18, 0), cobaltSteel, Enum.Material.Metal)
+	weldTo(handle, tipSpine)
+
+	addSocket(handle, "Grip", Vector3.new(0, 0, 0), Vector3.new(0, -90, 0))
+	addSocket(handle, "Tip", Vector3.new(0, 4.45, 0), Vector3.new(0, 0, 0))
+	addSocket(handle, "VfxTip", Vector3.new(0, 4.45, 0))
+	addSocket(handle, "VfxBase", Vector3.new(0, 0.80, 0))
+	addSocket(handle, "VfxCore", Vector3.new(0, 0.56, 0))
+
+	local shieldModel = Instance.new("Model")
+	shieldModel.Name = "OffhandShield"
+	shieldModel.Parent = model
+
+	local shieldHandle = makePart(shieldModel, "HandleS", Vector3.new(0.20, 0.60, 0.20), CFrame.new(0, 0, 0), darkGrip)
+	shieldModel.PrimaryPart = shieldHandle
+
+	local paviseMain = makePart(shieldModel, "PaviseMain", Vector3.new(0.20, 2.60, 1.40), CFrame.new(-0.30, 0, 0), cobaltSteel, Enum.Material.Metal)
+	weldTo(shieldHandle, paviseMain)
+	local paviseTopAngle = makePart(shieldModel, "PaviseTopAngle", Vector3.new(0.20, 0.45, 1.25), CFrame.new(-0.30, 1.48, 0), cobaltSteel, Enum.Material.Metal)
+	weldTo(shieldHandle, paviseTopAngle)
+	local paviseBottomSpike = makePart(shieldModel, "PaviseBottomSpike", Vector3.new(0.20, 0.55, 0.90), CFrame.new(-0.30, -1.52, 0), cobaltSteel, Enum.Material.Metal)
+	weldTo(shieldHandle, paviseBottomSpike)
+
+	local rimGoldTop = makePart(shieldModel, "RimGoldTop", Vector3.new(0.24, 0.16, 1.35), CFrame.new(-0.32, 1.70, 0), goldBanding, Enum.Material.Metal)
+	weldTo(shieldHandle, rimGoldTop)
+	local rimGoldL = makePart(shieldModel, "RimGoldL", Vector3.new(0.24, 3.10, 0.14), CFrame.new(-0.32, 0, 0.72), goldBanding, Enum.Material.Metal)
+	weldTo(shieldHandle, rimGoldL)
+	local rimGoldR = makePart(shieldModel, "RimGoldR", Vector3.new(0.24, 3.10, 0.14), CFrame.new(-0.32, 0, -0.72), goldBanding, Enum.Material.Metal)
+	weldTo(shieldHandle, rimGoldR)
+
+	local spineRidge = makePart(shieldModel, "SpineRidge", Vector3.new(0.26, 2.80, 0.24), CFrame.new(-0.36, 0, 0), runicSilver, Enum.Material.Metal)
+	weldTo(shieldHandle, spineRidge)
+	local runeGemCenter = makePart(shieldModel, "RuneGemCenter", Vector3.new(0.32, 0.40, 0.40), CFrame.new(-0.40, 0.20, 0), emeraldRune, Enum.Material.Neon)
+	weldTo(shieldHandle, runeGemCenter)
+	local runeRays1 = makePart(shieldModel, "RuneRays1", Vector3.new(0.28, 0.80, 0.10), CFrame.new(-0.38, 0.75, 0), emeraldRune, Enum.Material.SmoothPlastic)
+	weldTo(shieldHandle, runeRays1)
+	local runeRays2 = makePart(shieldModel, "RuneRays2", Vector3.new(0.28, 0.80, 0.10), CFrame.new(-0.38, -0.35, 0), emeraldRune, Enum.Material.SmoothPlastic)
+	weldTo(shieldHandle, runeRays2)
+
+	local cornerTrimTL = makePart(shieldModel, "CornerTrimTL", Vector3.new(0.22, 0.35, 0.35), CFrame.new(-0.32, 1.25, 0.50), runicSilver, Enum.Material.Metal)
+	weldTo(shieldHandle, cornerTrimTL)
+	local cornerTrimTR = makePart(shieldModel, "CornerTrimTR", Vector3.new(0.22, 0.35, 0.35), CFrame.new(-0.32, 1.25, -0.50), runicSilver, Enum.Material.Metal)
+	weldTo(shieldHandle, cornerTrimTR)
+	local cornerTrimBL = makePart(shieldModel, "CornerTrimBL", Vector3.new(0.22, 0.35, 0.35), CFrame.new(-0.32, -1.15, 0.40), runicSilver, Enum.Material.Metal)
+	weldTo(shieldHandle, cornerTrimBL)
+	local cornerTrimBR = makePart(shieldModel, "CornerTrimBR", Vector3.new(0.22, 0.35, 0.35), CFrame.new(-0.32, -1.15, -0.40), runicSilver, Enum.Material.Metal)
+	weldTo(shieldHandle, cornerTrimBR)
+
+	local armMount = makePart(shieldModel, "ArmMount", Vector3.new(0.18, 0.55, 0.24), CFrame.new(-0.16, 0, 0), cobaltSteel, Enum.Material.Metal)
+	weldTo(shieldHandle, armMount)
+	local armStrap = makePart(shieldModel, "ArmStrap", Vector3.new(0.14, 0.28, 0.44), CFrame.new(-0.10, 0, 0), darkGrip)
+	weldTo(shieldHandle, armStrap)
+
+	addSocket(shieldHandle, "ShieldMount", Vector3.new(-0.18, 0, 0), Vector3.new(0, 90, 0))
+	addSocket(shieldHandle, "VfxShieldCenter", Vector3.new(-0.42, 0.10, 0))
+
+	return model
+end
+
+
+function WeaponModelBuilder.BuildKnightlyEstoc(): Model
+	local model = Instance.new("Model")
+	model.Name = "art_knightly_estoc"
+
+	local polishedChrome = Color3.fromRGB(225, 230, 240)
+	local bluedSteel = Color3.fromRGB(52, 70, 95)
+	local brassGilt = Color3.fromRGB(215, 178, 75)
+	local velvetNavy = Color3.fromRGB(25, 35, 55)
+
+	
+
+-- Sword Assembly (23 parts: slender knightly estoc with swept ring guard and needle-point blade)
+	local handle = Instance.new("Part")
+	handle.Name = "Handle"
+	handle.Size = Vector3.new(0.20, 1.10, 0.20)
+	handle.CFrame = CFrame.new(0, 0, 0)
+	handle.Transparency = 1
+	handle.CanCollide = false
+	handle.Massless = true
+	handle.Parent = model
+	model.PrimaryPart = handle
+
+	local gripCyl = makeCylinder(model, "GripCylinder", 1.00, 0.17, CFrame.new(0, 0, 0), velvetNavy)
+	weldTo(handle, gripCyl)
+	local gripWrap1 = makeCylinder(model, "GripWrap1", 0.10, 0.19, CFrame.new(0, -0.30, 0), brassGilt, Enum.Material.Metal)
+	weldTo(handle, gripWrap1)
+	local gripWrap2 = makeCylinder(model, "GripWrap2", 0.10, 0.19, CFrame.new(0, 0.30, 0), brassGilt, Enum.Material.Metal)
+	weldTo(handle, gripWrap2)
+
+	local pommelNeck = makeCylinder(model, "PommelNeck", 0.10, 0.20, CFrame.new(0, -0.58, 0), polishedChrome, Enum.Material.Metal)
+	weldTo(handle, pommelNeck)
+	local pommelBall = makeBall(model, "PommelBall", 0.32, CFrame.new(0, -0.74, 0), brassGilt, Enum.Material.Metal)
+	weldTo(handle, pommelBall)
+	local pommelFinial = makeBall(model, "PommelFinial", 0.14, CFrame.new(0, -0.92, 0), bluedSteel, Enum.Material.Metal)
+	weldTo(handle, pommelFinial)
+
+	local guardCenter = makePart(model, "GuardCenter", Vector3.new(0.26, 0.18, 0.22), CFrame.new(0, 0.58, 0), polishedChrome, Enum.Material.Metal)
+	weldTo(handle, guardCenter)
+	local guardEcusson = makePart(model, "GuardEcusson", Vector3.new(0.20, 0.24, 0.10), CFrame.new(0, 0.60, 0.10), brassGilt, Enum.Material.Metal)
+	weldTo(handle, guardEcusson)
+	local quillonL = makePart(model, "QuillonL", Vector3.new(0.16, 0.10, 0.44), CFrame.new(0, 0.60, 0.36) * CFrame.Angles(math.rad(10), 0, 0), bluedSteel, Enum.Material.Metal)
+	weldTo(handle, quillonL)
+	local quillonR = makePart(model, "QuillonR", Vector3.new(0.16, 0.10, 0.44), CFrame.new(0, 0.60, -0.36) * CFrame.Angles(math.rad(-10), 0, 0), bluedSteel, Enum.Material.Metal)
+	weldTo(handle, quillonR)
+	local finialL = makeBall(model, "QuillonFinialL", 0.15, CFrame.new(0, 0.68, 0.60), brassGilt, Enum.Material.Metal)
+	weldTo(handle, finialL)
+	local finialR = makeBall(model, "QuillonFinialR", 0.15, CFrame.new(0, 0.68, -0.60), brassGilt, Enum.Material.Metal)
+	weldTo(handle, finialR)
+
+	local ringGuardL = makeCylinder(model, "RingGuardL", 0.12, 0.36, CFrame.new(0.08, 0.68, 0.20), polishedChrome, Enum.Material.Metal)
+	weldTo(handle, ringGuardL)
+	local ringGuardR = makeCylinder(model, "RingGuardR", 0.12, 0.36, CFrame.new(0.08, 0.68, -0.20), polishedChrome, Enum.Material.Metal)
+	weldTo(handle, ringGuardR)
+
+	local ricasso = makePart(model, "Ricasso", Vector3.new(0.38, 0.55, 0.07), CFrame.new(0, 0.92, 0), bluedSteel, Enum.Material.Metal)
+	weldTo(handle, ricasso)
+	local estocSpine = makePart(model, "EstocSpine", Vector3.new(0.14, 3.20, 0.065), CFrame.new(0, 2.75, 0), bluedSteel, Enum.Material.Metal)
+	weldTo(handle, estocSpine)
+	local edgeFwd = makePart(model, "BladeEdgeFwd", Vector3.new(0.14, 3.10, 0.045), CFrame.new(0.13, 2.75, 0), polishedChrome, Enum.Material.Metal)
+	weldTo(handle, edgeFwd)
+	local edgeBack = makePart(model, "BladeEdgeBack", Vector3.new(0.14, 3.10, 0.045), CFrame.new(-0.13, 2.75, 0), polishedChrome, Enum.Material.Metal)
+	weldTo(handle, edgeBack)
+
+	local tipMidFwd = makeWedge(model, "TipMidFwd", Vector3.new(0.045, 0.40, 0.18), CFrame.new(0.09, 4.45, 0) * CFrame.Angles(0, math.rad(-90), 0), polishedChrome, Enum.Material.Metal)
+	weldTo(handle, tipMidFwd)
+	local tipMidBack = makeWedge(model, "TipMidBack", Vector3.new(0.045, 0.40, 0.18), CFrame.new(-0.09, 4.45, 0) * CFrame.Angles(0, math.rad(90), 0), polishedChrome, Enum.Material.Metal)
+	weldTo(handle, tipMidBack)
+	local tipApexFwd = makeWedge(model, "TipApexFwd", Vector3.new(0.040, 0.40, 0.10), CFrame.new(0.05, 4.80, 0) * CFrame.Angles(0, math.rad(-90), 0), polishedChrome, Enum.Material.Metal)
+	weldTo(handle, tipApexFwd)
+	local tipApexBack = makeWedge(model, "TipApexBack", Vector3.new(0.040, 0.40, 0.10), CFrame.new(-0.05, 4.80, 0) * CFrame.Angles(0, math.rad(90), 0), polishedChrome, Enum.Material.Metal)
+	weldTo(handle, tipApexBack)
+	local tipSpur = makePart(model, "TipSpur", Vector3.new(0.04, 0.40, 0.04), CFrame.new(0, 4.80, 0), brassGilt, Enum.Material.Metal)
+	weldTo(handle, tipSpur)
+
+	addSocket(handle, "Grip", Vector3.new(0, 0, 0), Vector3.new(0, -90, 0))
+	addSocket(handle, "Tip", Vector3.new(0, 5.00, 0), Vector3.new(0, 0, 0))
+	addSocket(handle, "VfxTip", Vector3.new(0, 5.00, 0))
+	addSocket(handle, "VfxBase", Vector3.new(0, 0.85, 0))
+	addSocket(handle, "VfxCore", Vector3.new(0, 0.58, 0))
+
+	local shieldModel = Instance.new("Model")
+	shieldModel.Name = "OffhandShield"
+	shieldModel.Parent = model
+
+	local shieldHandle = makePart(shieldModel, "HandleS", Vector3.new(0.20, 0.60, 0.20), CFrame.new(0, 0, 0), velvetNavy)
+	shieldModel.PrimaryPart = shieldHandle
+
+	local kiteDome = makePart(shieldModel, "KiteDome", Vector3.new(0.22, 1.20, 1.40), CFrame.new(-0.32, 0.85, 0), bluedSteel, Enum.Material.Metal)
+	weldTo(shieldHandle, kiteDome)
+	local kiteMid = makePart(shieldModel, "KiteMid", Vector3.new(0.20, 1.20, 1.25), CFrame.new(-0.32, -0.30, 0), bluedSteel, Enum.Material.Metal)
+	weldTo(shieldHandle, kiteMid)
+	local kiteTaper = makePart(shieldModel, "KiteTaper", Vector3.new(0.18, 1.00, 0.85), CFrame.new(-0.32, -1.35, 0), bluedSteel, Enum.Material.Metal)
+	weldTo(shieldHandle, kiteTaper)
+	local kitePoint = makePart(shieldModel, "KitePoint", Vector3.new(0.16, 0.45, 0.40), CFrame.new(-0.32, -2.05, 0), brassGilt, Enum.Material.Metal)
+	weldTo(shieldHandle, kitePoint)
+
+	local rimCurvedTop = makePart(shieldModel, "RimCurvedTop", Vector3.new(0.26, 0.16, 1.45), CFrame.new(-0.34, 1.48, 0), brassGilt, Enum.Material.Metal)
+	weldTo(shieldHandle, rimCurvedTop)
+	local rimL1 = makePart(shieldModel, "RimL1", Vector3.new(0.24, 1.60, 0.14), CFrame.new(-0.34, 0.70, 0.72), polishedChrome, Enum.Material.Metal)
+	weldTo(shieldHandle, rimL1)
+	local rimR1 = makePart(shieldModel, "RimR1", Vector3.new(0.24, 1.60, 0.14), CFrame.new(-0.34, 0.70, -0.72), polishedChrome, Enum.Material.Metal)
+	weldTo(shieldHandle, rimR1)
+	local rimL2 = makePart(shieldModel, "RimL2", Vector3.new(0.22, 1.80, 0.14), CFrame.new(-0.34, -0.90, 0.52), polishedChrome, Enum.Material.Metal)
+	weldTo(shieldHandle, rimL2)
+	local rimR2 = makePart(shieldModel, "RimR2", Vector3.new(0.22, 1.80, 0.14), CFrame.new(-0.34, -0.90, -0.52), polishedChrome, Enum.Material.Metal)
+	weldTo(shieldHandle, rimR2)
+
+	local heraldicCrossV = makePart(shieldModel, "HeraldicCrossV", Vector3.new(0.26, 2.40, 0.22), CFrame.new(-0.36, 0.20, 0), brassGilt, Enum.Material.Metal)
+	weldTo(shieldHandle, heraldicCrossV)
+	local heraldicCrossH = makePart(shieldModel, "HeraldicCrossH", Vector3.new(0.26, 0.22, 1.00), CFrame.new(-0.36, 0.75, 0), brassGilt, Enum.Material.Metal)
+	weldTo(shieldHandle, heraldicCrossH)
+	local centerMedallion = makePart(shieldModel, "CenterMedallion", Vector3.new(0.32, 0.44, 0.44), CFrame.new(-0.40, 0.75, 0), polishedChrome, Enum.Material.Metal)
+	weldTo(shieldHandle, centerMedallion)
+
+	local fleurL = makePart(shieldModel, "FleurL", Vector3.new(0.28, 0.22, 0.22), CFrame.new(-0.36, 0.25, 0.35), brassGilt, Enum.Material.Metal)
+	weldTo(shieldHandle, fleurL)
+	local fleurR = makePart(shieldModel, "FleurR", Vector3.new(0.28, 0.22, 0.22), CFrame.new(-0.36, 0.25, -0.35), brassGilt, Enum.Material.Metal)
+	weldTo(shieldHandle, fleurR)
+
+	local armPad = makePart(shieldModel, "ArmPad", Vector3.new(0.18, 0.70, 0.30), CFrame.new(-0.16, 0, 0), velvetNavy)
+	weldTo(shieldHandle, armPad)
+	local strap1 = makePart(shieldModel, "Strap1", Vector3.new(0.12, 0.12, 0.42), CFrame.new(-0.10, 0.25, 0), bluedSteel, Enum.Material.Metal)
+	weldTo(shieldHandle, strap1)
+	local strap2 = makePart(shieldModel, "Strap2", Vector3.new(0.12, 0.12, 0.42), CFrame.new(-0.10, -0.25, 0), bluedSteel, Enum.Material.Metal)
+	weldTo(shieldHandle, strap2)
+
+	addSocket(shieldHandle, "ShieldMount", Vector3.new(-0.18, 0, 0), Vector3.new(0, 90, 0))
+	addSocket(shieldHandle, "VfxShieldCenter", Vector3.new(-0.42, 0.10, 0))
+
+	return model
+end
+
+
+function WeaponModelBuilder.BuildPaladinSpatha(): Model
+	local model = Instance.new("Model")
+	model.Name = "art_paladin_spatha"
+
+	local holySteel = Color3.fromRGB(220, 226, 238)
+	local radiantGold = Color3.fromRGB(235, 192, 65)
+	local royalBlue = Color3.fromRGB(35, 55, 95)
+	local sunGem = Color3.fromRGB(255, 230, 110)
+	local whiteLeather = Color3.fromRGB(230, 230, 235)
+
+	
+
+-- Sword Assembly (22 parts: holy leaf-bladed spatha with radiant gold winged quillons)
+	local handle = Instance.new("Part")
+	handle.Name = "Handle"
+	handle.Size = Vector3.new(0.20, 1.10, 0.20)
+	handle.CFrame = CFrame.new(0, 0, 0)
+	handle.Transparency = 1
+	handle.CanCollide = false
+	handle.Massless = true
+	handle.Parent = model
+	model.PrimaryPart = handle
+
+	local gripCyl = makeCylinder(model, "GripCylinder", 1.00, 0.18, CFrame.new(0, 0, 0), whiteLeather)
+	weldTo(handle, gripCyl)
+	local gripWrap1 = makeCylinder(model, "GripWrap1", 0.12, 0.20, CFrame.new(0, -0.28, 0), radiantGold, Enum.Material.Metal)
+	weldTo(handle, gripWrap1)
+	local gripWrap2 = makeCylinder(model, "GripWrap2", 0.12, 0.20, CFrame.new(0, 0.28, 0), radiantGold, Enum.Material.Metal)
+	weldTo(handle, gripWrap2)
+
+	local pommelNeck = makeCylinder(model, "PommelNeck", 0.10, 0.22, CFrame.new(0, -0.58, 0), radiantGold, Enum.Material.Metal)
+	weldTo(handle, pommelNeck)
+	local pommelBall = makeBall(model, "PommelBall", 0.36, CFrame.new(0, -0.76, 0), radiantGold, Enum.Material.Metal)
+	weldTo(handle, pommelBall)
+	local pommelCross = makePart(model, "PommelCross", Vector3.new(0.24, 0.24, 0.08), CFrame.new(0, -0.96, 0), sunGem, Enum.Material.Neon)
+	weldTo(handle, pommelCross)
+
+	local guardCenter = makePart(model, "GuardCenter", Vector3.new(0.32, 0.22, 0.24), CFrame.new(0, 0.58, 0), radiantGold, Enum.Material.Metal)
+	weldTo(handle, guardCenter)
+	local guardWingL = makePart(model, "GuardWingL", Vector3.new(0.18, 0.14, 0.46), CFrame.new(0, 0.60, 0.38) * CFrame.Angles(math.rad(12), 0, 0), radiantGold, Enum.Material.Metal)
+	weldTo(handle, guardWingL)
+	local guardWingR = makePart(model, "GuardWingR", Vector3.new(0.18, 0.14, 0.46), CFrame.new(0, 0.60, -0.38) * CFrame.Angles(math.rad(-12), 0, 0), radiantGold, Enum.Material.Metal)
+	weldTo(handle, guardWingR)
+	local finialL = makeBall(model, "QuillonFinialL", 0.18, CFrame.new(0, 0.70, 0.64), radiantGold, Enum.Material.Metal)
+	weldTo(handle, finialL)
+	local finialR = makeBall(model, "QuillonFinialR", 0.18, CFrame.new(0, 0.70, -0.64), radiantGold, Enum.Material.Metal)
+	weldTo(handle, finialR)
+
+	local ricasso = makePart(model, "Ricasso", Vector3.new(0.44, 0.50, 0.075), CFrame.new(0, 0.90, 0), radiantGold, Enum.Material.Metal)
+	weldTo(handle, ricasso)
+	local leafSwellFwd = makePart(model, "LeafSwellFwd", Vector3.new(0.24, 2.00, 0.05), CFrame.new(0.18, 2.15, 0), holySteel, Enum.Material.Metal)
+	weldTo(handle, leafSwellFwd)
+	local leafSwellBack = makePart(model, "LeafSwellBack", Vector3.new(0.24, 2.00, 0.05), CFrame.new(-0.18, 2.15, 0), holySteel, Enum.Material.Metal)
+	weldTo(handle, leafSwellBack)
+	local bladeFuller = makePart(model, "BladeFuller", Vector3.new(0.16, 3.10, 0.065), CFrame.new(0, 2.70, 0), holySteel, Enum.Material.Metal)
+	weldTo(handle, bladeFuller)
+	local holyInlay = makePart(model, "HolyInlay", Vector3.new(0.06, 2.60, 0.075), CFrame.new(0, 2.60, 0), sunGem, Enum.Material.Neon)
+	weldTo(handle, holyInlay)
+	local edgeUpperFwd = makePart(model, "EdgeUpperFwd", Vector3.new(0.18, 1.20, 0.045), CFrame.new(0.14, 3.65, 0), holySteel, Enum.Material.Metal)
+	weldTo(handle, edgeUpperFwd)
+	local edgeUpperBack = makePart(model, "EdgeUpperBack", Vector3.new(0.18, 1.20, 0.045), CFrame.new(-0.14, 3.65, 0), holySteel, Enum.Material.Metal)
+	weldTo(handle, edgeUpperBack)
+
+	local tipFwd = makeWedge(model, "TipFwd", Vector3.new(0.045, 0.56, 0.26), CFrame.new(0.13, 4.45, 0) * CFrame.Angles(0, math.rad(-90), 0), holySteel, Enum.Material.Metal)
+	weldTo(handle, tipFwd)
+	local tipBack = makeWedge(model, "TipBack", Vector3.new(0.045, 0.56, 0.26), CFrame.new(-0.13, 4.45, 0) * CFrame.Angles(0, math.rad(90), 0), holySteel, Enum.Material.Metal)
+	weldTo(handle, tipBack)
+
+	addSocket(handle, "Grip", Vector3.new(0, 0, 0), Vector3.new(0, -90, 0))
+	addSocket(handle, "Tip", Vector3.new(0, 4.75, 0), Vector3.new(0, 0, 0))
+	addSocket(handle, "VfxTip", Vector3.new(0, 4.75, 0))
+	addSocket(handle, "VfxBase", Vector3.new(0, 0.85, 0))
+	addSocket(handle, "VfxCore", Vector3.new(0, 0.60, 0))
+
+	local shieldModel = Instance.new("Model")
+	shieldModel.Name = "OffhandShield"
+	shieldModel.Parent = model
+
+	local shieldHandle = makePart(shieldModel, "HandleS", Vector3.new(0.20, 0.60, 0.20), CFrame.new(0, 0, 0), royalBlue)
+	shieldModel.PrimaryPart = shieldHandle
+
+	local heaterBase = makePart(shieldModel, "HeaterBase", Vector3.new(0.22, 1.40, 1.40), CFrame.new(-0.32, 0.70, 0), royalBlue, Enum.Material.Metal)
+	weldTo(shieldHandle, heaterBase)
+	local heaterMid = makePart(shieldModel, "HeaterMid", Vector3.new(0.20, 1.20, 1.25), CFrame.new(-0.32, -0.45, 0), royalBlue, Enum.Material.Metal)
+	weldTo(shieldHandle, heaterMid)
+	local heaterPoint = makePart(shieldModel, "HeaterPoint", Vector3.new(0.18, 0.85, 0.80), CFrame.new(-0.32, -1.35, 0), royalBlue, Enum.Material.Metal)
+	weldTo(shieldHandle, heaterPoint)
+	local heaterTip = makePart(shieldModel, "HeaterTip", Vector3.new(0.16, 0.40, 0.35), CFrame.new(-0.32, -1.90, 0), radiantGold, Enum.Material.Metal)
+	weldTo(shieldHandle, heaterTip)
+
+	-- Trim
+	local rimTopGold = makePart(shieldModel, "RimTopGold", Vector3.new(0.26, 0.18, 1.48), CFrame.new(-0.34, 1.40, 0), radiantGold, Enum.Material.Metal)
+	weldTo(shieldHandle, rimTopGold)
+	local rimL1 = makePart(shieldModel, "RimL1", Vector3.new(0.24, 1.40, 0.16), CFrame.new(-0.34, 0.65, 0.72), radiantGold, Enum.Material.Metal)
+	weldTo(shieldHandle, rimL1)
+	local rimR1 = makePart(shieldModel, "RimR1", Vector3.new(0.24, 1.40, 0.16), CFrame.new(-0.34, 0.65, -0.72), radiantGold, Enum.Material.Metal)
+	weldTo(shieldHandle, rimR1)
+	local rimL2 = makePart(shieldModel, "RimL2", Vector3.new(0.22, 1.60, 0.14), CFrame.new(-0.34, -0.75, 0.54), holySteel, Enum.Material.Metal)
+	weldTo(shieldHandle, rimL2)
+	local rimR2 = makePart(shieldModel, "RimR2", Vector3.new(0.22, 1.60, 0.14), CFrame.new(-0.34, -0.75, -0.54), holySteel, Enum.Material.Metal)
+	weldTo(shieldHandle, rimR2)
+
+	-- Radiant Sunburst Crest
+	local sunCenterDisc = makePart(shieldModel, "SunCenterDisc", Vector3.new(0.30, 0.80, 0.80), CFrame.new(-0.38, 0.40, 0), radiantGold, Enum.Material.Metal)
+	weldTo(shieldHandle, sunCenterDisc)
+	local sunCoreFlame = makePart(shieldModel, "SunCoreFlame", Vector3.new(0.36, 0.38, 0.38), CFrame.new(-0.44, 0.20, 0), sunGem, Enum.Material.Neon)
+	weldTo(shieldHandle, sunCoreFlame)
+
+	local sunRayUp = makePart(shieldModel, "SunRayUp", Vector3.new(0.28, 0.55, 0.16), CFrame.new(-0.38, 0.95, 0), radiantGold, Enum.Material.Metal)
+	weldTo(shieldHandle, sunRayUp)
+	local sunRayDown = makePart(shieldModel, "SunRayDown", Vector3.new(0.28, 0.55, 0.16), CFrame.new(-0.38, -0.15, 0), radiantGold, Enum.Material.Metal)
+	weldTo(shieldHandle, sunRayDown)
+	local sunRayLeft = makePart(shieldModel, "SunRayLeft", Vector3.new(0.28, 0.16, 0.55), CFrame.new(-0.38, 0.40, 0.55), radiantGold, Enum.Material.Metal)
+	weldTo(shieldHandle, sunRayLeft)
+	local sunRayRight = makePart(shieldModel, "SunRayRight", Vector3.new(0.28, 0.16, 0.55), CFrame.new(-0.38, 0.40, -0.55), radiantGold, Enum.Material.Metal)
+	weldTo(shieldHandle, sunRayRight)
+	local sunRayTL = makePart(shieldModel, "SunRayTL", Vector3.new(0.26, 0.40, 0.40), CFrame.new(-0.38, 0.80, 0.40), radiantGold, Enum.Material.Metal)
+	weldTo(shieldHandle, sunRayTL)
+	local sunRayTR = makePart(shieldModel, "SunRayTR", Vector3.new(0.26, 0.40, 0.40), CFrame.new(-0.38, 0.80, -0.40), radiantGold, Enum.Material.Metal)
+	weldTo(shieldHandle, sunRayTR)
+
+	local chevronLower = makePart(shieldModel, "ChevronLower", Vector3.new(0.24, 0.60, 0.60), CFrame.new(-0.36, -0.85, 0), radiantGold, Enum.Material.Metal)
+	weldTo(shieldHandle, chevronLower)
+
+	local armPad = makePart(shieldModel, "ArmPad", Vector3.new(0.18, 0.75, 0.32), CFrame.new(-0.16, 0, 0), royalBlue)
+	weldTo(shieldHandle, armPad)
+	local strapTop = makePart(shieldModel, "StrapTop", Vector3.new(0.14, 0.14, 0.44), CFrame.new(-0.10, 0.28, 0), whiteLeather)
+	weldTo(shieldHandle, strapTop)
+	local strapBot = makePart(shieldModel, "StrapBot", Vector3.new(0.14, 0.14, 0.44), CFrame.new(-0.10, -0.28, 0), whiteLeather)
+	weldTo(shieldHandle, strapBot)
+
+	addSocket(shieldHandle, "ShieldMount", Vector3.new(-0.18, 0, 0), Vector3.new(0, 90, 0))
+	addSocket(shieldHandle, "VfxShieldCenter", Vector3.new(-0.46, 0.10, 0))
+
+	return model
+end
+
+
+function WeaponModelBuilder.BuildVanguardWardenBastion(): Model
+	local model = Instance.new("Model")
+	model.Name = "art_vanguard_warden_bastion"
+
+	local gunmetalGrey = Color3.fromRGB(68, 72, 82)
+	local hardenedSteel = Color3.fromRGB(165, 172, 185)
+	local electricCyan = Color3.fromRGB(60, 215, 255)
+	local bronzeReinforce = Color3.fromRGB(165, 115, 55)
+	local heavyGrip = Color3.fromRGB(35, 38, 45)
+
+	
+
+-- Sword Assembly (24 parts: heavy fortress warden broadsword with storm-etched fuller)
+	local handle = Instance.new("Part")
+	handle.Name = "Handle"
+	handle.Size = Vector3.new(0.20, 1.15, 0.20)
+	handle.CFrame = CFrame.new(0, 0, 0)
+	handle.Transparency = 1
+	handle.CanCollide = false
+	handle.Massless = true
+	handle.Parent = model
+	model.PrimaryPart = handle
+
+	local gripCyl = makeCylinder(model, "GripCylinder", 1.05, 0.19, CFrame.new(0, 0, 0), heavyGrip)
+	weldTo(handle, gripCyl)
+	local gripWrap1 = makeCylinder(model, "GripWrap1", 0.12, 0.21, CFrame.new(0, -0.30, 0), bronzeReinforce, Enum.Material.Metal)
+	weldTo(handle, gripWrap1)
+	local gripWrap2 = makeCylinder(model, "GripWrap2", 0.12, 0.21, CFrame.new(0, 0.30, 0), bronzeReinforce, Enum.Material.Metal)
+	weldTo(handle, gripWrap2)
+
+	local pommelNeck = makeCylinder(model, "PommelNeck", 0.10, 0.24, CFrame.new(0, -0.60, 0), gunmetalGrey, Enum.Material.Metal)
+	weldTo(handle, pommelNeck)
+	local pommelBall = makeBall(model, "PommelBall", 0.38, CFrame.new(0, -0.78, 0), gunmetalGrey, Enum.Material.Metal)
+	weldTo(handle, pommelBall)
+	local pommelFinial = makeBall(model, "PommelFinial", 0.16, CFrame.new(0, -0.98, 0), bronzeReinforce, Enum.Material.Metal)
+	weldTo(handle, pommelFinial)
+
+	local guardCenter = makePart(model, "GuardCenter", Vector3.new(0.34, 0.24, 0.26), CFrame.new(0, 0.60, 0), gunmetalGrey, Enum.Material.Metal)
+	weldTo(handle, guardCenter)
+	local guardPlate = makePart(model, "GuardPlate", Vector3.new(0.26, 0.30, 0.10), CFrame.new(0, 0.62, 0.12), bronzeReinforce, Enum.Material.Metal)
+	weldTo(handle, guardPlate)
+	local quillonL = makePart(model, "QuillonL", Vector3.new(0.20, 0.14, 0.50), CFrame.new(0, 0.62, 0.40) * CFrame.Angles(math.rad(8), 0, 0), gunmetalGrey, Enum.Material.Metal)
+	weldTo(handle, quillonL)
+	local quillonR = makePart(model, "QuillonR", Vector3.new(0.20, 0.14, 0.50), CFrame.new(0, 0.62, -0.40) * CFrame.Angles(math.rad(-8), 0, 0), gunmetalGrey, Enum.Material.Metal)
+	weldTo(handle, quillonR)
+	local finialL = makeBall(model, "QuillonFinialL", 0.18, CFrame.new(0, 0.70, 0.68), bronzeReinforce, Enum.Material.Metal)
+	weldTo(handle, finialL)
+	local finialR = makeBall(model, "QuillonFinialR", 0.18, CFrame.new(0, 0.70, -0.68), bronzeReinforce, Enum.Material.Metal)
+	weldTo(handle, finialR)
+
+	local ricasso = makePart(model, "Ricasso", Vector3.new(0.48, 0.55, 0.08), CFrame.new(0, 0.95, 0), gunmetalGrey, Enum.Material.Metal)
+	weldTo(handle, ricasso)
+	local ricassoSpurL = makePart(model, "RicassoSpurL", Vector3.new(0.12, 0.20, 0.07), CFrame.new(0.28, 1.15, 0), bronzeReinforce, Enum.Material.Metal)
+	weldTo(handle, ricassoSpurL)
+	local ricassoSpurR = makePart(model, "RicassoSpurR", Vector3.new(0.12, 0.20, 0.07), CFrame.new(-0.28, 1.15, 0), bronzeReinforce, Enum.Material.Metal)
+	weldTo(handle, ricassoSpurR)
+
+	local bladeFuller = makePart(model, "BladeFuller", Vector3.new(0.18, 3.20, 0.07), CFrame.new(0, 2.80, 0), hardenedSteel, Enum.Material.Metal)
+	weldTo(handle, bladeFuller)
+	local fullerInlay = makePart(model, "FullerInlay", Vector3.new(0.06, 2.70, 0.08), CFrame.new(0, 2.75, 0), electricCyan, Enum.Material.Neon)
+	weldTo(handle, fullerInlay)
+	local edgeFwd = makePart(model, "BladeEdgeFwd", Vector3.new(0.20, 3.10, 0.045), CFrame.new(0.18, 2.80, 0), hardenedSteel, Enum.Material.Metal)
+	weldTo(handle, edgeFwd)
+	local edgeBack = makePart(model, "BladeEdgeBack", Vector3.new(0.20, 3.10, 0.045), CFrame.new(-0.18, 2.80, 0), hardenedSteel, Enum.Material.Metal)
+	weldTo(handle, edgeBack)
+
+	local tipFwd = makeWedge(model, "TipFwd", Vector3.new(0.045, 0.58, 0.28), CFrame.new(0.14, 4.65, 0) * CFrame.Angles(0, math.rad(-90), 0), hardenedSteel, Enum.Material.Metal)
+	weldTo(handle, tipFwd)
+	local tipBack = makeWedge(model, "TipBack", Vector3.new(0.045, 0.58, 0.28), CFrame.new(-0.14, 4.65, 0) * CFrame.Angles(0, math.rad(90), 0), hardenedSteel, Enum.Material.Metal)
+	weldTo(handle, tipBack)
+	local tipSpine = makePart(model, "TipSpine", Vector3.new(0.045, 0.58, 0.045), CFrame.new(0, 4.65, 0), gunmetalGrey, Enum.Material.Metal)
+	weldTo(handle, tipSpine)
+
+	addSocket(handle, "Grip", Vector3.new(0, 0, 0), Vector3.new(0, -90, 0))
+	addSocket(handle, "Tip", Vector3.new(0, 4.95, 0), Vector3.new(0, 0, 0))
+	addSocket(handle, "VfxTip", Vector3.new(0, 4.95, 0))
+	addSocket(handle, "VfxBase", Vector3.new(0, 0.90, 0))
+	addSocket(handle, "VfxCore", Vector3.new(0, 0.62, 0))
+
+	local shieldModel = Instance.new("Model")
+	shieldModel.Name = "OffhandShield"
+	shieldModel.Parent = model
+
+	local shieldHandle = makePart(shieldModel, "HandleS", Vector3.new(0.22, 0.65, 0.22), CFrame.new(0, 0, 0), heavyGrip)
+	shieldModel.PrimaryPart = shieldHandle
+
+	local bastionBody = makePart(shieldModel, "BastionBody", Vector3.new(0.24, 2.80, 1.60), CFrame.new(-0.34, 0, 0), gunmetalGrey, Enum.Material.Metal)
+	weldTo(shieldHandle, bastionBody)
+	local scallopTop1 = makePart(shieldModel, "ScallopTop1", Vector3.new(0.26, 0.40, 0.60), CFrame.new(-0.34, 1.55, 0.50), gunmetalGrey, Enum.Material.Metal)
+	weldTo(shieldHandle, scallopTop1)
+	local scallopTop2 = makePart(shieldModel, "ScallopTop2", Vector3.new(0.26, 0.40, 0.60), CFrame.new(-0.34, 1.55, -0.50), gunmetalGrey, Enum.Material.Metal)
+	weldTo(shieldHandle, scallopTop2)
+	local scallopCenter = makePart(shieldModel, "ScallopCenter", Vector3.new(0.26, 0.55, 0.40), CFrame.new(-0.34, 1.62, 0), bronzeReinforce, Enum.Material.Metal)
+	weldTo(shieldHandle, scallopCenter)
+	local scallopBot = makePart(shieldModel, "ScallopBot", Vector3.new(0.24, 0.50, 1.20), CFrame.new(-0.34, -1.60, 0), gunmetalGrey, Enum.Material.Metal)
+	weldTo(shieldHandle, scallopBot)
+
+	-- Heavy Armor Plates
+	local plateUpper = makePart(shieldModel, "PlateUpper", Vector3.new(0.28, 0.90, 1.40), CFrame.new(-0.38, 0.70, 0), hardenedSteel, Enum.Material.Metal)
+	weldTo(shieldHandle, plateUpper)
+	local plateLower = makePart(shieldModel, "PlateLower", Vector3.new(0.28, 0.90, 1.30), CFrame.new(-0.38, -0.70, 0), hardenedSteel, Enum.Material.Metal)
+	weldTo(shieldHandle, plateLower)
+
+	local rimL = makePart(shieldModel, "RimL", Vector3.new(0.28, 3.40, 0.16), CFrame.new(-0.36, 0, 0.82), bronzeReinforce, Enum.Material.Metal)
+	weldTo(shieldHandle, rimL)
+	local rimR = makePart(shieldModel, "RimR", Vector3.new(0.28, 3.40, 0.16), CFrame.new(-0.36, 0, -0.82), bronzeReinforce, Enum.Material.Metal)
+	weldTo(shieldHandle, rimR)
+
+	local centerBossPillar = makePart(shieldModel, "CenterBossPillar", Vector3.new(0.32, 2.20, 0.32), CFrame.new(-0.42, 0, 0), bronzeReinforce, Enum.Material.Metal)
+	weldTo(shieldHandle, centerBossPillar)
+	local coreBeacon = makePart(shieldModel, "CoreBeacon", Vector3.new(0.38, 0.38, 0.38), CFrame.new(-0.46, 0.15, 0), electricCyan, Enum.Material.Neon)
+	weldTo(shieldHandle, coreBeacon)
+	local cornerPlateTL = makePart(shieldModel, "CornerPlateTL", Vector3.new(0.26, 0.40, 0.40), CFrame.new(-0.36, 1.30, 0.70), bronzeReinforce, Enum.Material.Metal)
+	weldTo(shieldHandle, cornerPlateTL)
+	local cornerPlateTR = makePart(shieldModel, "CornerPlateTR", Vector3.new(0.26, 0.40, 0.40), CFrame.new(-0.36, 1.30, -0.70), bronzeReinforce, Enum.Material.Metal)
+	weldTo(shieldHandle, cornerPlateTR)
+	local cornerPlateBL = makePart(shieldModel, "CornerPlateBL", Vector3.new(0.26, 0.40, 0.40), CFrame.new(-0.36, -1.30, 0.60), bronzeReinforce, Enum.Material.Metal)
+	weldTo(shieldHandle, cornerPlateBL)
+	local cornerPlateBR = makePart(shieldModel, "CornerPlateBR", Vector3.new(0.26, 0.40, 0.40), CFrame.new(-0.36, -1.30, -0.60), bronzeReinforce, Enum.Material.Metal)
+	weldTo(shieldHandle, cornerPlateBR)
+
+	-- Fortress Rivets & Slits
+	local slitL = makePart(shieldModel, "SlitL", Vector3.new(0.30, 0.60, 0.10), CFrame.new(-0.39, 0.80, 0.40), electricCyan, Enum.Material.SmoothPlastic)
+	weldTo(shieldHandle, slitL)
+	local slitR = makePart(shieldModel, "SlitR", Vector3.new(0.30, 0.60, 0.10), CFrame.new(-0.39, 0.80, -0.40), electricCyan, Enum.Material.SmoothPlastic)
+	weldTo(shieldHandle, slitR)
+	local rivet1 = makePart(shieldModel, "Rivet1", Vector3.new(0.30, 0.18, 0.18), CFrame.new(-0.40, 1.20, 0.60), bronzeReinforce, Enum.Material.Metal)
+	weldTo(shieldHandle, rivet1)
+	local rivet2 = makePart(shieldModel, "Rivet2", Vector3.new(0.30, 0.18, 0.18), CFrame.new(-0.40, 1.20, -0.60), bronzeReinforce, Enum.Material.Metal)
+	weldTo(shieldHandle, rivet2)
+	local rivet3 = makePart(shieldModel, "Rivet3", Vector3.new(0.30, 0.18, 0.18), CFrame.new(-0.40, -1.20, 0.50), bronzeReinforce, Enum.Material.Metal)
+	weldTo(shieldHandle, rivet3)
+	local rivet4 = makePart(shieldModel, "Rivet4", Vector3.new(0.30, 0.18, 0.18), CFrame.new(-0.40, -1.20, -0.50), bronzeReinforce, Enum.Material.Metal)
+	weldTo(shieldHandle, rivet4)
+
+	local armFrame = makePart(shieldModel, "ArmFrame", Vector3.new(0.20, 0.90, 0.36), CFrame.new(-0.16, 0, 0), gunmetalGrey, Enum.Material.Metal)
+	weldTo(shieldHandle, armFrame)
+	local strap1 = makePart(shieldModel, "Strap1", Vector3.new(0.14, 0.16, 0.48), CFrame.new(-0.10, 0.30, 0), heavyGrip)
+	weldTo(shieldHandle, strap1)
+	local strap2 = makePart(shieldModel, "Strap2", Vector3.new(0.14, 0.16, 0.48), CFrame.new(-0.10, -0.30, 0), heavyGrip)
+	weldTo(shieldHandle, strap2)
+
+	addSocket(shieldHandle, "ShieldMount", Vector3.new(-0.18, 0, 0), Vector3.new(0, 90, 0))
+	addSocket(shieldHandle, "VfxShieldCenter", Vector3.new(-0.48, 0.10, 0))
+
+	return model
+end
+
+
+function WeaponModelBuilder.BuildCrystalClaymore(): Model
+	local model = Instance.new("Model")
+	model.Name = "art_crystal_claymore"
+
+	local quartzPurple = Color3.fromRGB(175, 95, 235)
+	local quartzGlow = Color3.fromRGB(215, 145, 255)
+	local titaniumGold = Color3.fromRGB(235, 205, 115)
+	local darkObsidian = Color3.fromRGB(42, 38, 48)
+	local crystalClear = Color3.fromRGB(145, 220, 255)
+
+	
+
+-- Sword Assembly (28 parts: prismatic crystalline anime claymore with faceted glass edge shards)
+	local handle = Instance.new("Part")
+	handle.Name = "Handle"
+	handle.Size = Vector3.new(0.20, 1.25, 0.20)
+	handle.CFrame = CFrame.new(0, 0, 0)
+	handle.Transparency = 1
+	handle.CanCollide = false
+	handle.Massless = true
+	handle.Parent = model
+	model.PrimaryPart = handle
+
+	local gripCyl = makeCylinder(model, "GripCylinder", 1.15, 0.18, CFrame.new(0, 0, 0), darkObsidian)
+	weldTo(handle, gripCyl)
+	local gripWrap1 = makeCylinder(model, "GripWrap1", 0.12, 0.20, CFrame.new(0, -0.32, 0), titaniumGold, Enum.Material.Metal)
+	weldTo(handle, gripWrap1)
+	local gripWrap2 = makeCylinder(model, "GripWrap2", 0.12, 0.20, CFrame.new(0, 0.32, 0), titaniumGold, Enum.Material.Metal)
+	weldTo(handle, gripWrap2)
+
+	local pommelNeck = makeCylinder(model, "PommelNeck", 0.10, 0.22, CFrame.new(0, -0.64, 0), titaniumGold, Enum.Material.Metal)
+	weldTo(handle, pommelNeck)
+	local pommelBall = makeBall(model, "PommelBall", 0.36, CFrame.new(0, -0.82, 0), titaniumGold, Enum.Material.Metal)
+	weldTo(handle, pommelBall)
+	local pommelGem = makeBall(model, "PommelGem", 0.18, CFrame.new(0, -1.02, 0), quartzGlow, Enum.Material.Neon)
+	weldTo(handle, pommelGem)
+
+	local guardCenter = makePart(model, "GuardCenter", Vector3.new(0.36, 0.22, 0.26), CFrame.new(0, 0.64, 0), titaniumGold, Enum.Material.Metal)
+	weldTo(handle, guardCenter)
+	local guardPrismL = makePart(model, "GuardPrismL", Vector3.new(0.18, 0.24, 0.12), CFrame.new(0, 0.66, 0.20), crystalClear, Enum.Material.Glass)
+	guardPrismL.Transparency = 0.25
+	weldTo(handle, guardPrismL)
+	local guardPrismR = makePart(model, "GuardPrismR", Vector3.new(0.18, 0.24, 0.12), CFrame.new(0, 0.66, -0.20), crystalClear, Enum.Material.Glass)
+	guardPrismR.Transparency = 0.25
+	weldTo(handle, guardPrismR)
+
+	local quillonL = makePart(model, "QuillonL", Vector3.new(0.20, 0.14, 0.54), CFrame.new(0, 0.66, 0.44) * CFrame.Angles(math.rad(10), 0, 0), titaniumGold, Enum.Material.Metal)
+	weldTo(handle, quillonL)
+	local quillonR = makePart(model, "QuillonR", Vector3.new(0.20, 0.14, 0.54), CFrame.new(0, 0.66, -0.44) * CFrame.Angles(math.rad(-10), 0, 0), titaniumGold, Enum.Material.Metal)
+	weldTo(handle, quillonR)
+	local finialL = makeBall(model, "QuillonFinialL", 0.18, CFrame.new(0, 0.76, 0.74), quartzPurple, Enum.Material.Glass)
+	weldTo(handle, finialL)
+	local finialR = makeBall(model, "QuillonFinialR", 0.18, CFrame.new(0, 0.76, -0.74), quartzPurple, Enum.Material.Glass)
+	weldTo(handle, finialR)
+
+	local ricasso = makePart(model, "Ricasso", Vector3.new(0.48, 0.60, 0.08), CFrame.new(0, 1.02, 0), titaniumGold, Enum.Material.Metal)
+	weldTo(handle, ricasso)
+	local shardBaseL = makePart(model, "ShardBaseL", Vector3.new(0.14, 0.35, 0.07), CFrame.new(0.28, 1.25, 0), crystalClear, Enum.Material.Glass)
+	shardBaseL.Transparency = 0.25
+	weldTo(handle, shardBaseL)
+	local shardBaseR = makePart(model, "ShardBaseR", Vector3.new(0.14, 0.35, 0.07), CFrame.new(-0.28, 1.25, 0), crystalClear, Enum.Material.Glass)
+	shardBaseR.Transparency = 0.25
+	weldTo(handle, shardBaseR)
+
+	local bladeFuller = makePart(model, "BladeFuller", Vector3.new(0.16, 3.40, 0.07), CFrame.new(0, 2.95, 0), quartzPurple, Enum.Material.Metal)
+	weldTo(handle, bladeFuller)
+	local crystalCore = makePart(model, "CrystalCore", Vector3.new(0.06, 2.90, 0.075), CFrame.new(0, 2.90, 0), quartzGlow, Enum.Material.Neon)
+	weldTo(handle, crystalCore)
+
+	local edgeFwd1 = makePart(model, "EdgeFwd1", Vector3.new(0.22, 1.70, 0.045), CFrame.new(0.18, 2.15, 0), crystalClear, Enum.Material.Glass)
+	edgeFwd1.Transparency = 0.25
+	weldTo(handle, edgeFwd1)
+	local edgeFwd2 = makePart(model, "EdgeFwd2", Vector3.new(0.20, 1.65, 0.045), CFrame.new(0.17, 3.80, 0), crystalClear, Enum.Material.Glass)
+	edgeFwd2.Transparency = 0.25
+	weldTo(handle, edgeFwd2)
+	local edgeBack1 = makePart(model, "EdgeBack1", Vector3.new(0.22, 1.70, 0.045), CFrame.new(-0.18, 2.15, 0), crystalClear, Enum.Material.Glass)
+	edgeBack1.Transparency = 0.25
+	weldTo(handle, edgeBack1)
+	local edgeBack2 = makePart(model, "EdgeBack2", Vector3.new(0.20, 1.65, 0.045), CFrame.new(-0.17, 3.80, 0), crystalClear, Enum.Material.Glass)
+	edgeBack2.Transparency = 0.25
+	weldTo(handle, edgeBack2)
+
+	local tipFlangeL = makePart(model, "TipFlangeL", Vector3.new(0.08, 0.35, 0.05), CFrame.new(0.20, 4.55, 0), titaniumGold, Enum.Material.Metal)
+	weldTo(handle, tipFlangeL)
+	local tipFlangeR = makePart(model, "TipFlangeR", Vector3.new(0.08, 0.35, 0.05), CFrame.new(-0.20, 4.55, 0), titaniumGold, Enum.Material.Metal)
+	weldTo(handle, tipFlangeR)
+
+	local tipFwd = makeWedge(model, "TipFwd", Vector3.new(0.045, 0.60, 0.26), CFrame.new(0.13, 4.90, 0) * CFrame.Angles(0, math.rad(-90), 0), crystalClear, Enum.Material.Glass)
+	tipFwd.Transparency = 0.25
+	weldTo(handle, tipFwd)
+	local tipBack = makeWedge(model, "TipBack", Vector3.new(0.045, 0.60, 0.26), CFrame.new(-0.13, 4.90, 0) * CFrame.Angles(0, math.rad(90), 0), crystalClear, Enum.Material.Glass)
+	tipBack.Transparency = 0.25
+	weldTo(handle, tipBack)
+
+	addSocket(handle, "Grip", Vector3.new(0, 0, 0), Vector3.new(0, -90, 0))
+	addSocket(handle, "Tip", Vector3.new(0, 5.20, 0), Vector3.new(0, 0, 0))
+	addSocket(handle, "VfxTip", Vector3.new(0, 5.20, 0))
+	addSocket(handle, "VfxBase", Vector3.new(0, 0.95, 0))
+	addSocket(handle, "VfxCore", Vector3.new(0, 0.66, 0))
+
+	local shieldModel = Instance.new("Model")
+	shieldModel.Name = "OffhandShield"
+	shieldModel.Parent = model
+
+	local shieldHandle = makePart(shieldModel, "HandleS", Vector3.new(0.20, 0.60, 0.20), CFrame.new(0, 0, 0), darkObsidian)
+	shieldModel.PrimaryPart = shieldHandle
+
+	local centralHexPlate = makePart(shieldModel, "CentralHexPlate", Vector3.new(0.24, 1.40, 1.40), CFrame.new(-0.34, 0.20, 0), quartzPurple, Enum.Material.Glass)
+	weldTo(shieldHandle, centralHexPlate)
+	local hexUpper = makePart(shieldModel, "HexUpper", Vector3.new(0.22, 1.00, 1.00), CFrame.new(-0.34, 1.20, 0), quartzPurple, Enum.Material.Glass)
+	weldTo(shieldHandle, hexUpper)
+	local hexLower = makePart(shieldModel, "HexLower", Vector3.new(0.22, 1.00, 1.00), CFrame.new(-0.34, -0.80, 0), quartzPurple, Enum.Material.Glass)
+	weldTo(shieldHandle, hexLower)
+	local hexLeft = makePart(shieldModel, "HexLeft", Vector3.new(0.22, 1.00, 0.90), CFrame.new(-0.34, 0.20, 0.95), quartzPurple, Enum.Material.Glass)
+	weldTo(shieldHandle, hexLeft)
+	local hexRight = makePart(shieldModel, "HexRight", Vector3.new(0.22, 1.00, 0.90), CFrame.new(-0.34, 0.20, -0.95), quartzPurple, Enum.Material.Glass)
+	weldTo(shieldHandle, hexRight)
+
+	-- Titanium Gold Frame Lattice
+	local frameTop = makePart(shieldModel, "FrameTop", Vector3.new(0.28, 0.18, 1.20), CFrame.new(-0.36, 1.70, 0), titaniumGold, Enum.Material.Metal)
+	weldTo(shieldHandle, frameTop)
+	local frameBottom = makePart(shieldModel, "FrameBottom", Vector3.new(0.28, 0.18, 1.20), CFrame.new(-0.36, -1.30, 0), titaniumGold, Enum.Material.Metal)
+	weldTo(shieldHandle, frameBottom)
+	local frameL1 = makePart(shieldModel, "FrameL1", Vector3.new(0.26, 1.50, 0.16), CFrame.new(-0.36, 0.85, 0.95), titaniumGold, Enum.Material.Metal)
+	weldTo(shieldHandle, frameL1)
+	local frameR1 = makePart(shieldModel, "FrameR1", Vector3.new(0.26, 1.50, 0.16), CFrame.new(-0.36, 0.85, -0.95), titaniumGold, Enum.Material.Metal)
+	weldTo(shieldHandle, frameR1)
+	local frameL2 = makePart(shieldModel, "FrameL2", Vector3.new(0.26, 1.50, 0.16), CFrame.new(-0.36, -0.45, 0.95), titaniumGold, Enum.Material.Metal)
+	weldTo(shieldHandle, frameL2)
+	local frameR2 = makePart(shieldModel, "FrameR2", Vector3.new(0.26, 1.50, 0.16), CFrame.new(-0.36, -0.45, -0.95), titaniumGold, Enum.Material.Metal)
+	weldTo(shieldHandle, frameR2)
+
+	-- Prismatic Emitter Nodes
+	local corePrism = makePart(shieldModel, "CorePrism", Vector3.new(0.36, 0.40, 0.40), CFrame.new(-0.42, 0.20, 0), quartzGlow, Enum.Material.Neon)
+	weldTo(shieldHandle, corePrism)
+	local prismNode1 = makePart(shieldModel, "PrismNode1", Vector3.new(0.28, 0.28, 0.28), CFrame.new(-0.38, 1.45, 0.65), crystalClear, Enum.Material.Glass)
+	weldTo(shieldHandle, prismNode1)
+	local prismNode2 = makePart(shieldModel, "PrismNode2", Vector3.new(0.28, 0.28, 0.28), CFrame.new(-0.38, 1.45, -0.65), crystalClear, Enum.Material.Glass)
+	weldTo(shieldHandle, prismNode2)
+	local prismNode3 = makePart(shieldModel, "PrismNode3", Vector3.new(0.28, 0.28, 0.28), CFrame.new(-0.38, -1.05, 0.65), crystalClear, Enum.Material.Glass)
+	weldTo(shieldHandle, prismNode3)
+	local prismNode4 = makePart(shieldModel, "PrismNode4", Vector3.new(0.28, 0.28, 0.28), CFrame.new(-0.38, -1.05, -0.65), crystalClear, Enum.Material.Glass)
+	weldTo(shieldHandle, prismNode4)
+
+	local floatingShard1 = makePart(shieldModel, "FloatingShard1", Vector3.new(0.24, 0.45, 0.22), CFrame.new(-0.38, 0.85, 0.55), quartzGlow, Enum.Material.Glass)
+	floatingShard1.Transparency = 0.25
+	weldTo(shieldHandle, floatingShard1)
+	local floatingShard2 = makePart(shieldModel, "FloatingShard2", Vector3.new(0.24, 0.45, 0.22), CFrame.new(-0.38, 0.85, -0.55), quartzGlow, Enum.Material.Glass)
+	floatingShard2.Transparency = 0.25
+	weldTo(shieldHandle, floatingShard2)
+	local floatingShard3 = makePart(shieldModel, "FloatingShard3", Vector3.new(0.24, 0.45, 0.22), CFrame.new(-0.38, -0.45, 0.55), quartzGlow, Enum.Material.Glass)
+	floatingShard3.Transparency = 0.25
+	weldTo(shieldHandle, floatingShard3)
+	local floatingShard4 = makePart(shieldModel, "FloatingShard4", Vector3.new(0.24, 0.45, 0.22), CFrame.new(-0.38, -0.45, -0.55), quartzGlow, Enum.Material.Glass)
+	floatingShard4.Transparency = 0.25
+	weldTo(shieldHandle, floatingShard4)
+
+	local crystalSpireTop = makePart(shieldModel, "CrystalSpireTop", Vector3.new(0.26, 0.50, 0.26), CFrame.new(-0.36, 1.95, 0), quartzGlow, Enum.Material.Glass)
+	crystalSpireTop.Transparency = 0.25
+	weldTo(shieldHandle, crystalSpireTop)
+	local crystalSpireBot = makePart(shieldModel, "CrystalSpireBot", Vector3.new(0.26, 0.50, 0.26), CFrame.new(-0.36, -1.55, 0), quartzGlow, Enum.Material.Glass)
+	crystalSpireBot.Transparency = 0.25
+	weldTo(shieldHandle, crystalSpireBot)
+
+	local mountBrace = makePart(shieldModel, "MountBrace", Vector3.new(0.18, 0.60, 0.28), CFrame.new(-0.16, 0.20, 0), titaniumGold, Enum.Material.Metal)
+	weldTo(shieldHandle, mountBrace)
+	local mountStrap1 = makePart(shieldModel, "MountStrap1", Vector3.new(0.12, 0.12, 0.42), CFrame.new(-0.10, 0.45, 0), darkObsidian)
+	weldTo(shieldHandle, mountStrap1)
+	local mountStrap2 = makePart(shieldModel, "MountStrap2", Vector3.new(0.12, 0.12, 0.42), CFrame.new(-0.10, -0.05, 0), darkObsidian)
+	weldTo(shieldHandle, mountStrap2)
+
+	addSocket(shieldHandle, "ShieldMount", Vector3.new(-0.18, 0, 0), Vector3.new(0, 90, 0))
+	addSocket(shieldHandle, "VfxShieldCenter", Vector3.new(-0.45, 0.10, 0))
+
+	return model
+end
+
+
+function WeaponModelBuilder.BuildResonantBulwark(): Model
+	local model = Instance.new("Model")
+	model.Name = "art_resonant_bulwark"
+
+	local sonicSilver = Color3.fromRGB(230, 235, 245)
+	local acousticBronze = Color3.fromRGB(195, 145, 75)
+	local frequencyCyan = Color3.fromRGB(85, 235, 255)
+	local dampenerGrey = Color3.fromRGB(55, 60, 70)
+	local resonatorNeon = Color3.fromRGB(120, 255, 240)
+
+	
+
+-- Sword Assembly (30 parts: sonic resonant longsword with acoustic bronze quillons)
+	local handle = Instance.new("Part")
+	handle.Name = "Handle"
+	handle.Size = Vector3.new(0.20, 1.30, 0.20)
+	handle.CFrame = CFrame.new(0, 0, 0)
+	handle.Transparency = 1
+	handle.CanCollide = false
+	handle.Massless = true
+	handle.Parent = model
+	model.PrimaryPart = handle
+
+	local gripCyl = makeCylinder(model, "GripCylinder", 1.20, 0.18, CFrame.new(0, 0, 0), dampenerGrey)
+	weldTo(handle, gripCyl)
+	local gripWrap1 = makeCylinder(model, "GripWrap1", 0.12, 0.20, CFrame.new(0, -0.35, 0), acousticBronze, Enum.Material.Metal)
+	weldTo(handle, gripWrap1)
+	local gripWrap2 = makeCylinder(model, "GripWrap2", 0.12, 0.20, CFrame.new(0, 0.35, 0), acousticBronze, Enum.Material.Metal)
+	weldTo(handle, gripWrap2)
+
+	local pommelNeck = makeCylinder(model, "PommelNeck", 0.10, 0.22, CFrame.new(0, -0.66, 0), acousticBronze, Enum.Material.Metal)
+	weldTo(handle, pommelNeck)
+	local pommelBall = makeBall(model, "PommelBall", 0.38, CFrame.new(0, -0.84, 0), dampenerGrey, Enum.Material.Metal)
+	weldTo(handle, pommelBall)
+	local pommelFinial = makeBall(model, "PommelFinial", 0.16, CFrame.new(0, -1.04, 0), acousticBronze, Enum.Material.Metal)
+	weldTo(handle, pommelFinial)
+
+	local guardCenter = makePart(model, "GuardCenter", Vector3.new(0.38, 0.24, 0.26), CFrame.new(0, 0.66, 0), dampenerGrey, Enum.Material.Metal)
+	weldTo(handle, guardCenter)
+	local guardCrest = makePart(model, "GuardCrest", Vector3.new(0.28, 0.30, 0.10), CFrame.new(0, 0.68, 0.12), acousticBronze, Enum.Material.Metal)
+	weldTo(handle, guardCrest)
+	local quillonL = makePart(model, "QuillonL", Vector3.new(0.20, 0.14, 0.54), CFrame.new(0, 0.68, 0.44) * CFrame.Angles(math.rad(10), 0, 0), dampenerGrey, Enum.Material.Metal)
+	weldTo(handle, quillonL)
+	local quillonR = makePart(model, "QuillonR", Vector3.new(0.20, 0.14, 0.54), CFrame.new(0, 0.68, -0.44) * CFrame.Angles(math.rad(-10), 0, 0), dampenerGrey, Enum.Material.Metal)
+	weldTo(handle, quillonR)
+	local quillonWingL = makePart(model, "QuillonWingL", Vector3.new(0.12, 0.22, 0.20), CFrame.new(0, 0.74, 0.58), acousticBronze, Enum.Material.Metal)
+	weldTo(handle, quillonWingL)
+	local quillonWingR = makePart(model, "QuillonWingR", Vector3.new(0.12, 0.22, 0.20), CFrame.new(0, 0.74, -0.58), acousticBronze, Enum.Material.Metal)
+	weldTo(handle, quillonWingR)
+	local finialL = makeBall(model, "QuillonFinialL", 0.18, CFrame.new(0, 0.80, 0.76), acousticBronze, Enum.Material.Metal)
+	weldTo(handle, finialL)
+	local finialR = makeBall(model, "QuillonFinialR", 0.18, CFrame.new(0, 0.80, -0.76), acousticBronze, Enum.Material.Metal)
+	weldTo(handle, finialR)
+
+	local ricasso = makePart(model, "Ricasso", Vector3.new(0.50, 0.60, 0.08), CFrame.new(0, 1.05, 0), dampenerGrey, Enum.Material.Metal)
+	weldTo(handle, ricasso)
+	local ricassoWingL = makePart(model, "RicassoWingL", Vector3.new(0.14, 0.35, 0.07), CFrame.new(0.30, 1.25, 0), acousticBronze, Enum.Material.Metal)
+	weldTo(handle, ricassoWingL)
+	local ricassoWingR = makePart(model, "RicassoWingR", Vector3.new(0.14, 0.35, 0.07), CFrame.new(-0.30, 1.25, 0), acousticBronze, Enum.Material.Metal)
+	weldTo(handle, ricassoWingR)
+
+	local bladeFuller = makePart(model, "BladeFuller", Vector3.new(0.18, 3.60, 0.07), CFrame.new(0, 3.10, 0), sonicSilver, Enum.Material.Metal)
+	weldTo(handle, bladeFuller)
+	local resonanceCore = makePart(model, "ResonanceCore", Vector3.new(0.06, 3.10, 0.075), CFrame.new(0, 3.05, 0), frequencyCyan, Enum.Material.Neon)
+	weldTo(handle, resonanceCore)
+
+	local edgeFwd1 = makePart(model, "EdgeFwd1", Vector3.new(0.22, 1.80, 0.045), CFrame.new(0.19, 2.25, 0), sonicSilver, Enum.Material.Metal)
+	weldTo(handle, edgeFwd1)
+	local edgeFwd2 = makePart(model, "EdgeFwd2", Vector3.new(0.20, 1.75, 0.045), CFrame.new(0.18, 3.95, 0), sonicSilver, Enum.Material.Metal)
+	weldTo(handle, edgeFwd2)
+	local edgeBack1 = makePart(model, "EdgeBack1", Vector3.new(0.22, 1.80, 0.045), CFrame.new(-0.19, 2.25, 0), sonicSilver, Enum.Material.Metal)
+	weldTo(handle, edgeBack1)
+	local edgeBack2 = makePart(model, "EdgeBack2", Vector3.new(0.20, 1.75, 0.045), CFrame.new(-0.18, 3.95, 0), sonicSilver, Enum.Material.Metal)
+	weldTo(handle, edgeBack2)
+
+	local midBladeSpurL = makePart(model, "MidBladeSpurL", Vector3.new(0.10, 0.28, 0.05), CFrame.new(0.22, 4.60, 0), acousticBronze, Enum.Material.Metal)
+	weldTo(handle, midBladeSpurL)
+	local midBladeSpurR = makePart(model, "MidBladeSpurR", Vector3.new(0.10, 0.28, 0.05), CFrame.new(-0.22, 4.60, 0), acousticBronze, Enum.Material.Metal)
+	weldTo(handle, midBladeSpurR)
+
+	local tipFwd = makeWedge(model, "TipFwd", Vector3.new(0.045, 0.62, 0.28), CFrame.new(0.14, 5.05, 0) * CFrame.Angles(0, math.rad(-90), 0), sonicSilver, Enum.Material.Metal)
+	weldTo(handle, tipFwd)
+	local tipBack = makeWedge(model, "TipBack", Vector3.new(0.045, 0.62, 0.28), CFrame.new(-0.14, 5.05, 0) * CFrame.Angles(0, math.rad(90), 0), sonicSilver, Enum.Material.Metal)
+	weldTo(handle, tipBack)
+
+	addSocket(handle, "Grip", Vector3.new(0, 0, 0), Vector3.new(0, -90, 0))
+	addSocket(handle, "Tip", Vector3.new(0, 5.35, 0), Vector3.new(0, 0, 0))
+	addSocket(handle, "VfxTip", Vector3.new(0, 5.35, 0))
+	addSocket(handle, "VfxBase", Vector3.new(0, 0.95, 0))
+	addSocket(handle, "VfxCore", Vector3.new(0, 0.68, 0))
+
+	local shieldModel = Instance.new("Model")
+	shieldModel.Name = "OffhandShield"
+	shieldModel.Parent = model
+
+	local shieldHandle = makePart(shieldModel, "HandleS", Vector3.new(0.22, 0.60, 0.22), CFrame.new(0, 0, 0), dampenerGrey)
+	shieldModel.PrimaryPart = shieldHandle
+
+	-- Concentric Hexagonal Acoustic Diaphragms
+	local centerDiaphragm = makePart(shieldModel, "CenterDiaphragm", Vector3.new(0.24, 1.50, 1.50), CFrame.new(-0.34, 0.15, 0), dampenerGrey, Enum.Material.Metal)
+	weldTo(shieldHandle, centerDiaphragm)
+	local outerPlateTop = makePart(shieldModel, "OuterPlateTop", Vector3.new(0.22, 0.70, 1.20), CFrame.new(-0.34, 1.15, 0), sonicSilver, Enum.Material.Metal)
+	weldTo(shieldHandle, outerPlateTop)
+	local outerPlateBot = makePart(shieldModel, "OuterPlateBot", Vector3.new(0.22, 0.70, 1.20), CFrame.new(-0.34, -0.85, 0), sonicSilver, Enum.Material.Metal)
+	weldTo(shieldHandle, outerPlateBot)
+	local outerPlateL = makePart(shieldModel, "OuterPlateL", Vector3.new(0.22, 1.20, 0.65), CFrame.new(-0.34, 0.15, 0.95), sonicSilver, Enum.Material.Metal)
+	weldTo(shieldHandle, outerPlateL)
+	local outerPlateR = makePart(shieldModel, "OuterPlateR", Vector3.new(0.22, 1.20, 0.65), CFrame.new(-0.34, 0.15, -0.95), sonicSilver, Enum.Material.Metal)
+	weldTo(shieldHandle, outerPlateR)
+
+	-- Acoustic Bronze Tuning Frames
+	local bronzeRimTop = makePart(shieldModel, "BronzeRimTop", Vector3.new(0.28, 0.18, 1.30), CFrame.new(-0.36, 1.55, 0), acousticBronze, Enum.Material.Metal)
+	weldTo(shieldHandle, bronzeRimTop)
+	local bronzeRimBot = makePart(shieldModel, "BronzeRimBot", Vector3.new(0.28, 0.18, 1.30), CFrame.new(-0.36, -1.25, 0), acousticBronze, Enum.Material.Metal)
+	weldTo(shieldHandle, bronzeRimBot)
+	local bronzeRimTL = makePart(shieldModel, "BronzeRimTL", Vector3.new(0.26, 1.20, 0.18), CFrame.new(-0.36, 0.95, 0.85), acousticBronze, Enum.Material.Metal)
+	weldTo(shieldHandle, bronzeRimTL)
+	local bronzeRimTR = makePart(shieldModel, "BronzeRimTR", Vector3.new(0.26, 1.20, 0.18), CFrame.new(-0.36, 0.95, -0.85), acousticBronze, Enum.Material.Metal)
+	weldTo(shieldHandle, bronzeRimTR)
+	local bronzeRimBL = makePart(shieldModel, "BronzeRimBL", Vector3.new(0.26, 1.20, 0.18), CFrame.new(-0.36, -0.65, 0.85), acousticBronze, Enum.Material.Metal)
+	weldTo(shieldHandle, bronzeRimBL)
+	local bronzeRimBR = makePart(shieldModel, "BronzeRimBR", Vector3.new(0.26, 1.20, 0.18), CFrame.new(-0.36, -0.65, -0.85), acousticBronze, Enum.Material.Metal)
+	weldTo(shieldHandle, bronzeRimBR)
+
+	-- Central Resonant Acoustic Speaker / Emitter Boss
+	local speakerHorn = makePart(shieldModel, "SpeakerHorn", Vector3.new(0.32, 0.80, 0.80), CFrame.new(-0.40, 0.15, 0), acousticBronze, Enum.Material.Metal)
+	weldTo(shieldHandle, speakerHorn)
+	local speakerCore = makePart(shieldModel, "SpeakerCore", Vector3.new(0.38, 0.38, 0.38), CFrame.new(-0.46, 0.15, 0), resonatorNeon, Enum.Material.Neon)
+	weldTo(shieldHandle, speakerCore)
+	local sonicWaveRing1 = makePart(shieldModel, "SonicWaveRing1", Vector3.new(0.30, 0.95, 0.95), CFrame.new(-0.38, 0.15, 0), frequencyCyan, Enum.Material.Glass)
+	sonicWaveRing1.Transparency = 0.30
+	weldTo(shieldHandle, sonicWaveRing1)
+
+	-- 6 Acoustic Resonant Emitters around periphery
+	local node1 = makePart(shieldModel, "Node1", Vector3.new(0.28, 0.22, 0.22), CFrame.new(-0.38, 1.35, 0), resonatorNeon, Enum.Material.Metal)
+	weldTo(shieldHandle, node1)
+	local node2 = makePart(shieldModel, "Node2", Vector3.new(0.28, 0.22, 0.22), CFrame.new(-0.38, -1.05, 0), resonatorNeon, Enum.Material.Metal)
+	weldTo(shieldHandle, node2)
+	local node3 = makePart(shieldModel, "Node3", Vector3.new(0.28, 0.22, 0.22), CFrame.new(-0.38, 0.75, 0.75), resonatorNeon, Enum.Material.Metal)
+	weldTo(shieldHandle, node3)
+	local node4 = makePart(shieldModel, "Node4", Vector3.new(0.28, 0.22, 0.22), CFrame.new(-0.38, 0.75, -0.75), resonatorNeon, Enum.Material.Metal)
+	weldTo(shieldHandle, node4)
+	local node5 = makePart(shieldModel, "Node5", Vector3.new(0.28, 0.22, 0.22), CFrame.new(-0.38, -0.45, 0.75), resonatorNeon, Enum.Material.Metal)
+	weldTo(shieldHandle, node5)
+	local node6 = makePart(shieldModel, "Node6", Vector3.new(0.28, 0.22, 0.22), CFrame.new(-0.38, -0.45, -0.75), resonatorNeon, Enum.Material.Metal)
+	weldTo(shieldHandle, node6)
+
+	-- Radial Shock Dampening Struts
+	local strut1 = makePart(shieldModel, "Strut1", Vector3.new(0.26, 0.60, 0.14), CFrame.new(-0.37, 0.85, 0), sonicSilver, Enum.Material.Metal)
+	weldTo(shieldHandle, strut1)
+	local strut2 = makePart(shieldModel, "Strut2", Vector3.new(0.26, 0.60, 0.14), CFrame.new(-0.37, -0.55, 0), sonicSilver, Enum.Material.Metal)
+	weldTo(shieldHandle, strut2)
+	local strut3 = makePart(shieldModel, "Strut3", Vector3.new(0.26, 0.14, 0.60), CFrame.new(-0.37, 0.15, 0.55), sonicSilver, Enum.Material.Metal)
+	weldTo(shieldHandle, strut3)
+	local strut4 = makePart(shieldModel, "Strut4", Vector3.new(0.26, 0.14, 0.60), CFrame.new(-0.37, 0.15, -0.55), sonicSilver, Enum.Material.Metal)
+	weldTo(shieldHandle, strut4)
+
+	local armHarness = makePart(shieldModel, "ArmHarness", Vector3.new(0.20, 0.70, 0.32), CFrame.new(-0.16, 0.15, 0), dampenerGrey, Enum.Material.Metal)
+	weldTo(shieldHandle, armHarness)
+	local strapTop = makePart(shieldModel, "StrapTop", Vector3.new(0.14, 0.14, 0.44), CFrame.new(-0.10, 0.42, 0), dampenerGrey)
+	weldTo(shieldHandle, strapTop)
+	local strapBot = makePart(shieldModel, "StrapBot", Vector3.new(0.14, 0.14, 0.44), CFrame.new(-0.10, -0.12, 0), dampenerGrey)
+	weldTo(shieldHandle, strapBot)
+
+	addSocket(shieldHandle, "ShieldMount", Vector3.new(-0.18, 0, 0), Vector3.new(0, 90, 0))
+	addSocket(shieldHandle, "VfxShieldCenter", Vector3.new(-0.48, 0.10, 0))
+
+	return model
+end
+
+
+function WeaponModelBuilder.BuildPaladinClaymoreArtifact(): Model
+	local model = Instance.new("Model")
+	model.Name = "art_paladin_claymore"
+
+	local holyPlatinum = Color3.fromRGB(240, 245, 255)
+	local divineGold = Color3.fromRGB(245, 205, 75)
+	local sunRadiance = Color3.fromRGB(255, 240, 145)
+	local pureWhite = Color3.fromRGB(250, 250, 255)
+	local sanctifiedSteel = Color3.fromRGB(180, 190, 210)
+
+	-- Consecrated Executioner Claymore (34 parts)
+
+-- Sword Assembly (32 parts: holy Zweihander with parrying lugs and divine gold quillons)
+	local handle = Instance.new("Part")
+	handle.Name = "Handle"
+	handle.Size = Vector3.new(0.20, 1.40, 0.20)
+	handle.CFrame = CFrame.new(0, 0, 0)
+	handle.Transparency = 1
+	handle.CanCollide = false
+	handle.Massless = true
+	handle.Parent = model
+	model.PrimaryPart = handle
+
+	local gripCyl = makeCylinder(model, "GripCylinder", 1.30, 0.18, CFrame.new(0, 0, 0), pureWhite)
+	weldTo(handle, gripCyl)
+	local gripWrap1 = makeCylinder(model, "GripWrap1", 0.12, 0.20, CFrame.new(0, -0.40, 0), divineGold, Enum.Material.Metal)
+	weldTo(handle, gripWrap1)
+	local gripWrap2 = makeCylinder(model, "GripWrap2", 0.12, 0.20, CFrame.new(0, 0.0, 0), divineGold, Enum.Material.Metal)
+	weldTo(handle, gripWrap2)
+	local gripWrap3 = makeCylinder(model, "GripWrap3", 0.12, 0.20, CFrame.new(0, 0.40, 0), divineGold, Enum.Material.Metal)
+	weldTo(handle, gripWrap3)
+
+	local pommelNeck = makeCylinder(model, "PommelNeck", 0.12, 0.24, CFrame.new(0, -0.72, 0), divineGold, Enum.Material.Metal)
+	weldTo(handle, pommelNeck)
+	local pommelBall = makeBall(model, "PommelBall", 0.40, CFrame.new(0, -0.92, 0), divineGold, Enum.Material.Metal)
+	weldTo(handle, pommelBall)
+	local pommelCross = makePart(model, "PommelCross", Vector3.new(0.26, 0.26, 0.08), CFrame.new(0, -1.16, 0), sunRadiance, Enum.Material.Neon)
+	weldTo(handle, pommelCross)
+
+	local guardCenter = makePart(model, "GuardCenter", Vector3.new(0.40, 0.24, 0.28), CFrame.new(0, 0.72, 0), divineGold, Enum.Material.Metal)
+	weldTo(handle, guardCenter)
+	local guardEcusson = makePart(model, "GuardEcusson", Vector3.new(0.30, 0.32, 0.10), CFrame.new(0, 0.74, 0.14), holyPlatinum, Enum.Material.Metal)
+	weldTo(handle, guardEcusson)
+	local quillonL = makePart(model, "QuillonL", Vector3.new(0.22, 0.16, 0.58), CFrame.new(0, 0.74, 0.48) * CFrame.Angles(math.rad(10), 0, 0), divineGold, Enum.Material.Metal)
+	weldTo(handle, quillonL)
+	local quillonR = makePart(model, "QuillonR", Vector3.new(0.22, 0.16, 0.58), CFrame.new(0, 0.74, -0.48) * CFrame.Angles(math.rad(-10), 0, 0), divineGold, Enum.Material.Metal)
+	weldTo(handle, quillonR)
+	local quillonWingL = makePart(model, "QuillonWingL", Vector3.new(0.14, 0.24, 0.24), CFrame.new(0, 0.82, 0.64), divineGold, Enum.Material.Metal)
+	weldTo(handle, quillonWingL)
+	local quillonWingR = makePart(model, "QuillonWingR", Vector3.new(0.14, 0.24, 0.24), CFrame.new(0, 0.82, -0.64), divineGold, Enum.Material.Metal)
+	weldTo(handle, quillonWingR)
+	local finialL = makeBall(model, "QuillonFinialL", 0.20, CFrame.new(0, 0.88, 0.82), divineGold, Enum.Material.Metal)
+	weldTo(handle, finialL)
+	local finialR = makeBall(model, "QuillonFinialR", 0.20, CFrame.new(0, 0.88, -0.82), divineGold, Enum.Material.Metal)
+	weldTo(handle, finialR)
+
+	local ricasso = makePart(model, "Ricasso", Vector3.new(0.52, 0.70, 0.08), CFrame.new(0, 1.15, 0), sanctifiedSteel, Enum.Material.Metal)
+	weldTo(handle, ricasso)
+	local parryingLugL = makePart(model, "ParryingLugL", Vector3.new(0.26, 0.18, 0.08), CFrame.new(0.38, 1.45, 0) * CFrame.Angles(0, 0, math.rad(-25)), divineGold, Enum.Material.Metal)
+	weldTo(handle, parryingLugL)
+	local parryingLugR = makePart(model, "ParryingLugR", Vector3.new(0.26, 0.18, 0.08), CFrame.new(-0.38, 1.45, 0) * CFrame.Angles(0, 0, math.rad(25)), divineGold, Enum.Material.Metal)
+	weldTo(handle, parryingLugR)
+
+	local fullerMain = makePart(model, "FullerMain", Vector3.new(0.18, 3.80, 0.07), CFrame.new(0, 3.40, 0), holyPlatinum, Enum.Material.Metal)
+	weldTo(handle, fullerMain)
+	local runeChannel = makePart(model, "RuneChannel", Vector3.new(0.06, 3.20, 0.075), CFrame.new(0, 3.35, 0), sunRadiance, Enum.Material.Neon)
+	weldTo(handle, runeChannel)
+
+	local edgeFwd1 = makePart(model, "EdgeFwd1", Vector3.new(0.22, 1.90, 0.045), CFrame.new(0.20, 2.45, 0), holyPlatinum, Enum.Material.Metal)
+	weldTo(handle, edgeFwd1)
+	local edgeFwd2 = makePart(model, "EdgeFwd2", Vector3.new(0.20, 1.85, 0.045), CFrame.new(0.19, 4.25, 0), holyPlatinum, Enum.Material.Metal)
+	weldTo(handle, edgeFwd2)
+	local edgeBack1 = makePart(model, "EdgeBack1", Vector3.new(0.22, 1.90, 0.045), CFrame.new(-0.20, 2.45, 0), holyPlatinum, Enum.Material.Metal)
+	weldTo(handle, edgeBack1)
+	local edgeBack2 = makePart(model, "EdgeBack2", Vector3.new(0.20, 1.85, 0.045), CFrame.new(-0.19, 4.25, 0), holyPlatinum, Enum.Material.Metal)
+	weldTo(handle, edgeBack2)
+
+	local midSpurL = makePart(model, "MidSpurL", Vector3.new(0.12, 0.32, 0.05), CFrame.new(0.24, 4.90, 0), divineGold, Enum.Material.Metal)
+	weldTo(handle, midSpurL)
+	local midSpurR = makePart(model, "MidSpurR", Vector3.new(0.12, 0.32, 0.05), CFrame.new(-0.24, 4.90, 0), divineGold, Enum.Material.Metal)
+	weldTo(handle, midSpurR)
+
+	local tipFwd = makeWedge(model, "TipFwd", Vector3.new(0.045, 0.65, 0.30), CFrame.new(0.15, 5.45, 0) * CFrame.Angles(0, math.rad(-90), 0), holyPlatinum, Enum.Material.Metal)
+	weldTo(handle, tipFwd)
+	local tipBack = makeWedge(model, "TipBack", Vector3.new(0.045, 0.65, 0.30), CFrame.new(-0.15, 5.45, 0) * CFrame.Angles(0, math.rad(90), 0), holyPlatinum, Enum.Material.Metal)
+	weldTo(handle, tipBack)
+
+	addSocket(handle, "Grip", Vector3.new(0, 0, 0), Vector3.new(0, -90, 0))
+	addSocket(handle, "Tip", Vector3.new(0, 5.75, 0), Vector3.new(0, 0, 0))
+	addSocket(handle, "VfxTip", Vector3.new(0, 5.75, 0))
+	addSocket(handle, "VfxBase", Vector3.new(0, 1.00, 0))
+	addSocket(handle, "VfxCore", Vector3.new(0, 0.72, 0))
+
+	local shieldModel = Instance.new("Model")
+	shieldModel.Name = "OffhandShield"
+	shieldModel.Parent = model
+
+	local shieldHandle = makePart(shieldModel, "HandleS", Vector3.new(0.22, 0.65, 0.22), CFrame.new(0, 0, 0), pureWhite)
+	shieldModel.PrimaryPart = shieldHandle
+
+	local kitePlateMain = makePart(shieldModel, "KitePlateMain", Vector3.new(0.22, 1.50, 1.45), CFrame.new(-0.34, 0.80, 0), holyPlatinum, Enum.Material.Metal)
+	weldTo(shieldHandle, kitePlateMain)
+	local kitePlateMid = makePart(shieldModel, "KitePlateMid", Vector3.new(0.20, 1.25, 1.30), CFrame.new(-0.34, -0.45, 0), holyPlatinum, Enum.Material.Metal)
+	weldTo(shieldHandle, kitePlateMid)
+	local kitePlateTaper = makePart(shieldModel, "KitePlateTaper", Vector3.new(0.18, 1.00, 0.90), CFrame.new(-0.34, -1.45, 0), holyPlatinum, Enum.Material.Metal)
+	weldTo(shieldHandle, kitePlateTaper)
+	local kitePlateSpike = makePart(shieldModel, "KitePlateSpike", Vector3.new(0.16, 0.50, 0.40), CFrame.new(-0.34, -2.15, 0), divineGold, Enum.Material.Metal)
+	weldTo(shieldHandle, kitePlateSpike)
+
+	-- Gold Trim Bevels
+	local trimTop = makePart(shieldModel, "TrimTop", Vector3.new(0.28, 0.20, 1.55), CFrame.new(-0.36, 1.55, 0), divineGold, Enum.Material.Metal)
+	weldTo(shieldHandle, trimTop)
+	local trimL1 = makePart(shieldModel, "TrimL1", Vector3.new(0.26, 1.40, 0.16), CFrame.new(-0.36, 0.85, 0.78), divineGold, Enum.Material.Metal)
+	weldTo(shieldHandle, trimL1)
+	local trimR1 = makePart(shieldModel, "TrimR1", Vector3.new(0.26, 1.40, 0.16), CFrame.new(-0.36, 0.85, -0.78), divineGold, Enum.Material.Metal)
+	weldTo(shieldHandle, trimR1)
+	local trimL2 = makePart(shieldModel, "TrimL2", Vector3.new(0.24, 1.80, 0.16), CFrame.new(-0.36, -0.65, 0.58), divineGold, Enum.Material.Metal)
+	weldTo(shieldHandle, trimL2)
+	local trimR2 = makePart(shieldModel, "TrimR2", Vector3.new(0.24, 1.80, 0.16), CFrame.new(-0.36, -0.65, -0.58), divineGold, Enum.Material.Metal)
+	weldTo(shieldHandle, trimR2)
+
+	-- Golden Angelic Wings overlay on face
+	local faceWingL1 = makePart(shieldModel, "FaceWingL1", Vector3.new(0.26, 0.80, 0.45), CFrame.new(-0.38, 0.85, 0.48), sanctifiedSteel, Enum.Material.Metal)
+	weldTo(shieldHandle, faceWingL1)
+	local faceWingR1 = makePart(shieldModel, "FaceWingR1", Vector3.new(0.26, 0.80, 0.45), CFrame.new(-0.38, 0.85, -0.48), sanctifiedSteel, Enum.Material.Metal)
+	weldTo(shieldHandle, faceWingR1)
+	local faceWingL2 = makePart(shieldModel, "FaceWingL2", Vector3.new(0.24, 0.60, 0.35), CFrame.new(-0.38, 0.25, 0.40), divineGold, Enum.Material.Metal)
+	weldTo(shieldHandle, faceWingL2)
+	local faceWingR2 = makePart(shieldModel, "FaceWingR2", Vector3.new(0.24, 0.60, 0.35), CFrame.new(-0.38, 0.25, -0.40), divineGold, Enum.Material.Metal)
+	weldTo(shieldHandle, faceWingR2)
+
+	-- Central Sunburst Boss
+	local sunCenterDisc = makePart(shieldModel, "SunCenterDisc", Vector3.new(0.32, 0.85, 0.85), CFrame.new(-0.40, 0.45, 0), divineGold, Enum.Material.Metal)
+	weldTo(shieldHandle, sunCenterDisc)
+	local sunInnerGlow = makePart(shieldModel, "SunInnerGlow", Vector3.new(0.38, 0.42, 0.42), CFrame.new(-0.46, 0.20, 0), sunRadiance, Enum.Material.Neon)
+	weldTo(shieldHandle, sunInnerGlow)
+
+	-- Radiating 8 Sun Rays
+	local rayUp = makePart(shieldModel, "RayUp", Vector3.new(0.28, 0.60, 0.16), CFrame.new(-0.40, 1.05, 0), divineGold, Enum.Material.Metal)
+	weldTo(shieldHandle, rayUp)
+	local rayDown = makePart(shieldModel, "RayDown", Vector3.new(0.28, 0.60, 0.16), CFrame.new(-0.40, -0.15, 0), divineGold, Enum.Material.Metal)
+	weldTo(shieldHandle, rayDown)
+	local rayLeft = makePart(shieldModel, "RayLeft", Vector3.new(0.28, 0.16, 0.60), CFrame.new(-0.40, 0.45, 0.60), divineGold, Enum.Material.Metal)
+	weldTo(shieldHandle, rayLeft)
+	local rayRight = makePart(shieldModel, "RayRight", Vector3.new(0.28, 0.16, 0.60), CFrame.new(-0.40, 0.45, -0.60), divineGold, Enum.Material.Metal)
+	weldTo(shieldHandle, rayRight)
+	local rayTL = makePart(shieldModel, "RayTL", Vector3.new(0.26, 0.42, 0.42), CFrame.new(-0.40, 0.88, 0.42), sunRadiance, Enum.Material.Metal)
+	weldTo(shieldHandle, rayTL)
+	local rayTR = makePart(shieldModel, "RayTR", Vector3.new(0.26, 0.42, 0.42), CFrame.new(-0.40, 0.88, -0.42), sunRadiance, Enum.Material.Metal)
+	weldTo(shieldHandle, rayTR)
+	local rayBL = makePart(shieldModel, "RayBL", Vector3.new(0.26, 0.42, 0.42), CFrame.new(-0.40, 0.02, 0.42), sunRadiance, Enum.Material.Metal)
+	weldTo(shieldHandle, rayBL)
+	local rayBR = makePart(shieldModel, "RayBR", Vector3.new(0.26, 0.42, 0.42), CFrame.new(-0.40, 0.02, -0.42), sunRadiance, Enum.Material.Metal)
+	weldTo(shieldHandle, rayBR)
+
+	local lowerCruciform = makePart(shieldModel, "LowerCruciform", Vector3.new(0.24, 0.80, 0.35), CFrame.new(-0.38, -0.95, 0), divineGold, Enum.Material.Metal)
+	weldTo(shieldHandle, lowerCruciform)
+	local lowerGem = makePart(shieldModel, "LowerGem", Vector3.new(0.28, 0.25, 0.25), CFrame.new(-0.42, -0.95, 0), sunRadiance, Enum.Material.Glass)
+	lowerGem.Transparency = 0.25
+	weldTo(shieldHandle, lowerGem)
+	local haloStud1 = makePart(shieldModel, "HaloStud1", Vector3.new(0.28, 0.18, 0.18), CFrame.new(-0.38, 1.25, 0.55), sunRadiance, Enum.Material.Metal)
+	weldTo(shieldHandle, haloStud1)
+	local haloStud2 = makePart(shieldModel, "HaloStud2", Vector3.new(0.28, 0.18, 0.18), CFrame.new(-0.38, 1.25, -0.55), sunRadiance, Enum.Material.Metal)
+	weldTo(shieldHandle, haloStud2)
+	local haloStud3 = makePart(shieldModel, "HaloStud3", Vector3.new(0.28, 0.18, 0.18), CFrame.new(-0.38, 1.65, 0), sunRadiance, Enum.Material.Metal)
+	weldTo(shieldHandle, haloStud3)
+
+	local armPad = makePart(shieldModel, "ArmPad", Vector3.new(0.18, 0.80, 0.34), CFrame.new(-0.16, 0.10, 0), pureWhite)
+	weldTo(shieldHandle, armPad)
+	local strapTop = makePart(shieldModel, "StrapTop", Vector3.new(0.14, 0.16, 0.46), CFrame.new(-0.10, 0.38, 0), divineGold, Enum.Material.Metal)
+	weldTo(shieldHandle, strapTop)
+	local strapBot = makePart(shieldModel, "StrapBot", Vector3.new(0.14, 0.16, 0.46), CFrame.new(-0.10, -0.18, 0), divineGold, Enum.Material.Metal)
+	weldTo(shieldHandle, strapBot)
+
+	addSocket(shieldHandle, "ShieldMount", Vector3.new(-0.18, 0, 0), Vector3.new(0, 90, 0))
+	addSocket(shieldHandle, "VfxShieldCenter", Vector3.new(-0.48, 0.10, 0))
+
+	return model
+end
+
+
+function WeaponModelBuilder.BuildAegisOfValor(): Model
+	local model = Instance.new("Model")
+	model.Name = "art_aegis_of_valor"
+
+	local royalGold = Color3.fromRGB(245, 205, 65)
+	local solarIncandescent = Color3.fromRGB(255, 242, 165)
+	local mirrorSilver = Color3.fromRGB(235, 240, 250)
+	local rubyGlint = Color3.fromRGB(235, 35, 65)
+	local royalCrimson = Color3.fromRGB(115, 25, 38)
+
+	-- Royal Gilded Arming Sword (36 parts)
+
+-- Sword Assembly (36 parts: royal grandmaster greatsword with solar quillons)
+	local handle = Instance.new("Part")
+	handle.Name = "Handle"
+	handle.Size = Vector3.new(0.20, 1.45, 0.20)
+	handle.CFrame = CFrame.new(0, 0, 0)
+	handle.Transparency = 1
+	handle.CanCollide = false
+	handle.Massless = true
+	handle.Parent = model
+	model.PrimaryPart = handle
+
+	local gripCyl = makeCylinder(model, "GripCylinder", 1.35, 0.18, CFrame.new(0, 0, 0), royalCrimson)
+	weldTo(handle, gripCyl)
+	local gripWrap1 = makeCylinder(model, "GripWrap1", 0.12, 0.20, CFrame.new(0, -0.42, 0), royalGold, Enum.Material.Metal)
+	weldTo(handle, gripWrap1)
+	local gripWrap2 = makeCylinder(model, "GripWrap2", 0.12, 0.20, CFrame.new(0, 0.0, 0), royalGold, Enum.Material.Metal)
+	weldTo(handle, gripWrap2)
+	local gripWrap3 = makeCylinder(model, "GripWrap3", 0.12, 0.20, CFrame.new(0, 0.42, 0), royalGold, Enum.Material.Metal)
+	weldTo(handle, gripWrap3)
+
+	local pommelNeck = makeCylinder(model, "PommelNeck", 0.12, 0.24, CFrame.new(0, -0.74, 0), royalGold, Enum.Material.Metal)
+	weldTo(handle, pommelNeck)
+	local pommelBall = makeBall(model, "PommelBall", 0.42, CFrame.new(0, -0.94, 0), royalGold, Enum.Material.Metal)
+	weldTo(handle, pommelBall)
+	local pommelSun = makeBall(model, "PommelSun", 0.20, CFrame.new(0, -1.18, 0), solarIncandescent, Enum.Material.Neon)
+	weldTo(handle, pommelSun)
+
+	local guardCenter = makePart(model, "GuardCenter", Vector3.new(0.42, 0.24, 0.28), CFrame.new(0, 0.74, 0), royalGold, Enum.Material.Metal)
+	weldTo(handle, guardCenter)
+	local guardEcusson = makePart(model, "GuardEcusson", Vector3.new(0.32, 0.34, 0.10), CFrame.new(0, 0.76, 0.14), solarIncandescent, Enum.Material.Neon)
+	weldTo(handle, guardEcusson)
+	local quillonL = makePart(model, "QuillonL", Vector3.new(0.24, 0.16, 0.60), CFrame.new(0, 0.76, 0.50) * CFrame.Angles(math.rad(12), 0, 0), royalGold, Enum.Material.Metal)
+	weldTo(handle, quillonL)
+	local quillonR = makePart(model, "QuillonR", Vector3.new(0.24, 0.16, 0.60), CFrame.new(0, 0.76, -0.50) * CFrame.Angles(math.rad(-12), 0, 0), royalGold, Enum.Material.Metal)
+	weldTo(handle, quillonR)
+	local quillonWingL = makePart(model, "QuillonWingL", Vector3.new(0.14, 0.26, 0.26), CFrame.new(0, 0.84, 0.68), royalGold, Enum.Material.Metal)
+	weldTo(handle, quillonWingL)
+	local quillonWingR = makePart(model, "QuillonWingR", Vector3.new(0.14, 0.26, 0.26), CFrame.new(0, 0.84, -0.68), royalGold, Enum.Material.Metal)
+	weldTo(handle, quillonWingR)
+	local finialL = makeBall(model, "QuillonFinialL", 0.22, CFrame.new(0, 0.92, 0.86), royalGold, Enum.Material.Metal)
+	weldTo(handle, finialL)
+	local finialR = makeBall(model, "QuillonFinialR", 0.22, CFrame.new(0, 0.92, -0.86), royalGold, Enum.Material.Metal)
+	weldTo(handle, finialR)
+
+	local ricasso = makePart(model, "Ricasso", Vector3.new(0.54, 0.75, 0.08), CFrame.new(0, 1.20, 0), mirrorSilver, Enum.Material.Metal)
+	weldTo(handle, ricasso)
+	local parryingLugL = makePart(model, "ParryingLugL", Vector3.new(0.28, 0.20, 0.08), CFrame.new(0.40, 1.50, 0) * CFrame.Angles(0, 0, math.rad(-25)), royalGold, Enum.Material.Metal)
+	weldTo(handle, parryingLugL)
+	local parryingLugR = makePart(model, "ParryingLugR", Vector3.new(0.28, 0.20, 0.08), CFrame.new(-0.40, 1.50, 0) * CFrame.Angles(0, 0, math.rad(25)), royalGold, Enum.Material.Metal)
+	weldTo(handle, parryingLugR)
+	local lugSpurL = makePart(model, "LugSpurL", Vector3.new(0.10, 0.16, 0.07), CFrame.new(0.52, 1.62, 0), rubyGlint, Enum.Material.Neon)
+	weldTo(handle, lugSpurL)
+	local lugSpurR = makePart(model, "LugSpurR", Vector3.new(0.10, 0.16, 0.07), CFrame.new(-0.52, 1.62, 0), rubyGlint, Enum.Material.Neon)
+	weldTo(handle, lugSpurR)
+
+	local fullerMain = makePart(model, "FullerMain", Vector3.new(0.18, 4.00, 0.07), CFrame.new(0, 3.55, 0), mirrorSilver, Enum.Material.Metal)
+	weldTo(handle, fullerMain)
+	local fullerInlay = makePart(model, "FullerInlay", Vector3.new(0.06, 3.40, 0.075), CFrame.new(0, 3.50, 0), royalGold, Enum.Material.Metal)
+	weldTo(handle, fullerInlay)
+
+	local edgeFwd1 = makePart(model, "EdgeFwd1", Vector3.new(0.24, 2.00, 0.045), CFrame.new(0.21, 2.55, 0), mirrorSilver, Enum.Material.Metal)
+	weldTo(handle, edgeFwd1)
+	local edgeFwd2 = makePart(model, "EdgeFwd2", Vector3.new(0.22, 1.95, 0.045), CFrame.new(0.20, 4.45, 0), mirrorSilver, Enum.Material.Metal)
+	weldTo(handle, edgeFwd2)
+	local edgeBack1 = makePart(model, "EdgeBack1", Vector3.new(0.24, 2.00, 0.045), CFrame.new(-0.21, 2.55, 0), mirrorSilver, Enum.Material.Metal)
+	weldTo(handle, edgeBack1)
+	local edgeBack2 = makePart(model, "EdgeBack2", Vector3.new(0.22, 1.95, 0.045), CFrame.new(-0.20, 4.45, 0), mirrorSilver, Enum.Material.Metal)
+	weldTo(handle, edgeBack2)
+
+	local midSpurL = makePart(model, "MidSpurL", Vector3.new(0.14, 0.35, 0.05), CFrame.new(0.26, 5.15, 0), royalGold, Enum.Material.Metal)
+	weldTo(handle, midSpurL)
+	local midSpurR = makePart(model, "MidSpurR", Vector3.new(0.14, 0.35, 0.05), CFrame.new(-0.26, 5.15, 0), royalGold, Enum.Material.Metal)
+	weldTo(handle, midSpurR)
+
+	local tipFwd = makeWedge(model, "TipFwd", Vector3.new(0.045, 0.68, 0.32), CFrame.new(0.16, 5.75, 0) * CFrame.Angles(0, math.rad(-90), 0), mirrorSilver, Enum.Material.Metal)
+	weldTo(handle, tipFwd)
+	local tipBack = makeWedge(model, "TipBack", Vector3.new(0.045, 0.68, 0.32), CFrame.new(-0.16, 5.75, 0) * CFrame.Angles(0, math.rad(90), 0), mirrorSilver, Enum.Material.Metal)
+	weldTo(handle, tipBack)
+
+	addSocket(handle, "Grip", Vector3.new(0, 0, 0), Vector3.new(0, -90, 0))
+	addSocket(handle, "Tip", Vector3.new(0, 6.05, 0), Vector3.new(0, 0, 0))
+	addSocket(handle, "VfxTip", Vector3.new(0, 6.05, 0))
+	addSocket(handle, "VfxBase", Vector3.new(0, 1.05, 0))
+	addSocket(handle, "VfxCore", Vector3.new(0, 0.74, 0))
+
+	local shieldModel = Instance.new("Model")
+	shieldModel.Name = "OffhandShield"
+	shieldModel.Parent = model
+
+	local shieldHandle = makePart(shieldModel, "HandleS", Vector3.new(0.22, 0.60, 0.22), CFrame.new(0, 0, 0), royalCrimson)
+	shieldModel.PrimaryPart = shieldHandle
+
+	-- Concentric Round Solar Plates
+	local centralAegisDisc = makePart(shieldModel, "CentralAegisDisc", Vector3.new(0.24, 1.80, 1.80), CFrame.new(-0.34, 0.15, 0), royalGold, Enum.Material.Metal)
+	weldTo(shieldHandle, centralAegisDisc)
+	local innerMirrorPlate = makePart(shieldModel, "InnerMirrorPlate", Vector3.new(0.26, 1.40, 1.40), CFrame.new(-0.36, 0.15, 0), mirrorSilver, Enum.Material.Metal)
+	weldTo(shieldHandle, innerMirrorPlate)
+	local coreSolarHum = makePart(shieldModel, "CoreSolarHum", Vector3.new(0.38, 0.75, 0.75), CFrame.new(-0.44, 0.15, 0), solarIncandescent, Enum.Material.Glass)
+	coreSolarHum.Transparency = 0.25
+	weldTo(shieldHandle, coreSolarHum)
+	local coreRubyBoss = makePart(shieldModel, "CoreRubyBoss", Vector3.new(0.44, 0.38, 0.38), CFrame.new(-0.48, 0.15, 0), rubyGlint, Enum.Material.Neon)
+	weldTo(shieldHandle, coreRubyBoss)
+
+	-- 8 Curved Corona Sunburst Blades around perimeter
+	local coronaN = makePart(shieldModel, "CoronaN", Vector3.new(0.26, 0.55, 0.32), CFrame.new(-0.36, 1.15, 0), royalGold, Enum.Material.Metal)
+	weldTo(shieldHandle, coronaN)
+	local coronaS = makePart(shieldModel, "CoronaS", Vector3.new(0.26, 0.55, 0.32), CFrame.new(-0.36, -0.85, 0), royalGold, Enum.Material.Metal)
+	weldTo(shieldHandle, coronaS)
+	local coronaE = makePart(shieldModel, "CoronaE", Vector3.new(0.26, 0.32, 0.55), CFrame.new(-0.36, 0.15, 1.00), royalGold, Enum.Material.Metal)
+	weldTo(shieldHandle, coronaE)
+	local coronaW = makePart(shieldModel, "CoronaW", Vector3.new(0.26, 0.32, 0.55), CFrame.new(-0.36, 0.15, -1.00), royalGold, Enum.Material.Metal)
+	weldTo(shieldHandle, coronaW)
+	local coronaNE = makePart(shieldModel, "CoronaNE", Vector3.new(0.24, 0.45, 0.45), CFrame.new(-0.36, 0.85, 0.70), royalGold, Enum.Material.Metal)
+	weldTo(shieldHandle, coronaNE)
+	local coronaNW = makePart(shieldModel, "CoronaNW", Vector3.new(0.24, 0.45, 0.45), CFrame.new(-0.36, 0.85, -0.70), royalGold, Enum.Material.Metal)
+	weldTo(shieldHandle, coronaNW)
+	local coronaSE = makePart(shieldModel, "CoronaSE", Vector3.new(0.24, 0.45, 0.45), CFrame.new(-0.36, -0.55, 0.70), royalGold, Enum.Material.Metal)
+	weldTo(shieldHandle, coronaSE)
+	local coronaSW = makePart(shieldModel, "CoronaSW", Vector3.new(0.24, 0.45, 0.45), CFrame.new(-0.36, -0.55, -0.70), royalGold, Enum.Material.Metal)
+	weldTo(shieldHandle, coronaSW)
+
+	-- 8 Radiant Tip Prisms on Corona Blades
+	local tipN = makePart(shieldModel, "TipN", Vector3.new(0.28, 0.22, 0.22), CFrame.new(-0.38, 1.48, 0), solarIncandescent, Enum.Material.Metal)
+	weldTo(shieldHandle, tipN)
+	local tipS = makePart(shieldModel, "TipS", Vector3.new(0.28, 0.22, 0.22), CFrame.new(-0.38, -1.18, 0), solarIncandescent, Enum.Material.Metal)
+	weldTo(shieldHandle, tipS)
+	local tipE = makePart(shieldModel, "TipE", Vector3.new(0.28, 0.22, 0.22), CFrame.new(-0.38, 0.15, 1.32), solarIncandescent, Enum.Material.Metal)
+	weldTo(shieldHandle, tipE)
+	local tipW = makePart(shieldModel, "TipW", Vector3.new(0.28, 0.22, 0.22), CFrame.new(-0.38, 0.15, -1.32), solarIncandescent, Enum.Material.Metal)
+	weldTo(shieldHandle, tipW)
+	local tipNE = makePart(shieldModel, "TipNE", Vector3.new(0.26, 0.20, 0.20), CFrame.new(-0.38, 1.08, 0.92), rubyGlint, Enum.Material.Metal)
+	weldTo(shieldHandle, tipNE)
+	local tipNW = makePart(shieldModel, "TipNW", Vector3.new(0.26, 0.20, 0.20), CFrame.new(-0.38, 1.08, -0.92), rubyGlint, Enum.Material.Metal)
+	weldTo(shieldHandle, tipNW)
+	local tipSE = makePart(shieldModel, "TipSE", Vector3.new(0.26, 0.20, 0.20), CFrame.new(-0.38, -0.78, 0.92), rubyGlint, Enum.Material.Metal)
+	weldTo(shieldHandle, tipSE)
+	local tipSW = makePart(shieldModel, "TipSW", Vector3.new(0.26, 0.20, 0.20), CFrame.new(-0.38, -0.78, -0.92), rubyGlint, Enum.Material.Metal)
+	weldTo(shieldHandle, tipSW)
+
+	-- Barrier Projector Rings
+	local barrierDomeL = makePart(shieldModel, "BarrierDomeL", Vector3.new(0.22, 1.20, 0.24), CFrame.new(-0.37, 0.15, 0.60), solarIncandescent, Enum.Material.Glass)
+	barrierDomeL.Transparency = 0.25
+	weldTo(shieldHandle, barrierDomeL)
+	local barrierDomeR = makePart(shieldModel, "BarrierDomeR", Vector3.new(0.22, 1.20, 0.24), CFrame.new(-0.37, 0.15, -0.60), solarIncandescent, Enum.Material.Glass)
+	barrierDomeR.Transparency = 0.25
+	weldTo(shieldHandle, barrierDomeR)
+	local filigreeArc1 = makePart(shieldModel, "FiligreeArc1", Vector3.new(0.26, 0.22, 1.00), CFrame.new(-0.37, 0.70, 0), royalGold, Enum.Material.Metal)
+	weldTo(shieldHandle, filigreeArc1)
+	local filigreeArc2 = makePart(shieldModel, "FiligreeArc2", Vector3.new(0.26, 0.22, 1.00), CFrame.new(-0.37, -0.40, 0), royalGold, Enum.Material.Metal)
+	weldTo(shieldHandle, filigreeArc2)
+	local domeNode1 = makePart(shieldModel, "DomeNode1", Vector3.new(0.30, 0.18, 0.18), CFrame.new(-0.39, 0.60, 0.40), rubyGlint, Enum.Material.Glass)
+	domeNode1.Transparency = 0.25
+	weldTo(shieldHandle, domeNode1)
+	local domeNode2 = makePart(shieldModel, "DomeNode2", Vector3.new(0.30, 0.18, 0.18), CFrame.new(-0.39, 0.60, -0.40), rubyGlint, Enum.Material.Glass)
+	domeNode2.Transparency = 0.25
+	weldTo(shieldHandle, domeNode2)
+	local domeNode3 = makePart(shieldModel, "DomeNode3", Vector3.new(0.30, 0.18, 0.18), CFrame.new(-0.39, -0.30, 0.40), rubyGlint, Enum.Material.Glass)
+	domeNode3.Transparency = 0.25
+	weldTo(shieldHandle, domeNode3)
+	local domeNode4 = makePart(shieldModel, "DomeNode4", Vector3.new(0.30, 0.18, 0.18), CFrame.new(-0.39, -0.30, -0.40), rubyGlint, Enum.Material.Glass)
+	domeNode4.Transparency = 0.25
+	weldTo(shieldHandle, domeNode4)
+
+	local armMountHarness = makePart(shieldModel, "ArmMountHarness", Vector3.new(0.20, 0.80, 0.32), CFrame.new(-0.16, 0.15, 0), royalGold, Enum.Material.Metal)
+	weldTo(shieldHandle, armMountHarness)
+	local strapTop = makePart(shieldModel, "StrapTop", Vector3.new(0.14, 0.14, 0.44), CFrame.new(-0.10, 0.42, 0), royalCrimson)
+	weldTo(shieldHandle, strapTop)
+	local strapBot = makePart(shieldModel, "StrapBot", Vector3.new(0.14, 0.14, 0.44), CFrame.new(-0.10, -0.12, 0), royalCrimson)
+	weldTo(shieldHandle, strapBot)
+
+	addSocket(shieldHandle, "ShieldMount", Vector3.new(-0.18, 0, 0), Vector3.new(0, 90, 0))
+	addSocket(shieldHandle, "VfxShieldCenter", Vector3.new(-0.50, 0.10, 0))
+
+	return model
+end
+
+
+function WeaponModelBuilder.BuildBladeOfTheRift(): Model
+	local model = Instance.new("Model")
+	model.Name = "art_blade_of_the_rift"
+
+	local cosmicGlass = Color3.fromRGB(25, 20, 42)
+	local nebulaViolet = Color3.fromRGB(165, 85, 245)
+	local starlightCyan = Color3.fromRGB(80, 230, 255)
+	local antiqueBronze = Color3.fromRGB(180, 140, 75)
+	local cathedralStone = Color3.fromRGB(65, 62, 75)
+
+	-- Dimensional Cosmic Glass Blade (39 parts)
+
+-- Sword Assembly (39 parts: cosmic void rift blade with segmented edge fangs and floating rift shards)
+	local handle = Instance.new("Part")
+	handle.Name = "Handle"
+	handle.Size = Vector3.new(0.20, 1.50, 0.20)
+	handle.CFrame = CFrame.new(0, 0, 0)
+	handle.Transparency = 1
+	handle.CanCollide = false
+	handle.Massless = true
+	handle.Parent = model
+	model.PrimaryPart = handle
+
+	local gripCyl = makeCylinder(model, "GripCylinder", 1.40, 0.18, CFrame.new(0, 0, 0), cathedralStone)
+	weldTo(handle, gripCyl)
+	local gripWrap1 = makeCylinder(model, "GripWrap1", 0.12, 0.20, CFrame.new(0, -0.45, 0), antiqueBronze, Enum.Material.Metal)
+	weldTo(handle, gripWrap1)
+	local gripWrap2 = makeCylinder(model, "GripWrap2", 0.12, 0.20, CFrame.new(0, 0.0, 0), antiqueBronze, Enum.Material.Metal)
+	weldTo(handle, gripWrap2)
+	local gripWrap3 = makeCylinder(model, "GripWrap3", 0.12, 0.20, CFrame.new(0, 0.45, 0), antiqueBronze, Enum.Material.Metal)
+	weldTo(handle, gripWrap3)
+
+	local pommelNeck = makeCylinder(model, "PommelNeck", 0.12, 0.24, CFrame.new(0, -0.76, 0), antiqueBronze, Enum.Material.Metal)
+	weldTo(handle, pommelNeck)
+	local pommelBall = makeBall(model, "PommelBall", 0.42, CFrame.new(0, -0.96, 0), cosmicGlass, Enum.Material.Metal)
+	weldTo(handle, pommelBall)
+	local pommelFinial = makeBall(model, "PommelFinial", 0.20, CFrame.new(0, -1.20, 0), antiqueBronze, Enum.Material.Metal)
+	weldTo(handle, pommelFinial)
+
+	local guardCenter = makePart(model, "GuardCenter", Vector3.new(0.42, 0.24, 0.28), CFrame.new(0, 0.76, 0), cosmicGlass, Enum.Material.Metal)
+	weldTo(handle, guardCenter)
+	local guardRiftCore = makeBall(model, "GuardRiftCore", 0.24, CFrame.new(0, 0.78, 0.14), starlightCyan, Enum.Material.Neon)
+	weldTo(handle, guardRiftCore)
+	local quillonL = makePart(model, "QuillonL", Vector3.new(0.24, 0.16, 0.62), CFrame.new(0, 0.78, 0.52) * CFrame.Angles(math.rad(12), 0, 0), cosmicGlass, Enum.Material.Metal)
+	weldTo(handle, quillonL)
+	local quillonR = makePart(model, "QuillonR", Vector3.new(0.24, 0.16, 0.62), CFrame.new(0, 0.78, -0.52) * CFrame.Angles(math.rad(-12), 0, 0), cosmicGlass, Enum.Material.Metal)
+	weldTo(handle, quillonR)
+	local finialL = makeBall(model, "QuillonFinialL", 0.22, CFrame.new(0, 0.94, 0.88), antiqueBronze, Enum.Material.Metal)
+	weldTo(handle, finialL)
+	local finialR = makeBall(model, "QuillonFinialR", 0.22, CFrame.new(0, 0.94, -0.88), antiqueBronze, Enum.Material.Metal)
+	weldTo(handle, finialR)
+
+	local ricasso = makePart(model, "Ricasso", Vector3.new(0.56, 0.75, 0.08), CFrame.new(0, 1.25, 0), nebulaViolet, Enum.Material.Metal)
+	weldTo(handle, ricasso)
+	local riftShardL1 = makePart(model, "RiftShardL1", Vector3.new(0.14, 0.35, 0.07), CFrame.new(0.34, 1.50, 0), starlightCyan, Enum.Material.Neon)
+	weldTo(handle, riftShardL1)
+	local riftShardL2 = makePart(model, "RiftShardL2", Vector3.new(0.12, 0.30, 0.07), CFrame.new(0.42, 1.85, 0), antiqueBronze, Enum.Material.Metal)
+	weldTo(handle, riftShardL2)
+	local riftShardR1 = makePart(model, "RiftShardR1", Vector3.new(0.14, 0.35, 0.07), CFrame.new(-0.34, 1.50, 0), starlightCyan, Enum.Material.Neon)
+	weldTo(handle, riftShardR1)
+	local riftShardR2 = makePart(model, "RiftShardR2", Vector3.new(0.12, 0.30, 0.07), CFrame.new(-0.42, 1.85, 0), antiqueBronze, Enum.Material.Metal)
+	weldTo(handle, riftShardR2)
+
+	local bladeFuller = makePart(model, "BladeFuller", Vector3.new(0.18, 4.20, 0.07), CFrame.new(0, 3.70, 0), nebulaViolet, Enum.Material.Metal)
+	weldTo(handle, bladeFuller)
+	local riftChannel = makePart(model, "RiftChannel", Vector3.new(0.06, 3.60, 0.075), CFrame.new(0, 3.65, 0), starlightCyan, Enum.Material.Neon)
+	weldTo(handle, riftChannel)
+
+	local edgeFwd1 = makePart(model, "EdgeFwd1", Vector3.new(0.24, 2.10, 0.045), CFrame.new(0.22, 2.65, 0), nebulaViolet, Enum.Material.Metal)
+	weldTo(handle, edgeFwd1)
+	local edgeFwd2 = makePart(model, "EdgeFwd2", Vector3.new(0.22, 2.05, 0.045), CFrame.new(0.21, 4.65, 0), nebulaViolet, Enum.Material.Metal)
+	weldTo(handle, edgeFwd2)
+	local edgeBack1 = makePart(model, "EdgeBack1", Vector3.new(0.24, 2.10, 0.045), CFrame.new(-0.22, 2.65, 0), nebulaViolet, Enum.Material.Metal)
+	weldTo(handle, edgeBack1)
+	local edgeBack2 = makePart(model, "EdgeBack2", Vector3.new(0.22, 2.05, 0.045), CFrame.new(-0.21, 4.65, 0), nebulaViolet, Enum.Material.Metal)
+	weldTo(handle, edgeBack2)
+
+	local serrationFwd1 = makePart(model, "SerrationFwd1", Vector3.new(0.12, 0.30, 0.05), CFrame.new(0.28, 5.00, 0), antiqueBronze, Enum.Material.Metal)
+	weldTo(handle, serrationFwd1)
+	local serrationFwd2 = makePart(model, "SerrationFwd2", Vector3.new(0.10, 0.25, 0.05), CFrame.new(0.26, 5.35, 0), antiqueBronze, Enum.Material.Metal)
+	weldTo(handle, serrationFwd2)
+	local serrationBack1 = makePart(model, "SerrationBack1", Vector3.new(0.12, 0.30, 0.05), CFrame.new(-0.28, 5.00, 0), antiqueBronze, Enum.Material.Metal)
+	weldTo(handle, serrationBack1)
+	local serrationBack2 = makePart(model, "SerrationBack2", Vector3.new(0.10, 0.25, 0.05), CFrame.new(-0.26, 5.35, 0), antiqueBronze, Enum.Material.Metal)
+	weldTo(handle, serrationBack2)
+
+	local floatingShard1 = makePart(model, "FloatingShard1", Vector3.new(0.08, 0.30, 0.05), CFrame.new(0.36, 4.20, 0), starlightCyan, Enum.Material.Neon)
+	weldTo(handle, floatingShard1)
+	local floatingShard2 = makePart(model, "FloatingShard2", Vector3.new(0.08, 0.30, 0.05), CFrame.new(-0.36, 4.20, 0), starlightCyan, Enum.Material.Neon)
+	weldTo(handle, floatingShard2)
+
+	local tipFwd = makeWedge(model, "TipFwd", Vector3.new(0.045, 0.70, 0.34), CFrame.new(0.17, 5.95, 0) * CFrame.Angles(0, math.rad(-90), 0), nebulaViolet, Enum.Material.Metal)
+	weldTo(handle, tipFwd)
+	local tipBack = makeWedge(model, "TipBack", Vector3.new(0.045, 0.70, 0.34), CFrame.new(-0.17, 5.95, 0) * CFrame.Angles(0, math.rad(90), 0), nebulaViolet, Enum.Material.Metal)
+	weldTo(handle, tipBack)
+
+	addSocket(handle, "Grip", Vector3.new(0, 0, 0), Vector3.new(0, -90, 0))
+	addSocket(handle, "Tip", Vector3.new(0, 6.25, 0), Vector3.new(0, 0, 0))
+	addSocket(handle, "VfxTip", Vector3.new(0, 6.25, 0))
+	addSocket(handle, "VfxBase", Vector3.new(0, 1.10, 0))
+	addSocket(handle, "VfxCore", Vector3.new(0, 0.76, 0))
+
+	local shieldModel = Instance.new("Model")
+	shieldModel.Name = "OffhandShield"
+	shieldModel.Parent = model
+
+	local shieldHandle = makePart(shieldModel, "HandleS", Vector3.new(0.22, 0.65, 0.22), CFrame.new(0, 0, 0), cathedralStone)
+	shieldModel.PrimaryPart = shieldHandle
+
+	-- Gothic Cathedral Arch Frame
+	local pillarL = makePart(shieldModel, "PillarL", Vector3.new(0.30, 3.20, 0.26), CFrame.new(-0.36, 0.10, 0.80), cathedralStone, Enum.Material.Metal)
+	weldTo(shieldHandle, pillarL)
+	local pillarR = makePart(shieldModel, "PillarR", Vector3.new(0.30, 3.20, 0.26), CFrame.new(-0.36, 0.10, -0.80), cathedralStone, Enum.Material.Metal)
+	weldTo(shieldHandle, pillarR)
+	local archRoofL = makePart(shieldModel, "ArchRoofL", Vector3.new(0.28, 0.70, 0.55), CFrame.new(-0.36, 1.85, 0.42), cathedralStone, Enum.Material.Metal)
+	weldTo(shieldHandle, archRoofL)
+	local archRoofR = makePart(shieldModel, "ArchRoofR", Vector3.new(0.28, 0.70, 0.55), CFrame.new(-0.36, 1.85, -0.42), cathedralStone, Enum.Material.Metal)
+	weldTo(shieldHandle, archRoofR)
+	local archKeystone = makePart(shieldModel, "ArchKeystone", Vector3.new(0.34, 0.40, 0.40), CFrame.new(-0.38, 2.22, 0), antiqueBronze, Enum.Material.Metal)
+	weldTo(shieldHandle, archKeystone)
+	local baseSill = makePart(shieldModel, "BaseSill", Vector3.new(0.32, 0.35, 1.80), CFrame.new(-0.36, -1.55, 0), cathedralStone, Enum.Material.Metal)
+	weldTo(shieldHandle, baseSill)
+
+	-- Antique Bronze Filigree Trim
+	local bronzeTrimL = makePart(shieldModel, "BronzeTrimL", Vector3.new(0.32, 3.20, 0.10), CFrame.new(-0.38, 0.10, 0.94), antiqueBronze, Enum.Material.Metal)
+	weldTo(shieldHandle, bronzeTrimL)
+	local bronzeTrimR = makePart(shieldModel, "BronzeTrimR", Vector3.new(0.32, 3.20, 0.10), CFrame.new(-0.38, 0.10, -0.94), antiqueBronze, Enum.Material.Metal)
+	weldTo(shieldHandle, bronzeTrimR)
+	local pinnacleSpireL = makePart(shieldModel, "PinnacleSpireL", Vector3.new(0.22, 0.60, 0.22), CFrame.new(-0.38, 1.95, 0.80), antiqueBronze, Enum.Material.Metal)
+	weldTo(shieldHandle, pinnacleSpireL)
+	local pinnacleSpireR = makePart(shieldModel, "PinnacleSpireR", Vector3.new(0.22, 0.60, 0.22), CFrame.new(-0.38, 1.95, -0.80), antiqueBronze, Enum.Material.Metal)
+	weldTo(shieldHandle, pinnacleSpireR)
+
+	-- Cosmic Rift Mirror Face (The Portal into the Void)
+	local portalFace = makePart(shieldModel, "PortalFace", Vector3.new(0.22, 2.80, 1.35), CFrame.new(-0.34, 0.25, 0), cosmicGlass, Enum.Material.Glass)
+	weldTo(shieldHandle, portalFace)
+	local nebulaSwirl = makePart(shieldModel, "NebulaSwirl", Vector3.new(0.26, 2.20, 1.05), CFrame.new(-0.38, 0.25, 0), nebulaViolet, Enum.Material.SmoothPlastic)
+	weldTo(shieldHandle, nebulaSwirl)
+	local portalSingularity = makePart(shieldModel, "PortalSingularity", Vector3.new(0.36, 0.45, 0.45), CFrame.new(-0.44, 0.20, 0), starlightCyan, Enum.Material.Neon)
+	weldTo(shieldHandle, portalSingularity)
+
+	-- 8 Floating Cathedral Rose Window Crystals
+	local rosePetal1 = makePart(shieldModel, "RosePetal1", Vector3.new(0.28, 0.35, 0.18), CFrame.new(-0.40, 0.95, 0), starlightCyan, Enum.Material.Glass)
+	rosePetal1.Transparency = 0.20
+	weldTo(shieldHandle, rosePetal1)
+	local rosePetal2 = makePart(shieldModel, "RosePetal2", Vector3.new(0.28, 0.35, 0.18), CFrame.new(-0.40, -0.25, 0), starlightCyan, Enum.Material.Glass)
+	rosePetal2.Transparency = 0.20
+	weldTo(shieldHandle, rosePetal2)
+	local rosePetal3 = makePart(shieldModel, "RosePetal3", Vector3.new(0.28, 0.18, 0.35), CFrame.new(-0.40, 0.35, 0.50), starlightCyan, Enum.Material.Glass)
+	rosePetal3.Transparency = 0.20
+	weldTo(shieldHandle, rosePetal3)
+	local rosePetal4 = makePart(shieldModel, "RosePetal4", Vector3.new(0.28, 0.18, 0.35), CFrame.new(-0.40, 0.35, -0.50), starlightCyan, Enum.Material.Glass)
+	rosePetal4.Transparency = 0.20
+	weldTo(shieldHandle, rosePetal4)
+	local rosePetal5 = makePart(shieldModel, "RosePetal5", Vector3.new(0.26, 0.25, 0.25), CFrame.new(-0.40, 0.75, 0.35), nebulaViolet, Enum.Material.Glass)
+	rosePetal5.Transparency = 0.20
+	weldTo(shieldHandle, rosePetal5)
+	local rosePetal6 = makePart(shieldModel, "RosePetal6", Vector3.new(0.26, 0.25, 0.25), CFrame.new(-0.40, 0.75, -0.35), nebulaViolet, Enum.Material.Glass)
+	rosePetal6.Transparency = 0.20
+	weldTo(shieldHandle, rosePetal6)
+	local rosePetal7 = makePart(shieldModel, "RosePetal7", Vector3.new(0.26, 0.25, 0.25), CFrame.new(-0.40, -0.05, 0.35), nebulaViolet, Enum.Material.Glass)
+	rosePetal7.Transparency = 0.20
+	weldTo(shieldHandle, rosePetal7)
+	local rosePetal8 = makePart(shieldModel, "RosePetal8", Vector3.new(0.26, 0.25, 0.25), CFrame.new(-0.40, -0.05, -0.35), nebulaViolet, Enum.Material.Glass)
+	rosePetal8.Transparency = 0.20
+	weldTo(shieldHandle, rosePetal8)
+
+	-- Lower Gothic Rosette
+	local lowerGothicPlate = makePart(shieldModel, "LowerGothicPlate", Vector3.new(0.26, 0.80, 0.90), CFrame.new(-0.36, -0.95, 0), antiqueBronze, Enum.Material.Metal)
+	weldTo(shieldHandle, lowerGothicPlate)
+	local lowerRosetteRune = makePart(shieldModel, "LowerRosetteRune", Vector3.new(0.30, 0.40, 0.40), CFrame.new(-0.40, -0.95, 0), nebulaViolet, Enum.Material.Metal)
+	weldTo(shieldHandle, lowerRosetteRune)
+
+	-- Gothic Tracery Bars
+	local traceryL = makePart(shieldModel, "TraceryL", Vector3.new(0.28, 1.40, 0.08), CFrame.new(-0.38, 0.35, 0.28), antiqueBronze, Enum.Material.Metal)
+	weldTo(shieldHandle, traceryL)
+	local traceryR = makePart(shieldModel, "TraceryR", Vector3.new(0.28, 1.40, 0.08), CFrame.new(-0.38, 0.35, -0.28), antiqueBronze, Enum.Material.Metal)
+	weldTo(shieldHandle, traceryR)
+	local portalShard1 = makePart(shieldModel, "PortalShard1", Vector3.new(0.26, 0.30, 0.20), CFrame.new(-0.40, 1.40, 0.45), starlightCyan, Enum.Material.Glass)
+	portalShard1.Transparency = 0.20
+	weldTo(shieldHandle, portalShard1)
+	local portalShard2 = makePart(shieldModel, "PortalShard2", Vector3.new(0.26, 0.30, 0.20), CFrame.new(-0.40, 1.40, -0.45), starlightCyan, Enum.Material.Glass)
+	portalShard2.Transparency = 0.20
+	weldTo(shieldHandle, portalShard2)
+	local portalShard3 = makePart(shieldModel, "PortalShard3", Vector3.new(0.26, 0.30, 0.20), CFrame.new(-0.40, -0.70, 0.45), starlightCyan, Enum.Material.Glass)
+	portalShard3.Transparency = 0.20
+	weldTo(shieldHandle, portalShard3)
+	local portalShard4 = makePart(shieldModel, "PortalShard4", Vector3.new(0.26, 0.30, 0.20), CFrame.new(-0.40, -0.70, -0.45), starlightCyan, Enum.Material.Glass)
+	portalShard4.Transparency = 0.20
+	weldTo(shieldHandle, portalShard4)
+	local sillRivetL = makePart(shieldModel, "SillRivetL", Vector3.new(0.34, 0.18, 0.18), CFrame.new(-0.38, -1.55, 0.70), antiqueBronze, Enum.Material.Metal)
+	weldTo(shieldHandle, sillRivetL)
+	local sillRivetR = makePart(shieldModel, "SillRivetR", Vector3.new(0.34, 0.18, 0.18), CFrame.new(-0.38, -1.55, -0.70), antiqueBronze, Enum.Material.Metal)
+	weldTo(shieldHandle, sillRivetR)
+
+	local armVaultBrace = makePart(shieldModel, "ArmVaultBrace", Vector3.new(0.20, 0.90, 0.34), CFrame.new(-0.16, 0.10, 0), cathedralStone, Enum.Material.Metal)
+	weldTo(shieldHandle, armVaultBrace)
+	local strapTop = makePart(shieldModel, "StrapTop", Vector3.new(0.14, 0.16, 0.46), CFrame.new(-0.10, 0.42, 0), antiqueBronze, Enum.Material.Metal)
+	weldTo(shieldHandle, strapTop)
+	local strapBot = makePart(shieldModel, "StrapBot", Vector3.new(0.14, 0.16, 0.46), CFrame.new(-0.10, -0.22, 0), antiqueBronze, Enum.Material.Metal)
+	weldTo(shieldHandle, strapBot)
+
+	addSocket(shieldHandle, "ShieldMount", Vector3.new(-0.18, 0, 0), Vector3.new(0, 90, 0))
+	addSocket(shieldHandle, "VfxShieldCenter", Vector3.new(-0.46, 0.10, 0))
+
+	return model
+end
+
+
+function WeaponModelBuilder.BuildAegisCore(): Model
+	local model = Instance.new("Model")
+	model.Name = "art_aegis_core"
+
+	local astralGold = Color3.fromRGB(245, 210, 75)
+	local riftCorePlasma = Color3.fromRGB(90, 240, 255)
+	local hyperViolet = Color3.fromRGB(195, 75, 255)
+	local darkMatter = Color3.fromRGB(25, 22, 35)
+	local stellarWhite = Color3.fromRGB(245, 248, 255)
+
+	-- Floating Segmented Rift Blade (41 parts)
+
+-- Sword Assembly (39 parts: astral aegis sword with cosmic prism wings and dual fullers)
+	local handle = Instance.new("Part")
+	handle.Name = "Handle"
+	handle.Size = Vector3.new(0.20, 1.55, 0.20)
+	handle.CFrame = CFrame.new(0, 0, 0)
+	handle.Transparency = 1
+	handle.CanCollide = false
+	handle.Massless = true
+	handle.Parent = model
+	model.PrimaryPart = handle
+
+	local gripCyl = makeCylinder(model, "GripCylinder", 1.45, 0.18, CFrame.new(0, 0, 0), darkMatter)
+	weldTo(handle, gripCyl)
+	local gripWrap1 = makeCylinder(model, "GripWrap1", 0.12, 0.20, CFrame.new(0, -0.48, 0), astralGold, Enum.Material.Metal)
+	weldTo(handle, gripWrap1)
+	local gripWrap2 = makeCylinder(model, "GripWrap2", 0.12, 0.20, CFrame.new(0, 0.0, 0), astralGold, Enum.Material.Metal)
+	weldTo(handle, gripWrap2)
+	local gripWrap3 = makeCylinder(model, "GripWrap3", 0.12, 0.20, CFrame.new(0, 0.48, 0), astralGold, Enum.Material.Metal)
+	weldTo(handle, gripWrap3)
+
+	local pommelNeck = makeCylinder(model, "PommelNeck", 0.12, 0.24, CFrame.new(0, -0.78, 0), astralGold, Enum.Material.Metal)
+	weldTo(handle, pommelNeck)
+	local pommelBall = makeBall(model, "PommelBall", 0.44, CFrame.new(0, -0.98, 0), darkMatter, Enum.Material.Metal)
+	weldTo(handle, pommelBall)
+	local pommelFinial = makeBall(model, "PommelFinial", 0.22, CFrame.new(0, -1.24, 0), astralGold, Enum.Material.Metal)
+	weldTo(handle, pommelFinial)
+
+	local guardCenter = makePart(model, "GuardCenter", Vector3.new(0.44, 0.24, 0.28), CFrame.new(0, 0.78, 0), astralGold, Enum.Material.Metal)
+	weldTo(handle, guardCenter)
+	local guardCorePrism = makeBall(model, "GuardCorePrism", 0.24, CFrame.new(0, 0.80, 0.14), riftCorePlasma, Enum.Material.Neon)
+	weldTo(handle, guardCorePrism)
+	local quillonL = makePart(model, "QuillonL", Vector3.new(0.24, 0.16, 0.64), CFrame.new(0, 0.80, 0.54) * CFrame.Angles(math.rad(12), 0, 0), astralGold, Enum.Material.Metal)
+	weldTo(handle, quillonL)
+	local quillonR = makePart(model, "QuillonR", Vector3.new(0.24, 0.16, 0.64), CFrame.new(0, 0.80, -0.54) * CFrame.Angles(math.rad(-12), 0, 0), astralGold, Enum.Material.Metal)
+	weldTo(handle, quillonR)
+	local finialL = makeBall(model, "QuillonFinialL", 0.22, CFrame.new(0, 0.96, 0.90), astralGold, Enum.Material.Metal)
+	weldTo(handle, finialL)
+	local finialR = makeBall(model, "QuillonFinialR", 0.22, CFrame.new(0, 0.96, -0.90), astralGold, Enum.Material.Metal)
+	weldTo(handle, finialR)
+
+	local ricasso = makePart(model, "Ricasso", Vector3.new(0.58, 0.80, 0.08), CFrame.new(0, 1.28, 0), stellarWhite, Enum.Material.Metal)
+	weldTo(handle, ricasso)
+	local ricassoSpikeL = makePart(model, "RicassoSpikeL", Vector3.new(0.14, 0.35, 0.07), CFrame.new(0.36, 1.55, 0), riftCorePlasma, Enum.Material.Neon)
+	weldTo(handle, ricassoSpikeL)
+	local ricassoSpikeR = makePart(model, "RicassoSpikeR", Vector3.new(0.14, 0.35, 0.07), CFrame.new(-0.36, 1.55, 0), riftCorePlasma, Enum.Material.Neon)
+	weldTo(handle, ricassoSpikeR)
+	local cosmicRibbonL = makePart(model, "CosmicRibbonL", Vector3.new(0.12, 0.30, 0.07), CFrame.new(0.44, 1.90, 0), astralGold, Enum.Material.Metal)
+	weldTo(handle, cosmicRibbonL)
+	local cosmicRibbonR = makePart(model, "CosmicRibbonR", Vector3.new(0.12, 0.30, 0.07), CFrame.new(-0.44, 1.90, 0), astralGold, Enum.Material.Metal)
+	weldTo(handle, cosmicRibbonR)
+
+	local bladeFuller = makePart(model, "BladeFuller", Vector3.new(0.18, 4.30, 0.07), CFrame.new(0, 3.75, 0), stellarWhite, Enum.Material.Metal)
+	weldTo(handle, bladeFuller)
+	local fullerCore = makePart(model, "FullerCore", Vector3.new(0.06, 3.70, 0.075), CFrame.new(0, 3.70, 0), riftCorePlasma, Enum.Material.Neon)
+	weldTo(handle, fullerCore)
+
+	local edgeFwd1 = makePart(model, "EdgeFwd1", Vector3.new(0.24, 2.15, 0.045), CFrame.new(0.23, 2.70, 0), stellarWhite, Enum.Material.Metal)
+	weldTo(handle, edgeFwd1)
+	local edgeFwd2 = makePart(model, "EdgeFwd2", Vector3.new(0.22, 2.10, 0.045), CFrame.new(0.22, 4.75, 0), stellarWhite, Enum.Material.Metal)
+	weldTo(handle, edgeFwd2)
+	local edgeBack1 = makePart(model, "EdgeBack1", Vector3.new(0.24, 2.15, 0.045), CFrame.new(-0.23, 2.70, 0), stellarWhite, Enum.Material.Metal)
+	weldTo(handle, edgeBack1)
+	local edgeBack2 = makePart(model, "EdgeBack2", Vector3.new(0.22, 2.10, 0.045), CFrame.new(-0.22, 4.75, 0), stellarWhite, Enum.Material.Metal)
+	weldTo(handle, edgeBack2)
+
+	local midSpurL = makePart(model, "MidSpurL", Vector3.new(0.12, 0.32, 0.05), CFrame.new(0.30, 5.10, 0), astralGold, Enum.Material.Metal)
+	weldTo(handle, midSpurL)
+	local midSpurR = makePart(model, "MidSpurR", Vector3.new(0.12, 0.32, 0.05), CFrame.new(-0.30, 5.10, 0), astralGold, Enum.Material.Metal)
+	weldTo(handle, midSpurR)
+	local upperSpurL = makePart(model, "UpperSpurL", Vector3.new(0.10, 0.28, 0.05), CFrame.new(0.28, 5.45, 0), astralGold, Enum.Material.Metal)
+	weldTo(handle, upperSpurL)
+	local upperSpurR = makePart(model, "UpperSpurR", Vector3.new(0.10, 0.28, 0.05), CFrame.new(-0.28, 5.45, 0), astralGold, Enum.Material.Metal)
+	weldTo(handle, upperSpurR)
+
+	local tipFwd = makeWedge(model, "TipFwd", Vector3.new(0.045, 0.72, 0.35), CFrame.new(0.175, 6.05, 0) * CFrame.Angles(0, math.rad(-90), 0), stellarWhite, Enum.Material.Metal)
+	weldTo(handle, tipFwd)
+	local tipBack = makeWedge(model, "TipBack", Vector3.new(0.045, 0.72, 0.35), CFrame.new(-0.175, 6.05, 0) * CFrame.Angles(0, math.rad(90), 0), stellarWhite, Enum.Material.Metal)
+	weldTo(handle, tipBack)
+
+	addSocket(handle, "Grip", Vector3.new(0, 0, 0), Vector3.new(0, -90, 0))
+	addSocket(handle, "Tip", Vector3.new(0, 6.35, 0), Vector3.new(0, 0, 0))
+	addSocket(handle, "VfxTip", Vector3.new(0, 6.35, 0))
+	addSocket(handle, "VfxBase", Vector3.new(0, 1.10, 0))
+	addSocket(handle, "VfxCore", Vector3.new(0, 0.78, 0))
+
+	local shieldModel = Instance.new("Model")
+	shieldModel.Name = "OffhandShield"
+	shieldModel.Parent = model
+
+	local shieldHandle = makePart(shieldModel, "HandleS", Vector3.new(0.22, 0.65, 0.22), CFrame.new(0, 0, 0), darkMatter)
+	shieldModel.PrimaryPart = shieldHandle
+
+	-- Hyper-Dense Glowing Rift Power Core
+	local containmentSphere = makePart(shieldModel, "ContainmentSphere", Vector3.new(0.36, 1.00, 1.00), CFrame.new(-0.36, 0.20, 0), darkMatter, Enum.Material.Metal)
+	weldTo(shieldHandle, containmentSphere)
+	local riftPowerCore = makePart(shieldModel, "RiftPowerCore", Vector3.new(0.46, 0.70, 0.70), CFrame.new(-0.44, 0.20, 0), riftCorePlasma, Enum.Material.Metal)
+	weldTo(shieldHandle, riftPowerCore)
+	local singularityEye = makePart(shieldModel, "SingularityEye", Vector3.new(0.50, 0.35, 0.35), CFrame.new(-0.48, 0.20, 0), hyperViolet, Enum.Material.Neon)
+	weldTo(shieldHandle, singularityEye)
+
+	-- 6 Hexagonal Floating Segmented Gold Orbital Plates
+	local orbitPlate1 = makePart(shieldModel, "OrbitPlate1", Vector3.new(0.26, 0.80, 0.80), CFrame.new(-0.38, 1.40, 0), astralGold, Enum.Material.Metal)
+	weldTo(shieldHandle, orbitPlate1)
+	local orbitPlate2 = makePart(shieldModel, "OrbitPlate2", Vector3.new(0.26, 0.80, 0.80), CFrame.new(-0.38, -1.00, 0), astralGold, Enum.Material.Metal)
+	weldTo(shieldHandle, orbitPlate2)
+	local orbitPlate3 = makePart(shieldModel, "OrbitPlate3", Vector3.new(0.26, 0.80, 0.80), CFrame.new(-0.38, 0.80, 1.05), astralGold, Enum.Material.Metal)
+	weldTo(shieldHandle, orbitPlate3)
+	local orbitPlate4 = makePart(shieldModel, "OrbitPlate4", Vector3.new(0.26, 0.80, 0.80), CFrame.new(-0.38, 0.80, -1.05), astralGold, Enum.Material.Metal)
+	weldTo(shieldHandle, orbitPlate4)
+	local orbitPlate5 = makePart(shieldModel, "OrbitPlate5", Vector3.new(0.26, 0.80, 0.80), CFrame.new(-0.38, -0.40, 1.05), astralGold, Enum.Material.Metal)
+	weldTo(shieldHandle, orbitPlate5)
+	local orbitPlate6 = makePart(shieldModel, "OrbitPlate6", Vector3.new(0.26, 0.80, 0.80), CFrame.new(-0.38, -0.40, -1.05), astralGold, Enum.Material.Metal)
+	weldTo(shieldHandle, orbitPlate6)
+
+	-- 6 Plasma Emitters embedded in Orbital Plates
+	local emitter1 = makePart(shieldModel, "Emitter1", Vector3.new(0.30, 0.35, 0.35), CFrame.new(-0.42, 1.40, 0), riftCorePlasma, Enum.Material.Metal)
+	weldTo(shieldHandle, emitter1)
+	local emitter2 = makePart(shieldModel, "Emitter2", Vector3.new(0.30, 0.35, 0.35), CFrame.new(-0.42, -1.00, 0), riftCorePlasma, Enum.Material.Metal)
+	weldTo(shieldHandle, emitter2)
+	local emitter3 = makePart(shieldModel, "Emitter3", Vector3.new(0.30, 0.35, 0.35), CFrame.new(-0.42, 0.80, 1.05), riftCorePlasma, Enum.Material.Metal)
+	weldTo(shieldHandle, emitter3)
+	local emitter4 = makePart(shieldModel, "Emitter4", Vector3.new(0.30, 0.35, 0.35), CFrame.new(-0.42, 0.80, -1.05), riftCorePlasma, Enum.Material.Metal)
+	weldTo(shieldHandle, emitter4)
+	local emitter5 = makePart(shieldModel, "Emitter5", Vector3.new(0.30, 0.35, 0.35), CFrame.new(-0.42, -0.40, 1.05), riftCorePlasma, Enum.Material.Metal)
+	weldTo(shieldHandle, emitter5)
+	local emitter6 = makePart(shieldModel, "Emitter6", Vector3.new(0.30, 0.35, 0.35), CFrame.new(-0.42, -0.40, -1.05), riftCorePlasma, Enum.Material.Metal)
+	weldTo(shieldHandle, emitter6)
+
+	-- 6 Magnetic Tether Rods anchoring the floating plates
+	local tether1 = makePart(shieldModel, "Tether1", Vector3.new(0.24, 0.65, 0.12), CFrame.new(-0.36, 0.80, 0), darkMatter, Enum.Material.Metal)
+	weldTo(shieldHandle, tether1)
+	local tether2 = makePart(shieldModel, "Tether2", Vector3.new(0.24, 0.65, 0.12), CFrame.new(-0.36, -0.40, 0), darkMatter, Enum.Material.Metal)
+	weldTo(shieldHandle, tether2)
+	local tether3 = makePart(shieldModel, "Tether3", Vector3.new(0.24, 0.12, 0.65), CFrame.new(-0.36, 0.50, 0.55), darkMatter, Enum.Material.Metal)
+	weldTo(shieldHandle, tether3)
+	local tether4 = makePart(shieldModel, "Tether4", Vector3.new(0.24, 0.12, 0.65), CFrame.new(-0.36, 0.50, -0.55), darkMatter, Enum.Material.Metal)
+	weldTo(shieldHandle, tether4)
+	local tether5 = makePart(shieldModel, "Tether5", Vector3.new(0.24, 0.12, 0.65), CFrame.new(-0.36, -0.10, 0.55), darkMatter, Enum.Material.Metal)
+	weldTo(shieldHandle, tether5)
+	local tether6 = makePart(shieldModel, "Tether6", Vector3.new(0.24, 0.12, 0.65), CFrame.new(-0.36, -0.10, -0.55), darkMatter, Enum.Material.Metal)
+	weldTo(shieldHandle, tether6)
+
+	-- Outer Hexagonal Kinetic Boundary Rim
+	local rimTop = makePart(shieldModel, "RimTop", Vector3.new(0.28, 0.18, 1.30), CFrame.new(-0.38, 1.85, 0), astralGold, Enum.Material.Metal)
+	weldTo(shieldHandle, rimTop)
+	local rimBottom = makePart(shieldModel, "RimBottom", Vector3.new(0.28, 0.18, 1.30), CFrame.new(-0.38, -1.45, 0), astralGold, Enum.Material.Metal)
+	weldTo(shieldHandle, rimBottom)
+	local rimTL = makePart(shieldModel, "RimTL", Vector3.new(0.26, 1.40, 0.16), CFrame.new(-0.38, 1.25, 1.25), astralGold, Enum.Material.Metal)
+	weldTo(shieldHandle, rimTL)
+	local rimTR = makePart(shieldModel, "RimTR", Vector3.new(0.26, 1.40, 0.16), CFrame.new(-0.38, 1.25, -1.25), astralGold, Enum.Material.Metal)
+	weldTo(shieldHandle, rimTR)
+	local rimBL = makePart(shieldModel, "RimBL", Vector3.new(0.26, 1.40, 0.16), CFrame.new(-0.38, -0.85, 1.25), astralGold, Enum.Material.Metal)
+	weldTo(shieldHandle, rimBL)
+	local rimBR = makePart(shieldModel, "RimBR", Vector3.new(0.26, 1.40, 0.16), CFrame.new(-0.38, -0.85, -1.25), astralGold, Enum.Material.Metal)
+	weldTo(shieldHandle, rimBR)
+
+	-- Outer Floating Shield Barrier Node Spikes
+	local nodeSpike1 = makePart(shieldModel, "NodeSpike1", Vector3.new(0.26, 0.40, 0.22), CFrame.new(-0.40, 2.05, 0), hyperViolet, Enum.Material.Metal)
+	weldTo(shieldHandle, nodeSpike1)
+	local nodeSpike2 = makePart(shieldModel, "NodeSpike2", Vector3.new(0.26, 0.40, 0.22), CFrame.new(-0.40, -1.65, 0), hyperViolet, Enum.Material.Metal)
+	weldTo(shieldHandle, nodeSpike2)
+	local nodeSpike3 = makePart(shieldModel, "NodeSpike3", Vector3.new(0.26, 0.22, 0.40), CFrame.new(-0.40, 0.20, 1.65), hyperViolet, Enum.Material.Metal)
+	weldTo(shieldHandle, nodeSpike3)
+	local nodeSpike4 = makePart(shieldModel, "NodeSpike4", Vector3.new(0.26, 0.22, 0.40), CFrame.new(-0.40, 0.20, -1.65), hyperViolet, Enum.Material.Metal)
+	weldTo(shieldHandle, nodeSpike4)
+	local coreOrbitShard1 = makePart(shieldModel, "CoreOrbitShard1", Vector3.new(0.28, 0.26, 0.26), CFrame.new(-0.46, 0.65, 0.45), riftCorePlasma, Enum.Material.Glass)
+	coreOrbitShard1.Transparency = 0.25
+	weldTo(shieldHandle, coreOrbitShard1)
+	local coreOrbitShard2 = makePart(shieldModel, "CoreOrbitShard2", Vector3.new(0.28, 0.26, 0.26), CFrame.new(-0.46, 0.65, -0.45), riftCorePlasma, Enum.Material.Glass)
+	coreOrbitShard2.Transparency = 0.25
+	weldTo(shieldHandle, coreOrbitShard2)
+	local coreOrbitShard3 = makePart(shieldModel, "CoreOrbitShard3", Vector3.new(0.28, 0.26, 0.26), CFrame.new(-0.46, -0.25, 0.45), riftCorePlasma, Enum.Material.Glass)
+	coreOrbitShard3.Transparency = 0.25
+	weldTo(shieldHandle, coreOrbitShard3)
+	local coreOrbitShard4 = makePart(shieldModel, "CoreOrbitShard4", Vector3.new(0.28, 0.26, 0.26), CFrame.new(-0.46, -0.25, -0.45), riftCorePlasma, Enum.Material.Glass)
+	coreOrbitShard4.Transparency = 0.25
+	weldTo(shieldHandle, coreOrbitShard4)
+
+	local armFrameHarness = makePart(shieldModel, "ArmFrameHarness", Vector3.new(0.20, 0.90, 0.36), CFrame.new(-0.16, 0.20, 0), darkMatter, Enum.Material.Metal)
+	weldTo(shieldHandle, armFrameHarness)
+	local strapTop = makePart(shieldModel, "StrapTop", Vector3.new(0.14, 0.16, 0.48), CFrame.new(-0.10, 0.50, 0), astralGold, Enum.Material.Metal)
+	weldTo(shieldHandle, strapTop)
+	local strapBot = makePart(shieldModel, "StrapBot", Vector3.new(0.14, 0.16, 0.48), CFrame.new(-0.10, -0.10, 0), astralGold, Enum.Material.Metal)
+	weldTo(shieldHandle, strapBot)
+
+	addSocket(shieldHandle, "ShieldMount", Vector3.new(-0.18, 0, 0), Vector3.new(0, 90, 0))
+	addSocket(shieldHandle, "VfxShieldCenter", Vector3.new(-0.50, 0.10, 0))
+
+	return model
+end
+
+
+function WeaponModelBuilder.BuildAstralExecutioner(): Model
+	local model = Instance.new("Model")
+	model.Name = "art_astral_executioner"
+
+	local astralPlatinum = Color3.fromRGB(240, 245, 255)
+	local starlightCyan = Color3.fromRGB(110, 235, 255)
+	local celestialGold = Color3.fromRGB(250, 215, 85)
+	local cosmicMirror = Color3.fromRGB(18, 15, 28)
+	local nebulaMagenta = Color3.fromRGB(255, 115, 230)
+
+	-- Astral Starlight Chisel-Tipped Executioner Blade (44 parts)
+
+-- Sword Assembly (44 parts: colossal anime executioner greatsword with stepped serrations and floating cosmic orbits)
+	local handle = Instance.new("Part")
+	handle.Name = "Handle"
+	handle.Size = Vector3.new(0.22, 1.60, 0.22)
+	handle.CFrame = CFrame.new(0, 0, 0)
+	handle.Transparency = 1
+	handle.CanCollide = false
+	handle.Massless = true
+	handle.Parent = model
+	model.PrimaryPart = handle
+
+	local gripCyl = makeCylinder(model, "GripCylinder", 1.50, 0.19, CFrame.new(0, 0, 0), cosmicMirror)
+	weldTo(handle, gripCyl)
+	local gripWrap1 = makeCylinder(model, "GripWrap1", 0.12, 0.21, CFrame.new(0, -0.50, 0), celestialGold, Enum.Material.Metal)
+	weldTo(handle, gripWrap1)
+	local gripWrap2 = makeCylinder(model, "GripWrap2", 0.12, 0.21, CFrame.new(0, 0.0, 0), celestialGold, Enum.Material.Metal)
+	weldTo(handle, gripWrap2)
+	local gripWrap3 = makeCylinder(model, "GripWrap3", 0.12, 0.21, CFrame.new(0, 0.50, 0), celestialGold, Enum.Material.Metal)
+	weldTo(handle, gripWrap3)
+
+	local pommelNeck = makeCylinder(model, "PommelNeck", 0.12, 0.26, CFrame.new(0, -0.80, 0), celestialGold, Enum.Material.Metal)
+	weldTo(handle, pommelNeck)
+	local pommelBall = makeBall(model, "PommelBall", 0.46, CFrame.new(0, -1.02, 0), cosmicMirror, Enum.Material.Metal)
+	weldTo(handle, pommelBall)
+	local pommelSpike = makePart(model, "PommelSpike", Vector3.new(0.18, 0.28, 0.18), CFrame.new(0, -1.30, 0), celestialGold, Enum.Material.Metal)
+	weldTo(handle, pommelSpike)
+	local pommelFinial = makeBall(model, "PommelFinial", 0.20, CFrame.new(0, -1.48, 0), starlightCyan, Enum.Material.Neon)
+	weldTo(handle, pommelFinial)
+
+	local guardCenter = makePart(model, "GuardCenter", Vector3.new(0.48, 0.26, 0.30), CFrame.new(0, 0.82, 0), cosmicMirror, Enum.Material.Metal)
+	weldTo(handle, guardCenter)
+	local guardCrest = makePart(model, "GuardCrest", Vector3.new(0.36, 0.36, 0.12), CFrame.new(0, 0.84, 0.16), celestialGold, Enum.Material.Metal)
+	weldTo(handle, guardCrest)
+	local quillonL = makePart(model, "QuillonL", Vector3.new(0.26, 0.18, 0.68), CFrame.new(0, 0.84, 0.58) * CFrame.Angles(math.rad(12), 0, 0), cosmicMirror, Enum.Material.Metal)
+	weldTo(handle, quillonL)
+	local quillonR = makePart(model, "QuillonR", Vector3.new(0.26, 0.18, 0.68), CFrame.new(0, 0.84, -0.58) * CFrame.Angles(math.rad(-12), 0, 0), cosmicMirror, Enum.Material.Metal)
+	weldTo(handle, quillonR)
+	local quillonWingL = makePart(model, "QuillonWingL", Vector3.new(0.16, 0.28, 0.28), CFrame.new(0, 0.94, 0.78), celestialGold, Enum.Material.Metal)
+	weldTo(handle, quillonWingL)
+	local quillonWingR = makePart(model, "QuillonWingR", Vector3.new(0.16, 0.28, 0.28), CFrame.new(0, 0.94, -0.78), celestialGold, Enum.Material.Metal)
+	weldTo(handle, quillonWingR)
+	local finialL = makeBall(model, "QuillonFinialL", 0.24, CFrame.new(0, 1.02, 0.98), celestialGold, Enum.Material.Metal)
+	weldTo(handle, finialL)
+	local finialR = makeBall(model, "QuillonFinialR", 0.24, CFrame.new(0, 1.02, -0.98), celestialGold, Enum.Material.Metal)
+	weldTo(handle, finialR)
+
+	local ricasso = makePart(model, "Ricasso", Vector3.new(0.62, 0.85, 0.09), CFrame.new(0, 1.34, 0), astralPlatinum, Enum.Material.Metal)
+	weldTo(handle, ricasso)
+	local ricassoPlateL = makePart(model, "RicassoPlateL", Vector3.new(0.16, 0.40, 0.08), CFrame.new(0.40, 1.62, 0), celestialGold, Enum.Material.Metal)
+	weldTo(handle, ricassoPlateL)
+	local ricassoPlateR = makePart(model, "RicassoPlateR", Vector3.new(0.16, 0.40, 0.08), CFrame.new(-0.40, 1.62, 0), celestialGold, Enum.Material.Metal)
+	weldTo(handle, ricassoPlateR)
+
+	local bladeFuller = makePart(model, "BladeFuller", Vector3.new(0.20, 4.50, 0.075), CFrame.new(0, 3.90, 0), astralPlatinum, Enum.Material.Metal)
+	weldTo(handle, bladeFuller)
+	local cosmicCoreLine = makePart(model, "CosmicCoreLine", Vector3.new(0.06, 3.80, 0.08), CFrame.new(0, 3.85, 0), starlightCyan, Enum.Material.Neon)
+	weldTo(handle, cosmicCoreLine)
+
+	local edgeFwd1 = makePart(model, "EdgeFwd1", Vector3.new(0.26, 2.25, 0.045), CFrame.new(0.25, 2.80, 0), astralPlatinum, Enum.Material.Metal)
+	weldTo(handle, edgeFwd1)
+	local edgeFwd2 = makePart(model, "EdgeFwd2", Vector3.new(0.24, 2.20, 0.045), CFrame.new(0.24, 4.95, 0), astralPlatinum, Enum.Material.Metal)
+	weldTo(handle, edgeFwd2)
+	local edgeBack1 = makePart(model, "EdgeBack1", Vector3.new(0.26, 2.25, 0.045), CFrame.new(-0.25, 2.80, 0), astralPlatinum, Enum.Material.Metal)
+	weldTo(handle, edgeBack1)
+	local edgeBack2 = makePart(model, "EdgeBack2", Vector3.new(0.24, 2.20, 0.045), CFrame.new(-0.24, 4.95, 0), astralPlatinum, Enum.Material.Metal)
+	weldTo(handle, edgeBack2)
+
+	local executionerSpur1 = makePart(model, "ExecutionerSpur1", Vector3.new(0.14, 0.35, 0.05), CFrame.new(0.34, 5.30, 0), celestialGold, Enum.Material.Metal)
+	weldTo(handle, executionerSpur1)
+	local executionerSpur2 = makePart(model, "ExecutionerSpur2", Vector3.new(0.12, 0.30, 0.05), CFrame.new(0.32, 5.70, 0), celestialGold, Enum.Material.Metal)
+	weldTo(handle, executionerSpur2)
+	local executionerSpur3 = makePart(model, "ExecutionerSpur3", Vector3.new(0.14, 0.35, 0.05), CFrame.new(-0.34, 5.30, 0), celestialGold, Enum.Material.Metal)
+	weldTo(handle, executionerSpur3)
+	local executionerSpur4 = makePart(model, "ExecutionerSpur4", Vector3.new(0.12, 0.30, 0.05), CFrame.new(-0.32, 5.70, 0), celestialGold, Enum.Material.Metal)
+	weldTo(handle, executionerSpur4)
+
+	local floatingOrbit1 = makePart(model, "FloatingOrbit1", Vector3.new(0.08, 0.35, 0.05), CFrame.new(0.44, 4.40, 0), starlightCyan, Enum.Material.Neon)
+	weldTo(handle, floatingOrbit1)
+	local floatingOrbit2 = makePart(model, "FloatingOrbit2", Vector3.new(0.08, 0.35, 0.05), CFrame.new(-0.44, 4.40, 0), starlightCyan, Enum.Material.Neon)
+	weldTo(handle, floatingOrbit2)
+	local floatingOrbit3 = makePart(model, "FloatingOrbit3", Vector3.new(0.08, 0.35, 0.05), CFrame.new(0.40, 3.60, 0), celestialGold, Enum.Material.Metal)
+	weldTo(handle, floatingOrbit3)
+	local floatingOrbit4 = makePart(model, "FloatingOrbit4", Vector3.new(0.08, 0.35, 0.05), CFrame.new(-0.40, 3.60, 0), celestialGold, Enum.Material.Metal)
+	weldTo(handle, floatingOrbit4)
+
+	local tipFwd = makeWedge(model, "TipFwd", Vector3.new(0.045, 0.76, 0.38), CFrame.new(0.19, 6.25, 0) * CFrame.Angles(0, math.rad(-90), 0), astralPlatinum, Enum.Material.Metal)
+	weldTo(handle, tipFwd)
+	local tipBack = makeWedge(model, "TipBack", Vector3.new(0.045, 0.76, 0.38), CFrame.new(-0.19, 6.25, 0) * CFrame.Angles(0, math.rad(90), 0), astralPlatinum, Enum.Material.Metal)
+	weldTo(handle, tipBack)
+
+	addSocket(handle, "Grip", Vector3.new(0, 0, 0), Vector3.new(0, -90, 0))
+	addSocket(handle, "Tip", Vector3.new(0, 6.55, 0), Vector3.new(0, 0, 0))
+	addSocket(handle, "VfxTip", Vector3.new(0, 6.55, 0))
+	addSocket(handle, "VfxBase", Vector3.new(0, 1.15, 0))
+	addSocket(handle, "VfxCore", Vector3.new(0, 0.82, 0))
+
+	local shieldModel = Instance.new("Model")
+	shieldModel.Name = "OffhandShield"
+	shieldModel.Parent = model
+
+	local shieldHandle = makePart(shieldModel, "HandleS", Vector3.new(0.22, 0.70, 0.22), CFrame.new(0, 0, 0), cosmicMirror)
+	shieldModel.PrimaryPart = shieldHandle
+
+	-- Monolithic Frame Structure
+	local mirrorBacking = makePart(shieldModel, "MirrorBacking", Vector3.new(0.24, 3.20, 1.80), CFrame.new(-0.36, 0.20, 0), astralPlatinum, Enum.Material.Metal)
+	weldTo(shieldHandle, mirrorBacking)
+	local obsidianMirror = makePart(shieldModel, "ObsidianMirror", Vector3.new(0.26, 2.90, 1.55), CFrame.new(-0.38, 0.20, 0), cosmicMirror, Enum.Material.Glass)
+	weldTo(shieldHandle, obsidianMirror)
+	local nebulaMirrorFilm = makePart(shieldModel, "NebulaMirrorFilm", Vector3.new(0.28, 2.50, 1.30), CFrame.new(-0.40, 0.20, 0), nebulaMagenta, Enum.Material.Metal)
+	weldTo(shieldHandle, nebulaMirrorFilm)
+	local starlightCoreSingularity = makePart(shieldModel, "StarlightCoreSingularity", Vector3.new(0.38, 0.45, 0.45), CFrame.new(-0.46, 0.20, 0), starlightCyan, Enum.Material.Neon)
+	weldTo(shieldHandle, starlightCoreSingularity)
+
+	-- Astral Platinum & Gold Outer Frame Bevels
+	local frameTop = makePart(shieldModel, "FrameTop", Vector3.new(0.32, 0.22, 1.95), CFrame.new(-0.38, 1.85, 0), celestialGold, Enum.Material.Metal)
+	weldTo(shieldHandle, frameTop)
+	local frameBottom = makePart(shieldModel, "FrameBottom", Vector3.new(0.32, 0.22, 1.95), CFrame.new(-0.38, -1.45, 0), celestialGold, Enum.Material.Metal)
+	weldTo(shieldHandle, frameBottom)
+	local frameL = makePart(shieldModel, "FrameL", Vector3.new(0.32, 3.50, 0.20), CFrame.new(-0.38, 0.20, 0.98), celestialGold, Enum.Material.Metal)
+	weldTo(shieldHandle, frameL)
+	local frameR = makePart(shieldModel, "FrameR", Vector3.new(0.32, 3.50, 0.20), CFrame.new(-0.38, 0.20, -0.98), celestialGold, Enum.Material.Metal)
+	weldTo(shieldHandle, frameR)
+
+	-- 4 Corner Spire Towers
+	local spireTL = makePart(shieldModel, "SpireTL", Vector3.new(0.34, 0.60, 0.34), CFrame.new(-0.38, 1.95, 0.98), astralPlatinum, Enum.Material.Metal)
+	weldTo(shieldHandle, spireTL)
+	local spireTR = makePart(shieldModel, "SpireTR", Vector3.new(0.34, 0.60, 0.34), CFrame.new(-0.38, 1.95, -0.98), astralPlatinum, Enum.Material.Metal)
+	weldTo(shieldHandle, spireTR)
+	local spireBL = makePart(shieldModel, "SpireBL", Vector3.new(0.34, 0.60, 0.34), CFrame.new(-0.38, -1.55, 0.98), astralPlatinum, Enum.Material.Metal)
+	weldTo(shieldHandle, spireBL)
+	local spireBR = makePart(shieldModel, "SpireBR", Vector3.new(0.34, 0.60, 0.34), CFrame.new(-0.38, -1.55, -0.98), astralPlatinum, Enum.Material.Metal)
+	weldTo(shieldHandle, spireBR)
+
+	-- 4 Corner Star Gems
+	local gemTL = makePart(shieldModel, "GemTL", Vector3.new(0.36, 0.28, 0.28), CFrame.new(-0.42, 2.15, 0.98), starlightCyan, Enum.Material.Glass)
+	gemTL.Transparency = 0.25
+	weldTo(shieldHandle, gemTL)
+	local gemTR = makePart(shieldModel, "GemTR", Vector3.new(0.36, 0.28, 0.28), CFrame.new(-0.42, 2.15, -0.98), starlightCyan, Enum.Material.Glass)
+	gemTR.Transparency = 0.25
+	weldTo(shieldHandle, gemTR)
+	local gemBL = makePart(shieldModel, "GemBL", Vector3.new(0.36, 0.28, 0.28), CFrame.new(-0.42, -1.75, 0.98), nebulaMagenta, Enum.Material.Glass)
+	gemBL.Transparency = 0.25
+	weldTo(shieldHandle, gemBL)
+	local gemBR = makePart(shieldModel, "GemBR", Vector3.new(0.36, 0.28, 0.28), CFrame.new(-0.42, -1.75, -0.98), nebulaMagenta, Enum.Material.Glass)
+	gemBR.Transparency = 0.25
+	weldTo(shieldHandle, gemBR)
+
+	-- Constellation Star Lattice Across Mirror Face
+	local starRaysV = makePart(shieldModel, "StarRaysV", Vector3.new(0.30, 2.60, 0.16), CFrame.new(-0.42, 0.20, 0), celestialGold, Enum.Material.Metal)
+	weldTo(shieldHandle, starRaysV)
+	local starRaysH = makePart(shieldModel, "StarRaysH", Vector3.new(0.30, 0.16, 1.40), CFrame.new(-0.42, 0.20, 0), celestialGold, Enum.Material.Metal)
+	weldTo(shieldHandle, starRaysH)
+
+	-- 8 Floating Constellation Nodes on Shield Face
+	local nodeN = makePart(shieldModel, "NodeN", Vector3.new(0.32, 0.26, 0.26), CFrame.new(-0.44, 1.25, 0), starlightCyan, Enum.Material.Metal)
+	weldTo(shieldHandle, nodeN)
+	local nodeS = makePart(shieldModel, "NodeS", Vector3.new(0.32, 0.26, 0.26), CFrame.new(-0.44, -0.85, 0), starlightCyan, Enum.Material.Metal)
+	weldTo(shieldHandle, nodeS)
+	local nodeE = makePart(shieldModel, "NodeE", Vector3.new(0.32, 0.26, 0.26), CFrame.new(-0.44, 0.20, 0.65), starlightCyan, Enum.Material.Metal)
+	weldTo(shieldHandle, nodeE)
+	local nodeW = makePart(shieldModel, "NodeW", Vector3.new(0.32, 0.26, 0.26), CFrame.new(-0.44, 0.20, -0.65), starlightCyan, Enum.Material.Metal)
+	weldTo(shieldHandle, nodeW)
+
+	local nodeNE = makePart(shieldModel, "NodeNE", Vector3.new(0.30, 0.22, 0.22), CFrame.new(-0.44, 0.85, 0.50), nebulaMagenta, Enum.Material.Metal)
+	weldTo(shieldHandle, nodeNE)
+	local nodeNW = makePart(shieldModel, "NodeNW", Vector3.new(0.30, 0.22, 0.22), CFrame.new(-0.44, 0.85, -0.50), nebulaMagenta, Enum.Material.Metal)
+	weldTo(shieldHandle, nodeNW)
+	local nodeSE = makePart(shieldModel, "NodeSE", Vector3.new(0.30, 0.22, 0.22), CFrame.new(-0.44, -0.45, 0.50), nebulaMagenta, Enum.Material.Metal)
+	weldTo(shieldHandle, nodeSE)
+	local nodeSW = makePart(shieldModel, "NodeSW", Vector3.new(0.30, 0.22, 0.22), CFrame.new(-0.44, -0.45, -0.50), nebulaMagenta, Enum.Material.Metal)
+	weldTo(shieldHandle, nodeSW)
+
+	-- Radial Constellation Struts
+	local strutNE = makePart(shieldModel, "StrutNE", Vector3.new(0.28, 0.85, 0.10), CFrame.new(-0.42, 0.65, 0.35), celestialGold, Enum.Material.Metal)
+	weldTo(shieldHandle, strutNE)
+	local strutNW = makePart(shieldModel, "StrutNW", Vector3.new(0.28, 0.85, 0.10), CFrame.new(-0.42, 0.65, -0.35), celestialGold, Enum.Material.Metal)
+	weldTo(shieldHandle, strutNW)
+	local strutSE = makePart(shieldModel, "StrutSE", Vector3.new(0.28, 0.85, 0.10), CFrame.new(-0.42, -0.25, 0.35), celestialGold, Enum.Material.Metal)
+	weldTo(shieldHandle, strutSE)
+	local strutSW = makePart(shieldModel, "StrutSW", Vector3.new(0.28, 0.85, 0.10), CFrame.new(-0.42, -0.25, -0.35), celestialGold, Enum.Material.Metal)
+	weldTo(shieldHandle, strutSW)
+	local borderGem1 = makePart(shieldModel, "BorderGem1", Vector3.new(0.34, 0.22, 0.22), CFrame.new(-0.40, 1.85, 0.50), celestialGold, Enum.Material.Metal)
+	weldTo(shieldHandle, borderGem1)
+	local borderGem2 = makePart(shieldModel, "BorderGem2", Vector3.new(0.34, 0.22, 0.22), CFrame.new(-0.40, 1.85, -0.50), celestialGold, Enum.Material.Metal)
+	weldTo(shieldHandle, borderGem2)
+	local borderGem3 = makePart(shieldModel, "BorderGem3", Vector3.new(0.34, 0.22, 0.22), CFrame.new(-0.40, -1.45, 0.50), celestialGold, Enum.Material.Metal)
+	weldTo(shieldHandle, borderGem3)
+	local borderGem4 = makePart(shieldModel, "BorderGem4", Vector3.new(0.34, 0.22, 0.22), CFrame.new(-0.40, -1.45, -0.50), celestialGold, Enum.Material.Metal)
+	weldTo(shieldHandle, borderGem4)
+	local outerAuraLens1 = makePart(shieldModel, "OuterAuraLens1", Vector3.new(0.32, 0.40, 0.20), CFrame.new(-0.42, 0.80, 0.80), starlightCyan, Enum.Material.Glass)
+	outerAuraLens1.Transparency = 0.25
+	weldTo(shieldHandle, outerAuraLens1)
+	local outerAuraLens2 = makePart(shieldModel, "OuterAuraLens2", Vector3.new(0.32, 0.40, 0.20), CFrame.new(-0.42, 0.80, -0.80), starlightCyan, Enum.Material.Glass)
+	outerAuraLens2.Transparency = 0.25
+	weldTo(shieldHandle, outerAuraLens2)
+
+	-- Arm Mounting Harness
+	local armBrace = makePart(shieldModel, "ArmBrace", Vector3.new(0.20, 1.00, 0.38), CFrame.new(-0.16, 0.20, 0), astralPlatinum, Enum.Material.Metal)
+	weldTo(shieldHandle, armBrace)
+	local strapTop = makePart(shieldModel, "StrapTop", Vector3.new(0.14, 0.16, 0.50), CFrame.new(-0.10, 0.55, 0), celestialGold, Enum.Material.Metal)
+	weldTo(shieldHandle, strapTop)
+	local strapBot = makePart(shieldModel, "StrapBot", Vector3.new(0.14, 0.16, 0.50), CFrame.new(-0.10, -0.15, 0), celestialGold, Enum.Material.Metal)
+	weldTo(shieldHandle, strapBot)
+
+	addSocket(shieldHandle, "ShieldMount", Vector3.new(-0.18, 0, 0), Vector3.new(0, 90, 0))
+	addSocket(shieldHandle, "VfxShieldCenter", Vector3.new(-0.48, 0.10, 0))
+
+	return model
+end
+
+
+function WeaponModelBuilder.BuildGenesisWorldbreaker(): Model
+	local model = Instance.new("Model")
+	model.Name = "art_genesis_worldbreaker"
+
+	local neutroniumDark = Color3.fromRGB(15, 12, 22)
+	local eventHorizonVoid = Color3.fromRGB(5, 5, 10)
+	local singularityCrimson = Color3.fromRGB(255, 65, 95)
+	local genesisCyan = Color3.fromRGB(75, 235, 255)
+	local solarGold = Color3.fromRGB(255, 215, 75)
+	local gravitationalLensing = Color3.fromRGB(240, 185, 255)
+
+	-- Colossal Primordial Executioner Blade (48 parts)
+
+-- Sword Assembly (47 parts: mythical reality-splitting worldbreaker colossal greatsword)
+	local handle = Instance.new("Part")
+	handle.Name = "Handle"
+	handle.Size = Vector3.new(0.24, 1.70, 0.24)
+	handle.CFrame = CFrame.new(0, 0, 0)
+	handle.Transparency = 1
+	handle.CanCollide = false
+	handle.Massless = true
+	handle.Parent = model
+	model.PrimaryPart = handle
+
+	local gripCyl = makeCylinder(model, "GripCylinder", 1.60, 0.20, CFrame.new(0, 0, 0), eventHorizonVoid)
+	weldTo(handle, gripCyl)
+	local gripWrap1 = makeCylinder(model, "GripWrap1", 0.12, 0.22, CFrame.new(0, -0.55, 0), solarGold, Enum.Material.Metal)
+	weldTo(handle, gripWrap1)
+	local gripWrap2 = makeCylinder(model, "GripWrap2", 0.12, 0.22, CFrame.new(0, 0.0, 0), solarGold, Enum.Material.Metal)
+	weldTo(handle, gripWrap2)
+	local gripWrap3 = makeCylinder(model, "GripWrap3", 0.12, 0.22, CFrame.new(0, 0.55, 0), solarGold, Enum.Material.Metal)
+	weldTo(handle, gripWrap3)
+
+	local pommelNeck = makeCylinder(model, "PommelNeck", 0.12, 0.28, CFrame.new(0, -0.85, 0), solarGold, Enum.Material.Metal)
+	weldTo(handle, pommelNeck)
+	local pommelBall = makeBall(model, "PommelBall", 0.48, CFrame.new(0, -1.08, 0), neutroniumDark, Enum.Material.Metal)
+	weldTo(handle, pommelBall)
+	local pommelCrown = makePart(model, "PommelCrown", Vector3.new(0.24, 0.26, 0.24), CFrame.new(0, -1.36, 0), solarGold, Enum.Material.Metal)
+	weldTo(handle, pommelCrown)
+	local pommelFinial = makeBall(model, "PommelFinial", 0.22, CFrame.new(0, -1.54, 0), genesisCyan, Enum.Material.Neon)
+	weldTo(handle, pommelFinial)
+
+	local guardCenter = makePart(model, "GuardCenter", Vector3.new(0.52, 0.28, 0.32), CFrame.new(0, 0.88, 0), neutroniumDark, Enum.Material.Metal)
+	weldTo(handle, guardCenter)
+	local guardSingularity = makeBall(model, "GuardSingularity", 0.26, CFrame.new(0, 0.90, 0.18), genesisCyan, Enum.Material.Neon)
+	weldTo(handle, guardSingularity)
+	local quillonL = makePart(model, "QuillonL", Vector3.new(0.28, 0.18, 0.72), CFrame.new(0, 0.90, 0.62) * CFrame.Angles(math.rad(14), 0, 0), neutroniumDark, Enum.Material.Metal)
+	weldTo(handle, quillonL)
+	local quillonR = makePart(model, "QuillonR", Vector3.new(0.28, 0.18, 0.72), CFrame.new(0, 0.90, -0.62) * CFrame.Angles(math.rad(-14), 0, 0), neutroniumDark, Enum.Material.Metal)
+	weldTo(handle, quillonR)
+	local quillonWingL = makePart(model, "QuillonWingL", Vector3.new(0.18, 0.30, 0.30), CFrame.new(0, 1.00, 0.84), solarGold, Enum.Material.Metal)
+	weldTo(handle, quillonWingL)
+	local quillonWingR = makePart(model, "QuillonWingR", Vector3.new(0.18, 0.30, 0.30), CFrame.new(0, 1.00, -0.84), solarGold, Enum.Material.Metal)
+	weldTo(handle, quillonWingR)
+	local finialL = makeBall(model, "QuillonFinialL", 0.26, CFrame.new(0, 1.10, 1.06), solarGold, Enum.Material.Metal)
+	weldTo(handle, finialL)
+	local finialR = makeBall(model, "QuillonFinialR", 0.26, CFrame.new(0, 1.10, -1.06), solarGold, Enum.Material.Metal)
+	weldTo(handle, finialR)
+
+	local ricasso = makePart(model, "Ricasso", Vector3.new(0.66, 0.90, 0.09), CFrame.new(0, 1.42, 0), neutroniumDark, Enum.Material.Metal)
+	weldTo(handle, ricasso)
+	local ricassoPlateL = makePart(model, "RicassoPlateL", Vector3.new(0.18, 0.45, 0.08), CFrame.new(0.44, 1.72, 0), solarGold, Enum.Material.Metal)
+	weldTo(handle, ricassoPlateL)
+	local ricassoPlateR = makePart(model, "RicassoPlateR", Vector3.new(0.18, 0.45, 0.08), CFrame.new(-0.44, 1.72, 0), solarGold, Enum.Material.Metal)
+	weldTo(handle, ricassoPlateR)
+
+	local bladeFuller = makePart(model, "BladeFuller", Vector3.new(0.22, 4.70, 0.075), CFrame.new(0, 4.05, 0), neutroniumDark, Enum.Material.Metal)
+	weldTo(handle, bladeFuller)
+	local singularityCore = makePart(model, "SingularityCore", Vector3.new(0.06, 4.00, 0.08), CFrame.new(0, 4.00, 0), genesisCyan, Enum.Material.Neon)
+	weldTo(handle, singularityCore)
+
+	local edgeFwd1 = makePart(model, "EdgeFwd1", Vector3.new(0.28, 2.35, 0.045), CFrame.new(0.27, 2.90, 0), solarGold, Enum.Material.Metal)
+	weldTo(handle, edgeFwd1)
+	local edgeFwd2 = makePart(model, "EdgeFwd2", Vector3.new(0.26, 2.30, 0.045), CFrame.new(0.26, 5.15, 0), solarGold, Enum.Material.Metal)
+	weldTo(handle, edgeFwd2)
+	local edgeBack1 = makePart(model, "EdgeBack1", Vector3.new(0.28, 2.35, 0.045), CFrame.new(-0.27, 2.90, 0), solarGold, Enum.Material.Metal)
+	weldTo(handle, edgeBack1)
+	local edgeBack2 = makePart(model, "EdgeBack2", Vector3.new(0.26, 2.30, 0.045), CFrame.new(-0.26, 5.15, 0), solarGold, Enum.Material.Metal)
+	weldTo(handle, edgeBack2)
+
+	local serratedFang1 = makePart(model, "SerratedFang1", Vector3.new(0.16, 0.38, 0.05), CFrame.new(0.38, 5.50, 0), solarGold, Enum.Material.Metal)
+	weldTo(handle, serratedFang1)
+	local serratedFang2 = makePart(model, "SerratedFang2", Vector3.new(0.14, 0.32, 0.05), CFrame.new(0.36, 5.92, 0), solarGold, Enum.Material.Metal)
+	weldTo(handle, serratedFang2)
+	local serratedFang3 = makePart(model, "SerratedFang3", Vector3.new(0.16, 0.38, 0.05), CFrame.new(-0.38, 5.50, 0), solarGold, Enum.Material.Metal)
+	weldTo(handle, serratedFang3)
+	local serratedFang4 = makePart(model, "SerratedFang4", Vector3.new(0.14, 0.32, 0.05), CFrame.new(-0.36, 5.92, 0), solarGold, Enum.Material.Metal)
+	weldTo(handle, serratedFang4)
+
+	local floatingHalo1 = makePart(model, "FloatingHalo1", Vector3.new(0.08, 0.40, 0.05), CFrame.new(0.48, 4.60, 0), genesisCyan, Enum.Material.Neon)
+	weldTo(handle, floatingHalo1)
+	local floatingHalo2 = makePart(model, "FloatingHalo2", Vector3.new(0.08, 0.40, 0.05), CFrame.new(-0.48, 4.60, 0), genesisCyan, Enum.Material.Neon)
+	weldTo(handle, floatingHalo2)
+	local floatingHalo3 = makePart(model, "FloatingHalo3", Vector3.new(0.08, 0.40, 0.05), CFrame.new(0.44, 3.80, 0), solarGold, Enum.Material.Metal)
+	weldTo(handle, floatingHalo3)
+	local floatingHalo4 = makePart(model, "FloatingHalo4", Vector3.new(0.08, 0.40, 0.05), CFrame.new(-0.44, 3.80, 0), solarGold, Enum.Material.Metal)
+	weldTo(handle, floatingHalo4)
+
+	local tipFwd = makeWedge(model, "TipFwd", Vector3.new(0.045, 0.80, 0.40), CFrame.new(0.20, 6.50, 0) * CFrame.Angles(0, math.rad(-90), 0), solarGold, Enum.Material.Metal)
+	weldTo(handle, tipFwd)
+	local tipBack = makeWedge(model, "TipBack", Vector3.new(0.045, 0.80, 0.40), CFrame.new(-0.20, 6.50, 0) * CFrame.Angles(0, math.rad(90), 0), solarGold, Enum.Material.Metal)
+	weldTo(handle, tipBack)
+
+	addSocket(handle, "Grip", Vector3.new(0, 0, 0), Vector3.new(0, -90, 0))
+	addSocket(handle, "Tip", Vector3.new(0, 6.85, 0), Vector3.new(0, 0, 0))
+	addSocket(handle, "VfxTip", Vector3.new(0, 6.85, 0))
+	addSocket(handle, "VfxBase", Vector3.new(0, 1.20, 0))
+	addSocket(handle, "VfxCore", Vector3.new(0, 0.88, 0))
+
+	local shieldModel = Instance.new("Model")
+	shieldModel.Name = "OffhandShield"
+	shieldModel.Parent = model
+
+	local shieldHandle = makePart(shieldModel, "HandleS", Vector3.new(0.24, 0.75, 0.24), CFrame.new(0, 0, 0), eventHorizonVoid)
+	shieldModel.PrimaryPart = shieldHandle
+
+	-- Collapsed Star Monolithic Bastion Core
+	local bastionBacking = makePart(shieldModel, "BastionBacking", Vector3.new(0.26, 3.40, 2.00), CFrame.new(-0.36, 0.20, 0), neutroniumDark, Enum.Material.Metal)
+	weldTo(shieldHandle, bastionBacking)
+	local eventHorizonShield = makePart(shieldModel, "EventHorizonShield", Vector3.new(0.28, 3.00, 1.70), CFrame.new(-0.38, 0.20, 0), eventHorizonVoid, Enum.Material.Glass)
+	weldTo(shieldHandle, eventHorizonShield)
+	local gravitationalLensingRing = makePart(shieldModel, "GravitationalLensingRing", Vector3.new(0.32, 2.60, 1.40), CFrame.new(-0.40, 0.20, 0), gravitationalLensing, Enum.Material.Glass)
+	gravitationalLensingRing.Transparency = 0.35
+	weldTo(shieldHandle, gravitationalLensingRing)
+	local collapsedStarCore = makePart(shieldModel, "CollapsedStarCore", Vector3.new(0.48, 1.00, 1.00), CFrame.new(-0.48, 0.20, 0), singularityCrimson, Enum.Material.Metal)
+	weldTo(shieldHandle, collapsedStarCore)
+	local protoStarBeacon = makePart(shieldModel, "ProtoStarBeacon", Vector3.new(0.54, 0.42, 0.42), CFrame.new(-0.52, 0.20, 0), genesisCyan, Enum.Material.Neon)
+	weldTo(shieldHandle, protoStarBeacon)
+
+	-- Solar Gold Rim & Heavy Neutronium Bastion Frames
+	local rimTop = makePart(shieldModel, "RimTop", Vector3.new(0.34, 0.24, 2.10), CFrame.new(-0.40, 1.95, 0), solarGold, Enum.Material.Metal)
+	weldTo(shieldHandle, rimTop)
+	local rimBottom = makePart(shieldModel, "RimBottom", Vector3.new(0.34, 0.24, 2.10), CFrame.new(-0.40, -1.55, 0), solarGold, Enum.Material.Metal)
+	weldTo(shieldHandle, rimBottom)
+	local rimL = makePart(shieldModel, "RimL", Vector3.new(0.34, 3.70, 0.22), CFrame.new(-0.40, 0.20, 1.08), solarGold, Enum.Material.Metal)
+	weldTo(shieldHandle, rimL)
+	local rimR = makePart(shieldModel, "RimR", Vector3.new(0.34, 3.70, 0.22), CFrame.new(-0.40, 0.20, -1.08), solarGold, Enum.Material.Metal)
+	weldTo(shieldHandle, rimR)
+
+	-- 4 Bastion Fortress Towers
+	local bastionTowerTL = makePart(shieldModel, "BastionTowerTL", Vector3.new(0.36, 0.65, 0.36), CFrame.new(-0.40, 2.05, 1.08), neutroniumDark, Enum.Material.Metal)
+	weldTo(shieldHandle, bastionTowerTL)
+	local bastionTowerTR = makePart(shieldModel, "BastionTowerTR", Vector3.new(0.36, 0.65, 0.36), CFrame.new(-0.40, 2.05, -1.08), neutroniumDark, Enum.Material.Metal)
+	weldTo(shieldHandle, bastionTowerTR)
+	local bastionTowerBL = makePart(shieldModel, "BastionTowerBL", Vector3.new(0.36, 0.65, 0.36), CFrame.new(-0.40, -1.65, 1.08), neutroniumDark, Enum.Material.Metal)
+	weldTo(shieldHandle, bastionTowerBL)
+	local bastionTowerBR = makePart(shieldModel, "BastionTowerBR", Vector3.new(0.36, 0.65, 0.36), CFrame.new(-0.40, -1.65, -1.08), neutroniumDark, Enum.Material.Metal)
+	weldTo(shieldHandle, bastionTowerBR)
+
+	-- 4 Singularity Emitters in Towers
+	local singEmitterTL = makePart(shieldModel, "SingEmitterTL", Vector3.new(0.38, 0.30, 0.30), CFrame.new(-0.44, 2.25, 1.08), genesisCyan, Enum.Material.Metal)
+	weldTo(shieldHandle, singEmitterTL)
+	local singEmitterTR = makePart(shieldModel, "SingEmitterTR", Vector3.new(0.38, 0.30, 0.30), CFrame.new(-0.44, 2.25, -1.08), genesisCyan, Enum.Material.Metal)
+	weldTo(shieldHandle, singEmitterTR)
+	local singEmitterBL = makePart(shieldModel, "SingEmitterBL", Vector3.new(0.38, 0.30, 0.30), CFrame.new(-0.44, -1.85, 1.08), singularityCrimson, Enum.Material.Metal)
+	weldTo(shieldHandle, singEmitterBL)
+	local singEmitterBR = makePart(shieldModel, "SingEmitterBR", Vector3.new(0.38, 0.30, 0.30), CFrame.new(-0.44, -1.85, -1.08), singularityCrimson, Enum.Material.Metal)
+	weldTo(shieldHandle, singEmitterBR)
+
+	-- Gravitational Accretion Waveguides Across Face
+	local accretionPillarV = makePart(shieldModel, "AccretionPillarV", Vector3.new(0.32, 2.80, 0.18), CFrame.new(-0.44, 0.20, 0), solarGold, Enum.Material.Metal)
+	weldTo(shieldHandle, accretionPillarV)
+	local accretionPillarH = makePart(shieldModel, "AccretionPillarH", Vector3.new(0.32, 0.18, 1.60), CFrame.new(-0.44, 0.20, 0), solarGold, Enum.Material.Metal)
+	weldTo(shieldHandle, accretionPillarH)
+
+	-- 8 Orbiting Lensing Nodes on Shield Face
+	local lensN = makePart(shieldModel, "LensN", Vector3.new(0.34, 0.28, 0.28), CFrame.new(-0.46, 1.35, 0), genesisCyan, Enum.Material.Glass)
+	lensN.Transparency = 0.25
+	weldTo(shieldHandle, lensN)
+	local lensS = makePart(shieldModel, "LensS", Vector3.new(0.34, 0.28, 0.28), CFrame.new(-0.46, -0.95, 0), genesisCyan, Enum.Material.Glass)
+	lensS.Transparency = 0.25
+	weldTo(shieldHandle, lensS)
+	local lensE = makePart(shieldModel, "LensE", Vector3.new(0.34, 0.28, 0.28), CFrame.new(-0.46, 0.20, 0.75), genesisCyan, Enum.Material.Glass)
+	lensE.Transparency = 0.25
+	weldTo(shieldHandle, lensE)
+	local lensW = makePart(shieldModel, "LensW", Vector3.new(0.34, 0.28, 0.28), CFrame.new(-0.46, 0.20, -0.75), genesisCyan, Enum.Material.Glass)
+	lensW.Transparency = 0.25
+	weldTo(shieldHandle, lensW)
+
+	local lensNE = makePart(shieldModel, "LensNE", Vector3.new(0.32, 0.24, 0.24), CFrame.new(-0.46, 0.95, 0.55), singularityCrimson, Enum.Material.Glass)
+	lensNE.Transparency = 0.25
+	weldTo(shieldHandle, lensNE)
+	local lensNW = makePart(shieldModel, "LensNW", Vector3.new(0.32, 0.24, 0.24), CFrame.new(-0.46, 0.95, -0.55), singularityCrimson, Enum.Material.Glass)
+	lensNW.Transparency = 0.25
+	weldTo(shieldHandle, lensNW)
+	local lensSE = makePart(shieldModel, "LensSE", Vector3.new(0.32, 0.24, 0.24), CFrame.new(-0.46, -0.55, 0.55), singularityCrimson, Enum.Material.Glass)
+	lensSE.Transparency = 0.25
+	weldTo(shieldHandle, lensSE)
+	local lensSW = makePart(shieldModel, "LensSW", Vector3.new(0.32, 0.24, 0.24), CFrame.new(-0.46, -0.55, -0.55), singularityCrimson, Enum.Material.Glass)
+	lensSW.Transparency = 0.25
+	weldTo(shieldHandle, lensSW)
+
+	-- Diagonal Seismic Shock Braces
+	local shockBraceNE = makePart(shieldModel, "ShockBraceNE", Vector3.new(0.30, 0.90, 0.12), CFrame.new(-0.44, 0.70, 0.40), solarGold, Enum.Material.Metal)
+	weldTo(shieldHandle, shockBraceNE)
+	local shockBraceNW = makePart(shieldModel, "ShockBraceNW", Vector3.new(0.30, 0.90, 0.12), CFrame.new(-0.44, 0.70, -0.40), solarGold, Enum.Material.Metal)
+	weldTo(shieldHandle, shockBraceNW)
+	local shockBraceSE = makePart(shieldModel, "ShockBraceSE", Vector3.new(0.30, 0.90, 0.12), CFrame.new(-0.44, -0.30, 0.40), solarGold, Enum.Material.Metal)
+	weldTo(shieldHandle, shockBraceSE)
+	local shockBraceSW = makePart(shieldModel, "ShockBraceSW", Vector3.new(0.30, 0.90, 0.12), CFrame.new(-0.44, -0.30, -0.40), solarGold, Enum.Material.Metal)
+	weldTo(shieldHandle, shockBraceSW)
+
+	-- Radial Event Horizon Rim Flanges
+	local rimFlangeTop = makePart(shieldModel, "RimFlangeTop", Vector3.new(0.36, 0.20, 0.80), CFrame.new(-0.42, 2.10, 0), gravitationalLensing, Enum.Material.Glass)
+	rimFlangeTop.Transparency = 0.25
+	weldTo(shieldHandle, rimFlangeTop)
+	local rimFlangeBot = makePart(shieldModel, "RimFlangeBot", Vector3.new(0.36, 0.20, 0.80), CFrame.new(-0.42, -1.70, 0), gravitationalLensing, Enum.Material.Glass)
+	rimFlangeBot.Transparency = 0.25
+	weldTo(shieldHandle, rimFlangeBot)
+	local realityTearL1 = makePart(shieldModel, "RealityTearL1", Vector3.new(0.34, 0.45, 0.22), CFrame.new(-0.46, 1.25, 0.90), singularityCrimson, Enum.Material.Glass)
+	realityTearL1.Transparency = 0.25
+	weldTo(shieldHandle, realityTearL1)
+	local realityTearR1 = makePart(shieldModel, "RealityTearR1", Vector3.new(0.34, 0.45, 0.22), CFrame.new(-0.46, 1.25, -0.90), singularityCrimson, Enum.Material.Glass)
+	realityTearR1.Transparency = 0.25
+	weldTo(shieldHandle, realityTearR1)
+	local realityTearL2 = makePart(shieldModel, "RealityTearL2", Vector3.new(0.34, 0.45, 0.22), CFrame.new(-0.46, -0.85, 0.90), singularityCrimson, Enum.Material.Glass)
+	realityTearL2.Transparency = 0.25
+	weldTo(shieldHandle, realityTearL2)
+	local realityTearR2 = makePart(shieldModel, "RealityTearR2", Vector3.new(0.34, 0.45, 0.22), CFrame.new(-0.46, -0.85, -0.90), singularityCrimson, Enum.Material.Glass)
+	realityTearR2.Transparency = 0.25
+	weldTo(shieldHandle, realityTearR2)
+	local singularityCoronaLensL = makePart(shieldModel, "SingularityCoronaLensL", Vector3.new(0.36, 0.24, 0.45), CFrame.new(-0.46, 0.20, 1.25), genesisCyan, Enum.Material.Glass)
+	singularityCoronaLensL.Transparency = 0.25
+	weldTo(shieldHandle, singularityCoronaLensL)
+	local singularityCoronaLensR = makePart(shieldModel, "SingularityCoronaLensR", Vector3.new(0.36, 0.24, 0.45), CFrame.new(-0.46, 0.20, -1.25), genesisCyan, Enum.Material.Glass)
+	singularityCoronaLensR.Transparency = 0.25
+	weldTo(shieldHandle, singularityCoronaLensR)
+
+	-- Arm Mounting Harness
+	local armBrace = makePart(shieldModel, "ArmBrace", Vector3.new(0.22, 1.10, 0.40), CFrame.new(-0.16, 0.20, 0), neutroniumDark, Enum.Material.Metal)
+	weldTo(shieldHandle, armBrace)
+	local strapTop = makePart(shieldModel, "StrapTop", Vector3.new(0.14, 0.18, 0.52), CFrame.new(-0.10, 0.60, 0), solarGold, Enum.Material.Metal)
+	weldTo(shieldHandle, strapTop)
+	local strapBot = makePart(shieldModel, "StrapBot", Vector3.new(0.14, 0.18, 0.52), CFrame.new(-0.10, -0.20, 0), solarGold, Enum.Material.Metal)
+	weldTo(shieldHandle, strapBot)
+
+	addSocket(shieldHandle, "ShieldMount", Vector3.new(-0.18, 0, 0), Vector3.new(0, 90, 0))
+	addSocket(shieldHandle, "VfxShieldCenter", Vector3.new(-0.54, 0.10, 0))
+
+	return model
+end
+
 -- ============================================================================
 -- 3. WEAPON_DAGGERS (Dual Rogue Trench Stilettos)
 -- ============================================================================
@@ -701,21 +5183,492 @@ function WeaponModelBuilder.Style(wModel: Model, weaponAssetId: string?, rarityI
 		end
 	end
 
-	-- Rarity flair: Exalted+ weapons (rarity >= 5) glow in their rarity colour.
+	-- Striker Dual Daggers (Batch 3) Styling Hook
+	local daggerStyle = weaponAssetId and DAGGER_STYLES[weaponAssetId]
+	if daggerStyle then
+		local handle = wModel:FindFirstChild("Handle") :: BasePart?
+		if handle then
+			handle.Material = daggerStyle.PrimaryMaterial
+			handle.Color = daggerStyle.PrimaryColor
+		end
+
+		local leftDagger = wModel:FindFirstChild("LeftDagger")
+		local handleL = leftDagger and leftDagger:FindFirstChild("HandleL") :: BasePart?
+		if handleL then
+			handleL.Material = daggerStyle.LeftMaterial or daggerStyle.PrimaryMaterial
+			handleL.Color = daggerStyle.LeftColor or daggerStyle.PrimaryColor
+		end
+
+		local function refreshRunes(parentPart: BasePart?, isLeft: boolean)
+			if not parentPart or not daggerStyle.Runes then return end
+			for _, r in ipairs(daggerStyle.Runes) do
+				local rune = parentPart:FindFirstChild(r.Name) :: BasePart?
+				local rColor = (isLeft and r.LeftColor) or r.Color
+				if not rune then
+					rune = Instance.new("Part")
+					rune.Name = r.Name
+					rune.Shape = r.Shape or Enum.PartType.Block
+					rune.Size = r.Size
+					rune.Material = Enum.Material.Neon
+					rune.Color = rColor
+					rune.CanCollide = false
+					rune.CanTouch = false
+					rune.CanQuery = false
+					rune.Massless = true
+					rune.Anchored = false
+					rune.CastShadow = false
+					rune.CFrame = parentPart.CFrame * CFrame.new(r.Offset)
+					rune.Parent = parentPart
+
+					local weld = Instance.new("WeldConstraint")
+					weld.Part0 = parentPart
+					weld.Part1 = rune
+					weld.Parent = rune
+				else
+					rune.Material = Enum.Material.Neon
+					rune.Color = rColor
+				end
+			end
+		end
+
+		refreshRunes(handle, false)
+		refreshRunes(handleL, true)
+	end
+
+	-- Subtle accent rune glow for Exalted+ weapons (rarity >= 5), applied ONLY to dedicated micro-pip parts.
+	-- Main staves, limbs, blades, wings, rings, and crystals retain their physical materials.
 	if rarityIndex and rarityIndex >= 5 then
 		local Shared = ReplicatedStorage:FindFirstChild("Shared")
 		local ArtifactCatalog = Shared and require(Shared:WaitForChild("Config"):WaitForChild("ArtifactCatalog")) :: any
 		local rInfo = ArtifactCatalog and ArtifactCatalog.GetRarityInfo(rarityIndex)
 		if rInfo then
 			for _, p in ipairs(wModel:GetDescendants()) do
-				if p:IsA("BasePart") and (p.Name:find("Blade") or p.Name:find("Tip") or p.Name:find("Orb") or p.Name:find("Crystal")) then
+				if p:IsA("BasePart") and (p.Name:find("RuneInlay") or p.Name:find("GlowPip")) then
 					p.Material = Enum.Material.Neon
 					p.Color = rInfo.Color
 				end
 			end
 		end
 	end
+
+	-- Apply client-side weapon VFX (glints, lights, auras, trails)
+	local assets = ReplicatedStorage:FindFirstChild("Assets")
+	local combatVfx = assets and assets:FindFirstChild("CombatVfx")
+	local weaponVfxMod = combatVfx and combatVfx:FindFirstChild("WeaponVfx")
+	if weaponVfxMod then
+		local ok, WeaponVfx = pcall(require, weaponVfxMod)
+		if ok and WeaponVfx and WeaponVfx.Apply then
+			local Shared = ReplicatedStorage:FindFirstChild("Shared")
+			local ArtifactCatalog = Shared and require(Shared:WaitForChild("Config"):WaitForChild("ArtifactCatalog")) :: any
+			local seed = weaponAssetId and ArtifactCatalog and ArtifactCatalog.Seeds and ArtifactCatalog.Seeds[weaponAssetId]
+			local resolvedType = (seed and seed.Type) or (if wModel:FindFirstChild("OffhandShield") then "SWORD_SHIELD" else "BOW")
+			WeaponVfx.Apply(wModel, resolvedType, rarityIndex, weaponAssetId)
+		end
+	end
 end
+
+-- Striker Dual Daggers (Batch 3) Styling Spec & Rune Configuration
+type DaggerAccentRune = {
+	Name: string,
+	Shape: Enum.PartType,
+	Size: Vector3,
+	Offset: Vector3,
+	Color: Color3,
+	LeftColor: Color3?,
+}
+
+type DaggerStyleData = {
+	PrimaryMaterial: Enum.Material,
+	PrimaryColor: Color3,
+	LeftMaterial: Enum.Material?,
+	LeftColor: Color3?,
+	RarityTier: number,
+	Runes: { DaggerAccentRune }?,
+}
+
+local DAGGER_STYLES: { [string]: DaggerStyleData } = {
+	art_rusty_daggers = {
+		PrimaryMaterial = Enum.Material.Metal,
+		PrimaryColor = Color3.fromRGB(125, 128, 135),
+		RarityTier = 1,
+	},
+	art_serrated_skewers = {
+		PrimaryMaterial = Enum.Material.Metal,
+		PrimaryColor = Color3.fromRGB(58, 62, 70),
+		RarityTier = 1,
+	},
+	art_viper_kris = {
+		PrimaryMaterial = Enum.Material.Metal,
+		PrimaryColor = Color3.fromRGB(185, 158, 85),
+		RarityTier = 2,
+		Runes = {
+			{ Name = "ViperEyeFwd", Shape = Enum.PartType.Ball, Size = Vector3.new(0.16, 0.16, 0.16), Offset = Vector3.new(0.14, 0, -0.42), Color = Color3.fromRGB(46, 204, 113) },
+			{ Name = "ViperEyeBack", Shape = Enum.PartType.Ball, Size = Vector3.new(0.16, 0.16, 0.16), Offset = Vector3.new(-0.14, 0, -0.42), Color = Color3.fromRGB(46, 204, 113) },
+		},
+	},
+	art_silent_dirks = {
+		PrimaryMaterial = Enum.Material.Metal,
+		PrimaryColor = Color3.fromRGB(220, 226, 238),
+		RarityTier = 2,
+		Runes = {
+			{ Name = "PommelGem", Shape = Enum.PartType.Ball, Size = Vector3.new(0.18, 0.18, 0.18), Offset = Vector3.new(0, 0, -1.25), Color = Color3.fromRGB(80, 160, 240) },
+		},
+	},
+	art_shadow_fangs = {
+		PrimaryMaterial = Enum.Material.Metal,
+		PrimaryColor = Color3.fromRGB(36, 34, 46),
+		RarityTier = 3,
+		Runes = {
+			{ Name = "BladeRuneCore", Shape = Enum.PartType.Block, Size = Vector3.new(0.08, 0.08, 0.45), Offset = Vector3.new(0, 0, 0.15), Color = Color3.fromRGB(155, 89, 182) },
+			{ Name = "PommelGem", Shape = Enum.PartType.Ball, Size = Vector3.new(0.18, 0.18, 0.18), Offset = Vector3.new(0, 0, -1.22), Color = Color3.fromRGB(155, 89, 182) },
+		},
+	},
+	art_phantom_stiletto = {
+		PrimaryMaterial = Enum.Material.Metal,
+		PrimaryColor = Color3.fromRGB(210, 230, 250),
+		RarityTier = 3,
+		Runes = {
+			{ Name = "BladeRuneCore", Shape = Enum.PartType.Block, Size = Vector3.new(0.07, 0.07, 0.55), Offset = Vector3.new(0, 0, 0.20), Color = Color3.fromRGB(0, 230, 255) },
+			{ Name = "CrossguardGem", Shape = Enum.PartType.Ball, Size = Vector3.new(0.16, 0.16, 0.16), Offset = Vector3.new(0, 0, -0.38), Color = Color3.fromRGB(0, 230, 255) },
+		},
+	},
+	art_phantom_edge = {
+		PrimaryMaterial = Enum.Material.Metal,
+		PrimaryColor = Color3.fromRGB(155, 190, 225),
+		RarityTier = 4,
+		Runes = {
+			{ Name = "BladeRuneCore", Shape = Enum.PartType.Block, Size = Vector3.new(0.08, 0.08, 0.60), Offset = Vector3.new(0, 0, 0.25), Color = Color3.fromRGB(100, 210, 255) },
+			{ Name = "CrossguardGem", Shape = Enum.PartType.Ball, Size = Vector3.new(0.18, 0.18, 0.18), Offset = Vector3.new(0, 0, -0.36), Color = Color3.fromRGB(100, 210, 255) },
+			{ Name = "PommelGem", Shape = Enum.PartType.Ball, Size = Vector3.new(0.18, 0.18, 0.18), Offset = Vector3.new(0, 0, -1.24), Color = Color3.fromRGB(100, 210, 255) },
+		},
+	},
+	art_nightstalker_katar = {
+		PrimaryMaterial = Enum.Material.Metal,
+		PrimaryColor = Color3.fromRGB(42, 45, 54),
+		RarityTier = 4,
+		Runes = {
+			{ Name = "CrossguardGem", Shape = Enum.PartType.Ball, Size = Vector3.new(0.18, 0.18, 0.18), Offset = Vector3.new(0.22, 0, -0.35), Color = Color3.fromRGB(255, 175, 40) },
+			{ Name = "CrossguardGemBack", Shape = Enum.PartType.Ball, Size = Vector3.new(0.18, 0.18, 0.18), Offset = Vector3.new(-0.22, 0, -0.35), Color = Color3.fromRGB(255, 175, 40) },
+			{ Name = "BladeRuneCore", Shape = Enum.PartType.Block, Size = Vector3.new(0.09, 0.09, 0.50), Offset = Vector3.new(0, 0, 0.20), Color = Color3.fromRGB(255, 175, 40) },
+		},
+	},
+	art_bloodthirst_twinblades = {
+		PrimaryMaterial = Enum.Material.Metal,
+		PrimaryColor = Color3.fromRGB(90, 28, 36),
+		RarityTier = 5,
+		Runes = {
+			{ Name = "BladeRuneCore", Shape = Enum.PartType.Block, Size = Vector3.new(0.08, 0.08, 0.65), Offset = Vector3.new(0, 0, 0.28), Color = Color3.fromRGB(255, 30, 60) },
+			{ Name = "CrossguardGem", Shape = Enum.PartType.Ball, Size = Vector3.new(0.20, 0.20, 0.20), Offset = Vector3.new(0, 0, -0.35), Color = Color3.fromRGB(255, 30, 60) },
+			{ Name = "PommelGem", Shape = Enum.PartType.Ball, Size = Vector3.new(0.18, 0.18, 0.18), Offset = Vector3.new(0, 0, -1.23), Color = Color3.fromRGB(255, 30, 60) },
+		},
+	},
+	art_crimson_carnage = {
+		PrimaryMaterial = Enum.Material.SmoothPlastic,
+		PrimaryColor = Color3.fromRGB(228, 220, 208),
+		RarityTier = 5,
+		Runes = {
+			{ Name = "BladeRuneCore", Shape = Enum.PartType.Block, Size = Vector3.new(0.09, 0.09, 0.65), Offset = Vector3.new(0, 0, 0.26), Color = Color3.fromRGB(220, 20, 40) },
+			{ Name = "PommelGem", Shape = Enum.PartType.Ball, Size = Vector3.new(0.20, 0.20, 0.20), Offset = Vector3.new(0, 0, -1.28), Color = Color3.fromRGB(220, 20, 40) },
+		},
+	},
+	art_eclipse_daggers = {
+		PrimaryMaterial = Enum.Material.Metal,
+		PrimaryColor = Color3.fromRGB(248, 198, 55),
+		LeftMaterial = Enum.Material.Metal,
+		LeftColor = Color3.fromRGB(215, 230, 250),
+		RarityTier = 6,
+		Runes = {
+			{ Name = "BladeRuneCore", Shape = Enum.PartType.Block, Size = Vector3.new(0.08, 0.08, 0.70), Offset = Vector3.new(0, 0, 0.30), Color = Color3.fromRGB(255, 140, 0), LeftColor = Color3.fromRGB(130, 200, 255) },
+			{ Name = "CrossguardGem", Shape = Enum.PartType.Ball, Size = Vector3.new(0.20, 0.20, 0.20), Offset = Vector3.new(0, 0, -0.34), Color = Color3.fromRGB(255, 180, 0), LeftColor = Color3.fromRGB(180, 220, 255) },
+			{ Name = "PommelGem", Shape = Enum.PartType.Ball, Size = Vector3.new(0.18, 0.18, 0.18), Offset = Vector3.new(0, 0, -1.22), Color = Color3.fromRGB(255, 140, 0), LeftColor = Color3.fromRGB(130, 200, 255) },
+		},
+	},
+	art_abyssal_razor = {
+		PrimaryMaterial = Enum.Material.Metal,
+		PrimaryColor = Color3.fromRGB(25, 28, 38),
+		RarityTier = 6,
+		Runes = {
+			{ Name = "BladeRuneCore", Shape = Enum.PartType.Block, Size = Vector3.new(0.08, 0.08, 0.72), Offset = Vector3.new(0, 0, 0.32), Color = Color3.fromRGB(0, 240, 210) },
+			{ Name = "CrossguardGem", Shape = Enum.PartType.Ball, Size = Vector3.new(0.20, 0.20, 0.20), Offset = Vector3.new(0, 0, -0.35), Color = Color3.fromRGB(0, 240, 210) },
+			{ Name = "PommelGem", Shape = Enum.PartType.Ball, Size = Vector3.new(0.18, 0.18, 0.18), Offset = Vector3.new(0, 0, -1.25), Color = Color3.fromRGB(0, 240, 210) },
+		},
+	},
+	art_abyssal_ravagers = {
+		PrimaryMaterial = Enum.Material.Metal,
+		PrimaryColor = Color3.fromRGB(32, 28, 48),
+		RarityTier = 7,
+		Runes = {
+			{ Name = "BladeRuneCore", Shape = Enum.PartType.Block, Size = Vector3.new(0.09, 0.09, 0.75), Offset = Vector3.new(0, 0, 0.32), Color = Color3.fromRGB(180, 70, 255) },
+			{ Name = "CrossguardGem", Shape = Enum.PartType.Ball, Size = Vector3.new(0.22, 0.22, 0.22), Offset = Vector3.new(0, 0, -0.34), Color = Color3.fromRGB(180, 70, 255) },
+			{ Name = "PommelGem", Shape = Enum.PartType.Ball, Size = Vector3.new(0.20, 0.20, 0.20), Offset = Vector3.new(0, 0, -1.24), Color = Color3.fromRGB(180, 70, 255) },
+		},
+	},
+	art_void_reapers = {
+		PrimaryMaterial = Enum.Material.Metal,
+		PrimaryColor = Color3.fromRGB(38, 30, 52),
+		RarityTier = 7,
+		Runes = {
+			{ Name = "BladeRuneCore", Shape = Enum.PartType.Block, Size = Vector3.new(0.10, 0.10, 0.80), Offset = Vector3.new(0, 0, 0.34), Color = Color3.fromRGB(255, 60, 220) },
+			{ Name = "CrossguardGem", Shape = Enum.PartType.Ball, Size = Vector3.new(0.24, 0.24, 0.24), Offset = Vector3.new(0, 0, -0.35), Color = Color3.fromRGB(255, 60, 220) },
+			{ Name = "PommelGem", Shape = Enum.PartType.Ball, Size = Vector3.new(0.22, 0.22, 0.22), Offset = Vector3.new(0, 0, -1.26), Color = Color3.fromRGB(255, 60, 220) },
+		},
+	},
+}
+
+-- Striker Dual Daggers (Batch 3) - Authenticated 3D Anime MeshPart Models
+local DAGGER_MESH_DATA: { [string]: { MeshR: string, MeshL: string, SizeR: Vector3, SizeL: Vector3, GripZ: number } } = {
+	art_rusty_daggers = {
+		MeshR = "rbxassetid://110034311026272", MeshL = "rbxassetid://131093026743929",
+		SizeR = Vector3.new(0.420, 0.180, 2.595), SizeL = Vector3.new(0.420, 0.180, 2.595),
+		GripZ = -0.78,
+	},
+	art_serrated_skewers = {
+		MeshR = "rbxassetid://91530348627271", MeshL = "rbxassetid://128192359900368",
+		SizeR = Vector3.new(0.637, 0.180, 2.620), SizeL = Vector3.new(0.637, 0.180, 2.620),
+		GripZ = -0.85,
+	},
+	art_viper_kris = {
+		MeshR = "rbxassetid://100960418327761", MeshL = "rbxassetid://87860424796055",
+		SizeR = Vector3.new(0.560, 0.210, 2.656), SizeL = Vector3.new(0.560, 0.210, 2.656),
+		GripZ = -0.83,
+	},
+	art_silent_dirks = {
+		MeshR = "rbxassetid://109463074459252", MeshL = "rbxassetid://90210120948150",
+		SizeR = Vector3.new(0.520, 0.167, 2.855), SizeL = Vector3.new(0.520, 0.167, 2.855),
+		GripZ = -0.84,
+	},
+	art_shadow_fangs = {
+		MeshR = "rbxassetid://84105855622343", MeshL = "rbxassetid://96637869715883",
+		SizeR = Vector3.new(0.641, 0.180, 2.788), SizeL = Vector3.new(0.641, 0.180, 2.788),
+		GripZ = -0.79,
+	},
+	art_phantom_stiletto = {
+		MeshR = "rbxassetid://95485455169856", MeshL = "rbxassetid://88959633954366",
+		SizeR = Vector3.new(0.680, 0.225, 2.972), SizeL = Vector3.new(0.680, 0.225, 2.972),
+		GripZ = -0.81,
+	},
+	art_phantom_edge = {
+		MeshR = "rbxassetid://103176855075399", MeshL = "rbxassetid://82325319620964",
+		SizeR = Vector3.new(0.660, 0.210, 2.768), SizeL = Vector3.new(0.660, 0.210, 2.768),
+		GripZ = -0.80,
+	},
+	art_nightstalker_katar = {
+		MeshR = "rbxassetid://86700504154269", MeshL = "rbxassetid://138241808478479",
+		SizeR = Vector3.new(0.981, 0.136, 2.760), SizeL = Vector3.new(0.981, 0.136, 2.760),
+		GripZ = -0.80,
+	},
+	art_bloodthirst_twinblades = {
+		MeshR = "rbxassetid://110396492656117", MeshL = "rbxassetid://104876354695035",
+		SizeR = Vector3.new(0.680, 0.203, 2.772), SizeL = Vector3.new(0.680, 0.203, 2.772),
+		GripZ = -0.79,
+	},
+	art_crimson_carnage = {
+		MeshR = "rbxassetid://111430681242668", MeshL = "rbxassetid://87778235118429",
+		SizeR = Vector3.new(0.680, 0.220, 2.690), SizeL = Vector3.new(0.680, 0.220, 2.690),
+		GripZ = -0.85,
+	},
+	art_eclipse_daggers = {
+		MeshR = "rbxassetid://92030472160232", MeshL = "rbxassetid://109171321167882",
+		SizeR = Vector3.new(0.740, 0.200, 2.920), SizeL = Vector3.new(0.720, 0.200, 2.920),
+		GripZ = -0.78,
+	},
+	art_abyssal_razor = {
+		MeshR = "rbxassetid://121671691834783", MeshL = "rbxassetid://90733904020662",
+		SizeR = Vector3.new(0.760, 0.209, 2.934), SizeL = Vector3.new(0.760, 0.209, 2.934),
+		GripZ = -0.81,
+	},
+	art_abyssal_ravagers = {
+		MeshR = "rbxassetid://98053273663985", MeshL = "rbxassetid://72459271137331",
+		SizeR = Vector3.new(0.893, 0.278, 2.946), SizeL = Vector3.new(0.893, 0.278, 2.946),
+		GripZ = -0.79,
+	},
+	art_void_reapers = {
+		MeshR = "rbxassetid://77924981977384", MeshL = "rbxassetid://107220411537472",
+		SizeR = Vector3.new(0.984, 0.280, 3.064), SizeL = Vector3.new(0.984, 0.280, 3.064),
+		GripZ = -0.81,
+	},
+}
+
+local function makeMeshDagger(name: string): Model
+	local data = DAGGER_MESH_DATA[name]
+	assert(data, `No dagger mesh data for {name}`)
+
+	local model = Instance.new("Model")
+	model.Name = name
+
+	local style = DAGGER_STYLES[name]
+
+	local handle = Instance.new("MeshPart")
+	handle.Name = "Handle"
+	handle.MeshId = data.MeshR
+	handle.Size = data.SizeR
+	handle.CFrame = CFrame.new(0, 0, 0)
+	handle.Material = style and style.PrimaryMaterial or Enum.Material.Metal
+	handle.Color = style and style.PrimaryColor or Color3.fromRGB(180, 180, 180)
+	handle.CanCollide = false
+	handle.CanTouch = false
+	handle.CanQuery = false
+	handle.Massless = true
+	handle.Anchored = false
+	handle.CastShadow = false
+	handle.Parent = model
+	model.PrimaryPart = handle
+
+	local leftDagger = Instance.new("Model")
+	leftDagger.Name = "LeftDagger"
+	leftDagger.Parent = model
+
+	local handleL = Instance.new("MeshPart")
+	handleL.Name = "HandleL"
+	handleL.MeshId = data.MeshL
+	handleL.Size = data.SizeL
+	handleL.CFrame = CFrame.new(-0.75, 0, 0)
+	handleL.Material = style and (style.LeftMaterial or style.PrimaryMaterial) or Enum.Material.Metal
+	handleL.Color = style and (style.LeftColor or style.PrimaryColor) or Color3.fromRGB(180, 180, 180)
+	handleL.CanCollide = false
+	handleL.CanTouch = false
+	handleL.CanQuery = false
+	handleL.Massless = true
+	handleL.Anchored = false
+	handleL.CastShadow = false
+	handleL.Parent = leftDagger
+	leftDagger.PrimaryPart = handleL
+
+	local function setupSockets(part: MeshPart)
+		local gripPos = Vector3.new(0, 0, data.GripZ)
+		local tipPos = Vector3.new(0, 0, part.Size.Z * 0.5)
+		local basePos = gripPos + Vector3.new(0, 0, 0.44)
+		local corePos = (gripPos + tipPos) * 0.5
+
+		local grip = Instance.new("Attachment")
+		grip.Name = "Grip"
+		grip.CFrame = CFrame.fromMatrix(gripPos, Vector3.new(0, -1, 0), Vector3.new(0, 0, 1), Vector3.new(-1, 0, 0))
+		grip.Parent = part
+
+		local tip = Instance.new("Attachment")
+		tip.Name = "Tip"
+		tip.CFrame = CFrame.new(tipPos)
+		tip.Parent = part
+
+		local vfxTip = Instance.new("Attachment")
+		vfxTip.Name = "VfxTip"
+		vfxTip.CFrame = CFrame.new(tipPos)
+		vfxTip.Parent = part
+
+		local vfxBase = Instance.new("Attachment")
+		vfxBase.Name = "VfxBase"
+		vfxBase.CFrame = CFrame.new(basePos)
+		vfxBase.Parent = part
+
+		local vfxCore = Instance.new("Attachment")
+		vfxCore.Name = "VfxCore"
+		vfxCore.CFrame = CFrame.new(corePos)
+		vfxCore.Parent = part
+	end
+
+	setupSockets(handle)
+	setupSockets(handleL)
+
+	-- Instantiate welded glowing Neon rune micro-pips
+	local function addRunes(parentPart: MeshPart, isLeft: boolean)
+		if not style or not style.Runes then return end
+		for _, r in ipairs(style.Runes) do
+			local rune = Instance.new("Part")
+			rune.Name = r.Name
+			rune.Shape = r.Shape or Enum.PartType.Block
+			rune.Size = r.Size
+			rune.Material = Enum.Material.Neon
+			rune.Color = (isLeft and r.LeftColor) or r.Color
+			rune.CanCollide = false
+			rune.CanTouch = false
+			rune.CanQuery = false
+			rune.Massless = true
+			rune.Anchored = false
+			rune.CastShadow = false
+			rune.CFrame = parentPart.CFrame * CFrame.new(r.Offset)
+			rune.Parent = parentPart
+
+			local weld = Instance.new("WeldConstraint")
+			weld.Part0 = parentPart
+			weld.Part1 = rune
+			weld.Parent = rune
+		end
+	end
+
+	addRunes(handle, false)
+	addRunes(handleL, true)
+
+	-- Apply client-side weapon VFX (glints, lights, auras, trails)
+	local assets = ReplicatedStorage:FindFirstChild("Assets")
+	local combatVfx = assets and assets:FindFirstChild("CombatVfx")
+	local weaponVfxMod = combatVfx and combatVfx:FindFirstChild("WeaponVfx")
+	if weaponVfxMod then
+		local ok, WeaponVfx = pcall(require, weaponVfxMod)
+		if ok and WeaponVfx and WeaponVfx.Apply then
+			local rarity = style and style.RarityTier or 1
+			WeaponVfx.Apply(model, "DAGGERS", rarity, name)
+		end
+	end
+
+	return model
+end
+
+function WeaponModelBuilder.BuildRustyDaggersArtifact(): Model
+	return makeMeshDagger("art_rusty_daggers")
+end
+
+function WeaponModelBuilder.BuildSerratedSkewersArtifact(): Model
+	return makeMeshDagger("art_serrated_skewers")
+end
+
+function WeaponModelBuilder.BuildViperKrisArtifact(): Model
+	return makeMeshDagger("art_viper_kris")
+end
+
+function WeaponModelBuilder.BuildSilentDirksArtifact(): Model
+	return makeMeshDagger("art_silent_dirks")
+end
+
+function WeaponModelBuilder.BuildShadowFangsArtifact(): Model
+	return makeMeshDagger("art_shadow_fangs")
+end
+
+function WeaponModelBuilder.BuildPhantomStilettoArtifact(): Model
+	return makeMeshDagger("art_phantom_stiletto")
+end
+
+function WeaponModelBuilder.BuildPhantomEdgeArtifact(): Model
+	return makeMeshDagger("art_phantom_edge")
+end
+
+function WeaponModelBuilder.BuildNightstalkerKatarArtifact(): Model
+	return makeMeshDagger("art_nightstalker_katar")
+end
+
+function WeaponModelBuilder.BuildBloodthirstTwinbladesArtifact(): Model
+	return makeMeshDagger("art_bloodthirst_twinblades")
+end
+
+function WeaponModelBuilder.BuildCrimsonCarnageArtifact(): Model
+	return makeMeshDagger("art_crimson_carnage")
+end
+
+function WeaponModelBuilder.BuildEclipseDaggersArtifact(): Model
+	return makeMeshDagger("art_eclipse_daggers")
+end
+
+function WeaponModelBuilder.BuildAbyssalRazorArtifact(): Model
+	return makeMeshDagger("art_abyssal_razor")
+end
+
+function WeaponModelBuilder.BuildAbyssalRavagersArtifact(): Model
+	return makeMeshDagger("art_abyssal_ravagers")
+end
+
+function WeaponModelBuilder.BuildVoidReapersArtifact(): Model
+	return makeMeshDagger("art_void_reapers")
+end
+
 
 -- Returns the Weapons folder first (ArtPackVisuals relies on that), then name -> prefab.
 function WeaponModelBuilder.EnsureWeapons(): (Folder, { [string]: Model })
@@ -735,10 +5688,53 @@ function WeaponModelBuilder.EnsureWeapons(): (Folder, { [string]: Model })
 
 	local builders: { [string]: () -> Model } = {
 		weapon_bow = WeaponModelBuilder.BuildBow,
+		art_hunters_shortbow = WeaponModelBuilder.BuildHuntersShortbow,
+		art_reinforced_longbow = WeaponModelBuilder.BuildReinforcedLongbow,
+		art_recurve_composite = WeaponModelBuilder.BuildRecurveComposite,
+		art_gale_force_composite = WeaponModelBuilder.BuildGaleForceComposite,
+		art_stormstrider_longbow = WeaponModelBuilder.BuildStormstriderLongbow,
+		art_thunderhead_recurve = WeaponModelBuilder.BuildThunderheadRecurve,
+		art_crystal_greatbow = WeaponModelBuilder.BuildCrystalGreatbow,
+		art_prismatic_arbalest = WeaponModelBuilder.BuildPrismaticArbalest,
+		art_phoenix_flatbow = WeaponModelBuilder.BuildPhoenixFlatbow,
+		art_solar_flare_recurve = WeaponModelBuilder.BuildSolarFlareRecurve,
+		art_celestial_zenith = WeaponModelBuilder.BuildCelestialZenith,
+		art_supernova_greatbow = WeaponModelBuilder.BuildSupernovaGreatbow,
+		art_astrea_cosmic_bow = WeaponModelBuilder.BuildAstreaCosmicBow,
+		art_infinity_genesis_bow = WeaponModelBuilder.BuildInfinityGenesisBow,
 		weapon_sword = WeaponModelBuilder.BuildSword,
 		weapon_sword_shield = WeaponModelBuilder.BuildSwordShield,
 		weapon_iron_broadsword = WeaponModelBuilder.BuildIronBroadsword,
 		weapon_runic_longsword = WeaponModelBuilder.BuildRunicLongsword,
+		art_iron_broadsword = WeaponModelBuilder.BuildIronBroadswordArtifact,
+		art_tempered_bastard_sword = WeaponModelBuilder.BuildTemperedBastardSword,
+		art_runic_longsword = WeaponModelBuilder.BuildRunicLongswordArtifact,
+		art_knightly_estoc = WeaponModelBuilder.BuildKnightlyEstoc,
+		art_paladin_spatha = WeaponModelBuilder.BuildPaladinSpatha,
+		art_vanguard_warden_bastion = WeaponModelBuilder.BuildVanguardWardenBastion,
+		art_crystal_claymore = WeaponModelBuilder.BuildCrystalClaymore,
+		art_resonant_bulwark = WeaponModelBuilder.BuildResonantBulwark,
+		art_paladin_claymore = WeaponModelBuilder.BuildPaladinClaymoreArtifact,
+		art_aegis_of_valor = WeaponModelBuilder.BuildAegisOfValor,
+		art_blade_of_the_rift = WeaponModelBuilder.BuildBladeOfTheRift,
+		art_aegis_core = WeaponModelBuilder.BuildAegisCore,
+		art_astral_executioner = WeaponModelBuilder.BuildAstralExecutioner,
+		art_genesis_worldbreaker = WeaponModelBuilder.BuildGenesisWorldbreaker,
+		-- Striker Dual Daggers (Batch 3)
+		art_rusty_daggers = WeaponModelBuilder.BuildRustyDaggersArtifact,
+		art_serrated_skewers = WeaponModelBuilder.BuildSerratedSkewersArtifact,
+		art_viper_kris = WeaponModelBuilder.BuildViperKrisArtifact,
+		art_silent_dirks = WeaponModelBuilder.BuildSilentDirksArtifact,
+		art_shadow_fangs = WeaponModelBuilder.BuildShadowFangsArtifact,
+		art_phantom_stiletto = WeaponModelBuilder.BuildPhantomStilettoArtifact,
+		art_phantom_edge = WeaponModelBuilder.BuildPhantomEdgeArtifact,
+		art_nightstalker_katar = WeaponModelBuilder.BuildNightstalkerKatarArtifact,
+		art_bloodthirst_twinblades = WeaponModelBuilder.BuildBloodthirstTwinbladesArtifact,
+		art_crimson_carnage = WeaponModelBuilder.BuildCrimsonCarnageArtifact,
+		art_eclipse_daggers = WeaponModelBuilder.BuildEclipseDaggersArtifact,
+		art_abyssal_razor = WeaponModelBuilder.BuildAbyssalRazorArtifact,
+		art_abyssal_ravagers = WeaponModelBuilder.BuildAbyssalRavagersArtifact,
+		art_void_reapers = WeaponModelBuilder.BuildVoidReapersArtifact,
 		weapon_daggers = WeaponModelBuilder.BuildDaggers,
 		weapon_axe = WeaponModelBuilder.BuildAxe,
 		weapon_staff = WeaponModelBuilder.BuildStaff,
