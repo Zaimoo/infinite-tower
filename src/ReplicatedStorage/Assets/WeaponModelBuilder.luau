@@ -7931,6 +7931,25 @@ function WeaponModelBuilder.EnsureWeapons(): (Folder, { [string]: Model })
 					alignHunterArrow(existing, handle)
 				end
 			end
+			-- Clean any cross-assembly welds from cached prefabs (e.g. LeftDagger or OffhandShield)
+			local leftDagger = existing:FindFirstChild("LeftDagger")
+			local shield = existing:FindFirstChild("OffhandShield")
+			local sub = leftDagger or shield
+			if sub then
+				for _, d in ipairs(existing:GetDescendants()) do
+					if d:IsA("JointInstance") or d:IsA("WeldConstraint") then
+						local p0 = d.Part0
+						local p1 = d.Part1
+						if p0 and p1 then
+							local inSub0 = p0:IsDescendantOf(sub)
+							local inSub1 = p1:IsDescendantOf(sub)
+							if (inSub0 and not inSub1) or (inSub1 and not inSub0) then
+								d:Destroy()
+							end
+						end
+					end
+				end
+			end
 			result[weaponName] = existing :: Model
 		end
 	end

@@ -192,6 +192,29 @@ function HeroSockets.Equip(rig: Model, weapon: Model, weaponType: WeaponType): M
 		end
 	end
 
+	-- Strip any cross-assembly welds between separate sub-assemblies (e.g. main weapon and LeftDagger/OffhandShield)
+	-- so each assembly can be positioned and welded to its own rig socket independently without conflicting rigid constraints.
+	for _, socket in sockets do
+		if socket.Assembly then
+			local sub = weapon:FindFirstChild(socket.Assembly)
+			if sub and sub:IsA("Model") then
+				for _, d in weapon:GetDescendants() do
+					if d:IsA("JointInstance") or d:IsA("WeldConstraint") then
+						local p0 = d.Part0
+						local p1 = d.Part1
+						if p0 and p1 then
+							local inSub0 = p0:IsDescendantOf(sub)
+							local inSub1 = p1:IsDescendantOf(sub)
+							if (inSub0 and not inSub1) or (inSub1 and not inSub0) then
+								d:Destroy()
+							end
+						end
+					end
+				end
+			end
+		end
+	end
+
 	for _, socket in sockets do
 		local assembly: Instance? = if socket.Assembly then weapon:FindFirstChild(socket.Assembly) else weapon
 		assert(assembly and assembly:IsA("Model"), `HeroSockets: {weapon.Name} has no assembly {socket.Assembly}`)
