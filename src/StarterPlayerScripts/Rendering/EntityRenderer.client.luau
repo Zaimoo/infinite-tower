@@ -59,6 +59,13 @@ local MOVE_KEEP_GAP = 0.05
 local MOVE_GRACE = 0.35
 local TELEPORT_SNAP_DISTANCE = 85.0
 
+-- Distance LOD: past LOD_FULL_RATE_DISTANCE a node's pose and animation update at LOD_STEP_SECONDS
+-- instead of every frame (interpolation math still runs every frame, so nothing drifts), and its
+-- Highlight turns off past HIGHLIGHT_DISTANCE (Highlights are costly and capped per client).
+local LOD_FULL_RATE_DISTANCE = 140
+local LOD_STEP_SECONDS = 1 / 15
+local HIGHLIGHT_DISTANCE = 180
+
 -- The hero rig inside a rendered entity when it was built by HeroRegistry (Phase 3 rigs).
 local function heroRig(model: Model): Model?
 	local art = model:FindFirstChild("ArtPackVisual")
@@ -220,13 +227,13 @@ local KO_ASSET_TEXTURE = "rbxassetid://10762151233"
 
 local function attachKOVFX(node: any)
 	if not node or not node.RootPart or not node.Model or not node.Model.Parent then return end
-	local existing = node.RootPart:FindFirstChild("KOAttachment")
-	if existing then return end
+	if node.KOAttachment and node.KOAttachment.Parent then return end
 
 	local att = Instance.new("Attachment")
 	att.Name = "KOAttachment"
 	att.Position = Vector3.new(0, 3.8, 0)
 	att.Parent = node.RootPart
+	node.KOAttachment = att
 
 	local pe = Instance.new("ParticleEmitter")
 	pe.Name = "KOParticles"
@@ -257,9 +264,10 @@ local function attachKOVFX(node: any)
 end
 
 local function removeKOVFX(node: any)
-	if not node or not node.RootPart then return end
-	local att = node.RootPart:FindFirstChild("KOAttachment")
+	-- Called every frame for standing heroes, so it reads the cached attachment, not the tree.
+	local att = node and node.KOAttachment
 	if att then
+		node.KOAttachment = nil
 		att:Destroy()
 	end
 end
@@ -635,10 +643,13 @@ TowerRemotes.TowerEntityState.OnClientEvent:Connect(function(context,message)
  end
 end)
 -- Reliable full roster cuts define existence. Packet loss only freezes poses and requests resync.
+local NextStaleScan=0
 local function stepResyncCheck()
  local now=os.clock()
  if Assembly and now-Assembly.Started>3 then Assembly=nil;requestEntityMetadata() end
- for _,node in pairs(VisualNodesByNetId) do if now-node.LastSeenClock>1 then requestEntityMetadata() end end
+ if now<NextStaleScan then return end
+ NextStaleScan=now+0.25
+ for _,node in pairs(VisualNodesByNetId) do if now-node.LastSeenClock>1 then requestEntityMetadata();break end end
 end
 RunService.Heartbeat:Connect(function()
 	debug.profilebegin("EntityRenderer.Resync")
@@ -656,6 +667,8 @@ local function stepRender(dt: number)
 		if serverNow>=node.DeathEnd then node.Model:Destroy();DyingNodes[key]=nil else EnemyAnimation.Step(node,dt,serverNow) end
 	end
 	local alpha = math.clamp(dt * 12.0, 0, 1)
+	local camera = Workspace.CurrentCamera
+	local camPos = if camera then camera.CFrame.Position else nil
 	for _, node in pairs(VisualNodesByNetId) do
 		local n = node :: any
 		local yaw = node.GoalYaw
@@ -675,12 +688,27 @@ local function stepRender(dt: number)
 			node.CurrentYaw += diff * math.clamp(dt * 12, 0, 1)
 			yaw = node.CurrentYaw
 		end
+		local camDist = if camPos then (node.CurrentPos - camPos).Magnitude else 0
+		local highlight = node.Highlight
+		if highlight then
+			local wantHighlight = camDist <= HIGHLIGHT_DISTANCE or _G.ClientCombatState.FocusedNetId == node.NetId
+			if highlight.Enabled ~= wantHighlight then highlight.Enabled = wantHighlight end
+		end
+		local stepDt = dt
+		if camDist > LOD_FULL_RATE_DISTANCE then
+			n.LodAccum = (n.LodAccum or 0) + dt
+			if n.LodAccum < LOD_STEP_SECONDS then
+				continue
+			end
+			stepDt = math.min(n.LodAccum, 0.15)
+		end
+		n.LodAccum = 0
 		local bodyH = (node :: any).RootHeight or node.IsHero and HeroRigSpec.GROUND_OFFSET or (node.RootPart.Size.Y * 0.5)
 		local cf = CFrame.new(node.CurrentPos + Vector3.new(0, bodyH, 0)) * CFrame.Angles(0, yaw, 0)
 		node.Model:PivotTo(cf)
 		local animator = (node :: any).HeroAnimator
 		if (node :: any).EnemyRig then
-			EnemyAnimation.Step(node,dt,serverNow)
+			EnemyAnimation.Step(node,stepDt,serverNow)
 		elseif animator then
 			debug.profilebegin("HeroAnimator.Step")
 			-- Hysteresis: positions arrive at 5 Hz, so the lerp gap dips below any single
@@ -695,11 +723,11 @@ local function stepRender(dt: number)
 			local isKnockedOut = node.StateEnum == 4 or (node.HpPermille ~= nil and node.HpPermille <= 0)
 			animator:SetLocomotion(if isKnockedOut then "Coma" elseif walking then "Move" else "Idle")
 			local moveSpeedScale = if walking then math.clamp((n.SegSpeed or 20.0) / 20.0, 1.0, 2.2) else 1.0
-			animator:Step(dt, moveSpeedScale)
+			animator:Step(stepDt, moveSpeedScale)
 			debug.profileend()
 		else
 			n.AnimSpeedScale = math.clamp((n.SegSpeed or 20.0) / 20.0, 1.0, 2.2)
-			ArtPackVisuals.Animate(node, dt, os.clock())
+			ArtPackVisuals.Animate(node, stepDt, os.clock())
 		end
 		if node.IsHero then
 			local isKnockedOut = node.StateEnum == 4 or (node.HpPermille ~= nil and node.HpPermille <= 0)
@@ -708,10 +736,6 @@ local function stepRender(dt: number)
 			else
 				removeKOVFX(node)
 			end
-		end
-		local head = node.Model:FindFirstChild("Head") :: BasePart?
-		if head and not node.IsHero then
-			head.Position = cf.Position + Vector3.new(0, bodyH + (head.Size.Y * 0.45), 0)
 		end
 	end
 end
