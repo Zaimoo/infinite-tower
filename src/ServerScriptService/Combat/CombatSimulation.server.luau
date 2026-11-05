@@ -118,10 +118,7 @@ local MASTER_SPRINT_MULTIPLIER = 3.0
 local SPRINT_FOLLOW_BUFFER = 1.05
 local SPRINT_VELOCITY_THRESHOLD = 22.0
 local LEASH_DISTANCE = 160.0
-local LEASH_TELEPORT_DISTANCE = 180.0
 local LEASH_VERTICAL_TELEPORT_DISTANCE = 45.0
-local HERO_STUCK_TIMEOUT = 3.0
-local HERO_STUCK_MIN_TICKS = 15
 -- Effective combat stats come from the profile (level, stars, weapon, training, attunement cap). They
 -- change rarely, so each hero re-derives them at most this often instead of every sim tick.
 local STAT_REFRESH_SECONDS = 1.0
@@ -258,7 +255,6 @@ local function allocateNetId(): number
 end
 
 local ActiveMasters: { [Player]: MasterCombatState } = {}
-local HeroStuckTracking: { [number]: { LastPos: Vector3, LastDist: number, LastClock: number, StuckTicks: number } } = {}
 local MasterVelocityTracking: { [Player]: { LastPos: Vector3, LastClock: number, HorizontalSpeed: number } } = {}
 local ActiveHeroesByNetId: { [number]: SimHero } = {}
 local ActiveMobsByNetId: { [number]: SimMob } = {}
@@ -400,7 +396,7 @@ local function getAssignedSpawnRoot(room: any): Vector3
 end
 
 local function getAssignedFloorAnchor(floorId: number, room: any, masterState: MasterCombatState?): Vector3
-	local basinRoot = getAssignedSpawnRoot(room)
+	local basinRoot = getAssignedSpawnRoot(room) - Vector3.new(0, 3, 0)
 	if not room or floorId <= 0 then
 		return basinRoot
 	end
@@ -409,7 +405,7 @@ local function getAssignedFloorAnchor(floorId: number, room: any, masterState: M
 			if h.State ~= "COMA" and h.CurrentHP > 0 and h.TargetNetId then
 				local mob = ActiveMobsByNetId[h.TargetNetId]
 				if mob and mob.IsAlive and Tower.Same(mob, room) and not Tower.GetSafety(mob, mob.Position).CombatSafe then
-					return mob.Position + Vector3.new(0, 3, 0)
+					return mob.Position
 				end
 			end
 		end
@@ -440,7 +436,7 @@ local function getAssignedFloorAnchor(floorId: number, room: any, masterState: M
 		end
 	end
 	if nearestMob then
-		return nearestMob.Position + Vector3.new(0, 3, 0)
+		return nearestMob.Position
 	end
 	return basinRoot
 end
@@ -504,7 +500,7 @@ function CombatSimulation.RebuildPlayerSquad(player: Player)
 
 	local towerState=Tower.GetState(player)
 	local room=Tower.GetRoom(towerState.SquadFloorId) or Tower.GetRoom(0)
-	local masterPos=towerState.SquadAssignment and getAssignedFloorAnchor(towerState.SquadFloorId, room, masterState) or getMasterGroundPosition(player) or room.Arrival.Position
+	local masterPos=towerState.SquadAssignment and getAssignedFloorAnchor(towerState.SquadFloorId, room, masterState) or getMasterGroundPosition(player) or (room.Arrival.Position - Vector3.new(0, 3, 0))
 		local desiredUUIDs: { [string]: number } = {}
 
 	for slot = 1, 5 do
@@ -557,7 +553,7 @@ function CombatSimulation.RebuildPlayerSquad(player: Player)
 		else
 			local netId = allocateNetId()
 			rosterChanged=true
-			local spawnPos = HeroNavigation.PlaceNear(masterPos, getFormationOffset(slotIndex))
+			local spawnPos = HeroNavigation.PlaceOnGround(masterPos, getFormationOffset(slotIndex))
 			local newSim: SimHero = {
 				NetId = netId,
 			FloorId = 0, RoomGeneration = 1, EntityGeneration = 1,
@@ -2157,6 +2153,7 @@ performHeroAttack = function(simHero: SimHero, targetPos: Vector3, targetMob: Si
 end
 
 local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
+	local movementHero: any = simHero
 	if simHero.DuelId then
 		stepDuelHero(simHero, dt, now)
 		return
@@ -2251,7 +2248,7 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 
 	-- Free-following squads fight around the Master and disengage when the Master walks off;
 	-- assigned squads roam the floor up to maxLeash and join squadmates' fights.
-	local engage: HeroTargeting.Context = { MasterPos = masterPos, Assigned = assignedRoom ~= nil, Leash = maxLeash }
+	local engage: HeroTargeting.Context = { MasterPos = masterPos, Assigned = assignedRoom ~= nil, Leash = maxLeash, Now = now }
 	local assist: { number }? = nil
 	if assignedRoom and masterState then
 		assist = {}
@@ -2268,7 +2265,7 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 		local distToMaster = (masterPos - simHero.Position).Magnitude
 		-- Slightly tighten formation offset when far away while keeping slots distinct so squadmates do not stack on bridges
 		local targetOffset = if distToMaster > 18 then formation * math.clamp(18 / distToMaster, 0.65, 1.0) else formation
-		local goalPos = HeroNavigation.PlaceNear(masterPos, targetOffset)
+		local goalPos = HeroNavigation.PlaceOnGround(masterPos, targetOffset)
 		local distToGoal = (goalPos - simHero.Position).Magnitude
 		local horizDistToGoal = getHorizontalDistance(simHero.Position, goalPos)
 
@@ -2279,46 +2276,10 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 				else 1.0
 			local followSpeed = baseFollowSpeed * catchUpMult
 
-			local tracker = HeroStuckTracking[simHero.NetId]
-			if not tracker then
-				tracker = { LastPos = simHero.Position, LastDist = distToGoal, LastClock = now, StuckTicks = 0 }
-				HeroStuckTracking[simHero.NetId] = tracker
-			end
-
-			local isTooFar = distToGoal > LEASH_TELEPORT_DISTANCE or math.abs(simHero.Position.Y - masterPos.Y) > LEASH_VERTICAL_TELEPORT_DISTANCE
-			if isTooFar then
-				simHero.Position = HeroNavigation.PlaceNear(masterPos, targetOffset)
-				HeroNavigation.Clear(simHero)
-				tracker.LastPos = simHero.Position
-				tracker.LastDist = 0
-				tracker.LastClock = now
-				tracker.StuckTicks = 0
-			else
-				HeroNavigation.Step(simHero, goalPos, followSpeed * dt, now)
-				local movedInWorld = (simHero.Position - tracker.LastPos).Magnitude
-				local newDistToGoal = (goalPos - simHero.Position).Magnitude
-				if movedInWorld >= 1.5 or (tracker.LastDist - newDistToGoal) > 1.0 then
-					tracker.LastPos = simHero.Position
-					tracker.LastDist = newDistToGoal
-					tracker.LastClock = now
-					tracker.StuckTicks = 0
-				else
-					tracker.StuckTicks += 1
-					local isStuck = newDistToGoal > FOLLOW_CATCHUP_RADIUS
-						and (now - tracker.LastClock > HERO_STUCK_TIMEOUT)
-						and (tracker.StuckTicks >= HERO_STUCK_MIN_TICKS)
-					if isStuck then
-						simHero.Position = HeroNavigation.PlaceNear(masterPos, targetOffset)
-						HeroNavigation.Clear(simHero)
-						tracker.LastPos = simHero.Position
-						tracker.LastDist = 0
-						tracker.LastClock = now
-						tracker.StuckTicks = 0
-					end
-				end
-			end
+			local outcome = HeroNavigation.Step(simHero, goalPos, followSpeed * dt, now, dt)
+			movementHero.NavigationStatus = outcome.Status
 		else
-			HeroStuckTracking[simHero.NetId] = nil
+			HeroNavigation.Pause(simHero)
 		end
 
 		-- Apply jump arc if jumping
@@ -2334,12 +2295,21 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 		return
 	end
 
-	HeroStuckTracking[simHero.NetId] = nil
 	local distToTarget = (simHero.Position - targetPos).Magnitude
 	if distToTarget > simHero.AttackRange or not HeroNavigation.CanAttack(simHero.Position, targetPos) then
 		simHero.State = "MOVE_TO_TARGET"
 		local stepDist = math.min(math.max(.5, distToTarget - simHero.AttackRange * .85), baseFollowSpeed * dt)
-		HeroNavigation.Step(simHero, targetPos, stepDist, now)
+		local outcome = HeroNavigation.Step(simHero, targetPos, stepDist, now, dt)
+		movementHero.NavigationStatus = outcome.Status
+		if outcome.Status == "UNREACHABLE" and targetMob then
+			local failures = movementHero.NavigationRejectedTargets or {}
+			for id, entry in failures do if entry.Until <= now then failures[id] = nil end end
+			failures[targetMob.NetId] = {Until=now+5,Generation=targetMob.EntityGeneration or 0,FloorId=targetMob.FloorId,RoomGeneration=targetMob.RoomGeneration}
+			HeroNavigation.Clear(simHero)
+			movementHero.NavigationRejectedTargets = failures
+			simHero.TargetNetId = nil
+			simHero.State = "FOLLOW_MASTER"
+		end
 
 		-- Apply jump arc if jumping while moving
 		if simHero.JumpStart and now >= simHero.JumpStart and now < simHero.JumpEnd then
@@ -2352,6 +2322,7 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 			simHero.JumpEnd = nil
 		end
 	else
+		HeroNavigation.Pause(simHero)
 		simHero.State = "ATTACKING"
 		local delta = targetPos - simHero.Position
 		if delta.Magnitude > 0.01 then
@@ -2636,8 +2607,7 @@ if RunService:IsStudio() then
  -- Phase 0 harness invokes the unchanged native state machine with isolated actors.
  CombatSimulation.DebugStepHero=stepHeroSimulation
  CombatSimulation.DebugStuckTracking=function(netId: number)
-  local tracker=HeroStuckTracking[netId]
-  return tracker and table.clone(tracker) or nil
+  return HeroNavigation.DebugTracking(netId)
  end
 end
 
@@ -2893,7 +2863,7 @@ Players.PlayerRemoving:Connect(function(player: Player)
 	if masterState then
 		for _, simHero in pairs(masterState.DeployedHeroes) do
 			HeroNavigation.Clear(simHero)
-			HeroStuckTracking[simHero.NetId] = nil
+
 			ProgressionAwards[simHero.NetId] = nil
 			ActiveHeroesByNetId[simHero.NetId] = nil
 		end

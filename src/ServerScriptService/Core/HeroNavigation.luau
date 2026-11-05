@@ -1,495 +1,361 @@
 --!strict
--- Server-side collision and waypoint following for lightweight heroes (no Humanoids).
-local Workspace = game:GetService("Workspace")
-local Players = game:GetService("Players")
-local PathfindingService = game:GetService("PathfindingService")
-local Navigation = {}
-local TowerLayout = require(game.ReplicatedStorage.Shared.Config.TowerLayout)
-local states: {[any]: any} = setmetatable({}, {__mode = "k"}) :: any
-local computing = 0
--- Studio-only counters; normal servers do not collect diagnostic samples.
-local diagnostics: any = if game:GetService("RunService"):IsStudio() then {
-	Steps = 0, GroundQueries = 0, BodyQueries = 0, PathRequests = 0,
-	PathSuccess = 0, PathFailure = 0, PeakComputing = 0,
-} else nil
-local RADIUS, HEIGHT, STEP_UP, MAX_DROP = 1.2, 4.8, 2.2, 3.5
-local exclusions: {Instance} = {}
-
+-- Shared server feet-position movement for heroes and enemies.
+local Workspace=game:GetService("Workspace")
+local Players=game:GetService("Players")
+local PathfindingService=game:GetService("PathfindingService")
+local Layout=require(game.ReplicatedStorage.Shared.Config.TowerLayout)
+local Graph=require(script.Parent.TowerNavigationGraph)
+local Recovery=require(script.Parent.NavigationRecovery)
+local Queue=require(script.Parent.NavigationQueue)
+local Navigation={}
+local states: {[any]:any}=setmetatable({},{__mode="k"}) :: any
+local graphs: {[number]:any}={}
+local RADIUS,HEIGHT,STEP_UP,MAX_DROP=1.2,4.8,2.2,3.5
+local diagnostics: any=if game:GetService("RunService"):IsStudio()then {
+	Steps=0,GroundQueries=0,BodyQueries=0,PathRequests=0,PathSuccess=0,PathFailure=0,PeakComputing=0,StalePaths=0,
+}else nil
+local exclusions: {Instance}={}
 local function refreshExclusions()
-	local list: {Instance} = {}
-	for _, name in {"ClientVisualEntities", "PhysicalLoot", "PhysicalRelics", "ModelViewer"} do
-		local f = Workspace:FindFirstChild(name)
-		if f then table.insert(list, f) end
+	local list: {Instance}={}
+	for _,name in {"ClientVisualEntities","PhysicalLoot","PhysicalRelics","ModelViewer"}do
+		local f=Workspace:FindFirstChild(name);if f then table.insert(list,f)end
 	end
-	for _, p in Players:GetPlayers() do if p.Character then table.insert(list, p.Character) end end
-	exclusions = list
+	for _,p in Players:GetPlayers()do if p.Character then table.insert(list,p.Character)end end
+	exclusions=list
+end
+local function trackPlayer(p: Player)
+	p.CharacterAdded:Connect(function()task.defer(refreshExclusions)end)
+	p.CharacterRemoving:Connect(function()task.defer(refreshExclusions)end)
 end
 refreshExclusions()
-local function trackPlayer(player: Player)
-	player.CharacterAdded:Connect(function() task.defer(refreshExclusions) end)
-	player.CharacterRemoving:Connect(function() task.defer(refreshExclusions) end)
-end
-for _, player in Players:GetPlayers() do trackPlayer(player) end
+for _,p in Players:GetPlayers()do trackPlayer(p)end
 Players.PlayerAdded:Connect(trackPlayer)
-Players.PlayerRemoving:Connect(function() task.defer(refreshExclusions) end)
+Players.PlayerRemoving:Connect(function()task.defer(refreshExclusions)end)
 Workspace.ChildAdded:Connect(refreshExclusions)
-
 local function parameters(group: string?): RaycastParams
-	local p = RaycastParams.new()
-	p.FilterType, p.FilterDescendantsInstances = Enum.RaycastFilterType.Exclude, exclusions
-	p.RespectCanCollide, p.IgnoreWater = true, true
-	p.CollisionGroup = group or "Default"
+	local p=RaycastParams.new()
+	p.FilterType=Enum.RaycastFilterType.Exclude;p.FilterDescendantsInstances=exclusions
+	p.RespectCanCollide=true;p.IgnoreWater=true;p.CollisionGroup=group or "Default"
 	return p
 end
-
-function Navigation.Ground(position: Vector3, group: string?, up: number?, down: number?): Vector3?
-	if diagnostics then diagnostics.GroundQueries += 1 end
-	local rise, drop = up or STEP_UP, down or MAX_DROP
-	local hit = Workspace:Raycast(position + Vector3.new(0, rise, 0), Vector3.new(0, -(rise + drop), 0), parameters(group))
-	if hit and hit.Normal.Y >= .65 then return hit.Position end
-	return nil
+function Navigation.Ground(position: Vector3,group: string?,up: number?,down: number?): Vector3?
+	if diagnostics then diagnostics.GroundQueries+=1 end
+	local rise,drop=up or STEP_UP,down or MAX_DROP
+	local hit=Workspace:Raycast(position+Vector3.new(0,rise,0),Vector3.new(0,-rise-drop,0),parameters(group))
+	return if hit and hit.Normal.Y>=.65 then hit.Position else nil
 end
-
 local function groupFor(hero: any): string
-	local owner = hero.Owner
-	local char = owner and owner.Character
-	local root = char and char:FindFirstChild("HumanoidRootPart")
-	return root and root.CollisionGroup or "Default"
+	local char=hero.Owner and hero.Owner.Character
+	local root=char and char:FindFirstChild("HumanoidRootPart")
+	return if root then root.CollisionGroup else "Default"
 end
-
--- Every substep must have support and enough clearance for the hero's whole body.
-local function walkSegment(from: Vector3, toward: Vector3, distance: number, group: string): (Vector3, boolean)
-	local flat = Vector3.new(toward.X - from.X, 0, toward.Z - from.Z)
-	local length = flat.Magnitude
-	if length < .02 then return from, math.abs(toward.Y - from.Y) < STEP_UP end
-	local direction = flat.Unit
-	local travel = math.min(distance, length)
-	local steps = math.max(1, math.ceil(travel / 1.5))
-	local at = from
-	local params = parameters(group)
-	for _ = 1, steps do
-		local candidate = at + direction * (travel / steps)
-		local ground = Navigation.Ground(candidate, group)
-		if not ground then
-			-- If ordinary ground probe missed, check if entity is airborne over a lower floor/ramp
-			local deepGround = Navigation.Ground(candidate, group, 2.0, 45)
-			if deepGround and deepGround.Y < at.Y then
-				local stepDown = math.min(at.Y - deepGround.Y, math.max(MAX_DROP, 18 * (travel / distance)))
-				local nextY = at.Y - stepDown
-				if nextY - deepGround.Y < 0.5 then
-					ground = deepGround
-				else
-					ground = Vector3.new(candidate.X, nextY, candidate.Z)
-				end
-			else
-				return at, false
-			end
+local function flatDistance(a: Vector3,b: Vector3): number
+	return Vector3.new(a.X-b.X,0,a.Z-b.Z).Magnitude
+end
+local function allowed(position: Vector3,origin: Vector3?,corridor: any,previous: Vector3): boolean
+	if not corridor or not origin then return true end
+	local p=position-origin
+	local dx,dz=corridor.BX-corridor.AX,corridor.BZ-corridor.AZ
+	local length2=dx*dx+dz*dz
+	local t=((p.X-corridor.AX)*dx+(p.Z-corridor.AZ)*dz)/length2
+	if t<0 or t>1 then return true end
+	local lateral=math.abs((p.X-corridor.AX)*dz-(p.Z-corridor.AZ)*dx)/math.sqrt(length2)
+	local before=previous-origin
+	local previousLateral=math.abs((before.X-corridor.AX)*dz-(before.Z-corridor.AZ)*dx)/math.sqrt(length2)
+	return lateral<=corridor.UsableWidth/2 or lateral<previousLateral-.01
+end
+local function walkSegment(from: Vector3,toward: Vector3,distance: number,group: string,origin: Vector3?,corridor: any): (Vector3,boolean,string?)
+	local flat=Vector3.new(toward.X-from.X,0,toward.Z-from.Z)
+	if flat.Magnitude<.01 then return from,math.abs(toward.Y-from.Y)<STEP_UP,"HEIGHT" end
+	local travel=math.min(distance,flat.Magnitude)
+	local direction=flat.Unit
+	local count=math.max(1,math.ceil(travel/1.5))
+	local at=from
+	local params=parameters(group)
+	for _=1,count do
+		local ground=Navigation.Ground(at+direction*(travel/count),group)
+		if not ground then return at,false,"NO_SUPPORT" end
+		if not allowed(ground,origin,corridor,at)then return at,false,"CORRIDOR_EDGE" end
+		local across=Vector3.new(-direction.Z,0,direction.X)*RADIUS
+		for _,offset in {across+direction*RADIUS,across-direction*RADIUS,-across+direction*RADIUS,-across-direction*RADIUS}do
+			local support=Navigation.Ground(ground+offset,group)
+			if not support or math.abs(support.Y-ground.Y)>MAX_DROP then return at,false,"UNSUPPORTED_SHOULDER" end
 		end
-		local delta = ground - at
-		-- Raise the sweep above small walkable steps; the ground probe limits step height.
-		local hit = Workspace:Blockcast(CFrame.new(at + Vector3.new(0, 3.5, 0)), Vector3.new(RADIUS * 2, 2.5, RADIUS * 2), delta, params)
-		if diagnostics then diagnostics.BodyQueries += 1 end
-		if hit then return at, false end
-		-- Probe the leading edges so formations cannot walk off narrow bridges into the void.
-		local across = Vector3.new(-direction.Z, 0, direction.X) * (RADIUS * .8)
-		local gA = Navigation.Ground(ground + across, group, 2.0, 30)
-		local gB = Navigation.Ground(ground - across, group, 2.0, 30)
-		if not gA and not gB then return at, false end
-		at = ground
+		if diagnostics then diagnostics.BodyQueries+=1 end
+		local delta=ground-at
+		if delta.Magnitude>.001 then
+			local hit=Workspace:Blockcast(CFrame.new(at+Vector3.new(0,3.5,0)),Vector3.new(RADIUS*2,2.5,RADIUS*2),delta,params)
+			if hit then return at,false,"BODY" end
+		end
+		at=ground
 	end
-	return at, true
+	return at,true,nil
 end
-
-local function clearRoute(from: Vector3, goal: Vector3, group: string): boolean
-	local distance = (Vector3.new(goal.X, from.Y, goal.Z) - from).Magnitude
-	if distance > 180 or math.abs(from.Y - goal.Y) > 45 then return false end
-	local probeDist = math.min(distance, 36)
-	local at, clear = walkSegment(from, goal, probeDist, group)
-	if not clear then return false end
-	if distance <= 36 then
-		return (at - goal).Magnitude < 3.0
-	end
-	local flatMoved = Vector3.new(at.X - from.X, 0, at.Z - from.Z).Magnitude
-	return math.abs(flatMoved - probeDist) < 1.5
+local function clearRoute(from: Vector3,goal: Vector3,group: string): boolean
+	local distance=flatDistance(from,goal)
+	if distance>180 or math.abs(from.Y-goal.Y)>45 then return false end
+	local at,clear=walkSegment(from,goal,distance,group,nil,nil)
+	return clear and (at-goal).Magnitude<.5
 end
-
+function Navigation.PlaceOnGround(feet: Vector3,offset: Vector3,group: string?): Vector3
+	local base=Navigation.Ground(feet,group,2.2,3.5)or feet
+	local desired=Navigation.Ground(base+offset,group)
+	return if desired and clearRoute(base,desired,group or "Default")then desired else base
+end
+-- Root-position compatibility wrapper for existing recalls and spawns.
+function Navigation.PlaceNear(root: Vector3,offset: Vector3,group: string?): Vector3
+	local feet=root-Vector3.new(0,3,0)
+	feet=Navigation.Ground(feet,group,4,50)or feet
+	return Navigation.PlaceOnGround(feet,offset,group)
+end
+local function intent(hero: any): string
+	return if hero.State=="FOLLOW_MASTER"then "FOLLOW"else tostring(hero.TargetNetId or hero.State or "MOVE")
+end
+local function identity(hero: any,s: any): any
+	return {Revision=s.Revision,FloorId=hero.FloorId,RoomGeneration=hero.RoomGeneration,
+		EntityGeneration=hero.EntityGeneration,Intent=intent(hero)}
+end
+local jobs: any
+jobs=Queue.new(12,512,function(job: any,done: ()->())
+	local request=job.Payload
+	task.spawn(function()
+		local path
+		local started=os.clock()
+		if diagnostics then diagnostics.PathRequests+=1;diagnostics.PeakComputing=math.max(diagnostics.PeakComputing,jobs.Active)end
+		local ok,points=pcall(function()
+			path=PathfindingService:CreatePath({AgentRadius=2,AgentHeight=HEIGHT,AgentCanJump=false,AgentCanClimb=false,WaypointSpacing=4,Costs={BridgeRail=math.huge}})
+			path:ComputeAsync(request.Start,request.Goal)
+			return if path.Status==Enum.PathStatus.Success then path:GetWaypoints()else nil
+		end)
+		local hero,s=request.Hero,request.State
+		local valid=not job.Cancelled and states[hero]==s and Graph.RequestMatches(request,identity(hero,s))
+			and hero.State~="COMA" and s.SubGoal and (s.SubGoal-request.Goal).Magnitude<=8
+		if valid then
+			s.Pending=false;s.PathMilliseconds=(os.clock()-started)*1000
+			s.PathStatus=if ok and points then "Success"else "NoPath"
+			if ok and points then
+				s.Points={}
+				local nearest,best=1,math.huge
+				for i,wp in points do
+					local feet=Navigation.Ground(wp.Position,groupFor(hero),STEP_UP,8)or wp.Position
+					table.insert(s.Points,feet)
+					local d=(feet-hero.Position).Magnitude
+					if d<best then nearest,best=i,d end
+				end
+				s.Index=nearest;s.Failures=0
+				if best<2.5 and s.Points[nearest+1]and clearRoute(hero.Position,s.Points[nearest+1],groupFor(hero))then s.Index+=1 end
+				if diagnostics then diagnostics.PathSuccess+=1 end
+			else
+				s.Failures=(s.Failures or 0)+1
+				s.NextRequest=os.clock()+math.min(2,.35*2^math.min(s.Failures,3))
+				if diagnostics then diagnostics.PathFailure+=1 end
+			end
+		else
+			if states[hero]==s and s.Revision==request.Revision then s.Pending=false end
+			if diagnostics then diagnostics.StalePaths+=1 end
+		end
+		if path then path:Destroy()end
+		done()
+	end)
+end)
+local function resetPath(hero: any,s: any)
+	jobs:Cancel(hero);s.Pending=false;s.Points=nil;s.PathGoal=nil;s.Revision+=1
+end
 function Navigation.Clear(hero: any)
-	states[hero] = nil
+	jobs:Cancel(hero);states[hero]=nil;hero.NavigationRejectedTargets=nil
 end
-
-function Navigation.Displace(hero: any, destination: Vector3)
-	local flat = Vector3.new(destination.X, hero.Position.Y, destination.Z)
-	hero.Position = walkSegment(hero.Position, flat, (flat - hero.Position).Magnitude, groupFor(hero))
+function Navigation.Pause(hero: any)
+	local s=states[hero]
+	if s then resetPath(hero,s);Recovery.Pause(s.Monitor);s.LastStep=nil end
+end
+function Navigation.Displace(hero: any,destination: Vector3)
+	hero.Position=walkSegment(hero.Position,destination,flatDistance(hero.Position,destination),groupFor(hero),nil,nil)
 	Navigation.Clear(hero)
 end
-
-function Navigation.PlaceNear(masterRoot: Vector3, offset: Vector3, group: string?): Vector3
-	local feet = masterRoot - Vector3.new(0, 3, 0)
-	local base = Navigation.Ground(feet, group, 4, 50) or feet
-	local desired = Navigation.Ground(base + offset, group, 4, 20)
-	if desired and clearRoute(base, desired, group or "Default") then return desired end
-	return base
+local function requestPath(hero: any,s: any,goal: Vector3,now: number)
+	if s.Pending or now<s.NextRequest then return end
+	local request=identity(hero,s)
+	request.Hero=hero;request.State=s;request.Start=hero.Position;request.Goal=goal
+	s.Pending=true;s.PathGoal=goal;s.PathRouteIndex=s.TowerIndex;s.RequestedAt=now;s.NextRequest=now+.35
+	if not jobs:Push(hero,request)then s.Pending=false;s.PathGoal=nil;s.NextRequest=now+.2 end
 end
-
-local function requestPath(hero: any, state: any, goal: Vector3, now: number)
-	if state.Pending or now < state.NextRequest or computing >= 12 then return end
-	state.Pending, state.NextRequest = true, now + 0.35
-	computing += 1
-	if diagnostics then
-		diagnostics.PathRequests += 1
-		diagnostics.PeakComputing = math.max(diagnostics.PeakComputing, computing)
-		state.RequestedAt = os.clock()
-	end
-	local start = hero.Position
-	task.spawn(function()
-		local path = PathfindingService:CreatePath({
-			AgentRadius = 2.0,
-			AgentHeight = HEIGHT,
-			AgentCanJump = true,
-			AgentCanClimb = false,
-			WaypointSpacing = 4,
-			Costs = {
-				BridgeRail = math.huge,
-			},
-		})
-		local ok = pcall(function() path:ComputeAsync(start, goal) end)
-		computing -= 1
-		if states[hero] ~= state then path:Destroy(); return end
-		state.Pending = false
-		if diagnostics then
-			state.PathMilliseconds = (os.clock() - state.RequestedAt) * 1000
-			state.PathStatus = if ok then path.Status.Name else "ERROR"
-			local key = if ok and path.Status == Enum.PathStatus.Success then "PathSuccess" else "PathFailure"
-			diagnostics[key] += 1
-		end
-		if ok and path.Status == Enum.PathStatus.Success then
-			local wps = path:GetWaypoints()
-			local bestIdx = 2
-			local bestDist = math.huge
-			local curPos = hero.Position
-			for i = 2, #wps do
-				local wp = wps[i].Position
-				local d = Vector2.new(wp.X - curPos.X, wp.Z - curPos.Z).Magnitude
-				if d < bestDist then
-					bestDist = d
-					bestIdx = i
-				end
-			end
-			if bestDist < 3.0 and bestIdx < #wps then
-				bestIdx += 1
-			end
-			state.Points, state.Index, state.Goal = wps, bestIdx, goal
-		end
-		path:Destroy()
-	end)
+local function graphFor(floor: number): (any,Vector3)
+	local index=(floor-1)%5+1
+	if not graphs[index]then graphs[index]=Graph.new(Layout.Get(index))end
+	return graphs[index],Vector3.new(12000+((floor-1)%10)*2400,1000,12000+math.floor((floor-1)/10)*2400)
 end
-
--- Follow authored bridge entrances using shortest Euclidean path across platform graph.
-local function towerRoute(hero: any, goal: Vector3): {Vector3}?
-	local floor = hero.FloorId
-	if not floor or floor < 1 then return nil end
-	local origin = Vector3.new(12000 + ((floor - 1) % 10) * 2400, 1000, 12000 + math.floor((floor - 1) / 10) * 2400)
-	local layout = TowerLayout.Get((floor - 1) % 5 + 1)
-	local function nearest(world)
-		local pos = world - origin
-		local best, score = nil, math.huge
-		for name, p in layout.Platforms do
-			local dx = math.max(0, math.abs(pos.X - p.X) - p.Width / 2)
-			local dz = math.max(0, math.abs(pos.Z - p.Z) - p.Depth / 2)
-			local d = dx * dx + dz * dz + (pos.Y - p.Y)^2
-			if d < score then best, score = name, d end
-		end
-		return best
-	end
-	local start, finish = nearest(hero.Position), nearest(goal)
-	if not start or not finish or start == finish then return nil end
-
-	-- Dijkstra shortest path using Euclidean physical distance so heroes take the central direct route (e.g. Crossing -> Apex)
-	local dist: { [string]: number } = { [start] = 0 }
-	local prev: { [string]: { From: string, Link: any } } = {}
-	local unvisited: { [string]: boolean } = {}
-	for name in pairs(layout.Platforms) do
-		unvisited[name] = true
-		if name ~= start then dist[name] = math.huge end
-	end
-
-	while next(unvisited) do
-		local current: string?, minDist = nil, math.huge
-		for node in pairs(unvisited) do
-			if dist[node] < minDist then
-				minDist = dist[node]
-				current = node
-			end
-		end
-		if not current or current == finish or minDist == math.huge then break end
-		unvisited[current] = nil
-
-		for _, link in layout.Links do
-			local nextId = if link.From == current then link.To elseif link.To == current then link.From else nil
-			if nextId and unvisited[nextId] then
-				local pA, pB = layout.Platforms[current], layout.Platforms[nextId]
-				local linkLen = (Vector3.new(pA.X, pA.Y, pA.Z) - Vector3.new(pB.X, pB.Y, pB.Z)).Magnitude
-				local alt = dist[current] + linkLen
-				if alt < dist[nextId] then
-					dist[nextId] = alt
-					prev[nextId] = { From = current, Link = link }
-				end
-			end
-		end
-	end
-
-	if not prev[finish] then return nil end
-	local edges = {}
-	local at = finish
-	while at ~= start and prev[at] do
-		table.insert(edges, 1, prev[at])
-		at = prev[at].From
-	end
-	local route = {}
-	for _, edge in edges do
-		local link = edge.Link
-		local a = origin + Vector3.new(link.AX, link.AY, link.AZ)
-		local b = origin + Vector3.new(link.BX, link.BY, link.BZ)
-		if edge.From ~= link.From then a, b = b, a end
-		table.insert(route, a)
-		table.insert(route, b)
-	end
-	return route
+local function localPoint(p: Vector3,origin: Vector3): any
+	local v=p-origin;return {X=v.X,Y=v.Y,Z=v.Z}
 end
-
-function Navigation.Step(hero: any, goal: Vector3, distance: number, now: number)
-	local state = states[hero]
-	if not state then state = {NextRequest = 0, Index = 2, BlockedCount = 0}; states[hero] = state end
-	local group = groupFor(hero)
-	if diagnostics then
-		diagnostics.Steps += 1
-		state.RequestedDistance, state.Destination = distance, goal
+local function remaining(s: any,position: Vector3): number
+	local route,index=s.TowerRoute,s.TowerIndex
+	local distance=0
+	if s.Points and s.Points[s.Index]then
+		for i=s.Index,#s.Points do distance+=(position-s.Points[i]).Magnitude;position=s.Points[i]end
+		index+=1
 	end
-
-	-- Ground recovery: if entity is suspended in the air without active jump, descend toward ground
-	local directGround = Navigation.Ground(hero.Position, group, 2.0, 50)
-	if directGround and hero.Position.Y > directGround.Y + 0.3 then
-		if not hero.JumpEnd or now >= hero.JumpEnd then
-			local fallSpeed = 45.0
-			local stepFall = math.min(hero.Position.Y - directGround.Y, fallSpeed * 0.2)
-			hero.Position = Vector3.new(hero.Position.X, hero.Position.Y - stepFall, hero.Position.Z)
+	for i=index,#route do distance+=(position-route[i]).Magnitude;position=route[i]end
+	return distance
+end
+local function advance(points: {Vector3},index: number,position: Vector3): number
+	while points[index] and (points[index]-position).Magnitude<.35 do index+=1 end
+	return index
+end
+local function avoid(hero: any,s: any,old: Vector3,nextPosition: Vector3,group: string): Vector3
+	local movement=nextPosition-old
+	if movement.Magnitude<.01 then return nextPosition end
+	for other in states do
+		if other==hero or other.FloorId~=hero.FloorId or other.RoomGeneration~=hero.RoomGeneration
+			or other.State=="COMA" or not other.Position or math.abs(other.Position.Y-old.Y)>3 then continue end
+		local offset=Vector3.new(other.Position.X-old.X,0,other.Position.Z-old.Z)
+		local flat=Vector3.new(movement.X,0,movement.Z)
+		if flat.Magnitude<.01 or offset:Dot(flat)<=0 or offset.Magnitude>flat.Magnitude+1.8 then continue end
+		local t=math.clamp(offset:Dot(flat)/flat:Dot(flat),0,1)
+		if (offset-flat*t).Magnitude>=1.8 then continue end
+		local right=Vector3.new(-flat.Unit.Z,0,flat.Unit.X)
+		-- Both travel directions prefer their own right, giving opposite lanes.
+		for _,side in {1,-1}do
+			local dir=(flat.Unit*.6+right*(side*.8)).Unit
+			local trial,safe=walkSegment(old,old+dir*flat.Magnitude,flat.Magnitude,group,s.Origin,s.Corridor)
+			if safe and flatDistance(trial,other.Position)>=math.min(1.8,offset.Magnitude+.1)then return trial end
+		end
+		-- Stable priority with minimum separation; no body tunneling.
+		if (hero.NetId or 0)<(other.NetId or 0)then
+			local room=math.max(0,offset.Magnitude-1.8)
+			return walkSegment(old,old+flat.Unit*math.min(room,flat.Magnitude),math.min(room,flat.Magnitude),group,s.Origin,s.Corridor)
+		end
+		s.BlockReason="YIELD";return old
+	end
+	return nextPosition
+end
+function Navigation.Step(hero: any,goal: Vector3,distance: number,now: number,deltaTime: number?): any
+	local s=states[hero]
+	if not s then s={Revision=0,NextRequest=0,TowerIndex=1,Index=1,Monitor={}};states[hero]=s end
+	local group=groupFor(hero)
+	local dt=math.clamp(deltaTime or (s.LastStep and now-s.LastStep)or .1,.001,.3)
+	s.LastStep=now
+	if hero.JumpStart and hero.GroundBaseY then hero.Position=Vector3.new(hero.Position.X,hero.GroundBaseY,hero.Position.Z)end
+	local from=hero.Position
+	local scope=tostring(hero.FloorId)..":"..tostring(hero.RoomGeneration)..":"..tostring(hero.EntityGeneration)..":"..intent(hero)
+	local g,origin,location,goalLocation
+	if hero.FloorId and hero.FloorId>0 then
+		g,origin=graphFor(hero.FloorId)
+		location=Graph.Locate(g,localPoint(from,origin));goalLocation=Graph.Locate(g,localPoint(goal,origin))
+	end
+	local key=scope..":"..(location and location.Key or "WORLD")..">"..(goalLocation and goalLocation.Key or "WORLD")
+	if s.RouteKey~=key then
+		resetPath(hero,s);s.RouteKey=key;s.TowerRoute={};s.TowerIndex=1
+		local route=if g then Graph.Route(g,localPoint(from,origin),localPoint(goal,origin))else {{X=goal.X,Y=goal.Y,Z=goal.Z}}
+		for _,p in route do
+			local v=Vector3.new(p.X,p.Y,p.Z)+(origin or Vector3.zero)
+			v=Navigation.Ground(v,group,STEP_UP,MAX_DROP)or v
+			if #s.TowerRoute==0 or (s.TowerRoute[#s.TowerRoute]-v).Magnitude>.01 then table.insert(s.TowerRoute,v)end
+		end
+		if #s.TowerRoute==0 then s.TowerRoute={goal}end
+	end
+	s.TowerRoute[#s.TowerRoute]=goal;s.TowerGoal=goal;s.Origin=origin
+	s.TowerIndex=math.min(s.TowerIndex,#s.TowerRoute)
+	s.Corridor=nil
+	if location and location.Link then for _,link in g.Links do if link.Id==location.Link then s.Corridor=link;break end end end
+	s.Destination=goal;s.RequestedDistance=distance;s.BlockReason=nil
+	if diagnostics then diagnostics.Steps+=1 end
+	-- Deep descent is for externally airborne actors, never a walking shortcut.
+	if not Navigation.Ground(from,group,.2,MAX_DROP)then
+		local below=Navigation.Ground(from,group,.2,50)
+		if below then
+			hero.Position=Vector3.new(from.X,math.max(below.Y,from.Y-45*dt),from.Z)
+			hero.GroundBaseY=hero.Position.Y;s.Status="FALLING"
+			return {Status="FALLING",Remaining=(goal-hero.Position).Magnitude}
 		end
 	end
-
-	if not state.TowerGoal or (state.TowerGoal - goal).Magnitude > 14 then
-		state.TowerGoal = goal
-		state.TowerRoute = towerRoute(hero, goal)
-		state.TowerIndex = 1
-	end
-
-	local startPosition = hero.Position
-	-- Split high-velocity sprint/catch-up steps (> 4.5 studs) into internal sub-steps so
-	-- heroes smoothly advance across 4-stud waypoints and corners without tunneling or clamping.
-	local subSteps = math.max(1, math.ceil(distance / 4.5))
-	local subStepDist = distance / subSteps
-	local anyClear = false
-
-	for _ = 1, subSteps do
-		local subGoal = goal
-		local route = state.TowerRoute
-		if route then
-			while route[state.TowerIndex] and (route[state.TowerIndex] - hero.Position).Magnitude < 3.5 do
-				state.TowerIndex += 1
-			end
-			subGoal = route[state.TowerIndex] or goal
+	s.TowerIndex=advance(s.TowerRoute,s.TowerIndex,hero.Position)
+	s.SubGoal=s.TowerRoute[s.TowerIndex]or goal
+	if s.PathGoal and (s.PathRouteIndex~=s.TowerIndex or (s.PathGoal-s.SubGoal).Magnitude>8)then resetPath(hero,s)end
+	local before=remaining(s,hero.Position)
+	local budget=math.max(0,distance)
+	for _=1,64 do
+		if budget<.01 then break end
+		s.TowerIndex=advance(s.TowerRoute,s.TowerIndex,hero.Position)
+		local subGoal=s.TowerRoute[s.TowerIndex]
+		if not subGoal then break end
+		s.SubGoal=subGoal
+		if s.PathGoal and (s.PathRouteIndex~=s.TowerIndex or (s.PathGoal-subGoal).Magnitude>8)then resetPath(hero,s)end
+		local destination=subGoal
+		if s.Points then
+			s.Index=advance(s.Points,s.Index,hero.Position)
+			destination=s.Points[s.Index]or subGoal
+			if not s.Points[s.Index]then s.Points=nil end
 		end
-		subGoal = Navigation.Ground(subGoal, group, 4, 16) or subGoal
-		if diagnostics then state.SubGoal = subGoal end
-
-		local old = hero.Position
-		if (Vector3.new(subGoal.X - old.X, 0, subGoal.Z - old.Z)).Magnitude < 0.05 then
-			anyClear = true
-			break
-		end
-
-		local destination = subGoal
-		if clearRoute(old, subGoal, group) then
-			state.Points = nil
-			state.Goal = nil
-			state.BlockedCount = 0
-		else
-			if not state.Points or not state.Goal or (state.Goal - subGoal).Magnitude > 28 then
-				requestPath(hero, state, subGoal, now)
-			end
-			local points = state.Points
-			if points then
-				while points[state.Index] do
-					local wpPos = points[state.Index].Position
-					local flatVec = Vector2.new(wpPos.X - hero.Position.X, wpPos.Z - hero.Position.Z)
-					local flatDist = flatVec.Magnitude
-					local nextWp = points[state.Index + 1]
-					local passedWp = false
-					if nextWp then
-						local segVec = Vector2.new(nextWp.Position.X - wpPos.X, nextWp.Position.Z - wpPos.Z)
-						if segVec.Magnitude > 0.05 and flatVec:Dot(segVec) < 0 then
-							passedWp = true
-						end
-					end
-					if flatDist < 2.5 or passedWp then
-						state.Index += 1
-					elseif flatDist < 5.5 and nextWp and clearRoute(hero.Position, nextWp.Position, group) then
-						state.Index += 1
-					else
-						break
-					end
-				end
-				local point = points[state.Index]
-				if point then
-					local wpPos = point.Position
-					if wpPos.Y - hero.Position.Y > STEP_UP then
-						-- Waypoint is elevated on railing / obstacle. Probe laterally perpendicular to path.
-						local nextPt = points[state.Index + 1] or points[state.Index]
-						local tangent = nextPt.Position - wpPos
-						local flatTangent = Vector2.new(tangent.X, tangent.Z)
-						local dir = flatTangent.Magnitude > 0.01 and flatTangent.Unit or Vector2.new(0, 1)
-						local lateral = Vector3.new(-dir.Y, 0, dir.X)
-						local resolved = nil
-						for _, side in {-1, 1} do
-							local probePos = wpPos + lateral * (side * 3.0)
-							local floor = Navigation.Ground(Vector3.new(probePos.X, hero.Position.Y + 1, probePos.Z), group, 2, 8)
-							if floor and math.abs(floor.Y - hero.Position.Y) <= 2.5 then
-								resolved = floor
-								break
-							end
-						end
-						destination = resolved or Vector3.new(wpPos.X, hero.Position.Y, wpPos.Z)
-					else
-						local floor = Navigation.Ground(wpPos, group, 2, 8)
-						destination = floor or wpPos
-					end
-				else
-					state.Points = nil
-					destination = subGoal
-				end
-			else
-				destination = subGoal
-			end
-		end
-
-		local nextPosition, clear = walkSegment(old, destination, subStepDist, group)
+		local old=hero.Position
+		if s.EscapeRemaining and s.EscapeRemaining>0 then destination=old+s.EscapeDirection*math.min(1.5,s.EscapeRemaining)end
+		local step=math.min(1.5,budget,flatDistance(old,destination))
+		if step<.01 then s.BlockReason="HEIGHT";break end
+		local nextPosition,clear,reason=walkSegment(old,destination,step,group,origin,s.Corridor)
 		if not clear then
-			-- Obstacle avoidance: if moving directly toward destination is blocked by a railing/corner,
-			-- preserve any partial forward progress and try angled (30, 45, 60 deg) and lateral steers.
-			local steerOrigin = nextPosition
-			local progressed = (steerOrigin - old).Magnitude
-			local remainingStep = math.max(0.4, subStepDist - progressed)
-			local flat = Vector3.new(destination.X - steerOrigin.X, 0, destination.Z - steerOrigin.Z)
-			if flat.Magnitude > 0.05 then
-				local dir = flat.Unit
-				local lateral = Vector3.new(-dir.Z, 0, dir.X)
-				local testAngles = {
-					{ fwd = 0.866, lat = 0.5 },
-					{ fwd = 0.707, lat = 0.707 },
-					{ fwd = 0.500, lat = 0.866 },
-					{ fwd = 0.000, lat = 1.000 },
-				}
-				for _, test in ipairs(testAngles) do
-					for _, side in {-1, 1} do
-						local steerDir = (dir * test.fwd + lateral * (side * test.lat)).Unit
-						for _, frac in {1.0, 0.65} do
-							local trialStep = remainingStep * frac
-							if trialStep > 0.3 then
-								local trialPos, trialClear = walkSegment(steerOrigin, steerOrigin + steerDir * trialStep, trialStep, group)
-								if (trialPos - steerOrigin).Magnitude > 0.2 then
-									nextPosition = trialPos
-									clear = trialClear
-									break
-								end
-							end
-						end
-						if clear then break end
-					end
-					if clear then break end
-				end
-			end
-		end
-
-		-- Sweep against other heroes so combat units do not stack, without halting squadmates sprinting in formation.
-		local isFollowingMaster = hero.State == "FOLLOW_MASTER"
-		for other in pairs(states) do
-			if other ~= hero and other.FloorId == hero.FloorId and other.RoomGeneration == hero.RoomGeneration and other.State ~= "COMA" and other.Position and math.abs(other.Position.Y - nextPosition.Y) < 3 then
-				local movement = Vector3.new(nextPosition.X - old.X, 0, nextPosition.Z - old.Z)
-				local offset = Vector3.new(other.Position.X - old.X, 0, other.Position.Z - old.Z)
-				local function clearance(delta: Vector3): number
-					local t = delta.Magnitude > .01 and math.clamp(offset:Dot(delta) / delta:Dot(delta), 0, 1) or 0
-					return (offset - delta * t).Magnitude
-				end
-				if movement.Magnitude > .01 and clearance(movement) < 1.8 and offset:Dot(movement) > 0 and offset.Magnitude < 2.2 then
-					local fwdUnit = movement.Unit
-					local latUnit = Vector3.new(-fwdUnit.Z, 0, fwdUnit.X)
-					local yielded = if isFollowingMaster then nextPosition else old
-					for _, side in {1, -1} do
-						local veerDir = if isFollowingMaster then (fwdUnit * 0.85 + latUnit * (0.52 * side)).Unit else latUnit * side
-						local trial, safe = walkSegment(old, old + veerDir * movement.Magnitude, movement.Magnitude, group)
-						local trialDelta = Vector3.new(trial.X - old.X, 0, trial.Z - old.Z)
-						if safe and clearance(trialDelta) >= math.min(1.8, offset.Magnitude - .01) then
-							yielded = trial
+			s.BlockReason=reason;requestPath(hero,s,subGoal,now)
+			local dir=Vector3.new(destination.X-nextPosition.X,0,destination.Z-nextPosition.Z)
+			if dir.Magnitude>.01 then
+				local right=Vector3.new(-dir.Unit.Z,0,dir.Unit.X)
+				local left=math.max(0,step-flatDistance(old,nextPosition))
+				-- Keep a side around convex scenery instead of alternating at its tip.
+				-- Lateral escape also lets an actor descend a low mound beside a spike.
+				local escaped=false
+				for _,angle in {{.707,.707},{.5,.866},{0,1},{-.5,.866},{-.866,.5}}do
+					for _,side in {s.SteerSide or 1,-(s.SteerSide or 1)}do
+						local steer=dir.Unit*angle[1]+right*(side*angle[2])
+						local trial,safe=walkSegment(nextPosition,nextPosition+steer*left,left,group,origin,s.Corridor)
+						if safe and flatDistance(trial,nextPosition)>.01 then
+							nextPosition=trial;s.SteerSide=side;escaped=true
+							-- Finish a short retreat before facing the obstacle again.
+							if angle[1]<0 then s.EscapeDirection=steer;s.EscapeRemaining=4.5 end
 							break
 						end
 					end
-					if not isFollowingMaster and yielded == old and offset.Magnitude > 1.2 then
-						local stepLen = math.min(movement.Magnitude, math.max(0, offset.Magnitude - 1.2))
-						if stepLen > 0.01 then
-							local trial, safe = walkSegment(old, old + fwdUnit * stepLen, stepLen, group)
-							if safe then yielded = trial end
-						end
-					end
-					nextPosition = yielded
+					if escaped then break end
 				end
 			end
 		end
-
-		hero.Position = nextPosition
-		if clear or (nextPosition - old).Magnitude > 0.25 then
-			anyClear = true
-		else
-			break
-		end
+		nextPosition=avoid(hero,s,old,nextPosition,group)
+		local spent=flatDistance(old,nextPosition)
+		if s.EscapeRemaining then s.EscapeRemaining=math.max(0,s.EscapeRemaining-spent)end
+		hero.Position=nextPosition;budget-=spent
+		if spent<.01 then break end
 	end
-
-	local moved = hero.Position - startPosition
-	if diagnostics then state.ConsumedDistance = moved.Magnitude end
-	if moved.Magnitude > .02 then hero.Yaw = math.atan2(-moved.X, -moved.Z) end
-	if not anyClear then
-		state.BlockedCount = (state.BlockedCount or 0) + 1
-		if state.BlockedCount >= 6 then
-			state.Points = nil
-			state.BlockedCount = 0
-			state.NextRequest = math.min(state.NextRequest, now + .2)
-		end
-	else
-		state.BlockedCount = 0
-	end
+	hero.GroundBaseY=hero.Position.Y
+	local moved=hero.Position-from
+	s.ConsumedDistance=moved.Magnitude
+	if moved.Magnitude>.02 then hero.Yaw=math.atan2(-moved.X,-moved.Z)end
+	local after=remaining(s,hero.Position)
+	s.Status=Recovery.Update(s.Monitor,scope,now,before-after,after)
+	s.NoProgressSeconds=now-(s.Monitor.ProgressAt or now)
+	if s.Status=="REPATH"then resetPath(hero,s);s.RouteKey=nil;s.NextRequest=now end
+	return {Status=s.Status,Remaining=after,NoProgressSeconds=s.NoProgressSeconds,Reason=s.BlockReason}
 end
-
 if diagnostics then
 	function Navigation.DebugSnapshot(hero: any?): any
-		local result = table.clone(diagnostics)
-		result.Computing = computing
-		local s = hero and states[hero]
+		local result=table.clone(diagnostics);result.Computing=jobs.Active;result.Queued=jobs.Waiting
+		local s=hero and states[hero]
 		if s then
-			local actor = {}
-			for _, key in {"TowerIndex", "Index", "BlockedCount", "Pending", "NextRequest", "RequestedAt", "PathMilliseconds", "PathStatus", "RequestedDistance", "ConsumedDistance", "Destination", "SubGoal", "TowerGoal"} do
-				local value = s[key]
-				actor[key] = if typeof(value) == "Vector3" then {X=value.X,Y=value.Y,Z=value.Z} else value
+			local actor={}
+			for _,key in {"TowerIndex","Index","Pending","NextRequest","RequestedAt","PathMilliseconds","PathStatus","RequestedDistance","ConsumedDistance","Destination","SubGoal","TowerGoal","Revision","RouteKey","Status","NoProgressSeconds","BlockReason"}do
+				local value=s[key]
+				actor[key]=if typeof(value)=="Vector3"then {X=value.X,Y=value.Y,Z=value.Z}else value
 			end
-			actor.TowerPoints = s.TowerRoute and #s.TowerRoute or 0
-			actor.PathPoints = s.Points and #s.Points or 0
-			result.Actor = actor
+			actor.TowerPoints=#s.TowerRoute;actor.PathPoints=s.Points and #s.Points or 0
+			result.Actor=actor
 		end
 		return result
 	end
+	function Navigation.DebugTracking(netId: number): any
+		for hero,s in states do
+			if hero.NetId==netId then return {LastClock=s.Monitor.ProgressAt,Status=s.Status,NoProgressSeconds=s.NoProgressSeconds}end
+		end
+		return nil
+	end
 end
-
-function Navigation.CanAttack(from: Vector3, target: Vector3, group: string?): boolean
-	if math.abs(from.Y - target.Y) > 11 then return false end
-	local a, b = from + Vector3.new(0, 2.5, 0), target + Vector3.new(0, 2.5, 0)
-	return Workspace:Raycast(a, b - a, parameters(group)) == nil
+function Navigation.CanAttack(from: Vector3,target: Vector3,group: string?): boolean
+	if math.abs(from.Y-target.Y)>11 then return false end
+	local a,b=from+Vector3.new(0,2.5,0),target+Vector3.new(0,2.5,0)
+	return Workspace:Raycast(a,b-a,parameters(group))==nil
 end
-
 return Navigation

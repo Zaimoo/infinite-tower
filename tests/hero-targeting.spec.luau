@@ -73,4 +73,16 @@ end)
 test("Nearest-mob ties break on the lower NetId",function()
 	local h=hero(0,0);assert(tick(h,{[9]=mob(4,0),[5]=mob(-4,0)},free(),0)~=nil and h.TargetNetId==5)
 end)
+test("Unreachable targets are skipped until cooldown, generation or room changes",function()
+	local h=hero(0,0);local blocked,other=mob(2,0),mob(8,0)
+	blocked.EntityGeneration=4
+	h.NavigationRejectedTargets={[1]={Until=15,Generation=4,FloorId=3,RoomGeneration=1}}
+	local ctx={MasterPos=Vector3.new(0,0,0),Assigned=true,Leash=95,Now=10}
+	h.TargetNetId=1;h.State="MOVE_TO_TARGET"
+	assert(T.Select(h,{[1]=blocked,[2]=other},ctx,eligible,false,{1})==other,"cached target, assist and acquisition must all respect failure")
+	h.TargetNetId=nil;ctx.Now=16
+	assert(T.Select(h,{[1]=blocked},ctx,eligible,false)==blocked)
+	h.TargetNetId=nil;ctx.Now=10;blocked.EntityGeneration=5
+	assert(T.Select(h,{[1]=blocked},ctx,eligible,false)==blocked,"respawn under the same NetId is fresh")
+end)
 print(string.format("Hero targeting tests: %d passed, %d failed",passed,failed));assert(failed==0)

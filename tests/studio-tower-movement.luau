@@ -3,8 +3,8 @@
 -- Real elapsed time allows asynchronous path computations to complete.
 return function(room: any, speed: number?, slots: number?, options: any?)
 	options = options or {}
-	local Navigation = require(game.ServerScriptService.Core.HeroNavigation)
-	local Layout = require(game.ReplicatedStorage.Shared.Config.TowerLayout)
+	local Navigation = options.Navigation or require(game.ServerScriptService.Core.HeroNavigation)
+	local Layout = options.Layout or require(game.ReplicatedStorage.Shared.Config.TowerLayout)
 	local layout = Layout.Get((room.FloorId - 1) % 5 + 1)
 	local results = {}
 	local actors = {}
@@ -24,7 +24,7 @@ return function(room: any, speed: number?, slots: number?, options: any?)
 				for slot = 1, slots or 5 do
 					local angle = (slot-1) / 5 * math.pi * 2
 					local offset = Vector3.new(math.cos(angle)*6, 0, math.sin(angle)*6)
-					local actor = {Position=Navigation.PlaceNear(a+Vector3.new(0,3,0),offset), FloorId=room.FloorId, RoomGeneration=-999, State="FOLLOW_MASTER"}
+					local actor = {NetId=slot, Position=Navigation.PlaceNear(a+Vector3.new(0,3,0),offset), FloorId=room.FloorId, RoomGeneration=-999, State="FOLLOW_MASTER"}
 					table.insert(actors,actor)
 					table.insert(records,{Actor=actor,Offset=offset,MaxLag=0,Backward=0,StallSeconds=0,MaxStall=0,ConsecutiveStall=0,Trace={},StepMs={}})
 				end
@@ -57,7 +57,7 @@ return function(room: any, speed: number?, slots: number?, options: any?)
 				until os.clock()-started>duration+(options.SettleSeconds or 3)
 				for slot, record in records do
 					table.sort(record.StepMs)
-					table.insert(results,{Link=link.From..">"..link.To,Reverse=reverse,Slot=slot,MaxLag=record.MaxLag,Backward=record.Backward,StallSeconds=record.StallSeconds,MaxStall=record.MaxStall,StepP95Ms=record.StepMs[math.max(1,math.ceil(#record.StepMs*.95))],FinalGap=(record.Actor.Position-b).Magnitude,Trace=if options.Trace then record.Trace else nil})
+					table.insert(results,{Link=link.From..">"..link.To,Reverse=reverse,Slot=slot,MaxLag=record.MaxLag,Backward=record.Backward,StallSeconds=record.StallSeconds,MaxStall=record.MaxStall,StepP95Ms=record.StepMs[math.max(1,math.ceil(#record.StepMs*.95))],FinalGap=(record.Actor.Position-b).Magnitude,Trace=if options.Trace then record.Trace else nil,FinalPosition=tostring(record.Actor.Position-room.Origin),Navigation=Navigation.DebugSnapshot and Navigation.DebugSnapshot(record.Actor).Actor})
 					Navigation.Clear(record.Actor)
 				end
 				table.clear(actors)

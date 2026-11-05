@@ -824,7 +824,7 @@ function Runtime.new(api: any): any
 		m.Yaw = math.atan2(-toHero.X, -toHero.Z)
 		m.State = "CHASE"
 		if (goal - m.Position).Magnitude > 3 and (goal - m.HomePosition).Magnitude < (m.LeashRadius or Config.LeashRange) * 0.8 then
-			api.Navigation.Step(m, goal, e.MoveSpeed * SupportRules.SpeedMultiplier(m, now) * math.min(dt, .3), os.clock())
+			api.Navigation.Step(m, goal, e.MoveSpeed * SupportRules.SpeedMultiplier(m, now) * math.min(dt, .3), os.clock(), dt)
 		end
 		return true
 	end
@@ -904,7 +904,7 @@ function Runtime.new(api: any): any
 		if fromHome > (m.LeashRadius or Config.LeashRange) or safe(m) or not target then
 			m.State = if fromHome <= 3 then "IDLE" elseif m.Patrol then "PATROL" else "RESET"
 			if fromHome > 3 then
-				api.Navigation.Step(m, m.HomePosition, speed * math.min(dt, .3), os.clock())
+				api.Navigation.Step(m, m.HomePosition, speed * math.min(dt, .3), os.clock(), dt)
 			end
 			return
 		end
@@ -934,7 +934,7 @@ function Runtime.new(api: any): any
 		else
 			m.State = "CHASE"
 			if nearest > chaseRange * .85 then
-				api.Navigation.Step(m, target.Position, speed * math.min(dt, .3), os.clock())
+				api.Navigation.Step(m, target.Position, speed * math.min(dt, .3), os.clock(), dt)
 			end
 		end
 	end
