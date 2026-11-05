@@ -3007,7 +3007,7 @@ function Forge:BuildArtifactsModal(gui: ScreenGui)
 		Active = true,
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.5),
-		Size = UDim2.fromOffset(840, 540),
+		Size = UDim2.fromOffset(WIDTH, HEIGHT) -- same size as the Forge window,
 		BackgroundColor3 = C.Panel,
 		BorderSizePixel = 0,
 		ZIndex = 66,
@@ -3015,7 +3015,7 @@ function Forge:BuildArtifactsModal(gui: ScreenGui)
 	GildedGrimoire.Frame(win, { Class = "Window", Tone = "Deep", ZIndex = 66 })
 	win.Activated:Connect(function() end)
 	self.ArtifactsModalScale = new("UIScale", {}, win)
-	ModalFit.Bind(win, self.ArtifactsModalScale, 840, 540)
+	ModalFit.Bind(win, self.ArtifactsModalScale, WIDTH, HEIGHT)
 
 	-- Header
 	local headerIcon = GrimoireIcons.Create("Forge", 36, win, 68)
