@@ -165,6 +165,17 @@ test("The 120-pull pity roll only lands Exalted or higher and follows the luck-b
 	assertEqual(SummonLuck.RollAtLeast(plain, banner.PityRarity, 0.999), 5, "highest roll is Exalted")
 end)
 
+test("Promotion donors are any weapon of the same rarity tier and weapon type", function()
+	local target = { Type = "BOW", Rarity = 5 }
+	assert(Promotion.IsDonorFor(target, { Type = "BOW", Rarity = 5 }), "same tier and type")
+	assert(not Promotion.IsDonorFor(target, { Type = "BOW", Rarity = 4 }), "lower tier")
+	assert(not Promotion.IsDonorFor(target, { Type = "STAFF", Rarity = 5 }), "other type")
+	assert(not Promotion.IsDonorFor(target, target), "itself")
+	local std, enh = ArtifactCatalog.GetTierPair(5, "BOW")
+	assert(std and enh)
+	assert(Promotion.IsDonorFor({ Type = std.Type, Rarity = std.RarityTier }, { Type = enh.Type, Rarity = enh.RarityTier }), "the other variant")
+end)
+
 -- 5. Artifact Selling Valuation
 test("Artifact sell price calculates accurately across all 7 tiers and star levels", function()
 	assertEqual(ArtifactCatalog.CalculateSellPrice(1, 1), 100)
@@ -228,13 +239,15 @@ local function fixture()
 		Currencies = { Gold = 300000, Gems = 1000 },
 		Heroes = {},
 		Artifacts = {
-			target = { TemplateId = "art_iron_broadsword", Star = 6, Rarity = 7, Level = 999 },
+			target = { TemplateId = "art_astral_executioner", Type = "SWORD_SHIELD", Star = 6, Rarity = 7, Level = 999 },
 		},
 	}
 	local donors = {}
 	for i = 1, 6 do
 		local id = "donor" .. i
-		p.Artifacts[id] = { TemplateId = "art_iron_broadsword", Star = 1, Rarity = 1 }
+		-- Alternate the Standard and Enhanced Mythical swords: either variant is a valid donor.
+		local templateId = if i % 2 == 0 then "art_genesis_worldbreaker" else "art_astral_executioner"
+		p.Artifacts[id] = { TemplateId = templateId, Type = "SWORD_SHIELD", Star = 1, Rarity = 7 }
 		table.insert(donors, id)
 	end
 	return p, donors
@@ -287,7 +300,8 @@ test("Malformed, stale, protected and insufficient promotions reject without mut
 		function(p, _d) p.Artifacts.donor1.Locked = true end,
 		function(p, _d) p.Artifacts.donor1.EquippedHeroUUID = "hero" end,
 		function(p, _d) p.Heroes.hero = { EquippedArtifactUUID = "donor1" } end,
-		function(p, _d) p.Artifacts.donor1.TemplateId = "other" end,
+		function(p, _d) p.Artifacts.donor1.Type = "BOW" end,
+		function(p, _d) p.Artifacts.donor1.Rarity = 6 end,
 		function(p, _d) p.Currencies.Gold = 0 end,
 		function(p, _d) p.Currencies.Gems = 0 end,
 		function(p, _d) p.Artifacts.target.Star = 0 / 0 end,

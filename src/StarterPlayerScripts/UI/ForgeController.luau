@@ -14,6 +14,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local ArtifactCatalog = require(Shared:WaitForChild("Config"):WaitForChild("ArtifactCatalog"))
 local HeroCatalog = require(Shared:WaitForChild("Config"):WaitForChild("HeroCatalog"))
 local StatFormulas = require(Shared.Util.StatFormulas)
+local WeaponPromotion = require(Shared.Util.WeaponPromotion)
 local StatBalance = require(Shared.Config.StatBalance)
 local GothicBoxStyle = require(Shared.Util.GothicBoxStyle)
 local GildedGrimoire = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GildedGrimoire"))
@@ -178,7 +179,7 @@ function Forge.new(gui: ScreenGui, artifactRemotes: Folder, getProfile: (() -> a
 	self.ActiveTab = "SUMMON" :: "ASSIGN" | "SUMMON" | "UPGRADE"
 	self.SelectedAssignArtifactUUID = nil :: string?
 	self.SelectedTargetUUID = nil :: string?
-	self.FodderUUIDs = {} :: { string } -- Up to six same-template donor UUIDs.
+	self.FodderUUIDs = {} :: { string } -- Up to six donor UUIDs (same rarity tier and weapon type).
 	self.PickerMode = "NONE" :: "NONE" | "TARGET" | "FODDER" | "EQUIP_LOADOUT"
 	self.Busy = false
 
@@ -1966,19 +1967,21 @@ function Forge:AutoFillFodder()
 
 	table.clear(self.FodderUUIDs)
 
-	-- Prefer lower rarity/star copies of the same weapon.
+	-- Donors share the target's rarity and type. Spend low stars first, and Standard before Enhanced.
 	local candidates = {}
 	for uuid, art in pairs(artifacts) do
-		if uuid ~= self.SelectedTargetUUID and not art.EquippedHeroUUID and not art.Locked and target and art.TemplateId == target.TemplateId then
+		if uuid ~= self.SelectedTargetUUID and not art.EquippedHeroUUID and not art.Locked and target and WeaponPromotion.IsDonorFor(target, art) then
 			table.insert(candidates, { UUID = uuid, Art = art })
 		end
 	end
 
 	table.sort(candidates, function(a, b)
-		local aRarity = a.Art.Rarity or 1
-		local bRarity = b.Art.Rarity or 1
-		if aRarity ~= bRarity then return aRarity < bRarity end
-		return (a.Art.Star or 1) < (b.Art.Star or 1)
+		local aStar, bStar = a.Art.Star or 1, b.Art.Star or 1
+		if aStar ~= bStar then return aStar < bStar end
+		local aSeed, bSeed = ArtifactCatalog.Seeds[a.Art.TemplateId], ArtifactCatalog.Seeds[b.Art.TemplateId]
+		local aEnh, bEnh = aSeed ~= nil and aSeed.IsHighStat, bSeed ~= nil and bSeed.IsHighStat
+		if aEnh ~= bEnh then return not aEnh end
+		return a.UUID < b.UUID
 	end)
 
 	for i = 1, math.min(reqFodder, #candidates) do
@@ -2208,12 +2211,12 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 			end)
 		end
 	elseif mode == "FODDER" then
-		self.DrawerTitle.Text = "SELECT SAME-WEAPON COPIES (RARITY STAYS FIXED)"
+		self.DrawerTitle.Text = "SELECT DONORS: SAME RARITY AND WEAPON TYPE"
 		local target = self.SelectedTargetUUID and artifacts[self.SelectedTargetUUID]
 		local req = target and ArtifactCatalog.GetFodderRequirement(target.Star or 1) or 0
 
 		for uuid, art in pairs(artifacts) do
-			if uuid ~= self.SelectedTargetUUID and not art.EquippedHeroUUID and not art.Locked and target and art.TemplateId == target.TemplateId then
+			if uuid ~= self.SelectedTargetUUID and not art.EquippedHeroUUID and not art.Locked and target and WeaponPromotion.IsDonorFor(target, art) then
 				local isSlotted = table.find(self.FodderUUIDs, uuid) ~= nil
 				local rarityInfo = ArtifactCatalog.GetRarityInfo(art.Rarity or 1)
 
