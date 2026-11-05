@@ -218,7 +218,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = false,
 		StatMultiplier = 1.00,
 		SpeedBonusAdditive = 0.000,
-		ModelAssetId = "weapon_sword_shield",
+		ModelAssetId = "art_iron_broadsword",
 		Description = "Utilitarian cast-grey iron blade with rough fuller hammer marks and wooden corner-banded heater shield.",
 	},
 	art_tempered_bastard_sword = {
@@ -229,7 +229,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = true,
 		StatMultiplier = 1.20,
 		SpeedBonusAdditive = 0.010,
-		ModelAssetId = "weapon_sword_shield",
+		ModelAssetId = "art_tempered_bastard_sword",
 		Description = "Double-quenched carbon steel blade with fluted crossguard and reinforced steel buckler.",
 	},
 	art_rusty_daggers = {
@@ -240,7 +240,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = false,
 		StatMultiplier = 1.00,
 		SpeedBonusAdditive = 0.000,
-		ModelAssetId = "weapon_daggers",
+		ModelAssetId = "art_rusty_daggers",
 		Description = "Pair of simple drop-point trench daggers with leather cord wraps and blackened tips.",
 	},
 	art_serrated_skewers = {
@@ -251,7 +251,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = true,
 		StatMultiplier = 1.20,
 		SpeedBonusAdditive = 0.010,
-		ModelAssetId = "weapon_daggers",
+		ModelAssetId = "art_serrated_skewers",
 		Description = "Deeply serrated butchering daggers with curved knuckle rings and brass pommel weights.",
 	},
 	art_hunters_shortbow = {
@@ -262,7 +262,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = false,
 		StatMultiplier = 1.00,
 		SpeedBonusAdditive = 0.000,
-		ModelAssetId = "weapon_bow",
+		ModelAssetId = "art_hunters_shortbow",
 		Description = "Lightweight curved yew hunting bow with waxed hemp string and smooth ash grip.",
 	},
 	art_reinforced_longbow = {
@@ -273,7 +273,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = true,
 		StatMultiplier = 1.20,
 		SpeedBonusAdditive = 0.010,
-		ModelAssetId = "weapon_bow",
+		ModelAssetId = "art_reinforced_longbow",
 		Description = "Stouter yew stave backed with cured tendon cordage, firing heavy field arrows.",
 	},
 	art_miner_pickaxe = {
@@ -350,7 +350,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = false,
 		StatMultiplier = 1.00,
 		SpeedBonusAdditive = 0.000,
-		ModelAssetId = "weapon_sword_shield",
+		ModelAssetId = "art_runic_longsword",
 		Description = "Cobalt-treated steel knightly blade etched with faint emerald rune grooves and matching runic pavise.",
 	},
 	art_knightly_estoc = {
@@ -361,7 +361,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = true,
 		StatMultiplier = 1.20,
 		SpeedBonusAdditive = 0.015,
-		ModelAssetId = "weapon_sword_shield",
+		ModelAssetId = "art_knightly_estoc",
 		Description = "Needle-pointed triangular thrusting sword with full basket hilt and convex teardrop kite shield.",
 	},
 	art_viper_kris = {
@@ -372,7 +372,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = false,
 		StatMultiplier = 1.00,
 		SpeedBonusAdditive = 0.000,
-		ModelAssetId = "weapon_daggers",
+		ModelAssetId = "art_viper_kris",
 		Description = "Flamboyant serpentine wavy-bladed daggers tipped with emerald venom gloss and snake-eye brass hilts.",
 	},
 	art_silent_dirks = {
@@ -383,7 +383,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = true,
 		StatMultiplier = 1.20,
 		SpeedBonusAdditive = 0.015,
-		ModelAssetId = "weapon_daggers",
+		ModelAssetId = "art_silent_dirks",
 		Description = "Needle-point stiletto dirks with non-reflective blued steel blades and lead-dampened guards.",
 	},
 	art_recurve_composite = {
@@ -394,7 +394,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = false,
 		StatMultiplier = 1.00,
 		SpeedBonusAdditive = 0.000,
-		ModelAssetId = "weapon_bow",
+		ModelAssetId = "art_recurve_composite",
 		Description = "Slender composite recurve layered with pale ashwood, horn tips, and falcon feather accents.",
 	},
 	art_gale_force_composite = {
@@ -405,7 +405,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = true,
 		StatMultiplier = 1.20,
 		SpeedBonusAdditive = 0.015,
-		ModelAssetId = "weapon_bow",
+		ModelAssetId = "art_gale_force_composite",
 		Description = "Deeply reflexed composite bow bound in emerald silk sinew with carved ivory riser tips.",
 	},
 	art_canyon_splitter = {
@@ -482,7 +482,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = false,
 		StatMultiplier = 1.00,
 		SpeedBonusAdditive = 0.000,
-		ModelAssetId = "weapon_sword_shield",
+		ModelAssetId = "art_paladin_spatha",
 		Description = "Noble chivalric broadsword with winged crossguard and radiant sun-crested heater shield.",
 	},
 	art_vanguard_warden_bastion = {
@@ -493,7 +493,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = true,
 		StatMultiplier = 1.20,
 		SpeedBonusAdditive = 0.020,
-		ModelAssetId = "weapon_sword_shield",
+		ModelAssetId = "art_vanguard_warden_bastion",
 		Description = "Heavy tower-blade with full-length blood channel and massive scalloped fortress shield.",
 	},
 	art_shadow_fangs = {
@@ -504,7 +504,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = false,
 		StatMultiplier = 1.00,
 		SpeedBonusAdditive = 0.000,
-		ModelAssetId = "weapon_daggers",
+		ModelAssetId = "art_shadow_fangs",
 		Description = "Twin obsidian stilettos trailing purple-black abyssal smoke, set in skeletal dragon-rib hilts.",
 	},
 	art_phantom_stiletto = {
@@ -515,7 +515,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = true,
 		StatMultiplier = 1.20,
 		SpeedBonusAdditive = 0.020,
-		ModelAssetId = "weapon_daggers",
+		ModelAssetId = "art_phantom_stiletto",
 		Description = "Translucent spirit-glass blades that blur into ethereal silhouettes during rapid thrusts.",
 	},
 	art_stormstrider_longbow = {
@@ -526,7 +526,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = false,
 		StatMultiplier = 1.00,
 		SpeedBonusAdditive = 0.000,
-		ModelAssetId = "weapon_bow",
+		ModelAssetId = "art_stormstrider_longbow",
 		Description = "Tall elven recurve inlaid with storm-silver alloy and eagle-wing riser accents.",
 	},
 	art_thunderhead_recurve = {
@@ -537,7 +537,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = true,
 		StatMultiplier = 1.20,
 		SpeedBonusAdditive = 0.020,
-		ModelAssetId = "weapon_bow",
+		ModelAssetId = "art_thunderhead_recurve",
 		Description = "Taut recurve wrapped in coiled copper lightning wires that discharge spark showers on draw.",
 	},
 	art_battleaxe_cleaver = {
@@ -614,7 +614,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = false,
 		StatMultiplier = 1.00,
 		SpeedBonusAdditive = 0.000,
-		ModelAssetId = "weapon_sword_shield",
+		ModelAssetId = "art_crystal_claymore",
 		Description = "Translucent amethyst-bladed greatsword paired with an interlocking prismatic crystal barrier.",
 	},
 	art_resonant_bulwark = {
@@ -625,7 +625,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = true,
 		StatMultiplier = 1.20,
 		SpeedBonusAdditive = 0.020,
-		ModelAssetId = "weapon_sword_shield",
+		ModelAssetId = "art_resonant_bulwark",
 		Description = "Vibrating sonic steel broadsword with an acoustic hexagonal aegis that deflects kinetic blows.",
 	},
 	art_phantom_edge = {
@@ -636,7 +636,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = false,
 		StatMultiplier = 1.00,
 		SpeedBonusAdditive = 0.000,
-		ModelAssetId = "weapon_daggers",
+		ModelAssetId = "art_phantom_edge",
 		Description = "Semitransparent spirit glass daggers with ornate filigree crossguards and phase-strike luminescence.",
 	},
 	art_nightstalker_katar = {
@@ -647,7 +647,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = true,
 		StatMultiplier = 1.20,
 		SpeedBonusAdditive = 0.020,
-		ModelAssetId = "weapon_daggers",
+		ModelAssetId = "art_nightstalker_katar",
 		Description = "Punching katars forged of black meteoric iron with dual glowing violet plasma edges.",
 	},
 	art_crystal_greatbow = {
@@ -658,7 +658,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = false,
 		StatMultiplier = 1.00,
 		SpeedBonusAdditive = 0.000,
-		ModelAssetId = "weapon_bow",
+		ModelAssetId = "art_crystal_greatbow",
 		Description = "Towering prismatic mana-quartz bow with condensed cerulean mana string that hums melodically.",
 	},
 	art_prismatic_arbalest = {
@@ -669,7 +669,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = true,
 		StatMultiplier = 1.20,
 		SpeedBonusAdditive = 0.020,
-		ModelAssetId = "weapon_bow",
+		ModelAssetId = "art_prismatic_arbalest",
 		Description = "Intricate crystal-limbed mechanical greatbow with floating mana focus sights.",
 	},
 	art_magma_behemoth = {
@@ -746,7 +746,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = false,
 		StatMultiplier = 1.00,
 		SpeedBonusAdditive = 0.000,
-		ModelAssetId = "weapon_sword_shield",
+		ModelAssetId = "art_paladin_claymore",
 		Description = "Consecrated white-silver executioner sword with angelic wing quillons and radiant sunburst kite shield.",
 	},
 	art_aegis_of_valor = {
@@ -757,7 +757,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = true,
 		StatMultiplier = 1.20,
 		SpeedBonusAdditive = 0.020,
-		ModelAssetId = "weapon_sword_shield",
+		ModelAssetId = "art_aegis_of_valor",
 		Description = "Gilded royal arming sword paired with an incandescent solar shield projecting humming barrier domes.",
 	},
 	art_bloodthirst_twinblades = {
@@ -768,7 +768,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = false,
 		StatMultiplier = 1.00,
 		SpeedBonusAdditive = 0.000,
-		ModelAssetId = "weapon_daggers",
+		ModelAssetId = "art_bloodthirst_twinblades",
 		Description = "Jagged crimson Damascus demonic falchions with arterial filigree dripping phantom blood embers.",
 	},
 	art_crimson_carnage = {
@@ -779,7 +779,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = true,
 		StatMultiplier = 1.20,
 		SpeedBonusAdditive = 0.020,
-		ModelAssetId = "weapon_daggers",
+		ModelAssetId = "art_crimson_carnage",
 		Description = "Asymmetrical curved demonic scythe-daggers forged of living bone that thrum with predatory frenzy.",
 	},
 	art_phoenix_flatbow = {
@@ -790,7 +790,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = false,
 		StatMultiplier = 1.00,
 		SpeedBonusAdditive = 0.000,
-		ModelAssetId = "weapon_bow",
+		ModelAssetId = "art_phoenix_flatbow",
 		Description = "Swept crimson-gold limbs sculpted like flaming phoenix wings emitting rippling heat shimmers.",
 	},
 	art_solar_flare_recurve = {
@@ -801,7 +801,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = true,
 		StatMultiplier = 1.20,
 		SpeedBonusAdditive = 0.020,
-		ModelAssetId = "weapon_bow",
+		ModelAssetId = "art_solar_flare_recurve",
 		Description = "Blinding incandescent bow with floating corona rings that materializes searing sunlight javelins.",
 	},
 	art_titan_earthshaker = {
@@ -878,7 +878,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = false,
 		StatMultiplier = 1.00,
 		SpeedBonusAdditive = 0.000,
-		ModelAssetId = "weapon_sword_shield",
+		ModelAssetId = "art_blade_of_the_rift",
 		Description = "Dimensional cosmic glass blade swirling with inner nebula stars and antique cathedral portal shield.",
 	},
 	art_aegis_core = {
@@ -889,7 +889,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = true,
 		StatMultiplier = 1.20,
 		SpeedBonusAdditive = 0.025,
-		ModelAssetId = "weapon_sword_shield",
+		ModelAssetId = "art_aegis_core",
 		Description = "Hexagonal floating segmented gold plates orbiting a hyper-dense glowing rift power core.",
 	},
 	art_eclipse_daggers = {
@@ -900,7 +900,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = false,
 		StatMultiplier = 1.00,
 		SpeedBonusAdditive = 0.000,
-		ModelAssetId = "weapon_daggers",
+		ModelAssetId = "art_eclipse_daggers",
 		Description = "Opposing celestial twins: one forged of lunar silver, one of solar gold, with crescent eclipse guards.",
 	},
 	art_abyssal_razor = {
@@ -911,7 +911,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = true,
 		StatMultiplier = 1.20,
 		SpeedBonusAdditive = 0.025,
-		ModelAssetId = "weapon_daggers",
+		ModelAssetId = "art_abyssal_razor",
 		Description = "Void-matter shadow daggers that leave pitch-black cuts suspended in three-dimensional space.",
 	},
 	art_celestial_zenith = {
@@ -922,7 +922,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = false,
 		StatMultiplier = 1.00,
 		SpeedBonusAdditive = 0.000,
-		ModelAssetId = "weapon_bow",
+		ModelAssetId = "art_celestial_zenith",
 		Description = "Pristine white marble and polished gold riser with floating orbital ring sights and starlight string.",
 	},
 	art_supernova_greatbow = {
@@ -933,7 +933,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = true,
 		StatMultiplier = 1.20,
 		SpeedBonusAdditive = 0.025,
-		ModelAssetId = "weapon_bow",
+		ModelAssetId = "art_supernova_greatbow",
 		Description = "Colossal cosmic recurve radiating stellar flares that nocks superheated fusion plasma bolts.",
 	},
 	art_valkyrie_waraxe = {
@@ -1010,7 +1010,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = false,
 		StatMultiplier = 1.00,
 		SpeedBonusAdditive = 0.000,
-		ModelAssetId = "weapon_sword_shield",
+		ModelAssetId = "art_astral_executioner",
 		Description = "Starlight alloy chisel-tipped blade with constellation runes and monolithic starry mirror shield.",
 	},
 	art_genesis_worldbreaker = {
@@ -1021,7 +1021,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = true,
 		StatMultiplier = 1.20,
 		SpeedBonusAdditive = 0.050,
-		ModelAssetId = "weapon_sword_shield",
+		ModelAssetId = "art_genesis_worldbreaker",
 		Description = "Colossal cosmic bastion forged from a collapsed star; gravitational lensing warps space around its rim.",
 	},
 	art_abyssal_ravagers = {
@@ -1032,7 +1032,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = false,
 		StatMultiplier = 1.00,
 		SpeedBonusAdditive = 0.000,
-		ModelAssetId = "weapon_daggers",
+		ModelAssetId = "art_abyssal_ravagers",
 		Description = "Floating dark-matter phantom daggers tethered by purple lightning arcs around the hero's wrists.",
 	},
 	art_void_reapers = {
@@ -1043,7 +1043,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = true,
 		StatMultiplier = 1.20,
 		SpeedBonusAdditive = 0.050,
-		ModelAssetId = "weapon_daggers",
+		ModelAssetId = "art_void_reapers",
 		Description = "Twin rift scythe-daggers that slice through the fabric of dimensions, leaving tearing cosmic rifts.",
 	},
 	art_astrea_cosmic_bow = {
@@ -1054,7 +1054,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = false,
 		StatMultiplier = 1.00,
 		SpeedBonusAdditive = 0.000,
-		ModelAssetId = "weapon_bow",
+		ModelAssetId = "art_astrea_cosmic_bow",
 		Description = "Astrea's pinnacle relic: stave formed of pure starlight constellation lines; nocks pure energy lances.",
 	},
 	art_infinity_genesis_bow = {
@@ -1065,7 +1065,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = true,
 		StatMultiplier = 1.20,
 		SpeedBonusAdditive = 0.050,
-		ModelAssetId = "weapon_bow",
+		ModelAssetId = "art_infinity_genesis_bow",
 		Description = "Transcendent cosmic arc whose string is a beam of creation light, firing arrows that warp space-time.",
 	},
 	art_world_carver = {
