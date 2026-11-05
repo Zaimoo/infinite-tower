@@ -246,7 +246,7 @@ end
 -- CONSTRUCTOR
 --============================================================================
 
-function Forge.new(gui: ScreenGui, artifactRemotes: Folder, getProfile: (() -> any)?, onClose: (() -> ())?)
+function Forge.new(gui: ScreenGui, artifactRemotes: Folder, getProfile: (() -> any)?, onClose: (() -> ())?, externalNavigation: boolean?)
 	local self: any = setmetatable({}, Forge)
 	self.Remotes = artifactRemotes
 	self.GetProfile = getProfile
@@ -465,7 +465,17 @@ function Forge.new(gui: ScreenGui, artifactRemotes: Folder, getProfile: (() -> a
 	self:BuildArtifactsModal(gui)
 
 	-- Fit the window inside the safe area (below the top bar, clear of the bottom edge).
-	ModalFit.Bind(root, self.Scale, WIDTH, HEIGHT)
+	local fitHeight = HEIGHT
+	if externalNavigation then
+		tabContainer.Visible = false
+		tabDivider.Visible = false
+		fitHeight -= 42
+		root.Size = UDim2.fromOffset(WIDTH, fitHeight)
+		for _, view in { self.AssignView, self.SummonView, self.UpgradeView } do
+			view.Position -= UDim2.fromOffset(0, 42)
+		end
+	end
+	ModalFit.Bind(root, self.Scale, WIDTH, fitHeight)
 
 	return self
 end

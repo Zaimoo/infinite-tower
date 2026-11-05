@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local React = require(ReplicatedStorage.Packages.React)
 local ReactRoblox = require(ReplicatedStorage.Packages.ReactRoblox)
 local App = require(script.Parent.ForgeWorkbench.App)
+local Navigation = require(script.Parent.ForgeWorkbench.Navigation)
 local LegacyForge = require(script.Parent.ForgeController)
 
 local Controller = {}
@@ -37,6 +38,10 @@ function Controller.new(gui: ScreenGui, remotes: Folder, getProfile: () -> any, 
 	host.Name = "ForgeWorkbenchHost"
 	host.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
 	self.ReactRoot = ReactRoblox.createRoot(host)
+	local navigationHost = Instance.new("Folder")
+	navigationHost.Name = "ForgeNavigationHost"
+	navigationHost.Parent = host.Parent
+	self.NavigationRoot = ReactRoblox.createRoot(navigationHost)
 	self.Request = remotes:WaitForChild("ForgeWorkbenchRequest") :: RemoteFunction
 	self.Transport = {
 		Execute = function(command) return self.Request:InvokeServer("EXECUTE", command) end,
@@ -44,7 +49,7 @@ function Controller.new(gui: ScreenGui, remotes: Folder, getProfile: () -> any, 
 	}
 	self.Legacy = LegacyForge.new(gui, remotes, getProfile, function()
 		if not self.Switching then self:Close() end
-	end)
+	end, true)
 	local legacySetTab = self.Legacy.SetTab
 	self.Legacy.AssignTabBtn.Text = "ARTIFACTS"
 	self.Legacy.UpgradeTabBtn.Text = "SELL ARTIFACTS"
@@ -70,14 +75,33 @@ function Controller.new(gui: ScreenGui, remotes: Folder, getProfile: () -> any, 
 		OnClose = function() self:Close() end,
 		OnSummon = function() self:Open("SUMMON") end,
 		OnSell = function() self:OpenSell() end,
+		OnSellArtifacts = function(ids)
+			local ok, message = self.Legacy.RequestSell:InvokeServer(ids)
+			local fresh = self.Request:InvokeServer("STATE")
+			self.Snapshot = fresh
+			self:_render()
+			return ok, message
+		end,
 		OnSnapshot = function(snapshot)
 			if not self.Snapshot or snapshot.Revision >= self.Snapshot.Revision then self.Snapshot = snapshot end
 		end,
 		OnContextChanged = function(heroId, artifactId, mode)
 			self.HeroId, self.ArtifactId, self.Mode = heroId, artifactId, mode
 		end,
+		OnBusyChanged = function(busy) self.Busy = busy; self:_renderNavigation() end,
 	}
 	return self
+end
+
+function Controller:_renderNavigation()
+	if self.Destination == "NONE" then self.NavigationRoot:render(nil); return end
+	self.NavigationRoot:render(React.createElement(Navigation, {
+		Active = if self.Destination == "SUMMON" then "Summon" elseif self.Mode == "UPGRADE" then "Upgrade" else "Artifacts",
+		Busy = self.Busy,
+		OnSelect = function(tab)
+			self:Open(if tab == "Summon" then "SUMMON" elseif tab == "Upgrade" then "UPGRADE" else "ASSIGN")
+		end,
+	}))
 end
 
 function Controller:_hideLegacy()
@@ -87,14 +111,17 @@ function Controller:_hideLegacy()
 end
 
 function Controller:_render()
-	if self.Destination ~= "ARTIFACTS" or not self.Snapshot then return end
+	if (self.Destination ~= "ARTIFACTS" and self.Destination ~= "SELL") or not self.Snapshot then return end
 	self.ReactRoot:render(React.createElement(App, {
 		key = self.OpenGeneration,
 		Snapshot = self.Snapshot, Transport = self.Transport,
 		InitialHeroId = self.HeroId, InitialArtifactId = self.ArtifactId, InitialMode = self.Mode,
 		OnClose = self.AppCallbacks.OnClose, OnSummon = self.AppCallbacks.OnSummon,
+		InitialPane = if self.Destination == "SELL" then "SELL" else "INVENTORY",
+		OnSellArtifacts = self.AppCallbacks.OnSellArtifacts,
 		OnSell = self.AppCallbacks.OnSell, OnSnapshot = self.AppCallbacks.OnSnapshot,
 		OnContextChanged = self.AppCallbacks.OnContextChanged,
+		OnBusyChanged = self.AppCallbacks.OnBusyChanged,
 	}))
 end
 
@@ -107,12 +134,14 @@ function Controller:Open(initialTab: string?)
 		self.Switching = true
 		self.Legacy:Open("SUMMON")
 		self.Switching = false
+		self:_renderNavigation()
 		return
 	end
 	self:_hideLegacy()
 	self.Destination = "ARTIFACTS"
 	self.Root.Visible = true
-	if initialTab == "UPGRADE" then self.Mode = "UPGRADE" end
+	self.Mode = if initialTab == "UPGRADE" then "UPGRADE" else "EQUIP"
+	self:_renderNavigation()
 	self.OpenGeneration += 1
 	local generation = self.OpenGeneration
 	local profile = self.GetProfile()
@@ -128,19 +157,20 @@ function Controller:Open(initialTab: string?)
 end
 
 function Controller:OpenSell()
-	self.Destination = "SELL"
-	self.OpenGeneration += 1
-	self.ReactRoot:render(nil)
-	self.Root.Visible = true
-	self.OpeningSell = true
-	self.Legacy:Open("ASSIGN")
-	self.OpeningSell = false
-	self.Legacy:ToggleSellMode(true)
+ self:_hideLegacy()
+ self.Destination = "SELL"
+ self.OpenGeneration += 1
+ self.Root.Visible = true
+ local profile = self.GetProfile()
+ if profile then self.Snapshot = snapshotFromProfile(profile) end
+ self:_renderNavigation()
+ self:_render()
 end
 
 function Controller:Close()
 	self.OpenGeneration += 1
 	self.Destination = "NONE"
+	self:_renderNavigation()
 	self.Root.Visible = false
 	self.ReactRoot:render(nil)
 	self:_hideLegacy()
@@ -149,7 +179,7 @@ end
 
 function Controller:Refresh()
 	if not self.Root.Visible then return end
-	if self.Destination == "SUMMON" or self.Destination == "SELL" then self.Legacy:Refresh(); return end
+	if self.Destination == "SUMMON" then self.Legacy:Refresh(); return end
 	local profile = self.GetProfile()
 	if not profile then return end
 	local nextSnapshot = snapshotFromProfile(profile)

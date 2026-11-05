@@ -66,12 +66,14 @@ export type Props = {
 	OnClose: () -> (),
 	OnSummon: () -> (), -- hand off to the existing artifact summon banner
 	OnSell: (() -> ())?,
+	OnSellArtifacts: ((ids: { string }) -> (boolean, string?))?,
 	OnContextChanged: ((heroId: string?, artifactId: string?, mode: string) -> ())?,
+	OnBusyChanged: ((busy: boolean) -> ())?,
 	OnSnapshot: ((snapshot: Snapshot) -> ())?,
 	InitialHeroId: string?,
 	InitialArtifactId: string?,
 	InitialMode: string?,
-	InitialPane: ("INVENTORY" | "DETAILS")?,
+	InitialPane: ("INVENTORY" | "DETAILS" | "SELL")?,
 	MaxWindowSize: Vector2?, -- default 960×640; optional expanded desktop layout
 }
 return {}

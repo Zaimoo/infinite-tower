@@ -922,16 +922,18 @@ end
 -- Compact enough to sit in Roblox's top bar (HudApp centres it there, or on the window's top edge).
 Components.PitTabsSize = Vector2.new(300, 46)
 
-function Components.PitTabs(props: { Active: string, Center: Vector2, OnSelect: (string) -> () })
+function Components.PitTabs(props: { Active: string, Center: Vector2, OnSelect: (string) -> (), Tabs: { string }?, Size: Vector2?, Name: string? })
+	local size = props.Size or Components.PitTabsSize
+	local tabs = props.Tabs or { "Synthesis", "Promotion" }
 	local children: { [string]: any } = {
 		Layout = e("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder,
 			VerticalAlignment = Enum.VerticalAlignment.Center, HorizontalAlignment = Enum.HorizontalAlignment.Center }),
 	}
-	for i, tab in { "Synthesis", "Promotion" } do
+	for i, tab in tabs do
 		local active = props.Active == tab
 		local tone = if active then Grimoire.Tones.Gold else Grimoire.Tones.Slate
 		children[tab] = panel({
-			Class = "TextButton", LayoutOrder = i, Size = UDim2.fromOffset(134, 34), Text = "", AutoButtonColor = false, Selectable = true,
+			Class = "TextButton", Name = tab .. "Tab", LayoutOrder = i, Size = UDim2.fromOffset((size.X - 32) / #tabs, size.Y - 12), Text = "", AutoButtonColor = false, Selectable = true,
 			Radius = 10, Top = tone.Top, Bottom = tone.Bottom, Rail = tone.Rail,
 			[React.Event.Activated] = function()
 				if not active then props.OnSelect(tab) end
@@ -942,9 +944,10 @@ function Components.PitTabs(props: { Active: string, Center: Vector2, OnSelect: 
 		})
 	end
 	return panel({
+		Name = props.Name or "PitTabs",
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromOffset(props.Center.X, props.Center.Y),
-		Size = UDim2.fromOffset(Components.PitTabsSize.X, Components.PitTabsSize.Y),
+		Size = UDim2.fromOffset(size.X, size.Y),
 		ZIndex = 30,
 	}, { Row = e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 }, children) })
 end
