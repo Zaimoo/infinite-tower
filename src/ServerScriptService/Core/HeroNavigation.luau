@@ -7,6 +7,11 @@ local Navigation = {}
 local TowerLayout = require(game.ReplicatedStorage.Shared.Config.TowerLayout)
 local states: {[any]: any} = setmetatable({}, {__mode = "k"}) :: any
 local computing = 0
+-- Studio-only counters; normal servers do not collect diagnostic samples.
+local diagnostics: any = if game:GetService("RunService"):IsStudio() then {
+	Steps = 0, GroundQueries = 0, BodyQueries = 0, PathRequests = 0,
+	PathSuccess = 0, PathFailure = 0, PeakComputing = 0,
+} else nil
 local RADIUS, HEIGHT, STEP_UP, MAX_DROP = 1.2, 4.8, 2.2, 3.5
 local exclusions: {Instance} = {}
 
@@ -38,6 +43,7 @@ local function parameters(group: string?): RaycastParams
 end
 
 function Navigation.Ground(position: Vector3, group: string?, up: number?, down: number?): Vector3?
+	if diagnostics then diagnostics.GroundQueries += 1 end
 	local rise, drop = up or STEP_UP, down or MAX_DROP
 	local hit = Workspace:Raycast(position + Vector3.new(0, rise, 0), Vector3.new(0, -(rise + drop), 0), parameters(group))
 	if hit and hit.Normal.Y >= .65 then return hit.Position end
@@ -82,6 +88,7 @@ local function walkSegment(from: Vector3, toward: Vector3, distance: number, gro
 		local delta = ground - at
 		-- Raise the sweep above small walkable steps; the ground probe limits step height.
 		local hit = Workspace:Blockcast(CFrame.new(at + Vector3.new(0, 3.5, 0)), Vector3.new(RADIUS * 2, 2.5, RADIUS * 2), delta, params)
+		if diagnostics then diagnostics.BodyQueries += 1 end
 		if hit then return at, false end
 		-- Probe the leading edges so formations cannot walk off narrow bridges into the void.
 		local across = Vector3.new(-direction.Z, 0, direction.X) * (RADIUS * .8)
@@ -128,6 +135,11 @@ local function requestPath(hero: any, state: any, goal: Vector3, now: number)
 	if state.Pending or now < state.NextRequest or computing >= 12 then return end
 	state.Pending, state.NextRequest = true, now + 0.35
 	computing += 1
+	if diagnostics then
+		diagnostics.PathRequests += 1
+		diagnostics.PeakComputing = math.max(diagnostics.PeakComputing, computing)
+		state.RequestedAt = os.clock()
+	end
 	local start = hero.Position
 	task.spawn(function()
 		local path = PathfindingService:CreatePath({
@@ -144,6 +156,12 @@ local function requestPath(hero: any, state: any, goal: Vector3, now: number)
 		computing -= 1
 		if states[hero] ~= state then path:Destroy(); return end
 		state.Pending = false
+		if diagnostics then
+			state.PathMilliseconds = (os.clock() - state.RequestedAt) * 1000
+			state.PathStatus = if ok then path.Status.Name else "ERROR"
+			local key = if ok and path.Status == Enum.PathStatus.Success then "PathSuccess" else "PathFailure"
+			diagnostics[key] += 1
+		end
 		if ok and path.Status == Enum.PathStatus.Success then
 			local wps = path:GetWaypoints()
 			local bestIdx = 2
@@ -243,6 +261,10 @@ function Navigation.Step(hero: any, goal: Vector3, distance: number, now: number
 	local state = states[hero]
 	if not state then state = {NextRequest = 0, Index = 2, BlockedCount = 0}; states[hero] = state end
 	local group = groupFor(hero)
+	if diagnostics then
+		diagnostics.Steps += 1
+		state.RequestedDistance, state.Destination = distance, goal
+	end
 
 	-- Ground recovery: if entity is suspended in the air without active jump, descend toward ground
 	local directGround = Navigation.Ground(hero.Position, group, 2.0, 50)
@@ -277,6 +299,7 @@ function Navigation.Step(hero: any, goal: Vector3, distance: number, now: number
 			subGoal = route[state.TowerIndex] or goal
 		end
 		subGoal = Navigation.Ground(subGoal, group, 4, 16) or subGoal
+		if diagnostics then state.SubGoal = subGoal end
 
 		local old = hero.Position
 		if (Vector3.new(subGoal.X - old.X, 0, subGoal.Z - old.Z)).Magnitude < 0.05 then
@@ -430,6 +453,7 @@ function Navigation.Step(hero: any, goal: Vector3, distance: number, now: number
 	end
 
 	local moved = hero.Position - startPosition
+	if diagnostics then state.ConsumedDistance = moved.Magnitude end
 	if moved.Magnitude > .02 then hero.Yaw = math.atan2(-moved.X, -moved.Z) end
 	if not anyClear then
 		state.BlockedCount = (state.BlockedCount or 0) + 1
@@ -440,6 +464,25 @@ function Navigation.Step(hero: any, goal: Vector3, distance: number, now: number
 		end
 	else
 		state.BlockedCount = 0
+	end
+end
+
+if diagnostics then
+	function Navigation.DebugSnapshot(hero: any?): any
+		local result = table.clone(diagnostics)
+		result.Computing = computing
+		local s = hero and states[hero]
+		if s then
+			local actor = {}
+			for _, key in {"TowerIndex", "Index", "BlockedCount", "Pending", "NextRequest", "RequestedAt", "PathMilliseconds", "PathStatus", "RequestedDistance", "ConsumedDistance", "Destination", "SubGoal", "TowerGoal"} do
+				local value = s[key]
+				actor[key] = if typeof(value) == "Vector3" then {X=value.X,Y=value.Y,Z=value.Z} else value
+			end
+			actor.TowerPoints = s.TowerRoute and #s.TowerRoute or 0
+			actor.PathPoints = s.Points and #s.Points or 0
+			result.Actor = actor
+		end
+		return result
 	end
 end
 

@@ -1,6 +1,6 @@
 # Tower movement reliability implementation plan
 
-Status: proposed, 2026-11-05. Implementation and acceptance testing are pending.
+Status: Phase 0 reproduction gate validated, 2026-11-05. See [baseline evidence](reviews/tower-movement/2026-11-05/README.md). Movement implementation and final acceptance testing are pending; moving render lag and full combat-load certification remain open.
 
 Make all five heroes traverse ramps and platforms reliably during active floor runs and assigned-squad combat. Address route reversals, heroes falling behind, ramp seams, squad congestion, ineffective stuck detection, and recovery teleports together.
 

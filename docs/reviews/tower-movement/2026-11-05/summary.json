@@ -1,0 +1,209 @@
+{
+  "sourceBase": "dd64e5e",
+  "mergedMain": "72236cf",
+  "controlled": {
+    "Moving": [
+      {
+        "slot": 1,
+        "backward": 0,
+        "maxLag": 12.91531753540039,
+        "finalGap": 6,
+        "p95StepMs": 0.5829000001540408
+      },
+      {
+        "slot": 2,
+        "backward": 8,
+        "maxLag": 92.23159790039062,
+        "finalGap": 5.999548435211182,
+        "p95StepMs": 1.3308999996297644
+      },
+      {
+        "slot": 3,
+        "backward": 0,
+        "maxLag": 11.861714363098145,
+        "finalGap": 5.99932336807251,
+        "p95StepMs": 0.3747000000657863
+      },
+      {
+        "slot": 4,
+        "backward": 0,
+        "maxLag": 13.959272384643555,
+        "finalGap": 5.99932336807251,
+        "p95StepMs": 0.35399999978835694
+      },
+      {
+        "slot": 5,
+        "backward": 9,
+        "maxLag": 103.76849365234375,
+        "finalGap": 5.999548435211182,
+        "p95StepMs": 1.5081999999893014
+      }
+    ],
+    "Fixed": [
+      {
+        "slot": 1,
+        "backward": 1,
+        "maxLag": 179.5167236328125,
+        "finalGap": 6,
+        "p95StepMs": 1.65130000004865
+      },
+      {
+        "slot": 2,
+        "backward": 1,
+        "maxLag": 179.5167236328125,
+        "finalGap": 6.000477313995361,
+        "p95StepMs": 1.1570999995456077
+      },
+      {
+        "slot": 3,
+        "backward": 0,
+        "maxLag": 179.5167236328125,
+        "finalGap": 5.99932336807251,
+        "p95StepMs": 1.4943999995011836
+      },
+      {
+        "slot": 4,
+        "backward": 0,
+        "maxLag": 179.5167236328125,
+        "finalGap": 5.997743129730225,
+        "p95StepMs": 1.6413000003012712
+      },
+      {
+        "slot": 5,
+        "backward": 0,
+        "maxLag": 179.5167236328125,
+        "finalGap": 5.999548435211182,
+        "p95StepMs": 1.6443999993498437
+      }
+    ]
+  },
+  "assigned": [
+    {
+      "kind": "PURSUIT_RETARGET",
+      "heroes": {
+        "-910003": {
+          "TargetChanges": 1,
+          "Backward": 10,
+          "MaxStall": 0,
+          "Slot": 3
+        },
+        "-910005": {
+          "TargetChanges": 1,
+          "Backward": 8,
+          "MaxStall": 0,
+          "Slot": 5
+        },
+        "-910001": {
+          "TargetChanges": 1,
+          "Backward": 11,
+          "MaxStall": 0,
+          "Slot": 1
+        },
+        "-910002": {
+          "TargetChanges": 1,
+          "Backward": 8,
+          "MaxStall": 0,
+          "Slot": 2
+        },
+        "-910004": {
+          "TargetChanges": 1,
+          "Backward": 11,
+          "MaxStall": 0,
+          "Slot": 4
+        }
+      },
+      "records": 455,
+      "pursuitWithoutTracker": 287,
+      "first": [
+        66.4765625,
+        2.7626953125,
+        24.291015625
+      ],
+      "last": [
+        103.513671875,
+        8,
+        -3.91796875
+      ],
+      "runtimeErrors": []
+    },
+    {
+      "kind": "BLOCKED_PURSUIT",
+      "heroes": {
+        "-910001": {
+          "TargetChanges": 0,
+          "Backward": 1,
+          "MaxStall": 4.199639599997681,
+          "Slot": 1
+        }
+      },
+      "records": 91,
+      "pursuitWithoutTracker": 91,
+      "first": [
+        68.884765625,
+        2.75396728515625,
+        26.85546875
+      ],
+      "last": [
+        68.5859375,
+        2.6976318359375,
+        27.05859375
+      ],
+      "runtimeErrors": []
+    }
+  ],
+  "load": [
+    {
+      "floors": 1,
+      "squadsPerFloor": 1,
+      "actors": 5,
+      "ticks": 45,
+      "p95BatchMs": 4.434100000253238,
+      "meanBatchMs": 1.7079177778416326,
+      "observedComputing": 2,
+      "groundQueries": 26278,
+      "bodyQueries": 8467
+    },
+    {
+      "floors": 1,
+      "squadsPerFloor": 2,
+      "actors": 10,
+      "ticks": 46,
+      "p95BatchMs": 6.783199999517819,
+      "meanBatchMs": 2.8759260869620724,
+      "observedComputing": 3,
+      "groundQueries": 39091,
+      "bodyQueries": 12787
+    },
+    {
+      "floors": 6,
+      "squadsPerFloor": 1,
+      "actors": 30,
+      "ticks": 43,
+      "p95BatchMs": 18.17730000038864,
+      "meanBatchMs": 8.482655813950682,
+      "observedComputing": 2,
+      "groundQueries": 86999,
+      "bodyQueries": 27884
+    }
+  ],
+  "client": {
+    "duration": 15.012251500000275,
+    "snapshotSamples": 53,
+    "snapshotMedianSeconds": 0.216696000000411,
+    "snapshotP95Seconds": 0.2730216999998447,
+    "packetAgeMedian": 0.026221036911010742,
+    "packetAgeP95": 0.14696288108825684,
+    "movingSamples": 0
+  },
+  "profiler": {
+    "frames": 63,
+    "heroScopeCount": 4,
+    "heroP95Ms": 0.6200189035007497,
+    "snapshotScopeCount": 2,
+    "heroIntervalsSeconds": [
+      0.10911526434142615,
+      0.10785942787421846,
+      0.13168001891222048
+    ]
+  }
+}

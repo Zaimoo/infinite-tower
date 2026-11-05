@@ -2632,6 +2632,14 @@ Tower.RegisterAdapter("Combat",{
  Bootstrap=sendBootstrap,BootstrapAll=bootstrapAll,
 })
 if RunService:IsStudio() then CombatSimulation.DebugEntities=function() return ActiveHeroesByNetId,ActiveMobsByNetId,CarrierToHeldLoot end end
+if RunService:IsStudio() then
+ -- Phase 0 harness invokes the unchanged native state machine with isolated actors.
+ CombatSimulation.DebugStepHero=stepHeroSimulation
+ CombatSimulation.DebugStuckTracking=function(netId: number)
+  local tracker=HeroStuckTracking[netId]
+  return tracker and table.clone(tracker) or nil
+ end
+end
 
 Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=ActiveMobsByNetId,Navigation=HeroNavigation,Allocate=allocateNetId,
  Changed=bootstrapAll,

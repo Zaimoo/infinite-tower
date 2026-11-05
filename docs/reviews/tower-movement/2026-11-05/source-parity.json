@@ -1,0 +1,94 @@
+{
+  "studio": {
+    "ServerScriptService.Core.TowerRoomBuilder": {
+      "hash": 63354384,
+      "length": 34988
+    },
+    "ServerScriptService.Core.HeroNavigation": {
+      "hash": 964298309,
+      "length": 17360
+    },
+    "ServerScriptService.Combat.HeroTargeting": {
+      "hash": 758486478,
+      "length": 4558
+    },
+    "ReplicatedStorage.Shared.Config.StatBalance": {
+      "hash": 424583275,
+      "length": 5552
+    },
+    "StarterPlayer.StarterPlayerScripts.Rendering.EntityRenderer": {
+      "hash": 997509290,
+      "length": 36767
+    },
+    "ServerScriptService.Core.TowerFloorService": {
+      "hash": 527523337,
+      "length": 26594
+    },
+    "ServerScriptService.Combat.CombatSimulation": {
+      "hash": 878339501,
+      "length": 124344
+    },
+    "ReplicatedStorage.Shared.Config.TowerLayout": {
+      "hash": 161455847,
+      "length": 8808
+    }
+  },
+  "disk": [
+    {
+      "path": "ServerScriptService.Core.TowerRoomBuilder",
+      "file": "ServerScriptService/Core/TowerRoomBuilder.luau",
+      "equal": true,
+      "hash": 63354384,
+      "bytes": 34988
+    },
+    {
+      "path": "ServerScriptService.Core.HeroNavigation",
+      "file": "ServerScriptService/Core/HeroNavigation.luau",
+      "equal": true,
+      "hash": 964298309,
+      "bytes": 17360
+    },
+    {
+      "path": "ServerScriptService.Combat.HeroTargeting",
+      "file": "ServerScriptService/Combat/HeroTargeting.luau",
+      "equal": true,
+      "hash": 758486478,
+      "bytes": 4558
+    },
+    {
+      "path": "ReplicatedStorage.Shared.Config.StatBalance",
+      "file": "ReplicatedStorage/Shared/Config/StatBalance.luau",
+      "equal": true,
+      "hash": 424583275,
+      "bytes": 5552
+    },
+    {
+      "path": "StarterPlayer.StarterPlayerScripts.Rendering.EntityRenderer",
+      "file": "StarterPlayerScripts/Rendering/EntityRenderer.client.luau",
+      "equal": true,
+      "hash": 997509290,
+      "bytes": 36767
+    },
+    {
+      "path": "ServerScriptService.Core.TowerFloorService",
+      "file": "ServerScriptService/Core/TowerFloorService.luau",
+      "equal": true,
+      "hash": 527523337,
+      "bytes": 26594
+    },
+    {
+      "path": "ServerScriptService.Combat.CombatSimulation",
+      "file": "ServerScriptService/Combat/CombatSimulation.server.luau",
+      "equal": true,
+      "hash": 878339501,
+      "bytes": 124344
+    },
+    {
+      "path": "ReplicatedStorage.Shared.Config.TowerLayout",
+      "file": "ReplicatedStorage/Shared/Config/TowerLayout.luau",
+      "equal": true,
+      "hash": 161455847,
+      "bytes": 8808
+    }
+  ]
+}
