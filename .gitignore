@@ -20,7 +20,8 @@ Desktop.ini
 *.log
 
 # Artifacts & snapshots
-artifacts/
+/artifacts/
+!assets/artifacts/
 
 # Wally packages
 Packages/
