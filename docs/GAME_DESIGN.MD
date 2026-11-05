@@ -16,7 +16,7 @@ In traditional gacha/simulator games, 95% of summons are discarded as worthless 
 
 1. **The Dual-Role Living Roster (Combat + Labor):**
    - Every hero pulled from the Summoning Altar rolls with **Combat Stats** (movement speed, attack speed, attack damage, health) and **Labor Output** (separate facility productivity), without trait or imprint bonuses.
-   - **Up to 5 Deployed Heroes** (all 5 slots unlocked from the start) accompany the Master into the Central Hub or are independently deployed to specific floors (1–50) of the **Infinite Tower**. Heroes charge an in-combat **Skill/Stamina Gauge** (0 to 100) through a 3-tier attack cadence (Basic -> Basic -> Special -> Skill Attack at 100), and risk a debilitating **Downed state** (down until the squad changes floor, goes home or wipes) if left inside lethal AoE telegraphs.
+   - **Up to 5 Deployed Heroes** (one slot at the start; the Fortress Tree's Command branch opens slots 2–5, see §4.3) accompany the Master into the Central Hub or are independently deployed to specific floors (1–50) of the **Infinite Tower**. Heroes charge an in-combat **Skill/Stamina Gauge** (0 to 100) through a 3-tier attack cadence (Basic -> Basic -> Special -> Skill Attack at 100), and risk a debilitating **Downed state** (down until the squad changes floor, goes home or wipes) if left inside lethal AoE telegraphs.
    - **Benched Heroes** physically inhabit the player's **Fortress Plot**, resting on the bench, or can be forged powerful equipment at the **Blacksmith Forge**.
    - **Zero Dead Pulls:** Duplicate heroes across all star ranks are fed into the **Synthesis Chamber** (`SynthesisController.luau`) for EXP leveling to cap (`MaxLevel = Stars * 10`), or sacrificed at the **Promotion Altar** (`PromotionController.luau`) for **Star Promotion** ($1★ \to 7★$). Both heroes and artifacts feature a baseline inventory space limit of **50 items**.
    - **Dual Hero Banners & Artifact Gacha:** At the **Summoning Altar**, players spend Gems on two distinct hero banners (Call of the Rift `100` / `900` Gems, A Star's Arrival `200` / `1,800` Gems for 1x / 10x): **Call of the Rift** (Permanent Banner featuring 5 stars: $1★ \to 5★$) and **A Star's Arrival** (Limited Time Banner featuring 1 character per star across all 7 stars: $1★ \to 7★$). In addition, Masters visit the **Blacksmith Forge** (`ForgeController.luau`) to summon equippable archetype weapons using **Gold** (`5,000 Gold` single / `45,000 Gold` 10x) across an **84-Weapon Roster** (2 weapons per archetype per rarity tier across 7 launch tiers, featuring Standard $1.00\times$ and Enhanced $1.20\times$ variants). All summoned weapons drop at **1★** baseline with inherent rarity tiers. At the Forge, donor weapons of the same rarity and weapon type, plus Gold, are used for **Star Ascension** ($1★ \to 7★$), scaling base stats up to **`16.00x`**, while unneeded artifacts can be **sold for Gold** to manage inventory limits.
@@ -91,7 +91,7 @@ flowchart TD
 4. **Extract & Bank (2:45 – 3:00):**
    - **Hub Banking:** Stepping onto the Cloister Commons (band, island or footbridges), a plot bridge, the Pilgrim's Causeway, your plot, or a Private Extraction Pad safely deposits cargo into permanent Gold and Gems.
    - **Floor Safe Sanctuary Banking:** Bringing physical loot (Gold/Gems) or Relics back into any floor's elevated **Floor Safe Sanctuary** automatically deposits them at the **Floor Extraction Pad** (`FloorExtractionPad`), granting 100% relic payout and Market multipliers immediately without requiring a trip back to the Hub.
-   - Comatose heroes are benched, and fresh rested heroes are rotated into the active squad via the `[AutoSwap]` toolbar action.
+   - Downed heroes stay down until the squad changes floor (they stand back up at 30% HP), returns home or wipes. A wipe sends the Master and squad home at full HP (see §2.5 and §6.1).
 
 ### 2.2 The 15-Minute Meso Loop (Fortress, Synthesis, Promotion & Forge Progression)
 1. **Facility Upkeep (Every 3–5 Minutes):**
@@ -526,6 +526,15 @@ Located inside the fortress military quarter. Stationed Trainers (`Striker` & `S
   $$\text{TrainingMultiplier} = 1 + \text{BaseBonus}_{\text{Level}} + \big(0.004 \times \sum \text{EffectiveLabor}_{\text{Training}}\big)$$
   *(Multiplies total squad $\text{FinalATK}$ and $\text{FinalHP}$ across all heroes and equipped Artifacts).*
 
+##### Facility Workers in the World
+Stationed heroes appear on the plot as costumed hero rigs carrying their equipped weapons, with no overhead labels. The client draws all of it from lightweight descriptors the server puts on `Plot_N` (`ActivePlotWorkers`), so it costs no server physics.
+- **Market and Training Grounds (`FacilityWorkerRules`, `FacilityWorkerController`):** each facility has 4 worker slots (3 at Lv. 5, plus the tree perks *Extra Stall* / *Drill Sergeant*). Every slot has its own station, props and looping clip, so two workers never mirror each other:
+  - **Market:** Slot 1 Bazaar Hawker, Slot 2 Crate Hauler, Slot 3 Relic Appraiser, Slot 4 Ledger & Coin Counter.
+  - **Training Grounds:** Slot 1 Dummy Combo Striker (the dummy wobbles on each hit), Slot 2 Bullseye Precision Drill, Slot 3 Kata Forms & Weapon Check, Slot 4 Drill Sergeant.
+  - A hero assigned while the Master is on the plot spawns at the edge of the courtyard plaza and jogs in along a clear path, then plays an arrival ring and sparkle. Resting workers sit out at a stool or bench until they recover.
+- **Guard Post wave defense (`OutskirtsRules`, `AdventurerPatrolController`):** stationed Adventurers hold a defense arc south of the Guard Post (ranged heroes near the palisade, melee heroes on the forward trail). They fight endless mob waves that march from three treeline lanes toward the palisade. Mobs come from the biome of the Master's frontier floor (highest floor reached), so they advance with each Biome Boss kill. Each wave's makeup follows the frontier floor's place in its biome: Regulars first, then a support Regular, an Elite, and an Alpha commander on the biome's 5th floor. With at least one hero stationed, a wave holds `clamp(workers + ceil(GuardPostLevel / 2), 2, 6)` mobs. The waves are cosmetic: Guard Post Gold still comes from the formula above.
+- **Facility panel:** the Market (`LIVE BAZAAR`), Training Grounds (`LIVE DRILLS`) and Guard Post panels show a live looping diorama of the stationed workers, with a flourish when a hero is assigned.
+
 ##### Facility D: God's Blessing (Plaza Fountain - Summon Luck)
 When unlocked, a marble angel statue holding a lantern of light rises onto the Plaza Fountain's top tier. Until the Divine branch's level 1 node is bought, the fountain is a plain fountain with no angel and no prompt. Stationed Acolytes (`Healer` preferred, $+25\%$ labor synergy) pray at the fountain to raise the Master's summon luck at the Summoning Altar:
 
@@ -668,6 +677,19 @@ The player interface is built from modular, gothic-styled components:
      - Coral Red (`#FF7474`): Incoming damage received by heroes.
    - **Hit Sparks:** Material Neon sphere sparks with dynamic scaling and fade.
    - **Telegraph Geometry (`MAX_EFFECTS = 12` Cap):** Authoritative server-timed warning shapes with expanding inner progress-fill discs (`SELF_DISC`, `TARGET_DISC`), frontal cleave wedges (`ARC`), and swept-corridor warning strips + flying Neon orbs (`PROJECTILE`).
+
+### 4.7 Next Goal Onboarding Chain
+Systems unlock one at a time through a linear quest chain, shown as the **Next Goal** card pinned on the HUD (`OnboardingConfig`, `OnboardingService`). A system stays hidden or disabled until its step is done.
+
+| Step | Goal | Trigger event | Unlocks | Reward |
+| :---: | :--- | :--- | :--- | :--- |
+| 1 | Summon your first hero | `HeroSummoned` | Squad | 200 Gems |
+| 2 | Deploy your squad | `SquadDeployed` | Tower | 500 Gold |
+| 3 | Clear Floor 1 of the Tower | `FloorCleared` (floor 1) | Forge | 1,000 Gold |
+| 4 | Upgrade a weapon at the Forge | `ArtifactUpgraded` | Facilities, Fortress Tree | 100 Gems |
+| 5 | Assign a hero to work | `FacilityAssigned` | The Pit | 750 Gold |
+| 6 | Level up a hero in The Pit | `PitUsed` | Tower Floor 5 | 250 Gems |
+| 7 | Grow your fortress | `TreeNodeUnlocked` | (none) | 1,000 Gold |
 
 ---
 

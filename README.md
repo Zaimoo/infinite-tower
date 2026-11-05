@@ -2,7 +2,7 @@
 
 > **Core Concept:** An asynchronous squad-command extraction RPG and Tycoon built in Roblox. Direct squads of anime heroes in a concentric arena, extract physical loot drops, dodge high-stakes telegraphed boss mechanics, and manage your private Waiting Room tycoon.
 
-Tower rebuild status: **Parts 1–3 are complete and verified for their recorded gates.** Floors 1 and 5 have working combat and damage feedback with prototype visuals; all 50 destinations are available as development rooms. Animation/art polish, Part 4 content/UI expansion, and Part 5 release verification are **deferred until requested again**. Start with the [tower documentation index](docs/tower-rebuild/README.md) for current scope, evidence, and deferred plans. This is a verified combat slice, not a completed 50-floor content release.
+Tower status: all 50 floors across 10 biomes are playable, with a Biome Boss every 5 floors. See `docs/GAME_DESIGN.MD` §6 and §8 and `docs/rework-plan/` for the current tower run loop.
 
 ---
 
@@ -32,13 +32,11 @@ Tower rebuild status: **Parts 1–3 are complete and verified for their recorded
 ```text
 ├── docs/
 │   ├── GAME_DESIGN.MD                -- Document 1: Master Game Design Document (GDD)
-│   ├── technical_architecture.md     -- Document 2: Technical Architecture & Network Contracts
 │   ├── economy_balancing_tables.md   -- Document 3: Mathematical Economy & Balancing Tables
-│   ├── ui_ux_wireframes.md           -- Document 4: UI/UX Wireframes & Spatial Screen Specifications
-│   ├── PROTOTYPE_DOCUMENTATION.md    -- Prototype Implementation & Verification Document
 │   ├── hero-rig-rebuild-plan.md      -- Code-authored hero rig contract and history
-│   ├── PIT_OVERHAUL.md               -- The Pit progression, imprints, synthesis, and verification
-│   └── TOWER_NAVIGATION.md           -- Tower traversal, 18-floor navigation, and hero routing
+│   ├── rework-plan/                  -- Phased rework specs (phases 3–6)
+│   ├── ui/                           -- Gilded Grimoire UI style, asset requests, backlog
+│   └── prompts/                      -- Reusable prompts (e.g. artifact remodel + VFX)
 └── src/
     ├── ServerScriptService/
     │   ├── BaseOverhaul/             -- Floating island ring, Central Crimson Tower, bridges, and lighting
@@ -79,6 +77,5 @@ Tower rebuild status: **Parts 1–3 are complete and verified for their recorded
 2. Scripts are synced via Rojo from `src/` to `ServerScriptService`, `StarterPlayer.StarterPlayerScripts`, and `ReplicatedStorage`.
 3. Press **F5 (Play)** to playtest the full loop: Gacha summoning, deploying squads, fighting mobs on the Central Crimson Tower, contested loot hauling, Blacksmith weapon ascension, and World Boss encounters.
 
-The Pit supports batch synthesis, focused imprints, material-based star promotion, and hero conversion. See [the Pit implementation and playtest guide](docs/PIT_OVERHAUL.md) for formulas, schema compatibility, test commands, and Studio checks. Profiles remain **session-only**.
+The Pit supports batch synthesis, focused imprints, material-based star promotion, and hero conversion. See `docs/GAME_DESIGN.MD` §2.2 for the rules. Profiles remain **session-only**.
 
-Tower walls, all 18 platforms, and connecting ascent ramps have server collision. Lightweight heroes use grounded, collision-checked waypoint navigation. See [tower traversal and navigation](docs/TOWER_NAVIGATION.md) for implementation and verification.
