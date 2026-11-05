@@ -50,12 +50,12 @@ local Presets: { [string]: Preset } = {
 		EnvironmentSpecularScale = 0.8,
 		ExposureCompensation = 0.3,
 
-		AtmosphereDensity = 0.12,
-		AtmosphereOffset = 0,
+		AtmosphereDensity = 0.16,
+		AtmosphereOffset = 0.25,
 		AtmosphereColor = Color3.fromRGB(214, 210, 200),
 		AtmosphereDecay = Color3.fromRGB(128, 164, 220),
-		AtmosphereGlare = 0,
-		AtmosphereHaze = 0,
+		AtmosphereGlare = 0.4,
+		AtmosphereHaze = 0.4,
 
 		TintColor = Color3.fromRGB(255, 247, 234),
 		Contrast = 0.05,
