@@ -15,6 +15,7 @@ local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormu
 local PitService = require(script.Parent:WaitForChild("PitService"))
 local OfflineRewardService = require(script.Parent:WaitForChild("OfflineRewardService"))
 local ArtifactCatalog = require(Shared:WaitForChild("Config"):WaitForChild("ArtifactCatalog"))
+local StatBalance = require(Shared:WaitForChild("Config"):WaitForChild("StatBalance"))
 local TowerHardcore = require(Shared:WaitForChild("Config"):WaitForChild("TowerHardcoreConfig"))
 local TowerProgress = require(Shared:WaitForChild("Util"):WaitForChild("TowerProgress"))
 local FortressTree = require(Shared:WaitForChild("Util"):WaitForChild("FortressTree"))
@@ -72,11 +73,11 @@ if not RequestUpgradeRarityFunc then
 	RequestUpgradeRarityFunc.Parent = ArtifactRemotes
 end
 
-local RequestCraftArtifactFunc = ArtifactRemotes:FindFirstChild("RequestCraftArtifact") :: RemoteFunction?
-if not RequestCraftArtifactFunc then
-	RequestCraftArtifactFunc = Instance.new("RemoteFunction")
-	RequestCraftArtifactFunc.Name = "RequestCraftArtifact"
-	RequestCraftArtifactFunc.Parent = ArtifactRemotes
+local RequestSellArtifactsFunc = ArtifactRemotes:FindFirstChild("RequestSellArtifacts") :: RemoteFunction?
+if not RequestSellArtifactsFunc then
+	RequestSellArtifactsFunc = Instance.new("RemoteFunction")
+	RequestSellArtifactsFunc.Name = "RequestSellArtifacts"
+	RequestSellArtifactsFunc.Parent = ArtifactRemotes
 end
 
 local RequestUpgradeArtifactFunc = ArtifactRemotes:FindFirstChild("RequestUpgradeArtifact") :: RemoteFunction?
@@ -227,6 +228,7 @@ export type PlayerProfile = {
 	},
 	BossPity: number?,
 	ArtifactBannerPity: number?,
+	ArtifactBanner10Pity: number?,
 	HeroBannerPity: number?,
 	HeroPermanentPity: number?,
 	HeroLimitedPity: number?,
@@ -301,15 +303,15 @@ function DataManager.EnsureFacilities(profile: any)
 end
 
 function DataManager.CreateArtifact(templateId: string, star: number?, rarity: number?): (string, ArtifactInstance)
-	local seed = ArtifactCatalog.Seeds[templateId] or ArtifactCatalog.Seeds.art_hunters_shortbow
+	local seed = ArtifactCatalog.Seeds[templateId] or ArtifactCatalog.Seeds.art_hunters_shortbow or ArtifactCatalog.Seeds.art_iron_broadsword
 	local uuid = "art_" .. string.gsub(HttpService:GenerateGUID(false), "-", ""):sub(1, 10)
 	local artifact: ArtifactInstance = {
 		UUID = uuid,
 		TemplateId = seed.TemplateId,
 		DisplayName = seed.DisplayName,
 		Type = seed.Type,
-		Star = star or seed.DefaultStar,
-		Rarity = rarity or 1,
+		Star = star or 1,
+		Rarity = seed.RarityTier or rarity or 1, -- rarity is inherent to the template
 		EquippedHeroUUID = nil,
 		Locked = false,
 	}
@@ -404,7 +406,7 @@ local function createDefaultPlayerProfile(): PlayerProfile
 	local axeUUID, axeArt = DataManager.CreateArtifact("art_miner_pickaxe", 1, 1)
 
 	-- Additional starter artifacts for forge crafting and fodder testing
-	local riftUUID, riftArt = DataManager.CreateArtifact("art_blade_of_the_rift", 3, 1)
+	local riftUUID, riftArt = DataManager.CreateArtifact("art_runic_longsword", 1)
 	local f1_UUID, f1_Art = DataManager.CreateArtifact("art_iron_broadsword", 1, 1)
 	local f2_UUID, f2_Art = DataManager.CreateArtifact("art_rusty_daggers", 1, 1)
 	local f3_UUID, f3_Art = DataManager.CreateArtifact("art_hunters_shortbow", 1, 1)
@@ -439,7 +441,8 @@ local function createDefaultPlayerProfile(): PlayerProfile
 			Gems = TowerHardcore.StarterGems, -- Phase 6: one 10-pull with its guaranteed Rare (testers use DEV_GRANT_RESOURCES)
 		},
 
-		ArtifactBannerPity = 8, -- Initial: 42 to 5-star guarantee (50 - 8 = 42) matching mockup parity
+		ArtifactBannerPity = 0,
+		ArtifactBanner10Pity = 0,
 		HeroBannerPity = 0,
 		HeroPermanentPity = 0, -- Call of the Rift: Exalted Ignis guaranteed at HeroCatalog.PermanentBanner.MaxPity
 		HeroLimitedPity = 0, -- A Star's Arrival: Mythical Astrea guaranteed at HeroCatalog.LimitedBanner.MaxPity
@@ -847,6 +850,15 @@ RequestSummonFunc.OnServerInvoke = function(player: Player, arg1: any, arg2: any
 	end
 
 	local count = (pullCount == 10) and 10 or 1
+	local currentHeroCount = 0
+	for _ in pairs(profile.Heroes) do
+		currentHeroCount += 1
+	end
+	if currentHeroCount + count > StatBalance.MaxHeroInventory then
+		DataManager.SendToast(player, string.format("Hero inventory full! Maximum capacity is %d.", StatBalance.MaxHeroInventory), "WARN")
+		return { Success = false, Message = "Hero inventory full" }
+	end
+
 	local costBanner = if isLimitedBanner(bannerId) then HeroCatalog.LimitedBanner else HeroCatalog.PermanentBanner
 	local gemCost = if count == 10 then costBanner.Cost10X else costBanner.Cost1X
 
@@ -1056,45 +1068,60 @@ RequestUpgradeRarityFunc.OnServerInvoke = function(player: Player, artifactUUID:
 	return DataManager.UpgradeArtifactRarity(player, artifactUUID)
 end
 
-function DataManager.CraftArtifact(player: Player, templateId: string): (boolean, string?, any?)
+function DataManager.SellArtifacts(player: Player, artifactUUIDs: { string }): (boolean, string?, number?, number?)
 	local profile = ActiveProfiles[player]
-	if not profile then return false, "Profile not loaded", nil end
-
-	local seed = ArtifactCatalog.Seeds[templateId]
-	if not seed then
-		return false, string.format("Unknown artifact recipe: %s", tostring(templateId)), nil
+	if not profile then return false, "Profile not loaded", 0, 0 end
+	if not profile.Artifacts then return false, "No artifacts found", 0, 0 end
+	if type(artifactUUIDs) ~= "table" or #artifactUUIDs == 0 then
+		return false, "No artifacts selected for sale", 0, 0
 	end
 
-	if not seed.CraftCost then
-		return false, string.format("%s cannot be crafted at the Forge.", seed.DisplayName), nil
+	if #artifactUUIDs > StatBalance.MaxArtifactInventory then
+		return false, "Too many artifacts selected", 0, 0
 	end
 
-	if not profile.PitMaterials then profile.PitMaterials = {} end
+	local totalGold = 0
+	local soldCount = 0
+	local toDelete = {}
+	local seen: { [string]: boolean } = {}
 
-	-- Validate material requirements
-	for matId, reqQty in pairs(seed.CraftCost) do
-		local haveQty = profile.PitMaterials[matId] or 0
-		if haveQty < reqQty then
-			local matInfo = ArtifactCatalog.CraftingMaterials[matId]
-			local matName = matInfo and matInfo.Name or matId
-			return false, string.format("Need %d %s to craft %s (Have: %d)!", reqQty, matName, seed.DisplayName, haveQty), nil
+	for _, uuid in ipairs(artifactUUIDs) do
+		if type(uuid) ~= "string" then
+			return false, "Invalid artifact id", 0, 0
+		end
+		if not seen[uuid] then
+			seen[uuid] = true
+			local art = profile.Artifacts[uuid]
+			if art then
+				if art.EquippedHeroUUID then
+					DataManager.SendToast(player, string.format("Cannot sell %s (equipped)!", art.DisplayName), "WARN")
+					return false, string.format("Cannot sell %s: weapon is equipped", art.DisplayName), 0, 0
+				end
+				if art.Locked then
+					DataManager.SendToast(player, string.format("Cannot sell %s (locked)!", art.DisplayName), "WARN")
+					return false, string.format("Cannot sell %s: weapon is locked", art.DisplayName), 0, 0
+				end
+				local price = ArtifactCatalog.CalculateSellPrice(art.Rarity or 1, art.Star or 1)
+				totalGold += price
+				soldCount += 1
+				table.insert(toDelete, uuid)
+			end
 		end
 	end
 
-	-- Deduct materials
-	for matId, reqQty in pairs(seed.CraftCost) do
-		profile.PitMaterials[matId] = math.max(0, (profile.PitMaterials[matId] or 0) - reqQty)
+	if soldCount == 0 then
+		return false, "No valid artifacts selected", 0, 0
 	end
 
-	-- Create new artifact instance at enhancement level 0
-	local uuid, artifact = DataManager.CreateArtifact(templateId, seed.DefaultStar or 1, 1)
+	for _, uuid in ipairs(toDelete) do
+		profile.Artifacts[uuid] = nil
+	end
 
-	if not profile.Artifacts then profile.Artifacts = {} end
-	profile.Artifacts[uuid] = artifact
-
+	profile.Currencies.Gold = (profile.Currencies.Gold or 0) + totalGold
 	DataManager.SyncProfile(player)
-	DataManager.SendToast(player, string.format("⚒️ FORGE SUCCESS! Crafted %s!", artifact.DisplayName), "SUCCESS")
-	return true, string.format("Crafted %s!", artifact.DisplayName), artifact
+	DataManager.SendToast(player, string.format("Sold %d artifact%s for %s Gold!", soldCount, soldCount == 1 and "" or "s", tostring(totalGold)), "SUCCESS")
+
+	return true, string.format("Sold %d artifacts for %d Gold", soldCount, totalGold), totalGold, soldCount
 end
 
 function DataManager.UpgradeArtifact(player: Player, targetUUID: string, fodderUUIDs: { any }): (boolean, string?, number?)
@@ -1112,17 +1139,17 @@ function DataManager.UpgradeArtifact(player: Player, targetUUID: string, fodderU
  return ok,message,star
 end
 
-RequestCraftArtifactFunc.OnServerInvoke = function(player: Player, templateId: any, targetPlot: any?)
+RequestSellArtifactsFunc.OnServerInvoke = function(player: Player, artifactUUIDs: any, targetPlot: any?)
 	if not validateCallerPlotOwnership(player, targetPlot) then
-		return false, "Plot ownership validation failed", nil
+		return false, "Plot ownership validation failed", 0, 0
 	end
-	if type(templateId) ~= "string" then
-		return false, "Invalid parameters", nil
+	if type(artifactUUIDs) ~= "table" then
+		return false, "Invalid parameters", 0, 0
 	end
-	if not OnboardingService.Require(player, "Forge") then -- toasts the unlock hint
-		return false, OnboardingService.LockedMessage("Forge"), nil
+	if not OnboardingService.Require(player, "Forge") then
+		return false, OnboardingService.LockedMessage("Forge"), 0, 0
 	end
-	return DataManager.CraftArtifact(player, templateId)
+	return DataManager.SellArtifacts(player, artifactUUIDs)
 end
 
 RequestUpgradeArtifactFunc.OnServerInvoke = function(player: Player, targetUUID: any, fodderUUIDs: any, targetPlot: any?)
@@ -1147,76 +1174,91 @@ function DataManager.SummonArtifact(player: Player, pullCount: any): (boolean, s
 	if not profile then return false, "Profile not loaded", nil, nil end
 
 	local count = (pullCount == 10) and 10 or 1
-	local cost = (count == 10) and ArtifactCatalog.Banner.Cost10X or ArtifactCatalog.Banner.Cost1X
+	local cfg = ArtifactCatalog.Banner
+	local cost = (count == 10) and cfg.Cost10X or cfg.Cost1X
 
-	if not profile.Currencies or (profile.Currencies.Gems or 0) < cost then
-		DataManager.SendToast(player, string.format("Need %d Gems to Summon!", cost), "WARN")
-		return false, string.format("Need %d Gems to Summon!", cost), nil, nil
+	if not profile.Currencies or (profile.Currencies.Gold or 0) < cost then
+		DataManager.SendToast(player, string.format("Need %d Gold to Summon!", cost), "WARN")
+		return false, string.format("Need %d Gold to Summon!", cost), nil, nil
 	end
 
-	profile.Currencies.Gems -= cost
 	if not profile.Artifacts then profile.Artifacts = {} end
-	if profile.ArtifactBannerPity == nil then profile.ArtifactBannerPity = 8 end
+	local currentArtCount = 0
+	for _ in pairs(profile.Artifacts) do
+		currentArtCount += 1
+	end
+	if currentArtCount + count > StatBalance.MaxArtifactInventory then
+		DataManager.SendToast(player, string.format("Artifact inventory full! Maximum capacity is %d.", StatBalance.MaxArtifactInventory), "WARN")
+		return false, "Artifact inventory full", nil, nil
+	end
 
-	local cfg = ArtifactCatalog.Banner
+	profile.Currencies.Gold -= cost
+	if profile.ArtifactBannerPity == nil then profile.ArtifactBannerPity = 0 end
+	if profile.ArtifactBanner10Pity == nil then profile.ArtifactBanner10Pity = 0 end
+
 	local summonedList = {}
-	-- Pool tiers, lowest first: 1-2★ 50%, 3★ 35%, 4★ 12%, 5★ 3%. God's Blessing luck boosts tiers 2-4.
-	local tierRates = SummonLuck.ApplyLuck({ 0.50, 0.35, 0.12, 0.03 }, DataManager.GetSummonLuck(player))
+	local luck = DataManager.GetSummonLuck(player)
+	local tierRates = SummonLuck.ApplyLuck(cfg.BaseRarityRates, luck)
+	local archetypeTypes = ArtifactCatalog.ArchetypeTypes
+	local bestTier = 1
 
 	for _ = 1, count do
 		profile.ArtifactBannerPity += 1
-		local isGuaranteed5Star = (profile.ArtifactBannerPity >= cfg.MaxPity)
-		local tier = SummonLuck.Roll(tierRates, math.random())
+		profile.ArtifactBanner10Pity += 1
 
-		local chosenSeed: string
-		local chosenStar: number
+		local isGuaranteedExalted = (profile.ArtifactBannerPity >= cfg.MaxPity)
+		local isGuaranteedRare = (profile.ArtifactBanner10Pity >= 10)
 
-		if isGuaranteed5Star or tier == 4 then
-			chosenSeed = cfg.Featured5Stars[math.random(1, #cfg.Featured5Stars)]
-			chosenStar = 5
-			profile.ArtifactBannerPity = 0
-		elseif tier == 3 then
-			chosenSeed = cfg.Pool4Stars[math.random(1, #cfg.Pool4Stars)]
-			chosenStar = 4
-		elseif tier == 2 then
-			chosenSeed = cfg.Pool3Stars[math.random(1, #cfg.Pool3Stars)]
-			chosenStar = 3
+		local tier: number
+		if isGuaranteedExalted then
+			-- 120-pull Hard Pity: Exalted (Tier 5) or higher guaranteed.
+			-- Relative rates for pity roll: Exalted (2.0%), Legendary (0.5%), Mythical (0.1%) -> sum = 0.026
+			local r = math.random() * 0.026
+			if r < 0.020 then
+				tier = 5
+			elseif r < 0.025 then
+				tier = 6
+			else
+				tier = 7
+			end
+		elseif isGuaranteedRare then
+			tier = SummonLuck.RollAtLeast(tierRates, 3, math.random())
 		else
-			chosenSeed = cfg.Pool12Stars[math.random(1, #cfg.Pool12Stars)]
-			chosenStar = math.random(1, 2)
+			tier = SummonLuck.Roll(tierRates, math.random())
 		end
 
-		local uuid, artifact = DataManager.CreateArtifact(chosenSeed, chosenStar, 1)
+		if tier > bestTier then
+			bestTier = tier
+		end
+
+		if tier >= 5 then
+			profile.ArtifactBannerPity = 0
+		end
+		if tier >= 3 then
+			profile.ArtifactBanner10Pity = 0
+		end
+
+		-- Uniform archetype selection across 6 archetypes
+		local chosenType = archetypeTypes[math.random(1, #archetypeTypes)]
+		local stdSeed, enhSeed = ArtifactCatalog.GetTierPair(tier, chosenType)
+
+		-- Variant roll: 60% Standard, 40% Enhanced
+		local chosenSeed = (math.random() <= 0.60) and stdSeed or enhSeed
+
+		-- All summoned artifacts start at 1★ baseline
+		local uuid, artifact = DataManager.CreateArtifact(chosenSeed.TemplateId, 1, tier)
 		profile.Artifacts[uuid] = artifact
 		table.insert(summonedList, artifact)
 	end
 
 	DataManager.SyncProfile(player)
+	OnboardingService.Report(player, "ArtifactSummoned")
+	if luck > 0 and bestTier >= 3 and _G.PlotManager and _G.PlotManager.PulseBlessing then
+		_G.PlotManager.PulseBlessing(player)
+	end
 
 	local pityRemaining = math.max(1, cfg.MaxPity - profile.ArtifactBannerPity)
-	-- No "Summoned: …" toast: it would spoil the client's per-pull reveal.
 	return true, "Summon successful", summonedList, pityRemaining
-end
-
--- Phase 6 M4: the first clear of each Biome Boss drops one artifact (1★) of a guaranteed minimum rarity tier.
--- Tier by boss: 1-2 -> Rare, 3-4 -> Superior, 5-6 -> Exalted, 7-8 -> Legendary, 9-10 -> Mythical (capped at Mythical until
--- higher tiers ship). The template is any weapon in the artifact banner's pools.
-function DataManager.GrantBossArtifact(player: Player, bossTier: number): ArtifactInstance?
-	local profile = ActiveProfiles[player]
-	if not profile then return nil end
-	local cfg = ArtifactCatalog.Banner
-	local pool = {}
-	for _, list in { cfg.Pool12Stars, cfg.Pool3Stars, cfg.Pool4Stars, cfg.Featured5Stars } do
-		for _, templateId in ipairs(list) do table.insert(pool, templateId) end
-	end
-	if #pool == 0 then return nil end
-	local rarity = TowerProgress.BossArtifactRarity(bossTier)
-	local uuid, artifact = DataManager.CreateArtifact(pool[math.random(1, #pool)], 1, rarity)
-	profile.Artifacts = profile.Artifacts or {}
-	profile.Artifacts[uuid] = artifact
-	DataManager.SyncProfile(player)
-	DataManager.SendToast(player, string.format("Boss reward: %s (%s)", artifact.DisplayName, ArtifactCatalog.GetRarityInfo(rarity).Name), "SUCCESS")
-	return artifact
 end
 
 RequestSummonArtifactFunc.OnServerInvoke = function(player: Player, pullCount: any, targetPlot: any?)

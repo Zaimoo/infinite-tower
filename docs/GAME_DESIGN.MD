@@ -18,8 +18,8 @@ In traditional gacha/simulator games, 95% of summons are discarded as worthless 
    - Every hero pulled from the Summoning Altar rolls with **Combat Stats** (movement speed, attack speed, attack damage, health) and **Labor Output** (separate facility productivity), without trait or imprint bonuses.
    - **Up to 5 Deployed Heroes** (all 5 slots unlocked from the start) accompany the Master into the Central Hub or are independently deployed to specific floors (1–50) of the **Infinite Tower**. Heroes charge an in-combat **Skill/Stamina Gauge** (0 to 100) through a 3-tier attack cadence (Basic -> Basic -> Special -> Skill Attack at 100), and risk a debilitating **Downed state** (down until the squad changes floor, goes home or wipes) if left inside lethal AoE telegraphs.
    - **Benched Heroes** physically inhabit the player's **Fortress Plot**, resting on the bench, or can be forged powerful equipment at the **Blacksmith Forge**.
-   - **Zero Dead Pulls:** Duplicate heroes across all star ranks are fed into the **Synthesis Chamber** (`SynthesisController.luau`) for EXP leveling to cap (`MaxLevel = Stars * 10`), or sacrificed at the **Promotion Altar** (`PromotionController.luau`) for **Star Promotion** ($1★ \to 7★$).
-   - **Dual Hero Banners & Artifact Ascension:** At the **Summoning Altar**, players spend Gems on two distinct banners (Call of the Rift `100` / `900` Gems, A Star's Arrival `200` / `1,800` Gems for 1x / 10x): **Call of the Rift** (Permanent Banner featuring 5 stars: $1★ \to 5★$) and **A Star's Arrival** (Limited Time Banner featuring 1 character per star across all 7 stars: $1★ \to 7★$). In addition, Masters spend Gems at the **Artifact Summoning Banner** (`160 Gems` single / `1,600 Gems` 10x) to pull equippable archetype weapons across **16 Rarity Tiers** (`Common` $\to$ `Origin`) which define inherent base stats. At the **Blacksmith Forge** (`ForgeController.luau`), duplicate gear and Gold are used for **Star Ascension** ($1★ \to 7★$), multiplying base stats with massive progressive multipliers up to **`16.00x`**.
+   - **Zero Dead Pulls:** Duplicate heroes across all star ranks are fed into the **Synthesis Chamber** (`SynthesisController.luau`) for EXP leveling to cap (`MaxLevel = Stars * 10`), or sacrificed at the **Promotion Altar** (`PromotionController.luau`) for **Star Promotion** ($1★ \to 7★$). Both heroes and artifacts feature a baseline inventory space limit of **50 items**.
+   - **Dual Hero Banners & Artifact Gacha:** At the **Summoning Altar**, players spend Gems on two distinct hero banners (Call of the Rift `100` / `900` Gems, A Star's Arrival `200` / `1,800` Gems for 1x / 10x): **Call of the Rift** (Permanent Banner featuring 5 stars: $1★ \to 5★$) and **A Star's Arrival** (Limited Time Banner featuring 1 character per star across all 7 stars: $1★ \to 7★$). In addition, Masters visit the **Blacksmith Forge** (`ForgeController.luau`) to summon equippable archetype weapons using **Gold** (`5,000 Gold` single / `45,000 Gold` 10x) across an **84-Weapon Roster** (2 weapons per archetype per rarity tier across 7 launch tiers, featuring Standard $1.00\times$ and Enhanced $1.20\times$ variants). All summoned weapons drop at **1★** baseline with inherent rarity tiers. At the Forge, duplicate gear and Gold are used for **Star Ascension** ($1★ \to 7★$), scaling base stats up to **`16.00x`**, while unneeded artifacts can be **sold for Gold** to manage inventory limits.
 
 2. **Tactical Master Agency Over AFK Whaling:**
    - The Master carries no personal weapon. Instead, the Master directs squads through battlefield commands—**`[Click / Tap]` Focus Target**, **`[Q]` Overdrive Whistle**, and **`[E]` Emergency Recall Whistle**—while physically hauling heavy, high-value **Relics** and cargo back to their plot.
@@ -56,9 +56,9 @@ flowchart TD
     subgraph Meso["15-Minute Loop: Recovery, Synthesis, Promotion & Forge"]
         T1["Gather Gold & Gems from Drops, Relics & Tower Floors"] --> T2["Summoning Altar: Call of the Rift (5★ Perm) & A Star's Arrival (1-7★ Limited)"]
         T2 --> T3["Synthesis Chamber: Feed Duplicates for XP & Max Level Cap"]
-        T2 --> T4["Artifact Banner: 16 Rarity Tiers (160 Gems)"]
+        T1 --> T4["Blacksmith Forge Banner: 84 Weapons (5,000 Gold)"]
         T3 --> T5["Promotion Altar: Sacrifice Same-Rank Heroes for Star Promotion (1★ -> 7★)"]
-        T4 --> T6["Blacksmith Forge: Star Ascension (1★ -> 7★ Multipliers)"]
+        T4 --> T6["Blacksmith Forge: Star Ascension (1★ -> 7★ Multipliers) & Gold Liquidation"]
     end
 
     subgraph Macro["Macro Loop: Tower Progression & Biome Boss Conquests"]
@@ -66,7 +66,7 @@ flowchart TD
         B2 --> B3["Engage Biome Boss on Floor Milestone (Floor 5, 10, 15... 50)"]
         B3 --> B4["Dodge Signature Telegraphed AoEs (Self/Target Discs) via [E] Recall"]
         B4 --> B5["Punish Window: Trigger [Q] Overdrive to Burst Down Boss HP"]
-        B5 --> B6["Claim Milestone Rewards: Massive Gold/Gems & High-Rarity Artifact Drops"]
+        B5 --> B6["Claim Milestone Rewards: Massive Gold & Gems Currency Payouts"]
         B6 --> B7["Unlock Next Biome Tier & Advance to Higher Tower Floors"]
     end
 
@@ -97,11 +97,12 @@ flowchart TD
 1. **Facility Upkeep (Every 3–5 Minutes):**
    - Swap rested heroes from the bench into the active squad rotation.
 2. **Summoning & Gacha Pulls (Every 5–10 Minutes):**
-   - Spend Gems at the **Summoning Altar** on either **Call of the Rift** (Common–Exalted Permanent Banner), **A Star's Arrival** (Common–Mythical Limited Time Rate-Up Banner, featuring 1 character per rarity tier, each summoned at 1★), or the **Artifact Banner** (`160 Gems` single / `1,600 Gems` 10x for archetype weapons across 16 Rarity Tiers).
+   - Spend Gems at the **Summoning Altar** on either **Call of the Rift** (Common–Exalted Permanent Banner) or **A Star's Arrival** (Common–Mythical Limited Time Rate-Up Banner, featuring 1 character per rarity tier, each summoned at 1★). In addition, visit the **Blacksmith Forge** (`ForgeController.luau`) to summon weapons using **Gold** (`5,000 Gold` single / `45,000 Gold` 10x) from an **84-Weapon Roster** (2 weapons per archetype per rarity tier across 7 tiers) with 120-pull Exalted+ hard pity, or liquidate unneeded gear for Gold.
    - **Synthesis Chamber (`SynthesisController.luau`):** Place a recipient hero and up to 5 fodder heroes to level up to the hero's current cap ($\text{MaxLevel} = \text{Stars} \times 10$).
    - **Promotion Altar (`PromotionController.luau`):** When a hero reaches max level, sacrifice same-rank heroes and Promotion Stones to permanently ascend star rating ($1★ \to 5★$). The hero's inherent rarity never changes.
-3. **Artifact Star Ascension at the Blacksmith Forge (`ForgeController.luau`):**
+3. **Artifact Star Ascension & Liquidation at the Blacksmith Forge (`ForgeController.luau`):**
    - **Star Ascension (Multipliers):** Ascend artifacts from $1★ \to 7★$ at the Forge by sacrificing duplicate artifacts and Gold, scaling inherent base stats by progressive multipliers up to **`16.00x`**.
+   - **Artifact Liquidation (Selling):** Sell unequipped, unlocked weapons for Gold directly from the Assign tab to maintain the 50-item inventory limit.
 
 ### 2.3 The Macro Loop (Tower Progression & Biome Boss Conquests)
 1. **Biome Traversal & Preparation:**
@@ -117,7 +118,7 @@ flowchart TD
    - **Tactical Counterplay ("Dodge vs. Coma"):** Masters must watch the expanding progress-fill telegraph discs, corridor warnings, and sound cues, repositioning and executing **`[E]` Emergency Recall Whistle** to yank heroes out of danger. Heroes struck by signature skills suffer severe stamina loss or a debilitating **Downed state** (down until the squad changes floor, goes home or wipes).
    - **Punish Windows:** Following major signature attacks, the boss enters an extended recovery window (1.2s–1.5s), providing active Masters the ideal moment to pop **`[Q]` Overdrive Whistle** for massive burst DPS.
 3. **Biome Clearance & Milestone Rewards:**
-   - Defeating the Biome Boss awards immense Gold, Gems, and rare direct drops of high-rarity **Artifacts** (from Legendary up to Origin).
+   - Defeating the Biome Boss awards immense Gold, Gems, and first-clear milestone bonuses.
    - Floors unlock in order: defeating a floor's boss opens the next floor on the **Floor Selector** (`TowerController.client.luau`). Only a Master standing on the floor can clear it; an assigned squad farms Gold, gems and XP but cannot climb.
 
 ### 2.4 The AFK & Outskirts Facility Loop (Passive Boost Facilities & Auto/Offline Gold Generation)
@@ -538,7 +539,7 @@ When unlocked, a marble angel statue holding a lantern of light rises onto the P
 - **Summon Luck Formula:**
   $$\text{Luck} = \min\Big(0.50,\; \text{BaseLuck}_{\text{Level}} + 0.004 \times \sum \text{EffectiveLabor}_{\text{Acolytes}} + \text{Perk}_{\text{Saint's Favor}}\Big)$$
   $$p'_i = p_i \times (1 + \text{Luck}) \;\; (i \ge 2), \qquad p'_1 = 1 - \sum_{i \ge 2} p'_i$$
-  *(Applies to both hero banners and the artifact banner. Every tier above the lowest is multiplied, and the lowest tier absorbs the difference. Luck never changes pity counters, pity thresholds or 10-pull guarantees. The Saint's Favor perk adds +3%, and the total is capped at +50%.)*
+  *(Applies to both hero banners and the Blacksmith Forge Gold artifact banner. Every tier above the lowest is multiplied by $(1 + \text{Luck})$, and Common absorbs the difference. Luck never changes pity counters, pity thresholds, the 120-pull Exalted+ hard pity, or 10-pull guarantees. The Saint's Favor perk adds +3%, and the total is capped at +50%.)*
 
 ### 4.4 Hero 3-Tier Attack Cadence & Dynamic Skill Gauge System
 
@@ -779,44 +780,45 @@ Implemented by `LootDuel` (`Shared/Util`, rules and arena layout), `DuelArena` (
 
 ## 7. EQUIPPABLE ARTIFACT & BLACKSMITH SYSTEM
 
-### 7.1 Inherent Rarity, Progressive Stars
+### 7.1 Inherent Rarity, Progressive Stars & Inventory Limits
 
 An **artifact is a weapon**, with one equipped artifact UUID per hero. Its rarity is an immutable property assigned on acquisition. **Star Promotion is the only upgrade to an owned weapon.** There are no enhancement levels or enhancement-fodder multipliers in the stat model.
 
-1. **Inherent rarity:** Sets base weapon power and a fixed attack-speed bonus. The stat reference uses **Mythical at hero level 50 / floor 50**. Rarity cannot be upgraded, rerolled, or refined on the same UUID.
-2. **Progressive stars (1★ to 7★):** Multiply power by **1.00 / 1.60 / 2.50 / 4.00 / 6.50 / 10.00 / 16.00x**. Each promotion retains the recipient's rarity, template, and owner.
-3. **New weapon acquisition:** A higher-rarity weapon is a new item, starting at 1★. Stars do not transfer between items. Compare resulting damage before equipping; a promoted lower-rarity weapon can outperform a fresh higher-rarity weapon.
+1. **Inherent Rarity:** Sets base weapon power and a fixed attack-speed bonus across 7 launch tiers (`Common` to `Mythical`, scalable up to 16 tiers). Rarity cannot be upgraded, rerolled, or refined on the same UUID.
+2. **Progressive Stars (1★ to 7★):** Multiply power by **1.00 / 1.60 / 2.50 / 4.00 / 6.50 / 10.00 / 16.00x**. Each promotion retains the recipient's rarity, template, and owner.
+3. **1★ Universal Baseline:** All summoned weapons drop at **1★** regardless of their inherent rarity tier. Star promotion from $1★ \to 7★$ is conducted exclusively at the Blacksmith Forge by sacrificing duplicate weapon copies of the same template.
+4. **Hard 50-Item Capacity Limits:**
+   - Heroes and Artifacts share a baseline inventory limit of **50 items each** (`StatBalance.MaxHeroInventory = 50`, `StatBalance.MaxArtifactInventory = 50`).
+   - If a Master's current inventory plus the incoming summon count exceeds 50, the transaction is rejected by the server with an inventory full notice.
+5. **Artifact Liquidation (Selling for Gold):**
+   - Masters can sell unequipped, unlocked artifacts directly from the Blacksmith Forge Assign tab for Gold.
+   - Payout follows: $\text{SellPrice}(\text{Rarity}, \text{Star}) = \text{BasePrice}(\text{Rarity}) \times (1 + 0.5 \times (\text{Star} - 1))$.
+   - Equipped artifacts and locked/favorite artifacts cannot be sold.
 
-`WeaponPower = InherentRarityPower * WeaponStarMultiplier`
+$$\text{WeaponPower} = \text{InherentRarityPower} \times \text{StatMultiplier} \times \text{WeaponStarMultiplier}$$
+$$\text{WeaponDamageMultiplier} = 1 + \frac{\text{WeaponPower}}{40}$$
 
-`WeaponDamageMultiplier = 1 + WeaponPower/40`
+At **Mythical 7★ (Standard Variant)**, power is $7,000 \times 1.00 \times 16 = 112,000$ (a **2,801x trained-damage multiplier**), with a base $+30.0\%$ attack speed bonus. The **Enhanced Variant** scales to $8,400 \times 16 = 134,400$ power (**3,361x multiplier**) with $+35.0\%$ attack speed.
 
-At **Mythical 7★**, power is `7,000 * 16 = 112,000`, for a **2,801x trained-damage multiplier**. The fixed rarity bonus is **+30% attack speed** at every star rank. Weapons do not change health or movement speed. Hero stars, levels, and seed damage remain the other major power axis.
+### 7.2 The 84-Weapon Catalog Structure (2 per Archetype per Rarity Tier)
 
-### 7.2 Inherent Weapon Stats by Rarity
+The artifact catalog features an exhaustive **84-Weapon Roster** (6 Hero Archetypes $\times$ 7 Rarity Tiers $\times$ 2 Variants), guaranteeing every hero class has viable weapon progression at every tier:
+- **Standard Variant:** $1.00\times$ base power, standard attack speed bonus ($60\%$ chance within tier).
+- **Enhanced Variant:** $1.20\times$ base power, $+2.0\%$ to $+5.0\%$ bonus attack speed ($40\%$ chance within tier).
 
-| Tier | Inherent rarity | Base power (1★) | Attack-speed bonus | 7★ power | 7★ trained-damage multiplier |
-| --- | --- | --- | --- | --- | --- |
-| 1 | Common | 20 | 5.0% | 320 | 9x |
-| 2 | Uncommon | 60 | 7.5% | 960 | 25x |
-| 3 | Rare | 180 | 10.0% | 2,880 | 73x |
-| 4 | Superior | 540 | 13.0% | 8,640 | 217x |
-| 5 | Exalted | 1,400 | 16.5% | 22,400 | 561x |
-| 6 | Legendary | 3,500 | 20.0% | 56,000 | 1,401x |
-| 7 | Mythical | 7,000 | 30.0% | 112,000 | 2,801x |
-| 8 | Transcendent | 10,000 | 35.0% | 160,000 | 4,001x |
-| 9 | Ascendant | 14,000 | 40.0% | 224,000 | 5,601x |
-| 10 | Ethereal | 20,000 | 45.0% | 320,000 | 8,001x |
-| 11 | Immortal | 28,000 | 50.0% | 448,000 | 11,201x |
-| 12 | Divine | 40,000 | 55.0% | 640,000 | 16,001x |
-| 13 | Celestial | 56,000 | 60.0% | 896,000 | 22,401x |
-| 14 | Primordial | 80,000 | 65.0% | 1,280,000 | 32,001x |
-| 15 | Supreme | 112,000 | 70.0% | 1,792,000 | 44,801x |
-| 16 | Origin | 160,000 | 75.0% | 2,560,000 | 64,001x |
+| Tier | Rarity | Standard Base Power (1★) | Standard ATK Speed | Enhanced Base Power (1★) | Enhanced ATK Speed | 1★ Base Sell Price |
+| :---: | :--- | :---: | :---: | :---: | :---: | :---: |
+| **1** | **Common** | 20 | $+5.0\%$ | 24 | $+6.0\%$ | 1,000 Gold |
+| **2** | **Uncommon** | 60 | $+7.5\%$ | 72 | $+9.0\%$ | 2,500 Gold |
+| **3** | **Rare** | 180 | $+10.0\%$ | 216 | $+12.0\%$ | 6,000 Gold |
+| **4** | **Superior** | 540 | $+13.0\%$ | 648 | $+15.0\%$ | 15,000 Gold |
+| **5** | **Exalted** | 1,400 | $+16.5\%$ | 1,680 | $+18.5\%$ | 40,000 Gold |
+| **6** | **Legendary** | 3,500 | $+20.0\%$ | 4,200 | $+22.5\%$ | 100,000 Gold |
+| **7** | **Mythical** | 7,000 | $+30.0\%$ | 8,400 | $+35.0\%$ | 300,000 Gold |
 
-These values apply to every compatible weapon type; templates select appearance/type rather than a special stat formula. Attack speed is fixed by inherent rarity, not multiplied by stars. A Common 7★ weapon has 320 power, while a Mythical 1★ has 7,000 power; a Legendary 7★ has 56,000 power and can outperform that newly acquired Mythical until it is promoted.
+*(Full weapon names, wielders, and concept art descriptions across all 84 items are indexed in `ArtifactCatalog.luau` and the Weapon Index compendium `HeroIndex.luau`)*.
 
-Higher rarities retain stat definitions in [the complete weapon matrix](balance/STAT_SCALING_TABLES.md#weapon-power-by-inherent-rarity-and-promoted-stars). They are outside the required floor-50 reference build; this stat revision does not change how any rarity is obtained. The current hero level cap stays 50.
+Higher rarities (Tiers 8–16) retain stat formulas in [the complete weapon matrix](balance/STAT_SCALING_TABLES.md#weapon-power-by-inherent-rarity-and-promoted-stars) for future expansions; launch gameplay focuses on Tiers 1–7.
 
 ### 7.3 Weapon Star Promotion (1★ to 7★)
 
@@ -834,23 +836,30 @@ Promotion consumes other copies of the **same weapon template**, of any rarity o
 
 The full 1★ to 7★ path consumes 21 donor weapons plus the retained original. There is no additional enhancement-fodder sink. The multipliers now supply the full weapon progression that the removed enhancement track previously shared. Prices and acquisition pacing remain proposed tuning.
 
-### 7.4 Artifact Summoning Banner (Gacha Mechanics)
-- **Altar Integration:** The Summoning Altar features two banner tabs: **[HERO BANNER]** and **[ARTIFACT BANNER]**.
-- **Summon Cost:** `160 Gems` per single pull, `1,600 Gems` for a 10x pull (matching live `ArtifactCatalog.Banner`).
+### 7.4 Blacksmith Forge Artifact Summon Banner (Gold Gacha)
+- **Summon Currency & Cost:**
+  - **Single Pull (1X):** `5,000 Gold`
+  - **Ten Pulls (10X):** `45,000 Gold` (10% bulk discount).
 - **Banner Rarity Probability Table:**
-  - **Common (Tier 1):** `54.9%`
+  - **Common (Tier 1):** `54.9%` (absorbs luck reduction)
   - **Uncommon (Tier 2):** `25.0%`
   - **Rare (Tier 3):** `12.0%`
   - **Superior (Tier 4):** `5.5%`
   - **Exalted (Tier 5):** `2.0%`
   - **Legendary (Tier 6):** `0.5%`
   - **Mythical (Tier 7):** `0.1%`
-  - *(Other Rarities will be available in future updates)*
-  - *(The God's Blessing summon luck bonus raises every tier above Common on this banner too; see Section 4.3, Facility D.)*
+  - *(God's Blessing summon luck dynamically increases Tiers 2–7 via `SummonLuck.ApplyLuck`)*.
 - **Pity Safeguards:**
-  - **10-Pull Guarantee:** Every 10-pull guarantees at least one **Rare (Tier 3)** or higher artifact.
-  - **50-Pull Hard Pity:** If no **Legendary (Tier 6)** or higher artifact has been pulled in 49 pulls, the 50th pull guarantees a **Legendary (Tier 6)** or higher artifact.
-  - **Biome Boss Milestone Drops:** Rare direct drops of Mythical to Origin artifacts from milestone floor clears.
+  - **10-Pull Guarantee:** Every 10-pull guarantees at least one **Rare (Tier 3) or higher** artifact.
+  - **120-Pull Hard Pity (Exalted+):** If no Exalted (Tier 5), Legendary (Tier 6), or Mythical (Tier 7) artifact is pulled in 119 summons, the 120th pull guarantees an **Exalted or higher** weapon (matching the Hero Limited Banner `MaxPity = 120`).
+  - **Pity Reset:** Any pull of an Exalted, Legendary, or Mythical artifact resets the counter to 0.
+- **Two-Stage Roll Hierarchy:**
+  1. Roll Rarity Tier (1–7) based on rates and luck.
+  2. Roll Archetype uniformly (1 of 6: Vanguard, Striker, Marksman, Miner, Scholar, Healer).
+  3. Roll Variant (60% Standard, 40% High-Stat Enhanced).
+  4. Instantiate weapon at 1★.
+- **Legacy Purge:** Crafting materials (`IronGear`, etc.) and milestone boss equipment drops are completely removed; all weapon acquisition occurs through the Forge banner and star ascension.
+- **Weapon Index Compendium:** All 84 weapons are fully cataloged in `HeroIndex.luau` with live collection tracking (`Collected X / 84 weapons`), category filtering, and 3D preview displays.
 
 ### 7.5 Archetype Restrictions & 3D Socketing Standards
 1. **One Weapon Type per Archetype:** Each hero holds a single equipped artifact, and each archetype can equip exactly one weapon type. There are no off-hand or accessory slots.

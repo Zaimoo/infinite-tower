@@ -64,13 +64,6 @@ function TowerProgress.RecordKill(progress: PlayerFloorProgress, role: string, m
 	return false
 end
 
-
--- Minimum artifact rarity tier a Biome Boss drops on its first clear: tiers 1-2 Rare, 3-4 Superior, 5-6 Exalted,
--- 7-8 Legendary, 9-10 Mythical. Capped at Mythical (7) until higher tiers ship after launch.
-function TowerProgress.BossArtifactRarity(bossTier: number): number
-	return math.min(7, 2 + math.ceil(bossTier / 2))
-end
-
 -- Personal surge pack: fires once per floor visit when a player's progress crosses SurgeAt of the threshold.
 -- Biome Boss floors (every 5th) skip it because the boss itself is the event.
 TowerProgress.SurgeAt = 0.5

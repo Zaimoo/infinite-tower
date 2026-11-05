@@ -49,7 +49,7 @@ local WEAPON_CATEGORIES = {
 	{
 		Key = "ALL",
 		Title = "ALL WEAPONS",
-		Tag = "MASTER CATALOG · 42 WEAPONS",
+		Tag = "MASTER CATALOG · 84 WEAPONS",
 		Tone = "Gold",
 		Icon = "Index",
 		FilterFn = function(_seed: any) return true end,
@@ -57,7 +57,7 @@ local WEAPON_CATEGORIES = {
 	{
 		Key = "SWORD_SHIELD",
 		Title = "SWORDS & SHIELDS",
-		Tag = "VANGUARD · 7 WEAPONS",
+		Tag = "VANGUARD · 14 WEAPONS",
 		Tone = "Violet",
 		Icon = "Vanguard",
 		FilterFn = function(seed: any) return seed.Type == "SWORD_SHIELD" end,
@@ -65,7 +65,7 @@ local WEAPON_CATEGORIES = {
 	{
 		Key = "DAGGERS",
 		Title = "DUAL DAGGERS",
-		Tag = "STRIKER · 7 WEAPONS",
+		Tag = "STRIKER · 14 WEAPONS",
 		Tone = "Crimson",
 		Icon = "Striker",
 		FilterFn = function(seed: any) return seed.Type == "DAGGERS" end,
@@ -73,7 +73,7 @@ local WEAPON_CATEGORIES = {
 	{
 		Key = "AXE",
 		Title = "MINING AXES",
-		Tag = "MINER · 7 WEAPONS",
+		Tag = "MINER · 14 WEAPONS",
 		Tone = "Bronze",
 		Icon = "Miner",
 		FilterFn = function(seed: any) return seed.Type == "AXE" end,
@@ -81,7 +81,7 @@ local WEAPON_CATEGORIES = {
 	{
 		Key = "BOW",
 		Title = "MARKSMAN BOWS",
-		Tag = "MARKSMAN · 7 WEAPONS",
+		Tag = "MARKSMAN · 14 WEAPONS",
 		Tone = "Cyan",
 		Icon = "Marksman",
 		FilterFn = function(seed: any) return seed.Type == "BOW" end,
@@ -89,7 +89,7 @@ local WEAPON_CATEGORIES = {
 	{
 		Key = "STAFF",
 		Title = "SCHOLAR STAVES",
-		Tag = "SCHOLAR · 7 WEAPONS",
+		Tag = "SCHOLAR · 14 WEAPONS",
 		Tone = "Violet",
 		Icon = "Scholar",
 		FilterFn = function(seed: any) return seed.Type == "STAFF" end,
@@ -97,24 +97,18 @@ local WEAPON_CATEGORIES = {
 	{
 		Key = "TOME",
 		Title = "HEALER TOMES",
-		Tag = "HEALER · 7 WEAPONS",
+		Tag = "HEALER · 14 WEAPONS",
 		Tone = "Green",
 		Icon = "Healer",
 		FilterFn = function(seed: any) return seed.Type == "TOME" end,
 	},
 	{
 		Key = "BANNER",
-		Title = "ECHOES OF THE RIFT",
-		Tag = "ARTIFACT GACHA · 14 WEAPONS",
+		Title = "BLACKSMITH FORGE BANNER",
+		Tag = "ARTIFACT GACHA · 84 WEAPONS",
 		Tone = "Violet",
 		Icon = "Summon",
-		FilterFn = function(seed: any)
-			local b = ArtifactCatalog.Banner
-			for _, pool in { b.Featured5Stars, b.Pool4Stars, b.Pool3Stars, b.Pool12Stars } do
-				if table.find(pool, seed.TemplateId) then return true end
-			end
-			return false
-		end,
+		FilterFn = function(_seed: any) return true end,
 	},
 }
 
@@ -179,7 +173,8 @@ end
 
 local function weaponsOfCategory(cat: any): { string }
 	local list = {}
-	for _, id in ipairs(ArtifactCatalog.CraftingRecipeOrder) do
+	local order = ArtifactCatalog.CatalogOrder or ArtifactCatalog.CraftingRecipeOrder
+	for _, id in ipairs(order) do
 		local seed = ArtifactCatalog.Seeds[id]
 		if seed and cat.FilterFn(seed) then
 			table.insert(list, id)
@@ -545,7 +540,9 @@ local function HeroIndex(props: { Profile: any, Width: number, OnClose: () -> ()
 		local keep = weaponFilter == "All" or (weaponFilter == "Owned" and mine ~= nil) or (weaponFilter == "Missing" and mine == nil)
 		if seed and keep then
 			weaponShown += 1
-			local rarityColor = Theme.RarityColor(seed.DefaultStar)
+			local tier = seed.RarityTier or seed.DefaultStar or 1
+			local rarityInfo = ArtifactCatalog.GetRarityInfo(tier)
+			local rarityColor = Theme.RarityColor(tier)
 			local isSel = id == selectedWeaponId
 			weaponCards["W" .. i] = Panel({
 				Class = "TextButton", Text = "", AutoButtonColor = false, Selectable = true, LayoutOrder = i, Radius = 12,
@@ -570,7 +567,7 @@ local function HeroIndex(props: { Profile: any, Width: number, OnClose: () -> ()
 				}) else nil,
 				Name = Heavy({ Position = UDim2.fromOffset(6, 126), Size = UDim2.new(1, -12, 0, 20), MaxSize = 15, Outline = 2, Gold = false, Text = seed.DisplayName, ZIndex = 4 }),
 				Tier = Body({ Position = UDim2.fromOffset(6, 148), Size = UDim2.new(1, -12, 0, 16), TextSize = 12, TextXAlignment = Enum.TextXAlignment.Center,
-					TextColor3 = rarityColor, Text = string.format("%s · %d★", ArtifactCatalog.GetRarityInfo(seed.DefaultStar).Name, seed.DefaultStar), ZIndex = 4 }),
+					TextColor3 = rarityColor, Text = string.format("%s · %s", rarityInfo.Name, seed.Variant or "Standard"), ZIndex = 4 }),
 			})
 		end
 	end
@@ -582,11 +579,14 @@ local function HeroIndex(props: { Profile: any, Width: number, OnClose: () -> ()
 	local weaponDetail: { [string]: any } = {}
 	local weaponSeed = selectedWeaponId and ArtifactCatalog.Seeds[selectedWeaponId]
 	if weaponSeed then
-		local rarityInfo = ArtifactCatalog.GetRarityInfo(weaponSeed.DefaultStar)
-		local rarityColor = Theme.RarityColor(weaponSeed.DefaultStar)
+		local tier = weaponSeed.RarityTier or weaponSeed.DefaultStar or 1
+		local rarityInfo = ArtifactCatalog.GetRarityInfo(tier)
+		local rarityColor = Theme.RarityColor(tier)
 		local mine = ownedWeapons[weaponSeed.TemplateId]
-		local power, speedBonus = ArtifactCatalog.CalculateEffectiveStats(weaponSeed.DefaultStar, weaponSeed.DefaultStar, nil, weaponSeed.TemplateId)
-		local dmgMult = 1 + power / StatBalance.WeaponPowerDivisor
+		local stats = ArtifactCatalog.GetStatBreakdown(weaponSeed.TemplateId, 1, tier)
+		local power = stats.Power
+		local dmgMult = stats.DamageMultiplier
+		local speedBonus = stats["Attack Speed"]
 
 		weaponDetail.Header = e("Frame", { LayoutOrder = 1, Size = UDim2.new(1, 0, 0, 150), BackgroundTransparency = 1 }, {
 			Art = e("Frame", { Size = UDim2.fromOffset(140, 140), BackgroundColor3 = Color3.fromRGB(12, 8, 18), ClipsDescendants = true, ZIndex = 3 }, {
@@ -600,7 +600,7 @@ local function HeroIndex(props: { Profile: any, Width: number, OnClose: () -> ()
 				Top = rarityColor, Bottom = rarityColor:Lerp(Color3.new(0, 0, 0), 0.35), Rail = Color3.new(1, 1, 1), ZIndex = 3 }, {
 				Pad = e("UIPadding", { PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) }),
 				Text = Heavy({ AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 26), TextScaled = false, TextSize = 14, Outline = 2, Gold = false,
-					Text = string.format("%s · %d★", string.upper(rarityInfo.Name), weaponSeed.DefaultStar), ZIndex = 5 }),
+					Text = string.format("%s · %s", string.upper(rarityInfo.Name), string.upper(weaponSeed.Variant or "Standard")), ZIndex = 5 }),
 			}),
 			Arch = IconAt(weaponSeed.Type, 30, { Position = UDim2.fromOffset(150, 72), ZIndex = 4 }),
 			ArchText = Body({ Position = UDim2.fromOffset(186, 78), Size = UDim2.new(1, -186, 0, 18), TextSize = 14,
@@ -613,13 +613,13 @@ local function HeroIndex(props: { Profile: any, Width: number, OnClose: () -> ()
 		weaponDetail.Stats = e("Frame", { LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 52), BackgroundTransparency = 1 }, {
 			Layout = e("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
 			Power = statTile(1, "BASE POWER", Components.Abbreviate(power), TEXT.Gold),
-			Mult = statTile(2, "DMG MULT", string.format("%.1fx", dmgMult), Color3.fromRGB(255, 150, 120)),
-			Speed = statTile(3, "ATK SPEED", string.format("+%.1f%%", speedBonus * 100), TEXT.Good),
+			Mult = statTile(2, "DMG MULT", string.format("%.2fx", dmgMult), Color3.fromRGB(255, 150, 120)),
+			Speed = statTile(3, "ATK SPEED", string.format("+%.1f%%", speedBonus), TEXT.Good),
 		})
 
-		weaponDetail.Description = section(3, "LORE & AESTHETIC", weaponSeed.Description or "—", 52)
+		weaponDetail.Description = section(3, "LORE & CONCEPT ART", weaponSeed.Description or "—", 52)
 		weaponDetail.Wielders = section(4, "COMPATIBLE HEROES", WIELDERS_BY_TYPE[weaponSeed.Type] or "All heroes of this archetype", 40)
-		weaponDetail.Crafting = section(5, "FORGE CRAFTING COST", formatCraftCost(weaponSeed.CraftCost), 46)
+		weaponDetail.Acquisition = section(5, "ACQUISITION", "Blacksmith Forge Gacha (5,000 Gold / spin, 45,000 / 10-spin)", 46)
 
 		weaponDetail.Action = button({ LayoutOrder = 6, Size = UDim2.new(1, 0, 0, 46), ZIndex = 3,
 			[React.Event.Activated] = function()
