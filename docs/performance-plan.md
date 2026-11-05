@@ -85,8 +85,9 @@ Leak fixes (scenario D) jump the queue whenever found.
 | #168 | item 9 (first pass) | Hub rig outlines culled by distance; weapon parts cast no shadows; `tests/studio-perf-census.luau` |
 | #169 | item 3 (first pass) | Hero combat stats re-derived once a second instead of every sim tick |
 | #170 | item 13 | `StaticGeometry.Apply` on hub, plots and tower rooms: anchored scenery stops generating touch events; small anchored parts stop casting shadows |
+| #171 | items 10–11 | Damage/heal numbers pooled (no per-hit part + BillboardGui + TextLabel); hit sparks cast no shadows. UI previews and menu loops audited: they already clean up |
 
-Still open: baseline numbers (Phase 0.2–0.4, needs Studio), item 3 beyond stats (targeting, safety checks) once `CombatSim.Heroes` is measured, items 4–5, 10–11, and streaming (item 12, its own plan).
+Still open: baseline numbers (Phase 0.2–0.4, needs Studio), item 3 beyond stats (targeting, safety checks) once `CombatSim.Heroes` is measured, items 4–5 and streaming (item 12, its own plan).
 
 ## Phase 3 — Guardrails
 
