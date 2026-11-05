@@ -284,7 +284,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = false,
 		StatMultiplier = 1.00,
 		SpeedBonusAdditive = 0.000,
-		ModelAssetId = "weapon_axe",
+		ModelAssetId = "art_miner_pickaxe",
 		Description = "Wedge-profile industrial steel axe with beveled cutting bevel and pick spike butt.",
 	},
 	art_heavy_hewing_axe = {
@@ -295,7 +295,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = true,
 		StatMultiplier = 1.20,
 		SpeedBonusAdditive = 0.010,
-		ModelAssetId = "weapon_axe",
+		ModelAssetId = "art_heavy_hewing_axe",
 		Description = "Broad-faced logging axe with hardened wedge bit and counter-weighted iron poll.",
 	},
 	art_apprentice_cane = {
@@ -416,7 +416,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = false,
 		StatMultiplier = 1.00,
 		SpeedBonusAdditive = 0.000,
-		ModelAssetId = "weapon_axe",
+		ModelAssetId = "art_canyon_splitter",
 		Description = "Heavy dwarven wedge axe with raw amethyst geode chips embedded into the spine.",
 	},
 	art_quakestone_greataxe = {
@@ -427,7 +427,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = true,
 		StatMultiplier = 1.20,
 		SpeedBonusAdditive = 0.015,
-		ModelAssetId = "weapon_axe",
+		ModelAssetId = "art_quakestone_greataxe",
 		Description = "Broad bearded mining axe forged of grey granite-tempered steel with hexagonal brass shaft.",
 	},
 	art_ruby_staff = {
@@ -548,7 +548,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = false,
 		StatMultiplier = 1.00,
 		SpeedBonusAdditive = 0.000,
-		ModelAssetId = "weapon_axe",
+		ModelAssetId = "art_battleaxe_cleaver",
 		Description = "Symmetrical twin-bearded dwarven axe forged from dark gunmetal iron with bronze geometric inlays.",
 	},
 	art_iron_juggernaut_cleaver = {
@@ -559,7 +559,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = true,
 		StatMultiplier = 1.20,
 		SpeedBonusAdditive = 0.020,
-		ModelAssetId = "weapon_axe",
+		ModelAssetId = "art_iron_juggernaut_cleaver",
 		Description = "Asymmetrical slab-iron executioner axe with heavy boiler-plate rivets and counterbalance hammer.",
 	},
 	art_frostweaver_scepter = {
@@ -680,7 +680,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = false,
 		StatMultiplier = 1.00,
 		SpeedBonusAdditive = 0.000,
-		ModelAssetId = "weapon_axe",
+		ModelAssetId = "art_magma_behemoth",
 		Description = "Volcanic black basalt axe head fractured with molten lava veins and an obsidian counter-spike.",
 	},
 	art_obsidian_hell_splitter = {
@@ -691,7 +691,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = true,
 		StatMultiplier = 1.20,
 		SpeedBonusAdditive = 0.020,
-		ModelAssetId = "weapon_axe",
+		ModelAssetId = "art_obsidian_hell_splitter",
 		Description = "Solid jagged volcanic glass double axe billowing white sulfur smoke along its searing edge.",
 	},
 	art_archmage_rod = {
@@ -812,7 +812,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = false,
 		StatMultiplier = 1.00,
 		SpeedBonusAdditive = 0.000,
-		ModelAssetId = "weapon_axe",
+		ModelAssetId = "art_titan_earthshaker",
 		Description = "Monumental runic double axe with dwarven runes pulsing seismic tremors across the earth.",
 	},
 	art_mountain_breaker = {
@@ -823,7 +823,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = true,
 		StatMultiplier = 1.20,
 		SpeedBonusAdditive = 0.020,
-		ModelAssetId = "weapon_axe",
+		ModelAssetId = "art_mountain_breaker",
 		Description = "Massive monolithic stone-and-gold greataxe that fissures the bedrock with localized shockwaves.",
 	},
 	art_infernal_pillar = {
@@ -944,7 +944,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = false,
 		StatMultiplier = 1.00,
 		SpeedBonusAdditive = 0.000,
-		ModelAssetId = "weapon_axe",
+		ModelAssetId = "art_valkyrie_waraxe",
 		Description = "Elegant winged golden waraxe with braided platinum shaft and cyan celestial teardrop gems.",
 	},
 	art_world_shaper = {
@@ -955,7 +955,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = true,
 		StatMultiplier = 1.20,
 		SpeedBonusAdditive = 0.025,
-		ModelAssetId = "weapon_axe",
+		ModelAssetId = "art_world_shaper",
 		Description = "Mythic foundry greataxe with burning celestial brass conduits and an anti-gravity core.",
 	},
 	art_solaris_sunburst = {
@@ -1076,7 +1076,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = false,
 		StatMultiplier = 1.00,
 		SpeedBonusAdditive = 0.000,
-		ModelAssetId = "weapon_axe",
+		ModelAssetId = "art_world_carver",
 		Description = "Monolithic dark-matter greataxe crackling with rift lightning that leaves trailing space rifts when swung.",
 	},
 	art_genesis_sunderer = {
@@ -1087,7 +1087,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = true,
 		StatMultiplier = 1.20,
 		SpeedBonusAdditive = 0.050,
-		ModelAssetId = "weapon_axe",
+		ModelAssetId = "art_genesis_sunderer",
 		Description = "Colossal primordial axe infused with the spark of planetary creation; seismic ripples shatter reality.",
 	},
 	art_eye_of_singularity = {

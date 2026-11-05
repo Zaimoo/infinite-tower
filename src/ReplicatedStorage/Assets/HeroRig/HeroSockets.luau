@@ -77,6 +77,21 @@ HeroSockets.PREFABS = table.freeze({
 	art_abyssal_razor = "art_abyssal_razor",
 	art_abyssal_ravagers = "art_abyssal_ravagers",
 	art_void_reapers = "art_void_reapers",
+	-- Miner Axes (Batch 4)
+	art_miner_pickaxe = "art_miner_pickaxe",
+	art_heavy_hewing_axe = "art_heavy_hewing_axe",
+	art_canyon_splitter = "art_canyon_splitter",
+	art_quakestone_greataxe = "art_quakestone_greataxe",
+	art_battleaxe_cleaver = "art_battleaxe_cleaver",
+	art_iron_juggernaut_cleaver = "art_iron_juggernaut_cleaver",
+	art_magma_behemoth = "art_magma_behemoth",
+	art_obsidian_hell_splitter = "art_obsidian_hell_splitter",
+	art_titan_earthshaker = "art_titan_earthshaker",
+	art_mountain_breaker = "art_mountain_breaker",
+	art_valkyrie_waraxe = "art_valkyrie_waraxe",
+	art_world_shaper = "art_world_shaper",
+	art_world_carver = "art_world_carver",
+	art_genesis_sunderer = "art_genesis_sunderer",
 } :: { [string]: string })
 
 HeroSockets.SOCKETS = table.freeze({

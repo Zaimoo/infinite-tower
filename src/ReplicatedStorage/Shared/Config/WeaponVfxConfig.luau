@@ -186,15 +186,31 @@ WeaponVfxConfig.ArtifactElements = table.freeze({
 	art_abyssal_razor = "VOID",
 	art_abyssal_ravagers = "COSMIC",
 	art_void_reapers = "VOID",
+
+	-- Miner Axes (Batch 4)
+	art_miner_pickaxe = "PHYSICAL",
+	art_heavy_hewing_axe = "PHYSICAL",
+	art_canyon_splitter = "CRYSTAL",
+	art_quakestone_greataxe = "PHYSICAL",
+	art_battleaxe_cleaver = "LIGHTNING",
+	art_iron_juggernaut_cleaver = "FIRE",
+	art_magma_behemoth = "FIRE",
+	art_obsidian_hell_splitter = "FIRE",
+	art_titan_earthshaker = "CELESTIAL",
+	art_mountain_breaker = "PHYSICAL",
+	art_valkyrie_waraxe = "CELESTIAL",
+	art_world_shaper = "CELESTIAL",
+	art_world_carver = "VOID",
+	art_genesis_sunderer = "COSMIC",
 } :: { [string]: ElementType })
 
 -- Balanced particle & lighting rates: punchy, radiant anime VFX accents with clear gameplay presence
 WeaponVfxConfig.Budget = table.freeze({
-	Band1 = table.freeze({ MoteRate = 4,  AuraRate = 0,  LightRange = 4.5,  LightBrightness = 0.45 }),
-	Band2 = table.freeze({ MoteRate = 8,  AuraRate = 0,  LightRange = 6.0,  LightBrightness = 0.70 }),
-	Band3 = table.freeze({ MoteRate = 12, AuraRate = 14, LightRange = 7.5,  LightBrightness = 0.95 }),
-	Band4 = table.freeze({ MoteRate = 18, AuraRate = 22, LightRange = 9.0,  LightBrightness = 1.25 }),
-	Band5 = table.freeze({ MoteRate = 26, AuraRate = 32, LightRange = 10.5, LightBrightness = 1.60 }),
+	Band1 = table.freeze({ MoteRate = 2,  AuraRate = 0,  LightRange = 3.2,  LightBrightness = 0.22 }),
+	Band2 = table.freeze({ MoteRate = 4,  AuraRate = 0,  LightRange = 4.2,  LightBrightness = 0.35 }),
+	Band3 = table.freeze({ MoteRate = 6,  AuraRate = 6,  LightRange = 5.2,  LightBrightness = 0.48 }),
+	Band4 = table.freeze({ MoteRate = 10, AuraRate = 10, LightRange = 6.2,  LightBrightness = 0.60 }),
+	Band5 = table.freeze({ MoteRate = 14, AuraRate = 14, LightRange = 7.2,  LightBrightness = 0.75 }),
 })
 
 function WeaponVfxConfig.GetProfile(artifactId: string?, rarityTier: number?): ArtifactVfxProfile
