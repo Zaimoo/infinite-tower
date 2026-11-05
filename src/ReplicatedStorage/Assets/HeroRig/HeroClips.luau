@@ -97,14 +97,14 @@ local function floatIdle(stance: Pose, duration: number?): Clip
 		Neck = { (stance.Neck and stance.Neck[1] or 0) - 1.2, stance.Neck and stance.Neck[2] or 0, stance.Neck and stance.Neck[3] or 0 },
 		LeftShoulder = { (stance.LeftShoulder and stance.LeftShoulder[1] or 0) + 5.0, stance.LeftShoulder and stance.LeftShoulder[2] or 0, stance.LeftShoulder and stance.LeftShoulder[3] or 0 },
 		LeftElbow = { (stance.LeftElbow and stance.LeftElbow[1] or 0) - 6.0, stance.LeftElbow and stance.LeftElbow[2] or 0, stance.LeftElbow and stance.LeftElbow[3] or 0 },
-		LeftWrist = { (stance.LeftWrist and stance.LeftWrist[1] or 0) + 3.0, stance.LeftWrist and stance.LeftWrist[2] or 0, stance.LeftWrist and stance.LeftWrist[3] or 0 },
+		LeftWrist = { (stance.LeftWrist and stance.LeftWrist[1] or 0) + 6.0, stance.LeftWrist and stance.LeftWrist[2] or 0, (stance.LeftWrist and stance.LeftWrist[3] or 0) - 6.8 },
 	})
 	local trough = merge(stance, {
 		Waist = { (stance.Waist and stance.Waist[1] or 0) - 1.2, stance.Waist and stance.Waist[2] or 0, stance.Waist and stance.Waist[3] or 0 },
 		Neck = { (stance.Neck and stance.Neck[1] or 0) + 0.8, stance.Neck and stance.Neck[2] or 0, stance.Neck and stance.Neck[3] or 0 },
 		LeftShoulder = { (stance.LeftShoulder and stance.LeftShoulder[1] or 0) - 4.0, stance.LeftShoulder and stance.LeftShoulder[2] or 0, stance.LeftShoulder and stance.LeftShoulder[3] or 0 },
 		LeftElbow = { (stance.LeftElbow and stance.LeftElbow[1] or 0) + 4.5, stance.LeftElbow and stance.LeftElbow[2] or 0, stance.LeftElbow and stance.LeftElbow[3] or 0 },
-		LeftWrist = { (stance.LeftWrist and stance.LeftWrist[1] or 0) - 2.5, stance.LeftWrist and stance.LeftWrist[2] or 0, stance.LeftWrist and stance.LeftWrist[3] or 0 },
+		LeftWrist = { (stance.LeftWrist and stance.LeftWrist[1] or 0) - 4.5, stance.LeftWrist and stance.LeftWrist[2] or 0, (stance.LeftWrist and stance.LeftWrist[3] or 0) + 5.2 },
 	})
 	return clip(dur, true, {
 		{ 0, stance },
@@ -351,9 +351,9 @@ do
 	local read = merge(STANCE, {
 		Waist = { -2, 6, 0 },
 		Neck = { -8, 8, 2 },
-		LeftShoulder = { 26, -14, -8 },
-		LeftElbow = { 76, 0, 0 },
-		LeftWrist = { 15, -70, -65 }, -- palm flat, fully open, facing skyward beneath floating grimoire
+		LeftShoulder = { 32, -14, -8 }, -- arm extended forward presenting floating grimoire
+		LeftElbow = { 58, 0, 0 },
+		LeftWrist = { 173.2, 75.7, -171.4 }, -- palm flat, fully open, facing skyward beneath floating grimoire
 		RightShoulder = { 6, 0, 8 },
 		RightElbow = { 16, 0, 0 },
 		RightWrist = { 0, 0, 0 },
@@ -362,9 +362,9 @@ do
 	local gather = merge(ATTACK_STANCE, {
 		Waist = { 0, 16, 0 },
 		Neck = { 0, -6, 0 },
-		LeftShoulder = { 30, -10, -6 },
-		LeftElbow = { 78, 0, 0 },
-		LeftWrist = { 15, -70, -65 },
+		LeftShoulder = { 35, -10, -6 },
+		LeftElbow = { 60, 0, 0 },
+		LeftWrist = { -138.0, 74.6, 133.9 },
 		RightShoulder = { 32, 18, 22 },
 		RightElbow = { 85, 0, 0 },
 		RightWrist = { 15, 0, 0 },
@@ -373,18 +373,18 @@ do
 	local release = merge(ATTACK_STANCE, {
 		Waist = { -6, -14, 0 },
 		Neck = { 2, 8, 0 },
-		LeftShoulder = { 28, -12, -6 },
-		LeftElbow = { 75, 0, 0 },
-		LeftWrist = { 15, -70, -65 },
+		LeftShoulder = { 33, -12, -6 },
+		LeftElbow = { 58, 0, 0 },
+		LeftWrist = { 116.8, 66.3, -113.9 },
 		RightShoulder = { 92, -6, 4 },
 		RightElbow = { 10, 0, 0 },
 		RightWrist = { -15, 0, 0 },
 	})
 	local followThrough = merge(ATTACK_STANCE, {
 		Waist = { -4, -8, 0 },
-		LeftShoulder = { 28, -12, -6 },
-		LeftElbow = { 75, 0, 0 },
-		LeftWrist = { 15, -70, -65 },
+		LeftShoulder = { 33, -12, -6 },
+		LeftElbow = { 58, 0, 0 },
+		LeftWrist = { 126.2, 71.3, -124.6 },
 		RightShoulder = { 75, 0, 12 },
 		RightElbow = { 25, 0, 0 },
 	})
@@ -986,17 +986,17 @@ end
 -- Idle retains her characteristic poise: floating grimoire above palm, thoughtful head tilt, relaxed posture.
 do
 	local p = WeaponPoses.TOME
-	local open = merge(ATTACK_STANCE, { Waist = { 10, 0, 0 }, Neck = { 12, 0, 0 }, LeftShoulder = { 110, 0, -70 }, LeftElbow = { 15, 0, 0 }, LeftWrist = { 15, -70, -65 }, RightShoulder = { 110, 0, 70 }, RightElbow = { 15, 0, 0 } })
+	local open = merge(ATTACK_STANCE, { Waist = { 10, 0, 0 }, Neck = { 12, 0, 0 }, LeftShoulder = { 110, 0, -70 }, LeftElbow = { 15, 0, 0 }, LeftWrist = { -105.0, 20.0, 60.0 }, RightShoulder = { 110, 0, 70 }, RightElbow = { 15, 0, 0 } })
 	local reading = merge(STANCE, {
 		Waist = { -2, 10, 0 }, Neck = { -8, 12, 3 },
-		LeftShoulder = { 28, -20, -10 }, LeftElbow = { 76, 0, 0 }, LeftWrist = { 15, -70, -65 },
+		LeftShoulder = { 34, -16, -10 }, LeftElbow = { 58, 0, 0 }, LeftWrist = { -174.5, 72.6, 174.6 },
 		RightShoulder = { 4, 0, 6 }, RightElbow = { 12, 0, 0 },
 	})
 	Overrides.hero_valeria = {
-		Idle = floatIdle(reading, 3.6),
+		Idle = floatIdle(reading, 3.4),
 		AttackSkill = signature(1.2, {
 			{ 0, p.Read },
-			{ 0.35, merge(p.Channel, { Neck = { 20, 0, 0 }, LeftShoulder = { 150, 0, -10 }, LeftElbow = { 20, 0, 0 }, LeftWrist = { 15, -70, -65 }, RightShoulder = { 150, 0, 10 }, RightElbow = { 10, 0, 0 } }) },
+			{ 0.35, merge(p.Channel, { Neck = { 20, 0, 0 }, LeftShoulder = { 150, 0, -10 }, LeftElbow = { 20, 0, 0 }, LeftWrist = { -110.0, 80.0, 20.0 }, RightShoulder = { 150, 0, 10 }, RightElbow = { 10, 0, 0 } }) },
 			{ 0.65, open },
 			{ 0.85, open },
 			{ 1, p.Read },

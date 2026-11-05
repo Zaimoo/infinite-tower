@@ -5084,35 +5084,8 @@ end
 -- 6. WEAPON_TOME (Pyromancer Grimoire / Eldritch Tome)
 -- ============================================================================
 function WeaponModelBuilder.BuildTome(): Model
-	local model = Instance.new("Model")
+	local model = makeMeshTome("art_novice_tome")
 	model.Name = "weapon_tome"
-
-	local leatherRed = Color3.fromRGB(115, 30, 35)
-	local parchment = Color3.fromRGB(240, 230, 205)
-	local gold = Color3.fromRGB(245, 195, 65)
-	local flameNeon = Color3.fromRGB(255, 140, 45)
-
-	-- Spine used as Handle
-	local handle = makePart(model, "Handle", Vector3.new(0.28, 1.5, 0.32), CFrame.new(0, 0, 0), leatherRed)
-	model.PrimaryPart = handle
-
-	local frontCover = makePart(model, "FrontCover", Vector3.new(1.05, 1.5, 0.06), CFrame.new(0.55, 0, 0.16), leatherRed)
-	weldTo(handle, frontCover)
-
-	local backCover = makePart(model, "BackCover", Vector3.new(1.05, 1.5, 0.06), CFrame.new(0.55, 0, -0.16), leatherRed)
-	weldTo(handle, backCover)
-
-	local pages = makePart(model, "Pages", Vector3.new(0.95, 1.4, 0.26), CFrame.new(0.52, 0, 0), parchment)
-	weldTo(handle, pages)
-
-	local clasp = makePart(model, "Clasp", Vector3.new(0.35, 0.35, 0.1), CFrame.new(1.05, 0, 0.18), gold)
-	weldTo(handle, clasp)
-
-	local rune = makePart(model, "TomeRune", Vector3.new(0.4, 0.4, 0.05), CFrame.new(0.55, 0, 0.2), flameNeon, Enum.Material.Neon)
-	weldTo(handle, rune)
-
-	addSocket(handle, "Grip", Vector3.zero, Vector3.new(0, 180, 0)) -- up = spine top, look = front cover (+Z)
-
 	return model
 end
 
@@ -7717,10 +7690,10 @@ local function makeMeshTome(name: string): Model
 
 	-- Sockets: Grip, Tip, VfxTip, VfxBase, VfxCore
 	-- Tomes float horizontally above the upturned open palm with pages facing skyward
-	local floatOffset = 0.75
+	local floatOffset = 1.025
 	local grip = Instance.new("Attachment")
 	grip.Name = "Grip"
-	grip.CFrame = CFrame.new(0, -floatOffset, 0) * CFrame.Angles(math.rad(90), 0, math.rad(-90))
+	grip.CFrame = CFrame.new(0, -floatOffset, -0.05) * CFrame.Angles(0, 0, math.rad(90))
 	grip.Parent = handlePart
 
 	local tip = Instance.new("Attachment")

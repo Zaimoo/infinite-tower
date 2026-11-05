@@ -29,7 +29,7 @@ HeroSockets.PREFABS = table.freeze({
 	DAGGERS = "weapon_daggers",
 	AXE = "weapon_axe",
 	STAFF = "weapon_staff",
-	TOME = "weapon_tome",
+	TOME = "art_novice_tome",
 	weapon_iron_broadsword = "weapon_iron_broadsword",
 	weapon_runic_longsword = "weapon_runic_longsword",
 	-- Vanguard Swords & Shields (Batch 2)
