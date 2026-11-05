@@ -173,7 +173,7 @@ end
 
 local function weaponsOfCategory(cat: any): { string }
 	local list = {}
-	local order = ArtifactCatalog.CatalogOrder or ArtifactCatalog.CraftingRecipeOrder
+	local order = ArtifactCatalog.CatalogOrder
 	for _, id in ipairs(order) do
 		local seed = ArtifactCatalog.Seeds[id]
 		if seed and cat.FilterFn(seed) then
@@ -183,18 +183,18 @@ local function weaponsOfCategory(cat: any): { string }
 	return list
 end
 
-local function formatCraftCost(craftCost: { [string]: number }?): string
-	if not craftCost or next(craftCost) == nil then
-		return "Obtained via Star Ascension or Tower Milestone Drops"
-	end
-	local parts = {}
-	for matKey, count in pairs(craftCost) do
-		local mat = ArtifactCatalog.CraftingMaterials[matKey]
-		local icon = mat and mat.Icon or "✦"
-		local name = mat and mat.Name or matKey
-		table.insert(parts, string.format("%s %s x%d", icon, name, count))
-	end
-	return table.concat(parts, "  ·  ")
+-- Where a weapon comes from, read from the banner config: the price, this weapon's exact chance per
+-- pull (tier chance / 6 weapon types x 60% Standard or 40% Enhanced, God's Blessing included) and
+-- what it sells back for at 1 star.
+local function acquisitionText(seed: any, luck: number): string
+	local banner = ArtifactCatalog.Banner
+	local rates = SummonLuck.ApplyLuck(banner.BaseRarityRates, luck)
+	local chance = (rates[seed.RarityTier] or 0) / #ArtifactCatalog.ArchetypeOrder * (if seed.IsHighStat then 0.4 else 0.6) * 100
+	local pct = if chance >= 0.1 then string.format("%.2f", chance) else string.format("%.3f", chance)
+	return string.format("Blacksmith Forge banner · %s Gold per pull, %s per 10\n%s%% chance per pull%s · sells for %s Gold at 1★",
+		StatBalance.Format(banner.Cost1X), StatBalance.Format(banner.Cost10X), pct,
+		if luck > 0 then " (with God's Blessing)" else "",
+		StatBalance.Format(ArtifactCatalog.CalculateSellPrice(seed.RarityTier, 1)))
 end
 
 -- A themed button with its label as a child (a fill gradient would tint text on the button).
@@ -540,7 +540,7 @@ local function HeroIndex(props: { Profile: any, Width: number, OnClose: () -> ()
 		local keep = weaponFilter == "All" or (weaponFilter == "Owned" and mine ~= nil) or (weaponFilter == "Missing" and mine == nil)
 		if seed and keep then
 			weaponShown += 1
-			local tier = seed.RarityTier or seed.DefaultStar or 1
+			local tier = seed.RarityTier or 1
 			local rarityInfo = ArtifactCatalog.GetRarityInfo(tier)
 			local rarityColor = Theme.RarityColor(tier)
 			local isSel = id == selectedWeaponId
@@ -579,7 +579,7 @@ local function HeroIndex(props: { Profile: any, Width: number, OnClose: () -> ()
 	local weaponDetail: { [string]: any } = {}
 	local weaponSeed = selectedWeaponId and ArtifactCatalog.Seeds[selectedWeaponId]
 	if weaponSeed then
-		local tier = weaponSeed.RarityTier or weaponSeed.DefaultStar or 1
+		local tier = weaponSeed.RarityTier or 1
 		local rarityInfo = ArtifactCatalog.GetRarityInfo(tier)
 		local rarityColor = Theme.RarityColor(tier)
 		local mine = ownedWeapons[weaponSeed.TemplateId]
@@ -619,7 +619,7 @@ local function HeroIndex(props: { Profile: any, Width: number, OnClose: () -> ()
 
 		weaponDetail.Description = section(3, "LORE & CONCEPT ART", weaponSeed.Description or "—", 52)
 		weaponDetail.Wielders = section(4, "COMPATIBLE HEROES", WIELDERS_BY_TYPE[weaponSeed.Type] or "All heroes of this archetype", 40)
-		weaponDetail.Acquisition = section(5, "ACQUISITION", "Blacksmith Forge Gacha (5,000 Gold / spin, 45,000 / 10-spin)", 46)
+		weaponDetail.Acquisition = section(5, "ACQUISITION", acquisitionText(weaponSeed, luck), 66)
 
 		weaponDetail.Action = button({ LayoutOrder = 6, Size = UDim2.new(1, 0, 0, 46), ZIndex = 3,
 			[React.Event.Activated] = function()
