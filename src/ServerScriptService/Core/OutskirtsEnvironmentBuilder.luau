@@ -42,28 +42,28 @@ end
 -- 1. LUSH GRASS MEADOW FLOOR & TRANSITION APRON
 --============================================================================
 function OutskirtsBuilder.BuildTerrainFloor(folder: Instance, origin: CFrame)
-	-- Main solid grass ground (260 studs wide x 140 studs deep)
-	local ground = makePart(folder, "OutskirtsGrounds", V(260, 6, 140), origin * CFrame.new(0, -3, 160), Color3.fromRGB(72, 115, 54), Enum.Material.Grass, true)
+	-- Main solid grass ground (160 studs wide x 100 studs deep, flush against dividing wall Z = 60)
+	local ground = makePart(folder, "OutskirtsGrounds", V(160, 6, 100), origin * CFrame.new(0, -3, 110), Color3.fromRGB(72, 115, 54), Enum.Material.Grass, true)
 	ground.CanTouch = true
 	ground.CanQuery = true
 
 	-- Subtle organic tone patches for natural meadow variation
 	local grassTones = {
-		{ Pos = V(-65, 0.04, 130), Size = V(90, 0.08, 60), Color = Color3.fromRGB(64, 105, 48) },
-		{ Pos = V(70, 0.04, 135), Size = V(85, 0.08, 55), Color = Color3.fromRGB(80, 126, 62) },
-		{ Pos = V(-50, 0.04, 195), Size = V(110, 0.08, 50), Color = Color3.fromRGB(62, 100, 46) },
-		{ Pos = V(55, 0.04, 190), Size = V(100, 0.08, 54), Color = Color3.fromRGB(76, 120, 58) },
-		{ Pos = V(0, 0.04, 215), Size = V(140, 0.08, 30), Color = Color3.fromRGB(54, 90, 42) },
+		{ Pos = V(-35, 0.04, 90), Size = V(55, 0.08, 40), Color = Color3.fromRGB(64, 105, 48) },
+		{ Pos = V(35, 0.04, 95), Size = V(50, 0.08, 38), Color = Color3.fromRGB(80, 126, 62) },
+		{ Pos = V(-25, 0.04, 130), Size = V(60, 0.08, 35), Color = Color3.fromRGB(62, 100, 46) },
+		{ Pos = V(28, 0.04, 128), Size = V(55, 0.08, 36), Color = Color3.fromRGB(76, 120, 58) },
+		{ Pos = V(0, 0.04, 145), Size = V(80, 0.08, 22), Color = Color3.fromRGB(54, 90, 42) },
 	}
 	for i, patch in ipairs(grassTones) do
 		makePart(folder, "MeadowTone_" .. i, patch.Size, origin * CFrame.new(patch.Pos), patch.Color, Enum.Material.Grass, false)
 	end
 
-	-- Cobblestone threshold apron right outside the rear fortress gatehouse (X = 32, Z = 90 to 104)
+	-- Cobblestone threshold apron right outside the rear fortress gatehouse (X = 14, Z = 60 to 70)
 	-- Smoothly transitions from citadel stone out into the wilderness
-	local apron = makePart(folder, "GatehouseApron", V(34, 0.2, 16), origin * CFrame.new(32, 0.08, 97), Color3.fromRGB(76, 80, 88), Enum.Material.Slate, false)
-	for x = -12, 12, 8 do
-		makePart(folder, "ApronPaver", V(6.5, 0.22, 14), origin * CFrame.new(32 + x, 0.1, 97), Color3.fromRGB(64, 66, 72), Enum.Material.Basalt, false)
+	local apron = makePart(folder, "GatehouseApron", V(26, 0.2, 12), origin * CFrame.new(14, 0.08, 65), Color3.fromRGB(76, 80, 88), Enum.Material.Slate, false)
+	for x = -8, 8, 4 do
+		makePart(folder, "ApronPaver", V(4.5, 0.22, 10), origin * CFrame.new(14 + x, 0.1, 65), Color3.fromRGB(64, 66, 72), Enum.Material.Basalt, false)
 	end
 end
 
@@ -72,13 +72,13 @@ end
 --============================================================================
 function OutskirtsBuilder.BuildCurvedPath(folder: Instance, origin: CFrame)
 	-- Curve function for the east-west patrol trail
-	-- Snakes naturally across Z = 148 to Z = 172 between X = -114 and X = 114
+	-- Snakes naturally across Z = 102 to Z = 118 between X = -68 and X = 68
 	local function getPathZ(x: number): number
-		return 160 + math.sin(x * 0.038) * 12 + math.cos(x * 0.082) * 4
+		return 110 + math.sin(x * 0.055) * 8 + math.cos(x * 0.11) * 3
 	end
 
-	local numSegments = 28
-	local minX, maxX = -114, 114
+	local numSegments = 20
+	local minX, maxX = -68, 68
 	local step = (maxX - minX) / numSegments
 
 	local dirtColor1 = Color3.fromRGB(108, 86, 62)
@@ -92,10 +92,10 @@ function OutskirtsBuilder.BuildCurvedPath(folder: Instance, origin: CFrame)
 
 		local midX = (x1 + x2) * 0.5
 		local midZ = (z1 + z2) * 0.5
-		local length = math.sqrt((x2 - x1) ^ 2 + (z2 - z1) ^ 2) + 2.5
+		local length = math.sqrt((x2 - x1) ^ 2 + (z2 - z1) ^ 2) + 2.0
 		local angleY = math.atan2(z2 - z1, x2 - x1)
 
-		local pathWidth = 14 + math.sin(i * 0.7) * 2.0
+		local pathWidth = 10 + math.sin(i * 0.7) * 1.5
 		local segColor = (i % 2 == 0) and dirtColor1 or dirtColor2
 
 		-- Main dirt path slice (Enum.Material.Ground per spec)
@@ -104,30 +104,30 @@ function OutskirtsBuilder.BuildCurvedPath(folder: Instance, origin: CFrame)
 
 		-- Soft grass-dirt blend fringe along the edges
 		for _, side in {-1, 1} do
-			local fringeZ = side * (pathWidth * 0.5 + 1.2)
+			local fringeZ = side * (pathWidth * 0.5 + 1.0)
 			local fringeCF = segCF * CFrame.new(0, -0.04, fringeZ)
-			makePart(folder, "TrailFringe", V(length * 0.9, 0.16, 2.8), fringeCF, Color3.fromRGB(68, 92, 52), Enum.Material.LeafyGrass, false)
+			makePart(folder, "TrailFringe", V(length * 0.9, 0.16, 2.2), fringeCF, Color3.fromRGB(68, 92, 52), Enum.Material.LeafyGrass, false)
 		end
 
 		-- Periodic embedded stone pavers along the trail
 		if i % 2 == 1 then
-			local paverOffset = math.sin(i * 1.3) * 3.5
+			local paverOffset = math.sin(i * 1.3) * 2.5
 			local paverCF = segCF * CFrame.new(0, 0.06, paverOffset) * CFrame.Angles(0, math.rad(i * 23), 0)
-			makePart(folder, "TrailPaver", V(4.2, 0.18, 3.8), paverCF, Color3.fromRGB(88, 92, 98), Enum.Material.Slate, false)
+			makePart(folder, "TrailPaver", V(3.5, 0.18, 3.2), paverCF, Color3.fromRGB(88, 92, 98), Enum.Material.Slate, false)
 		end
 	end
 
-	-- Connector path from Dividing Wall Gatehouse Apron (X = 32, Z = 100) curving gently to Guardpost & main trail (X = 15, Z = 156)
-	local connectorSteps = 8
+	-- Connector path from Dividing Wall Gatehouse Apron (X = 14, Z = 67) curving gently to Guardpost & main trail (X = 12, Z = 112)
+	local connectorSteps = 6
 	for j = 1, connectorSteps do
 		local t = j / connectorSteps
-		local cz = 100 + (156 - 100) * t
-		local cx = 32 + (15 - 32) * t + math.sin(t * math.pi) * 5
-		local width = 13 - t * 1.5
-		makePart(folder, "GateConnectorPath_" .. j, V(width, 0.20, 8.5), origin * CFrame.new(cx, 0.12, cz), dirtColor1, Enum.Material.Ground, false)
+		local cz = 67 + (112 - 67) * t
+		local cx = 14 + (12 - 14) * t + math.sin(t * math.pi) * 3
+		local width = 9 - t * 1.0
+		makePart(folder, "GateConnectorPath_" .. j, V(width, 0.20, 8.0), origin * CFrame.new(cx, 0.12, cz), dirtColor1, Enum.Material.Ground, false)
 
 		if j % 2 == 0 then
-			makePart(folder, "ConnectorPaver", V(4.5, 0.18, 4.0), origin * CFrame.new(cx + math.sin(j) * 2, 0.16, cz), Color3.fromRGB(86, 90, 96), Enum.Material.Slate, false)
+			makePart(folder, "ConnectorPaver", V(3.8, 0.18, 3.5), origin * CFrame.new(cx + math.sin(j) * 1.5, 0.16, cz), Color3.fromRGB(86, 90, 96), Enum.Material.Slate, false)
 		end
 	end
 end
@@ -294,48 +294,41 @@ function OutskirtsBuilder.Build(folder: Instance, origin: CFrame)
 	OutskirtsBuilder.BuildCurvedPath(folder, origin)
 
 	-- 3. Dense Layered Conical Pine Forest (28 Highland Conifers & Craggy Woods)
-	-- A. Deep Forest Ridge (Z = 198 to 224)
+	-- A. Deep Forest Ridge (Z = 144 to 154)
 	local backdropTrees = {
-		{ Pos = V(-118, 0, 218), Scale = 1.38, Species = "PINE", Yaw = 14 },
-		{ Pos = V(-102, 0, 206), Scale = 1.18, Species = "PINE", Yaw = 78 },
-		{ Pos = V(-86, 0, 220), Scale = 1.42, Species = "PINE", Yaw = 45 },
-		{ Pos = V(-68, 0, 208), Scale = 1.12, Species = "PINE", Yaw = 130 },
-		{ Pos = V(-50, 0, 222), Scale = 1.35, Species = "PINE", Yaw = 88 },
-		{ Pos = V(-32, 0, 206), Scale = 1.20, Species = "PINE", Yaw = 15 },
-		{ Pos = V(-14, 0, 220), Scale = 1.32, Species = "PINE", Yaw = 62 },
-		{ Pos = V(6, 0, 214), Scale = 1.26, Species = "PINE", Yaw = 32 },
-		{ Pos = V(26, 0, 222), Scale = 1.44, Species = "PINE", Yaw = 165 },
-		{ Pos = V(46, 0, 208), Scale = 1.16, Species = "PINE", Yaw = 95 },
-		{ Pos = V(66, 0, 220), Scale = 1.36, Species = "PINE", Yaw = 112 },
-		{ Pos = V(86, 0, 210), Scale = 1.22, Species = "PINE", Yaw = 56 },
-		{ Pos = V(102, 0, 222), Scale = 1.40, Species = "PINE", Yaw = 140 },
-		{ Pos = V(118, 0, 212), Scale = 1.25, Species = "PINE", Yaw = 205 },
+		{ Pos = V(-68, 0, 150), Scale = 1.30, Species = "PINE", Yaw = 14 },
+		{ Pos = V(-52, 0, 146), Scale = 1.18, Species = "PINE", Yaw = 78 },
+		{ Pos = V(-36, 0, 152), Scale = 1.35, Species = "PINE", Yaw = 45 },
+		{ Pos = V(-20, 0, 145), Scale = 1.15, Species = "PINE", Yaw = 130 },
+		{ Pos = V(-4, 0, 152), Scale = 1.32, Species = "PINE", Yaw = 62 },
+		{ Pos = V(14, 0, 148), Scale = 1.25, Species = "PINE", Yaw = 32 },
+		{ Pos = V(30, 0, 152), Scale = 1.36, Species = "PINE", Yaw = 165 },
+		{ Pos = V(48, 0, 146), Scale = 1.18, Species = "PINE", Yaw = 95 },
+		{ Pos = V(66, 0, 150), Scale = 1.32, Species = "PINE", Yaw = 112 },
 	}
 
-	-- B. South/West Wilderness Copse (Dense clustering framing the lower-right outskirts)
+	-- B. South/West Wilderness Copse (Dense clustering framing the lower outskirts)
 	local westernGrove = {
-		{ Pos = V(-112, 0, 182), Scale = 1.26, Species = "PINE", Yaw = 40 },
-		{ Pos = V(-94, 0, 186), Scale = 1.15, Species = "PINE", Yaw = 95 },
-		{ Pos = V(-110, 0, 142), Scale = 1.22, Species = "PINE", Yaw = 160 },
-		{ Pos = V(-92, 0, 126), Scale = 1.08, Species = "PINE", Yaw = 210 },
-		{ Pos = V(-114, 0, 112), Scale = 0.98, Species = "PINE", Yaw = 55 },
-		{ Pos = V(-72, 0, 118), Scale = 1.05, Species = "PINE", Yaw = 125 },
+		{ Pos = V(-68, 0, 130), Scale = 1.22, Species = "PINE", Yaw = 40 },
+		{ Pos = V(-58, 0, 120), Scale = 1.12, Species = "PINE", Yaw = 95 },
+		{ Pos = V(-68, 0, 96), Scale = 1.18, Species = "PINE", Yaw = 160 },
+		{ Pos = V(-56, 0, 80), Scale = 1.05, Species = "PINE", Yaw = 210 },
+		{ Pos = V(-68, 0, 68), Scale = 0.98, Species = "PINE", Yaw = 55 },
 	}
 
-	-- C. North/East Frontier Woodlands (Framing the upper-right outskirts behind Market)
+	-- C. North/East Frontier Woodlands (Framing the upper outskirts behind Market)
 	local easternGrove = {
-		{ Pos = V(106, 0, 184), Scale = 1.30, Species = "PINE", Yaw = 72 },
-		{ Pos = V(88, 0, 188), Scale = 1.14, Species = "PINE", Yaw = 120 },
-		{ Pos = V(108, 0, 142), Scale = 1.24, Species = "PINE", Yaw = 35 },
-		{ Pos = V(90, 0, 126), Scale = 1.12, Species = "PINE", Yaw = 150 },
-		{ Pos = V(112, 0, 110), Scale = 1.02, Species = "PINE", Yaw = 85 },
-		{ Pos = V(72, 0, 114), Scale = 1.08, Species = "PINE", Yaw = 195 },
+		{ Pos = V(68, 0, 130), Scale = 1.24, Species = "PINE", Yaw = 72 },
+		{ Pos = V(58, 0, 120), Scale = 1.14, Species = "PINE", Yaw = 120 },
+		{ Pos = V(68, 0, 96), Scale = 1.20, Species = "PINE", Yaw = 35 },
+		{ Pos = V(56, 0, 80), Scale = 1.08, Species = "PINE", Yaw = 150 },
+		{ Pos = V(68, 0, 68), Scale = 1.00, Species = "PINE", Yaw = 85 },
 	}
 
 	-- D. Standalone Landmark Pines framing the Campfire & Palisade Watch
 	local landmarkTrees = {
-		{ Pos = V(-42, 0, 128), Scale = 0.96, Species = "PINE", Yaw = 50 },
-		{ Pos = V(54, 0, 128), Scale = 1.00, Species = "PINE", Yaw = 185 },
+		{ Pos = V(-24, 0, 96), Scale = 0.95, Species = "PINE", Yaw = 50 },
+		{ Pos = V(36, 0, 96), Scale = 0.98, Species = "PINE", Yaw = 185 },
 	}
 
 	local allTrees = { backdropTrees, westernGrove, easternGrove, landmarkTrees }
@@ -352,31 +345,30 @@ function OutskirtsBuilder.Build(folder: Instance, origin: CFrame)
 	-- 4. Wild Shrubs & Berry Bushes scattered naturally
 	local bushes = {
 		-- Pathside clusters (curved path ambiance)
-		{ Pos = V(-82, 0, 148), Scale = 1.1, Berries = true },
-		{ Pos = V(-68, 0, 172), Scale = 0.9, Berries = false },
-		{ Pos = V(-42, 0, 152), Scale = 1.2, Berries = true },
-		{ Pos = V(-24, 0, 174), Scale = 1.0, Berries = false },
-		{ Pos = V(22, 0, 172), Scale = 1.15, Berries = true },
-		{ Pos = V(38, 0, 150), Scale = 0.85, Berries = false },
-		{ Pos = V(64, 0, 175), Scale = 1.25, Berries = true },
-		{ Pos = V(84, 0, 152), Scale = 1.0, Berries = false },
+		{ Pos = V(-48, 0, 108), Scale = 1.1, Berries = true },
+		{ Pos = V(-38, 0, 120), Scale = 0.9, Berries = false },
+		{ Pos = V(-22, 0, 106), Scale = 1.1, Berries = true },
+		{ Pos = V(-12, 0, 122), Scale = 0.95, Berries = false },
+		{ Pos = V(18, 0, 120), Scale = 1.1, Berries = true },
+		{ Pos = V(28, 0, 108), Scale = 0.85, Berries = false },
+		{ Pos = V(44, 0, 122), Scale = 1.15, Berries = true },
 
-		-- Near Guard Post (X = 0, Z = 160)
-		{ Pos = V(-14, 0, 164), Scale = 0.9, Berries = true },
-		{ Pos = V(15, 0, 158), Scale = 0.95, Berries = false },
-		{ Pos = V(-12, 0, 142), Scale = 0.8, Berries = false },
+		-- Near Guard Post (X = 12, Z = 115)
+		{ Pos = V(-4, 0, 118), Scale = 0.9, Berries = true },
+		{ Pos = V(12, 0, 115), Scale = 0.95, Berries = false },
+		{ Pos = V(-6, 0, 104), Scale = 0.8, Berries = false },
 
-		-- Fortress Rear Wall Base (Z = 100 to 108)
-		{ Pos = V(-78, 0, 105), Scale = 1.05, Berries = false },
-		{ Pos = V(-45, 0, 106), Scale = 0.95, Berries = true },
-		{ Pos = V(42, 0, 106), Scale = 1.0, Berries = false },
-		{ Pos = V(75, 0, 105), Scale = 1.1, Berries = true },
+		-- Fortress Rear Wall Base (Z = 68 to 74)
+		{ Pos = V(-46, 0, 72), Scale = 1.05, Berries = false },
+		{ Pos = V(-26, 0, 73), Scale = 0.95, Berries = true },
+		{ Pos = V(28, 0, 73), Scale = 1.0, Berries = false },
+		{ Pos = V(48, 0, 72), Scale = 1.1, Berries = true },
 
 		-- Woodland Undergrowth
-		{ Pos = V(-102, 0, 204), Scale = 1.3, Berries = true },
-		{ Pos = V(-62, 0, 214), Scale = 1.1, Berries = false },
-		{ Pos = V(30, 0, 210), Scale = 1.2, Berries = true },
-		{ Pos = V(82, 0, 202), Scale = 1.15, Berries = false },
+		{ Pos = V(-58, 0, 142), Scale = 1.2, Berries = true },
+		{ Pos = V(-36, 0, 146), Scale = 1.0, Berries = false },
+		{ Pos = V(20, 0, 145), Scale = 1.1, Berries = true },
+		{ Pos = V(52, 0, 142), Scale = 1.15, Berries = false },
 	}
 
 	for _, b in ipairs(bushes) do
@@ -385,14 +377,14 @@ function OutskirtsBuilder.Build(folder: Instance, origin: CFrame)
 
 	-- 5. Mossy Granite Boulders
 	local boulders = {
-		{ Pos = V(-88, 0, 168), Size = V(5.5, 3.2, 4.8), RotY = 32 },
-		{ Pos = V(-55, 0, 142), Size = V(4.2, 2.6, 3.8), RotY = 75 },
-		{ Pos = V(-18, 0, 180), Size = V(4.8, 2.8, 4.2), RotY = 15 },
-		{ Pos = V(28, 0, 144), Size = V(5.0, 3.0, 4.5), RotY = 110 },
-		{ Pos = V(72, 0, 168), Size = V(4.6, 2.7, 4.0), RotY = 48 },
-		{ Pos = V(95, 0, 145), Size = V(6.0, 3.6, 5.2), RotY = 85 },
-		{ Pos = V(-32, 0, 108), Size = V(4.0, 2.4, 3.5), RotY = 20 },
-		{ Pos = V(58, 0, 108), Size = V(4.4, 2.5, 3.8), RotY = 140 },
+		{ Pos = V(-52, 0, 118), Size = V(4.8, 2.8, 4.2), RotY = 32 },
+		{ Pos = V(-32, 0, 102), Size = V(3.8, 2.4, 3.4), RotY = 75 },
+		{ Pos = V(-10, 0, 126), Size = V(4.2, 2.5, 3.8), RotY = 15 },
+		{ Pos = V(18, 0, 104), Size = V(4.5, 2.7, 4.0), RotY = 110 },
+		{ Pos = V(46, 0, 118), Size = V(4.2, 2.5, 3.6), RotY = 48 },
+		{ Pos = V(58, 0, 105), Size = V(5.0, 3.0, 4.5), RotY = 85 },
+		{ Pos = V(-20, 0, 74), Size = V(3.6, 2.2, 3.2), RotY = 20 },
+		{ Pos = V(38, 0, 74), Size = V(3.8, 2.3, 3.4), RotY = 140 },
 	}
 
 	for _, r in ipairs(boulders) do
