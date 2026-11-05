@@ -415,16 +415,19 @@ Players.PlayerRemoving:Connect(removePlayer)
 local isOpen = true
 local currentTween: Tween? = nil
 
+local TOP_MARGIN = 6
+local RIGHT_MARGIN = 16
+
 local function getTargetPositions(): (UDim2, UDim2)
 	local camera = workspace.CurrentCamera
 	local vp = camera and camera.ViewportSize or Vector2.new(1280, 720)
 	if vp.X < 500 then
-		local openPos = UDim2.new(0.5, 0, 0, 4)
-		local closedPos = UDim2.new(1, CARD_WIDTH + 40, 0, 4)
+		local openPos = UDim2.new(0.5, 0, 0, TOP_MARGIN)
+		local closedPos = UDim2.new(1, CARD_WIDTH + 40, 0, TOP_MARGIN)
 		return openPos, closedPos
 	else
-		local openPos = UDim2.new(1, -4, 0, 4)
-		local closedPos = UDim2.new(1, CARD_WIDTH + 40, 0, 4)
+		local openPos = UDim2.new(1, -RIGHT_MARGIN, 0, TOP_MARGIN)
+		local closedPos = UDim2.new(1, CARD_WIDTH + 40, 0, TOP_MARGIN)
 		return openPos, closedPos
 	end
 end

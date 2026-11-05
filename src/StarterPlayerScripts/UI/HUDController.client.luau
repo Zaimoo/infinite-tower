@@ -1919,97 +1919,100 @@ do
 	ProfileDeltaSyncEvent.OnClientEvent:Connect(updateCurrency)
 	updateCurrency(CurrentProfile)
 
-	-- Top-right Setting Icon Button
+	-- Top-right Setting Icon Button (Roblox TopBar style matched circular button in dedicated topbar overlay)
+	local topBarRightGui = PlayerGui:FindFirstChild("TopBarRightScreenGui") :: ScreenGui?
+	if not topBarRightGui then
+		topBarRightGui = Instance.new("ScreenGui")
+		topBarRightGui.Name = "TopBarRightScreenGui"
+		topBarRightGui.ResetOnSpawn = false
+		topBarRightGui.IgnoreGuiInset = true
+		topBarRightGui.ScreenInsets = Enum.ScreenInsets.None
+		topBarRightGui.DisplayOrder = 10
+		topBarRightGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+		topBarRightGui.Parent = PlayerGui
+	end
+
 	local settingsButton = Instance.new("ImageButton")
 	settingsButton.Name = "SettingsButton"
+	settingsButton:SetAttribute("NoFeel", true) -- Disable spring hover/press scaling from UIFeel (does not enlarge when hovered)
 	settingsButton.AnchorPoint = Vector2.new(1, 0)
 	settingsButton.Position = UDim2.new(1, -16, 0, 12)
-	settingsButton.Size = UDim2.fromOffset(38, 38)
-	settingsButton.BackgroundColor3 = Color3.fromRGB(18, 14, 26)
+	settingsButton.Size = UDim2.fromOffset(44, 44)
+	settingsButton.BackgroundColor3 = Color3.fromRGB(18, 18, 21)
 	settingsButton.BackgroundTransparency = 0.15
 	settingsButton.AutoButtonColor = false
 	settingsButton.ZIndex = 15
-	settingsButton.Parent = hudGui
-	-- Phase 5: Settings is the last Left Rail button (drawn gear); this corner button stays hidden.
-	settingsButton.Visible = false
+	settingsButton.Visible = true
+	settingsButton.Parent = topBarRightGui
 
 	local settingsCorner = Instance.new("UICorner")
-	settingsCorner.CornerRadius = UDim.new(0, 9)
+	settingsCorner.CornerRadius = UDim.new(1, 0)
 	settingsCorner.Parent = settingsButton
 
 	local settingsStroke = Instance.new("UIStroke")
 	settingsStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	settingsStroke.Thickness = 1.5
-	settingsStroke.Color = Color3.fromRGB(80, 70, 105)
+	settingsStroke.Thickness = 1
+	settingsStroke.Color = Color3.fromRGB(45, 45, 52)
+	settingsStroke.Transparency = 0.6
 	settingsStroke.Parent = settingsButton
 
 	local gearIcon = Instance.new("ImageLabel")
 	gearIcon.Name = "GearIcon"
-	gearIcon.Image = "rbxassetid://18801194936"
+	gearIcon.Image = "rbxassetid://116900178322793"
 	gearIcon.AnchorPoint = Vector2.new(0.5, 0.5)
 	gearIcon.Position = UDim2.fromScale(0.5, 0.5)
-	gearIcon.Size = UDim2.fromOffset(22, 22)
+	gearIcon.Size = UDim2.fromOffset(26, 26)
 	gearIcon.BackgroundTransparency = 1
-	gearIcon.ImageColor3 = Color3.fromRGB(225, 220, 240)
+	gearIcon.ImageColor3 = Color3.fromRGB(255, 255, 255)
+	gearIcon.ScaleType = Enum.ScaleType.Fit
 	gearIcon.ZIndex = 16
 	gearIcon.Parent = settingsButton
 
-	-- Hover and click micro-interactions
-	local origBg = Color3.fromRGB(18, 14, 26)
-	local hoverBg = Color3.fromRGB(36, 28, 50)
-	local origStroke = Color3.fromRGB(80, 70, 105)
-	local hoverStroke = Color3.fromRGB(175, 150, 235)
+	-- Highlight overlay (matching Roblox TopBar StateOverlayRound: lightens the circle on hover/press with no animations)
+	local stateOverlay = Instance.new("Frame")
+	stateOverlay.Name = "StateOverlayRound"
+	stateOverlay.Size = UDim2.fromScale(1, 1)
+	stateOverlay.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	stateOverlay.BackgroundTransparency = 1
+	stateOverlay.ZIndex = 17
+
+	local stateOverlayCorner = Instance.new("UICorner")
+	stateOverlayCorner.CornerRadius = UDim.new(1, 0)
+	stateOverlayCorner.Parent = stateOverlay
+	stateOverlay.Parent = settingsButton
 
 	settingsButton.MouseEnter:Connect(function()
-		TweenService:Create(settingsButton, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-			BackgroundColor3 = hoverBg,
-			Size = UDim2.fromOffset(40, 40),
-		}):Play()
-		TweenService:Create(settingsStroke, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-			Color = hoverStroke,
-		}):Play()
-		TweenService:Create(gearIcon, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-			Rotation = 30,
-			ImageColor3 = Color3.fromRGB(255, 255, 255),
-		}):Play()
+		stateOverlay.BackgroundTransparency = 0.88
 	end)
 
 	settingsButton.MouseLeave:Connect(function()
-		TweenService:Create(settingsButton, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-			BackgroundColor3 = origBg,
-			Size = UDim2.fromOffset(38, 38),
-		}):Play()
-		TweenService:Create(settingsStroke, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-			Color = origStroke,
-		}):Play()
-		TweenService:Create(gearIcon, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-			Rotation = 0,
-			ImageColor3 = Color3.fromRGB(225, 220, 240),
-		}):Play()
+		stateOverlay.BackgroundTransparency = 1
 	end)
 
+	settingsButton.MouseButton1Down:Connect(function()
+		stateOverlay.BackgroundTransparency = 0.75
+	end)
+
+	settingsButton.MouseButton1Up:Connect(function()
+		stateOverlay.BackgroundTransparency = 0.88
+	end)
+
+	local lastSettingsToggleTime = 0
 	local function onSettingsTrigger()
-		local clickTween = TweenService:Create(settingsButton, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-			Size = UDim2.fromOffset(34, 34),
-		})
-		local restoreTween = TweenService:Create(settingsButton, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-			Size = UDim2.fromOffset(38, 38),
-		})
-		clickTween:Play()
-		clickTween.Completed:Connect(function()
-			restoreTween:Play()
-		end)
+		local now = os.clock()
+		if now - lastSettingsToggleTime < 0.25 then return end
+		lastSettingsToggleTime = now
+
 		if _G.ToggleSettings then
 			_G.ToggleSettings()
 		end
 	end
-	settingsButton.MouseButton1Click:Connect(onSettingsTrigger)
 	settingsButton.Activated:Connect(onSettingsTrigger)
 
 	-- Keep Studio F8 development hooks available without the top menu bar (positioned to the left of settings button)
-	navButtonsFrame.Parent = hudGui
+	navButtonsFrame.Parent = topBarRightGui
 	navButtonsFrame.AnchorPoint = Vector2.new(1, 0)
-	navButtonsFrame.Position = UDim2.new(1, -64, 0, 12)
+	navButtonsFrame.Position = UDim2.new(1, -68, 0, 12)
 	navButtonsFrame.Size = UDim2.fromOffset(240, 36)
 	local devButtons = {}
 	for _, b in navButtonsFrame:GetChildren() do

@@ -117,6 +117,6 @@ SettingsConfig.FONTS = {
 }
 
 SettingsConfig.CLICK_SOUND_ID = "rbxassetid://139403951941162"
-SettingsConfig.GEAR_ICON_ID = "rbxassetid://18801194936"
+SettingsConfig.GEAR_ICON_ID = "rbxassetid://116900178322793"
 
 return SettingsConfig
