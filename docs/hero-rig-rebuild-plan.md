@@ -333,7 +333,7 @@ Skills consulted: `roblox-characters-animation`, `roblox-performance`, `roblox-n
   - Legacy rigs get the `AttackAnimTier`/`AttackAnimStartClock`/`AttackAnimDuration` fields that `ArtPackVisuals.Animate` already read but nothing set.
   - It is cosmetic, so a dropped packet only skips one swing.
 - **`HeroLoadout.luau`** (new) resolves the prefab with the pure `HeroSockets.ResolvePrefab` (the artifact's own type wins), clones it, styles it and sockets it, and sets the entity's `EquippedArtifactId`/`Type` attributes.
-  - Weapon styling (crystal greatbow, recurve, rarity ≥ 14 glow) moved into `WeaponModelBuilder.Style`, which `ArtPackVisuals.EquipWeapon` now calls too. Behaviour is unchanged.
+  - Weapon styling (crystal greatbow, recurve, rarity ≥ 14 glow, since lowered to ≥ 5) moved into `WeaponModelBuilder.Style`, which `ArtPackVisuals.EquipWeapon` now calls too. Behaviour is unchanged.
 - **`HeroAnimator.ApplyStaticPose`:** poses anchored clones by writing part CFrames down the joint chain, then moving welded pieces. `ViewportFrame`s never simulate joints. `HeroCard.Portrait` uses it to show each hero's `Idle` first frame (Jenna's signature stance).
 - **`PlotManager`:**
   - Infirmary workers' rig root is now anchored. Hero templates are unanchored assemblies, so before this the cloned worker was held by nothing and fell.

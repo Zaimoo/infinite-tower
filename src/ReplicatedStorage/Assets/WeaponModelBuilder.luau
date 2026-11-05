@@ -701,8 +701,8 @@ function WeaponModelBuilder.Style(wModel: Model, weaponAssetId: string?, rarityI
 		end
 	end
 
-	-- Rarity flair: Legendary+ weapons (rarity >= 14) glow in their rarity colour.
-	if rarityIndex and rarityIndex >= 14 then
+	-- Rarity flair: Exalted+ weapons (rarity >= 5) glow in their rarity colour.
+	if rarityIndex and rarityIndex >= 5 then
 		local Shared = ReplicatedStorage:FindFirstChild("Shared")
 		local ArtifactCatalog = Shared and require(Shared:WaitForChild("Config"):WaitForChild("ArtifactCatalog")) :: any
 		local rInfo = ArtifactCatalog and ArtifactCatalog.GetRarityInfo(rarityIndex)

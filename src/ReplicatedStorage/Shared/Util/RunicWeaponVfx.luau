@@ -109,7 +109,7 @@ end
 function RunicWeaponVfx.SetupAura(vfxCore: Attachment, starRating: number?, rarityIndex: number?): (ParticleEmitter, PointLight)
 	local star = math.clamp(math.floor(starRating or 2), 1, 7)
 	local rarityInfo = rarityIndex and ArtifactCatalog.GetRarityInfo(rarityIndex)
-	local coreColor = (rarityInfo and rarityIndex >= 14) and rarityInfo.Color or DEFAULT_CYAN
+	local coreColor = (rarityInfo and rarityIndex >= 5) and rarityInfo.Color or DEFAULT_CYAN
 
 	-- Particle Emitter
 	local emitter = vfxCore:FindFirstChild("RunicAuraEmitter") :: ParticleEmitter?
@@ -179,7 +179,7 @@ function RunicWeaponVfx.AttachVfx(weaponModel: Model, starRating: number?, rarit
 	local vfxCore = getOrCreateAttachment(handle, "VFXCore", SOCKET_OFFSETS.VFXCore)
 
 	local rarityInfo = rarityIndex and ArtifactCatalog.GetRarityInfo(rarityIndex)
-	local primaryColor = (rarityInfo and rarityIndex >= 14) and rarityInfo.Color or DEFAULT_CYAN
+	local primaryColor = (rarityInfo and rarityIndex >= 5) and rarityInfo.Color or DEFAULT_CYAN
 
 	local trail = RunicWeaponVfx.SetupTrail(handle, trailBottom, trailTop, primaryColor)
 	local emitter, light = RunicWeaponVfx.SetupAura(vfxCore, starRating, rarityIndex)
