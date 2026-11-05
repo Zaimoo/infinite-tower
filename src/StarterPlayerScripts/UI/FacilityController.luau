@@ -615,6 +615,7 @@ function Controller:ShowSummonResults(summonedList: { any }, bannerId: string, o
 		end,
 		Cost1 = summonCost(bannerId, 1),
 		Cost10 = summonCost(bannerId, 10),
+		Currency = "Gems",
 		OnAgain = function(count: number)
 			self:PerformSummon(bannerId, count)
 		end,

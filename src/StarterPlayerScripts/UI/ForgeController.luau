@@ -1739,6 +1739,7 @@ function Forge:ShowSummonResults(summonedList: { any }, ownedBefore: { [string]:
 		end,
 		Cost1 = ArtifactCatalog.Banner.Cost1X,
 		Cost10 = ArtifactCatalog.Banner.Cost10X,
+		Currency = ArtifactCatalog.Banner.Currency,
 		OnAgain = function(count: number)
 			self:PerformSummon(count)
 		end,

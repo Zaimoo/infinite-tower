@@ -26,6 +26,7 @@ export type Button = {
 	TitleLabel: TextLabel,
 	CostLabel: TextLabel,
 	SetCost: (cost: number | string) -> (),
+	SetIcon: (iconName: string) -> (),
 }
 
 function GrimoireSummonButton.new(parent: Instance, props: Props): Button
@@ -53,7 +54,8 @@ function GrimoireSummonButton.new(parent: Instance, props: Props): Button
 	title.Parent = btn
 	GothicBoxStyle.Font.Apply(title, { Role = "Button", Size = 20, Color = Color3.new(1, 1, 1) })
 
-	local row, cost = GrimoireIcons.IconText(props.Icon or "Gems", 22, btn, z + 2)
+	local currentIcon = props.Icon or "Gems"
+	local row, cost = GrimoireIcons.IconText(currentIcon, 22, btn, z + 2)
 	row.AnchorPoint = Vector2.new(0.5, 0.5)
 	row.Position = UDim2.new(0.5, 0, 0.72, 0)
 	cost.Text = tostring(props.Cost)
@@ -61,6 +63,34 @@ function GrimoireSummonButton.new(parent: Instance, props: Props): Button
 	cost.TextSize = 19
 	GildedGrimoire.StyleText(cost, "Number")
 	cost:SetAttribute("Grimoire", true)
+
+	local iconFrame: Frame? = nil
+	for _, child in row:GetChildren() do
+		if child:IsA("Frame") and string.sub(child.Name, 1, 13) == "GrimoireIcon_" then
+			iconFrame = child
+			break
+		end
+	end
+
+	local function setIcon(iconName: string)
+		if currentIcon == iconName and iconFrame and iconFrame.Parent then
+			return
+		end
+		if iconFrame then
+			iconFrame:Destroy()
+			iconFrame = nil
+		else
+			for _, child in row:GetChildren() do
+				if child:IsA("Frame") and string.sub(child.Name, 1, 13) == "GrimoireIcon_" then
+					child:Destroy()
+				end
+			end
+		end
+		currentIcon = iconName
+		local newIcon = GrimoireIcons.Create(iconName, 22, row, z + 2)
+		newIcon.LayoutOrder = 1
+		iconFrame = newIcon
+	end
 
 	btn.Activated:Connect(props.OnClick)
 
@@ -71,6 +101,7 @@ function GrimoireSummonButton.new(parent: Instance, props: Props): Button
 		SetCost = function(value: number | string)
 			cost.Text = tostring(value)
 		end,
+		SetIcon = setIcon,
 	}
 end
 
