@@ -12,6 +12,7 @@ local Buildings = {}
 local Architecture = require(script.Parent:WaitForChild("PlotFacilityArchitecture"))
 local OutskirtsBuilder = require(script.Parent:WaitForChild("OutskirtsEnvironmentBuilder"))
 local FacilityPresence = require(script.Parent:WaitForChild("FacilityPresence"))
+local StaticGeometry = require(script.Parent:WaitForChild("StaticGeometry"))
 local FacilityConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("FacilityConfig"))
 
 local VERSION = 29 -- 29: Solid collision on Blacksmith Forge & coursed ashlar Gothic fortress walls
@@ -295,6 +296,7 @@ function Buildings.Build(plot: Instance)
 	if existing then
 		existing:Destroy()
 	end
+	StaticGeometry.Apply(folder)
 	folder.Name = "PlotBuildings"
 	if RunService:IsRunning() then
 		FacilityPresence.Reapply(plot)
