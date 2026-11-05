@@ -1,0 +1,16 @@
+{
+  "Tower_Base_Entrance": 1202,
+  "Tower_Mid_Segment": 2016,
+  "Cloud_Ring_Bottom": 384,
+  "Cloud_Ring_Top": 552,
+  "Total_Kit_Triangles": 4154,
+  "Budget_Limit": 4500,
+  "Bridge_Snap_Point_Rbx": [
+    0.0,
+    0.0,
+    -35.8
+  ],
+  "Base_Height_Rbx": 28.0,
+  "Mid_Segment_Height_Rbx": 36.0,
+  "Tower_Radius_Rbx": 32.5
+}

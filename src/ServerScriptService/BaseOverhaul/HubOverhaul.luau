@@ -27,7 +27,7 @@ local CloisterBuilder = require(BaseOverhaulFolder:WaitForChild("CloisterBuilder
 local SharedLeaderboards = require(BaseOverhaulFolder:WaitForChild("SharedLeaderboards"))
 
 local HubOverhaul = {}
-HubOverhaul.Version = 14 -- Bump to force a rebuild of baked geometry
+HubOverhaul.Version = 15 -- Bump to force a rebuild of baked geometry
 
 --============================================================================
 -- CONFIGURATION TABLE
