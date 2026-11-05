@@ -1,6 +1,6 @@
 # Performance analysis and fix plan
 
-Status: proposed (2026-11-05). Scope: client FPS, server heartbeat, network and memory after recent content growth.
+Status: in progress (2026-11-05). Scope: client FPS, server heartbeat, network and memory after recent content growth.
 
 Rule for every phase: **measure first, change second, re-measure.** No fix lands without a before/after number.
 
@@ -73,6 +73,19 @@ Do these as separate small PRs (`perf(scope): ...`), each with before/after numb
 8. Streaming (item 12) — largest change; its own plan once the rest is done.
 
 Leak fixes (scenario D) jump the queue whenever found.
+
+## Progress
+
+| PR | Plan item | What landed |
+| --- | --- | --- |
+| #164 | Phase 0.1, item 1 | MicroProfiler labels and memory categories; relic billboards written only on change |
+| #165 | item 2 | Snapshots encoded once per floor; no per-entity clones |
+| #166 | items 6–7 | EntityRenderer distance LOD, highlight culling, cached KO/Head lookups, 4 Hz stale scan |
+| #167 | item 8 | Hub workers/patrol/Commons park on tower floors; cached plot origins |
+| #168 | item 9 (first pass) | Hub rig outlines culled by distance; weapon parts cast no shadows; `tests/studio-perf-census.luau` |
+| this PR | item 3 (first pass) | Hero combat stats re-derived once a second instead of every sim tick |
+
+Still open: baseline numbers (Phase 0.2–0.4, needs Studio), item 3 beyond stats (targeting, safety checks) once `CombatSim.Heroes` is measured, items 4–5, 10–11, 13, and streaming (item 12, its own plan).
 
 ## Phase 3 — Guardrails
 
