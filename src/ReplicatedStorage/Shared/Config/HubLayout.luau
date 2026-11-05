@@ -16,6 +16,7 @@ HubLayout.TowerClearRadius = 420 -- No plot geometry may come closer to the towe
 -- Cloister Commons
 HubLayout.HubCentre = Vector3.new(0, 12, -1036)
 HubLayout.ParkCentre = HubLayout.HubCentre -- Fast travel and background islets centre on the hub
+HubLayout.HubArrival = Vector3.new(0, HubLayout.IslandSurfaceY + 3.8, -975) -- South red-runner entrance to the Wayfinder Dais
 HubLayout.HubHalfX = 420
 HubLayout.HubHalfZ = 560
 HubLayout.OuterCornerRadius = 160
