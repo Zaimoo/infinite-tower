@@ -28,6 +28,8 @@ function B.HeroRarityLabor(tier: number): number
 end
 B.MovementSpeed = 20
 B.MaxAttackSpeed = 5
+B.MaxHeroInventory = 50
+B.MaxArtifactInventory = 50
 B.WeaponPowerDivisor = 40
 B.WeaponStarMultipliers = table.freeze({1, 1.6, 2.5, 4, 6.5, 10, 16})
 B.RarityPower = table.freeze({20, 60, 180, 540, 1400, 3500, 7000, 10000, 14000, 20000, 28000, 40000, 56000, 80000, 112000, 160000})

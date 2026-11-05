@@ -19,6 +19,7 @@ local GothicBoxStyle = require(Shared.Util.GothicBoxStyle)
 local GildedGrimoire = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GildedGrimoire"))
 local GrimoireIcons = require(Shared.Util.GrimoireIcons)
 local ArtifactPreview = require(script.Parent.ArtifactPreview)
+local SummonLuck = require(Shared.Util.SummonLuck)
 
 local function showArtifact(label: TextLabel, templateId: string?)
 	label.TextTransparency = if ArtifactPreview.Show(label, templateId) then 1 else 0
@@ -156,7 +157,11 @@ function Forge.new(gui: ScreenGui, artifactRemotes: Folder, getProfile: (() -> a
 	self.RequestUpgrade = artifactRemotes:WaitForChild("RequestUpgradeArtifact") :: RemoteFunction
 	self.RequestEquip = artifactRemotes:WaitForChild("RequestEquipArtifact") :: RemoteFunction
 	self.RequestUnequip = artifactRemotes:WaitForChild("RequestUnequipArtifact") :: RemoteFunction
-	self.RequestCraft = artifactRemotes:FindFirstChild("RequestCraftArtifact") :: RemoteFunction?
+	self.RequestSell = artifactRemotes:WaitForChild("RequestSellArtifacts") :: RemoteFunction
+	self.SellMode = false
+	self.SelectedSellUUIDs = {} :: { [string]: boolean }
+	self.ArtifactsModal = nil :: any
+	self.ArtifactsModalFilter = "ALL"
 
 	self.ActiveTab = "SUMMON" :: "ASSIGN" | "SUMMON" | "UPGRADE"
 	self.SelectedAssignArtifactUUID = nil :: string?
@@ -335,6 +340,9 @@ function Forge.new(gui: ScreenGui, artifactRemotes: Folder, getProfile: (() -> a
 	-- 9. SUMMON RESULTS CELEBRATION MODAL
 	self:BuildSummonRevealModal(gui)
 
+	-- 10. ARTIFACT BANNER VIEW & RATES MODAL
+	self:BuildArtifactsModal(gui)
+
 	-- Fit the window inside the safe area (below the top bar, clear of the bottom edge).
 	ModalFit.Bind(root, self.Scale, WIDTH, HEIGHT)
 
@@ -437,11 +445,130 @@ function Forge:BuildAssignView(root: Frame)
 	}, root)
 	self.AssignView = assignView
 
+	local headerBar = new("Frame", {
+		Name = "AssignHeaderBar",
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(0, 0),
+		Size = UDim2.new(1, 0, 0, 36),
+		ZIndex = 53,
+	}, assignView)
+	self.AssignHeaderBar = headerBar
+
+	local capFrame = new("Frame", {
+		Name = "CapacityPill",
+		Position = UDim2.fromOffset(0, 2),
+		Size = UDim2.fromOffset(170, 30),
+		BackgroundColor3 = Color3.fromRGB(24, 18, 36),
+		BorderSizePixel = 0,
+		ZIndex = 54,
+	}, headerBar)
+	new("UICorner", { CornerRadius = UDim.new(0, 8) }, capFrame)
+	local capStroke = new("UIStroke", { Color = Color3.fromRGB(80, 60, 110), Thickness = 1.5 }, capFrame)
+	self.CapacityStroke = capStroke
+
+	local capLabel = label(capFrame, "Artifacts: 0 / 50", 13, C.TextLavender, Enum.Font.GothamBold)
+	capLabel.Position = UDim2.fromScale(0, 0)
+	capLabel.Size = UDim2.fromScale(1, 1)
+	capLabel.TextXAlignment = Enum.TextXAlignment.Center
+	capLabel.ZIndex = 55
+	self.CapacityLabel = capLabel
+
+	local sellToggleBtn = new("TextButton", {
+		Name = "SellToggleBtn",
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, 0, 0, 2),
+		Size = UDim2.fromOffset(140, 30),
+		Text = "SELL ARTIFACTS",
+		Font = Enum.Font.GothamBold,
+		TextSize = 13,
+		TextColor3 = Color3.fromRGB(255, 220, 120),
+		BackgroundColor3 = Color3.fromRGB(36, 24, 48),
+		BorderSizePixel = 0,
+		ZIndex = 54,
+	}, headerBar)
+	new("UICorner", { CornerRadius = UDim.new(0, 8) }, sellToggleBtn)
+	new("UIStroke", { Color = Color3.fromRGB(160, 120, 50), Thickness = 1.5 }, sellToggleBtn)
+	self.SellToggleBtn = sellToggleBtn
+	sellToggleBtn.Activated:Connect(function()
+		self:ToggleSellMode()
+	end)
+
+	local sellControls = new("Frame", {
+		Name = "SellControls",
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, 0, 0, 2),
+		Size = UDim2.new(0, 480, 0, 30),
+		BackgroundTransparency = 1,
+		Visible = false,
+		ZIndex = 54,
+	}, headerBar)
+	self.SellControls = sellControls
+
+	local sellValuation = label(sellControls, "Selected: 0  |  Value: 0 Gold", 12, Color3.fromRGB(255, 220, 120), Enum.Font.GothamBold)
+	sellValuation.Position = UDim2.fromOffset(0, 0)
+	sellValuation.Size = UDim2.new(1, -260, 1, 0)
+	sellValuation.TextXAlignment = Enum.TextXAlignment.Right
+	sellValuation.ZIndex = 55
+	self.SellValuationLabel = sellValuation
+
+	local selectAllBtn = new("TextButton", {
+		Name = "SelectAllBtn",
+		Position = UDim2.new(1, -250, 0, 0),
+		Size = UDim2.fromOffset(70, 30),
+		Text = "ALL",
+		Font = Enum.Font.GothamBold,
+		TextSize = 12,
+		TextColor3 = C.Text,
+		BackgroundColor3 = Color3.fromRGB(45, 35, 60),
+		BorderSizePixel = 0,
+		ZIndex = 55,
+	}, sellControls)
+	new("UICorner", { CornerRadius = UDim.new(0, 6) }, selectAllBtn)
+	selectAllBtn.Activated:Connect(function()
+		self:SelectAllUnequippedForSell()
+	end)
+
+	local confirmSellBtn = new("TextButton", {
+		Name = "ConfirmSellBtn",
+		Position = UDim2.new(1, -170, 0, 0),
+		Size = UDim2.fromOffset(100, 30),
+		Text = "SELL SELECTED",
+		Font = Enum.Font.GothamBlack,
+		TextSize = 11,
+		TextColor3 = Color3.fromRGB(255, 255, 255),
+		BackgroundColor3 = Color3.fromRGB(180, 50, 50),
+		BorderSizePixel = 0,
+		ZIndex = 55,
+	}, sellControls)
+	new("UICorner", { CornerRadius = UDim.new(0, 6) }, confirmSellBtn)
+	self.ConfirmSellBtn = confirmSellBtn
+	confirmSellBtn.Activated:Connect(function()
+		self:ConfirmSellArtifacts()
+	end)
+
+	local cancelSellBtn = new("TextButton", {
+		Name = "CancelSellBtn",
+		Position = UDim2.new(1, -60, 0, 0),
+		Size = UDim2.fromOffset(55, 30),
+		Text = "CANCEL",
+		Font = Enum.Font.GothamMedium,
+		TextSize = 11,
+		TextColor3 = C.TextMuted,
+		BackgroundColor3 = Color3.fromRGB(30, 25, 40),
+		BorderSizePixel = 0,
+		ZIndex = 55,
+	}, sellControls)
+	new("UICorner", { CornerRadius = UDim.new(0, 6) }, cancelSellBtn)
+	cancelSellBtn.Activated:Connect(function()
+		self:ToggleSellMode(false)
+	end)
+
 	local scroll = new("ScrollingFrame", {
 		Name = "AssignScroll",
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
-		Size = UDim2.fromScale(1, 1),
+		Position = UDim2.fromOffset(0, 42),
+		Size = UDim2.new(1, 0, 1, -42),
 		ScrollBarThickness = 6,
 		ScrollBarImageColor3 = Color3.fromRGB(240, 196, 110),
 		CanvasSize = UDim2.fromScale(0, 0),
@@ -518,6 +645,8 @@ type CardNode = {
 	DamageVal: TextLabel,
 	AtkSpdVal: TextLabel,
 	AssignBtn: TextButton,
+	SellBtn: TextButton,
+	SellStroke: UIStroke?,
 	LastEquippedState: boolean?,
 	CurrentUUID: string?,
 }
@@ -628,6 +757,22 @@ local function createCard(scroll: Instance, onAssignClick: (node: CardNode) -> (
 	assignBtn.TextStrokeTransparency = 0.15
 	assignBtn:SetAttribute("Grimoire", true)
 
+	local sellBtn = new("TextButton", {
+		Name = "SellBtn",
+		Position = UDim2.fromOffset(infoX, 176),
+		Size = UDim2.new(1, -infoX - 14, 0, 38),
+		BorderSizePixel = 0,
+		Text = "SELL ARTIFACT",
+		Font = Enum.Font.GothamBold,
+		TextSize = 14,
+		TextColor3 = Color3.new(1, 1, 1),
+		BackgroundColor3 = Color3.fromRGB(50, 38, 70),
+		Visible = false,
+		ZIndex = 56,
+	}, card)
+	new("UICorner", { CornerRadius = UDim.new(0, 8) }, sellBtn)
+	local sellStroke = new("UIStroke", { Color = Color3.fromRGB(120, 90, 160), Thickness = 1.5 }, sellBtn)
+
 	local node: CardNode = {
 		Root = card,
 		Fill = fill,
@@ -644,12 +789,20 @@ local function createCard(scroll: Instance, onAssignClick: (node: CardNode) -> (
 		DamageVal = damageVal,
 		AtkSpdVal = atkSpdVal,
 		AssignBtn = assignBtn,
+		SellBtn = sellBtn,
+		SellStroke = sellStroke,
 		LastEquippedState = false,
 		CurrentUUID = nil,
 	}
 
 	assignBtn.Activated:Connect(function()
 		onAssignClick(node)
+	end)
+
+	sellBtn.Activated:Connect(function()
+		if node.CurrentUUID then
+			onAssignClick(node)
+		end
 	end)
 
 	return node
@@ -705,6 +858,39 @@ local function updateCard(node: CardNode, item: { UUID: string, Art: any }, hero
 		node.AssignBtn:SetAttribute("Grimoire", true)
 		node.LastEquippedState = isEquipped
 	end
+
+	-- Sell Mode presentation
+	if self.SellMode then
+		node.AssignBtn.Visible = false
+		node.SellBtn.Visible = true
+		local canSell = not isEquipped and not art.Locked
+		local sellPrice = ArtifactCatalog.CalculateSellPrice(art.Rarity or 1, art.Star or 1)
+		if not canSell then
+			node.SellBtn.Text = if isEquipped then "EQUIPPED" else "LOCKED"
+			node.SellBtn.BackgroundColor3 = Color3.fromRGB(30, 20, 35)
+			node.SellBtn.TextColor3 = Color3.fromRGB(140, 120, 140)
+			if node.SellStroke then node.SellStroke.Color = Color3.fromRGB(60, 45, 70) end
+			node.Root.BackgroundTransparency = 0.35
+		else
+			node.Root.BackgroundTransparency = 0
+			local isSelected = self.SelectedSellUUIDs[uuid] == true
+			if isSelected then
+				node.SellBtn.Text = string.format("✓ SELECTED (+%d G)", sellPrice)
+				node.SellBtn.BackgroundColor3 = Color3.fromRGB(160, 50, 50)
+				node.SellBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+				if node.SellStroke then node.SellStroke.Color = Color3.fromRGB(255, 200, 80) end
+			else
+				node.SellBtn.Text = string.format("SELECT (+%d G)", sellPrice)
+				node.SellBtn.BackgroundColor3 = Color3.fromRGB(45, 30, 60)
+				node.SellBtn.TextColor3 = Color3.fromRGB(255, 220, 120)
+				if node.SellStroke then node.SellStroke.Color = Color3.fromRGB(120, 90, 160) end
+			end
+		end
+	else
+		node.AssignBtn.Visible = true
+		node.SellBtn.Visible = false
+		node.Root.BackgroundTransparency = 0
+	end
 end
 
 local CHUNK_SIZE = 12
@@ -727,6 +913,20 @@ function Forge:RenderAssignView(force: boolean?)
 	for uuid, art in pairs(artifacts) do
 		table.insert(artList, { UUID = uuid, Art = art })
 	end
+
+	local artCount = #artList
+	local maxArt = StatBalance.MaxArtifactInventory or 50
+	if self.CapacityLabel then
+		self.CapacityLabel.Text = string.format("Artifacts: %d / %d", artCount, maxArt)
+		if artCount >= maxArt then
+			self.CapacityLabel.TextColor3 = Color3.fromRGB(248, 113, 113)
+			if self.CapacityStroke then self.CapacityStroke.Color = Color3.fromRGB(239, 68, 68) end
+		else
+			self.CapacityLabel.TextColor3 = C.TextLavender
+			if self.CapacityStroke then self.CapacityStroke.Color = Color3.fromRGB(80, 60, 110) end
+		end
+	end
+	self:UpdateSellValuationDisplay()
 
 	local scroll = self.AssignScroll
 	self.AssignCardPool = self.AssignCardPool or {}
@@ -793,8 +993,18 @@ function Forge:RenderAssignView(force: boolean?)
 
 	local function onAssignClick(node: CardNode)
 		if self.Busy then return end
-		if not node.CurrentUUID then return end
-		self.SelectedAssignArtifactUUID = node.CurrentUUID
+		local uuid = node.CurrentUUID
+		if not uuid then return end
+		if self.SellMode then
+			local prof = self:ResolveProfile()
+			local art = prof and prof.Artifacts and prof.Artifacts[uuid]
+			if art and not art.EquippedHeroUUID and not art.Locked then
+				self.SelectedSellUUIDs[uuid] = not self.SelectedSellUUIDs[uuid]
+				self:RenderAssignView(true)
+			end
+			return
+		end
+		self.SelectedAssignArtifactUUID = uuid
 		self:OpenDrawer("EQUIP_LOADOUT", node.CurrentUUID)
 	end
 
@@ -1053,7 +1263,7 @@ function Forge:BuildSummonView(root: Frame)
 	new("UICorner", { CornerRadius = UDim.new(1, 0) }, chip1)
 	new("UIStroke", { Color = Color3.fromHex("#EAB308"), Thickness = 1 }, chip1)
 	new("UIPadding", { PaddingLeft = UDim.new(0, 9), PaddingRight = UDim.new(0, 9) }, chip1)
-	local chip1Lbl = label(chip1, "Blade of the Rift (5★)", 11, Color3.fromHex("#FDE047"), Enum.Font.GothamBold)
+	local chip1Lbl = label(chip1, "Blade of the Rift (Tier 6)", 11, Color3.fromHex("#FDE047"), Enum.Font.GothamBold)
 	chip1Lbl.Size = UDim2.fromScale(1, 1)
 
 	local chip2 = new("Frame", {
@@ -1069,8 +1279,27 @@ function Forge:BuildSummonView(root: Frame)
 	new("UICorner", { CornerRadius = UDim.new(1, 0) }, chip2)
 	new("UIStroke", { Color = Color3.fromHex("#A855F7"), Thickness = 1 }, chip2)
 	new("UIPadding", { PaddingLeft = UDim.new(0, 9), PaddingRight = UDim.new(0, 9) }, chip2)
-	local chip2Lbl = label(chip2, "Aegis Core (5★)", 11, Color3.fromHex("#E9D5FF"), Enum.Font.GothamBold)
+	local chip2Lbl = label(chip2, "Genesis Sunderer (Tier 7)", 11, Color3.fromHex("#E9D5FF"), Enum.Font.GothamBold)
 	chip2Lbl.Size = UDim2.fromScale(1, 1)
+
+	local viewArtBtn = new("TextButton", {
+		Name = "ViewArtifactsBtn",
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, 0, 0.5, 0),
+		Size = UDim2.fromOffset(145, 34),
+		BackgroundColor3 = Color3.fromRGB(28, 20, 42),
+		Text = "VIEW ARTIFACTS",
+		Font = Enum.Font.GothamBlack,
+		TextSize = 13,
+		TextColor3 = C.GoldYellow,
+		BorderSizePixel = 0,
+		ZIndex = 58,
+	}, bannerBottom)
+	new("UICorner", { CornerRadius = UDim.new(0, 8) }, viewArtBtn)
+	new("UIStroke", { Color = C.GoldYellow, Thickness = 1.5 }, viewArtBtn)
+	viewArtBtn.Activated:Connect(function()
+		self:OpenArtifactsModal()
+	end)
 
 	-- 2. Info Row (Guaranteed Pity & Timer)
 	local infoRow = new("Frame", {
@@ -1081,7 +1310,7 @@ function Forge:BuildSummonView(root: Frame)
 		ZIndex = 53,
 	}, summonView)
 
-	local pityLabel = label(infoRow, "Guaranteed 5-Star in: <b>42</b> summons", 13, Color3.fromHex("#A396BA"), Enum.Font.GothamMedium)
+	local pityLabel = label(infoRow, "Guaranteed Exalted+ in: <b>120</b> summons", 13, Color3.fromHex("#A396BA"), Enum.Font.GothamMedium)
 	pityLabel.Position = UDim2.fromOffset(2, 0)
 	pityLabel.Size = UDim2.new(0.5, 0, 1, 0)
 	pityLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -1108,7 +1337,7 @@ function Forge:BuildSummonView(root: Frame)
 	local pityFill = new("Frame", {
 		Name = "PityBarFill",
 		Position = UDim2.fromOffset(0, 0),
-		Size = UDim2.new(0.66, 0, 1, 0),
+		Size = UDim2.new(0.02, 0, 1, 0),
 		BackgroundColor3 = Color3.fromHex("#C084FC"),
 		BorderSizePixel = 0,
 		ZIndex = 54,
@@ -1132,11 +1361,12 @@ function Forge:BuildSummonView(root: Frame)
 		ZIndex = 53,
 	}, summonView)
 
-	-- SUMMON 1X / 10X: the shared Gilded Grimoire summon button (same as the hero banners).
+	-- SUMMON 1X / 10X: Gold currency gacha buttons (5,000 Gold / 45,000 Gold)
 	local btn1X = GrimoireSummonButton.new(btnRow, {
 		Name = "Summon1XBtn",
 		Title = "SUMMON 1X",
-		Cost = 160,
+		Cost = 5000,
+		Icon = "Gold",
 		Position = UDim2.fromScale(0, 0),
 		Size = UDim2.new(0.485, 0, 1, 0),
 		ZIndex = 54,
@@ -1150,7 +1380,8 @@ function Forge:BuildSummonView(root: Frame)
 	local btn10X = GrimoireSummonButton.new(btnRow, {
 		Name = "Summon10XBtn",
 		Title = "SUMMON 10X",
-		Cost = 1600,
+		Cost = 45000,
+		Icon = "Gold",
 		AnchorPoint = Vector2.new(1, 0),
 		Position = UDim2.new(1, 0, 0, 0),
 		Size = UDim2.new(0.485, 0, 1, 0),
@@ -1165,12 +1396,13 @@ end
 
 function Forge:RenderSummonView()
 	local profile = self:ResolveProfile()
-	local pity = profile and profile.ArtifactBannerPity or 8
-	local remaining = math.max(1, 50 - (pity % 50))
-	local progress = math.clamp((50 - remaining) / 50, 0.05, 1)
+	local pity = profile and profile.ArtifactBannerPity or 0
+	local maxPity = ArtifactCatalog.Banner.MaxPity or 120
+	local remaining = math.max(1, maxPity - (pity % maxPity))
+	local progress = math.clamp((maxPity - remaining) / maxPity, 0.02, 1)
 
 	if self.PityLabel then
-		self.PityLabel.Text = string.format("Guaranteed 5-Star in: <b>%d</b> summons", remaining)
+		self.PityLabel.Text = string.format("Guaranteed Exalted+ in: <b>%d</b> summons", remaining)
 	end
 	if self.PityFill then
 		self.PityFill.Size = UDim2.new(progress, 0, 1, 0)
@@ -1180,13 +1412,14 @@ end
 function Forge:PerformSummon(count: number)
 	if self.Busy then return end
 	local profile = self:ResolveProfile()
-	local cost = (count == 10) and 1600 or 160
+	local cfg = ArtifactCatalog.Banner
+	local cost = (count == 10) and cfg.Cost10X or cfg.Cost1X
 
 	local deny = function()
 		local row = self.Summon1XBtn and self.Summon1XBtn.Parent
 		UIFeel.Deny(if row and row:IsA("GuiObject") then row else nil)
 	end
-	if not profile or not profile.Currencies or (profile.Currencies.Gems or 0) < cost then
+	if not profile or not profile.Currencies or (profile.Currencies.Gold or 0) < cost then
 		deny()
 		if self.PityLabel then
 			UIFeel.Pop(self.PityLabel, 0.12)
@@ -1206,7 +1439,7 @@ function Forge:PerformSummon(count: number)
 		self.Busy = false
 		if ok and success and summonedList and #summonedList > 0 then
 			if pityRemaining and self.PityLabel then
-				self.PityLabel.Text = string.format("Guaranteed 5-Star in: <b>%d</b> summons", pityRemaining)
+				self.PityLabel.Text = string.format("Guaranteed Exalted+ in: <b>%d</b> summons", pityRemaining)
 			end
 			self:ShowSummonResults(summonedList, ownedBefore)
 		else
@@ -1234,8 +1467,8 @@ function Forge:ShowSummonResults(summonedList: { any }, ownedBefore: { [string]:
 			seen[id] = true
 			return true
 		end,
-		Cost1 = 160,
-		Cost10 = 1600,
+		Cost1 = ArtifactCatalog.Banner.Cost1X,
+		Cost10 = ArtifactCatalog.Banner.Cost10X,
 		OnAgain = function(count: number)
 			self:PerformSummon(count)
 		end,
@@ -2270,6 +2503,372 @@ function Forge:Refresh()
 	end
 	if self.PickerMode ~= "NONE" then
 		self:OpenDrawer(self.PickerMode)
+	end
+end
+
+
+--============================================================================
+-- SECTION 4: SELLING ARTIFACTS & "VIEW ARTIFACTS" MODAL
+--============================================================================
+
+function Forge:ToggleSellMode(enable: boolean?)
+	self.SellMode = if enable ~= nil then enable else not self.SellMode
+	self.SelectedSellUUIDs = {}
+	if self.SellControls then self.SellControls.Visible = self.SellMode end
+	if self.SellToggleBtn then self.SellToggleBtn.Visible = not self.SellMode end
+	self:RenderAssignView(true)
+end
+
+function Forge:UpdateSellValuationDisplay()
+	if not self.SellValuationLabel then return end
+	local profile = self:ResolveProfile()
+	local artifacts = profile and profile.Artifacts or {}
+	local totalVal = 0
+	local count = 0
+	for uuid, sel in pairs(self.SelectedSellUUIDs) do
+		if sel and artifacts[uuid] then
+			local art = artifacts[uuid]
+			totalVal += ArtifactCatalog.CalculateSellPrice(art.Rarity or 1, art.Star or 1)
+			count += 1
+		end
+	end
+	self.SellValuationLabel.Text = string.format("Selected: %d  |  Value: %s Gold", count, tostring(totalVal))
+end
+
+function Forge:SelectAllUnequippedForSell()
+	local profile = self:ResolveProfile()
+	local artifacts = profile and profile.Artifacts or {}
+	for uuid, art in pairs(artifacts) do
+		if not art.EquippedHeroUUID and not art.Locked then
+			self.SelectedSellUUIDs[uuid] = true
+		end
+	end
+	self:RenderAssignView(true)
+end
+
+function Forge:ConfirmSellArtifacts()
+	if self.Busy then return end
+	local uuids = {}
+	for uuid, sel in pairs(self.SelectedSellUUIDs) do
+		if sel then table.insert(uuids, uuid) end
+	end
+	if #uuids == 0 then return end
+	self.Busy = true
+	task.spawn(function()
+		local ok, success, _msg = pcall(function()
+			return self.RequestSell:InvokeServer(uuids)
+		end)
+		self.Busy = false
+		if ok and success then
+			self.SelectedSellUUIDs = {}
+			self.SellMode = false
+			if self.SellControls then self.SellControls.Visible = false end
+			if self.SellToggleBtn then self.SellToggleBtn.Visible = true end
+		end
+		self:Refresh()
+	end)
+end
+
+local ARCHETYPE_FILTER_KEYS = {
+	{ Key = "ALL", Title = "ALL (84)" },
+	{ Key = "SWORD_SHIELD", Title = "VANGUARD (14)" },
+	{ Key = "DAGGERS", Title = "STRIKER (14)" },
+	{ Key = "BOW", Title = "MARKSMAN (14)" },
+	{ Key = "AXE", Title = "MINER (14)" },
+	{ Key = "STAFF", Title = "SCHOLAR (14)" },
+	{ Key = "TOME", Title = "HEALER (14)" },
+}
+
+function Forge:BuildArtifactsModal(gui: ScreenGui)
+	local scrim = new("TextButton", {
+		Name = "ArtifactsCatalogScrim",
+		Text = "",
+		AutoButtonColor = false,
+		BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+		BackgroundTransparency = 0.45,
+		Size = UDim2.fromScale(1, 1),
+		Visible = false,
+		ZIndex = 65,
+	}, gui)
+
+	local win = new("Frame", {
+		Name = "ArtifactsCatalogWindow",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromOffset(840, 540),
+		BackgroundColor3 = C.Panel,
+		BorderSizePixel = 0,
+		ZIndex = 66,
+	}, scrim)
+	GildedGrimoire.Frame(win, { Class = "Window", Tone = "Deep", ZIndex = 66 })
+
+	-- Header
+	local headerIcon = GrimoireIcons.Create("Forge", 36, win, 68)
+	headerIcon.Position = UDim2.fromOffset(18, 12)
+
+	local headerTitle = label(win, "ARTIFACT BANNER CATALOG & LIVE ODDS", 20, Color3.new(1, 1, 1), Enum.Font.GothamBlack)
+	headerTitle.Position = UDim2.fromOffset(62, 16)
+	headerTitle.Size = UDim2.fromOffset(450, 26)
+	headerTitle.TextXAlignment = Enum.TextXAlignment.Left
+	headerTitle.ZIndex = 68
+
+	local closeBtn = new("TextButton", {
+		Name = "CloseBtn",
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -16, 0, 12),
+		Size = UDim2.fromOffset(34, 34),
+		Text = "✕",
+		Font = Enum.Font.GothamBold,
+		TextSize = 18,
+		TextColor3 = C.TextMuted,
+		BackgroundColor3 = Color3.fromRGB(28, 20, 36),
+		BorderSizePixel = 0,
+		ZIndex = 68,
+	}, win)
+	new("UICorner", { CornerRadius = UDim.new(0, 8) }, closeBtn)
+	closeBtn.Activated:Connect(function()
+		self:CloseArtifactsModal()
+	end)
+
+	-- Rates Banner Box
+	local ratesBox = new("Frame", {
+		Name = "RatesBox",
+		Position = UDim2.fromOffset(18, 56),
+		Size = UDim2.new(1, -36, 0, 68),
+		BackgroundColor3 = Color3.fromRGB(22, 16, 32),
+		BorderSizePixel = 0,
+		ZIndex = 67,
+	}, win)
+	new("UICorner", { CornerRadius = UDim.new(0, 8) }, ratesBox)
+	new("UIStroke", { Color = Color3.fromRGB(80, 55, 110), Thickness = 1.2 }, ratesBox)
+
+	local ratesRow = new("Frame", {
+		Name = "RatesRow",
+		Position = UDim2.fromOffset(12, 8),
+		Size = UDim2.new(1, -24, 0, 24),
+		BackgroundTransparency = 1,
+		ZIndex = 68,
+	}, ratesBox)
+	local ratesLayout = new("UIListLayout", {
+		FillDirection = Enum.FillDirection.Horizontal,
+		HorizontalAlignment = Enum.HorizontalAlignment.Left,
+		VerticalAlignment = Enum.VerticalAlignment.Center,
+		Padding = UDim.new(0, 8),
+	}, ratesRow)
+	self.ModalRatesRow = ratesRow
+
+	local rulesLabel = label(ratesBox, "• 120-Pull Hard Pity: Guaranteed Exalted (Tier 5) or higher   • 60% Standard / 40% Enhanced (+20% Power, +Spd)   • All 1★ Baseline", 12, C.TextLavender, Enum.Font.GothamMedium)
+	rulesLabel.Position = UDim2.fromOffset(12, 38)
+	rulesLabel.Size = UDim2.new(1, -24, 0, 22)
+	rulesLabel.TextXAlignment = Enum.TextXAlignment.Left
+	rulesLabel.ZIndex = 68
+	self.ModalRulesLabel = rulesLabel
+
+	-- Filter Tabs Row
+	local tabsRow = new("Frame", {
+		Name = "TabsRow",
+		Position = UDim2.fromOffset(18, 132),
+		Size = UDim2.new(1, -36, 0, 32),
+		BackgroundTransparency = 1,
+		ZIndex = 67,
+	}, win)
+	local tabsLayout = new("UIListLayout", {
+		FillDirection = Enum.FillDirection.Horizontal,
+		HorizontalAlignment = Enum.HorizontalAlignment.Left,
+		Padding = UDim.new(0, 6),
+	}, tabsRow)
+
+	self.ModalTabBtns = {}
+	for _, entry in ipairs(ARCHETYPE_FILTER_KEYS) do
+		local tabBtn = new("TextButton", {
+			Name = "Tab_" .. entry.Key,
+			Size = UDim2.fromOffset(108, 30),
+			Text = entry.Title,
+			Font = Enum.Font.GothamBold,
+			TextSize = 11,
+			TextColor3 = if entry.Key == "ALL" then C.GoldYellow else C.TextMuted,
+			BackgroundColor3 = if entry.Key == "ALL" then Color3.fromRGB(45, 30, 65) else Color3.fromRGB(24, 18, 32),
+			BorderSizePixel = 0,
+			ZIndex = 68,
+		}, tabsRow)
+		new("UICorner", { CornerRadius = UDim.new(0, 6) }, tabBtn)
+		local stroke = new("UIStroke", {
+			Color = if entry.Key == "ALL" then C.GoldYellow else Color3.fromRGB(60, 45, 80),
+			Thickness = 1,
+		}, tabBtn)
+		tabBtn.Activated:Connect(function()
+			self.ArtifactsModalFilter = entry.Key
+			for k, b in pairs(self.ModalTabBtns) do
+				local active = (k == entry.Key)
+				b.TextColor3 = if active then C.GoldYellow else C.TextMuted
+				b.BackgroundColor3 = if active then Color3.fromRGB(45, 30, 65) else Color3.fromRGB(24, 18, 32)
+				local str = b:FindFirstChildOfClass("UIStroke")
+				if str then str.Color = if active then C.GoldYellow else Color3.fromRGB(60, 45, 80) end
+			end
+			self:RenderArtifactsCatalog(entry.Key)
+		end)
+		self.ModalTabBtns[entry.Key] = tabBtn
+	end
+
+	-- Catalog Scroll Grid
+	local scroll = new("ScrollingFrame", {
+		Name = "CatalogScroll",
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		Position = UDim2.fromOffset(18, 172),
+		Size = UDim2.new(1, -36, 1, -186),
+		ScrollBarThickness = 6,
+		ScrollBarImageColor3 = Color3.fromRGB(240, 196, 110),
+		CanvasSize = UDim2.fromScale(0, 0),
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		ZIndex = 67,
+	}, win)
+	self.ModalCatalogScroll = scroll
+
+	local grid = new("UIGridLayout", {
+		SortOrder = Enum.SortOrder.LayoutOrder,
+		CellSize = UDim2.new(0.5, -6, 0, 118),
+		CellPadding = UDim2.fromOffset(12, 10),
+		HorizontalAlignment = Enum.HorizontalAlignment.Center,
+	}, scroll)
+	new("UIPadding", {
+		PaddingTop = UDim.new(0, 4),
+		PaddingBottom = UDim.new(0, 16),
+		PaddingLeft = UDim.new(0, 2),
+		PaddingRight = UDim.new(0, 6),
+	}, scroll)
+
+	scrim.Activated:Connect(function()
+		self:CloseArtifactsModal()
+	end)
+
+	self.ArtifactsModal = scrim
+end
+
+function Forge:OpenArtifactsModal()
+	if not self.ArtifactsModal then return end
+	self.ArtifactsModal.Visible = true
+	self:RenderArtifactsRates()
+	self:RenderArtifactsCatalog(self.ArtifactsModalFilter or "ALL")
+end
+
+function Forge:CloseArtifactsModal()
+	if self.ArtifactsModal then
+		self.ArtifactsModal.Visible = false
+	end
+end
+
+function Forge:RenderArtifactsRates()
+	if not self.ModalRatesRow then return end
+	for _, child in ipairs(self.ModalRatesRow:GetChildren()) do
+		if child:IsA("GuiObject") then child:Destroy() end
+	end
+
+	local profile = self:ResolveProfile()
+	local luck = SummonLuck.ForProfile(profile)
+	local cfg = ArtifactCatalog.Banner
+	local boosted = SummonLuck.ApplyLuck(cfg.BaseRarityRates, luck)
+
+	for tier = 1, 7 do
+		local rInfo = ArtifactCatalog.GetRarityInfo(tier)
+		local pct = boosted[tier] * 100
+		local pill = new("Frame", {
+			Name = "RatePill_" .. tier,
+			BackgroundColor3 = Color3.fromRGB(16, 12, 24),
+			BorderSizePixel = 0,
+			AutomaticSize = Enum.AutomaticSize.X,
+			Size = UDim2.fromOffset(0, 22),
+			ZIndex = 69,
+		}, self.ModalRatesRow)
+		new("UICorner", { CornerRadius = UDim.new(0, 5) }, pill)
+		new("UIStroke", { Color = rInfo.Color, Thickness = 1.2 }, pill)
+		new("UIPadding", { PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6) }, pill)
+
+		local tLbl = label(pill, string.format("%s: %.1f%%", rInfo.Name, pct), 11, rInfo.Color, Enum.Font.GothamBold)
+		tLbl.Size = UDim2.fromScale(1, 1)
+		tLbl.ZIndex = 70
+	end
+
+	if luck > 0 and self.ModalRulesLabel then
+		self.ModalRulesLabel.Text = string.format("• God's Blessing Luck Active: +%.1f%% upper tiers   • 120 Pity: Guaranteed Exalted+   • 60%% Standard / 40%% Enhanced", luck * 100)
+	end
+end
+
+function Forge:RenderArtifactsCatalog(filter: string)
+	local scroll = self.ModalCatalogScroll
+	if not scroll then return end
+	for _, child in ipairs(scroll:GetChildren()) do
+		if child:IsA("Frame") and child.Name:sub(1, 8) == "CardMod_" then
+			child:Destroy()
+		end
+	end
+
+	local order = ArtifactCatalog.CatalogOrder or {}
+	local count = 0
+
+	for i, templateId in ipairs(order) do
+		local seed = ArtifactCatalog.Seeds[templateId]
+		if seed and (filter == "ALL" or seed.Type == filter) then
+			count += 1
+			local tier = seed.RarityTier or 1
+			local rInfo = ArtifactCatalog.GetRarityInfo(tier)
+			local rColor = rInfo.Color
+			local stats = ArtifactCatalog.GetStatBreakdown(templateId, 1, tier)
+
+			local card = new("Frame", {
+				Name = "CardMod_" .. templateId,
+				LayoutOrder = count,
+				BackgroundColor3 = Color3.fromRGB(18, 14, 26),
+				BorderSizePixel = 0,
+				ZIndex = 68,
+			}, scroll)
+			new("UICorner", { CornerRadius = UDim.new(0, 8) }, card)
+			new("UIStroke", { Color = rColor, Thickness = 1.5 }, card)
+
+			-- Left icon box
+			local iconBox = new("Frame", {
+				Position = UDim2.fromOffset(8, 8),
+				Size = UDim2.fromOffset(48, 48),
+				BackgroundColor3 = Color3.fromRGB(12, 8, 18),
+				BorderSizePixel = 0,
+				ZIndex = 69,
+			}, card)
+			new("UICorner", { CornerRadius = UDim.new(0, 6) }, iconBox)
+			local iconLbl = label(iconBox, ICON_MAP[seed.Type] or "⚔️", 28, C.Text)
+			iconLbl.Size = UDim2.fromScale(1, 1)
+			iconLbl.ZIndex = 70
+			showArtifact(iconLbl, templateId)
+
+			-- Name & Variant
+			local nameLbl = label(card, seed.DisplayName, 13, C.Text, Enum.Font.GothamBlack)
+			nameLbl.Position = UDim2.fromOffset(64, 8)
+			nameLbl.Size = UDim2.new(1, -72, 0, 18)
+			nameLbl.TextXAlignment = Enum.TextXAlignment.Left
+			nameLbl.ZIndex = 69
+
+			-- Rarity & Variant tag
+			local variantTag = label(card, string.format("%s · %s", rInfo.Name, seed.Variant or "Standard"), 11, rColor, Enum.Font.GothamBold)
+			variantTag.Position = UDim2.fromOffset(64, 26)
+			variantTag.Size = UDim2.new(1, -72, 0, 16)
+			variantTag.TextXAlignment = Enum.TextXAlignment.Left
+			variantTag.ZIndex = 69
+
+			-- Stats row
+			local statsLbl = label(card, string.format("Power: <b>%.0f</b>  |  Dmg: <b>x%.2f</b>  |  Spd: <b>+%.1f%%</b>", stats.Power, stats.DamageMultiplier, stats["Attack Speed"]), 11, C.GoldYellow, Enum.Font.GothamMedium)
+			statsLbl.Position = UDim2.fromOffset(64, 44)
+			statsLbl.Size = UDim2.new(1, -72, 0, 16)
+			statsLbl.TextXAlignment = Enum.TextXAlignment.Left
+			statsLbl.ZIndex = 69
+
+			-- Concept Lore
+			local loreLbl = label(card, seed.Description or "A legendary weapon forged in the crucible.", 10, C.TextMuted, Enum.Font.Gotham)
+			loreLbl.Position = UDim2.fromOffset(8, 64)
+			loreLbl.Size = UDim2.new(1, -16, 0, 48)
+			loreLbl.TextXAlignment = Enum.TextXAlignment.Left
+			loreLbl.TextYAlignment = Enum.TextYAlignment.Top
+			loreLbl.TextWrapped = true
+			loreLbl.ZIndex = 69
+		end
 	end
 end
 

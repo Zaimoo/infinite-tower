@@ -198,14 +198,6 @@ test("Relic economy: gem income sits near 2,900 / 6,800 / 12,700 per hour on Alp
 	end
 end)
 
-test("Phase 6 M4: Biome Boss first-clear artifacts are Rare or better and capped at Mythical", function()
-	local expected = { 3, 3, 4, 4, 5, 5, 6, 6, 7, 7 }
-	for tier = 1, 10 do
-		assert(TowerProgress.BossArtifactRarity(tier) == expected[tier], "tier " .. tier)
-	end
-	assert(TowerProgress.BossArtifactRarity(50) == 7)
-end)
-
 local TowerRun = require(nodes["ReplicatedStorage.Shared.Util.TowerRun"])
 
 test("Phase 6 M5: the climb streak grows on consecutive clears, restarts on a gap and ignores repeats", function()

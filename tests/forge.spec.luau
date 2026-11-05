@@ -1,13 +1,21 @@
 --!strict
 -- tests/forge.spec.luau
 -- Authoritative unit and regression tests for Blacksmith Forge System:
---   1. Crafting recipes, materials & class restrictions
---   2. Stat scaling: Level +4 (120 ATK) -> Level +5 (155 ATK) parity
---   3. Fodder requirements (1 to 5 progression)
---   4. Max level cap enforcement
+--   1. 84-Weapon Catalog (6 archetypes x 7 rarity tiers x 2 variants)
+--   2. Gold Gacha Summon Banner & 120-pull Hard Pity (Exalted+)
+--   3. God's Blessing luck integration across 7 tiers
+--   4. Baseline 50 inventory limits for Heroes & Artifacts
+--   5. Artifact selling valuation formula
+--   6. Universal 1★ summoned baseline and star promotion
+--   7. Combat stat snapshots and high-tier scaling
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ArtifactCatalog = require(ReplicatedStorage.Shared.Config.ArtifactCatalog)
+local Balance = require(ReplicatedStorage.Shared.Config.StatBalance)
+local SummonLuck = require(ReplicatedStorage.Shared.Util.SummonLuck)
+local Promotion = require(ReplicatedStorage.Shared.Util.WeaponPromotion)
+local Stats = require(ReplicatedStorage.Shared.Util.StatFormulas)
+local Heroes = require(ReplicatedStorage.Shared.Config.HeroCatalog)
 
 local function test(name: string, fn: () -> ())
 	local ok, err = pcall(fn)
@@ -25,36 +33,50 @@ local function assertEqual(a: any, b: any, msg: string?)
 	end
 end
 
--- 1. Recipe catalog checks
-test("Featured mock recipes exist with exact costs and properties", function()
-	local blade = ArtifactCatalog.Seeds.art_blade_of_the_rift
-	assert(blade ~= nil, "Blade of the Rift missing")
-	assertEqual(blade.DisplayName, "Blade of the Rift")
-	assertEqual(blade.Type, "SWORD_SHIELD")
-	assertEqual(blade.CraftCost.IronGear, 5)
-	assertEqual(blade.CraftCost.RiftOrb, 3)
+-- 1. 84-Weapon Matrix Catalog Verification
+test("84 master catalog weapons exist across 6 archetypes and 7 rarity tiers", function()
+	local countsByType: { [string]: number } = {}
+	local countsByTier: { [number]: number } = {}
+	local totalSeeds = 0
 
-	local aegis = ArtifactCatalog.Seeds.art_aegis_core
-	assert(aegis ~= nil, "Aegis Core missing")
-	assertEqual(aegis.DisplayName, "Aegis Core")
-	assertEqual(aegis.Type, "SWORD_SHIELD")
-	assertEqual(aegis.CraftCost.IronGear, 8)
-	assertEqual(aegis.CraftCost.AegisGem, 2)
+	for id, seed in pairs(ArtifactCatalog.Seeds) do
+		totalSeeds += 1
+		countsByType[seed.Type] = (countsByType[seed.Type] or 0) + 1
+		local tier = seed.RarityTier or 1
+		countsByTier[tier] = (countsByTier[tier] or 0) + 1
 
-	assert(ArtifactCatalog.Seeds.art_ring_of_haste == nil, "Rings are removed")
-end)
+		assert(seed.DisplayName and #seed.DisplayName > 0, id .. " missing DisplayName")
+		assert(seed.Description and #seed.Description > 0, id .. " missing Description")
+		assert(seed.DefaultStar == 1, id .. " DefaultStar must be 1 (1★ universal baseline)")
+		assert(seed.Variant == "Standard" or seed.Variant == "Enhanced", id .. " invalid variant")
+		assert(seed.RarityTier >= 1 and seed.RarityTier <= 7, id .. " invalid RarityTier")
+	end
 
--- 2. Crafting materials metadata
-test("Crafting materials define icon and color metadata", function()
-	for _, matKey in { "IronGear", "RiftOrb", "AegisGem", "StarDust", "VoidPowder" } do
-		local info = ArtifactCatalog.CraftingMaterials[matKey]
-		assert(info ~= nil, "Missing crafting material: " .. matKey)
-		assert(info.Name ~= nil and #info.Name > 0, "Missing material name")
-		assert(info.Icon ~= nil and #info.Icon > 0, "Missing material icon")
+	assertEqual(totalSeeds, 84, "Master catalog must have exactly 84 weapons")
+	for _role, weaponType in pairs(ArtifactCatalog.ArchetypeWeaponType) do
+		assertEqual(countsByType[weaponType], 14, string.format("Weapon type %s must have exactly 14 weapons (2 per tier)", weaponType))
+	end
+	for tier = 1, 7 do
+		assertEqual(countsByTier[tier], 12, string.format("Rarity Tier %d must have exactly 12 weapons (6 archetypes x 2 variants)", tier))
 	end
 end)
 
--- 3. Class Restrictions
+test("Every (tier, archetype) pair has exactly 1 Standard and 1 Enhanced variant", function()
+	for tier = 1, 7 do
+		for _, weaponType in ipairs(ArtifactCatalog.ArchetypeTypes) do
+			local std, enh = ArtifactCatalog.GetTierPair(tier, weaponType)
+			assert(std ~= nil, string.format("Missing Standard variant for tier %d, type %s", tier, weaponType))
+			assert(enh ~= nil, string.format("Missing Enhanced variant for tier %d, type %s", tier, weaponType))
+			assertEqual(std.Variant, "Standard")
+			assertEqual(enh.Variant, "Enhanced")
+			assertEqual(std.StatMultiplier, 1.0, "Standard variant has 1.0x power multiplier")
+			assertEqual(enh.StatMultiplier, 1.20, "Enhanced variant has 1.20x power multiplier")
+			assert(enh.SpeedBonusAdditive > 0, "Enhanced variant has positive additive attack speed bonus")
+		end
+	end
+end)
+
+-- 2. Class Restrictions
 test("Each archetype equips exactly one weapon type", function()
 	local expected = {
 		Vanguard = "SWORD_SHIELD",
@@ -65,8 +87,8 @@ test("Each archetype equips exactly one weapon type", function()
 		Healer = "TOME",
 	}
 	local weaponTypes = { "SWORD_SHIELD", "DAGGERS", "BOW", "AXE", "STAFF", "TOME" }
-	for role, allowedType in expected do
-		for _, weaponType in weaponTypes do
+	for role, allowedType in pairs(expected) do
+		for _, weaponType in ipairs(weaponTypes) do
 			assertEqual(ArtifactCatalog.CanHeroEquip(role, weaponType :: any), weaponType == allowedType, role .. " / " .. weaponType)
 		end
 		assert(not ArtifactCatalog.CanHeroEquip(role, "RING" :: any), role .. " cannot equip RING")
@@ -75,165 +97,237 @@ test("Each archetype equips exactly one weapon type", function()
 	end
 end)
 
-test("Every catalog and banner artifact belongs to a live weapon type", function()
-	local live = {}
-	for _, weaponType in ArtifactCatalog.ArchetypeWeaponType do
-		live[weaponType] = true
-	end
-	for id, seed in ArtifactCatalog.Seeds do
-		assert(live[seed.Type], id .. " has orphan type " .. seed.Type)
-	end
-	local banner = ArtifactCatalog.Banner
-	for _, pool in { banner.Featured5Stars, banner.Pool4Stars, banner.Pool3Stars, banner.Pool12Stars } do
-		for _, id in pool do
-			assert(ArtifactCatalog.Seeds[id] ~= nil, "Banner references missing seed " .. id)
-		end
-	end
-	for _, id in ArtifactCatalog.CraftingRecipeOrder do
-		assert(ArtifactCatalog.Seeds[id] ~= nil, "Recipe order references missing seed " .. id)
+test("All 84 weapons appear in CatalogOrder", function()
+	assertEqual(#ArtifactCatalog.CatalogOrder, 84, "CatalogOrder must contain all 84 items")
+	local seen = {}
+	for _, id in ipairs(ArtifactCatalog.CatalogOrder) do
+		assert(ArtifactCatalog.Seeds[id] ~= nil, "CatalogOrder references unknown seed: " .. tostring(id))
+		assert(not seen[id], "Duplicate id in CatalogOrder: " .. tostring(id))
+		seen[id] = true
 	end
 end)
 
-test("All 42 master catalog weapons across 6 archetypes are registered with valid metadata", function()
-	local countsByType: { [string]: number } = {}
-	local totalSeeds = 0
-	for id, seed in ArtifactCatalog.Seeds do
-		totalSeeds += 1
-		countsByType[seed.Type] = (countsByType[seed.Type] or 0) + 1
-		assert(seed.DisplayName and #seed.DisplayName > 0, id .. " missing DisplayName")
-		assert(seed.Description and #seed.Description > 0, id .. " missing Description")
-		assert(seed.DefaultStar >= 1 and seed.DefaultStar <= 7, id .. " invalid DefaultStar")
-		assert(seed.ModelAssetId and #seed.ModelAssetId > 0, id .. " missing ModelAssetId")
-	end
-	assertEqual(totalSeeds, 42, "Master catalog must have exactly 42 weapons")
-	for _role, weaponType in ArtifactCatalog.ArchetypeWeaponType do
-		assertEqual(countsByType[weaponType], 7, string.format("Weapon type %s must have exactly 7 weapons", weaponType))
-	end
-end)
-
--- Star progression replaces enhancement; named templates cannot bypass the formula.
-test("Mythical power and speed are inherent and ignore enhancement fields",function()
- for _,id in {"art_blade_of_the_rift","art_iron_broadsword","art_crystal_greatbow"} do
-  local p,speed=ArtifactCatalog.CalculateEffectiveStats(7,7,0,id)
-  assertEqual(p,112000);assertEqual(speed,.30)
-  local legacy=ArtifactCatalog.CalculateEffectiveStats(7,7,999,id)
-  assertEqual(legacy,p)
- end
- assertEqual(ArtifactCatalog.MaxStars,7)
- assertEqual(ArtifactCatalog.GetFodderRequirement(6),6)
- assertEqual(ArtifactCatalog.GetFodderRequirement(7),0)
-end)
-
--- 7. Artifact Banner configuration & pity math
-test("Artifact banner Echoes of the Rift matches mockup pricing and pity", function()
+-- 3. Gold Gacha Summon Banner & 120-pull Hard Pity (Exalted+)
+test("Artifact banner operates with Gold currency and 120-pull Exalted+ hard pity", function()
 	local banner = ArtifactCatalog.Banner
 	assert(banner ~= nil, "ArtifactCatalog.Banner missing")
-	assertEqual(banner.Title, "ECHOES OF THE RIFT")
-	assertEqual(banner.Cost1X, 160, "1X summon costs 160 gems")
-	assertEqual(banner.Cost10X, 1600, "10X summon costs 1600 gems")
-	assertEqual(banner.MaxPity, 50, "Pity threshold is 50 pulls")
-	assertEqual(ArtifactCatalog.GetPityRemaining(8), 42, "Mockup parity: initial pity is 42 remaining")
-	assertEqual(ArtifactCatalog.GetPityRemaining(49), 1, "49 pulls gives 1 remaining to guaranteed 5-star")
-	assertEqual(ArtifactCatalog.GetPityRemaining(50), 50, "50 pulls resets to 50 remaining")
+	assertEqual(banner.Currency, "Gold", "Banner currency is Gold")
+	assertEqual(banner.Cost1X, 5000, "1X summon costs 5,000 Gold")
+	assertEqual(banner.Cost10X, 45000, "10X summon costs 45,000 Gold (10% discount)")
+	assertEqual(banner.MaxPity, 120, "Hard pity is 120 summons")
+	assertEqual(banner.PityRarityTier, 5, "Hard pity guarantees Exalted (Tier 5) or higher")
+
+	-- Pity math calculations
+	assertEqual(ArtifactCatalog.GetPityRemaining(0), 120, "0 pity means 120 remaining")
+	assertEqual(ArtifactCatalog.GetPityRemaining(50), 70, "50 pulls gives 70 remaining")
+	assertEqual(ArtifactCatalog.GetPityRemaining(119), 1, "119 pulls gives 1 remaining to guaranteed Exalted+")
+	assertEqual(ArtifactCatalog.GetPityRemaining(120), 120, "120 pulls resets to 120 remaining")
 end)
 
-local Promotion=require(ReplicatedStorage.Shared.Util.WeaponPromotion)
-local Stats=require(ReplicatedStorage.Shared.Util.StatFormulas)
-local Heroes=require(ReplicatedStorage.Shared.Config.HeroCatalog)
-local Balance=require(ReplicatedStorage.Shared.Config.StatBalance)
+test("Banner base rarity rates sum to 1.0 and God's Blessing luck scales upper tiers", function()
+	local rates = ArtifactCatalog.Banner.BaseRarityRates
+	assertEqual(#rates, 7, "Base rates define 7 rarity tiers")
+	local sum = 0
+	for _, r in ipairs(rates) do sum += r end
+	assert(math.abs(sum - 1.0) < 1e-6, "Base rarity rates must sum to 1.0")
+
+	-- God's Blessing Luck check
+	local boosted = SummonLuck.ApplyLuck(rates, 0.25)
+	local boostedSum = 0
+	for _, r in ipairs(boosted) do boostedSum += r end
+	assert(math.abs(boostedSum - 1.0) < 1e-6, "Boosted rarity rates must sum to 1.0")
+	assert(boosted[1] < rates[1], "Common tier absorbs the luck bonus")
+	for tier = 2, 7 do
+		assertEqual(boosted[tier], rates[tier] * 1.25, "Tiers 2-7 receive exact (1 + luck) scaling")
+	end
+end)
+
+-- 4. Baseline 50 Inventory Capacity Limits
+test("Baseline inventory capacity for Heroes and Artifacts is 50", function()
+	assertEqual(Balance.MaxHeroInventory, 50, "MaxHeroInventory must be 50")
+	assertEqual(Balance.MaxArtifactInventory, 50, "MaxArtifactInventory must be 50")
+end)
+
+-- 5. Artifact Selling Valuation
+test("Artifact sell price calculates accurately across all 7 tiers and star levels", function()
+	-- Common (Tier 1): Base 1,000 Gold
+	assertEqual(ArtifactCatalog.CalculateSellPrice(1, 1), 1000)
+	assertEqual(ArtifactCatalog.CalculateSellPrice(1, 2), 1500)
+	assertEqual(ArtifactCatalog.CalculateSellPrice(1, 3), 2000)
+
+	-- Uncommon (Tier 2): Base 2,500 Gold
+	assertEqual(ArtifactCatalog.CalculateSellPrice(2, 1), 2500)
+
+	-- Rare (Tier 3): Base 6,000 Gold
+	assertEqual(ArtifactCatalog.CalculateSellPrice(3, 1), 6000)
+	assertEqual(ArtifactCatalog.CalculateSellPrice(3, 3), 12000)
+
+	-- Superior (Tier 4): Base 15,000 Gold
+	assertEqual(ArtifactCatalog.CalculateSellPrice(4, 1), 15000)
+
+	-- Exalted (Tier 5): Base 40,000 Gold
+	assertEqual(ArtifactCatalog.CalculateSellPrice(5, 1), 40000)
+
+	-- Legendary (Tier 6): Base 100,000 Gold
+	assertEqual(ArtifactCatalog.CalculateSellPrice(6, 1), 100000)
+
+	-- Mythical (Tier 7): Base 300,000 Gold
+	assertEqual(ArtifactCatalog.CalculateSellPrice(7, 1), 300000)
+	assertEqual(ArtifactCatalog.CalculateSellPrice(7, 7), 1200000) -- 300,000 * (1 + 0.5 * 6) = 1,200,000
+end)
+
+-- 6. Weapon Star Progression & Fodder Rules
+test("Weapon star progression replaces enhancement and ignores legacy fields", function()
+	local p, speed = ArtifactCatalog.CalculateEffectiveStats(7, 7, 0, "art_blade_of_the_rift")
+	assertEqual(p, 112000)
+	assertEqual(speed, 0.30)
+
+	local legacy = ArtifactCatalog.CalculateEffectiveStats(7, 7, 999, "art_blade_of_the_rift")
+	assertEqual(legacy, p)
+
+	assertEqual(ArtifactCatalog.MaxStars, 7)
+	assertEqual(ArtifactCatalog.GetFodderRequirement(6), 6)
+	assertEqual(ArtifactCatalog.GetFodderRequirement(7), 0)
+end)
+
+test("Enhanced variants provide 20 percent higher power and additive speed", function()
+	local stdPower, stdSpeed = ArtifactCatalog.CalculateEffectiveStats(1, 5, nil, "art_paladin_claymore")
+	local enhPower, enhSpeed = ArtifactCatalog.CalculateEffectiveStats(1, 5, nil, "art_aegis_of_valor")
+	assertEqual(enhPower, math.round(stdPower * 1.20))
+	assert(enhSpeed > stdSpeed, "Enhanced weapon has higher attack speed")
+end)
+
 local function fixture()
- local p={Currencies={Gold=300000,Gems=1000},Heroes={},Artifacts={target={TemplateId="art_iron_broadsword",Star=6,Rarity=7,Level=999}}}
- local donors={}
- for i=1,6 do local id="donor"..i;p.Artifacts[id]={TemplateId="art_iron_broadsword",Star=1,Rarity=1};table.insert(donors,id) end
- return p,donors
+	local p = {
+		Currencies = { Gold = 300000, Gems = 1000 },
+		Heroes = {},
+		Artifacts = {
+			target = { TemplateId = "art_iron_broadsword", Star = 6, Rarity = 7, Level = 999 },
+		},
+	}
+	local donors = {}
+	for i = 1, 6 do
+		local id = "donor" .. i
+		p.Artifacts[id] = { TemplateId = "art_iron_broadsword", Star = 1, Rarity = 1 }
+		table.insert(donors, id)
+	end
+	return p, donors
 end
-test("Six-donor final promotion preserves rarity and commits exact resources once",function()
- local p,d=fixture();local target=p.Artifacts.target
- local ok,_,star=Promotion.Promote(p,"target",d)
- assert(ok);assertEqual(star,7);assertEqual(target.Rarity,7);assertEqual(target.Level,999)
- assertEqual(p.Currencies.Gold,50000);assertEqual(p.Currencies.Gems,500)
- for _,id in d do assert(p.Artifacts[id]==nil) end
- assert(not Promotion.Promote(p,"target",d));assertEqual(p.Currencies.Gold,50000)
+
+test("Six-donor final promotion preserves rarity and commits exact resources once", function()
+	local p, d = fixture()
+	local target = p.Artifacts.target
+	local ok, _, star = Promotion.Promote(p, "target", d)
+	assert(ok)
+	assertEqual(star, 7)
+	assertEqual(target.Rarity, 7)
+	assertEqual(target.Level, 999)
+	assertEqual(p.Currencies.Gold, 50000)
+	assertEqual(p.Currencies.Gems, 500)
+	for _, id in ipairs(d) do assert(p.Artifacts[id] == nil) end
+	assert(not Promotion.Promote(p, "target", d))
+	assertEqual(p.Currencies.Gold, 50000)
 end)
-test("Every promotion step charges exactly once and retains identity, rarity and speed",function()
- for star=1,6 do
-  local p,d=fixture();p.Artifacts.target.Star=star
-  for i=6,star+1,-1 do d[i]=nil end
-  local rule=Balance.WeaponPromotionCosts[star]
-  local before=p.Artifacts.target
-  local ok=Promotion.Promote(p,"target",d);assert(ok)
-  assert(p.Artifacts.target==before);assertEqual(before.Star,star+1);assertEqual(before.Rarity,7)
-  assertEqual(p.Currencies.Gold,300000-rule.Gold);assertEqual(p.Currencies.Gems,1000-rule.Gems)
-  local _,speed=ArtifactCatalog.CalculateEffectiveStats(before.Star,before.Rarity)
-  assertEqual(speed,.3)
-  assert(not Promotion.Promote(p,"target",d));assertEqual(p.Currencies.Gold,300000-rule.Gold)
- end
+
+test("Every promotion step charges exactly once and retains identity, rarity and speed", function()
+	for star = 1, 6 do
+		local p, d = fixture()
+		p.Artifacts.target.Star = star
+		for i = 6, star + 1, -1 do d[i] = nil end
+		local rule = Balance.WeaponPromotionCosts[star]
+		local before = p.Artifacts.target
+		local ok = Promotion.Promote(p, "target", d)
+		assert(ok)
+		assert(p.Artifacts.target == before)
+		assertEqual(before.Star, star + 1)
+		assertEqual(before.Rarity, 7)
+		assertEqual(p.Currencies.Gold, 300000 - rule.Gold)
+		assertEqual(p.Currencies.Gems, 1000 - rule.Gems)
+		local _, speed = ArtifactCatalog.CalculateEffectiveStats(before.Star, before.Rarity)
+		assertEqual(speed, 0.3)
+		assert(not Promotion.Promote(p, "target", d))
+		assertEqual(p.Currencies.Gold, 300000 - rule.Gold)
+	end
 end)
-test("Malformed, stale, protected and insufficient promotions reject without mutation",function()
- for _,change in {
-  function(p,d) d[6]=d[1] end,
-  function(p,d) d[6]="target" end,
-  function(p,d) d[6]="foreign" end,
-  function(p,d) d[6]=nil end,
-  function(p,d) d[7]="extra" end,
-  function(p,d) d.fake="donor1" end,
-  function(p,d) p.Artifacts.donor1.Locked=true end,
-  function(p,d) p.Artifacts.donor1.EquippedHeroUUID="hero" end,
-  function(p,d) p.Heroes.hero={EquippedArtifactUUID="donor1"} end,
-  function(p,d) p.Artifacts.donor1.TemplateId="other" end,
-  function(p,d) p.Currencies.Gold=0 end,
-  function(p,d) p.Currencies.Gems=0 end,
-  function(p,d) p.Artifacts.target.Star=0/0 end,
- } do
-  local p,d=fixture();change(p,d);local gold,gems=p.Currencies.Gold,p.Currencies.Gems
-  local ok=Promotion.Promote(p,"target",d);assert(not ok)
-  assertEqual(p.Currencies.Gold,gold);assertEqual(p.Currencies.Gems,gems);assert(p.Artifacts.donor1~=nil)
-  assertEqual(p.Artifacts.target.Rarity,7)
- end
+
+test("Malformed, stale, protected and insufficient promotions reject without mutation", function()
+	for _, change in ipairs({
+		function(_p, d) d[6] = d[1] end,
+		function(_p, d) d[6] = "target" end,
+		function(_p, d) d[6] = "foreign" end,
+		function(_p, d) d[6] = nil end,
+		function(_p, d) d[7] = "extra" end,
+		function(_p, d) d.fake = "donor1" end,
+		function(p, _d) p.Artifacts.donor1.Locked = true end,
+		function(p, _d) p.Artifacts.donor1.EquippedHeroUUID = "hero" end,
+		function(p, _d) p.Heroes.hero = { EquippedArtifactUUID = "donor1" } end,
+		function(p, _d) p.Artifacts.donor1.TemplateId = "other" end,
+		function(p, _d) p.Currencies.Gold = 0 end,
+		function(p, _d) p.Currencies.Gems = 0 end,
+		function(p, _d) p.Artifacts.target.Star = 0 / 0 end,
+	}) do
+		local p, d = fixture()
+		change(p, d)
+		local gold, gems = p.Currencies.Gold, p.Currencies.Gems
+		local ok = Promotion.Promote(p, "target", d)
+		assert(not ok)
+		assertEqual(p.Currencies.Gold, gold)
+		assertEqual(p.Currencies.Gems, gems)
+		assert(p.Artifacts.donor1 ~= nil)
+		assertEqual(p.Artifacts.target.Rarity, 7)
+	end
 end)
-test("All hero/weapon tiers are finite, monotonic and independent of legacy levels",function()
- for id,seed in Heroes.Seeds do
-  local hero={TemplateId=id,Stars=5,Level=50,QualityScalar=1,CurrentStamina=100}
-  for r=1,16 do
-   local last=0
-   for star=1,7 do
-    local artifact={TemplateId="art_iron_broadsword",Rarity=r,Star=star,Level=10000}
-    local v=Stats.GetCombatSnapshot(hero,artifact)
-    assert(v.AttackDamage>last);last=v.AttackDamage
-    assert(v.AttackSpeed<=5);assertEqual(v.MovementSpeed,20)
-    local expectedPower=Balance.RarityPower[r]*Balance.WeaponStarMultipliers[star]
-    -- 1-star summons: promotion is 1.5x per star, rarity carries the old summon-star bonus (Phase 4 §7)
-    local growth=1.5^4*1.08^49*Balance.HeroRarityCombat(seed.Rarity)
-    assertEqual(v.AttackDamage,math.round(seed.BaseATK_1Star*1*growth*(1+expectedPower/40)*1))
-    assert(math.abs(v.AttackSpeed-(1+Balance.RaritySpeed[r])/seed.AttackInterval)<1e-9)
-    assertEqual(v.Health,math.round(seed.BaseHP_1Star*1*growth*1))
-   end
-  end
- end
+
+test("All hero/weapon tiers are finite, monotonic and independent of legacy levels", function()
+	for id, seed in pairs(Heroes.Seeds) do
+		local hero = { TemplateId = id, Stars = 5, Level = 50, QualityScalar = 1, CurrentStamina = 100 }
+		for r = 1, 16 do
+			local last = 0
+			for star = 1, 7 do
+				local artifact = { TemplateId = "art_iron_broadsword", Rarity = r, Star = star, Level = 10000 }
+				local v = Stats.GetCombatSnapshot(hero, artifact)
+				assert(v.AttackDamage > last)
+				last = v.AttackDamage
+				assert(v.AttackSpeed <= 5)
+				assertEqual(v.MovementSpeed, 20)
+				local expectedPower = Balance.RarityPower[r] * Balance.WeaponStarMultipliers[star]
+				local growth = 1.5 ^ 4 * 1.08 ^ 49 * Balance.HeroRarityCombat(seed.Rarity)
+				assertEqual(v.AttackDamage, math.round(seed.BaseATK_1Star * 1 * growth * (1 + expectedPower / 40) * 1))
+				assert(math.abs(v.AttackSpeed - (1 + Balance.RaritySpeed[r]) / seed.AttackInterval) < 1e-9)
+				assertEqual(v.Health, math.round(seed.BaseHP_1Star * 1 * growth * 1))
+			end
+		end
+	end
 end)
-test("Low-quality mixed squad exceeds one billion DPS at 75 percent uptime",function()
- local total=0
- for _,id in {"hero_han","hero_jenna","hero_aaron","hero_velkist","hero_eolka"} do
-  local h={TemplateId=id,Stars=7,Level=70,QualityScalar=.9,CurrentStamina=100}
-  local v=Stats.GetCombatSnapshot(h,{Star=7,Rarity=7})
-  total+=v.DPS
- end
- -- Maxed 7-star Lv.70 heroes; rarity carries the old summon-star bonus (Aaron/Velkist 4.05x, Eolka 16.4x; Phase 4 §7).
- assert(math.abs(total*.75-6952335172)<2) -- 10 Hz tick: a 0.85s attack rounds to 0.9s, not 1.0s
- assert(total*.75>1e9)
- -- Phase 6 re-anchor: floor 50 now includes hero rarity (x3.32) and the boss-floor biome step (x1.3).
- assertEqual(Balance.GetFloorStats(50,"BOSS").MaxHP,303887290571)
+
+test("Low-quality mixed squad exceeds one billion DPS at 75 percent uptime", function()
+	local total = 0
+	for _, id in ipairs({ "hero_han", "hero_jenna", "hero_aaron", "hero_velkist", "hero_eolka" }) do
+		local h = { TemplateId = id, Stars = 7, Level = 70, QualityScalar = 0.9, CurrentStamina = 100 }
+		local v = Stats.GetCombatSnapshot(h, { Star = 7, Rarity = 7 })
+		total += v.DPS
+	end
+	assert(math.abs(total * 0.75 - 6952335172) < 2)
+	assert(total * 0.75 > 1e9)
+	assertEqual(Balance.GetFloorStats(50, "BOSS").MaxHP, 303887290571)
 end)
-test("Legacy trait and imprint fields cannot restore retired stat bonuses",function()
- local hero={TemplateId="hero_han",Stars=5,Level=50,QualityScalar=1,CurrentStamina=100}
- local clean=Stats.GetCombatSnapshot(hero,{Star=7,Rarity=7})
- hero.PassiveTrait="Blood Pact";hero.TraitATKBonus=100;hero.TraitHPBonus=100;hero.InheritedImprints={melee_memory=3}
- local legacy=Stats.GetCombatSnapshot(hero,{Star=7,Rarity=7,Level=999},false,true)
- assertEqual(legacy.AttackDamage,clean.AttackDamage);assertEqual(legacy.Health,clean.Health)
- assertEqual(legacy.AttackSpeed,clean.AttackSpeed)
+
+test("Legacy trait and imprint fields cannot restore retired stat bonuses", function()
+	local hero = { TemplateId = "hero_han", Stars = 5, Level = 50, QualityScalar = 1, CurrentStamina = 100 }
+	local clean = Stats.GetCombatSnapshot(hero, { Star = 7, Rarity = 7 })
+	hero.PassiveTrait = "Blood Pact"
+	hero.TraitATKBonus = 100
+	hero.TraitHPBonus = 100
+	hero.InheritedImprints = { melee_memory = 3 }
+	local legacy = Stats.GetCombatSnapshot(hero, { Star = 7, Rarity = 7, Level = 999 }, false, true)
+	assertEqual(legacy.AttackDamage, clean.AttackDamage)
+	assertEqual(legacy.Health, clean.Health)
+	assertEqual(legacy.AttackSpeed, clean.AttackSpeed)
 end)
-test("Formatting supports damage and health above unsigned 32-bit range",function()
- assertEqual(Balance.Format(110844632813),"110.84B")
- assertEqual(Balance.Format(0/0),"0")
+
+test("Formatting supports damage and health above unsigned 32-bit range", function()
+	assertEqual(Balance.Format(110844632813), "110.84B")
+	assertEqual(Balance.Format(0 / 0), "0")
 end)
+
 print("All Forge spec tests passed successfully!")

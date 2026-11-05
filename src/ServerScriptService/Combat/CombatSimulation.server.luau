@@ -2747,7 +2747,6 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
 
        if bossTier > 0 then
         dm.RecordBiomeBossClear(p, bossTier)
-        if firstBiomeClear and dm.GrantBossArtifact then dm.GrantBossArtifact(p, bossTier) end
        end
 
        local progress = ActivePlayerProgress[p]
