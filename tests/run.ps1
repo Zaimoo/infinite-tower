@@ -88,7 +88,8 @@ $modulePaths = @(
     'ServerScriptService/Combat/HeroTargeting.luau',
     'ServerScriptService/Core/TowerNavigationGraph.luau',
     'ServerScriptService/Core/NavigationRecovery.luau',
-    'ServerScriptService/Core/NavigationQueue.luau'
+    'ServerScriptService/Core/NavigationQueue.luau',
+    'ServerScriptService/Combat/SquadMovement.luau'
 )
 $bundleParts = [System.Collections.Generic.List[string]]::new()
 $bundleParts.Add([System.IO.File]::ReadAllText((Join-Path $PSScriptRoot 'roblox-module-shim.luau')))
@@ -99,7 +100,7 @@ foreach ($modulePath in $modulePaths) {
     $bundleParts.Add([System.IO.File]::ReadAllText($sourcePath))
     $bundleParts.Add("`nend)")
 }
-foreach ($suite in @('pit.spec.luau', 'forge.spec.luau', 'combat-skills.spec.luau', 'tower.spec.luau', 'tower-transport.spec.luau', 'tower-combat.spec.luau', 'tower-rework.spec.luau', 'phase1-combat-tempo.luau', 'hero-rig.spec.luau', 'phase2-floor-loop.spec.luau', 'phase2-defeat-rules.spec.luau', 'hero-action.spec.luau', 'hero-targeting.spec.luau', 'tower-navigation.spec.luau', 'combat-vfx.spec.luau', 'phase4-progression.luau', 'profile-persistence.spec.luau', 'tower-run-loop.spec.luau', 'tower-camp-roster.spec.luau', 'tower-support.spec.luau', 'tower-patrols.spec.luau', 'tower-affixes.spec.luau', 'tower-events.spec.luau', 'tower-portals.spec.luau', 'hublayout.spec.luau', 'outskirts-waves.spec.luau', 'facility-workers.spec.luau')) {
+foreach ($suite in @('pit.spec.luau', 'forge.spec.luau', 'combat-skills.spec.luau', 'tower.spec.luau', 'tower-transport.spec.luau', 'tower-combat.spec.luau', 'tower-rework.spec.luau', 'phase1-combat-tempo.luau', 'hero-rig.spec.luau', 'phase2-floor-loop.spec.luau', 'phase2-defeat-rules.spec.luau', 'hero-action.spec.luau', 'hero-targeting.spec.luau', 'tower-navigation.spec.luau', 'squad-movement.spec.luau', 'combat-vfx.spec.luau', 'phase4-progression.luau', 'profile-persistence.spec.luau', 'tower-run-loop.spec.luau', 'tower-camp-roster.spec.luau', 'tower-support.spec.luau', 'tower-patrols.spec.luau', 'tower-affixes.spec.luau', 'tower-events.spec.luau', 'tower-portals.spec.luau', 'hublayout.spec.luau', 'outskirts-waves.spec.luau', 'facility-workers.spec.luau')) {
     $bundleParts.Add('do')
     $bundleParts.Add([System.IO.File]::ReadAllText((Join-Path $PSScriptRoot $suite)))
     $bundleParts.Add("`nend")

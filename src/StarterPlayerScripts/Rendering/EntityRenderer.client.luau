@@ -38,6 +38,33 @@ local Buffered={}
 local EntitySequences: {[number]:number}={}
 local Generations: {[number]:number}={}
 local VisualFolder = Workspace:WaitForChild("ClientVisualEntities")
+local RenderGroundParams = RaycastParams.new()
+RenderGroundParams.FilterType = Enum.RaycastFilterType.Exclude
+RenderGroundParams.IgnoreWater = true
+
+local function clampInterpolatedGroundY(pos: Vector3, fromPos: Vector3, goalPos: Vector3, model: Model): Vector3
+	if math.abs(goalPos.Y - fromPos.Y) < 0.35 then
+		return pos
+	end
+	local flatSpan = Vector3.new(goalPos.X - fromPos.X, 0, goalPos.Z - fromPos.Z).Magnitude
+	if flatSpan < 0.25 or flatSpan > TELEPORT_SNAP_DISTANCE then
+		return pos
+	end
+	local filter = { VisualFolder, model }
+	if LocalPlayer and LocalPlayer.Character then
+		table.insert(filter, LocalPlayer.Character)
+	end
+	RenderGroundParams.FilterDescendantsInstances = filter
+	local hit = Workspace:Raycast(pos + Vector3.new(0, 3.2, 0), Vector3.new(0, -6.4, 0), RenderGroundParams)
+	if hit and hit.Instance and hit.Instance.CanCollide and hit.Normal.Y >= 0.65 then
+		local minY = math.min(fromPos.Y, goalPos.Y) - 0.6
+		local maxY = math.max(fromPos.Y, goalPos.Y) + 1.6
+		if hit.Position.Y >= minY and hit.Position.Y <= maxY and math.abs(hit.Position.Y - pos.Y) <= 2.2 then
+			return Vector3.new(pos.X, math.max(pos.Y, hit.Position.Y), pos.Z)
+		end
+	end
+	return pos
+end
 local CombatFeedback=require(ReplicatedStorage.Assets.CombatFeedback).new(VisualFolder)
 local CombatVfx = ReplicatedStorage.Assets:WaitForChild("CombatVfx")
 local SkillVfx = require(CombatVfx:WaitForChild("SkillVfx"))
@@ -678,7 +705,8 @@ local function stepRender(dt: number)
 			n.SegSpeed = 0
 		elseif node.IsHero and n.SegStart then
 			local t = math.clamp((os.clock() - n.SegStart) / n.SegDuration, 0, 1)
-			node.CurrentPos = n.SegFrom:Lerp(node.GoalPos, t)
+			local lerped = n.SegFrom:Lerp(node.GoalPos, t)
+			node.CurrentPos = clampInterpolatedGroundY(lerped, n.SegFrom, node.GoalPos, node.Model)
 		else
 			node.CurrentPos = node.CurrentPos:Lerp(node.GoalPos, alpha)
 		end

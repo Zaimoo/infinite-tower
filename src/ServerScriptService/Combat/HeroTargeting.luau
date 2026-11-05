@@ -20,6 +20,7 @@ export type Context = {
 	Assigned: boolean, -- squad assigned to a floor: heroes roam up to Leash studs from the anchor
 	Leash: number,
 	Now: number?,
+	RouteCost: ((from: Vector3, to: Vector3) -> number)?,
 }
 
 local function rejected(hero: any,netId: number,mob: any,ctx: Context): boolean
@@ -60,7 +61,7 @@ function HeroTargeting.Acquire(hero: any, mobs: { [number]: any }, ctx: Context,
 		local dist: number
 		if ctx.Assigned then
 			if math.abs(mob.Position.Y - ctx.MasterPos.Y) >= HeroTargeting.MAX_MASTER_HEIGHT_GAP or heroDist > ctx.Leash then continue end
-			dist = heroDist
+			dist = if ctx.RouteCost then ctx.RouteCost(hero.Position, mob.Position) else heroDist
 		else
 			local masterDist = flat(ctx.MasterPos, mob.Position)
 			if masterDist > HeroTargeting.MASTER_ACQUIRE_RADIUS and heroDist > hero.AttackRange then continue end

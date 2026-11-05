@@ -1,6 +1,6 @@
 # Tower movement reliability implementation plan
 
-Status: Phase 0 reproduction gate validated, 2026-11-05; [baseline evidence](reviews/tower-movement/2026-11-05/README.md). Phase 1 geometry source is implemented and CLI/build verified; [Studio join checks are pending](reviews/tower-movement/PHASE_1.md). Phase 2 shared movement is implemented; [bounded validation and remaining checks](reviews/tower-movement/PHASE_2.md). Phases 3-5 and full acceptance remain pending.
+Status: Phases 0-5 implemented, 2026-11-05: [Phase 0 baseline](reviews/tower-movement/2026-11-05/README.md), [Phase 1 geometry](reviews/tower-movement/PHASE_1.md), [Phase 2 shared solver](reviews/tower-movement/PHASE_2.md), [Phase 3 active policy](reviews/tower-movement/PHASE_3.md), [Phase 4 assigned policy](reviews/tower-movement/PHASE_4.md), and [Phase 5 presentation & docs](reviews/tower-movement/PHASE_5.md). Architecture reference: [TOWER_NAVIGATION.md](TOWER_NAVIGATION.md). Full multi-variant Studio playtest certification remains pending per user directive to implement without running final test loops.
 
 Make all five heroes traverse ramps and platforms reliably during active floor runs and assigned-squad combat. Address route reversals, heroes falling behind, ramp seams, squad congestion, ineffective stuck detection, and recovery teleports together.
 
