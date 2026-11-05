@@ -145,7 +145,7 @@ Budget: about 1,400 parts, at most 36 PointLights and at most 8 ParticleEmitters
 - **GDD §3.5:** rewritten for the cloister.
 - **GDD §3.6:** new Dread radius.
 - **`CLAUDE.md`:** "Each server holds 6 players" becomes 10.
-- **`commons-hub-layout-plan.md`:** marked superseded.
+- **`commons-hub-layout-plan.md`:** marked superseded, later deleted.
 
 ## 5. Risks
 

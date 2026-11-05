@@ -8,7 +8,7 @@
 
 Out of scope: damage numbers, balance multipliers, new skill mechanics, enemy projectiles (the `PROJECTILE` enemy attack in `AttackTimeline` / `EnemyAnimationController` already works) and uploaded animation or particle assets. Everything stays code-authored, like the hero rigs.
 
-This plan supersedes the draft in `docs/animations-implementation-plan.md`. Parts of that draft already landed (the `HERO_ATTACK` cue, the BOW clips in `HeroClips`, the per-hero kits in `ArchetypeCombatSkills`). The rest is replaced here.
+This plan supersedes an earlier animations draft (since deleted). Parts of that draft already landed (the `HERO_ATTACK` cue, the BOW clips in `HeroClips`, the per-hero kits in `ArchetypeCombatSkills`). The rest is replaced here.
 
 ## Where things stand (2026-10-26)
 
