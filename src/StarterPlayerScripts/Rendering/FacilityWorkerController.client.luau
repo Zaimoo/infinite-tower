@@ -48,6 +48,8 @@ local WorkerVfxPool = VfxPool.new(EntitiesFolder)
 local FULL_RATE_DIST = 220
 local THROTTLE_DIST = 480
 local THROTTLE_STEP = 1 / 15
+-- Highlights are costly and capped per client: only plots inside the full-rate radius keep outlines.
+local HIGHLIGHT_DIST = FULL_RATE_DIST
 
 local GOLD_COLOR = Color3.fromRGB(255, 214, 92)
 local MARKET_COLOR = Color3.fromRGB(240, 184, 78)
@@ -1508,6 +1510,13 @@ local function stepFacilityWorkers(dt: number)
 
 		if director.Parked then
 			parkDirector(director, false, origin)
+		end
+
+		local wantOutline = nearestDist <= HIGHLIGHT_DIST
+		for _, worker in pairs(director.Workers) do
+			if worker.Highlight.Enabled ~= wantOutline then
+				worker.Highlight.Enabled = wantOutline
+			end
 		end
 
 		if nearestDist > FULL_RATE_DIST then

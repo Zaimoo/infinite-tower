@@ -52,6 +52,8 @@ local OutskirtsVfxPool = VfxPool.new(EntitiesFolder)
 local FULL_RATE_DIST = 240
 local THROTTLE_DIST = 480
 local THROTTLE_STEP = 1 / 15
+-- Highlights are costly and capped per client: only plots inside the full-rate radius keep outlines.
+local HIGHLIGHT_DIST = FULL_RATE_DIST
 
 local GOLD_COLOR = Color3.fromRGB(255, 214, 92)
 local DEPLOY_COLOR = Color3.fromRGB(130, 245, 210)
@@ -1238,6 +1240,19 @@ local function stepAdventurerPatrol(dt: number)
 		end
 
 		setDirectorParked(director, false)
+
+		local wantOutline = camDist <= HIGHLIGHT_DIST
+		for _, hero in pairs(director.Heroes) do
+			if hero.Highlight.Enabled ~= wantOutline then
+				hero.Highlight.Enabled = wantOutline
+			end
+		end
+		for _, mob in pairs(director.Mobs) do
+			local hl = mob.Highlight
+			if hl and hl.Enabled ~= wantOutline then
+				hl.Enabled = wantOutline
+			end
+		end
 
 		if camDist > FULL_RATE_DIST then
 			director.AccumulatedDt += frameDt

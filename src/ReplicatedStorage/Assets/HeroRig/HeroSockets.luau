@@ -97,6 +97,8 @@ function HeroSockets.Equip(rig: Model, weapon: Model, weaponType: WeaponType): M
 			d.CanTouch = false
 			d.CanQuery = false
 			d.Massless = true
+			-- Weapons are dozens of small parts per hero; their shadows cost more than they show.
+			d.CastShadow = false
 		end
 	end
 
