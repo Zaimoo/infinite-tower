@@ -2364,6 +2364,10 @@ local STATE_TO_ENUM: { [HeroSimState]: number } = {
 	COMA = 4,
 }
 
+local ENEMY_STATE_TO_ENUM: { [string]: number } = { IDLE = 20, CHASE = 21, WINDUP = 22, RECOVERY = 23, RESET = 24, PATROL = 25 }
+-- One reused wire record per sim entity (weak keys, so despawned entities drop out). The encoder only
+-- reads these fields, so cloning the whole sim table every snapshot was wasted allocation.
+local SnapshotRecords: { [any]: any } = setmetatable({}, { __mode = "k" }) :: any
 local function broadcastReplicationSnapshot(now: number)
  SnapshotSequence=(SnapshotSequence+1)%4294967296
  local serverNow=Workspace:GetServerTimeNow()
@@ -2375,16 +2379,29 @@ local function broadcastReplicationSnapshot(now: number)
   if not Protocol.InBounds(e.Position,room.Origin,room.Bounds) then
    warn("Tower entity recovered outside bounds",e.NetId);e.Position=room.Arrival.Position-Vector3.new(0,3.5,0);HeroNavigation.Clear(e)
   end
-  local hero=e.Owner~=nil;local entry=table.clone(e)
-  entry.StateEnum=hero and (STATE_TO_ENUM[e.State] or 1) or (e.TowerEnemy and ({IDLE=20,CHASE=21,WINDUP=22,RECOVERY=23,RESET=24,PATROL=25})[e.State] or (10+(e.Phase or 1)))
+  local hero=e.Owner~=nil
+  local entry=SnapshotRecords[e];if not entry then entry={};SnapshotRecords[e]=entry end
+  entry.NetId=e.NetId;entry.EntityGeneration=e.EntityGeneration;entry.Position=e.Position;entry.Yaw=e.Yaw
+  entry.CurrentHP=e.CurrentHP;entry.MaxHP=e.MaxHP;entry.Stamina=e.Stamina;entry.ActionSequence=e.ActionSequence
+  entry.StateEnum=hero and (STATE_TO_ENUM[e.State] or 1) or (e.TowerEnemy and ENEMY_STATE_TO_ENUM[e.State] or (10+(e.Phase or 1)))
   entry.Flags=hero and (1+(now<e.OverdriveUntil and 2 or 0)+(now<e.PacifiedUntil and 4 or 0))
    or (e.TowerEnemy and (((SupportRules.Shielded(e,serverNow) or (e.AffixShield or 0)>0) and 8 or 0)+(SupportRules.Roused(e,serverNow) and 16 or 0)
     +(AffixRules.IsAffixed(e) and 32 or 0))) or 0
-  byFloor[e.FloorId]=byFloor[e.FloorId] or {};table.insert(byFloor[e.FloorId],entry)
+  local list=byFloor[e.FloorId];if not list then list={};byFloor[e.FloorId]=list end
+  table.insert(list,entry)
  end end
+ -- Encode once per floor + room generation; players there differ only by ViewEpoch in the header.
+ local encoded={}
  for _,p in Players:GetPlayers() do
   local c=Tower.Context(p)
-  for _,packet in Protocol.Encode(c,byFloor[c.FloorId] or {},SnapshotSequence,Workspace:GetServerTimeNow()) do TowerRemotes.TowerSnapshot:FireClient(p,packet) end
+  local key=`{c.FloorId}:{c.RoomGeneration}`
+  local shared=encoded[key]
+  if not shared then
+   shared={ViewEpoch=c.ViewEpoch,Packets=Protocol.Encode(c,byFloor[c.FloorId] or {},SnapshotSequence,serverNow)}
+   encoded[key]=shared
+  end
+  local packets=if shared.ViewEpoch==c.ViewEpoch then shared.Packets else Protocol.WithViewEpoch(shared.Packets,c.ViewEpoch)
+  for _,packet in packets do TowerRemotes.TowerSnapshot:FireClient(p,packet) end
  end
 end
 -- Summons (or joins) the floor boss for a player whose own kill threshold is met. At most one boss is alive per floor.
