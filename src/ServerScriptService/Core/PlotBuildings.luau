@@ -15,7 +15,7 @@ local FacilityPresence = require(script.Parent:WaitForChild("FacilityPresence"))
 local StaticGeometry = require(script.Parent:WaitForChild("StaticGeometry"))
 local FacilityConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("FacilityConfig"))
 
-local VERSION = 29 -- 29: Solid collision on Blacksmith Forge & coursed ashlar Gothic fortress walls
+local VERSION = 30 -- 30: Compact Base Redesign with condensed courtyard footprint
 
 local function attachPrompt(
 	parent: Instance,
@@ -90,13 +90,9 @@ function Buildings.Build(plot: Instance)
 
 	local origin: CFrame
 	if top and top:IsA("BasePart") then
-		if top.Size.Z > 200 then
-			origin = CFrame.new(top.Position.X, surfaceY, top.Position.Z) * top.CFrame.Rotation * CFrame.new(0, 0, -70)
-		else
-			origin = CFrame.new(top.Position.X, surfaceY, top.Position.Z) * top.CFrame.Rotation
-		end
+		origin = CFrame.new(top.Position.X, surfaceY, top.Position.Z) * top.CFrame.Rotation
 	else
-		origin = CFrame.new(spawn.Position.X, surfaceY, spawn.Position.Z) * spawn.CFrame.Rotation * CFrame.new(0, 0, 80)
+		origin = CFrame.new(spawn.Position.X, surfaceY, spawn.Position.Z) * spawn.CFrame.Rotation * CFrame.new(0, 0, 38)
 	end
 
 	-- Half-finished builds from an interrupted session
@@ -244,8 +240,8 @@ function Buildings.Build(plot: Instance)
 	syncPlotFacilityAnchor(plot, "GuardPost", gpInteract.CFrame)
 
 	-- 9. Command Post (War Banner for Squad Management & Architect's Table for Fortress Tree)
-	local bannerCF = origin * CFrame.new(-22, 0, -24)
-	local tableCF = origin * CFrame.new(-24, 0, 16) * CFrame.Angles(0, math.rad(35), 0)
+	local bannerCF = origin * CFrame.new(-18, 0, -16)
+	local tableCF = origin * CFrame.new(-18, 0, 14) * CFrame.Angles(0, math.rad(35), 0)
 	local cmdAnchors = Architecture.BuildCommandPost(folder, bannerCF, tableCF)
 
 	attachPrompt(

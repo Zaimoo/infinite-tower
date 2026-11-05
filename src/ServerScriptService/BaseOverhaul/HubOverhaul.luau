@@ -27,7 +27,7 @@ local CloisterBuilder = require(BaseOverhaulFolder:WaitForChild("CloisterBuilder
 local SharedLeaderboards = require(BaseOverhaulFolder:WaitForChild("SharedLeaderboards"))
 
 local HubOverhaul = {}
-HubOverhaul.Version = 15 -- Bump to force a rebuild of baked geometry
+HubOverhaul.Version = 16 -- Bump to force a rebuild of baked geometry
 
 --============================================================================
 -- CONFIGURATION TABLE
@@ -53,15 +53,15 @@ local function createMasterIslandTemplate(): Model
 end
 
 -- Repositions a Plot_N model onto its new floating island CFrame while keeping all required children intact
--- Courtyard-local offsets (courtyard centre = fountain centre, -Z faces the Tower / front gate at z = -90).
+-- Courtyard-local offsets (courtyard centre = fountain centre, -Z faces the Tower / front gate at z = -60).
 -- The fountain basin spans ~24 studs, so the spawn sits between the fountain and the front gate.
-local SPAWN_COURTYARD_OFFSET = CFrame.new(0, 0.5, -50) * CFrame.Angles(0, math.pi, 0) -- face into the fortress
+local SPAWN_COURTYARD_OFFSET = CFrame.new(0, 0.5, -38) * CFrame.Angles(0, math.pi, 0) -- face into the fortress
 local BEACON_ANCHOR_Y = 12
 
 -- Places PlotSpawn on clear cobblestone and centres the persistent beacon anchor over the courtyard.
 -- Runs for both freshly built and pre-baked islands so stale baked positions are always corrected.
 local function alignPlotSpawnAndBeacon(plotModel: Model, islandTopCF: CFrame)
-	local courtyardTopCF = islandTopCF * CFrame.new(0, 0, -(IslandBuilder.Config.CenterOffsetZ or 70))
+	local courtyardTopCF = islandTopCF * CFrame.new(0, 0, -(IslandBuilder.Config.CenterOffsetZ or 100))
 
 	local plotSpawn = plotModel:FindFirstChild("PlotSpawn") :: SpawnLocation?
 	if plotSpawn then
@@ -118,7 +118,7 @@ local function migratePlotToIsland(plotModel: Model, islandClone: Model, islandT
 
 	-- 3. Move PrivateExtractionPad to the inner edge near the front gate so Relic drop-off continues to work
 	local extractionPad = plotModel:FindFirstChild("PrivateExtractionPad") :: BasePart?
-	local padCFrame = islandTopCF * CFrame.new(36, 0.6, -72)
+	local padCFrame = islandTopCF * CFrame.new(22, 0.6, -46)
 	if extractionPad then
 		extractionPad.Anchored = true
 		extractionPad.CFrame = padCFrame
@@ -240,6 +240,7 @@ local function buildDistantBackgroundIslets(container: Instance)
 			local bz = rng:NextNumber(-length * 0.32, length * 0.32)
 			decPart("IsletBoulder_" .. b, Vector3.new(6, 4, 5), isletCF * CFrame.new(bx, 4.2, bz) * CFrame.Angles(0.1, b * 1.1, 0), slateColor, Enum.Material.Slate)
 		end
+		task.wait()
 	end
 end
 
@@ -397,6 +398,7 @@ function HubOverhaul.Build(forceRebuild: boolean?): (Instance, boolean)
 
 		local islandClone = masterTemplate:Clone()
 		migratePlotToIsland(plotModel, islandClone, islandTopCF)
+		task.wait()
 	end
 
 	masterTemplate:Destroy()

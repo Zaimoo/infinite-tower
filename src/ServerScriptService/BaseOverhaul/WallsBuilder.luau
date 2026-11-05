@@ -13,20 +13,20 @@ local WallsBuilder = {}
 -- CONFIGURATION TABLE
 --============================================================================
 WallsBuilder.Config = {
-	-- Perimeter Dimensions (Grand Citadel & Courtyard: 260 x 180 studs)
-	PerimeterWidth = 260,
-	PerimeterLength = 180,
+	-- Perimeter Dimensions (Compact Citadel & Courtyard: 160 x 120 studs)
+	PerimeterWidth = 160,
+	PerimeterLength = 120,
 
 	-- Wall Geometry (GDD Section 3.4: 28-stud high crenellated stone walls)
 	WallHeight = 28,
 	WallThickness = 6,
-	BastionSize = 22,
-	BastionHeight = 40,
+	BastionSize = 20,
+	BastionHeight = 36,
 
 	-- Crenellations (Merlons on top of the wall)
-	MerlonWidth = 6.2,
-	MerlonHeight = 4.2,
-	MerlonSpacing = 12,
+	MerlonWidth = 6.0,
+	MerlonHeight = 4.0,
+	MerlonSpacing = 11,
 
 	-- Front Gate Opening (Facing the Tower, -Z local direction)
 	IncludeFrontOpening = true,
@@ -34,10 +34,10 @@ WallsBuilder.Config = {
 	OpeningArchHeight = 18,
 	BlockOpeningWithInvisibleBarrier = false, -- Non-collidable so players walk across bridge into fortress
 
-	-- Rear Gate Opening (Facing the Outskirts, +Z local direction, positioned between Market & Forge)
+	-- Rear Gate Opening (Facing the Outskirts, +Z local direction, opening to forest trail)
 	IncludeRearOpening = true,
-	RearGateCenterX = 32,
-	RearOpeningWidth = 24,
+	RearGateCenterX = 14,
+	RearOpeningWidth = 20,
 	RearOpeningArchHeight = 18,
 
 	-- Invisible Backup Safety Barrier
@@ -670,33 +670,31 @@ function WallsBuilder.Build(parentIsland: Instance?, customConfig: { [string]: a
 		end
 
 		-- Medieval Crimson & Gold Crest Banners along the Dividing Wall (flanking Forge & Market)
-		for idx, bx in ipairs({ 56, 14, -48 }) do
+		for idx, bx in ipairs({ 44, -24 }) do
 			addWallBanner("DividingWallBanner_" .. idx, Vector3.new(bx, 16.0, halfL - (cfg.WallThickness * 0.5)))
 		end
 
 		-- Interior Wall Torches & Courtyard Perimeter Props matching reference layout
-		for idx, tz in ipairs({ -52, 48 }) do
+		for idx, tz in ipairs({ -30, 26 }) do
 			addWallTorch("NorthWallTorch_" .. idx, Vector3.new(halfW - 3.2, 11.5, tz), Vector3.new(-1, 0, 0))
 		end
-		for idx, tz in ipairs({ -52, 0, 52 }) do
+		for idx, tz in ipairs({ -30, 0, 30 }) do
 			addWallTorch("SouthWallTorch_" .. idx, Vector3.new(-halfW + 3.2, 11.5, tz), Vector3.new(1, 0, 0))
 		end
-		for idx, tx in ipairs({ -56, 56 }) do
+		for idx, tx in ipairs({ -34, 34 }) do
 			addWallTorch("WestWallTorch_" .. idx, Vector3.new(tx, 11.5, -halfL + 3.8), Vector3.new(0, 0, 1))
 		end
-		for idx, tx in ipairs({ -44, -8, 68 }) do
+		for idx, tx in ipairs({ -24, 36 }) do
 			addWallTorch("EastWallTorch_" .. idx, Vector3.new(tx, 11.5, halfL - 3.8), Vector3.new(0, 0, -1))
 		end
 
 		-- Stacked Wooden Barrels, Crates & Weapon Racks along West (-Z) and East (+Z) Fortress Walls
 		local wallCrateClusters = {
-			{ Size = Vector3.new(3.4, 3.4, 3.4), Pos = Vector3.new(46, 1.7, -halfL + 6.2), Yaw = 14 },
-			{ Size = Vector3.new(3.0, 3.0, 3.0), Pos = Vector3.new(50.2, 1.5, -halfL + 5.8), Yaw = -22 },
-			{ Size = Vector3.new(2.8, 2.8, 2.8), Pos = Vector3.new(47.8, 4.8, -halfL + 6.0), Yaw = 8 },
-			{ Size = Vector3.new(3.6, 3.6, 3.6), Pos = Vector3.new(-48, 1.8, -halfL + 6.2), Yaw = -16 },
-			{ Size = Vector3.new(3.2, 3.2, 3.2), Pos = Vector3.new(-52.5, 1.6, -halfL + 5.9), Yaw = 24 },
-			{ Size = Vector3.new(3.4, 3.4, 3.4), Pos = Vector3.new(-42, 1.7, halfL - 6.2), Yaw = 19 },
-			{ Size = Vector3.new(3.0, 3.0, 3.0), Pos = Vector3.new(-37.8, 1.5, halfL - 5.8), Yaw = -12 },
+			{ Size = Vector3.new(3.0, 3.0, 3.0), Pos = Vector3.new(28, 1.5, -halfL + 5.5), Yaw = 14 },
+			{ Size = Vector3.new(2.6, 2.6, 2.6), Pos = Vector3.new(31.5, 1.3, -halfL + 5.2), Yaw = -22 },
+			{ Size = Vector3.new(3.0, 3.0, 3.0), Pos = Vector3.new(-28, 1.5, -halfL + 5.5), Yaw = -16 },
+			{ Size = Vector3.new(2.6, 2.6, 2.6), Pos = Vector3.new(-31.5, 1.3, -halfL + 5.2), Yaw = 24 },
+			{ Size = Vector3.new(3.0, 3.0, 3.0), Pos = Vector3.new(-22, 1.5, halfL - 5.5), Yaw = 19 },
 		}
 		for idx, wc in ipairs(wallCrateClusters) do
 			makePart({
