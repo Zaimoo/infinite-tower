@@ -817,7 +817,7 @@ The artifact catalog features an exhaustive **84-Weapon Roster** (6 Hero Archety
 | **6** | **Legendary** | 3,500 | $+20.0\%$ | 4,200 | $+22.5\%$ | 100,000 Gold |
 | **7** | **Mythical** | 7,000 | $+30.0\%$ | 8,400 | $+35.0\%$ | 300,000 Gold |
 
-*(Full weapon names, wielders, and concept art descriptions across all 84 items are indexed in `ArtifactCatalog.luau` and the Weapon Index compendium `HeroIndex.luau`)*.
+*(Full weapon names, wielders, and concept art descriptions across all 84 items are indexed in `ArtifactCatalog.luau` and the Artifact Index compendium `HeroIndex.luau`)*.
 
 Higher rarities (Tiers 8–16) retain stat formulas in [the complete weapon matrix](balance/STAT_SCALING_TABLES.md#weapon-power-by-inherent-rarity-and-promoted-stars) for future expansions; launch gameplay focuses on Tiers 1–7.
 
@@ -860,7 +860,7 @@ The full 1★ to 7★ path consumes 21 donor weapons plus the retained original.
   3. Roll Variant (60% Standard, 40% High-Stat Enhanced).
   4. Instantiate weapon at 1★.
 - **Legacy Purge:** Crafting materials (`IronGear`, etc.) and milestone boss equipment drops are completely removed; all weapon acquisition occurs through the Forge banner and star ascension.
-- **Weapon Index Compendium:** All 84 weapons are fully cataloged in `HeroIndex.luau` with live collection tracking (`Collected X / 84 weapons`), category filtering, and 3D preview displays.
+- **Artifact Index Compendium:** All 84 weapons are fully cataloged in `HeroIndex.luau` with live collection tracking (`Collected X / 84 artifacts`, under the Index's ARTIFACTS tab), category filtering, and 3D preview displays.
 
 ### 7.5 Archetype Restrictions & 3D Socketing Standards
 1. **One Weapon Type per Archetype:** Each hero holds a single equipped artifact, and each archetype can equip exactly one weapon type. There are no off-hand or accessory slots.

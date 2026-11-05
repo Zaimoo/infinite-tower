@@ -1254,7 +1254,7 @@ for _, seed in pairs(Seeds) do
 	(seed :: any).Variant = if seed.IsHighStat then "Enhanced" else "Standard"
 end
 
--- Master order of all 84 weapons for the Weapon Index and catalog viewers
+-- Master order of all 84 weapons for the Artifact Index and catalog viewers
 local CatalogOrder: { string } = {
 	"art_iron_broadsword",
 	"art_tempered_bastard_sword",

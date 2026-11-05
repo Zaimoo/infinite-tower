@@ -177,7 +177,7 @@ The Forge still runs on the old cosmic-purple palette (`C.Border #C084FC`, raw `
 - Body grouped by **tier**, highest first: a tier header row (rarity colour, name, live %, per-weapon %), then the Standard and Enhanced cards side by side for each archetype. Per-weapon odds = `rate(tier) / 6 × 0.6` or `× 0.4`; showing them is the clearest odds disclosure.
 - Each card: preview, name, variant tag, 1★ Power / Dmg / Spd, a one-line description (full text on hover), and an **Owned** stud if the player has one.
 
-### 5.6 Weapon Index (`HeroIndex.luau`)
+### 5.6 Artifact Index (`HeroIndex.luau`)
 
 - Acquisition line reads from config: `"Blacksmith Forge · " .. StatBalance.Format(Banner.Cost1X) .. " Gold"` instead of a hard-coded string.
 - Show the per-weapon drop rate (as in §5.5) and the sell price at 1★.

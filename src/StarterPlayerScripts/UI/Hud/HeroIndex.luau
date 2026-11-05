@@ -1,14 +1,14 @@
 --!strict
 -- StarterPlayerScripts/UI/Hud/HeroIndex.luau
 -- Master Compendium (Phase 5 §4.7), drawn in Gilded Grimoire:
---   * Mode Switcher: [HEROES] and [WEAPONS] compendiums
+--   * Mode Switcher: [HEROES] and [ARTIFACTS] compendiums
 --   * HERO INDEX:
 --       - Left: banners with collection bar (owned / total).
 --       - Middle: hero cards with owned counts; ALL / OWNED / MISSING.
 --       - Right: selected hero portrait, rarity badge, archetype, stats, kit, drop rate, summon button.
---   * WEAPON INDEX:
---       - Left: weapon categories (All, 6 Archetypes, Echoes of the Rift banner) with collection bars.
---       - Middle: weapon cards with 3D models/previews, star rating, rarity tint, owned counts.
+--   * ARTIFACT INDEX:
+--       - Left: artifact categories (All, 6 Archetypes, Echoes of the Rift banner) with collection bars.
+--       - Middle: artifact cards with 3D models/previews, star rating, rarity tint, owned counts.
 --       - Right: 3D preview, stats (Power, Dmg Multiplier, AtkSpd), description, wielders, forge recipe, and Blacksmith button.
 -- Client-only: catalog data plus the synced profile. Narrow screens show one column at a time with
 -- a back button. ButtonB / the close button closes it.
@@ -45,11 +45,11 @@ local BANNERS = {
 	{ Key = "LIMITED", Banner = HeroCatalog.LimitedBanner, Tag = "LIMITED EVENT", Tone = "Bronze", Summon = "A_STARS_ARRIVAL" },
 }
 
-local WEAPON_CATEGORIES = {
+local ARTIFACT_CATEGORIES = {
 	{
 		Key = "ALL",
-		Title = "ALL WEAPONS",
-		Tag = "MASTER CATALOG · 84 WEAPONS",
+		Title = "ALL ARTIFACTS",
+		Tag = "MASTER CATALOG · 84 ARTIFACTS",
 		Tone = "Gold",
 		Icon = "Index",
 		FilterFn = function(_seed: any) return true end,
@@ -57,7 +57,7 @@ local WEAPON_CATEGORIES = {
 	{
 		Key = "SWORD_SHIELD",
 		Title = "SWORDS & SHIELDS",
-		Tag = "VANGUARD · 14 WEAPONS",
+		Tag = "VANGUARD · 14 ARTIFACTS",
 		Tone = "Violet",
 		Icon = "Vanguard",
 		FilterFn = function(seed: any) return seed.Type == "SWORD_SHIELD" end,
@@ -65,7 +65,7 @@ local WEAPON_CATEGORIES = {
 	{
 		Key = "DAGGERS",
 		Title = "DUAL DAGGERS",
-		Tag = "STRIKER · 14 WEAPONS",
+		Tag = "STRIKER · 14 ARTIFACTS",
 		Tone = "Crimson",
 		Icon = "Striker",
 		FilterFn = function(seed: any) return seed.Type == "DAGGERS" end,
@@ -73,7 +73,7 @@ local WEAPON_CATEGORIES = {
 	{
 		Key = "AXE",
 		Title = "MINING AXES",
-		Tag = "MINER · 14 WEAPONS",
+		Tag = "MINER · 14 ARTIFACTS",
 		Tone = "Bronze",
 		Icon = "Miner",
 		FilterFn = function(seed: any) return seed.Type == "AXE" end,
@@ -81,7 +81,7 @@ local WEAPON_CATEGORIES = {
 	{
 		Key = "BOW",
 		Title = "MARKSMAN BOWS",
-		Tag = "MARKSMAN · 14 WEAPONS",
+		Tag = "MARKSMAN · 14 ARTIFACTS",
 		Tone = "Cyan",
 		Icon = "Marksman",
 		FilterFn = function(seed: any) return seed.Type == "BOW" end,
@@ -89,7 +89,7 @@ local WEAPON_CATEGORIES = {
 	{
 		Key = "STAFF",
 		Title = "SCHOLAR STAVES",
-		Tag = "SCHOLAR · 14 WEAPONS",
+		Tag = "SCHOLAR · 14 ARTIFACTS",
 		Tone = "Violet",
 		Icon = "Scholar",
 		FilterFn = function(seed: any) return seed.Type == "STAFF" end,
@@ -97,7 +97,7 @@ local WEAPON_CATEGORIES = {
 	{
 		Key = "TOME",
 		Title = "HEALER TOMES",
-		Tag = "HEALER · 14 WEAPONS",
+		Tag = "HEALER · 14 ARTIFACTS",
 		Tone = "Green",
 		Icon = "Healer",
 		FilterFn = function(seed: any) return seed.Type == "TOME" end,
@@ -105,7 +105,7 @@ local WEAPON_CATEGORIES = {
 	{
 		Key = "BANNER",
 		Title = "BLACKSMITH FORGE BANNER",
-		Tag = "ARTIFACT GACHA · 84 WEAPONS",
+		Tag = "BLACKSMITH FORGE · 84 ARTIFACTS",
 		Tone = "Violet",
 		Icon = "Summon",
 		FilterFn = function(_seed: any) return true end,
@@ -121,7 +121,7 @@ local WIELDERS_BY_TYPE = {
 	TOME = "Valeria (4★)",
 }
 
-local WEAPON_EMOJI: { [string]: string } = {
+local ARTIFACT_EMOJI: { [string]: string } = {
 	BOW = "🏹",
 	SWORD_SHIELD = "🛡️",
 	DAGGERS = "🗡️",
@@ -156,8 +156,8 @@ local function heroOwnership(profile: any): { [string]: { Copies: number, BestSt
 	return owned
 end
 
--- Owned copies, best star and highest rarity per weapon template.
-local function weaponOwnership(profile: any): { [string]: { Copies: number, BestStar: number, BestRarity: number } }
+-- Owned copies, best star and highest rarity per artifact template.
+local function artifactOwnership(profile: any): { [string]: { Copies: number, BestStar: number, BestRarity: number } }
 	local owned = {}
 	for _, art in pairs(profile and profile.Artifacts or {}) do
 		if art and art.TemplateId then
@@ -171,7 +171,7 @@ local function weaponOwnership(profile: any): { [string]: { Copies: number, Best
 	return owned
 end
 
-local function weaponsOfCategory(cat: any): { string }
+local function artifactsOfCategory(cat: any): { string }
 	local list = {}
 	local order = ArtifactCatalog.CatalogOrder
 	for _, id in ipairs(order) do
@@ -183,7 +183,7 @@ local function weaponsOfCategory(cat: any): { string }
 	return list
 end
 
--- Where a weapon comes from, read from the banner config: the price, this weapon's exact chance per
+-- Where a artifact comes from, read from the banner config: the price, this artifact's exact chance per
 -- pull (tier chance / 6 weapon types x 60% Standard or 40% Enhanced, God's Blessing included) and
 -- what it sells back for at 1 star.
 local function acquisitionText(seed: any, luck: number): string
@@ -264,8 +264,8 @@ local function section(order: number, title: string, body: string, height: numbe
 	})
 end
 
--- 3D ViewportFrame / Model Preview for Weapons with emoji fallback.
-local function WeaponPreviewBox(props: { TemplateId: string, Archetype: string, Size: UDim2, ZIndex: number })
+-- 3D ViewportFrame / Model Preview for Artifacts with emoji fallback.
+local function ArtifactPreviewBox(props: { TemplateId: string, Archetype: string, Size: UDim2, ZIndex: number })
 	local frameRef = React.useRef(nil :: GuiObject?)
 	local hasModel, setHasModel = React.useState(false)
 
@@ -294,22 +294,22 @@ local function WeaponPreviewBox(props: { TemplateId: string, Archetype: string, 
 			Position = UDim2.fromScale(0.5, 0.5),
 			Size = UDim2.fromOffset(48, 48),
 			BackgroundTransparency = 1,
-			Text = WEAPON_EMOJI[props.Archetype] or "⚔️",
+			Text = ARTIFACT_EMOJI[props.Archetype] or "⚔️",
 			TextSize = 34,
 			ZIndex = props.ZIndex + 1,
 		}) else nil,
 	})
 end
 
-local function HeroIndex(props: { Profile: any, Width: number, OnClose: () -> (), InitialMode: ("HEROES" | "WEAPONS")? })
-	local indexMode, setIndexMode = React.useState((props.InitialMode or "HEROES") :: "HEROES" | "WEAPONS")
+local function HeroIndex(props: { Profile: any, Width: number, OnClose: () -> (), InitialMode: ("HEROES" | "ARTIFACTS")? })
+	local indexMode, setIndexMode = React.useState((props.InitialMode or "HEROES") :: "HEROES" | "ARTIFACTS")
 	local bannerKey, setBannerKey = React.useState("PERMANENT")
 	local selectedHero, setSelectedHero = React.useState(nil :: string?)
 	local heroFilter, setHeroFilter = React.useState("All" :: Filter)
 
-	local weaponCatKey, setWeaponCatKey = React.useState("ALL")
-	local selectedWeapon, setSelectedWeapon = React.useState(nil :: string?)
-	local weaponFilter, setWeaponFilter = React.useState("All" :: Filter)
+	local artifactCatKey, setArtifactCatKey = React.useState("ALL")
+	local selectedArtifact, setSelectedArtifact = React.useState(nil :: string?)
+	local artifactFilter, setArtifactFilter = React.useState("All" :: Filter)
 
 	local step, setStep = React.useState("banners") -- narrow layout only
 	local firstButton = React.useRef(nil)
@@ -328,7 +328,7 @@ local function HeroIndex(props: { Profile: any, Width: number, OnClose: () -> ()
 
 	local narrow = props.Width < 800
 	local ownedHeroes = heroOwnership(props.Profile)
-	local ownedWeapons = weaponOwnership(props.Profile)
+	local ownedArtifacts = artifactOwnership(props.Profile)
 	local luck = SummonLuck.ForProfile(props.Profile)
 
 	-- =========================================================================
@@ -342,10 +342,10 @@ local function HeroIndex(props: { Profile: any, Width: number, OnClose: () -> ()
 		end
 	end
 
-	local totalWeaponHave, totalWeaponAll = 0, 0
+	local totalArtifactHave, totalArtifactAll = 0, 0
 	for id, _ in pairs(ArtifactCatalog.Seeds) do
-		totalWeaponAll += 1
-		if ownedWeapons[id] then totalWeaponHave += 1 end
+		totalArtifactAll += 1
+		if ownedArtifacts[id] then totalArtifactHave += 1 end
 	end
 
 	-- =========================================================================
@@ -495,28 +495,28 @@ local function HeroIndex(props: { Profile: any, Width: number, OnClose: () -> ()
 	end
 
 	-- =========================================================================
-	-- WEAPON MODE CONTENT
+	-- ARTIFACT MODE CONTENT
 	-- =========================================================================
-	local weaponEntry = WEAPON_CATEGORIES[1]
-	for _, cat in WEAPON_CATEGORIES do if cat.Key == weaponCatKey then weaponEntry = cat end end
-	local weaponIds = weaponsOfCategory(weaponEntry)
-	local selectedWeaponId = selectedWeapon
-	if not selectedWeaponId or not table.find(weaponIds, selectedWeaponId) then selectedWeaponId = weaponIds[1] end
+	local artifactEntry = ARTIFACT_CATEGORIES[1]
+	for _, cat in ARTIFACT_CATEGORIES do if cat.Key == artifactCatKey then artifactEntry = cat end end
+	local artifactIds = artifactsOfCategory(artifactEntry)
+	local selectedArtifactId = selectedArtifact
+	if not selectedArtifactId or not table.find(artifactIds, selectedArtifactId) then selectedArtifactId = artifactIds[1] end
 
-	local weaponCategoryChildren: { [string]: any } = {}
-	for i, cat in WEAPON_CATEGORIES do
-		local ids = weaponsOfCategory(cat)
+	local artifactCategoryChildren: { [string]: any } = {}
+	for i, cat in ARTIFACT_CATEGORIES do
+		local ids = artifactsOfCategory(cat)
 		local have = 0
-		for _, id in ids do if ownedWeapons[id] then have += 1 end end
-		local active = cat.Key == weaponCatKey
+		for _, id in ids do if ownedArtifacts[id] then have += 1 end end
+		local active = cat.Key == artifactCatKey
 		local tone = Tones[cat.Tone] or Tones.Slate
-		weaponCategoryChildren["WCat" .. i] = Panel({
+		artifactCategoryChildren["WCat" .. i] = Panel({
 			Class = "TextButton", Text = "", AutoButtonColor = false, Selectable = true, LayoutOrder = i,
 			Size = UDim2.new(1, 0, 0, 112), Radius = 12,
 			Top = if active then tone.Top else Tones.Deep.Top, Bottom = tone.Bottom, Rail = if active then TEXT.Gold else tone.Rail,
 			[React.Event.Activated] = function()
-				setWeaponCatKey(cat.Key)
-				setSelectedWeapon(nil)
+				setArtifactCatKey(cat.Key)
+				setSelectedArtifact(nil)
 				if narrow then setStep("heroes") end
 			end,
 		}, {
@@ -532,23 +532,23 @@ local function HeroIndex(props: { Profile: any, Width: number, OnClose: () -> ()
 		})
 	end
 
-	local weaponCards: { [string]: any } = {}
-	local weaponShown = 0
-	for i, id in weaponIds do
+	local artifactCards: { [string]: any } = {}
+	local artifactShown = 0
+	for i, id in artifactIds do
 		local seed = ArtifactCatalog.Seeds[id]
-		local mine = ownedWeapons[id]
-		local keep = weaponFilter == "All" or (weaponFilter == "Owned" and mine ~= nil) or (weaponFilter == "Missing" and mine == nil)
+		local mine = ownedArtifacts[id]
+		local keep = artifactFilter == "All" or (artifactFilter == "Owned" and mine ~= nil) or (artifactFilter == "Missing" and mine == nil)
 		if seed and keep then
-			weaponShown += 1
+			artifactShown += 1
 			local tier = seed.RarityTier or 1
 			local rarityInfo = ArtifactCatalog.GetRarityInfo(tier)
 			local rarityColor = Theme.RarityColor(tier)
-			local isSel = id == selectedWeaponId
-			weaponCards["W" .. i] = Panel({
+			local isSel = id == selectedArtifactId
+			artifactCards["W" .. i] = Panel({
 				Class = "TextButton", Text = "", AutoButtonColor = false, Selectable = true, LayoutOrder = i, Radius = 12,
 				Top = Tones.Deep.Top:Lerp(rarityColor, if isSel then 0.4 else 0.22), Bottom = Tones.Deep.Bottom, Rail = if isSel then TEXT.Gold else rarityColor,
 				[React.Event.Activated] = function()
-					setSelectedWeapon(id)
+					setSelectedArtifact(id)
 					if narrow then setStep("details") end
 				end,
 			}, {
@@ -556,7 +556,7 @@ local function HeroIndex(props: { Profile: any, Width: number, OnClose: () -> ()
 					BackgroundColor3 = Color3.fromRGB(12, 8, 18), ClipsDescendants = true, ZIndex = 3 }, {
 					Corner = e("UICorner", { CornerRadius = UDim.new(0, 10) }),
 					Ring = e("UIStroke", { Color = rarityColor, Thickness = 2.4, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
-					Preview = e(WeaponPreviewBox, { TemplateId = id, Archetype = seed.Type, Size = UDim2.fromScale(1, 1), ZIndex = 4 }),
+					Preview = e(ArtifactPreviewBox, { TemplateId = id, Archetype = seed.Type, Size = UDim2.fromScale(1, 1), ZIndex = 4 }),
 				}),
 				Arch = IconAt(seed.Type, 26, { Position = UDim2.fromOffset(4, 100), ZIndex = 6 }),
 				Missing = if mine == nil then Body({ AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 52), Size = UDim2.new(1, -20, 0, 18), TextSize = 13,
@@ -571,57 +571,57 @@ local function HeroIndex(props: { Profile: any, Width: number, OnClose: () -> ()
 			})
 		end
 	end
-	if weaponShown == 0 then
-		weaponCards.Empty = Body({ Size = UDim2.new(1, 0, 0, 40), TextSize = 14, TextColor3 = TEXT.Muted, TextXAlignment = Enum.TextXAlignment.Center,
-			Text = if weaponFilter == "Owned" then "You don't own any weapons from this category yet." else "You own every weapon in this category!" })
+	if artifactShown == 0 then
+		artifactCards.Empty = Body({ Size = UDim2.new(1, 0, 0, 40), TextSize = 14, TextColor3 = TEXT.Muted, TextXAlignment = Enum.TextXAlignment.Center,
+			Text = if artifactFilter == "Owned" then "You don't own any artifacts from this category yet." else "You own every artifact in this category!" })
 	end
 
-	local weaponDetail: { [string]: any } = {}
-	local weaponSeed = selectedWeaponId and ArtifactCatalog.Seeds[selectedWeaponId]
-	if weaponSeed then
-		local tier = weaponSeed.RarityTier or 1
+	local artifactDetail: { [string]: any } = {}
+	local artifactSeed = selectedArtifactId and ArtifactCatalog.Seeds[selectedArtifactId]
+	if artifactSeed then
+		local tier = artifactSeed.RarityTier or 1
 		local rarityInfo = ArtifactCatalog.GetRarityInfo(tier)
 		local rarityColor = Theme.RarityColor(tier)
-		local mine = ownedWeapons[weaponSeed.TemplateId]
-		local stats = ArtifactCatalog.GetStatBreakdown(weaponSeed.TemplateId, 1, tier)
+		local mine = ownedArtifacts[artifactSeed.TemplateId]
+		local stats = ArtifactCatalog.GetStatBreakdown(artifactSeed.TemplateId, 1, tier)
 		local power = stats.Power
 		local dmgMult = stats.DamageMultiplier
 		local speedBonus = stats["Attack Speed"]
 
-		weaponDetail.Header = e("Frame", { LayoutOrder = 1, Size = UDim2.new(1, 0, 0, 150), BackgroundTransparency = 1 }, {
+		artifactDetail.Header = e("Frame", { LayoutOrder = 1, Size = UDim2.new(1, 0, 0, 150), BackgroundTransparency = 1 }, {
 			Art = e("Frame", { Size = UDim2.fromOffset(140, 140), BackgroundColor3 = Color3.fromRGB(12, 8, 18), ClipsDescendants = true, ZIndex = 3 }, {
 				Corner = e("UICorner", { CornerRadius = UDim.new(0, 12) }),
 				Ring = e("UIStroke", { Color = rarityColor, Thickness = 3, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
-				Preview = e(WeaponPreviewBox, { TemplateId = weaponSeed.TemplateId, Archetype = weaponSeed.Type, Size = UDim2.fromScale(1, 1), ZIndex = 4 }),
+				Preview = e(ArtifactPreviewBox, { TemplateId = artifactSeed.TemplateId, Archetype = artifactSeed.Type, Size = UDim2.fromScale(1, 1), ZIndex = 4 }),
 			}),
 			Name = Heavy({ Position = UDim2.fromOffset(152, 2), Size = UDim2.new(1, -152, 0, 30), MaxSize = 24, TextXAlignment = Enum.TextXAlignment.Left,
-				Text = weaponSeed.DisplayName, ZIndex = 3 }),
+				Text = artifactSeed.DisplayName, ZIndex = 3 }),
 			Rarity = Panel({ Position = UDim2.fromOffset(152, 38), Size = UDim2.fromOffset(0, 26), AutomaticSize = Enum.AutomaticSize.X, Radius = 13,
 				Top = rarityColor, Bottom = rarityColor:Lerp(Color3.new(0, 0, 0), 0.35), Rail = Color3.new(1, 1, 1), ZIndex = 3 }, {
 				Pad = e("UIPadding", { PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) }),
 				Text = Heavy({ AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 26), TextScaled = false, TextSize = 14, Outline = 2, Gold = false,
-					Text = string.format("%s · %s", string.upper(rarityInfo.Name), string.upper(weaponSeed.Variant or "Standard")), ZIndex = 5 }),
+					Text = string.format("%s · %s", string.upper(rarityInfo.Name), string.upper(artifactSeed.Variant or "Standard")), ZIndex = 5 }),
 			}),
-			Arch = IconAt(weaponSeed.Type, 30, { Position = UDim2.fromOffset(150, 72), ZIndex = 4 }),
+			Arch = IconAt(artifactSeed.Type, 30, { Position = UDim2.fromOffset(150, 72), ZIndex = 4 }),
 			ArchText = Body({ Position = UDim2.fromOffset(186, 78), Size = UDim2.new(1, -186, 0, 18), TextSize = 14,
-				Text = string.format("%s Archetype", string.gsub(weaponSeed.Type, "_", " & ")), ZIndex = 3 }),
+				Text = string.format("%s Archetype", string.gsub(artifactSeed.Type, "_", " & ")), ZIndex = 3 }),
 			Owned = Body({ Position = UDim2.fromOffset(152, 104), Size = UDim2.new(1, -152, 0, 34), TextSize = 13, TextWrapped = true, TextTruncate = Enum.TextTruncate.None,
 				TextColor3 = if mine then TEXT.Good else TEXT.Muted,
 				Text = if mine then string.format("Owned x%d · best %d★ · highest Tier %d", mine.Copies, mine.BestStar, mine.BestRarity) else "Not owned yet", ZIndex = 3 }),
 		})
 
-		weaponDetail.Stats = e("Frame", { LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 52), BackgroundTransparency = 1 }, {
+		artifactDetail.Stats = e("Frame", { LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 52), BackgroundTransparency = 1 }, {
 			Layout = e("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
 			Power = statTile(1, "BASE POWER", Components.Abbreviate(power), TEXT.Gold),
 			Mult = statTile(2, "DMG MULT", string.format("%.2fx", dmgMult), Color3.fromRGB(255, 150, 120)),
 			Speed = statTile(3, "ATK SPEED", string.format("+%.1f%%", speedBonus), TEXT.Good),
 		})
 
-		weaponDetail.Description = section(3, "LORE & CONCEPT ART", weaponSeed.Description or "—", 52)
-		weaponDetail.Wielders = section(4, "COMPATIBLE HEROES", WIELDERS_BY_TYPE[weaponSeed.Type] or "All heroes of this archetype", 40)
-		weaponDetail.Acquisition = section(5, "ACQUISITION", acquisitionText(weaponSeed, luck), 66)
+		artifactDetail.Description = section(3, "LORE & CONCEPT ART", artifactSeed.Description or "—", 52)
+		artifactDetail.Wielders = section(4, "COMPATIBLE HEROES", WIELDERS_BY_TYPE[artifactSeed.Type] or "All heroes of this archetype", 40)
+		artifactDetail.Acquisition = section(5, "ACQUISITION", acquisitionText(artifactSeed, luck), 66)
 
-		weaponDetail.Action = button({ LayoutOrder = 6, Size = UDim2.new(1, 0, 0, 46), ZIndex = 3,
+		artifactDetail.Action = button({ LayoutOrder = 6, Size = UDim2.new(1, 0, 0, 46), ZIndex = 3,
 			[React.Event.Activated] = function()
 				props.OnClose()
 				if _G.OpenMasterModal then
@@ -635,8 +635,8 @@ local function HeroIndex(props: { Profile: any, Width: number, OnClose: () -> ()
 	-- =========================================================================
 	-- COLUMNS ASSEMBLY
 	-- =========================================================================
-	local activeFilter = if indexMode == "HEROES" then heroFilter else weaponFilter
-	local setActiveFilter = if indexMode == "HEROES" then setHeroFilter else setWeaponFilter
+	local activeFilter = if indexMode == "HEROES" then heroFilter else artifactFilter
+	local setActiveFilter = if indexMode == "HEROES" then setHeroFilter else setArtifactFilter
 	local filterChips: { [string]: any } = { Layout = e("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Right,
 		Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }) }
 	for order, key in { "All", "Owned", "Missing" } do
@@ -645,11 +645,11 @@ local function HeroIndex(props: { Profile: any, Width: number, OnClose: () -> ()
 	end
 
 	local leftTitle = if indexMode == "HEROES" then "BANNERS" else "CATEGORIES"
-	local leftScrollerContent = if indexMode == "HEROES" then heroBannerChildren else weaponCategoryChildren
-	local midTitle = if indexMode == "HEROES" then string.upper(heroEntry.Banner.Title) else string.upper(weaponEntry.Title)
-	local midCards = if indexMode == "HEROES" then heroCards else weaponCards
-	local rightTitle = if indexMode == "HEROES" then "HERO DETAILS" else "WEAPON DETAILS"
-	local rightDetail = if indexMode == "HEROES" then heroDetail else weaponDetail
+	local leftScrollerContent = if indexMode == "HEROES" then heroBannerChildren else artifactCategoryChildren
+	local midTitle = if indexMode == "HEROES" then string.upper(heroEntry.Banner.Title) else string.upper(artifactEntry.Title)
+	local midCards = if indexMode == "HEROES" then heroCards else artifactCards
+	local rightTitle = if indexMode == "HEROES" then "HERO DETAILS" else "ARTIFACT DETAILS"
+	local rightDetail = if indexMode == "HEROES" then heroDetail else artifactDetail
 
 	local leftCol = column(1, if narrow then UDim.new(1, 0) else UDim.new(0.22, -8), leftTitle, nil,
 		scroller(leftScrollerContent, e("UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder })))
@@ -674,13 +674,13 @@ local function HeroIndex(props: { Profile: any, Width: number, OnClose: () -> ()
 		}
 	end
 
-	local windowTitle = if indexMode == "HEROES" then "HERO INDEX" else "WEAPON INDEX"
+	local windowTitle = if indexMode == "HEROES" then "HERO INDEX" else "ARTIFACT INDEX"
 	local collectedText = if indexMode == "HEROES"
 		then string.format("Collected %d / %d heroes", totalHeroHave, totalHeroAll)
-		else string.format("Collected %d / %d weapons", totalWeaponHave, totalWeaponAll)
+		else string.format("Collected %d / %d artifacts", totalArtifactHave, totalArtifactAll)
 	local collectedFraction = if indexMode == "HEROES"
 		then totalHeroHave / math.max(1, totalHeroAll)
-		else totalWeaponHave / math.max(1, totalWeaponAll)
+		else totalArtifactHave / math.max(1, totalArtifactAll)
 
 	return e("Frame", {
 		Size = UDim2.fromScale(1, 1),
@@ -720,14 +720,14 @@ local function HeroIndex(props: { Profile: any, Width: number, OnClose: () -> ()
 						if narrow then setStep("banners") end
 					end,
 				}, if indexMode == "HEROES" then "Gold" else "Slate", "HEROES", 13),
-				Weapons = button({
+				Artifacts = button({
 					Size = UDim2.fromOffset(112, 34),
 					ZIndex = 4,
 					[React.Event.Activated] = function()
-						setIndexMode("WEAPONS")
+						setIndexMode("ARTIFACTS")
 						if narrow then setStep("banners") end
 					end,
-				}, if indexMode == "WEAPONS" then "Gold" else "Slate", "WEAPONS", 13),
+				}, if indexMode == "ARTIFACTS" then "Gold" else "Slate", "ARTIFACTS", 13),
 			}),
 			Back = if narrow and step ~= "banners" then button({ AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -326, 0, 16), Size = UDim2.fromOffset(96, 38), ZIndex = 5,
 				[React.Event.Activated] = function() setStep(if step == "details" then "heroes" else "banners") end }, "Slate", "‹ BACK", 14) else nil,
