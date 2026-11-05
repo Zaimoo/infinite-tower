@@ -5,26 +5,33 @@ return function(room: any, speed: number?, slots: number?, options: any?)
 	options = options or {}
 	local Navigation = options.Navigation or require(game.ServerScriptService.Core.HeroNavigation)
 	local Layout = options.Layout or require(game.ReplicatedStorage.Shared.Config.TowerLayout)
+	local Policy = if options.Policy ~= nil then options.Policy else (game.ServerScriptService.Combat:FindFirstChild("SquadMovement") and require(game.ServerScriptService.Combat.SquadMovement))
 	local layout = Layout.Get((room.FloorId - 1) % 5 + 1)
 	local results = {}
 	local actors = {}
+	local ownerKey = {}
 	local metricsBefore = Navigation.DebugSnapshot and Navigation.DebugSnapshot()
 	local ok, failure = pcall(function()
 		for _, link in layout.Links do
 			if options.Link and link.From..">"..link.To ~= options.Link then continue end
 			for _, reverse in {false, true} do
 				if options.Reverse ~= nil and reverse ~= options.Reverse then continue end
+				if Policy then Policy.Reset(ownerKey) end
 				local p = layout.Platforms[if reverse then link.To else link.From]
 				local q = layout.Platforms[if reverse then link.From else link.To]
 				local a = room.Origin + Vector3.new(p.X, p.Y, p.Z)
 				local b = room.Origin + Vector3.new(q.X, q.Y, q.Z)
+				local startGround = Navigation.Ground(a, nil, 4, 16) or a
 				local direction = Vector3.new(b.X-a.X, 0, b.Z-a.Z).Unit
 				local duration = (b-a).Magnitude / (speed or 48)
 				local records = {}
 				for slot = 1, slots or 5 do
 					local angle = (slot-1) / 5 * math.pi * 2
 					local offset = Vector3.new(math.cos(angle)*6, 0, math.sin(angle)*6)
-					local actor = {NetId=slot, Position=Navigation.PlaceNear(a+Vector3.new(0,3,0),offset), FloorId=room.FloorId, RoomGeneration=-999, State="FOLLOW_MASTER"}
+					local spawnPos = if Policy and not options.Fixed
+						then Policy.ResolveSlotGoal(startGround, slot, direction, nil, 0, function(base, off) return Navigation.PlaceOnGround(base, off) end)
+						else Navigation.PlaceNear(a+Vector3.new(0,3,0),offset)
+					local actor = {NetId=slot, SlotIndex=slot, Position=spawnPos, FloorId=room.FloorId, RoomGeneration=-999, EntityGeneration=1, State="FOLLOW_MASTER", MoveSpeed=20}
 					table.insert(actors,actor)
 					table.insert(records,{Actor=actor,Offset=offset,MaxLag=0,Backward=0,StallSeconds=0,MaxStall=0,ConsecutiveStall=0,Trace={},StepMs={}})
 				end
@@ -35,14 +42,45 @@ return function(room: any, speed: number?, slots: number?, options: any?)
 					local dt = now-previous; previous=now
 					local master = if options.Fixed then b else a:Lerp(b,math.clamp((now-started)/duration,0,1))
 					master = Navigation.Ground(master,nil,4,16) or master
+					if Policy and not options.Fixed then
+						Policy.UpdateMaster(ownerKey, {
+							FloorId = room.FloorId,
+							RoomGeneration = -999,
+							Assigned = false,
+							RawRootPosition = master + Vector3.new(0, 3, 0),
+							SupportedPosition = master,
+							Origin = room.Origin,
+							IsJumping = false,
+							IsSprintingAttr = (speed or 48) > 22,
+							HumanoidWalkSpeed = speed or 48,
+							Now = now,
+							DeltaTime = dt,
+							CanWalk = if Navigation.CanShortcut then function(u, v) return Navigation.CanShortcut(u, v) end else nil,
+						})
+					end
 					for _, record in records do
 						local actor = record.Actor
-						local goal = Navigation.PlaceNear(master+Vector3.new(0,3,0),record.Offset)
-						local lag = (goal-actor.Position).Magnitude
+						local goal, lag, budget
+						if Policy and not options.Fixed then
+							local plan = Policy.PlanActiveFollow(ownerKey, actor, master, now, {
+								HeroBaseSpeed = 20,
+								PlaceOnGround = function(base, off) return Navigation.PlaceOnGround(base, off) end,
+								CanShortcut = if Navigation.CanShortcut then function(u, v) return Navigation.CanShortcut(u, v) end else nil,
+							})
+							goal = plan.Goal
+							lag = plan.RouteLag
+							budget = plan.FollowSpeed * dt
+							record.TerminalGoal = plan.TerminalGoal
+						else
+							goal = Navigation.PlaceNear(master+Vector3.new(0,3,0),record.Offset)
+							lag = (goal-actor.Position).Magnitude
+							budget = (speed or 48)*1.05*(1+math.clamp((lag-14)/50,0,.65))*dt
+							record.TerminalGoal = goal
+						end
 						record.MaxLag=math.max(record.MaxLag,lag)
 						local old = actor.Position
 						local stepStart = os.clock()
-						Navigation.Step(actor,goal,(speed or 48)*1.05*(1+math.clamp((lag-14)/50,0,.65))*dt,now)
+						Navigation.Step(actor,goal,budget,now,dt)
 						table.insert(record.StepMs,(os.clock()-stepStart)*1000)
 						local delta = actor.Position-old
 						if delta:Dot(direction)<-.5 then record.Backward+=1 end
@@ -61,10 +99,12 @@ return function(room: any, speed: number?, slots: number?, options: any?)
 					Navigation.Clear(record.Actor)
 				end
 				table.clear(actors)
+				if Policy then Policy.Reset(ownerKey) end
 			end
 		end
 	end)
 	for _, actor in actors do Navigation.Clear(actor) end
+	if Policy then Policy.Reset(ownerKey) end
 	assert(ok,tostring(failure))
 	return {Records=results,MetricsBefore=metricsBefore,MetricsAfter=Navigation.DebugSnapshot and Navigation.DebugSnapshot(),Speed=speed or 48,Fixed=options.Fixed==true}
 end

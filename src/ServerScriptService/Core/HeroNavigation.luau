@@ -97,6 +97,10 @@ local function clearRoute(from: Vector3,goal: Vector3,group: string): boolean
 	local at,clear=walkSegment(from,goal,distance,group,nil,nil)
 	return clear and (at-goal).Magnitude<.5
 end
+function Navigation.CanShortcut(from: Vector3,goal: Vector3,group: string?): boolean
+	if math.abs(from.Y-goal.Y)>4.5 or flatDistance(from,goal)>42 then return false end
+	return clearRoute(from,goal,group or "Default")
+end
 function Navigation.PlaceOnGround(feet: Vector3,offset: Vector3,group: string?): Vector3
 	local base=Navigation.Ground(feet,group,2.2,3.5)or feet
 	local desired=Navigation.Ground(base+offset,group)
@@ -129,7 +133,7 @@ jobs=Queue.new(12,512,function(job: any,done: ()->())
 		end)
 		local hero,s=request.Hero,request.State
 		local valid=not job.Cancelled and states[hero]==s and Graph.RequestMatches(request,identity(hero,s))
-			and hero.State~="COMA" and s.SubGoal and (s.SubGoal-request.Goal).Magnitude<=8
+			and hero.State~="COMA" and s.SubGoal and (s.PathRouteIndex==s.TowerIndex and (s.SubGoal-request.Goal).Magnitude<=40)
 		if valid then
 			s.Pending=false;s.PathMilliseconds=(os.clock()-started)*1000
 			s.PathStatus=if ok and points then "Success"else "NoPath"
@@ -142,7 +146,7 @@ jobs=Queue.new(12,512,function(job: any,done: ()->())
 					local d=(feet-hero.Position).Magnitude
 					if d<best then nearest,best=i,d end
 				end
-				s.Index=nearest;s.Failures=0
+				s.Index=nearest;s.Failures=0;s.EscapeRemaining=nil
 				if best<2.5 and s.Points[nearest+1]and clearRoute(hero.Position,s.Points[nearest+1],groupFor(hero))then s.Index+=1 end
 				if diagnostics then diagnostics.PathSuccess+=1 end
 			else
@@ -159,7 +163,7 @@ jobs=Queue.new(12,512,function(job: any,done: ()->())
 	end)
 end)
 local function resetPath(hero: any,s: any)
-	jobs:Cancel(hero);s.Pending=false;s.Points=nil;s.PathGoal=nil;s.Revision+=1
+	jobs:Cancel(hero);s.Pending=false;s.Points=nil;s.PathGoal=nil;s.EscapeRemaining=nil;s.Revision+=1
 end
 function Navigation.Clear(hero: any)
 	jobs:Cancel(hero);states[hero]=nil;hero.NavigationRejectedTargets=nil
@@ -197,14 +201,32 @@ local function remaining(s: any,position: Vector3): number
 	for i=index,#route do distance+=(position-route[i]).Magnitude;position=route[i]end
 	return distance
 end
-local function advance(points: {Vector3},index: number,position: Vector3): number
-	while points[index] and (points[index]-position).Magnitude<.35 do index+=1 end
+local function advance(points: {Vector3},index: number,position: Vector3,group: string?): number
+	while points[index] do
+		local wp=points[index]
+		local nxt=points[index+1]
+		if (wp-position).Magnitude<.35 or (flatDistance(wp,position)<.45 and math.abs(wp.Y-position.Y)<=STEP_UP) then
+			index+=1
+		elseif nxt and math.abs(wp.Y-position.Y)<=1.8 and flatDistance(wp,position)<=4.5 then
+			local seg=Vector3.new(nxt.X-wp.X,0,nxt.Z-wp.Z)
+			local rel=Vector3.new(position.X-wp.X,0,position.Z-wp.Z)
+			local step=math.min(4.5,flatDistance(position,nxt))
+			local _,ok=walkSegment(position,nxt,step,group or "Default",nil,nil)
+			if seg.Magnitude>.01 and rel:Dot(seg.Unit)>=0 and ok then
+				index+=1
+			else
+				break
+			end
+		else
+			break
+		end
+	end
 	return index
 end
 local function avoid(hero: any,s: any,old: Vector3,nextPosition: Vector3,group: string): Vector3
 	local movement=nextPosition-old
 	if movement.Magnitude<.01 then return nextPosition end
-	for other in states do
+	for other,otherState in states do
 		if other==hero or other.FloorId~=hero.FloorId or other.RoomGeneration~=hero.RoomGeneration
 			or other.State=="COMA" or not other.Position or math.abs(other.Position.Y-old.Y)>3 then continue end
 		local offset=Vector3.new(other.Position.X-old.X,0,other.Position.Z-old.Z)
@@ -213,16 +235,22 @@ local function avoid(hero: any,s: any,old: Vector3,nextPosition: Vector3,group: 
 		local t=math.clamp(offset:Dot(flat)/flat:Dot(flat),0,1)
 		if (offset-flat*t).Magnitude>=1.8 then continue end
 		local right=Vector3.new(-flat.Unit.Z,0,flat.Unit.X)
-		-- Both travel directions prefer their own right, giving opposite lanes.
-		for _,side in {1,-1}do
-			local dir=(flat.Unit*.6+right*(side*.8)).Unit
-			local trial,safe=walkSegment(old,old+dir*flat.Magnitude,flat.Magnitude,group,s.Origin,s.Corridor)
-			if safe and flatDistance(trial,other.Position)>=math.min(1.8,offset.Magnitude+.1)then return trial end
+		local minSep=if s.BlockReason or (otherState and (otherState.ConsumedDistance or 1)<.05) then 1.35 else 1.65
+		for _,ang in {{.6,.8},{.25,.97},{0,1},{-.35,.94}}do
+			for _,side in {s.SteerSide or 1,-(s.SteerSide or 1)}do
+				local dir=(flat.Unit*ang[1]+right*(side*ang[2])).Unit
+				local trial,safe=walkSegment(old,old+dir*flat.Magnitude,flat.Magnitude,group,s.Origin,s.Corridor)
+				if safe and flatDistance(trial,old)>.01 and (flatDistance(trial,other.Position)>=minSep or flatDistance(trial,other.Position)>offset.Magnitude+.02)then
+					return trial
+				end
+			end
 		end
-		-- Stable priority with minimum separation; no body tunneling.
-		if (hero.NetId or 0)<(other.NetId or 0)then
-			local room=math.max(0,offset.Magnitude-1.8)
-			return walkSegment(old,old+flat.Unit*math.min(room,flat.Magnitude),math.min(room,flat.Magnitude),group,s.Origin,s.Corridor)
+		if (hero.NetId or 0)<(other.NetId or 0) or (otherState and (otherState.ConsumedDistance or 1)<.05) then
+			local room=math.max(0,offset.Magnitude-1.2)
+			if room>.05 then
+				return walkSegment(old,old+flat.Unit*math.min(room,flat.Magnitude),math.min(room,flat.Magnitude),group,s.Origin,s.Corridor)
+			end
+			return nextPosition
 		end
 		s.BlockReason="YIELD";return old
 	end
@@ -268,26 +296,27 @@ function Navigation.Step(hero: any,goal: Vector3,distance: number,now: number,de
 			return {Status="FALLING",Remaining=(goal-hero.Position).Magnitude}
 		end
 	end
-	s.TowerIndex=advance(s.TowerRoute,s.TowerIndex,hero.Position)
+	s.TowerIndex=advance(s.TowerRoute,s.TowerIndex,hero.Position,group)
 	s.SubGoal=s.TowerRoute[s.TowerIndex]or goal
-	if s.PathGoal and (s.PathRouteIndex~=s.TowerIndex or (s.PathGoal-s.SubGoal).Magnitude>8)then resetPath(hero,s)end
+	if s.PathGoal and (s.PathRouteIndex~=s.TowerIndex or (s.PathGoal-s.SubGoal).Magnitude>(if s.Pending then 36 else 16))then resetPath(hero,s)end
 	local before=remaining(s,hero.Position)
 	local budget=math.max(0,distance)
 	for _=1,64 do
 		if budget<.01 then break end
-		s.TowerIndex=advance(s.TowerRoute,s.TowerIndex,hero.Position)
+		s.TowerIndex=advance(s.TowerRoute,s.TowerIndex,hero.Position,group)
 		local subGoal=s.TowerRoute[s.TowerIndex]
 		if not subGoal then break end
 		s.SubGoal=subGoal
-		if s.PathGoal and (s.PathRouteIndex~=s.TowerIndex or (s.PathGoal-subGoal).Magnitude>8)then resetPath(hero,s)end
+		if s.PathGoal and (s.PathRouteIndex~=s.TowerIndex or (s.PathGoal-subGoal).Magnitude>(if s.Pending then 36 else 16))then resetPath(hero,s)end
 		local destination=subGoal
 		if s.Points then
-			s.Index=advance(s.Points,s.Index,hero.Position)
+			s.Index=advance(s.Points,s.Index,hero.Position,group)
 			destination=s.Points[s.Index]or subGoal
 			if not s.Points[s.Index]then s.Points=nil end
 		end
 		local old=hero.Position
-		if s.EscapeRemaining and s.EscapeRemaining>0 then destination=old+s.EscapeDirection*math.min(1.5,s.EscapeRemaining)end
+		if s.EscapeRemaining and s.EscapeRemaining>.05 then destination=old+s.EscapeDirection*math.min(1.5,s.EscapeRemaining) else s.EscapeRemaining=nil end
+		if s.Points and s.Points[s.Index] and flatDistance(old,destination)<.45 then s.Index+=1;continue end
 		local step=math.min(1.5,budget,flatDistance(old,destination))
 		if step<.01 then s.BlockReason="HEIGHT";break end
 		local nextPosition,clear,reason=walkSegment(old,destination,step,group,origin,s.Corridor)
@@ -317,7 +346,7 @@ function Navigation.Step(hero: any,goal: Vector3,distance: number,now: number,de
 		end
 		nextPosition=avoid(hero,s,old,nextPosition,group)
 		local spent=flatDistance(old,nextPosition)
-		if s.EscapeRemaining then s.EscapeRemaining=math.max(0,s.EscapeRemaining-spent)end
+		if s.EscapeRemaining then s.EscapeRemaining=if clear and spent>=.05 then math.max(0,s.EscapeRemaining-spent) else nil end
 		hero.Position=nextPosition;budget-=spent
 		if spent<.01 then break end
 	end

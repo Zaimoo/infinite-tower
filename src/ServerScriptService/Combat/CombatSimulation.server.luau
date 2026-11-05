@@ -40,6 +40,7 @@ local HeroActionTiming=require(Shared.Util.HeroActionTiming)
 local HeroImpactQueue=require(script.Parent.HeroImpactQueue)
 local HeroTargeting=require(script.Parent.HeroTargeting)
 local HeroSkillEffects=require(script.Parent.HeroSkillEffects)
+local SquadMovement=require(script.Parent.SquadMovement)
 local HeroImpacts=HeroImpactQueue.new()
 local TowerProgress=require(Shared.Util.TowerProgress)
 local TowerRoomBuilder=require(script.Parent.Parent:WaitForChild("Core"):WaitForChild("TowerRoomBuilder"))
@@ -359,12 +360,7 @@ local function getHorizontalDistance(a: Vector3, b: Vector3): number
 end
 
 local function getFormationOffset(slotIndex: number): Vector3
-	local angle = ((slotIndex - 1) / 5) * (math.pi * 2)
-	return Vector3.new(
-		math.cos(angle) * MASTER_FORMATION_RADIUS,
-		0,
-		math.sin(angle) * MASTER_FORMATION_RADIUS
-	)
+	return SquadMovement.RadialOffset(slotIndex)
 end
 
 local function getMasterRootPosition(player: Player): Vector3?
@@ -519,6 +515,7 @@ function CombatSimulation.RebuildPlayerSquad(player: Player)
 		if not desiredUUIDs[uuid] then
 			rosterChanged=true
 			HeroNavigation.Clear(simHero)
+			SquadMovement.ClearHero(player, simHero.NetId)
 			ProgressionAwards[simHero.NetId] = nil
 			ActiveHeroesByNetId[simHero.NetId] = nil
 			masterState.DeployedHeroes[uuid] = nil
@@ -743,6 +740,7 @@ end)
 
 local function knockHeroIntoComa(simHero: SimHero, _baseComaSeconds: number?)
 	HeroNavigation.Clear(simHero)
+	SquadMovement.ClearHero(simHero.Owner, simHero.NetId)
 	local dm = getDataManager()
 	local profile = dm.GetProfile(simHero.Owner)
 
@@ -898,6 +896,7 @@ syncSquadStatus = function(player: Player)
 end
 
 local function restoreSquadOnPlot(player: Player)
+	SquadMovement.Reset(player)
 	local masterState = ActiveMasters[player]
 	if masterState then
 		for _, h in pairs(masterState.DeployedHeroes) do
@@ -928,6 +927,7 @@ end
 -- Phase 6: a floor transition no longer restores the squad. Downed heroes stand back up at a fraction of their HP
 -- and standing heroes keep whatever damage they carry. (Going home still calls restoreSquadOnPlot.)
 local function reviveDownedOnTransition(player: Player)
+	SquadMovement.Reset(player)
 	local masterState = ActiveMasters[player]
 	if not masterState then return end
 	local revived = 0
@@ -1532,6 +1532,7 @@ local function startDuel(owner: Player, contest: LootDuel.Contest): (boolean, st
 			end
 		end
 		freezeMaster(squad)
+		SquadMovement.Reset(squad.Player)
 		DuelByPlayer[squad.Player] = duel
 	end
 
@@ -1702,6 +1703,7 @@ local function finishDuel(duel: Duel)
 		local squad = duelSquad(duel, side)
 		if DuelByPlayer[squad.Player] == duel then DuelByPlayer[squad.Player] = nil end
 		thawMaster(squad)
+		SquadMovement.Reset(squad.Player)
 		local profile = dm.GetProfile(squad.Player)
 		local masterState = Tower.GetState(squad.Player)
 		local root = getMasterRootPosition(squad.Player)
@@ -2152,6 +2154,39 @@ performHeroAttack = function(simHero: SimHero, targetPos: Vector3, targetMob: Si
 	end
 end
 
+local function updateMasterMovementPolicy(player: Player, dt: number, now: number)
+	local squadState = Tower.GetState(player)
+	local assignedRoom = squadState.SquadAssignment and Tower.GetRoom(squadState.SquadFloorId)
+	local floorId = if assignedRoom then squadState.SquadFloorId else (squadState.FloorId or 0)
+	local roomGen = if assignedRoom then squadState.SquadRoomGeneration else (squadState.RoomGeneration or 1)
+	local room = Tower.GetRoom(floorId)
+	local ownerChar = player.Character
+	local ownerHum = ownerChar and ownerChar:FindFirstChildOfClass("Humanoid")
+	local ownerHrp = ownerChar and ownerChar:FindFirstChild("HumanoidRootPart") :: BasePart?
+	local rootPos = ownerHrp and ownerHrp.Position or nil
+	local supportedPos = if not assignedRoom and ownerHrp then HeroNavigation.Ground(ownerHrp.Position, nil, 3, 50) else nil
+	local isSprintingAttr = player:GetAttribute("IsSprinting") == true or (ownerChar ~= nil and ownerChar:GetAttribute("IsSprinting") == true)
+	SquadMovement.UpdateMaster(player, {
+		FloorId = floorId,
+		RoomGeneration = roomGen,
+		Assigned = assignedRoom ~= nil,
+		RawRootPosition = rootPos,
+		SupportedPosition = supportedPos,
+		Origin = room and room.Origin,
+		IsJumping = isPlayerJumping(player),
+		IsSprintingAttr = isSprintingAttr,
+		HumanoidWalkSpeed = ownerHum and ownerHum.WalkSpeed or 16.0,
+		RootVelocity = ownerHrp and ownerHrp.AssemblyLinearVelocity or Vector3.zero,
+		Now = now,
+		DeltaTime = dt,
+		CanWalk = function(from: Vector3, goal: Vector3): boolean
+			return HeroNavigation.CanShortcut(from, goal)
+		end,
+	})
+end
+
+local lastMasterPolicyClock: { [Player]: number } = setmetatable({}, { __mode = "k" }) :: any
+
 local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 	local movementHero: any = simHero
 	if simHero.DuelId then
@@ -2160,6 +2195,10 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 	end
 	if simHero.State == "COMA" then
 		return
+	end
+	if lastMasterPolicyClock[simHero.Owner] ~= now then
+		lastMasterPolicyClock[simHero.Owner] = now
+		updateMasterMovementPolicy(simHero.Owner, dt, now)
 	end
 	local squadState = Tower.GetState(simHero.Owner)
 	local assignedRoom = squadState.SquadAssignment and Tower.GetRoom(squadState.SquadFloorId)
@@ -2197,7 +2236,6 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 	end
 	simHero.CurrentHP = math.min(simHero.CurrentHP, simHero.MaxHP)
 
-	local masterState = ActiveMasters[simHero.Owner]
 	local maxLeash = assignedRoom and FirstBiome.LeashRange or (masterState and masterState.TargetEnemyUserId ~= nil) and 150.0 or LEASH_DISTANCE
 	if getHorizontalDistance(simHero.Position, masterPos) > maxLeash or math.abs(simHero.Position.Y - masterPos.Y) > LEASH_VERTICAL_TELEPORT_DISTANCE then
 		simHero.TargetNetId = nil
@@ -2261,25 +2299,46 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 	local targetEnemyHero: SimHero? = nil -- outside duels heroes only ever fight mobs (stepDuelHero handles hero-vs-hero)
 
 	if simHero.State == "FOLLOW_MASTER" or not targetPos then
-		local formation = getFormationOffset(simHero.SlotIndex)
-		local distToMaster = (masterPos - simHero.Position).Magnitude
-		-- Slightly tighten formation offset when far away while keeping slots distinct so squadmates do not stack on bridges
-		local targetOffset = if distToMaster > 18 then formation * math.clamp(18 / distToMaster, 0.65, 1.0) else formation
-		local goalPos = HeroNavigation.PlaceOnGround(masterPos, targetOffset)
-		local distToGoal = (goalPos - simHero.Position).Magnitude
-		local horizDistToGoal = getHorizontalDistance(simHero.Position, goalPos)
-
-		if distToGoal > .5 then
-			-- Rubber-band catch-up curve: v_final = v_baseFollow * (1 + clamp((D - 14) / 50, 0, 0.65))
-			local catchUpMult = if horizDistToGoal > FOLLOW_CATCHUP_RADIUS
-				then 1.0 + math.clamp((horizDistToGoal - FOLLOW_CATCHUP_RADIUS) / FOLLOW_CATCHUP_SPAN, 0.0, FOLLOW_CATCHUP_MAX_BONUS)
-				else 1.0
-			local followSpeed = baseFollowSpeed * catchUpMult
-
-			local outcome = HeroNavigation.Step(simHero, goalPos, followSpeed * dt, now, dt)
-			movementHero.NavigationStatus = outcome.Status
+		if not assignedRoom then
+			local plan = SquadMovement.PlanActiveFollow(simHero.Owner, simHero, masterPos, now, {
+				HeroBaseSpeed = heroBaseSpeed,
+				Overdrive = isOverdrive,
+				PlaceOnGround = function(base: Vector3, offset: Vector3): Vector3
+					return HeroNavigation.PlaceOnGround(base, offset)
+				end,
+				CanShortcut = function(from: Vector3, goal: Vector3): boolean
+					return HeroNavigation.CanShortcut(from, goal)
+				end,
+			})
+			movementHero.ServerRouteLag = plan.RouteLag
+			movementHero.FormationTarget = plan.TerminalGoal
+			movementHero.TrailGoal = plan.Goal
+			local distToTerminal = (plan.TerminalGoal - simHero.Position).Magnitude
+			if distToTerminal > .5 then
+				local outcome = HeroNavigation.Step(simHero, plan.Goal, plan.FollowSpeed * dt, now, dt)
+				movementHero.NavigationStatus = outcome.Status
+			else
+				HeroNavigation.Pause(simHero)
+			end
 		else
-			HeroNavigation.Pause(simHero)
+			local formation = getFormationOffset(simHero.SlotIndex)
+			local distToMaster = (masterPos - simHero.Position).Magnitude
+			local targetOffset = if distToMaster > 18 then formation * math.clamp(18 / distToMaster, 0.65, 1.0) else formation
+			local goalPos = HeroNavigation.PlaceOnGround(masterPos, targetOffset)
+			local distToGoal = (goalPos - simHero.Position).Magnitude
+			local horizDistToGoal = getHorizontalDistance(simHero.Position, goalPos)
+
+			if distToGoal > .5 then
+				local catchUpMult = if horizDistToGoal > FOLLOW_CATCHUP_RADIUS
+					then 1.0 + math.clamp((horizDistToGoal - FOLLOW_CATCHUP_RADIUS) / FOLLOW_CATCHUP_SPAN, 0.0, FOLLOW_CATCHUP_MAX_BONUS)
+					else 1.0
+				local followSpeed = baseFollowSpeed * catchUpMult
+
+				local outcome = HeroNavigation.Step(simHero, goalPos, followSpeed * dt, now, dt)
+				movementHero.NavigationStatus = outcome.Status
+			else
+				HeroNavigation.Pause(simHero)
+			end
 		end
 
 		-- Apply jump arc if jumping
@@ -2294,6 +2353,8 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 		end
 		return
 	end
+
+	SquadMovement.MarkCombat(simHero.Owner, simHero)
 
 	local distToTarget = (simHero.Position - targetPos).Magnitude
 	if distToTarget > simHero.AttackRange or not HeroNavigation.CanAttack(simHero.Position, targetPos) then
@@ -2546,11 +2607,12 @@ Tower.RegisterAdapter("Combat",{
  RestoreSquad=function(saved)
   if not saved.Master then return end
   saved.Master.FocusedTargetNetId=saved.FocusedTargetNetId;saved.Master.TargetEnemyUserId=saved.TargetEnemyUserId;saved.Master.LastRecallClock=saved.LastRecallClock
-  for _,entry in saved.Heroes do for _,key in {"Position","FloorId","RoomGeneration","EntityGeneration","TargetNetId","State","PacifiedUntil","ActionSequence"} do entry.Ref[key]=entry[key] end;HeroNavigation.Clear(entry.Ref) end
+  for _,entry in saved.Heroes do for _,key in {"Position","FloorId","RoomGeneration","EntityGeneration","TargetNetId","State","PacifiedUntil","ActionSequence"} do entry.Ref[key]=entry[key] end;HeroNavigation.Clear(entry.Ref);SquadMovement.Reset(entry.Ref.Owner) end
  end,
  CanRecall=function(player) local m=ActiveMasters[player];return m~=nil and os.clock()-m.LastRecallClock>=RECALL_COOLDOWN end,
   Transfer=function(player,room,recall,anchor)
    local m=ActiveMasters[player];if not m then return end
+   SquadMovement.Reset(player)
    m.FocusedTargetNetId=nil;m.TargetEnemyUserId=nil
    if recall then m.LastRecallClock=os.clock();ProgressionActivity[player]=os.clock() end
    local changedFloor=false
@@ -2818,12 +2880,14 @@ end
 
 local function handlePlayerAdded(player: Player)
 	player.CharacterAdded:Connect(function(char)
+		SquadMovement.Reset(player)
 		bindCharacterCargoListeners(player, char)
 	end)
 	if player.Character then
 		bindCharacterCargoListeners(player, player.Character)
 	end
 	player.CharacterRemoving:Connect(function()
+		SquadMovement.Reset(player)
 		if CarrierToHeldLoot[player] then
 			CombatSimulation.DropCarriedLoot(player, true)
 		end
@@ -2869,6 +2933,8 @@ Players.PlayerRemoving:Connect(function(player: Player)
 		end
 		ActiveMasters[player] = nil
 	end
+	SquadMovement.Reset(player)
+	lastMasterPolicyClock[player] = nil
 	MasterVelocityTracking[player] = nil
 end)
 
@@ -2910,6 +2976,8 @@ local function stepCombatHeartbeat(deltaTime: number)
 		else
 			MasterVelocityTracking[player] = nil
 		end
+		lastMasterPolicyClock[player] = now
+		updateMasterMovementPolicy(player, dt, now)
 	end
 
 	debug.profilebegin("CombatSim.Heroes")
@@ -2987,6 +3055,7 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 end)
 
 local function warpSquad(player: Player, targetPos: Vector3, isIsland: boolean)
+	SquadMovement.Reset(player)
 	local masterState = ActiveMasters[player]
 	if not masterState then return end
 	masterState.FocusedTargetNetId = nil

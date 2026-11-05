@@ -79,8 +79,21 @@ function Graph.Route(g: any,from: Point,goal: Point): {Point}
 				local length2=dx*dx+dz*dz
 				local t=((p.X-link.AX)*dx+(p.Z-link.AZ)*dz)/length2
 				local lateral=math.abs((p.X-link.AX)*dz-(p.Z-link.AZ)*dx)/math.sqrt(length2)
-				return t>=0 and t<=1 and lateral<=link.UsableWidth/2
-					and math.abs(p.Y-link.AY-(link.BY-link.AY)*t)<=2
+				if t>=0 and t<=1 and lateral<=link.UsableWidth/2
+					and math.abs(p.Y-link.AY-(link.BY-link.AY)*t)<=2 then
+					return true
+				end
+				for _,name in {"LandingA","LandingB"}do
+					local pad=link[name]
+					local lx,lz=pad.BX-pad.AX,pad.BZ-pad.AZ
+					local ll=lx*lx+lz*lz
+					local u=((p.X-pad.AX)*lx+(p.Z-pad.AZ)*lz)/ll
+					local padLat=math.abs((p.X-pad.AX)*lz-(p.Z-pad.AZ)*lx)/math.sqrt(ll)
+					if u>=0 and u<=1 and padLat<=link.UsableWidth/2 and math.abs(p.Y-pad.AY)<=.5 then
+						return true
+					end
+				end
+				return false
 			end
 			if onDeck(from)and onDeck(goal)then return {goal}end
 		end
