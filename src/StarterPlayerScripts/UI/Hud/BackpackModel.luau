@@ -5,6 +5,7 @@ local Config = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config")
 local HeroCatalog = require(Config:WaitForChild("HeroCatalog"))
 local ArtifactCatalog = require(Config:WaitForChild("ArtifactCatalog"))
 local PitBalance = require(Config:WaitForChild("PitBalanceConfig"))
+local StatBalance = require(Config:WaitForChild("StatBalance"))
 
 export type Tab = "Artifacts" | "Heroes" | "Materials"
 export type Row = {
@@ -46,6 +47,19 @@ local function assignment(tag: string?): string
 end
 
 local Model = {}
+
+-- How many heroes and artifacts the player holds against the inventory caps (50 each). Summons that
+-- would go past a cap are refused by the server.
+export type Capacity = { Have: number, Max: number }
+function Model.Capacity(profile: any): { Heroes: Capacity, Artifacts: Capacity }
+	local heroes, artifacts = 0, 0
+	for _ in (profile and profile.Heroes) or {} do heroes += 1 end
+	for _ in (profile and profile.Artifacts) or {} do artifacts += 1 end
+	return {
+		Heroes = { Have = heroes, Max = StatBalance.MaxHeroInventory },
+		Artifacts = { Have = artifacts, Max = StatBalance.MaxArtifactInventory },
+	}
+end
 
 function Model.Build(profile: any, tab: Tab): { Row }?
 	if not profile then return nil end

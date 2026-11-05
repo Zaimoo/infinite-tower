@@ -241,6 +241,18 @@ local function BackpackPanel(props: { Width: number, Height: number, OnClose: ()
 	local tabY = if compact then 50 else 62
 	local tabHeight = if compact then 42 else 46
 	local contentY = tabY + tabHeight + 10
+	-- Inventory caps: tabs read "Artifacts 37/50"; the title row warns near and at the limit.
+	local capacity = Model.Capacity(Store.Profile)
+	local function capColor(c: Model.Capacity): string
+		return if c.Have >= c.Max then "#F87171" elseif c.Have >= c.Max - 5 then "#FBBF24" else "#E8E0F5"
+	end
+	local function capText(name: string, c: Model.Capacity): string
+		return string.format("%s <font color=\"%s\">%d / %d</font>", name, capColor(c), c.Have, c.Max)
+	end
+	local fullNote = if capacity.Artifacts.Have >= capacity.Artifacts.Max then "Artifacts full: sell or promote at the Forge to summon more."
+		elseif capacity.Heroes.Have >= capacity.Heroes.Max then "Heroes full: convert or synthesize at the Pit to summon more."
+		else nil
+
 	local tabs = {}
 	for i, name in TABS do
 		tabs[name] = button({
@@ -257,7 +269,9 @@ local function BackpackPanel(props: { Width: number, Height: number, OnClose: ()
 				setRows(Model.Build(Store.Profile, name))
 				setTab(name)
 			end,
-		}, name, tab == name)
+		}, if name == "Artifacts" then string.format("Artifacts %d/%d", capacity.Artifacts.Have, capacity.Artifacts.Max)
+			elseif name == "Heroes" then string.format("Heroes %d/%d", capacity.Heroes.Have, capacity.Heroes.Max)
+			else name, tab == name)
 	end
 
 	local listChildren: { [string]: any } = {
@@ -290,6 +304,12 @@ local function BackpackPanel(props: { Width: number, Height: number, OnClose: ()
 		}, {
 			Title = Heavy({ Text = "Backpack", MaxSize = 28, TextXAlignment = Enum.TextXAlignment.Left,
 				Position = UDim2.fromOffset(20, 10), Size = UDim2.new(1, -84, 0, 34) }),
+			Capacity = Body({ Name = "Capacity", RichText = true, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Right,
+				Position = UDim2.new(0.4, 0, 0, if fullNote then 6 else 16), Size = UDim2.new(0.6, -66, 0, 20),
+				Text = capText("Artifacts", capacity.Artifacts) .. "   ·   " .. capText("Heroes", capacity.Heroes) }),
+			FullNote = if fullNote then Body({ Name = "FullNote", TextSize = 12, TextColor3 = Color3.fromRGB(248, 113, 113),
+				TextXAlignment = Enum.TextXAlignment.Right, TextTruncate = Enum.TextTruncate.AtEnd,
+				Position = UDim2.new(0.4, 0, 0, 28), Size = UDim2.new(0.6, -66, 0, 18), Text = fullNote }) else nil,
 			Close = button({ Name = "Close", Position = UDim2.new(1, -54, 0, 8), Size = UDim2.fromOffset(44, 42),
 				[React.Event.Activated] = close }, "×"),
 			Tabs = e("Frame", { Name = "Tabs", Position = UDim2.fromOffset(10, tabY),
