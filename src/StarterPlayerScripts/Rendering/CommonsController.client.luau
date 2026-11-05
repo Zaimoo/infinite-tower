@@ -7,6 +7,8 @@
 local CollectionService = game:GetService("CollectionService")
 local RunService = game:GetService("RunService")
 
+local HubPresence = require(script.Parent:WaitForChild("HubPresence"))
+
 local SPIN_SPEED = math.rad(40) -- radians per second
 local BOB_HEIGHT = 1.2
 local BOB_PERIOD = 4
@@ -55,6 +57,9 @@ track("CommonsSpinner", addSpinner, spinners)
 track("CausewayPulse", addPulser, pulsers)
 
 local function stepCommons()
+	if HubPresence.InTower() then
+		return -- the Commons is not visible from a tower floor
+	end
 	local t = os.clock()
 	if next(spinners) ~= nil then
 		local bob = math.sin(t * math.pi * 2 / BOB_PERIOD) * BOB_HEIGHT
