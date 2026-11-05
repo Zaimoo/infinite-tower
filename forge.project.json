@@ -1,0 +1,32 @@
+{
+  "name": "infinite-tower-forge",
+  "tree": {
+    "$className": "DataModel",
+    "$ignoreUnknownInstances": true,
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "$ignoreUnknownInstances": true,
+      "Core": {
+        "$className": "Folder",
+        "$ignoreUnknownInstances": true,
+        "DataManager": { "$path": "src/ServerScriptService/Core/DataManager.server.luau" },
+        "ForgeTransactions": { "$path": "src/ServerScriptService/Core/ForgeTransactions.luau" }
+      }
+    },
+    "StarterPlayer": {
+      "$className": "StarterPlayer",
+      "$ignoreUnknownInstances": true,
+      "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
+        "$ignoreUnknownInstances": true,
+        "UI": {
+          "$className": "Folder",
+          "$ignoreUnknownInstances": true,
+          "HUDController": { "$path": "src/StarterPlayerScripts/UI/HUDController.client.luau" },
+          "ForgeWorkbenchController": { "$path": "src/StarterPlayerScripts/UI/ForgeWorkbenchController.luau" },
+          "ForgeWorkbench": { "$path": "src/StarterPlayerScripts/UI/ForgeWorkbench" }
+        }
+      }
+    }
+  }
+}

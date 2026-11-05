@@ -1,0 +1,9 @@
+{
+  "name": "forge-workbench-review",
+  "tree": {
+    "$className": "Folder",
+    "ForgeWorkbench": { "$path": "ForgeWorkbench" },
+    "Fixture": { "$path": "Fixture.luau" },
+    "DemoTransport": { "$path": "DemoTransport.luau" }
+  }
+}

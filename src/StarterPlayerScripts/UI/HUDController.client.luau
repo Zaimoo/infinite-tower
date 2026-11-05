@@ -1224,7 +1224,7 @@ fortressTreeController = FortressTreeController.new(hudGui, function() return Cu
 local SynthesisController = require(script.Parent:WaitForChild("SynthesisController"))
 synthesisController = SynthesisController.new(hudGui, TycoonRemotes:WaitForChild("PitRequest") :: RemoteFunction)
 _G.SynthesisController = synthesisController
-local ForgeController = require(script.Parent:WaitForChild("ForgeController"))
+local ForgeController = require(script.Parent:WaitForChild("ForgeWorkbenchController"))
 local ArtifactRemotes = Remotes:WaitForChild("ArtifactRemotes") :: Folder
 forgeController = ForgeController.new(hudGui, ArtifactRemotes, function() return CurrentProfile end, updateBottomTabHighlights)
 _G.ForgeController = forgeController
@@ -1557,7 +1557,7 @@ ProfileDeltaSyncEvent.OnClientEvent:Connect(function(profile: any)
 		if not CurrentProfile then return end
 		for uuid, hero in profile.Heroes or {} do CurrentProfile.Heroes[uuid] = hero end
 		for _, uuid in profile.Removed or {} do CurrentProfile.Heroes[uuid] = nil end
-		for _, key in {"Currencies", "PitMaterials", "PitRevision", "UnlockedResearch", "SquadPower", "SquadPowerByHero"} do
+		for _, key in {"Currencies", "PitMaterials", "PitRevision", "ForgeRevision", "UnlockedResearch", "SquadPower", "SquadPowerByHero"} do
 			if profile[key] ~= nil then CurrentProfile[key] = profile[key] end
 		end
 		profile = CurrentProfile
