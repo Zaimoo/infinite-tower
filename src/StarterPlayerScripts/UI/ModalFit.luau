@@ -22,6 +22,18 @@ export type Options = {
 	DesignSize: ((Vector2) -> Vector2)?, -- choose a layout for the available space
 }
 
+-- Shared geometry for imperative and React windows.
+function ModalFit.Calculate(size: Vector2, topBar: number, width: number, height: number, opts: Options?): (UDim2, number, Vector2)
+	local o: Options = opts or {}
+	local margin = o.Margin or ModalFit.Margin
+	local top = topBar + margin + (o.Top or 0)
+	local availH = math.max(1, size.Y - top - (o.BottomMargin or ModalFit.BottomMargin))
+	local availW = math.max(1, size.X - 2 * margin)
+	local design = if o.DesignSize then o.DesignSize(Vector2.new(availW, availH)) else Vector2.new(width, height)
+	local scale = math.clamp(math.min(availW / design.X, availH / design.Y), o.MinScale or 0.45, o.MaxScale or 1)
+	return UDim2.new(0.5, 0, 0, top + availH / 2), scale, design
+end
+
 -- Keeps `root` centred in the safe area and `scale` fitted while the screen changes size.
 -- Returns `fit`, which re-centres the window and returns the scale it should have (for open tweens).
 function ModalFit.Bind(root: GuiObject, scale: UIScale, width: number, height: number, opts: Options?): () -> number
@@ -31,18 +43,10 @@ function ModalFit.Bind(root: GuiObject, scale: UIScale, width: number, height: n
 		if not gui then return scale.Scale end
 		local size = gui.AbsoluteSize
 		local topBar = if gui.IgnoreGuiInset then (GuiService:GetGuiInset()).Y else 0
-		local margin = o.Margin or ModalFit.Margin
-		local top = topBar + margin + (o.Top or 0)
-		local availH = math.max(1, size.Y - top - (o.BottomMargin or ModalFit.BottomMargin))
-		local availW = math.max(1, size.X - 2 * margin)
-		local designWidth, designHeight = width, height
-		if o.DesignSize then
-			local design = o.DesignSize(Vector2.new(availW, availH))
-			designWidth, designHeight = design.X, design.Y
-			root.Size = UDim2.fromOffset(designWidth, designHeight)
-		end
-		root.Position = UDim2.new(0.5, 0, 0, top + availH / 2)
-		return math.clamp(math.min(availW / designWidth, availH / designHeight), o.MinScale or 0.45, o.MaxScale or 1)
+		local position, fittedScale, design = ModalFit.Calculate(size, topBar, width, height, o)
+		if o.DesignSize then root.Size = UDim2.fromOffset(design.X, design.Y) end
+		root.Position = position
+		return fittedScale
 	end
 	local function apply()
 		scale.Scale = fit()

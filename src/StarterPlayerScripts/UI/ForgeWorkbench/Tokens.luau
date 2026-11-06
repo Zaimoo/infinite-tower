@@ -19,7 +19,7 @@ return table.freeze({
 	Body = 16,
 	Small = 14,
 	Heading = 22,
-	CardWidth = 156,
-	CardHeight = 240,
+	CardWidth = 128,
+	CardHeight = 188,
 	PageSize = 24, -- retained for compatibility; the native grid scrolls and bounds its 3D previews
 })

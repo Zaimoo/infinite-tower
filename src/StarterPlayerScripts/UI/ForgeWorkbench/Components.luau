@@ -6,6 +6,7 @@ local React = require(ReplicatedStorage.Packages.React)
 local Catalog = require(ReplicatedStorage.Shared.Config.ArtifactCatalog)
 local Stats = require(ReplicatedStorage.Shared.Util.StatFormulas)
 local Portrait = require(script.Parent.Parent.Hud.Portrait)
+local Icons = require(script.Parent.Parent.Hud.Icons)
 local ArtifactPreview = require(script.Parent.Parent.ArtifactPreview)
 local UIFeel = require(script.Parent.Parent.UIFeel)
 local Model = require(script.Parent.Model)
@@ -20,11 +21,11 @@ local C = {}
 function C.Text(props: { [string]: any })
 	local result: { [string]: any } = {
 		BackgroundTransparency = 1,
-		FontFace = T.Theme.Fonts.Body,
+		FontFace = T.Theme.Fonts.Title,
 		TextSize = T.Body,
 		TextColor3 = T.Text,
 		TextStrokeColor3 = T.Theme.Ink,
-		TextStrokeTransparency = 0.55,
+		TextStrokeTransparency = 1,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextYAlignment = Enum.TextYAlignment.Center,
 		RichText = false, -- names are always plain text
@@ -32,7 +33,11 @@ function C.Text(props: { [string]: any })
 		Size = UDim2.new(1, 0, 0, 32),
 	}
 	for key, value in props do result[key] = value end
-	return e("TextLabel", result)
+	-- A contextual stroke outlines the glyphs separately from button borders.
+	result.TextStrokeTransparency = 1
+	return e("TextLabel", result, {
+		Ink = e("UIStroke", { Name = "GrimoireTextInk", ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual, Color = T.Theme.Ink, Thickness = math.clamp((result.TextSize or T.Body) * 0.12, 2, 3), Transparency = 0, LineJoinMode = Enum.LineJoinMode.Round }),
+	})
 end
 
 function C.Stack(props: { Size: UDim2?, Position: UDim2?, Order: number?, Children: { [string]: any }, ZIndex: number? })
@@ -80,7 +85,7 @@ type ButtonProps = {
 	OnActivate: () -> (),
 	Size: UDim2?, Position: UDim2?, Order: number?, Name: string?,
 	Disabled: boolean?, Primary: boolean?, Selected: boolean?, Accent: Color3?,
-	FocusOrder: number?, Ref: any?,
+	FocusOrder: number?, Ref: any?, Icon: string?, Tooltip: string?,
 }
 
 function C.Button(props: ButtonProps)
@@ -100,6 +105,7 @@ function C.Button(props: ButtonProps)
 		animate(if not props.Disabled and (hovered or focused) then 1.035 else 1, 0.12)
 		return function() if tweenRef.current then tweenRef.current:Cancel() end end
 	end, { hovered, focused, props.Disabled })
+	local iconSize = if props.Icon == "Add" then 44 else 28
 	local active = props.Selected or focused
 	local tone = if props.Disabled then T.Theme.Tones.Slate elseif props.Primary then T.Theme.Tones.Action elseif props.Selected then T.Theme.Tones.Gold else T.Theme.Tones.Deep
 	return e("TextButton", {
@@ -136,12 +142,27 @@ function C.Button(props: ButtonProps)
 			Corner = e("UICorner", { CornerRadius = UDim.new(0, 7) }),
 			Line = e("UIStroke", { Color = props.Accent or (if active or hovered or props.Primary then T.Gold else T.Theme.Tones.Slate.Rail), Thickness = if active then 2.5 else 1.4, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
 		}),
+		Tooltip = if props.Tooltip and (hovered or focused) then e("Frame", { Name = "ActionTooltip", AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, 0, 0, -8), Size = UDim2.fromOffset(240, 64), BackgroundColor3 = T.Background, BorderSizePixel = 0, ZIndex = 50 }, {
+			Corner = e("UICorner", { CornerRadius = UDim.new(0, 8) }),
+			Rail = e("UIStroke", { Color = T.Gold, Thickness = 1 }),
+			Label = e(C.Text, { Text = props.Tooltip, Position = UDim2.fromOffset(8, 4), Size = UDim2.new(1, -16, 1, -8), TextSize = 14, ZIndex = 51 }),
+		}) else nil,
+		Icon = if props.Icon then e("Frame", { Name = "ActionIcon", AnchorPoint = Vector2.new(if props.Text == "" then 0.5 else 0, 0.5), Position = if props.Text == "" then UDim2.fromScale(0.5, 0.5) else UDim2.new(0, 12, 0.5, 0), Size = UDim2.fromOffset(iconSize, iconSize), BackgroundTransparency = 1, ZIndex = 3 }, { Art = e(Icons.Icon, { Name = props.Icon, Size = iconSize, Dim = props.Disabled }) }) else nil,
 		Label = e(C.Text, {
-			Position = UDim2.fromOffset(8, 2), Size = UDim2.new(1, -16, 1, -4),
-			Text = props.Text, TextSize = 14, FontFace = T.Theme.Fonts.Title,
+			Position = UDim2.fromOffset(if props.Icon and props.Text ~= "" then 46 else 8, 2), Size = UDim2.new(1, if props.Icon and props.Text ~= "" then -54 else -16, 1, -4),
+			Text = props.Text, TextSize = 18, FontFace = T.Theme.Fonts.Title,
 			TextStrokeColor3 = T.Theme.Ink, TextStrokeTransparency = if props.Disabled then 1 else 0.15,
 			TextColor3 = if props.Disabled then T.Muted else T.Text, TextXAlignment = Enum.TextXAlignment.Center,
 		}),
+	})
+end
+
+function C.Currency(props: { Icon: string, Text: string, Position: UDim2 })
+	return e("Frame", { Name = props.Icon .. "Chip", Position = props.Position, Size = UDim2.fromOffset(150, 34), BackgroundColor3 = T.Theme.Tones.Deep.Bottom, BorderSizePixel = 0 }, {
+		Corner = e("UICorner", { CornerRadius = UDim.new(0, 8) }),
+		Outline = e("UIStroke", { Color = T.Gold, Thickness = 2 }),
+		Icon = e("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(8, 6), Size = UDim2.fromOffset(22, 22) }, { Art = e(Icons.Icon, { Name = props.Icon, Size = 22 }) }),
+		Value = e(C.Text, { Text = props.Text, FontFace = T.Theme.Fonts.Number, TextSize = 17, Position = UDim2.fromOffset(36, 0), Size = UDim2.new(1, -44, 1, 0), TextXAlignment = Enum.TextXAlignment.Center }),
 	})
 end
 
@@ -206,23 +227,38 @@ function C.Preview(props: { Artifact: Artifact, Size: UDim2?, Order: number? })
 	})
 end
 
-type HeroSlotProps = { Snapshot: Snapshot, Hero: Hero, Selected: boolean, OnSelect: () -> (), Order: number }
+type HeroSlotProps = { Snapshot: Snapshot, Hero: Hero, Selected: boolean, OnSelect: () -> (), Order: number, Compatible: boolean?, Busy: boolean? }
 function C.HeroSlot(props: HeroSlotProps)
 	local hero = props.Hero
 	local artifact = hero.EquippedArtifactUUID and props.Snapshot.Artifacts[hero.EquippedArtifactUUID]
-	return e("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 112), LayoutOrder = props.Order }, {
-		Button = e(C.Button, { Text = "", Selected = props.Selected, OnActivate = props.OnSelect, Size = UDim2.fromScale(1, 1), Name = "Hero_" .. hero.UUID, FocusOrder = props.Order }),
-		Portrait = e("Frame", { Active = false, Position = UDim2.fromOffset(10, 16), Size = UDim2.fromOffset(48, 64), BackgroundTransparency = 1, ZIndex = 2 }, {
-			Image = e(Portrait, { TemplateId = hero.TemplateId, Archetype = hero.Archetype, Stars = hero.Stars }),
-		}),
-		Name = e(C.Text, { Text = Model.heroLabel(hero), Position = UDim2.fromOffset(68, 8), Size = UDim2.new(1, -80, 0, 52), TextSize = 14, ZIndex = 2 }),
-		Slot = e(C.Text, {
-			ZIndex = 2,
-			Text = if artifact then "[E] " .. artifact.DisplayName else "[—] Empty weapon slot",
-			TextColor3 = if artifact then T.Equipped else T.Muted, TextSize = 14,
-			Position = UDim2.fromOffset(68, 62), Size = UDim2.new(1, -80, 0, 42),
+	local available = props.Compatible ~= false
+	local deployedSlot = Model.deployedSlot(hero)
+	return e("Frame", { Name = "HeroCard_" .. hero.UUID, BackgroundTransparency = 1, Size = UDim2.fromOffset(196, 286), LayoutOrder = props.Order + (if available then 0 else 10000) }, {
+		Button = e(C.Button, { Text = "", Selected = props.Selected, Disabled = props.Busy or not available, OnActivate = props.OnSelect, Size = UDim2.fromScale(1, 1), Name = "Hero_" .. hero.UUID, FocusOrder = props.Order }),
+		Content = e("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(10, 10), Size = UDim2.new(1, -20, 1, -20), ZIndex = 2 }, {
+			Portrait = e("Frame", { Position = UDim2.fromOffset(0, 0), Size = UDim2.new(1, 0, 0, 116), BackgroundColor3 = T.Background, BorderSizePixel = 0 }, {
+				Corner = e("UICorner", { CornerRadius = UDim.new(0, 8) }),
+				Image = e(Portrait, { TemplateId = hero.TemplateId, Archetype = hero.Archetype, Stars = hero.Stars, Dark = not available }),
+			}),
+			Power = e(C.Text, { Text = string.format("%.0f PWR", Model.heroPower(props.Snapshot, hero)), TextSize = 14, TextColor3 = T.Gold, TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(0, 92), Size = UDim2.new(1, 0, 0, 24), BackgroundColor3 = T.Background, BackgroundTransparency = 0.12, ZIndex = 5 }),
+			Deployment = e(C.Text, { Name = "DeploymentBadge", Text = if deployedSlot then "DEPLOYED · SLOT " .. deployedSlot else "UNDEPLOYED", TextSize = 12, TextColor3 = if deployedSlot then T.Equipped else T.Muted, TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(0, 0), Size = UDim2.new(1, 0, 0, 24), BackgroundTransparency = 0.12, BackgroundColor3 = T.Background, ZIndex = 5 }),
+			Name = e(C.Text, { Text = hero.DisplayName, TextColor3 = if available then T.Gold else T.Muted, Position = UDim2.fromOffset(0, 120), Size = UDim2.new(1, 0, 0, 28), TextSize = 18, TextWrapped = false, TextTruncate = Enum.TextTruncate.AtEnd, TextXAlignment = Enum.TextXAlignment.Center }),
+			Rank = e(C.Text, { Text = string.format("Lv.%d · %s", hero.Level, string.rep("★", hero.Stars)), Position = UDim2.fromOffset(0, 148), Size = UDim2.new(1, 0, 0, 24), TextSize = 14, TextXAlignment = Enum.TextXAlignment.Center }),
+			Class = e(C.Text, { Text = hero.Archetype .. " · #" .. string.sub(hero.UUID, -4), Position = UDim2.fromOffset(0, 172), Size = UDim2.new(1, 0, 0, 22), TextSize = 12, TextColor3 = T.Muted, TextXAlignment = Enum.TextXAlignment.Center }),
+			Weapon = e(C.Text, { Text = if artifact then "Current: " .. artifact.DisplayName else "Empty weapon slot", Position = UDim2.fromOffset(0, 196), Size = UDim2.new(1, 0, 0, 36), TextSize = 13, TextColor3 = if artifact then T.Equipped else T.Muted, TextXAlignment = Enum.TextXAlignment.Center }),
+			Action = e(C.Text, { Text = if not available then "INCOMPATIBLE" elseif artifact then "REPLACE WEAPON" else "EQUIP", Position = UDim2.fromOffset(0, 236), Size = UDim2.new(1, 0, 0, 28), TextSize = 14, TextColor3 = if available then T.Gold else T.Muted, TextXAlignment = Enum.TextXAlignment.Center }),
 		}),
 	})
+end
+
+function C.CardGrid(props: { Children: { [string]: any }, Size: UDim2, Position: UDim2? })
+	local columns, setColumns = React.useState(3)
+	local children = table.clone(props.Children)
+	children.Layout = e("UIGridLayout", { CellSize = UDim2.new(1 / columns, -12, 0, 286), CellPadding = UDim2.fromOffset(12, 12), SortOrder = Enum.SortOrder.LayoutOrder })
+	children.Padding = e("UIPadding", { PaddingTop = UDim.new(0, 6), PaddingLeft = UDim.new(0, 6), PaddingBottom = UDim.new(0, 12) })
+	return e("ScrollingFrame", { Name = "HeroCardGrid", Size = props.Size, Position = props.Position, BackgroundTransparency = 1, BorderSizePixel = 0, CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, ScrollingDirection = Enum.ScrollingDirection.Y, ScrollBarThickness = 6, ScrollBarImageColor3 = T.Gold, ClipsDescendants = true, SelectionGroup = true,
+		[React.Change.AbsoluteSize] = function(frame) setColumns(math.clamp(math.floor(frame.AbsoluteSize.X / 180), 1, 5)) end,
+	}, children)
 end
 
 type CardProps = {
@@ -235,8 +271,8 @@ function C.ArtifactCard(props: CardProps)
  local owners = Model.ownerIds(props.Snapshot, artifact.UUID)
  local owner = #owners == 1 and props.Snapshot.Heroes[owners[1]] or nil
  local equipped = #owners > 0
- local accent = if props.Material then T.Bad elseif props.Selected then T.Gold else rarity.Color
- local state = if equipped then "EQUIPPED" elseif artifact.Locked then "LOCKED" else "AVAILABLE"
+ local accent = if props.Material then T.Bad elseif props.Selected then T.Gold elseif equipped then T.Equipped else rarity.Color
+ local state = if equipped then "EQUIPPED" elseif artifact.Locked then "LOCKED" else "UNEQUIPPED"
  local stateColor = if equipped then T.Equipped elseif artifact.Locked then T.Gold else T.Muted
  local ref = React.useRef(nil)
  React.useEffect(function()
@@ -250,16 +286,15 @@ function C.ArtifactCard(props: CardProps)
   Scale = e("UIScale", { ref = ref }),
   Button = e(C.Button, { Text = "", Accent = accent, Selected = props.Selected or props.Material, OnActivate = props.OnSelect, Size = UDim2.fromScale(1, 1), Name = "Artifact_" .. artifact.UUID, FocusOrder = 100 + props.Order }),
   Content = e("Frame", { Position = UDim2.fromOffset(8, 8), Size = UDim2.new(1, -16, 1, -16), BackgroundTransparency = 1, ZIndex = 2 }, {
-   PreviewHost = e("Frame", { Position = UDim2.fromOffset(0, 24), Size = UDim2.new(1, 0, 0, 112), BackgroundTransparency = 1 }, {
+   PreviewHost = e("Frame", { Position = UDim2.fromOffset(0, 24), Size = UDim2.new(1, 0, 0, 68), BackgroundTransparency = 1 }, {
     Preview = if props.ShowPreview ~= false then e(C.Preview, { Artifact = artifact, Size = UDim2.fromScale(1, 1) }) else nil,
    }),
-   State = e(C.Text, { Name = "EquipmentRibbon", Text = state, TextColor3 = stateColor, FontFace = T.Theme.Fonts.Title, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 24), BackgroundTransparency = 0, BackgroundColor3 = if equipped then T.Theme.Tones.Teal.Bottom else T.Theme.Tones.Deep.Bottom, ZIndex = 4 }),
-   Stars = e(C.Text, { Text = string.rep("★", artifact.Star), TextColor3 = T.Gold, FontFace = T.Theme.Fonts.Number, TextSize = 17, TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(0, 112), Size = UDim2.new(1, 0, 0, 24), ZIndex = 4 }),
-   Name = e(C.Text, { Text = artifact.DisplayName, Position = UDim2.fromOffset(0, 138), Size = UDim2.new(1, 0, 0, 34), TextSize = 14, TextTruncate = Enum.TextTruncate.AtEnd }),
-   Rarity = e(C.Text, { Text = rarity.Name, Position = UDim2.fromOffset(0, 172), Size = UDim2.new(0.58, 0, 0, 22), TextSize = 14, TextColor3 = rarity.Color, TextWrapped = false, TextTruncate = Enum.TextTruncate.AtEnd }),
-   Power = e(C.Text, { Text = string.format("%.0f PWR", Model.power(artifact)), Position = UDim2.new(0.58, 0, 0, 172), Size = UDim2.new(0.42, 0, 0, 22), TextSize = 14, FontFace = T.Theme.Fonts.Number, TextXAlignment = Enum.TextXAlignment.Right }),
-   OwnerPortrait = if owner then e("Frame", { Position = UDim2.fromOffset(0, 196), Size = UDim2.fromOffset(22, 28), BackgroundTransparency = 1 }, { Image = e(Portrait, { TemplateId = owner.TemplateId, Archetype = owner.Archetype, Stars = owner.Stars }) }) else nil,
-   Owner = e(C.Text, { Text = if owner then owner.DisplayName .. " · " .. string.sub(owner.UUID, -4) elseif equipped then "Assigned · protected" elseif artifact.Locked then "Unlock to sell / consume" else "Ready to equip", Position = UDim2.fromOffset(if owner then 26 else 0, 196), Size = UDim2.new(1, if owner then -26 else 0, 0, 28), TextSize = 14, TextColor3 = stateColor, TextWrapped = false, TextTruncate = Enum.TextTruncate.AtEnd }),
+   State = e(C.Text, { Name = "EquipmentRibbon", Text = (if equipped then "◆ " else "◇ ") .. state, TextColor3 = stateColor, FontFace = T.Theme.Fonts.Title, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 20), BackgroundTransparency = 0, BackgroundColor3 = if equipped then T.Theme.Tones.Teal.Bottom else T.Theme.Tones.Deep.Bottom, ZIndex = 4 }),
+   Stars = e(C.Text, { Text = string.rep("★", artifact.Star), TextColor3 = T.Gold, FontFace = T.Theme.Fonts.Number, TextSize = 17, TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(0, 68), Size = UDim2.new(1, 0, 0, 24), ZIndex = 4 }),
+   Name = e(C.Text, { Text = artifact.DisplayName, Position = UDim2.fromOffset(0, 94), Size = UDim2.new(1, 0, 0, 34), TextSize = 14, TextTruncate = Enum.TextTruncate.AtEnd }),
+   Rarity = e(C.Text, { Text = rarity.Name, Position = UDim2.fromOffset(0, 128), Size = UDim2.new(0.58, 0, 0, 22), TextSize = 14, TextColor3 = rarity.Color, TextWrapped = false, TextTruncate = Enum.TextTruncate.AtEnd }),
+   Power = e(C.Text, { Text = string.format("%.0f PWR", Model.power(artifact)), Position = UDim2.new(0.58, 0, 0, 128), Size = UDim2.new(0.42, 0, 0, 22), TextSize = 14, FontFace = T.Theme.Fonts.Number, TextXAlignment = Enum.TextXAlignment.Right }),
+   Owner = e(C.Text, { Text = if owner then owner.DisplayName .. " · " .. string.sub(owner.UUID, -4) elseif equipped then "Assigned · protected" elseif artifact.Locked then "Unlock to sell / consume" else "Ready to equip", Position = UDim2.fromOffset(0, 150), Size = UDim2.new(1, 0, 0, 18), TextSize = 14, TextColor3 = stateColor, TextWrapped = false, TextTruncate = Enum.TextTruncate.AtEnd }),
    Selection = if props.Material or props.Selected or props.Reason or artifact.Locked then e(C.Text, { Text = if props.Material then "SELECTED" elseif props.Reason then (if props.Selected then "KEPT" elseif equipped or artifact.Locked then "PROTECTED" else "INCOMPATIBLE") elseif props.Selected then "SELECTED" else "LOCKED", TextSize = 12, TextColor3 = T.Text, TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(4, 28), Size = UDim2.new(1, -8, 0, 22), BackgroundTransparency = 0.15, BackgroundColor3 = if props.Material then T.Theme.Tones.Crimson.Bottom else T.Theme.Ink, ZIndex = 4 }) else nil,
   }),
  })
@@ -324,9 +359,9 @@ function C.StatRow(props: StatRowProps)
 	local format = props.Format or "%.0f"
 	local difference = if math.abs(delta) < 0.00001 then " (=)" else string.format(" (%s%s)", if delta > 0 then "+" else "-", string.format(format, math.abs(delta)))
 	return e("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 36), LayoutOrder = props.Order }, {
-		Label = e(C.Text, { Text = props.Label, TextSize = 14, TextColor3 = T.Muted, Size = UDim2.new(0.3, -8, 1, 0) }),
-		Before = e(C.Text, { Text = string.format(format, props.Before), TextSize = 14, Position = UDim2.fromScale(0.3, 0), Size = UDim2.new(0.22, -8, 1, 0), TextXAlignment = Enum.TextXAlignment.Right }),
-		After = e(C.Text, { Text = "→ " .. string.format(format, props.After) .. difference, TextSize = 14, Position = UDim2.fromScale(0.52, 0), Size = UDim2.fromScale(0.48, 1), TextColor3 = if delta > 0.00001 then T.Good elseif delta < -0.00001 then T.Bad else T.Text }),
+		Label = e(C.Text, { Text = props.Label, TextSize = 16, TextColor3 = T.Muted, Size = UDim2.new(0.3, -8, 1, 0) }),
+		Before = e(C.Text, { Text = string.format(format, props.Before), TextSize = 16, Position = UDim2.fromScale(0.3, 0), Size = UDim2.new(0.22, -8, 1, 0), TextXAlignment = Enum.TextXAlignment.Right }),
+		After = e(C.Text, { Text = "→ " .. string.format(format, props.After) .. difference, TextSize = 16, Position = UDim2.fromScale(0.52, 0), Size = UDim2.fromScale(0.48, 1), TextColor3 = if delta > 0.00001 then T.Good elseif delta < -0.00001 then T.Bad else T.Text }),
 	})
 end
 

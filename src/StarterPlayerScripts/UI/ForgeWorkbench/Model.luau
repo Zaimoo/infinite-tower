@@ -11,6 +11,12 @@ type Filter = Types.Filter
 
 local Model = {}
 
+function Model.deployedSlot(hero: Hero): number?
+	local slot = string.match(hero.Assignment or "", "^SQUAD_SLOT_(%d+)$")
+	local number = slot and tonumber(slot)
+	return if number and number >= 1 then number else nil
+end
+
 function Model.ownerIds(snapshot: Snapshot, artifactId: string): { string }
 	local ids = {}
 	local artifact = snapshot.Artifacts[artifactId]
@@ -159,6 +165,31 @@ function Model.sortedHeroes(snapshot: Snapshot): { Hero }
 	return heroes
 end
 
+function Model.heroPower(snapshot: Snapshot, hero: Hero): number
+	local artifact = hero.EquippedArtifactUUID and snapshot.Artifacts[hero.EquippedArtifactUUID]
+	return Stats.GetHeroPower(hero, artifact)
+end
+
+function Model.pickerHeroes(snapshot: Snapshot, target: Artifact?, deployment: string, sort: string): { Hero }
+	local result = {}
+	local power = {}
+	for _, hero in snapshot.Heroes do
+		local deployed = Model.deployedSlot(hero) ~= nil
+		if Model.compatible(hero, target) and (deployment == "ALL" or deployment == "DEPLOYED" and deployed or deployment == "UNDEPLOYED" and not deployed) then
+			table.insert(result, hero)
+			power[hero.UUID] = Model.heroPower(snapshot, hero)
+		end
+	end
+	table.sort(result, function(a: Hero, b: Hero): boolean
+		local av = if sort == "STARS" then a.Stars elseif sort == "LEVEL" then a.Level else power[a.UUID]
+		local bv = if sort == "STARS" then b.Stars elseif sort == "LEVEL" then b.Level else power[b.UUID]
+		if av ~= bv then return av > bv end
+		if a.DisplayName ~= b.DisplayName then return a.DisplayName < b.DisplayName end
+		return a.UUID < b.UUID
+	end)
+	return result
+end
+
 function Model.best(snapshot: Snapshot, heroId: string?): string?
 	local hero = heroId and snapshot.Heroes[heroId]
 	if not hero then return nil end
@@ -179,7 +210,6 @@ end
 function Model.inventory(snapshot: Snapshot, filter: Filter, heroId: string?): { Artifact }
 	local query = string.lower(filter.Query)
 	local result = {}
-	local best = Model.best(snapshot, heroId)
 	for id, artifact in snapshot.Artifacts do
 		local owners = Model.ownerIds(snapshot, id)
 		local heroMatches = heroId ~= nil and table.find(owners, heroId) ~= nil
@@ -195,7 +225,6 @@ function Model.inventory(snapshot: Snapshot, filter: Filter, heroId: string?): {
 		end
 	end
 	table.sort(result, function(a: Artifact, b: Artifact): boolean
-		if filter.Sort == "BEST" and (a.UUID == best) ~= (b.UUID == best) then return a.UUID == best end
 		if filter.Sort == "RARITY" and a.Rarity ~= b.Rarity then return a.Rarity > b.Rarity end
 		if filter.Sort == "STARS" and a.Star ~= b.Star then return a.Star > b.Star end
 		if filter.Sort ~= "NAME" then

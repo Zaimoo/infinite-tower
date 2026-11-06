@@ -11,6 +11,7 @@ export type Artifact = {
 	EquippedHeroUUID: string?,
 }
 export type Hero = {
+	Assignment: string?,
 	UUID: string,
 	TemplateId: string,
 	DisplayName: string,

@@ -25,7 +25,7 @@ local function Navigation(props: { Active: string, OnSelect: (string) -> (), Bus
 		[React.Change.AbsoluteSize] = function(gui) setScreen(gui.AbsoluteSize) end,
 	}, {
 		Tabs = e(Hud.PitTabs, {
-			Name = "ForgeTabs", Active = props.Active, Tabs = { "Artifacts", "Upgrade", "Summon" }, Size = Vector2.new(width, 56), Center = center,
+			Name = "ForgeTabs", Active = props.Active, Tabs = { "Artifacts", "Summon" }, Size = Vector2.new(width, 56), Center = center,
 			OnSelect = function(tab) if not props.Busy then props.OnSelect(tab) end end,
 		}),
 	})

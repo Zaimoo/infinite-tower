@@ -22,6 +22,7 @@ local GothicBoxStyle = require(Shared.Util.GothicBoxStyle)
 local GildedGrimoire = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GildedGrimoire"))
 local GrimoireIcons = require(Shared.Util.GrimoireIcons)
 local ArtifactPreview = require(script.Parent.ArtifactPreview)
+local ForgeHeader = require(script.Parent.ForgeHeader)
 local SummonLuck = require(Shared.Util.SummonLuck)
 
 local ARCHETYPE_ICON: { [string]: string } = {
@@ -323,14 +324,7 @@ function Forge.new(gui: ScreenGui, artifactRemotes: Folder, getProfile: (() -> a
 		end
 	end)
 	local _ = closeBtn
-	local headerIcon = GrimoireIcons.Create("Forge", 46, root, 53)
-	headerIcon.Position = UDim2.fromOffset(22, 10)
-	local headerTitle = label(root, "BLACKSMITH FORGE", 26, Color3.new(1, 1, 1), Enum.Font.GothamBlack)
-	headerTitle.Position = UDim2.fromOffset(78, 14)
-	headerTitle.Size = UDim2.fromOffset(460, 32)
-	headerTitle.TextXAlignment = Enum.TextXAlignment.Left
-	headerTitle.ZIndex = 53
-	new("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.new(1, 1, 1), GildedGrimoire.Text.Gold) }, headerTitle)
+	ForgeHeader.Create(root, 53)
 
 	-- Gold chip: the banner, promotions and selling all spend or pay Gold.
 	local goldChip = new("Frame", {
