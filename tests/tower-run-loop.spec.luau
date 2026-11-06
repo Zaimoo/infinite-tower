@@ -172,8 +172,8 @@ local function gemsPerHour(floorId: number): number
 	return kills * perKill + bosses * relicValue(floorId, if floorId % 5 == 0 then "BOSS" else "ALPHA")
 end
 
-test("Relic economy: gem income sits near 2,900 / 6,800 / 12,700 per hour on Alpha floors and rises with depth", function()
-	for floorId, target in { [1] = 2900, [26] = 6800, [49] = 12700 } do
+test("Relic economy: gem income sits near 2,900 / 7,500 / 15,500 per hour on Alpha floors and rises with depth", function()
+	for floorId, target in { [1] = 2900, [26] = 7500, [49] = 15500 } do
 		local rate = gemsPerHour(floorId)
 		assert(math.abs(rate - target) / target <= 0.20, string.format("floor %d earns %d gems/h, target %d", floorId, rate, target))
 	end
