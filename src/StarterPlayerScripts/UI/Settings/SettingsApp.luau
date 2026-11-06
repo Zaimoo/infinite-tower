@@ -38,7 +38,11 @@ local setIsOpenGlobal: ((boolean) -> ())? = nil
 local isCurrentlyOpen = false
 
 _G.OpenSettings = function()
-	if _G.CloseBackpack then _G.CloseBackpack() end
+	if _G.OpenMasterModal then
+		_G.OpenMasterModal("SETTINGS")
+	elseif _G.CloseBackpack then
+		_G.CloseBackpack()
+	end
 	if setIsOpenGlobal then setIsOpenGlobal(true) end
 end
 _G.CloseSettings = function()
@@ -48,7 +52,11 @@ _G.ToggleSettings = function()
 	if isCurrentlyOpen then
 		if setIsOpenGlobal then setIsOpenGlobal(false) end
 	else
-		if _G.CloseBackpack then _G.CloseBackpack() end
+		if _G.OpenMasterModal then
+			_G.OpenMasterModal("SETTINGS")
+		elseif _G.CloseBackpack then
+			_G.CloseBackpack()
+		end
 		if setIsOpenGlobal then setIsOpenGlobal(true) end
 	end
 end
@@ -138,11 +146,39 @@ local function SettingsApp()
 	})
 
 	----------------------------------------------------------------------------
-	-- 2. Global Open / Close / Toggle APIS & Keybinds
+	-- 2. Modal Focus Dimmer & Surrounding HUD Icons Suppression
+	----------------------------------------------------------------------------
+	useEffect(function()
+		if isOpen then
+			if _G.OpenMasterModal then
+				_G.OpenMasterModal("SETTINGS")
+			end
+			if _G.SetModalFocusMode then
+				_G.SetModalFocusMode(true)
+			end
+		else
+			if _G.SetModalFocusMode then
+				_G.SetModalFocusMode(false)
+			end
+		end
+
+		return function()
+			if isOpen and _G.SetModalFocusMode then
+				_G.SetModalFocusMode(false)
+			end
+		end
+	end, { isOpen })
+
+	----------------------------------------------------------------------------
+	-- 3. Global Open / Close / Toggle APIS & Keybinds
 	----------------------------------------------------------------------------
 	useEffect(function()
 		local function openSettings()
-			if _G.CloseBackpack then _G.CloseBackpack() end
+			if _G.OpenMasterModal then
+				_G.OpenMasterModal("SETTINGS")
+			elseif _G.CloseBackpack then
+				_G.CloseBackpack()
+			end
 			setIsOpen(true)
 		end
 		local function toggleSettings()
@@ -510,7 +546,7 @@ local function SettingsApp()
 		Size = UDim2.fromScale(1, 1),
 		Visible = isOpen,
 	}, {
-		-- Subtle Backdrop Dim (lets 3D world show through frosted glass)
+		-- Focus Modal Backdrop Dimmer (dismisses on click outside)
 		Dim = e("TextButton", {
 			Name = "Dim",
 			AutoButtonColor = false,
@@ -519,6 +555,9 @@ local function SettingsApp()
 			BackgroundTransparency = 0.55,
 			Size = UDim2.fromScale(1, 1),
 			ZIndex = 1,
+			[React.Event.Activated] = function()
+				setIsOpen(false)
+			end,
 		}),
 
 		-- Centered Settings Window (Clear Glass Crystal Frame)
@@ -529,6 +568,7 @@ local function SettingsApp()
 			Size = UDim2.new(0, 960, 0, 620),
 			BackgroundColor3 = Color3.fromRGB(12, 10, 18),
 			BackgroundTransparency = 0.35,
+			Active = true,
 			ZIndex = 2,
 		}, {
 			Max = e("UISizeConstraint", { MaxSize = Vector2.new(960, 620) }),
