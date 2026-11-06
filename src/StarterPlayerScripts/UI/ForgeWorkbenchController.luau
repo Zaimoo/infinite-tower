@@ -96,7 +96,7 @@ end
 function Controller:_renderNavigation()
 	if self.Destination == "NONE" then self.NavigationRoot:render(nil); return end
 	self.NavigationRoot:render(React.createElement(Navigation, {
-		Active = if self.Destination == "SUMMON" then "Summon" elseif self.Mode == "UPGRADE" then "Upgrade" else "Artifacts",
+		Active = if self.Destination == "SUMMON" then "Summon" else "Artifacts",
 		Busy = self.Busy,
 		OnSelect = function(tab)
 			self:Open(if tab == "Summon" then "SUMMON" elseif tab == "Upgrade" then "UPGRADE" else "ASSIGN")

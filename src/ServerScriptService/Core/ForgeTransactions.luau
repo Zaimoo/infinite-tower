@@ -7,7 +7,7 @@ local Balance = require(ReplicatedStorage.Shared.Config.StatBalance)
 
 local ForgeTransactions = {}
 local ARTIFACT_FIELDS = { "UUID", "TemplateId", "DisplayName", "Type", "Rarity", "Star", "Locked", "EquippedHeroUUID" }
-local HERO_FIELDS = { "UUID", "TemplateId", "DisplayName", "Archetype", "Stars", "Level", "Rarity", "QualityScalar", "AttackInterval", "ComaUntilTimestamp", "EquippedArtifactUUID" }
+local HERO_FIELDS = { "Assignment", "UUID", "TemplateId", "DisplayName", "Archetype", "Stars", "Level", "Rarity", "QualityScalar", "AttackInterval", "ComaUntilTimestamp", "EquippedArtifactUUID" }
 local MAX_RECEIPTS = 128
 local RECEIPT_SECONDS = 600
 

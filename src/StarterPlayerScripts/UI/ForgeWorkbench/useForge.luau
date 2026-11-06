@@ -97,19 +97,21 @@ local function useForge(props: Types.Props)
 		return { RequestId = HttpService:GenerateGUID(false), ExpectedRevision = snapshotRef.current.Revision, Kind = kind }
 	end
 
-	local function equip(): boolean
+	local function equip(selectedHeroId: string?): boolean
+		local equipHeroId = selectedHeroId or heroId
 		local current = snapshotRef.current
-		local reason = Model.equipReason(current, heroId, targetId)
+		local reason = Model.equipReason(current, equipHeroId, targetId)
 		if reason then setMessage(reason); setSuccess(false); return false end
 		local request = command("EQUIP")
-		request.HeroId, request.ArtifactId = heroId, targetId
+		request.HeroId, request.ArtifactId = equipHeroId, targetId
 		return execute(request)
 	end
-	local function unequip(): boolean
-		local hero = heroId and snapshotRef.current.Heroes[heroId]
+	local function unequip(ownerId: string?): boolean
+		local unequipHeroId = ownerId or heroId
+		local hero = unequipHeroId and snapshotRef.current.Heroes[unequipHeroId]
 		if not hero or not hero.EquippedArtifactUUID then return false end
 		local request = command("UNEQUIP")
-		request.HeroId = heroId
+		request.HeroId = unequipHeroId
 		return execute(request)
 	end
 	local function upgrade(expectedRevision: number): boolean
@@ -165,7 +167,7 @@ local function useForge(props: Types.Props)
 			if not ok then uncertain() end
 		end)
 	end
-	local function selectTarget(id: string)
+	local function selectTarget(id: string?)
 		if pending.current then return end
 		setTargetId(id)
 		setMaterials({})

@@ -8,6 +8,7 @@ local C = require(script.Parent.Components)
 local Model = require(script.Parent.Model)
 local T = require(script.Parent.Tokens)
 local Types = require(script.Parent.Types)
+local EquippedHero = require(script.Parent.EquippedHero)
 local e = React.createElement
 local Screens = {}
 
@@ -15,14 +16,16 @@ function Screens.ItemHeader(props: { Snapshot: Types.Snapshot, Artifact: Types.A
  local artifact = props.Artifact
  local rarity = Catalog.GetRarityInfo(artifact.Rarity)
  local large = props.Large == true
+ local owners = Model.ownerIds(props.Snapshot, artifact.UUID)
+ local owner = #owners == 1 and props.Snapshot.Heroes[owners[1]] or nil
  local height = if large then 200 else 96
  local previewWidth = if large then 160 else 80
  return e("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, height) }, {
-  Preview = e(C.Preview, { Artifact = artifact, Size = UDim2.fromOffset(previewWidth, height) }),
+  Preview = if owner then e(EquippedHero, { Hero = owner, Artifact = artifact, Size = UDim2.fromOffset(previewWidth, height) }) else e(C.Preview, { Artifact = artifact, Size = UDim2.fromOffset(previewWidth, height) }),
   Name = e(C.Text, { Text = artifact.DisplayName, Position = UDim2.fromOffset(previewWidth + 16, 0), Size = UDim2.new(1, -previewWidth - 16, 0, if large then 64 else 36), TextSize = if large then 24 else 18, FontFace = T.Theme.Fonts.Title }),
   Stars = if large then e(C.Text, { Text = string.rep("★", artifact.Star), Position = UDim2.fromOffset(previewWidth + 16, 66), Size = UDim2.new(1, -previewWidth - 16, 0, 32), TextSize = 26, TextColor3 = T.Gold }) else nil,
   Stats = e(C.Text, { Text = (if props.Kept then "KEPT · " else "") .. string.format("%s · %d★ · %.0f PWR", rarity.Name, artifact.Star, Model.power(artifact)), Position = UDim2.fromOffset(previewWidth + 16, if large then 104 else 36), Size = UDim2.new(1, -previewWidth - 16, 0, 36), TextSize = 14, TextColor3 = rarity.Color }),
-  Owner = e(C.Text, { Text = Model.ownerText(props.Snapshot, artifact.UUID) .. (if artifact.Locked then " · Locked" else ""), Position = UDim2.fromOffset(previewWidth + 16, if large then 146 else 66), Size = UDim2.new(1, -previewWidth - 16, 0, if large then 48 else 30), TextSize = 14, TextColor3 = if #Model.ownerIds(props.Snapshot, artifact.UUID) > 0 then T.Equipped else T.Muted }),
+  Owner = e(C.Text, { Text = (if owner then owner.DisplayName .. " · Lv." .. owner.Level else Model.ownerText(props.Snapshot, artifact.UUID)) .. (if artifact.Locked then " · Locked" else ""), Position = UDim2.fromOffset(previewWidth + 16, if large then 146 else 66), Size = UDim2.new(1, -previewWidth - 16, 0, if large then 48 else 30), TextSize = 14, TextColor3 = if #Model.ownerIds(props.Snapshot, artifact.UUID) > 0 then T.Equipped else T.Muted }),
  })
 end
 

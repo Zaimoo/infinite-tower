@@ -38,6 +38,17 @@ export type ShapeSpec = {
 
 -- Each icon is a list of shapes, back to front.
 GrimoireIcons.Drawings = {
+	-- Forge controls use the same top-lit shapes and ink as the other windows.
+	Add = {
+		{ X = 32, Y = 32, W = 46, H = 12, Hi = P.PageHi, Lo = P.GoldLo, Radius = 2 },
+		{ X = 32, Y = 32, W = 12, H = 46, Hi = P.PageHi, Lo = P.GoldLo, Radius = 2 },
+		{ X = 32, Y = 32, W = 13, H = 13, Hi = P.PageHi, Lo = P.GoldLo, Radius = 0, Outline = 0, Sheen = false },
+	},
+	Back = {
+		{ X = 29, Y = 23, W = 12, H = 30, Rot = 45, Hi = P.PageHi, Lo = P.GoldLo, Radius = 2 },
+		{ X = 29, Y = 41, W = 12, H = 30, Rot = -45, Hi = P.PageHi, Lo = P.GoldLo, Radius = 2 },
+	},
+
 	-- Summoning: an amethyst crystal hovering over a gold altar, with a star spark.
 	Summon = {
 		{ X = 32, Y = 52, W = 40, H = 11, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 4 },
