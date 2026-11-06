@@ -172,6 +172,7 @@ end)
 test("Phase 4: hero banners use the lowered odds, raised pity and a Rare 10-pull floor", function()
 	local perm, lim = HeroCatalog.PermanentBanner, HeroCatalog.LimitedBanner
 	assert(perm.MaxPity == 120 and lim.MaxPity == 100)
+	assert(perm.PityMinTier == 5 and lim.PityMinTier == 5, "hard pity guarantees Exalted+ on both hero banners")
 	assert(perm.TenPullMinTier == 3 and lim.TenPullMinTier == 3)
 	assert(near(perm.Rates[5], 0.0033) and near(lim.Rates[7], 0.0006))
 	assert(perm.Cost1X == 100 and perm.Cost10X == 900, "Call of the Rift costs 100 / 900")

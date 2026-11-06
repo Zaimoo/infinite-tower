@@ -136,13 +136,15 @@ test("Floor sanctuary extraction rejects unarmed stale expired transitioning or 
 	local carriedCargo={FloorId=0,RoomGeneration=1,DespawnTime=math.huge}
 	assert(Rules.CanBank(hub,carriedCargo,{CanBankCargo=true},false,100000))
 end)
-test("Kill gems stay flat while gold and relic odds/value rise on every floor",function()
+test("Kill gems scale by role and +2%/floor while gold and relic odds/value rise on every floor",function()
  local top={REGULAR="CURSED_URN",ELITE="ABYSSAL_CORE",ALPHA="CALAMITY_HEART",BOSS="CALAMITY_HEART"}
  for _,role in {"REGULAR","ELITE","ALPHA","BOSS"} do
   local previous=nil
   for floor=1,50 do
    local reward=Floors.GetKillRewards(floor,role)
-   assert(reward.Gems==1 and reward.RelicChance>0 and reward.RelicChance<1)
+   local baseGems=({REGULAR=1,ELITE=5,ALPHA=10,BOSS=50})[role]
+   assert(reward.Gems==math.round(baseGems*(1+0.02*(floor-1))) and reward.RelicChance>0 and reward.RelicChance<1)
+   if previous then assert(reward.Gems>=previous.Gems) end
    if previous then
     assert(reward.Gold>previous.Gold and reward.RelicChance>previous.RelicChance)
     assert(reward.RelicMultiplier>previous.RelicMultiplier and reward.GemMultiplier>previous.GemMultiplier)
@@ -165,7 +167,8 @@ test("Relic tiers are role-exclusive: Cores from Elites, Hearts from Alphas and 
  end
  local gold1,gems1=Floors.RelicFloorMultipliers(1)
  local gold50,gems50=Floors.RelicFloorMultipliers(50)
- assert(gold1==1 and gems1==1 and math.abs(gems50-1.98)<1e-9 and math.abs(gold50-3.45)<1e-9)
+ assert(Floors.GetKillRewards(50,"BOSS").Gems==99 and Floors.GetKillRewards(50,"REGULAR").Gems==2)
+ assert(gold1==1 and gems1==1 and math.abs(gems50-2.47)<1e-9 and math.abs(gold50-3.45)<1e-9)
  assert(select(2,Floors.RelicFloorMultipliers(0))==1,"hub relics are unscaled")
 end)
 print(string.format("Tower rework tests: %d passed",passed))

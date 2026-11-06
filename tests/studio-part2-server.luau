@@ -23,35 +23,12 @@ local function request(action,id)
 	assert(terminal,"No terminal result")
 	return terminal.Result,r
 end
-local heroes,mobs,held=_G.CombatSimulation.DebugEntities()
+local heroes,mobs=_G.CombatSimulation.DebugEntities()
 local hero=next(heroes) and heroes[next(heroes)]
 assert(hero,"Deployed hero missing")
 local profile=_G.DataManager.GetProfile(p)
 local before={HP=hero.CurrentHP,Stamina=hero.Stamina,ProfileStamina=profile.Heroes[hero.HeroUUID].CurrentStamina,AttackCooldown=hero.AttackCooldown}
 local fixtureIds={}
-record("Live HP stamina cooldown and physical cargo identity survive floor-50 travel without banking",function()
-	assert(request("HUB").Status=="COMMITTED")
-	hero.CurrentHP=hero.MaxHP-31;hero.Stamina=44;hero.AttackCooldown=.87;profile.Heroes[hero.HeroUUID].CurrentStamina=44
-	local root=p.Character.HumanoidRootPart
-	local loot=_G.CombatSimulation.SpawnPhysicalLoot("GOLD",125,root.Position,p)
-	_G.CombatSimulation.CollectPhysicalLoot(p,loot.LootId)
-	local cargo=assert(held[p],"Cargo not picked up")
-	local identity,weld,expiry=cargo.Part,cargo.Weld,cargo.DespawnTime
-	local currency=profile.Currencies.Gold
-	assert(request("VISIT",50).Status=="COMMITTED")
-	assert(hero.CurrentHP==hero.MaxHP-31 and hero.Stamina==44 and hero.AttackCooldown==.87)
-	assert(held[p]==cargo and cargo.Part==identity and cargo.Weld==weld and cargo.DespawnTime==expiry and cargo.Amount==125)
-	assert(cargo.FloorId==50 and cargo.RoomGeneration==T.GetState(p).RoomGeneration)
-	task.wait(1.1);assert(profile.Currencies.Gold==currency and held[p]==cargo,"Off-map travel banked cargo")
-	_G.CombatSimulation.DropCarriedLoot(p);assert(held[p]==nil and identity.Parent)
-	identity:Destroy() -- test fixture only; no payout
-end)
-record("Cross-floor pickups fail even when the physical part is placed beside the carrier",function()
-	local loot=_G.CombatSimulation.SpawnPhysicalLoot("GOLD",9,T.GetRoom(0).Arrival.Position,p)
-	loot.Part.Position=p.Character.HumanoidRootPart.Position
-	_G.CombatSimulation.CollectPhysicalLoot(p,loot.LootId);assert(held[p]==nil)
-	loot.Part:Destroy()
-end)
 record("Relic cargo preserves identity locks expiry weld and private extraction rejects off-map",function()
 	local root=p.Character.HumanoidRootPart
 	local relic=_G.RelicService.SpawnRelic("MANA_GEODE",root.Position,p.UserId)

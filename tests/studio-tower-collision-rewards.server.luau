@@ -41,12 +41,10 @@ local ok,err=xpcall(function()
   combat.DebugEncounters.API.Damage({Player=player,Humanoid=hum},100,victim)
   assert(hum.Health==hp,"Commander took monster damage")
   local beforeGold,beforeGems=profile.Currencies.Gold,profile.Currencies.Gems
-  local bags=#workspace.PhysicalLoot:GetChildren()
   local reward=Config.GetKillRewards(id,victim.Role)
   combat.DebugKillTowerMob(victim,player)
   assert(profile.Currencies.Gold==beforeGold+math.round(reward.Gold*dm.GetMarketMultiplier(player)),"Wrong direct gold")
-  assert(profile.Currencies.Gems==beforeGems+1,"Wrong flat kill gems")
-  assert(#workspace.PhysicalLoot:GetChildren()==bags,"Gold bag spawned")
+  assert(profile.Currencies.Gems==beforeGems+reward.Gems,"Wrong kill gems")
   combat.DebugKillTowerMob(victim,player)
   assert(profile.Currencies.Gems==beforeGems+1,"Duplicate kill payout")
   results.KillPayouts+=1;results.DuplicateClaims+=1

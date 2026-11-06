@@ -225,14 +225,19 @@ end
 
 -- Relic payouts scale with the floor the relic dropped on: Gold x(1 + 0.05 per floor), Gems x(1 + 0.02 per floor).
 Config.RelicGoldFloorScaling = 0.05
-Config.RelicGemFloorScaling = 0.02
+Config.RelicGemFloorScaling = 0.03
 
 function Config.RelicFloorMultipliers(floorId: number): (number, number)
 	if not Config.IsFloorId(floorId) then return 1, 1 end
 	return 1 + Config.RelicGoldFloorScaling * (floorId - 1), 1 + Config.RelicGemFloorScaling * (floorId - 1)
 end
 
--- Kill gems stay flat; gold, relic probability and relic value grow with floor.
+-- Gems paid straight to the killer per kill, before the floor multiplier 1 + KillGemFloorScaling * (floor - 1).
+-- Kept below RelicGemFloorScaling so relics gain value relative to kills deeper in the tower.
+Config.KillGemsByRole = table.freeze({ REGULAR = 1, ELITE = 5, ALPHA = 10, BOSS = 50 })
+Config.KillGemFloorScaling = 0.02
+
+-- Kill Gold grows with RewardPerFloor ^ (floor - 1), kill Gems linearly by KillGemFloorScaling; relic odds and value grow too.
 -- `role` is REGULAR, ELITE, ALPHA or BOSS (Biome Boss).
 function Config.GetKillRewards(floorId: number, role: string): any
 	assert(Config.IsFloorId(floorId), "Invalid reward floor")
@@ -243,7 +248,7 @@ function Config.GetKillRewards(floorId: number, role: string): any
 	local goldMult, gemMult = Config.RelicFloorMultipliers(floorId)
 	return {
 		Gold = math.round(base.GoldReward * Config.Scaling.RewardPerFloor ^ (floorId - 1)),
-		Gems = 1,
+		Gems = math.round(assert(Config.KillGemsByRole[role], "Invalid enemy role") * (1 + Config.KillGemFloorScaling * (floorId - 1))),
 		RelicChance = at(drops.Drop),
 		RelicMultiplier = goldMult,
 		GemMultiplier = gemMult,

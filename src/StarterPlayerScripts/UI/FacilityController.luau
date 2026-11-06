@@ -800,11 +800,12 @@ function Controller:Refresh()
 		}
 		for key, bv in self.BannerViews do
 			local banner = BANNER_VIEWS[key].Banner
-			local featuredId, topTier = featuredOf(banner)
-			local seed = HeroCatalog.Seeds[featuredId]
 			local done = pityCount[key] % banner.MaxPity
-			bv.Pity.Text = string.format("Guaranteed %s %s in <b>%d</b> summons", HeroCatalog.RarityName(topTier),
-				seed and seed.DisplayName or "hero", math.max(1, banner.MaxPity - done))
+			local guaranteedFeatured = key == "A_STARS_ARRIVAL" and profile ~= nil and profile.HeroLimitedFeaturedGuarantee == true
+			local featuredSeed = HeroCatalog.Seeds[banner.FeaturedHeroId or ""]
+			bv.Pity.Text = if guaranteedFeatured
+				then string.format("Guaranteed <b>%s</b> in <b>%d</b> summons", featuredSeed and featuredSeed.DisplayName or "featured hero", math.max(1, banner.MaxPity - done))
+				else string.format("Guaranteed %s+ hero in <b>%d</b> summons", HeroCatalog.RarityName(banner.PityMinTier or 5), math.max(1, banner.MaxPity - done))
 			TweenService:Create(bv.PityFill, TweenInfo.new(0.3, Enum.EasingStyle.Quad), { Size = UDim2.fromScale(done / banner.MaxPity, 1) }):Play()
 			for count, b in bv.Buttons do
 				local cost = summonCost(key, count)

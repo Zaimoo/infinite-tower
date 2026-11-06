@@ -1,7 +1,7 @@
 --!strict
 -- tests/phase3-pvp-duels.luau
--- Phase 3: contested drops, [Loot Thief] contests, retaliation duel layout and the loser lockout
--- (docs/rework-plan/PHASE_3_TOWER_PVP_RETALIATION.md). Owner and thief are locked out alike.
+-- Phase 3: contested drops, [Loot Thief] contests, bounty duel layout and the loser lockout
+-- (GDD 6.1). The duel loser, hunter or thief, is locked out.
 
 local LootDuel = require(nodes["ReplicatedStorage.Shared.Util.LootDuel"])
 local HeroSkillEffects = require(nodes["ServerScriptService.Combat.HeroSkillEffects"])
@@ -21,16 +21,36 @@ test("Phase 3: the killer picking up their own drop is not theft; anyone else is
 	assert(not LootDuel.IsTheft(0, THIEF), "open loot is free for all")
 end)
 
-test("Phase 3: a theft opens a 3-minute contest only the owner can act on", function()
+test("Phase 3: a theft opens a 3-minute bounty any Master but the thief can claim", function()
 	local contest = LootDuel.NewContest(7, OWNER, THIEF, 100)
 	assert(contest.Status == "CONTESTED" and contest.ExpiresAt == 100 + LootDuel.THIEF_FLAG_SECONDS)
-	assert(LootDuel.CanRetaliate(contest, OWNER, 150))
-	assert(not LootDuel.CanRetaliate(contest, THIEF, 150), "the thief cannot retaliate")
-	assert(not LootDuel.CanRetaliate(contest, BYSTANDER, 150), "a bystander cannot retaliate")
-	assert(not LootDuel.CanRetaliate(contest, OWNER, 100 + LootDuel.THIEF_FLAG_SECONDS), "window closes at expiry")
-	assert(not LootDuel.CanRetaliate(nil, OWNER, 150))
+	assert(LootDuel.CanChallenge(contest, OWNER, 150), "the robbed owner can claim the bounty")
+	assert(LootDuel.CanChallenge(contest, BYSTANDER, 150), "a bystander can claim the bounty")
+	assert(not LootDuel.CanChallenge(contest, THIEF, 150), "the thief cannot claim their own bounty")
+	assert(not LootDuel.CanChallenge(contest, OWNER, 100 + LootDuel.THIEF_FLAG_SECONDS), "window closes at expiry")
+	assert(not LootDuel.CanChallenge(nil, OWNER, 150))
 	contest.Status = "DUELING"
-	assert(not LootDuel.CanRetaliate(contest, OWNER, 150), "no second duel while one runs")
+	assert(not LootDuel.CanChallenge(contest, BYSTANDER, 150), "no second duel while one runs")
+end)
+
+test("Phase 3: a bounty hunter who wins takes the drop; the thief is locked out", function()
+	local contest = LootDuel.NewContest(7, OWNER, THIEF, 0)
+	contest.ChallengerUserId = BYSTANDER
+	local drop = { KillerUserId = OWNER, DuelLocked = true }
+	local loser = LootDuel.Resolve(contest, drop, BYSTANDER)
+	assert(loser == THIEF and drop.KillerUserId == BYSTANDER)
+	assert(LootDuel.CanPickUp(drop, BYSTANDER) and LootDuel.CanPickUp(drop, OWNER))
+	assert(not LootDuel.CanPickUp(drop, THIEF))
+end)
+
+test("Phase 3: a thief who beats the hunter keeps the drop; only the hunter is locked out", function()
+	local contest = LootDuel.NewContest(7, OWNER, THIEF, 0)
+	contest.ChallengerUserId = BYSTANDER
+	local drop = { KillerUserId = OWNER, DuelLocked = true }
+	local loser = LootDuel.Resolve(contest, drop, THIEF)
+	assert(loser == BYSTANDER and drop.KillerUserId == THIEF)
+	assert(not LootDuel.CanPickUp(drop, BYSTANDER))
+	assert(LootDuel.CanPickUp(drop, OWNER), "the owner did not fight, so is not locked out")
 end)
 
 test("Phase 3: the drop is untouchable while its duel runs", function()

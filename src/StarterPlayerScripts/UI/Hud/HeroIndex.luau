@@ -477,15 +477,15 @@ local function HeroIndex(props: { Profile: any, Width: number, OnClose: () -> ()
 		heroDetail.Basic = section(4, "BASIC ATTACK", kitLine(kit and kit.Basic), 52)
 		heroDetail.Special = section(5, "SPECIAL", kitLine(kit and kit.Special), 60)
 		heroDetail.Skill = section(6, "SKILL", kitLine(kit and kit.Skill), 60)
-		heroDetail.Odds = Panel({ LayoutOrder = 7, Size = UDim2.new(1, 0, 0, if tier == heroEntry.Banner.MaxStar then 78 else 58), Radius = 10,
+		heroDetail.Odds = Panel({ LayoutOrder = 7, Size = UDim2.new(1, 0, 0, if tier >= (heroEntry.Banner.PityMinTier or 5) then 78 else 58), Radius = 10,
 			Top = Tones.Violet.Top, Bottom = Tones.Violet.Bottom, Rail = Tones.Violet.Rail }, {
 			Title = Heavy({ Position = UDim2.fromOffset(12, 8), Size = UDim2.new(1, -24, 0, 18), MaxSize = 14, Outline = 1.8, TextXAlignment = Enum.TextXAlignment.Left,
 				Text = "DROP RATE", ZIndex = 3 }),
 			Rate = Body({ Position = UDim2.fromOffset(12, 30), Size = UDim2.new(1, -24, 0, 18), TextSize = 14, ZIndex = 3,
 				Text = if luck > 0 then string.format("%.2f%%  →  <font color=\"#78FF8C\"><b>%.2f%%</b></font> with God's Blessing", base * 100, lucky * 100)
 					else string.format("<b>%.2f%%</b> per summon", base * 100) }),
-			Pity = if tier == heroEntry.Banner.MaxStar then Body({ Position = UDim2.fromOffset(12, 52), Size = UDim2.new(1, -24, 0, 18), TextSize = 13, TextColor3 = TEXT.Gold,
-				Text = string.format("Guaranteed within %d summons (pity)", heroEntry.Banner.MaxPity), ZIndex = 3 }) else nil,
+			Pity = if tier >= (heroEntry.Banner.PityMinTier or 5) then Body({ Position = UDim2.fromOffset(12, 52), Size = UDim2.new(1, -24, 0, 18), TextSize = 13, TextColor3 = TEXT.Gold,
+				Text = string.format("Exalted+ guaranteed within %d summons (pity)", heroEntry.Banner.MaxPity), ZIndex = 3 }) else nil,
 		})
 		heroDetail.Summon = button({ LayoutOrder = 8, Size = UDim2.new(1, 0, 0, 46), ZIndex = 3,
 			[React.Event.Activated] = function()

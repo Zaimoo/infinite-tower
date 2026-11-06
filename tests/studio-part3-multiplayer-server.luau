@@ -119,7 +119,6 @@ local ok,err=pcall(function()
 		rt:Cancel(boss,"TEST_SETUP");boss.CurrentHP=boss.MaxHP-333
 		local hp=boss.CurrentHP;local oldGeneration=boss.EntityGeneration;boss.Cooldowns.guardian_crush=workspace:GetServerTimeNow()+60
 		command(q,"HUB");command(p,"HUB")
-		for _,part in workspace.PhysicalLoot:GetChildren() do part:Destroy() end
 		local room=T.GetRoom(5);room.EmptySince=os.clock()-62
 		waitFor(function() return T.GetRoom(5)==nil end,3);task.wait(.3)
 		T.EnsureRoom(5);task.wait(.4)
@@ -130,7 +129,6 @@ local ok,err=pcall(function()
 		local count=rt.Metrics.Deaths;sim.DebugKillTowerMob(boss,p);sim.DebugKillTowerMob(boss,q)
 		assert(rt.Metrics.Deaths==count+1 and not boss.IsAlive)
 		local deadline=boss.RespawnAt;local generation=boss.LifeGeneration
-		for _,part in workspace.PhysicalLoot:GetChildren() do part:Destroy() end
 		T.GetRoom(5).EmptySince=os.clock()-62;waitFor(function() return T.GetRoom(5)==nil end,3);task.wait(.3)
 		T.EnsureRoom(5);task.wait(.4)
 		assert(not boss.IsAlive and boss.RespawnAt==deadline and boss.LifeGeneration==generation)

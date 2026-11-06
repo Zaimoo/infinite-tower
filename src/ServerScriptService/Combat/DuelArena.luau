@@ -1,6 +1,6 @@
 --!strict
 -- ServerScriptService/Combat/DuelArena.luau
--- Builds the floating hex-grid arena used by retaliation duels (GDD 6.1). Geometry only:
+-- Builds the floating hex-grid arena used by bounty duels (GDD 6.1). Geometry only:
 -- CombatSimulation owns the duel state and places the squads on LootDuel.SlotLocal tiles.
 
 local Workspace = game:GetService("Workspace")
