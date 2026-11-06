@@ -21,7 +21,7 @@ local remotes: any
 local function remoteFolder(): any
 	local root=RS:WaitForChild("Remotes")
 	local f=root:FindFirstChild("TowerRemotes") or Instance.new("Folder");f.Name="TowerRemotes";f.Parent=root
-	for _,name in {"Request","Response","Context","Ready","Presence","TowerEntityState","TowerAction","TowerSnapshot","OpenSelector","FloorProgress","SquadDefeated","SquadStatus","LootContested","InitiateRetaliation","DuelState","RunState","RunSummary"} do
+	for _,name in {"Request","Response","Context","Ready","Presence","TowerEntityState","TowerAction","TowerSnapshot","OpenSelector","FloorProgress","SquadDefeated","SquadStatus","LootContested","DuelState","RunState","RunSummary"} do
 		if not f:FindFirstChild(name) then local e=Instance.new(name=="TowerSnapshot" and "UnreliableRemoteEvent" or "RemoteEvent");e.Name=name;e.Parent=f end
 	end
 	return f
@@ -424,7 +424,7 @@ function Service.Init()
 				char:PivotTo(r.Arrival);root.AssemblyLinearVelocity=Vector3.zero;root.AssemblyAngularVelocity=Vector3.zero
 			end
 			if root then
-				local carrying = (char:GetAttribute("CarryingLoot") == true) or (char:GetAttribute("CarryingRelic") ~= nil)
+				local carrying = char:GetAttribute("CarryingRelic") ~= nil
 				if carrying or not Service.GetSafety(s,root.Position).CanBankCargo then s.BankArmed=true end
 			end
 		end

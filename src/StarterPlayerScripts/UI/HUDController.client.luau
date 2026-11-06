@@ -22,7 +22,6 @@ local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormu
 local GothicBoxStyle = require(Shared:WaitForChild("Util"):WaitForChild("GothicBoxStyle"))
 local GothicVectorIcons = require(Shared:WaitForChild("Util"):WaitForChild("GothicVectorIcons"))
 local GildedGrimoire = require(Shared:WaitForChild("Util"):WaitForChild("GildedGrimoire"))
-local GrimoireIcons = require(Shared:WaitForChild("Util"):WaitForChild("GrimoireIcons"))
 local UIFeel = require(script.Parent:WaitForChild("UIFeel"))
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
@@ -36,7 +35,6 @@ local WhistleCommandRemote = CombatRemotes:WaitForChild("WhistleCommand") :: Rem
 local FocusTargetRemote = CombatRemotes:WaitForChild("FocusTarget") :: RemoteEvent
 local SquadWipeStateRemote = CombatRemotes:WaitForChild("SquadWipeState") :: RemoteEvent
 local DropCarriedItemRemote = CombatRemotes:WaitForChild("DropCarriedItem") :: RemoteEvent
-local CarriedLootSyncRemote = CombatRemotes:WaitForChild("CarriedLootSync") :: RemoteEvent
 local TowerRemotes = Remotes:WaitForChild("TowerRemotes")
 local FloorProgressRemote = TowerRemotes:WaitForChild("FloorProgress") :: RemoteEvent
 local SquadDefeatedRemote = TowerRemotes:WaitForChild("SquadDefeated") :: RemoteEvent
@@ -316,7 +314,7 @@ SystemToastEvent.OnClientEvent:Connect(function(msg: string, colorType: string)
 	playToast(msg, color, 4.5, colorType == "WARN")
 end)
 
--- Loot Stolen Retaliation Banner
+-- Loot Stolen Bounty Banner
 local lootStolenBanner = makeFrame({
 	Name = "LootStolenBanner",
 	Size = UDim2.new(0, 520, 0, 48),
@@ -341,22 +339,36 @@ local lootStolenText = makeLabel({
 })
 
 -- The banner tracks the newest contested drop; it stays up with a countdown for the whole
--- retaliation window, and the server clears it when the drop is recovered, duelled or gone.
+-- bounty window, and the server clears it when the drop is recovered, duelled or gone. The duel is
+-- claimed in the world (walk up to the thief and press F), so the banner only carries the hint.
 local currentContest: any = nil
-local retaliateBtn = makeButton({
+local bountyHint = makeLabel({
 	Size = UDim2.new(0.30, 0, 0.8, 0),
 	Position = UDim2.new(0.68, 0, 0.1, 0),
 	BackgroundColor3 = Color3.fromRGB(220, 35, 45),
-	Text = "RETALIATE",
+	Text = "HUNT THEM: [F]",
+	TextColor3 = Color3.fromRGB(255, 255, 255),
+	TextSize = 13,
+	TextScaled = false,
 	Corner = 6,
 	Parent = lootStolenBanner,
-	OnClick = function()
-		local remote = TowerRemotes:FindFirstChild("InitiateRetaliation")
-		if currentContest and remote and remote:IsA("RemoteEvent") then
-			remote:FireServer(currentContest.DropId)
-		end
-	end,
 })
+
+-- The server puts a "Claim Bounty" [F] prompt on every [Loot Thief]. Hide the one on our own
+-- character locally (the server also rejects a thief claiming their own bounty).
+local function hideOwnBountyPrompt(character: Model)
+	local function hide(child: Instance)
+		if child:IsA("ProximityPrompt") and child.Name == "BountyPrompt" then
+			child.Enabled = false
+		end
+	end
+	local root = character:WaitForChild("HumanoidRootPart", 10)
+	if not root then return end
+	for _, child in root:GetChildren() do hide(child) end
+	root.ChildAdded:Connect(hide)
+end
+if LocalPlayer.Character then task.spawn(hideOwnBountyPrompt, LocalPlayer.Character) end
+LocalPlayer.CharacterAdded:Connect(hideOwnBountyPrompt)
 
 local function refreshContestBanner()
 	local contest = currentContest
@@ -370,7 +382,7 @@ local function refreshContestBanner()
 		lootStolenBanner.Visible = false
 		return
 	end
-	lootStolenText.Text = string.format("%s STOLE %d %s! (%d:%02d)", string.upper(contest.ThiefName), contest.Amount, contest.LootType, remaining // 60, remaining % 60)
+	lootStolenText.Text = string.format("%s STOLE YOUR %s! (%d:%02d)", string.upper(contest.ThiefName), string.upper(contest.Label), remaining // 60, remaining % 60)
 	lootStolenBanner.Visible = true
 end
 
@@ -383,8 +395,7 @@ task.spawn(function()
 			currentContest = {
 				DropId = message.DropId,
 				ThiefName = tostring(message.ThiefName),
-				LootType = tostring(message.LootType),
-				Amount = tonumber(message.Amount) or 0,
+				Label = tostring(message.Label or "loot"),
 				ExpiresAt = os.clock() + (tonumber(message.Seconds) or 0),
 			}
 		elseif message.Kind == "CLEAR" and currentContest and currentContest.DropId == message.DropId then
@@ -573,42 +584,6 @@ SquadDefeatedRemote.OnClientEvent:Connect(function(floorId: number)
 	squadWipeText.Text = string.format("SQUAD WIPED ON FLOOR %d! CARRIED LOOT DROPPED — TELEPORTED TO FORTRESS PLOT", floorId or 0)
 end)
 
--- Carried Field Loot Indicator
-local carriedLootPill = makeFrame({
-	Name = "CarriedLootPill",
-	Size = UDim2.fromOffset(230, 38),
-	Position = UDim2.fromOffset(12, 58),
-	BackgroundColor3 = Color3.fromRGB(26, 32, 46),
-	BackgroundTransparency = 0.1,
-	Corner = 8,
-	Stroke = 1.5,
-	StrokeColor = Color3.fromRGB(245, 195, 65),
-	Visible = false,
-	Parent = topBar,
-})
-
-local carriedLootIcon = GrimoireIcons.Create("Gold", 26, carriedLootPill, 3)
-carriedLootIcon.AnchorPoint = Vector2.new(0, 0.5)
-carriedLootIcon.Position = UDim2.new(0, 8, 0.5, 0)
-local carriedLootLabel = makeLabel({
-	Size = UDim2.new(1, -46, 1, 0),
-	Position = UDim2.new(0, 40, 0, 0),
-	Text = "Field: 0 Gold · 0 Gems",
-	TextColor3 = Color3.fromRGB(255, 235, 145),
-	TextSize = 13,
-	TextScaled = false,
-	Parent = carriedLootPill,
-})
-
-CarriedLootSyncRemote.OnClientEvent:Connect(function(gold: number, gems: number)
-	if gold > 0 or gems > 0 then
-		carriedLootPill.Visible = true
-		carriedLootLabel.Text = string.format("Field: %d Gold · %d Gems", gold, gems)
-	else
-		carriedLootPill.Visible = false
-	end
-end)
-
 -- World Boss Top Banner
 local bossBanner = makeFrame({
 	Name = "FloorBossTopBanner",
@@ -652,19 +627,18 @@ GildedGrimoire.Reframe(lootStolenBanner, { Tone = "Glass", Rail = Glass.Danger }
 GildedGrimoire.Reframe(squadWipeBanner, { Tone = "Glass", Rail = Glass.Danger })
 GildedGrimoire.Reframe(partiallyDefeatedBanner :: Frame, { Tone = "Glass", Rail = Glass.Royal })
 GildedGrimoire.GlassFrame(partialTooltipPopover, { Transparency = 0.12 })
-GildedGrimoire.Reframe(carriedLootPill, { Tone = "Glass", Rail = Glass.Royal })
 GildedGrimoire.Reframe(bossBanner, { Tone = "Glass", Rail = Glass.Danger })
 GildedGrimoire.GlassBar(novaBarBg)
--- Retaliate: a solid Danger button with a hairline edge.
-GildedGrimoire.GlassFrame(retaliateBtn)
-retaliateBtn.BackgroundColor3 = Glass.Danger
-retaliateBtn.BackgroundTransparency = 0
-retaliateBtn.TextColor3 = Glass.Text
+-- Bounty hint: a solid Danger chip with a hairline edge.
+GildedGrimoire.GlassFrame(bountyHint)
+bountyHint.BackgroundColor3 = Glass.Danger
+bountyHint.BackgroundTransparency = 0
+bountyHint.TextColor3 = Glass.Text
 -- Every label in these banners moves to Montserrat; headlines take the bold weight.
-for _, banner in { toastBanner, lootStolenBanner, squadWipeBanner, partiallyDefeatedBanner :: Frame, partialTooltipPopover, carriedLootPill, bossBanner } do
+for _, banner in { toastBanner, lootStolenBanner, squadWipeBanner, partiallyDefeatedBanner :: Frame, partialTooltipPopover, bossBanner } do
 	GildedGrimoire.GlassTexts(banner)
 end
-for _, headline in { lootStolenText, squadWipeText, partialHeader, tooltipTitle, bossTitleLabel, novaCastLabel, toastText, retaliateBtn } do
+for _, headline in { lootStolenText, squadWipeText, partialHeader, tooltipTitle, bossTitleLabel, novaCastLabel, toastText, bountyHint } do
 	GildedGrimoire.GlassText(headline, "Title")
 end
 for _, line in { partialSubtext, tooltipList, tooltipFooter } do
@@ -1802,11 +1776,6 @@ do
 	-- Remove top menu bar so the viewport top is unobstructed and currencies live in the bottom-left
 	topBar.Visible = false
 	currencyLabel.Visible = false
-
-	carriedLootPill.Parent = hudGui
-	carriedLootPill.AnchorPoint = Vector2.new(0, 1)
-	carriedLootPill.Position = UDim2.new(0, 16, 1, -74)
-	carriedLootPill.ZIndex = 8
 
 	-- Bottom-left Gold & Diamond Currency Display
 	-- Total row width locked to Squad container bar width (W_squad = 296px).

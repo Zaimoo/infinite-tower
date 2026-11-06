@@ -20,13 +20,5 @@ record("Existing elite AoE cannot damage a different FloorId even with identical
 end)
 mobs[3000000001]=nil;hero.Position=saved.Position;hero.FloorId=saved.FloorId;hero.RoomGeneration=saved.RoomGeneration
 _G.CombatSimulation.RebuildPlayerSquad(p)
-record("Live dropped loot pins its room until the physical item is removed",function()
-	local room=T.EnsureRoom(4)
-	local loot=_G.CombatSimulation.SpawnPhysicalLoot("GOLD",1,room.Arrival.Position,p)
-	room.EmptySince=os.clock()-61;task.wait(1.2)
-	assert(T.GetRoom(4)==room and loot.Part.Parent)
-	loot.Part:Destroy();room.EmptySince=os.clock()-61;task.wait(1.2)
-	assert(T.GetRoom(4)==nil)
-end)
 game.ReplicatedStorage:SetAttribute("Part2ExtraTests",game.HttpService:JSONEncode(results))
 script:Destroy()

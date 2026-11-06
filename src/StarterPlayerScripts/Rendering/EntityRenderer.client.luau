@@ -407,7 +407,7 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 	title.BackgroundTransparency = 1
 	title.TextScaled = true
 	title.ZIndex = 3
-	-- In a retaliation duel each viewer sees their own squad in green and the other in orange.
+	-- In a bounty duel each viewer sees their own squad in green and the other in orange.
 	local duelColor = isHero and meta and meta.DuelSide and (if meta.OwnerUserId == LocalPlayer.UserId then Color3.fromRGB(120, 235, 120) else Color3.fromRGB(255, 160, 70)) or nil
 	if isHero then
 		local stars = string.rep("★", (meta and meta.Stars) or 1)

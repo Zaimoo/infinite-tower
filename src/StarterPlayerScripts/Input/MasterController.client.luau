@@ -103,7 +103,7 @@ UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: 
 		Whistles.Fire("Recall")
 	elseif input.KeyCode == Enum.KeyCode.R then
 		local char = LocalPlayer.Character
-		if char and (char:GetAttribute("CarryingLoot") == true or char:GetAttribute("CarryingRelic") ~= nil) then
+		if char and char:GetAttribute("CarryingRelic") ~= nil then
 			DropCarriedItemRemote:FireServer()
 		end
 	end
@@ -138,11 +138,6 @@ UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: 
 		if p ~= LocalPlayer and p.Character then
 			table.insert(filterList, p.Character)
 		end
-	end
-
-	local lootFolder = Workspace:FindFirstChild("PhysicalLoot")
-	if lootFolder then
-		table.insert(filterList, lootFolder)
 	end
 
 	params.FilterDescendantsInstances = filterList

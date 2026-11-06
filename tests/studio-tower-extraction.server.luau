@@ -25,22 +25,6 @@ local ok,err=xpcall(function()
 		local layout=Layout.Get((id-1)%5+1)
 		state.FloorId=id; state.RoomGeneration=room.RoomGeneration
 		local field=room.Origin+Vector3.new(0,4,layout.Platforms.Basin.Z+34)
-		for _,kind in {"GOLD","GEMS"} do
-			root.CFrame=CFrame.new(field); state.BankArmed=false
-			local loot=combat.SpawnPhysicalLoot(kind,7,root.Position-Vector3.new(0,3,0),player,"Rework test")
-			combat.CollectPhysicalLoot(player,loot.LootId)
-			assert(state.BankArmed and char:GetAttribute("CarryingLoot"),"Pickup did not arm "..id.." "..kind)
-			local key=if kind=="GOLD" then "Gold" else "Gems"
-			local before=profile.Currencies[key]
-			local expected=if kind=="GOLD" then math.round(7*dm.GetMarketMultiplier(player)) else 7
-			root.CFrame=room.Arrival
-			local deadline=os.clock()+4
-			repeat task.wait(.05) until not char:GetAttribute("CarryingLoot") or os.clock()>deadline
-			assert(not char:GetAttribute("CarryingLoot"),"Banking timeout "..id.." "..kind)
-			assert(profile.Currencies[key]==before+expected,"Incorrect cargo payout "..id.." "..kind)
-			assert(hum.WalkSpeed==16,"Carry speed not restored")
-			if kind=="GOLD" then results.GoldBanks+=1 else results.GemBanks+=1 end
-		end
 		root.CFrame=CFrame.new(field); state.BankArmed=false
 		local relic=relics.SpawnRelic("MANA_GEODE",root.Position-Vector3.new(0,3,0),player.UserId)
 		assert(relics.TryPickupRelic(player,relic) and state.BankArmed,"Relic pickup failed "..id)
@@ -71,7 +55,6 @@ local ok,err=xpcall(function()
 		task.wait()
 	end
 end,debug.traceback)
-combat.DropCarriedLoot(player)
 relics.DropCarriedRelic(player)
 state.FloorId=saved.FloorId; state.RoomGeneration=saved.RoomGeneration; state.BankArmed=saved.BankArmed
 state.SquadAssignment=saved.SquadAssignment

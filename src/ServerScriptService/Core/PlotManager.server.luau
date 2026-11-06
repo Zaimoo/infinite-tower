@@ -346,12 +346,9 @@ if TeleportRequest then
 			end
 		end
 
-		-- 4. Contested cargo guard: drop carried loot/relic prior to teleporting
-		local carrying = (char:GetAttribute("CarryingLoot") == true) or (char:GetAttribute("CarryingRelic") ~= nil)
+		-- 4. Contested cargo guard: drop a carried relic prior to teleporting
+		local carrying = char:GetAttribute("CarryingRelic") ~= nil
 		if carrying then
-			if _G.CombatSimulation and _G.CombatSimulation.DropCarriedLoot then
-				_G.CombatSimulation.DropCarriedLoot(player, true)
-			end
 			if _G.RelicService and _G.RelicService.DropCarriedRelic then
 				_G.RelicService.DropCarriedRelic(player)
 			end

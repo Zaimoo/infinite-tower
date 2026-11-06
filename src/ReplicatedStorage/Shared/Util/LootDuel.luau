@@ -1,16 +1,18 @@
 --!strict
 -- Shared/Util/LootDuel.luau
--- Rules for contested tower drops and retaliation duels (docs/rework-plan/PHASE_3_TOWER_PVP_RETALIATION.md).
+-- Rules for contested tower drops and bounty-hunt duels (GDD 6.1). A thief carries an open bounty:
+-- any other Master who walks up to them and presses F challenges them to a duel for the drop.
 -- Pure data and math: the server owns the state, the client only reads the layout constants.
 
 local LootDuel = {}
 
-LootDuel.THIEF_FLAG_SECONDS = 180 -- [Loot Thief] flag and retaliation window
+LootDuel.THIEF_FLAG_SECONDS = 180 -- [Loot Thief] flag and bounty window
 LootDuel.DUEL_MAX_SECONDS = 40 -- after this the side with more HP left wins
 LootDuel.DUEL_INTRO_SECONDS = 2.5 -- squads stand in formation before the first swing
 LootDuel.DUEL_OUTRO_SECONDS = 3.0 -- result banner before squads return to their Masters
 LootDuel.DUEL_DAMAGE_SCALE = 0.5 -- hero-vs-hero damage multiplier
-LootDuel.RETALIATE_COOLDOWN = 3.0
+LootDuel.CHALLENGE_COOLDOWN = 3.0
+LootDuel.CHALLENGE_RANGE = 12 -- studs between the hunter and the thief for the F prompt
 
 -- Arena geometry: flat-top hex grid, HEX_SIZE is centre-to-corner in studs.
 LootDuel.HEX_SIZE = 3.2
@@ -23,6 +25,7 @@ export type Contest = {
 	DropId: number,
 	OwnerUserId: number,
 	ThiefUserId: number,
+	ChallengerUserId: number?, -- the bounty hunter, set when a duel starts
 	ExpiresAt: number,
 	Status: "CONTESTED" | "DUELING" | "RESOLVED" | "EXPIRED",
 	WinnerUserId: number?,
@@ -120,19 +123,21 @@ function LootDuel.NewContest(dropId: number, ownerUserId: number, thiefUserId: n
 		ThiefUserId = thiefUserId,
 		ExpiresAt = now + LootDuel.THIEF_FLAG_SECONDS,
 		Status = "CONTESTED",
+		ChallengerUserId = nil,
 		WinnerUserId = nil,
 	}
 end
 
-function LootDuel.CanRetaliate(contest: Contest?, requesterUserId: number, now: number): (boolean, string?)
+-- Any Master except the thief may claim the bounty, the robbed owner included.
+function LootDuel.CanChallenge(contest: Contest?, requesterUserId: number, now: number): (boolean, string?)
 	if not contest then
-		return false, "That drop is no longer contested."
-	elseif contest.OwnerUserId ~= requesterUserId then
-		return false, "Only the drop's owner can retaliate."
+		return false, "That player has no bounty on them."
+	elseif contest.ThiefUserId == requesterUserId then
+		return false, "You cannot claim the bounty on yourself."
 	elseif contest.Status == "DUELING" then
-		return false, "A duel for this drop is already underway."
+		return false, "Someone is already dueling for this bounty."
 	elseif contest.Status ~= "CONTESTED" or now >= contest.ExpiresAt then
-		return false, "The retaliation window has closed."
+		return false, "The bounty has expired."
 	end
 	return true, nil
 end
@@ -149,10 +154,11 @@ function LootDuel.CanPickUp(drop: any, userId: number): (boolean, string?)
 	return true, nil
 end
 
--- Applies a duel result to the contest and the drop record. The winner becomes the drop's owner;
--- the loser, whichever role they had, can never pick this drop up again.
+-- Applies a duel result to the contest and the drop record. The duel is hunter vs thief: the
+-- winner becomes the drop's owner and the loser, hunter or thief, can never pick it up again.
 function LootDuel.Resolve(contest: Contest, drop: any?, winnerUserId: number)
-	local loserUserId = if winnerUserId == contest.OwnerUserId then contest.ThiefUserId else contest.OwnerUserId
+	local hunterUserId = contest.ChallengerUserId or contest.OwnerUserId
+	local loserUserId = if winnerUserId == contest.ThiefUserId then hunterUserId else contest.ThiefUserId
 	contest.Status = "RESOLVED"
 	contest.WinnerUserId = winnerUserId
 	if drop then

@@ -32,12 +32,12 @@ In traditional gacha/simulator games, 95% of summons are discarded as worthless 
 | :--- | :--- | :--- |
 | ***Pick Me Up, Infinite Gacha*** | Desperate squad survival, Synthesis chamber, Star Promotion, living lobby workers | Heroes suffer Stamina drain and `Coma` if mismanaged; 4★/5★ heroes require hard promotion sacrifices; War Banner plot deployment. |
 | ***Pet Simulator 99*** | Multi-unit squad grinding, tactile loot explosions, exponential progression | Replaces passive pet hovering with Stamina-managed combat squads, active whistle commands, and isolated 50-floor dynamic tower rooms. |
-| ***Blox Fruits*** | Telegraphed boss skills, live DPS leaderboards, open-world bounty hunting | **Greed vs. Coma** boss checks, 10 **Biome Bosses** (Floors 5, 10, ..., 50), and **Contested Loot & Targeted Retaliation PvP** in arena rings. |
+| ***Blox Fruits*** | Telegraphed boss skills, live DPS leaderboards, open-world bounty hunting | **Greed vs. Coma** boss checks, 10 **Biome Bosses** (Floors 5, 10, ..., 50), and **Contested Loot & Bounty-Hunt PvP** in arena rings. |
 | ***Grow a Garden*** | Cozy-yet-competitive perimeter plots, passive production, fortress management | Dedicated private plots with a Fortress Tree of unlockable facilities, War Banner squad deployment, and Forge progression. |
 | ***Steal an Egg*** | Physical object hauling, movement penalties, fumble & steal tension | High-tier **Relics** & cargo weld overhead, slow WalkSpeed by up to -45%, and fumble on AoE hits. |
 
 **The Intimate Server Dynamic:**
-In a 5–6 player server, anonymity disappears. Every player knows who conquered the latest Biome Boss, who just scooped contested loot, and who holds an active 3-minute retaliation grudge. The interplay of high-stakes extraction, boss timing, and targeted revenge loops keeps players engaged in continuous Biome Boss clears and Infinite Tower floor pushes.
+In a 5–6 player server, anonymity disappears. Every player knows who conquered the latest Biome Boss, who just scooped contested loot, and who carries an open 3-minute thief bounty. The interplay of high-stakes extraction, boss timing, and bounty-hunt loops keeps players engaged in continuous Biome Boss clears and Infinite Tower floor pushes.
 
 ---
 
@@ -145,7 +145,7 @@ A **run** starts when a Master first stands on a tower floor and ends when they 
 2. **A longer climb.** A floor boss is summoned after `round(20 + 1.2 × floor)` kill points (a Regular is 1, a camp Elite 3). The boss of floors 1–4 is the biome's **Alpha**, a larger, gilded elite with its own name, stats and a self-quake attack; the 5th floor is the **Biome Boss**. Enemy strength is anchored to the squad a player is expected to have (2 heroes at floor 1, 3 by floor 5, 4 by floor 10, 5 from floor 15, hero rarity included; the curve is frozen at its values from before heroes were summoned at 1★), with a per-biome sawtooth (×0.85, 0.95, 1.05, 1.15, 1.30 by floor in the biome). Floor 1 is sized to the default starter pair, and new profiles start with 900 Gems (one 10-pull).
 3. **Penalties, never losing what you own.** A knocked-out hero stays down until the squad **changes floor** (it stands back up at 30% HP), returns home, or wipes. Floor changes no longer heal anyone; the tower sanctuary heals standing heroes (10% HP per second). After a floor's summoned boss has been damaged, the floor's travel stays sealed until it dies or the squad wipes. A **wipe** costs the carried relic, the streak and 25% of the Gold and Gems earned since the last bank. Heroes, weapons and banked currency are never lost.
 4. **Banking and the climb streak.** Entering a sanctuary or pad banks everything. Each floor cleared in a row adds +10% (up to +100%) to the value of relics banked during the run; banking does not reset the streak, only the end of the run does. Relics are the contested loot: each enemy role has its own drop table (§5.5 Relic Drops), and relic Gems (base 100 / 300 / 1,000 / 5,000) and Gold both scale with the floor.
-5. **Rift Attunement.** In the tower and in retaliation duels, one hero's power is capped at about 1.5× an on-curve hero two floors above the Master's highest floor reached, so a lucky or premium pull is felt without skipping a biome. Duels use the lower of the two Masters' caps. Facility labor is never capped, and the pull itself (hero, star, rarity) never changes.
+5. **Rift Attunement.** In the tower and in bounty duels, one hero's power is capped at about 1.5× an on-curve hero two floors above the Master's highest floor reached, so a lucky or premium pull is felt without skipping a biome. Duels use the lower of the two Masters' caps. Facility labor is never capped, and the pull itself (hero, star, rarity) never changes.
 6. **Assigned squads farm.** An assigned squad earns kill Gold, Gems and XP anywhere, but relics, kill progress, boss summons and floor unlocks need its Master standing on the floor.
 7. **Simulation rate.** The tower simulation runs at 10 Hz (attack intervals round up to 0.1 s); snapshots to clients stay at 5 Hz until a Studio profile clears the bandwidth budget.
 
@@ -377,7 +377,7 @@ Hero summoning at the **Summoning Altar** (`FacilityController.luau`) is partiti
 #### 1. Permanent Banner: "Call of the Rift" (Rarity Tiers 1–5)
 The permanent standard banner features exactly **one character for each rarity from Common to Exalted** (5 total heroes):
 - **Summon Cost:** `100 Gems` per single pull (`900 Gems` for 10x pull).
-- **Pity System:** Guaranteed Exalted hero (**Ignis**) within **120 summons** (`MaxPity = 120`). A natural Exalted pull resets the pity counter.
+- **Pity System:** Guaranteed **Exalted or higher** hero within **120 summons** (`MaxPity = 120`, `PityMinTier = 5`). On this banner Exalted is the top tier, so pity always gives **Ignis**. A natural Exalted pull resets the counter.
 - **10-Pull Guarantee:** Every 10x pull includes at least one **Rare** or higher hero.
 - **Drop Rates:**
   - `Common (75.32%)`: **Han**
@@ -389,7 +389,8 @@ The permanent standard banner features exactly **one character for each rarity f
 #### 2. Limited Time Banner: "A Star's Arrival" (Rarity Tiers 1–7)
 The inaugural limited-time rate-up banner features exactly **one character for each rarity from Common to Mythical** (7 total heroes):
 - **Summon Cost:** `200 Gems` per single pull (`1,800 Gems` for 10x pull).
-- **Pity System:** Guaranteed Mythical featured hero (**Astrea**) within **100 summons** (`MaxPity = 100`). A natural Mythical pull resets the pity counter.
+- **Pity System:** Guaranteed **Exalted or higher** hero within **100 summons** (`MaxPity = 100`, `PityMinTier = 5`). The pity pull is split by the banner's Exalted/Legendary/Mythical rates (with God's Blessing luck): about 77% Archon, 19% Solaris, 4% Astrea. Any natural Exalted+ pull resets the counter.
+- **50/50 rule:** whenever an Exalted+ hero that is *not* Astrea is pulled on this banner (natural or pity), the next pity is guaranteed to be **Astrea** (`HeroLimitedFeaturedGuarantee`). Pulling Astrea clears the guarantee. The summon screen shows "Guaranteed Astrea in N summons" while it is active. Worst case for Astrea: 200 summons.
 - **10-Pull Guarantee:** Every 10x pull includes at least one **Rare** or higher hero.
 - **Drop Rates:**
   - `Common (61.14%)`: **Jenna**
@@ -649,7 +650,7 @@ These are the default multipliers and secondary mechanics each hero kit inherits
 | **Overdrive Whistle** | `[Q]` / `ButtonL1` / Right Rail | $20\text{s}$ CD. Grants $+40\%$ Attack Speed for $5\text{s}$ across all active heroes with zero Stamina drain, allowing squads to rapidly charge their Skill Gauges. |
 | **Emergency Recall** | `[E]` / `ButtonR1` / Right Rail | $6\text{s}$ CD. Instantly warps squad to Master + $2\text{s}$ pacify (dodges lethal AoE). Yields priority to ProximityPrompts. |
 | **Drop Carried Item**| `[R]` / HUD Button | Drops carried cargo or relic on the ground; restores normal WalkSpeed. |
-| **Retaliate (Duel)** | `[⚔️ RETALIATE]` / click the thief | HUD prompt (with a 3-minute countdown) when your drop is stolen. Starts a retaliation duel for that drop (§6.1). |
+| **Claim Bounty (Duel)** | `F` near a `[Loot Thief]` | Any Master but the thief, within 12 studs, during the 3-minute bounty. Starts a bounty duel for the stolen drop (§6.1). |
 
 *The Overdrive and Recall hotkeys are bound only on Tower floors, never while typing, in a modal or in a duel. Recall yields to a visible ProximityPrompt on the same key. The `Q`/`E` bindings are specified in Phase 5 (`docs/rework-plan/PHASE_5_REACT_UI_AND_MENUS.md` §2.1); until then only the HUD buttons fire the whistles.*
 
@@ -756,8 +757,9 @@ Supports have 70% of a Regular's HP and 50% of its ATK, move at 10 and aggro at 
 
 ### 5.4 Biome Boss Loot & Progression Ledger
 - **Summoning, not respawning:** a floor's boss (the biome **Alpha** on floors 1–4, the **Biome Boss** on floor 5) is summoned for a Master whose own kill progress reaches the floor threshold. It never respawns on a timer. Repeat kills need a fresh threshold.
-- **First clear of a floor** (the big payout): Gold ×3, `10 + 2 × floor` Gems, and a guaranteed Relic tagged to the killer.
-- **Repeat kills:** Gold at the normal rate, a 20% → 40% chance of a Relic (floor 1 → 50), and no bonus Gems, so a cleared floor is a farm, not a Gem source.
+- **Kill Gems** (every kill, paid straight to the killer, `TowerFloorConfig.KillGemsByRole`): Regular 1, Elite 5, Alpha 10, Biome Boss 50, each × `1 + 0.02 × (floor − 1)` (`KillGemFloorScaling`, rounded). Floor 50 pays 2 / 10 / 20 / 99. Relic Gems scale faster (`RelicGemFloorScaling` 0.03, ×2.47 at floor 50), so relics gain value relative to kills as you climb. Kill Gold keeps `1.055^(floor − 1)`.
+- **First clear of a floor** (the big payout): Gold ×3, `10 + 2 × floor` bonus Gems on top of the kill Gems, and a guaranteed Relic tagged to the killer.
+- **Repeat kills:** Gold at the normal rate, a 20% → 40% chance of a Relic (floor 1 → 50), and only the kill Gems (no first-clear bonus).
 - **Boss relics:** Alphas and Biome Bosses are the only source of the **Calamity Heart** (Alpha 2% → 5% of their relics, Biome Boss 4% → 10%); the rest are Cursed Urns and Mana Geodes. A first Biome Boss clear always drops at least a Cursed Urn.
 - **First clear of a Biome Boss** (floors 5, 10, …, 50), on top of the above: `300 × biome number` Gems. Bosses, Alphas and other mobs never drop artifacts: every artifact comes from the Blacksmith Forge Gold banner (§7).
 - **Floor advancement:** defeating a floor's boss opens the next floor on the Floor Selector and raises the Master's Rift Attunement cap (Section 2.5).
@@ -773,7 +775,7 @@ Relics are the contested tower loot (`TowerFloorConfig.RelicDrops`, `RelicConfig
 | Biome Boss | 20% → 40% (100% on first clear) | 4% → 10% | — | 45% → 55% |
 
 - **Payouts** (floor 1 base): Mana Geode `100` Gems / `250` Gold, Cursed Urn `300` / `1,200`, Abyssal Core `1,000` / `4,000`, Calamity Heart `5,000` / `15,000`. A Geode is worth one Call of the Rift pull.
-- **Floor scaling:** Gems ×`(1 + 0.02 × (floor − 1))` (×1.98 on floor 50), Gold ×`(1 + 0.05 × (floor − 1))`. The Market multiplies Gold, and the climb streak multiplies both. The relic's billboard shows its base value at that floor.
+- **Floor scaling:** Gems ×`(1 + 0.03 × (floor − 1))` (×2.47 on floor 50), Gold ×`(1 + 0.05 × (floor − 1))`. The Market multiplies Gold, and the climb streak multiplies both. The relic's billboard shows its base value at that floor.
 - **Billboard themes** (`Config/BillboardThemes`): relic plates are themed by rarity, with a badge above the plate: Mana Geode azure (`COMMON`), Cursed Urn amber (`RARE`), Abyssal Core void purple (`ELITE EXCLUSIVE`), Calamity Heart blood red with a gold rail (`ALPHA EXCLUSIVE`). Higher tiers get larger plates, a gradient title and longer view range, and Cores and Hearts draw on top of walls. Mob nameplates follow the same rule by tier: Normal slate (no badge), Elite void purple (`ELITE`), Alpha gilded gold (`ALPHA`), Biome Boss blood red (`BIOME BOSS`). The HP bar and outline take the tier's accent colour. Hero nameplates are themed by inherent rarity in the artifact rarity colours, each with its rarity badge: Common slate, Uncommon jade, Rare azure, Superior violet, Exalted amber, Legendary gold and Mythical blood red, with gradient titles from Exalted up. Hero HP bars stay green, and duel colours replace the title colour during a retaliation duel.
 - **Seal and owner lock:** a fresh relic drop is **sealed for everyone, its killer included**, for `5s` (Calamity Heart `15s`): its Carry prompt stays off and the billboard counts the seal down, then anyone may take it. A fumbled relic is locked to the player who fumbled it for `5s`.
 - **Calamity Heart bonus:** extracting one has a 10% chance to grant a 5★ Sovereign Archon.
@@ -782,22 +784,22 @@ Relics are the contested tower loot (`TowerFloorConfig.RelicDrops`, `RelicConfig
 
 ---
 
-## 6. CONTESTED LOOT & RETALIATION PVP
+## 6. CONTESTED LOOT & BOUNTY PVP
 
-### 6.1 Contested Loot & Retaliation Duels
-Implemented by `LootDuel` (`Shared/Util`, rules and arena layout), `DuelArena` (`Combat`, arena geometry), the duel section of `CombatSimulation` and `DuelController.client.luau`. Spec: `docs/rework-plan/PHASE_3_TOWER_PVP_RETALIATION.md`.
+### 6.1 Contested Loot & Bounty Duels
+Implemented by `LootDuel` (`Shared/Util`, rules and arena layout), `DuelArena` (`Combat`, arena geometry), the duel section of `CombatSimulation` and `DuelController.client.luau`. Original spec: `docs/rework-plan/PHASE_3_TOWER_PVP_RETALIATION.md` (the owner-only retaliation it describes was replaced by the bounty hunt below).
 
-1. **Universal Physical Drops:** Monsters and crystal nodes drop 3D physical cargo in `Workspace.PhysicalLoot` tagged with `KillerUserId`. In the tower, regular and elite kills pay their Gold and Gems directly, with no Gold drop (the tower Bounty Bag is removed). The contested drops in the tower are the killer-tagged **Relics**, which must be carried to a sanctuary to bank.
+1. **Relics are the only physical drops:** Kills pay their Gold and Gems directly; the old physical Gold/Gem cargo (`Workspace.PhysicalLoot`, Bounty Bag) is removed. The contested drops are the killer-tagged **Relics** (`Workspace.PhysicalRelics`), which must be carried to a sanctuary to bank. `RelicService` keeps the killer on each relic (`KillerUserId`) and reports every relic pickup to `CombatSimulation.ReportRelicPickup`, which opens the bounty on a theft. Contests are keyed by relic id.
 2. **Physical Overhead Hauling:** Picking up loot welds it overhead, slows movement by `-15%` to `-45%`, and triggers the upper-arm holding pose (`HoldingAnimationController.client.luau`).
-3. **Theft Detection:** Picking up a drop tagged to someone else opens a **contest** for that drop and flags the picker as a `[Loot Thief]` (character attribute `IsLootThief` plus a nameplate everyone sees) for 3 minutes. The owner gets a `[⚔️ RETALIATE]` banner with a countdown (`TowerRemotes.LootContested`). The contest closes when the window runs out, the drop is banked or despawns, or the owner picks it back up. If the drop is stolen again, only the newest thief can be challenged.
-4. **Retaliation Duel:** The owner presses `[⚔️ RETALIATE]` (`TowerRemotes.InitiateRetaliation(dropId)`) or clicks the thief. Both Masters must be on the same floor with at least one hero standing. There is no open-field PvP: squads only fight each other inside a duel.
-   - **Arena:** A floating hex-grid island is built just under the room's ceiling bound, above the owner, so it stays inside room-local replication and clear of floor geometry. Each squad lines up in formation on its own half: melee (Vanguard, Miner, Striker) in a front row of three, ranged and support (Marksman, Scholar, Healer) in a back row of two. Each client gets a fixed high-angle camera from behind its own squad, with its heroes labelled green and the opponent orange (`DuelState` remote).
+3. **Theft Detection:** Picking up a drop tagged to someone else opens a **contest** for that drop and flags the picker as a `[Loot Thief]` (character attribute `IsLootThief` plus a nameplate everyone sees) for 3 minutes. The flag is an open **bounty**: the thief carries a `Claim Bounty [F]` ProximityPrompt (`BountyPrompt`, 12-stud range, hidden on the thief's own client) and every other Master on the floor gets a bounty toast. The owner also gets a banner with a countdown and an `HUNT THEM: [F]` hint (`TowerRemotes.LootContested`). There is no Gold reward: the prize is the drop itself. The contest closes when the window runs out, the drop is banked or despawns, or the owner picks it back up. If the drop is stolen again, only the newest thief carries the bounty.
+4. **Bounty Duel:** Any Master except the thief (the robbed owner included) walks up to the thief and presses **F**. The duel starts at once; the server re-checks range, so the hunter must really be next to the thief. A thief with several bounties is challenged for the newest steal. Both Masters must be on the same floor with at least one hero standing. Clicking another Master never starts a fight. There is no open-field PvP: squads only fight each other inside a duel.
+   - **Arena:** A floating hex-grid island is built just under the room's ceiling bound, above the hunter, so it stays inside room-local replication and clear of floor geometry. Each squad lines up in formation on its own half: melee (Vanguard, Miner, Striker) in a front row of three, ranged and support (Marksman, Scholar, Healer) in a back row of two. Each client gets a fixed high-angle camera from behind its own squad, with its heroes labelled green and the opponent orange (`DuelState` remote).
    - **Flow:** 2.5 s line-up, then up to 40 s of automatic combat with each hero's own kit at 50% hero-vs-hero damage. Mobs ignore duelling squads. Masters are held in place, cannot bank or recall, and the drop cannot be picked up by anyone.
-   - **Victory:** Knock out every opposing hero. On timeout, the side with more total HP fraction left wins (a tie goes to the thief). A Master who leaves, travels or changes floor forfeits.
+   - **Victory:** Knock out every opposing hero. On timeout, the side with more total HP fraction left wins (a tie goes to the thief, who defends). A Master who leaves, travels or changes floor forfeits.
 5. **Zero-Consequence Resolution:** Duel knockouts never cause a squad wipe, teleport or progression loss. Afterwards every hero returns to its Master at its pre-duel HP and Skill Gauge.
    - **Winner:** Becomes the drop's owner. The drop is set at the winner's feet and picked up for them if their hands are free. The thief's flag clears.
-   - **Loser lockout (owner or thief alike):** The loser is locked out of that drop for the rest of its lifetime, whichever role they had. A losing owner cannot reclaim it, and a losing thief cannot steal it again. The lockout travels with the drop when it is dropped or spilled.
-6. **Squad Wipe & Spilled Loot:** On a PvE squad defeat, all carried loot spills onto the ground, and field looting is locked until the Master returns to their Fortress Plot (there is no Infirmary; see §4.3). The run ends with a wipe: the streak is lost and 25% of the Gold and Gems earned since the last bank is lost.
+   - **Loser lockout (hunter or thief alike):** The loser is locked out of that drop for the rest of its lifetime, whichever role they had. A losing hunter cannot claim it, and a losing thief cannot steal it again. A robbed owner who did not fight is not locked out. The lockout travels with the drop when it is dropped or spilled.
+6. **Squad Wipe & Spilled Loot:** On a PvE squad defeat, a carried relic is fumbled onto the ground, and field looting is locked until the Master returns to their Fortress Plot (there is no Infirmary; see §4.3). The run ends with a wipe: the streak is lost and 25% of the Gold and Gems earned since the last bank is lost.
 7. **Hub Banking:** Reaching a hub banking zone (the Cloister Commons band, island or footbridges, a plot bridge or the Pilgrim's Causeway), a Floor Safe Sanctuary or the private plot pad safely banks loot into permanent Gold and Gems.
 
 ---

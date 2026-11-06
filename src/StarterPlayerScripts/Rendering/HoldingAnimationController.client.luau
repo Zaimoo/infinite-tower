@@ -11,7 +11,7 @@ local LEFT_ARM_HOLD = CFrame.Angles(math.rad(152), math.rad(-10), math.rad(-14))
 RunService.Stepped:Connect(function()
 	for _, player in ipairs(Players:GetPlayers()) do
 		local char = player.Character
-		if char and (char:GetAttribute("CarryingLoot") == true or char:GetAttribute("CarryingRelic") ~= nil) then
+		if char and char:GetAttribute("CarryingRelic") ~= nil then
 			-- R15 Characters
 			local rUpperArm = char:FindFirstChild("RightUpperArm")
 			local rShoulder = rUpperArm and rUpperArm:FindFirstChild("RightShoulder") :: Motor6D?
