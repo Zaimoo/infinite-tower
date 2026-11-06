@@ -116,6 +116,9 @@ ModalFit.Bind(panel, scale, 830, 560, { MinScale = 0.48 })
 local function closeSelector()
 	panel.Visible = false
 	scrim.Visible = false
+	if _G.SetModalFocusMode then
+		_G.SetModalFocusMode(false)
+	end
 	if _G.UpdateBottomTabHighlights then
 		_G.UpdateBottomTabHighlights()
 	end
@@ -124,12 +127,13 @@ GothicBoxStyle.CreateCloseButton(panel, closeSelector)
 
 scrim.Activated:Connect(function()
 	if os.clock() - lastSelectorOpenTime < 0.25 then return end
-	panel.Visible = false
-	scrim.Visible = false
-	if _G.UpdateBottomTabHighlights then
-		_G.UpdateBottomTabHighlights()
-	end
+	closeSelector()
 end)
+
+_G.CloseTowerSelector = closeSelector
+_G.IsTowerSelectorOpen = function(): boolean
+	return panel.Visible
+end
 
 -- Title & Subtitle Header
 local titleIcon = GrimoireIcons.Create("Tower", 46, panel, 42)
@@ -908,33 +912,11 @@ end
 
 _G.OpenTowerSelector = openSelector
 
-_G.IsTowerSelectorOpen = function(): boolean
-	return panel.Visible
-end
-
-_G.CloseTowerSelector = function()
-	panel.Visible = false
-	scrim.Visible = false
-	if _G.SetModalFocusMode then
-		_G.SetModalFocusMode(false)
-	end
-	if _G.UpdateBottomTabHighlights then
-		_G.UpdateBottomTabHighlights()
-	end
-end
-
 -- Keyboard / Gamepad Navigation
 UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: boolean)
 	if not panel.Visible then return end
 	if input.KeyCode == Enum.KeyCode.Escape or input.KeyCode == Enum.KeyCode.ButtonB then
-		panel.Visible = false
-		scrim.Visible = false
-		if _G.SetModalFocusMode then
-			_G.SetModalFocusMode(false)
-		end
-		if _G.UpdateBottomTabHighlights then
-			_G.UpdateBottomTabHighlights()
-		end
+		closeSelector()
 		return
 	end
 	if gameProcessed then return end
@@ -1034,6 +1016,9 @@ remotes.Context.OnClientEvent:Connect(function(c)
 		if root and root:IsA("BasePart") then
 			root.AssemblyLinearVelocity = Vector3.zero
 			root.AssemblyAngularVelocity = Vector3.zero
+		end
+		if panel.Visible then
+			closeSelector()
 		end
 		render()
 	end
