@@ -24,12 +24,36 @@ export type RelicFx = {
 }
 
 -- Rarer relics read louder: brighter light, a taller pillar and more motes.
-RelicModelBuilder.Fx = table.freeze({
+local defaultFxByTier = {
+	[1] = { LightRange = 10, LightBrightness = 1.5, BeamHeight = 20, MoteRate = 6, Smoke = false, Beat = false },
+	[2] = { LightRange = 12, LightBrightness = 2, BeamHeight = 30, MoteRate = 10, Smoke = true, Beat = false },
+	[3] = { LightRange = 16, LightBrightness = 3, BeamHeight = 45, MoteRate = 16, Smoke = false, Beat = false },
+	[4] = { LightRange = 24, LightBrightness = 4, BeamHeight = 70, MoteRate = 24, Smoke = false, Beat = true },
+}
+
+local fxMap: { [string]: RelicFx } = {
 	MANA_GEODE = table.freeze({ LightRange = 10, LightBrightness = 1.5, BeamHeight = 20, MoteRate = 6, Smoke = false, Beat = false }),
 	CURSED_URN = table.freeze({ LightRange = 12, LightBrightness = 2, BeamHeight = 30, MoteRate = 10, Smoke = true, Beat = false }),
 	ABYSSAL_CORE = table.freeze({ LightRange = 16, LightBrightness = 3, BeamHeight = 45, MoteRate = 16, Smoke = false, Beat = false }),
 	CALAMITY_HEART = table.freeze({ LightRange = 24, LightBrightness = 4, BeamHeight = 70, MoteRate = 24, Smoke = false, Beat = true }),
-} :: { [string]: RelicFx })
+}
+
+if RelicConfig and RelicConfig.Items then
+	for itemId, item in pairs(RelicConfig.Items) do
+		local bTier = item.BiomeTier or 1
+		local f = defaultFxByTier[bTier] or defaultFxByTier[1]
+		fxMap[itemId] = table.freeze({
+			LightRange = f.LightRange,
+			LightBrightness = f.LightBrightness,
+			BeamHeight = f.BeamHeight,
+			MoteRate = f.MoteRate,
+			Smoke = f.Smoke or (item.Rarity == "Origin"),
+			Beat = f.Beat,
+		})
+	end
+end
+
+RelicModelBuilder.Fx = table.freeze(fxMap)
 
 local function makePart(parent: Instance, name: string, size: Vector3, cf: CFrame, color: Color3, material: Enum.Material?, shape: Enum.PartType?): Part
 	local p = Instance.new("Part")
@@ -158,6 +182,20 @@ local builders: { [string]: (Model, Color3) -> () } = {
 	CALAMITY_HEART = buildHeart,
 }
 
+if RelicConfig and RelicConfig.Items then
+	for itemId, item in pairs(RelicConfig.Items) do
+		if item.BiomeTier == 1 then
+			builders[itemId] = buildGeode
+		elseif item.BiomeTier == 2 then
+			builders[itemId] = buildUrn
+		elseif item.BiomeTier == 3 then
+			builders[itemId] = buildCore
+		else
+			builders[itemId] = buildHeart
+		end
+	end
+end
+
 -- Builds an anchored, non-colliding relic model centred on the origin. PrimaryPart "Anchor" sits at the
 -- centre and carries the light and mote emitters, so the caller only has to PivotTo it.
 function RelicModelBuilder.Build(tierId: string): Model
@@ -220,6 +258,22 @@ function RelicModelBuilder.Build(tierId: string): Model
 		lidVent.Position = Vector3.new(0, 2.0, 0)
 		lidVent.Parent = anchor
 		smoke.Parent = lidVent
+	end
+
+	-- Contested particle trail for higher-tier relics (Tier 3 Idols and Tier 4 Cores)
+	if (spec.BiomeTier and spec.BiomeTier >= 3) or tierId == "ABYSSAL_CORE" or tierId == "CALAMITY_HEART" then
+		local aura = Instance.new("ParticleEmitter")
+		aura.Name = "ContestedAura"
+		aura.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+		aura.Color = ColorSequence.new(spec.Color, Color3.new(1, 1, 1))
+		aura.LightEmission = 0.8
+		aura.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.5), NumberSequenceKeypoint.new(1, 0) })
+		aura.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(1, 1) })
+		aura.Lifetime = NumberRange.new(0.8, 1.6)
+		aura.Speed = NumberRange.new(1.0, 2.5)
+		aura.SpreadAngle = Vector2.new(45, 45)
+		aura.Rate = 8
+		aura.Parent = anchor
 	end
 
 	return model

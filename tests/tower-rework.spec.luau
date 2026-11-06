@@ -3,6 +3,7 @@ local Floors=require(nodes["ReplicatedStorage.Shared.Config.TowerFloorConfig"])
 local Mobs=require(nodes["ReplicatedStorage.Shared.Config.MobCatalog"])
 local Combat=require(nodes["ReplicatedStorage.Shared.Config.FirstBiomeCombat"])
 local Rules=require(nodes["ReplicatedStorage.Shared.Util.TowerSanctuaryRules"])
+local RelicConfig=require(nodes["ReplicatedStorage.Shared.RelicConfig"])
 local passed=0
 local function test(name,fn) fn(); passed+=1; print("PASS "..name) end
 test("Canonical biome progression and all five room envelopes",function()
@@ -137,7 +138,7 @@ test("Floor sanctuary extraction rejects unarmed stale expired transitioning or 
 	assert(Rules.CanBank(hub,carriedCargo,{CanBankCargo=true},false,100000))
 end)
 test("Kill gems scale by role and +2%/floor while gold and relic odds/value rise on every floor",function()
- local top={REGULAR="CURSED_URN",ELITE="ABYSSAL_CORE",ALPHA="CALAMITY_HEART",BOSS="CALAMITY_HEART"}
+ local topTierIndex = { REGULAR = 2, ELITE = 3, ALPHA = 4, BOSS = 4 }
  for _,role in {"REGULAR","ELITE","ALPHA","BOSS"} do
   local previous=nil
   for floor=1,50 do
@@ -149,9 +150,12 @@ test("Kill gems scale by role and +2%/floor while gold and relic odds/value rise
     assert(reward.Gold>previous.Gold and reward.RelicChance>previous.RelicChance)
     assert(reward.RelicMultiplier>previous.RelicMultiplier and reward.GemMultiplier>previous.GemMultiplier)
    end
-   -- Each role's best relic sits at the bottom of the tier roll; a high roll is always a Geode.
-   assert(Floors.RollRelic(floor,role,0,0)==top[role],role.." top relic")
-   assert(Floors.RollRelic(floor,role,0,.99)=="MANA_GEODE")
+   local biome = RelicConfig.GetBiomeForFloor(floor)
+   local expectedTop = biome and biome.DropTable[topTierIndex[role]] or "CURSED_URN"
+   local expectedBottom = biome and biome.DropTable[1] or "MANA_GEODE"
+   -- Each role's best relic sits at the bottom of the tier roll; a high roll is always the biome shard.
+   assert(Floors.RollRelic(floor,role,0,0)==expectedTop,role.." top relic on floor "..floor)
+   assert(Floors.RollRelic(floor,role,0,.99)==expectedBottom,role.." baseline shard on floor "..floor)
    -- Every role can miss now, camp Elites included; a dropRoll of 0 always drops (boss first clears).
    assert(Floors.RollRelic(floor,role,reward.RelicChance,0)==nil)
    previous=reward
