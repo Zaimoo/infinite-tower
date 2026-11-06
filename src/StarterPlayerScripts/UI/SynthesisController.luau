@@ -194,8 +194,8 @@ local function stars(n: number?): string
 	return string.rep("★", math.clamp(n or 1, 1, 7))
 end
 
-local function xpRatio(level: number?, xp: number?): number
-	return math.clamp((xp or 0) / StatFormulas.GetXPRequiredForNextLevel(level or 1), 0, 1)
+local function xpRatio(level: number?, xp: number?, starCount: number?): number
+	return math.clamp((xp or 0) / StatFormulas.GetXPRequiredForNextLevel(level or 1, starCount), 0, 1)
 end
 
 local function restingSeconds(hero: any): number
@@ -1120,22 +1120,22 @@ function Synth.Render(self: any)
 		self.RecipientInfo.TextColor3 = recipRarity
 
 		local level, xp = recipient.Level or 1, recipient.XP or 0
-		local currentRatio = xpRatio(level, xp)
+		local currentRatio = xpRatio(level, xp, recipient.Stars)
 		local gainRatio = currentRatio
 
 		if before and after then
 			if after.Level > before.Level then
 				currentRatio = 0
-				gainRatio = after.Level >= (after.MaxLevel or math.huge) and 1 or xpRatio(after.Level, after.XP)
+				gainRatio = after.Level >= (after.MaxLevel or math.huge) and 1 or xpRatio(after.Level, after.XP, after.Stars)
 			else
-				gainRatio = math.max(currentRatio, xpRatio(after.Level, after.XP))
+				gainRatio = math.max(currentRatio, xpRatio(after.Level, after.XP, after.Stars))
 			end
 			self.LevelLabel.Text = string.format('Lv. %d  <font color="#39E81E">→  Lv. %d</font>%s', before.Level, after.Level,
 				if after.Level > before.Level then string.format(" (+%d Lvls)", after.Level - before.Level) else "")
-			self.XPText.Text = string.format("%d / %d EXP (+%d EXP)", after.XP or 0, StatFormulas.GetXPRequiredForNextLevel(after.Level), gained)
+			self.XPText.Text = string.format("%d / %d EXP (+%d EXP)", after.XP or 0, StatFormulas.GetXPRequiredForNextLevel(after.Level, after.Stars), gained)
 		else
-			self.LevelLabel.Text = string.format("Lv. %d  (Cap: Lv. %d)", level, (recipient.Stars or 1) * 10)
-			self.XPText.Text = string.format("%d / %d EXP", xp, StatFormulas.GetXPRequiredForNextLevel(level))
+			self.LevelLabel.Text = string.format("Lv. %d  (Cap: Lv. %d)", level, StatFormulas.GetMaxLevel(recipient.Stars))
+			self.XPText.Text = string.format("%d / %d EXP", xp, StatFormulas.GetXPRequiredForNextLevel(level, recipient.Stars))
 		end
 
 		self.CurrentFill.Size = UDim2.fromScale(currentRatio, 1)

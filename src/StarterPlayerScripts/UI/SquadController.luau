@@ -855,8 +855,8 @@ function SquadController.RenderDetails(self: any)
 	d.Rarity.Text = string.format("%s  ·  %s  ·  %s", string.rep("★", stars), HeroCatalog.RarityName(rarity), hero.Archetype or "Hero")
 	d.Rarity.TextColor3 = color
 	d.Level.Text = if level >= cap then string.format("Lv. %d / %d  ·  MAX", level, cap)
-		else string.format("Lv. %d / %d  ·  %d / %d EXP", level, cap, hero.XP or 0, StatFormulas.GetXPRequiredForNextLevel(level))
-	d.XPFill.Size = UDim2.fromScale(if level >= cap then 1 else math.clamp((hero.XP or 0) / StatFormulas.GetXPRequiredForNextLevel(level), 0, 1), 1)
+		else string.format("Lv. %d / %d  ·  %d / %d EXP", level, cap, hero.XP or 0, StatFormulas.GetXPRequiredForNextLevel(level, stars))
+	d.XPFill.Size = UDim2.fromScale(if level >= cap then 1 else math.clamp((hero.XP or 0) / StatFormulas.GetXPRequiredForNextLevel(level, stars), 0, 1), 1)
 	d.State.Text = assignmentText(hero)
 
 	d.Stats.Power.Text = abbreviate(powerOf(profile, hero, mult))
