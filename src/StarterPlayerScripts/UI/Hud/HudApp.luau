@@ -232,6 +232,11 @@ local function rail(name: string, side: "Left" | "Right", top: number, bottom: n
 	}, children)
 end
 
+local currentFacilityOpen: string? = nil
+local currentIndexOpen = false
+local currentShopOpen = false
+local currentBackpackOpen = false
+
 local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 	local _, setRevision = React.useState(0)
 	local _, setTick = React.useState(0)
@@ -243,6 +248,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 	local backpackOpen, setBackpackOpen = React.useState(false)
 	local backpackButton = React.useRef(nil :: GuiButton?)
 	local closeBackpack = React.useCallback(function()
+		currentBackpackOpen = false
 		setBackpackOpen(false)
 		call("SetModalFocusMode", false)
 	end, {})
@@ -289,7 +295,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 	end, {})
 
 	React.useEffect(function()
-		_G.IsBackpackOpen = function() return backpackOpen end
+		_G.IsBackpackOpen = function() return currentBackpackOpen or backpackOpen end
 		_G.CloseBackpack = closeBackpack
 		return function()
 			_G.IsBackpackOpen = nil
@@ -299,30 +305,54 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 
 	React.useEffect(function()
 		_G.OpenHeroIndex = function(mode: string?)
-			call("OpenMasterModal", "NONE")
+			currentFacilityOpen = nil
+			currentShopOpen = false
+			currentIndexOpen = true
+			call("OpenMasterModal", "INDEX")
 			if mode == "ARTIFACTS" or mode == "HEROES" then
 				setIndexInitialMode(mode :: any)
 			end
+			setFacilityOpen(nil)
+			setShopOpen(false)
 			setIndexOpen(true)
 			setNewHeroes(0)
 			call("SetModalFocusMode", true)
 		end
 		_G.OpenArtifactIndex = function()
-			call("OpenMasterModal", "NONE")
+			currentFacilityOpen = nil
+			currentShopOpen = false
+			currentIndexOpen = true
+			call("OpenMasterModal", "INDEX")
 			setIndexInitialMode("ARTIFACTS")
+			setFacilityOpen(nil)
+			setShopOpen(false)
 			setIndexOpen(true)
 			call("SetModalFocusMode", true)
 		end
-		_G.IsHeroIndexOpen = function() return indexOpen or facilityOpen ~= nil or shopOpen end
-		_G.CloseHeroIndex = function()
-			setIndexOpen(false)
+		_G.IsHeroIndexOpen = function() return currentIndexOpen or currentShopOpen or indexOpen or shopOpen end
+		_G.IsFacilityPanelOpen = function(): boolean
+			return currentFacilityOpen ~= nil
+		end
+		_G.CloseFacilityPanel = function()
+			if currentFacilityOpen == nil and facilityOpen == nil then return end
+			currentFacilityOpen = nil
 			setFacilityOpen(nil)
+			call("SetModalFocusMode", false)
+		end
+		_G.CloseHeroIndex = function()
+			if not currentIndexOpen and not currentShopOpen and not indexOpen and not shopOpen then return end
+			currentIndexOpen = false
+			currentShopOpen = false
+			setIndexOpen(false)
 			setShopOpen(false)
 			call("SetModalFocusMode", false)
 		end
 		-- Robux Store (Phase 5): the Shop button on the Right Rail.
 		_G.OpenRobuxShop = function()
-			call("OpenMasterModal", "NONE")
+			currentFacilityOpen = nil
+			currentIndexOpen = false
+			currentShopOpen = true
+			call("OpenMasterModal", "SHOP")
 			setIndexOpen(false)
 			setFacilityOpen(nil)
 			setShopOpen(true)
@@ -330,7 +360,12 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 		end
 		_G.OpenFacilityPanel = function(facility: string): boolean
 			if not PANEL_FACILITIES[facility] then return false end
-			call("OpenMasterModal", "NONE")
+			currentFacilityOpen = facility
+			currentIndexOpen = false
+			currentShopOpen = false
+			call("OpenMasterModal", "FACILITY")
+			setIndexOpen(false)
+			setShopOpen(false)
 			setFacilityOpen(facility)
 			call("SetModalFocusMode", true)
 			return true
@@ -471,6 +506,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 			Accent = Color3.fromRGB(243, 199, 119),
 			ButtonRef = backpackButton,
 			OnActivated = function()
+				currentBackpackOpen = true
 				call("OpenMasterModal", "NONE")
 				setBackpackOpen(true)
 				call("SetModalFocusMode", true)
@@ -630,10 +666,15 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 			return e(Components.PitTabs, { Active = pitActive, Center = pitCenter, OnSelect = function(tab) call("OpenFacilityHUD", tab) end })
 		end)(),
 		Facility = if facilityOpen then e(FacilityPanel, { Facility = facilityOpen, Profile = profile, Width = screen.X,
-			OnClose = function() setFacilityOpen(nil) call("SetModalFocusMode", false) end }) else nil,
-		Shop = if shopOpen then e(ShopPanel, { Profile = profile, Width = screen.X, OnClose = function() setShopOpen(false) call("SetModalFocusMode", false) end }) else nil,
+			OnClose = function()
+				currentFacilityOpen = nil
+				setFacilityOpen(nil)
+				call("SetModalFocusMode", false)
+			end,
+		}) else nil,
+		Shop = if shopOpen then e(ShopPanel, { Profile = profile, Width = screen.X, OnClose = function() currentShopOpen = false setShopOpen(false) call("SetModalFocusMode", false) end }) else nil,
 		TowerEventPopup = e(TowerEventHud.Popup, { Blocked = facilityOpen ~= nil or shopOpen or indexOpen or modalFocus }),
-		Index = if indexOpen then e(HeroIndex, { Profile = profile, Width = screen.X, InitialMode = indexInitialMode, OnClose = function() setIndexOpen(false) call("SetModalFocusMode", false) end }) else nil,
+		Index = if indexOpen then e(HeroIndex, { Profile = profile, Width = screen.X, InitialMode = indexInitialMode, OnClose = function() currentIndexOpen = false setIndexOpen(false) call("SetModalFocusMode", false) end }) else nil,
 		Backpack = if backpackOpen then e(BackpackPanel, {
 			Width = screen.X, Height = screen.Y, OnClose = function() closeBackpack() call("SetModalFocusMode", false) end, ReturnFocus = returnBackpackFocus,
 		}) else nil,

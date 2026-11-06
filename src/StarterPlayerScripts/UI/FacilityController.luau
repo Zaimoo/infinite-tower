@@ -732,7 +732,12 @@ function Controller:PerformSummon(bannerId: string, count: number)
 	end)
 end
 
+function Controller:IsOpen(): boolean
+	return self.Root ~= nil and self.Root.Visible
+end
+
 function Controller:Close()
+	if not self:IsOpen() then return end
 	self.Root.Visible = false
 	self.Scrim.Visible = false
 	self.Reveal:Close()
