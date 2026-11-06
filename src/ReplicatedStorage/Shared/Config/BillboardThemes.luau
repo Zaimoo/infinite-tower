@@ -18,11 +18,24 @@ export type Theme = {
 
 export type MobTier = "NORMAL" | "ELITE" | "ALPHA" | "BIOME_BOSS"
 
+local RelicConfig = require(script.Parent.RelicConfig)
+
 local BillboardThemes = {}
 
 BillboardThemes.BADGE_HEIGHT = 16
 
-BillboardThemes.Relic = table.freeze({
+local rarityDefaults: { [string]: { Tone: string, Badge: string, AlwaysOnTop: boolean, Size: Vector2, MaxDistance: number } } = {
+	Common = { Tone = "Azure", Badge = "COMMON", AlwaysOnTop = false, Size = Vector2.new(210, 84), MaxDistance = 240 },
+	Uncommon = { Tone = "Azure", Badge = "UNCOMMON", AlwaysOnTop = false, Size = Vector2.new(215, 84), MaxDistance = 250 },
+	Rare = { Tone = "Amber", Badge = "RARE", AlwaysOnTop = false, Size = Vector2.new(220, 86), MaxDistance = 260 },
+	Superior = { Tone = "Void", Badge = "SUPERIOR", AlwaysOnTop = true, Size = Vector2.new(225, 88), MaxDistance = 280 },
+	Exalted = { Tone = "Blood", Badge = "EXALTED", AlwaysOnTop = true, Size = Vector2.new(235, 90), MaxDistance = 300 },
+	Legendary = { Tone = "Gilded", Badge = "LEGENDARY", AlwaysOnTop = true, Size = Vector2.new(245, 92), MaxDistance = 330 },
+	Mythical = { Tone = "Blood", Badge = "MYTHICAL", AlwaysOnTop = true, Size = Vector2.new(255, 94), MaxDistance = 360 },
+	Origin = { Tone = "Gilded", Badge = "ORIGIN", AlwaysOnTop = true, Size = Vector2.new(265, 96), MaxDistance = 400 },
+}
+
+local relicThemes: { [string]: Theme } = {
 	MANA_GEODE = table.freeze({
 		Tone = "Azure",
 		Rail = Color3.fromRGB(120, 220, 255),
@@ -66,7 +79,32 @@ BillboardThemes.Relic = table.freeze({
 		MaxDistance = 360,
 		AlwaysOnTop = true,
 	}),
-} :: { [string]: Theme })
+}
+
+if RelicConfig and RelicConfig.Items then
+	for itemId, item in pairs(RelicConfig.Items) do
+		local rDef = rarityDefaults[item.Rarity] or rarityDefaults.Common
+		local col = item.Color or Color3.fromRGB(255, 255, 255)
+		local titleCol = col:Lerp(Color3.new(1, 1, 1), 0.35)
+		local gradient = if item.BiomeTier >= 3 or item.Rarity == "Legendary" or item.Rarity == "Mythical" or item.Rarity == "Origin"
+			then { col:Lerp(Color3.new(1, 1, 1), 0.5), col, col:Lerp(Color3.new(1, 1, 1), 0.5) }
+			else nil
+
+		relicThemes[itemId] = table.freeze({
+			Tone = rDef.Tone,
+			Rail = col,
+			Title = titleCol,
+			TitleGradient = gradient,
+			Accent = col,
+			Badge = rDef.Badge,
+			Size = rDef.Size,
+			MaxDistance = rDef.MaxDistance,
+			AlwaysOnTop = rDef.AlwaysOnTop,
+		})
+	end
+end
+
+BillboardThemes.Relic = table.freeze(relicThemes)
 
 BillboardThemes.Mob = table.freeze({
 	NORMAL = table.freeze({

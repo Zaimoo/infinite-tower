@@ -88,4 +88,29 @@ assert(RelicConfig.CURSED_URN ~= nil and RelicConfig.CURSED_URN.Payout.Gems == 3
 assert(RelicConfig.ABYSSAL_CORE ~= nil and RelicConfig.ABYSSAL_CORE.Payout.Gems == 1000, "Legacy ABYSSAL_CORE gems")
 assert(RelicConfig.CALAMITY_HEART ~= nil and RelicConfig.CALAMITY_HEART.Payout.Gems == 5000, "Legacy CALAMITY_HEART gems")
 
-print("PASS Relic biome config: all 10 biomes, 40 relics, helpers, and backward compatibility verified")
+-- 5. Verify Biome Drop Integration with TowerFloorConfig
+local TowerFloorConfig = require(nodes["ReplicatedStorage.Shared.Config.TowerFloorConfig"])
+
+-- Floor 17 (Frozen Citadel) must drop Frozen Citadel relics, NEVER Mana Geode
+local f17Shard = TowerFloorConfig.RollRelic(17, "REGULAR", 0, 0.99)
+assert(f17Shard == "RimefrostCrystalShard", "Floor 17 baseline shard must be RimefrostCrystalShard, got: " .. tostring(f17Shard))
+assert(f17Shard ~= "MANA_GEODE", "Floor 17 must not drop MANA_GEODE")
+
+local f17Urn = TowerFloorConfig.RollRelic(17, "REGULAR", 0, 0.0)
+assert(f17Urn == "GlacialUrn", "Floor 17 regular top drop must be GlacialUrn, got: " .. tostring(f17Urn))
+
+local f17Elite = TowerFloorConfig.RollRelic(17, "ELITE", 0, 0.0)
+assert(f17Elite == "BorealValkyrieIdol", "Floor 17 elite top drop must be BorealValkyrieIdol, got: " .. tostring(f17Elite))
+
+local f17Boss = TowerFloorConfig.RollRelic(17, "BOSS", 0, 0.0)
+assert(f17Boss == "PermafrostCore", "Floor 17 boss drop must be PermafrostCore, got: " .. tostring(f17Boss))
+
+-- Across all floors 1..50, baseline drops must be the biome's Tier 1 Shard and never Mana Geode
+for floor = 1, 50 do
+	local dropped = TowerFloorConfig.RollRelic(floor, "REGULAR", 0, 0.99)
+	local biome = RelicConfig.GetBiomeForFloor(floor)
+	assert(dropped == biome.DropTable[1], string.format("Floor %d dropped %s, expected %s", floor, tostring(dropped), biome.DropTable[1]))
+	assert(dropped ~= "MANA_GEODE", string.format("Floor %d must never drop MANA_GEODE", floor))
+end
+
+print("PASS Relic biome config: all 10 biomes, 40 relics, helpers, Floor 17 Frozen Citadel drops, and backward compatibility verified")

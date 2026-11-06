@@ -4,6 +4,7 @@
 local MobCatalog = require(script.Parent.MobCatalog)
 local Layout = require(script.Parent.TowerLayout)
 local StatBalance = require(script.Parent.StatBalance)
+local RelicConfig = require(script.Parent.RelicConfig)
 
 export type Encounter = { EnemyId: string, Count: number }
 export type Floor = {
@@ -258,10 +259,11 @@ function Config.GetKillRewards(floorId: number, role: string): any
 	}
 end
 
--- A dropRoll of 0 forces a drop (boss first clears). Tiers are checked from the top: Heart, Core, Urn, then Geode.
+-- A dropRoll of 0 forces a drop (boss first clears). Tiers are checked from the top:
+-- Tier 4: Origin/Apex Core, Tier 3: Idol/Totem/Scarab, Tier 2: Cursed Urn, Tier 1: Biome Shard.
+-- Relics are biome-locked to the floor's 5-floor biome drop table (RelicConfig.Biomes).
 -- `mods` (optional, a timed tower event's TowerEventConfig.Mods) can scale the drop chance and the Heart
--- and Core shares, and upgrade Geodes to Urns and an Elite's Urns to Cores. Hearts stay Alpha/Boss-only
--- and Cores Elite-only, because a zero share stays zero and Urn upgrades need role ELITE.
+-- and Core shares, and upgrade Shards to Urns and an Elite's Urns to Cores.
 function Config.RollRelic(floorId: number, role: string, dropRoll: number, tierRoll: number, mods: any?): string?
 	local reward = Config.GetKillRewards(floorId, role)
 	local m = mods or {}
@@ -269,14 +271,31 @@ function Config.RollRelic(floorId: number, role: string, dropRoll: number, tierR
 	local heart = reward.HeartChance * (m.HeartMult or 1)
 	local core = reward.CoreChance * (m.CoreMult or 1)
 	local shift = (tierRoll * 7919) % 1 -- a second, independent-looking roll for event upgrades
-	if tierRoll < heart then return "CALAMITY_HEART" end
-	if tierRoll < heart + core then return "ABYSSAL_CORE" end
-	if tierRoll < heart + core + reward.UrnChance then
-		if role == "ELITE" and m.UrnUpgrade and shift < m.UrnUpgrade then return "ABYSSAL_CORE" end
-		return "CURSED_URN"
+
+	local tierIndex = 1
+	if tierRoll < heart then
+		tierIndex = 4
+	elseif tierRoll < heart + core then
+		tierIndex = 3
+	elseif tierRoll < heart + core + reward.UrnChance then
+		if role == "ELITE" and m.UrnUpgrade and shift < m.UrnUpgrade then
+			tierIndex = 3
+		else
+			tierIndex = 2
+		end
+	elseif m.GeodeUpgrade and shift < m.GeodeUpgrade then
+		tierIndex = 2
+	else
+		tierIndex = 1
 	end
-	if m.GeodeUpgrade and shift < m.GeodeUpgrade then return "CURSED_URN" end
-	return "MANA_GEODE"
+
+	local biome = RelicConfig.GetBiomeForFloor(floorId)
+	if biome and biome.DropTable and biome.DropTable[tierIndex] then
+		return biome.DropTable[tierIndex]
+	end
+
+	local legacyTiers = { "MANA_GEODE", "CURSED_URN", "ABYSSAL_CORE", "CALAMITY_HEART" }
+	return legacyTiers[tierIndex]
 end
 
 return table.freeze(Config)

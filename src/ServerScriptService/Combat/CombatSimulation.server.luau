@@ -28,6 +28,7 @@ local FirstBiome=require(Shared.Config.FirstBiomeCombat)
 local TowerLayout=require(Shared.Config.TowerLayout)
 local PortalAssets=require(Shared.Config.TowerPortalAssets)
 local TowerRewards=require(Shared.Config.TowerFloorConfig)
+local RelicConfig = require(Shared:WaitForChild("RelicConfig"))
 local TowerHardcore=require(Shared.Config.TowerHardcoreConfig)
 local StatBalance=require(Shared.Config.StatBalance)
 local EncounterRuntime=require(script.Parent.TowerEncounterRuntime)
@@ -2535,7 +2536,14 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
         local relicRole = if bossTier > 0 then "BOSS" else "ALPHA"
         local relicTier = TowerRewards.RollRelic(mob.FloorId, relicRole, if firstClear then 0 else math.random(), math.random(),
          bossEventMods) -- Stamped at spawn (Alpha Hunt raises the Heart share; Calamity Hour raises tiers)
-        if relicTier == "MANA_GEODE" and firstBiomeClear then relicTier = "CURSED_URN" end
+        if relicTier and firstBiomeClear then
+         local biome = RelicConfig.GetBiomeForFloor(mob.FloorId)
+         if biome and relicTier == biome.DropTable[1] then
+          relicTier = biome.DropTable[2]
+         elseif relicTier == "MANA_GEODE" then
+          relicTier = "CURSED_URN"
+         end
+        end
         if relicTier then _G.RelicService.SpawnRelic(relicTier, mob.Position, p.UserId) end
        end
 
