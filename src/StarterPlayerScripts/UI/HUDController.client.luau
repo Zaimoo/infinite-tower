@@ -220,6 +220,20 @@ GildedGrimoire.Watch(hudGui)
 -- MODAL FOCUS MODE (FULL-SCREEN DIMMER, LIGHTING POLISH & SELECTIVE HUD HIDING)
 --============================================================================
 
+local oldModalFocusGui = PlayerGui:FindFirstChild("ModalFocusScreenGui")
+if oldModalFocusGui then
+	oldModalFocusGui:Destroy()
+end
+
+local modalFocusGui = Instance.new("ScreenGui")
+modalFocusGui.Name = "ModalFocusScreenGui"
+modalFocusGui.ResetOnSpawn = false
+modalFocusGui.IgnoreGuiInset = true
+modalFocusGui.ScreenInsets = Enum.ScreenInsets.None
+modalFocusGui.DisplayOrder = 4
+modalFocusGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+modalFocusGui.Parent = PlayerGui
+
 local modalFocusOverlay = Instance.new("Frame")
 modalFocusOverlay.Name = "ModalFocusOverlay"
 modalFocusOverlay.Size = UDim2.fromScale(1, 1)
@@ -228,9 +242,9 @@ modalFocusOverlay.BackgroundColor3 = Color3.fromHex("#06040A")
 modalFocusOverlay.BackgroundTransparency = 1
 modalFocusOverlay.BorderSizePixel = 0
 modalFocusOverlay.Visible = false
-modalFocusOverlay.ZIndex = 35
+modalFocusOverlay.ZIndex = 1
 modalFocusOverlay.Active = false
-modalFocusOverlay.Parent = hudGui
+modalFocusOverlay.Parent = modalFocusGui
 
 local function getOrCreateEffect<T>(className: string, name: string): T
 	local existing = Lighting:FindFirstChild(name)
