@@ -1283,6 +1283,7 @@ _G.IsAnyMasterModalOpen = function(): boolean
 	if _G.IsHeroIndexOpen and _G.IsHeroIndexOpen() then return true end
 	if _G.IsFacilityPanelOpen and _G.IsFacilityPanelOpen() then return true end
 	if _G.IsTowerSelectorOpen and _G.IsTowerSelectorOpen() then return true end
+	if _G.IsSettingsOpen and _G.IsSettingsOpen() then return true end
 	if facilityController and facilityController.Root and facilityController.Root.Visible then return true end
 	if fortressTreeController and fortressTreeController:IsOpen() then return true end
 	if synthesisController and synthesisController.Root and synthesisController.Root.Visible then return true end
@@ -1300,7 +1301,7 @@ _G.OpenMasterModal = function(which: string)
 	if which ~= "FACILITY" and _G.CloseFacilityPanel then
 		_G.CloseFacilityPanel()
 	end
-	if _G.CloseSettings and _G.IsSettingsOpen and _G.IsSettingsOpen() then
+	if which ~= "SETTINGS" and _G.CloseSettings and _G.IsSettingsOpen and _G.IsSettingsOpen() then
 		_G.CloseSettings()
 	end
 	if _G.CloseTowerSelector then _G.CloseTowerSelector() end

@@ -647,7 +647,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 		}) else nil,
 		-- Screens and the Pit tabs render above the building screens; the zones above stay behind them.
 		Overlay = ReactRoblox.createPortal({
-		FocusCurrency = if modalFocus and profile then e("Frame", {
+		FocusCurrency = if modalFocus and profile and not (_G.IsSettingsOpen and _G.IsSettingsOpen()) then e("Frame", {
 			Name = "ModalFocusCurrencyWrapper",
 			Position = UDim2.new(0, L.Edge, 1, -L.Edge),
 			AnchorPoint = Vector2.new(0, 1),
