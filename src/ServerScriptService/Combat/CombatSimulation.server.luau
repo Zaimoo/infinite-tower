@@ -2161,6 +2161,29 @@ local function summonFloorBoss(player: Player, progress: TowerProgress.PlayerFlo
  end
 end
 
+local function resetPlayerTowerEncounter(player: Player, reason: string?)
+	local progress = ActivePlayerProgress[player]
+	local state = Tower.GetState(player)
+	local floorId = (progress and progress.FloorId) or (state and state.FloorId) or 0
+	ActivePlayerProgress[player] = nil
+
+	if floorId > 0 and Encounters then
+		local others = 0
+		for p, _ in pairs(ActiveMasters) do
+			if p ~= player and p.Parent == Players and Tower.GetState(p).FloorId == floorId then
+				others += 1
+			end
+		end
+		if others == 0 then
+			Encounters:ClearFloorBoss(floorId)
+		end
+	end
+
+	if FloorProgressRemote and player.Parent == Players then
+		FloorProgressRemote:FireClient(player, TowerProgress.CreateProgress(0))
+	end
+end
+
 -- Phase H: when a floor's boss falls, two portals rise at the back of the Apex (TowerLayout.PortalSpots),
 -- built with TowerPortalKit in the biome's colours: Ascend (or Return to Hub on floor 50) and Rerun,
 -- which sends the Master back to this floor's Sanctuary with a fresh kill counter. Both need the Master
@@ -2329,7 +2352,7 @@ Tower.RegisterAdapter("Combat",{
     for _,other in pairs(ActiveHeroesByNetId) do if other.TargetNetId==h.NetId then other.TargetNetId=nil;if other.CurrentHP > 0 and other.State ~= "COMA" then other.State="FOLLOW_MASTER" end end end
    end
    if room.FloorId == 0 then
-    ActivePlayerProgress[player] = nil
+    resetPlayerTowerEncounter(player, "EXIT_TO_HUB_OR_PLOT")
     restoreSquadOnPlot(player)
    else
     -- Moving between floors revives downed heroes at a fraction of their HP; it no longer heals anyone
@@ -2338,13 +2361,19 @@ Tower.RegisterAdapter("Combat",{
      reviveDownedOnTransition(player)
     end
     local existing = ActivePlayerProgress[player]
-    if not existing or existing.FloorId ~= room.FloorId then
+    if not existing or existing.FloorId ~= room.FloorId or changedFloor then
      local progress = TowerProgress.CreateProgress(room.FloorId)
      ActivePlayerProgress[player] = progress
      if FloorProgressRemote then
       FloorProgressRemote:FireClient(player, progress)
      end
     else
+     if existing.CurrentKills >= existing.RequiredKills and not existing.BossDefeated then
+      local activeBoss = Encounters and Encounters:GetActiveBoss(room.FloorId)
+      if not activeBoss then
+       summonFloorBoss(player, existing)
+      end
+     end
      if FloorProgressRemote then
       FloorProgressRemote:FireClient(player, existing)
      end
@@ -2356,6 +2385,7 @@ Tower.RegisterAdapter("Combat",{
   if Encounters and Encounters:Pins(id,gen) then return true end
   return false
  end,
+ ResetPlayerTowerEncounter=resetPlayerTowerEncounter,
  Bootstrap=sendBootstrap,BootstrapAll=bootstrapAll,
 })
 if RunService:IsStudio() then CombatSimulation.DebugEntities=function() return ActiveHeroesByNetId,ActiveMobsByNetId end end
@@ -2440,18 +2470,19 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
        FloorProgressRemote:FireClient(killer, progress)
       end
      end
-     if progress and progress.FloorId == mob.FloorId and not progress.BossSpawned and not (mob :: any).NoKillCredit then
+     if progress and progress.FloorId == mob.FloorId and not (mob :: any).NoKillCredit then
       local stamped = (mob :: any).EventMods
       local shouldSpawn = TowerProgress.RecordKill(progress, mob.Role, stamped and stamped.KillMult or nil)
       if not shouldSpawn and TowerProgress.CheckSurge(progress) then
        Encounters:SpawnSurge(mob.FloorId, killer, mob.Position)
        getDataManager().SendToast(killer, "A surge pack is bearing down on your squad!", "WARN")
       end
+      local activeBoss = Encounters and Encounters:GetActiveBoss(mob.FloorId)
+      if (shouldSpawn or (progress.CurrentKills >= progress.RequiredKills and not activeBoss and not progress.BossDefeated)) then
+       summonFloorBoss(killer, progress)
+      end
       if FloorProgressRemote then
        FloorProgressRemote:FireClient(killer, progress)
-      end
-      if shouldSpawn then
-       summonFloorBoss(killer, progress)
       end
      end
      end
@@ -2763,6 +2794,7 @@ local function warpSquad(player: Player, targetPos: Vector3, isIsland: boolean)
 	if isIsland then
 		restoreSquadOnPlot(player)
 	end
+	resetPlayerTowerEncounter(player, if isIsland then "WARP_ISLAND" else "WARP_HUB")
 end
 
 local function isPlayerInDuel(player: Player): boolean
@@ -2783,4 +2815,5 @@ CombatSimulation.WarpSquad = warpSquad
 CombatSimulation.IsInDuel = isPlayerInDuel
 CombatSimulation.IsBossLocked = isBossLocked
 CombatSimulation.RestoreSquadOnPlot = restoreSquadOnPlot
+CombatSimulation.ResetPlayerTowerEncounter = resetPlayerTowerEncounter
 _G.CombatSimulation = CombatSimulation

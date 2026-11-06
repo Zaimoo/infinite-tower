@@ -198,6 +198,12 @@ local function commit(player: Player)
 	if p.View then
 		s.FloorId=r.FloorId;s.RoomGeneration=r.RoomGeneration;s.LocationRevision+=1;s.ViewEpoch=p.ViewEpoch;s.BankArmed=(#records > 0)
 		char:SetAttribute("TowerFloorId",s.FloorId)
+		local ls = player:FindFirstChild("leaderstats")
+		local floorStat = ls and ls:FindFirstChild("Floor") :: IntValue?
+		if floorStat then
+			local profile = _G.DataManager and _G.DataManager.GetProfile(player)
+			floorStat.Value = if s.FloorId > 0 then s.FloorId else ((profile and profile.HighestClearedFloor) or 0)
+		end
 	end
 	if movingSquad then
 		s.SquadFloorId=r.FloorId;s.SquadRoomGeneration=r.RoomGeneration;s.SquadRevision+=1
@@ -359,6 +365,17 @@ function Service.ExitToOverworld(player: Player, targetPos: Vector3, isIsland: b
 	s.SquadRoomGeneration = 1
 	s.SquadRevision += 1
 	s.SquadAssignment = nil
+	local profile = _G.DataManager and _G.DataManager.GetProfile(player)
+	local ls = player:FindFirstChild("leaderstats")
+	local floorStat = ls and ls:FindFirstChild("Floor") :: IntValue?
+	if floorStat then
+		floorStat.Value = (profile and profile.HighestClearedFloor) or 0
+	end
+	if adapters.Combat and adapters.Combat.ResetPlayerTowerEncounter then
+		adapters.Combat.ResetPlayerTowerEncounter(player, "EXIT_TO_OVERWORLD")
+	elseif _G.CombatSimulation and _G.CombatSimulation.ResetPlayerTowerEncounter then
+		_G.CombatSimulation.ResetPlayerTowerEncounter(player, "EXIT_TO_OVERWORLD")
+	end
 	if _G.CombatSimulation and _G.CombatSimulation.WarpSquad then
 		_G.CombatSimulation.WarpSquad(player, targetPos, isIsland)
 	elseif adapters.Combat then

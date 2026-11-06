@@ -14,6 +14,7 @@ local CampRoster = require(RS.Shared.Util.CampRoster)
 local SupportRules = require(RS.Shared.Util.SupportRules)
 local PatrolPath = require(RS.Shared.Util.PatrolPath)
 local AffixRules = require(RS.Shared.Util.AffixRules)
+local Protocol = require(RS.Shared.Util.TowerProtocol)
 local Runtime = {}
 
 function Runtime.new(api: any): any
@@ -100,6 +101,22 @@ function Runtime.new(api: any): any
 		end
 		return nil
 	end
+	function self:ClearFloorBoss(floorId: number)
+		local changed = false
+		for netId, m in pairs(api.Mobs) do
+			if m.TowerEnemy and m.Role == "BOSS" and m.FloorId == floorId then
+				self:Cancel(m, "DESPAWNED")
+				m.IsAlive = false
+				m.State = "DEAD"
+				api.Navigation.Clear(m)
+				api.Mobs[netId] = nil
+				changed = true
+			end
+		end
+		if changed then
+			api.Changed()
+		end
+	end
 	function self:SpawnBoss(floorId: number, player: any?)
 		local activeBoss = self:GetActiveBoss(floorId)
 		if activeBoss then
@@ -115,11 +132,9 @@ function Runtime.new(api: any): any
 		end
 		local enemyId = TowerProgress.GetFloorBossEnemyId(floorId)
 		local cat = MobCatalog.Get(enemyId)
-		local e = table.clone(Config.Get(enemyId))
+		local rawSpec = Config.Get(enemyId)
+		local e = if rawSpec then table.clone(rawSpec) else nil
 		local layout = TowerLayout.Get(floorSpec.IndexInBiome)
-		local apexPlatform = layout.Platforms.Apex or layout.Platforms.Crossing or layout.Platforms.Basin
-		local posX, posY, posZ = apexPlatform.X, apexPlatform.Y, apexPlatform.Z
-		local homePos = api.Navigation.Ground(room.Origin + Vector3.new(posX, posY + 6, posZ), nil, 2, 12) or (room.Origin + Vector3.new(posX, posY, posZ))
 
 		local maxHP, atk, gold = 12000, 55, 800
 		local floorStats = TowerFloorConfig.GetEnemyStats(floorId, enemyId)
@@ -139,8 +154,129 @@ function Runtime.new(api: any): any
 			gold = math.round(800 * (1.055 ^ (floorId - 1)))
 		end
 
+		if not e then
+			local attacks = {
+				{
+					Id = enemyId .. "_basic",
+					AnimationKey = "BasicAttack",
+					Shape = "ARC",
+					WindupSeconds = 1.1,
+					TravelSeconds = 0,
+					ImpactOffsetSeconds = 1.1,
+					RecoverySeconds = 1.0,
+					Range = 14,
+					Radius = 0,
+					HalfArcCos = .05,
+					DamageMultiplier = 1.0,
+					CooldownSeconds = 3.0,
+					MaxLatenessSeconds = .45,
+					TargetRule = "QUALIFIED_LIVE_UNSAFE_SAME_ROOM",
+					ImpactRule = "SCHEDULED_SERVER_SHAPE_ONCE",
+					TelegraphGeometry = "ARC",
+				},
+				{
+					Id = enemyId .. "_signature_1",
+					AnimationKey = "Signature1",
+					Shape = "SELF_DISC",
+					WindupSeconds = 1.8,
+					TravelSeconds = 0,
+					ImpactOffsetSeconds = 1.8,
+					RecoverySeconds = 1.2,
+					Range = 22,
+					Radius = 22,
+					HalfArcCos = .05,
+					DamageMultiplier = 1.2,
+					CooldownSeconds = 10.0,
+					MaxLatenessSeconds = .45,
+					TargetRule = "QUALIFIED_LIVE_UNSAFE_SAME_ROOM",
+					ImpactRule = "SCHEDULED_SERVER_SHAPE_ONCE",
+					TelegraphGeometry = "SELF_DISC",
+				},
+				{
+					Id = enemyId .. "_signature_2",
+					AnimationKey = "Signature2",
+					Shape = "TARGET_DISC",
+					WindupSeconds = 2.2,
+					TravelSeconds = 0,
+					ImpactOffsetSeconds = 2.2,
+					RecoverySeconds = 1.5,
+					Range = 55,
+					Radius = 13,
+					HalfArcCos = .05,
+					DamageMultiplier = 1.4,
+					CooldownSeconds = 14.0,
+					MaxLatenessSeconds = .45,
+					TargetRule = "QUALIFIED_LIVE_UNSAFE_SAME_ROOM",
+					ImpactRule = "SCHEDULED_SERVER_SHAPE_ONCE",
+					TelegraphGeometry = "TARGET_DISC",
+				},
+			}
+			e = {
+				EnemyId = enemyId,
+				DisplayName = (cat and cat.DisplayName) or (floorSpec.DisplayName .. " Guardian"),
+				BiomeId = floorSpec.BiomeId,
+				Role = "BOSS",
+				Alpha = false,
+				Height = 16,
+				Width = 14,
+				Depth = 12,
+				RootHeight = 8.0,
+				MoveSpeed = 7,
+				AggroRange = 85,
+				MaxHP = maxHP,
+				ATK = atk,
+				Gold = gold,
+				RigFamily = "ROYAL_BIPED",
+				CatalogFamily = "ROYAL_BIPED",
+				ModelSource = "Assets.TowerEnemyRigs",
+				ClipSource = "Assets.TowerEnemyClips",
+				RequiredSlots = { "Idle", "Locomotion", "BasicAttack", "HitReaction", "Death", "Awakening", "Signature1", "Signature2" },
+				Attacks = attacks,
+			}
+		end
+
+		local function findGrounded(worldPos: Vector3): Vector3?
+			local params = RaycastParams.new()
+			params.FilterType = Enum.RaycastFilterType.Include
+			params.FilterDescendantsInstances = room.Model and { room.Model } or { workspace }
+			local hit = workspace:Raycast(worldPos + Vector3.new(0, 15, 0), Vector3.new(0, -40, 0), params)
+			if hit and hit.Normal.Y > 0.5 then
+				return hit.Position
+			end
+			return nil
+		end
+
+		local char = player and player.Character
+		local hrp = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
+		local homePos: Vector3
+		local localPos: Vector3
+
+		if hrp and Protocol.InBounds(hrp.Position, room.Origin, room.Bounds) then
+			local look = hrp.CFrame.LookVector
+			local forward = Vector3.new(look.X, 0, look.Z)
+			if forward.Magnitude < 0.1 then forward = Vector3.new(0, 0, -1) else forward = forward.Unit end
+			local candidateWorld = hrp.Position + forward * 26
+			local grounded = findGrounded(candidateWorld)
+			if grounded and Protocol.InBounds(grounded, room.Origin, room.Bounds) then
+				homePos = grounded
+			else
+				local toCenter = (room.Origin - hrp.Position)
+				local dir = if toCenter.Magnitude > 1 then Vector3.new(toCenter.X, 0, toCenter.Z).Unit else forward
+				grounded = findGrounded(hrp.Position + dir * 22)
+				homePos = (grounded and Protocol.InBounds(grounded, room.Origin, room.Bounds)) and grounded or hrp.Position
+			end
+			localPos = homePos - room.Origin
+		else
+			local apexPlatform = layout.Platforms.Apex or layout.Platforms.Crossing or layout.Platforms.Basin
+			local posX, posY, posZ = apexPlatform.X, apexPlatform.Y, apexPlatform.Z
+			local baseWorld = room.Origin + Vector3.new(posX, posY, posZ)
+			homePos = findGrounded(baseWorld) or baseWorld
+			localPos = homePos - room.Origin
+		end
+
 		local netId = api.Allocate()
 		local now = workspace:GetServerTimeNow()
+		local bossYaw = if hrp then math.atan2(hrp.Position.X - homePos.X, hrp.Position.Z - homePos.Z) else math.pi
 		local boss = {
 			NetId = netId,
 			EntityGeneration = 1,
@@ -161,7 +297,7 @@ function Runtime.new(api: any): any
 			GoldReward = gold,
 			IsAlive = true,
 			State = "IDLE",
-			Yaw = math.pi,
+			Yaw = bossYaw,
 			Phase = 1,
 			DamageLedger = {},
 			Cooldowns = {},
@@ -171,7 +307,7 @@ function Runtime.new(api: any): any
 			BornAt = now,
 			HomePosition = homePos,
 			Position = homePos,
-			LocalPosition = Vector3.new(posX, posY, posZ),
+			LocalPosition = localPos,
 			LeashRadius = 120,
 			CampId = "CAMP_APEX_SANCTUM",
 			SummonedByUserId = player and player.UserId or nil,
@@ -751,6 +887,14 @@ function Runtime.new(api: any): any
 					api.Mobs[netId] = nil
 					ledger.Surge[netId] = nil
 					changed = true
+				end
+				for netId, m in pairs(api.Mobs) do
+					if m.TowerEnemy and m.Role == "BOSS" and m.FloorId == floorId then
+						self:Cancel(m, "ROOM_RETIRED_OR_DISABLED")
+						api.Navigation.Clear(m)
+						api.Mobs[netId] = nil
+						changed = true
+					end
 				end
 			end
 		end

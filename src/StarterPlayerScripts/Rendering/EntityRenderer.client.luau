@@ -317,15 +317,24 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 
 	local bodySize = Vector3.new(2.4, 3.4, 1.4)
 	local bodyColor = Color3.fromRGB(90, 170, 255)
-	local isBoss = false
+	local isBoss = (meta and meta.Role == "BOSS") or false
 
 	if isHero then
 		local seed = meta and HeroCatalog.Seeds[meta.TemplateId]
 		bodyColor = (seed and seed.Color) or Color3.fromRGB(85, 175, 255)
 	end
 
-	local enemySpec=meta.EnemyId and FirstBiome.Get(meta.EnemyId)
-	if enemySpec then bodySize=Vector3.new(enemySpec.Role=="BOSS" and 13 or 5,enemySpec.Height,5);isBoss=enemySpec.Role=="BOSS";bodyColor=Color3.fromRGB(106,149,89) end
+	local enemySpec = meta.EnemyId and FirstBiome.Get(meta.EnemyId)
+	if enemySpec then
+		if enemySpec.Role == "BOSS" then
+			isBoss = true
+		end
+		bodySize = Vector3.new(isBoss and 13 or 5, enemySpec.Height, 5)
+		bodyColor = if isBoss then Color3.fromRGB(150, 45, 60) else Color3.fromRGB(106, 149, 89)
+	elseif isBoss then
+		bodySize = Vector3.new(13, 16, 5)
+		bodyColor = Color3.fromRGB(150, 45, 60)
+	end
 	local rootOffsetY = enemySpec and enemySpec.RootHeight or isHero and HeroRigSpec.GROUND_OFFSET or (bodySize.Y * 0.5)
 	local root = Instance.new("Part")
 	root.Name = "HumanoidRootPart"
@@ -356,9 +365,49 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 		head.Parent = model
 	end
 
-	local enemyRig=enemySpec and EnemyAnimation.Attach(model,root,meta.EnemyId)
-	local art = not enemyRig and ArtPackVisuals.Attach(model, meta or {}, root, bodySize) or nil
-	if art and head then
+	local enemyRig = nil
+	if enemySpec then
+		local ok, rig = pcall(function()
+			return EnemyAnimation.Attach(model, root, meta.EnemyId)
+		end)
+		if ok then
+			enemyRig = rig
+		else
+			warn("[EntityRenderer] Failed to attach enemy rig for " .. tostring(meta.EnemyId) .. ": " .. tostring(rig))
+		end
+	end
+
+	local art = not enemyRig and not isBoss and ArtPackVisuals.Attach(model, meta or {}, root, bodySize) or nil
+
+	if isBoss and not enemyRig then
+		-- Construct fallback scaled procedural boss rig
+		root.Transparency = 0
+		root.Material = Enum.Material.Neon
+		root.Color = bodyColor
+		root.Size = bodySize
+
+		local bossHead = Instance.new("Part")
+		bossHead.Name = "Head"
+		bossHead.Shape = Enum.PartType.Ball
+		bossHead.Size = Vector3.new(4.5, 4.5, 4.5)
+		bossHead.Color = Color3.fromRGB(255, 120, 140)
+		bossHead.Material = Enum.Material.Neon
+		bossHead.Anchored = true
+		bossHead.CanCollide = false
+		bossHead:SetAttribute("NetId", netId)
+		bossHead.Position = root.Position + Vector3.new(0, (bodySize.Y * 0.5) + 2.2, 0)
+		bossHead.Parent = model
+
+		local crown = Instance.new("Part")
+		crown.Name = "BossCrown"
+		crown.Size = Vector3.new(5.0, 1.5, 5.0)
+		crown.Color = Color3.fromRGB(255, 215, 80)
+		crown.Material = Enum.Material.Neon
+		crown.Anchored = true
+		crown.CanCollide = false
+		crown.Position = bossHead.Position + Vector3.new(0, 2.5, 0)
+		crown.Parent = model
+	elseif art and head then
 		head:Destroy()
 	elseif isHero and not art then
 		-- Fallback visual rig if hero model is missing or loading
@@ -377,7 +426,9 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 		head.Parent = model
 	end
 	-- Heroes are themed by inherent rarity, mobs by tier (Normal, Elite, Alpha, Biome Boss).
-	local theme = if isHero then BillboardThemes.Hero(HeroCatalog.RarityOf(meta and meta.TemplateId)) else BillboardThemes.Mob[BillboardThemes.MobTier(enemySpec)]
+	local theme = if isHero then BillboardThemes.Hero(HeroCatalog.RarityOf(meta and meta.TemplateId))
+		elseif isBoss then BillboardThemes.Mob.BIOME_BOSS
+		else BillboardThemes.Mob[BillboardThemes.MobTier(enemySpec)]
 	if not isHero and not enemySpec and meta and (meta.MobType == "WORLD_BOSS" or meta.MobType == "RIFT_BOSS") then theme = BillboardThemes.Mob.BIOME_BOSS end
 
 	local hl = Instance.new("Highlight")
@@ -514,7 +565,7 @@ local function clearView()
 end
 TowerRemotes.Context.OnClientEvent:Connect(function(c)
  if c.Stage~="COMMIT" then return end
- if not Protocol.Same(c,View) then clearView() end
+ if not Protocol.Same(c,View) or c.FloorId == 0 then clearView() end
  View=c;_G.TowerView=c
 end)
 local function retireVisual(id,at)

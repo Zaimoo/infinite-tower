@@ -694,7 +694,8 @@ function DataManager.UpdateSquadPower(player: Player)
 	;(profile :: any).SquadPower = total
 	;(profile :: any).SquadPowerByHero = perHero
 	local floorStat, powerStat = ensureLeaderstats(player)
-	floorStat.Value = profile.HighestClearedFloor or 0
+	local curFloorAttr = player.Character and player.Character:GetAttribute("TowerFloorId")
+	floorStat.Value = if typeof(curFloorAttr) == "number" and curFloorAttr > 0 then curFloorAttr else (profile.HighestClearedFloor or 0)
 	local now = os.clock()
 	if powerStat.Value ~= total and now - (lastLeaderstatsWrite[player] or -99) >= 2 then
 		lastLeaderstatsWrite[player] = now
