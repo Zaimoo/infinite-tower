@@ -4,11 +4,14 @@ local TweenService = game:GetService("TweenService")
 local GuiService = game:GetService("GuiService")
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Grimoire = require(ReplicatedStorage.Shared.Util.GildedGrimoire)
+local GrimoireIcons = require(ReplicatedStorage.Shared.Util.GrimoireIcons)
 local Card = require(script.Parent.HeroPickerCard)
 local Drawer = {}
 Drawer.__index = Drawer
 local nextId = 0
-local GOLD = Color3.fromRGB(230, 185, 95)
+local GOLD = Grimoire.Text.Gold
 
 local function new(kind: string, props: { [string]: any }, parent: Instance): any
 	local object = Instance.new(kind)
@@ -48,23 +51,32 @@ function Drawer.new(parent: Instance, z: number, onClose: () -> ())
 	end
 	self.Title = new("TextLabel", {
 		Name = "Title", Position = UDim2.fromOffset(14, 12), Size = UDim2.new(1, -86, 0, 34),
-		BackgroundTransparency = 1, Text = "SELECT HERO", Font = Enum.Font.Garamond,
-		TextColor3 = Color3.fromRGB(249, 232, 197), TextScaled = true, ZIndex = z + 2,
+		BackgroundTransparency = 1, Text = "SELECT HERO", TextSize = 24,
+		TextColor3 = Color3.new(1, 1, 1), TextScaled = true, ZIndex = z + 2,
 	}, self.Panel)
-	new("UITextSizeConstraint", { MinTextSize = 16, MaxTextSize = 29 }, self.Title)
+	new("UITextSizeConstraint", { MinTextSize = 16, MaxTextSize = 28 }, self.Title)
+	self.Title:SetAttribute("Grimoire", true)
+	Grimoire.StyleText(self.Title, "Title")
+	new("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.new(1, 1, 1), GOLD) }, self.Title)
+
 	self.Subtitle = new("TextLabel", {
 		Name = "Subtitle", Position = UDim2.fromOffset(14, 47), Size = UDim2.new(1, -86, 0, 24),
-		BackgroundTransparency = 1, Text = "", Font = Enum.Font.Garamond, TextSize = 17,
-		TextColor3 = Color3.fromRGB(203, 183, 213), TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = z + 2,
+		BackgroundTransparency = 1, Text = "", TextSize = 15,
+		TextColor3 = Grimoire.Text.Muted, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = z + 2,
 	}, self.Panel)
+	self.Subtitle:SetAttribute("Grimoire", true)
+	Grimoire.StyleText(self.Subtitle, "Body")
+
 	self.CloseButton = new("TextButton", {
 		Name = "Close", Position = UDim2.new(1, -58, 0, 14), Size = UDim2.fromOffset(44, 44),
-		Text = "×", Font = Enum.Font.Gotham, TextSize = 32, TextColor3 = GOLD,
-		BackgroundColor3 = Color3.fromRGB(31, 22, 42), BorderSizePixel = 0, ZIndex = z + 3,
+		Text = "", BackgroundColor3 = Color3.fromRGB(31, 22, 42), BorderSizePixel = 0, ZIndex = z + 3,
 	}, self.Panel)
 	new("UICorner", { CornerRadius = UDim.new(0, 7) }, self.CloseButton)
 	new("UIStroke", { Color = GOLD, Thickness = 1.5 }, self.CloseButton)
+	self.CloseButton:SetAttribute("Grimoire", true)
+	GrimoireIcons.CloseGlyph(self.CloseButton, 18)
 	self.CloseButton.Activated:Connect(function() self:Close() end)
+
 	self.Scroll = new("ScrollingFrame", {
 		Name = "Heroes", Position = UDim2.fromOffset(14, 82), Size = UDim2.new(1, -28, 1, -118),
 		BackgroundTransparency = 1, BorderSizePixel = 0, CanvasSize = UDim2.new(),
@@ -78,28 +90,35 @@ function Drawer.new(parent: Instance, z: number, onClose: () -> ())
 	new("UIPadding", { PaddingTop = UDim.new(0, 4), PaddingBottom = UDim.new(0, 10), PaddingLeft = UDim.new(0, 4), PaddingRight = UDim.new(0, 12) }, self.Scroll)
 	self.Footer = new("TextLabel", {
 		Name = "Footer", Position = UDim2.new(0, 18, 1, -30), Size = UDim2.new(1, -36, 0, 24),
-		BackgroundTransparency = 1, Text = "", Font = Enum.Font.Garamond, TextSize = 17,
+		BackgroundTransparency = 1, Text = "", TextSize = 14,
 		TextColor3 = GOLD, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = z + 2,
 	}, self.Panel)
+	self.Footer:SetAttribute("Grimoire", true)
+	Grimoire.StyleText(self.Footer, "Body")
+
 	self.Empty = new("TextLabel", {
 		Name = "Empty", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1,
-		Text = "No heroes in your roster.", Font = Enum.Font.Gotham, TextSize = 16,
-		TextColor3 = GOLD, Visible = false, ZIndex = z + 3,
+		Text = "No heroes in your roster.", TextSize = 15,
+		TextColor3 = Grimoire.Text.Muted, Visible = false, ZIndex = z + 3,
 	}, self.Panel)
 	self.Empty.Position = UDim2.fromOffset(14, 82)
 	self.Empty.Size = UDim2.new(1, -28, 1, -118)
+	self.Empty:SetAttribute("Grimoire", true)
+	Grimoire.StyleText(self.Empty, "Body")
+
 	local function resize()
 		local compact = self.Root.AbsoluteSize.Y < 700
 		self.Compact = compact
 		self.Panel.Size = UDim2.new(1, -24, if compact then 0.98 else 0.94, -10)
 		self.Title.Position = UDim2.fromOffset(14, if compact then 0 else 12)
 		self.Subtitle.Position = UDim2.fromOffset(14, if compact then 30 else 47)
+		self.Subtitle.TextSize = if compact then 13 else 15
 		self.CloseButton.Position = UDim2.new(1, -58, 0, if compact then 4 else 14)
 		self.Scroll.Position = UDim2.fromOffset(14, if compact then 54 else 82)
 		self.Scroll.Size = UDim2.new(1, -28, 1, if compact then -80 else -118)
 		self.Footer.Position = UDim2.new(0, 18, 1, if compact then -22 else -30)
 		self.Footer.Size = UDim2.new(1, -36, 0, if compact then 18 else 24)
-		self.Footer.TextSize = if compact then 14 else 17
+		self.Footer.TextSize = if compact then 12 else 14
 		for _, button in self.Buttons or {} do Card.Resize(button, compact) end
 		local width = math.max(1, self.Scroll.AbsoluteSize.X - 16)
 		local columns = math.max(1, math.floor((width + 12) / 166))
@@ -119,6 +138,7 @@ function Drawer.new(parent: Instance, z: number, onClose: () -> ())
 		self:CancelWork()
 		if self.BackContext then self.BackContext:Destroy(); self.BackContext = nil end
 	end)
+	Grimoire.Watch(self.Root)
 	resize()
 	return self
 end
