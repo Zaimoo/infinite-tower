@@ -104,11 +104,22 @@ function PitService:DonorStatus(profile: any, hero: any, recipientUUID: string?)
 	return { EligibleDonor = reason == "", Reason = reason, Status = status }
 end
 
+function PitService:RecipientStatus(profile: any, hero: any): any
+	if hero.ReservedBy or hero.Reserved or hero.OperationReserved or hero.ReservedOperationId or (profile.ReservedHeroUUIDs or {})[hero.UUID] then
+		return { Eligible = false, Reason = "Reserved by another operation" }
+	end
+	if (hero.ComaUntilTimestamp or 0) > os.time() or hero.IsHardAuditComa then
+		return { Eligible = false, Reason = "Recovering from coma" }
+	end
+	return { Eligible = true, Reason = "Ready to receive EXP" }
+end
+
 function PitService:State(profile: any): any
 	local heroes = {}
 	for uuid, hero in pairs(profile.Heroes) do
 		local copy = Math.Copy(hero)
 		copy.PitStatus = self:DonorStatus(profile, hero)
+		copy.RecipientStatus = self:RecipientStatus(profile, hero)
 		copy.Stats = Math.Snapshot(hero, profile)
 		copy.SynthesisXPValue = Config.Synthesis.BaseXP * Config.Synthesis.StarMultiplier ^ (hero.Stars - 1) + Config.Synthesis.LevelXP * hero.Level
 		heroes[uuid] = copy
@@ -126,6 +137,7 @@ function PitService:Delta(profile: any, changed: any, removed: any): any
 	for uuid, hero in pairs(changed) do
 		local copy = Math.Copy(hero)
 		copy.PitStatus = self:DonorStatus(profile, hero)
+		copy.RecipientStatus = self:RecipientStatus(profile, hero)
 		copy.Stats = Math.Snapshot(hero, profile)
 		copy.SynthesisXPValue = Config.Synthesis.BaseXP * Config.Synthesis.StarMultiplier ^ (hero.Stars - 1) + Config.Synthesis.LevelXP * hero.Level
 		heroes[uuid] = copy

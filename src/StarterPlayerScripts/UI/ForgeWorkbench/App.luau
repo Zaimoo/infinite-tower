@@ -15,6 +15,7 @@ local useForge = require(script.Parent.useForge)
 local Screens = require(script.Parent.Screens)
 local UpgradeStage = require(script.Parent.UpgradeStage)
 local Sell = require(script.Parent.Sell)
+local HeroPicker = require(script.Parent.HeroPicker)
 local Balance = require(ReplicatedStorage.Shared.Config.StatBalance)
 local UIFeel = require(script.Parent.Parent.UIFeel)
 local ModalFit = require(script.Parent.Parent.ModalFit)
@@ -101,9 +102,6 @@ local function App(props: Types.Props)
 	local preferred, setPreferred = React.useState(UserInputService.PreferredInput)
 	local route, setRoute = React.useState(if props.InitialPane == "SELL" then "SELL" elseif props.InitialMode == "UPGRADE" then "UPGRADE_PICK" else "INVENTORY")
 	local dialog, setDialog = React.useState(nil :: string?)
-	local heroDeployment, setHeroDeployment = React.useState("ALL")
-	local heroSort, setHeroSort = React.useState("POWER")
-	local heroSortOpen, setHeroSortOpen = React.useState(false)
 	local review, setReview = React.useState(nil :: any)
 	local filter, setFilter = React.useState({ Query = "", Ownership = "ALL", Rarity = 0, WeaponType = "ALL", Sort = "BEST" } :: Types.Filter)
 	local handlers = React.useRef({ Back = function() end })
@@ -216,7 +214,7 @@ local function App(props: Types.Props)
    tween:Play()
   end
 		if preferred == Enum.PreferredInput.Gamepad and bodyRef.current and not dialog then GuiService:Select(bodyRef.current) end
-	end, { route, preferred, dialog })
+	end, { route, preferred })
 	React.useEffect(function()
 		if route ~= "INVENTORY" and route ~= "SELL" and route ~= "UPGRADE_PICK" and not target then inventory() end
 	end, { target, route })
@@ -352,36 +350,18 @@ local function App(props: Types.Props)
 		end
 		if next(choices) == nil then choices.Empty = e(C.Text, { Text = "No eligible artifacts. Equipped and locked artifacts are protected.", Size = UDim2.new(1, 0, 0, 80) }) end
 		dialogView = e(Dialog, { Title = "Choose an artifact · consumed on upgrade", Cards = true, CardHeight = T.CardHeight, Children = choices, OnCancel = function() setDialog(nil) end, FocusKey = "MATERIAL" })
-	elseif dialog == "HERO" then
-		local choices: { [string]: any } = {}
-		local compatibleHeroes = Model.pickerHeroes(snapshot, target, "ALL", heroSort)
-		local pickerHeroes = Model.pickerHeroes(snapshot, target, heroDeployment, heroSort)
-		for index, entry in pickerHeroes do
-			choices[entry.UUID] = e(C.HeroSlot, { Snapshot = snapshot, Hero = entry, Selected = false, Compatible = Model.compatible(entry, target), Busy = busy, Order = index, OnSelect = function()
-				if not busy and Model.compatible(entry, target) then forge.SetHero(entry.UUID); forge.Equip(entry.UUID); setDialog(nil)
-				else forge.Explain("This hero cannot use that weapon type.") end
-			end })
-		end
-		if next(choices) == nil then choices.Empty = e(C.Text, { Text = if #compatibleHeroes == 0 then "No compatible heroes owned yet." else "No compatible heroes in this group.", Size = UDim2.new(1, 0, 0, 64) }) end
-		local deployedCount = 0
-		for _, entry in compatibleHeroes do if Model.deployedSlot(entry) then deployedCount += 1 end end
-		local filterButtons = {}
-		for index, state in { "ALL", "DEPLOYED", "UNDEPLOYED" } do
-			local count = if state == "ALL" then #compatibleHeroes elseif state == "DEPLOYED" then deployedCount else #compatibleHeroes - deployedCount
-			filterButtons[state] = e(C.Button, { Name = "HeroFilter" .. state, Text = state .. " (" .. count .. ")", Selected = heroDeployment == state, Position = UDim2.fromScale((index - 1) * 0.22, 0), Size = UDim2.new(0.22, -8, 0, 48), OnActivate = function() setHeroDeployment(state); setHeroSortOpen(false) end })
-		end
-		filterButtons.Sort = e("Frame", { Name = "HeroSortControl", Position = UDim2.fromScale(0.68, 0), Size = UDim2.fromScale(0.32, 1), BackgroundTransparency = 1, ZIndex = 10 }, {
-			Button = e(C.Button, { Name = "HeroSortDropdown", Text = "Sort: " .. string.sub(heroSort, 1, 1) .. string.lower(string.sub(heroSort, 2)) .. " ▾", Size = UDim2.fromScale(1, 1), Selected = heroSortOpen, OnActivate = function() setHeroSortOpen(not heroSortOpen) end }),
-			Menu = if heroSortOpen then e("Frame", { Name = "HeroSortMenu", Position = UDim2.new(0, 0, 1, 6), Size = UDim2.new(1, 0, 0, 160), BackgroundColor3 = T.Background, BorderSizePixel = 0, ZIndex = 20 }, {
-				Corner = e("UICorner", { CornerRadius = UDim.new(0, 10) }),
-				Outline = e("UIStroke", { Color = T.Gold, Thickness = 1 }),
-				Power = e(C.Button, { Name = "HeroSortPOWER", Text = "Power ↓", Selected = heroSort == "POWER", Position = UDim2.fromOffset(4, 4), Size = UDim2.new(1, -8, 0, 48), OnActivate = function() setHeroSort("POWER"); setHeroSortOpen(false) end }),
-				Stars = e(C.Button, { Name = "HeroSortSTARS", Text = "Stars ↓", Selected = heroSort == "STARS", Position = UDim2.fromOffset(4, 56), Size = UDim2.new(1, -8, 0, 48), OnActivate = function() setHeroSort("STARS"); setHeroSortOpen(false) end }),
-				Level = e(C.Button, { Name = "HeroSortLEVEL", Text = "Level ↓", Selected = heroSort == "LEVEL", Position = UDim2.fromOffset(4, 108), Size = UDim2.new(1, -8, 0, 48), OnActivate = function() setHeroSort("LEVEL"); setHeroSortOpen(false) end }),
-			}) else nil,
+	elseif dialog == "HERO" and target then
+		dialogView = e(HeroPicker, {
+			Snapshot = snapshot, Target = target, Busy = busy,
+			OnClose = function() setDialog(nil) end,
+			OnSelect = function(uuid)
+				local chosen = snapshot.Heroes[uuid]
+				if busy or not chosen or not Model.compatible(chosen, target) then return end
+				forge.SetHero(uuid)
+				local accepted = if chosen.EquippedArtifactUUID == target.UUID then forge.Unequip(uuid) else forge.Equip(uuid)
+				if accepted then setDialog(nil) end
+			end,
 		})
-		local headerExtras = e("Frame", { Name = "HeroDeploymentFilters", BackgroundTransparency = 1, Position = UDim2.fromOffset(16, 72), Size = UDim2.new(1, -32, 0, 48), ZIndex = 10 }, filterButtons)
-		dialogView = e(Dialog, { Title = "Choose a hero to equip", Cards = true, HeaderExtras = headerExtras, Children = choices, OnCancel = function() setDialog(nil) end, FocusKey = "HERO" })
 	elseif dialog == "FILTER" then
 		local choices: { [string]: any } = {
 			Clear = e(C.Button, { Text = "Clear filters", OnActivate = clearFilters, Order = 0 }),
