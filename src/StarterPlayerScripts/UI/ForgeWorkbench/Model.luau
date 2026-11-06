@@ -106,9 +106,9 @@ function Model.upgradeReason(snapshot: Snapshot, targetId: string?, materialIds:
 	local rule = Catalog.GetStarPromotionCost(target.Star)
 	if not rule then return "Maximum 7 stars reached" end
 	local materials = Model.materials(snapshot, targetId, materialIds)
-	if #materials ~= #materialIds then return "Materials changed. Select eligible materials again." end
+	if #materials ~= #materialIds then return "Artifacts changed. Select eligible artifacts again." end
 	if #materials ~= rule.Donors then
-		return string.format("Choose %d more materials", math.max(0, rule.Donors - #materials))
+		return string.format("Choose %d more artifacts", math.max(0, rule.Donors - #materials))
 	end
 	if snapshot.Gold < rule.Gold then return "Not enough Gold" end
 	if snapshot.Gems < rule.Gems then return "Not enough Gems" end
