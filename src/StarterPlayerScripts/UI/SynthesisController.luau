@@ -408,7 +408,7 @@ function Synth.new(gui: ScreenGui, remote: RemoteFunction)
 	}, recipCard)
 
 	recipCard.Activated:Connect(function()
-		if self.Busy then return end
+		if self.Busy or self.Picker.Visible then return end
 		self:OpenPicker("RECIPIENT")
 	end)
 
@@ -539,7 +539,7 @@ function Synth.new(gui: ScreenGui, remote: RemoteFunction)
 		AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -232, 0, 546), Size = UDim2.fromOffset(130, 40), ZIndex = Z + 2,
 	})
 	clearBtn.Activated:Connect(function()
-		if self.Busy then return end
+		if self.Busy or self.Picker.Visible then return end
 		if #self.Donors > 0 then
 			self.Donors = {}
 			self.Message = ""
@@ -647,7 +647,7 @@ function Synth.BuildPicker(self: any)
 
 	self.PickerTitle = label(picker, "Title", {
 		Position = UDim2.fromOffset(0, 16), Size = UDim2.new(1, 0, 0, 28),
-		TextSize = 20, Text = "SELECT RECIPIENT HERO", ZIndex = Z + 21,
+		TextSize = 20, Text = "SELECT HERO TO LEVEL UP", ZIndex = Z + 21,
 	})
 	gold(self.PickerTitle)
 
@@ -680,22 +680,25 @@ function Synth.BuildPicker(self: any)
 end
 
 function Synth.OpenPicker(self: any, mode: string)
-	if self.Busy then return end
+	if self.Busy or self.Picker.Visible then return end
 	self.PickerMode = mode
 	self.Picker.Visible = true
 	self:RenderPicker()
+	self:Render()
 end
 
 function Synth.Pick(self: any, uuid: string)
+	if self.Busy or not self.Picker.Visible then return end
 	local hero = self.State.Heroes[uuid] or (_G.CurrentProfile and _G.CurrentProfile.Heroes and _G.CurrentProfile.Heroes[uuid])
 	if not hero then return end
 	if self.PickerMode == "RECIPIENT" then
-		self.Recipient = uuid
-		local index = table.find(self.Donors, uuid)
-		if index then table.remove(self.Donors, index) end
-		self.Message = ""
 		self.Picker.Visible = false
-		self:QueuePreview()
+		if self.Recipient ~= uuid then
+			self.Recipient = uuid
+			self.Donors = {}
+			self.Message = ""
+			self:QueuePreview()
+		end
 		self:Render()
 	end
 end
@@ -715,9 +718,11 @@ function Synth.RenderPicker(self: any)
 		table.insert(heroes, hero)
 	end
 	table.sort(heroes, function(a, b)
-		if (a.Stars or 1) ~= (b.Stars or 1) then return (a.Stars or 1) > (b.Stars or 1) end
+		if (a.UUID == self.Recipient) ~= (b.UUID == self.Recipient) then return a.UUID == self.Recipient end
 		if (a.Level or 1) ~= (b.Level or 1) then return (a.Level or 1) > (b.Level or 1) end
-		return tostring(a.DisplayName or "") < tostring(b.DisplayName or "")
+		if (a.Stars or 1) ~= (b.Stars or 1) then return (a.Stars or 1) > (b.Stars or 1) end
+		if (a.DisplayName or "") ~= (b.DisplayName or "") then return (a.DisplayName or "") < (b.DisplayName or "") end
+		return tostring(a.UUID) < tostring(b.UUID)
 	end)
 
 	for i, hero in heroes do
@@ -874,22 +879,9 @@ function Synth.BuildRosterCard(self: any, hero: any): any
 end
 
 function Synth.PressRosterHero(self: any, uuid: string)
-	if self.Busy or self.Popup.Visible then return end
+	if self.Busy or self.Popup.Visible or self.Picker.Visible or not self.Recipient then return end
 	local hero = self.State.Heroes[uuid] or (_G.CurrentProfile and _G.CurrentProfile.Heroes and _G.CurrentProfile.Heroes[uuid])
 	if not hero then return end
-
-	-- 1. If no recipient has been chosen yet:
-	if not self.Recipient then
-		self.Recipient = uuid
-		local donorIdx = table.find(self.Donors, uuid)
-		if donorIdx then
-			table.remove(self.Donors, donorIdx)
-		end
-		self.Message = string.format("Selected %s as recipient. Choose materials below to synthesize EXP.", hero.DisplayName or "Hero")
-		self:Render()
-		self:QueuePreview()
-		return
-	end
 
 	-- 2. If this hero is the recipient:
 	if uuid == self.Recipient then
@@ -953,7 +945,11 @@ function Synth.Refresh(self: any, attempt: number?)
 			return
 		end
 		self.State = response.State or { Heroes = {} }
-		if self.Recipient and not self.State.Heroes[self.Recipient] then self.Recipient = nil end
+		if self.Recipient and not self.State.Heroes[self.Recipient] then
+			self.Recipient = nil
+			self.Donors = {}
+			self.Message = ""
+		end
 		for i = #self.Donors, 1, -1 do
 			local uuid = self.Donors[i]
 			local hero = self.State.Heroes[uuid]
@@ -990,7 +986,7 @@ function Synth.QueuePreview(self: any)
 end
 
 function Synth.Confirm(self: any)
-	if self.Busy or self.Loading or self.Popup.Visible then return end
+	if self.Busy or self.Loading or self.Popup.Visible or self.Picker.Visible then return end
 	local preview = self.Preview
 	if not self.Recipient then
 		self:ShowPopup("SYNTHESIS UNAVAILABLE", "Choose the hero who will receive the EXP.")
@@ -1276,7 +1272,7 @@ function Synth.Render(self: any)
 	end
 
 	-- 4. Bottom Footer (Clear & Confirm Synthesize buttons)
-	local ready = self.Recipient ~= nil and #self.Donors > 0 and preview ~= nil and preview.CanCommit and not self.Loading and not self.Busy
+	local ready = self.Recipient ~= nil and #self.Donors > 0 and preview ~= nil and preview.CanCommit and not self.Loading and not self.Busy and not self.Picker.Visible
 
 	self.ClearButton.Button.Visible = #self.Donors > 0
 	self.ClearButton.Label.Text = string.format("CLEAR (%d)", #self.Donors)
