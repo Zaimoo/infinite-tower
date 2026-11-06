@@ -63,7 +63,7 @@ local function Feedback(props: { Text: string, Success: boolean, Sequence: numbe
 	})
 end
 
-local function Dialog(props: { Title: string, Children: { [string]: any }, OnCancel: () -> (), FocusKey: string, Cards: boolean?, HeaderExtras: any? })
+local function Dialog(props: { Title: string, Children: { [string]: any }, OnCancel: () -> (), FocusKey: string, Cards: boolean?, HeaderExtras: any?, CardHeight: number? })
 	local ref = React.useRef(nil)
 	React.useEffect(function()
 		local previous = GuiService.SelectedObject
@@ -86,7 +86,7 @@ local function Dialog(props: { Title: string, Children: { [string]: any }, OnCan
 			Title = e(C.Text, { Text = props.Title, TextColor3 = T.Gold, Position = UDim2.fromOffset(16, 8), Size = UDim2.new(1, -88, 0, 56), TextSize = 18 }),
 			Close = e(C.Button, { Text = "Back", Size = UDim2.fromOffset(64, 48), Position = UDim2.new(1, -80, 0, 12), OnActivate = props.OnCancel, FocusOrder = -100 }),
 			Extras = props.HeaderExtras,
-			Content = e(if props.Cards then C.CardGrid else C.Scroll, { Size = UDim2.new(1, -16, 1, if props.HeaderExtras then -144 else -88), Position = UDim2.fromOffset(8, if props.HeaderExtras then 132 else 76), Children = props.Children }),
+			Content = e(if props.Cards then C.CardGrid else C.Scroll, { Size = UDim2.new(1, -16, 1, if props.HeaderExtras then -144 else -88), Position = UDim2.fromOffset(8, if props.HeaderExtras then 132 else 76), Children = props.Children, CellHeight = props.CardHeight }),
 		}),
 	})
 end
@@ -270,7 +270,7 @@ local function App(props: Types.Props)
 			if equipped then forge.Unequip(owners[1]) else setDialog("HERO") end
 		end })
 		view.Upgrade = e(C.Button, { Name = "OpenUpgradeButton", Icon = "Forge", Text = "Upgrade", Position = UDim2.new(0.5, -26, 1, -48), Size = UDim2.new(0.5, -34, 0, 48), Disabled = busy or maxRank, OnActivate = startUpgrade })
-		view.Lock = e(C.Button, { Name = "LockArtifactButton", Icon = "Lock", Text = "", Selected = target.Locked, Tooltip = if target.Locked then "Locked: protected from selling and upgrades. Click to unlock." else "Lock artifact to protect it from selling and use as an upgrade material.", Position = UDim2.new(1, -48, 1, -48), Size = UDim2.fromOffset(48, 48), Disabled = busy, OnActivate = forge.ToggleLock })
+		view.Lock = e(C.Button, { Name = "LockArtifactButton", Icon = "Lock", Text = "", Selected = target.Locked, Tooltip = if target.Locked then "Locked: protected from selling and upgrades. Click to unlock." else "Lock to prevent selling or consumption during upgrades.", Position = UDim2.new(1, -48, 1, -48), Size = UDim2.fromOffset(48, 48), Disabled = busy, OnActivate = forge.ToggleLock })
 
 	elseif route == "MATERIALS" and target then
 		local after = table.clone(target); after.Star = math.min(Catalog.MaxStars, target.Star + 1)
@@ -279,10 +279,10 @@ local function App(props: Types.Props)
 			Title = e(C.Text, { Text = "UPGRADE RESULT", TextColor3 = T.Gold, LayoutOrder = 1 }),
 			Rank = e(C.Text, { Text = string.format("CURRENT %d★  →  AFTER %d★", target.Star, after.Star), LayoutOrder = 2 }),
 			Stats = e(C.Stack, { Order = 3, Children = { Values = e(Screens.Stats, { Before = target, After = after }) } }),
-			Cost = e(C.Text, { Text = if rule then string.format("%d Gold · %d Gems · %d materials", rule.Gold, rule.Gems, rule.Donors) else "Maximum stars", TextColor3 = T.Gold, LayoutOrder = 4 }),
+			Cost = e(C.Text, { Text = if rule then string.format("%d Gold · %d Gems · %d artifacts", rule.Gold, rule.Gems, rule.Donors) else "Maximum stars", TextColor3 = T.Gold, LayoutOrder = 4 }),
 			Reason = e(C.Text, { Text = upgradeReason or "Ready to upgrade", TextSize = 14, LayoutOrder = 5 }),
 		} }) })
-		view.AutoFill = e(C.Button, { Name = "AutoFillMaterialsButton", Text = "Auto-fill safe materials", Position = UDim2.new(0, 0, 1, -48), Size = UDim2.new(0.4, -8, 0, 48), Disabled = busy or maxRank, OnActivate = forge.AutoFill })
+		view.AutoFill = e(C.Button, { Name = "AutoFillMaterialsButton", Text = "Auto-fill safe artifacts", Position = UDim2.new(0, 0, 1, -48), Size = UDim2.new(0.4, -8, 0, 48), Disabled = busy or maxRank, OnActivate = forge.AutoFill })
 		view.Review = e(C.Button, { Name = "ReviewUpgradeButton", Icon = "Forge", Text = string.format("REVIEW UPGRADE · %d★ → %d★", target.Star, after.Star), Primary = true, Position = UDim2.new(0.4, 0, 1, -48), Size = UDim2.new(0.6, 0, 0, 48), Disabled = busy or upgradeReason ~= nil, OnActivate = reviewUpgrade })
 
 	elseif route == "REVIEW" and target and review then
@@ -296,10 +296,10 @@ local function App(props: Types.Props)
 			Cost = e(C.Text, { LayoutOrder = 4, Text = string.format("Cost: %d Gold + %d Gems\nBalance after: %d Gold · %d Gems", review.Gold, review.Gems, snapshot.Gold - review.Gold, snapshot.Gems - review.Gems), TextColor3 = T.Gold, Size = UDim2.new(1, 0, 0, 52) }),
 			Consume = e(C.Text, { LayoutOrder = 5, Text = "PERMANENTLY CONSUMED", TextColor3 = T.Bad, Size = UDim2.new(1, 0, 0, 24), TextSize = 14 }),
 			Materials = e(C.Stack, { Order = 6, Children = { Items = e(Screens.MaterialList, { Items = review.Materials, Width = contentWidth * 0.58 - 24 }) } }),
-			Warning = e(C.Text, { LayoutOrder = 7, Text = if changed then "Inventory changed. Go back and review your materials again." else "The target is kept. Listed materials are consumed permanently. This upgrade cannot be undone.", TextColor3 = if changed then T.Bad else T.Muted, TextSize = 14, Size = UDim2.new(1, 0, 0, 48) }),
+			Warning = e(C.Text, { LayoutOrder = 7, Text = if changed then "Inventory changed. Go back and review your artifacts again." else "The target is kept. Listed artifacts are consumed permanently. This upgrade cannot be undone.", TextColor3 = if changed then T.Bad else T.Muted, TextSize = 14, Size = UDim2.new(1, 0, 0, 48) }),
 		}
 		view.Review = e(C.Scroll, { Size = UDim2.new(1, 0, 1, -60), Children = children })
-		view.Back = e(C.Button, { Name = "BackToMaterialsButton", Text = "Back to materials", Position = UDim2.new(0, 0, 1, -48), Size = UDim2.new(0.4, -4, 0, 48), Disabled = busy, OnActivate = function() setRoute("MATERIALS") end })
+		view.Back = e(C.Button, { Name = "BackToMaterialsButton", Text = "Back to artifacts", Position = UDim2.new(0, 0, 1, -48), Size = UDim2.new(0.4, -4, 0, 48), Disabled = busy, OnActivate = function() setRoute("MATERIALS") end })
 		view.Confirm = e(C.Button, { Name = "ConfirmUpgradeButton", Icon = "Forge", Text = if busy then "Waiting for server…" else "Consume & upgrade", Primary = true, Position = UDim2.new(0.4, 4, 1, -48), Size = UDim2.new(0.6, -4, 0, 48), Disabled = busy or changed or upgradeReason ~= nil, OnActivate = function() forge.Upgrade(review.Revision) end })
 	elseif route == "RESULT" and target then
 		view.Success = e(C.Stack, { Children = {
@@ -347,11 +347,11 @@ local function App(props: Types.Props)
 		local choices = {}
 		for index, artifact in items do
 			if not Model.materialReason(snapshot, forge.TargetId, artifact.UUID) and not table.find(forge.Materials, artifact.UUID) then
-				choices[artifact.UUID] = e(C.Button, { Text = string.format("%s · %d★ · %.0f PWR", artifact.DisplayName, artifact.Star, Model.power(artifact)), Order = index, OnActivate = function() forge.ToggleMaterial(artifact.UUID); setDialog(nil) end })
+				choices[artifact.UUID] = e(C.ArtifactCard, { Snapshot = snapshot, Artifact = artifact, Selected = false, Material = false, Recommended = false, UpgradeChoice = true, Order = index, ShowPreview = true, OnSelect = function() forge.ToggleMaterial(artifact.UUID); setDialog(nil) end })
 			end
 		end
-		if next(choices) == nil then choices.Empty = e(C.Text, { Text = "No eligible materials. Equipped and locked artifacts are protected.", Size = UDim2.new(1, 0, 0, 80) }) end
-		dialogView = e(Dialog, { Title = "Choose a material · consumed on upgrade", Children = choices, OnCancel = function() setDialog(nil) end, FocusKey = "MATERIAL" })
+		if next(choices) == nil then choices.Empty = e(C.Text, { Text = "No eligible artifacts. Equipped and locked artifacts are protected.", Size = UDim2.new(1, 0, 0, 80) }) end
+		dialogView = e(Dialog, { Title = "Choose an artifact · consumed on upgrade", Cards = true, CardHeight = T.CardHeight, Children = choices, OnCancel = function() setDialog(nil) end, FocusKey = "MATERIAL" })
 	elseif dialog == "HERO" then
 		local choices: { [string]: any } = {}
 		local compatibleHeroes = Model.pickerHeroes(snapshot, target, "ALL", heroSort)

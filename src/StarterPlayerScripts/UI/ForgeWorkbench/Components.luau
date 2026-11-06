@@ -179,7 +179,7 @@ function C.StateBadges(props: { Snapshot: Snapshot, Artifact: Artifact, Selected
 	local owners = Model.ownerIds(props.Snapshot, artifact.UUID)
 	local equipped = #owners > 0
 	local owner = #owners == 1 and props.Snapshot.Heroes[owners[1]] or nil
-	local state = if props.Material then "[−] Material · consumed" elseif props.Selected then "[✓] Selected" else nil
+	local state = if props.Material then "[−] Artifact · consumed" elseif props.Selected then "[✓] Selected" else nil
 	return e(C.Stack, { Children = {
 		Owner = e("Frame", { Size = UDim2.new(1, 0, 0, 48), BackgroundTransparency = 1, LayoutOrder = 1 }, {
 			Portrait = if owner then e("Frame", { Position = UDim2.fromOffset(0, 8), Size = UDim2.fromOffset(24, 32), BackgroundTransparency = 1 }, { Image = e(Portrait, { TemplateId = owner.TemplateId, Archetype = owner.Archetype, Stars = owner.Stars }) }) else nil,
@@ -251,19 +251,19 @@ function C.HeroSlot(props: HeroSlotProps)
 	})
 end
 
-function C.CardGrid(props: { Children: { [string]: any }, Size: UDim2, Position: UDim2? })
+function C.CardGrid(props: { Children: { [string]: any }, Size: UDim2, Position: UDim2?, CellHeight: number? })
 	local columns, setColumns = React.useState(3)
 	local children = table.clone(props.Children)
-	children.Layout = e("UIGridLayout", { CellSize = UDim2.new(1 / columns, -12, 0, 286), CellPadding = UDim2.fromOffset(12, 12), SortOrder = Enum.SortOrder.LayoutOrder })
+	children.Layout = e("UIGridLayout", { CellSize = UDim2.new(1 / columns, -12, 0, props.CellHeight or 286), CellPadding = UDim2.fromOffset(12, 12), SortOrder = Enum.SortOrder.LayoutOrder })
 	children.Padding = e("UIPadding", { PaddingTop = UDim.new(0, 6), PaddingLeft = UDim.new(0, 6), PaddingBottom = UDim.new(0, 12) })
-	return e("ScrollingFrame", { Name = "HeroCardGrid", Size = props.Size, Position = props.Position, BackgroundTransparency = 1, BorderSizePixel = 0, CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, ScrollingDirection = Enum.ScrollingDirection.Y, ScrollBarThickness = 6, ScrollBarImageColor3 = T.Gold, ClipsDescendants = true, SelectionGroup = true,
+	return e("ScrollingFrame", { Name = if props.CellHeight then "ArtifactCardGrid" else "HeroCardGrid", Size = props.Size, Position = props.Position, BackgroundTransparency = 1, BorderSizePixel = 0, CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, ScrollingDirection = Enum.ScrollingDirection.Y, ScrollBarThickness = 6, ScrollBarImageColor3 = T.Gold, ClipsDescendants = true, SelectionGroup = true,
 		[React.Change.AbsoluteSize] = function(frame) setColumns(math.clamp(math.floor(frame.AbsoluteSize.X / 180), 1, 5)) end,
 	}, children)
 end
 
 type CardProps = {
 	Snapshot: Snapshot, Artifact: Artifact, Selected: boolean, Material: boolean,
-	Recommended: boolean, Reason: string?, OnSelect: () -> (), Order: number, ShowPreview: boolean?,
+	Recommended: boolean, Reason: string?, OnSelect: () -> (), Order: number, ShowPreview: boolean?, UpgradeChoice: boolean?,
 }
 function C.ArtifactCard(props: CardProps)
  local artifact = props.Artifact
@@ -294,7 +294,7 @@ function C.ArtifactCard(props: CardProps)
    Name = e(C.Text, { Text = artifact.DisplayName, Position = UDim2.fromOffset(0, 94), Size = UDim2.new(1, 0, 0, 34), TextSize = 14, TextTruncate = Enum.TextTruncate.AtEnd }),
    Rarity = e(C.Text, { Text = rarity.Name, Position = UDim2.fromOffset(0, 128), Size = UDim2.new(0.58, 0, 0, 22), TextSize = 14, TextColor3 = rarity.Color, TextWrapped = false, TextTruncate = Enum.TextTruncate.AtEnd }),
    Power = e(C.Text, { Text = string.format("%.0f PWR", Model.power(artifact)), Position = UDim2.new(0.58, 0, 0, 128), Size = UDim2.new(0.42, 0, 0, 22), TextSize = 14, FontFace = T.Theme.Fonts.Number, TextXAlignment = Enum.TextXAlignment.Right }),
-   Owner = e(C.Text, { Text = if owner then owner.DisplayName .. " · " .. string.sub(owner.UUID, -4) elseif equipped then "Assigned · protected" elseif artifact.Locked then "Unlock to sell / consume" else "Ready to equip", Position = UDim2.fromOffset(0, 150), Size = UDim2.new(1, 0, 0, 18), TextSize = 14, TextColor3 = stateColor, TextWrapped = false, TextTruncate = Enum.TextTruncate.AtEnd }),
+   Owner = e(C.Text, { Text = if owner then owner.DisplayName .. " · " .. string.sub(owner.UUID, -4) elseif equipped then "Assigned · protected" elseif artifact.Locked then "Unlock to sell / consume" elseif props.UpgradeChoice then "Consumed on upgrade" else "Ready to equip", Position = UDim2.fromOffset(0, 150), Size = UDim2.new(1, 0, 0, 18), TextSize = 14, TextColor3 = stateColor, TextWrapped = false, TextTruncate = Enum.TextTruncate.AtEnd }),
    Selection = if props.Material or props.Selected or props.Reason or artifact.Locked then e(C.Text, { Text = if props.Material then "SELECTED" elseif props.Reason then (if props.Selected then "KEPT" elseif equipped or artifact.Locked then "PROTECTED" else "INCOMPATIBLE") elseif props.Selected then "SELECTED" else "LOCKED", TextSize = 12, TextColor3 = T.Text, TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(4, 28), Size = UDim2.new(1, -8, 0, 22), BackgroundTransparency = 0.15, BackgroundColor3 = if props.Material then T.Theme.Tones.Crimson.Bottom else T.Theme.Ink, ZIndex = 4 }) else nil,
   }),
  })
@@ -413,8 +413,8 @@ function C.UpgradePreviewPanel(props: { Snapshot: Snapshot, Target: Artifact, Ma
 			Text = if rule then string.format("Cost: %d Gold + %d Gems\nBalance after: %d Gold · %d Gems", rule.Gold, rule.Gems, props.Snapshot.Gold - rule.Gold, props.Snapshot.Gems - rule.Gems) else "No further promotion available.",
 			Size = UDim2.new(1, 0, 0, 76), TextColor3 = T.Gold, LayoutOrder = 7,
 		}),
-		Materials = e(C.Text, { Text = string.format("MATERIALS · CONSUMED %d/%d", #props.MaterialIds, if rule then rule.Donors else 0), LayoutOrder = 8 }),
-		Warning = e(C.Text, { Text = "Selected materials are permanently consumed. Equipped and locked items are protected.", TextColor3 = T.Muted, Size = UDim2.new(1, 0, 0, 60), LayoutOrder = 9 }),
+		Materials = e(C.Text, { Text = string.format("ARTIFACTS · CONSUMED %d/%d", #props.MaterialIds, if rule then rule.Donors else 0), LayoutOrder = 8 }),
+		Warning = e(C.Text, { Text = "Selected artifacts are permanently consumed. Equipped and locked items are protected.", TextColor3 = T.Muted, Size = UDim2.new(1, 0, 0, 60), LayoutOrder = 9 }),
 	}
 	for index, id in props.MaterialIds do
 		local artifact = props.Snapshot.Artifacts[id]

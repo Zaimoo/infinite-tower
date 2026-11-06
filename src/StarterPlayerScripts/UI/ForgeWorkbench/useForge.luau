@@ -140,7 +140,7 @@ local function useForge(props: Types.Props)
 		setMaterials(nextIds)
 		local target = snapshotRef.current.Artifacts[targetId]
 		local required = if target then Catalog.GetFodderRequirement(target.Star) else 0
-		setMessage(if #nextIds < required then "Not enough unprotected materials. Equipped and locked artifacts remain visible in the inventory." else "Safe materials selected. Review the consumed items and cost.")
+		setMessage(if #nextIds < required then "Not enough unprotected artifacts. Equipped and locked artifacts remain visible in the inventory." else "Safe artifacts selected. Review the consumed items and cost.")
 		setSuccess(false)
 	end
 	local function toggleLock()
