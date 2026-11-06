@@ -47,7 +47,9 @@ test("Existing level curve and all five caps remain intact", function()
 	equal(Stats.GetXPRequiredForNextLevel(1), 50)
 	equal(Stats.GetXPRequiredForNextLevel(2), 137)
 	equal(Stats.GetXPRequiredForNextLevel(9), 1210)
-	for stars = 1, 7 do equal(Stats.GetMaxLevel(stars), stars * 10) end
+	for stars = 1, 7 do equal(Stats.GetMaxLevel(stars), 10) end
+	equal(Stats.GetXPRequiredForNextLevel(1, 2), 1618)
+	equal(Stats.GetEffectiveLevel(3, 5), 25)
 end)
 
 test("Fresh donor value, affinity, research and efficiency have exact results", function()
@@ -57,16 +59,16 @@ test("Fresh donor value, affinity, research and efficiency have exact results", 
 	equal(result.Base, 125); equal(result.Efficiency, 1); equal(result.Final, 125)
 	equal(Math.GetSynthesisXP(hero("a"), recipient, {}).Final, 131)
 	equal(Math.GetSynthesisXP(donor, recipient, { EssenceAttunement = true }).Final, 138)
-	recipient.Level = 30
+	recipient.Stars, recipient.Level = 3, 10
 	local diminished = Math.GetSynthesisXP(donor, recipient, {})
 	equal(diminished.Efficiency, 0.55); equal(diminished.Final, 69)
 end)
 
 test("Invested donors improve value at every rarity", function()
 	for stars = 1, 5 do
-		local recipient = hero("r", "hero_han", { Stars = stars, Level = stars * 10 })
+		local recipient = hero("r", "hero_han", { Stars = stars, Level = 10 })
 		local fresh = hero("a", "hero_jenna", { Stars = stars })
-		local invested = hero("b", "hero_jenna", { Stars = stars, Level = stars * 10 })
+		local invested = hero("b", "hero_jenna", { Stars = stars, Level = 10 })
 		check(Math.GetSynthesisXP(invested, recipient, {}).Final > Math.GetSynthesisXP(fresh, recipient, {}).Final)
 	end
 end)
@@ -77,16 +79,17 @@ test("Full balance sweep keeps donor XP monotonic and efficiency between 55 and 
 			for _, affinity in ipairs({ false, true }) do
 				for _, researched in ipairs({ false, true }) do
 					local previous = -1
-					for donorLevel = 1, stars * 10 do
+					for donorLevel = 1, 10 do
 						local donor = hero("d", affinity and "hero_han" or "hero_jenna", { Stars = stars, Level = donorLevel })
-						local recipient = hero("r", "hero_han", { Stars = 5, Level = recipientLevel })
+						local recipient = hero("r", "hero_han", { Stars = math.ceil(recipientLevel / 10), Level = recipientLevel - (math.ceil(recipientLevel / 10) - 1) * 10 })
 						local result = Math.GetSynthesisXP(donor, recipient, { EssenceAttunement = researched })
 						check(result.Efficiency >= 0.55 and result.Efficiency <= 1)
 						check(result.Final >= 0 and result.Final >= previous, "Investing levels reduced donor value")
-						local base = 100 * 3 ^ (stars - 1) + 25 * donorLevel
+						local donorEffective = (stars - 1) * 10 + donorLevel
+						local base = 100 * 3 ^ (stars - 1) + 25 * donorEffective
 						-- Evaluate rational config constants without intermediate
 						-- floating-point .5 boundary drift in the expected result.
-						local efficiencyUnits = math.max(22, 40 - math.max(0, recipientLevel - donorLevel - 5))
+						local efficiencyUnits = math.max(22, 40 - math.max(0, recipientLevel - donorEffective - 5))
 						local bonusPercent = 100 + (researched and 10 or 0) + (affinity and 5 or 0)
 						local expected = math.floor(base * efficiencyUnits * bonusPercent / 4000 + 0.5)
 						equal(result.Final, expected, string.format("Rounding stars=%d donor=%d recipient=%d affinity=%s research=%s", stars, donorLevel, recipientLevel, tostring(affinity), tostring(researched)))
@@ -106,17 +109,17 @@ test("Every native seed uses canonical compounded growth without retired effects
 		local rarityCombat = comp * (3 * 1.35)^(seed.Rarity-1)
 		local rarityLabor = comp * (1.35 * 1.12)^(seed.Rarity-1)
 		for _, stars in ipairs({ 1, 4, 7 }) do
-			for level = 1, stars * 10, 3 do
+			for level = 1, 10, 3 do
 				for _, quality in ipairs({ 0.9, 1, 1.15 }) do
 					local original = hero("native", seedId, { Stars = stars, Level = level, QualityScalar = quality })
 					local atk, hp, dps = Stats.GetEffectiveCombatStats(original, false, false)
-					local expectedATK = math.round(seed.BaseATK_1Star * quality * rarityCombat * 1.5^(stars-1) * 1.08^(level-1))
-					local expectedHP = math.round(seed.BaseHP_1Star * quality * rarityCombat * 1.5^(stars-1) * 1.08^(level-1))
+					local expectedATK = math.round(seed.BaseATK_1Star * quality * rarityCombat * 1.5^(stars-1) * 1.08^((stars-1)*10+level-1))
+					local expectedHP = math.round(seed.BaseHP_1Star * quality * rarityCombat * 1.5^(stars-1) * 1.08^((stars-1)*10+level-1))
 					local expectedDPS = math.round((expectedATK / (math.ceil(seed.AttackInterval/Balance.TickSeconds-1e-10)*Balance.TickSeconds)) * 10) / 10
 					equal(atk, expectedATK); equal(hp, expectedHP); equal(dps, expectedDPS)
 					for _, facility in ipairs({ "BENCHED", "FACILITY_CONDUIT", "FACILITY_INFIRMARY", "FACILITY_LAB" }) do
 						local synergy = (seed.PreferredFacility == "ALL" or seed.PreferredFacility == facility) and 0.25 or 0
-						local expectedLabor = math.round(seed.BaseLabor_1Star * rarityLabor * 1.35^(stars-1) * quality * (1 + 0.05 * (level - 1)) * (1 + synergy) * 100) / 100
+						local expectedLabor = math.round(seed.BaseLabor_1Star * rarityLabor * 1.35^(stars-1) * quality * (1 + 0.05 * ((stars-1)*10 + level - 1)) * (1 + synergy) * 100) / 100
 						equal(Stats.GetEffectiveLabor(original, facility), expectedLabor)
 					end
 				end
@@ -159,28 +162,28 @@ test("Cap overflow is stored exactly and excess is reported", function()
 	local recipient = hero("r", "hero_han", { Level = 9, XP = 1190 })
 	local after, overflow = Math.AdvanceXP(recipient, 125)
 	equal(after.Level, 10); equal(after.XP, 0); equal(after.OverflowXP, 105)
-	equal(overflow.Rejected, 0); equal(overflow.Capacity, 3027)
+	equal(overflow.Rejected, 0); equal(overflow.Capacity, 3454) -- 2★ Lv 1 and Lv 2 (effective 11, 12)
 	local bounded, excess = Math.AdvanceXP(hero("r", "hero_han", { Level = 10 }), 4000)
-	equal(bounded.OverflowXP, 3027); equal(excess.Rejected, 973)
+	equal(bounded.OverflowXP, 3454); equal(excess.Rejected, 546)
 end)
 
 test("Five stars never exceed level 50 or create a future-tier reserve", function()
-	local result, overflow = Math.AdvanceXP(hero("r", "hero_han", { Stars = 7, Level = 70 }), 10000)
-	equal(result.Level, 70); equal(result.XP, 0); equal(result.OverflowXP, 0); equal(overflow.Rejected, 10000)
+	local result, overflow = Math.AdvanceXP(hero("r", "hero_han", { Stars = 7, Level = 10 }), 10000)
+	equal(result.Level, 10); equal(result.XP, 0); equal(result.OverflowXP, 0); equal(overflow.Rejected, 10000)
 end)
 
 test("Promotion applies one multiplier and releases reserve through real levels", function()
-	local before = hero("r", "hero_han", { Level = 10, OverflowXP = 3027, InheritedImprints = { melee_memory = 1 } })
+	local before = hero("r", "hero_han", { Level = 10, OverflowXP = 3454, InheritedImprints = { melee_memory = 1 } })
 	local after = Math.Promote(before)
 	equal(after.Stars, 2); equal(after.BaseATK, 60); equal(after.BaseHP, 450); equal(after.BaseLabor, 18.9)
-	equal(after.Level, 12); equal(after.XP, 0); equal(after.OverflowXP, 0)
+	equal(after.Level, 3); equal(after.XP, 0) -- reset to Lv 1, reserve buys Lv 2 and 3; equal(after.OverflowXP, 0)
 	equal(after.PassiveTrait, before.PassiveTrait); equal(after.InheritedImprints.melee_memory, 1)
 	equal(before.Stars, 1); equal(before.BaseATK, 40)
 	local atk, hp = Stats.GetEffectiveCombatStats(after, false, false)
-	equal(atk, math.round(60 * 1.08^11)); equal(hp, math.round(450 * 1.08^11))
+	equal(atk, math.round(60 * 1.08^12)); equal(hp, math.round(450 * 1.08^12))
 	local repeatATK, repeatHP = Stats.GetEffectiveCombatStats(after, false, false)
 	equal(repeatATK, atk); equal(repeatHP, hp); equal(after.BaseATK, 60)
-	close(Stats.GetEffectiveLabor(after, "FACILITY_CONDUIT"), 29.3, 0.00001)
+	close(Stats.GetEffectiveLabor(after, "FACILITY_CONDUIT"), 30.24, 0.00001)
 end)
 
 test("Conversion rewards are deterministic and account for bounded investment", function()
@@ -520,8 +523,8 @@ end)
 
 test("Synthesis above the EXP cap requires confirmation and only credits applied EXP", function()
 	for _, scenario in ipairs({
-		{ Stars = 1, Level = 10, Reserve = 3000, ExpectedReserve = 3027, Applied = 27 },
-		{ Stars = 7, Level = 70, Reserve = 0, ExpectedReserve = 0, Applied = 0 },
+		{ Stars = 1, Level = 10, Reserve = 3400, ExpectedReserve = 3454, Applied = 54 },
+		{ Stars = 7, Level = 10, Reserve = 0, ExpectedReserve = 0, Applied = 0 },
 	}) do
 		local c = context()
 		local recipient = c.profile.Heroes.r
@@ -557,13 +560,13 @@ test("Promotion validates cap, Gold, stones and five-star ceiling without resear
 		function(p) p.Heroes.r.Level = 9 end,
 		function(p) p.Currencies.Gold = 1499 end,
 		function(p) p.PitMaterials.PromotionStone = 0 end,
-		function(p) p.Heroes.r.Stars = 7; p.Heroes.r.Level = 70 end,
+		function(p) p.Heroes.r.Stars = 7; p.Heroes.r.Level = 10 end,
 	}
 	for _, mutate in ipairs(scenarios) do
 		local c = context(); c.profile.Heroes.r.Level = 10; mutate(c.profile)
 		rejectedWithoutMutation(c, "PREVIEW", { Action = "PROMOTION", Recipient = "r" })
 	end
-	local c = context(); c.profile.Heroes.r.Stars = 4; c.profile.Heroes.r.Level = 40
+	local c = context(); c.profile.Heroes.r.Stars = 4; c.profile.Heroes.r.Level = 10
 	local p = c:preview({ Action = "PROMOTION", Recipient = "r" }); check(p.CanCommit); check(c:commit(p).Success)
 	equal(c.profile.Heroes.r.Stars, 5); equal(Math.GetImprintCapacity(c.profile.Heroes.r), 3)
 	local cDonor = context(); cDonor.profile.Heroes.r.Level = 10
@@ -573,7 +576,7 @@ test("Promotion validates cap, Gold, stones and five-star ceiling without resear
 		cTier.profile.Currencies.Gold = 5000000
 		cTier.profile.PitMaterials.PromotionStone = 500
 		cTier.profile.Heroes.r.Stars = tier.Stars
-		cTier.profile.Heroes.r.Level = tier.Stars * 10
+		cTier.profile.Heroes.r.Level = 10
 		local pTier = cTier:preview({ Action = "PROMOTION", Recipient = "r" })
 		check(pTier.CanCommit)
 		equal(pTier.Costs.Gold, tier.Gold)
@@ -593,7 +596,7 @@ test("Current profiles promote without retired research currency or lab faciliti
 		local state = c:request("STATE")
 		check(state.Success); equal(state.State.Research, nil)
 		equal(state.State.Resources.ResearchPoints, nil)
-		c.profile.Heroes.r.Stars, c.profile.Heroes.r.Level = stars, stars * 10
+		c.profile.Heroes.r.Stars, c.profile.Heroes.r.Level = stars, 10
 		local preview = c:preview({ Action = "PROMOTION", Recipient = "r" })
 		check(preview.CanCommit); check(c:commit(preview).Success)
 		equal(c.profile.Heroes.r.Stars, stars + 1)
@@ -626,14 +629,14 @@ test("Focused imprint has guaranteed server-derived rank, half EXP and exact con
 end)
 
 test("Five-star level-50 heroes receive explicitly disclosed memory-only imprints", function()
-	local c = context(); c.profile.Heroes.r.Stars = 7; c.profile.Heroes.r.Level = 70
+	local c = context(); c.profile.Heroes.r.Stars = 7; c.profile.Heroes.r.Level = 10
 	c.profile.Heroes.d = hero("d"); PitService.EnsureDefaults(c.profile)
 	local beforeATK = Stats.GetEffectiveCombatStats(c.profile.Heroes.r, false, false)
 	local p = c:preview({ Action = "IMPRINT", Recipient = "r", Donors = { "d" }, Imprint = "melee_memory" })
 	check(p.CanCommit); equal(p.XP.MemoryOnly, true); equal(p.XP.Final, 0); check(#p.Warnings > 0)
-	equal(p.After.Level, 70); equal(p.After.XP, 0); equal(p.After.OverflowXP, 0)
+	equal(p.After.Level, 10); equal(p.After.XP, 0); equal(p.After.OverflowXP, 0)
 	check(c:commit(p).Success); equal(c.profile.Heroes.d, nil)
-	equal(c.profile.Heroes.r.InheritedImprints.melee_memory, 1); equal(c.profile.Heroes.r.Level, 70)
+	equal(c.profile.Heroes.r.InheritedImprints.melee_memory, 1); equal(c.profile.Heroes.r.Level, 10)
 	equal((Stats.GetEffectiveCombatStats(c.profile.Heroes.r, false, false)), beforeATK)
 	equal(c.profile.Currencies.Gold, 999800); equal(c.profile.PitMaterials.ImprintCatalyst, 99)
 	rejectedWithoutMutation(c, "COMMIT", { Token = p.Token })
@@ -794,7 +797,7 @@ test("Missing profiles, unknown commands and forgotten sessions fail safely", fu
 end)
 
 test("Higher-rarity hero promotion preserves inherent rarity combat and labor multipliers", function()
-	local eorka = hero("e", "hero_valeria", { Stars = 4, Level = 40 })
+	local eorka = hero("e", "hero_valeria", { Stars = 4, Level = 10 })
 	equal(eorka.Stars, 4)
 
 	local beforeATK, beforeHP = Stats.GetEffectiveCombatStats(eorka, false, false)
