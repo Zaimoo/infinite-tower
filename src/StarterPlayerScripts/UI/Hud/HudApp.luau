@@ -638,6 +638,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 				Gold = profile.Currencies and profile.Currencies.Gold or 0,
 				Gems = profile.Currencies and profile.Currencies.Gems or 0,
 				Position = UDim2.fromScale(0, 1),
+				Width = Components.CurrencyBarWidth,
 			}),
 		}) else nil,
 		TowerEvent = if not modalFocus then e(TowerEventHud.Badge, { Compact = compact, Bottom = eventBottom }) else nil,
@@ -650,7 +651,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 			Name = "ModalFocusCurrencyWrapper",
 			Position = UDim2.new(0, L.Edge, 1, -L.Edge),
 			AnchorPoint = Vector2.new(0, 1),
-			Size = UDim2.fromOffset(296, Components.CurrencyBarHeight),
+			Size = UDim2.fromOffset(Components.CurrencyBarWidth, Components.CurrencyBarHeight),
 			BackgroundTransparency = 1,
 			ZIndex = 50,
 		}, {
@@ -658,7 +659,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 				Gold = profile.Currencies and profile.Currencies.Gold or 0,
 				Gems = profile.Currencies and profile.Currencies.Gems or 0,
 				Position = UDim2.fromScale(0, 1),
-				Width = 296,
+				Width = Components.CurrencyBarWidth,
 			}),
 		}) else nil,
 		PitTabs = (function()
