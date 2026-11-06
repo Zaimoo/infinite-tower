@@ -1834,7 +1834,12 @@ RunService.RenderStepped:Connect(function()
 	-- 2. Update World Boss Top Banner & Devouring Nova Cast Bar
 	local floorBoss = cs and cs.FloorBoss
 	local hasFloorBoss = floorBoss and floorBoss.Enabled == true
-	local curFloor = if _G.TowerView and _G.TowerView.FloorId then _G.TowerView.FloorId else 0
+	local char = LocalPlayer.Character
+	local charFloor = if char then (char:GetAttribute("TowerFloorId") or 0) else 0
+	local curFloor = if charFloor > 0 then charFloor elseif (_G.TowerView and _G.TowerView.FloorId) then _G.TowerView.FloorId else 0
+	if charFloor == 0 then
+		curFloor = 0
+	end
 	if not hasFloorBoss and curFloor > 0 then
 		bossBanner.Visible = true
 		local floorSpec = TowerFloorConfig.Get(curFloor)
@@ -1853,13 +1858,13 @@ RunService.RenderStepped:Connect(function()
 			novaCastLabel.Text = string.format("MOBS DEFEATED: %d / %d (%d%%)", curKills, reqKills, math.floor(pct * 100))
 		end
 	else
-		bossBanner.Visible = hasFloorBoss or false
+		bossBanner.Visible = (hasFloorBoss and curFloor > 0) or false
 	end
-	if hasFloorBoss then
+	if hasFloorBoss and curFloor > 0 then
 		local node = cs.VisualNodes and cs.VisualNodes[floorBoss.NetId]
 		local hpPct = if node and node.HpPermille then node.HpPermille / 10.0 else (floorBoss.CurrentHP or 1) / math.max(1, floorBoss.MaxHP or 1) * 100.0
 		local phase = if hpPct <= 50.0 then 2 else (floorBoss.Phase or 1)
-		local floorNum = floorBoss.FloorId or (_G.TowerView and _G.TowerView.FloorId) or 5
+		local floorNum = floorBoss.FloorId or curFloor
 		bossTitleLabel.Text = string.format(" FLOOR %d BOSS · %s (PHASE %d) — HP: %.1f%%", floorNum, string.upper(floorBoss.Name or "FLOOR BOSS"), phase, hpPct)
 		novaBarFill.Size = UDim2.fromScale(math.clamp(hpPct / 100.0, 0, 1), 1)
 		novaBarFill.BackgroundColor3 = GildedGrimoire.Glass.Danger
