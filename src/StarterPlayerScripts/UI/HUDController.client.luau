@@ -6,7 +6,9 @@
 -- 3. ThePitScreenGui (Synthesis XP Fodder & 1->5 Star Promotion)
 -- 4. MercenaryScreenGui (Noticeboard, Secret Directives & 50G Audit Soul Reveal)
 
+local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
+local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
@@ -24,6 +26,7 @@ local GothicVectorIcons = require(Shared:WaitForChild("Util"):WaitForChild("Goth
 local GildedGrimoire = require(Shared:WaitForChild("Util"):WaitForChild("GildedGrimoire"))
 local GrimoireIcons = require(Shared:WaitForChild("Util"):WaitForChild("GrimoireIcons"))
 local UIFeel = require(script.Parent:WaitForChild("UIFeel"))
+local Store = require(script.Parent:WaitForChild("Hud"):WaitForChild("Store"))
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local CombatRemotes = Remotes:WaitForChild("CombatRemotes")
@@ -212,6 +215,162 @@ hudGui.DisplayOrder = 5
 hudGui.Parent = PlayerGui
 -- Gilded Grimoire: every legacy Gotham label in the HUD (alerts, banners) uses the theme fonts.
 GildedGrimoire.Watch(hudGui)
+
+--============================================================================
+-- MODAL FOCUS MODE (FULL-SCREEN DIMMER, LIGHTING POLISH & SELECTIVE HUD HIDING)
+--============================================================================
+
+local modalFocusOverlay = Instance.new("Frame")
+modalFocusOverlay.Name = "ModalFocusOverlay"
+modalFocusOverlay.Size = UDim2.fromScale(1, 1)
+modalFocusOverlay.Position = UDim2.fromScale(0, 0)
+modalFocusOverlay.BackgroundColor3 = Color3.fromHex("#06040A")
+modalFocusOverlay.BackgroundTransparency = 1
+modalFocusOverlay.BorderSizePixel = 0
+modalFocusOverlay.Visible = false
+modalFocusOverlay.ZIndex = 35
+modalFocusOverlay.Active = false
+modalFocusOverlay.Parent = hudGui
+
+local function getOrCreateEffect<T>(className: string, name: string): T
+	local existing = Lighting:FindFirstChild(name)
+	if existing and existing:IsA(className) then
+		return existing :: any
+	end
+	if existing then existing:Destroy() end
+	local eff = Instance.new(className)
+	eff.Name = name
+	eff.Parent = Lighting
+	return eff :: any
+end
+
+local focusBlur = getOrCreateEffect("BlurEffect", "ModalFocusBlur") :: BlurEffect
+focusBlur.Size = 0
+focusBlur.Enabled = false
+
+local focusColorCorrection = getOrCreateEffect("ColorCorrectionEffect", "ModalFocusColorCorrection") :: ColorCorrectionEffect
+focusColorCorrection.Brightness = 0
+focusColorCorrection.Contrast = 0.04
+focusColorCorrection.Enabled = false
+
+local isFocusModeActive = false
+local currentOverlayTween: Tween? = nil
+local currentBlurTween: Tween? = nil
+local currentCCTween: Tween? = nil
+
+local function applyFocusMode(isFocused: boolean, _options: { [string]: any }?)
+	if isFocusModeActive == isFocused then return end
+	isFocusModeActive = isFocused
+
+	if currentOverlayTween then currentOverlayTween:Cancel() currentOverlayTween = nil end
+	if currentBlurTween then currentBlurTween:Cancel() currentBlurTween = nil end
+	if currentCCTween then currentCCTween:Cancel() currentCCTween = nil end
+
+	local reduced = UIFeel.ReducedMotion()
+	local duration = if isFocused then (if reduced then 0.05 else 0.22) else (if reduced then 0.05 else 0.18)
+	local ease = Enum.EasingStyle.Quad
+	local dir = Enum.EasingDirection.Out
+
+	if isFocused then
+		-- 1. Dimmer Backdrop
+		modalFocusOverlay.Visible = true
+		currentOverlayTween = TweenService:Create(modalFocusOverlay, TweenInfo.new(duration, ease, dir), {
+			BackgroundTransparency = 0.35,
+		})
+		currentOverlayTween:Play()
+
+		-- 2. 3D Lighting Polish
+		focusBlur.Enabled = true
+		currentBlurTween = TweenService:Create(focusBlur, TweenInfo.new(duration, ease, dir), {
+			Size = 8,
+		})
+		currentBlurTween:Play()
+
+		focusColorCorrection.Enabled = true
+		currentCCTween = TweenService:Create(focusColorCorrection, TweenInfo.new(duration, ease, dir), {
+			Brightness = -0.08,
+		})
+		currentCCTween:Play()
+
+		-- 3. World Interactions & Clutter
+		pcall(function() ProximityPromptService.Enabled = false end)
+
+		local lbGui = PlayerGui:FindFirstChild("CustomLeaderboardGui") :: ScreenGui?
+		if lbGui then lbGui.Enabled = false end
+
+		local topBarRight = PlayerGui:FindFirstChild("TopBarRightScreenGui") :: ScreenGui?
+		if topBarRight then topBarRight.Enabled = false end
+
+		-- 4. React HUD Rails & Squad Drawer (keeps Currencies visible in Overlay)
+		Store.SetModalFocus(true)
+	else
+		-- 1. Dimmer Backdrop
+		currentOverlayTween = TweenService:Create(modalFocusOverlay, TweenInfo.new(duration, ease, dir), {
+			BackgroundTransparency = 1,
+		})
+		currentOverlayTween:Play()
+		currentOverlayTween.Completed:Connect(function()
+			if not isFocusModeActive then
+				modalFocusOverlay.Visible = false
+			end
+		end)
+
+		-- 2. 3D Lighting Polish
+		currentBlurTween = TweenService:Create(focusBlur, TweenInfo.new(duration, ease, dir), {
+			Size = 0,
+		})
+		currentBlurTween:Play()
+		currentBlurTween.Completed:Connect(function()
+			if not isFocusModeActive then
+				focusBlur.Enabled = false
+			end
+		end)
+
+		currentCCTween = TweenService:Create(focusColorCorrection, TweenInfo.new(duration, ease, dir), {
+			Brightness = 0,
+		})
+		currentCCTween:Play()
+		currentCCTween.Completed:Connect(function()
+			if not isFocusModeActive then
+				focusColorCorrection.Enabled = false
+			end
+		end)
+
+		-- 3. World Interactions & Clutter
+		pcall(function() ProximityPromptService.Enabled = true end)
+
+		local lbGui = PlayerGui:FindFirstChild("CustomLeaderboardGui") :: ScreenGui?
+		if lbGui then lbGui.Enabled = true end
+
+		local topBarRight = PlayerGui:FindFirstChild("TopBarRightScreenGui") :: ScreenGui?
+		if topBarRight then topBarRight.Enabled = true end
+
+		-- 4. React HUD Rails & Squad Drawer
+		Store.SetModalFocus(false)
+	end
+end
+
+local function setModalFocusMode(isFocused: boolean, options: { [string]: any }?)
+	if not isFocused then
+		task.defer(function()
+			if _G.IsAnyMasterModalOpen and _G.IsAnyMasterModalOpen() then
+				return
+			end
+			applyFocusMode(false, options)
+		end)
+	else
+		applyFocusMode(true, options)
+	end
+end
+
+_G.SetModalFocusMode = setModalFocusMode
+_G.IsModalFocusMode = function(): boolean
+	return isFocusModeActive
+end
+
+LocalPlayer.CharacterRemoving:Connect(function()
+	setModalFocusMode(false)
+end)
 
 -- Top Bar Container
 local topBar = makeFrame({
@@ -1174,6 +1333,11 @@ _G.OpenMasterModal = function(which: string)
 	if which == "BLACKSMITH" and not forgeController and refreshBlacksmithModal then
 		refreshBlacksmithModal()
 	end
+	if which == "NONE" then
+		setModalFocusMode(false)
+	else
+		setModalFocusMode(true)
+	end
 end
 
 -- Add Top Bar Navigation Buttons
@@ -1229,6 +1393,7 @@ local ArtifactRemotes = Remotes:WaitForChild("ArtifactRemotes") :: Folder
 forgeController = ForgeController.new(hudGui, ArtifactRemotes, function() return CurrentProfile end, updateBottomTabHighlights)
 _G.ForgeController = forgeController
 _G.OpenFacilityHUD = function(facility: string)
+	setModalFocusMode(true)
 	-- Phase 5: The Pit has one prompt and opens on its Synthesis tab (the React tab bar switches).
 	if facility == "Pit" or facility == "ThePit" then
 		facility = "Synthesis"
@@ -1931,6 +2096,7 @@ do
 		topBarRightGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 		topBarRightGui.Parent = PlayerGui
 	end
+	topBarRightGui.Enabled = not isFocusModeActive
 
 	local settingsButton = Instance.new("ImageButton")
 	settingsButton.Name = "SettingsButton"

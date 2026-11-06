@@ -728,6 +728,9 @@ function SquadController.Assign(self: any, uuid: string, target: string, success
 end
 
 function SquadController.Open(self: any)
+	if _G.SetModalFocusMode then
+		_G.SetModalFocusMode(true)
+	end
 	self.OpenTime = os.clock()
 	self.ChoosingSlot = nil
 	self.HeldHero = nil
@@ -741,6 +744,9 @@ end
 
 function SquadController.Close(self: any)
 	if not self.Root.Visible then return end
+	if _G.SetModalFocusMode then
+		_G.SetModalFocusMode(false)
+	end
 	self.ChoosingSlot = nil
 	self.HeldHero = nil
 	local tw = TweenService:Create(self.Scrim, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { BackgroundTransparency = 1 })

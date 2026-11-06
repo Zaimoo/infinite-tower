@@ -17,10 +17,17 @@ Store.Profile = nil :: any
 Store.Goal = nil :: any -- OnboardingSync.Step, or nil once the chain is complete
 Store.Revision = 0
 Store.DrawerExpanded = false -- the player's Squad drawer choice, kept for the session
+Store.ModalFocus = false
 
 local function bump()
 	Store.Revision += 1
 	changed:Fire(Store.Revision)
+end
+
+function Store.SetModalFocus(isFocused: boolean)
+	if Store.ModalFocus == isFocused then return end
+	Store.ModalFocus = isFocused
+	bump()
 end
 
 -- HUDController merges Pit deltas into _G.CurrentProfile; read it after that handler has run.
