@@ -19,6 +19,7 @@ local StatBalance = require(Shared:WaitForChild("Config"):WaitForChild("StatBala
 local TowerHardcore = require(Shared:WaitForChild("Config"):WaitForChild("TowerHardcoreConfig"))
 local TowerProgress = require(Shared:WaitForChild("Util"):WaitForChild("TowerProgress"))
 local FortressTree = require(Shared:WaitForChild("Util"):WaitForChild("FortressTree"))
+local InventoryCapacity = require(Shared:WaitForChild("Util"):WaitForChild("InventoryCapacity"))
 local SummonLuck = require(Shared:WaitForChild("Util"):WaitForChild("SummonLuck"))
 local Onboarding = require(Shared:WaitForChild("Util"):WaitForChild("Onboarding"))
 local OnboardingService = require(script.Parent:WaitForChild("OnboardingService"))
@@ -885,12 +886,10 @@ RequestSummonFunc.OnServerInvoke = function(player: Player, arg1: any, arg2: any
 	end
 
 	local count = (pullCount == 10) and 10 or 1
-	local currentHeroCount = 0
-	for _ in pairs(profile.Heroes) do
-		currentHeroCount += 1
-	end
-	if currentHeroCount + count > StatBalance.MaxHeroInventory then
-		DataManager.SendToast(player, string.format("Hero inventory full! Maximum capacity is %d.", StatBalance.MaxHeroInventory), "WARN")
+	-- Heroes working in a facility are out of the backpack and don't count (InventoryCapacity).
+	local heroCap = InventoryCapacity.HeroCap(profile.FortressTree)
+	if InventoryCapacity.HeroCount(profile) + count > heroCap then
+		DataManager.SendToast(player, string.format("Hero inventory full! Maximum capacity is %d.", heroCap), "WARN")
 		return { Success = false, Message = "Hero inventory full" }
 	end
 
@@ -1111,7 +1110,7 @@ function DataManager.SellArtifacts(player: Player, artifactUUIDs: { string }): (
 		return false, "No artifacts selected for sale", 0, 0
 	end
 
-	if #artifactUUIDs > StatBalance.MaxArtifactInventory then
+	if #artifactUUIDs > InventoryCapacity.ArtifactCap(profile.FortressTree) then
 		return false, "Too many artifacts selected", 0, 0
 	end
 
@@ -1253,12 +1252,9 @@ function DataManager.SummonArtifact(player: Player, pullCount: any): (boolean, s
 	end
 
 	if not profile.Artifacts then profile.Artifacts = {} end
-	local currentArtCount = 0
-	for _ in pairs(profile.Artifacts) do
-		currentArtCount += 1
-	end
-	if currentArtCount + count > StatBalance.MaxArtifactInventory then
-		DataManager.SendToast(player, string.format("Artifact inventory full! Maximum capacity is %d.", StatBalance.MaxArtifactInventory), "WARN")
+	local artifactCap = InventoryCapacity.ArtifactCap(profile.FortressTree)
+	if InventoryCapacity.ArtifactCount(profile) + count > artifactCap then
+		DataManager.SendToast(player, string.format("Artifact inventory full! Maximum capacity is %d.", artifactCap), "WARN")
 		return false, "Artifact inventory full", nil, nil
 	end
 
