@@ -1314,6 +1314,9 @@ end
 --============================================================================
 
 function Synth.Open(self: any)
+	if _G.SetModalFocusMode then
+		_G.SetModalFocusMode(true)
+	end
 	self:DismissPopup()
 	self.Root.Visible, self.Scrim.Visible = true, true
 	self.Picker.Visible = false
@@ -1328,6 +1331,9 @@ end
 
 function Synth.Close(self: any)
 	if self.Busy then return end
+	if _G.SetModalFocusMode then
+		_G.SetModalFocusMode(false)
+	end
 	self:DismissPopup()
 	self.Root.Visible, self.Scrim.Visible, self.Picker.Visible = false, false, false
 	self.PreviewSerial += 1

@@ -1280,6 +1280,9 @@ end
 
 function Promo.Open(self: any)
 	if self.Busy then return end
+	if _G.SetModalFocusMode then
+		_G.SetModalFocusMode(true)
+	end
 	self.Root.Visible = true
 	self.Scrim.Visible = true
 	self.Picker.Visible = false
@@ -1294,6 +1297,9 @@ end
 
 function Promo.Close(self: any)
 	if self.Busy then return end
+	if _G.SetModalFocusMode then
+		_G.SetModalFocusMode(false)
+	end
 	self:StopStoneOrbit()
 	local firework = self.RitualArea:FindFirstChild("AscensionFirework")
 	if firework then firework:Destroy() end

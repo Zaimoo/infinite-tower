@@ -63,6 +63,9 @@ screenGui.ResetOnSpawn = false
 screenGui.DisplayOrder = 8
 screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 screenGui.ScreenInsets = Enum.ScreenInsets.CoreUISafeInsets
+if _G.IsModalFocusMode and _G.IsModalFocusMode() then
+	screenGui.Enabled = false
+end
 
 -- 4. Main Leaderboard Card (Exact Roblox PlayerList dimensions)
 local CARD_WIDTH = 318

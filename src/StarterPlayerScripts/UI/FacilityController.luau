@@ -736,6 +736,9 @@ function Controller:Close()
 	self.Root.Visible = false
 	self.Scrim.Visible = false
 	self.Reveal:Close()
+	if _G.SetModalFocusMode then
+		_G.SetModalFocusMode(false)
+	end
 	if _G.UpdateBottomTabHighlights then
 		_G.UpdateBottomTabHighlights()
 	end
@@ -743,6 +746,9 @@ end
 
 function Controller:Open(facility: string)
 	if not DETAILS[facility] then return end
+	if _G.SetModalFocusMode then
+		_G.SetModalFocusMode(true)
+	end
 	self.OpenTime = os.clock()
 	self.Current = facility
 	self.Root.Visible = true

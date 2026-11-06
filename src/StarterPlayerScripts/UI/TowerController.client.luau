@@ -891,6 +891,9 @@ local function openSelector()
 	if _G.OpenMasterModal then _G.OpenMasterModal("NONE") end
 	selected = getMaxAllowedFloor()
 	activeBiomeIndex = math.clamp(math.floor((selected - 1) / 5) + 1, 1, BIOME_COUNT)
+	if _G.SetModalFocusMode then
+		_G.SetModalFocusMode(true)
+	end
 	panel.Visible = true
 	scrim.Visible = true
 	render()
@@ -912,6 +915,9 @@ end
 _G.CloseTowerSelector = function()
 	panel.Visible = false
 	scrim.Visible = false
+	if _G.SetModalFocusMode then
+		_G.SetModalFocusMode(false)
+	end
 	if _G.UpdateBottomTabHighlights then
 		_G.UpdateBottomTabHighlights()
 	end
@@ -923,6 +929,9 @@ UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: 
 	if input.KeyCode == Enum.KeyCode.Escape or input.KeyCode == Enum.KeyCode.ButtonB then
 		panel.Visible = false
 		scrim.Visible = false
+		if _G.SetModalFocusMode then
+			_G.SetModalFocusMode(false)
+		end
 		if _G.UpdateBottomTabHighlights then
 			_G.UpdateBottomTabHighlights()
 		end

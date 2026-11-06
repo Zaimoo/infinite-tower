@@ -1032,6 +1032,9 @@ function Controller:IsOpen(): boolean
 end
 
 function Controller:Open()
+	if _G.SetModalFocusMode then
+		_G.SetModalFocusMode(true)
+	end
 	self.Root.Visible = true
 	self.Scrim.Visible = true
 	self.Status.Text = ""
@@ -1060,6 +1063,9 @@ end
 function Controller:Close()
 	self.Root.Visible = false
 	self.Scrim.Visible = false
+	if _G.SetModalFocusMode then
+		_G.SetModalFocusMode(false)
+	end
 	self:HideTooltip()
 	for _, entry in self.Nodes do
 		self:SetPulse(entry, false)
