@@ -1281,28 +1281,35 @@ _G.UpdateBottomTabHighlights = updateBottomTabHighlights
 _G.IsAnyMasterModalOpen = function(): boolean
 	if _G.IsBackpackOpen and _G.IsBackpackOpen() then return true end
 	if _G.IsHeroIndexOpen and _G.IsHeroIndexOpen() then return true end
+	if _G.IsFacilityPanelOpen and _G.IsFacilityPanelOpen() then return true end
 	if _G.IsTowerSelectorOpen and _G.IsTowerSelectorOpen() then return true end
+	if _G.IsSettingsOpen and _G.IsSettingsOpen() then return true end
 	if facilityController and facilityController.Root and facilityController.Root.Visible then return true end
 	if fortressTreeController and fortressTreeController:IsOpen() then return true end
 	if synthesisController and synthesisController.Root and synthesisController.Root.Visible then return true end
 	if promotionController and promotionController:IsOpen() then return true end
-	if forgeController and forgeController.Root and forgeController.Root.Visible then return true end
+	if forgeController and ((forgeController.IsOpen and forgeController:IsOpen()) or (forgeController.Root and forgeController.Root.Visible)) then return true end
 	if squadController and squadController:IsOpen() then return true end
 	if blacksmithModal.Visible then return true end
 	return false
 end
 _G.OpenMasterModal = function(which: string)
 	if _G.CloseBackpack then _G.CloseBackpack() end
-	if _G.CloseHeroIndex then _G.CloseHeroIndex() end
-	if _G.CloseSettings and _G.IsSettingsOpen and _G.IsSettingsOpen() then
+	if which ~= "INDEX" and which ~= "SHOP" and _G.CloseHeroIndex then
+		_G.CloseHeroIndex()
+	end
+	if which ~= "FACILITY" and _G.CloseFacilityPanel then
+		_G.CloseFacilityPanel()
+	end
+	if which ~= "SETTINGS" and _G.CloseSettings and _G.IsSettingsOpen and _G.IsSettingsOpen() then
 		_G.CloseSettings()
 	end
 	if _G.CloseTowerSelector then _G.CloseTowerSelector() end
-	if facilityController then facilityController:Close() end
-	if fortressTreeController then fortressTreeController:Close() end
-	if synthesisController then synthesisController:Close() end
-	if promotionController then promotionController:Close() end
-	if forgeController then forgeController:Close() end
+	if facilityController and facilityController:IsOpen() then facilityController:Close() end
+	if fortressTreeController and fortressTreeController:IsOpen() then fortressTreeController:Close() end
+	if synthesisController and synthesisController.Root and synthesisController.Root.Visible then synthesisController:Close() end
+	if promotionController and promotionController:IsOpen() then promotionController:Close() end
+	if which ~= "BLACKSMITH" and forgeController and forgeController:IsOpen() then forgeController:Close() end
 	if which ~= "SQUAD" and which ~= "WAITING_ROOM" and squadController and squadController:IsOpen() then
 		squadController:Close()
 	end
@@ -1407,6 +1414,8 @@ _G.OpenFacilityHUD = function(facility: string)
 		_G.OpenMasterModal("NONE")
 		fortressTreeController:Open()
 		updateBottomTabHighlights()
+	elseif facility == "Blacksmith" or facility == "Forge" then
+		_G.OpenMasterModal("BLACKSMITH")
 	else
 		_G.OpenMasterModal("NONE")
 		if synthesisController then synthesisController:Close() end
@@ -1826,7 +1835,12 @@ RunService.RenderStepped:Connect(function()
 	-- 2. Update World Boss Top Banner & Devouring Nova Cast Bar
 	local floorBoss = cs and cs.FloorBoss
 	local hasFloorBoss = floorBoss and floorBoss.Enabled == true
-	local curFloor = if _G.TowerView and _G.TowerView.FloorId then _G.TowerView.FloorId else 0
+	local char = LocalPlayer.Character
+	local charFloor = if char then (char:GetAttribute("TowerFloorId") or 0) else 0
+	local curFloor = if charFloor > 0 then charFloor elseif (_G.TowerView and _G.TowerView.FloorId) then _G.TowerView.FloorId else 0
+	if charFloor == 0 then
+		curFloor = 0
+	end
 	if not hasFloorBoss and curFloor > 0 then
 		bossBanner.Visible = true
 		local floorSpec = TowerFloorConfig.Get(curFloor)
@@ -1845,13 +1859,13 @@ RunService.RenderStepped:Connect(function()
 			novaCastLabel.Text = string.format("MOBS DEFEATED: %d / %d (%d%%)", curKills, reqKills, math.floor(pct * 100))
 		end
 	else
-		bossBanner.Visible = hasFloorBoss or false
+		bossBanner.Visible = (hasFloorBoss and curFloor > 0) or false
 	end
-	if hasFloorBoss then
+	if hasFloorBoss and curFloor > 0 then
 		local node = cs.VisualNodes and cs.VisualNodes[floorBoss.NetId]
 		local hpPct = if node and node.HpPermille then node.HpPermille / 10.0 else (floorBoss.CurrentHP or 1) / math.max(1, floorBoss.MaxHP or 1) * 100.0
 		local phase = if hpPct <= 50.0 then 2 else (floorBoss.Phase or 1)
-		local floorNum = floorBoss.FloorId or (_G.TowerView and _G.TowerView.FloorId) or 5
+		local floorNum = floorBoss.FloorId or curFloor
 		bossTitleLabel.Text = string.format(" FLOOR %d BOSS · %s (PHASE %d) — HP: %.1f%%", floorNum, string.upper(floorBoss.Name or "FLOOR BOSS"), phase, hpPct)
 		novaBarFill.Size = UDim2.fromScale(math.clamp(hpPct / 100.0, 0, 1), 1)
 		novaBarFill.BackgroundColor3 = GildedGrimoire.Glass.Danger

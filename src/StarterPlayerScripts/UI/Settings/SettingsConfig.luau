@@ -41,7 +41,7 @@ export type SettingsState = {
 local SettingsConfig = {}
 
 SettingsConfig.DEFAULTS = {
-	Sound = 0.65,
+	Sound = 0.80,
 	Music = 0.55,
 	Ambience = 0.60,
 	MuteMusic = false,

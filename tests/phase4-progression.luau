@@ -160,13 +160,13 @@ test("Phase 4: every launch hero is summoned at 1 star and its rarity only scale
 	local han = { TemplateId = "hero_han", Stars = 1, Level = 1, QualityScalar = 1 }
 	assert(Stats.GetCombatSnapshot(han).AttackDamage == 40)
 	local astrea = { TemplateId = "hero_astrea", Stars = 7, Level = 1, QualityScalar = 1 }
-	assert(Stats.GetCombatSnapshot(astrea).AttackDamage == math.round(48 * (1.5 ^ 6 * 1 * (0.5 * (3 * 1.35) ^ 6))))
+	assert(Stats.GetCombatSnapshot(astrea).AttackDamage == math.round(48 * (1.5 ^ 6 * 1.08 ^ 60 * (0.5 * (3 * 1.35) ^ 6))))
 	assert(HeroCatalog.Seeds.hero_astrea.NativeHP == math.round(230 * (1 * (0.5 * (3 * 1.35) ^ 6))), "GDD roster table value")
 	-- A saved Rarity field wins over the template, so a future rarity change cannot move old heroes.
 	local saved = { TemplateId = "hero_han", Rarity = 2, Stars = 1, Level = 1, QualityScalar = 1 }
 	assert(Stats.GetCombatSnapshot(saved).AttackDamage == math.round(40 * (3 * 1.35)))
 	assert(Stats.GetEffectiveLabor({ TemplateId = "hero_valeria", Stars = 4, Level = 1, QualityScalar = 1 }, "FACILITY_GODS_BLESSING")
-		== math.round(18 * (0.5 * (1.35 * 1.12) ^ 3) * 1.35 ^ 3 * 1.25 * 100) / 100, "Healers get +25% synergy at God's Blessing")
+		== math.round(18 * (0.5 * (1.35 * 1.12) ^ 3) * 1.35 ^ 3 * (1 + 0.05 * 30) * 1.25 * 100) / 100, "Healers get +25% synergy at God's Blessing")
 end)
 
 test("Phase 4: hero banners use the lowered odds, raised pity and a Rare 10-pull floor", function()
@@ -200,7 +200,7 @@ test("Phase 4: onboarding advances only on the active step's event and merges un
 	assert(Onboarding.ActiveStep(state) == nil, "chain complete")
 end)
 
-test("Phase 4: v3+v4 migration stamps rarity, rebases stars, builds the tree and grandfathers unlocks", function()
+test("Phase 4: v3+v4+v5 migration stamps rarity, rebases stars, builds the tree and grandfathers unlocks", function()
 	local profile: any = {
 		SchemaVersion = 2,
 		MaxFloorReached = 6,
@@ -211,7 +211,7 @@ test("Phase 4: v3+v4 migration stamps rarity, rebases stars, builds the tree and
 		Facilities = { GuardPost = { Level = 2 }, Market = { Level = 1 }, TrainingGrounds = { Level = 1 } },
 	}
 	Migrations.Run(profile)
-	assert(profile.SchemaVersion == 4)
+	assert(profile.SchemaVersion == 5)
 	-- v4: the 4 stars Ignis got for free at summon are removed, and the level is clamped to the new 1-star cap.
 	assert(profile.Heroes.a.Rarity == 5 and profile.Heroes.a.Stars == 1 and profile.Heroes.a.Level == 10)
 	assert(profile.Heroes.b.Rarity == 1 and profile.Heroes.b.Stars == 3)

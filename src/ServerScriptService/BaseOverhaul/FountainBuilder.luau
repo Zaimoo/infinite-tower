@@ -363,6 +363,11 @@ function FountainBuilder.Build(parentIsland: Instance?, customConfig: { [string]
 	sound.Name = "FountainWaterLoop"
 	sound.SoundId = cfg.WaterSoundId
 	sound.Volume = cfg.WaterVolume
+	sound:SetAttribute("OrigVolume", cfg.WaterVolume)
+	local sgAmbience = game:GetService("SoundService"):FindFirstChild("SG_Ambience")
+	if sgAmbience and sgAmbience:IsA("SoundGroup") then
+		sound.SoundGroup = sgAmbience
+	end
 	sound.RollOffMaxDistance = cfg.WaterMaxDistance
 	sound.RollOffMinDistance = 10
 	sound.Looped = true

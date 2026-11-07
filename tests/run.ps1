@@ -42,6 +42,7 @@ $modulePaths = @(
     'ReplicatedStorage/Shared/Config/TowerPortalAssets.luau',
     'ReplicatedStorage/Shared/Config/HubLayout.luau',
     'ReplicatedStorage/Shared/Config/HubLighting.luau',
+    'ReplicatedStorage/Shared/RelicConfig.luau',
     'ReplicatedStorage/Shared/Config/RelicConfig.luau',
     'ReplicatedStorage/Shared/Config/TowerFloorConfig.luau',
     'ReplicatedStorage/Shared/Config/FirstBiomeCombat.luau',
@@ -102,7 +103,7 @@ foreach ($modulePath in $modulePaths) {
     $bundleParts.Add([System.IO.File]::ReadAllText($sourcePath))
     $bundleParts.Add("`nend)")
 }
-foreach ($suite in @('pit.spec.luau', 'forge.spec.luau', 'forge-workbench.spec.luau', 'combat-skills.spec.luau', 'tower.spec.luau', 'tower-transport.spec.luau', 'tower-combat.spec.luau', 'tower-rework.spec.luau', 'phase1-combat-tempo.luau', 'hero-rig.spec.luau', 'phase2-floor-loop.spec.luau', 'phase2-defeat-rules.spec.luau', 'hero-action.spec.luau', 'hero-targeting.spec.luau', 'tower-navigation.spec.luau', 'squad-movement.spec.luau', 'combat-vfx.spec.luau', 'phase4-progression.luau', 'profile-persistence.spec.luau', 'tower-run-loop.spec.luau', 'tower-camp-roster.spec.luau', 'tower-support.spec.luau', 'tower-patrols.spec.luau', 'tower-affixes.spec.luau', 'tower-events.spec.luau', 'tower-portals.spec.luau', 'hublayout.spec.luau', 'outskirts-waves.spec.luau', 'facility-workers.spec.luau', 'inventory-capacity.spec.luau')) {
+foreach ($suite in @('pit.spec.luau', 'forge.spec.luau', 'forge-workbench.spec.luau', 'combat-skills.spec.luau', 'tower.spec.luau', 'tower-transport.spec.luau', 'tower-combat.spec.luau', 'tower-rework.spec.luau', 'phase1-combat-tempo.luau', 'hero-rig.spec.luau', 'phase2-floor-loop.spec.luau', 'phase2-defeat-rules.spec.luau', 'hero-action.spec.luau', 'hero-targeting.spec.luau', 'tower-navigation.spec.luau', 'squad-movement.spec.luau', 'combat-vfx.spec.luau', 'phase4-progression.luau', 'profile-persistence.spec.luau', 'tower-run-loop.spec.luau', 'tower-camp-roster.spec.luau', 'tower-support.spec.luau', 'tower-patrols.spec.luau', 'tower-affixes.spec.luau', 'tower-events.spec.luau', 'tower-portals.spec.luau', 'hublayout.spec.luau', 'outskirts-waves.spec.luau', 'facility-workers.spec.luau', 'relic-biome-config.spec.luau', 'inventory-capacity.spec.luau')) {
     $bundleParts.Add('do')
     $bundleParts.Add([System.IO.File]::ReadAllText((Join-Path $PSScriptRoot $suite)))
     $bundleParts.Add("`nend")

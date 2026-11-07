@@ -24,9 +24,12 @@ local GildedGrimoire = require(Shared:WaitForChild("Util"):WaitForChild("GildedG
 local GrimoireIcons = require(Shared:WaitForChild("Util"):WaitForChild("GrimoireIcons"))
 local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormulas"))
 local PitBalanceConfig = require(Shared:WaitForChild("Config"):WaitForChild("PitBalanceConfig"))
+local PitMath = require(Shared:WaitForChild("Util"):WaitForChild("PitMath"))
 
 local Synth = {}
 Synth.__index = Synth
+
+local BAR_TWEEN_INFO = TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
 local WIDTH, HEIGHT = 920, 600
 local LEFT_W = 300 -- recipient column; the materials roster fills the rest
@@ -194,8 +197,8 @@ local function stars(n: number?): string
 	return string.rep("★", math.clamp(n or 1, 1, 7))
 end
 
-local function xpRatio(level: number?, xp: number?, starCount: number?): number
-	return math.clamp((xp or 0) / StatFormulas.GetXPRequiredForNextLevel(level or 1, starCount), 0, 1)
+local function xpRatio(level: number?, xp: number?, stars: number?): number
+	return math.clamp((xp or 0) / StatFormulas.GetXPRequiredForNextLevel(level or 1, stars), 0, 1)
 end
 
 local function restingSeconds(hero: any): number
@@ -327,6 +330,10 @@ function Synth.new(gui: ScreenGui, remote: RemoteFunction)
 	self.PreviewSerial = 0
 	self.Message = ""
 	self.Tweens = {}
+	self.LastRecipientUID = nil :: string?
+	self.LastBaseRatio = 0 :: number
+	self.LastTotalRatio = 0 :: number
+	self.ActivePreviewTween = nil :: Tween?
 	self.Sort = "Power" :: Sort
 	self.ReadyOnly = false
 	self.RosterCards = {}
@@ -543,7 +550,6 @@ function Synth.new(gui: ScreenGui, remote: RemoteFunction)
 		if #self.Donors > 0 then
 			self.Donors = {}
 			self.Message = ""
-			self:Render()
 			self:QueuePreview()
 		end
 	end)
@@ -696,7 +702,6 @@ function Synth.Pick(self: any, uuid: string)
 		self.Message = ""
 		self.Picker.Visible = false
 		self:QueuePreview()
-		self:Render()
 	end
 end
 
@@ -886,7 +891,6 @@ function Synth.PressRosterHero(self: any, uuid: string)
 			table.remove(self.Donors, donorIdx)
 		end
 		self.Message = string.format("Selected %s as recipient. Choose materials below to synthesize EXP.", hero.DisplayName or "Hero")
-		self:Render()
 		self:QueuePreview()
 		return
 	end
@@ -908,7 +912,6 @@ function Synth.PressRosterHero(self: any, uuid: string)
 	if donorIdx then
 		table.remove(self.Donors, donorIdx)
 		self.Message = ""
-		self:Render()
 		self:QueuePreview()
 		return
 	end
@@ -930,7 +933,6 @@ function Synth.PressRosterHero(self: any, uuid: string)
 	-- 6. Add to materials!
 	table.insert(self.Donors, uuid)
 	self.Message = ""
-	self:Render()
 	self:QueuePreview()
 end
 
@@ -967,14 +969,93 @@ function Synth.Refresh(self: any, attempt: number?)
 	end)
 end
 
+function Synth.ComputeOptimisticPreview(self: any): any?
+	if not self.Recipient or #self.Donors == 0 then return nil end
+	local profile: any = _G.CurrentProfile
+	local heroMap = self.State.Heroes
+	if (not heroMap or next(heroMap) == nil) and profile and profile.Heroes then
+		heroMap = profile.Heroes
+	end
+	local recipient = heroMap and heroMap[self.Recipient]
+	if not recipient then return nil end
+
+	local donorList = {}
+	for _, uuid in ipairs(self.Donors) do
+		local donor = heroMap and heroMap[uuid]
+		if donor then
+			table.insert(donorList, donor)
+		end
+	end
+	if #donorList == 0 then return nil end
+
+	local ok, preview = pcall(function()
+		local research = profile and profile.UnlockedResearch or {}
+		local xp = { Base = 0, Final = 0, Efficiency = 1, ResearchBonus = 0, Breakdown = {} }
+		for _, donor in ipairs(donorList) do
+			local breakdown = PitMath.GetSynthesisXP(donor, recipient, research)
+			breakdown.UUID, breakdown.Name = donor.UUID, donor.DisplayName
+			xp.Base += breakdown.Base
+			xp.Final += breakdown.Final
+			xp.ResearchBonus = breakdown.ResearchBonus
+			table.insert(xp.Breakdown, breakdown)
+		end
+		if xp.Base > 0 then
+			local weighted = 0
+			for _, part in ipairs(xp.Breakdown) do weighted += part.Base * part.Efficiency end
+			xp.Efficiency = weighted / xp.Base
+		end
+		local after, overflow = PitMath.AdvanceXP(recipient, xp.Final)
+		xp.Applied = xp.Final
+
+		local warnings = {}
+		if xp.Efficiency < 1 then
+			table.insert(warnings, "The recipient outlevels these donors. The displayed EXP includes reduced efficiency.")
+		end
+
+		return {
+			Action = "SYNTHESIS",
+			CanCommit = true,
+			Reason = "",
+			Recipient = PitMath.Copy(recipient),
+			Before = PitMath.Snapshot(recipient, profile),
+			After = PitMath.Snapshot(after, profile),
+			XP = xp,
+			Donors = donorList,
+			Warnings = warnings,
+			RequiresRareConfirmation = false,
+			RequiresOverflowConfirmation = (overflow and overflow.Rejected > 0),
+			SuccessChance = 1,
+		}
+	end)
+
+	if ok and preview then
+		return preview
+	end
+	return nil
+end
+
 function Synth.QueuePreview(self: any)
 	self.PreviewSerial += 1
 	local serial = self.PreviewSerial
-	self.Preview, self.PreviewError = nil, nil
-	self.Loading = self.Recipient ~= nil and #self.Donors > 0
+
+	if self.Recipient and #self.Donors > 0 then
+		local opt = self:ComputeOptimisticPreview()
+		if opt then
+			self.Preview = opt
+			self.PreviewError = nil
+		end
+		self.Loading = false
+	else
+		self.Preview = nil
+		self.PreviewError = nil
+		self.Loading = false
+	end
+
 	self:Render()
-	if not self.Loading then return end
-	task.delay(0.2, function()
+
+	if not self.Recipient or #self.Donors == 0 then return end
+
+	task.delay(0.15, function()
 		if serial ~= self.PreviewSerial or not self.Root.Visible then return end
 		local response = self:Request("PREVIEW", { Action = "SYNTHESIS", Recipient = self.Recipient, Donors = table.clone(self.Donors) })
 		if serial ~= self.PreviewSerial then return end
@@ -983,8 +1064,12 @@ function Synth.QueuePreview(self: any)
 			return
 		end
 		self.Loading = false
-		self.Preview = response.Preview
-		if not response.Success then self.PreviewError = response.Message or "Preview unavailable." end
+		if response.Success and response.Preview then
+			self.Preview = response.Preview
+			self.PreviewError = nil
+		elseif not response.Success then
+			self.PreviewError = response.Message or "Preview unavailable."
+		end
 		self:Render()
 	end)
 end
@@ -1000,9 +1085,9 @@ function Synth.Confirm(self: any)
 		self:ShowPopup("SYNTHESIS UNAVAILABLE", "Select at least one material hero from the roster.")
 		return
 	end
-	if not preview or not preview.CanCommit then
-		self:ShowPopup("SYNTHESIS UNAVAILABLE", if preview then preview.Reason else self.PreviewError or "Synthesis preview unavailable. Please try again.")
-		if not preview then self:QueuePreview() end
+	if not preview or not preview.CanCommit or not preview.Token then
+		self:ShowPopup("SYNTHESIS UNAVAILABLE", if preview and preview.Reason ~= "" then preview.Reason else self.PreviewError or "Synthesis preview is loading. Please try again in a moment.")
+		if not preview or not preview.Token then self:QueuePreview() end
 		return
 	end
 	if #preview.Warnings > 0 then
@@ -1044,6 +1129,10 @@ function Synth.Commit(self: any, preview: any)
 				for _, uuid in delta.Removed or {} do self.State.Heroes[uuid] = nil end
 			end
 			self.Donors = {}
+			if self.ActivePreviewTween then
+				self.ActivePreviewTween:Cancel()
+				self.ActivePreviewTween = nil
+			end
 			self:Celebrate()
 		else
 			self:ShowPopup("SYNTHESIS UNAVAILABLE", response.Message or "The synthesis was rejected. Review your selection.")
@@ -1109,39 +1198,96 @@ function Synth.Render(self: any)
 	local preview = self.Preview
 	local before = preview and preview.Before
 	local after = preview and preview.After
-	local gained = preview and preview.XP and (preview.XP.Applied or preview.XP.Final) or 0
-
-	for _, t in self.Tweens do t:Cancel() end
-	table.clear(self.Tweens)
+	local gained = if #self.Donors > 0 and preview and preview.XP then (preview.XP.Applied or preview.XP.Final or 0) else 0
 
 	if recipient then
 		self.RecipientName.Text = recipient.DisplayName or "Hero"
 		self.RecipientInfo.Text = string.format("%s  ·  %s  ·  %s", stars(recipient.Stars), recipient.Archetype or "", abbreviate(powerOf(profile, recipient, mult)) .. " PWR")
 		self.RecipientInfo.TextColor3 = recipRarity
 
-		local level, xp = recipient.Level or 1, recipient.XP or 0
-		local currentRatio = xpRatio(level, xp, recipient.Stars)
-		local gainRatio = currentRatio
+		local currentLevel, currentExp = recipient.Level or 1, recipient.XP or 0
+		local currentMaxExp = StatFormulas.GetXPRequiredForNextLevel(currentLevel, recipient.Stars)
+		local safeMax = math.max(1, currentMaxExp)
+		local baseRatio = math.clamp(currentExp / safeMax, 0, 1)
+		local targetTotalRatio = baseRatio
 
-		if before and after then
-			if after.Level > before.Level then
-				currentRatio = 0
-				gainRatio = after.Level >= (after.MaxLevel or math.huge) and 1 or xpRatio(after.Level, after.XP, after.Stars)
-			else
-				gainRatio = math.max(currentRatio, xpRatio(after.Level, after.XP, after.Stars))
-			end
-			self.LevelLabel.Text = string.format('Lv. %d  <font color="#39E81E">→  Lv. %d</font>%s', before.Level, after.Level,
-				if after.Level > before.Level then string.format(" (+%d Lvls)", after.Level - before.Level) else "")
-			self.XPText.Text = string.format("%d / %d EXP (+%d EXP)", after.XP or 0, StatFormulas.GetXPRequiredForNextLevel(after.Level, after.Stars), gained)
-		else
-			self.LevelLabel.Text = string.format("Lv. %d  (Cap: Lv. %d)", level, StatFormulas.GetMaxLevel(recipient.Stars))
-			self.XPText.Text = string.format("%d / %d EXP", xp, StatFormulas.GetXPRequiredForNextLevel(level, recipient.Stars))
+		if #self.Donors > 0 and gained > 0 then
+			targetTotalRatio = math.clamp((currentExp + gained) / safeMax, baseRatio, 1)
 		end
 
-		self.CurrentFill.Size = UDim2.fromScale(currentRatio, 1)
-		local tween = TweenService:Create(self.GainFill, TweenInfo.new(0.35, Enum.EasingStyle.Quad), { Size = UDim2.fromScale(gainRatio, 1) })
-		table.insert(self.Tweens, tween)
-		tween:Play()
+		local isSameHero = (self.LastRecipientUID == recipient.UUID)
+
+		-- 1. Blue Base EXP Bar:
+		-- Locked steadily at baseRatio. Never snaps to 0 or resets when materials are added/removed.
+		self.CurrentFill.Size = UDim2.fromScale(baseRatio, 1)
+
+		-- 2. Labels update
+		if before and after and #self.Donors > 0 then
+			local levelGain = after.Level - before.Level
+			self.LevelLabel.Text = string.format('Lv. %d  <font color="#39E81E">→  Lv. %d</font>%s', before.Level, after.Level,
+				if levelGain > 0 then string.format(" (+%d Lvl%s)", levelGain, if levelGain == 1 then "" else "s") else "")
+			local displayMax = StatFormulas.GetXPRequiredForNextLevel(after.Level, after.Stars or recipient.Stars)
+			self.XPText.Text = string.format("%d / %d EXP (+%d EXP)", after.XP or 0, displayMax, gained)
+		else
+			self.LevelLabel.Text = string.format("Lv. %d  (Cap: Lv. %d)", currentLevel, StatFormulas.GetMaxLevel(recipient.Stars))
+			self.XPText.Text = string.format("%d / %d EXP", currentExp, safeMax)
+		end
+
+		-- 3. Green Preview EXP Bar Tweening
+		if not isSameHero then
+			if self.ActivePreviewTween then
+				self.ActivePreviewTween:Cancel()
+				self.ActivePreviewTween = nil
+			end
+			self.GainFill.Size = UDim2.fromScale(baseRatio, 1)
+			self.GainFill.Visible = (targetTotalRatio > baseRatio)
+			self.LastRecipientUID = recipient.UUID
+			self.LastBaseRatio = baseRatio
+			self.LastTotalRatio = baseRatio
+
+			if targetTotalRatio > baseRatio then
+				local tween = TweenService:Create(self.GainFill, BAR_TWEEN_INFO, {
+					Size = UDim2.fromScale(targetTotalRatio, 1),
+				})
+				self.ActivePreviewTween = tween
+				tween.Completed:Connect(function(playbackState)
+					if playbackState == Enum.PlaybackState.Completed and self.ActivePreviewTween == tween then
+						self.ActivePreviewTween = nil
+					end
+				end)
+				tween:Play()
+				self.LastTotalRatio = targetTotalRatio
+			end
+		else
+			local targetChanged = math.abs(self.LastTotalRatio - targetTotalRatio) > 0.0005
+			if targetChanged then
+				if self.ActivePreviewTween then
+					self.ActivePreviewTween:Cancel()
+					self.ActivePreviewTween = nil
+				end
+
+				self.GainFill.Visible = true
+
+				local tween = TweenService:Create(self.GainFill, BAR_TWEEN_INFO, {
+					Size = UDim2.fromScale(targetTotalRatio, 1),
+				})
+				self.ActivePreviewTween = tween
+
+				tween.Completed:Connect(function(playbackState)
+					if playbackState == Enum.PlaybackState.Completed then
+						if self.ActivePreviewTween == tween then
+							self.ActivePreviewTween = nil
+						end
+						if #self.Donors == 0 and self.GainFill.Size.X.Scale <= baseRatio + 0.005 then
+							self.GainFill.Visible = false
+						end
+					end
+				end)
+
+				tween:Play()
+				self.LastTotalRatio = targetTotalRatio
+			end
+		end
 
 		if #self.Donors > 0 and preview and preview.XP then
 			self.SummaryLine.Text = string.format('<b><font color="#4ADE80">+%s EXP</font></b> from %d material%s  ·  Efficiency: %d%%',
@@ -1156,10 +1302,18 @@ function Synth.Render(self: any)
 		self.RecipientInfo.Text = "Pick the hero who receives the EXP"
 		self.RecipientInfo.TextColor3 = TEXT.Muted
 		self.LevelLabel.Text = '<font color="#96929F">Lv. —</font>'
+		if self.ActivePreviewTween then
+			self.ActivePreviewTween:Cancel()
+			self.ActivePreviewTween = nil
+		end
 		self.CurrentFill.Size = UDim2.fromScale(0, 1)
 		self.GainFill.Size = UDim2.fromScale(0, 1)
+		self.GainFill.Visible = false
 		self.XPText.Text = ""
 		self.SummaryLine.Text = '<font color="#A59BB9">Press SELECT HERO, or click a hero on the right.</font>'
+		self.LastRecipientUID = nil
+		self.LastBaseRatio = 0
+		self.LastTotalRatio = 0
 	end
 
 	-- 2. Sort / filter buttons
@@ -1276,7 +1430,7 @@ function Synth.Render(self: any)
 	end
 
 	-- 4. Bottom Footer (Clear & Confirm Synthesize buttons)
-	local ready = self.Recipient ~= nil and #self.Donors > 0 and preview ~= nil and preview.CanCommit and not self.Loading and not self.Busy
+	local ready = self.Recipient ~= nil and #self.Donors > 0 and preview ~= nil and preview.CanCommit and preview.Token ~= nil and not self.Loading and not self.Busy
 
 	self.ClearButton.Button.Visible = #self.Donors > 0
 	self.ClearButton.Label.Text = string.format("CLEAR (%d)", #self.Donors)
@@ -1325,6 +1479,13 @@ function Synth.Open(self: any)
 	self.Preview, self.PreviewError = nil, nil
 	self.Message = ""
 	self.Loading = false
+	if self.ActivePreviewTween then
+		self.ActivePreviewTween:Cancel()
+		self.ActivePreviewTween = nil
+	end
+	self.LastRecipientUID = nil
+	self.LastBaseRatio = 0
+	self.LastTotalRatio = 0
 	self:Render()
 	self:Refresh()
 end
@@ -1342,6 +1503,13 @@ function Synth.Close(self: any)
 	self.Donors = {}
 	self.Preview, self.PreviewError = nil, nil
 	self.Message = ""
+	if self.ActivePreviewTween then
+		self.ActivePreviewTween:Cancel()
+		self.ActivePreviewTween = nil
+	end
+	self.LastRecipientUID = nil
+	self.LastBaseRatio = 0
+	self.LastTotalRatio = 0
 	self:Render()
 end
 

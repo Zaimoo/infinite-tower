@@ -173,6 +173,10 @@ function Controller:OpenSell()
 	self:_render()
 end
 
+function Controller:IsOpen(): boolean
+	return self.Destination ~= "NONE" or (self.Root ~= nil and self.Root.Visible)
+end
+
 function Controller:Close()
 	self.OpenGeneration += 1
 	self.Destination = "NONE"
