@@ -117,31 +117,30 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 		})
 	end
 
-	-- 1B. Raised Modular Cobblestone Path Network (Thickness = 0.25 studs, dark cobble center + square stone block borders)
+	-- 1B. Concentric Interlocking Cobblestone Rings, Radial Paths & Gothic Lampposts (Phase 2 Overhaul)
 	local pathsFolder = Instance.new("Folder")
 	pathsFolder.Name = "CobblestonePaths"
 	pathsFolder.Parent = islandModel
 
 	local pathPalette = {
-		Color3.fromRGB(76, 80, 84),
-		Color3.fromRGB(84, 88, 92),
-		Color3.fromRGB(70, 74, 78),
-		Color3.fromRGB(80, 84, 88),
+		Color3.fromRGB(76, 80, 86),
+		Color3.fromRGB(86, 90, 96),
+		Color3.fromRGB(70, 74, 80),
+		Color3.fromRGB(80, 84, 90),
+	}
+	local innerBrickPalette = {
+		Color3.fromRGB(88, 84, 82),
+		Color3.fromRGB(96, 92, 88),
+		Color3.fromRGB(82, 78, 76),
+		Color3.fromRGB(92, 88, 84),
 	}
 	local curbBlockPalette = {
-		Color3.fromRGB(98, 100, 104),
-		Color3.fromRGB(86, 88, 92),
-		Color3.fromRGB(108, 110, 114),
-		Color3.fromRGB(92, 94, 98),
-		Color3.fromRGB(78, 80, 84),
+		Color3.fromRGB(102, 104, 110),
+		Color3.fromRGB(88, 90, 96),
+		Color3.fromRGB(110, 112, 118),
+		Color3.fromRGB(94, 96, 102),
+		Color3.fromRGB(82, 84, 90),
 	}
-	local curbColor = Color3.fromRGB(88, 90, 94)
-
-	-- Circular Cobblestone Ring Road encircling the Fountain (connects all radiating roads cleanly)
-	local ringRadius = 13.6
-	local ringWidth = 4.4
-	local ringSegments = 24
-	local curbWidth = 0.72
 
 	local radialBranchAngles = {
 		math.atan2(0, -1), -- Bridge (0, -56)
@@ -162,6 +161,53 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 		end
 		return false
 	end
+
+	-- Ring 1: Inner Brick Apron Ring (R = 13.4, Width = 1.8, 32 interlocking brick segments)
+	local innerRingR = 13.4
+	local innerRingW = 1.8
+	local innerSegments = 32
+	local curbWidth = 0.72
+
+	for i = 1, innerSegments do
+		local a0 = ((i - 1) / innerSegments) * math.pi * 2
+		local a1 = (i / innerSegments) * math.pi * 2
+		local aMid = (a0 + a1) * 0.5
+		local chord = 2 * innerRingR * math.sin((a1 - a0) * 0.5) + 0.22
+		local cx = math.sin(aMid) * innerRingR
+		local cz = math.cos(aMid) * innerRingR
+		local tangentDir = Vector3.new(math.cos(aMid), 0, -math.sin(aMid))
+		local segCF = CFrame.lookAt(Vector3.new(cx, 0.13, cz), Vector3.new(cx, 0.13, cz) + tangentDir)
+
+		makePart({
+			Name = string.format("InnerBrickRing_Slab_%d", i),
+			Size = Vector3.new(innerRingW, 0.26, chord),
+			CFrame = segCF,
+			Material = Enum.Material.Brick,
+			Color = innerBrickPalette[((i - 1) % #innerBrickPalette) + 1],
+			Decorative = true,
+			Parent = pathsFolder,
+		})
+
+		-- Inner raised stone curb hugging the Fountain plinth
+		local curbInR = innerRingR - innerRingW * 0.5 - 0.28
+		local curbInChord = 2 * curbInR * math.sin((a1 - a0) * 0.5) + 0.14
+		local ix = math.sin(aMid) * curbInR
+		local iz = math.cos(aMid) * curbInR
+		makePart({
+			Name = string.format("InnerBrickRing_Curb_%d", i),
+			Size = Vector3.new(0.56, 0.34, curbInChord),
+			CFrame = CFrame.lookAt(Vector3.new(ix, 0.17, iz), Vector3.new(ix, 0.17, iz) + tangentDir),
+			Material = Enum.Material.Pavement,
+			Color = curbBlockPalette[((i - 1) % #curbBlockPalette) + 1],
+			Decorative = true,
+			Parent = pathsFolder,
+		})
+	end
+
+	-- Ring 2: Outer Concentric Cobblestone Promenade Ring (R = 16.4, Width = 3.4, 28 segments)
+	local ringRadius = 16.4
+	local ringWidth = 3.4
+	local ringSegments = 28
 
 	for i = 1, ringSegments do
 		local a0 = ((i - 1) / ringSegments) * math.pi * 2
@@ -190,23 +236,23 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 		local divTangent = Vector3.new(math.cos(a1), 0, -math.sin(a1))
 		makePart({
 			Name = string.format("RingRoad_Divider_%d", i),
-			Size = Vector3.new(ringWidth - 0.2, 0.26, 0.45),
+			Size = Vector3.new(ringWidth - 0.18, 0.26, 0.42),
 			CFrame = CFrame.lookAt(Vector3.new(divX, 0.13, divZ), Vector3.new(divX, 0.13, divZ) + divTangent),
 			Material = Enum.Material.Pavement,
-			Color = Color3.fromRGB(96, 98, 102),
+			Color = Color3.fromRGB(98, 100, 106),
 			Decorative = true,
 			Parent = pathsFolder,
 		})
 
-		-- Inner curb bordering the Fountain basin
-		local innerR = ringRadius - ringWidth * 0.5 - curbWidth * 0.5
-		local innerChord = 2 * innerR * math.sin((a1 - a0) * 0.5) + 0.18
-		local ix = math.sin(aMid) * innerR
-		local iz = math.cos(aMid) * innerR
+		-- Mid dividing stone curb between Ring 1 (Inner Brick) and Ring 2 (Outer Cobble)
+		local midCurbR = ringRadius - ringWidth * 0.5 - 0.24
+		local midChord = 2 * midCurbR * math.sin((a1 - a0) * 0.5) + 0.16
+		local mx = math.sin(aMid) * midCurbR
+		local mz = math.cos(aMid) * midCurbR
 		makePart({
 			Name = string.format("RingRoad_CurbInner_%d", i),
-			Size = Vector3.new(curbWidth, 0.30, innerChord),
-			CFrame = CFrame.lookAt(Vector3.new(ix, 0.15, iz), Vector3.new(ix, 0.15, iz) + tangentDir),
+			Size = Vector3.new(0.48, 0.30, midChord),
+			CFrame = CFrame.lookAt(Vector3.new(mx, 0.15, mz), Vector3.new(mx, 0.15, mz) + tangentDir),
 			Material = Enum.Material.Pavement,
 			Color = curbBlockPalette[((i - 1) % #curbBlockPalette) + 1],
 			Decorative = true,
@@ -246,7 +292,6 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 			local pos = p0:Lerp(p1, t)
 			local col = pathPalette[((s - 1) % #pathPalette) + 1]
 
-			-- Center dark irregular cobblestone bed (~2/3 thinner than old wide roads)
 			makePart({
 				Name = string.format("%s_Slab_%d", name, s),
 				Size = Vector3.new(width, 0.24, segLen - 0.18),
@@ -257,7 +302,6 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 				Parent = pathsFolder,
 			})
 
-			-- Transverse stone divider header band between cobblestone bays
 			if s < segments then
 				local bandPos = p0:Lerp(p1, s / segments)
 				makePart({
@@ -271,7 +315,6 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 				})
 			end
 
-			-- Single-course sleek stone curb blocks flanking left & right edges
 			local subBlocks = math.max(2, math.floor(segLen / 3.0))
 			local blockLen = segLen / subBlocks
 			for b = 1, subBlocks do
@@ -294,14 +337,136 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 		end
 	end
 
-	-- Radiating courtyard pathways connecting the Fountain Ring Road -> Stations & Outskirts Gate
-	buildCobblePath("Path_BridgeToFountain", Vector3.new(0, 0, -56), Vector3.new(0, 0, -14.2), 4.6, 5)
-	buildCobblePath("Path_FountainToPortal", Vector3.new(11.6, 0, -8.2), Vector3.new(36, 0, -25.5), 4.2, 4)
-	buildCobblePath("Path_FountainToForge", Vector3.new(14.2, 0, -0.7), Vector3.new(38, 0, -1.8), 4.2, 4)
-	buildCobblePath("Path_FountainToMarket", Vector3.new(11.6, 0, 8.3), Vector3.new(34, 0, 24.3), 4.2, 4)
-	buildCobblePath("Path_FountainToGate", Vector3.new(3.4, 0, 13.8), Vector3.new(14, 0, 56), 4.6, 5)
-	buildCobblePath("Path_FountainToSynthesis", Vector3.new(-12.0, 0, -7.6), Vector3.new(-22.9, 0, -14.6), 4.2, 3)
-	buildCobblePath("Path_FountainToTraining", Vector3.new(-11.2, 0, 8.8), Vector3.new(-25, 0, 19.7), 4.2, 3)
+	-- Radiating courtyard pathways connecting the Outer Promenade Ring -> Stations & Outskirts Gate
+	buildCobblePath("Path_BridgeToFountain", Vector3.new(0, 0, -56), Vector3.new(0, 0, -17.6), 4.6, 5)
+	buildCobblePath("Path_FountainToPortal", Vector3.new(14.2, 0, -10.1), Vector3.new(36, 0, -25.5), 4.2, 4)
+	buildCobblePath("Path_FountainToForge", Vector3.new(17.6, 0, -0.8), Vector3.new(38, 0, -1.8), 4.2, 4)
+	buildCobblePath("Path_FountainToMarket", Vector3.new(14.3, 0, 10.2), Vector3.new(34, 0, 24.3), 4.2, 4)
+	buildCobblePath("Path_FountainToGate", Vector3.new(4.2, 0, 17.1), Vector3.new(14, 0, 56), 4.6, 5)
+	buildCobblePath("Path_FountainToSynthesis", Vector3.new(-14.8, 0, -9.4), Vector3.new(-22.9, 0, -14.6), 4.2, 3)
+	buildCobblePath("Path_FountainToTraining", Vector3.new(-13.8, 0, 10.9), Vector3.new(-25, 0, 19.7), 4.2, 3)
+
+	-- 1C. Courtyard Gothic Lampposts & Carved Stone Benches (Phase 2.3 Accent Lighting & Props)
+	local accentsFolder = Instance.new("Folder")
+	accentsFolder.Name = "CourtyardAccents"
+	accentsFolder.Parent = islandModel
+
+	local ironColor = Color3.fromRGB(28, 30, 36)
+	local stoneBenchColor = Color3.fromRGB(92, 96, 106)
+	local goldAccentColor = Color3.fromRGB(196, 152, 58)
+	local warmFlameColor = Color3.fromRGB(255, 182, 88)
+	local warmLightColor = Color3.fromRGB(255, 172, 76)
+
+	-- 4 Gothic Lampposts at the corners of the radiating paths (Brightness 1.5, Range 15)
+	local lampAnglesDeg = { -152, -72, 68, 152 }
+	local lampRadius = 19.6
+	for idx, angDeg in ipairs(lampAnglesDeg) do
+		local a = math.rad(angDeg)
+		local lx = math.sin(a) * lampRadius
+		local lz = math.cos(a) * lampRadius
+		local baseCF = CFrame.new(lx, 0, lz) * CFrame.Angles(0, a, 0)
+
+		makePart({
+			Name = string.format("Lamppost_Plinth_%d", idx),
+			Size = Vector3.new(1.35, 1.2, 1.35),
+			CFrame = baseCF * CFrame.new(0, 0.6, 0),
+			Material = Enum.Material.Slate,
+			Color = stoneBenchColor,
+			Decorative = true,
+			Parent = accentsFolder,
+		})
+		makePart({
+			Name = string.format("Lamppost_Shaft_%d", idx),
+			Size = Vector3.new(0.38, 7.6, 0.38),
+			CFrame = baseCF * CFrame.new(0, 5.0, 0),
+			Material = Enum.Material.Metal,
+			Color = ironColor,
+			Decorative = true,
+			Parent = accentsFolder,
+		})
+		makePart({
+			Name = string.format("Lamppost_Crossbar_%d", idx),
+			Size = Vector3.new(1.15, 0.22, 0.22),
+			CFrame = baseCF * CFrame.new(0, 8.6, 0),
+			Material = Enum.Material.Metal,
+			Color = goldAccentColor,
+			Decorative = true,
+			Parent = accentsFolder,
+		})
+		makePart({
+			Name = string.format("Lamppost_CageCap_%d", idx),
+			Size = Vector3.new(1.1, 0.35, 1.1),
+			CFrame = baseCF * CFrame.new(0, 10.15, 0),
+			Material = Enum.Material.Metal,
+			Color = ironColor,
+			Decorative = true,
+			Parent = accentsFolder,
+		})
+		local lanternGlass = makePart({
+			Name = string.format("Lamppost_Lantern_%d", idx),
+			Size = Vector3.new(0.76, 1.15, 0.76),
+			CFrame = baseCF * CFrame.new(0, 9.4, 0),
+			Material = Enum.Material.Neon,
+			Color = warmFlameColor,
+			Transparency = 0.18,
+			Decorative = true,
+			Parent = accentsFolder,
+		})
+		local lampLight = Instance.new("PointLight")
+		lampLight.Name = "WarmCourtyardLampLight"
+		lampLight.Color = warmLightColor
+		lampLight.Brightness = 1.5
+		lampLight.Range = 15
+		lampLight.Shadows = false
+		lampLight.Parent = lanternGlass
+	end
+
+	-- 2 Carved Gothic Stone Benches flanking the outer ring promenade (facing the fountain)
+	for idx, benchAngDeg in ipairs({ -108, 18 }) do
+		local a = math.rad(benchAngDeg)
+		local bx = math.sin(a) * 19.8
+		local bz = math.cos(a) * 19.8
+		local benchCF = CFrame.lookAt(Vector3.new(bx, 0, bz), Vector3.new(0, 0, 0))
+
+		makePart({
+			Name = string.format("GothicBench_Seat_%d", idx),
+			Size = Vector3.new(4.6, 0.35, 1.55),
+			CFrame = benchCF * CFrame.new(0, 1.35, 0),
+			Material = Enum.Material.Slate,
+			Color = stoneBenchColor,
+			Decorative = true,
+			Parent = accentsFolder,
+		})
+		makePart({
+			Name = string.format("GothicBench_Backrest_%d", idx),
+			Size = Vector3.new(4.4, 1.35, 0.32),
+			CFrame = benchCF * CFrame.new(0, 2.15, 0.62),
+			Material = Enum.Material.Slate,
+			Color = stoneBenchColor,
+			Decorative = true,
+			Parent = accentsFolder,
+		})
+		makePart({
+			Name = string.format("GothicBench_GoldRelief_%d", idx),
+			Size = Vector3.new(3.6, 0.65, 0.08),
+			CFrame = benchCF * CFrame.new(0, 2.20, 0.44),
+			Material = Enum.Material.Metal,
+			Color = goldAccentColor,
+			Decorative = true,
+			Parent = accentsFolder,
+		})
+		for _, side in ipairs({ -1, 1 }) do
+			makePart({
+				Name = string.format("GothicBench_Armrest_%d_%s", idx, if side < 0 then "L" else "R"),
+				Size = Vector3.new(0.42, 1.85, 1.65),
+				CFrame = benchCF * CFrame.new(side * 2.15, 0.92, 0),
+				Material = Enum.Material.Slate,
+				Color = stoneBenchColor,
+				Decorative = true,
+				Parent = accentsFolder,
+			})
+		end
+	end
 
 	-- 2. Decorative Tapered Rocky Underside (Non-collidable, low part count for mobile)
 	local undersideFolder = Instance.new("Folder")
