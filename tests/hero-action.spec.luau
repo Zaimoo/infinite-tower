@@ -144,12 +144,22 @@ do
 	-- Vanguard ultimate: barrier and taunt once, on the first tick.
 	local vanguard = { NetId = 60, Owner = owner, Archetype = "Vanguard", Position = Vector3.new(0, 0, 0), MaxHP = 1000 }
 	local taunted = mob(21, 10)
-	ctx = context({ taunted })
+	local farMob = mob(22, 35) -- outside 25 stud taunt radius
+	local tauntCallbackCalled = false
+	ctx = context({ taunted, farMob })
+	ctx.Taunt = function(m, att, dur)
+		tauntCallbackCalled = true
+		assert(m.NetId == 21 and att.NetId == 60 and dur == 4.0, "taunt callback args")
+	end
 	local vProfile = Skills.GetSkillProfile("Vanguard")
 	impact = { FloorId = 1, RoomGeneration = 1, Atk = 100, DamageMult = vProfile.Skill.DamageMultiplier, Ticks = 1, Origin = vanguard.Position }
 	Effects.Resolve(ctx, { Impact = impact, Attacker = vanguard, Profile = vProfile, Tier = "SKILL", Tick = 1, Center = vanguard.Position })
 	assert(vanguard.BarrierHP == math.round(1000 * (vProfile.Skill.BarrierPercent or 0.40)), "vanguard barrier")
-	assert(taunted.TargetNetId == 60, "vanguard taunt")
+	assert(taunted.TargetNetId == 60, "vanguard taunt target net id")
+	assert(taunted.TauntedByNetId == 60, "vanguard taunt net id")
+	assert(taunted.TauntExpires == 104, "vanguard taunt expires")
+	assert(tauntCallbackCalled, "taunt callback executed")
+	assert(farMob.TargetNetId == nil, "far mob not taunted")
 end
 
 -- Clip markers fire in order as an action advances (HeroAnimator.Step) -------------------------

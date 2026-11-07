@@ -166,6 +166,8 @@ export type SimHero = {
 	AttackCount: number?,
 	BarrierHP: number?,
 	BarrierExpires: number?,
+	TauntedByNetId: number?,
+	TauntExpires: number?,
 	DuelId: number?, -- set while the hero fights in a bounty duel
 	DuelSide: LootDuel.Side?,
 	DefenseShredUntil: number?,
@@ -198,6 +200,9 @@ export type SimMob = {
 	NovaDetonateTime: number?,
 	PunishWindowUntil: number,
 	DefenseShredUntil: number?,
+	TauntedByNetId: number?,
+	TauntExpires: number?,
+	TargetNetId: number?,
 	DespawnAt: number?,
 	DamageLedger: { [number]: number },
 }
@@ -651,7 +656,7 @@ local function knockHeroIntoComa(simHero: SimHero, _baseComaSeconds: number?)
 	)
 	dm.SyncProfile(simHero.Owner)
 
-	Tower.BroadcastAt(CombatVFXRemote, simHero, "HERO_KO", simHero.Position, simHero.NetId)
+	Tower.BroadcastAt(CombatVFXRemote, simHero, "HERO_COMA", simHero.Position, simHero.NetId)
 
 	local masterState = ActiveMasters[simHero.Owner]
 
@@ -1253,7 +1258,7 @@ local function duelDamage(victim: SimHero, amount: number, kind: string, overdri
 		HeroNavigation.Clear(victim)
 		victim.State = "COMA"
 		victim.TargetNetId = nil
-		Tower.BroadcastAt(CombatVFXRemote, victim, "HERO_KO", victim.Position, victim.NetId)
+		Tower.BroadcastAt(CombatVFXRemote, victim, "HERO_COMA", victim.Position, victim.NetId)
 		sendDuelState(duel, { Kind = "SCORE" })
 	end
 end
@@ -1263,6 +1268,13 @@ end
 local function stepDuelHero(simHero: SimHero, dt: number, now: number)
 	local duel = simHero.DuelId and Duels[simHero.DuelId]
 	if not duel or duel.Phase ~= "FIGHT" or simHero.State == "COMA" then return end
+	if simHero.TauntExpires and now >= simHero.TauntExpires then
+		if simHero.TargetNetId == simHero.TauntedByNetId then
+			simHero.TargetNetId = nil
+		end
+		simHero.TauntedByNetId = nil
+		simHero.TauntExpires = nil
+	end
 	local enemies = liveDuelHeroes(duelSquad(duel, if simHero.DuelSide == "A" then "B" else "A"))
 	local target: SimHero? = nil
 	for _, enemy in enemies do
@@ -1320,6 +1332,11 @@ local function duelSkillContext(simHero: SimHero, now: number): HeroSkillEffects
 		end,
 		Damage = function(target: any, amount: number)
 			duelDamage(target, amount, "HIT_SPARK", false)
+		end,
+		Taunt = function(target: any, attacker: any, duration: number)
+			target.TargetNetId = attacker.NetId
+			target.TauntedByNetId = attacker.NetId
+			target.TauntExpires = now + duration
 		end,
 	}
 end
@@ -1664,6 +1681,14 @@ local function heroSkillContext(simHero: SimHero, now: number): HeroSkillEffects
 		end,
 		Absorb = function(mob: any, amount: number): number
 			return if Encounters then Encounters:OnMobHit(mob, amount) else amount
+		end,
+		Taunt = function(mob: any, attacker: any, duration: number)
+			mob.TargetNetId = attacker.NetId
+			mob.TauntedByNetId = attacker.NetId
+			mob.TauntExpires = now + duration
+			if Encounters then
+				Encounters:Taunt(mob, attacker, duration, now)
+			end
 		end,
 	}
 end
@@ -2270,6 +2295,8 @@ local function spawnFloorAscensionPortal(floorId: number, _position: Vector3?)
 
 	portal("Rerun", Color3.fromRGB(120, 245, 150), string.format("Rerun Floor %d", floorId), "Floor Portal",
 		function(player, state)
+			-- Rerunning the floor revives KO'd heroes just like transitioning floors.
+			reviveDownedOnTransition(player)
 			-- A fresh kill counter for this floor, no leftover surge pack, then back to the Sanctuary.
 			local progress = TowerProgress.CreateProgress(floorId)
 			ActivePlayerProgress[player] = progress
