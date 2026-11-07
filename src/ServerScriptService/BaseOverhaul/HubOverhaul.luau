@@ -58,10 +58,16 @@ end
 local SPAWN_COURTYARD_OFFSET = CFrame.new(0, 0.5, -38) * CFrame.Angles(0, math.pi, 0) -- face into the fortress
 local BEACON_ANCHOR_Y = 12
 
--- Places PlotSpawn on clear cobblestone and centres the persistent beacon anchor over the courtyard.
+-- Places PlotSpawn on clear cobblestone, aligns PlazaFountain to face the island entrance (-Z of courtyardTopCF),
+-- and centres the persistent beacon anchor over the courtyard.
 -- Runs for both freshly built and pre-baked islands so stale baked positions are always corrected.
 local function alignPlotSpawnAndBeacon(plotModel: Model, islandTopCF: CFrame)
 	local courtyardTopCF = islandTopCF * CFrame.new(0, 0, -(IslandBuilder.Config.CenterOffsetZ or 100))
+
+	local fountain = plotModel:FindFirstChild("PlazaFountain")
+	if fountain and fountain:IsA("Model") then
+		fountain:PivotTo(courtyardTopCF)
+	end
 
 	local plotSpawn = plotModel:FindFirstChild("PlotSpawn") :: SpawnLocation?
 	if plotSpawn then
