@@ -345,10 +345,19 @@ local function App(props: Types.Props)
 	local dialogView = nil
 	if dialog == "MATERIAL" then
 		local choices = {}
-		for index, artifact in items do
+		local candidates = {}
+		for _, artifact in snapshot.Artifacts do
 			if not Model.materialReason(snapshot, forge.TargetId, artifact.UUID) and not table.find(forge.Materials, artifact.UUID) then
-				choices[artifact.UUID] = e(C.ArtifactCard, { Snapshot = snapshot, Artifact = artifact, Selected = false, Material = false, Recommended = false, UpgradeChoice = true, Order = index, ShowPreview = true, OnSelect = function() forge.ToggleMaterial(artifact.UUID); setDialog(nil) end })
+				table.insert(candidates, artifact)
 			end
+		end
+		table.sort(candidates, function(a, b)
+			local ap, bp = Model.power(a), Model.power(b)
+			if ap ~= bp then return ap < bp end
+			return a.DisplayName < b.DisplayName
+		end)
+		for index, artifact in candidates do
+			choices[artifact.UUID] = e(C.ArtifactCard, { Snapshot = snapshot, Artifact = artifact, Selected = false, Material = false, Recommended = false, UpgradeChoice = true, Order = index, ShowPreview = true, OnSelect = function() forge.ToggleMaterial(artifact.UUID); setDialog(nil) end })
 		end
 		if next(choices) == nil then choices.Empty = e(C.Text, { Text = "No eligible artifacts. Equipped and locked artifacts are protected.", Size = UDim2.new(1, 0, 0, 80) }) end
 		dialogView = e(Dialog, { Title = "Choose an artifact · consumed on upgrade", Cards = true, CardHeight = T.CardHeight, Children = choices, OnCancel = function() setDialog(nil) end, FocusKey = "MATERIAL" })
