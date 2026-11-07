@@ -2,10 +2,10 @@
 -- Atomic, non-yielding star promotion. Acquisition and rarity never change here.
 local B=require(script.Parent.Parent.Config.StatBalance)
 local P={}
--- A donor is any other weapon of the same rarity tier and weapon type (either variant).
+-- A donor is any other weapon of the same rarity tier and star rank (regardless of weapon type).
 function P.IsDonorFor(target: any, donor: any): boolean
 	return type(target)=="table" and type(donor)=="table" and donor~=target
-		and donor.Type==target.Type and donor.Rarity==target.Rarity
+		and donor.Rarity==target.Rarity and (donor.Star or 1)==(target.Star or 1)
 end
 function P.Promote(profile: any, targetUUID: any, donors: any): (boolean,string,number?)
 	if type(profile)~="table" or type(targetUUID)~="string" or type(donors)~="table" then return false,"Invalid promotion request",nil end
@@ -27,7 +27,7 @@ function P.Promote(profile: any, targetUUID: any, donors: any): (boolean,string,
 		if type(uuid)~="string" or uuid==targetUUID or seen[uuid] then return false,"Invalid or duplicate donor",target.Star end
 		seen[uuid]=true
 		local donor=inventory[uuid]
-		if not donor or not P.IsDonorFor(target,donor) then return false,"Donors must be weapons of the same rarity and type",target.Star end
+		if not donor or not P.IsDonorFor(target,donor) then return false,"Donors must be weapons of the same rarity and stars",target.Star end
 		if donor.Locked or donor.EquippedHeroUUID then return false,"Cannot consume locked or equipped weapons",target.Star end
 		for _,hero in pairs(profile.Heroes or {}) do
 			if hero.EquippedArtifactUUID==uuid then return false,"Cannot consume an equipped weapon",target.Star end

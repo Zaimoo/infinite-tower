@@ -94,7 +94,7 @@ Expected value per pull: **≈ 445 Gold at no luck (9.9% of the 10x per-pull pri
 
 Promotion consumed copies of the **same template**. With 84 templates, a specific Exalted Enhanced weapon drops at about 0.02 × 1/6 × 0.4 ≈ **0.13%** per pull, and 7★ needs 21 donors, so high-tier stars were out of reach.
 
-**Decision (done):** a donor is any weapon of the **same rarity tier and weapon type**, either variant (`WeaponPromotion.IsDonorFor`). The Upgrade picker and auto-fill use the same check; auto-fill spends low stars first and Standard before Enhanced. GDD §7 and CLAUDE.md say so.
+**Decision (done):** a donor is any weapon of the **same rarity tier and star rank**, regardless of weapon type (`WeaponPromotion.IsDonorFor`). The Upgrade picker and auto-fill use the same check; auto-fill selects matching star donors, with Standard before Enhanced. GDD §7 and CLAUDE.md say so.
 
 ### 3.3 Starting Gold
 

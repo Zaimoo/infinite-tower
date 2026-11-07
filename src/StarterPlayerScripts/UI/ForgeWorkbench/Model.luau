@@ -58,8 +58,8 @@ function Model.materialReason(snapshot: Snapshot, targetId: string?, artifactId:
 	if #Model.ownerIds(snapshot, artifactId) > 0 then return "Protected · unequip before using" end
 	if artifact.Locked then return "Protected · unlock before using" end
 	if target.Star >= Catalog.MaxStars then return "Target is at maximum stars" end
-	if target.Type ~= artifact.Type then return "Requires the same weapon type" end
 	if target.Rarity ~= artifact.Rarity then return "Requires the same rarity" end
+	if (target.Star or 1) ~= (artifact.Star or 1) then return "Requires the same star rank" end
 	return nil
 end
 

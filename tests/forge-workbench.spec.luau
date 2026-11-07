@@ -71,6 +71,13 @@ test("promotion receipts deduplicate same-ID submissions and do not grant undo",
 	first.Snapshot.Artifacts.target.Star=7
 	assert(api.Reconcile(p,command.RequestId).Snapshot.Artifacts.target.Star==2)
 end)
+test("cross-type artifact donor of same rarity and stars promotes target",function()
+	local api,p,request=setup()
+	p.Artifacts.dagger={UUID="dagger",TemplateId="art_viper_kris",DisplayName="Viper Kris",Type="DAGGERS",Rarity=4,Star=1,Locked=false}
+	local command=request("UPGRADE",{ArtifactId="target",MaterialIds={"dagger"}})
+	local result=api.Execute(p,command,true)
+	assert(result.Ok and p.Artifacts.target.Star==2 and p.Artifacts.dagger==nil)
+end)
 test("moves empty the previous hero and undo restores every affected link",function()
 	local api,p,request=setup()
 	local result=api.Execute(p,request("EQUIP",{HeroId="h1",ArtifactId="held"}),true)
