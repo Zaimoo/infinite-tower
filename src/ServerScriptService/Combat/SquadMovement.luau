@@ -963,40 +963,7 @@ function SquadMovement.SelectAssignedAnchor(ownerKey: any, input: {
 	local chosenMob: any? = nil
 	local retained = false
 
-	-- 1. Focused target takes top priority if eligible
-	if input.FocusedTargetNetId then
-		local m = usableObjective(input.FocusedTargetNetId)
-		if m then
-			chosenId = input.FocusedTargetNetId
-			chosenMob = m
-		end
-	end
-
-	-- 2. Retain current squad engagement objective while still valid
-	if not chosenMob and state.AssignedObjectiveNetId then
-		local m = usableObjective(state.AssignedObjectiveNetId)
-		if m and state.AssignedObjectiveGeneration == (m.EntityGeneration or 0) then
-			chosenId = state.AssignedObjectiveNetId
-			chosenMob = m
-			retained = true
-		end
-	end
-
-	-- 3. Adopt a valid combat target already held by an active non-stranded squadmate (deterministic slot order)
-	if not chosenMob then
-		for _, h in ipairs(heroes) do
-			if h.NavigationStatus ~= "UNREACHABLE" and h.TargetNetId then
-				local m = usableObjective(h.TargetNetId)
-				if m and not isHeroTargetRejected(h, h.TargetNetId, m, now) then
-					chosenId = h.TargetNetId
-					chosenMob = m
-					break
-				end
-			end
-		end
-	end
-
-	-- 4. Compute non-dragged reference position (excluding recovering/stranded heroes and minority stragglers)
+	-- Compute non-dragged reference position (excluding recovering/stranded heroes and minority stragglers)
 	local refPos = state.LastEngagementPlatformPosition or spawnPos
 	if #heroes > 0 then
 		local healthy = {}
@@ -1036,6 +1003,65 @@ function SquadMovement.SelectAssignedAnchor(ownerKey: any, input: {
 		end
 	end
 
+	-- 1. Focused target takes top priority if eligible
+	if input.FocusedTargetNetId then
+		local m = usableObjective(input.FocusedTargetNetId)
+		if m then
+			chosenId = input.FocusedTargetNetId
+			chosenMob = m
+		end
+	end
+
+	-- 2. Retain current squad engagement objective while still valid
+	if not chosenMob and state.AssignedObjectiveNetId then
+		local m = usableObjective(state.AssignedObjectiveNetId)
+		if m and state.AssignedObjectiveGeneration == (m.EntityGeneration or 0) then
+			chosenId = state.AssignedObjectiveNetId
+			chosenMob = m
+			retained = true
+		end
+	end
+
+	-- 3. Retain current committed camp until every eligible mob in that camp is cleared
+	if not chosenMob and state.AssignedObjectiveCampId ~= nil then
+		local bestCampCost = math.huge
+		local bestCampId: number? = nil
+		local bestCampMob: any? = nil
+		for netId, _ in pairs(mobs) do
+			local candidate = usableObjective(netId)
+			if candidate and candidate.CampId == state.AssignedObjectiveCampId then
+				local cost = SquadMovement.RouteCost(floorId, refPos, candidate.Position, origin)
+				if cost < math.huge then
+					if cost < bestCampCost or (cost == bestCampCost and bestCampId ~= nil and netId < bestCampId) then
+						bestCampCost = cost
+						bestCampId = netId
+						bestCampMob = candidate
+					end
+				end
+			end
+		end
+		if bestCampMob then
+			chosenId = bestCampId
+			chosenMob = bestCampMob
+			retained = true
+		end
+	end
+
+	-- 4. Adopt a valid combat target already held by an active non-stranded squadmate (deterministic slot order)
+	if not chosenMob then
+		for _, h in ipairs(heroes) do
+			local tId = h.TargetNetId or h.TargetId
+			if h.NavigationStatus ~= "UNREACHABLE" and tId then
+				local m = usableObjective(tId)
+				if m and not isHeroTargetRejected(h, tId, m, now) then
+					chosenId = tId
+					chosenMob = m
+					break
+				end
+			end
+		end
+	end
+
 	-- 5. Select next eligible objective using connector graph connectivity and route cost
 	if not chosenMob then
 		local bestCost = math.huge
@@ -1059,10 +1085,24 @@ function SquadMovement.SelectAssignedAnchor(ownerKey: any, input: {
 	end
 
 	local anchorPos = spawnPos
-	local regroupAnchor = state.LastEngagementPlatformPosition or refPos
+	local regroupAnchor = state.LastEngagementPlatformPosition or spawnPos
 	if chosenMob then
 		state.AssignedObjectiveNetId = chosenId
 		state.AssignedObjectiveGeneration = chosenMob.EntityGeneration or 0
+		state.AssignedObjectiveCampId = chosenMob.CampId
+		local campMobIds = {}
+		if chosenMob.CampId ~= nil then
+			for netId, _ in pairs(mobs) do
+				if netId ~= chosenId then
+					local candidate = usableObjective(netId)
+					if candidate and candidate.CampId == chosenMob.CampId then
+						table.insert(campMobIds, netId)
+					end
+				end
+			end
+			table.sort(campMobIds)
+		end
+		state.AssignedCampMobIds = campMobIds
 		anchorPos = chosenMob.Position
 		local landingPos = resolveEngagementLanding(floorId, chosenMob.Position, origin)
 		if input.PlaceOnGround then
@@ -1073,6 +1113,8 @@ function SquadMovement.SelectAssignedAnchor(ownerKey: any, input: {
 	else
 		state.AssignedObjectiveNetId = nil
 		state.AssignedObjectiveGeneration = nil
+		state.AssignedObjectiveCampId = nil
+		state.AssignedCampMobIds = nil
 		anchorPos = regroupAnchor
 	end
 
@@ -1081,6 +1123,7 @@ function SquadMovement.SelectAssignedAnchor(ownerKey: any, input: {
 		RegroupAnchor = regroupAnchor,
 		ObjectiveNetId = chosenId,
 		ObjectiveMob = chosenMob,
+		ObjectiveCampId = chosenMob and chosenMob.CampId or nil,
 		Retained = retained,
 	}
 	state.LastAssignedAnchorClock = now
@@ -1096,11 +1139,21 @@ function SquadMovement.BuildAssignedAssistList(ownerKey: any, hero: any, heroes:
 		seen[state.AssignedObjectiveNetId] = true
 		table.insert(list, state.AssignedObjectiveNetId)
 	end
-	local ordered = collectOrderedHeroes(heroes or (state and state.RegisteredHeroes), hero and hero.FloorId or 0, hero and hero.RoomGeneration)
-	for _, ally in ipairs(ordered) do
-		if ally ~= hero and ally.TargetNetId and not seen[ally.TargetNetId] then
-			seen[ally.TargetNetId] = true
-			table.insert(list, ally.TargetNetId)
+	if state and state.AssignedCampMobIds then
+		for _, netId in ipairs(state.AssignedCampMobIds) do
+			if not seen[netId] then
+				seen[netId] = true
+				table.insert(list, netId)
+			end
+		end
+	end
+	if not (state and state.AssignedObjectiveCampId) then
+		local ordered = collectOrderedHeroes(heroes or (state and state.RegisteredHeroes), hero and hero.FloorId or 0, hero and hero.RoomGeneration)
+		for _, ally in ipairs(ordered) do
+			if ally ~= hero and ally.TargetNetId and not seen[ally.TargetNetId] then
+				seen[ally.TargetNetId] = true
+				table.insert(list, ally.TargetNetId)
+			end
 		end
 	end
 	return list
@@ -1241,6 +1294,8 @@ function SquadMovement.RejectTarget(ownerKey: any, hero: any, targetMob: any, no
 	hero.NavigationRejectedTargets = failures
 	hero.AlternativeAttackGoal = nil
 	hero.TargetNetId = nil
+	hero.TargetId = nil
+	hero.IsFocusTarget = false
 	if hero.State ~= "COMA" then
 		hero.State = "FOLLOW_MASTER"
 	end
@@ -1318,6 +1373,7 @@ function SquadMovement.DebugState(ownerKey: any): any
 		HeadConnectorId = state.HeadConnectorId,
 		HeadUsableWidth = state.HeadUsableWidth,
 		AssignedObjectiveNetId = state.AssignedObjectiveNetId,
+		AssignedObjectiveCampId = state.AssignedObjectiveCampId,
 	}
 end
 

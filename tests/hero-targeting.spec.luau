@@ -67,6 +67,8 @@ test("Assigned squads join a squadmate's target before scanning",function()
 	local ctx={MasterPos=Vector3.new(0,0,0),Assigned=true,Leash=95}
 	local near,ally=mob(3,0),mob(30,0);local h=hero(0,0)
 	assert(tick(h,{[1]=near,[2]=ally},ctx,0,0,{2})==ally and h.TargetNetId==2)
+	-- Consecutive ticks while ally target lives must NOT drop assist commitment for a closer mob in another camp
+	assert(tick(h,{[1]=near,[2]=ally},ctx,.1,0,{2})==ally and h.TargetNetId==2)
 	ally.IsAlive=false
 	assert(tick(h,{[1]=near,[2]=ally},ctx,.2,0,{2})==near and h.TargetNetId==1)
 end)
@@ -153,5 +155,33 @@ test("Deterministic tie-breaker resolves nearly identical distances (< 4 studs) 
 
 	local best = T.Acquire(h, mobs, ctx, eligible, nil)
 	assert(best == 2, "Tie-breaker selects mobB due to lower EntityId/SpawnOrder (10 vs 50)")
+end)
+
+test("Assigned squad on diagonal ramp does not alternate or split when both end camps spawn", function()
+	local campLower = mob(-110, 75); campLower.Position = Vector3.new(-110, 0, 75); campLower.CampId = "CAMP_BASIN_WEST"
+	local campUpper = mob(-106, -25); campUpper.Position = Vector3.new(-106, 8, -25); campUpper.CampId = "CAMP_WEST_GALLERY"
+	local mobs = { [10] = campLower, [20] = campUpper }
+
+	-- Front hero near top of ramp, back hero near bottom of ramp; squad assist is committed to campUpper (20)
+	local hFront = hero(-52, 26); hFront.Position = Vector3.new(-52, 7, 26)
+	local hBack = hero(-35, 42); hBack.Position = Vector3.new(-35, 1, 42)
+	local ctx = {
+		MasterPos = campUpper.Position,
+		Assigned = true,
+		Leash = 1000,
+		Now = 1.0,
+		RouteCost = function(from, to)
+			return (to - from).Magnitude
+		end,
+	}
+	local assist = { 20 }
+
+	for step = 1, 10 do
+		ctx.Now = step * 0.1
+		local resFront = T.Select(hFront, mobs, ctx, eligible, false, assist)
+		local resBack = T.Select(hBack, mobs, ctx, eligible, false, assist)
+		assert(resFront == campUpper and hFront.TargetNetId == 20, "Front hero lost lock on squad camp")
+		assert(resBack == campUpper and hBack.TargetNetId == 20, "Back hero split to lower camp instead of staying with squad")
+	end
 end)
 print(string.format("Hero targeting tests: %d passed, %d failed",passed,failed));assert(failed==0)
