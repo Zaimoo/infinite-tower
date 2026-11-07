@@ -29,6 +29,38 @@ function PitMath.GetOverflowCapacity(hero: any): number
 	return total
 end
 
+-- Calculates total XP required from hero's current Level and XP to reach their current Star Level Cap (MaxLevel).
+function PitMath.GetXPRequiredForMaxLevel(hero: any): number
+	local cap = Stats.GetMaxLevel(hero.Stars)
+	local currentLevel = hero.Level or 1
+	if currentLevel >= cap then
+		return 0
+	end
+	local currentXP = math.max(0, hero.XP or 0)
+	local needed = 0
+	for lvl = currentLevel, cap - 1 do
+		local req = Stats.GetXPRequiredForNextLevel(lvl, hero.Stars)
+		if lvl == currentLevel then
+			needed += math.max(0, req - currentXP)
+		else
+			needed += req
+		end
+	end
+	return math.max(0, needed)
+end
+
+-- Simulates projected level and XP after adding a given amount of donor XP.
+-- Returns: projectedLevel, projectedXP, isAtOrAboveCap
+function PitMath.GetProjectedLevel(hero: any, addedXP: number): (number, number, boolean)
+	local cap = Stats.GetMaxLevel(hero.Stars)
+	if (hero.Level or 1) >= cap then
+		return cap, 0, true
+	end
+	local after, _ = PitMath.AdvanceXP(hero, addedXP)
+	local isCap = (after.Level or 1) >= cap
+	return after.Level or 1, after.XP or 0, isCap
+end
+
 function PitMath.GetSynthesisXP(donor: any, recipient: any, research: any): any
 	local balance = Config.Synthesis
 	local base = balance.BaseXP * balance.StarMultiplier ^ (PitMath.EffectiveStars(donor) - 1) + balance.LevelXP * Stats.GetEffectiveLevel(donor.Stars, donor.Level)

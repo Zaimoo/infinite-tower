@@ -841,18 +841,47 @@ function Synth.BuildRosterCard(self: any, hero: any): any
 	}
 end
 
+function Synth.GetProjectedState(self: any): (number, number, boolean)
+	if not self.Recipient then return 1, 0, false end
+	local profile: any = _G.CurrentProfile
+	local heroMap = self.State.Heroes
+	if (not heroMap or next(heroMap) == nil) and profile and profile.Heroes then
+		heroMap = profile.Heroes
+	end
+	local recipient = heroMap and heroMap[self.Recipient]
+	if not recipient then return 1, 0, false end
+	local maxLevel = StatFormulas.GetMaxLevel(recipient.Stars)
+	if (recipient.Level or 1) >= maxLevel then
+		return recipient.Level or 1, recipient.XP or 0, true
+	end
+	if #self.Donors == 0 then
+		return recipient.Level or 1, recipient.XP or 0, false
+	end
+	local research = profile and profile.UnlockedResearch or {}
+	local totalXP = 0
+	for _, donorUUID in ipairs(self.Donors) do
+		local donor = heroMap and heroMap[donorUUID]
+		if donor then
+			local breakdown = PitMath.GetSynthesisXP(donor, recipient, research)
+			totalXP += breakdown.Final
+		end
+	end
+	local projLevel, projXP, isCap = PitMath.GetProjectedLevel(recipient, totalXP)
+	return projLevel, projXP, isCap
+end
+
 function Synth.PressRosterHero(self: any, uuid: string)
 	if self.Busy or self.Popup.Visible or self.Picker.Visible or not self.Recipient then return end
 	local hero = self.State.Heroes[uuid]
 	if not hero then return end
 
-	-- 2. If this hero is the recipient:
+	-- 1. If this hero is the recipient:
 	if uuid == self.Recipient then
 		self:ShowPopup("MATERIAL UNAVAILABLE", "This hero is the recipient and cannot be used as its own material.")
 		return
 	end
 
-	-- 2b. If this hero is equipped in your squad:
+	-- 2. If this hero is equipped in your squad:
 	if isSquad(hero) then
 		self:ShowPopup("MATERIAL UNAVAILABLE", "This hero is equipped in your squad and cannot be used as material.")
 		return
@@ -867,21 +896,38 @@ function Synth.PressRosterHero(self: any, uuid: string)
 		return
 	end
 
-	-- 4. Check eligibility as a donor material:
+	-- 4. Check if recipient is already at MaxLevel
+	local recipient = self.State.Heroes[self.Recipient]
+	if recipient then
+		local maxLevel = StatFormulas.GetMaxLevel(recipient.Stars)
+		if (recipient.Level or 1) >= maxLevel then
+			self:ShowPopup("MAX LEVEL REACHED", "This hero has already reached the maximum level for their current Star tier.\n\nPromote their star tier to raise the level cap.")
+			return
+		end
+	end
+
+	-- 5. Check if projected level has already reached MaxLevel
+	local projLevel, _, isCap = self:GetProjectedState()
+	if isCap then
+		self:ShowPopup("MAX LEVEL REACHED", "The recipient will already reach their current Star Level Cap with the selected materials.\n\nPromote their star tier after synthesis, or unselect materials to choose others.")
+		return
+	end
+
+	-- 6. Check eligibility as a donor material:
 	local eligible, reason, _ = checkDonorEligibility(hero, self.Recipient)
 	if not eligible then
 		self:ShowPopup("MATERIAL UNAVAILABLE", reason)
 		return
 	end
 
-	-- 5. Check against server limit
+	-- 7. Check against server limit
 	local maxLimit = PitBalanceConfig.MaxDonors or 100
 	if #self.Donors >= maxLimit then
 		self:ShowPopup("MATERIAL LIMIT", string.format("Maximum material limit (%d) reached.", maxLimit))
 		return
 	end
 
-	-- 6. Add to materials!
+	-- 8. Add to materials!
 	table.insert(self.Donors, uuid)
 	self.Message = ""
 	self:QueuePreview()
@@ -1026,6 +1072,11 @@ function Synth.Confirm(self: any)
 		self:ShowPopup("SYNTHESIS UNAVAILABLE", "Choose the hero who will receive the EXP.")
 		return
 	end
+	local recipient = self.State.Heroes[self.Recipient]
+	if recipient and (recipient.Level or 1) >= StatFormulas.GetMaxLevel(recipient.Stars) then
+		self:ShowPopup("MAX LEVEL REACHED", "This hero has already reached the maximum level for their current Star tier.\n\nPromote their star tier to raise the level cap.")
+		return
+	end
 	if #self.Donors == 0 then
 		self:ShowPopup("SYNTHESIS UNAVAILABLE", "Select at least one material hero from the roster.")
 		return
@@ -1114,6 +1165,14 @@ function Synth.Render(self: any)
 	end
 
 	local recipient = self.Recipient and heroes[self.Recipient]
+	local recipientMaxLevel = if recipient then StatFormulas.GetMaxLevel(recipient.Stars) else 10
+	local isRecipientMaxLevel = if recipient then (recipient.Level or 1) >= recipientMaxLevel else false
+
+	if isRecipientMaxLevel and #self.Donors > 0 then
+		self.Donors = {}
+	end
+
+	local projLevel, projXP, isProjectedMax = self:GetProjectedState()
 
 	-- 1. Left column: the recipient card and its details
 	local recipSlot = self.RecipientSlot
@@ -1150,94 +1209,116 @@ function Synth.Render(self: any)
 		local currentLevel, currentExp = recipient.Level or 1, recipient.XP or 0
 		local currentMaxExp = StatFormulas.GetXPRequiredForNextLevel(currentLevel, recipient.Stars)
 		local safeMax = math.max(1, currentMaxExp)
-		local baseRatio = math.clamp(currentExp / safeMax, 0, 1)
-		local targetTotalRatio = baseRatio
 
-		if #self.Donors > 0 and gained > 0 then
-			targetTotalRatio = math.clamp((currentExp + gained) / safeMax, baseRatio, 1)
-		end
-
-		local isSameHero = (self.LastRecipientUID == recipient.UUID)
-
-		-- 1. Blue Base EXP Bar:
-		-- Locked steadily at baseRatio. Never snaps to 0 or resets when materials are added/removed.
-		self.CurrentFill.Size = UDim2.fromScale(baseRatio, 1)
-
-		-- 2. Labels update
-		if before and after and #self.Donors > 0 then
-			local levelGain = after.Level - before.Level
-			self.LevelLabel.Text = string.format('Lv. %d  <font color="#39E81E">→  Lv. %d</font>%s', before.Level, after.Level,
-				if levelGain > 0 then string.format(" (+%d Lvl%s)", levelGain, if levelGain == 1 then "" else "s") else "")
-			local displayMax = StatFormulas.GetXPRequiredForNextLevel(after.Level, after.Stars or recipient.Stars)
-			self.XPText.Text = string.format("%d / %d EXP (+%d EXP)", after.XP or 0, displayMax, gained)
-		else
-			self.LevelLabel.Text = string.format("Lv. %d  (Cap: Lv. %d)", currentLevel, StatFormulas.GetMaxLevel(recipient.Stars))
-			self.XPText.Text = string.format("%d / %d EXP", currentExp, safeMax)
-		end
-
-		-- 3. Green Preview EXP Bar Tweening
-		if not isSameHero then
+		if isRecipientMaxLevel then
 			if self.ActivePreviewTween then
 				self.ActivePreviewTween:Cancel()
 				self.ActivePreviewTween = nil
 			end
-			self.GainFill.Size = UDim2.fromScale(baseRatio, 1)
-			self.GainFill.Visible = (targetTotalRatio > baseRatio)
+			self.CurrentFill.Size = UDim2.fromScale(1, 1)
+			self.GainFill.Size = UDim2.fromScale(1, 1)
+			self.GainFill.Visible = false
 			self.LastRecipientUID = recipient.UUID
-			self.LastBaseRatio = baseRatio
-			self.LastTotalRatio = baseRatio
+			self.LastBaseRatio = 1
+			self.LastTotalRatio = 1
 
-			if targetTotalRatio > baseRatio then
-				local tween = TweenService:Create(self.GainFill, BAR_TWEEN_INFO, {
-					Size = UDim2.fromScale(targetTotalRatio, 1),
-				})
-				self.ActivePreviewTween = tween
-				tween.Completed:Connect(function(playbackState)
-					if playbackState == Enum.PlaybackState.Completed and self.ActivePreviewTween == tween then
-						self.ActivePreviewTween = nil
-					end
-				end)
-				tween:Play()
-				self.LastTotalRatio = targetTotalRatio
-			end
+			self.LevelLabel.Text = string.format("Lv. %d  (CAP: Lv. %d — MAX)", currentLevel, recipientMaxLevel)
+			self.XPText.Text = "MAX LEVEL REACHED"
+			self.SummaryLine.Text = '<font color="#EF8078"><b>MAX LEVEL REACHED — PROMOTE STAR TIER</b></font><br/><font color="#A59BB9">This hero has reached the level cap for this Star rank. Promote their star tier to continue.</font>'
 		else
-			local targetChanged = math.abs(self.LastTotalRatio - targetTotalRatio) > 0.0005
-			if targetChanged then
+			local baseRatio = math.clamp(currentExp / safeMax, 0, 1)
+			local targetTotalRatio = baseRatio
+
+			if #self.Donors > 0 and gained > 0 then
+				targetTotalRatio = math.clamp((currentExp + gained) / safeMax, baseRatio, 1)
+			end
+
+			local isSameHero = (self.LastRecipientUID == recipient.UUID)
+
+			-- 1. Blue Base EXP Bar:
+			-- Locked steadily at baseRatio. Never snaps to 0 or resets when materials are added/removed.
+			self.CurrentFill.Size = UDim2.fromScale(baseRatio, 1)
+
+			-- 2. Labels update
+			if before and after and #self.Donors > 0 then
+				local levelGain = after.Level - before.Level
+				if isProjectedMax then
+					self.LevelLabel.Text = string.format('Lv. %d  <font color="#39E81E">→  Lv. %d (CAP)</font>', before.Level, after.Level)
+					local displayMax = StatFormulas.GetXPRequiredForNextLevel(after.Level, after.Stars or recipient.Stars)
+					self.XPText.Text = string.format("%d / %d EXP (+%d EXP) [CAP REACHED]", after.XP or 0, displayMax, gained)
+					self.SummaryLine.Text = string.format('<b><font color="#4ADE80">MAX LEVEL REACHED (Lv. %d)</font></b>  ·  +%s EXP from %d material%s<br/><font color="#A59BB9">Star tier cap reached. Remove materials to adjust, or confirm synthesis.</font>',
+						recipientMaxLevel, abbreviate(gained), #self.Donors, if #self.Donors == 1 then "" else "s")
+				else
+					self.LevelLabel.Text = string.format('Lv. %d  <font color="#39E81E">→  Lv. %d</font>%s', before.Level, after.Level,
+						if levelGain > 0 then string.format(" (+%d Lvl%s)", levelGain, if levelGain == 1 then "" else "s") else "")
+					local displayMax = StatFormulas.GetXPRequiredForNextLevel(after.Level, after.Stars or recipient.Stars)
+					self.XPText.Text = string.format("%d / %d EXP (+%d EXP)", after.XP or 0, displayMax, gained)
+					if preview and preview.XP then
+						self.SummaryLine.Text = string.format('<b><font color="#4ADE80">+%s EXP</font></b> from %d material%s  ·  Efficiency: %d%%',
+							abbreviate(gained), #self.Donors, if #self.Donors == 1 then "" else "s", math.floor((preview.XP.Efficiency or 1) * 100 + 0.5))
+					end
+				end
+			else
+				self.LevelLabel.Text = string.format("Lv. %d  (Cap: Lv. %d)", currentLevel, recipientMaxLevel)
+				self.XPText.Text = string.format("%d / %d EXP", currentExp, safeMax)
+				self.SummaryLine.Text = '<font color="#A59BB9">Select material heroes on the right to grant EXP.</font>'
+			end
+
+			-- 3. Green Preview EXP Bar Tweening
+			if not isSameHero then
 				if self.ActivePreviewTween then
 					self.ActivePreviewTween:Cancel()
 					self.ActivePreviewTween = nil
 				end
+				self.GainFill.Size = UDim2.fromScale(baseRatio, 1)
+				self.GainFill.Visible = (targetTotalRatio > baseRatio)
+				self.LastRecipientUID = recipient.UUID
+				self.LastBaseRatio = baseRatio
+				self.LastTotalRatio = baseRatio
 
-				self.GainFill.Visible = true
-
-				local tween = TweenService:Create(self.GainFill, BAR_TWEEN_INFO, {
-					Size = UDim2.fromScale(targetTotalRatio, 1),
-				})
-				self.ActivePreviewTween = tween
-
-				tween.Completed:Connect(function(playbackState)
-					if playbackState == Enum.PlaybackState.Completed then
-						if self.ActivePreviewTween == tween then
+				if targetTotalRatio > baseRatio then
+					local tween = TweenService:Create(self.GainFill, BAR_TWEEN_INFO, {
+						Size = UDim2.fromScale(targetTotalRatio, 1),
+					})
+					self.ActivePreviewTween = tween
+					tween.Completed:Connect(function(playbackState)
+						if playbackState == Enum.PlaybackState.Completed and self.ActivePreviewTween == tween then
 							self.ActivePreviewTween = nil
 						end
-						if #self.Donors == 0 and self.GainFill.Size.X.Scale <= baseRatio + 0.005 then
-							self.GainFill.Visible = false
-						end
+					end)
+					tween:Play()
+					self.LastTotalRatio = targetTotalRatio
+				end
+			else
+				local targetChanged = math.abs(self.LastTotalRatio - targetTotalRatio) > 0.0005
+				if targetChanged then
+					if self.ActivePreviewTween then
+						self.ActivePreviewTween:Cancel()
+						self.ActivePreviewTween = nil
 					end
-				end)
 
-				tween:Play()
-				self.LastTotalRatio = targetTotalRatio
+					self.GainFill.Visible = true
+
+					local tween = TweenService:Create(self.GainFill, BAR_TWEEN_INFO, {
+						Size = UDim2.fromScale(targetTotalRatio, 1),
+					})
+					self.ActivePreviewTween = tween
+
+					tween.Completed:Connect(function(playbackState)
+						if playbackState == Enum.PlaybackState.Completed then
+							if self.ActivePreviewTween == tween then
+								self.ActivePreviewTween = nil
+							end
+							if #self.Donors == 0 and self.GainFill.Size.X.Scale <= baseRatio + 0.005 then
+								self.GainFill.Visible = false
+							end
+						end
+					end)
+
+					tween:Play()
+					self.LastTotalRatio = targetTotalRatio
+				end
 			end
-		end
-
-		if #self.Donors > 0 and preview and preview.XP then
-			self.SummaryLine.Text = string.format('<b><font color="#4ADE80">+%s EXP</font></b> from %d material%s  ·  Efficiency: %d%%',
-				abbreviate(gained), #self.Donors, if #self.Donors == 1 then "" else "s", math.floor((preview.XP.Efficiency or 1) * 100 + 0.5))
-		elseif #self.Donors > 0 then
-			self.SummaryLine.Text = string.format("Selected %d material%s. Calculating preview…", #self.Donors, if #self.Donors == 1 then "" else "s")
-		else
-			self.SummaryLine.Text = '<font color="#A59BB9">Select material heroes on the right to grant EXP.</font>'
 		end
 	else
 		self.RecipientName.Text = "No Hero Selected"
@@ -1259,7 +1340,7 @@ function Synth.Render(self: any)
 	end
 
 	local hasRecipient = recipient ~= nil
-	local materialEnabled = hasRecipient and not self.Busy and not self.Picker.Visible
+	local materialEnabled = hasRecipient and not self.Busy and not self.Picker.Visible and not isRecipientMaxLevel
 	self.ScreenState = if self.Busy then "Submitting" elseif self.Picker.Visible then "PickerOpen"
 		elseif not recipient then "NoRecipient" elseif #self.Donors > 0 then "MaterialsSelected" else "RecipientSelected"
 	self.NoRecipientPrompt.Visible = not hasRecipient
@@ -1313,8 +1394,14 @@ function Synth.Render(self: any)
 	end)
 
 	local selectedCount = #self.Donors
-	self.RosterHeader.Text = string.format("MATERIALS  (%d)%s", #heroList,
-		if selectedCount > 0 then string.format("  ·  %d SELECTED", selectedCount) else "")
+	if isRecipientMaxLevel then
+		self.RosterHeader.Text = "MATERIALS — MAX LEVEL REACHED (PROMOTE STAR TIER)"
+	elseif isProjectedMax then
+		self.RosterHeader.Text = string.format("MATERIALS  (%d)  ·  %d SELECTED (MAX LEVEL REACHED)", #heroList, selectedCount)
+	else
+		self.RosterHeader.Text = string.format("MATERIALS  (%d)%s", #heroList,
+			if selectedCount > 0 then string.format("  ·  %d SELECTED", selectedCount) else "")
+	end
 
 	self.EmptyLabel.Visible = hasRecipient and #heroList == 0
 	self.EmptyLabel.Text = if self.ReadyOnly then "No eligible material heroes available. Unassign, unlock or bench heroes first." else "Your roster is empty."
@@ -1326,7 +1413,6 @@ function Synth.Render(self: any)
 		self.RosterCards[hero.UUID] = entry
 		entry.Card.LayoutOrder = order
 		entry.Card.Visible = true
-		entry.Card.Interactable = materialEnabled
 
 		local isRecipient = (hero.UUID == self.Recipient)
 		local isSelected = (table.find(self.Donors, hero.UUID) ~= nil)
@@ -1359,18 +1445,32 @@ function Synth.Render(self: any)
 		entry.ChipLabel.Text = chipText
 		entry.ChipLabel.TextColor3 = chipColor
 
-		-- Ineligible, squad-equipped, or Recipient heroes are shaded
-		entry.Shade.Visible = not materialEnabled or isRecipient or inSquad or not eligible
-
 		-- Selection visual (Gold highlighted rail & check badge, matching Image 2's Sovereign Archon highlight)
 		entry.SelectedTint.Visible = isSelected
 		entry.SelectedBadge.Visible = isSelected
-		if isSelected then
+
+		if isRecipientMaxLevel then
+			entry.Card.Interactable = false
+			entry.Shade.Visible = true
+			entry.Rail.Color = Color3.fromRGB(86, 80, 100)
+			entry.Rail.Thickness = 1.4
+			entry.Rail.Transparency = 0.6
+		elseif isSelected then
+			entry.Card.Interactable = true
+			entry.Shade.Visible = false
 			entry.Rail.Color = TEXT.Gold
 			entry.Rail.Thickness = 2.6
 			entry.Rail.Transparency = 0
+		elseif isProjectedMax then
+			entry.Card.Interactable = true
+			entry.Shade.Visible = true
+			entry.Rail.Color = Color3.fromRGB(86, 80, 100)
+			entry.Rail.Thickness = 1.4
+			entry.Rail.Transparency = 0.6
 		else
 			local canUse = eligible and not inSquad and not isRecipient
+			entry.Card.Interactable = materialEnabled and canUse
+			entry.Shade.Visible = not materialEnabled or isRecipient or inSquad or not eligible
 			entry.Rail.Color = if canUse then Color3.fromRGB(200, 160, 96) else Color3.fromRGB(86, 80, 100)
 			entry.Rail.Thickness = 1.4
 			entry.Rail.Transparency = if canUse then 0.2 else 0.6
@@ -1389,41 +1489,49 @@ function Synth.Render(self: any)
 	end
 
 	-- 4. Bottom Footer (Clear & Confirm Synthesize buttons)
-	local canAct = materialEnabled and #self.Donors > 0 and not self.Loading
-	local retry = canAct and self.PreviewError ~= nil
-	local ready = canAct and not retry and preview ~= nil and preview.CanCommit and preview.Token ~= nil
-
-	self.ConfirmButton.Button.Interactable = ready or retry
-	self.ClearButton.Button.Visible = #self.Donors > 0
-	self.ClearButton.Label.Text = string.format("CLEAR (%d)", #self.Donors)
-
-	if self.Busy then
-		retone(self.ConfirmButton.Button, self.ConfirmButton.Label, "Slate", "SYNTHESIZING…")
-	elseif self.Loading then
-		retone(self.ConfirmButton.Button, self.ConfirmButton.Label, "Slate", "CHECKING EXP…")
-	elseif retry then
-		retone(self.ConfirmButton.Button, self.ConfirmButton.Label, "Gold", "RETRY PREVIEW")
-	elseif ready then
-		retone(self.ConfirmButton.Button, self.ConfirmButton.Label, "Action", "CONFIRM SYNTHESIZE")
+	if isRecipientMaxLevel then
+		self.ConfirmButton.Button.Interactable = false
+		retone(self.ConfirmButton.Button, self.ConfirmButton.Label, "Slate", "MAX LEVEL REACHED")
+		self.ClearButton.Button.Visible = false
+		self.Status.Text = "MAX LEVEL REACHED — PROMOTE STAR TIER"
+		self.Status.TextColor3 = C.Danger
 	else
-		retone(self.ConfirmButton.Button, self.ConfirmButton.Label, "Slate", "CONFIRM SYNTHESIZE")
-	end
+		local canAct = materialEnabled and #self.Donors > 0 and not self.Loading
+		local retry = canAct and self.PreviewError ~= nil
+		local ready = canAct and not retry and preview ~= nil and preview.CanCommit and preview.Token ~= nil
 
-	-- Status line
-	local status, color = self.Message, TEXT.Muted
-	if self.Loading then
-		status = "Checking the EXP preview with the server…"
-	elseif self.PreviewError then
-		status, color = self.PreviewError, TEXT.Bad
-	elseif preview and not preview.CanCommit and preview.Reason and preview.Reason ~= "" then
-		status, color = preview.Reason, TEXT.Bad
-	elseif status:find("complete") then
-		color = C.Good
+		self.ConfirmButton.Button.Interactable = ready or retry
+		self.ClearButton.Button.Visible = #self.Donors > 0
+		self.ClearButton.Label.Text = string.format("CLEAR (%d)", #self.Donors)
+
+		if self.Busy then
+			retone(self.ConfirmButton.Button, self.ConfirmButton.Label, "Slate", "SYNTHESIZING…")
+		elseif self.Loading then
+			retone(self.ConfirmButton.Button, self.ConfirmButton.Label, "Slate", "CHECKING EXP…")
+		elseif retry then
+			retone(self.ConfirmButton.Button, self.ConfirmButton.Label, "Gold", "RETRY PREVIEW")
+		elseif ready then
+			retone(self.ConfirmButton.Button, self.ConfirmButton.Label, "Action", "CONFIRM SYNTHESIZE")
+		else
+			retone(self.ConfirmButton.Button, self.ConfirmButton.Label, "Slate", "CONFIRM SYNTHESIZE")
+		end
+
+		-- Status line
+		local status, color = self.Message, TEXT.Muted
+		if self.Loading then
+			status = "Checking the EXP preview with the server…"
+		elseif self.PreviewError then
+			status, color = self.PreviewError, TEXT.Bad
+		elseif preview and not preview.CanCommit and preview.Reason and preview.Reason ~= "" then
+			status, color = preview.Reason, TEXT.Bad
+		elseif status:find("complete") then
+			color = C.Good
+		end
+		if #self.Donors > 0 then
+			status ..= "\nSelected materials will be permanently consumed."
+		end
+		self.Status.Text, self.Status.TextColor3 = status, color
 	end
-	if #self.Donors > 0 then
-		status ..= "\nSelected materials will be permanently consumed."
-	end
-	self.Status.Text, self.Status.TextColor3 = status, color
 end
 
 function Synth.Celebrate(self: any)

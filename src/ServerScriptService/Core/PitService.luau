@@ -214,15 +214,33 @@ function PitService:Build(profile: any, request: any): (any, any)
 
 	if action == "SYNTHESIS" or action == "IMPRINT" then
 		if recipient then
+			local maxLevel = Stats.GetMaxLevel(recipient.Stars)
+			if action == "SYNTHESIS" and (recipient.Level or 1) >= maxLevel then
+				reject("The recipient is already at maximum level for this star rank. Promote the hero to raise the level cap.")
+			end
+
 			local xp = { Base = 0, Final = 0, Efficiency = 1, ResearchBonus = 0, Breakdown = {} }
-			for _, donor in ipairs(preview.Donors) do
+			local reachedCapIndex: number? = nil
+
+			for index, donor in ipairs(preview.Donors) do
+				if action == "SYNTHESIS" and reachedCapIndex ~= nil then
+					reject("The recipient reaches the star level cap before all selected materials are consumed. Remove excess materials.")
+					break
+				end
+
 				local breakdown = Math.GetSynthesisXP(donor, recipient, profile.UnlockedResearch)
 				breakdown.UUID, breakdown.Name = donor.UUID, donor.DisplayName
 				xp.Base += breakdown.Base
 				xp.Final += breakdown.Final
 				xp.ResearchBonus = breakdown.ResearchBonus
 				table.insert(xp.Breakdown, breakdown)
+
 				if action == "SYNTHESIS" then
+					local simAfter, _ = Math.AdvanceXP(recipient, xp.Final)
+					if (simAfter.Level or 1) >= maxLevel then
+						reachedCapIndex = index
+					end
+
 					for _, option in ipairs(Math.GetImprintOptions(donor, recipient, profile.UnlockedResearch)) do
 						option.DonorUUID, option.DonorName = donor.UUID, donor.DisplayName
 						option.OpportunityOnly = true
@@ -256,6 +274,10 @@ function PitService:Build(profile: any, request: any): (any, any)
 				preview.FailureResult = "Guaranteed inheritance. The donor is consumed once; there is no failure roll."
 			end
 			local after, overflow = Math.AdvanceXP(recipient, xp.Final)
+			if (after.Level or 1) >= maxLevel then
+				after.Level = maxLevel
+				after.XP = 0
+			end
 			xp.Applied = xp.Final
 			if overflow.Rejected > 0 then
 				if action == "SYNTHESIS" then
