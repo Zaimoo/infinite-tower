@@ -25,7 +25,7 @@ local rad = math.rad
 
 -- Shared dimensions (keep in sync with tools/blender/generate_synthesis_chamber.py)
 local DIM = {
-	PlinthHalf = 20,
+	PlinthHalf = 19.2,
 	PlinthTop = 1.2,
 	PodiumR = 18.6,
 	FloorY = 2.4,
@@ -53,7 +53,7 @@ Builder.Dimensions = DIM
 
 -- Socket positions (building-local)
 Builder.Sockets = {
-	DoorTriggerCenter = V(0, 3, 18.5),
+	DoorTriggerCenter = V(0, 1.2, 25.0), -- Front edge of bottom stair step
 	PromptAnchor = V(0, 6.2, 0),
 	PedestalCoreVFXSocket = V(0, 7.45, 0),
 }
@@ -184,18 +184,13 @@ local function inEntranceBay(angleDeg: number, radius: number): boolean
 end
 
 --------------------------------------------------------------------------------
--- 1. Plinth, podium and front stair
+-- 1. Circular stepped podium and front stair (no square corner overhang)
 --------------------------------------------------------------------------------
 local function buildBase(ctx: Ctx)
 	local g = folder(ctx.Model, "Chamber_Base")
 	local cf = ctx.CF
-	local h = DIM.PlinthHalf * 2
-	newPart(g, "PlinthSlab", V(h, DIM.PlinthTop, h), cf * CFrame.new(0, DIM.PlinthTop / 2, 0), C_STONE_DARK, Enum.Material.Slate, true)
-	newPart(g, "PlinthPaving", V(h - 0.8, 0.1, h - 0.8), cf * CFrame.new(0, DIM.PlinthTop + 0.05, 0), C_STONE, Enum.Material.Cobblestone, true)
-	for _, s in ipairs({ -1, 1 }) do
-		newPart(g, "PlinthEdgeX", V(0.8, 0.5, h), cf * CFrame.new(s * (DIM.PlinthHalf - 0.4), DIM.PlinthTop + 0.1, 0), C_STONE_LIGHT, Enum.Material.Slate, true)
-		newPart(g, "PlinthEdgeZ", V(h, 0.5, 0.8), cf * CFrame.new(0, DIM.PlinthTop + 0.1, s * (DIM.PlinthHalf - 0.4)), C_STONE_LIGHT, Enum.Material.Slate, true)
-	end
+	vcyl(g, "PlinthRing", DIM.PodiumR + 0.8, DIM.PlinthTop, cf * CFrame.new(0, DIM.PlinthTop / 2, 0), C_STONE_DARK, Enum.Material.Slate, true)
+	vcyl(g, "PlinthRim", DIM.PodiumR + 1.0, 0.28, cf * CFrame.new(0, DIM.PlinthTop - 0.14, 0), C_STONE_LIGHT, Enum.Material.Slate, true)
 	local podiumH = DIM.FloorY - DIM.PlinthTop
 	vcyl(g, "Podium", DIM.PodiumR, podiumH - 0.3, cf * CFrame.new(0, DIM.PlinthTop + (podiumH - 0.3) / 2, 0), C_STONE, Enum.Material.Slate, true)
 	vcyl(g, "PodiumLip", DIM.PodiumR + 0.3, 0.3, cf * CFrame.new(0, DIM.FloorY - 0.15, 0), C_STONE_LIGHT, Enum.Material.Slate, true)
@@ -428,7 +423,8 @@ end
 -- 4. Outward-opening double doors (Models pivoted on their outer hinge edge)
 --------------------------------------------------------------------------------
 local function buildDoorLeaf(ctx: Ctx, name: string, side: number): Model
-	-- side = -1 for the left leaf (hinge at -X), +1 for the right leaf (hinge at +X)
+	-- side = -1 for the left leaf (hinge at X = -6, leaf spans X in [-6, 0])
+	-- side = +1 for the right leaf (hinge at X = +6, leaf spans X in [0, +6])
 	local cf = ctx.CF
 	local door = Instance.new("Model")
 	door.Name = name
@@ -443,37 +439,88 @@ local function buildDoorLeaf(ctx: Ctx, name: string, side: number): Model
 	local zMid = DIM.BayFrontZ - 0.3
 	local zFace = DIM.BayFrontZ + 0.05
 	local leafX = function(dx: number): number
-		-- dx measured from the hinge toward the doorway centre
+		-- dx in [0, 6] measured from the outer hinge toward the center seam (X = 0)
 		return hx - side * dx
 	end
 
 	local bottomY = DIM.InteriorFloorY + 0.05
-	local slabH = DIM.DoorSpringY - bottomY
-	newPart(door, "DoorSlab", V(DIM.DoorHalfW, slabH, 0.6), cf * CFrame.new(leafX(DIM.DoorHalfW / 2), bottomY + slabH / 2, zMid), C_TIMBER, Enum.Material.Wood, false)
-	local slices = 8
-	local sliceH = DIM.DoorArchR / slices
-	for j = 0, slices - 1 do
-		local hMid = (j + 0.5) * sliceH
-		local w = math.sqrt(math.max(0, DIM.DoorArchR * DIM.DoorArchR - hMid * hMid))
-		if w > 0.1 then
-			newPart(door, "DoorArchSlice", V(w, sliceH, 0.6), cf * CFrame.new(-side * w / 2, DIM.DoorSpringY + hMid, zMid), C_TIMBER, Enum.Material.Wood, false)
+	-- 6 vertical arch-topped timber planks spanning continuously from bottomY up to the arch curve
+	local numPlanks = 6
+	local plankW = DIM.DoorHalfW / numPlanks
+	for p = 1, numPlanks do
+		-- Distance from the center seam (X = 0) is xFromCenter in (0, 6)
+		local xFromCenter = (p - 0.5) * plankW
+		local xPos = side * xFromCenter
+		local archRise = math.sqrt(math.max(0, DIM.DoorArchR * DIM.DoorArchR - xFromCenter * xFromCenter))
+		local topY = DIM.DoorSpringY + archRise
+		local plankH = topY - bottomY
+		local plankColor = if p % 2 == 0 then C_TIMBER else C_TIMBER_LIGHT
+		newPart(
+			door,
+			"DoorPlank_" .. p,
+			V(plankW - 0.03, plankH, 0.6),
+			cf * CFrame.new(xPos, bottomY + plankH * 0.5, zMid),
+			plankColor,
+			Enum.Material.Wood,
+			false
+		)
+		if p < numPlanks then
+			local grooveX = side * (p * plankW)
+			local grooveRise = math.sqrt(math.max(0, DIM.DoorArchR * DIM.DoorArchR - (p * plankW) ^ 2))
+			local grooveH = (DIM.DoorSpringY + grooveRise) - bottomY - 0.2
+			newPart(
+				door,
+				"PlankGroove_" .. p,
+				V(0.06, grooveH, 0.64),
+				cf * CFrame.new(grooveX, bottomY + grooveH * 0.5, zMid),
+				C_IRON,
+				Enum.Material.Metal,
+				false
+			)
 		end
 	end
-	for _, dx in ipairs({ 1.5, 4.5 }) do
-		newPart(door, "PlankGroove", V(0.12, slabH - 0.4, 0.06), cf * CFrame.new(leafX(dx), bottomY + slabH / 2, zFace), C_IRON, Enum.Material.Wood, false)
+
+	-- Arched iron-bound border stile along the vertical center seam & outer hinge stile
+	newPart(door, "CenterMeetingStile", V(0.24, (DIM.DoorSpringY + DIM.DoorArchR) - bottomY, 0.66), cf * CFrame.new(side * 0.12, (bottomY + DIM.DoorSpringY + DIM.DoorArchR) * 0.5, zMid), C_IRON, Enum.Material.Metal, false)
+	newPart(door, "OuterHingeStile", V(0.28, DIM.DoorSpringY - bottomY, 0.66), cf * CFrame.new(leafX(0.14), (bottomY + DIM.DoorSpringY) * 0.5, zMid), C_IRON, Enum.Material.Metal, false)
+
+	-- Curved upper arch molding segments on the correcto leaf side (`side * x`)
+	local archSegs = 6
+	for aIdx = 0, archSegs - 1 do
+		local t0 = (aIdx / archSegs) * (math.pi * 0.5)
+		local t1 = ((aIdx + 1) / archSegs) * (math.pi * 0.5)
+		local tm = (t0 + t1) * 0.5
+		local rMold = DIM.DoorArchR - 0.22
+		local ax = side * (math.cos(tm) * rMold)
+		local ay = DIM.DoorSpringY + math.sin(tm) * rMold
+		local segLen = 2 * rMold * math.sin((t1 - t0) * 0.5) + 0.12
+		-- Tangent angle in XY plane
+		local roll = if side > 0 then (tm + math.pi * 0.5) else -(tm + math.pi * 0.5)
+		newPart(
+			door,
+			"DoorArchRim_" .. (aIdx + 1),
+			V(segLen, 0.42, 0.68),
+			cf * CFrame.new(ax, ay, zMid) * CFrame.Angles(0, 0, roll),
+			C_IRON,
+			Enum.Material.Metal,
+			false
+		)
 	end
+
+	-- Heavy iron hinge straps & waist band
 	for _, y in ipairs({ 4.6, 10.6 }) do
-		newPart(door, "HingeStrap", V(3.0, 0.45, 0.12), cf * CFrame.new(leafX(1.5), y, zFace + 0.02), C_IRON, Enum.Material.Metal, false)
+		newPart(door, "HingeStrap", V(3.4, 0.48, 0.14), cf * CFrame.new(leafX(1.7), y, zFace + 0.02), C_IRON, Enum.Material.Metal, false)
 	end
-	newPart(door, "IronBand", V(DIM.DoorHalfW - 0.3, 0.35, 0.1), cf * CFrame.new(leafX(DIM.DoorHalfW / 2), 7.4, zFace), C_IRON, Enum.Material.Metal, false)
+	newPart(door, "IronBand", V(DIM.DoorHalfW - 0.3, 0.38, 0.12), cf * CFrame.new(leafX(DIM.DoorHalfW / 2), 7.4, zFace), C_IRON, Enum.Material.Metal, false)
+
 	-- Raised circular / crescent moulding and pull ring
-	local roundel = cf * CFrame.new(leafX(3.0), 13.6, zFace)
-	zdisc(door, "RoundelOuter", 3.4, 0.12, roundel, C_TIMBER_LIGHT, Enum.Material.Wood)
-	zdisc(door, "RoundelInner", 2.5, 0.14, roundel * CFrame.new(0, 0, 0.02), C_TIMBER, Enum.Material.Wood)
-	zdisc(door, "RoundelCrescent", 1.7, 0.16, roundel * CFrame.new(side * 0.35, 0.2, 0.04), C_IRON, Enum.Material.Metal)
-	zdisc(door, "RoundelBoss", 0.6, 0.2, roundel * CFrame.new(0, 0, 0.06), C_VIOLET, Enum.Material.Neon)
-	zdisc(door, "PullRing", 1.0, 0.12, cf * CFrame.new(leafX(5.1), 7.0, zFace + 0.06), C_IRON, Enum.Material.Metal)
-	zdisc(door, "PullRingHole", 0.6, 0.14, cf * CFrame.new(leafX(5.1), 7.0, zFace + 0.08), C_TIMBER, Enum.Material.Wood)
+	local roundel = cf * CFrame.new(leafX(3.0), 13.0, zFace)
+	zdisc(door, "RoundelOuter", 3.2, 0.12, roundel, C_TIMBER_LIGHT, Enum.Material.Wood)
+	zdisc(door, "RoundelInner", 2.3, 0.14, roundel * CFrame.new(0, 0, 0.02), C_TIMBER, Enum.Material.Wood)
+	zdisc(door, "RoundelCrescent", 1.6, 0.16, roundel * CFrame.new(side * 0.32, 0.18, 0.04), C_IRON, Enum.Material.Metal)
+	zdisc(door, "RoundelBoss", 0.55, 0.2, roundel * CFrame.new(0, 0, 0.06), C_VIOLET, Enum.Material.Neon)
+	zdisc(door, "PullRing", 1.0, 0.12, cf * CFrame.new(leafX(5.0), 7.0, zFace + 0.06), C_IRON, Enum.Material.Metal)
+	zdisc(door, "PullRingHole", 0.6, 0.14, cf * CFrame.new(leafX(5.0), 7.0, zFace + 0.08), C_TIMBER, Enum.Material.Wood)
 
 	door:SetAttribute("OpenAngleDeg", if side < 0 then -DIM.DoorOpenAngleDeg else DIM.DoorOpenAngleDeg)
 	door:SetAttribute("ClosedPivot", hingeCF)

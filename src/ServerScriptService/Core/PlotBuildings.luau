@@ -15,7 +15,7 @@ local FacilityPresence = require(script.Parent:WaitForChild("FacilityPresence"))
 local StaticGeometry = require(script.Parent:WaitForChild("StaticGeometry"))
 local FacilityConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("FacilityConfig"))
 
-local VERSION = 31 -- 31: Enterable Synthesis Chamber rotunda with outward-swinging double doors & interior anvil prompt
+local VERSION = 32 -- 32: Synthesis Chamber facing fountain, circular podium, CommandPost/ArchitectTable removed
 
 local function attachPrompt(
 	parent: Instance,
@@ -72,10 +72,12 @@ function Buildings.Build(plot: Instance)
 	-- Ensure standardized facility prefabs exist under ReplicatedStorage.Assets.PlotFacilities
 	Architecture.EnsureFacilityPrefabs()
 
-	-- Always purge removed Infirmary from plot
-	local oldInfirmaryAnchor = plot:FindFirstChild("Facility_Infirmary")
-	if oldInfirmaryAnchor then
-		oldInfirmaryAnchor:Destroy()
+	-- Always purge removed Infirmary and legacy CommandPost/ArchitectTable anchors from plot
+	for _, legacyName in ipairs({ "Facility_Infirmary", "Facility_SquadManagement", "Facility_ArchitectTable" }) do
+		local oldAnchor = plot:FindFirstChild(legacyName)
+		if oldAnchor then
+			oldAnchor:Destroy()
+		end
 	end
 
 	local spawn = plot:FindFirstChild("PlotSpawn")
@@ -246,38 +248,10 @@ function Buildings.Build(plot: Instance)
 	)
 	syncPlotFacilityAnchor(plot, "GuardPost", gpInteract.CFrame)
 
-	-- 9. Command Post (War Banner for Squad Management & Architect's Table for Fortress Tree)
-	local bannerCF = origin * CFrame.new(-18, 0, -16)
-	local tableCF = origin * CFrame.new(-18, 0, 14) * CFrame.Angles(0, math.rad(35), 0)
-	local cmdAnchors = Architecture.BuildCommandPost(folder, bannerCF, tableCF)
-
-	attachPrompt(
-		cmdAnchors.SquadBanner,
-		"FacilityHUDPrompt",
-		"SquadManagement",
-		"War Banner",
-		"Deploy & Manage Squad",
-		Enum.KeyCode.F,
-		14
-	)
-	syncPlotFacilityAnchor(plot, "SquadManagement", cmdAnchors.SquadBanner.CFrame)
-
-	attachPrompt(
-		cmdAnchors.ArchitectTable,
-		"FacilityHUDPrompt",
-		"FortressTree",
-		"Architect's Table",
-		"Open Upgrades",
-		Enum.KeyCode.F,
-		14
-	)
-
 	-- Compatibility alias models for external references (Onboarding arrows & HeroNavigation)
 	for _, aliasDef in ipairs({
 		{ Name = "Building_Synthesis", Fac = "Synthesis", Ref = pitInteract },
 		{ Name = "Building_Promotion", Fac = "Promotion", Ref = pitInteract },
-		{ Name = "Building_SquadManagement", Fac = "SquadManagement", Ref = cmdAnchors.SquadBanner },
-		{ Name = "Building_ArchitectTable", Fac = "ArchitectTable", Ref = cmdAnchors.ArchitectTable },
 	}) do
 		local alias = Instance.new("Model")
 		alias.Name = aliasDef.Name

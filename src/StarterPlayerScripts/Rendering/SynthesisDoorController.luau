@@ -4,8 +4,9 @@
 -- for the enterable Synthesis Chamber ("The Pit" — `Building_ThePit` / `SynthesisChamber`).
 --
 -- Behavior:
---   * Throttled 10 Hz proximity check against `DoorTriggerCenter` (<= 26 studs) and
---     interior sanctum center (<= 18 studs), with a 32-stud close hysteresis buffer.
+--   * Throttled 10 Hz proximity check in the chamber's local space so the doors open only
+--     when the player steps within ~1 pixel of the front stairs (`Z <= 25.6`, `|X| <= 7.4`),
+--     is climbing the stairs, or is inside the circular sanctum (`R <= 16.5`).
 --   * Swings `Chamber_Door_Left` by -95 deg outward and `Chamber_Door_Right` by +95 deg
 --     outward around their outer doorjamb hinges via `TweenService`
 --     (`TweenInfo.new(0.65, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)`).
@@ -24,9 +25,9 @@ local FacilityConfig = require(Shared:WaitForChild("Config"):WaitForChild("Facil
 local SynthesisDoorController = {}
 
 local pitCfg = FacilityConfig.FacilityLayout and FacilityConfig.FacilityLayout.SynthesisChamber
-local OPEN_DISTANCE: number = (pitCfg and pitCfg.ProximityOpenRadius) or 26
-local CLOSE_DISTANCE: number = (pitCfg and pitCfg.ProximityCloseRadius) or 32
-local INTERIOR_RADIUS: number = (pitCfg and pitCfg.InteriorHoldRadius) or 18
+local OPEN_DISTANCE: number = (pitCfg and pitCfg.ProximityOpenRadius) or 1.5
+local CLOSE_DISTANCE: number = (pitCfg and pitCfg.ProximityCloseRadius) or 3.0
+local INTERIOR_RADIUS: number = (pitCfg and pitCfg.InteriorHoldRadius) or 16.5
 local OUTWARD_ANGLE_DEG: number = (pitCfg and pitCfg.DoorOpenAngleDeg) or 95
 
 local DOOR_TWEEN_INFO = TweenInfo.new(0.65, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
@@ -313,14 +314,28 @@ function SynthesisDoorController.Init()
 				continue
 			end
 
-			-- Horizontal distance to the front threshold & to the interior sanctum center
-			local triggerDist = Vector3.new(playerPos.X - trigPos.X, 0, playerPos.Z - trigPos.Z).Magnitude
-			local centerDist = Vector3.new(playerPos.X - centerPos.X, 0, playerPos.Z - centerPos.Z).Magnitude
-			local insideSanctum = centerDist <= INTERIOR_RADIUS
+			-- Use chamber local-space bounds so the doors only open when the player is right at the bottom step
+			-- of the stairs (front face of Step 1 is at local Z = 25.0, width |X| <= 7.0) or inside the rotunda.
+			local shouldOpen = false
+			local shouldKeepOpen = false
+			if state.CenterSource then
+				local rootCF = state.CenterSource.CFrame * CFrame.new(0, -0.5, 0)
+				local lp = rootCF:PointToObjectSpace(playerPos)
+				local radialDist = math.sqrt(lp.X * lp.X + lp.Z * lp.Z)
+				local onStairsOpen = math.abs(lp.X) <= 7.4 and lp.Z >= 13.5 and lp.Z <= 25.8
+				local onStairsHold = math.abs(lp.X) <= 8.6 and lp.Z >= 13.0 and lp.Z <= 27.2
+				shouldOpen = onStairsOpen or (radialDist <= INTERIOR_RADIUS)
+				shouldKeepOpen = onStairsHold or (radialDist <= INTERIOR_RADIUS + 1.0)
+			else
+				local triggerDist = Vector3.new(playerPos.X - trigPos.X, 0, playerPos.Z - trigPos.Z).Magnitude
+				local centerDist = Vector3.new(playerPos.X - centerPos.X, 0, playerPos.Z - centerPos.Z).Magnitude
+				shouldOpen = (triggerDist <= OPEN_DISTANCE) or (centerDist <= INTERIOR_RADIUS)
+				shouldKeepOpen = (triggerDist < CLOSE_DISTANCE) or (centerDist <= INTERIOR_RADIUS + 1.0)
+			end
 
-			if not state.IsOpen and (triggerDist <= OPEN_DISTANCE or insideSanctum) then
+			if not state.IsOpen and shouldOpen then
 				SynthesisDoorController.SetDoorsOpen(state, true, false)
-			elseif state.IsOpen and (triggerDist >= CLOSE_DISTANCE and not insideSanctum) then
+			elseif state.IsOpen and not shouldKeepOpen then
 				SynthesisDoorController.SetDoorsOpen(state, false, false)
 			end
 		end

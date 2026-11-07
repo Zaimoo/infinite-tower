@@ -305,8 +305,9 @@ def dome_profile(t: float) -> tuple:
 def build_exterior_mesh() -> bmesh.types.BMesh:
     bm = bmesh.new()
 
-    # 1A. 40x40 Square Plinth & Circular Podium (Y = 0..2.4)
-    add_box(bm, 0.0, 0.6, 0.0, 40.0, 1.2, 40.0, M_STONE)
+    # 1A. Stepped Circular Podium (Y = 0..2.4, no protruding square corners)
+    add_cylinder_y(bm, 0.0, 0.0, 1.2, 0.0, 19.4, 19.4, M_STONE, sides=16)
+    add_cylinder_y(bm, 0.0, 1.0, 1.25, 0.0, 19.6, 19.6, M_STONE, sides=16, cap_ends=False)
     add_cylinder_y(bm, 0.0, 1.2, 2.4, 0.0, 18.6, 18.6, M_STONE, sides=16)
 
     # 7-Step Entrance Staircase (+Z = 17.5..25.0) & Cheek Walls
@@ -465,15 +466,32 @@ def build_door_leaf_mesh(side: float) -> tuple:
     def leaf_x(dx: float) -> float:
         return hx - side * dx
 
-    # Main rectangular door slab (Y = 2.5..12.4)
-    add_box(bm, leaf_x(3.0), 7.45, z_mid, 6.0, 9.9, 0.6, M_TIMBER, origin_rbx=hinge_origin)
+    # Continuous vertical arch-topped timber planks (6 planks per 6-stud door leaf)
+    num_planks = 6
+    plank_w = 6.0 / num_planks
+    for p_idx in range(num_planks):
+        x_center_mag = (p_idx + 0.5) * plank_w
+        arch_h = math.sqrt(max(0.0, 36.0 - x_center_mag * x_center_mag))
+        total_h = 9.9 + arch_h
+        cy = 2.45 + total_h * 0.5
+        add_box(bm, side * x_center_mag, cy, z_mid, plank_w - 0.03, total_h, 0.6, M_TIMBER, origin_rbx=hinge_origin)
 
-    # Arched upper door head (Y = 12.4..18.4)
-    for j in range(6):
-        h_mid = (j + 0.5) * 1.0
-        w = math.sqrt(max(0.0, 36.0 - h_mid * h_mid))
-        if w > 0.1:
-            add_box(bm, -side * w * 0.5, 12.4 + h_mid, z_mid, w, 1.0, 0.6, M_TIMBER, origin_rbx=hinge_origin)
+    # Outer hinge stile & inner meeting stile
+    add_box(bm, side * 5.82, 7.42, z_mid, 0.36, 9.95, 0.72, M_IRON, origin_rbx=hinge_origin)
+    add_box(bm, side * 0.18, 10.42, z_mid, 0.36, 15.9, 0.72, M_IRON, origin_rbx=hinge_origin)
+
+    # Curved upper arch rim border following the quarter-circle top edge of this leaf
+    arch_segs = 6
+    for j in range(arch_segs):
+        t0 = (j / float(arch_segs)) * (math.pi * 0.5)
+        t1 = ((j + 1) / float(arch_segs)) * (math.pi * 0.5)
+        t_mid = (t0 + t1) * 0.5
+        r_rim = 5.82
+        seg_len = 2.0 * r_rim * math.sin((t1 - t0) * 0.5) + 0.08
+        rx = side * math.cos(t_mid) * r_rim
+        ry = 12.4 + math.sin(t_mid) * r_rim
+        roll = -side * (t_mid + math.pi * 0.5)
+        add_box(bm, rx, ry, z_mid, 0.38, seg_len, 0.74, M_IRON, roll_rad=roll, origin_rbx=hinge_origin)
 
     # Iron hinge straps & waist band
     for y_strap in (4.6, 10.6):
@@ -482,9 +500,9 @@ def build_door_leaf_mesh(side: float) -> tuple:
 
     # Raised circular / crescent molding & pull ring
     rx_roundel = leaf_x(3.0)
-    add_disc_z(bm, rx_roundel, 13.6, z_face, 1.7, 0.12, M_TIMBER, sides=12, origin_rbx=hinge_origin)
-    add_disc_z(bm, rx_roundel + side * 0.35, 13.8, z_face + 0.04, 0.85, 0.14, M_IRON, sides=10, origin_rbx=hinge_origin)
-    add_disc_z(bm, rx_roundel, 13.6, z_face + 0.06, 0.30, 0.18, M_VIOLET, sides=8, origin_rbx=hinge_origin)
+    add_disc_z(bm, rx_roundel, 11.2, z_face, 1.4, 0.12, M_TIMBER, sides=12, origin_rbx=hinge_origin)
+    add_disc_z(bm, rx_roundel + side * 0.30, 11.3, z_face + 0.04, 0.72, 0.14, M_IRON, sides=10, origin_rbx=hinge_origin)
+    add_disc_z(bm, rx_roundel, 11.2, z_face + 0.06, 0.25, 0.18, M_VIOLET, sides=8, origin_rbx=hinge_origin)
     add_disc_z(bm, leaf_x(5.1), 7.0, z_face + 0.06, 0.50, 0.12, M_IRON, sides=10, origin_rbx=hinge_origin)
 
     return bm, hinge_origin

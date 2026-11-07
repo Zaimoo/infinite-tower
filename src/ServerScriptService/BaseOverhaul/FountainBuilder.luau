@@ -11,11 +11,11 @@ local FountainBuilder = {}
 -- CONFIGURATION TABLE
 --============================================================================
 FountainBuilder.Config = {
-	-- Circular Plaza Dimensions (40 to 60 studs across)
-	PlazaDiameter = 48,
+	-- Tight Foundation Lip under Tier 1 Basin (outer gray circle replaced by cobblestone ring road)
+	PlazaDiameter = 21.2,
 	PlazaHeight = 0.6,
-	InlaidRingOuterDiameter = 38,
-	InlaidRingInnerDiameter = 26,
+	InlaidRingOuterDiameter = 21.2,
+	InlaidRingInnerDiameter = 20.0,
 
 	-- Three-Tier Stacked Basins
 	Tier1BasinDiameter = 20,
@@ -160,7 +160,7 @@ function FountainBuilder.Build(parentIsland: Instance?, customConfig: { [string]
 	fountainModel:SetAttribute("Removable", cfg.PlayerRemovable)
 	fountainModel:SetAttribute("ObjectCategory", "DefaultPlazaFountain")
 
-	-- 1. Dark Stone Circular Plaza with Concentric Inlaid Ring Pattern
+	-- 1. Foundation Lip directly beneath Tier 1 Basin (no outer gray disk)
 	local plazaBase = makeCylinder({
 		Name = "PlazaBase",
 		Diameter = cfg.PlazaDiameter,
@@ -172,39 +172,6 @@ function FountainBuilder.Build(parentIsland: Instance?, customConfig: { [string]
 		Parent = fountainModel,
 	})
 	fountainModel.PrimaryPart = plazaBase
-
-	makeCylinder({
-		Name = "PlazaInlayOuterRing",
-		Diameter = cfg.InlaidRingOuterDiameter,
-		Height = cfg.PlazaHeight + 0.08,
-		Position = Vector3.new(0, cfg.PlazaHeight * 0.5 + 0.04, 0),
-		Material = cfg.InlayMaterial,
-		Color = cfg.InlayColor,
-		Decorative = true,
-		Parent = fountainModel,
-	})
-
-	makeCylinder({
-		Name = "PlazaInnerStoneDisk",
-		Diameter = cfg.InlaidRingOuterDiameter - 3.0,
-		Height = cfg.PlazaHeight + 0.14,
-		Position = Vector3.new(0, cfg.PlazaHeight * 0.5 + 0.07, 0),
-		Material = cfg.PlazaMaterial,
-		Color = cfg.PlazaColor,
-		Decorative = true,
-		Parent = fountainModel,
-	})
-
-	makeCylinder({
-		Name = "PlazaInlayInnerRing",
-		Diameter = cfg.InlaidRingInnerDiameter,
-		Height = cfg.PlazaHeight + 0.20,
-		Position = Vector3.new(0, cfg.PlazaHeight * 0.5 + 0.10, 0),
-		Material = cfg.InlayMaterial,
-		Color = cfg.InlayColor,
-		Decorative = true,
-		Parent = fountainModel,
-	})
 
 	-- 2. Tier 1: Wide Base Basin
 	local y1 = cfg.PlazaHeight + cfg.Tier1Height * 0.5
