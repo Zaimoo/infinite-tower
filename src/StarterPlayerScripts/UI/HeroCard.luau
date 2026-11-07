@@ -23,7 +23,7 @@ local CHECKS_PER_FRAME = 40
 local SETTLE_SECONDS = 0.15 -- wait for a moving portrait (open pop, scrolling) to stop before reading layout
 type Lazy = {
 	Viewport: ViewportFrame, Template: Model, Hero: any, Model: Model?, Dead: boolean,
-	FullBody: boolean?,
+	FullBody: boolean?, CloseUp: boolean?,
 	Scroll: ScrollingFrame?, Moved: boolean, MovedAt: number, WasVisible: boolean, Queued: boolean, Y: number,
 }
 local entries: { Lazy } = {}
@@ -119,6 +119,12 @@ local function buildRig(entry: Lazy)
 		local head = model:FindFirstChild("Head")
 		look = if head and head:IsA("BasePart") then head.Position - Vector3.new(0, size.Y * 0.1, 0) else bounds.Position + Vector3.new(0, size.Y * 0.22, 0)
 		distance = math.max(4, size.Y * 0.82)
+		if entry.CloseUp then
+			if head and head:IsA("BasePart") then
+				look = head.Position - Vector3.new(0, size.Y * 0.045, 0)
+			end
+			distance = math.max(2.8, size.Y * 0.65)
+		end
 	end
 	local camera = T.New("Camera", {FieldOfView = fieldOfView, CFrame = CFrame.lookAt(look + forward * distance, look)}, vp)
 	vp.CurrentCamera = camera
@@ -164,10 +170,10 @@ local function portraitImage(parent: Instance, image: string): ImageLabel
 	return T.New("ImageLabel", {BackgroundTransparency = 1, Image = image, ScaleType = Enum.ScaleType.Crop, Size = UDim2.fromScale(1, 1)}, parent)
 end
 
-function HeroCard.Portrait(parent: Instance, hero: any, fullBody: boolean?): GuiObject
+function HeroCard.Portrait(parent: Instance, hero: any, framing: (boolean | "CloseUp")?): GuiObject
 	local seed = HeroCatalog.Seeds[hero.TemplateId]
 	local portrait = hero.Portrait or (seed and seed.Portrait)
-	if not fullBody and type(portrait) == "string" and portrait ~= "" then
+	if framing ~= true and type(portrait) == "string" and portrait ~= "" then
 		return portraitImage(parent, portrait)
 	end
 	local assets = ReplicatedStorage:FindFirstChild("Assets")
@@ -181,7 +187,7 @@ function HeroCard.Portrait(parent: Instance, hero: any, fullBody: boolean?): Gui
 		}, parent)
 		local entry: Lazy = {
 			Viewport = viewport, Template = template, Hero = { TemplateId = hero.TemplateId }, Model = nil, Dead = false,
-			FullBody = fullBody,
+			FullBody = framing == true, CloseUp = framing == "CloseUp",
 			Scroll = nil, Moved = false, MovedAt = 0, WasVisible = false, Queued = false, Y = 0,
 		}
 		table.insert(entries, entry)
@@ -212,7 +218,7 @@ function HeroCard.Portrait(parent: Instance, hero: any, fullBody: boolean?): Gui
 		local h = a and a:WaitForChild("Heroes", 3)
 		local t = h and h:WaitForChild(hero.TemplateId or "", 3)
 		if t and t:IsA("Model") and parent.Parent and fallback.Parent == parent then
-			local view = HeroCard.Portrait(parent, hero, fullBody)
+			local view = HeroCard.Portrait(parent, hero, framing)
 			view.ZIndex = fallback.ZIndex
 			fallback:Destroy()
 		end

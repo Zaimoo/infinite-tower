@@ -310,6 +310,33 @@ test("State snapshots do not expose mutable references", function()
 	equal(c.profile.Heroes.r.Level, 1); equal(c.profile.PitMaterials.SoulEssence, 1000)
 end)
 
+test("Recipient status ignores donor protections and level cap", function()
+	local c = context()
+	local h = c.profile.Heroes.r
+	h.Locked = true
+	h.Favorite = true
+	h.Assignment = "SQUAD_SLOT_1"
+	h.Level = Stats.GetMaxLevel(h.Stars)
+	local state = c:request("STATE").State
+	check(state.Heroes.r.RecipientStatus.Eligible)
+	check(not state.Heroes.r.PitStatus.EligibleDonor)
+	local preview = c:preview(synthesis())
+	check(preview.CanCommit)
+end)
+
+test("Recipient status exposes coma and profile reservations", function()
+	local c = context()
+	c.profile.ReservedHeroUUIDs = { r = true }
+	local state = c:request("STATE").State
+	check(not state.Heroes.r.RecipientStatus.Eligible)
+	check(not c:preview(synthesis()).CanCommit)
+	c.profile.ReservedHeroUUIDs = {}
+	c.profile.Heroes.r.IsHardAuditComa = true
+	state = c:request("STATE").State
+	check(not state.Heroes.r.RecipientStatus.Eligible)
+	check(not c:preview(synthesis()).CanCommit)
+end)
+
 test("Preview does not spend resources and committed single donor matches exact preview", function()
 	local c = context()
 	local before = Math.Copy(c.profile)

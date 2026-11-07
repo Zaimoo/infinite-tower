@@ -2,7 +2,7 @@
 -- StarterPlayerScripts/UI/SynthesisController.luau
 -- Focused Synthesis HUD opened from the Synthesis chamber's [F] prompt.
 -- Layout:
---   * Left column: a big card for the recipient (the hero being levelled), with SELECT / CHANGE HERO,
+--   * Left column: a big card for the recipient (the hero being levelled), with SELECT / REMOVE HERO,
 --     its name, level preview and live animated XP bar.
 --   * Right column: the material heroes to synthesize with, sortable (Power/Stars/Level),
 --     "READY ONLY" filter, and cards displaying power, archetype, stars, and facility chips.
@@ -16,6 +16,7 @@ local GuiService = game:GetService("GuiService")
 local UserInputService = game:GetService("UserInputService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local HeroSelectionDrawer = require(script.Parent.HeroSelectionDrawer)
 local HeroCard = require(script.Parent:WaitForChild("HeroCard"))
 local ModalFit = require(script.Parent:WaitForChild("ModalFit"))
 local Theme = require(script.Parent:WaitForChild("Hud"):WaitForChild("Theme"))
@@ -328,6 +329,7 @@ function Synth.new(gui: ScreenGui, remote: RemoteFunction)
 	self.Preview = nil
 	self.Busy = false
 	self.PreviewSerial = 0
+	self.SessionSerial = 0
 	self.Message = ""
 	self.Tweens = {}
 	self.LastRecipientUID = nil :: string?
@@ -415,8 +417,8 @@ function Synth.new(gui: ScreenGui, remote: RemoteFunction)
 	}, recipCard)
 
 	recipCard.Activated:Connect(function()
-		if self.Busy then return end
-		self:OpenPicker("RECIPIENT")
+		if self.Busy or self.Picker.Visible then return end
+		self:OpenPicker("RECIPIENT", recipCard)
 	end)
 
 	-- Recipient details: name, rarity line, level preview, live XP bar and the EXP summary.
@@ -464,8 +466,11 @@ function Synth.new(gui: ScreenGui, remote: RemoteFunction)
 		Size = UDim2.new(1, -28, 0, 42), ZIndex = Z + 2,
 	})
 	pickBtn.Activated:Connect(function()
-		if self.Busy then return end
-		self:OpenPicker("RECIPIENT")
+		if self.Recipient then
+			self:RemoveRecipient()
+		else
+			self:OpenPicker("RECIPIENT")
+		end
 	end)
 
 	self.RecipientSlot = {
@@ -483,6 +488,12 @@ function Synth.new(gui: ScreenGui, remote: RemoteFunction)
 	GildedGrimoire.Frame(rosterPanel, { Class = "Panel", Tone = "Deep", ZIndex = Z })
 	self.RosterPanel = rosterPanel
 
+	self.NoRecipientPrompt = label(rosterPanel, "Title", {
+		Name = "NoRecipientPrompt", Position = UDim2.fromOffset(24, 0), Size = UDim2.new(1, -48, 1, 0),
+		TextSize = 32, TextWrapped = true, Text = "Select a hero first", ZIndex = Z + 2,
+	})
+	gold(self.NoRecipientPrompt)
+
 	self.RosterHeader = label(rosterPanel, "Title", {
 		Position = UDim2.fromOffset(14, 8), Size = UDim2.fromOffset(250, 20), TextSize = 16,
 		TextXAlignment = Enum.TextXAlignment.Left, Text = "MATERIALS", ZIndex = Z + 2,
@@ -494,6 +505,7 @@ function Synth.new(gui: ScreenGui, remote: RemoteFunction)
 		AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -12, 0, 6), Size = UDim2.fromOffset(290, 24),
 		BackgroundTransparency = 1, ZIndex = Z + 2,
 	}, rosterPanel)
+	self.RosterControls = controls
 	new("UIListLayout", {
 		FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Right,
 		Padding = UDim.new(0, 5), SortOrder = Enum.SortOrder.LayoutOrder, VerticalAlignment = Enum.VerticalAlignment.Center,
@@ -504,6 +516,7 @@ function Synth.new(gui: ScreenGui, remote: RemoteFunction)
 		local b, l = button(controls, "Slate", string.upper(key), { LayoutOrder = order, Size = UDim2.fromOffset(58, 24), ZIndex = Z + 3 })
 		l.TextSize = 11
 		b.Activated:Connect(function()
+			if self.Busy or self.Picker.Visible or not self.Recipient then return end
 			self.Sort = key :: Sort
 			self:Render()
 		end)
@@ -513,6 +526,7 @@ function Synth.new(gui: ScreenGui, remote: RemoteFunction)
 	local fb, fl = button(controls, "Slate", "READY ONLY", { LayoutOrder = 4, Size = UDim2.fromOffset(92, 24), ZIndex = Z + 3 })
 	fl.TextSize = 11
 	fb.Activated:Connect(function()
+		if self.Busy or self.Picker.Visible or not self.Recipient then return end
 		self.ReadyOnly = not self.ReadyOnly
 		self:Render()
 	end)
@@ -546,7 +560,7 @@ function Synth.new(gui: ScreenGui, remote: RemoteFunction)
 		AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -232, 0, 546), Size = UDim2.fromOffset(130, 40), ZIndex = Z + 2,
 	})
 	clearBtn.Activated:Connect(function()
-		if self.Busy then return end
+		if self.Busy or self.Picker.Visible or self.Popup.Visible then return end
 		if #self.Donors > 0 then
 			self.Donors = {}
 			self.Message = ""
@@ -641,126 +655,75 @@ end
 -- HERO PICKER (Overlay used to pick the Recipient Hero)
 --============================================================================
 
-function Synth.BuildPicker(self: any)
-	local picker = new("TextButton", {
-		Name = "HeroPicker", BackgroundColor3 = C.Panel, BorderSizePixel = 0, Visible = false, Active = true,
-		Position = UDim2.fromOffset(14, 14), Size = UDim2.new(1, -28, 1, -28), ZIndex = Z + 20,
-		Text = "", AutoButtonColor = false,
-	}, self.Root)
-	picker.Activated:Connect(function() end)
-	GothicBoxStyle.Apply(picker, { Style = "Window" })
-	self.Picker = picker
-
-	self.PickerTitle = label(picker, "Title", {
-		Position = UDim2.fromOffset(0, 16), Size = UDim2.new(1, 0, 0, 28),
-		TextSize = 20, Text = "SELECT RECIPIENT HERO", ZIndex = Z + 21,
-	})
-	gold(self.PickerTitle)
-
-	local back = new("TextButton", {
-		Text = "×", TextSize = 28, Font = Enum.Font.GothamBold, TextColor3 = C.Muted, BackgroundTransparency = 1,
-		Position = UDim2.new(1, -50, 0, 10), Size = UDim2.fromOffset(40, 40), ZIndex = Z + 22,
-	}, picker)
-	back.Activated:Connect(function()
-		picker.Visible = false
-		self:Render()
-	end)
-	GrimoireIcons.CloseGlyph(back, 18)
-
-	self.PickerStatus = label(picker, "Body", {
-		Position = UDim2.new(0, 24, 1, -44), Size = UDim2.new(1, -48, 0, 36),
-		TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = TEXT.Muted,
-		Text = "Choose the hero who will receive the EXP.", ZIndex = Z + 21,
-	})
-
-	self.PickerList = new("ScrollingFrame", {
-		BackgroundTransparency = 1, BorderSizePixel = 0, Position = UDim2.fromOffset(20, 52), Size = UDim2.new(1, -40, 1, -104),
-		CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, ScrollBarThickness = 6,
-		ScrollBarImageColor3 = Color3.fromRGB(240, 196, 110), ScrollingDirection = Enum.ScrollingDirection.Y, ZIndex = Z + 21,
-	}, picker)
-	new("UIGridLayout", {
-		CellSize = UDim2.fromOffset(110, 144), CellPadding = UDim2.fromOffset(12, 12),
-		HorizontalAlignment = Enum.HorizontalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder,
-	}, self.PickerList)
-	new("UIPadding", { PaddingTop = UDim.new(0, 4), PaddingBottom = UDim.new(0, 8) }, self.PickerList)
+local function recipientStatus(hero: any): (boolean, string)
+	local status = hero.RecipientStatus
+	if status and status.Eligible == false then return false, status.Reason or "Unavailable" end
+	if hero.ReservedBy or hero.Reserved or hero.OperationReserved or hero.ReservedOperationId then
+		return false, "Reserved by another operation"
+	end
+	if (hero.ComaUntilTimestamp or 0) > os.time() or hero.IsHardAuditComa then
+		return false, "Recovering from coma"
+	end
+	return true, "Ready to receive EXP"
 end
 
-function Synth.OpenPicker(self: any, mode: string)
-	if self.Busy then return end
+function Synth.BuildPicker(self: any)
+	self.HeroDrawer = HeroSelectionDrawer.new(self.Root.Parent, Z + 50, function()
+		self:Render()
+	end)
+	self.Picker = self.HeroDrawer.Root
+end
+
+function Synth.OpenPicker(self: any, mode: string, returnFocus: GuiObject?)
+	if self.Busy or self.Popup.Visible or self.Picker.Visible or not self.Root.Visible then return end
 	self.PickerMode = mode
-	self.Picker.Visible = true
 	self:RenderPicker()
+	self.HeroDrawer:Open(returnFocus or self.RecipientSlot.Button)
+	self:Render()
+end
+
+function Synth.RemoveRecipient(self: any)
+	if self.Busy or self.Popup.Visible or self.Picker.Visible or not self.Root.Visible or not self.Recipient then return end
+	self.Recipient = nil
+	self.Donors = {}
+	self.Message = ""
+	self:QueuePreview()
 end
 
 function Synth.Pick(self: any, uuid: string)
-	local hero = self.State.Heroes[uuid] or (_G.CurrentProfile and _G.CurrentProfile.Heroes and _G.CurrentProfile.Heroes[uuid])
-	if not hero then return end
-	if self.PickerMode == "RECIPIENT" then
+	if self.Busy or not self.HeroDrawer.Opened or not self.Root.Visible then return end
+	local hero = self.State.Heroes[uuid]
+	if not hero or not recipientStatus(hero) then return end
+	if self.Recipient ~= uuid then
 		self.Recipient = uuid
-		local index = table.find(self.Donors, uuid)
-		if index then table.remove(self.Donors, index) end
+		self.Donors = {}
 		self.Message = ""
-		self.Picker.Visible = false
-		self:QueuePreview()
+		self:QueuePreview() -- advances PreviewSerial before any delayed response can apply
 	end
+	self.HeroDrawer:Close()
+	self:Render()
 end
 
 function Synth.RenderPicker(self: any)
-	for _, child in self.PickerList:GetChildren() do
-		if child:IsA("GuiObject") then child:Destroy() end
+	local entries = {}
+	for uuid, hero in self.State.Heroes do
+		local eligible, status = recipientStatus(hero)
+		table.insert(entries, {
+			UUID = uuid, Hero = hero, Selected = uuid == self.Recipient, Disabled = not eligible,
+			Status = status, Action = if uuid == self.Recipient then "SELECTED" else "SELECT",
+		})
 	end
-
-	local heroMap = self.State.Heroes
-	if (not heroMap or next(heroMap) == nil) and _G.CurrentProfile and _G.CurrentProfile.Heroes then
-		heroMap = _G.CurrentProfile.Heroes
-	end
-
-	local heroes = {}
-	for _, hero in heroMap do
-		table.insert(heroes, hero)
-	end
-	table.sort(heroes, function(a, b)
-		if (a.Stars or 1) ~= (b.Stars or 1) then return (a.Stars or 1) > (b.Stars or 1) end
-		if (a.Level or 1) ~= (b.Level or 1) then return (a.Level or 1) > (b.Level or 1) end
-		return tostring(a.DisplayName or "") < tostring(b.DisplayName or "")
+	table.sort(entries, function(a, b)
+		if a.Selected ~= b.Selected then return a.Selected end
+		local ah, bh = a.Hero, b.Hero
+		if (ah.Level or 1) ~= (bh.Level or 1) then return (ah.Level or 1) > (bh.Level or 1) end
+		if (ah.Stars or 1) ~= (bh.Stars or 1) then return (ah.Stars or 1) > (bh.Stars or 1) end
+		if (ah.DisplayName or "") ~= (bh.DisplayName or "") then return (ah.DisplayName or "") < (bh.DisplayName or "") end
+		return a.UUID < b.UUID
 	end)
-
-	for i, hero in heroes do
-		local isCurrent = hero.UUID == self.Recipient
-		local rarity = Theme.RarityColor(StatFormulas.GetHeroRarity(hero))
-
-		local tile = new("TextButton", {
-			Name = "Hero_" .. tostring(hero.UUID), Text = "", LayoutOrder = i, AutoButtonColor = true,
-			BackgroundColor3 = C.Slot, BorderSizePixel = 0, ZIndex = Z + 22,
-		}, self.PickerList)
-		GildedGrimoire.Frame(tile, { Class = "Card", Tone = "Violet", ZIndex = Z + 22 })
-		local rail = GildedGrimoire.StateStroke(tile)
-		if rail then
-			rail.Color = if isCurrent then TEXT.Gold else rarity
-			rail.Thickness = if isCurrent then 2.4 else 1.2
-		end
-
-		local host = new("Frame", {
-			BackgroundTransparency = 1, ClipsDescendants = true, Position = UDim2.fromOffset(12, 8),
-			Size = UDim2.fromOffset(86, 82), ZIndex = Z + 23,
-		}, tile)
-		new("UICorner", { CornerRadius = UDim.new(0, 10) }, host)
-		HeroCard.Portrait(host, hero)
-
-		local name = label(tile, "Title", {
-			Position = UDim2.fromOffset(4, 94), Size = UDim2.new(1, -8, 0, 18), TextScaled = true,
-			TextColor3 = isCurrent and TEXT.Gold or TEXT.Parchment, Text = hero.DisplayName or "Hero", ZIndex = Z + 24,
-		})
-		new("UITextSizeConstraint", { MaxTextSize = 13 }, name)
-
-		label(tile, "Body", {
-			Position = UDim2.fromOffset(4, 114), Size = UDim2.new(1, -8, 0, 16), TextSize = 11,
-			TextColor3 = rarity, Text = string.format("%s · Lv.%d", stars(hero.Stars), hero.Level or 1), ZIndex = Z + 24,
-		})
-
-		local uuid = hero.UUID
-		tile.Activated:Connect(function() self:Pick(uuid) end)
-	end
+	self.HeroDrawer:SetContent("SELECT HERO TO LEVEL UP", "Choose the hero who will receive EXP.", entries, function(uuid)
+		self:Pick(uuid)
+	end)
 end
 
 --============================================================================
@@ -879,21 +842,9 @@ function Synth.BuildRosterCard(self: any, hero: any): any
 end
 
 function Synth.PressRosterHero(self: any, uuid: string)
-	if self.Busy or self.Popup.Visible then return end
-	local hero = self.State.Heroes[uuid] or (_G.CurrentProfile and _G.CurrentProfile.Heroes and _G.CurrentProfile.Heroes[uuid])
+	if self.Busy or self.Popup.Visible or self.Picker.Visible or not self.Recipient then return end
+	local hero = self.State.Heroes[uuid]
 	if not hero then return end
-
-	-- 1. If no recipient has been chosen yet:
-	if not self.Recipient then
-		self.Recipient = uuid
-		local donorIdx = table.find(self.Donors, uuid)
-		if donorIdx then
-			table.remove(self.Donors, donorIdx)
-		end
-		self.Message = string.format("Selected %s as recipient. Choose materials below to synthesize EXP.", hero.DisplayName or "Hero")
-		self:QueuePreview()
-		return
-	end
 
 	-- 2. If this hero is the recipient:
 	if uuid == self.Recipient then
@@ -947,15 +898,21 @@ function Synth.Request(self: any, command: string, payload: any?): any
 end
 
 function Synth.Refresh(self: any, attempt: number?)
+	local session = self.SessionSerial
 	task.spawn(function()
 		local response = self:Request("STATE")
-		if not self.Root.Visible then return end
+		if not self.Root.Visible or session ~= self.SessionSerial then return end
 		if not response.Success then
-			if (attempt or 0) < 3 then task.delay(0.5, function() self:Refresh((attempt or 0) + 1) end) end
+			if (attempt or 0) < 3 then task.delay(0.5, function() if session == self.SessionSerial and self.Root.Visible then self:Refresh((attempt or 0) + 1) end end) end
 			return
 		end
 		self.State = response.State or { Heroes = {} }
-		if self.Recipient and not self.State.Heroes[self.Recipient] then self.Recipient = nil end
+		self.State.Heroes = self.State.Heroes or {}
+		if self.Recipient and not self.State.Heroes[self.Recipient] then
+			self.Recipient = nil
+			self.Donors = {}
+			self.Message = ""
+		end
 		for i = #self.Donors, 1, -1 do
 			local uuid = self.Donors[i]
 			local hero = self.State.Heroes[uuid]
@@ -963,9 +920,8 @@ function Synth.Refresh(self: any, attempt: number?)
 				table.remove(self.Donors, i)
 			end
 		end
-		self:Render()
-		if self.Picker.Visible then self:RenderPicker() end
 		self:QueuePreview()
+		if self.Picker.Visible then self:RenderPicker() end
 	end)
 end
 
@@ -1005,7 +961,7 @@ function Synth.ComputeOptimisticPreview(self: any): any?
 			xp.Efficiency = weighted / xp.Base
 		end
 		local after, overflow = PitMath.AdvanceXP(recipient, xp.Final)
-		xp.Applied = xp.Final
+		xp.Applied = math.max(0, xp.Final - overflow.Rejected)
 
 		local warnings = {}
 		if xp.Efficiency < 1 then
@@ -1038,22 +994,12 @@ function Synth.QueuePreview(self: any)
 	self.PreviewSerial += 1
 	local serial = self.PreviewSerial
 
-	if self.Recipient and #self.Donors > 0 then
-		local opt = self:ComputeOptimisticPreview()
-		if opt then
-			self.Preview = opt
-			self.PreviewError = nil
-		end
-		self.Loading = false
-	else
-		self.Preview = nil
-		self.PreviewError = nil
-		self.Loading = false
-	end
-
+	self.Loading = self.Recipient ~= nil and #self.Donors > 0
+	self.Preview = if self.Loading then self:ComputeOptimisticPreview() else nil
+	self.PreviewError = nil
 	self:Render()
 
-	if not self.Recipient or #self.Donors == 0 then return end
+	if not self.Loading then return end
 
 	task.delay(0.15, function()
 		if serial ~= self.PreviewSerial or not self.Root.Visible then return end
@@ -1064,10 +1010,9 @@ function Synth.QueuePreview(self: any)
 			return
 		end
 		self.Loading = false
-		if response.Success and response.Preview then
+		if response.Success and type(response.Preview) == "table" then
 			self.Preview = response.Preview
-			self.PreviewError = nil
-		elseif not response.Success then
+		else
 			self.PreviewError = response.Message or "Preview unavailable."
 		end
 		self:Render()
@@ -1075,7 +1020,7 @@ function Synth.QueuePreview(self: any)
 end
 
 function Synth.Confirm(self: any)
-	if self.Busy or self.Loading or self.Popup.Visible then return end
+	if self.Busy or self.Loading or self.Popup.Visible or self.Picker.Visible then return end
 	local preview = self.Preview
 	if not self.Recipient then
 		self:ShowPopup("SYNTHESIS UNAVAILABLE", "Choose the hero who will receive the EXP.")
@@ -1085,11 +1030,11 @@ function Synth.Confirm(self: any)
 		self:ShowPopup("SYNTHESIS UNAVAILABLE", "Select at least one material hero from the roster.")
 		return
 	end
-	if not preview or not preview.CanCommit or not preview.Token then
-		self:ShowPopup("SYNTHESIS UNAVAILABLE", if preview and preview.Reason ~= "" then preview.Reason else self.PreviewError or "Synthesis preview is loading. Please try again in a moment.")
-		if not preview or not preview.Token then self:QueuePreview() end
+	if self.PreviewError then
+		self:QueuePreview()
 		return
 	end
+	if not preview or not preview.CanCommit or not preview.Token then return end
 	if #preview.Warnings > 0 then
 		local overflow = preview.RequiresOverflowConfirmation == true
 		self:ShowPopup(if overflow then "EXP CAP EXCEEDED" else "SYNTHESIS WARNING", table.concat(preview.Warnings, "\n\n"),
@@ -1102,8 +1047,8 @@ function Synth.Confirm(self: any)
 end
 
 function Synth.Commit(self: any, preview: any)
-	if self.Busy or not self.Root.Visible then return end
-	if preview ~= self.Preview or #preview.Donors ~= #self.Donors then
+	if self.Busy or self.Loading or self.Picker.Visible or not self.Root.Visible then return end
+	if not preview.Token or preview ~= self.Preview or #preview.Donors ~= #self.Donors then
 		self:ShowPopup("SELECTION CHANGED", "Review the updated preview before synthesizing.")
 		self:QueuePreview()
 		return
@@ -1149,14 +1094,11 @@ end
 function Synth.Render(self: any)
 	local profile: any = _G.CurrentProfile
 	local heroes = self.State.Heroes or {}
-	if (not heroes or next(heroes) == nil) and profile and profile.Heroes then
-		heroes = profile.Heroes
-	end
 
 	-- Prune any donors that have become ineligible
 	for i = #self.Donors, 1, -1 do
 		local uuid = self.Donors[i]
-		local hero = heroes[uuid] or (profile and profile.Heroes and profile.Heroes[uuid])
+		local hero = heroes[uuid]
 		local eligible = hero and checkDonorEligibility(hero, self.Recipient)
 		if not eligible then
 			table.remove(self.Donors, i)
@@ -1166,12 +1108,12 @@ function Synth.Render(self: any)
 	-- Training multiplier for hero power calculation
 	local mult = 1
 	for uuid, reported in pairs(profile and profile.SquadPowerByHero or {}) do
-		local h = heroes[uuid] or (profile and profile.Heroes and profile.Heroes[uuid])
+		local h = heroes[uuid]
 		local base = h and StatFormulas.GetHeroPower(h, StatFormulas.GetEquippedArtifact(profile, h))
 		if base and base > 0 then mult = reported / base break end
 	end
 
-	local recipient = self.Recipient and (heroes[self.Recipient] or (profile and profile.Heroes and profile.Heroes[self.Recipient]))
+	local recipient = self.Recipient and heroes[self.Recipient]
 
 	-- 1. Left column: the recipient card and its details
 	local recipSlot = self.RecipientSlot
@@ -1192,7 +1134,7 @@ function Synth.Render(self: any)
 
 	local recipRarity = recipient and Theme.RarityColor(StatFormulas.GetHeroRarity(recipient)) or INK
 	recipSlot.Ring.Color = if recipient then recipRarity else INK
-	retone(recipSlot.Button, recipSlot.BtnLabel, if recipient then "Slate" else "Gold", if recipient then "CHANGE HERO" else "SELECT HERO")
+	retone(recipSlot.Button, recipSlot.BtnLabel, if recipient then "Slate" else "Gold", if recipient then "REMOVE HERO" else "SELECT HERO")
 	recipSlot.Rail.Color = if recipient then TEXT.Gold else Color3.fromRGB(150, 138, 176)
 
 	local preview = self.Preview
@@ -1310,11 +1252,26 @@ function Synth.Render(self: any)
 		self.GainFill.Size = UDim2.fromScale(0, 1)
 		self.GainFill.Visible = false
 		self.XPText.Text = ""
-		self.SummaryLine.Text = '<font color="#A59BB9">Press SELECT HERO, or click a hero on the right.</font>'
+		self.SummaryLine.Text = '<font color="#A59BB9">Press SELECT HERO to choose who receives EXP.</font>'
 		self.LastRecipientUID = nil
 		self.LastBaseRatio = 0
 		self.LastTotalRatio = 0
 	end
+
+	local hasRecipient = recipient ~= nil
+	local materialEnabled = hasRecipient and not self.Busy and not self.Picker.Visible
+	self.ScreenState = if self.Busy then "Submitting" elseif self.Picker.Visible then "PickerOpen"
+		elseif not recipient then "NoRecipient" elseif #self.Donors > 0 then "MaterialsSelected" else "RecipientSelected"
+	self.NoRecipientPrompt.Visible = not hasRecipient
+	self.RosterHeader.Visible = hasRecipient
+	self.RosterControls.Visible = hasRecipient
+	self.RosterScroll.Visible = hasRecipient
+	self.RecipientSlot.Button.Interactable = not self.Busy and not self.Picker.Visible
+	self.RecipientSlot.Card.Interactable = not self.Busy and not self.Picker.Visible
+	self.RosterScroll.ScrollingEnabled = materialEnabled
+	self.ClearButton.Button.Interactable = materialEnabled
+	self.FilterButton.Button.Interactable = materialEnabled
+	for _, item in self.SortButtons do item.Button.Interactable = materialEnabled end
 
 	-- 2. Sort / filter buttons
 	for key, b in self.SortButtons do
@@ -1325,7 +1282,8 @@ function Synth.Render(self: any)
 	-- 3. Right column: material hero cards
 	local heroList = {}
 	local heroPower: { [string]: number } = {}
-	for _, h in pairs(heroes) do
+	local materialHeroes = if hasRecipient then heroes else {}
+	for _, h in pairs(materialHeroes) do
 		-- The selected recipient hero never shows in the material heroes section, even if equipped in squad
 		if self.Recipient and h.UUID == self.Recipient then
 			continue
@@ -1358,7 +1316,7 @@ function Synth.Render(self: any)
 	self.RosterHeader.Text = string.format("MATERIALS  (%d)%s", #heroList,
 		if selectedCount > 0 then string.format("  ·  %d SELECTED", selectedCount) else "")
 
-	self.EmptyLabel.Visible = #heroList == 0
+	self.EmptyLabel.Visible = hasRecipient and #heroList == 0
 	self.EmptyLabel.Text = if self.ReadyOnly then "No eligible material heroes available. Unassign, unlock or bench heroes first." else "Your roster is empty."
 
 	local seen: { [string]: boolean } = {}
@@ -1368,6 +1326,7 @@ function Synth.Render(self: any)
 		self.RosterCards[hero.UUID] = entry
 		entry.Card.LayoutOrder = order
 		entry.Card.Visible = true
+		entry.Card.Interactable = materialEnabled
 
 		local isRecipient = (hero.UUID == self.Recipient)
 		local isSelected = (table.find(self.Donors, hero.UUID) ~= nil)
@@ -1401,7 +1360,7 @@ function Synth.Render(self: any)
 		entry.ChipLabel.TextColor3 = chipColor
 
 		-- Ineligible, squad-equipped, or Recipient heroes are shaded
-		entry.Shade.Visible = isRecipient or inSquad or not eligible
+		entry.Shade.Visible = not materialEnabled or isRecipient or inSquad or not eligible
 
 		-- Selection visual (Gold highlighted rail & check badge, matching Image 2's Sovereign Archon highlight)
 		entry.SelectedTint.Visible = isSelected
@@ -1430,13 +1389,20 @@ function Synth.Render(self: any)
 	end
 
 	-- 4. Bottom Footer (Clear & Confirm Synthesize buttons)
-	local ready = self.Recipient ~= nil and #self.Donors > 0 and preview ~= nil and preview.CanCommit and preview.Token ~= nil and not self.Loading and not self.Busy
+	local canAct = materialEnabled and #self.Donors > 0 and not self.Loading
+	local retry = canAct and self.PreviewError ~= nil
+	local ready = canAct and not retry and preview ~= nil and preview.CanCommit and preview.Token ~= nil
 
+	self.ConfirmButton.Button.Interactable = ready or retry
 	self.ClearButton.Button.Visible = #self.Donors > 0
 	self.ClearButton.Label.Text = string.format("CLEAR (%d)", #self.Donors)
 
 	if self.Busy then
 		retone(self.ConfirmButton.Button, self.ConfirmButton.Label, "Slate", "SYNTHESIZING…")
+	elseif self.Loading then
+		retone(self.ConfirmButton.Button, self.ConfirmButton.Label, "Slate", "CHECKING EXP…")
+	elseif retry then
+		retone(self.ConfirmButton.Button, self.ConfirmButton.Label, "Gold", "RETRY PREVIEW")
 	elseif ready then
 		retone(self.ConfirmButton.Button, self.ConfirmButton.Label, "Action", "CONFIRM SYNTHESIZE")
 	else
@@ -1446,9 +1412,16 @@ function Synth.Render(self: any)
 	-- Status line
 	local status, color = self.Message, TEXT.Muted
 	if self.Loading then
-		status = "Calculating synthesis preview…"
+		status = "Checking the EXP preview with the server…"
+	elseif self.PreviewError then
+		status, color = self.PreviewError, TEXT.Bad
+	elseif preview and not preview.CanCommit and preview.Reason and preview.Reason ~= "" then
+		status, color = preview.Reason, TEXT.Bad
 	elseif status:find("complete") then
 		color = C.Good
+	end
+	if #self.Donors > 0 then
+		status ..= "\nSelected materials will be permanently consumed."
 	end
 	self.Status.Text, self.Status.TextColor3 = status, color
 end
@@ -1468,12 +1441,13 @@ end
 --============================================================================
 
 function Synth.Open(self: any)
+	self.SessionSerial += 1
 	if _G.SetModalFocusMode then
 		_G.SetModalFocusMode(true)
 	end
 	self:DismissPopup()
 	self.Root.Visible, self.Scrim.Visible = true, true
-	self.Picker.Visible = false
+	self.HeroDrawer:Close(true)
 	self.Recipient = nil
 	self.Donors = {}
 	self.Preview, self.PreviewError = nil, nil
@@ -1492,11 +1466,13 @@ end
 
 function Synth.Close(self: any)
 	if self.Busy then return end
+	self.SessionSerial += 1
 	if _G.SetModalFocusMode then
 		_G.SetModalFocusMode(false)
 	end
 	self:DismissPopup()
-	self.Root.Visible, self.Scrim.Visible, self.Picker.Visible = false, false, false
+	self.HeroDrawer:Close(true)
+	self.Root.Visible, self.Scrim.Visible = false, false
 	self.PreviewSerial += 1
 	self.Loading = false
 	self.Recipient = nil

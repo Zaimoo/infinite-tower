@@ -21,6 +21,19 @@ UIAssets.Images = table.freeze({
 	BannerCallOfTheRift = "", -- 1600×900 permanent banner background.
 	BannerStarsArrival = "", -- 1600×900 limited banner background.
 	BannerArtifactForge = "", -- 1600×900 artifact banner background.
+	-- Tower Biome Banners (Infinite Tower Travel & Hub Floor Selector)
+	BiomeBanners = table.freeze({
+		verdant_ruins = "rbxassetid://93875713627917",
+		fungal_hollow = "rbxassetid://101580789455814",
+		ashen_dunes = "rbxassetid://94817733825787",
+		frozen_citadel = "rbxassetid://106259487975925",
+		infernal_foundry = "rbxassetid://85509085913763",
+		thunder_highlands = "rbxassetid://122513568623188",
+		corrupted_grove = "rbxassetid://110433752583302",
+		sunken_sanctuary = "rbxassetid://129768018099787",
+		astral_archives = "rbxassetid://116413443963257",
+		abyssal_throne = "rbxassetid://92731064207895",
+	}),
 })
 
 UIAssets.Sounds = table.freeze({
@@ -41,5 +54,29 @@ UIAssets.Sounds = table.freeze({
 	ResultsPop = "", -- each card in the 10x grid
 	NewBadge = "",
 })
+
+local BIOME_BANNER_BY_INDEX: { [number]: string } = table.freeze({
+	[1] = "rbxassetid://93875713627917",
+	[2] = "rbxassetid://101580789455814",
+	[3] = "rbxassetid://94817733825787",
+	[4] = "rbxassetid://106259487975925",
+	[5] = "rbxassetid://85509085913763",
+	[6] = "rbxassetid://122513568623188",
+	[7] = "rbxassetid://110433752583302",
+	[8] = "rbxassetid://129768018099787",
+	[9] = "rbxassetid://116413443963257",
+	[10] = "rbxassetid://92731064207895",
+})
+
+function UIAssets.GetBiomeBanner(biomeKeyOrIndex: string | number): string
+	if type(biomeKeyOrIndex) == "number" then
+		return BIOME_BANNER_BY_INDEX[biomeKeyOrIndex] or ""
+	elseif type(biomeKeyOrIndex) == "string" then
+		local images = UIAssets.Images :: any
+		local banners = images and images.BiomeBanners
+		return (banners and banners[biomeKeyOrIndex]) or ""
+	end
+	return ""
+end
 
 return UIAssets
