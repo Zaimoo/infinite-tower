@@ -41,6 +41,7 @@ local FountainVFXController = {}
 
 FountainVFXController.Config = table.freeze({
 	WaterColor = Color3.fromRGB(14, 165, 233), -- #0EA5E9 Deep Cyan
+	WaterSurfaceBaseColor = Color3.fromRGB(8, 108, 185), -- Deep Cerulean Pool Depth
 	WaterFoamColor = Color3.fromRGB(186, 230, 253), -- Soft Sky Foam
 	LightColor = Color3.fromRGB(56, 189, 248), -- #38BDF8 Light Blue
 	LightBrightness = 1.75, -- Balanced 1.5 - 2.0 range
@@ -48,8 +49,10 @@ FountainVFXController.Config = table.freeze({
 	BeamTextureSpeed = 2.5,
 	BeamLightEmission = 0.4, -- Magical glow without blowing out bloom
 	MistLightEmission = 0.35,
-	RippleTextureId = "rbxassetid://6078620892",
-	WaterfallSpriteId = "rbxassetid://243660364",
+	RippleTextureId = "rbxassetid://118260672943381", -- Custom seamless cellular water caustics + sparkles
+	WaterfallSpriteId = "rbxassetid://74951117913804", -- Custom vertical silky water strands
+	SplashFoamRingId = "rbxassetid://105409048761236", -- Custom frothy splash boil + concentric ripple rings
+	WaterSparkleId = "rbxassetid://129486097319512", -- Custom 4-point glowing water droplet/sparkle mote
 	ScrollLayerASpeed = Vector2.new(0.85, 0.55),
 	ScrollLayerBSpeed = Vector2.new(-0.62, 0.78),
 })
@@ -84,7 +87,7 @@ local function ensureWaterSurfaceTextures(waterPart: BasePart): (Texture, Textur
 		waterPart.Transparency = 0.15
 	end
 	if waterPart:GetAttribute("OriginalColor") == nil then
-		waterPart.Color = cfg.WaterColor
+		waterPart.Color = cfg.WaterSurfaceBaseColor or cfg.WaterColor
 	end
 
 	local topFace = resolveTopFace(waterPart)
@@ -95,8 +98,8 @@ local function ensureWaterSurfaceTextures(waterPart: BasePart): (Texture, Textur
 		created.Name = "WaterRippleTextureA"
 		created.Face = topFace
 		created.Texture = cfg.RippleTextureId
-		created.Color3 = cfg.WaterFoamColor
-		created.Transparency = 0.62
+		created.Color3 = Color3.fromRGB(220, 248, 255)
+		created.Transparency = 0.45
 		created.StudsPerTileU = 6.5
 		created.StudsPerTileV = 6.5
 		created.Parent = waterPart
@@ -109,10 +112,10 @@ local function ensureWaterSurfaceTextures(waterPart: BasePart): (Texture, Textur
 		created.Name = "WaterRippleTextureB"
 		created.Face = topFace
 		created.Texture = cfg.RippleTextureId
-		created.Color3 = Color3.fromRGB(224, 242, 254)
-		created.Transparency = 0.74
-		created.StudsPerTileU = 4.8
-		created.StudsPerTileV = 4.8
+		created.Color3 = Color3.fromRGB(165, 243, 252)
+		created.Transparency = 0.58
+		created.StudsPerTileU = 4.2
+		created.StudsPerTileV = 4.2
 		created.Parent = waterPart
 		texB = created
 	end
@@ -187,7 +190,7 @@ function FountainVFXController.BindFountain(fountainModel: Model): ManagedFounta
 	local pointLight: PointLight? = nil
 
 	for _, desc in ipairs(fountainModel:GetDescendants()) do
-		if desc:IsA("BasePart") then
+		if desc:IsA("BasePart") and not desc:IsA("MeshPart") then
 			if (WATER_PART_NAMES[desc.Name] or desc:GetAttribute("FountainWaterSurface") == true) and desc.Transparency < 0.95 then
 				local texA, texB = ensureWaterSurfaceTextures(desc)
 				table.insert(waterTextures, {
@@ -236,11 +239,13 @@ function FountainVFXController.BindFountain(fountainModel: Model): ManagedFounta
 		end
 	end
 
-	-- Also collect any pre-existing WaterfallSheet_* beams
+	-- Collect any additional WaterfallBody_* and BasinFlowStream_* beams while preserving parallax speeds
 	for _, desc in ipairs(fountainModel:GetDescendants()) do
 		if desc:IsA("Beam") and not table.find(waterfallBeams, desc) then
-			desc.TextureSpeed = cfg.BeamTextureSpeed
-			desc.LightEmission = cfg.BeamLightEmission
+			if string.find(desc.Name, "^WaterfallSheet_") then
+				desc.TextureSpeed = cfg.BeamTextureSpeed
+			end
+			desc.LightEmission = math.min(desc.LightEmission, cfg.BeamLightEmission)
 			table.insert(waterfallBeams, desc)
 		end
 	end
