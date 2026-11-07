@@ -127,6 +127,35 @@ local Presets: { [string]: Preset } = {
 		SunRaysIntensity = 0.09,
 		SunRaysSpread = 0.7,
 	},
+	-- Misty/windy moor: dense atmospheric fog, cool desaturated light, heavy horizon haze
+	FoggyWind = {
+		Ambient = Color3.fromRGB(72, 78, 88),
+		OutdoorAmbient = Color3.fromRGB(108, 118, 130),
+		ColorShift_Top = Color3.fromRGB(175, 185, 200),
+		ColorShift_Bottom = Color3.fromRGB(88, 98, 112),
+		EnvironmentDiffuseScale = 0.5,
+		EnvironmentSpecularScale = 0.45,
+		ExposureCompensation = 0.05,
+
+		AtmosphereDensity = 0.79,
+		AtmosphereOffset = 0.05,
+		AtmosphereColor = Color3.fromRGB(170, 180, 192),
+		AtmosphereDecay = Color3.fromRGB(115, 125, 138),
+		AtmosphereGlare = 0,
+		AtmosphereHaze = 3.2,
+
+		TintColor = Color3.fromRGB(225, 235, 245),
+		Contrast = 0.08,
+		Saturation = -0.15,
+		BrightnessOffset = 0,
+
+		BloomIntensity = 0.35,
+		BloomSize = 20,
+		BloomThreshold = 1.1,
+
+		SunRaysIntensity = 0,
+		SunRaysSpread = 0,
+	},
 }
 HubLighting.Presets = Presets
 

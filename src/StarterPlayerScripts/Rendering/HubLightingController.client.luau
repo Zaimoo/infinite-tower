@@ -82,16 +82,28 @@ local function apply(p: Preset)
 	end
 	local rays = effect("SunRaysEffect", "TowerStormSunRays") :: SunRaysEffect?
 	if rays then
-		rays.Intensity = p.SunRaysIntensity
-		rays.Spread = p.SunRaysSpread
+		if p.SunRaysIntensity > 0.005 then
+			rays.Enabled = true
+			rays.Intensity = p.SunRaysIntensity
+			rays.Spread = p.SunRaysSpread
+		else
+			rays.Enabled = false
+			rays.Intensity = 0
+		end
 	end
 end
 
 -- Target weights: how much Dread and how much Storm the current position calls for.
 local function targetWeights(): (number, number)
-	local character = LocalPlayer.Character
-	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
-	local pos = if root then root.Position else workspace.CurrentCamera.Focus.Position
+	local pos: Vector3
+	if _G.IsViewingSquad and _G.IsViewingSquad() then
+		local cam = workspace.CurrentCamera
+		pos = if cam then cam.CFrame.Position else Vector3.new(12000, 1000, 12000)
+	else
+		local character = LocalPlayer.Character
+		local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		pos = if root then root.Position else workspace.CurrentCamera.Focus.Position
+	end
 	local zone, dread = HubLighting.Classify(pos.X, pos.Z)
 	if zone == "Storm" then
 		return 0, 1
@@ -100,19 +112,44 @@ local function targetWeights(): (number, number)
 end
 
 local dreadW, stormW = targetWeights()
-local lastDread, lastStorm = -1, -1
+local weatherW = 0
+local lastDread, lastStorm, lastWeather = -1, -1, -1
 
 local function stepHubLighting(dt: number)
 	local wantDread, wantStorm = targetWeights()
+	local wantWeather = math.clamp(workspace:GetAttribute("WeatherFoggyWindWeight") :: number? or 0, 0, 1)
+
 	local k = 1 - math.exp(-BLEND_RATE * dt)
 	dreadW += (wantDread - dreadW) * k
 	stormW += (wantStorm - stormW) * k
-	if math.abs(dreadW - lastDread) < 0.002 and math.abs(stormW - lastStorm) < 0.002 then
+	weatherW += (wantWeather - weatherW) * k
+
+	local customDensity = workspace:GetAttribute("WeatherFogDensity") :: number?
+	local customHaze = workspace:GetAttribute("WeatherFogHaze") :: number?
+
+	if math.abs(dreadW - lastDread) < 0.002 and math.abs(stormW - lastStorm) < 0.002 and math.abs(weatherW - lastWeather) < 0.002 and not customDensity and not customHaze then
 		return
 	end
-	lastDread, lastStorm = dreadW, stormW
+	lastDread, lastStorm, lastWeather = dreadW, stormW, weatherW
 	local hub = mix(Presets.Sanctuary, Presets.Dread, dreadW)
-	apply(mix(hub, Presets.Storm, stormW))
+	local base = mix(hub, Presets.Storm, stormW)
+
+	local finalPreset = base
+	if Presets.FoggyWind and weatherW > 0.001 then
+		local foggyPreset = Presets.FoggyWind
+		if customDensity or customHaze then
+			foggyPreset = table.clone(Presets.FoggyWind)
+			if customDensity then
+				foggyPreset.AtmosphereDensity = customDensity
+			end
+			if customHaze then
+				foggyPreset.AtmosphereHaze = customHaze
+			end
+		end
+		finalPreset = mix(base, foggyPreset, weatherW)
+	end
+
+	apply(finalPreset)
 end
 RunService.RenderStepped:Connect(function(dt: number)
 	debug.profilebegin("HubLighting")
