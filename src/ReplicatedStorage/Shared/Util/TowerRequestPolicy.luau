@@ -1,7 +1,7 @@
 --!strict
 local P=require(script.Parent.TowerProtocol)
 local Policy={}
-local actions={VISIT=true,HUB=true,ASSIGN=true,RECALL=true,PRESENCE_SUBSCRIBE=true,PRESENCE_UNSUBSCRIBE=true,RESYNC=true,CANCEL=true}
+local actions={VISIT=true,HUB=true,ASSIGN=true,RECALL=true,PRESENCE_SUBSCRIBE=true,PRESENCE_UNSUBSCRIBE=true,RESYNC=true,CANCEL=true,SPECTATE_SQUAD=true,UNSPECTATE_SQUAD=true}
 local fields={ContractVersion=true,RequestId=true,Action=true,FloorId=true,CharacterGeneration=true,ExpectedLocationRevision=true,ExpectedSquadRevision=true,
 	CancelRequestId=true,ServerSessionId=true,RoomGeneration=true,ViewEpoch=true}
 function Policy.Validate(r: any): (boolean,string?)

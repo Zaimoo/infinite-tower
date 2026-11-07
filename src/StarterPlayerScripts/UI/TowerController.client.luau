@@ -9,6 +9,8 @@ local PromptService = game:GetService("ProximityPromptService")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local Http = game:GetService("HttpService")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
 
 local player = Players.LocalPlayer
 local floors = require(RS.Shared.Config.TowerFloorConfig)
@@ -19,6 +21,7 @@ local GildedGrimoire = require(RS.Shared.Util.GildedGrimoire)
 local GrimoireIcons = require(RS.Shared.Util.GrimoireIcons)
 local UIAssets = require(script.Parent:WaitForChild("UIAssets"))
 local remotes = RS:WaitForChild("Remotes"):WaitForChild("TowerRemotes")
+local Store = require(script.Parent:WaitForChild("Hud"):WaitForChild("Store"))
 
 local selfState: any = nil
 local context: any = nil
@@ -29,6 +32,8 @@ local selected = 1
 local activeBiomeIndex = 1
 local presence: any = nil
 local lastSelectorOpenTime = 0
+local selectorMode: "TRAVEL" | "ASSIGN" = "TRAVEL"
+local setViewSquad: (boolean) -> () -- forward declaration
 local render: () -> ()
 
 -- Visual Palette
@@ -114,9 +119,18 @@ local scale = new("UIScale", { Scale = 1.0 }, panel)
 -- Fit the selector inside the safe area (below the top bar, clear of the bottom edge).
 ModalFit.Bind(panel, scale, 830, 560, { MaxScale = 1.25, FillWidth = true })
 
+local titleIcon: Frame? = nil
+local function updateTitleIcon(iconName: string)
+	if titleIcon then titleIcon:Destroy() end
+	titleIcon = GrimoireIcons.Create(iconName, 46, panel, 42)
+	titleIcon.Position = UDim2.fromOffset(20, 12)
+end
+
 local function closeSelector()
 	panel.Visible = false
 	scrim.Visible = false
+	selectorMode = "TRAVEL"
+	updateTitleIcon("Tower")
 	if _G.SetModalFocusMode then
 		_G.SetModalFocusMode(false)
 	end
@@ -137,8 +151,7 @@ _G.IsTowerSelectorOpen = function(): boolean
 end
 
 -- Title & Subtitle Header
-local titleIcon = GrimoireIcons.Create("Tower", 46, panel, 42)
-titleIcon.Position = UDim2.fromOffset(20, 12)
+updateTitleIcon("Tower")
 local titleLabel = new("TextLabel", {
 	Name = "Title",
 	Position = UDim2.fromOffset(74, 14),
@@ -784,6 +797,10 @@ end)
 local recallBtn = createOrnateButton(actionRow, "RECALL SQUAD", 3, false, function()
 	request("RECALL")
 end)
+local viewBtn = createOrnateButton(actionRow, "VIEW SQUAD", 4, false, function()
+	closeSelector()
+	if setViewSquad then setViewSquad(true) end
+end)
 
 -- ============================================================================
 -- RENDER & REFRESH LOGIC
@@ -974,16 +991,63 @@ render = function()
 			slotData.FloorId = fId
 		end
 	end
-	-- 4. Dynamic Action Button Text
-	if isSelectedLocked then
-		visitBtn.Text = "LOCKED"
-		assignBtn.Text = "LOCKED"
-	elseif visitingFloor == selected and visitingFloor > 0 then
-		visitBtn.Text = "RETURN TO HUB"
-		assignBtn.Text = "ASSIGN SQUAD"
+	-- 4. Dynamic Action Button Text & Mode Adaptation
+	if selectorMode == "ASSIGN" then
+		assignBtn.LayoutOrder = 1
+		recallBtn.LayoutOrder = 2
+		viewBtn.LayoutOrder = 3
+		visitBtn.LayoutOrder = 4
+
+		if isSelectedLocked then
+			assignBtn.Text = "LOCKED"
+			visitBtn.Text = "LOCKED"
+		elseif assignedFloor == selected then
+			assignBtn.Text = "STATIONED HERE"
+			visitBtn.Text = if visitingFloor == selected and visitingFloor > 0 then "RETURN TO HUB" else "VISIT FLOOR"
+		else
+			assignBtn.Text = "STATION SQUAD"
+			visitBtn.Text = if visitingFloor == selected and visitingFloor > 0 then "RETURN TO HUB" else "VISIT FLOOR"
+		end
+
+		recallBtn.Text = "RECALL SQUAD"
+		recallBtn.Visible = (assignedFloor ~= nil)
+		viewBtn.Text = "VIEW SQUAD"
+		viewBtn.Visible = (assignedFloor ~= nil)
+		visitBtn.Visible = true
 	else
-		visitBtn.Text = "VISIT FLOOR"
-		assignBtn.Text = "ASSIGN SQUAD"
+		visitBtn.LayoutOrder = 1
+		assignBtn.LayoutOrder = 2
+		recallBtn.LayoutOrder = 3
+		viewBtn.LayoutOrder = 4
+
+		if isSelectedLocked then
+			visitBtn.Text = "LOCKED"
+			assignBtn.Text = "LOCKED"
+		elseif visitingFloor == selected and visitingFloor > 0 then
+			visitBtn.Text = "RETURN TO HUB"
+			assignBtn.Text = if assignedFloor == selected then "STATIONED HERE" else "ASSIGN SQUAD"
+		else
+			visitBtn.Text = "VISIT FLOOR"
+			assignBtn.Text = if assignedFloor == selected then "STATIONED HERE" else "ASSIGN SQUAD"
+		end
+
+		recallBtn.Text = "RECALL SQUAD"
+		recallBtn.Visible = (assignedFloor ~= nil)
+		viewBtn.Text = "VIEW SQUAD"
+		viewBtn.Visible = (assignedFloor ~= nil)
+		visitBtn.Visible = true
+	end
+
+	local visibleButtons = {}
+	for _, b in ipairs({ visitBtn, assignBtn, recallBtn, viewBtn }) do
+		if b.Visible then table.insert(visibleButtons, b) end
+	end
+	table.sort(visibleButtons, function(a, b) return a.LayoutOrder < b.LayoutOrder end)
+	local btnCount = math.max(1, #visibleButtons)
+	local widthScale = 1 / btnCount
+	local gapOffset = math.round(10 * (btnCount - 1) / btnCount)
+	for _, b in ipairs(visibleButtons) do
+		b.Size = UDim2.new(widthScale, -gapOffset, 1, 0)
 	end
 	-- 5. Status Footer Readout
 	if selfState then
@@ -1010,10 +1074,30 @@ _G.RequestTowerHub = function(): boolean
 	return true
 end
 
-local function openSelector()
+local function openSelector(mode: string?)
+	if isViewingSquad then
+		setViewSquad(false)
+	end
 	lastSelectorOpenTime = os.clock()
 	if _G.OpenMasterModal then _G.OpenMasterModal("NONE") end
-	selected = getMaxAllowedFloor()
+	selectorMode = if mode == "ASSIGN" then "ASSIGN" else "TRAVEL"
+
+	if selectorMode == "ASSIGN" then
+		titleLabel.Text = "ASSIGN SQUAD · 50 FLOORS"
+		subtitleLabel.Text = "Choose an unlocked floor to station your squad for autonomous farming"
+		updateTitleIcon("Squad")
+		if selfState and selfState.SquadAssignment and selfState.SquadAssignment > 0 then
+			selected = selfState.SquadAssignment
+		else
+			selected = getMaxAllowedFloor()
+		end
+	else
+		titleLabel.Text = "INFINITE TOWER · 50 FLOORS"
+		subtitleLabel.Text = "Choose a floor to visit or station your squad"
+		updateTitleIcon("Tower")
+		selected = getMaxAllowedFloor()
+	end
+
 	activeBiomeIndex = math.clamp(math.floor((selected - 1) / 5) + 1, 1, BIOME_COUNT)
 	if _G.SetModalFocusMode then
 		_G.SetModalFocusMode(true)
@@ -1030,7 +1114,281 @@ local function openSelector()
 	end
 end
 
+-- ============================================================================
+-- BIRD'S-EYE SQUAD FOLLOW CAMERA
+-- ============================================================================
+local isViewingSquad = false
+local prevCameraType: Enum.CameraType? = nil
+local prevCameraSubject: Instance? = nil
+local zoomDist: number = 24
+local orbitAngle: number = 0
+local currentCamPos: Vector3? = nil
+local currentCamLook: Vector3? = nil
+local lockedOntoSquad = false
+local isSpectatingRemoteFloor = false
+local lastCharHealth: number? = nil
+local camera = Workspace.CurrentCamera
+
+local function getFloorFallbackPos(floorId: number?): Vector3
+	if floorId and floorId > 0 then
+		if _G.TowerView and _G.TowerView.FloorId == floorId then
+			if _G.TowerView.Origin then
+				return _G.TowerView.Origin + Vector3.new(0, 11.5, 0)
+			elseif _G.TowerView.Arrival then
+				return _G.TowerView.Arrival.Position
+			end
+		end
+		local ox = 12000 + ((floorId - 1) % 10) * 2400
+		local oz = 12000 + math.floor((floorId - 1) / 10) * 2400
+		return Vector3.new(ox, 1011.5, oz)
+	end
+	local char = player.Character
+	return (char and char:GetPivot().Position) or Vector3.new(0, 1011.5, 0)
+end
+
+local function getSquadCentroid(): Vector3?
+	local state = _G.ClientCombatState
+	if not state or not state.Metadata then return nil end
+	local targetFloorId = if selfState then selfState.SquadAssignment else nil
+	local aliveEntries: { { Pos: Vector3, Slot: number } } = {}
+	local allEntries: { { Pos: Vector3, Slot: number } } = {}
+	for netId, meta in pairs(state.Metadata) do
+		if meta.IsHero and meta.OwnerUserId == player.UserId then
+			if targetFloorId ~= nil and meta.FloorId ~= nil and meta.FloorId > 0 and meta.FloorId ~= targetFloorId then
+				continue
+			end
+			local node = state.VisualNodes and state.VisualNodes[netId]
+			local pos: Vector3? = nil
+			if node then
+				pos = node.CurrentPos or node.GoalPos or (node.RootPart and node.RootPart.Position)
+			end
+			if not pos and typeof(meta.Position) == "Vector3" then
+				pos = meta.Position
+			end
+			if pos then
+				local entry = { Pos = pos, Slot = meta.SlotIndex or 99 }
+				local isAlive = if node
+					then (node.StateEnum ~= 4 and (node.HpPermille == nil or node.HpPermille > 0))
+					else (meta.IsAlive ~= false)
+				if isAlive then
+					table.insert(aliveEntries, entry)
+				end
+				table.insert(allEntries, entry)
+			end
+		end
+	end
+	local pool = if #aliveEntries > 0 then aliveEntries else allEntries
+	if #pool == 0 then
+		return nil
+	end
+	table.sort(pool, function(a, b)
+		return a.Slot < b.Slot
+	end)
+	-- Anchor on the lead slot hero and average only nearby heroes (within 20 studs) so a split squad
+	-- never points the camera at empty ground between two distant groups.
+	local anchor = pool[1].Pos
+	local clusterSum = Vector3.zero
+	local clusterCount = 0
+	for _, item in ipairs(pool) do
+		if (item.Pos - anchor).Magnitude <= 20 then
+			clusterSum += item.Pos
+			clusterCount += 1
+		end
+	end
+	local center = if clusterCount > 0 then (clusterSum / clusterCount) else anchor
+	return center + Vector3.new(0, 2.5, 0)
+end
+
+local function computeCameraOffset(): Vector3
+	local horiz = zoomDist * 0.65
+	local offX = horiz * math.sin(orbitAngle)
+	local offZ = horiz * math.cos(orbitAngle)
+	local offY = zoomDist * 0.72
+	return Vector3.new(offX, offY, offZ)
+end
+
+setViewSquad = function(active: boolean)
+	if active == isViewingSquad then return end
+	if active then
+		if not selfState or selfState.SquadAssignment == nil then return end
+		if _G.IsDuelActive and _G.IsDuelActive() then return end
+		if panel.Visible then
+			closeSelector()
+		end
+		if _G.CloseHeroIndex then _G.CloseHeroIndex() end
+		if _G.CloseBackpack then _G.CloseBackpack() end
+		if _G.CloseFacilityPanel then _G.CloseFacilityPanel() end
+
+		local visitingFloor = if selfState and selfState.PlayerLocation then selfState.PlayerLocation.FloorId else 0
+		local assignedFloor = selfState.SquadAssignment
+
+		if assignedFloor ~= nil and assignedFloor ~= visitingFloor then
+			isSpectatingRemoteFloor = true
+			remotes.Request:FireServer({
+				ContractVersion = 1,
+				RequestId = Http:GenerateGUID(false),
+				Action = "SPECTATE_SQUAD",
+			})
+		else
+			isSpectatingRemoteFloor = false
+		end
+
+		isViewingSquad = true
+		Store.SetViewingSquad(true)
+
+		camera = Workspace.CurrentCamera or camera
+		prevCameraType = camera.CameraType
+		prevCameraSubject = camera.CameraSubject
+
+		local char = player.Character
+		local hum = char and char:FindFirstChildOfClass("Humanoid")
+		lastCharHealth = if hum then hum.Health else nil
+
+		camera.CameraType = Enum.CameraType.Scriptable
+
+		local centroid = getSquadCentroid()
+		lockedOntoSquad = (centroid ~= nil)
+		local initialLook = centroid or getFloorFallbackPos(assignedFloor)
+		currentCamLook = initialLook
+		currentCamPos = initialLook + computeCameraOffset()
+		camera.CFrame = CFrame.lookAt(currentCamPos, currentCamLook)
+
+		RunService:BindToRenderStep("SquadBirdsEyeCam", Enum.RenderPriority.Camera.Value + 1, function(dt: number)
+			if _G.IsDuelActive and _G.IsDuelActive() then
+				setViewSquad(false)
+				return
+			end
+			if not selfState or selfState.SquadAssignment == nil then
+				setViewSquad(false)
+				return
+			end
+			local currentChar = player.Character
+			local currentHum = currentChar and currentChar:FindFirstChildOfClass("Humanoid")
+			if currentHum then
+				if lastCharHealth and currentHum.Health < lastCharHealth - 0.5 then
+					setViewSquad(false)
+					return
+				end
+				lastCharHealth = currentHum.Health
+				if currentHum.MoveDirection.Magnitude > 0.1 then
+					setViewSquad(false)
+					return
+				end
+			end
+
+			local liveCentroid = getSquadCentroid()
+			local targetLook = liveCentroid or currentCamLook or getFloorFallbackPos(selfState.SquadAssignment)
+			local offset = computeCameraOffset()
+			local targetPos = targetLook + offset
+
+			if liveCentroid and (not lockedOntoSquad or (currentCamLook and (liveCentroid - currentCamLook).Magnitude > 60)) then
+				lockedOntoSquad = true
+				currentCamLook = liveCentroid
+				currentCamPos = targetPos
+			else
+				local alpha = 1 - math.exp(-10 * dt)
+				currentCamPos = if currentCamPos then currentCamPos:Lerp(targetPos, alpha) else targetPos
+				currentCamLook = if currentCamLook then currentCamLook:Lerp(targetLook, alpha) else targetLook
+			end
+
+			camera.CFrame = CFrame.lookAt(currentCamPos, currentCamLook)
+		end)
+	else
+		isViewingSquad = false
+		lockedOntoSquad = false
+		Store.SetViewingSquad(false)
+		pcall(function()
+			RunService:UnbindFromRenderStep("SquadBirdsEyeCam")
+		end)
+		if isSpectatingRemoteFloor then
+			isSpectatingRemoteFloor = false
+			remotes.Request:FireServer({
+				ContractVersion = 1,
+				RequestId = Http:GenerateGUID(false),
+				Action = "UNSPECTATE_SQUAD",
+			})
+		end
+		camera = Workspace.CurrentCamera or camera
+		camera.CameraType = prevCameraType or Enum.CameraType.Custom
+		local char = player.Character
+		local hum = char and char:FindFirstChildOfClass("Humanoid")
+		camera.CameraSubject = hum or prevCameraSubject
+		currentCamPos = nil
+		currentCamLook = nil
+	end
+end
+
+local function toggleViewSquad()
+	setViewSquad(not isViewingSquad)
+end
+
+UserInputService.PointerAction:Connect(function(wheel: number, _pan: Vector2, pinch: number, processed: boolean)
+	if not isViewingSquad or processed then return end
+	if wheel ~= 0 then
+		zoomDist = math.clamp(zoomDist - wheel * 2.5, 10, 36)
+	end
+	if pinch ~= 0 then
+		zoomDist = math.clamp(zoomDist - pinch * 14, 10, 36)
+	end
+end)
+
+local isOrbitDragging = false
+UserInputService.InputBegan:Connect(function(input: InputObject, _processed: boolean)
+	if not isViewingSquad then return end
+	if input.UserInputType == Enum.UserInputType.MouseButton2 then
+		isOrbitDragging = true
+	end
+end)
+
+UserInputService.InputEnded:Connect(function(input: InputObject)
+	if input.UserInputType == Enum.UserInputType.MouseButton2 then
+		isOrbitDragging = false
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input: InputObject, processed: boolean)
+	if not isViewingSquad then return end
+	if input.UserInputType == Enum.UserInputType.MouseMovement and isOrbitDragging then
+		orbitAngle = orbitAngle - input.Delta.X * 0.006
+	elseif input.UserInputType == Enum.UserInputType.Touch and not processed then
+		orbitAngle = orbitAngle - input.Delta.X * 0.006
+	end
+end)
+
+-- Keyboard hotkey: [V] toggles squad bird's-eye cam, [Esc] exits
+UserInputService.InputBegan:Connect(function(input: InputObject, processed: boolean)
+	if processed then return end
+	if input.KeyCode == Enum.KeyCode.V then
+		if UserInputService:GetFocusedTextBox() ~= nil then return end
+		if panel.Visible then return end
+		if _G.IsAnyMasterModalOpen and _G.IsAnyMasterModalOpen() then return end
+		toggleViewSquad()
+	elseif input.KeyCode == Enum.KeyCode.Escape or input.KeyCode == Enum.KeyCode.ButtonB then
+		if isViewingSquad then
+			setViewSquad(false)
+		end
+	elseif isViewingSquad and (input.KeyCode == Enum.KeyCode.W or input.KeyCode == Enum.KeyCode.A
+		or input.KeyCode == Enum.KeyCode.S or input.KeyCode == Enum.KeyCode.D
+		or input.KeyCode == Enum.KeyCode.Space) then
+		setViewSquad(false)
+	end
+end)
+
 _G.OpenTowerSelector = openSelector
+_G.ToggleViewSquad = toggleViewSquad
+_G.SetViewSquad = setViewSquad
+_G.IsViewingSquad = function(): boolean
+	return isViewingSquad
+end
+_G.TowerAssignSquad = function(floorId: number)
+	request("ASSIGN", floorId)
+end
+_G.TowerRecallSquad = function()
+	if isViewingSquad then
+		setViewSquad(false)
+	end
+	request("RECALL")
+end
 
 -- Keyboard / Gamepad Navigation
 UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: boolean)
@@ -1091,6 +1449,13 @@ remotes.Presence.OnClientEvent:Connect(function(p)
 	if presence and p.ServerSessionId == presence.ServerSessionId and p.PresenceRevision < presence.PresenceRevision then return end
 	presence = p
 	selfState = p.Self
+	if selfState then
+		local curFloor = if selfState.PlayerLocation then selfState.PlayerLocation.FloorId else 0
+		Store.SetTowerState(curFloor, selfState.SquadAssignment)
+		if isViewingSquad and selfState.SquadAssignment == nil then
+			setViewSquad(false)
+		end
+	end
 	render()
 end)
 
@@ -1130,7 +1495,10 @@ remotes.Context.OnClientEvent:Connect(function(c)
 	elseif c.Stage == "COMMIT" then
 		context = c
 		_G.TowerView = c
-		if c.FloorId > 0 then selected = c.FloorId end
+		if c.FloorId > 0 and not isViewingSquad then selected = c.FloorId end
+		if c.MasterFloorId ~= nil then
+			Store.SetTowerState(c.MasterFloorId, selfState and selfState.SquadAssignment)
+		end
 		local char = player.Character
 		local root = char and char:FindFirstChild("HumanoidRootPart")
 		if root and root:IsA("BasePart") then

@@ -194,3 +194,7 @@ task.spawn(function()
 		end
 	end
 end)
+
+_G.IsDuelActive = function(): boolean
+	return current ~= nil
+end

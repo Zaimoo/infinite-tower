@@ -119,7 +119,7 @@ local function buildRows(profile: any): ({ any }, string?)
 				row.ShowStamina = true
 				row.HpFraction = (hero.CurrentStamina or 100) / math.max(1, hero.MaxStamina or 100)
 				row.Gauge = 0
-				row.State = "Resting"
+				row.State = if Store.SquadAssignment ~= nil then ("Floor " .. tostring(Store.SquadAssignment)) else "Resting"
 			end
 			if comaLeft > 0 then
 				row.State = "Down"
@@ -144,6 +144,12 @@ local function squadAlertShowing(): boolean
 		if banner and banner:IsA("GuiObject") and banner.Visible then return true end
 	end
 	return false
+end
+
+local function isFloorBossBannerVisible(): boolean
+	local hud = LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild("MasterHUDScreenGui")
+	local banner = hud and hud:FindFirstChild("FloorBossTopBanner")
+	return banner ~= nil and banner:IsA("GuiObject") and banner.Visible
 end
 
 local function buildableNodes(profile: any): number
@@ -402,7 +408,8 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 	-- The status card grows to the right with each open slot. Tiles shrink to stay clear of the
 	-- Squad Power badge; if even the smallest tiles would reach it, use the compact portrait strip.
 	local lockedRange = if lockedText then string.format("%d–%d", #rows + 1, TreeConfig.MaxSquadSlots) else nil
-	local roomForCard = screen.X - 2 * L.Edge - L.PowerBadgeWidth - L.ZoneGap - Components.DrawerTabWidth
+	local assignButtonWidth = 80
+	local roomForCard = screen.X - 2 * L.Edge - L.PowerBadgeWidth - L.ZoneGap - Components.DrawerTabWidth - assignButtonWidth
 	local tileWidth = Components.StatusTileMax
 	if not compact then
 		local fixed = Components.StatusCardWidth(0, lockedText ~= nil, 0) + #rows * 6
@@ -622,6 +629,11 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 	end
 	table.sort(breakdown, function(a, b) return a.Power > b.Power end)
 
+	local hasSquadHeroes = false
+	for _, r in rows do
+		if r.Hero then hasSquadHeroes = true break end
+	end
+
 	local modalFocus = Store.ModalFocus
 
 	return e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 }, {
@@ -631,6 +643,8 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 		Status = if not modalFocus and profile then e(Components.SquadDrawer, {
 			Rows = rows, LockedText = lockedText, LockedRange = lockedRange, Compact = compact, TileWidth = tileWidth,
 			CardHeight = cardHeight, Expanded = drawerOpen,
+			SquadAssignment = Store.SquadAssignment,
+			OnAssignSquad = function() call("OpenTowerSelector", "ASSIGN") end,
 			OnToggle = function() if toggleRef.current then toggleRef.current() end end,
 			OnRow = function() call("OpenMasterModal", "SQUAD") end,
 			OnLocked = function() call("OpenFacilityHUD", "FortressTree") end,
@@ -640,6 +654,15 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 				Position = UDim2.fromScale(0, 1),
 				Width = Components.CurrencyBarWidth,
 			}),
+		}) else nil,
+		ViewSquad = if not modalFocus and hasSquadHeroes and (Store.SquadAssignment ~= nil or Store.ViewingSquad) and not (_G.IsDuelActive and _G.IsDuelActive()) then e(Components.ViewSquadBar, {
+			SquadAssignment = Store.SquadAssignment,
+			PlayerFloorId = Store.PlayerFloorId,
+			ViewingSquad = Store.ViewingSquad,
+			Compact = compact,
+			Top = if isFloorBossBannerVisible() then 112 else 14,
+			OnToggleView = function() call("ToggleViewSquad") end,
+			OnRecall = function() call("TowerRecallSquad") end,
 		}) else nil,
 		TowerEvent = if not modalFocus then e(TowerEventHud.Badge, { Compact = compact, Bottom = eventBottom }) else nil,
 		Power = if not modalFocus and profile then e(Components.SquadPowerBadge, {

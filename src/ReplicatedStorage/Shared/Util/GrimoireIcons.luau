@@ -301,6 +301,16 @@ GrimoireIcons.Drawings = {
 		{ X = 16, Y = 26, W = 6, H = 6, Rot = 45, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 1, Outline = 1.5 },
 		{ X = 48, Y = 26, W = 6, H = 6, Rot = 45, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 1, Outline = 1.5 },
 	},
+	-- Eye / ViewSquad: an arcane scrying eye with a cyan iris, dark slit pupil, white glint, and gold rim.
+	Eye = {
+		{ X = 32, Y = 32, W = 46, H = 46, Rot = 45, Hi = P.SteelHi, Lo = P.SteelLo, Radius = 8 },
+		{ X = 32, Y = 32, W = 36, H = 36, Rot = 45, Hi = P.PageHi, Lo = P.StoneHi, Radius = 6, Sheen = false },
+		{ X = 32, Y = 32, W = 22, H = 22, Hi = P.CyanHi, Lo = P.CyanLo, Round = true },
+		{ X = 32, Y = 32, W = 8, H = 14, Hi = P.Dark, Lo = P.Dark, Radius = 3, Outline = 1.6, Sheen = false },
+		{ X = 35, Y = 29, W = 5, H = 5, Hi = P.White, Lo = P.CyanHi, Round = true, Outline = 1.2, Sheen = false },
+		{ X = 32, Y = 16, W = 38, H = 6, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 3 },
+		{ X = 32, Y = 48, W = 38, H = 6, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 3, Sheen = false },
+	},
 
 	-- Timed tower events (Phase G; mockup: docs/ui/tower-event-hud-mockup.html).
 	-- Calamity Hour: a blood moon half-eclipsed by a dark disc, with gold and ember sparks.
@@ -385,6 +395,7 @@ local ALIAS: { [string]: string } = {
 	Root = "Fortress", Outskirts = "Camp", Commerce = "Market", Martial = "Power", Divine = "Blessing",
 	Command = "Banner", Perk = "Spark", GuardPost = "Camp", TrainingGrounds = "Power", GodsBlessing = "Blessing",
 	Training = "Power", Gem = "Gems", TowerGate = "Tower", Gate = "Tower",
+	ViewSquad = "Eye", View = "Eye", Spectate = "Eye", Scry = "Eye",
 }
 
 function GrimoireIcons.Resolve(name: string): { ShapeSpec }?
