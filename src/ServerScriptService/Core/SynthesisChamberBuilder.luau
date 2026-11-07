@@ -565,25 +565,54 @@ local function buildInterior(ctx: Ctx): InteriorRefs
 		newPart(circle, "CircleHexagram", V(side, 0.04, 0.18), ringCF(cf, a, triR / 2, glyphY + 0.01), C_CYAN, Enum.Material.Neon, false)
 	end
 
-	-- Dais + Synthesis anvil
+	-- Dais + Arcane Synthesis Cauldron & Floating Grimoire Lectern (replaces anvil)
 	vcyl(g, "Chamber_Center_Pedestal", 3.2, 0.8, cf * CFrame.new(0, fy + 0.4, 0), C_STONE, Enum.Material.Slate, true)
 	vcyl(g, "PedestalIronTrim", 2.5, 0.5, cf * CFrame.new(0, fy + 1.05, 0), C_IRON, Enum.Material.Metal, true)
 	local ay = fy + 1.3
-	newPart(g, "AnvilFoot", V(2.4, 0.5, 1.7), cf * CFrame.new(0, ay + 0.25, 0), C_IRON, Enum.Material.Metal, true)
-	newPart(g, "AnvilWaist", V(1.1, 1.1, 1.0), cf * CFrame.new(0, ay + 1.05, 0), C_IRON, Enum.Material.Metal, true)
-	newPart(g, "AnvilFace", V(3.2, 0.7, 1.4), cf * CFrame.new(-0.2, ay + 1.95, 0), C_IRON, Enum.Material.Metal, true)
-	local horn = Instance.new("WedgePart")
-	horn.Name = "AnvilHorn"
-	horn.Size = V(1.2, 0.7, 1.3)
-	horn.CFrame = cf * CFrame.new(2.0, ay + 1.95, 0) * CFrame.Angles(0, -math.pi / 2, 0)
-	horn.Color = C_IRON
-	horn.Material = Enum.Material.Metal
-	horn.Anchored = true
-	horn.CanCollide = false
-	horn.CanQuery = false
-	horn.CanTouch = false
-	horn.Parent = g
-	newPart(g, "AnvilRuneInlay", V(2.4, 0.06, 0.25), cf * CFrame.new(-0.2, ay + 2.31, 0), C_CYAN, Enum.Material.Neon, false)
+
+	-- 4 forged iron claw feet under the cauldron
+	for k = 0, 3 do
+		local legAngle = rad(45 + k * 90)
+		local lx = math.sin(legAngle) * 1.45
+		local lz = math.cos(legAngle) * 1.45
+		newPart(
+			g,
+			"CauldronLeg_" .. (k + 1),
+			V(0.42, 0.65, 0.65),
+			cf * CFrame.new(lx, ay + 0.28, lz) * CFrame.Angles(rad(-18), legAngle, 0),
+			C_IRON,
+			Enum.Material.Metal,
+			false
+		)
+	end
+
+	-- Tiered dark-iron Synthesis Cauldron pot with glowing rune band & bubbling arcane elixir
+	vcyl(g, "CauldronLower", 1.45, 0.55, cf * CFrame.new(0, ay + 0.42, 0), C_IRON, Enum.Material.Metal, true)
+	vcyl(g, "CauldronBelly", 1.85, 0.95, cf * CFrame.new(0, ay + 1.12, 0), C_IRON, Enum.Material.Metal, true)
+	vcyl(g, "CauldronRuneBand", 1.90, 0.14, cf * CFrame.new(0, ay + 1.15, 0), C_VIOLET, Enum.Material.Neon, false)
+	vcyl(g, "CauldronNeck", 1.65, 0.35, cf * CFrame.new(0, ay + 1.72, 0), C_IRON, Enum.Material.Metal, true)
+	vcyl(g, "CauldronRim", 1.92, 0.24, cf * CFrame.new(0, ay + 1.96, 0), C_IRON, Enum.Material.Metal, true)
+	vcyl(g, "CauldronElixir", 1.56, 0.12, cf * CFrame.new(0, ay + 1.98, 0), C_CYAN, Enum.Material.Neon, false)
+
+	-- Side ring handles on the cauldron
+	for _, s in ipairs({ -1, 1 }) do
+		zdisc(g, "CauldronHandleRing", 0.72, 0.14, cf * CFrame.new(s * 1.92, ay + 1.25, 0), C_IRON, Enum.Material.Metal)
+	end
+
+	-- Arcane Grimoire Lectern + Open Spellbook on the front (+Z) edge of the dais
+	local lectZ = 2.05
+	newPart(g, "LecternBase", V(0.95, 0.25, 0.95), cf * CFrame.new(0, fy + 0.92, lectZ), C_IRON, Enum.Material.Metal, true)
+	vcyl(g, "LecternPillar", 0.24, 1.55, cf * CFrame.new(0, fy + 1.80, lectZ), C_IRON, Enum.Material.Metal, true)
+	local deskCF = cf * CFrame.new(0, fy + 2.62, lectZ) * CFrame.Angles(rad(28), 0, 0)
+	newPart(g, "LecternDesk", V(1.65, 0.12, 1.20), deskCF, C_IRON, Enum.Material.Metal, false)
+	-- Open Grimoire (left & right leather covers, cream-violet pages, glowing cyan rune scripts)
+	for _, s in ipairs({ -1, 1 }) do
+		local pageCF = deskCF * CFrame.new(s * 0.38, 0.10, 0) * CFrame.Angles(0, 0, rad(-s * 12))
+		newPart(g, "GrimoireCover", V(0.76, 0.08, 1.04), pageCF, C_TIMBER, Enum.Material.Wood, false)
+		newPart(g, "GrimoirePage", V(0.70, 0.10, 0.96), pageCF * CFrame.new(0, 0.06, 0), C_GALLERY_LIGHT, Enum.Material.SmoothPlastic, false)
+		newPart(g, "GrimoireRuneText", V(0.46, 0.04, 0.64), pageCF * CFrame.new(0, 0.12, 0), if s < 0 then C_CYAN else C_VIOLET, Enum.Material.Neon, false)
+	end
+	newPart(g, "GrimoireSpine", V(0.18, 0.14, 1.06), deskCF * CFrame.new(0, 0.09, 0), C_IRON, Enum.Material.Metal, false)
 
 	local corePos = Builder.Sockets.PedestalCoreVFXSocket
 	local core = keep(ball(g, "SynthesisCore", 1.0, cf * CFrame.new(corePos), C_CYAN, Enum.Material.Neon))

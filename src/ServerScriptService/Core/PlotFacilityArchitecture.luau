@@ -1612,7 +1612,7 @@ function Arch.EnsureFacilityPrefabs(): Folder
 	end
 
 	local existing = assetsFolder:FindFirstChild("PlotFacilities")
-	if existing and existing:GetAttribute("PrefabVersion") == 9 then
+	if existing and existing:GetAttribute("PrefabVersion") == 10 then
 		return existing :: Folder
 	end
 	if existing then
@@ -1621,7 +1621,7 @@ function Arch.EnsureFacilityPrefabs(): Folder
 
 	local prefabs = Instance.new("Folder")
 	prefabs.Name = "PlotFacilities"
-	prefabs:SetAttribute("PrefabVersion", 9)
+	prefabs:SetAttribute("PrefabVersion", 10)
 	prefabs.Parent = assetsFolder
 
 	local tempHolder = Instance.new("Folder")

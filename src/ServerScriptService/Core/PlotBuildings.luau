@@ -15,7 +15,7 @@ local FacilityPresence = require(script.Parent:WaitForChild("FacilityPresence"))
 local StaticGeometry = require(script.Parent:WaitForChild("StaticGeometry"))
 local FacilityConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("FacilityConfig"))
 
-local VERSION = 32 -- 32: Synthesis Chamber facing fountain, circular podium, CommandPost/ArchitectTable removed
+local VERSION = 33 -- 33: Synthesis Chamber interior Cauldron & Grimoire Lectern replacing anvil
 
 local function attachPrompt(
 	parent: Instance,

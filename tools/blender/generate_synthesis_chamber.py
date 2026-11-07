@@ -558,14 +558,55 @@ def build_interior_mesh() -> bmesh.types.BMesh:
 def build_pedestal_mesh() -> bmesh.types.BMesh:
     bm = bmesh.new()
     fy = 2.45
+    # Stepped circular dais
     add_cylinder_y(bm, 0.0, fy, fy + 0.8, 0.0, 3.2, 3.0, M_STONE, sides=12)
     add_cylinder_y(bm, 0.0, fy + 0.8, fy + 1.3, 0.0, 2.5, 2.4, M_IRON, sides=12)
     ay = fy + 1.3
-    add_box(bm, 0.0, ay + 0.25, 0.0, 2.4, 0.5, 1.7, M_IRON)
-    add_box(bm, 0.0, ay + 1.05, 0.0, 1.1, 1.1, 1.0, M_IRON)
-    add_box(bm, -0.2, ay + 1.95, 0.0, 3.2, 0.7, 1.4, M_IRON)
-    add_box(bm, 1.8, ay + 1.95, 0.0, 1.1, 0.5, 0.9, M_IRON)
-    add_box(bm, -0.2, ay + 2.32, 0.0, 2.4, 0.06, 0.25, M_CYAN)
+
+    # 4 Forged iron claw feet under the cauldron
+    for k in range(4):
+        leg_a = math.radians(45.0 + k * 90.0)
+        lx = math.sin(leg_a) * 1.45
+        lz = math.cos(leg_a) * 1.45
+        add_box(bm, lx, ay + 0.28, lz, 0.42, 0.65, 0.65, M_IRON, yaw_rad=leg_a, pitch_rad=math.radians(-18.0))
+
+    # Arcane Synthesis Cauldron with glowing violet rune band & bubbling cyan elixir
+    add_cylinder_y(bm, 0.0, ay + 0.15, ay + 0.65, 0.0, 1.15, 1.75, M_IRON, sides=12)
+    add_cylinder_y(bm, 0.0, ay + 0.65, ay + 1.55, 0.0, 1.85, 1.78, M_IRON, sides=12, cap_ends=False)
+    add_cylinder_y(bm, 0.0, ay + 1.08, ay + 1.22, 0.0, 1.90, 1.90, M_VIOLET, sides=12, cap_ends=False)
+    add_cylinder_y(bm, 0.0, ay + 1.55, ay + 1.85, 0.0, 1.78, 1.62, M_IRON, sides=12, cap_ends=False)
+    add_cylinder_y(bm, 0.0, ay + 1.85, ay + 2.08, 0.0, 1.92, 1.88, M_IRON, sides=12)
+    add_cylinder_y(bm, 0.0, ay + 2.02, ay + 2.12, 0.0, 1.56, 1.56, M_CYAN, sides=12)
+
+    # Side ring handles
+    for s in (-1.0, 1.0):
+        add_disc_z(bm, s * 1.92, ay + 1.25, 0.0, 0.36, 0.14, M_IRON, sides=8)
+
+    # Arcane Grimoire Lectern + Open Spellbook on front (+Z = 2.05) of dais
+    lect_z = 2.05
+    add_box(bm, 0.0, fy + 0.92, lect_z, 0.95, 0.25, 0.95, M_IRON)
+    add_cylinder_y(bm, 0.0, fy + 1.02, fy + 2.58, lect_z, 0.24, 0.22, M_IRON, sides=8, cap_ends=False)
+    tilt = math.radians(28.0)
+    add_box(bm, 0.0, fy + 2.62, lect_z, 1.65, 0.12, 1.20, M_IRON, pitch_rad=tilt)
+    # Left & Right open Grimoire covers, pages & glowing rune text
+    for s in (-1.0, 1.0):
+        px = s * 0.38
+        roll = math.radians(-s * 12.0)
+        add_box(bm, px, fy + 2.71, lect_z + 0.03, 0.76, 0.08, 1.04, M_TIMBER, pitch_rad=tilt, roll_rad=roll)
+        add_box(bm, px, fy + 2.76, lect_z + 0.05, 0.70, 0.10, 0.96, M_GALLERY, pitch_rad=tilt, roll_rad=roll)
+        add_box(
+            bm,
+            px,
+            fy + 2.81,
+            lect_z + 0.07,
+            0.46,
+            0.04,
+            0.64,
+            M_CYAN if s < 0 else M_VIOLET,
+            pitch_rad=tilt,
+            roll_rad=roll,
+        )
+    add_box(bm, 0.0, fy + 2.70, lect_z + 0.03, 0.18, 0.14, 1.06, M_IRON, pitch_rad=tilt)
     return bm
 
 
