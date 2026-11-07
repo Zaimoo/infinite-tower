@@ -15,7 +15,7 @@ local FacilityPresence = require(script.Parent:WaitForChild("FacilityPresence"))
 local StaticGeometry = require(script.Parent:WaitForChild("StaticGeometry"))
 local FacilityConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("FacilityConfig"))
 
-local VERSION = 30 -- 30: Compact Base Redesign with condensed courtyard footprint
+local VERSION = 31 -- 31: Enterable Synthesis Chamber rotunda with outward-swinging double doors & interior anvil prompt
 
 local function attachPrompt(
 	parent: Instance,
@@ -160,7 +160,7 @@ function Buildings.Build(plot: Instance)
 	)
 	syncPlotFacilityAnchor(plot, "Market", marketInteract.CFrame)
 
-	-- 5. Synthesis Chamber / The Pit (Monumental Domed Arcane Rotunda in SW Corner)
+	-- 5. Synthesis Chamber / The Pit (Monumental Enterable Domed Arcane Rotunda in SW Corner)
 	local pitCfg = layout.SynthesisChamber
 	local pitCF = origin * CFrame.new(pitCfg.Offset) * CFrame.Angles(0, pitCfg.RotationY or math.rad(42), 0)
 	local pitInteract = Architecture.BuildThePit(folder, pitCF)
@@ -168,15 +168,22 @@ function Buildings.Build(plot: Instance)
 	if pitModel then
 		pitModel:SetAttribute("Facility", "ThePit")
 	end
-	-- One [F] prompt for the whole Pit; its screen has Synthesis and Promotion tabs.
+	-- Attach the [F] prompt inside the rotunda on the central Synthesis Anvil (or PromptAnchor attachment).
+	local pitPromptParent: Instance = pitInteract
+	if pitModel and pitModel.PrimaryPart and pitCfg.PromptAttachmentName then
+		local promptAtt = pitModel.PrimaryPart:FindFirstChild(pitCfg.PromptAttachmentName)
+		if promptAtt and promptAtt:IsA("Attachment") then
+			pitPromptParent = promptAtt
+		end
+	end
 	attachPrompt(
-		pitInteract,
+		pitPromptParent,
 		"FacilityHUDPrompt",
 		"Pit",
 		"The Pit",
 		pitCfg.PromptText or "Synthesis & Promotion",
 		pitCfg.Keybind or Enum.KeyCode.F,
-		16
+		pitCfg.ActivationDistance or 12
 	)
 	syncPlotFacilityAnchor(plot, "Synthesis", pitInteract.CFrame)
 	-- Strip the old Promotion Altar anchor's bare prompt as well.

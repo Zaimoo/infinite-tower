@@ -13,6 +13,7 @@
 --   8. CommandPost        (War Banner & Architect's Table for Squad Management & Fortress Tree)
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SynthesisChamberBuilder = require(script.Parent:WaitForChild("SynthesisChamberBuilder"))
 
 local Arch = {}
 
@@ -882,214 +883,10 @@ function Arch.BuildMarket(folder: Instance, centerCF: CFrame): Part
 end
 
 --============================================================================
--- 2.4 SYNTHESIS CHAMBER (`SynthesisChamber` — Domed Arcane Rotunda / The Pit)
+-- 2.4 SYNTHESIS CHAMBER (`SynthesisChamber` — Enterable Gothic Rotunda / The Pit)
 --============================================================================
 function Arch.BuildThePit(folder: Instance, centerCF: CFrame): Part
-	local model = Instance.new("Model")
-	model.Name = "Building_ThePit"
-	model.Parent = folder
-
-	local baseStone = Color3.fromRGB(64, 68, 78)
-	local columnStone = Color3.fromRGB(94, 98, 110)
-	local wallStone = Color3.fromRGB(76, 80, 92)
-	local roofSlate = Color3.fromRGB(44, 48, 58)
-	local roofRib = Color3.fromRGB(68, 72, 84)
-	local purpleLight = Color3.fromRGB(192, 132, 252) -- #C084FC
-	local purpleDeep = Color3.fromRGB(126, 34, 206) -- #7E22CE
-	local cyanBarrier = Color3.fromRGB(56, 189, 248) -- #38BDF8
-
-	-- 3-Step Circular Base (Outer Diameter = 32 studs)
-	cylinder(model, "RotundaStep1", 16.0, 1.0, centerCF * CFrame.new(0, 0.5, 0), baseStone, Enum.Material.Slate, true)
-	cylinder(model, "RotundaStep2", 14.8, 1.0, centerCF * CFrame.new(0, 1.5, 0), columnStone, Enum.Material.Slate, true)
-	cylinder(model, "RotundaStep3", 13.6, 1.0, centerCF * CFrame.new(0, 2.5, 0), baseStone, Enum.Material.Cobblestone, true)
-
-	-- Cylindrical Stone Masonry Body (leaving doorway opening on +Z facing courtyard)
-	local wallRadius = 11.4
-	local wallHeight = 13.5
-	local wallBaseY = 3.0
-	local numWallPanels = 12
-	for i = 1, numWallPanels do
-		local angle = ((i - 1) / numWallPanels) * math.pi * 2
-		-- Panel at angle ~ pi/2 (+Z local) is the arched doorway entrance
-		local sinA = math.sin(angle)
-		local cosA = math.cos(angle)
-		local isDoorway = (sinA > 0.72 and math.abs(cosA) < 0.55)
-		local panelCF = centerCF
-			* CFrame.new(cosA * wallRadius, wallBaseY + wallHeight * 0.5, sinA * wallRadius)
-			* CFrame.Angles(0, -angle + math.pi * 0.5, 0)
-
-		if not isDoorway then
-			part(
-				model,
-				"RotundaWallPanel_" .. i,
-				V(6.4, wallHeight, 2.2),
-				panelCF,
-				wallStone,
-				Enum.Material.Cobblestone,
-				true
-			)
-			-- Gothic arched window recess on alternating panels
-			if i % 2 == 0 then
-				part(
-					model,
-					"GothicWindowGlow_" .. i,
-					V(2.2, 6.8, 2.4),
-					panelCF * CFrame.new(0, 0.8, 0),
-					purpleLight,
-					Enum.Material.Neon,
-					false
-				).Transparency = 0.25
-			end
-		end
-	end
-
-	-- 8 Perimeter Stone Columns (Shape = Cylinder) + Upper Entablature Ring
-	local colRadius = 12.6
-	for c = 1, 8 do
-		local angle = ((c - 1) / 8) * math.pi * 2 + math.rad(22.5)
-		local cx = math.cos(angle) * colRadius
-		local cz = math.sin(angle) * colRadius
-		cylinder(
-			model,
-			"RotundaColumn_" .. c,
-			1.15,
-			wallHeight + 0.5,
-			centerCF * CFrame.new(cx, wallBaseY + (wallHeight + 0.5) * 0.5, cz),
-			columnStone,
-			Enum.Material.Slate,
-			false
-		)
-		part(
-			model,
-			"ColumnCapital_" .. c,
-			V(2.8, 1.1, 2.8),
-			centerCF * CFrame.new(cx, wallBaseY + wallHeight + 0.4, cz),
-			columnStone,
-			Enum.Material.Slate,
-			false
-		)
-		part(
-			model,
-			"ColumnPlinth_" .. c,
-			V(2.8, 1.1, 2.8),
-			centerCF * CFrame.new(cx, wallBaseY + 0.55, cz),
-			baseStone,
-			Enum.Material.Slate,
-			false
-		)
-	end
-
-	-- Upper Cornice Entablature Ring
-	local corniceY = wallBaseY + wallHeight + 1.2
-	cylinder(model, "RotundaCornice", 14.0, 1.6, centerCF * CFrame.new(0, corniceY, 0), columnStone, Enum.Material.Slate, false)
-
-	-- Arched Courtyard Entrance (+Z) lit from within by a bright Cyan/Blue Magical Barrier Glow (#38BDF8)
-	local doorCF = centerCF * CFrame.new(0, wallBaseY, 12.0)
-	for _, sx in ipairs({ -3.6, 3.6 }) do
-		part(model, "EntrancePillar", V(2.0, 12.2, 2.6), doorCF * CFrame.new(sx, 6.1, 0), columnStone, Enum.Material.Slate, true)
-	end
-	part(model, "EntranceArchLintel", V(9.6, 2.6, 3.0), doorCF * CFrame.new(0, 12.4, 0), columnStone, Enum.Material.Slate, false)
-	wedge(model, "EntrancePedimentL", V(2.8, 2.4, 5.0), doorCF * CFrame.new(-2.4, 14.8, 0) * CFrame.Angles(0, math.pi * 0.5, 0), baseStone, Enum.Material.Slate, false)
-	wedge(model, "EntrancePedimentR", V(2.8, 2.4, 5.0), doorCF * CFrame.new(2.4, 14.8, 0) * CFrame.Angles(0, -math.pi * 0.5, 0), baseStone, Enum.Material.Slate, false)
-
-	local barrierPortal = part(
-		model,
-		"ArcaneDoorwayBarrier",
-		V(5.4, 11.0, 0.8),
-		doorCF * CFrame.new(0, 5.5, -0.4),
-		cyanBarrier,
-		Enum.Material.Neon,
-		false
-	)
-	barrierPortal.Transparency = 0.15
-	pointLight(barrierPortal, cyanBarrier, 2.4, 22, false)
-
-	-- Ribbed Conical/Domed Roof with Dormer Vents (CanCollide = false on roof dome)
-	local domeTiers = {
-		{ R = 13.4, H = 2.2, Y = corniceY + 1.8 },
-		{ R = 11.6, H = 2.2, Y = corniceY + 3.8 },
-		{ R = 9.4, H = 2.0, Y = corniceY + 5.6 },
-		{ R = 7.0, H = 1.8, Y = corniceY + 7.2 },
-		{ R = 4.8, H = 1.4, Y = corniceY + 8.5 },
-	}
-	for idx, tier in ipairs(domeTiers) do
-		cylinder(
-			model,
-			"RotundaDomeTier_" .. idx,
-			tier.R,
-			tier.H,
-			centerCF * CFrame.new(0, tier.Y, 0),
-			(idx % 2 == 0) and roofSlate or roofRib,
-			Enum.Material.Slate,
-			false
-		)
-	end
-
-	-- 4 Dormer Vents around the Dome
-	for d = 1, 4 do
-		local dAngle = math.rad((d - 1) * 90 + 45)
-		local dCF = centerCF
-			* CFrame.new(math.cos(dAngle) * 10.5, corniceY + 4.2, math.sin(dAngle) * 10.5)
-			* CFrame.Angles(0, -dAngle + math.pi * 0.5, 0)
-		part(model, "DormerVent_" .. d, V(2.8, 2.8, 2.6), dCF, columnStone, Enum.Material.Slate, false)
-		part(model, "DormerGlow_" .. d, V(1.6, 1.8, 2.8), dCF, purpleLight, Enum.Material.Neon, false)
-	end
-
-	-- Open Oculus at Dome Apex (Radius = 4 studs) venting Purple Arcane Smoke & Energy
-	local oculusY = corniceY + 9.2
-	cylinder(model, "OculusStoneRim", 4.6, 1.1, centerCF * CFrame.new(0, oculusY, 0), columnStone, Enum.Material.Slate, false)
-	local oculusCore = cylinder(
-		model,
-		"OculusArcaneCore",
-		3.8,
-		0.8,
-		centerCF * CFrame.new(0, oculusY + 0.1, 0),
-		purpleLight,
-		Enum.Material.Neon,
-		false
-	)
-
-	-- Interior Purple PointLight at Roof Apex (Range = 32, Brightness = 2.5)
-	pointLight(oculusCore, purpleLight, 2.5, 32, false)
-
-	-- Sculpted Arcane Plume Wisps rising out of the oculus (visible in both Edit & Play modes)
-	for w = 1, 4 do
-		local wy = oculusY + w * 2.2
-		local wr = 3.4 - w * 0.45
-		local wisp = sphere(
-			model,
-			"ArcaneOculusWisp_" .. w,
-			wr * 2,
-			centerCF * CFrame.new(math.sin(w * 1.4) * 0.9, wy, math.cos(w * 1.4) * 0.9),
-			(w % 2 == 0) and purpleLight or purpleDeep,
-			Enum.Material.Neon
-		)
-		wisp.Transparency = 0.35 + w * 0.12
-	end
-
-	local oculusEmitter = Instance.new("ParticleEmitter")
-	oculusEmitter.Name = "ArcaneOculusPlume"
-	oculusEmitter.Texture = "rbxassetid://243660364"
-	oculusEmitter.Color = ColorSequence.new(purpleLight, purpleDeep)
-	oculusEmitter.LightEmission = 0.85
-	oculusEmitter.Size = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 3.0),
-		NumberSequenceKeypoint.new(0.6, 6.2),
-		NumberSequenceKeypoint.new(1, 8.5),
-	})
-	oculusEmitter.Transparency = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 0.2),
-		NumberSequenceKeypoint.new(0.6, 0.45),
-		NumberSequenceKeypoint.new(1, 1.0),
-	})
-	oculusEmitter.Lifetime = NumberRange.new(1.8, 3.0)
-	oculusEmitter.Rate = 22
-	oculusEmitter.Speed = NumberRange.new(6, 12)
-	oculusEmitter.SpreadAngle = Vector2.new(22, 22)
-	oculusEmitter.RotSpeed = NumberRange.new(-35, 35)
-	oculusEmitter.Parent = oculusCore
-
-	local interactionPart = finalizeFacilityModel(model, centerCF, V(24, 14, 24), V(0, 4.0, 14.5))
+	local _, interactionPart = SynthesisChamberBuilder.Build(folder, centerCF)
 	return interactionPart
 end
 
@@ -1815,7 +1612,7 @@ function Arch.EnsureFacilityPrefabs(): Folder
 	end
 
 	local existing = assetsFolder:FindFirstChild("PlotFacilities")
-	if existing and existing:GetAttribute("PrefabVersion") == 7 then
+	if existing and existing:GetAttribute("PrefabVersion") == 8 then
 		return existing :: Folder
 	end
 	if existing then
@@ -1824,7 +1621,7 @@ function Arch.EnsureFacilityPrefabs(): Folder
 
 	local prefabs = Instance.new("Folder")
 	prefabs.Name = "PlotFacilities"
-	prefabs:SetAttribute("PrefabVersion", 7)
+	prefabs:SetAttribute("PrefabVersion", 8)
 	prefabs.Parent = assetsFolder
 
 	local tempHolder = Instance.new("Folder")
