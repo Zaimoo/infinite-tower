@@ -85,16 +85,31 @@ local function beginWarning(now: number, forcedId: string?)
 	toastAll(string.format("%s begins in %d seconds", event.DisplayName, EventConfig.WarningSeconds), "WARN")
 end
 
+-- Every camp on the floors the event touches despawns and respawns fresh, so the whole floor picks up
+-- (on start) or drops (on end) the event's modifiers at once.
+local function resetCamps(id: string, biome: number)
+	local event = EventConfig.Get(id)
+	local sim = _G.CombatSimulation
+	if not event or not sim or not sim.ResetTowerCamps then return end
+	sim.ResetTowerCamps(EventRules.AffectedFloors(event, biome, TowerFloorConfig.FloorCount, function(floorId)
+		local floor = TowerFloorConfig.Get(floorId)
+		return if floor then floor.BiomeIndex else 0
+	end))
+end
+
 local function beginActive()
 	phase = "ACTIVE"
 	lastId = eventId
 	publish()
+	resetCamps(eventId, featured)
 end
 
 local function endActive(now: number)
-	local event = EventConfig.Get(eventId)
+	local id, biome = eventId, featured
+	local event = EventConfig.Get(id)
 	if event then toastAll(event.DisplayName .. " has ended", "INFO") end
 	beginCalm(now)
+	resetCamps(id, biome)
 end
 
 -- Modifiers for a mob spawning on `floorId` right now, or nil when no running event touches it.

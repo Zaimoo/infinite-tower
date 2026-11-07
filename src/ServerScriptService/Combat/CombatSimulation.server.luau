@@ -2783,4 +2783,12 @@ CombatSimulation.WarpSquad = warpSquad
 CombatSimulation.IsInDuel = isPlayerInDuel
 CombatSimulation.IsBossLocked = isBossLocked
 CombatSimulation.RestoreSquadOnPlot = restoreSquadOnPlot
+-- Timed tower events reset every camp on the floors they touch (TowerEventService). Server only.
+CombatSimulation.ResetTowerCamps = function(floors: { number }): number
+	if not Encounters then return 0 end
+	local now = os.clock()
+	local removed = 0
+	for _, floorId in floors do removed += Encounters:ResetCamps(floorId, now) end
+	return removed
+end
 _G.CombatSimulation = CombatSimulation

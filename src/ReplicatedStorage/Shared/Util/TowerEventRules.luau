@@ -50,6 +50,15 @@ function Rules.Applies(event: Event, floorId: number, biomeIndex: number, featur
 	return event.Scope == "TOWER" or biomeIndex == featuredBiome
 end
 
+-- Floors whose camps reset when `event` starts or ends: every floor it touches. `biomeOf` maps a floor to its biome.
+function Rules.AffectedFloors(event: Event, featuredBiome: number, floorCount: number, biomeOf: (number) -> number): { number }
+	local floors = {}
+	for floorId = 1, floorCount do
+		if Rules.Applies(event, floorId, biomeOf(floorId), featuredBiome) then table.insert(floors, floorId) end
+	end
+	return floors
+end
+
 -- Biomes a server has opened: every biome up to the one holding the floor after the best clear.
 function Rules.UnlockedBiomes(highestCleared: number): { number }
 	local top = math.clamp(math.ceil((highestCleared + 1) / 5), 1, 10)

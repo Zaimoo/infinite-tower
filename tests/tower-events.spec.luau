@@ -115,4 +115,22 @@ test("The HUD timer counts calm down to the start, fills the warning and drains 
 	assert(Rules.Format(272) == "4:32" and Rules.Format(-3) == "0:00")
 end)
 
+test("Camp resets hit every floor a tower event touches and only the featured biome for biome events", function()
+	local biomeOf = function(floorId: number): number return assert(Floors.Get(floorId)).BiomeIndex end
+	for _, event in EventConfig.Events do
+		local featured = if event.Scope == "BIOME" then math.max(3, math.ceil(event.MinFloor / 5)) else 0
+		local floors = Rules.AffectedFloors(event, featured, Floors.FloorCount, biomeOf)
+		assert(#floors > 0, event.Id .. " resets no floor")
+		local hit = {}
+		for _, floorId in floors do
+			hit[floorId] = true
+			assert(floorId >= event.MinFloor, event.Id .. " resets a floor below its minimum")
+			assert(event.Scope == "TOWER" or biomeOf(floorId) == featured, event.Id .. " resets outside its biome")
+		end
+		for floorId = 1, Floors.FloorCount do
+			assert((hit[floorId] == true) == Rules.Applies(event, floorId, biomeOf(floorId), featured), event.Id .. " missed floor " .. floorId)
+		end
+	end
+end)
+
 print("Event tests: " .. passed .. " passed, 0 failed")

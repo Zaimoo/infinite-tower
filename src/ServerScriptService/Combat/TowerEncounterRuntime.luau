@@ -427,6 +427,31 @@ function Runtime.new(api: any): any
 		ledger.Roster = roster
 		return roster
 	end
+	-- A timed tower event starting or ending resets the floor's camps: every camp and patrol member
+	-- (not the Apex boss) leaves, surge/split packs leave, and the roster is rebuilt, so the next
+	-- SyncRooms spawns every camp fresh from its layout with no respawn timers and the current event
+	-- modifiers. Returns how many mobs left the world.
+	function self:ResetCamps(floor, now)
+		local ledger = api.Tower.Encounters[floor]
+		if not ledger or not ledger.Slots then return 0 end
+		local removed = 0
+		for slot, m in pairs(ledger.Slots) do
+			if m.Role ~= "BOSS" and m.CampId ~= "CAMP_APEX_SANCTUM" then
+				self:Cancel(m, "CAMP_RESET")
+				api.Navigation.Clear(m)
+				if api.Mobs[m.NetId] then api.Mobs[m.NetId] = nil; removed += 1 end
+				ledger.Slots[slot] = nil
+			end
+		end
+		for netId, m in pairs(ledger.Surge or {}) do
+			self:Cancel(m, "CAMP_RESET")
+			if api.Mobs[netId] then api.Mobs[netId] = nil; removed += 1 end
+			ledger.Surge[netId] = nil
+		end
+		ledger.Roster = nil
+		if removed > 0 then api.Changed() end
+		return removed
+	end
 	-- Patrols: replan a wiped patrol (fresh type mix, maybe a support, back to the route start), and
 	-- walk each living patrol's anchor along its route while it is not fighting.
 	function self:StepPatrols(floor, room, ledger, roster, now)
