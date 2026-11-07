@@ -34,7 +34,7 @@ test("Phase 4: a new tree owns only the root and the Guard Post's first level", 
 	for _, facility in { "Market", "TrainingGrounds", "GodsBlessing" } do
 		assert(FortressTree.FacilityLevel(tree, facility) == 0, facility .. " starts unbuilt")
 	end
-	assert(#TreeConfig.Nodes == 33, "root + 4 facility branches x (5 levels + 2 perks) + 4 squad slots")
+	assert(#TreeConfig.Nodes == 39, "root + 4 facility branches x (5 levels + 2 perks) + 4 squad slots + 6 storage")
 	assert(FortressTree.SquadSlots(tree) == 1, "a new Master starts with one squad slot")
 end)
 

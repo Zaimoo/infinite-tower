@@ -6,6 +6,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config.FortressTreeConfig)
 local FortressTree = require(ReplicatedStorage.Shared.Util.FortressTree)
+local InventoryCapacity = require(ReplicatedStorage.Shared.Util.InventoryCapacity)
 
 export type Dependencies = {
 	GetProfile: (Player) -> any,
@@ -80,6 +81,9 @@ function FortressTreeService.Unlock(player: Player, nodeId: any): (boolean, stri
 
 	local message = if node.Facility == "Squad"
 		then string.format("🚩 %s raised! Squad slot %d is open.", node.Name, FortressTree.SquadSlots(profile.FortressTree))
+		elseif node.Facility == Config.StorageFacility
+		then string.format("🎒 %s built! Backpack holds %d heroes and %d artifacts.", node.Name,
+			InventoryCapacity.HeroCap(profile.FortressTree), InventoryCapacity.ArtifactCap(profile.FortressTree))
 		elseif node.Kind == "LEVEL" and node.Level == 1
 		then string.format("🏗️ %s unlocked! The building rises on your plot.", node.Name)
 		elseif node.Kind == "LEVEL" then string.format("🏗️ %s complete!", node.Name)
