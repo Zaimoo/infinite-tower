@@ -155,6 +155,10 @@ export type SimHero = {
 	Stamina: number,
 	SlotIndex: number,
 	TargetNetId: number?,
+	TargetId: number?,
+	IsFocusTarget: boolean?,
+	FocusOverride: boolean?,
+	RecallOverride: boolean?,
 	AttackCooldown: number,
 	PacifiedUntil: number,
 	OverdriveUntil: number,
@@ -571,6 +575,10 @@ function CombatSimulation.RebuildPlayerSquad(player: Player)
 				Stamina = heroData.CurrentStamina or 0.0,
 				SlotIndex = slotIndex,
 				TargetNetId = masterState.FocusedTargetNetId,
+				TargetId = masterState.FocusedTargetNetId,
+				IsFocusTarget = masterState.FocusedTargetNetId ~= nil,
+				FocusOverride = nil,
+				RecallOverride = nil,
 				AttackCooldown = 0.2,
 				PacifiedUntil = 0,
 				OverdriveUntil = 0,
@@ -640,6 +648,8 @@ local function knockHeroIntoComa(simHero: SimHero, _baseComaSeconds: number?)
 	simHero.CurrentHP = 0
 	simHero.State = "COMA"
 	simHero.TargetNetId = nil
+	simHero.TargetId = nil
+	simHero.IsFocusTarget = false
 	ProgressionAwards[simHero.NetId] = nil
 
 	if profile then
@@ -1574,6 +1584,9 @@ FocusTargetRemote.OnServerEvent:Connect(function(player: Player, targetNetId: an
 				for _, simHero in pairs(masterState.DeployedHeroes) do
 					if simHero.State ~= "COMA" then
 						simHero.TargetNetId = targetNetId
+						simHero.TargetId = targetNetId
+						simHero.IsFocusTarget = true
+						simHero.FocusOverride = true
 						simHero.PacifiedUntil = 0
 						simHero.State = "MOVE_TO_TARGET"
 					end
@@ -1618,6 +1631,13 @@ WhistleCommandRemote.OnServerEvent:Connect(function(player: Player, commandCode:
 
 	elseif commandCode == 2 then
 		if DuelByPlayer[player] then return end
+		masterState.FocusedTargetNetId = nil
+		for _, simHero in pairs(masterState.DeployedHeroes) do
+			simHero.TargetNetId = nil
+			simHero.TargetId = nil
+			simHero.IsFocusTarget = false
+			simHero.RecallOverride = true
+		end
 		Tower.Recall(player)
 	end
 end)
@@ -1752,8 +1772,10 @@ local function resolveHeroImpact(impact: any, tick: number)
 		end
 
 		if mob.CurrentHP <= 0 then
-			if simHero.TargetNetId == mob.NetId then
+			if simHero.TargetNetId == mob.NetId or simHero.TargetId == mob.NetId then
 				simHero.TargetNetId = nil
+				simHero.TargetId = nil
+				simHero.IsFocusTarget = false
 				simHero.State = "FOLLOW_MASTER"
 			end
 			handleMobDeath(mob, simHero.Owner)
@@ -1877,6 +1899,92 @@ end
 
 local lastMasterPolicyClock: { [Player]: number } = setmetatable({}, { __mode = "k" }) :: any
 
+local function buildFreeSquadAssistList(
+	player: Player,
+	hero: SimHero,
+	masterState: MasterCombatState,
+	anchorPos: Vector3,
+	now: number,
+	maxLeash: number
+): { number }
+	local list: { number } = {}
+	local seen: { [number]: boolean } = {}
+
+	-- 1. Master Focused Target takes top priority
+	if masterState.FocusedTargetNetId then
+		local focusedMob = ActiveMobsByNetId[masterState.FocusedTargetNetId]
+		if focusedMob and focusedMob.IsAlive and isHostileMob(hero, focusedMob) then
+			table.insert(list, masterState.FocusedTargetNetId)
+			seen[masterState.FocusedTargetNetId] = true
+			return list
+		end
+	end
+
+	-- 2. Squad commitment: if any hero has a valid target, adopt that target and its camp
+	local primaryCampId: string? = nil
+	local heroes: { SimHero } = {}
+	for _, h in pairs(masterState.DeployedHeroes) do
+		if h.State ~= "COMA" and h.CurrentHP > 0 then
+			table.insert(heroes, h)
+		end
+	end
+	table.sort(heroes, function(a, b)
+		return (a.SlotIndex or 99) < (b.SlotIndex or 99)
+	end)
+
+	for _, ally in ipairs(heroes) do
+		local tId = ally.TargetId or ally.TargetNetId
+		if tId and not seen[tId] then
+			local mob = ActiveMobsByNetId[tId]
+			if mob and mob.IsAlive and isHostileMob(hero, mob) then
+				seen[tId] = true
+				table.insert(list, tId)
+				if not primaryCampId and (mob :: any).CampId then
+					primaryCampId = (mob :: any).CampId
+				end
+			end
+		end
+	end
+
+	-- If a camp was identified, include remaining alive mobs in the same camp so squad commits together
+	if primaryCampId then
+		for netId, mob in pairs(ActiveMobsByNetId) do
+			if not seen[netId] and (mob :: any).CampId == primaryCampId and mob.IsAlive and isHostileMob(hero, mob) then
+				seen[netId] = true
+				table.insert(list, netId)
+			end
+		end
+		return list
+	end
+
+	-- 3. If no squad hero has an active target (idle squad on ramp, 2 camps spawn simultaneously):
+	-- Anchor initial auto-aggro choice to anchorPos (Master's or lead hero's position) using elevation-weighted distance.
+	if #list == 0 then
+		local ctx: HeroTargeting.Context = {
+			MasterPos = anchorPos,
+			Assigned = false,
+			Leash = maxLeash,
+			Now = now,
+			SquadAnchorPos = anchorPos,
+		}
+		local initialTargetNetId = HeroTargeting.Acquire(hero, ActiveMobsByNetId, ctx, isHostileMob, nil)
+		if initialTargetNetId then
+			table.insert(list, initialTargetNetId)
+			local chosenMob = ActiveMobsByNetId[initialTargetNetId]
+			local chosenCampId = chosenMob and (chosenMob :: any).CampId
+			if chosenCampId then
+				for netId, mob in pairs(ActiveMobsByNetId) do
+					if netId ~= initialTargetNetId and (mob :: any).CampId == chosenCampId and mob.IsAlive and isHostileMob(hero, mob) then
+						table.insert(list, netId)
+					end
+				end
+			end
+		end
+	end
+
+	return list
+end
+
 local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 	local movementHero: any = simHero
 	if simHero.DuelId then
@@ -1979,11 +2087,24 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 
 	-- Free-following squads fight around the Master and disengage when the Master walks off;
 	-- assigned squads roam the floor up to maxLeash and join squadmates' fights.
+	local squadAnchorPos = masterPos
+	if not assignedRoom and masterState and not squadAnchorPos then
+		local bestSlot = 999
+		for _, h in pairs(masterState.DeployedHeroes) do
+			if h.State ~= "COMA" and h.CurrentHP > 0 and (h.SlotIndex or 99) < bestSlot then
+				squadAnchorPos = h.Position
+				bestSlot = h.SlotIndex or 99
+			end
+		end
+	end
+
 	local engage: HeroTargeting.Context = {
 		MasterPos = masterPos,
 		Assigned = assignedRoom ~= nil,
 		Leash = maxLeash,
 		Now = now,
+		FocusedTargetNetId = masterState and masterState.FocusedTargetNetId,
+		SquadAnchorPos = squadAnchorPos,
 		RouteCost = if assignedRoom
 			then function(from: Vector3, to: Vector3): number
 				return SquadMovement.RouteCost(simHero.FloorId, from, to, assignedRoom.Origin)
@@ -1993,8 +2114,11 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 	local assist: { number }? = nil
 	if assignedRoom and masterState then
 		assist = SquadMovement.BuildAssignedAssistList(simHero.Owner, simHero, masterState.DeployedHeroes)
+	elseif not assignedRoom and masterState and squadAnchorPos then
+		assist = buildFreeSquadAssistList(simHero.Owner, simHero, masterState, squadAnchorPos, now, maxLeash)
 	end
 	local targetMob: SimMob? = HeroTargeting.Select(simHero, ActiveMobsByNetId, engage, isHostileMob, isPacified, assist)
+	simHero.TargetId = simHero.TargetNetId
 	local targetPos: Vector3? = targetMob and targetMob.Position
 	local targetEnemyHero: SimHero? = nil -- outside duels heroes only ever fight mobs (stepDuelHero handles hero-vs-hero)
 
@@ -2370,7 +2494,7 @@ Tower.RegisterAdapter("Combat",{
     h.FloorId=room.FloorId;h.RoomGeneration=room.RoomGeneration;h.EntityGeneration+=1
     local spawnBase = anchor or (if room.FloorId > 0 then getAssignedSpawnRoot(room) else room.Arrival.Position)
     h.Position=HeroNavigation.PlaceNear(spawnBase,getFormationOffset(h.SlotIndex))
-    h.TargetNetId=nil
+    h.TargetNetId=nil;h.TargetId=nil;h.IsFocusTarget=false;h.RecallOverride=true
     if h.CurrentHP > 0 and h.State ~= "COMA" then
      h.State = "FOLLOW_MASTER"
     else
