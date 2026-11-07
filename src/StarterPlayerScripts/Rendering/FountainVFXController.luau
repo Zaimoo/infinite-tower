@@ -95,10 +95,10 @@ local function ensureWaterSurfaceTextures(waterPart: BasePart): (Texture, Textur
 		created.Name = "WaterRippleTextureA"
 		created.Face = topFace
 		created.Texture = cfg.RippleTextureId
-		created.Color3 = cfg.WaterFoamColor
-		created.Transparency = 0.62
-		created.StudsPerTileU = 6.5
-		created.StudsPerTileV = 6.5
+		created.Color3 = cfg.LightColor
+		created.Transparency = 0.82
+		created.StudsPerTileU = 5.5
+		created.StudsPerTileV = 5.5
 		created.Parent = waterPart
 		texA = created
 	end
@@ -109,10 +109,10 @@ local function ensureWaterSurfaceTextures(waterPart: BasePart): (Texture, Textur
 		created.Name = "WaterRippleTextureB"
 		created.Face = topFace
 		created.Texture = cfg.RippleTextureId
-		created.Color3 = Color3.fromRGB(224, 242, 254)
-		created.Transparency = 0.74
-		created.StudsPerTileU = 4.8
-		created.StudsPerTileV = 4.8
+		created.Color3 = cfg.WaterFoamColor
+		created.Transparency = 0.86
+		created.StudsPerTileU = 3.8
+		created.StudsPerTileV = 3.8
 		created.Parent = waterPart
 		texB = created
 	end
@@ -187,7 +187,7 @@ function FountainVFXController.BindFountain(fountainModel: Model): ManagedFounta
 	local pointLight: PointLight? = nil
 
 	for _, desc in ipairs(fountainModel:GetDescendants()) do
-		if desc:IsA("BasePart") then
+		if desc:IsA("BasePart") and not desc:IsA("MeshPart") then
 			if (WATER_PART_NAMES[desc.Name] or desc:GetAttribute("FountainWaterSurface") == true) and desc.Transparency < 0.95 then
 				local texA, texB = ensureWaterSurfaceTextures(desc)
 				table.insert(waterTextures, {
@@ -236,11 +236,13 @@ function FountainVFXController.BindFountain(fountainModel: Model): ManagedFounta
 		end
 	end
 
-	-- Also collect any pre-existing WaterfallSheet_* beams
+	-- Collect any additional WaterfallBody_* and BasinFlowStream_* beams while preserving parallax speeds
 	for _, desc in ipairs(fountainModel:GetDescendants()) do
 		if desc:IsA("Beam") and not table.find(waterfallBeams, desc) then
-			desc.TextureSpeed = cfg.BeamTextureSpeed
-			desc.LightEmission = cfg.BeamLightEmission
+			if string.find(desc.Name, "^WaterfallSheet_") then
+				desc.TextureSpeed = cfg.BeamTextureSpeed
+			end
+			desc.LightEmission = math.min(desc.LightEmission, cfg.BeamLightEmission)
 			table.insert(waterfallBeams, desc)
 		end
 	end

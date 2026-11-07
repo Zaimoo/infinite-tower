@@ -28,6 +28,7 @@
 --      - Soft cyan/white mist `ParticleEmitter` instances at water impact rings.
 --      - Single central `PointLight` in the bottom basin (`#38BDF8`, Brightness 1.75, Range 24).
 
+local InsertService = game:GetService("InsertService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SoundService = game:GetService("SoundService")
 
@@ -37,6 +38,25 @@ local FountainBuilder = {}
 -- CONFIGURATION TABLE
 --============================================================================
 FountainBuilder.Config = {
+	-- Cloud-uploaded Blender FBX MeshIds (from assets/models/facilities/GoddessFountain.fbx)
+	UploadedMeshes = {
+		Fountain_Base_And_Tiers = {
+			MeshId = "rbxassetid://113309633218778",
+			Size = Vector3.new(25.35, 15.85, 25.35),
+			Offset = CFrame.new(0, 7.925, 0) * CFrame.Angles(0, math.pi, 0),
+		},
+		Goddess_Statue = {
+			MeshId = "rbxassetid://96585252266419",
+			Size = Vector3.new(4.102948, 7.74, 2.53),
+			Offset = CFrame.new(0.062927, 19.72, 0) * CFrame.Angles(0, math.pi, 0),
+		},
+		Water_Surface_Meshes = {
+			MeshId = "rbxassetid://138814072126177",
+			Size = Vector3.new(20.24, 12.17, 20.24),
+			Offset = CFrame.new(0, 9.035, 0) * CFrame.Angles(0, math.pi, 0),
+		},
+	},
+
 	-- Outer Foundation & Tier Dimensions (fits inside PlazaFountainClearRadius = 16.5)
 	PlazaDiameter = 25.2,
 	PlazaHeight = 0.55,
@@ -184,8 +204,8 @@ local function attachScrollingWaterTextures(waterPart: BasePart, cfg: { [string]
 	texA.Name = "WaterRippleTextureA"
 	texA.Face = topFace
 	texA.Texture = cfg.WaterRippleTexture
-	texA.Color3 = Color3.fromRGB(224, 242, 254)
-	texA.Transparency = 0.35
+	texA.Color3 = Color3.fromRGB(56, 189, 248)
+	texA.Transparency = 0.82
 	texA.StudsPerTileU = 5.5
 	texA.StudsPerTileV = 5.5
 	texA.Parent = waterPart
@@ -195,7 +215,7 @@ local function attachScrollingWaterTextures(waterPart: BasePart, cfg: { [string]
 	texB.Face = topFace
 	texB.Texture = cfg.WaterRippleTexture
 	texB.Color3 = cfg.WaterFoamColor
-	texB.Transparency = 0.48
+	texB.Transparency = 0.86
 	texB.StudsPerTileU = 3.8
 	texB.StudsPerTileV = 3.8
 	texB.Parent = waterPart
@@ -500,9 +520,9 @@ local function createSpoutBeamAndMist(
 	bodyBeam.LightEmission = cfg.WaterfallLightEmission
 	bodyBeam.LightInfluence = 0.35
 	bodyBeam.Transparency = NumberSequence.new({
-		NumberSequenceKeypoint.new(0.0, 0.15),
-		NumberSequenceKeypoint.new(0.7, 0.12),
-		NumberSequenceKeypoint.new(0.92, 0.38),
+		NumberSequenceKeypoint.new(0.0, 0.12),
+		NumberSequenceKeypoint.new(0.7, 0.08),
+		NumberSequenceKeypoint.new(0.92, 0.35),
 		NumberSequenceKeypoint.new(1.0, 0.85),
 	})
 	bodyBeam.Width0 = width0
@@ -519,6 +539,7 @@ local function createSpoutBeamAndMist(
 	beam.Attachment0 = aSpout
 	beam.Attachment1 = aImpact
 	beam.Texture = cfg.WaterfallBeamTexture
+	beam.TextureMode = Enum.TextureMode.Wrap
 	beam.TextureSpeed = cfg.WaterfallTextureSpeed
 	beam.TextureLength = 1.6
 	beam.Color = ColorSequence.new(Color3.fromRGB(240, 249, 255), cfg.WaterFoamColor)
@@ -563,72 +584,227 @@ local function createSpoutBeamAndMist(
 	end
 end
 
+-- Adds radial outward-flowing water ripple Beams across each horizontal basin pool so the water
+-- visibly ripples and flows in real time (in both Studio Edit mode and Play mode).
+local function createBasinRunningWaterBeams(socketHolder: BasePart, cfg: { [string]: any })
+	local tiers = {
+		{ Name = "Tier1", Y = 3.02, InnerR = 7.6, OuterR = 10.4, Count = 12, W0 = 0.75, W1 = 1.25 },
+		{ Name = "Tier2", Y = 6.36, InnerR = 4.6, OuterR = 6.9, Count = 8, W0 = 0.75, W1 = 1.2 },
+		{ Name = "Tier3", Y = 11.79, InnerR = 2.0, OuterR = 4.5, Count = 8, W0 = 0.7, W1 = 1.1 },
+		{ Name = "Tier4", Y = 15.36, InnerR = 1.4, OuterR = 2.6, Count = 4, W0 = 0.65, W1 = 0.95 },
+	}
+	local flowIdx = 1
+	for _, tier in ipairs(tiers) do
+		for k = 0, tier.Count - 1 do
+			local a = (k / tier.Count) * math.pi * 2
+			local sa, ca = math.sin(a), math.cos(a)
+
+			local a0 = Instance.new("Attachment")
+			a0.Name = string.format("BasinFlowInner_%d", flowIdx)
+			a0.Position = Vector3.new(sa * tier.InnerR, tier.Y, ca * tier.InnerR)
+			a0.Axis = Vector3.new(0, 1, 0)
+			a0.SecondaryAxis = Vector3.new(ca, 0, -sa)
+			a0.Parent = socketHolder
+
+			local a1 = Instance.new("Attachment")
+			a1.Name = string.format("BasinFlowOuter_%d", flowIdx)
+			a1.Position = Vector3.new(sa * tier.OuterR, tier.Y, ca * tier.OuterR)
+			a1.Axis = Vector3.new(0, 1, 0)
+			a1.SecondaryAxis = Vector3.new(ca, 0, -sa)
+			a1.Parent = socketHolder
+
+			local flowBeam = Instance.new("Beam")
+			flowBeam.Name = string.format("BasinFlowStream_%d", flowIdx)
+			flowBeam.Attachment0 = a0
+			flowBeam.Attachment1 = a1
+			flowBeam.Texture = cfg.WaterfallBeamTexture
+			flowBeam.TextureMode = Enum.TextureMode.Wrap
+			flowBeam.TextureLength = 2.2
+			flowBeam.TextureSpeed = 1.65
+			flowBeam.Color = ColorSequence.new({
+				ColorSequenceKeypoint.new(0.0, cfg.WaterFoamColor),
+				ColorSequenceKeypoint.new(0.5, cfg.LightColor),
+				ColorSequenceKeypoint.new(1.0, cfg.WaterColor),
+			})
+			flowBeam.LightEmission = 0.35
+			flowBeam.LightInfluence = 0.35
+			flowBeam.Transparency = NumberSequence.new({
+				NumberSequenceKeypoint.new(0.0, 0.78),
+				NumberSequenceKeypoint.new(0.45, 0.52),
+				NumberSequenceKeypoint.new(0.85, 0.62),
+				NumberSequenceKeypoint.new(1.0, 0.95),
+			})
+			flowBeam.Width0 = tier.W0
+			flowBeam.Width1 = tier.W1
+			flowBeam.FaceCamera = false
+			flowBeam.Segments = 4
+			flowBeam.Parent = socketHolder
+
+			flowIdx += 1
+		end
+	end
+end
+
 --============================================================================
--- 3. OPTIONAL IMPORTED BLENDER MESH INTEGRATION
+-- 3. IMPORTED BLENDER MESH INTEGRATION (AUTO-CACHED OR FROM REPLICATEDSTORAGE)
 --============================================================================
-local function findImportedFountainTemplate(): Model?
+local function findImportedFountainTemplate(cfg: { [string]: any }): Model?
 	local assets = ReplicatedStorage:FindFirstChild("Assets")
 	local custom = assets and assets:FindFirstChild("CustomFacilityMeshes")
 	local template = custom and custom:FindFirstChild("GoddessFountain")
 	if template and template:IsA("Model") and template:FindFirstChildWhichIsA("MeshPart", true) then
 		return template
 	end
-	return nil
+
+	-- Automatically instantiate and cache the uploaded Blender MeshParts if InsertService is available
+	local uploaded = cfg.UploadedMeshes
+	if type(uploaded) ~= "table" or typeof(InsertService) ~= "Instance" then
+		return nil
+	end
+	local createFn = (InsertService :: any).CreateMeshPartAsync
+	if type(createFn) ~= "function" then
+		return nil
+	end
+
+	local createdModel = Instance.new("Model")
+	createdModel.Name = "GoddessFountain"
+	local count = 0
+	for partName, spec in pairs(uploaded) do
+		local ok, mp = pcall(function()
+			return InsertService:CreateMeshPartAsync(
+				spec.MeshId,
+				Enum.CollisionFidelity.Box,
+				Enum.RenderFidelity.Automatic
+			)
+		end)
+		if ok and mp and mp:IsA("MeshPart") then
+			mp.Name = partName
+			mp.Size = spec.Size
+			mp.Anchored = true
+			mp.CanCollide = false
+			mp.CanQuery = false
+			mp.CanTouch = false
+			mp.Parent = createdModel
+			count += 1
+		end
+	end
+
+	if count == 0 then
+		createdModel:Destroy()
+		return nil
+	end
+
+	if not assets then
+		local newAssets = Instance.new("Folder")
+		newAssets.Name = "Assets"
+		newAssets.Parent = ReplicatedStorage
+		assets = newAssets
+	end
+	if not custom then
+		local newCustom = Instance.new("Folder")
+		newCustom.Name = "CustomFacilityMeshes"
+		newCustom.Parent = assets
+		custom = newCustom
+	end
+	createdModel.Parent = custom
+	return createdModel
 end
 
 local function applyImportedFountainMeshes(fountainModel: Model, template: Model, cfg: { [string]: any })
-	-- Hide procedural visual parts while keeping collider parts and compatibility parts intact
+	local waterSurfaceNames: { [string]: boolean } = {
+		Tier1_WaterPool = true,
+		Tier2_WaterPool = true,
+		Tier3_WaterPool = true,
+		Tier3_WaterCrest = true,
+		CatchBasin_Water_1 = true,
+		CatchBasin_Water_2 = true,
+		CatchBasin_Water_3 = true,
+		CatchBasin_Water_4 = true,
+	}
 	local keepHiddenColliders: { [string]: boolean } = {
+		FountainRootPivot = true,
+		WaterfallSocketHolder = true,
 		PlazaBase = true,
 		Tier1_OuterWall = true,
 		Tier1_Rim = true,
-		Tier1_WaterPool = true,
 		Tier2_BasinBody = true,
-		Tier2_WaterPool = true,
 		Tier3_TopBasin = true,
-		Tier3_WaterCrest = true,
-		WaterfallSocketHolder = true,
 	}
+
+	-- Rescue gold trim parts from inside procedural Goddess_Statue before stripping blocky stone/marble parts
+	local baseFolder = fountainModel:FindFirstChild("Fountain_Base_And_Tiers") or fountainModel
+	local procStatue = fountainModel:FindFirstChild("Goddess_Statue")
+	if procStatue and procStatue:IsA("Model") then
+		for _, child in ipairs(procStatue:GetChildren()) do
+			if child:IsA("BasePart") then
+				if child.Material == cfg.GoldMaterial then
+					child.Parent = baseFolder
+				elseif child:GetAttribute("BlessingHandAnchor") == true then
+					child.Transparency = 1
+					child.Parent = baseFolder
+				end
+			end
+		end
+		procStatue:Destroy()
+	end
+
 	for _, desc in ipairs(fountainModel:GetDescendants()) do
 		if desc:IsA("BasePart") then
-			if keepHiddenColliders[desc.Name] then
+			if waterSurfaceNames[desc.Name] then
+				-- Keep non-Neon #0EA5E9 basin water pools & scrolling textures visible
+				desc.Transparency = 0
+			elseif desc.Material == cfg.GoldMaterial or desc:GetAttribute("BlessingHandAnchor") == true then
+				-- Keep antique gold filigree bands, plaques, capitals, crown, and waist girdle visible
+			elseif keepHiddenColliders[desc.Name] then
 				desc.Transparency = 1
-				for _, child in ipairs(desc:GetChildren()) do
-					if child:IsA("Texture") then
-						child:Destroy()
-					end
-				end
 			else
 				desc:Destroy()
 			end
 		end
 	end
 
-	local clone = template:Clone()
-	clone:PivotTo(fountainModel:GetPivot())
-	for _, desc in ipairs(clone:GetDescendants()) do
-		if desc:IsA("MeshPart") then
-			desc.Anchored = true
-			desc.CanCollide = false
-			desc.CanQuery = false
-			desc.CanTouch = false
-			if desc.Name == "Fountain_Base_And_Tiers" then
-				desc.Color = cfg.StoneDarkColor
-				desc.Material = cfg.StoneDarkMaterial
-			elseif desc.Name == "Goddess_Statue" then
-				desc.Color = cfg.MarbleColor
-				desc.Material = cfg.MarbleMaterial
-			elseif desc.Name == "Water_Surface_Meshes" then
-				desc.Color = cfg.WaterColor
-				desc.Material = Enum.Material.Glass
-				desc.Transparency = 0.15
-				desc.CastShadow = false
-				attachScrollingWaterTextures(desc, cfg)
+	local pivotCF = fountainModel:GetPivot()
+	local uploaded = cfg.UploadedMeshes or {}
+
+	for _, meshName in ipairs({ "Fountain_Base_And_Tiers", "Goddess_Statue", "Water_Surface_Meshes" }) do
+		local srcMesh = template:FindFirstChild(meshName, true)
+		if srcMesh and srcMesh:IsA("MeshPart") then
+			local clone = srcMesh:Clone()
+			-- Remove any nested child MeshParts so each of the 3 MeshParts is placed cleanly once
+			for _, child in ipairs(clone:GetChildren()) do
+				if child:IsA("MeshPart") then
+					child:Destroy()
+				end
 			end
-			desc.Parent = fountainModel
+			clone.Anchored = true
+			clone.CanCollide = false
+			clone.CanQuery = false
+			clone.CanTouch = false
+
+			local spec = uploaded[meshName]
+			if spec and spec.Offset then
+				clone.CFrame = pivotCF * spec.Offset
+			end
+
+			if meshName == "Fountain_Base_And_Tiers" then
+				clone.Color = cfg.StoneLightColor
+				clone.Material = cfg.StoneDarkMaterial
+				clone.Parent = baseFolder
+			elseif meshName == "Goddess_Statue" then
+				clone.Color = cfg.MarbleColor
+				clone.Material = cfg.MarbleMaterial
+				clone.Parent = fountainModel
+			elseif meshName == "Water_Surface_Meshes" then
+				clone.Color = cfg.WaterColor
+				clone.Material = Enum.Material.SmoothPlastic
+				clone.Reflectance = 0.08
+				clone.Transparency = 0
+				clone.CastShadow = false
+				local wf = fountainModel:FindFirstChild("Water_Surface_Meshes")
+				clone.Parent = if wf and wf:IsA("Folder") then wf else fountainModel
+			end
 		end
 	end
-	clone:Destroy()
 end
 
 --============================================================================
@@ -743,7 +919,7 @@ function FountainBuilder.Build(parentIsland: Instance?, customConfig: { [string]
 		Position = Vector3.new(0, cfg.PlazaHeight + tier1WallH + 0.14, 0),
 		Material = Enum.Material.SmoothPlastic,
 		Color = cfg.WaterColor,
-		Reflectance = 0.25,
+		Reflectance = 0.08,
 		Decorative = true,
 		Parent = fountainModel,
 	})
@@ -796,7 +972,7 @@ function FountainBuilder.Build(parentIsland: Instance?, customConfig: { [string]
 			Position = Vector3.new(bx, 2.92, bz),
 			Material = Enum.Material.SmoothPlastic,
 			Color = cfg.WaterColor,
-			Reflectance = 0.25,
+			Reflectance = 0.08,
 			Decorative = true,
 			Parent = waterFolder,
 		})
@@ -832,7 +1008,7 @@ function FountainBuilder.Build(parentIsland: Instance?, customConfig: { [string]
 		Position = Vector3.new(0, 6.22, 0),
 		Material = Enum.Material.SmoothPlastic,
 		Color = cfg.WaterColor,
-		Reflectance = 0.25,
+		Reflectance = 0.08,
 		Decorative = true,
 		Parent = fountainModel,
 	})
@@ -926,7 +1102,7 @@ function FountainBuilder.Build(parentIsland: Instance?, customConfig: { [string]
 		Position = Vector3.new(0, 11.65, 0),
 		Material = Enum.Material.SmoothPlastic,
 		Color = cfg.WaterColor,
-		Reflectance = 0.25,
+		Reflectance = 0.08,
 		Decorative = true,
 		Parent = waterFolder,
 	})
@@ -983,7 +1159,7 @@ function FountainBuilder.Build(parentIsland: Instance?, customConfig: { [string]
 		Position = Vector3.new(0, 15.22, 0),
 		Material = Enum.Material.SmoothPlastic,
 		Color = cfg.WaterColor,
-		Reflectance = 0.25,
+		Reflectance = 0.08,
 		Decorative = true,
 		Parent = fountainModel,
 	})
@@ -1099,6 +1275,9 @@ function FountainBuilder.Build(parentIsland: Instance?, customConfig: { [string]
 		end
 	end
 
+	-- Radial outward-flowing water ripple streams across all horizontal basin pools
+	createBasinRunningWaterBeams(socketHolder, cfg)
+
 	-- 9. Ambient Fountain Lighting (Phase 3.4: single central PointLight in bottom basin)
 	local light = Instance.new("PointLight")
 	light.Name = "FountainGlow"
@@ -1145,8 +1324,8 @@ function FountainBuilder.Build(parentIsland: Instance?, customConfig: { [string]
 	sound.Parent = topBasin
 	sound:Play()
 
-	-- Apply imported Blender MeshParts if present under ReplicatedStorage.Assets.CustomFacilityMeshes.GoddessFountain
-	local importedTemplate = findImportedFountainTemplate()
+	-- Apply imported Blender MeshParts (from ReplicatedStorage or InsertService MeshIds)
+	local importedTemplate = findImportedFountainTemplate(cfg)
 	if importedTemplate then
 		applyImportedFountainMeshes(fountainModel, importedTemplate, cfg)
 	end
