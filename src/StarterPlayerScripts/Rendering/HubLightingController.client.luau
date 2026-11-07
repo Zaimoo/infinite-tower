@@ -82,8 +82,14 @@ local function apply(p: Preset)
 	end
 	local rays = effect("SunRaysEffect", "TowerStormSunRays") :: SunRaysEffect?
 	if rays then
-		rays.Intensity = p.SunRaysIntensity
-		rays.Spread = p.SunRaysSpread
+		if p.SunRaysIntensity > 0.005 then
+			rays.Enabled = true
+			rays.Intensity = p.SunRaysIntensity
+			rays.Spread = p.SunRaysSpread
+		else
+			rays.Enabled = false
+			rays.Intensity = 0
+		end
 	end
 end
 
@@ -113,10 +119,15 @@ local function stepHubLighting(dt: number)
 	local k = 1 - math.exp(-BLEND_RATE * dt)
 	dreadW += (wantDread - dreadW) * k
 	stormW += (wantStorm - stormW) * k
+
 	if math.abs(dreadW - lastDread) < 0.002 and math.abs(stormW - lastStorm) < 0.002 then
 		return
 	end
 	lastDread, lastStorm = dreadW, stormW
+
+	-- Publish dread weight (tower proximity) for VFX/wind scaling
+	workspace:SetAttribute("WeatherTowerProximity", dreadW)
+
 	local hub = mix(Presets.Sanctuary, Presets.Dread, dreadW)
 	apply(mix(hub, Presets.Storm, stormW))
 end
