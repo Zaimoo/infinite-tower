@@ -38,6 +38,10 @@ local function require(module)
 end
 
 local game = { ReplicatedStorage = node("ReplicatedStorage") }
+local workspace = {
+	GetServerTimeNow = function() return os.clock() end,
+	GetAttribute = function(_, attr) return nil end,
+}
 local CFrame = {}
 local cframeMeta = {}
 function CFrame.new(x, y, z)
@@ -87,7 +91,24 @@ local warn = print
 
 local Vector3 = {}
 local vectorMeta = {}
-function Vector3.new(x, y, z) return setmetatable({X=x,Y=y,Z=z},vectorMeta) end
+vectorMeta.__index = function(t, k)
+	if k == "Magnitude" then
+		return math.sqrt(t.X * t.X + t.Y * t.Y + t.Z * t.Z)
+	elseif k == "Unit" then
+		local m = math.sqrt(t.X * t.X + t.Y * t.Y + t.Z * t.Z)
+		if m < 0.00001 then return Vector3.new(0, 0, 0) end
+		return Vector3.new(t.X / m, t.Y / m, t.Z / m)
+	end
+	return rawget(t, k)
+end
+function Vector3.new(x, y, z) return setmetatable({X=x or 0,Y=y or 0,Z=z or 0},vectorMeta) end
+Vector3.zero = Vector3.new(0, 0, 0)
+Vector3.one = Vector3.new(1, 1, 1)
 vectorMeta.__add=function(a,b) return Vector3.new(a.X+b.X,a.Y+b.Y,a.Z+b.Z) end
 vectorMeta.__sub=function(a,b) return Vector3.new(a.X-b.X,a.Y-b.Y,a.Z-b.Z) end
+vectorMeta.__mul=function(a,b)
+	if type(a) == "number" then return Vector3.new(b.X*a, b.Y*a, b.Z*a)
+	elseif type(b) == "number" then return Vector3.new(a.X*b, a.Y*b, a.Z*b)
+	else return Vector3.new(a.X*b.X, a.Y*b.Y, a.Z*b.Z) end
+end
 local Vector2 = {new=function(x,y) return {X=x,Y=y} end}

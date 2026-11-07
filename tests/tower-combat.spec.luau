@@ -123,4 +123,70 @@ test("Old sequences, wrong generation and unknown identities reject on client",f
 	local old=table.clone(a);old.ActionSequence=3;assert(not S.Receive(s,old,meta,10.2))
 	old.Actor=table.clone(a.Actor);old.Actor.EntityGeneration=2;assert(not S.Receive(s,old,meta,10.2));assert(not S.Receive(S.New(),a,{},10.2))
 end)
+test("Taunt redirects mob target to the taunting hero even when another hero is closer", function()
+	local Runtime = require(nodes["ServerScriptService.Combat.TowerEncounterRuntime"])
+	local sent = {}
+	local heroA = { NetId = 101, EntityGeneration = 1, FloorId = 1, RoomGeneration = 1, CurrentHP = 100, MaxHP = 100, IsAlive = true, Position = Vector3.new(0, 0, 5), Yaw = 0 }
+	local heroB = { NetId = 102, EntityGeneration = 1, FloorId = 1, RoomGeneration = 1, CurrentHP = 200, MaxHP = 200, IsAlive = true, Position = Vector3.new(0, 0, 15), Yaw = 0 }
+	local mob = {
+		NetId = 201, EntityGeneration = 1, FloorId = 1, RoomGeneration = 1, CurrentHP = 500, MaxHP = 500, ATK = 10,
+		IsAlive = true, Position = Vector3.new(0, 0, 0), HomePosition = Vector3.new(0, 0, 0), Yaw = 0,
+		EnemyId = "mob_moss_crawler", TowerEnemy = true, Role = "REGULAR", Cooldowns = {},
+		ActionCounter = 0, ActionSequence = 0,
+	}
+	local heroes = { [101] = heroA, [102] = heroB }
+	local mobs = { [201] = mob }
+	local api = {
+		Heroes = heroes,
+		Mobs = mobs,
+		Tower = {
+			GetRoom = function() return { RoomGeneration = 1, Origin = Vector3.zero } end,
+			Same = function(a, b) return a.FloorId == b.FloorId and a.RoomGeneration == b.RoomGeneration end,
+			GetSafety = function() return { CombatSafe = false } end,
+		},
+		Navigation = {
+			CanAttack = function() return true end,
+			Step = function(m, goal, stepDist) m.Position = goal end,
+		},
+		Send = function(m, msg) table.insert(sent, msg) end,
+		Damage = function() end,
+	}
+	local runtime = Runtime.new(api)
+	local targets = { heroA, heroB }
+
+	-- Tick 1: Hero A is closer (dist 5 vs dist 15). Mob should target Hero A.
+	runtime:Step(mob, 0.1, 10.0, targets)
+	assert(mob.TargetNetId == 101, "initial target should be closest hero (heroA)")
+
+	-- Hero B (Vanguard) taunts the mob for 4.0 seconds.
+	runtime:Taunt(mob, heroB, 4.0, 10.0)
+	assert(mob.TauntedByNetId == 102, "taunted by heroB")
+	assert(mob.TargetNetId == 102, "target switched to heroB immediately")
+
+	-- Tick 2: Mob steps while taunted. Even though Hero A is still closer, target must remain Hero B!
+	runtime:Step(mob, 0.1, 10.1, targets)
+	assert(mob.TargetNetId == 102, "target remains taunting hero (heroB) despite heroA being closer")
+
+	-- If mob was in WINDUP against heroA, taunt cancels the windup
+	mob.Action = A.Start(mob, heroA, C.Get(mob.EnemyId).Attacks[1], 10.2)
+	assert(mob.Action.Status == "WINDUP" and mob.Action.Target.NetId == 101)
+	runtime:Taunt(mob, heroB, 4.0, 10.2)
+	assert(mob.Action == nil, "windup on another target is cancelled by taunt")
+	assert(mob.TargetNetId == 102, "target is heroB")
+
+	-- Hero B moves further away; after taunt expires (at t = 15.0), mob re-acquires closest hero (Hero A)
+	heroB.Position = Vector3.new(0, 0, 30)
+	runtime:Step(mob, 0.1, 15.0, targets)
+	assert(mob.TargetNetId == 101, "mob reverts to nearest hero (heroA) after taunt expires")
+	assert(mob.TauntedByNetId == nil, "taunt state cleared")
+
+	-- If taunter dies during taunt, mob drops taunt immediately
+	heroB.Position = Vector3.new(0, 0, 15)
+	runtime:Taunt(mob, heroB, 4.0, 15.1)
+	assert(mob.TargetNetId == 102)
+	heroB.IsAlive = false
+	heroB.CurrentHP = 0
+	runtime:Step(mob, 0.1, 15.1, targets)
+	assert(mob.TargetNetId == 101, "mob drops taunt and targets alive hero when taunter dies")
+end)
 print(string.format("Tower combat tests: %d passed, %d failed",passed,failed));assert(failed==0)

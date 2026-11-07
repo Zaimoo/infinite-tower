@@ -92,7 +92,8 @@ $modulePaths = @(
     'ServerScriptService/Core/TowerNavigationGraph.luau',
     'ServerScriptService/Core/NavigationRecovery.luau',
     'ServerScriptService/Core/NavigationQueue.luau',
-    'ServerScriptService/Combat/SquadMovement.luau'
+    'ServerScriptService/Combat/SquadMovement.luau',
+    'ServerScriptService/Combat/TowerEncounterRuntime.luau'
 )
 $bundleParts = [System.Collections.Generic.List[string]]::new()
 $bundleParts.Add([System.IO.File]::ReadAllText((Join-Path $PSScriptRoot 'roblox-module-shim.luau')))

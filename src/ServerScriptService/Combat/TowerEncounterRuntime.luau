@@ -67,6 +67,22 @@ function Runtime.new(api: any): any
 		m.Action = nil
 		m.ActionSequence = 0
 	end
+	function self:Taunt(m, attacker, duration, optNow)
+		if not m.TowerEnemy or not m.IsAlive then return end
+		local now = optNow or workspace:GetServerTimeNow()
+		m.TauntedByNetId = attacker.NetId
+		m.TauntExpires = now + duration
+		m.TargetNetId = attacker.NetId
+		if m.Action and m.Action.Status == "WINDUP" then
+			local actionTargetNetId = m.Action.Target and m.Action.Target.NetId
+			if actionTargetNetId ~= attacker.NetId then
+				self:Cancel(m, "TAUNTED")
+				m.State = "CHASE"
+			end
+		end
+		local delta = attacker.Position - m.Position
+		m.Yaw = math.atan2(-delta.X, -delta.Z)
+	end
 	function self:ActiveActions(context)
 		local actions = {}
 		for _, m in pairs(api.Mobs) do
@@ -328,6 +344,9 @@ function Runtime.new(api: any): any
 	function self:Death(m, killer)
 		if not m.IsAlive then return end
 		self:Cancel(m, "ACTOR_DEATH")
+		m.TauntedByNetId = nil
+		m.TauntExpires = nil
+		m.TargetNetId = nil
 		m.IsAlive = false
 		m.CurrentHP = 0
 		m.State = "DEAD"
@@ -1012,6 +1031,13 @@ function Runtime.new(api: any): any
 			end
 		end
 		local function safe(v) return self:Safe(v) end
+		if m.Action and m.Action.Status == "WINDUP" and m.TauntedByNetId and m.TauntExpires and now < m.TauntExpires then
+			local actionTargetNetId = m.Action.Target and m.Action.Target.NetId
+			if actionTargetNetId ~= m.TauntedByNetId then
+				self:Cancel(m, "TAUNTED")
+				m.State = "CHASE"
+			end
+		end
 		if m.Action then
 			local action = m.Action
 			local definition = Config.Attack(m.EnemyId, action.AttackId)
@@ -1059,15 +1085,44 @@ function Runtime.new(api: any): any
 		local fromHome = (m.Position - m.HomePosition).Magnitude
 		local target = nil
 		local nearest = e.AggroRange
-		for _, t in targets do
-			if Timeline.Alive(t) and api.Tower.Same(m, t) and not safe(t) and (t.Position - m.HomePosition).Magnitude < (m.LeashRadius or Config.LeashRange) then
-				local d = (m.Position - t.Position).Magnitude
-				if d < nearest then
-					nearest = d
-					target = t
+		local taunted = false
+		if m.TauntedByNetId and m.TauntExpires and now < m.TauntExpires then
+			local t = if api.Heroes then api.Heroes[m.TauntedByNetId] else nil
+			if not t then
+				for _, cand in targets do
+					if cand.NetId == m.TauntedByNetId then
+						t = cand
+						break
+					end
+				end
+			end
+			if t and Timeline.Alive(t) and not t.DuelId and api.Tower.Same(m, t) and not safe(t)
+				and (t.Position - m.HomePosition).Magnitude < (m.LeashRadius or Config.LeashRange) then
+				target = t
+				nearest = (m.Position - t.Position).Magnitude
+				taunted = true
+			else
+				m.TauntedByNetId = nil
+				m.TauntExpires = nil
+			end
+		else
+			m.TauntedByNetId = nil
+			m.TauntExpires = nil
+		end
+
+		if not taunted then
+			for _, t in targets do
+				if Timeline.Alive(t) and api.Tower.Same(m, t) and not safe(t) and (t.Position - m.HomePosition).Magnitude < (m.LeashRadius or Config.LeashRange) then
+					local d = (m.Position - t.Position).Magnitude
+					if d < nearest then
+						nearest = d
+						target = t
+					end
 				end
 			end
 		end
+
+		m.TargetNetId = if target then target.NetId else nil
 		if m.Affixes then AffixRules.Regen(m, workspace:GetServerTimeNow()) end
 		local speed = e.MoveSpeed * SupportRules.SpeedMultiplier(m, now) * AffixRules.SpeedMultiplier(m)
 		if fromHome > (m.LeashRadius or Config.LeashRange) or safe(m) or not target then
