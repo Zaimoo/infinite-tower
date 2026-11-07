@@ -293,7 +293,7 @@ function Controller.new(gui: ScreenGui, getProfile: () -> any, remotes: Instance
 	self:BuildSummonRevealModal(gui)
 
 	-- Fit the window inside the safe area (below the top bar, clear of the bottom edge).
-	ModalFit.Bind(root, self.Scale, WIDTH, HEIGHT)
+	ModalFit.Bind(root, self.Scale, WIDTH, HEIGHT, { MaxScale = 1.25 })
 
 	return self
 end

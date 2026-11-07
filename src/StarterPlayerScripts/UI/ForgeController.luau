@@ -471,7 +471,7 @@ function Forge.new(gui: ScreenGui, artifactRemotes: Folder, getProfile: (() -> a
 			view.Position -= UDim2.fromOffset(0, 42)
 		end
 	end
-	ModalFit.Bind(root, self.Scale, WIDTH, fitHeight)
+	ModalFit.Bind(root, self.Scale, WIDTH, fitHeight, { MaxScale = 1.2 })
 
 	return self
 end

@@ -584,7 +584,7 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 
 	local btn = new("TextButton", {
 		Name = "InitiatePromotionButton",
-		Text = "INITIATE PROMOTION",
+		Text = "PROMOTE",
 		TextSize = 22,
 		Font = Enum.Font.GothamBlack,
 		TextColor3 = C.Text,
@@ -631,7 +631,7 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 	end)
 
 	ModalFit.Bind(root, self.Scale, WIDE_SIZE.X, WIDE_SIZE.Y, {
-		MinScale = 0,
+		MaxScale = 1.25,
 		DesignSize = function(available: Vector2): Vector2
 			local wideScale = math.min(available.X / WIDE_SIZE.X, available.Y / WIDE_SIZE.Y)
 			local stackedScale = math.min(available.X / STACKED_SIZE.X, available.Y / STACKED_SIZE.Y)
@@ -799,7 +799,7 @@ end
 function Promo.Confirm(self: any)
 	if self.Busy or self.Loading then return end
 	if not self.Recipient then
-		self.Message = "Tap the center slot to select a hero to promote."
+		self.Message = "Choose a hero to promote."
 		self:Render()
 		return
 	end
@@ -1108,7 +1108,7 @@ function Promo.Render(self: any)
 	if self.Busy then
 		button.Text = "PROMOTING…"
 	else
-		button.Text = "INITIATE PROMOTION"
+		button.Text = "PROMOTE"
 	end
 
 	button.TextColor3 = (canCommit or self.Busy) and C.Text or Color3.fromRGB(206, 196, 226)
@@ -1122,7 +1122,7 @@ function Promo.Render(self: any)
 		status = "Channeling the promotion ritual…"
 	elseif status == "" then
 		if not recipient then
-			status = "Tap the center slot to select a hero for promotion."
+			status = "Choose a hero to promote."
 		elseif self.Loading then
 			status = "Evaluating ascension requirements…"
 		elseif preview and not preview.CanCommit then

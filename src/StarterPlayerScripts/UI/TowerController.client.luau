@@ -112,7 +112,7 @@ GildedGrimoire.Watch(panel)
 local scale = new("UIScale", { Scale = 1.0 }, panel)
 
 -- Fit the selector inside the safe area (below the top bar, clear of the bottom edge).
-ModalFit.Bind(panel, scale, 830, 560, { MinScale = 0.48 })
+ModalFit.Bind(panel, scale, 830, 560, { MaxScale = 1.25, FillWidth = true })
 
 local function closeSelector()
 	panel.Visible = false
@@ -158,7 +158,7 @@ local subtitleLabel = new("TextLabel", {
 	Position = UDim2.fromOffset(74, 44),
 	Size = UDim2.fromOffset(500, 18),
 	BackgroundTransparency = 1,
-	Text = "10 Biomes · Select any floor to visit or station your squad",
+	Text = "Choose a floor to visit or station your squad",
 	TextColor3 = C.TextMuted,
 	Font = Enum.Font.Gotham,
 	TextSize = 13,
@@ -303,7 +303,7 @@ local detailHeader = new("TextLabel", {
 	Text = "Floor 1 · Overgrown Threshold (Verdant Ruins)",
 	TextColor3 = GildedGrimoire.Text.Gold,
 	Font = Enum.Font.GothamBlack,
-	TextSize = 18,
+	TextSize = 20,
 	TextXAlignment = Enum.TextXAlignment.Left,
 	TextTruncate = Enum.TextTruncate.AtEnd,
 	ZIndex = 45,
@@ -318,7 +318,7 @@ local detailScaling = new("TextLabel", {
 	Text = "Recommended Power: 700",
 	TextColor3 = Color3.fromRGB(240, 235, 248),
 	Font = Enum.Font.Gotham,
-	TextSize = 14,
+	TextSize = 16,
 	TextXAlignment = Enum.TextXAlignment.Left,
 	ZIndex = 45,
 }, detailsCard)
@@ -332,7 +332,7 @@ local detailRoster = new("TextLabel", {
 	Text = "Roster: Moss Crawler ×5, Ruin Guardian ×5, Vinebound Elite ×1",
 	TextColor3 = Color3.fromRGB(220, 212, 235),
 	Font = Enum.Font.Gotham,
-	TextSize = 14,
+	TextSize = 16,
 	TextWrapped = true,
 	TextXAlignment = Enum.TextXAlignment.Left,
 	ZIndex = 45,
@@ -346,7 +346,7 @@ local detailVisitors = new("TextLabel", {
 	Text = "Visitors: 0 · Stationed Squads: none",
 	TextColor3 = Color3.fromRGB(150, 140, 168),
 	Font = Enum.Font.Gotham,
-	TextSize = 13,
+	TextSize = 15,
 	TextXAlignment = Enum.TextXAlignment.Left,
 	ZIndex = 45,
 }, detailsCard)
@@ -375,7 +375,7 @@ local statusFooter = new("TextLabel", {
 	Text = "You: Hub · Squad: Following Master\nHub travel complete",
 	TextColor3 = Color3.fromRGB(160, 150, 180),
 	Font = Enum.Font.Gotham,
-	TextSize = 12,
+	TextSize = 14,
 	TextWrapped = true,
 	TextXAlignment = Enum.TextXAlignment.Left,
 	ZIndex = 43,

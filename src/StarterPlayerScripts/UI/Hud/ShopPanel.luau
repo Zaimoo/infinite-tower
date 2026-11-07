@@ -251,7 +251,7 @@ local function ShopPanel(props: { Profile: any, Width: number, OnClose: () -> ()
 	}, {
 		Window = Panel({
 			Class = "TextButton", Text = "", AutoButtonColor = false, -- swallows clicks so they don't reach the scrim
-			AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, -16), Size = UDim2.new(1, -48, 1, -80), Radius = 16, ZIndex = 21,
+			AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.new(1, -24, 1, -24), Radius = 16, ZIndex = 21,
 		}, {
 			Max = e("UISizeConstraint", { MaxSize = Vector2.new(1040, 760) }),
 			Icon = IconAt("Shop", 66, { Position = UDim2.fromOffset(16, -14), ZIndex = 26 }),

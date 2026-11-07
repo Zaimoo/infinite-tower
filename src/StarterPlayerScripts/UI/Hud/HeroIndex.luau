@@ -41,7 +41,7 @@ local TEXT = Grimoire.Text
 local INK = Grimoire.Ink
 
 local BANNERS = {
-	{ Key = "PERMANENT", Banner = HeroCatalog.PermanentBanner, Tag = "PERMANENT BANNER", Tone = "Violet", Summon = "CALL_OF_THE_RIFT" },
+	{ Key = "PERMANENT", Banner = HeroCatalog.PermanentBanner, Tag = "PERMANENT", Tone = "Violet", Summon = "CALL_OF_THE_RIFT" },
 	{ Key = "LIMITED", Banner = HeroCatalog.LimitedBanner, Tag = "LIMITED EVENT", Tone = "Bronze", Summon = "A_STARS_ARRIVAL" },
 }
 
@@ -378,7 +378,7 @@ local function HeroIndex(props: { Profile: any, Width: number, OnClose: () -> ()
 			Title = Heavy({ Position = UDim2.fromOffset(56, 10), Size = UDim2.new(1, -66, 0, 22), MaxSize = 16, Outline = 2, Gold = active,
 				TextXAlignment = Enum.TextXAlignment.Left, Text = b.Banner.Title, ZIndex = 4 }),
 			Tag = Body({ Position = UDim2.fromOffset(56, 34), Size = UDim2.new(1, -66, 0, 14), TextSize = 11, TextColor3 = TEXT.Muted,
-				Text = string.format("%s · %d HEROES", b.Tag, #ids), ZIndex = 4 }),
+				Text = b.Tag, ZIndex = 4 }),
 			Owned = Body({ Position = UDim2.fromOffset(12, 62), Size = UDim2.new(1, -24, 0, 16), TextSize = 13, TextColor3 = if have == #ids then TEXT.Gold else TEXT.Good,
 				Text = if have == #ids then "Collection complete!" else string.format("Collected %d / %d", have, #ids), ZIndex = 4 }),
 			Bar = bar({ Position = UDim2.fromOffset(12, 84), Size = UDim2.new(1, -24, 0, 12), ZIndex = 4 }, have / math.max(1, #ids),
@@ -461,7 +461,8 @@ local function HeroIndex(props: { Profile: any, Width: number, OnClose: () -> ()
 					Text = string.format("%s · %d★", string.upper(HeroCatalog.RarityName(tier)), heroSeed.BaseStar), ZIndex = 5 }),
 			}),
 			Arch = IconAt(heroSeed.Archetype, 30, { Position = UDim2.fromOffset(150, 72), ZIndex = 4 }),
-			ArchText = Body({ Position = UDim2.fromOffset(186, 78), Size = UDim2.new(1, -186, 0, 18), TextSize = 14,
+			ArchText = Body({ Position = UDim2.fromOffset(186, 72), Size = UDim2.new(1, -186, 0, 32), TextSize = 13,
+				TextWrapped = true, TextTruncate = Enum.TextTruncate.None,
 				Text = string.format("%s · %s", heroSeed.Archetype, (string.gsub(ArtifactCatalog.ArchetypeWeaponType[heroSeed.Archetype] or "?", "_", " & "))), ZIndex = 3 }),
 			Owned = Body({ Position = UDim2.fromOffset(152, 104), Size = UDim2.new(1, -152, 0, 34), TextSize = 13, TextWrapped = true, TextTruncate = Enum.TextTruncate.None,
 				TextColor3 = if mine then TEXT.Good else TEXT.Muted,
@@ -603,7 +604,8 @@ local function HeroIndex(props: { Profile: any, Width: number, OnClose: () -> ()
 					Text = string.format("%s · %s", string.upper(rarityInfo.Name), string.upper(artifactSeed.Variant or "Standard")), ZIndex = 5 }),
 			}),
 			Arch = IconAt(artifactSeed.Type, 30, { Position = UDim2.fromOffset(150, 72), ZIndex = 4 }),
-			ArchText = Body({ Position = UDim2.fromOffset(186, 78), Size = UDim2.new(1, -186, 0, 18), TextSize = 14,
+			ArchText = Body({ Position = UDim2.fromOffset(186, 72), Size = UDim2.new(1, -186, 0, 32), TextSize = 13,
+				TextWrapped = true, TextTruncate = Enum.TextTruncate.None,
 				Text = string.format("%s Archetype", string.gsub(artifactSeed.Type, "_", " & ")), ZIndex = 3 }),
 			Owned = Body({ Position = UDim2.fromOffset(152, 104), Size = UDim2.new(1, -152, 0, 34), TextSize = 13, TextWrapped = true, TextTruncate = Enum.TextTruncate.None,
 				TextColor3 = if mine then TEXT.Good else TEXT.Muted,
@@ -691,8 +693,8 @@ local function HeroIndex(props: { Profile: any, Width: number, OnClose: () -> ()
 	}, {
 		Window = Panel({
 			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.new(0.5, 0, 0.5, -16),
-			Size = UDim2.new(1, -48, 1, -80),
+			Position = UDim2.fromScale(0.5, 0.5),
+			Size = UDim2.new(1, -24, 1, -24),
 			Radius = 16,
 			Active = true,
 		}, {

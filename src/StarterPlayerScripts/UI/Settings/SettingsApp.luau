@@ -10,6 +10,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local React = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("React"))
 
+local ModalFit = require(script.Parent.Parent:WaitForChild("ModalFit"))
+local GuiService = game:GetService("GuiService")
+
 local SettingsConfig = require(script.Parent:WaitForChild("SettingsConfig"))
 local SettingsComponents = require(script.Parent:WaitForChild("SettingsComponents"))
 local SettingsAudioEngine = require(script.Parent:WaitForChild("SettingsAudioEngine"))
@@ -65,11 +68,28 @@ _G.IsSettingsOpen = function()
 end
 
 local function SettingsApp()
+	local panelRef = React.useRef(nil)
+	local scaleRef = React.useRef(nil)
+	useEffect(function()
+		local panel, scale = panelRef.current, scaleRef.current
+		if not panel or not scale then return end
+		local gui = panel:FindFirstAncestorOfClass("ScreenGui")
+		if not gui then return end
+		local function fit()
+			local position, fitted, design = ModalFit.Calculate(gui.AbsoluteSize, GuiService:GetGuiInset().Y, 960, 620, { MaxScale = 1.2, FillWidth = true })
+			panel.Position = position
+			panel.Size = UDim2.fromOffset(design.X, design.Y)
+			scale.Scale = fitted
+		end
+		fit()
+		local connection = gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(fit)
+		return function() connection:Disconnect() end
+	end, {})
 	local isOpen, setIsOpen = useState(false)
 	isCurrentlyOpen = isOpen
 	setIsOpenGlobal = setIsOpen
 	local activeTab, setActiveTab = useState("Overview" :: SettingsConfig.TabName)
-	local statusMsg, setStatusMsg = useState("Ready. Adjust any parameter with live preview.")
+	local statusMsg, setStatusMsg = useState("Ready.")
 	local settings, setSettings = useState(table.clone(SettingsConfig.DEFAULTS))
 
 	local theme = SettingsConfig.THEMES[settings.Theme] or SettingsConfig.THEMES.Gold
@@ -347,8 +367,8 @@ local function SettingsApp()
 				}),
 			}),
 			Presets = e(Section, {
-				Title = "Quick Configuration Presets",
-				Subtitle = "Instantly rebalance audio and graphics for your playstyle",
+				Title = "Presets",
+				Subtitle = "Choose a preset",
 				LayoutOrder = 2,
 				Children = {
 					PresetButtons = e("Frame", {
@@ -384,21 +404,6 @@ local function SettingsApp()
 					}),
 				},
 			}),
-			StatusCard = e(Section, {
-				Title = "Experience Information",
-				Subtitle = "Infinite Towers • Client Runtime Synced",
-				LayoutOrder = 3,
-				Children = {
-					Info = Body({
-						Text = "Every slider and toggle updates the live engine instantly. Use the tabs on the right to fine-tune sound channels, post-processing shaders, input scale, and UI palette themes.",
-						TextSize = 14,
-						TextWrapped = true,
-						TextTruncate = Enum.TextTruncate.None,
-						Size = UDim2.new(1, 0, 0, 44),
-						LayoutOrder = 2,
-					}),
-				},
-			}),
 		})
 	elseif activeTab == "Audio" then
 		pageContent = e("Frame", {
@@ -412,7 +417,7 @@ local function SettingsApp()
 			}),
 			Sliders = e(Section, {
 				Title = "Volume Levels",
-				Subtitle = "Real-time master and directional sound channel controls",
+				Subtitle = "Adjust volume",
 				LayoutOrder = 1,
 				Children = {
 					S1 = e(Slider, {
@@ -440,12 +445,12 @@ local function SettingsApp()
 			}),
 			Mutes = e(Section, {
 				Title = "Channel Mutes",
-				Subtitle = "Instantly silence individual audio groups",
+				Subtitle = "Mute sound groups",
 				LayoutOrder = 2,
 				Children = {
 					T1 = e(Toggle, {
 						Label = "Mute Sound Effects",
-						Description = "Silences combat impacts, swing whooshes and UI sounds",
+						Description = "Combat and UI sounds",
 						Value = settings.MuteSFX,
 						AccentColor = accent,
 						LayoutOrder = 1,
@@ -453,7 +458,7 @@ local function SettingsApp()
 					}),
 					T2 = e(Toggle, {
 						Label = "Mute Music",
-						Description = "Stops background melodies and floor boss themes",
+						Description = "Background and boss music",
 						Value = settings.MuteMusic,
 						AccentColor = accent,
 						LayoutOrder = 2,
@@ -461,7 +466,7 @@ local function SettingsApp()
 					}),
 					T3 = e(Toggle, {
 						Label = "Mute Atmosphere & Ambience",
-						Description = "Disables fountain water, wind and tower environment background sounds",
+						Description = "Water, wind and ambience",
 						Value = settings.MuteAmbience,
 						AccentColor = accent,
 						LayoutOrder = 3,
@@ -482,7 +487,7 @@ local function SettingsApp()
 			}),
 			QualitySection = e(Section, {
 				Title = "Visual Tuning",
-				Subtitle = "World lighting and camera viewport adjustments",
+				Subtitle = "Camera and lighting",
 				LayoutOrder = 1,
 				Children = {
 					FovSlider = e(Slider, {
@@ -505,12 +510,12 @@ local function SettingsApp()
 			}),
 			PostFx = e(Section, {
 				Title = "Post-Processing & Shaders",
-				Subtitle = "Toggle rendering shaders to optimize frame rates",
+				Subtitle = "Balance visuals and performance",
 				LayoutOrder = 2,
 				Children = {
 					ShadowToggle = e(Toggle, {
 						Label = "Global Dynamic Shadows",
-						Description = "Simulates realistic sunlight and architectural shadows",
+						Description = "Sunlight and shadows",
 						Value = settings.GlobalShadows,
 						AccentColor = accent,
 						LayoutOrder = 1,
@@ -518,7 +523,7 @@ local function SettingsApp()
 					}),
 					BloomToggle = e(Toggle, {
 						Label = "Bloom & Glow Effects",
-						Description = "Enables glowing energy cores and crystal highlights",
+						Description = "Glowing effects",
 						Value = settings.Bloom,
 						AccentColor = accent,
 						LayoutOrder = 2,
@@ -526,7 +531,7 @@ local function SettingsApp()
 					}),
 					ColorToggle = e(Toggle, {
 						Label = "Atmospheric Color Correction",
-						Description = "Applies sunset sky atmospheric grading and contrast",
+						Description = "Color and contrast",
 						Value = settings.ColorFX,
 						AccentColor = accent,
 						LayoutOrder = 3,
@@ -563,6 +568,7 @@ local function SettingsApp()
 		-- Centered Settings Window (Clear Glass Crystal Frame)
 		Window = e("Frame", {
 			Name = "SettingsPanel",
+			ref = panelRef,
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			Position = UDim2.fromScale(0.5, 0.5),
 			Size = UDim2.new(0, 960, 0, 620),
@@ -571,7 +577,7 @@ local function SettingsApp()
 			Active = true,
 			ZIndex = 2,
 		}, {
-			Max = e("UISizeConstraint", { MaxSize = Vector2.new(960, 620) }),
+			Scale = e("UIScale", { ref = scaleRef }),
 			Corner = e("UICorner", { CornerRadius = UDim.new(0, 14) }),
 			GlassRimStroke = e("UIStroke", {
 				Thickness = 1.2,
@@ -647,7 +653,7 @@ local function SettingsApp()
 							Size = UDim2.new(1, 0, 0, 16),
 							TextSize = 13,
 							TextColor3 = Grimoire.Text.Muted,
-							Text = "Customize your game experience",
+							Text = "Changes apply instantly",
 							ZIndex = 3,
 						}),
 					}),

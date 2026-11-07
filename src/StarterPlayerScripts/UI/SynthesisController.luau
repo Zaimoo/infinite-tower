@@ -408,7 +408,7 @@ function Synth.new(gui: ScreenGui, remote: RemoteFunction)
 	})
 	local recipHint = label(recipPortrait, "Body", {
 		AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 0, 1, -28), Size = UDim2.new(1, 0, 0, 18),
-		TextSize = 13, TextColor3 = TEXT.Muted, Text = "Choose a hero to level up", ZIndex = Z + 4,
+		TextSize = 13, TextColor3 = TEXT.Muted, Text = "Choose a hero", ZIndex = Z + 4,
 	})
 
 	local recipArch = new("Frame", {
@@ -581,7 +581,7 @@ function Synth.new(gui: ScreenGui, remote: RemoteFunction)
 
 	-- Fit the window inside the safe area. The Pit's tab bar sits in Roblox's top bar (React HUD), so no
 	-- space is reserved above the window; on large screens it grows up to 1.25x.
-	ModalFit.Bind(root, self.Scale, WIDTH, HEIGHT, { MaxScale = 1.25 })
+	ModalFit.Bind(root, self.Scale, WIDTH, HEIGHT, { MaxScale = 1.25, FillWidth = true })
 
 	self:Render()
 	return self
@@ -1241,7 +1241,7 @@ function Synth.Render(self: any)
 		end
 	else
 		self.RecipientName.Text = "No Hero Selected"
-		self.RecipientInfo.Text = "Pick the hero who receives the EXP"
+		self.RecipientInfo.Text = "Receives EXP"
 		self.RecipientInfo.TextColor3 = TEXT.Muted
 		self.LevelLabel.Text = '<font color="#96929F">Lv. —</font>'
 		if self.ActivePreviewTween then

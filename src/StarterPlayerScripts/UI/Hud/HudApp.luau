@@ -295,7 +295,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 	end, {})
 
 	React.useEffect(function()
-		_G.IsBackpackOpen = function() return currentBackpackOpen or backpackOpen end
+		_G.IsBackpackOpen = function() return currentBackpackOpen end
 		_G.CloseBackpack = closeBackpack
 		return function()
 			_G.IsBackpackOpen = nil
@@ -329,7 +329,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 			setIndexOpen(true)
 			call("SetModalFocusMode", true)
 		end
-		_G.IsHeroIndexOpen = function() return currentIndexOpen or currentShopOpen or indexOpen or shopOpen end
+		_G.IsHeroIndexOpen = function() return currentIndexOpen or currentShopOpen end
 		_G.IsFacilityPanelOpen = function(): boolean
 			return currentFacilityOpen ~= nil
 		end

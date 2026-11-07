@@ -1145,7 +1145,7 @@ local function FacilityPanel(props: { Facility: string, Profile: any, Width: num
 				[React.Event.Activated] = function() say("Pick a hero from the list on the right to fill this slot.") end }, {
 				Plus = Heavy({ Position = UDim2.fromOffset(0, 30), Size = UDim2.new(1, 0, 0, 50), MaxSize = 48, Text = "+", ZIndex = 4 }),
 				Hint = Body({ Position = UDim2.fromOffset(6, 92), Size = UDim2.new(1, -12, 0, 40), TextSize = 12, TextWrapped = true, TextTruncate = Enum.TextTruncate.None,
-					TextXAlignment = Enum.TextXAlignment.Center, TextColor3 = TEXT.Muted, Text = "Free slot\npick a hero", ZIndex = 4 }),
+					TextXAlignment = Enum.TextXAlignment.Center, TextColor3 = TEXT.Muted, Text = "Assign hero", ZIndex = 4 }),
 			})
 		else
 			-- The next slot this facility can open, through a level or perk node.
@@ -1327,8 +1327,8 @@ local function FacilityPanel(props: { Facility: string, Profile: any, Width: num
 		Window = Panel({
 			Class = "TextButton", Text = "", AutoButtonColor = false, -- swallows clicks so they don't reach the scrim
 			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.new(0.5, 0, 0.5, -16), -- 24 px top and side margins, 56 px at the bottom (as ModalFit)
-			Size = UDim2.new(1, -48, 1, -80),
+			Position = UDim2.fromScale(0.5, 0.5),
+			Size = UDim2.new(1, -24, 1, -24),
 			Radius = 16,
 			Rail = tone.Rail,
 			ZIndex = 21,
