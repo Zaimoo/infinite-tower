@@ -108,7 +108,6 @@ function Drawer.new(parent: Instance, z: number, onClose: () -> ())
 
 	local function resize()
 		local compact = self.Root.AbsoluteSize.Y < 700
-		self.Compact = compact
 		self.Panel.Size = UDim2.new(1, -24, if compact then 0.98 else 0.94, -10)
 		self.Title.Position = UDim2.fromOffset(14, if compact then 0 else 12)
 		self.Subtitle.Position = UDim2.fromOffset(14, if compact then 30 else 47)
@@ -119,11 +118,14 @@ function Drawer.new(parent: Instance, z: number, onClose: () -> ())
 		self.Footer.Position = UDim2.new(0, 18, 1, if compact then -22 else -30)
 		self.Footer.Size = UDim2.new(1, -36, 0, if compact then 18 else 24)
 		self.Footer.TextSize = if compact then 12 else 14
-		for _, button in self.Buttons or {} do Card.Resize(button, compact) end
 		local width = math.max(1, self.Scroll.AbsoluteSize.X - 16)
-		local columns = math.max(1, math.floor((width + 12) / 166))
+		local wideCards = compact and width >= 420
+		self.WideCards = wideCards
+		for _, button in self.Buttons or {} do Card.Resize(button, wideCards) end
+		local columnPitch = if wideCards then 212 else 166
+		local columns = math.max(1, math.floor((width + 12) / columnPitch))
 		self.Columns = columns
-		self.Grid.CellSize = UDim2.fromOffset(math.floor((width - (columns - 1) * 12) / columns), if compact then 176 else 254)
+		self.Grid.CellSize = UDim2.fromOffset(math.floor((width - (columns - 1) * 12) / columns), if wideCards then Card.WideHeight else Card.TallHeight)
 		self:LinkFocus()
 	end
 	self.Scroll:GetPropertyChangedSignal("AbsoluteSize"):Connect(resize)
@@ -177,7 +179,7 @@ function Drawer.SetContent(self: any, title: string, subtitle: string, entries: 
 		local button = Card.Create(self.Scroll, entry, i, self.Z + 3, function(uuid)
 			if self.Opened and self.Root.Visible then onSelect(uuid) end
 		end)
-		Card.Resize(button, self.Compact == true)
+		Card.Resize(button, self.WideCards == true)
 		table.insert(self.Buttons, button)
 		if entry.UUID == focusUUID or (not focusUUID and entry.Selected) then focus = button end
 	end

@@ -128,6 +128,37 @@ local duplicateOrder = {}
 for i, button in s.HeroDrawer.Buttons do duplicateOrder[button:GetAttribute("HeroUUID")] = i end
 check(duplicateOrder.test18 < duplicateOrder.test9, "Equal-name equal-level heroes have stable UUID ordering")
 close()
+s.Donors = { "test5" }
+s:QueuePreview()
+check(s.RecipientSlot.BtnLabel.Text == "REMOVE HERO", "Selected recipient offers Remove Hero")
+s:RemoveRecipient()
+check(s.Recipient == nil and #s.Donors == 0 and s.Preview == nil and s.ScreenState == "NoRecipient", "Removing recipient clears materials and preview")
+check(s.RecipientSlot.BtnLabel.Text == "SELECT HERO", "Removing recipient restores Select Hero")
+s:OpenPicker("RECIPIENT")
+s:Pick("test1")
+close()
+local attempts = 0
+s.Request = function(_, command)
+	assert(command == "PREVIEW", "Unexpected command during preview recovery")
+	attempts += 1
+	if attempts == 1 then
+		return { Success = false, Message = "Preview connection interrupted." }
+	elseif attempts == 2 then
+		return { Success = true, Preview = { CanCommit = false, Reason = "The recipient is reserved.", Donors = {}, Warnings = {} } }
+	end
+	return { Success = true, Preview = { CanCommit = true, Token = "current", Donors = { "test6" }, Warnings = {} } }
+end
+s:PressRosterHero("test5")
+check(s.Loading and not s.ConfirmButton.Button.Interactable, "Confirm waits for the server preview")
+task.wait(0.25)
+check(s.Status.Text:find("Preview connection interrupted.", 1, true) and s.ConfirmButton.Label.Text == "RETRY PREVIEW" and s.ConfirmButton.Button.Interactable, "Failed preview shows reason and an enabled retry")
+s:Confirm()
+task.wait(0.25)
+check(s.Status.Text:find("The recipient is reserved.", 1, true) and not s.ConfirmButton.Button.Interactable, "Rejected preview explains why Confirm is disabled")
+s:PressRosterHero("test5")
+s:PressRosterHero("test6")
+task.wait(0.25)
+check(s.ConfirmButton.Button.Interactable and s.Preview.Token == "current", "A valid preview enables Confirm again")
 s:Close()
 s:OpenPicker("RECIPIENT")
 check(not s.Picker.Visible, "Closed Synthesis rejects stale picker-open handlers")
