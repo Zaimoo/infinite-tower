@@ -15,7 +15,7 @@ local FacilityPresence = require(script.Parent:WaitForChild("FacilityPresence"))
 local StaticGeometry = require(script.Parent:WaitForChild("StaticGeometry"))
 local FacilityConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("FacilityConfig"))
 
-local VERSION = 30 -- 30: Compact Base Redesign with condensed courtyard footprint
+local VERSION = 33 -- 33: Synthesis Chamber interior Cauldron & Grimoire Lectern replacing anvil
 
 local function attachPrompt(
 	parent: Instance,
@@ -72,10 +72,12 @@ function Buildings.Build(plot: Instance)
 	-- Ensure standardized facility prefabs exist under ReplicatedStorage.Assets.PlotFacilities
 	Architecture.EnsureFacilityPrefabs()
 
-	-- Always purge removed Infirmary from plot
-	local oldInfirmaryAnchor = plot:FindFirstChild("Facility_Infirmary")
-	if oldInfirmaryAnchor then
-		oldInfirmaryAnchor:Destroy()
+	-- Always purge removed Infirmary and legacy CommandPost/ArchitectTable anchors from plot
+	for _, legacyName in ipairs({ "Facility_Infirmary", "Facility_SquadManagement", "Facility_ArchitectTable" }) do
+		local oldAnchor = plot:FindFirstChild(legacyName)
+		if oldAnchor then
+			oldAnchor:Destroy()
+		end
 	end
 
 	local spawn = plot:FindFirstChild("PlotSpawn")
@@ -160,7 +162,7 @@ function Buildings.Build(plot: Instance)
 	)
 	syncPlotFacilityAnchor(plot, "Market", marketInteract.CFrame)
 
-	-- 5. Synthesis Chamber / The Pit (Monumental Domed Arcane Rotunda in SW Corner)
+	-- 5. Synthesis Chamber / The Pit (Monumental Enterable Domed Arcane Rotunda in SW Corner)
 	local pitCfg = layout.SynthesisChamber
 	local pitCF = origin * CFrame.new(pitCfg.Offset) * CFrame.Angles(0, pitCfg.RotationY or math.rad(42), 0)
 	local pitInteract = Architecture.BuildThePit(folder, pitCF)
@@ -168,15 +170,22 @@ function Buildings.Build(plot: Instance)
 	if pitModel then
 		pitModel:SetAttribute("Facility", "ThePit")
 	end
-	-- One [F] prompt for the whole Pit; its screen has Synthesis and Promotion tabs.
+	-- Attach the [F] prompt inside the rotunda on the central Synthesis Anvil (or PromptAnchor attachment).
+	local pitPromptParent: Instance = pitInteract
+	if pitModel and pitModel.PrimaryPart and pitCfg.PromptAttachmentName then
+		local promptAtt = pitModel.PrimaryPart:FindFirstChild(pitCfg.PromptAttachmentName)
+		if promptAtt and promptAtt:IsA("Attachment") then
+			pitPromptParent = promptAtt
+		end
+	end
 	attachPrompt(
-		pitInteract,
+		pitPromptParent,
 		"FacilityHUDPrompt",
 		"Pit",
 		"The Pit",
 		pitCfg.PromptText or "Synthesis & Promotion",
 		pitCfg.Keybind or Enum.KeyCode.F,
-		16
+		pitCfg.ActivationDistance or 12
 	)
 	syncPlotFacilityAnchor(plot, "Synthesis", pitInteract.CFrame)
 	-- Strip the old Promotion Altar anchor's bare prompt as well.
@@ -239,38 +248,10 @@ function Buildings.Build(plot: Instance)
 	)
 	syncPlotFacilityAnchor(plot, "GuardPost", gpInteract.CFrame)
 
-	-- 9. Command Post (War Banner for Squad Management & Architect's Table for Fortress Tree)
-	local bannerCF = origin * CFrame.new(-18, 0, -16)
-	local tableCF = origin * CFrame.new(-18, 0, 14) * CFrame.Angles(0, math.rad(35), 0)
-	local cmdAnchors = Architecture.BuildCommandPost(folder, bannerCF, tableCF)
-
-	attachPrompt(
-		cmdAnchors.SquadBanner,
-		"FacilityHUDPrompt",
-		"SquadManagement",
-		"War Banner",
-		"Deploy & Manage Squad",
-		Enum.KeyCode.F,
-		14
-	)
-	syncPlotFacilityAnchor(plot, "SquadManagement", cmdAnchors.SquadBanner.CFrame)
-
-	attachPrompt(
-		cmdAnchors.ArchitectTable,
-		"FacilityHUDPrompt",
-		"FortressTree",
-		"Architect's Table",
-		"Open Upgrades",
-		Enum.KeyCode.F,
-		14
-	)
-
 	-- Compatibility alias models for external references (Onboarding arrows & HeroNavigation)
 	for _, aliasDef in ipairs({
 		{ Name = "Building_Synthesis", Fac = "Synthesis", Ref = pitInteract },
 		{ Name = "Building_Promotion", Fac = "Promotion", Ref = pitInteract },
-		{ Name = "Building_SquadManagement", Fac = "SquadManagement", Ref = cmdAnchors.SquadBanner },
-		{ Name = "Building_ArchitectTable", Fac = "ArchitectTable", Ref = cmdAnchors.ArchitectTable },
 	}) do
 		local alias = Instance.new("Model")
 		alias.Name = aliasDef.Name
