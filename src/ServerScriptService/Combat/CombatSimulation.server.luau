@@ -2037,9 +2037,11 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 	end
 	simHero.CurrentHP = math.min(simHero.CurrentHP, simHero.MaxHP)
 
-	local maxLeash = assignedRoom and FirstBiome.LeashRange or (masterState and masterState.TargetEnemyUserId ~= nil) and 150.0 or LEASH_DISTANCE
-	if getHorizontalDistance(simHero.Position, masterPos) > maxLeash or math.abs(simHero.Position.Y - masterPos.Y) > LEASH_VERTICAL_TELEPORT_DISTANCE then
+	local maxLeash = if assignedRoom then 1000.0 elseif (masterState and masterState.TargetEnemyUserId ~= nil) then 150.0 else LEASH_DISTANCE
+	if not assignedRoom and (getHorizontalDistance(simHero.Position, masterPos) > maxLeash or math.abs(simHero.Position.Y - masterPos.Y) > LEASH_VERTICAL_TELEPORT_DISTANCE) then
 		simHero.TargetNetId = nil
+		simHero.TargetId = nil
+		simHero.IsFocusTarget = false
 		simHero.State = "FOLLOW_MASTER"
 	end
 

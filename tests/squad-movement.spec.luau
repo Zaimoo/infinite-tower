@@ -405,4 +405,98 @@ test("Combat move outcome tries alternative supported attack position before gen
 	SquadMovement.Reset(owner)
 end)
 
+test("Assigned squad on diagonal ramp stays committed to current camp until cleared when both end camps spawn", function()
+	local owner = {}
+	SquadMovement.Reset(owner)
+	local layout = Layout.Get(1)
+	local origin = v3(0, 0, 0)
+	local basin = layout.Platforms.Basin
+	local west = layout.Platforms.WestGallery
+	local basinPos = v3(basin.X, basin.Y, basin.Z)
+
+	-- 5 heroes spread along the Basin_WestGallery diagonal ramp
+	local link
+	for _, l in ipairs(layout.Links) do
+		if l.From == "Basin" and l.To == "WestGallery" then
+			link = l
+			break
+		end
+	end
+	assert(link ~= nil, "Missing Basin_WestGallery ramp")
+	local rampA = v3(link.AX, link.AY, link.AZ)
+	local rampB = v3(link.BX, link.BY, link.BZ)
+
+	local heroes = {}
+	for slot = 1, 5 do
+		local t = 0.85 - (slot - 1) * 0.18
+		heroes[slot] = {
+			NetId = slot,
+			SlotIndex = slot,
+			FloorId = 1,
+			RoomGeneration = 1,
+			Position = rampA:Lerp(rampB, t),
+			CurrentHP = 100,
+			State = "MOVE_TO_TARGET",
+			MoveSpeed = 20,
+		}
+	end
+
+	-- Camp at WestGallery (top of ramp) has 2 mobs; Camp at BasinWest (bottom of ramp) spawns 2 mobs
+	local mobUpper1 = { NetId = 201, FloorId = 1, RoomGeneration = 1, EntityGeneration = 1, IsAlive = true, CampId = "CAMP_WEST_GALLERY", Position = v3(west.X, west.Y, west.Z) }
+	local mobUpper2 = { NetId = 202, FloorId = 1, RoomGeneration = 1, EntityGeneration = 1, IsAlive = true, CampId = "CAMP_WEST_GALLERY", Position = v3(west.X - 12, west.Y, west.Z - 10) }
+	local mobLower1 = { NetId = 101, FloorId = 1, RoomGeneration = 1, EntityGeneration = 1, IsAlive = true, CampId = "CAMP_BASIN_WEST", Position = v3(basin.X - 60, basin.Y, basin.Z - 10) }
+	local mobLower2 = { NetId = 102, FloorId = 1, RoomGeneration = 1, EntityGeneration = 1, IsAlive = true, CampId = "CAMP_BASIN_WEST", Position = v3(basin.X - 70, basin.Y, basin.Z) }
+
+	-- Initially only upper camp is alive; squad commits to CAMP_WEST_GALLERY (201)
+	local mobs = { [201] = mobUpper1, [202] = mobUpper2 }
+	local sel1 = SquadMovement.SelectAssignedAnchor(owner, {
+		FloorId = 1,
+		RoomGeneration = 1,
+		Origin = origin,
+		DefaultSpawnPosition = basinPos,
+		Heroes = heroes,
+		Mobs = mobs,
+		Now = 1.0,
+	})
+	assert(sel1.ObjectiveNetId == 201 and sel1.ObjectiveCampId == "CAMP_WEST_GALLERY", "Did not lock upper camp")
+
+	-- Now lower camp spawns behind the squad while trailing heroes (slots 3, 4, 5) are still on the lower ramp closer to lower camp,
+	-- and mobUpper1 dies. Squad must NOT flip to CAMP_BASIN_WEST while mobUpper2 in CAMP_WEST_GALLERY is still alive!
+	mobs[101] = mobLower1
+	mobs[102] = mobLower2
+	mobUpper1.IsAlive = false
+
+	local sel2 = SquadMovement.SelectAssignedAnchor(owner, {
+		FloorId = 1,
+		RoomGeneration = 1,
+		Origin = origin,
+		DefaultSpawnPosition = basinPos,
+		Heroes = heroes,
+		Mobs = mobs,
+		Now = 1.2,
+	})
+	assert(sel2.ObjectiveNetId == 202 and sel2.ObjectiveCampId == "CAMP_WEST_GALLERY" and sel2.Retained == true, "Squad flipped to lower camp before finishing committed upper camp")
+
+	-- Assist list only contains mobs from the committed camp, never mixing camps
+	heroes[5].TargetNetId = 101 -- even if a trailing hero had a stale target id from the other camp
+	local assist = SquadMovement.BuildAssignedAssistList(owner, heroes[1], heroes)
+	for _, id in ipairs(assist) do
+		assert(id == 202, "Assist list leaked target from uncommitted camp: " .. tostring(id))
+	end
+
+	-- Once the entire upper camp is cleared, squad cleanly transitions to CAMP_BASIN_WEST
+	mobUpper2.IsAlive = false
+	local sel3 = SquadMovement.SelectAssignedAnchor(owner, {
+		FloorId = 1,
+		RoomGeneration = 1,
+		Origin = origin,
+		DefaultSpawnPosition = basinPos,
+		Heroes = heroes,
+		Mobs = mobs,
+		Now = 1.4,
+	})
+	assert(sel3.ObjectiveCampId == "CAMP_BASIN_WEST" and (sel3.ObjectiveNetId == 101 or sel3.ObjectiveNetId == 102), "Squad did not transition to lower camp after upper camp cleared")
+	SquadMovement.Reset(owner)
+end)
+
 print(string.format("Squad movement tests: %d passed", passed))

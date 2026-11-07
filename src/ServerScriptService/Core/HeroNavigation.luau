@@ -332,13 +332,13 @@ function Navigation.Step(hero: any,goal: Vector3,distance: number,now: number,de
 			if #s.TowerRoute == 0 or (s.TowerRoute[#s.TowerRoute] - v).Magnitude > 0.01 then table.insert(s.TowerRoute, v) end
 		end
 		if #s.TowerRoute == 0 then s.TowerRoute = {goal} end
-	elseif shouldCommit and (not s.TowerRoute or #s.TowerRoute == 0) and currentLink then
+	elseif shouldCommit and currentLink then
 		local endLocal = if s.RampDirection == 1
 			then Vector3.new(currentLink.BX, currentLink.BY, currentLink.BZ)
 			else Vector3.new(currentLink.AX, currentLink.AY, currentLink.AZ)
 		local endWorld = endLocal + (origin or Vector3.zero)
 		endWorld = Navigation.Ground(endWorld, group, STEP_UP, MAX_DROP) or endWorld
-		s.TowerRoute = { endWorld }
+		s.TowerRoute = { endWorld, goal }
 		s.TowerIndex = 1
 	end
 	s.TowerRoute[#s.TowerRoute]=goal;s.TowerGoal=goal;s.Origin=origin
