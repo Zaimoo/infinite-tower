@@ -38,7 +38,7 @@ local function focus(target: GuiObject?)
 	end
 end
 
-local function button(props: { [any]: any }, text: string, selected: boolean?)
+local function button(props: { [any]: any }, text: string, selected: boolean?, labelColor: Color3?)
 	local tone = if selected then Tones.Bronze else Tones.Slate
 	props.Class = "TextButton"
 	props.Text = ""
@@ -47,7 +47,7 @@ local function button(props: { [any]: any }, text: string, selected: boolean?)
 	props.Radius = 9
 	props.Top, props.Bottom, props.Rail = tone.Top, tone.Bottom, tone.Rail
 	return Panel(props, {
-		Label = Heavy({ Text = text, Gold = selected == true, MaxSize = 15, Outline = 2,
+		Label = Heavy({ Text = text, Gold = selected == true and labelColor == nil, TextColor3 = labelColor, MaxSize = 15, Outline = 2,
 			Position = UDim2.fromOffset(4, 3), Size = UDim2.new(1, -8, 1, -6) }),
 	})
 end
@@ -235,19 +235,17 @@ local function BackpackPanel(props: { Width: number, Height: number, OnClose: ()
 		return function() ContextActionService:UnbindAction(CLOSE_ACTION) end
 	end, { inDetails, props.OnClose, props.ReturnFocus })
 
-	local width = math.min(860, math.max(1, props.Width - 24))
-	local height = math.min(530, math.max(1, props.Height - 24))
+	local width = math.min(1000, math.max(1, props.Width - 24))
+	local height = math.min(650, math.max(1, props.Height - 24))
 	local compact = height < 340
 	local tabY = if compact then 50 else 62
 	local tabHeight = if compact then 42 else 46
 	local contentY = tabY + tabHeight + 10
-	-- Inventory caps: tabs read "Artifacts 37/50"; the title row warns near and at the limit.
 	local capacity = Model.Capacity(Store.Profile)
-	local function capColor(c: Model.Capacity): string
-		return if c.Have >= c.Max then "#F87171" elseif c.Have >= c.Max - 5 then "#FBBF24" else "#E8E0F5"
-	end
-	local function capText(name: string, c: Model.Capacity): string
-		return string.format("%s <font color=\"%s\">%d / %d</font>", name, capColor(c), c.Have, c.Max)
+	local function capColor(c: Model.Capacity): Color3?
+		if c.Have >= c.Max then return Color3.fromHex("#F87171") end
+		if c.Have >= c.Max - 5 then return Color3.fromHex("#FBBF24") end
+		return nil
 	end
 	local fullNote = if capacity.Artifacts.Have >= capacity.Artifacts.Max then "Artifacts full: sell or promote at the Forge to summon more."
 		elseif capacity.Heroes.Have >= capacity.Heroes.Max then "Heroes full: convert or synthesize at the Pit to summon more."
@@ -271,7 +269,8 @@ local function BackpackPanel(props: { Width: number, Height: number, OnClose: ()
 			end,
 		}, if name == "Artifacts" then string.format("Artifacts %d/%d", capacity.Artifacts.Have, capacity.Artifacts.Max)
 			elseif name == "Heroes" then string.format("Heroes %d/%d", capacity.Heroes.Have, capacity.Heroes.Max)
-			else name, tab == name)
+			else name, tab == name, if name == "Artifacts" then capColor(capacity.Artifacts)
+			elseif name == "Heroes" then capColor(capacity.Heroes) else nil)
 	end
 
 	local listChildren: { [string]: any } = {
@@ -304,9 +303,6 @@ local function BackpackPanel(props: { Width: number, Height: number, OnClose: ()
 		}, {
 			Title = Heavy({ Text = "Backpack", MaxSize = 28, TextXAlignment = Enum.TextXAlignment.Left,
 				Position = UDim2.fromOffset(20, 10), Size = UDim2.new(1, -84, 0, 34) }),
-			Capacity = Body({ Name = "Capacity", RichText = true, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Right,
-				Position = UDim2.new(0.4, 0, 0, if fullNote then 6 else 16), Size = UDim2.new(0.6, -66, 0, 20),
-				Text = capText("Artifacts", capacity.Artifacts) .. "   ·   " .. capText("Heroes", capacity.Heroes) }),
 			FullNote = if fullNote then Body({ Name = "FullNote", TextSize = 12, TextColor3 = Color3.fromRGB(248, 113, 113),
 				TextXAlignment = Enum.TextXAlignment.Right, TextTruncate = Enum.TextTruncate.AtEnd,
 				Position = UDim2.new(0.4, 0, 0, 28), Size = UDim2.new(0.6, -66, 0, 18), Text = fullNote }) else nil,

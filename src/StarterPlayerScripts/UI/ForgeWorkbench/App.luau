@@ -109,10 +109,11 @@ local function App(props: Types.Props)
 	local busy = forge.Phase ~= "idle"
 	local target = forge.TargetId and snapshot.Artifacts[forge.TargetId]
 	local hero = forge.HeroId and snapshot.Heroes[forge.HeroId]
-	-- One 16:9 design canvas, fitted uniformly inside the safe area.
-	local width, height = 1120, 630
-	-- Use the full 1120×630 canvas, shrinking only to fit the safe area.
-	local windowPosition, windowScale = ModalFit.Calculate(screen, 0, width, height, { MinScale = 0.01 })
+	local windowPosition, windowScale, design = ModalFit.Calculate(screen, 0, 1120, 630, {
+		MaxScale = 1.2,
+		FillWidth = true,
+	})
+	local width, height = design.X, design.Y
 	local narrow = false
 	local statusAction = forge.Undo ~= nil or forge.Phase == "uncertain"
 	local statusHeight = if statusAction then 60 else 32
@@ -315,7 +316,7 @@ local function App(props: Types.Props)
 		if route == "INVENTORY" then
 			detailView = {
 				Heading = e(C.Text, { Text = "YOUR RELIC, YOUR POWER", TextColor3 = T.Gold, TextSize = 24, Position = UDim2.fromOffset(20, 32), Size = UDim2.new(1, -40, 0, 64) }),
-				Hint = e(C.Text, { Text = "Select an artifact to inspect its stats, choose a hero, or upgrade its stars.", TextColor3 = T.Muted, Position = UDim2.fromOffset(20, 108), Size = UDim2.new(1, -40, 0, 80) }),
+				Hint = e(C.Text, { Text = "Select an artifact to equip or upgrade.", TextColor3 = T.Muted, Position = UDim2.fromOffset(20, 108), Size = UDim2.new(1, -40, 0, 80) }),
 				Summon = e(C.Button, { Text = "SUMMON ARTIFACTS", Primary = true, Position = UDim2.new(0, 20, 1, -68), Size = UDim2.new(1, -40, 0, 48), OnActivate = props.OnSummon, Disabled = busy }),
 			}
 		end
@@ -400,12 +401,11 @@ local function App(props: Types.Props)
 			SelectionGroup = true, SelectionBehaviorUp = Enum.SelectionBehavior.Escape, SelectionBehaviorDown = Enum.SelectionBehavior.Stop, SelectionBehaviorLeft = Enum.SelectionBehavior.Stop, SelectionBehaviorRight = Enum.SelectionBehavior.Stop,
 		}, {
 			Scale = e("UIScale", { Scale = windowScale }),
-			Aspect = e("UIAspectRatioConstraint", { AspectRatio = 16 / 9 }),
 			Header = e(Header),
 			Gold = e(C.Currency, { Icon = "Gold", Text = Balance.Format(snapshot.Gold), Position = UDim2.new(1, -388, 0, 16) }),
 			Gems = e(C.Currency, { Icon = "Gems", Text = Balance.Format(snapshot.Gems), Position = UDim2.new(1, -228, 0, 16) }),
 			Close = e(C.Button, { Name = "CloseForgeButton", Text = "", Icon = "Close", Position = UDim2.new(1, -60, 0, 8), Size = UDim2.fromOffset(44, 44), OnActivate = props.OnClose, FocusOrder = -100 }),
-			Subtitle = e(C.Text, { Text = "Manage your artifacts, upgrade their power, and summon new relics.", Position = UDim2.fromOffset(78, 50), Size = UDim2.new(1, -156, 0, 24), TextSize = 14, TextColor3 = T.Muted }),
+			Subtitle = e(C.Text, { Text = "Equip • Upgrade • Summon", Position = UDim2.fromOffset(78, 50), Size = UDim2.new(1, -156, 0, 24), TextSize = 14, TextColor3 = T.Muted }),
 			Body = e("Frame", { Name = "Body", Position = UDim2.fromOffset(16, 92), Size = UDim2.new(1, -32, 1, -100 - statusHeight), BackgroundColor3 = T.Theme.Tones.Deep.Bottom, BorderSizePixel = 0 }, {
 				Corner = e("UICorner", { CornerRadius = UDim.new(0, 10) }),
 				Rail = e("UIStroke", { Color = T.Theme.Tones.Deep.Rail, Thickness = 1, Transparency = 0.35 }),

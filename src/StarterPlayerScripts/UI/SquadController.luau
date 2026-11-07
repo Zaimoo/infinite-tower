@@ -245,7 +245,7 @@ function SquadController.new(screenGui: ScreenGui, getProfile: () -> any, remote
 	self.Scale = new("UIScale", {}, self.Root)
 	-- Fit the window inside the safe area with tight margins (the scrim covers the HUD drawer while
 	-- it is open), growing up to 1.35x on screens with room to spare.
-	self.Fit = ModalFit.Bind(self.Root, self.Scale, WIDTH, HEIGHT, { MinScale = 0.5, MaxScale = 1.35, Margin = 12, BottomMargin = 16 })
+	self.Fit = ModalFit.Bind(self.Root, self.Scale, WIDTH, HEIGHT, { MaxScale = 1.35, Margin = 12, BottomMargin = 16 })
 	GothicBoxStyle.CreateCloseButton(self.Root, function() self:Close() end)
 
 	-- Header: icon, title, subtitle and the Squad Power badge

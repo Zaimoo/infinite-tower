@@ -63,7 +63,7 @@ local function createModalGui(): (ScreenGui, Frame, Frame, TextLabel, TextLabel,
 	title.Size = UDim2.new(1, -40, 0, 36)
 	title.Position = UDim2.fromOffset(20, 24)
 	title.BackgroundTransparency = 1
-	title.Text = "WELCOME BACK, MASTER!"
+	title.Text = "WELCOME BACK!"
 	title.Font = Enum.Font.GothamBlack
 	title.TextSize = 22
 	title.TextColor3 = Color3.new(1, 1, 1)
@@ -78,7 +78,7 @@ local function createModalGui(): (ScreenGui, Frame, Frame, TextLabel, TextLabel,
 	sub.Size = UDim2.new(1, -40, 0, 22)
 	sub.Position = UDim2.fromOffset(20, 62)
 	sub.BackgroundTransparency = 1
-	sub.Text = "YOUR STATIONED ADVENTURERS DEFENDED THE OUTSKIRTS"
+	sub.Text = "OFFLINE EARNINGS"
 	sub.Font = Enum.Font.GothamBold
 	sub.TextSize = 12
 	sub.TextColor3 = C.TextMuted
@@ -128,7 +128,7 @@ local function createModalGui(): (ScreenGui, Frame, Frame, TextLabel, TextLabel,
 	claimBtn.Size = UDim2.fromOffset(260, 46)
 	claimBtn.BackgroundColor3 = Color3.fromRGB(32, 26, 48)
 	claimBtn.BorderSizePixel = 0
-	claimBtn.Text = "CLAIM & CONTINUE"
+	claimBtn.Text = "CONTINUE"
 	claimBtn.Font = Enum.Font.GothamBold
 	claimBtn.TextSize = 15
 	claimBtn.TextColor3 = C.GoldYellow
@@ -184,7 +184,7 @@ OfflineRewardEvent.OnClientEvent:Connect(function(payload: any)
 	local bossBonusText = bossTier > 0 and string.format("  •  Boss Tier %d (+%d%%)", bossTier, bossTier * 15) or ""
 
 	detailsLbl.Text = string.format(
-		"Time Offline: <b>%s</b>%s\nOutskirts Guard Post: <b>Lv.%d</b>%s\nPassive Generation: <b>%.1f Gold / min</b>\n<font color=\"#4ADE80\">Gold has been credited directly to your treasury!</font>",
+		"Offline: <b>%s</b>%s\nGuard Post: <b>Lv.%d</b>%s\nIncome: <b>%.1f Gold / min</b>\n<font color=\"#4ADE80\">Gold added to your balance.</font>",
 		timeText,
 		capNotice,
 		level,
