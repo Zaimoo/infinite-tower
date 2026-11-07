@@ -89,9 +89,15 @@ end
 
 -- Target weights: how much Dread and how much Storm the current position calls for.
 local function targetWeights(): (number, number)
-	local character = LocalPlayer.Character
-	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
-	local pos = if root then root.Position else workspace.CurrentCamera.Focus.Position
+	local pos: Vector3
+	if _G.IsViewingSquad and _G.IsViewingSquad() then
+		local cam = workspace.CurrentCamera
+		pos = if cam then cam.CFrame.Position else Vector3.new(12000, 1000, 12000)
+	else
+		local character = LocalPlayer.Character
+		local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		pos = if root then root.Position else workspace.CurrentCamera.Focus.Position
+	end
 	local zone, dread = HubLighting.Classify(pos.X, pos.Z)
 	if zone == "Storm" then
 		return 0, 1

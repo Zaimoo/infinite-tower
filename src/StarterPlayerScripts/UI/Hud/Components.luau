@@ -108,11 +108,14 @@ end
 Components.HeavyLabel = heavyLabel
 
 function Components.RailButton(props: {
+	Name: string?,
 	Icon: string,
 	Label: string,
 	Accent: Color3,
 	Order: number,
 	Size: number,
+	AnchorPoint: Vector2?,
+	Position: UDim2?,
 	Badge: number?,
 	KeyHint: string?,
 	Cooldown: number?, -- seconds left
@@ -155,9 +158,11 @@ function Components.RailButton(props: {
 		end
 	end
 	return e("TextButton", {
-		Name = props.Icon .. "RailButton",
+		Name = props.Name or (props.Icon .. "RailButton"),
 		ref = props.ButtonRef,
 		LayoutOrder = props.Order,
+		AnchorPoint = props.AnchorPoint,
+		Position = props.Position,
 		Size = UDim2.fromOffset(size + 24, size + math.floor(labelH * 0.55)),
 		BackgroundTransparency = 1,
 		Text = "",
@@ -820,6 +825,8 @@ function Components.SquadDrawer(props: {
 	CardHeight: number,
 	Expanded: boolean,
 	Above: any?, -- the currency bar, riding on the drawer's top edge
+	SquadAssignment: number?,
+	OnAssignSquad: (() -> ())?,
 	OnToggle: () -> (),
 	OnRow: (number) -> (),
 	OnLocked: () -> (),
@@ -912,7 +919,138 @@ function Components.SquadDrawer(props: {
 				Row = e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 }, slots),
 			}) else nil,
 		}),
+		Assign = if props.OnAssignSquad then e(Components.RailButton, {
+			Name = "AssignSquadButton",
+			AnchorPoint = Vector2.new(0, 1),
+			Position = UDim2.new(1, 8, 1, 2),
+			Icon = "Squad",
+			Label = if props.SquadAssignment ~= nil then ("Floor " .. tostring(props.SquadAssignment)) else "Assign",
+			Accent = Color3.fromRGB(56, 189, 248),
+			Order = 1,
+			Size = if props.Compact then 44 else 48,
+			OnActivated = function()
+				if props.OnAssignSquad then props.OnAssignSquad() end
+			end,
+		}) else nil,
 		Tooltip = if hoveredRow and hoveredRow.Hero then stripTooltip(hoveredRow, hoverSlot :: number) else nil,
+	})
+end
+
+--------------------------------------------------------------------------------
+-- Top-Center VIEW SQUAD Bar: floor indicator, bird's-eye cam toggle, and recall button.
+--------------------------------------------------------------------------------
+function Components.ViewSquadBar(props: {
+	SquadAssignment: number?,
+	PlayerFloorId: number,
+	ViewingSquad: boolean,
+	Compact: boolean,
+	Top: number?,
+	OnToggleView: () -> (),
+	OnRecall: () -> (),
+})
+	local viewing = props.ViewingSquad
+	local stationed = props.SquadAssignment ~= nil
+	local floorLabel = if stationed then ("FLOOR " .. tostring(props.SquadAssignment)) else "SQUAD"
+	local statusText = if viewing then ("VIEWING " .. floorLabel) else ("SQUAD · " .. floorLabel)
+
+	local height = 40
+
+	return e("Frame", {
+		Name = "ViewSquadBar",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, props.Top or 14),
+		AutomaticSize = Enum.AutomaticSize.X,
+		Size = UDim2.fromOffset(0, height),
+		BackgroundColor3 = if viewing then Color3.fromRGB(18, 30, 48) else G.Base,
+		BackgroundTransparency = if viewing then 0.12 else G.BaseTransparency,
+		BorderSizePixel = 0,
+		ZIndex = 10,
+	}, {
+		Corner = corner(G.Radius),
+		Stroke = stroke(
+			if viewing then Grimoire.Tones.Gold.Rail else G.Hairline,
+			if viewing then 1.5 else 1,
+			if viewing then 0.2 else G.HairlineTransparency
+		),
+		Content = e("Frame", {
+			AutomaticSize = Enum.AutomaticSize.X,
+			Size = UDim2.fromOffset(0, height),
+			BackgroundTransparency = 1,
+		}, {
+			Layout = e("UIListLayout", {
+				FillDirection = Enum.FillDirection.Horizontal,
+				Padding = UDim.new(0, 10),
+				SortOrder = Enum.SortOrder.LayoutOrder,
+				VerticalAlignment = Enum.VerticalAlignment.Center,
+			}),
+			Padding = e("UIPadding", {
+				PaddingLeft = UDim.new(0, 12),
+				PaddingRight = UDim.new(0, 10),
+				PaddingTop = UDim.new(0, 6),
+				PaddingBottom = UDim.new(0, 6),
+			}),
+			Icon = icon("Eye", 20, { LayoutOrder = 1 }),
+			Status = e("TextLabel", {
+				LayoutOrder = 2,
+				AutomaticSize = Enum.AutomaticSize.X,
+				Size = UDim2.fromOffset(0, 28),
+				BackgroundTransparency = 1,
+				Font = G.FontHeavy,
+				TextSize = 13,
+				TextColor3 = if viewing then Grimoire.Text.Gold else Grimoire.Text.Primary,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				Text = statusText,
+				TextTruncate = Enum.TextTruncate.None,
+			}),
+			ToggleBtn = e("TextButton", {
+				LayoutOrder = 3,
+				AutomaticSize = Enum.AutomaticSize.X,
+				Size = UDim2.fromOffset(0, 28),
+				BackgroundColor3 = if viewing then Grimoire.Tones.Gold.Top else Color3.fromRGB(36, 44, 62),
+				BackgroundTransparency = if viewing then 0.1 else 0.25,
+				BorderSizePixel = 0,
+				AutoButtonColor = false,
+				Text = if viewing then "EXIT [V]" else "VIEW [V]",
+				Font = G.FontHeavy,
+				TextSize = 12,
+				TextColor3 = if viewing then Color3.fromRGB(20, 14, 28) else Grimoire.Text.Primary,
+				Selectable = true,
+				[React.Event.Activated] = function()
+					props.OnToggleView()
+				end,
+			}, {
+				BtnPadding = e("UIPadding", {
+					PaddingLeft = UDim.new(0, 10),
+					PaddingRight = UDim.new(0, 10),
+				}),
+				BtnCorner = corner(6),
+				BtnStroke = stroke(if viewing then Grimoire.Tones.Gold.Rail else G.Hairline, 1, 0.4),
+			}),
+			RecallBtn = if stationed then e("TextButton", {
+				LayoutOrder = 4,
+				AutomaticSize = Enum.AutomaticSize.X,
+				Size = UDim2.fromOffset(0, 28),
+				BackgroundColor3 = Color3.fromRGB(48, 24, 28),
+				BackgroundTransparency = 0.25,
+				BorderSizePixel = 0,
+				AutoButtonColor = false,
+				Text = "RECALL",
+				Font = G.FontHeavy,
+				TextSize = 11,
+				TextColor3 = Color3.fromRGB(255, 180, 180),
+				Selectable = true,
+				[React.Event.Activated] = function()
+					props.OnRecall()
+				end,
+			}, {
+				BtnPadding = e("UIPadding", {
+					PaddingLeft = UDim.new(0, 10),
+					PaddingRight = UDim.new(0, 10),
+				}),
+				BtnCorner = corner(6),
+				BtnStroke = stroke(Color3.fromRGB(150, 40, 50), 1, 0.4),
+			}) else nil,
+		}),
 	})
 end
 

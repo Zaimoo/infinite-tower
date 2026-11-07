@@ -18,6 +18,9 @@ Store.Goal = nil :: any -- OnboardingSync.Step, or nil once the chain is complet
 Store.Revision = 0
 Store.DrawerExpanded = false -- the player's Squad drawer choice, kept for the session
 Store.ModalFocus = false
+Store.SquadAssignment = nil :: number?
+Store.PlayerFloorId = 0 :: number
+Store.ViewingSquad = false :: boolean
 
 local function bump()
 	Store.Revision += 1
@@ -27,6 +30,19 @@ end
 function Store.SetModalFocus(isFocused: boolean)
 	if Store.ModalFocus == isFocused then return end
 	Store.ModalFocus = isFocused
+	bump()
+end
+
+function Store.SetTowerState(playerFloorId: number, squadAssignment: number?)
+	if Store.PlayerFloorId == playerFloorId and Store.SquadAssignment == squadAssignment then return end
+	Store.PlayerFloorId = playerFloorId
+	Store.SquadAssignment = squadAssignment
+	bump()
+end
+
+function Store.SetViewingSquad(isViewing: boolean)
+	if Store.ViewingSquad == isViewing then return end
+	Store.ViewingSquad = isViewing
 	bump()
 end
 

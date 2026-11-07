@@ -36,7 +36,7 @@ local function createState(player: Player): any
 	local s=states[player]
 	if not s then
 		s={FloorId=0,RoomGeneration=1,LocationRevision=0,SquadRevision=0,CharacterGeneration=0,ViewEpoch=1,
-			SquadFloorId=0,SquadRoomGeneration=1,SquadSize=0,Subscribed=false,Ledger={},Order={},Tokens=4,TokenAt=os.clock(),ControlTokens=4,ControlAt=os.clock(),BankArmed=false}
+			SquadFloorId=0,SquadRoomGeneration=1,SquadSize=0,Subscribed=false,SpectatingSquad=false,Ledger={},Order={},Tokens=4,TokenAt=os.clock(),ControlTokens=4,ControlAt=os.clock(),BankArmed=false}
 		states[player]=s
 	end
 	return s
@@ -45,7 +45,7 @@ function Service.GetState(player: Player): any return createState(player) end
 function Service.GetRoom(id: number): any return rooms[id] end
 function Service.IsTransitioning(player: Player): boolean local s=states[player];return s~=nil and s.Pending~=nil end
 -- Masters whose view is on this floor (at least 1); drives camp scaling in the encounter runtime.
-function Service.MastersOnFloor(id: number): number local n=0;for player,s in pairs(states) do if player.Parent==Players and s.FloorId==id then n+=1 end end;return math.max(1,n) end
+function Service.MastersOnFloor(id: number): number local n=0;for player,s in pairs(states) do if player.Parent==Players and (s.FloorId==id or (s.SpectatingSquad and s.SquadFloorId==id)) then n+=1 end end;return math.max(1,n) end
 function Service.RegisterAdapter(name: string,adapter: any) adapters[name]=adapter end
 function Service.EnsureRoom(id: number): any
 	if rooms[id] and rooms[id].Status=="READY" then return rooms[id] end
@@ -58,10 +58,24 @@ function Service.EnsureRoom(id: number): any
 	Service.Encounters[id]=Service.Encounters[id] or {Seed=id,BossGeneration=0,PayoutClaims={},EncountersEnabled=false}
 	return room
 end
+local function getViewFloor(s: any): (number, number)
+	if s.SpectatingSquad and s.SquadAssignment ~= nil and s.SquadSize > 0 then
+		return s.SquadFloorId, s.SquadRoomGeneration
+	end
+	return s.FloorId, s.RoomGeneration
+end
+local function playerViewMatches(s: any, context: any): boolean
+	if not context or context.FloorId == nil then return false end
+	local vf, vg = getViewFloor(s)
+	return vf == context.FloorId and (context.RoomGeneration == nil or vg == context.RoomGeneration)
+end
 function Service.Context(player: Player): any
-	local s=createState(player);local r=rooms[s.FloorId]
-	return {ContractVersion=1,ServerSessionId=Service.SessionId,FloorId=s.FloorId,RoomGeneration=s.RoomGeneration,ViewEpoch=s.ViewEpoch,
-		CharacterGeneration=s.CharacterGeneration,LocationRevision=s.LocationRevision,Origin=r.Origin,Bounds=r.Bounds,Arrival=r.Arrival}
+	local s=createState(player)
+	local vf, vg = getViewFloor(s)
+	local r=rooms[vf] or rooms[0]
+	return {ContractVersion=1,ServerSessionId=Service.SessionId,FloorId=vf,RoomGeneration=vg,ViewEpoch=s.ViewEpoch,
+		CharacterGeneration=s.CharacterGeneration,LocationRevision=s.LocationRevision,Origin=r.Origin,Bounds=r.Bounds,Arrival=r.Arrival,
+		MasterFloorId=s.FloorId,SquadFloorId=s.SquadFloorId,SpectatingSquad=s.SpectatingSquad}
 end
 function Service.Same(a: any,b: any): boolean
 	return a~=nil and b~=nil and a.FloorId~=nil and a.FloorId==b.FloorId and a.RoomGeneration==b.RoomGeneration
@@ -87,7 +101,7 @@ function Service.GroundDrop(context: any,position: Vector3,halfHeight: number): 
 	return r.Arrival.Position+Vector3.new(0,halfHeight-3,0)
 end
 function Service.BroadcastAt(remote: any,context: any,...: any)
-	for player,s in pairs(states) do if player.Parent==Players and Service.Same(s,context) then remote:FireClient(player,Service.Context(player),...) end end
+	for player,s in pairs(states) do if player.Parent==Players and playerViewMatches(s,context) then remote:FireClient(player,Service.Context(player),...) end end
 end
 function Service.GetPresence(player: Player): any
 	local floors={}
@@ -195,6 +209,10 @@ local function commit(player: Player)
 		if squadSnapshot then combat.RestoreSquad(squadSnapshot) end
 		finish(player,"REJECTED","TRANSFER_FAILED");return
 	end
+	if p.View or p.Action=="RECALL" then
+		s.SpectatingSquad = false
+		pcall(function() player.ReplicationFocus = nil end)
+	end
 	if p.View then
 		s.FloorId=r.FloorId;s.RoomGeneration=r.RoomGeneration;s.LocationRevision+=1;s.ViewEpoch=p.ViewEpoch;s.BankArmed=(#records > 0)
 		char:SetAttribute("TowerFloorId",s.FloorId)
@@ -251,6 +269,52 @@ function Service.Request(player: Player,r: any)
 		if adapters.Combat then adapters.Combat.Bootstrap(player) end
 		saveResult(s,r.RequestId,fp,reply(player,r.RequestId,"COMMITTED"));return
 	elseif r.Action=="PRESENCE_UNSUBSCRIBE" then s.Subscribed=false;saveResult(s,r.RequestId,fp,reply(player,r.RequestId,"COMMITTED"));return end
+	if r.Action == "SPECTATE_SQUAD" then
+		if s.SquadSize <= 0 or not s.SquadAssignment then
+			reject("NO_SQUAD_ASSIGNED")
+			return
+		end
+		local room = rooms[s.SquadFloorId]
+		if not room or room.Status ~= "READY" then
+			reject("ROOM_NOT_READY")
+			return
+		end
+		s.SpectatingSquad = true
+		s.ViewEpoch += 1
+		pcall(function()
+			local focusPart = room.ArrivalPart
+				or (room.Model and (room.Model:FindFirstChild("Ground") or room.Model.PrimaryPart or room.Model:FindFirstChildWhichIsA("BasePart")))
+			if focusPart and focusPart:IsA("BasePart") then
+				player.ReplicationFocus = focusPart
+			end
+		end)
+		local rem = getRemotes()
+		if rem and rem:FindFirstChild("Context") then
+			local c = Service.Context(player)
+			c.Stage = "COMMIT"
+			c.RequestId = r.RequestId
+			rem.Context:FireClient(player, c)
+		end
+		if adapters.Combat then adapters.Combat.Bootstrap(player) end
+		saveResult(s, r.RequestId, fp, reply(player, r.RequestId, "COMMITTED"))
+		return
+	elseif r.Action == "UNSPECTATE_SQUAD" then
+		s.SpectatingSquad = false
+		s.ViewEpoch += 1
+		pcall(function()
+			player.ReplicationFocus = nil
+		end)
+		local rem = getRemotes()
+		if rem and rem:FindFirstChild("Context") then
+			local c = Service.Context(player)
+			c.Stage = "COMMIT"
+			c.RequestId = r.RequestId
+			rem.Context:FireClient(player, c)
+		end
+		if adapters.Combat then adapters.Combat.Bootstrap(player) end
+		saveResult(s, r.RequestId, fp, reply(player, r.RequestId, "COMMITTED"))
+		return
+	end
 	if s.Pending then reject("BUSY");return end
 	if r.CharacterGeneration~=s.CharacterGeneration or r.ExpectedLocationRevision~=s.LocationRevision or r.ExpectedSquadRevision~=s.SquadRevision then reject("STALE_REVISION");return end
 	local char=alive(player)
@@ -328,12 +392,16 @@ function Service.Recall(player: Player,request: any?)
 end
 function Service.RosterChanged(player: Player,size: number)
 	local s=createState(player);Service.CancelPending(player,"ROSTER_CHANGED");s.SquadSize=size;s.SquadRevision+=1
-	if size==0 then s.SquadAssignment=nil;s.SquadFloorId=s.FloorId;s.SquadRoomGeneration=s.RoomGeneration end
+	if size==0 then
+		s.SquadAssignment=nil;s.SquadFloorId=s.FloorId;s.SquadRoomGeneration=s.RoomGeneration
+		s.SpectatingSquad=false;pcall(function() player.ReplicationFocus=nil end)
+	end
 	publish()
 end
 function Service.RecallWipedSquad(player: Player)
 	local s=createState(player);Service.CancelPending(player,"SQUAD_WIPED")
 	s.SquadAssignment=nil
+	s.SpectatingSquad=false;pcall(function() player.ReplicationFocus=nil end)
 	local targetRoom=rooms[s.FloorId] or rooms[0]
 	if adapters.Combat and targetRoom then
 		adapters.Combat.Transfer(player,targetRoom,false,player.Character and player.Character:GetPivot().Position)
@@ -345,6 +413,7 @@ end
 function Service.CommitRespawn(player: Player)
 	local s=createState(player);Service.CancelPending(player,"CHARACTER_CHANGED")
 	s.FloorId=0;s.RoomGeneration=1;s.LocationRevision+=1;s.ViewEpoch+=1;s.BankArmed=false
+	s.SpectatingSquad=false;pcall(function() player.ReplicationFocus=nil end)
 	if player.Character then player.Character:SetAttribute("TowerFloorId",0) end
 	if not s.SquadAssignment and adapters.Combat then adapters.Combat.Transfer(player,rooms[0],false,player.Character and player.Character:GetPivot().Position);s.SquadFloorId=0;s.SquadRoomGeneration=1;s.SquadRevision+=1 end
 	if remotes then local c=Service.Context(player);c.Stage="COMMIT";c.RequestId="RESPAWN";remotes.Context:FireClient(player,c) end
@@ -358,6 +427,8 @@ function Service.ExitToOverworld(player: Player, targetPos: Vector3, isIsland: b
 	s.LocationRevision += 1
 	s.ViewEpoch += 1
 	s.BankArmed = false
+	s.SpectatingSquad = false
+	pcall(function() player.ReplicationFocus = nil end)
 	if player.Character then
 		player.Character:SetAttribute("TowerFloorId", 0)
 	end

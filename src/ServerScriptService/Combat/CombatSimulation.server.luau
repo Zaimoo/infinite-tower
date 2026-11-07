@@ -323,7 +323,7 @@ local function sendBootstrap(player: Player)
  for _,entry in buildMetadataTable() do
   local e=ActiveHeroesByNetId[entry.NetId] or ActiveMobsByNetId[entry.NetId]
   if e and Tower.Same(e,context) then
-   entry.FloorId=e.FloorId;entry.RoomGeneration=e.RoomGeneration;entry.EntityGeneration=e.EntityGeneration;table.insert(metadata,entry)
+   entry.FloorId=e.FloorId;entry.RoomGeneration=e.RoomGeneration;entry.EntityGeneration=e.EntityGeneration;entry.Position=e.Position;entry.IsAlive=(e.CurrentHP or 0)>0 and e.State~="COMA";table.insert(metadata,entry)
   end
  end
  BootstrapRevision+=1
