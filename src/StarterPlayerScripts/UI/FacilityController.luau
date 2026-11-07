@@ -618,7 +618,10 @@ function Controller:ShowSummonResults(summonedList: { any }, bannerId: string, o
 		Cost10 = summonCost(bannerId, 10),
 		Currency = "Gems",
 		OnAgain = function(count: number)
-			self:PerformSummon(bannerId, count)
+			return self:PerformSummon(bannerId, count)
+		end,
+		OnContinue = function()
+			self:Open("Summoning")
 		end,
 	})
 end
@@ -689,15 +692,19 @@ function Controller:SetSummonStatus(bannerId: string, text: string, isError: boo
 	bv.Status.TextColor3 = if isError then C.Red else C.TextMuted
 end
 
-function Controller:PerformSummon(bannerId: string, count: number)
-	if self.Busy then return end
+function Controller:PerformSummon(bannerId: string, count: number): boolean?
+	if self.Busy then return false end
 	local profile = self.GetProfile()
 	local cost = summonCost(bannerId, count)
 	local gems = profile and profile.Currencies and profile.Currencies.Gems or 0
 	if gems < cost then
 		self:SetSummonStatus(bannerId, string.format("You need %d Gems for this summon (you have %d).", cost, math.floor(gems)), true)
 		self:DenySummon(bannerId)
-		return
+		if self.Reveal and self.Reveal:IsOpen() then
+			local btn = if count == 10 then self.Reveal.Again10.Root else self.Reveal.Again1.Root
+			UIFeel.Deny(btn)
+		end
+		return false
 	end
 
 	local ownedBefore = ownedTemplates(profile)
@@ -721,27 +728,42 @@ function Controller:PerformSummon(bannerId: string, count: number)
 				_G.PortalEffectController.TriggerSummonBurst(nil, topPulledStars)
 			end
 			self:SetSummonStatus(bannerId, "")
+			self.Root.Visible = false
+			self.Scrim.Visible = false
 			self:ShowSummonResults(self.LastSummoned, bannerId, ownedBefore)
 		elseif ok then
+			if not self.Root.Visible then
+				self:Open("Summoning")
+			end
 			self:SetSummonStatus(bannerId, tostring(result and result.Message or "The summon was refused."), true)
 			self:DenySummon(bannerId)
+			if self.Reveal and self.Reveal:IsOpen() then
+				self.Reveal:Close(true)
+			end
 		else
+			if not self.Root.Visible then
+				self:Open("Summoning")
+			end
 			self:SetSummonStatus(bannerId, "Couldn't reach the server. Try again.", true)
 			self:DenySummon(bannerId)
+			if self.Reveal and self.Reveal:IsOpen() then
+				self.Reveal:Close(true)
+			end
 		end
 		self:Refresh()
 	end)
+	return true
 end
 
 function Controller:IsOpen(): boolean
-	return self.Root ~= nil and self.Root.Visible
+	return (self.Root ~= nil and self.Root.Visible) or (self.Reveal ~= nil and self.Reveal:IsOpen())
 end
 
 function Controller:Close()
 	if not self:IsOpen() then return end
-	self.Root.Visible = false
-	self.Scrim.Visible = false
-	self.Reveal:Close()
+	if self.Root then self.Root.Visible = false end
+	if self.Scrim then self.Scrim.Visible = false end
+	if self.Reveal then self.Reveal:Close() end
 	if _G.SetModalFocusMode then
 		_G.SetModalFocusMode(false)
 	end
