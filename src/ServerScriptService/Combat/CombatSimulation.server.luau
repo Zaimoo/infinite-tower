@@ -2270,6 +2270,8 @@ local function spawnFloorAscensionPortal(floorId: number, _position: Vector3?)
 
 	portal("Rerun", Color3.fromRGB(120, 245, 150), string.format("Rerun Floor %d", floorId), "Floor Portal",
 		function(player, state)
+			-- Rerunning the floor revives KO'd heroes just like transitioning floors.
+			reviveDownedOnTransition(player)
 			-- A fresh kill counter for this floor, no leftover surge pack, then back to the Sanctuary.
 			local progress = TowerProgress.CreateProgress(floorId)
 			ActivePlayerProgress[player] = progress
