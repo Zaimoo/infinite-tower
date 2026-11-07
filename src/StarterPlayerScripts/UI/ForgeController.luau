@@ -18,6 +18,7 @@ local HeroCatalog = require(Shared:WaitForChild("Config"):WaitForChild("HeroCata
 local StatFormulas = require(Shared.Util.StatFormulas)
 local WeaponPromotion = require(Shared.Util.WeaponPromotion)
 local StatBalance = require(Shared.Config.StatBalance)
+local InventoryCapacity = require(Shared.Util.InventoryCapacity)
 local GothicBoxStyle = require(Shared.Util.GothicBoxStyle)
 local GildedGrimoire = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GildedGrimoire"))
 local GrimoireIcons = require(Shared.Util.GrimoireIcons)
@@ -1157,7 +1158,7 @@ function Forge:RenderAssignView(force: boolean?)
 	end
 
 	local artCount = totalCount
-	local maxArt = StatBalance.MaxArtifactInventory or 50
+	local maxArt = InventoryCapacity.ArtifactCap(profile and profile.FortressTree)
 	if self.CapacityLabel then
 		self.CapacityLabel.Text = string.format("Artifacts: %d / %d", artCount, maxArt)
 		if artCount >= maxArt then

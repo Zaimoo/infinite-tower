@@ -5,7 +5,7 @@ local Config = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config")
 local HeroCatalog = require(Config:WaitForChild("HeroCatalog"))
 local ArtifactCatalog = require(Config:WaitForChild("ArtifactCatalog"))
 local PitBalance = require(Config:WaitForChild("PitBalanceConfig"))
-local StatBalance = require(Config:WaitForChild("StatBalance"))
+local InventoryCapacity = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("InventoryCapacity"))
 
 export type Tab = "Artifacts" | "Heroes" | "Materials"
 export type Row = {
@@ -48,16 +48,15 @@ end
 
 local Model = {}
 
--- How many heroes and artifacts the player holds against the inventory caps (50 each). Summons that
--- would go past a cap are refused by the server.
+-- How many heroes and artifacts the player holds against the inventory caps (50 each, raised by the
+-- Storage branch of the Fortress Tree). Heroes working in a facility are not in the backpack and don't
+-- count. Summons that would go past a cap are refused by the server.
 export type Capacity = { Have: number, Max: number }
 function Model.Capacity(profile: any): { Heroes: Capacity, Artifacts: Capacity }
-	local heroes, artifacts = 0, 0
-	for _ in (profile and profile.Heroes) or {} do heroes += 1 end
-	for _ in (profile and profile.Artifacts) or {} do artifacts += 1 end
+	local tree = profile and profile.FortressTree
 	return {
-		Heroes = { Have = heroes, Max = StatBalance.MaxHeroInventory },
-		Artifacts = { Have = artifacts, Max = StatBalance.MaxArtifactInventory },
+		Heroes = { Have = InventoryCapacity.HeroCount(profile), Max = InventoryCapacity.HeroCap(tree) },
+		Artifacts = { Have = InventoryCapacity.ArtifactCount(profile), Max = InventoryCapacity.ArtifactCap(tree) },
 	}
 end
 
@@ -103,6 +102,7 @@ function Model.Build(profile: any, tab: Tab): { Row }?
 		end
 	else
 		for id, hero in heroes do
+			if InventoryCapacity.IsInFacility(hero) then continue end -- lives in its facility until unassigned
 			local seed = HeroCatalog.Seeds[hero.TemplateId]
 			local rarity = number(hero.Rarity, HeroCatalog.RarityOf(hero.TemplateId))
 			local stars = number(hero.Stars, 1)
