@@ -6,7 +6,9 @@
 -- 3. ThePitScreenGui (Synthesis XP Fodder & 1->5 Star Promotion)
 -- 4. MercenaryScreenGui (Noticeboard, Secret Directives & 50G Audit Soul Reveal)
 
+local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
+local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
@@ -22,8 +24,8 @@ local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormu
 local GothicBoxStyle = require(Shared:WaitForChild("Util"):WaitForChild("GothicBoxStyle"))
 local GothicVectorIcons = require(Shared:WaitForChild("Util"):WaitForChild("GothicVectorIcons"))
 local GildedGrimoire = require(Shared:WaitForChild("Util"):WaitForChild("GildedGrimoire"))
-local GrimoireIcons = require(Shared:WaitForChild("Util"):WaitForChild("GrimoireIcons"))
 local UIFeel = require(script.Parent:WaitForChild("UIFeel"))
+local Store = require(script.Parent:WaitForChild("Hud"):WaitForChild("Store"))
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local CombatRemotes = Remotes:WaitForChild("CombatRemotes")
@@ -36,7 +38,6 @@ local WhistleCommandRemote = CombatRemotes:WaitForChild("WhistleCommand") :: Rem
 local FocusTargetRemote = CombatRemotes:WaitForChild("FocusTarget") :: RemoteEvent
 local SquadWipeStateRemote = CombatRemotes:WaitForChild("SquadWipeState") :: RemoteEvent
 local DropCarriedItemRemote = CombatRemotes:WaitForChild("DropCarriedItem") :: RemoteEvent
-local CarriedLootSyncRemote = CombatRemotes:WaitForChild("CarriedLootSync") :: RemoteEvent
 local TowerRemotes = Remotes:WaitForChild("TowerRemotes")
 local FloorProgressRemote = TowerRemotes:WaitForChild("FloorProgress") :: RemoteEvent
 local SquadDefeatedRemote = TowerRemotes:WaitForChild("SquadDefeated") :: RemoteEvent
@@ -213,6 +214,176 @@ hudGui.Parent = PlayerGui
 -- Gilded Grimoire: every legacy Gotham label in the HUD (alerts, banners) uses the theme fonts.
 GildedGrimoire.Watch(hudGui)
 
+--============================================================================
+-- MODAL FOCUS MODE (FULL-SCREEN DIMMER, LIGHTING POLISH & SELECTIVE HUD HIDING)
+--============================================================================
+
+local oldModalFocusGui = PlayerGui:FindFirstChild("ModalFocusScreenGui")
+if oldModalFocusGui then
+	oldModalFocusGui:Destroy()
+end
+
+local modalFocusGui = Instance.new("ScreenGui")
+modalFocusGui.Name = "ModalFocusScreenGui"
+modalFocusGui.ResetOnSpawn = false
+modalFocusGui.IgnoreGuiInset = true
+modalFocusGui.ScreenInsets = Enum.ScreenInsets.None
+modalFocusGui.DisplayOrder = 4
+modalFocusGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+modalFocusGui.Parent = PlayerGui
+
+local modalFocusOverlay = Instance.new("Frame")
+modalFocusOverlay.Name = "ModalFocusOverlay"
+modalFocusOverlay.Size = UDim2.fromScale(1, 1)
+modalFocusOverlay.Position = UDim2.fromScale(0, 0)
+modalFocusOverlay.BackgroundColor3 = Color3.fromHex("#06040A")
+modalFocusOverlay.BackgroundTransparency = 1
+modalFocusOverlay.BorderSizePixel = 0
+modalFocusOverlay.Visible = false
+modalFocusOverlay.ZIndex = 1
+modalFocusOverlay.Active = false
+modalFocusOverlay.Parent = modalFocusGui
+
+local function getOrCreateEffect<T>(className: string, name: string): T
+	local existing = Lighting:FindFirstChild(name)
+	if existing and existing:IsA(className) then
+		return existing :: any
+	end
+	if existing then existing:Destroy() end
+	local eff = Instance.new(className)
+	eff.Name = name
+	eff.Parent = Lighting
+	return eff :: any
+end
+
+local focusBlur = getOrCreateEffect("BlurEffect", "ModalFocusBlur") :: BlurEffect
+focusBlur.Size = 0
+focusBlur.Enabled = false
+
+local focusColorCorrection = getOrCreateEffect("ColorCorrectionEffect", "ModalFocusColorCorrection") :: ColorCorrectionEffect
+focusColorCorrection.Brightness = 0
+focusColorCorrection.Contrast = 0.04
+focusColorCorrection.Enabled = false
+
+local isFocusModeActive = false
+local currentOverlayTween: Tween? = nil
+local currentBlurTween: Tween? = nil
+local currentCCTween: Tween? = nil
+
+local function applyFocusMode(isFocused: boolean, _options: { [string]: any }?)
+	if isFocusModeActive == isFocused then return end
+	isFocusModeActive = isFocused
+
+	if currentOverlayTween then currentOverlayTween:Cancel() currentOverlayTween = nil end
+	if currentBlurTween then currentBlurTween:Cancel() currentBlurTween = nil end
+	if currentCCTween then currentCCTween:Cancel() currentCCTween = nil end
+
+	local reduced = UIFeel.ReducedMotion()
+	local duration = if isFocused then (if reduced then 0.05 else 0.22) else (if reduced then 0.05 else 0.18)
+	local ease = Enum.EasingStyle.Quad
+	local dir = Enum.EasingDirection.Out
+
+	if isFocused then
+		-- 1. Dimmer Backdrop
+		modalFocusOverlay.Visible = true
+		currentOverlayTween = TweenService:Create(modalFocusOverlay, TweenInfo.new(duration, ease, dir), {
+			BackgroundTransparency = 0.35,
+		})
+		currentOverlayTween:Play()
+
+		-- 2. 3D Lighting Polish
+		focusBlur.Enabled = true
+		currentBlurTween = TweenService:Create(focusBlur, TweenInfo.new(duration, ease, dir), {
+			Size = 8,
+		})
+		currentBlurTween:Play()
+
+		focusColorCorrection.Enabled = true
+		currentCCTween = TweenService:Create(focusColorCorrection, TweenInfo.new(duration, ease, dir), {
+			Brightness = -0.08,
+		})
+		currentCCTween:Play()
+
+		-- 3. World Interactions & Clutter
+		pcall(function() ProximityPromptService.Enabled = false end)
+
+		local lbGui = PlayerGui:FindFirstChild("CustomLeaderboardGui") :: ScreenGui?
+		if lbGui then lbGui.Enabled = false end
+
+		local topBarRight = PlayerGui:FindFirstChild("TopBarRightScreenGui") :: ScreenGui?
+		if topBarRight then topBarRight.Enabled = false end
+
+		-- 4. React HUD Rails & Squad Drawer (keeps Currencies visible in Overlay)
+		Store.SetModalFocus(true)
+	else
+		-- 1. Dimmer Backdrop
+		currentOverlayTween = TweenService:Create(modalFocusOverlay, TweenInfo.new(duration, ease, dir), {
+			BackgroundTransparency = 1,
+		})
+		currentOverlayTween:Play()
+		currentOverlayTween.Completed:Connect(function()
+			if not isFocusModeActive then
+				modalFocusOverlay.Visible = false
+			end
+		end)
+
+		-- 2. 3D Lighting Polish
+		currentBlurTween = TweenService:Create(focusBlur, TweenInfo.new(duration, ease, dir), {
+			Size = 0,
+		})
+		currentBlurTween:Play()
+		currentBlurTween.Completed:Connect(function()
+			if not isFocusModeActive then
+				focusBlur.Enabled = false
+			end
+		end)
+
+		currentCCTween = TweenService:Create(focusColorCorrection, TweenInfo.new(duration, ease, dir), {
+			Brightness = 0,
+		})
+		currentCCTween:Play()
+		currentCCTween.Completed:Connect(function()
+			if not isFocusModeActive then
+				focusColorCorrection.Enabled = false
+			end
+		end)
+
+		-- 3. World Interactions & Clutter
+		pcall(function() ProximityPromptService.Enabled = true end)
+
+		local lbGui = PlayerGui:FindFirstChild("CustomLeaderboardGui") :: ScreenGui?
+		if lbGui then lbGui.Enabled = true end
+
+		local topBarRight = PlayerGui:FindFirstChild("TopBarRightScreenGui") :: ScreenGui?
+		if topBarRight then topBarRight.Enabled = true end
+
+		-- 4. React HUD Rails & Squad Drawer
+		Store.SetModalFocus(false)
+	end
+end
+
+local function setModalFocusMode(isFocused: boolean, options: { [string]: any }?)
+	if not isFocused then
+		task.defer(function()
+			if _G.IsAnyMasterModalOpen and _G.IsAnyMasterModalOpen() then
+				return
+			end
+			applyFocusMode(false, options)
+		end)
+	else
+		applyFocusMode(true, options)
+	end
+end
+
+_G.SetModalFocusMode = setModalFocusMode
+_G.IsModalFocusMode = function(): boolean
+	return isFocusModeActive
+end
+
+LocalPlayer.CharacterRemoving:Connect(function()
+	setModalFocusMode(false)
+end)
+
 -- Top Bar Container
 local topBar = makeFrame({
 	Name = "TopBarContainer",
@@ -316,7 +487,7 @@ SystemToastEvent.OnClientEvent:Connect(function(msg: string, colorType: string)
 	playToast(msg, color, 4.5, colorType == "WARN")
 end)
 
--- Loot Stolen Retaliation Banner
+-- Loot Stolen Bounty Banner
 local lootStolenBanner = makeFrame({
 	Name = "LootStolenBanner",
 	Size = UDim2.new(0, 520, 0, 48),
@@ -341,22 +512,36 @@ local lootStolenText = makeLabel({
 })
 
 -- The banner tracks the newest contested drop; it stays up with a countdown for the whole
--- retaliation window, and the server clears it when the drop is recovered, duelled or gone.
+-- bounty window, and the server clears it when the drop is recovered, duelled or gone. The duel is
+-- claimed in the world (walk up to the thief and press F), so the banner only carries the hint.
 local currentContest: any = nil
-local retaliateBtn = makeButton({
+local bountyHint = makeLabel({
 	Size = UDim2.new(0.30, 0, 0.8, 0),
 	Position = UDim2.new(0.68, 0, 0.1, 0),
 	BackgroundColor3 = Color3.fromRGB(220, 35, 45),
-	Text = "RETALIATE",
+	Text = "HUNT THEM: [F]",
+	TextColor3 = Color3.fromRGB(255, 255, 255),
+	TextSize = 13,
+	TextScaled = false,
 	Corner = 6,
 	Parent = lootStolenBanner,
-	OnClick = function()
-		local remote = TowerRemotes:FindFirstChild("InitiateRetaliation")
-		if currentContest and remote and remote:IsA("RemoteEvent") then
-			remote:FireServer(currentContest.DropId)
-		end
-	end,
 })
+
+-- The server puts a "Claim Bounty" [F] prompt on every [Loot Thief]. Hide the one on our own
+-- character locally (the server also rejects a thief claiming their own bounty).
+local function hideOwnBountyPrompt(character: Model)
+	local function hide(child: Instance)
+		if child:IsA("ProximityPrompt") and child.Name == "BountyPrompt" then
+			child.Enabled = false
+		end
+	end
+	local root = character:WaitForChild("HumanoidRootPart", 10)
+	if not root then return end
+	for _, child in root:GetChildren() do hide(child) end
+	root.ChildAdded:Connect(hide)
+end
+if LocalPlayer.Character then task.spawn(hideOwnBountyPrompt, LocalPlayer.Character) end
+LocalPlayer.CharacterAdded:Connect(hideOwnBountyPrompt)
 
 local function refreshContestBanner()
 	local contest = currentContest
@@ -370,7 +555,7 @@ local function refreshContestBanner()
 		lootStolenBanner.Visible = false
 		return
 	end
-	lootStolenText.Text = string.format("%s STOLE %d %s! (%d:%02d)", string.upper(contest.ThiefName), contest.Amount, contest.LootType, remaining // 60, remaining % 60)
+	lootStolenText.Text = string.format("%s STOLE YOUR %s! (%d:%02d)", string.upper(contest.ThiefName), string.upper(contest.Label), remaining // 60, remaining % 60)
 	lootStolenBanner.Visible = true
 end
 
@@ -383,8 +568,7 @@ task.spawn(function()
 			currentContest = {
 				DropId = message.DropId,
 				ThiefName = tostring(message.ThiefName),
-				LootType = tostring(message.LootType),
-				Amount = tonumber(message.Amount) or 0,
+				Label = tostring(message.Label or "loot"),
 				ExpiresAt = os.clock() + (tonumber(message.Seconds) or 0),
 			}
 		elseif message.Kind == "CLEAR" and currentContest and currentContest.DropId == message.DropId then
@@ -573,42 +757,6 @@ SquadDefeatedRemote.OnClientEvent:Connect(function(floorId: number)
 	squadWipeText.Text = string.format("SQUAD WIPED ON FLOOR %d! CARRIED LOOT DROPPED — TELEPORTED TO FORTRESS PLOT", floorId or 0)
 end)
 
--- Carried Field Loot Indicator
-local carriedLootPill = makeFrame({
-	Name = "CarriedLootPill",
-	Size = UDim2.fromOffset(230, 38),
-	Position = UDim2.fromOffset(12, 58),
-	BackgroundColor3 = Color3.fromRGB(26, 32, 46),
-	BackgroundTransparency = 0.1,
-	Corner = 8,
-	Stroke = 1.5,
-	StrokeColor = Color3.fromRGB(245, 195, 65),
-	Visible = false,
-	Parent = topBar,
-})
-
-local carriedLootIcon = GrimoireIcons.Create("Gold", 26, carriedLootPill, 3)
-carriedLootIcon.AnchorPoint = Vector2.new(0, 0.5)
-carriedLootIcon.Position = UDim2.new(0, 8, 0.5, 0)
-local carriedLootLabel = makeLabel({
-	Size = UDim2.new(1, -46, 1, 0),
-	Position = UDim2.new(0, 40, 0, 0),
-	Text = "Field: 0 Gold · 0 Gems",
-	TextColor3 = Color3.fromRGB(255, 235, 145),
-	TextSize = 13,
-	TextScaled = false,
-	Parent = carriedLootPill,
-})
-
-CarriedLootSyncRemote.OnClientEvent:Connect(function(gold: number, gems: number)
-	if gold > 0 or gems > 0 then
-		carriedLootPill.Visible = true
-		carriedLootLabel.Text = string.format("Field: %d Gold · %d Gems", gold, gems)
-	else
-		carriedLootPill.Visible = false
-	end
-end)
-
 -- World Boss Top Banner
 local bossBanner = makeFrame({
 	Name = "FloorBossTopBanner",
@@ -652,19 +800,18 @@ GildedGrimoire.Reframe(lootStolenBanner, { Tone = "Glass", Rail = Glass.Danger }
 GildedGrimoire.Reframe(squadWipeBanner, { Tone = "Glass", Rail = Glass.Danger })
 GildedGrimoire.Reframe(partiallyDefeatedBanner :: Frame, { Tone = "Glass", Rail = Glass.Royal })
 GildedGrimoire.GlassFrame(partialTooltipPopover, { Transparency = 0.12 })
-GildedGrimoire.Reframe(carriedLootPill, { Tone = "Glass", Rail = Glass.Royal })
 GildedGrimoire.Reframe(bossBanner, { Tone = "Glass", Rail = Glass.Danger })
 GildedGrimoire.GlassBar(novaBarBg)
--- Retaliate: a solid Danger button with a hairline edge.
-GildedGrimoire.GlassFrame(retaliateBtn)
-retaliateBtn.BackgroundColor3 = Glass.Danger
-retaliateBtn.BackgroundTransparency = 0
-retaliateBtn.TextColor3 = Glass.Text
+-- Bounty hint: a solid Danger chip with a hairline edge.
+GildedGrimoire.GlassFrame(bountyHint)
+bountyHint.BackgroundColor3 = Glass.Danger
+bountyHint.BackgroundTransparency = 0
+bountyHint.TextColor3 = Glass.Text
 -- Every label in these banners moves to Montserrat; headlines take the bold weight.
-for _, banner in { toastBanner, lootStolenBanner, squadWipeBanner, partiallyDefeatedBanner :: Frame, partialTooltipPopover, carriedLootPill, bossBanner } do
+for _, banner in { toastBanner, lootStolenBanner, squadWipeBanner, partiallyDefeatedBanner :: Frame, partialTooltipPopover, bossBanner } do
 	GildedGrimoire.GlassTexts(banner)
 end
-for _, headline in { lootStolenText, squadWipeText, partialHeader, tooltipTitle, bossTitleLabel, novaCastLabel, toastText, retaliateBtn } do
+for _, headline in { lootStolenText, squadWipeText, partialHeader, tooltipTitle, bossTitleLabel, novaCastLabel, toastText, bountyHint } do
 	GildedGrimoire.GlassText(headline, "Title")
 end
 for _, line in { partialSubtext, tooltipList, tooltipFooter } do
@@ -1134,28 +1281,35 @@ _G.UpdateBottomTabHighlights = updateBottomTabHighlights
 _G.IsAnyMasterModalOpen = function(): boolean
 	if _G.IsBackpackOpen and _G.IsBackpackOpen() then return true end
 	if _G.IsHeroIndexOpen and _G.IsHeroIndexOpen() then return true end
+	if _G.IsFacilityPanelOpen and _G.IsFacilityPanelOpen() then return true end
 	if _G.IsTowerSelectorOpen and _G.IsTowerSelectorOpen() then return true end
+	if _G.IsSettingsOpen and _G.IsSettingsOpen() then return true end
 	if facilityController and facilityController.Root and facilityController.Root.Visible then return true end
 	if fortressTreeController and fortressTreeController:IsOpen() then return true end
 	if synthesisController and synthesisController.Root and synthesisController.Root.Visible then return true end
 	if promotionController and promotionController:IsOpen() then return true end
-	if forgeController and forgeController.Root and forgeController.Root.Visible then return true end
+	if forgeController and ((forgeController.IsOpen and forgeController:IsOpen()) or (forgeController.Root and forgeController.Root.Visible)) then return true end
 	if squadController and squadController:IsOpen() then return true end
 	if blacksmithModal.Visible then return true end
 	return false
 end
 _G.OpenMasterModal = function(which: string)
 	if _G.CloseBackpack then _G.CloseBackpack() end
-	if _G.CloseHeroIndex then _G.CloseHeroIndex() end
-	if _G.CloseSettings and _G.IsSettingsOpen and _G.IsSettingsOpen() then
+	if which ~= "INDEX" and which ~= "SHOP" and _G.CloseHeroIndex then
+		_G.CloseHeroIndex()
+	end
+	if which ~= "FACILITY" and _G.CloseFacilityPanel then
+		_G.CloseFacilityPanel()
+	end
+	if which ~= "SETTINGS" and _G.CloseSettings and _G.IsSettingsOpen and _G.IsSettingsOpen() then
 		_G.CloseSettings()
 	end
 	if _G.CloseTowerSelector then _G.CloseTowerSelector() end
-	if facilityController then facilityController:Close() end
-	if fortressTreeController then fortressTreeController:Close() end
-	if synthesisController then synthesisController:Close() end
-	if promotionController then promotionController:Close() end
-	if forgeController then forgeController:Close() end
+	if facilityController and facilityController:IsOpen() then facilityController:Close() end
+	if fortressTreeController and fortressTreeController:IsOpen() then fortressTreeController:Close() end
+	if synthesisController and synthesisController.Root and synthesisController.Root.Visible then synthesisController:Close() end
+	if promotionController and promotionController:IsOpen() then promotionController:Close() end
+	if which ~= "BLACKSMITH" and forgeController and forgeController:IsOpen() then forgeController:Close() end
 	if which ~= "SQUAD" and which ~= "WAITING_ROOM" and squadController and squadController:IsOpen() then
 		squadController:Close()
 	end
@@ -1173,6 +1327,11 @@ _G.OpenMasterModal = function(which: string)
 	updateBottomTabHighlights()
 	if which == "BLACKSMITH" and not forgeController and refreshBlacksmithModal then
 		refreshBlacksmithModal()
+	end
+	if which == "NONE" then
+		setModalFocusMode(false)
+	else
+		setModalFocusMode(true)
 	end
 end
 
@@ -1229,6 +1388,7 @@ local ArtifactRemotes = Remotes:WaitForChild("ArtifactRemotes") :: Folder
 forgeController = ForgeController.new(hudGui, ArtifactRemotes, function() return CurrentProfile end, updateBottomTabHighlights)
 _G.ForgeController = forgeController
 _G.OpenFacilityHUD = function(facility: string)
+	setModalFocusMode(true)
 	-- Phase 5: The Pit has one prompt and opens on its Synthesis tab (the React tab bar switches).
 	if facility == "Pit" or facility == "ThePit" then
 		facility = "Synthesis"
@@ -1254,6 +1414,8 @@ _G.OpenFacilityHUD = function(facility: string)
 		_G.OpenMasterModal("NONE")
 		fortressTreeController:Open()
 		updateBottomTabHighlights()
+	elseif facility == "Blacksmith" or facility == "Forge" then
+		_G.OpenMasterModal("BLACKSMITH")
 	else
 		_G.OpenMasterModal("NONE")
 		if synthesisController then synthesisController:Close() end
@@ -1673,7 +1835,12 @@ RunService.RenderStepped:Connect(function()
 	-- 2. Update World Boss Top Banner & Devouring Nova Cast Bar
 	local floorBoss = cs and cs.FloorBoss
 	local hasFloorBoss = floorBoss and floorBoss.Enabled == true
-	local curFloor = if _G.TowerView and _G.TowerView.FloorId then _G.TowerView.FloorId else 0
+	local char = LocalPlayer.Character
+	local charFloor = if char then (char:GetAttribute("TowerFloorId") or 0) else 0
+	local curFloor = if charFloor > 0 then charFloor elseif (_G.TowerView and _G.TowerView.FloorId) then _G.TowerView.FloorId else 0
+	if charFloor == 0 then
+		curFloor = 0
+	end
 	if not hasFloorBoss and curFloor > 0 then
 		bossBanner.Visible = true
 		local floorSpec = TowerFloorConfig.Get(curFloor)
@@ -1692,13 +1859,13 @@ RunService.RenderStepped:Connect(function()
 			novaCastLabel.Text = string.format("MOBS DEFEATED: %d / %d (%d%%)", curKills, reqKills, math.floor(pct * 100))
 		end
 	else
-		bossBanner.Visible = hasFloorBoss or false
+		bossBanner.Visible = (hasFloorBoss and curFloor > 0) or false
 	end
-	if hasFloorBoss then
+	if hasFloorBoss and curFloor > 0 then
 		local node = cs.VisualNodes and cs.VisualNodes[floorBoss.NetId]
 		local hpPct = if node and node.HpPermille then node.HpPermille / 10.0 else (floorBoss.CurrentHP or 1) / math.max(1, floorBoss.MaxHP or 1) * 100.0
 		local phase = if hpPct <= 50.0 then 2 else (floorBoss.Phase or 1)
-		local floorNum = floorBoss.FloorId or (_G.TowerView and _G.TowerView.FloorId) or 5
+		local floorNum = floorBoss.FloorId or curFloor
 		bossTitleLabel.Text = string.format(" FLOOR %d BOSS · %s (PHASE %d) — HP: %.1f%%", floorNum, string.upper(floorBoss.Name or "FLOOR BOSS"), phase, hpPct)
 		novaBarFill.Size = UDim2.fromScale(math.clamp(hpPct / 100.0, 0, 1), 1)
 		novaBarFill.BackgroundColor3 = GildedGrimoire.Glass.Danger
@@ -1802,11 +1969,6 @@ do
 	-- Remove top menu bar so the viewport top is unobstructed and currencies live in the bottom-left
 	topBar.Visible = false
 	currencyLabel.Visible = false
-
-	carriedLootPill.Parent = hudGui
-	carriedLootPill.AnchorPoint = Vector2.new(0, 1)
-	carriedLootPill.Position = UDim2.new(0, 16, 1, -74)
-	carriedLootPill.ZIndex = 8
 
 	-- Bottom-left Gold & Diamond Currency Display
 	-- Total row width locked to Squad container bar width (W_squad = 296px).
@@ -1931,6 +2093,7 @@ do
 		topBarRightGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 		topBarRightGui.Parent = PlayerGui
 	end
+	topBarRightGui.Enabled = not isFocusModeActive
 
 	local settingsButton = Instance.new("ImageButton")
 	settingsButton.Name = "SettingsButton"

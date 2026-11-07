@@ -51,11 +51,7 @@ local ok,err=pcall(function()
 		first=command(a,"MEASURE");assert(first.FloorId==5 and #first.Ids==2)
 		local own=first.Presence.Floors[6];assert(#own.Visitors==1 and #own.Squads==1 and own.Squads[1].UserId==a.UserId)
 	end)
-	record("Cross-floor pickup and stale room snapshots/metadata fail on actual clients",function()
-		local loot=_G.CombatSimulation.SpawnPhysicalLoot("GOLD",17,a.Character.HumanoidRootPart.Position,a)
-		loot.Part.Position=b.Character.HumanoidRootPart.Position
-		_G.CombatSimulation.CollectPhysicalLoot(b,loot.LootId)
-		local _,_,held=_G.CombatSimulation.DebugEntities();assert(held[b]==nil);loot.Part:Destroy()
+	record("Stale room snapshots/metadata fail on actual clients",function()
 		local heroes=_G.CombatSimulation.DebugEntities();local fake={}
 		for _,h in heroes do if h.Owner==a then local entry=table.clone(h);entry.Position=T.GetRoom(50).Origin+Vector3.new(110,0,110);entry.Flags=1;entry.StateEnum=1;table.insert(fake,entry) end end
 		for _,packet in P.Encode(oldContext,fake,4000000000,workspace:GetServerTimeNow()) do RS.Remotes.TowerRemotes.TowerSnapshot:FireClient(a,packet) end

@@ -1,6 +1,6 @@
 --!strict
 -- StarterPlayerScripts/UI/DuelController.client.luau
--- Retaliation duel presentation (GDD 6.1): a fixed high-angle camera over the hex arena with this
+-- Bounty duel presentation (GDD 6.1): a fixed high-angle camera over the hex arena with this
 -- player's squad in the foreground, and a banner with the countdown, squads left and the result.
 -- The server runs the duel; this script only listens to TowerRemotes.DuelState.
 
@@ -142,7 +142,7 @@ DuelStateRemote.OnClientEvent:Connect(function(message: any)
 		current = { Id = message.DuelId, Side = message.Side, FightAt = message.FightAt or 0, EndsAt = message.EndsAt or 0, Ended = false }
 		local mine = if message.Side == "A" then message.NameA else message.NameB
 		local theirs = if message.Side == "A" then message.NameB else message.NameA
-		titleLabel.Text = "RETALIATION DUEL"
+		titleLabel.Text = "BOUNTY DUEL"
 		myLabel.Text = tostring(mine)
 		enemyLabel.Text = tostring(theirs)
 		updateScore(message)

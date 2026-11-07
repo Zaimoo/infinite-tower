@@ -476,7 +476,7 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 	local currentHeading = label(leftBlock, "CURRENT", 14, C.TextMuted, nil, "Header")
 	currentHeading.Size = UDim2.new(1, 0, 0, 20)
 	currentHeading.ZIndex = 43
-	self.OldMaxLevel = makeStatRow(leftBlock, 22, "Max Lv.")
+	self.OldMaxLevel = makeStatRow(leftBlock, 22, "Level")
 	self.OldHP = makeStatRow(leftBlock, 46, "HP")
 	self.OldATK = makeStatRow(leftBlock, 70, "ATK")
 	self.OldStars = label(leftBlock, "", 18, C.StarGold, Enum.Font.GothamBold)
@@ -501,7 +501,7 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 	local previewHeading = label(rightBlock, "AFTER PROMOTION", 14, C.TextMuted, nil, "Header")
 	previewHeading.Size = UDim2.new(1, 0, 0, 20)
 	previewHeading.ZIndex = 43
-	self.NewMaxLevel = makeStatRow(rightBlock, 22, "Max Lv.")
+	self.NewMaxLevel = makeStatRow(rightBlock, 22, "Level")
 	self.NewMaxLevel.TextColor3 = C.SuccessGreen
 	self.NewHP = makeStatRow(rightBlock, 46, "HP")
 	self.NewHP.TextColor3 = C.SuccessGreen
@@ -1022,8 +1022,8 @@ function Promo.Render(self: any)
 	if recipient then
 		local curStars = math.clamp(recipient.Stars or 1, 1, maxStars)
 		local nextStars = math.min(maxStars, curStars + 1)
-		local curMaxLvl = curStars * 10
-		local nextMaxLvl = nextStars * 10
+		local curMaxLvl = recipient.Level or 1 -- promotion resets the hero to Lv 1 of the next star
+		local nextMaxLvl = if curStars >= maxStars then curMaxLvl else 1
 
 		local beforeSnap = (preview and preview.Before) or recipient.Stats or StatFormulas.GetCombatSnapshot(recipient)
 		local oldHP = math.floor(beforeSnap.HP or beforeSnap.Health or recipient.BaseHP or 1000)
@@ -1280,6 +1280,9 @@ end
 
 function Promo.Open(self: any)
 	if self.Busy then return end
+	if _G.SetModalFocusMode then
+		_G.SetModalFocusMode(true)
+	end
 	self.Root.Visible = true
 	self.Scrim.Visible = true
 	self.Picker.Visible = false
@@ -1294,6 +1297,9 @@ end
 
 function Promo.Close(self: any)
 	if self.Busy then return end
+	if _G.SetModalFocusMode then
+		_G.SetModalFocusMode(false)
+	end
 	self:StopStoneOrbit()
 	local firework = self.RitualArea:FindFirstChild("AscensionFirework")
 	if firework then firework:Destroy() end

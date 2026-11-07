@@ -12,9 +12,17 @@ local TowerFloorConfig = require(ReplicatedStorage.Shared.Config.TowerFloorConfi
 local FacilityConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("FacilityConfig"))
 local StatFormulas = {}
 
--- Level Cap: MaxLevel(S) = S * 10
-function StatFormulas.GetMaxLevel(stars: number): number
-	return math.clamp(math.floor(stars), 1, PitBalanceConfig.MaxStars) * 10
+-- Each star rank has its own Lv 1-10 track; promotion resets the hero to Lv 1 of the next star.
+-- Stats and EXP use the effective level (S-1)*10 + L, so 3★ Lv 5 equals the old 3★ Lv 25.
+StatFormulas.LevelsPerStar = 10
+function StatFormulas.GetMaxLevel(_stars: number?): number
+	return StatFormulas.LevelsPerStar
+end
+
+function StatFormulas.GetEffectiveLevel(stars: number?, level: number?): number
+	local s = if type(stars) == "number" then math.clamp(math.floor(stars), 1, PitBalanceConfig.MaxStars) else 1
+	local l = if type(level) == "number" then math.clamp(math.floor(level), 1, StatFormulas.LevelsPerStar) else 1
+	return (s - 1) * StatFormulas.LevelsPerStar + l
 end
 
 -- Legacy compatibility: retired effects cannot affect stats.
@@ -25,9 +33,9 @@ function StatFormulas.GetEquippedArtifact(profile: any, hero: any): any?
  return profile and profile.Artifacts and hero and hero.EquippedArtifactUUID and profile.Artifacts[hero.EquippedArtifactUUID] or nil
 end
 
--- XP Required for Level L -> L + 1: round(50 * (L ^ 1.45))
-function StatFormulas.GetXPRequiredForNextLevel(level: number): number
-	return math.round(50 * (level ^ 1.45))
+-- XP Required for Level L -> L + 1 at star S: round(50 * (E ^ 1.45)), E = effective level, so every star costs more.
+function StatFormulas.GetXPRequiredForNextLevel(level: number, stars: number?): number
+	return math.round(50 * (StatFormulas.GetEffectiveLevel(stars, level) ^ 1.45))
 end
 
 -- Synthesis ("The Pit") Fodder XP: (100 * 3^(FodderStars - 1)) + (25 * FodderLevel)
@@ -65,7 +73,7 @@ end
 function StatFormulas.GetCombatSnapshot(hero: any, artifact: any?, inOverdrive: boolean?, _inBloodPact: boolean?, trainingMultiplier: number?): any
  local seed=HeroCatalog.Seeds[hero.TemplateId]
  local stars=B.Integer(hero.Stars,1,PitBalanceConfig.MaxStars) and hero.Stars or 1
- local level=B.Integer(hero.Level,1,stars*10) and hero.Level or 1
+ local level=StatFormulas.GetEffectiveLevel(stars,hero.Level)
  local quality=B.Finite(hero.QualityScalar) and math.clamp(hero.QualityScalar,.9,1.15) or 1
  local growth=B.HeroPromotionMultiplier^(stars-1)*B.LevelMultiplier^(level-1)*B.HeroRarityCombat(StatFormulas.GetHeroRarity(hero))
  local power,speed=0,0
@@ -118,7 +126,7 @@ end
 function StatFormulas.GetEffectiveLabor(hero: any, targetFacilityAssignment: string?): number
  local seed=HeroCatalog.Seeds[hero.TemplateId]
  local stars=B.Integer(hero.Stars,1,PitBalanceConfig.MaxStars) and hero.Stars or 1
- local level=B.Integer(hero.Level,1,stars*10) and hero.Level or 1
+ local level=StatFormulas.GetEffectiveLevel(stars,hero.Level)
  local q=B.Finite(hero.QualityScalar) and math.clamp(hero.QualityScalar,.9,1.15) or 1
  local pref=seed and seed.PreferredFacility or ""
  local target=targetFacilityAssignment or hero.Assignment or ""

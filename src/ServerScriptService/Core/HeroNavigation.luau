@@ -17,7 +17,7 @@ local diagnostics: any=if game:GetService("RunService"):IsStudio()then {
 local exclusions: {Instance}={}
 local function refreshExclusions()
 	local list: {Instance}={}
-	for _,name in {"ClientVisualEntities","PhysicalLoot","PhysicalRelics","ModelViewer"}do
+	for _,name in {"ClientVisualEntities","PhysicalRelics","ModelViewer"}do
 		local f=Workspace:FindFirstChild(name);if f then table.insert(list,f)end
 	end
 	for _,p in Players:GetPlayers()do if p.Character then table.insert(list,p.Character)end end

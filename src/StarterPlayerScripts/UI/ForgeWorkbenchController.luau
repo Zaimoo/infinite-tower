@@ -126,6 +126,9 @@ function Controller:_render()
 end
 
 function Controller:Open(initialTab: string?)
+	if _G.SetModalFocusMode then
+		_G.SetModalFocusMode(true)
+	end
 	if initialTab == "SUMMON" then
 		self.Destination = "SUMMON"
 		self.OpenGeneration += 1
@@ -157,14 +160,21 @@ function Controller:Open(initialTab: string?)
 end
 
 function Controller:OpenSell()
- self:_hideLegacy()
- self.Destination = "SELL"
- self.OpenGeneration += 1
- self.Root.Visible = true
- local profile = self.GetProfile()
- if profile then self.Snapshot = snapshotFromProfile(profile) end
- self:_renderNavigation()
- self:_render()
+	if _G.SetModalFocusMode then
+		_G.SetModalFocusMode(true)
+	end
+	self:_hideLegacy()
+	self.Destination = "SELL"
+	self.OpenGeneration += 1
+	self.Root.Visible = true
+	local profile = self.GetProfile()
+	if profile then self.Snapshot = snapshotFromProfile(profile) end
+	self:_renderNavigation()
+	self:_render()
+end
+
+function Controller:IsOpen(): boolean
+	return self.Destination ~= "NONE" or (self.Root ~= nil and self.Root.Visible)
 end
 
 function Controller:Close()
@@ -174,6 +184,9 @@ function Controller:Close()
 	self.Root.Visible = false
 	self.ReactRoot:render(nil)
 	self:_hideLegacy()
+	if _G.SetModalFocusMode then
+		_G.SetModalFocusMode(false)
+	end
 	if self.OnClose then self.OnClose() end
 end
 

@@ -164,15 +164,18 @@ test("The 120-pull pity roll only lands Exalted or higher and follows the luck-b
 	assertEqual(SummonLuck.RollAtLeast(plain, banner.PityRarity, 0.999), 5, "highest roll is Exalted")
 end)
 
-test("Promotion donors are any weapon of the same rarity tier and weapon type", function()
-	local target = { Type = "BOW", Rarity = 5 }
-	assert(Promotion.IsDonorFor(target, { Type = "BOW", Rarity = 5 }), "same tier and type")
-	assert(not Promotion.IsDonorFor(target, { Type = "BOW", Rarity = 4 }), "lower tier")
-	assert(not Promotion.IsDonorFor(target, { Type = "STAFF", Rarity = 5 }), "other type")
+test("Promotion donors are any weapon of the same rarity tier and star rank", function()
+	local target = { Type = "BOW", Rarity = 5, Star = 2 }
+	assert(Promotion.IsDonorFor(target, { Type = "BOW", Rarity = 5, Star = 2 }), "same tier, stars and type")
+	assert(Promotion.IsDonorFor(target, { Type = "STAFF", Rarity = 5, Star = 2 }), "different weapon type allowed")
+	assert(Promotion.IsDonorFor(target, { Type = "SWORD_SHIELD", Rarity = 5, Star = 2 }), "vanguard weapon for bow allowed")
+	assert(Promotion.IsDonorFor(target, { Type = "DAGGERS", Rarity = 5, Star = 2 }), "striker weapon for bow allowed")
+	assert(not Promotion.IsDonorFor(target, { Type = "BOW", Rarity = 4, Star = 2 }), "lower tier")
+	assert(not Promotion.IsDonorFor(target, { Type = "BOW", Rarity = 5, Star = 1 }), "different star rank")
 	assert(not Promotion.IsDonorFor(target, target), "itself")
 	local std, enh = ArtifactCatalog.GetTierPair(5, "BOW")
 	assert(std and enh)
-	assert(Promotion.IsDonorFor({ Type = std.Type, Rarity = std.RarityTier }, { Type = enh.Type, Rarity = enh.RarityTier }), "the other variant")
+	assert(Promotion.IsDonorFor({ Type = std.Type, Rarity = std.RarityTier, Star = 1 }, { Type = enh.Type, Rarity = enh.RarityTier, Star = 1 }), "the other variant")
 end)
 
 -- 5. Artifact Selling Valuation
@@ -241,12 +244,13 @@ local function fixture()
 			target = { TemplateId = "art_astral_executioner", Type = "SWORD_SHIELD", Star = 6, Rarity = 7, Level = 999 },
 		},
 	}
+	local types = { "SWORD_SHIELD", "DAGGERS", "BOW", "AXE", "STAFF", "TOME" }
 	local donors = {}
 	for i = 1, 6 do
 		local id = "donor" .. i
-		-- Alternate the Standard and Enhanced Mythical swords: either variant is a valid donor.
+		-- Alternate weapon types across archetypes: any type is valid as long as rarity and stars match.
 		local templateId = if i % 2 == 0 then "art_genesis_worldbreaker" else "art_astral_executioner"
-		p.Artifacts[id] = { TemplateId = templateId, Type = "SWORD_SHIELD", Star = 1, Rarity = 7 }
+		p.Artifacts[id] = { TemplateId = templateId, Type = types[i] or "SWORD_SHIELD", Star = 6, Rarity = 7 }
 		table.insert(donors, id)
 	end
 	return p, donors
@@ -271,6 +275,9 @@ test("Every promotion step charges exactly once and retains identity, rarity and
 	for star = 1, 6 do
 		local p, d = fixture()
 		p.Artifacts.target.Star = star
+		for _, donorId in ipairs(d) do
+			p.Artifacts[donorId].Star = star
+		end
 		for i = 6, star + 1, -1 do d[i] = nil end
 		local rule = Balance.WeaponPromotionCosts[star]
 		local before = p.Artifacts.target
@@ -299,7 +306,7 @@ test("Malformed, stale, protected and insufficient promotions reject without mut
 		function(p, _d) p.Artifacts.donor1.Locked = true end,
 		function(p, _d) p.Artifacts.donor1.EquippedHeroUUID = "hero" end,
 		function(p, _d) p.Heroes.hero = { EquippedArtifactUUID = "donor1" } end,
-		function(p, _d) p.Artifacts.donor1.Type = "BOW" end,
+		function(p, _d) p.Artifacts.donor1.Star = p.Artifacts.target.Star - 1 end,
 		function(p, _d) p.Artifacts.donor1.Rarity = 6 end,
 		function(p, _d) p.Currencies.Gold = 0 end,
 		function(p, _d) p.Currencies.Gems = 0 end,
@@ -315,6 +322,35 @@ test("Malformed, stale, protected and insufficient promotions reject without mut
 		assert(p.Artifacts.donor1 ~= nil)
 		assertEqual(p.Artifacts.target.Rarity, 7)
 	end
+end)
+
+test("Vanguard mythical artifact can be promoted using striker mythical artifact with same stars", function()
+	local p = {
+		Currencies = { Gold = 50000, Gems = 500 },
+		Heroes = {},
+		Artifacts = {
+			target_vanguard = { TemplateId = "art_genesis_worldbreaker", Type = "SWORD_SHIELD", Star = 1, Rarity = 7 },
+			donor_striker = { TemplateId = "art_void_reapers", Type = "DAGGERS", Star = 1, Rarity = 7 },
+		},
+	}
+	local ok, msg, star = Promotion.Promote(p, "target_vanguard", { "donor_striker" })
+	assert(ok, "Promotion with striker daggers for vanguard sword should succeed: " .. tostring(msg))
+	assertEqual(star, 2)
+	assert(p.Artifacts.donor_striker == nil, "Donor striker weapon consumed")
+	assertEqual(p.Artifacts.target_vanguard.Star, 2)
+end)
+
+test("Promotion fails if donor has different star count", function()
+	local p = {
+		Currencies = { Gold = 50000, Gems = 500 },
+		Heroes = {},
+		Artifacts = {
+			target_vanguard = { TemplateId = "art_genesis_worldbreaker", Type = "SWORD_SHIELD", Star = 2, Rarity = 7 },
+			donor_striker = { TemplateId = "art_void_reapers", Type = "DAGGERS", Star = 1, Rarity = 7 },
+		},
+	}
+	local ok, msg = Promotion.Promote(p, "target_vanguard", { "donor_striker" })
+	assert(not ok, "Promotion should fail when star ranks do not match")
 end)
 
 test("All hero/weapon tiers are finite, monotonic and independent of legacy levels", function()

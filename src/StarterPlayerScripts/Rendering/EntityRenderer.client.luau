@@ -3,6 +3,7 @@ debug.setmemorycategory("EntityRenderer")
 -- StarterPlayerScripts/Rendering/EntityRenderer.client.luau
 -- Unpacks 5 Hz Binary Buffer Snapshots & Interpolates Hero/Mob/Boss Visuals at 60 FPS (RenderStepped)
 
+local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -256,54 +257,155 @@ local function playAttackVfx(rig: Model, animator: any, meta: any, cue: any)
 	})
 end
 
-local KO_ASSET_TEXTURE = "rbxassetid://10762151233"
-
-local function attachKOVFX(node: any)
+local function playComaVFX(node: any)
 	if not node or not node.RootPart or not node.Model or not node.Model.Parent then return end
-	if node.KOAttachment and node.KOAttachment.Parent then return end
+	if node.ComaBillboard and node.ComaBillboard.Parent then return end
+	local now = os.clock()
+	if (node.LastComaVfxTime or 0) + 1.0 > now then return end
+	node.LastComaVfxTime = now
 
+	local root = node.RootPart
+	local pos = root.Position
+
+	-- 1. Ground shockwave ring: expanding crimson circle that dissipates rapidly
+	local ring = Instance.new("Part")
+	ring.Name = "ComaShockwave"
+	ring.Shape = Enum.PartType.Cylinder
+	ring.Size = Vector3.new(0.2, 2.5, 2.5)
+	ring.CFrame = CFrame.new(pos.X, pos.Y - 1.2, pos.Z) * CFrame.Angles(0, 0, math.rad(90))
+	ring.Color = Color3.fromRGB(245, 45, 55)
+	ring.Material = Enum.Material.Neon
+	ring.Transparency = 0.25
+	ring.Anchored = true
+	ring.CanCollide = false
+	ring.CanTouch = false
+	ring.CanQuery = false
+	ring.CastShadow = false
+	ring.Parent = VisualFolder
+
+	TweenService:Create(
+		ring,
+		TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+		{ Size = Vector3.new(0.2, 22, 22), Transparency = 1.0 }
+	):Play()
+	Debris:AddItem(ring, 0.50)
+	task.delay(0.55, function()
+		if ring.Parent then ring:Destroy() end
+	end)
+
+	-- 2. One-shot ember burst (does not loop; emitted once and cleaned up)
 	local att = Instance.new("Attachment")
-	att.Name = "KOAttachment"
-	att.Position = Vector3.new(0, 3.8, 0)
-	att.Parent = node.RootPart
-	node.KOAttachment = att
+	att.Name = "ComaAttachment"
+	att.Position = Vector3.new(0, 2.5, 0)
+	att.Parent = root
 
 	local pe = Instance.new("ParticleEmitter")
-	pe.Name = "KOParticles"
-	pe.Texture = KO_ASSET_TEXTURE
-	pe.Size = NumberSequence.new(5)
-	pe.Transparency = NumberSequence.new(0)
-	pe.Color = ColorSequence.new(Color3.new(1, 1, 1))
-	pe.Rate = 1
-	pe.Lifetime = NumberRange.new(1, 1)
-	pe.Speed = NumberRange.new(0, 0)
-	pe.SpreadAngle = Vector2.new(0, 0)
-	pe.VelocitySpread = 0
-	pe.Acceleration = Vector3.new(0, 0, 0)
-	pe.Drag = 4.5
-	pe.LockedToPart = true
-	pe.LightEmission = 0
+	pe.Name = "ComaParticles"
+	pe.Texture = "rbxassetid://241685484" -- red embers
+	pe.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.8),
+		NumberSequenceKeypoint.new(0.5, 1.2),
+		NumberSequenceKeypoint.new(1, 0),
+	})
+	pe.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.1),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	pe.Color = ColorSequence.new(Color3.fromRGB(255, 60, 70), Color3.fromRGB(180, 20, 30))
+	pe.Rate = 0
+	pe.Lifetime = NumberRange.new(0.5, 0.9)
+	pe.Speed = NumberRange.new(4, 10)
+	pe.SpreadAngle = Vector2.new(180, 180)
+	pe.VelocitySpread = 180
+	pe.Acceleration = Vector3.new(0, 2, 0)
+	pe.Drag = 3
+	pe.LightEmission = 0.8
 	pe.LightInfluence = 0
 	pe.Orientation = Enum.ParticleOrientation.FacingCamera
-	pe.FlipbookLayout = Enum.ParticleFlipbookLayout.Grid8x8
-	pe.FlipbookMode = Enum.ParticleFlipbookMode.Loop
-	pe.FlipbookFramerate = NumberRange.new(60, 60)
-	pe.TimeScale = 1
-	pe.Brightness = 1
-	pe.Enabled = true
+	pe.Enabled = false
 	pe.Parent = att
 
-	pe:Emit(1)
+	pe:Emit(14)
+	Debris:AddItem(att, 1.0)
+	task.delay(1.05, function()
+		if att.Parent then att:Destroy() end
+	end)
+
+	-- 3. Stylized "COMA" announcement pop-up (plays entrance animation and STAYS while in Coma)
+	local billboard = Instance.new("BillboardGui")
+	billboard.Name = "ComaAnnouncement"
+	billboard.Adornee = root
+	billboard.Size = UDim2.fromOffset(260, 80)
+	billboard.StudsOffset = Vector3.new(0, 4.0, 0)
+	billboard.AlwaysOnTop = true
+	billboard.LightInfluence = 0
+	billboard.MaxDistance = 200
+	billboard.ResetOnSpawn = false
+	billboard.Parent = root
+	node.ComaBillboard = billboard
+
+	local label = Instance.new("TextLabel")
+	label.Name = "ComaLabel"
+	label.BackgroundTransparency = 1
+	label.Size = UDim2.fromScale(1, 1)
+	label.AnchorPoint = Vector2.new(0.5, 0.5)
+	label.Position = UDim2.fromScale(0.5, 0.5)
+	label.Font = Enum.Font.GothamBlack
+	label.Text = "COMA"
+	label.TextSize = 34
+	label.TextColor3 = Color3.fromRGB(255, 50, 60)
+	label.TextStrokeColor3 = Color3.fromRGB(15, 0, 0)
+	label.TextStrokeTransparency = 0
+	label.ZIndex = 20
+	label.Parent = billboard
+
+	local scale = Instance.new("UIScale")
+	scale.Scale = 1.35
+	scale.Parent = label
+
+	-- Punch pop scale animation (intro)
+	TweenService:Create(
+		scale,
+		TweenInfo.new(0.20, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+		{ Scale = 1.0 }
+	):Play()
+
+	-- Float upward smoothly to resting position (and stays there!)
+	TweenService:Create(
+		billboard,
+		TweenInfo.new(0.60, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+		{ StudsOffset = Vector3.new(0, 5.6, 0) }
+	):Play()
 end
 
 local function removeKOVFX(node: any)
-	-- Called every frame for standing heroes, so it reads the cached attachment, not the tree.
-	local att = node and node.KOAttachment
+	if not node then return end
+	local bb = node.ComaBillboard
+	if bb then
+		node.ComaBillboard = nil
+		local label = bb:FindFirstChild("ComaLabel")
+		if label then
+			TweenService:Create(label, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				TextTransparency = 1,
+				TextStrokeTransparency = 1,
+			}):Play()
+			task.delay(0.25, function()
+				if bb.Parent then bb:Destroy() end
+			end)
+		else
+			bb:Destroy()
+		end
+	end
+
+	-- Cleanup any legacy attachment if present
+	local att = node.KOAttachment
 	if att then
 		node.KOAttachment = nil
 		att:Destroy()
 	end
 end
+
+local attachKOVFX = playComaVFX
 
 local function createEntityModel(netId: number, meta: any, initPos: Vector3): VisualNode
 	local isHero = (meta and meta.IsHero) or false
@@ -317,15 +419,24 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 
 	local bodySize = Vector3.new(2.4, 3.4, 1.4)
 	local bodyColor = Color3.fromRGB(90, 170, 255)
-	local isBoss = false
+	local isBoss = (meta and meta.Role == "BOSS") or false
 
 	if isHero then
 		local seed = meta and HeroCatalog.Seeds[meta.TemplateId]
 		bodyColor = (seed and seed.Color) or Color3.fromRGB(85, 175, 255)
 	end
 
-	local enemySpec=meta.EnemyId and FirstBiome.Get(meta.EnemyId)
-	if enemySpec then bodySize=Vector3.new(enemySpec.Role=="BOSS" and 13 or 5,enemySpec.Height,5);isBoss=enemySpec.Role=="BOSS";bodyColor=Color3.fromRGB(106,149,89) end
+	local enemySpec = meta.EnemyId and FirstBiome.Get(meta.EnemyId)
+	if enemySpec then
+		if enemySpec.Role == "BOSS" then
+			isBoss = true
+		end
+		bodySize = Vector3.new(isBoss and 13 or 5, enemySpec.Height, 5)
+		bodyColor = if isBoss then Color3.fromRGB(150, 45, 60) else Color3.fromRGB(106, 149, 89)
+	elseif isBoss then
+		bodySize = Vector3.new(13, 16, 5)
+		bodyColor = Color3.fromRGB(150, 45, 60)
+	end
 	local rootOffsetY = enemySpec and enemySpec.RootHeight or isHero and HeroRigSpec.GROUND_OFFSET or (bodySize.Y * 0.5)
 	local root = Instance.new("Part")
 	root.Name = "HumanoidRootPart"
@@ -356,9 +467,49 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 		head.Parent = model
 	end
 
-	local enemyRig=enemySpec and EnemyAnimation.Attach(model,root,meta.EnemyId)
-	local art = not enemyRig and ArtPackVisuals.Attach(model, meta or {}, root, bodySize) or nil
-	if art and head then
+	local enemyRig = nil
+	if enemySpec then
+		local ok, rig = pcall(function()
+			return EnemyAnimation.Attach(model, root, meta.EnemyId)
+		end)
+		if ok then
+			enemyRig = rig
+		else
+			warn("[EntityRenderer] Failed to attach enemy rig for " .. tostring(meta.EnemyId) .. ": " .. tostring(rig))
+		end
+	end
+
+	local art = not enemyRig and not isBoss and ArtPackVisuals.Attach(model, meta or {}, root, bodySize) or nil
+
+	if isBoss and not enemyRig then
+		-- Construct fallback scaled procedural boss rig
+		root.Transparency = 0
+		root.Material = Enum.Material.Neon
+		root.Color = bodyColor
+		root.Size = bodySize
+
+		local bossHead = Instance.new("Part")
+		bossHead.Name = "Head"
+		bossHead.Shape = Enum.PartType.Ball
+		bossHead.Size = Vector3.new(4.5, 4.5, 4.5)
+		bossHead.Color = Color3.fromRGB(255, 120, 140)
+		bossHead.Material = Enum.Material.Neon
+		bossHead.Anchored = true
+		bossHead.CanCollide = false
+		bossHead:SetAttribute("NetId", netId)
+		bossHead.Position = root.Position + Vector3.new(0, (bodySize.Y * 0.5) + 2.2, 0)
+		bossHead.Parent = model
+
+		local crown = Instance.new("Part")
+		crown.Name = "BossCrown"
+		crown.Size = Vector3.new(5.0, 1.5, 5.0)
+		crown.Color = Color3.fromRGB(255, 215, 80)
+		crown.Material = Enum.Material.Neon
+		crown.Anchored = true
+		crown.CanCollide = false
+		crown.Position = bossHead.Position + Vector3.new(0, 2.5, 0)
+		crown.Parent = model
+	elseif art and head then
 		head:Destroy()
 	elseif isHero and not art then
 		-- Fallback visual rig if hero model is missing or loading
@@ -377,7 +528,9 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 		head.Parent = model
 	end
 	-- Heroes are themed by inherent rarity, mobs by tier (Normal, Elite, Alpha, Biome Boss).
-	local theme = if isHero then BillboardThemes.Hero(HeroCatalog.RarityOf(meta and meta.TemplateId)) else BillboardThemes.Mob[BillboardThemes.MobTier(enemySpec)]
+	local theme = if isHero then BillboardThemes.Hero(HeroCatalog.RarityOf(meta and meta.TemplateId))
+		elseif isBoss then BillboardThemes.Mob.BIOME_BOSS
+		else BillboardThemes.Mob[BillboardThemes.MobTier(enemySpec)]
 	if not isHero and not enemySpec and meta and (meta.MobType == "WORLD_BOSS" or meta.MobType == "RIFT_BOSS") then theme = BillboardThemes.Mob.BIOME_BOSS end
 
 	local hl = Instance.new("Highlight")
@@ -407,7 +560,7 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 	title.BackgroundTransparency = 1
 	title.TextScaled = true
 	title.ZIndex = 3
-	-- In a retaliation duel each viewer sees their own squad in green and the other in orange.
+	-- In a bounty duel each viewer sees their own squad in green and the other in orange.
 	local duelColor = isHero and meta and meta.DuelSide and (if meta.OwnerUserId == LocalPlayer.UserId then Color3.fromRGB(120, 235, 120) else Color3.fromRGB(255, 160, 70)) or nil
 	if isHero then
 		local stars = string.rep("★", (meta and meta.Stars) or 1)
@@ -496,6 +649,8 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 		Stamina = 100,
 		StateEnum = 1,
 		Flags = 0,
+		WasKnockedOut = false,
+		ComaBillboard = nil :: BillboardGui?,
 	}
 end
 
@@ -514,7 +669,7 @@ local function clearView()
 end
 TowerRemotes.Context.OnClientEvent:Connect(function(c)
  if c.Stage~="COMMIT" then return end
- if not Protocol.Same(c,View) then clearView() end
+ if not Protocol.Same(c,View) or c.FloorId == 0 then clearView() end
  View=c;_G.TowerView=c
 end)
 local function retireVisual(id,at)
@@ -766,9 +921,15 @@ local function stepRender(dt: number)
 		if node.IsHero then
 			local isKnockedOut = node.StateEnum == 4 or (node.HpPermille ~= nil and node.HpPermille <= 0)
 			if isKnockedOut then
-				attachKOVFX(node)
+				if not (node :: any).WasKnockedOut or not (node :: any).ComaBillboard then
+					(node :: any).WasKnockedOut = true
+					playComaVFX(node)
+				end
 			else
-				removeKOVFX(node)
+				if (node :: any).WasKnockedOut or (node :: any).ComaBillboard then
+					(node :: any).WasKnockedOut = false
+					removeKOVFX(node)
+				end
 			end
 		end
 	end
@@ -844,10 +1005,11 @@ CombatVFXRemote.OnClientEvent:Connect(function(context: any, vfxType: string, po
 			end
 		end
 		return
-	elseif vfxType=="HERO_KO" then
+	elseif vfxType=="HERO_COMA" or vfxType=="HERO_KO" then
 		local node = VisualNodesByNetId[amount or -1]
 		if node then
-			attachKOVFX(node)
+			(node :: any).WasKnockedOut = true
+			playComaVFX(node)
 		end
 		return
 	elseif vfxType=="HIT_SPARK" then

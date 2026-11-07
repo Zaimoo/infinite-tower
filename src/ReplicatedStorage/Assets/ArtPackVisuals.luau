@@ -203,7 +203,6 @@ function A.Animate(node: any, dt: number, time: number)
 
 	-- Generic poses for art-pack rigs that are not heroes (hub mobs, bosses). Heroes are
 	-- animated by HeroRig/HeroAnimator.
-	local isHoldingLoot = node.Model:GetAttribute("CarryingLoot") == true
 	local moving = (node.GoalPos - node.CurrentPos).Magnitude > 0.15
 	local speedScale = math.clamp((node :: any).AnimSpeedScale or 1.0, 1.0, 2.2)
 	local strideScale = math.clamp(1.0 + (speedScale - 1.0) * 0.35, 1.0, 1.45)
@@ -212,11 +211,6 @@ function A.Animate(node: any, dt: number, time: number)
 	local attack = node.StateEnum == 3
 
 	for name, b in pairs(node.ArtBones) do
-		-- Do not override arms if the unit is actively hauling physical loot overhead
-		if isHoldingLoot and (name:find("UpperArm") or name:find("Shoulder")) then
-			continue
-		end
-
 		local target = CFrame.identity
 
 		if moving then

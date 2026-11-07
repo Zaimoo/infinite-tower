@@ -24,7 +24,7 @@ local function fixture()
 	artifact("bow-locked", "art_crystal_greatbow", nil, true)
 	artifact("sword-target", "art_runic_longsword")
 	artifact("sword-material", "art_runic_longsword")
-	artifact("sword-invested", "art_runic_longsword", nil, false, 3)
+	artifact("sword-invested", "art_knightly_estoc", nil, false, 1)
 	artifact("bow-max", "art_crystal_greatbow", nil, false, 7)
 	return snapshot
 end

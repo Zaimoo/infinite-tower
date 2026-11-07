@@ -15,9 +15,7 @@ local ArtifactCatalog = require(Shared:WaitForChild("Config"):WaitForChild("Arti
 local ArchetypeCombatSkills = require(Shared:WaitForChild("Config"):WaitForChild("ArchetypeCombatSkills"))
 local HeroCatalog = require(Shared:WaitForChild("Config"):WaitForChild("HeroCatalog"))
 local PitBalance = require(Shared:WaitForChild("Config"):WaitForChild("PitBalanceConfig"))
-local ArtPackVisuals = require(ReplicatedStorage:WaitForChild("Assets"):WaitForChild("ArtPackVisuals"))
 local GildedGrimoire = require(Shared:WaitForChild("Util"):WaitForChild("GildedGrimoire"))
-local GrimoireIcons = require(Shared:WaitForChild("Util"):WaitForChild("GrimoireIcons"))
 local HeroNavigation = require(script.Parent.Parent:WaitForChild("Core"):WaitForChild("HeroNavigation"))
 
 local Tower=require(script.Parent.Parent.Core.TowerFloorService)
@@ -30,6 +28,7 @@ local FirstBiome=require(Shared.Config.FirstBiomeCombat)
 local TowerLayout=require(Shared.Config.TowerLayout)
 local PortalAssets=require(Shared.Config.TowerPortalAssets)
 local TowerRewards=require(Shared.Config.TowerFloorConfig)
+local RelicConfig = require(Shared:WaitForChild("RelicConfig"))
 local TowerHardcore=require(Shared.Config.TowerHardcoreConfig)
 local StatBalance=require(Shared.Config.StatBalance)
 local EncounterRuntime=require(script.Parent.TowerEncounterRuntime)
@@ -58,11 +57,8 @@ local BossTelegraphRemote = CombatRemotes:WaitForChild("BossTelegraph") :: Remot
 local CombatVFXRemote = CombatRemotes:WaitForChild("CombatVFX") :: UnreliableRemoteEvent
 local EntityMetadataRemote = CombatRemotes:WaitForChild("EntityMetadataSync") :: RemoteEvent
 local LootContestedRemote = TowerRemotes:WaitForChild("LootContested") :: RemoteEvent
-local InitiateRetaliationRemote = TowerRemotes:WaitForChild("InitiateRetaliation") :: RemoteEvent
 local DuelStateRemote = TowerRemotes:WaitForChild("DuelState") :: RemoteEvent
 local SquadWipeStateRemote = CombatRemotes:WaitForChild("SquadWipeState") :: RemoteEvent
-local CarriedLootSyncRemote = CombatRemotes:WaitForChild("CarriedLootSync") :: RemoteEvent
-local PhysicalLootFolder = Workspace:WaitForChild("PhysicalLoot") :: Folder
 local FloorProgressRemote = TowerRemotes:WaitForChild("FloorProgress") :: RemoteEvent
 local SquadDefeatedRemote = TowerRemotes:WaitForChild("SquadDefeated") :: RemoteEvent
 local SquadStatusRemote = TowerRemotes:WaitForChild("SquadStatus") :: RemoteEvent
@@ -110,7 +106,6 @@ local TICK_INTERVAL = StatBalance.TickSeconds -- 10 Hz server simulation (Phase 
 -- Snapshots stay at 5 Hz (every second tick) until a Studio profile with six busy floors clears the 25 KB/s client budget.
 local SNAPSHOT_EVERY_TICKS = 2
 local snapshotTick = 0
-local FIELD_LOOT_DESPAWN_SECONDS = 90
 local MASTER_FORMATION_RADIUS = 6.0
 local FOLLOW_CATCHUP_RADIUS = 14.0
 local FOLLOW_CATCHUP_SPAN = 50.0
@@ -171,7 +166,9 @@ export type SimHero = {
 	AttackCount: number?,
 	BarrierHP: number?,
 	BarrierExpires: number?,
-	DuelId: number?, -- set while the hero fights in a retaliation duel
+	TauntedByNetId: number?,
+	TauntExpires: number?,
+	DuelId: number?, -- set while the hero fights in a bounty duel
 	DuelSide: LootDuel.Side?,
 	DefenseShredUntil: number?,
 }
@@ -203,6 +200,9 @@ export type SimMob = {
 	NovaDetonateTime: number?,
 	PunishWindowUntil: number,
 	DefenseShredUntil: number?,
+	TauntedByNetId: number?,
+	TauntExpires: number?,
+	TargetNetId: number?,
 	DespawnAt: number?,
 	DamageLedger: { [number]: number },
 }
@@ -218,11 +218,10 @@ export type MasterCombatState = {
 	IsSquadWiped: boolean,
 }
 
--- Contested drops (GDD 6.1): one contest per stolen drop, keyed by LootId.
+-- Contested relics (GDD 6.1): one contest per stolen relic, keyed by RelicId.
 local Contests: { [number]: LootDuel.Contest } = {}
 local ThiefFlagUntil: { [Player]: number } = {}
-local LastRetaliationRequest: { [Player]: number } = {}
-local LastPickupDenial: { [Player]: number } = {}
+local LastChallengeRequest: { [Player]: number } = {}
 
 type DuelSquad = { Player: Player, Heroes: { SimHero }, Saved: { [SimHero]: any }, Frozen: any? }
 type Duel = {
@@ -242,9 +241,6 @@ type Duel = {
 local Duels: { [number]: Duel } = {}
 local DuelByPlayer: { [Player]: Duel } = {}
 local NextDuelId = 1
-local NextLootId = 1
-local ActiveLootDrops: { [number]: any } = {}
-local CarrierToHeldLoot: { [Player]: any } = {}
 
 local CombatSimulation = {}
 local NextNetId = 1
@@ -618,123 +614,15 @@ function CombatSimulation.RebuildPlayerSquad(player: Player)
  broadcastMetadata(nil)
 end
 
-local collectPhysicalLoot: (player: Player, lootId: number) -> ()
-local spawnPhysicalLoot: (lootType: "GOLD" | "GEMS", amount: number, worldPos: Vector3, killerPlayer: Player?, customLabel: string?) -> any
-
-local function clearLootCarryState(player: Player)
-	local char = player.Character
-	if char then
-		char:SetAttribute("CarryingLoot", false)
-		char:SetAttribute("CarryingLootType", nil)
-		char:SetAttribute("CarryingLootAmount", nil)
-		char:SetAttribute("CarryingLootName", nil)
-		local hum = char:FindFirstChildOfClass("Humanoid")
-		if hum then hum.WalkSpeed = 16.0 end
-	end
-	CarrierToHeldLoot[player] = nil
-	CarriedLootSyncRemote:FireClient(player, 0, 0)
-end
-
-function CombatSimulation.BankHeldLoot(player: Player, location: any?): boolean
-	local held = CarrierToHeldLoot[player]
-	if not held then return false end
-	local dm = getDataManager()
-	local prof = dm.GetProfile(player)
-	if not prof then return false end
-
-	CarrierToHeldLoot[player] = nil
-	local loc = location or Tower.GetState(player)
-	local floorId = if loc and type(loc.FloorId) == "number" then loc.FloorId else 0
-	local prefix = if floorId > 0 then string.format("📦 Unpackaged Field Loot at Floor %d Safe Zone: ", floorId) else "🏦 Safely Banked Field Cargo: "
-
-	if held.LootType == "GOLD" then
-		local marketMult = dm.GetMarketMultiplier and dm.GetMarketMultiplier(player) or 1.0
-		local finalGold = math.round(held.Amount * marketMult)
-		prof.Currencies.Gold += finalGold
-		dm.SendToast(
-			player,
-			if marketMult > 1.0
-				then prefix .. string.format("+%d GOLD (Market: +%.1f%%)!", finalGold, (marketMult - 1) * 100)
-				else prefix .. string.format("+%d GOLD!", finalGold),
-			"SUCCESS"
-		)
-	elseif held.LootType == "GEMS" then
-		prof.Currencies.Gems += held.Amount
-		dm.SendToast(
-			player,
-			prefix .. string.format("+%d GEMS!", held.Amount),
-			"SUCCESS"
-		)
-	end
-	dm.SyncProfile(player)
-
-	if held.Weld and held.Weld.Parent then
-		held.Weld:Destroy()
-	end
-	if held.Part and held.Part.Parent then
-		held.Part:Destroy()
-	end
-
-	clearLootCarryState(player)
-	return true
-end
-
-function CombatSimulation.DropCarriedLoot(player: Player, openLoot: boolean?): boolean
-	if Tower.IsTransitioning(player) then Tower.CancelPending(player,"CARGO_CHANGED") end
-	local held = CarrierToHeldLoot[player]
-	if not held then return false end
-	if held.Weld then held.Weld:Destroy() end
-
-	local char = player.Character
-	local root = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
-	local part = held.Part
-	clearLootCarryState(player)
-	if not part or not part.Parent then return true end
-
-	local position = root and (root.Position + root.CFrame.LookVector * 8) or part.Position
-	local params = RaycastParams.new()
-	params.FilterType = Enum.RaycastFilterType.Exclude
-	params.FilterDescendantsInstances = {char or part, PhysicalLootFolder, Workspace.PhysicalRelics}
-	local ground = Workspace:Raycast(position + Vector3.new(0, 8, 0), Vector3.new(0, -64, 0), params)
-	part.Anchored = true
-	part.Position = Tower.GroundDrop(held, position, part.Size.Y/2)
-	part.Parent = PhysicalLootFolder
-
-	local now = os.clock()
-	local despawnTime = now + FIELD_LOOT_DESPAWN_SECONDS
-	local dropped = {
-		LootId = held.LootId, LootType = held.LootType, Amount = held.Amount,
-		FloorId=held.FloorId,RoomGeneration=held.RoomGeneration,
-		Part = part, Prompt = held.OriginalPrompt, Billboard = held.Billboard,
-		KillerUserId = openLoot and 0 or held.KillerUserId,
-		KillerName = openLoot and "Open" or held.KillerName,
-		SpawnTime = held.SpawnTime, DespawnTime = despawnTime,
-		PickupBlockedUserId = player.UserId, PickupBlockedUntil = now + 1.5,
-		LockedOut = held.LockedOut, DuelLocked = held.DuelLocked,
-	}
-	ActiveLootDrops[held.LootId] = dropped
-	if held.OriginalPrompt then
-		held.OriginalPrompt.ActionText = "Hold / Carry"
-		held.OriginalPrompt.Enabled = true
-	end
-	task.delay(FIELD_LOOT_DESPAWN_SECONDS, function()
-		if ActiveLootDrops[held.LootId] == dropped then
-			ActiveLootDrops[held.LootId] = nil
-			if part and part.Parent and not part:FindFirstChildOfClass("WeldConstraint") then
-				part:Destroy()
-			end
-		end
-	end)
-	return true
-end
+local registerPickup: (player: Player, dropId: number, killerUserId: number, killerName: string, label: string) -> boolean
 
 DropCarriedItemRemote.OnServerEvent:Connect(function(player: Player)
 	local char = player.Character
 	local hum = char and char:FindFirstChildOfClass("Humanoid")
 	if not hum or hum.Health <= 0 then return end
-	local dropped = CombatSimulation.DropCarriedLoot(player)
+	local dropped = false
 	if _G.RelicService and _G.RelicService.DropCarriedRelic then
-		dropped = _G.RelicService.DropCarriedRelic(player) or dropped
+		dropped = _G.RelicService.DropCarriedRelic(player)
 	end
 	if dropped then
 		getDataManager().SendToast(player, "Dropped carried item. You can pick it up again.", "INFO")
@@ -768,7 +656,7 @@ local function knockHeroIntoComa(simHero: SimHero, _baseComaSeconds: number?)
 	)
 	dm.SyncProfile(simHero.Owner)
 
-	Tower.BroadcastAt(CombatVFXRemote, simHero, "HERO_KO", simHero.Position, simHero.NetId)
+	Tower.BroadcastAt(CombatVFXRemote, simHero, "HERO_COMA", simHero.Position, simHero.NetId)
 
 	local masterState = ActiveMasters[simHero.Owner]
 
@@ -811,12 +699,10 @@ local function knockHeroIntoComa(simHero: SimHero, _baseComaSeconds: number?)
 					dm.SendToast(simHero.Owner, string.format("Wiped: lost %d Gold and %d Gems earned since you last banked. Banked loot is safe.", lossGold, lossGems), "WARN")
 				end
 			end
-			CombatSimulation.DropCarriedLoot(simHero.Owner, true)
 			if _G.RelicService then
 				_G.RelicService.FumbleRelicOnAoEHit(simHero.Owner)
 			end
 			masterState.CarriedLoot = { Gold = 0, Gems = 0 }
-			CarriedLootSyncRemote:FireClient(simHero.Owner, 0, 0)
 		end
 
 		SquadWipeStateRemote:FireClient(simHero.Owner, true)
@@ -962,12 +848,34 @@ end
 -- PHYSICAL CONTESTED LOOT SYSTEM (3D MESH ASSETS & OVERHEAD HOLDING)
 --============================================================================
 
--- [Loot Thief] marker: a character attribute for game logic plus a nameplate everyone can see.
+local challengeThief: (hunter: Player, thief: Player) -> () -- defined with the bounty duels below
+
+-- [Loot Thief] marker: a character attribute for game logic, a nameplate everyone can see, and the
+-- bounty prompt (F) other Masters use to challenge the thief. The thief's own client hides the prompt.
 local function applyThiefTag(player: Player)
 	local char = player.Character
 	if not char then return end
 	local flagged = (ThiefFlagUntil[player] or 0) > os.clock()
 	char:SetAttribute("IsLootThief", flagged)
+	local root = char:FindFirstChild("HumanoidRootPart")
+	local bountyPrompt = root and root:FindFirstChild("BountyPrompt")
+	if flagged and root and not bountyPrompt then
+		local prompt = Instance.new("ProximityPrompt")
+		prompt.Name = "BountyPrompt"
+		prompt.ActionText = "Claim Bounty"
+		prompt.ObjectText = player.DisplayName .. " [Loot Thief]"
+		prompt.KeyboardKeyCode = Enum.KeyCode.F
+		prompt.GamepadKeyCode = Enum.KeyCode.ButtonY
+		prompt.HoldDuration = 0
+		prompt.MaxActivationDistance = LootDuel.CHALLENGE_RANGE
+		prompt.RequiresLineOfSight = false
+		prompt.Triggered:Connect(function(hunter: Player)
+			challengeThief(hunter, player)
+		end)
+		prompt.Parent = root
+	elseif not flagged and bountyPrompt then
+		bountyPrompt:Destroy()
+	end
 	local head = char:FindFirstChild("Head")
 	local tag = head and head:FindFirstChild("LootThiefTag")
 	if flagged and head and not tag then
@@ -1018,289 +926,56 @@ local function closeContestPrompt(contest: LootDuel.Contest)
 	end
 end
 
-function collectPhysicalLoot(player: Player, lootId: number)
-	if Tower.IsTransitioning(player) then return end
-	local loot = ActiveLootDrops[lootId]
-	if not loot or not loot.Part or not loot.Part.Parent then
-		return
-	end
-
-	if not Tower.Same(Tower.GetState(player),loot) or os.clock()>=loot.DespawnTime then return end
-	if loot.PickupBlockedUserId == player.UserId and os.clock() < (loot.PickupBlockedUntil or 0) then
-		return
-	end
-	local allowed, denial = LootDuel.CanPickUp(loot, player.UserId)
-	if not allowed then
-		-- Touched fires every frame while standing on the drop; toast at most every few seconds.
-		if os.clock() - (LastPickupDenial[player] or 0) > 4 then
-			LastPickupDenial[player] = os.clock()
-			getDataManager().SendToast(player, "🔒 " .. (denial or "You cannot pick this up."), "WARN")
-		end
-		return
-	end
-
-	local masterState = ActiveMasters[player]
-	if not masterState then
-		return
-	end
-
+-- Runs on every relic pickup. Returns true when the pickup was a theft (and opened a bounty).
+registerPickup = function(player: Player, dropId: number, killerUserId: number, killerName: string, label: string): boolean
 	local dm = getDataManager()
-
-	-- 1. Check Squad Wipe / Looting Lockout
-	if not masterState.CanCollectLoot or (player.Character and player.Character:GetAttribute("SquadWiped") == true) then
-		dm.SendToast(player, "🚫 SQUAD DOWN! You cannot collect loot until you recover your squad at your Waiting Room!", "WARN")
-		return
-	end
-
-	-- 2. Check if player is already holding loot
-	if CarrierToHeldLoot[player] ~= nil or (player.Character and (player.Character:GetAttribute("CarryingLoot") == true or player.Character:GetAttribute("CarryingRelic") ~= nil)) then
-		dm.SendToast(player, "⚠️ You are already carrying loot! Drop it with [R] or unpackage it at a Floor Safe Sanctuary or Hub bank first.", "WARN")
-		return
-	end
-
-	local char = player.Character
-	local hum = char and char:FindFirstChildOfClass("Humanoid")
-	local hrp = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
-	if not hum or not hrp or hum.Health <= 0 then
-		return
-	end
-	if (hrp.Position - loot.Part.Position).Magnitude > 12 then return end
-
-	Tower.GetState(player).BankArmed = true
-	ActiveLootDrops[lootId] = nil
-	local part = loot.Part
-	local lootType = loot.LootType
-	local amount = loot.Amount
-	local killerUserId = loot.KillerUserId
-	local killerName = loot.KillerName
-
-	if loot.Prompt then
-		loot.Prompt.Enabled = false
-	end
-
-	-- Physically Weld Overhead with Holding Pose
-	part.Anchored = false
-	part.CFrame = hrp.CFrame * CFrame.new(0, 4.6, 0)
-
-	local weld = Instance.new("WeldConstraint")
-	weld.Part0 = hrp
-	weld.Part1 = part
-	weld.Parent = part
-
-	-- Set Character Attributes to trigger Holding Animation & HUD banner
-	char:SetAttribute("CarryingLoot", true)
-	char:SetAttribute("CarryingLootType", lootType)
-	char:SetAttribute("CarryingLootAmount", amount)
-	char:SetAttribute("CarryingLootName", string.format("%d %s", amount, lootType))
-
-	-- Movement penalty: -15% WalkSpeed while hauling cargo
-	hum.WalkSpeed = 16.0 * 0.85
-
-	CarrierToHeldLoot[player] = {
-		LootId = lootId,
-		FloorId=loot.FloorId,RoomGeneration=loot.RoomGeneration,SpawnTime=loot.SpawnTime,DespawnTime=math.huge,
-		Part = part,
-		Weld = weld,
-		LootType = lootType,
-		Amount = amount,
-		KillerUserId = killerUserId,
-		KillerName = killerName,
-		OriginalPrompt = loot.Prompt,
-		Billboard = loot.Billboard,
-		LockedOut = loot.LockedOut,
-	}
-
-	local g = (lootType == "GOLD" and amount or 0)
-	local gm = (lootType == "GEMS" and amount or 0)
-	CarriedLootSyncRemote:FireClient(player, g, gm)
-
-	Tower.BroadcastAt(CombatVFXRemote,Tower.GetState(player),"LOOT_PICKUP",hrp.Position)
-
-	local isStolen = LootDuel.IsTheft(killerUserId, player.UserId)
-	if not isStolen then
+	if not LootDuel.IsTheft(killerUserId, player.UserId) then
 		-- The owner took their drop back without a fight: the contest is over.
-		local contest = Contests[lootId]
+		local contest = Contests[dropId]
 		if contest and contest.Status == "CONTESTED" and contest.OwnerUserId == player.UserId then
 			contest.Status = "RESOLVED"
 			closeContestPrompt(contest)
 			local thief = Players:GetPlayerByUserId(contest.ThiefUserId)
 			if thief then refreshThiefFlag(thief) end
 		end
-		dm.SendToast(player, string.format("🎒 Holding %d %s (-15%% Spd)! Bring it to a Floor Safe Sanctuary or Hub bank to unpackage!", amount, lootType), "INFO")
-	else
-		-- A re-steal replaces any older contest for this drop; the newest thief is the one challenged.
-		local previous = Contests[lootId]
-		if previous and previous.Status == "CONTESTED" then
-			previous.Status = "EXPIRED"
-			local previousThief = Players:GetPlayerByUserId(previous.ThiefUserId)
-			if previousThief then refreshThiefFlag(previousThief) end
-		end
-		local contest = LootDuel.NewContest(lootId, killerUserId, player.UserId, os.clock())
-		Contests[lootId] = contest
-		refreshThiefFlag(player)
-
-		local victimPlayer = Players:GetPlayerByUserId(killerUserId)
-		if victimPlayer then
-			dm.SendToast(victimPlayer, string.format("🚨 %s STOLE YOUR %d %s! Retaliate to duel for it!", player.DisplayName, amount, lootType), "WARN")
-			LootContestedRemote:FireClient(victimPlayer, {
-				Kind = "STOLEN", DropId = lootId, ThiefUserId = player.UserId, ThiefName = player.DisplayName,
-				LootType = lootType, Amount = amount, Seconds = LootDuel.THIEF_FLAG_SECONDS,
-			})
-		end
-
-		dm.SendToast(player, string.format("⚠️ You stole %s's loot! You are a [Loot Thief] — they can challenge you to a duel for it.", killerName), "WARN")
+		return false
 	end
+	-- A re-steal replaces any older contest for this drop; the newest thief carries the bounty.
+	local previous = Contests[dropId]
+	if previous and previous.Status == "CONTESTED" then
+		previous.Status = "EXPIRED"
+		local previousThief = Players:GetPlayerByUserId(previous.ThiefUserId)
+		if previousThief then refreshThiefFlag(previousThief) end
+	end
+	local contest = LootDuel.NewContest(dropId, killerUserId, player.UserId, os.clock())
+	Contests[dropId] = contest
+	refreshThiefFlag(player)
+
+	local victimPlayer = Players:GetPlayerByUserId(killerUserId)
+	-- The bounty is public: every other Master on the floor can hunt the thief down.
+	local thiefState = Tower.GetState(player)
+	for _, other in Players:GetPlayers() do
+		if other ~= player and other ~= victimPlayer and Tower.Same(Tower.GetState(other), thiefState) then
+			dm.SendToast(other, string.format("🎯 BOUNTY: %s stole %s's %s! Get close and press F to duel for it.", player.DisplayName, killerName, label), "INFO")
+		end
+	end
+	if victimPlayer then
+		dm.SendToast(victimPlayer, string.format("🚨 %s STOLE YOUR %s! Get close and press F to duel for it!", player.DisplayName, string.upper(label)), "WARN")
+		LootContestedRemote:FireClient(victimPlayer, {
+			Kind = "STOLEN", DropId = dropId, ThiefUserId = player.UserId, ThiefName = player.DisplayName,
+			Label = label, Seconds = LootDuel.THIEF_FLAG_SECONDS,
+		})
+	end
+	dm.SendToast(player, string.format("⚠️ You stole %s's %s! You are a [Loot Thief] with a bounty on you: any Master who reaches you can duel you for it.", killerName, label), "WARN")
+	return true
 end
 
-function spawnPhysicalLoot(lootType: "GOLD" | "GEMS", amount: number, worldPos: Vector3, killerPlayer: Player?, customLabel: string?): any
-	local lootId = NextLootId
-	NextLootId += 1
-
-	local part: BasePart? = nil
-	local color = Color3.fromRGB(255, 205, 45)
-	local icon = "Gold"
-
-	if lootType == "GOLD" then
-		part = ArtPackVisuals.Mesh("prop_bounty_bag")
-		if part then
-			part.Size = Vector3.new(2.4, 2.8, 1.8)
-		end
-		color = Color3.fromRGB(255, 205, 45)
-		icon = "Gold"
-	elseif lootType == "GEMS" then
-		part = ArtPackVisuals.Mesh("prop_rift_tether_crystal")
-		if part then
-			part.Size = Vector3.new(2.4, 3.4, 2.4)
-		end
-		color = Color3.fromRGB(0, 230, 255)
-		icon = "Gems"
-	end
-
-	if not part then
-		part = Instance.new("Part")
-		part.Size = Vector3.new(2.2, 2.2, 2.2)
-		part.Color = color
-	end
-
-	part.Name = string.format("Loot_%s_%d", lootType, lootId)
-	part.CanCollide = false
-	part.Anchored = true
-	part.Position = Vector3.new(worldPos.X, math.max(2.5, worldPos.Y + 1.2), worldPos.Z)
-
-	local highlight = Instance.new("Highlight")
-	highlight.FillColor = color
-	highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-	highlight.FillTransparency = 0.55
-	highlight.OutlineTransparency = 0.1
-	highlight.Parent = part
-
-	local bb = Instance.new("BillboardGui")
-	bb.Name = "LootBillboard"
-	bb.Size = UDim2.new(0, 180, 0, 48)
-	bb.StudsOffset = Vector3.new(0, 3.4, 0)
-	bb.MaxDistance = 140
-	bb.AlwaysOnTop = false
-	bb.Parent = part
-
-	-- Gilded Grimoire loot plate: bronze for gold, teal for gems, with a drawn currency icon.
-	local frame = Instance.new("Frame")
-	frame.Size = UDim2.fromScale(1, 1)
-	frame.BackgroundTransparency = 0.12
-	frame.Parent = bb
-	GildedGrimoire.Frame(frame, { Class = "Compact", Tone = if lootType == "GEMS" then "Teal" else "Bronze" })
-
-	local lootIcon = GrimoireIcons.Create(icon, 34, frame, 3)
-	lootIcon.AnchorPoint = Vector2.new(0, 0.5)
-	lootIcon.Position = UDim2.new(0, 6, 0.5, 0)
-
-	local titleLbl = Instance.new("TextLabel")
-	titleLbl.Size = UDim2.new(1, -52, 0.54, 0)
-	titleLbl.Position = UDim2.new(0, 46, 0, 3)
-	titleLbl.BackgroundTransparency = 1
-	titleLbl.Text = string.format("%d %s", amount, if lootType == "GEMS" then "Gems" elseif lootType == "GOLD" then "Gold" else lootType)
-	titleLbl.TextColor3 = color
-	titleLbl.TextScaled = true
-	titleLbl.TextXAlignment = Enum.TextXAlignment.Left
-	titleLbl.ZIndex = 3
-	titleLbl.Parent = frame
-	GildedGrimoire.StyleText(titleLbl, "Number")
-
-	local ownerLbl = Instance.new("TextLabel")
-	ownerLbl.Size = UDim2.new(1, -52, 0.38, 0)
-	ownerLbl.Position = UDim2.new(0, 46, 0.56, 0)
-	ownerLbl.BackgroundTransparency = 1
-	if killerPlayer then
-		ownerLbl.Text = string.format("Killer: %s", killerPlayer.DisplayName)
-		ownerLbl.TextColor3 = Color3.fromRGB(255, 226, 150)
-	else
-		ownerLbl.Text = customLabel or "Open loot · free for all"
-		ownerLbl.TextColor3 = Color3.fromRGB(140, 245, 190)
-	end
-	ownerLbl.TextScaled = true
-	ownerLbl.TextXAlignment = Enum.TextXAlignment.Left
-	ownerLbl.ZIndex = 3
-	ownerLbl.Parent = frame
-	GildedGrimoire.StyleText(ownerLbl, "Body")
-
-	local prompt = Instance.new("ProximityPrompt")
-	prompt.ActionText = "Hold / Carry"
-	prompt.ObjectText = string.format("%d %s", amount, lootType)
-	prompt.HoldDuration = 0
-	prompt.MaxActivationDistance = 9.5
-	prompt.RequiresLineOfSight = false
-	prompt.Parent = part
-
-	part.Parent = PhysicalLootFolder
-
-	local killerUserId = killerPlayer and killerPlayer.UserId or 0
-	local killerName = killerPlayer and killerPlayer.DisplayName or "Open"
-
-	local context=assert(Tower.ContextAt(worldPos),"Loot spawn outside room bounds")
-	local lootData = {
-		FloorId=context.FloorId,RoomGeneration=context.RoomGeneration,
-		LootId = lootId,
-		LootType = lootType,
-		Amount = amount,
-		Part = part,
-		Prompt = prompt,
-		Billboard = bb,
-		KillerUserId = killerUserId,
-		KillerName = killerName,
-		SpawnTime = os.clock(),
-		DespawnTime = os.clock() + FIELD_LOOT_DESPAWN_SECONDS,
-	}
-	ActiveLootDrops[lootId] = lootData
-
-	local function onCollect(player: Player)
-		collectPhysicalLoot(player, lootId)
-	end
-
-	prompt.Triggered:Connect(onCollect)
-
-	part:SetAttribute("NeedsTouch", true) -- StaticGeometry.Apply leaves it touchable
-	part.CanTouch = true
-	part.Touched:Connect(function(hit)
-		local char = hit.Parent
-		if char then
-			local p = Players:GetPlayerFromCharacter(char)
-			if p then
-				onCollect(p)
-			end
-		end
-	end)
-
-	task.delay(FIELD_LOOT_DESPAWN_SECONDS, function()
-		if ActiveLootDrops[lootId] == lootData then
-			ActiveLootDrops[lootId] = nil
-			if part and part.Parent and not part:FindFirstChildOfClass("WeldConstraint") then
-				part:Destroy()
-			end
-		end
-	end)
-
-	return lootData
+-- Relics live in RelicService; it reports every pickup here so stealing one opens a bounty.
+-- Contests are keyed by relic id.
+function CombatSimulation.ReportRelicPickup(player: Player, relicId: number, killerUserId: number?, label: string): boolean
+	local killer = killerUserId and Players:GetPlayerByUserId(killerUserId)
+	return registerPickup(player, relicId, killerUserId or 0, if killer then killer.DisplayName else "another Master", label)
 end
-
 
 -- 5. MOB DEATH & RELIC DROPS
 --============================================================================
@@ -1349,10 +1024,11 @@ end
 --============================================================================
 
 --============================================================================
--- 6a. RETALIATION DUELS (GDD 6.1, docs/rework-plan/PHASE_3_TOWER_PVP_RETALIATION.md)
--- The drop's owner challenges the thief; both squads fight on a floating hex arena above the
--- floor while their Masters wait in place. Nobody is wiped, teleported or loses progress: heroes
--- return to their pre-duel HP afterwards, and the loser (owner or thief) is locked out of the drop.
+-- 6a. BOUNTY DUELS (GDD 6.1)
+-- Any Master except the thief (the robbed owner included) walks up to a [Loot Thief] and presses F;
+-- both squads fight on a floating hex arena above the floor while their Masters wait in place.
+-- Nobody is wiped, teleported or loses progress: heroes return to their pre-duel HP afterwards, the
+-- winner takes the drop and the loser (hunter or thief) is locked out of it.
 --============================================================================
 
 local DUEL_MOVE_SPEED = 18.0
@@ -1414,22 +1090,20 @@ local function thawMaster(squad: DuelSquad)
 	end
 end
 
--- A contested drop either lies on the floor or rides over somebody's head.
+-- A contested relic either lies on the floor or rides over somebody's head.
 local function findDrop(dropId: number): (any?, Player?)
-	local ground = ActiveLootDrops[dropId]
-	if ground then
-		return ground, nil
-	end
-	for carrier, held in pairs(CarrierToHeldLoot) do
-		if held.LootId == dropId then
-			return held, carrier
-		end
+	local relics = _G.RelicService
+	local relic = relics and relics.GetRelic and relics.GetRelic(dropId)
+	if relic then
+		return relic, relic.Carrier
 	end
 	return nil, nil
 end
 
-local function startDuel(owner: Player, contest: LootDuel.Contest): (boolean, string?)
-	local ok, reason = LootDuel.CanRetaliate(contest, owner.UserId, os.clock())
+local function startDuel(owner: Player, contest: LootDuel.Contest?): (boolean, string?)
+	-- `owner` is the bounty hunter (side A); the thief defends as side B.
+	local ok, reason = LootDuel.CanChallenge(contest, owner.UserId, os.clock())
+	if not ok or not contest then return false, reason end
 	if not ok then return false, reason end
 	local thief = Players:GetPlayerByUserId(contest.ThiefUserId)
 	if not thief then return false, "The thief has left the server." end
@@ -1541,6 +1215,7 @@ local function startDuel(owner: Player, contest: LootDuel.Contest): (boolean, st
 
 	Duels[id] = duel
 	contest.Status = "DUELING"
+	contest.ChallengerUserId = owner.UserId
 	record.DuelLocked = true
 	closeContestPrompt(contest)
 	sendDuelState(duel, {
@@ -1554,8 +1229,8 @@ local function startDuel(owner: Player, contest: LootDuel.Contest): (boolean, st
 		EndsAt = Workspace:GetServerTimeNow() + LootDuel.DUEL_INTRO_SECONDS + LootDuel.DUEL_MAX_SECONDS,
 	})
 	local dm = getDataManager()
-	dm.SendToast(owner, string.format("⚔️ Retaliation duel against %s! Winner takes the drop.", thief.DisplayName), "WARN")
-	dm.SendToast(thief, string.format("⚔️ %s challenged you to a retaliation duel for the stolen drop!", owner.DisplayName), "WARN")
+	dm.SendToast(owner, string.format("⚔️ Bounty duel against %s! Winner takes the drop.", thief.DisplayName), "WARN")
+	dm.SendToast(thief, string.format("⚔️ %s claimed your bounty and challenged you to a duel for the stolen drop!", owner.DisplayName), "WARN")
 	broadcastMetadata(nil)
 	return true, nil
 end
@@ -1583,7 +1258,7 @@ local function duelDamage(victim: SimHero, amount: number, kind: string, overdri
 		HeroNavigation.Clear(victim)
 		victim.State = "COMA"
 		victim.TargetNetId = nil
-		Tower.BroadcastAt(CombatVFXRemote, victim, "HERO_KO", victim.Position, victim.NetId)
+		Tower.BroadcastAt(CombatVFXRemote, victim, "HERO_COMA", victim.Position, victim.NetId)
 		sendDuelState(duel, { Kind = "SCORE" })
 	end
 end
@@ -1593,6 +1268,13 @@ end
 local function stepDuelHero(simHero: SimHero, dt: number, now: number)
 	local duel = simHero.DuelId and Duels[simHero.DuelId]
 	if not duel or duel.Phase ~= "FIGHT" or simHero.State == "COMA" then return end
+	if simHero.TauntExpires and now >= simHero.TauntExpires then
+		if simHero.TargetNetId == simHero.TauntedByNetId then
+			simHero.TargetNetId = nil
+		end
+		simHero.TauntedByNetId = nil
+		simHero.TauntExpires = nil
+	end
 	local enemies = liveDuelHeroes(duelSquad(duel, if simHero.DuelSide == "A" then "B" else "A"))
 	local target: SimHero? = nil
 	for _, enemy in enemies do
@@ -1651,6 +1333,11 @@ local function duelSkillContext(simHero: SimHero, now: number): HeroSkillEffects
 		Damage = function(target: any, amount: number)
 			duelDamage(target, amount, "HIT_SPARK", false)
 		end,
+		Taunt = function(target: any, attacker: any, duration: number)
+			target.TargetNetId = attacker.NetId
+			target.TauntedByNetId = attacker.NetId
+			target.TauntExpires = now + duration
+		end,
 	}
 end
 
@@ -1661,34 +1348,24 @@ local function applyDuelOutcome(duel: Duel)
 	local contest = duel.Contest
 	local winner = duelSquad(duel, duel.Winner or "B").Player
 	local loser = duelSquad(duel, if duel.Winner == "A" then "B" else "A").Player
-	local record, carrier = findDrop(contest.DropId)
+	local record = findDrop(contest.DropId)
 	LootDuel.Resolve(contest, record, winner.UserId)
 	if record then
 		record.KillerName = winner.DisplayName
 	end
-	local winnerState = Tower.GetState(winner)
-	if record and winner.Parent == Players and Tower.Same(record, winnerState) then
-		if carrier and carrier ~= winner and Tower.Same(Tower.GetState(carrier), winnerState) then
-			CombatSimulation.DropCarriedLoot(carrier)
-		end
-		local ground = ActiveLootDrops[contest.DropId]
-		local root = winner.Character and winner.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
-		if ground and ground.Part and root then
-			ground.PickupBlockedUserId = nil
-			ground.Part.Position = Tower.GroundDrop(ground, root.Position + root.CFrame.LookVector * 4, ground.Part.Size.Y / 2)
-			collectPhysicalLoot(winner, contest.DropId)
-		end
+	if record and winner.Parent == Players and _G.RelicService then
+		_G.RelicService.GiveRelicTo(winner, contest.DropId)
 	end
 
 	local dm = getDataManager()
-	local ownerLost = loser.UserId == contest.OwnerUserId
+	local hunterLost = loser.UserId ~= contest.ThiefUserId
 	if winner.Parent == Players then
 		dm.SendToast(winner, string.format("🏆 You won the duel against %s! The contested drop is yours.", loser.DisplayName), "SUCCESS")
 	end
 	if loser.Parent == Players then
-		dm.SendToast(loser, if ownerLost
+		dm.SendToast(loser, if hunterLost
 			then string.format("💀 You lost the duel. %s keeps the drop and you are locked out of it.", winner.DisplayName)
-			else string.format("💀 You lost the duel. %s takes the drop back and you are locked out of it.", winner.DisplayName), "WARN")
+			else string.format("💀 You lost the duel. %s claims the drop and you are locked out of it.", winner.DisplayName), "WARN")
 	end
 	local thief = Players:GetPlayerByUserId(contest.ThiefUserId)
 	if thief then refreshThiefFlag(thief) end
@@ -1822,24 +1499,30 @@ local function stepContests(now: number)
 	end
 end
 
-local function requestRetaliation(player: Player, contest: LootDuel.Contest?, thiefName: string?)
+-- Fired by the thief's F prompt. The prompt's range is enforced by the client, so the server re-checks it.
+challengeThief = function(hunter: Player, thief: Player)
+	if hunter == thief or hunter.Parent ~= Players or thief.Parent ~= Players then return end
 	local now = os.clock()
-	if now - (LastRetaliationRequest[player] or -math.huge) < LootDuel.RETALIATE_COOLDOWN then return end
-	LastRetaliationRequest[player] = now
-	if not contest then
-		getDataManager().SendToast(player, string.format("%s has not stolen from you.", thiefName or "That player"), "WARN")
+	if now - (LastChallengeRequest[hunter] or -math.huge) < LootDuel.CHALLENGE_COOLDOWN then return end
+	LastChallengeRequest[hunter] = now
+	local hunterPos, thiefPos = getMasterRootPosition(hunter), getMasterRootPosition(thief)
+	if not hunterPos or not thiefPos or (hunterPos - thiefPos).Magnitude > LootDuel.CHALLENGE_RANGE + 4 then
+		getDataManager().SendToast(hunter, string.format("Get closer to %s to claim the bounty.", thief.DisplayName), "WARN")
 		return
 	end
-	local ok, reason = startDuel(player, contest)
+	-- A thief with several open bounties is challenged for their newest steal.
+	local chosen: LootDuel.Contest? = nil
+	for _, contest in pairs(Contests) do
+		if contest.ThiefUserId == thief.UserId and contest.Status == "CONTESTED"
+			and (not chosen or contest.ExpiresAt > chosen.ExpiresAt) then
+			chosen = contest
+		end
+	end
+	local ok, reason = startDuel(hunter, chosen)
 	if not ok then
-		getDataManager().SendToast(player, reason or "The duel cannot start right now.", "WARN")
+		getDataManager().SendToast(hunter, reason or "The duel cannot start right now.", "WARN")
 	end
 end
-
-InitiateRetaliationRemote.OnServerEvent:Connect(function(player: Player, dropId: any)
-	if not Protocol.Integer(dropId, 1, NextLootId) then return end
-	requestRetaliation(player, Contests[dropId])
-end)
 
 FocusTargetRemote.OnServerEvent:Connect(function(player: Player, targetNetId: any, optThiefUserId: any)
  if Tower.IsTransitioning(player) then return end
@@ -1868,18 +1551,14 @@ FocusTargetRemote.OnServerEvent:Connect(function(player: Player, targetNetId: an
 		end
 	end
 
-	-- 3. Clicking a thief (or their hero) challenges them to a duel for their newest steal from you.
-	-- Squads never fight in the open field; PvP only happens inside a retaliation duel.
+	-- 3. Clicking another Master (or their hero) never starts a fight: squads only meet inside a
+	-- bounty duel, which is claimed by walking up to a [Loot Thief] and pressing F.
 	if targetPlayer and targetPlayer ~= player then
 		if DuelByPlayer[player] then return end
-		local chosen: LootDuel.Contest? = nil
-		for _, contest in pairs(Contests) do
-			if contest.OwnerUserId == player.UserId and contest.ThiefUserId == targetPlayer.UserId and contest.Status == "CONTESTED"
-				and (not chosen or contest.ExpiresAt > chosen.ExpiresAt) then
-				chosen = contest
-			end
+		local targetChar = targetPlayer.Character
+		if targetChar and targetChar:GetAttribute("IsLootThief") then
+			dm.SendToast(player, string.format("Walk up to %s and press F to claim the bounty.", targetPlayer.DisplayName), "INFO")
 		end
-		requestRetaliation(player, chosen, targetPlayer.DisplayName)
 		return
 	end
 	if DuelByPlayer[player] then return end
@@ -2002,6 +1681,14 @@ local function heroSkillContext(simHero: SimHero, now: number): HeroSkillEffects
 		end,
 		Absorb = function(mob: any, amount: number): number
 			return if Encounters then Encounters:OnMobHit(mob, amount) else amount
+		end,
+		Taunt = function(mob: any, attacker: any, duration: number)
+			mob.TargetNetId = attacker.NetId
+			mob.TauntedByNetId = attacker.NetId
+			mob.TauntExpires = now + duration
+			if Encounters then
+				Encounters:Taunt(mob, attacker, duration, now)
+			end
 		end,
 	}
 end
@@ -2500,6 +2187,29 @@ local function summonFloorBoss(player: Player, progress: TowerProgress.PlayerFlo
  end
 end
 
+local function resetPlayerTowerEncounter(player: Player, reason: string?)
+	local progress = ActivePlayerProgress[player]
+	local state = Tower.GetState(player)
+	local floorId = (progress and progress.FloorId) or (state and state.FloorId) or 0
+	ActivePlayerProgress[player] = nil
+
+	if floorId > 0 and Encounters then
+		local others = 0
+		for p, _ in pairs(ActiveMasters) do
+			if p ~= player and p.Parent == Players and Tower.GetState(p).FloorId == floorId then
+				others += 1
+			end
+		end
+		if others == 0 then
+			Encounters:ClearFloorBoss(floorId)
+		end
+	end
+
+	if FloorProgressRemote and player.Parent == Players then
+		FloorProgressRemote:FireClient(player, TowerProgress.CreateProgress(0))
+	end
+end
+
 -- Phase H: when a floor's boss falls, two portals rise at the back of the Apex (TowerLayout.PortalSpots),
 -- built with TowerPortalKit in the biome's colours: Ascend (or Return to Hub on floor 50) and Rerun,
 -- which sends the Master back to this floor's Sanctuary with a fresh kill counter. Both need the Master
@@ -2585,6 +2295,8 @@ local function spawnFloorAscensionPortal(floorId: number, _position: Vector3?)
 
 	portal("Rerun", Color3.fromRGB(120, 245, 150), string.format("Rerun Floor %d", floorId), "Floor Portal",
 		function(player, state)
+			-- Rerunning the floor revives KO'd heroes just like transitioning floors.
+			reviveDownedOnTransition(player)
 			-- A fresh kill counter for this floor, no leftover surge pack, then back to the Sanctuary.
 			local progress = TowerProgress.CreateProgress(floorId)
 			ActivePlayerProgress[player] = progress
@@ -2668,7 +2380,7 @@ Tower.RegisterAdapter("Combat",{
     for _,other in pairs(ActiveHeroesByNetId) do if other.TargetNetId==h.NetId then other.TargetNetId=nil;if other.CurrentHP > 0 and other.State ~= "COMA" then other.State="FOLLOW_MASTER" end end end
    end
    if room.FloorId == 0 then
-    ActivePlayerProgress[player] = nil
+    resetPlayerTowerEncounter(player, "EXIT_TO_HUB_OR_PLOT")
     restoreSquadOnPlot(player)
    else
     -- Moving between floors revives downed heroes at a fraction of their HP; it no longer heals anyone
@@ -2677,13 +2389,19 @@ Tower.RegisterAdapter("Combat",{
      reviveDownedOnTransition(player)
     end
     local existing = ActivePlayerProgress[player]
-    if not existing or existing.FloorId ~= room.FloorId then
+    if not existing or existing.FloorId ~= room.FloorId or changedFloor then
      local progress = TowerProgress.CreateProgress(room.FloorId)
      ActivePlayerProgress[player] = progress
      if FloorProgressRemote then
       FloorProgressRemote:FireClient(player, progress)
      end
     else
+     if existing.CurrentKills >= existing.RequiredKills and not existing.BossDefeated then
+      local activeBoss = Encounters and Encounters:GetActiveBoss(room.FloorId)
+      if not activeBoss then
+       summonFloorBoss(player, existing)
+      end
+     end
      if FloorProgressRemote then
       FloorProgressRemote:FireClient(player, existing)
      end
@@ -2691,17 +2409,14 @@ Tower.RegisterAdapter("Combat",{
    end
    syncSquadStatus(player)
   end,
- CaptureCargo=function(player) return CarrierToHeldLoot[player] end,
- DropCargo=function(player) CombatSimulation.DropCarriedLoot(player,true) end,
- StoreCargo=function(player, loc) return CombatSimulation.BankHeldLoot(player, loc) end,
  Pins=function(id,gen)
   if Encounters and Encounters:Pins(id,gen) then return true end
-  for _,items in {ActiveLootDrops,CarrierToHeldLoot} do for _,item in pairs(items) do if item.FloorId==id and item.RoomGeneration==gen and item.Part and item.Part.Parent then return true end end end
   return false
  end,
+ ResetPlayerTowerEncounter=resetPlayerTowerEncounter,
  Bootstrap=sendBootstrap,BootstrapAll=bootstrapAll,
 })
-if RunService:IsStudio() then CombatSimulation.DebugEntities=function() return ActiveHeroesByNetId,ActiveMobsByNetId,CarrierToHeldLoot end end
+if RunService:IsStudio() then CombatSimulation.DebugEntities=function() return ActiveHeroesByNetId,ActiveMobsByNetId end end
 if RunService:IsStudio() then
  -- Phase 0 harness invokes the unchanged native state machine with isolated actors.
  CombatSimulation.DebugStepHero=stepHeroSimulation
@@ -2783,18 +2498,19 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
        FloorProgressRemote:FireClient(killer, progress)
       end
      end
-     if progress and progress.FloorId == mob.FloorId and not progress.BossSpawned and not (mob :: any).NoKillCredit then
+     if progress and progress.FloorId == mob.FloorId and not (mob :: any).NoKillCredit then
       local stamped = (mob :: any).EventMods
       local shouldSpawn = TowerProgress.RecordKill(progress, mob.Role, stamped and stamped.KillMult or nil)
       if not shouldSpawn and TowerProgress.CheckSurge(progress) then
        Encounters:SpawnSurge(mob.FloorId, killer, mob.Position)
        getDataManager().SendToast(killer, "A surge pack is bearing down on your squad!", "WARN")
       end
+      local activeBoss = Encounters and Encounters:GetActiveBoss(mob.FloorId)
+      if (shouldSpawn or (progress.CurrentKills >= progress.RequiredKills and not activeBoss and not progress.BossDefeated)) then
+       summonFloorBoss(killer, progress)
+      end
       if FloorProgressRemote then
        FloorProgressRemote:FireClient(killer, progress)
-      end
-      if shouldSpawn then
-       summonFloorBoss(killer, progress)
       end
      end
      end
@@ -2816,7 +2532,9 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
        local firstBiomeClear = bossTier > 0 and profile ~= nil and bossTier > (profile.HighestClearedBiomeBoss or 0)
        local bossEventMods = (mob :: any).EventMods
        local bossGold = math.round(reward.Gold * marketMult * (if firstClear then 3 else 1) * (bossEventMods and bossEventMods.GoldMult or 1))
-       local bossGems = if firstClear then 10 + 2 * mob.FloorId else 0
+       -- Kill gems: Biome Bosses pay the BOSS rate, other floor bosses the ALPHA rate, plus first-clear bonuses.
+       local bossGems = TowerRewards.GetKillRewards(mob.FloorId, if bossTier > 0 then "BOSS" else "ALPHA").Gems
+       if firstClear then bossGems += 10 + 2 * mob.FloorId end
        if firstBiomeClear then bossGems += 300 * bossTier end
        local stoneRole = if bossTier > 0 then "BOSS" else "ALPHA"
        local bossStones = if firstClear
@@ -2845,7 +2563,14 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
         local relicRole = if bossTier > 0 then "BOSS" else "ALPHA"
         local relicTier = TowerRewards.RollRelic(mob.FloorId, relicRole, if firstClear then 0 else math.random(), math.random(),
          bossEventMods) -- Stamped at spawn (Alpha Hunt raises the Heart share; Calamity Hour raises tiers)
-        if relicTier == "MANA_GEODE" and firstBiomeClear then relicTier = "CURSED_URN" end
+        if relicTier and firstBiomeClear then
+         local biome = RelicConfig.GetBiomeForFloor(mob.FloorId)
+         if biome and relicTier == biome.DropTable[1] then
+          relicTier = biome.DropTable[2]
+         elseif relicTier == "MANA_GEODE" then
+          relicTier = "CURSED_URN"
+         end
+        end
         if relicTier then _G.RelicService.SpawnRelic(relicTier, mob.Position, p.UserId) end
        end
 
@@ -2896,17 +2621,6 @@ end
 -- Legacy tower population disabled for the isolated-room migration.
 
 local function bindCharacterCargoListeners(player: Player, char: Model)
-	local hum = char:WaitForChild("Humanoid", 5) :: Humanoid?
-	if hum then
-		hum.Died:Connect(function()
-			CombatSimulation.DropCarriedLoot(player, true)
-		end)
-	end
-	char.Destroying:Connect(function()
-		if CarrierToHeldLoot[player] then
-			CombatSimulation.DropCarriedLoot(player, true)
-		end
-	end)
 	-- A respawned thief keeps the [Loot Thief] nameplate until the flag runs out.
 	task.spawn(function()
 		if char:WaitForChild("Head", 5) and player.Character == char then
@@ -2925,9 +2639,6 @@ local function handlePlayerAdded(player: Player)
 	end
 	player.CharacterRemoving:Connect(function()
 		SquadMovement.Reset(player)
-		if CarrierToHeldLoot[player] then
-			CombatSimulation.DropCarriedLoot(player, true)
-		end
 	end)
 	task.delay(1.0, function()
 		CombatSimulation.RebuildPlayerSquad(player)
@@ -2955,9 +2666,7 @@ Players.PlayerRemoving:Connect(function(player: Player)
 		end
 	end
 	ThiefFlagUntil[player] = nil
-	LastRetaliationRequest[player] = nil
-	LastPickupDenial[player] = nil
-	CombatSimulation.DropCarriedLoot(player,true)
+	LastChallengeRequest[player] = nil
 	ProgressionActivity[player] = nil
 	LastMetadataRequestByPlayer[player] = nil
 	local masterState = ActiveMasters[player]
@@ -3049,9 +2758,6 @@ local function stepCombatHeartbeat(deltaTime: number)
 				end
 			end
 			if safety.CanBankCargo and not Tower.IsTransitioning(player) and not DuelByPlayer[player] then
-				if CarrierToHeldLoot[player] then
-					CombatSimulation.BankHeldLoot(player, location)
-				end
 				TowerRuns.Bank(player) -- the sanctuary makes unbanked earnings safe from a wipe
 
 				if safety.CanRecoverWipe and masterState.IsSquadWiped then
@@ -3123,6 +2829,7 @@ local function warpSquad(player: Player, targetPos: Vector3, isIsland: boolean)
 	if isIsland then
 		restoreSquadOnPlot(player)
 	end
+	resetPlayerTowerEncounter(player, if isIsland then "WARP_ISLAND" else "WARP_HUB")
 end
 
 local function isPlayerInDuel(player: Player): boolean
@@ -3137,12 +2844,19 @@ local function isBossLocked(player: Player, floorId: number): boolean
 	return m ~= nil and not m.IsSquadWiped
 end
 
-CombatSimulation.SpawnPhysicalLoot = spawnPhysicalLoot
-CombatSimulation.CollectPhysicalLoot = collectPhysicalLoot
 CombatSimulation.Contests = Contests
 CombatSimulation.StartDuel = startDuel
 CombatSimulation.WarpSquad = warpSquad
 CombatSimulation.IsInDuel = isPlayerInDuel
 CombatSimulation.IsBossLocked = isBossLocked
 CombatSimulation.RestoreSquadOnPlot = restoreSquadOnPlot
+-- Timed tower events reset every camp on the floors they touch (TowerEventService). Server only.
+CombatSimulation.ResetTowerCamps = function(floors: { number }): number
+	if not Encounters then return 0 end
+	local now = os.clock()
+	local removed = 0
+	for _, floorId in floors do removed += Encounters:ResetCamps(floorId, now) end
+	return removed
+end
+CombatSimulation.ResetPlayerTowerEncounter = resetPlayerTowerEncounter
 _G.CombatSimulation = CombatSimulation

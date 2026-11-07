@@ -19,6 +19,7 @@ local StatBalance = require(Shared:WaitForChild("Config"):WaitForChild("StatBala
 local TowerHardcore = require(Shared:WaitForChild("Config"):WaitForChild("TowerHardcoreConfig"))
 local TowerProgress = require(Shared:WaitForChild("Util"):WaitForChild("TowerProgress"))
 local FortressTree = require(Shared:WaitForChild("Util"):WaitForChild("FortressTree"))
+local InventoryCapacity = require(Shared:WaitForChild("Util"):WaitForChild("InventoryCapacity"))
 local SummonLuck = require(Shared:WaitForChild("Util"):WaitForChild("SummonLuck"))
 local Onboarding = require(Shared:WaitForChild("Util"):WaitForChild("Onboarding"))
 local OnboardingService = require(script.Parent:WaitForChild("OnboardingService"))
@@ -244,6 +245,7 @@ export type PlayerProfile = {
 	HeroBannerPity: number?,
 	HeroPermanentPity: number?,
 	HeroLimitedPity: number?,
+	HeroLimitedFeaturedGuarantee: boolean?, -- 50/50 lost: the next A Star's Arrival pity is the featured hero
 	RiftLuresOwned: number?,
 	Heroes: { [string]: HeroInstance },
 	DeployedSquadOrder: { string },
@@ -451,8 +453,9 @@ local function createDefaultPlayerProfile(): PlayerProfile
 		ArtifactBannerPity = 0,
 		ArtifactBanner10Pity = 0,
 		HeroBannerPity = 0,
-		HeroPermanentPity = 0, -- Call of the Rift: Exalted Ignis guaranteed at HeroCatalog.PermanentBanner.MaxPity
-		HeroLimitedPity = 0, -- A Star's Arrival: Mythical Astrea guaranteed at HeroCatalog.LimitedBanner.MaxPity
+		HeroPermanentPity = 0, -- Call of the Rift: Exalted+ hero guaranteed at HeroCatalog.PermanentBanner.MaxPity
+		HeroLimitedPity = 0, -- A Star's Arrival: Exalted+ hero guaranteed at HeroCatalog.LimitedBanner.MaxPity
+		HeroLimitedFeaturedGuarantee = false, -- 50/50: set when an Exalted+ pull is not the featured hero
 
 		Heroes = {
 			[hanUUID] = hanHero,
@@ -570,6 +573,8 @@ function DataManager.SyncProfile(player: Player, progressionOnly: boolean?)
 	profile.ArtifactBannerPity = math.clamp(math.floor(profile.ArtifactBannerPity), 0, maxPity - 1)
 	if type(profile.ArtifactBanner10Pity) ~= "number" then profile.ArtifactBanner10Pity = 0 end
 	profile.ArtifactBanner10Pity = math.clamp(math.floor(profile.ArtifactBanner10Pity), 0, 9)
+	-- 50/50 rule (added with Exalted+ hero pity): older profiles have no flag yet.
+	if type(profile.HeroLimitedFeaturedGuarantee) ~= "boolean" then profile.HeroLimitedFeaturedGuarantee = false end
 
 	-- Auto-migrate legacy SQUAD assignments or DeployedSquadOrder into the open squad slots
 	local openSlots = DataManager.MaxSquadSlots(profile)
@@ -690,7 +695,8 @@ function DataManager.UpdateSquadPower(player: Player)
 	;(profile :: any).SquadPower = total
 	;(profile :: any).SquadPowerByHero = perHero
 	local floorStat, powerStat = ensureLeaderstats(player)
-	floorStat.Value = profile.HighestClearedFloor or 0
+	local curFloorAttr = player.Character and player.Character:GetAttribute("TowerFloorId")
+	floorStat.Value = if typeof(curFloorAttr) == "number" and curFloorAttr > 0 then curFloorAttr else (profile.HighestClearedFloor or 0)
 	local now = os.clock()
 	if powerStat.Value ~= total and now - (lastLeaderstatsWrite[player] or -99) >= 2 then
 		lastLeaderstatsWrite[player] = now
@@ -805,8 +811,8 @@ function DataManager.RollSummons(player: Player, bannerId: string, count: number
 	local isLimited = isLimitedBanner(bannerId)
 	local banner = if isLimited then HeroCatalog.LimitedBanner else HeroCatalog.PermanentBanner
 	local bannerKey = isLimited and "HeroLimitedPity" or "HeroPermanentPity"
-	local topTier = banner.MaxStar
-	local featuredId = if isLimited then (banner.FeaturedHeroId or "hero_astrea") else (banner.HeroesByStar[topTier] or "hero_ignis")
+	local pityTier = banner.PityMinTier or 5
+	local featuredId = banner.FeaturedHeroId or banner.HeroesByStar[banner.MaxStar]
 
 	if profile.HeroPermanentPity == nil then profile.HeroPermanentPity = profile.HeroBannerPity or 0 end
 	if profile.HeroLimitedPity == nil then profile.HeroLimitedPity = 0 end
@@ -823,17 +829,24 @@ function DataManager.RollSummons(player: Player, bannerId: string, count: number
 		local hero: HeroInstance
 		local tier: number
 
-		if currentPity >= banner.MaxPity then
-			-- Hard pity: the banner's top hero (Exalted Ignis / Mythical Astrea).
+		if currentPity >= banner.MaxPity and isLimited and profile.HeroLimitedFeaturedGuarantee then
+			-- 50/50 lost last time: this pity pull is the featured hero.
 			uuid, hero = DataManager.CreateHeroFromSeed(featuredId)
-			tier = topTier
+			tier = banner.MaxStar
+		elseif currentPity >= banner.MaxPity then
+			-- Hard pity: an Exalted or better hero, split by the luck-boosted rates of those tiers.
+			uuid, hero, tier = rollBannerHero(isLimited and "A_STARS_ARRIVAL" or "CALL_OF_THE_RIFT", luck, pityTier)
 		else
 			-- The 10th pull of a 10x is forced to Rare or better if the first nine were not.
 			local guarantee = if count == 10 and pull == count and bestTier < banner.TenPullMinTier then banner.TenPullMinTier else nil
 			uuid, hero, tier = rollBannerHero(isLimited and "A_STARS_ARRIVAL" or "CALL_OF_THE_RIFT", luck, guarantee)
 		end
-		if tier >= topTier then
-			profile[bannerKey] = 0
+		if tier >= pityTier then
+			profile[bannerKey] = 0 -- any Exalted+ hero, natural or pity, resets the counter
+			if isLimited then
+				-- 50/50: an Exalted+ hero that is not the featured one guarantees the featured hero at the next pity.
+				profile.HeroLimitedFeaturedGuarantee = hero.TemplateId ~= featuredId
+			end
 		end
 		bestTier = math.max(bestTier, tier)
 
@@ -874,12 +887,10 @@ RequestSummonFunc.OnServerInvoke = function(player: Player, arg1: any, arg2: any
 	end
 
 	local count = (pullCount == 10) and 10 or 1
-	local currentHeroCount = 0
-	for _ in pairs(profile.Heroes) do
-		currentHeroCount += 1
-	end
-	if currentHeroCount + count > StatBalance.MaxHeroInventory then
-		DataManager.SendToast(player, string.format("Hero inventory full! Maximum capacity is %d.", StatBalance.MaxHeroInventory), "WARN")
+	-- Heroes working in a facility are out of the backpack and don't count (InventoryCapacity).
+	local heroCap = InventoryCapacity.HeroCap(profile.FortressTree)
+	if InventoryCapacity.HeroCount(profile) + count > heroCap then
+		DataManager.SendToast(player, string.format("Hero inventory full! Maximum capacity is %d.", heroCap), "WARN")
 		return { Success = false, Message = "Hero inventory full" }
 	end
 
@@ -1100,7 +1111,7 @@ function DataManager.SellArtifacts(player: Player, artifactUUIDs: { string }): (
 		return false, "No artifacts selected for sale", 0, 0
 	end
 
-	if #artifactUUIDs > StatBalance.MaxArtifactInventory then
+	if #artifactUUIDs > InventoryCapacity.ArtifactCap(profile.FortressTree) then
 		return false, "Too many artifacts selected", 0, 0
 	end
 
@@ -1242,12 +1253,9 @@ function DataManager.SummonArtifact(player: Player, pullCount: any): (boolean, s
 	end
 
 	if not profile.Artifacts then profile.Artifacts = {} end
-	local currentArtCount = 0
-	for _ in pairs(profile.Artifacts) do
-		currentArtCount += 1
-	end
-	if currentArtCount + count > StatBalance.MaxArtifactInventory then
-		DataManager.SendToast(player, string.format("Artifact inventory full! Maximum capacity is %d.", StatBalance.MaxArtifactInventory), "WARN")
+	local artifactCap = InventoryCapacity.ArtifactCap(profile.FortressTree)
+	if InventoryCapacity.ArtifactCount(profile) + count > artifactCap then
+		DataManager.SendToast(player, string.format("Artifact inventory full! Maximum capacity is %d.", artifactCap), "WARN")
 		return false, "Artifact inventory full", nil, nil
 	end
 

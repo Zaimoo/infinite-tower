@@ -17,6 +17,7 @@ local HeroCatalog = require(Shared:WaitForChild("Config"):WaitForChild("HeroCata
 local ArtifactCatalog = require(Shared:WaitForChild("Config"):WaitForChild("ArtifactCatalog"))
 local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormulas"))
 local FortressTree = require(Shared:WaitForChild("Util"):WaitForChild("FortressTree"))
+local InventoryCapacity = require(Shared:WaitForChild("Util"):WaitForChild("InventoryCapacity"))
 local SummonLuck = require(Shared:WaitForChild("Util"):WaitForChild("SummonLuck"))
 local GothicBoxStyle = require(Shared:WaitForChild("Util"):WaitForChild("GothicBoxStyle"))
 local GrimoireIcons = require(Shared:WaitForChild("Util"):WaitForChild("GrimoireIcons"))
@@ -617,7 +618,10 @@ function Controller:ShowSummonResults(summonedList: { any }, bannerId: string, o
 		Cost10 = summonCost(bannerId, 10),
 		Currency = "Gems",
 		OnAgain = function(count: number)
-			self:PerformSummon(bannerId, count)
+			return self:PerformSummon(bannerId, count)
+		end,
+		OnContinue = function()
+			self:Open("Summoning")
 		end,
 	})
 end
@@ -688,15 +692,19 @@ function Controller:SetSummonStatus(bannerId: string, text: string, isError: boo
 	bv.Status.TextColor3 = if isError then C.Red else C.TextMuted
 end
 
-function Controller:PerformSummon(bannerId: string, count: number)
-	if self.Busy then return end
+function Controller:PerformSummon(bannerId: string, count: number): boolean?
+	if self.Busy then return false end
 	local profile = self.GetProfile()
 	local cost = summonCost(bannerId, count)
 	local gems = profile and profile.Currencies and profile.Currencies.Gems or 0
 	if gems < cost then
 		self:SetSummonStatus(bannerId, string.format("You need %d Gems for this summon (you have %d).", cost, math.floor(gems)), true)
 		self:DenySummon(bannerId)
-		return
+		if self.Reveal and self.Reveal:IsOpen() then
+			local btn = if count == 10 then self.Reveal.Again10.Root else self.Reveal.Again1.Root
+			UIFeel.Deny(btn)
+		end
+		return false
 	end
 
 	local ownedBefore = ownedTemplates(profile)
@@ -720,22 +728,45 @@ function Controller:PerformSummon(bannerId: string, count: number)
 				_G.PortalEffectController.TriggerSummonBurst(nil, topPulledStars)
 			end
 			self:SetSummonStatus(bannerId, "")
+			self.Root.Visible = false
+			self.Scrim.Visible = false
 			self:ShowSummonResults(self.LastSummoned, bannerId, ownedBefore)
 		elseif ok then
+			if not self.Root.Visible then
+				self:Open("Summoning")
+			end
 			self:SetSummonStatus(bannerId, tostring(result and result.Message or "The summon was refused."), true)
 			self:DenySummon(bannerId)
+			if self.Reveal and self.Reveal:IsOpen() then
+				self.Reveal:Close(true)
+			end
 		else
+			if not self.Root.Visible then
+				self:Open("Summoning")
+			end
 			self:SetSummonStatus(bannerId, "Couldn't reach the server. Try again.", true)
 			self:DenySummon(bannerId)
+			if self.Reveal and self.Reveal:IsOpen() then
+				self.Reveal:Close(true)
+			end
 		end
 		self:Refresh()
 	end)
+	return true
+end
+
+function Controller:IsOpen(): boolean
+	return (self.Root ~= nil and self.Root.Visible) or (self.Reveal ~= nil and self.Reveal:IsOpen())
 end
 
 function Controller:Close()
-	self.Root.Visible = false
-	self.Scrim.Visible = false
-	self.Reveal:Close()
+	if not self:IsOpen() then return end
+	if self.Root then self.Root.Visible = false end
+	if self.Scrim then self.Scrim.Visible = false end
+	if self.Reveal then self.Reveal:Close() end
+	if _G.SetModalFocusMode then
+		_G.SetModalFocusMode(false)
+	end
 	if _G.UpdateBottomTabHighlights then
 		_G.UpdateBottomTabHighlights()
 	end
@@ -743,6 +774,9 @@ end
 
 function Controller:Open(facility: string)
 	if not DETAILS[facility] then return end
+	if _G.SetModalFocusMode then
+		_G.SetModalFocusMode(true)
+	end
 	self.OpenTime = os.clock()
 	self.Current = facility
 	self.Root.Visible = true
@@ -800,11 +834,12 @@ function Controller:Refresh()
 		}
 		for key, bv in self.BannerViews do
 			local banner = BANNER_VIEWS[key].Banner
-			local featuredId, topTier = featuredOf(banner)
-			local seed = HeroCatalog.Seeds[featuredId]
 			local done = pityCount[key] % banner.MaxPity
-			bv.Pity.Text = string.format("Guaranteed %s %s in <b>%d</b> summons", HeroCatalog.RarityName(topTier),
-				seed and seed.DisplayName or "hero", math.max(1, banner.MaxPity - done))
+			local guaranteedFeatured = key == "A_STARS_ARRIVAL" and profile ~= nil and profile.HeroLimitedFeaturedGuarantee == true
+			local featuredSeed = HeroCatalog.Seeds[banner.FeaturedHeroId or ""]
+			bv.Pity.Text = if guaranteedFeatured
+				then string.format("Guaranteed <b>%s</b> in <b>%d</b> summons", featuredSeed and featuredSeed.DisplayName or "featured hero", math.max(1, banner.MaxPity - done))
+				else string.format("Guaranteed %s+ hero in <b>%d</b> summons", HeroCatalog.RarityName(banner.PityMinTier or 5), math.max(1, banner.MaxPity - done))
 			TweenService:Create(bv.PityFill, TweenInfo.new(0.3, Enum.EasingStyle.Quad), { Size = UDim2.fromScale(done / banner.MaxPity, 1) }):Play()
 			for count, b in bv.Buttons do
 				local cost = summonCost(key, count)
@@ -852,9 +887,12 @@ function Controller:Refresh()
 		return
 	end
 
-	local heroes = {}
-	for _, h in profile.Heroes or {} do table.insert(heroes, h) end
 	local currentTag = FacilityConfig.AssignmentTags[self.Current]
+	-- Facility workers are out of the backpack: list only this facility's own workers plus free heroes.
+	local heroes = {}
+	for _, h in profile.Heroes or {} do
+		if not InventoryCapacity.IsInFacility(h) or h.Assignment == currentTag then table.insert(heroes, h) end
+	end
 
 	table.sort(heroes, function(a, b)
 		if currentTag then

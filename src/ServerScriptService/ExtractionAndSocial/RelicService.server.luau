@@ -14,6 +14,7 @@ local TowerFloorConfig = require(Shared.Config:WaitForChild("TowerFloorConfig"))
 local GildedGrimoire = require(Shared:WaitForChild("Util"):WaitForChild("GildedGrimoire"))
 local BillboardThemes = require(Shared.Config:WaitForChild("BillboardThemes"))
 local TowerRuns = require(script.Parent.Parent:WaitForChild("Combat"):WaitForChild("TowerRunService"))
+local LootDuel = require(Shared.Util.LootDuel)
 
 local RemotesFolder = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RelicPactRemotes")
 local RelicStateRemote = RemotesFolder:WaitForChild("RelicStateChanged") :: RemoteEvent
@@ -28,7 +29,7 @@ local function getDataManager(): any
 	return _G.DataManager
 end
 
-export type RelicTierId = "MANA_GEODE" | "CURSED_URN" | "ABYSSAL_CORE" | "CALAMITY_HEART"
+export type RelicTierId = string
 
 export type ActiveRelic = {
 	RelicId: number,
@@ -50,6 +51,11 @@ export type ActiveRelic = {
 	DespawnAt: number,
 	PickupBlockedUserId: number?,
 	PickupBlockedUntil: number?,
+	-- Bounty duels (GDD 6.1): the killer owns the relic; anyone else carrying it is a [Loot Thief].
+	KillerUserId: number,
+	KillerName: string?,
+	LockedOut: { [number]: boolean }?, -- duel losers, for the relic's lifetime
+	DuelLocked: boolean?, -- nobody may pick it up while its duel runs
 }
 
 local BASE_WALKSPEED = 16.0
@@ -123,7 +129,7 @@ function RelicService.SpawnRelic(tierId: RelicTierId, worldPos: Vector3, initial
 	-- Each client builds the relic's model and effects around it (RelicVisualController).
 	local part = Instance.new("Part")
 	part.Name = string.format("Relic_%s_%d", tierId, relicId)
-	part.Size = (tierId == "CALAMITY_HEART") and Vector3.new(4.2, 4.2, 4.2) or Vector3.new(3.2, 3.8, 3.2)
+	part.Size = (tierId == "CALAMITY_HEART" or (spec.BiomeTier and spec.BiomeTier == 4)) and Vector3.new(4.2, 4.2, 4.2) or Vector3.new(3.2, 3.8, 3.2)
 	part.Position = Vector3.new(worldPos.X, math.max(3.5, worldPos.Y + 2.2), worldPos.Z)
 	part.Transparency = 1
 	part.Anchored = true
@@ -214,6 +220,7 @@ function RelicService.SpawnRelic(tierId: RelicTierId, worldPos: Vector3, initial
 		LockKind = initialOwnerUserId and "SPAWN" or nil,
 		Prompt = prompt,
 		DespawnAt = now + spec.DespawnSeconds,
+		KillerUserId = initialOwnerUserId or 0,
 	}
 	prompt.Triggered:Connect(function(player: Player)
 		RelicService.TryPickupRelic(player, relic)
@@ -230,9 +237,13 @@ function RelicService.TryPickupRelic(player: Player, relic: ActiveRelic): boolea
 	if relic.Carrier ~= nil or CarrierToRelic[player] ~= nil then
 		return false
 	end
-	if player.Character and player.Character:GetAttribute("CarryingLoot") == true then return false end
 	if relic.PickupBlockedUserId == player.UserId and now < (relic.PickupBlockedUntil or 0) then return false end
 	if now < (PlayerStunnedUntil[player] or 0) then
+		return false
+	end
+	local allowed, denial = LootDuel.CanPickUp(relic, player.UserId)
+	if not allowed then
+		getDataManager().SendToast(player, denial or "You cannot carry this relic.", "WARN")
 		return false
 	end
 	if relic.LockedUserId and now < relic.LockExpiresAt then
@@ -276,9 +287,33 @@ function RelicService.TryPickupRelic(player: Player, relic: ActiveRelic): boolea
 	local spec = RelicConfig[relic.TierId]
 
 	updateMasterMovementAttributes(player, now)
-	dm.SendToast(player, string.format("Carrying %s (-%d%% Spd)! Bring to a Floor Safe Sanctuary or your Extraction Pad!", spec.DisplayName, math.round(spec.WalkSpeedPenalty * 100)), "INFO")
+	local combat = _G.CombatSimulation
+	local stolen = combat and combat.ReportRelicPickup and combat.ReportRelicPickup(player, relic.RelicId, relic.KillerUserId, spec.DisplayName)
+	if not stolen then
+		dm.SendToast(player, string.format("Carrying %s (-%d%% Spd)! Bring to a Floor Safe Sanctuary or your Extraction Pad!", spec.DisplayName, math.round(spec.WalkSpeedPenalty * 100)), "INFO")
+	end
 	Tower.BroadcastAt(RelicStateRemote,relic,relic.RelicId, relic.TierId, "PICKUP", player.UserId, 0)
 	return true
+end
+
+function RelicService.GetRelic(relicId: number): ActiveRelic?
+	return ActiveRelics[relicId]
+end
+
+-- Bounty duel payout: LootDuel.Resolve has already made the winner the relic's owner. Take it off
+-- whoever carries it, set it at the winner's feet and pick it up for them when their hands are free.
+function RelicService.GiveRelicTo(winner: Player, relicId: number)
+	local relic = ActiveRelics[relicId]
+	if not relic or not Tower.Same(Tower.GetState(winner), relic) then return end
+	if relic.Carrier == winner then return end
+	if relic.Carrier then RelicService.DropCarriedRelic(relic.Carrier) end
+	local _, root = getCharacterParts(winner)
+	if not root then return end
+	relic.PickupBlockedUserId = nil
+	relic.LockedUserId, relic.LockExpiresAt, relic.LockKind = nil, 0, nil
+	if relic.Prompt then relic.Prompt.Enabled = true end
+	relic.Part.Position = Tower.GroundDrop(relic, root.Position + root.CFrame.LookVector * 4, relic.Part.Size.Y / 2)
+	RelicService.TryPickupRelic(winner, relic)
 end
 
 function RelicService.DropCarriedRelic(carrier: Player): boolean
@@ -293,7 +328,7 @@ function RelicService.DropCarriedRelic(carrier: Player): boolean
 	local position = root and (root.Position + root.CFrame.LookVector * 8) or relic.Part.Position
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
-	params.FilterDescendantsInstances = {carrier.Character or relic.Part, PhysicalRelicsFolder, Workspace.PhysicalLoot}
+	params.FilterDescendantsInstances = {carrier.Character or relic.Part, PhysicalRelicsFolder}
 	local ground = Workspace:Raycast(position + Vector3.new(0, 8, 0), Vector3.new(0, -64, 0), params)
 	relic.Part.Anchored = true
 	relic.Part.Position = Tower.GroundDrop(relic,position,relic.Part.Size.Y/2)
@@ -369,11 +404,11 @@ local function awardRelicPayout(player: Player, spec: any, scalar: number, rewar
 	end
 	TowerRuns.AddRelicPayout(player, gold, gems)
 
-	-- Calamity Heart: a small chance of a free Exalted Archon
-	if spec.TierId == "CALAMITY_HEART" and math.random() <= HEART_ARCHON_CHANCE then
+	-- Apex Cores / Calamity Heart: a small chance of a free Exalted Archon
+	if (spec.TierId == "CALAMITY_HEART" or (spec.BiomeTier and spec.BiomeTier == 4 and spec.BiomeIndex and spec.BiomeIndex >= 9)) and math.random() <= HEART_ARCHON_CHANCE then
 		local uuid, archon = dm.CreateHeroFromSeed("hero_archon", 1.10)
 		profile.Heroes[uuid] = archon
-		dm.BroadcastToast(string.format("👑 %s extracted THE CALAMITY HEART and rolled 5★ SOVEREIGN ARCHON!", player.DisplayName), "SUCCESS")
+		dm.BroadcastToast(string.format("👑 %s extracted %s and rolled 5★ SOVEREIGN ARCHON!", player.DisplayName, string.upper(spec.DisplayName)), "SUCCESS")
 	end
 
 	local stoneText = if stones > 0 then string.format(", +%d Promotion Stone%s", stones, if stones == 1 then "" else "s") else ""

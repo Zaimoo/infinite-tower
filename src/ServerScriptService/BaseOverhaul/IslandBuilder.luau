@@ -137,34 +137,99 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 	}
 	local curbColor = Color3.fromRGB(88, 90, 94)
 
-	-- Central Fountain Plaza Cobblestone Ring
-	local plazaBase = Instance.new("Part")
-	plazaBase.Shape = Enum.PartType.Cylinder
-	plazaBase.Name = "FountainPlazaCobble"
-	plazaBase.Size = Vector3.new(0.25, 44, 44)
-	plazaBase.CFrame = CFrame.new(0, 0.125, 0) * CFrame.Angles(0, 0, math.rad(90))
-	plazaBase.Anchored = true
-	plazaBase.CanCollide = false
-	plazaBase.CanTouch = false
-	plazaBase.CanQuery = false
-	plazaBase.CastShadow = false
-	plazaBase.Material = Enum.Material.Cobblestone
-	plazaBase.Color = Color3.fromRGB(82, 86, 90)
-	plazaBase.Parent = pathsFolder
+	-- Circular Cobblestone Ring Road encircling the Fountain (connects all radiating roads cleanly)
+	local ringRadius = 13.6
+	local ringWidth = 4.4
+	local ringSegments = 24
+	local curbWidth = 0.72
 
-	local plazaRim = Instance.new("Part")
-	plazaRim.Shape = Enum.PartType.Cylinder
-	plazaRim.Name = "FountainPlazaCurb"
-	plazaRim.Size = Vector3.new(0.20, 47, 47)
-	plazaRim.CFrame = CFrame.new(0, 0.10, 0) * CFrame.Angles(0, 0, math.rad(90))
-	plazaRim.Anchored = true
-	plazaRim.CanCollide = false
-	plazaRim.CanTouch = false
-	plazaRim.CanQuery = false
-	plazaRim.CastShadow = false
-	plazaRim.Material = Enum.Material.Pavement
-	plazaRim.Color = curbColor
-	plazaRim.Parent = pathsFolder
+	local radialBranchAngles = {
+		math.atan2(0, -1), -- Bridge (0, -56)
+		math.atan2(36, -25.5), -- Summoning Portal
+		math.atan2(38, -1.8), -- Blacksmith Forge
+		math.atan2(34, 24.3), -- Market
+		math.atan2(14, 56), -- Outskirts Gate
+		math.atan2(-44, -28), -- Synthesis Chamber
+		math.atan2(-25, 19.7), -- Training Grounds
+	}
+
+	local function isNearBranchAngle(theta: number): boolean
+		for _, bAngle in ipairs(radialBranchAngles) do
+			local diff = math.atan2(math.sin(theta - bAngle), math.cos(theta - bAngle))
+			if math.abs(diff) < 0.20 then
+				return true
+			end
+		end
+		return false
+	end
+
+	for i = 1, ringSegments do
+		local a0 = ((i - 1) / ringSegments) * math.pi * 2
+		local a1 = (i / ringSegments) * math.pi * 2
+		local aMid = (a0 + a1) * 0.5
+		local chord = 2 * ringRadius * math.sin((a1 - a0) * 0.5) + 0.35
+		local cx = math.sin(aMid) * ringRadius
+		local cz = math.cos(aMid) * ringRadius
+		local tangentDir = Vector3.new(math.cos(aMid), 0, -math.sin(aMid))
+		local segCF = CFrame.lookAt(Vector3.new(cx, 0.12, cz), Vector3.new(cx, 0.12, cz) + tangentDir)
+		local col = pathPalette[((i - 1) % #pathPalette) + 1]
+
+		makePart({
+			Name = string.format("RingRoad_Slab_%d", i),
+			Size = Vector3.new(ringWidth, 0.24, chord),
+			CFrame = segCF,
+			Material = Enum.Material.Cobblestone,
+			Color = col,
+			Decorative = true,
+			Parent = pathsFolder,
+		})
+
+		-- Radial stone divider header band
+		local divX = math.sin(a1) * ringRadius
+		local divZ = math.cos(a1) * ringRadius
+		local divTangent = Vector3.new(math.cos(a1), 0, -math.sin(a1))
+		makePart({
+			Name = string.format("RingRoad_Divider_%d", i),
+			Size = Vector3.new(ringWidth - 0.2, 0.26, 0.45),
+			CFrame = CFrame.lookAt(Vector3.new(divX, 0.13, divZ), Vector3.new(divX, 0.13, divZ) + divTangent),
+			Material = Enum.Material.Pavement,
+			Color = Color3.fromRGB(96, 98, 102),
+			Decorative = true,
+			Parent = pathsFolder,
+		})
+
+		-- Inner curb bordering the Fountain basin
+		local innerR = ringRadius - ringWidth * 0.5 - curbWidth * 0.5
+		local innerChord = 2 * innerR * math.sin((a1 - a0) * 0.5) + 0.18
+		local ix = math.sin(aMid) * innerR
+		local iz = math.cos(aMid) * innerR
+		makePart({
+			Name = string.format("RingRoad_CurbInner_%d", i),
+			Size = Vector3.new(curbWidth, 0.30, innerChord),
+			CFrame = CFrame.lookAt(Vector3.new(ix, 0.15, iz), Vector3.new(ix, 0.15, iz) + tangentDir),
+			Material = Enum.Material.Pavement,
+			Color = curbBlockPalette[((i - 1) % #curbBlockPalette) + 1],
+			Decorative = true,
+			Parent = pathsFolder,
+		})
+
+		-- Outer curb (skipped where radiating roads branch out so paths merge seamlessly)
+		if not isNearBranchAngle(aMid) then
+			local outerR = ringRadius + ringWidth * 0.5 + curbWidth * 0.5
+			local outerChord = 2 * outerR * math.sin((a1 - a0) * 0.5) + 0.18
+			local ox = math.sin(aMid) * outerR
+			local oz = math.cos(aMid) * outerR
+			makePart({
+				Name = string.format("RingRoad_CurbOuter_%d", i),
+				Size = Vector3.new(curbWidth, 0.30, outerChord),
+				CFrame = CFrame.lookAt(Vector3.new(ox, 0.15, oz), Vector3.new(ox, 0.15, oz) + tangentDir),
+				Material = Enum.Material.Pavement,
+				Color = curbBlockPalette[((i + 1) % #curbBlockPalette) + 1],
+				Decorative = true,
+				Parent = pathsFolder,
+			})
+		end
+	end
 
 	local function buildCobblePath(name: string, p0: Vector3, p1: Vector3, width: number, segments: number)
 		local dir = p1 - p0
@@ -181,10 +246,10 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 			local pos = p0:Lerp(p1, t)
 			local col = pathPalette[((s - 1) % #pathPalette) + 1]
 
-			-- Center dark irregular cobblestone bed
+			-- Center dark irregular cobblestone bed (~2/3 thinner than old wide roads)
 			makePart({
 				Name = string.format("%s_Slab_%d", name, s),
-				Size = Vector3.new(width, 0.24, segLen - 0.35),
+				Size = Vector3.new(width, 0.24, segLen - 0.18),
 				CFrame = CFrame.new(pos.X, 0.12, pos.Z) * lookCF,
 				Material = Enum.Material.Cobblestone,
 				Color = col,
@@ -197,7 +262,7 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 				local bandPos = p0:Lerp(p1, s / segments)
 				makePart({
 					Name = string.format("%s_Divider_%d", name, s),
-					Size = Vector3.new(width - 0.2, 0.26, 0.75),
+					Size = Vector3.new(width - 0.2, 0.26, 0.45),
 					CFrame = CFrame.new(bandPos.X, 0.13, bandPos.Z) * lookCF,
 					Material = Enum.Material.Pavement,
 					Color = Color3.fromRGB(96, 98, 102),
@@ -206,35 +271,21 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 				})
 			end
 
-			-- Double-course square stone curb blocks flanking left & right edges
-			local subBlocks = math.max(3, math.floor(segLen / 2.6))
+			-- Single-course sleek stone curb blocks flanking left & right edges
+			local subBlocks = math.max(2, math.floor(segLen / 3.0))
 			local blockLen = segLen / subBlocks
 			for b = 1, subBlocks do
 				local bt = ((s - 1) + (b - 0.5) / subBlocks) / segments
 				local bPos = p0:Lerp(p1, bt)
 				for _, side in ipairs({ -1, 1 }) do
-					-- Inner raised curb course
-					local innerOffset = lookCF.RightVector * (side * (width * 0.5 + 0.85))
+					local innerOffset = lookCF.RightVector * (side * (width * 0.5 + curbWidth * 0.5))
 					local innerCol = curbBlockPalette[((s + b) % #curbBlockPalette) + 1]
 					makePart({
-						Name = string.format("%s_CurbInner_%d_%d_%s", name, s, b, side < 0 and "L" or "R"),
-						Size = Vector3.new(1.55, 0.32, blockLen * 0.90),
-						CFrame = CFrame.new(bPos.X + innerOffset.X, 0.16, bPos.Z + innerOffset.Z) * lookCF,
+						Name = string.format("%s_Curb_%d_%d_%s", name, s, b, side < 0 and "L" or "R"),
+						Size = Vector3.new(curbWidth, 0.30, blockLen * 0.92),
+						CFrame = CFrame.new(bPos.X + innerOffset.X, 0.15, bPos.Z + innerOffset.Z) * lookCF,
 						Material = Enum.Material.Pavement,
 						Color = innerCol,
-						Decorative = true,
-						Parent = pathsFolder,
-					})
-
-					-- Outer square paver border course
-					local outerOffset = lookCF.RightVector * (side * (width * 0.5 + 2.55))
-					local outerCol = curbBlockPalette[((s + b + 2) % #curbBlockPalette) + 1]
-					makePart({
-						Name = string.format("%s_CurbOuter_%d_%d_%s", name, s, b, side < 0 and "L" or "R"),
-						Size = Vector3.new(1.65, 0.26, blockLen * 0.88),
-						CFrame = CFrame.new(bPos.X + outerOffset.X, 0.13, bPos.Z + outerOffset.Z) * lookCF,
-						Material = Enum.Material.Pavement,
-						Color = outerCol,
 						Decorative = true,
 						Parent = pathsFolder,
 					})
@@ -243,15 +294,14 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 		end
 	end
 
-	-- Radiating courtyard pathways connecting Bridge -> Fountain -> Stations & Outskirts Gate
-	buildCobblePath("Path_BridgeToFountain", Vector3.new(0, 0, -56), Vector3.new(0, 0, -18), 13, 5)
-	buildCobblePath("Path_FountainToPortal", Vector3.new(14, 0, -10), Vector3.new(42, 0, -30), 10, 5)
-	buildCobblePath("Path_FountainToForge", Vector3.new(18, 0, -2), Vector3.new(44, 0, -2), 10, 4)
-	buildCobblePath("Path_FountainToMarket", Vector3.new(14, 0, 10), Vector3.new(36, 0, 26), 10, 4)
-	buildCobblePath("Path_FountainToGate", Vector3.new(6, 0, 18), Vector3.new(14, 0, 56), 11, 5)
-	buildCobblePath("Path_FountainToSynthesis", Vector3.new(-14, 0, -8), Vector3.new(-34, 0, -20), 10, 4)
-	buildCobblePath("Path_FountainToTraining", Vector3.new(-14, 0, 10), Vector3.new(-28, 0, 24), 10, 4)
-	buildCobblePath("Path_FountainToSouthWall", Vector3.new(-18, 0, 0), Vector3.new(-54, 0, 0), 11, 5)
+	-- Radiating courtyard pathways connecting the Fountain Ring Road -> Stations & Outskirts Gate
+	buildCobblePath("Path_BridgeToFountain", Vector3.new(0, 0, -56), Vector3.new(0, 0, -14.2), 4.6, 5)
+	buildCobblePath("Path_FountainToPortal", Vector3.new(11.6, 0, -8.2), Vector3.new(36, 0, -25.5), 4.2, 4)
+	buildCobblePath("Path_FountainToForge", Vector3.new(14.2, 0, -0.7), Vector3.new(38, 0, -1.8), 4.2, 4)
+	buildCobblePath("Path_FountainToMarket", Vector3.new(11.6, 0, 8.3), Vector3.new(34, 0, 24.3), 4.2, 4)
+	buildCobblePath("Path_FountainToGate", Vector3.new(3.4, 0, 13.8), Vector3.new(14, 0, 56), 4.6, 5)
+	buildCobblePath("Path_FountainToSynthesis", Vector3.new(-12.0, 0, -7.6), Vector3.new(-22.9, 0, -14.6), 4.2, 3)
+	buildCobblePath("Path_FountainToTraining", Vector3.new(-11.2, 0, 8.8), Vector3.new(-25, 0, 19.7), 4.2, 3)
 
 	-- 2. Decorative Tapered Rocky Underside (Non-collidable, low part count for mobile)
 	local undersideFolder = Instance.new("Folder")

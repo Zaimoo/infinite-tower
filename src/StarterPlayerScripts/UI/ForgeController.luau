@@ -18,6 +18,7 @@ local HeroCatalog = require(Shared:WaitForChild("Config"):WaitForChild("HeroCata
 local StatFormulas = require(Shared.Util.StatFormulas)
 local WeaponPromotion = require(Shared.Util.WeaponPromotion)
 local StatBalance = require(Shared.Config.StatBalance)
+local InventoryCapacity = require(Shared.Util.InventoryCapacity)
 local GothicBoxStyle = require(Shared.Util.GothicBoxStyle)
 local GildedGrimoire = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GildedGrimoire"))
 local GrimoireIcons = require(Shared.Util.GrimoireIcons)
@@ -1158,7 +1159,7 @@ function Forge:RenderAssignView(force: boolean?)
 	end
 
 	local artCount = totalCount
-	local maxArt = StatBalance.MaxArtifactInventory or 50
+	local maxArt = InventoryCapacity.ArtifactCap(profile and profile.FortressTree)
 	if self.CapacityLabel then
 		self.CapacityLabel.Text = string.format("Artifacts: %d / %d", artCount, maxArt)
 		if artCount >= maxArt then
@@ -1680,8 +1681,8 @@ function Forge:RenderSummonView()
 	self:RenderGoldChip()
 end
 
-function Forge:PerformSummon(count: number)
-	if self.Busy then return end
+function Forge:PerformSummon(count: number): boolean?
+	if self.Busy then return false end
 	local profile = self:ResolveProfile()
 	local cfg = ArtifactCatalog.Banner
 	local cost = (count == 10) and cfg.Cost10X or cfg.Cost1X
@@ -1689,6 +1690,10 @@ function Forge:PerformSummon(count: number)
 	local deny = function()
 		local row = self.Summon1XBtn and self.Summon1XBtn.Parent
 		UIFeel.Deny(if row and row:IsA("GuiObject") then row else nil)
+		if self.Reveal and self.Reveal:IsOpen() then
+			local btn = if count == 10 then self.Reveal.Again10.Root else self.Reveal.Again1.Root
+			UIFeel.Deny(btn)
+		end
 	end
 	if not profile or self:SummonBlockReason(count) then
 		deny()
@@ -1699,7 +1704,7 @@ function Forge:PerformSummon(count: number)
 		if self.PityLabel then
 			UIFeel.Pop(self.PityLabel, 0.12)
 		end
-		return
+		return false
 	end
 
 	local ownedBefore: { [string]: boolean } = {}
@@ -1716,12 +1721,21 @@ function Forge:PerformSummon(count: number)
 			if pityRemaining and self.PityLabel then
 				self.PityLabel.Text = string.format("Exalted+ guaranteed in <b>%d</b>", pityRemaining)
 			end
+			self.Root.Visible = false
+			self.Scrim.Visible = false
 			self:ShowSummonResults(summonedList, ownedBefore)
 		else
+			if not self.Root.Visible then
+				self:Open("SUMMON")
+			end
 			deny()
+			if self.Reveal and self.Reveal:IsOpen() then
+				self.Reveal:Close(true)
+			end
 		end
 		self:Refresh()
 	end)
+	return true
 end
 
 --============================================================================
@@ -1746,7 +1760,10 @@ function Forge:ShowSummonResults(summonedList: { any }, ownedBefore: { [string]:
 		Cost10 = ArtifactCatalog.Banner.Cost10X,
 		Currency = ArtifactCatalog.Banner.Currency,
 		OnAgain = function(count: number)
-			self:PerformSummon(count)
+			return self:PerformSummon(count)
+		end,
+		OnContinue = function()
+			self:Open("SUMMON")
 		end,
 	})
 end
@@ -2232,7 +2249,7 @@ function Forge:AutoFillFodder()
 
 	table.clear(self.FodderUUIDs)
 
-	-- Donors share the target's rarity and type. Spend low stars first, and Standard before Enhanced.
+	-- Donors share the target's rarity and stars (any weapon type). Standard before Enhanced.
 	local candidates = {}
 	for uuid, art in pairs(artifacts) do
 		if uuid ~= self.SelectedTargetUUID and not art.EquippedHeroUUID and not art.Locked and target and WeaponPromotion.IsDonorFor(target, art) then
@@ -2484,7 +2501,7 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 			end)
 		end
 	elseif mode == "FODDER" then
-		self.DrawerTitle.Text = "SELECT DONORS: SAME RARITY AND WEAPON TYPE"
+		self.DrawerTitle.Text = "SELECT DONORS: SAME RARITY AND STARS"
 		local target = self.SelectedTargetUUID and artifacts[self.SelectedTargetUUID]
 		local req = target and ArtifactCatalog.GetFodderRequirement(target.Star or 1) or 0
 
@@ -2661,6 +2678,9 @@ end
 function Forge:Close()
 	self:ClosePicker()
 	self:CloseArtifactsModal()
+	if self.Reveal then
+		self.Reveal:Close()
+	end
 	self.Scrim.Visible = false
 	self.Root.Visible = false
 	if self.OnClose then

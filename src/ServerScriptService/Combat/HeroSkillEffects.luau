@@ -22,6 +22,7 @@ export type Context = {
 	Damage: ((target: any, amount: number) -> ())?,
 	-- Tower mobs: damage left after shields, and support cast interrupts (TowerEncounterRuntime:OnMobHit).
 	Absorb: ((mob: any, amount: number) -> number)?,
+	Taunt: ((mob: any, attacker: any, duration: number) -> ())?,
 }
 
 -- What the caller knows about the attack. Impact (from HeroImpactQueue) carries FloorId and
@@ -115,9 +116,15 @@ local function resolveSkill(ctx: Context, hit: Hit, scale: number)
 		attacker.BarrierHP = barrier
 		attacker.BarrierExpires = ctx.Now + (skill.Duration or 6.0)
 		local tauntRadius = skill.Radius or 25.0
+		local tauntDuration = skill.TauntDuration or 4.0
 		for _, mob in ctx.Mobs do
 			if eligible(ctx, hit, mob) and horizontal(attacker.Position, mob.Position) <= tauntRadius then
 				mob.TargetNetId = attacker.NetId
+				mob.TauntedByNetId = attacker.NetId
+				mob.TauntExpires = ctx.Now + tauntDuration
+				if ctx.Taunt then
+					ctx.Taunt(mob, attacker, tauntDuration)
+				end
 			end
 		end
 		ctx.Broadcast(attacker, "BARRIER_APPLIED", attacker.Position, barrier, false, false)

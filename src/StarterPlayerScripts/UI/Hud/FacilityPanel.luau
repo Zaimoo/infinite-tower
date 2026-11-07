@@ -25,6 +25,7 @@ local FortressTree = require(Shared:WaitForChild("Util"):WaitForChild("FortressT
 local OutskirtsRules = require(Shared:WaitForChild("Util"):WaitForChild("OutskirtsRules"))
 local FacilityWorkerRules = require(Shared:WaitForChild("Util"):WaitForChild("FacilityWorkerRules"))
 local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormulas"))
+local InventoryCapacity = require(Shared:WaitForChild("Util"):WaitForChild("InventoryCapacity"))
 local SummonLuck = require(Shared:WaitForChild("Util"):WaitForChild("SummonLuck"))
 local Grimoire = require(Shared:WaitForChild("Util"):WaitForChild("GildedGrimoire"))
 
@@ -1184,7 +1185,8 @@ local function FacilityPanel(props: { Facility: string, Profile: any, Width: num
 	-- Hero list -------------------------------------------------------------
 	local heroes = {}
 	for _, hero in pairs(profile.Heroes or {}) do
-		if hero.Assignment ~= info.Tag then
+		-- Workers of any facility are out of the backpack; they come back only when unassigned.
+		if not InventoryCapacity.IsInFacility(hero) then
 			if filter == "All" or (filter == "Bench" and hero.Assignment == "BENCHED") or (filter == "Best" and hasSynergy(props.Facility, hero)) then
 				table.insert(heroes, hero)
 			end

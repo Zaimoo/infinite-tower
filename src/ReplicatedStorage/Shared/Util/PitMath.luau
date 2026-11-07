@@ -22,18 +22,17 @@ end
 
 function PitMath.GetOverflowCapacity(hero: any): number
 	if hero.Stars >= Config.MaxStars then return 0 end
-	local cap = Stats.GetMaxLevel(hero.Stars)
 	local total = 0
 	for offset = 0, Config.Synthesis.OverflowNextLevels - 1 do
-		total += Stats.GetXPRequiredForNextLevel(cap + offset)
+		total += Stats.GetXPRequiredForNextLevel(offset + 1, hero.Stars + 1)
 	end
 	return total
 end
 
 function PitMath.GetSynthesisXP(donor: any, recipient: any, research: any): any
 	local balance = Config.Synthesis
-	local base = balance.BaseXP * balance.StarMultiplier ^ (PitMath.EffectiveStars(donor) - 1) + balance.LevelXP * donor.Level
-	local gap = math.max(0, recipient.Level - donor.Level - balance.EfficiencyGrace)
+	local base = balance.BaseXP * balance.StarMultiplier ^ (PitMath.EffectiveStars(donor) - 1) + balance.LevelXP * Stats.GetEffectiveLevel(donor.Stars, donor.Level)
+	local gap = math.max(0, Stats.GetEffectiveLevel(recipient.Stars, recipient.Level) - Stats.GetEffectiveLevel(donor.Stars, donor.Level) - balance.EfficiencyGrace)
 	local efficiency = math.max(balance.MinimumEfficiency, 1 - gap * balance.EfficiencyLossPerLevel)
 	local researchBonus = research and research.EssenceAttunement and balance.ResearchBonus or 0
 	local affinity = donor.Archetype == recipient.Archetype and balance.AffinityBonus or 0
@@ -48,8 +47,8 @@ function PitMath.AdvanceXP(hero: any, amount: number): (any, any)
 	local xp = math.max(0, result.XP or 0) + reserve + math.max(0, math.floor(amount))
 	local cap = Stats.GetMaxLevel(result.Stars)
 	result.OverflowXP = 0
-	while result.Level < cap and xp >= Stats.GetXPRequiredForNextLevel(result.Level) do
-		xp -= Stats.GetXPRequiredForNextLevel(result.Level)
+	while result.Level < cap and xp >= Stats.GetXPRequiredForNextLevel(result.Level, result.Stars) do
+		xp -= Stats.GetXPRequiredForNextLevel(result.Level, result.Stars)
 		result.Level += 1
 	end
 	local rejected = 0
@@ -69,7 +68,7 @@ function PitMath.GetConversionYield(hero: any): number
 	for id, rank in pairs(hero.InheritedImprints or {}) do
 		if Config.Imprints.Definitions[id] and type(rank) == "number" then ranks += math.clamp(math.floor(rank), 0, Config.Imprints.MaxRank) end
 	end
-	return (cfg.BaseEssence[PitMath.EffectiveStars(hero)] or cfg.BaseEssence[5] or 324) + math.floor((hero.Level - 1) / cfg.LevelsPerBonus) * cfg.EssencePerInvestmentLevel + ranks * cfg.EssencePerImprintRank
+	return (cfg.BaseEssence[PitMath.EffectiveStars(hero)] or cfg.BaseEssence[5] or 324) + math.floor((Stats.GetEffectiveLevel(hero.Stars, hero.Level) - 1) / cfg.LevelsPerBonus) * cfg.EssencePerInvestmentLevel + ranks * cfg.EssencePerImprintRank
 end
 
 function PitMath.GetImprintCapacity(hero: any): number
@@ -103,6 +102,8 @@ end
 function PitMath.Promote(hero: any): (any, any)
 	local result = PitMath.Copy(hero)
 	result.Stars += 1
+	-- Promotion resets to Lv 1 of the new star; reserved EXP is released below. Stats never drop (effective level rises by 1).
+	result.Level, result.XP = 1, 0
 	local seed = Catalog.Seeds[result.TemplateId]
 	if seed then
 		local rarity = Stats.GetHeroRarity(result)
@@ -121,7 +122,7 @@ function PitMath.Snapshot(hero: any, profile: any?): any
 	return { Level = hero.Level, XP = hero.XP, Stars = hero.Stars, HP = combat.Health, ATK = combat.AttackDamage, DPS = combat.DPS,
 		AttackDamage = combat.AttackDamage, Health = combat.Health, AttackSpeed = combat.AttackSpeed, MovementSpeed = combat.MovementSpeed,
 		Labor = Stats.GetEffectiveLabor(hero), MaxLevel = Stats.GetMaxLevel(hero.Stars),
-		XPRequired = Stats.GetXPRequiredForNextLevel(hero.Level), OverflowXP = hero.OverflowXP or 0,
+		XPRequired = Stats.GetXPRequiredForNextLevel(hero.Level, hero.Stars), OverflowXP = hero.OverflowXP or 0,
 		ImprintCapacity = PitMath.GetImprintCapacity(hero), InheritedImprints = PitMath.Copy(hero.InheritedImprints or {}) }
 end
 

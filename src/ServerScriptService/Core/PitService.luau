@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config.PitBalanceConfig)
 local Math = require(Shared.Util.PitMath)
+local Stats = require(Shared.Util.StatFormulas)
 local HeroCatalog = require(Shared.Config.HeroCatalog)
 local FacilityConfig = require(Shared.Config.FacilityConfig)
 
@@ -121,7 +122,7 @@ function PitService:State(profile: any): any
 		copy.PitStatus = self:DonorStatus(profile, hero)
 		copy.RecipientStatus = self:RecipientStatus(profile, hero)
 		copy.Stats = Math.Snapshot(hero, profile)
-		copy.SynthesisXPValue = Config.Synthesis.BaseXP * Config.Synthesis.StarMultiplier ^ (hero.Stars - 1) + Config.Synthesis.LevelXP * hero.Level
+		copy.SynthesisXPValue = Config.Synthesis.BaseXP * Config.Synthesis.StarMultiplier ^ (hero.Stars - 1) + Config.Synthesis.LevelXP * Stats.GetEffectiveLevel(hero.Stars, hero.Level)
 		heroes[uuid] = copy
 	end
 	local resources = Math.Copy(profile.Currencies)
@@ -139,7 +140,7 @@ function PitService:Delta(profile: any, changed: any, removed: any): any
 		copy.PitStatus = self:DonorStatus(profile, hero)
 		copy.RecipientStatus = self:RecipientStatus(profile, hero)
 		copy.Stats = Math.Snapshot(hero, profile)
-		copy.SynthesisXPValue = Config.Synthesis.BaseXP * Config.Synthesis.StarMultiplier ^ (hero.Stars - 1) + Config.Synthesis.LevelXP * hero.Level
+		copy.SynthesisXPValue = Config.Synthesis.BaseXP * Config.Synthesis.StarMultiplier ^ (hero.Stars - 1) + Config.Synthesis.LevelXP * Stats.GetEffectiveLevel(hero.Stars, hero.Level)
 		heroes[uuid] = copy
 	end
 	local resources = Math.Copy(profile.Currencies)
@@ -238,7 +239,7 @@ function PitService:Build(profile: any, request: any): (any, any)
 			if xp.Efficiency < 1 then table.insert(preview.Warnings, "The recipient outlevels these donors. The displayed EXP includes reduced efficiency.") end
 			if action == "IMPRINT" then
 				xp.Final = math.floor(xp.Final * Config.Synthesis.FocusedXPScale)
-				if recipient.Stars == Config.MaxStars and recipient.Level >= Config.MaxStars * 10 then
+				if recipient.Stars == Config.MaxStars and recipient.Level >= Stats.GetMaxLevel(recipient.Stars) then
 					xp.MemoryOnly = true
 					xp.Final = 0
 					table.insert(preview.Warnings, "At maximum level, Focused Imprint grants the selected memory only. This donor grants 0 EXP.")
@@ -288,12 +289,12 @@ function PitService:Build(profile: any, request: any): (any, any)
 			if recipient.Stars >= Config.MaxStars or not rule then reject("This hero has reached the maximum " .. Config.MaxStars .. "★ rank.")
 			else
 				preview.Costs = { Gold = rule.Gold, PromotionStone = rule.PromotionStone }
-				preview.Requirements = { { Label = "Reach the current level cap", Current = recipient.Level, Required = recipient.Stars * 10, Met = recipient.Level >= recipient.Stars * 10 } }
+				preview.Requirements = { { Label = "Reach the current level cap", Current = recipient.Level, Required = Stats.GetMaxLevel(recipient.Stars), Met = recipient.Level >= Stats.GetMaxLevel(recipient.Stars) } }
 				if rule.Research then
 					table.insert(preview.Requirements, { Label = rule.Research == "MasterStonecraft" and "Master Stonecraft" or "Advanced Stonecraft",
 						Current = profile.UnlockedResearch[rule.Research] and 1 or 0, Required = 1, Met = profile.UnlockedResearch[rule.Research] == true })
 				end
-				if recipient.Level < recipient.Stars * 10 then reject("Reach Level " .. recipient.Stars * 10 .. " to unlock promotion.") end
+				if recipient.Level < Stats.GetMaxLevel(recipient.Stars) then reject("Reach Level " .. Stats.GetMaxLevel(recipient.Stars) .. " to unlock promotion.") end
 				if rule.Research and not profile.UnlockedResearch[rule.Research] then reject("Unlock " .. (rule.Research == "MasterStonecraft" and "Master Stonecraft" or "Advanced Stonecraft") .. " in the Dimensional Lab.") end
 				local after, overflow = Math.Promote(recipient)
 				after.ImprintCapacity = Math.GetImprintCapacity(after)

@@ -79,6 +79,7 @@ local BRANCH_COLORS: { [string]: Color3 } = {
 	Martial = Color3.fromRGB(226, 62, 62),
 	Divine = Color3.fromRGB(168, 96, 240),
 	Command = Color3.fromRGB(52, 150, 240),
+	Storage = Color3.fromRGB(196, 140, 84),
 }
 
 local WHITE = Color3.new(1, 1, 1)
@@ -104,6 +105,7 @@ local ICONS: { [string]: string } = {
 	Martial = "Power",
 	Divine = "Blessing",
 	Command = "Banner",
+	Storage = "Backpack",
 	Perk = "Spark",
 }
 
@@ -131,6 +133,8 @@ local LAYOUT: { [string]: { number } } = {
 	tg_drill_sergeant = { -3, 0 }, tg_veteran_drills = { -5, 1 },
 	-- Command (squad slots) climbs north-east, between Divine and Commerce.
 	sq_1 = { 1, -1 }, sq_2 = { 2, -2 }, sq_3 = { 3, -3 }, sq_4 = { 4, -4 },
+	-- Storage (backpack capacity) runs south-west, between Outskirts and Martial.
+	st_1 = { -1, 1 }, st_2 = { -2, 2 }, st_3 = { -3, 3 }, st_4 = { -4, 4 }, st_5 = { -5, 5 }, st_6 = { -6, 6 },
 }
 
 local function hexToPixel(q: number, r: number): Vector2
@@ -756,6 +760,8 @@ function Controller:TooltipFor(nodeId: string): (string, string, string, string,
 	local kind = if node.Kind == "ROOT" then "FOUNDATION"
 		elseif node.Kind == "PERK" then string.upper(branch) .. " · PERK"
 		elseif node.Facility == "Squad" then string.format("COMMAND · SQUAD SLOT %d", (node.Level or 0) + TreeConfig.BaseSquadSlots)
+		elseif node.Facility == TreeConfig.StorageFacility then
+			string.format("STORAGE · %s +%d", if (node.Level or 0) % 2 == 1 then "HEROES" else "ARTIFACTS", TreeConfig.StorageStep)
 		else string.format("%s · LEVEL %d", string.upper(branch), node.Level or 0)
 	local footer, color
 	if entry.State == "OWNED" then
@@ -1032,6 +1038,9 @@ function Controller:IsOpen(): boolean
 end
 
 function Controller:Open()
+	if _G.SetModalFocusMode then
+		_G.SetModalFocusMode(true)
+	end
 	self.Root.Visible = true
 	self.Scrim.Visible = true
 	self.Status.Text = ""
@@ -1060,6 +1069,9 @@ end
 function Controller:Close()
 	self.Root.Visible = false
 	self.Scrim.Visible = false
+	if _G.SetModalFocusMode then
+		_G.SetModalFocusMode(false)
+	end
 	self:HideTooltip()
 	for _, entry in self.Nodes do
 		self:SetPulse(entry, false)

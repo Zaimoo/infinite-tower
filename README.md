@@ -18,11 +18,11 @@ Tower status: all 50 floors across 10 biomes are playable, with a Biome Boss eve
   - 6 archetypally restricted weapon classes (Bows, Swords, Daggers, Axes, Tomes, Staves) with permanent 1★–7★ Base Stat seeds.
   - Deterministic 16-tier Rarity upgrade path (`Common` $\to$ `Origin`) at the Waiting Room Blacksmith Forge using Gold and Gems, multiplying base stats up to $18.00\times$.
   - 3D visual socketing and procedural combat animations with dynamic weapon geometry.
-- **Physical Contested Loot & Retaliation PvP:**
-  - Monsters and crystal nodes drop 3D physical cargo in `Workspace.PhysicalLoot` tagged with `KillerUserId`.
-  - Picking up another player's loot flags the player as a `[Loot Thief]` and grants the victim a 3-minute retaliation grudge.
-  - Aggrieved Masters can click `[⚔️ RETALIATE]` to command their deployed squad to attack the thief's heroes at $25\%$ PvP damage scaling.
-  - On squad defeat, all carried loot spills onto the ground, and field looting is locked until the Master returns to their Waiting Room plot to heal or swap heroes.
+- **Physical Contested Loot & Bounty PvP:**
+  - Kills pay Gold and Gems directly; killer-tagged Relics drop physically and must be carried to a sanctuary to bank.
+  - Picking up another player's loot flags the player as a `[Loot Thief]` with a 3-minute bounty on them.
+  - Any other Master can walk up to the thief and press `F` to start a squad duel; the winner takes the drop.
+  - On squad defeat, a carried relic is fumbled onto the ground, and field looting is locked until the Master returns to their Waiting Room plot to heal or swap heroes.
   - Safe looting deposit occurs upon reaching the perimeter highway or private plot extraction pads.
 
 ---
@@ -64,7 +64,7 @@ Tower status: all 50 floors across 10 biomes are playable, with a Biome Boss eve
 | **Overdrive Whistle** | `[Q]` | $20\text{s}$ CD. Consumes $5$ Stamina/hero for $+40\%$ Attack Speed for $5\text{s}$. |
 | **Emergency Recall** | `[E]` | $6\text{s}$ CD. Instantly warps squad to Master + $2\text{s}$ pacify (dodges $85\text{-stud}$ Devouring Nova). Yields priority to nearby ProximityPrompts. |
 | **Drop Carried Item** | `[R]` / Drop button | Place carried cargo or a relic on the ground for pickup; restores normal movement. |
-| **Retaliate Attack** | `[⚔️ RETALIATE]` | Single-click HUD response when your drop is stolen to unleash squad PvP. |
+| **Claim Bounty** | `F` near a `[Loot Thief]` | Starts a squad duel with the thief for the stolen drop. |
 | **Blacksmith Forge** | `[E]` / Prompt | Approach the Blacksmith Forge on your plot to view, equip, and ascend weapon rarities (Common $\to$ Origin). |
 | **The Pit (Synthesis)** | `[E]` / `[F]` / Prompt | Approach the Pit cauldron to open the dedicated Synthesis UI modal (recipient slot, 5 donor slots, level preview) or star promotion. |
 | **Facility HUDs** | `[F]` / Prompt | Approach Summoning Altar, Infirmary, or Squad Management to open focused facility HUDs. |

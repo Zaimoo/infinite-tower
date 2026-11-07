@@ -10,7 +10,7 @@ local Onboarding = require(ReplicatedStorage.Shared.Util.Onboarding)
 
 local ProfileMigrations = {}
 
-ProfileMigrations.CurrentSchema = 4
+ProfileMigrations.CurrentSchema = 5
 
 local function blankFacility(level: number): any
 	return {
@@ -65,9 +65,24 @@ function ProfileMigrations.ToV4(profile: any)
 	profile.SchemaVersion = 4
 end
 
+-- v5: levels are per star (Lv 1-10 each), promotion resets to Lv 1. Convert the old absolute level to the level
+-- within the current star; a level below this star's floor becomes Lv 1 (stats only rise), above 10 becomes Lv 10.
+function ProfileMigrations.ToV5(profile: any)
+	if (profile.SchemaVersion or 1) >= 5 then return end
+	for _, hero in pairs(profile.Heroes or {}) do
+		local stars = if type(hero.Stars) == "number" then math.max(1, math.floor(hero.Stars)) else 1
+		local old = if type(hero.Level) == "number" then math.floor(hero.Level) else 1
+		local level = math.clamp(old - (stars - 1) * 10, 1, 10)
+		if level ~= old - (stars - 1) * 10 then hero.XP = 0 end
+		hero.Level = level
+	end
+	profile.SchemaVersion = 5
+end
+
 function ProfileMigrations.Run(profile: any)
 	ProfileMigrations.ToV3(profile)
 	ProfileMigrations.ToV4(profile)
+	ProfileMigrations.ToV5(profile)
 end
 
 return ProfileMigrations

@@ -29,7 +29,7 @@ HeroSockets.PREFABS = table.freeze({
 	DAGGERS = "weapon_daggers",
 	AXE = "weapon_axe",
 	STAFF = "weapon_staff",
-	TOME = "weapon_tome",
+	TOME = "art_novice_tome",
 	weapon_iron_broadsword = "weapon_iron_broadsword",
 	weapon_runic_longsword = "weapon_runic_longsword",
 	-- Vanguard Swords & Shields (Batch 2)
@@ -189,6 +189,29 @@ function HeroSockets.Equip(rig: Model, weapon: Model, weaponType: WeaponType): M
 			d.Massless = true
 			-- Weapons are dozens of small parts per hero; their shadows cost more than they show.
 			d.CastShadow = false
+		end
+	end
+
+	-- Strip any cross-assembly welds between separate sub-assemblies (e.g. main weapon and LeftDagger/OffhandShield)
+	-- so each assembly can be positioned and welded to its own rig socket independently without conflicting rigid constraints.
+	for _, socket in sockets do
+		if socket.Assembly then
+			local sub = weapon:FindFirstChild(socket.Assembly)
+			if sub and sub:IsA("Model") then
+				for _, d in weapon:GetDescendants() do
+					if d:IsA("JointInstance") or d:IsA("WeldConstraint") then
+						local p0 = d.Part0
+						local p1 = d.Part1
+						if p0 and p1 then
+							local inSub0 = p0:IsDescendantOf(sub)
+							local inSub1 = p1:IsDescendantOf(sub)
+							if (inSub0 and not inSub1) or (inSub1 and not inSub0) then
+								d:Destroy()
+							end
+						end
+					end
+				end
+			end
 		end
 	end
 

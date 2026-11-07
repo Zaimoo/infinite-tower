@@ -247,10 +247,19 @@ FacilityConfig.FacilityLayout = {
 	},
 	SynthesisChamber = {
 		Offset = Vector3.new(-44, 0, -28),
-		RotationY = math.rad(42),
+		RotationY = math.atan2(44, 28),
 		Radius = 28,
+		Dimensions = Vector3.new(40.0, 41.0, 45.0),
+		DoorOpenAngleDeg = 95,
+		ProximityOpenRadius = 1.5,
+		ProximityCloseRadius = 3.0,
+		InteriorHoldRadius = 16.5,
+		PromptOffset = Vector3.new(0, 6.2, 0),
+		PromptAttachmentName = "PromptAnchor",
+		ActivationDistance = 12,
 		-- One prompt for the whole Pit; Synthesis and Promotion are tabs inside its screen.
 		PromptText = "Synthesis & Promotion",
+		ActionText = "Open The Pit",
 		Keybind = if Enum then Enum.KeyCode.F else ("F" :: any),
 	},
 	TrainingArea = {
