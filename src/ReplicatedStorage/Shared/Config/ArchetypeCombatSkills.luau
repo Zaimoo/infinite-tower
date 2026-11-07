@@ -58,6 +58,7 @@ export type SkillAttackDef = {
 	BarrierPercent: number?, -- Fractional MaxHP (e.g. 0.40 for 40%)
 	Radius: number?, -- Radius in studs for AoE / Taunt
 	Duration: number?, -- Duration in seconds for buffs / ground effects
+	TauntDuration: number?, -- Duration in seconds for taunt
 	Description: string,
 	VFXKey: string,
 	CastSeconds: number?, -- minimum animation lock; the hero's next attack waits for it
@@ -118,6 +119,7 @@ ArchetypeCombatSkills.Profiles = {
 			BarrierPercent = 0.40, -- 40% Max HP personal damage barrier
 			Radius = 25.0, -- Taunt radius
 			Duration = 6.0, -- 6s barrier duration, 4s taunt
+			TauntDuration = 4.0,
 			Description = "Unleashes a resounding battle roar, taunting enemies within 25 studs for 4s, and gains a personal damage barrier equal to 40% Max HP for 6s.",
 			VFXKey = "VANGUARD_SKILL",
 			CastSeconds = 1.1,
