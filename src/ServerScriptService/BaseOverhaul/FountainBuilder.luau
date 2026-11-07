@@ -88,9 +88,12 @@ FountainBuilder.Config = {
 
 	-- Balanced Water & Ambient Lighting (Phase 3)
 	WaterColor = Color3.fromRGB(14, 165, 233), -- #0EA5E9 Deep Cyan/Blue
+	WaterSurfaceBaseColor = Color3.fromRGB(8, 108, 185), -- Deep Cerulean Pool Depth
 	WaterFoamColor = Color3.fromRGB(186, 230, 253), -- Soft Sky Foam
-	WaterRippleTexture = "rbxassetid://6078620892", -- Tileable water caustic/ripple texture
-	WaterfallBeamTexture = "rbxassetid://243660364", -- Cascading water/mist sprite
+	WaterRippleTexture = "rbxassetid://118260672943381", -- Custom seamless cellular water caustics + sparkles
+	WaterfallBeamTexture = "rbxassetid://74951117913804", -- Custom vertical silky water strands
+	SplashFoamRingTexture = "rbxassetid://105409048761236", -- Custom frothy splash boil + concentric ripple rings
+	WaterSparkleTexture = "rbxassetid://129486097319512", -- Custom 4-point glowing water droplet/sparkle mote
 	WaterfallTextureSpeed = 2.5,
 	WaterfallLightEmission = 0.4, -- Magical glow without blowing out bloom
 
@@ -195,6 +198,7 @@ end
 -- Adds dual UV-scrolling Texture instances onto a non-Neon water surface part
 local function attachScrollingWaterTextures(waterPart: BasePart, cfg: { [string]: any })
 	waterPart:SetAttribute("FountainWaterSurface", true)
+	waterPart.Color = cfg.WaterSurfaceBaseColor or cfg.WaterColor
 	-- Note: Roblox Cylinders have their circular top face on +X (Right) because they are rolled +90 deg on Z.
 	local topFace = if waterPart:IsA("Part") and waterPart.Shape == Enum.PartType.Cylinder
 		then Enum.NormalId.Right
@@ -204,20 +208,20 @@ local function attachScrollingWaterTextures(waterPart: BasePart, cfg: { [string]
 	texA.Name = "WaterRippleTextureA"
 	texA.Face = topFace
 	texA.Texture = cfg.WaterRippleTexture
-	texA.Color3 = Color3.fromRGB(56, 189, 248)
-	texA.Transparency = 0.82
-	texA.StudsPerTileU = 5.5
-	texA.StudsPerTileV = 5.5
+	texA.Color3 = Color3.fromRGB(220, 248, 255)
+	texA.Transparency = 0.45
+	texA.StudsPerTileU = 6.5
+	texA.StudsPerTileV = 6.5
 	texA.Parent = waterPart
 
 	local texB = Instance.new("Texture")
 	texB.Name = "WaterRippleTextureB"
 	texB.Face = topFace
 	texB.Texture = cfg.WaterRippleTexture
-	texB.Color3 = cfg.WaterFoamColor
-	texB.Transparency = 0.86
-	texB.StudsPerTileU = 3.8
-	texB.StudsPerTileV = 3.8
+	texB.Color3 = Color3.fromRGB(165, 243, 252)
+	texB.Transparency = 0.58
+	texB.StudsPerTileU = 4.2
+	texB.StudsPerTileV = 4.2
 	texB.Parent = waterPart
 end
 
@@ -480,6 +484,21 @@ end
 --============================================================================
 -- 2. WATERFALL BEAM & IMPACT MIST FACTORY
 --============================================================================
+local function resolveWaterSurfaceY(index: number, impactY: number): number
+	if index == 1 then
+		return 15.36
+	elseif index <= 5 then
+		return 11.79
+	elseif index <= 13 then
+		return 6.36
+	elseif index <= 17 then
+		return 3.05
+	elseif index <= 29 then
+		return 3.40
+	end
+	return impactY + 0.04
+end
+
 local function createSpoutBeamAndMist(
 	socketHolder: BasePart,
 	index: number,
@@ -494,92 +513,149 @@ local function createSpoutBeamAndMist(
 )
 	local horiz = Vector3.new(impactPos.X - spoutPos.X, 0, impactPos.Z - spoutPos.Z)
 	local radialDir = if horiz.Magnitude > 0.01 then horiz.Unit else Vector3.new(0, 0, -1)
+	local surfaceY = resolveWaterSurfaceY(index, impactPos.Y)
+	local exactImpactPos = Vector3.new(impactPos.X, surfaceY, impactPos.Z)
+
+	-- True parabolic waterfall Bezier tangents:
+	-- P1 = P0 + aSpout.Axis * CurveSize0 (arcs outward from spout)
+	-- P2 = P3 + aImpact.Axis * CurveSize1 (arcs upward above impact so water curves steeply down)
+	local absC0 = math.max(0.55, math.abs(curve0) * 1.35)
+	local absC1 = math.max(0.45, math.abs(curve1) * 1.65)
 
 	local aSpout = Instance.new("Attachment")
 	aSpout.Name = string.format("Waterfall_Spout_%d", index)
 	aSpout.Position = spoutPos
-	aSpout.Axis = (radialDir * 0.65 - Vector3.yAxis * 0.75).Unit
+	aSpout.Axis = (radialDir * 0.95 - Vector3.yAxis * 0.25).Unit
 	aSpout.Parent = socketHolder
 
 	local aImpact = Instance.new("Attachment")
 	aImpact.Name = string.format("Waterfall_Impact_%d", index)
-	aImpact.Position = impactPos
-	aImpact.Axis = Vector3.new(0, 1, 0)
+	aImpact.Position = exactImpactPos
+	aImpact.Axis = (-radialDir * 0.15 + Vector3.yAxis * 0.98).Unit
 	aImpact.Parent = socketHolder
 
-	-- Primary translucent cyan-white water ribbon
+	-- Primary silky vertical-strand water ribbon (TextureSpeed = 2.0)
 	local bodyBeam = Instance.new("Beam")
 	bodyBeam.Name = string.format("WaterfallBody_%d", index)
 	bodyBeam.Attachment0 = aSpout
 	bodyBeam.Attachment1 = aImpact
+	bodyBeam.Texture = cfg.WaterfallBeamTexture
+	bodyBeam.TextureMode = Enum.TextureMode.Wrap
+	bodyBeam.TextureSpeed = 2.0
+	bodyBeam.TextureLength = 2.8
 	bodyBeam.Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0.0, Color3.fromRGB(224, 242, 254)),
-		ColorSequenceKeypoint.new(0.45, cfg.WaterFoamColor),
-		ColorSequenceKeypoint.new(1.0, cfg.WaterColor),
+		ColorSequenceKeypoint.new(0.0, Color3.fromRGB(240, 253, 255)),
+		ColorSequenceKeypoint.new(0.55, Color3.fromRGB(165, 243, 252)),
+		ColorSequenceKeypoint.new(1.0, Color3.fromRGB(56, 189, 248)),
 	})
 	bodyBeam.LightEmission = cfg.WaterfallLightEmission
-	bodyBeam.LightInfluence = 0.35
+	bodyBeam.LightInfluence = 0.2
 	bodyBeam.Transparency = NumberSequence.new({
-		NumberSequenceKeypoint.new(0.0, 0.12),
-		NumberSequenceKeypoint.new(0.7, 0.08),
-		NumberSequenceKeypoint.new(0.92, 0.35),
-		NumberSequenceKeypoint.new(1.0, 0.85),
+		NumberSequenceKeypoint.new(0.0, 0.08),
+		NumberSequenceKeypoint.new(0.75, 0.05),
+		NumberSequenceKeypoint.new(0.95, 0.15),
+		NumberSequenceKeypoint.new(1.0, 0.65),
 	})
 	bodyBeam.Width0 = width0
 	bodyBeam.Width1 = width1
 	bodyBeam.FaceCamera = true
-	bodyBeam.Segments = 14
-	bodyBeam.CurveSize0 = curve0
-	bodyBeam.CurveSize1 = curve1
+	bodyBeam.Segments = 16
+	bodyBeam.CurveSize0 = absC0
+	bodyBeam.CurveSize1 = absC1
 	bodyBeam.Parent = socketHolder
 
-	-- Animated UV-scrolling white foam stream overlay (TextureSpeed = 2.5, LightEmission = 0.4)
+	-- Secondary faster parallax white-foam vertical-strand overlay (TextureSpeed = 2.8, LightEmission = 0.4)
 	local beam = Instance.new("Beam")
 	beam.Name = string.format("WaterfallSheet_%d", index)
 	beam.Attachment0 = aSpout
 	beam.Attachment1 = aImpact
 	beam.Texture = cfg.WaterfallBeamTexture
 	beam.TextureMode = Enum.TextureMode.Wrap
-	beam.TextureSpeed = cfg.WaterfallTextureSpeed
-	beam.TextureLength = 1.6
-	beam.Color = ColorSequence.new(Color3.fromRGB(240, 249, 255), cfg.WaterFoamColor)
+	beam.TextureSpeed = 2.8
+	beam.TextureLength = 1.9
+	beam.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0.0, Color3.fromRGB(255, 255, 255)),
+		ColorSequenceKeypoint.new(0.7, Color3.fromRGB(224, 242, 254)),
+		ColorSequenceKeypoint.new(1.0, Color3.fromRGB(125, 211, 252)),
+	})
 	beam.LightEmission = cfg.WaterfallLightEmission
-	beam.LightInfluence = 0.25
+	beam.LightInfluence = 0.15
 	beam.Transparency = NumberSequence.new({
-		NumberSequenceKeypoint.new(0.0, 0.05),
-		NumberSequenceKeypoint.new(0.65, 0.05),
-		NumberSequenceKeypoint.new(0.9, 0.25),
-		NumberSequenceKeypoint.new(1.0, 0.90),
+		NumberSequenceKeypoint.new(0.0, 0.12),
+		NumberSequenceKeypoint.new(0.7, 0.08),
+		NumberSequenceKeypoint.new(0.92, 0.2),
+		NumberSequenceKeypoint.new(1.0, 0.75),
 	})
 	beam.Width0 = width0 * 0.92
 	beam.Width1 = width1 * 1.05
 	beam.FaceCamera = true
-	beam.Segments = 14
-	beam.CurveSize0 = curve0
-	beam.CurveSize1 = curve1
+	beam.Segments = 16
+	beam.CurveSize0 = absC0
+	beam.CurveSize1 = absC1
 	beam.Parent = socketHolder
+
+	-- Flat horizontal XZ-plane splash boil & concentric foam ring right on the water surface
+	local boilRadius = if index == 1
+		then 1.15
+		elseif index <= 5 then 1.25
+		elseif index <= 13 then 1.45
+		else 1.65
+	local boilCenter = Vector3.new(exactImpactPos.X, surfaceY + 0.05, exactImpactPos.Z)
+
+	local sb0 = Instance.new("Attachment")
+	sb0.Name = string.format("SplashBoilA0_%d", index)
+	sb0.Position = boilCenter - radialDir * boilRadius
+	sb0.Axis = Vector3.new(0, 1, 0)
+	sb0.Parent = socketHolder
+
+	local sb1 = Instance.new("Attachment")
+	sb1.Name = string.format("SplashBoilA1_%d", index)
+	sb1.Position = boilCenter + radialDir * boilRadius
+	sb1.Axis = Vector3.new(0, 1, 0)
+	sb1.Parent = socketHolder
+
+	local boilBeam = Instance.new("Beam")
+	boilBeam.Name = string.format("SplashBoilBeam1_%d", index)
+	boilBeam.Attachment0 = sb0
+	boilBeam.Attachment1 = sb1
+	boilBeam.Texture = cfg.SplashFoamRingTexture or cfg.WaterfallBeamTexture
+	boilBeam.TextureMode = Enum.TextureMode.Stretch
+	boilBeam.TextureLength = 1
+	boilBeam.TextureSpeed = 0
+	boilBeam.Color = ColorSequence.new(Color3.fromRGB(240, 253, 255), Color3.fromRGB(125, 211, 252))
+	boilBeam.LightEmission = cfg.WaterfallLightEmission
+	boilBeam.LightInfluence = 0.1
+	boilBeam.Transparency = NumberSequence.new(0.05)
+	boilBeam.Width0 = boilRadius * 2.0
+	boilBeam.Width1 = boilRadius * 2.0
+	boilBeam.FaceCamera = false
+	boilBeam.Segments = 1
+	boilBeam.Parent = socketHolder
 
 	if emitMist then
 		local mist = Instance.new("ParticleEmitter")
 		mist.Name = string.format("SpoutImpactMist_%d", index)
-		mist.Texture = cfg.WaterfallBeamTexture
-		mist.Color = ColorSequence.new(Color3.fromRGB(224, 242, 254), cfg.WaterColor)
+		mist.Texture = cfg.SplashFoamRingTexture or cfg.WaterfallBeamTexture
+		mist.Orientation = Enum.ParticleOrientation.VelocityPerpendicular
+		mist.Color = ColorSequence.new(Color3.fromRGB(240, 253, 255), Color3.fromRGB(56, 189, 248))
 		mist.LightEmission = 0.35
 		mist.Transparency = NumberSequence.new({
-			NumberSequenceKeypoint.new(0.0, 0.72),
-			NumberSequenceKeypoint.new(0.45, 0.58),
+			NumberSequenceKeypoint.new(0.0, 0.15),
+			NumberSequenceKeypoint.new(0.5, 0.35),
 			NumberSequenceKeypoint.new(1.0, 1.0),
 		})
 		mist.Size = NumberSequence.new({
-			NumberSequenceKeypoint.new(0.0, 0.85),
-			NumberSequenceKeypoint.new(0.6, 1.85),
-			NumberSequenceKeypoint.new(1.0, 2.75),
+			NumberSequenceKeypoint.new(0.0, width1 * 0.55),
+			NumberSequenceKeypoint.new(0.6, width1 * 1.15),
+			NumberSequenceKeypoint.new(1.0, width1 * 1.75),
 		})
-		mist.Lifetime = NumberRange.new(0.75, 1.25)
-		mist.Rate = 6
-		mist.Speed = NumberRange.new(1.2, 2.6)
-		mist.SpreadAngle = Vector2.new(75, 25)
-		mist.Acceleration = Vector3.new(0, -3.5, 0)
+		mist.Lifetime = NumberRange.new(0.65, 1.05)
+		mist.Rate = 5
+		mist.Speed = NumberRange.new(0.05, 0.12)
+		mist.EmissionDirection = Enum.NormalId.Right
+		mist.SpreadAngle = Vector2.new(0, 0)
+		mist.Acceleration = Vector3.zero
+		mist.RotSpeed = NumberRange.new(-35, 35)
 		mist.Parent = aImpact
 	end
 end
@@ -588,10 +664,10 @@ end
 -- visibly ripples and flows in real time (in both Studio Edit mode and Play mode).
 local function createBasinRunningWaterBeams(socketHolder: BasePart, cfg: { [string]: any })
 	local tiers = {
-		{ Name = "Tier1", Y = 3.02, InnerR = 7.6, OuterR = 10.4, Count = 12, W0 = 0.75, W1 = 1.25 },
-		{ Name = "Tier2", Y = 6.36, InnerR = 4.6, OuterR = 6.9, Count = 8, W0 = 0.75, W1 = 1.2 },
-		{ Name = "Tier3", Y = 11.79, InnerR = 2.0, OuterR = 4.5, Count = 8, W0 = 0.7, W1 = 1.1 },
-		{ Name = "Tier4", Y = 15.36, InnerR = 1.4, OuterR = 2.6, Count = 4, W0 = 0.65, W1 = 0.95 },
+		{ Name = "Tier1", Y = 3.44, InnerR = 7.6, OuterR = 10.4, Count = 12, W0 = 1.6, W1 = 3.2 },
+		{ Name = "Tier2", Y = 6.40, InnerR = 4.6, OuterR = 6.9, Count = 8, W0 = 1.4, W1 = 2.6 },
+		{ Name = "Tier3", Y = 11.83, InnerR = 2.0, OuterR = 4.5, Count = 8, W0 = 1.2, W1 = 2.2 },
+		{ Name = "Tier4", Y = 15.40, InnerR = 1.4, OuterR = 2.6, Count = 4, W0 = 1.0, W1 = 1.8 },
 	}
 	local flowIdx = 1
 	for _, tier in ipairs(tiers) do
@@ -617,22 +693,21 @@ local function createBasinRunningWaterBeams(socketHolder: BasePart, cfg: { [stri
 			flowBeam.Name = string.format("BasinFlowStream_%d", flowIdx)
 			flowBeam.Attachment0 = a0
 			flowBeam.Attachment1 = a1
-			flowBeam.Texture = cfg.WaterfallBeamTexture
+			flowBeam.Texture = cfg.SplashFoamRingTexture or cfg.WaterfallBeamTexture
 			flowBeam.TextureMode = Enum.TextureMode.Wrap
-			flowBeam.TextureLength = 2.2
-			flowBeam.TextureSpeed = 1.65
+			flowBeam.TextureLength = 2.4
+			flowBeam.TextureSpeed = 0.85
 			flowBeam.Color = ColorSequence.new({
-				ColorSequenceKeypoint.new(0.0, cfg.WaterFoamColor),
+				ColorSequenceKeypoint.new(0.0, Color3.fromRGB(240, 253, 255)),
 				ColorSequenceKeypoint.new(0.5, cfg.LightColor),
 				ColorSequenceKeypoint.new(1.0, cfg.WaterColor),
 			})
-			flowBeam.LightEmission = 0.35
-			flowBeam.LightInfluence = 0.35
+			flowBeam.LightEmission = cfg.WaterfallLightEmission
+			flowBeam.LightInfluence = 0.25
 			flowBeam.Transparency = NumberSequence.new({
-				NumberSequenceKeypoint.new(0.0, 0.78),
-				NumberSequenceKeypoint.new(0.45, 0.52),
-				NumberSequenceKeypoint.new(0.85, 0.62),
-				NumberSequenceKeypoint.new(1.0, 0.95),
+				NumberSequenceKeypoint.new(0.0, 0.35),
+				NumberSequenceKeypoint.new(0.45, 0.65),
+				NumberSequenceKeypoint.new(1.0, 1.0),
 			})
 			flowBeam.Width0 = tier.W0
 			flowBeam.Width1 = tier.W1
@@ -795,7 +870,7 @@ local function applyImportedFountainMeshes(fountainModel: Model, template: Model
 				clone.Material = cfg.MarbleMaterial
 				clone.Parent = fountainModel
 			elseif meshName == "Water_Surface_Meshes" then
-				clone.Color = cfg.WaterColor
+				clone.Color = cfg.WaterSurfaceBaseColor or cfg.WaterColor
 				clone.Material = Enum.Material.SmoothPlastic
 				clone.Reflectance = 0.08
 				clone.Transparency = 0
@@ -1287,10 +1362,66 @@ function FountainBuilder.Build(parentIsland: Instance?, customConfig: { [string]
 	light.Shadows = false
 	light.Parent = tier1Pool
 
+	-- Pinpoint water sparkles across the main ground basin pool and around the Goddess Statue
+	local sparkleTex = cfg.WaterSparkleTexture or cfg.WaterfallBeamTexture
+	local basinSparkles = Instance.new("ParticleEmitter")
+	basinSparkles.Name = "BasinWaterSparkles"
+	basinSparkles.Texture = sparkleTex
+	basinSparkles.Color = ColorSequence.new(Color3.fromRGB(255, 255, 255), Color3.fromRGB(165, 243, 252))
+	basinSparkles.LightEmission = 0.35
+	basinSparkles.LightInfluence = 0
+	basinSparkles.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0.0, 1.0),
+		NumberSequenceKeypoint.new(0.2, 0.05),
+		NumberSequenceKeypoint.new(0.8, 0.1),
+		NumberSequenceKeypoint.new(1.0, 1.0),
+	})
+	basinSparkles.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0.0, 0.15),
+		NumberSequenceKeypoint.new(0.5, 0.42),
+		NumberSequenceKeypoint.new(1.0, 0.1),
+	})
+	basinSparkles.Lifetime = NumberRange.new(0.8, 1.6)
+	basinSparkles.Rate = 28
+	basinSparkles.Speed = NumberRange.new(0.15, 0.45)
+	basinSparkles.EmissionDirection = Enum.NormalId.Right
+	basinSparkles.SpreadAngle = Vector2.new(35, 35)
+	basinSparkles.RotSpeed = NumberRange.new(-90, 90)
+	basinSparkles.Parent = tier1Pool
+
+	local statueSparkleAtt = Instance.new("Attachment")
+	statueSparkleAtt.Name = "StatueSparkleAttachment"
+	statueSparkleAtt.Position = Vector3.new(0.3, 18.8, -0.2)
+	statueSparkleAtt.Parent = socketHolder
+
+	local statueSparkles = Instance.new("ParticleEmitter")
+	statueSparkles.Name = "StatueMistSparkles"
+	statueSparkles.Texture = sparkleTex
+	statueSparkles.Color = ColorSequence.new(Color3.fromRGB(255, 255, 255), Color3.fromRGB(186, 230, 253))
+	statueSparkles.LightEmission = 0.35
+	statueSparkles.LightInfluence = 0
+	statueSparkles.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0.0, 1.0),
+		NumberSequenceKeypoint.new(0.25, 0.1),
+		NumberSequenceKeypoint.new(0.75, 0.15),
+		NumberSequenceKeypoint.new(1.0, 1.0),
+	})
+	statueSparkles.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0.0, 0.12),
+		NumberSequenceKeypoint.new(0.5, 0.32),
+		NumberSequenceKeypoint.new(1.0, 0.08),
+	})
+	statueSparkles.Lifetime = NumberRange.new(1.1, 2.0)
+	statueSparkles.Rate = 18
+	statueSparkles.Speed = NumberRange.new(1.2, 2.6)
+	statueSparkles.SpreadAngle = Vector2.new(180, 180)
+	statueSparkles.Acceleration = Vector3.new(0, -1.8, 0)
+	statueSparkles.Parent = statueSparkleAtt
+
 	-- Subtle ambient base mist across the bottom basin
 	local mistEmitter = Instance.new("ParticleEmitter")
 	mistEmitter.Name = "BaseWaterMist"
-	mistEmitter.Texture = cfg.WaterfallBeamTexture
+	mistEmitter.Texture = cfg.SplashFoamRingTexture or cfg.WaterfallBeamTexture
 	mistEmitter.Color = ColorSequence.new(Color3.fromRGB(224, 242, 254), cfg.WaterColor)
 	mistEmitter.LightEmission = 0.35
 	mistEmitter.Transparency = NumberSequence.new({
