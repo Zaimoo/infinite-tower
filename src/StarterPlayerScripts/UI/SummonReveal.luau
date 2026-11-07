@@ -58,7 +58,8 @@ local ARTIFACT_STAR_COLOR: { [number]: Color3 } = {
 
 export type Options = {
 	IsNew: ((raw: any) -> boolean)?, -- shows the NEW badge (first copy of a template)
-	OnAgain: ((count: number) -> ())?, -- results screen: SUMMON AGAIN x1 / x10
+	OnAgain: ((count: number) -> any)?, -- results screen: SUMMON AGAIN x1 / x10
+	OnContinue: (() -> ())?, -- called when closing/continuing (reopens initial summon panel)
 	Cost1: number?,
 	Cost10: number?,
 	Currency: string?,
@@ -174,11 +175,33 @@ function SummonReveal.new(gui: ScreenGui)
 	self.Fast = false -- a tap during a beat fast-forwards the rest of it
 	self.Options = {} :: Options
 
-	-- Full-screen catcher: turns any tap into "continue" (no dim: see PHASE_5 §"No dim").
+	local playerGui = (gui:IsA("BasePlayerGui") and gui) or gui:FindFirstAncestorOfClass("PlayerGui") or (if gui.Parent and gui.Parent:IsA("BasePlayerGui") then gui.Parent else nil)
+	local targetGui: Instance = gui
+	if playerGui and playerGui:IsA("BasePlayerGui") then
+		local existing = playerGui:FindFirstChild("SummonRevealGui") :: ScreenGui?
+		if existing then
+			targetGui = existing
+			self.RevealGui = existing
+		else
+			local revealGui = new("ScreenGui", {
+				Name = "SummonRevealGui",
+				IgnoreGuiInset = true,
+				ScreenInsets = Enum.ScreenInsets.None,
+				DisplayOrder = 95,
+				ResetOnSpawn = false,
+				ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+				Enabled = false,
+			}, playerGui)
+			targetGui = revealGui
+			self.RevealGui = revealGui
+		end
+	end
+
+	-- Full-screen catcher: turns any tap into "continue" and provides darkened theater backdrop.
 	self.Scrim = new("TextButton", {
-		Name = "SummonRevealScrim", Text = "", AutoButtonColor = false, BackgroundColor3 = Color3.fromRGB(4, 2, 8),
+		Name = "SummonRevealScrim", Text = "", AutoButtonColor = false, BackgroundColor3 = Color3.fromRGB(0, 0, 0),
 		BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Visible = false, ZIndex = Z,
-	}, gui)
+	}, targetGui)
 	self.Scrim:SetAttribute("NoFeel", true)
 	self.Scrim.Activated:Connect(function() self:Tap() end)
 	GildedGrimoire.Watch(self.Scrim)
@@ -408,7 +431,7 @@ function SummonReveal.new(gui: ScreenGui)
 	}, actions)
 	GildedGrimoire.Frame(done, { Class = "Button", Tone = "Gold", ZIndex = Z + 40 })
 	label(done, "Title", { Size = UDim2.fromScale(1, 1), TextSize = 18, TextColor3 = Color3.new(1, 1, 1), Text = "CONTINUE", ZIndex = Z + 42 })
-	done.Activated:Connect(function() self:Close() end)
+	done.Activated:Connect(function() self:Close(true) end)
 	self.DoneButton = done
 	self.Again10 = GrimoireSummonButton.new(actions, {
 		Name = "Again10", Title = "AGAIN 10X", Cost = 0, Position = UDim2.new(), Size = UDim2.fromOffset(190, 56), ZIndex = Z + 40,
@@ -424,7 +447,7 @@ function SummonReveal.new(gui: ScreenGui)
 		if not self.Scrim.Visible then return end
 		local key = input.KeyCode
 		if key == Enum.KeyCode.ButtonB or key == Enum.KeyCode.Backspace then
-			if self.Actions.Visible then self:Close() else self:Skip() end
+			if self.Actions.Visible then self:Close(true) else self:Skip() end
 		elseif not processed and (key == Enum.KeyCode.Space or key == Enum.KeyCode.Return or key == Enum.KeyCode.ButtonA) then
 			if self.Actions.Visible then return end -- the selected button handles A
 			self:Tap()
@@ -797,8 +820,37 @@ end
 function SummonReveal.Again(self: any, count: number)
 	local onAgain = self.Options.OnAgain
 	if not onAgain then return end
-	self:Close()
-	onAgain(count)
+	local allowed = onAgain(count)
+	if allowed == false then
+		local btn = if count == 10 then self.Again10.Root else self.Again1.Root
+		UIFeel.Deny(btn)
+		return
+	end
+	self.Run += 1
+	self.Advance:Fire()
+	self:StopFx()
+	self.WaitingForTap = false
+	self.Fast = false
+	self.Results.Visible = false
+	self.Actions.Visible = false
+	self.Flash.BackgroundTransparency = 1
+	self.Card.Visible = false
+	self.CardBack.Visible = false
+	self.Rays.Visible = false
+	self.Glow.Visible = false
+	self.Counter.Visible = false
+	self.Hint.Visible = false
+	self.SkipButton.Visible = false
+	self.TeaseLabel.Visible = false
+	clearGui(self.Portrait)
+	clearGui(self.Grid)
+
+	-- Keep surrounding backdrop solid black and show soft pulsing orb awaiting the pull
+	self.Orb.Visible = true
+	self.Orb.BackgroundColor3 = Color3.new(1, 1, 1)
+	self.OrbHalo.Color = Color3.new(1, 1, 1)
+	self.OrbScale.Scale = 0.45
+	self.Orb.BackgroundTransparency = 0.4
 end
 
 -- Plays the reveal for `list` (hero instances, or artifacts when isArtifact).
@@ -820,8 +872,24 @@ function SummonReveal.Play(self: any, list: { any }, isArtifact: boolean?, opts:
 	self.Counter.Visible = #items > 1
 	self.SkipButton.Visible = #items > 1
 	if #items > 1 then UIFeel.PopIn(self.SkipButton, 0.5) end
+	if self.RevealGui and self.RevealGui:IsA("ScreenGui") then
+		self.RevealGui.Enabled = true
+	end
 	self.Scrim.Visible = true
-	self.Scrim.BackgroundTransparency = 1
+	if self.ScrimFadeTween then
+		self.ScrimFadeTween:Cancel()
+		self.ScrimFadeTween = nil
+	end
+	if self.Scrim.BackgroundTransparency > 0 then
+		if UIFeel.ReducedMotion() then
+			self.Scrim.BackgroundTransparency = 0
+		else
+			self.ScrimFadeTween = TweenService:Create(self.Scrim, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				BackgroundTransparency = 0,
+			})
+			self.ScrimFadeTween:Play()
+		end
+	end
 
 	task.spawn(function()
 		if #items > 1 then
@@ -853,15 +921,15 @@ function SummonReveal.Skip(self: any)
 	self:ShowResults(self.Items)
 end
 
-function SummonReveal.Close(self: any)
+function SummonReveal.Close(self: any, isContinue: boolean?)
 	self.Run += 1
 	self.Advance:Fire()
 	self:StopFx()
 	self.WaitingForTap = false
 	self.Fast = false
+	local onContinue = self.Options and self.Options.OnContinue
 	self.Items = nil
 	self.IsArtifact = false
-	self.Scrim.Visible = false
 	self.Flash.BackgroundTransparency = 1
 	if GuiService.SelectedObject and GuiService.SelectedObject:IsDescendantOf(self.Scrim) then
 		GuiService.SelectedObject = nil
@@ -869,6 +937,38 @@ function SummonReveal.Close(self: any)
 	-- Free the viewports.
 	clearGui(self.Portrait)
 	clearGui(self.Grid)
+
+	if self.ScrimFadeTween then
+		self.ScrimFadeTween:Cancel()
+		self.ScrimFadeTween = nil
+	end
+
+	local function finishClose()
+		self.Scrim.BackgroundTransparency = 1
+		self.Scrim.Visible = false
+		if self.RevealGui and self.RevealGui:IsA("ScreenGui") then
+			self.RevealGui.Enabled = false
+		end
+	end
+
+	if not UIFeel.ReducedMotion() and self.Scrim.Visible and self.Scrim.BackgroundTransparency < 1 then
+		local tween = TweenService:Create(self.Scrim, TweenInfo.new(0.28, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			BackgroundTransparency = 1,
+		})
+		self.ScrimFadeTween = tween
+		tween:Play()
+		tween.Completed:Connect(function()
+			if not self.Items then
+				finishClose()
+			end
+		end)
+	else
+		finishClose()
+	end
+
+	if isContinue and onContinue then
+		onContinue()
+	end
 end
 
 function SummonReveal.IsOpen(self: any): boolean
