@@ -17,6 +17,7 @@ local HeroCatalog = require(Shared:WaitForChild("Config"):WaitForChild("HeroCata
 local ArtifactCatalog = require(Shared:WaitForChild("Config"):WaitForChild("ArtifactCatalog"))
 local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormulas"))
 local FortressTree = require(Shared:WaitForChild("Util"):WaitForChild("FortressTree"))
+local InventoryCapacity = require(Shared:WaitForChild("Util"):WaitForChild("InventoryCapacity"))
 local SummonLuck = require(Shared:WaitForChild("Util"):WaitForChild("SummonLuck"))
 local GothicBoxStyle = require(Shared:WaitForChild("Util"):WaitForChild("GothicBoxStyle"))
 local GrimoireIcons = require(Shared:WaitForChild("Util"):WaitForChild("GrimoireIcons"))
@@ -732,7 +733,12 @@ function Controller:PerformSummon(bannerId: string, count: number)
 	end)
 end
 
+function Controller:IsOpen(): boolean
+	return self.Root ~= nil and self.Root.Visible
+end
+
 function Controller:Close()
+	if not self:IsOpen() then return end
 	self.Root.Visible = false
 	self.Scrim.Visible = false
 	self.Reveal:Close()
@@ -859,9 +865,12 @@ function Controller:Refresh()
 		return
 	end
 
-	local heroes = {}
-	for _, h in profile.Heroes or {} do table.insert(heroes, h) end
 	local currentTag = FacilityConfig.AssignmentTags[self.Current]
+	-- Facility workers are out of the backpack: list only this facility's own workers plus free heroes.
+	local heroes = {}
+	for _, h in profile.Heroes or {} do
+		if not InventoryCapacity.IsInFacility(h) or h.Assignment == currentTag then table.insert(heroes, h) end
+	end
 
 	table.sort(heroes, function(a, b)
 		if currentTag then

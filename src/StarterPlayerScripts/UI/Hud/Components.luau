@@ -884,7 +884,7 @@ function Components.SquadDrawer(props: {
 		BackgroundTransparency = 1,
 	}, {
 		Brackets = e(Components.Brackets, {}),
-		Above = if props.Above then e("Frame", { Name = "CurrencyRowWrapper", AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromOffset(0, -8), Size = UDim2.fromOffset(collapsedWidth, Components.CurrencyBarHeight),
+		Above = if props.Above then e("Frame", { Name = "CurrencyRowWrapper", AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromOffset(0, -8), Size = UDim2.fromOffset(Components.CurrencyBarWidth, Components.CurrencyBarHeight),
 			BackgroundTransparency = 1 }, { Bar = props.Above }) else nil,
 		Clip = e("Frame", { Position = UDim2.fromOffset(-CLIP_PAD, -CLIP_PAD), Size = UDim2.new(1, CLIP_PAD * 2, 1, CLIP_PAD * 2),
 			BackgroundTransparency = 1, ClipsDescendants = true }, {
@@ -954,8 +954,13 @@ end
 
 --------------------------------------------------------------------------------
 -- Currency bar (Gold and Gems), riding on the Squad drawer: two glass chips, each a flat icon and
--- the value, with a change floater above.
+-- the value, with a change floater above. Fixed size ensures values remain readable even when
+-- only 1-2 squad slots are unlocked.
 --------------------------------------------------------------------------------
+Components.CurrencyChipWidth = 144
+Components.CurrencyBarHeight = 40
+Components.CurrencyBarWidth = 296
+
 local function CurrencyChip(props: { Icon: string, Value: number, Order: number, Color: Color3 })
 	local shown, setShown = React.useState(props.Value)
 	local delta, setDelta = React.useState(0)
@@ -969,7 +974,7 @@ local function CurrencyChip(props: { Icon: string, Value: number, Order: number,
 		task.delay(0.9, function() if alive then setDelta(0) end end)
 		return function() alive = false end
 	end, { props.Value })
-	return e("Frame", { Name = props.Icon .. "Pill", LayoutOrder = props.Order, Size = UDim2.new(0.5, -4, 1, 0), BackgroundTransparency = 1 }, {
+	return e("Frame", { Name = props.Icon .. "Pill", LayoutOrder = props.Order, Size = UDim2.new(0, Components.CurrencyChipWidth, 1, 0), BackgroundTransparency = 1 }, {
 		Body = glass({ AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), Size = UDim2.new(1, 0, 0, 32) }, {
 			Padding = e("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) }),
 			Icon = icon(props.Icon, 20, { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 0, 0.5, 0), Flat = true }),
@@ -990,14 +995,12 @@ local function CurrencyChip(props: { Icon: string, Value: number, Order: number,
 	})
 end
 
-Components.CurrencyBarHeight = 40
-
 function Components.CurrencyBar(props: { Gold: number, Gems: number, Bottom: number?, Width: number?, Position: UDim2? })
 	return e("Frame", {
 		Name = "CurrencyRow",
 		AnchorPoint = Vector2.new(0, 1),
 		Position = props.Position or UDim2.new(0, L.Edge, 1, -(props.Bottom or 0)),
-		Size = if props.Width then UDim2.fromOffset(props.Width, Components.CurrencyBarHeight) else UDim2.fromScale(1, 1),
+		Size = UDim2.fromOffset(props.Width or Components.CurrencyBarWidth, Components.CurrencyBarHeight),
 		BackgroundTransparency = 1,
 	}, {
 		Layout = e("UIListLayout", {

@@ -404,7 +404,7 @@ local function App(props: Types.Props)
 		ScreenInsets = Enum.ScreenInsets.CoreUISafeInsets,
 		[React.Change.AbsoluteSize] = function(gui) setScreen(gui.AbsoluteSize) end,
 	}, {
-		Scrim = e("Frame", { Name = "Scrim", Size = UDim2.fromScale(1, 1), BackgroundColor3 = T.Theme.Ink, BackgroundTransparency = 0.65, Active = true, BorderSizePixel = 0, ZIndex = 1 }),
+		Scrim = e("Frame", { Name = "Scrim", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Active = true, BorderSizePixel = 0, ZIndex = 1 }),
 		Root = e("Frame", {
 			ref = rootRef, Name = "Root", AnchorPoint = Vector2.new(0.5, 0.5), Position = windowPosition,
 			Size = UDim2.fromOffset(width, height), BackgroundColor3 = T.Background, BorderSizePixel = 0, ZIndex = 2,

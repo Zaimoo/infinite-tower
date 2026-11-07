@@ -28,6 +28,7 @@ local GothicBoxStyle = require(Shared:WaitForChild("Util"):WaitForChild("GothicB
 local GildedGrimoire = require(Shared:WaitForChild("Util"):WaitForChild("GildedGrimoire"))
 local GrimoireIcons = require(Shared:WaitForChild("Util"):WaitForChild("GrimoireIcons"))
 local FortressTree = require(Shared:WaitForChild("Util"):WaitForChild("FortressTree"))
+local InventoryCapacity = require(Shared:WaitForChild("Util"):WaitForChild("InventoryCapacity"))
 local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormulas"))
 local HeroCatalog = require(Shared:WaitForChild("Config"):WaitForChild("HeroCatalog"))
 local ArtifactCatalog = require(Shared:WaitForChild("Config"):WaitForChild("ArtifactCatalog"))
@@ -1003,11 +1004,12 @@ function SquadController.Refresh(self: any)
 	end
 	retone(self.FilterButton.Button, self.FilterButton.Label, if self.AvailableOnly then "Gold" else "Slate", "READY ONLY")
 
-	-- Roster (active squad heroes are excluded; they are displayed and managed in ACTIVE SQUAD above)
+	-- Roster (active squad heroes are excluded; they are displayed and managed in ACTIVE SQUAD above,
+	-- and facility workers stay in their facility until unassigned there)
 	local list = {}
 	local power: { [string]: number } = {}
 	for _, h in pairs(profile.Heroes) do
-		if slotOf(h) then
+		if slotOf(h) or InventoryCapacity.IsInFacility(h) then
 			continue
 		end
 		power[h.UUID] = powerOf(profile, h, mult)

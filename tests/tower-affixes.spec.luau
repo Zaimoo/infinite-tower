@@ -2,6 +2,7 @@
 local AffixRules = require(nodes["ReplicatedStorage.Shared.Util.AffixRules"])
 local CampRoster = require(nodes["ReplicatedStorage.Shared.Util.CampRoster"])
 local Floors = require(nodes["ReplicatedStorage.Shared.Config.TowerFloorConfig"])
+local RelicConfig = require(nodes["ReplicatedStorage.Shared.RelicConfig"])
 local Protocol = require(nodes["ReplicatedStorage.Shared.Util.TowerProtocol"])
 local passed = 0
 local function test(name: string, fn: () -> ())
@@ -38,13 +39,15 @@ end)
 test("An affixed Elite drops relics four times as often, keeps role tiers, and a plain Elite is unchanged", function()
 	for _, floorId in { 1, 26, 50 } do
 		local base = Floors.GetKillRewards(floorId, "ELITE").RelicChance
+		local biome = RelicConfig.GetBiomeForFloor(floorId)
+		local eliteTierId = biome and biome.DropTable[3] or "ABYSSAL_CORE"
 		local plainDrops, affixedDrops, cores, n = 0, 0, 0, 4000
 		for i = 1, n do
 			local roll = (i - 0.5) / n
 			if Floors.RollRelic(floorId, "ELITE", AffixRules.DropRoll(mob(0, 0, nil), roll), 0.5) then plainDrops += 1 end
 			local tier = Floors.RollRelic(floorId, "ELITE", AffixRules.DropRoll(mob(0, 0, { "HASTED" }), roll), (i % 100) / 100)
 			if tier then affixedDrops += 1 end
-			if tier == "ABYSSAL_CORE" then cores += 1 end
+			if tier == eliteTierId or tier == "ABYSSAL_CORE" then cores += 1 end
 		end
 		assert(math.abs(plainDrops / n - base) < 0.002)
 		assert(math.abs(affixedDrops / n - math.min(1, base * AffixRules.RelicDropMultiplier)) < 0.002)

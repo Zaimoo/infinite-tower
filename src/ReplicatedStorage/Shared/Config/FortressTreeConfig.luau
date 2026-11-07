@@ -43,6 +43,7 @@ FortressTreeConfig.Branches = table.freeze({
 	{ Id = "Martial", Title = "MARTIAL", Facility = "TrainingGrounds", Color = Color3.fromRGB(235, 80, 80) },
 	{ Id = "Divine", Title = "DIVINE", Facility = "GodsBlessing", Color = Color3.fromRGB(255, 226, 150) },
 	{ Id = "Command", Title = "COMMAND", Facility = "Squad", Color = Color3.fromRGB(56, 189, 248) },
+	{ Id = "Storage", Title = "STORAGE", Facility = "Storage", Color = Color3.fromRGB(196, 140, 84) },
 } :: { Branch })
 
 local nodes: { Node } = {
@@ -87,6 +88,14 @@ level("sq", "Command", "Squad", 1, "Second Banner", 500, 0, "Opens squad slot 2.
 level("sq", "Command", "Squad", 2, "Third Banner", 2000, 0, "Opens squad slot 3.", "Squad")
 level("sq", "Command", "Squad", 3, "Fourth Banner", 6000, 5, "Opens squad slot 4.", "Squad")
 level("sq", "Command", "Squad", 4, "Fifth Banner", 15000, 10, "Opens squad slot 5, a full squad.", "Squad")
+
+-- Storage: backpack capacity. Odd levels add hero slots, even levels artifact slots (InventoryCapacity).
+level("st", "Storage", "Storage", 1, "Barracks Annex", 1500, 0, "+25 hero capacity.")
+level("st", "Storage", "Storage", 2, "Armory Racks", 4000, 0, "+25 artifact capacity.")
+level("st", "Storage", "Storage", 3, "Officers' Wing", 12000, 5, "+25 hero capacity.")
+level("st", "Storage", "Storage", 4, "Vaulted Arsenal", 30000, 15, "+25 artifact capacity.")
+level("st", "Storage", "Storage", 5, "Grand Quarters", 75000, 25, "+25 hero capacity.")
+level("st", "Storage", "Storage", 6, "Reliquary Vault", 100000, 25, "+25 artifact capacity.")
 
 -- Outskirts: Guard Post (level 1 is owned from the start so idle Gold works immediately)
 level("gp", "Outskirts", "GuardPost", 1, "Frontier Camp", 0, 0, "Guard Post Lv.1: a lean-to and campfire on the southern trail.")
@@ -137,6 +146,10 @@ FortressTreeConfig.ById = table.freeze(byId)
 -- One squad slot is always open; the Command branch adds the rest.
 FortressTreeConfig.BaseSquadSlots = 1
 FortressTreeConfig.MaxSquadSlots = 5
+
+-- Storage branch: each LEVEL node adds this many slots to the hero or artifact cap.
+FortressTreeConfig.StorageFacility = "Storage"
+FortressTreeConfig.StorageStep = 25
 
 -- Facilities gated by the tree; anything else on the plot is a Core Main Building.
 FortressTreeConfig.GatedFacilities = table.freeze({ "GuardPost", "Market", "TrainingGrounds", "GodsBlessing" })

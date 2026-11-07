@@ -3,6 +3,7 @@ local EventConfig = require(nodes["ReplicatedStorage.Shared.Config.TowerEventCon
 local Rules = require(nodes["ReplicatedStorage.Shared.Util.TowerEventRules"])
 local Icons = require(nodes["ReplicatedStorage.Shared.Util.GrimoireIcons"])
 local Floors = require(nodes["ReplicatedStorage.Shared.Config.TowerFloorConfig"])
+local RelicConfig = require(nodes["ReplicatedStorage.Shared.RelicConfig"])
 local Progress = require(nodes["ReplicatedStorage.Shared.Util.TowerProgress"])
 local CampRoster = require(nodes["ReplicatedStorage.Shared.Util.CampRoster"])
 local passed = 0
@@ -70,6 +71,9 @@ test("Event relic mods keep Hearts on Alphas and Bosses and Cores on Elites, and
 	local hunt = assert(EventConfig.Get("ALPHA_HUNT")).Mods
 	local n = 4000
 	for _, floorId in { 6, 30, 50 } do
+		local biome = RelicConfig.GetBiomeForFloor(floorId)
+		local apexRelic = biome and biome.DropTable[4] or "CALAMITY_HEART"
+		local eliteRelic = biome and biome.DropTable[3] or "ABYSSAL_CORE"
 		for _, role in { "REGULAR", "ELITE", "ALPHA", "BOSS" } do
 			local base, boosted = 0, 0
 			for i = 1, n do
@@ -77,20 +81,22 @@ test("Event relic mods keep Hearts on Alphas and Bosses and Cores on Elites, and
 				local tier = Floors.RollRelic(floorId, role, roll, (i * 37 % n) / n, calamity)
 				if tier then boosted += 1 end
 				if Floors.RollRelic(floorId, role, roll, 0.5) then base += 1 end
-				assert(tier ~= "CALAMITY_HEART" or role == "ALPHA" or role == "BOSS", "Heart outside Alphas and Bosses")
-				assert(tier ~= "ABYSSAL_CORE" or role == "ELITE", "Core outside Elites")
+				assert(tier ~= apexRelic or role == "ALPHA" or role == "BOSS", "Heart outside Alphas and Bosses")
+				assert(tier ~= eliteRelic or role == "ELITE", "Core outside Elites")
 				local hunted = Floors.RollRelic(floorId, role, roll, (i * 37 % n) / n, hunt)
-				assert(hunted ~= "ABYSSAL_CORE" or role == "ELITE")
+				assert(hunted ~= eliteRelic or role == "ELITE")
 			end
 			assert(boosted >= base * 1.9, role .. " drops did not double on floor " .. floorId)
 		end
 	end
-	-- Alpha Hunt triples the Heart share.
+	-- Alpha Hunt triples the Heart / Apex Core share.
+	local f26Biome = RelicConfig.GetBiomeForFloor(26)
+	local f26Apex = f26Biome and f26Biome.DropTable[4] or "CALAMITY_HEART"
 	local hearts, huntedHearts = 0, 0
 	for i = 1, n do
 		local roll = (i - 0.5) / n
-		if Floors.RollRelic(26, "ALPHA", 0, roll) == "CALAMITY_HEART" then hearts += 1 end
-		if Floors.RollRelic(26, "ALPHA", 0, roll, hunt) == "CALAMITY_HEART" then huntedHearts += 1 end
+		if Floors.RollRelic(26, "ALPHA", 0, roll) == f26Apex then hearts += 1 end
+		if Floors.RollRelic(26, "ALPHA", 0, roll, hunt) == f26Apex then huntedHearts += 1 end
 	end
 	assert(math.abs(huntedHearts - hearts * 3) <= 3)
 end)
