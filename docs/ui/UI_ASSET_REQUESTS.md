@@ -76,6 +76,7 @@ These need wiring. `FacilityController.BuildBannerView` and the Forge summon vie
 
 - **P1: currency icons** as images (Gold, Gems, Robux-styled premium) at 128². `GrimoireIcons` draws them well enough for now, but they are the most-looked-at icons in the game.
 - **P1: facility building badges** at 256² for the Fortress Tree nodes and facility panels: Guard Post, Market, Training Grounds, Summoning Altar, Forge, Pit.
+- **Biome banners (all 10 biomes, done):** Uploaded and wired into `UIAssets.Images.BiomeBanners` and `TowerController` for the tower travel & floor selector modal (biome cards and details card).
 - **P2: biome emblems**, one per biome (10), for the tower selector and floor banners.
 - **P2: rank frames** for the leaderboard top 3 (gold, silver and bronze laurels).
 

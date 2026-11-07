@@ -17,6 +17,7 @@ local GothicBoxStyle = require(RS.Shared.Util.GothicBoxStyle)
 local ModalFit = require(script.Parent:WaitForChild("ModalFit"))
 local GildedGrimoire = require(RS.Shared.Util.GildedGrimoire)
 local GrimoireIcons = require(RS.Shared.Util.GrimoireIcons)
+local UIAssets = require(script.Parent:WaitForChild("UIAssets"))
 local remotes = RS:WaitForChild("Remotes"):WaitForChild("TowerRemotes")
 
 local selfState: any = nil
@@ -211,7 +212,7 @@ local biomeListLayout = new("UIListLayout", {
 	SortOrder = Enum.SortOrder.LayoutOrder,
 }, biomeScroll)
 
-local biomeCards: { [number]: { Root: Frame, Stroke: UIStroke, Label: TextLabel, PillStroke: UIStroke } } = {}
+local biomeCards: { [number]: { Root: TextButton, Stroke: UIStroke, Label: TextLabel, PillStroke: UIStroke, Banner: ImageLabel?, Vignette: Frame? } } = {}
 
 -- ============================================================================
 -- RIGHT COLUMN: ACTIVE BIOME FLOOR SELECTION & TELEMETRY
@@ -249,9 +250,49 @@ local detailsCard = new("Frame", {
 	Position = UDim2.fromOffset(0, 80),
 	Size = UDim2.new(1, 0, 0, 176),
 	BorderSizePixel = 0,
+	ClipsDescendants = true,
 	ZIndex = 43,
 }, rightPane)
 GildedGrimoire.Frame(detailsCard, { Class = "Panel", Tone = "Deep", ZIndex = 44 })
+
+-- Atmospheric Biome Banner Backdrop for Floor Details
+local detailBanner = new("ImageLabel", {
+	Name = "DetailBannerArt",
+	Size = UDim2.fromScale(1, 1),
+	Position = UDim2.fromScale(0.5, 0.5),
+	AnchorPoint = Vector2.new(0.5, 0.5),
+	BackgroundTransparency = 1,
+	ScaleType = Enum.ScaleType.Crop,
+	Image = UIAssets.GetBiomeBanner(1),
+	ImageTransparency = 0.65,
+	Active = false,
+	ZIndex = 44,
+}, detailsCard)
+new("UICorner", { CornerRadius = UDim.new(0, 8) }, detailBanner)
+
+local detailBannerScrim = new("Frame", {
+	Name = "DetailBannerScrim",
+	Size = UDim2.fromScale(1, 1),
+	BackgroundColor3 = Color3.fromRGB(14, 10, 20),
+	BackgroundTransparency = 0.42,
+	BorderSizePixel = 0,
+	Active = false,
+	ZIndex = 44,
+}, detailsCard)
+new("UICorner", { CornerRadius = UDim.new(0, 8) }, detailBannerScrim)
+new("UIGradient", {
+	Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0.0, Color3.fromRGB(10, 8, 16)),
+		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(18, 14, 26)),
+		ColorSequenceKeypoint.new(1.0, Color3.fromRGB(10, 8, 16)),
+	}),
+	Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0.0, 0.15),
+		NumberSequenceKeypoint.new(0.55, 0.48),
+		NumberSequenceKeypoint.new(1.0, 0.2),
+	}),
+	Rotation = 85,
+}, detailBannerScrim)
 
 -- Details Content Labels
 local detailHeader = new("TextLabel", {
@@ -508,29 +549,61 @@ for biomeIdx, biome in ipairs(mobs.Biomes) do
 		Rotation = 75,
 	}, card)
 
-	-- Atmospheric horizon silhouette layer
-	local horizon = new("Frame", {
-		Name = "HorizonArt",
-		Position = UDim2.new(0, 0, 0.12, 0),
-		Size = UDim2.new(1, 0, 0.68, 0),
-		BackgroundTransparency = 0.55,
-		BackgroundColor3 = Color3.fromRGB(8, 6, 12),
-		BorderSizePixel = 0,
-		Active = false,
-		ZIndex = 44,
-	}, card)
-	new("UICorner", { CornerRadius = UDim.new(0, 4) }, horizon)
+	-- Biome Banner Art
+	local bannerAsset = UIAssets.GetBiomeBanner(biome.Id)
+	local bannerImage: ImageLabel? = nil
+	if bannerAsset and bannerAsset ~= "" then
+		bannerImage = new("ImageLabel", {
+			Name = "BannerArt",
+			Size = UDim2.fromScale(1, 1),
+			Position = UDim2.fromScale(0.5, 0.5),
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			BackgroundTransparency = 1,
+			Image = bannerAsset,
+			ScaleType = Enum.ScaleType.Crop,
+			Active = false,
+			ZIndex = 44,
+		}, card)
+		new("UICorner", { CornerRadius = UDim.new(0, 10) }, bannerImage)
+	else
+		-- Atmospheric horizon silhouette layer fallback
+		local horizon = new("Frame", {
+			Name = "HorizonArt",
+			Position = UDim2.new(0, 0, 0.12, 0),
+			Size = UDim2.new(1, 0, 0.68, 0),
+			BackgroundTransparency = 0.55,
+			BackgroundColor3 = Color3.fromRGB(8, 6, 12),
+			BorderSizePixel = 0,
+			Active = false,
+			ZIndex = 44,
+		}, card)
+		new("UICorner", { CornerRadius = UDim.new(0, 4) }, horizon)
+	end
 
 	-- Vignette overlay
 	local vignette = new("Frame", {
 		Name = "Vignette",
 		Size = UDim2.fromScale(1, 1),
 		BackgroundColor3 = Color3.fromRGB(10, 8, 16),
-		BackgroundTransparency = 0.65,
+		BackgroundTransparency = 0.45,
 		BorderSizePixel = 0,
 		Active = false,
 		ZIndex = 45,
 	}, card)
+	new("UICorner", { CornerRadius = UDim.new(0, 10) }, vignette)
+	new("UIGradient", {
+		Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0.0, Color3.fromRGB(0, 0, 0)),
+			ColorSequenceKeypoint.new(0.45, Color3.fromRGB(255, 255, 255)),
+			ColorSequenceKeypoint.new(1.0, Color3.fromRGB(0, 0, 0)),
+		}),
+		Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0.0, 0.3),
+			NumberSequenceKeypoint.new(0.5, 0.55),
+			NumberSequenceKeypoint.new(1.0, 0.15),
+		}),
+		Rotation = 90,
+	}, vignette)
 
 	-- Gilded Grimoire: ink outline; the inset rail is the selection stroke.
 	new("UIStroke", {
@@ -599,11 +672,28 @@ for biomeIdx, biome in ipairs(mobs.Biomes) do
 		render()
 	end)
 
+	card.MouseEnter:Connect(function()
+		if activeBiomeIndex ~= biomeIdx then
+			cardStroke.Thickness = 1.4
+			if bannerImage then
+				bannerImage.ImageColor3 = Color3.new(1, 1, 1)
+				bannerImage.ImageTransparency = 0.05
+			end
+		end
+	end)
+	card.MouseLeave:Connect(function()
+		if activeBiomeIndex ~= biomeIdx then
+			render()
+		end
+	end)
+
 	biomeCards[biomeIdx] = {
 		Root = card,
 		Stroke = cardStroke,
 		Label = pillText,
 		PillStroke = pillStroke,
+		Banner = bannerImage,
+		Vignette = vignette,
 	}
 end
 
@@ -728,13 +818,22 @@ render = function()
 	local isSelectedLocked = selected > maxAllowed
 
 	-- 1. Update Floor Details Card
+	-- Panoramic Biome Banner update
+	local currentBiomeBanner = UIAssets.GetBiomeBanner(activeBiomeIndex)
+	if detailBanner.Image ~= currentBiomeBanner then
+		detailBanner.Image = currentBiomeBanner
+	end
 	if isSelectedLocked then
+		detailBanner.ImageColor3 = Color3.fromRGB(110, 95, 130)
+		detailBanner.ImageTransparency = 0.8
 		detailHeader.Text = string.format("Floor %d · %s (LOCKED)", selected, floor.DisplayName)
 		detailScaling.Text = string.format(
 			"LOCKED · Slay Floor %d Boss to unlock!",
 			selected - 1
 		)
 	else
+		detailBanner.ImageColor3 = Color3.new(1, 1, 1)
+		detailBanner.ImageTransparency = 0.65
 		detailHeader.Text = string.format("Floor %d · %s (%s%s)", selected, floor.DisplayName, floor.BiomeDisplayName or (biome and biome.DisplayName) or floor.BiomeId, bossText)
 		-- Phase 5: the floor's Recommended Squad Power against yours (green when you meet it).
 		local recommended = floors.RecommendedPower(selected)
@@ -771,16 +870,37 @@ render = function()
 				cardData.Stroke.Thickness = 1.8
 				cardData.PillStroke.Color = C.BorderSelected
 				cardData.Label.TextColor3 = C.TextWhite
+				if cardData.Banner then
+					cardData.Banner.ImageColor3 = Color3.new(1, 1, 1)
+					cardData.Banner.ImageTransparency = 0.0
+				end
+				if cardData.Vignette then
+					cardData.Vignette.BackgroundTransparency = 0.5
+				end
 			elseif isBiomeLocked then
 				cardData.Stroke.Color = Color3.fromRGB(35, 28, 48)
 				cardData.Stroke.Thickness = 1.0
 				cardData.PillStroke.Color = Color3.fromRGB(40, 32, 52)
 				cardData.Label.TextColor3 = Color3.fromRGB(110, 95, 130)
+				if cardData.Banner then
+					cardData.Banner.ImageColor3 = Color3.fromRGB(85, 70, 100)
+					cardData.Banner.ImageTransparency = 0.5
+				end
+				if cardData.Vignette then
+					cardData.Vignette.BackgroundTransparency = 0.25
+				end
 			else
 				cardData.Stroke.Color = C.BorderNormal
 				cardData.Stroke.Thickness = 1.0
 				cardData.PillStroke.Color = Color3.fromRGB(75, 62, 95)
 				cardData.Label.TextColor3 = C.TextMuted
+				if cardData.Banner then
+					cardData.Banner.ImageColor3 = Color3.fromRGB(215, 215, 225)
+					cardData.Banner.ImageTransparency = 0.15
+				end
+				if cardData.Vignette then
+					cardData.Vignette.BackgroundTransparency = 0.45
+				end
 			end
 		end
 	end
