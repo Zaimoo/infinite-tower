@@ -112,44 +112,24 @@ local function targetWeights(): (number, number)
 end
 
 local dreadW, stormW = targetWeights()
-local weatherW = 0
-local lastDread, lastStorm, lastWeather = -1, -1, -1
+local lastDread, lastStorm = -1, -1
 
 local function stepHubLighting(dt: number)
 	local wantDread, wantStorm = targetWeights()
-	local wantWeather = math.clamp(workspace:GetAttribute("WeatherFoggyWindWeight") :: number? or 0, 0, 1)
-
 	local k = 1 - math.exp(-BLEND_RATE * dt)
 	dreadW += (wantDread - dreadW) * k
 	stormW += (wantStorm - stormW) * k
-	weatherW += (wantWeather - weatherW) * k
 
-	local customDensity = workspace:GetAttribute("WeatherFogDensity") :: number?
-	local customHaze = workspace:GetAttribute("WeatherFogHaze") :: number?
-
-	if math.abs(dreadW - lastDread) < 0.002 and math.abs(stormW - lastStorm) < 0.002 and math.abs(weatherW - lastWeather) < 0.002 and not customDensity and not customHaze then
+	if math.abs(dreadW - lastDread) < 0.002 and math.abs(stormW - lastStorm) < 0.002 then
 		return
 	end
-	lastDread, lastStorm, lastWeather = dreadW, stormW, weatherW
+	lastDread, lastStorm = dreadW, stormW
+
+	-- Publish dread weight (tower proximity) for VFX/wind scaling
+	workspace:SetAttribute("WeatherTowerProximity", dreadW)
+
 	local hub = mix(Presets.Sanctuary, Presets.Dread, dreadW)
-	local base = mix(hub, Presets.Storm, stormW)
-
-	local finalPreset = base
-	if Presets.FoggyWind and weatherW > 0.001 then
-		local foggyPreset = Presets.FoggyWind
-		if customDensity or customHaze then
-			foggyPreset = table.clone(Presets.FoggyWind)
-			if customDensity then
-				foggyPreset.AtmosphereDensity = customDensity
-			end
-			if customHaze then
-				foggyPreset.AtmosphereHaze = customHaze
-			end
-		end
-		finalPreset = mix(base, foggyPreset, weatherW)
-	end
-
-	apply(finalPreset)
+	apply(mix(hub, Presets.Storm, stormW))
 end
 RunService.RenderStepped:Connect(function(dt: number)
 	debug.profilebegin("HubLighting")

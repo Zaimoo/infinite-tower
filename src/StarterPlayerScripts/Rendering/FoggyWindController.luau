@@ -168,6 +168,10 @@ local function ensureClouds(): Clouds
 	return clouds
 end
 
+local function lerp(a: number, b: number, t: number): number
+	return a + (b - a) * t
+end
+
 --============================================================================
 -- FRAME UPDATE
 --============================================================================
@@ -180,28 +184,25 @@ local function onHeartbeat(dt: number)
 		currentWeight = targetWeight
 	end
 
-	-- 1. Sync weights to Workspace attributes for HubLightingController
-	Workspace:SetAttribute("WeatherFoggyWindWeight", currentWeight)
-	Workspace:SetAttribute("WeatherFogDensity", State.FogDensity)
-	Workspace:SetAttribute("WeatherFogHaze", State.FogHaze)
-
-	-- 2. Dynamic Wind & Gusting via Perlin noise
+	-- 1. Dynamic Wind & Gusting via Perlin noise, scaled by proximity to tower
 	if currentWeight > 0.001 then
+		local prox = Workspace:GetAttribute("WeatherTowerProximity") :: number? or 0
+		local targetSpeed = lerp(20, 36, prox)
 		local t = os.clock()
 		local gust = math.noise(t * 0.45, 0, 0) -- organic gust variation
-		local gustMult = 1 + gust * 0.45
-		local activeSpeed = State.WindStrength * gustMult * currentWeight
+		local gustMult = 1 + gust * (0.3 + 0.15 * prox)
+		local activeSpeed = targetSpeed * gustMult * currentWeight
 
 		local rad = math.rad(State.WindAngleDeg)
 		local windDir = Vector3.new(math.cos(rad), 0, math.sin(rad))
 		Workspace.GlobalWind = windDir * activeSpeed
 
-		-- 3. Clouds
+		-- 2. Clouds
 		local clouds = ensureClouds()
 		clouds.Cover = 0.84 * currentWeight
 		clouds.Density = 0.72
 
-		-- 4. Move particle emitter with Camera
+		-- 3. Move particle emitter with Camera
 		local cam = Workspace.CurrentCamera
 		if cam then
 			local part = ensureEmitterPart()
@@ -210,22 +211,24 @@ local function onHeartbeat(dt: number)
 			part.CFrame = CFrame.new(cam.CFrame.Position + spawnOffset)
 		end
 
-		-- 5. Particle Rates and Dynamic Wind Acceleration
+		-- 4. Particle Rates scaled by tower proximity (faint on plots, heavy near tower)
 		local pMult = if State.ParticlesEnabled then currentWeight else 0
 		local particleAccel = windDir * activeSpeed * 0.45
+		local mistTargetRate = lerp(2, 16, prox)
+		local specksTargetRate = lerp(5, 24, prox)
 		if mistEmitter then
-			mistEmitter.Rate = 14 * pMult
+			mistEmitter.Rate = mistTargetRate * pMult
 			mistEmitter.Acceleration = particleAccel
 		end
 		if specksEmitter then
-			specksEmitter.Rate = 22 * pMult
+			specksEmitter.Rate = specksTargetRate * pMult
 			specksEmitter.Acceleration = particleAccel * 1.5
 		end
 
-		-- 6. Audio
+		-- 5. Audio scaled by proximity
 		local audio = ensureAudio()
 		if State.AudioEnabled and currentWeight > 0.01 then
-			audio.Volume = 0.38 * currentWeight
+			audio.Volume = lerp(0.18, 0.42, prox) * currentWeight
 			if not audio.IsPlaying then
 				audio:Play()
 			end

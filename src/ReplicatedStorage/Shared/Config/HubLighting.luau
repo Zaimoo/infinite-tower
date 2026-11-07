@@ -40,63 +40,63 @@ export type Preset = {
 HubLighting.ClockTime = 14.8 -- Shared by every preset so the sun never swings while blending
 
 local Presets: { [string]: Preset } = {
-	-- Golden afternoon over the fortresses: warm sun, soft blue bounce light, clear air, gentle glow
+	-- Hub & Fortress Plots: lessened cool moody mist locally, but tower is heavily obscured in the distance
 	Sanctuary = {
-		Ambient = Color3.fromRGB(96, 90, 82),
-		OutdoorAmbient = Color3.fromRGB(152, 142, 124),
-		ColorShift_Top = Color3.fromRGB(255, 228, 176),
-		ColorShift_Bottom = Color3.fromRGB(120, 142, 176),
-		EnvironmentDiffuseScale = 0.9,
-		EnvironmentSpecularScale = 0.8,
-		ExposureCompensation = 0.3,
+		Ambient = Color3.fromRGB(78, 84, 94),
+		OutdoorAmbient = Color3.fromRGB(118, 128, 140),
+		ColorShift_Top = Color3.fromRGB(205, 215, 230),
+		ColorShift_Bottom = Color3.fromRGB(100, 110, 125),
+		EnvironmentDiffuseScale = 0.65,
+		EnvironmentSpecularScale = 0.55,
+		ExposureCompensation = 0.1,
 
-		AtmosphereDensity = 0.16,
-		AtmosphereOffset = 0.25,
-		AtmosphereColor = Color3.fromRGB(214, 210, 200),
-		AtmosphereDecay = Color3.fromRGB(128, 164, 220),
-		AtmosphereGlare = 0.4,
-		AtmosphereHaze = 0.4,
+		AtmosphereDensity = 0.46,
+		AtmosphereOffset = 0,
+		AtmosphereColor = Color3.fromRGB(175, 185, 198),
+		AtmosphereDecay = Color3.fromRGB(115, 125, 140),
+		AtmosphereGlare = 0,
+		AtmosphereHaze = 3.6,
 
-		TintColor = Color3.fromRGB(255, 247, 234),
-		Contrast = 0.05,
-		Saturation = 0.18,
-		BrightnessOffset = 0.03,
+		TintColor = Color3.fromRGB(240, 245, 252),
+		Contrast = 0.08,
+		Saturation = -0.10,
+		BrightnessOffset = 0.01,
 
-		BloomIntensity = 0.55,
-		BloomSize = 28,
+		BloomIntensity = 0.45,
+		BloomSize = 24,
 		BloomThreshold = 1.05,
 
-		SunRaysIntensity = 0.16,
-		SunRaysSpread = 0.8,
+		SunRaysIntensity = 0,
+		SunRaysSpread = 0,
 	},
-	-- The tower's shadow: crimson murk, drained colour, heavy haze, red glows that bloom
+	-- The tower's shadow: intense heavy mist, deep storm murk, high fog density wrapping the tower
 	Dread = {
-		Ambient = Color3.fromRGB(34, 18, 24),
-		OutdoorAmbient = Color3.fromRGB(66, 34, 42),
+		Ambient = Color3.fromRGB(38, 24, 30),
+		OutdoorAmbient = Color3.fromRGB(68, 42, 50),
 		ColorShift_Top = Color3.fromRGB(160, 60, 60),
 		ColorShift_Bottom = Color3.fromRGB(34, 20, 30),
 		EnvironmentDiffuseScale = 0.4,
-		EnvironmentSpecularScale = 0.5,
-		ExposureCompensation = -0.45,
+		EnvironmentSpecularScale = 0.45,
+		ExposureCompensation = -0.3,
 
-		AtmosphereDensity = 0.42,
+		AtmosphereDensity = 0.85,
 		AtmosphereOffset = 0,
-		AtmosphereColor = Color3.fromRGB(78, 30, 36),
-		AtmosphereDecay = Color3.fromRGB(32, 12, 18),
+		AtmosphereColor = Color3.fromRGB(60, 40, 48),
+		AtmosphereDecay = Color3.fromRGB(30, 16, 22),
 		AtmosphereGlare = 0,
-		AtmosphereHaze = 1.6,
+		AtmosphereHaze = 4.2,
 
-		TintColor = Color3.fromRGB(255, 212, 212),
-		Contrast = 0.18,
-		Saturation = -0.2,
-		BrightnessOffset = -0.04,
+		TintColor = Color3.fromRGB(250, 205, 210),
+		Contrast = 0.16,
+		Saturation = -0.22,
+		BrightnessOffset = -0.03,
 
 		BloomIntensity = 0.75,
 		BloomSize = 30,
 		BloomThreshold = 0.95,
 
-		SunRaysIntensity = 0.04,
-		SunRaysSpread = 0.5,
+		SunRaysIntensity = 0,
+		SunRaysSpread = 0,
 	},
 	-- Off-map tower floors: the original moody storm grade, unchanged
 	Storm = {
