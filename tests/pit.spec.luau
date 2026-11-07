@@ -320,8 +320,8 @@ test("Recipient status ignores donor protections and level cap", function()
 	local state = c:request("STATE").State
 	check(state.Heroes.r.RecipientStatus.Eligible)
 	check(not state.Heroes.r.PitStatus.EligibleDonor)
-	local preview = c:preview(synthesis())
-	check(preview.CanCommit)
+	local previewResult = c:request("PREVIEW", synthesis())
+	check(not previewResult.Success or not previewResult.Preview.CanCommit)
 end)
 
 test("Recipient status exposes coma and profile reservations", function()
@@ -548,26 +548,31 @@ test("Recipient recovery and reservation reject before donors are lost", functio
 	equal(c.profile.Heroes.r.Level, 10); equal(c.profile.Heroes.r.OverflowXP, 96)
 end)
 
-test("Synthesis above the EXP cap requires confirmation and only credits applied EXP", function()
+test("Synthesis rejects already-maxed heroes and rejects excess donors beyond the level cap", function()
 	for _, scenario in ipairs({
-		{ Stars = 1, Level = 10, Reserve = 3400, ExpectedReserve = 3454, Applied = 54 },
-		{ Stars = 7, Level = 10, Reserve = 0, ExpectedReserve = 0, Applied = 0 },
+		{ Stars = 1, Level = 10, Reserve = 3400 },
+		{ Stars = 7, Level = 10, Reserve = 0 },
 	}) do
 		local c = context()
 		local recipient = c.profile.Heroes.r
 		recipient.Stars, recipient.Level, recipient.OverflowXP = scenario.Stars, scenario.Level, scenario.Reserve
-		local p = c:preview(synthesis())
-		check(p.CanCommit); check(p.RequiresOverflowConfirmation)
-		check(p.Overflow.Rejected > 0); equal(p.XP.Applied, scenario.Applied)
-		rejectedWithoutMutation(c, "COMMIT", { Token = p.Token, ConfirmOverflow = "true" })
-		rejectedWithoutMutation(c, "COMMIT", { Token = p.Token, ConfirmOverflow = true })
-		p = c:preview(synthesis())
-		check(c:commit(p, { ConfirmOverflow = true }).Success)
-		equal(c.profile.Heroes.d, nil)
-		equal(c.profile.Heroes.r.Level, scenario.Level)
-		equal(c.profile.Heroes.r.OverflowXP, scenario.ExpectedReserve)
-		equal(c.profile.Heroes.r.SynthesisHistory.XPGained, scenario.Applied)
+		rejectedWithoutMutation(c, "PREVIEW", synthesis())
 	end
+
+	local cExcess = context()
+	cExcess.profile.Heroes.r.Level = 9
+	cExcess.profile.Heroes.r.XP = 1190
+	rejectedWithoutMutation(cExcess, "PREVIEW", synthesis({ "d", "e" }))
+
+	local cValid = context()
+	cValid.profile.Heroes.r.Level = 9
+	cValid.profile.Heroes.r.XP = 1190
+	local p = cValid:preview(synthesis({ "d" }))
+	check(p.CanCommit)
+	local result = cValid:commit(p)
+	check(result.Success)
+	equal(cValid.profile.Heroes.r.Level, 10)
+	equal(cValid.profile.Heroes.r.XP, 0)
 end)
 
 test("Valid promotion charges exact resources, preserves traits and cannot repeat", function()
