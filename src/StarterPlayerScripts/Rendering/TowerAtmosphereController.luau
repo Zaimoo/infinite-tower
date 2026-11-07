@@ -155,27 +155,27 @@ local function spawnFogBaseParticles(att: Attachment)
 	rollingFog.Name = "TowerBaseRollingFog"
 	rollingFog.Texture = cfg.SmokeTexture
 	rollingFog.Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0.0, Color3.fromRGB(68, 64, 78)),
-		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(44, 42, 54)),
-		ColorSequenceKeypoint.new(1.0, Color3.fromRGB(26, 24, 34)),
+		ColorSequenceKeypoint.new(0.0, Color3.fromRGB(150, 160, 175)),
+		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(110, 118, 132)),
+		ColorSequenceKeypoint.new(1.0, Color3.fromRGB(60, 62, 74)),
 	})
 	rollingFog.Transparency = NumberSequence.new({
 		NumberSequenceKeypoint.new(0.0, 1.0),
-		NumberSequenceKeypoint.new(0.22, 0.38),
-		NumberSequenceKeypoint.new(0.75, 0.48),
+		NumberSequenceKeypoint.new(0.18, 0.28),
+		NumberSequenceKeypoint.new(0.80, 0.38),
 		NumberSequenceKeypoint.new(1.0, 1.0),
 	})
 	rollingFog.Size = NumberSequence.new({
-		NumberSequenceKeypoint.new(0.0, 32),
-		NumberSequenceKeypoint.new(0.5, 54),
-		NumberSequenceKeypoint.new(1.0, 72),
+		NumberSequenceKeypoint.new(0.0, 60),
+		NumberSequenceKeypoint.new(0.5, 110),
+		NumberSequenceKeypoint.new(1.0, 160),
 	})
-	rollingFog.Lifetime = NumberRange.new(7, 11)
-	rollingFog.Rate = 9
-	rollingFog.Speed = NumberRange.new(5, 11)
-	rollingFog.SpreadAngle = Vector2.new(180, 14)
+	rollingFog.Lifetime = NumberRange.new(9, 14)
+	rollingFog.Rate = 24
+	rollingFog.Speed = NumberRange.new(8, 18)
+	rollingFog.SpreadAngle = Vector2.new(180, 20)
 	rollingFog.Rotation = NumberRange.new(0, 360)
-	rollingFog.RotSpeed = NumberRange.new(-16, 16)
+	rollingFog.RotSpeed = NumberRange.new(-12, 12)
 	rollingFog.Parent = att
 end
 
@@ -190,27 +190,27 @@ local function spawnStormPeakParticles(att: Attachment)
 	stormSmoke.Name = "TowerPeakStormClouds"
 	stormSmoke.Texture = cfg.SmokeTexture
 	stormSmoke.Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0.0, Color3.fromRGB(30, 28, 38)),
-		ColorSequenceKeypoint.new(0.55, Color3.fromRGB(54, 30, 38)),
-		ColorSequenceKeypoint.new(1.0, Color3.fromRGB(18, 16, 24)),
+		ColorSequenceKeypoint.new(0.0, Color3.fromRGB(140, 150, 165)),
+		ColorSequenceKeypoint.new(0.55, Color3.fromRGB(80, 75, 90)),
+		ColorSequenceKeypoint.new(1.0, Color3.fromRGB(40, 36, 48)),
 	})
 	stormSmoke.Transparency = NumberSequence.new({
 		NumberSequenceKeypoint.new(0.0, 1.0),
-		NumberSequenceKeypoint.new(0.25, 0.25),
-		NumberSequenceKeypoint.new(0.80, 0.35),
+		NumberSequenceKeypoint.new(0.20, 0.18),
+		NumberSequenceKeypoint.new(0.80, 0.28),
 		NumberSequenceKeypoint.new(1.0, 1.0),
 	})
 	stormSmoke.Size = NumberSequence.new({
-		NumberSequenceKeypoint.new(0.0, 48),
-		NumberSequenceKeypoint.new(0.5, 76),
-		NumberSequenceKeypoint.new(1.0, 96),
+		NumberSequenceKeypoint.new(0.0, 80),
+		NumberSequenceKeypoint.new(0.5, 140),
+		NumberSequenceKeypoint.new(1.0, 190),
 	})
-	stormSmoke.Lifetime = NumberRange.new(8, 13)
-	stormSmoke.Rate = 12
-	stormSmoke.Speed = NumberRange.new(8, 16)
-	stormSmoke.SpreadAngle = Vector2.new(180, 18)
+	stormSmoke.Lifetime = NumberRange.new(10, 16)
+	stormSmoke.Rate = 26
+	stormSmoke.Speed = NumberRange.new(10, 22)
+	stormSmoke.SpreadAngle = Vector2.new(180, 25)
 	stormSmoke.Rotation = NumberRange.new(0, 360)
-	stormSmoke.RotSpeed = NumberRange.new(-22, 22)
+	stormSmoke.RotSpeed = NumberRange.new(-18, 18)
 	stormSmoke.Parent = att
 
 	local stormEmbers = Instance.new("ParticleEmitter")
@@ -380,6 +380,75 @@ function TowerAtmosphereController.AssembleFromImportedKit(
 	return assembled
 end
 
+-- Spawns a vast sea of rolling fog beneath the floating islands and hub at Y = -55,
+-- so when looking over the edge, players see the rocky bottom of the islands dipping into a rolling sea of clouds.
+local function ensureUnderIslandFogSea()
+	local container = Workspace:FindFirstChild("ClientVisualEntities") or Workspace
+	if container:FindFirstChild("UnderIslandCloudSea") then
+		return
+	end
+
+	local folder = Instance.new("Folder")
+	folder.Name = "UnderIslandCloudSea"
+	folder.Parent = container
+
+	local seaPoints = {
+		Vector3.new(0, -55, 0), -- Base of Tower
+		Vector3.new(0, -55, -220), -- Causeway
+		Vector3.new(0, -55, -520), -- Causeway / Cloister junction
+		Vector3.new(0, -55, -1036), -- Cloister Commons Center
+		Vector3.new(-490, -55, -752), -- West Plot 1
+		Vector3.new(490, -55, -752), -- East Plot 10
+		Vector3.new(-490, -55, -1036), -- West Plot 2
+		Vector3.new(490, -55, -1036), -- East Plot 9
+		Vector3.new(-490, -55, -1320), -- West Plot 3
+		Vector3.new(490, -55, -1320), -- East Plot 8
+		Vector3.new(-142, -55, -1666), -- North Plot 5
+		Vector3.new(142, -55, -1666), -- North Plot 6
+	}
+
+	local cfg = TowerAtmosphereController.Config
+	for i, pt in ipairs(seaPoints) do
+		local anchor = Instance.new("Part")
+		anchor.Name = string.format("UnderIslandFog_%02d", i)
+		anchor.Size = Vector3.new(4, 4, 4)
+		anchor.CFrame = CFrame.new(pt)
+		anchor.Anchored = true
+		anchor.CanCollide = false
+		anchor.CanTouch = false
+		anchor.CanQuery = false
+		anchor.Transparency = 1
+		anchor.Parent = folder
+
+		local fog = Instance.new("ParticleEmitter")
+		fog.Name = "UnderIslandRollingFog"
+		fog.Texture = cfg.SmokeTexture
+		fog.Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0.0, Color3.fromRGB(170, 180, 192)),
+			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(148, 158, 172)),
+			ColorSequenceKeypoint.new(1.0, Color3.fromRGB(125, 135, 148)),
+		})
+		fog.Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0.0, 1.0),
+			NumberSequenceKeypoint.new(0.20, 0.38),
+			NumberSequenceKeypoint.new(0.80, 0.48),
+			NumberSequenceKeypoint.new(1.0, 1.0),
+		})
+		fog.Size = NumberSequence.new({
+			NumberSequenceKeypoint.new(0.0, 90),
+			NumberSequenceKeypoint.new(0.5, 150),
+			NumberSequenceKeypoint.new(1.0, 200),
+		})
+		fog.Lifetime = NumberRange.new(12, 18)
+		fog.Rate = 5
+		fog.Speed = NumberRange.new(6, 14)
+		fog.SpreadAngle = Vector2.new(180, 12)
+		fog.Rotation = NumberRange.new(0, 360)
+		fog.RotSpeed = NumberRange.new(-6, 6)
+		fog.Parent = anchor
+	end
+end
+
 --============================================================================
 -- RUNTIME BOOTSTRAP & WINDOW GLOW PULSE LOOP
 --============================================================================
@@ -388,6 +457,8 @@ function TowerAtmosphereController.Start()
 		return
 	end
 	Started = true
+
+	ensureUnderIslandFogSea()
 
 	local function bindExistingTower()
 		local overhaul = Workspace:FindFirstChild("BaseOverhaulGeometry")
