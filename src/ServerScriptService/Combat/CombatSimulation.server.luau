@@ -656,7 +656,7 @@ local function knockHeroIntoComa(simHero: SimHero, _baseComaSeconds: number?)
 	)
 	dm.SyncProfile(simHero.Owner)
 
-	Tower.BroadcastAt(CombatVFXRemote, simHero, "HERO_KO", simHero.Position, simHero.NetId)
+	Tower.BroadcastAt(CombatVFXRemote, simHero, "HERO_COMA", simHero.Position, simHero.NetId)
 
 	local masterState = ActiveMasters[simHero.Owner]
 
@@ -1258,7 +1258,7 @@ local function duelDamage(victim: SimHero, amount: number, kind: string, overdri
 		HeroNavigation.Clear(victim)
 		victim.State = "COMA"
 		victim.TargetNetId = nil
-		Tower.BroadcastAt(CombatVFXRemote, victim, "HERO_KO", victim.Position, victim.NetId)
+		Tower.BroadcastAt(CombatVFXRemote, victim, "HERO_COMA", victim.Position, victim.NetId)
 		sendDuelState(duel, { Kind = "SCORE" })
 	end
 end
