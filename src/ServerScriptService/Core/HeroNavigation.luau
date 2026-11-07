@@ -7,6 +7,7 @@ local Layout=require(game.ReplicatedStorage.Shared.Config.TowerLayout)
 local Graph=require(script.Parent.TowerNavigationGraph)
 local Recovery=require(script.Parent.NavigationRecovery)
 local Queue=require(script.Parent.NavigationQueue)
+local TowerTraversal=require(script.Parent.TowerTraversal)
 local Navigation={}
 local states: {[any]:any}=setmetatable({},{__mode="k"}) :: any
 local graphs: {[number]:any}={}
@@ -170,7 +171,10 @@ function Navigation.Clear(hero: any)
 end
 function Navigation.Pause(hero: any)
 	local s=states[hero]
-	if s then resetPath(hero,s);Recovery.Pause(s.Monitor);s.LastStep=nil end
+	if s then
+		resetPath(hero,s);Recovery.Pause(s.Monitor);s.LastStep=nil
+		s.RampLinkId=nil;s.RampDirection=nil;s.RampDirChangeTime=nil
+	end
 end
 function Navigation.Displace(hero: any,destination: Vector3)
 	hero.Position=walkSegment(hero.Position,destination,flatDistance(hero.Position,destination),groupFor(hero),nil,nil)
@@ -271,15 +275,71 @@ function Navigation.Step(hero: any,goal: Vector3,distance: number,now: number,de
 		location=Graph.Locate(g,localPoint(from,origin));goalLocation=Graph.Locate(g,localPoint(goal,origin))
 	end
 	local key=scope..":"..(location and location.Key or "WORLD")..">"..(goalLocation and goalLocation.Key or "WORLD")
-	if s.RouteKey~=key then
-		resetPath(hero,s);s.RouteKey=key;s.TowerRoute={};s.TowerIndex=1
-		local route=if g then Graph.Route(g,localPoint(from,origin),localPoint(goal,origin))else {{X=goal.X,Y=goal.Y,Z=goal.Z}}
-		for _,p in route do
-			local v=Vector3.new(p.X,p.Y,p.Z)+(origin or Vector3.zero)
-			v=Navigation.Ground(v,group,STEP_UP,MAX_DROP)or v
-			if #s.TowerRoute==0 or (s.TowerRoute[#s.TowerRoute]-v).Magnitude>.01 then table.insert(s.TowerRoute,v)end
+	local currentLink = nil
+	if location and location.Link and g then
+		for _, link in g.Links do
+			if link.Id == location.Link then
+				currentLink = link
+				break
+			end
 		end
-		if #s.TowerRoute==0 then s.TowerRoute={goal}end
+	end
+
+	local isMidRamp = currentLink ~= nil and TowerTraversal.IsDiagonalRamp(currentLink) and TowerTraversal.IsMidRamp(location and location.T)
+	local isOverride = hero.FocusOverride == true or hero.RecallOverride == true or hero.IsFocusTarget == true
+	local shouldCommit = false
+
+	if isOverride or not isMidRamp then
+		s.RampLinkId = nil
+		s.RampDirection = nil
+		s.RampDirChangeTime = nil
+		hero.FocusOverride = nil
+		hero.RecallOverride = nil
+	else
+		local fromLocal = localPoint(from, origin)
+		local candRoute = if g then Graph.Route(g, fromLocal, localPoint(goal, origin)) else {{X=goal.X, Y=goal.Y, Z=goal.Z}}
+		local lx, ly, lz = currentLink.BX - currentLink.AX, currentLink.BY - currentLink.AY, currentLink.BZ - currentLink.AZ
+		local reqDir = 0
+		for _, p in candRoute do
+			local dot = (p.X - fromLocal.X) * lx + (p.Y - fromLocal.Y) * ly + (p.Z - fromLocal.Z) * lz
+			if math.abs(dot) > 0.05 then
+				reqDir = if dot > 0 then 1 else -1
+				break
+			end
+		end
+		if reqDir == 0 then
+			reqDir = s.RampDirection or 1
+		end
+
+		local isReversal = (s.RampLinkId == currentLink.Id) and (s.RampDirection ~= nil) and (reqDir == -s.RampDirection)
+		if isReversal and TowerTraversal.ShouldCommitDirection(s.RampDirChangeTime, now) then
+			shouldCommit = true
+		else
+			if s.RampLinkId ~= currentLink.Id or s.RampDirection ~= reqDir then
+				s.RampLinkId = currentLink.Id
+				s.RampDirection = reqDir
+				s.RampDirChangeTime = now
+			end
+		end
+	end
+
+	if not shouldCommit and s.RouteKey ~= key then
+		resetPath(hero, s); s.RouteKey = key; s.TowerRoute = {}; s.TowerIndex = 1
+		local route = if g then Graph.Route(g, localPoint(from, origin), localPoint(goal, origin)) else {{X=goal.X, Y=goal.Y, Z=goal.Z}}
+		for _, p in route do
+			local v = Vector3.new(p.X, p.Y, p.Z) + (origin or Vector3.zero)
+			v = Navigation.Ground(v, group, STEP_UP, MAX_DROP) or v
+			if #s.TowerRoute == 0 or (s.TowerRoute[#s.TowerRoute] - v).Magnitude > 0.01 then table.insert(s.TowerRoute, v) end
+		end
+		if #s.TowerRoute == 0 then s.TowerRoute = {goal} end
+	elseif shouldCommit and (not s.TowerRoute or #s.TowerRoute == 0) and currentLink then
+		local endLocal = if s.RampDirection == 1
+			then Vector3.new(currentLink.BX, currentLink.BY, currentLink.BZ)
+			else Vector3.new(currentLink.AX, currentLink.AY, currentLink.AZ)
+		local endWorld = endLocal + (origin or Vector3.zero)
+		endWorld = Navigation.Ground(endWorld, group, STEP_UP, MAX_DROP) or endWorld
+		s.TowerRoute = { endWorld }
+		s.TowerIndex = 1
 	end
 	s.TowerRoute[#s.TowerRoute]=goal;s.TowerGoal=goal;s.Origin=origin
 	s.TowerIndex=math.min(s.TowerIndex,#s.TowerRoute)

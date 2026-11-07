@@ -2,6 +2,27 @@
 -- Real shell collision, solid floor platforms, and a continuous exterior ascent.
 local Traversal = {}
 local VERSION = 3
+
+Traversal.RAMP_COMMITMENT_WINDOW = 0.8
+
+function Traversal.IsDiagonalRamp(link: any): boolean
+	if not link then return false end
+	if link.Kind == "RAMP" or link.Kind == "STAIRS" then
+		return true
+	end
+	return math.abs((link.BY or 0) - (link.AY or 0)) >= 1.0
+end
+
+function Traversal.IsMidRamp(t: number?): boolean
+	if not t then return false end
+	return t > 0.05 and t < 0.95
+end
+
+function Traversal.ShouldCommitDirection(lastChangeTime: number?, now: number): boolean
+	if not lastChangeTime then return false end
+	return (now - lastChangeTime) < Traversal.RAMP_COMMITMENT_WINDOW
+end
+
 function Traversal.Apply(tower: Model)
 	if tower:GetAttribute("TraversalVersion") == VERSION then return end
 	local rings = tower:FindFirstChild("TowerRings")
@@ -90,7 +111,8 @@ function Traversal.Apply(tower: Model)
 			end
 			local a, b = point(i / 32), point((i + 1) / 32)
 			local cf = CFrame.lookAt((a + b) / 2, b)
-			block(batch, "AscentRamp", Vector3.new(10, 1.5, (b - a).Magnitude + .3), cf * CFrame.new(0, -.75, 0), Color3.fromRGB(69, 48, 57), Enum.Material.Slate)
+			local rampPart = block(batch, "AscentRamp", Vector3.new(10, 1.5, (b - a).Magnitude + .3), cf * CFrame.new(0, -.75, 0), Color3.fromRGB(69, 48, 57), Enum.Material.Slate)
+			rampPart:SetAttribute("IsDiagonalRamp", true)
 			block(batch, "OuterRampRail", Vector3.new(.6, 3, (b - a).Magnitude + .3), cf * CFrame.new(-4.9, 1.5, 0), Color3.fromRGB(112, 26, 37), Enum.Material.Granite)
 		end
 		local landing = Vector3.new(center.X + math.cos(endAngle) * (rampRadius - 3.8), topY, center.Z + math.sin(endAngle) * (rampRadius - 3.8))

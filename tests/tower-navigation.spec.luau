@@ -2,6 +2,7 @@ local Graph=require(nodes["ServerScriptService.Core.TowerNavigationGraph"])
 local Recovery=require(nodes["ServerScriptService.Core.NavigationRecovery"])
 local Queue=require(nodes["ServerScriptService.Core.NavigationQueue"])
 local Layout=require(nodes["ReplicatedStorage.Shared.Config.TowerLayout"])
+local Traversal=require(nodes["ServerScriptService.Core.TowerTraversal"])
 local passed=0
 local function test(name,fn)fn();passed+=1;print("PASS "..name)end
 local function p(x,y,z)return {X=x,Y=y,Z=z}end
@@ -87,5 +88,19 @@ test("Cancelled queue churn remains bounded and synchronous completions do not r
 	local sync=Queue.new(1,4,function(_,complete)completed+=1;complete()end)
 	for i=1,100 do sync:Push(i,{})end
 	assert(completed==100 and sync.Active==0 and sync.Count==0)
+end)
+test("TowerTraversal diagonal ramp commitment and bounds detection", function()
+	assert(Traversal.RAMP_COMMITMENT_WINDOW == 0.8)
+	local rampLink = { Kind = "RAMP", AY = 0, BY = 8 }
+	local flatLink = { Kind = "BRIDGE", AY = 0, BY = 0 }
+	assert(Traversal.IsDiagonalRamp(rampLink) == true)
+	assert(Traversal.IsDiagonalRamp(flatLink) == false)
+
+	assert(Traversal.IsMidRamp(0.5) == true)
+	assert(Traversal.IsMidRamp(0.02) == false)
+	assert(Traversal.IsMidRamp(0.98) == false)
+
+	assert(Traversal.ShouldCommitDirection(10.0, 10.5) == true, "0.5s < 0.8s commits direction")
+	assert(Traversal.ShouldCommitDirection(10.0, 10.85) == false, "0.85s >= 0.8s releases commitment")
 end)
 print(string.format("Tower navigation tests: %d passed",passed))

@@ -98,4 +98,60 @@ test("Assigned target acquisition prefers lower connector route cost over shorte
 	}
 	assert(T.Select(h,{[1]=chasmMob,[2]=rampMob},ctx,eligible,false)==rampMob and h.TargetNetId==2)
 end)
+test("Target lock hysteresis: competing mob < 12 studs closer does NOT switch, >= 12 studs closer DOES switch", function()
+	local h = hero(0, 0)
+	local target1 = mob(20, 0)
+	local target2 = mob(14, 0)
+	local target3 = mob(6, 0)
+	local mobs = { [1] = target1, [2] = target2, [3] = target3 }
+
+	h.TargetNetId = 1
+	h.State = "MOVE_TO_TARGET"
+	local ctx = free(0, 0)
+
+	local res = T.Select(h, { [1] = target1, [2] = target2 }, ctx, eligible, false)
+	assert(res == target1 and h.TargetNetId == 1, "target lock hysteresis prevents switching to mob only 6 studs closer")
+
+	res = T.Select(h, mobs, ctx, eligible, false)
+	assert(res == target3 and h.TargetNetId == 3, "competing mob >= 12 studs closer triggers target switch")
+end)
+
+test("Focus target instantly overrides hysteresis and maintains lock", function()
+	local h = hero(0, 0)
+	local m1 = mob(5, 0)
+	local m2 = mob(25, 0)
+	local mobs = { [1] = m1, [2] = m2 }
+	local ctx = free(0, 0)
+	ctx.FocusedTargetNetId = 2
+
+	local res = T.Select(h, mobs, ctx, eligible, false)
+	assert(res == m2 and h.TargetNetId == 2 and h.IsFocusTarget == true, "Focus target instantly locks onto clicked mob")
+
+	ctx.FocusedTargetNetId = nil
+	res = T.Select(h, mobs, ctx, eligible, false)
+	assert(res == m2 and h.TargetNetId == 2, "Focus target remains locked against closer competing mob")
+end)
+
+test("Elevation-weighted distance applies 2.5x vertical penalty across diagonal ramp height gaps", function()
+	local h = hero(0, 0)
+	local mobFlat = mob(10, 0)
+	local mobElevated = mob(8, 0); mobElevated.Position = Vector3.new(8, 6, 0)
+	local mobs = { [1] = mobElevated, [2] = mobFlat }
+	local ctx = free(0, 0)
+
+	local res = T.Select(h, mobs, ctx, eligible, false)
+	assert(res == mobFlat and h.TargetNetId == 2, "Elevation penalty prioritizes platform mob over ramp-elevated mob")
+end)
+
+test("Deterministic tie-breaker resolves nearly identical distances (< 4 studs) by lowest EntityId / SpawnOrder", function()
+	local h = hero(0, 0)
+	local mobA = mob(15, 0); mobA.EntityId = 50; mobA.SpawnOrder = 50
+	local mobB = mob(16, 0); mobB.EntityId = 10; mobB.SpawnOrder = 10
+	local mobs = { [1] = mobA, [2] = mobB }
+	local ctx = free(0, 0)
+	ctx.TieBreakerMargin = T.TIE_BREAKER_MARGIN
+
+	local best = T.Acquire(h, mobs, ctx, eligible, nil)
+	assert(best == 2, "Tie-breaker selects mobB due to lower EntityId/SpawnOrder (10 vs 50)")
+end)
 print(string.format("Hero targeting tests: %d passed, %d failed",passed,failed));assert(failed==0)
