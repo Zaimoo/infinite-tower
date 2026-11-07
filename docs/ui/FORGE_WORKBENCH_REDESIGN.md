@@ -54,7 +54,7 @@ States compose. A weapon can be Rare + equipped + locked + selected simultaneous
 | Selected material | `[−] Material · consumed`; danger text, with name/star count in the removal list. | Tap again or use its 48px Remove button to deselect. |
 | Manually locked | `[L] Locked`; lock/protection button in details. | Excluded from auto-fill and consumption; inspection remains available. |
 | Equipped protection | `[P] Protected`; owner chip stays visible. | Material selection explains “unequip before using”; no implicit unequip. |
-| Invalid material | Reason such as “Requires the same weapon type” or “Requires the same rarity.” | Focusable/inspectable; activation explains refusal without changing materials. |
+| Invalid material | Reason such as “Requires the same star rank” or “Requires the same rarity.” | Focusable/inspectable; activation explains refusal without changing materials. |
 | Missing or conflicting owner | “Equipped · sync required.” | Treat as protected until an authoritative snapshot resolves it. |
 | Gamepad focus | Platform selection adornment outside the control; hover/selection rail brightens. | Distinct from the selected item's persistent text badge. |
 | Pending | Primary action says “Waiting for server…”; all mutations are latched. | Filters and inspection can remain usable; no second purchase/upgrade request. |

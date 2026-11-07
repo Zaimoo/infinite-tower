@@ -2232,7 +2232,7 @@ function Forge:AutoFillFodder()
 
 	table.clear(self.FodderUUIDs)
 
-	-- Donors share the target's rarity and type. Spend low stars first, and Standard before Enhanced.
+	-- Donors share the target's rarity and stars (any weapon type). Standard before Enhanced.
 	local candidates = {}
 	for uuid, art in pairs(artifacts) do
 		if uuid ~= self.SelectedTargetUUID and not art.EquippedHeroUUID and not art.Locked and target and WeaponPromotion.IsDonorFor(target, art) then
@@ -2476,7 +2476,7 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 			end)
 		end
 	elseif mode == "FODDER" then
-		self.DrawerTitle.Text = "SELECT DONORS: SAME RARITY AND WEAPON TYPE"
+		self.DrawerTitle.Text = "SELECT DONORS: SAME RARITY AND STARS"
 		local target = self.SelectedTargetUUID and artifacts[self.SelectedTargetUUID]
 		local req = target and ArtifactCatalog.GetFodderRequirement(target.Star or 1) or 0
 

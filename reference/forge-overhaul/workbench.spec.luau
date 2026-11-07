@@ -78,7 +78,7 @@ test("max rank, compatibility, currency, and duplicate materials block commitmen
 	s.Gold = 115940
 	assert(Model.upgradeReason(s, "bow-target", { "bow-material", "bow-material" }) ~= nil)
 	s.Artifacts["bow-target"].Star = 4; s.Gems = 49
-	for i = 1, 4 do local donor = table.clone(s.Artifacts["bow-material"]); donor.UUID = "d" .. i; s.Artifacts[donor.UUID] = donor end
+	for i = 1, 4 do local donor = table.clone(s.Artifacts["bow-material"]); donor.UUID = "d" .. i; donor.Star = 4; s.Artifacts[donor.UUID] = donor end
 	assert(Model.upgradeReason(s, "bow-target", { "d1", "d2", "d3", "d4" }) == "Not enough Gems")
 end)
 test("filters compose without deleting inventory entries; sorting is stable", function()
