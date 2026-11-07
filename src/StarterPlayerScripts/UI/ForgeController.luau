@@ -24,6 +24,7 @@ local GildedGrimoire = require(ReplicatedStorage:WaitForChild("Shared"):WaitForC
 local GrimoireIcons = require(Shared.Util.GrimoireIcons)
 local ArtifactPreview = require(script.Parent.ArtifactPreview)
 local ForgeHeader = require(script.Parent.ForgeHeader)
+local HeroSelectionDrawer = require(script.Parent.HeroSelectionDrawer)
 local SummonLuck = require(Shared.Util.SummonLuck)
 
 local ARCHETYPE_ICON: { [string]: string } = {
@@ -2302,6 +2303,9 @@ end
 --============================================================================
 
 function Forge:BuildPickerDrawer(root: Frame)
+	self.HeroDrawer = HeroSelectionDrawer.new(root.Parent, 90, function()
+		self.PickerMode = "NONE"
+	end)
 	local drawer = new("Frame", {
 		Name = "SelectionDrawer",
 		AnchorPoint = Vector2.new(0, 1),
@@ -2398,6 +2402,11 @@ function Forge:BuildPickerDrawer(root: Frame)
 end
 
 function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUUID: string?)
+	if mode == "EQUIP_LOADOUT" then
+		self:OpenHeroDrawer(contextUUID)
+		return
+	end
+	self.HeroDrawer:Close(true)
 	self.PickerMode = mode
 	self.Drawer.Visible = true
 
@@ -2585,189 +2594,66 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 				end)
 			end
 		end
-	elseif mode == "EQUIP_LOADOUT" then
-		local artUUID = contextUUID or self.SelectedAssignArtifactUUID
-		local art = artUUID and artifacts[artUUID]
-		if not art then return end
-
-		self.DrawerTitle.Text = string.format("ASSIGN %s (%s) TO HERO", string.upper(art.DisplayName or "ARTIFACT"), string.upper(art.Type or "WEAPON"))
-
-		-- Collect only compatible heroes (hide incompatible ones)
-		local compatibleList = {}
-		for heroUUID, hero in pairs(heroMap) do
-			local heroArchetype = hero.Archetype or (hero.TemplateId and HeroCatalog.Seeds[hero.TemplateId] and HeroCatalog.Seeds[hero.TemplateId].Archetype) or "Striker"
-			local canEquip = ArtifactCatalog.CanHeroEquip(heroArchetype, art.Type)
-			local isCurrentEquipped = (hero.EquippedArtifactUUID == artUUID)
-
-			if canEquip or isCurrentEquipped then
-				table.insert(compatibleList, {
-					UUID = heroUUID,
-					Hero = hero,
-					Archetype = heroArchetype,
-					IsCurrent = isCurrentEquipped,
-				})
-			end
-		end
-
-		-- Deterministic sorting: currently equipped first, then highest level, then highest stars, then name
-		table.sort(compatibleList, function(a, b)
-			if a.IsCurrent ~= b.IsCurrent then
-				return a.IsCurrent
-			end
-			local aLvl = a.Hero.Level or 1
-			local bLvl = b.Hero.Level or 1
-			if aLvl ~= bLvl then
-				return aLvl > bLvl
-			end
-			local aStars = a.Hero.Stars or 1
-			local bStars = b.Hero.Stars or 1
-			if aStars ~= bStars then
-				return aStars > bStars
-			end
-			return (a.Hero.DisplayName or "") < (b.Hero.DisplayName or "")
-		end)
-
-		if #compatibleList == 0 then
-			local emptyLbl = label(scroll, string.format("No compatible %s heroes found in your roster.", art.Type or "weapon"), 14, C.TextMuted, Enum.Font.GothamMedium)
-			emptyLbl.Position = UDim2.fromOffset(20, 50)
-			emptyLbl.Size = UDim2.new(1, -40, 0, 36)
-			emptyLbl.TextXAlignment = Enum.TextXAlignment.Center
-			return
-		end
-
-		for order, entry in ipairs(compatibleList) do
-			local heroUUID = entry.UUID
-			local hero = entry.Hero
-			local heroArchetype = entry.Archetype
-			local isCurrentEquipped = entry.IsCurrent
-
-			local starCount = hero.Stars or 1
-			local starColor = (starCount >= 5) and C.GoldYellow or ((starCount >= 4) and Color3.fromRGB(192, 132, 252) or C.TextLavender)
-
-			local card = new("Frame", {
-				Name = "HeroCard_" .. heroUUID,
-				Size = UDim2.fromOffset(150, 168),
-				BorderSizePixel = 0,
-				LayoutOrder = order,
-				ZIndex = 72,
-			}, scroll)
-			applyGothicStyle(card, "Row", { AccentColor = if isCurrentEquipped then C.Green else starColor })
-
-			-- Hero Icon / Portrait
-			local portraitHost = new("Frame", {
-				Name = "PortraitHost",
-				AnchorPoint = Vector2.new(0.5, 0),
-				Position = UDim2.new(0.5, 0, 0, 8),
-				Size = UDim2.fromOffset(54, 54),
-				BackgroundColor3 = Color3.fromRGB(14, 10, 22),
-				BorderSizePixel = 0,
-				ClipsDescendants = true,
-				ZIndex = 73,
-			}, card)
-			new("UICorner", { CornerRadius = UDim.new(0, 8) }, portraitHost)
-			local portStroke = stroke(portraitHost, if isCurrentEquipped then C.Green else starColor, 1.2)
-			portStroke.Transparency = 0.4
-
-			pcall(HeroCard.Portrait, portraitHost, hero)
-
-			-- Level badge pill on bottom-left of portrait
-			local lvlPill = new("Frame", {
-				Name = "LevelPill",
-				AnchorPoint = Vector2.new(0, 1),
-				Position = UDim2.new(0, 2, 1, -2),
-				Size = UDim2.fromOffset(36, 15),
-				BackgroundColor3 = Color3.fromRGB(8, 6, 12),
-				BackgroundTransparency = 0.25,
-				BorderSizePixel = 0,
-				ZIndex = 75,
-			}, portraitHost)
-			new("UICorner", { CornerRadius = UDim.new(0, 4) }, lvlPill)
-			local lvlLbl = label(lvlPill, string.format("Lv.%d", hero.Level or 1), 10, C.GoldYellow, Enum.Font.GothamBold)
-			lvlLbl.Size = UDim2.fromScale(1, 1)
-			lvlLbl.TextXAlignment = Enum.TextXAlignment.Center
-			lvlLbl.ZIndex = 76
-
-			-- Archetype icon badge on bottom-right of portrait
-			local archPill = new("Frame", {
-				Name = "ArchPill",
-				AnchorPoint = Vector2.new(1, 1),
-				Position = UDim2.new(1, -2, 1, -2),
-				Size = UDim2.fromOffset(18, 18),
-				BackgroundColor3 = Color3.fromRGB(8, 6, 12),
-				BackgroundTransparency = 0.25,
-				BorderSizePixel = 0,
-				ZIndex = 75,
-			}, portraitHost)
-			new("UICorner", { CornerRadius = UDim.new(0, 4) }, archPill)
-			pcall(function()
-				GrimoireIcons.Create(heroArchetype, 14, archPill, 76)
-			end)
-
-			-- Hero Name
-			local heroNameLbl = label(card, hero.DisplayName or "Hero", 13, C.Text, Enum.Font.GothamBold)
-			heroNameLbl.Position = UDim2.new(0, 6, 0, 65)
-			heroNameLbl.Size = UDim2.new(1, -12, 0, 16)
-			heroNameLbl.TextTruncate = Enum.TextTruncate.AtEnd
-			heroNameLbl.TextXAlignment = Enum.TextXAlignment.Center
-			heroNameLbl.ZIndex = 73
-
-			-- Hero Level, Stars & Archetype subtitle
-			local heroSubLbl = label(card, string.format("<font color=\"#FACC15\">%s</font>  Lv.%d  •  %s", string.rep("★", starCount), hero.Level or 1, heroArchetype), 11, C.TextLavender, Enum.Font.GothamMedium)
-			heroSubLbl.Position = UDim2.new(0, 6, 0, 82)
-			heroSubLbl.Size = UDim2.new(1, -12, 0, 14)
-			heroSubLbl.TextTruncate = Enum.TextTruncate.AtEnd
-			heroSubLbl.TextXAlignment = Enum.TextXAlignment.Center
-			heroSubLbl.ZIndex = 73
-
-			-- Equipment Status
-			local eqArt = hero.EquippedArtifactUUID and artifacts[hero.EquippedArtifactUUID]
-			local eqStatusText = isCurrentEquipped and "<font color=\"#4ADE80\">Equipped: This</font>" or (eqArt and ("Equipped: " .. (eqArt.DisplayName or "Artifact")) or "No Artifact")
-			local eqStatusColor = if isCurrentEquipped then C.Green else (if eqArt then C.TextLavender else C.TextMuted)
-			local eqStatusLbl = label(card, eqStatusText, 10, eqStatusColor, Enum.Font.Gotham)
-			eqStatusLbl.Position = UDim2.new(0, 6, 0, 98)
-			eqStatusLbl.Size = UDim2.new(1, -12, 0, 14)
-			eqStatusLbl.TextTruncate = Enum.TextTruncate.AtEnd
-			eqStatusLbl.TextXAlignment = Enum.TextXAlignment.Center
-			eqStatusLbl.ZIndex = 73
-
-			-- Action Button (EQUIP / UNEQUIP / SWAP)
-			local actionBtn = new("TextButton", {
-				Name = "HeroActionBtn",
-				AnchorPoint = Vector2.new(0.5, 1),
-				Position = UDim2.new(0.5, 0, 1, -8),
-				Size = UDim2.fromOffset(130, 28),
-				BorderSizePixel = 0,
-				Text = isCurrentEquipped and "UNEQUIP" or (hero.EquippedArtifactUUID and "SWAP" or "EQUIP"),
-				Font = Enum.Font.GothamBold,
-				TextSize = 12,
-				ZIndex = 74,
-			}, card)
-
-			if isCurrentEquipped then
-				applyGothicStyle(actionBtn, "ButtonSecondary")
-			else
-				applyGothicStyle(actionBtn, "ButtonPrimary", { Variant = "Gold" })
-			end
-
-			actionBtn.Activated:Connect(function()
-				if self.Busy then return end
-				self.Busy = true
-				task.spawn(function()
-					if isCurrentEquipped then
-						self.RequestUnequip:InvokeServer(heroUUID)
-					else
-						self.RequestEquip:InvokeServer(heroUUID, artUUID)
-					end
-					self.Busy = false
-					self:ClosePicker()
-					self:Refresh()
-				end)
-			end)
-		end
 	end
 end
 
+function Forge:OpenHeroDrawer(contextUUID: string?)
+	if self.Busy or not self.Root.Visible then return end
+	local profile = self:ResolveProfile()
+	local artifacts = profile and profile.Artifacts or {}
+	local artUUID = contextUUID or self.SelectedAssignArtifactUUID
+	local art = artUUID and artifacts[artUUID]
+	if not art then self.HeroDrawer:Close(true); return end
+	self.Drawer.Visible = false
+	self.SelectedAssignArtifactUUID = artUUID
+	self.PickerMode = "EQUIP_LOADOUT"
+	local entries = {}
+	for uuid, hero in profile.Heroes or {} do
+		local seed = hero.TemplateId and HeroCatalog.Seeds[hero.TemplateId]
+		local archetype = hero.Archetype or (seed and seed.Archetype) or "Striker"
+		local current = hero.EquippedArtifactUUID == artUUID
+		if ArtifactCatalog.CanHeroEquip(archetype, art.Type) or current then
+			local equipped = hero.EquippedArtifactUUID and artifacts[hero.EquippedArtifactUUID]
+			table.insert(entries, {
+				UUID = uuid, Hero = hero, Archetype = archetype, Selected = current,
+				Status = if current then "Equipped: This" elseif equipped then "Equipped: " .. (equipped.DisplayName or "Artifact") else "No Artifact",
+				Action = if current then "UNEQUIP" elseif hero.EquippedArtifactUUID then "SWAP" else "EQUIP",
+			})
+		end
+	end
+	table.sort(entries, function(a, b)
+		if a.Selected ~= b.Selected then return a.Selected end
+		local ah, bh = a.Hero, b.Hero
+		if (ah.Level or 1) ~= (bh.Level or 1) then return (ah.Level or 1) > (bh.Level or 1) end
+		if (ah.Stars or 1) ~= (bh.Stars or 1) then return (ah.Stars or 1) > (bh.Stars or 1) end
+		if (ah.DisplayName or "") ~= (bh.DisplayName or "") then return (ah.DisplayName or "") < (bh.DisplayName or "") end
+		return a.UUID < b.UUID
+	end)
+	self.HeroDrawer:SetContent("EQUIP ARTIFACT", art.DisplayName or "Choose a compatible hero.", entries, function(uuid)
+		if self.Busy or not self.Root.Visible or not self.HeroDrawer.Opened then return end
+		local hero = self:ResolveProfile().Heroes[uuid]
+		if not hero then return end
+		local current = hero.EquippedArtifactUUID == artUUID
+		self.Busy = true
+		task.spawn(function()
+			local ok, response = pcall(function()
+				if current then return self.RequestUnequip:InvokeServer(uuid) end
+				return self.RequestEquip:InvokeServer(uuid, artUUID)
+			end)
+			self.Busy = false
+			if not ok or response == false or (type(response) == "table" and response.Success == false) then
+				self.HeroDrawer.Footer.Text = "Assignment failed. Please try again."
+				return
+			end
+			self:ClosePicker()
+			self:Refresh()
+		end)
+	end, "No compatible heroes in your roster.")
+	self.HeroDrawer:Open()
+end
+
 function Forge:ClosePicker()
+	self.HeroDrawer:Close(true)
 	self.PickerMode = "NONE"
 	TweenService:Create(self.Drawer, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
 		Position = UDim2.fromScale(0, 1.5),
