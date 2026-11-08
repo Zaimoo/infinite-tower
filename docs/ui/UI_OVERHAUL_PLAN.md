@@ -300,6 +300,14 @@ The rail's Backpack now opens a separate list window (Artifacts 44/100, Heroes 7
 - Hero nameplates overlap heavily at mid-range (five large plates in a row). Scale them by distance and shrink to name plus HP beyond 40 studs. Show your own squad's plates fully only when you hover or target them. Turn `AlwaysOnTop` off for non-duel heroes.
 - Hide all nameplates while a modal is open (WindowManager focus mode).
 
+### 5.14 Facility labels in the world (plots and Hub)
+Every facility building gets a floating label above it (`BillboardGui` on the building's roof attachment, client-built per plot in `Rendering/`). That covers the Blacksmith Forge, Guard Post, Market, Training Grounds, God's Blessing, Summoning, the Pit (Synthesis/Promotion), Fortress Tree/Upgrades and Storage.
+- **Content:** a drawn facility icon and the name in Grimoire title type (white→gold, ink outline), and under it one live status line in 13–14 px body type. Examples: "Lv.3 · 2/4 workers · +18% loot" (Market), "Lv.2 · +12% squad ATK" (Training), "+1.2K Gold/min" (Guard Post), "44/100 weapons" (Forge).
+- **States:** a gold "!" badge when something needs attention (free worker slot, upgrade affordable, gold to collect). Locked buildings show a lock and "Unlock in Upgrades". The label of the building you're standing at grows slightly and shows its key prompt.
+- **Readability:** scale by distance and fade between about 60 and 120 studs. Only your own plot's labels show full status; other players' plots show the name only. `AlwaysOnTop` off, so buildings occlude them. Labels are hidden while a modal is open, and status is updated on change only, not per frame.
+- **Data:** read from the replicated profile (facility levels, assigned workers, bonuses via `StatFormulas`). There are no new remotes, and it's purely visual.
+- Lands in Phase 6 with the other world UI, or earlier as its own small PR.
+
 ---
 
 ## 6. Warning and confirmation matrix
@@ -346,7 +354,7 @@ Each phase is its own PR off `main` with conventional commits. Each adds Studio 
 | Phase | Scope | Size |
 | --- | --- | --- |
 | **0. Hotfixes** | B2 first, then B4, B5, B6, B7, B8, B9, B10; a clean-session check for B3 (B1 already fixed) | S |
-| **1. Kit foundation** | `Kit/` tokens re-export, `Button`, `CurrencyChip`, `Bar`, `DeltaStat`, `Callout`, `Tooltip`, `Notify`, `ConfirmDialog`, motion presets. Spec tests for pure logic (tooltip placement/flip, toast coalescing, confirm-tier selection from the §6 table). | L |
+| **1. Kit foundation** | `Kit/` tokens re-export, `Button`, `CurrencyChip`, `Bar`, `DeltaStat`, `Callout`, `Tooltip`, `Notify`, `ConfirmDialog`, motion presets. Spec tests for pure logic (tooltip placement/flip, toast coalescing, confirm-tier selection from the §6 table). | L · **Built 2026-11-09:** `UI/Kit` (see `GILDED_GRIMOIRE.md` §The UI kit), `Shared/Util/UiKitRules` with 12 spec tests, server and client toasts routed to `Notify`. Checked in a Studio playtest. No screen uses the other pieces yet; adoption starts in Phase 3. |
 | **2. WindowManager** | Registry, scrim/blur, HUD focus mode, Esc/B, open/close transitions, `_G` shims; B3 investigation | M |
 | **3. Pit + Forge** | Synthesis, picker, Promotion, Forge Workbench, Blacksmith summon onto `Window` + Kit; the §6 confirms | L |
 | **4. Tower + Fortress + Index + Store** | §5.6–5.9 | M |

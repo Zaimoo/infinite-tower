@@ -4,6 +4,7 @@
 --   Authoritative RemoteFunction: PitRequest (STATE -> PREVIEW -> COMMIT).
 
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local HeroCard = require(script.Parent:WaitForChild("HeroCard"))
@@ -679,21 +680,27 @@ function Promo.BuildPicker(self: any)
 	goldText(self.PickerTitle)
 	self.PickerTitle.ZIndex = 61
 
-	local back = new("TextButton", {
-		Text = "×",
-		TextSize = 28,
-		Font = Enum.Font.GothamBold,
-		TextColor3 = C.TextDim,
-		BackgroundTransparency = 1,
-		Position = UDim2.new(1, -48, 0, 10),
-		Size = UDim2.fromOffset(38, 38),
-		ZIndex = 61,
-		Name = "PickerClose",
-	}, picker)
-	back.Activated:Connect(function()
+	-- Same close button as the Promotion window itself (it used to be a bare "×" glyph).
+	local back = GothicBoxStyle.CreateCloseButton(picker, function()
 		picker.Visible = false
 	end)
-	GrimoireIcons.CloseGlyph(back, 18)
+	back.Name = "PickerClose"
+	back.ZIndex = math.max(back.ZIndex, 61)
+	for _, d in back:GetDescendants() do
+		if d:IsA("GuiObject") then d.ZIndex = math.max(d.ZIndex, 62) end
+	end
+
+	-- Esc / gamepad B: close the picker first, then the Promotion window (the Synthesis picker and
+	-- every other window close this way).
+	UserInputService.InputBegan:Connect(function(input)
+		if input.KeyCode ~= Enum.KeyCode.Escape and input.KeyCode ~= Enum.KeyCode.ButtonB then return end
+		if not self.Root.Visible then return end
+		if picker.Visible then
+			picker.Visible = false
+		elseif not self.Busy then
+			self:Close()
+		end
+	end)
 
 	self.PickerStatus = label(picker, "", 16, C.TextMuted, Enum.Font.GothamMedium, "Body")
 	self.PickerStatus.Position = UDim2.new(0, 20, 1, -44)
@@ -892,6 +899,7 @@ function Promo.RenderPicker(self: any)
 	local maxStars = PitBalanceConfig.MaxStars or 7
 	self.PickerTitle.Text = spaced("SELECT HERO TO PROMOTE")
 	self.PickerStatus.Text = self.PickerMessage or ""
+	self.PickerStatus.TextColor3 = C.TextMuted
 
 	local heroes = {}
 	for _, hero in self.State.Heroes do
@@ -902,8 +910,8 @@ function Promo.RenderPicker(self: any)
 		local aMax = (a.Stars or 1) >= maxStars
 		local bMax = (b.Stars or 1) >= maxStars
 		if aMax ~= bMax then return not aMax end
-		local aCap = (a.Level or 1) >= (a.Stars or 1) * 10
-		local bCap = (b.Level or 1) >= (b.Stars or 1) * 10
+		local aCap = (a.Level or 1) >= StatFormulas.GetMaxLevel(a.Stars)
+		local bCap = (b.Level or 1) >= StatFormulas.GetMaxLevel(b.Stars)
 		if aCap ~= bCap then return aCap end
 		if (a.Stars or 1) ~= (b.Stars or 1) then return (a.Stars or 1) > (b.Stars or 1) end
 		if (a.Level or 1) ~= (b.Level or 1) then return (a.Level or 1) > (b.Level or 1) end
@@ -918,13 +926,13 @@ function Promo.RenderPicker(self: any)
 
 	for i, hero in heroes do
 		local isMax = (hero.Stars or 1) >= maxStars
-		local isCapped = (hero.Level or 1) >= (hero.Stars or 1) * 10
+		local isCapped = (hero.Level or 1) >= StatFormulas.GetMaxLevel(hero.Stars)
 		local eligible = not isMax and isCapped
 		local tagText: string? = nil
 		if isMax then
 			tagText = "MAX RANK"
 		elseif not isCapped then
-			tagText = "NEED LV." .. ((hero.Stars or 1) * 10)
+			tagText = "NEED LV." .. StatFormulas.GetMaxLevel(hero.Stars)
 		end
 
 		local rarity = RARITY[math.clamp(StatFormulas.GetHeroRarity(hero), 1, #RARITY)]
@@ -967,14 +975,26 @@ function Promo.RenderPicker(self: any)
 				Size = UDim2.fromScale(1, 1),
 				ZIndex = 64,
 			}, tile)
+			-- At the foot of the portrait, not across the hero's face.
 			local tag = label(shade, tagText, 13, C.Danger, nil, "Title")
 			tag.Size = UDim2.new(1, 0, 0, 16)
-			tag.Position = UDim2.fromOffset(0, 36)
+			tag.Position = UDim2.fromOffset(0, 72)
 			tag.ZIndex = 65
 		end
 
 		local uuid = hero.UUID
+		local heroName = hero.DisplayName or "This hero"
+		local refusal = if isMax then string.format("%s is already at the maximum %d★ rank.", heroName, maxStars)
+			elseif not isCapped then string.format("%s needs Lv.%d to promote (now Lv.%d). Level up in Synthesis.", heroName, StatFormulas.GetMaxLevel(hero.Stars), hero.Level or 1)
+			else nil
 		tile.Activated:Connect(function()
+			if refusal then
+				-- Not eligible: say why instead of selecting a hero the server will refuse.
+				UIFeel.Deny(tile)
+				self.PickerStatus.Text = refusal
+				self.PickerStatus.TextColor3 = C.Danger
+				return
+			end
 			self:Pick(uuid)
 		end)
 	end
@@ -1009,7 +1029,7 @@ function Promo.Render(self: any)
 		self.MainStroke.Color = rarity
 		self.MainRank.Text = stars(recipient.Stars)
 
-		local maxLevel = (recipient.Stars or 1) * 10
+		local maxLevel = StatFormulas.GetMaxLevel(recipient.Stars)
 		local isCapped = (recipient.Level or 1) >= maxLevel
 		self.MainBadge.Visible = true
 		self.MainBadgeText.Text = isCapped and "MAX LVL" or string.format("LV. %d/%d", recipient.Level or 1, maxLevel)

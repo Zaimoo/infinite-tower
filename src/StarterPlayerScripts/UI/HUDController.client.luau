@@ -481,7 +481,20 @@ local function playToast(msg: string, color: Color3, holdSeconds: number, isWarn
 	end)
 end
 
+-- Server toasts go through the kit's stacked toasts (Kit/Notify). The single-slot playToast above
+-- stays only as a fallback if the kit fails to load.
+local KitNotify = (function()
+	local ok, kit = pcall(function() return require(script.Parent:WaitForChild("Kit")) end)
+	if ok then return kit.Notify end
+	warn("[HUD] UI kit failed to load; using the legacy toast:", kit)
+	return nil
+end)()
+
 SystemToastEvent.OnClientEvent:Connect(function(msg: string, colorType: string)
+	if KitNotify then
+		KitNotify.Push(if colorType == "WARN" then "warn" elseif colorType == "SUCCESS" then "success" else "info", tostring(msg))
+		return
+	end
 	local color = if colorType == "WARN" then Color3.fromRGB(255, 105, 105)
 		elseif colorType == "SUCCESS" then Color3.fromRGB(95, 250, 145)
 		else Color3.fromRGB(135, 225, 255)
@@ -879,6 +892,7 @@ end
 _G.TriggerHUDWhistleCooldown = triggerHUDWhistleCooldown
 
 local function showClientToast(msg: string)
+	if KitNotify then KitNotify.Push("info", msg) return end
 	playToast(msg, Color3.fromRGB(135, 225, 255), 3.5, false)
 end
 
