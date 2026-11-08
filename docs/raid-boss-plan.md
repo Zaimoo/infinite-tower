@@ -1,6 +1,13 @@
 # Raid Boss System: Implementation Plan
 
-Status: **planned** (models done, code not started). Owner: Zaimoo. Written 2026-11-08.
+Status: **implemented** on `feat/raid-boss-system` (2026-11-08), pending a Studio playtest and the mesh upload (step 7). Owner: Zaimoo.
+
+**Changes from the original plan, made while building it:**
+- The portal sits at hub-local `(0, −536)`, not `(0, −500)`: `(0, −500)` is exactly where the north footbridge meets the band.
+- **No relic extras on a kill.** Urns and Hearts pay Gems, which would break the 2,000 Gem cap, so they were dropped. Rewards are Gems and Gold only.
+- Raid bosses reuse the tower combat runtime: they are entries in `FirstBiomeCombat` (`raid_hollow_king`, …) with kits built from `RaidConfig`. Until the Blender meshes are uploaded, they render with a matching colossus rig (`RAID_LOOK`), so `RaidBossRigs` (§11) waits for step 7.
+- Multi-target signatures (`Count`) fire at one target for now, because `AttackTimeline` has one target per action.
+- The whistle chip strip under the leaderboard was not built. Q/E still work from the keyboard, but touch players have no whistles inside the raid.
 
 Every 30 minutes a **Raid Boss** spawns in its own off-map arena. A **Raid Portal** in the Cloister Commons opens a minute before. Masters walk through it with their deployed squad. Inside, the HUD's Right Rail becomes a live **damage leaderboard**, and a **Leave** button appears at the bottom centre, just above the Squad Status card. The fight lasts 5 minutes. When it ends, every participant gets Gems by how much damage they dealt, up to **2,000**.
 
