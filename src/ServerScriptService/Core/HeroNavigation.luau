@@ -205,18 +205,25 @@ local function remaining(s: any,position: Vector3): number
 	for i=index,#route do distance+=(position-route[i]).Magnitude;position=route[i]end
 	return distance
 end
-local function advance(points: {Vector3},index: number,position: Vector3,group: string?): number
+local function advance(points: {Vector3},index: number,position: Vector3,group: string?,origin: Vector3?,corridor: any,startPoint: Vector3?): number
 	while points[index] do
 		local wp=points[index]
 		local nxt=points[index+1]
 		if (wp-position).Magnitude<.35 or (flatDistance(wp,position)<.45 and math.abs(wp.Y-position.Y)<=STEP_UP) then
 			index+=1
 		elseif nxt and math.abs(wp.Y-position.Y)<=1.8 and flatDistance(wp,position)<=4.5 then
+			local prev=points[index-1] or startPoint
+			local inOk=true
+			if prev then
+				local inSeg=Vector3.new(wp.X-prev.X,0,wp.Z-prev.Z)
+				local relIn=Vector3.new(position.X-wp.X,0,position.Z-wp.Z)
+				inOk=inSeg.Magnitude<=.05 or inSeg:Dot(relIn)>=0
+			end
 			local seg=Vector3.new(nxt.X-wp.X,0,nxt.Z-wp.Z)
 			local rel=Vector3.new(position.X-wp.X,0,position.Z-wp.Z)
 			local step=math.min(4.5,flatDistance(position,nxt))
-			local _,ok=walkSegment(position,nxt,step,group or "Default",nil,nil)
-			if seg.Magnitude>.01 and rel:Dot(seg.Unit)>=0 and ok then
+			local _,ok=walkSegment(position,nxt,step,group or "Default",origin,corridor)
+			if inOk and seg.Magnitude>.01 and rel:Dot(seg.Unit)>=0 and ok then
 				index+=1
 			else
 				break
@@ -324,7 +331,7 @@ function Navigation.Step(hero: any,goal: Vector3,distance: number,now: number,de
 	end
 
 	if not shouldCommit and s.RouteKey ~= key then
-		resetPath(hero, s); s.RouteKey = key; s.TowerRoute = {}; s.TowerIndex = 1
+		resetPath(hero, s); s.RouteKey = key; s.TowerRoute = {}; s.TowerIndex = 1; s.TowerStart = from
 		local route = if g then Graph.Route(g, localPoint(from, origin), localPoint(goal, origin)) else {{X=goal.X, Y=goal.Y, Z=goal.Z}}
 		for _, p in route do
 			local v = Vector3.new(p.X, p.Y, p.Z) + (origin or Vector3.zero)
@@ -334,12 +341,19 @@ function Navigation.Step(hero: any,goal: Vector3,distance: number,now: number,de
 		if #s.TowerRoute == 0 then s.TowerRoute = {goal} end
 	elseif shouldCommit and currentLink then
 		local endLocal = if s.RampDirection == 1
-			then Vector3.new(currentLink.BX, currentLink.BY, currentLink.BZ)
-			else Vector3.new(currentLink.AX, currentLink.AY, currentLink.AZ)
-		local endWorld = endLocal + (origin or Vector3.zero)
+			then {X=currentLink.BX, Y=currentLink.BY, Z=currentLink.BZ}
+			else {X=currentLink.AX, Y=currentLink.AY, Z=currentLink.AZ}
+		local endWorld = Vector3.new(endLocal.X, endLocal.Y, endLocal.Z) + (origin or Vector3.zero)
 		endWorld = Navigation.Ground(endWorld, group, STEP_UP, MAX_DROP) or endWorld
-		s.TowerRoute = { endWorld, goal }
+		s.TowerRoute = { endWorld }
+		local tailRoute = if g then Graph.Route(g, endLocal, localPoint(goal, origin)) else {{X=goal.X, Y=goal.Y, Z=goal.Z}}
+		for _, p in tailRoute do
+			local v = Vector3.new(p.X, p.Y, p.Z) + (origin or Vector3.zero)
+			v = Navigation.Ground(v, group, STEP_UP, MAX_DROP) or v
+			if (s.TowerRoute[#s.TowerRoute] - v).Magnitude > 0.01 then table.insert(s.TowerRoute, v) end
+		end
 		s.TowerIndex = 1
+		s.TowerStart = from
 	end
 	s.TowerRoute[#s.TowerRoute]=goal;s.TowerGoal=goal;s.Origin=origin
 	s.TowerIndex=math.min(s.TowerIndex,#s.TowerRoute)
@@ -356,21 +370,21 @@ function Navigation.Step(hero: any,goal: Vector3,distance: number,now: number,de
 			return {Status="FALLING",Remaining=(goal-hero.Position).Magnitude}
 		end
 	end
-	s.TowerIndex=advance(s.TowerRoute,s.TowerIndex,hero.Position,group)
+	s.TowerIndex=advance(s.TowerRoute,s.TowerIndex,hero.Position,group,origin,s.Corridor,s.TowerStart)
 	s.SubGoal=s.TowerRoute[s.TowerIndex]or goal
 	if s.PathGoal and (s.PathRouteIndex~=s.TowerIndex or (s.PathGoal-s.SubGoal).Magnitude>(if s.Pending then 36 else 16))then resetPath(hero,s)end
 	local before=remaining(s,hero.Position)
 	local budget=math.max(0,distance)
 	for _=1,64 do
 		if budget<.01 then break end
-		s.TowerIndex=advance(s.TowerRoute,s.TowerIndex,hero.Position,group)
+		s.TowerIndex=advance(s.TowerRoute,s.TowerIndex,hero.Position,group,origin,s.Corridor,s.TowerStart)
 		local subGoal=s.TowerRoute[s.TowerIndex]
 		if not subGoal then break end
 		s.SubGoal=subGoal
 		if s.PathGoal and (s.PathRouteIndex~=s.TowerIndex or (s.PathGoal-subGoal).Magnitude>(if s.Pending then 36 else 16))then resetPath(hero,s)end
 		local destination=subGoal
 		if s.Points then
-			s.Index=advance(s.Points,s.Index,hero.Position,group)
+			s.Index=advance(s.Points,s.Index,hero.Position,group,origin,s.Corridor,s.TowerStart)
 			destination=s.Points[s.Index]or subGoal
 			if not s.Points[s.Index]then s.Points=nil end
 		end

@@ -103,4 +103,48 @@ test("TowerTraversal diagonal ramp commitment and bounds detection", function()
 	assert(Traversal.ShouldCommitDirection(10.0, 10.5) == true, "0.5s < 0.8s commits direction")
 	assert(Traversal.ShouldCommitDirection(10.0, 10.85) == false, "0.85s >= 0.8s releases commitment")
 end)
+test("Recessed diagonal ramps route around curb walls via landing porch in both directions and classify lower deck as connector", function()
+	local layout = Layout.Get(1)
+	local g = Graph.new(layout)
+	local link
+	for _, l in layout.Links do
+		if l.Id == "Basin_WestGallery" then link = l; break end
+	end
+	assert(link ~= nil)
+	local a, b = p(link.AX, link.AY, link.AZ), p(link.BX, link.BY, link.BZ)
+	local lowDeck = lerp(a, b, 0.02) -- Y = 0.16 < 0.25 inside Basin bounds
+	local loc = Graph.Locate(g, lowDeck)
+	assert(loc.Key == "C:Basin_WestGallery", "Lower ramp deck misclassified as platform: " .. tostring(loc.Key))
+
+	local campBasinWest = p(-102.3, 0, 59.7)
+	local campWestGallery = p(-106.4, 8, -25.2)
+
+	-- Going UP from behind the ramp curb (CAMP_BASIN_WEST -> CAMP_WEST_GALLERY) inserts porch before A
+	local upRoute = Graph.Route(g, campBasinWest, campWestGallery)
+	local aIndex = nil
+	for i, pt in ipairs(upRoute) do
+		if Graph.Distance(pt, a) < 0.01 then aIndex = i; break end
+	end
+	assert(aIndex and aIndex >= 3, "Missing porch waypoint before ramp entrance A")
+	local porchUp = upRoute[aIndex - 1]
+	local alongUp = (porchUp.X - a.X) * link.UX + (porchUp.Z - a.Z) * link.UZ
+	assert(alongUp <= -10, "Approach porch is not in front of ramp mouth A")
+
+	-- Going DOWN (CAMP_WEST_GALLERY -> CAMP_BASIN_WEST) inserts porch after A before turning behind curb
+	local downRoute = Graph.Route(g, campWestGallery, campBasinWest)
+	local downAIndex = nil
+	for i, pt in ipairs(downRoute) do
+		if Graph.Distance(pt, a) < 0.01 then downAIndex = i; break end
+	end
+	assert(downAIndex and downRoute[downAIndex + 1], "Missing waypoint after ramp exit A")
+	local porchDown = downRoute[downAIndex + 1]
+	local alongDown = (porchDown.X - a.X) * link.UX + (porchDown.Z - a.Z) * link.UZ
+	assert(alongDown <= -10, "Exit porch is not in front of ramp mouth A")
+
+	-- Same-platform segment starting just outside A toward CAMP_BASIN_WEST detours via porch
+	local justOutsideA = p(a.X - link.UX * 1.5, a.Y, a.Z - link.UZ * 1.5)
+	local samePlatRoute = Graph.Route(g, justOutsideA, campBasinWest)
+	assert(#samePlatRoute == 2 and ((samePlatRoute[1].X - a.X) * link.UX + (samePlatRoute[1].Z - a.Z) * link.UZ) <= -10,
+		"Same-platform route cut through recessed ramp curb")
+end)
 print(string.format("Tower navigation tests: %d passed",passed))
