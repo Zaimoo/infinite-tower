@@ -64,7 +64,7 @@ local function apply(p: Preset)
 		atmosphere.Offset = p.AtmosphereOffset
 		atmosphere.Color = p.AtmosphereColor
 		atmosphere.Decay = p.AtmosphereDecay
-		atmosphere.Glare = p.AtmosphereGlare
+		atmosphere.Glare = 0 -- Keep glare 0 to eliminate harsh directional ray bloom
 		atmosphere.Haze = p.AtmosphereHaze
 	end
 	local cc = effect("ColorCorrectionEffect", "TowerStormColorCorrection") :: ColorCorrectionEffect?
@@ -80,15 +80,12 @@ local function apply(p: Preset)
 		bloom.Size = p.BloomSize
 		bloom.Threshold = p.BloomThreshold
 	end
-	local rays = effect("SunRaysEffect", "TowerStormSunRays") :: SunRaysEffect?
-	if rays then
-		if p.SunRaysIntensity > 0.005 then
-			rays.Enabled = true
-			rays.Intensity = p.SunRaysIntensity
-			rays.Spread = p.SunRaysSpread
-		else
-			rays.Enabled = false
-			rays.Intensity = 0
+	-- Destroy any SunRaysEffect to prevent crepuscular light shafts across walls/abyss
+	for _, child in ipairs(Lighting:GetChildren()) do
+		if child:IsA("SunRaysEffect") then
+			child.Enabled = false
+			child.Intensity = 0
+			child:Destroy()
 		end
 	end
 end

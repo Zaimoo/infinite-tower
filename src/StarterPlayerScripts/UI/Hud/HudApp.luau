@@ -50,6 +50,9 @@ local function requestTeleport(destination: "Island" | "Hub" | "Tower" | "TowerG
 		return
 	end
 	lastTeleportClock = now
+	if _G.SetViewSquad and _G.IsViewingSquad and _G.IsViewingSquad() then
+		_G.SetViewSquad(false)
+	end
 	if not TeleportRequest then
 		TeleportRequest = Remotes:FindFirstChild("TeleportRequest") :: RemoteEvent?
 	end

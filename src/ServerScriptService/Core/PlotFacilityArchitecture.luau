@@ -709,28 +709,7 @@ function Arch.BuildSummoning(folder: Instance, centerCF: CFrame): Part
 	swirlEmitter.SpreadAngle = Vector2.new(35, 35)
 	swirlEmitter.Parent = centerVFXSocket
 
-	-- Outward Volumetric God-Ray Beams spilling down the steps onto the courtyard floor (enabled when doors open)
-	for rayIdx = 1, 4 do
-		local spreadX = (rayIdx - 2.5) * 3.2
-		local rayTarget = makeSocket("GodRayFloorSocket_" .. rayIdx, V(spreadX, 0.15, 10.2))
-		local godRay = Instance.new("Beam")
-		godRay.Name = "GodRayBeam_" .. rayIdx
-		godRay.Attachment0 = centerVFXSocket
-		godRay.Attachment1 = rayTarget
-		godRay.Color = ColorSequence.new(zone4Vortex, zone3RuneGlow)
-		godRay.LightEmission = 1
-		godRay.LightInfluence = 0
-		godRay.Width0 = 2.4
-		godRay.Width1 = 5.8
-		godRay.FaceCamera = true
-		godRay.Enabled = false
-		godRay.Transparency = NumberSequence.new({
-			NumberSequenceKeypoint.new(0.0, 0.68),
-			NumberSequenceKeypoint.new(0.6, 0.85),
-			NumberSequenceKeypoint.new(1.0, 1.0),
-		})
-		godRay.Parent = primaryRoot
-	end
+	-- Outward God-Ray Beams removed to eliminate intersecting white light shafts across courtyard/abyss
 
 	return interactionPart
 end

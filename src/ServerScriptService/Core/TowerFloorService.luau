@@ -440,6 +440,8 @@ function Service.CommitRespawn(player: Player)
 end
 function Service.ExitToOverworld(player: Player, targetPos: Vector3, isIsland: boolean)
 	local s = createState(player)
+	local wasOnFloor = s.FloorId > 0
+	local prevFloor = s.FloorId
 	Service.CancelPending(player, "FAST_TRAVEL")
 	s.FloorId = 0
 	s.RoomGeneration = 1
@@ -451,26 +453,55 @@ function Service.ExitToOverworld(player: Player, targetPos: Vector3, isIsland: b
 	if player.Character then
 		player.Character:SetAttribute("TowerFloorId", 0)
 	end
-	s.SquadFloorId = 0
-	s.SquadRoomGeneration = 1
-	s.SquadRevision += 1
-	s.SquadAssignment = nil
+
+	local hasAssignment = s.SquadAssignment ~= nil
+	if not hasAssignment then
+		s.SquadFloorId = 0
+		s.SquadRoomGeneration = 1
+		s.SquadRevision += 1
+	end
+
 	local profile = _G.DataManager and _G.DataManager.GetProfile(player)
 	local ls = player:FindFirstChild("leaderstats")
 	local floorStat = ls and ls:FindFirstChild("Floor") :: IntValue?
 	if floorStat then
 		floorStat.Value = (profile and profile.HighestClearedFloor) or 0
 	end
+
+	if wasOnFloor then
+		local TowerRuns = require(script.Parent.Parent.Combat.TowerRunService)
+		if TowerRuns then
+			local run = TowerRuns.Get(player)
+			if run then
+				TowerRuns.Bank(player)
+				local summary = TowerRuns.End(player, "RETURN")
+				local dm = _G.DataManager
+				if summary and dm and dm.SendToast then
+					if summary.FloorsCleared > 0 or summary.Kills > 0 then
+						dm.SendToast(player, string.format("Run over: floors %d-%d, %d cleared, best streak x%d, +%d Gold, +%d Gems",
+							summary.StartFloor, summary.HighestFloor, summary.FloorsCleared, summary.BestStreak, summary.GoldEarned + summary.RelicGold, summary.GemsEarned + summary.RelicGems), "INFO")
+					else
+						dm.SendToast(player, string.format("Run ended. Returned from Floor %d.", summary.StartFloor or prevFloor), "INFO")
+					end
+				end
+			end
+		end
+	end
+
 	if adapters.Combat and adapters.Combat.ResetPlayerTowerEncounter then
 		adapters.Combat.ResetPlayerTowerEncounter(player, "EXIT_TO_OVERWORLD")
 	elseif _G.CombatSimulation and _G.CombatSimulation.ResetPlayerTowerEncounter then
 		_G.CombatSimulation.ResetPlayerTowerEncounter(player, "EXIT_TO_OVERWORLD")
 	end
-	if _G.CombatSimulation and _G.CombatSimulation.WarpSquad then
-		_G.CombatSimulation.WarpSquad(player, targetPos, isIsland)
-	elseif adapters.Combat then
-		adapters.Combat.Transfer(player, rooms[0], false, targetPos)
+
+	if not hasAssignment then
+		if _G.CombatSimulation and _G.CombatSimulation.WarpSquad then
+			_G.CombatSimulation.WarpSquad(player, targetPos, isIsland)
+		elseif adapters.Combat then
+			adapters.Combat.Transfer(player, rooms[0], false, targetPos)
+		end
 	end
+
 	local rem = getRemotes()
 	if rem and rem:FindFirstChild("Context") then
 		local c = Service.Context(player)

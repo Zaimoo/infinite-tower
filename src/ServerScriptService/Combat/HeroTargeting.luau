@@ -190,8 +190,13 @@ function HeroTargeting.Select(
 	local firstAssistId: number? = nil
 	local firstAssistMob: any? = nil
 	local assistAllowed: { [number]: boolean }? = nil
+	local committedCampId: string? = nil
 	if assist and #assist > 0 then
 		for _, netId in assist do
+			local rawMob = mobs[netId]
+			if not committedCampId and rawMob and rawMob.CampId and eligible(hero, rawMob) then
+				committedCampId = rawMob.CampId
+			end
 			local m = usable(netId)
 			if m then
 				if not firstAssistId then
@@ -209,6 +214,9 @@ function HeroTargeting.Select(
 				end
 			end
 		end
+	end
+	if currentTarget and ctx.Assigned and committedCampId and currentTarget.CampId ~= committedCampId and not firstAssistId then
+		currentTarget = nil
 	end
 
 	-- 2. Target Lock Hysteresis (Anti-Thrashing):
@@ -271,7 +279,7 @@ function HeroTargeting.Select(
 	end
 
 	-- Acquire new target using elevation-weighted distance and deterministic tie-breaking
-	if not target then
+	if not target and not (ctx.Assigned and committedCampId ~= nil) then
 		local netId = HeroTargeting.Acquire(hero, mobs, ctx, eligible, nil)
 		target = usable(netId)
 		if target then

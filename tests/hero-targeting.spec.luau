@@ -183,5 +183,13 @@ test("Assigned squad on diagonal ramp does not alternate or split when both end 
 		assert(resFront == campUpper and hFront.TargetNetId == 20, "Front hero lost lock on squad camp")
 		assert(resBack == campUpper and hBack.TargetNetId == 20, "Back hero split to lower camp instead of staying with squad")
 	end
+
+	-- Even if hBack temporarily rejects mob 20 while teammates remain committed to CAMP_WEST_GALLERY,
+	-- hBack must regroup (FOLLOW_MASTER) rather than peeling off to CAMP_BASIN_WEST (10).
+	campUpper.EntityGeneration = 1
+	hBack.NavigationRejectedTargets = { [20] = { Until = 6.0, Generation = 1, FloorId = 3, RoomGeneration = 1 } }
+	ctx.Now = 2.0
+	local resRejected = T.Select(hBack, mobs, ctx, eligible, false, assist)
+	assert(resRejected == nil and hBack.State == "FOLLOW_MASTER", "Hero with rejected camp mob split to opposing camp")
 end)
 print(string.format("Hero targeting tests: %d passed, %d failed",passed,failed));assert(failed==0)

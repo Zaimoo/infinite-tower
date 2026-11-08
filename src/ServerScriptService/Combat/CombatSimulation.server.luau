@@ -798,6 +798,10 @@ syncSquadStatus = function(player: Player)
 end
 
 local function restoreSquadOnPlot(player: Player)
+	local towerState = Tower.GetState(player)
+	if towerState and towerState.SquadAssignment ~= nil then
+		return
+	end
 	SquadMovement.Reset(player)
 	local masterState = ActiveMasters[player]
 	if masterState then
@@ -2896,10 +2900,13 @@ local function stepCombatHeartbeat(deltaTime: number)
 				elseif location.FloorId > 0 then
 					TowerRuns.Ensure(player, location.FloorId)
 				elseif TowerRuns.Get(player) then
+					TowerRuns.Bank(player)
 					local summary = TowerRuns.End(player, "RETURN")
 					if summary and (summary.FloorsCleared > 0 or summary.Kills > 0) then
 						getDataManager().SendToast(player, string.format("Run over: floors %d-%d, %d cleared, best streak x%d, +%d Gold, +%d Gems",
 							summary.StartFloor, summary.HighestFloor, summary.FloorsCleared, summary.BestStreak, summary.GoldEarned + summary.RelicGold, summary.GemsEarned + summary.RelicGems), "INFO")
+					elseif summary then
+						getDataManager().SendToast(player, string.format("Run ended. Returned from Floor %d.", summary.StartFloor), "INFO")
 					end
 				end
 			end
@@ -2944,6 +2951,10 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 end)
 
 local function warpSquad(player: Player, targetPos: Vector3, isIsland: boolean)
+	local towerState = Tower.GetState(player)
+	if towerState and towerState.SquadAssignment ~= nil then
+		return
+	end
 	SquadMovement.Reset(player)
 	local masterState = ActiveMasters[player]
 	if not masterState then return end
@@ -2972,9 +2983,7 @@ local function warpSquad(player: Player, targetPos: Vector3, isIsland: boolean)
 			end
 		end
 	end
-	if isIsland then
-		restoreSquadOnPlot(player)
-	end
+	restoreSquadOnPlot(player)
 	resetPlayerTowerEncounter(player, if isIsland then "WARP_ISLAND" else "WARP_HUB")
 end
 
