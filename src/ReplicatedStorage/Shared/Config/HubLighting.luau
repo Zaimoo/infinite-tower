@@ -50,12 +50,12 @@ local Presets: { [string]: Preset } = {
 		EnvironmentSpecularScale = 0.55,
 		ExposureCompensation = 0.1,
 
-		AtmosphereDensity = 0.46,
+		AtmosphereDensity = 0.35,
 		AtmosphereOffset = 0,
-		AtmosphereColor = Color3.fromRGB(175, 185, 198),
-		AtmosphereDecay = Color3.fromRGB(115, 125, 140),
+		AtmosphereColor = Color3.fromRGB(18, 16, 24),
+		AtmosphereDecay = Color3.fromRGB(12, 10, 16),
 		AtmosphereGlare = 0,
-		AtmosphereHaze = 3.6,
+		AtmosphereHaze = 1.5,
 
 		TintColor = Color3.fromRGB(240, 245, 252),
 		Contrast = 0.08,
@@ -112,7 +112,7 @@ local Presets: { [string]: Preset } = {
 		AtmosphereOffset = 0.08,
 		AtmosphereColor = Color3.fromRGB(115, 125, 140),
 		AtmosphereDecay = Color3.fromRGB(68, 76, 92),
-		AtmosphereGlare = 0.15,
+		AtmosphereGlare = 0,
 		AtmosphereHaze = 0.45,
 
 		TintColor = Color3.fromRGB(238, 242, 252),
@@ -124,8 +124,8 @@ local Presets: { [string]: Preset } = {
 		BloomSize = 24,
 		BloomThreshold = 1.15,
 
-		SunRaysIntensity = 0.09,
-		SunRaysSpread = 0.7,
+		SunRaysIntensity = 0,
+		SunRaysSpread = 0,
 	},
 	-- Misty/windy moor: dense atmospheric fog, cool desaturated light, heavy horizon haze
 	FoggyWind = {

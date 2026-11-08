@@ -57,6 +57,59 @@ function B.Build()
 		end
 	end
 
+	-- Creates a flat dark void floor plane and subtle non-streaking dark mist beneath the bridge chasm
+	local function createUnderBridgeAbyss(n: string, a: Vector3, b: Vector3, w: number)
+		local mid = (a + b) / 2
+		local delta = b - a
+		local len = delta.Magnitude + 14
+		local cf = CFrame.lookAt(Vector3.new(mid.X, -45, mid.Z), Vector3.new(b.X, -45, b.Z))
+
+		local voidPlane = Instance.new("Part")
+		voidPlane.Name = n .. "_AbyssVoidFloor"
+		voidPlane.Size = Vector3.new(w * 2.4, 1, len)
+		voidPlane.CFrame = cf
+		voidPlane.Color = Color3.fromRGB(10, 8, 14)
+		voidPlane.Material = Enum.Material.SmoothPlastic
+		voidPlane.Reflectance = 0
+		voidPlane.Anchored = true
+		voidPlane.CanCollide = false
+		voidPlane.CanTouch = false
+		voidPlane.CanQuery = false
+		voidPlane.CastShadow = false
+		voidPlane.TopSurface = Enum.SurfaceType.Smooth
+		voidPlane.BottomSurface = Enum.SurfaceType.Smooth
+		voidPlane.Parent = f
+
+		local mist = Instance.new("ParticleEmitter")
+		mist.Name = "AbyssFogMist"
+		mist.Texture = "rbxassetid://243660364"
+		mist.LightEmission = 0 -- Essential: zero light emission prevents bright streaks or white crisscrossing
+		mist.Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0.0, Color3.fromRGB(18, 16, 24)),
+			ColorSequenceKeypoint.new(1.0, Color3.fromRGB(12, 10, 16)),
+		})
+		mist.Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0.0, 1.0),
+			NumberSequenceKeypoint.new(0.3, 0.86),
+			NumberSequenceKeypoint.new(0.7, 0.90),
+			NumberSequenceKeypoint.new(1.0, 1.0),
+		})
+		mist.Size = NumberSequence.new({
+			NumberSequenceKeypoint.new(0.0, 16),
+			NumberSequenceKeypoint.new(0.5, 26),
+			NumberSequenceKeypoint.new(1.0, 38),
+		})
+		mist.Lifetime = NumberRange.new(6.0, 9.0)
+		mist.Rate = 2.0
+		mist.Speed = NumberRange.new(0.4, 1.2)
+		mist.SpreadAngle = Vector2.new(180, 15)
+		mist.Rotation = NumberRange.new(0, 360)
+		mist.RotSpeed = NumberRange.new(-5, 5)
+		mist.Shape = Enum.ParticleEmitterShape.Box
+		mist.ShapeInOut = Enum.ParticleEmitterShapeInOut.Outward
+		mist.Parent = voidPlane
+	end
+
 	local radius = HubLayout.TowerWalkwayRadius
 	local y = HubLayout.TowerWalkwayY
 	local surfaceY = HubLayout.IslandSurfaceY
@@ -76,6 +129,7 @@ function B.Build()
 					local slot = HubLayout.PlotSlots[i]
 					local landing = HubLayout.HubLandingPoint(i) - Vector3.new(slot.DX, 0, slot.DZ) * 2
 					span("IslandBridge_" .. i, start, landing, HubLayout.PlotBridgeWidth, true, 4, 6, true)
+					createUnderBridgeAbyss("IslandBridge_" .. i, start, landing, HubLayout.PlotBridgeWidth)
 					local edgeBarriers = walls:FindFirstChild("InvisibleEdgeBarriers")
 					local barrier = edgeBarriers and edgeBarriers:FindFirstChild("Barrier_Front")
 					if barrier then barrier.CanCollide = false barrier.CanTouch = false end
@@ -110,6 +164,7 @@ function B.Build()
 	-- 1. Bridge approach from walkway to entrance terrace
 	local approachFront = Vector3.new(0, y, -358)
 	span("TowerEntranceApproach", Vector3.new(0, y, -radius - 1), approachFront, HubLayout.CausewayWidth, true)
+	createUnderBridgeAbyss("TowerEntranceApproach", Vector3.new(0, y, -radius - 1), approachFront, HubLayout.CausewayWidth)
 
 	-- 2. Legacy square plaza slab poked into the plots; the tower's CrackedGroundSlab is the floor
 	local oldPlaza = world:FindFirstChild("TowerPlazaFoundation")

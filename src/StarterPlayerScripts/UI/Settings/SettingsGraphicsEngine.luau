@@ -106,9 +106,13 @@ function SettingsGraphicsEngine.updateBloom(enabled: boolean)
 	end
 
 	for _, child in ipairs(Lighting:GetChildren()) do
-		if (child:IsA("BloomEffect") or child:IsA("SunRaysEffect") or child:IsA("DepthOfFieldEffect"))
+		if (child:IsA("BloomEffect") or child:IsA("DepthOfFieldEffect"))
 			and child.Name ~= "SettingsGlassBlur" then
 			child.Enabled = enabled
+		elseif child:IsA("SunRaysEffect") then
+			child.Enabled = false
+			child.Intensity = 0
+			child:Destroy()
 		end
 	end
 end
@@ -133,13 +137,13 @@ function SettingsGraphicsEngine.updateColorCorrection(enabled: boolean)
 		if atmosphere:GetAttribute("OrigDensity") == nil then
 			atmosphere:SetAttribute("OrigDensity", atmosphere.Density)
 			atmosphere:SetAttribute("OrigHaze", atmosphere.Haze)
-			atmosphere:SetAttribute("OrigGlare", atmosphere.Glare)
+			atmosphere:SetAttribute("OrigGlare", 0)
 		end
 
 		if enabled then
 			atmosphere.Density = (atmosphere:GetAttribute("OrigDensity") :: number?) or 0.35
-			atmosphere.Haze = (atmosphere:GetAttribute("OrigHaze") :: number?) or 0.25
-			atmosphere.Glare = (atmosphere:GetAttribute("OrigGlare") :: number?) or 0.25
+			atmosphere.Haze = (atmosphere:GetAttribute("OrigHaze") :: number?) or 1.5
+			atmosphere.Glare = 0
 		else
 			atmosphere.Density = 0.10
 			atmosphere.Haze = 0
