@@ -6,6 +6,7 @@
 local RS = game:GetService("ReplicatedStorage")
 local Assets = require(RS.Shared.Config.RaidPortalAssets)
 local HubLayout = require(RS.Shared.Config.HubLayout)
+local MeshCache = require(RS.Assets.RaidMeshCache)
 
 local Kit = {}
 
@@ -118,14 +119,17 @@ local function buildParts(model: Model, origin: CFrame, s: number)
 	end
 end
 
-local function buildMeshes(model: Model, origin: CFrame, s: number)
+-- Yields while the meshes load. Returns false (and builds nothing) if any mesh fails to load.
+local function buildMeshes(model: Model, origin: CFrame, s: number): boolean
+	local ids = {}
+	for _, piece in Assets.Pieces do table.insert(ids, piece.MeshId) end
+	if not MeshCache.LoadAll(ids) then return false end
 	for _, piece in Assets.Pieces do
-		local m = Instance.new("MeshPart")
+		local m = assert(MeshCache.Get(piece.MeshId))
 		m.Name = piece.Name
-		m.MeshId = piece.MeshId
 		if piece.TextureId and piece.TextureId ~= "" then m.TextureID = piece.TextureId end
 		m.Size = piece.Size * s
-		m.CFrame = origin * CFrame.new(piece.Offset * s)
+		m.CFrame = origin * CFrame.new(piece.Offset * s) * MeshCache.MeshRotation
 		m.Anchored = true
 		m.CanCollide = piece.Role == "FRAME"
 		if piece.Role ~= "FRAME" then
@@ -136,6 +140,7 @@ local function buildMeshes(model: Model, origin: CFrame, s: number)
 		end
 		m.Parent = model
 	end
+	return true
 end
 
 export type Portal = { Model: Model, Trigger: BasePart, Prompt: ProximityPrompt, Title: TextLabel, Status: TextLabel }
@@ -148,7 +153,11 @@ function Kit.Build(parent: Instance): Portal
 	local model = Instance.new("Model")
 	model.Name = "RaidPortal"
 	model.ModelStreamingMode = Enum.ModelStreamingMode.Persistent -- the countdown should be visible across the hub
-	if Assets.HasMeshes() then buildMeshes(model, origin, s) else buildParts(model, origin, s) end
+	-- The Blender meshes when uploaded and loadable; otherwise the part version of the same design.
+	if not (Assets.HasMeshes() and buildMeshes(model, origin, s)) then
+		model:ClearAllChildren()
+		buildParts(model, origin, s)
+	end
 	model:SetAttribute("ShardPivot", origin * (Assets.ShardPivot * s))
 
 	local trigger = Instance.new("Part")

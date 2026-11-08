@@ -20,11 +20,11 @@ export type Piece = {
 local Assets = {}
 
 Assets.Pieces = table.freeze({
-	table.freeze({ Name = "RaidPortal_Frame", Role = "FRAME", Size = Vector3.new(34.0, 32.1, 28.862), Offset = Vector3.new(0, 16.05, 0), MeshId = "", TextureId = "" }),
-	table.freeze({ Name = "RaidPortal_Runes_Glow_Crimson", Role = "RUNES", Size = Vector3.new(31.869, 26.902, 24.398), Offset = Vector3.new(0, 14.311, -1.351), MeshId = "" }),
-	table.freeze({ Name = "RaidPortal_Runes_Glow_Orange", Role = "FIRE", Size = Vector3.new(17.442, 3.4, 2.186), Offset = Vector3.new(0, 7.4, -6.457), MeshId = "" }),
-	table.freeze({ Name = "RaidPortal_Vortex", Role = "VORTEX", Size = Vector3.new(15.5, 22.472, 0.7), Offset = Vector3.new(0, 13.636, -0.2), MeshId = "" }),
-	table.freeze({ Name = "RaidPortal_Shards", Role = "SHARDS", Size = Vector3.new(30.776, 25.766, 5.716), Offset = Vector3.new(0.17, 16.957, 0.072), MeshId = "" }),
+	table.freeze({ Name = "RaidPortal_Frame", Role = "FRAME", Size = Vector3.new(34.0, 32.1, 28.862), Offset = Vector3.new(0, 16.05, 0), MeshId = "rbxassetid://99953523991468", TextureId = "rbxassetid://74173858139235" }),
+	table.freeze({ Name = "RaidPortal_Runes_Glow_Crimson", Role = "RUNES", Size = Vector3.new(31.869, 26.902, 24.398), Offset = Vector3.new(0, 14.311, -1.351), MeshId = "rbxassetid://90248669037666" }),
+	table.freeze({ Name = "RaidPortal_Runes_Glow_Orange", Role = "FIRE", Size = Vector3.new(17.442, 3.4, 2.186), Offset = Vector3.new(0, 7.4, -6.457), MeshId = "rbxassetid://101660112092589" }),
+	table.freeze({ Name = "RaidPortal_Vortex", Role = "VORTEX", Size = Vector3.new(15.5, 22.472, 0.7), Offset = Vector3.new(0, 13.636, -0.2), MeshId = "rbxassetid://74986541919658" }),
+	table.freeze({ Name = "RaidPortal_Shards", Role = "SHARDS", Size = Vector3.new(30.776, 25.766, 5.716), Offset = Vector3.new(0.17, 16.957, 0.072), MeshId = "rbxassetid://114563862060461" }),
 }) :: { Piece }
 
 -- Arch geometry at Scale 1 (from the Blender generator), shared by the part fallback and the trigger.

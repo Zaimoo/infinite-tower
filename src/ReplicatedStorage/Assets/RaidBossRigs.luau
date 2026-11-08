@@ -4,8 +4,11 @@
 -- segment. Animation is procedural: Clips(bossId) returns pose keyframes keyed by segment name in the
 -- TowerEnemyClips format, so EnemyAnimationController drives these rigs exactly like the tower enemies.
 -- Used only when RaidBossAssets.HasMeshes(bossId); otherwise the stand-in TowerEnemyRigs rig renders.
-local Assets = require(game.ReplicatedStorage.Shared.Config.RaidBossAssets)
-local Config = require(game.ReplicatedStorage.Shared.Config.FirstBiomeCombat)
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local Assets = require(ReplicatedStorage.Shared.Config.RaidBossAssets)
+local Config = require(ReplicatedStorage.Shared.Config.FirstBiomeCombat)
+local MeshCache = require(script.Parent.RaidMeshCache)
 
 local R = {}
 
@@ -13,12 +16,51 @@ local function rot(x: number?, y: number?, z: number?): CFrame
 	return CFrame.Angles(math.rad(x or 0), math.rad(y or 0), math.rad(z or 0))
 end
 
--- The raid boss id for a FirstBiomeCombat enemy id, when its meshes are uploaded.
+local function meshIds(bossId: string): { string }
+	local ids = {}
+	local boss = Assets.Bosses[bossId]
+	if boss then
+		for _, s in boss.Segments do
+			if s.Mesh then table.insert(ids, s.MeshId) end
+			for _, g in s.Glow do table.insert(ids, g.MeshId) end
+		end
+	end
+	return ids
+end
+
+local loaded: { [string]: boolean } = {}
+local loading: { [string]: boolean } = {}
+-- Load a boss's meshes in the background (the client starts this when the raid is announced).
+function R.Preload(bossId: string)
+	if loaded[bossId] or loading[bossId] or not Assets.HasMeshes(bossId) then return end
+	loading[bossId] = true
+	task.spawn(function()
+		loaded[bossId] = MeshCache.LoadAll(meshIds(bossId))
+		loading[bossId] = nil
+	end)
+end
+
+-- The raid boss id for a FirstBiomeCombat enemy id, when its meshes are uploaded and loaded.
+-- Otherwise nil (and a preload starts), so the stand-in rig renders this time.
 function R.BossFor(enemyId: string): string?
 	local spec = Config.Get(enemyId)
 	local bossId = spec and spec.Raid
-	if bossId and Assets.HasMeshes(bossId) then return bossId end
+	if not bossId or not Assets.HasMeshes(bossId) then return nil end
+	if loaded[bossId] then return bossId end
+	R.Preload(bossId)
 	return nil
+end
+
+-- Clients preload the announced boss as soon as the raid is announced (60 s warning).
+if RunService:IsClient() then
+	local function preloadAnnounced()
+		local id = ReplicatedStorage:GetAttribute("RaidBossId")
+		local phase = ReplicatedStorage:GetAttribute("RaidPhase")
+		if type(id) == "string" and (phase == "WARNING" or phase == "ACTIVE") then R.Preload(id) end
+	end
+	ReplicatedStorage:GetAttributeChangedSignal("RaidPhase"):Connect(preloadAnnounced)
+	ReplicatedStorage:GetAttributeChangedSignal("RaidBossId"):Connect(preloadAnnounced)
+	task.defer(preloadAnnounced)
 end
 
 function R.Build(model: Model, root: BasePart, enemyId: string): any
@@ -30,18 +72,17 @@ function R.Build(model: Model, root: BasePart, enemyId: string): any
 	folder.Parent = model
 	-- Model space (origin = ground under the boss) -> world, through the root at RootHeight.
 	local ground = root.CFrame * CFrame.new(0, -(spec.RootHeight or 0), 0)
-	local rootLocal = Vector3.new(0, spec.RootHeight or 0, 0)
+	local rootLocal = CFrame.new(0, spec.RootHeight or 0, 0)
+	local frames: { [string]: CFrame } = {} -- each segment part's CFrame in model space
 	local rig: any = { Joints = {}, Parts = {}, Root = root, Model = folder, Spec = spec, EnemyId = enemyId, Distance = 0, BossId = bossId }
 	local parts: { [string]: BasePart } = {}
-	local centres: { [string]: Vector3 } = {}
 	local netId = model:GetAttribute("NetId")
 
 	local function mesh(name: string, meshId: string, size: Vector3, centre: Vector3): MeshPart
-		local p = Instance.new("MeshPart")
+		local p = assert(MeshCache.Get(meshId), "Raid mesh not loaded: " .. name)
 		p.Name = name
-		p.MeshId = meshId
 		p.Size = size
-		p.CFrame = ground * CFrame.new(centre)
+		p.CFrame = ground * CFrame.new(centre) * MeshCache.MeshRotation
 		p.Anchored = false
 		p.CanCollide = false
 		p.CanTouch = false
@@ -72,7 +113,7 @@ function R.Build(model: Model, root: BasePart, enemyId: string): any
 			p = carrier
 		end
 		parts[s.Name] = p
-		centres[s.Name] = centre
+		frames[s.Name] = if s.Mesh then CFrame.new(centre) * MeshCache.MeshRotation else CFrame.new(centre)
 		for _, g in s.Glow do
 			local gm = mesh(g.Mesh, g.MeshId, g.Size, g.Centre)
 			gm.Material = Enum.Material.Neon
@@ -84,17 +125,19 @@ function R.Build(model: Model, root: BasePart, enemyId: string): any
 			w.Parent = gm
 		end
 	end
-	-- Joints at the Blender pivots. C0 is the pivot in the parent's space (the "bind"); poses rotate about it.
+	-- Joints at the Blender pivots, axis-aligned with model space, so poses rotate about model axes.
+	-- C0 is the pivot in the parent's frame (the "bind"); C1 the pivot in the segment's own frame.
 	for _, s in boss.Segments do
 		local parentPart = if s.Parent then parts[s.Parent] else root
-		local parentCentre = if s.Parent then centres[s.Parent] else rootLocal
+		local parentFrame = if s.Parent then frames[s.Parent] else rootLocal
+		local pivot = CFrame.new(s.Pivot)
 		local j = Instance.new("Motor6D")
 		j.Name = s.Name
 		j.Part0 = parentPart
 		j.Part1 = parts[s.Name]
-		local bind = CFrame.new(s.Pivot - parentCentre)
+		local bind = parentFrame:Inverse() * pivot
 		j.C0 = bind
-		j.C1 = CFrame.new(s.Pivot - centres[s.Name])
+		j.C1 = frames[s.Name]:Inverse() * pivot
 		j.Parent = parentPart
 		rig.Joints[s.Name] = { Motor = j, Bind = bind }
 	end
