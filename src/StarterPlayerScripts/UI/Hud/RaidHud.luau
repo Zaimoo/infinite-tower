@@ -136,7 +136,7 @@ local function row(order: number, rank: number, name: string, damage: number, sh
 		Corner = e("UICorner", { CornerRadius = UDim.new(0, G.TileRadius) }),
 		Stroke = if isSelf then e("UIStroke", { Color = GOLD, Transparency = 0.25, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }) else nil,
 		Rank = title({ Position = UDim2.fromOffset(6, 0), Size = UDim2.new(0, 26, 1, -6), TextSize = 15, TextColor3 = rankColor,
-			Text = if rank == 1 then "♛" elseif rank > 0 then tostring(rank) else "–", TextXAlignment = Enum.TextXAlignment.Center }),
+			Text = if rank > 0 then tostring(rank) else "-", -- plain ASCII: the HUD fonts lack symbol glyphs TextXAlignment = Enum.TextXAlignment.Center }),
 		Name = Components.GlassText({ Position = UDim2.fromOffset(36, 1), Size = UDim2.new(1, -100, 0, 16), TextSize = 12,
 			Text = if isSelf then "<b>" .. name .. "</b>" else name, TextColor3 = if isSelf then GOLD else G.Text }),
 		Damage = title({ AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -8, 0, 1), Size = UDim2.fromOffset(62, 16), TextSize = 13,
@@ -167,7 +167,7 @@ function RaidHud.Leaderboard(props: { Top: number, Bottom: number, Compact: bool
 			TextColor3 = if raid.Phase == "ACTIVE" and left <= 30 then G.Danger else GOLD }),
 	})
 	rows.Boss = Components.GlassText({ LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 14), TextSize = 11, TextTransparency = G.MutedTransparency,
-		Text = if raid.Phase == "WARNING" then RaidConfig.FullName(raid.Boss) .. " · awakens soon" else RaidConfig.FullName(raid.Boss) })
+		Text = if raid.Phase == "WARNING" then RaidConfig.FullName(raid.Boss) .. " - awakens soon" else RaidConfig.FullName(raid.Boss) })
 	local data = board
 	local maxDamage = 0
 	if data then
@@ -194,7 +194,7 @@ function RaidHud.Leaderboard(props: { Top: number, Bottom: number, Compact: bool
 	end
 	if data and data.MaxHP > 0 then
 		rows.Foot = Components.GlassText({ LayoutOrder = 99, Size = UDim2.new(1, 0, 0, 14), TextSize = 11, TextTransparency = G.MutedTransparency,
-			Text = string.format("Boss %d%% · %s dealt", math.round(math.clamp(data.CurrentHP / data.MaxHP, 0, 1) * 100), RaidRules.Abbrev(data.Total)) })
+			Text = string.format("Boss %d%%  |  %s dealt", math.round(math.clamp(data.CurrentHP / data.MaxHP, 0, 1) * 100), RaidRules.Abbrev(data.Total)) })
 	end
 	local maxHeight = math.max(120, props.Bottom - props.Top)
 	return Components.Glass({
@@ -232,7 +232,7 @@ function RaidHud.LeaveButton(props: { Bottom: number })
 		FontFace = G.Fonts.Display,
 		TextSize = 15,
 		TextColor3 = G.Text,
-		Text = if confirm then "Leave? Damage still counts" else "⟵  LEAVE RAID",
+		Text = if confirm then "Leave? Damage still counts" else "LEAVE RAID",
 		[React.Event.Activated] = function()
 			if not confirm then
 				setConfirm(true)
@@ -262,16 +262,16 @@ function RaidHud.ResultsCard(props: { Blocked: boolean })
 		Boss = Components.GlassText({ LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 16), TextXAlignment = Enum.TextXAlignment.Center, TextSize = 13,
 			Text = RaidConfig.FullName(boss) .. (if r.Killed then " has fallen" else " retreats"), TextColor3 = boss.Accent:Lerp(Color3.new(1, 1, 1), 0.4) }),
 		Rank = title({ LayoutOrder = 3, Size = UDim2.new(1, 0, 0, 40), TextSize = 34, TextXAlignment = Enum.TextXAlignment.Center,
-			Text = if r.Rank > 0 then "#" .. r.Rank else "—", TextColor3 = GOLD }),
+			Text = if r.Rank > 0 then "#" .. r.Rank else "-", TextColor3 = GOLD }),
 		Detail = Components.GlassText({ LayoutOrder = 4, Size = UDim2.new(1, 0, 0, 16), TextXAlignment = Enum.TextXAlignment.Center, TextSize = 13,
-			Text = string.format("%s damage · %d%% of the top · %d raider%s", RaidRules.Abbrev(r.Damage), math.round((r.Share or 0) * 100), r.Participants or 0,
+			Text = string.format("%s damage  |  %d%% of the top  |  %d raider%s", RaidRules.Abbrev(r.Damage), math.round((r.Share or 0) * 100), r.Participants or 0,
 				if (r.Participants or 0) == 1 then "" else "s") }),
 		Reward = title({ LayoutOrder = 5, Size = UDim2.new(1, 0, 0, 26), TextSize = 20, TextXAlignment = Enum.TextXAlignment.Center,
 			Text = if r.Qualified then string.format("+%d Gems   +%s Gold", r.Gems, RaidRules.Abbrev(r.Gold)) else "Deal more damage to earn rewards",
 			TextColor3 = if r.Qualified then G.Text else G.Danger }),
 		Return = Components.GlassText({ LayoutOrder = 6, Size = UDim2.new(1, 0, 0, 14), TextXAlignment = Enum.TextXAlignment.Center, TextSize = 11,
 			TextTransparency = G.MutedTransparency,
-			Text = if raid.InRaid then "Returning to the Commons in " .. math.max(0, math.ceil((r.ReturnAt or 0) - raid.Now)) .. "…" else "Rewards added to your Fortress" }),
+			Text = if raid.InRaid then "Returning to the Commons in " .. math.max(0, math.ceil((r.ReturnAt or 0) - raid.Now)) .. "..." else "Rewards added to your Fortress" }),
 	}
 	return Components.Glass({
 		Name = "RaidResults",
@@ -308,7 +308,7 @@ function RaidHud.HubChip(props: { Bottom: number, Compact: boolean })
 		Label = Components.GlassText({ Position = UDim2.fromOffset(12, 3), Size = UDim2.new(1, -76, 0, 16), TextSize = 12, FontFace = G.Fonts.Display,
 			Text = "RAID OPEN", TextColor3 = raid.Boss.Accent:Lerp(Color3.new(1, 1, 1), 0.3) }),
 		Name = if not props.Compact then Components.GlassText({ Position = UDim2.fromOffset(12, 20), Size = UDim2.new(1, -76, 0, 14), TextSize = 11,
-			TextTransparency = G.MutedTransparency, Text = "Portal · island, by the pool" }) else nil,
+			TextTransparency = G.MutedTransparency, Text = "Portal: island, by the pool" }) else nil,
 		Timer = title({ AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.fromOffset(60, 20), TextSize = 16,
 			TextXAlignment = Enum.TextXAlignment.Right, Text = RaidRules.Clock(left), TextColor3 = GOLD }),
 	})

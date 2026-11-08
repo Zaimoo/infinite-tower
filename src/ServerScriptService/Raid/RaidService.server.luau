@@ -129,9 +129,9 @@ local function refreshPortal()
 	if phase == "CALM" then
 		portal.Status.Text = "Next raid in " .. Rules.Clock(startAt - t)
 	elseif phase == "WARNING" then
-		portal.Status.Text = "RAID OPEN · rises in " .. Rules.Clock(startAt - t)
+		portal.Status.Text = "RAID OPEN - rises in " .. Rules.Clock(startAt - t)
 	elseif phase == "ACTIVE" then
-		portal.Status.Text = if open then "RAID OPEN · " .. Rules.Clock(startAt + timings.Active - t) .. " left" else "Raid sealed · " .. Rules.Clock(startAt + timings.Active - t)
+		portal.Status.Text = if open then "RAID OPEN - " .. Rules.Clock(startAt + timings.Active - t) .. " left" else "Raid sealed - " .. Rules.Clock(startAt + timings.Active - t)
 	else
 		portal.Status.Text = if killed then "Defeated!" else "The raid is over"
 	end
@@ -337,7 +337,7 @@ local function payout()
 			Gems = gems, Gold = reward.Gold, Qualified = reward.Qualified, ReturnAt = now() + timings.Results,
 		})
 		if reward.Qualified then
-			dm.SendToast(player, `Raid {if killed then "victory" else "over"}: #{rank} · +{gems} Gems · +{reward.Gold} Gold`, "SUCCESS")
+			dm.SendToast(player, `Raid {if killed then "victory" else "over"}: #{rank}, +{gems} Gems, +{reward.Gold} Gold`, "SUCCESS")
 		end
 	end
 end
