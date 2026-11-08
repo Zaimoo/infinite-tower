@@ -24,6 +24,14 @@ local ModalFit = require(script.Parent.Parent.ModalFit)
 local Types = require(script.Parent.Types)
 local e = React.createElement
 
+-- "500 Gold · 1 weapon consumed": Gems only when the rank actually costs Gems.
+local function upgradeCostText(rule: { Gold: number, Gems: number, Donors: number }): string
+	local parts = { string.format("%s Gold", Balance.Format(rule.Gold)) }
+	if (rule.Gems or 0) > 0 then table.insert(parts, string.format("%s Gems", Balance.Format(rule.Gems))) end
+	table.insert(parts, string.format("%d %s consumed", rule.Donors, if rule.Donors == 1 then "weapon" else "weapons"))
+	return table.concat(parts, " · ")
+end
+
 local function UndoButton(props: { ExpiresAt: number, OnUndo: () -> (), Busy: boolean })
 	local seconds, setSeconds = React.useState(math.max(0, math.ceil(props.ExpiresAt - Workspace:GetServerTimeNow())))
 	React.useEffect(function()
@@ -519,12 +527,12 @@ local function App(props: Types.Props)
 				Title = e(C.Text, { Text = "UPGRADE RESULT", TextColor3 = T.Gold, LayoutOrder = 1 }),
 				Rank = e(C.Text, { Text = string.format("CURRENT %d★  →  AFTER %d★", target.Star, after.Star), LayoutOrder = 2 }),
 				Stats = e(C.Stack, { Order = 3, Children = { Values = e(Screens.Stats, { Before = target, After = after }) } }),
-				Cost = e(C.Text, { Text = if rule then string.format("%s Gold · %s Gems · %d artifacts", Balance.Format(rule.Gold), Balance.Format(rule.Gems), rule.Donors) else "Maximum stars", TextColor3 = T.Gold, LayoutOrder = 4 }),
+				Cost = e(C.Text, { Text = if rule then upgradeCostText(rule) else "Maximum stars", TextColor3 = T.Gold, LayoutOrder = 4 }),
 				Reason = e(C.Text, { Text = upgradeReason or "Ready to upgrade", TextSize = 14, LayoutOrder = 5 }),
 			} }),
 		})
 		view.AutoFill = e(C.Button, { Name = "AutoFillMaterialsButton", Text = "Auto-fill safe artifacts", Position = UDim2.new(0, 0, 1, -48), Size = UDim2.new(0.4, -8, 0, 48), Disabled = busy or maxRank, OnActivate = forge.AutoFill })
-		view.Review = e(C.Button, { Name = "ReviewUpgradeButton", Icon = "Forge", Text = string.format("REVIEW UPGRADE · %d★ → %d★", target.Star, after.Star), Primary = true, Position = UDim2.new(0.4, 0, 1, -48), Size = UDim2.new(0.6, 0, 0, 48), Disabled = busy or upgradeReason ~= nil, OnActivate = reviewUpgrade })
+		view.Review = e(C.Button, { Name = "ReviewUpgradeButton", Icon = "Forge", Text = string.format("REVIEW UPGRADE · %d★ → %d★", target.Star, after.Star), Primary = true, Position = UDim2.new(0.4, 0, 1, -48), Size = UDim2.new(0.6, 0, 0, 48), Disabled = busy or upgradeReason ~= nil, Tooltip = upgradeReason, OnActivate = reviewUpgrade })
 
 	elseif route == "REVIEW" and target and review then
 		local changed = snapshot.Revision ~= review.Revision
@@ -643,8 +651,13 @@ local function App(props: Types.Props)
 		dialogView = e(Dialog, { Title = "Inventory filters", Children = choices, OnCancel = function() setDialog(nil) end, FocusKey = "FILTER" })
 	end
 
+	-- Before any server result, the footer is a hint that follows what the player is doing (it used to
+	-- keep saying "Select an artifact…" after one was selected, and on the upgrade screen).
+	local idleHint = if route == "MATERIALS" or route == "REVIEW" then (upgradeReason or "Ready: review the upgrade.")
+		elseif target then string.format("%s selected. Equip, upgrade, lock or sell it.", target.DisplayName)
+		else "Select an artifact to equip or upgrade."
 	local message = if sellMode then sell.Message
-		elseif forge.Sequence == 0 and forge.Message == "Choose a hero and an artifact to compare." then "Select an artifact to equip or upgrade."
+		elseif forge.Sequence == 0 and forge.Message == "Choose a hero and an artifact to compare." then idleHint
 		else forge.Message
 
 	return e("ScreenGui", {

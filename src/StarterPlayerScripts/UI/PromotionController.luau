@@ -815,7 +815,9 @@ function Promo.Confirm(self: any)
 	local recipientId = self.Recipient
 	self:Render()
 	task.spawn(function()
-		local response = self:Request("COMMIT", { Token = preview.Token, ConfirmRare = true })
+		-- Promotion consumes no donor heroes today, so the server never asks for rare confirmation here.
+		-- Pass the preview's flag rather than a blanket true so the safeguard holds if that changes.
+		local response = self:Request("COMMIT", { Token = preview.Token, ConfirmRare = preview.RequiresRareConfirmation == true })
 		self.Preview = nil
 		local revealRank = false
 		if response.Success then

@@ -113,7 +113,8 @@ function C.Button(props: ButtonProps)
 	local tone = if props.Disabled then T.Theme.Tones.Slate elseif props.Primary then (if props.Accent == T.Bad then T.Theme.Tones.Crimson else T.Theme.Tones.Action) elseif props.Selected then T.Theme.Tones.Gold else T.Theme.Tones.Deep
 	return e("TextButton", {
 		ref = props.Ref,
-		Name = props.Name or "Action",
+		-- Unique, readable names (e.g. "Action_AllSpare") so tests, Studio MCP and focus maps can find them.
+		Name = props.Name or ("Action_" .. (string.gsub(props.Text, "[^%w]", ""))),
 		Size = props.Size or UDim2.new(1, 0, 0, T.Touch), Position = props.Position,
 		LayoutOrder = props.Order, Text = "", AutoButtonColor = false,
 		BackgroundColor3 = Color3.new(1, 1, 1),
@@ -143,7 +144,13 @@ function C.Button(props: ButtonProps)
 			Position = UDim2.fromOffset(3, 3), Size = UDim2.new(1, -6, 1, -6), BackgroundTransparency = 1,
 		}, {
 			Corner = e("UICorner", { CornerRadius = UDim.new(0, 7) }),
-			Line = e("UIStroke", { Color = props.Accent or (if active or hovered or props.Primary then T.Gold else T.Theme.Tones.Slate.Rail), Thickness = if active then 2.5 else 1.4, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
+			-- A disabled button never shows the gold rail, so it can't be mistaken for a ready action.
+			Line = e("UIStroke", {
+				Color = if props.Disabled then T.Theme.Tones.Slate.Rail else props.Accent or (if active or hovered or props.Primary then T.Gold else T.Theme.Tones.Slate.Rail),
+				Thickness = if active and not props.Disabled then 2.5 else 1.4,
+				Transparency = if props.Disabled then 0.45 else 0,
+				ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+			}),
 		}),
 		Tooltip = if props.Tooltip and (hovered or focused) then e("Frame", { Name = "ActionTooltip", AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, 0, 0, -8), Size = UDim2.fromOffset(240, 64), BackgroundColor3 = T.Background, BorderSizePixel = 0, ZIndex = 50 }, {
 			Corner = e("UICorner", { CornerRadius = UDim.new(0, 8) }),
@@ -776,7 +783,9 @@ type StatRowProps = { Label: string, Before: number, After: number, Format: stri
 function C.StatRow(props: StatRowProps)
 	local delta = props.After - props.Before
 	local format = props.Format or "%.0f"
-	local difference = if math.abs(delta) < 0.00001 then " (=)" else string.format(" (%s%s)", if delta > 0 then "+" else "-", string.format(format, math.abs(delta)))
+	-- A multiplier's "×" belongs on the values, not the change: "×6.40 → ×9.64 (+3.24)".
+	local deltaText = (string.gsub(string.format(format, math.abs(delta)), "^×", ""))
+	local difference = if math.abs(delta) < 0.00001 then " (=)" else string.format(" (%s%s)", if delta > 0 then "+" else "-", deltaText)
 	return e("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 36), LayoutOrder = props.Order }, {
 		Label = e(C.Text, { Text = props.Label, TextSize = 16, TextColor3 = T.Muted, Size = UDim2.new(0.3, -8, 1, 0) }),
 		Before = e(C.Text, { Text = string.format(format, props.Before), TextSize = 16, Position = UDim2.fromScale(0.3, 0), Size = UDim2.new(0.22, -8, 1, 0), TextXAlignment = Enum.TextXAlignment.Right }),

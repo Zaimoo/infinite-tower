@@ -40,6 +40,17 @@ local LocalPlayer = Players.LocalPlayer
 local setIsOpenGlobal: ((boolean) -> ())? = nil
 local isCurrentlyOpen = false
 
+-- True when two settings tables hold the same values (the draft against the applied settings).
+local function sameSettings(a: { [string]: any }, b: { [string]: any }): boolean
+	for k, v in a do
+		if b[k] ~= v then return false end
+	end
+	for k, v in b do
+		if a[k] ~= v then return false end
+	end
+	return true
+end
+
 _G.OpenSettings = function()
 	if _G.OpenMasterModal then
 		_G.OpenMasterModal("SETTINGS")
@@ -90,7 +101,33 @@ local function SettingsApp()
 	setIsOpenGlobal = setIsOpen
 	local activeTab, setActiveTab = useState("Overview" :: SettingsConfig.TabName)
 	local statusMsg, setStatusMsg = useState("Ready.")
+	-- `settings` is the draft: it previews live while the window is open. `applied` is what the
+	-- player kept with Apply. Closing with a different draft asks before throwing it away.
 	local settings, setSettings = useState(table.clone(SettingsConfig.DEFAULTS))
+	local applied, setApplied = useState(table.clone(SettingsConfig.DEFAULTS))
+	local confirmDiscard, setConfirmDiscard = useState(false)
+	local dirty = not sameSettings(settings, applied)
+	local dirtyRef = React.useRef(false)
+	dirtyRef.current = dirty
+	local appliedRef = React.useRef(applied)
+	appliedRef.current = applied
+	local confirmRef = React.useRef(false)
+	confirmRef.current = confirmDiscard
+
+	-- Close if nothing is unapplied; otherwise ask first.
+	local function requestClose()
+		if dirtyRef.current then
+			setConfirmDiscard(true)
+		else
+			setIsOpen(false)
+		end
+	end
+	-- Throw the draft away and close (the Discard button, or another window taking over).
+	local function discardAndClose()
+		setSettings(table.clone(appliedRef.current))
+		setConfirmDiscard(false)
+		setIsOpen(false)
+	end
 
 	local theme = SettingsConfig.THEMES[settings.Theme] or SettingsConfig.THEMES.Gold
 	local accent = theme.Accent
@@ -202,18 +239,25 @@ local function SettingsApp()
 			setIsOpen(true)
 		end
 		local function toggleSettings()
-			if isOpen then setIsOpen(false) else openSettings() end
+			if isOpen then requestClose() else openSettings() end
 		end
 
 		_G.OpenSettings = openSettings
-		_G.CloseSettings = function() setIsOpen(false) end
+		-- Another window is taking over: unapplied changes can't be kept, so they are discarded.
+		_G.CloseSettings = function()
+			if isOpen then discardAndClose() end
+		end
 		_G.ToggleSettings = toggleSettings
 		_G.IsSettingsOpen = function() return isOpen end
 
-		-- Escape closes modal
+		-- Escape (or gamepad B) closes the discard prompt first, then the window.
 		local conn = UserInputService.InputBegan:Connect(function(input)
-			if input.KeyCode == Enum.KeyCode.Escape and isOpen then
-				setIsOpen(false)
+			if (input.KeyCode == Enum.KeyCode.Escape or input.KeyCode == Enum.KeyCode.ButtonB) and isOpen then
+				if confirmRef.current then
+					setConfirmDiscard(false)
+				else
+					requestClose()
+				end
 			end
 		end)
 
@@ -256,12 +300,13 @@ local function SettingsApp()
 
 	local resetDefaults = useCallback(function()
 		setSettings(table.clone(SettingsConfig.DEFAULTS))
-		setStatusMsg("All parameters restored to factory defaults.")
+		setStatusMsg("Defaults loaded. Press Apply to keep them.")
 	end, {})
 
 	local applySettings = useCallback(function()
-		setStatusMsg("Settings successfully committed and exported.")
-	end, {})
+		setApplied(table.clone(settings))
+		setStatusMsg("Settings applied.")
+	end, { settings })
 
 	local applyPreset = useCallback(function(name: string)
 		if name == "Quiet" then
@@ -275,7 +320,7 @@ local function SettingsApp()
 				c.MuteAmbience = true
 				return c
 			end)
-			setStatusMsg("Applied Quiet Mode preset (all audio silenced).")
+			setStatusMsg("Quiet Mode loaded (all audio silenced). Press Apply to keep it.")
 		elseif name == "Performance" then
 			setSettings(function(prev)
 				local c = table.clone(prev)
@@ -286,7 +331,7 @@ local function SettingsApp()
 				c.ReduceMotion = true
 				return c
 			end)
-			setStatusMsg("Applied Maximum Performance preset (effects trimmed).")
+			setStatusMsg("Max Performance loaded (effects trimmed). Press Apply to keep it.")
 		elseif name == "Cinematic" then
 			setSettings(function(prev)
 				local c = table.clone(prev)
@@ -298,7 +343,7 @@ local function SettingsApp()
 				c.Brightness = 0.25
 				return c
 			end)
-			setStatusMsg("Applied Cinematic preset (full shadows, bloom and color FX).")
+			setStatusMsg("Cinematic loaded (shadows, bloom and color FX). Press Apply to keep it.")
 		end
 	end, {})
 
@@ -561,7 +606,7 @@ local function SettingsApp()
 			Size = UDim2.fromScale(1, 1),
 			ZIndex = 1,
 			[React.Event.Activated] = function()
-				setIsOpen(false)
+				requestClose()
 			end,
 		}),
 
@@ -652,8 +697,8 @@ local function SettingsApp()
 							Position = UDim2.fromOffset(0, 28),
 							Size = UDim2.new(1, 0, 0, 16),
 							TextSize = 13,
-							TextColor3 = Grimoire.Text.Muted,
-							Text = "Changes apply instantly",
+							TextColor3 = if dirty then Grimoire.Text.Gold else Grimoire.Text.Muted,
+							Text = if dirty then "Unsaved changes: press Apply to keep them" else "All changes applied",
 							ZIndex = 3,
 						}),
 					}),
@@ -667,7 +712,7 @@ local function SettingsApp()
 						BackgroundColor3 = Color3.fromRGB(120, 24, 40),
 						BackgroundTransparency = 0.35,
 						ZIndex = 3,
-						[React.Event.Activated] = function() setIsOpen(false) end,
+						[React.Event.Activated] = function() requestClose() end,
 					}, {
 						Corner = e("UICorner", { CornerRadius = UDim.new(0, 10) }),
 						Stroke = e("UIStroke", {
@@ -882,8 +927,8 @@ local function SettingsApp()
 								OnClick = resetDefaults,
 							}),
 							ApplyBtn = e(ActionButton, {
-								Text = "Apply",
-								Primary = true,
+								Text = if dirty then "Apply" else "Applied",
+								Primary = dirty,
 								AccentColor = accent,
 								Size = UDim2.new(0, 90, 1, 0),
 								LayoutOrder = 2,
@@ -893,6 +938,80 @@ local function SettingsApp()
 					}),
 				}),
 			}),
+
+			-- "Discard unsaved changes?" prompt, over the window, when closing with an unapplied draft.
+			DiscardPrompt = if confirmDiscard then e("TextButton", {
+				Name = "DiscardPrompt",
+				AutoButtonColor = false,
+				Text = "",
+				BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+				BackgroundTransparency = 0.4,
+				Size = UDim2.fromScale(1, 1),
+				ZIndex = 40,
+			}, {
+				Corner = e("UICorner", { CornerRadius = UDim.new(0, 14) }),
+				Dialog = e("Frame", {
+					Name = "Dialog",
+					AnchorPoint = Vector2.new(0.5, 0.5),
+					Position = UDim2.fromScale(0.5, 0.5),
+					Size = UDim2.fromOffset(420, 190),
+					BackgroundColor3 = Grimoire.Tones.Deep.Top,
+					ZIndex = 41,
+				}, {
+					Corner = e("UICorner", { CornerRadius = UDim.new(0, 12) }),
+					Ink = e("UIStroke", { Color = Grimoire.Ink, Thickness = 3, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
+					Pad = e("UIPadding", {
+						PaddingLeft = UDim.new(0, 20), PaddingRight = UDim.new(0, 20),
+						PaddingTop = UDim.new(0, 18), PaddingBottom = UDim.new(0, 18),
+					}),
+					Title = HeavyLabel({
+						Size = UDim2.new(1, 0, 0, 28),
+						MaxSize = 22,
+						TextXAlignment = Enum.TextXAlignment.Left,
+						Text = "Discard unsaved changes?",
+						ZIndex = 42,
+					}),
+					Message = Body({
+						Position = UDim2.fromOffset(0, 36),
+						Size = UDim2.new(1, 0, 0, 44),
+						TextSize = 15,
+						TextWrapped = true,
+						TextTruncate = Enum.TextTruncate.None,
+						TextColor3 = Grimoire.Text.Parchment,
+						Text = "You're previewing changes you haven't applied. Discarding goes back to your applied settings.",
+						ZIndex = 42,
+					}),
+					Actions = e("Frame", {
+						BackgroundTransparency = 1,
+						AnchorPoint = Vector2.new(0, 1),
+						Position = UDim2.fromScale(0, 1),
+						Size = UDim2.new(1, 0, 0, 40),
+						ZIndex = 42,
+					}, {
+						Layout = e("UIListLayout", {
+							FillDirection = Enum.FillDirection.Horizontal,
+							HorizontalAlignment = Enum.HorizontalAlignment.Right,
+							Padding = UDim.new(0, 10),
+						}),
+						Keep = e(ActionButton, {
+							Text = "Keep editing",
+							Primary = true,
+							AccentColor = accent,
+							Size = UDim2.new(0, 150, 1, 0),
+							LayoutOrder = 1,
+							OnClick = function() setConfirmDiscard(false) end,
+						}),
+						Discard = e(ActionButton, {
+							Text = "Discard",
+							Primary = false,
+							AccentColor = Grimoire.Text.Bad,
+							Size = UDim2.new(0, 110, 1, 0),
+							LayoutOrder = 2,
+							OnClick = discardAndClose,
+						}),
+					}),
+				}),
+			}) else nil,
 		}),
 	})
 end

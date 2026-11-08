@@ -1632,9 +1632,9 @@ function Forge:SummonBlockReason(count: number): string?
 	if not profile then return "Profile not loaded" end
 	local cfg = ArtifactCatalog.Banner
 	local cost = if count == 10 then cfg.Cost10X else cfg.Cost1X
-	local owned = 0
-	for _ in pairs(profile.Artifacts or {}) do owned += 1 end
-	local cap = StatBalance.MaxArtifactInventory
+	-- Same rule as the server's summon check: Storage nodes in the Fortress Tree raise the cap.
+	local owned = InventoryCapacity.ArtifactCount(profile)
+	local cap = InventoryCapacity.ArtifactCap(profile.FortressTree)
 	if owned + count > cap then
 		return if owned >= cap
 			then string.format("Inventory full (%d / %d): sell or promote weapons", owned, cap)
@@ -1648,9 +1648,8 @@ end
 
 function Forge:RenderSummonView()
 	local profile = self:ResolveProfile()
-	local owned = 0
-	for _ in pairs((profile and profile.Artifacts) or {}) do owned += 1 end
-	local cap = StatBalance.MaxArtifactInventory
+	local owned = InventoryCapacity.ArtifactCount(profile)
+	local cap = InventoryCapacity.ArtifactCap(profile and profile.FortressTree)
 	local block1, block10 = self:SummonBlockReason(1), self:SummonBlockReason(10)
 	for btn, blocked in { [self.Summon1XBtn] = block1, [self.Summon10XBtn] = block10 } do
 		if btn then

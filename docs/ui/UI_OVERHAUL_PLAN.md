@@ -7,6 +7,12 @@ Ground rules:
 - **Gilded Grimoire** (`docs/ui/GILDED_GRIMOIRE.md`) stays the theme. The references (a bright simulator HUD, an inventory window and a rebirth window) are guides to *structure and feel*: chunky tiles, colour-coded intent, big numbers, before→after previews, warnings next to the action. We are not copying their look.
 - The HUD Left/Right Rail buttons keep their current chunky icon style. The user decided that on 2026-11-03.
 
+**Decisions (2026-11-09):**
+1. **HUD goes fully gothic.** Clear Glass is retired from the HUD cards (power, event, leaderboard, currency, banners). Everything uses Grimoire.
+2. **Brighter, still Gilded Grimoire.** Raise saturation and value: brighter domain-tinted window headers, vivid intent buttons, glowing rarity rails, lighter panel interiors. Keep the ink outlines, gold rails, diamond studs and Cinzel type. See §3.0.
+3. **The §6 confirmation table is approved as written**, including hold-to-confirm for Exalted+ sells.
+4. **Settings keeps an explicit Apply button.** It gets an "Unsaved changes" state and a confirm when closing with unapplied changes (§5.10).
+
 ---
 
 ## 1. Diagnosis: why the UI reads as bad, convoluted, inconsistent and plain
@@ -27,15 +33,26 @@ Ground rules:
 
 ### 1.2 Bugs found during the audit (fix first)
 
+**Phase 0 status (2026-11-09):** B2 and B4–B10 are fixed in code and the test suite passes. They are **not yet verified in a Studio playtest**. B3 still needs its clean-session check. Fixing the suite also needed two test-harness repairs: a stray `end` in `tests/forge-workbench.spec.luau`, and registering `EquipBest` (plus its spec) in `tests/run.ps1`.
+- **B2:** the summon view now uses `InventoryCapacity.ArtifactCount`/`ArtifactCap`, the same rule as the server.
+- **B4** was not a live bug: Promotion never takes donor heroes, so the server never asks for rare confirmation. The client now sends the preview's flag instead of a blanket `true`, so the safeguard holds if that changes.
+- **B5:** rail buttons show the reason in a bubble on hover, gamepad focus or tap, with a lock badge.
+- **B6:** Apply is real now. The draft previews live, Apply keeps it, and closing with unapplied changes asks "Discard unsaved changes?". Another window taking over discards the draft.
+- **B7:** long panels fade at the bottom while there's more to scroll, and the collection count sits inside the header bar.
+- **B8–B10:** the Forge hint follows the route and selection. Disabled buttons lose the gold rail and show their reason as a tooltip. The copy is fixed. Buttons get unique `Action_<Text>` names.
+
 | ID | Bug | Where | Impact |
 | --- | --- | --- | --- |
-| B1 | Forge detail actions show the literal text **"Button"** over each icon. `C.IconAction` creates a `TextButton` without `Text = ""`. | `ForgeWorkbench/Components.luau:311` (uncommitted, on `feat/forge-ui-redesign`) | Visible on every artifact selection. |
-| B2 | The Blacksmith summon view caps artifacts at `StatBalance.MaxArtifactInventory` (50) and ignores Storage nodes. The Workbench shows 29/**100** and the summon view 29/**50**. `SummonBlockReason` also **blocks summons client-side** at 50 when the server allows more. | `ForgeController.luau:1636` and `:1652`. Use `InventoryCapacity.ArtifactCap`. | Players with Storage upgrades are wrongly refused. |
-| B3 | Controllers build twice. In a live session `MasterHUDScreenGui` holds 2× `BlacksmithForgeModal`, `ForgeScrim`, `ForgeWorkbenchOpenState` and `ArtifactsCatalogScrim`, and 3× `HeroSelectionDrawer`. | Probably `ForgeController` and `HeroSelectionDrawer` construction on respawn or re-require. Needs investigation. | Memory use, duplicate connections, and possible double-fired handlers. |
+| B1 | ~~Forge detail actions show the literal text "Button" over each icon.~~ **Fixed in `a61c3ce`** (`IconAction` now sets `Text = ""`). | `ForgeWorkbench/Components.luau` | Done. |
+| B2 | The Blacksmith summon view caps artifacts at `StatBalance.MaxArtifactInventory` (50) and ignores Storage nodes. **Confirmed live:** at 44/100 the summon view says "Room for 6 more: a 10x needs 10 free slots" and greys out Summon 10x. | `ForgeController.luau:1636` and `:1652`. Use `InventoryCapacity.ArtifactCap`. | Players with Storage upgrades are wrongly refused 10x pulls. **Highest priority.** |
+| B3 | Duplicate UI instances: 2× Forge host folders, Blacksmith modal and scrims, and 3× `HeroSelectionDrawer`. **Probably caused by another agent's Studio MCP session** re-running client scripts. Re-check in a clean playtest; only investigate if it reproduces. | Clean-session check in Phase 0 | Low until it reproduces. |
 | B4 | Promotion bypasses the rare-donor confirmation (see R4). | `PromotionController.luau:818` | A safety net is silently disabled. |
 | B5 | `RailButton` accepts `DisabledReason`, but nothing passes or renders it. Overdrive greys out with no explanation. | `Hud/Components.luau:124` | Players do not know why the button is off. |
 | B6 | Settings says "Changes apply instantly" but shows an Apply button. | `Settings/SettingsApp.luau` | Contradicts itself. |
 | B7 | Hero Index detail panel is clipped at the bottom ("Drop rate" cut off). Its title-bar progress bar has no label. | `Hud/HeroIndex.luau` | Reads as broken. |
+| B8 | The Forge footer shows "Select an artifact to equip or upgrade." while an artifact *is* selected, and stays on the Upgrade stage. | `ForgeWorkbench/App.luau:646` | Wrong instruction. |
+| B9 | "Review Upgrade" looks enabled (gold outline) with no material chosen. The copy reads "Choose 1 more artifacts", "500 Gold · 0 Gems · 1 artifacts" and "+×3.24". | `ForgeWorkbench/Screens.luau` (upgrade stage) | Sloppy, reads unfinished. |
+| B10 | Four sibling sell buttons are all named `Action`, so tests, Studio MCP and gamepad focus maps cannot address them. | `ForgeWorkbench` sell action bar | Untestable. |
 
 ---
 
@@ -56,13 +73,23 @@ Ground rules:
 
 One token module, `Shared/Util/GildedGrimoire.luau`, stays the single source. `Hud/Theme`, `ForgeWorkbench/Tokens`, `PitDesignTokens` and `Settings/SettingsConfig` colours become thin re-exports, then go away.
 
+### 3.0 "Brighter Grimoire": what changes, what stays
+| Stays | Gets brighter |
+| --- | --- |
+| Ink outlines (2–3.5 px), gold inset rail, diamond corner studs | Window **header bars** become saturated domain colours (ember orange, amethyst, azure, royal gold, crimson) with a subtle diagonal pattern, like the reference headers, instead of the same violet everywhere |
+| Cinzel family, white→gold title gradient | Panel interiors lift from near-black (`#0D0912`) to a lighter violet-plum, so contents stop sitting in a void |
+| Violet base tone, obsidian accents | Intent buttons use vivid fills (gold, jade, azure, crimson) with a top shine, not outline-only dark buttons |
+| Rarity colours | Rarity tiles get a tinted gradient fill plus an outer glow from Exalted up; Mythical and above get an animated shimmer |
+| No emoji, drawn icons | Icons get one value step brighter and a stronger white sheen |
+Rule of thumb: **dark is for backgrounds only.** Anything you can press or read is bright. Contrast stays at least 4.5:1 for text.
+
 ### 3.1 Surfaces
 | Token | Use |
 | --- | --- |
 | `Window` | Violet top-lit gradient, 3 px ink outline, gold rail, diamond studs on the corners. Every modal window. |
 | `Panel` | Deep tone, 2 px ink, gold rail at 50%. Sections inside a window. |
 | `Tile` | Rarity-tinted top-lit gradient (never flat black), 2 px ink, rarity-coloured rail, and a soft inner glow for Exalted+. Artifact, hero and material tiles. |
-| `Glass` | Clear Glass. **HUD status cards only** (power, event, leaderboard), and a bit stronger: base 0.25, 14 px numbers minimum. |
+| `HudCard` | Compact Grimoire card for the HUD (power, event, leaderboard, currency, banners): ink outline, gold rail, a 0.1 transparency fill so the world still reads behind. It **replaces Clear Glass** (decision 1). |
 | `Scrim` | Black at 0.45 behind every modal, plus `Lighting` blur 8. One scrim, owned by the window manager. |
 
 ### 3.2 Type scale (Cinzel family, no Gotham)
@@ -168,22 +195,45 @@ All presets respect `UIFeel.ReducedMotion()`.
 - Overdrive: render `DisabledReason` as a tooltip and as a small lock glyph (B5). The cooldown already shows seconds; add a radial sweep.
 - Currency chips (bottom-left): move up a size (big number 22 px). Show the `+87` gain floater consistently. Clicking a chip opens a tooltip with income per minute and a "Get more" link to the Store.
 - The squad strip plus the orphaned "Assign" button become one unit: Assign docks onto the strip's right end as a `Travel` button.
-- Power and Tower Event cards: Glass stays, but numbers go to 22–26 px, labels to 13 px. The event card gets a progress ring for the timer.
-- Leaderboard: 14 px minimum. Highlight the local player's row in gold. Collapse it to a small "People (n)" tab rather than a tiny X.
+- Power and Tower Event cards move from Clear Glass to `HudCard` (Grimoire). Numbers go to 22–26 px, labels to 13 px. The event card gets a progress ring for the timer.
+- Currency chips and banners (loot stolen, squad down, boss, toasts) also move to Grimoire. Retire the `Theme.Glass`, `GlassFrame` and `GlassText` usages and update `GILDED_GRIMOIRE.md` §Clear Glass.
+- Leaderboard: Grimoire panel, 14 px minimum. Highlight the local player's row in gold. Collapse it to a small "People (n)" tab rather than a tiny X.
 - Rail badges are wired to real signals: Index (new heroes), Store (limited banner live), Upgrades (a node is affordable), Backpack (inventory ≥90% or a new artifact).
 - Delete the hidden legacy toolbar, top bar and currency cluster from `HUDController` once nothing reads them (R9).
 
-### 5.2 Forge Workbench (`ForgeWorkbench/*`): finish on the current branch
-- Fix B1. Give the detail actions real labels (`IconButton` M size, 13 px).
-- Remove the duplicates: "Filters (0)" (top) and "Filter (0)" (bottom), and "BEST" (top) and "Equip Best / Squad Optimal" (bottom). Keep search, filters and sort on top, actions at the bottom.
-- Tiles: rarity-tinted gradient instead of black, the star row as icons, and the power number at 15 px. Locked shows a padlock corner, equipped the owner's portrait corner.
-- Detail panel: `DeltaStat` against the currently equipped weapon of the target hero ("+1.2M DPS ↑").
-- Move "Optimal gear equipped on 2 squad members." to `Notify`. Turn "Undo expired" into a ghost Undo button with a countdown ring that disappears when it expires.
-- The capacity chip warns at ≥90% (amber) and when full (crimson), with a Callout "Inventory full · Sell".
-- Confirms: sell of Rare+ (Hard), sell of Exalted+ or any starred weapon (Critical), and an Upgrade that consumes Rare+ donors (Hard, showing the donor tiles).
+### 5.2 Forge (`ForgeWorkbench/*`, `ForgeController` summon, `ForgeNavigation`)
+
+Re-audited live on 2026-11-09 after `a61c3ce`, across all four states: Artifacts, Upgrade, material picker and Sell, plus the Summon tab.
+
+**What works and stays:** square image-first tiles with 3D models, the rarity label with stars and power, equipped and locked protection with padlocks in Sell and the picker, the before→after numbers on Upgrade, quick-pick sell chips, Squad Optimal, the 44/100 capacity chip, and the red close X.
+
+**Problems, by state**
+
+| State | Problem | Fix |
+| --- | --- | --- |
+| All | **Artifacts and Summon are two different windows.** The tab switches from the Workbench frame (big red X, three chips, flat header) to the old gothic modal (diamond studs, small X, Gold chip only), and the window jumps size. The tab strip floats *outside* the window at the top of the screen. | One Forge `Window` (§4.2) with an ember header. Artifacts and Summon become a `TabRail` *inside* it, with the same frame, size and chips (Gold, Gems, capacity) on both tabs. |
+| All | The HUD currency chips draw over the window's bottom-left corner and status line. | WindowManager focus mode (§4.1). |
+| All | The footer status line is often wrong or redundant (B8), and in Sell it repeats the instruction box. | Remove the footer. Results go to `Notify`, blockers to a `Callout` above the primary button. |
+| Artifacts | Tiles are flat black. On equipped tiles the border colour switches to teal and hides the rarity colour (an Exalted tile has a cyan border). Rarity text overlaps tall models ("Uncommon" behind the staff head). Stars, power and the equipped shield are 10–12 px. | Brighter tile (§3.0): rarity gradient fill and rail. Equipped becomes an **owner-portrait corner badge**, never a border colour. Rarity label sits on a top band above the model viewport. Power is 15 px bold and stars are drawn icons. |
+| Artifacts | Detail panel: equipped weapons preview as a **tiny hero model** in a black box, so the weapon itself can't be read. The four icon actions (Lock, Sell, Unequip, Upgrade) are 22 px icons with 10 px labels floating mid-panel, leaving 40% of the panel empty. | The weapon is the hero of the preview: big, slowly rotating, on a rarity-lit pedestal. The owner shows as a portrait chip ("Equipped by Aaron"). The actions become a row of M-size labelled buttons pinned to the panel bottom, with Upgrade as `Primary`. The freed space shows `DeltaStat` against the target hero's current weapon ("+1.2M DPS"). |
+| Artifacts | Search placeholder is centred. The sort button reads just "BEST", which looks like a duplicate of Squad Optimal. | Left-aligned `SearchBox` with a clear button. Sort becomes "Sort: Best ▾". Squad Optimal turns `Confirm` (green) and carries the preview gain ("+4.28M") as a tooltip or subtitle. Its label text is currently grey, which looks disabled. |
+| Artifacts | All 44 tiles mount live `ViewportFrame`s, including off-screen rows. Storage takes this past 100. | Virtualize: mount viewports only for visible rows plus one buffer row, and show a static icon while scrolling. |
+| Upgrade | The stage floats in a black void: the material slot sits top-left, the target is centre-left and the numbers are on the right. There's no Back button (only the X or the Artifacts tab). "★ · KEPT" is cryptic. "Review Upgrade" looks enabled with nothing chosen (B9). | A three-zone layout: **TARGET · KEPT** card (left) → arrow with the cost → **RESULT** card (right, the new star count glowing), with a **MATERIALS · CONSUMED** strip of N labelled slots below. Add a Back button in the header. Review is `Primary` and Disabled with the reason "Choose 1 more material". The cost chips show balance after the upgrade, and drop "0 Gems" when it's zero. |
+| Material picker | The grid has broken spacing (about 60 px column gaps, 6 px rows) and two-thirds of the panel is empty black. Padlocked tiles don't say why. "Back" is a plain text button. | Use the same `InventoryGrid` as the main view with "eligible first" sorting. Locked or equipped tiles get a tooltip with the reason ("Equipped by Ignis: unequip first"). Header says "Choose 1 material · it will be destroyed", with the standard close. |
+| Sell | Two exits ("Done" bottom-left, "Exit Delete Mode" in the panel). The commit button reads "Select Items". The breakdown is about 11 px. "Delete / Sell" naming is mixed. Four buttons are all named `Action` (B10). | One exit (Back in the header). The commit becomes `Danger` "Sell 6 · +1,240 Gold", Disabled until something is selected. The breakdown becomes rarity-coloured chips at 13 px. Call it "Sell" everywhere. Give every button a unique name. |
+| Summon | **B2** blocks 10x at 44/100. The banner has a red pill blob behind the centre weapon, and side weapons render as black silhouettes. Both summon buttons are violet or slate, with no best-value cue. "Room for 6 more…" and "Rare+ guaranteed in 4" are small grey text on the right. | Fix B2. The carousel gets a rarity ring glow and lit side weapons. 10x gets a "BEST VALUE · Rare+ guaranteed" ribbon. Pity becomes two inline-labelled bars. The capacity warning becomes a `Callout` that only shows when it actually blocks. |
+
+**Confirms (from §6):** sell Rare–Superior is Hard; sell Exalted+ or any ★2+ is Critical (hold); Upgrade with Rare+ donors is Hard, showing donor tiles; Summon 10x is Soft on first use per session.
+
+### 5.2a Backpack (`Hud/BackpackPanel.luau`)
+The rail's Backpack now opens a separate list window (Artifacts 44/100, Heroes 7/100, Materials). It has its own plain header, a small "×", text-only rows with tiny model thumbnails, and an empty "Select an item to inspect it." panel.
+- Put it on the standard `Window` with a royal-gold header. Tabs become the `TabRail`, with capacity bars inside the tab labels.
+- Reuse the Forge `Tile` grid for artifacts and the hero `Tile` for heroes, so the same item looks the same in every screen.
+- The detail panel reuses the Forge detail component. Add a "Manage in Forge" `Travel` button rather than duplicating equip, upgrade and sell actions here.
+- Empty detail state: `EmptyState` with a hint, not a blank panel.
 
 ### 5.3 Blacksmith summon (`ForgeController` summon view)
-- Fix B2.
+- Fix B2. It is merged into the Forge window as the Summon tab (§5.2).
 - Clean up the banner preview: remove the red pill blob behind the centre weapon, and give the carousel a rarity-coloured ring glow.
 - Summon buttons: 1x is `Primary` and 10x is `Primary` with a "BEST VALUE · Rare+ guaranteed" ribbon. Show cost chips with the player's balance in red when short, and Disabled with a reason.
 - The pity bar gets inline labels: "Exalted+ in 94" inside the bar and "Rare+ in 7" as a second thin segment bar.
@@ -230,7 +280,7 @@ All presets respect `UIFeel.ReducedMotion()`.
 
 ### 5.10 Settings (`Settings/*`)
 - Move it into Grimoire v2 (§3): `Window`, with the `TabRail` **on the left** like every other window.
-- Resolve B6: either make everything apply instantly and remove Apply, or keep Apply and say "Unsaved changes" in a Callout. Instant apply plus a Revert is recommended.
+- Resolve B6 with **explicit Apply** (decision 4): remove "Changes apply instantly". Changing any option shows an amber "Unsaved changes" `Callout` and lights up Apply as `Primary`. Apply shows a "Settings applied" toast. Closing with unapplied changes opens a Soft confirm ("Discard changes?").
 - Fill the Overview with presets as large cards, each with a preview description and tooltips.
 - Reset Defaults gets a Soft confirm.
 
@@ -244,7 +294,7 @@ All presets respect `UIFeel.ReducedMotion()`.
 - Strip the remaining Gotham fonts (Offline Reward, Duel).
 - Offline reward: a reward toast also flies to the currency chip.
 - Raid "Leave": Soft confirm (it already has a local `confirm` state; move it onto `ConfirmDialog`).
-- Loot stolen, squad down and boss banners: one `Banner` component (Glass, accent bar, icon) with consistent slide-in and out.
+- Loot stolen, squad down and boss banners: one `Banner` component (`HudCard` Grimoire, accent bar, icon) with consistent slide-in and out.
 
 ### 5.13 World UI (`Rendering/EntityRenderer.client.luau`)
 - Hero nameplates overlap heavily at mid-range (five large plates in a row). Scale them by distance and shrink to name plus HP beyond 40 studs. Show your own squad's plates fully only when you hover or target them. Turn `AlwaysOnTop` off for non-duel heroes.
@@ -295,7 +345,7 @@ Each phase is its own PR off `main` with conventional commits. Each adds Studio 
 
 | Phase | Scope | Size |
 | --- | --- | --- |
-| **0. Hotfixes** | B1 (on the current `feat/forge-ui-redesign` branch before its PR), B2, B4, B5, B6, B7 | S |
+| **0. Hotfixes** | B2 first, then B4, B5, B6, B7, B8, B9, B10; a clean-session check for B3 (B1 already fixed) | S |
 | **1. Kit foundation** | `Kit/` tokens re-export, `Button`, `CurrencyChip`, `Bar`, `DeltaStat`, `Callout`, `Tooltip`, `Notify`, `ConfirmDialog`, motion presets. Spec tests for pure logic (tooltip placement/flip, toast coalescing, confirm-tier selection from the §6 table). | L |
 | **2. WindowManager** | Registry, scrim/blur, HUD focus mode, Esc/B, open/close transitions, `_G` shims; B3 investigation | M |
 | **3. Pit + Forge** | Synthesis, picker, Promotion, Forge Workbench, Blacksmith summon onto `Window` + Kit; the §6 confirms | L |
@@ -308,9 +358,6 @@ Verification for each phase: `pwsh tests/run.ps1` (compile plus specs), then a S
 
 ---
 
-## 10. Decisions needed from you
+## 10. Decisions
 
-1. **HUD cards:** should Clear Glass stay on the HUD status cards (power, event, leaderboard, currency) as recommended, or should the HUD go fully Grimoire for maximum consistency? The rails stay Grimoire either way.
-2. **Saturation:** the references are much brighter. Should Grimoire v2 push saturation up (brighter domain-tinted headers, more colourful intent buttons) or stay moody gothic, adding colour only to intent and rarity?
-3. **Confirm defaults:** is the §6 table the right risk level, especially Critical (hold-to-confirm) for Exalted+ sells?
-4. **Settings apply model:** instant apply plus Revert (recommended), or explicit Apply?
+All four were answered on 2026-11-09 and are recorded at the top of this plan: fully gothic HUD, brighter Grimoire, the §6 table as written, and explicit Apply in Settings.

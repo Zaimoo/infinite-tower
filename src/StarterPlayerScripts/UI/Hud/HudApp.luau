@@ -231,6 +231,7 @@ local function rail(name: string, side: "Left" | "Right", top: number, bottom: n
 	for i, b in buttons do
 		b.Order = i
 		b.Size = size
+		b.TipSide = if side == "Left" then "Right" else "Left"
 		children["B" .. i] = e(Components.RailButton, b)
 	end
 	return e("Frame", {
@@ -561,6 +562,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 			Cooldown = Whistles.Remaining("Overdrive"),
 			CooldownTotal = Whistles.Cooldown.Overdrive,
 			Disabled = overdriveBlocked ~= nil,
+			DisabledReason = overdriveBlocked,
 			OnActivated = function()
 				Whistles.Fire("Overdrive")
 			end,
@@ -573,6 +575,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 			Cooldown = Whistles.Remaining("Recall"),
 			CooldownTotal = Whistles.Cooldown.Recall,
 			Disabled = recallBlocked ~= nil,
+			DisabledReason = recallBlocked,
 			OnActivated = function()
 				Whistles.Fire("Recall")
 			end,
