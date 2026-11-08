@@ -94,7 +94,7 @@ Gold_i     = round(Gems_i × 25 × floorScale(HighestClearedFloor_i))
 | --- | --- | --- |
 | 100% (rank 1) | 2,000 | 1,600 |
 | 50% | 1,388 | 1,110 |
-| 25% | 984 | 787 |
+| 25% | 983 | 787 |
 | 5% | 498 | 399 |
 | any qualifier | ≥ 200 | ≥ 160 |
 
