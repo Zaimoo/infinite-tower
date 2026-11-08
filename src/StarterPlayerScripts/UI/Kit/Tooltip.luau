@@ -10,7 +10,6 @@
 local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local UserInputService = game:GetService("UserInputService")
 
 local Rules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("UiKitRules"))
 local GrimoireIcons = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GrimoireIcons"))
@@ -191,10 +190,5 @@ function Tooltip.Bind(anchor: GuiObject, content: () -> (Content | string)?, opt
 		if currentAnchor == anchor then Tooltip.Hide() end
 	end
 end
-
--- Any click elsewhere or a window switch should not leave a tooltip floating.
-UserInputService.InputBegan:Connect(function(input: InputObject)
-	if input.KeyCode == Enum.KeyCode.Escape then Tooltip.Hide() end
-end)
 
 return table.freeze(Tooltip)

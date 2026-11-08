@@ -23,6 +23,7 @@ local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormu
 
 local Theme = require(script.Parent:WaitForChild("Theme"))
 local Store = require(script.Parent:WaitForChild("Store"))
+local WindowManager = require(script.Parent.Parent:WaitForChild("WindowManager"))
 local Whistles = require(script.Parent:WaitForChild("Whistles"))
 local Components = require(script.Parent:WaitForChild("Components"))
 local HeroIndex = require(script.Parent:WaitForChild("HeroIndex"))
@@ -252,6 +253,12 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 	local _, setRevision = React.useState(0)
 	local _, setTick = React.useState(0)
 	local screen, setScreen = React.useState(props.Root.AbsoluteSize)
+	-- Re-render when any window opens or closes (the HUD currency bar follows the top window).
+	local _, setWindowTick = React.useState(0)
+	React.useEffect(function()
+		local conn = WindowManager.Changed:Connect(function() setWindowTick(function(n: number) return n + 1 end) end)
+		return function() conn:Disconnect() end
+	end, {})
 	local indexOpen, setIndexOpen = React.useState(false)
 	local indexInitialMode, setIndexInitialMode = React.useState("HEROES" :: "HEROES" | "ARTIFACTS")
 	local facilityOpen, setFacilityOpen = React.useState(nil :: string?)
@@ -688,7 +695,9 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 		}) else nil,
 		-- Screens and the Pit tabs render above the building screens; the zones above stay behind them.
 		Overlay = ReactRoblox.createPortal({
-		FocusCurrency = if modalFocus and profile and not (_G.IsSettingsOpen and _G.IsSettingsOpen()) then e("Frame", {
+		-- Over an open window, only when that window has no currency display of its own (Forge, Store,
+		-- Index and the Pit draw theirs or spend nothing): the HUD bar used to overlap their corners.
+		FocusCurrency = if modalFocus and profile and WindowManager.WantsHudCurrency() then e("Frame", {
 			Name = "ModalFocusCurrencyWrapper",
 			Position = UDim2.new(0, L.Edge, 1, -L.Edge),
 			AnchorPoint = Vector2.new(0, 1),

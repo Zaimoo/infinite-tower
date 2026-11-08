@@ -1355,7 +1355,7 @@ UserInputService.InputChanged:Connect(function(input: InputObject, processed: bo
 	end
 end)
 
--- Keyboard hotkey: [V] toggles squad bird's-eye cam, [Esc] exits
+-- Keyboard hotkey: [V] toggles squad bird's-eye cam, [Backspace] exits
 UserInputService.InputBegan:Connect(function(input: InputObject, processed: boolean)
 	if processed then return end
 	if input.KeyCode == Enum.KeyCode.V then
@@ -1363,7 +1363,7 @@ UserInputService.InputBegan:Connect(function(input: InputObject, processed: bool
 		if panel.Visible then return end
 		if _G.IsAnyMasterModalOpen and _G.IsAnyMasterModalOpen() then return end
 		toggleViewSquad()
-	elseif input.KeyCode == Enum.KeyCode.Escape or input.KeyCode == Enum.KeyCode.ButtonB then
+	elseif input.KeyCode == Enum.KeyCode.Backspace or input.KeyCode == Enum.KeyCode.ButtonB then
 		if isViewingSquad then
 			setViewSquad(false)
 		end
@@ -1393,7 +1393,9 @@ end
 -- Keyboard / Gamepad Navigation
 UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: boolean)
 	if not panel.Visible then return end
-	if input.KeyCode == Enum.KeyCode.Escape or input.KeyCode == Enum.KeyCode.ButtonB then
+	if input.KeyCode == Enum.KeyCode.Backspace or input.KeyCode == Enum.KeyCode.ButtonB then
+		-- Backspace while typing (chat, a search box) edits text; it doesn't close the selector.
+		if gameProcessed or UserInputService:GetFocusedTextBox() ~= nil then return end
 		closeSelector()
 		return
 	end

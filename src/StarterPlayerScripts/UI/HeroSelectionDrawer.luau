@@ -207,12 +207,16 @@ function Drawer.Open(self: any, returnFocus: GuiObject?)
 	back.Name = "CloseDrawer"
 	back.Type = Enum.InputActionType.Bool
 	back.Parent = context
-	for _, key in { Enum.KeyCode.ButtonB, Enum.KeyCode.Escape } do
+	for _, key in { Enum.KeyCode.ButtonB, Enum.KeyCode.Backspace } do
 		local binding = Instance.new("InputBinding")
 		binding.KeyCode = key
 		binding.Parent = back
 	end
-	back.Pressed:Connect(function() self:Close() end)
+	-- Backspace while typing (chat, the search box) edits text; it doesn't close the drawer.
+	back.Pressed:Connect(function()
+		if UserInputService:GetFocusedTextBox() then return end
+		self:Close()
+	end)
 	context.Parent = Players.LocalPlayer:WaitForChild("PlayerScripts")
 	self.BackContext = context
 	local serial = self.Serial

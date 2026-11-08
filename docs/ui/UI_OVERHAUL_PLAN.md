@@ -129,7 +129,7 @@ Each module is `--!strict`, has a React component *and* an imperative adapter, b
 - Registry `{ id, open, close, isOpen, priority }`. It replaces the `_G.Open*` and `_G.Is*Open` globals; keep thin `_G` shims for one release.
 - One modal at a time, with stack semantics (a picker opened from Synthesis pushes; closing pops back).
 - Owns the scrim, the blur, and **HUD focus mode**: while a window is open the rails, currency chips and squad strip fade to 0 and stop taking input. That fixes HUD chips drawing over windows.
-- Esc, gamepad B and a scrim click close the top window. A window can veto the close ("unsaved selection"), which opens a ConfirmDialog.
+- Backspace, gamepad B and a scrim click close the top window (Roblox reserves Esc for its own menu, so a game never receives it). A window can veto the close ("unsaved selection"), which opens a ConfirmDialog.
 - Open and close transitions: open is scale 0.92→1 with Back easing over 0.22 s plus a scrim fade. Close is scale 1→0.95 and fade over 0.14 s, *then* `Visible = false`. That clears the backlog item "Window close transitions".
 - Sets `GuiService.SelectedObject` on open and restores it on close.
 
@@ -355,7 +355,7 @@ Each phase is its own PR off `main` with conventional commits. Each adds Studio 
 | --- | --- | --- |
 | **0. Hotfixes** | B2 first, then B4, B5, B6, B7, B8, B9, B10; a clean-session check for B3 (B1 already fixed) | S |
 | **1. Kit foundation** | `Kit/` tokens re-export, `Button`, `CurrencyChip`, `Bar`, `DeltaStat`, `Callout`, `Tooltip`, `Notify`, `ConfirmDialog`, motion presets. Spec tests for pure logic (tooltip placement/flip, toast coalescing, confirm-tier selection from the §6 table). | L · **Built 2026-11-09:** `UI/Kit` (see `GILDED_GRIMOIRE.md` §The UI kit), `Shared/Util/UiKitRules` with 12 spec tests, server and client toasts routed to `Notify`. Checked in a Studio playtest. No screen uses the other pieces yet; adoption starts in Phase 3. |
-| **2. WindowManager** | Registry, scrim/blur, HUD focus mode, Esc/B, open/close transitions, `_G` shims; B3 investigation | M |
+| **2. WindowManager** | Registry, scrim/blur, HUD focus mode, Esc/B, open/close transitions, `_G` shims; B3 investigation | M · **Built 2026-11-09:** `UI/WindowManager` (registry of 12 windows in `HUDController` plus the offline-reward popup; `_G.OpenMasterModal` / `_G.IsAnyMasterModalOpen` route through it). Backspace / B go to the topmost window through an `InputContext` at priority 1000. Settings, Promotion and Forge step back first; the Tower selector keeps its own handler. Windows with a `UIScale` shrink out on close. The HUD currency bar stays over a window only when it has none of its own. The confirm dialog sinks Backspace / B at priority 5000. **B3 closed:** in a clean session the only duplicate is the two hero drawers, which Synthesis and the legacy Forge build on purpose. In Studio, B closed the Index; the picker-then-window layering is not yet verified. **Keys (2026-11-09):** Esc never reaches the game (Roblox opens its menu), so every back binding uses Backspace, ignored while a text box has focus, plus gamepad B. Playtested: one window at a time, close animation, HUD currency, focus mode and the welcome-back popup all pass. |
 | **3. Pit + Forge** | Synthesis, picker, Promotion, Forge Workbench, Blacksmith summon onto `Window` + Kit; the §6 confirms | L |
 | **4. Tower + Fortress + Index + Store** | §5.6–5.9 | M |
 | **5. HUD pass** | §5.1, leaderboard, rail badges, legacy HUD removal | M |

@@ -5,7 +5,6 @@
 -- and connects all Audio, Graphics, and Preset controls directly to the live game engine.
 
 local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local React = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("React"))
@@ -250,16 +249,20 @@ local function SettingsApp()
 		_G.ToggleSettings = toggleSettings
 		_G.IsSettingsOpen = function() return isOpen end
 
-		-- Escape (or gamepad B) closes the discard prompt first, then the window.
-		local conn = UserInputService.InputBegan:Connect(function(input)
-			if (input.KeyCode == Enum.KeyCode.Escape or input.KeyCode == Enum.KeyCode.ButtonB) and isOpen then
-				if confirmRef.current then
-					setConfirmDiscard(false)
-				else
-					requestClose()
-				end
+		-- Backspace / gamepad B arrive through WindowManager (registered in HUDController): close the
+		-- discard prompt first, then ask about unapplied changes. Returning false lets the manager
+		-- close the window, which only happens with nothing unapplied.
+		_G.SettingsBack = function(): boolean
+			if confirmRef.current then
+				setConfirmDiscard(false)
+				return true
 			end
-		end)
+			if dirtyRef.current then
+				setConfirmDiscard(true)
+				return true
+			end
+			return false
+		end
 
 		-- Bind SettingsButton in PlayerGui
 		local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
@@ -282,7 +285,6 @@ local function SettingsApp()
 		end
 
 		return function()
-			conn:Disconnect()
 			if addConn then addConn:Disconnect() end
 		end
 	end, { isOpen })

@@ -277,8 +277,12 @@ local function App(props: Types.Props)
 		context.Name = inputName.current; context.Priority = 2500; context.Sink = false
 		local action = Instance.new("InputAction")
 		action.Name = "Back"; action.Type = Enum.InputActionType.Bool; action.Parent = context
-		local binding = Instance.new("InputBinding")
-		binding.KeyCode = Enum.KeyCode.ButtonB; binding.Parent = action
+		-- Backspace and gamepad B step back (dialog → sell mode → upgrade route → close). WindowManager
+		-- leaves the Forge's Back to this context.
+		for _, key in { Enum.KeyCode.ButtonB, Enum.KeyCode.Backspace } do
+			local binding = Instance.new("InputBinding")
+			binding.KeyCode = key; binding.Parent = action
+		end
 		action.Pressed:Connect(function() if not UserInputService:GetFocusedTextBox() then handlers.current.Back() end end)
 		context.Parent = Players.LocalPlayer:WaitForChild("PlayerScripts")
 		return function() context:Destroy(); inputConnection:Disconnect() end

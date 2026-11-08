@@ -4,7 +4,6 @@
 --   Authoritative RemoteFunction: PitRequest (STATE -> PREVIEW -> COMMIT).
 
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local HeroCard = require(script.Parent:WaitForChild("HeroCard"))
@@ -690,18 +689,6 @@ function Promo.BuildPicker(self: any)
 		if d:IsA("GuiObject") then d.ZIndex = math.max(d.ZIndex, 62) end
 	end
 
-	-- Esc / gamepad B: close the picker first, then the Promotion window (the Synthesis picker and
-	-- every other window close this way).
-	UserInputService.InputBegan:Connect(function(input)
-		if input.KeyCode ~= Enum.KeyCode.Escape and input.KeyCode ~= Enum.KeyCode.ButtonB then return end
-		if not self.Root.Visible then return end
-		if picker.Visible then
-			picker.Visible = false
-		elseif not self.Busy then
-			self:Close()
-		end
-	end)
-
 	self.PickerStatus = label(picker, "", 16, C.TextMuted, Enum.Font.GothamMedium, "Body")
 	self.PickerStatus.Position = UDim2.new(0, 20, 1, -44)
 	self.PickerStatus.Size = UDim2.new(1, -40, 0, 34)
@@ -1330,6 +1317,16 @@ function Promo.Close(self: any)
 	self.Picker.Visible = false
 	self.PreviewSerial += 1
 	self.Loading = false
+end
+
+-- Backspace / gamepad B (via WindowManager): closes the hero picker first. Returns true when handled;
+-- false lets WindowManager close the window. While a promotion is in flight, Back does nothing.
+function Promo.Back(self: any): boolean
+	if self.Picker and self.Picker.Visible then
+		self.Picker.Visible = false
+		return true
+	end
+	return self.Busy == true
 end
 
 function Promo.IsOpen(self: any): boolean

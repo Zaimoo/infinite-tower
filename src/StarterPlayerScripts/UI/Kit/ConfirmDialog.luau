@@ -5,19 +5,19 @@
 --   Soft      Cancel / Confirm, plus "Don't ask again this session" when a SessionKey is given.
 --   Hard      lists what will be lost; Confirm (Danger) arms after 1 s.
 --   Critical  as Hard, but Confirm must be held for 1.2 s.
--- Focus starts on Cancel; Esc, gamepad B and the scrim cancel. Only one dialog shows at a time.
+-- Focus starts on Cancel; Backspace, gamepad B and the scrim cancel. Only one dialog shows at a time.
 --
 --   ConfirmDialog.Ask({ Tier = "Hard", Title = "Sell 3 weapons?", Body = "...", Items = { "Holy Claymore · Exalted 2★" },
 --     ConfirmText = "Sell", OnConfirm = sell })
 --   if ConfirmDialog.AskAsync({ Tier = "Soft", Title = "Spend 45,000 Gold?", SessionKey = "SUMMON_10X" }) then ... end
 
-local ContextActionService = game:GetService("ContextActionService")
 local GuiService = game:GetService("GuiService")
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 
 local Rules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("UiKitRules"))
 local GrimoireIcons = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GrimoireIcons"))
@@ -164,6 +164,7 @@ function ConfirmDialog.Ask(opts: Options): () -> ()
 
 	local done = false
 	local actionName = "KitConfirm_" .. HttpService:GenerateGUID(false)
+	local backContext: InputContext? = nil
 	local heartbeat: RBXScriptConnection? = nil
 	local previousSelection = GuiService.SelectedObject
 
@@ -171,7 +172,7 @@ function ConfirmDialog.Ask(opts: Options): () -> ()
 		if done then return end
 		done = true
 		closeCurrent = nil
-		ContextActionService:UnbindAction(actionName)
+		if backContext then backContext:Destroy() end
 		if heartbeat then heartbeat:Disconnect() end
 		if accepted and dontAsk and opts.SessionKey then skipped[opts.SessionKey] = true end
 		if GuiService.SelectedObject and GuiService.SelectedObject:IsDescendantOf(scrim) then
@@ -242,11 +243,19 @@ function ConfirmDialog.Ask(opts: Options): () -> ()
 		confirm.Update({ OnActivate = function() close(true) end })
 	end
 
-	-- Esc / gamepad B cancel while the dialog is up (bound above other menus).
-	ContextActionService:BindActionAtPriority(actionName, function(_, state)
-		if state == Enum.UserInputState.Begin then close(false) end
-		return Enum.ContextActionResult.Sink
-	end, false, Enum.ContextActionPriority.High.Value + 10, Enum.KeyCode.ButtonB, Enum.KeyCode.Escape)
+	-- Backspace / gamepad B cancel while the dialog is up. Priority 5000 and Sink, above every window's
+	-- context (hero drawer 4000, Forge 2500, WindowManager 1000), so the key never reaches them.
+	backContext = New("InputContext", { Name = actionName, Priority = 5000, Sink = true })
+	local backAction = New("InputAction", { Name = "Cancel", Type = Enum.InputActionType.Bool }, backContext)
+	for _, key in { Enum.KeyCode.ButtonB, Enum.KeyCode.Backspace } do
+		New("InputBinding", { KeyCode = key }, backAction)
+	end
+	backAction.Pressed:Connect(function()
+		-- Backspace while typing in chat edits text; it doesn't cancel the dialog.
+		if UserInputService:GetFocusedTextBox() then return end
+		close(false)
+	end)
+	backContext.Parent = Players.LocalPlayer:WaitForChild("PlayerScripts")
 
 	scrim.Parent = root
 	UIFeel.Sfx(if destructive then "Error" else "WindowOpen", 1, 0.5)
