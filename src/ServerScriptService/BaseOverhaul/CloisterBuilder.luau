@@ -689,6 +689,7 @@ local function bandClearings(): { { number } }
 	table.insert(list, { bandMid, -s, 88 }) -- east orchard
 	table.insert(list, { bandMid + 32, s, 34 }) -- biome stones
 	table.insert(list, { -175, HubLayout.HubHalfZ - mid + 30, 48 }) -- overlook terrace
+	table.insert(list, { HubLayout.RaidPortal.X, HubLayout.RaidPortal.Z, HubLayout.RaidPortal.ClearRadius }) -- Raid Portal
 	return list
 end
 

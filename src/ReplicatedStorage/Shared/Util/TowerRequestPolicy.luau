@@ -14,7 +14,8 @@ function Policy.Validate(r: any): (boolean,string?)
 	if r.ServerSessionId~=nil and (type(r.ServerSessionId)~="string" or #r.ServerSessionId~=32 or r.ServerSessionId:find("[^%da-f]")) then return false,"BAD_REQUEST" end
 	if r.CancelRequestId~=nil and (type(r.CancelRequestId)~="string" or #r.CancelRequestId<1 or #r.CancelRequestId>64 or r.CancelRequestId:find("[^ -~]")) then return false,"BAD_REQUEST" end
 	if type(r.RequestId)~="string" or #r.RequestId<1 or #r.RequestId>64 or r.RequestId:find("[^ -~]") or not actions[r.Action] then return false,"BAD_REQUEST" end
-	if (r.Action=="VISIT" or r.Action=="ASSIGN") and not P.Integer(r.FloorId,1,50) then return false,"INVALID_FLOOR" end
+	-- Floor 60 is the raid arena: VISIT only, and TowerFloorService only honours it with a server-issued raid pass.
+	if (r.Action=="VISIT" or r.Action=="ASSIGN") and not P.Integer(r.FloorId,1,50) and not (r.Action=="VISIT" and r.FloorId==60) then return false,"INVALID_FLOOR" end
 	if r.Action~="VISIT" and r.Action~="ASSIGN" and r.Action~="RESYNC" and r.FloorId~=nil then return false,"BAD_REQUEST" end
 	if r.Action=="VISIT" or r.Action=="HUB" or r.Action=="ASSIGN" or r.Action=="RECALL" then
 		for _,k in {"CharacterGeneration","ExpectedLocationRevision","ExpectedSquadRevision"} do if not P.Integer(r[k],0,4294967295) then return false,"BAD_REQUEST" end end

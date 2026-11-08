@@ -235,6 +235,7 @@ export type PlayerProfile = {
 	PitMaterials: { [string]: number },
 	PitRevision: number,
 	PlotIndex: number,
+	Raid: { LastRewardedRaid: number, BestDamage: number, Kills: number, Participations: number }?,
 	Currencies: {
 		Gold: number,
 		Gems: number,
@@ -445,6 +446,7 @@ local function createDefaultPlayerProfile(): PlayerProfile
 		},
 		PitRevision = 0,
 		PlotIndex = 1,
+		Raid = { LastRewardedRaid = 0, BestDamage = 0, Kills = 0, Participations = 0 },
 		Currencies = {
 			Gold = 500,
 			Gems = TowerHardcore.StarterGems, -- Phase 6: one 10-pull with its guaranteed Rare (testers use DEV_GRANT_RESOURCES)
@@ -519,6 +521,18 @@ function DataManager.BroadcastToast(message: string, colorType: string?)
 end
 
 -- Build a sanitized copy of profile for client UI (hiding secret directive of rented mercenary!)
+function DataManager.EnsureRaidData(profile: any): any
+	local raid = profile.Raid
+	if type(raid) ~= "table" then
+		raid = {}
+		profile.Raid = raid
+	end
+	for _, key in { "LastRewardedRaid", "BestDamage", "Kills", "Participations" } do
+		if type(raid[key]) ~= "number" or raid[key] ~= raid[key] then raid[key] = 0 end
+	end
+	return raid
+end
+
 function DataManager.SyncProfile(player: Player, progressionOnly: boolean?)
 	local profile = ActiveProfiles[player]
 	if not profile then
@@ -551,6 +565,8 @@ function DataManager.SyncProfile(player: Player, progressionOnly: boolean?)
 		end
 	end
 	DataManager.MigrateArtifactTypes(profile)
+	-- Raid bosses (docs/raid-boss-plan.md §10): idempotent payout key and raid stats. Lazy, so old profiles gain it.
+	DataManager.EnsureRaidData(profile)
 	-- Crafting was removed with the Gold banner: drop its old materials from the Backpack.
 	if profile.PitMaterials then
 		for _, id in { "IronGear", "RiftOrb", "AegisGem", "StarDust", "VoidPowder" } do

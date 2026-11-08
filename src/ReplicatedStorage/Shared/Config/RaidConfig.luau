@@ -32,7 +32,7 @@ export type Boss = {
 	Basic: Attack,
 	Signatures: { Attack },
 	Enrage: Attack,
-	Adds: { Count: number, Template: string }?, -- Broodmother spiderlings on enrage
+	Adds: { Count: number, Template: string }?, -- Broodmother spiderlings on enrage (enemy id)
 }
 
 local Config = {}
@@ -112,7 +112,7 @@ Config.Bosses = table.freeze({
 			{ Id = "WEB_BURST", DisplayName = "Web Burst", Shape = "SELF_DISC", Radius = 20, Windup = 1.8, DamageMult = 3, Signature = true },
 		},
 		Enrage = { Id = "BROOD_SWARM", DisplayName = "Brood Swarm", Shape = "SELF_DISC", Radius = 16, Windup = 2.2, DamageMult = 2, Signature = true },
-		Adds = { Count = 6, Template = "Moss Crawler" },
+		Adds = { Count = 6, Template = "mob_moss_crawler" }, -- FirstBiomeCombat enemy id
 	}),
 	table.freeze({
 		Id = "SHARDBOUND", DisplayName = "Aurelith", Title = "the Shardbound Colossus", Model = "Shardbound", Root = "Pelvis",

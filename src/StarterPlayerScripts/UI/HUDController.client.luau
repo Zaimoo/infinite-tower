@@ -20,6 +20,7 @@ local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local FacilityConfig = require(Shared:WaitForChild("Config"):WaitForChild("FacilityConfig"))
 local TowerFloorConfig = require(Shared:WaitForChild("Config"):WaitForChild("TowerFloorConfig"))
+local RAID_FLOOR = require(Shared:WaitForChild("Config"):WaitForChild("RaidConfig")).FloorId -- raid arena (docs/raid-boss-plan.md)
 local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormulas"))
 local GothicBoxStyle = require(Shared:WaitForChild("Util"):WaitForChild("GothicBoxStyle"))
 local GothicVectorIcons = require(Shared:WaitForChild("Util"):WaitForChild("GothicVectorIcons"))
@@ -1841,7 +1842,11 @@ RunService.RenderStepped:Connect(function()
 	if charFloor == 0 then
 		curFloor = 0
 	end
-	if not hasFloorBoss and curFloor > 0 then
+	local inRaid = curFloor == RAID_FLOOR
+	if inRaid and not hasFloorBoss then
+		-- Raid arena: the banner only shows the boss (staging, results and the timer live in RaidHud).
+		bossBanner.Visible = false
+	elseif not hasFloorBoss and curFloor > 0 then
 		bossBanner.Visible = true
 		local floorSpec = TowerFloorConfig.Get(curFloor)
 		local floorName = floorSpec and floorSpec.DisplayName or ("Floor " .. tostring(curFloor))
@@ -1866,7 +1871,14 @@ RunService.RenderStepped:Connect(function()
 		local hpPct = if node and node.HpPermille then node.HpPermille / 10.0 else (floorBoss.CurrentHP or 1) / math.max(1, floorBoss.MaxHP or 1) * 100.0
 		local phase = if hpPct <= 50.0 then 2 else (floorBoss.Phase or 1)
 		local floorNum = floorBoss.FloorId or curFloor
-		bossTitleLabel.Text = string.format(" FLOOR %d BOSS · %s (PHASE %d) — HP: %.1f%%", floorNum, string.upper(floorBoss.Name or "FLOOR BOSS"), phase, hpPct)
+		if inRaid then
+			local endsAt = ReplicatedStorage:GetAttribute("RaidEndsAt") or 0
+			local left = math.max(0, math.ceil(endsAt - workspace:GetServerTimeNow()))
+			bossTitleLabel.Text = string.format(" RAID BOSS · %s%s — %d:%02d", string.upper(floorBoss.Name or "RAID BOSS"),
+				if phase >= 2 then " [ENRAGED]" else "", left // 60, left % 60)
+		else
+			bossTitleLabel.Text = string.format(" FLOOR %d BOSS · %s (PHASE %d) — HP: %.1f%%", floorNum, string.upper(floorBoss.Name or "FLOOR BOSS"), phase, hpPct)
+		end
 		novaBarFill.Size = UDim2.fromScale(math.clamp(hpPct / 100.0, 0, 1), 1)
 		novaBarFill.BackgroundColor3 = GildedGrimoire.Glass.Danger
 		novaCastLabel.Text = string.format("BOSS HP: %.1f%%", hpPct)
