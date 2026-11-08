@@ -1,6 +1,7 @@
 --!strict
 local Rigs = require(script.Parent.TowerEnemyRigs)
 local Clips = require(script.Parent.TowerEnemyClips)
+local RaidRigs = require(script.Parent.RaidBossRigs)
 local Config = require(game.ReplicatedStorage.Shared.Config.FirstBiomeCombat)
 local Controller = {}
 local effects: { [string]: any } = {}
@@ -48,6 +49,10 @@ function Controller.Attach(model: Model, root: BasePart, enemyId: string)
 	local clips = assert(Clips[enemyId], "Missing enemy clips: " .. enemyId)
 	for _, slot in Config.Get(enemyId).RequiredSlots do
 		assert(clips[slot], "Missing enemy clip " .. enemyId .. "/" .. slot)
+	end
+	-- Raid bosses use their Blender meshes once uploaded (RaidBossAssets); until then the stand-in rig.
+	if RaidRigs.BossFor(enemyId) then
+		return RaidRigs.Build(model, root, enemyId)
 	end
 	return Rigs.Build(model, root, enemyId)
 end
@@ -249,7 +254,7 @@ function Controller.Step(node: any, dt: number, now: number)
 	if not rig then return end
 	supportGlow(node, rig)
 	affixGlow(node, rig, now)
-	local clips = Clips[rig.EnemyId]
+	local clips = rig.Clips or Clips[rig.EnemyId] -- mesh raid bosses carry their own clips
 	local frames = clips.Idle
 	local phase = (now % 3) / 3
 	local moving = (node.GoalPos - node.CurrentPos).Magnitude > .15
