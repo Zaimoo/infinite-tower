@@ -136,7 +136,7 @@ local function row(order: number, rank: number, name: string, damage: number, sh
 		Corner = e("UICorner", { CornerRadius = UDim.new(0, G.TileRadius) }),
 		Stroke = if isSelf then e("UIStroke", { Color = GOLD, Transparency = 0.25, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }) else nil,
 		Rank = title({ Position = UDim2.fromOffset(6, 0), Size = UDim2.new(0, 26, 1, -6), TextSize = 15, TextColor3 = rankColor,
-			Text = if rank > 0 then tostring(rank) else "-", -- plain ASCII: the HUD fonts lack symbol glyphs TextXAlignment = Enum.TextXAlignment.Center }),
+			Text = if rank > 0 then tostring(rank) else "-", TextXAlignment = Enum.TextXAlignment.Center }), -- plain ASCII: the HUD fonts lack symbol glyphs
 		Name = Components.GlassText({ Position = UDim2.fromOffset(36, 1), Size = UDim2.new(1, -100, 0, 16), TextSize = 12,
 			Text = if isSelf then "<b>" .. name .. "</b>" else name, TextColor3 = if isSelf then GOLD else G.Text }),
 		Damage = title({ AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -8, 0, 1), Size = UDim2.fromOffset(62, 16), TextSize = 13,
