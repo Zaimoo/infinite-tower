@@ -186,7 +186,7 @@ function Kit.Build(parent: Instance): Portal
 	anchor.Parent = trigger
 	local board = Instance.new("BillboardGui")
 	board.Name = "RaidBoard"
-	board.Size = UDim2.fromOffset(340, 92)
+	board.Size = UDim2.fromOffset(460, 112)
 	board.LightInfluence = 0
 	board.MaxDistance = 900
 	board.Adornee = anchor
@@ -205,9 +205,15 @@ function Kit.Build(parent: Instance): Portal
 		l.Parent = board
 		return l
 	end
-	local title = label("Title", 0, 46, 26, Color3.fromRGB(255, 225, 160))
+	-- Long names ("OZRITH, THE THOUSAND-EYED") wrap to two lines and shrink to fit rather than clip.
+	local title = label("Title", 0, 66, 26, Color3.fromRGB(255, 225, 160))
 	title.TextWrapped = true
-	local status = label("Status", 48, 40, 22, Color3.new(1, 1, 1))
+	title.TextScaled = true
+	local fit = Instance.new("UITextSizeConstraint")
+	fit.MaxTextSize = 26
+	fit.MinTextSize = 14
+	fit.Parent = title
+	local status = label("Status", 70, 38, 22, Color3.new(1, 1, 1))
 	model.Parent = parent
 	return { Model = model, Trigger = trigger, Prompt = prompt, Title = title, Status = status }
 end
