@@ -2,9 +2,12 @@
 -- Install this folder under StarterPlayerScripts/UI. Reuses the existing theme and previews.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local GuiService = game:GetService("GuiService")
+local UserInputService = game:GetService("UserInputService")
 local React = require(ReplicatedStorage.Packages.React)
 local Catalog = require(ReplicatedStorage.Shared.Config.ArtifactCatalog)
 local Stats = require(ReplicatedStorage.Shared.Util.StatFormulas)
+local Balance = require(ReplicatedStorage.Shared.Config.StatBalance)
 local Portrait = require(script.Parent.Parent.Hud.Portrait)
 local Icons = require(script.Parent.Parent.Hud.Icons)
 local ArtifactPreview = require(script.Parent.Parent.ArtifactPreview)
@@ -107,7 +110,7 @@ function C.Button(props: ButtonProps)
 	end, { hovered, focused, props.Disabled })
 	local iconSize = if props.Icon == "Add" then 44 else 28
 	local active = props.Selected or focused
-	local tone = if props.Disabled then T.Theme.Tones.Slate elseif props.Primary then T.Theme.Tones.Action elseif props.Selected then T.Theme.Tones.Gold else T.Theme.Tones.Deep
+	local tone = if props.Disabled then T.Theme.Tones.Slate elseif props.Primary then (if props.Accent == T.Bad then T.Theme.Tones.Crimson else T.Theme.Tones.Action) elseif props.Selected then T.Theme.Tones.Gold else T.Theme.Tones.Deep
 	return e("TextButton", {
 		ref = props.Ref,
 		Name = props.Name or "Action",
@@ -252,141 +255,519 @@ function C.HeroSlot(props: HeroSlotProps)
 end
 
 function C.CardGrid(props: { Children: { [string]: any }, Size: UDim2, Position: UDim2?, CellHeight: number? })
-	local columns, setColumns = React.useState(3)
+	local columns, setColumns = React.useState(4)
 	local children = table.clone(props.Children)
-	children.Layout = e("UIGridLayout", { CellSize = UDim2.new(1 / columns, -12, 0, props.CellHeight or 286), CellPadding = UDim2.fromOffset(12, 12), SortOrder = Enum.SortOrder.LayoutOrder })
-	children.Padding = e("UIPadding", { PaddingTop = UDim.new(0, 6), PaddingLeft = UDim.new(0, 6), PaddingBottom = UDim.new(0, 12) })
-	return e("ScrollingFrame", { Name = if props.CellHeight then "ArtifactCardGrid" else "HeroCardGrid", Size = props.Size, Position = props.Position, BackgroundTransparency = 1, BorderSizePixel = 0, CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, ScrollingDirection = Enum.ScrollingDirection.Y, ScrollBarThickness = 6, ScrollBarImageColor3 = T.Gold, ClipsDescendants = true, SelectionGroup = true,
-		[React.Change.AbsoluteSize] = function(frame) setColumns(math.clamp(math.floor(frame.AbsoluteSize.X / 180), 1, 5)) end,
+	children.Layout = e("UIGridLayout", { CellSize = UDim2.new(1 / columns, -10, 0, props.CellHeight or 110), CellPadding = UDim2.fromOffset(8, 8), SortOrder = Enum.SortOrder.LayoutOrder })
+	children.Padding = e("UIPadding", { PaddingTop = UDim.new(0, 4), PaddingLeft = UDim.new(0, 4), PaddingBottom = UDim.new(0, 8) })
+	return e("ScrollingFrame", { Name = "CardGrid", Size = props.Size, Position = props.Position, BackgroundTransparency = 1, BorderSizePixel = 0, CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, ScrollingDirection = Enum.ScrollingDirection.Y, ScrollBarThickness = 6, ScrollBarImageColor3 = T.Gold, ClipsDescendants = true, SelectionGroup = true,
+		[React.Change.AbsoluteSize] = function(frame) setColumns(math.clamp(math.floor(frame.AbsoluteSize.X / 106), 2, 6)) end,
 	}, children)
 end
 
-type CardProps = {
-	Snapshot: Snapshot, Artifact: Artifact, Selected: boolean, Material: boolean,
-	Recommended: boolean, Reason: string?, OnSelect: () -> (), Order: number, ShowPreview: boolean?, UpgradeChoice: boolean?,
-}
-function C.ArtifactCard(props: CardProps)
- local artifact = props.Artifact
- local rarity = Catalog.GetRarityInfo(artifact.Rarity)
- local owners = Model.ownerIds(props.Snapshot, artifact.UUID)
- local owner = #owners == 1 and props.Snapshot.Heroes[owners[1]] or nil
- local equipped = #owners > 0
- local isNotUsable = props.UpgradeChoice and (equipped or artifact.Locked)
- local overlayText = if not props.UpgradeChoice then nil
-  elseif equipped then "EQUIPPED\nNOT USABLE"
-  elseif artifact.Locked then "LOCKED\nNOT USABLE"
-  else nil
- local accent = if isNotUsable then T.Theme.Tones.Slate.Rail elseif props.Material then T.Bad elseif props.Selected then T.Gold elseif equipped then T.Equipped else rarity.Color
- local state = if equipped then "EQUIPPED" elseif artifact.Locked then "LOCKED" else "UNEQUIPPED"
- local stateColor = if equipped then T.Equipped elseif artifact.Locked then T.Gold else T.Muted
- local ref = React.useRef(nil)
- React.useEffect(function()
-  if not ref.current or UIFeel.ReducedMotion() then return end
-  ref.current.Scale = 0.94
-  local tween = TweenService:Create(ref.current, TweenInfo.new(0.24, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
-  tween:Play()
-  return function() tween:Cancel() end
- end, {})
- return e("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(T.CardWidth, T.CardHeight), LayoutOrder = props.Order }, {
-  Scale = e("UIScale", { ref = ref }),
-  Button = e(C.Button, {
-   Text = "",
-   Accent = accent,
-   Selected = props.Selected or props.Material,
-   Disabled = isNotUsable,
-   OnActivate = if isNotUsable then function() end else props.OnSelect,
-   Size = UDim2.fromScale(1, 1),
-   Name = "Artifact_" .. artifact.UUID,
-   FocusOrder = 100 + props.Order,
-  }),
-  Content = e("Frame", { Position = UDim2.fromOffset(8, 8), Size = UDim2.new(1, -16, 1, -16), BackgroundTransparency = 1, ZIndex = 2 }, {
-   PreviewHost = e("Frame", { Position = UDim2.fromOffset(0, 24), Size = UDim2.new(1, 0, 0, 68), BackgroundTransparency = 1 }, {
-    Preview = if props.ShowPreview ~= false then e(C.Preview, { Artifact = artifact, Size = UDim2.fromScale(1, 1) }) else nil,
-   }),
-   State = e(C.Text, { Name = "EquipmentRibbon", Text = (if equipped then "◆ " else "◇ ") .. state, TextColor3 = stateColor, FontFace = T.Theme.Fonts.Title, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 20), BackgroundTransparency = 0, BackgroundColor3 = if equipped then T.Theme.Tones.Teal.Bottom else T.Theme.Tones.Deep.Bottom, ZIndex = 4 }),
-   Stars = e(C.Text, { Text = string.rep("★", artifact.Star), TextColor3 = T.Gold, FontFace = T.Theme.Fonts.Number, TextSize = 17, TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(0, 68), Size = UDim2.new(1, 0, 0, 24), ZIndex = 4 }),
-   Name = e(C.Text, { Text = artifact.DisplayName, Position = UDim2.fromOffset(0, 94), Size = UDim2.new(1, 0, 0, 34), TextSize = 14, TextTruncate = Enum.TextTruncate.AtEnd }),
-   Rarity = e(C.Text, { Text = rarity.Name, Position = UDim2.fromOffset(0, 128), Size = UDim2.new(0.58, 0, 0, 22), TextSize = 14, TextColor3 = rarity.Color, TextWrapped = false, TextTruncate = Enum.TextTruncate.AtEnd }),
-   Power = e(C.Text, { Text = string.format("%.0f PWR", Model.power(artifact)), Position = UDim2.new(0.58, 0, 0, 128), Size = UDim2.new(0.42, 0, 0, 22), TextSize = 14, FontFace = T.Theme.Fonts.Number, TextXAlignment = Enum.TextXAlignment.Right }),
-   Owner = e(C.Text, { Text = if owner then owner.DisplayName .. " · " .. string.sub(owner.UUID, -4) elseif equipped then "Assigned · protected" elseif artifact.Locked then "Unlock to sell / consume" elseif props.UpgradeChoice then "Consumed on upgrade" else "Ready to equip", Position = UDim2.fromOffset(0, 150), Size = UDim2.new(1, 0, 0, 18), TextSize = 14, TextColor3 = stateColor, TextWrapped = false, TextTruncate = Enum.TextTruncate.AtEnd }),
-   Selection = if not isNotUsable and (props.Material or props.Selected or props.Reason or artifact.Locked) then e(C.Text, { Text = if props.Material then "SELECTED" elseif props.Reason then (if props.Selected then "KEPT" elseif equipped or artifact.Locked then "PROTECTED" else "INCOMPATIBLE") elseif props.Selected then "SELECTED" else "LOCKED", TextSize = 12, TextColor3 = T.Text, TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(4, 28), Size = UDim2.new(1, -8, 0, 22), BackgroundTransparency = 0.15, BackgroundColor3 = if props.Material then T.Theme.Tones.Crimson.Bottom else T.Theme.Ink, ZIndex = 4 }) else nil,
-  }),
-  Overlay = if isNotUsable and overlayText then e("Frame", {
-   Name = "NotUsableOverlay",
-   Size = UDim2.fromScale(1, 1),
-   Position = UDim2.fromScale(0, 0),
-   BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-   BackgroundTransparency = 0.5,
-   BorderSizePixel = 0,
-   Active = true,
-   ZIndex = 10,
-  }, {
-   Corner = e("UICorner", { CornerRadius = UDim.new(0, T.Theme.Radius.Button) }),
-   Text = e(C.Text, {
-    Name = "OverlayText",
-    Text = overlayText,
-    TextColor3 = Color3.fromRGB(255, 255, 255),
-    TextSize = 14,
-    FontFace = T.Theme.Fonts.Title,
-    TextXAlignment = Enum.TextXAlignment.Center,
-    TextYAlignment = Enum.TextYAlignment.Center,
-    Position = UDim2.fromScale(0, 0),
-    Size = UDim2.fromScale(1, 1),
-    ZIndex = 11,
-   }),
-  }) else nil,
- })
+--============================================================================
+-- STAT CHIP & COMPACT ACTION ICONS (Reference Layout)
+--============================================================================
+function C.StatChip(props: { Label: string, Value: string, Order: number?, Color: Color3? })
+	return e("Frame", {
+		Name = "StatChip_" .. props.Label,
+		Size = UDim2.new(0.31, 0, 0, 46),
+		BackgroundColor3 = T.Theme.Tones.Deep.Top,
+		BorderSizePixel = 0,
+		LayoutOrder = props.Order,
+	}, {
+		Corner = e("UICorner", { CornerRadius = UDim.new(0, 8) }),
+		Stroke = e("UIStroke", { Color = T.Theme.Tones.Deep.Rail, Thickness = 1, Transparency = 0.45 }),
+		Title = e(C.Text, {
+			Text = props.Label,
+			TextSize = 10,
+			TextColor3 = T.Muted,
+			TextXAlignment = Enum.TextXAlignment.Center,
+			Position = UDim2.new(0, 2, 0, 4),
+			Size = UDim2.new(1, -4, 0, 14),
+		}),
+		Val = e(C.Text, {
+			Text = props.Value,
+			TextSize = 14,
+			FontFace = T.Theme.Fonts.Number,
+			TextColor3 = props.Color or T.Text,
+			TextXAlignment = Enum.TextXAlignment.Center,
+			Position = UDim2.new(0, 2, 0, 18),
+			Size = UDim2.new(1, -4, 0, 24),
+		}),
+	})
 end
 
-type GridProps = {
-	Snapshot: Snapshot, Items: { Artifact }, TargetId: string?, MaterialIds: { string },
-	MaterialMode: boolean, HeroId: string?, Width: number, OnSelect: (id: string) -> (),
-	FilterKey: string?, Page: number?, OnPage: ((page: number) -> ())?,
+function C.IconAction(props: {
+	Icon: string,
+	Label: string,
+	OnActivate: () -> (),
+	Size: UDim2?,
+	Disabled: boolean?,
+	Selected: boolean?,
+	Accent: Color3?,
+	Order: number?,
+})
+	local hovered, setHovered = React.useState(false)
+	return e("TextButton", {
+		Name = "Action_" .. props.Label,
+		Text = "",
+		Size = props.Size or UDim2.fromOffset(56, 52),
+		BackgroundColor3 = if props.Selected then T.Theme.Tones.Gold.Bottom else T.Theme.Tones.Deep.Bottom,
+		AutoButtonColor = false,
+		BorderSizePixel = 0,
+		Selectable = not props.Disabled,
+		Active = not props.Disabled,
+		LayoutOrder = props.Order,
+		[React.Event.MouseEnter] = function() setHovered(true) end,
+		[React.Event.MouseLeave] = function() setHovered(false) end,
+		[React.Event.Activated] = function()
+			if not props.Disabled then
+				UIFeel.Sfx("Click")
+				props.OnActivate()
+			end
+		end,
+	}, {
+		Corner = e("UICorner", { CornerRadius = UDim.new(0, 8) }),
+		Stroke = e("UIStroke", {
+			Color = props.Accent or (if props.Selected then T.Gold elseif hovered then T.Gold else T.Theme.Tones.Deep.Rail),
+			Thickness = if props.Selected or hovered then 1.8 else 1,
+			Transparency = if props.Selected or hovered then 0 else 0.4,
+		}),
+		Icon = e("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0),
+			Position = UDim2.new(0.5, 0, 0, 5),
+			Size = UDim2.fromOffset(22, 22),
+			BackgroundTransparency = 1,
+		}, {
+			Art = e(Icons.Icon, { Name = props.Icon, Size = 22, Dim = props.Disabled }),
+		}),
+		Label = e(C.Text, {
+			Text = props.Label,
+			TextSize = 10,
+			TextColor3 = if props.Disabled then T.Muted elseif props.Selected then T.Gold else T.Text,
+			TextXAlignment = Enum.TextXAlignment.Center,
+			Position = UDim2.new(0, 2, 0, 28),
+			Size = UDim2.new(1, -4, 0, 20),
+		}),
+	})
+end
+
+--============================================================================
+-- CONFIRM MODAL (Selling Rare or better artifacts)
+--============================================================================
+function C.ConfirmModal(props: {
+	Title: string,
+	Message: string,
+	TotalGold: number?,
+	ConfirmText: string,
+	CancelText: string,
+	OnConfirm: () -> (),
+	OnCancel: () -> (),
+})
+	local ref = React.useRef(nil)
+	React.useEffect(function()
+		if ref.current and UserInputService.PreferredInput == Enum.PreferredInput.Gamepad then
+			GuiService:Select(ref.current)
+		end
+	end, {})
+
+	return e("Frame", {
+		Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1,
+		ZIndex = 250,
+	}, {
+		Shade = e("TextButton", {
+			Size = UDim2.fromScale(1, 1),
+			BackgroundColor3 = Color3.new(),
+			BackgroundTransparency = 0.35,
+			Text = "",
+			AutoButtonColor = false,
+			Selectable = false,
+			ZIndex = 1,
+			[React.Event.Activated] = props.OnCancel,
+		}),
+		Dialog = e("Frame", {
+			ref = ref,
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0.5, 0.5),
+			Size = UDim2.fromOffset(450, 260),
+			BackgroundColor3 = T.Background,
+			BorderSizePixel = 0,
+			ZIndex = 2,
+		}, {
+			Corner = e("UICorner", { CornerRadius = UDim.new(0, 14) }),
+			Outline = e("UIStroke", { Color = T.Bad, Thickness = 2.4 }),
+			WarningIcon = e("Frame", {
+				Position = UDim2.fromOffset(18, 16),
+				Size = UDim2.fromOffset(32, 32),
+				BackgroundTransparency = 1,
+			}, {
+				Art = e(Icons.Icon, { Name = "Warning", Size = 32 }),
+			}),
+			Title = e(C.Text, {
+				Text = props.Title,
+				TextColor3 = T.Bad,
+				TextSize = 20,
+				Position = UDim2.fromOffset(58, 18),
+				Size = UDim2.new(1, -74, 0, 28),
+			}),
+			Message = e(C.Text, {
+				Text = props.Message,
+				TextColor3 = T.Text,
+				TextSize = 14,
+				Position = UDim2.fromOffset(20, 56),
+				Size = UDim2.new(1, -40, 0, 68),
+			}),
+			GoldNotice = if props.TotalGold then e(C.Text, {
+				Text = string.format("You will receive +%s Gold. This cannot be undone.", Balance.Format(props.TotalGold)),
+				TextColor3 = T.Gold,
+				FontFace = T.Theme.Fonts.Number,
+				TextSize = 15,
+				Position = UDim2.fromOffset(20, 130),
+				Size = UDim2.new(1, -40, 0, 28),
+			}) else nil,
+			Actions = e("Frame", {
+				Position = UDim2.new(0, 20, 1, -64),
+				Size = UDim2.new(1, -40, 0, 48),
+				BackgroundTransparency = 1,
+			}, {
+				Cancel = e(C.Button, {
+					Text = props.CancelText,
+					Size = UDim2.new(0.48, -4, 1, 0),
+					Position = UDim2.fromScale(0, 0),
+					OnActivate = props.OnCancel,
+				}),
+				Confirm = e(C.Button, {
+					Text = props.ConfirmText,
+					Size = UDim2.new(0.48, -4, 1, 0),
+					Position = UDim2.new(0.52, 4, 0, 0),
+					Primary = true,
+					Accent = T.Bad,
+					OnActivate = props.OnConfirm,
+				}),
+			}),
+		}),
+	})
+end
+
+--============================================================================
+-- ARTIFACT TILE (Image-first, square card from reference)
+--============================================================================
+export type TileProps = {
+	Snapshot: Snapshot,
+	Artifact: Artifact,
+	Selected: boolean,
+	Material: boolean?,
+	Checked: boolean?,
+	Protected: boolean?,
+	Reason: string?,
+	OnSelect: () -> (),
+	Order: number,
+	ShowPreview: boolean?,
+	UpgradeChoice: boolean?,
+	SellMode: boolean?,
 }
+
+function C.ArtifactTile(props: TileProps)
+	local artifact = props.Artifact
+	local rarity = Catalog.GetRarityInfo(artifact.Rarity)
+	local owners = Model.ownerIds(props.Snapshot, artifact.UUID)
+	local equipped = #owners > 0
+	local isProtected = props.Protected or (props.SellMode and (equipped or artifact.Locked))
+	local isNotUsable = props.UpgradeChoice and (equipped or artifact.Locked)
+	local isChecked = props.Checked or props.Material
+	local hovered, setHovered = React.useState(false)
+	local focused, setFocused = React.useState(false)
+	local previewHostRef = React.useRef(nil)
+
+	local accent = if props.Selected then T.Gold
+		elseif isChecked then T.Bad
+		elseif isProtected then T.Theme.Tones.Slate.Rail
+		elseif equipped then T.Equipped
+		else rarity.Color
+
+	React.useEffect(function()
+		local host = previewHostRef.current
+		if not host or props.ShowPreview == false then return end
+		ArtifactPreview.Show(host, artifact.TemplateId)
+		return function()
+			local current = host:FindFirstChild("ArtifactModelPreview")
+			if current then current:Destroy() end
+		end
+	end, { artifact.TemplateId, props.ShowPreview })
+
+	local powerText = Balance.Format(Model.power(artifact))
+
+	return e("Frame", {
+		Name = "Tile_" .. artifact.UUID,
+		BackgroundTransparency = 1,
+		Size = UDim2.fromScale(1, 1),
+		LayoutOrder = props.Order,
+	}, {
+		Aspect = e("UIAspectRatioConstraint", { AspectRatio = 1 }),
+		Button = e("TextButton", {
+			Name = "TileButton",
+			Size = UDim2.fromScale(1, 1),
+			BackgroundTransparency = 0,
+			BackgroundColor3 = Color3.fromRGB(16, 12, 24),
+			Text = "",
+			AutoButtonColor = false,
+			Selectable = not isProtected and not isNotUsable,
+			Active = true,
+			SelectionOrder = 100 + props.Order,
+			[React.Event.MouseEnter] = function() setHovered(true) end,
+			[React.Event.MouseLeave] = function() setHovered(false) end,
+			[React.Event.SelectionGained] = function(b) setFocused(true); reveal(b) end,
+			[React.Event.SelectionLost] = function() setFocused(false) end,
+			[React.Event.Activated] = function()
+				if isProtected or isNotUsable then
+					UIFeel.Sfx("Error")
+					return
+				end
+				UIFeel.Sfx("Click")
+				props.OnSelect()
+			end,
+		}, {
+			Corner = e("UICorner", { CornerRadius = UDim.new(0, 10) }),
+			Gradient = e("UIGradient", {
+				Color = ColorSequence.new({
+					ColorSequenceKeypoint.new(0, rarity.Color:Lerp(Color3.fromRGB(24, 18, 34), 0.7)),
+					ColorSequenceKeypoint.new(1, Color3.fromRGB(12, 8, 18)),
+				}),
+				Rotation = 90,
+			}),
+			Stroke = e("UIStroke", {
+				Color = accent,
+				Thickness = if props.Selected then 2.8 elseif isChecked then 2.4 else 1.8,
+				ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+			}),
+			-- 3D Model Viewport spans the full tile
+			ModelHost = e("Frame", {
+				ref = previewHostRef,
+				Name = "ModelHost",
+				Size = UDim2.fromScale(1, 1),
+				BackgroundTransparency = 1,
+				ZIndex = 2,
+				ClipsDescendants = true,
+			}, {
+				Corner = e("UICorner", { CornerRadius = UDim.new(0, 10) }),
+			}),
+			-- Top-Left Header: Equipped Icon + Lock
+			TopLeft = e("Frame", {
+				Name = "TopLeftBadges",
+				Position = UDim2.fromOffset(6, 6),
+				Size = UDim2.new(0.42, 0, 0, 18),
+				BackgroundTransparency = 1,
+				ZIndex = 4,
+			}, {
+				Layout = e("UIListLayout", {
+					FillDirection = Enum.FillDirection.Horizontal,
+					Padding = UDim.new(0, 3),
+					VerticalAlignment = Enum.VerticalAlignment.Center,
+				}),
+				Equipped = if equipped then e("Frame", {
+					Size = UDim2.fromOffset(18, 18),
+					BackgroundTransparency = 1,
+				}, {
+					Icon = e(Icons.Icon, { Name = "Equipped", Size = 18 }),
+				}) else nil,
+				Lock = if artifact.Locked then e("Frame", {
+					Size = UDim2.fromOffset(16, 16),
+					BackgroundTransparency = 1,
+				}, {
+					Icon = e(Icons.Icon, { Name = "Lock", Size = 16 }),
+				}) else nil,
+			}),
+			-- Top-Right Header: Rarity text + Star count
+			TopRight = e("Frame", {
+				Name = "TopRightLabels",
+				AnchorPoint = Vector2.new(1, 0),
+				Position = UDim2.new(1, -6, 0, 4),
+				Size = UDim2.new(0.55, 0, 0, 30),
+				BackgroundTransparency = 1,
+				ZIndex = 4,
+			}, {
+				Layout = e("UIListLayout", {
+					FillDirection = Enum.FillDirection.Vertical,
+					HorizontalAlignment = Enum.HorizontalAlignment.Right,
+					Padding = UDim.new(0, 0),
+				}),
+				Rarity = e(C.Text, {
+					Text = rarity.Name,
+					TextSize = 11,
+					TextColor3 = rarity.Color,
+					FontFace = T.Theme.Fonts.Title,
+					TextXAlignment = Enum.TextXAlignment.Right,
+					Size = UDim2.new(1, 0, 0, 15),
+				}),
+				Stars = e(C.Text, {
+					Text = string.format("★%d", artifact.Star),
+					TextSize = 11,
+					TextColor3 = T.Gold,
+					FontFace = T.Theme.Fonts.Number,
+					TextXAlignment = Enum.TextXAlignment.Right,
+					Size = UDim2.new(1, 0, 0, 14),
+				}),
+			}),
+			-- Bottom-Left: Bold Power text
+			BottomLeft = e("Frame", {
+				Name = "BottomLeftPower",
+				AnchorPoint = Vector2.new(0, 1),
+				Position = UDim2.new(0, 6, 1, -4),
+				Size = UDim2.new(1, -12, 0, 22),
+				BackgroundTransparency = 1,
+				ZIndex = 4,
+			}, {
+				Power = e(C.Text, {
+					Text = "⚔ " .. powerText,
+					TextSize = 14,
+					FontFace = T.Theme.Fonts.Number,
+					TextColor3 = Color3.fromRGB(255, 230, 140),
+					TextXAlignment = Enum.TextXAlignment.Left,
+					Size = UDim2.fromScale(1, 1),
+				}),
+			}),
+			-- Checked badge in center when selected for sale or upgrade
+			CheckedBadge = if isChecked then e("Frame", {
+				Name = "CheckedBadge",
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromScale(0.5, 0.5),
+				Size = UDim2.fromOffset(30, 30),
+				BackgroundColor3 = Color3.fromRGB(20, 14, 28),
+				BackgroundTransparency = 0.2,
+				ZIndex = 6,
+			}, {
+				Corner = e("UICorner", { CornerRadius = UDim.new(1, 0) }),
+				Stroke = e("UIStroke", { Color = if props.Material then T.Bad else T.Good, Thickness = 2 }),
+				Icon = e("Frame", {
+					AnchorPoint = Vector2.new(0.5, 0.5),
+					Position = UDim2.fromScale(0.5, 0.5),
+					Size = UDim2.fromOffset(20, 20),
+					BackgroundTransparency = 1,
+				}, {
+					Art = e(Icons.Icon, { Name = "Check", Size = 20 }),
+				}),
+			}) else nil,
+			-- Protected or Not Usable overlay
+			ProtectedOverlay = if isProtected or isNotUsable then e("Frame", {
+				Name = "ProtectedOverlay",
+				Size = UDim2.fromScale(1, 1),
+				BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+				BackgroundTransparency = 0.55,
+				ZIndex = 8,
+			}, {
+				Corner = e("UICorner", { CornerRadius = UDim.new(0, 10) }),
+				LockIcon = e("Frame", {
+					AnchorPoint = Vector2.new(0.5, 0.5),
+					Position = UDim2.fromScale(0.5, 0.5),
+					Size = UDim2.fromOffset(24, 24),
+					BackgroundTransparency = 1,
+				}, {
+					Art = e(Icons.Icon, { Name = "Lock", Size = 24 }),
+				}),
+			}) else nil,
+		}),
+	})
+end
+
+-- Backward compatibility alias
+C.ArtifactCard = C.ArtifactTile
+
+--============================================================================
+-- INVENTORY GRID (Square responsive tiles)
+--============================================================================
+type GridProps = {
+	Snapshot: Snapshot,
+	Items: { Artifact },
+	TargetId: string?,
+	MaterialIds: { string }?,
+	MaterialMode: boolean?,
+	HeroId: string?,
+	Width: number,
+	OnSelect: (id: string) -> (),
+	FilterKey: string?,
+	Page: number?,
+	OnPage: ((page: number) -> ())?,
+	SellMode: boolean?,
+	CheckedIds: { [string]: boolean }?,
+}
+
 function C.InventoryGrid(props: GridProps)
-	local columns = math.max(1, math.floor((props.Width - 16 + T.Gap) / (T.CardWidth + T.Gap)))
+	local tileSize = T.TileSize or 104
+	local tileGap = T.TileGap or 8
+	local columns = math.max(1, math.floor((props.Width - 16 + tileGap) / (tileSize + tileGap)))
+	local cellWidth = math.max(80, math.floor((props.Width - 16 - tileGap * (columns - 1)) / columns))
 	local ref = React.useRef(nil)
 	local view, setView = React.useState({ Row = 0, Height = 340 })
 	local best = Model.best(props.Snapshot, props.HeroId)
+
 	local function observe(scroll: ScrollingFrame)
-		local row = math.floor(scroll.CanvasPosition.Y / (T.CardHeight + T.Gap))
+		local row = math.floor(scroll.CanvasPosition.Y / (cellWidth + tileGap))
 		local height = scroll.AbsoluteWindowSize.Y
 		setView(function(previous)
 			return if previous.Row == row and previous.Height == height then previous else { Row = row, Height = height }
 		end)
 	end
+
 	local children: { [string]: any } = {
 		Layout = e("UIGridLayout", {
-			CellSize = UDim2.new(1 / columns, -(T.Gap * (columns - 1) + 16) / columns, 0, T.CardHeight),
-			CellPadding = UDim2.fromOffset(T.Gap, T.Gap), SortOrder = Enum.SortOrder.LayoutOrder,
+			CellSize = UDim2.fromOffset(cellWidth, cellWidth),
+			CellPadding = UDim2.fromOffset(tileGap, tileGap),
+			SortOrder = Enum.SortOrder.LayoutOrder,
 		}),
-		Padding = e("UIPadding", { PaddingTop = UDim.new(0, 4), PaddingLeft = UDim.new(0, 4), PaddingBottom = UDim.new(0, 8) }),
+		Padding = e("UIPadding", {
+			PaddingTop = UDim.new(0, 4),
+			PaddingLeft = UDim.new(0, 4),
+			PaddingBottom = UDim.new(0, 8),
+		}),
 	}
-	local visibleRows = math.max(1, math.ceil(view.Height / (T.CardHeight + T.Gap)))
+
+	local visibleRows = math.max(1, math.ceil(view.Height / (cellWidth + tileGap)))
 	for index, artifact in props.Items do
 		local row = math.floor((index - 1) / columns)
-		children[artifact.UUID] = e(C.ArtifactCard, {
-			Snapshot = props.Snapshot, Artifact = artifact, Selected = props.TargetId == artifact.UUID,
-			Material = table.find(props.MaterialIds, artifact.UUID) ~= nil, Recommended = best == artifact.UUID,
+		local isChecked = if props.SellMode then (props.CheckedIds and props.CheckedIds[artifact.UUID] == true)
+			elseif props.MaterialIds then (table.find(props.MaterialIds, artifact.UUID) ~= nil)
+			else false
+
+		children[artifact.UUID] = e(C.ArtifactTile, {
+			Snapshot = props.Snapshot,
+			Artifact = artifact,
+			Selected = props.TargetId == artifact.UUID,
+			Material = props.MaterialMode and isChecked,
+			Checked = props.SellMode and isChecked,
+			SellMode = props.SellMode,
 			Reason = if props.MaterialMode then Model.materialReason(props.Snapshot, props.TargetId, artifact.UUID) else nil,
-			OnSelect = function() props.OnSelect(artifact.UUID) end, Order = index,
+			OnSelect = function() props.OnSelect(artifact.UUID) end,
+			Order = index,
 			ShowPreview = row >= view.Row - 1 and row <= view.Row + visibleRows,
 		})
 	end
+
 	React.useEffect(function()
 		if ref.current then ref.current.CanvasPosition = Vector2.zero end
 	end, { props.FilterKey })
+
 	return e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 }, {
 		Grid = e("ScrollingFrame", {
-			ref = ref, Name = "ArtifactGrid", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0,
-			AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(),
-			ScrollingDirection = Enum.ScrollingDirection.Y, ScrollBarThickness = 6,
-			ScrollBarImageColor3 = T.Gold, SelectionGroup = true, ClipsDescendants = true,
-			[React.Change.CanvasPosition] = observe, [React.Change.AbsoluteWindowSize] = observe,
+			ref = ref,
+			Name = "ArtifactGrid",
+			Size = UDim2.fromScale(1, 1),
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			AutomaticCanvasSize = Enum.AutomaticSize.Y,
+			CanvasSize = UDim2.new(),
+			ScrollingDirection = Enum.ScrollingDirection.Y,
+			ScrollBarThickness = 6,
+			ScrollBarImageColor3 = T.Gold,
+			SelectionGroup = true,
+			ClipsDescendants = true,
+			[React.Change.CanvasPosition] = observe,
+			[React.Change.AbsoluteWindowSize] = observe,
 		}, children),
 		Empty = if #props.Items == 0 then e(C.Text, {
 			Text = if next(props.Snapshot.Artifacts) == nil then "No artifacts yet. Open Summon to get your first weapon." else "No matching artifacts. Clear your filters to see all owned weapons.",
-			Size = UDim2.new(1, -20, 0, 100), Position = UDim2.fromOffset(8, 12),
+			Size = UDim2.new(1, -20, 0, 100),
+			Position = UDim2.fromOffset(8, 12),
 		}) else nil,
 	})
 end
@@ -466,7 +847,6 @@ function C.UpgradePreviewPanel(props: { Snapshot: Snapshot, Target: Artifact, Ma
 	return e(C.Stack, { Children = children })
 end
 
--- Pure primary-action presentation shared by equip and promotion.
 function C.ActionFlow(props: { Label: string, Reason: string?, Busy: boolean, OnActivate: () -> (), Order: number? })
 	return e(C.Stack, { Order = props.Order, Children = {
 		Reason = e(C.Text, { Text = props.Reason or "Ready", TextColor3 = if props.Reason then T.Muted else T.Good, TextSize = 14, Size = UDim2.new(1, 0, 0, 48), LayoutOrder = 1 }),

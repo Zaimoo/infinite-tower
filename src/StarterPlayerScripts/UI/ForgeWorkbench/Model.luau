@@ -3,6 +3,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Catalog = require(ReplicatedStorage.Shared.Config.ArtifactCatalog)
 local Stats = require(ReplicatedStorage.Shared.Util.StatFormulas)
+local EquipBest = require(ReplicatedStorage.Shared.Util.EquipBest)
 local Types = require(script.Parent.Types)
 type Artifact = Types.Artifact
 type Hero = Types.Hero
@@ -215,6 +216,10 @@ function Model.best(snapshot: Snapshot, heroId: string?): string?
 		end
 	end
 	return bestId
+end
+
+function Model.equipBestPlan(snapshot: Snapshot)
+	return EquipBest.Plan(snapshot.Heroes or {}, snapshot.Artifacts or {})
 end
 
 function Model.inventory(snapshot: Snapshot, filter: Filter, heroId: string?): { Artifact }
