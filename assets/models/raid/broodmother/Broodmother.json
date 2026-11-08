@@ -1,0 +1,537 @@
+{
+ "Asset": "Broodmother",
+ "Segments": [
+  {
+   "Name": "Thorax",
+   "Parent": null,
+   "Pivot": [
+    0.0,
+    8.6,
+    -4.0
+   ],
+   "Glow": [
+    {
+     "Mesh": "Broodmother_Thorax_Glow_Green",
+     "Colour": [
+      126,
+      255,
+      74
+     ],
+     "Centre": [
+      0.0,
+      10.275,
+      -10.545
+     ],
+     "Size": [
+      4.971,
+      1.85,
+      2.25
+     ]
+    }
+   ],
+   "Centre": [
+    -0.0,
+    8.9,
+    -6.4
+   ],
+   "Size": [
+    8.4,
+    8.2,
+    14.0
+   ],
+   "Mesh": "Broodmother_Thorax",
+   "Tris": 2224
+  },
+  {
+   "Name": "Abdomen",
+   "Parent": "Thorax",
+   "Pivot": [
+    0.0,
+    10.0,
+    -0.4
+   ],
+   "Glow": [
+    {
+     "Mesh": "Broodmother_Abdomen_Glow_Green",
+     "Colour": [
+      126,
+      255,
+      74
+     ],
+     "Centre": [
+      0.001,
+      16.998,
+      10.523
+     ],
+     "Size": [
+      12.876,
+      12.804,
+      14.553
+     ]
+    }
+   ],
+   "Centre": [
+    0.0,
+    12.843,
+    8.215
+   ],
+   "Size": [
+    13.574,
+    14.018,
+    18.03
+   ],
+   "Mesh": "Broodmother_Abdomen",
+   "Tris": 3420
+  },
+  {
+   "Name": "FangR",
+   "Parent": "Thorax",
+   "Pivot": [
+    1.15,
+    7.9,
+    -10.7
+   ],
+   "Glow": [
+    {
+     "Mesh": "Broodmother_FangR_Glow_Green",
+     "Colour": [
+      126,
+      255,
+      74
+     ],
+     "Centre": [
+      0.55,
+      3.55,
+      -11.7
+     ],
+     "Size": [
+      0.533,
+      0.56,
+      0.533
+     ]
+    }
+   ],
+   "Centre": [
+    1.15,
+    6.5,
+    -11.262
+   ],
+   "Size": [
+    1.8,
+    5.2,
+    2.924
+   ],
+   "Mesh": "Broodmother_FangR",
+   "Tris": 262
+  },
+  {
+   "Name": "FangL",
+   "Parent": "Thorax",
+   "Pivot": [
+    -1.15,
+    7.9,
+    -10.7
+   ],
+   "Glow": [
+    {
+     "Mesh": "Broodmother_FangL_Glow_Green",
+     "Colour": [
+      126,
+      255,
+      74
+     ],
+     "Centre": [
+      -0.55,
+      3.55,
+      -11.7
+     ],
+     "Size": [
+      0.533,
+      0.56,
+      0.533
+     ]
+    }
+   ],
+   "Centre": [
+    -1.15,
+    6.5,
+    -11.262
+   ],
+   "Size": [
+    1.8,
+    5.2,
+    2.924
+   ],
+   "Mesh": "Broodmother_FangL",
+   "Tris": 262
+  },
+  {
+   "Name": "LegR1Upper",
+   "Parent": "Thorax",
+   "Pivot": [
+    2.9,
+    8.4,
+    -7.0
+   ],
+   "Glow": [],
+   "Centre": [
+    6.002,
+    10.984,
+    -9.288
+   ],
+   "Size": [
+    8.201,
+    7.268,
+    6.675
+   ],
+   "Mesh": "Broodmother_LegR1Upper",
+   "Tris": 188
+  },
+  {
+   "Name": "LegR1Lower",
+   "Parent": "LegR1Upper",
+   "Pivot": [
+    9.6,
+    13.9,
+    -12.0
+   ],
+   "Glow": [],
+   "Centre": [
+    11.948,
+    7.425,
+    -13.797
+   ],
+   "Size": [
+    6.504,
+    14.85,
+    5.493
+   ],
+   "Mesh": "Broodmother_LegR1Lower",
+   "Tris": 286
+  },
+  {
+   "Name": "LegR2Upper",
+   "Parent": "Thorax",
+   "Pivot": [
+    2.9,
+    8.4,
+    -5.3
+   ],
+   "Glow": [],
+   "Centre": [
+    5.959,
+    11.26,
+    -6.052
+   ],
+   "Size": [
+    8.114,
+    7.82,
+    3.603
+   ],
+   "Mesh": "Broodmother_LegR2Upper",
+   "Tris": 188
+  },
+  {
+   "Name": "LegR2Lower",
+   "Parent": "LegR2Upper",
+   "Pivot": [
+    9.6,
+    14.5,
+    -7.1
+   ],
+   "Glow": [],
+   "Centre": [
+    11.948,
+    7.725,
+    -7.515
+   ],
+   "Size": [
+    6.504,
+    15.45,
+    2.729
+   ],
+   "Mesh": "Broodmother_LegR2Lower",
+   "Tris": 286
+  },
+  {
+   "Name": "LegR3Upper",
+   "Parent": "Thorax",
+   "Pivot": [
+    2.9,
+    8.4,
+    -3.6
+   ],
+   "Glow": [],
+   "Centre": [
+    5.953,
+    11.259,
+    -2.946
+   ],
+   "Size": [
+    8.103,
+    7.819,
+    3.409
+   ],
+   "Mesh": "Broodmother_LegR3Upper",
+   "Tris": 188
+  },
+  {
+   "Name": "LegR3Lower",
+   "Parent": "LegR3Upper",
+   "Pivot": [
+    9.6,
+    14.5,
+    -2.0
+   ],
+   "Glow": [],
+   "Centre": [
+    11.948,
+    7.725,
+    -1.67
+   ],
+   "Size": [
+    6.504,
+    15.45,
+    2.559
+   ],
+   "Mesh": "Broodmother_LegR3Lower",
+   "Tris": 286
+  },
+  {
+   "Name": "LegR4Upper",
+   "Parent": "Thorax",
+   "Pivot": [
+    2.9,
+    8.4,
+    -1.9
+   ],
+   "Glow": [],
+   "Centre": [
+    6.0,
+    10.983,
+    0.292
+   ],
+   "Size": [
+    8.197,
+    7.267,
+    6.484
+   ],
+   "Mesh": "Broodmother_LegR4Upper",
+   "Tris": 188
+  },
+  {
+   "Name": "LegR4Lower",
+   "Parent": "LegR4Upper",
+   "Pivot": [
+    9.6,
+    13.9,
+    2.9
+   ],
+   "Glow": [],
+   "Centre": [
+    11.948,
+    7.425,
+    4.61
+   ],
+   "Size": [
+    6.504,
+    14.85,
+    5.321
+   ],
+   "Mesh": "Broodmother_LegR4Lower",
+   "Tris": 286
+  },
+  {
+   "Name": "LegL1Upper",
+   "Parent": "Thorax",
+   "Pivot": [
+    -2.9,
+    8.4,
+    -7.0
+   ],
+   "Glow": [],
+   "Centre": [
+    -6.002,
+    10.984,
+    -9.288
+   ],
+   "Size": [
+    8.201,
+    7.268,
+    6.675
+   ],
+   "Mesh": "Broodmother_LegL1Upper",
+   "Tris": 188
+  },
+  {
+   "Name": "LegL1Lower",
+   "Parent": "LegL1Upper",
+   "Pivot": [
+    -9.6,
+    13.9,
+    -12.0
+   ],
+   "Glow": [],
+   "Centre": [
+    -11.948,
+    7.425,
+    -13.797
+   ],
+   "Size": [
+    6.504,
+    14.85,
+    5.493
+   ],
+   "Mesh": "Broodmother_LegL1Lower",
+   "Tris": 286
+  },
+  {
+   "Name": "LegL2Upper",
+   "Parent": "Thorax",
+   "Pivot": [
+    -2.9,
+    8.4,
+    -5.3
+   ],
+   "Glow": [],
+   "Centre": [
+    -5.959,
+    11.26,
+    -6.052
+   ],
+   "Size": [
+    8.114,
+    7.82,
+    3.603
+   ],
+   "Mesh": "Broodmother_LegL2Upper",
+   "Tris": 188
+  },
+  {
+   "Name": "LegL2Lower",
+   "Parent": "LegL2Upper",
+   "Pivot": [
+    -9.6,
+    14.5,
+    -7.1
+   ],
+   "Glow": [],
+   "Centre": [
+    -11.948,
+    7.725,
+    -7.515
+   ],
+   "Size": [
+    6.504,
+    15.45,
+    2.729
+   ],
+   "Mesh": "Broodmother_LegL2Lower",
+   "Tris": 286
+  },
+  {
+   "Name": "LegL3Upper",
+   "Parent": "Thorax",
+   "Pivot": [
+    -2.9,
+    8.4,
+    -3.6
+   ],
+   "Glow": [],
+   "Centre": [
+    -5.953,
+    11.259,
+    -2.946
+   ],
+   "Size": [
+    8.103,
+    7.819,
+    3.409
+   ],
+   "Mesh": "Broodmother_LegL3Upper",
+   "Tris": 188
+  },
+  {
+   "Name": "LegL3Lower",
+   "Parent": "LegL3Upper",
+   "Pivot": [
+    -9.6,
+    14.5,
+    -2.0
+   ],
+   "Glow": [],
+   "Centre": [
+    -11.948,
+    7.725,
+    -1.67
+   ],
+   "Size": [
+    6.504,
+    15.45,
+    2.559
+   ],
+   "Mesh": "Broodmother_LegL3Lower",
+   "Tris": 286
+  },
+  {
+   "Name": "LegL4Upper",
+   "Parent": "Thorax",
+   "Pivot": [
+    -2.9,
+    8.4,
+    -1.9
+   ],
+   "Glow": [],
+   "Centre": [
+    -6.0,
+    10.983,
+    0.292
+   ],
+   "Size": [
+    8.197,
+    7.267,
+    6.484
+   ],
+   "Mesh": "Broodmother_LegL4Upper",
+   "Tris": 188
+  },
+  {
+   "Name": "LegL4Lower",
+   "Parent": "LegL4Upper",
+   "Pivot": [
+    -9.6,
+    13.9,
+    2.9
+   ],
+   "Glow": [],
+   "Centre": [
+    -11.948,
+    7.425,
+    4.61
+   ],
+   "Size": [
+    6.504,
+    14.85,
+    5.321
+   ],
+   "Mesh": "Broodmother_LegL4Lower",
+   "Tris": 286
+  }
+ ],
+ "TotalTris": 11294,
+ "MeshCount": 24,
+ "Size": [
+  30.4,
+  23.4,
+  34.34
+ ],
+ "Convention": "Studs. Roblox axes (Y up, model faces -Z). Pivot = joint in model space, origin at ground centre. Centre/Size = mesh bounding box (Roblox importer recentres meshes on it).",
+ "Boss": "BROODMOTHER",
+ "DisplayName": "Xal'Zhara, the Rift Broodmother",
+ "Root": "Thorax",
+ "GlowAccent": [
+  126,
+  255,
+  74
+ ]
+}

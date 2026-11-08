@@ -30,6 +30,7 @@ local BackpackPanel = require(script.Parent:WaitForChild("BackpackPanel"))
 local FacilityPanel = require(script.Parent:WaitForChild("FacilityPanel"))
 local ShopPanel = require(script.Parent:WaitForChild("ShopPanel"))
 local TowerEventHud = require(script.Parent:WaitForChild("TowerEventHud"))
+local RaidHud = require(script.Parent:WaitForChild("RaidHud"))
 
 -- Support facilities shown in the Phase 5 gothic panel.
 local PANEL_FACILITIES = { GuardPost = true, Market = true, TrainingGrounds = true, GodsBlessing = true }
@@ -381,6 +382,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 		end
 	end, { indexOpen, facilityOpen, shopOpen })
 
+	local raid = RaidHud.useRaid() -- raid arena state: swaps the Right Rail for the damage leaderboard
 	local profile = Store.Profile
 	local unlocks = profile and profile.Unlocks or {}
 
@@ -588,7 +590,10 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 	local powerDrawn = if compact then 44 else L.PowerBadgeHeight
 	local eventBottom = L.Edge + powerDrawn + 8
 	local eventHeight = if compact then 40 else L.EventBadgeHeight
-	local rightBottom = screen.Y - eventBottom - eventHeight - L.StackGap
+	-- While the Raid Portal is open (outside the arena), the raid chip stacks above the event badge.
+	local raidChip = RaidHud.ChipVisible(raid.Phase, raid.InRaid)
+	local raidChipBottom = eventBottom + eventHeight + 8
+	local rightBottom = screen.Y - eventBottom - eventHeight - L.StackGap - (if raidChip then RaidHud.ChipHeight + 8 else 0)
 	-- Top right, top to bottom: the Next Goal card, then the Right Rail. Positions are in the Root's
 	-- coordinates unless noted.
 	-- Free part of Roblox's top bar, in screen pixels. Read live, because it can still be empty when the
@@ -642,7 +647,14 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 	return e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 }, {
 		Goal = if not modalFocus then e(Components.NextGoalCard, { Goal = goal, Top = goalTop }) else nil,
 		LeftRail = if not modalFocus then rail("LeftRail", "Left", leftTop, leftBottom, leftSize, leftBottom - leftTop, leftButtons, screen.Y) else nil,
-		RightRail = if not modalFocus then rail("RightRail", "Right", rightTop, rightBottom, rightSize, rightBottom - rightTop, rightButtons, screen.Y) else nil,
+		RightRail = if modalFocus then nil
+			elseif raid.InRaid then e(RaidHud.Leaderboard, { Top = rightTop, Bottom = rightBottom, Compact = compact })
+			else rail("RightRail", "Right", rightTop, rightBottom, rightSize, rightBottom - rightTop, rightButtons, screen.Y),
+		-- Raid: Leave sits bottom centre, just above the Squad Status card (it tracks the drawer's slide).
+		RaidLeave = if not modalFocus and raid.InRaid then e(RaidHud.LeaveButton, {
+			Bottom = L.Edge + Components.DrawerHeight(drawerOpen or layoutOpen, cardHeight) + 12,
+		}) else nil,
+		RaidChip = if not modalFocus and raidChip then e(RaidHud.HubChip, { Bottom = raidChipBottom, Compact = compact }) else nil,
 		Status = if not modalFocus and profile then e(Components.SquadDrawer, {
 			Rows = rows, LockedText = lockedText, LockedRange = lockedRange, Compact = compact, TileWidth = tileWidth,
 			CardHeight = cardHeight, Expanded = drawerOpen,
@@ -701,6 +713,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 		}) else nil,
 		Shop = if shopOpen then e(ShopPanel, { Profile = profile, Width = screen.X, OnClose = function() currentShopOpen = false setShopOpen(false) call("SetModalFocusMode", false) end }) else nil,
 		TowerEventPopup = e(TowerEventHud.Popup, { Blocked = facilityOpen ~= nil or shopOpen or indexOpen or modalFocus }),
+		RaidResults = e(RaidHud.ResultsCard, { Blocked = facilityOpen ~= nil or shopOpen or indexOpen }),
 		Index = if indexOpen then e(HeroIndex, { Profile = profile, Width = screen.X, InitialMode = indexInitialMode, OnClose = function() currentIndexOpen = false setIndexOpen(false) call("SetModalFocusMode", false) end }) else nil,
 		Backpack = if backpackOpen then e(BackpackPanel, {
 			Width = screen.X, Height = screen.Y, OnClose = function() closeBackpack() call("SetModalFocusMode", false) end, ReturnFocus = returnBackpackFocus,

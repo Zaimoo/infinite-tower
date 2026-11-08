@@ -1,0 +1,148 @@
+{
+ "Asset": "RaidPortal",
+ "Segments": [
+  {
+   "Name": "Frame",
+   "Parent": null,
+   "Pivot": [
+    0.0,
+    0.0,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    0.0,
+    16.05,
+    -0.0
+   ],
+   "Size": [
+    34.0,
+    32.1,
+    28.862
+   ],
+   "Mesh": "RaidPortal_Frame",
+   "Tris": 7378
+  },
+  {
+   "Name": "Runes",
+   "Parent": null,
+   "Pivot": [
+    0.0,
+    0.0,
+    -0.0
+   ],
+   "Glow": [
+    {
+     "Mesh": "RaidPortal_Runes_Glow_Crimson",
+     "Colour": [
+      255,
+      46,
+      58
+     ],
+     "Centre": [
+      0.0,
+      14.311,
+      -1.351
+     ],
+     "Size": [
+      31.869,
+      26.902,
+      24.398
+     ]
+    },
+    {
+     "Mesh": "RaidPortal_Runes_Glow_Orange",
+     "Colour": [
+      255,
+      118,
+      36
+     ],
+     "Centre": [
+      0.0,
+      7.4,
+      -6.457
+     ],
+     "Size": [
+      17.442,
+      3.4,
+      2.186
+     ]
+    }
+   ]
+  },
+  {
+   "Name": "Vortex",
+   "Parent": null,
+   "Pivot": [
+    0.0,
+    0.0,
+    -0.0
+   ],
+   "Glow": [
+    {
+     "Mesh": "RaidPortal_Vortex",
+     "Colour": [
+      186,
+      96,
+      255
+     ],
+     "Centre": [
+      0.0,
+      13.636,
+      -0.2
+     ],
+     "Size": [
+      15.5,
+      22.472,
+      0.7
+     ]
+    }
+   ]
+  },
+  {
+   "Name": "Shards",
+   "Parent": null,
+   "Pivot": [
+    0.0,
+    15.5,
+    -0.0
+   ],
+   "Glow": [
+    {
+     "Mesh": "RaidPortal_Shards",
+     "Colour": [
+      255,
+      46,
+      58
+     ],
+     "Centre": [
+      0.17,
+      16.957,
+      0.072
+     ],
+     "Size": [
+      30.776,
+      25.766,
+      5.716
+     ]
+    }
+   ]
+  }
+ ],
+ "TotalTris": 9567,
+ "MeshCount": 5,
+ "Size": [
+  34.0,
+  32.1,
+  28.86
+ ],
+ "Convention": "Studs. Roblox axes (Y up, model faces -Z). Pivot = joint in model space, origin at ground centre. Centre/Size = mesh bounding box (Roblox importer recentres meshes on it).",
+ "Roles": {
+  "Frame": "PALETTE",
+  "Runes": "NEON",
+  "Vortex": "NEON",
+  "Shards": "NEON (spin about pivot)"
+ },
+ "TriggerRingCentreY": 15.5,
+ "Apex": 26.79
+}

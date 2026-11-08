@@ -46,6 +46,21 @@ HubLayout.CausewayTowerZ = -(375 + 11) -- Outer edge of the tower walkway
 HubLayout.SouthGateWidth = 44
 HubLayout.BoulevardWidth = 28 -- Pilgrim's Way across the south band
 
+-- Raid Portal (docs/raid-boss-plan.md §6): on the centre island, east of the Reflecting Pool (its right
+-- side seen from the dais), facing diagonally back toward the island centre. Hub-local.
+HubLayout.RaidPortal = { X = 100, Z = -160, Scale = 1.0, ClearRadius = 30 }
+function HubLayout.RaidPortalCFrame(): CFrame
+	local p = HubLayout.RaidPortal
+	local pos = HubLayout.HubPoint(p.X, p.Z)
+	local centre = HubLayout.HubPoint(0, 0)
+	return CFrame.lookAt(pos, centre) -- LookVector faces the island centre (south-west)
+end
+-- Where Masters land when they leave a raid: on the promenade in front of the portal.
+function HubLayout.RaidPortalLanding(): Vector3
+	local cf = HubLayout.RaidPortalCFrame()
+	local ahead = cf.Position + cf.LookVector * 34
+	return Vector3.new(ahead.X, HubLayout.IslandSurfaceY + 3.5, ahead.Z)
+end
 -- Safety catch plane & background horizon
 HubLayout.KillZoneCentre = Vector3.new(0, -95, -950)
 HubLayout.KillZoneSize = Vector3.new(2400, 8, 3400)

@@ -1023,8 +1023,12 @@ function Runtime.new(api: any): any
 		if not room or room.RoomGeneration ~= m.RoomGeneration then return end
 		m.LastOrigin = room.Origin
 		m.LocalPosition = m.Position - room.Origin
+		if m.Dormant then -- a raid boss waits on its dais until the fight starts (RaidService)
+			m.State = "IDLE"
+			return
+		end
 		if m.Role == "BOSS" then
-			m.Phase = m.CurrentHP <= m.MaxHP * 0.5 and 2 or 1
+			m.Phase = (m.Enraged or m.CurrentHP <= m.MaxHP * 0.5) and 2 or 1
 			if now - m.BornAt < 2.2 then
 				m.State = "IDLE"
 				return
@@ -1071,6 +1075,9 @@ function Runtime.new(api: any): any
 			end
 			local result = Timeline.Step(action, m, target, definition, now, safe, candidates, onHit)
 			if result then
+				if result == "IMPACT" and m.RaidBoss and definition and definition.Signature and api.OnRaidSignature then
+					api.OnRaidSignature(m, now) -- opens the Punish Window
+				end
 				if result == "IMPACT" then self.Metrics.Impacts += 1
 				elseif result == "CANCEL" then self.Metrics.Canceled += 1 end
 				api.Send(m, self:PublicAction(action, result))

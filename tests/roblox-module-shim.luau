@@ -117,6 +117,10 @@ vectorMeta.__index = function(t, k)
 		return Vector3.new(t.X / m, t.Y / m, t.Z / m)
 	elseif k == "Lerp" then
 		return vectorMeta.Lerp
+	elseif k == "Dot" then
+		return function(a, b) return a.X * b.X + a.Y * b.Y + a.Z * b.Z end
+	elseif k == "Cross" then
+		return function(a, b) return Vector3.new(a.Y * b.Z - a.Z * b.Y, a.Z * b.X - a.X * b.Z, a.X * b.Y - a.Y * b.X) end
 	end
 	return rawget(t, k)
 end

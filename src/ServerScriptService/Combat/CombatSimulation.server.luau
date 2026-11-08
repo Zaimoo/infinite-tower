@@ -33,6 +33,7 @@ local TowerHardcore=require(Shared.Config.TowerHardcoreConfig)
 local StatBalance=require(Shared.Config.StatBalance)
 local EncounterRuntime=require(script.Parent.TowerEncounterRuntime)
 local TowerRuns=require(script.Parent.TowerRunService)
+local RAID_FLOOR=require(game:GetService("ReplicatedStorage").Shared.Config.RaidConfig).FloorId -- off-map raid arena (docs/raid-boss-plan.md)
 local TowerRun=require(Shared.Util.TowerRun)
 local AttackTimeline=require(Shared.Util.AttackTimeline)
 local HeroActionTiming=require(Shared.Util.HeroActionTiming)
@@ -382,7 +383,7 @@ local function getMasterGroundPosition(player: Player): Vector3?
 end
 
 local function getAssignedSpawnRoot(room: any): Vector3
-	if not room or (room.FloorId or 0) <= 0 then
+	if not room or (room.FloorId or 0) <= 0 or room.FloorId == RAID_FLOOR then
 		return room and room.Arrival and room.Arrival.Position or Vector3.new(0, 3, 0)
 	end
 	local idx = ((room.FloorId - 1) % 5) + 1
@@ -720,7 +721,9 @@ local function knockHeroIntoComa(simHero: SimHero, _baseComaSeconds: number?)
 			SquadDefeatedRemote:FireClient(simHero.Owner, wipeFloor)
 		end
 
-		if playerOnWipeFloor then
+		if wipeFloor == RAID_FLOOR then
+			dm.SendToast(simHero.Owner, "Your squad fell in the raid. Your damage still counts. Returning to your Fortress Plot...", "WARN")
+		elseif playerOnWipeFloor then
 			dm.SendToast(
 				simHero.Owner,
 				string.format("ALL HEROES FALLEN on Floor %d! Carried loot dropped. Teleporting to Fortress Plot...", wipeFloor),
@@ -1653,7 +1656,7 @@ if FloorProgressRemote then
 			FloorProgressRemote:FireClient(player, progress)
 		else
 			local state = Tower.GetState(player)
-			if state and state.FloorId and state.FloorId > 0 then
+			if state and state.FloorId and state.FloorId > 0 and state.FloorId ~= RAID_FLOOR then
 				local newProg = TowerProgress.CreateProgress(state.FloorId)
 				ActivePlayerProgress[player] = newProg
 				FloorProgressRemote:FireClient(player, newProg)
@@ -1669,7 +1672,7 @@ end
 
 -- Mobs a hero may auto-target: alive, in the hero's room generation and outside safe zones.
 local function isHostileMob(simHero: SimHero, mob: SimMob): boolean
-	return mob.IsAlive and Tower.Same(simHero, mob) and not Tower.GetSafety(mob, mob.Position).CombatSafe
+	return mob.IsAlive and not (mob :: any).Dormant and Tower.Same(simHero, mob) and not Tower.GetSafety(mob, mob.Position).CombatSafe
 end
 
 -- A hero attack scheduled by stepHeroSimulation is cancelled if, by its release frame, the
@@ -1751,12 +1754,18 @@ local function resolveHeroImpact(impact: any, tick: number)
 	local damage = math.round(impact.Atk * impact.DamageMult * bonus / impact.Ticks)
 	local hitKind = if impact.Tier == "SKILL" then "HIT_SKILL" elseif impact.Tier == "SPECIAL" then "HIT_SPECIAL" else "HIT_SPARK"
 
+	if mob and (mob :: any).Dormant then
+		return -- a raid boss is untouchable until the fight starts
+	end
 	if mob then
 		if mob.DefenseShredUntil and now < mob.DefenseShredUntil then
 			damage = math.round(damage * 1.20)
 		end
 		if Encounters then
 			damage = Encounters:OnMobHit(mob, damage) -- WARD shields soak first; a hit interrupts a support's cast
+		end
+		if (mob :: any).RaidBoss and _G.RaidService then
+			damage = _G.RaidService.ModifyDamage(mob, damage, now) -- Punish Window and enrage weak points
 		end
 		local actualDamage = math.min(mob.CurrentHP, damage)
 		local participation = ProgressionHits[mob.NetId]
@@ -1768,6 +1777,9 @@ local function resolveHeroImpact(impact: any, tick: number)
 		participation[simHero.NetId] = { Damage = (previous and previous.Damage or 0) + actualDamage, At = now, Owner=simHero.Owner, HeroUUID=simHero.HeroUUID, FloorId=impact.FloorId, RoomGeneration=impact.RoomGeneration, EntityGeneration=impact.AttackerGeneration }
 		mob.CurrentHP = math.max(0, mob.CurrentHP - damage)
 		mob.DamageLedger[simHero.Owner.UserId] = (mob.DamageLedger[simHero.Owner.UserId] or 0) + damage
+		if (mob :: any).RaidBoss and _G.RaidService then
+			_G.RaidService.RecordDamage(simHero.Owner, actualDamage) -- overkill never counts
+		end
 
 		Tower.BroadcastAt(CombatVFXRemote,mob,hitKind, mob.Position, actualDamage, impact.Overdrive,false)
 		if (mob :: any).TowerEnemy then
@@ -2557,6 +2569,7 @@ end
 
 Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=ActiveMobsByNetId,Navigation=HeroNavigation,Allocate=allocateNetId,
  Changed=bootstrapAll,
+ OnRaidSignature=function(mob,now) if _G.RaidService then _G.RaidService.OnSignature(mob,now) end end,
  Announce=function(floorId,text)
   for _,p in Players:GetPlayers() do
    local s=Tower.GetState(p)
@@ -2588,6 +2601,11 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
   end
  end,
   Reward=function(mob,killer)
+   if (mob :: any).RaidBoss or (mob :: any).RaidAdd then
+    -- Raid payouts are by damage share at the end of the fight (RaidService), never per kill.
+    if (mob :: any).RaidBoss and _G.RaidService then _G.RaidService.OnBossDeath(mob,killer) end
+    return
+   end
    awardParticipationXP(mob)
    local dm = getDataManager()
    local isBoss = (mob :: any).Role == "BOSS"
@@ -2877,7 +2895,9 @@ local function stepCombatHeartbeat(deltaTime: number)
 			local safety=Tower.GetSafety(location,rootPos)
 			-- Phase 6 run lifecycle: a run starts on a tower floor and ends when the Master is back in the hub or on the plot.
 			if not Tower.IsTransitioning(player) then
-				if location.FloorId > 0 then
+				if location.FloorId == RAID_FLOOR then
+					-- raids are not tower runs: no streak, no wipe loss
+				elseif location.FloorId > 0 then
 					TowerRuns.Ensure(player, location.FloorId)
 				elseif TowerRuns.Get(player) then
 					TowerRuns.Bank(player)
@@ -2994,4 +3014,65 @@ CombatSimulation.ResetTowerCamps = function(floors: { number }): number
 	return removed
 end
 CombatSimulation.ResetPlayerTowerEncounter = resetPlayerTowerEncounter
+
+-- Raid bosses (RaidService, docs/raid-boss-plan.md). Server only.
+-- The deployed squad's sustained DPS (ATK / attack interval of every standing hero): the HP budget input.
+CombatSimulation.SquadDPS = function(player: Player): number
+	local m = ActiveMasters[player]
+	if not m then return 0 end
+	local dps = 0
+	for _, h in pairs(m.DeployedHeroes) do
+		if h.State ~= "COMA" and h.CurrentHP > 0 and (h.AttackInterval or 0) > 0 then
+			dps += (h.EffectiveATK or 0) / h.AttackInterval
+		end
+	end
+	return dps
+end
+-- Heroes able to fight right now (not in a coma).
+CombatSimulation.StandingHeroes = function(player: Player): number
+	local m = ActiveMasters[player]
+	local n = 0
+	if m then for _, h in pairs(m.DeployedHeroes) do if h.State ~= "COMA" and h.CurrentHP > 0 then n += 1 end end end
+	return n
+end
+-- Spawn a raid mob (boss or add) from a FirstBiomeCombat entry. `fields` overrides the defaults.
+CombatSimulation.SpawnRaidMob = function(room: any, enemyId: string, position: Vector3, fields: { [string]: any }): any
+	local netId = allocateNetId()
+	local now = workspace:GetServerTimeNow()
+	local mob: any = {
+		NetId = netId, EntityGeneration = 1, FloorId = room.FloorId, RoomGeneration = room.RoomGeneration,
+		EnemyId = enemyId, SpecId = enemyId, DisplayName = enemyId, TowerEnemy = true, Role = "REGULAR",
+		MobType = "RING2_ELITE", RingIndex = 3, Slot = 90000 + netId, LifeGeneration = 1,
+		CurrentHP = 1, MaxHP = 1, ATK = 1, GoldReward = 0, IsAlive = true, State = "IDLE", Yaw = 0, Phase = 1,
+		DamageLedger = {}, Cooldowns = {}, ActionCounter = 0, ActionSequence = 0, RespawnAt = math.huge, BornAt = now,
+		HomePosition = position, Position = position, LocalPosition = position - room.Origin, LeashRadius = 400,
+		Summoned = true, NoKillCredit = true,
+	}
+	for k, v in fields do mob[k] = v end
+	ActiveMobsByNetId[netId] = mob
+	if Encounters then
+		Encounters.API.Send(mob, { Kind = "BOSS_SPAWN", Actor = AttackTimeline.Identity(mob), EnemyId = enemyId, StartServerTime = now })
+	end
+	bootstrapAll()
+	return mob
+end
+-- Remove every raid mob on a floor (the fight ended or the room is being reset).
+CombatSimulation.ClearRaidMobs = function(floorId: number)
+	local changed = false
+	for netId, m in pairs(ActiveMobsByNetId) do
+		local mob: any = m
+		if mob.FloorId == floorId and (mob.RaidBoss or mob.RaidAdd) then
+			if Encounters then Encounters:Cancel(mob, "DESPAWNED") end
+			mob.IsAlive = false
+			mob.State = "DEAD"
+			HeroNavigation.Clear(mob)
+			ActiveMobsByNetId[netId] = nil
+			changed = true
+		end
+	end
+	if changed then bootstrapAll() end
+end
+CombatSimulation.KillRaidMob = function(mob: any)
+	if Encounters and mob.IsAlive then Encounters:Death(mob, nil) end
+end
 _G.CombatSimulation = CombatSimulation

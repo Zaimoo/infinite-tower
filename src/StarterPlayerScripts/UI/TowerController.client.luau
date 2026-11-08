@@ -1495,7 +1495,7 @@ remotes.Context.OnClientEvent:Connect(function(c)
 	elseif c.Stage == "COMMIT" then
 		context = c
 		_G.TowerView = c
-		if c.FloorId > 0 and not isViewingSquad then selected = c.FloorId end
+		if c.FloorId > 0 and c.FloorId <= 50 and not isViewingSquad then selected = c.FloorId end -- 60 is the raid arena
 		if c.MasterFloorId ~= nil then
 			Store.SetTowerState(c.MasterFloorId, selfState and selfState.SquadAssignment)
 		end

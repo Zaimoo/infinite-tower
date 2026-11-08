@@ -5,6 +5,7 @@ local MobCatalog = require(script.Parent.MobCatalog)
 local Layout = require(script.Parent.TowerLayout)
 local TowerFloorConfig = require(script.Parent.TowerFloorConfig)
 local SupportRules = require(script.Parent.Parent.Util.SupportRules)
+local RaidConfig = require(script.Parent.RaidConfig)
 
 local C: any = {
 	ReleaseEnabled = true,
@@ -170,6 +171,63 @@ for enemyId, cat in pairs(MobCatalog.Entries) do
 		ModelSource = "Assets.TowerEnemyRigs",
 		ClipSource = "Assets.TowerEnemyClips",
 		RequiredSlots = requiredSlots,
+		Attacks = attacks,
+	}
+end
+
+-- Raid bosses (docs/raid-boss-plan.md): kits come from RaidConfig. Until the Blender meshes are uploaded
+-- they render with the procedural rig of a matching colossus family, in a matching biome palette.
+-- RaidService overrides HP and ATK at spawn; the enrage move stays on cooldown until Phase 2.
+local RAID_LOOK: { [string]: { Family: string, Biome: string } } = {
+	HOLLOW_KING = { Family = "ROYAL_COLOSSUS", Biome = "abyssal_throne" },
+	THOUSAND_EYED = { Family = "ARCANE_COLOSSUS", Biome = "astral_archives" },
+	BROODMOTHER = { Family = "FUNGAL_COLOSSUS", Biome = "corrupted_grove" },
+	SHARDBOUND = { Family = "STONE_COLOSSUS", Biome = "frozen_citadel" },
+}
+local function raidMove(a: any, slot: string, cooldown: number)
+	local range = if a.Shape == "TARGET_DISC" then 60 else a.Radius
+	local radius = if a.Shape == "ARC" then 0 elseif a.Shape == "PROJECTILE" then 2.6 else a.Radius
+	local m = move(a.Id, slot, a.Shape, a.Windup, if a.Signature then 1.4 else 0.9, range, radius, a.DamageMult, cooldown, if a.Shape == "PROJECTILE" then .4 else nil)
+	if a.Shape == "ARC" then m.HalfArcCos = math.cos(math.rad((a.ArcDegrees or 100) / 2)) end
+	m.Signature = a.Signature == true
+	return m
+end
+function C.RaidEnemyId(bossId: string): string
+	return "raid_" .. string.lower(bossId)
+end
+function C.RaidEnrageAttackId(bossId: string): string?
+	local boss = RaidConfig.Get(bossId)
+	return boss and boss.Enrage.Id
+end
+for _, boss in RaidConfig.Bosses do
+	local look = RAID_LOOK[boss.Id]
+	local attacks = { raidMove(boss.Basic, "BasicAttack", boss.AttackInterval) }
+	for i, sig in boss.Signatures do
+		table.insert(attacks, raidMove(sig, if i == 1 then "Signature1" else "Signature2", 9 + i * 4))
+	end
+	table.insert(attacks, raidMove(boss.Enrage, "Signature2", 12))
+	local id = C.RaidEnemyId(boss.Id)
+	C.Entries[id] = {
+		EnemyId = id,
+		DisplayName = RaidConfig.FullName(boss),
+		BiomeId = look.Biome,
+		Role = "BOSS",
+		Raid = boss.Id,
+		Alpha = false,
+		Height = boss.Height,
+		Width = boss.HitRadius * 1.6,
+		Depth = boss.HitRadius * 1.4,
+		RootHeight = rootHeightByFamily[look.Family] or 9,
+		MoveSpeed = boss.MoveSpeed,
+		AggroRange = RaidConfig.ArenaRadius * 2,
+		MaxHP = 1,
+		ATK = 1,
+		Gold = 0,
+		RigFamily = look.Family,
+		CatalogFamily = look.Family,
+		ModelSource = "Assets.TowerEnemyRigs",
+		ClipSource = "Assets.TowerEnemyClips",
+		RequiredSlots = { "Idle", "Locomotion", "BasicAttack", "HitReaction", "Death", "Awakening", "Signature1", "Signature2" },
 		Attacks = attacks,
 	}
 end

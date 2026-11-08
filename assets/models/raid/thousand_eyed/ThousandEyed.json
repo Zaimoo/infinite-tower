@@ -1,0 +1,597 @@
+{
+ "Asset": "ThousandEyed",
+ "Segments": [
+  {
+   "Name": "Body",
+   "Parent": null,
+   "Pivot": [
+    0.0,
+    17.0,
+    -0.0
+   ],
+   "Glow": [
+    {
+     "Mesh": "ThousandEyed_Body_Glow_Teal",
+     "Colour": [
+      60,
+      255,
+      214
+     ],
+     "Centre": [
+      0.0,
+      18.338,
+      -0.461
+     ],
+     "Size": [
+      13.529,
+      11.299,
+      8.399
+     ]
+    },
+    {
+     "Mesh": "ThousandEyed_Body_Glow_Violet",
+     "Colour": [
+      186,
+      96,
+      255
+     ],
+     "Centre": [
+      0.0,
+      17.292,
+      -0.0
+     ],
+     "Size": [
+      11.505,
+      10.439,
+      12.144
+     ]
+    }
+   ],
+   "Centre": [
+    -0.053,
+    18.041,
+    1.523
+   ],
+   "Size": [
+    15.603,
+    16.281,
+    15.396
+   ],
+   "Mesh": "ThousandEyed_Body",
+   "Tris": 4806
+  },
+  {
+   "Name": "Eye",
+   "Parent": "Body",
+   "Pivot": [
+    0.0,
+    17.0,
+    -4.6
+   ],
+   "Glow": [
+    {
+     "Mesh": "ThousandEyed_Eye_Glow_Teal",
+     "Colour": [
+      60,
+      255,
+      214
+     ],
+     "Centre": [
+      -0.0,
+      17.0,
+      -7.2
+     ],
+     "Size": [
+      4.7,
+      4.7,
+      2.115
+     ]
+    }
+   ],
+   "Centre": [
+    0.0,
+    17.0,
+    -3.85
+   ],
+   "Size": [
+    8.6,
+    8.6,
+    9.1
+   ],
+   "Mesh": "ThousandEyed_Eye",
+   "Tris": 884
+  },
+  {
+   "Name": "HaloInner",
+   "Parent": "Body",
+   "Pivot": [
+    0.0,
+    17.0,
+    -0.0
+   ],
+   "Glow": [
+    {
+     "Mesh": "ThousandEyed_HaloInner_Glow_Violet",
+     "Colour": [
+      186,
+      96,
+      255
+     ],
+     "Centre": [
+      0.0,
+      17.0,
+      -0.0
+     ],
+     "Size": [
+      19.319,
+      19.319,
+      9.372
+     ]
+    }
+   ],
+   "Centre": [
+    0.0,
+    17.0,
+    -0.0
+   ],
+   "Size": [
+    18.848,
+    18.755,
+    8.801
+   ],
+   "Mesh": "ThousandEyed_HaloInner",
+   "Tris": 784
+  },
+  {
+   "Name": "HaloOuter",
+   "Parent": "Body",
+   "Pivot": [
+    0.0,
+    17.0,
+    -0.0
+   ],
+   "Glow": [
+    {
+     "Mesh": "ThousandEyed_HaloOuter_Glow_Violet",
+     "Colour": [
+      186,
+      96,
+      255
+     ],
+     "Centre": [
+      0.0,
+      17.0,
+      -0.0
+     ],
+     "Size": [
+      23.576,
+      26.974,
+      14.732
+     ]
+    }
+   ],
+   "Centre": [
+    0.0,
+    17.0,
+    -0.0
+   ],
+   "Size": [
+    21.798,
+    23.869,
+    14.885
+   ],
+   "Mesh": "ThousandEyed_HaloOuter",
+   "Tris": 1456
+  },
+  {
+   "Name": "Eyelets",
+   "Parent": "Body",
+   "Pivot": [
+    0.0,
+    17.0,
+    -0.0
+   ],
+   "Glow": [
+    {
+     "Mesh": "ThousandEyed_Eyelets_Glow_Teal",
+     "Colour": [
+      60,
+      255,
+      214
+     ],
+     "Centre": [
+      0.0,
+      17.0,
+      -1.0
+     ],
+     "Size": [
+      17.266,
+      7.24,
+      16.707
+     ]
+    }
+   ],
+   "Centre": [
+    0.0,
+    16.417,
+    1.175
+   ],
+   "Size": [
+    19.027,
+    10.033,
+    20.937
+   ],
+   "Mesh": "ThousandEyed_Eyelets",
+   "Tris": 1416
+  },
+  {
+   "Name": "Tentacle1A",
+   "Parent": "Body",
+   "Pivot": [
+    4.065,
+    13.1,
+    -1.684
+   ],
+   "Glow": [],
+   "Centre": [
+    4.988,
+    10.924,
+    -1.843
+   ],
+   "Size": [
+    3.972,
+    5.687,
+    2.684
+   ],
+   "Mesh": "ThousandEyed_Tentacle1A",
+   "Tris": 296
+  },
+  {
+   "Name": "Tentacle1B",
+   "Parent": "Tentacle1A",
+   "Pivot": [
+    6.231,
+    8.5,
+    -2.188
+   ],
+   "Glow": [],
+   "Centre": [
+    8.193,
+    6.844,
+    -2.74
+   ],
+   "Size": [
+    5.314,
+    4.203,
+    2.723
+   ],
+   "Mesh": "ThousandEyed_Tentacle1B",
+   "Tris": 224
+  },
+  {
+   "Name": "Tentacle2A",
+   "Parent": "Body",
+   "Pivot": [
+    1.684,
+    13.1,
+    -4.065
+   ],
+   "Glow": [],
+   "Centre": [
+    2.157,
+    10.93,
+    -5.258
+   ],
+   "Size": [
+    3.368,
+    5.794,
+    4.372
+   ],
+   "Mesh": "ThousandEyed_Tentacle2A",
+   "Tris": 296
+  },
+  {
+   "Name": "Tentacle2B",
+   "Parent": "Tentacle2A",
+   "Pivot": [
+    3.05,
+    8.5,
+    -6.699
+   ],
+   "Glow": [],
+   "Centre": [
+    3.615,
+    6.865,
+    -8.653
+   ],
+   "Size": [
+    2.698,
+    4.224,
+    5.331
+   ],
+   "Mesh": "ThousandEyed_Tentacle2B",
+   "Tris": 224
+  },
+  {
+   "Name": "Tentacle3A",
+   "Parent": "Body",
+   "Pivot": [
+    -1.684,
+    13.1,
+    -4.065
+   ],
+   "Glow": [],
+   "Centre": [
+    -2.305,
+    10.932,
+    -5.381
+   ],
+   "Size": [
+    3.514,
+    5.844,
+    4.71
+   ],
+   "Mesh": "ThousandEyed_Tentacle3A",
+   "Tris": 296
+  },
+  {
+   "Name": "Tentacle3B",
+   "Parent": "Tentacle3A",
+   "Pivot": [
+    -3.229,
+    8.5,
+    -7.046
+   ],
+   "Glow": [],
+   "Centre": [
+    -3.793,
+    6.875,
+    -9.003
+   ],
+   "Size": [
+    2.697,
+    4.233,
+    5.325
+   ],
+   "Mesh": "ThousandEyed_Tentacle3B",
+   "Tris": 224
+  },
+  {
+   "Name": "Tentacle4A",
+   "Parent": "Body",
+   "Pivot": [
+    -4.065,
+    13.1,
+    -1.684
+   ],
+   "Glow": [],
+   "Centre": [
+    -4.858,
+    10.924,
+    -2.068
+   ],
+   "Size": [
+    3.648,
+    5.681,
+    3.194
+   ],
+   "Mesh": "ThousandEyed_Tentacle4A",
+   "Tris": 296
+  },
+  {
+   "Name": "Tentacle4B",
+   "Parent": "Tentacle4A",
+   "Pivot": [
+    -5.909,
+    8.5,
+    -2.863
+   ],
+   "Glow": [],
+   "Centre": [
+    -7.853,
+    6.843,
+    -3.432
+   ],
+   "Size": [
+    5.351,
+    4.202,
+    2.69
+   ],
+   "Mesh": "ThousandEyed_Tentacle4B",
+   "Tris": 224
+  },
+  {
+   "Name": "Tentacle5A",
+   "Parent": "Body",
+   "Pivot": [
+    -4.065,
+    13.1,
+    1.684
+   ],
+   "Glow": [],
+   "Centre": [
+    -5.017,
+    10.927,
+    2.228
+   ],
+   "Size": [
+    4.053,
+    5.752,
+    3.391
+   ],
+   "Mesh": "ThousandEyed_Tentacle5A",
+   "Tris": 296
+  },
+  {
+   "Name": "Tentacle5B",
+   "Parent": "Tentacle5A",
+   "Pivot": [
+    -6.328,
+    8.5,
+    3.09
+   ],
+   "Glow": [],
+   "Centre": [
+    -8.276,
+    6.856,
+    3.659
+   ],
+   "Size": [
+    5.344,
+    4.216,
+    2.689
+   ],
+   "Mesh": "ThousandEyed_Tentacle5B",
+   "Tris": 224
+  },
+  {
+   "Name": "Tentacle6A",
+   "Parent": "Body",
+   "Pivot": [
+    -1.684,
+    13.1,
+    4.065
+   ],
+   "Glow": [],
+   "Centre": [
+    -2.27,
+    10.929,
+    5.116
+   ],
+   "Size": [
+    3.577,
+    5.774,
+    4.146
+   ],
+   "Mesh": "ThousandEyed_Tentacle6A",
+   "Tris": 296
+  },
+  {
+   "Name": "Tentacle6B",
+   "Parent": "Tentacle6A",
+   "Pivot": [
+    -3.261,
+    8.5,
+    6.433
+   ],
+   "Glow": [],
+   "Centre": [
+    -3.832,
+    6.861,
+    8.38
+   ],
+   "Size": [
+    2.684,
+    4.22,
+    5.345
+   ],
+   "Mesh": "ThousandEyed_Tentacle6B",
+   "Tris": 224
+  },
+  {
+   "Name": "Tentacle7A",
+   "Parent": "Body",
+   "Pivot": [
+    1.684,
+    13.1,
+    4.065
+   ],
+   "Glow": [],
+   "Centre": [
+    1.84,
+    10.929,
+    5.302
+   ],
+   "Size": [
+    2.707,
+    5.768,
+    4.524
+   ],
+   "Mesh": "ThousandEyed_Tentacle7A",
+   "Tris": 296
+  },
+  {
+   "Name": "Tentacle7B",
+   "Parent": "Tentacle7A",
+   "Pivot": [
+    2.15,
+    8.5,
+    6.839
+   ],
+   "Glow": [],
+   "Centre": [
+    2.698,
+    6.86,
+    8.806
+   ],
+   "Size": [
+    2.731,
+    4.219,
+    5.305
+   ],
+   "Mesh": "ThousandEyed_Tentacle7B",
+   "Tris": 224
+  },
+  {
+   "Name": "Tentacle8A",
+   "Parent": "Body",
+   "Pivot": [
+    4.065,
+    13.1,
+    1.684
+   ],
+   "Glow": [],
+   "Centre": [
+    4.974,
+    10.927,
+    2.264
+   ],
+   "Size": [
+    3.897,
+    5.738,
+    3.561
+   ],
+   "Mesh": "ThousandEyed_Tentacle8A",
+   "Tris": 296
+  },
+  {
+   "Name": "Tentacle8B",
+   "Parent": "Tentacle8A",
+   "Pivot": [
+    6.157,
+    8.5,
+    3.243
+   ],
+   "Glow": [],
+   "Centre": [
+    8.1,
+    6.854,
+    3.812
+   ],
+   "Size": [
+    5.354,
+    4.213,
+    2.689
+   ],
+   "Mesh": "ThousandEyed_Tentacle8B",
+   "Tris": 224
+  }
+ ],
+ "TotalTris": 15378,
+ "MeshCount": 27,
+ "Size": [
+  23.58,
+  26.97,
+  23.31
+ ],
+ "Convention": "Studs. Roblox axes (Y up, model faces -Z). Pivot = joint in model space, origin at ground centre. Centre/Size = mesh bounding box (Roblox importer recentres meshes on it).",
+ "Boss": "THOUSAND_EYED",
+ "DisplayName": "Ozrith, the Thousand-Eyed",
+ "Root": "Body",
+ "HoverHeight": 17,
+ "GlowAccent": [
+  186,
+  96,
+  255
+ ]
+}

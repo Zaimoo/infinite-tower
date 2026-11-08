@@ -15,6 +15,7 @@ local states: {[Player]:any}={}
 local rooms: {[number]:any}={}
 local generations: {[number]:number}={}
 local adapters: {[string]:any}={}
+local roomBuilders: {[number]:(number,number)->any}={} -- off-grid rooms (the raid arena, floor 60)
 local presenceRevision=0
 local started=false
 local remotes: any
@@ -47,12 +48,13 @@ function Service.IsTransitioning(player: Player): boolean local s=states[player]
 -- Masters whose view is on this floor (at least 1); drives camp scaling in the encounter runtime.
 function Service.MastersOnFloor(id: number): number local n=0;for player,s in pairs(states) do if player.Parent==Players and (s.FloorId==id or (s.SpectatingSquad and s.SquadFloorId==id)) then n+=1 end end;return math.max(1,n) end
 function Service.RegisterAdapter(name: string,adapter: any) adapters[name]=adapter end
+function Service.RegisterRoomBuilder(id: number,build: (number,number)->any) roomBuilders[id]=build end
 function Service.EnsureRoom(id: number): any
 	if rooms[id] and rooms[id].Status=="READY" then return rooms[id] end
-	assert(Protocol.Integer(id,1,50),"Invalid room")
+	assert(Protocol.Integer(id,1,50) or roomBuilders[id]~=nil,"Invalid room")
 	local gen=(generations[id] or 0)+1;generations[id]=gen
 	rooms[id]={FloorId=id,RoomGeneration=gen,Status="BUILDING",Reservations=0}
-	local ok,room=pcall(Builder.Build,id,gen)
+	local ok,room=pcall(roomBuilders[id] or Builder.Build,id,gen)
 	if not ok then rooms[id].Status="FAILED";rooms[id].Error=tostring(room);error(room) end
 	room.Status="READY";room.Reservations=0;room.EmptySince=os.clock();rooms[id]=room
 	Service.Encounters[id]=Service.Encounters[id] or {Seed=id,BossGeneration=0,PayoutClaims={},EncountersEnabled=false}
@@ -109,8 +111,10 @@ function Service.GetPresence(player: Player): any
 	for p,s in pairs(states) do
 		if p.Parent==Players then
 			local who={UserId=p.UserId,Username=p.Name,DisplayName=p.DisplayName}
-			table.insert(floors[s.FloorId+1].Visitors,who)
-			if s.SquadSize>0 then local q=table.clone(who);q.RosterSize=s.SquadSize;q.SquadRevision=s.SquadRevision;table.insert(floors[s.SquadFloorId+1].Squads,q) end
+			local here=floors[s.FloorId+1] -- nil in the raid arena: it is not a tower floor
+			if here then table.insert(here.Visitors,who) end
+			local squadAt=floors[s.SquadFloorId+1]
+			if s.SquadSize>0 and squadAt then local q=table.clone(who);q.RosterSize=s.SquadSize;q.SquadRevision=s.SquadRevision;table.insert(squadAt.Squads,q) end
 		end
 	end
 	local s=createState(player)
@@ -220,7 +224,7 @@ local function commit(player: Player)
 		local floorStat = ls and ls:FindFirstChild("Floor") :: IntValue?
 		if floorStat then
 			local profile = _G.DataManager and _G.DataManager.GetProfile(player)
-			floorStat.Value = if s.FloorId > 0 then s.FloorId else ((profile and profile.HighestClearedFloor) or 0)
+			floorStat.Value = if s.FloorId > 0 and s.FloorId <= 50 then s.FloorId else ((profile and profile.HighestClearedFloor) or 0) -- the raid arena is not a floor
 		end
 	end
 	if movingSquad then
@@ -322,12 +326,18 @@ function Service.Request(player: Player,r: any)
 	local profile = _G.DataManager and _G.DataManager.GetProfile(player)
 	if not profile then reject('PROFILE_NOT_READY');return end
 	local id=r.Action=='HUB' and 0 or r.Action=='RECALL' and s.FloorId or r.FloorId
+	-- The raid arena only opens with a one-shot pass that RaidService issues after its own entry checks.
+	local raidEntry=r.Action=='VISIT' and id>50
+	if raidEntry then
+		if s.RaidPass~=id then reject('INVALID_FLOOR');return end
+		s.RaidPass=nil
+	end
 	-- Phase 6 boss lock: once you have hurt this floor's summoned boss, travel stays sealed until it dies or your squad wipes.
 	if (r.Action=='VISIT' or r.Action=='HUB') and s.FloorId>0 and id~=s.FloorId and adapters.Combat and adapters.Combat.BossLocked and adapters.Combat.BossLocked(player,s.FloorId) then
 		if _G.DataManager and _G.DataManager.SendToast then _G.DataManager.SendToast(player,'🔒 Travel is sealed until the boss falls.','WARN') end
 		reject('BOSS_LOCKED');return
 	end
-	if (r.Action=='VISIT' or r.Action=='ASSIGN') and id > 0 then
+	if (r.Action=='VISIT' or r.Action=='ASSIGN') and id > 0 and not raidEntry then
 		local bypass = RunService:IsStudio() and workspace:GetAttribute('UnlockAllFloors') == true
 		if not bypass then
 			-- Phase 4 onboarding: the Tower, and Floor 5 onward, open through the quest chain.
@@ -389,6 +399,15 @@ function Service.Recall(player: Player,request: any?)
 	local s=createState(player)
 	Service.Request(player,request or {ContractVersion=1,RequestId=Http:GenerateGUID(false),Action="RECALL",CharacterGeneration=s.CharacterGeneration,
 		ExpectedLocationRevision=s.LocationRevision,ExpectedSquadRevision=s.SquadRevision})
+end
+-- Raid entry (RaidService): drop any tower assignment so the squad travels with its Master, then VISIT.
+function Service.EnterRaidFloor(player: Player,id: number): boolean
+	local s=createState(player)
+	if s.Pending or not roomBuilders[id] then return false end
+	if s.SquadAssignment~=nil then s.SquadAssignment=nil;s.SpectatingSquad=false;pcall(function() player.ReplicationFocus=nil end) end
+	s.RaidPass=id
+	Service.VisitFloor(player,id)
+	return true
 end
 function Service.RosterChanged(player: Player,size: number)
 	local s=createState(player);Service.CancelPending(player,"ROSTER_CHANGED");s.SquadSize=size;s.SquadRevision+=1

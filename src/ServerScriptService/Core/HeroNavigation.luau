@@ -277,7 +277,7 @@ function Navigation.Step(hero: any,goal: Vector3,distance: number,now: number,de
 	local from=hero.Position
 	local scope=tostring(hero.FloorId)..":"..tostring(hero.RoomGeneration)..":"..tostring(hero.EntityGeneration)..":"..intent(hero)
 	local g,origin,location,goalLocation
-	if hero.FloorId and hero.FloorId>0 then
+	if hero.FloorId and hero.FloorId>0 and hero.FloorId<=50 then -- tower floors only; the raid arena is open ground
 		g,origin=graphFor(hero.FloorId)
 		location=Graph.Locate(g,localPoint(from,origin));goalLocation=Graph.Locate(g,localPoint(goal,origin))
 	end
