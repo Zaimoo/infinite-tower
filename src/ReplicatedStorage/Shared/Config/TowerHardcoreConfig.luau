@@ -4,6 +4,8 @@ local Config = {}
 
 -- A downed hero stands back up on a floor transition at this fraction of max HP.
 Config.ReviveHPFraction = 0.30
+-- A stationed/assigned hero knocked out on a tower floor respawns after this delay.
+Config.AssignedRespawnSeconds = 5.0
 -- Standing heroes inside a tower sanctuary heal this fraction of max HP per second.
 Config.SanctuaryHealPerSecond = 0.10
 -- A wipe removes this fraction of the Gold and Gems earned since the last bank in the run.

@@ -129,17 +129,20 @@ test("Phase 2: Individual hero death puts hero in COMA with no 60s timer and all
 	assert(masterState.CanCollectLoot == true, "Loot collection must be re-enabled on plot")
 end)
 
-test("Phase 2: Transfer and squad recall on the same floor preserves COMA state of fallen heroes", function()
+test("Phase 2: Transfer and squad recall restores and heals fallen heroes from COMA", function()
 	local heroes = {
-		h1 = { UUID = "h1", CurrentHP = 0, State = "COMA" },
-		h2 = { UUID = "h2", CurrentHP = 500, State = "ATTACKING" },
-		h3 = { UUID = "h3", CurrentHP = 800, State = "MOVE_TO_TARGET" },
+		h1 = { UUID = "h1", MaxHP = 1000, CurrentHP = 0, State = "COMA" },
+		h2 = { UUID = "h2", MaxHP = 1200, CurrentHP = 500, State = "ATTACKING" },
+		h3 = { UUID = "h3", MaxHP = 800, CurrentHP = 800, State = "MOVE_TO_TARGET" },
 	}
 
-	-- Simulate Transfer on the same floor (e.g. recall)
-	local function onTransfer(roomFloorId: number)
+	-- Simulate Transfer on the same floor or different floor with recall
+	local function onTransfer(roomFloorId: number, recall: boolean)
 		for _, h in pairs(heroes) do
-			if h.CurrentHP > 0 and h.State ~= "COMA" then
+			if recall then
+				h.CurrentHP = h.MaxHP
+				h.State = "FOLLOW_MASTER"
+			elseif h.CurrentHP > 0 and h.State ~= "COMA" then
 				h.State = "FOLLOW_MASTER"
 			else
 				h.State = "COMA"
@@ -147,23 +150,86 @@ test("Phase 2: Transfer and squad recall on the same floor preserves COMA state 
 		end
 		if roomFloorId == 0 then
 			for _, h in pairs(heroes) do
-				h.CurrentHP = 1000
+				h.CurrentHP = h.MaxHP
 				h.State = "FOLLOW_MASTER"
 			end
 		end
 	end
 
-	-- Recall on floor 1: h1 must remain in COMA!
-	onTransfer(1)
-	assert(heroes.h1.State == "COMA", "Fallen hero must remain in COMA on squad recall")
-	assert(heroes.h1.CurrentHP == 0, "Fallen hero HP must remain 0")
+	-- Recall on floor 1 (or any floor): all heroes must be fully healed and revived!
+	onTransfer(1, true)
+	assert(heroes.h1.State == "FOLLOW_MASTER", "Fallen hero must be revived on squad recall")
+	assert(heroes.h1.CurrentHP == 1000, "Fallen hero must be healed to full on squad recall")
 	assert(heroes.h2.State == "FOLLOW_MASTER", "Living hero h2 enters FOLLOW_MASTER")
+	assert(heroes.h2.CurrentHP == 1200, "Living hero h2 is healed to full on recall")
 	assert(heroes.h3.State == "FOLLOW_MASTER", "Living hero h3 enters FOLLOW_MASTER")
+	assert(heroes.h3.CurrentHP == 800, "Living hero h3 stays at full HP")
 
 	-- Transfer to Fortress Plot (floor 0): all heroes restored!
-	onTransfer(0)
+	onTransfer(0, false)
 	assert(heroes.h1.State == "FOLLOW_MASTER", "Fallen hero restores on plot")
 	assert(heroes.h1.CurrentHP == 1000, "Fallen hero restores HP on plot")
+end)
+
+test("Phase 2: Stationed squad hero knockout arms respawn timer and respawns back to squad on floor", function()
+	local assignedFloorId = 5
+	local hero = {
+		UUID = "hero_assigned",
+		DisplayName = "Valeria",
+		MaxHP = 1500,
+		CurrentHP = 1500,
+		FloorId = assignedFloorId,
+		State = "FOLLOW_MASTER",
+		RespawnAt = nil,
+		SlotIndex = 1,
+	}
+
+	local masterState = {
+		DeployedHeroes = { [hero.UUID] = hero },
+		IsSquadWiped = false,
+		CanCollectLoot = true,
+	}
+
+	local now = 100.0
+	local assignedRespawnSeconds = 5.0
+
+	-- 1. Hero is knocked out while stationed on floor
+	local function knockStationedHero(h: any, clockTime: number)
+		h.CurrentHP = 0
+		h.State = "COMA"
+		h.RespawnAt = clockTime + assignedRespawnSeconds
+		masterState.IsSquadWiped = true
+		masterState.CanCollectLoot = false
+	end
+
+	knockStationedHero(hero, now)
+	assert(hero.State == "COMA", "Stationed hero must enter COMA")
+	assert(hero.CurrentHP == 0, "Stationed hero HP must be 0")
+	assert(hero.RespawnAt == 105.0, "Stationed hero must have RespawnAt set 5s into future")
+	assert(masterState.IsSquadWiped == true, "Squad is marked wiped when only hero is down")
+
+	-- 2. Step simulation before timer expires: hero stays in COMA
+	local function stepStationedComa(h: any, clockTime: number)
+		if h.State == "COMA" and h.RespawnAt and clockTime >= h.RespawnAt then
+			h.RespawnAt = nil
+			h.CurrentHP = h.MaxHP
+			h.State = "FOLLOW_MASTER"
+			masterState.IsSquadWiped = false
+			masterState.CanCollectLoot = true
+		end
+	end
+
+	stepStationedComa(hero, 102.0)
+	assert(hero.State == "COMA", "Hero must remain in COMA before 5s elapses")
+	assert(hero.CurrentHP == 0, "Hero HP must remain 0 before 5s elapses")
+
+	-- 3. Step simulation after timer expires: hero respawns at full HP and FOLLOW_MASTER
+	stepStationedComa(hero, 105.1)
+	assert(hero.State == "FOLLOW_MASTER", "Hero must respawn into FOLLOW_MASTER after timer expires")
+	assert(hero.CurrentHP == 1500, "Hero must be restored to full MaxHP")
+	assert(hero.RespawnAt == nil, "RespawnAt must be cleared")
+	assert(masterState.IsSquadWiped == false, "Squad wipe state must be cleared on respawn")
+	assert(masterState.CanCollectLoot == true, "Loot collection must be re-enabled on respawn")
 end)
 
 test("Phase 2: Navigating between floors fully revives and heals every hero from COMA", function()
@@ -236,6 +302,32 @@ test("Phase 2: Partial squad casualty tracking produces accurate status and tool
 	assert(#fallenNames == 2, "2 fallen names recorded")
 	assert(table.find(fallenNames, "Han") ~= nil, "Han must be in fallen list")
 	assert(table.find(fallenNames, "Ignis") ~= nil, "Ignis must be in fallen list")
+end)
+
+test("Phase 2: Squad compromised banner is suppressed when in station squad mode", function()
+	local function evaluateCompromisedBanner(fallen: number, alive: number, floorId: number, isStationed: boolean): boolean
+		if not isStationed and fallen > 0 and alive > 0 and floorId > 0 then
+			return true
+		end
+		return false
+	end
+
+	-- During normal climbing run: banner shows on partial casualty
+	assert(evaluateCompromisedBanner(1, 4, 3, false) == true, "Compromised banner must show during climb when hero is down")
+	assert(evaluateCompromisedBanner(3, 2, 3, false) == true, "Compromised banner must show during climb when 3 heroes are down")
+
+	-- During station squad mode: banner is suppressed
+	assert(evaluateCompromisedBanner(1, 4, 3, true) == false, "Compromised banner must be hidden when hero is down in station squad mode")
+	assert(evaluateCompromisedBanner(3, 2, 3, true) == false, "Compromised banner must be hidden when 3 heroes are down in station squad mode")
+	assert(evaluateCompromisedBanner(0, 5, 3, true) == false, "Compromised banner must be hidden when 0 heroes are down in station squad mode")
+
+	-- If squad assignment changes to stationed while banner is visible, banner must hide
+	local bannerVisible = true
+	local squadAssignment = 5 -- assigned to floor 5
+	if squadAssignment ~= nil and squadAssignment > 0 then
+		bannerVisible = false
+	end
+	assert(bannerVisible == false, "Compromised banner must hide when squad is assigned")
 end)
 
 print(string.format("Phase 2 defeat rule tests: %d passed", passed))

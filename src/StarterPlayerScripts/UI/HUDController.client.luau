@@ -720,17 +720,18 @@ SquadStatusRemote.OnClientEvent:Connect(function(status: any)
 	local isWiped = status.IsWiped == true
 	local fallenList = status.FallenHeroes or {}
 	local statuses = status.HeroStatuses or {}
+	local isStationed = status.IsStationed == true or (Store.SquadAssignment ~= nil and Store.SquadAssignment > 0)
 
 	if isWiped then
 		partiallyDefeatedBanner.Visible = false
 		partialTooltipPopover.Visible = false
-		squadWipeBanner.Visible = true
+		squadWipeBanner.Visible = not isStationed
 		return
 	end
 
 	squadWipeBanner.Visible = false
 
-	if fallen > 0 and alive > 0 and clientFloorProgress.FloorId > 0 then
+	if not isStationed and fallen > 0 and alive > 0 and clientFloorProgress.FloorId > 0 then
 		partiallyDefeatedBanner.Visible = true
 		partialHeader.Text = string.format("SQUAD COMPROMISED · %d/%d HEROES DOWNED", fallen, total)
 		local namesText = if #fallenList > 0 then table.concat(fallenList, ", ") else "Hero"
@@ -746,6 +747,14 @@ SquadStatusRemote.OnClientEvent:Connect(function(status: any)
 		end
 		tooltipList.Text = table.concat(lines, "\n")
 	else
+		partiallyDefeatedBanner.Visible = false
+		partialTooltipPopover.Visible = false
+	end
+end)
+
+Store.Changed:Connect(function()
+	local isStationed = Store.SquadAssignment ~= nil and Store.SquadAssignment > 0
+	if isStationed and partiallyDefeatedBanner and partiallyDefeatedBanner.Visible then
 		partiallyDefeatedBanner.Visible = false
 		partialTooltipPopover.Visible = false
 	end

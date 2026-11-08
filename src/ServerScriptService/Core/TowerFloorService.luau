@@ -191,6 +191,17 @@ local function commit(player: Player)
 	local source=char:GetPivot()
 	local squadSnapshot=movingSquad and combat.CaptureSquad(player) or nil
 	local arrivalSafe = p.View and Service.GetSafety(r, r.Arrival.Position).CanBankCargo == true
+	local prevSquadAssignment = s.SquadAssignment
+	local prevSquadFloorId = s.SquadFloorId
+	local prevSquadRoomGen = s.SquadRoomGeneration
+	local prevSquadRevision = s.SquadRevision
+	if movingSquad then
+		if p.Action == "ASSIGN" then
+			s.SquadAssignment = r.FloorId
+		elseif p.Action == "RECALL" then
+			s.SquadAssignment = nil
+		end
+	end
 	local ok,transferError=pcall(function()
 		if p.View then
 			char:PivotTo(r.Arrival)
@@ -211,6 +222,12 @@ local function commit(player: Player)
 		warn("Tower transfer rolled back: "..tostring(transferError))
 		char:PivotTo(source);for _,entry in records do entry.Ref.Part.CFrame=entry.Position;entry.Ref.FloorId=entry.FloorId;entry.Ref.RoomGeneration=entry.RoomGeneration end
 		if squadSnapshot then combat.RestoreSquad(squadSnapshot) end
+		if movingSquad then
+			s.SquadAssignment = prevSquadAssignment
+			s.SquadFloorId = prevSquadFloorId
+			s.SquadRoomGeneration = prevSquadRoomGen
+			s.SquadRevision = prevSquadRevision
+		end
 		finish(player,"REJECTED","TRANSFER_FAILED");return
 	end
 	if p.View or p.Action=="RECALL" then
@@ -229,7 +246,6 @@ local function commit(player: Player)
 	end
 	if movingSquad then
 		s.SquadFloorId=r.FloorId;s.SquadRoomGeneration=r.RoomGeneration;s.SquadRevision+=1
-		if p.Action=="ASSIGN" then s.SquadAssignment=r.FloorId elseif p.Action=="RECALL" then s.SquadAssignment=nil end
 	end
 	if p.View then
 		local c=Service.Context(player);c.Stage="COMMIT";c.RequestId=p.RequestId
