@@ -1,0 +1,383 @@
+{
+ "Asset": "HollowKing",
+ "Segments": [
+  {
+   "Name": "Hips",
+   "Parent": null,
+   "Pivot": [
+    0.0,
+    15.5,
+    -0.0
+   ],
+   "Glow": [
+    {
+     "Mesh": "HollowKing_Hips_Glow_Crimson",
+     "Colour": [
+      255,
+      46,
+      58
+     ],
+     "Centre": [
+      0.0,
+      16.7,
+      -2.55
+     ],
+     "Size": [
+      0.9,
+      0.9,
+      0.9
+     ]
+    }
+   ],
+   "Centre": [
+    0.0,
+    12.5,
+    -0.386
+   ],
+   "Size": [
+    7.992,
+    9.8,
+    5.922
+   ],
+   "Mesh": "HollowKing_Hips",
+   "Tris": 450
+  },
+  {
+   "Name": "Torso",
+   "Parent": "Hips",
+   "Pivot": [
+    0.0,
+    17.4,
+    -0.0
+   ],
+   "Glow": [
+    {
+     "Mesh": "HollowKing_Torso_Glow_Crimson",
+     "Colour": [
+      255,
+      46,
+      58
+     ],
+     "Centre": [
+      0.0,
+      23.3,
+      -3.0
+     ],
+     "Size": [
+      5.479,
+      2.591,
+      1.495
+     ]
+    }
+   ],
+   "Centre": [
+    0.0,
+    21.947,
+    0.636
+   ],
+   "Size": [
+    9.0,
+    9.706,
+    7.927
+   ],
+   "Mesh": "HollowKing_Torso",
+   "Tris": 908
+  },
+  {
+   "Name": "Head",
+   "Parent": "Torso",
+   "Pivot": [
+    0.0,
+    26.6,
+    -0.0
+   ],
+   "Glow": [
+    {
+     "Mesh": "HollowKing_Head_Glow_Crimson",
+     "Colour": [
+      255,
+      46,
+      58
+     ],
+     "Centre": [
+      0.0,
+      30.35,
+      -2.202
+     ],
+     "Size": [
+      2.5,
+      2.84,
+      1.044
+     ]
+    }
+   ],
+   "Centre": [
+    -0.004,
+    30.089,
+    0.525
+   ],
+   "Size": [
+    7.781,
+    7.222,
+    6.15
+   ],
+   "Mesh": "HollowKing_Head",
+   "Tris": 872
+  },
+  {
+   "Name": "Cape",
+   "Parent": "Torso",
+   "Pivot": [
+    0.0,
+    25.6,
+    2.6
+   ],
+   "Glow": [],
+   "Centre": [
+    0.0,
+    14.03,
+    4.01
+   ],
+   "Size": [
+    12.0,
+    27.545,
+    3.82
+   ],
+   "Mesh": "HollowKing_Cape",
+   "Tris": 148
+  },
+  {
+   "Name": "UpperLegR",
+   "Parent": "Hips",
+   "Pivot": [
+    2.0,
+    14.4,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    2.136,
+    11.604,
+    -0.098
+   ],
+   "Size": [
+    3.028,
+    6.181,
+    3.092
+   ],
+   "Mesh": "HollowKing_UpperLegR",
+   "Tris": 144
+  },
+  {
+   "Name": "LowerLegR",
+   "Parent": "UpperLegR",
+   "Pivot": [
+    2.3,
+    8.3,
+    -0.3
+   ],
+   "Glow": [],
+   "Centre": [
+    2.325,
+    4.781,
+    -1.8
+   ],
+   "Size": [
+    2.65,
+    9.637,
+    6.4
+   ],
+   "Mesh": "HollowKing_LowerLegR",
+   "Tris": 382
+  },
+  {
+   "Name": "UpperLegL",
+   "Parent": "Hips",
+   "Pivot": [
+    -2.0,
+    14.4,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    -2.136,
+    11.604,
+    -0.098
+   ],
+   "Size": [
+    3.028,
+    6.181,
+    3.092
+   ],
+   "Mesh": "HollowKing_UpperLegL",
+   "Tris": 144
+  },
+  {
+   "Name": "LowerLegL",
+   "Parent": "UpperLegL",
+   "Pivot": [
+    -2.3,
+    8.3,
+    -0.3
+   ],
+   "Glow": [],
+   "Centre": [
+    -2.325,
+    4.781,
+    -1.8
+   ],
+   "Size": [
+    2.65,
+    9.637,
+    6.4
+   ],
+   "Mesh": "HollowKing_LowerLegL",
+   "Tris": 382
+  },
+  {
+   "Name": "UpperArmR",
+   "Parent": "Torso",
+   "Pivot": [
+    4.6,
+    25.0,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    5.4,
+    24.918,
+    -0.0
+   ],
+   "Size": [
+    5.72,
+    10.364,
+    5.54
+   ],
+   "Mesh": "HollowKing_UpperArmR",
+   "Tris": 744
+  },
+  {
+   "Name": "LowerArmR",
+   "Parent": "UpperArmR",
+   "Pivot": [
+    5.9,
+    19.6,
+    -0.3
+   ],
+   "Glow": [],
+   "Centre": [
+    6.2,
+    17.05,
+    -0.895
+   ],
+   "Size": [
+    3.28,
+    7.4,
+    3.49
+   ],
+   "Mesh": "HollowKing_LowerArmR",
+   "Tris": 482
+  },
+  {
+   "Name": "UpperArmL",
+   "Parent": "Torso",
+   "Pivot": [
+    -4.6,
+    25.0,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    -5.4,
+    24.918,
+    -0.0
+   ],
+   "Size": [
+    5.72,
+    10.364,
+    5.54
+   ],
+   "Mesh": "HollowKing_UpperArmL",
+   "Tris": 744
+  },
+  {
+   "Name": "LowerArmL",
+   "Parent": "UpperArmL",
+   "Pivot": [
+    -5.9,
+    19.6,
+    -0.3
+   ],
+   "Glow": [],
+   "Centre": [
+    -6.2,
+    17.05,
+    -0.895
+   ],
+   "Size": [
+    3.28,
+    7.4,
+    3.49
+   ],
+   "Mesh": "HollowKing_LowerArmL",
+   "Tris": 482
+  },
+  {
+   "Name": "Sword",
+   "Parent": "LowerArmR",
+   "Pivot": [
+    6.3,
+    14.4,
+    -1.1
+   ],
+   "Glow": [
+    {
+     "Mesh": "HollowKing_Sword_Glow_Crimson",
+     "Colour": [
+      255,
+      46,
+      58
+     ],
+     "Centre": [
+      6.374,
+      9.609,
+      -2.159
+     ],
+     "Size": [
+      0.866,
+      15.689,
+      3.961
+     ]
+    }
+   ],
+   "Centre": [
+    6.37,
+    8.674,
+    -2.204
+   ],
+   "Size": [
+    5.597,
+    17.047,
+    4.452
+   ],
+   "Mesh": "HollowKing_Sword",
+   "Tris": 272
+  }
+ ],
+ "TotalTris": 6762,
+ "MeshCount": 17,
+ "Size": [
+  17.43,
+  33.74,
+  10.92
+ ],
+ "Convention": "Studs. Roblox axes (Y up, model faces -Z). Pivot = joint in model space, origin at ground centre. Centre/Size = mesh bounding box (Roblox importer recentres meshes on it).",
+ "Boss": "HOLLOW_KING",
+ "DisplayName": "Vorthak, the Hollow King",
+ "Root": "Hips",
+ "GlowAccent": [
+  255,
+  46,
+  58
+ ]
+}

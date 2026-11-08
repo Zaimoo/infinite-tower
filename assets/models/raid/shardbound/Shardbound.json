@@ -1,0 +1,459 @@
+{
+ "Asset": "Shardbound",
+ "Segments": [
+  {
+   "Name": "Pelvis",
+   "Parent": null,
+   "Pivot": [
+    0.0,
+    10.5,
+    3.0
+   ],
+   "Glow": [],
+   "Centre": [
+    0.278,
+    10.495,
+    2.657
+   ],
+   "Size": [
+    8.056,
+    5.006,
+    7.055
+   ],
+   "Mesh": "Shardbound_Pelvis",
+   "Tris": 40
+  },
+  {
+   "Name": "Torso",
+   "Parent": "Pelvis",
+   "Pivot": [
+    0.0,
+    12.2,
+    2.6
+   ],
+   "Glow": [
+    {
+     "Mesh": "Shardbound_Torso_Glow_Cyan",
+     "Colour": [
+      84,
+      226,
+      255
+     ],
+     "Centre": [
+      -1.059,
+      23.306,
+      0.917
+     ],
+     "Size": [
+      11.882,
+      13.389,
+      17.767
+     ]
+    }
+   ],
+   "Centre": [
+    0.215,
+    19.428,
+    0.885
+   ],
+   "Size": [
+    14.397,
+    17.944,
+    15.43
+   ],
+   "Mesh": "Shardbound_Torso",
+   "Tris": 804
+  },
+  {
+   "Name": "Head",
+   "Parent": "Torso",
+   "Pivot": [
+    0.0,
+    22.2,
+    -5.0
+   ],
+   "Glow": [
+    {
+     "Mesh": "Shardbound_Head_Glow_Cyan",
+     "Colour": [
+      84,
+      226,
+      255
+     ],
+     "Centre": [
+      0.0,
+      25.312,
+      -6.82
+     ],
+     "Size": [
+      5.247,
+      5.375,
+      4.76
+     ]
+    }
+   ],
+   "Centre": [
+    -0.055,
+    22.493,
+    -6.782
+   ],
+   "Size": [
+    4.842,
+    4.341,
+    4.69
+   ],
+   "Mesh": "Shardbound_Head",
+   "Tris": 108
+  },
+  {
+   "Name": "UpperArmR",
+   "Parent": "Torso",
+   "Pivot": [
+    7.6,
+    21.4,
+    -1.4
+   ],
+   "Glow": [
+    {
+     "Mesh": "Shardbound_UpperArmR_Glow_Cyan",
+     "Colour": [
+      84,
+      226,
+      255
+     ],
+     "Centre": [
+      8.998,
+      26.078,
+      1.198
+     ],
+     "Size": [
+      2.646,
+      3.843,
+      2.646
+     ]
+    }
+   ],
+   "Centre": [
+    7.942,
+    20.323,
+    -1.283
+   ],
+   "Size": [
+    8.115,
+    12.155,
+    7.259
+   ],
+   "Mesh": "Shardbound_UpperArmR",
+   "Tris": 119
+  },
+  {
+   "Name": "LowerArmR",
+   "Parent": "UpperArmR",
+   "Pivot": [
+    9.8,
+    14.8,
+    -3.0
+   ],
+   "Glow": [
+    {
+     "Mesh": "Shardbound_LowerArmR_Glow_Cyan",
+     "Colour": [
+      84,
+      226,
+      255
+     ],
+     "Centre": [
+      13.609,
+      11.606,
+      -3.156
+     ],
+     "Size": [
+      3.582,
+      3.358,
+      1.822
+     ]
+    }
+   ],
+   "Centre": [
+    10.839,
+    11.769,
+    -4.254
+   ],
+   "Size": [
+    6.722,
+    10.611,
+    6.788
+   ],
+   "Mesh": "Shardbound_LowerArmR",
+   "Tris": 259
+  },
+  {
+   "Name": "FistR",
+   "Parent": "LowerArmR",
+   "Pivot": [
+    10.4,
+    6.4,
+    -5.0
+   ],
+   "Glow": [],
+   "Centre": [
+    10.679,
+    3.381,
+    -5.612
+   ],
+   "Size": [
+    6.023,
+    6.373,
+    7.389
+   ],
+   "Mesh": "Shardbound_FistR",
+   "Tris": 240
+  },
+  {
+   "Name": "UpperArmL",
+   "Parent": "Torso",
+   "Pivot": [
+    -7.6,
+    21.4,
+    -1.4
+   ],
+   "Glow": [
+    {
+     "Mesh": "Shardbound_UpperArmL_Glow_Cyan",
+     "Colour": [
+      84,
+      226,
+      255
+     ],
+     "Centre": [
+      -8.998,
+      26.078,
+      1.198
+     ],
+     "Size": [
+      2.646,
+      3.843,
+      2.646
+     ]
+    }
+   ],
+   "Centre": [
+    -8.058,
+    20.328,
+    -1.321
+   ],
+   "Size": [
+    7.885,
+    12.145,
+    7.116
+   ],
+   "Mesh": "Shardbound_UpperArmL",
+   "Tris": 119
+  },
+  {
+   "Name": "LowerArmL",
+   "Parent": "UpperArmL",
+   "Pivot": [
+    -9.8,
+    14.8,
+    -3.0
+   ],
+   "Glow": [
+    {
+     "Mesh": "Shardbound_LowerArmL_Glow_Cyan",
+     "Colour": [
+      84,
+      226,
+      255
+     ],
+     "Centre": [
+      -13.609,
+      11.606,
+      -3.156
+     ],
+     "Size": [
+      3.582,
+      3.358,
+      1.822
+     ]
+    }
+   ],
+   "Centre": [
+    -10.839,
+    11.74,
+    -4.265
+   ],
+   "Size": [
+    6.722,
+    10.553,
+    6.766
+   ],
+   "Mesh": "Shardbound_LowerArmL",
+   "Tris": 259
+  },
+  {
+   "Name": "FistL",
+   "Parent": "LowerArmL",
+   "Pivot": [
+    -10.4,
+    6.4,
+    -5.0
+   ],
+   "Glow": [],
+   "Centre": [
+    -10.608,
+    3.348,
+    -5.792
+   ],
+   "Size": [
+    6.558,
+    5.746,
+    7.015
+   ],
+   "Mesh": "Shardbound_FistL",
+   "Tris": 240
+  },
+  {
+   "Name": "UpperLegR",
+   "Parent": "Pelvis",
+   "Pivot": [
+    4.2,
+    9.6,
+    3.6
+   ],
+   "Glow": [],
+   "Centre": [
+    4.412,
+    8.478,
+    3.344
+   ],
+   "Size": [
+    4.926,
+    5.722,
+    4.164
+   ],
+   "Mesh": "Shardbound_UpperLegR",
+   "Tris": 20
+  },
+  {
+   "Name": "LowerLegR",
+   "Parent": "UpperLegR",
+   "Pivot": [
+    4.8,
+    5.4,
+    3.0
+   ],
+   "Glow": [
+    {
+     "Mesh": "Shardbound_LowerLegR_Glow_Cyan",
+     "Colour": [
+      84,
+      226,
+      255
+     ],
+     "Centre": [
+      6.697,
+      7.07,
+      5.037
+     ],
+     "Size": [
+      1.807,
+      2.66,
+      2.325
+     ]
+    }
+   ],
+   "Centre": [
+    4.881,
+    3.441,
+    1.825
+   ],
+   "Size": [
+    5.368,
+    7.12,
+    6.997
+   ],
+   "Mesh": "Shardbound_LowerLegR",
+   "Tris": 64
+  },
+  {
+   "Name": "UpperLegL",
+   "Parent": "Pelvis",
+   "Pivot": [
+    -4.2,
+    9.6,
+    3.6
+   ],
+   "Glow": [],
+   "Centre": [
+    -4.559,
+    8.137,
+    3.354
+   ],
+   "Size": [
+    4.547,
+    5.692,
+    4.598
+   ],
+   "Mesh": "Shardbound_UpperLegL",
+   "Tris": 20
+  },
+  {
+   "Name": "LowerLegL",
+   "Parent": "UpperLegL",
+   "Pivot": [
+    -4.8,
+    5.4,
+    3.0
+   ],
+   "Glow": [
+    {
+     "Mesh": "Shardbound_LowerLegL_Glow_Cyan",
+     "Colour": [
+      84,
+      226,
+      255
+     ],
+     "Centre": [
+      -6.697,
+      7.07,
+      5.037
+     ],
+     "Size": [
+      1.807,
+      2.66,
+      2.325
+     ]
+    }
+   ],
+   "Centre": [
+    -5.049,
+    3.332,
+    1.729
+   ],
+   "Size": [
+    5.438,
+    6.989,
+    6.732
+   ],
+   "Mesh": "Shardbound_LowerLegL",
+   "Tris": 64
+  }
+ ],
+ "TotalTris": 2854,
+ "MeshCount": 21,
+ "Size": [
+  30.8,
+  30.16,
+  19.11
+ ],
+ "Convention": "Studs. Roblox axes (Y up, model faces -Z). Pivot = joint in model space, origin at ground centre. Centre/Size = mesh bounding box (Roblox importer recentres meshes on it).",
+ "Boss": "SHARDBOUND",
+ "DisplayName": "Aurelith, the Shardbound Colossus",
+ "Root": "Pelvis",
+ "GlowAccent": [
+  84,
+  226,
+  255
+ ]
+}
