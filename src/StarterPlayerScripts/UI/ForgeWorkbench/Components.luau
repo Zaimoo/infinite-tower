@@ -271,7 +271,12 @@ function C.ArtifactCard(props: CardProps)
  local owners = Model.ownerIds(props.Snapshot, artifact.UUID)
  local owner = #owners == 1 and props.Snapshot.Heroes[owners[1]] or nil
  local equipped = #owners > 0
- local accent = if props.Material then T.Bad elseif props.Selected then T.Gold elseif equipped then T.Equipped else rarity.Color
+ local isNotUsable = props.UpgradeChoice and (equipped or artifact.Locked)
+ local overlayText = if not props.UpgradeChoice then nil
+  elseif equipped then "EQUIPPED\nNOT USABLE"
+  elseif artifact.Locked then "LOCKED\nNOT USABLE"
+  else nil
+ local accent = if isNotUsable then T.Theme.Tones.Slate.Rail elseif props.Material then T.Bad elseif props.Selected then T.Gold elseif equipped then T.Equipped else rarity.Color
  local state = if equipped then "EQUIPPED" elseif artifact.Locked then "LOCKED" else "UNEQUIPPED"
  local stateColor = if equipped then T.Equipped elseif artifact.Locked then T.Gold else T.Muted
  local ref = React.useRef(nil)
@@ -284,7 +289,16 @@ function C.ArtifactCard(props: CardProps)
  end, {})
  return e("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(T.CardWidth, T.CardHeight), LayoutOrder = props.Order }, {
   Scale = e("UIScale", { ref = ref }),
-  Button = e(C.Button, { Text = "", Accent = accent, Selected = props.Selected or props.Material, OnActivate = props.OnSelect, Size = UDim2.fromScale(1, 1), Name = "Artifact_" .. artifact.UUID, FocusOrder = 100 + props.Order }),
+  Button = e(C.Button, {
+   Text = "",
+   Accent = accent,
+   Selected = props.Selected or props.Material,
+   Disabled = isNotUsable,
+   OnActivate = if isNotUsable then function() end else props.OnSelect,
+   Size = UDim2.fromScale(1, 1),
+   Name = "Artifact_" .. artifact.UUID,
+   FocusOrder = 100 + props.Order,
+  }),
   Content = e("Frame", { Position = UDim2.fromOffset(8, 8), Size = UDim2.new(1, -16, 1, -16), BackgroundTransparency = 1, ZIndex = 2 }, {
    PreviewHost = e("Frame", { Position = UDim2.fromOffset(0, 24), Size = UDim2.new(1, 0, 0, 68), BackgroundTransparency = 1 }, {
     Preview = if props.ShowPreview ~= false then e(C.Preview, { Artifact = artifact, Size = UDim2.fromScale(1, 1) }) else nil,
@@ -295,8 +309,32 @@ function C.ArtifactCard(props: CardProps)
    Rarity = e(C.Text, { Text = rarity.Name, Position = UDim2.fromOffset(0, 128), Size = UDim2.new(0.58, 0, 0, 22), TextSize = 14, TextColor3 = rarity.Color, TextWrapped = false, TextTruncate = Enum.TextTruncate.AtEnd }),
    Power = e(C.Text, { Text = string.format("%.0f PWR", Model.power(artifact)), Position = UDim2.new(0.58, 0, 0, 128), Size = UDim2.new(0.42, 0, 0, 22), TextSize = 14, FontFace = T.Theme.Fonts.Number, TextXAlignment = Enum.TextXAlignment.Right }),
    Owner = e(C.Text, { Text = if owner then owner.DisplayName .. " · " .. string.sub(owner.UUID, -4) elseif equipped then "Assigned · protected" elseif artifact.Locked then "Unlock to sell / consume" elseif props.UpgradeChoice then "Consumed on upgrade" else "Ready to equip", Position = UDim2.fromOffset(0, 150), Size = UDim2.new(1, 0, 0, 18), TextSize = 14, TextColor3 = stateColor, TextWrapped = false, TextTruncate = Enum.TextTruncate.AtEnd }),
-   Selection = if props.Material or props.Selected or props.Reason or artifact.Locked then e(C.Text, { Text = if props.Material then "SELECTED" elseif props.Reason then (if props.Selected then "KEPT" elseif equipped or artifact.Locked then "PROTECTED" else "INCOMPATIBLE") elseif props.Selected then "SELECTED" else "LOCKED", TextSize = 12, TextColor3 = T.Text, TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(4, 28), Size = UDim2.new(1, -8, 0, 22), BackgroundTransparency = 0.15, BackgroundColor3 = if props.Material then T.Theme.Tones.Crimson.Bottom else T.Theme.Ink, ZIndex = 4 }) else nil,
+   Selection = if not isNotUsable and (props.Material or props.Selected or props.Reason or artifact.Locked) then e(C.Text, { Text = if props.Material then "SELECTED" elseif props.Reason then (if props.Selected then "KEPT" elseif equipped or artifact.Locked then "PROTECTED" else "INCOMPATIBLE") elseif props.Selected then "SELECTED" else "LOCKED", TextSize = 12, TextColor3 = T.Text, TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(4, 28), Size = UDim2.new(1, -8, 0, 22), BackgroundTransparency = 0.15, BackgroundColor3 = if props.Material then T.Theme.Tones.Crimson.Bottom else T.Theme.Ink, ZIndex = 4 }) else nil,
   }),
+  Overlay = if isNotUsable and overlayText then e("Frame", {
+   Name = "NotUsableOverlay",
+   Size = UDim2.fromScale(1, 1),
+   Position = UDim2.fromScale(0, 0),
+   BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+   BackgroundTransparency = 0.5,
+   BorderSizePixel = 0,
+   Active = true,
+   ZIndex = 10,
+  }, {
+   Corner = e("UICorner", { CornerRadius = UDim.new(0, T.Theme.Radius.Button) }),
+   Text = e(C.Text, {
+    Name = "OverlayText",
+    Text = overlayText,
+    TextColor3 = Color3.fromRGB(255, 255, 255),
+    TextSize = 14,
+    FontFace = T.Theme.Fonts.Title,
+    TextXAlignment = Enum.TextXAlignment.Center,
+    TextYAlignment = Enum.TextYAlignment.Center,
+    Position = UDim2.fromScale(0, 0),
+    Size = UDim2.fromScale(1, 1),
+    ZIndex = 11,
+   }),
+  }) else nil,
  })
 end
 

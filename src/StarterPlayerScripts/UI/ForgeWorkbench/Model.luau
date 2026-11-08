@@ -49,6 +49,16 @@ function Model.power(artifact: Artifact): number
 	return Catalog.CalculateEffectiveStats(artifact.Star, artifact.Rarity, nil, artifact.TemplateId)
 end
 
+function Model.isEligibleDonor(snapshot: Snapshot, targetId: string?, artifactId: string): boolean
+	local target = targetId and snapshot.Artifacts[targetId]
+	local artifact = snapshot.Artifacts[artifactId]
+	if not target or not artifact then return false end
+	if targetId == artifactId then return false end
+	if target.Rarity ~= artifact.Rarity then return false end
+	if (target.Star or 1) ~= (artifact.Star or 1) then return false end
+	return true
+end
+
 function Model.materialReason(snapshot: Snapshot, targetId: string?, artifactId: string): string?
 	local target = targetId and snapshot.Artifacts[targetId]
 	local artifact = snapshot.Artifacts[artifactId]
