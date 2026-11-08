@@ -308,7 +308,7 @@ function RaidHud.HubChip(props: { Bottom: number, Compact: boolean })
 		Label = Components.GlassText({ Position = UDim2.fromOffset(12, 3), Size = UDim2.new(1, -76, 0, 16), TextSize = 12, FontFace = G.Fonts.Display,
 			Text = "RAID OPEN", TextColor3 = raid.Boss.Accent:Lerp(Color3.new(1, 1, 1), 0.3) }),
 		Name = if not props.Compact then Components.GlassText({ Position = UDim2.fromOffset(12, 20), Size = UDim2.new(1, -76, 0, 14), TextSize = 11,
-			TextTransparency = G.MutedTransparency, Text = "Portal · north Commons" }) else nil,
+			TextTransparency = G.MutedTransparency, Text = "Portal · island, by the pool" }) else nil,
 		Timer = title({ AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.fromOffset(60, 20), TextSize = 16,
 			TextXAlignment = Enum.TextXAlignment.Right, Text = RaidRules.Clock(left), TextColor3 = GOLD }),
 	})

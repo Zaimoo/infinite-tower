@@ -254,7 +254,10 @@ local function returnToHub(player: Player)
 	if not inArena(player) then return end
 	local landing = HubLayout.RaidPortalLanding()
 	local char = player.Character
-	if char then char:PivotTo(CFrame.lookAt(landing, landing + Vector3.new(0, 0, 1))) end
+	if char then
+		local away = HubLayout.RaidPortalCFrame().LookVector -- face away from the portal, toward the dais
+		char:PivotTo(CFrame.lookAt(landing, landing + Vector3.new(away.X, 0, away.Z)))
+	end
 	Tower.ExitToOverworld(player, landing, false)
 end
 

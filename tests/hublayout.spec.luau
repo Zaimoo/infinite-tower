@@ -168,20 +168,17 @@ test("Lighting: plots and the cloister are Sanctuary, the walkway is Dread, the 
 	assert(Light.Classify(12000, 12000) == "Storm", "tower floors should use Storm")
 end)
 
-test("Raid Portal stands on the north band, clear of the footbridge spur and the plot landings", function()
+test("Raid Portal stands on the centre island east of the pool, clear of the paths and the pool", function()
 	local p = Hub.RaidPortal
-	local outerZ, voidZ = -Hub.HubHalfZ, -Hub.VoidHalfZ
 	local footprint = 16 * p.Scale -- the portal's dais radius
-	assert(p.Z - footprint >= outerZ + 6 and p.Z + footprint <= voidZ - 40, "portal must sit on the north band's outer half, inside the rim wall")
-	local mid = Hub.BandWidth * 0.5
-	assert(math.abs(p.Z - (voidZ - mid)) >= 30, "portal blocks the north footbridge spur")
-	for i = 1, Hub.PlotCount do
-		local land = Hub.HubLandingPoint(i)
-		local dx, dz = land.X - Hub.HubCentre.X - p.X, land.Z - Hub.HubCentre.Z - p.Z
-		assert(math.sqrt(dx * dx + dz * dz) > p.ClearRadius + 40, "portal crowds plot " .. i .. "'s landing")
-	end
-	local landing = Hub.RaidPortalLanding()
-	assert(landing.Z > Hub.HubCentre.Z + p.Z + 20, "landing must be in front (south) of the portal")
+	assert(math.abs(p.X) + footprint <= Hub.IslandHalfX - 20 and math.abs(p.Z) + footprint <= Hub.IslandHalfZ - 20, "portal must sit inside the island")
+	assert(p.X > 0, "portal is on the pool's east (right, seen from the dais) side")
+	local half = 8 -- island cross paths are 16 wide along both axes
+	assert(math.abs(p.X) - footprint > half + 4 and math.abs(p.Z) - footprint > half + 4, "portal blocks an island path")
+	local poolZ, poolReach = -160, (26 + 2) * 1.3 -- CloisterBuilder: pool at (0, -160) scaled 1.3, coping included
+	local dPool = math.sqrt(p.X ^ 2 + (p.Z - poolZ) ^ 2)
+	assert(dPool - footprint > poolReach + 20, "portal crowds the Reflecting Pool")
+	assert(math.abs(p.Z - poolZ) < 20, "portal sits beside the pool, not above or below it")
 end)
 
 print(string.format("HubLayout: %d passed, %d failed", passed, failed))
