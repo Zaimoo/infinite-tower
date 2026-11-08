@@ -7,14 +7,20 @@ local ReactRoblox = require(ReplicatedStorage.Packages.ReactRoblox)
 local App = require(script.Parent.ForgeWorkbench.App)
 local Navigation = require(script.Parent.ForgeWorkbench.Navigation)
 local LegacyForge = require(script.Parent.ForgeController)
+local InventoryCapacity = require(ReplicatedStorage.Shared.Util.InventoryCapacity)
 
 local Controller = {}
 Controller.__index = Controller
 
 local function snapshotFromProfile(profile: any): any
-	local snapshot = { Revision = profile.ForgeRevision or 0, Heroes = {}, Artifacts = {}, Gold = profile.Currencies.Gold, Gems = profile.Currencies.Gems }
+	if not profile then return nil end
+	if profile.Revision ~= nil and profile.Gold ~= nil and profile.Artifacts ~= nil then return profile end
+	local gold = if profile.Currencies then profile.Currencies.Gold else (profile.Gold or 0)
+	local gems = if profile.Currencies then profile.Currencies.Gems else (profile.Gems or 0)
+	local snapshot = { Revision = profile.ForgeRevision or 0, Heroes = {}, Artifacts = {}, Gold = gold, Gems = gems }
 	for id, hero in profile.Heroes or {} do snapshot.Heroes[id] = table.clone(hero) end
 	for id, artifact in profile.Artifacts or {} do snapshot.Artifacts[id] = table.clone(artifact) end
+	snapshot.ArtifactCap = InventoryCapacity.ArtifactCap(profile.FortressTree)
 	return snapshot
 end
 

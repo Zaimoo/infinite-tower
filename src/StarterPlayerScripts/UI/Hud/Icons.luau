@@ -65,6 +65,6 @@ function Icons.Icon(props: { Name: string, Size: number, Dim: boolean?, Flat: bo
 	})
 end
 
-Icons.Names = { "Summon", "Squad", "Forge", "Fortress", "Index", "Overdrive", "Recall", "Tower", "TowerGate", "Island", "Hub", "Eye", "ViewSquad" }
+Icons.Names = { "Summon", "Squad", "Forge", "Fortress", "Index", "Overdrive", "Recall", "Tower", "TowerGate", "Island", "Hub", "Eye", "ViewSquad", "Equipped", "Hammer", "Check", "Warning", "Lock", "Power", "Close" }
 
 return Icons

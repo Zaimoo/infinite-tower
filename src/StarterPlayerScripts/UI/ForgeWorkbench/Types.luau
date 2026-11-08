@@ -30,6 +30,7 @@ export type Snapshot = {
 	Heroes: { [string]: Hero },
 	Gold: number,
 	Gems: number,
+	ArtifactCap: number?,
 }
 export type Filter = {
 	Query: string,
@@ -41,7 +42,7 @@ export type Filter = {
 export type Command = {
 	RequestId: string,
 	ExpectedRevision: number,
-	Kind: string, -- EQUIP | UNEQUIP | LOCK | UPGRADE | UNDO
+	Kind: string, -- EQUIP | UNEQUIP | LOCK | UPGRADE | UNDO | EQUIP_BEST
 	ArtifactId: string?,
 	HeroId: string?,
 	MaterialIds: { string }?,

@@ -4,6 +4,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Catalog = require(ReplicatedStorage.Shared.Config.ArtifactCatalog)
 local Promotion = require(ReplicatedStorage.Shared.Util.WeaponPromotion)
 local Balance = require(ReplicatedStorage.Shared.Config.StatBalance)
+local InventoryCapacity = require(ReplicatedStorage.Shared.Util.InventoryCapacity)
+local EquipBest = require(ReplicatedStorage.Shared.Util.EquipBest)
 
 local ForgeTransactions = {}
 local ARTIFACT_FIELDS = { "UUID", "TemplateId", "DisplayName", "Type", "Rarity", "Star", "Locked", "EquippedHeroUUID" }
@@ -80,6 +82,7 @@ function ForgeTransactions.new(options: { Clock: () -> number, GenerateToken: ()
 			state.Signature = nextSignature
 		end
 		snapshot.Revision = state.Revision
+		snapshot.ArtifactCap = InventoryCapacity.ArtifactCap(profile.FortressTree)
 		-- Currency ticks do not invalidate equipment undo or a material selection. Every mutation
 		-- still checks the CURRENT server balance immediately before committing.
 		profile.ForgeRevision = state.Revision
@@ -155,7 +158,7 @@ function ForgeTransactions.new(options: { Clock: () -> number, GenerateToken: ()
 			return finish(false, "Inventory changed. Review the refreshed selection.", nil)
 		end
 		local kind = command.Kind
-		if kind ~= "EQUIP" and kind ~= "UNEQUIP" and kind ~= "LOCK" and kind ~= "UPGRADE" and kind ~= "UNDO" then
+		if kind ~= "EQUIP" and kind ~= "UNEQUIP" and kind ~= "LOCK" and kind ~= "UPGRADE" and kind ~= "UNDO" and kind ~= "EQUIP_BEST" then
 			return finish(false, "Unsupported Forge action", nil)
 		end
 		local hero = validId(command.HeroId) and profile.Heroes[command.HeroId] or nil
@@ -180,6 +183,47 @@ function ForgeTransactions.new(options: { Clock: () -> number, GenerateToken: ()
 			for id, link in undo.Heroes do profile.Heroes[id].EquippedArtifactUUID = if link == false then nil else link end
 			for id, link in undo.Artifacts do profile.Artifacts[id].EquippedHeroUUID = if link == false then nil else link end
 			return finish(true, "Equipment change undone.", nil)
+		elseif kind == "EQUIP_BEST" then
+			local plan = EquipBest.Plan(profile.Heroes or {}, profile.Artifacts or {})
+			if not plan.HasChanges or plan.ChangeCount == 0 then
+				return finish(false, "Squad already equipped with optimal gear.", nil)
+			end
+			local undo = { Heroes = {}, Artifacts = {} }
+			local function rememberHero(id: string)
+				if undo.Heroes[id] == nil and profile.Heroes[id] then
+					undo.Heroes[id] = profile.Heroes[id].EquippedArtifactUUID or false
+				end
+			end
+			local function rememberArtifact(id: string)
+				if undo.Artifacts[id] == nil and profile.Artifacts[id] then
+					undo.Artifacts[id] = profile.Artifacts[id].EquippedHeroUUID or false
+				end
+			end
+			for heroId, newArtId in plan.Changes do
+				rememberHero(heroId)
+				local oldArtId = profile.Heroes[heroId] and profile.Heroes[heroId].EquippedArtifactUUID
+				if oldArtId then rememberArtifact(oldArtId) end
+				rememberArtifact(newArtId)
+				local prevOwner = profile.Artifacts[newArtId] and profile.Artifacts[newArtId].EquippedHeroUUID
+				if prevOwner and profile.Heroes[prevOwner] then rememberHero(prevOwner) end
+			end
+			for heroId, newArtId in plan.Changes do
+				local heroEntry = profile.Heroes[heroId]
+				local newArtEntry = profile.Artifacts[newArtId]
+				if heroEntry and newArtEntry then
+					local oldArtId = heroEntry.EquippedArtifactUUID
+					if oldArtId and profile.Artifacts[oldArtId] then
+						profile.Artifacts[oldArtId].EquippedHeroUUID = nil
+					end
+					local prevOwner = newArtEntry.EquippedHeroUUID
+					if prevOwner and profile.Heroes[prevOwner] and prevOwner ~= heroId then
+						profile.Heroes[prevOwner].EquippedArtifactUUID = nil
+					end
+					heroEntry.EquippedArtifactUUID = newArtId
+					newArtEntry.EquippedHeroUUID = heroId
+				end
+			end
+			return finish(true, string.format("Optimal gear equipped on %d squad member%s.", plan.ChangeCount, if plan.ChangeCount == 1 then "" else "s"), undo)
 		end
 		if not hero then return finish(false, "Hero no longer owned", nil) end
 		local undo = { Heroes = {}, Artifacts = {} }

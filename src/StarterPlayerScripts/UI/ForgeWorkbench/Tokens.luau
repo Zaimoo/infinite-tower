@@ -21,5 +21,16 @@ return table.freeze({
 	Heading = 22,
 	CardWidth = 128,
 	CardHeight = 188,
+	TileSize = 104,
+	TileGap = 8,
+	GridShare = 0.64,
+	DetailShare = 0.36,
+	ActionBarHeight = 56,
+	Crimson = Grimoire.Tones.Crimson,
+	Jade = Grimoire.Tones.Jade,
+	Azure = Grimoire.Tones.Azure,
+	Amber = Grimoire.Tones.Amber,
+	Slate = Grimoire.Tones.Slate,
+	Action = Grimoire.Tones.Action,
 	PageSize = 24, -- retained for compatibility; the native grid scrolls and bounds its 3D previews
 })

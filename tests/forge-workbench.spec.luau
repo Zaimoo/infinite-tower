@@ -156,4 +156,29 @@ test("request rate limits reset with time and profile cleanup resets session sta
 	api.Forget(p)
 	assert(api.Snapshot(p).Revision==1)
 end)
+test("EQUIP_BEST optimizes deployed squad weapons and is completely undoable", function()
+	local api, p, request = setup()
+	p.Heroes.h1.Assignment = "SQUAD_SLOT_1"
+	p.Artifacts.target.Star = 5
+	p.Artifacts.target.Rarity = 5
+	local result = api.Execute(p, request("EQUIP_BEST"), true)
+	assert(result.Ok, "Expected EQUIP_BEST to succeed")
+	assert(p.Heroes.h1.EquippedArtifactUUID == "target")
+	assert(p.Artifacts.target.EquippedHeroUUID == "h1")
+	assert(result.UndoToken ~= nil, "Expected undo token")
+
+	local undoResult = api.Execute(p, request("UNDO", { UndoToken = result.UndoToken }), true)
+	assert(undoResult.Ok, "Expected undo to succeed")
+	assert(p.Heroes.h1.EquippedArtifactUUID == "old")
+	assert(p.Artifacts.old.EquippedHeroUUID == "h1")
+	assert(p.Artifacts.target.EquippedHeroUUID == nil)
+end)
+test("EQUIP_BEST rejects when squad is already optimal", function()
+	local api, p, request = setup()
+	p.Heroes.h1.Assignment = "SQUAD_SLOT_1"
+	local result = api.Execute(p, request("EQUIP_BEST"), true)
+	assert(not result.Ok, "Expected already optimal squad to return not Ok")
+end
+
+end)
 print(string.format("Forge authority: %d cases passed",count))

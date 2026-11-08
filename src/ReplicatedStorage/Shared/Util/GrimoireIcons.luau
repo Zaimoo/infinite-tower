@@ -277,6 +277,26 @@ GrimoireIcons.Drawings = {
 		{ X = 32, Y = 32, W = 52, H = 12, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 6, Sheen = false },
 		{ X = 32, Y = 32, W = 22, H = 22, Rot = 45, Hi = P.White, Lo = P.GoldHi, Radius = 4 },
 	},
+	Equipped = {
+		{ X = 32, Y = 28, W = 36, H = 30, Hi = P.CyanHi, Lo = P.CyanLo, Radius = 6 },
+		{ X = 32, Y = 42, W = 25, H = 25, Rot = 45, Hi = P.CyanHi, Lo = P.CyanLo, Radius = 5, Sheen = false },
+		{ X = 32, Y = 32, W = 10, H = 10, Rot = 45, Hi = P.White, Lo = P.GoldHi, Radius = 2, Outline = 1.8 },
+	},
+	Hammer = {
+		{ X = 26, Y = 38, W = 8, H = 34, Rot = -45, Hi = P.LeatherHi, Lo = P.LeatherLo, Radius = 3 },
+		{ X = 40, Y = 24, W = 32, H = 16, Rot = 45, Hi = P.BloodHi, Lo = P.BloodLo, Radius = 3 },
+		{ X = 48, Y = 16, W = 14, H = 18, Rot = 45, Hi = P.SteelHi, Lo = P.SteelLo, Radius = 2, Sheen = false },
+	},
+	Check = {
+		{ X = 24, Y = 36, W = 8, H = 20, Rot = -45, Hi = P.LeafHi, Lo = P.LeafLo, Radius = 3 },
+		{ X = 38, Y = 30, W = 8, H = 36, Rot = 45, Hi = P.LeafHi, Lo = P.LeafLo, Radius = 3 },
+	},
+	Warning = {
+		{ X = 32, Y = 34, W = 46, H = 40, Hi = P.GoldHi, Lo = P.EmberLo, Radius = 6 },
+		{ X = 32, Y = 34, W = 36, H = 30, Hi = P.EmberHi, Lo = P.EmberLo, Radius = 4, Outline = 2, Sheen = false },
+		{ X = 32, Y = 28, W = 6, H = 16, Hi = P.Dark, Lo = P.Dark, Radius = 2, Sheen = false, Outline = 1 },
+		{ X = 32, Y = 42, W = 6, H = 6, Hi = P.Dark, Lo = P.Dark, Round = true, Sheen = false, Outline = 1 },
+	},
 	-- Island: a floating fortress island with emerald turf and a glowing cyan portal tower.
 	Island = {
 		{ X = 32, Y = 50, W = 28, H = 20, Rot = 45, Hi = P.IronHi, Lo = P.IronLo, Radius = 4 },

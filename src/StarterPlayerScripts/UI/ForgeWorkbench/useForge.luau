@@ -150,6 +150,10 @@ local function useForge(props: Types.Props)
 		request.ArtifactId, request.Locked = targetId, not artifact.Locked
 		execute(request)
 	end
+	local function equipBest(): boolean
+		local request = command("EQUIP_BEST")
+		return execute(request)
+	end
 	local function undoLast()
 		if not undo then return end
 		if Workspace:GetServerTimeNow() >= undo.ExpiresAt then setUndo(nil); setMessage("Undo expired. Select the previous artifact to equip it again."); return end
@@ -179,7 +183,7 @@ local function useForge(props: Types.Props)
 		Message = message, Success = success, Sequence = sequence, Undo = undo,
 		SetHero = setHeroId, SetMode = setMode, SelectTarget = selectTarget,
 		ToggleMaterial = toggleMaterial, AutoFill = autoFill, ToggleLock = toggleLock,
-		Equip = equip, Unequip = unequip, Upgrade = upgrade, UndoLast = undoLast, Reconcile = reconcile,
+		Equip = equip, Unequip = unequip, Upgrade = upgrade, EquipBest = equipBest, UndoLast = undoLast, Reconcile = reconcile,
 		Explain = function(text: string) setMessage(text); setSuccess(false) end,
 	}
 end
