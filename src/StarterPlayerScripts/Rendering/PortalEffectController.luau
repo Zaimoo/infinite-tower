@@ -189,10 +189,13 @@ function PortalEffectController.BindPortal(portalModel: Model): ManagedPortal?
 	for _, desc in ipairs(portalModel:GetDescendants()) do
 		if desc:IsA("Beam") then
 			if string.find(desc.Name, "GodRayBeam") then
-				table.insert(godRayBeams, desc)
+				desc.Enabled = false
+				desc:Destroy()
 			elseif string.find(desc.Name, "SkyColumn") or string.find(desc.Name, "VolumetricLightColumn") then
 				table.insert(skyBeams, desc)
 			end
+		elseif desc:IsA("Attachment") and string.find(desc.Name, "GodRayFloorSocket") then
+			desc:Destroy()
 		elseif desc:IsA("PointLight") and (desc.Name == "PortalPointLight" or not pointLight) then
 			pointLight = desc
 		elseif desc:IsA("ParticleEmitter") and desc.Name == "PortalVortexParticles" then
@@ -309,9 +312,9 @@ function PortalEffectController.SetState(portalModel: Model, newState: PortalSta
 		end
 	end
 
-	-- 4. Outward Volumetric Light Rays (spill across steps when doors open)
+	-- 4. Outward God-Ray Beams removed to prevent intersecting white light shafts
 	for _, beam in ipairs(managed.GodRayBeams) do
-		beam.Enabled = isActive
+		beam.Enabled = false
 	end
 
 	-- 5. Ensure any legacy exterior sky-beam column or shaft is hidden

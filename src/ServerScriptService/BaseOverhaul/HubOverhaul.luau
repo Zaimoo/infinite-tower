@@ -27,7 +27,58 @@ local CloisterBuilder = require(BaseOverhaulFolder:WaitForChild("CloisterBuilder
 local SharedLeaderboards = require(BaseOverhaulFolder:WaitForChild("SharedLeaderboards"))
 
 local HubOverhaul = {}
-HubOverhaul.Version = 19 -- Bump to force a rebuild of baked geometry (Goddess Fountain & Courtyard Overhaul)
+HubOverhaul.Version = 20 -- Bump to force a rebuild of baked geometry & sweep stale light shafts
+
+-- Runtime cleanup sweep to destroy pre-baked light shaft beams, god-ray attachments, and SunRays
+function HubOverhaul.CleanupLightShaftsAndRays()
+	local Lighting = game:GetService("Lighting")
+	-- 1. Remove all SunRaysEffects from Lighting
+	for _, effect in ipairs(Lighting:GetChildren()) do
+		if effect:IsA("SunRaysEffect") then
+			effect.Enabled = false
+			effect.Intensity = 0
+			effect:Destroy()
+		end
+	end
+
+	-- 2. Sweep Workspace for pre-baked light shafts, volumetric beams, and god ray anchors
+	for _, desc in ipairs(Workspace:GetDescendants()) do
+		if desc:FindFirstAncestorOfClass("Tool")
+			or desc:FindFirstAncestorWhichIsA("Humanoid")
+			or desc:FindFirstAncestor("LiveEntities")
+			or desc:FindFirstAncestor("ActiveMobs")
+			or desc:FindFirstAncestor("ActiveHeroes")
+		then
+			continue
+		end
+
+		local nameLower = string.lower(desc.Name)
+		if desc:IsA("Beam") then
+			if string.find(nameLower, "godray")
+				or string.find(nameLower, "lightshaft")
+				or string.find(nameLower, "abyssray")
+				or string.find(nameLower, "mistbeam")
+				or string.find(nameLower, "chasmlight")
+				or string.find(nameLower, "volumetriclightcolumn")
+			then
+				desc.Enabled = false
+				desc:Destroy()
+			end
+		elseif desc:IsA("Attachment") then
+			if string.find(nameLower, "godrayfloor")
+				or string.find(nameLower, "shaftanchor")
+			then
+				desc:Destroy()
+			end
+		elseif desc:IsA("BasePart") then
+			if string.find(nameLower, "volumetriclightshaft")
+				or string.find(nameLower, "lightshaftray")
+			then
+				desc:Destroy()
+			end
+		end
+	end
+end
 
 --============================================================================
 -- CONFIGURATION TABLE
@@ -329,6 +380,7 @@ end
 function HubOverhaul.Build(forceRebuild: boolean?): (Instance, boolean)
 	-- Always apply lighting & atmospheric effects
 	LightingAndEffects.Apply()
+	HubOverhaul.CleanupLightShaftsAndRays()
 
 	local OVERHAUL_VERSION = HubOverhaul.Version
 	local plotsFolder = Workspace:WaitForChild("WaitingRoomPlots")
@@ -439,6 +491,7 @@ end
 -- Server-only wiring that cannot be baked: kill-zone touches, live gate nameplates, and moving
 -- players already in the server after a rebuild.
 function HubOverhaul.StartRuntime(container: Instance, rebuilt: boolean)
+	HubOverhaul.CleanupLightShaftsAndRays()
 	local killZone = container:FindFirstChild("IslandKillRespawnZone")
 	if killZone then
 		for _, tile in killZone:GetChildren() do

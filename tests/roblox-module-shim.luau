@@ -69,12 +69,22 @@ function game:GetService(serviceName)
 	return node(serviceName)
 end
 
+local colorMeta = {}
+function colorMeta:Lerp(other, alpha)
+	return setmetatable({
+		R = self.R + (other.R - self.R) * alpha,
+		G = self.G + (other.G - self.G) * alpha,
+		B = self.B + (other.B - self.B) * alpha,
+	}, colorMeta)
+end
+colorMeta.__index = colorMeta
+
 local Color3 = {}
 function Color3.fromRGB(r, g, b)
-	return { R = r / 255, G = g / 255, B = b / 255 }
+	return setmetatable({ R = r / 255, G = g / 255, B = b / 255 }, colorMeta)
 end
 function Color3.new(r, g, b)
-	return { R = r, G = g, B = b }
+	return setmetatable({ R = r, G = g, B = b }, colorMeta)
 end
 function Color3.fromHex(hex)
 	local digits = string.gsub(hex, "^#", "")
@@ -91,6 +101,13 @@ local warn = print
 
 local Vector3 = {}
 local vectorMeta = {}
+function vectorMeta:Lerp(other, alpha)
+	return Vector3.new(
+		self.X + (other.X - self.X) * alpha,
+		self.Y + (other.Y - self.Y) * alpha,
+		self.Z + (other.Z - self.Z) * alpha
+	)
+end
 vectorMeta.__index = function(t, k)
 	if k == "Magnitude" then
 		return math.sqrt(t.X * t.X + t.Y * t.Y + t.Z * t.Z)
@@ -98,6 +115,8 @@ vectorMeta.__index = function(t, k)
 		local m = math.sqrt(t.X * t.X + t.Y * t.Y + t.Z * t.Z)
 		if m < 0.00001 then return Vector3.new(0, 0, 0) end
 		return Vector3.new(t.X / m, t.Y / m, t.Z / m)
+	elseif k == "Lerp" then
+		return vectorMeta.Lerp
 	end
 	return rawget(t, k)
 end

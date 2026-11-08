@@ -56,12 +56,12 @@ function LightingAndEffects.Apply(customConfig: { [string]: any }?)
 		atmosphere.Name = "TowerStormAtmosphere"
 		atmosphere.Parent = Lighting
 	end
-	atmosphere.Density = cfg.AtmosphereDensity
-	atmosphere.Offset = cfg.AtmosphereOffset
-	atmosphere.Color = cfg.AtmosphereColor
-	atmosphere.Decay = cfg.AtmosphereDecay
-	atmosphere.Glare = cfg.AtmosphereGlare
-	atmosphere.Haze = cfg.AtmosphereHaze
+	atmosphere.Density = cfg.AtmosphereDensity or 0.35
+	atmosphere.Offset = cfg.AtmosphereOffset or 0
+	atmosphere.Color = cfg.AtmosphereColor or Color3.fromRGB(18, 16, 24)
+	atmosphere.Decay = cfg.AtmosphereDecay or Color3.fromRGB(12, 10, 16)
+	atmosphere.Glare = 0 -- Keep glare 0 to eliminate radial blooming and crepuscular streaks
+	atmosphere.Haze = cfg.AtmosphereHaze or 1.5
 
 	local cc = Lighting:FindFirstChild("TowerStormColorCorrection") :: ColorCorrectionEffect?
 	if not cc then
@@ -86,16 +86,14 @@ function LightingAndEffects.Apply(customConfig: { [string]: any }?)
 	bloom.Size = cfg.BloomSize
 	bloom.Threshold = cfg.BloomThreshold
 
-	local sunRays = Lighting:FindFirstChild("TowerStormSunRays") :: SunRaysEffect?
-		or Lighting:FindFirstChildOfClass("SunRaysEffect")
-	if not sunRays then
-		sunRays = Instance.new("SunRaysEffect")
-		sunRays.Name = "TowerStormSunRays"
-		sunRays.Parent = Lighting
+	-- Disable and destroy any SunRaysEffect to prevent crisscrossing light shafts / god rays
+	for _, effect in ipairs(Lighting:GetChildren()) do
+		if effect:IsA("SunRaysEffect") then
+			effect.Enabled = false
+			effect.Intensity = 0
+			effect:Destroy()
+		end
 	end
-	sunRays.Enabled = true
-	sunRays.Intensity = cfg.SunRaysIntensity
-	sunRays.Spread = cfg.SunRaysSpread
 
 	-- Sunset Skybox
 	local sky = Lighting:FindFirstChildOfClass("Sky")
@@ -119,12 +117,14 @@ function LightingAndEffects.Apply(customConfig: { [string]: any }?)
 	sky.CelestialBodiesShown = true
 	sky.StarCount = 3000
 
-	-- Disable competing bloom/blur layers so glow does not stack.
+	-- Disable competing bloom/blur layers and eliminate any SunRays
 	for _, effect in Lighting:GetChildren() do
 		if effect:IsA("BloomEffect") and effect ~= bloom then
 			effect.Enabled = false
-		elseif effect:IsA("SunRaysEffect") and effect ~= sunRays then
+		elseif effect:IsA("SunRaysEffect") then
 			effect.Enabled = false
+			effect.Intensity = 0
+			effect:Destroy()
 		elseif effect:IsA("BlurEffect") or effect:IsA("DepthOfFieldEffect") then
 			effect.Enabled = false
 		end

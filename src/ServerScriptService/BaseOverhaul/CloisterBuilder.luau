@@ -367,8 +367,9 @@ local function buildGround(model: Model, root: CFrame, cfg: typeof(CloisterBuild
 	clouds.Name = "CloudWisps"
 	clouds.Texture = "rbxassetid://243660364"
 	clouds.Shape = Enum.ParticleEmitterShape.Box
-	clouds.Color = ColorSequence.new(Color3.fromRGB(205, 210, 222), Color3.fromRGB(150, 158, 175))
-	clouds.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.3, 0.75), NumberSequenceKeypoint.new(1, 1) })
+	clouds.LightEmission = 0
+	clouds.Color = ColorSequence.new(Color3.fromRGB(20, 18, 26), Color3.fromRGB(14, 12, 18))
+	clouds.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.3, 0.88), NumberSequenceKeypoint.new(0.7, 0.92), NumberSequenceKeypoint.new(1, 1) })
 	clouds.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 20), NumberSequenceKeypoint.new(1, 36) })
 	clouds.Lifetime = NumberRange.new(8, 12)
 	clouds.Rate = 6
