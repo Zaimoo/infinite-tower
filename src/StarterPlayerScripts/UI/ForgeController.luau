@@ -2506,17 +2506,21 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 		local req = target and ArtifactCatalog.GetFodderRequirement(target.Star or 1) or 0
 
 		for uuid, art in pairs(artifacts) do
-			if uuid ~= self.SelectedTargetUUID and not art.EquippedHeroUUID and not art.Locked and target and WeaponPromotion.IsDonorFor(target, art) then
+			if uuid ~= self.SelectedTargetUUID and target and WeaponPromotion.IsDonorFor(target, art) then
 				local isSlotted = table.find(self.FodderUUIDs, uuid) ~= nil
 				local rarityInfo = ArtifactCatalog.GetRarityInfo(art.Rarity or 1)
+				local isEquipped = art.EquippedHeroUUID ~= nil
+				local isLocked = art.Locked == true
+				local isNotUsable = isEquipped or isLocked
 
 				local card = new("Frame", {
 					Name = "FodderCard_" .. uuid,
 					Size = UDim2.fromOffset(128, 164),
 					BorderSizePixel = 0,
+					LayoutOrder = if isNotUsable then 300 elseif isSlotted then 200 else 100,
 					ZIndex = 72,
 				}, scroll)
-				applyGothicStyle(card, "Row", { AccentColor = rarityInfo.Color })
+				applyGothicStyle(card, "Row", { AccentColor = if isNotUsable then Color3.fromRGB(60, 60, 70) else rarityInfo.Color })
 
 				local iconTile = new("Frame", {
 					Name = "IconTile",
@@ -2526,7 +2530,7 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 					BorderSizePixel = 0,
 					ZIndex = 73,
 				}, card)
-				applyGothicStyle(iconTile, "Slot", { State = "Filled", AccentColor = rarityInfo.Color })
+				applyGothicStyle(iconTile, "Slot", { State = "Filled", AccentColor = if isNotUsable then Color3.fromRGB(60, 60, 70) else rarityInfo.Color })
 
 				local iconChar = ICON_MAP[art.Type] or ""
 				local iconLbl = label(iconTile, iconChar, 24, C.Text)
@@ -2569,6 +2573,7 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 					Text = isSlotted and "REMOVE" or "+ ADD",
 					Font = Enum.Font.GothamBold,
 					TextSize = 11,
+					Visible = not isNotUsable,
 					ZIndex = 74,
 				}, card)
 
@@ -2578,7 +2583,28 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 					applyGothicStyle(fodderBtn, "ButtonPrimary", { Variant = "Gold" })
 				end
 
+				if isNotUsable then
+					local overlay = new("Frame", {
+						Name = "NotUsableOverlay",
+						Size = UDim2.fromScale(1, 1),
+						Position = UDim2.fromScale(0, 0),
+						BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+						BackgroundTransparency = 0.5,
+						BorderSizePixel = 0,
+						Active = true,
+						ZIndex = 75,
+					}, card)
+					new("UICorner", { CornerRadius = UDim.new(0, 6) }, overlay)
+					local overlayLbl = label(overlay, if isEquipped then "EQUIPPED\nNOT USABLE" else "LOCKED\nNOT USABLE", 11, Color3.fromRGB(255, 255, 255), Enum.Font.GothamBold)
+					overlayLbl.Position = UDim2.fromScale(0, 0)
+					overlayLbl.Size = UDim2.fromScale(1, 1)
+					overlayLbl.TextXAlignment = Enum.TextXAlignment.Center
+					overlayLbl.TextYAlignment = Enum.TextYAlignment.Center
+					overlayLbl.ZIndex = 76
+				end
+
 				fodderBtn.Activated:Connect(function()
+					if isNotUsable then return end
 					if isSlotted then
 						local idx = table.find(self.FodderUUIDs, uuid)
 						if idx then table.remove(self.FodderUUIDs, idx) end

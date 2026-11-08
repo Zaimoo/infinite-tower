@@ -346,19 +346,44 @@ local function App(props: Types.Props)
 		local choices = {}
 		local candidates = {}
 		for _, artifact in snapshot.Artifacts do
-			if not Model.materialReason(snapshot, forge.TargetId, artifact.UUID) and not table.find(forge.Materials, artifact.UUID) then
+			if Model.isEligibleDonor(snapshot, forge.TargetId, artifact.UUID) and not table.find(forge.Materials, artifact.UUID) then
 				table.insert(candidates, artifact)
 			end
 		end
 		table.sort(candidates, function(a, b)
+			local aOwners = Model.ownerIds(snapshot, a.UUID)
+			local bOwners = Model.ownerIds(snapshot, b.UUID)
+			local aEquipped = #aOwners > 0
+			local bEquipped = #bOwners > 0
+			if aEquipped ~= bEquipped then return not aEquipped end
+			local aLocked = a.Locked == true
+			local bLocked = b.Locked == true
+			if aLocked ~= bLocked then return not aLocked end
 			local ap, bp = Model.power(a), Model.power(b)
 			if ap ~= bp then return ap < bp end
 			return a.DisplayName < b.DisplayName
 		end)
 		for index, artifact in candidates do
-			choices[artifact.UUID] = e(C.ArtifactCard, { Snapshot = snapshot, Artifact = artifact, Selected = false, Material = false, Recommended = false, UpgradeChoice = true, Order = index, ShowPreview = true, OnSelect = function() forge.ToggleMaterial(artifact.UUID); setDialog(nil) end })
+			local owners = Model.ownerIds(snapshot, artifact.UUID)
+			local isEquipped = #owners > 0
+			local isNotUsable = isEquipped or artifact.Locked
+			choices[artifact.UUID] = e(C.ArtifactCard, {
+				Snapshot = snapshot,
+				Artifact = artifact,
+				Selected = false,
+				Material = false,
+				Recommended = false,
+				UpgradeChoice = true,
+				Order = index,
+				ShowPreview = true,
+				OnSelect = function()
+					if isNotUsable then return end
+					forge.ToggleMaterial(artifact.UUID)
+					setDialog(nil)
+				end,
+			})
 		end
-		if next(choices) == nil then choices.Empty = e(C.Text, { Text = "No eligible artifacts. Equipped and locked artifacts are protected.", Size = UDim2.new(1, 0, 0, 80) }) end
+		if next(choices) == nil then choices.Empty = e(C.Text, { Text = "No eligible artifacts of the same rarity and star rank found.", Size = UDim2.new(1, 0, 0, 80) }) end
 		dialogView = e(Dialog, { Title = "Choose an artifact · consumed on upgrade", Cards = true, CardHeight = T.CardHeight, Children = choices, OnCancel = function() setDialog(nil) end, FocusKey = "MATERIAL" })
 	elseif dialog == "HERO" and target then
 		dialogView = e(HeroPicker, {
