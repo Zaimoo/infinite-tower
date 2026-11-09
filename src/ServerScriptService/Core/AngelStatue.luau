@@ -267,9 +267,11 @@ local function build(plot: Instance, level: number): Model?
 		CFrame = CFrame.new(fountainCenter.X, promptY, fountainCenter.Z),
 		Transparency = 1,
 	})
+	interaction:SetAttribute("BillboardStudsOffset", Vector3.new(0, 24, 0))
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.Name = "FacilityHUDPrompt"
 	prompt:SetAttribute("FacilityHUD", "GodsBlessing")
+	prompt:SetAttribute("BillboardStudsOffset", Vector3.new(0, 24, 0))
 	prompt.ObjectText = "God's Blessing"
 	prompt.ActionText = "Pray & Assign Acolytes"
 	prompt.MaxActivationDistance = 18

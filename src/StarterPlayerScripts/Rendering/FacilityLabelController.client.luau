@@ -28,6 +28,12 @@ local ICONS = {
 }
 -- Support facilities whose level and workers live in profile.Facilities[key].
 local WORKER_FACILITIES = { Market = true, TrainingGrounds = true, GuardPost = true, GodsBlessing = true }
+-- Default height offset above the prompt's adornee, with overrides for tall landmarks
+-- like the central Plaza Fountain (God's Blessing angel statue, ~18 studs tall).
+local DEFAULT_STUDS_OFFSET = Vector3.new(0, 7.5, 0)
+local FACILITY_STUDS_OFFSETS: { [string]: Vector3 } = {
+	GodsBlessing = Vector3.new(0, 24, 0),
+}
 
 local folder = New("Folder", { Name = "FacilityLabels" }, LocalPlayer:WaitForChild("PlayerGui"))
 type Label = { Billboard: BillboardGui, Status: TextLabel, Facility: string, Owned: boolean, LastText: string }
@@ -77,11 +83,18 @@ local function build(prompt: ProximityPrompt)
 	local adornee = prompt.Parent
 	if not adornee or not (adornee:IsA("BasePart") or adornee:IsA("Attachment")) then return end
 	local facility, owned = describe(prompt)
+	local offsetAttr = prompt:GetAttribute("BillboardStudsOffset")
+		or prompt:GetAttribute("BillboardOffset")
+		or (adornee and adornee:GetAttribute("BillboardStudsOffset"))
+		or (adornee and adornee:GetAttribute("BillboardOffset"))
+	local studsOffset = if typeof(offsetAttr) == "Vector3"
+		then offsetAttr
+		else (FACILITY_STUDS_OFFSETS[facility or ""] or DEFAULT_STUDS_OFFSET)
 	local billboard: BillboardGui = New("BillboardGui", {
 		Name = "FacilityLabel_" .. (facility or prompt.ObjectText),
 		Adornee = adornee,
 		Size = UDim2.fromScale(11, if owned then 3.4 else 2.2), -- studs: shrinks with distance
-		StudsOffset = Vector3.new(0, 7.5, 0),
+		StudsOffset = studsOffset,
 		MaxDistance = MAX_DISTANCE,
 		AlwaysOnTop = false,
 		LightInfluence = 0,
