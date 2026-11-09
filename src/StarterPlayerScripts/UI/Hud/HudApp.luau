@@ -32,6 +32,7 @@ local FacilityPanel = require(script.Parent:WaitForChild("FacilityPanel"))
 local ShopPanel = require(script.Parent:WaitForChild("ShopPanel"))
 local TowerEventHud = require(script.Parent:WaitForChild("TowerEventHud"))
 local RaidHud = require(script.Parent:WaitForChild("RaidHud"))
+local GuidePanel = require(script.Parent:WaitForChild("GuidePanel"))
 
 -- Support facilities shown in the Phase 5 gothic panel.
 local PANEL_FACILITIES = { GuardPost = true, Market = true, TrainingGrounds = true, GodsBlessing = true }
@@ -263,6 +264,11 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 	local indexInitialMode, setIndexInitialMode = React.useState("HEROES" :: "HEROES" | "ARTIFACTS")
 	local facilityOpen, setFacilityOpen = React.useState(nil :: string?)
 	local shopOpen, setShopOpen = React.useState(false)
+	local guideOpen, setGuideOpen = React.useState(false)
+	local function closeGuide()
+		setGuideOpen(false)
+		call("SetModalFocusMode", false)
+	end
 	local backpackOpen, setBackpackOpen = React.useState(false)
 	local backpackButton = React.useRef(nil :: GuiButton?)
 	local closeBackpack = React.useCallback(function()
@@ -534,6 +540,16 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 		},
 	}
 
+	if Store.GuideV2 then
+		table.insert(leftButtons, {
+			Name = "GuideRailButton", Icon = "Index", Label = "Guide", Accent = Color3.fromRGB(255, 225, 150),
+			OnActivated = function()
+				setGuideOpen(true)
+				call("SetModalFocusMode", true)
+			end,
+		})
+	end
+
 	local overdriveBlocked = Whistles.Blocked("Overdrive")
 	local recallBlocked = Whistles.Blocked("Recall")
 	local rightButtons = {
@@ -617,7 +633,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 	-- TopbarInset is in screen pixels, but AbsolutePosition is measured from below the top bar (a
 	-- layer that reaches into the bar reports y = -58): shift the top-bar rect into that space.
 	local guiInset = (GuiService:GetGuiInset())
-	local goalBlock = if goal then L.GoalCardHeight + L.ZoneGap else 0
+	local goalBlock = if goal then (if Store.GuideV2 then 124 else L.GoalCardHeight) + L.ZoneGap else 0
 	local goalTop = L.TopZone
 	local rightTop = L.TopZone + goalBlock
 	-- Pit tabs (Synthesis / Promotion): centred in the free part of Roblox's top bar under the window.
@@ -655,7 +671,9 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 	local modalFocus = Store.ModalFocus
 
 	return e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 }, {
-		Goal = if not modalFocus then e(Components.NextGoalCard, { Goal = goal, Top = goalTop }) else nil,
+		Goal = if not modalFocus then e(Components.NextGoalCard, {
+			Goal = goal, Top = goalTop, GuideAction = if Store.GuideV2 then Store.GuideAction else nil, GuideVisible = Store.GuideVisible,
+		}) else nil,
 		LeftRail = if not modalFocus then rail("LeftRail", "Left", leftTop, leftBottom, leftSize, leftBottom - leftTop, leftButtons, screen.Y) else nil,
 		RightRail = if modalFocus then nil
 			elseif raid.InRaid then e(RaidHud.Leaderboard, { Top = rightTop, Bottom = rightBottom, Compact = compact })
@@ -695,6 +713,10 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 		}) else nil,
 		-- Screens and the Pit tabs render above the building screens; the zones above stay behind them.
 		Overlay = ReactRoblox.createPortal({
+		Guide = if guideOpen then e(GuidePanel, { OnClose = closeGuide, OnResume = function()
+			Store.GuideAction("Resume")
+			closeGuide()
+		end }) else nil,
 		-- Over an open window, only when that window has no currency display of its own (Forge, Store,
 		-- Index and the Pit draw theirs or spend nothing): the HUD bar used to overlap their corners.
 		FocusCurrency = if modalFocus and profile and WindowManager.WantsHudCurrency() then e("Frame", {
@@ -725,7 +747,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 		}) else nil,
 		Shop = if shopOpen then e(ShopPanel, { Profile = profile, Width = screen.X, OnClose = function() currentShopOpen = false setShopOpen(false) call("SetModalFocusMode", false) end }) else nil,
 		TowerEventPopup = e(TowerEventHud.Popup, { Blocked = facilityOpen ~= nil or shopOpen or indexOpen or modalFocus }),
-		RaidResults = e(RaidHud.ResultsCard, { Blocked = facilityOpen ~= nil or shopOpen or indexOpen }),
+		RaidResults = e(RaidHud.ResultsCard, { Blocked = facilityOpen ~= nil or shopOpen or indexOpen or guideOpen }),
 		Index = if indexOpen then e(HeroIndex, { Profile = profile, Width = screen.X, InitialMode = indexInitialMode, OnClose = function() currentIndexOpen = false setIndexOpen(false) call("SetModalFocusMode", false) end }) else nil,
 		Backpack = if backpackOpen then e(BackpackPanel, {
 			Width = screen.X, Height = screen.Y, OnClose = function() closeBackpack() call("SetModalFocusMode", false) end, ReturnFocus = returnBackpackFocus,

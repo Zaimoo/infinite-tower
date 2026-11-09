@@ -993,12 +993,12 @@ end
 	end
 	-- Viewing the roster stays open; changing it needs The Pit unlocked (Phase 4 onboarding).
 	if (command == "PREVIEW" or command == "COMMIT") and not OnboardingService.IsUnlocked(player, "Pit") then
-		local message = OnboardingService.LockedMessage("Pit")
+		local message = OnboardingService.LockedMessage("Pit", player)
 		return { Success = false, Message = message, Reason = message }
 	end
 	local response = pit:Request(player, command, payload)
 	if command == "COMMIT" and type(response) == "table" and response.Success then
-		OnboardingService.Report(player, "PitUsed")
+		OnboardingService.Report(player, "PitUsed", response.Result and response.Result.Action)
 	end
 	return response
 end
@@ -1198,7 +1198,7 @@ RequestSellArtifactsFunc.OnServerInvoke = function(player: Player, artifactUUIDs
 		return false, "Invalid parameters", 0, 0
 	end
 	if not OnboardingService.Require(player, "Forge") then
-		return false, OnboardingService.LockedMessage("Forge"), 0, 0
+		return false, OnboardingService.LockedMessage("Forge", player), 0, 0
 	end
 	return DataManager.SellArtifacts(player, artifactUUIDs)
 end
@@ -1211,7 +1211,7 @@ RequestUpgradeArtifactFunc.OnServerInvoke = function(player: Player, targetUUID:
 		return false, "Invalid parameters", nil
 	end
 	if not OnboardingService.Require(player, "Forge") then -- toasts the unlock hint
-		return false, OnboardingService.LockedMessage("Forge"), nil
+		return false, OnboardingService.LockedMessage("Forge", player), nil
 	end
 	local ok, message, star = DataManager.UpgradeArtifact(player, targetUUID, fodderUUIDs)
 	if ok then
@@ -1240,7 +1240,11 @@ end
 			if ActiveProfiles[player] ~= profile then return end
 			local kind = payload.Kind
 			DataManager.SyncProfile(player, kind == "UPGRADE" or kind == "LOCK")
-			if kind == "UPGRADE" then OnboardingService.Report(player, "ArtifactUpgraded") end
+			if kind == "UPGRADE" then
+				OnboardingService.Report(player, "ArtifactUpgraded")
+			elseif kind == "EQUIP" or kind == "EQUIP_BEST" then
+				OnboardingService.Report(player, "ArtifactEquipped")
+			end
 		end)
 	end
 	return result
@@ -1384,7 +1388,7 @@ AssignHeroRoleFunc.OnServerInvoke = function(player: Player, heroUUID: any, targ
 	-- Special Smart Action from Document 4 Section 2.2: "AUTO_SWAP_EXHAUSTED"
 	if heroUUID == "AUTO_SWAP_EXHAUSTED" then
 		if not OnboardingService.Require(player, "Squad") then -- toasts the unlock hint
-			return false, OnboardingService.LockedMessage("Squad")
+			return false, OnboardingService.LockedMessage("Squad", player)
 		end
 		local maxSlots = DataManager.MaxSquadSlots(profile)
 		local swappedCount = 0
@@ -1435,7 +1439,7 @@ AssignHeroRoleFunc.OnServerInvoke = function(player: Player, heroUUID: any, targ
 	-- Facility workers stay at work; resting heroes are benched.
 	if heroUUID == "AUTO_BEST" then
 		if not OnboardingService.Require(player, "Squad") then -- toasts the unlock hint
-			return false, OnboardingService.LockedMessage("Squad")
+			return false, OnboardingService.LockedMessage("Squad", player)
 		end
 		local maxSlots = DataManager.MaxSquadSlots(profile)
 		local mult = DataManager.GetTrainingMultiplier(player)
@@ -1476,11 +1480,11 @@ AssignHeroRoleFunc.OnServerInvoke = function(player: Player, heroUUID: any, targ
 	local supportFacility = FACILITY_BY_TAG[targetAssignment]
 	local isSquad = string.find(targetAssignment, "^SQUAD_SLOT_") ~= nil or targetAssignment == "SQUAD_AUTO"
 	if isSquad and not OnboardingService.Require(player, "Squad") then -- toasts the unlock hint
-		return false, OnboardingService.LockedMessage("Squad")
+		return false, OnboardingService.LockedMessage("Squad", player)
 	end
 	if supportFacility then
 		if not OnboardingService.Require(player, "Facilities") then -- toasts the unlock hint
-			return false, OnboardingService.LockedMessage("Facilities")
+			return false, OnboardingService.LockedMessage("Facilities", player)
 		end
 		local facData = (profile.Facilities :: any)[supportFacility] :: FacilityData?
 		if not facData or facData.Level <= 0 then
@@ -1553,7 +1557,7 @@ AssignHeroRoleFunc.OnServerInvoke = function(player: Player, heroUUID: any, targ
 	if isSquad then
 		OnboardingService.Report(player, "SquadDeployed")
 	elseif supportFacility then
-		OnboardingService.Report(player, "FacilityAssigned")
+		OnboardingService.Report(player, "FacilityAssigned", supportFacility)
 	end
 
 	DataManager.SyncProfile(player)
@@ -1650,16 +1654,16 @@ function DataManager.GetPassiveGoldRate(player: Player): number
 end
 
 -- Onboarding events reported by systems outside DataManager (tower floor clears).
-function DataManager.ReportProgress(player: Player, eventName: string)
-	OnboardingService.Report(player, eventName)
+function DataManager.ReportProgress(player: Player, eventName: string, detail: (string | number)?)
+	OnboardingService.Report(player, eventName, detail)
 end
 
 function DataManager.IsUnlocked(player: Player, key: string): boolean
 	return OnboardingService.IsUnlocked(player, key)
 end
 
-function DataManager.LockedMessage(key: string): string
-	return OnboardingService.LockedMessage(key)
+function DataManager.LockedMessage(key: string, player: Player?): string
+	return OnboardingService.LockedMessage(key, player)
 end
 
 OnboardingService.Init({
@@ -1667,6 +1671,26 @@ OnboardingService.Init({
 	SendToast = DataManager.SendToast,
 	SyncProfile = function(player: Player) DataManager.SyncProfile(player) end,
 	SyncRemote = OnboardingSyncEvent,
+	PitLesson = function(profile: any, promotion: boolean, synthesis: boolean): string?
+		if not promotion and not synthesis then return nil end
+		local donorId: string? = nil
+		if synthesis then
+			for id, hero in profile.Heroes do
+				if pit:DonorStatus(profile, hero).EligibleDonor then donorId = id; break end
+			end
+		end
+		for id, hero in profile.Heroes do
+			if not string.match(hero.Assignment or "", "^SQUAD_SLOT_%d+$") or not pit:RecipientStatus(profile, hero).Eligible then continue end
+			if promotion and hero.Level >= StatFormulas.GetMaxLevel(hero.Stars) then
+				local preview = pit:Build(profile, { Action = "PROMOTION", Recipient = id })
+				if preview.CanCommit then return "Promotion" end
+			elseif donorId and hero.Level < StatFormulas.GetMaxLevel(hero.Stars) then
+				local preview = pit:Build(profile, { Action = "SYNTHESIS", Recipient = id, Donors = { donorId } })
+				if preview.CanCommit then return "Synthesis" end
+			end
+		end
+		return nil
+	end,
 })
 
 FortressTreeService.Init({

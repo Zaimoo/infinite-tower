@@ -491,7 +491,7 @@ end
 -- Next Goal card (top-right): a raised header strip ("NEXT GOAL ——— 3/7"), the goal title, its
 -- hint and its reward. The stroke flashes Royal when the goal advances.
 --------------------------------------------------------------------------------
-function Components.NextGoalCard(props: { Goal: any, Top: number? })
+function Components.NextGoalCard(props: { Goal: any, Top: number?, GuideAction: ((string) -> ())?, GuideVisible: boolean? })
 	local goal = props.Goal
 	local strokeRef = React.useRef(nil)
 	local lastIndex = React.useRef(nil :: number?)
@@ -532,7 +532,7 @@ function Components.NextGoalCard(props: { Goal: any, Top: number? })
 	return glass({
 		AnchorPoint = Vector2.new(1, 0),
 		Position = UDim2.new(1, -L.Edge, 0, props.Top or L.TopZone),
-		Size = UDim2.fromOffset(L.GoalCardWidth, L.GoalCardHeight),
+		Size = UDim2.fromOffset(L.GoalCardWidth, if props.GuideAction then 124 else L.GoalCardHeight),
 		StrokeRef = strokeRef,
 	}, {
 		Header = e("Frame", { Size = UDim2.new(1, 0, 0, 24), BackgroundColor3 = G.BaseRaised, BackgroundTransparency = G.RaisedTransparency, BorderSizePixel = 0 }, {
@@ -541,11 +541,26 @@ function Components.NextGoalCard(props: { Goal: any, Top: number? })
 			Icon = icon("Goal", 18, { Position = UDim2.fromOffset(8, 3), Flat = true }),
 			Label = sectionLabel("Next Goal", { Position = UDim2.fromOffset(32, 0), Size = UDim2.new(1, -84, 1, 0) }),
 			Step = glassText({ AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -10, 0, 0), Size = UDim2.fromOffset(44, 24), FontFace = G.Fonts.Number,
-				TextXAlignment = Enum.TextXAlignment.Right, Text = string.format("%d/%d", goal.Index or 1, goal.Total or 1) }),
+				TextXAlignment = Enum.TextXAlignment.Right, Text = if props.GuideAction then "" else string.format("%d/%d", goal.Index or 1, goal.Total or 1) }),
 		}),
 		Title = glassText({ Position = UDim2.fromOffset(10, 28), Size = UDim2.new(1, -20, 0, 18), FontFace = G.Fonts.Number, TextSize = 15, Text = tostring(goal.Title) }),
-		Hint = glassText({ Position = UDim2.fromOffset(10, 47), Size = UDim2.new(1, -20, 0, 15), TextTransparency = G.MutedTransparency, Text = tostring(goal.Description) }),
+		Hint = glassText({ Position = UDim2.fromOffset(10, 47), Size = UDim2.new(1, -20, 0, if props.GuideAction then 26 else 15), TextTransparency = G.MutedTransparency,
+			TextWrapped = props.GuideAction ~= nil, Text = tostring(goal.Description) }),
 		Reward = if reward then e("Frame", { Position = UDim2.fromOffset(10, 66), Size = UDim2.new(1, -20, 0, 16), BackgroundTransparency = 1 }, reward) else nil,
+		GuideActions = if props.GuideAction then e("Frame", {
+			Position = UDim2.fromOffset(8, 74), Size = UDim2.new(1, -16, 0, 42), BackgroundTransparency = 1,
+		}, {
+			Show = e("TextButton", {
+				Size = UDim2.new(0.55, -4, 1, 0), Text = if props.GuideVisible then "Hide marker" else "Show me",
+				BackgroundColor3 = G.BaseRaised, TextColor3 = G.Royal, TextSize = 14, FontFace = G.Fonts.Number,
+				Selectable = true, [React.Event.Activated] = function() if props.GuideAction then props.GuideAction("Show") end end,
+			}, { Corner = corner(G.Radius) }),
+			Later = e("TextButton", {
+				AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(1, 0), Size = UDim2.new(0.45, -4, 1, 0),
+				Text = "Later", BackgroundColor3 = G.BaseRaised, TextColor3 = G.Royal, TextSize = 14, FontFace = G.Fonts.Number,
+				Selectable = true, [React.Event.Activated] = function() if props.GuideAction then props.GuideAction("Snooze") end end,
+			}, { Corner = corner(G.Radius) }),
+		}) else nil,
 	})
 end
 
@@ -600,7 +615,8 @@ function Components.SquadStatusCard(props: { Rows: { any }, LockedText: string?,
 		local chipText = chip[1] .. (if row.DownSeconds then string.format(" %ds", row.DownSeconds) else "")
 		if props.Compact then
 			children["Slot" .. i] = e("TextButton", {
-				LayoutOrder = i, Size = UDim2.fromOffset(48, 48), BackgroundColor3 = G.BaseRaised, BackgroundTransparency = G.RaisedTransparency,
+				Name = `GuideSquadHudSlot{i}`,
+				Selectable = true, LayoutOrder = i, Size = UDim2.fromOffset(48, 48), BackgroundColor3 = G.BaseRaised, BackgroundTransparency = G.RaisedTransparency,
 				BorderSizePixel = 0, Text = "", AutoButtonColor = false,
 				[React.Event.Activated] = function() props.OnRow(row.Slot) end,
 			}, {
@@ -621,6 +637,7 @@ function Components.SquadStatusCard(props: { Rows: { any }, LockedText: string?,
 			})
 		elseif row.Hero then
 			children["Slot" .. i] = e("TextButton", {
+				Name = `GuideSquadHudSlot{i}`,
 				LayoutOrder = i, Size = UDim2.fromOffset(tileW, TILE_HEIGHT),
 				BackgroundColor3 = G.BaseRaised,
 				BackgroundTransparency = G.RaisedTransparency,
@@ -660,6 +677,7 @@ function Components.SquadStatusCard(props: { Rows: { any }, LockedText: string?,
 			})
 		else
 			children["Slot" .. i] = e("TextButton", {
+				Name = `GuideSquadHudSlot{i}`,
 				LayoutOrder = i, Size = UDim2.fromOffset(tileW, TILE_HEIGHT), Text = "", AutoButtonColor = false, Selectable = true,
 				BackgroundColor3 = G.BaseRaised, BackgroundTransparency = G.RaisedTransparency, BorderSizePixel = 0,
 				[React.Event.Activated] = function() props.OnRow(row.Slot) end,
@@ -872,6 +890,7 @@ local function chevron(up: boolean, order: number, onToggle: () -> (), triple: b
 		kids.Right = bar(1, 0, 12)
 	end
 	return e("TextButton", {
+		Name = "SquadDrawerToggle",
 		LayoutOrder = order,
 		Size = size or UDim2.fromOffset(STRIP_SLOT, STRIP_H - 8),
 		BackgroundColor3 = G.BaseRaised,

@@ -27,7 +27,7 @@ local CloisterBuilder = require(BaseOverhaulFolder:WaitForChild("CloisterBuilder
 local SharedLeaderboards = require(BaseOverhaulFolder:WaitForChild("SharedLeaderboards"))
 
 local HubOverhaul = {}
-HubOverhaul.Version = 20 -- Bump to force a rebuild of baked geometry & sweep stale light shafts
+HubOverhaul.Version = 22 -- Bump to force a rebuild of baked geometry with Mossy Flagstone Courtyard Ground Tiles
 
 -- Runtime cleanup sweep to destroy pre-baked light shaft beams, god-ray attachments, and SunRays
 function HubOverhaul.CleanupLightShaftsAndRays()
