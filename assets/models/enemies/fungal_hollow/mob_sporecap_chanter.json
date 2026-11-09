@@ -1,0 +1,268 @@
+{
+ "EnemyId": "mob_sporecap_chanter",
+ "Family": "FUNGAL_BIPED",
+ "Role": "SUPPORT",
+ "Biome": "fungal_hollow",
+ "Segments": [
+  {
+   "Name": "Body",
+   "Parent": null,
+   "Pivot": [
+    0.0,
+    2.2,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    0.0,
+    2.22,
+    0.05
+   ],
+   "Size": [
+    1.96,
+    4.028,
+    1.758
+   ],
+   "Tris": 424
+  },
+  {
+   "Name": "Head",
+   "Parent": "Body",
+   "Pivot": [
+    0.0,
+    3.7,
+    -0.35
+   ],
+   "Glow": [
+    {
+     "Mesh": "Head_Glow_Spore",
+     "Colour": [
+      110,
+      255,
+      220
+     ],
+     "Tris": 396,
+     "Centre": [
+      -0.041,
+      4.335,
+      -0.421
+     ],
+     "Size": [
+      2.274,
+      1.01,
+      1.662
+     ]
+    }
+   ],
+   "Centre": [
+    -0.0,
+    4.0,
+    -0.45
+   ],
+   "Size": [
+    2.34,
+    1.7,
+    2.4
+   ],
+   "Tris": 730
+  },
+  {
+   "Name": "ArmL",
+   "Parent": "Body",
+   "Pivot": [
+    -0.48,
+    3.3,
+    -0.25
+   ],
+   "Glow": [],
+   "Centre": [
+    -0.624,
+    3.0,
+    -0.367
+   ],
+   "Size": [
+    0.696,
+    0.896,
+    0.597
+   ],
+   "Tris": 44
+  },
+  {
+   "Name": "ForearmL",
+   "Parent": "ArmL",
+   "Pivot": [
+    -0.75,
+    2.65,
+    -0.45
+   ],
+   "Glow": [],
+   "Centre": [
+    -0.82,
+    2.392,
+    -0.667
+   ],
+   "Size": [
+    0.651,
+    0.852,
+    0.822
+   ],
+   "Tris": 108
+  },
+  {
+   "Name": "ArmR",
+   "Parent": "Body",
+   "Pivot": [
+    0.48,
+    3.3,
+    -0.25
+   ],
+   "Glow": [],
+   "Centre": [
+    0.624,
+    3.0,
+    -0.367
+   ],
+   "Size": [
+    0.696,
+    0.896,
+    0.597
+   ],
+   "Tris": 44
+  },
+  {
+   "Name": "ForearmR",
+   "Parent": "ArmR",
+   "Pivot": [
+    0.75,
+    2.65,
+    -0.45
+   ],
+   "Glow": [
+    {
+     "Mesh": "ForearmR_Glow_Spore",
+     "Colour": [
+      110,
+      255,
+      220
+     ],
+     "Tris": 172,
+     "Centre": [
+      0.895,
+      1.56,
+      -1.078
+     ],
+     "Size": [
+      0.318,
+      0.86,
+      0.284
+     ]
+    }
+   ],
+   "Centre": [
+    0.82,
+    1.824,
+    -0.793
+   ],
+   "Size": [
+    0.651,
+    1.988,
+    1.074
+   ],
+   "Tris": 392
+  },
+  {
+   "Name": "LegL",
+   "Parent": "Body",
+   "Pivot": [
+    -0.25,
+    2.05,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    -0.248,
+    1.575,
+    -0.015
+   ],
+   "Size": [
+    0.316,
+    1.066,
+    0.342
+   ],
+   "Tris": 24
+  },
+  {
+   "Name": "KneeL",
+   "Parent": "LegL",
+   "Pivot": [
+    -0.28,
+    1.05,
+    -0.05
+   ],
+   "Glow": [],
+   "Centre": [
+    -0.3,
+    0.529,
+    -0.224
+   ],
+   "Size": [
+    0.3,
+    1.059,
+    0.601
+   ],
+   "Tris": 68
+  },
+  {
+   "Name": "LegR",
+   "Parent": "Body",
+   "Pivot": [
+    0.25,
+    2.05,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    0.263,
+    1.576,
+    -0.015
+   ],
+   "Size": [
+    0.314,
+    1.066,
+    0.342
+   ],
+   "Tris": 24
+  },
+  {
+   "Name": "KneeR",
+   "Parent": "LegR",
+   "Pivot": [
+    0.28,
+    1.05,
+    -0.05
+   ],
+   "Glow": [],
+   "Centre": [
+    0.3,
+    0.529,
+    -0.224
+   ],
+   "Size": [
+    0.3,
+    1.058,
+    0.601
+   ],
+   "Tris": 68
+  }
+ ],
+ "TotalTris": 2494,
+ "MeshCount": 12,
+ "Size": [
+  2.35,
+  4.85,
+  2.58
+ ],
+ "FeetY": 0.0,
+ "Convention": "Studs, Roblox axes (Y up, faces -Z), origin on the ground under the enemy. Pivot = joint position. Mesh objects are named after their joint.",
+ "Atlas": "atlas_fungal_hollow.png"
+}

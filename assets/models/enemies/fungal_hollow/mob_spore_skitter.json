@@ -1,0 +1,394 @@
+{
+ "EnemyId": "mob_spore_skitter",
+ "Family": "CRAWLER",
+ "Role": "REGULAR",
+ "Biome": "fungal_hollow",
+ "Segments": [
+  {
+   "Name": "Body",
+   "Parent": null,
+   "Pivot": [
+    0.0,
+    1.6,
+    -0.0
+   ],
+   "Glow": [
+    {
+     "Mesh": "Body_Glow_Spore",
+     "Colour": [
+      110,
+      255,
+      220
+     ],
+     "Tris": 576,
+     "Centre": [
+      0.138,
+      2.703,
+      0.369
+     ],
+     "Size": [
+      1.689,
+      1.403,
+      2.607
+     ]
+    }
+   ],
+   "Centre": [
+    0.0,
+    2.158,
+    0.25
+   ],
+   "Size": [
+    2.45,
+    2.516,
+    2.659
+   ],
+   "Tris": 948
+  },
+  {
+   "Name": "Head",
+   "Parent": "Body",
+   "Pivot": [
+    0.0,
+    1.5,
+    -1.3
+   ],
+   "Glow": [
+    {
+     "Mesh": "Head_Glow_Spore",
+     "Colour": [
+      110,
+      255,
+      220
+     ],
+     "Tris": 128,
+     "Centre": [
+      0.0,
+      1.62,
+      -1.95
+     ],
+     "Size": [
+      0.747,
+      0.26,
+      0.247
+     ]
+    }
+   ],
+   "Centre": [
+    0.0,
+    1.721,
+    -1.71
+   ],
+   "Size": [
+    1.2,
+    1.258,
+    1.28
+   ],
+   "Tris": 232
+  },
+  {
+   "Name": "JawL",
+   "Parent": "Head",
+   "Pivot": [
+    -0.28,
+    1.35,
+    -1.95
+   ],
+   "Glow": [],
+   "Centre": [
+    -0.263,
+    1.336,
+    -2.164
+   ],
+   "Size": [
+    0.285,
+    0.198,
+    0.571
+   ],
+   "Tris": 18
+  },
+  {
+   "Name": "JawR",
+   "Parent": "Head",
+   "Pivot": [
+    0.28,
+    1.35,
+    -1.95
+   ],
+   "Glow": [],
+   "Centre": [
+    0.268,
+    1.334,
+    -2.166
+   ],
+   "Size": [
+    0.296,
+    0.202,
+    0.568
+   ],
+   "Tris": 18
+  },
+  {
+   "Name": "Leg-1_1",
+   "Parent": "Body",
+   "Pivot": [
+    -0.85,
+    1.45,
+    -0.85
+   ],
+   "Glow": [],
+   "Centre": [
+    -1.381,
+    1.898,
+    -0.899
+   ],
+   "Size": [
+    1.213,
+    1.026,
+    0.316
+   ],
+   "Tris": 32
+  },
+  {
+   "Name": "Knee-1_1",
+   "Parent": "Leg-1_1",
+   "Pivot": [
+    -1.95,
+    2.35,
+    -0.978
+   ],
+   "Glow": [],
+   "Centre": [
+    -2.202,
+    1.259,
+    -0.994
+   ],
+   "Size": [
+    0.733,
+    2.423,
+    0.261
+   ],
+   "Tris": 96
+  },
+  {
+   "Name": "Leg-1_2",
+   "Parent": "Body",
+   "Pivot": [
+    -0.85,
+    1.45,
+    0.2
+   ],
+   "Glow": [],
+   "Centre": [
+    -1.381,
+    1.898,
+    0.2
+   ],
+   "Size": [
+    1.206,
+    1.025,
+    0.22
+   ],
+   "Tris": 32
+  },
+  {
+   "Name": "Knee-1_2",
+   "Parent": "Leg-1_2",
+   "Pivot": [
+    -1.95,
+    2.35,
+    0.23
+   ],
+   "Glow": [],
+   "Centre": [
+    -2.202,
+    1.259,
+    0.23
+   ],
+   "Size": [
+    0.732,
+    2.422,
+    0.228
+   ],
+   "Tris": 96
+  },
+  {
+   "Name": "Leg-1_3",
+   "Parent": "Body",
+   "Pivot": [
+    -0.85,
+    1.45,
+    1.25
+   ],
+   "Glow": [],
+   "Centre": [
+    -1.381,
+    1.898,
+    1.329
+   ],
+   "Size": [
+    1.217,
+    1.026,
+    0.375
+   ],
+   "Tris": 32
+  },
+  {
+   "Name": "Knee-1_3",
+   "Parent": "Leg-1_3",
+   "Pivot": [
+    -1.95,
+    2.35,
+    1.438
+   ],
+   "Glow": [],
+   "Centre": [
+    -2.202,
+    1.259,
+    1.484
+   ],
+   "Size": [
+    0.733,
+    2.423,
+    0.321
+   ],
+   "Tris": 96
+  },
+  {
+   "Name": "Leg1_1",
+   "Parent": "Body",
+   "Pivot": [
+    0.85,
+    1.45,
+    -0.85
+   ],
+   "Glow": [],
+   "Centre": [
+    1.381,
+    1.898,
+    -0.899
+   ],
+   "Size": [
+    1.213,
+    1.026,
+    0.316
+   ],
+   "Tris": 32
+  },
+  {
+   "Name": "Knee1_1",
+   "Parent": "Leg1_1",
+   "Pivot": [
+    1.95,
+    2.35,
+    -0.978
+   ],
+   "Glow": [],
+   "Centre": [
+    2.202,
+    1.259,
+    -0.994
+   ],
+   "Size": [
+    0.733,
+    2.423,
+    0.261
+   ],
+   "Tris": 96
+  },
+  {
+   "Name": "Leg1_2",
+   "Parent": "Body",
+   "Pivot": [
+    0.85,
+    1.45,
+    0.2
+   ],
+   "Glow": [],
+   "Centre": [
+    1.381,
+    1.898,
+    0.2
+   ],
+   "Size": [
+    1.206,
+    1.025,
+    0.22
+   ],
+   "Tris": 32
+  },
+  {
+   "Name": "Knee1_2",
+   "Parent": "Leg1_2",
+   "Pivot": [
+    1.95,
+    2.35,
+    0.23
+   ],
+   "Glow": [],
+   "Centre": [
+    2.202,
+    1.259,
+    0.23
+   ],
+   "Size": [
+    0.732,
+    2.422,
+    0.228
+   ],
+   "Tris": 96
+  },
+  {
+   "Name": "Leg1_3",
+   "Parent": "Body",
+   "Pivot": [
+    0.85,
+    1.45,
+    1.25
+   ],
+   "Glow": [],
+   "Centre": [
+    1.381,
+    1.898,
+    1.329
+   ],
+   "Size": [
+    1.217,
+    1.026,
+    0.375
+   ],
+   "Tris": 32
+  },
+  {
+   "Name": "Knee1_3",
+   "Parent": "Leg1_3",
+   "Pivot": [
+    1.95,
+    2.35,
+    1.438
+   ],
+   "Glow": [],
+   "Centre": [
+    2.202,
+    1.259,
+    1.484
+   ],
+   "Size": [
+    0.733,
+    2.423,
+    0.321
+   ],
+   "Tris": 96
+  }
+ ],
+ "TotalTris": 2688,
+ "MeshCount": 18,
+ "Size": [
+  5.14,
+  3.37,
+  4.12
+ ],
+ "FeetY": 0.047,
+ "Convention": "Studs, Roblox axes (Y up, faces -Z), origin on the ground under the enemy. Pivot = joint position. Mesh objects are named after their joint.",
+ "Atlas": "atlas_fungal_hollow.png"
+}

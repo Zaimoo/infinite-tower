@@ -1,0 +1,326 @@
+{
+ "EnemyId": "mob_lantern_spore",
+ "Family": "FUNGAL_BIPED",
+ "Role": "REGULAR",
+ "Biome": "fungal_hollow",
+ "Segments": [
+  {
+   "Name": "Body",
+   "Parent": null,
+   "Pivot": [
+    0.0,
+    2.4,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    0.0,
+    3.149,
+    -0.0
+   ],
+   "Size": [
+    1.6,
+    2.457,
+    1.6
+   ],
+   "Tris": 640
+  },
+  {
+   "Name": "Head",
+   "Parent": "Body",
+   "Pivot": [
+    0.0,
+    4.3,
+    -0.0
+   ],
+   "Glow": [
+    {
+     "Mesh": "Head_Glow_Spore",
+     "Colour": [
+      110,
+      255,
+      220
+     ],
+     "Tris": 376,
+     "Centre": [
+      0.0,
+      5.34,
+      -0.019
+     ],
+     "Size": [
+      0.87,
+      1.45,
+      0.958
+     ]
+    }
+   ],
+   "Centre": [
+    0.0,
+    5.351,
+    -0.0
+   ],
+   "Size": [
+    1.405,
+    2.098,
+    1.234
+   ],
+   "Tris": 900
+  },
+  {
+   "Name": "ArmL",
+   "Parent": "Body",
+   "Pivot": [
+    -0.42,
+    4.0,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    -0.604,
+    3.677,
+    -0.038
+   ],
+   "Size": [
+    0.663,
+    0.913,
+    0.301
+   ],
+   "Tris": 38
+  },
+  {
+   "Name": "ForearmL",
+   "Parent": "ArmL",
+   "Pivot": [
+    -0.85,
+    3.25,
+    -0.1
+   ],
+   "Glow": [
+    {
+     "Mesh": "ForearmL_Glow_Spore",
+     "Colour": [
+      110,
+      255,
+      220
+     ],
+     "Tris": 64,
+     "Centre": [
+      -0.65,
+      2.05,
+      -0.55
+     ],
+     "Size": [
+      0.209,
+      0.22,
+      0.209
+     ]
+    },
+    {
+     "Mesh": "ForearmL_Glow_Violet",
+     "Colour": [
+      186,
+      96,
+      255
+     ],
+     "Tris": 72,
+     "Centre": [
+      -0.97,
+      2.475,
+      -0.45
+     ],
+     "Size": [
+      0.187,
+      0.55,
+      0.3
+     ]
+    }
+   ],
+   "Centre": [
+    -0.827,
+    2.654,
+    -0.297
+   ],
+   "Size": [
+    0.392,
+    1.251,
+    0.563
+   ],
+   "Tris": 44
+  },
+  {
+   "Name": "ArmR",
+   "Parent": "Body",
+   "Pivot": [
+    0.42,
+    4.0,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    0.597,
+    3.678,
+    -0.033
+   ],
+   "Size": [
+    0.664,
+    0.911,
+    0.304
+   ],
+   "Tris": 38
+  },
+  {
+   "Name": "ForearmR",
+   "Parent": "ArmR",
+   "Pivot": [
+    0.85,
+    3.25,
+    -0.1
+   ],
+   "Glow": [
+    {
+     "Mesh": "ForearmR_Glow_Spore",
+     "Colour": [
+      110,
+      255,
+      220
+     ],
+     "Tris": 64,
+     "Centre": [
+      0.65,
+      2.05,
+      -0.55
+     ],
+     "Size": [
+      0.209,
+      0.22,
+      0.209
+     ]
+    },
+    {
+     "Mesh": "ForearmR_Glow_Violet",
+     "Colour": [
+      186,
+      96,
+      255
+     ],
+     "Tris": 72,
+     "Centre": [
+      0.97,
+      2.475,
+      -0.45
+     ],
+     "Size": [
+      0.187,
+      0.55,
+      0.3
+     ]
+    }
+   ],
+   "Centre": [
+    0.827,
+    2.654,
+    -0.297
+   ],
+   "Size": [
+    0.392,
+    1.251,
+    0.563
+   ],
+   "Tris": 44
+  },
+  {
+   "Name": "LegL",
+   "Parent": "Body",
+   "Pivot": [
+    -0.28,
+    2.2,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    -0.285,
+    1.704,
+    -0.005
+   ],
+   "Size": [
+    0.41,
+    1.124,
+    0.41
+   ],
+   "Tris": 44
+  },
+  {
+   "Name": "KneeL",
+   "Parent": "LegL",
+   "Pivot": [
+    -0.33,
+    1.15,
+    -0.05
+   ],
+   "Glow": [],
+   "Centre": [
+    -0.458,
+    0.591,
+    -0.176
+   ],
+   "Size": [
+    0.594,
+    1.141,
+    0.632
+   ],
+   "Tris": 68
+  },
+  {
+   "Name": "LegR",
+   "Parent": "Body",
+   "Pivot": [
+    0.28,
+    2.2,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    0.285,
+    1.704,
+    -0.005
+   ],
+   "Size": [
+    0.41,
+    1.124,
+    0.41
+   ],
+   "Tris": 44
+  },
+  {
+   "Name": "KneeR",
+   "Parent": "LegR",
+   "Pivot": [
+    0.33,
+    1.15,
+    -0.05
+   ],
+   "Glow": [],
+   "Centre": [
+    0.465,
+    0.591,
+    -0.176
+   ],
+   "Size": [
+    0.609,
+    1.141,
+    0.632
+   ],
+   "Tris": 68
+  }
+ ],
+ "TotalTris": 2576,
+ "MeshCount": 15,
+ "Size": [
+  2.13,
+  6.38,
+  1.6
+ ],
+ "FeetY": 0.02,
+ "Convention": "Studs, Roblox axes (Y up, faces -Z), origin on the ground under the enemy. Pivot = joint position. Mesh objects are named after their joint.",
+ "Atlas": "atlas_fungal_hollow.png"
+}
