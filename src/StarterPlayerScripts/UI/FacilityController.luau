@@ -28,6 +28,8 @@ local ModalFit = require(script.Parent:WaitForChild("ModalFit"))
 local Theme = require(script.Parent:WaitForChild("Hud"):WaitForChild("Theme"))
 local SummonReveal = require(script.Parent:WaitForChild("SummonReveal"))
 local UIFeel = require(script.Parent:WaitForChild("UIFeel"))
+local Kit = require(script.Parent:WaitForChild("Kit"))
+local StatBalance = require(Shared:WaitForChild("Config"):WaitForChild("StatBalance"))
 
 local RemotesFolder = ReplicatedStorage:WaitForChild("Remotes")
 local ArtifactRemotes = RemotesFolder:FindFirstChild("ArtifactRemotes") :: Folder?
@@ -692,7 +694,7 @@ function Controller:SetSummonStatus(bannerId: string, text: string, isError: boo
 	bv.Status.TextColor3 = if isError then C.Red else C.TextMuted
 end
 
-function Controller:PerformSummon(bannerId: string, count: number): boolean?
+function Controller:PerformSummon(bannerId: string, count: number, confirmed: boolean?): boolean?
 	if self.Busy then return false end
 	local profile = self.GetProfile()
 	local cost = summonCost(bannerId, count)
@@ -704,6 +706,22 @@ function Controller:PerformSummon(bannerId: string, count: number): boolean?
 			local btn = if count == 10 then self.Reveal.Again10.Root else self.Reveal.Again1.Root
 			UIFeel.Deny(btn)
 		end
+		return false
+	end
+
+	-- The first 10x of the session asks before spending Gems (plan §6, Soft).
+	if count == 10 and not confirmed and not self.Summon10Confirmed then
+		Kit.Confirm.Ask({
+			Tier = Kit.Rules.ConfirmTier("SUMMON_10X"),
+			Title = string.format("Spend %s Gems?", StatBalance.Format(cost)),
+			Body = "Summon 10 heroes from this banner.",
+			ConfirmText = "Summon 10x",
+			SessionKey = "SUMMON_10X_HEROES",
+			OnConfirm = function()
+				self.Summon10Confirmed = true
+				self:PerformSummon(bannerId, count, true)
+			end,
+		})
 		return false
 	end
 

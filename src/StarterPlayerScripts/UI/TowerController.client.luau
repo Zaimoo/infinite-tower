@@ -20,6 +20,8 @@ local ModalFit = require(script.Parent:WaitForChild("ModalFit"))
 local GildedGrimoire = require(RS.Shared.Util.GildedGrimoire)
 local GrimoireIcons = require(RS.Shared.Util.GrimoireIcons)
 local UIAssets = require(script.Parent:WaitForChild("UIAssets"))
+local Kit = require(script.Parent:WaitForChild("Kit"))
+local StatBalance = require(RS.Shared.Config.StatBalance)
 local remotes = RS:WaitForChild("Remotes"):WaitForChild("TowerRemotes")
 local Store = require(script.Parent:WaitForChild("Hud"):WaitForChild("Store"))
 
@@ -780,6 +782,23 @@ local visitBtn = createOrnateButton(actionRow, "VISIT FLOOR", 1, true, function(
 	if selected > maxAllowed then
 		lastFeedback = string.format("Floor %d is locked! Slay Floor %d Boss first.", selected, selected - 1)
 		render()
+		return
+	end
+	-- Under the recommended power: ask first (plan §6, Soft), naming the gap.
+	local profile = _G.CurrentProfile
+	local recommended = floors.RecommendedPower(selected)
+	local mine = if profile then profile.SquadPower or 0 else 0
+	if Kit.Rules.ConfirmTier("VISIT_FLOOR", { SquadPower = mine, Recommended = recommended }) ~= "None" then
+		local floorToVisit = selected
+		Kit.Confirm.Ask({
+			Tier = "Soft",
+			Title = string.format("Visit Floor %d under-powered?", floorToVisit),
+			Body = string.format("Your squad has %s power; this floor recommends %s (%s short). Your heroes may fall into a coma.",
+				StatBalance.Format(mine), StatBalance.Format(recommended), StatBalance.Format(recommended - mine)),
+			ConfirmText = "Visit anyway",
+			SessionKey = "VISIT_UNDERPOWERED",
+			OnConfirm = function() request("VISIT", floorToVisit) end,
+		})
 		return
 	end
 	request("VISIT", selected)

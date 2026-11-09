@@ -5,7 +5,7 @@
 --   Soft      Cancel / Confirm, plus "Don't ask again this session" when a SessionKey is given.
 --   Hard      lists what will be lost; Confirm (Danger) arms after 1 s.
 --   Critical  as Hard, but Confirm must be held for 1.2 s.
--- Focus starts on Cancel; Backspace, gamepad B and the scrim cancel. Only one dialog shows at a time.
+-- On gamepad, focus starts on Cancel; Backspace, gamepad B and the scrim cancel. Only one dialog shows at a time.
 --
 --   ConfirmDialog.Ask({ Tier = "Hard", Title = "Sell 3 weapons?", Body = "...", Items = { "Holy Claymore · Exalted 2★" },
 --     ConfirmText = "Sell", OnConfirm = sell })
@@ -266,7 +266,11 @@ function ConfirmDialog.Ask(opts: Options): () -> ()
 		TweenService:Create(scrim, TweenInfo.new(0.15), { BackgroundTransparency = 0.45 }):Play()
 		TweenService:Create(scale, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
 	end
-	GuiService.SelectedObject = cancel.Instance
+	-- Focus Cancel for gamepad players only: setting a selection on mouse / keyboard draws Roblox's
+	-- blue selection box around the button.
+	if UserInputService.PreferredInput == Enum.PreferredInput.Gamepad then
+		GuiService.SelectedObject = cancel.Instance
+	end
 
 	return function() close(false) end
 end

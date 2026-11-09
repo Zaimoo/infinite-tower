@@ -10,6 +10,7 @@ local HeroCard = require(script.Parent:WaitForChild("HeroCard"))
 local ModalFit = require(script.Parent:WaitForChild("ModalFit"))
 local UIAssets = require(script.Parent:WaitForChild("UIAssets"))
 local UIFeel = require(script.Parent:WaitForChild("UIFeel"))
+local Kit = require(script.Parent:WaitForChild("Kit"))
 local StatFormulas = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("StatFormulas"))
 local PitBalanceConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("PitBalanceConfig"))
 local GothicBoxStyle = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GothicBoxStyle"))
@@ -606,10 +607,15 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 		self:Confirm()
 	end)
 
+	-- Status as a callout under the button (plan §4.4); the label stays hidden for older code.
 	self.Status = label(actionArea, "", 14, C.TextMuted, Enum.Font.GothamMedium, "Body")
 	self.Status.Position = UDim2.fromOffset(6, 149)
 	self.Status.Size = UDim2.new(1, -12, 0, 39)
 	self.Status.ZIndex = 43
+	self.Status.Visible = false
+	self.StatusCallout = Kit.Callout.Create(actionArea, {
+		Name = "StatusCallout", Position = UDim2.fromOffset(0, 150), Width = UDim.new(1, 0), Height = 40, ZIndex = 43,
+	})
 
 	self:BuildPicker()
 
@@ -1120,10 +1126,16 @@ function Promo.Render(self: any)
 		button.Text = "PROMOTE"
 	end
 
-	button.TextColor3 = (canCommit or self.Busy) and C.Text or Color3.fromRGB(206, 196, 226)
-	button.TextTransparency = if canCommit or self.Busy then 0 else 0.15
+	-- Brighter Grimoire: ready = the gold primary button; blocked = slate, so it can't be mistaken
+	-- for a live action (it used to differ only by its outline).
+	local live = canCommit or self.Busy
+	local tone = if live then Kit.Tokens.Intent.Primary else Kit.Tokens.Intent.Disabled
+	local fill = button:FindFirstChildWhichIsA("UIGradient")
+	if fill then fill.Color = ColorSequence.new(tone.Top, tone.Bottom) end
+	button.TextColor3 = if live then C.Text else Color3.fromRGB(176, 168, 196)
+	button.TextTransparency = 0
 	if self.ConfirmStroke then
-		self.ConfirmStroke.Color = if canCommit then Color3.fromRGB(255, 226, 140) else Color3.fromRGB(150, 138, 176)
+		self.ConfirmStroke.Color = tone.Rail
 	end
 
 	local status, color = self.Message, C.TextDim
@@ -1144,6 +1156,10 @@ function Promo.Render(self: any)
 	end
 	self.Status.Text = status
 	self.Status.TextColor3 = color
+	self.StatusCallout.Update({
+		Text = if status ~= "" then status else nil,
+		Severity = if color == C.Danger then "block" elseif color == C.Good then "success" else "info",
+	})
 end
 
 function Promo.StopStoneOrbit(self: any)
@@ -1190,6 +1206,7 @@ function Promo.PlayAscension(self: any, count: number)
 		self.StoneCount.Text = string.format("0 / %d", count)
 		self.Status.Text = "The hero is absorbing Promotion Stones…"
 		self.Status.TextColor3 = C.TextMuted
+		self.StatusCallout.Update({ Text = self.Status.Text, Severity = "info" })
 
 		local landed, elapsed, shakePhase = 0, 0, 0
 		local duration = absorptionTime(1, count)

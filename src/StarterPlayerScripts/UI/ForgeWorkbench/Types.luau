@@ -67,6 +67,11 @@ export type Props = {
 	Transport: Transport,
 	OnClose: () -> (),
 	OnSummon: () -> (), -- hand off to the existing artifact summon banner
+	-- One Forge window (UI overhaul plan §5.2): the header's tabs, and the body frame that hosts the
+	-- legacy summon view while the Summon tab is active (nil when it leaves).
+	ActiveTab: ("Artifacts" | "Summon")?,
+	OnSelectTab: ((tab: string) -> ())?,
+	OnSummonHost: ((host: Frame?) -> ())?,
 	OnSell: (() -> ())?,
 	OnSellArtifacts: ((ids: { string }) -> (boolean, string?))?,
 	OnContextChanged: ((heroId: string?, artifactId: string?, mode: string) -> ())?,

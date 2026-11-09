@@ -128,11 +128,9 @@ function Screens.DetailPanel(props: DetailPanelProps)
 				Rotation = 90,
 			}),
 			Stroke = e("UIStroke", { Color = rarity.Color, Thickness = 1.4, Transparency = 0.3 }),
-			Model = if owner then e(EquippedHero, {
-				Hero = owner,
-				Artifact = artifact,
-				Size = UDim2.fromScale(1, 1),
-			}) else e(C.Preview, {
+			-- Always the weapon itself (an equipped weapon used to show a tiny hero holding it, too
+			-- small to read). The owner is named on the status line under the title.
+			Model = e(C.Preview, {
 				Artifact = artifact,
 				Size = UDim2.fromScale(1, 1),
 			}),
@@ -225,48 +223,54 @@ function Screens.DetailPanel(props: DetailPanelProps)
 				Order = 3,
 			}),
 		}),
-		-- 6. Compact Action Icons Row (Lock · Upgrade · Equip · Sell)
+		-- 6. Actions as labelled buttons in a 2 × 2 grid (they were 22 px icons with 10 px labels).
+		-- Upgrade is the gold primary; Sell is red; a disabled button says why on hover.
 		ActionRow = e("Frame", {
 			Name = "ActionRow",
-			Size = UDim2.new(1, 0, 0, 56),
+			Size = UDim2.new(1, 0, 0, 100),
 			BackgroundTransparency = 1,
 			LayoutOrder = 6,
 		}, {
-			Layout = e("UIListLayout", {
-				FillDirection = Enum.FillDirection.Horizontal,
-				HorizontalAlignment = Enum.HorizontalAlignment.Center,
-				Padding = UDim.new(0, 10),
+			Layout = e("UIGridLayout", {
+				CellSize = UDim2.new(0.5, -4, 0, 46),
+				CellPadding = UDim2.fromOffset(8, 8),
+				SortOrder = Enum.SortOrder.LayoutOrder,
 			}),
-			LockBtn = e(C.IconAction, {
-				Icon = "Lock",
-				Label = if artifact.Locked then "Unlock" else "Lock",
-				Selected = artifact.Locked == true,
-				Accent = if artifact.Locked then T.Gold else nil,
-				Disabled = props.Busy,
-				OnActivate = props.OnToggleLock,
+			UpgradeBtn = e(C.Button, {
+				Name = "DetailUpgradeButton",
+				Icon = "Forge",
+				Text = if maxRank then "Max 7★" else "Upgrade",
+				Primary = not maxRank,
+				Disabled = props.Busy or maxRank,
+				Tooltip = if maxRank then "This weapon is already at 7★." else nil,
+				OnActivate = props.OnUpgrade,
 				Order = 1,
 			}),
-			UpgradeBtn = e(C.IconAction, {
-				Icon = "Forge",
-				Label = if maxRank then "Max" else "Upgrade",
-				Accent = Color3.fromRGB(120, 180, 255),
-				Disabled = props.Busy or maxRank,
-				OnActivate = props.OnUpgrade,
-				Order = 2,
-			}),
-			EquipBtn = e(C.IconAction, {
+			EquipBtn = e(C.Button, {
+				Name = "DetailEquipButton",
 				Icon = "Equipped",
-				Label = if isEquipped then "Unequip" else "Equip",
-				Accent = if isEquipped then T.Equipped else Color3.fromRGB(120, 255, 140),
+				Text = if isEquipped then "Unequip" else "Equip",
 				Disabled = props.Busy,
 				OnActivate = if isEquipped then props.OnUnequip else props.OnEquip,
+				Order = 2,
+			}),
+			LockBtn = e(C.Button, {
+				Name = "DetailLockButton",
+				Icon = "Lock",
+				Text = if artifact.Locked then "Unlock" else "Lock",
+				Selected = artifact.Locked == true,
+				Disabled = props.Busy,
+				Tooltip = "Locked weapons can't be sold or used as upgrade material.",
+				OnActivate = props.OnToggleLock,
 				Order = 3,
 			}),
-			SellBtn = e(C.IconAction, {
+			SellBtn = e(C.Button, {
+				Name = "DetailSellButton",
 				Icon = "Hammer",
-				Label = "Sell",
+				Text = "Sell",
 				Accent = T.Bad,
 				Disabled = props.Busy or isEquipped or artifact.Locked == true,
+				Tooltip = if isEquipped then "Unequip it first to sell." elseif artifact.Locked then "Unlock it first to sell." else nil,
 				OnActivate = props.OnSell,
 				Order = 4,
 			}),
@@ -312,7 +316,7 @@ function Screens.SellSummary(props: SellSummaryProps)
 				Art = e(Icons.Icon, { Name = "Hammer", Size = 32 }),
 			}),
 			Title = e(C.Text, {
-				Text = "DELETE / SELL MODE",
+				Text = "SELL WEAPONS",
 				FontFace = T.Theme.Fonts.Title,
 				TextSize = 20,
 				TextColor3 = T.Bad,
@@ -360,7 +364,7 @@ function Screens.SellSummary(props: SellSummaryProps)
 			Title = e(C.Text, {
 				Text = "SELECTION BREAKDOWN",
 				FontFace = T.Theme.Fonts.Title,
-				TextSize = 12,
+				TextSize = 13,
 				TextColor3 = T.Gold,
 				Position = UDim2.fromOffset(12, 8),
 				Size = UDim2.new(1, -24, 0, 18),
@@ -375,9 +379,9 @@ function Screens.SellSummary(props: SellSummaryProps)
 					Padding = UDim.new(0, 10),
 					VerticalAlignment = Enum.VerticalAlignment.Center,
 				}),
-				C = e(C.Text, { Text = string.format("Common: %d", props.RarityCounts[1] or 0), TextSize = 12, TextColor3 = Catalog.GetRarityInfo(1).Color, Size = UDim2.fromOffset(70, 20) }),
-				U = e(C.Text, { Text = string.format("Uncommon: %d", props.RarityCounts[2] or 0), TextSize = 12, TextColor3 = Catalog.GetRarityInfo(2).Color, Size = UDim2.fromOffset(80, 20) }),
-				R = e(C.Text, { Text = string.format("Rare+: %d", (props.RarityCounts[3] or 0) + (props.RarityCounts[4] or 0) + (props.RarityCounts[5] or 0)), TextSize = 12, TextColor3 = Catalog.GetRarityInfo(3).Color, Size = UDim2.fromOffset(70, 20) }),
+				C = e(C.Text, { Text = string.format("Common: %d", props.RarityCounts[1] or 0), TextSize = 13, TextColor3 = Catalog.GetRarityInfo(1).Color, Size = UDim2.fromOffset(70, 20) }),
+				U = e(C.Text, { Text = string.format("Uncommon: %d", props.RarityCounts[2] or 0), TextSize = 13, TextColor3 = Catalog.GetRarityInfo(2).Color, Size = UDim2.fromOffset(80, 20) }),
+				R = e(C.Text, { Text = string.format("Rare+: %d", (props.RarityCounts[3] or 0) + (props.RarityCounts[4] or 0) + (props.RarityCounts[5] or 0)), TextSize = 13, TextColor3 = Catalog.GetRarityInfo(3).Color, Size = UDim2.fromOffset(70, 20) }),
 			}),
 		}),
 		-- Notice / Safety advice
@@ -392,19 +396,13 @@ function Screens.SellSummary(props: SellSummaryProps)
 			Hint = e(C.Text, {
 				Text = "• Tap cards to toggle selection\n• Equipped and Locked items are protected\n• Use bottom buttons for quick-selection",
 				FontFace = T.Theme.Fonts.Body,
-				TextSize = 12,
+				TextSize = 13,
 				TextColor3 = T.Muted,
 				Position = UDim2.fromOffset(12, 10),
 				Size = UDim2.new(1, -24, 1, -20),
 			}),
 		}),
-		-- Back button to exit sell mode
-		ExitBtn = e(C.Button, {
-			Text = "Exit Delete Mode",
-			Size = UDim2.new(1, 0, 0, 44),
-			OnActivate = props.OnExitSell,
-			Order = 5,
-		}),
+		-- No second exit here: the action bar's Back is the one way out of sell mode.
 	})
 end
 

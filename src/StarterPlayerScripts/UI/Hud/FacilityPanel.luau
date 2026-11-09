@@ -28,6 +28,7 @@ local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormu
 local InventoryCapacity = require(Shared:WaitForChild("Util"):WaitForChild("InventoryCapacity"))
 local SummonLuck = require(Shared:WaitForChild("Util"):WaitForChild("SummonLuck"))
 local Grimoire = require(Shared:WaitForChild("Util"):WaitForChild("GildedGrimoire"))
+local Kit = require(script.Parent.Parent:WaitForChild("Kit"))
 
 local Assets = ReplicatedStorage:WaitForChild("Assets")
 local TowerEnemyRigs = require(Assets:WaitForChild("TowerEnemyRigs"))
@@ -1227,8 +1228,16 @@ local function FacilityPanel(props: { Facility: string, Profile: any, Width: num
 			elseif full then
 				say(string.format("All %d %s slots are full. Remove a worker first.", maxWorkers, info.Worker), true)
 			elseif away and not isConfirming then
-				setConfirming(hero.UUID)
-				say(string.format("Take %s off %s? Press CONFIRM.", hero.DisplayName, assignmentLabel(hero.Assignment)))
+				-- Moving a hero off another job asks first (plan §6, Soft) instead of "press CONFIRM".
+				local heroId = hero.UUID
+				Kit.Confirm.Ask({
+					Tier = Kit.Rules.ConfirmTier("UNASSIGN_FACILITY"),
+					Title = string.format("Move %s here?", hero.DisplayName),
+					Body = string.format("%s will leave %s and work here instead.", hero.DisplayName, assignmentLabel(hero.Assignment)),
+					ConfirmText = "Move here",
+					SessionKey = "UNASSIGN_FACILITY",
+					OnConfirm = function() request(heroId, info.Tag) end,
+				})
 			else
 				request(hero.UUID, info.Tag)
 			end

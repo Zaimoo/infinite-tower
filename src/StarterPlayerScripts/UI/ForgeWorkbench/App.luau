@@ -22,6 +22,7 @@ local Icons = require(script.Parent.Parent.Hud.Icons)
 local UIFeel = require(script.Parent.Parent.UIFeel)
 local ModalFit = require(script.Parent.Parent.ModalFit)
 local Types = require(script.Parent.Types)
+local Kit = require(script.Parent.Parent.Kit)
 local e = React.createElement
 
 -- "500 Gold · 1 weapon consumed": Gems only when the rank actually costs Gems.
@@ -103,6 +104,20 @@ local function App(props: Types.Props)
 	local forge = useForge(props)
 	local snapshot = forge.Snapshot
 	local rootRef, bodyRef = React.useRef(nil), React.useRef(nil)
+	local headerBarRef, summonHostRef = React.useRef(nil), React.useRef(nil)
+	local summonTab = props.ActiveTab == "Summon"
+	-- Hand the body frame to the legacy summon view while the Summon tab shows, and take it back.
+	-- A layout effect: its cleanup runs before React destroys the host frame, so the summon view is
+	-- moved out first instead of being destroyed with it.
+	React.useLayoutEffect(function()
+		if not summonTab or not props.OnSummonHost then return nil end
+		props.OnSummonHost(summonHostRef.current)
+		return function() props.OnSummonHost(nil) end
+	end, { summonTab })
+	-- The header's domain colour bar (Brighter Grimoire: Forge = ember).
+	React.useEffect(function()
+		if headerBarRef.current then Kit.Tokens.Paint(headerBarRef.current, Kit.Tokens.Domain.Forge, 12, 0, 0.35) end
+	end, {})
 	local transitionRef = React.useRef(nil)
 	local camera = workspace.CurrentCamera
 	local screen, setScreen = React.useState(if camera then camera.ViewportSize else Vector2.new(1280, 720))
@@ -261,13 +276,30 @@ local function App(props: Types.Props)
 		end
 	end
 
+	-- Selling asks by risk (UI overhaul plan §6): Commons and Uncommons sell straight away; Rare to
+	-- Superior is a Hard confirm (arms after 1 s); Exalted+ or any ★2+ weapon must be held to confirm.
 	local function handleSellAction()
 		if sell.SelectedCount == 0 or busy then return end
-		if sell.HasRareOrBetter then
-			setDialog("SELL_WARNING")
-		else
-			sell.Sell()
+		local maxRarity, maxStars = 1, 1
+		local items = {}
+		for _, artifact in sell.SelectedItems do
+			maxRarity = math.max(maxRarity, artifact.Rarity or 1)
+			maxStars = math.max(maxStars, artifact.Star or 1)
+			table.insert(items, string.format("%s · %s %d★", artifact.DisplayName, Catalog.GetRarityInfo(artifact.Rarity or 1).Name, artifact.Star or 1))
 		end
+		local tier = Kit.Rules.ConfirmTier("SELL", { MaxRarity = maxRarity, MaxStars = maxStars })
+		if tier == "None" then
+			sell.Sell()
+			return
+		end
+		Kit.Confirm.Ask({
+			Tier = tier,
+			Title = string.format("Sell %d weapon%s?", sell.SelectedCount, if sell.SelectedCount == 1 then "" else "s"),
+			Body = string.format("They're gone for good. You get %s Gold.", Balance.Format(sell.TotalGold)),
+			Items = items,
+			ConfirmText = "Sell",
+			OnConfirm = function() sell.Sell() end,
+		})
 	end
 
 	React.useEffect(function()
@@ -362,7 +394,7 @@ local function App(props: Types.Props)
 			Hammer = e(C.Button, {
 				Name = "ExitSellHammer",
 				Icon = "Hammer",
-				Text = "Done",
+				Text = "Back",
 				Accent = T.Bad,
 				Selected = true,
 				Size = UDim2.new(0.16, -6, 0, 48),
@@ -399,7 +431,8 @@ local function App(props: Types.Props)
 			}),
 			SellBtn = e(C.Button, {
 				Name = "CommitSellButton",
-				Text = if sell.Busy then "Selling…" elseif sell.SelectedCount > 0 then string.format("Sell %d (+%s)", sell.SelectedCount, Balance.Format(sell.TotalGold)) else "Select Items",
+				Text = if sell.Busy then "Selling…" elseif sell.SelectedCount > 0 then string.format("Sell %d (+%s)", sell.SelectedCount, Balance.Format(sell.TotalGold)) else "Pick weapons to sell",
+				Tooltip = if sell.SelectedCount == 0 then "Tap weapons in the grid, or use Common / Uncommon / All Spare." else nil,
 				Primary = true,
 				Accent = T.Bad,
 				Size = UDim2.new(0.23, 0, 0, 48),
@@ -418,7 +451,7 @@ local function App(props: Types.Props)
 				Icon = "Hammer",
 				Text = "Sell",
 				Accent = T.Bad,
-				Tooltip = "Delete / Sell mode",
+				Tooltip = "Pick spare weapons to sell for Gold",
 				Size = UDim2.new(0.20, -6, 0, 48),
 				Position = UDim2.new(0, 0, 0, 4),
 				OnActivate = function() setSellMode(true) end,
@@ -535,8 +568,10 @@ local function App(props: Types.Props)
 				Reason = e(C.Text, { Text = upgradeReason or "Ready to upgrade", TextSize = 14, LayoutOrder = 5 }),
 			} }),
 		})
-		view.AutoFill = e(C.Button, { Name = "AutoFillMaterialsButton", Text = "Auto-fill safe artifacts", Position = UDim2.new(0, 0, 1, -48), Size = UDim2.new(0.4, -8, 0, 48), Disabled = busy or maxRank, OnActivate = forge.AutoFill })
-		view.Review = e(C.Button, { Name = "ReviewUpgradeButton", Icon = "Forge", Text = string.format("REVIEW UPGRADE · %d★ → %d★", target.Star, after.Star), Primary = true, Position = UDim2.new(0.4, 0, 1, -48), Size = UDim2.new(0.6, 0, 0, 48), Disabled = busy or upgradeReason ~= nil, Tooltip = upgradeReason, OnActivate = reviewUpgrade })
+		-- A visible way back to the inventory (before, only the X, the tab or Backspace / B left this screen).
+		view.Back = e(C.Button, { Name = "UpgradeBackButton", Icon = "Back", Text = "Back", Position = UDim2.new(0, 0, 1, -48), Size = UDim2.new(0.18, -8, 0, 48), Disabled = busy, OnActivate = inventory })
+		view.AutoFill = e(C.Button, { Name = "AutoFillMaterialsButton", Text = "Auto-fill safe weapons", Position = UDim2.new(0.18, 0, 1, -48), Size = UDim2.new(0.32, -8, 0, 48), Disabled = busy or maxRank, OnActivate = forge.AutoFill })
+		view.Review = e(C.Button, { Name = "ReviewUpgradeButton", Icon = "Forge", Text = string.format("REVIEW UPGRADE · %d★ → %d★", target.Star, after.Star), Primary = true, Position = UDim2.new(0.5, 0, 1, -48), Size = UDim2.new(0.5, 0, 0, 48), Disabled = busy or upgradeReason ~= nil, Tooltip = upgradeReason, OnActivate = reviewUpgrade })
 
 	elseif route == "REVIEW" and target and review then
 		local changed = snapshot.Revision ~= review.Revision
@@ -572,20 +607,7 @@ local function App(props: Types.Props)
 
 	-- Dialogs
 	local dialogView = nil
-	if dialog == "SELL_WARNING" then
-		dialogView = e(C.ConfirmModal, {
-			Title = "Selling Rare Artifacts",
-			Message = string.format("Your selection includes %d Rare or better weapon%s. Once sold, they are permanently destroyed.", #sell.RareOrBetterItems, if #sell.RareOrBetterItems == 1 then "" else "s"),
-			TotalGold = sell.TotalGold,
-			ConfirmText = "Sell anyway",
-			CancelText = "Cancel",
-			OnCancel = function() setDialog(nil) end,
-			OnConfirm = function()
-				setDialog(nil)
-				sell.Sell()
-			end,
-		})
-	elseif dialog == "MATERIAL" then
+	if dialog == "MATERIAL" then
 		local choices = {}
 		local candidates = {}
 		for _, artifact in snapshot.Artifacts do
@@ -676,19 +698,39 @@ local function App(props: Types.Props)
 			SelectionGroup = true, SelectionBehaviorUp = Enum.SelectionBehavior.Escape, SelectionBehaviorDown = Enum.SelectionBehavior.Stop, SelectionBehaviorLeft = Enum.SelectionBehavior.Stop, SelectionBehaviorRight = Enum.SelectionBehavior.Stop,
 		}, {
 			Scale = e("UIScale", { Scale = windowScale }),
-			-- Header: Forge Icon + Title
+			-- Header: the Forge's ember bar, icon, title and the Artifacts / Summon tabs, all inside
+			-- the window (they used to float above it in a separate bar).
+			HeaderBar = e("Frame", {
+				ref = headerBarRef, Name = "HeaderBar",
+				Position = UDim2.fromOffset(6, 6), Size = UDim2.new(1, -12, 0, 56), ZIndex = 0,
+			}),
 			HeaderIcon = e("Frame", {
-				Position = UDim2.fromOffset(22, 10),
+				Position = UDim2.fromOffset(18, 8),
 				Size = UDim2.fromOffset(46, 46),
 				BackgroundTransparency = 1,
 			}, { Art = e(Icons.Icon, { Name = "Forge", Size = 46 }) }),
 			HeaderTitle = e(C.Text, {
 				Text = "FORGE",
 				FontFace = T.Theme.Fonts.Title,
-				TextSize = 26,
-				TextColor3 = T.Gold,
-				Position = UDim2.fromOffset(76, 16),
-				Size = UDim2.fromOffset(220, 34),
+				TextSize = 28,
+				TextColor3 = T.Text,
+				TextStrokeColor3 = T.Theme.Ink,
+				TextStrokeTransparency = 0,
+				Position = UDim2.fromOffset(72, 14),
+				Size = UDim2.fromOffset(120, 34),
+			}),
+			Tabs = e("Frame", {
+				Name = "ForgeTabs", Position = UDim2.fromOffset(196, 12), Size = UDim2.fromOffset(276, 42), BackgroundTransparency = 1,
+			}, {
+				Layout = e("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
+				Artifacts = e(C.Button, {
+					Name = "ArtifactsTab", Text = "Artifacts", Order = 1, Size = UDim2.fromOffset(134, 42), Selected = not summonTab,
+					Disabled = busy and summonTab, OnActivate = function() if summonTab and props.OnSelectTab then props.OnSelectTab("Artifacts") end end,
+				}),
+				Summon = e(C.Button, {
+					Name = "SummonTab", Text = "Summon", Order = 2, Size = UDim2.fromOffset(134, 42), Selected = summonTab,
+					Disabled = busy and not summonTab, OnActivate = function() if not summonTab and props.OnSelectTab then props.OnSelectTab("Summon") end end,
+				}),
 			}),
 			-- Currencies + Capacity Counter
 			Gold = e(C.Currency, { Icon = "Gold", Text = Balance.Format(snapshot.Gold), Position = UDim2.new(1, -520, 0, 16) }),
@@ -737,16 +779,24 @@ local function App(props: Types.Props)
 			}, {
 				Corner = e("UICorner", { CornerRadius = UDim.new(0, 10) }),
 				Rail = e("UIStroke", { Color = T.Theme.Tones.Deep.Rail, Thickness = 1, Transparency = 0.35 }),
-				Content = e("Frame", {
+				Content = if summonTab then nil else e("Frame", {
 					ref = bodyRef,
 					Name = "Content",
 					Position = UDim2.fromOffset(8, 8),
 					Size = UDim2.new(1, -16, 1, -16),
 					BackgroundTransparency = 1,
 				}, view),
+				-- Summon tab: the legacy summon view (banner, pity, Summon 1x/10x) is parented here.
+				SummonHost = if summonTab then e("Frame", {
+					ref = summonHostRef,
+					Name = "SummonHost",
+					Position = UDim2.fromOffset(12, 10),
+					Size = UDim2.new(1, -24, 1, -20),
+					BackgroundTransparency = 1,
+				}) else nil,
 			}),
-			-- Status Bar (hidden on RESULT screen so message doesn't duplicate)
-			Status = if route ~= "RESULT" then e("Frame", {
+			-- Status Bar (hidden on RESULT screen so message doesn't duplicate, and on the Summon tab)
+			Status = if route ~= "RESULT" and not summonTab then e("Frame", {
 				Name = "Status",
 				Position = UDim2.new(0, 16, 1, -statusHeight),
 				Size = UDim2.new(1, -32, 0, statusHeight - 4),

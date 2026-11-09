@@ -286,7 +286,7 @@ function C.StatChip(props: { Label: string, Value: string, Order: number?, Color
 		Stroke = e("UIStroke", { Color = T.Theme.Tones.Deep.Rail, Thickness = 1, Transparency = 0.45 }),
 		Title = e(C.Text, {
 			Text = props.Label,
-			TextSize = 10,
+			TextSize = 13,
 			TextColor3 = T.Muted,
 			TextXAlignment = Enum.TextXAlignment.Center,
 			Position = UDim2.new(0, 2, 0, 4),
@@ -350,7 +350,7 @@ function C.IconAction(props: {
 		}),
 		Label = e(C.Text, {
 			Text = props.Label,
-			TextSize = 10,
+			TextSize = 13,
 			TextColor3 = if props.Disabled then T.Muted elseif props.Selected then T.Gold else T.Text,
 			TextXAlignment = Enum.TextXAlignment.Center,
 			Position = UDim2.new(0, 2, 0, 28),
@@ -487,11 +487,13 @@ function C.ArtifactTile(props: TileProps)
 	local focused, setFocused = React.useState(false)
 	local previewHostRef = React.useRef(nil)
 
+	-- The border always carries the rarity (or selection state); "equipped" is the owner badge in the
+	-- corner, never a border colour (an Exalted weapon used to show a teal border once equipped).
 	local accent = if props.Selected then T.Gold
 		elseif isChecked then T.Bad
 		elseif isProtected then T.Theme.Tones.Slate.Rail
-		elseif equipped then T.Equipped
 		else rarity.Color
+	local owner = if equipped then props.Snapshot.Heroes[owners[1]] else nil
 
 	React.useEffect(function()
 		local host = previewHostRef.current
@@ -536,104 +538,92 @@ function C.ArtifactTile(props: TileProps)
 			end,
 		}, {
 			Corner = e("UICorner", { CornerRadius = UDim.new(0, 10) }),
+			-- Brighter Grimoire: a rarity-tinted fill instead of near-black.
 			Gradient = e("UIGradient", {
 				Color = ColorSequence.new({
-					ColorSequenceKeypoint.new(0, rarity.Color:Lerp(Color3.fromRGB(24, 18, 34), 0.7)),
-					ColorSequenceKeypoint.new(1, Color3.fromRGB(12, 8, 18)),
+					ColorSequenceKeypoint.new(0, rarity.Color:Lerp(Color3.fromRGB(30, 22, 44), 0.42)),
+					ColorSequenceKeypoint.new(1, Color3.fromRGB(26, 18, 40)),
 				}),
 				Rotation = 90,
 			}),
 			Stroke = e("UIStroke", {
 				Color = accent,
-				Thickness = if props.Selected then 2.8 elseif isChecked then 2.4 else 1.8,
+				Thickness = if props.Selected then 3 elseif isChecked then 2.6 else 2,
 				ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
 			}),
-			-- 3D Model Viewport spans the full tile
+			-- 3D model between the label band and the power line, so text never sits on the art.
 			ModelHost = e("Frame", {
 				ref = previewHostRef,
 				Name = "ModelHost",
-				Size = UDim2.fromScale(1, 1),
+				Position = UDim2.fromOffset(0, 20),
+				Size = UDim2.new(1, 0, 1, -42),
 				BackgroundTransparency = 1,
 				ZIndex = 2,
 				ClipsDescendants = true,
-			}, {
-				Corner = e("UICorner", { CornerRadius = UDim.new(0, 10) }),
 			}),
-			-- Top-Left Header: Equipped Icon + Lock
-			TopLeft = e("Frame", {
-				Name = "TopLeftBadges",
-				Position = UDim2.fromOffset(6, 6),
-				Size = UDim2.new(0.42, 0, 0, 18),
-				BackgroundTransparency = 1,
+			-- Top band: lock on the left; rarity and stars on the right, on a dark strip for contrast.
+			TopBand = e("Frame", {
+				Name = "TopBand",
+				Size = UDim2.new(1, 0, 0, 20),
+				BackgroundColor3 = Color3.fromRGB(10, 6, 14),
+				BackgroundTransparency = 0.35,
 				ZIndex = 4,
 			}, {
-				Layout = e("UIListLayout", {
-					FillDirection = Enum.FillDirection.Horizontal,
-					Padding = UDim.new(0, 3),
-					VerticalAlignment = Enum.VerticalAlignment.Center,
-				}),
-				Equipped = if equipped then e("Frame", {
-					Size = UDim2.fromOffset(18, 18),
-					BackgroundTransparency = 1,
-				}, {
-					Icon = e(Icons.Icon, { Name = "Equipped", Size = 18 }),
-				}) else nil,
+				Corner = e("UICorner", { CornerRadius = UDim.new(0, 10) }),
 				Lock = if artifact.Locked then e("Frame", {
+					Position = UDim2.fromOffset(5, 2),
 					Size = UDim2.fromOffset(16, 16),
 					BackgroundTransparency = 1,
+					ZIndex = 5,
 				}, {
 					Icon = e(Icons.Icon, { Name = "Lock", Size = 16 }),
 				}) else nil,
-			}),
-			-- Top-Right Header: Rarity text + Star count
-			TopRight = e("Frame", {
-				Name = "TopRightLabels",
-				AnchorPoint = Vector2.new(1, 0),
-				Position = UDim2.new(1, -6, 0, 4),
-				Size = UDim2.new(0.55, 0, 0, 30),
-				BackgroundTransparency = 1,
-				ZIndex = 4,
-			}, {
-				Layout = e("UIListLayout", {
-					FillDirection = Enum.FillDirection.Vertical,
-					HorizontalAlignment = Enum.HorizontalAlignment.Right,
-					Padding = UDim.new(0, 0),
-				}),
-				Rarity = e(C.Text, {
-					Text = rarity.Name,
-					TextSize = 11,
+				Label = e(C.Text, {
+					Text = string.format("%s  <font color=\"#FFD678\">★%d</font>", rarity.Name, artifact.Star),
+					RichText = true, -- catalog rarity names only, never player text
+					TextSize = 13,
 					TextColor3 = rarity.Color,
 					FontFace = T.Theme.Fonts.Title,
 					TextXAlignment = Enum.TextXAlignment.Right,
-					Size = UDim2.new(1, 0, 0, 15),
-				}),
-				Stars = e(C.Text, {
-					Text = string.format("★%d", artifact.Star),
-					TextSize = 11,
-					TextColor3 = T.Gold,
-					FontFace = T.Theme.Fonts.Number,
-					TextXAlignment = Enum.TextXAlignment.Right,
-					Size = UDim2.new(1, 0, 0, 14),
+					AnchorPoint = Vector2.new(1, 0),
+					Position = UDim2.new(1, -6, 0, 1),
+					Size = UDim2.new(1, -26, 1, -2),
+					ZIndex = 5,
 				}),
 			}),
-			-- Bottom-Left: Bold Power text
+			-- Bottom: power, and the owner's portrait when equipped.
 			BottomLeft = e("Frame", {
 				Name = "BottomLeftPower",
 				AnchorPoint = Vector2.new(0, 1),
-				Position = UDim2.new(0, 6, 1, -4),
-				Size = UDim2.new(1, -12, 0, 22),
+				Position = UDim2.new(0, 6, 1, -3),
+				Size = UDim2.new(1, -36, 0, 20),
 				BackgroundTransparency = 1,
 				ZIndex = 4,
 			}, {
 				Power = e(C.Text, {
 					Text = "⚔ " .. powerText,
-					TextSize = 14,
+					TextSize = 15,
 					FontFace = T.Theme.Fonts.Number,
 					TextColor3 = Color3.fromRGB(255, 230, 140),
 					TextXAlignment = Enum.TextXAlignment.Left,
+					TextStrokeColor3 = T.Theme.Ink,
+					TextStrokeTransparency = 0.2,
 					Size = UDim2.fromScale(1, 1),
 				}),
 			}),
+			OwnerBadge = if owner then e("Frame", {
+				Name = "OwnerBadge",
+				AnchorPoint = Vector2.new(1, 1),
+				Position = UDim2.new(1, -4, 1, -4),
+				Size = UDim2.fromOffset(26, 26),
+				BackgroundColor3 = Color3.fromRGB(14, 10, 22),
+				ClipsDescendants = true,
+				ZIndex = 5,
+			}, {
+				Corner = e("UICorner", { CornerRadius = UDim.new(1, 0) }),
+				Ring = e("UIStroke", { Color = T.Equipped, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
+				Face = e(Portrait, { TemplateId = owner.TemplateId, Archetype = owner.Archetype, Stars = owner.Stars }),
+			}) else nil,
 			-- Checked badge in center when selected for sale or upgrade
 			CheckedBadge = if isChecked then e("Frame", {
 				Name = "CheckedBadge",

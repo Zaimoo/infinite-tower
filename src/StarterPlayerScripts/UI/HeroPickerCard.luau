@@ -6,6 +6,7 @@ local StatFormulas = require(ReplicatedStorage.Shared.Util.StatFormulas)
 local GrimoireIcons = require(ReplicatedStorage.Shared.Util.GrimoireIcons)
 local Grimoire = require(ReplicatedStorage.Shared.Util.GildedGrimoire)
 local Theme = require(script.Parent.Hud.Theme)
+local UIFeel = require(script.Parent.UIFeel)
 
 local Card = {}
 local GOLD = Grimoire.Text.Gold
@@ -74,24 +75,35 @@ function Card.Create(parent: Instance, entry: any, order: number, z: number, onS
 	new("UICorner", { CornerRadius = UDim.new(0, 4) }, role)
 	local statusColor = if entry.Disabled then Grimoire.Text.Bad else Grimoire.Text.Muted
 	text("Status", entry.Status or "", "Body", TALL_PORTRAIT_HEIGHT + 58, 24, 12, statusColor)
+	-- The whole card is the button (plan §5.4): a transparent hit area over the card, a gold outline on
+	-- hover or gamepad focus, and a small "Select ›" hint where the big gold button used to be.
+	local cardStroke = card:FindFirstChildOfClass("UIStroke") :: UIStroke
+	local restColor, restThickness = cardStroke.Color, cardStroke.Thickness
+	local hint = text("ActionHint", if entry.Disabled then "Unavailable" else (entry.Action or "Select") .. "  ›", "Title", 0, 22, 15,
+		if entry.Disabled then Grimoire.Text.Muted else GOLD)
+	hint.AnchorPoint = Vector2.new(0, 1)
+	hint.Position = UDim2.new(0, 8, 1, -10)
 	local action = new("TextButton", {
-		Name = "HeroActionBtn", Position = UDim2.new(0, 8, 1, -52), Size = UDim2.new(1, -16, 0, 44),
-		Text = if entry.Disabled then "Unavailable" else entry.Action or "SELECT", TextSize = 16,
-		TextColor3 = if entry.Disabled then Color3.fromRGB(180, 170, 190) else Color3.fromRGB(32, 19, 9),
-		BackgroundColor3 = if entry.Disabled then Grimoire.Tones.Slate.Top else Color3.new(1, 1, 1),
-		BorderSizePixel = 0, AutoButtonColor = not entry.Disabled, Selectable = true,
-		ZIndex = z + 3,
+		Name = "HeroActionBtn", Position = UDim2.fromScale(0, 0), Size = UDim2.fromScale(1, 1),
+		Text = "", BackgroundTransparency = 1, BorderSizePixel = 0, AutoButtonColor = false, Selectable = true,
+		ZIndex = z + 6,
 	}, card)
-	new("UICorner", { CornerRadius = UDim.new(0, 6) }, action)
-	new("UIStroke", { ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Color = if entry.Disabled then Grimoire.Tones.Slate.Rail else GOLD, Thickness = if entry.Selected then 2 else 1 }, action)
-	if not entry.Disabled then
-		new("UIGradient", { Color = ColorSequence.new(Color3.fromRGB(255, 238, 169), Color3.fromRGB(179, 113, 36)), Rotation = 90 }, action)
+	local function highlight(on: boolean)
+		if entry.Disabled then return end
+		cardStroke.Color = if on then GOLD else restColor
+		cardStroke.Thickness = if on then 3 else restThickness
 	end
+	action.MouseEnter:Connect(function() highlight(true) end)
+	action.MouseLeave:Connect(function() highlight(false) end)
+	action.SelectionGained:Connect(function() highlight(true) end)
+	action.SelectionLost:Connect(function() highlight(false) end)
 	action:SetAttribute("HeroUUID", entry.UUID)
-	action:SetAttribute("Grimoire", true)
-	Grimoire.StyleText(action, "Title")
 	action.Activated:Connect(function()
-		if not entry.Disabled then onSelect(entry.UUID) end
+		if entry.Disabled then
+			UIFeel.Deny(card)
+			return
+		end
+		onSelect(entry.UUID)
 	end)
 	return action
 end
