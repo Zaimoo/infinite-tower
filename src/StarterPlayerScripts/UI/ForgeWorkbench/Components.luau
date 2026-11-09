@@ -14,6 +14,7 @@ local ArtifactPreview = require(script.Parent.Parent.ArtifactPreview)
 local UIFeel = require(script.Parent.Parent.UIFeel)
 local Model = require(script.Parent.Model)
 local T = require(script.Parent.Tokens)
+local Kit = require(script.Parent.Parent.Kit)
 local Types = require(script.Parent.Types)
 type Artifact = Types.Artifact
 type Hero = Types.Hero
@@ -89,6 +90,9 @@ type ButtonProps = {
 	Size: UDim2?, Position: UDim2?, Order: number?, Name: string?,
 	Disabled: boolean?, Primary: boolean?, Selected: boolean?, Accent: Color3?,
 	FocusOrder: number?, Ref: any?, Icon: string?, Tooltip: string?,
+	-- Brighter Grimoire intent colour (UI kit): "Primary" gold, "Confirm" jade, "Travel" azure,
+	-- "Secondary" violet, "Danger" crimson. Overrides Primary/Accent for the fill.
+	Intent: ("Primary" | "Confirm" | "Travel" | "Secondary" | "Danger")?,
 }
 
 function C.Button(props: ButtonProps)
@@ -110,7 +114,11 @@ function C.Button(props: ButtonProps)
 	end, { hovered, focused, props.Disabled })
 	local iconSize = if props.Icon == "Add" then 44 else 28
 	local active = props.Selected or focused
-	local tone = if props.Disabled then T.Theme.Tones.Slate elseif props.Primary then (if props.Accent == T.Bad then T.Theme.Tones.Crimson else T.Theme.Tones.Action) elseif props.Selected then T.Theme.Tones.Gold else T.Theme.Tones.Deep
+	local intentTone = if props.Intent and not props.Disabled then Kit.Tokens.Intent[props.Intent] else nil
+	local tone = if props.Disabled then T.Theme.Tones.Slate
+		elseif intentTone then intentTone
+		elseif props.Primary then (if props.Accent == T.Bad then T.Theme.Tones.Crimson else T.Theme.Tones.Action)
+		elseif props.Selected then T.Theme.Tones.Gold else T.Theme.Tones.Deep
 	return e("TextButton", {
 		ref = props.Ref,
 		-- Unique, readable names (e.g. "Action_AllSpare") so tests, Studio MCP and focus maps can find them.
@@ -147,7 +155,9 @@ function C.Button(props: ButtonProps)
 			Corner = e("UICorner", { CornerRadius = UDim.new(0, 7) }),
 			-- A disabled button never shows the gold rail, so it can't be mistaken for a ready action.
 			Line = e("UIStroke", {
-				Color = if props.Disabled then T.Theme.Tones.Slate.Rail else props.Accent or (if active or hovered or props.Primary then T.Gold else T.Theme.Tones.Slate.Rail),
+				Color = if props.Disabled then T.Theme.Tones.Slate.Rail
+					elseif intentTone then (if active or hovered then Color3.new(1, 1, 1) else intentTone.Rail)
+					else props.Accent or (if active or hovered or props.Primary then T.Gold else T.Theme.Tones.Slate.Rail),
 				Thickness = if active and not props.Disabled then 2.5 else 1.4,
 				Transparency = if props.Disabled then 0.45 else 0,
 				ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
@@ -262,13 +272,32 @@ function C.HeroSlot(props: HeroSlotProps)
 	})
 end
 
-function C.CardGrid(props: { Children: { [string]: any }, Size: UDim2, Position: UDim2?, CellHeight: number? })
+-- `Square` lays out square cells (artifact tiles keep a 1:1 aspect): about `SquareSize` px, as many
+-- columns as fit, centred, with even gaps. Without it, cells are 1/columns wide and CellHeight tall.
+function C.CardGrid(props: { Children: { [string]: any }, Size: UDim2, Position: UDim2?, CellHeight: number?, Square: boolean?, SquareSize: number? })
 	local columns, setColumns = React.useState(4)
+	local width, setWidth = React.useState(600)
 	local children = table.clone(props.Children)
-	children.Layout = e("UIGridLayout", { CellSize = UDim2.new(1 / columns, -10, 0, props.CellHeight or 110), CellPadding = UDim2.fromOffset(8, 8), SortOrder = Enum.SortOrder.LayoutOrder })
-	children.Padding = e("UIPadding", { PaddingTop = UDim.new(0, 4), PaddingLeft = UDim.new(0, 4), PaddingBottom = UDim.new(0, 8) })
+	local gap = 10
+	local cellSize: UDim2
+	if props.Square then
+		local target = props.SquareSize or 140
+		local cols = math.max(1, math.floor((width - 8 + gap) / (target + gap)))
+		local cell = math.floor(math.min(target * 1.25, (width - 8 - gap * (cols - 1)) / cols))
+		cellSize = UDim2.fromOffset(cell, cell)
+	else
+		cellSize = UDim2.new(1 / columns, -10, 0, props.CellHeight or 110)
+	end
+	children.Layout = e("UIGridLayout", {
+		CellSize = cellSize, CellPadding = UDim2.fromOffset(gap, gap), SortOrder = Enum.SortOrder.LayoutOrder,
+		HorizontalAlignment = if props.Square then Enum.HorizontalAlignment.Center else Enum.HorizontalAlignment.Left,
+	})
+	children.Padding = e("UIPadding", { PaddingTop = UDim.new(0, 4), PaddingLeft = UDim.new(0, 4), PaddingRight = UDim.new(0, 4), PaddingBottom = UDim.new(0, 8) })
 	return e("ScrollingFrame", { Name = "CardGrid", Size = props.Size, Position = props.Position, BackgroundTransparency = 1, BorderSizePixel = 0, CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, ScrollingDirection = Enum.ScrollingDirection.Y, ScrollBarThickness = 6, ScrollBarImageColor3 = T.Gold, ClipsDescendants = true, SelectionGroup = true,
-		[React.Change.AbsoluteSize] = function(frame) setColumns(math.clamp(math.floor(frame.AbsoluteSize.X / 106), 2, 6)) end,
+		[React.Change.AbsoluteSize] = function(frame)
+			setColumns(math.clamp(math.floor(frame.AbsoluteSize.X / 106), 2, 6))
+			setWidth(frame.AbsoluteWindowSize.X)
+		end,
 	}, children)
 end
 
@@ -776,11 +805,21 @@ function C.StatRow(props: StatRowProps)
 	local format = props.Format or "%.0f"
 	-- A multiplier's "×" belongs on the values, not the change: "×6.40 → ×9.64 (+3.24)".
 	local deltaText = (string.gsub(string.format(format, math.abs(delta)), "^×", ""))
-	local difference = if math.abs(delta) < 0.00001 then " (=)" else string.format(" (%s%s)", if delta > 0 then "+" else "-", deltaText)
-	return e("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 36), LayoutOrder = props.Order }, {
-		Label = e(C.Text, { Text = props.Label, TextSize = 16, TextColor3 = T.Muted, Size = UDim2.new(0.3, -8, 1, 0) }),
-		Before = e(C.Text, { Text = string.format(format, props.Before), TextSize = 16, Position = UDim2.fromScale(0.3, 0), Size = UDim2.new(0.22, -8, 1, 0), TextXAlignment = Enum.TextXAlignment.Right }),
-		After = e(C.Text, { Text = "→ " .. string.format(format, props.After) .. difference, TextSize = 16, Position = UDim2.fromScale(0.52, 0), Size = UDim2.fromScale(0.48, 1), TextColor3 = if delta > 0.00001 then T.Good elseif delta < -0.00001 then T.Bad else T.Text }),
+	local changeColor = if delta > 0.00001 then T.Good elseif delta < -0.00001 then T.Bad else T.Muted
+	-- Two lines, so it reads in a narrow column: a label, then "before → after" large with the change
+	-- on the right (it was one 16 px line that wrapped and then got scaled down with the window).
+	return e("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 56), LayoutOrder = props.Order }, {
+		Label = e(C.Text, { Text = props.Label, TextSize = 15, FontFace = T.Theme.Fonts.Body, TextColor3 = T.Muted, Size = UDim2.new(1, 0, 0, 20) }),
+		Values = e(C.Text, {
+			Text = string.format("%s  →  %s", string.format(format, props.Before), string.format(format, props.After)),
+			TextSize = 22, FontFace = T.Theme.Fonts.Number, TextColor3 = if math.abs(delta) < 0.00001 then T.Text else changeColor,
+			Position = UDim2.fromOffset(0, 22), Size = UDim2.new(0.72, 0, 0, 32), TextWrapped = false,
+		}),
+		Change = e(C.Text, {
+			Text = if math.abs(delta) < 0.00001 then "no change" else string.format("%s%s", if delta > 0 then "+" else "-", deltaText),
+			TextSize = if math.abs(delta) < 0.00001 then 15 else 20, FontFace = T.Theme.Fonts.Number, TextColor3 = changeColor,
+			TextXAlignment = Enum.TextXAlignment.Right, Position = UDim2.new(0.72, 0, 0, 22), Size = UDim2.new(0.28, 0, 0, 32), TextWrapped = false,
+		}),
 	})
 end
 
