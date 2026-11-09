@@ -1,0 +1,394 @@
+{
+ "EnemyId": "mob_moss_crawler",
+ "Family": "SIX_LEGGED_CRAWLER",
+ "Role": "REGULAR",
+ "Biome": "verdant_ruins",
+ "Segments": [
+  {
+   "Name": "Body",
+   "Parent": null,
+   "Pivot": [
+    0.0,
+    1.6,
+    -0.0
+   ],
+   "Glow": [
+    {
+     "Mesh": "Body_Glow_Spring",
+     "Colour": [
+      153,
+      240,
+      125
+     ],
+     "Tris": 52,
+     "Centre": [
+      0.0,
+      2.37,
+      0.3
+     ],
+     "Size": [
+      0.45,
+      0.084,
+      0.462
+     ]
+    }
+   ],
+   "Centre": [
+    0.061,
+    2.249,
+    0.325
+   ],
+   "Size": [
+    3.222,
+    2.838,
+    4.75
+   ],
+   "Tris": 1192
+  },
+  {
+   "Name": "Head",
+   "Parent": "Body",
+   "Pivot": [
+    0.0,
+    1.5,
+    -1.9
+   ],
+   "Glow": [
+    {
+     "Mesh": "Head_Glow_Spring",
+     "Colour": [
+      153,
+      240,
+      125
+     ],
+     "Tris": 160,
+     "Centre": [
+      0.0,
+      1.62,
+      -2.82
+     ],
+     "Size": [
+      1.18,
+      0.34,
+      0.34
+     ]
+    }
+   ],
+   "Centre": [
+    0.0,
+    1.856,
+    -2.284
+   ],
+   "Size": [
+    2.3,
+    1.964,
+    1.508
+   ],
+   "Tris": 296
+  },
+  {
+   "Name": "JawL",
+   "Parent": "Head",
+   "Pivot": [
+    -0.45,
+    1.3,
+    -2.85
+   ],
+   "Glow": [],
+   "Centre": [
+    -0.42,
+    1.272,
+    -3.225
+   ],
+   "Size": [
+    0.64,
+    0.331,
+    1.051
+   ],
+   "Tris": 34
+  },
+  {
+   "Name": "JawR",
+   "Parent": "Head",
+   "Pivot": [
+    0.45,
+    1.3,
+    -2.85
+   ],
+   "Glow": [],
+   "Centre": [
+    0.42,
+    1.272,
+    -3.225
+   ],
+   "Size": [
+    0.64,
+    0.331,
+    1.051
+   ],
+   "Tris": 34
+  },
+  {
+   "Name": "Leg-1_1",
+   "Parent": "Body",
+   "Pivot": [
+    -0.95,
+    1.45,
+    -1.3
+   ],
+   "Glow": [],
+   "Centre": [
+    -1.413,
+    1.687,
+    -1.342
+   ],
+   "Size": [
+    1.326,
+    0.875,
+    0.485
+   ],
+   "Tris": 118
+  },
+  {
+   "Name": "Knee-1_1",
+   "Parent": "Leg-1_1",
+   "Pivot": [
+    -2.05,
+    2.0,
+    -1.456
+   ],
+   "Glow": [],
+   "Centre": [
+    -2.454,
+    1.08,
+    -1.557
+   ],
+   "Size": [
+    1.093,
+    2.14,
+    0.487
+   ],
+   "Tris": 108
+  },
+  {
+   "Name": "Leg-1_2",
+   "Parent": "Body",
+   "Pivot": [
+    -0.95,
+    1.45,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    -1.411,
+    1.687,
+    -0.0
+   ],
+   "Size": [
+    1.322,
+    0.875,
+    0.4
+   ],
+   "Tris": 118
+  },
+  {
+   "Name": "Knee-1_2",
+   "Parent": "Leg-1_2",
+   "Pivot": [
+    -2.05,
+    2.0,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    -2.454,
+    1.08,
+    -0.0
+   ],
+   "Size": [
+    1.093,
+    2.14,
+    0.35
+   ],
+   "Tris": 108
+  },
+  {
+   "Name": "Leg-1_3",
+   "Parent": "Body",
+   "Pivot": [
+    -0.95,
+    1.45,
+    1.3
+   ],
+   "Glow": [],
+   "Centre": [
+    -1.414,
+    1.687,
+    1.337
+   ],
+   "Size": [
+    1.328,
+    0.875,
+    0.473
+   ],
+   "Tris": 118
+  },
+  {
+   "Name": "Knee-1_3",
+   "Parent": "Leg-1_3",
+   "Pivot": [
+    -2.05,
+    2.0,
+    1.456
+   ],
+   "Glow": [],
+   "Centre": [
+    -2.454,
+    1.08,
+    1.557
+   ],
+   "Size": [
+    1.093,
+    2.14,
+    0.487
+   ],
+   "Tris": 108
+  },
+  {
+   "Name": "Leg1_1",
+   "Parent": "Body",
+   "Pivot": [
+    0.95,
+    1.45,
+    -1.3
+   ],
+   "Glow": [],
+   "Centre": [
+    1.414,
+    1.687,
+    -1.337
+   ],
+   "Size": [
+    1.328,
+    0.875,
+    0.473
+   ],
+   "Tris": 118
+  },
+  {
+   "Name": "Knee1_1",
+   "Parent": "Leg1_1",
+   "Pivot": [
+    2.05,
+    2.0,
+    -1.456
+   ],
+   "Glow": [],
+   "Centre": [
+    2.454,
+    1.08,
+    -1.557
+   ],
+   "Size": [
+    1.093,
+    2.14,
+    0.487
+   ],
+   "Tris": 108
+  },
+  {
+   "Name": "Leg1_2",
+   "Parent": "Body",
+   "Pivot": [
+    0.95,
+    1.45,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    1.411,
+    1.687,
+    -0.0
+   ],
+   "Size": [
+    1.322,
+    0.875,
+    0.4
+   ],
+   "Tris": 118
+  },
+  {
+   "Name": "Knee1_2",
+   "Parent": "Leg1_2",
+   "Pivot": [
+    2.05,
+    2.0,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    2.454,
+    1.08,
+    -0.0
+   ],
+   "Size": [
+    1.093,
+    2.14,
+    0.35
+   ],
+   "Tris": 108
+  },
+  {
+   "Name": "Leg1_3",
+   "Parent": "Body",
+   "Pivot": [
+    0.95,
+    1.45,
+    1.3
+   ],
+   "Glow": [],
+   "Centre": [
+    1.413,
+    1.687,
+    1.342
+   ],
+   "Size": [
+    1.326,
+    0.875,
+    0.485
+   ],
+   "Tris": 118
+  },
+  {
+   "Name": "Knee1_3",
+   "Parent": "Leg1_3",
+   "Pivot": [
+    2.05,
+    2.0,
+    1.456
+   ],
+   "Glow": [],
+   "Centre": [
+    2.454,
+    1.08,
+    1.557
+   ],
+   "Size": [
+    1.093,
+    2.14,
+    0.487
+   ],
+   "Tris": 108
+  }
+ ],
+ "TotalTris": 3124,
+ "MeshCount": 18,
+ "Size": [
+  6.0,
+  3.66,
+  6.45
+ ],
+ "FeetY": 0.01,
+ "Convention": "Studs, Roblox axes (Y up, faces -Z), origin on the ground under the enemy. Pivot = joint position. Mesh objects are named after their joint.",
+ "Atlas": "atlas_verdant_ruins.png"
+}

@@ -22,7 +22,7 @@ local OutskirtsRules = require(Shared:WaitForChild("Util"):WaitForChild("Outskir
 
 local Assets = ReplicatedStorage:WaitForChild("Assets")
 local ArtPackVisuals = require(Assets:WaitForChild("ArtPackVisuals"))
-local TowerEnemyRigs = require(Assets:WaitForChild("TowerEnemyRigs"))
+local EnemyRigFactory = require(Assets:WaitForChild("EnemyRigFactory")) -- remodelled templates, else the part rig
 local TowerEnemyClips = require(Assets:WaitForChild("TowerEnemyClips"))
 
 local HeroRigFolder = Assets:WaitForChild("HeroRig")
@@ -566,7 +566,7 @@ local function realizeMobModel(director: PlotDirector, origin: CFrame, mob: MobV
 	root.Parent = model
 	model.PrimaryPart = root
 
-	local rig = TowerEnemyRigs.Build(model, root, mob.EnemyId)
+	local rig = EnemyRigFactory.Build(model, root, mob.EnemyId)
 	for _, p in ipairs(rig.Parts) do
 		if p:IsA("BasePart") then
 			p.CanQuery = false

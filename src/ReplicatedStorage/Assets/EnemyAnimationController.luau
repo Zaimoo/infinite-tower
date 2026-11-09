@@ -2,6 +2,7 @@
 local Rigs = require(script.Parent.TowerEnemyRigs)
 local Clips = require(script.Parent.TowerEnemyClips)
 local RaidRigs = require(script.Parent.RaidBossRigs)
+local RigFactory = require(script.Parent.EnemyRigFactory)
 local Config = require(game.ReplicatedStorage.Shared.Config.FirstBiomeCombat)
 local Controller = {}
 local effects: { [string]: any } = {}
@@ -54,7 +55,7 @@ function Controller.Attach(model: Model, root: BasePart, enemyId: string)
 	if RaidRigs.BossFor(enemyId) then
 		return RaidRigs.Build(model, root, enemyId)
 	end
-	return Rigs.Build(model, root, enemyId)
+	return RigFactory.Build(model, root, enemyId) -- remodelled template, else the part rig
 end
 
 function Controller.Action(node: any, action: any, origin: Vector3, now: number)

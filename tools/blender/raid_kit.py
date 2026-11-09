@@ -254,7 +254,8 @@ class Segment:
             if prev is None:
                 u = Vector(up)
                 if abs(t.dot(u)) > 0.95:
-                    u = Vector((1, 0, 0)) if abs(t.x) < 0.9 else Vector((0, 1, 0))
+                    # vertical path: pick the frame so (rx, ry) = (width along X, depth along Y)
+                    u = Vector((0, 1, 0)) if abs(t.y) < 0.9 else Vector((1, 0, 0))
                 nrm = t.cross(u).normalized()
             else:
                 nrm = (prev - t * prev.dot(t))

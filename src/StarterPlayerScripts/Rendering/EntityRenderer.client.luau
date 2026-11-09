@@ -26,6 +26,7 @@ local Protocol=require(Shared.Util.TowerProtocol)
 local FirstBiome=require(Shared.Config.FirstBiomeCombat)
 local ActionState=require(Shared.Util.EnemyActionState)
 local EnemyAnimation=require(ReplicatedStorage.Assets.EnemyAnimationController)
+local EnemyRigFactory=require(ReplicatedStorage.Assets.EnemyRigFactory)
 local Actions=ActionState.New()
 local PendingActions={}
 local DyingNodes={}
@@ -431,7 +432,8 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 		if enemySpec.Role == "BOSS" then
 			isBoss = true
 		end
-		bodySize = Vector3.new(isBoss and 13 or 5, enemySpec.Height, 5)
+		-- Remodelled enemies draw taller than their combat Height: lift the nameplate and HP bar with them.
+		bodySize = Vector3.new(isBoss and 13 or 5, enemySpec.Height * EnemyRigFactory.HeightScale(meta.EnemyId), 5)
 		bodyColor = if isBoss then Color3.fromRGB(150, 45, 60) else Color3.fromRGB(106, 149, 89)
 	elseif isBoss then
 		bodySize = Vector3.new(13, 16, 5)
