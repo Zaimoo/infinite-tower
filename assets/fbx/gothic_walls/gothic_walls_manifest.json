@@ -1,0 +1,430 @@
+{
+  "kit": "GothicFortification",
+  "units": "1 Blender unit = 1 Roblox stud",
+  "space": "Roblox local space of each module; origin = bottom-centre; -Z = courtyard/interior face",
+  "fbxAxes": "forward -Z, up Y (FBX coordinates == Roblox coordinates)",
+  "modules": {
+    "Tower_Gothic_CornerSpire": {
+      "objects": {
+        "Tower_Gothic_CornerSpire_Hull_Stone": {
+          "material": "Slate",
+          "color": "#3B4048",
+          "transparency": 0.0,
+          "canCollide": true,
+          "castShadow": true
+        },
+        "Tower_Gothic_CornerSpire_Hull_CapStone": {
+          "material": "Rock",
+          "color": "#4E555F",
+          "transparency": 0.0,
+          "canCollide": true,
+          "castShadow": true
+        },
+        "Tower_Gothic_CornerSpire_Detail_CapStone": {
+          "material": "Rock",
+          "color": "#4E555F",
+          "transparency": 0.0,
+          "canCollide": false,
+          "castShadow": true
+        },
+        "Tower_Gothic_CornerSpire_Detail_Mortar": {
+          "material": "Slate",
+          "color": "#1E2228",
+          "transparency": 0.0,
+          "canCollide": false,
+          "castShadow": true
+        },
+        "Tower_Gothic_CornerSpire_Detail_Glow": {
+          "material": "Neon",
+          "color": "#FF7A1A",
+          "transparency": 0.15,
+          "canCollide": false,
+          "castShadow": false
+        },
+        "Tower_Spire_Part_Stone": {
+          "material": "Slate",
+          "color": "#3B4048",
+          "transparency": 0.0,
+          "canCollide": false,
+          "castShadow": true
+        },
+        "Tower_Spire_Part_CapStone": {
+          "material": "Rock",
+          "color": "#4E555F",
+          "transparency": 0.0,
+          "canCollide": false,
+          "castShadow": true
+        },
+        "Tower_Spire_Part_SpireRoof": {
+          "material": "Slate",
+          "color": "#232730",
+          "transparency": 0.0,
+          "canCollide": false,
+          "castShadow": true
+        },
+        "Tower_Spire_Part_Iron": {
+          "material": "Metal",
+          "color": "#181A1E",
+          "transparency": 0.0,
+          "canCollide": false,
+          "castShadow": true
+        }
+      },
+      "parts": {
+        "Tower_Spire": {
+          "pivot": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        }
+      },
+      "sockets": {
+        "VFX_TowerWindow_N": [
+          0.0,
+          33.0,
+          -8.5
+        ],
+        "VFX_TowerWindow_S": [
+          0.0,
+          33.0,
+          8.5
+        ],
+        "VFX_TowerWindow_E": [
+          8.5,
+          33.0,
+          0.0
+        ],
+        "VFX_TowerWindow_W": [
+          -8.5,
+          33.0,
+          0.0
+        ],
+        "VFX_RampartArch_Glow": [
+          0.0,
+          20.0,
+          0.0
+        ]
+      },
+      "size": [
+        20,
+        68,
+        20
+      ],
+      "tris": 3584,
+      "fbx": "assets/fbx/gothic_walls/Tower_Gothic_CornerSpire.fbx"
+    },
+    "Wall_Gothic_Straight": {
+      "objects": {
+        "Wall_Gothic_Straight_Hull_Stone": {
+          "material": "Slate",
+          "color": "#3B4048",
+          "transparency": 0.0,
+          "canCollide": true,
+          "castShadow": true
+        },
+        "Wall_Gothic_Straight_Hull_CapStone": {
+          "material": "Rock",
+          "color": "#4E555F",
+          "transparency": 0.0,
+          "canCollide": true,
+          "castShadow": true
+        },
+        "Wall_Gothic_Straight_Hull_Mortar": {
+          "material": "Slate",
+          "color": "#1E2228",
+          "transparency": 0.0,
+          "canCollide": false,
+          "castShadow": true
+        },
+        "Wall_Gothic_Straight_Detail_Stone": {
+          "material": "Slate",
+          "color": "#3B4048",
+          "transparency": 0.0,
+          "canCollide": false,
+          "castShadow": true
+        },
+        "Wall_Gothic_Straight_Detail_CapStone": {
+          "material": "Rock",
+          "color": "#4E555F",
+          "transparency": 0.0,
+          "canCollide": false,
+          "castShadow": true
+        },
+        "Wall_Gothic_Straight_Detail_Mortar": {
+          "material": "Slate",
+          "color": "#1E2228",
+          "transparency": 0.0,
+          "canCollide": false,
+          "castShadow": true
+        },
+        "Wall_Gothic_Straight_Detail_Glow": {
+          "material": "Neon",
+          "color": "#FF7A1A",
+          "transparency": 0.15,
+          "canCollide": false,
+          "castShadow": false
+        }
+      },
+      "parts": {},
+      "sockets": {
+        "TorchSocket_Center": [
+          0.0,
+          9.5,
+          -2.6
+        ],
+        "BannerSocket_Left": [
+          -9.0,
+          13.5,
+          -2.8
+        ],
+        "BannerSocket_Right": [
+          9.0,
+          13.5,
+          -2.8
+        ]
+      },
+      "size": [
+        24,
+        22,
+        6
+      ],
+      "tris": 1240,
+      "fbx": "assets/fbx/gothic_walls/Wall_Gothic_Straight.fbx"
+    },
+    "Wall_Gothic_GateArch": {
+      "objects": {
+        "Wall_Gothic_GateArch_Hull_Stone": {
+          "material": "Slate",
+          "color": "#3B4048",
+          "transparency": 0.0,
+          "canCollide": true,
+          "castShadow": true
+        },
+        "Wall_Gothic_GateArch_Hull_CapStone": {
+          "material": "Rock",
+          "color": "#4E555F",
+          "transparency": 0.0,
+          "canCollide": true,
+          "castShadow": true
+        },
+        "Wall_Gothic_GateArch_Hull_Mortar": {
+          "material": "Slate",
+          "color": "#1E2228",
+          "transparency": 0.0,
+          "canCollide": false,
+          "castShadow": true
+        },
+        "Wall_Gothic_GateArch_Detail_CapStone": {
+          "material": "Rock",
+          "color": "#4E555F",
+          "transparency": 0.0,
+          "canCollide": false,
+          "castShadow": true
+        },
+        "Gate_Door_Left_Part_Timber": {
+          "material": "WoodPlanks",
+          "color": "#3A2618",
+          "transparency": 0.0,
+          "canCollide": true,
+          "castShadow": true
+        },
+        "Gate_Door_Left_Part_Iron": {
+          "material": "Metal",
+          "color": "#181A1E",
+          "transparency": 0.0,
+          "canCollide": true,
+          "castShadow": true
+        },
+        "Gate_Door_Right_Part_Timber": {
+          "material": "WoodPlanks",
+          "color": "#3A2618",
+          "transparency": 0.0,
+          "canCollide": true,
+          "castShadow": true
+        },
+        "Gate_Door_Right_Part_Iron": {
+          "material": "Metal",
+          "color": "#181A1E",
+          "transparency": 0.0,
+          "canCollide": true,
+          "castShadow": true
+        },
+        "Gate_Portcullis_Part_Iron": {
+          "material": "Metal",
+          "color": "#181A1E",
+          "transparency": 0.0,
+          "canCollide": true,
+          "castShadow": true
+        },
+        "Gate_CrestShield_Part_Crimson": {
+          "material": "Fabric",
+          "color": "#7F1D1D",
+          "transparency": 0.0,
+          "canCollide": false,
+          "castShadow": true
+        },
+        "Gate_CrestShield_Part_Gold": {
+          "material": "Metal",
+          "color": "#D97706",
+          "transparency": 0.0,
+          "canCollide": false,
+          "castShadow": true
+        },
+        "Gate_StairThreshold_Part_CapStone": {
+          "material": "Rock",
+          "color": "#4E555F",
+          "transparency": 0.0,
+          "canCollide": true,
+          "castShadow": true
+        }
+      },
+      "parts": {
+        "Gate_Door_Left": {
+          "pivot": [
+            -7.0,
+            0.0,
+            0.0
+          ]
+        },
+        "Gate_Door_Right": {
+          "pivot": [
+            7.0,
+            0.0,
+            0.0
+          ]
+        },
+        "Gate_Portcullis": {
+          "pivot": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "Gate_CrestShield": {
+          "pivot": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "Gate_StairThreshold": {
+          "pivot": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        }
+      },
+      "sockets": {
+        "TorchSocket_Left": [
+          -10.6,
+          10.5,
+          -5.1
+        ],
+        "TorchSocket_Right": [
+          10.6,
+          10.5,
+          -5.1
+        ],
+        "TorchSocket_OuterLeft": [
+          -10.6,
+          10.5,
+          5.1
+        ],
+        "TorchSocket_OuterRight": [
+          10.6,
+          10.5,
+          5.1
+        ],
+        "VFX_GateCrest": [
+          0.0,
+          19.6,
+          -4.4
+        ]
+      },
+      "size": [
+        32,
+        24,
+        8
+      ],
+      "tris": 1988,
+      "fbx": "assets/fbx/gothic_walls/Wall_Gothic_GateArch.fbx"
+    },
+    "Prop_WallBanner": {
+      "objects": {
+        "Prop_WallBanner_Iron": {
+          "material": "Metal",
+          "color": "#181A1E",
+          "transparency": 0.0,
+          "canCollide": false,
+          "castShadow": true
+        },
+        "Prop_WallBanner_Crimson": {
+          "material": "Fabric",
+          "color": "#7F1D1D",
+          "transparency": 0.0,
+          "canCollide": false,
+          "castShadow": true
+        },
+        "Prop_WallBanner_Gold": {
+          "material": "Metal",
+          "color": "#D97706",
+          "transparency": 0.0,
+          "canCollide": false,
+          "castShadow": true
+        }
+      },
+      "parts": {},
+      "sockets": {},
+      "size": [
+        3.4,
+        7.75,
+        0.5
+      ],
+      "tris": 136,
+      "fbx": "assets/fbx/gothic_walls/Prop_WallBanner.fbx"
+    },
+    "Prop_WallTorchSconce": {
+      "objects": {
+        "Prop_WallTorchSconce_Mortar": {
+          "material": "Slate",
+          "color": "#1E2228",
+          "transparency": 0.0,
+          "canCollide": false,
+          "castShadow": true
+        },
+        "Prop_WallTorchSconce_Timber": {
+          "material": "WoodPlanks",
+          "color": "#3A2618",
+          "transparency": 0.0,
+          "canCollide": false,
+          "castShadow": true
+        },
+        "Prop_WallTorchSconce_Iron": {
+          "material": "Metal",
+          "color": "#181A1E",
+          "transparency": 0.0,
+          "canCollide": false,
+          "castShadow": true
+        },
+        "Prop_WallTorchSconce_Glow": {
+          "material": "Neon",
+          "color": "#FF7A1A",
+          "transparency": 0.15,
+          "canCollide": false,
+          "castShadow": false
+        }
+      },
+      "parts": {},
+      "sockets": {},
+      "size": [
+        0.7,
+        2.45,
+        1.8
+      ],
+      "tris": 110,
+      "fbx": "assets/fbx/gothic_walls/Prop_WallTorchSconce.fbx"
+    }
+  }
+}

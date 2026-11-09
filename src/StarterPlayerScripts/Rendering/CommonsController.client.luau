@@ -3,6 +3,7 @@
 -- Client-only ambient motion in the hub, so the server never animates scenery:
 --   "CommonsSpinner" parts (the Wayfinder Crystal) spin and bob.
 --   "CausewayPulse" parts (Pilgrim's Causeway runes, eyes and souls) throb, in a wave that rolls toward the tower.
+--   "WallTorchFlicker" PointLights on the Gothic Fortress walls oscillate Brightness between 1.95 and 2.45.
 
 local CollectionService = game:GetService("CollectionService")
 local RunService = game:GetService("RunService")
@@ -19,8 +20,11 @@ local PULSE_WAVELENGTH = 0.06 -- radians of phase per stud along Z, so the glow 
 
 type Spinner = { Part: BasePart, Base: CFrame }
 type Pulser = { Part: BasePart, Base: number, Phase: number }
+type TorchLight = { Light: PointLight, Seed: number }
 local spinners: { [BasePart]: Spinner } = {}
 local pulsers: { [BasePart]: Pulser } = {}
+local torchLights: { [PointLight]: TorchLight } = {}
+local torchSeedCounter = 0
 
 local function addSpinner(inst: Instance)
 	if inst:IsA("BasePart") and not spinners[inst] then
@@ -41,20 +45,26 @@ local function addPulser(inst: Instance)
 	end
 end
 
-local function track(tag: string, add: (Instance) -> (), list: { [BasePart]: any })
+local function addTorchLight(inst: Instance)
+	if inst:IsA("PointLight") and not torchLights[inst] then
+		torchSeedCounter += 1
+		torchLights[inst] = { Light = inst, Seed = torchSeedCounter * 1.732 }
+	end
+end
+
+local function track(tag: string, add: (Instance) -> (), list: { [any]: any })
 	for _, inst in CollectionService:GetTagged(tag) do
 		add(inst)
 	end
 	CollectionService:GetInstanceAddedSignal(tag):Connect(add)
 	CollectionService:GetInstanceRemovedSignal(tag):Connect(function(inst: Instance)
-		if inst:IsA("BasePart") then
-			list[inst] = nil
-		end
+		list[inst] = nil
 	end)
 end
 
 track("CommonsSpinner", addSpinner, spinners)
 track("CausewayPulse", addPulser, pulsers)
+track("WallTorchFlicker", addTorchLight, torchLights)
 
 local function stepCommons()
 	if HubPresence.InTower() then
@@ -74,6 +84,12 @@ local function stepCommons()
 		if part.Parent then
 			local dim = 0.5 + 0.5 * math.sin(t * PULSE_SPEED + p.Phase)
 			part.Transparency = math.min(0.95, p.Base + dim * PULSE_DEPTH)
+		end
+	end
+	for light, tl in torchLights do
+		if light.Parent then
+			local n = math.noise(t * 3.8, tl.Seed, 0)
+			light.Brightness = 2.2 + math.clamp(n * 0.35, -0.25, 0.25)
 		end
 	end
 end
