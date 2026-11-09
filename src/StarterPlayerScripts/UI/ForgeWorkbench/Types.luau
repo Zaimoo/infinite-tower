@@ -30,6 +30,7 @@ export type Snapshot = {
 	Heroes: { [string]: Hero },
 	Gold: number,
 	Gems: number,
+	ArtifactCap: number?,
 }
 export type Filter = {
 	Query: string,
@@ -41,7 +42,7 @@ export type Filter = {
 export type Command = {
 	RequestId: string,
 	ExpectedRevision: number,
-	Kind: string, -- EQUIP | UNEQUIP | LOCK | UPGRADE | UNDO
+	Kind: string, -- EQUIP | UNEQUIP | LOCK | UPGRADE | UNDO | EQUIP_BEST
 	ArtifactId: string?,
 	HeroId: string?,
 	MaterialIds: { string }?,
@@ -66,6 +67,11 @@ export type Props = {
 	Transport: Transport,
 	OnClose: () -> (),
 	OnSummon: () -> (), -- hand off to the existing artifact summon banner
+	-- One Forge window (UI overhaul plan §5.2): the header's tabs, and the body frame that hosts the
+	-- legacy summon view while the Summon tab is active (nil when it leaves).
+	ActiveTab: ("Artifacts" | "Summon")?,
+	OnSelectTab: ((tab: string) -> ())?,
+	OnSummonHost: ((host: Frame?) -> ())?,
 	OnSell: (() -> ())?,
 	OnSellArtifacts: ((ids: { string }) -> (boolean, string?))?,
 	OnContextChanged: ((heroId: string?, artifactId: string?, mode: string) -> ())?,

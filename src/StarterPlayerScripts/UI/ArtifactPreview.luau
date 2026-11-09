@@ -4,7 +4,12 @@ local ArtifactCatalog = require(ReplicatedStorage.Shared.Config.ArtifactCatalog)
 
 local ArtifactPreview = {}
 
-function ArtifactPreview.Show(host: GuiObject, templateId: string?): boolean
+export type PreviewOptions = {
+	Spin: boolean?,
+	FieldOfView: number?,
+}
+
+function ArtifactPreview.Show(host: GuiObject, templateId: string?, options: PreviewOptions?): boolean
 	local current = host:FindFirstChild("ArtifactModelPreview")
 	if current and current:GetAttribute("TemplateId") == templateId then return true end
 	if current then current:Destroy() end
@@ -33,7 +38,7 @@ function ArtifactPreview.Show(host: GuiObject, templateId: string?): boolean
 	viewport.LightDirection = Vector3.new(-1, -2, -2)
 
 	local camera = Instance.new("Camera")
-	camera.FieldOfView = 38
+	camera.FieldOfView = options and options.FieldOfView or 38
 	local center = bounds.Position
 	local distance = math.max(0.1, size.Magnitude / (2 * math.tan(math.rad(camera.FieldOfView / 2))) * 1.14)
 	camera.CFrame = CFrame.lookAt(center + Vector3.new(0.7, 0.48, 1).Unit * distance, center)
@@ -41,6 +46,24 @@ function ArtifactPreview.Show(host: GuiObject, templateId: string?): boolean
 	viewport.CurrentCamera = camera
 	model.Parent = viewport
 	viewport.Parent = host
+
+	if options and options.Spin then
+		local RunService = game:GetService("RunService")
+		local angle = 0
+		local connection: RBXScriptConnection? = nil
+		connection = RunService.RenderStepped:Connect(function(dt)
+			if not viewport.Parent or not camera.Parent then
+				if connection then connection:Disconnect(); connection = nil end
+				return
+			end
+			angle = (angle + dt * 0.9) % (math.pi * 2)
+			local offset = Vector3.new(math.cos(angle) * 0.85, 0.45, math.sin(angle) * 0.85).Unit * distance
+			camera.CFrame = CFrame.lookAt(center + offset, center)
+		end)
+		viewport.Destroying:Connect(function()
+			if connection then connection:Disconnect(); connection = nil end
+		end)
+	end
 	return true
 end
 

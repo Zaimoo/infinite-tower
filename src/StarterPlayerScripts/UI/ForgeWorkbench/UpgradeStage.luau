@@ -15,7 +15,7 @@ return function(props: any)
 			Rail = e("UIStroke", { Color = T.Gold, Thickness = 2 }),
 		}),
 		Name = e(C.Text, { Text = props.Target.DisplayName, TextColor3 = T.Gold, TextSize = 22, TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromScale(0, 0.78), Size = UDim2.fromScale(1, 0.12) }),
-		Stars = e(C.Text, { Text = string.rep("★", props.Target.Star) .. " · KEPT", TextColor3 = T.Gold, TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromScale(0, 0.9), Size = UDim2.fromScale(1, 0.1) }),
+		Stars = e(C.Text, { Text = string.format("%d★ · Upgrade target (kept)", props.Target.Star), TextColor3 = T.Gold, TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromScale(0, 0.9), Size = UDim2.fromScale(1, 0.1) }),
 	}
 	for i = 1, count do
 		local id = props.Materials[i]

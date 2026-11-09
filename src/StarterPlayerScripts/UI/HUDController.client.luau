@@ -27,6 +27,7 @@ local GothicVectorIcons = require(Shared:WaitForChild("Util"):WaitForChild("Goth
 local GildedGrimoire = require(Shared:WaitForChild("Util"):WaitForChild("GildedGrimoire"))
 local UIFeel = require(script.Parent:WaitForChild("UIFeel"))
 local Store = require(script.Parent:WaitForChild("Hud"):WaitForChild("Store"))
+local WindowManager = require(script.Parent:WaitForChild("WindowManager"))
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local CombatRemotes = Remotes:WaitForChild("CombatRemotes")
@@ -481,7 +482,20 @@ local function playToast(msg: string, color: Color3, holdSeconds: number, isWarn
 	end)
 end
 
+-- Server toasts go through the kit's stacked toasts (Kit/Notify). The single-slot playToast above
+-- stays only as a fallback if the kit fails to load.
+local KitNotify = (function()
+	local ok, kit = pcall(function() return require(script.Parent:WaitForChild("Kit")) end)
+	if ok then return kit.Notify end
+	warn("[HUD] UI kit failed to load; using the legacy toast:", kit)
+	return nil
+end)()
+
 SystemToastEvent.OnClientEvent:Connect(function(msg: string, colorType: string)
+	if KitNotify then
+		KitNotify.Push(if colorType == "WARN" then "warn" elseif colorType == "SUCCESS" then "success" else "info", tostring(msg))
+		return
+	end
 	local color = if colorType == "WARN" then Color3.fromRGB(255, 105, 105)
 		elseif colorType == "SUCCESS" then Color3.fromRGB(95, 250, 145)
 		else Color3.fromRGB(135, 225, 255)
@@ -720,17 +734,18 @@ SquadStatusRemote.OnClientEvent:Connect(function(status: any)
 	local isWiped = status.IsWiped == true
 	local fallenList = status.FallenHeroes or {}
 	local statuses = status.HeroStatuses or {}
+	local isStationed = status.IsStationed == true or (Store.SquadAssignment ~= nil and Store.SquadAssignment > 0)
 
 	if isWiped then
 		partiallyDefeatedBanner.Visible = false
 		partialTooltipPopover.Visible = false
-		squadWipeBanner.Visible = true
+		squadWipeBanner.Visible = not isStationed
 		return
 	end
 
 	squadWipeBanner.Visible = false
 
-	if fallen > 0 and alive > 0 and clientFloorProgress.FloorId > 0 then
+	if not isStationed and fallen > 0 and alive > 0 and clientFloorProgress.FloorId > 0 then
 		partiallyDefeatedBanner.Visible = true
 		partialHeader.Text = string.format("SQUAD COMPROMISED · %d/%d HEROES DOWNED", fallen, total)
 		local namesText = if #fallenList > 0 then table.concat(fallenList, ", ") else "Hero"
@@ -746,6 +761,14 @@ SquadStatusRemote.OnClientEvent:Connect(function(status: any)
 		end
 		tooltipList.Text = table.concat(lines, "\n")
 	else
+		partiallyDefeatedBanner.Visible = false
+		partialTooltipPopover.Visible = false
+	end
+end)
+
+Store.Changed:Connect(function()
+	local isStationed = Store.SquadAssignment ~= nil and Store.SquadAssignment > 0
+	if isStationed and partiallyDefeatedBanner and partiallyDefeatedBanner.Visible then
 		partiallyDefeatedBanner.Visible = false
 		partialTooltipPopover.Visible = false
 	end
@@ -870,6 +893,7 @@ end
 _G.TriggerHUDWhistleCooldown = triggerHUDWhistleCooldown
 
 local function showClientToast(msg: string)
+	if KitNotify then KitNotify.Push("info", msg) return end
 	playToast(msg, Color3.fromRGB(135, 225, 255), 3.5, false)
 end
 
@@ -1279,41 +1303,88 @@ local function updateBottomTabHighlights()
 end
 _G.UpdateBottomTabHighlights = updateBottomTabHighlights
 
+--============================================================================
+-- WINDOW REGISTRY (UI overhaul plan §4.1)
+-- Every modal window, for WindowManager: one open at a time, Backspace / gamepad B to the topmost one,
+-- animated close. Windows owned by other scripts (React panels, Settings, the Tower selector) are
+-- reached through their _G functions at call time, so load order doesn't matter.
+--============================================================================
+local function g(name: string): any return (_G :: any)[name] end
+WindowManager.Register("Backpack", {
+	IsOpen = function() return g("IsBackpackOpen") ~= nil and g("IsBackpackOpen")() end,
+	Close = function() if g("CloseBackpack") then g("CloseBackpack")() end end,
+})
+WindowManager.Register("Index", { -- Hero/Artifact Index and the Store share one panel slot
+	IsOpen = function() return g("IsHeroIndexOpen") ~= nil and g("IsHeroIndexOpen")() end,
+	Close = function() if g("CloseHeroIndex") then g("CloseHeroIndex")() end end,
+})
+WindowManager.Register("FacilityPanel", {
+	IsOpen = function() return g("IsFacilityPanelOpen") ~= nil and g("IsFacilityPanelOpen")() end,
+	Close = function() if g("CloseFacilityPanel") then g("CloseFacilityPanel")() end end,
+	HudCurrency = true,
+})
+WindowManager.Register("Tower", {
+	IsOpen = function() return g("IsTowerSelectorOpen") ~= nil and g("IsTowerSelectorOpen")() end,
+	Close = function() if g("CloseTowerSelector") then g("CloseTowerSelector")() end end,
+	OwnsBack = true, -- TowerController handles Backspace / B itself
+})
+WindowManager.Register("Settings", {
+	IsOpen = function() return g("IsSettingsOpen") ~= nil and g("IsSettingsOpen")() end,
+	Close = function() if g("CloseSettings") then g("CloseSettings")() end end,
+	-- Settings asks before discarding unapplied changes.
+	Back = function() return g("SettingsBack") ~= nil and g("SettingsBack")() end,
+})
+WindowManager.Register("Facility", {
+	IsOpen = function() return facilityController ~= nil and facilityController:IsOpen() end,
+	Close = function() facilityController:Close() end,
+	Root = function() return facilityController and facilityController.Root end,
+	HudCurrency = true,
+})
+WindowManager.Register("Fortress", {
+	IsOpen = function() return fortressTreeController ~= nil and fortressTreeController:IsOpen() end,
+	Close = function() fortressTreeController:Close() end,
+	HudCurrency = true,
+})
+WindowManager.Register("Synthesis", {
+	IsOpen = function() return synthesisController ~= nil and synthesisController.Root ~= nil and synthesisController.Root.Visible end,
+	Close = function() synthesisController:Close() end,
+	Root = function() return synthesisController and synthesisController.Root end,
+})
+WindowManager.Register("Promotion", {
+	IsOpen = function() return promotionController ~= nil and promotionController:IsOpen() end,
+	Close = function() promotionController:Close() end,
+	Back = function() return promotionController ~= nil and promotionController.Back ~= nil and promotionController:Back() end,
+	Root = function() return promotionController and promotionController.Root end,
+})
+WindowManager.Register("Forge", {
+	IsOpen = function() return forgeController ~= nil and forgeController:IsOpen() end,
+	Close = function() forgeController:Close() end,
+	OwnsBack = true, -- the Workbench steps back through dialogs and routes on Backspace / B itself
+})
+WindowManager.Register("Squad", {
+	IsOpen = function() return squadController ~= nil and squadController:IsOpen() end,
+	Close = function() squadController:Close() end,
+	Root = function() return squadController and squadController.Root end,
+})
+_G.WindowManager = WindowManager
+
+-- A window that finishes its close animation may be the last one: drop focus mode then.
+WindowManager.Changed:Connect(function(_, open: boolean)
+	if not open then setModalFocusMode(false) end
+end)
+
+-- OpenMasterModal's names for the windows it keeps open.
+local MASTER_KEEP = {
+	INDEX = "Index", SHOP = "Index", FACILITY = "FacilityPanel", SETTINGS = "Settings",
+	BLACKSMITH = "Forge", SQUAD = "Squad", WAITING_ROOM = "Squad",
+}
+
 _G.IsAnyMasterModalOpen = function(): boolean
-	if _G.IsBackpackOpen and _G.IsBackpackOpen() then return true end
-	if _G.IsHeroIndexOpen and _G.IsHeroIndexOpen() then return true end
-	if _G.IsFacilityPanelOpen and _G.IsFacilityPanelOpen() then return true end
-	if _G.IsTowerSelectorOpen and _G.IsTowerSelectorOpen() then return true end
-	if _G.IsSettingsOpen and _G.IsSettingsOpen() then return true end
-	if facilityController and facilityController.Root and facilityController.Root.Visible then return true end
-	if fortressTreeController and fortressTreeController:IsOpen() then return true end
-	if synthesisController and synthesisController.Root and synthesisController.Root.Visible then return true end
-	if promotionController and promotionController:IsOpen() then return true end
-	if forgeController and ((forgeController.IsOpen and forgeController:IsOpen()) or (forgeController.Root and forgeController.Root.Visible)) then return true end
-	if squadController and squadController:IsOpen() then return true end
-	if blacksmithModal.Visible then return true end
-	return false
+	return WindowManager.IsAnyOpen() or blacksmithModal.Visible
 end
 _G.OpenMasterModal = function(which: string)
-	if _G.CloseBackpack then _G.CloseBackpack() end
-	if which ~= "INDEX" and which ~= "SHOP" and _G.CloseHeroIndex then
-		_G.CloseHeroIndex()
-	end
-	if which ~= "FACILITY" and _G.CloseFacilityPanel then
-		_G.CloseFacilityPanel()
-	end
-	if which ~= "SETTINGS" and _G.CloseSettings and _G.IsSettingsOpen and _G.IsSettingsOpen() then
-		_G.CloseSettings()
-	end
-	if _G.CloseTowerSelector then _G.CloseTowerSelector() end
-	if facilityController and facilityController:IsOpen() then facilityController:Close() end
-	if fortressTreeController and fortressTreeController:IsOpen() then fortressTreeController:Close() end
-	if synthesisController and synthesisController.Root and synthesisController.Root.Visible then synthesisController:Close() end
-	if promotionController and promotionController:IsOpen() then promotionController:Close() end
-	if which ~= "BLACKSMITH" and forgeController and forgeController:IsOpen() then forgeController:Close() end
-	if which ~= "SQUAD" and which ~= "WAITING_ROOM" and squadController and squadController:IsOpen() then
-		squadController:Close()
-	end
+	-- One window at a time: close everything but the one being opened (animated).
+	WindowManager.CloseAll(MASTER_KEEP[which])
 	if which == "BLACKSMITH" and forgeController then
 		blacksmithModal.Visible = false
 		forgeController:Open()
@@ -1329,6 +1400,7 @@ _G.OpenMasterModal = function(which: string)
 	if which == "BLACKSMITH" and not forgeController and refreshBlacksmithModal then
 		refreshBlacksmithModal()
 	end
+	if MASTER_KEEP[which] then WindowManager.Opened(MASTER_KEEP[which]) end
 	if which == "NONE" then
 		setModalFocusMode(false)
 	else
@@ -1400,20 +1472,24 @@ _G.OpenFacilityHUD = function(facility: string)
 		if forgeController then forgeController:Close() end
 		if promotionController then promotionController:Close() end
 		synthesisController:Open()
+		WindowManager.Opened("Synthesis")
 	elseif facility == "Promotion" then
 		-- Dedicated Hero Promotion Ritual HUD matching the Gothic Ascension Mockup.
 		_G.OpenMasterModal("NONE")
 		if forgeController then forgeController:Close() end
 		if synthesisController then synthesisController:Close() end
 		promotionController:Open()
+		WindowManager.Opened("Promotion")
 	elseif facility == "SquadManagement" or facility == "Squad" then
 		_G.OpenMasterModal("SQUAD")
 	elseif _G.OpenFacilityPanel and (facility == "GuardPost" or facility == "Market" or facility == "TrainingGrounds" or facility == "GodsBlessing") then
 		-- Phase 5 §4.5: support facilities open the gothic React panel.
 		_G.OpenFacilityPanel(facility)
+		WindowManager.Opened("FacilityPanel")
 	elseif facility == "FortressTree" then
 		_G.OpenMasterModal("NONE")
 		fortressTreeController:Open()
+		WindowManager.Opened("Fortress")
 		updateBottomTabHighlights()
 	elseif facility == "Blacksmith" or facility == "Forge" then
 		_G.OpenMasterModal("BLACKSMITH")
@@ -1423,6 +1499,7 @@ _G.OpenFacilityHUD = function(facility: string)
 		if promotionController then promotionController:Close() end
 		if forgeController then forgeController:Close() end
 		facilityController:Open(facility)
+		WindowManager.Opened("Facility")
 	end
 end
 
@@ -2202,9 +2279,7 @@ do
 		if processed then
 			return
 		end
-		if input.KeyCode == Enum.KeyCode.Escape then
-			_G.OpenMasterModal("NONE")
-		end
+		-- Backspace / gamepad B: WindowManager closes only the topmost window (or steps back inside it).
 		if input.KeyCode == Enum.KeyCode.B then
 			if _G.ToggleShop then
 				_G.ToggleShop()

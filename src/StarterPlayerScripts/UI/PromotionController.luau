@@ -10,6 +10,7 @@ local HeroCard = require(script.Parent:WaitForChild("HeroCard"))
 local ModalFit = require(script.Parent:WaitForChild("ModalFit"))
 local UIAssets = require(script.Parent:WaitForChild("UIAssets"))
 local UIFeel = require(script.Parent:WaitForChild("UIFeel"))
+local Kit = require(script.Parent:WaitForChild("Kit"))
 local StatFormulas = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("StatFormulas"))
 local PitBalanceConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("PitBalanceConfig"))
 local GothicBoxStyle = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GothicBoxStyle"))
@@ -606,10 +607,15 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 		self:Confirm()
 	end)
 
+	-- Status as a callout under the button (plan §4.4); the label stays hidden for older code.
 	self.Status = label(actionArea, "", 14, C.TextMuted, Enum.Font.GothamMedium, "Body")
 	self.Status.Position = UDim2.fromOffset(6, 149)
 	self.Status.Size = UDim2.new(1, -12, 0, 39)
 	self.Status.ZIndex = 43
+	self.Status.Visible = false
+	self.StatusCallout = Kit.Callout.Create(actionArea, {
+		Name = "StatusCallout", Position = UDim2.fromOffset(0, 150), Width = UDim.new(1, 0), Height = 40, ZIndex = 43,
+	})
 
 	self:BuildPicker()
 
@@ -679,21 +685,15 @@ function Promo.BuildPicker(self: any)
 	goldText(self.PickerTitle)
 	self.PickerTitle.ZIndex = 61
 
-	local back = new("TextButton", {
-		Text = "×",
-		TextSize = 28,
-		Font = Enum.Font.GothamBold,
-		TextColor3 = C.TextDim,
-		BackgroundTransparency = 1,
-		Position = UDim2.new(1, -48, 0, 10),
-		Size = UDim2.fromOffset(38, 38),
-		ZIndex = 61,
-		Name = "PickerClose",
-	}, picker)
-	back.Activated:Connect(function()
+	-- Same close button as the Promotion window itself (it used to be a bare "×" glyph).
+	local back = GothicBoxStyle.CreateCloseButton(picker, function()
 		picker.Visible = false
 	end)
-	GrimoireIcons.CloseGlyph(back, 18)
+	back.Name = "PickerClose"
+	back.ZIndex = math.max(back.ZIndex, 61)
+	for _, d in back:GetDescendants() do
+		if d:IsA("GuiObject") then d.ZIndex = math.max(d.ZIndex, 62) end
+	end
 
 	self.PickerStatus = label(picker, "", 16, C.TextMuted, Enum.Font.GothamMedium, "Body")
 	self.PickerStatus.Position = UDim2.new(0, 20, 1, -44)
@@ -815,7 +815,9 @@ function Promo.Confirm(self: any)
 	local recipientId = self.Recipient
 	self:Render()
 	task.spawn(function()
-		local response = self:Request("COMMIT", { Token = preview.Token, ConfirmRare = true })
+		-- Promotion consumes no donor heroes today, so the server never asks for rare confirmation here.
+		-- Pass the preview's flag rather than a blanket true so the safeguard holds if that changes.
+		local response = self:Request("COMMIT", { Token = preview.Token, ConfirmRare = preview.RequiresRareConfirmation == true })
 		self.Preview = nil
 		local revealRank = false
 		if response.Success then
@@ -890,6 +892,7 @@ function Promo.RenderPicker(self: any)
 	local maxStars = PitBalanceConfig.MaxStars or 7
 	self.PickerTitle.Text = spaced("SELECT HERO TO PROMOTE")
 	self.PickerStatus.Text = self.PickerMessage or ""
+	self.PickerStatus.TextColor3 = C.TextMuted
 
 	local heroes = {}
 	for _, hero in self.State.Heroes do
@@ -900,8 +903,8 @@ function Promo.RenderPicker(self: any)
 		local aMax = (a.Stars or 1) >= maxStars
 		local bMax = (b.Stars or 1) >= maxStars
 		if aMax ~= bMax then return not aMax end
-		local aCap = (a.Level or 1) >= (a.Stars or 1) * 10
-		local bCap = (b.Level or 1) >= (b.Stars or 1) * 10
+		local aCap = (a.Level or 1) >= StatFormulas.GetMaxLevel(a.Stars)
+		local bCap = (b.Level or 1) >= StatFormulas.GetMaxLevel(b.Stars)
 		if aCap ~= bCap then return aCap end
 		if (a.Stars or 1) ~= (b.Stars or 1) then return (a.Stars or 1) > (b.Stars or 1) end
 		if (a.Level or 1) ~= (b.Level or 1) then return (a.Level or 1) > (b.Level or 1) end
@@ -916,13 +919,13 @@ function Promo.RenderPicker(self: any)
 
 	for i, hero in heroes do
 		local isMax = (hero.Stars or 1) >= maxStars
-		local isCapped = (hero.Level or 1) >= (hero.Stars or 1) * 10
+		local isCapped = (hero.Level or 1) >= StatFormulas.GetMaxLevel(hero.Stars)
 		local eligible = not isMax and isCapped
 		local tagText: string? = nil
 		if isMax then
 			tagText = "MAX RANK"
 		elseif not isCapped then
-			tagText = "NEED LV." .. ((hero.Stars or 1) * 10)
+			tagText = "NEED LV." .. StatFormulas.GetMaxLevel(hero.Stars)
 		end
 
 		local rarity = RARITY[math.clamp(StatFormulas.GetHeroRarity(hero), 1, #RARITY)]
@@ -965,14 +968,26 @@ function Promo.RenderPicker(self: any)
 				Size = UDim2.fromScale(1, 1),
 				ZIndex = 64,
 			}, tile)
+			-- At the foot of the portrait, not across the hero's face.
 			local tag = label(shade, tagText, 13, C.Danger, nil, "Title")
 			tag.Size = UDim2.new(1, 0, 0, 16)
-			tag.Position = UDim2.fromOffset(0, 36)
+			tag.Position = UDim2.fromOffset(0, 72)
 			tag.ZIndex = 65
 		end
 
 		local uuid = hero.UUID
+		local heroName = hero.DisplayName or "This hero"
+		local refusal = if isMax then string.format("%s is already at the maximum %d★ rank.", heroName, maxStars)
+			elseif not isCapped then string.format("%s needs Lv.%d to promote (now Lv.%d). Level up in Synthesis.", heroName, StatFormulas.GetMaxLevel(hero.Stars), hero.Level or 1)
+			else nil
 		tile.Activated:Connect(function()
+			if refusal then
+				-- Not eligible: say why instead of selecting a hero the server will refuse.
+				UIFeel.Deny(tile)
+				self.PickerStatus.Text = refusal
+				self.PickerStatus.TextColor3 = C.Danger
+				return
+			end
 			self:Pick(uuid)
 		end)
 	end
@@ -1007,7 +1022,7 @@ function Promo.Render(self: any)
 		self.MainStroke.Color = rarity
 		self.MainRank.Text = stars(recipient.Stars)
 
-		local maxLevel = (recipient.Stars or 1) * 10
+		local maxLevel = StatFormulas.GetMaxLevel(recipient.Stars)
 		local isCapped = (recipient.Level or 1) >= maxLevel
 		self.MainBadge.Visible = true
 		self.MainBadgeText.Text = isCapped and "MAX LVL" or string.format("LV. %d/%d", recipient.Level or 1, maxLevel)
@@ -1105,16 +1120,23 @@ function Promo.Render(self: any)
 	-- 4. Action Button & Feedback Status
 	local canCommit = preview ~= nil and preview.CanCommit == true and not self.Loading and not self.Busy
 	local button = self.ConfirmButton
+	button.Interactable = canCommit
 	if self.Busy then
 		button.Text = "PROMOTING…"
 	else
 		button.Text = "PROMOTE"
 	end
 
-	button.TextColor3 = (canCommit or self.Busy) and C.Text or Color3.fromRGB(206, 196, 226)
-	button.TextTransparency = if canCommit or self.Busy then 0 else 0.15
+	-- Brighter Grimoire: ready = the gold primary button; blocked = slate, so it can't be mistaken
+	-- for a live action (it used to differ only by its outline).
+	local live = canCommit or self.Busy
+	local tone = if live then Kit.Tokens.Intent.Primary else Kit.Tokens.Intent.Disabled
+	local fill = button:FindFirstChildWhichIsA("UIGradient")
+	if fill then fill.Color = ColorSequence.new(tone.Top, tone.Bottom) end
+	button.TextColor3 = if live then C.Text else Color3.fromRGB(176, 168, 196)
+	button.TextTransparency = 0
 	if self.ConfirmStroke then
-		self.ConfirmStroke.Color = if canCommit then Color3.fromRGB(255, 226, 140) else Color3.fromRGB(150, 138, 176)
+		self.ConfirmStroke.Color = tone.Rail
 	end
 
 	local status, color = self.Message, C.TextDim
@@ -1135,6 +1157,10 @@ function Promo.Render(self: any)
 	end
 	self.Status.Text = status
 	self.Status.TextColor3 = color
+	self.StatusCallout.Update({
+		Text = if status ~= "" then status else nil,
+		Severity = if color == C.Danger then "block" elseif color == C.Good then "success" else "info",
+	})
 end
 
 function Promo.StopStoneOrbit(self: any)
@@ -1181,6 +1207,7 @@ function Promo.PlayAscension(self: any, count: number)
 		self.StoneCount.Text = string.format("0 / %d", count)
 		self.Status.Text = "The hero is absorbing Promotion Stones…"
 		self.Status.TextColor3 = C.TextMuted
+		self.StatusCallout.Update({ Text = self.Status.Text, Severity = "info" })
 
 		local landed, elapsed, shakePhase = 0, 0, 0
 		local duration = absorptionTime(1, count)
@@ -1308,6 +1335,16 @@ function Promo.Close(self: any)
 	self.Picker.Visible = false
 	self.PreviewSerial += 1
 	self.Loading = false
+end
+
+-- Backspace / gamepad B (via WindowManager): closes the hero picker first. Returns true when handled;
+-- false lets WindowManager close the window. While a promotion is in flight, Back does nothing.
+function Promo.Back(self: any): boolean
+	if self.Picker and self.Picker.Visible then
+		self.Picker.Visible = false
+		return true
+	end
+	return self.Busy == true
 end
 
 function Promo.IsOpen(self: any): boolean

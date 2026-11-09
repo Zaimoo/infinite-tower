@@ -207,8 +207,8 @@ local function button(props: { [string]: any }, tone: string, label: string, siz
 	})
 end
 
--- Pill progress bar (ink track, shaded fill).
-local function bar(props: { [string]: any }, fraction: number, color: Color3)
+-- Pill progress bar (ink track, shaded fill). `label` is drawn inside the bar, over the fill.
+local function bar(props: { [string]: any }, fraction: number, color: Color3, label: string?)
 	local inst: { [string]: any } = { BackgroundColor3 = Color3.fromRGB(26, 20, 36), BorderSizePixel = 0 }
 	for k, v in props do inst[k] = v end
 	return e("Frame", inst, {
@@ -217,6 +217,48 @@ local function bar(props: { [string]: any }, fraction: number, color: Color3)
 		Fill = if fraction > 0 then e("Frame", { Size = UDim2.fromScale(math.clamp(fraction, 0.06, 1), 1), BackgroundColor3 = color, BorderSizePixel = 0, ZIndex = (props.ZIndex or 1) + 1 }, {
 			Corner = e("UICorner", { CornerRadius = UDim.new(1, 0) }),
 			Shade = e("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(150, 150, 165)) }),
+		}) else nil,
+		Label = if label then e("TextLabel", {
+			Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, FontFace = Grimoire.Fonts.Number, Text = label, TextSize = 13,
+			TextColor3 = Color3.new(1, 1, 1), TextStrokeColor3 = INK, TextStrokeTransparency = 0, ZIndex = (props.ZIndex or 1) + 2,
+		}) else nil,
+	})
+end
+
+-- A scrolling list whose bottom edge fades out while more content sits below, so a long detail
+-- panel reads as "scroll for more" rather than cut off.
+local function FadeScroller(props: { Frame: { [string]: any }, Children: { [string]: any } })
+	local more, setMore = React.useState(false)
+	local ref = React.useRef(nil)
+	React.useEffect(function()
+		local sf = ref.current
+		if not sf then return nil end
+		local function update()
+			local hidden = sf.AbsoluteCanvasSize.Y - sf.AbsoluteWindowSize.Y - sf.CanvasPosition.Y
+			setMore(hidden > 4)
+		end
+		update()
+		local conns = {
+			sf:GetPropertyChangedSignal("CanvasPosition"):Connect(update),
+			sf:GetPropertyChangedSignal("AbsoluteCanvasSize"):Connect(update),
+			sf:GetPropertyChangedSignal("AbsoluteWindowSize"):Connect(update),
+		}
+		return function() for _, c in conns do c:Disconnect() end end
+	end, {})
+	local frame = table.clone(props.Frame)
+	frame.ref = ref
+	return e(React.Fragment, nil, {
+		List = e("ScrollingFrame", frame, props.Children),
+		Fade = if more then e("Frame", {
+			Name = "MoreBelowFade",
+			AnchorPoint = Vector2.new(0, 1),
+			Position = UDim2.new(0, 6, 1, -6),
+			Size = UDim2.new(1, -20, 0, 34),
+			BackgroundColor3 = Tones.Deep.Bottom,
+			BorderSizePixel = 0,
+			ZIndex = (frame.ZIndex or 3) + 5,
+		}, {
+			Gradient = e("UIGradient", { Rotation = 90, Transparency = NumberSequence.new(1, 0) }),
 		}) else nil,
 	})
 end
@@ -234,12 +276,15 @@ end
 
 local function scroller(children: { [string]: any }, layout: any)
 	children.Layout = layout
-	children.Padding = e("UIPadding", { PaddingTop = UDim.new(0, 6), PaddingBottom = UDim.new(0, 10), PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 10) })
-	return e("ScrollingFrame", {
-		Position = UDim2.fromOffset(6, 40), Size = UDim2.new(1, -12, 1, -46), BackgroundTransparency = 1, BorderSizePixel = 0,
-		ScrollBarThickness = 5, ScrollBarImageColor3 = Color3.fromRGB(240, 196, 110),
-		AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), ZIndex = 3,
-	}, children)
+	children.Padding = e("UIPadding", { PaddingTop = UDim.new(0, 6), PaddingBottom = UDim.new(0, 24), PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 12) })
+	return e(FadeScroller, {
+		Frame = {
+			Position = UDim2.fromOffset(6, 40), Size = UDim2.new(1, -12, 1, -46), BackgroundTransparency = 1, BorderSizePixel = 0,
+			ScrollBarThickness = 8, ScrollBarImageColor3 = Color3.fromRGB(240, 196, 110),
+			AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), ZIndex = 3,
+		},
+		Children = children,
+	})
 end
 
 -- A stat tile: caption over a big inked number.
@@ -657,7 +702,7 @@ local function HeroIndex(props: { Profile: any, Width: number, OnClose: () -> ()
 		scroller(leftScrollerContent, e("UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder })))
 	local midCol = column(2, if narrow then UDim.new(1, 0) else UDim.new(0.42, -8), midTitle, {
 		Filter = e("Frame", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -12, 0, 8), Size = UDim2.fromOffset(240, 26), BackgroundTransparency = 1, ZIndex = 3 }, filterChips),
-	}, scroller(midCards, e("UIGridLayout", { CellSize = UDim2.fromOffset(150, 172), CellPadding = UDim2.fromOffset(10, 10), SortOrder = Enum.SortOrder.LayoutOrder })))
+	}, scroller(midCards, e("UIGridLayout", { CellSize = UDim2.fromOffset(150, 172), CellPadding = UDim2.fromOffset(10, 10), SortOrder = Enum.SortOrder.LayoutOrder, HorizontalAlignment = Enum.HorizontalAlignment.Center })))
 	local rightCol = column(3, if narrow then UDim.new(1, 0) else UDim.new(0.36, 0), rightTitle, nil,
 		scroller(rightDetail, e("UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder })))
 
@@ -702,10 +747,11 @@ local function HeroIndex(props: { Profile: any, Width: number, OnClose: () -> ()
 			TitleIcon = IconAt("Index", 50, { Position = UDim2.fromOffset(18, 10), ZIndex = 3 }),
 			Title = Heavy({ Position = UDim2.fromOffset(78, 12), Size = UDim2.fromOffset(300, 30), MaxSize = 28, TextXAlignment = Enum.TextXAlignment.Left,
 				Text = windowTitle, ZIndex = 3 }),
-			Collected = Body({ Position = UDim2.fromOffset(80, 42), Size = UDim2.fromOffset(300, 16), TextSize = 13, TextColor3 = TEXT.Muted, ZIndex = 3,
-				Text = collectedText }),
-			CollectedBar = if not narrow then bar({ Position = UDim2.fromOffset(390, 30), Size = UDim2.fromOffset(200, 14), ZIndex = 3 },
-				collectedFraction, TEXT.Gold) else nil,
+			-- The collection count sits inside its bar, under the title (on narrow screens, text only).
+			Collected = if narrow then Body({ Position = UDim2.fromOffset(80, 42), Size = UDim2.fromOffset(300, 16), TextSize = 13, TextColor3 = TEXT.Muted, ZIndex = 3,
+				Text = collectedText }) else nil,
+			CollectedBar = if not narrow then bar({ Name = "CollectedBar", Position = UDim2.fromOffset(80, 44), Size = UDim2.fromOffset(260, 20), ZIndex = 3 },
+				collectedFraction, TEXT.Gold, collectedText) else nil,
 			ModeTabs = e("Frame", {
 				AnchorPoint = Vector2.new(1, 0),
 				Position = UDim2.new(1, if narrow then -76 else -76, 0, 16),

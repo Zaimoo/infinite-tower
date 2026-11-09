@@ -3,6 +3,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Catalog = require(ReplicatedStorage.Shared.Config.ArtifactCatalog)
 local Stats = require(ReplicatedStorage.Shared.Util.StatFormulas)
+local EquipBest = require(ReplicatedStorage.Shared.Util.EquipBest)
 local Types = require(script.Parent.Types)
 type Artifact = Types.Artifact
 type Hero = Types.Hero
@@ -47,6 +48,16 @@ end
 
 function Model.power(artifact: Artifact): number
 	return Catalog.CalculateEffectiveStats(artifact.Star, artifact.Rarity, nil, artifact.TemplateId)
+end
+
+function Model.isEligibleDonor(snapshot: Snapshot, targetId: string?, artifactId: string): boolean
+	local target = targetId and snapshot.Artifacts[targetId]
+	local artifact = snapshot.Artifacts[artifactId]
+	if not target or not artifact then return false end
+	if targetId == artifactId then return false end
+	if target.Rarity ~= artifact.Rarity then return false end
+	if (target.Star or 1) ~= (artifact.Star or 1) then return false end
+	return true
 end
 
 function Model.materialReason(snapshot: Snapshot, targetId: string?, artifactId: string): string?
@@ -108,7 +119,8 @@ function Model.upgradeReason(snapshot: Snapshot, targetId: string?, materialIds:
 	local materials = Model.materials(snapshot, targetId, materialIds)
 	if #materials ~= #materialIds then return "Artifacts changed. Select eligible artifacts again." end
 	if #materials ~= rule.Donors then
-		return string.format("Choose %d more artifacts", math.max(0, rule.Donors - #materials))
+		local missing = math.max(0, rule.Donors - #materials)
+		return string.format("Choose %d more %s to consume", missing, if missing == 1 then "weapon" else "weapons")
 	end
 	if snapshot.Gold < rule.Gold then return "Not enough Gold" end
 	if snapshot.Gems < rule.Gems then return "Not enough Gems" end
@@ -205,6 +217,10 @@ function Model.best(snapshot: Snapshot, heroId: string?): string?
 		end
 	end
 	return bestId
+end
+
+function Model.equipBestPlan(snapshot: Snapshot)
+	return EquipBest.Plan(snapshot.Heroes or {}, snapshot.Artifacts or {})
 end
 
 function Model.inventory(snapshot: Snapshot, filter: Filter, heroId: string?): { Artifact }

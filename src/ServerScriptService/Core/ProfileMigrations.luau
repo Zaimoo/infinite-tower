@@ -10,7 +10,7 @@ local Onboarding = require(ReplicatedStorage.Shared.Util.Onboarding)
 
 local ProfileMigrations = {}
 
-ProfileMigrations.CurrentSchema = 5
+ProfileMigrations.CurrentSchema = 6
 
 local function blankFacility(level: number): any
 	return {
@@ -83,6 +83,11 @@ function ProfileMigrations.Run(profile: any)
 	ProfileMigrations.ToV3(profile)
 	ProfileMigrations.ToV4(profile)
 	ProfileMigrations.ToV5(profile)
+	if profile.SchemaVersion < 6 then
+		profile.Onboarding = profile.Onboarding or Onboarding.NewState()
+		Onboarding.EnsureGuide(profile.Onboarding)
+		profile.SchemaVersion = 6
+	end
 end
 
 return ProfileMigrations

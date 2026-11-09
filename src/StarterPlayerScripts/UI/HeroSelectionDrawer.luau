@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Grimoire = require(ReplicatedStorage.Shared.Util.GildedGrimoire)
 local GrimoireIcons = require(ReplicatedStorage.Shared.Util.GrimoireIcons)
 local Card = require(script.Parent.HeroPickerCard)
+local Motion = require(script.Parent.Kit.Motion)
 local Drawer = {}
 Drawer.__index = Drawer
 local nextId = 0
@@ -198,6 +199,13 @@ function Drawer.Open(self: any, returnFocus: GuiObject?)
 	self.Panel.Position = UDim2.new(0.5, 0, 1.9, 0)
 	self.Tween = TweenService:Create(self.Panel, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Position = UDim2.new(0.5, 0, 1, -10) })
 	self.Tween:Play()
+	-- Cards pop in one after another (UI overhaul plan §4.8 Stagger; skipped with Reduce Motion).
+	local cards = {}
+	for _, button in self.Buttons do
+		local card = button.Parent
+		if card and card:IsA("GuiObject") then table.insert(cards, card) end
+	end
+	Motion.Stagger(cards)
 	if self.BackContext then self.BackContext:Destroy() end
 	local context = Instance.new("InputContext")
 	context.Name = self.ActionName
@@ -207,12 +215,16 @@ function Drawer.Open(self: any, returnFocus: GuiObject?)
 	back.Name = "CloseDrawer"
 	back.Type = Enum.InputActionType.Bool
 	back.Parent = context
-	for _, key in { Enum.KeyCode.ButtonB, Enum.KeyCode.Escape } do
+	for _, key in { Enum.KeyCode.ButtonB, Enum.KeyCode.Backspace } do
 		local binding = Instance.new("InputBinding")
 		binding.KeyCode = key
 		binding.Parent = back
 	end
-	back.Pressed:Connect(function() self:Close() end)
+	-- Backspace while typing (chat, the search box) edits text; it doesn't close the drawer.
+	back.Pressed:Connect(function()
+		if UserInputService:GetFocusedTextBox() then return end
+		self:Close()
+	end)
 	context.Parent = Players.LocalPlayer:WaitForChild("PlayerScripts")
 	self.BackContext = context
 	local serial = self.Serial

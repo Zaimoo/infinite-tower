@@ -176,6 +176,7 @@ export type SimHero = {
 	DuelId: number?, -- set while the hero fights in a bounty duel
 	DuelSide: LootDuel.Side?,
 	DefenseShredUntil: number?,
+	RespawnAt: number?,
 }
 
 export type SimMob = {
@@ -660,11 +661,24 @@ local function knockHeroIntoComa(simHero: SimHero, _baseComaSeconds: number?)
 		end
 	end
 
-	dm.SendToast(
-		simHero.Owner,
-		string.format("%s collapsed! (No mid-run revives)", simHero.DisplayName),
-		"WARN"
-	)
+	local towerState = Tower.GetState(simHero.Owner)
+	local isStationed = towerState and towerState.SquadAssignment ~= nil and towerState.SquadFloorId == simHero.FloorId
+
+	if isStationed then
+		simHero.RespawnAt = os.clock() + TowerHardcore.AssignedRespawnSeconds
+		dm.SendToast(
+			simHero.Owner,
+			string.format("%s collapsed! Respawning in %ds...", simHero.DisplayName, math.round(TowerHardcore.AssignedRespawnSeconds)),
+			"WARN"
+		)
+	else
+		simHero.RespawnAt = nil
+		dm.SendToast(
+			simHero.Owner,
+			string.format("%s collapsed! (No mid-run revives)", simHero.DisplayName),
+			"WARN"
+		)
+	end
 	dm.SyncProfile(simHero.Owner)
 
 	Tower.BroadcastAt(CombatVFXRemote, simHero, "HERO_COMA", simHero.Position, simHero.NetId)
@@ -689,68 +703,76 @@ local function knockHeroIntoComa(simHero: SimHero, _baseComaSeconds: number?)
 			simHero.Owner.Character:SetAttribute("SquadWiped", true)
 		end
 
-		local towerState = Tower.GetState(simHero.Owner)
 		local wipeFloor = if towerState.SquadFloorId and towerState.SquadFloorId > 0 then towerState.SquadFloorId else towerState.FloorId
 		local playerOnWipeFloor = (towerState.FloorId == wipeFloor and wipeFloor > 0)
 
-		if playerOnWipeFloor then
-			-- Phase 6 wipe loss: a share of the Gold and Gems earned since the last bank is gone, and the run (and streak) ends.
-			local run = TowerRuns.Get(simHero.Owner)
-			local profile = dm.GetProfile(simHero.Owner)
-			local lossGold, lossGems = 0, 0
-			if run and profile then
-				lossGold, lossGems = TowerRun.WipeLoss(run, profile.Currencies.Gold, profile.Currencies.Gems)
-				profile.Currencies.Gold -= lossGold
-				profile.Currencies.Gems -= lossGems
-				dm.SyncProfile(simHero.Owner)
-			end
-			if run then
-				TowerRuns.End(simHero.Owner, "WIPE", lossGold, lossGems)
-				if lossGold > 0 or lossGems > 0 then
-					dm.SendToast(simHero.Owner, string.format("Wiped: lost %d Gold and %d Gems earned since you last banked. Banked loot is safe.", lossGold, lossGems), "WARN")
-				end
-			end
-			if _G.RelicService then
-				_G.RelicService.FumbleRelicOnAoEHit(simHero.Owner)
-			end
-			masterState.CarriedLoot = { Gold = 0, Gems = 0 }
-		end
-
-		SquadWipeStateRemote:FireClient(simHero.Owner, true)
-		if SquadDefeatedRemote then
-			SquadDefeatedRemote:FireClient(simHero.Owner, wipeFloor)
-		end
-
-		if wipeFloor == RAID_FLOOR then
-			dm.SendToast(simHero.Owner, "Your squad fell in the raid. Your damage still counts. Returning to your Fortress Plot...", "WARN")
-		elseif playerOnWipeFloor then
+		if isStationed then
 			dm.SendToast(
 				simHero.Owner,
-				string.format("ALL HEROES FALLEN on Floor %d! Carried loot dropped. Teleporting to Fortress Plot...", wipeFloor),
+				string.format("All heroes fallen on Floor %d! Stationed squad will respawn and regroup.", wipeFloor),
 				"WARN"
 			)
+			-- Do not recall or teleport stationed squads; heroes will respawn on their timers and resume farming.
 		else
-			dm.SendToast(
-				simHero.Owner,
-				string.format("Assigned squad fallen on Floor %d! Squad recalled and recovered.", wipeFloor),
-				"WARN"
-			)
-		end
-
-		task.defer(function()
-			if Tower.RecallWipedSquad then
-				Tower.RecallWipedSquad(simHero.Owner)
-			end
 			if playerOnWipeFloor then
-				-- PlotManager is a Script (not a ModuleScript); it publishes itself as _G.PlotManager.
-				local PlotManager = _G.PlotManager
-				if PlotManager and PlotManager.TeleportPlayerToPlot then
-					PlotManager.TeleportPlayerToPlot(simHero.Owner)
-				else
-					Tower.CommitRespawn(simHero.Owner)
+				-- Phase 6 wipe loss: a share of the Gold and Gems earned since the last bank is gone, and the run (and streak) ends.
+				local run = TowerRuns.Get(simHero.Owner)
+				local profile = dm.GetProfile(simHero.Owner)
+				local lossGold, lossGems = 0, 0
+				if run and profile then
+					lossGold, lossGems = TowerRun.WipeLoss(run, profile.Currencies.Gold, profile.Currencies.Gems)
+					profile.Currencies.Gold -= lossGold
+					profile.Currencies.Gems -= lossGems
+					dm.SyncProfile(simHero.Owner)
 				end
+				if run then
+					TowerRuns.End(simHero.Owner, "WIPE", lossGold, lossGems)
+					if lossGold > 0 or lossGems > 0 then
+						dm.SendToast(simHero.Owner, string.format("Wiped: lost %d Gold and %d Gems earned since you last banked. Banked loot is safe.", lossGold, lossGems), "WARN")
+					end
+				end
+				if _G.RelicService then
+					_G.RelicService.FumbleRelicOnAoEHit(simHero.Owner)
+				end
+				masterState.CarriedLoot = { Gold = 0, Gems = 0 }
 			end
-		end)
+
+			SquadWipeStateRemote:FireClient(simHero.Owner, true)
+			if SquadDefeatedRemote then
+				SquadDefeatedRemote:FireClient(simHero.Owner, wipeFloor)
+			end
+
+			if wipeFloor == RAID_FLOOR then
+				dm.SendToast(simHero.Owner, "Your squad fell in the raid. Your damage still counts. Returning to your Fortress Plot...", "WARN")
+			elseif playerOnWipeFloor then
+				dm.SendToast(
+					simHero.Owner,
+					string.format("ALL HEROES FALLEN on Floor %d! Carried loot dropped. Teleporting to Fortress Plot...", wipeFloor),
+					"WARN"
+				)
+			else
+				dm.SendToast(
+					simHero.Owner,
+					string.format("Assigned squad fallen on Floor %d! Squad recalled and recovered.", wipeFloor),
+					"WARN"
+				)
+			end
+
+			task.defer(function()
+				if Tower.RecallWipedSquad then
+					Tower.RecallWipedSquad(simHero.Owner)
+				end
+				if playerOnWipeFloor then
+					-- PlotManager is a Script (not a ModuleScript); it publishes itself as _G.PlotManager.
+					local PlotManager = _G.PlotManager
+					if PlotManager and PlotManager.TeleportPlayerToPlot then
+						PlotManager.TeleportPlayerToPlot(simHero.Owner)
+					else
+						Tower.CommitRespawn(simHero.Owner)
+					end
+				end
+			end)
+		end
 	end
 
 	syncSquadStatus(simHero.Owner)
@@ -779,11 +801,14 @@ syncSquadStatus = function(player: Player)
 		end
 	end
 	local isWiped = total > 0 and alive == 0
+	local towerState = Tower.GetState(player)
+	local isStationed = towerState ~= nil and towerState.SquadAssignment ~= nil and towerState.SquadAssignment > 0
 	if player.Character then
 		player.Character:SetAttribute("AliveHeroCount", alive)
 		player.Character:SetAttribute("TotalHeroCount", total)
 		player.Character:SetAttribute("FallenHeroCount", fallen)
 		player.Character:SetAttribute("SquadWiped", isWiped)
+		player.Character:SetAttribute("IsSquadStationed", isStationed)
 	end
 	if SquadStatusRemote then
 		SquadStatusRemote:FireClient(player, {
@@ -793,6 +818,7 @@ syncSquadStatus = function(player: Player)
 			IsWiped = isWiped,
 			FallenHeroes = fallenNames,
 			HeroStatuses = heroStatuses,
+			IsStationed = isStationed,
 		})
 	end
 end
@@ -806,6 +832,7 @@ local function restoreSquadOnPlot(player: Player)
 	local masterState = ActiveMasters[player]
 	if masterState then
 		for _, h in pairs(masterState.DeployedHeroes) do
+			h.RespawnAt = nil
 			h.CurrentHP = h.MaxHP
 			h.State = "FOLLOW_MASTER"
 			ActiveHeroesByNetId[h.NetId] = h
@@ -2008,6 +2035,47 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 		return
 	end
 	if simHero.State == "COMA" then
+		local squadState = Tower.GetState(simHero.Owner)
+		if squadState and squadState.SquadAssignment ~= nil and simHero.FloorId == squadState.SquadFloorId then
+			if not simHero.RespawnAt then
+				simHero.RespawnAt = now + TowerHardcore.AssignedRespawnSeconds
+			end
+			if now >= simHero.RespawnAt then
+				simHero.RespawnAt = nil
+				local assignedRoom = Tower.GetRoom(squadState.SquadFloorId)
+				local spawnBase = if assignedRoom then getAssignedSpawnRoot(assignedRoom) else simHero.Position
+				simHero.Position = HeroNavigation.PlaceNear(spawnBase, getFormationOffset(simHero.SlotIndex))
+				simHero.CurrentHP = simHero.MaxHP
+				simHero.State = "FOLLOW_MASTER"
+				simHero.TargetNetId = nil
+				simHero.TargetId = nil
+				simHero.IsFocusTarget = false
+				simHero.PacifiedUntil = now + 1.5
+				simHero.EntityGeneration += 1
+				HeroNavigation.Clear(simHero)
+				SquadMovement.ClearHero(simHero.Owner, simHero.NetId)
+				local masterState = ActiveMasters[simHero.Owner]
+				if masterState and masterState.IsSquadWiped then
+					local hasLiving = false
+					for _, h in pairs(masterState.DeployedHeroes) do
+						if h.State ~= "COMA" and h.CurrentHP > 0 then
+							hasLiving = true
+							break
+						end
+					end
+					if hasLiving then
+						masterState.IsSquadWiped = false
+						masterState.CanCollectLoot = true
+						if simHero.Owner.Character then
+							simHero.Owner.Character:SetAttribute("SquadWiped", false)
+						end
+						SquadWipeStateRemote:FireClient(simHero.Owner, false)
+					end
+				end
+				syncSquadStatus(simHero.Owner)
+				broadcastMetadata(nil)
+			end
+		end
 		return
 	end
 	if lastMasterPolicyClock[simHero.Owner] ~= now then
@@ -2513,7 +2581,11 @@ Tower.RegisterAdapter("Combat",{
     local spawnBase = anchor or (if room.FloorId > 0 then getAssignedSpawnRoot(room) else room.Arrival.Position)
     h.Position=HeroNavigation.PlaceNear(spawnBase,getFormationOffset(h.SlotIndex))
     h.TargetNetId=nil;h.TargetId=nil;h.IsFocusTarget=false;h.RecallOverride=true
-    if h.CurrentHP > 0 and h.State ~= "COMA" then
+    h.RespawnAt = nil
+    if recall then
+     h.CurrentHP = h.MaxHP
+     h.State = "FOLLOW_MASTER"
+    elseif h.CurrentHP > 0 and h.State ~= "COMA" then
      h.State = "FOLLOW_MASTER"
     else
      h.State = "COMA"
@@ -2521,13 +2593,28 @@ Tower.RegisterAdapter("Combat",{
     h.PacifiedUntil=os.clock()+2;h.ActionSequence=0;HeroNavigation.Clear(h)
     for _,other in pairs(ActiveHeroesByNetId) do if other.TargetNetId==h.NetId then other.TargetNetId=nil;if other.CurrentHP > 0 and other.State ~= "COMA" then other.State="FOLLOW_MASTER" end end end
    end
+   if recall then
+    m.IsSquadWiped = false
+    m.CanCollectLoot = true
+    if player.Character then
+     player.Character:SetAttribute("SquadWiped", false)
+    end
+    SquadWipeStateRemote:FireClient(player, false)
+    local profile = getDataManager().GetProfile(player)
+    if profile then
+     for _, hero in pairs(profile.Heroes) do
+      hero.ComaUntilTimestamp = 0
+     end
+     getDataManager().SyncProfile(player)
+    end
+   end
    if room.FloorId == 0 then
     resetPlayerTowerEncounter(player, "EXIT_TO_HUB_OR_PLOT")
     restoreSquadOnPlot(player)
    else
     -- Moving between floors revives downed heroes at a fraction of their HP; it no longer heals anyone
     -- (same-floor recalls do nothing). The tower sanctuary is where standing heroes recover.
-    if changedFloor then
+    if changedFloor and not recall then
      reviveDownedOnTransition(player)
     end
     local existing = ActivePlayerProgress[player]
@@ -2697,8 +2784,8 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
         end
         profile.HighestClearedFloor = math.max(profile.HighestClearedFloor or 0, mob.FloorId)
         profile.MaxFloorReached = math.max(profile.MaxFloorReached or 0, mob.FloorId + 1)
+        if dm.ReportProgress then dm.ReportProgress(p, "FloorCleared", mob.FloorId) end
         dm.SyncProfile(p)
-        if dm.ReportProgress then dm.ReportProgress(p, "FloorCleared") end
         TowerRuns.AddEarnings(p, bossGold, bossGems, 0)
         TowerRuns.RecordFloorClear(p, mob.FloorId, firstClear)
         CombatSimulation.RefreshPlayerHeroStats(p) -- a new highest floor raises the Rift Attunement cap

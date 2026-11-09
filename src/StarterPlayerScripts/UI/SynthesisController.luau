@@ -26,6 +26,7 @@ local GrimoireIcons = require(Shared:WaitForChild("Util"):WaitForChild("Grimoire
 local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormulas"))
 local PitBalanceConfig = require(Shared:WaitForChild("Config"):WaitForChild("PitBalanceConfig"))
 local PitMath = require(Shared:WaitForChild("Util"):WaitForChild("PitMath"))
+local Kit = require(script.Parent:WaitForChild("Kit"))
 
 local Synth = {}
 Synth.__index = Synth
@@ -441,18 +442,21 @@ function Synth.new(gui: ScreenGui, remote: RemoteFunction)
 	-- Live XP Bar
 	local bar = new("Frame", {
 		Name = "XPBar", BackgroundColor3 = Color3.fromRGB(12, 10, 18), BorderSizePixel = 0, ClipsDescendants = true,
-		Position = UDim2.fromOffset(14, 342), Size = UDim2.new(1, -28, 0, 18), ZIndex = Z + 2,
+		Position = UDim2.fromOffset(14, 342), Size = UDim2.new(1, -28, 0, 20), ZIndex = Z + 2,
 	}, recipientPanel)
 	new("UICorner", { CornerRadius = UDim.new(0, 4) }, bar)
 	new("UIStroke", { Color = INK, Thickness = 1.8, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, bar)
 
-	self.GainFill = new("Frame", { Name = "Gain", BackgroundColor3 = C.Green, BorderSizePixel = 0, Size = UDim2.fromScale(0, 1), ZIndex = Z + 3 }, bar)
-	self.CurrentFill = new("Frame", { Name = "Current", BackgroundColor3 = C.Blue, BorderSizePixel = 0, Size = UDim2.fromScale(0, 1), ZIndex = Z + 4 }, bar)
-	new("UIGradient", { Color = ColorSequence.new(Color3.fromRGB(10, 110, 190), Color3.fromRGB(30, 150, 235)) }, self.CurrentFill)
+	-- Gold EXP bar (Brighter Grimoire) with a translucent gold ghost for the EXP about to be gained.
+	local barTone = Kit.Tokens.BarTone.Gold
+	self.GainFill = new("Frame", { Name = "Gain", BackgroundColor3 = barTone.Top, BackgroundTransparency = 0.5, BorderSizePixel = 0, Size = UDim2.fromScale(0, 1), ZIndex = Z + 3 }, bar)
+	self.CurrentFill = new("Frame", { Name = "Current", BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Size = UDim2.fromScale(0, 1), ZIndex = Z + 4 }, bar)
+	new("UIGradient", { Rotation = 90, Color = ColorSequence.new(barTone.Top, barTone.Bottom) }, self.CurrentFill)
 
 	self.XPText = label(bar, "Body", {
 		Position = UDim2.new(0, 0, 0, 0), Size = UDim2.fromScale(1, 1),
-		TextSize = 11, TextColor3 = Color3.new(1, 1, 1), Text = "", ZIndex = Z + 5,
+		TextSize = 13, TextColor3 = Color3.new(1, 1, 1), Text = "", ZIndex = Z + 5,
+		TextStrokeColor3 = INK, TextStrokeTransparency = 0,
 	})
 
 	self.SummaryLine = label(recipientPanel, "Body", {
@@ -488,11 +492,31 @@ function Synth.new(gui: ScreenGui, remote: RemoteFunction)
 	GildedGrimoire.Frame(rosterPanel, { Class = "Panel", Tone = "Deep", ZIndex = Z })
 	self.RosterPanel = rosterPanel
 
-	self.NoRecipientPrompt = label(rosterPanel, "Title", {
-		Name = "NoRecipientPrompt", Position = UDim2.fromOffset(24, 0), Size = UDim2.new(1, -48, 1, 0),
-		TextSize = 32, TextWrapped = true, Text = "Select a hero first", ZIndex = Z + 2,
+	-- Empty state: what to do first, with the primary action right there (plan §5.4).
+	local empty = new("Frame", {
+		Name = "NoRecipientPrompt", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromOffset(340, 230), BackgroundTransparency = 1, ZIndex = Z + 2,
+	}, rosterPanel)
+	local emptyIcon = GrimoireIcons.Create("Summon", 72, empty, Z + 3)
+	emptyIcon.AnchorPoint = Vector2.new(0.5, 0)
+	emptyIcon.Position = UDim2.fromScale(0.5, 0)
+	local emptyTitle = label(empty, "Title", {
+		Position = UDim2.fromOffset(0, 80), Size = UDim2.new(1, 0, 0, 30), TextSize = 22, Text = "Pick a hero to level up", ZIndex = Z + 3,
 	})
-	gold(self.NoRecipientPrompt)
+	gold(emptyTitle)
+	label(empty, "Body", {
+		Position = UDim2.fromOffset(0, 114), Size = UDim2.new(1, 0, 0, 40), TextSize = 14, TextWrapped = true, TextColor3 = TEXT.Muted,
+		Text = "Then choose spare heroes here to feed it EXP.", ZIndex = Z + 3,
+	})
+	Kit.Button.Create(empty, {
+		Name = "EmptySelectHeroButton", Text = "Select Hero", Intent = "Primary", Size = "L", Icon = "Add",
+		Position = UDim2.new(0.5, 0, 1, -56), AnchorPoint = Vector2.new(0.5, 0), Width = UDim.new(0, 260), ZIndex = Z + 4,
+		OnActivate = function()
+			if self.Busy or self.Picker.Visible then return end
+			self:OpenPicker("RECIPIENT")
+		end,
+	})
+	self.NoRecipientPrompt = empty
 
 	self.RosterHeader = label(rosterPanel, "Title", {
 		Position = UDim2.fromOffset(14, 8), Size = UDim2.fromOffset(250, 20), TextSize = 16,
@@ -549,10 +573,14 @@ function Synth.new(gui: ScreenGui, remote: RemoteFunction)
 		Text = "No material heroes available.", Visible = false, ZIndex = Z + 3,
 	})
 
-	-- Footer: Status message, Clear selection, Confirm Synthesize button
+	-- Footer: a callout next to the actions (plan §4.4), Clear selection, Confirm Synthesize button.
+	-- self.Status stays as a hidden label so older code that reads it keeps working.
 	self.Status = label(root, "Body", {
-		Position = UDim2.fromOffset(22, 546), Size = UDim2.new(1, -410, 0, 42), TextSize = 13,
+		Position = UDim2.fromOffset(22, 546), Size = UDim2.new(1, -410, 0, 42), TextSize = 13, Visible = false,
 		TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true, TextColor3 = TEXT.Muted, ZIndex = Z + 2, Text = "",
+	})
+	self.StatusCallout = Kit.Callout.Create(root, {
+		Name = "StatusCallout", Position = UDim2.fromOffset(16, 546), Width = UDim.new(1, -394), Height = 42, ZIndex = Z + 2,
 	})
 
 	local clearBtn, clearLabel = button(root, "Slate", "CLEAR", {
@@ -630,6 +658,17 @@ function Synth.BuildPopup(self: any)
 end
 
 function Synth.ShowPopup(self: any, title: string, message: string, proceedText: string?, proceed: (() -> ())?)
+	-- Refusals and notices are toasts now (the material card already shakes); questions use the
+	-- kit's confirm dialog.
+	if not proceed then
+		Kit.Notify.Push("warn", (string.gsub(message, "%s*\n+%s*", " ")))
+		return
+	end
+	Kit.Confirm.Ask({ Tier = "Soft", Title = title, Body = message, ConfirmText = proceedText or "Continue", OnConfirm = proceed })
+end
+
+-- The old in-window popup (no longer shown; kept so the guards that read Popup.Visible still work).
+function Synth.ShowLegacyPopup(self: any, title: string, message: string, proceedText: string?, proceed: (() -> ())?)
 	self.PopupTitle.Text = title
 	self.PopupMessage.Text = message
 	self.PopupAction = proceed
@@ -1087,11 +1126,22 @@ function Synth.Confirm(self: any)
 	end
 	if not preview or not preview.CanCommit or not preview.Token then return end
 	if #preview.Warnings > 0 then
+		-- Rare donors are a Hard confirm (plan §6): arms after a second and lists who is consumed.
+		-- Other warnings (EXP past the level cap) are a Soft confirm.
 		local overflow = preview.RequiresOverflowConfirmation == true
-		self:ShowPopup(if overflow then "EXP CAP EXCEEDED" else "SYNTHESIS WARNING", table.concat(preview.Warnings, "\n\n"),
-			if overflow then "SYNTHESIZE ANYWAY" else "SYNTHESIZE", function()
-				self:Commit(preview)
-			end)
+		local rareTier = Kit.Rules.ConfirmTier("SYNTHESIS", { RequiresRareConfirmation = preview.RequiresRareConfirmation })
+		local items = {}
+		for _, donor in preview.Donors or {} do
+			table.insert(items, string.format("%s · %s Lv.%d", donor.DisplayName or "Hero", stars(donor.Stars), donor.Level or 1))
+		end
+		Kit.Confirm.Ask({
+			Tier = if rareTier ~= "None" then rareTier else "Soft",
+			Title = if overflow then "EXP past the level cap" else "Consume these heroes?",
+			Body = table.concat(preview.Warnings, "\n"),
+			Items = items,
+			ConfirmText = if overflow then "Synthesize anyway" else "Synthesize",
+			OnConfirm = function() self:Commit(preview) end,
+		})
 		return
 	end
 	self:Commit(preview)
@@ -1193,7 +1243,8 @@ function Synth.Render(self: any)
 
 	local recipRarity = recipient and Theme.RarityColor(StatFormulas.GetHeroRarity(recipient)) or INK
 	recipSlot.Ring.Color = if recipient then recipRarity else INK
-	retone(recipSlot.Button, recipSlot.BtnLabel, if recipient then "Slate" else "Gold", if recipient then "REMOVE HERO" else "SELECT HERO")
+	-- Secondary: the empty state on the right carries the primary "Select Hero".
+	retone(recipSlot.Button, recipSlot.BtnLabel, if recipient then "Slate" else "Violet", if recipient then "REMOVE HERO" else "SELECT HERO")
 	recipSlot.Rail.Color = if recipient then TEXT.Gold else Color3.fromRGB(150, 138, 176)
 
 	local preview = self.Preview
@@ -1493,8 +1544,7 @@ function Synth.Render(self: any)
 		self.ConfirmButton.Button.Interactable = false
 		retone(self.ConfirmButton.Button, self.ConfirmButton.Label, "Slate", "MAX LEVEL REACHED")
 		self.ClearButton.Button.Visible = false
-		self.Status.Text = "MAX LEVEL REACHED — PROMOTE STAR TIER"
-		self.Status.TextColor3 = C.Danger
+		self:SetStatus("Max level for this star rank. Promote the hero to keep levelling.", "block")
 	else
 		local canAct = materialEnabled and #self.Donors > 0 and not self.Loading
 		local retry = canAct and self.PreviewError ~= nil
@@ -1511,7 +1561,7 @@ function Synth.Render(self: any)
 		elseif retry then
 			retone(self.ConfirmButton.Button, self.ConfirmButton.Label, "Gold", "RETRY PREVIEW")
 		elseif ready then
-			retone(self.ConfirmButton.Button, self.ConfirmButton.Label, "Action", "CONFIRM SYNTHESIZE")
+			retone(self.ConfirmButton.Button, self.ConfirmButton.Label, "Gold", "CONFIRM SYNTHESIZE") -- the window's primary action
 		else
 			retone(self.ConfirmButton.Button, self.ConfirmButton.Label, "Slate", "CONFIRM SYNTHESIZE")
 		end
@@ -1527,11 +1577,21 @@ function Synth.Render(self: any)
 		elseif status:find("complete") then
 			color = C.Good
 		end
-		if #self.Donors > 0 then
-			status ..= "\nSelected materials will be permanently consumed."
+		local severity = if color == TEXT.Bad then "block" elseif color == C.Good then "success" else "info"
+		if #self.Donors > 0 and severity ~= "block" then
+			-- What happens on confirm, said before it happens.
+			status = if status ~= "" then status .. " · " else ""
+			status ..= string.format("%d material hero%s will be consumed.", #self.Donors, if #self.Donors == 1 then "" else "es")
+			severity = "warn"
 		end
-		self.Status.Text, self.Status.TextColor3 = status, color
+		self:SetStatus(status, severity)
 	end
+end
+
+-- The footer callout (and the hidden legacy label). Empty text hides the callout.
+function Synth.SetStatus(self: any, text: string, severity: string)
+	self.Status.Text = text
+	self.StatusCallout.Update({ Text = if text ~= "" then text else nil, Severity = severity })
 end
 
 function Synth.Celebrate(self: any)

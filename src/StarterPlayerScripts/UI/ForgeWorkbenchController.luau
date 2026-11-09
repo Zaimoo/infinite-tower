@@ -7,14 +7,20 @@ local ReactRoblox = require(ReplicatedStorage.Packages.ReactRoblox)
 local App = require(script.Parent.ForgeWorkbench.App)
 local Navigation = require(script.Parent.ForgeWorkbench.Navigation)
 local LegacyForge = require(script.Parent.ForgeController)
+local InventoryCapacity = require(ReplicatedStorage.Shared.Util.InventoryCapacity)
 
 local Controller = {}
 Controller.__index = Controller
 
 local function snapshotFromProfile(profile: any): any
-	local snapshot = { Revision = profile.ForgeRevision or 0, Heroes = {}, Artifacts = {}, Gold = profile.Currencies.Gold, Gems = profile.Currencies.Gems }
+	if not profile then return nil end
+	if profile.Revision ~= nil and profile.Gold ~= nil and profile.Artifacts ~= nil then return profile end
+	local gold = if profile.Currencies then profile.Currencies.Gold else (profile.Gold or 0)
+	local gems = if profile.Currencies then profile.Currencies.Gems else (profile.Gems or 0)
+	local snapshot = { Revision = profile.ForgeRevision or 0, Heroes = {}, Artifacts = {}, Gold = gold, Gems = gems }
 	for id, hero in profile.Heroes or {} do snapshot.Heroes[id] = table.clone(hero) end
 	for id, artifact in profile.Artifacts or {} do snapshot.Artifacts[id] = table.clone(artifact) end
+	snapshot.ArtifactCap = InventoryCapacity.ArtifactCap(profile.FortressTree)
 	return snapshot
 end
 
@@ -93,15 +99,10 @@ function Controller.new(gui: ScreenGui, remotes: Folder, getProfile: () -> any, 
 	return self
 end
 
+-- The Artifacts / Summon tabs now live in the Workbench window's header (UI overhaul plan §5.2), so
+-- the old floating tab bar is never shown. Kept as a no-op for the callers that still poke it.
 function Controller:_renderNavigation()
-	if self.Destination == "NONE" then self.NavigationRoot:render(nil); return end
-	self.NavigationRoot:render(React.createElement(Navigation, {
-		Active = if self.Destination == "SUMMON" then "Summon" else "Artifacts",
-		Busy = self.Busy,
-		OnSelect = function(tab)
-			self:Open(if tab == "Summon" then "SUMMON" elseif tab == "Upgrade" then "UPGRADE" else "ASSIGN")
-		end,
-	}))
+	self.NavigationRoot:render(nil)
 end
 
 function Controller:_hideLegacy()
@@ -111,9 +112,12 @@ function Controller:_hideLegacy()
 end
 
 function Controller:_render()
-	if (self.Destination ~= "ARTIFACTS" and self.Destination ~= "SELL") or not self.Snapshot then return end
+	if (self.Destination ~= "ARTIFACTS" and self.Destination ~= "SELL" and self.Destination ~= "SUMMON") or not self.Snapshot then return end
 	self.ReactRoot:render(React.createElement(App, {
 		key = self.OpenGeneration,
+		ActiveTab = if self.Destination == "SUMMON" then "Summon" else "Artifacts",
+		OnSelectTab = function(tab: string) self:Open(if tab == "Summon" then "SUMMON" else "ASSIGN") end,
+		OnSummonHost = function(host: Frame?) self.Legacy:HostSummon(host) end,
 		Snapshot = self.Snapshot, Transport = self.Transport,
 		InitialHeroId = self.HeroId, InitialArtifactId = self.ArtifactId, InitialMode = self.Mode,
 		OnClose = self.AppCallbacks.OnClose, OnSummon = self.AppCallbacks.OnSummon,
@@ -130,14 +134,16 @@ function Controller:Open(initialTab: string?)
 		_G.SetModalFocusMode(true)
 	end
 	if initialTab == "SUMMON" then
+		-- Same window, Summon tab: the legacy summon view is hosted in the Workbench body (its own
+		-- window stays hidden).
+		self:_hideLegacy()
 		self.Destination = "SUMMON"
 		self.OpenGeneration += 1
-		self.ReactRoot:render(nil)
 		self.Root.Visible = true
-		self.Switching = true
-		self.Legacy:Open("SUMMON")
-		self.Switching = false
+		local profile = self.GetProfile()
+		if profile then self.Snapshot = snapshotFromProfile(profile) end
 		self:_renderNavigation()
+		self:_render()
 		return
 	end
 	self:_hideLegacy()
@@ -192,7 +198,13 @@ end
 
 function Controller:Refresh()
 	if not self.Root.Visible then return end
-	if self.Destination == "SUMMON" then self.Legacy:Refresh(); return end
+	if self.Destination == "SUMMON" then
+		self.Legacy:Refresh()
+		-- Keep the window's Gold / Gems / capacity chips current after pulls.
+		local fresh = self.GetProfile()
+		if fresh then self.Snapshot = snapshotFromProfile(fresh); self:_render() end
+		return
+	end
 	local profile = self.GetProfile()
 	if not profile then return end
 	local nextSnapshot = snapshotFromProfile(profile)

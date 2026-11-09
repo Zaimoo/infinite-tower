@@ -27,6 +27,28 @@ The source of truth is `src/ReplicatedStorage/Shared/Util/GildedGrimoire.luau`.
 - **Icons:** imperative screens call `GrimoireIcons.Create(name, size, parent)` or `GrimoireIcons.IconText(name, size, parent)` for an icon beside a number; React screens use `Hud/Icons` (`Icon`) or `Components.IconAt`. Add new drawings to `GrimoireIcons.Drawings` in the same style.
 - **Fonts:** never use Gotham in a new screen. Use `GildedGrimoire.Fonts.Title`, `.Number` or `.Body`.
 
+## The UI kit (`UI/Kit`, "Brighter Grimoire")
+
+New and reworked screens build from the shared kit (`docs/ui/UI_OVERHAUL_PLAN.md` §3–§4) instead of drawing their own buttons, bars and popups. `require(UI.Kit)` gives:
+
+| Piece | What it is |
+| :--- | :--- |
+| `Tokens` | Brighter Grimoire colours: lifted `Surface` tones; saturated `Domain` header colours (Forge, Pit, Tower, Fortress, Index, Store, Settings, Backpack, Squad); `Intent` button colours; `Severity` colours and icons; the type scale (13 px minimum); spacing; radii. `Tokens.Paint(frame, tone)` draws fill, ink and rail. |
+| `Button` | One button. `Intent` sets the colour: **Primary** (gold, the window's main action), **Confirm** (jade), **Travel** (azure), **Secondary** (violet), **Danger** (crimson). Disabled is slate with a lock and always has a `Reason`, shown on hover and after a tap. |
+| `Bar` | Pill bar with its numbers inside, a ghost `Preview` fill and a gold glow when full. |
+| `DeltaStat` | Before → after row with a green or red signed change. |
+| `CurrencyChip` | Icon and number pill. Changes count up with a floater; `Need` turns it red when unaffordable. |
+| `Callout` | A warning next to the action (`info`, `warn` with a pulse, `block`), with an optional fix-it link. It replaces footer status text. |
+| `Tooltip` | One tooltip layer: hover (0.35 s), long-press (0.4 s) or gamepad focus (0.5 s). It flips at screen edges. `Tooltip.Bind(gui, fn)` and `Tooltip.Flash(gui, reason)`. |
+| `Notify` | Up to 3 stacked toasts, top centre. Repeats coalesce ("×3", or amounts add up). Server `SystemToast` messages use it. |
+| `Confirm` | Confirmation dialog in three tiers: Soft (optional "Don't ask again this session"), Hard (lists what is lost, arms after 1 s) and Critical (hold 1.2 s). `Kit.Rules.ConfirmTier(action, ctx)` picks the tier from the plan's risk table. |
+| `Motion` | `Open`/`Close`, `TabSwap`, `Stagger`, `Select`, `Attention`, `NumberTick`, `BarFill` and `Success`. All respect Reduce Motion. |
+| `React` | React wrappers for `Button`, `Bar`, `DeltaStat`, `CurrencyChip` and `Callout`. |
+
+Building blocks return a handle with `Instance`, `Update(props)` and `Destroy()`. Imperative screens call `Kit.Button.Create(parent, props)`; React screens use `e(Kit.React.Button, props)`. The pure rules live in `Shared/Util/UiKitRules` and are covered by `tests/ui-kit.spec.luau`. `tests/studio-ui-kit-client.luau` builds a showcase of every piece in a Studio playtest.
+
+`Tokens.Paint` adds the rail as a child frame. Never put a `UIListLayout` or `UIGridLayout` directly in a painted frame: lay its contents out in a child frame instead, or the rail gets laid out as an item.
+
 ## Where it's used
 
 - The HUD rails and the expanded Squad Status tiles. The Next Goal card, Gold/Gems bar, Squad Power badge and the Squad drawer strip now use **Clear Glass** (`Theme.Glass` in `UI/Hud/Theme.luau`; see `PHASE_5_REACT_UI_AND_MENUS.md` §2.0b).

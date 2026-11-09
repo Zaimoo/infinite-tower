@@ -23,6 +23,7 @@ local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormu
 
 local Theme = require(script.Parent:WaitForChild("Theme"))
 local Store = require(script.Parent:WaitForChild("Store"))
+local WindowManager = require(script.Parent.Parent:WaitForChild("WindowManager"))
 local Whistles = require(script.Parent:WaitForChild("Whistles"))
 local Components = require(script.Parent:WaitForChild("Components"))
 local HeroIndex = require(script.Parent:WaitForChild("HeroIndex"))
@@ -31,6 +32,7 @@ local FacilityPanel = require(script.Parent:WaitForChild("FacilityPanel"))
 local ShopPanel = require(script.Parent:WaitForChild("ShopPanel"))
 local TowerEventHud = require(script.Parent:WaitForChild("TowerEventHud"))
 local RaidHud = require(script.Parent:WaitForChild("RaidHud"))
+local GuidePanel = require(script.Parent:WaitForChild("GuidePanel"))
 
 -- Support facilities shown in the Phase 5 gothic panel.
 local PANEL_FACILITIES = { GuardPost = true, Market = true, TrainingGrounds = true, GodsBlessing = true }
@@ -156,6 +158,15 @@ local function isFloorBossBannerVisible(): boolean
 	return banner ~= nil and banner:IsA("GuiObject") and banner.Visible
 end
 
+-- True when artifacts or heroes fill 90% or more of their backpack cap (the Backpack rail badge).
+local function backpackNearlyFull(profile: any): boolean
+	if not profile then return false end
+	local InventoryCapacity = require(Shared:WaitForChild("Util"):WaitForChild("InventoryCapacity"))
+	local artifacts = InventoryCapacity.ArtifactCount(profile) / math.max(1, InventoryCapacity.ArtifactCap(profile.FortressTree))
+	local heroes = InventoryCapacity.HeroCount(profile) / math.max(1, InventoryCapacity.HeroCap(profile.FortressTree))
+	return artifacts >= 0.9 or heroes >= 0.9
+end
+
 local function buildableNodes(profile: any): number
 	if not profile or not (profile.Unlocks and profile.Unlocks.FortressTree) then return 0 end
 	local tree = profile.FortressTree
@@ -231,6 +242,7 @@ local function rail(name: string, side: "Left" | "Right", top: number, bottom: n
 	for i, b in buttons do
 		b.Order = i
 		b.Size = size
+		b.TipSide = if side == "Left" then "Right" else "Left"
 		children["B" .. i] = e(Components.RailButton, b)
 	end
 	return e("Frame", {
@@ -251,10 +263,21 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 	local _, setRevision = React.useState(0)
 	local _, setTick = React.useState(0)
 	local screen, setScreen = React.useState(props.Root.AbsoluteSize)
+	-- Re-render when any window opens or closes (the HUD currency bar follows the top window).
+	local _, setWindowTick = React.useState(0)
+	React.useEffect(function()
+		local conn = WindowManager.Changed:Connect(function() setWindowTick(function(n: number) return n + 1 end) end)
+		return function() conn:Disconnect() end
+	end, {})
 	local indexOpen, setIndexOpen = React.useState(false)
 	local indexInitialMode, setIndexInitialMode = React.useState("HEROES" :: "HEROES" | "ARTIFACTS")
 	local facilityOpen, setFacilityOpen = React.useState(nil :: string?)
 	local shopOpen, setShopOpen = React.useState(false)
+	local guideOpen, setGuideOpen = React.useState(false)
+	local function closeGuide()
+		setGuideOpen(false)
+		call("SetModalFocusMode", false)
+	end
 	local backpackOpen, setBackpackOpen = React.useState(false)
 	local backpackButton = React.useRef(nil :: GuiButton?)
 	local closeBackpack = React.useCallback(function()
@@ -515,6 +538,8 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 		{
 			Icon = "Backpack",
 			Label = "Backpack",
+			-- "!" when artifacts or heroes are at 90% of capacity (summons and drops start failing when full).
+			Badge = if backpackNearlyFull(profile) then "!" else nil,
 			Accent = Color3.fromRGB(243, 199, 119),
 			ButtonRef = backpackButton,
 			OnActivated = function()
@@ -525,6 +550,16 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 			end,
 		},
 	}
+
+	if Store.GuideV2 then
+		table.insert(leftButtons, {
+			Name = "GuideRailButton", Icon = "Index", Label = "Guide", Accent = Color3.fromRGB(255, 225, 150),
+			OnActivated = function()
+				setGuideOpen(true)
+				call("SetModalFocusMode", true)
+			end,
+		})
+	end
 
 	local overdriveBlocked = Whistles.Blocked("Overdrive")
 	local recallBlocked = Whistles.Blocked("Recall")
@@ -561,6 +596,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 			Cooldown = Whistles.Remaining("Overdrive"),
 			CooldownTotal = Whistles.Cooldown.Overdrive,
 			Disabled = overdriveBlocked ~= nil,
+			DisabledReason = overdriveBlocked,
 			OnActivated = function()
 				Whistles.Fire("Overdrive")
 			end,
@@ -573,6 +609,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 			Cooldown = Whistles.Remaining("Recall"),
 			CooldownTotal = Whistles.Cooldown.Recall,
 			Disabled = recallBlocked ~= nil,
+			DisabledReason = recallBlocked,
 			OnActivated = function()
 				Whistles.Fire("Recall")
 			end,
@@ -607,7 +644,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 	-- TopbarInset is in screen pixels, but AbsolutePosition is measured from below the top bar (a
 	-- layer that reaches into the bar reports y = -58): shift the top-bar rect into that space.
 	local guiInset = (GuiService:GetGuiInset())
-	local goalBlock = if goal then L.GoalCardHeight + L.ZoneGap else 0
+	local goalBlock = if goal then (if Store.GuideV2 then 124 else L.GoalCardHeight) + L.ZoneGap else 0
 	local goalTop = L.TopZone
 	local rightTop = L.TopZone + goalBlock
 	-- Pit tabs (Synthesis / Promotion): centred in the free part of Roblox's top bar under the window.
@@ -645,7 +682,9 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 	local modalFocus = Store.ModalFocus
 
 	return e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 }, {
-		Goal = if not modalFocus then e(Components.NextGoalCard, { Goal = goal, Top = goalTop }) else nil,
+		Goal = if not modalFocus then e(Components.NextGoalCard, {
+			Goal = goal, Top = goalTop, GuideAction = if Store.GuideV2 then Store.GuideAction else nil, GuideVisible = Store.GuideVisible,
+		}) else nil,
 		LeftRail = if not modalFocus then rail("LeftRail", "Left", leftTop, leftBottom, leftSize, leftBottom - leftTop, leftButtons, screen.Y) else nil,
 		RightRail = if modalFocus then nil
 			elseif raid.InRaid then e(RaidHud.Leaderboard, { Top = rightTop, Bottom = rightBottom, Compact = compact })
@@ -685,7 +724,13 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 		}) else nil,
 		-- Screens and the Pit tabs render above the building screens; the zones above stay behind them.
 		Overlay = ReactRoblox.createPortal({
-		FocusCurrency = if modalFocus and profile and not (_G.IsSettingsOpen and _G.IsSettingsOpen()) then e("Frame", {
+		Guide = if guideOpen then e(GuidePanel, { OnClose = closeGuide, OnResume = function()
+			Store.GuideAction("Resume")
+			closeGuide()
+		end }) else nil,
+		-- Over an open window, only when that window has no currency display of its own (Forge, Store,
+		-- Index and the Pit draw theirs or spend nothing): the HUD bar used to overlap their corners.
+		FocusCurrency = if modalFocus and profile and WindowManager.WantsHudCurrency() then e("Frame", {
 			Name = "ModalFocusCurrencyWrapper",
 			Position = UDim2.new(0, L.Edge, 1, -L.Edge),
 			AnchorPoint = Vector2.new(0, 1),
@@ -713,7 +758,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 		}) else nil,
 		Shop = if shopOpen then e(ShopPanel, { Profile = profile, Width = screen.X, OnClose = function() currentShopOpen = false setShopOpen(false) call("SetModalFocusMode", false) end }) else nil,
 		TowerEventPopup = e(TowerEventHud.Popup, { Blocked = facilityOpen ~= nil or shopOpen or indexOpen or modalFocus }),
-		RaidResults = e(RaidHud.ResultsCard, { Blocked = facilityOpen ~= nil or shopOpen or indexOpen }),
+		RaidResults = e(RaidHud.ResultsCard, { Blocked = facilityOpen ~= nil or shopOpen or indexOpen or guideOpen }),
 		Index = if indexOpen then e(HeroIndex, { Profile = profile, Width = screen.X, InitialMode = indexInitialMode, OnClose = function() currentIndexOpen = false setIndexOpen(false) call("SetModalFocusMode", false) end }) else nil,
 		Backpack = if backpackOpen then e(BackpackPanel, {
 			Width = screen.X, Height = screen.Y, OnClose = function() closeBackpack() call("SetModalFocusMode", false) end, ReturnFocus = returnBackpackFocus,

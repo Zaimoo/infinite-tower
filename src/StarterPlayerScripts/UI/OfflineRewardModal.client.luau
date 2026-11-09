@@ -221,3 +221,17 @@ claimBtn.Activated:Connect(function()
 	scrim.Visible = false
 	modal.Visible = false
 end)
+
+-- A window like any other for WindowManager: opening another window, or Backspace / B, dismisses it
+-- (the Gold is already in the balance), so it never sits on top of the Index or a facility.
+local WindowManager = require(script.Parent:WaitForChild("WindowManager"))
+WindowManager.Register("OfflineReward", {
+	IsOpen = function() return modal.Visible end,
+	Close = function()
+		scrim.Visible = false
+		modal.Visible = false
+	end,
+})
+modal:GetPropertyChangedSignal("Visible"):Connect(function()
+	if modal.Visible then WindowManager.Opened("OfflineReward") end
+end)

@@ -61,32 +61,36 @@ GildedGrimoire.Fonts = {
 	Body = font("Cinzel", Enum.FontWeight.Bold, Enum.Font.GothamBold), -- sentences, details
 }
 
--- "Clear Glass": the HUD's thin hairline panels with a dark translucent body over the world. The
--- React HUD reads these as Hud/Theme.Glass; imperative HUD pieces use GlassFrame / GlassText below.
+-- HUD card tokens. Historically "Clear Glass" (thin white hairlines over a see-through near-black
+-- body); since the 2026-11-09 decision the HUD is fully gothic (UI overhaul plan §3.1 "HudCard"),
+-- so the same keys now draw a lifted plum card with an ink outline and a gold inset rail, in Cinzel.
+-- The React HUD reads these as Hud/Theme.Glass; imperative HUD pieces use GlassFrame / GlassText below.
 GildedGrimoire.Glass = table.freeze({
-	Base = Color3.fromHex("#0D0912"), -- panel body
-	BaseRaised = Color3.fromHex("#261C32"), -- header strip, tile background
-	Hairline = Color3.fromHex("#F6F4FF"), -- 1px stroke, at HairlineTransparency
+	Base = Color3.fromRGB(44, 30, 68), -- card body (lifted plum)
+	BaseRaised = Color3.fromRGB(66, 46, 98), -- header strip, tile background
+	Hairline = Color3.fromRGB(10, 6, 14), -- the ink outline (was a 1px white hairline)
+	Rail = Color3.fromRGB(240, 196, 110), -- inset gold rail
 	Text = Color3.fromHex("#F6F4FF"),
 	TextMuted = Color3.fromHex("#F6F4FF"), -- at MutedTransparency
 	Arcane = Color3.fromHex("#C084FC"), -- active, selected, focused; skill gauge
 	Royal = Color3.fromHex("#FACC15"), -- currency, primary action, full gauge, local player
 	Danger = Color3.fromHex("#EF4444"), -- down, badges, boss HP, loot stolen
 	Vital = Color3.fromHex("#4ADE80"), -- HP, positive deltas
-	-- Contrast budget: over a white sky, a 0.35 body composites to ~#626166. Muted text at 0.15
-	-- composites to ~#E0DFE6 there, about 4.6:1; at 0.45 it would fall near 3:1.
-	BaseTransparency = 0.35,
-	RaisedTransparency = 0.25,
-	BackplateTransparency = 0.7, -- empty or decorative backplates only
-	HairlineTransparency = 0.82,
+	-- Mostly opaque so text keeps contrast over a bright sky; a little of the world shows through.
+	BaseTransparency = 0.1,
+	RaisedTransparency = 0.05,
+	BackplateTransparency = 0.5, -- empty or decorative backplates only
+	HairlineTransparency = 0,
+	StrokeThickness = 2.5,
+	RailTransparency = 0.3,
 	MutedTransparency = 0.15,
-	HoverDrop = 0.1, -- body transparency drop on hover
-	Radius = 6,
-	TileRadius = 4,
+	HoverDrop = 0.05, -- body transparency drop on hover
+	Radius = 10,
+	TileRadius = 6,
 	Tween = TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 	Fonts = table.freeze({
-		Label = font("Montserrat", Enum.FontWeight.SemiBold, Enum.Font.GothamMedium), -- UI chrome
-		Number = font("Montserrat", Enum.FontWeight.Bold, Enum.Font.GothamBold), -- numbers, headlines
+		Label = font("Cinzel", Enum.FontWeight.Bold, Enum.Font.GothamMedium), -- UI chrome
+		Number = font("Cinzel", Enum.FontWeight.Heavy, Enum.Font.GothamBold), -- numbers, headlines
 		Display = font("Cinzel", Enum.FontWeight.Bold, Enum.Font.GothamBold), -- hero names, Squad Power
 	}),
 })
@@ -197,9 +201,14 @@ function GildedGrimoire.GlassFrame(frame: GuiObject, opts: { Accent: Color3?, Ra
 	stroke.Name = "GlassStroke"
 	stroke.Color = g.Hairline
 	stroke.Transparency = g.HairlineTransparency
-	stroke.Thickness = 1
+	stroke.Thickness = g.StrokeThickness
+	stroke.LineJoinMode = Enum.LineJoinMode.Round
 	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	stroke.Parent = frame
+	-- Gothic HUD card: the inset gold rail inside the ink outline.
+	local rail = GildedGrimoire.Rail(frame, g.Rail, o.Radius or g.Radius, frame.ZIndex)
+	local railStroke = rail:FindFirstChildOfClass("UIStroke")
+	if railStroke then railStroke.Transparency = g.RailTransparency end
 	if o.Accent then
 		local accent = Instance.new("Frame")
 		accent.Name = "GlassAccent"

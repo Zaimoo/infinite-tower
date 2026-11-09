@@ -91,6 +91,7 @@ local HeroCard = require(script.Parent:WaitForChild("HeroCard"))
 local ModalFit = require(script.Parent:WaitForChild("ModalFit"))
 local SummonReveal = require(script.Parent:WaitForChild("SummonReveal"))
 local UIFeel = require(script.Parent:WaitForChild("UIFeel"))
+local Kit = require(script.Parent:WaitForChild("Kit"))
 
 local LocalPlayer = Players.LocalPlayer
 
@@ -1455,14 +1456,14 @@ function Forge:BuildSummonView(root: Frame)
 	task.spawn(function()
 		while self.Root and self.Root.Parent do
 			task.wait(2.8)
-			if self.Root.Visible and summonView.Visible and #self.CarouselSlots > 1 then
+			if self:IsShowing() and summonView.Visible and #self.CarouselSlots > 1 then
 				self.CarouselCenter = (self.CarouselCenter % #self.CarouselSlots) + 1
 				self:LayoutCarousel(true)
 			end
 		end
 	end)
 	RunService.RenderStepped:Connect(function(dt)
-		if not (self.Root.Visible and summonView.Visible) then return end
+		if not (self:IsShowing() and summonView.Visible) then return end
 		self:SpinCarouselCenter(dt)
 	end)
 
@@ -1632,9 +1633,9 @@ function Forge:SummonBlockReason(count: number): string?
 	if not profile then return "Profile not loaded" end
 	local cfg = ArtifactCatalog.Banner
 	local cost = if count == 10 then cfg.Cost10X else cfg.Cost1X
-	local owned = 0
-	for _ in pairs(profile.Artifacts or {}) do owned += 1 end
-	local cap = StatBalance.MaxArtifactInventory
+	-- Same rule as the server's summon check: Storage nodes in the Fortress Tree raise the cap.
+	local owned = InventoryCapacity.ArtifactCount(profile)
+	local cap = InventoryCapacity.ArtifactCap(profile.FortressTree)
 	if owned + count > cap then
 		return if owned >= cap
 			then string.format("Inventory full (%d / %d): sell or promote weapons", owned, cap)
@@ -1648,9 +1649,8 @@ end
 
 function Forge:RenderSummonView()
 	local profile = self:ResolveProfile()
-	local owned = 0
-	for _ in pairs((profile and profile.Artifacts) or {}) do owned += 1 end
-	local cap = StatBalance.MaxArtifactInventory
+	local owned = InventoryCapacity.ArtifactCount(profile)
+	local cap = InventoryCapacity.ArtifactCap(profile and profile.FortressTree)
 	local block1, block10 = self:SummonBlockReason(1), self:SummonBlockReason(10)
 	for btn, blocked in { [self.Summon1XBtn] = block1, [self.Summon10XBtn] = block10 } do
 		if btn then
@@ -1681,7 +1681,7 @@ function Forge:RenderSummonView()
 	self:RenderGoldChip()
 end
 
-function Forge:PerformSummon(count: number): boolean?
+function Forge:PerformSummon(count: number, confirmed: boolean?): boolean?
 	if self.Busy then return false end
 	local profile = self:ResolveProfile()
 	local cfg = ArtifactCatalog.Banner
@@ -1707,6 +1707,22 @@ function Forge:PerformSummon(count: number): boolean?
 		return false
 	end
 
+	-- The first 10x of the session asks before spending (plan §6, Soft).
+	if count == 10 and not confirmed and not self.Summon10Confirmed then
+		Kit.Confirm.Ask({
+			Tier = Kit.Rules.ConfirmTier("SUMMON_10X"),
+			Title = string.format("Spend %s Gold?", StatBalance.Format(cost)),
+			Body = "Summon 10 weapons from the Blacksmith banner. A ten-pull always includes at least one Rare.",
+			ConfirmText = "Summon 10x",
+			SessionKey = "SUMMON_10X_FORGE",
+			OnConfirm = function()
+				self.Summon10Confirmed = true
+				self:PerformSummon(count, true)
+			end,
+		})
+		return false
+	end
+
 	local ownedBefore: { [string]: boolean } = {}
 	for _, art in profile.Artifacts or {} do
 		if art.TemplateId then ownedBefore[art.TemplateId] = true end
@@ -1721,11 +1737,11 @@ function Forge:PerformSummon(count: number): boolean?
 			if pityRemaining and self.PityLabel then
 				self.PityLabel.Text = string.format("Exalted+ guaranteed in <b>%d</b>", pityRemaining)
 			end
-			self.Root.Visible = false
-			self.Scrim.Visible = false
+			if not self.SummonHosted then self.Root.Visible = false end
+			if not self.SummonHosted then self.Scrim.Visible = false end
 			self:ShowSummonResults(summonedList, ownedBefore)
 		else
-			if not self.Root.Visible then
+			if not self:IsShowing() then
 				self:Open("SUMMON")
 			end
 			deny()
@@ -1763,7 +1779,7 @@ function Forge:ShowSummonResults(summonedList: { any }, ownedBefore: { [string]:
 			return self:PerformSummon(count)
 		end,
 		OnContinue = function()
-			self:Open("SUMMON")
+			if not self.SummonHosted then self:Open("SUMMON") end
 		end,
 	})
 end
@@ -2506,17 +2522,21 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 		local req = target and ArtifactCatalog.GetFodderRequirement(target.Star or 1) or 0
 
 		for uuid, art in pairs(artifacts) do
-			if uuid ~= self.SelectedTargetUUID and not art.EquippedHeroUUID and not art.Locked and target and WeaponPromotion.IsDonorFor(target, art) then
+			if uuid ~= self.SelectedTargetUUID and target and WeaponPromotion.IsDonorFor(target, art) then
 				local isSlotted = table.find(self.FodderUUIDs, uuid) ~= nil
 				local rarityInfo = ArtifactCatalog.GetRarityInfo(art.Rarity or 1)
+				local isEquipped = art.EquippedHeroUUID ~= nil
+				local isLocked = art.Locked == true
+				local isNotUsable = isEquipped or isLocked
 
 				local card = new("Frame", {
 					Name = "FodderCard_" .. uuid,
 					Size = UDim2.fromOffset(128, 164),
 					BorderSizePixel = 0,
+					LayoutOrder = if isNotUsable then 300 elseif isSlotted then 200 else 100,
 					ZIndex = 72,
 				}, scroll)
-				applyGothicStyle(card, "Row", { AccentColor = rarityInfo.Color })
+				applyGothicStyle(card, "Row", { AccentColor = if isNotUsable then Color3.fromRGB(60, 60, 70) else rarityInfo.Color })
 
 				local iconTile = new("Frame", {
 					Name = "IconTile",
@@ -2526,7 +2546,7 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 					BorderSizePixel = 0,
 					ZIndex = 73,
 				}, card)
-				applyGothicStyle(iconTile, "Slot", { State = "Filled", AccentColor = rarityInfo.Color })
+				applyGothicStyle(iconTile, "Slot", { State = "Filled", AccentColor = if isNotUsable then Color3.fromRGB(60, 60, 70) else rarityInfo.Color })
 
 				local iconChar = ICON_MAP[art.Type] or ""
 				local iconLbl = label(iconTile, iconChar, 24, C.Text)
@@ -2569,6 +2589,7 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 					Text = isSlotted and "REMOVE" or "+ ADD",
 					Font = Enum.Font.GothamBold,
 					TextSize = 11,
+					Visible = not isNotUsable,
 					ZIndex = 74,
 				}, card)
 
@@ -2578,7 +2599,28 @@ function Forge:OpenDrawer(mode: "TARGET" | "FODDER" | "EQUIP_LOADOUT", contextUU
 					applyGothicStyle(fodderBtn, "ButtonPrimary", { Variant = "Gold" })
 				end
 
+				if isNotUsable then
+					local overlay = new("Frame", {
+						Name = "NotUsableOverlay",
+						Size = UDim2.fromScale(1, 1),
+						Position = UDim2.fromScale(0, 0),
+						BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+						BackgroundTransparency = 0.5,
+						BorderSizePixel = 0,
+						Active = true,
+						ZIndex = 75,
+					}, card)
+					new("UICorner", { CornerRadius = UDim.new(0, 6) }, overlay)
+					local overlayLbl = label(overlay, if isEquipped then "EQUIPPED\nNOT USABLE" else "LOCKED\nNOT USABLE", 11, Color3.fromRGB(255, 255, 255), Enum.Font.GothamBold)
+					overlayLbl.Position = UDim2.fromScale(0, 0)
+					overlayLbl.Size = UDim2.fromScale(1, 1)
+					overlayLbl.TextXAlignment = Enum.TextXAlignment.Center
+					overlayLbl.TextYAlignment = Enum.TextYAlignment.Center
+					overlayLbl.ZIndex = 76
+				end
+
 				fodderBtn.Activated:Connect(function()
+					if isNotUsable then return end
 					if isSlotted then
 						local idx = table.find(self.FodderUUIDs, uuid)
 						if idx then table.remove(self.FodderUUIDs, idx) end
@@ -2675,6 +2717,60 @@ function Forge:Open(initialTab: ("ASSIGN" | "SUMMON" | "UPGRADE")?)
 	self:SetTab(initialTab or "SUMMON")
 end
 
+-- True while this controller's content is on screen: its own window, or the summon view hosted
+-- inside the Forge Workbench window (UI overhaul plan §5.2: one Forge window).
+function Forge:IsShowing(): boolean
+	return self.Root.Visible or self.SummonHosted == true
+end
+
+-- Moves the summon view (banner carousel, pity, Summon 1x/10x) into `parent`, scaled to fill it,
+-- so the Workbench window shows Summon as a tab of the same frame. nil puts it back.
+function Forge:HostSummon(parent: GuiObject?)
+	local view = self.SummonView :: Frame
+	local scale = view:FindFirstChildOfClass("UIScale") :: UIScale
+	if self.HostFitConn then self.HostFitConn:Disconnect(); self.HostFitConn = nil end
+	if parent then
+		self.SummonHosted = true
+		self.ActiveTab = "SUMMON"
+		view.Parent = parent
+		view.AnchorPoint = Vector2.new(0.5, 0)
+		view.Position = UDim2.fromScale(0.5, 0)
+		view.Visible = true
+		local function fit()
+			-- AbsoluteSize already includes every UIScale above the host, and the view's own UIScale
+			-- multiplies on top of them, so divide those out to fit the host in screen pixels.
+			local ancestorScale = 1
+			local node: Instance? = parent
+			while node and node:IsA("GuiObject") do
+				local s = node:FindFirstChildOfClass("UIScale")
+				if s then ancestorScale *= s.Scale end
+				node = node.Parent
+			end
+			local size = parent.AbsoluteSize
+			scale.Scale = math.max(0.4, math.min(size.X / (LEGACY_W * ancestorScale), size.Y / (LEGACY_H * ancestorScale)))
+		end
+		fit()
+		self.HostFitConn = parent:GetPropertyChangedSignal("AbsoluteSize"):Connect(fit)
+		-- "View all weapons & odds" opens over the host window, not in the HUD layer underneath it.
+		local hostGui = parent:FindFirstAncestorWhichIsA("ScreenGui")
+		if self.ArtifactsModal and hostGui then
+			self.ArtifactsModalHome = self.ArtifactsModalHome or self.ArtifactsModal.Parent
+			self.ArtifactsModal.Parent = hostGui
+		end
+		self:RenderGoldChip()
+		self:RenderSummonView()
+	else
+		self.SummonHosted = false
+		self:CloseArtifactsModal()
+		if self.ArtifactsModal and self.ArtifactsModalHome then self.ArtifactsModal.Parent = self.ArtifactsModalHome end
+		view.Parent = self.Root
+		view.AnchorPoint = Vector2.zero
+		view.Position = UDim2.fromOffset(LEGACY_X, VIEW_Y)
+		scale.Scale = LEGACY_SCALE
+		view.Visible = self.ActiveTab == "SUMMON"
+	end
+end
+
 function Forge:Close()
 	self:ClosePicker()
 	self:CloseArtifactsModal()
@@ -2700,7 +2796,7 @@ function Forge:RenderGoldChip()
 end
 
 function Forge:Refresh()
-	if not self.Root.Visible then return end
+	if not self:IsShowing() then return end
 	self:RenderGoldChip()
 	if self.ActiveTab == "ASSIGN" then
 		self:RenderAssignView()
