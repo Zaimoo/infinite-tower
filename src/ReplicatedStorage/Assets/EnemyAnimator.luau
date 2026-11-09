@@ -118,8 +118,57 @@ local function inStrike(elapsed: number, windup: number?, impact: number): boole
 	return elapsed >= w - lead and elapsed <= impact + 0.05
 end
 
--- Studs per locomotion cycle (step 2 of the plan replaces this with one measured from leg length).
+-- ------------------------------------------------------------------ size (plan §3.5, §3.6)
+-- Clip translations are authored for one hip height per clip group; MotionScale stretches them to the drawn
+-- model so a death drop, lunge or bob reads the same on a 2-stud mite and a 25-stud boss.
+EnemyAnimator.REFERENCE_HIP = { BIPED = 3.5, MULTILEG = 1.3, QUADRUPED = 2.4, AVIAN = 2.8, SERPENT = 4.2 }
+-- Studs per walk cycle per stud of hip height: two steps of 2 * leg * sin(swing). Biped and avian legs swing
+-- ±24°, quadrupeds ±22°; crawler legs sweep ±18° with a reach about 1.4x their hip; the serpent's S-wave
+-- travels about one and a half hip heights.
+EnemyAnimator.STRIDE_PER_HIP = {
+	BIPED = 4 * math.sin(math.rad(24)),
+	AVIAN = 4 * math.sin(math.rad(24)),
+	QUADRUPED = 4 * math.sin(math.rad(22)),
+	MULTILEG = 4 * 1.4 * math.sin(math.rad(18)),
+	SERPENT = 1.5,
+}
+
+export type Metrics = { Group: string, Height: number, HipHeight: number, MotionScale: number, Stride: number }
+
+-- Size metrics for a rig. `entry` is the TowerEnemyModelIndex entry for a remodelled template (nil for the
+-- part rig, which uses its combat spec); `renderScale` is how much bigger the template is drawn.
+function EnemyAnimator.Metrics(enemyId: string, spec: any, entry: any?, renderScale: number?): Metrics
+	local group = Clips.GroupFor(enemyId)
+	local s = renderScale or 1
+	local hip, height
+	if entry then
+		local sum, n = 0, 0
+		for _, seg in entry.Segments do
+			if (group == "MULTILEG" and string.match(seg.Name, "^Leg%-?1_%d$")) or (group ~= "MULTILEG" and seg.Name == "LegL") then
+				sum += seg.Pivot.Y
+				n += 1
+			end
+		end
+		hip = (if n > 0 then sum / n else entry.Height * 0.45) * s
+		height = entry.Height * s
+	else
+		hip = (spec and spec.RootHeight) or 3
+		height = (spec and spec.Height) or hip * 2
+	end
+	hip = math.max(0.3, hip)
+	local ref = EnemyAnimator.REFERENCE_HIP[group] or 3.5
+	return {
+		Group = group,
+		Height = height,
+		HipHeight = hip,
+		MotionScale = math.clamp(hip / ref, 0.4, 4),
+		Stride = (EnemyAnimator.STRIDE_PER_HIP[group] or 1.6) * hip,
+	}
+end
+
+-- Studs per locomotion cycle: from the rig's leg length, else the old per-role table (raid stand-ins).
 function EnemyAnimator.Stride(rig: any): number
+	if rig.Metrics then return rig.Metrics.Stride end
 	local role = rig.Spec and rig.Spec.Role
 	return if role == "BOSS" then 9.6 elseif role == "REGULAR" then 3.6 else 4.8
 end
@@ -258,6 +307,7 @@ function EnemyAnimator:Evaluate(now: number, input: any, dt: number): ({ [string
 		targets = {}
 		self.Targets = targets
 	end
+	local motionScale = if self.Rig.Metrics then self.Rig.Metrics.MotionScale else 1
 	for name in self.Rig.Joints do
 		local pose = idle[name] or IDENTITY
 		if loco then pose = pose:Lerp(loco[name] or IDENTITY, locoWeight) end
@@ -269,6 +319,7 @@ function EnemyAnimator:Evaluate(now: number, input: any, dt: number): ({ [string
 			if h then pose = pose * ((self.HitBase[name] or IDENTITY):Inverse() * h) end
 		end
 		if death then pose = pose:Lerp(death[name] or IDENTITY, deathWeight) end
+		if motionScale ~= 1 then pose = pose + Vector3.new(pose.X, pose.Y, pose.Z) * (motionScale - 1) end
 		targets[name] = pose
 	end
 	return targets, snap
