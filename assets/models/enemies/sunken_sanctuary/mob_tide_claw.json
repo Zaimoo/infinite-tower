@@ -1,0 +1,374 @@
+{
+ "EnemyId": "mob_tide_claw",
+ "Family": "CRUSTACEAN",
+ "Role": "REGULAR",
+ "Biome": "sunken_sanctuary",
+ "Segments": [
+  {
+   "Name": "Body",
+   "Parent": null,
+   "Pivot": [
+    0.0,
+    1.4,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    0.0,
+    1.806,
+    -0.0
+   ],
+   "Size": [
+    3.7,
+    1.811,
+    2.4
+   ],
+   "Tris": 582
+  },
+  {
+   "Name": "Head",
+   "Parent": "Body",
+   "Pivot": [
+    0.0,
+    1.45,
+    -1.3
+   ],
+   "Glow": [
+    {
+     "Mesh": "Head_Glow_Aqua",
+     "Colour": [
+      70,
+      240,
+      222
+     ],
+     "Tris": 72,
+     "Centre": [
+      -0.0,
+      2.1,
+      -1.45
+     ],
+     "Size": [
+      0.813,
+      0.2,
+      0.2
+     ]
+    }
+   ],
+   "Centre": [
+    0.0,
+    1.681,
+    -1.312
+   ],
+   "Size": [
+    0.9,
+    0.762,
+    0.374
+   ],
+   "Tris": 76
+  },
+  {
+   "Name": "JawL",
+   "Parent": "Head",
+   "Pivot": [
+    -0.9,
+    1.4,
+    -1.0
+   ],
+   "Glow": [],
+   "Centre": [
+    -1.3,
+    1.531,
+    -2.177
+   ],
+   "Size": [
+    0.992,
+    0.523,
+    2.541
+   ],
+   "Tris": 174
+  },
+  {
+   "Name": "JawR",
+   "Parent": "Head",
+   "Pivot": [
+    0.9,
+    1.4,
+    -1.0
+   ],
+   "Glow": [],
+   "Centre": [
+    1.346,
+    1.55,
+    -2.485
+   ],
+   "Size": [
+    1.189,
+    0.77,
+    3.275
+   ],
+   "Tris": 194
+  },
+  {
+   "Name": "Leg-1_1",
+   "Parent": "Body",
+   "Pivot": [
+    -1.2,
+    1.3,
+    -0.5
+   ],
+   "Glow": [],
+   "Centre": [
+    -1.573,
+    1.498,
+    -0.535
+   ],
+   "Size": [
+    0.9,
+    0.573,
+    0.328
+   ],
+   "Tris": 32
+  },
+  {
+   "Name": "Knee-1_1",
+   "Parent": "Leg-1_1",
+   "Pivot": [
+    -2.0,
+    1.7,
+    -0.6
+   ],
+   "Glow": [],
+   "Centre": [
+    -2.216,
+    0.891,
+    -0.61
+   ],
+   "Size": [
+    0.604,
+    1.688,
+    0.219
+   ],
+   "Tris": 32
+  },
+  {
+   "Name": "Leg-1_2",
+   "Parent": "Body",
+   "Pivot": [
+    -1.2,
+    1.3,
+    0.1
+   ],
+   "Glow": [],
+   "Centre": [
+    -1.573,
+    1.498,
+    0.1
+   ],
+   "Size": [
+    0.89,
+    0.573,
+    0.26
+   ],
+   "Tris": 32
+  },
+  {
+   "Name": "Knee-1_2",
+   "Parent": "Leg-1_2",
+   "Pivot": [
+    -2.0,
+    1.7,
+    0.12
+   ],
+   "Glow": [],
+   "Centre": [
+    -2.218,
+    0.891,
+    0.12
+   ],
+   "Size": [
+    0.598,
+    1.688,
+    0.2
+   ],
+   "Tris": 32
+  },
+  {
+   "Name": "Leg-1_3",
+   "Parent": "Body",
+   "Pivot": [
+    -1.2,
+    1.3,
+    0.7
+   ],
+   "Glow": [],
+   "Centre": [
+    -1.573,
+    1.498,
+    0.755
+   ],
+   "Size": [
+    0.905,
+    0.573,
+    0.367
+   ],
+   "Tris": 32
+  },
+  {
+   "Name": "Knee-1_3",
+   "Parent": "Leg-1_3",
+   "Pivot": [
+    -2.0,
+    1.7,
+    0.84
+   ],
+   "Glow": [],
+   "Centre": [
+    -2.216,
+    0.891,
+    0.871
+   ],
+   "Size": [
+    0.606,
+    1.689,
+    0.258
+   ],
+   "Tris": 32
+  },
+  {
+   "Name": "Leg1_1",
+   "Parent": "Body",
+   "Pivot": [
+    1.2,
+    1.3,
+    -0.5
+   ],
+   "Glow": [],
+   "Centre": [
+    1.573,
+    1.498,
+    -0.535
+   ],
+   "Size": [
+    0.9,
+    0.573,
+    0.328
+   ],
+   "Tris": 32
+  },
+  {
+   "Name": "Knee1_1",
+   "Parent": "Leg1_1",
+   "Pivot": [
+    2.0,
+    1.7,
+    -0.6
+   ],
+   "Glow": [],
+   "Centre": [
+    2.216,
+    0.891,
+    -0.61
+   ],
+   "Size": [
+    0.604,
+    1.688,
+    0.219
+   ],
+   "Tris": 32
+  },
+  {
+   "Name": "Leg1_2",
+   "Parent": "Body",
+   "Pivot": [
+    1.2,
+    1.3,
+    0.1
+   ],
+   "Glow": [],
+   "Centre": [
+    1.573,
+    1.498,
+    0.1
+   ],
+   "Size": [
+    0.89,
+    0.573,
+    0.26
+   ],
+   "Tris": 32
+  },
+  {
+   "Name": "Knee1_2",
+   "Parent": "Leg1_2",
+   "Pivot": [
+    2.0,
+    1.7,
+    0.12
+   ],
+   "Glow": [],
+   "Centre": [
+    2.218,
+    0.891,
+    0.12
+   ],
+   "Size": [
+    0.598,
+    1.688,
+    0.2
+   ],
+   "Tris": 32
+  },
+  {
+   "Name": "Leg1_3",
+   "Parent": "Body",
+   "Pivot": [
+    1.2,
+    1.3,
+    0.7
+   ],
+   "Glow": [],
+   "Centre": [
+    1.573,
+    1.498,
+    0.755
+   ],
+   "Size": [
+    0.905,
+    0.573,
+    0.367
+   ],
+   "Tris": 32
+  },
+  {
+   "Name": "Knee1_3",
+   "Parent": "Leg1_3",
+   "Pivot": [
+    2.0,
+    1.7,
+    0.84
+   ],
+   "Glow": [],
+   "Centre": [
+    2.216,
+    0.891,
+    0.871
+   ],
+   "Size": [
+    0.606,
+    1.689,
+    0.258
+   ],
+   "Tris": 32
+  }
+ ],
+ "TotalTris": 1482,
+ "MeshCount": 17,
+ "Size": [
+  5.04,
+  2.66,
+  5.32
+ ],
+ "FeetY": 0.046,
+ "Convention": "Studs, Roblox axes (Y up, faces -Z), origin on the ground under the enemy. Pivot = joint position. Mesh objects are named after their joint.",
+ "Atlas": "atlas_sunken_sanctuary.png"
+}

@@ -1,0 +1,355 @@
+{
+ "EnemyId": "alpha_coral_warden",
+ "Family": "ARMORED_BIPED",
+ "Role": "ALPHA",
+ "Biome": "sunken_sanctuary",
+ "Segments": [
+  {
+   "Name": "Body",
+   "Parent": null,
+   "Pivot": [
+    0.0,
+    4.095,
+    -0.0
+   ],
+   "Glow": [
+    {
+     "Mesh": "Body_Glow_Aqua",
+     "Colour": [
+      70,
+      240,
+      222
+     ],
+     "Tris": 28,
+     "Centre": [
+      0.0,
+      5.72,
+      -1.04
+     ],
+     "Size": [
+      0.468,
+      0.468,
+      0.13
+     ]
+    }
+   ],
+   "Centre": [
+    -0.018,
+    5.156,
+    -0.012
+   ],
+   "Size": [
+    2.792,
+    4.124,
+    2.534
+   ],
+   "Tris": 652
+  },
+  {
+   "Name": "Head",
+   "Parent": "Body",
+   "Pivot": [
+    0.0,
+    6.955,
+    -0.065
+   ],
+   "Glow": [
+    {
+     "Mesh": "Head_Glow_Aqua",
+     "Colour": [
+      70,
+      240,
+      222
+     ],
+     "Tris": 12,
+     "Centre": [
+      0.0,
+      7.605,
+      -0.689
+     ],
+     "Size": [
+      0.78,
+      0.13,
+      0.156
+     ]
+    }
+   ],
+   "Centre": [
+    0.0,
+    7.995,
+    0.13
+   ],
+   "Size": [
+    1.43,
+    2.21,
+    1.82
+   ],
+   "Tris": 352
+  },
+  {
+   "Name": "ArmL",
+   "Parent": "Body",
+   "Pivot": [
+    -1.365,
+    6.435,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    -1.456,
+    6.328,
+    -0.0
+   ],
+   "Size": [
+    1.352,
+    2.591,
+    1.352
+   ],
+   "Tris": 186
+  },
+  {
+   "Name": "ForearmL",
+   "Parent": "ArmL",
+   "Pivot": [
+    -1.56,
+    5.005,
+    -0.065
+   ],
+   "Glow": [
+    {
+     "Mesh": "ForearmL_Glow_Aqua",
+     "Colour": [
+      70,
+      240,
+      222
+     ],
+     "Tris": 36,
+     "Centre": [
+      -1.968,
+      4.29,
+      -0.891
+     ],
+     "Size": [
+      0.378,
+      0.437,
+      0.437
+     ]
+    }
+   ],
+   "Centre": [
+    -2.011,
+    4.29,
+    -0.457
+   ],
+   "Size": [
+    2.821,
+    2.912,
+    1.481
+   ],
+   "Tris": 476
+  },
+  {
+   "Name": "ArmR",
+   "Parent": "Body",
+   "Pivot": [
+    1.365,
+    6.435,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    1.456,
+    6.328,
+    -0.0
+   ],
+   "Size": [
+    1.352,
+    2.591,
+    1.352
+   ],
+   "Tris": 186
+  },
+  {
+   "Name": "ForearmR",
+   "Parent": "ArmR",
+   "Pivot": [
+    1.56,
+    5.005,
+    -0.065
+   ],
+   "Glow": [
+    {
+     "Mesh": "ForearmR_Glow_Aqua",
+     "Colour": [
+      70,
+      240,
+      222
+     ],
+     "Tris": 36,
+     "Centre": [
+      1.625,
+      7.215,
+      -0.39
+     ],
+     "Size": [
+      0.203,
+      0.234,
+      0.234
+     ]
+    }
+   ],
+   "Centre": [
+    1.58,
+    4.55,
+    -0.608
+   ],
+   "Size": [
+    0.74,
+    7.54,
+    1.783
+   ],
+   "Tris": 176
+  },
+  {
+   "Name": "LegL",
+   "Parent": "Body",
+   "Pivot": [
+    -0.585,
+    3.835,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    -0.631,
+    3.011,
+    -0.046
+   ],
+   "Size": [
+    1.026,
+    1.861,
+    1.026
+   ],
+   "Tris": 44
+  },
+  {
+   "Name": "KneeL",
+   "Parent": "LegL",
+   "Pivot": [
+    -0.65,
+    2.015,
+    -0.065
+   ],
+   "Glow": [],
+   "Centre": [
+    -0.676,
+    1.176,
+    -0.283
+   ],
+   "Size": [
+    0.806,
+    2.353,
+    1.241
+   ],
+   "Tris": 152
+  },
+  {
+   "Name": "LegR",
+   "Parent": "Body",
+   "Pivot": [
+    0.585,
+    3.835,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    0.631,
+    3.011,
+    -0.046
+   ],
+   "Size": [
+    1.026,
+    1.861,
+    1.026
+   ],
+   "Tris": 44
+  },
+  {
+   "Name": "KneeR",
+   "Parent": "LegR",
+   "Pivot": [
+    0.65,
+    2.015,
+    -0.065
+   ],
+   "Glow": [],
+   "Centre": [
+    0.676,
+    1.176,
+    -0.283
+   ],
+   "Size": [
+    0.806,
+    2.353,
+    1.241
+   ],
+   "Tris": 152
+  },
+  {
+   "Name": "Trophy_PearlCrown",
+   "Parent": "Head",
+   "Pivot": [
+    0.0,
+    8.255,
+    -0.065
+   ],
+   "Glow": [
+    {
+     "Mesh": "Trophy_PearlCrown_Glow_Pearl",
+     "Colour": [
+      226,
+      250,
+      255
+     ],
+     "Tris": 208,
+     "Centre": [
+      0.0,
+      8.651,
+      -0.093
+     ],
+     "Size": [
+      1.425,
+      1.001,
+      1.513
+     ]
+    }
+   ],
+   "Centre": [
+    0.0,
+    8.554,
+    -0.065
+   ],
+   "Size": [
+    1.404,
+    0.91,
+    1.403
+   ],
+   "Tris": 192
+  }
+ ],
+ "Surface": {
+  "Tier": "B",
+  "Size": 1024,
+  "Color": "alpha_coral_warden_color.png",
+  "Normal": "alpha_coral_warden_normal.png"
+ },
+ "TotalTris": 2932,
+ "MeshCount": 16,
+ "Size": [
+  5.55,
+  9.15,
+  2.75
+ ],
+ "FeetY": 0.0,
+ "Convention": "Studs, Roblox axes (Y up, faces -Z), origin on the ground under the enemy. Pivot = joint position. Mesh objects are named after their joint.",
+ "Atlas": "atlas_sunken_sanctuary_alpha.png"
+}
