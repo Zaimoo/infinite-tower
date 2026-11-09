@@ -1,0 +1,332 @@
+{
+ "EnemyId": "boss_crimson_overlord",
+ "Family": "ROYAL_COLOSSUS",
+ "Role": "BOSS",
+ "Biome": "abyssal_throne",
+ "Segments": [
+  {
+   "Name": "Body",
+   "Parent": null,
+   "Pivot": [
+    0.0,
+    7.875,
+    -0.0
+   ],
+   "Glow": [
+    {
+     "Mesh": "Body_Glow_Violet",
+     "Colour": [
+      186,
+      96,
+      255
+     ],
+     "Tris": 28,
+     "Centre": [
+      0.0,
+      10.25,
+      -1.85
+     ],
+     "Size": [
+      0.9,
+      0.9,
+      0.2
+     ]
+    },
+    {
+     "Mesh": "Body_Glow_Crimson",
+     "Colour": [
+      255,
+      46,
+      58
+     ],
+     "Tris": 144,
+     "Centre": [
+      0.013,
+      12.375,
+      1.75
+     ],
+     "Size": [
+      4.535,
+      0.3,
+      0.3
+     ]
+    }
+   ],
+   "Centre": [
+    0.0,
+    7.255,
+    0.834
+   ],
+   "Size": [
+    6.312,
+    12.509,
+    5.418
+   ],
+   "Tris": 5462
+  },
+  {
+   "Name": "Head",
+   "Parent": "Body",
+   "Pivot": [
+    0.0,
+    13.375,
+    -0.125
+   ],
+   "Glow": [
+    {
+     "Mesh": "Head_Glow_Crimson",
+     "Colour": [
+      255,
+      46,
+      58
+     ],
+     "Tris": 132,
+     "Centre": [
+      -0.0,
+      15.038,
+      -0.437
+     ],
+     "Size": [
+      2.468,
+      2.475,
+      2.225
+     ]
+    }
+   ],
+   "Centre": [
+    0.0,
+    15.9,
+    -0.172
+   ],
+   "Size": [
+    3.053,
+    5.3,
+    3.007
+   ],
+   "Tris": 446
+  },
+  {
+   "Name": "ArmL",
+   "Parent": "Body",
+   "Pivot": [
+    -2.375,
+    12.375,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    -2.625,
+    12.094,
+    -0.0
+   ],
+   "Size": [
+    2.25,
+    4.813,
+    2.1
+   ],
+   "Tris": 156
+  },
+  {
+   "Name": "ForearmL",
+   "Parent": "ArmL",
+   "Pivot": [
+    -2.75,
+    9.625,
+    -0.125
+   ],
+   "Glow": [],
+   "Centre": [
+    -2.825,
+    7.723,
+    -0.702
+   ],
+   "Size": [
+    1.349,
+    3.945,
+    2.346
+   ],
+   "Tris": 154
+  },
+  {
+   "Name": "ArmR",
+   "Parent": "Body",
+   "Pivot": [
+    2.375,
+    12.375,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    2.625,
+    12.094,
+    -0.0
+   ],
+   "Size": [
+    2.25,
+    4.813,
+    2.1
+   ],
+   "Tris": 156
+  },
+  {
+   "Name": "ForearmR",
+   "Parent": "ArmR",
+   "Pivot": [
+    2.75,
+    9.625,
+    -0.125
+   ],
+   "Glow": [
+    {
+     "Mesh": "ForearmR_Glow_Crimson",
+     "Colour": [
+      255,
+      46,
+      58
+     ],
+     "Tris": 16,
+     "Centre": [
+      2.875,
+      13.775,
+      -0.75
+     ],
+     "Size": [
+      1.3,
+      10.75,
+      0.25
+     ]
+    },
+    {
+     "Mesh": "ForearmR_Glow_Violet",
+     "Colour": [
+      186,
+      96,
+      255
+     ],
+     "Tris": 16,
+     "Centre": [
+      2.875,
+      13.4,
+      -0.75
+     ],
+     "Size": [
+      0.4,
+      9.5,
+      0.35
+     ]
+    }
+   ],
+   "Centre": [
+    2.875,
+    7.623,
+    -0.282
+   ],
+   "Size": [
+    3.5,
+    4.145,
+    1.507
+   ],
+   "Tris": 200
+  },
+  {
+   "Name": "LegL",
+   "Parent": "Body",
+   "Pivot": [
+    -1.05,
+    7.375,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    -1.125,
+    5.782,
+    -0.088
+   ],
+   "Size": [
+    1.749,
+    3.563,
+    1.773
+   ],
+   "Tris": 44
+  },
+  {
+   "Name": "KneeL",
+   "Parent": "LegL",
+   "Pivot": [
+    -1.15,
+    3.875,
+    -0.125
+   ],
+   "Glow": [],
+   "Centre": [
+    -1.2,
+    2.237,
+    -0.625
+   ],
+   "Size": [
+    1.4,
+    4.475,
+    2.5
+   ],
+   "Tris": 158
+  },
+  {
+   "Name": "LegR",
+   "Parent": "Body",
+   "Pivot": [
+    1.05,
+    7.375,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    1.125,
+    5.782,
+    -0.088
+   ],
+   "Size": [
+    1.749,
+    3.563,
+    1.773
+   ],
+   "Tris": 44
+  },
+  {
+   "Name": "KneeR",
+   "Parent": "LegR",
+   "Pivot": [
+    1.15,
+    3.875,
+    -0.125
+   ],
+   "Glow": [],
+   "Centre": [
+    1.2,
+    2.237,
+    -0.625
+   ],
+   "Size": [
+    1.4,
+    4.475,
+    2.5
+   ],
+   "Tris": 158
+  }
+ ],
+ "Surface": {
+  "Tier": "B",
+  "Size": 2048,
+  "Color": "boss_crimson_overlord_color.png",
+  "Normal": "boss_crimson_overlord_normal.png"
+ },
+ "TotalTris": 7314,
+ "MeshCount": 15,
+ "Size": [
+  8.38,
+  19.15,
+  5.49
+ ],
+ "FeetY": 0.0,
+ "Convention": "Studs, Roblox axes (Y up, faces -Z), origin on the ground under the enemy. Pivot = joint position. Mesh objects are named after their joint.",
+ "Atlas": "atlas_abyssal_throne.png"
+}

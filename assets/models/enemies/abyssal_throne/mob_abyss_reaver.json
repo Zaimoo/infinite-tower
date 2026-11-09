@@ -1,0 +1,308 @@
+{
+ "EnemyId": "mob_abyss_reaver",
+ "Family": "WEAPON_BIPED",
+ "Role": "REGULAR",
+ "Biome": "abyssal_throne",
+ "Segments": [
+  {
+   "Name": "Body",
+   "Parent": null,
+   "Pivot": [
+    0.0,
+    3.15,
+    -0.0
+   ],
+   "Glow": [
+    {
+     "Mesh": "Body_Glow_Crimson",
+     "Colour": [
+      255,
+      46,
+      58
+     ],
+     "Tris": 12,
+     "Centre": [
+      0.0,
+      4.45,
+      -0.66
+     ],
+     "Size": [
+      0.354,
+      0.354,
+      0.12
+     ]
+    }
+   ],
+   "Centre": [
+    -0.041,
+    3.809,
+    -0.026
+   ],
+   "Size": [
+    2.002,
+    3.19,
+    1.34
+   ],
+   "Tris": 358
+  },
+  {
+   "Name": "Head",
+   "Parent": "Body",
+   "Pivot": [
+    0.0,
+    5.35,
+    -0.05
+   ],
+   "Glow": [
+    {
+     "Mesh": "Head_Glow_Crimson",
+     "Colour": [
+      255,
+      46,
+      58
+     ],
+     "Tris": 24,
+     "Centre": [
+      0.0,
+      5.85,
+      -0.55
+     ],
+     "Size": [
+      0.445,
+      0.072,
+      0.05
+     ]
+    }
+   ],
+   "Centre": [
+    -0.001,
+    5.918,
+    0.102
+   ],
+   "Size": [
+    1.208,
+    1.172,
+    1.295
+   ],
+   "Tris": 248
+  },
+  {
+   "Name": "ArmL",
+   "Parent": "Body",
+   "Pivot": [
+    -0.95,
+    4.95,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    -1.05,
+    4.837,
+    -0.0
+   ],
+   "Size": [
+    0.9,
+    1.925,
+    0.84
+   ],
+   "Tris": 156
+  },
+  {
+   "Name": "ForearmL",
+   "Parent": "ArmL",
+   "Pivot": [
+    -1.1,
+    3.85,
+    -0.05
+   ],
+   "Glow": [
+    {
+     "Mesh": "ForearmL_Glow_Crimson",
+     "Colour": [
+      255,
+      46,
+      58
+     ],
+     "Tris": 12,
+     "Centre": [
+      -1.15,
+      3.416,
+      -0.954
+     ],
+     "Size": [
+      0.08,
+      0.518,
+      0.848
+     ]
+    }
+   ],
+   "Centre": [
+    -1.115,
+    3.444,
+    -0.764
+   ],
+   "Size": [
+    0.509,
+    1.728,
+    1.906
+   ],
+   "Tris": 156
+  },
+  {
+   "Name": "ArmR",
+   "Parent": "Body",
+   "Pivot": [
+    0.95,
+    4.95,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    1.05,
+    4.837,
+    -0.0
+   ],
+   "Size": [
+    0.9,
+    1.925,
+    0.84
+   ],
+   "Tris": 156
+  },
+  {
+   "Name": "ForearmR",
+   "Parent": "ArmR",
+   "Pivot": [
+    1.1,
+    3.85,
+    -0.05
+   ],
+   "Glow": [
+    {
+     "Mesh": "ForearmR_Glow_Crimson",
+     "Colour": [
+      255,
+      46,
+      58
+     ],
+     "Tris": 12,
+     "Centre": [
+      1.15,
+      3.416,
+      -0.954
+     ],
+     "Size": [
+      0.08,
+      0.518,
+      0.848
+     ]
+    }
+   ],
+   "Centre": [
+    1.115,
+    3.444,
+    -0.764
+   ],
+   "Size": [
+    0.509,
+    1.728,
+    1.906
+   ],
+   "Tris": 156
+  },
+  {
+   "Name": "LegL",
+   "Parent": "Body",
+   "Pivot": [
+    -0.42,
+    2.95,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    -0.45,
+    2.313,
+    -0.035
+   ],
+   "Size": [
+    0.699,
+    1.425,
+    0.709
+   ],
+   "Tris": 44
+  },
+  {
+   "Name": "KneeL",
+   "Parent": "LegL",
+   "Pivot": [
+    -0.46,
+    1.55,
+    -0.05
+   ],
+   "Glow": [],
+   "Centre": [
+    -0.48,
+    0.895,
+    -0.25
+   ],
+   "Size": [
+    0.56,
+    1.79,
+    1.0
+   ],
+   "Tris": 158
+  },
+  {
+   "Name": "LegR",
+   "Parent": "Body",
+   "Pivot": [
+    0.42,
+    2.95,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    0.45,
+    2.313,
+    -0.035
+   ],
+   "Size": [
+    0.699,
+    1.425,
+    0.709
+   ],
+   "Tris": 44
+  },
+  {
+   "Name": "KneeR",
+   "Parent": "LegR",
+   "Pivot": [
+    0.46,
+    1.55,
+    -0.05
+   ],
+   "Glow": [],
+   "Centre": [
+    0.48,
+    0.895,
+    -0.25
+   ],
+   "Size": [
+    0.56,
+    1.79,
+    1.0
+   ],
+   "Tris": 158
+  }
+ ],
+ "TotalTris": 1694,
+ "MeshCount": 14,
+ "Size": [
+  3.0,
+  6.5,
+  2.47
+ ],
+ "FeetY": 0.0,
+ "Convention": "Studs, Roblox axes (Y up, faces -Z), origin on the ground under the enemy. Pivot = joint position. Mesh objects are named after their joint.",
+ "Atlas": "atlas_abyssal_throne.png"
+}

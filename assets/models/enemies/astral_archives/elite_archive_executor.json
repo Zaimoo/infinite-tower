@@ -1,0 +1,294 @@
+{
+ "EnemyId": "elite_archive_executor",
+ "Family": "ARMORED_BIPED",
+ "Role": "ELITE",
+ "Biome": "astral_archives",
+ "Segments": [
+  {
+   "Name": "Body",
+   "Parent": null,
+   "Pivot": [
+    0.0,
+    4.253,
+    -0.0
+   ],
+   "Glow": [
+    {
+     "Mesh": "Body_Glow_Star",
+     "Colour": [
+      255,
+      214,
+      120
+     ],
+     "Tris": 128,
+     "Centre": [
+      0.05,
+      3.082,
+      -0.945
+     ],
+     "Size": [
+      0.93,
+      2.71,
+      0.105
+     ]
+    }
+   ],
+   "Centre": [
+    0.0,
+    4.286,
+    -0.016
+   ],
+   "Size": [
+    2.7,
+    6.142,
+    1.909
+   ],
+   "Tris": 440
+  },
+  {
+   "Name": "Head",
+   "Parent": "Body",
+   "Pivot": [
+    0.0,
+    7.222,
+    -0.068
+   ],
+   "Glow": [
+    {
+     "Mesh": "Head_Glow_Star",
+     "Colour": [
+      255,
+      214,
+      120
+     ],
+     "Tris": 24,
+     "Centre": [
+      0.0,
+      7.965,
+      -0.621
+     ],
+     "Size": [
+      0.608,
+      0.81,
+      0.135
+     ]
+    }
+   ],
+   "Centre": [
+    0.0,
+    8.525,
+    0.305
+   ],
+   "Size": [
+    1.242,
+    2.524,
+    1.955
+   ],
+   "Tris": 260
+  },
+  {
+   "Name": "ArmL",
+   "Parent": "Body",
+   "Pivot": [
+    -1.35,
+    6.682,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    -1.431,
+    6.221,
+    -0.0
+   ],
+   "Size": [
+    1.377,
+    1.975,
+    1.316
+   ],
+   "Tris": 500
+  },
+  {
+   "Name": "ForearmL",
+   "Parent": "ArmL",
+   "Pivot": [
+    -1.553,
+    5.197,
+    -0.068
+   ],
+   "Glow": [],
+   "Centre": [
+    -1.615,
+    4.374,
+    -0.305
+   ],
+   "Size": [
+    0.798,
+    1.727,
+    1.145
+   ],
+   "Tris": 156
+  },
+  {
+   "Name": "ArmR",
+   "Parent": "Body",
+   "Pivot": [
+    1.35,
+    6.682,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    1.431,
+    6.221,
+    -0.0
+   ],
+   "Size": [
+    1.377,
+    1.975,
+    1.316
+   ],
+   "Tris": 500
+  },
+  {
+   "Name": "ForearmR",
+   "Parent": "ArmR",
+   "Pivot": [
+    1.553,
+    5.197,
+    -0.068
+   ],
+   "Glow": [
+    {
+     "Mesh": "ForearmR_Glow_Star",
+     "Colour": [
+      255,
+      214,
+      120
+     ],
+     "Tris": 16,
+     "Centre": [
+      1.856,
+      10.328,
+      -0.405
+     ],
+     "Size": [
+      0.473,
+      1.755,
+      0.135
+     ]
+    }
+   ],
+   "Centre": [
+    1.789,
+    5.94,
+    -0.143
+   ],
+   "Size": [
+    1.147,
+    11.88,
+    0.821
+   ],
+   "Tris": 460
+  },
+  {
+   "Name": "LegL",
+   "Parent": "Body",
+   "Pivot": [
+    -0.567,
+    3.983,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    -0.608,
+    3.122,
+    -0.048
+   ],
+   "Size": [
+    0.944,
+    1.924,
+    0.957
+   ],
+   "Tris": 44
+  },
+  {
+   "Name": "KneeL",
+   "Parent": "LegL",
+   "Pivot": [
+    -0.621,
+    2.092,
+    -0.068
+   ],
+   "Glow": [],
+   "Centre": [
+    -0.648,
+    1.208,
+    -0.27
+   ],
+   "Size": [
+    0.756,
+    2.417,
+    1.215
+   ],
+   "Tris": 152
+  },
+  {
+   "Name": "LegR",
+   "Parent": "Body",
+   "Pivot": [
+    0.567,
+    3.983,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    0.608,
+    3.122,
+    -0.048
+   ],
+   "Size": [
+    0.944,
+    1.924,
+    0.957
+   ],
+   "Tris": 44
+  },
+  {
+   "Name": "KneeR",
+   "Parent": "LegR",
+   "Pivot": [
+    0.621,
+    2.092,
+    -0.068
+   ],
+   "Glow": [],
+   "Centre": [
+    0.648,
+    1.208,
+    -0.27
+   ],
+   "Size": [
+    0.756,
+    2.417,
+    1.215
+   ],
+   "Tris": 152
+  }
+ ],
+ "Surface": {
+  "Tier": "B",
+  "Size": 1024,
+  "Color": "elite_archive_executor_color.png",
+  "Normal": "elite_archive_executor_normal.png"
+ },
+ "TotalTris": 2876,
+ "MeshCount": 13,
+ "Size": [
+  4.48,
+  11.88,
+  2.28
+ ],
+ "FeetY": 0.0,
+ "Convention": "Studs, Roblox axes (Y up, faces -Z), origin on the ground under the enemy. Pivot = joint position. Mesh objects are named after their joint.",
+ "Atlas": "atlas_astral_archives.png"
+}
