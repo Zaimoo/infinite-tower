@@ -1,6 +1,6 @@
 # Tower Mob Reanimation: Implementation Plan
 
-Status: **steps 1–3 built**, step 4 done (all five pairs exported); steps 5–8 to do. Decisions settled (§8). Owner: Zaimoo. Written 2026-11-09.
+Status: **steps 1–5 built** (step 5: biped motion sets); steps 6–8 to do. Decisions settled (§8). Owner: Zaimoo. Written 2026-11-09.
 
 All 60 tower enemies are now remodelled meshes (`docs/tower-mob-remodel-plan.md`), but they still move with the clips written for the old part rigs. This plan rebuilds their **idle, walking and attack** animation (plus the hit, death and awakening clips those blend with) so each family moves like what it is. It stays on the existing contract: rigid segments, `Motor6D`s, clips authored as code in `TowerEnemyClips`, no uploaded `Animation` assets. The server, the network records and combat timings don't change.
 
@@ -86,6 +86,8 @@ Each motion set exports `Idle`, `Fidgets` (1 or 2), `Locomotion`, `HitReaction`,
 - `ReferenceHeight`, for size scaling (§3.5);
 - `SwingDegrees`, for stride matching (§3.6);
 - `UpperBody`, the list of joints an action drives while moving.
+
+**As built, step 5:** `EnemyClips/Common.luau` is the pose vocabulary (`lean`, `twist`, `armR = { fwd, out }`, `kneeL`… named for what you see, with legs that counter the body so feet stay planted, and a `crouch` that bends knees by `acos(1 − drop / 3.5)`); `EnemyClips/Bipeds.luau` builds the four biped sets. Clips resolve by `"<Slot>:<Shape>"` first, so an Alpha's two Specials and a support's kit and bolt play different styles. Set timing (idle loop length, stride scale from its swing) and fidgets come from `TowerEnemyClips.MetaFor`. The King (`ROYAL_BIPED`) uses the warrior set until step 6 gives bosses their own clips.
 
 ### 3.3 Attack styles: pick by shape, set and role
 

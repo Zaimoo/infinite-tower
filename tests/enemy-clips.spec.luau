@@ -68,11 +68,12 @@ end)
 
 test("Attack clips have ordered markers inside the clip", function()
 	for id in C.Entries do
-		for _, slot in ATTACK_SLOTS do
-			local frames = Clips[id][slot]
-			if frames then
+		for slot, frames in Clips[id] do
+			local base = string.match(slot, "^([^:]+)")
+			if table.find(ATTACK_SLOTS, base) then
 				local release, impact = Clips.MarkersFor(frames)
 				assert(release > 0 and release <= impact and impact < 1, id .. "/" .. slot .. " markers out of order")
+				assert(frames[1][1] == 0 and frames[#frames][1] == 1, id .. "/" .. slot .. " must span 0..1")
 			end
 		end
 	end
@@ -237,11 +238,87 @@ test("Unkeyed extra joints get their spring role; clip joints keep their clips",
 	local rigid = Anim.SPRINGS.Rigid
 	assert(math.abs(t.Trophy_Crown.rx) <= rigid.Sway + 1e-6 and math.abs(t.Trophy_Crown.rz) <= rigid.Sway + 1e-6 and t.Trophy_Crown.ry == 0,
 		"a rigid trophy at rest only sways gently")
-	local idle = Clips.Sample(Clips[id].Idle, (40.5 * a.IdleRate / Anim.IDLE_SECONDS + a.IdleOffset) % 1)
+	local idle = Clips.Sample(Clips[id].Idle, (40.5 * a.IdleRate / a.IdleSeconds + a.IdleOffset) % 1)
 	assert(sameCF(t.Head, idle.Head), "a joint the clips key ignores its motion role")
 	input.Far = true
 	local far = a:Evaluate(41, input, 0.5)
 	assert(sameCF(far.Trophy_Crown, CFrame.identity), "far springs rest")
+end)
+
+local Bipeds = require(nodes["ReplicatedStorage.Assets.EnemyClips.Bipeds"])
+local Common = require(nodes["ReplicatedStorage.Assets.EnemyClips.Common"])
+
+test("Every biped move resolves to its own slot:shape clip with markers", function()
+	local n = 0
+	for id, spec in C.Entries do
+		local family = spec.CatalogFamily or spec.RigFamily
+		local setName = Bipeds.FamilySet[family]
+		if setName then
+			n += 1
+			local meta = assert(Clips.MetaFor(id), id .. ": no animation meta")
+			assert(meta.Set == setName and meta.IdleSeconds > 0 and meta.StrideScale > 0 and #meta.Fidgets >= 1, id .. ": bad meta")
+			for _, move in spec.Attacks do
+				local frames = Clips[id][move.AnimationKey .. ":" .. move.Shape]
+				assert(frames, id .. ": no clip for " .. move.AnimationKey .. ":" .. move.Shape)
+				local release, impact = Clips.MarkersFor(frames)
+				assert(Common.Markers[frames], id .. ": " .. move.Shape .. " style has no authored markers")
+				assert(release < 1 and impact < 1)
+			end
+		end
+	end
+	assert(n >= 30, "expected the biped families to cover most enemies, got " .. n)
+end)
+
+test("Moves that share a slot play different styles", function()
+	local alpha = Clips.alpha_glacier_knight
+	assert(alpha["Special:TARGET_DISC"] ~= alpha["Special:SELF_DISC"], "Alpha Specials should differ")
+	local support = Clips.mob_ember_oracle
+	assert(support["BasicAttack:ALLY_BEAM"] ~= support["BasicAttack:PROJECTILE"], "a support's kit and bolt should differ")
+	assert(Clips.mob_rime_sentry.BasicAttack ~= Clips.mob_ash_raider.BasicAttack, "the spear thrusts, the khopesh slashes")
+	assert(Clips.elite_molten_taskmaster.BasicAttack ~= Clips.elite_mycelial_brute.BasicAttack, "the chain lashes")
+end)
+
+test("Animator plays a move by slot and shape", function()
+	local rig = fakeRig("alpha_glacier_knight")
+	local a = Anim.new(rig, 2)
+	local action: any = { AnimationKey = "Special", Shape = "SELF_DISC", StartServerTime = 50, WindupSeconds = 1.6, ImpactOffsetSeconds = 1.6, RecoverySeconds = 1.1 }
+	a:Evaluate(51, { Moved = 0, Action = action }, 0)
+	assert(a.CachedFrames == Clips.alpha_glacier_knight["Special:SELF_DISC"], "should pick the SELF_DISC style")
+	action = { AnimationKey = "Special", StartServerTime = 50, WindupSeconds = 1.6, ImpactOffsetSeconds = 1.6, RecoverySeconds = 1.1 }
+	a:Evaluate(51, { Moved = 0, Action = action }, 0)
+	assert(a.CachedFrames == Clips.alpha_glacier_knight.Special, "without a shape the bare slot plays")
+end)
+
+test("Pose helper keeps planted feet under a leaning, turning body", function()
+	local p = Common.pose({ lean = 20, twist = 15, tilt = 5 })
+	for _, leg in { "LegL", "LegR" } do
+		assert(near(p[leg].rx, -p.Body.rx) and near(p[leg].ry, -p.Body.ry) and near(p[leg].rz, -p.Body.rz), leg .. " should cancel the body")
+	end
+	local fallen = Common.pose({ lean = 80, planted = false })
+	assert(near(fallen.LegL.rx, 0), "a falling body takes its legs with it")
+	local c = Common.crouch({}, 0.3)
+	assert(c.bob == -0.3 and c.legL.fwd > 20 and c.legL.fwd < 28 and near(c.kneeL, 2 * c.legL.fwd), "crouch keeps a 3.5-stud leg's feet down")
+end)
+
+test("Fidgets wait for calm, then play eased in and out on a seeded schedule", function()
+	local rig = fakeRig("mob_ruin_guardian")
+	local a = Anim.new(rig, 77)
+	local input: any = { Moved = 0 }
+	local t = 100
+	a:Evaluate(t, input, 0)
+	local due = a.NextFidgetAt
+	assert(due >= t + Anim.FIDGET_MIN and due <= t + Anim.FIDGET_MIN + Anim.FIDGET_SPREAD, "first fidget 6–14 s out")
+	-- an attack just before it is due delays it for FIDGET_CALM
+	input.Action = { AnimationKey = "BasicAttack", Shape = "ARC", StartServerTime = due - 1.5, WindupSeconds = 0.68, ImpactOffsetSeconds = 0.68, RecoverySeconds = 0.68 }
+	a:Evaluate(due - 0.5, input, 1 / 60)
+	input.Action = nil
+	a:Evaluate(due + 0.1, input, 1 / 60)
+	assert(a.FidgetAt == nil, "no fidget right after an attack")
+	local start = due - 0.5 + Anim.FIDGET_CALM + 0.05
+	a:Evaluate(start, input, 1 / 60)
+	assert(a.FidgetAt ~= nil, "fidget starts once calm")
+	a:Evaluate(start + Anim.FIDGET_SECONDS + 0.01, input, 1 / 60)
+	assert(a.FidgetAt == nil and a.NextFidgetAt > start + Anim.FIDGET_MIN, "then the next one is scheduled")
 end)
 
 print(string.format("enemy-clips: %d passed", passed))

@@ -3,6 +3,8 @@
 -- Includes leg counter-rotation during torso leans so feet stay planted on the floor.
 -- Native source, no uploaded Roblox animation asset IDs.
 local Config = require(game.ReplicatedStorage.Shared.Config.FirstBiomeCombat)
+local Common = require(game.ReplicatedStorage.Assets.EnemyClips.Common)
+local Bipeds = require(game.ReplicatedStorage.Assets.EnemyClips.Bipeds)
 local C: any = {}
 
 local function rot(x: number?, y: number?, z: number?): CFrame
@@ -255,13 +257,37 @@ local MARKERS: { [any]: { number } } = {
 	[avianStrike] = { .6, .8 },
 }
 
+-- Per-enemy animation meta for EnemyAnimator: motion set, idle loop length, stride scale, fidgets.
+local META: { [string]: any } = {}
+
 for enemyId, spec in pairs(Config.Entries) do
 	local family = spec.CatalogFamily or spec.RigFamily
 	local isBoss = spec.Role == "BOSS"
 	local isElite = spec.Role == "ELITE"
 	local isProjectile = spec.Attacks[1] and spec.Attacks[1].Shape == "PROJECTILE"
 
-	if family == "CRAWLER" or family == "INSECT" or family == "CRUSTACEAN" or family == "SCORPION" or spec.RigFamily == "SIX_LEGGED_CRAWLER" then
+	local bipedSet = Bipeds.FamilySet[family]
+	if bipedSet then
+		-- Biped motion sets (docs/mob-reanimation-plan.md step 5). Each move plays the style its shape maps to;
+		-- "<Slot>:<Shape>" keys let two moves share a slot (Alpha Specials, support kits), and the bare slot
+		-- plays the slot's first move.
+		local set = Bipeds.Set(bipedSet)
+		local clips: any = { Idle = set.Idle, Locomotion = set.Locomotion, HitReaction = set.HitReaction, Death = set.Death }
+		for _, move in spec.Attacks do
+			local frames = set.Styles[Bipeds.StyleFor(bipedSet, enemyId, move.Shape)]
+			clips[move.AnimationKey .. ":" .. move.Shape] = frames
+			if not clips[move.AnimationKey] then clips[move.AnimationKey] = frames end
+		end
+		clips.BasicAttack = clips.BasicAttack or set.Styles.Slash
+		if isElite then clips.Special = clips.Special or set.Styles.Overhead end
+		if isBoss then -- step 6 gives bosses their own awakenings
+			clips.Awakening = awakening
+			clips.Signature1 = clips.Signature1 or set.Styles.Stomp
+			clips.Signature2 = clips.Signature2 or set.Styles.Overhead
+		end
+		META[enemyId] = { Set = bipedSet, IdleSeconds = set.IdleSeconds, StrideScale = set.StrideScale, Fidgets = set.Fidgets }
+		C[enemyId] = clips
+	elseif family == "CRAWLER" or family == "INSECT" or family == "CRUSTACEAN" or family == "SCORPION" or spec.RigFamily == "SIX_LEGGED_CRAWLER" then
 		local clips: any = {
 			Idle = idle,
 			Locomotion = crawl,
@@ -343,8 +369,12 @@ function C.GroupFor(enemyId: string): string
 	return GROUPS[enemyId] or "BIPED"
 end
 
+function C.MetaFor(enemyId: string?): any
+	return enemyId and META[enemyId]
+end
+
 function C.MarkersFor(frames: any): (number, number)
-	local m = MARKERS[frames]
+	local m = MARKERS[frames] or Common.Markers[frames]
 	if m then return m[1], m[2] end
 	return .72, .8
 end
