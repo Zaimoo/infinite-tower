@@ -255,6 +255,12 @@
    "Tris": 468
   }
  ],
+ "Surface": {
+  "Tier": "B",
+  "Size": 2048,
+  "Color": "boss_mossbound_guardian_color.png",
+  "Normal": "boss_mossbound_guardian_normal.png"
+ },
  "TotalTris": 6860,
  "MeshCount": 12,
  "Size": [

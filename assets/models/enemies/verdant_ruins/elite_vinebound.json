@@ -295,6 +295,12 @@
    "Tris": 234
   }
  ],
+ "Surface": {
+  "Tier": "B",
+  "Size": 1024,
+  "Color": "elite_vinebound_color.png",
+  "Normal": "elite_vinebound_normal.png"
+ },
  "TotalTris": 5018,
  "MeshCount": 14,
  "Size": [

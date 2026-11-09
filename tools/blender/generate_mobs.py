@@ -29,6 +29,9 @@ def build_one(mod, biome, enemy_id, out, prev):
     asset.atlas.build_image(os.path.join(out, f"atlas_{asset.atlas.biome}.png"))
     objs = asset.build()
     asset.meta["Biome"] = biome
+    if asset.role in ("ELITE", "ALPHA", "BOSS") and "--no-bake" not in sys.argv:
+        import bake  # Tier B: baked colour/AO + normal map (2048 for Biome Bosses, 1024 otherwise)
+        bake.bake_asset(asset, objs, 2048 if asset.role == "BOSS" else 1024, out)
     asset.export(out, {"Atlas": f"atlas_{asset.atlas.biome}.png"})
     src = os.path.join(REPO, "assets-source", "tower", "enemies", enemy_id)
     os.makedirs(src, exist_ok=True)
