@@ -60,7 +60,10 @@ test("Compiled sampling matches TowerEnemyClips.Sample and reuses its table", fu
 				for joint, cf in want do
 					assert(got[joint] and sameCF(got[joint], cf), id .. "/" .. slot .. "/" .. joint .. " differs at t=" .. t)
 				end
-				for joint in got do assert(want[joint], id .. "/" .. slot .. ": stale joint " .. joint) end
+				-- the compiled clip keys every joint the clip ever keys, holding unkeyed spans at identity
+				for joint, cf in got do
+					assert(want[joint] or sameCF(cf, CFrame.identity), id .. "/" .. slot .. ": stale joint " .. joint)
+				end
 			end
 		end
 	end
@@ -319,6 +322,74 @@ test("Fidgets wait for calm, then play eased in and out on a seeded schedule", f
 	assert(a.FidgetAt ~= nil, "fidget starts once calm")
 	a:Evaluate(start + Anim.FIDGET_SECONDS + 0.01, input, 1 / 60)
 	assert(a.FidgetAt == nil and a.NextFidgetAt > start + Anim.FIDGET_MIN, "then the next one is scheduled")
+end)
+
+local Colossi = require(nodes["ReplicatedStorage.Assets.EnemyClips.Colossi"])
+
+test("Colossus bosses get the Colossus set: awakening, fidgets and a style per move", function()
+	local n = 0
+	for id, spec in C.Entries do
+		if Colossi.Families[spec.CatalogFamily or spec.RigFamily] then
+			n += 1
+			local meta = assert(Clips.MetaFor(id), id .. ": no meta")
+			assert(meta.Set == "Colossus" and #meta.Fidgets >= 1, id .. ": not on the Colossus set")
+			local clips = Clips[id]
+			assert(clips.Awakening and clips.Signature1 and clips.Signature2, id .. ": missing boss clips")
+			for _, move in spec.Attacks do
+				local frames = assert(clips[move.AnimationKey .. ":" .. move.Shape], id .. ": no " .. move.AnimationKey .. ":" .. move.Shape)
+				assert(Common.Markers[frames], id .. ": style without markers")
+			end
+		end
+	end
+	assert(n >= 6 + 4, "six colossus Biome Bosses and four raid stand-ins, got " .. n)
+	local king = Clips.raid_hollow_king
+	assert(king["Signature2:SELF_DISC"] ~= king["Signature2:ARC"], "a raid boss's two Signature2 moves should differ")
+	assert(Clips.boss_frostbound_king.Awakening ~= Clips.boss_mossbound_guardian.Awakening, "the King rises from a kneel, colossi from a slump")
+end)
+
+test("The Matriarch's crown and the Rift Warden's tomes are keyed in their boss moves", function()
+	local function keyed(frames: any, joint: string): boolean
+		for _, k in frames do if k[2][joint] then return true end end
+		return false
+	end
+	local m = Clips.boss_spore_matriarch
+	assert(keyed(m.Signature1, "ExtraCrown") and keyed(m.Signature2, "ExtraCrown") and keyed(m.Awakening, "ExtraCrown"), "crown should rise in signatures and awakening")
+	assert(not keyed(m.Idle, "ExtraCrown"), "the idle leaves the crown to its spring")
+	local w = Clips.boss_archive_rift_warden
+	assert(keyed(w.BasicAttack, "ExtraTomeL") and keyed(w.BasicAttack, "ExtraTomeR"), "tome shields swing in on the sweep")
+end)
+
+test("Creatures get their own set, a style per move, and key their tails, jaws, beaks, stings and elytra", function()
+	local want = { QUADRUPED = "Quadruped", AVIAN = "Avian", GIANT_AVIAN = "Avian", SERPENT = "Serpent", CRAWLER = "Multileg",
+		SIX_LEGGED_CRAWLER = "Multileg", INSECT = "Multileg", CRUSTACEAN = "Multileg", SCORPION = "Multileg" }
+	local n = 0
+	for id, spec in C.Entries do
+		local setName = want[spec.CatalogFamily or spec.RigFamily] or want[spec.RigFamily]
+		if setName then
+			n += 1
+			local meta = assert(Clips.MetaFor(id), id .. ": no meta")
+			assert(meta.Set == setName and #meta.Fidgets >= 1, id .. ": not on " .. setName)
+			for _, move in spec.Attacks do
+				local frames = assert(Clips[id][move.AnimationKey .. ":" .. move.Shape], id .. ": no " .. move.AnimationKey .. ":" .. move.Shape)
+				assert(Common.Markers[frames], id .. ": style without markers")
+			end
+		end
+	end
+	assert(n >= 15, "fifteen creatures, got " .. n)
+	local function keyed(frames: any, joint: string): boolean
+		for _, k in frames do if k[2][joint] then return true end end
+		return false
+	end
+	assert(keyed(Clips.mob_blight_wolf.BasicAttack, "ExtraJaw") and keyed(Clips.mob_blight_wolf.Locomotion, "ExtraTail1"), "wolves bite and wag")
+	assert(keyed(Clips.boss_storm_roc.Awakening, "ExtraBeak") and keyed(Clips.boss_storm_roc.Idle, "ExtraTailFan"), "the roc screeches and fans")
+	assert(keyed(Clips.boss_tidal_leviathan.Signature1, "ExtraFrill") and keyed(Clips.boss_tidal_leviathan.Locomotion, "ExtraTail2"), "the leviathan flares and waves")
+	assert(keyed(Clips.alpha_glass_scorpion["Special:TARGET_DISC"], "ExtraSting"), "scorpions stab with the sting")
+	assert(keyed(Clips.mob_dune_scarab.Death, "ExtraElytraL"), "scarabs part their elytra")
+	local s = Clips.alpha_glass_scorpion
+	assert(s["Special:TARGET_DISC"] ~= s["Special:SELF_DISC"], "an Alpha's two Specials differ")
+	assert(Clips.alpha_thunder_ram.BasicAttack ~= Clips.mob_blight_wolf.BasicAttack, "rams butt, wolves bite")
+	assert(Clips.boss_storm_roc.Awakening and Clips.boss_tidal_leviathan.Awakening ~= Clips.boss_storm_roc.Awakening, "both creature bosses awaken their own way")
+	assert(Clips.mob_squall_herald["BasicAttack:ALLY_AURA"] ~= Clips.mob_squall_herald["BasicAttack:PROJECTILE"], "the herald cries and flicks")
 end)
 
 print(string.format("enemy-clips: %d passed", passed))

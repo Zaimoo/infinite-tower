@@ -5,6 +5,8 @@
 local Config = require(game.ReplicatedStorage.Shared.Config.FirstBiomeCombat)
 local Common = require(game.ReplicatedStorage.Assets.EnemyClips.Common)
 local Bipeds = require(game.ReplicatedStorage.Assets.EnemyClips.Bipeds)
+local Colossi = require(game.ReplicatedStorage.Assets.EnemyClips.Colossi)
+local Creatures = require(game.ReplicatedStorage.Assets.EnemyClips.Creatures)
 local C: any = {}
 
 local function rot(x: number?, y: number?, z: number?): CFrame
@@ -131,119 +133,6 @@ for i = 0, 4 do
 	table.insert(walk, { phase, p })
 end
 
-local crawl = {}
-for i = 0, 4 do
-	local phase = i / 4
-	local shift = ({ 0, 1, 0, -1, 0 })[i + 1]
-	local p: any = { Body = CFrame.new(0, -math.abs(shift) * .04, 0) * rot(0, shift * 2.5, 0) }
-	for _, side in { -1, 1 } do
-		for leg = 1, 3 do
-			local value = shift * (leg % 2 == 0 and -1 or 1) * side
-			p["Leg" .. side .. "_" .. leg] = CFrame.new(0, math.max(0, value) * .28, 0) * rot(0, value * 18, 0)
-			p["Knee" .. side .. "_" .. leg] = rot(0, 0, side * math.max(0, value) * -20)
-		end
-	end
-	table.insert(crawl, { phase, p })
-end
-
-local function crawlerPose(bodyCF: CFrame, headCF: CFrame, jawDeg: number, legPitch: number): any
-	local p: any = {
-		Body = bodyCF,
-		Head = headCF,
-		JawL = rot(0, -jawDeg, 0),
-		JawR = rot(0, jawDeg, 0),
-	}
-	for _, side in { -1, 1 } do
-		for leg = 1, 3 do
-			p["Leg" .. side .. "_" .. leg] = rot(legPitch, 0, 0)
-			p["Knee" .. side .. "_" .. leg] = rot(-legPitch * 0.6, 0, 0)
-		end
-	end
-	return p
-end
-
-local bite = {
-	{ 0, crawlerPose(CFrame.identity, rot(0), 0, 0) },
-	{ .6, crawlerPose(CFrame.new(0, -.12, .48) * rot(-7), rot(-12), 32, 7) },
-	{ .8, crawlerPose(CFrame.new(0, -.04, -.55) * rot(9), rot(14), -18, -9) },
-	{ 1, crawlerPose(CFrame.identity, CFrame.identity, 0, 0) },
-}
-
-local crawlerDeath = {
-	{ 0, { Body = CFrame.identity } },
-	{ .4, { Body = CFrame.new(0, -.55, 0) * rot(0, 0, 22) } },
-	{ 1, { Body = CFrame.new(0, -.88, 0) * rot(0, 0, 32) } },
-}
-
-local quadWalk = {}
-for i = 0, 4 do
-	local phase = i / 4
-	local shift = ({ 0, 1, 0, -1, 0 })[i + 1]
-	local p = {
-		Body = CFrame.new(0, -math.abs(shift) * .06, 0) * rot(shift * 2, 0, 0),
-		Head = rot(-shift * 2, 0, 0),
-		ArmL = rot(shift * 22, 0, 0),
-		ForearmL = rot(math.max(0, shift) * -20, 0, 0),
-		ArmR = rot(-shift * 22, 0, 0),
-		ForearmR = rot(math.max(0, -shift) * -20, 0, 0),
-		LegL = rot(-shift * 22, 0, 0),
-		KneeL = rot(math.max(0, -shift) * -20, 0, 0),
-		LegR = rot(shift * 22, 0, 0),
-		KneeR = rot(math.max(0, shift) * -20, 0, 0),
-	}
-	table.insert(quadWalk, { phase, p })
-end
-
-local quadAttack = {
-	{ 0, { Body = CFrame.identity, Head = CFrame.identity, ArmL = CFrame.identity, ArmR = CFrame.identity, LegL = CFrame.identity, LegR = CFrame.identity } },
-	{ .58, { Body = CFrame.new(0, -.15, .45) * rot(-12), Head = rot(-16), ArmL = rot(-22), ArmR = rot(-22), LegL = rot(14), LegR = rot(14) } },
-	{ .8, { Body = CFrame.new(0, .05, -.55) * rot(14), Head = rot(20), ArmL = rot(28), ArmR = rot(28), LegL = rot(-18), LegR = rot(-18) } },
-	{ 1, { Body = CFrame.identity, Head = CFrame.identity, ArmL = CFrame.identity, ArmR = CFrame.identity, LegL = CFrame.identity, LegR = CFrame.identity } },
-}
-
-local avianWalk = {}
-for i = 0, 4 do
-	local phase = i / 4
-	local shift = ({ 0, 1, 0, -1, 0 })[i + 1]
-	local flap = math.abs(shift) * 18
-	local p = {
-		Body = CFrame.new(0, math.abs(shift) * .08, 0) * rot(3, 0, 0),
-		Head = rot(-3, 0, 0),
-		ArmL = rot(0, 0, -flap),
-		ForearmL = rot(0, 0, -flap * 0.6),
-		ArmR = rot(0, 0, flap),
-		ForearmR = rot(0, 0, flap * 0.6),
-		LegL = rot(shift * 24 - 3, 0, 0),
-		KneeL = rot(math.max(0, shift) * -24, 0, 0),
-		LegR = rot(-shift * 24 - 3, 0, 0),
-		KneeR = rot(math.max(0, -shift) * -24, 0, 0),
-	}
-	table.insert(avianWalk, { phase, p })
-end
-
-local avianStrike = {
-	{ 0, { Body = CFrame.identity, ArmL = CFrame.identity, ArmR = CFrame.identity, Head = CFrame.identity, LegL = CFrame.identity, LegR = CFrame.identity } },
-	{ .6, { Body = CFrame.new(0, .25, .3) * rot(-14), ArmL = rot(-18, 0, -38), ArmR = rot(-18, 0, 38), Head = rot(-18), LegL = rot(14), LegR = rot(14) } },
-	{ .8, { Body = CFrame.new(0, -.12, -.5) * rot(18), ArmL = rot(24, 0, 18), ArmR = rot(24, 0, -18), Head = rot(22), LegL = rot(-18), LegR = rot(-18) } },
-	{ 1, { Body = CFrame.identity, ArmL = CFrame.identity, ArmR = CFrame.identity, Head = CFrame.identity, LegL = CFrame.identity, LegR = CFrame.identity } },
-}
-
-local slither = {}
-for i = 0, 4 do
-	local phase = i / 4
-	local shift = ({ 0, 1, 0, -1, 0 })[i + 1]
-	table.insert(slither, { phase, {
-		Body = CFrame.new(shift * .22, 0, 0) * rot(0, shift * 10, shift * 4),
-		Head = rot(0, -shift * 12, -shift * 4),
-		ArmL = rot(shift * 14, 0, -10),
-		ArmR = rot(-shift * 14, 0, 10),
-		LegL = rot(0, -shift * 16, 0),
-		LegR = rot(0, -shift * 16, 0),
-		KneeL = rot(0, shift * 20, 0),
-		KneeR = rot(0, shift * 20, 0),
-	} })
-end
-
 -- Attack markers (docs/mob-reanimation-plan.md §3.3): Release = the strike starts, Impact = contact or launch.
 -- EnemyAnimator maps the server's windup/impact/recovery onto them. Clips without an entry use 0.72 / 0.8.
 local MARKERS: { [any]: { number } } = {
@@ -252,9 +141,6 @@ local MARKERS: { [any]: { number } } = {
 	[slam] = { .72, .8 },
 	[sweep] = { .76, .8 },
 	[projectileCast] = { .45, .65 },
-	[bite] = { .6, .8 },
-	[quadAttack] = { .58, .8 },
-	[avianStrike] = { .6, .8 },
 }
 
 -- Per-enemy animation meta for EnemyAnimator: motion set, idle loop length, stride scale, fidgets.
@@ -280,62 +166,47 @@ for enemyId, spec in pairs(Config.Entries) do
 		end
 		clips.BasicAttack = clips.BasicAttack or set.Styles.Slash
 		if isElite then clips.Special = clips.Special or set.Styles.Overhead end
-		if isBoss then -- step 6 gives bosses their own awakenings
-			clips.Awakening = awakening
+		if isBoss then
+			clips.Awakening = set.Awakening
 			clips.Signature1 = clips.Signature1 or set.Styles.Stomp
 			clips.Signature2 = clips.Signature2 or set.Styles.Overhead
 		end
 		META[enemyId] = { Set = bipedSet, IdleSeconds = set.IdleSeconds, StrideScale = set.StrideScale, Fidgets = set.Fidgets }
 		C[enemyId] = clips
-	elseif family == "CRAWLER" or family == "INSECT" or family == "CRUSTACEAN" or family == "SCORPION" or spec.RigFamily == "SIX_LEGGED_CRAWLER" then
-		local clips: any = {
-			Idle = idle,
-			Locomotion = crawl,
-			BasicAttack = bite,
-			HitReaction = hit,
-			Death = crawlerDeath,
-		}
-		if isElite then
-			clips.Special = bite
+	elseif Colossi.Families[family] then
+		-- The Colossus set (step 6): Biome Bosses and the raid bosses' stand-in rigs. Moves resolve by
+		-- "<Slot>:<Shape>" like the bipeds, so a raid boss's two Signature2 moves differ.
+		local set = Colossi.Set()
+		local clips: any = { Idle = set.Idle, Locomotion = set.Locomotion, HitReaction = set.HitReaction, Death = set.Death, Awakening = set.Awakening }
+		for _, move in spec.Attacks do
+			local frames = set.Styles[Colossi.StyleFor(move.Shape)]
+			clips[move.AnimationKey .. ":" .. move.Shape] = frames
+			if not clips[move.AnimationKey] then clips[move.AnimationKey] = frames end
 		end
+		clips.BasicAttack = clips.BasicAttack or set.Styles.Sweep
+		clips.Signature1 = clips.Signature1 or set.Styles.Quake
+		clips.Signature2 = clips.Signature2 or set.Styles.Pound
+		META[enemyId] = { Set = "Colossus", IdleSeconds = set.IdleSeconds, StrideScale = set.StrideScale, Fidgets = set.Fidgets }
 		C[enemyId] = clips
-	elseif family == "QUADRUPED" then
-		local clips: any = {
-			Idle = idle,
-			Locomotion = quadWalk,
-			BasicAttack = quadAttack,
-			HitReaction = hit,
-			Death = death,
-		}
-		if isElite then
-			clips.Special = quadAttack
+	elseif Creatures.FamilySet[family] or Creatures.FamilySet[spec.RigFamily] then
+		-- Creature sets (step 7): Quadruped, Avian, Serpent, Multileg. Moves resolve by "<Slot>:<Shape>".
+		local setName = Creatures.FamilySet[family] or Creatures.FamilySet[spec.RigFamily]
+		local set = Creatures.Set(setName)
+		local clips: any = { Idle = set.Idle, Locomotion = set.Locomotion, HitReaction = set.HitReaction, Death = set.Death }
+		for _, move in spec.Attacks do
+			local frames = set.Styles[Creatures.StyleFor(setName, family, enemyId, move.Shape)]
+			clips[move.AnimationKey .. ":" .. move.Shape] = frames
+			if not clips[move.AnimationKey] then clips[move.AnimationKey] = frames end
 		end
-		C[enemyId] = clips
-	elseif family == "AVIAN" or family == "GIANT_AVIAN" then
-		local clips: any = {
-			Idle = idle,
-			Locomotion = avianWalk,
-			BasicAttack = avianStrike,
-			HitReaction = hit,
-			Death = death,
-		}
+		clips.BasicAttack = clips.BasicAttack or set.Styles[set.ByShape.ARC]
+		if isElite then clips.Special = clips.Special or set.Styles[set.ByShape.TARGET_DISC] end
 		if isBoss then
-			clips.Awakening = awakening
-			clips.Signature1 = avianStrike
-			clips.Signature2 = sweep
+			clips.Awakening = set.Awakening or awakening
+			clips.Signature1 = clips.Signature1 or set.Styles[set.ByShape.SELF_DISC]
+			clips.Signature2 = clips.Signature2 or set.Styles[set.ByShape.TARGET_DISC]
 		end
+		META[enemyId] = { Set = setName, IdleSeconds = set.IdleSeconds, StrideScale = set.StrideScale, Fidgets = set.Fidgets }
 		C[enemyId] = clips
-	elseif family == "SERPENT" then
-		C[enemyId] = {
-			Idle = idle,
-			Locomotion = slither,
-			BasicAttack = cleave,
-			Awakening = awakening,
-			Signature1 = slam,
-			Signature2 = sweep,
-			HitReaction = hit,
-			Death = death,
-		}
 	else
 		local clips: any = {
 			Idle = idle,
