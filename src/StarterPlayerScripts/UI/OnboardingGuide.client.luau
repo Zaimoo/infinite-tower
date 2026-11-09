@@ -3,6 +3,7 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Store = require(script.Parent.Hud.Store)
+local UIFeel = require(script.Parent.UIFeel)
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -63,6 +64,19 @@ local outline = Instance.new("UIStroke")
 outline.Color = GOLD
 outline.Thickness = 3
 outline.Parent = ring
+
+local halo = Instance.new("Frame")
+halo.Name = "Pulse"
+halo.BackgroundTransparency = 1
+halo.AnchorPoint = Vector2.new(0.5, 0.5)
+halo.Position = UDim2.fromScale(0.5, 0.5)
+halo.Parent = ring
+local haloCorner = corner:Clone()
+haloCorner.Parent = halo
+local haloStroke = Instance.new("UIStroke")
+haloStroke.Color = GOLD
+haloStroke.Thickness = 2
+haloStroke.Parent = halo
 
 local function shown(object: Instance?): boolean
 	local current = object
@@ -210,23 +224,24 @@ local function worldTarget(target: string, root: BasePart): (Vector3?, Instance?
 	return position, building
 end
 
-local projection: RBXScriptConnection?
+local renderConnection: RBXScriptConnection?
 local point: Vector3?
+local focusedButton: GuiButton?
+local reducedMotion = false
 
 local function stopWorld()
-	if projection then projection:Disconnect(); projection = nil end
 	point = nil
 	arrow.Visible = false
 	highlight.Enabled = false
 	highlight.Adornee = nil
 end
 
-local function project()
+local function project(bounce: number)
 	local camera = workspace.CurrentCamera
 	local target = point
 	if not camera or not target then arrow.Visible = false; caption.Visible = false; return end
 	local size = gui.AbsoluteSize
-	if size.X < 120 or size.Y < 120 then return end
+	if size.X < 120 or size.Y < 120 then arrow.Visible = false; caption.Visible = false; return end
 	local projected, inView = camera:WorldToScreenPoint(target)
 	local center = size / 2
 	local delta = Vector2.new(projected.X, projected.Y) - center
@@ -240,11 +255,40 @@ local function project()
 		pos = center + delta / scale
 		rotation = math.deg(math.atan2(delta.X, -delta.Y))
 	end
-	arrow.Position = UDim2.fromOffset(pos.X, pos.Y)
+	-- Keep the caption steady and bounce the arrow opposite the direction it points.
+	local radians = math.rad(rotation)
+	local arrowPos = pos + Vector2.new(-math.sin(radians), math.cos(radians)) * bounce
+	arrow.Position = UDim2.fromOffset(arrowPos.X, arrowPos.Y)
 	arrow.Rotation = rotation
 	arrow.Visible = true
-	caption.Position = UDim2.fromOffset(math.clamp(pos.X, 122, math.max(122, size.X - 122)), math.min(pos.Y + 35, size.Y - 23))
+	caption.Position = UDim2.fromOffset(math.clamp(pos.X, 122, math.max(122, size.X - 122)), math.min(pos.Y + 42, size.Y - 23))
 	caption.Visible = true
+end
+
+local function renderCue()
+	local wave = if reducedMotion then 0 else 0.5 - 0.5 * math.cos(time() * 2 * math.pi / 1.35)
+	if point then project(7 * wave) end
+	if highlight.Enabled then
+		highlight.OutlineTransparency = 0.12 + 0.3 * wave
+		highlight.FillTransparency = 0.92 - 0.08 * wave
+	end
+	local button = focusedButton
+	ring.Visible = button ~= nil and button.Parent ~= nil and button.Visible
+	if button and ring.Visible then
+		local offset = button.AbsolutePosition - gui.AbsolutePosition
+		ring.Position = UDim2.fromOffset(offset.X, offset.Y)
+		ring.Size = UDim2.fromOffset(button.AbsoluteSize.X, button.AbsoluteSize.Y)
+		halo.Visible = not reducedMotion
+		if halo.Visible then
+			local spread = 4 + 10 * wave
+			halo.Size = UDim2.new(1, spread, 1, spread)
+			haloStroke.Transparency = 0.42 + 0.52 * wave
+		end
+	end
+end
+
+local function stopRendering()
+	if renderConnection then renderConnection:Disconnect(); renderConnection = nil end
 end
 
 local function refresh()
@@ -285,19 +329,14 @@ local function refresh()
 			end
 		end
 	end
-	ring.Visible = button ~= nil
-	if button then
-		local offset = button.AbsolutePosition - gui.AbsolutePosition
-		ring.Position = UDim2.fromOffset(offset.X, offset.Y)
-		ring.Size = UDim2.fromOffset(button.AbsoluteSize.X, button.AbsoluteSize.Y)
-	end
+	focusedButton = button
+	reducedMotion = UIFeel.ReducedMotion()
 	if position and root and root:IsA("BasePart") then
 		point = position
 		caption.Text = goal.Title
 		local near = model ~= nil and (position - root.Position).Magnitude <= 50
 		highlight.Adornee = if near then model else nil
 		highlight.Enabled = near
-		if not projection then projection = RunService.RenderStepped:Connect(project) end
 	else
 		stopWorld()
 		caption.Visible = showModal
@@ -305,6 +344,12 @@ local function refresh()
 			caption.Text = goal.Description
 			caption.Position = UDim2.new(0.5, 0, 0, 24)
 		end
+	end
+	renderCue()
+	if point or focusedButton then
+		if not renderConnection then renderConnection = RunService.RenderStepped:Connect(renderCue) end
+	else
+		stopRendering()
 	end
 end
 
@@ -315,6 +360,7 @@ end)
 script.Destroying:Connect(function()
 	changed:Disconnect()
 	task.cancel(refreshLoop)
+	stopRendering()
 	stopWorld()
 	ring:Destroy()
 	highlight:Destroy()
