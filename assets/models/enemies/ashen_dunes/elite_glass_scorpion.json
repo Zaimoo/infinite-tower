@@ -1,0 +1,400 @@
+{
+ "EnemyId": "elite_glass_scorpion",
+ "Family": "SCORPION",
+ "Role": "ELITE",
+ "Biome": "ashen_dunes",
+ "Segments": [
+  {
+   "Name": "Body",
+   "Parent": null,
+   "Pivot": [
+    0.0,
+    2.0,
+    -0.0
+   ],
+   "Glow": [
+    {
+     "Mesh": "Body_Glow_Magma",
+     "Colour": [
+      255,
+      92,
+      30
+     ],
+     "Tris": 22,
+     "Centre": [
+      0.0,
+      5.418,
+      1.354
+     ],
+     "Size": [
+      0.4,
+      1.035,
+      0.708
+     ]
+    }
+   ],
+   "Centre": [
+    0.0,
+    3.829,
+    1.194
+   ],
+   "Size": [
+    2.73,
+    5.259,
+    7.188
+   ],
+   "Tris": 1276
+  },
+  {
+   "Name": "Head",
+   "Parent": "Body",
+   "Pivot": [
+    0.0,
+    1.9,
+    -2.4
+   ],
+   "Glow": [
+    {
+     "Mesh": "Head_Glow_Ember",
+     "Colour": [
+      255,
+      140,
+      52
+     ],
+     "Tris": 144,
+     "Centre": [
+      0.0,
+      2.15,
+      -3.21
+     ],
+     "Size": [
+      1.239,
+      0.2,
+      0.38
+     ]
+    }
+   ],
+   "Centre": [
+    0.0,
+    1.85,
+    -2.75
+   ],
+   "Size": [
+    1.95,
+    1.0,
+    1.365
+   ],
+   "Tris": 188
+  },
+  {
+   "Name": "JawL",
+   "Parent": "Head",
+   "Pivot": [
+    -0.9,
+    1.8,
+    -3.1
+   ],
+   "Glow": [],
+   "Centre": [
+    -1.444,
+    1.971,
+    -4.937
+   ],
+   "Size": [
+    1.484,
+    0.937,
+    4.126
+   ],
+   "Tris": 416
+  },
+  {
+   "Name": "JawR",
+   "Parent": "Head",
+   "Pivot": [
+    0.9,
+    1.8,
+    -3.1
+   ],
+   "Glow": [],
+   "Centre": [
+    1.444,
+    1.971,
+    -4.937
+   ],
+   "Size": [
+    1.484,
+    0.937,
+    4.126
+   ],
+   "Tris": 416
+  },
+  {
+   "Name": "Leg-1_1",
+   "Parent": "Body",
+   "Pivot": [
+    -1.2,
+    1.8,
+    -1.25
+   ],
+   "Glow": [],
+   "Centre": [
+    -1.815,
+    2.304,
+    -1.324
+   ],
+   "Size": [
+    1.508,
+    1.245,
+    0.544
+   ],
+   "Tris": 32
+  },
+  {
+   "Name": "Knee-1_1",
+   "Parent": "Leg-1_1",
+   "Pivot": [
+    -2.5,
+    2.8,
+    -1.438
+   ],
+   "Glow": [],
+   "Centre": [
+    -2.878,
+    1.512,
+    -1.46
+   ],
+   "Size": [
+    1.099,
+    2.936,
+    0.388
+   ],
+   "Tris": 102
+  },
+  {
+   "Name": "Leg-1_2",
+   "Parent": "Body",
+   "Pivot": [
+    -1.2,
+    1.8,
+    -0.2
+   ],
+   "Glow": [],
+   "Centre": [
+    -1.815,
+    2.304,
+    -0.2
+   ],
+   "Size": [
+    1.489,
+    1.244,
+    0.4
+   ],
+   "Tris": 32
+  },
+  {
+   "Name": "Knee-1_2",
+   "Parent": "Leg-1_2",
+   "Pivot": [
+    -2.5,
+    2.8,
+    -0.23
+   ],
+   "Glow": [],
+   "Centre": [
+    -2.877,
+    1.512,
+    -0.23
+   ],
+   "Size": [
+    1.097,
+    2.935,
+    0.342
+   ],
+   "Tris": 102
+  },
+  {
+   "Name": "Leg-1_3",
+   "Parent": "Body",
+   "Pivot": [
+    -1.2,
+    1.8,
+    0.85
+   ],
+   "Glow": [],
+   "Centre": [
+    -1.815,
+    2.304,
+    0.894
+   ],
+   "Size": [
+    1.501,
+    1.244,
+    0.486
+   ],
+   "Tris": 32
+  },
+  {
+   "Name": "Knee-1_3",
+   "Parent": "Leg-1_3",
+   "Pivot": [
+    -2.5,
+    2.8,
+    0.978
+   ],
+   "Glow": [],
+   "Centre": [
+    -2.878,
+    1.512,
+    0.978
+   ],
+   "Size": [
+    1.098,
+    2.936,
+    0.344
+   ],
+   "Tris": 102
+  },
+  {
+   "Name": "Leg1_1",
+   "Parent": "Body",
+   "Pivot": [
+    1.2,
+    1.8,
+    -1.25
+   ],
+   "Glow": [],
+   "Centre": [
+    1.815,
+    2.304,
+    -1.324
+   ],
+   "Size": [
+    1.508,
+    1.245,
+    0.544
+   ],
+   "Tris": 32
+  },
+  {
+   "Name": "Knee1_1",
+   "Parent": "Leg1_1",
+   "Pivot": [
+    2.5,
+    2.8,
+    -1.438
+   ],
+   "Glow": [],
+   "Centre": [
+    2.878,
+    1.512,
+    -1.46
+   ],
+   "Size": [
+    1.099,
+    2.936,
+    0.388
+   ],
+   "Tris": 102
+  },
+  {
+   "Name": "Leg1_2",
+   "Parent": "Body",
+   "Pivot": [
+    1.2,
+    1.8,
+    -0.2
+   ],
+   "Glow": [],
+   "Centre": [
+    1.815,
+    2.304,
+    -0.2
+   ],
+   "Size": [
+    1.489,
+    1.244,
+    0.4
+   ],
+   "Tris": 32
+  },
+  {
+   "Name": "Knee1_2",
+   "Parent": "Leg1_2",
+   "Pivot": [
+    2.5,
+    2.8,
+    -0.23
+   ],
+   "Glow": [],
+   "Centre": [
+    2.877,
+    1.512,
+    -0.23
+   ],
+   "Size": [
+    1.097,
+    2.935,
+    0.342
+   ],
+   "Tris": 102
+  },
+  {
+   "Name": "Leg1_3",
+   "Parent": "Body",
+   "Pivot": [
+    1.2,
+    1.8,
+    0.85
+   ],
+   "Glow": [],
+   "Centre": [
+    1.815,
+    2.304,
+    0.894
+   ],
+   "Size": [
+    1.501,
+    1.244,
+    0.486
+   ],
+   "Tris": 32
+  },
+  {
+   "Name": "Knee1_3",
+   "Parent": "Leg1_3",
+   "Pivot": [
+    2.5,
+    2.8,
+    0.978
+   ],
+   "Glow": [],
+   "Centre": [
+    2.878,
+    1.512,
+    0.978
+   ],
+   "Size": [
+    1.098,
+    2.936,
+    0.344
+   ],
+   "Tris": 102
+  }
+ ],
+ "Surface": {
+  "Tier": "B",
+  "Size": 1024,
+  "Color": "elite_glass_scorpion_color.png",
+  "Normal": "elite_glass_scorpion_normal.png"
+ },
+ "TotalTris": 3266,
+ "MeshCount": 18,
+ "Size": [
+  6.86,
+  6.41,
+  11.79
+ ],
+ "FeetY": 0.044,
+ "Convention": "Studs, Roblox axes (Y up, faces -Z), origin on the ground under the enemy. Pivot = joint position. Mesh objects are named after their joint.",
+ "Atlas": "atlas_ashen_dunes.png"
+}
