@@ -89,15 +89,20 @@ def blight_wolf():
         b = V((0, 1.7 - t * 2.9, 3.25 - t * 0.35 - (0.2 if k == 0 else 0)))
         body.spike(b, b + V((0, -0.35, 0.6 - t * 0.25)), 0.1, "thorn", segs=5)
     bloom(body, (0.3, -0.2, 2.95), (0.4, 0, 1), 0.28, petals=5)
-    body.tube([V((0, -1.9, 2.55)), V((0, -2.6, 2.6)), V((0, -3.1, 2.2)), V((0, -3.3, 1.8))], [0.2, 0.16, 0.1, 0.04], "fur_dark", sides=6)
+    tail1 = A.segment("ExtraTail1", (0, -1.9, 2.55), body)  # two links, keyed later (springs until then)
+    tail2 = A.segment("ExtraTail2", (0, -2.6, 2.6), tail1)
+    tail1.tube([V((0, -1.9, 2.55)), V((0, -2.6, 2.6))], [0.2, 0.16], "fur_dark", sides=6)
+    tail2.sphere(0.16, "fur_dark", loc=(0, -2.6, 2.6), segs=6, rings=4)  # covers the bend
+    tail2.tube([V((0, -2.6, 2.6)), V((0, -3.1, 2.2)), V((0, -3.3, 1.8))], [0.16, 0.1, 0.04], "fur_dark", sides=6)
     for k in range(3):
         p = V((0, -2.3 - k * 0.35, 2.65 - k * 0.15))
-        body.spike(p, p + V((0, -0.15, 0.35)), 0.06, "thorn", segs=4)
+        (tail1 if k == 0 else tail2).spike(p, p + V((0, -0.15, 0.35)), 0.06, "thorn", segs=4)
     # head: a lean skull, bark brow, thorn ears, bloom eyes, bared bone teeth
     head.sphere(0.5, "fur", loc=(0, 2.25, 3.15), scale=(0.92, 1.1, 0.85), segs=12, rings=7)
     head.tube([V((0, 2.55, 3.05)), V((0, 3.0, 2.95)), V((0, 3.38, 2.85))], [(0.28, 0.24), (0.22, 0.18), (0.14, 0.12)], "fur_dark", sides=8)
     head.sphere(0.09, "black", loc=(0, 3.45, 2.9), segs=6, rings=4)
-    head.tube([V((0, 2.5, 2.75)), V((0, 3.0, 2.66)), V((0, 3.26, 2.64))], [0.18, 0.12, 0.07], "fur_dark", sides=6)
+    jaw = A.segment("ExtraJaw", (0, 2.45, 2.8), head)  # the lower jaw opens on the bite (keyed later)
+    jaw.tube([V((0, 2.5, 2.75)), V((0, 3.0, 2.66)), V((0, 3.26, 2.64))], [0.18, 0.12, 0.07], "fur_dark", sides=6)
     head.box((0.55, 0.4, 0.1), "bark_bruise", loc=(0, 2.4, 3.55), rot=(-15, 0, 0), bevel=0.03)
     for s in (1, -1):
         head.spike((s * 0.28, 2.1, 3.45), (s * 0.45, 1.9, 4.0), 0.14, "thorn", segs=4)
@@ -208,14 +213,15 @@ def rot_mender():
             fore.tube([V((0.8, 0.8, 0.1)), V((0.85, 0.8, 1.5)), V((0.8, 0.78, 2.7)), V((0.95, 0.75, 2.95))], [0.06, 0.06, 0.06, 0.04], "bark_dark", sides=5)
         else:
             c = V((-0.8, 0.85, 1.85))
-            fore.rod((-0.8, 0.78, 2.5), c + V((0, 0, 0.32)), 0.025, "iron", segs=4)
-            fore.cyl(0.18, 0.2, 0.08, "iron", loc=c + V((0, 0, 0.3)), segs=6)
-            fore.cyl(0.2, 0.18, 0.08, "iron", loc=c - V((0, 0, 0.3)), segs=6)
+            lamp = A.segment("ExtraLantern", (-0.8, 0.78, 2.5), fore)  # swings from the hand (Hanging spring)
+            lamp.rod((-0.8, 0.78, 2.5), c + V((0, 0, 0.32)), 0.025, "iron", segs=4)
+            lamp.cyl(0.18, 0.2, 0.08, "iron", loc=c + V((0, 0, 0.3)), segs=6)
+            lamp.cyl(0.2, 0.18, 0.08, "iron", loc=c - V((0, 0, 0.3)), segs=6)
             for k in range(4):
                 a = k * math.pi / 2 + math.pi / 4
-                fore.rod(c + V((math.cos(a) * 0.17, math.sin(a) * 0.17, -0.28)), c + V((math.cos(a) * 0.17, math.sin(a) * 0.17, 0.28)), 0.025, "iron", segs=4)
-            fore.sphere(0.15, BLOOM, loc=c, scale=(1, 1, 1.3), segs=8, rings=5)
-            fore.spike(c - V((0, 0, 0.34)), c - V((0, 0, 0.6)), 0.05, "sap", segs=5)
+                lamp.rod(c + V((math.cos(a) * 0.17, math.sin(a) * 0.17, -0.28)), c + V((math.cos(a) * 0.17, math.sin(a) * 0.17, 0.28)), 0.025, "iron", segs=4)
+            lamp.sphere(0.15, BLOOM, loc=c, scale=(1, 1, 1.3), segs=8, rings=5)
+            lamp.spike(c - V((0, 0, 0.34)), c - V((0, 0, 0.6)), 0.05, "sap", segs=5)
     rooted_legs(A, body, 0.26)
     return A
 
@@ -240,12 +246,13 @@ def treant(A, boss=False, alpha=False):
         a = math.radians(-50 + k * 33)
         body.tube([V((math.sin(a) * 0.35, 0.95, 3.6)), V((math.sin(a) * 0.4, 1.0, 3.2)), V((math.sin(a) * 0.36, 0.98, 2.9))], [0.05, 0.04, 0.0], "sap", sides=4)
     body.cyl(0.9, 1.0, 0.6, "bark_dark", loc=(0, 0, 2.6), segs=10)
-    # a mantle of hanging moss over the shoulders
+    # a mantle of hanging moss over the shoulders (ExtraMantle, Cloth spring)
+    mantle = A.segment("ExtraMantle", (0, 0, 5.35), body)
     for k in range(14 if boss else 9):
         a = math.pi * 0.15 + (math.pi * 1.7) * k / ((14 if boss else 9) - 1) + math.pi / 2
         b = V((math.cos(a) * 1.0, math.sin(a) * 0.95, 5.35))
         L = rnd.uniform(0.8, 1.4) * (1.5 if boss else 1.0)
-        body.spike(b, b + V((math.cos(a) * 0.15, math.sin(a) * 0.15, -L)), 0.16, "moss" if k % 2 else "moss_dark", segs=4)
+        mantle.spike(b, b + V((math.cos(a) * 0.15, math.sin(a) * 0.15, -L)), 0.16, "moss" if k % 2 else "moss_dark", segs=4)
     for k in range(3):
         bloom(body, (rnd.uniform(-0.8, 0.8), rnd.uniform(-1.0, -0.5), rnd.uniform(3.0, 5.0)), (0, -1, 0.3), 0.25, petals=5)
     # head: the trunk's crown, a face of knots with glowing eyes, branches above
@@ -254,11 +261,12 @@ def treant(A, boss=False, alpha=False):
     for s in (1, -1):
         head.sphere(0.13, BLIGHT, loc=(s * 0.32, 0.8, 5.9), segs=6, rings=4)
     head.box((0.5, 0.1, 0.1), "black", loc=(0, 0.8, 5.5))
+    branches = A.segment("ExtraBranches", (0, 0.05, 6.15), head)  # the crown branches sway stiffly (Rigid spring)
     for k in range(6 if boss else 4):
         a = 2 * math.pi * k / (6 if boss else 4) + 0.4
         b = V((math.cos(a) * 0.55, 0.05 + math.sin(a) * 0.5, 6.15))
         t = b + V((math.cos(a) * 0.7, math.sin(a) * 0.5, rnd.uniform(1.0, 1.6) * (1.25 if boss else 1)))
-        branch(head, b, t, 0.16, "bark_dark", twigs=2, seed=k)
+        branch(branches, b, t, 0.16, "bark_dark", twigs=2, seed=k)
     if boss:
         # a jagged crown of dead wood bound with a gold band
         head.torus(0.82, 0.08, "gold", loc=(0, 0.05, 6.22), major=16, minor=4)

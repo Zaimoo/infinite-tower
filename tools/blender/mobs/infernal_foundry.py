@@ -122,18 +122,19 @@ def bellows_imp():
     # a leather bellows pack strapped to its back, nozzle up, puffing sparks
     for s in (1, -1):
         body.tube([V((s * 0.55, 0.62, 4.3)), V((s * 0.45, 0.5, 3.4)), V((s * 0.5, -0.6, 3.0))], [0.06] * 3, "leather_dark", sides=4)
-    body.prism([(-0.8, 0), (0.8, 0), (0.55, 1.5), (-0.55, 1.5)], 0.12, "wood", loc=(0, -0.9, 3.0), rot=(-8, 0, 0))
-    body.prism([(-0.8, 0), (0.8, 0), (0.55, 1.5), (-0.55, 1.5)], 0.12, "wood", loc=(0, -1.6, 3.0), rot=(8, 0, 0))
+    pack = A.segment("ExtraBellows", (0, -0.9, 3.0), body)  # the pack pumps on ROUSE (keyed later; spring until then)
+    pack.prism([(-0.8, 0), (0.8, 0), (0.55, 1.5), (-0.55, 1.5)], 0.12, "wood", loc=(0, -0.9, 3.0), rot=(-8, 0, 0))
+    pack.prism([(-0.8, 0), (0.8, 0), (0.55, 1.5), (-0.55, 1.5)], 0.12, "wood", loc=(0, -1.6, 3.0), rot=(8, 0, 0))
     for k in range(4):
         y = -1.0 - k * 0.17
-        body.box((1.4 - k * 0.0, 0.14, 1.1), "leather" if k % 2 else "leather_dark", loc=(0, y, 3.65), bevel=0.04)
+        pack.box((1.4 - k * 0.0, 0.14, 1.1), "leather" if k % 2 else "leather_dark", loc=(0, y, 3.65), bevel=0.04)
     for z in (3.2, 4.3):
-        body.box((1.3, 0.85, 0.08), "brass_dark", loc=(0, -1.25, z))
-    body.rod((0, -1.25, 4.5), (0, -1.1, 5.4), 0.14, "brass", segs=8, r2=0.08)
+        pack.box((1.3, 0.85, 0.08), "brass_dark", loc=(0, -1.25, z))
+    pack.rod((0, -1.25, 4.5), (0, -1.1, 5.4), 0.14, "brass", segs=8, r2=0.08)
     rnd = random.Random(25)
     for k in range(5):
         c = V((rnd.uniform(-0.3, 0.3), -1.1 + rnd.uniform(-0.2, 0.2), 5.6 + k * 0.28))
-        body.sphere(0.07 + 0.03 * (k % 2), MOLTEN if k % 2 else EMBER, loc=c, segs=6, rings=4)
+        pack.sphere(0.07 + 0.03 * (k % 2), MOLTEN if k % 2 else EMBER, loc=c, segs=6, rings=4)
     body.rod((0.5, -0.9, 3.0), (0.9, -0.6, 2.4), 0.07, "wood", segs=5)
     return scaled(A, 0.6)
 
@@ -170,11 +171,12 @@ def forge_construct():
         fore.sphere(0.25, "brass_dark", loc=(s * 1.3, 0.05, 3.85), segs=8, rings=5)
         if s == 1:
             fore.cyl(0.26, 0.26, 0.8, "iron", loc=(1.3, 0.1, 3.4), segs=10)
-            fore.cyl(0.14, 0.14, 0.6, "iron_light", loc=(1.3, 0.1, 2.75), segs=8)
-            fore.box((1.2, 0.75, 0.75), "iron_dark", loc=(1.3, 0.15, 2.15), bevel=0.1)
+            piston = A.segment("ExtraPiston", (1.3, 0.1, 3.05), fore)  # fires as the hammer lands (keyed later)
+            piston.cyl(0.14, 0.14, 0.6, "iron_light", loc=(1.3, 0.1, 2.75), segs=8)
+            piston.box((1.2, 0.75, 0.75), "iron_dark", loc=(1.3, 0.15, 2.15), bevel=0.1)
             for sx in (1, -1):
-                fore.box((0.12, 0.8, 0.8), "brass_dark", loc=(1.3 + sx * 0.5, 0.15, 2.15))
-            fore.box((0.9, 0.08, 0.5), EMBER, loc=(1.3, 0.55, 2.15))
+                piston.box((0.12, 0.8, 0.8), "brass_dark", loc=(1.3 + sx * 0.5, 0.15, 2.15))
+            piston.box((0.9, 0.08, 0.5), EMBER, loc=(1.3, 0.55, 2.15))
         else:
             fore.cyl(0.24, 0.2, 0.9, "iron", loc=(-1.3, 0.1, 3.35), segs=8)
             for sx in (1, -1):
@@ -221,12 +223,18 @@ def molten_taskmaster(alpha=False):
         fore.sphere(0.36, "slag_dark", loc=(s * 1.72, 0.4, 2.35), segs=10, rings=6)
         seam(fore, [(s * 1.95, 0.3, 3.5), (s * 2.0, 0.35, 3.1), (s * 1.95, 0.4, 2.9)], 0.05)
     # the chain: from the right fist down to the floor and trailing behind, its last links still glowing
+    # three links ExtraChain1-3, pivoting at the fist, the knee of the drop and where it meets the floor
     fist = V((1.72, 0.45, 2.3))
-    chain_links(A.seg("ForearmR"), [fist, fist + V((0.15, 0.1, -1.2)), fist + V((0.25, -0.4, -2.2)), V((2.0, -1.5, 0.1)), V((1.8, -3.0, 0.1))],
-                0.19, ("brass_dark", "chain", "chain") if alpha else ("chain",))
-    fore = A.seg("ForearmR")
-    fore.sphere(0.32, MOLTEN, loc=(1.75, -3.25, 0.25), segs=8, rings=5)
-    fore.box((0.35, 0.35, 0.35), "iron_dark", loc=(1.75, -3.25, 0.25), rot=(30, 20, 0))
+    pts = [fist, fist + V((0.15, 0.1, -1.2)), fist + V((0.25, -0.4, -2.2)), V((2.0, -1.5, 0.1)), V((1.8, -3.0, 0.1))]
+    colours = ("brass_dark", "chain", "chain") if alpha else ("chain",)
+    links, prev = [], A.seg("ForearmR")
+    for n, (a, b) in enumerate(((0, 2), (2, 3), (3, 4))):
+        link = A.segment(f"ExtraChain{n + 1}", pts[a], prev)
+        chain_links(link, pts[a:b + 1], 0.19, colours)
+        links.append(link)
+        prev = link
+    links[2].sphere(0.32, MOLTEN, loc=(1.75, -3.25, 0.25), segs=8, rings=5)
+    links[2].box((0.35, 0.35, 0.35), "iron_dark", loc=(1.75, -3.25, 0.25), rot=(30, 20, 0))
     for s, side in ((-1, "L"), (1, "R")):
         leg = A.segment(f"Leg{side}", (s * 0.6, 0, 2.85), body)
         knee = A.segment(f"Knee{side}", (s * 0.65, 0.05, 1.5), leg)

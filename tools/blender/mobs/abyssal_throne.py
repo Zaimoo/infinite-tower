@@ -102,7 +102,8 @@ def abyss_reaver():
     A = M.MobAsset("mob_abyss_reaver", "WEAPON_BIPED", ATLAS, "REGULAR")
     body, head, arms, legs = biped_body(A, "iron_dark", "iron", "crimson")
     # a tattered crimson half-cape off the left shoulder, a crimson sash
-    tattered(body, 1.0, 3.0, "silk", K.M((-0.45, -0.55, 5.2), (6, 0, 8)), teeth=4, seed=1)
+    cape = A.segment("ExtraCape", (-0.45, -0.55, 5.2), body)  # the half-cape (Cloth spring)
+    tattered(cape, 1.0, 3.0, "silk", K.M((-0.45, -0.55, 5.2), (6, 0, 8)), teeth=4, seed=1)
     body.tube([V((-0.8, 0.55, 4.9)), V((0, 0.62, 4.1)), V((0.8, 0.58, 3.35))], [0.09] * 3, "crimson_dark", sides=5)
     body.box((0.25, 0.12, 0.25), CRIMSON, loc=(0, 0.66, 4.45), rot=(0, 45, 0))
     # head: a narrow visored helm with crimson eye slits and swept horns
@@ -190,8 +191,8 @@ def void_hierophant():
         b = V((math.sin(a) * 0.42, 0.05, 5.05))
         head.spike(b, b + V((math.sin(a) * 0.25, 0, 0.45 - abs(k - 2) * 0.1)), 0.05, "gold", segs=4)
     head.sphere(0.07, CRIMSON, loc=(0, 0.38, 6.25), segs=6, rings=4)
-    left = A.seg("ForearmL")
     c = V((-0.82, 0.55, 1.85))
+    left = A.segment("ExtraCenser", (-0.82, 0.42, 2.65), A.seg("ForearmL"))  # swings on its chain (Hanging spring)
     chain_links(left, [(-0.82, 0.42, 2.65), c + V((0, 0, 0.35))], 0.06, ("gold_dark",))
     left.sphere(0.25, "iron_dark", loc=c, scale=(1, 1, 0.85), segs=10, rings=6)
     left.torus(0.25, 0.04, "gold", loc=c, major=12, minor=4)
@@ -279,12 +280,15 @@ def crimson_overlord():
     body.cyl(0.28, 0.28, 0.06, "black", loc=(0, 0.72, 4.1), rot=(90, 0, 0), segs=8)
     body.cyl(0.18, 0.18, 0.08, VOID, loc=(0, 0.74, 4.1), rot=(90, 0, 0), segs=8)
     body.torus(0.7, 0.18, "crimson_dark", mat=K.M((0, -0.04, 5.2)) @ K.M(scale=(1.1, 0.85, 1)), major=18, minor=6)
+    # the chain mantle in three hanging groups: the two left chains, the centre one, the two right (Cloth springs)
+    mantles = [A.segment(name, (gx, -0.65, 5.15), body) for name, gx in (("ExtraMantleL", -0.75), ("ExtraMantle", 0.0), ("ExtraMantleR", 0.75))]
     for k in range(5):
         x = -1.0 + k * (2.0 / 4)
         top = V((x, -0.6 - abs(x) * 0.1, 5.15))
         bottom = top + V((x * 0.15, -0.5 - rnd.uniform(0, 0.2), -4.4 + abs(x) * 0.6))
-        chain_links(body, [top, top.lerp(bottom, 0.5) + V((0, -0.15, 0)), bottom], 0.17, ("chain", "iron_dark"))
-        body.spike(bottom, bottom + V((0, -0.05, -0.35)), 0.09, "iron_light", segs=4)
+        group = mantles[(0, 0, 1, 2, 2)[k]]
+        chain_links(group, [top, top.lerp(bottom, 0.5) + V((0, -0.15, 0)), bottom], 0.17, ("chain", "iron_dark"))
+        group.spike(bottom, bottom + V((0, -0.05, -0.35)), 0.09, "iron_light", segs=4)
     for k in range(4):
         body.sphere(0.06, CRIMSON, loc=(-0.85 + k * 0.57, -0.7, 4.95), segs=6, rings=4)
     # head: a closed black helm with a crimson visor, under a tall crown of iron spikes

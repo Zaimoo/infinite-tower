@@ -83,11 +83,13 @@ def rune_mite():
     for k in range(5):
         a = 2 * math.pi * k / 5
         body.cyl(0.08, 0.08, 0.06, "silver", loc=(math.cos(a) * 0.5, -0.1 + math.sin(a) * 0.6, 1.53), segs=6)
-    body.rod((0, -1.2, 1.1), (0, -1.55, 1.3), 0.05, "brass_dark", segs=5)
-    body.torus(0.2, 0.05, "brass", loc=(0, -1.62, 1.35), rot=(0, 90, 0), major=10, minor=4)
-    glyph_plate(body, (0, -0.1, 1.95), 1.5, "stone", STAR, rot=(4, 0, 45), seed=1)
-    glyph_plate(body, (0, -0.1, 2.15), 0.85, "midnight", INDIGO, rot=(-6, 0, 10), seed=2)
-    body.sphere(0.12, STAR, loc=(0, -0.1, 2.35), segs=6, rings=4)
+    key = A.segment("ExtraKey", (0, -1.2, 1.1), body)  # the winding key (Rigid spring)
+    key.rod((0, -1.2, 1.1), (0, -1.55, 1.3), 0.05, "brass_dark", segs=5)
+    key.torus(0.2, 0.05, "brass", loc=(0, -1.62, 1.35), rot=(0, 90, 0), major=10, minor=4)
+    shell = A.segment("ExtraShell", (0, -0.1, 1.95), body)  # the floating rune-plate shell (keyed to hover later)
+    glyph_plate(shell, (0, -0.1, 1.95), 1.5, "stone", STAR, rot=(4, 0, 45), seed=1)
+    glyph_plate(shell, (0, -0.1, 2.15), 0.85, "midnight", INDIGO, rot=(-6, 0, 10), seed=2)
+    shell.sphere(0.12, STAR, loc=(0, -0.1, 2.35), segs=6, rings=4)
     # head: a riveted brass dome with one lens eye
     head.sphere(0.45, "brass_dark", loc=(0, 1.2, 1.0), scale=(1.0, 0.9, 0.75), segs=12, rings=7)
     head.cyl(0.16, 0.16, 0.12, "silver", loc=(0, 1.58, 1.08), rot=(90, 0, 0), segs=10)
@@ -152,8 +154,8 @@ def astral_scribe():
     fore.cyl(0.08, 0.06, 0.25, "brass", loc=(0.82, 0.42, 5.4), segs=6)
     fore.prism([(-0.05, 0), (0.05, 0), (0.22, 0.6), (0.18, 1.1), (0.0, 1.35), (-0.12, 0.8)], 0.03, "parchment", loc=(0.82, 0.42, 5.5), rot=(0, 0, 90))
     fore.spike((0.82, 0.42, 0.9), (0.82, 0.42, 0.55), 0.05, STAR, segs=5)
-    left = A.seg("ForearmL")
     c = V((-0.9, 0.95, 3.25))
+    left = A.segment("ExtraTome", c, A.seg("ForearmL"))  # the open floating tome and its trailing pages (Rigid spring)
     book(left, c, (1.0, 0.7, 0.12), "book_blue", rot=(-35, 0, 0), open_=True)
     left.sphere(0.08, STAR, loc=c + V((0, 0.1, 0.25)), segs=6, rings=4)
     for k in range(4):
@@ -177,12 +179,13 @@ def glyph_warden():
         head.cyl(0.1, 0.1, 0.02, STAR, loc=(s * 0.15, 0.46, 4.8), rot=(90, 0, 0), segs=8)
     head.tube([V((0, 0.4, 4.55)), V((0, 0.42, 4.25)), V((0, 0.36, 4.05))], [(0.18, 0.08), (0.14, 0.07), (0.0, 0.0)], "silver", sides=6)
     body.torus(0.5, 0.12, "brass", mat=K.M((0, 0, 4.25)) @ K.M(scale=(1, 0.85, 1)), major=16, minor=5)
+    rings = A.segment("ExtraRing", (0, 0, 2.6), body)  # the three glyph rings orbit together (Spin)
     for k, (r, tilt, z, col) in enumerate(((1.35, (20, 0, 0), 3.2, STAR), (1.2, (-15, 25, 0), 2.6, INDIGO), (1.5, (5, -20, 0), 1.9, STAR))):
-        body.torus(r, 0.035, col, loc=(0, 0, z), rot=tilt, major=28, minor=3)
+        rings.torus(r, 0.035, col, loc=(0, 0, z), rot=tilt, major=28, minor=3)
         m = K.M((0, 0, z), tilt)
         for j in range(4):
             a = 2 * math.pi * j / 4 + k
-            body.box((0.16, 0.16, 0.04), "brass", mat=m @ K.M((math.cos(a) * r, math.sin(a) * r, 0), (0, 0, math.degrees(a))))
+            rings.box((0.16, 0.16, 0.04), "brass", mat=m @ K.M((math.cos(a) * r, math.sin(a) * r, 0), (0, 0, math.degrees(a))))
     return A
 
 
@@ -301,9 +304,10 @@ def rift_warden():
         for z in (3.45, 3.0):
             fore.torus(0.32, 0.05, "brass", loc=(s * 1.78, 0.22, z), major=12, minor=4)
         fore.sphere(0.32, "brass_dark", loc=(s * 1.82, 0.35, 2.55), segs=10, rings=6)
-        book(fore, (s * 2.55, 0.55, 3.3), (0.32, 1.3, 1.7), "book_red" if s > 0 else "book_blue", rot=(0, 0, s * 12))
-        fore.cyl(0.3, 0.3, 0.06, "brass", loc=(s * 2.75, 0.55, 3.3), rot=(0, 90, 0), segs=8)
-        fore.cyl(0.18, 0.18, 0.08, STAR, loc=(s * 2.77, 0.55, 3.3), rot=(0, 90, 0), segs=6)
+        tome = A.segment(f"ExtraTome{side}", (s * 2.2, 0.55, 3.3), fore)  # the floating tome shield (keyed later)
+        book(tome, (s * 2.55, 0.55, 3.3), (0.32, 1.3, 1.7), "book_red" if s > 0 else "book_blue", rot=(0, 0, s * 12))
+        tome.cyl(0.3, 0.3, 0.06, "brass", loc=(s * 2.75, 0.55, 3.3), rot=(0, 90, 0), segs=8)
+        tome.cyl(0.18, 0.18, 0.08, STAR, loc=(s * 2.77, 0.55, 3.3), rot=(0, 90, 0), segs=6)
     # legs: stacked tomes on brass feet
     for s, side in ((-1, "L"), (1, "R")):
         leg = A.segment(f"Leg{side}", (s * 0.65, 0, 2.5), body)

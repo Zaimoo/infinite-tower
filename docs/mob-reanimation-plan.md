@@ -1,6 +1,6 @@
 # Tower Mob Reanimation: Implementation Plan
 
-Status: **steps 1–3 built** (animator core; size and stride; extra-joint pipeline and springs); steps 4–8 to do. Decisions settled (§8). Owner: Zaimoo. Written 2026-11-09.
+Status: **steps 1–3 built**, step 4 done (all five pairs exported); steps 5–8 to do. Decisions settled (§8). Owner: Zaimoo. Written 2026-11-09.
 
 All 60 tower enemies are now remodelled meshes (`docs/tower-mob-remodel-plan.md`), but they still move with the clips written for the old part rigs. This plan rebuilds their **idle, walking and attack** animation (plus the hit, death and awakening clips those blend with) so each family moves like what it is. It stays on the existing contract: rigid segments, `Motor6D`s, clips authored as code in `TowerEnemyClips`, no uploaded `Animation` assets. The server, the network records and combat timings don't change.
 
@@ -185,6 +185,16 @@ Appendages that are now welded into a parent segment become **joints of their ow
 | Spore Skitter, Moss Crawler | `ExtraAntennaL`/`R` (`Rigid`) |
 | Tide Claw | `ExtraEyeL`/`R` (eyestalks, `Rigid`) |
 | Spore Matriarch | `ExtraSkirt` (tendril skirt, `Cloth`), `ExtraSacs` (spore-sac lanterns, `Hanging`) |
+
+**As built, pair 5:** the Rune Mite's `ExtraKey` is a `Rigid` spring, not `Spin`: the key turns about the body's long axis and a Spin joint only turns about up (registry updated). The Glyph Warden's three rings orbit together as one `ExtraRing`; the Crimson Overlord's five back chains hang as `ExtraMantleL` / `ExtraMantle` / `ExtraMantleR`; the Astral Scribe's tome is `ExtraTome` on `ForearmL`. The Void Invoker and Throne Executioners are unchanged.
+
+**As built, pair 4:** the Tidal Leviathan's tail is `KneeL` → `ExtraTail1` → `ExtraTail2` (the fin rides the last link), with `ExtraJaw` and `ExtraFrill` (both side frills) on its head; the Blight Wolf got a two-link tail like the Frost Hound. The Drowned Acolyte keeps its robe whole. 2048² boss bakes can still run out of memory on a busy machine even alone; a retry in a fresh process has always worked.
+
+**As built, pair 3:** the Crag Channeler keeps its cloak on the body (it is a closed tube around the torso, so tilting it would cut through the legs). The Herald's speaking horn and rings are its `ExtraBeak`. Boss 2048² bakes need their own Blender process: the Storm Roc ran out of memory baked after four other enemies in one run, so run bosses one per process.
+
+**As built, pair 2:** the Frostbound King's five cloak panels hang as three joints (`ExtraCape1`–`3`: the two left panels, the centre one, the two right panels); the Glass Scorpion Alpha's `Trophy_SunCrest` now hangs from `ExtraSting`; the Ember Oracle and Rime Chaplain have no `ExtraHem` (single-tube robes, like the Chanter). The Ember Oracle's `ExtraRing` is glow-only, so the factory gives it an invisible carrier part.
+
+**As built, pair 1:** the Spore Matriarch's crown is one `ExtraCrown` joint (both morel tiers; the morel is radially symmetric, so it rises rather than splits), its four spore sacs are `ExtraSacs1`–`ExtraSacs4` (each swings on its own stalk), and the Sporecap Chanter has no `ExtraHem` (its robe is one tube, so a hem split would need a remodel).
 
 That comes to **43 of the 60 enemies** (20 with keyed extras, 23 with springs only) across all 10 biomes. Enemies not listed keep their current models. The exact split is settled in each biome's generator, so the tables may shift by a piece or two where a model turns out differently.
 

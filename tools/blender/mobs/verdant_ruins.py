@@ -54,8 +54,9 @@ def moss_crawler():
     head.box((1.4, 0.7, 0.24), "stone", loc=(0, 2.25, 1.98), rot=(-14, 0, 0), bevel=0.08)
     for s in (1, -1):
         head.sphere(0.17, GLOW, loc=(s * 0.42, 2.82, 1.62), segs=8, rings=6)
-        head.tube([V((s * 0.3, 2.5, 1.9)), V((s * 0.6, 2.9, 2.5)), V((s * 0.95, 3.0, 2.8)), V((s * 1.15, 2.8, 2.75))],
-                  [0.06, 0.05, 0.04, 0.0], "vine", sides=5)
+        ant = A.segment("ExtraAntennaR" if s == 1 else "ExtraAntennaL", (s * 0.3, 2.5, 1.9), head)  # springs (mob_extras)
+        ant.tube([V((s * 0.3, 2.5, 1.9)), V((s * 0.6, 2.9, 2.5)), V((s * 0.95, 3.0, 2.8)), V((s * 1.15, 2.8, 2.75))],
+                 [0.06, 0.05, 0.04, 0.0], "vine", sides=5)
     # mandibles
     for s, side in ((-1, "L"), (1, "R")):
         jaw = A.segment(f"Jaw{side}", (s * 0.45, 2.85, 1.3), head)
@@ -237,14 +238,23 @@ def vinebound(alpha=False):
             M.moss(fore, m @ V((0.4, -0.1, 0.7)), 0.16, 2, "moss", seed=40)
         else:
             # thorn whip: a thick barbed vine hanging from the gauntlet, coiling at the end
+            # three links (ExtraWhip1-3, keyed by the attack later; springs until then), pivoting at pts 0, 2, 4
             pts = [V((1.86, 0.4, 2.95)), V((1.95, 0.9, 2.2)), V((2.1, 1.3, 1.3)), V((2.0, 1.6, 0.6)), V((1.6, 1.8, 0.35)), V((1.4, 1.55, 0.6))]
-            fore.tube(pts, [0.14, 0.13, 0.12, 0.1, 0.08, 0.05], "vine_dark", sides=7)
+            radii = [0.14, 0.13, 0.12, 0.1, 0.08, 0.05]
+            links, prev = [], fore
+            for n, (a, b) in enumerate(((0, 2), (2, 4), (4, 5))):
+                link = A.segment(f"ExtraWhip{n + 1}", pts[a], prev)
+                link.tube(pts[a:b + 1], radii[a:b + 1], "vine_dark", sides=7)
+                link.sphere(radii[a] * 1.05, "vine_dark", loc=pts[a], segs=8, rings=5)  # covers the bend
+                links.append(link)
+                prev = link
+            owner = {1: 0, 2: 1, 3: 1, 4: 2}
             for k in range(1, len(pts) - 1):
                 d = (pts[k + 1] - pts[k - 1]).normalized()
                 side_v = d.cross(V((0, 0, 1))).normalized() if abs(d.z) < 0.9 else V((1, 0, 0))
                 for sg in (1, -1):
-                    fore.spike(pts[k] + side_v * sg * 0.1, pts[k] + side_v * sg * 0.38 + d * 0.12, 0.06, "bark_dark", segs=4)
-            fore.sphere(0.12, GLOW, loc=pts[-1], segs=8, rings=5)
+                    links[owner[k]].spike(pts[k] + side_v * sg * 0.1, pts[k] + side_v * sg * 0.38 + d * 0.12, 0.06, "bark_dark", segs=4)
+            links[2].sphere(0.12, GLOW, loc=pts[-1], segs=8, rings=5)
     for s, side in ((-1, "L"), (1, "R")):
         leg = A.segment(f"Leg{side}", (s * 0.7, 0, 3.05), body)
         knee = A.segment(f"Knee{side}", (s * 0.75, 0.05, 1.6), leg)
@@ -283,20 +293,22 @@ def mossbound_guardian():
         x = rnd.uniform(-3.4, 3.4)
         y = rnd.uniform(-2.2, 0.8)
         M.moss(body, (x, y, 12.2 - abs(x) * 0.1), rnd.uniform(0.7, 1.05), 3, rnd.choice(("moss", "moss_dark", "moss_light")), seed=60 + k, flat=0.55)
+    vines = A.segment("ExtraVines", (0, 2.55, 11.9), body)  # the hanging vines sway as one curtain (spring)
     for k in range(6):
         x = -3.2 + k * 1.3
         top = V((x, 2.4 + (k % 2) * 0.3, 11.9))
-        body.tube([top, top + V((0.1, 0.35, -1.2)), top + V((-0.1, 0.4, -2.6)), top + V((0.05, 0.3, -3.4 - (k % 3) * 0.5))], [0.13, 0.12, 0.1, 0.0], "vine", sides=6)
-        M.leaf(body, top + V((0.1, 0.38, -1.5)), top + V((0.45, 0.6, -1.9)), 0.3, "leaf")
+        vines.tube([top, top + V((0.1, 0.35, -1.2)), top + V((-0.1, 0.4, -2.6)), top + V((0.05, 0.3, -3.4 - (k % 3) * 0.5))], [0.13, 0.12, 0.1, 0.0], "vine", sides=6)
+        M.leaf(vines, top + V((0.1, 0.38, -1.5)), top + V((0.45, 0.6, -1.9)), 0.3, "leaf")
     # a broken pediment on the back and a tree growing from the left shoulder
     body.prism([(-3.2, 0), (3.2, 0), (0, 1.8)], 0.9, "stone", loc=(0, -2.3, 12.0))
     body.box((6.6, 0.95, 0.4), "stone_dark", loc=(0, -2.3, 11.95), bevel=0.1)
     trunk = [V((-3.4, -0.6, 12.4)), V((-3.9, -0.8, 13.8)), V((-4.1, -1.0, 15.2)), V((-4.0, -0.9, 16.2))]
-    body.tube(trunk, [0.65, 0.52, 0.4, 0.28], "bark", sides=9)
+    tree = A.segment("ExtraTree", trunk[0], body)  # the shoulder tree sways stiffly (spring)
+    tree.tube(trunk, [0.65, 0.52, 0.4, 0.28], "bark", sides=9)
     for k, d in enumerate((V((0.9, 0.2, 0.6)), V((-0.8, 0.3, 0.4)), V((0.1, -0.7, 0.7)))):
-        body.tube([trunk[2], trunk[2] + d], [0.2, 0.08], "bark_dark", sides=6)
+        tree.tube([trunk[2], trunk[2] + d], [0.2, 0.08], "bark_dark", sides=6)
     for k, (dx, dy, dz, r) in enumerate(((0, 0, 0.7, 1.8), (1.2, 0.3, 0.2, 1.3), (-1.3, 0.2, 0.3, 1.35), (0.2, -1.1, 0.3, 1.2), (0.3, 1.0, -0.1, 1.1), (-0.6, -0.4, 1.4, 1.0))):
-        body.ico(r, "leaf" if k % 2 else "leaf_dark", loc=trunk[3] + V((dx, dy, dz)), scale=(1, 1, 0.8), subdiv=2, jitter=0.12, seed=70 + k)
+        tree.ico(r, "leaf" if k % 2 else "leaf_dark", loc=trunk[3] + V((dx, dy, dz)), scale=(1, 1, 0.8), subdiv=2, jitter=0.12, seed=70 + k)
     # head: a statue face sunk between the shoulders, broken tiara, glyph eyes, moss beard
     head.box((2.0, 1.8, 2.0), "stone", loc=(0, 1.55, 13.2), bevel=0.3)
     head.box((2.3, 0.6, 0.5), "stone_dark", loc=(0, 2.35, 13.75), bevel=0.12)

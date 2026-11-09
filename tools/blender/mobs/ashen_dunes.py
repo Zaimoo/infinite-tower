@@ -48,8 +48,9 @@ def dune_scarab():
     head = A.segment("Head", (0, 1.55, 1.45), body)
     # iridescent split wing-cases over a bronze body, a pronotum shield, sand streaming off the back
     body.sphere(1.0, "bronze_dark", loc=(0, -0.3, 1.45), scale=(1.25, 1.65, 0.7), segs=14, rings=8)
-    for s in (1, -1):
-        body.sphere(1.0, "bronze_iri", loc=(s * 0.62, -0.45, 1.85), scale=(0.68, 1.55, 0.62), segs=12, rings=8)
+    for s in (1, -1):  # each wing-case hinges at its front edge (ExtraElytraL/R, keyed later; springs until then)
+        case = A.segment("ExtraElytraR" if s == 1 else "ExtraElytraL", (s * 0.4, 0.9, 2.05), body)
+        case.sphere(1.0, "bronze_iri", loc=(s * 0.62, -0.45, 1.85), scale=(0.68, 1.55, 0.62), segs=12, rings=8)
     body.box((0.08, 3.0, 0.1), "gold", loc=(0, -0.45, 2.45))
     body.sphere(1.0, "bronze", loc=(0, 0.95, 1.8), scale=(1.05, 0.6, 0.55), segs=12, rings=7)
     body.box((1.6, 0.12, 0.12), "gold_dark", loc=(0, 1.42, 1.95))
@@ -100,7 +101,8 @@ def ash_raider():
     for s in (1, -1):
         head.box((0.22, 0.06, 0.07), EMBER, loc=(s * 0.18, 0.66, 5.78))
     head.torus(0.5, 0.1, "sash", loc=(0, 0.05, 6.1), rot=(8, 0, 0), major=14, minor=5)
-    head.tube([V((0.1, -0.45, 6.05)), V((0.25, -0.9, 5.7)), V((0.2, -1.3, 5.2)), V((0.35, -1.6, 4.9))], [(0.18, 0.05)] * 3 + [(0.12, 0.04)], "sash", rect=True, up=(0, 0, 1))
+    wrap = A.segment("ExtraWrapTail", (0.1, -0.45, 6.05), head)  # streams behind (Cloth spring)
+    wrap.tube([V((0.1, -0.45, 6.05)), V((0.25, -0.9, 5.7)), V((0.2, -1.3, 5.2)), V((0.35, -1.6, 4.9))], [(0.18, 0.05)] * 3 + [(0.12, 0.04)], "sash", rect=True, up=(0, 0, 1))
     # wrapped arms; a curved khopesh in the right hand, a bronze bracer on the left
     for s, side in ((-1, "L"), (1, "R")):
         arm = A.segment(f"Arm{side}", (s * 0.95, 0, 4.95), body)
@@ -143,12 +145,13 @@ def ember_oracle():
     body.tube([V((0, 0, 0.2)), V((0, 0, 0.38))], [(0.97, 0.87), (0.95, 0.85)], "gold", sides=12)
     body.prism([(-0.35, 0), (0.35, 0), (0.28, -2.3), (-0.28, -2.3)], 0.05, "sash", loc=(0, 0.56, 3.9))
     body.torus(0.62, 0.07, "gold_dark", mat=K.M((0, 0.02, 3.1)) @ K.M(scale=(1, 0.82, 1)), major=16, minor=4)
+    ring = A.segment("ExtraRing", (0, 0, 3.35), body)  # the floating ward shards orbit (Spin)
     for k in range(6):
         a = 2 * math.pi * k / 6 + 0.3
         c = V((math.cos(a) * 1.45, math.sin(a) * 1.45, 3.35 + math.sin(a * 3) * 0.2))
         d = V((rnd.uniform(-0.3, 0.3), rnd.uniform(-0.3, 0.3), 1)).normalized()
-        body.crystal(c - d * 0.35, c + d * 0.35, 0.13, SUNGLOW, sides=5, shaft=0.5)
-        body.spike(c - d * 0.35, c - d * 0.6, 0.12, SUNGLOW, segs=5)
+        ring.crystal(c - d * 0.35, c + d * 0.35, 0.13, SUNGLOW, sides=5, shaft=0.5)
+        ring.spike(c - d * 0.35, c - d * 0.6, 0.12, SUNGLOW, segs=5)
     # head: a deep veiled hood, the veil hung with gold coins, ember eyes behind it
     head.sphere(0.42, "skin", loc=(0, 0.1, 4.75), segs=10, rings=7)
     head.tube([V((0, -0.05, 4.3)), V((0, -0.08, 4.85)), V((0, -0.1, 5.25)), V((0, -0.25, 5.45))], [(0.55, 0.52), (0.58, 0.56), (0.48, 0.48), (0.0, 0.0)], "cloth_dark", sides=10)
@@ -190,14 +193,19 @@ def glass_scorpion(alpha=False):
         w = 1.35 - k * 0.12
         body.box((w * 2, 0.8, 0.5), "obsidian_mid", loc=(0, y, 2.35 - k * 0.05), rot=(-6, 0, 0), bevel=0.15)
         body.box((w * 2 - 0.2, 0.1, 0.3), "glass_amber", loc=(0, y - 0.43, 2.3 - k * 0.05))
+    # the tail: four links ExtraTail1-4 then ExtraSting, each pivoting at its base (keyed later; springs until then)
     tail = [V((0, -2.9, 2.4)), V((0, -3.9, 3.2)), V((0, -4.3, 4.4)), V((0, -3.9, 5.5)), V((0, -3.0, 6.1)), V((0, -2.0, 6.0))]
+    prev = body
     for k in range(len(tail) - 1):
         r = 0.6 - k * 0.07
-        body.rod(tail[k], tail[k + 1], r, "obsidian", segs=10, r2=r * 0.9)
-        body.sphere(r * 0.92, "glass_amber", loc=tail[k + 1], segs=10, rings=6)
+        link = A.segment("ExtraSting" if k == len(tail) - 2 else f"ExtraTail{k + 1}", tail[k], prev)
+        link.rod(tail[k], tail[k + 1], r, "obsidian", segs=10, r2=r * 0.9)
+        link.sphere(r * 0.92, "glass_amber", loc=tail[k + 1], segs=10, rings=6)
+        prev = link
+    sting = prev
     sting_base = tail[-1]
-    body.sphere(0.5, "glass_dark", loc=sting_base + V((0, 0.25, -0.15)), segs=10, rings=7)
-    body.tube([sting_base + V((0, 0.4, -0.2)), sting_base + V((0, 0.9, -0.6)), sting_base + V((0, 1.0, -1.1))], [0.2, 0.12, 0.0], MAGMA, sides=6)
+    sting.sphere(0.5, "glass_dark", loc=sting_base + V((0, 0.25, -0.15)), segs=10, rings=7)
+    sting.tube([sting_base + V((0, 0.4, -0.2)), sting_base + V((0, 0.9, -0.6)), sting_base + V((0, 1.0, -1.1))], [0.2, 0.12, 0.0], MAGMA, sides=6)
     # head: a flat obsidian plate with amber eyes
     head.sphere(1.0, "obsidian", loc=(0, 2.75, 1.85), scale=(1.0, 0.7, 0.5), segs=12, rings=7)
     head.box((1.4, 0.7, 0.18), "obsidian_mid", loc=(0, 2.75, 2.25), bevel=0.08)
@@ -232,7 +240,7 @@ def glass_scorpion(alpha=False):
             shin.spike(mid, mid + V((s * 0.1, 0, 0.35)), 0.07, "glass_dark", segs=4)
     if alpha:
         # trophy: a gold sun crest mounted under the stinger
-        crest = A.segment("Trophy_SunCrest", (0, -2.6, 6.2), body)
+        crest = A.segment("Trophy_SunCrest", (0, -2.6, 6.2), sting)  # rides the stinger
         M.sun_glyph(crest, (0, -2.4, 6.75), (0, 1, 0.2), 0.55, "gold", SUNGLOW, rays=10, ring_thick=0.09)
     return A
 

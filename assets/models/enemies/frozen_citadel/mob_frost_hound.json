@@ -16,14 +16,14 @@
    "Centre": [
     0.0,
     2.772,
-    1.075
+    0.025
    ],
    "Size": [
     1.66,
     2.544,
-    6.05
+    3.95
    ],
-   "Tris": 1002
+   "Tris": 924
   },
   {
    "Name": "Head",
@@ -56,15 +56,84 @@
    ],
    "Centre": [
     0.0,
-    3.334,
+    3.36,
     -2.627
    ],
    "Size": [
     0.926,
-    1.532,
+    1.48,
     1.826
    ],
-   "Tris": 345
+   "Tris": 313
+  },
+  {
+   "Name": "ExtraTail1",
+   "Parent": "Body",
+   "Pivot": [
+    0.0,
+    2.55,
+    1.9
+   ],
+   "Glow": [],
+   "Motion": "Hanging",
+   "Keyed": true,
+   "Centre": [
+    -0.011,
+    2.641,
+    2.247
+   ],
+   "Size": [
+    0.418,
+    0.594,
+    0.812
+   ],
+   "Tris": 24
+  },
+  {
+   "Name": "ExtraTail2",
+   "Parent": "ExtraTail1",
+   "Pivot": [
+    0.0,
+    2.75,
+    2.6
+   ],
+   "Glow": [],
+   "Motion": "Hanging",
+   "Keyed": true,
+   "Centre": [
+    -0.007,
+    2.4,
+    3.255
+   ],
+   "Size": [
+    0.385,
+    1.1,
+    1.69
+   ],
+   "Tris": 120
+  },
+  {
+   "Name": "ExtraJaw",
+   "Parent": "Head",
+   "Pivot": [
+    0.0,
+    2.8,
+    -2.45
+   ],
+   "Glow": [],
+   "Motion": "Rigid",
+   "Keyed": true,
+   "Centre": [
+    0.0,
+    2.74,
+    -2.881
+   ],
+   "Size": [
+    0.38,
+    0.345,
+    0.807
+   ],
+   "Tris": 32
   },
   {
    "Name": "ArmL",
@@ -235,8 +304,8 @@
    "Tris": 94
   }
  ],
- "TotalTris": 1971,
- "MeshCount": 11,
+ "TotalTris": 2037,
+ "MeshCount": 14,
  "Size": [
   1.74,
   4.1,

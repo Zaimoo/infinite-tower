@@ -80,20 +80,21 @@ def raptor(A, herald=False, roc=False):
     # body leaning forward, a pale breast, slate back
     body.sphere(1.0, "slate", loc=(0, -0.15, 3.2), rot=(-22, 0, 0), scale=(0.8, 1.2, 0.85), segs=14, rings=8)
     body.sphere(1.0, "feather_pale", loc=(0, 0.45, 3.1), rot=(-15, 0, 0), scale=(0.62, 0.55, 0.75), segs=12, rings=7)
-    # tail: a fan of slate feathers (the Herald's stands upright like a display fan)
+    # tail: a fan of slate feathers (the Herald's stands upright like a display fan); ExtraTailFan, keyed later
+    fan = A.segment("ExtraTailFan", (0, -1.15, 3.2), body)
     if herald:
         for k in range(9):
             a = math.radians(-70 + k * 17.5)
             m = K.M((0, -1.15, 3.35), (0, a * 180 / math.pi, 0))
             root = V((0, -1.15, 3.35))
             tipp = root + V((math.sin(a) * 2.2, -0.35, math.cos(a) * 2.2))
-            body.prism([(-0.22, 0), (0.22, 0), (0.18, 1.85), (0, 2.2), (-0.18, 1.85)], 0.05, "slate" if k % 2 else "slate_dark",
-                       mat=K.M(root, (8, a * 180 / math.pi, 0)))
-            body.sphere(0.11, STORM, loc=root + V((math.sin(a) * 1.85, -0.3, math.cos(a) * 1.85)), segs=6, rings=4)
+            fan.prism([(-0.22, 0), (0.22, 0), (0.18, 1.85), (0, 2.2), (-0.18, 1.85)], 0.05, "slate" if k % 2 else "slate_dark",
+                      mat=K.M(root, (8, a * 180 / math.pi, 0)))
+            fan.sphere(0.11, STORM, loc=root + V((math.sin(a) * 1.85, -0.3, math.cos(a) * 1.85)), segs=6, rings=4)
     else:
         for k in range(5):
             yaw = (k - 2) * 14
-            feather(body, (0, -1.15, 3.0 - abs(k - 2) * 0.03), 1.7, 0.36, "slate_dark" if k % 2 else "slate", yaw=yaw, droop=18,
+            feather(fan, (0, -1.15, 3.0 - abs(k - 2) * 0.03), 1.7, 0.36, "slate_dark" if k % 2 else "slate", yaw=yaw, droop=18,
                     tip="copper" if not roc else "slate_light")
     # neck and head with a hooked beak (the Herald's beak flares into a speaking horn)
     head.tube([V((0, 0.55, 3.65)), V((0, 0.8, 4.25)), V((0, 0.92, 4.6))], [0.38, 0.32, 0.3], "slate", sides=10)
@@ -101,24 +102,26 @@ def raptor(A, herald=False, roc=False):
     head.box((0.7, 0.3, 0.1), "slate_dark", loc=(0, 1.3, 4.98), rot=(-10, 0, 0), bevel=0.03)
     for s in (1, -1):
         head.sphere(0.07, STORM, loc=(s * 0.27, 1.32, 4.86), segs=6, rings=4)
+    beak = A.segment("ExtraBeak", (0, 1.4, 4.75), head)  # opens to cry or strike (keyed later)
     if herald:
-        head.rod((0, 1.4, 4.72), (0, 2.05, 4.68), 0.12, "copper", segs=10, r2=0.17)
-        head.cyl(0.36, 0.17, 0.32, "copper", loc=(0, 2.2, 4.68), rot=(-90, 0, 0), segs=12)
+        beak.rod((0, 1.4, 4.72), (0, 2.05, 4.68), 0.12, "copper", segs=10, r2=0.17)
+        beak.cyl(0.36, 0.17, 0.32, "copper", loc=(0, 2.2, 4.68), rot=(-90, 0, 0), segs=12)
         for k, rr in enumerate((0.42, 0.62, 0.84)):
-            head.torus(rr, 0.035, STORM if k % 2 == 0 else SPARK, loc=(0, 2.55 + k * 0.38, 4.68), rot=(90, 0, 0), major=16, minor=4)
+            beak.torus(rr, 0.035, STORM if k % 2 == 0 else SPARK, loc=(0, 2.55 + k * 0.38, 4.68), rot=(90, 0, 0), major=16, minor=4)
     else:
-        head.tube([V((0, 1.4, 4.78)), V((0, 1.75, 4.7)), V((0, 1.92, 4.52)), V((0, 1.86, 4.36))],
+        beak.tube([V((0, 1.4, 4.78)), V((0, 1.75, 4.7)), V((0, 1.92, 4.52)), V((0, 1.86, 4.36))],
                   [(0.14, 0.16), (0.1, 0.12), (0.06, 0.07), (0.0, 0.0)], "beak", sides=8)
     # crest: slate plumes with crackling violet tips (the Roc's is a row of copper spines)
+    crest = A.segment("ExtraCrest", (0, 0.95, 5.05), head)  # Cloth spring
     for k in range(5 if herald else 4):
         b = V((0, 0.95 - k * 0.12, 5.05 - k * 0.05))
         t = b + V((0, -0.55 - k * 0.15, 0.55 + (0.35 if herald else 0) - k * 0.05))
         if roc:
             body_c = "copper" if k % 2 == 0 else "copper_dark"
-            head.spike(b, t + V((0, -0.2, 0.2)), 0.1, body_c, segs=5)
+            crest.spike(b, t + V((0, -0.2, 0.2)), 0.1, body_c, segs=5)
         else:
-            head.spike(b, t, 0.08, "slate_dark", segs=5)
-            head.spike(t - (t - b) * 0.3, t + (t - b) * 0.25, 0.04, STORM, segs=4)
+            crest.spike(b, t, 0.08, "slate_dark", segs=5)
+            crest.spike(t - (t - b) * 0.3, t + (t - b) * 0.25, 0.04, STORM, segs=4)
     # wings: inner (Arm) with coverts, outer (Forearm) with copper-tipped primaries
     span = 1.05 if roc else (0.8 if herald else 1.0)
     for s, side in ((-1, "L"), (1, "R")):
@@ -245,7 +248,8 @@ def thunder_ram(alpha=False):
         if c.z < 2.5 or (alpha and abs(y + 0.1) < 0.95 and c.z > 3.0):  # keep the saddle's footprint clear
             continue
         body.ico(rnd.uniform(0.38, 0.55), "wool" if k % 3 else "wool_dark", loc=c, subdiv=1, jitter=0.08, seed=k)
-    body.tube([V((0, -1.8, 3.0)), V((0, -2.15, 2.8))], [0.25, 0.12], "wool", sides=6)
+    tail = A.segment("ExtraTail1", (0, -1.8, 3.0), body)  # a short flick (keyed later)
+    tail.tube([V((0, -1.8, 3.0)), V((0, -2.15, 2.8))], [0.25, 0.12], "wool", sides=6)
     # head: a long hide face with violet eyes; spiral copper-banded horns that arc lightning between their tips
     head.sphere(0.55, "hide", loc=(0, 2.4, 3.15), scale=(0.85, 1.0, 0.9), segs=12, rings=7)
     head.tube([V((0, 2.65, 3.1)), V((0, 3.05, 2.85)), V((0, 3.3, 2.6))], [(0.36, 0.34), (0.3, 0.3), (0.22, 0.22)], "hide", sides=8)

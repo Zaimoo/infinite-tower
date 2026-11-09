@@ -177,9 +177,76 @@
     4.4,
     -0.05
    ],
+   "Glow": [],
+   "Centre": [
+    1.85,
+    3.758,
+    -0.155
+   ],
+   "Size": [
+    0.8,
+    1.965,
+    0.921
+   ],
+   "Tris": 180
+  },
+  {
+   "Name": "ExtraWhip1",
+   "Parent": "ForearmR",
+   "Pivot": [
+    1.86,
+    2.95,
+    -0.4
+   ],
+   "Glow": [],
+   "Motion": "Hanging",
+   "Keyed": true,
+   "Centre": [
+    1.965,
+    2.173,
+    -0.835
+   ],
+   "Size": [
+    0.734,
+    1.848,
+    1.15
+   ],
+   "Tris": 114
+  },
+  {
+   "Name": "ExtraWhip2",
+   "Parent": "ExtraWhip1",
+   "Pivot": [
+    2.1,
+    1.3,
+    -1.3
+   ],
+   "Glow": [],
+   "Motion": "Hanging",
+   "Keyed": true,
+   "Centre": [
+    2.017,
+    0.853,
+    -1.55
+   ],
+   "Size": [
+    0.932,
+    1.145,
+    0.739
+   ],
+   "Tris": 126
+  },
+  {
+   "Name": "ExtraWhip3",
+   "Parent": "ExtraWhip2",
+   "Pivot": [
+    1.6,
+    0.35,
+    -1.8
+   ],
    "Glow": [
     {
-     "Mesh": "ForearmR_Glow_Spring",
+     "Mesh": "ExtraWhip3_Glow_Spring",
      "Colour": [
       153,
       240,
@@ -198,17 +265,19 @@
      ]
     }
    ],
+   "Motion": "Hanging",
+   "Keyed": true,
    "Centre": [
-    1.921,
-    2.506,
-    -0.931
+    1.52,
+    0.452,
+    -1.79
    ],
    "Size": [
-    1.125,
-    4.468,
-    2.475
+    0.319,
+    0.372,
+    0.757
    ],
-   "Tris": 308
+   "Tris": 100
   },
   {
    "Name": "LegL",
@@ -323,6 +392,7 @@
      ]
     }
    ],
+   "Motion": "Rigid",
    "Centre": [
     0.0,
     7.25,
@@ -342,8 +412,8 @@
   "Color": "alpha_vinebound_color.png",
   "Normal": "alpha_vinebound_normal.png"
  },
- "TotalTris": 5662,
- "MeshCount": 16,
+ "TotalTris": 5874,
+ "MeshCount": 19,
  "Size": [
   5.0,
   8.8,

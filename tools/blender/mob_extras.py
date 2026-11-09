@@ -32,7 +32,7 @@ EXTRAS = {
     "Crown": {"parents": ["Head"], "motion": "Rigid", "keyed": True},
     "Tome": {"parents": ["Body", "ForearmL", "ForearmR"], "motion": "Rigid", "keyed": True},
     # springs only
-    "Key": {"parents": ["Body"], "motion": "Spin"},
+    "Key": {"parents": ["Body"], "motion": "Rigid"},  # its turn axis is horizontal; Spin only turns about up
     "Crest": {"parents": ["Head"], "motion": "Cloth"},
     "Cape": {"parents": ["Body"], "motion": "Cloth"},
     "WrapTail": {"parents": ["Head"], "motion": "Cloth"},

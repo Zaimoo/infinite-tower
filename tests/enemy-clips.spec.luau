@@ -209,6 +209,20 @@ test("Springs settle, trail the pull and stay bounded", function()
 	end
 end)
 
+test("Springs trail their parent's turn and drift towards their sway", function()
+	for motion, params in Anim.SPRINGS do
+		local st: any = { X = 0, Z = 0, VX = 0, VZ = 0, Angle = 0 }
+		Anim.SpringTurn(st, 0.2, -0.1, params)
+		assert(st.X < 0 and st.Z > 0, motion .. ": should swing against the parent's turn")
+		assert(math.abs(st.X) <= params.Max + 1e-9, motion .. ": turn kick exceeded its limit")
+		Anim.SpringTurn(st, 50, 0, params)
+		assert(st.X >= -params.Max - 1e-9, motion .. ": a teleport turn must stay clamped")
+		local s2: any = { X = 0, Z = 0, VX = 0, VZ = 0, Angle = 0 }
+		for _ = 1, 600 do Anim.SpringStep(s2, 0, 0, 1 / 60, params, 0.05, -0.03) end
+		assert(near(s2.X, 0.05, 1e-3) and near(s2.Z, -0.03, 1e-3), motion .. ": should settle on its sway target")
+	end
+end)
+
 test("Unkeyed extra joints get their spring role; clip joints keep their clips", function()
 	local id = firstEnemy(function(s) return s.Role == "REGULAR" end)
 	local rig = fakeRig(id)
@@ -220,7 +234,9 @@ test("Unkeyed extra joints get their spring role; clip joints keep their clips",
 	a:Evaluate(40, input, 0)
 	local t = a:Evaluate(40.5, input, 0.5)
 	assert(near(t.ExtraKey.ry, Anim.SPIN_RATE * 0.5, 1e-6), "spin joint should turn at SPIN_RATE")
-	assert(sameCF(t.Trophy_Crown, CFrame.identity), "a rigid trophy at rest stays put")
+	local rigid = Anim.SPRINGS.Rigid
+	assert(math.abs(t.Trophy_Crown.rx) <= rigid.Sway + 1e-6 and math.abs(t.Trophy_Crown.rz) <= rigid.Sway + 1e-6 and t.Trophy_Crown.ry == 0,
+		"a rigid trophy at rest only sways gently")
 	local idle = Clips.Sample(Clips[id].Idle, (40.5 * a.IdleRate / Anim.IDLE_SECONDS + a.IdleOffset) % 1)
 	assert(sameCF(t.Head, idle.Head), "a joint the clips key ignores its motion role")
 	input.Far = true

@@ -76,15 +76,59 @@
    ],
    "Centre": [
     0.0,
-    1.721,
-    -1.71
+    1.5,
+    -1.55
    ],
    "Size": [
-    1.2,
-    1.258,
-    1.28
+    1.03,
+    0.816,
+    0.96
    ],
-   "Tris": 232
+   "Tris": 196
+  },
+  {
+   "Name": "ExtraAntennaR",
+   "Parent": "Head",
+   "Pivot": [
+    0.2,
+    1.8,
+    -1.8
+   ],
+   "Glow": [],
+   "Motion": "Rigid",
+   "Centre": [
+    0.382,
+    2.061,
+    -2.061
+   ],
+   "Size": [
+    0.436,
+    0.578,
+    0.579
+   ],
+   "Tris": 18
+  },
+  {
+   "Name": "ExtraAntennaL",
+   "Parent": "Head",
+   "Pivot": [
+    -0.2,
+    1.8,
+    -1.8
+   ],
+   "Glow": [],
+   "Motion": "Rigid",
+   "Centre": [
+    -0.383,
+    2.061,
+    -2.06
+   ],
+   "Size": [
+    0.434,
+    0.578,
+    0.581
+   ],
+   "Tris": 18
   },
   {
    "Name": "JawL",
@@ -382,7 +426,7 @@
   }
  ],
  "TotalTris": 2688,
- "MeshCount": 18,
+ "MeshCount": 20,
  "Size": [
   5.14,
   3.37,

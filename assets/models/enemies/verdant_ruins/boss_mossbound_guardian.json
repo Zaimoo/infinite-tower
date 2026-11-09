@@ -34,16 +34,16 @@
     }
    ],
    "Centre": [
-    -1.369,
-    12.413,
-    0.161
+    0.05,
+    10.075,
+    0.206
    ],
    "Size": [
-    10.647,
-    12.126,
-    7.008
+    7.81,
+    7.45,
+    6.917
    ],
-   "Tris": 2656
+   "Tris": 1676
   },
   {
    "Name": "Head",
@@ -85,6 +85,50 @@
     2.475
    ],
    "Tris": 432
+  },
+  {
+   "Name": "ExtraVines",
+   "Parent": "Body",
+   "Pivot": [
+    0.0,
+    11.9,
+    -2.55
+   ],
+   "Glow": [],
+   "Motion": "Cloth",
+   "Centre": [
+    0.184,
+    9.718,
+    -2.818
+   ],
+   "Size": [
+    7.168,
+    4.437,
+    1.051
+   ],
+   "Tris": 372
+  },
+  {
+   "Name": "ExtraTree",
+   "Parent": "Body",
+   "Pivot": [
+    -3.4,
+    12.4,
+    0.6
+   ],
+   "Glow": [],
+   "Motion": "Rigid",
+   "Centre": [
+    -4.07,
+    15.323,
+    1.077
+   ],
+   "Size": [
+    5.244,
+    6.306,
+    4.467
+   ],
+   "Tris": 608
   },
   {
    "Name": "ArmL",
@@ -262,7 +306,7 @@
   "Normal": "boss_mossbound_guardian_normal.png"
  },
  "TotalTris": 6860,
- "MeshCount": 12,
+ "MeshCount": 14,
  "Size": [
   12.99,
   18.48,

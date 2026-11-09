@@ -19,11 +19,11 @@
     0.433
    ],
    "Size": [
-    2.6,
+    2.437,
     2.2,
     3.935
    ],
-   "Tris": 724
+   "Tris": 388
   },
   {
    "Name": "Head",
@@ -65,6 +65,52 @@
     1.299
    ],
    "Tris": 178
+  },
+  {
+   "Name": "ExtraElytraR",
+   "Parent": "Body",
+   "Pivot": [
+    0.4,
+    2.05,
+    -0.9
+   ],
+   "Glow": [],
+   "Motion": "Rigid",
+   "Keyed": true,
+   "Centre": [
+    0.62,
+    1.85,
+    0.45
+   ],
+   "Size": [
+    1.36,
+    1.24,
+    3.1
+   ],
+   "Tris": 168
+  },
+  {
+   "Name": "ExtraElytraL",
+   "Parent": "Body",
+   "Pivot": [
+    -0.4,
+    2.05,
+    -0.9
+   ],
+   "Glow": [],
+   "Motion": "Rigid",
+   "Keyed": true,
+   "Centre": [
+    -0.62,
+    1.85,
+    0.45
+   ],
+   "Size": [
+    1.36,
+    1.24,
+    3.1
+   ],
+   "Tris": 168
   },
   {
    "Name": "JawL",
@@ -362,7 +408,7 @@
   }
  ],
  "TotalTris": 1430,
- "MeshCount": 17,
+ "MeshCount": 19,
  "Size": [
   4.96,
   2.86,
