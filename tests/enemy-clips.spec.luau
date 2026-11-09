@@ -161,4 +161,38 @@ test("Death overrides the action and the walk", function()
 	end
 end)
 
+local Index = require(nodes["ReplicatedStorage.Shared.Config.TowerEnemyModelIndex"])
+
+test("Every remodelled enemy gets size metrics, and stride grows with leg length", function()
+	for id, entry in Index do
+		local spec = C.Get(id)
+		local m = Anim.Metrics(id, spec, entry, 1.25)
+		assert(m.HipHeight > 0 and m.Height > m.HipHeight, id .. ": bad hip/height")
+		assert(m.MotionScale >= 0.4 and m.MotionScale <= 4, id .. ": motion scale out of range")
+		assert(m.Stride > 0, id .. ": no stride")
+		local big = Anim.Metrics(id, spec, entry, 1.25 * 1.4)
+		assert(big.Stride > m.Stride and big.MotionScale >= m.MotionScale, id .. ": stride must grow with size")
+	end
+	-- the Throne Executioner's legs cover ~7.5 studs a cycle, not the old 4.8
+	local exec = Anim.Metrics("elite_throne_executioner", C.Get("elite_throne_executioner"), Index.elite_throne_executioner, 1.25)
+	assert(exec.Stride > 7 and exec.Stride < 8, "executioner stride " .. exec.Stride)
+end)
+
+test("MotionScale stretches clip translations, not rotations", function()
+	local id = firstEnemy(function(s) return s.Role == "REGULAR" end)
+	local now = 30
+	local input: any = { Moved = 0, DeathAt = now - 1.6 }
+	local one, two = fakeRig(id), fakeRig(id)
+	one.Metrics = { MotionScale = 1, Stride = 5 }
+	two.Metrics = { MotionScale = 2, Stride = 5 }
+	local a = Anim.new(one, 9):Evaluate(now, input, 0)
+	local b = Anim.new(two, 9):Evaluate(now, input, 0)
+	assert(math.abs(a.Body.Y) > 0.1, "death should drop the body")
+	for name, cf in a do
+		local d = b[name]
+		assert(near(d.X, cf.X * 2) and near(d.Y, cf.Y * 2) and near(d.Z, cf.Z * 2), name .. ": translation not doubled")
+		assert(near(d.rx, cf.rx) and near(d.ry, cf.ry) and near(d.rz, cf.rz), name .. ": rotation changed")
+	end
+end)
+
 print(string.format("enemy-clips: %d passed", passed))

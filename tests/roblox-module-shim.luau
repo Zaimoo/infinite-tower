@@ -67,6 +67,9 @@ end
 function cframeMeta:Inverse()
 	return setmetatable({ X = -self.X, Y = -self.Y, Z = -self.Z, rx = -self.rx, ry = -self.ry, rz = -self.rz }, cframeMeta)
 end
+cframeMeta.__add = function(a, v)
+	return setmetatable({ X = a.X + v.X, Y = a.Y + v.Y, Z = a.Z + v.Z, rx = a.rx, ry = a.ry, rz = a.rz }, cframeMeta)
+end
 cframeMeta.__index = cframeMeta
 function game:GetService(serviceName)
 	return node(serviceName)

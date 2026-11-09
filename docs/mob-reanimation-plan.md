@@ -1,6 +1,6 @@
 # Tower Mob Reanimation: Implementation Plan
 
-Status: **step 1 built** (animator core on the current clips); steps 2–8 to do. Decisions settled (§8). Owner: Zaimoo. Written 2026-11-09.
+Status: **steps 1–2 built** (animator core; size scaling and leg-length stride); steps 3–8 to do. Decisions settled (§8). Owner: Zaimoo. Written 2026-11-09.
 
 All 60 tower enemies are now remodelled meshes (`docs/tower-mob-remodel-plan.md`), but they still move with the clips written for the old part rigs. This plan rebuilds their **idle, walking and attack** animation (plus the hit, death and awakening clips those blend with) so each family moves like what it is. It stays on the existing contract: rigid segments, `Motor6D`s, clips authored as code in `TowerEnemyClips`, no uploaded `Animation` assets. The server, the network records and combat timings don't change.
 
