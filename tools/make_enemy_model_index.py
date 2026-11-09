@@ -24,7 +24,7 @@ def main():
         "-- Remodelled tower enemies (docs/tower-mob-remodel-plan.md): joints for EnemyRigFactory, budgets for the spec.",
         "-- Studs, Roblox axes (Y up, faces -Z), origin on the ground under the enemy. Pivot = joint position.",
         "",
-        "export type Glow = { Mesh: string, Centre: Vector3 }",
+        "export type Glow = { Mesh: string, Centre: Vector3, Colour: Color3 }",
         "export type Segment = { Name: string, Parent: string?, Pivot: Vector3, Centre: Vector3?, Tris: number, Glow: { Glow } }",
         "export type Entry = { EnemyId: string, Biome: string, Family: string, Role: string, Height: number, TotalTris: number,",
         "\tMeshCount: number, Segments: { Segment } }",
@@ -39,7 +39,7 @@ def main():
         lines.append("\t\tSegments = {")
         for s in d["Segments"]:
             parent = f"\"{s['Parent']}\"" if s["Parent"] else "nil"
-            glows = ", ".join(f"{{ Mesh = \"{g['Mesh']}\", Centre = {v3(g['Centre'])} }}" for g in s["Glow"])
+            glows = ", ".join(f"{{ Mesh = \"{g['Mesh']}\", Centre = {v3(g['Centre'])}, Colour = Color3.fromRGB({g['Colour'][0]}, {g['Colour'][1]}, {g['Colour'][2]}) }}" for g in s["Glow"])
             centre = f"Centre = {v3(s['Centre'])}, " if "Centre" in s else ""
             tris = s.get("Tris", 0) + sum(g.get("Tris", 0) for g in s["Glow"])
             lines.append(f"\t\t\t{{ Name = \"{s['Name']}\", Parent = {parent}, Pivot = {v3(s['Pivot'])}, {centre}Tris = {tris}, Glow = {{ {glows} }} }},")
