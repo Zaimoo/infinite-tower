@@ -18,12 +18,24 @@ local Rigs = require(script.Parent.TowerEnemyRigs)
 local Factory = {}
 
 local ALPHA_SCALE = 1.4 -- Alphas spawn 1.4x their Elite (MobCatalog bounds)
+-- Remodelled enemies render 1.25x their Blender size (2026-11-09 review). Scaling is about the ground point
+-- under the enemy, so feet stay planted; hitboxes and server stats are unchanged.
+Factory.RemodelScale = 1.25
 local templatesFolder: Instance? = ReplicatedStorage:FindFirstChild("TowerEnemyTemplates")
 
 local function template(enemyId: string): Model?
 	templatesFolder = templatesFolder or ReplicatedStorage:FindFirstChild("TowerEnemyTemplates")
 	local t = templatesFolder and templatesFolder:FindFirstChild(enemyId)
 	return if t and t:IsA("Model") then t else nil
+end
+
+-- How much taller the drawn enemy is than its combat Height (1 for the part rig), for overhead UI.
+function Factory.HeightScale(enemyId: string): number
+	local spec = Config.Get(enemyId)
+	local entry = Index[enemyId]
+	if not spec or not entry or not template(enemyId) then return 1 end
+	local drawn = entry.Height * (if spec.Alpha then ALPHA_SCALE else 1) * Factory.RemodelScale
+	return math.max(1, drawn / math.max(1, spec.Height or drawn))
 end
 
 -- True when the enemy has a remodelled template and index entry.
@@ -44,7 +56,7 @@ local function buildModel(model: Model, root: BasePart, enemyId: string): any
 	local spec = assert(Config.Get(enemyId), "Missing tower enemy spec: " .. enemyId)
 	local entry = Index[enemyId]
 	local source = assert(template(enemyId))
-	local s = if spec.Alpha then ALPHA_SCALE else 1
+	local s = (if spec.Alpha then ALPHA_SCALE else 1) * Factory.RemodelScale
 	local folder = Instance.new("Model")
 	folder.Name = "TowerEnemyArt"
 	folder.Parent = model
@@ -118,7 +130,7 @@ local function buildModel(model: Model, root: BasePart, enemyId: string): any
 
 	if spec.Support then
 		-- Supports keep their floating halo of glowing beads (TowerEnemyRigs), readable from a distance.
-		local haloY = (spec.Height or 6) - (spec.RootHeight or 3) + 1.1
+		local haloY = math.max(spec.Height or 6, entry.Height * s) - (spec.RootHeight or 3) + 1.1
 		local glow = Color3.fromRGB(150, 255, 160)
 		for i = 0, 8 do
 			local bead = Instance.new("Part")
