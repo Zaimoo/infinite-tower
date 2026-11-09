@@ -32,6 +32,9 @@ EnemyAnimator.MOVE_STOP = 0.3 -- studs/s below which walking stops after MOVE_GR
 EnemyAnimator.MOVE_GRACE = 0.35 -- longer than a 5 Hz snapshot gap plus jitter
 EnemyAnimator.SPEED_RATE = 6.5 -- per second, smoothing of the measured speed
 EnemyAnimator.LOCO_BLEND_RATE = 8 -- per second, idle <-> walk weight
+EnemyAnimator.FIDGET_SECONDS = 2.2 -- a fidget's length
+EnemyAnimator.FIDGET_MIN, EnemyAnimator.FIDGET_SPREAD = 6, 8 -- seconds between fidgets: 6 + 0..8, seeded (plan §3.7)
+EnemyAnimator.FIDGET_CALM = 3 -- seconds of quiet (no move, attack or awakening) before a fidget may start
 EnemyAnimator.STRIKE_LEAD = 0.15 -- share of the windup the strike takes...
 EnemyAnimator.STRIKE_LEAD_MAX = 0.25 -- ...capped in seconds
 
@@ -308,6 +311,17 @@ function EnemyAnimator.new(rig: any, seed: any)
 	if self.Clips and self.Clips.HitReaction then
 		EnemyAnimator.SampleInto(self.Clips.HitReaction, 0, self.HitBase)
 	end
+	-- per-set timing from the clip library (biped sets and later); older clip groups use the defaults
+	local meta = if rig.Clips then nil else Clips.MetaFor(rig.EnemyId)
+	self.IdleSeconds = (meta and meta.IdleSeconds) or EnemyAnimator.IDLE_SECONDS
+	self.StrideScale = (meta and meta.StrideScale) or 1
+	self.Fidgets = meta and meta.Fidgets
+	self.Seed = seed
+	self.FidgetCount = 0
+	self.NextFidgetAt = nil :: number?
+	self.FidgetAt = nil :: number?
+	self.FidgetFrames = nil :: any
+	self.LastBusyAt = -math.huge
 	return self
 end
 
@@ -336,12 +350,12 @@ function EnemyAnimator:Evaluate(now: number, input: any, dt: number): ({ [string
 	self.LocoWeight += (wantLoco - self.LocoWeight) * (if dt > 0 then 1 - math.exp(-dt * EnemyAnimator.LOCO_BLEND_RATE) else 1)
 
 	-- base layer
-	local idlePhase = (now * self.IdleRate / EnemyAnimator.IDLE_SECONDS + self.IdleOffset) % 1
+	local idlePhase = (now * self.IdleRate / self.IdleSeconds + self.IdleOffset) % 1
 	local idle = EnemyAnimator.SampleInto(clips.Idle, idlePhase, self.IdleOut)
 	local locoWeight = self.LocoWeight
 	local loco: { [string]: CFrame }? = nil
 	if locoWeight > 0.001 and clips.Locomotion then
-		local stride = EnemyAnimator.Stride(self.Rig) / self.GaitRate
+		local stride = EnemyAnimator.Stride(self.Rig) * self.StrideScale / self.GaitRate
 		loco = EnemyAnimator.SampleInto(clips.Locomotion, (self.Distance / stride) % 1, self.LocoOut)
 	end
 
@@ -353,7 +367,12 @@ function EnemyAnimator:Evaluate(now: number, input: any, dt: number): ({ [string
 	if action and not input.DeathAt then
 		local elapsed = now - action.StartServerTime
 		local total = action.ImpactOffsetSeconds + action.RecoverySeconds
-		local frames = clips[action.AnimationKey] or clips.BasicAttack
+		-- "<Slot>:<Shape>" first, so two moves sharing a slot play their own styles (cached per action record)
+		if action ~= self.CachedAction then
+			self.CachedAction = action
+			self.CachedFrames = (action.Shape and clips[action.AnimationKey .. ":" .. action.Shape]) or clips[action.AnimationKey] or clips.BasicAttack
+		end
+		local frames = self.CachedFrames
 		if frames and elapsed >= 0 and elapsed <= total then
 			local release, impactMark = Clips.MarkersFor(frames)
 			local phase = EnemyAnimator.ActionPhase(elapsed, action.WindupSeconds, action.ImpactOffsetSeconds, action.RecoverySeconds, release, impactMark)
@@ -368,6 +387,36 @@ function EnemyAnimator:Evaluate(now: number, input: any, dt: number): ({ [string
 		if elapsed >= 0 and elapsed < span then
 			act = EnemyAnimator.SampleInto(clips.Awakening, elapsed / span, self.ActOut)
 			actWeight = 1
+		end
+	end
+	-- fidgets: every 6–14 s (seeded) a calm, standing mob plays one of its set's fidgets, eased in and out
+	local fidgets = self.Fidgets
+	if fidgets and #fidgets > 0 then
+		if act or self.Moving or input.DeathAt then
+			self.LastBusyAt = now
+			self.FidgetAt = nil
+		end
+		if not self.NextFidgetAt then
+			self.NextFidgetAt = now + EnemyAnimator.FIDGET_MIN + EnemyAnimator.FIDGET_SPREAD * EnemyAnimator.Hash(self.Seed, 10)
+		end
+		if not act and not self.Moving and not input.DeathAt then
+			if not self.FidgetAt and now >= self.NextFidgetAt and now - self.LastBusyAt >= EnemyAnimator.FIDGET_CALM then
+				self.FidgetCount += 1
+				local pick = 1 + math.floor(EnemyAnimator.Hash(self.Seed, 20 + self.FidgetCount) * #fidgets) % #fidgets
+				self.FidgetAt = now
+				self.FidgetFrames = fidgets[pick]
+			end
+			local at = self.FidgetAt
+			if at then
+				local t = (now - at) / EnemyAnimator.FIDGET_SECONDS
+				if t >= 1 then
+					self.FidgetAt = nil
+					self.NextFidgetAt = now + EnemyAnimator.FIDGET_MIN + EnemyAnimator.FIDGET_SPREAD * EnemyAnimator.Hash(self.Seed, 30 + self.FidgetCount)
+				else
+					act = EnemyAnimator.SampleInto(self.FidgetFrames, t, self.ActOut)
+					actWeight = math.sin(math.pi * t)
+				end
+			end
 		end
 	end
 	local maskLegs = self.Moving
