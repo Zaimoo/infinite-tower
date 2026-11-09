@@ -1,0 +1,268 @@
+{
+ "EnemyId": "mob_ruin_guardian",
+ "Family": "ARMORED_BIPED",
+ "Role": "REGULAR",
+ "Biome": "verdant_ruins",
+ "Segments": [
+  {
+   "Name": "Body",
+   "Parent": null,
+   "Pivot": [
+    0.0,
+    3.0,
+    -0.0
+   ],
+   "Glow": [
+    {
+     "Mesh": "Body_Glow_Spring",
+     "Colour": [
+      153,
+      240,
+      125
+     ],
+     "Tris": 52,
+     "Centre": [
+      0.0,
+      5.0,
+      -0.98
+     ],
+     "Size": [
+      0.45,
+      0.462,
+      0.084
+     ]
+    }
+   ],
+   "Centre": [
+    -0.021,
+    4.456,
+    -0.039
+   ],
+   "Size": [
+    3.74,
+    3.712,
+    2.735
+   ],
+   "Tris": 1286
+  },
+  {
+   "Name": "Head",
+   "Parent": "Body",
+   "Pivot": [
+    0.0,
+    5.75,
+    -0.1
+   ],
+   "Glow": [
+    {
+     "Mesh": "Head_Glow_Spring",
+     "Colour": [
+      153,
+      240,
+      125
+     ],
+     "Tris": 12,
+     "Centre": [
+      0.0,
+      6.45,
+      -0.7
+     ],
+     "Size": [
+      0.5,
+      0.24,
+      0.2
+     ]
+    }
+   ],
+   "Centre": [
+    0.0,
+    6.669,
+    -0.139
+   ],
+   "Size": [
+    1.4,
+    1.888,
+    1.228
+   ],
+   "Tris": 216
+  },
+  {
+   "Name": "ArmL",
+   "Parent": "Body",
+   "Pivot": [
+    -1.75,
+    5.4,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    -1.918,
+    5.169,
+    0.02
+   ],
+   "Size": [
+    1.362,
+    2.142,
+    1.264
+   ],
+   "Tris": 96
+  },
+  {
+   "Name": "ForearmL",
+   "Parent": "ArmL",
+   "Pivot": [
+    -1.95,
+    4.05,
+    -0.05
+   ],
+   "Glow": [],
+   "Centre": [
+    -2.147,
+    3.331,
+    -0.02
+   ],
+   "Size": [
+    1.611,
+    2.238,
+    1.464
+   ],
+   "Tris": 520
+  },
+  {
+   "Name": "ArmR",
+   "Parent": "Body",
+   "Pivot": [
+    1.75,
+    5.4,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    1.819,
+    5.186,
+    0.009
+   ],
+   "Size": [
+    1.305,
+    2.176,
+    1.293
+   ],
+   "Tris": 96
+  },
+  {
+   "Name": "ForearmR",
+   "Parent": "ArmR",
+   "Pivot": [
+    1.95,
+    4.05,
+    -0.05
+   ],
+   "Glow": [],
+   "Centre": [
+    1.867,
+    3.286,
+    -0.111
+   ],
+   "Size": [
+    1.613,
+    2.328,
+    1.281
+   ],
+   "Tris": 564
+  },
+  {
+   "Name": "LegL",
+   "Parent": "Body",
+   "Pivot": [
+    -0.65,
+    2.75,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    -0.651,
+    2.151,
+    -0.0
+   ],
+   "Size": [
+    0.953,
+    1.351,
+    0.999
+   ],
+   "Tris": 36
+  },
+  {
+   "Name": "KneeL",
+   "Parent": "LegL",
+   "Pivot": [
+    -0.7,
+    1.45,
+    -0.05
+   ],
+   "Glow": [],
+   "Centre": [
+    -0.72,
+    0.933,
+    -0.243
+   ],
+   "Size": [
+    0.95,
+    1.875,
+    1.497
+   ],
+   "Tris": 240
+  },
+  {
+   "Name": "LegR",
+   "Parent": "Body",
+   "Pivot": [
+    0.65,
+    2.75,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    0.651,
+    2.151,
+    -0.0
+   ],
+   "Size": [
+    0.953,
+    1.351,
+    0.999
+   ],
+   "Tris": 36
+  },
+  {
+   "Name": "KneeR",
+   "Parent": "LegR",
+   "Pivot": [
+    0.7,
+    1.45,
+    -0.05
+   ],
+   "Glow": [],
+   "Centre": [
+    0.72,
+    0.933,
+    -0.22
+   ],
+   "Size": [
+    0.95,
+    1.875,
+    1.45
+   ],
+   "Tris": 240
+  }
+ ],
+ "TotalTris": 3394,
+ "MeshCount": 12,
+ "Size": [
+  5.63,
+  7.62,
+  2.73
+ ],
+ "FeetY": -0.005,
+ "Convention": "Studs, Roblox axes (Y up, faces -Z), origin on the ground under the enemy. Pivot = joint position. Mesh objects are named after their joint.",
+ "Atlas": "atlas_verdant_ruins.png"
+}

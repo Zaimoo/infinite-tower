@@ -30,7 +30,7 @@ local SummonLuck = require(Shared:WaitForChild("Util"):WaitForChild("SummonLuck"
 local Grimoire = require(Shared:WaitForChild("Util"):WaitForChild("GildedGrimoire"))
 
 local Assets = ReplicatedStorage:WaitForChild("Assets")
-local TowerEnemyRigs = require(Assets:WaitForChild("TowerEnemyRigs"))
+local EnemyRigFactory = require(Assets:WaitForChild("EnemyRigFactory")) -- remodelled templates, else the part rig
 local TowerEnemyClips = require(Assets:WaitForChild("TowerEnemyClips"))
 local HeroRigFolder = Assets:WaitForChild("HeroRig")
 local HeroRegistry = require(HeroRigFolder:WaitForChild("HeroRegistry"))
@@ -345,7 +345,7 @@ local function OutskirtsPreviewStage(props: { Profile: any, AssignedUUIDs: { str
 		mobRoot.Parent = mobModel
 		mobModel.PrimaryPart = mobRoot
 
-		local enemyRig = TowerEnemyRigs.Build(mobModel, mobRoot, enemyId)
+		local enemyRig = EnemyRigFactory.Build(mobModel, mobRoot, enemyId)
 		local _, rawExtents = mobModel:GetBoundingBox()
 		local rigScale = if rawExtents.Y > 5.8 then (5.8 / rawExtents.Y) else 1.0
 		if rigScale ~= 1.0 then
