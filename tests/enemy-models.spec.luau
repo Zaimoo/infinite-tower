@@ -114,4 +114,19 @@ test("Alphas have their Elite remodelled too, and roles match the combat registr
 	end
 end)
 
+test("Extra and trophy joints carry a spring role (tools/blender/mob_extras.py)", function()
+	local roles = { Cloth = true, Hanging = true, Rigid = true, Spin = true }
+	for id, entry in Index do
+		for _, s in entry.Segments do
+			local seg: any = s
+			if string.sub(s.Name, 1, 5) == "Extra" or string.sub(s.Name, 1, 6) == "Trophy" then
+				assert(roles[seg.Motion], id .. "/" .. s.Name .. ": missing or unknown Motion " .. tostring(seg.Motion))
+				assert(s.Parent, id .. "/" .. s.Name .. ": extra joints hang from a parent")
+			else
+				assert(seg.Motion == nil, id .. "/" .. s.Name .. ": clip joints have no spring role")
+			end
+		end
+	end
+end)
+
 print(`enemy-models.spec: {passed} passed`)

@@ -163,6 +163,13 @@ local function buildModel(model: Model, root: BasePart, enemyId: string): any
 	end
 
 	rig.Metrics = EnemyAnimator.Metrics(enemyId, spec, entry, s)
+	-- Extra*/Trophy_* joints spring while no clip keys them (EnemyAnimator; roles from tools/blender/mob_extras.py).
+	local motions: { [string]: string } = {}
+	for _, seg in entry.Segments do
+		local motion = (seg :: any).Motion
+		if motion then motions[seg.Name] = motion end
+	end
+	rig.JointMotion = motions
 	model:SetAttribute("TowerEnemyId", enemyId)
 	folder:SetAttribute("Source", "TowerEnemies/" .. enemyId)
 	folder:SetAttribute("RigFamily", spec.RigFamily)

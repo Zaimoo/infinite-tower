@@ -195,4 +195,37 @@ test("MotionScale stretches clip translations, not rotations", function()
 	end
 end)
 
+test("Springs settle, trail the pull and stay bounded", function()
+	for motion, params in Anim.SPRINGS do
+		local st: any = { X = 0, Z = 0, VX = 0, VZ = 0, Angle = 0 }
+		Anim.SpringStep(st, 0, 0, 1, params)
+		assert(st.X == 0 and st.Z == 0, motion .. ": moved with no pull")
+		for _ = 1, 120 do Anim.SpringStep(st, 0, 40, 1 / 60, params) end
+		assert(st.X > 0, motion .. ": should tilt with a forward/back pull")
+		for _ = 1, 600 do Anim.SpringStep(st, -1000, 1000, 1 / 60, params) end
+		assert(math.abs(st.X) <= params.Max + 1e-9 and math.abs(st.Z) <= params.Max + 1e-9, motion .. ": exceeded its limit")
+		for _ = 1, 600 do Anim.SpringStep(st, 0, 0, 1 / 60, params) end
+		assert(math.abs(st.X) < 0.01 and math.abs(st.Z) < 0.01, motion .. ": did not settle")
+	end
+end)
+
+test("Unkeyed extra joints get their spring role; clip joints keep their clips", function()
+	local id = firstEnemy(function(s) return s.Role == "REGULAR" end)
+	local rig = fakeRig(id)
+	rig.Joints.ExtraKey = { Motor = {}, Bind = CFrame.identity }
+	rig.Joints.Trophy_Crown = { Motor = {}, Bind = CFrame.identity }
+	rig.JointMotion = { ExtraKey = "Spin", Trophy_Crown = "Rigid", Head = "Cloth" }
+	local a = Anim.new(rig, 4)
+	local input: any = { Moved = 0 }
+	a:Evaluate(40, input, 0)
+	local t = a:Evaluate(40.5, input, 0.5)
+	assert(near(t.ExtraKey.ry, Anim.SPIN_RATE * 0.5, 1e-6), "spin joint should turn at SPIN_RATE")
+	assert(sameCF(t.Trophy_Crown, CFrame.identity), "a rigid trophy at rest stays put")
+	local idle = Clips.Sample(Clips[id].Idle, (40.5 * a.IdleRate / Anim.IDLE_SECONDS + a.IdleOffset) % 1)
+	assert(sameCF(t.Head, idle.Head), "a joint the clips key ignores its motion role")
+	input.Far = true
+	local far = a:Evaluate(41, input, 0.5)
+	assert(sameCF(far.Trophy_Crown, CFrame.identity), "far springs rest")
+end)
+
 print(string.format("enemy-clips: %d passed", passed))

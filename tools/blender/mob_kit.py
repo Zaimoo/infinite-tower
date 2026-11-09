@@ -13,6 +13,7 @@ Coordinates: 1 unit = 1 stud, Z up, enemies FACE +Y in Blender (Roblox -Z). Grou
 import bpy, bmesh, math, os, json
 from mathutils import Vector, Matrix
 import raid_kit as K
+import mob_extras as X
 
 ATLAS = 512
 GRID = 16
@@ -170,7 +171,13 @@ class MobAsset:
                 got = s.parent.name if s.parent else None
                 assert want == got, f"{self.name}: {s.name} parent {got}, clips expect {want}"
             else:
-                assert s.name.startswith(("Trophy", "Extra")) and s.parent is not None, f"{self.name}: unknown joint {s.name}"
+                if s.name.startswith("Extra"):
+                    try:
+                        X.check(s.name, s.parent.name if s.parent else None)
+                    except AssertionError as e:
+                        raise AssertionError(f"{self.name}: {e}")
+                else:
+                    assert s.name.startswith("Trophy") and s.parent is not None, f"{self.name}: unknown joint {s.name}"
 
     # ------------------------------------------------------------ build meshes
     def build(self, collection=None):
@@ -186,6 +193,7 @@ class MobAsset:
                 bmesh.ops.triangulate(bm, faces=ngons, quad_method="BEAUTY", ngon_method="BEAUTY")
             glow_slots = {i: s.split(":")[1] for i, s in enumerate(seg.slots) if s.startswith("glow:")}
             entry = {"Name": seg.name, "Parent": seg.parent.name if seg.parent else None, "Pivot": K.to_roblox(seg.pivot), "Glow": []}
+            entry.update(X.motion_for(seg.name))  # Motion / Keyed for extra and trophy joints (EnemyAnimator springs)
             body = bm.copy()
             bmesh.ops.delete(body, geom=[f for f in body.faces if f.material_index in glow_slots], context="FACES")
             if len(body.faces):
@@ -255,6 +263,28 @@ class MobAsset:
             json.dump(self.meta, fh, indent=1)
         print(f"[mob_kit] {self.name}: {len(self.objects)} meshes, {tris} tris, size {self.meta['Size']}")
         return fbx
+
+
+# ------------------------------------------------------------------ extra joints (docs/mob-reanimation-plan.md §3.8)
+def chain(asset, base, points, parent, radius, colour, segs=8, taper=0.85, ball=True):
+    """Split a rod chain (tail, whip, chain...) into extra joints Extra<base>1..N, one per link.
+
+    Link i runs from points[i] to points[i + 1] and pivots at points[i]; link 1 hangs from `parent` (a
+    segment), each later link from the one before. A small ball caps every pivot so links never show a gap
+    when they bend. Returns the segments, root first."""
+    out = []
+    prev = parent
+    r = radius
+    for i in range(len(points) - 1):
+        a, b = Vector(points[i]), Vector(points[i + 1])
+        seg = asset.segment(f"Extra{base}{i + 1}", a, prev)
+        seg.rod(a, b, r, colour, segs=segs, r2=r * taper)
+        if ball:
+            seg.sphere(r * 1.02, colour, loc=a, segs=segs, rings=max(4, segs // 2))
+        out.append(seg)
+        prev = seg
+        r *= taper
+    return out
 
 
 # ------------------------------------------------------------------ organic / motif helpers
