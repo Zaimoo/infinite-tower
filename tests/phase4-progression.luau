@@ -200,7 +200,7 @@ test("Phase 4: onboarding advances only on the active step's event and merges un
 	assert(Onboarding.ActiveStep(state) == nil, "chain complete")
 end)
 
-test("Phase 4: v3+v4+v5 migration stamps rarity, rebases stars, builds the tree and grandfathers unlocks", function()
+test("Phase 4: v3 through v6 migration stamps rarity, rebases stars, builds the tree and grandfathers unlocks", function()
 	local profile: any = {
 		SchemaVersion = 2,
 		MaxFloorReached = 6,
@@ -211,7 +211,7 @@ test("Phase 4: v3+v4+v5 migration stamps rarity, rebases stars, builds the tree 
 		Facilities = { GuardPost = { Level = 2 }, Market = { Level = 1 }, TrainingGrounds = { Level = 1 } },
 	}
 	Migrations.Run(profile)
-	assert(profile.SchemaVersion == 5)
+	assert(profile.SchemaVersion == 6)
 	-- v4: the 4 stars Ignis got for free at summon are removed, and the level is clamped to the new 1-star cap.
 	assert(profile.Heroes.a.Rarity == 5 and profile.Heroes.a.Stars == 1 and profile.Heroes.a.Level == 10)
 	assert(profile.Heroes.b.Rarity == 1 and profile.Heroes.b.Stars == 3)
@@ -222,8 +222,62 @@ test("Phase 4: v3+v4+v5 migration stamps rarity, rebases stars, builds the tree 
 	assert(profile.Unlocks.Tower and profile.Unlocks.Forge and profile.Unlocks.FortressTree and profile.Unlocks.Pit)
 	-- Steps whose systems are already open are skipped, so the tracker shows a real next goal.
 	assert(Onboarding.ActiveStep(profile.Onboarding).Id == "step_pit")
+	local guide = profile.Onboarding.Guide
+	assert(guide and next(guide.Facts) == nil and guide.Enabled == nil)
 	Migrations.Run(profile)
-	assert(profile.Heroes.a.Rarity == 5, "migration is idempotent")
+	assert(profile.Heroes.a.Rarity == 5 and profile.Onboarding.Guide == guide, "migration is idempotent")
+end)
+
+test("Guide: access follows a ready squad and Tower progress", function()
+	local profile = {
+		Heroes = { han = { Assignment = "SQUAD_SLOT_1", ComaUntilTimestamp = 10 } },
+		Unlocks = {},
+		HighestClearedFloor = 0,
+		MaxFloorReached = 1,
+	}
+	assert(not Onboarding.HasReadySquad(profile, 9))
+	Onboarding.UpdateAccess(profile, false)
+	assert(profile.Unlocks.Squad and not profile.Unlocks.Tower)
+	assert(Onboarding.HasReadySquad(profile, 10))
+	Onboarding.UpdateAccess(profile, true)
+	assert(profile.Unlocks.Tower and not profile.Unlocks.Forge)
+	profile.HighestClearedFloor, profile.MaxFloorReached = 1, 2
+	Onboarding.UpdateAccess(profile, true)
+	assert(profile.Unlocks.Forge and profile.Unlocks.Facilities and profile.Unlocks.Pit and profile.Unlocks.FortressTree)
+	assert(not profile.Unlocks.TowerFloor5)
+	profile.MaxFloorReached = 5
+	Onboarding.UpdateAccess(profile, true)
+	assert(profile.Unlocks.TowerFloor5)
+	Onboarding.UpdateAccess(profile, false)
+	assert(profile.Unlocks.Tower and profile.Unlocks.TowerFloor5, "earned access persists during recovery")
+end)
+
+test("Guide: recovery, cargo, and affordable actions drive the next cue", function()
+	local GuideLessons = require(nodes["ServerScriptService.Core.GuideLessons"])
+	local state = Onboarding.NewState()
+	local guide = Onboarding.EnsureGuide(state)
+	local profile = {
+		Onboarding = state, Unlocks = { Forge = true },
+		Currencies = { Gold = 0, Gems = 0 }, Heroes = {}, Artifacts = {},
+	}
+	local context = { Floor = 0, Ready = false, Carrying = false, CanRaid = false, Now = 100, PitLesson = function() return nil end }
+	assert(GuideLessons.Select(profile, context).Id == "Ready")
+	context.Ready = true
+	assert(GuideLessons.Select(profile, context).Id == "Visit")
+	context.Floor = 1
+	assert(GuideLessons.Select(profile, context).Id == "Clear")
+	guide.Facts.Clear = true
+	context.Carrying = true
+	assert(GuideLessons.Select(profile, context).Id == "Bank")
+	guide.Snoozed.Bank = 101
+	assert(GuideLessons.Select(profile, context).Id == "Return")
+	guide.Facts.Return = true
+	context.Floor, context.Carrying = 0, false
+	assert(GuideLessons.Select(profile, context) == nil, "do not recommend unaffordable transactions")
+	context.CanRaid = true
+	assert(GuideLessons.Select(profile, context).Id == "Raid")
+	context.CanRaid = false
+	assert(GuideLessons.Select(profile, context) == nil, "closed raid stops being recommended")
 end)
 
 test("Phase 5: Squad Power sums round(10 x DPS + Health) over deployed heroes only", function()

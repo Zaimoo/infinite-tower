@@ -76,10 +76,11 @@ $modulePaths = @(
     'ReplicatedStorage/Shared/Util/LootDuel.luau',
     'ReplicatedStorage/Shared/Config/FortressTreeConfig.luau',
     'ReplicatedStorage/Shared/Config/OnboardingConfig.luau',
+    'ReplicatedStorage/Shared/Config/GuideConfig.luau',
+    'ServerScriptService/Core/GuideLessons.luau',
     'ReplicatedStorage/Shared/Config/ShopConfig.luau',
     'ReplicatedStorage/Shared/Util/FortressTree.luau',
     'ReplicatedStorage/Shared/Util/InventoryCapacity.luau',
-    'ReplicatedStorage/Shared/Util/EquipBest.luau',
     'ReplicatedStorage/Shared/Util/OutskirtsRules.luau',
     'ReplicatedStorage/Shared/Util/FacilityWorkerRules.luau',
     'ReplicatedStorage/Shared/Util/SummonLuck.luau',
@@ -88,6 +89,7 @@ $modulePaths = @(
     'ServerScriptService/Core/ProfileCodec.luau',
     'ReplicatedStorage/Shared/Util/PitMath.luau',
     'ServerScriptService/Core/PitService.luau',
+    'ReplicatedStorage/Shared/Util/EquipBest.luau',
     'ServerScriptService/Core/ForgeTransactions.luau',
     'ServerScriptService/Combat/HeroImpactQueue.luau',
     'ServerScriptService/Combat/HeroSkillEffects.luau',
@@ -109,9 +111,9 @@ foreach ($modulePath in $modulePaths) {
     $bundleParts.Add("`nend)")
 }
 foreach ($suite in @('pit.spec.luau', 'forge.spec.luau', 'forge-workbench.spec.luau', 'equip-best.spec.luau', 'combat-skills.spec.luau', 'tower.spec.luau', 'tower-transport.spec.luau', 'tower-combat.spec.luau', 'tower-rework.spec.luau', 'phase1-combat-tempo.luau', 'hero-rig.spec.luau', 'phase2-floor-loop.spec.luau', 'phase2-defeat-rules.spec.luau', 'hero-action.spec.luau', 'hero-targeting.spec.luau', 'tower-navigation.spec.luau', 'squad-movement.spec.luau', 'combat-vfx.spec.luau', 'phase4-progression.luau', 'profile-persistence.spec.luau', 'tower-run-loop.spec.luau', 'tower-camp-roster.spec.luau', 'tower-support.spec.luau', 'tower-patrols.spec.luau', 'tower-affixes.spec.luau', 'tower-events.spec.luau', 'tower-portals.spec.luau', 'hublayout.spec.luau', 'outskirts-waves.spec.luau', 'facility-workers.spec.luau', 'relic-biome-config.spec.luau', 'inventory-capacity.spec.luau', 'raid.spec.luau')) {
-    $bundleParts.Add('do')
+    $bundleParts.Add('do local function runSuite()')
     $bundleParts.Add([System.IO.File]::ReadAllText((Join-Path $PSScriptRoot $suite)))
-    $bundleParts.Add("`nend")
+    $bundleParts.Add("`nend`nrunSuite()`nend")
 }
 # Keep generated tests out of the installed CLI directory, which may be read-only.
 $bundlePath = Join-Path $env:TEMP 'infinite-tower-tests.luau'

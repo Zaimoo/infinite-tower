@@ -168,6 +168,13 @@ function RaidHud.Leaderboard(props: { Top: number, Bottom: number, Compact: bool
 	})
 	rows.Boss = Components.GlassText({ LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 14), TextSize = 11, TextTransparency = G.MutedTransparency,
 		Text = if raid.Phase == "WARNING" then RaidConfig.FullName(raid.Boss) .. " - awakens soon" else RaidConfig.FullName(raid.Boss) })
+	local profile = Store.Profile
+	local firstRaid = not profile or not profile.Raid or (profile.Raid.Participations or 0) == 0
+	if Store.GuideV2 and firstRaid and raid.Phase == "ACTIVE" then
+		local punish = (ReplicatedStorage:GetAttribute("RaidPunishUntil") or 0) > raid.Now
+		rows.Guide = Components.GlassText({ LayoutOrder = 3, Size = UDim2.new(1, 0, 0, 34), TextWrapped = true, TextSize = 12,
+			TextColor3 = GOLD, Text = if punish then "Punish Window: the boss takes extra damage now." else "Move your squad out of marked attacks. Strike after the boss’s signature." })
+	end
 	local data = board
 	local maxDamage = 0
 	if data then

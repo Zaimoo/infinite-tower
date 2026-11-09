@@ -1105,6 +1105,7 @@ function Promo.Render(self: any)
 	-- 4. Action Button & Feedback Status
 	local canCommit = preview ~= nil and preview.CanCommit == true and not self.Loading and not self.Busy
 	local button = self.ConfirmButton
+	button.Interactable = canCommit
 	if self.Busy then
 		button.Text = "PROMOTING…"
 	else

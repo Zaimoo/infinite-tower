@@ -950,6 +950,7 @@ function SquadController.Refresh(self: any)
 		end
 		e.ArchRendered = setIcon(e.Arch, e.ArchRendered, hero and hero.Archetype, 24)
 
+		e.Main.Name = if not locked and unlocked and not self.Busy and self.ChoosingSlot == nil then `GuideSquadSlot{i}` else "SlotAction"
 		local choosing = self.ChoosingSlot == i
 		local rarity = hero and StatFormulas.GetHeroRarity(hero) or 1
 		e.Ring.Color = if hero then Theme.RarityColor(rarity) else INK
@@ -1038,6 +1039,7 @@ function SquadController.Refresh(self: any)
 		self.RosterCards[hero.UUID] = entry
 		entry.Card.LayoutOrder = order
 		entry.Card.Visible = true
+		entry.Card.Name = if self.ChoosingSlot and hero.Assignment == "BENCHED" and (hero.ComaUntilTimestamp or 0) <= os.time() then "GuideSquadHero" else "Hero_" .. hero.UUID
 
 		local resting = restingSeconds(hero)
 		local rarity = StatFormulas.GetHeroRarity(hero)

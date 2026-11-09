@@ -74,6 +74,7 @@ local function now(): number
 end
 
 local function publish()
+	if phase ~= "ACTIVE" then ReplicatedStorage:SetAttribute("RaidPunishUntil", nil) end
 	ReplicatedStorage:SetAttribute("RaidPhase", phase)
 	ReplicatedStorage:SetAttribute("RaidBossId", boss.Id)
 	ReplicatedStorage:SetAttribute("RaidStartsAt", startAt)
@@ -242,6 +243,9 @@ end
 
 function Service.OnSignature(mob: any, t: number)
 	mob.PunishUntil = t + Config.PunishSeconds
+	if mob == bossMob and phase == "ACTIVE" then
+		ReplicatedStorage:SetAttribute("RaidPunishUntil", now() + Config.PunishSeconds)
+	end
 end
 
 function Service.OnBossDeath(mob: any, _killer: Player?)
@@ -261,11 +265,11 @@ local function returnToHub(player: Player)
 	Tower.ExitToOverworld(player, landing, false)
 end
 
-local function entryError(player: Player): string?
+local function entryError(player: Player, ignoreDistance: boolean?): string?
 	local t = now()
 	if not Rules.CanEnter(t, startAt, timings) or (phase ~= "WARNING" and phase ~= "ACTIVE") then return "The Raid Portal is closed." end
 	local dm = dataManager()
-	if dm.IsUnlocked and not dm.IsUnlocked(player, "Tower") then return dm.LockedMessage and dm.LockedMessage("Tower") or "Unlock the Tower first." end
+	if dm.IsUnlocked and not dm.IsUnlocked(player, "Tower") then return dm.LockedMessage and dm.LockedMessage("Tower", player) or "Unlock the Tower first." end
 	if Tower.IsTransitioning(player) then return "You are already travelling." end
 	local char = player.Character
 	if not char then return "Your Master is not ready." end
@@ -275,8 +279,12 @@ local function entryError(player: Player): string?
 	if cs and cs.IsInDuel and cs.IsInDuel(player) then return "Finish your duel first." end
 	if cs and cs.StandingHeroes and cs.StandingHeroes(player) == 0 then return "Deploy a hero who can fight to enter the raid." end
 	local root = char:FindFirstChild("HumanoidRootPart") :: BasePart?
-	if not root or not portal or (root.Position - portal.Trigger.Position).Magnitude > Config.PortalPromptDistance + 12 then return "Step up to the portal." end
+	if not root or not portal or (not ignoreDistance and (root.Position - portal.Trigger.Position).Magnitude > Config.PortalPromptDistance + 12) then return "Step up to the portal." end
 	return nil
+end
+
+function Service.CanGuide(player: Player): boolean
+	return entryError(player, true) == nil
 end
 
 function Service.TryEnter(player: Player)

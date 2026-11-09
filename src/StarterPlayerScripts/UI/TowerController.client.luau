@@ -927,6 +927,7 @@ render = function()
 		local fId = firstFloorOfBiome + slotIdx - 1
 		local slotData = activeFloorButtons[slotIdx]
 		if slotData then
+			slotData.Root.Name = if fId == 1 then "GuideFloor1" else "FloorSlot_" .. slotIdx
 			local isSelectedFloor = (fId == selected)
 			local isVisiting = (visitingFloor == fId)
 			local isAssigned = (assignedFloor == fId)
@@ -992,6 +993,7 @@ render = function()
 		end
 	end
 	-- 4. Dynamic Action Button Text & Mode Adaptation
+	visitBtn.Name = if selected == 1 and not isSelectedLocked and visitingFloor ~= 1 and not pendingActionName then "GuideVisitFloor1" else "VisitFloorBtn"
 	if selectorMode == "ASSIGN" then
 		assignBtn.LayoutOrder = 1
 		recallBtn.LayoutOrder = 2

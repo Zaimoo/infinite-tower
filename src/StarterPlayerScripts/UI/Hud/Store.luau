@@ -14,6 +14,9 @@ local changed = Instance.new("BindableEvent")
 Store.Changed = changed.Event
 
 Store.Profile = nil :: any
+Store.GuideV2 = false
+Store.GuideVisible = true
+Store.GuideRevision = 0
 Store.Goal = nil :: any -- OnboardingSync.Step, or nil once the chain is complete
 Store.Revision = 0
 Store.DrawerExpanded = false -- the player's Squad drawer choice, kept for the session
@@ -25,6 +28,19 @@ Store.ViewingSquad = false :: boolean
 local function bump()
 	Store.Revision += 1
 	changed:Fire(Store.Revision)
+end
+
+local guideRemote: RemoteEvent? = nil
+
+function Store.GuideAction(action: string)
+	if action == "Show" then
+		Store.GuideVisible = not Store.GuideVisible
+		bump()
+	elseif action == "Snooze" or action == "Resume" then
+		if action == "Resume" then Store.GuideVisible = true; bump() end
+		local remote = guideRemote
+		if remote then remote:FireServer(action, if action == "Snooze" and Store.Goal then Store.Goal.Id else nil) end
+	end
 end
 
 function Store.SetModalFocus(isFocused: boolean)
@@ -58,11 +74,17 @@ task.spawn(function()
 	local progression = Remotes:WaitForChild("ProgressionRemotes", 30)
 	local sync = progression and progression:WaitForChild("OnboardingSync", 30)
 	if sync and sync:IsA("RemoteEvent") then
+		guideRemote = sync
 		sync.OnClientEvent:Connect(function(message: any)
-			if type(message) ~= "table" then return end
+			if type(message) ~= "table" or type(message.Revision) ~= "number" or message.Revision <= Store.GuideRevision then return end
+			local previous = Store.Goal
+			Store.GuideRevision = message.Revision
+			Store.GuideV2 = message.V2 == true
 			Store.Goal = if type(message.Step) == "table" then message.Step else nil
+			if Store.Goal and (not previous or previous.Id ~= Store.Goal.Id) then Store.GuideVisible = true end
 			bump()
 		end)
+		sync:FireServer("Refresh")
 	end
 end)
 
