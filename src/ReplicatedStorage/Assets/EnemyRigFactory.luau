@@ -14,6 +14,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config.FirstBiomeCombat)
 local Index = require(ReplicatedStorage.Shared.Config.TowerEnemyModelIndex)
 local Rigs = require(script.Parent.TowerEnemyRigs)
+local EnemyAnimator = require(script.Parent.EnemyAnimator)
 
 local Factory = {}
 
@@ -161,6 +162,7 @@ local function buildModel(model: Model, root: BasePart, enemyId: string): any
 		end
 	end
 
+	rig.Metrics = EnemyAnimator.Metrics(enemyId, spec, entry, s)
 	model:SetAttribute("TowerEnemyId", enemyId)
 	folder:SetAttribute("Source", "TowerEnemies/" .. enemyId)
 	folder:SetAttribute("RigFamily", spec.RigFamily)
@@ -176,7 +178,9 @@ function Factory.Build(model: Model, root: BasePart, enemyId: string): any
 		local art = model:FindFirstChild("TowerEnemyArt")
 		if art then art:Destroy() end
 	end
-	return Rigs.Build(model, root, enemyId)
+	local rig = Rigs.Build(model, root, enemyId)
+	rig.Metrics = EnemyAnimator.Metrics(enemyId, rig.Spec, nil, 1)
+	return rig
 end
 
 return Factory
