@@ -12,38 +12,18 @@
     2.0,
     -0.0
    ],
-   "Glow": [
-    {
-     "Mesh": "Body_Glow_Magma",
-     "Colour": [
-      255,
-      92,
-      30
-     ],
-     "Tris": 22,
-     "Centre": [
-      0.0,
-      5.418,
-      1.354
-     ],
-     "Size": [
-      0.4,
-      1.035,
-      0.708
-     ]
-    }
-   ],
+   "Glow": [],
    "Centre": [
     0.0,
-    3.829,
-    1.194
+    1.95,
+    0.29
    ],
    "Size": [
     2.73,
-    5.259,
-    7.188
+    1.5,
+    5.38
    ],
-   "Tris": 1276
+   "Tris": 476
   },
   {
    "Name": "Head",
@@ -85,6 +65,141 @@
     1.365
    ],
    "Tris": 188
+  },
+  {
+   "Name": "ExtraTail1",
+   "Parent": "Body",
+   "Pivot": [
+    0.0,
+    2.4,
+    2.9
+   ],
+   "Glow": [],
+   "Motion": "Hanging",
+   "Keyed": true,
+   "Centre": [
+    0.0,
+    2.842,
+    3.489
+   ],
+   "Size": [
+    1.141,
+    1.821,
+    1.927
+   ],
+   "Tris": 136
+  },
+  {
+   "Name": "ExtraTail2",
+   "Parent": "ExtraTail1",
+   "Pivot": [
+    0.0,
+    3.2,
+    3.9
+   ],
+   "Glow": [],
+   "Motion": "Hanging",
+   "Keyed": true,
+   "Centre": [
+    0.0,
+    3.96,
+    4.092
+   ],
+   "Size": [
+    1.008,
+    1.855,
+    1.39
+   ],
+   "Tris": 136
+  },
+  {
+   "Name": "ExtraTail3",
+   "Parent": "ExtraTail2",
+   "Pivot": [
+    0.0,
+    4.4,
+    4.3
+   ],
+   "Glow": [],
+   "Motion": "Hanging",
+   "Keyed": true,
+   "Centre": [
+    0.0,
+    5.083,
+    4.105
+   ],
+   "Size": [
+    0.875,
+    1.68,
+    1.256
+   ],
+   "Tris": 136
+  },
+  {
+   "Name": "ExtraTail4",
+   "Parent": "ExtraTail3",
+   "Pivot": [
+    0.0,
+    5.5,
+    3.9
+   ],
+   "Glow": [],
+   "Motion": "Hanging",
+   "Keyed": true,
+   "Centre": [
+    0.0,
+    5.817,
+    3.379
+   ],
+   "Size": [
+    0.742,
+    1.283,
+    1.475
+   ],
+   "Tris": 136
+  },
+  {
+   "Name": "ExtraSting",
+   "Parent": "ExtraTail4",
+   "Pivot": [
+    0.0,
+    6.1,
+    3.0
+   ],
+   "Glow": [
+    {
+     "Mesh": "ExtraSting_Glow_Magma",
+     "Colour": [
+      255,
+      92,
+      30
+     ],
+     "Tris": 22,
+     "Centre": [
+      0.0,
+      5.418,
+      1.354
+     ],
+     "Size": [
+      0.4,
+      1.035,
+      0.708
+     ]
+    }
+   ],
+   "Motion": "Rigid",
+   "Keyed": true,
+   "Centre": [
+    0.0,
+    5.884,
+    2.147
+   ],
+   "Size": [
+    0.927,
+    1.068,
+    1.769
+   ],
+   "Tris": 256
   },
   {
    "Name": "JawL",
@@ -382,7 +497,7 @@
   },
   {
    "Name": "Trophy_SunCrest",
-   "Parent": "Body",
+   "Parent": "ExtraSting",
    "Pivot": [
     0.0,
     6.2,
@@ -409,6 +524,7 @@
      ]
     }
    ],
+   "Motion": "Rigid",
    "Centre": [
     0.0,
     6.75,
@@ -429,7 +545,7 @@
   "Normal": "alpha_glass_scorpion_normal.png"
  },
  "TotalTris": 3618,
- "MeshCount": 20,
+ "MeshCount": 25,
  "Size": [
   6.86,
   7.5,

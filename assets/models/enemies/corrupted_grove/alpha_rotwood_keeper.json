@@ -55,14 +55,14 @@
    "Centre": [
     0.0,
     4.875,
-    -0.003
+    -0.014
    ],
    "Size": [
-    2.828,
+    2.725,
     4.0,
-    2.778
+    2.754
    ],
-   "Tris": 692
+   "Tris": 638
   },
   {
    "Name": "Head",
@@ -94,16 +94,60 @@
     }
    ],
    "Centre": [
+    0.0,
+    7.275,
+    -0.091
+   ],
+   "Size": [
+    2.021,
+    1.05,
+    2.181
+   ],
+   "Tris": 92
+  },
+  {
+   "Name": "ExtraMantle",
+   "Parent": "Body",
+   "Pivot": [
+    0.0,
+    6.688,
+    -0.0
+   ],
+   "Glow": [],
+   "Motion": "Cloth",
+   "Centre": [
+    0.0,
+    5.828,
+    0.065
+   ],
+   "Size": [
+    2.828,
+    1.774,
+    2.643
+   ],
+   "Tris": 54
+  },
+  {
+   "Name": "ExtraBranches",
+   "Parent": "Head",
+   "Pivot": [
+    0.0,
+    7.688,
+    -0.062
+   ],
+   "Glow": [],
+   "Motion": "Rigid",
+   "Centre": [
     -0.0,
-    8.22,
+    8.634,
     -0.047
    ],
    "Size": [
     2.932,
-    2.939,
+    2.11,
     2.571
    ],
-   "Tris": 268
+   "Tris": 176
   },
   {
    "Name": "ArmL",
@@ -302,6 +346,7 @@
      ]
     }
    ],
+   "Motion": "Rigid",
    "Centre": [
     0.0,
     8.728,
@@ -322,7 +367,7 @@
   "Normal": "alpha_rotwood_keeper_normal.png"
  },
  "TotalTris": 2148,
- "MeshCount": 15,
+ "MeshCount": 17,
  "Size": [
   5.0,
   9.74,

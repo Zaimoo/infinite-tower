@@ -54,15 +54,15 @@
    ],
    "Centre": [
     0.0,
-    7.255,
-    0.834
+    9.067,
+    0.033
    ],
    "Size": [
-    6.312,
-    12.509,
-    5.418
+    4.84,
+    8.884,
+    3.817
    ],
-   "Tris": 5462
+   "Tris": 568
   },
   {
    "Name": "Head",
@@ -311,6 +311,72 @@
     2.5
    ],
    "Tris": 158
+  },
+  {
+   "Name": "ExtraMantleL",
+   "Parent": "Body",
+   "Pivot": [
+    -1.875,
+    12.875,
+    1.625
+   ],
+   "Glow": [],
+   "Motion": "Cloth",
+   "Centre": [
+    -2.046,
+    7.406,
+    2.527
+   ],
+   "Size": [
+    2.22,
+    11.312,
+    2.031
+   ],
+   "Tris": 1932
+  },
+  {
+   "Name": "ExtraMantle",
+   "Parent": "Body",
+   "Pivot": [
+    0.0,
+    12.875,
+    1.625
+   ],
+   "Glow": [],
+   "Motion": "Cloth",
+   "Centre": [
+    0.0,
+    7.019,
+    2.379
+   ],
+   "Size": [
+    0.643,
+    12.039,
+    1.97
+   ],
+   "Tris": 1030
+  },
+  {
+   "Name": "ExtraMantleR",
+   "Parent": "Body",
+   "Pivot": [
+    1.875,
+    12.875,
+    1.625
+   ],
+   "Glow": [],
+   "Motion": "Cloth",
+   "Centre": [
+    2.046,
+    7.406,
+    2.521
+   ],
+   "Size": [
+    2.22,
+    11.312,
+    2.02
+   ],
+   "Tris": 1932
   }
  ],
  "Surface": {
@@ -320,7 +386,7 @@
   "Normal": "boss_crimson_overlord_normal.png"
  },
  "TotalTris": 7314,
- "MeshCount": 15,
+ "MeshCount": 18,
  "Size": [
   8.38,
   19.15,

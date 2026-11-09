@@ -134,9 +134,30 @@
     8.51,
     -0.345
    ],
+   "Glow": [],
+   "Centre": [
+    -4.094,
+    6.873,
+    -0.598
+   ],
+   "Size": [
+    1.702,
+    3.488,
+    1.886
+   ],
+   "Tris": 320
+  },
+  {
+   "Name": "ExtraTomeL",
+   "Parent": "ForearmL",
+   "Pivot": [
+    -5.06,
+    7.59,
+    -1.265
+   ],
    "Glow": [
     {
-     "Mesh": "ForearmL_Glow_Star",
+     "Mesh": "ExtraTomeL_Glow_Star",
      "Colour": [
       255,
       214,
@@ -155,17 +176,19 @@
      ]
     }
    ],
+   "Motion": "Rigid",
+   "Keyed": true,
    "Centre": [
-    -4.885,
-    7.337,
-    -1.238
+    -5.864,
+    7.59,
+    -1.26
    ],
    "Size": [
-    3.283,
-    4.416,
-    3.166
+    1.324,
+    3.91,
+    3.121
    ],
-   "Tris": 404
+   "Tris": 84
   },
   {
    "Name": "ArmR",
@@ -196,9 +219,30 @@
     8.51,
     -0.345
    ],
+   "Glow": [],
+   "Centre": [
+    4.094,
+    6.873,
+    -0.598
+   ],
+   "Size": [
+    1.702,
+    3.488,
+    1.886
+   ],
+   "Tris": 320
+  },
+  {
+   "Name": "ExtraTomeR",
+   "Parent": "ForearmR",
+   "Pivot": [
+    5.06,
+    7.59,
+    -1.265
+   ],
    "Glow": [
     {
-     "Mesh": "ForearmR_Glow_Star",
+     "Mesh": "ExtraTomeR_Glow_Star",
      "Colour": [
       255,
       214,
@@ -217,17 +261,19 @@
      ]
     }
    ],
+   "Motion": "Rigid",
+   "Keyed": true,
    "Centre": [
-    4.885,
-    7.337,
-    -1.243
+    5.866,
+    7.59,
+    -1.27
    ],
    "Size": [
-    3.285,
-    4.416,
-    3.175
+    1.324,
+    3.91,
+    3.121
    ],
-   "Tris": 404
+   "Tris": 84
   },
   {
    "Name": "LegL",
@@ -321,7 +367,7 @@
   "Normal": "boss_archive_rift_warden_normal.png"
  },
  "TotalTris": 4414,
- "MeshCount": 15,
+ "MeshCount": 17,
  "Size": [
   13.05,
   17.71,

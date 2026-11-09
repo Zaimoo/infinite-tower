@@ -12,9 +12,71 @@
     2.7,
     -0.0
    ],
+   "Glow": [],
+   "Centre": [
+    0.0,
+    2.88,
+    0.13
+   ],
+   "Size": [
+    1.404,
+    1.62,
+    2.08
+   ],
+   "Tris": 340
+  },
+  {
+   "Name": "Head",
+   "Parent": "Body",
+   "Pivot": [
+    0.0,
+    3.78,
+    -0.72
+   ],
    "Glow": [
     {
-     "Mesh": "Body_Glow_Storm",
+     "Mesh": "Head_Glow_Storm",
+     "Colour": [
+      190,
+      150,
+      255
+     ],
+     "Tris": 72,
+     "Centre": [
+      -0.0,
+      4.374,
+      -1.188
+     ],
+     "Size": [
+      0.595,
+      0.126,
+      0.126
+     ]
+    }
+   ],
+   "Centre": [
+    0.0,
+    3.879,
+    -0.772
+   ],
+   "Size": [
+    0.684,
+    1.439,
+    1.154
+   ],
+   "Tris": 244
+  },
+  {
+   "Name": "ExtraTailFan",
+   "Parent": "Body",
+   "Pivot": [
+    0.0,
+    2.88,
+    1.035
+   ],
+   "Glow": [
+    {
+     "Mesh": "ExtraTailFan_Glow_Storm",
      "Colour": [
       190,
       150,
@@ -33,48 +95,50 @@
      ]
     }
    ],
+   "Motion": "Cloth",
+   "Keyed": true,
    "Centre": [
     0.0,
-    3.524,
-    0.211
+    3.903,
+    1.173
    ],
    "Size": [
     3.691,
-    2.909,
-    2.243
+    2.151,
+    0.32
    ],
-   "Tris": 484
+   "Tris": 144
   },
   {
-   "Name": "Head",
-   "Parent": "Body",
+   "Name": "ExtraBeak",
+   "Parent": "Head",
    "Pivot": [
     0.0,
-    3.78,
-    -0.72
+    4.275,
+    -1.26
    ],
    "Glow": [
     {
-     "Mesh": "Head_Glow_Storm",
+     "Mesh": "ExtraBeak_Glow_Storm",
      "Colour": [
       190,
       150,
       255
      ],
-     "Tris": 358,
+     "Tris": 256,
      "Centre": [
       0.0,
-      4.491,
-      -1.07
+      4.212,
+      -2.637
      ],
      "Size": [
       1.575,
-      2.133,
-      3.881
+      1.575,
+      0.747
      ]
     },
     {
-     "Mesh": "Head_Glow_Spark",
+     "Mesh": "ExtraBeak_Glow_Spark",
      "Colour": [
       238,
       234,
@@ -93,17 +157,61 @@
      ]
     }
    ],
+   "Motion": "Rigid",
+   "Keyed": true,
    "Centre": [
     0.0,
-    4.257,
-    -0.756
+    4.212,
+    -1.689
    ],
    "Size": [
-    0.684,
-    2.195,
-    2.736
+    0.648,
+    0.648,
+    0.871
    ],
-   "Tris": 364
+   "Tris": 80
+  },
+  {
+   "Name": "ExtraCrest",
+   "Parent": "Head",
+   "Pivot": [
+    0.0,
+    4.545,
+    -0.855
+   ],
+   "Glow": [
+    {
+     "Mesh": "ExtraCrest_Glow_Storm",
+     "Colour": [
+      190,
+      150,
+      255
+     ],
+     "Tris": 30,
+     "Centre": [
+      0.0,
+      5.166,
+      0.166
+     ],
+     "Size": [
+      0.072,
+      0.782,
+      1.41
+     ]
+    }
+   ],
+   "Motion": "Cloth",
+   "Centre": [
+    0.0,
+    4.835,
+    -0.152
+   ],
+   "Size": [
+    0.137,
+    1.04,
+    1.528
+   ],
+   "Tris": 40
   },
   {
    "Name": "ArmL",
@@ -275,7 +383,7 @@
   }
  ],
  "TotalTris": 2478,
- "MeshCount": 13,
+ "MeshCount": 18,
  "Size": [
   6.52,
   5.54,

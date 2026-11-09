@@ -120,7 +120,8 @@ def spore_skitter():
     head.sphere(0.48, "chitin_dark", loc=(0, 1.55, 1.5), scale=(1.1, 1.0, 0.85), segs=14, rings=8)
     for s in (1, -1):
         head.sphere(0.13, GLOW, loc=(s * 0.25, 1.95, 1.62), segs=8, rings=5)
-        head.tube([V((s * 0.2, 1.8, 1.8)), V((s * 0.45, 2.2, 2.25)), V((s * 0.6, 2.35, 2.35))], [0.04, 0.03, 0.0], "gill_dark", sides=5)
+        feeler = A.segment("ExtraAntennaR" if s == 1 else "ExtraAntennaL", (s * 0.2, 1.8, 1.8), head)  # springs (mob_extras)
+        feeler.tube([V((s * 0.2, 1.8, 1.8)), V((s * 0.45, 2.2, 2.25)), V((s * 0.6, 2.35, 2.35))], [0.04, 0.03, 0.0], "gill_dark", sides=5)
     for s, side in ((-1, "L"), (1, "R")):
         jaw = A.segment(f"Jaw{side}", (s * 0.28, 1.95, 1.35), head)
         jaw.tube([V((s * 0.28, 1.9, 1.35)), V((s * 0.35, 2.25, 1.3)), V((s * 0.12, 2.45, 1.25))], [0.09, 0.07, 0.0], "bone", sides=5)
@@ -209,12 +210,13 @@ def sporecap_chanter():
         if s == 1:
             top = V((0.82, 0.95, 2.05))
             bot = V((0.85, 1.05, 1.25))
-            fore.tube([top, top.lerp(bot, 0.5) + V((0.02, 0, 0)), bot], [0.025] * 3, "brass_dark", sides=4)
-            fore.sphere(0.24, "brass", loc=bot - V((0, 0, 0.18)), segs=12, rings=8)
-            fore.torus(0.24, 0.04, "brass_dark", loc=bot - V((0, 0, 0.12)), major=12, minor=4)
-            fore.sphere(0.12, GLOW, loc=bot - V((0, 0, 0.0)), segs=8, rings=5)
+            censer = A.segment("ExtraCenser", top, fore)  # swings on its chain (Hanging spring)
+            censer.tube([top, top.lerp(bot, 0.5) + V((0.02, 0, 0)), bot], [0.025] * 3, "brass_dark", sides=4)
+            censer.sphere(0.24, "brass", loc=bot - V((0, 0, 0.18)), segs=12, rings=8)
+            censer.torus(0.24, 0.04, "brass_dark", loc=bot - V((0, 0, 0.12)), major=12, minor=4)
+            censer.sphere(0.12, GLOW, loc=bot - V((0, 0, 0.0)), segs=8, rings=5)
             for k in range(3):
-                fore.sphere(0.07 + k * 0.025, GLOW, loc=bot + V((0.05 * k, 0.05, 0.22 + k * 0.2)), segs=6, rings=4)
+                censer.sphere(0.07 + k * 0.025, GLOW, loc=bot + V((0.05 * k, 0.05, 0.22 + k * 0.2)), segs=6, rings=4)
     # short legs and sandaled feet under the robe hem
     for s, side in ((-1, "L"), (1, "R")):
         leg = A.segment(f"Leg{side}", (s * 0.25, 0, 2.05), body)
@@ -302,13 +304,14 @@ def spore_matriarch():
     head = A.segment("Head", (0, 0.3, 11.5), body)
     rnd = random.Random(70)
     # a skirt of heavy tendrils from the waist, a tall stem body widening to the shoulders
+    skirt = A.segment("ExtraSkirt", (0, 0, 6.4), body)  # the tendril skirt (Cloth spring)
     for k in range(14):
         a = 2 * math.pi * k / 14 + rnd.uniform(-0.1, 0.1)
         d = V((math.cos(a), math.sin(a), 0))
         top = V((0, 0, 6.4)) + d * 1.6
         pts = [top, top + d * 1.2 + V((0, 0, -1.6)), top + d * 2.6 + V((0, 0, -3.6)), top + d * 3.2 + V((0, 0, -5.4)), top + d * 3.9 + V((0, 0, -6.2))]
-        body.tube(pts, [0.55, 0.5, 0.42, 0.3, 0.12], "cap_dark" if k % 2 else "robe", sides=8)
-        body.sphere(0.12, GLOW, loc=pts[2] + d * 0.42, segs=6, rings=4)
+        skirt.tube(pts, [0.55, 0.5, 0.42, 0.3, 0.12], "cap_dark" if k % 2 else "robe", sides=8)
+        skirt.sphere(0.12, GLOW, loc=pts[2] + d * 0.42, segs=6, rings=4)
     body.cyl(2.4, 1.7, 1.2, "gill", loc=(0, 0, 6.6), segs=20)
     body.tube([V((0, 0, 6.6)), V((0, 0.2, 8.2)), V((0, 0.35, 9.8)), V((0, 0.3, 11.2))], [(1.7, 1.4), (1.6, 1.3), (2.3, 1.6), (1.6, 1.2)], "stalk", sides=16)
     for k in range(9):  # glowing mycelium veins up the stem
@@ -320,8 +323,9 @@ def spore_matriarch():
     for k, (x, y) in enumerate(((-2.2, -0.6), (2.2, -0.6), (-1.0, -1.6), (1.1, -1.6))):
         top = V((x, y, 10.9))
         low = top + V((x * 0.15, y * 0.2, -1.4))
-        body.tube([top, top.lerp(low, 0.5) + V((0, 0, 0.1)), low], [0.08, 0.07, 0.06], "stalk_dark", sides=5)
-        lantern(body, low - V((0, 0, 0.55)), 0.42, 0.45, "cap_dark", GLOW, "cap_violet", ribs=5)
+        sac = A.segment(f"ExtraSacs{k + 1}", top, body)  # each sac swings on its stalk (Hanging spring)
+        sac.tube([top, top.lerp(low, 0.5) + V((0, 0, 0.1)), low], [0.08, 0.07, 0.06], "stalk_dark", sides=5)
+        lantern(sac, low - V((0, 0, 0.55)), 0.42, 0.45, "cap_dark", GLOW, "cap_violet", ribs=5)
     # head: a face of gills under three tiers of pitted morel crown, rising to a point
     head.sphere(1.05, "flesh", loc=(0, 0.75, 12.1), scale=(1.0, 0.9, 1.0), segs=16, rings=10)
     for s in (1, -1):
@@ -330,9 +334,10 @@ def spore_matriarch():
         x = (k - 4) * 0.2
         head.tube([V((x, 1.5, 11.75)), V((x * 1.1, 1.65, 11.2)), V((x * 1.2, 1.55, 10.7))], [0.05, 0.04, 0.0], "gill", sides=4)
     cap(head, (0, 0.4, 13.0), 2.6, 0.9, "cap_violet", spots=12, seed=80, stalk_r=0.9, gills=22)
-    morel(head, (0, 0.3, 14.3), 1.7, 1.2, "cap_dark", "robe_dark", seed=81)
-    morel(head, (0, 0.25, 15.6), 1.0, 1.0, "cap_violet", "cap_dark", seed=82)
-    head.spike((0, 0.25, 16.4), (0, 0.2, 17.2), 0.25, "cap_light", segs=6)
+    crown = A.segment("ExtraCrown", (0, 0.3, 13.6), head)  # the morel tiers: keyed to rise for Signatures later
+    morel(crown, (0, 0.3, 14.3), 1.7, 1.2, "cap_dark", "robe_dark", seed=81)
+    morel(crown, (0, 0.25, 15.6), 1.0, 1.0, "cap_violet", "cap_dark", seed=82)
+    crown.spike((0, 0.25, 16.4), (0, 0.2, 17.2), 0.25, "cap_light", segs=6)
     # long tendril arms ending in gill-fan hands with glowing tips
     for s, side in ((-1, "L"), (1, "R")):
         arm = A.segment(f"Arm{side}", (s * 2.3, 0.3, 10.7), body)

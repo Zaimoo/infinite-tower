@@ -115,9 +115,30 @@
     3.05,
     -0.45
    ],
+   "Glow": [],
+   "Centre": [
+    -0.768,
+    2.768,
+    -0.603
+   ],
+   "Size": [
+    0.292,
+    0.675,
+    0.523
+   ],
+   "Tris": 84
+  },
+  {
+   "Name": "ExtraLantern",
+   "Parent": "ForearmL",
+   "Pivot": [
+    -0.8,
+    2.5,
+    -0.78
+   ],
    "Glow": [
     {
-     "Mesh": "ForearmL_Glow_Bloom",
+     "Mesh": "ExtraLantern_Glow_Bloom",
      "Colour": [
       255,
       140,
@@ -136,17 +157,18 @@
      ]
     }
    ],
+   "Motion": "Hanging",
    "Centre": [
-    -0.798,
-    2.178,
-    -0.696
+    -0.8,
+    1.878,
+    -0.85
    ],
    "Size": [
-    0.351,
-    1.855,
-    0.709
+    0.346,
+    1.255,
+    0.4
    ],
-   "Tris": 192
+   "Tris": 108
   },
   {
    "Name": "ArmR",
@@ -276,7 +298,7 @@
   }
  ],
  "TotalTris": 1472,
- "MeshCount": 13,
+ "MeshCount": 14,
  "Size": [
   1.95,
   4.84,

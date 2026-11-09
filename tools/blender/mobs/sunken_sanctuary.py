@@ -88,9 +88,10 @@ def tide_claw():
     coral(body, (0.0, 0.1, 2.05), (0.0, 0.2, 1), 0.5, "coral", seed=3)
     # head: eyestalks with aqua eyes, little mouthparts
     head.box((0.9, 0.35, 0.3), "crab_dark", loc=(0, 1.3, 1.45), bevel=0.06)
-    for s in (1, -1):
-        head.rod((s * 0.25, 1.35, 1.55), (s * 0.32, 1.45, 2.05), 0.05, "crab", segs=5)
-        head.sphere(0.1, AQUA, loc=(s * 0.32, 1.45, 2.1), segs=6, rings=4)
+    for s in (1, -1):  # eyestalks (ExtraEyeL/R, Rigid springs)
+        eye = A.segment("ExtraEyeR" if s == 1 else "ExtraEyeL", (s * 0.25, 1.35, 1.55), head)
+        eye.rod((s * 0.25, 1.35, 1.55), (s * 0.32, 1.45, 2.05), 0.05, "crab", segs=5)
+        eye.sphere(0.1, AQUA, loc=(s * 0.32, 1.45, 2.1), segs=6, rings=4)
     # pincers (Jaw): the right one is much bigger
     for s, side in ((-1, "L"), (1, "R")):
         big = s == 1
@@ -181,8 +182,9 @@ def tide_cantor():
     for s in (1, -1):
         for k in range(4):
             head.spike((s * 0.38, -0.05 - k * 0.1, 4.95 - k * 0.08), (s * 0.85, -0.25 - k * 0.15, 5.3 - k * 0.2), 0.05, "coral_pink", segs=4)
-    head.torus(0.62, 0.05, AQUA, loc=(0, -0.05, 5.55), rot=(15, 0, 0), major=20, minor=4)
-    head.torus(0.48, 0.03, PEARL, loc=(0, -0.05, 5.6), rot=(15, 0, 0), major=16, minor=4)
+    halo = A.segment("ExtraRing", (0, -0.05, 5.55), head)  # the water ring turns over the head (Spin)
+    halo.torus(0.62, 0.05, AQUA, loc=(0, -0.05, 5.55), rot=(15, 0, 0), major=20, minor=4)
+    halo.torus(0.48, 0.03, PEARL, loc=(0, -0.05, 5.6), rot=(15, 0, 0), major=16, minor=4)
     fore = A.seg("ForearmL")
     c = V((-0.85, 0.6, 3.15))
     pts = [c + V((0, -0.15 + 0.5 * i / 8, 0.1 * math.sin(i)) ) for i in range(9)]
@@ -291,18 +293,20 @@ def tidal_leviathan():
     # head: a long frilled eel-dragon skull with aqua eyes and a gaping jaw of shell teeth
     head.sphere(0.85, "skin", loc=(0, 1.35, 5.75), scale=(0.95, 1.35, 0.8), segs=14, rings=8)
     head.tube([V((0, 1.9, 5.85)), V((0, 2.55, 5.75)), V((0, 2.95, 5.6))], [(0.6, 0.45), (0.48, 0.36), (0.32, 0.25)], "skin", sides=10)
-    head.tube([V((0, 1.7, 5.3)), V((0, 2.4, 5.2)), V((0, 2.8, 5.25))], [(0.5, 0.25), (0.4, 0.2), (0.25, 0.14)], "belly", sides=8)
+    jaw = A.segment("ExtraJaw", (0, 1.7, 5.3), head)  # gapes on the bite (keyed later)
+    jaw.tube([V((0, 1.7, 5.3)), V((0, 2.4, 5.2)), V((0, 2.8, 5.25))], [(0.5, 0.25), (0.4, 0.2), (0.25, 0.14)], "belly", sides=8)
     for k in range(6):
         y = 2.0 + k * 0.15
         for s in (1, -1):
             head.spike((s * (0.38 - k * 0.03), y, 5.5), (s * (0.36 - k * 0.03), y + 0.05, 5.2), 0.05, "shell", segs=4)
+    frill = A.segment("ExtraFrill", (0, 1.0, 5.85), head)  # the side frills flare on the windup (keyed later)
     for s in (1, -1):
         head.sphere(0.16, AQUA, loc=(s * 0.55, 1.95, 6.0), segs=8, rings=5)
         head.box((0.4, 0.15, 0.08), "skin", loc=(s * 0.52, 1.95, 6.18), rot=(0, s * -15, 0))
         for k in range(4):
             root = V((s * 0.7, 1.2 - k * 0.2, 5.9 - k * 0.05))
-            head.prism([(0, 0), (0.35, 0.9 - k * 0.12), (0.7, 0.1)], 0.04, "coral" if k % 2 else "coral_pink", loc=root, rot=(0, -s * 25, s * (60 + k * 8)))
-            head.spike(root, root + V((s * 0.7, -0.3, 0.6 - k * 0.1)), 0.04, "coral_dark", segs=4)
+            frill.prism([(0, 0), (0.35, 0.9 - k * 0.12), (0.7, 0.1)], 0.04, "coral" if k % 2 else "coral_pink", loc=root, rot=(0, -s * 25, s * (60 + k * 8)))
+            frill.spike(root, root + V((s * 0.7, -0.3, 0.6 - k * 0.1)), 0.04, "coral_dark", segs=4)
     head.prism([(0, 0), (-1.1, 0.7), (-1.8, 0.2), (-1.9, -0.3)], 0.05, "coral_dark", loc=(0, 1.2, 6.35), rot=(0, 0, 90))
     head.sphere(0.12, AQUA, loc=(0, 2.4, 6.15), segs=6, rings=4)
     # side fins (Arm/Forearm)
@@ -320,9 +324,15 @@ def tidal_leviathan():
     eel(legr, [(0.4, -0.1, 0.7), (1.6, 0.2, 0.68), (2.4, -0.9, 0.65), (1.9, -2.4, 0.62)], 0.92, 0.85, debris=1, seed=3)
     eel(kner, [(1.9, -2.4, 0.62), (1.2, -3.3, 0.6), (0.2, -3.4, 0.58)], 0.85, 0.8, debris=1, seed=4)
     eel(legl, [(0.2, -3.4, 0.58), (-1.0, -3.6, 0.55), (-1.9, -4.4, 0.5), (-1.8, -5.3, 0.48)], 0.8, 0.66, debris=1, seed=5)
-    eel(knel, [(-1.8, -5.3, 0.48), (-1.2, -6.3, 0.42), (0.0, -6.9, 0.38), (1.0, -7.1, 0.35)], 0.66, 0.3, debris=0)
-    knel.prism([(0, 0), (1.2, 0.9), (1.5, 0.0), (1.2, -0.9)], 0.06, "coral", loc=(1.0, -7.1, 0.38), rot=(90, 0, 0))
-    knel.tube([V((1.05, -7.1, 0.4)), V((2.1, -7.1, 1.1)), V((2.4, -7.1, 0.4))], [0.05, 0.04, 0.0], AQUA, sides=4)
+    tail1 = A.segment("ExtraTail1", (-1.2, -6.3, 0.42), knel)  # the tail carries the S-wave to the fin (keyed later)
+    tail2 = A.segment("ExtraTail2", (0.0, -6.9, 0.38), tail1)
+    eel(knel, [(-1.8, -5.3, 0.48), (-1.2, -6.3, 0.42)], 0.66, 0.54, debris=0)
+    eel(tail1, [(-1.2, -6.3, 0.42), (0.0, -6.9, 0.38)], 0.54, 0.42, debris=0)
+    eel(tail2, [(0.0, -6.9, 0.38), (1.0, -7.1, 0.35)], 0.42, 0.3, debris=0)
+    tail1.sphere(0.54, "skin", loc=(-1.2, -6.3, 0.42), scale=(1, 1, 0.9), segs=10, rings=6)  # covers the bends
+    tail2.sphere(0.42, "skin", loc=(0.0, -6.9, 0.38), scale=(1, 1, 0.9), segs=10, rings=6)
+    tail2.prism([(0, 0), (1.2, 0.9), (1.5, 0.0), (1.2, -0.9)], 0.06, "coral", loc=(1.0, -7.1, 0.38), rot=(90, 0, 0))
+    tail2.tube([V((1.05, -7.1, 0.4)), V((2.1, -7.1, 1.1)), V((2.4, -7.1, 0.4))], [0.05, 0.04, 0.0], AQUA, sides=4)
     return scaled(A, 2.05)
 
 

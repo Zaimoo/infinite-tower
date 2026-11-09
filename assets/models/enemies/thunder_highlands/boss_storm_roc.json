@@ -36,14 +36,14 @@
    "Centre": [
     0.0,
     8.32,
-    2.296
+    0.375
    ],
    "Size": [
-    4.073,
+    4.056,
     4.681,
-    9.849
+    6.008
    ],
-   "Tris": 816
+   "Tris": 676
   },
   {
    "Name": "Head",
@@ -76,15 +76,83 @@
    ],
    "Centre": [
     0.0,
-    12.104,
-    -1.792
+    11.207,
+    -2.229
    ],
    "Size": [
     1.976,
-    5.951,
-    6.756
+    4.157,
+    3.333
    ],
-   "Tris": 322
+   "Tris": 244
+  },
+  {
+   "Name": "ExtraTailFan",
+   "Parent": "Body",
+   "Pivot": [
+    0.0,
+    8.32,
+    2.99
+   ],
+   "Glow": [],
+   "Motion": "Cloth",
+   "Keyed": true,
+   "Centre": [
+    0.0,
+    7.035,
+    4.985
+   ],
+   "Size": [
+    4.073,
+    1.678,
+    4.471
+   ],
+   "Tris": 140
+  },
+  {
+   "Name": "ExtraBeak",
+   "Parent": "Head",
+   "Pivot": [
+    0.0,
+    12.35,
+    -3.64
+   ],
+   "Glow": [],
+   "Motion": "Rigid",
+   "Keyed": true,
+   "Centre": [
+    0.0,
+    12.085,
+    -4.359
+   ],
+   "Size": [
+    0.728,
+    1.498,
+    1.623
+   ],
+   "Tris": 46
+  },
+  {
+   "Name": "ExtraCrest",
+   "Parent": "Head",
+   "Pivot": [
+    0.0,
+    13.13,
+    -2.47
+   ],
+   "Glow": [],
+   "Motion": "Cloth",
+   "Centre": [
+    0.0,
+    13.816,
+    -0.534
+   ],
+   "Size": [
+    0.495,
+    2.528,
+    4.24
+   ],
+   "Tris": 32
   },
   {
    "Name": "ArmL",
@@ -342,7 +410,7 @@
   "Normal": "boss_storm_roc_normal.png"
  },
  "TotalTris": 2614,
- "MeshCount": 16,
+ "MeshCount": 19,
  "Size": [
   23.58,
   15.03,

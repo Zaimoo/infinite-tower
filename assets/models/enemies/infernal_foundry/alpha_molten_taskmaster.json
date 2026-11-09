@@ -196,9 +196,77 @@
       0.793,
       0.213
      ]
-    },
+    }
+   ],
+   "Centre": [
+    2.145,
+    3.688,
+    -0.323
+   ],
+   "Size": [
+    1.216,
+    2.201,
+    1.329
+   ],
+   "Tris": 164
+  },
+  {
+   "Name": "ExtraChain1",
+   "Parent": "ForearmR",
+   "Pivot": [
+    2.236,
+    2.99,
+    -0.585
+   ],
+   "Glow": [],
+   "Motion": "Hanging",
+   "Keyed": true,
+   "Centre": [
+    2.399,
+    1.586,
+    -0.45
+   ],
+   "Size": [
+    0.648,
+    3.015,
+    0.869
+   ],
+   "Tris": 448
+  },
+  {
+   "Name": "ExtraChain2",
+   "Parent": "ExtraChain1",
+   "Pivot": [
+    2.561,
+    0.13,
+    -0.065
+   ],
+   "Glow": [],
+   "Motion": "Hanging",
+   "Keyed": true,
+   "Centre": [
+    2.58,
+    0.13,
+    0.942
+   ],
+   "Size": [
+    0.405,
+    0.374,
+    2.215
+   ],
+   "Tris": 320
+  },
+  {
+   "Name": "ExtraChain3",
+   "Parent": "ExtraChain2",
+   "Pivot": [
+    2.6,
+    0.13,
+    1.95
+   ],
+   "Glow": [
     {
-     "Mesh": "ForearmR_Glow_Molten",
+     "Mesh": "ExtraChain3_Glow_Molten",
      "Colour": [
       255,
       156,
@@ -217,17 +285,19 @@
      ]
     }
    ],
+   "Motion": "Hanging",
+   "Keyed": true,
    "Centre": [
-    2.156,
-    2.366,
-    1.774
+    2.357,
+    0.319,
+    3.191
    ],
    "Size": [
-    1.239,
-    4.845,
-    5.524
+    0.804,
+    0.752,
+    2.689
    ],
-   "Tris": 1264
+   "Tris": 332
   },
   {
    "Name": "LegL",
@@ -342,6 +412,7 @@
      ]
     }
    ],
+   "Motion": "Rigid",
    "Centre": [
     0.0,
     8.14,
@@ -362,9 +433,9 @@
   "Normal": "alpha_molten_taskmaster_normal.png"
  },
  "TotalTris": 3532,
- "MeshCount": 17,
+ "MeshCount": 20,
  "Size": [
-  5.53,
+  5.54,
   8.65,
   5.93
  ],

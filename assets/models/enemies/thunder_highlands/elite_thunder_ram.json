@@ -16,14 +16,14 @@
    "Centre": [
     -0.023,
     3.66,
-    0.126
+    -0.085
    ],
    "Size": [
     3.222,
     2.82,
-    5.252
+    4.831
    ],
-   "Tris": 536
+   "Tris": 516
   },
   {
    "Name": "Head",
@@ -84,6 +84,29 @@
     2.764
    ],
    "Tris": 1144
+  },
+  {
+   "Name": "ExtraTail1",
+   "Parent": "Body",
+   "Pivot": [
+    0.0,
+    3.75,
+    2.25
+   ],
+   "Glow": [],
+   "Motion": "Hanging",
+   "Keyed": true,
+   "Centre": [
+    0.0,
+    3.686,
+    2.434
+   ],
+   "Size": [
+    0.625,
+    0.598,
+    0.636
+   ],
+   "Tris": 20
   },
   {
    "Name": "ArmL",
@@ -261,7 +284,7 @@
   "Normal": "elite_thunder_ram_normal.png"
  },
  "TotalTris": 2476,
- "MeshCount": 12,
+ "MeshCount": 13,
  "Size": [
   3.22,
   5.07,

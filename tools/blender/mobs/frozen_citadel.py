@@ -81,13 +81,18 @@ def frost_hound():
             base = V((s * 0.38, 1.65 - k * 0.35, 2.95 - k * 0.05))
             body.crystal(base, base + V((s * 0.45, -0.45, 0.45)), 0.1, "ice", sides=5)
     # tail ending in an ice shard
-    body.tube([V((0, -1.9, 2.55)), V((0, -2.6, 2.75)), V((0, -3.2, 2.6)), V((0, -3.55, 2.25))], [0.22, 0.2, 0.15, 0.1], "fur_grey", sides=7)
-    body.crystal((0, -3.5, 2.3), (0, -4.1, 1.85), 0.13, "ice", sides=6)
+    tail1 = A.segment("ExtraTail1", (0, -1.9, 2.55), body)  # two links, keyed later (springs until then)
+    tail2 = A.segment("ExtraTail2", (0, -2.6, 2.75), tail1)
+    tail1.tube([V((0, -1.9, 2.55)), V((0, -2.6, 2.75))], [0.22, 0.2], "fur_grey", sides=7)
+    tail2.sphere(0.2, "fur_grey", loc=(0, -2.6, 2.75), segs=7, rings=5)  # covers the bend
+    tail2.tube([V((0, -2.6, 2.75)), V((0, -3.2, 2.6)), V((0, -3.55, 2.25))], [0.2, 0.15, 0.1], "fur_grey", sides=7)
+    tail2.crystal((0, -3.5, 2.3), (0, -4.1, 1.85), 0.13, "ice", sides=6)
     # head: a narrow skull, long snout with frosted breath vents, a silver brow plate, ice teeth
     head.sphere(0.5, "fur_grey", loc=(0, 2.25, 3.15), scale=(0.95, 1.1, 0.85), segs=12, rings=7)
     head.tube([V((0, 2.55, 3.05)), V((0, 3.0, 2.95)), V((0, 3.38, 2.85))], [(0.3, 0.25), (0.23, 0.19), (0.15, 0.13)], "fur_grey", sides=8)
     head.sphere(0.09, "black", loc=(0, 3.45, 2.9), segs=6, rings=4)
-    head.tube([V((0, 2.5, 2.75)), V((0, 3.0, 2.68)), V((0, 3.28, 2.66))], [0.19, 0.13, 0.07], "fur_dark", sides=6)
+    jaw = A.segment("ExtraJaw", (0, 2.45, 2.8), head)  # the lower jaw opens on the bite (keyed later)
+    jaw.tube([V((0, 2.5, 2.75)), V((0, 3.0, 2.68)), V((0, 3.28, 2.66))], [0.19, 0.13, 0.07], "fur_dark", sides=6)
     head.box((0.5, 0.36, 0.08), "silver", loc=(0, 2.45, 3.55), rot=(-15, 0, 0), bevel=0.03)
     head.crystal((0, 2.3, 3.55), (0, 1.95, 4.1), 0.1, "ice", sides=5)
     for s in (1, -1):
@@ -127,8 +132,9 @@ def rime_sentry():
     for x in (-0.42, 0.42):
         body.prism([(-0.3, 0), (0.3, 0), (0.26, -0.8), (-0.26, -0.8)], 0.08, "steel_dark", loc=(x, 0.55, 3.2), rot=(-8, 0, 0))
     body.torus(0.74, 0.26, "fur", mat=K.M((0, -0.04, 5.15)) @ K.M(scale=(1.08, 0.82, 1)), major=16, minor=6)
-    body.prism([(-0.7, 0), (0.7, 0), (0.82, -2.4), (-0.82, -2.4)], 0.08, "robe_blue", loc=(0, -0.62, 5.05), rot=(6, 0, 0))
-    body.prism([(-0.82, -2.25), (0.82, -2.25), (0.84, -2.45), (-0.84, -2.45)], 0.1, "fur", loc=(0, -0.64, 5.05), rot=(6, 0, 0))
+    cape = A.segment("ExtraCape", (0, -0.62, 5.05), body)  # Cloth spring
+    cape.prism([(-0.7, 0), (0.7, 0), (0.82, -2.4), (-0.82, -2.4)], 0.08, "robe_blue", loc=(0, -0.62, 5.05), rot=(6, 0, 0))
+    cape.prism([(-0.82, -2.25), (0.82, -2.25), (0.84, -2.45), (-0.84, -2.45)], 0.1, "fur", loc=(0, -0.64, 5.05), rot=(6, 0, 0))
     # head: a rounded helm with a nasal guard, frost eye slits, a silver rim and an ice crest
     head.sphere(0.5, "steel", loc=(0, 0.05, 5.85), scale=(1.0, 1.05, 1.1), segs=12, rings=8)
     head.box((0.62, 0.12, 0.22), "black", loc=(0, 0.5, 5.8))
@@ -186,12 +192,13 @@ def rime_chaplain():
             body.box((0.18, 0.06, 0.05), "silver", loc=tuple(m @ V((0, 0.04, dz))), rot=(8, 0, 0))
             body.box((0.05, 0.06, 0.2), "silver", loc=tuple(m @ V((0, 0.04, dz))), rot=(8, 0, 0))
     body.torus(0.55, 0.14, "robe_dark", mat=K.M((0, 0, 4.15)) @ K.M(scale=(1, 0.85, 1)), major=14, minor=5)
+    ring = A.segment("ExtraRing", (0, 0, 3.3), body)  # the ward shards orbit (Spin)
     for k in range(6):
         a = 2 * math.pi * k / 6 + 0.25
         c = V((math.cos(a) * 1.45, math.sin(a) * 1.45, 3.3 + math.sin(a * 3) * 0.2))
-        body.crystal(c - V((0, 0, 0.32)), c + V((0, 0, 0.32)), 0.14, "ice", sides=6, shaft=0.6)
-        body.spike(c - V((0, 0, 0.3)), c - V((0, 0, 0.6)), 0.14, "ice", segs=6)
-        body.sphere(0.06, FROST, loc=c, segs=6, rings=4)
+        ring.crystal(c - V((0, 0, 0.32)), c + V((0, 0, 0.32)), 0.14, "ice", sides=6, shaft=0.6)
+        ring.spike(c - V((0, 0, 0.3)), c - V((0, 0, 0.6)), 0.14, "ice", segs=6)
+        ring.sphere(0.06, FROST, loc=c, segs=6, rings=4)
     # head: a pale face with frost eyes, a long white beard, and a tall mitre with silver crosses
     head.sphere(0.4, "skin", loc=(0, 0.1, 4.72), segs=10, rings=7)
     for s in (1, -1):
@@ -325,16 +332,18 @@ def frostbound_king():
         a = 2 * math.pi * k / 12
         body.spike((math.cos(a) * 0.86 * 1.1, -0.04 + math.sin(a) * 0.86 * 0.85, 5.12), (math.cos(a) * 0.95 * 1.1, -0.04 + math.sin(a) * 0.95 * 0.85, 4.8), 0.05, "black", segs=4)
     # the articulated cloak: five fanned violet panels lined with ermine, frost trailing off the hem
+    capes = [A.segment(f"ExtraCape{g + 1}", (gx, -0.68, 5.1), body) for g, gx in enumerate((-0.54, 0.0, 0.54))]  # Cloth springs
     for k in range(5):
         x = (k - 2) * 0.36
         yaw = (k - 2) * -9
         tilt = 7 + abs(k - 2) * 2
         m = K.M((x, -0.66 - abs(k - 2) * 0.04, 5.1), (tilt, 0, yaw))
-        body.prism([(-0.22, 0), (0.22, 0), (0.27, -4.6), (-0.27, -4.6)], 0.07, "royal" if k % 2 == 0 else "royal_dark", mat=m)
-        body.prism([(-0.27, -4.45), (0.27, -4.45), (0.28, -4.85), (-0.28, -4.85)], 0.12, "ermine", mat=m)
+        panel = capes[(0, 0, 1, 2, 2)[k]]
+        panel.prism([(-0.22, 0), (0.22, 0), (0.27, -4.6), (-0.27, -4.6)], 0.07, "royal" if k % 2 == 0 else "royal_dark", mat=m)
+        panel.prism([(-0.27, -4.45), (0.27, -4.45), (0.28, -4.85), (-0.28, -4.85)], 0.12, "ermine", mat=m)
         for j in range(2):
             tip = m @ V(((j - 0.5) * 0.25, -0.3, -4.85))
-            body.spike(m @ V(((j - 0.5) * 0.25, 0, -4.75)), tip + V((rnd.uniform(-0.1, 0.1), -0.55, -0.1)), 0.06, FROST, segs=4)
+            panel.spike(m @ V(((j - 0.5) * 0.25, 0, -4.75)), tip + V((rnd.uniform(-0.1, 0.1), -0.55, -0.1)), 0.06, FROST, segs=4)
     # head: a frozen face, an icicle beard, frost eyes and a jagged ice crown on a silver circlet
     head.sphere(0.45, "skin", loc=(0, 0.08, 5.82), scale=(0.95, 1.0, 1.08), segs=12, rings=8)
     for s in (1, -1):

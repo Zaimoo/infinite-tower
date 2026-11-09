@@ -43,7 +43,7 @@
     2.995,
     1.64
    ],
-   "Tris": 520
+   "Tris": 496
   },
   {
    "Name": "Head",
@@ -85,6 +85,28 @@
     1.15
    ],
    "Tris": 412
+  },
+  {
+   "Name": "ExtraCape",
+   "Parent": "Body",
+   "Pivot": [
+    0.0,
+    5.05,
+    0.62
+   ],
+   "Glow": [],
+   "Motion": "Cloth",
+   "Centre": [
+    0.0,
+    3.831,
+    0.495
+   ],
+   "Size": [
+    1.68,
+    2.446,
+    0.33
+   ],
+   "Tris": 24
   },
   {
    "Name": "ArmL",
@@ -276,7 +298,7 @@
   }
  ],
  "TotalTris": 2388,
- "MeshCount": 13,
+ "MeshCount": 14,
  "Size": [
   3.03,
   7.6,

@@ -53,16 +53,16 @@
     }
    ],
    "Centre": [
-    -0.001,
+    0.0,
     8.58,
     0.026
    ],
    "Size": [
-    5.062,
+    4.796,
     7.04,
     4.95
    ],
-   "Tris": 722
+   "Tris": 638
   },
   {
    "Name": "Head",
@@ -113,16 +113,60 @@
     }
    ],
    "Centre": [
+    -0.001,
+    13.75,
+    -0.142
+   ],
+   "Size": [
+    4.032,
+    3.74,
+    4.024
+   ],
+   "Tris": 274
+  },
+  {
+   "Name": "ExtraMantle",
+   "Parent": "Body",
+   "Pivot": [
     0.0,
-    14.898,
+    11.77,
+    -0.0
+   ],
+   "Glow": [],
+   "Motion": "Cloth",
+   "Centre": [
+    -0.001,
+    9.482,
+    0.091
+   ],
+   "Size": [
+    5.062,
+    4.661,
+    4.61
+   ],
+   "Tris": 84
+  },
+  {
+   "Name": "ExtraBranches",
+   "Parent": "Head",
+   "Pivot": [
+    0.0,
+    13.53,
+    -0.11
+   ],
+   "Glow": [],
+   "Motion": "Rigid",
+   "Centre": [
+    0.0,
+    15.652,
     -0.108
    ],
    "Size": [
     5.164,
-    6.035,
+    4.526,
     4.462
    ],
-   "Tris": 538
+   "Tris": 264
   },
   {
    "Name": "ArmL",
@@ -300,7 +344,7 @@
   "Normal": "boss_blight_sovereign_normal.png"
  },
  "TotalTris": 2236,
- "MeshCount": 14,
+ "MeshCount": 16,
  "Size": [
   8.79,
   17.88,

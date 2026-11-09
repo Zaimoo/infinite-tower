@@ -199,33 +199,47 @@ local function isLeg(name: string): boolean
 end
 
 -- ------------------------------------------------------------------ springs (plan §3.7, §3.8)
--- Extra*/Trophy_* joints that no playing clip keys lag behind their pivot's acceleration: a damped spring per
--- tilt axis. Tilt about local X follows forward/back acceleration and about Z follows sideways, so a hanging
--- piece trails the way it is pulled. Spin joints just turn. Roles come from tools/blender/mob_extras.py.
-export type SpringParams = { K: number, C: number, G: number, Max: number }
+-- Extra*/Trophy_* joints that no playing clip keys move as damped springs on two tilt axes (local X: fore/aft,
+-- local Z: sideways), driven three ways:
+--   * rotation inertia: when the parent turns, the piece keeps most of its world orientation and swings back,
+--     so a censer or whip trails an arm swing, a body bob or a turn (the main source of motion);
+--   * linear inertia: the pivot's acceleration pushes the piece the other way (starts, stops, lunges);
+--   * idle sway: a slow seeded drift, so cloth and hanging pieces never sit dead still.
+-- Spin joints just turn. Roles come from tools/blender/mob_extras.py.
+export type SpringParams = { K: number, C: number, G: number, Max: number, Inertia: number, Sway: number, SwayHz: number }
 EnemyAnimator.SPRINGS = {
-	Cloth = { K = 40, C = 6, G = 0.3, Max = 0.5 } :: SpringParams,
-	Hanging = { K = 25, C = 3, G = 0.22, Max = 0.6 } :: SpringParams,
-	Rigid = { K = 160, C = 14, G = 0.24, Max = 0.12 } :: SpringParams,
+	Cloth = { K = 30, C = 4, G = 0.5, Max = 0.6, Inertia = 0.8, Sway = 0.07, SwayHz = 0.7 } :: SpringParams,
+	Hanging = { K = 22, C = 2.2, G = 0.45, Max = 0.7, Inertia = 0.9, Sway = 0.05, SwayHz = 0.6 } :: SpringParams,
+	Rigid = { K = 110, C = 9, G = 0.4, Max = 0.18, Inertia = 0.5, Sway = 0.04, SwayHz = 1.1 } :: SpringParams,
 }
 EnemyAnimator.SPIN_RATE = 1.2 -- radians per second
 EnemyAnimator.MAX_ACCEL = 250 -- studs/s², clamps teleports and snapshot hitches
+EnemyAnimator.MAX_TURN_STEP = 0.5 -- radians per frame of parent rotation fed to inertia (teleports, snaps)
 
-export type SpringState = { X: number, Z: number, VX: number, VZ: number, Angle: number, LastPos: Vector3?, LastVel: Vector3? }
+export type SpringState = { X: number, Z: number, VX: number, VZ: number, Angle: number, LastPos: Vector3?, LastVel: Vector3?, LastRot: CFrame? }
 
--- Advance one spring by dt under a pivot acceleration (parent-local X and Z, studs/s²). Pure; exposed for tests.
-function EnemyAnimator.SpringStep(st: SpringState, accX: number, accZ: number, dt: number, p: SpringParams)
+-- Advance one spring by dt towards a sway target (radians) under a pivot acceleration (parent-local X and Z,
+-- studs/s²). Pure; exposed for tests.
+function EnemyAnimator.SpringStep(st: SpringState, accX: number, accZ: number, dt: number, p: SpringParams, swayX: number?, swayZ: number?)
+	local tx, tz = swayX or 0, swayZ or 0
 	local steps = math.max(1, math.ceil(dt / (1 / 60)))
 	local h = dt / steps
 	for _ = 1, steps do
-		st.VX += (-p.K * st.X - p.C * st.VX + p.G * accZ) * h
-		st.VZ += (-p.K * st.Z - p.C * st.VZ - p.G * accX) * h
+		st.VX += (p.K * (tx - st.X) - p.C * st.VX + p.G * accZ) * h
+		st.VZ += (p.K * (tz - st.Z) - p.C * st.VZ - p.G * accX) * h
 		st.X = math.clamp(st.X + st.VX * h, -p.Max, p.Max)
 		st.Z = math.clamp(st.Z + st.VZ * h, -p.Max, p.Max)
 	end
 end
 
-local function springPose(self: any, name: string, motion: string, joint: any, dt: number, far: boolean): CFrame
+-- Counter-rotate a spring by its parent's turn this frame (parent-local radians about X and Z). Pure.
+function EnemyAnimator.SpringTurn(st: SpringState, turnX: number, turnZ: number, p: SpringParams)
+	local m = EnemyAnimator.MAX_TURN_STEP
+	st.X = math.clamp(st.X - math.clamp(turnX, -m, m) * p.Inertia, -p.Max, p.Max)
+	st.Z = math.clamp(st.Z - math.clamp(turnZ, -m, m) * p.Inertia, -p.Max, p.Max)
+end
+
+local function springPose(self: any, name: string, motion: string, joint: any, dt: number, far: boolean, now: number): CFrame
 	local springs = self.Springs
 	local st: SpringState = springs[name]
 	if not st then
@@ -238,20 +252,34 @@ local function springPose(self: any, name: string, motion: string, joint: any, d
 	end
 	local p = EnemyAnimator.SPRINGS[motion]
 	if not p or far then
-		st.X, st.Z, st.VX, st.VZ, st.LastPos, st.LastVel = 0, 0, 0, 0, nil, nil
+		st.X, st.Z, st.VX, st.VZ, st.LastPos, st.LastVel, st.LastRot = 0, 0, 0, 0, nil, nil, nil
 		return IDENTITY
 	end
+	if dt <= 0 then return CFrame.Angles(st.X, 0, st.Z) end
+	-- seeded sway: each joint drifts on its own phase
+	local phase = (self.IdleOffset + #name * 0.137) * 2 * math.pi
+	local w = 2 * math.pi * p.SwayHz * self.IdleRate
+	local swayX = p.Sway * math.sin(now * w + phase)
+	local swayZ = p.Sway * 0.6 * math.sin(now * w * 0.73 + phase * 1.7)
+	local accX, accZ = 0, 0
 	local part0 = joint.Motor.Part0
-	if dt > 0 and part0 then
+	if part0 then
 		local frame = part0.CFrame * joint.Bind
+		local rot = frame.Rotation
+		if st.LastRot then
+			local turnX, _, turnZ = st.LastRot:ToObjectSpace(rot):ToEulerAnglesXYZ()
+			EnemyAnimator.SpringTurn(st, turnX, turnZ, p)
+		end
+		st.LastRot = rot
 		local pos = frame.Position
 		local vel = if st.LastPos then (pos - st.LastPos) / dt else Vector3.zero
 		local acc = if st.LastVel then (vel - st.LastVel) / dt else Vector3.zero
 		if acc.Magnitude > EnemyAnimator.MAX_ACCEL then acc = acc.Unit * EnemyAnimator.MAX_ACCEL end
 		st.LastPos, st.LastVel = pos, vel
 		local localAcc = frame:VectorToObjectSpace(acc)
-		EnemyAnimator.SpringStep(st, localAcc.X, localAcc.Z, dt, p)
+		accX, accZ = localAcc.X, localAcc.Z
 	end
+	EnemyAnimator.SpringStep(st, accX, accZ, dt, p, swayX, swayZ)
 	return CFrame.Angles(st.X, 0, st.Z)
 end
 
@@ -371,7 +399,7 @@ function EnemyAnimator:Evaluate(now: number, input: any, dt: number): ({ [string
 	for name, joint in self.Rig.Joints do
 		local motion = motions and motions[name]
 		local keyed = idle[name] or (loco and loco[name]) or (act and act[name]) or (death and death[name])
-		local pose = if motion and not keyed then springPose(self, name, motion, joint, dt, input.Far == true)
+		local pose = if motion and not keyed then springPose(self, name, motion, joint, dt, input.Far == true, now)
 			else idle[name] or IDENTITY
 		if loco then pose = pose:Lerp(loco[name] or IDENTITY, locoWeight) end
 		if act and actWeight > 0 and not (maskLegs and isLeg(name)) then

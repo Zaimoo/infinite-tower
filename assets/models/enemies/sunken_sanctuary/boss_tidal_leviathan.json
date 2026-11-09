@@ -76,15 +76,61 @@
    ],
    "Centre": [
     0.0,
-    12.351,
+    12.423,
     -2.392
    ],
    "Size": [
-    5.74,
-    4.202,
+    3.228,
+    4.059,
     7.654
    ],
-   "Tris": 516
+   "Tris": 360
+  },
+  {
+   "Name": "ExtraJaw",
+   "Parent": "Head",
+   "Pivot": [
+    0.0,
+    10.865,
+    -3.485
+   ],
+   "Glow": [],
+   "Motion": "Rigid",
+   "Keyed": true,
+   "Centre": [
+    0.0,
+    10.811,
+    -4.594
+   ],
+   "Size": [
+    2.05,
+    1.122,
+    2.363
+   ],
+   "Tris": 44
+  },
+  {
+   "Name": "ExtraFrill",
+   "Parent": "Head",
+   "Pivot": [
+    0.0,
+    11.992,
+    -2.05
+   ],
+   "Glow": [],
+   "Motion": "Cloth",
+   "Keyed": true,
+   "Centre": [
+    0.0,
+    12.719,
+    -1.689
+   ],
+   "Size": [
+    5.74,
+    2.704,
+    3.686
+   ],
+   "Tris": 112
   },
   {
    "Name": "ArmL",
@@ -349,30 +395,116 @@
       240,
       222
      ],
-     "Tris": 42,
+     "Tris": 12,
      "Centre": [
-      0.545,
-      1.535,
-      12.719
+      -3.088,
+      2.02,
+      11.882
      ],
      "Size": [
-      8.749,
-      1.601,
-      3.876
+      1.483,
+      0.632,
+      2.202
      ]
     }
    ],
    "Centre": [
-    0.137,
+    -3.18,
     0.92,
-    13.284
+    11.827
    ],
    "Size": [
-    9.975,
+    3.339,
     2.442,
-    6.231
+    3.316
    ],
-   "Tris": 156
+   "Tris": 64
+  },
+  {
+   "Name": "ExtraTail1",
+   "Parent": "KneeL",
+   "Pivot": [
+    -2.46,
+    0.861,
+    12.915
+   ],
+   "Glow": [
+    {
+     "Mesh": "ExtraTail1_Glow_Aqua",
+     "Colour": [
+      70,
+      240,
+      222
+     ],
+     "Tris": 12,
+     "Centre": [
+      -1.237,
+      1.701,
+      13.517
+     ],
+     "Size": [
+      2.566,
+      0.533,
+      1.441
+     ]
+    }
+   ],
+   "Motion": "Hanging",
+   "Keyed": true,
+   "Centre": [
+    -1.564,
+    0.833,
+    13.362
+   ],
+   "Size": [
+    3.898,
+    2.048,
+    3.107
+   ],
+   "Tris": 164
+  },
+  {
+   "Name": "ExtraTail2",
+   "Parent": "ExtraTail1",
+   "Pivot": [
+    0.0,
+    0.779,
+    14.145
+   ],
+   "Glow": [
+    {
+     "Mesh": "ExtraTail2_Glow_Aqua",
+     "Colour": [
+      70,
+      240,
+      222
+     ],
+     "Tris": 26,
+     "Centre": [
+      2.45,
+      1.534,
+      14.351
+     ],
+     "Size": [
+      4.94,
+      1.599,
+      0.614
+     ]
+    }
+   ],
+   "Motion": "Hanging",
+   "Keyed": true,
+   "Centre": [
+    2.153,
+    0.757,
+    14.555
+   ],
+   "Size": [
+    5.944,
+    1.593,
+    3.69
+   ],
+   "Tris": 176
   }
  ],
  "Surface": {
@@ -381,8 +513,8 @@
   "Color": "boss_tidal_leviathan_color.png",
   "Normal": "boss_tidal_leviathan_normal.png"
  },
- "TotalTris": 2164,
- "MeshCount": 18,
+ "TotalTris": 2420,
+ "MeshCount": 24,
  "Size": [
   12.53,
   14.84,
