@@ -1,0 +1,333 @@
+{
+ "EnemyId": "boss_archive_rift_warden",
+ "Family": "ARCANE_COLOSSUS",
+ "Role": "BOSS",
+ "Biome": "astral_archives",
+ "Segments": [
+  {
+   "Name": "Body",
+   "Parent": null,
+   "Pivot": [
+    0.0,
+    6.9,
+    -0.0
+   ],
+   "Glow": [
+    {
+     "Mesh": "Body_Glow_Indigo",
+     "Colour": [
+      128,
+      116,
+      255
+     ],
+     "Tris": 100,
+     "Centre": [
+      0.0,
+      9.775,
+      -1.518
+     ],
+     "Size": [
+      0.919,
+      1.288,
+      0.644
+     ]
+    },
+    {
+     "Mesh": "Body_Glow_Star",
+     "Colour": [
+      255,
+      214,
+      120
+     ],
+     "Tris": 136,
+     "Centre": [
+      0.0,
+      9.131,
+      -0.0
+     ],
+     "Size": [
+      8.505,
+      1.84,
+      7.366
+     ]
+    }
+   ],
+   "Centre": [
+    0.0,
+    9.257,
+    -0.0
+   ],
+   "Size": [
+    8.326,
+    7.705,
+    8.326
+   ],
+   "Tris": 1320
+  },
+  {
+   "Name": "Head",
+   "Parent": "Body",
+   "Pivot": [
+    0.0,
+    13.225,
+    -0.23
+   ],
+   "Glow": [
+    {
+     "Mesh": "Head_Glow_Star",
+     "Colour": [
+      255,
+      214,
+      120
+     ],
+     "Tris": 80,
+     "Centre": [
+      0.0,
+      15.847,
+      -1.173
+     ],
+     "Size": [
+      1.012,
+      3.726,
+      2.116
+     ]
+    }
+   ],
+   "Centre": [
+    0.074,
+    14.75,
+    -0.345
+   ],
+   "Size": [
+    4.703,
+    5.231,
+    4.416
+   ],
+   "Tris": 730
+  },
+  {
+   "Name": "ArmL",
+   "Parent": "Body",
+   "Pivot": [
+    -3.335,
+    11.73,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    -3.68,
+    10.854,
+    -0.029
+   ],
+   "Size": [
+    2.3,
+    4.741,
+    2.818
+   ],
+   "Tris": 120
+  },
+  {
+   "Name": "ForearmL",
+   "Parent": "ArmL",
+   "Pivot": [
+    -4.025,
+    8.51,
+    -0.345
+   ],
+   "Glow": [
+    {
+     "Mesh": "ForearmL_Glow_Star",
+     "Colour": [
+      255,
+      214,
+      120
+     ],
+     "Tris": 20,
+     "Centre": [
+      -6.371,
+      7.59,
+      -1.265
+     ],
+     "Size": [
+      0.184,
+      0.717,
+      0.828
+     ]
+    }
+   ],
+   "Centre": [
+    -4.885,
+    7.337,
+    -1.238
+   ],
+   "Size": [
+    3.283,
+    4.416,
+    3.166
+   ],
+   "Tris": 404
+  },
+  {
+   "Name": "ArmR",
+   "Parent": "Body",
+   "Pivot": [
+    3.335,
+    11.73,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    3.68,
+    10.854,
+    -0.029
+   ],
+   "Size": [
+    2.3,
+    4.741,
+    2.818
+   ],
+   "Tris": 120
+  },
+  {
+   "Name": "ForearmR",
+   "Parent": "ArmR",
+   "Pivot": [
+    4.025,
+    8.51,
+    -0.345
+   ],
+   "Glow": [
+    {
+     "Mesh": "ForearmR_Glow_Star",
+     "Colour": [
+      255,
+      214,
+      120
+     ],
+     "Tris": 20,
+     "Centre": [
+      6.371,
+      7.59,
+      -1.265
+     ],
+     "Size": [
+      0.184,
+      0.717,
+      0.828
+     ]
+    }
+   ],
+   "Centre": [
+    4.885,
+    7.337,
+    -1.243
+   ],
+   "Size": [
+    3.285,
+    4.416,
+    3.175
+   ],
+   "Tris": 404
+  },
+  {
+   "Name": "LegL",
+   "Parent": "Body",
+   "Pivot": [
+    -1.495,
+    5.75,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    -1.541,
+    4.439,
+    -0.051
+   ],
+   "Size": [
+    2.32,
+    2.162,
+    2.137
+   ],
+   "Tris": 168
+  },
+  {
+   "Name": "KneeL",
+   "Parent": "LegL",
+   "Pivot": [
+    -1.61,
+    3.22,
+    -0.115
+   ],
+   "Glow": [],
+   "Centre": [
+    -1.656,
+    2.024,
+    -0.46
+   ],
+   "Size": [
+    2.645,
+    4.048,
+    3.105
+   ],
+   "Tris": 312
+  },
+  {
+   "Name": "LegR",
+   "Parent": "Body",
+   "Pivot": [
+    1.495,
+    5.75,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    1.541,
+    4.439,
+    -0.036
+   ],
+   "Size": [
+    2.453,
+    2.162,
+    2.282
+   ],
+   "Tris": 168
+  },
+  {
+   "Name": "KneeR",
+   "Parent": "LegR",
+   "Pivot": [
+    1.61,
+    3.22,
+    -0.115
+   ],
+   "Glow": [],
+   "Centre": [
+    1.656,
+    2.024,
+    -0.46
+   ],
+   "Size": [
+    2.645,
+    4.048,
+    3.105
+   ],
+   "Tris": 312
+  }
+ ],
+ "Surface": {
+  "Tier": "B",
+  "Size": 2048,
+  "Color": "boss_archive_rift_warden_color.png",
+  "Normal": "boss_archive_rift_warden_normal.png"
+ },
+ "TotalTris": 4414,
+ "MeshCount": 15,
+ "Size": [
+  13.05,
+  17.71,
+  8.33
+ ],
+ "FeetY": 0.0,
+ "Convention": "Studs, Roblox axes (Y up, faces -Z), origin on the ground under the enemy. Pivot = joint position. Mesh objects are named after their joint.",
+ "Atlas": "atlas_astral_archives.png"
+}

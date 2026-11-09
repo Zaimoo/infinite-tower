@@ -1,0 +1,413 @@
+{
+ "EnemyId": "mob_rune_mite",
+ "Family": "CRAWLER",
+ "Role": "REGULAR",
+ "Biome": "astral_archives",
+ "Segments": [
+  {
+   "Name": "Body",
+   "Parent": null,
+   "Pivot": [
+    0.0,
+    1.0,
+    -0.0
+   ],
+   "Glow": [
+    {
+     "Mesh": "Body_Glow_Star",
+     "Colour": [
+      255,
+      214,
+      120
+     ],
+     "Tris": 72,
+     "Centre": [
+      0.018,
+      2.216,
+      0.096
+     ],
+     "Size": [
+      0.685,
+      0.508,
+      0.925
+     ]
+    },
+    {
+     "Mesh": "Body_Glow_Indigo",
+     "Colour": [
+      128,
+      116,
+      255
+     ],
+     "Tris": 36,
+     "Centre": [
+      -0.041,
+      2.209,
+      0.177
+     ],
+     "Size": [
+      0.687,
+      0.079,
+      0.443
+     ]
+    }
+   ],
+   "Centre": [
+    0.0,
+    1.341,
+    0.357
+   ],
+   "Size": [
+    2.092,
+    1.782,
+    3.001
+   ],
+   "Tris": 624
+  },
+  {
+   "Name": "Head",
+   "Parent": "Body",
+   "Pivot": [
+    0.0,
+    0.95,
+    -1.1
+   ],
+   "Glow": [
+    {
+     "Mesh": "Head_Glow_Star",
+     "Colour": [
+      255,
+      214,
+      120
+     ],
+     "Tris": 36,
+     "Centre": [
+      0.0,
+      1.08,
+      -1.6
+     ],
+     "Size": [
+      0.19,
+      0.2,
+      0.14
+     ]
+    }
+   ],
+   "Centre": [
+    0.0,
+    1.0,
+    -1.223
+   ],
+   "Size": [
+    0.877,
+    0.675,
+    0.835
+   ],
+   "Tris": 180
+  },
+  {
+   "Name": "JawL",
+   "Parent": "Head",
+   "Pivot": [
+    -0.22,
+    0.85,
+    -1.5
+   ],
+   "Glow": [],
+   "Centre": [
+    -0.21,
+    0.831,
+    -1.731
+   ],
+   "Size": [
+    0.26,
+    0.151,
+    0.498
+   ],
+   "Tris": 18
+  },
+  {
+   "Name": "JawR",
+   "Parent": "Head",
+   "Pivot": [
+    0.22,
+    0.85,
+    -1.5
+   ],
+   "Glow": [],
+   "Centre": [
+    0.214,
+    0.829,
+    -1.732
+   ],
+   "Size": [
+    0.268,
+    0.155,
+    0.495
+   ],
+   "Tris": 18
+  },
+  {
+   "Name": "Leg-1_1",
+   "Parent": "Body",
+   "Pivot": [
+    -0.8,
+    0.95,
+    -0.6
+   ],
+   "Glow": [],
+   "Centre": [
+    -1.172,
+    1.196,
+    -0.64
+   ],
+   "Size": [
+    0.83,
+    0.608,
+    0.239
+   ],
+   "Tris": 20
+  },
+  {
+   "Name": "Knee-1_1",
+   "Parent": "Leg-1_1",
+   "Pivot": [
+    -1.55,
+    1.45,
+    -0.69
+   ],
+   "Glow": [],
+   "Centre": [
+    -1.745,
+    0.788,
+    -0.7
+   ],
+   "Size": [
+    0.546,
+    1.504,
+    0.2
+   ],
+   "Tris": 68
+  },
+  {
+   "Name": "Leg-1_2",
+   "Parent": "Body",
+   "Pivot": [
+    -0.8,
+    0.95,
+    0.1
+   ],
+   "Glow": [],
+   "Centre": [
+    -1.173,
+    1.196,
+    0.103
+   ],
+   "Size": [
+    0.824,
+    0.608,
+    0.165
+   ],
+   "Tris": 20
+  },
+  {
+   "Name": "Knee-1_2",
+   "Parent": "Leg-1_2",
+   "Pivot": [
+    -1.55,
+    1.45,
+    0.115
+   ],
+   "Glow": [],
+   "Centre": [
+    -1.745,
+    0.788,
+    0.115
+   ],
+   "Size": [
+    0.545,
+    1.503,
+    0.18
+   ],
+   "Tris": 68
+  },
+  {
+   "Name": "Leg-1_3",
+   "Parent": "Body",
+   "Pivot": [
+    -0.8,
+    0.95,
+    0.8
+   ],
+   "Glow": [],
+   "Centre": [
+    -1.172,
+    1.196,
+    0.855
+   ],
+   "Size": [
+    0.832,
+    0.609,
+    0.268
+   ],
+   "Tris": 20
+  },
+  {
+   "Name": "Knee-1_3",
+   "Parent": "Leg-1_3",
+   "Pivot": [
+    -1.55,
+    1.45,
+    0.92
+   ],
+   "Glow": [],
+   "Centre": [
+    -1.745,
+    0.788,
+    0.945
+   ],
+   "Size": [
+    0.547,
+    1.504,
+    0.23
+   ],
+   "Tris": 68
+  },
+  {
+   "Name": "Leg1_1",
+   "Parent": "Body",
+   "Pivot": [
+    0.8,
+    0.95,
+    -0.6
+   ],
+   "Glow": [],
+   "Centre": [
+    1.172,
+    1.196,
+    -0.64
+   ],
+   "Size": [
+    0.83,
+    0.608,
+    0.239
+   ],
+   "Tris": 20
+  },
+  {
+   "Name": "Knee1_1",
+   "Parent": "Leg1_1",
+   "Pivot": [
+    1.55,
+    1.45,
+    -0.69
+   ],
+   "Glow": [],
+   "Centre": [
+    1.745,
+    0.788,
+    -0.7
+   ],
+   "Size": [
+    0.546,
+    1.504,
+    0.2
+   ],
+   "Tris": 68
+  },
+  {
+   "Name": "Leg1_2",
+   "Parent": "Body",
+   "Pivot": [
+    0.8,
+    0.95,
+    0.1
+   ],
+   "Glow": [],
+   "Centre": [
+    1.173,
+    1.196,
+    0.103
+   ],
+   "Size": [
+    0.824,
+    0.608,
+    0.165
+   ],
+   "Tris": 20
+  },
+  {
+   "Name": "Knee1_2",
+   "Parent": "Leg1_2",
+   "Pivot": [
+    1.55,
+    1.45,
+    0.115
+   ],
+   "Glow": [],
+   "Centre": [
+    1.745,
+    0.788,
+    0.115
+   ],
+   "Size": [
+    0.545,
+    1.503,
+    0.18
+   ],
+   "Tris": 68
+  },
+  {
+   "Name": "Leg1_3",
+   "Parent": "Body",
+   "Pivot": [
+    0.8,
+    0.95,
+    0.8
+   ],
+   "Glow": [],
+   "Centre": [
+    1.172,
+    1.196,
+    0.855
+   ],
+   "Size": [
+    0.832,
+    0.609,
+    0.268
+   ],
+   "Tris": 20
+  },
+  {
+   "Name": "Knee1_3",
+   "Parent": "Leg1_3",
+   "Pivot": [
+    1.55,
+    1.45,
+    0.92
+   ],
+   "Glow": [],
+   "Centre": [
+    1.745,
+    0.788,
+    0.945
+   ],
+   "Size": [
+    0.547,
+    1.504,
+    0.23
+   ],
+   "Tris": 68
+  }
+ ],
+ "TotalTris": 1512,
+ "MeshCount": 19,
+ "Size": [
+  4.04,
+  2.43,
+  3.84
+ ],
+ "FeetY": 0.036,
+ "Convention": "Studs, Roblox axes (Y up, faces -Z), origin on the ground under the enemy. Pivot = joint position. Mesh objects are named after their joint.",
+ "Atlas": "atlas_astral_archives.png"
+}
