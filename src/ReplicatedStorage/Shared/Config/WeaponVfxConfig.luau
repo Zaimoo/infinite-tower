@@ -202,6 +202,38 @@ WeaponVfxConfig.ArtifactElements = table.freeze({
 	art_world_shaper = "CELESTIAL",
 	art_world_carver = "VOID",
 	art_genesis_sunderer = "COSMIC",
+
+	-- Scholar Staves (Batch 5)
+	art_apprentice_cane = "PHYSICAL",
+	art_scholars_spire = "PHYSICAL",
+	art_ruby_staff = "FIRE",
+	art_pyromancers_torch_rod = "FIRE",
+	art_frostweaver_scepter = "CRYSTAL",
+	art_glacial_monolith = "CRYSTAL",
+	art_archmage_rod = "LIGHTNING",
+	art_chronomancers_spindle = "LIGHTNING",
+	art_infernal_pillar = "FIRE",
+	art_void_channeler = "VOID",
+	art_solaris_sunburst = "CELESTIAL",
+	art_chronos_stave = "CELESTIAL",
+	art_eye_of_singularity = "VOID",
+	art_omega_archon_caduceus = "COSMIC",
+
+	-- Healer Tomes (Batch 6)
+	art_novice_tome = "PHYSICAL",
+	art_acolytes_litany = "PHYSICAL",
+	art_cleric_scripture = "CELESTIAL",
+	art_mendicants_psalter = "CELESTIAL",
+	art_hermetic_grimoire = "WIND",
+	art_restorative_codex = "CRYSTAL",
+	art_valeria_sanctuary = "CELESTIAL",
+	art_seraphs_testament = "CELESTIAL",
+	art_necronomicon_pages = "VOID",
+	art_lifebinders_chronicle = "WIND",
+	art_seraphic_psalms = "CELESTIAL",
+	art_divine_providence = "CELESTIAL",
+	art_akashic_records = "COSMIC",
+	art_book_of_primordial_genesis = "VOID",
 } :: { [string]: ElementType })
 
 -- Balanced particle & lighting rates: punchy, radiant anime VFX accents with clear gameplay presence
