@@ -33,6 +33,7 @@ local Kit = require(script.Parent.Parent:WaitForChild("Kit"))
 local Assets = ReplicatedStorage:WaitForChild("Assets")
 local EnemyRigFactory = require(Assets:WaitForChild("EnemyRigFactory")) -- remodelled templates, else the part rig
 local TowerEnemyClips = require(Assets:WaitForChild("TowerEnemyClips"))
+local EnemyAnimator = require(Assets:WaitForChild("EnemyAnimator"))
 local HeroRigFolder = Assets:WaitForChild("HeroRig")
 local HeroRegistry = require(HeroRigFolder:WaitForChild("HeroRegistry"))
 local HeroAnimator = require(HeroRigFolder:WaitForChild("HeroAnimator"))
@@ -393,6 +394,10 @@ local function OutskirtsPreviewStage(props: { Profile: any, AssignedUUIDs: { str
 				end
 			end
 		end
+		-- Walks in place at one stride cycle per ~1.2 s, attacking every 2.8 s (EnemyAnimator).
+		local mobAnimator = EnemyAnimator.new(enemyRig, enemyId)
+		local mobAction = { AnimationKey = "BasicAttack", StartServerTime = 0, WindupSeconds = 0.64, ImpactOffsetSeconds = 0.64, RecoverySeconds = 0.16 }
+		local mobInput: any = { Treadmill = 0.85 * EnemyAnimator.Stride(enemyRig), Action = nil, HitAt = nil }
 		mobModel.Parent = world
 		world.Parent = vp
 
@@ -456,32 +461,30 @@ local function OutskirtsPreviewStage(props: { Profile: any, AssignedUUIDs: { str
 
 			local clips = TowerEnemyClips[enemyId]
 			if clips then
-				local frames = clips.Locomotion or clips.Idle
-				local phase = (clock * 0.85) % 1
 				if #heroActors > 0 and mobHitTimer > 0 then
 					mobHitTimer = math.max(0, mobHitTimer - stepDt)
-					if mobHitTimer < 0.24 then
-						frames = clips.HitReaction or frames
-						phase = 1 - (mobHitTimer / 0.24)
+					if mobHitTimer < 0.24 and (mobInput.HitAt == nil or clock - mobInput.HitAt > 0.3) then
+						mobInput.HitAt = clock
 					end
 					spark.Transparency = 0.2 + 0.8 * (1 - math.min(1, mobHitTimer * 3))
 					spark.Size = Vector3.one * (0.6 + (1 - mobHitTimer) * 1.8)
 				else
 					spark.Transparency = 1
-					if (clock % 2.8) > 2.0 and clips.BasicAttack then
-						frames = clips.BasicAttack
-						phase = ((clock % 2.8) - 2.0) / 0.8
-					end
+				end
+				-- a basic attack in the last 0.8 s of every 2.8 s, while no hero is landing a hit
+				local cycle = clock % 2.8
+				if cycle > 2.0 and mobHitTimer <= 0 and clips.BasicAttack then
+					mobAction.StartServerTime = clock - (cycle - 2.0)
+					mobInput.Action = mobAction
+				elseif cycle <= 2.0 then
+					mobInput.Action = nil
 				end
 				local sway = math.sin(clock * 2.2) * 0.28
 				mobRoot.CFrame = mobBaseCF * CFrame.new(0, 0, -sway)
-				local poses = TowerEnemyClips.Sample(frames, phase)
-				for name, joint in pairs(enemyRig.Joints) do
-					joint.Motor.C0 = joint.Bind * (poses[name] or CFrame.identity)
-				end
+				mobAnimator:Step(clock, mobInput)
 				for _, link in ipairs(mobLinks) do
 					if link.Kind == "Motor" and link.Motor then
-						link.Part1.CFrame = link.Part0.CFrame * link.Motor.C0 * link.Motor.C1:Inverse()
+						link.Part1.CFrame = link.Part0.CFrame * link.Motor.C0 * link.Motor.Transform * link.Motor.C1:Inverse()
 					elseif link.Rel then
 						link.Part1.CFrame = link.Part0.CFrame * link.Rel
 					end

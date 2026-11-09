@@ -64,6 +64,9 @@ function cframeMeta:Lerp(other, alpha)
 		rz = self.rz + (other.rz - self.rz) * alpha,
 	}, cframeMeta)
 end
+function cframeMeta:Inverse()
+	return setmetatable({ X = -self.X, Y = -self.Y, Z = -self.Z, rx = -self.rx, ry = -self.ry, rz = -self.rz }, cframeMeta)
+end
 cframeMeta.__index = cframeMeta
 function game:GetService(serviceName)
 	return node(serviceName)

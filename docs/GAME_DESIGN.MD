@@ -723,7 +723,10 @@ In **Infinite Tower**, major boss encounters take place at the apex of each biom
 | **50** | **Abyssal Throne** | **Crimson Overlord** | `ROYAL_COLOSSUS` | `303,887,290,571` | `546,802` | Hellfire Cleave (`ARC`), Abyssal Nova (`SELF_DISC`), Doom Pillars (`TARGET_DISC`) |
 
 ### 5.2 Full 50-Enemy Biome Roster & Procedural Rig Architecture
-Each of the 10 biomes features 4 local-authored procedural enemies (2 Regulars, 1 Elite, 1 Biome Boss = **40 enemies total** in `MobCatalog.luau` and `FirstBiomeCombat.luau`), built with biome-specific material/glow palettes in `TowerEnemyRigs.luau` and animated with planted-foot leg counter-rotation (`plantedPose`) in `TowerEnemyClips.luau`:
+Each of the 10 biomes features 4 local-authored procedural enemies (2 Regulars, 1 Elite, 1 Biome Boss = **40 enemies total** in `MobCatalog.luau` and `FirstBiomeCombat.luau`), built with biome-specific material/glow palettes in `TowerEnemyRigs.luau` and animated with planted-foot leg counter-rotation (`plantedPose`) in `TowerEnemyClips.luau`.
+
+**Enemy animation playback** (`EnemyAnimator.luau`, docs/mob-reanimation-plan.md): one client clip player drives every enemy rig in the tower, the hub patrol and the Facility preview, writing `Motor6D.Transform`. Idle and walk blend by measured speed with hysteresis (walk starts above 0.6 studs/s and stops 0.25 s after dropping below 0.3), and each mob's idle phase and rate (×0.9–1.1) are seeded from its NetId so a camp never breathes in unison. Attacks play on top, keyed to the server timings: anticipation to the clip's `Release` marker, the strike in the last 15% of the windup (at most 0.25 s) reaching `Impact` exactly at the windup's end, the impact pose held through a projectile's flight, then recovery. Legs keep walking under an attack while the mob moves. Hit flinches are additive, so they play mid-chase and mid-windup; death overrides everything. Joints ease towards their targets (rate 14/s) except through a strike.
+
 
 | Biome (Floors) | Regular 1 | Regular 2 | Biome Elite | Biome Boss (5th Floor) |
 | :--- | :--- | :--- | :--- | :--- |
