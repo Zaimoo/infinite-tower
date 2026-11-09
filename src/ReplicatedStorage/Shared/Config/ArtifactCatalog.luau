@@ -306,7 +306,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = false,
 		StatMultiplier = 1.00,
 		SpeedBonusAdditive = 0.000,
-		ModelAssetId = "weapon_staff",
+		ModelAssetId = "art_apprentice_cane",
 		Description = "Slender birch rod with polished copper socket holding cloudy river quartz focus.",
 	},
 	art_scholars_spire = {
@@ -317,7 +317,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = true,
 		StatMultiplier = 1.20,
 		SpeedBonusAdditive = 0.010,
-		ModelAssetId = "weapon_staff",
+		ModelAssetId = "art_scholars_spire",
 		Description = "Carved rowan staff banded with brass astrological markings and faceted amber focus.",
 	},
 	art_novice_tome = {
@@ -438,7 +438,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = false,
 		StatMultiplier = 1.00,
 		SpeedBonusAdditive = 0.000,
-		ModelAssetId = "weapon_staff",
+		ModelAssetId = "art_ruby_staff",
 		Description = "Polished hickory staff holding an uncut igneous crystal head that amplifies casting cadence.",
 	},
 	art_pyromancers_torch_rod = {
@@ -449,7 +449,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = true,
 		StatMultiplier = 1.20,
 		SpeedBonusAdditive = 0.015,
-		ModelAssetId = "weapon_staff",
+		ModelAssetId = "art_pyromancers_torch_rod",
 		Description = "Dark iron rod terminating in an open-caged brazier casting continual fiery ember wisps.",
 	},
 	art_cleric_scripture = {
@@ -570,7 +570,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = false,
 		StatMultiplier = 1.00,
 		SpeedBonusAdditive = 0.000,
-		ModelAssetId = "weapon_staff",
+		ModelAssetId = "art_frostweaver_scepter",
 		Description = "Pale driftwood staff crowned with an intricate snowflake crystal radiating drifting frost mist.",
 	},
 	art_glacial_monolith = {
@@ -581,7 +581,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = true,
 		StatMultiplier = 1.20,
 		SpeedBonusAdditive = 0.020,
-		ModelAssetId = "weapon_staff",
+		ModelAssetId = "art_glacial_monolith",
 		Description = "Translucent blue glacial ice rod suspended with floating frost-rime shards orbiting the crown.",
 	},
 	art_hermetic_grimoire = {
@@ -702,7 +702,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = false,
 		StatMultiplier = 1.00,
 		SpeedBonusAdditive = 0.000,
-		ModelAssetId = "weapon_staff",
+		ModelAssetId = "art_archmage_rod",
 		Description = "Petrified ebony wood staff with entwined brass serpents suspending a hovering multi-faceted arcane prism.",
 	},
 	art_chronomancers_spindle = {
@@ -713,7 +713,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = true,
 		StatMultiplier = 1.20,
 		SpeedBonusAdditive = 0.020,
-		ModelAssetId = "weapon_staff",
+		ModelAssetId = "art_chronomancers_spindle",
 		Description = "Ornate brass clockwork staff with spinning interlocking astrolabe gears around a quartz core.",
 	},
 	art_valeria_sanctuary = {
@@ -834,7 +834,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = false,
 		StatMultiplier = 1.00,
 		SpeedBonusAdditive = 0.000,
-		ModelAssetId = "weapon_staff",
+		ModelAssetId = "art_infernal_pillar",
 		Description = "Dark iron battle-staff with open caged brazier containing an eternal roiling miniature flame star.",
 	},
 	art_void_channeler = {
@@ -845,7 +845,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = true,
 		StatMultiplier = 1.20,
 		SpeedBonusAdditive = 0.020,
-		ModelAssetId = "weapon_staff",
+		ModelAssetId = "art_void_channeler",
 		Description = "Abyssal black-stone staff crowned with a miniature gravitational singularity dragging light inward.",
 	},
 	art_necronomicon_pages = {
@@ -966,7 +966,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = false,
 		StatMultiplier = 1.00,
 		SpeedBonusAdditive = 0.000,
-		ModelAssetId = "weapon_staff",
+		ModelAssetId = "art_solaris_sunburst",
 		Description = "Golden solar eclipse crown with rotating orbital rings suspending an incandescent sun core.",
 	},
 	art_chronos_stave = {
@@ -977,7 +977,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = true,
 		StatMultiplier = 1.20,
 		SpeedBonusAdditive = 0.025,
-		ModelAssetId = "weapon_staff",
+		ModelAssetId = "art_chronos_stave",
 		Description = "Complex astronomical clockwork mechanism rotating in 3D around an unmoving time singularity.",
 	},
 	art_seraphic_psalms = {
@@ -1098,7 +1098,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = false,
 		StatMultiplier = 1.00,
 		SpeedBonusAdditive = 0.000,
-		ModelAssetId = "weapon_staff",
+		ModelAssetId = "art_eye_of_singularity",
 		Description = "Stave of black cosmic glass culminating in an event horizon core that bends ambient light.",
 	},
 	art_omega_archon_caduceus = {
@@ -1109,7 +1109,7 @@ local Seeds: { [string]: ArtifactSeed } = {
 		IsHighStat = true,
 		StatMultiplier = 1.20,
 		SpeedBonusAdditive = 0.050,
-		ModelAssetId = "weapon_staff",
+		ModelAssetId = "art_omega_archon_caduceus",
 		Description = "Primordial staff crowned by an uncoiling infinity loop of cosmic plasma, channeling raw arcane genesis.",
 	},
 	art_akashic_records = {
