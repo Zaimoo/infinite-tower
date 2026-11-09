@@ -1,0 +1,293 @@
+{
+ "EnemyId": "elite_rotwood_keeper",
+ "Family": "TREANT",
+ "Role": "ELITE",
+ "Biome": "corrupted_grove",
+ "Segments": [
+  {
+   "Name": "Body",
+   "Parent": null,
+   "Pivot": [
+    0.0,
+    3.75,
+    -0.0
+   ],
+   "Glow": [
+    {
+     "Mesh": "Body_Glow_Blight",
+     "Colour": [
+      236,
+      72,
+      206
+     ],
+     "Tris": 20,
+     "Centre": [
+      0.008,
+      5.068,
+      -1.005
+     ],
+     "Size": [
+      0.829,
+      0.887,
+      0.765
+     ]
+    },
+    {
+     "Mesh": "Body_Glow_Bloom",
+     "Colour": [
+      255,
+      140,
+      236
+     ],
+     "Tris": 108,
+     "Centre": [
+      -0.147,
+      4.379,
+      1.041
+     ],
+     "Size": [
+      1.622,
+      0.996,
+      0.316
+     ]
+    }
+   ],
+   "Centre": [
+    0.0,
+    4.875,
+    -0.003
+   ],
+   "Size": [
+    2.828,
+    4.0,
+    2.778
+   ],
+   "Tris": 692
+  },
+  {
+   "Name": "Head",
+   "Parent": "Body",
+   "Pivot": [
+    0.0,
+    6.75,
+    -0.062
+   ],
+   "Glow": [
+    {
+     "Mesh": "Head_Glow_Blight",
+     "Colour": [
+      236,
+      72,
+      206
+     ],
+     "Tris": 72,
+     "Centre": [
+      0.0,
+      7.375,
+      -1.0
+     ],
+     "Size": [
+      1.081,
+      0.325,
+      0.325
+     ]
+    }
+   ],
+   "Centre": [
+    -0.0,
+    8.22,
+    -0.047
+   ],
+   "Size": [
+    2.932,
+    2.939,
+    2.571
+   ],
+   "Tris": 268
+  },
+  {
+   "Name": "ArmL",
+   "Parent": "Body",
+   "Pivot": [
+    -1.312,
+    6.25,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    -1.584,
+    5.593,
+    0.019
+   ],
+   "Size": [
+    1.611,
+    2.338,
+    1.173
+   ],
+   "Tris": 76
+  },
+  {
+   "Name": "ForearmL",
+   "Parent": "ArmL",
+   "Pivot": [
+    -1.875,
+    4.5,
+    -0.25
+   ],
+   "Glow": [],
+   "Centre": [
+    -1.965,
+    3.389,
+    -0.812
+   ],
+   "Size": [
+    1.065,
+    2.391,
+    1.739
+   ],
+   "Tris": 128
+  },
+  {
+   "Name": "ArmR",
+   "Parent": "Body",
+   "Pivot": [
+    1.312,
+    6.25,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    1.573,
+    5.59,
+    -0.053
+   ],
+   "Size": [
+    1.633,
+    2.346,
+    1.0
+   ],
+   "Tris": 76
+  },
+  {
+   "Name": "ForearmR",
+   "Parent": "ArmR",
+   "Pivot": [
+    1.875,
+    4.5,
+    -0.25
+   ],
+   "Glow": [],
+   "Centre": [
+    1.965,
+    3.39,
+    -0.812
+   ],
+   "Size": [
+    1.065,
+    2.392,
+    1.739
+   ],
+   "Tris": 128
+  },
+  {
+   "Name": "LegL",
+   "Parent": "Body",
+   "Pivot": [
+    -0.688,
+    3.125,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    -0.685,
+    2.483,
+    -0.007
+   ],
+   "Size": [
+    1.039,
+    1.661,
+    1.035
+   ],
+   "Tris": 38
+  },
+  {
+   "Name": "KneeL",
+   "Parent": "LegL",
+   "Pivot": [
+    -0.775,
+    1.688,
+    -0.125
+   ],
+   "Glow": [],
+   "Centre": [
+    -0.884,
+    0.862,
+    -0.141
+   ],
+   "Size": [
+    2.089,
+    1.684,
+    2.263
+   ],
+   "Tris": 128
+  },
+  {
+   "Name": "LegR",
+   "Parent": "Body",
+   "Pivot": [
+    0.688,
+    3.125,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    0.732,
+    2.482,
+    -0.007
+   ],
+   "Size": [
+    1.034,
+    1.659,
+    1.034
+   ],
+   "Tris": 38
+  },
+  {
+   "Name": "KneeR",
+   "Parent": "LegR",
+   "Pivot": [
+    0.775,
+    1.688,
+    -0.125
+   ],
+   "Glow": [],
+   "Centre": [
+    0.884,
+    0.863,
+    -0.141
+   ],
+   "Size": [
+    2.089,
+    1.686,
+    2.263
+   ],
+   "Tris": 128
+  }
+ ],
+ "Surface": {
+  "Tier": "B",
+  "Size": 1024,
+  "Color": "elite_rotwood_keeper_color.png",
+  "Normal": "elite_rotwood_keeper_normal.png"
+ },
+ "TotalTris": 1900,
+ "MeshCount": 13,
+ "Size": [
+  5.0,
+  9.67,
+  3.07
+ ],
+ "FeetY": 0.02,
+ "Convention": "Studs, Roblox axes (Y up, faces -Z), origin on the ground under the enemy. Pivot = joint position. Mesh objects are named after their joint.",
+ "Atlas": "atlas_corrupted_grove.png"
+}

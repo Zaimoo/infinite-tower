@@ -88,6 +88,17 @@ test("Models stay inside the triangle budgets", function()
 	end
 end)
 
+test("Every glow mesh carries its colour (the importer drops it; EnemyRigFactory reapplies it)", function()
+	for id, entry in Index do
+		for _, s in entry.Segments do
+			for _, g in s.Glow do
+				assert(g.Colour and g.Colour.R ~= nil, id .. "/" .. g.Mesh .. ": glow has no colour")
+				assert(g.Colour.R + g.Colour.G + g.Colour.B > 0.3, id .. "/" .. g.Mesh .. ": glow colour is too dark to read")
+			end
+		end
+	end
+end)
+
 test("Alphas have their Elite remodelled too, and roles match the combat registry", function()
 	for id, entry in Index do
 		local spec = C.Get(id)

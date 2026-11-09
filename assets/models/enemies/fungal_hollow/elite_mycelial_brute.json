@@ -1,0 +1,274 @@
+{
+ "EnemyId": "elite_mycelial_brute",
+ "Family": "HEAVY_BIPED",
+ "Role": "ELITE",
+ "Biome": "fungal_hollow",
+ "Segments": [
+  {
+   "Name": "Body",
+   "Parent": null,
+   "Pivot": [
+    0.0,
+    3.6,
+    -0.0
+   ],
+   "Glow": [
+    {
+     "Mesh": "Body_Glow_Spore",
+     "Colour": [
+      110,
+      255,
+      220
+     ],
+     "Tris": 412,
+     "Centre": [
+      0.024,
+      5.461,
+      -0.164
+     ],
+     "Size": [
+      2.962,
+      3.18,
+      2.977
+     ]
+    }
+   ],
+   "Centre": [
+    -0.001,
+    5.025,
+    0.225
+   ],
+   "Size": [
+    4.551,
+    4.15,
+    3.829
+   ],
+   "Tris": 2400
+  },
+  {
+   "Name": "Head",
+   "Parent": "Body",
+   "Pivot": [
+    0.0,
+    6.5,
+    -0.75
+   ],
+   "Glow": [
+    {
+     "Mesh": "Head_Glow_Spore",
+     "Colour": [
+      110,
+      255,
+      220
+     ],
+     "Tris": 416,
+     "Centre": [
+      0.087,
+      7.306,
+      -0.86
+     ],
+     "Size": [
+      2.401,
+      1.033,
+      2.284
+     ]
+    }
+   ],
+   "Centre": [
+    0.0,
+    7.055,
+    -0.9
+   ],
+   "Size": [
+    2.437,
+    1.69,
+    2.5
+   ],
+   "Tris": 680
+  },
+  {
+   "Name": "ArmL",
+   "Parent": "Body",
+   "Pivot": [
+    -2.0,
+    6.0,
+    -0.2
+   ],
+   "Glow": [],
+   "Centre": [
+    -2.073,
+    5.54,
+    -0.2
+   ],
+   "Size": [
+    1.803,
+    2.72,
+    1.7
+   ],
+   "Tris": 252
+  },
+  {
+   "Name": "ForearmL",
+   "Parent": "ArmL",
+   "Pivot": [
+    -2.5,
+    4.3,
+    -0.5
+   ],
+   "Glow": [],
+   "Centre": [
+    -2.626,
+    2.92,
+    -0.789
+   ],
+   "Size": [
+    2.287,
+    3.76,
+    2.282
+   ],
+   "Tris": 884
+  },
+  {
+   "Name": "ArmR",
+   "Parent": "Body",
+   "Pivot": [
+    2.0,
+    6.0,
+    -0.2
+   ],
+   "Glow": [],
+   "Centre": [
+    2.073,
+    5.54,
+    -0.2
+   ],
+   "Size": [
+    1.803,
+    2.72,
+    1.7
+   ],
+   "Tris": 252
+  },
+  {
+   "Name": "ForearmR",
+   "Parent": "ArmR",
+   "Pivot": [
+    2.5,
+    4.3,
+    -0.5
+   ],
+   "Glow": [],
+   "Centre": [
+    2.614,
+    2.92,
+    -0.789
+   ],
+   "Size": [
+    2.287,
+    3.76,
+    2.282
+   ],
+   "Tris": 884
+  },
+  {
+   "Name": "LegL",
+   "Parent": "Body",
+   "Pivot": [
+    -0.95,
+    3.15,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    -0.965,
+    2.453,
+    -0.017
+   ],
+   "Size": [
+    1.267,
+    1.609,
+    1.21
+   ],
+   "Tris": 36
+  },
+  {
+   "Name": "KneeL",
+   "Parent": "LegL",
+   "Pivot": [
+    -1.05,
+    1.7,
+    -0.1
+   ],
+   "Glow": [],
+   "Centre": [
+    -1.1,
+    1.075,
+    -0.35
+   ],
+   "Size": [
+    1.462,
+    2.25,
+    1.828
+   ],
+   "Tris": 298
+  },
+  {
+   "Name": "LegR",
+   "Parent": "Body",
+   "Pivot": [
+    0.95,
+    3.15,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    0.965,
+    2.453,
+    -0.017
+   ],
+   "Size": [
+    1.267,
+    1.609,
+    1.21
+   ],
+   "Tris": 36
+  },
+  {
+   "Name": "KneeR",
+   "Parent": "LegR",
+   "Pivot": [
+    1.05,
+    1.7,
+    -0.1
+   ],
+   "Glow": [],
+   "Centre": [
+    1.1,
+    1.075,
+    -0.35
+   ],
+   "Size": [
+    1.462,
+    2.25,
+    1.828
+   ],
+   "Tris": 298
+  }
+ ],
+ "Surface": {
+  "Tier": "B",
+  "Size": 1024,
+  "Color": "elite_mycelial_brute_color.png",
+  "Normal": "elite_mycelial_brute_normal.png"
+ },
+ "TotalTris": 6848,
+ "MeshCount": 12,
+ "Size": [
+  7.53,
+  7.95,
+  4.29
+ ],
+ "FeetY": -0.05,
+ "Convention": "Studs, Roblox axes (Y up, faces -Z), origin on the ground under the enemy. Pivot = joint position. Mesh objects are named after their joint.",
+ "Atlas": "atlas_fungal_hollow.png"
+}

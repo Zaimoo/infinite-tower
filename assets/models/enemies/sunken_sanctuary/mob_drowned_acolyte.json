@@ -1,0 +1,268 @@
+{
+ "EnemyId": "mob_drowned_acolyte",
+ "Family": "CASTER_BIPED",
+ "Role": "REGULAR",
+ "Biome": "sunken_sanctuary",
+ "Segments": [
+  {
+   "Name": "Body",
+   "Parent": null,
+   "Pivot": [
+    0.0,
+    2.6,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    -0.066,
+    2.255,
+    -0.066
+   ],
+   "Size": [
+    2.295,
+    4.11,
+    2.35
+   ],
+   "Tris": 888
+  },
+  {
+   "Name": "Head",
+   "Parent": "Body",
+   "Pivot": [
+    0.0,
+    4.35,
+    -0.05
+   ],
+   "Glow": [
+    {
+     "Mesh": "Head_Glow_Aqua",
+     "Colour": [
+      70,
+      240,
+      222
+     ],
+     "Tris": 72,
+     "Centre": [
+      0.0,
+      4.85,
+      -0.42
+     ],
+     "Size": [
+      0.731,
+      0.22,
+      0.22
+     ]
+    }
+   ],
+   "Centre": [
+    0.0,
+    5.086,
+    0.245
+   ],
+   "Size": [
+    1.04,
+    1.527,
+    1.61
+   ],
+   "Tris": 354
+  },
+  {
+   "Name": "ArmL",
+   "Parent": "Body",
+   "Pivot": [
+    -0.55,
+    4.05,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    -0.663,
+    3.732,
+    -0.094
+   ],
+   "Size": [
+    0.622,
+    0.885,
+    0.497
+   ],
+   "Tris": 44
+  },
+  {
+   "Name": "ForearmL",
+   "Parent": "ArmL",
+   "Pivot": [
+    -0.78,
+    3.35,
+    -0.15
+   ],
+   "Glow": [],
+   "Centre": [
+    -0.82,
+    3.017,
+    -0.285
+   ],
+   "Size": [
+    0.53,
+    0.833,
+    0.67
+   ],
+   "Tris": 104
+  },
+  {
+   "Name": "ArmR",
+   "Parent": "Body",
+   "Pivot": [
+    0.55,
+    4.05,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    0.663,
+    3.732,
+    -0.094
+   ],
+   "Size": [
+    0.622,
+    0.885,
+    0.497
+   ],
+   "Tris": 44
+  },
+  {
+   "Name": "ForearmR",
+   "Parent": "ArmR",
+   "Pivot": [
+    0.78,
+    3.35,
+    -0.15
+   ],
+   "Glow": [
+    {
+     "Mesh": "ForearmR_Glow_Aqua",
+     "Colour": [
+      70,
+      240,
+      222
+     ],
+     "Tris": 36,
+     "Centre": [
+      0.82,
+      5.4,
+      -0.56
+     ],
+     "Size": [
+      0.116,
+      0.134,
+      0.134
+     ]
+    }
+   ],
+   "Centre": [
+    0.833,
+    3.31,
+    -0.292
+   ],
+   "Size": [
+    0.845,
+    5.02,
+    0.683
+   ],
+   "Tris": 386
+  },
+  {
+   "Name": "LegL",
+   "Parent": "Body",
+   "Pivot": [
+    -0.25,
+    2.4,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    -0.248,
+    1.825,
+    -0.015
+   ],
+   "Size": [
+    0.316,
+    1.264,
+    0.342
+   ],
+   "Tris": 24
+  },
+  {
+   "Name": "KneeL",
+   "Parent": "LegL",
+   "Pivot": [
+    -0.28,
+    1.2,
+    -0.05
+   ],
+   "Glow": [],
+   "Centre": [
+    -0.3,
+    0.614,
+    0.142
+   ],
+   "Size": [
+    0.56,
+    1.188,
+    0.717
+   ],
+   "Tris": 40
+  },
+  {
+   "Name": "LegR",
+   "Parent": "Body",
+   "Pivot": [
+    0.25,
+    2.4,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    0.263,
+    1.826,
+    -0.015
+   ],
+   "Size": [
+    0.314,
+    1.264,
+    0.342
+   ],
+   "Tris": 24
+  },
+  {
+   "Name": "KneeR",
+   "Parent": "LegR",
+   "Pivot": [
+    0.28,
+    1.2,
+    -0.05
+   ],
+   "Glow": [],
+   "Centre": [
+    0.3,
+    0.614,
+    0.142
+   ],
+   "Size": [
+    0.56,
+    1.188,
+    0.717
+   ],
+   "Tris": 40
+  }
+ ],
+ "TotalTris": 2056,
+ "MeshCount": 12,
+ "Size": [
+  2.47,
+  5.83,
+  2.35
+ ],
+ "FeetY": 0.02,
+ "Convention": "Studs, Roblox axes (Y up, faces -Z), origin on the ground under the enemy. Pivot = joint position. Mesh objects are named after their joint.",
+ "Atlas": "atlas_sunken_sanctuary.png"
+}

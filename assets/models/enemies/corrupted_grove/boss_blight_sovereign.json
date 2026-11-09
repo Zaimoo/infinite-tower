@@ -1,0 +1,312 @@
+{
+ "EnemyId": "boss_blight_sovereign",
+ "Family": "GROVE_COLOSSUS",
+ "Role": "BOSS",
+ "Biome": "corrupted_grove",
+ "Segments": [
+  {
+   "Name": "Body",
+   "Parent": null,
+   "Pivot": [
+    0.0,
+    6.6,
+    -0.0
+   ],
+   "Glow": [
+    {
+     "Mesh": "Body_Glow_Blight",
+     "Colour": [
+      236,
+      72,
+      206
+     ],
+     "Tris": 20,
+     "Centre": [
+      0.014,
+      8.919,
+      -1.769
+     ],
+     "Size": [
+      1.459,
+      1.561,
+      1.347
+     ]
+    },
+    {
+     "Mesh": "Body_Glow_Bloom",
+     "Colour": [
+      255,
+      140,
+      236
+     ],
+     "Tris": 108,
+     "Centre": [
+      -0.087,
+      8.937,
+      2.044
+     ],
+     "Size": [
+      2.372,
+      3.593,
+      0.769
+     ]
+    }
+   ],
+   "Centre": [
+    -0.001,
+    8.58,
+    0.026
+   ],
+   "Size": [
+    5.062,
+    7.04,
+    4.95
+   ],
+   "Tris": 722
+  },
+  {
+   "Name": "Head",
+   "Parent": "Body",
+   "Pivot": [
+    0.0,
+    11.88,
+    -0.11
+   ],
+   "Glow": [
+    {
+     "Mesh": "Head_Glow_Blight",
+     "Colour": [
+      236,
+      72,
+      206
+     ],
+     "Tris": 72,
+     "Centre": [
+      0.0,
+      12.98,
+      -1.76
+     ],
+     "Size": [
+      1.903,
+      0.572,
+      0.572
+     ]
+    },
+    {
+     "Mesh": "Head_Glow_Bloom",
+     "Colour": [
+      255,
+      140,
+      236
+     ],
+     "Tris": 36,
+     "Centre": [
+      -0.0,
+      13.97,
+      -1.936
+     ],
+     "Size": [
+      0.457,
+      0.528,
+      0.528
+     ]
+    }
+   ],
+   "Centre": [
+    0.0,
+    14.898,
+    -0.108
+   ],
+   "Size": [
+    5.164,
+    6.035,
+    4.462
+   ],
+   "Tris": 538
+  },
+  {
+   "Name": "ArmL",
+   "Parent": "Body",
+   "Pivot": [
+    -2.31,
+    11.0,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    -2.788,
+    9.843,
+    0.034
+   ],
+   "Size": [
+    2.836,
+    4.115,
+    2.064
+   ],
+   "Tris": 76
+  },
+  {
+   "Name": "ForearmL",
+   "Parent": "ArmL",
+   "Pivot": [
+    -3.3,
+    7.92,
+    -0.44
+   ],
+   "Glow": [],
+   "Centre": [
+    -3.459,
+    5.965,
+    -1.429
+   ],
+   "Size": [
+    1.875,
+    4.208,
+    3.06
+   ],
+   "Tris": 128
+  },
+  {
+   "Name": "ArmR",
+   "Parent": "Body",
+   "Pivot": [
+    2.31,
+    11.0,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    2.768,
+    9.838,
+    -0.093
+   ],
+   "Size": [
+    2.874,
+    4.128,
+    1.761
+   ],
+   "Tris": 76
+  },
+  {
+   "Name": "ForearmR",
+   "Parent": "ArmR",
+   "Pivot": [
+    3.3,
+    7.92,
+    -0.44
+   ],
+   "Glow": [],
+   "Centre": [
+    3.459,
+    5.966,
+    -1.429
+   ],
+   "Size": [
+    1.875,
+    4.21,
+    3.06
+   ],
+   "Tris": 128
+  },
+  {
+   "Name": "LegL",
+   "Parent": "Body",
+   "Pivot": [
+    -1.21,
+    5.5,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    -1.205,
+    4.37,
+    -0.012
+   ],
+   "Size": [
+    1.829,
+    2.923,
+    1.822
+   ],
+   "Tris": 38
+  },
+  {
+   "Name": "KneeL",
+   "Parent": "LegL",
+   "Pivot": [
+    -1.364,
+    2.97,
+    -0.22
+   ],
+   "Glow": [],
+   "Centre": [
+    -1.556,
+    1.517,
+    -0.247
+   ],
+   "Size": [
+    3.676,
+    2.964,
+    3.983
+   ],
+   "Tris": 128
+  },
+  {
+   "Name": "LegR",
+   "Parent": "Body",
+   "Pivot": [
+    1.21,
+    5.5,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    1.289,
+    4.368,
+    -0.012
+   ],
+   "Size": [
+    1.82,
+    2.921,
+    1.82
+   ],
+   "Tris": 38
+  },
+  {
+   "Name": "KneeR",
+   "Parent": "LegR",
+   "Pivot": [
+    1.364,
+    2.97,
+    -0.22
+   ],
+   "Glow": [],
+   "Centre": [
+    1.556,
+    1.519,
+    -0.247
+   ],
+   "Size": [
+    3.676,
+    2.967,
+    3.983
+   ],
+   "Tris": 128
+  }
+ ],
+ "Surface": {
+  "Tier": "B",
+  "Size": 2048,
+  "Color": "boss_blight_sovereign_color.png",
+  "Normal": "boss_blight_sovereign_normal.png"
+ },
+ "TotalTris": 2236,
+ "MeshCount": 14,
+ "Size": [
+  8.79,
+  17.88,
+  5.46
+ ],
+ "FeetY": 0.035,
+ "Convention": "Studs, Roblox axes (Y up, faces -Z), origin on the ground under the enemy. Pivot = joint position. Mesh objects are named after their joint.",
+ "Atlas": "atlas_corrupted_grove.png"
+}

@@ -67,6 +67,11 @@ local function buildModel(model: Model, root: BasePart, enemyId: string): any
 	-- Clone every mesh, scaled and placed in model space, then on the root.
 	local frames: { [string]: CFrame } = {}
 	local parts: { [string]: BasePart } = {}
+	-- The 3D Importer drops vertex/material colour, so glow meshes arrive as grey Neon (renders white).
+	local glowColours: { [string]: Color3 } = {}
+	for _, seg in entry.Segments do
+		for _, g in seg.Glow do glowColours[g.Mesh] = g.Colour end
+	end
 	for _, d in source:GetDescendants() do
 		if d:IsA("BasePart") then
 			local p = d:Clone()
@@ -75,6 +80,11 @@ local function buildModel(model: Model, root: BasePart, enemyId: string): any
 			p.Size = d.Size * s
 			p.CFrame = ground * placed
 			prep(p, netId)
+			local glowColour = glowColours[d.Name]
+			if glowColour then
+				p.Color = glowColour
+				p.Material = Enum.Material.Neon
+			end
 			p.Parent = folder
 			frames[d.Name] = placed
 			parts[d.Name] = p

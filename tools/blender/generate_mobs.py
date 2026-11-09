@@ -66,6 +66,7 @@ def lineup(mod, biome, ids, out, prev):
 
 if __name__ == "__main__":
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
+    argv = [a for a in argv if not a.startswith("--")]  # flags like --no-bake are read from sys.argv
     biome = argv[0]
     mod = importlib.import_module(biome)
     ids = argv[1:] or list(mod.BUILDERS)

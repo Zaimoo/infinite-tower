@@ -1,0 +1,314 @@
+{
+ "EnemyId": "elite_glacier_knight",
+ "Family": "ARMORED_BIPED",
+ "Role": "ELITE",
+ "Biome": "frozen_citadel",
+ "Segments": [
+  {
+   "Name": "Body",
+   "Parent": null,
+   "Pivot": [
+    0.0,
+    4.095,
+    -0.0
+   ],
+   "Glow": [
+    {
+     "Mesh": "Body_Glow_Frost",
+     "Colour": [
+      168,
+      226,
+      255
+     ],
+     "Tris": 20,
+     "Centre": [
+      0.0,
+      6.006,
+      -1.04
+     ],
+     "Size": [
+      0.27,
+      0.312,
+      0.078
+     ]
+    }
+   ],
+   "Centre": [
+    0.0,
+    4.13,
+    -0.052
+   ],
+   "Size": [
+    2.86,
+    5.92,
+    2.08
+   ],
+   "Tris": 352
+  },
+  {
+   "Name": "Head",
+   "Parent": "Body",
+   "Pivot": [
+    0.0,
+    6.955,
+    -0.065
+   ],
+   "Glow": [
+    {
+     "Mesh": "Head_Glow_Frost",
+     "Colour": [
+      168,
+      226,
+      255
+     ],
+     "Tris": 12,
+     "Centre": [
+      0.0,
+      7.67,
+      -0.65
+     ],
+     "Size": [
+      0.91,
+      0.104,
+      0.13
+     ]
+    }
+   ],
+   "Centre": [
+    0.0,
+    7.962,
+    -0.065
+   ],
+   "Size": [
+    1.95,
+    1.885,
+    1.378
+   ],
+   "Tris": 394
+  },
+  {
+   "Name": "ArmL",
+   "Parent": "Body",
+   "Pivot": [
+    -1.365,
+    6.435,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    -1.476,
+    6.383,
+    -0.0
+   ],
+   "Size": [
+    1.469,
+    2.704,
+    1.43
+   ],
+   "Tris": 401
+  },
+  {
+   "Name": "ForearmL",
+   "Parent": "ArmL",
+   "Pivot": [
+    -1.56,
+    5.005,
+    -0.065
+   ],
+   "Glow": [
+    {
+     "Mesh": "ForearmL_Glow_Frost",
+     "Colour": [
+      168,
+      226,
+      255
+     ],
+     "Tris": 20,
+     "Centre": [
+      -1.926,
+      4.42,
+      -0.789
+     ],
+     "Size": [
+      0.463,
+      0.416,
+      0.482
+     ]
+    }
+   ],
+   "Centre": [
+    -2.006,
+    4.277,
+    -0.395
+   ],
+   "Size": [
+    1.779,
+    4.368,
+    1.384
+   ],
+   "Tris": 164
+  },
+  {
+   "Name": "ArmR",
+   "Parent": "Body",
+   "Pivot": [
+    1.365,
+    6.435,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    1.476,
+    6.383,
+    -0.0
+   ],
+   "Size": [
+    1.469,
+    2.704,
+    1.43
+   ],
+   "Tris": 401
+  },
+  {
+   "Name": "ForearmR",
+   "Parent": "ArmR",
+   "Pivot": [
+    1.56,
+    5.005,
+    -0.065
+   ],
+   "Glow": [
+    {
+     "Mesh": "ForearmR_Glow_Frost",
+     "Colour": [
+      168,
+      226,
+      255
+     ],
+     "Tris": 6,
+     "Centre": [
+      1.625,
+      6.11,
+      -0.39
+     ],
+     "Size": [
+      0.13,
+      1.82,
+      0.13
+     ]
+    }
+   ],
+   "Centre": [
+    1.625,
+    5.519,
+    -0.121
+   ],
+   "Size": [
+    1.235,
+    5.057,
+    0.835
+   ],
+   "Tris": 248
+  },
+  {
+   "Name": "LegL",
+   "Parent": "Body",
+   "Pivot": [
+    -0.585,
+    3.835,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    -0.631,
+    3.012,
+    -0.046
+   ],
+   "Size": [
+    1.078,
+    1.863,
+    1.078
+   ],
+   "Tris": 44
+  },
+  {
+   "Name": "KneeL",
+   "Parent": "LegL",
+   "Pivot": [
+    -0.65,
+    2.015,
+    -0.065
+   ],
+   "Glow": [],
+   "Centre": [
+    -0.676,
+    1.183,
+    -0.306
+   ],
+   "Size": [
+    0.832,
+    2.366,
+    1.313
+   ],
+   "Tris": 164
+  },
+  {
+   "Name": "LegR",
+   "Parent": "Body",
+   "Pivot": [
+    0.585,
+    3.835,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    0.631,
+    3.012,
+    -0.046
+   ],
+   "Size": [
+    1.078,
+    1.863,
+    1.078
+   ],
+   "Tris": 44
+  },
+  {
+   "Name": "KneeR",
+   "Parent": "LegR",
+   "Pivot": [
+    0.65,
+    2.015,
+    -0.065
+   ],
+   "Glow": [],
+   "Centre": [
+    0.676,
+    1.183,
+    -0.306
+   ],
+   "Size": [
+    0.832,
+    2.366,
+    1.313
+   ],
+   "Tris": 164
+  }
+ ],
+ "Surface": {
+  "Tier": "B",
+  "Size": 1024,
+  "Color": "elite_glacier_knight_color.png",
+  "Normal": "elite_glacier_knight_normal.png"
+ },
+ "TotalTris": 2434,
+ "MeshCount": 14,
+ "Size": [
+  5.14,
+  8.9,
+  2.08
+ ],
+ "FeetY": 0.0,
+ "Convention": "Studs, Roblox axes (Y up, faces -Z), origin on the ground under the enemy. Pivot = joint position. Mesh objects are named after their joint.",
+ "Atlas": "atlas_frozen_citadel.png"
+}

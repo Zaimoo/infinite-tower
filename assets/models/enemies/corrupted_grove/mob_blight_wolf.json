@@ -1,0 +1,268 @@
+{
+ "EnemyId": "mob_blight_wolf",
+ "Family": "QUADRUPED",
+ "Role": "REGULAR",
+ "Biome": "corrupted_grove",
+ "Segments": [
+  {
+   "Name": "Body",
+   "Parent": null,
+   "Pivot": [
+    0.0,
+    2.2,
+    -0.0
+   ],
+   "Glow": [
+    {
+     "Mesh": "Body_Glow_Bloom",
+     "Colour": [
+      255,
+      140,
+      236
+     ],
+     "Tris": 36,
+     "Centre": [
+      0.31,
+      2.976,
+      0.2
+     ],
+     "Size": [
+      0.184,
+      0.213,
+      0.213
+     ]
+    }
+   ],
+   "Centre": [
+    0.004,
+    2.688,
+    0.69
+   ],
+   "Size": [
+    1.522,
+    2.175,
+    5.281
+   ],
+   "Tris": 836
+  },
+  {
+   "Name": "Head",
+   "Parent": "Body",
+   "Pivot": [
+    0.0,
+    2.9,
+    -1.9
+   ],
+   "Glow": [
+    {
+     "Mesh": "Head_Glow_Bloom",
+     "Colour": [
+      255,
+      140,
+      236
+     ],
+     "Tris": 72,
+     "Centre": [
+      0.0,
+      3.251,
+      -2.631
+     ],
+     "Size": [
+      0.61,
+      0.091,
+      0.091
+     ]
+    }
+   ],
+   "Centre": [
+    0.0,
+    3.278,
+    -2.627
+   ],
+   "Size": [
+    0.9,
+    1.443,
+    1.826
+   ],
+   "Tris": 384
+  },
+  {
+   "Name": "ArmL",
+   "Parent": "Body",
+   "Pivot": [
+    -0.5,
+    2.3,
+    -1.3
+   ],
+   "Glow": [],
+   "Centre": [
+    -0.487,
+    1.827,
+    -1.284
+   ],
+   "Size": [
+    0.494,
+    1.395,
+    0.538
+   ],
+   "Tris": 38
+  },
+  {
+   "Name": "ForearmL",
+   "Parent": "ArmL",
+   "Pivot": [
+    -0.55,
+    1.15,
+    -1.15
+   ],
+   "Glow": [],
+   "Centre": [
+    -0.55,
+    0.59,
+    -1.454
+   ],
+   "Size": [
+    0.28,
+    1.181,
+    0.853
+   ],
+   "Tris": 94
+  },
+  {
+   "Name": "LegL",
+   "Parent": "Body",
+   "Pivot": [
+    -0.5,
+    2.3,
+    1.3
+   ],
+   "Glow": [],
+   "Centre": [
+    -0.478,
+    1.86,
+    1.386
+   ],
+   "Size": [
+    0.659,
+    1.426,
+    0.961
+   ],
+   "Tris": 38
+  },
+  {
+   "Name": "KneeL",
+   "Parent": "LegL",
+   "Pivot": [
+    -0.55,
+    1.2,
+    1.75
+   ],
+   "Glow": [],
+   "Centre": [
+    -0.55,
+    0.617,
+    1.416
+   ],
+   "Size": [
+    0.28,
+    1.234,
+    0.892
+   ],
+   "Tris": 94
+  },
+  {
+   "Name": "ArmR",
+   "Parent": "Body",
+   "Pivot": [
+    0.5,
+    2.3,
+    -1.3
+   ],
+   "Glow": [],
+   "Centre": [
+    0.513,
+    1.828,
+    -1.284
+   ],
+   "Size": [
+    0.494,
+    1.397,
+    0.537
+   ],
+   "Tris": 38
+  },
+  {
+   "Name": "ForearmR",
+   "Parent": "ArmR",
+   "Pivot": [
+    0.55,
+    1.15,
+    -1.15
+   ],
+   "Glow": [],
+   "Centre": [
+    0.55,
+    0.59,
+    -1.454
+   ],
+   "Size": [
+    0.28,
+    1.181,
+    0.853
+   ],
+   "Tris": 94
+  },
+  {
+   "Name": "LegR",
+   "Parent": "Body",
+   "Pivot": [
+    0.5,
+    2.3,
+    1.3
+   ],
+   "Glow": [],
+   "Centre": [
+    0.482,
+    1.857,
+    1.37
+   ],
+   "Size": [
+    0.659,
+    1.431,
+    0.973
+   ],
+   "Tris": 38
+  },
+  {
+   "Name": "KneeR",
+   "Parent": "LegR",
+   "Pivot": [
+    0.55,
+    1.2,
+    1.75
+   ],
+   "Glow": [],
+   "Centre": [
+    0.55,
+    0.617,
+    1.416
+   ],
+   "Size": [
+    0.28,
+    1.234,
+    0.892
+   ],
+   "Tris": 94
+  }
+ ],
+ "TotalTris": 1856,
+ "MeshCount": 12,
+ "Size": [
+  1.62,
+  4.0,
+  6.87
+ ],
+ "FeetY": 0.0,
+ "Convention": "Studs, Roblox axes (Y up, faces -Z), origin on the ground under the enemy. Pivot = joint position. Mesh objects are named after their joint.",
+ "Atlas": "atlas_corrupted_grove.png"
+}

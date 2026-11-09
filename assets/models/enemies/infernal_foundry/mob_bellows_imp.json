@@ -1,0 +1,306 @@
+{
+ "EnemyId": "mob_bellows_imp",
+ "Family": "SMALL_BIPED",
+ "Role": "SUPPORT",
+ "Biome": "infernal_foundry",
+ "Segments": [
+  {
+   "Name": "Body",
+   "Parent": null,
+   "Pivot": [
+    0.0,
+    1.8,
+    -0.0
+   ],
+   "Glow": [
+    {
+     "Mesh": "Body_Glow_Ember",
+     "Colour": [
+      255,
+      96,
+      30
+     ],
+     "Tris": 156,
+     "Centre": [
+      -0.048,
+      2.905,
+      0.132
+     ],
+     "Size": [
+      0.521,
+      2.338,
+      1.233
+     ]
+    },
+    {
+     "Mesh": "Body_Glow_Molten",
+     "Colour": [
+      255,
+      156,
+      44
+     ],
+     "Tris": 72,
+     "Centre": [
+      -0.021,
+      3.696,
+      0.64
+     ],
+     "Size": [
+      0.392,
+      0.456,
+      0.297
+     ]
+    }
+   ],
+   "Centre": [
+    0.001,
+    2.333,
+    0.411
+   ],
+   "Size": [
+    1.142,
+    1.83,
+    1.722
+   ],
+   "Tris": 628
+  },
+  {
+   "Name": "Head",
+   "Parent": "Body",
+   "Pivot": [
+    0.0,
+    2.76,
+    -0.06
+   ],
+   "Glow": [
+    {
+     "Mesh": "Head_Glow_Ember",
+     "Colour": [
+      255,
+      96,
+      30
+     ],
+     "Tris": 12,
+     "Centre": [
+      0.0,
+      2.97,
+      -0.552
+     ],
+     "Size": [
+      0.51,
+      0.072,
+      0.072
+     ]
+    },
+    {
+     "Mesh": "Head_Glow_Molten",
+     "Colour": [
+      255,
+      156,
+      44
+     ],
+     "Tris": 144,
+     "Centre": [
+      0.0,
+      3.645,
+      -0.165
+     ],
+     "Size": [
+      0.923,
+      1.026,
+      0.846
+     ]
+    }
+   ],
+   "Centre": [
+    0.0,
+    3.392,
+    -0.09
+   ],
+   "Size": [
+    1.74,
+    1.462,
+    0.969
+   ],
+   "Tris": 268
+  },
+  {
+   "Name": "ArmL",
+   "Parent": "Body",
+   "Pivot": [
+    -0.51,
+    2.49,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    -0.551,
+    2.24,
+    -0.015
+   ],
+   "Size": [
+    0.339,
+    0.567,
+    0.287
+   ],
+   "Tris": 24
+  },
+  {
+   "Name": "ForearmL",
+   "Parent": "ArmL",
+   "Pivot": [
+    -0.63,
+    1.98,
+    -0.06
+   ],
+   "Glow": [],
+   "Centre": [
+    -0.651,
+    1.664,
+    -0.192
+   ],
+   "Size": [
+    0.246,
+    0.687,
+    0.456
+   ],
+   "Tris": 106
+  },
+  {
+   "Name": "ArmR",
+   "Parent": "Body",
+   "Pivot": [
+    0.51,
+    2.49,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    0.561,
+    2.237,
+    -0.015
+   ],
+   "Size": [
+    0.337,
+    0.566,
+    0.287
+   ],
+   "Tris": 24
+  },
+  {
+   "Name": "ForearmR",
+   "Parent": "ArmR",
+   "Pivot": [
+    0.63,
+    1.98,
+    -0.06
+   ],
+   "Glow": [],
+   "Centre": [
+    0.656,
+    1.662,
+    -0.192
+   ],
+   "Size": [
+    0.237,
+    0.685,
+    0.456
+   ],
+   "Tris": 106
+  },
+  {
+   "Name": "LegL",
+   "Parent": "Body",
+   "Pivot": [
+    -0.24,
+    1.62,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    -0.245,
+    1.32,
+    -0.077
+   ],
+   "Size": [
+    0.34,
+    0.799,
+    0.459
+   ],
+   "Tris": 38
+  },
+  {
+   "Name": "KneeL",
+   "Parent": "LegL",
+   "Pivot": [
+    -0.27,
+    0.93,
+    -0.21
+   ],
+   "Glow": [],
+   "Centre": [
+    -0.282,
+    0.492,
+    -0.061
+   ],
+   "Size": [
+    0.216,
+    0.984,
+    0.453
+   ],
+   "Tris": 82
+  },
+  {
+   "Name": "LegR",
+   "Parent": "Body",
+   "Pivot": [
+    0.24,
+    1.62,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    0.248,
+    1.32,
+    -0.091
+   ],
+   "Size": [
+    0.339,
+    0.799,
+    0.457
+   ],
+   "Tris": 38
+  },
+  {
+   "Name": "KneeR",
+   "Parent": "LegR",
+   "Pivot": [
+    0.27,
+    0.93,
+    -0.21
+   ],
+   "Glow": [],
+   "Centre": [
+    0.282,
+    0.492,
+    -0.062
+   ],
+   "Size": [
+    0.216,
+    0.984,
+    0.452
+   ],
+   "Tris": 82
+  }
+ ],
+ "TotalTris": 1780,
+ "MeshCount": 14,
+ "Size": [
+  1.74,
+  4.16,
+  1.86
+ ],
+ "FeetY": 0.0,
+ "Convention": "Studs, Roblox axes (Y up, faces -Z), origin on the ground under the enemy. Pivot = joint position. Mesh objects are named after their joint.",
+ "Atlas": "atlas_infernal_foundry.png"
+}
