@@ -282,6 +282,7 @@ function Controller.Step(node: any, dt: number, now: number)
 	input.DeathAt = node.DeathAt
 	input.BornAt = node.BornAt
 	input.AwakenSeconds = 2.2
+	input.Far = node.AnimFar == true
 	anim:Step(now, input)
 	if node.HitAt and now - node.HitAt < .15 then
 		if node.Highlight then

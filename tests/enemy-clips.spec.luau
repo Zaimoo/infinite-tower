@@ -161,4 +161,71 @@ test("Death overrides the action and the walk", function()
 	end
 end)
 
+local Index = require(nodes["ReplicatedStorage.Shared.Config.TowerEnemyModelIndex"])
+
+test("Every remodelled enemy gets size metrics, and stride grows with leg length", function()
+	for id, entry in Index do
+		local spec = C.Get(id)
+		local m = Anim.Metrics(id, spec, entry, 1.25)
+		assert(m.HipHeight > 0 and m.Height > m.HipHeight, id .. ": bad hip/height")
+		assert(m.MotionScale >= 0.4 and m.MotionScale <= 4, id .. ": motion scale out of range")
+		assert(m.Stride > 0, id .. ": no stride")
+		local big = Anim.Metrics(id, spec, entry, 1.25 * 1.4)
+		assert(big.Stride > m.Stride and big.MotionScale >= m.MotionScale, id .. ": stride must grow with size")
+	end
+	-- the Throne Executioner's legs cover ~7.5 studs a cycle, not the old 4.8
+	local exec = Anim.Metrics("elite_throne_executioner", C.Get("elite_throne_executioner"), Index.elite_throne_executioner, 1.25)
+	assert(exec.Stride > 7 and exec.Stride < 8, "executioner stride " .. exec.Stride)
+end)
+
+test("MotionScale stretches clip translations, not rotations", function()
+	local id = firstEnemy(function(s) return s.Role == "REGULAR" end)
+	local now = 30
+	local input: any = { Moved = 0, DeathAt = now - 1.6 }
+	local one, two = fakeRig(id), fakeRig(id)
+	one.Metrics = { MotionScale = 1, Stride = 5 }
+	two.Metrics = { MotionScale = 2, Stride = 5 }
+	local a = Anim.new(one, 9):Evaluate(now, input, 0)
+	local b = Anim.new(two, 9):Evaluate(now, input, 0)
+	assert(math.abs(a.Body.Y) > 0.1, "death should drop the body")
+	for name, cf in a do
+		local d = b[name]
+		assert(near(d.X, cf.X * 2) and near(d.Y, cf.Y * 2) and near(d.Z, cf.Z * 2), name .. ": translation not doubled")
+		assert(near(d.rx, cf.rx) and near(d.ry, cf.ry) and near(d.rz, cf.rz), name .. ": rotation changed")
+	end
+end)
+
+test("Springs settle, trail the pull and stay bounded", function()
+	for motion, params in Anim.SPRINGS do
+		local st: any = { X = 0, Z = 0, VX = 0, VZ = 0, Angle = 0 }
+		Anim.SpringStep(st, 0, 0, 1, params)
+		assert(st.X == 0 and st.Z == 0, motion .. ": moved with no pull")
+		for _ = 1, 120 do Anim.SpringStep(st, 0, 40, 1 / 60, params) end
+		assert(st.X > 0, motion .. ": should tilt with a forward/back pull")
+		for _ = 1, 600 do Anim.SpringStep(st, -1000, 1000, 1 / 60, params) end
+		assert(math.abs(st.X) <= params.Max + 1e-9 and math.abs(st.Z) <= params.Max + 1e-9, motion .. ": exceeded its limit")
+		for _ = 1, 600 do Anim.SpringStep(st, 0, 0, 1 / 60, params) end
+		assert(math.abs(st.X) < 0.01 and math.abs(st.Z) < 0.01, motion .. ": did not settle")
+	end
+end)
+
+test("Unkeyed extra joints get their spring role; clip joints keep their clips", function()
+	local id = firstEnemy(function(s) return s.Role == "REGULAR" end)
+	local rig = fakeRig(id)
+	rig.Joints.ExtraKey = { Motor = {}, Bind = CFrame.identity }
+	rig.Joints.Trophy_Crown = { Motor = {}, Bind = CFrame.identity }
+	rig.JointMotion = { ExtraKey = "Spin", Trophy_Crown = "Rigid", Head = "Cloth" }
+	local a = Anim.new(rig, 4)
+	local input: any = { Moved = 0 }
+	a:Evaluate(40, input, 0)
+	local t = a:Evaluate(40.5, input, 0.5)
+	assert(near(t.ExtraKey.ry, Anim.SPIN_RATE * 0.5, 1e-6), "spin joint should turn at SPIN_RATE")
+	assert(sameCF(t.Trophy_Crown, CFrame.identity), "a rigid trophy at rest stays put")
+	local idle = Clips.Sample(Clips[id].Idle, (40.5 * a.IdleRate / Anim.IDLE_SECONDS + a.IdleOffset) % 1)
+	assert(sameCF(t.Head, idle.Head), "a joint the clips key ignores its motion role")
+	input.Far = true
+	local far = a:Evaluate(41, input, 0.5)
+	assert(sameCF(far.Trophy_Crown, CFrame.identity), "far springs rest")
+end)
+
 print(string.format("enemy-clips: %d passed", passed))

@@ -329,6 +329,20 @@ for enemyId, spec in pairs(Config.Entries) do
 	end
 end
 
+-- Which shared clip group an enemy uses, for size scaling and stride (EnemyAnimator.Metrics).
+local GROUPS: { [string]: string } = {}
+for enemyId, spec in pairs(Config.Entries) do
+	local family = spec.CatalogFamily or spec.RigFamily
+	GROUPS[enemyId] = if family == "CRAWLER" or family == "INSECT" or family == "CRUSTACEAN" or family == "SCORPION" or spec.RigFamily == "SIX_LEGGED_CRAWLER" then "MULTILEG"
+		elseif family == "QUADRUPED" then "QUADRUPED"
+		elseif family == "AVIAN" or family == "GIANT_AVIAN" then "AVIAN"
+		elseif family == "SERPENT" then "SERPENT"
+		else "BIPED"
+end
+function C.GroupFor(enemyId: string): string
+	return GROUPS[enemyId] or "BIPED"
+end
+
 function C.MarkersFor(frames: any): (number, number)
 	local m = MARKERS[frames]
 	if m then return m[1], m[2] end

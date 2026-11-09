@@ -11,6 +11,7 @@
 --   Treadmill    studs per second to walk in place (Facility preview)
 --   Action       { AnimationKey, StartServerTime, WindupSeconds?, ImpactOffsetSeconds, RecoverySeconds } or nil
 --   HitAt, DeathAt, BornAt, AwakenSeconds
+--   Far          true beyond full-rate LOD distance: springs rest
 --
 -- Layers: Idle and Locomotion blend by a speed weight with hysteresis; an action plays on top (legs keep
 -- walking while the mob moves); a hit flinch is added on top of anything; death overrides all. Each joint
@@ -118,8 +119,57 @@ local function inStrike(elapsed: number, windup: number?, impact: number): boole
 	return elapsed >= w - lead and elapsed <= impact + 0.05
 end
 
--- Studs per locomotion cycle (step 2 of the plan replaces this with one measured from leg length).
+-- ------------------------------------------------------------------ size (plan §3.5, §3.6)
+-- Clip translations are authored for one hip height per clip group; MotionScale stretches them to the drawn
+-- model so a death drop, lunge or bob reads the same on a 2-stud mite and a 25-stud boss.
+EnemyAnimator.REFERENCE_HIP = { BIPED = 3.5, MULTILEG = 1.3, QUADRUPED = 2.4, AVIAN = 2.8, SERPENT = 4.2 }
+-- Studs per walk cycle per stud of hip height: two steps of 2 * leg * sin(swing). Biped and avian legs swing
+-- ±24°, quadrupeds ±22°; crawler legs sweep ±18° with a reach about 1.4x their hip; the serpent's S-wave
+-- travels about one and a half hip heights.
+EnemyAnimator.STRIDE_PER_HIP = {
+	BIPED = 4 * math.sin(math.rad(24)),
+	AVIAN = 4 * math.sin(math.rad(24)),
+	QUADRUPED = 4 * math.sin(math.rad(22)),
+	MULTILEG = 4 * 1.4 * math.sin(math.rad(18)),
+	SERPENT = 1.5,
+}
+
+export type Metrics = { Group: string, Height: number, HipHeight: number, MotionScale: number, Stride: number }
+
+-- Size metrics for a rig. `entry` is the TowerEnemyModelIndex entry for a remodelled template (nil for the
+-- part rig, which uses its combat spec); `renderScale` is how much bigger the template is drawn.
+function EnemyAnimator.Metrics(enemyId: string, spec: any, entry: any?, renderScale: number?): Metrics
+	local group = Clips.GroupFor(enemyId)
+	local s = renderScale or 1
+	local hip, height
+	if entry then
+		local sum, n = 0, 0
+		for _, seg in entry.Segments do
+			if (group == "MULTILEG" and string.match(seg.Name, "^Leg%-?1_%d$")) or (group ~= "MULTILEG" and seg.Name == "LegL") then
+				sum += seg.Pivot.Y
+				n += 1
+			end
+		end
+		hip = (if n > 0 then sum / n else entry.Height * 0.45) * s
+		height = entry.Height * s
+	else
+		hip = (spec and spec.RootHeight) or 3
+		height = (spec and spec.Height) or hip * 2
+	end
+	hip = math.max(0.3, hip)
+	local ref = EnemyAnimator.REFERENCE_HIP[group] or 3.5
+	return {
+		Group = group,
+		Height = height,
+		HipHeight = hip,
+		MotionScale = math.clamp(hip / ref, 0.4, 4),
+		Stride = (EnemyAnimator.STRIDE_PER_HIP[group] or 1.6) * hip,
+	}
+end
+
+-- Studs per locomotion cycle: from the rig's leg length, else the old per-role table (raid stand-ins).
 function EnemyAnimator.Stride(rig: any): number
+	if rig.Metrics then return rig.Metrics.Stride end
 	local role = rig.Spec and rig.Spec.Role
 	return if role == "BOSS" then 9.6 elseif role == "REGULAR" then 3.6 else 4.8
 end
@@ -148,6 +198,63 @@ local function isLeg(name: string): boolean
 	return cached
 end
 
+-- ------------------------------------------------------------------ springs (plan §3.7, §3.8)
+-- Extra*/Trophy_* joints that no playing clip keys lag behind their pivot's acceleration: a damped spring per
+-- tilt axis. Tilt about local X follows forward/back acceleration and about Z follows sideways, so a hanging
+-- piece trails the way it is pulled. Spin joints just turn. Roles come from tools/blender/mob_extras.py.
+export type SpringParams = { K: number, C: number, G: number, Max: number }
+EnemyAnimator.SPRINGS = {
+	Cloth = { K = 40, C = 6, G = 0.3, Max = 0.5 } :: SpringParams,
+	Hanging = { K = 25, C = 3, G = 0.22, Max = 0.6 } :: SpringParams,
+	Rigid = { K = 160, C = 14, G = 0.24, Max = 0.12 } :: SpringParams,
+}
+EnemyAnimator.SPIN_RATE = 1.2 -- radians per second
+EnemyAnimator.MAX_ACCEL = 250 -- studs/s², clamps teleports and snapshot hitches
+
+export type SpringState = { X: number, Z: number, VX: number, VZ: number, Angle: number, LastPos: Vector3?, LastVel: Vector3? }
+
+-- Advance one spring by dt under a pivot acceleration (parent-local X and Z, studs/s²). Pure; exposed for tests.
+function EnemyAnimator.SpringStep(st: SpringState, accX: number, accZ: number, dt: number, p: SpringParams)
+	local steps = math.max(1, math.ceil(dt / (1 / 60)))
+	local h = dt / steps
+	for _ = 1, steps do
+		st.VX += (-p.K * st.X - p.C * st.VX + p.G * accZ) * h
+		st.VZ += (-p.K * st.Z - p.C * st.VZ - p.G * accX) * h
+		st.X = math.clamp(st.X + st.VX * h, -p.Max, p.Max)
+		st.Z = math.clamp(st.Z + st.VZ * h, -p.Max, p.Max)
+	end
+end
+
+local function springPose(self: any, name: string, motion: string, joint: any, dt: number, far: boolean): CFrame
+	local springs = self.Springs
+	local st: SpringState = springs[name]
+	if not st then
+		st = { X = 0, Z = 0, VX = 0, VZ = 0, Angle = 0 }
+		springs[name] = st
+	end
+	if motion == "Spin" then
+		st.Angle = (st.Angle + EnemyAnimator.SPIN_RATE * dt) % (2 * math.pi)
+		return CFrame.Angles(0, st.Angle, 0)
+	end
+	local p = EnemyAnimator.SPRINGS[motion]
+	if not p or far then
+		st.X, st.Z, st.VX, st.VZ, st.LastPos, st.LastVel = 0, 0, 0, 0, nil, nil
+		return IDENTITY
+	end
+	local part0 = joint.Motor.Part0
+	if dt > 0 and part0 then
+		local frame = part0.CFrame * joint.Bind
+		local pos = frame.Position
+		local vel = if st.LastPos then (pos - st.LastPos) / dt else Vector3.zero
+		local acc = if st.LastVel then (vel - st.LastVel) / dt else Vector3.zero
+		if acc.Magnitude > EnemyAnimator.MAX_ACCEL then acc = acc.Unit * EnemyAnimator.MAX_ACCEL end
+		st.LastPos, st.LastVel = pos, vel
+		local localAcc = frame:VectorToObjectSpace(acc)
+		EnemyAnimator.SpringStep(st, localAcc.X, localAcc.Z, dt, p)
+	end
+	return CFrame.Angles(st.X, 0, st.Z)
+end
+
 -- ------------------------------------------------------------------ animator
 function EnemyAnimator.new(rig: any, seed: any)
 	local self = setmetatable({}, EnemyAnimator) :: any
@@ -163,6 +270,7 @@ function EnemyAnimator.new(rig: any, seed: any)
 	self.LocoWeight = 0
 	self.LastNow = nil :: number?
 	self.Current = {} :: { [string]: CFrame }
+	self.Springs = {} :: { [string]: SpringState }
 	self.IdleOut = {} :: { [string]: CFrame }
 	self.LocoOut = {} :: { [string]: CFrame }
 	self.ActOut = {} :: { [string]: CFrame }
@@ -258,8 +366,13 @@ function EnemyAnimator:Evaluate(now: number, input: any, dt: number): ({ [string
 		targets = {}
 		self.Targets = targets
 	end
-	for name in self.Rig.Joints do
-		local pose = idle[name] or IDENTITY
+	local motionScale = if self.Rig.Metrics then self.Rig.Metrics.MotionScale else 1
+	local motions = self.Rig.JointMotion
+	for name, joint in self.Rig.Joints do
+		local motion = motions and motions[name]
+		local keyed = idle[name] or (loco and loco[name]) or (act and act[name]) or (death and death[name])
+		local pose = if motion and not keyed then springPose(self, name, motion, joint, dt, input.Far == true)
+			else idle[name] or IDENTITY
 		if loco then pose = pose:Lerp(loco[name] or IDENTITY, locoWeight) end
 		if act and actWeight > 0 and not (maskLegs and isLeg(name)) then
 			pose = pose:Lerp(act[name] or IDENTITY, actWeight)
@@ -269,6 +382,7 @@ function EnemyAnimator:Evaluate(now: number, input: any, dt: number): ({ [string
 			if h then pose = pose * ((self.HitBase[name] or IDENTITY):Inverse() * h) end
 		end
 		if death then pose = pose:Lerp(death[name] or IDENTITY, deathWeight) end
+		if motionScale ~= 1 then pose = pose + Vector3.new(pose.X, pose.Y, pose.Z) * (motionScale - 1) end
 		targets[name] = pose
 	end
 	return targets, snap

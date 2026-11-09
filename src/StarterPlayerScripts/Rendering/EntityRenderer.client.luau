@@ -888,6 +888,7 @@ local function stepRender(dt: number)
 			if highlight.Enabled ~= wantHighlight then highlight.Enabled = wantHighlight end
 		end
 		local stepDt = dt
+		n.AnimFar = camDist > LOD_FULL_RATE_DISTANCE -- EnemyAnimator rests springs out here
 		if camDist > LOD_FULL_RATE_DISTANCE then
 			n.LodAccum = (n.LodAccum or 0) + dt
 			if n.LodAccum < LOD_STEP_SECONDS then

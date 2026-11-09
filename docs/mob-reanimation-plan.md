@@ -1,6 +1,6 @@
 # Tower Mob Reanimation: Implementation Plan
 
-Status: **step 1 built** (animator core on the current clips); steps 2–8 to do. Decisions settled (§8). Owner: Zaimoo. Written 2026-11-09.
+Status: **steps 1–3 built** (animator core; size and stride; extra-joint pipeline and springs); steps 4–8 to do. Decisions settled (§8). Owner: Zaimoo. Written 2026-11-09.
 
 All 60 tower enemies are now remodelled meshes (`docs/tower-mob-remodel-plan.md`), but they still move with the clips written for the old part rigs. This plan rebuilds their **idle, walking and attack** animation (plus the hit, death and awakening clips those blend with) so each family moves like what it is. It stays on the existing contract: rigid segments, `Motor6D`s, clips authored as code in `TowerEnemyClips`, no uploaded `Animation` assets. The server, the network records and combat timings don't change.
 
@@ -189,7 +189,7 @@ Appendages that are now welded into a parent segment become **joints of their ow
 That comes to **43 of the 60 enemies** (20 with keyed extras, 23 with springs only) across all 10 biomes. Enemies not listed keep their current models. The exact split is settled in each biome's generator, so the tables may shift by a piece or two where a model turns out differently.
 
 **Re-export pipeline**, one PR per biome pair, in the same order as the remodel:
-1. Add `EXTRAS` and a `chain(seg, prefix, points, parent)` helper to `mob_kit.py` (the helper splits a rod chain such as a tail, whip or chain into one joint per link). Extend `validate`.
+1. *(Built, step 3.)* The registry lives in `tools/blender/mob_extras.py` (pure Python, self-check: `python tools/blender/mob_extras.py`), and `mob_kit.chain(asset, base, points, parent, radius, colour)` splits a rod chain into links (the helper splits a rod chain such as a tail, whip or chain into one joint per link). Extend `validate`.
 2. In `tools/blender/mobs/<biome>.py`, move each appendage's geometry out of its parent segment into a new `A.segment("Extra…", pivot, parent)`, with the pivot at the attachment point.
 3. Run `generate_mobs.py -- <biome>`. This exports the FBX, JSON and previews.
 4. **Rebake Tier B** for every Elite, Alpha and Boss whose segments changed (`bake.py`), because a bake has to be redone when the geometry changes.

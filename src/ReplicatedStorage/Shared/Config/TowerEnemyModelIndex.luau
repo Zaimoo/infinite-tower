@@ -4,7 +4,10 @@
 -- Studs, Roblox axes (Y up, faces -Z), origin on the ground under the enemy. Pivot = joint position.
 
 export type Glow = { Mesh: string, Centre: Vector3, Colour: Color3 }
-export type Segment = { Name: string, Parent: string?, Pivot: Vector3, Centre: Vector3?, Tris: number, Glow: { Glow } }
+-- Motion: the spring EnemyAnimator gives an Extra*/Trophy_* joint while no clip keys it (tools/blender/mob_extras.py);
+-- Keyed: motion sets key it in clips.
+export type Segment = { Name: string, Parent: string?, Pivot: Vector3, Centre: Vector3?, Tris: number, Glow: { Glow },
+	Motion: string?, Keyed: boolean? }
 export type Entry = { EnemyId: string, Biome: string, Family: string, Role: string, Height: number, TotalTris: number,
 	MeshCount: number, Segments: { Segment } }
 
@@ -23,7 +26,7 @@ local Index: { [string]: Entry } = {
 			{ Name = "KneeL", Parent = "LegL", Pivot = Vector3.new(-0.845, 1.95, -0.065), Centre = Vector3.new(-0.878, 1.183, -0.257), Tris = 152, Glow = {  } },
 			{ Name = "LegR", Parent = "Body", Pivot = Vector3.new(0.78, 3.705, -0), Centre = Vector3.new(0.833, 2.918, -0.046), Tris = 44, Glow = {  } },
 			{ Name = "KneeR", Parent = "LegR", Pivot = Vector3.new(0.845, 1.95, -0.065), Centre = Vector3.new(0.878, 1.183, -0.257), Tris = 152, Glow = {  } },
-			{ Name = "Trophy_SkullPauldron", Parent = "ArmL", Pivot = Vector3.new(-1.82, 6.89, -0), Centre = Vector3.new(-1.93, 6.986, -0.01), Tris = 374, Glow = { { Mesh = "Trophy_SkullPauldron_Glow_Crimson", Centre = Vector3.new(-1.95, 7.215, -0.845), Colour = Color3.fromRGB(255, 46, 58) } } },
+			{ Name = "Trophy_SkullPauldron", Parent = "ArmL", Pivot = Vector3.new(-1.82, 6.89, -0), Centre = Vector3.new(-1.93, 6.986, -0.01), Tris = 374, Glow = { { Mesh = "Trophy_SkullPauldron_Glow_Crimson", Centre = Vector3.new(-1.95, 7.215, -0.845), Colour = Color3.fromRGB(255, 46, 58) } }, Motion = "Rigid" },
 		},
 	},
 	boss_crimson_overlord = {
@@ -126,7 +129,7 @@ local Index: { [string]: Entry } = {
 			{ Name = "Knee1_2", Parent = "Leg1_2", Pivot = Vector3.new(2.5, 2.8, -0.23), Centre = Vector3.new(2.877, 1.512, -0.23), Tris = 102, Glow = {  } },
 			{ Name = "Leg1_3", Parent = "Body", Pivot = Vector3.new(1.2, 1.8, 0.85), Centre = Vector3.new(1.815, 2.304, 0.894), Tris = 32, Glow = {  } },
 			{ Name = "Knee1_3", Parent = "Leg1_3", Pivot = Vector3.new(2.5, 2.8, 0.978), Centre = Vector3.new(2.878, 1.512, 0.978), Tris = 102, Glow = {  } },
-			{ Name = "Trophy_SunCrest", Parent = "Body", Pivot = Vector3.new(0, 6.2, 2.6), Centre = Vector3.new(0, 6.75, 2.4), Tris = 352, Glow = { { Mesh = "Trophy_SunCrest_Glow_Gold", Centre = Vector3.new(0, 6.75, 2.4), Colour = Color3.fromRGB(255, 202, 96) } } },
+			{ Name = "Trophy_SunCrest", Parent = "Body", Pivot = Vector3.new(0, 6.2, 2.6), Centre = Vector3.new(0, 6.75, 2.4), Tris = 352, Glow = { { Mesh = "Trophy_SunCrest_Glow_Gold", Centre = Vector3.new(0, 6.75, 2.4), Colour = Color3.fromRGB(255, 202, 96) } }, Motion = "Rigid" },
 		},
 	},
 	boss_sandstone_colossus = {
@@ -235,7 +238,7 @@ local Index: { [string]: Entry } = {
 			{ Name = "KneeL", Parent = "LegL", Pivot = Vector3.new(-0.621, 2.092, -0.068), Centre = Vector3.new(-0.648, 1.208, -0.27), Tris = 152, Glow = {  } },
 			{ Name = "LegR", Parent = "Body", Pivot = Vector3.new(0.567, 3.983, -0), Centre = Vector3.new(0.608, 3.122, -0.048), Tris = 44, Glow = {  } },
 			{ Name = "KneeR", Parent = "LegR", Pivot = Vector3.new(0.621, 2.092, -0.068), Centre = Vector3.new(0.648, 1.208, -0.27), Tris = 152, Glow = {  } },
-			{ Name = "Trophy_OrreryCrown", Parent = "Head", Pivot = Vector3.new(0, 8.977, -0.068), Centre = Vector3.new(0, 9.658, -0.1), Tris = 744, Glow = { { Mesh = "Trophy_OrreryCrown_Glow_Star", Centre = Vector3.new(0, 9.72, -0.067), Colour = Color3.fromRGB(255, 214, 120) } } },
+			{ Name = "Trophy_OrreryCrown", Parent = "Head", Pivot = Vector3.new(0, 8.977, -0.068), Centre = Vector3.new(0, 9.658, -0.1), Tris = 744, Glow = { { Mesh = "Trophy_OrreryCrown_Glow_Star", Centre = Vector3.new(0, 9.72, -0.067), Colour = Color3.fromRGB(255, 214, 120) } }, Motion = "Rigid" },
 		},
 	},
 	boss_archive_rift_warden = {
@@ -338,7 +341,7 @@ local Index: { [string]: Entry } = {
 			{ Name = "KneeL", Parent = "LegL", Pivot = Vector3.new(-0.775, 1.688, -0.125), Centre = Vector3.new(-0.884, 0.862, -0.141), Tris = 128, Glow = {  } },
 			{ Name = "LegR", Parent = "Body", Pivot = Vector3.new(0.688, 3.125, -0), Centre = Vector3.new(0.732, 2.482, -0.007), Tris = 38, Glow = {  } },
 			{ Name = "KneeR", Parent = "LegR", Pivot = Vector3.new(0.775, 1.688, -0.125), Centre = Vector3.new(0.884, 0.863, -0.141), Tris = 128, Glow = {  } },
-			{ Name = "Trophy_AntlerCrown", Parent = "Head", Pivot = Vector3.new(0, 7.875, -0.062), Centre = Vector3.new(0, 8.728, -0.062), Tris = 248, Glow = { { Mesh = "Trophy_AntlerCrown_Glow_Bloom", Centre = Vector3.new(-0, 7.812, -0.875), Colour = Color3.fromRGB(255, 140, 236) } } },
+			{ Name = "Trophy_AntlerCrown", Parent = "Head", Pivot = Vector3.new(0, 7.875, -0.062), Centre = Vector3.new(0, 8.728, -0.062), Tris = 248, Glow = { { Mesh = "Trophy_AntlerCrown_Glow_Bloom", Centre = Vector3.new(-0, 7.812, -0.875), Colour = Color3.fromRGB(255, 140, 236) } }, Motion = "Rigid" },
 		},
 	},
 	boss_blight_sovereign = {
@@ -435,7 +438,7 @@ local Index: { [string]: Entry } = {
 			{ Name = "KneeL", Parent = "LegL", Pivot = Vector3.new(-0.65, 2.015, -0.065), Centre = Vector3.new(-0.676, 1.183, -0.306), Tris = 164, Glow = {  } },
 			{ Name = "LegR", Parent = "Body", Pivot = Vector3.new(0.585, 3.835, -0), Centre = Vector3.new(0.631, 3.012, -0.046), Tris = 44, Glow = {  } },
 			{ Name = "KneeR", Parent = "LegR", Pivot = Vector3.new(0.65, 2.015, -0.065), Centre = Vector3.new(0.676, 1.183, -0.306), Tris = 164, Glow = {  } },
-			{ Name = "Trophy_IceCrown", Parent = "Head", Pivot = Vector3.new(0, 8.255, -0.065), Centre = Vector3.new(0.001, 8.743, -0.089), Tris = 397, Glow = { { Mesh = "Trophy_IceCrown_Glow_Rime", Centre = Vector3.new(0, 8.32, -0.676), Colour = Color3.fromRGB(226, 246, 255) } } },
+			{ Name = "Trophy_IceCrown", Parent = "Head", Pivot = Vector3.new(0, 8.255, -0.065), Centre = Vector3.new(0.001, 8.743, -0.089), Tris = 397, Glow = { { Mesh = "Trophy_IceCrown_Glow_Rime", Centre = Vector3.new(0, 8.32, -0.676), Colour = Color3.fromRGB(226, 246, 255) } }, Motion = "Rigid" },
 		},
 	},
 	boss_frostbound_king = {
@@ -532,8 +535,8 @@ local Index: { [string]: Entry } = {
 			{ Name = "KneeL", Parent = "LegL", Pivot = Vector3.new(-1.05, 1.7, -0.1), Centre = Vector3.new(-1.1, 1.075, -0.35), Tris = 298, Glow = {  } },
 			{ Name = "LegR", Parent = "Body", Pivot = Vector3.new(0.95, 3.15, -0), Centre = Vector3.new(0.965, 2.453, -0.017), Tris = 36, Glow = {  } },
 			{ Name = "KneeR", Parent = "LegR", Pivot = Vector3.new(1.05, 1.7, -0.1), Centre = Vector3.new(1.1, 1.075, -0.35), Tris = 298, Glow = {  } },
-			{ Name = "Trophy_Crown", Parent = "Head", Pivot = Vector3.new(0, 7.9, -0.9), Centre = Vector3.new(0, 8.062, -0.986), Tris = 1700, Glow = { { Mesh = "Trophy_Crown_Glow_Gold", Centre = Vector3.new(-0.196, 8.339, -1.021), Colour = Color3.fromRGB(255, 202, 96) } } },
-			{ Name = "Trophy_Fans", Parent = "Body", Pivot = Vector3.new(0, 6.2, 0.4), Centre = Vector3.new(0, 7.169, 0.75), Tris = 408, Glow = { { Mesh = "Trophy_Fans_Glow_Gold", Centre = Vector3.new(0, 6.25, 0.6), Colour = Color3.fromRGB(255, 202, 96) } } },
+			{ Name = "Trophy_Crown", Parent = "Head", Pivot = Vector3.new(0, 7.9, -0.9), Centre = Vector3.new(0, 8.062, -0.986), Tris = 1700, Glow = { { Mesh = "Trophy_Crown_Glow_Gold", Centre = Vector3.new(-0.196, 8.339, -1.021), Colour = Color3.fromRGB(255, 202, 96) } }, Motion = "Rigid" },
+			{ Name = "Trophy_Fans", Parent = "Body", Pivot = Vector3.new(0, 6.2, 0.4), Centre = Vector3.new(0, 7.169, 0.75), Tris = 408, Glow = { { Mesh = "Trophy_Fans_Glow_Gold", Centre = Vector3.new(0, 6.25, 0.6), Colour = Color3.fromRGB(255, 202, 96) } }, Motion = "Rigid" },
 		},
 	},
 	boss_spore_matriarch = {
@@ -636,7 +639,7 @@ local Index: { [string]: Entry } = {
 			{ Name = "KneeL", Parent = "LegL", Pivot = Vector3.new(-0.845, 1.95, -0.065), Centre = Vector3.new(-0.878, 1.183, -0.257), Tris = 152, Glow = {  } },
 			{ Name = "LegR", Parent = "Body", Pivot = Vector3.new(0.78, 3.705, -0), Centre = Vector3.new(0.833, 2.918, -0.046), Tris = 44, Glow = {  } },
 			{ Name = "KneeR", Parent = "LegR", Pivot = Vector3.new(0.845, 1.95, -0.065), Centre = Vector3.new(0.878, 1.183, -0.257), Tris = 152, Glow = {  } },
-			{ Name = "Trophy_SlagCrown", Parent = "Head", Pivot = Vector3.new(0, 7.865, -0.585), Centre = Vector3.new(0, 8.14, -0.617), Tris = 140, Glow = { { Mesh = "Trophy_SlagCrown_Glow_Molten", Centre = Vector3.new(-0.062, 7.715, -0.617), Colour = Color3.fromRGB(255, 156, 44) } } },
+			{ Name = "Trophy_SlagCrown", Parent = "Head", Pivot = Vector3.new(0, 7.865, -0.585), Centre = Vector3.new(0, 8.14, -0.617), Tris = 140, Glow = { { Mesh = "Trophy_SlagCrown_Glow_Molten", Centre = Vector3.new(-0.062, 7.715, -0.617), Colour = Color3.fromRGB(255, 156, 44) } }, Motion = "Rigid" },
 		},
 	},
 	boss_ember_titan = {
@@ -733,7 +736,7 @@ local Index: { [string]: Entry } = {
 			{ Name = "KneeL", Parent = "LegL", Pivot = Vector3.new(-0.65, 2.015, -0.065), Centre = Vector3.new(-0.676, 1.176, -0.283), Tris = 152, Glow = {  } },
 			{ Name = "LegR", Parent = "Body", Pivot = Vector3.new(0.585, 3.835, -0), Centre = Vector3.new(0.631, 3.011, -0.046), Tris = 44, Glow = {  } },
 			{ Name = "KneeR", Parent = "LegR", Pivot = Vector3.new(0.65, 2.015, -0.065), Centre = Vector3.new(0.676, 1.176, -0.283), Tris = 152, Glow = {  } },
-			{ Name = "Trophy_PearlCrown", Parent = "Head", Pivot = Vector3.new(0, 8.255, -0.065), Centre = Vector3.new(0, 8.554, -0.065), Tris = 400, Glow = { { Mesh = "Trophy_PearlCrown_Glow_Pearl", Centre = Vector3.new(0, 8.651, -0.093), Colour = Color3.fromRGB(226, 250, 255) } } },
+			{ Name = "Trophy_PearlCrown", Parent = "Head", Pivot = Vector3.new(0, 8.255, -0.065), Centre = Vector3.new(0, 8.554, -0.065), Tris = 400, Glow = { { Mesh = "Trophy_PearlCrown_Glow_Pearl", Centre = Vector3.new(0, 8.651, -0.093), Colour = Color3.fromRGB(226, 250, 255) } }, Motion = "Rigid" },
 		},
 	},
 	boss_tidal_leviathan = {
@@ -836,7 +839,7 @@ local Index: { [string]: Entry } = {
 			{ Name = "ForearmR", Parent = "ArmR", Pivot = Vector3.new(0.85, 1.375, -1.688), Centre = Vector3.new(0.862, 0.695, -1.741), Tris = 112, Glow = {  } },
 			{ Name = "LegR", Parent = "Body", Pivot = Vector3.new(0.812, 2.875, 1.625), Centre = Vector3.new(0.812, 2.291, 1.564), Tris = 44, Glow = {  } },
 			{ Name = "KneeR", Parent = "LegR", Pivot = Vector3.new(0.85, 1.438, 1.938), Centre = Vector3.new(0.862, 0.739, 1.82), Tris = 112, Glow = {  } },
-			{ Name = "Trophy_StormSaddle", Parent = "Body", Pivot = Vector3.new(0, 4.688, 0.125), Centre = Vector3.new(0, 4.162, 0.125), Tris = 308, Glow = { { Mesh = "Trophy_StormSaddle_Glow_Storm", Centre = Vector3.new(0.014, 4.126, 0.122), Colour = Color3.fromRGB(190, 150, 255) }, { Mesh = "Trophy_StormSaddle_Glow_Spark", Centre = Vector3.new(0, 4.8, 0.125), Colour = Color3.fromRGB(238, 234, 255) } } },
+			{ Name = "Trophy_StormSaddle", Parent = "Body", Pivot = Vector3.new(0, 4.688, 0.125), Centre = Vector3.new(0, 4.162, 0.125), Tris = 308, Glow = { { Mesh = "Trophy_StormSaddle_Glow_Storm", Centre = Vector3.new(0.014, 4.126, 0.122), Colour = Color3.fromRGB(190, 150, 255) }, { Mesh = "Trophy_StormSaddle_Glow_Spark", Centre = Vector3.new(0, 4.8, 0.125), Colour = Color3.fromRGB(238, 234, 255) } }, Motion = "Rigid" },
 		},
 	},
 	boss_storm_roc = {
@@ -933,7 +936,7 @@ local Index: { [string]: Entry } = {
 			{ Name = "KneeL", Parent = "LegL", Pivot = Vector3.new(-0.75, 1.6, -0.05), Centre = Vector3.new(-0.78, 0.99, -0.113), Tris = 234, Glow = {  } },
 			{ Name = "LegR", Parent = "Body", Pivot = Vector3.new(0.7, 3.05, -0), Centre = Vector3.new(0.725, 2.375, -0.063), Tris = 80, Glow = {  } },
 			{ Name = "KneeR", Parent = "LegR", Pivot = Vector3.new(0.75, 1.6, -0.05), Centre = Vector3.new(0.917, 0.99, -0.113), Tris = 234, Glow = {  } },
-			{ Name = "Trophy_Halo", Parent = "Head", Pivot = Vector3.new(0, 7.2, 0.6), Centre = Vector3.new(0, 7.25, 0.65), Tris = 644, Glow = { { Mesh = "Trophy_Halo_Glow_Gold", Centre = Vector3.new(0, 7.25, 0.65), Colour = Color3.fromRGB(255, 202, 96) } } },
+			{ Name = "Trophy_Halo", Parent = "Head", Pivot = Vector3.new(0, 7.2, 0.6), Centre = Vector3.new(0, 7.25, 0.65), Tris = 644, Glow = { { Mesh = "Trophy_Halo_Glow_Gold", Centre = Vector3.new(0, 7.25, 0.65), Colour = Color3.fromRGB(255, 202, 96) } }, Motion = "Rigid" },
 		},
 	},
 	boss_mossbound_guardian = {

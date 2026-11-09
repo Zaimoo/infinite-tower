@@ -6,7 +6,10 @@ The index carries every remodelled enemy's joints (name, parent, pivot), glow me
 EnemyRigFactory can wire Motor6Ds onto a template clone and the CLI spec can check the clip contract and
 budgets without Roblox. Run after re-exporting a biome:  python tools/make_enemy_model_index.py
 """
-import glob, json, os
+import glob, json, os, sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "blender"))
+import mob_extras as X  # noqa: E402
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 OUT = os.path.join(REPO, "src", "ReplicatedStorage", "Shared", "Config", "TowerEnemyModelIndex.luau")
@@ -25,7 +28,10 @@ def main():
         "-- Studs, Roblox axes (Y up, faces -Z), origin on the ground under the enemy. Pivot = joint position.",
         "",
         "export type Glow = { Mesh: string, Centre: Vector3, Colour: Color3 }",
-        "export type Segment = { Name: string, Parent: string?, Pivot: Vector3, Centre: Vector3?, Tris: number, Glow: { Glow } }",
+        "-- Motion: the spring EnemyAnimator gives an Extra*/Trophy_* joint while no clip keys it (tools/blender/mob_extras.py);",
+        "-- Keyed: motion sets key it in clips.",
+        "export type Segment = { Name: string, Parent: string?, Pivot: Vector3, Centre: Vector3?, Tris: number, Glow: { Glow },",
+        "\tMotion: string?, Keyed: boolean? }",
         "export type Entry = { EnemyId: string, Biome: string, Family: string, Role: string, Height: number, TotalTris: number,",
         "\tMeshCount: number, Segments: { Segment } }",
         "",
@@ -42,7 +48,11 @@ def main():
             glows = ", ".join(f"{{ Mesh = \"{g['Mesh']}\", Centre = {v3(g['Centre'])}, Colour = Color3.fromRGB({g['Colour'][0]}, {g['Colour'][1]}, {g['Colour'][2]}) }}" for g in s["Glow"])
             centre = f"Centre = {v3(s['Centre'])}, " if "Centre" in s else ""
             tris = s.get("Tris", 0) + sum(g.get("Tris", 0) for g in s["Glow"])
-            lines.append(f"\t\t\t{{ Name = \"{s['Name']}\", Parent = {parent}, Pivot = {v3(s['Pivot'])}, {centre}Tris = {tris}, Glow = {{ {glows} }} }},")
+            fields = X.motion_for(s["Name"])
+            motion = s.get("Motion") or fields.get("Motion")
+            keyed = s.get("Keyed") or fields.get("Keyed")
+            extra = (f", Motion = \"{motion}\"" if motion else "") + (", Keyed = true" if keyed else "")
+            lines.append(f"\t\t\t{{ Name = \"{s['Name']}\", Parent = {parent}, Pivot = {v3(s['Pivot'])}, {centre}Tris = {tris}, Glow = {{ {glows} }}{extra} }},")
         lines.append("\t\t},")
         lines.append("\t},")
     lines += ["}", "", "return Index", ""]

@@ -355,6 +355,13 @@ local function OutskirtsPreviewStage(props: { Profile: any, AssignedUUIDs: { str
 			for _, joint in pairs(enemyRig.Joints) do
 				joint.Bind = joint.Motor.C0
 			end
+			local m = enemyRig.Metrics
+			if m then
+				m.HipHeight *= rigScale
+				m.Height *= rigScale
+				m.Stride *= rigScale
+				m.MotionScale *= rigScale
+			end
 		end
 		local scaledCF, scaledExtents = mobModel:GetBoundingBox()
 		local rawFootOffset = mobRoot.Position.Y - (scaledCF.Position.Y - scaledExtents.Y * 0.5)
