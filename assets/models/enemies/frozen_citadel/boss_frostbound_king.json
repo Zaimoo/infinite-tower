@@ -1,0 +1,294 @@
+{
+ "EnemyId": "boss_frostbound_king",
+ "Family": "ROYAL_BIPED",
+ "Role": "BOSS",
+ "Biome": "frozen_citadel",
+ "Segments": [
+  {
+   "Name": "Body",
+   "Parent": null,
+   "Pivot": [
+    0.0,
+    7.718,
+    -0.0
+   ],
+   "Glow": [
+    {
+     "Mesh": "Body_Glow_Frost",
+     "Colour": [
+      168,
+      226,
+      255
+     ],
+     "Tris": 270,
+     "Centre": [
+      0.0,
+      5.536,
+      0.174
+     ],
+     "Size": [
+      5.771,
+      10.34,
+      4.145
+     ]
+    }
+   ],
+   "Centre": [
+    0.0,
+    7.094,
+    0.098
+   ],
+   "Size": [
+    6.323,
+    12.821,
+    4.582
+   ],
+   "Tris": 792
+  },
+  {
+   "Name": "Head",
+   "Parent": "Body",
+   "Pivot": [
+    0.0,
+    13.108,
+    -0.123
+   ],
+   "Glow": [
+    {
+     "Mesh": "Head_Glow_Frost",
+     "Colour": [
+      168,
+      226,
+      255
+     ],
+     "Tris": 44,
+     "Centre": [
+      0.0,
+      14.951,
+      -1.28
+     ],
+     "Size": [
+      1.127,
+      1.115,
+      0.233
+     ]
+    }
+   ],
+   "Centre": [
+    -0.06,
+    14.945,
+    -0.184
+   ],
+   "Size": [
+    3.412,
+    6.125,
+    3.465
+   ],
+   "Tris": 750
+  },
+  {
+   "Name": "ArmL",
+   "Parent": "Body",
+   "Pivot": [
+    -2.45,
+    12.127,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    -2.805,
+    11.914,
+    -0.0
+   ],
+   "Size": [
+    2.719,
+    4.837,
+    2.499
+   ],
+   "Tris": 363
+  },
+  {
+   "Name": "ForearmL",
+   "Parent": "ArmL",
+   "Pivot": [
+    -2.818,
+    9.432,
+    -0.123
+   ],
+   "Glow": [],
+   "Centre": [
+    -2.891,
+    7.449,
+    -0.457
+   ],
+   "Size": [
+    1.519,
+    4.117,
+    1.942
+   ],
+   "Tris": 209
+  },
+  {
+   "Name": "ArmR",
+   "Parent": "Body",
+   "Pivot": [
+    2.45,
+    12.127,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    2.805,
+    11.914,
+    -0.0
+   ],
+   "Size": [
+    2.719,
+    4.837,
+    2.499
+   ],
+   "Tris": 363
+  },
+  {
+   "Name": "ForearmR",
+   "Parent": "ArmR",
+   "Pivot": [
+    2.818,
+    9.432,
+    -0.123
+   ],
+   "Glow": [
+    {
+     "Mesh": "ForearmR_Glow_Frost",
+     "Colour": [
+      168,
+      226,
+      255
+     ],
+     "Tris": 6,
+     "Centre": [
+      2.94,
+      12.985,
+      -0.906
+     ],
+     "Size": [
+      0.245,
+      8.33,
+      0.245
+     ]
+    }
+   ],
+   "Centre": [
+    2.94,
+    11.772,
+    -0.262
+   ],
+   "Size": [
+    3.343,
+    12.715,
+    1.552
+   ],
+   "Tris": 738
+  },
+  {
+   "Name": "LegL",
+   "Parent": "Body",
+   "Pivot": [
+    -1.078,
+    7.228,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    -1.164,
+    5.668,
+    -0.086
+   ],
+   "Size": [
+    1.934,
+    3.519,
+    1.933
+   ],
+   "Tris": 44
+  },
+  {
+   "Name": "KneeL",
+   "Parent": "LegL",
+   "Pivot": [
+    -1.176,
+    3.797,
+    -0.123
+   ],
+   "Glow": [],
+   "Centre": [
+    -1.225,
+    2.217,
+    -0.551
+   ],
+   "Size": [
+    1.519,
+    4.434,
+    2.377
+   ],
+   "Tris": 164
+  },
+  {
+   "Name": "LegR",
+   "Parent": "Body",
+   "Pivot": [
+    1.078,
+    7.228,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    1.164,
+    5.668,
+    -0.086
+   ],
+   "Size": [
+    1.934,
+    3.519,
+    1.933
+   ],
+   "Tris": 44
+  },
+  {
+   "Name": "KneeR",
+   "Parent": "LegR",
+   "Pivot": [
+    1.176,
+    3.797,
+    -0.123
+   ],
+   "Glow": [],
+   "Centre": [
+    1.225,
+    2.217,
+    -0.551
+   ],
+   "Size": [
+    1.519,
+    4.434,
+    2.377
+   ],
+   "Tris": 164
+  }
+ ],
+ "Surface": {
+  "Tier": "B",
+  "Size": 2048,
+  "Color": "boss_frostbound_king_color.png",
+  "Normal": "boss_frostbound_king_normal.png"
+ },
+ "TotalTris": 3951,
+ "MeshCount": 13,
+ "Size": [
+  8.78,
+  18.13,
+  4.58
+ ],
+ "FeetY": 0.0,
+ "Convention": "Studs, Roblox axes (Y up, faces -Z), origin on the ground under the enemy. Pivot = joint position. Mesh objects are named after their joint.",
+ "Atlas": "atlas_frozen_citadel.png"
+}
