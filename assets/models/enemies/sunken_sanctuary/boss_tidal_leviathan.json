@@ -375,6 +375,12 @@
    "Tris": 156
   }
  ],
+ "Surface": {
+  "Tier": "B",
+  "Size": 2048,
+  "Color": "boss_tidal_leviathan_color.png",
+  "Normal": "boss_tidal_leviathan_normal.png"
+ },
  "TotalTris": 2164,
  "MeshCount": 18,
  "Size": [
