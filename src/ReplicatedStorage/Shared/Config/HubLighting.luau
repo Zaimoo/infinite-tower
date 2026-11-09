@@ -40,10 +40,10 @@ export type Preset = {
 HubLighting.ClockTime = 14.8 -- Shared by every preset so the sun never swings while blending
 
 local Presets: { [string]: Preset } = {
-	-- Hub & Fortress Plots: lessened cool moody mist locally, but tower is heavily obscured in the distance
+	-- Hub & Fortress Plots: cool slate-blue moonlight contrasting with warm orange wall torches (image_8b03db.jpg)
 	Sanctuary = {
-		Ambient = Color3.fromRGB(78, 84, 94),
-		OutdoorAmbient = Color3.fromRGB(118, 128, 140),
+		Ambient = Color3.fromRGB(58, 66, 80),
+		OutdoorAmbient = Color3.fromRGB(68, 78, 96),
 		ColorShift_Top = Color3.fromRGB(205, 215, 230),
 		ColorShift_Bottom = Color3.fromRGB(100, 110, 125),
 		EnvironmentDiffuseScale = 0.65,
