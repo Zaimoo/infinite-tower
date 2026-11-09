@@ -242,6 +242,19 @@ for i = 0, 4 do
 	} })
 end
 
+-- Attack markers (docs/mob-reanimation-plan.md §3.3): Release = the strike starts, Impact = contact or launch.
+-- EnemyAnimator maps the server's windup/impact/recovery onto them. Clips without an entry use 0.72 / 0.8.
+local MARKERS: { [any]: { number } } = {
+	[cleave] = { .76, .8 },
+	[cast] = { .76, .8 },
+	[slam] = { .72, .8 },
+	[sweep] = { .76, .8 },
+	[projectileCast] = { .45, .65 },
+	[bite] = { .6, .8 },
+	[quadAttack] = { .58, .8 },
+	[avianStrike] = { .6, .8 },
+}
+
 for enemyId, spec in pairs(Config.Entries) do
 	local family = spec.CatalogFamily or spec.RigFamily
 	local isBoss = spec.Role == "BOSS"
@@ -314,6 +327,12 @@ for enemyId, spec in pairs(Config.Entries) do
 		end
 		C[enemyId] = clips
 	end
+end
+
+function C.MarkersFor(frames: any): (number, number)
+	local m = MARKERS[frames]
+	if m then return m[1], m[2] end
+	return .72, .8
 end
 
 function C.Sample(frames: any, t: number): any

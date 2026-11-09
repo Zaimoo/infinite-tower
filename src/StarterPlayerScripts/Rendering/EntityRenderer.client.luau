@@ -738,8 +738,8 @@ local function consume(buf: buffer)
    local active=Actions.Actors[ActionState.Key(e)]
    if active and not active.Terminal and active.Action then EnemyAnimation.Action(node,active.Action,View.Origin,Workspace:GetServerTimeNow()) end
   end
-  if node.IsHero and e.Position~=node.GoalPos then
-   -- Heroes glide at constant speed from where they are now to the new snapshot over one
+  if (node.IsHero or (node :: any).EnemyRig) and e.Position~=node.GoalPos then
+   -- Heroes and enemy rigs glide at constant speed from where they are now to the new snapshot over one
    -- snapshot interval, so they arrive as the next one lands (no surge-and-stall at 5 Hz).
    local clock=os.clock();local n=node :: any
    local segDist=(e.Position-node.CurrentPos).Magnitude
@@ -868,7 +868,7 @@ local function stepRender(dt: number)
 			node.CurrentPos = node.GoalPos
 			n.SegStart = nil
 			n.SegSpeed = 0
-		elseif node.IsHero and n.SegStart then
+		elseif (node.IsHero or n.EnemyRig) and n.SegStart then
 			local t = math.clamp((os.clock() - n.SegStart) / n.SegDuration, 0, 1)
 			local lerped = n.SegFrom:Lerp(node.GoalPos, t)
 			node.CurrentPos = clampInterpolatedGroundY(lerped, n.SegFrom, node.GoalPos, node.Model)

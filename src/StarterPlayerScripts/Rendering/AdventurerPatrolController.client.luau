@@ -24,6 +24,7 @@ local Assets = ReplicatedStorage:WaitForChild("Assets")
 local ArtPackVisuals = require(Assets:WaitForChild("ArtPackVisuals"))
 local EnemyRigFactory = require(Assets:WaitForChild("EnemyRigFactory")) -- remodelled templates, else the part rig
 local TowerEnemyClips = require(Assets:WaitForChild("TowerEnemyClips"))
+local EnemyAnimator = require(Assets:WaitForChild("EnemyAnimator"))
 
 local HeroRigFolder = Assets:WaitForChild("HeroRig")
 local HeroRegistry = require(HeroRigFolder:WaitForChild("HeroRegistry"))
@@ -679,26 +680,33 @@ local function stepMobAnimation(
 	end
 	root.CFrame = worldRootCFrame(origin, mob.LocalPos, mob.RootHeight, mob.Yaw)
 
-	local clips = TowerEnemyClips[mob.EnemyId]
-	if not clips then
+	if not TowerEnemyClips[mob.EnemyId] then
 		return
 	end
+	local anim = rig.Animator
+	if not anim then
+		anim = EnemyAnimator.new(rig, mob.EnemyId .. tostring(mob.LocalPos))
+		rig.Animator = anim
+	end
+	local input = rig.AnimInput
+	if not input then
+		input = { Action = nil }
+		rig.AnimInput = input
+	end
 
-	rig.Distance = (rig.Distance or 0) + math.min(movedDist, 4)
-	local frames = clips.Idle
-	local phase = (now % 3) / 3
-
-	if mob.DeathAt then
-		frames = clips.Death
-		phase = math.clamp((now - mob.DeathAt) / 1.6, 0, 1)
-	elseif mob.ActionStartedAt then
+	local action: any = nil
+	if mob.ActionStartedAt and not mob.DeathAt then
 		local elapsed = now - mob.ActionStartedAt
-		local total = mob.ActionImpactOffset + mob.ActionRecovery
-		if elapsed < total then
-			frames = clips.BasicAttack or clips.Idle
-			phase = if elapsed < mob.ActionImpactOffset
-				then 0.8 * (elapsed / mob.ActionImpactOffset)
-				else 0.8 + 0.2 * ((elapsed - mob.ActionImpactOffset) / mob.ActionRecovery)
+		if elapsed < mob.ActionImpactOffset + mob.ActionRecovery then
+			action = rig.AnimAction
+			if not action then
+				action = { AnimationKey = "BasicAttack" }
+				rig.AnimAction = action
+			end
+			action.StartServerTime = mob.ActionStartedAt
+			action.WindupSeconds = mob.ActionImpactOffset
+			action.ImpactOffsetSeconds = mob.ActionImpactOffset
+			action.RecoverySeconds = mob.ActionRecovery
 			if not mob.ActionImpactDone and elapsed >= mob.ActionImpactOffset then
 				mob.ActionImpactDone = true
 				if mob.AttackingBuilding and not director.Parked then
@@ -711,22 +719,14 @@ local function stepMobAnimation(
 		else
 			mob.ActionStartedAt = nil
 		end
-	elseif clips.Awakening and now - mob.BornAt < 1.1 then
-		frames = clips.Awakening
-		phase = (now - mob.BornAt) / 1.1
-	elseif movedDist > 0.02 then
-		frames = clips.Locomotion
-		local stride = if rig.Spec.Role == "REGULAR" then 3.6 else 4.8
-		phase = (rig.Distance / stride) % 1
-	elseif mob.HitAt and now - mob.HitAt < 0.28 then
-		frames = clips.HitReaction
-		phase = (now - mob.HitAt) / 0.28
 	end
-
-	local poses = TowerEnemyClips.Sample(frames, phase)
-	for name, joint in pairs(rig.Joints) do
-		joint.Motor.C0 = joint.Bind * (poses[name] or CFrame.identity)
-	end
+	input.Moved = movedDist
+	input.Action = action
+	input.HitAt = mob.HitAt
+	input.DeathAt = mob.DeathAt
+	input.BornAt = mob.BornAt
+	input.AwakenSeconds = 1.1
+	anim:Step(now, input)
 
 	if mob.Highlight then
 		if mob.HitAt and now - mob.HitAt < 0.15 and not mob.DeathAt then

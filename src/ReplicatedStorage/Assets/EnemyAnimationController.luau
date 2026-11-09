@@ -1,6 +1,7 @@
 --!strict
 local Rigs = require(script.Parent.TowerEnemyRigs)
 local Clips = require(script.Parent.TowerEnemyClips)
+local EnemyAnimator = require(script.Parent.EnemyAnimator)
 local RaidRigs = require(script.Parent.RaidBossRigs)
 local RigFactory = require(script.Parent.EnemyRigFactory)
 local Config = require(game.ReplicatedStorage.Shared.Config.FirstBiomeCombat)
@@ -255,41 +256,33 @@ function Controller.Step(node: any, dt: number, now: number)
 	if not rig then return end
 	supportGlow(node, rig)
 	affixGlow(node, rig, now)
-	local clips = rig.Clips or Clips[rig.EnemyId] -- mesh raid bosses carry their own clips
-	local frames = clips.Idle
-	local phase = (now % 3) / 3
-	local moving = (node.GoalPos - node.CurrentPos).Magnitude > .15
-	local distance = (node.CurrentPos - (rig.LastPos or node.CurrentPos)).Magnitude
+	local anim = rig.Animator
+	if not anim then
+		anim = EnemyAnimator.new(rig, node.NetId)
+		rig.Animator = anim
+	end
+	local action = node.EnemyAction
+	if action and not node.DeathAt and now - action.StartServerTime >= action.ImpactOffsetSeconds + action.RecoverySeconds then
+		Controller.Cancel(node)
+		action = nil
+	end
+	local input = rig.AnimInput
+	if not input then
+		input = {}
+		rig.AnimInput = input
+	end
+	input.Moved = (node.CurrentPos - (rig.LastPos or node.CurrentPos)).Magnitude
+	-- Walk/idle follows the snapshot glide speed (EntityRenderer moves enemies at a constant speed between
+	-- 5 Hz snapshots), held through the segment plus EnemyAnimator.MOVE_GRACE, so late snapshots do not drop to idle.
+	local segStart = node.SegStart
+	input.Speed = if segStart and os.clock() - segStart <= (node.SegDuration or 0.2) then node.SegSpeed or 0 else 0
 	rig.LastPos = node.CurrentPos
-	rig.Distance += math.min(distance, 4)
-
-	if node.DeathAt then
-		frames = clips.Death
-		phase = (now - node.DeathAt) / 1.6
-	elseif node.EnemyAction then
-		local a = node.EnemyAction
-		local elapsed = now - a.StartServerTime
-		if elapsed < a.ImpactOffsetSeconds + a.RecoverySeconds then
-			frames = clips[a.AnimationKey]
-			phase = elapsed < a.ImpactOffsetSeconds and .8 * elapsed / a.ImpactOffsetSeconds or .8 + .2 * (elapsed - a.ImpactOffsetSeconds) / a.RecoverySeconds
-		else
-			Controller.Cancel(node)
-		end
-	elseif node.BornAt and clips.Awakening and now - node.BornAt < 2.2 then
-		frames = clips.Awakening
-		phase = (now - node.BornAt) / 2.2
-	elseif moving then
-		frames = clips.Locomotion
-		phase = (rig.Distance / (rig.Spec.Role == "BOSS" and 9.6 or rig.Spec.Role == "REGULAR" and 3.6 or 4.8)) % 1
-	elseif node.HitAt and now - node.HitAt < .28 then
-		frames = clips.HitReaction
-		phase = (now - node.HitAt) / .28
-	end
-
-	local poses = Clips.Sample(frames, phase)
-	for name, joint in pairs(rig.Joints) do
-		joint.Motor.C0 = joint.Bind * (poses[name] or CFrame.identity)
-	end
+	input.Action = action
+	input.HitAt = node.HitAt
+	input.DeathAt = node.DeathAt
+	input.BornAt = node.BornAt
+	input.AwakenSeconds = 2.2
+	anim:Step(now, input)
 	if node.HitAt and now - node.HitAt < .15 then
 		if node.Highlight then
 			node.Highlight.FillColor = Color3.fromRGB(235, 255, 190)
