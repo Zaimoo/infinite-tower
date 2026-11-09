@@ -217,7 +217,10 @@ local function commit(player: Player)
 				end
 			end
 		end
-		if movingSquad then combat.Transfer(player,r,p.Action=="RECALL",(p.View or p.Action=="RECALL") and root.Position or nil) end
+		if movingSquad then
+			local isStationRecall = p.Action == "RECALL" and prevSquadAssignment ~= nil
+			combat.Transfer(player, r, isStationRecall, (p.View or p.Action == "RECALL") and root.Position or nil)
+		end
 	end)
 	if not ok then
 		warn("Tower transfer rolled back: "..tostring(transferError))

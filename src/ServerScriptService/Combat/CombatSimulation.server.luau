@@ -1664,15 +1664,51 @@ WhistleCommandRemote.OnServerEvent:Connect(function(player: Player, commandCode:
 		dm.SyncProfile(player)
 
 	elseif commandCode == 2 then
+		-- [E] EMERGENCY RECALL WHISTLE (6s CD, active tactical dodge / reposition, DOES NOT HEAL)
 		if DuelByPlayer[player] then return end
+		if (now - masterState.LastRecallClock) < RECALL_COOLDOWN then return end
+		masterState.LastRecallClock = now
+		ProgressionActivity[player] = now
+
+		SquadMovement.Reset(player)
 		masterState.FocusedTargetNetId = nil
+		masterState.TargetEnemyUserId = nil
+
 		for _, simHero in pairs(masterState.DeployedHeroes) do
 			simHero.TargetNetId = nil
 			simHero.TargetId = nil
 			simHero.IsFocusTarget = false
 			simHero.RecallOverride = true
+
+			if simHero.CurrentHP > 0 and simHero.State ~= "COMA" then
+				-- Living hero: reposition to formation near Master, pacify for 2s (NO HEALING)
+				simHero.Position = HeroNavigation.PlaceNear(masterPos, getFormationOffset(simHero.SlotIndex))
+				simHero.State = "FOLLOW_MASTER"
+				simHero.PacifiedUntil = now + RECALL_PACIFY_DURATION
+				simHero.ActionSequence = 0
+				HeroNavigation.Clear(simHero)
+
+				-- Drop aggro: any enemy or hero targeting this hero drops target
+				for _, other in pairs(ActiveHeroesByNetId) do
+					if other.TargetNetId == simHero.NetId then
+						other.TargetNetId = nil
+						if other.CurrentHP > 0 and other.State ~= "COMA" then
+							other.State = "FOLLOW_MASTER"
+						end
+					end
+				end
+				for _, mob in pairs(ActiveMobsByNetId) do
+					if mob.TargetNetId == simHero.NetId then
+						mob.TargetNetId = nil
+					end
+				end
+			else
+				-- Hero in COMA stays in COMA, does NOT heal or revive
+				simHero.State = "COMA"
+			end
 		end
-		Tower.Recall(player)
+
+		Tower.BroadcastAt(CombatVFXRemote, Tower.GetState(player), "WHISTLE_E", masterPos)
 	end
 end)
 

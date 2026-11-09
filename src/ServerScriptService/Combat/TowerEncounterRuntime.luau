@@ -264,35 +264,17 @@ function Runtime.new(api: any): any
 
 		local char = player and player.Character
 		local hrp = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
-		local homePos: Vector3
-		local localPos: Vector3
-
-		if hrp and Protocol.InBounds(hrp.Position, room.Origin, room.Bounds) then
-			local look = hrp.CFrame.LookVector
-			local forward = Vector3.new(look.X, 0, look.Z)
-			if forward.Magnitude < 0.1 then forward = Vector3.new(0, 0, -1) else forward = forward.Unit end
-			local candidateWorld = hrp.Position + forward * 26
-			local grounded = findGrounded(candidateWorld)
-			if grounded and Protocol.InBounds(grounded, room.Origin, room.Bounds) then
-				homePos = grounded
-			else
-				local toCenter = (room.Origin - hrp.Position)
-				local dir = if toCenter.Magnitude > 1 then Vector3.new(toCenter.X, 0, toCenter.Z).Unit else forward
-				grounded = findGrounded(hrp.Position + dir * 22)
-				homePos = (grounded and Protocol.InBounds(grounded, room.Origin, room.Bounds)) and grounded or hrp.Position
-			end
-			localPos = homePos - room.Origin
-		else
-			local apexPlatform = layout.Platforms.Apex or layout.Platforms.Crossing or layout.Platforms.Basin
-			local posX, posY, posZ = apexPlatform.X, apexPlatform.Y, apexPlatform.Z
-			local baseWorld = room.Origin + Vector3.new(posX, posY, posZ)
-			homePos = findGrounded(baseWorld) or baseWorld
-			localPos = homePos - room.Origin
-		end
+		local apexPlatform = layout.Platforms.Apex or layout.Platforms.Crossing or layout.Platforms.Basin
+		local posX, posY, posZ = apexPlatform.X, apexPlatform.Y, apexPlatform.Z
+		local baseWorld = room.Origin + Vector3.new(posX, posY, posZ)
+		local homePos: Vector3 = findGrounded(baseWorld) or baseWorld
+		local localPos: Vector3 = homePos - room.Origin
 
 		local netId = api.Allocate()
 		local now = workspace:GetServerTimeNow()
-		local bossYaw = if hrp then math.atan2(hrp.Position.X - homePos.X, hrp.Position.Z - homePos.Z) else math.pi
+		local bossYaw = if hrp and (hrp.Position - homePos).Magnitude < 100
+			then math.atan2(hrp.Position.X - homePos.X, hrp.Position.Z - homePos.Z)
+			else math.pi
 		local boss = {
 			NetId = netId,
 			EntityGeneration = 1,

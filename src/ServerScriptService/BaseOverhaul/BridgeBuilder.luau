@@ -119,21 +119,28 @@ function B.Build()
 	for i = 1, HubLayout.PlotCount do
 		local plot = workspace.WaitingRoomPlots:FindFirstChild("Plot_" .. i)
 		if plot then
-			local island = plot:WaitForChild("FloatingFortressIsland", 10)
+			local island = plot:FindFirstChild("FloatingFortressIsland") or plot:WaitForChild("FloatingFortressIsland", 10)
 			if island then
 				local walls = island:FindFirstChild("FortressWalls")
-				local gate = walls and walls:FindFirstChild("GateLintel")
+				local gate = walls and (walls:FindFirstChild("GateLintel") or walls:FindFirstChild("GateLintel", true))
+				local islandCF = HubLayout.PlotIslandCFrame(i)
+				local start: Vector3
 				if gate and gate:IsA("BasePart") then
-					connected += 1
-					local start = Vector3.new(gate.Position.X, surfaceY, gate.Position.Z) - gate.CFrame.LookVector * 4
-					local slot = HubLayout.PlotSlots[i]
-					local landing = HubLayout.HubLandingPoint(i) - Vector3.new(slot.DX, 0, slot.DZ) * 2
-					span("IslandBridge_" .. i, start, landing, HubLayout.PlotBridgeWidth, true, 4, 6, true)
-					createUnderBridgeAbyss("IslandBridge_" .. i, start, landing, HubLayout.PlotBridgeWidth)
-					local edgeBarriers = walls:FindFirstChild("InvisibleEdgeBarriers")
-					local barrier = edgeBarriers and edgeBarriers:FindFirstChild("Barrier_Front")
-					if barrier then barrier.CanCollide = false barrier.CanTouch = false end
+					start = Vector3.new(gate.Position.X, surfaceY, gate.Position.Z) - gate.CFrame.LookVector * 4
+				else
+					local gateLook = islandCF.LookVector
+					local gatePos = islandCF.Position + gateLook * 157
+					start = Vector3.new(gatePos.X, surfaceY, gatePos.Z) - gateLook * 4
 				end
+
+				connected += 1
+				local slot = HubLayout.PlotSlots[i]
+				local landing = HubLayout.HubLandingPoint(i) - Vector3.new(slot.DX, 0, slot.DZ) * 2
+				span("IslandBridge_" .. i, start, landing, HubLayout.PlotBridgeWidth, true, 4, 6, true)
+				createUnderBridgeAbyss("IslandBridge_" .. i, start, landing, HubLayout.PlotBridgeWidth)
+				local edgeBarriers = walls and (walls:FindFirstChild("InvisibleEdgeBarriers") or walls:FindFirstChild("InvisibleEdgeBarriers", true))
+				local barrier = edgeBarriers and edgeBarriers:FindFirstChild("Barrier_Front")
+				if barrier then barrier.CanCollide = false barrier.CanTouch = false end
 			end
 		end
 	end
