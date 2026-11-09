@@ -1,0 +1,354 @@
+{
+ "EnemyId": "boss_ember_titan",
+ "Family": "FORGE_COLOSSUS",
+ "Role": "BOSS",
+ "Biome": "infernal_foundry",
+ "Segments": [
+  {
+   "Name": "Body",
+   "Parent": null,
+   "Pivot": [
+    0.0,
+    6.9,
+    -0.0
+   ],
+   "Glow": [
+    {
+     "Mesh": "Body_Glow_Molten",
+     "Colour": [
+      255,
+      156,
+      44
+     ],
+     "Tris": 84,
+     "Centre": [
+      0.0,
+      9.028,
+      -2.148
+     ],
+     "Size": [
+      4.977,
+      4.345,
+      1.683
+     ]
+    }
+   ],
+   "Centre": [
+    0.0,
+    9.602,
+    -0.012
+   ],
+   "Size": [
+    6.578,
+    8.165,
+    6.601
+   ],
+   "Tris": 1132
+  },
+  {
+   "Name": "Head",
+   "Parent": "Body",
+   "Pivot": [
+    0.0,
+    12.88,
+    -0.46
+   ],
+   "Glow": [
+    {
+     "Mesh": "Head_Glow_Molten",
+     "Colour": [
+      255,
+      156,
+      44
+     ],
+     "Tris": 12,
+     "Centre": [
+      0.0,
+      14.03,
+      -2.3
+     ],
+     "Size": [
+      2.185,
+      0.322,
+      0.23
+     ]
+    }
+   ],
+   "Centre": [
+    0.0,
+    14.547,
+    -0.74
+   ],
+   "Size": [
+    3.419,
+    3.795,
+    3.464
+   ],
+   "Tris": 382
+  },
+  {
+   "Name": "ArmL",
+   "Parent": "Body",
+   "Pivot": [
+    -3.565,
+    11.96,
+    -0.0
+   ],
+   "Glow": [
+    {
+     "Mesh": "ArmL_Glow_Ember",
+     "Colour": [
+      255,
+      96,
+      30
+     ],
+     "Tris": 28,
+     "Centre": [
+      -3.91,
+      16.445,
+      0.69
+     ],
+     "Size": [
+      0.92,
+      0.115,
+      0.92
+     ]
+    }
+   ],
+   "Centre": [
+    -3.854,
+    14.446,
+    0.574
+   ],
+   "Size": [
+    2.647,
+    11.548,
+    3.678
+   ],
+   "Tris": 188
+  },
+  {
+   "Name": "ForearmL",
+   "Parent": "ArmL",
+   "Pivot": [
+    -4.14,
+    8.855,
+    -0.345
+   ],
+   "Glow": [
+    {
+     "Mesh": "ForearmL_Glow_Molten",
+     "Colour": [
+      255,
+      156,
+      44
+     ],
+     "Tris": 20,
+     "Centre": [
+      -5.315,
+      5.631,
+      -0.78
+     ],
+     "Size": [
+      0.189,
+      0.828,
+      1.46
+     ]
+    }
+   ],
+   "Centre": [
+    -4.261,
+    6.785,
+    -1.38
+   ],
+   "Size": [
+    2.312,
+    5.98,
+    4.37
+   ],
+   "Tris": 366
+  },
+  {
+   "Name": "ArmR",
+   "Parent": "Body",
+   "Pivot": [
+    3.565,
+    11.96,
+    -0.0
+   ],
+   "Glow": [
+    {
+     "Mesh": "ArmR_Glow_Ember",
+     "Colour": [
+      255,
+      96,
+      30
+     ],
+     "Tris": 28,
+     "Centre": [
+      3.91,
+      16.445,
+      0.69
+     ],
+     "Size": [
+      0.92,
+      0.115,
+      0.92
+     ]
+    }
+   ],
+   "Centre": [
+    3.853,
+    14.441,
+    0.573
+   ],
+   "Size": [
+    2.645,
+    11.54,
+    3.676
+   ],
+   "Tris": 188
+  },
+  {
+   "Name": "ForearmR",
+   "Parent": "ArmR",
+   "Pivot": [
+    4.14,
+    8.855,
+    -0.345
+   ],
+   "Glow": [
+    {
+     "Mesh": "ForearmR_Glow_Molten",
+     "Colour": [
+      255,
+      156,
+      44
+     ],
+     "Tris": 20,
+     "Centre": [
+      5.315,
+      5.631,
+      -0.78
+     ],
+     "Size": [
+      0.189,
+      0.828,
+      1.46
+     ]
+    }
+   ],
+   "Centre": [
+    4.261,
+    6.785,
+    -1.38
+   ],
+   "Size": [
+    2.312,
+    5.98,
+    4.37
+   ],
+   "Tris": 366
+  },
+  {
+   "Name": "LegL",
+   "Parent": "Body",
+   "Pivot": [
+    -1.61,
+    5.98,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    -1.61,
+    4.6,
+    -0.0
+   ],
+   "Size": [
+    2.438,
+    2.76,
+    2.438
+   ],
+   "Tris": 132
+  },
+  {
+   "Name": "KneeL",
+   "Parent": "LegL",
+   "Pivot": [
+    -1.725,
+    3.335,
+    -0.184
+   ],
+   "Glow": [],
+   "Centre": [
+    -1.725,
+    2.151,
+    -0.632
+   ],
+   "Size": [
+    2.415,
+    4.301,
+    3.335
+   ],
+   "Tris": 288
+  },
+  {
+   "Name": "LegR",
+   "Parent": "Body",
+   "Pivot": [
+    1.61,
+    5.98,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    1.61,
+    4.6,
+    -0.0
+   ],
+   "Size": [
+    2.438,
+    2.76,
+    2.438
+   ],
+   "Tris": 132
+  },
+  {
+   "Name": "KneeR",
+   "Parent": "LegR",
+   "Pivot": [
+    1.725,
+    3.335,
+    -0.184
+   ],
+   "Glow": [],
+   "Centre": [
+    1.725,
+    2.151,
+    -0.632
+   ],
+   "Size": [
+    2.415,
+    4.301,
+    3.335
+   ],
+   "Tris": 288
+  }
+ ],
+ "Surface": {
+  "Tier": "B",
+  "Size": 2048,
+  "Color": "boss_ember_titan_color.png",
+  "Normal": "boss_ember_titan_normal.png"
+ },
+ "TotalTris": 3654,
+ "MeshCount": 16,
+ "Size": [
+  10.83,
+  20.22,
+  6.85
+ ],
+ "FeetY": 0.0,
+ "Convention": "Studs, Roblox axes (Y up, faces -Z), origin on the ground under the enemy. Pivot = joint position. Mesh objects are named after their joint.",
+ "Atlas": "atlas_infernal_foundry.png"
+}
