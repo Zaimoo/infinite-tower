@@ -84,6 +84,23 @@ function Common.with(base: PoseSpec, over: PoseSpec): PoseSpec
 	return r
 end
 
+-- Add the numeric fields of `delta` onto `base` (limb tables field by field); extras pass through.
+function Common.add(base: PoseSpec, delta: PoseSpec): PoseSpec
+	local r: any = table.clone(base :: any)
+	for k, v in delta :: any do
+		if type(v) == "number" then
+			r[k] = (r[k] or 0) + v
+		elseif type(v) == "table" and k ~= "extra" then
+			local m = table.clone(r[k] or {})
+			for kk, vv in v do m[kk] = (m[kk] or 0) + vv end
+			r[k] = m
+		else
+			r[k] = v
+		end
+	end
+	return r
+end
+
 -- A dropped crouch: lower the body by `drop` (reference studs; the hip is 3.5) and bend the knees so the feet
 -- stay on the floor. Thigh forward by a and shin back by 2a shortens a 3.5-stud leg by 3.5 * (1 - cos a).
 Common.REFERENCE_HIP = 3.5

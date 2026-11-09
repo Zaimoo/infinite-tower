@@ -1,6 +1,6 @@
 # Tower Mob Reanimation: Implementation Plan
 
-Status: **steps 1–5 built** (step 5: biped motion sets); steps 6–8 to do. Decisions settled (§8). Owner: Zaimoo. Written 2026-11-09.
+Status: **steps 1–7 built** (step 7: the creature sets); step 8 to do. Decisions settled (§8). Owner: Zaimoo. Written 2026-11-09.
 
 All 60 tower enemies are now remodelled meshes (`docs/tower-mob-remodel-plan.md`), but they still move with the clips written for the old part rigs. This plan rebuilds their **idle, walking and attack** animation (plus the hit, death and awakening clips those blend with) so each family moves like what it is. It stays on the existing contract: rigid segments, `Motor6D`s, clips authored as code in `TowerEnemyClips`, no uploaded `Animation` assets. The server, the network records and combat timings don't change.
 
@@ -88,6 +88,10 @@ Each motion set exports `Idle`, `Fidgets` (1 or 2), `Locomotion`, `HitReaction`,
 - `UpperBody`, the list of joints an action drives while moving.
 
 **As built, step 5:** `EnemyClips/Common.luau` is the pose vocabulary (`lean`, `twist`, `armR = { fwd, out }`, `kneeL`… named for what you see, with legs that counter the body so feet stay planted, and a `crouch` that bends knees by `acos(1 − drop / 3.5)`); `EnemyClips/Bipeds.luau` builds the four biped sets. Clips resolve by `"<Slot>:<Shape>"` first, so an Alpha's two Specials and a support's kit and bolt play different styles. Set timing (idle loop length, stride scale from its swing) and fidgets come from `TowerEnemyClips.MetaFor`. The King (`ROYAL_BIPED`) uses the warrior set until step 6 gives bosses their own clips.
+
+**As built, step 6:** `EnemyClips/Colossi.luau` is the Colossus set for the six colossus Biome Bosses and the raid bosses' stand-in rigs (mesh raid bosses keep `RaidBossRigs.Clips`): a wide crouched stance, a 5.5 s breathing idle that surveys side to side, a planted stomping walk (±16°), an awakening (slumped → heaves up → roars arms-wide), a stagger-kneel-crash death, and Sweep (ARC), Pound (TARGET_DISC), Quake (SELF_DISC) and Hurl (PROJECTILE). The Spore Matriarch's `ExtraCrown` rises in its awakening and signatures, and the Rift Warden's `ExtraTomeL/R` swing in front on every windup. The Frostbound King keeps the warrior set and gains its own awakening (rises from a kneel, lifts its sword). The Storm Roc and Tidal Leviathan get theirs with the creature sets in step 7.
+
+**As built, step 7:** `EnemyClips/Creatures.luau` holds the Quadruped, Avian, Serpent and Multileg sets. Each body has its own pose function (Common.pose is biped-only), its own `loop`, and markers set straight on the posed frames. Quadruped: a diagonal trot (±22°), head scans, panting jaw, wagging tail; LungeBite / Pounce / HowlStomp / Spit, and the Thunder Rams `Butt` instead of biting. Avian: wings bind spread flat, so rest folds them back (raise −25, fold 70); hop-walk with half-open wings; Rake / Dive / WingBuffet / WingFlick, the Squall Herald's aura plays `Cry`, and the Storm Roc awakens from a wing-wrapped crouch to a screech. Serpent: the Leviathan's coils (`LegR > KneeR`, `LegL > KneeL > ExtraTail1 > ExtraTail2`) carry an S-wave about the vertical while the trunk sways; CoilBite / RearStrike / CoilSlam / Spit, an uncoiling awakening, frill and jaw keyed. Multileg: alternating tripod walk, one-leg-at-a-time idle taps, flipped-over death; Snap / Leap / Drum / Spit, scorpions `Pinch` and `TailStab` (tail curls over, sting stabs), scarab elytra part on leaps and death. Tails, jaws, beaks, tail fans, frills, stings and elytra are keyed in every clip of their set.
 
 ### 3.3 Attack styles: pick by shape, set and role
 

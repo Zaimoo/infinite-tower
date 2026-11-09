@@ -54,22 +54,7 @@ local function restOf(def: SetDef): Common.PoseSpec
 	return crouch(def.Rest, def.Drop)
 end
 
-local function add(base: Common.PoseSpec, delta: Common.PoseSpec): Common.PoseSpec
-	-- Add numeric fields of delta onto base (limbs field by field); extras pass through.
-	local r: any = table.clone(base :: any)
-	for k, v in delta :: any do
-		if type(v) == "number" then
-			r[k] = (r[k] or 0) + v
-		elseif type(v) == "table" and k ~= "extra" then
-			local m = table.clone(r[k] or {})
-			for kk, vv in v do m[kk] = (m[kk] or 0) + vv end
-			r[k] = m
-		else
-			r[k] = v
-		end
-	end
-	return r
-end
+local add = Common.add
 
 -- ------------------------------------------------------------------ loops
 local function idleClip(name: string, def: SetDef)
@@ -176,6 +161,20 @@ local function deathClip(name: string, def: SetDef)
 		{ 0.2, crouch(with(R, { lean = -10, nod = -20, armL = { fwd = -10, out = 30 }, armR = { fwd = -10, out = 30 } }), 0.3) },
 		{ 0.55, { planted = false, lean = -55, bob = -1.8, legL = { fwd = 40 }, legR = { fwd = 30 }, kneeL = 35, kneeR = 25, armL = { fwd = 20, out = 50 }, armR = { fwd = 20, out = 50 }, nod = -15 } },
 		{ 1, { planted = false, lean = -86, bob = -3.0, legL = { fwd = 5 }, legR = { fwd = -5 }, kneeL = 10, kneeR = 15, armL = { fwd = -20, out = 70 }, armR = { fwd = -10, out = 65 }, nod = -10 } },
+	})
+end
+
+-- ------------------------------------------------------------------ awakening (bosses: the Frostbound King)
+-- kneeling with its head bowed, it rises, lifts its weapon overhead to the sky and settles into its guard
+local function awakeningClip(def: SetDef)
+	local R = restOf(def)
+	local kneel: Common.PoseSpec = { planted = false, lean = 10, bob = -1.3, nod = 30, legL = { fwd = 85 }, kneeL = 95, legR = { fwd = -15 }, kneeR = 85, armR = { fwd = 25, out = 10 }, foreR = 30, armL = { fwd = 10, out = 15 }, foreL = 20 }
+	return keys({
+		{ 0, kneel },
+		{ 0.4, crouch(add(R, { lean = 10, nod = 15 }), 0.35) },
+		{ 0.68, add(R, { lean = -10, bob = 0.1, nod = -25, armR = { fwd = 150, out = 5 }, foreR = -40, armL = { fwd = 30, out = 35 } }) },
+		{ 0.82, add(R, { lean = -8, bob = 0.08, nod = -20, armR = { fwd = 145, out = 5 }, foreR = -40, armL = { fwd = 28, out = 33 } }) },
+		{ 1, R },
 	})
 end
 
@@ -391,7 +390,7 @@ local OVERRIDES: { [string]: string } = {
 
 -- ------------------------------------------------------------------ built sets
 export type BuiltSet = {
-	Name: string, Rest: Common.PoseSpec, Idle: any, Locomotion: any, HitReaction: any, Death: any,
+	Name: string, Rest: Common.PoseSpec, Idle: any, Locomotion: any, HitReaction: any, Death: any, Awakening: any,
 	Fidgets: { any }, IdleSeconds: number, StrideScale: number, Styles: { [string]: any },
 }
 local built: { [string]: BuiltSet } = {}
@@ -410,6 +409,7 @@ function Bipeds.Set(name: string): BuiltSet
 	b = {
 		Name = name, Rest = R,
 		Idle = idleClip(name, def), Locomotion = walkClip(def), HitReaction = Common.Hit, Death = deathClip(name, def),
+		Awakening = awakeningClip(def),
 		Fidgets = fidgets(name, def), IdleSeconds = def.IdleSeconds,
 		StrideScale = math.sin(math.rad(def.Walk.swing)) / math.sin(math.rad(24)),
 		Styles = styles,
