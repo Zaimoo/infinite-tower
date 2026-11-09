@@ -1,0 +1,333 @@
+{
+ "EnemyId": "alpha_thunder_ram",
+ "Family": "QUADRUPED",
+ "Role": "ALPHA",
+ "Biome": "thunder_highlands",
+ "Segments": [
+  {
+   "Name": "Body",
+   "Parent": null,
+   "Pivot": [
+    0.0,
+    3.25,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    -0.009,
+    3.693,
+    0.126
+   ],
+   "Size": [
+    3.176,
+    2.886,
+    5.252
+   ],
+   "Tris": 396
+  },
+  {
+   "Name": "Head",
+   "Parent": "Body",
+   "Pivot": [
+    0.0,
+    3.75,
+    -2.625
+   ],
+   "Glow": [
+    {
+     "Mesh": "Head_Glow_Storm",
+     "Colour": [
+      190,
+      150,
+      255
+     ],
+     "Tris": 132,
+     "Centre": [
+      -0.004,
+      4.307,
+      -3.119
+     ],
+     "Size": [
+      2.815,
+      0.689,
+      0.837
+     ]
+    },
+    {
+     "Mesh": "Head_Glow_Spark",
+     "Colour": [
+      238,
+      234,
+      255
+     ],
+     "Tris": 72,
+     "Centre": [
+      0.0,
+      4.296,
+      -2.778
+     ],
+     "Size": [
+      2.806,
+      0.298,
+      0.486
+     ]
+    }
+   ],
+   "Centre": [
+    0.0,
+    4.051,
+    -3.018
+   ],
+   "Size": [
+    3.012,
+    1.991,
+    2.764
+   ],
+   "Tris": 1164
+  },
+  {
+   "Name": "ArmL",
+   "Parent": "Body",
+   "Pivot": [
+    -0.812,
+    2.875,
+    -1.625
+   ],
+   "Glow": [],
+   "Centre": [
+    -0.812,
+    2.192,
+    -1.625
+   ],
+   "Size": [
+    1.05,
+    1.661,
+    1.049
+   ],
+   "Tris": 28
+  },
+  {
+   "Name": "ForearmL",
+   "Parent": "ArmL",
+   "Pivot": [
+    -0.85,
+    1.375,
+    -1.688
+   ],
+   "Glow": [],
+   "Centre": [
+    -0.838,
+    0.695,
+    -1.741
+   ],
+   "Size": [
+    0.475,
+    1.389,
+    0.593
+   ],
+   "Tris": 112
+  },
+  {
+   "Name": "LegL",
+   "Parent": "Body",
+   "Pivot": [
+    -0.812,
+    2.875,
+    1.625
+   ],
+   "Glow": [],
+   "Centre": [
+    -0.812,
+    2.291,
+    1.564
+   ],
+   "Size": [
+    1.197,
+    1.851,
+    1.288
+   ],
+   "Tris": 44
+  },
+  {
+   "Name": "KneeL",
+   "Parent": "LegL",
+   "Pivot": [
+    -0.85,
+    1.438,
+    1.938
+   ],
+   "Glow": [],
+   "Centre": [
+    -0.838,
+    0.739,
+    1.82
+   ],
+   "Size": [
+    0.475,
+    1.478,
+    0.715
+   ],
+   "Tris": 112
+  },
+  {
+   "Name": "ArmR",
+   "Parent": "Body",
+   "Pivot": [
+    0.812,
+    2.875,
+    -1.625
+   ],
+   "Glow": [],
+   "Centre": [
+    0.812,
+    2.192,
+    -1.625
+   ],
+   "Size": [
+    1.05,
+    1.661,
+    1.049
+   ],
+   "Tris": 28
+  },
+  {
+   "Name": "ForearmR",
+   "Parent": "ArmR",
+   "Pivot": [
+    0.85,
+    1.375,
+    -1.688
+   ],
+   "Glow": [],
+   "Centre": [
+    0.862,
+    0.695,
+    -1.741
+   ],
+   "Size": [
+    0.475,
+    1.389,
+    0.593
+   ],
+   "Tris": 112
+  },
+  {
+   "Name": "LegR",
+   "Parent": "Body",
+   "Pivot": [
+    0.812,
+    2.875,
+    1.625
+   ],
+   "Glow": [],
+   "Centre": [
+    0.812,
+    2.291,
+    1.564
+   ],
+   "Size": [
+    1.197,
+    1.851,
+    1.288
+   ],
+   "Tris": 44
+  },
+  {
+   "Name": "KneeR",
+   "Parent": "LegR",
+   "Pivot": [
+    0.85,
+    1.438,
+    1.938
+   ],
+   "Glow": [],
+   "Centre": [
+    0.862,
+    0.739,
+    1.82
+   ],
+   "Size": [
+    0.475,
+    1.478,
+    0.715
+   ],
+   "Tris": 112
+  },
+  {
+   "Name": "Trophy_StormSaddle",
+   "Parent": "Body",
+   "Pivot": [
+    0.0,
+    4.688,
+    0.125
+   ],
+   "Glow": [
+    {
+     "Mesh": "Trophy_StormSaddle_Glow_Storm",
+     "Colour": [
+      190,
+      150,
+      255
+     ],
+     "Tris": 72,
+     "Centre": [
+      0.014,
+      4.126,
+      0.122
+     ],
+     "Size": [
+      2.776,
+      0.835,
+      1.181
+     ]
+    },
+    {
+     "Mesh": "Trophy_StormSaddle_Glow_Spark",
+     "Colour": [
+      238,
+      234,
+      255
+     ],
+     "Tris": 28,
+     "Centre": [
+      0.0,
+      4.8,
+      0.125
+     ],
+     "Size": [
+      0.325,
+      0.125,
+      0.325
+     ]
+    }
+   ],
+   "Centre": [
+    0.0,
+    4.162,
+    0.125
+   ],
+   "Size": [
+    2.675,
+    1.325,
+    2.025
+   ],
+   "Tris": 208
+  }
+ ],
+ "Surface": {
+  "Tier": "B",
+  "Size": 1024,
+  "Color": "alpha_thunder_ram_color.png",
+  "Normal": "alpha_thunder_ram_normal.png"
+ },
+ "TotalTris": 2664,
+ "MeshCount": 15,
+ "Size": [
+  3.18,
+  5.14,
+  7.15
+ ],
+ "FeetY": 0.0,
+ "Convention": "Studs, Roblox axes (Y up, faces -Z), origin on the ground under the enemy. Pivot = joint position. Mesh objects are named after their joint.",
+ "Atlas": "atlas_thunder_highlands_alpha.png"
+}

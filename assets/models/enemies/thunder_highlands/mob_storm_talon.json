@@ -1,0 +1,248 @@
+{
+ "EnemyId": "mob_storm_talon",
+ "Family": "AVIAN",
+ "Role": "REGULAR",
+ "Biome": "thunder_highlands",
+ "Segments": [
+  {
+   "Name": "Body",
+   "Parent": null,
+   "Pivot": [
+    0.0,
+    3.0,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    0.0,
+    3.2,
+    0.883
+   ],
+   "Size": [
+    1.567,
+    1.8,
+    3.788
+   ],
+   "Tris": 480
+  },
+  {
+   "Name": "Head",
+   "Parent": "Body",
+   "Pivot": [
+    0.0,
+    4.2,
+    -0.8
+   ],
+   "Glow": [
+    {
+     "Mesh": "Head_Glow_Storm",
+     "Colour": [
+      190,
+      150,
+      255
+     ],
+     "Tris": 96,
+     "Centre": [
+      -0.0,
+      5.264,
+      -0.365
+     ],
+     "Size": [
+      0.661,
+      0.948,
+      2.05
+     ]
+    }
+   ],
+   "Centre": [
+    0.0,
+    4.556,
+    -0.789
+   ],
+   "Size": [
+    0.76,
+    2.089,
+    2.399
+   ],
+   "Tris": 322
+  },
+  {
+   "Name": "ArmL",
+   "Parent": "Body",
+   "Pivot": [
+    -0.7,
+    3.65,
+    -0.1
+   ],
+   "Glow": [],
+   "Centre": [
+    -1.465,
+    3.707,
+    0.459
+   ],
+   "Size": [
+    1.623,
+    0.574,
+    1.599
+   ],
+   "Tris": 102
+  },
+  {
+   "Name": "ForearmL",
+   "Parent": "ArmL",
+   "Pivot": [
+    -2.2,
+    3.75,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    -3.226,
+    3.654,
+    0.767
+   ],
+   "Size": [
+    2.252,
+    0.435,
+    1.813
+   ],
+   "Tris": 160
+  },
+  {
+   "Name": "ArmR",
+   "Parent": "Body",
+   "Pivot": [
+    0.7,
+    3.65,
+    -0.1
+   ],
+   "Glow": [],
+   "Centre": [
+    1.465,
+    3.708,
+    0.471
+   ],
+   "Size": [
+    1.623,
+    0.574,
+    1.575
+   ],
+   "Tris": 102
+  },
+  {
+   "Name": "ForearmR",
+   "Parent": "ArmR",
+   "Pivot": [
+    2.2,
+    3.75,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    3.226,
+    3.654,
+    0.767
+   ],
+   "Size": [
+    2.252,
+    0.435,
+    1.813
+   ],
+   "Tris": 160
+  },
+  {
+   "Name": "LegL",
+   "Parent": "Body",
+   "Pivot": [
+    -0.45,
+    2.6,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    -0.45,
+    2.254,
+    -0.047
+   ],
+   "Size": [
+    0.718,
+    1.153,
+    0.796
+   ],
+   "Tris": 44
+  },
+  {
+   "Name": "KneeL",
+   "Parent": "LegL",
+   "Pivot": [
+    -0.5,
+    1.7,
+    -0.2
+   ],
+   "Glow": [],
+   "Centre": [
+    -0.5,
+    0.878,
+    -0.19
+   ],
+   "Size": [
+    0.582,
+    1.716,
+    1.1
+   ],
+   "Tris": 104
+  },
+  {
+   "Name": "LegR",
+   "Parent": "Body",
+   "Pivot": [
+    0.45,
+    2.6,
+    -0.0
+   ],
+   "Glow": [],
+   "Centre": [
+    0.45,
+    2.254,
+    -0.047
+   ],
+   "Size": [
+    0.718,
+    1.153,
+    0.796
+   ],
+   "Tris": 44
+  },
+  {
+   "Name": "KneeR",
+   "Parent": "LegR",
+   "Pivot": [
+    0.5,
+    1.7,
+    -0.2
+   ],
+   "Glow": [],
+   "Centre": [
+    0.5,
+    0.878,
+    -0.19
+   ],
+   "Size": [
+    0.582,
+    1.716,
+    1.1
+   ],
+   "Tris": 104
+  }
+ ],
+ "TotalTris": 1718,
+ "MeshCount": 11,
+ "Size": [
+  8.7,
+  5.72,
+  4.77
+ ],
+ "FeetY": 0.02,
+ "Convention": "Studs, Roblox axes (Y up, faces -Z), origin on the ground under the enemy. Pivot = joint position. Mesh objects are named after their joint.",
+ "Atlas": "atlas_thunder_highlands.png"
+}
