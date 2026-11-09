@@ -15,6 +15,7 @@ local function apply(p: BasePart, props: { [string]: any })
 	p.CanQuery = not isDecorative
 	if isDecorative then
 		p.CastShadow = false
+		p.Massless = true
 	end
 	for k, v in pairs(props) do
 		if k ~= "Decorative" and k ~= "Parent" then

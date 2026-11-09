@@ -26,9 +26,11 @@ IslandBuilder.Config = {
 	InnerStalactiteCount = 10, -- Deep jagged rock points tapering toward the bottom tip
 	RandomSeed = 4042026, -- Fixed seed so all 6 cloned islands have identical geometry
 
-	-- Materials & Colors (Atmospheric Gothic Fortress Palette)
-	TopMaterial = Enum.Material.Cobblestone,
-	TopColor = Color3.fromRGB(78, 82, 86),
+	-- Materials & Colors (Mossy Gothic Flagstone Courtyard Palette — image_892b9a.jpg)
+	TopMaterial = Enum.Material.LeafyGrass,
+	TopColor = Color3.fromRGB(53, 74, 46), -- #354A2E Deep Forest Moss sub-layer
+	DampMossMaterial = Enum.Material.Ground,
+	DampMossColor = Color3.fromRGB(42, 59, 36), -- #2A3B24 Damp Earth / Perimeter Moss
 	RimMaterial = Enum.Material.Cobblestone,
 	RimColor = Color3.fromRGB(62, 66, 70),
 	RockMaterial = Enum.Material.Slate,
@@ -48,8 +50,352 @@ local makePart = PartKit.Part
 local makeWedge = PartKit.Wedge
 
 --============================================================================
--- BUILDER
+-- MOSSY FLAGSTONE COURTYARD GROUND BUILDER (image_892b9a.jpg)
 --============================================================================
+-- Generates the concentric fountain plaza, 8-10 stud wide radial flagstone walkways,
+-- damp perimeter moss patches, and math.noise-driven weathered grey flagstone scatter.
+-- All parts are ultra-thin (0.02-0.08 studs), CanCollide=false, CanQuery=false, CanTouch=false,
+-- Massless=true, CastShadow=false, keeping total ground detail parts <= 250 per plot.
+local function buildMossyFlagstoneCourtyard(
+	islandModel: Model,
+	courtyardCenterCF: CFrame,
+	courtyardSize: Vector2,
+	seed: number
+): Folder
+	local tilesFolder = Instance.new("Folder")
+	tilesFolder.Name = "CourtyardGroundTiles"
+	tilesFolder.Parent = islandModel
+
+	local tileRng = Random.new(seed + 892)
+	local noiseSeed = (seed % 997) * 0.137
+
+	-- 4 Weathered Gothic Stone Tones + Damp Moss Earth Palette (Extracted from image_892b9a.jpg)
+	local COLOR_WEATHERED_SLATE = Color3.fromRGB(62, 66, 74) -- #3E424A Primary Flagstone
+	local COLOR_LIGHT_ASH = Color3.fromRGB(78, 84, 92) -- #4E545C Highlight Ash Flagstone
+	local COLOR_DARK_BASALT = Color3.fromRGB(43, 46, 52) -- #2B2E34 Shadow / Damp Basalt
+	local COLOR_MOSS_OLIVE = Color3.fromRGB(63, 74, 60) -- #3F4A3C Moss-Tinted Olive Stone
+	local COLOR_DAMP_MOSS = Color3.fromRGB(42, 59, 36) -- #2A3B24 Damp Earth / Perimeter Moss
+
+	local primaryStonePalette = {
+		COLOR_WEATHERED_SLATE,
+		COLOR_LIGHT_ASH,
+		COLOR_DARK_BASALT,
+		COLOR_WEATHERED_SLATE,
+		COLOR_MOSS_OLIVE,
+	}
+	local curbStonePalette = {
+		COLOR_LIGHT_ASH,
+		COLOR_WEATHERED_SLATE,
+		COLOR_DARK_BASALT,
+		COLOR_LIGHT_ASH,
+	}
+
+	local partCount = 0
+	local MAX_GROUND_PARTS = 246
+
+	local function makeGroundTile(
+		name: string,
+		size: Vector3,
+		localCF: CFrame,
+		color: Color3,
+		material: Enum.Material
+	): Part?
+		if partCount >= MAX_GROUND_PARTS then
+			return nil
+		end
+		partCount += 1
+		return makePart({
+			Name = name,
+			Size = size,
+			CFrame = courtyardCenterCF * localCF,
+			Material = material,
+			Color = color,
+			Decorative = true,
+			Massless = true,
+			Parent = tilesFolder,
+		})
+	end
+
+	-- 1. Darker Damp-Moss Earth Patches (0.02 studs thin at Y = 0.01) near perimeter castle walls & corners
+	local halfW = courtyardSize.X * 0.5
+	local halfL = courtyardSize.Y * 0.5
+	local dampMossPatches = {
+		{ Pos = Vector3.new(halfW - 18, 0.01, -halfL + 16), Size = Vector3.new(26, 0.02, 22), Yaw = 4 },
+		{ Pos = Vector3.new(halfW - 16, 0.01, halfL - 18), Size = Vector3.new(24, 0.02, 24), Yaw = -6 },
+		{ Pos = Vector3.new(-halfW + 18, 0.01, -halfL + 18), Size = Vector3.new(26, 0.02, 24), Yaw = 5 },
+		{ Pos = Vector3.new(-halfW + 18, 0.01, halfL - 18), Size = Vector3.new(26, 0.02, 24), Yaw = -4 },
+		{ Pos = Vector3.new(halfW - 12, 0.01, 0), Size = Vector3.new(16, 0.02, 34), Yaw = 2 },
+		{ Pos = Vector3.new(-halfW + 12, 0.01, 2), Size = Vector3.new(16, 0.02, 32), Yaw = -3 },
+		{ Pos = Vector3.new(-22, 0.01, -halfL + 10), Size = Vector3.new(28, 0.02, 12), Yaw = 1 },
+		{ Pos = Vector3.new(24, 0.01, -halfL + 10), Size = Vector3.new(28, 0.02, 12), Yaw = -2 },
+		{ Pos = Vector3.new(-18, 0.01, halfL - 10), Size = Vector3.new(30, 0.02, 12), Yaw = 2 },
+		{ Pos = Vector3.new(40, 0.01, halfL - 10), Size = Vector3.new(24, 0.02, 12), Yaw = -2 },
+	}
+	for idx, patch in ipairs(dampMossPatches) do
+		makeGroundTile(
+			string.format("DampMossPatch_%d", idx),
+			patch.Size,
+			CFrame.new(patch.Pos) * CFrame.Angles(0, math.rad(patch.Yaw), 0),
+			COLOR_DAMP_MOSS,
+			Enum.Material.Ground
+		)
+	end
+
+	-- 2. Radial Walkway Definitions (Connecting Fountain Plaza to Bridge Gate, Outskirts Gate & all 5 Stations)
+	local radialWalkways = {
+		{ Name = "Path_BridgeGate", P0 = Vector3.new(0, 0, -19.6), P1 = Vector3.new(0, 0, -56.0), Width = 9.2, Segments = 5 },
+		{ Name = "Path_SummoningPortal", P0 = Vector3.new(16.0, 0, -11.4), P1 = Vector3.new(41.5, 0, -29.5), Width = 8.4, Segments = 4 },
+		{ Name = "Path_BlacksmithForge", P0 = Vector3.new(19.6, 0, -0.8), P1 = Vector3.new(44.5, 0, -1.8), Width = 8.4, Segments = 4 },
+		{ Name = "Path_Market", P0 = Vector3.new(16.2, 0, 11.2), P1 = Vector3.new(36.0, 0, 25.4), Width = 8.4, Segments = 4 },
+		{ Name = "Path_OutskirtsGate", P0 = Vector3.new(4.8, 0, 19.0), P1 = Vector3.new(14.0, 0, 56.0), Width = 9.0, Segments = 5 },
+		{ Name = "Path_SynthesisChamber", P0 = Vector3.new(-16.6, 0, -10.6), P1 = Vector3.new(-32.0, 0, -20.4), Width = 8.4, Segments = 3 },
+		{ Name = "Path_TrainingArea", P0 = Vector3.new(-15.4, 0, 12.2), P1 = Vector3.new(-30.5, 0, 24.0), Width = 8.4, Segments = 3 },
+	}
+
+	local radialBranchAngles = {}
+	for _, rw in ipairs(radialWalkways) do
+		table.insert(radialBranchAngles, math.atan2(rw.P0.X, rw.P0.Z))
+	end
+
+	local function isNearBranchAngle(theta: number): boolean
+		for _, bAngle in ipairs(radialBranchAngles) do
+			local diff = math.atan2(math.sin(theta - bAngle), math.cos(theta - bAngle))
+			if math.abs(diff) < 0.24 then
+				return true
+			end
+		end
+		return false
+	end
+
+	-- Helper to check if a courtyard (x, z) point overlaps any radial walkway or facility footprint
+	local function isPointOnWalkwayOrFacility(px: number, pz: number): boolean
+		local distCenter = math.sqrt(px * px + pz * pz)
+		if distCenter < 21.6 then
+			return true
+		end
+		for _, rw in ipairs(radialWalkways) do
+			local ax, az = rw.P0.X, rw.P0.Z
+			local bx, bz = rw.P1.X, rw.P1.Z
+			local abx, abz = bx - ax, bz - az
+			local abLenSq = abx * abx + abz * abz
+			if abLenSq > 0.01 then
+				local t = math.clamp(((px - ax) * abx + (pz - az) * abz) / abLenSq, 0, 1)
+				local cx = ax + t * abx
+				local cz = az + t * abz
+				local dx, dz = px - cx, pz - cz
+				if (dx * dx + dz * dz) < ((rw.Width * 0.5 + 2.8) ^ 2) then
+					return true
+				end
+			end
+		end
+		return false
+	end
+
+	-- 3. Concentric Fountain Plaza (Radius ~ 12.2 to 20.4 studs, 0.06 stud flagstones + 0.08 stud curbs)
+	-- Ring 1: Inner Flagstone Apron Ring (R = 14.0, Width = 3.2, 16 slabs with 0.18 stud mossy gaps)
+	local innerRingR = 14.0
+	local innerRingW = 3.2
+	local innerSegments = 16
+	local mortarGap = 0.18
+
+	for i = 1, innerSegments do
+		local a0 = ((i - 1) / innerSegments) * math.pi * 2
+		local a1 = (i / innerSegments) * math.pi * 2
+		local aMid = (a0 + a1) * 0.5
+		local chord = 2 * innerRingR * math.sin((a1 - a0) * 0.5) - mortarGap
+		local cx = math.sin(aMid) * innerRingR
+		local cz = math.cos(aMid) * innerRingR
+		local tangentDir = Vector3.new(math.cos(aMid), 0, -math.sin(aMid))
+		local yawJitter = math.rad(tileRng:NextNumber(-1.5, 1.5))
+		local segCF = CFrame.lookAt(Vector3.new(cx, 0.03, cz), Vector3.new(cx, 0.03, cz) + tangentDir)
+			* CFrame.Angles(0, yawJitter, 0)
+
+		makeGroundTile(
+			string.format("PlazaInner_Flagstone_%d", i),
+			Vector3.new(innerRingW, 0.06, chord),
+			segCF,
+			primaryStonePalette[((i - 1) % #primaryStonePalette) + 1],
+			if i % 2 == 0 then Enum.Material.Slate else Enum.Material.Cobblestone
+		)
+
+		-- Inner raised stone curb hugging the Fountain plinth (0.08 studs high)
+		local curbInR = innerRingR - innerRingW * 0.5 - 0.38
+		local curbInChord = 2 * curbInR * math.sin((a1 - a0) * 0.5) - 0.15
+		local ix = math.sin(aMid) * curbInR
+		local iz = math.cos(aMid) * curbInR
+		makeGroundTile(
+			string.format("PlazaInner_Curb_%d", i),
+			Vector3.new(0.60, 0.08, curbInChord),
+			CFrame.lookAt(Vector3.new(ix, 0.04, iz), Vector3.new(ix, 0.04, iz) + tangentDir),
+			curbStonePalette[((i - 1) % #curbStonePalette) + 1],
+			Enum.Material.Slate
+		)
+	end
+
+	-- Ring 2: Outer Flagstone Plaza Ring (R = 17.8, Width = 3.8, 20 slabs with 0.22 stud mossy gaps)
+	local outerRingR = 17.8
+	local outerRingW = 3.8
+	local outerSegments = 20
+	local curbWidth = 0.78
+
+	for i = 1, outerSegments do
+		local a0 = ((i - 1) / outerSegments) * math.pi * 2
+		local a1 = (i / outerSegments) * math.pi * 2
+		local aMid = (a0 + a1) * 0.5
+		local chord = 2 * outerRingR * math.sin((a1 - a0) * 0.5) - 0.22
+		local cx = math.sin(aMid) * outerRingR
+		local cz = math.cos(aMid) * outerRingR
+		local tangentDir = Vector3.new(math.cos(aMid), 0, -math.sin(aMid))
+		local yawJitter = math.rad(tileRng:NextNumber(-2.0, 2.0))
+		local segCF = CFrame.lookAt(Vector3.new(cx, 0.03, cz), Vector3.new(cx, 0.03, cz) + tangentDir)
+			* CFrame.Angles(0, yawJitter, 0)
+
+		makeGroundTile(
+			string.format("PlazaOuter_Flagstone_%d", i),
+			Vector3.new(outerRingW, 0.06, chord),
+			segCF,
+			primaryStonePalette[((i + 1) % #primaryStonePalette) + 1],
+			if i % 3 == 0 then Enum.Material.Cobblestone else Enum.Material.Slate
+		)
+
+		-- Outer raised curb stones (0.08 studs high, skipped where radial walkways branch out)
+		if not isNearBranchAngle(aMid) then
+			local outerCurbR = outerRingR + outerRingW * 0.5 + curbWidth * 0.5 + 0.14
+			local outerChord = 2 * outerCurbR * math.sin((a1 - a0) * 0.5) - 0.20
+			local ox = math.sin(aMid) * outerCurbR
+			local oz = math.cos(aMid) * outerCurbR
+			makeGroundTile(
+				string.format("PlazaOuter_Curb_%d", i),
+				Vector3.new(curbWidth, 0.08, outerChord),
+				CFrame.lookAt(Vector3.new(ox, 0.04, oz), Vector3.new(ox, 0.04, oz) + tangentDir),
+				curbStonePalette[((i + 2) % #curbStonePalette) + 1],
+				Enum.Material.Slate
+			)
+		end
+	end
+
+	-- 4. Build Radial Cobblestone/Slate Walkways (8.4-9.2 studs wide, 0.06 stud slabs + 0.08 stud curbs)
+	for _, rw in ipairs(radialWalkways) do
+		local dir = rw.P1 - rw.P0
+		local totalDist = dir.Magnitude
+		if totalDist >= 1 then
+			local unit = dir.Unit
+			local segLen = totalDist / rw.Segments
+			local lookCF = CFrame.lookAt(Vector3.zero, unit)
+			local innerWidth = rw.Width - curbWidth * 2 - 0.30
+
+			for s = 1, rw.Segments do
+				local t = (s - 0.5) / rw.Segments
+				local pos = rw.P0:Lerp(rw.P1, t)
+				local yawJitter = math.rad(tileRng:NextNumber(-2.2, 2.2))
+				local col = primaryStonePalette[((s + tileRng:NextInteger(0, 3)) % #primaryStonePalette) + 1]
+				local mat = if (s % 2 == 0) then Enum.Material.Cobblestone else Enum.Material.Slate
+
+				makeGroundTile(
+					string.format("%s_Slab_%d", rw.Name, s),
+					Vector3.new(innerWidth, 0.06, segLen - 0.24),
+					CFrame.new(pos.X, 0.03, pos.Z) * lookCF * CFrame.Angles(0, yawJitter, 0),
+					col,
+					mat
+				)
+
+				-- Left and Right raised curb flagstones (0.08 studs high) with mortar gap
+				for _, side in ipairs({ -1, 1 }) do
+					local curbOffset = lookCF.RightVector * (side * (rw.Width * 0.5 - curbWidth * 0.5))
+					local curbCol = curbStonePalette[((s + (if side > 0 then 1 else 2)) % #curbStonePalette) + 1]
+					local curbYaw = math.rad(tileRng:NextNumber(-1.5, 1.5))
+					makeGroundTile(
+						string.format("%s_Curb_%d_%s", rw.Name, s, if side < 0 then "L" else "R"),
+						Vector3.new(curbWidth, 0.08, segLen - 0.28),
+						CFrame.new(pos.X + curbOffset.X, 0.04, pos.Z + curbOffset.Z)
+							* lookCF
+							* CFrame.Angles(0, curbYaw, 0),
+						curbCol,
+						Enum.Material.Slate
+					)
+				end
+			end
+		end
+	end
+
+	-- 5. Organic Mossy Flagstone Courtyard Scatter (Deterministic math.noise across intermediate & perimeter zones)
+	local marginWallX = halfW - 9.0 -- 71 studs (inside castle walls)
+	local marginWallZ = halfL - 8.5 -- 51.5 studs (inside castle walls)
+	local stepX = 8.2
+	local stepZ = 7.8
+
+	local gx = -marginWallX + 3.5
+	while gx <= marginWallX - 3.5 do
+		local gz = -marginWallZ + 3.5
+		while gz <= marginWallZ - 3.5 do
+			local jitterX = gx + tileRng:NextNumber(-1.4, 1.4)
+			local jitterZ = gz + tileRng:NextNumber(-1.4, 1.4)
+
+			if not isPointOnWalkwayOrFacility(jitterX, jitterZ) then
+				local distToWall = math.min(marginWallX - math.abs(jitterX), marginWallZ - math.abs(jitterZ))
+				local n = math.noise(jitterX * 0.08, jitterZ * 0.08, noiseSeed)
+
+				if distToWall < 6.0 then
+					-- Perimeter castle wall drop-off: mostly open moss, occasional loose weathered edge stone
+					if n > 0.18 then
+						local w = tileRng:NextNumber(2.5, 3.4)
+						local l = tileRng:NextNumber(2.5, 3.2)
+						local yaw = math.rad(tileRng:NextNumber(-3.0, 3.0))
+						makeGroundTile(
+							"PerimeterEdgeStone",
+							Vector3.new(w, 0.04, l),
+							CFrame.new(jitterX, 0.02, jitterZ) * CFrame.Angles(0, yaw, 0),
+							COLOR_MOSS_OLIVE,
+							Enum.Material.Cobblestone
+						)
+					end
+				elseif n > -0.10 then
+					-- High noise (> -0.10): Weathered Slate / Ash / Basalt flagstones (0.06 studs high) with mossy gaps
+					local w = tileRng:NextNumber(3.6, 5.5)
+					local l = tileRng:NextNumber(3.2, 4.5)
+					local yaw = math.rad(tileRng:NextNumber(-3.0, 3.0))
+					local tonePick = tileRng:NextInteger(1, 4)
+					local col = if tonePick == 1
+						then COLOR_WEATHERED_SLATE
+						elseif tonePick == 2 then COLOR_LIGHT_ASH
+						elseif tonePick == 3 then COLOR_DARK_BASALT
+						else COLOR_MOSS_OLIVE
+					local mat = if tonePick == 3
+						then Enum.Material.Rock
+						elseif tonePick == 4 then Enum.Material.Cobblestone
+						else Enum.Material.Slate
+
+					makeGroundTile(
+						"CourtyardFlagstone",
+						Vector3.new(w, 0.06, l),
+						CFrame.new(jitterX, 0.03, jitterZ) * CFrame.Angles(0, yaw, 0),
+						col,
+						mat
+					)
+				elseif n > -0.35 then
+					-- Medium noise (-0.35 to -0.10): Smaller olive-tinted flagstones partially sunken (0.03 studs high)
+					local w = tileRng:NextNumber(2.5, 3.8)
+					local l = tileRng:NextNumber(2.5, 3.5)
+					local yaw = math.rad(tileRng:NextNumber(-3.0, 3.0))
+					makeGroundTile(
+						"MossySunkenStone",
+						Vector3.new(w, 0.03, l),
+						CFrame.new(jitterX, 0.015, jitterZ) * CFrame.Angles(0, yaw, 0),
+						COLOR_MOSS_OLIVE,
+						Enum.Material.Cobblestone
+					)
+				end
+			end
+			gz += stepZ
+		end
+		gx += stepX
+	end
+
+	return tilesFolder
+end
+
+IslandBuilder.BuildMossyFlagstoneCourtyard = buildMossyFlagstoneCourtyard
+
 -- Builds an Island model centered at origin CFrame.identity where Y = 0 is the flat top walking surface.
 function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 	local cfg = table.clone(IslandBuilder.Config)
@@ -117,234 +463,8 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 		})
 	end
 
-	-- 1B. Concentric Interlocking Cobblestone Rings, Radial Paths & Gothic Lampposts (Phase 2 Overhaul)
-	local pathsFolder = Instance.new("Folder")
-	pathsFolder.Name = "CobblestonePaths"
-	pathsFolder.Parent = islandModel
-
-	local pathPalette = {
-		Color3.fromRGB(76, 80, 86),
-		Color3.fromRGB(86, 90, 96),
-		Color3.fromRGB(70, 74, 80),
-		Color3.fromRGB(80, 84, 90),
-	}
-	local innerBrickPalette = {
-		Color3.fromRGB(88, 84, 82),
-		Color3.fromRGB(96, 92, 88),
-		Color3.fromRGB(82, 78, 76),
-		Color3.fromRGB(92, 88, 84),
-	}
-	local curbBlockPalette = {
-		Color3.fromRGB(102, 104, 110),
-		Color3.fromRGB(88, 90, 96),
-		Color3.fromRGB(110, 112, 118),
-		Color3.fromRGB(94, 96, 102),
-		Color3.fromRGB(82, 84, 90),
-	}
-
-	local radialBranchAngles = {
-		math.atan2(0, -1), -- Bridge (0, -56)
-		math.atan2(36, -25.5), -- Summoning Portal
-		math.atan2(38, -1.8), -- Blacksmith Forge
-		math.atan2(34, 24.3), -- Market
-		math.atan2(14, 56), -- Outskirts Gate
-		math.atan2(-44, -28), -- Synthesis Chamber
-		math.atan2(-25, 19.7), -- Training Grounds
-	}
-
-	local function isNearBranchAngle(theta: number): boolean
-		for _, bAngle in ipairs(radialBranchAngles) do
-			local diff = math.atan2(math.sin(theta - bAngle), math.cos(theta - bAngle))
-			if math.abs(diff) < 0.20 then
-				return true
-			end
-		end
-		return false
-	end
-
-	-- Ring 1: Inner Brick Apron Ring (R = 13.4, Width = 1.8, 32 interlocking brick segments)
-	local innerRingR = 13.4
-	local innerRingW = 1.8
-	local innerSegments = 32
-	local curbWidth = 0.72
-
-	for i = 1, innerSegments do
-		local a0 = ((i - 1) / innerSegments) * math.pi * 2
-		local a1 = (i / innerSegments) * math.pi * 2
-		local aMid = (a0 + a1) * 0.5
-		local chord = 2 * innerRingR * math.sin((a1 - a0) * 0.5) + 0.22
-		local cx = math.sin(aMid) * innerRingR
-		local cz = math.cos(aMid) * innerRingR
-		local tangentDir = Vector3.new(math.cos(aMid), 0, -math.sin(aMid))
-		local segCF = CFrame.lookAt(Vector3.new(cx, 0.13, cz), Vector3.new(cx, 0.13, cz) + tangentDir)
-
-		makePart({
-			Name = string.format("InnerBrickRing_Slab_%d", i),
-			Size = Vector3.new(innerRingW, 0.26, chord),
-			CFrame = segCF,
-			Material = Enum.Material.Brick,
-			Color = innerBrickPalette[((i - 1) % #innerBrickPalette) + 1],
-			Decorative = true,
-			Parent = pathsFolder,
-		})
-
-		-- Inner raised stone curb hugging the Fountain plinth
-		local curbInR = innerRingR - innerRingW * 0.5 - 0.28
-		local curbInChord = 2 * curbInR * math.sin((a1 - a0) * 0.5) + 0.14
-		local ix = math.sin(aMid) * curbInR
-		local iz = math.cos(aMid) * curbInR
-		makePart({
-			Name = string.format("InnerBrickRing_Curb_%d", i),
-			Size = Vector3.new(0.56, 0.34, curbInChord),
-			CFrame = CFrame.lookAt(Vector3.new(ix, 0.17, iz), Vector3.new(ix, 0.17, iz) + tangentDir),
-			Material = Enum.Material.Pavement,
-			Color = curbBlockPalette[((i - 1) % #curbBlockPalette) + 1],
-			Decorative = true,
-			Parent = pathsFolder,
-		})
-	end
-
-	-- Ring 2: Outer Concentric Cobblestone Promenade Ring (R = 16.4, Width = 3.4, 28 segments)
-	local ringRadius = 16.4
-	local ringWidth = 3.4
-	local ringSegments = 28
-
-	for i = 1, ringSegments do
-		local a0 = ((i - 1) / ringSegments) * math.pi * 2
-		local a1 = (i / ringSegments) * math.pi * 2
-		local aMid = (a0 + a1) * 0.5
-		local chord = 2 * ringRadius * math.sin((a1 - a0) * 0.5) + 0.35
-		local cx = math.sin(aMid) * ringRadius
-		local cz = math.cos(aMid) * ringRadius
-		local tangentDir = Vector3.new(math.cos(aMid), 0, -math.sin(aMid))
-		local segCF = CFrame.lookAt(Vector3.new(cx, 0.12, cz), Vector3.new(cx, 0.12, cz) + tangentDir)
-		local col = pathPalette[((i - 1) % #pathPalette) + 1]
-
-		makePart({
-			Name = string.format("RingRoad_Slab_%d", i),
-			Size = Vector3.new(ringWidth, 0.24, chord),
-			CFrame = segCF,
-			Material = Enum.Material.Cobblestone,
-			Color = col,
-			Decorative = true,
-			Parent = pathsFolder,
-		})
-
-		-- Radial stone divider header band
-		local divX = math.sin(a1) * ringRadius
-		local divZ = math.cos(a1) * ringRadius
-		local divTangent = Vector3.new(math.cos(a1), 0, -math.sin(a1))
-		makePart({
-			Name = string.format("RingRoad_Divider_%d", i),
-			Size = Vector3.new(ringWidth - 0.18, 0.26, 0.42),
-			CFrame = CFrame.lookAt(Vector3.new(divX, 0.13, divZ), Vector3.new(divX, 0.13, divZ) + divTangent),
-			Material = Enum.Material.Pavement,
-			Color = Color3.fromRGB(98, 100, 106),
-			Decorative = true,
-			Parent = pathsFolder,
-		})
-
-		-- Mid dividing stone curb between Ring 1 (Inner Brick) and Ring 2 (Outer Cobble)
-		local midCurbR = ringRadius - ringWidth * 0.5 - 0.24
-		local midChord = 2 * midCurbR * math.sin((a1 - a0) * 0.5) + 0.16
-		local mx = math.sin(aMid) * midCurbR
-		local mz = math.cos(aMid) * midCurbR
-		makePart({
-			Name = string.format("RingRoad_CurbInner_%d", i),
-			Size = Vector3.new(0.48, 0.30, midChord),
-			CFrame = CFrame.lookAt(Vector3.new(mx, 0.15, mz), Vector3.new(mx, 0.15, mz) + tangentDir),
-			Material = Enum.Material.Pavement,
-			Color = curbBlockPalette[((i - 1) % #curbBlockPalette) + 1],
-			Decorative = true,
-			Parent = pathsFolder,
-		})
-
-		-- Outer curb (skipped where radiating roads branch out so paths merge seamlessly)
-		if not isNearBranchAngle(aMid) then
-			local outerR = ringRadius + ringWidth * 0.5 + curbWidth * 0.5
-			local outerChord = 2 * outerR * math.sin((a1 - a0) * 0.5) + 0.18
-			local ox = math.sin(aMid) * outerR
-			local oz = math.cos(aMid) * outerR
-			makePart({
-				Name = string.format("RingRoad_CurbOuter_%d", i),
-				Size = Vector3.new(curbWidth, 0.30, outerChord),
-				CFrame = CFrame.lookAt(Vector3.new(ox, 0.15, oz), Vector3.new(ox, 0.15, oz) + tangentDir),
-				Material = Enum.Material.Pavement,
-				Color = curbBlockPalette[((i + 1) % #curbBlockPalette) + 1],
-				Decorative = true,
-				Parent = pathsFolder,
-			})
-		end
-	end
-
-	local function buildCobblePath(name: string, p0: Vector3, p1: Vector3, width: number, segments: number)
-		local dir = p1 - p0
-		local totalDist = dir.Magnitude
-		if totalDist < 1 then
-			return
-		end
-		local unit = dir.Unit
-		local segLen = totalDist / segments
-		local lookCF = CFrame.lookAt(Vector3.zero, unit)
-
-		for s = 1, segments do
-			local t = (s - 0.5) / segments
-			local pos = p0:Lerp(p1, t)
-			local col = pathPalette[((s - 1) % #pathPalette) + 1]
-
-			makePart({
-				Name = string.format("%s_Slab_%d", name, s),
-				Size = Vector3.new(width, 0.24, segLen - 0.18),
-				CFrame = CFrame.new(pos.X, 0.12, pos.Z) * lookCF,
-				Material = Enum.Material.Cobblestone,
-				Color = col,
-				Decorative = true,
-				Parent = pathsFolder,
-			})
-
-			if s < segments then
-				local bandPos = p0:Lerp(p1, s / segments)
-				makePart({
-					Name = string.format("%s_Divider_%d", name, s),
-					Size = Vector3.new(width - 0.2, 0.26, 0.45),
-					CFrame = CFrame.new(bandPos.X, 0.13, bandPos.Z) * lookCF,
-					Material = Enum.Material.Pavement,
-					Color = Color3.fromRGB(96, 98, 102),
-					Decorative = true,
-					Parent = pathsFolder,
-				})
-			end
-
-			local subBlocks = math.max(2, math.floor(segLen / 3.0))
-			local blockLen = segLen / subBlocks
-			for b = 1, subBlocks do
-				local bt = ((s - 1) + (b - 0.5) / subBlocks) / segments
-				local bPos = p0:Lerp(p1, bt)
-				for _, side in ipairs({ -1, 1 }) do
-					local innerOffset = lookCF.RightVector * (side * (width * 0.5 + curbWidth * 0.5))
-					local innerCol = curbBlockPalette[((s + b) % #curbBlockPalette) + 1]
-					makePart({
-						Name = string.format("%s_Curb_%d_%d_%s", name, s, b, side < 0 and "L" or "R"),
-						Size = Vector3.new(curbWidth, 0.30, blockLen * 0.92),
-						CFrame = CFrame.new(bPos.X + innerOffset.X, 0.15, bPos.Z + innerOffset.Z) * lookCF,
-						Material = Enum.Material.Pavement,
-						Color = innerCol,
-						Decorative = true,
-						Parent = pathsFolder,
-					})
-				end
-			end
-		end
-	end
-
-	-- Radiating courtyard pathways connecting the Outer Promenade Ring -> Stations & Outskirts Gate
-	buildCobblePath("Path_BridgeToFountain", Vector3.new(0, 0, -56), Vector3.new(0, 0, -17.6), 4.6, 5)
-	buildCobblePath("Path_FountainToPortal", Vector3.new(14.2, 0, -10.1), Vector3.new(36, 0, -25.5), 4.2, 4)
-	buildCobblePath("Path_FountainToForge", Vector3.new(17.6, 0, -0.8), Vector3.new(38, 0, -1.8), 4.2, 4)
-	buildCobblePath("Path_FountainToMarket", Vector3.new(14.3, 0, 10.2), Vector3.new(34, 0, 24.3), 4.2, 4)
-	buildCobblePath("Path_FountainToGate", Vector3.new(4.2, 0, 17.1), Vector3.new(14, 0, 56), 4.6, 5)
-	buildCobblePath("Path_FountainToSynthesis", Vector3.new(-14.8, 0, -9.4), Vector3.new(-22.9, 0, -14.6), 4.2, 3)
-	buildCobblePath("Path_FountainToTraining", Vector3.new(-13.8, 0, 10.9), Vector3.new(-25, 0, 19.7), 4.2, 3)
+	-- 1B. Mossy Green & Grey Flagstone Courtyard Ground (Concentric Plaza, Radial Walkways & Mossy Scatter)
+	buildMossyFlagstoneCourtyard(islandModel, CFrame.identity, Vector2.new(cfg.TopWidth, courtyardL), cfg.RandomSeed)
 
 	-- 1C. Courtyard Gothic Lampposts & Carved Stone Benches (Phase 2.3 Accent Lighting & Props)
 	local accentsFolder = Instance.new("Folder")
