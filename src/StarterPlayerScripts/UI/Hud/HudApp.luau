@@ -158,6 +158,15 @@ local function isFloorBossBannerVisible(): boolean
 	return banner ~= nil and banner:IsA("GuiObject") and banner.Visible
 end
 
+-- True when artifacts or heroes fill 90% or more of their backpack cap (the Backpack rail badge).
+local function backpackNearlyFull(profile: any): boolean
+	if not profile then return false end
+	local InventoryCapacity = require(Shared:WaitForChild("Util"):WaitForChild("InventoryCapacity"))
+	local artifacts = InventoryCapacity.ArtifactCount(profile) / math.max(1, InventoryCapacity.ArtifactCap(profile.FortressTree))
+	local heroes = InventoryCapacity.HeroCount(profile) / math.max(1, InventoryCapacity.HeroCap(profile.FortressTree))
+	return artifacts >= 0.9 or heroes >= 0.9
+end
+
 local function buildableNodes(profile: any): number
 	if not profile or not (profile.Unlocks and profile.Unlocks.FortressTree) then return 0 end
 	local tree = profile.FortressTree
@@ -529,6 +538,8 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 		{
 			Icon = "Backpack",
 			Label = "Backpack",
+			-- "!" when artifacts or heroes are at 90% of capacity (summons and drops start failing when full).
+			Badge = if backpackNearlyFull(profile) then "!" else nil,
 			Accent = Color3.fromRGB(243, 199, 119),
 			ButtonRef = backpackButton,
 			OnActivated = function()

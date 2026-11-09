@@ -281,7 +281,7 @@ function Controller.new(gui: ScreenGui, getProfile: () -> any, remotes: Instance
 	self.Scrim = new("Frame", {
 		Name = "FortressTreeScrim",
 		BackgroundColor3 = C.Scrim,
-		BackgroundTransparency = 1, -- no dim behind the map
+		BackgroundTransparency = 0.4, -- dim the world so nameplates and props don't show through the tree
 		Size = UDim2.fromScale(1, 1),
 		Visible = false,
 		ZIndex = 50,
@@ -352,6 +352,13 @@ function Controller.new(gui: ScreenGui, getProfile: () -> any, remotes: Instance
 		ZIndex = 91,
 	}, closeButton)
 	closeLabel:SetAttribute("Grimoire", true)
+	-- Same close as every other window (UI overhaul plan §5.7): a red X in the top-right corner,
+	-- not a 190 px "Close" bar at the bottom of the screen.
+	closeButton.AnchorPoint = Vector2.new(1, 0)
+	closeButton.Position = UDim2.new(1, -20, 0, 16)
+	closeButton.Size = UDim2.fromOffset(52, 52)
+	closeLabel.Visible = false
+	GrimoireIcons.CloseGlyph(closeButton, 22)
 
 	new("UIStroke", {
 		Name = "TextStroke",
@@ -924,9 +931,12 @@ function Controller:Buy(nodeId: string, confirmed: boolean?)
 		if not ok then
 			self.Status.Text = "Connection failed. Please try again."
 			self.Status.TextColor3 = C.Red
+			Kit.Notify.Push("error", self.Status.Text)
 		else
 			self.Status.Text = tostring(message or (if success then "Done." else "Unable to build that node."))
 			self.Status.TextColor3 = if success then C.Green else C.Red
+			-- Results as toasts too: the footer line is easy to miss on this full-screen view.
+			Kit.Notify.Push(if success then "success" else "warn", self.Status.Text)
 			local entry = self.Nodes[nodeId]
 			if success and entry then
 				entry.Scale.Scale = 1.32

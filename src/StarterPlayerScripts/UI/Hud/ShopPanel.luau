@@ -77,7 +77,7 @@ local function PriceButton(props: { Offer: ShopConfig.Offer, Tone: string?, Size
 		Radius = 12, Top = t.Top, Bottom = t.Bottom, Rail = t.Rail, ZIndex = 6,
 		[React.Event.Activated] = function() props.OnBuy(offer) end,
 		[React.Event.MouseEnter] = function()
-			if scaleRef.current then TweenService:Create(scaleRef.current, TweenInfo.new(0.12, Enum.EasingStyle.Back), { Scale = 1.06 }):Play() end
+			if live and scaleRef.current then TweenService:Create(scaleRef.current, TweenInfo.new(0.12, Enum.EasingStyle.Back), { Scale = 1.06 }):Play() end
 		end,
 		[React.Event.MouseLeave] = function()
 			if scaleRef.current then TweenService:Create(scaleRef.current, TweenInfo.new(0.12), { Scale = 1 }):Play() end
@@ -87,10 +87,10 @@ local function PriceButton(props: { Offer: ShopConfig.Offer, Tone: string?, Size
 		Row = e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 7 }, {
 			Layout = e("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center,
 				VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
-			Mark = if live then IconAt("Robux", 26, { LayoutOrder = 1, ZIndex = 8 }) else nil,
+			Mark = if live then IconAt("Robux", 26, { LayoutOrder = 1, ZIndex = 8 }) else IconAt("Lock", 22, { LayoutOrder = 1, ZIndex = 8 }),
 			Price = if live then inkNumber({ LayoutOrder = 2, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 30), TextScaled = false, TextSize = 24,
 				Text = tostring(price), ZIndex = 8 })
-				else Heavy({ LayoutOrder = 2, Size = UDim2.new(1, -12, 0, 24), MaxSize = 15, Outline = 2, Gold = false, Text = "COMING SOON", ZIndex = 8 }),
+				else Heavy({ LayoutOrder = 2, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 24), MaxSize = 15, Outline = 2, Gold = false, TextColor3 = Color3.fromRGB(196, 186, 214), Text = "COMING SOON", ZIndex = 8 }),
 		}),
 	})
 end
@@ -215,9 +215,10 @@ local function ShopPanel(props: { Profile: any, Width: number, OnClose: () -> ()
 			Crest = IconAt("Spark", 54, { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 10), ZIndex = 6 }),
 			Title = Heavy({ Position = UDim2.fromOffset(22, 14), Size = UDim2.new(1, -220, 0, 46), MaxSize = 42, TextXAlignment = Enum.TextXAlignment.Left,
 				Text = featured.Title, ZIndex = 6 }),
-			Limited = Panel({ Position = UDim2.fromOffset(24, 62), Size = UDim2.fromOffset(104, 26), Radius = 13, Top = Color3.new(1, 1, 1), Bottom = Color3.fromRGB(220, 220, 230),
-				Rail = INK, ZIndex = 6 }, {
-				Text = Heavy({ Size = UDim2.fromScale(1, 1), MaxSize = 14, Outline = 0, Gold = false, TextColor3 = Color3.fromRGB(150, 20, 30), Text = "LIMITED", ZIndex = 8 }),
+			-- Gold pill with white, ink-outlined text (it was dark red on white under an ink rail).
+			Limited = Panel({ Position = UDim2.fromOffset(24, 62), Size = UDim2.fromOffset(104, 26), Radius = 13, Top = Color3.fromRGB(255, 216, 92), Bottom = Color3.fromRGB(222, 136, 28),
+				Rail = Color3.fromRGB(255, 250, 214), ZIndex = 6 }, {
+				Text = Heavy({ Size = UDim2.fromScale(1, 1), MaxSize = 15, Outline = 2, Gold = false, TextColor3 = Color3.new(1, 1, 1), Text = "LIMITED", ZIndex = 8 }),
 			}),
 			Sub = Body({ Position = UDim2.fromOffset(140, 66), Size = UDim2.new(1, -160, 0, 18), TextSize = 14, TextColor3 = Color3.fromRGB(255, 220, 210), Text = featured.Subtitle, ZIndex = 6 }),
 			Tiles = e("Frame", { Position = UDim2.fromOffset(16, 94), Size = UDim2.new(1, -32, 0, 240), BackgroundTransparency = 1, ZIndex = 5 }, tiles),

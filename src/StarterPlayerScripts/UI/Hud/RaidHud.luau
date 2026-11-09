@@ -221,37 +221,34 @@ end
 -- Leave button -----------------------------------------------------------------------------------
 -- props.Bottom: offset from the screen bottom to the Squad Status card's top edge.
 function RaidHud.LeaveButton(props: { Bottom: number })
-	local confirm, setConfirm = React.useState(false)
-	React.useEffect(function()
-		if not confirm then return nil end
-		local thread = task.delay(4, function() setConfirm(false) end)
-		return function() task.cancel(thread) end
-	end, { confirm })
 	return e("TextButton", {
 		Name = "RaidLeave",
 		AnchorPoint = Vector2.new(0.5, 1),
 		Position = UDim2.new(0.5, 0, 1, -props.Bottom),
-		Size = UDim2.fromOffset(if confirm then 236 else RaidHud.LeaveSize.X, RaidHud.LeaveSize.Y),
-		BackgroundColor3 = if confirm then Color3.fromRGB(150, 28, 40) else G.Base,
-		BackgroundTransparency = if confirm then 0.1 else G.BaseTransparency,
+		Size = UDim2.fromOffset(RaidHud.LeaveSize.X, RaidHud.LeaveSize.Y),
+		BackgroundColor3 = Color3.fromRGB(150, 28, 40),
+		BackgroundTransparency = 0.1,
 		AutoButtonColor = true,
 		BorderSizePixel = 0,
 		FontFace = G.Fonts.Display,
 		TextSize = 15,
 		TextColor3 = G.Text,
-		Text = if confirm then "Leave? Damage still counts" else "LEAVE RAID",
+		Text = "LEAVE RAID",
+		-- Asks through the kit's confirm dialog (plan §6, Soft) instead of a press-twice button.
 		[React.Event.Activated] = function()
-			if not confirm then
-				setConfirm(true)
-				return
-			end
-			setConfirm(false)
-			if leaveRemote then leaveRemote:FireServer() end
+			local Kit = require(script.Parent.Parent:WaitForChild("Kit"))
+			Kit.Confirm.Ask({
+				Tier = Kit.Rules.ConfirmTier("LEAVE_RAID"),
+				Title = "Leave the raid?",
+				Body = "Your damage so far still counts toward the rewards.",
+				ConfirmText = "Leave raid",
+				OnConfirm = function() if leaveRemote then leaveRemote:FireServer() end end,
+			})
 		end,
 	}, {
 		Corner = e("UICorner", { CornerRadius = UDim.new(0, G.Radius) }),
-		Stroke = e("UIStroke", { Color = if confirm then Color3.fromRGB(255, 140, 140) else G.Hairline, Transparency = if confirm then 0 else G.HairlineTransparency,
-			Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
+		Stroke = e("UIStroke", { Color = G.Hairline, Transparency = G.HairlineTransparency,
+			Thickness = G.StrokeThickness or 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
 	})
 end
 

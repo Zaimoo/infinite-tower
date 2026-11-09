@@ -548,6 +548,8 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 	bb.StudsOffset = Vector3.new(0, (bodySize.Y * 0.5) + (isBoss and 5.5 or 3.2), 0)
 	bb.MaxDistance = theme.MaxDistance
 	bb.AlwaysOnTop = theme.AlwaysOnTop or (isHero and meta ~= nil and meta.DuelSide ~= nil)
+	-- Tagged so FacilityLabelController can hide every nameplate while a window is open.
+	game:GetService("CollectionService"):AddTag(bb, "UnitNameplate")
 	bb.Parent = root
 
 	-- Gilded Grimoire nameplate in the theme's tone and rail, with its rarity / tier badge above.

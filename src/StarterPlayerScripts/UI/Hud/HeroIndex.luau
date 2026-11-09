@@ -702,7 +702,7 @@ local function HeroIndex(props: { Profile: any, Width: number, OnClose: () -> ()
 		scroller(leftScrollerContent, e("UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder })))
 	local midCol = column(2, if narrow then UDim.new(1, 0) else UDim.new(0.42, -8), midTitle, {
 		Filter = e("Frame", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -12, 0, 8), Size = UDim2.fromOffset(240, 26), BackgroundTransparency = 1, ZIndex = 3 }, filterChips),
-	}, scroller(midCards, e("UIGridLayout", { CellSize = UDim2.fromOffset(150, 172), CellPadding = UDim2.fromOffset(10, 10), SortOrder = Enum.SortOrder.LayoutOrder })))
+	}, scroller(midCards, e("UIGridLayout", { CellSize = UDim2.fromOffset(150, 172), CellPadding = UDim2.fromOffset(10, 10), SortOrder = Enum.SortOrder.LayoutOrder, HorizontalAlignment = Enum.HorizontalAlignment.Center })))
 	local rightCol = column(3, if narrow then UDim.new(1, 0) else UDim.new(0.36, 0), rightTitle, nil,
 		scroller(rightDetail, e("UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder })))
 

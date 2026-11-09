@@ -116,7 +116,7 @@ function Components.RailButton(props: {
 	Size: number,
 	AnchorPoint: Vector2?,
 	Position: UDim2?,
-	Badge: number?,
+	Badge: (number | string)?, -- a count, or a short marker like "!"
 	KeyHint: string?,
 	Cooldown: number?, -- seconds left
 	CooldownTotal: number?,
@@ -266,7 +266,7 @@ function Components.RailButton(props: {
 		}) else nil,
 		-- Key chip (top-left) and badge (top-right), both outlined like the icons.
 		Key = if props.KeyHint then e("TextLabel", {
-			Position = UDim2.fromOffset(2, -2),
+			Position = UDim2.new(0.5, -math.floor(size / 2) - 6, 0, -4), -- on the icon's top-left corner, not the button edge
 			Size = UDim2.fromOffset(22, 22),
 			BackgroundColor3 = Color3.fromRGB(28, 22, 40),
 			FontFace = NUMBER_FONT,
@@ -278,13 +278,13 @@ function Components.RailButton(props: {
 			Corner = corner(6),
 			Stroke = e("UIStroke", { Color = Color3.fromRGB(255, 236, 180), Thickness = 1.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
 		}) else nil,
-		Badge = if props.Badge and props.Badge > 0 then e("TextLabel", {
+		Badge = if props.Badge and (type(props.Badge) == "string" or (props.Badge :: number) > 0) then e("TextLabel", {
 			AnchorPoint = Vector2.new(1, 0),
 			Position = UDim2.new(1, -2, 0, -4),
 			Size = UDim2.fromOffset(24, 24),
 			BackgroundColor3 = Color3.fromRGB(214, 34, 48),
 			FontFace = NUMBER_FONT,
-			Text = if props.Badge > 9 then "9+" else tostring(props.Badge),
+			Text = if type(props.Badge) == "string" then props.Badge elseif (props.Badge :: number) > 9 then "9+" else tostring(props.Badge),
 			TextColor3 = Color3.new(1, 1, 1),
 			TextSize = 14,
 			ZIndex = 7,
@@ -397,10 +397,13 @@ local function glass(props: { [string]: any }, children: { [string]: any }?)
 	for k, v in props do
 		if k ~= "Class" and k ~= "Radius" and k ~= "StrokeRef" then inst[k] = v end
 	end
+	-- Gothic HUD card (2026-11-09): ink outline and a top-lit plum gradient. No rail frame here,
+	-- because some cards hold a UIListLayout directly and a rail child would be laid out with it.
 	local kids: { [string]: any } = {
 		Corner = corner(props.Radius or G.Radius),
-		Stroke = e("UIStroke", { ref = props.StrokeRef, Color = G.Hairline, Transparency = G.HairlineTransparency, Thickness = 1,
-			ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
+		Stroke = e("UIStroke", { ref = props.StrokeRef, Color = G.Hairline, Transparency = G.HairlineTransparency, Thickness = G.StrokeThickness or 1,
+			LineJoinMode = Enum.LineJoinMode.Round, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
+		Lit = e("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(150, 140, 170)) }),
 	}
 	for k, v in children or {} do kids[k] = v end
 	return e(props.Class or "Frame", inst, kids)
@@ -412,7 +415,7 @@ local function glassText(props: { [string]: any }, children: { [string]: any }?)
 		BackgroundTransparency = 1,
 		FontFace = G.Fonts.Label,
 		TextColor3 = G.Text,
-		TextSize = 12,
+		TextSize = 14,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextTruncate = Enum.TextTruncate.AtEnd,
 		RichText = true,
@@ -432,7 +435,7 @@ local function glassBar(fraction: number, color: Color3, order: number, height: 
 		BorderSizePixel = 0,
 	}, {
 		Corner = corner(math.max(2, math.floor(height / 2))),
-		Stroke = stroke(G.Hairline, 1, 0.75),
+		Stroke = stroke(G.Hairline, 2, 0),
 		Fill = if fraction > 0 then e("Frame", {
 			Size = UDim2.fromScale(math.clamp(fraction, 0.02, 1), 1),
 			BackgroundColor3 = color,

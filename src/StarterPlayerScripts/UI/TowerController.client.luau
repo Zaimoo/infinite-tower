@@ -781,6 +781,7 @@ local visitBtn = createOrnateButton(actionRow, "VISIT FLOOR", 1, true, function(
 	local maxAllowed = getMaxAllowedFloor()
 	if selected > maxAllowed then
 		lastFeedback = string.format("Floor %d is locked! Slay Floor %d Boss first.", selected, selected - 1)
+		Kit.Notify.Push("warn", lastFeedback :: string)
 		render()
 		return
 	end
@@ -808,6 +809,7 @@ local assignBtn = createOrnateButton(actionRow, "ASSIGN SQUAD", 2, false, functi
 	local maxAllowed = getMaxAllowedFloor()
 	if selected > maxAllowed then
 		lastFeedback = string.format("Cannot assign squad to locked Floor %d!", selected)
+		Kit.Notify.Push("warn", lastFeedback :: string)
 		render()
 		return
 	end
@@ -1463,6 +1465,7 @@ PromptService.PromptTriggered:Connect(function(prompt, who)
 			request("VISIT", nextFloor)
 		else
 			lastFeedback = string.format("Floor %d is locked! Slay Floor %d Boss first.", nextFloor, curFloor)
+			Kit.Notify.Push("warn", lastFeedback :: string)
 			openSelector()
 		end
 	end
@@ -1492,6 +1495,7 @@ remotes.Response.OnClientEvent:Connect(function(r)
 			lastFeedback = string.format("%s complete", act)
 		else
 			lastFeedback = string.format("%s failed: %s", act, tostring(r.ErrorCode))
+			Kit.Notify.Push("warn", lastFeedback :: string)
 		end
 		render()
 	end
