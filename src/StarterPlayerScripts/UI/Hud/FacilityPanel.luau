@@ -28,6 +28,7 @@ local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormu
 local InventoryCapacity = require(Shared:WaitForChild("Util"):WaitForChild("InventoryCapacity"))
 local SummonLuck = require(Shared:WaitForChild("Util"):WaitForChild("SummonLuck"))
 local Grimoire = require(Shared:WaitForChild("Util"):WaitForChild("GildedGrimoire"))
+local Kit = require(script.Parent.Parent:WaitForChild("Kit"))
 
 local Assets = ReplicatedStorage:WaitForChild("Assets")
 local TowerEnemyRigs = require(Assets:WaitForChild("TowerEnemyRigs"))
@@ -1028,7 +1029,10 @@ local function FacilityPanel(props: { Facility: string, Profile: any, Width: num
 	local labor = awakeLabor(profile, assigned, info.Tag)
 	local value, figure, breakdown = bonusFor(props.Facility, profile, level, labor)
 	local levelCfg = (FacilityConfig.UpgradeTable :: any)[props.Facility][level]
-	local narrow = props.Width < 820
+	-- Always two columns. Below MIN_WIDTH the window is laid out at MIN_WIDTH and scaled down to fit,
+	-- instead of restacking into one scrolling column.
+	local MIN_WIDTH = 820
+	local fit = math.clamp(props.Width / MIN_WIDTH, 0.4, 1)
 	local full = #assigned >= maxWorkers
 	local tone = Tones[info.Tone] or Tones.Violet
 
@@ -1224,8 +1228,16 @@ local function FacilityPanel(props: { Facility: string, Profile: any, Width: num
 			elseif full then
 				say(string.format("All %d %s slots are full. Remove a worker first.", maxWorkers, info.Worker), true)
 			elseif away and not isConfirming then
-				setConfirming(hero.UUID)
-				say(string.format("Take %s off %s? Press CONFIRM.", hero.DisplayName, assignmentLabel(hero.Assignment)))
+				-- Moving a hero off another job asks first (plan §6, Soft) instead of "press CONFIRM".
+				local heroId = hero.UUID
+				Kit.Confirm.Ask({
+					Tier = Kit.Rules.ConfirmTier("UNASSIGN_FACILITY"),
+					Title = string.format("Move %s here?", hero.DisplayName),
+					Body = string.format("%s will leave %s and work here instead.", hero.DisplayName, assignmentLabel(hero.Assignment)),
+					ConfirmText = "Move here",
+					SessionKey = "UNASSIGN_FACILITY",
+					OnConfirm = function() request(heroId, info.Tag) end,
+				})
 			else
 				request(hero.UUID, info.Tag)
 			end
@@ -1276,7 +1288,7 @@ local function FacilityPanel(props: { Facility: string, Profile: any, Width: num
 			[React.Event.Activated] = function() setFilter(key :: Filter) end },
 			if filter == key then "Gold" else "Slate", if key == "Best" then "BEST FIT" else string.upper(key), 12)
 	end
-	local picker = Panel({ LayoutOrder = 4, Size = if narrow then UDim2.new(1, 0, 0, 420) else UDim2.fromScale(1, 1),
+	local picker = Panel({ LayoutOrder = 4, Size = UDim2.fromScale(1, 1),
 		Top = Tones.Deep.Top, Bottom = Tones.Deep.Bottom, Rail = Tones.Deep.Rail }, {
 		Caption = Heavy({ Position = UDim2.fromOffset(18, 12), Size = UDim2.new(1, -300, 0, 20), MaxSize = 16, Outline = 2, TextXAlignment = Enum.TextXAlignment.Left,
 			Text = string.format("ASSIGN %sS", string.upper(info.Worker)), ZIndex = 3 }),
@@ -1288,27 +1300,18 @@ local function FacilityPanel(props: { Facility: string, Profile: any, Width: num
 		}, cards),
 	})
 
-	-- Layout: two columns on desktop, one scrolling column on narrow screens.
-	local body
-	if narrow then
-		body = e("ScrollingFrame", { Position = UDim2.fromOffset(20, 108), Size = UDim2.new(1, -40, 1, -156), BackgroundTransparency = 1, BorderSizePixel = 0,
-			ScrollBarThickness = 4, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), ZIndex = 23 }, {
-			Layout = e("UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder }),
-			Bonus = bonus, Stage = stagePanel, Slots = slotPanel, Picker = picker,
-		})
-	else
-		body = e("Frame", { Position = UDim2.fromOffset(20, 108), Size = UDim2.new(1, -40, 1, -156), BackgroundTransparency = 1, ZIndex = 23 }, {
-			Left = e("ScrollingFrame", { Size = UDim2.new(0.44, -8, 1, 0), BackgroundTransparency = 1, BorderSizePixel = 0,
-				ScrollBarThickness = 4, ScrollBarImageColor3 = Color3.fromRGB(240, 196, 110),
-				AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), ZIndex = 23 }, {
-				Layout = e("UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
-				Bonus = bonus, Stage = stagePanel, Slots = slotPanel,
-			}),
-			Right = e("Frame", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(1, 0), Size = UDim2.new(0.56, -8, 1, 0), BackgroundTransparency = 1, ZIndex = 23 }, {
-				Picker = picker,
-			}),
-		})
-	end
+	-- Layout: always two columns (bonus, stage and workers left; the hero picker right).
+	local body = e("Frame", { Position = UDim2.fromOffset(20, 108), Size = UDim2.new(1, -40, 1, -156), BackgroundTransparency = 1, ZIndex = 23 }, {
+		Left = e("ScrollingFrame", { Size = UDim2.new(0.44, -8, 1, 0), BackgroundTransparency = 1, BorderSizePixel = 0,
+			ScrollBarThickness = 4, ScrollBarImageColor3 = Color3.fromRGB(240, 196, 110),
+			AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), ZIndex = 23 }, {
+			Layout = e("UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
+			Bonus = bonus, Stage = stagePanel, Slots = slotPanel,
+		}),
+		Right = e("Frame", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(1, 0), Size = UDim2.new(0.56, -8, 1, 0), BackgroundTransparency = 1, ZIndex = 23 }, {
+			Picker = picker,
+		}),
+	})
 
 	-- Footer: the Fortress Tree link and the status line.
 	local footer = e("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 20, 1, -12), Size = UDim2.new(1, -40, 0, 36), BackgroundTransparency = 1, ZIndex = 24 }, {
@@ -1329,12 +1332,15 @@ local function FacilityPanel(props: { Facility: string, Profile: any, Width: num
 			Class = "TextButton", Text = "", AutoButtonColor = false, -- swallows clicks so they don't reach the scrim
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			Position = UDim2.fromScale(0.5, 0.5),
-			Size = UDim2.new(1, -24, 1, -24),
+			-- Sized at 1/fit and scaled by fit, so on narrow screens it still fills the screen minus
+			-- 24 px but lays out as if MIN_WIDTH wide.
+			Size = UDim2.new(1 / fit, -24 / fit, 1 / fit, -24 / fit),
 			Radius = 16,
 			Rail = tone.Rail,
 			ZIndex = 21,
 		}, {
 			Max = e("UISizeConstraint", { MaxSize = Vector2.new(1120, 720) }),
+			Fit = e("UIScale", { Scale = fit }),
 			Header = header,
 			Close = Panel({
 				Class = "TextButton", Text = "", AutoButtonColor = false, Selectable = true, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -18, 0, 18),

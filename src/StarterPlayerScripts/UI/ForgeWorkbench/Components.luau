@@ -14,6 +14,7 @@ local ArtifactPreview = require(script.Parent.Parent.ArtifactPreview)
 local UIFeel = require(script.Parent.Parent.UIFeel)
 local Model = require(script.Parent.Model)
 local T = require(script.Parent.Tokens)
+local Kit = require(script.Parent.Parent.Kit)
 local Types = require(script.Parent.Types)
 type Artifact = Types.Artifact
 type Hero = Types.Hero
@@ -89,6 +90,9 @@ type ButtonProps = {
 	Size: UDim2?, Position: UDim2?, Order: number?, Name: string?,
 	Disabled: boolean?, Primary: boolean?, Selected: boolean?, Accent: Color3?,
 	FocusOrder: number?, Ref: any?, Icon: string?, Tooltip: string?,
+	-- Brighter Grimoire intent colour (UI kit): "Primary" gold, "Confirm" jade, "Travel" azure,
+	-- "Secondary" violet, "Danger" crimson. Overrides Primary/Accent for the fill.
+	Intent: ("Primary" | "Confirm" | "Travel" | "Secondary" | "Danger")?,
 }
 
 function C.Button(props: ButtonProps)
@@ -110,10 +114,15 @@ function C.Button(props: ButtonProps)
 	end, { hovered, focused, props.Disabled })
 	local iconSize = if props.Icon == "Add" then 44 else 28
 	local active = props.Selected or focused
-	local tone = if props.Disabled then T.Theme.Tones.Slate elseif props.Primary then (if props.Accent == T.Bad then T.Theme.Tones.Crimson else T.Theme.Tones.Action) elseif props.Selected then T.Theme.Tones.Gold else T.Theme.Tones.Deep
+	local intentTone = if props.Intent and not props.Disabled then Kit.Tokens.Intent[props.Intent] else nil
+	local tone = if props.Disabled then T.Theme.Tones.Slate
+		elseif intentTone then intentTone
+		elseif props.Primary then (if props.Accent == T.Bad then T.Theme.Tones.Crimson else T.Theme.Tones.Action)
+		elseif props.Selected then T.Theme.Tones.Gold else T.Theme.Tones.Deep
 	return e("TextButton", {
 		ref = props.Ref,
-		Name = props.Name or "Action",
+		-- Unique, readable names (e.g. "Action_AllSpare") so tests, Studio MCP and focus maps can find them.
+		Name = props.Name or ("Action_" .. (string.gsub(props.Text, "[^%w]", ""))),
 		Size = props.Size or UDim2.new(1, 0, 0, T.Touch), Position = props.Position,
 		LayoutOrder = props.Order, Text = "", AutoButtonColor = false,
 		BackgroundColor3 = Color3.new(1, 1, 1),
@@ -144,7 +153,15 @@ function C.Button(props: ButtonProps)
 			Position = UDim2.fromOffset(3, 3), Size = UDim2.new(1, -6, 1, -6), BackgroundTransparency = 1,
 		}, {
 			Corner = e("UICorner", { CornerRadius = UDim.new(0, 7) }),
-			Line = e("UIStroke", { Color = props.Accent or (if active or hovered or props.Primary then T.Gold else T.Theme.Tones.Slate.Rail), Thickness = if active then 2.5 else 1.4, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
+			-- A disabled button never shows the gold rail, so it can't be mistaken for a ready action.
+			Line = e("UIStroke", {
+				Color = if props.Disabled then T.Theme.Tones.Slate.Rail
+					elseif intentTone then (if active or hovered then Color3.new(1, 1, 1) else intentTone.Rail)
+					else props.Accent or (if active or hovered or props.Primary then T.Gold else T.Theme.Tones.Slate.Rail),
+				Thickness = if active and not props.Disabled then 2.5 else 1.4,
+				Transparency = if props.Disabled then 0.45 else 0,
+				ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+			}),
 		}),
 		Tooltip = if props.Tooltip and (hovered or focused) then e("Frame", { Name = "ActionTooltip", AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, 0, 0, -8), Size = UDim2.fromOffset(240, 64), BackgroundColor3 = T.Background, BorderSizePixel = 0, ZIndex = 50 }, {
 			Corner = e("UICorner", { CornerRadius = UDim.new(0, 8) }),
@@ -255,13 +272,32 @@ function C.HeroSlot(props: HeroSlotProps)
 	})
 end
 
-function C.CardGrid(props: { Children: { [string]: any }, Size: UDim2, Position: UDim2?, CellHeight: number? })
+-- `Square` lays out square cells (artifact tiles keep a 1:1 aspect): about `SquareSize` px, as many
+-- columns as fit, centred, with even gaps. Without it, cells are 1/columns wide and CellHeight tall.
+function C.CardGrid(props: { Children: { [string]: any }, Size: UDim2, Position: UDim2?, CellHeight: number?, Square: boolean?, SquareSize: number? })
 	local columns, setColumns = React.useState(4)
+	local width, setWidth = React.useState(600)
 	local children = table.clone(props.Children)
-	children.Layout = e("UIGridLayout", { CellSize = UDim2.new(1 / columns, -10, 0, props.CellHeight or 110), CellPadding = UDim2.fromOffset(8, 8), SortOrder = Enum.SortOrder.LayoutOrder })
-	children.Padding = e("UIPadding", { PaddingTop = UDim.new(0, 4), PaddingLeft = UDim.new(0, 4), PaddingBottom = UDim.new(0, 8) })
+	local gap = 10
+	local cellSize: UDim2
+	if props.Square then
+		local target = props.SquareSize or 140
+		local cols = math.max(1, math.floor((width - 8 + gap) / (target + gap)))
+		local cell = math.floor(math.min(target * 1.25, (width - 8 - gap * (cols - 1)) / cols))
+		cellSize = UDim2.fromOffset(cell, cell)
+	else
+		cellSize = UDim2.new(1 / columns, -10, 0, props.CellHeight or 110)
+	end
+	children.Layout = e("UIGridLayout", {
+		CellSize = cellSize, CellPadding = UDim2.fromOffset(gap, gap), SortOrder = Enum.SortOrder.LayoutOrder,
+		HorizontalAlignment = if props.Square then Enum.HorizontalAlignment.Center else Enum.HorizontalAlignment.Left,
+	})
+	children.Padding = e("UIPadding", { PaddingTop = UDim.new(0, 4), PaddingLeft = UDim.new(0, 4), PaddingRight = UDim.new(0, 4), PaddingBottom = UDim.new(0, 8) })
 	return e("ScrollingFrame", { Name = "CardGrid", Size = props.Size, Position = props.Position, BackgroundTransparency = 1, BorderSizePixel = 0, CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, ScrollingDirection = Enum.ScrollingDirection.Y, ScrollBarThickness = 6, ScrollBarImageColor3 = T.Gold, ClipsDescendants = true, SelectionGroup = true,
-		[React.Change.AbsoluteSize] = function(frame) setColumns(math.clamp(math.floor(frame.AbsoluteSize.X / 106), 2, 6)) end,
+		[React.Change.AbsoluteSize] = function(frame)
+			setColumns(math.clamp(math.floor(frame.AbsoluteSize.X / 106), 2, 6))
+			setWidth(frame.AbsoluteWindowSize.X)
+		end,
 	}, children)
 end
 
@@ -280,7 +316,7 @@ function C.StatChip(props: { Label: string, Value: string, Order: number?, Color
 		Stroke = e("UIStroke", { Color = T.Theme.Tones.Deep.Rail, Thickness = 1, Transparency = 0.45 }),
 		Title = e(C.Text, {
 			Text = props.Label,
-			TextSize = 10,
+			TextSize = 13,
 			TextColor3 = T.Muted,
 			TextXAlignment = Enum.TextXAlignment.Center,
 			Position = UDim2.new(0, 2, 0, 4),
@@ -344,7 +380,7 @@ function C.IconAction(props: {
 		}),
 		Label = e(C.Text, {
 			Text = props.Label,
-			TextSize = 10,
+			TextSize = 13,
 			TextColor3 = if props.Disabled then T.Muted elseif props.Selected then T.Gold else T.Text,
 			TextXAlignment = Enum.TextXAlignment.Center,
 			Position = UDim2.new(0, 2, 0, 28),
@@ -481,11 +517,13 @@ function C.ArtifactTile(props: TileProps)
 	local focused, setFocused = React.useState(false)
 	local previewHostRef = React.useRef(nil)
 
+	-- The border always carries the rarity (or selection state); "equipped" is the owner badge in the
+	-- corner, never a border colour (an Exalted weapon used to show a teal border once equipped).
 	local accent = if props.Selected then T.Gold
 		elseif isChecked then T.Bad
 		elseif isProtected then T.Theme.Tones.Slate.Rail
-		elseif equipped then T.Equipped
 		else rarity.Color
+	local owner = if equipped then props.Snapshot.Heroes[owners[1]] else nil
 
 	React.useEffect(function()
 		local host = previewHostRef.current
@@ -530,104 +568,92 @@ function C.ArtifactTile(props: TileProps)
 			end,
 		}, {
 			Corner = e("UICorner", { CornerRadius = UDim.new(0, 10) }),
+			-- Brighter Grimoire: a rarity-tinted fill instead of near-black.
 			Gradient = e("UIGradient", {
 				Color = ColorSequence.new({
-					ColorSequenceKeypoint.new(0, rarity.Color:Lerp(Color3.fromRGB(24, 18, 34), 0.7)),
-					ColorSequenceKeypoint.new(1, Color3.fromRGB(12, 8, 18)),
+					ColorSequenceKeypoint.new(0, rarity.Color:Lerp(Color3.fromRGB(30, 22, 44), 0.42)),
+					ColorSequenceKeypoint.new(1, Color3.fromRGB(26, 18, 40)),
 				}),
 				Rotation = 90,
 			}),
 			Stroke = e("UIStroke", {
 				Color = accent,
-				Thickness = if props.Selected then 2.8 elseif isChecked then 2.4 else 1.8,
+				Thickness = if props.Selected then 3 elseif isChecked then 2.6 else 2,
 				ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
 			}),
-			-- 3D Model Viewport spans the full tile
+			-- 3D model between the label band and the power line, so text never sits on the art.
 			ModelHost = e("Frame", {
 				ref = previewHostRef,
 				Name = "ModelHost",
-				Size = UDim2.fromScale(1, 1),
+				Position = UDim2.fromOffset(0, 20),
+				Size = UDim2.new(1, 0, 1, -42),
 				BackgroundTransparency = 1,
 				ZIndex = 2,
 				ClipsDescendants = true,
-			}, {
-				Corner = e("UICorner", { CornerRadius = UDim.new(0, 10) }),
 			}),
-			-- Top-Left Header: Equipped Icon + Lock
-			TopLeft = e("Frame", {
-				Name = "TopLeftBadges",
-				Position = UDim2.fromOffset(6, 6),
-				Size = UDim2.new(0.42, 0, 0, 18),
-				BackgroundTransparency = 1,
+			-- Top band: lock on the left; rarity and stars on the right, on a dark strip for contrast.
+			TopBand = e("Frame", {
+				Name = "TopBand",
+				Size = UDim2.new(1, 0, 0, 20),
+				BackgroundColor3 = Color3.fromRGB(10, 6, 14),
+				BackgroundTransparency = 0.35,
 				ZIndex = 4,
 			}, {
-				Layout = e("UIListLayout", {
-					FillDirection = Enum.FillDirection.Horizontal,
-					Padding = UDim.new(0, 3),
-					VerticalAlignment = Enum.VerticalAlignment.Center,
-				}),
-				Equipped = if equipped then e("Frame", {
-					Size = UDim2.fromOffset(18, 18),
-					BackgroundTransparency = 1,
-				}, {
-					Icon = e(Icons.Icon, { Name = "Equipped", Size = 18 }),
-				}) else nil,
+				Corner = e("UICorner", { CornerRadius = UDim.new(0, 10) }),
 				Lock = if artifact.Locked then e("Frame", {
+					Position = UDim2.fromOffset(5, 2),
 					Size = UDim2.fromOffset(16, 16),
 					BackgroundTransparency = 1,
+					ZIndex = 5,
 				}, {
 					Icon = e(Icons.Icon, { Name = "Lock", Size = 16 }),
 				}) else nil,
-			}),
-			-- Top-Right Header: Rarity text + Star count
-			TopRight = e("Frame", {
-				Name = "TopRightLabels",
-				AnchorPoint = Vector2.new(1, 0),
-				Position = UDim2.new(1, -6, 0, 4),
-				Size = UDim2.new(0.55, 0, 0, 30),
-				BackgroundTransparency = 1,
-				ZIndex = 4,
-			}, {
-				Layout = e("UIListLayout", {
-					FillDirection = Enum.FillDirection.Vertical,
-					HorizontalAlignment = Enum.HorizontalAlignment.Right,
-					Padding = UDim.new(0, 0),
-				}),
-				Rarity = e(C.Text, {
-					Text = rarity.Name,
-					TextSize = 11,
+				Label = e(C.Text, {
+					Text = string.format("%s  <font color=\"#FFD678\">★%d</font>", rarity.Name, artifact.Star),
+					RichText = true, -- catalog rarity names only, never player text
+					TextSize = 13,
 					TextColor3 = rarity.Color,
 					FontFace = T.Theme.Fonts.Title,
 					TextXAlignment = Enum.TextXAlignment.Right,
-					Size = UDim2.new(1, 0, 0, 15),
-				}),
-				Stars = e(C.Text, {
-					Text = string.format("★%d", artifact.Star),
-					TextSize = 11,
-					TextColor3 = T.Gold,
-					FontFace = T.Theme.Fonts.Number,
-					TextXAlignment = Enum.TextXAlignment.Right,
-					Size = UDim2.new(1, 0, 0, 14),
+					AnchorPoint = Vector2.new(1, 0),
+					Position = UDim2.new(1, -6, 0, 1),
+					Size = UDim2.new(1, -26, 1, -2),
+					ZIndex = 5,
 				}),
 			}),
-			-- Bottom-Left: Bold Power text
+			-- Bottom: power, and the owner's portrait when equipped.
 			BottomLeft = e("Frame", {
 				Name = "BottomLeftPower",
 				AnchorPoint = Vector2.new(0, 1),
-				Position = UDim2.new(0, 6, 1, -4),
-				Size = UDim2.new(1, -12, 0, 22),
+				Position = UDim2.new(0, 6, 1, -3),
+				Size = UDim2.new(1, -36, 0, 20),
 				BackgroundTransparency = 1,
 				ZIndex = 4,
 			}, {
 				Power = e(C.Text, {
 					Text = "⚔ " .. powerText,
-					TextSize = 14,
+					TextSize = 15,
 					FontFace = T.Theme.Fonts.Number,
 					TextColor3 = Color3.fromRGB(255, 230, 140),
 					TextXAlignment = Enum.TextXAlignment.Left,
+					TextStrokeColor3 = T.Theme.Ink,
+					TextStrokeTransparency = 0.2,
 					Size = UDim2.fromScale(1, 1),
 				}),
 			}),
+			OwnerBadge = if owner then e("Frame", {
+				Name = "OwnerBadge",
+				AnchorPoint = Vector2.new(1, 1),
+				Position = UDim2.new(1, -4, 1, -4),
+				Size = UDim2.fromOffset(26, 26),
+				BackgroundColor3 = Color3.fromRGB(14, 10, 22),
+				ClipsDescendants = true,
+				ZIndex = 5,
+			}, {
+				Corner = e("UICorner", { CornerRadius = UDim.new(1, 0) }),
+				Ring = e("UIStroke", { Color = T.Equipped, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
+				Face = e(Portrait, { TemplateId = owner.TemplateId, Archetype = owner.Archetype, Stars = owner.Stars }),
+			}) else nil,
 			-- Checked badge in center when selected for sale or upgrade
 			CheckedBadge = if isChecked then e("Frame", {
 				Name = "CheckedBadge",
@@ -777,11 +803,23 @@ type StatRowProps = { Label: string, Before: number, After: number, Format: stri
 function C.StatRow(props: StatRowProps)
 	local delta = props.After - props.Before
 	local format = props.Format or "%.0f"
-	local difference = if math.abs(delta) < 0.00001 then " (=)" else string.format(" (%s%s)", if delta > 0 then "+" else "-", string.format(format, math.abs(delta)))
-	return e("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 36), LayoutOrder = props.Order }, {
-		Label = e(C.Text, { Text = props.Label, TextSize = 16, TextColor3 = T.Muted, Size = UDim2.new(0.3, -8, 1, 0) }),
-		Before = e(C.Text, { Text = string.format(format, props.Before), TextSize = 16, Position = UDim2.fromScale(0.3, 0), Size = UDim2.new(0.22, -8, 1, 0), TextXAlignment = Enum.TextXAlignment.Right }),
-		After = e(C.Text, { Text = "→ " .. string.format(format, props.After) .. difference, TextSize = 16, Position = UDim2.fromScale(0.52, 0), Size = UDim2.fromScale(0.48, 1), TextColor3 = if delta > 0.00001 then T.Good elseif delta < -0.00001 then T.Bad else T.Text }),
+	-- A multiplier's "×" belongs on the values, not the change: "×6.40 → ×9.64 (+3.24)".
+	local deltaText = (string.gsub(string.format(format, math.abs(delta)), "^×", ""))
+	local changeColor = if delta > 0.00001 then T.Good elseif delta < -0.00001 then T.Bad else T.Muted
+	-- Two lines, so it reads in a narrow column: a label, then "before → after" large with the change
+	-- on the right (it was one 16 px line that wrapped and then got scaled down with the window).
+	return e("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 56), LayoutOrder = props.Order }, {
+		Label = e(C.Text, { Text = props.Label, TextSize = 15, FontFace = T.Theme.Fonts.Body, TextColor3 = T.Muted, Size = UDim2.new(1, 0, 0, 20) }),
+		Values = e(C.Text, {
+			Text = string.format("%s  →  %s", string.format(format, props.Before), string.format(format, props.After)),
+			TextSize = 22, FontFace = T.Theme.Fonts.Number, TextColor3 = if math.abs(delta) < 0.00001 then T.Text else changeColor,
+			Position = UDim2.fromOffset(0, 22), Size = UDim2.new(0.72, 0, 0, 32), TextWrapped = false,
+		}),
+		Change = e(C.Text, {
+			Text = if math.abs(delta) < 0.00001 then "no change" else string.format("%s%s", if delta > 0 then "+" else "-", deltaText),
+			TextSize = if math.abs(delta) < 0.00001 then 15 else 20, FontFace = T.Theme.Fonts.Number, TextColor3 = changeColor,
+			TextXAlignment = Enum.TextXAlignment.Right, Position = UDim2.new(0.72, 0, 0, 22), Size = UDim2.new(0.28, 0, 0, 32), TextWrapped = false,
+		}),
 	})
 end
 

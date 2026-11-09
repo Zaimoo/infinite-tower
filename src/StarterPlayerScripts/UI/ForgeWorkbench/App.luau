@@ -22,7 +22,16 @@ local Icons = require(script.Parent.Parent.Hud.Icons)
 local UIFeel = require(script.Parent.Parent.UIFeel)
 local ModalFit = require(script.Parent.Parent.ModalFit)
 local Types = require(script.Parent.Types)
+local Kit = require(script.Parent.Parent.Kit)
 local e = React.createElement
+
+-- "500 Gold · 1 weapon consumed": Gems only when the rank actually costs Gems.
+local function upgradeCostText(rule: { Gold: number, Gems: number, Donors: number }): string
+	local parts = { string.format("%s Gold", Balance.Format(rule.Gold)) }
+	if (rule.Gems or 0) > 0 then table.insert(parts, string.format("%s Gems", Balance.Format(rule.Gems))) end
+	table.insert(parts, string.format("%d %s consumed", rule.Donors, if rule.Donors == 1 then "weapon" else "weapons"))
+	return table.concat(parts, " · ")
+end
 
 local function UndoButton(props: { ExpiresAt: number, OnUndo: () -> (), Busy: boolean })
 	local seconds, setSeconds = React.useState(math.max(0, math.ceil(props.ExpiresAt - Workspace:GetServerTimeNow())))
@@ -54,7 +63,7 @@ local function Feedback(props: { Text: string, Success: boolean, Sequence: numbe
 		ref.current.Scale = 0.98
 		local tween = TweenService:Create(ref.current, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
 		tween:Play()
-		UIFeel.Sfx(if props.Success then "StarTick" else "Error")
+		-- No sound here: results are toasts now, and the toast plays the sound.
 		return function() tween:Cancel() end
 	end, { props.Sequence })
 	return e("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1) }, {
@@ -63,7 +72,8 @@ local function Feedback(props: { Text: string, Success: boolean, Sequence: numbe
 	})
 end
 
-local function Dialog(props: { Title: string, Children: { [string]: any }, OnCancel: () -> (), FocusKey: string, Cards: boolean?, HeaderExtras: any?, CardHeight: number? })
+local function Dialog(props: { Title: string, Children: { [string]: any }, OnCancel: () -> (), FocusKey: string, Cards: boolean?, HeaderExtras: any?, CardHeight: number?,
+	Subtitle: string?, MaxSize: Vector2?, Square: boolean? })
 	local ref = React.useRef(nil)
 	React.useEffect(function()
 		local previous = GuiService.SelectedObject
@@ -74,19 +84,41 @@ local function Dialog(props: { Title: string, Children: { [string]: any }, OnCan
 	end, { props.FocusKey })
 	return e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 100 }, {
 		Shade = e("TextButton", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(), BackgroundTransparency = 0.25, Text = "", AutoButtonColor = false, Selectable = false, ZIndex = 1, [React.Event.Activated] = props.OnCancel }),
+		-- Same anatomy as the Forge window (Brighter Grimoire): ember header bar, white title, red X,
+		-- a lifted plum panel with ink and a gold rail; an optional subtitle says what to do.
 		Dialog = e("Frame", {
 			ref = ref, Size = UDim2.new(0.94, 0, 0.92, 0), Position = UDim2.fromScale(0.5, 0.5), AnchorPoint = Vector2.new(0.5, 0.5),
-			BackgroundColor3 = T.Background, BorderSizePixel = 0, ZIndex = 2,
+			BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, ZIndex = 2,
 			SelectionGroup = true, SelectionBehaviorUp = Enum.SelectionBehavior.Stop,
 			SelectionBehaviorDown = Enum.SelectionBehavior.Stop, SelectionBehaviorLeft = Enum.SelectionBehavior.Stop, SelectionBehaviorRight = Enum.SelectionBehavior.Stop,
 		}, {
-			Constraint = e("UISizeConstraint", { MaxSize = Vector2.new(if props.Cards then 1050 else 620, 760) }),
+			Constraint = e("UISizeConstraint", { MaxSize = props.MaxSize or Vector2.new(if props.Cards then 1050 else 620, 760) }),
 			Corner = e("UICorner", { CornerRadius = UDim.new(0, 16) }),
-			Outline = e("UIStroke", { Color = T.Gold, Thickness = 2 }),
-			Title = e(C.Text, { Text = props.Title, TextColor3 = T.Gold, Position = UDim2.fromOffset(16, 8), Size = UDim2.new(1, -88, 0, 56), TextSize = 18 }),
-			Close = e(C.Button, { Text = "Back", Size = UDim2.fromOffset(64, 48), Position = UDim2.new(1, -80, 0, 12), OnActivate = props.OnCancel, FocusOrder = -100 }),
+			Fill = e("UIGradient", { Rotation = 90, Color = ColorSequence.new(Kit.Tokens.Surface.Window.Top, Kit.Tokens.Surface.Inset.Bottom) }),
+			Ink = e("UIStroke", { Color = T.Theme.Ink, Thickness = 3, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
+			Rail = e("Frame", { Position = UDim2.fromOffset(3, 3), Size = UDim2.new(1, -6, 1, -6), BackgroundTransparency = 1, ZIndex = 2 }, {
+				Corner = e("UICorner", { CornerRadius = UDim.new(0, 13) }),
+				Line = e("UIStroke", { Color = T.Gold, Thickness = 1.4, Transparency = 0.25, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
+			}),
+			HeaderBar = e("Frame", { Position = UDim2.fromOffset(6, 6), Size = UDim2.new(1, -12, 0, 56), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, ZIndex = 2 }, {
+				Corner = e("UICorner", { CornerRadius = UDim.new(0, 12) }),
+				Fill = e("UIGradient", { Rotation = 90, Color = ColorSequence.new(Kit.Tokens.Domain.Forge.Top, Kit.Tokens.Domain.Forge.Bottom) }),
+			}),
+			Title = e(C.Text, { Text = props.Title, TextColor3 = T.Text, Position = UDim2.fromOffset(22, 10), Size = UDim2.new(1, -96, 0, 52), TextSize = 22, ZIndex = 3 }),
+			-- In a ZIndex-4 holder so it draws above the header bar (it was hidden under it).
+			CloseHolder = e("Frame", { Name = "CloseHolder", Size = UDim2.fromOffset(44, 44), Position = UDim2.new(1, -56, 0, 12), BackgroundTransparency = 1, ZIndex = 4 }, {
+				Close = e(C.Button, { Name = "CloseDialogButton", Text = "", Icon = "Close", Accent = T.Bad, Size = UDim2.fromScale(1, 1), OnActivate = props.OnCancel, FocusOrder = -100 }),
+			}),
+			Subtitle = if props.Subtitle then e(C.Text, {
+				Text = props.Subtitle, RichText = true, TextColor3 = T.Text, TextSize = 16, FontFace = T.Theme.Fonts.Body,
+				Position = UDim2.fromOffset(20, 68), Size = UDim2.new(1, -40, 0, 30), ZIndex = 3,
+			}) else nil,
 			Extras = props.HeaderExtras,
-			Content = e(if props.Cards then C.CardGrid else C.Scroll, { Size = UDim2.new(1, -16, 1, if props.HeaderExtras then -144 else -88), Position = UDim2.fromOffset(8, if props.HeaderExtras then 132 else 76), Children = props.Children, CellHeight = props.CardHeight }),
+			Content = e(if props.Cards then C.CardGrid else C.Scroll, {
+				Size = UDim2.new(1, -24, 1, if props.HeaderExtras then -152 elseif props.Subtitle then -118 else -84),
+				Position = UDim2.fromOffset(12, if props.HeaderExtras then 138 elseif props.Subtitle then 104 else 72),
+				Children = props.Children, CellHeight = props.CardHeight, Square = props.Square,
+			}),
 		}),
 	})
 end
@@ -95,6 +127,20 @@ local function App(props: Types.Props)
 	local forge = useForge(props)
 	local snapshot = forge.Snapshot
 	local rootRef, bodyRef = React.useRef(nil), React.useRef(nil)
+	local headerBarRef, summonHostRef = React.useRef(nil), React.useRef(nil)
+	local summonTab = props.ActiveTab == "Summon"
+	-- Hand the body frame to the legacy summon view while the Summon tab shows, and take it back.
+	-- A layout effect: its cleanup runs before React destroys the host frame, so the summon view is
+	-- moved out first instead of being destroyed with it.
+	React.useLayoutEffect(function()
+		if not summonTab or not props.OnSummonHost then return nil end
+		props.OnSummonHost(summonHostRef.current)
+		return function() props.OnSummonHost(nil) end
+	end, { summonTab })
+	-- The header's domain colour bar (Brighter Grimoire: Forge = ember).
+	React.useEffect(function()
+		if headerBarRef.current then Kit.Tokens.Paint(headerBarRef.current, Kit.Tokens.Domain.Forge, 12, 0, 0.35) end
+	end, {})
 	local transitionRef = React.useRef(nil)
 	local camera = workspace.CurrentCamera
 	local screen, setScreen = React.useState(if camera then camera.ViewportSize else Vector2.new(1280, 720))
@@ -138,6 +184,21 @@ local function App(props: Types.Props)
 		OnSellArtifacts = props.OnSellArtifacts,
 		OnBusyChanged = props.OnBusyChanged,
 	})
+
+	-- Results as toasts (UI overhaul plan §4.3): every forge result (equip, upgrade, lock, Equip Best,
+	-- refusals) and every finished sale. Refusals are amber with the refusal sound.
+	React.useEffect(function()
+		if forge.Sequence == 0 or forge.Message == "" then return end
+		Kit.Notify.Push(if forge.Success then "success" else "warn", forge.Message)
+	end, { forge.Sequence })
+	local sellWasBusy = React.useRef(false)
+	React.useEffect(function()
+		if sellWasBusy.current and not sell.Busy and sell.Message ~= "" then
+			local ok = string.find(string.lower(sell.Message), "sold") ~= nil
+			Kit.Notify.Push(if ok then "success" else "warn", sell.Message)
+		end
+		sellWasBusy.current = sell.Busy
+	end, { sell.Busy, sell.Message })
 
 	-- Count owned artifacts & capacity
 	local artifactCount = 0
@@ -253,13 +314,30 @@ local function App(props: Types.Props)
 		end
 	end
 
+	-- Selling asks by risk (UI overhaul plan §6): Commons and Uncommons sell straight away; Rare to
+	-- Superior is a Hard confirm (arms after 1 s); Exalted+ or any ★2+ weapon must be held to confirm.
 	local function handleSellAction()
 		if sell.SelectedCount == 0 or busy then return end
-		if sell.HasRareOrBetter then
-			setDialog("SELL_WARNING")
-		else
-			sell.Sell()
+		local maxRarity, maxStars = 1, 1
+		local items = {}
+		for _, artifact in sell.SelectedItems do
+			maxRarity = math.max(maxRarity, artifact.Rarity or 1)
+			maxStars = math.max(maxStars, artifact.Star or 1)
+			table.insert(items, string.format("%s · %s %d★", artifact.DisplayName, Catalog.GetRarityInfo(artifact.Rarity or 1).Name, artifact.Star or 1))
 		end
+		local tier = Kit.Rules.ConfirmTier("SELL", { MaxRarity = maxRarity, MaxStars = maxStars })
+		if tier == "None" then
+			sell.Sell()
+			return
+		end
+		Kit.Confirm.Ask({
+			Tier = tier,
+			Title = string.format("Sell %d weapon%s?", sell.SelectedCount, if sell.SelectedCount == 1 then "" else "s"),
+			Body = string.format("They're gone for good. You get %s Gold.", Balance.Format(sell.TotalGold)),
+			Items = items,
+			ConfirmText = "Sell",
+			OnConfirm = function() sell.Sell() end,
+		})
 	end
 
 	React.useEffect(function()
@@ -269,8 +347,12 @@ local function App(props: Types.Props)
 		context.Name = inputName.current; context.Priority = 2500; context.Sink = false
 		local action = Instance.new("InputAction")
 		action.Name = "Back"; action.Type = Enum.InputActionType.Bool; action.Parent = context
-		local binding = Instance.new("InputBinding")
-		binding.KeyCode = Enum.KeyCode.ButtonB; binding.Parent = action
+		-- Backspace and gamepad B step back (dialog → sell mode → upgrade route → close). WindowManager
+		-- leaves the Forge's Back to this context.
+		for _, key in { Enum.KeyCode.ButtonB, Enum.KeyCode.Backspace } do
+			local binding = Instance.new("InputBinding")
+			binding.KeyCode = key; binding.Parent = action
+		end
 		action.Pressed:Connect(function() if not UserInputService:GetFocusedTextBox() then handlers.current.Back() end end)
 		context.Parent = Players.LocalPlayer:WaitForChild("PlayerScripts")
 		return function() context:Destroy(); inputConnection:Disconnect() end
@@ -309,13 +391,13 @@ local function App(props: Types.Props)
 	local filterCount = (if filter.Ownership ~= "ALL" then 1 else 0) + (if filter.Rarity ~= 0 then 1 else 0) + (if filter.WeaponType ~= "ALL" then 1 else 0)
 	local toolbar = e("Frame", { Name = "InventoryToolbar", Size = UDim2.new(1, 0, 0, 42), BackgroundTransparency = 1 }, {
 		Search = e("TextBox", {
-			Name = "ArtifactSearch", Text = filter.Query, PlaceholderText = "Search weapons…", ClearTextOnFocus = false,
+			Name = "ArtifactSearch", Text = filter.Query, PlaceholderText = "Search weapons by name…", ClearTextOnFocus = false,
 			Size = UDim2.new(0.55, -4, 1, 0), BackgroundColor3 = T.Raised, BorderSizePixel = 0,
-			FontFace = T.Theme.Fonts.Number, TextSize = 15, TextColor3 = T.Text, PlaceholderColor3 = T.Muted,
+			FontFace = T.Theme.Fonts.Body, TextSize = 16, TextColor3 = T.Text, PlaceholderColor3 = T.Muted, TextXAlignment = Enum.TextXAlignment.Left,
 			[React.Change.Text] = function(box) updateFilter("Query", box.Text) end,
-		}, { Corner = e("UICorner", { CornerRadius = UDim.new(0, 8) }), Padding = e("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8) }) }),
+		}, { Corner = e("UICorner", { CornerRadius = UDim.new(0, 8) }), Padding = e("UIPadding", { PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 8) }), Ink = e("UIStroke", { Color = T.Theme.Ink, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }) }),
 		Filter = e(C.Button, { Name = "FilterArtifactsButton", Text = string.format("Filters (%d)", filterCount), Position = UDim2.fromScale(0.55, 0), Size = UDim2.new(0.23, -4, 1, 0), OnActivate = function() setDialog("FILTER") end }),
-		Sort = e(C.Button, { Name = "SortArtifactsButton", Text = filter.Sort, Position = UDim2.fromScale(0.78, 0), Size = UDim2.fromScale(0.22, 1), OnActivate = function()
+		Sort = e(C.Button, { Name = "SortArtifactsButton", Text = "Sort: " .. string.upper(string.sub(filter.Sort, 1, 1)) .. string.lower(string.sub(filter.Sort, 2)), Tooltip = "Tap to cycle: Best, Power, Rarity, Stars, Name", Position = UDim2.fromScale(0.78, 0), Size = UDim2.fromScale(0.22, 1), OnActivate = function()
 			local order = { "BEST", "POWER", "RARITY", "STARS", "NAME" }
 			updateFilter("Sort", order[(table.find(order, filter.Sort) or 1) % #order + 1])
 		end }),
@@ -350,7 +432,7 @@ local function App(props: Types.Props)
 			Hammer = e(C.Button, {
 				Name = "ExitSellHammer",
 				Icon = "Hammer",
-				Text = "Done",
+				Text = "Back",
 				Accent = T.Bad,
 				Selected = true,
 				Size = UDim2.new(0.16, -6, 0, 48),
@@ -387,7 +469,8 @@ local function App(props: Types.Props)
 			}),
 			SellBtn = e(C.Button, {
 				Name = "CommitSellButton",
-				Text = if sell.Busy then "Selling…" elseif sell.SelectedCount > 0 then string.format("Sell %d (+%s)", sell.SelectedCount, Balance.Format(sell.TotalGold)) else "Select Items",
+				Text = if sell.Busy then "Selling…" elseif sell.SelectedCount > 0 then string.format("Sell %d (+%s)", sell.SelectedCount, Balance.Format(sell.TotalGold)) else "Pick weapons to sell",
+				Tooltip = if sell.SelectedCount == 0 then "Tap weapons in the grid, or use Common / Uncommon / All Spare." else nil,
 				Primary = true,
 				Accent = T.Bad,
 				Size = UDim2.new(0.23, 0, 0, 48),
@@ -401,42 +484,28 @@ local function App(props: Types.Props)
 			Position = UDim2.new(0, 0, 1, -T.ActionBarHeight),
 			BackgroundTransparency = 1,
 		}, {
+			-- Upgrade / Equip live in the detail panel next to the grid; this bar holds the two
+			-- inventory-wide actions only (they used to be repeated here).
 			Hammer = e(C.Button, {
 				Name = "EnterSellHammer",
 				Icon = "Hammer",
-				Text = "Sell",
-				Accent = T.Bad,
-				Tooltip = "Delete / Sell mode",
-				Size = UDim2.new(0.20, -6, 0, 48),
+				Text = "Sell weapons",
+				Intent = "Danger",
+				Tooltip = "Pick spare weapons to sell for Gold",
+				Size = UDim2.new(0.34, -6, 0, 48),
 				Position = UDim2.new(0, 0, 0, 4),
 				OnActivate = function() setSellMode(true) end,
 			}),
 			EquipBest = e(C.Button, {
 				Name = "EquipBestButton",
-				Text = if equipBestPlan.HasChanges then string.format("Equip Best (+%s)", Balance.Format(equipBestPlan.PowerDelta)) else "Squad Optimal",
-				Primary = true,
-				Accent = Color3.fromRGB(120, 255, 140),
-				Size = UDim2.new(0.34, -6, 0, 48),
-				Position = UDim2.new(0.20, 0, 0, 4),
+				Icon = "Equipped",
+				Text = if equipBestPlan.HasChanges then string.format("Equip Best (+%s power)", Balance.Format(equipBestPlan.PowerDelta)) else "Squad already optimal",
+				Intent = "Confirm",
+				Tooltip = if equipBestPlan.HasChanges then "Gives every deployed squad hero its strongest compatible weapon. Benched heroes keep theirs." else "Every deployed hero already has its best weapon.",
+				Size = UDim2.new(0.66, 0, 0, 48),
+				Position = UDim2.new(0.34, 0, 0, 4),
 				Disabled = busy or not equipBestPlan.HasChanges,
 				OnActivate = forge.EquipBest,
-			}),
-			Upgrade = e(C.Button, {
-				Name = "ActionBarUpgrade",
-				Icon = "Forge",
-				Text = "Upgrade",
-				Size = UDim2.new(0.23, -6, 0, 48),
-				Position = UDim2.new(0.54, 0, 0, 4),
-				Disabled = busy or not target or maxRank,
-				OnActivate = startUpgrade,
-			}),
-			Equip = e(C.Button, {
-				Name = "ActionBarEquip",
-				Text = if target and #Model.ownerIds(snapshot, target.UUID) > 0 then "Unequip" else "Equip",
-				Size = UDim2.new(0.23, 0, 0, 48),
-				Position = UDim2.new(0.77, 0, 0, 4),
-				Disabled = busy or not target,
-				OnActivate = handleEquipTarget,
 			}),
 		})
 
@@ -492,11 +561,16 @@ local function App(props: Types.Props)
 			Name = "DetailPane",
 			Position = UDim2.fromScale(T.GridShare, 0),
 			Size = UDim2.new(T.DetailShare, 0, 1, 0),
-			BackgroundColor3 = T.Background,
+			BackgroundColor3 = Color3.new(1, 1, 1),
 			BorderSizePixel = 0,
 		}, {
 			Corner = e("UICorner", { CornerRadius = UDim.new(0, 12) }),
-			Rail = e("UIStroke", { Color = T.Gold, Thickness = 1, Transparency = 0.4 }),
+			Fill = e("UIGradient", { Rotation = 90, Color = ColorSequence.new(Kit.Tokens.Surface.Window.Top, Kit.Tokens.Surface.Inset.Bottom) }),
+			Ink = e("UIStroke", { Color = T.Theme.Ink, Thickness = 2.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
+			Rail = e("Frame", { Position = UDim2.fromOffset(3, 3), Size = UDim2.new(1, -6, 1, -6), BackgroundTransparency = 1 }, {
+				Corner = e("UICorner", { CornerRadius = UDim.new(0, 9) }),
+				Line = e("UIStroke", { Color = T.Gold, Thickness = 1.4, Transparency = 0.3, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
+			}),
 			Inner = e("Frame", {
 				Position = UDim2.fromOffset(10, 10),
 				Size = UDim2.new(1, -20, 1, -20),
@@ -519,29 +593,34 @@ local function App(props: Types.Props)
 				Title = e(C.Text, { Text = "UPGRADE RESULT", TextColor3 = T.Gold, LayoutOrder = 1 }),
 				Rank = e(C.Text, { Text = string.format("CURRENT %d★  →  AFTER %d★", target.Star, after.Star), LayoutOrder = 2 }),
 				Stats = e(C.Stack, { Order = 3, Children = { Values = e(Screens.Stats, { Before = target, After = after }) } }),
-				Cost = e(C.Text, { Text = if rule then string.format("%s Gold · %s Gems · %d artifacts", Balance.Format(rule.Gold), Balance.Format(rule.Gems), rule.Donors) else "Maximum stars", TextColor3 = T.Gold, LayoutOrder = 4 }),
+				Cost = e(C.Text, { Text = if rule then upgradeCostText(rule) else "Maximum stars", TextColor3 = T.Gold, LayoutOrder = 4 }),
 				Reason = e(C.Text, { Text = upgradeReason or "Ready to upgrade", TextSize = 14, LayoutOrder = 5 }),
 			} }),
 		})
-		view.AutoFill = e(C.Button, { Name = "AutoFillMaterialsButton", Text = "Auto-fill safe artifacts", Position = UDim2.new(0, 0, 1, -48), Size = UDim2.new(0.4, -8, 0, 48), Disabled = busy or maxRank, OnActivate = forge.AutoFill })
-		view.Review = e(C.Button, { Name = "ReviewUpgradeButton", Icon = "Forge", Text = string.format("REVIEW UPGRADE · %d★ → %d★", target.Star, after.Star), Primary = true, Position = UDim2.new(0.4, 0, 1, -48), Size = UDim2.new(0.6, 0, 0, 48), Disabled = busy or upgradeReason ~= nil, OnActivate = reviewUpgrade })
+		-- A visible way back to the inventory (before, only the X, the tab or Backspace / B left this screen).
+		view.Back = e(C.Button, { Name = "UpgradeBackButton", Icon = "Back", Text = "Back", Position = UDim2.new(0, 0, 1, -48), Size = UDim2.new(0.18, -8, 0, 48), Disabled = busy, OnActivate = inventory })
+		view.AutoFill = e(C.Button, { Name = "AutoFillMaterialsButton", Text = "Auto-fill safe weapons", Position = UDim2.new(0.18, 0, 1, -48), Size = UDim2.new(0.32, -8, 0, 48), Disabled = busy or maxRank, OnActivate = forge.AutoFill })
+		view.Review = e(C.Button, { Name = "ReviewUpgradeButton", Icon = "Forge", Text = string.format("REVIEW UPGRADE · %d★ → %d★", target.Star, after.Star), Primary = true, Position = UDim2.new(0.5, 0, 1, -48), Size = UDim2.new(0.5, 0, 0, 48), Disabled = busy or upgradeReason ~= nil, Tooltip = upgradeReason, OnActivate = reviewUpgrade })
 
 	elseif route == "REVIEW" and target and review then
 		local changed = snapshot.Revision ~= review.Revision
 		local owners = Model.ownerIds(snapshot, target.UUID)
 		local owner = #owners == 1 and snapshot.Heroes[owners[1]] or nil
-		local children: { [string]: any } = {
-			Target = e("Frame", { LayoutOrder = 1, Size = UDim2.new(1, 0, 0, 96), BackgroundTransparency = 1 }, { Content = e(Screens.ItemHeader, { Snapshot = snapshot, Artifact = review.Before, Kept = true }) }),
-			Rank = e(C.Text, { LayoutOrder = 2, Text = string.format("%d★ → %d★ · rarity and hero assignment stay", review.Before.Star, review.After.Star), TextColor3 = T.Gold, Size = UDim2.new(1, 0, 0, 28) }),
-			Stats = e(C.Stack, { Order = 3, Children = { Compare = e(Screens.Stats, { Before = review.Before, After = review.After, Hero = owner }) } }),
-			Cost = e(C.Text, { LayoutOrder = 4, Text = string.format("Cost: %s Gold + %s Gems\nBalance after: %s Gold · %s Gems", Balance.Format(review.Gold), Balance.Format(review.Gems), Balance.Format(snapshot.Gold - review.Gold), Balance.Format(snapshot.Gems - review.Gems)), TextColor3 = T.Gold, Size = UDim2.new(1, 0, 0, 52) }),
-			Consume = e(C.Text, { LayoutOrder = 5, Text = "PERMANENTLY CONSUMED", TextColor3 = T.Bad, Size = UDim2.new(1, 0, 0, 24), TextSize = 14 }),
-			Materials = e(C.Stack, { Order = 6, Children = { Items = e(Screens.MaterialList, { Items = review.Materials, Width = contentWidth * 0.58 - 24 }) } }),
-			Warning = e(C.Text, { LayoutOrder = 7, Text = if changed then "Inventory changed. Go back and review your artifacts again." else "The target is kept. Listed artifacts are consumed permanently. This upgrade cannot be undone.", TextColor3 = if changed then T.Bad else T.Muted, TextSize = 14, Size = UDim2.new(1, 0, 0, 48) }),
-		}
-		view.Review = e(C.Scroll, { Size = UDim2.new(1, 0, 1, -60), Children = children })
-		view.Back = e(C.Button, { Name = "BackToMaterialsButton", Text = "Back to artifacts", Position = UDim2.new(0, 0, 1, -48), Size = UDim2.new(0.4, -4, 0, 48), Disabled = busy, OnActivate = function() setRoute("MATERIALS") end })
-		view.Confirm = e(C.Button, { Name = "ConfirmUpgradeButton", Icon = "Forge", Text = if busy then "Waiting for server…" else "Consume & upgrade", Primary = true, Position = UDim2.new(0.4, 4, 1, -48), Size = UDim2.new(0.6, -4, 0, 48), Disabled = busy or changed or upgradeReason ~= nil, OnActivate = function() forge.Upgrade(review.Revision) end })
+		-- One-screen visual confirm (Screens.UpgradeReview): kept → result, stat changes, what is
+		-- destroyed and the cost.
+		view.Review = e(Screens.UpgradeReview, {
+			Snapshot = snapshot, Before = review.Before, After = review.After, Materials = review.Materials,
+			Gold = review.Gold, Gems = review.Gems, Owner = owner, Changed = changed,
+		})
+		view.Back = e(C.Button, { Name = "BackToMaterialsButton", Icon = "Back", Text = "Back", Intent = "Secondary", Position = UDim2.new(0, 0, 1, -48), Size = UDim2.new(0.3, -4, 0, 48), Disabled = busy, OnActivate = function() setRoute("MATERIALS") end })
+		view.Confirm = e(C.Button, {
+			Name = "ConfirmUpgradeButton", Icon = "Forge",
+			Text = if busy then "Upgrading…" else string.format("Upgrade %d★ → %d★", review.Before.Star, review.After.Star),
+			Intent = "Primary", Position = UDim2.new(0.3, 4, 1, -48), Size = UDim2.new(0.7, -4, 0, 48),
+			Disabled = busy or changed or upgradeReason ~= nil,
+			Tooltip = if changed then "Your inventory changed. Go back and review again." else upgradeReason,
+			OnActivate = function() forge.Upgrade(review.Revision) end,
+		})
 
 	elseif route == "RESULT" and target then
 		view.Success = e(UpgradeResult, {
@@ -560,20 +639,7 @@ local function App(props: Types.Props)
 
 	-- Dialogs
 	local dialogView = nil
-	if dialog == "SELL_WARNING" then
-		dialogView = e(C.ConfirmModal, {
-			Title = "Selling Rare Artifacts",
-			Message = string.format("Your selection includes %d Rare or better weapon%s. Once sold, they are permanently destroyed.", #sell.RareOrBetterItems, if #sell.RareOrBetterItems == 1 then "" else "s"),
-			TotalGold = sell.TotalGold,
-			ConfirmText = "Sell anyway",
-			CancelText = "Cancel",
-			OnCancel = function() setDialog(nil) end,
-			OnConfirm = function()
-				setDialog(nil)
-				sell.Sell()
-			end,
-		})
-	elseif dialog == "MATERIAL" then
+	if dialog == "MATERIAL" then
 		local choices = {}
 		local candidates = {}
 		for _, artifact in snapshot.Artifacts do
@@ -613,8 +679,36 @@ local function App(props: Types.Props)
 				end,
 			})
 		end
-		if next(choices) == nil then choices.Empty = e(C.Text, { Text = "No eligible artifacts of the same rarity and star rank found.", Size = UDim2.new(1, 0, 0, 80) }) end
-		dialogView = e(Dialog, { Title = "Choose an artifact · consumed on upgrade", Cards = true, CardHeight = 110, Children = choices, OnCancel = function() setDialog(nil) end, FocusKey = "MATERIAL" })
+		-- What qualifies, how many are still needed, and that the pick is destroyed.
+		local need = if rule then math.max(0, rule.Donors - #forge.Materials) else 0
+		local wanted = if target then string.format("%s %d★", Catalog.GetRarityInfo(target.Rarity).Name, target.Star) else "matching"
+		local subtitle = string.format("Pick <b>%d more</b> · any <b>%s</b> weapon · <font color=\"#FF7A7A\">it will be destroyed</font>", need, wanted)
+		local empty = next(choices) == nil
+		if empty then
+			-- Empty state: say why, and offer the way to get one.
+			choices.Empty = e("Frame", { Name = "EmptyState", Size = UDim2.new(1, -8, 0, 220), BackgroundTransparency = 1 }, {
+				Icon = e("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 8), Size = UDim2.fromOffset(64, 64), BackgroundTransparency = 1 }, {
+					Art = e(Icons.Icon, { Name = "Forge", Size = 64 }),
+				}),
+				Text = e(C.Text, {
+					Text = string.format("No spare %s weapons yet. Equipped and locked ones can't be used.", wanted),
+					TextSize = 16, TextColor3 = T.Text, TextXAlignment = Enum.TextXAlignment.Center,
+					Position = UDim2.fromOffset(0, 84), Size = UDim2.new(1, 0, 0, 52),
+				}),
+				Summon = if props.OnSelectTab then e(C.Button, {
+					Name = "EmptyGoSummon", Text = "Summon weapons", Icon = "Summon", Intent = "Primary",
+					-- C.Button has no AnchorPoint: centre it with the offset.
+					Position = UDim2.new(0.5, -130, 0, 148), Size = UDim2.fromOffset(260, 48),
+					OnActivate = function() setDialog(nil); props.OnSelectTab("Summon") end,
+				}) else nil,
+			})
+		end
+		dialogView = e(Dialog, {
+			Title = "Choose upgrade material", Subtitle = subtitle, Cards = not empty, Square = true,
+			-- Compact when there is nothing to pick, so the empty state isn't lost in a big empty box.
+			MaxSize = if empty then Vector2.new(600, 360) else Vector2.new(780, 560),
+			Children = choices, OnCancel = function() setDialog(nil) end, FocusKey = "MATERIAL",
+		})
 	elseif dialog == "HERO" and target then
 		dialogView = e(HeroPicker, {
 			Snapshot = snapshot, Target = target, Busy = busy,
@@ -643,9 +737,15 @@ local function App(props: Types.Props)
 		dialogView = e(Dialog, { Title = "Inventory filters", Children = choices, OnCancel = function() setDialog(nil) end, FocusKey = "FILTER" })
 	end
 
-	local message = if sellMode then sell.Message
-		elseif forge.Sequence == 0 and forge.Message == "Choose a hero and an artifact to compare." then "Select an artifact to equip or upgrade."
-		else forge.Message
+	-- Before any server result, the footer is a hint that follows what the player is doing (it used to
+	-- keep saying "Select an artifact…" after one was selected, and on the upgrade screen).
+	local idleHint = if route == "MATERIALS" or route == "REVIEW" then (upgradeReason or "Ready: review the upgrade.")
+		elseif target then string.format("%s selected. Equip, upgrade, lock or sell it.", target.DisplayName)
+		else "Select an artifact to equip or upgrade."
+	-- The footer is only ever a hint now. Server results and refusals ("Not enough unprotected
+	-- artifacts", "Optimal gear equipped…") are toasts (the effects below), so they can't be missed
+	-- in small text at the bottom.
+	local message = if sellMode then "Select spare weapons to sell. Equipped and locked weapons are protected." else idleHint
 
 	return e("ScreenGui", {
 		Name = "ForgeWorkbench", ResetOnSpawn = false, DisplayOrder = 80, ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
@@ -659,19 +759,39 @@ local function App(props: Types.Props)
 			SelectionGroup = true, SelectionBehaviorUp = Enum.SelectionBehavior.Escape, SelectionBehaviorDown = Enum.SelectionBehavior.Stop, SelectionBehaviorLeft = Enum.SelectionBehavior.Stop, SelectionBehaviorRight = Enum.SelectionBehavior.Stop,
 		}, {
 			Scale = e("UIScale", { Scale = windowScale }),
-			-- Header: Forge Icon + Title
+			-- Header: the Forge's ember bar, icon, title and the Artifacts / Summon tabs, all inside
+			-- the window (they used to float above it in a separate bar).
+			HeaderBar = e("Frame", {
+				ref = headerBarRef, Name = "HeaderBar",
+				Position = UDim2.fromOffset(6, 6), Size = UDim2.new(1, -12, 0, 56), ZIndex = 0,
+			}),
 			HeaderIcon = e("Frame", {
-				Position = UDim2.fromOffset(22, 10),
+				Position = UDim2.fromOffset(18, 8),
 				Size = UDim2.fromOffset(46, 46),
 				BackgroundTransparency = 1,
 			}, { Art = e(Icons.Icon, { Name = "Forge", Size = 46 }) }),
 			HeaderTitle = e(C.Text, {
 				Text = "FORGE",
 				FontFace = T.Theme.Fonts.Title,
-				TextSize = 26,
-				TextColor3 = T.Gold,
-				Position = UDim2.fromOffset(76, 16),
-				Size = UDim2.fromOffset(220, 34),
+				TextSize = 28,
+				TextColor3 = T.Text,
+				TextStrokeColor3 = T.Theme.Ink,
+				TextStrokeTransparency = 0,
+				Position = UDim2.fromOffset(72, 14),
+				Size = UDim2.fromOffset(120, 34),
+			}),
+			Tabs = e("Frame", {
+				Name = "ForgeTabs", Position = UDim2.fromOffset(196, 12), Size = UDim2.fromOffset(276, 42), BackgroundTransparency = 1,
+			}, {
+				Layout = e("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
+				Artifacts = e(C.Button, {
+					Name = "ArtifactsTab", Text = "Artifacts", Order = 1, Size = UDim2.fromOffset(134, 42), Selected = not summonTab,
+					Disabled = busy and summonTab, OnActivate = function() if summonTab and props.OnSelectTab then props.OnSelectTab("Artifacts") end end,
+				}),
+				Summon = e(C.Button, {
+					Name = "SummonTab", Text = "Summon", Order = 2, Size = UDim2.fromOffset(134, 42), Selected = summonTab,
+					Disabled = busy and not summonTab, OnActivate = function() if not summonTab and props.OnSelectTab then props.OnSelectTab("Summon") end end,
+				}),
 			}),
 			-- Currencies + Capacity Counter
 			Gold = e(C.Currency, { Icon = "Gold", Text = Balance.Format(snapshot.Gold), Position = UDim2.new(1, -520, 0, 16) }),
@@ -715,21 +835,31 @@ local function App(props: Types.Props)
 				Name = "Body",
 				Position = UDim2.fromOffset(16, 68),
 				Size = UDim2.new(1, -32, 1, -78 - statusHeight),
-				BackgroundColor3 = T.Theme.Tones.Deep.Bottom,
+				BackgroundColor3 = Color3.new(1, 1, 1),
 				BorderSizePixel = 0,
 			}, {
 				Corner = e("UICorner", { CornerRadius = UDim.new(0, 10) }),
-				Rail = e("UIStroke", { Color = T.Theme.Tones.Deep.Rail, Thickness = 1, Transparency = 0.35 }),
-				Content = e("Frame", {
+				-- Brighter Grimoire: a lifted plum panel instead of near-black.
+				Fill = e("UIGradient", { Rotation = 90, Color = ColorSequence.new(Kit.Tokens.Surface.Panel.Top, Kit.Tokens.Surface.Panel.Bottom) }),
+				Rail = e("UIStroke", { Color = Kit.Tokens.Surface.Panel.Rail, Thickness = 1.4, Transparency = 0.35 }),
+				Content = if summonTab then nil else e("Frame", {
 					ref = bodyRef,
 					Name = "Content",
 					Position = UDim2.fromOffset(8, 8),
 					Size = UDim2.new(1, -16, 1, -16),
 					BackgroundTransparency = 1,
 				}, view),
+				-- Summon tab: the legacy summon view (banner, pity, Summon 1x/10x) is parented here.
+				SummonHost = if summonTab then e("Frame", {
+					ref = summonHostRef,
+					Name = "SummonHost",
+					Position = UDim2.fromOffset(12, 10),
+					Size = UDim2.new(1, -24, 1, -20),
+					BackgroundTransparency = 1,
+				}) else nil,
 			}),
-			-- Status Bar (hidden on RESULT screen so message doesn't duplicate)
-			Status = if route ~= "RESULT" then e("Frame", {
+			-- Status Bar (hidden on RESULT screen so message doesn't duplicate, and on the Summon tab)
+			Status = if route ~= "RESULT" and not summonTab then e("Frame", {
 				Name = "Status",
 				Position = UDim2.new(0, 16, 1, -statusHeight),
 				Size = UDim2.new(1, -32, 0, statusHeight - 4),

@@ -23,6 +23,7 @@ local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormu
 
 local Theme = require(script.Parent:WaitForChild("Theme"))
 local Store = require(script.Parent:WaitForChild("Store"))
+local WindowManager = require(script.Parent.Parent:WaitForChild("WindowManager"))
 local Whistles = require(script.Parent:WaitForChild("Whistles"))
 local Components = require(script.Parent:WaitForChild("Components"))
 local HeroIndex = require(script.Parent:WaitForChild("HeroIndex"))
@@ -157,6 +158,15 @@ local function isFloorBossBannerVisible(): boolean
 	return banner ~= nil and banner:IsA("GuiObject") and banner.Visible
 end
 
+-- True when artifacts or heroes fill 90% or more of their backpack cap (the Backpack rail badge).
+local function backpackNearlyFull(profile: any): boolean
+	if not profile then return false end
+	local InventoryCapacity = require(Shared:WaitForChild("Util"):WaitForChild("InventoryCapacity"))
+	local artifacts = InventoryCapacity.ArtifactCount(profile) / math.max(1, InventoryCapacity.ArtifactCap(profile.FortressTree))
+	local heroes = InventoryCapacity.HeroCount(profile) / math.max(1, InventoryCapacity.HeroCap(profile.FortressTree))
+	return artifacts >= 0.9 or heroes >= 0.9
+end
+
 local function buildableNodes(profile: any): number
 	if not profile or not (profile.Unlocks and profile.Unlocks.FortressTree) then return 0 end
 	local tree = profile.FortressTree
@@ -232,6 +242,7 @@ local function rail(name: string, side: "Left" | "Right", top: number, bottom: n
 	for i, b in buttons do
 		b.Order = i
 		b.Size = size
+		b.TipSide = if side == "Left" then "Right" else "Left"
 		children["B" .. i] = e(Components.RailButton, b)
 	end
 	return e("Frame", {
@@ -252,6 +263,12 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 	local _, setRevision = React.useState(0)
 	local _, setTick = React.useState(0)
 	local screen, setScreen = React.useState(props.Root.AbsoluteSize)
+	-- Re-render when any window opens or closes (the HUD currency bar follows the top window).
+	local _, setWindowTick = React.useState(0)
+	React.useEffect(function()
+		local conn = WindowManager.Changed:Connect(function() setWindowTick(function(n: number) return n + 1 end) end)
+		return function() conn:Disconnect() end
+	end, {})
 	local indexOpen, setIndexOpen = React.useState(false)
 	local indexInitialMode, setIndexInitialMode = React.useState("HEROES" :: "HEROES" | "ARTIFACTS")
 	local facilityOpen, setFacilityOpen = React.useState(nil :: string?)
@@ -521,6 +538,8 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 		{
 			Icon = "Backpack",
 			Label = "Backpack",
+			-- "!" when artifacts or heroes are at 90% of capacity (summons and drops start failing when full).
+			Badge = if backpackNearlyFull(profile) then "!" else nil,
 			Accent = Color3.fromRGB(243, 199, 119),
 			ButtonRef = backpackButton,
 			OnActivated = function()
@@ -577,6 +596,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 			Cooldown = Whistles.Remaining("Overdrive"),
 			CooldownTotal = Whistles.Cooldown.Overdrive,
 			Disabled = overdriveBlocked ~= nil,
+			DisabledReason = overdriveBlocked,
 			OnActivated = function()
 				Whistles.Fire("Overdrive")
 			end,
@@ -589,6 +609,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 			Cooldown = Whistles.Remaining("Recall"),
 			CooldownTotal = Whistles.Cooldown.Recall,
 			Disabled = recallBlocked ~= nil,
+			DisabledReason = recallBlocked,
 			OnActivated = function()
 				Whistles.Fire("Recall")
 			end,
@@ -707,7 +728,9 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 			Store.GuideAction("Resume")
 			closeGuide()
 		end }) else nil,
-		FocusCurrency = if modalFocus and profile and not (_G.IsSettingsOpen and _G.IsSettingsOpen()) then e("Frame", {
+		-- Over an open window, only when that window has no currency display of its own (Forge, Store,
+		-- Index and the Pit draw theirs or spend nothing): the HUD bar used to overlap their corners.
+		FocusCurrency = if modalFocus and profile and WindowManager.WantsHudCurrency() then e("Frame", {
 			Name = "ModalFocusCurrencyWrapper",
 			Position = UDim2.new(0, L.Edge, 1, -L.Edge),
 			AnchorPoint = Vector2.new(0, 1),

@@ -119,7 +119,8 @@ function Model.upgradeReason(snapshot: Snapshot, targetId: string?, materialIds:
 	local materials = Model.materials(snapshot, targetId, materialIds)
 	if #materials ~= #materialIds then return "Artifacts changed. Select eligible artifacts again." end
 	if #materials ~= rule.Donors then
-		return string.format("Choose %d more artifacts", math.max(0, rule.Donors - #materials))
+		local missing = math.max(0, rule.Donors - #materials)
+		return string.format("Choose %d more %s to consume", missing, if missing == 1 then "weapon" else "weapons")
 	end
 	if snapshot.Gold < rule.Gold then return "Not enough Gold" end
 	if snapshot.Gems < rule.Gems then return "Not enough Gems" end

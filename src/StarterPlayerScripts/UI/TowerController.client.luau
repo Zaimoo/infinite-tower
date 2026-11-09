@@ -20,6 +20,8 @@ local ModalFit = require(script.Parent:WaitForChild("ModalFit"))
 local GildedGrimoire = require(RS.Shared.Util.GildedGrimoire)
 local GrimoireIcons = require(RS.Shared.Util.GrimoireIcons)
 local UIAssets = require(script.Parent:WaitForChild("UIAssets"))
+local Kit = require(script.Parent:WaitForChild("Kit"))
+local StatBalance = require(RS.Shared.Config.StatBalance)
 local remotes = RS:WaitForChild("Remotes"):WaitForChild("TowerRemotes")
 local Store = require(script.Parent:WaitForChild("Hud"):WaitForChild("Store"))
 
@@ -779,7 +781,25 @@ local visitBtn = createOrnateButton(actionRow, "VISIT FLOOR", 1, true, function(
 	local maxAllowed = getMaxAllowedFloor()
 	if selected > maxAllowed then
 		lastFeedback = string.format("Floor %d is locked! Slay Floor %d Boss first.", selected, selected - 1)
+		Kit.Notify.Push("warn", lastFeedback :: string)
 		render()
+		return
+	end
+	-- Under the recommended power: ask first (plan §6, Soft), naming the gap.
+	local profile = _G.CurrentProfile
+	local recommended = floors.RecommendedPower(selected)
+	local mine = if profile then profile.SquadPower or 0 else 0
+	if Kit.Rules.ConfirmTier("VISIT_FLOOR", { SquadPower = mine, Recommended = recommended }) ~= "None" then
+		local floorToVisit = selected
+		Kit.Confirm.Ask({
+			Tier = "Soft",
+			Title = string.format("Visit Floor %d under-powered?", floorToVisit),
+			Body = string.format("Your squad has %s power; this floor recommends %s (%s short). Your heroes may fall into a coma.",
+				StatBalance.Format(mine), StatBalance.Format(recommended), StatBalance.Format(recommended - mine)),
+			ConfirmText = "Visit anyway",
+			SessionKey = "VISIT_UNDERPOWERED",
+			OnConfirm = function() request("VISIT", floorToVisit) end,
+		})
 		return
 	end
 	request("VISIT", selected)
@@ -789,6 +809,7 @@ local assignBtn = createOrnateButton(actionRow, "ASSIGN SQUAD", 2, false, functi
 	local maxAllowed = getMaxAllowedFloor()
 	if selected > maxAllowed then
 		lastFeedback = string.format("Cannot assign squad to locked Floor %d!", selected)
+		Kit.Notify.Push("warn", lastFeedback :: string)
 		render()
 		return
 	end
@@ -1357,7 +1378,7 @@ UserInputService.InputChanged:Connect(function(input: InputObject, processed: bo
 	end
 end)
 
--- Keyboard hotkey: [V] toggles squad bird's-eye cam, [Esc] exits
+-- Keyboard hotkey: [V] toggles squad bird's-eye cam, [Backspace] exits
 UserInputService.InputBegan:Connect(function(input: InputObject, processed: boolean)
 	if processed then return end
 	if input.KeyCode == Enum.KeyCode.V then
@@ -1365,7 +1386,7 @@ UserInputService.InputBegan:Connect(function(input: InputObject, processed: bool
 		if panel.Visible then return end
 		if _G.IsAnyMasterModalOpen and _G.IsAnyMasterModalOpen() then return end
 		toggleViewSquad()
-	elseif input.KeyCode == Enum.KeyCode.Escape or input.KeyCode == Enum.KeyCode.ButtonB then
+	elseif input.KeyCode == Enum.KeyCode.Backspace or input.KeyCode == Enum.KeyCode.ButtonB then
 		if isViewingSquad then
 			setViewSquad(false)
 		end
@@ -1395,7 +1416,9 @@ end
 -- Keyboard / Gamepad Navigation
 UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: boolean)
 	if not panel.Visible then return end
-	if input.KeyCode == Enum.KeyCode.Escape or input.KeyCode == Enum.KeyCode.ButtonB then
+	if input.KeyCode == Enum.KeyCode.Backspace or input.KeyCode == Enum.KeyCode.ButtonB then
+		-- Backspace while typing (chat, a search box) edits text; it doesn't close the selector.
+		if gameProcessed or UserInputService:GetFocusedTextBox() ~= nil then return end
 		closeSelector()
 		return
 	end
@@ -1442,6 +1465,7 @@ PromptService.PromptTriggered:Connect(function(prompt, who)
 			request("VISIT", nextFloor)
 		else
 			lastFeedback = string.format("Floor %d is locked! Slay Floor %d Boss first.", nextFloor, curFloor)
+			Kit.Notify.Push("warn", lastFeedback :: string)
 			openSelector()
 		end
 	end
@@ -1471,6 +1495,7 @@ remotes.Response.OnClientEvent:Connect(function(r)
 			lastFeedback = string.format("%s complete", act)
 		else
 			lastFeedback = string.format("%s failed: %s", act, tostring(r.ErrorCode))
+			Kit.Notify.Push("warn", lastFeedback :: string)
 		end
 		render()
 	end

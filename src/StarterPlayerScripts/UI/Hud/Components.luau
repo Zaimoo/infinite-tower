@@ -116,12 +116,13 @@ function Components.RailButton(props: {
 	Size: number,
 	AnchorPoint: Vector2?,
 	Position: UDim2?,
-	Badge: number?,
+	Badge: (number | string)?, -- a count, or a short marker like "!"
 	KeyHint: string?,
 	Cooldown: number?, -- seconds left
 	CooldownTotal: number?,
 	Disabled: boolean?,
-	DisabledReason: string?,
+	DisabledReason: string?, -- shown in a bubble on hover, or for a moment when tapped while disabled
+	TipSide: ("Left" | "Right")?, -- which side the bubble opens on (away from the screen edge)
 	Wiggle: boolean?, -- a short shake every few seconds (the Store button)
 	ButtonRef: any?,
 	OnActivated: () -> (),
@@ -129,6 +130,8 @@ function Components.RailButton(props: {
 	local Icons = require(script.Parent:WaitForChild("Icons"))
 	local scaleRef = React.useRef(nil)
 	local iconRef = React.useRef(nil)
+	local tipShown, setTipShown = React.useState(false)
+	local tipToken = React.useRef(0)
 	React.useEffect(function()
 		if not props.Wiggle then return nil end
 		local alive = true
@@ -150,6 +153,7 @@ function Components.RailButton(props: {
 	end, { props.Wiggle })
 	local remaining = props.Cooldown or 0
 	local dim = props.Disabled or remaining > 0
+	local reason = if props.Disabled then props.DisabledReason else nil
 	local size = props.Size
 	local labelH = math.floor(size * 0.36)
 	local function tween(scale: number, rot: number)
@@ -157,6 +161,16 @@ function Components.RailButton(props: {
 			TweenService:Create(scaleRef.current, TweenInfo.new(0.12, Enum.EasingStyle.Back), { Scale = scale }):Play()
 		end
 	end
+	-- Touch and gamepad have no hover: a tap on a blocked button shows the reason for a moment.
+	local function flashTip()
+		tipToken.current += 1
+		local token = tipToken.current
+		setTipShown(true)
+		task.delay(2.2, function()
+			if tipToken.current == token then setTipShown(false) end
+		end)
+	end
+	local tipLeft = props.TipSide == "Left"
 	return e("TextButton", {
 		Name = props.Name or (props.Icon .. "RailButton"),
 		ref = props.ButtonRef,
@@ -168,10 +182,64 @@ function Components.RailButton(props: {
 		Text = "",
 		AutoButtonColor = false,
 		Selectable = true,
-		[React.Event.Activated] = function() props.OnActivated() end,
-		[React.Event.MouseEnter] = function() tween(1.1, 0) end,
-		[React.Event.MouseLeave] = function() tween(1, 0) end,
+		[React.Event.Activated] = function()
+			if reason then
+				flashTip()
+				local UIFeel = require(script.Parent.Parent:WaitForChild("UIFeel"))
+				if iconRef.current then UIFeel.Deny(iconRef.current) else UIFeel.Sfx("Error") end
+			end
+			props.OnActivated()
+		end,
+		[React.Event.MouseEnter] = function()
+			tween(1.1, 0)
+			if reason then setTipShown(true) end
+		end,
+		[React.Event.MouseLeave] = function()
+			tween(1, 0)
+			tipToken.current += 1
+			setTipShown(false)
+		end,
+		[React.Event.SelectionGained] = function() if reason then setTipShown(true) end end,
+		[React.Event.SelectionLost] = function() setTipShown(false) end,
 	}, {
+		-- Why this button is off, in a gothic bubble beside the icon (never over the screen edge).
+		Tip = if reason and tipShown then e("TextLabel", {
+			Name = "DisabledReasonTip",
+			AnchorPoint = Vector2.new(if tipLeft then 1 else 0, 0.5),
+			Position = if tipLeft then UDim2.new(0, -6, 0, math.floor(size * 0.45)) else UDim2.new(1, 6, 0, math.floor(size * 0.45)),
+			Size = UDim2.fromOffset(0, 32),
+			AutomaticSize = Enum.AutomaticSize.X,
+			BackgroundColor3 = Grimoire.Tones.Deep.Top,
+			FontFace = Grimoire.Fonts.Body,
+			Text = reason,
+			TextColor3 = Grimoire.Text.Parchment,
+			TextSize = 15,
+			ZIndex = 20,
+		}, {
+			Corner = corner(8),
+			Ink = e("UIStroke", { Color = Grimoire.Ink, Thickness = 2.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
+			Pad = e("UIPadding", { PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) }),
+			Rail = e("Frame", {
+				Name = "Rail",
+				AnchorPoint = Vector2.new(if tipLeft then 1 else 0, 0.5),
+				Position = if tipLeft then UDim2.new(1, 9, 0.5, 0) else UDim2.new(0, -9, 0.5, 0),
+				Size = UDim2.new(0, 3, 1, -10),
+				BackgroundColor3 = Grimoire.Text.Bad,
+				BorderSizePixel = 0,
+				ZIndex = 21,
+			}, { Corner = corner(2) }),
+		}) else nil,
+		-- A small lock on blocked buttons (not on cooldowns, which show their seconds instead).
+		Lock = if reason and remaining <= 0 then e("Frame", {
+			Name = "BlockedLock",
+			AnchorPoint = Vector2.new(1, 1),
+			Position = UDim2.new(0.5, math.floor(size * 0.5), 0, size - math.floor(size * 0.1)),
+			Size = UDim2.fromOffset(math.floor(size * 0.36), math.floor(size * 0.36)),
+			BackgroundTransparency = 1,
+			ZIndex = 8,
+		}, {
+			Art = e(Icons.Icon, { Name = "Lock", Size = math.floor(size * 0.36) }),
+		}) else nil,
 		Scale = e("UIScale", { ref = scaleRef }),
 		Icon = e("Frame", { ref = iconRef, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0), Size = UDim2.fromOffset(size, size), BackgroundTransparency = 1 }, {
 			Art = e(Icons.Icon, { Name = props.Icon, Size = size, Dim = dim }),
@@ -198,7 +266,7 @@ function Components.RailButton(props: {
 		}) else nil,
 		-- Key chip (top-left) and badge (top-right), both outlined like the icons.
 		Key = if props.KeyHint then e("TextLabel", {
-			Position = UDim2.fromOffset(2, -2),
+			Position = UDim2.new(0.5, -math.floor(size / 2) - 6, 0, -4), -- on the icon's top-left corner, not the button edge
 			Size = UDim2.fromOffset(22, 22),
 			BackgroundColor3 = Color3.fromRGB(28, 22, 40),
 			FontFace = NUMBER_FONT,
@@ -210,13 +278,13 @@ function Components.RailButton(props: {
 			Corner = corner(6),
 			Stroke = e("UIStroke", { Color = Color3.fromRGB(255, 236, 180), Thickness = 1.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
 		}) else nil,
-		Badge = if props.Badge and props.Badge > 0 then e("TextLabel", {
+		Badge = if props.Badge and (type(props.Badge) == "string" or (props.Badge :: number) > 0) then e("TextLabel", {
 			AnchorPoint = Vector2.new(1, 0),
 			Position = UDim2.new(1, -2, 0, -4),
 			Size = UDim2.fromOffset(24, 24),
 			BackgroundColor3 = Color3.fromRGB(214, 34, 48),
 			FontFace = NUMBER_FONT,
-			Text = if props.Badge > 9 then "9+" else tostring(props.Badge),
+			Text = if type(props.Badge) == "string" then props.Badge elseif (props.Badge :: number) > 9 then "9+" else tostring(props.Badge),
 			TextColor3 = Color3.new(1, 1, 1),
 			TextSize = 14,
 			ZIndex = 7,
@@ -329,10 +397,13 @@ local function glass(props: { [string]: any }, children: { [string]: any }?)
 	for k, v in props do
 		if k ~= "Class" and k ~= "Radius" and k ~= "StrokeRef" then inst[k] = v end
 	end
+	-- Gothic HUD card (2026-11-09): ink outline and a top-lit plum gradient. No rail frame here,
+	-- because some cards hold a UIListLayout directly and a rail child would be laid out with it.
 	local kids: { [string]: any } = {
 		Corner = corner(props.Radius or G.Radius),
-		Stroke = e("UIStroke", { ref = props.StrokeRef, Color = G.Hairline, Transparency = G.HairlineTransparency, Thickness = 1,
-			ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
+		Stroke = e("UIStroke", { ref = props.StrokeRef, Color = G.Hairline, Transparency = G.HairlineTransparency, Thickness = G.StrokeThickness or 1,
+			LineJoinMode = Enum.LineJoinMode.Round, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
+		Lit = e("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(150, 140, 170)) }),
 	}
 	for k, v in children or {} do kids[k] = v end
 	return e(props.Class or "Frame", inst, kids)
@@ -344,7 +415,7 @@ local function glassText(props: { [string]: any }, children: { [string]: any }?)
 		BackgroundTransparency = 1,
 		FontFace = G.Fonts.Label,
 		TextColor3 = G.Text,
-		TextSize = 12,
+		TextSize = 14,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextTruncate = Enum.TextTruncate.AtEnd,
 		RichText = true,
@@ -364,7 +435,7 @@ local function glassBar(fraction: number, color: Color3, order: number, height: 
 		BorderSizePixel = 0,
 	}, {
 		Corner = corner(math.max(2, math.floor(height / 2))),
-		Stroke = stroke(G.Hairline, 1, 0.75),
+		Stroke = stroke(G.Hairline, 2, 0),
 		Fill = if fraction > 0 then e("Frame", {
 			Size = UDim2.fromScale(math.clamp(fraction, 0.02, 1), 1),
 			BackgroundColor3 = color,

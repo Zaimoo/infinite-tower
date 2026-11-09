@@ -119,4 +119,3 @@ do
 end
 
 print("ALL EquipBest unit tests passed successfully!")
-return true
