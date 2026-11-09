@@ -7,7 +7,7 @@ local DataStoreService = game:GetService("DataStoreService")
 local RunService = game:GetService("RunService")
 local ProfileCodec = require(script.Parent:WaitForChild("ProfileCodec"))
 
-local STORE_NAME = "PlayerProfiles_v2"
+local STORE_NAME = "PlayerProfiles_v3"
 local MAX_ATTEMPTS = 4
 local CLAIM_ATTEMPTS = 6 -- the previous server may still be saving on leave
 local CLAIM_RETRY_SECONDS = 5
