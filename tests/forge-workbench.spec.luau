@@ -178,7 +178,5 @@ test("EQUIP_BEST rejects when squad is already optimal", function()
 	p.Heroes.h1.Assignment = "SQUAD_SLOT_1"
 	local result = api.Execute(p, request("EQUIP_BEST"), true)
 	assert(not result.Ok, "Expected already optimal squad to return not Ok")
-end
-
 end)
 print(string.format("Forge authority: %d cases passed",count))

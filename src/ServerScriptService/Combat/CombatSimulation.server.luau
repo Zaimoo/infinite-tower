@@ -2784,8 +2784,8 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
         end
         profile.HighestClearedFloor = math.max(profile.HighestClearedFloor or 0, mob.FloorId)
         profile.MaxFloorReached = math.max(profile.MaxFloorReached or 0, mob.FloorId + 1)
+        if dm.ReportProgress then dm.ReportProgress(p, "FloorCleared", mob.FloorId) end
         dm.SyncProfile(p)
-        if dm.ReportProgress then dm.ReportProgress(p, "FloorCleared") end
         TowerRuns.AddEarnings(p, bossGold, bossGems, 0)
         TowerRuns.RecordFloorClear(p, mob.FloorId, firstClear)
         CombatSimulation.RefreshPlayerHeroStats(p) -- a new highest floor raises the Rift Attunement cap

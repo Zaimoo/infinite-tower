@@ -403,6 +403,7 @@ local function awardRelicPayout(player: Player, spec: any, scalar: number, rewar
 		profile.PitMaterials.PromotionStone = (profile.PitMaterials.PromotionStone or 0) + stones
 	end
 	TowerRuns.AddRelicPayout(player, gold, gems)
+	if dm.ReportProgress and (gold > 0 or gems > 0 or stones > 0) then dm.ReportProgress(player, "RelicBanked") end
 
 	-- Apex Cores / Calamity Heart: a small chance of a free Exalted Archon
 	if (spec.TierId == "CALAMITY_HEART" or (spec.BiomeTier and spec.BiomeTier == 4 and spec.BiomeIndex and spec.BiomeIndex >= 9)) and math.random() <= HEART_ARCHON_CHANCE then

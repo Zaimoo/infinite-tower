@@ -118,6 +118,7 @@ function C.Button(props: ButtonProps)
 		LayoutOrder = props.Order, Text = "", AutoButtonColor = false,
 		BackgroundColor3 = Color3.new(1, 1, 1),
 		BorderSizePixel = 0, Selectable = true, Active = true,
+		Interactable = not props.Disabled,
 		SelectionOrder = props.FocusOrder or props.Order or 0,
 		[React.Event.MouseEnter] = function() setHovered(true) end,
 		[React.Event.MouseLeave] = function() setHovered(false) end,

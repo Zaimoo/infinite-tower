@@ -188,6 +188,7 @@ local function commit(player: Player)
 		end end
 		if #records>1 then finish(player,"REJECTED","CARGO_CHANGED");return end
 	end
+	local sourceFloor = s.FloorId
 	local source=char:GetPivot()
 	local squadSnapshot=movingSquad and combat.CaptureSquad(player) or nil
 	local arrivalSafe = p.View and Service.GetSafety(r, r.Arrival.Position).CanBankCargo == true
@@ -254,6 +255,14 @@ local function commit(player: Player)
 	end
 	combat.BootstrapAll()
 	finish(player,"COMMITTED")
+	local dm = _G.DataManager
+	if p.View and dm and dm.ReportProgress then
+		if p.Action == "VISIT" then
+			dm.ReportProgress(player, if r.FloorId > 50 then "RaidEntered" else "FloorVisited", r.FloorId)
+		elseif r.FloorId == 0 and sourceFloor > 0 and sourceFloor <= 50 then
+			dm.ReportProgress(player, "TowerReturned")
+		end
+	end
 end
 local function take(s: any,control: boolean): boolean
 	local tk,at=control and "ControlTokens" or "Tokens",control and "ControlAt" or "TokenAt"
@@ -361,7 +370,7 @@ function Service.Request(player: Player,r: any)
 			if dm and dm.IsUnlocked then
 				local gate=if not dm.IsUnlocked(player,'Tower') then 'Tower' elseif id>=5 and not dm.IsUnlocked(player,'TowerFloor5') then 'TowerFloor5' else nil
 				if gate then
-					dm.SendToast(player,'🔒 '..dm.LockedMessage(gate),'WARN')
+					dm.SendToast(player,'🔒 '..dm.LockedMessage(gate, player),'WARN')
 					reject('SYSTEM_LOCKED')
 					return
 				end
@@ -529,6 +538,10 @@ function Service.ExitToOverworld(player: Player, targetPos: Vector3, isIsland: b
 		adapters.Combat.BootstrapAll()
 	end
 	publish()
+	local dm = _G.DataManager
+	if prevFloor > 0 and prevFloor <= 50 and dm and dm.ReportProgress then
+		dm.ReportProgress(player, "TowerReturned")
+	end
 end
 local function disconnectCargo(player: Player)
 	for _,a in pairs(adapters) do if a.DropCargo then a.DropCargo(player) end end

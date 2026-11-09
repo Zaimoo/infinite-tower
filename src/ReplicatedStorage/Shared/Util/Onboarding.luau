@@ -6,7 +6,8 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Steps = require(ReplicatedStorage.Shared.Config.OnboardingConfig)
 
-export type State = { StepIndex: number, StepProgress: number, CompletedSteps: { [string]: boolean } }
+export type Guide = { Enabled: boolean?, Facts: { [string]: boolean }, Snoozed: { [string]: number } }
+export type State = { StepIndex: number, StepProgress: number, CompletedSteps: { [string]: boolean }, Guide: Guide? }
 
 local Onboarding = {}
 
@@ -21,6 +22,39 @@ end
 
 function Onboarding.ActiveStep(state: State?): any
 	return if state then Steps[state.StepIndex] else nil
+end
+
+function Onboarding.EnsureGuide(state: State): Guide
+	local guide = state.Guide
+	if guide then return guide end
+	guide = { Facts = {}, Snoozed = {} }
+	state.Guide = guide
+	return guide
+end
+
+function Onboarding.HasReadySquad(profile: any, now: number): boolean
+	for _, hero in profile.Heroes or {} do
+		if string.match(hero.Assignment or "", "^SQUAD_SLOT_%d+$")
+			and (hero.ComaUntilTimestamp or 0) <= now and not hero.IsHardAuditComa then
+			return true
+		end
+	end
+	return false
+end
+
+function Onboarding.UpdateAccess(profile: any, ready: boolean)
+	local unlocks = profile.Unlocks
+	unlocks.Squad = true
+	if ready then unlocks.Tower = true end
+	if (profile.HighestClearedFloor or 0) >= 1 or (profile.MaxFloorReached or 0) >= 2 then
+		unlocks.Tower = true
+		unlocks.Forge = true
+		unlocks.Facilities = true
+		unlocks.FortressTree = true
+		unlocks.Pit = true
+	end
+	-- The normal floor-access check still requires MaxFloorReached to be at least 5.
+	if (profile.MaxFloorReached or 0) >= 5 then unlocks.TowerFloor5 = true end
 end
 
 function Onboarding.IsUnlocked(unlocks: { [string]: boolean }?, key: string): boolean

@@ -1261,7 +1261,7 @@ local function FacilityPanel(props: { Facility: string, Profile: any, Width: num
 				Gain = if not full and resting == 0 then Body({ Position = UDim2.fromOffset(0, 42), Size = UDim2.new(1, 0, 0, 14), TextSize = 11,
 					TextXAlignment = Enum.TextXAlignment.Center, TextColor3 = TEXT.Good, Text = gainText(hero), ZIndex = 4 }) else nil,
 			}),
-			Action = button({ AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0), Size = UDim2.fromOffset(118, 40), ZIndex = 4,
+			Action = button({ Name = if actionText == "ASSIGN" then "GuideAssignWorker" else "WorkerAction", AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0), Size = UDim2.fromOffset(118, 40), ZIndex = 4,
 				[React.Event.Activated] = act }, actionTone, actionText, 14),
 		})
 	end
@@ -1325,6 +1325,7 @@ local function FacilityPanel(props: { Facility: string, Profile: any, Width: num
 		[React.Event.Activated] = function() props.OnClose() end,
 	}, {
 		Window = Panel({
+			Name = `GuideFacility_{props.Facility}`,
 			Class = "TextButton", Text = "", AutoButtonColor = false, -- swallows clicks so they don't reach the scrim
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			Position = UDim2.fromScale(0.5, 0.5),
