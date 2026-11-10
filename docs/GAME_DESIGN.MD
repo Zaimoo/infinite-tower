@@ -21,7 +21,7 @@ In traditional gacha/simulator games, 95% of summons are discarded as worthless 
    - **Up to 5 Deployed Heroes** (one slot at the start; the Fortress Tree's Command branch opens slots 2–5, see §4.3) follow the Master onto floors 1–50 of the **Infinite Tower** or are assigned to a floor on their own. Heroes charge an in-combat **Skill Gauge** (0 to 100) through a 3-tier attack cadence (Basic -> Basic -> Special -> Skill Attack at 100), and risk being **Downed** (until the squad changes floor, goes home or wipes) if left inside lethal AoE telegraphs.
    - **Benched Heroes** rest on the player's **Fortress Plot** or work in its support facilities (§4.3).
    - **Zero Dead Pulls:** Duplicate heroes across all star ranks are fed into the **Synthesis Chamber** (`SynthesisController.luau`) for EXP leveling to the star cap (Lv. 10 at every star), or converted into Soul Essence that crafts the Promotion Stones the **Promotion Altar** (`PromotionController.luau`) needs for **Star Promotion** ($1★ \to 7★$, §4.2a). Both heroes and artifacts feature a baseline inventory space limit of **50 items**, raised by the Fortress Tree's Storage branch (§4.3). Heroes working in a support facility are out of the backpack and don't count toward the hero cap.
-   - **Dual Hero Banners & Artifact Gacha:** At the **Summoning Altar**, players spend Gems on two distinct hero banners (Call of the Rift `100` / `900` Gems, A Star's Arrival `200` / `1,800` Gems for 1x / 10x): **Call of the Rift** (Permanent Banner featuring 6 stars: $1★ \to 6★$) and **A Star's Arrival** (Limited Time Banner featuring 1 character per star across all 7 stars: $1★ \to 7★$). In addition, Masters visit the **Blacksmith Forge** (`ForgeController.luau`) to summon equippable archetype weapons using **Gold** (`5,000 Gold` single / `45,000 Gold` 10x) across an **84-Weapon Roster** (2 weapons per archetype per rarity tier across 7 launch tiers, featuring Standard $1.00\times$ and Enhanced $1.20\times$ variants). All summoned weapons drop at **1★** baseline with inherent rarity tiers. At the Forge, donor weapons of the same rarity and star rank (regardless of weapon type), plus Gold, are used for **Star Ascension** ($1★ \to 7★$), scaling base stats up to **`16.00x`**, while unneeded artifacts can be **sold for Gold** to manage inventory limits.
+   - **Dual Hero Banners & Artifact Gacha:** At the **Summoning Altar**, players spend Gems on two distinct hero banners (Call of the Rift `100` / `900` Gems, A Star's Arrival `200` / `1,800` Gems for 1x / 10x): **Call of the Rift** (Permanent Banner featuring 7 stars: $1★ \to 7★$) and **A Star's Arrival** (Limited Time Banner featuring 1 character per star across all 7 stars: $1★ \to 7★$). In addition, Masters visit the **Blacksmith Forge** (`ForgeController.luau`) to summon equippable archetype weapons using **Gold** (`5,000 Gold` single / `45,000 Gold` 10x) across an **84-Weapon Roster** (2 weapons per archetype per rarity tier across 7 launch tiers, featuring Standard $1.00\times$ and Enhanced $1.20\times$ variants). All summoned weapons drop at **1★** baseline with inherent rarity tiers. At the Forge, donor weapons of the same rarity and star rank (regardless of weapon type), plus Gold, are used for **Star Ascension** ($1★ \to 7★$), scaling base stats up to **`16.00x`**, while unneeded artifacts can be **sold for Gold** to manage inventory limits.
 
 2. **Tactical Master Agency Over AFK Whaling:**
    - The Master carries no personal weapon. Instead, the Master directs squads through battlefield commands—**`[Click / Tap]` Focus Target**, **`[Q]` Overdrive Whistle**, and **`[E]` Emergency Recall Whistle**—while physically hauling heavy, high-value **Relics** back to a Sanctuary or their plot.
@@ -56,7 +56,7 @@ flowchart TD
     end
 
     subgraph Meso["15-Minute Loop: Summoning, Synthesis, Promotion & Forge"]
-        T1["Gather Gold & Gems from Drops, Relics & Tower Floors"] --> T2["Summoning Altar: Call of the Rift (1-6★ Perm) & A Star's Arrival (1-7★ Limited)"]
+        T1["Gather Gold & Gems from Drops, Relics & Tower Floors"] --> T2["Summoning Altar: Call of the Rift (1-7★ Perm) & A Star's Arrival (1-7★ Limited)"]
         T2 --> T3["Synthesis Chamber: Feed Duplicates for XP & Max Level Cap"]
         T1 --> T4["Blacksmith Forge Banner: 84 Weapons (5,000 Gold)"]
         T3 --> T5["Promotion Altar: Sacrifice Same-Rank Heroes for Star Promotion (1★ -> 7★)"]
@@ -99,7 +99,7 @@ flowchart TD
 1. **Roster Upkeep (Every 3–5 Minutes):**
    - Swap heroes between the squad, the bench and the support facilities at the War Banner and the facility panels.
 2. **Summoning & Gacha Pulls (Every 5–10 Minutes):**
-   - Spend Gems at the **Summoning Altar** on either **Call of the Rift** (Common–Legendary Permanent Banner) or **A Star's Arrival** (Common–Mythical Limited Time Rate-Up Banner, featuring 1 character per rarity tier, each summoned at 1★). In addition, visit the **Blacksmith Forge** (`ForgeController.luau`) to summon weapons using **Gold** (`5,000 Gold` single / `45,000 Gold` 10x) from an **84-Weapon Roster** (2 weapons per archetype per rarity tier across 7 tiers) with 120-pull Exalted+ hard pity, or liquidate unneeded gear for Gold.
+   - Spend Gems at the **Summoning Altar** on either **Call of the Rift** (Common–Mythical Permanent Banner) or **A Star's Arrival** (Common–Mythical Limited Time Rate-Up Banner, featuring 1 character per rarity tier, each summoned at 1★). In addition, visit the **Blacksmith Forge** (`ForgeController.luau`) to summon weapons using **Gold** (`5,000 Gold` single / `45,000 Gold` 10x) from an **84-Weapon Roster** (2 weapons per archetype per rarity tier across 7 tiers) with 120-pull Exalted+ hard pity, or liquidate unneeded gear for Gold.
    - **Synthesis Chamber (`SynthesisController.luau`):** Place a recipient hero and fodder heroes to level it up to the current star's cap (Lv. 10).
    - **Promotion Altar (`PromotionController.luau`):** When a hero reaches max level, spend Gold and Promotion Stones to permanently ascend its star rating ($1★ \to 7★$, §4.2a). The hero's inherent rarity never changes.
 3. **Artifact Star Ascension & Liquidation at the Blacksmith Forge (`ForgeController.luau`):**
@@ -376,18 +376,21 @@ Dread fades in by distance from the tower centre: none beyond 470 studs (the clo
 
 Hero summoning at the **Summoning Altar** (`FacilityController.luau`) is partitioned into two distinct banners. Each banner rolls an **inherent rarity tier**, and each tier holds exactly one hero. Every hero is summoned at **1★**, whatever its tier, and its rarity sets how strong that 1★ hero is (see *Inherent Hero Rarity* below). Stars are earned only by promotion at The Pit. All hero odds can be raised by the **God's Blessing** facility (Section 4.3, Facility D).
 
-#### 1. Permanent Banner: "Call of the Rift" (Rarity Tiers 1–6)
-The permanent standard banner features exactly **one character for each rarity from Common to Legendary** (6 total heroes):
+#### 1. Permanent Banner: "Call of the Rift" (Rarity Tiers 1–7)
+The permanent standard banner features exactly **one character for each rarity from Common to Mythical** (7 total heroes):
 - **Summon Cost:** `100 Gems` per single pull (`900 Gems` for 10x pull).
-- **Pity System:** Guaranteed **Exalted or higher** hero within **120 summons** (`MaxPity = 120`, `PityMinTier = 5`). The pity pull is split by the banner's Exalted/Legendary rates (with God's Blessing luck): about 69% Ignis, 31% Edis. Any natural Exalted+ pull resets the counter. This banner has no featured hero and no 50/50 rule.
+- **Pity System:** Guaranteed **Exalted or higher** hero within **120 summons** (`MaxPity = 120`, `PityMinTier = 5`). The pity pull is split by the banner's Exalted/Legendary/Mythical rates (with God's Blessing luck): about 65% Ignis, 29% Edis, 6% Han. Any natural Exalted+ pull resets the counter. This banner has no featured hero and no 50/50 rule.
 - **10-Pull Guarantee:** Every 10x pull includes at least one **Rare** or higher hero.
 - **Drop Rates:**
-  - `Common (75.17%)`: **Han**
+  - `Common (75.14%)`: **Gide** or **Shurn**
   - `Uncommon (18.0%)`: **Aaron**
   - `Rare (4.7%)`: **Catio**
-  - `Superior (1.65%)`: **Valeria**
-  - `Exalted (0.33%)`: **Ignis**
+  - `Superior (1.65%)`: **Aaron / Catio (Pool fallback)**
+  - `Exalted (0.33%)`: **Ignis** or **Diran**
   - `Legendary (0.15%)`: **Edis Callen** (the same Gems per copy as Solaris on A Star's Arrival: half the rate at half the price)
+  - `Mythical (0.03%)`: **Han** (the same Gems per copy as Astrea, by the same rule)
+
+**Han's rework.** Han used to be this banner's Common and the starter hero. He is now its Mythical, and **Gide** is the Common and the starter: a new Master begins with Gide in squad slot 1 (locked) and Catio on the bench. Hans summoned before the rework keep their saved Common rarity and stats, and only take the new look. Old-save migrations pin Han to Common for the same reason (`ProfileMigrations.LEGACY_RARITY`). His base stats and kit are unchanged; only the rarity multiplier differs.
 
 #### 2. Limited Time Banner: "A Star's Arrival" (Rarity Tiers 1–7)
 The inaugural limited-time rate-up banner features exactly **one character for each rarity from Common to Mythical** (7 total heroes):
@@ -400,7 +403,7 @@ The inaugural limited-time rate-up banner features exactly **one character for e
   - `Uncommon (24.0%)`: **Velkist**
   - `Rare (9.5%)`: **Eolka**
   - `Superior (3.8%)`: **Morrigan**
-  - `Exalted (1.2%)`: **Sovereign Archon**
+  - `Exalted (1.2%)`: **Sovereign Archon** or **Valeria**
   - `Legendary (0.30%)`: **Solaris**
   - `Mythical (0.06%)`: **Astrea (Featured Starlight Mythical)**
 
@@ -423,16 +426,19 @@ Every summoned hero rolls a `QualityScalar` $q \in [0.90, 1.15]$ applied to thei
 
 | Banner | Hero | Rarity / Summoned Star | Archetype | Base HP / ATK | Native HP / ATK | Base / Native Labor |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Call of the Rift** | **Han** | **Common (1) / 1★** | Striker | `300` / `40` | `300` / `40` | `14` / `14.0` |
+| **Call of the Rift** | **Gide** | **Common (1) / 1★** | Miner | `340` / `36` | `340` / `36` | `18` / `18.0` |
+| **Call of the Rift** | **Shurn** | **Common (1) / 1★** | Scholar | `220` / `46` | `220` / `46` | `18` / `18.0` |
 | **Call of the Rift** | **Aaron** | **Uncommon (2) / 1★** | Vanguard | `450` / `28` | `1,823` / `113` | `16` / `24.2` |
 | **Call of the Rift** | **Catio** | **Rare (3) / 1★** | Miner | `280` / `24` | `4,593` / `394` | `20` / `45.7` |
-| **Call of the Rift** | **Valeria** | **Superior (4) / 1★** | Healer | `260` / `18` | `8,636` / `598` | `18` / `31.1` |
 | **Call of the Rift** | **Ignis** | **Exalted (5) / 1★** | Vanguard | `450` / `26` | `60,534` / `3,498` | `16` / `41.8` |
+| **Call of the Rift** | **Diran** | **Exalted (5) / 1★** | Healer | `300` / `22` | `40,356` / `2,959` | `20` / `52.2` |
 | **Call of the Rift** | **Edis Callen** | **Legendary (6) / 1★** | Striker | `320` / `62` | `174,339` / `33,778` | `16` / `63.2` |
+| **Call of the Rift** | **Han** | **Mythical (7) / 1★** | Striker | `300` / `40` | `661,944` / `88,259` | `14` / `83.6` |
 | **A Star's Arrival** | **Jenna** | **Common (1) / 1★** | Marksman | `210` / `34` | `210` / `34` | `13` / `13.0` |
 | **A Star's Arrival** | **Velkist** | **Uncommon (2) / 1★** | Striker | `300` / `44` | `1,215` / `178` | `14` / `21.2` |
 | **A Star's Arrival** | **Eolka** | **Rare (3) / 1★** | Scholar | `230` / `52` | `3,773` / `853` | `22` / `50.3` |
 | **A Star's Arrival** | **Morrigan** | **Superior (4) / 1★** | Vanguard | `450` / `24` | `14,947` / `797` | `16` / `27.6` |
+| **A Star's Arrival** | **Valeria** | **Exalted (5) / 1★** | Healer | `260` / `18` | `34,975` / `2,421` | `18` / `47.0` |
 | **A Star's Arrival** | **Archon** | **Exalted (5) / 1★** | Striker | `350` / `65` | `47,082` / `8,744` | `25` / `65.3` |
 | **A Star's Arrival** | **Solaris** | **Legendary (6) / 1★** | Scholar | `240` / `55` | `130,754` / `29,965` | `22` / `86.9` |
 | **A Star's Arrival** | **Astrea** | **Mythical (7) / 1★** | Marksman | `230` / `48` | `507,491` / `105,911` | `23` / `137.4` |
@@ -610,10 +616,10 @@ Each hero's kit is resolved by `HeroId` in `ArchetypeCombatSkills.HeroProfiles` 
 
 | # | Hero | Rarity | Archetype | Basic (+5 SP) | Special (+10 SP, 3rd Hit) | Skill / Ultimate (100 SP) |
 | :---: | :--- | :--- | :--- | :--- | :--- | :--- |
-| 1 | **Han** (`hero_han`) | Common | Striker | Gale Slash | Crescent Cross-Cut | Relentless Blade Flurry |
+| 1 | **Han** (`hero_han`) | Mythical | Striker | Gloam Cut | Nightfall Fangs | Abyssal Wake |
 | 2 | **Aaron** (`hero_aaron`) | Uncommon | Vanguard | Bastion Strike | Aegis Shield Bash | Fortress Bulwark |
 | 3 | **Catio** (`hero_catio`) | Rare | Miner | Pickaxe Cleave | Resonance Tremor | Crystalline Excavation |
-| 4 | **Valeria** (`hero_valeria`) | Superior | Healer | Emerald Bolt | Verdant Mend | Sanctuary Miracle |
+| 4 | **Valeria** (`hero_valeria`) | Exalted | Healer | Emerald Bolt | Verdant Mend | Sanctuary Miracle |
 | 5 | **Ignis** (`hero_ignis`) | Exalted | Vanguard | Molten Cleave | Magma Breaker | Infernal Juggernaut |
 | 6 | **Jenna** (`hero_jenna`) | Common | Marksman | Wind-Step Shot | Piercing Gale Volley | Sylphid Arrow Storm |
 | 7 | **Velkist** (`hero_velkist`) | Uncommon | Striker | Twin Fang Cut | Shadow Rend | Phantom Lotus Execution |
@@ -623,6 +629,11 @@ Each hero's kit is resolved by `HeroId` in `ArchetypeCombatSkills.HeroProfiles` 
 | 11 | **Solaris** (`hero_solaris`) | Legendary | Scholar | Solar Ray | Corona Arc | Supernova Starfall |
 | 12 | **Astrea** (`hero_astrea`) | Mythical | Marksman | Astral Arrow | Nebula Piercer | Constellation Judgment |
 | 13 | **Edis Callen** (`hero_edis`) | Legendary | Striker | Ravenclaw Cut | Umbral Crosscut | Midnight Requiem |
+| 14 | **Gide** (`hero_gide`) | Common | Miner | Ironvein Chop | Bedrock Sundering | Tunnelbreaker Fault |
+| 15 | **Shurn** (`hero_shurn`) | Common | Scholar | Cinder Spark | Arcing Hearthbolt | Dawnstone Convergence |
+| 16 | **Diran** (`hero_diran`) | Exalted | Healer | Runeward Bolt | Compass Mend | Vitality Covenant |
+
+**Han's kit** keeps the Striker numbers but lands them differently. *Nightfall Fangs* is a leaping stab with both daggers reversed: its `1.60x` hit lands as **2 blows** `0.1s` apart, each with its own bonus-crit roll. *Abyssal Wake* is a dash through the target that leaves a circle of lingering slashes: its `3.20x` burst is split over **5 waves** `0.12s` apart, each hitting every enemy within `12 studs` of the aim point. His effects are smoky black and cold blue (`PLUNGE` and `WAKE` in `SkillVfxCatalog`).
 
 #### 3. Archetype Base Mechanics (Kit Defaults)
 

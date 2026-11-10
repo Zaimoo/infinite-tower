@@ -171,6 +171,9 @@ export type SimHero = {
 	AttackCount: number?,
 	BarrierHP: number?,
 	BarrierExpires: number?,
+	BaseMaxHP: number?,
+	MaxHPBuffMult: number?,
+	MaxHPBuffExpires: number?,
 	TauntedByNetId: number?,
 	TauntExpires: number?,
 	DuelId: number?, -- set while the hero fights in a bounty duel
@@ -539,8 +542,10 @@ function CombatSimulation.RebuildPlayerSquad(player: Player)
 			existing.Stars = heroData.Stars
 			existing.Level = heroData.Level
 			existing.EffectiveATK = effATK
-			existing.MaxHP = effHP
-			existing.CurrentHP = math.min(existing.CurrentHP, effHP)
+			existing.BaseMaxHP = effHP
+			local hpBuffMult = if (existing.MaxHPBuffExpires or 0) > os.clock() then (existing.MaxHPBuffMult or 1) else 1
+			existing.MaxHP = math.round(effHP * hpBuffMult)
+			existing.CurrentHP = math.min(existing.CurrentHP, existing.MaxHP)
 			existing.Stamina = heroData.CurrentStamina or existing.Stamina or 0.0
 			existing.SlotIndex = slotIndex
 			existing.AttackInterval = effInterval
@@ -570,6 +575,7 @@ function CombatSimulation.RebuildPlayerSquad(player: Player)
 				Yaw = 0,
 				CurrentHP = effHP,
 				MaxHP = effHP,
+				BaseMaxHP = effHP,
 				EffectiveATK = effATK,
 				AttackRange = heroData.AttackRange or 6,
 				AttackInterval = effInterval,
@@ -1236,7 +1242,10 @@ local function startDuel(owner: Player, contest: LootDuel.Contest?): (boolean, s
 				local f = duelCap / power
 				h.EffectiveATK = math.max(1, math.round(h.EffectiveATK * f))
 				h.MaxHP = math.max(1, math.round(h.MaxHP * f))
+				h.BaseMaxHP = h.MaxHP
 				h.CurrentHP = math.min(h.MaxHP, math.max(1, math.round(h.CurrentHP * f)))
+			else
+				h.BaseMaxHP = h.MaxHP
 			end
 			HeroNavigation.Clear(h)
 			h.DuelId, h.DuelSide = id, side
@@ -1247,6 +1256,7 @@ local function startDuel(owner: Player, contest: LootDuel.Contest?): (boolean, s
 			h.AttackCooldown = 0.4
 			h.PacifiedUntil = 0
 			h.BarrierHP, h.BarrierExpires = 0, 0
+			h.MaxHPBuffMult, h.MaxHPBuffExpires = nil, nil
 			h.EntityGeneration += 1
 			for _, other in pairs(ActiveHeroesByNetId) do
 				if other.TargetNetId == h.NetId and other.DuelId ~= id then other.TargetNetId = nil end
@@ -1318,6 +1328,14 @@ local function stepDuelHero(simHero: SimHero, dt: number, now: number)
 		end
 		simHero.TauntedByNetId = nil
 		simHero.TauntExpires = nil
+	end
+	if simHero.MaxHPBuffExpires and now >= simHero.MaxHPBuffExpires then
+		simHero.MaxHPBuffExpires = nil
+		simHero.MaxHPBuffMult = nil
+		if simHero.BaseMaxHP then
+			simHero.MaxHP = simHero.BaseMaxHP
+			simHero.CurrentHP = math.min(simHero.CurrentHP, simHero.MaxHP)
+		end
 	end
 	local enemies = liveDuelHeroes(duelSquad(duel, if simHero.DuelSide == "A" then "B" else "A"))
 	local target: SimHero? = nil
@@ -1438,6 +1456,8 @@ local function finishDuel(duel: Duel)
 			local saved = squad.Saved[h]
 			if saved then
 				h.EffectiveATK, h.MaxHP = saved.ATK, saved.MaxHP -- undo the duel's attunement clamp
+				h.BaseMaxHP = saved.MaxHP
+				h.MaxHPBuffMult, h.MaxHPBuffExpires = nil, nil
 			end
 			if saved and h.FloorId == saved.FloorId then
 				h.CurrentHP = math.min(saved.HP, h.MaxHP)
@@ -2152,7 +2172,13 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 			local effATK, effHP, _, interval = StatFormulas.GetEffectiveCombatStats(currentHero, false, false, artifact, trainingMult)
 			simHero.AttackInterval = interval
 			simHero.EffectiveATK = effATK
-			simHero.MaxHP = effHP
+			simHero.BaseMaxHP = effHP
+			local hpBuffMult = if (simHero.MaxHPBuffExpires or 0) > now then (simHero.MaxHPBuffMult or 1) else 1
+			if hpBuffMult == 1 then
+				simHero.MaxHPBuffMult = nil
+				simHero.MaxHPBuffExpires = nil
+			end
+			simHero.MaxHP = math.round(effHP * hpBuffMult)
 		end
 	end
 	simHero.CurrentHP = math.min(simHero.CurrentHP, simHero.MaxHP)

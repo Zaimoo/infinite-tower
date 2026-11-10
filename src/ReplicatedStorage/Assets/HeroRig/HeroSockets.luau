@@ -147,6 +147,37 @@ HeroSockets.SOCKETS = table.freeze({
 	}),
 } :: { [WeaponType]: { Socket } })
 
+-- Uniform size multiplier applied to a weapon type's prefab when it is equipped.
+HeroSockets.WEAPON_SCALE = table.freeze({
+	DAGGERS = 1.1,
+} :: { [string]: number })
+
+-- Studs the grip point slides towards the pommel (away from the blade) when equipped, so the
+-- hand closes lower on the handle and the crossguard clears the fist instead of clipping it.
+HeroSockets.GRIP_SHIFT = table.freeze({
+	DAGGERS = 0.15,
+} :: { [string]: number })
+
+-- Unit blade direction in the primary part's space: towards the Tip attachment, else the Blade part.
+local function bladeAxis(assembly: Model, primary: BasePart): Vector3?
+	local tip = primary:FindFirstChild("Tip")
+	local target: Vector3? = nil
+	if tip and tip:IsA("Attachment") then
+		target = tip.Position
+	else
+		for _, d in assembly:GetChildren() do
+			if d:IsA("BasePart") and (d.Name == "Blade" or d.Name == "BladeL") then
+				target = primary.CFrame:PointToObjectSpace(d.Position)
+				break
+			end
+		end
+	end
+	if not target or target.Magnitude < 1e-3 then
+		return nil
+	end
+	return target.Unit
+end
+
 -- Which prefab and weapon type an equipped artifact uses. `seeds` is ArtifactCatalog.Seeds
 -- (passed in so this stays pure). The artifact's own type wins over a mismatched hint.
 function HeroSockets.ResolvePrefab(artifactId: string?, weaponType: string?, seeds: { [string]: any }?): (string?, WeaponType?)
@@ -215,6 +246,12 @@ function HeroSockets.Equip(rig: Model, weapon: Model, weaponType: WeaponType): M
 		end
 	end
 
+	-- Per-type size tweak. ScaleTo is absolute, so re-equipping the same clone never compounds it.
+	local scale = HeroSockets.WEAPON_SCALE[weaponType]
+	if scale and scale ~= 1 then
+		weapon:ScaleTo(scale)
+	end
+
 	for _, socket in sockets do
 		local assembly: Instance? = if socket.Assembly then weapon:FindFirstChild(socket.Assembly) else weapon
 		assert(assembly and assembly:IsA("Model"), `HeroSockets: {weapon.Name} has no assembly {socket.Assembly}`)
@@ -228,6 +265,13 @@ function HeroSockets.Equip(rig: Model, weapon: Model, weaponType: WeaponType): M
 		assert(rigAttachment and rigAttachment:IsA("Attachment"), `HeroSockets: rig has no {socket.RigPart}.{socket.RigAttachment}`)
 
 		local c1 = weaponAttachment.CFrame
+		local shift = HeroSockets.GRIP_SHIFT[weaponType]
+		if shift and socket.WeaponAttachment == "Grip" then
+			local axis = bladeAxis(assembly, primary)
+			if axis then
+				c1 = CFrame.new(-axis * shift) * c1
+			end
+		end
 		if reverse and socket.WeaponAttachment == "Grip" then
 			c1 *= CFrame.Angles(0, 0, math.pi)
 		end

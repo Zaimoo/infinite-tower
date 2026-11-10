@@ -378,7 +378,8 @@ end)
 test("Low-quality mixed squad exceeds one billion DPS at 75 percent uptime", function()
 	local total = 0
 	for _, id in ipairs({ "hero_han", "hero_jenna", "hero_aaron", "hero_velkist", "hero_eolka" }) do
-		local h = { TemplateId = id, Stars = 7, Level = 70, QualityScalar = 0.9, CurrentStamina = 100 }
+		-- Han here is one summoned while he was Common: owned heroes keep their saved rarity.
+		local h = { TemplateId = id, Rarity = if id == "hero_han" then 1 else nil, Stars = 7, Level = 70, QualityScalar = 0.9, CurrentStamina = 100 }
 		local v = Stats.GetCombatSnapshot(h, { Star = 7, Rarity = 7 })
 		total += v.DPS
 	end

@@ -39,6 +39,12 @@ local function hero(id, seedId, fields)
 		ComaUntilTimestamp = 0, IsHardAuditComa = false, Assignment = "BENCHED",
 		Locked = false, Favorite = false,
 	}
+	-- The default test hero is a Han summoned while he was the Common starter: owned heroes keep
+	-- their saved rarity, so he still counts as Common now that the template is Mythical.
+	if seed.HeroId == "hero_han" then
+		value.Rarity = 1
+		value.BaseHP, value.BaseATK, value.BaseLabor = seed.BaseHP_1Star, seed.BaseATK_1Star, seed.BaseLabor_1Star
+	end
 	for key, valueOverride in pairs(fields or {}) do value[key] = valueOverride end
 	return value
 end
@@ -111,7 +117,7 @@ test("Every native seed uses canonical compounded growth without retired effects
 		for _, stars in ipairs({ 1, 4, 7 }) do
 			for level = 1, 10, 3 do
 				for _, quality in ipairs({ 0.9, 1, 1.15 }) do
-					local original = hero("native", seedId, { Stars = stars, Level = level, QualityScalar = quality })
+					local original = hero("native", seedId, { Stars = stars, Level = level, QualityScalar = quality, Rarity = seed.Rarity })
 					local atk, hp, dps = Stats.GetEffectiveCombatStats(original, false, false)
 					local expectedATK = math.round(seed.BaseATK_1Star * quality * rarityCombat * 1.5^(stars-1) * 1.08^((stars-1)*10+level-1))
 					local expectedHP = math.round(seed.BaseHP_1Star * quality * rarityCombat * 1.5^(stars-1) * 1.08^((stars-1)*10+level-1))
@@ -130,7 +136,7 @@ end)
 
 test("A 1-star pull keeps its old summoned power: 100% to Rare, 50% from Superior", function()
 	for seedId, seed in pairs(Catalog.Seeds) do
-		local now = Stats.GetHeroPower(hero("p", seedId, { Stars = 1 }))
+		local now = Stats.GetHeroPower(hero("p", seedId, { Stars = 1, Rarity = seed.Rarity }))
 		-- Old rule: summoned at star = tier, 3x per star, 1.35x per tier.
 		local g = 3^(seed.Rarity-1) * 1.35^(seed.Rarity-1)
 		local tick = math.ceil(seed.AttackInterval/Balance.TickSeconds-1e-10)*Balance.TickSeconds

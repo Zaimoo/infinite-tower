@@ -71,6 +71,8 @@ do
 	local projectileStyles = { SHOT = true, BOLT = true, VOLLEY = true, CHAIN = true, MEND = true, STORM = true }
 	-- Each archetype's ultimate is drawn by one style, and its radius matches the kit.
 	local skillStyle = { Marksman = "STORM", Vanguard = "BULWARK", Striker = "TEMPEST", Miner = "CRYSTALS", Scholar = "PILLAR", Healer = "SANCTUARY" }
+	-- A hero may draw its ultimate with its own style instead of its archetype's.
+	local heroSkillStyle = { hero_han = "WAKE" }
 	local function checkRecipe(name: string, recipe: any)
 		assert(recipe.Palette and recipe.Palette.Primary and recipe.Palette.Secondary and recipe.Palette.Core, name .. " palette")
 		for _, tier in { "Basic", "Special", "Skill" } do
@@ -89,7 +91,7 @@ do
 	end
 	local function checkRadius(name: string, recipe: any, archetype: string)
 		local profile = Skills.GetSkillProfile(archetype)
-		assert(recipe.Skill.Style == skillStyle[archetype], name .. " ultimate style matches " .. archetype)
+		assert(recipe.Skill.Style == (heroSkillStyle[name] or skillStyle[archetype]), name .. " ultimate style matches " .. archetype)
 		local radius = if recipe.Skill.Style == "STORM" then recipe.Skill.SigilRadius else recipe.Skill.Radius
 		near(radius, profile.Skill.Radius, name .. " ultimate radius matches the kit")
 	end
@@ -101,7 +103,7 @@ do
 		checkRecipe(heroId, recipe)
 		checkRadius(heroId, recipe, profile.Archetype)
 	end
-	assert(heroes == 13, "all thirteen heroes have VFX")
+	assert(heroes == 16, "all sixteen heroes have VFX")
 	for heroId in Catalog.Heroes do
 		assert(Skills.HeroProfiles[heroId], heroId .. " is a hero with a kit")
 	end

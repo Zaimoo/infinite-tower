@@ -160,6 +160,21 @@ do
 	assert(taunted.TauntExpires == 104, "vanguard taunt expires")
 	assert(tauntCallbackCalled, "taunt callback executed")
 	assert(farMob.TargetNetId == nil, "far mob not taunted")
+
+	-- Diran single-target heal + Max HP buff: prioritizes lowest-HP ally and buffs their Max HP.
+	local diran = { NetId = 70, Owner = owner, Archetype = "Healer", Position = Vector3.new(0, 0, 0), MaxHP = 1500, CurrentHP = 1500, State = "ATTACKING" }
+	local healthyAlly = { NetId = 71, Owner = owner, Archetype = "Vanguard", Position = Vector3.new(5, 0, 0), MaxHP = 2000, CurrentHP = 1800, State = "ATTACKING" }
+	local lowAlly = { NetId = 72, Owner = owner, Archetype = "Striker", Position = Vector3.new(8, 0, 0), MaxHP = 1000, CurrentHP = 200, State = "ATTACKING" }
+	local comaAlly = { NetId = 73, Owner = owner, Archetype = "Miner", Position = Vector3.new(4, 0, 0), MaxHP = 1000, CurrentHP = 0, State = "COMA" }
+	ctx = context({})
+	ctx.Squad = { d = diran, h = healthyAlly, l = lowAlly, c = comaAlly }
+	local dProfile = Skills.GetSkillProfile("hero_diran", "Healer")
+	impact = { FloorId = 1, RoomGeneration = 1, Atk = 150, DamageMult = dProfile.Skill.DamageMultiplier, Ticks = 1, Origin = diran.Position }
+	Effects.Resolve(ctx, { Impact = impact, Attacker = diran, Profile = dProfile, Tier = "SKILL", Tick = 1, Center = diran.Position })
+	assert(lowAlly.MaxHP == 1250 and lowAlly.BaseMaxHP == 1000 and lowAlly.MaxHPBuffExpires == 108, "Diran buffs lowest-HP ally Max HP by 25% for 8s")
+	assert(lowAlly.CurrentHP == 200 + 250 + math.round(1250 * 0.55), "Diran heals only the lowest-HP ally after applying the Max HP buff")
+	assert(healthyAlly.CurrentHP == 1800 and healthyAlly.MaxHP == 2000, "other allies are not healed or buffed by Diran's single-target skill")
+	assert(comaAlly.CurrentHP == 0, "comatose allies are not targeted")
 end
 
 -- Clip markers fire in order as an action advances (HeroAnimator.Step) -------------------------

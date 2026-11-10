@@ -113,12 +113,12 @@ local ARTIFACT_CATEGORIES = {
 }
 
 local WIELDERS_BY_TYPE = {
-	SWORD_SHIELD = "Aaron (2★), Morrigan (4★), Ignis (5★)",
-	DAGGERS = "Han (1★), Velkist (2★), Sovereign Archon (5★)",
-	AXE = "Catio (3★)",
-	BOW = "Jenna (1★), Astrea (7★)",
-	STAFF = "Eolka (3★), Solaris (6★)",
-	TOME = "Valeria (4★)",
+	SWORD_SHIELD = "Aaron (Uncommon), Morrigan (Superior), Ignis (Exalted)",
+	DAGGERS = "Han (Mythical), Velkist (Uncommon), Sovereign Archon (Exalted)",
+	AXE = "Gide (Common), Catio (Rare)",
+	BOW = "Jenna (Common), Astrea (Mythical)",
+	STAFF = "Shurn (Common), Eolka (Rare), Solaris (Legendary)",
+	TOME = "Valeria (Exalted), Diran (Exalted)",
 }
 
 local ARTIFACT_EMOJI: { [string]: string } = {
@@ -137,8 +137,15 @@ local CLOSE_ACTION = "HeroIndexClose"
 local function heroesOf(banner: any): { string }
 	local list = {}
 	for tier = banner.MaxStar, 1, -1 do
-		local id = banner.HeroesByStar[tier]
-		if id then table.insert(list, id) end
+		local pool = banner.HeroesPoolByStar and banner.HeroesPoolByStar[tier]
+		if pool and #pool > 0 then
+			for _, id in ipairs(pool) do
+				table.insert(list, id)
+			end
+		else
+			local id = banner.HeroesByStar[tier]
+			if id then table.insert(list, id) end
+		end
 	end
 	return list
 end

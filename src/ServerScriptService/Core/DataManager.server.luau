@@ -360,12 +360,10 @@ function DataManager.CreateHeroFromSeed(seedId: string, forceQuality: number?): 
 end
 
 local function createDefaultPlayerProfile(): PlayerProfile
-	local hanUUID, hanHero = DataManager.CreateHeroFromSeed("hero_han", 1.05)
-	hanHero.Assignment = "SQUAD_SLOT_1"
-	hanHero.Locked = true
-
-	local jennaUUID, jennaHero = DataManager.CreateHeroFromSeed("hero_jenna", 1.00)
-	jennaHero.Assignment = "BENCHED" -- squad slot 2 starts locked behind the Fortress Tree
+	-- Gide leads the starting squad (replacing Jenna; Han was the starter before he became Mythical).
+	local gideUUID, gideHero = DataManager.CreateHeroFromSeed("hero_gide", 1.05)
+	gideHero.Assignment = "SQUAD_SLOT_1"
+	gideHero.Locked = true
 
 	local catioUUID, catioHero = DataManager.CreateHeroFromSeed("hero_catio", 1.02)
 	catioHero.Assignment = "BENCHED"
@@ -383,14 +381,11 @@ local function createDefaultPlayerProfile(): PlayerProfile
 	local f4_UUID, f4_Art = DataManager.CreateArtifact("art_miner_pickaxe", 1, 1)
 	local f5_UUID, f5_Art = DataManager.CreateArtifact("art_novice_tome", 1, 1)
 
-	jennaHero.EquippedArtifactUUID = bowUUID
-	bowArt.EquippedHeroUUID = jennaUUID
+	gideHero.EquippedArtifactUUID = axeUUID
+	axeArt.EquippedHeroUUID = gideUUID
 
-	hanHero.EquippedArtifactUUID = daggerUUID
-	daggerArt.EquippedHeroUUID = hanUUID
-
-	catioHero.EquippedArtifactUUID = axeUUID
-	axeArt.EquippedHeroUUID = catioUUID
+	catioHero.EquippedArtifactUUID = f4_UUID
+	f4_Art.EquippedHeroUUID = catioUUID
 
 	return {
 		SchemaVersion = ProfileMigrations.CurrentSchema,
@@ -414,8 +409,7 @@ local function createDefaultPlayerProfile(): PlayerProfile
 		HeroLimitedFeaturedGuarantee = false, -- 50/50: set when an Exalted+ pull is not the featured hero
 
 		Heroes = {
-			[hanUUID] = hanHero,
-			[jennaUUID] = jennaHero,
+			[gideUUID] = gideHero,
 			[catioUUID] = catioHero,
 		},
 		Artifacts = {
@@ -429,7 +423,7 @@ local function createDefaultPlayerProfile(): PlayerProfile
 			[f4_UUID] = f4_Art,
 			[f5_UUID] = f5_Art,
 		},
-		DeployedSquadOrder = { hanUUID },
+		DeployedSquadOrder = { gideUUID },
 		Facilities = {
 			GuardPost = createDefaultFacility(1),
 			Market = createDefaultFacility(0),
@@ -745,7 +739,8 @@ local function rollBannerHero(bannerId: string?, luck: number, minTier: number?)
 	local banner = if isLimitedBanner(bannerId) then HeroCatalog.LimitedBanner else HeroCatalog.PermanentBanner
 	local rates = SummonLuck.ApplyLuck(banner.Rates :: { number }, luck)
 	local tier = if minTier then SummonLuck.RollAtLeast(rates, minTier, math.random()) else SummonLuck.Roll(rates, math.random())
-	local chosenId = banner.HeroesByStar[tier]
+	local bannerPool = (banner :: any).HeroesPoolByStar and (banner :: any).HeroesPoolByStar[tier]
+	local chosenId = if bannerPool and #bannerPool > 0 then bannerPool[math.random(1, #bannerPool)] else banner.HeroesByStar[tier]
 	if not chosenId then
 		local pool = HeroCatalog.PoolByStar[tier] or HeroCatalog.PoolByStar[1]
 		chosenId = pool[math.random(1, #pool)]
@@ -1534,6 +1529,37 @@ FacilityInteractEvent.OnServerEvent:Connect(function(player: Player, action: any
 		DataManager.SyncProfile(player)
 	end
 end)
+
+-- Studio-only chat command: `/summon <hero>` adds that hero to the caller's profile for free.
+-- `<hero>` is a HeroCatalog seed id, with or without the `hero_` prefix (`/summon edis`).
+if game:GetService("RunService"):IsStudio() then
+	local summonCommand = Instance.new("TextChatCommand")
+	summonCommand.Name = "DevSummonHero"
+	summonCommand.PrimaryAlias = "/summon"
+	summonCommand.Parent = game:GetService("TextChatService")
+	summonCommand.Triggered:Connect(function(source: TextSource, message: string)
+		local player = Players:GetPlayerByUserId(source.UserId)
+		local profile = player and ActiveProfiles[player]
+		if not player or not profile then return end
+
+		local arg = string.lower(string.match(message, "^%S+%s+(%S+)") or "")
+		local seedId = if HeroCatalog.Seeds[arg] then arg else "hero_" .. arg
+		if arg == "" or not HeroCatalog.Seeds[seedId] then
+			DataManager.SendToast(player, "Usage: /summon <hero>, e.g. /summon edis", "WARN")
+			return
+		end
+		local heroCap = InventoryCapacity.HeroCap(profile.FortressTree)
+		if InventoryCapacity.HeroCount(profile) + 1 > heroCap then
+			DataManager.SendToast(player, string.format("Hero inventory full! Maximum capacity is %d.", heroCap), "WARN")
+			return
+		end
+
+		local uuid, hero = DataManager.CreateHeroFromSeed(seedId)
+		profile.Heroes[uuid] = hero
+		DataManager.SendToast(player, string.format("[Dev] Summoned %s", hero.DisplayName), "SUCCESS")
+		DataManager.SyncProfile(player)
+	end)
+end
 
 function DataManager.GetMarketMultiplier(player: Player): number
 	local profile = ActiveProfiles[player]

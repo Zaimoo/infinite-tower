@@ -7,9 +7,10 @@
 -- Each tier names a Style, the SkillVfx player that draws it:
 --   Basic    SHOT (bow arrow), BOLT (caster projectile), SLASH (melee arc on the target)
 --   Special  VOLLEY (bow), CLEAVE (Vanguard cone), CROSS (Striker), TREMOR (Miner),
---            CHAIN (Scholar), MEND (Healer)
+--            CHAIN (Scholar), MEND (Healer), PLUNGE (two falling stabs; Han)
 --   Skill    STORM (bow), BULWARK (Vanguard), TEMPEST (Striker), CRYSTALS (Miner),
---            PILLAR (Scholar), SANCTUARY (Healer)
+--            PILLAR (Scholar), SANCTUARY (Healer), WAKE (a dash streak and a lingering circle of
+--            slashes, one wave per damage tick; Han)
 -- The other fields are that style's knobs; a style ignores the ones it does not use.
 
 export type Palette = {
@@ -37,7 +38,7 @@ export type TierRecipe = {
 	RainHeight: number?,
 	-- Area styles
 	Radius: number?, -- studs: cone reach, tremor, tempest, crystal field, healing circle, taunt
-	Slashes: number?, -- TEMPEST: slash arcs around the target
+	Slashes: number?, -- TEMPEST: slash arcs around the target. WAKE: slash arcs per wave
 	Spikes: number?, -- CRYSTALS / TREMOR: spikes at the centre (plus one under each hit enemy)
 	PillarHeight: number?, -- PILLAR: column height, studs
 	Linger: number?, -- seconds a ground effect or shell lasts after impact
@@ -67,8 +68,8 @@ SkillVfxCatalog.WeaponArchetype = table.freeze({
 -- Every Style SkillVfx knows, per tier.
 SkillVfxCatalog.Styles = table.freeze({
 	Basic = table.freeze({ SHOT = true, BOLT = true, SLASH = true }),
-	Special = table.freeze({ VOLLEY = true, CLEAVE = true, CROSS = true, TREMOR = true, CHAIN = true, MEND = true }),
-	Skill = table.freeze({ STORM = true, BULWARK = true, TEMPEST = true, CRYSTALS = true, PILLAR = true, SANCTUARY = true }),
+	Special = table.freeze({ VOLLEY = true, CLEAVE = true, CROSS = true, TREMOR = true, CHAIN = true, MEND = true, PLUNGE = true }),
+	Skill = table.freeze({ STORM = true, BULWARK = true, TEMPEST = true, CRYSTALS = true, PILLAR = true, SANCTUARY = true, WAKE = true }),
 })
 
 local function rgb(r: number, g: number, b: number): Color3
@@ -156,12 +157,12 @@ SkillVfxCatalog.Heroes = table.freeze({
 	},
 
 	-- Striker ----------------------------------------------------------------------------------
-	-- Gale Slash / Crescent Cross-Cut / Relentless Blade Flurry: pale wind green and white.
+	-- Gloam Cut / Nightfall Fangs / Abyssal Wake: smoky black and cold blue.
 	hero_han = {
-		Palette = { Primary = rgb(200, 255, 220), Secondary = rgb(120, 230, 170), Core = rgb(255, 255, 255) },
-		Basic = { Style = "SLASH", Scale = 0.8, Impact = 1.2 },
-		Special = { Style = "CROSS", Scale = 1.0, Impact = 1.8 },
-		Skill = { Style = "TEMPEST", Radius = 12, Slashes = 6, Impact = 3, Shake = 0.2 },
+		Palette = { Primary = rgb(70, 140, 255), Secondary = rgb(22, 24, 34), Core = rgb(170, 215, 255) },
+		Basic = { Style = "SLASH", Scale = 0.9, Impact = 1.3 },
+		Special = { Style = "PLUNGE", Scale = 1.15, Radius = 4, Impact = 2.2 },
+		Skill = { Style = "WAKE", Radius = 12, Slashes = 5, Linger = 0.35, Impact = 3.4, Shake = 0.3 },
 	},
 	-- Twin Fang Cut / Shadow Rend / Phantom Lotus Execution: shadow purple and lotus pink.
 	hero_velkist = {
@@ -187,6 +188,13 @@ SkillVfxCatalog.Heroes = table.freeze({
 	},
 
 	-- Miner ------------------------------------------------------------------------------------
+	-- Ironvein Chop / Bedrock Sundering / Tunnelbreaker Fault: brass gold and slate stone.
+	hero_gide = {
+		Palette = { Primary = rgb(215, 175, 95), Secondary = rgb(115, 110, 102), Core = rgb(255, 235, 190) },
+		Basic = { Style = "SLASH", Scale = 1.2, Impact = 1.8 },
+		Special = { Style = "TREMOR", Radius = 8, Spikes = 3, Impact = 2.4 },
+		Skill = { Style = "CRYSTALS", Radius = 18, Spikes = 6, Impact = 3, Linger = 1.4, Shake = 0.25 },
+	},
 	-- Pickaxe Cleave / Resonance Tremor / Crystalline Excavation: crystal cyan and stone.
 	hero_catio = {
 		Palette = { Primary = rgb(130, 235, 255), Secondary = rgb(150, 140, 120), Core = rgb(230, 255, 255) },
@@ -196,6 +204,13 @@ SkillVfxCatalog.Heroes = table.freeze({
 	},
 
 	-- Scholar ----------------------------------------------------------------------------------
+	-- Cinder Spark / Arcing Hearthbolt / Dawnstone Convergence: warm amber-gold and hearthstone glow.
+	hero_shurn = {
+		Palette = { Primary = rgb(255, 195, 95), Secondary = rgb(215, 130, 55), Core = rgb(255, 245, 215) },
+		Basic = { Style = "BOLT", Projectile = "ORB", Scale = 0.95, Arc = 0.1, Trail = 0.2, Impact = 1.8 },
+		Special = { Style = "CHAIN", Projectile = "ORB", Scale = 1.1, Arc = 0.05, Trail = 0.2, Impact = 2.1, Radius = 14 },
+		Skill = { Style = "PILLAR", Radius = 20, PillarHeight = 42, Linger = 3, Impact = 4.2, Shake = 0.28 },
+	},
 	-- Ruby Firebolt / Wildfire Chain / Crimson Hellfire Pillar: crimson and flame orange.
 	hero_eolka = {
 		Palette = { Primary = rgb(255, 60, 60), Secondary = rgb(255, 150, 40), Core = rgb(255, 225, 180) },
@@ -218,6 +233,13 @@ SkillVfxCatalog.Heroes = table.freeze({
 		Basic = { Style = "BOLT", Projectile = "ORB", Scale = 1.0, Arc = 0.15, Trail = 0.2, Impact = 1.6 },
 		Special = { Style = "MEND", Projectile = "ORB", Scale = 1.1, Arc = 0.1, Trail = 0.22, Impact = 2.0 },
 		Skill = { Style = "SANCTUARY", Radius = 25, PillarHeight = 16, Linger = 1.4, Impact = 3 },
+	},
+	-- Runeward Bolt / Compass Mend / Vitality Covenant: sage-emerald rune light and compass gold.
+	hero_diran = {
+		Palette = { Primary = rgb(110, 235, 165), Secondary = rgb(245, 210, 115), Core = rgb(245, 255, 235) },
+		Basic = { Style = "BOLT", Projectile = "ORB", Scale = 1.05, Arc = 0.14, Trail = 0.2, Impact = 1.8 },
+		Special = { Style = "MEND", Projectile = "ORB", Scale = 1.15, Arc = 0.1, Trail = 0.22, Impact = 2.1 },
+		Skill = { Style = "SANCTUARY", Radius = 25, PillarHeight = 18, Linger = 1.5, Impact = 3.2 },
 	},
 } :: { [string]: Recipe })
 

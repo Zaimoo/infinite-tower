@@ -157,8 +157,12 @@ test("Phase 4: every launch hero is summoned at 1 star and its rarity only scale
 	assert(HeroCatalog.RarityName(1) == "Common" and HeroCatalog.RarityName(7) == "Mythical")
 	-- A Common hero keeps the pre-rarity numbers. Higher tiers carry their old summon-star bonus (3x and 1.35x per tier,
 	-- on top of 1.35x and 1.12x), at 100% up to Rare and 50% from Superior; promotion adds 1.5x per star.
-	local han = { TemplateId = "hero_han", Stars = 1, Level = 1, QualityScalar = 1 }
-	assert(Stats.GetCombatSnapshot(han).AttackDamage == 40)
+	local jenna = { TemplateId = "hero_jenna", Stars = 1, Level = 1, QualityScalar = 1 }
+	assert(Stats.GetCombatSnapshot(jenna).AttackDamage == 34)
+	-- Han is Mythical now, but a Han summoned while he was the Common starter keeps his saved rarity.
+	assert(HeroCatalog.RarityOf("hero_han") == 7 and HeroCatalog.Seeds.hero_han.NativeATK == math.round(40 * (0.5 * (3 * 1.35) ^ 6)))
+	assert(Stats.GetCombatSnapshot({ TemplateId = "hero_han", Stars = 1, Level = 1, QualityScalar = 1 }).AttackDamage == HeroCatalog.Seeds.hero_han.NativeATK)
+	assert(Stats.GetCombatSnapshot({ TemplateId = "hero_han", Rarity = 1, Stars = 1, Level = 1, QualityScalar = 1 }).AttackDamage == 40)
 	local astrea = { TemplateId = "hero_astrea", Stars = 7, Level = 1, QualityScalar = 1 }
 	assert(Stats.GetCombatSnapshot(astrea).AttackDamage == math.round(48 * (1.5 ^ 6 * 1.08 ^ 60 * (0.5 * (3 * 1.35) ^ 6))))
 	assert(HeroCatalog.Seeds.hero_astrea.NativeHP == math.round(230 * (1 * (0.5 * (3 * 1.35) ^ 6))), "GDD roster table value")
@@ -166,7 +170,7 @@ test("Phase 4: every launch hero is summoned at 1 star and its rarity only scale
 	local saved = { TemplateId = "hero_han", Rarity = 2, Stars = 1, Level = 1, QualityScalar = 1 }
 	assert(Stats.GetCombatSnapshot(saved).AttackDamage == math.round(40 * (3 * 1.35)))
 	assert(Stats.GetEffectiveLabor({ TemplateId = "hero_valeria", Stars = 4, Level = 1, QualityScalar = 1 }, "FACILITY_GODS_BLESSING")
-		== math.round(18 * (0.5 * (1.35 * 1.12) ^ 3) * 1.35 ^ 3 * (1 + 0.05 * 30) * 1.25 * 100) / 100, "Healers get +25% synergy at God's Blessing")
+		== math.round(18 * (0.5 * (1.35 * 1.12) ^ 4) * 1.35 ^ 3 * (1 + 0.05 * 30) * 1.25 * 100) / 100, "Healers get +25% synergy at God's Blessing")
 end)
 
 test("Phase 4: hero banners use the lowered odds, raised pity and a Rare 10-pull floor", function()

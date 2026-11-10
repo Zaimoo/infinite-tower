@@ -12,6 +12,14 @@ local ProfileMigrations = {}
 
 ProfileMigrations.CurrentSchema = 7
 
+-- Rarity a template had when these old saves were written, where it differs from today's catalog.
+-- Han was the Common starter before he became Mythical; Valeria was Superior before moving to Exalted.
+local LEGACY_RARITY: { [string]: number } = { hero_han = 1, hero_valeria = 4 }
+
+local function legacyRarity(templateId: string?): number
+	return (templateId and LEGACY_RARITY[templateId]) or HeroCatalog.RarityOf(templateId)
+end
+
 local function blankFacility(level: number): any
 	return {
 		Level = level,
@@ -35,7 +43,7 @@ function ProfileMigrations.ToV3(profile: any)
 	profile.FortressTree = FortressTree.NodesFromFacilityLevels(profile.Facilities, highestSlot)
 	profile.Facilities.GodsBlessing = profile.Facilities.GodsBlessing or blankFacility(0)
 	for _, hero in pairs(profile.Heroes or {}) do
-		hero.Rarity = HeroCatalog.RarityOf(hero.TemplateId)
+		hero.Rarity = legacyRarity(hero.TemplateId)
 	end
 	profile.SchemaVersion = 3
 end
@@ -46,7 +54,7 @@ end
 function ProfileMigrations.ToV4(profile: any)
 	if (profile.SchemaVersion or 1) >= 4 then return end
 	for _, hero in pairs(profile.Heroes or {}) do
-		local rarity = hero.Rarity or HeroCatalog.RarityOf(hero.TemplateId)
+		local rarity = hero.Rarity or legacyRarity(hero.TemplateId)
 		hero.Rarity = rarity
 		local stars = if type(hero.Stars) == "number" then math.floor(hero.Stars) else 1
 		hero.Stars = math.max(1, stars - (rarity - 1))

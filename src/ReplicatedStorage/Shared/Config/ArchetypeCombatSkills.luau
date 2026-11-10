@@ -55,6 +55,8 @@ export type SkillAttackDef = {
 	StaminaCost: number, -- 100
 	DamageMultiplier: number,
 	HealPercent: number?, -- Fractional MaxHP (e.g. 0.35 for 35%)
+	TargetLowestAlly: boolean?, -- True for single-target lowest-HP ally heals
+	MaxHpBuffPercent: number?, -- Fractional MaxHP buff applied to the healed target (e.g. 0.25 for +25% Max HP)
 	BarrierPercent: number?, -- Fractional MaxHP (e.g. 0.40 for 40%)
 	Radius: number?, -- Radius in studs for AoE / Taunt
 	Duration: number?, -- Duration in seconds for buffs / ground effects
@@ -352,11 +354,16 @@ end
 local HERO_KITS: { [string]: HeroKitOverride } = {
 	hero_han = {
 		Archetype = "Striker",
-		Basic = { Name = "Gale Slash" },
-		Special = { Name = "Crescent Cross-Cut" },
+		Basic = { Name = "Gloam Cut" },
+		-- A leaping double stab with both daggers reversed: the 1.60x hit lands as two blows.
+		Special = { Name = "Nightfall Fangs", Ticks = 2, TickSeconds = 0.1 },
+		-- He dashes through the target and the cuts he leaves behind keep slashing the circle:
+		-- the 3.20x burst is split over five waves instead of landing at once.
 		Skill = {
-			Name = "Relentless Blade Flurry",
-			Description = "Han refuses to yield, carving a relentless flurry through the primary target that deals 3.20x ATK burst damage in a 12-stud radius.",
+			Name = "Abyssal Wake",
+			Description = "Han dashes through the target and leaves a circle of lingering slashes behind him: 3.20x ATK over 5 waves to every enemy within 12 studs.",
+			Ticks = 5,
+			TickSeconds = 0.12,
 		},
 	},
 	hero_aaron = {
@@ -377,6 +384,15 @@ local HERO_KITS: { [string]: HeroKitOverride } = {
 			Description = "Catio strikes a resonant fault line, erupting crystal spikes under all enemies within 18 studs for 2.60x ATK blunt damage and bonus gem shards.",
 		},
 	},
+	hero_gide = {
+		Archetype = "Miner",
+		Basic = { Name = "Ironvein Chop" },
+		Special = { Name = "Bedrock Sundering" },
+		Skill = {
+			Name = "Tunnelbreaker Fault",
+			Description = "Gide drives his heavy axe into the floor, splitting a fault line that erupts jagged stone and crystal spikes under all enemies within 18 studs for 2.60x ATK blunt damage and bonus shard drops.",
+		},
+	},
 	hero_valeria = {
 		Archetype = "Healer",
 		Basic = { Name = "Emerald Bolt" },
@@ -384,6 +400,19 @@ local HERO_KITS: { [string]: HeroKitOverride } = {
 		Skill = {
 			Name = "Sanctuary Miracle",
 			Description = "Valeria blooms an emerald sanctuary, restoring 35% Max HP to ALL deployed heroes, cleansing debuffs, and granting +3% HP/s regen for 4s.",
+		},
+	},
+	hero_diran = {
+		Archetype = "Healer",
+		Basic = { Name = "Runeward Bolt" },
+		Special = { Name = "Compass Mend" },
+		Skill = {
+			Name = "Vitality Covenant",
+			HealPercent = 0.55,
+			TargetLowestAlly = true,
+			MaxHpBuffPercent = 0.25,
+			Duration = 8.0,
+			Description = "Diran invokes a sacred covenant from his grimoire, prioritizing the deployed ally with the lowest HP to restore 55% Max HP and buff their Max HP by 25% for 8s.",
 		},
 	},
 	hero_ignis = {
@@ -429,6 +458,15 @@ local HERO_KITS: { [string]: HeroKitOverride } = {
 		Skill = {
 			Name = "Crimson Hellfire Pillar",
 			Description = "Eolka calls a crimson hellfire pillar onto the target area (20-stud radius), dealing 3.50x ATK fire damage and leaving burning ground for 3s.",
+		},
+	},
+	hero_shurn = {
+		Archetype = "Scholar",
+		Basic = { Name = "Cinder Spark" },
+		Special = { Name = "Arcing Hearthbolt" },
+		Skill = {
+			Name = "Dawnstone Convergence",
+			Description = "Shurn raises his crystal-bound branch staff and calls down a radiant pillar of golden-amber light onto the target area (20-stud radius), dealing 3.50x ATK magic damage and scorching the ground for 3s.",
 		},
 	},
 	hero_morrigan = {
