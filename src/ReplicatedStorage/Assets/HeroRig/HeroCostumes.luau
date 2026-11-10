@@ -343,7 +343,7 @@ do
 	}, "rbxassetid://135079238224097"))
 end
 
--- 4. VALERIA (4★ Healer - Emerald Guardian) --------------------------------------------
+-- 4. VALERIA (Exalted Healer - Emerald Guardian) ---------------------------------------
 -- Sleepy field-medic priest from her reference art: fluffy shoulder-length brown hair, white and
 -- green robe with gold trim, high collar with goggles resting at the neck, white pauldrons with
 -- gold stars, a green tabard with a gold cross and stars, belt with potion vials and a herb
@@ -1205,7 +1205,7 @@ do
 	}, "rbxassetid://120275678632025"))
 end
 
--- 16. DIRAN (5★ Healer - Exalted Covenant Battle-Cleric) -------------------------------
+-- 16. DIRAN (Exalted Healer - Covenant Battle-Cleric) ----------------------------------
 -- From his reference art: sturdy battle-cleric (Heavy body) with long silver-white hair tied into a
 -- high side-swept ponytail and face-framing center-parted bangs, calm amber-brown eyes, a layered
 -- bronze-ochre cowl pinned with a four-point gold compass brooch, an off-white and forest-green

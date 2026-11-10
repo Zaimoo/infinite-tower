@@ -113,12 +113,12 @@ local ARTIFACT_CATEGORIES = {
 }
 
 local WIELDERS_BY_TYPE = {
-	SWORD_SHIELD = "Aaron (2★), Morrigan (4★), Ignis (5★)",
-	DAGGERS = "Han (1★), Velkist (2★), Sovereign Archon (5★)",
-	AXE = "Gide (1★), Catio (3★)",
-	BOW = "Jenna (1★), Astrea (7★)",
-	STAFF = "Shurn (1★), Eolka (3★), Solaris (6★)",
-	TOME = "Valeria (5★), Diran (5★)",
+	SWORD_SHIELD = "Aaron (Uncommon), Morrigan (Superior), Ignis (Exalted)",
+	DAGGERS = "Han (Mythical), Velkist (Uncommon), Sovereign Archon (Exalted)",
+	AXE = "Gide (Common), Catio (Rare)",
+	BOW = "Jenna (Common), Astrea (Mythical)",
+	STAFF = "Shurn (Common), Eolka (Rare), Solaris (Legendary)",
+	TOME = "Valeria (Exalted), Diran (Exalted)",
 }
 
 local ARTIFACT_EMOJI: { [string]: string } = {
