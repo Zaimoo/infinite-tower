@@ -1059,7 +1059,7 @@ end
 -- guards with brass chevron trim, and heavy miner boots. Face: our own decal from
 -- assets/faces/make_gide_face.py. Hair: our Blender mesh (tools/make_gide_hair_ugc.py).
 do
-	local skin, hair, tunic, tunicDark = { 236, 196, 158 }, { 38, 30, 26 }, { 146, 138, 126 }, { 112, 106, 96 }
+	local skin, hair, tunic, tunicDark = { 236, 196, 158 }, { 108, 72, 48 }, { 146, 138, 126 }, { 112, 106, 96 }
 	local leather, darkLeather, pants, cape = { 76, 52, 38 }, { 50, 36, 28 }, { 36, 36, 40 }, { 34, 38, 46 }
 	local steel, gold = { 122, 126, 132 }, { 200, 162, 78 }
 	table.insert(COSTUMES, costume("hero_gide", "Heavy", {
@@ -1086,7 +1086,7 @@ do
 		-- Asymmetric leather shoulder harness, diagonal chest strap and steel ring
 		piece("HarnessL", "UpperTorso", { 0.22, 0.95, 1.08 }, { -0.72, 0.30, 0 }, leather),
 		piece("HarnessR", "UpperTorso", { 0.22, 0.95, 1.08 }, { 0.72, 0.30, 0 }, leather),
-		piece("ChestStrap", "UpperTorso", { 0.20, 1.65, 0.06 }, { 0, 0.02, -0.54 }, leather, { Rotation = { 0, 0, 52 } }),
+		piece("ChestStrap", "UpperTorso", { 0.20, 1.65, 0.06 }, { 0, 0.02, -0.54 }, leather, { Rotation = { 0, 0, -52 } }),
 		piece("HarnessRing", "UpperTorso", { 0.06, 0.32, 0.32 }, { -0.54, 0.28, -0.55 }, steel, with(METAL, { Shape = "Cylinder", Rotation = { 0, 90, 0 } })),
 		-- Tattered dark slate cape behind the back
 		piece("CapeBack", "UpperTorso", { 2.16, 1.60, 0.12 }, { 0, 0, 0.54 }, cape, with(LOOSE, { Material = "Fabric", Rotation = { -5, 0, 0 } })),

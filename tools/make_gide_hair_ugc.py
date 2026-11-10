@@ -229,7 +229,7 @@ for p in me.polygons:
 hair = bpy.data.objects.new(NAME, me)
 bpy.context.collection.objects.link(hair)
 
-COLOUR = (0.15, 0.115, 0.098, 1)  # Dark espresso brown (#261E1A)
+COLOUR = (0.376, 0.259, 0.180, 1)  # Warm brown (#60422E)
 mat = bpy.data.materials.get("GideHairBrown") or bpy.data.materials.new("GideHairBrown")
 mat.use_nodes = True
 bsdf = next((n for n in mat.node_tree.nodes if n.type == "BSDF_PRINCIPLED"), None)
