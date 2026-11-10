@@ -48,7 +48,7 @@ HeroCatalog.PermanentBanner = {
 	TenPullMinTier = 3, -- every 10-pull includes a Rare or better hero
 	-- Retuned with the 100-gem relic economy: hours of play per copy match the old rates at the higher income.
 	Rates = {
-		[1] = 0.7514, -- 75.14% Common Jenna (she is the Common on both banners)
+		[1] = 0.7514, -- 75.14% Common Gide
 		[2] = 0.1800, -- 18.0% Uncommon Aaron
 		[3] = 0.0470, -- 4.7% Rare Catio
 		[4] = 0.0165, -- 1.65% Superior Valeria
@@ -59,7 +59,7 @@ HeroCatalog.PermanentBanner = {
 		[7] = 0.0003,
 	},
 	HeroesByStar = {
-		[1] = "hero_jenna",
+		[1] = "hero_gide",
 		[2] = "hero_aaron",
 		[3] = "hero_catio",
 		[4] = "hero_valeria",
@@ -110,8 +110,27 @@ HeroCatalog.BannerDropRates = HeroCatalog.PermanentBanner.Rates
 
 HeroCatalog.Seeds = {
 	-- ------------------------------------------------------------------------
-	-- CALL OF THE RIFT (Permanent Banner: 1★ to 7★; its Common is Jenna, listed under A Star's Arrival)
+	-- CALL OF THE RIFT (Permanent Banner: 1★ to 7★)
 	-- ------------------------------------------------------------------------
+	hero_gide = {
+		HeroId = "hero_gide",
+		DisplayName = "Gide",
+		BannerOrigin = "STANDARD",
+		DropWeight = 60.0,
+		BaseStar = 1,
+		Rarity = 1,
+		Archetype = "Miner",
+		BaseHP_1Star = 340,
+		BaseATK_1Star = 36,
+		NativeHP = 340,
+		NativeATK = 36,
+		AttackInterval = 1.05,
+		AttackRange = 6,
+		BaseLabor_1Star = 18.0,
+		NativeLabor = 18.0,
+		PreferredFacility = "FACILITY_MARKET",
+		Color = Color3.fromRGB(168, 142, 98),
+	},
 	hero_han = {
 		HeroId = "hero_han",
 		DisplayName = "Han",
@@ -389,7 +408,7 @@ function HeroCatalog.RarityName(tier: number?): string
 end
 
 HeroCatalog.PoolByStar = {
-	[1] = { "hero_jenna" },
+	[1] = { "hero_gide", "hero_jenna" },
 	[2] = { "hero_aaron", "hero_velkist" },
 	[3] = { "hero_catio", "hero_eolka" },
 	[4] = { "hero_valeria", "hero_morrigan" },

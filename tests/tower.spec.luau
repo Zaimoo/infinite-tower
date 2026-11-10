@@ -176,14 +176,14 @@ end)
 
 test("Provisional balance is measured against current starter formulas, not claimed playtested", function()
 	local totalDPS = 0
-	-- Jenna leads the starting squad (Han was the starter until he became Mythical).
-	for _, starter in ipairs({ { Id = "hero_jenna", Quality = 1.05, HP = 221, ATK = 54, DPS = 67.5 } }) do
+	-- Gide leads the starting squad (replacing Jenna; Han was the starter until he became Mythical).
+	for _, starter in ipairs({ { Id = "hero_gide", Quality = 1.05, HP = 357, ATK = 57, DPS = 57 } }) do
 		local seed = Heroes.Seeds[starter.Id]
 		local atk, hp, dps = Stats.GetEffectiveCombatStats({ TemplateId = starter.Id, Level = 1, QualityScalar = starter.Quality, BaseATK = seed.NativeATK, BaseHP = seed.NativeHP, Archetype = seed.Archetype, AttackInterval = seed.AttackInterval, CurrentStamina = 100 }, false, false, { Star = 1, Rarity = 1 })
 		assert(atk == starter.ATK and hp == starter.HP and dps == starter.DPS)
 		totalDPS += dps
 	end
-	assert(math.abs(totalDPS - 67.5) < .001)
+	assert(math.abs(totalDPS - 57) < .001)
 	for _, id in ipairs({ 1, 5, 25, 50 }) do
 		local floor = Floors.Get(id)
 		local enemyId = floor.BossEnemyId or floor.Encounters[1].EnemyId
