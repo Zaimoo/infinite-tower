@@ -370,7 +370,8 @@ do
 	end
 	check(HeroClips.Get("hero_velkist", "DAGGERS", "AttackSpecial") == HeroClips.Overrides.hero_velkist.AttackSpecial, "Velkist's Shadow Rend override")
 	check(HeroClips.Get("hero_catio", "AXE", "AttackSpecial") == HeroClips.Overrides.hero_catio.AttackSpecial, "Catio's Resonance Tremor override")
-	check(HeroClips.Get("hero_han", "DAGGERS", "AttackSpecial") == HeroClips.ByWeapon.DAGGERS.AttackSpecial, "other specials use the weapon clip")
+	check(HeroClips.Get("hero_han", "DAGGERS", "AttackSpecial") == HeroClips.Overrides.hero_han.AttackSpecial, "Han's Nightfall Fangs override")
+	check(HeroClips.Get("hero_archon", "DAGGERS", "AttackSpecial") == HeroClips.ByWeapon.DAGGERS.AttackSpecial, "other specials use the weapon clip")
 end
 
 -- 6. Weapon sockets (Phase 2) ---------------------------------------------------

@@ -7,9 +7,10 @@
 -- Each tier names a Style, the SkillVfx player that draws it:
 --   Basic    SHOT (bow arrow), BOLT (caster projectile), SLASH (melee arc on the target)
 --   Special  VOLLEY (bow), CLEAVE (Vanguard cone), CROSS (Striker), TREMOR (Miner),
---            CHAIN (Scholar), MEND (Healer)
+--            CHAIN (Scholar), MEND (Healer), PLUNGE (two falling stabs; Han)
 --   Skill    STORM (bow), BULWARK (Vanguard), TEMPEST (Striker), CRYSTALS (Miner),
---            PILLAR (Scholar), SANCTUARY (Healer)
+--            PILLAR (Scholar), SANCTUARY (Healer), WAKE (a dash streak and a lingering circle of
+--            slashes, one wave per damage tick; Han)
 -- The other fields are that style's knobs; a style ignores the ones it does not use.
 
 export type Palette = {
@@ -37,7 +38,7 @@ export type TierRecipe = {
 	RainHeight: number?,
 	-- Area styles
 	Radius: number?, -- studs: cone reach, tremor, tempest, crystal field, healing circle, taunt
-	Slashes: number?, -- TEMPEST: slash arcs around the target
+	Slashes: number?, -- TEMPEST: slash arcs around the target. WAKE: slash arcs per wave
 	Spikes: number?, -- CRYSTALS / TREMOR: spikes at the centre (plus one under each hit enemy)
 	PillarHeight: number?, -- PILLAR: column height, studs
 	Linger: number?, -- seconds a ground effect or shell lasts after impact
@@ -67,8 +68,8 @@ SkillVfxCatalog.WeaponArchetype = table.freeze({
 -- Every Style SkillVfx knows, per tier.
 SkillVfxCatalog.Styles = table.freeze({
 	Basic = table.freeze({ SHOT = true, BOLT = true, SLASH = true }),
-	Special = table.freeze({ VOLLEY = true, CLEAVE = true, CROSS = true, TREMOR = true, CHAIN = true, MEND = true }),
-	Skill = table.freeze({ STORM = true, BULWARK = true, TEMPEST = true, CRYSTALS = true, PILLAR = true, SANCTUARY = true }),
+	Special = table.freeze({ VOLLEY = true, CLEAVE = true, CROSS = true, TREMOR = true, CHAIN = true, MEND = true, PLUNGE = true }),
+	Skill = table.freeze({ STORM = true, BULWARK = true, TEMPEST = true, CRYSTALS = true, PILLAR = true, SANCTUARY = true, WAKE = true }),
 })
 
 local function rgb(r: number, g: number, b: number): Color3
@@ -156,12 +157,12 @@ SkillVfxCatalog.Heroes = table.freeze({
 	},
 
 	-- Striker ----------------------------------------------------------------------------------
-	-- Gale Slash / Crescent Cross-Cut / Relentless Blade Flurry: pale wind green and white.
+	-- Gloam Cut / Nightfall Fangs / Abyssal Wake: smoky black and cold blue.
 	hero_han = {
-		Palette = { Primary = rgb(200, 255, 220), Secondary = rgb(120, 230, 170), Core = rgb(255, 255, 255) },
-		Basic = { Style = "SLASH", Scale = 0.8, Impact = 1.2 },
-		Special = { Style = "CROSS", Scale = 1.0, Impact = 1.8 },
-		Skill = { Style = "TEMPEST", Radius = 12, Slashes = 6, Impact = 3, Shake = 0.2 },
+		Palette = { Primary = rgb(70, 140, 255), Secondary = rgb(22, 24, 34), Core = rgb(170, 215, 255) },
+		Basic = { Style = "SLASH", Scale = 0.9, Impact = 1.3 },
+		Special = { Style = "PLUNGE", Scale = 1.15, Radius = 4, Impact = 2.2 },
+		Skill = { Style = "WAKE", Radius = 12, Slashes = 5, Linger = 0.35, Impact = 3.4, Shake = 0.3 },
 	},
 	-- Twin Fang Cut / Shadow Rend / Phantom Lotus Execution: shadow purple and lotus pink.
 	hero_velkist = {

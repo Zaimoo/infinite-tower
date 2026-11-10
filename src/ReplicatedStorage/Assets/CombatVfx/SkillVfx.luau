@@ -212,6 +212,30 @@ local function playCross(ctx: Context)
 	VfxPrimitives.Burst(pool, at, palette.Core, recipe.Impact or 1.8, ctx.ArriveAt + 0.06, 0.2)
 end
 
+-- PLUNGE: two near-vertical crescents falling on the target side by side, one per damage tick,
+-- with a puff of smoke rolling out along the ground where the blades land.
+local function playPlunge(ctx: Context)
+	local pool, recipe, palette, args = ctx.Pool, ctx.Recipe, ctx.Palette, ctx.Args
+	local at = args.Target()
+	local ground = args.Cue.Aim
+	local scale = recipe.Scale or 1
+	local archetype = args.WeaponType and SkillVfxCatalog.WeaponArchetype[args.WeaponType]
+	local profile = ArchetypeCombatSkills.GetSkillProfile(args.HeroId, archetype)
+	local ticks, gap = HeroActionTiming.Ticks(profile.Special)
+	local side = heading(ctx):Cross(Vector3.yAxis)
+	for k, hitAt in VfxMath.WaveTimes(ctx.ArriveAt, math.max(2, ticks), if gap > 0 then gap else 0.08) do
+		local sign = if k % 2 == 1 then -1 else 1
+		local frame = slashFrame(ctx, at + side * (0.55 * sign * scale) + Vector3.new(0, 0.6, 0), 90 + 10 * sign)
+		VfxPrimitives.SlashArc(pool, frame, 2.3 * scale * SLASH_SIZE, if k % 2 == 1 then palette.Primary else palette.Core, hitAt - 0.05, 0.3)
+		VfxPrimitives.SlashArc(pool, frame * CFrame.new(0, 0, 0.25), 2.6 * scale * SLASH_SIZE, palette.Secondary, hitAt - 0.02, 0.42)
+	end
+	local radius = recipe.Radius or 4
+	VfxPrimitives.Ring(pool, { Center = ground, From = 0.6, To = radius, Color = palette.Secondary, StartAt = ctx.ArriveAt, EndAt = ctx.ArriveAt + 0.45, Width = 1.1 })
+	VfxPrimitives.Ring(pool, { Center = ground, From = 0.3, To = radius * 0.7, Color = palette.Primary, StartAt = ctx.ArriveAt + 0.05, EndAt = ctx.ArriveAt + 0.4, Width = 0.35 })
+	VfxPrimitives.Motes(pool, ground + Vector3.new(0, 0.8, 0), palette.Secondary, ctx.ArriveAt, 6, 0.7)
+	VfxPrimitives.Burst(pool, at, palette.Core, recipe.Impact or 2, ctx.ArriveAt + 0.03, 0.2)
+end
+
 -- TREMOR: a ground shockwave from the target with a few spikes of rock and crystal.
 local function playTremor(ctx: Context)
 	local pool, recipe, palette = ctx.Pool, ctx.Recipe, ctx.Palette
@@ -338,6 +362,52 @@ local function playTempest(ctx: Context)
 	shake(ctx, at)
 end
 
+-- WAKE: a dash streak from the attacker through the target, then a smoky circle over the skill
+-- radius that keeps cutting: one wave of crescents inside it per server damage tick.
+local function playWake(ctx: Context)
+	local pool, recipe, palette, args = ctx.Pool, ctx.Recipe, ctx.Palette, ctx.Args
+	local center: Vector3 = args.Cue.Aim
+	local radius = recipe.Radius or 12
+	local archetype = args.WeaponType and SkillVfxCatalog.WeaponArchetype[args.WeaponType]
+	local profile = ArchetypeCombatSkills.GetSkillProfile(args.HeroId, archetype)
+	local ticks, gap = HeroActionTiming.Ticks(profile.Skill)
+	local waves = VfxMath.WaveTimes(ctx.ArriveAt, ticks, gap)
+	local first, last = waves[1], waves[#waves]
+	local linger = recipe.Linger or 0.35
+	local up = Vector3.new(0, 1.6, 0)
+
+	-- The dash: twin streaks along his path and one long cut across the target as he passes.
+	local from = if args.Self then args.Self() else args.Origin
+	local dir = heading(ctx)
+	local exit = center + dir * math.min(radius * 0.6, 7)
+	VfxPrimitives.Beam(pool, from + up, exit + up, palette.Primary, first - 0.1, 0.3, args.Cue.NetId % 13)
+	VfxPrimitives.Beam(pool, from + up * 0.6, exit + up * 0.6, palette.Secondary, first - 0.1, 0.45, args.Cue.NetId % 7 + 3)
+	VfxPrimitives.SlashArc(pool, CFrame.lookAt(center + up, center + up - dir) * CFrame.Angles(0, 0, math.rad(8)), radius * 0.42 * SLASH_SIZE, palette.Core, first - 0.04, 0.36)
+
+	-- The wake: a dark disc with a blue rim, held until the last wave has landed.
+	local ground = CFrame.new(center + Vector3.new(0, 0.15, 0)) * VfxPrimitives.FLAT
+	VfxPrimitives.Disc(pool, { CFrame = ground, Radius = radius, Color = palette.Secondary, StartAt = first - 0.05, EndAt = last + linger, Grow = 0.25, Transparency = 0.3 })
+	VfxPrimitives.Ring(pool, { Center = center, From = 1, To = radius, Color = palette.Primary, StartAt = first, EndAt = first + 0.3, Width = 0.5 })
+	VfxPrimitives.Ring(pool, { Center = center, From = radius * 0.96, To = radius, Color = palette.Primary, StartAt = first + 0.28, EndAt = last + linger, Width = 0.35 })
+
+	local perWave = recipe.Slashes or 5
+	local seedBase = (args.Cue.NetId % 89) * 0.41
+	for k, waveAt in waves do
+		for i, point in VfxMath.RainPoints(center, radius * 0.92, perWave, seedBase + k * 2.1) do
+			local yaw = seedBase + k * 1.3 + i * 2.4
+			local roll = math.rad(if (i + k) % 2 == 0 then 38 else -38)
+			local frame = CFrame.new(point + up) * CFrame.Angles(0, yaw, roll)
+			local size = radius * (0.2 + 0.05 * ((i + k) % 3)) * SLASH_SIZE
+			VfxPrimitives.SlashArc(pool, frame, size, if (i + k) % 3 == 0 then palette.Core else palette.Primary, waveAt - 0.04 + i * 0.012, 0.3)
+			VfxPrimitives.SlashArc(pool, frame * CFrame.new(0, -0.1, 0.2), size * 1.12, palette.Secondary, waveAt + i * 0.012, 0.4)
+		end
+		VfxPrimitives.Motes(pool, center + Vector3.new(0, 0.6, 0), palette.Secondary, waveAt, 4, 0.6)
+	end
+	VfxPrimitives.Burst(pool, center + up, palette.Core, recipe.Impact or 3, first, 0.25)
+	VfxPrimitives.Ring(pool, { Center = center, From = radius * 0.4, To = radius * 1.05, Color = palette.Core, StartAt = last, EndAt = last + linger, Width = 0.6 })
+	shake(ctx, first)
+end
+
 -- CRYSTALS: a cluster of crystal spikes at the centre, then one under each enemy the server hit.
 local function playCrystals(ctx: Context)
 	local pool, recipe, palette = ctx.Pool, ctx.Recipe, ctx.Palette
@@ -406,12 +476,14 @@ local PLAYERS: { [string]: (Context) -> () } = {
 	VOLLEY = playVolley,
 	CLEAVE = playCleave,
 	CROSS = playCross,
+	PLUNGE = playPlunge,
 	TREMOR = playTremor,
 	CHAIN = playChain,
 	MEND = playMend,
 	STORM = playStorm,
 	BULWARK = playBulwark,
 	TEMPEST = playTempest,
+	WAKE = playWake,
 	CRYSTALS = playCrystals,
 	PILLAR = playPillar,
 	SANCTUARY = playSanctuary,

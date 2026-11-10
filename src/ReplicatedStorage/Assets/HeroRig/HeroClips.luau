@@ -822,26 +822,96 @@ do
 	}
 end
 
--- Han (DAGGERS): Relentless Blade Flurry. Four alternating cuts that build into a final double
--- slash.
+-- Han (DAGGERS).
+-- Nightfall Fangs (Special): he sinks into a crouch, leaps, and comes down on the target with both
+-- daggers reversed, points down. A blade points straight down when its arm's shoulder, elbow and
+-- wrist pitch add up to 270 degrees, plus the waist's lean (measured in Studio), so the wrists turn
+-- as the arms fall and the points stay down from the top of the jump to the landing.
+-- Abyssal Wake (Skill): he coils with both blades chambered at his left hip, dashes through the
+-- target with a wide cut, skids to a stop with his back to it while the wake of slashes he left
+-- behind keeps cutting (the kit's five waves), then springs back to his place.
 do
 	local p = WeaponPoses.DAGGERS
-	local function cut(side: number, lean: number): Pose
-		if side > 0 then
-			return merge(p.Crouched, { Waist = { lean, -40, 0 }, RightShoulder = { 95, 0, -20 }, RightElbow = { 5, 0, 0 }, RightWrist = { -70, 0, 0 } })
-		end
-		return merge(p.Crouched, { Waist = { lean, 40, 0 }, LeftShoulder = { 95, 0, 20 }, LeftElbow = { 5, 0, 0 }, LeftWrist = { -70, 0, 0 } })
-	end
+	-- Special
+	local sink = merge(p.Crouched, {
+		Waist = { -16, 0, 0 }, Neck = { 12, 0, 0 },
+		LeftShoulder = { -40, 0, -14 }, RightShoulder = { -40, 0, 14 }, LeftElbow = { 35, 0, 0 }, RightElbow = { 35, 0, 0 },
+		LeftWrist = { 20, 0, 0 }, RightWrist = { 20, 0, 0 },
+		LeftHip = { 48, 0, -8 }, RightHip = { 30, 0, 8 }, LeftKnee = { -75, 0, 0 }, RightKnee = { -80, 0, 0 },
+		LeftAnkle = { 26, 0, 0 }, RightAnkle = { 48, 0, 0 }, RootOffset = { 0, -0.6, 0.1 },
+	})
+	local apex = merge(p.Crouched, {
+		Waist = { 14, 0, 0 }, Neck = { -16, 0, 0 },
+		LeftShoulder = { 166, 0, -10 }, RightShoulder = { 166, 0, 10 }, LeftElbow = { 26, 0, 0 }, RightElbow = { 26, 0, 0 },
+		LeftWrist = { 92, 0, 0 }, RightWrist = { 92, 0, 0 },
+		LeftHip = { 62, 0, -6 }, RightHip = { 18, 0, 6 }, LeftKnee = { -85, 0, 0 }, RightKnee = { -100, 0, 0 },
+		LeftAnkle = { 20, 0, 0 }, RightAnkle = { 30, 0, 0 }, RootOffset = { 0, 1.9, -0.5 },
+	})
+	local falling = merge(apex, {
+		Waist = { -10, 0, 0 }, Neck = { -4, 0, 0 },
+		LeftShoulder = { 118, 0, -4 }, RightShoulder = { 118, 0, 4 }, LeftWrist = { 116, 0, 0 }, RightWrist = { 116, 0, 0 },
+		LeftHip = { 50, 0, -6 }, RightHip = { 0, 0, 6 }, LeftKnee = { -55, 0, 0 }, RightKnee = { -70, 0, 0 },
+		RootOffset = { 0, 0.95, -0.95 },
+	})
+	local plunge = merge(p.Crouched, {
+		Waist = { -34, 0, 0 }, Neck = { 20, 0, 0 },
+		LeftShoulder = { 60, 0, 12 }, RightShoulder = { 60, 0, -12 }, LeftElbow = { 28, 0, 0 }, RightElbow = { 28, 0, 0 },
+		LeftWrist = { 148, 0, 0 }, RightWrist = { 148, 0, 0 },
+		LeftHip = { 66, 0, -8 }, RightHip = { -28, 0, 8 }, LeftKnee = { -70, 0, 0 }, RightKnee = { -55, 0, 0 },
+		LeftAnkle = { 12, 0, 0 }, RightAnkle = { 42, 0, 0 }, RootOffset = { 0, -0.6, -1.25 },
+	})
+	-- Skill
+	local chambered = merge(p.Crouched, {
+		Waist = { -14, 52, 0 }, Neck = { 4, -40, 0 },
+		RightShoulder = { 52, 0, -58 }, RightElbow = { 82, 0, 0 }, RightWrist = { -20, 0, 0 },
+		LeftShoulder = { -32, 0, -18 }, LeftElbow = { 58, 0, 0 }, LeftWrist = { -40, 0, 0 },
+		LeftHip = { 38, 0, -8 }, RightHip = { -30, 0, 10 }, LeftKnee = { -58, 0, 0 }, RightKnee = { -42, 0, 0 },
+		LeftAnkle = { 14, 0, 0 }, RightAnkle = { 44, 0, 0 }, RootOffset = { 0, -0.55, 0.45 },
+	})
+	local dashing = merge(chambered, {
+		Waist = { -40, 30, 0 }, Neck = { 30, -22, 0 },
+		LeftHip = { 78, 0, -6 }, RightHip = { -52, 0, 8 }, LeftKnee = { -48, 0, 0 }, RightKnee = { -20, 0, 0 },
+		LeftAnkle = { 0, 0, 0 }, RightAnkle = { 50, 0, 0 }, RootOffset = { 0, -0.5, -3.2 },
+	})
+	local cutThrough = merge(p.Crouched, {
+		Waist = { -26, -58, 0 }, Neck = { 14, 40, 0 },
+		RightShoulder = { 84, 0, 78 }, RightElbow = { 8, 0, 0 }, RightWrist = { -12, 0, 0 },
+		LeftShoulder = { 58, 0, -72 }, LeftElbow = { 10, 0, 0 }, LeftWrist = { -12, 0, 0 },
+		LeftHip = { -30, 0, -10 }, RightHip = { 64, 0, 8 }, LeftKnee = { -30, 0, 0 }, RightKnee = { -62, 0, 0 },
+		LeftAnkle = { 40, 0, 0 }, RightAnkle = { 8, 0, 0 }, RootOffset = { 0, -0.5, -6.2 },
+	})
+	local skid = merge(cutThrough, {
+		Waist = { -20, -72, 0 }, Neck = { 6, 58, 0 },
+		RightShoulder = { 30, 0, 98 }, RightElbow = { 12, 0, 0 }, RightWrist = { -30, 0, 0 },
+		LeftShoulder = { 16, 0, -50 }, LeftElbow = { 40, 0, 0 }, LeftWrist = { -50, 0, 0 },
+		LeftHip = { -38, 0, -12 }, RightHip = { 72, 0, 10 }, LeftKnee = { -38, 0, 0 }, RightKnee = { -78, 0, 0 },
+		RootOffset = { 0, -0.75, -6.9 },
+	})
+	local springBack = merge(p.Crouched, {
+		Waist = { 6, -20, 0 }, Neck = { -4, 14, 0 },
+		LeftHip = { 30, 0, -6 }, RightHip = { 20, 0, 6 }, LeftKnee = { -50, 0, 0 }, RightKnee = { -60, 0, 0 },
+		RootOffset = { 0, 0.55, -3.0 },
+	})
 	Overrides.hero_han = {
+		AttackSpecial = signature(0.85, {
+			{ 0, p.Crouched },
+			{ 0.17, sink },
+			{ 0.42, apex },
+			{ 0.53, falling },
+			{ 0.62, plunge },
+			{ 0.8, merge(plunge, { Waist = { -30, 0, 0 }, LeftWrist = { 152, 0, 0 }, RightWrist = { 152, 0, 0 }, RootOffset = { 0, -0.52, -1.15 } }) },
+			{ 1, p.Crouched },
+		}, { Release = 0.62 }),
 		AttackSkill = signature(1.0, {
 			{ 0, p.Crouched },
-			{ 0.15, cut(1, -6) },
-			{ 0.3, cut(-1, -8) },
-			{ 0.45, cut(1, -10) },
-			{ 0.6, cut(-1, -12) },
-			{ 0.8, merge(p.Crouched, { Waist = { -18, 0, 0 }, LeftShoulder = { 110, 0, 35 }, RightShoulder = { 110, 0, -35 }, LeftElbow = { 5, 0, 0 }, RightElbow = { 5, 0, 0 }, RootOffset = { 0, -0.35, -0.3 } }) },
+			{ 0.16, chambered },
+			{ 0.3, dashing },
+			{ 0.4, cutThrough },
+			{ 0.56, skid },
+			{ 0.8, merge(skid, { Waist = { -16, -76, 0 }, RootOffset = { 0, -0.7, -6.9 } }) },
+			{ 0.92, springBack },
 			{ 1, p.Crouched },
-		}, { Release = 0.8 }),
+		}, { Release = 0.4 }),
 	}
 end
 

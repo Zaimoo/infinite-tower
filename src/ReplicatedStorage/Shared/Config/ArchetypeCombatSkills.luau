@@ -352,11 +352,16 @@ end
 local HERO_KITS: { [string]: HeroKitOverride } = {
 	hero_han = {
 		Archetype = "Striker",
-		Basic = { Name = "Gale Slash" },
-		Special = { Name = "Crescent Cross-Cut" },
+		Basic = { Name = "Gloam Cut" },
+		-- A leaping double stab with both daggers reversed: the 1.60x hit lands as two blows.
+		Special = { Name = "Nightfall Fangs", Ticks = 2, TickSeconds = 0.1 },
+		-- He dashes through the target and the cuts he leaves behind keep slashing the circle:
+		-- the 3.20x burst is split over five waves instead of landing at once.
 		Skill = {
-			Name = "Relentless Blade Flurry",
-			Description = "Han refuses to yield, carving a relentless flurry through the primary target that deals 3.20x ATK burst damage in a 12-stud radius.",
+			Name = "Abyssal Wake",
+			Description = "Han dashes through the target and leaves a circle of lingering slashes behind him: 3.20x ATK over 5 waves to every enemy within 12 studs.",
+			Ticks = 5,
+			TickSeconds = 0.12,
 		},
 	},
 	hero_aaron = {

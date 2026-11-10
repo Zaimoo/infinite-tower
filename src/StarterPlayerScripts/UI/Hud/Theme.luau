@@ -22,15 +22,16 @@ Theme.Colors = table.freeze({
 	Badge = Color3.fromRGB(239, 68, 68),
 })
 
--- Rarity tier frame colours, Common (1) to Mythical (7).
+-- Rarity tier frame colours, Common (1) to Mythical (7). Same hues as ArtifactCatalog's rarities
+-- and BillboardThemes.HeroByRarity: Legendary is gold, Mythical is red.
 Theme.Rarity = table.freeze({
-	Color3.fromRGB(170, 170, 182),
-	Color3.fromRGB(92, 205, 112),
-	Color3.fromRGB(70, 150, 255),
-	Color3.fromRGB(176, 104, 255),
-	Color3.fromRGB(255, 160, 50),
-	Color3.fromRGB(255, 92, 72),
-	Color3.fromRGB(255, 215, 90),
+	Color3.fromRGB(170, 170, 182), -- Common
+	Color3.fromRGB(92, 205, 112), -- Uncommon
+	Color3.fromRGB(70, 150, 255), -- Rare
+	Color3.fromRGB(176, 104, 255), -- Superior
+	Color3.fromRGB(255, 160, 50), -- Exalted
+	Color3.fromRGB(255, 215, 90), -- Legendary
+	Color3.fromRGB(255, 92, 72), -- Mythical
 })
 
 function Theme.RarityColor(tier: number?): Color3
