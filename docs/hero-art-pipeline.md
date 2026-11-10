@@ -2,7 +2,9 @@
 
 This is the guide for remodelling a hero in *Infinite Tower* from a reference image: the costume, the face decal, the hair mesh and the idle stance. It is written to be handed to another LLM or a new contributor as complete context. The rig contract behind it is in `docs/hero-rig-rebuild-plan.md`; this document covers how heroes are dressed and posed on that rig.
 
-Reference examples, done in this order: **Jenna** (Part-built costume), **Han** (costume, generated face, store hair mesh), **Velkist** (costume, generated face, our own Blender hair, signature idle), **Aaron** (costume, generated face, our own Blender hair, signature idle).
+All 12 heroes have been through this pipeline (status in §7). The step-by-step procedure for an agent, with helper scripts and Studio snippets, is the `hero-remodel` skill in `.claude/skills/hero-remodel/` (mirrored in `.agents/skills/hero-remodel/`). This document holds the rules and the reasons; the skill holds the steps. Keep the two consistent when either changes.
+
+Good examples to copy from: **Han** (store hair mesh), **Velkist** (cocky face, showboat idle), **Eolka** (feminine face, high ponytail, staff idle), **Valeria** (long layered hair), **Solaris** (wavy hair, back-mounted frame and banners), **Astrea** (very long hair, longer than the reference on request).
 
 ---
 
@@ -12,6 +14,7 @@ Reference examples, done in this order: **Jenna** (Part-built costume), **Han** 
 
 - **Blocky Roblox body, anime head.** The body is chunky R15 blocks with hard edges and flat colours. The head carries the anime character: a rounded head shape, a hand-drawn face decal and sculpted mesh hair.
 - **The silhouette reads at gameplay distance.** Up to 30 heroes are on screen (6 players × 5 heroes), seen from an over-the-shoulder camera. Big shapes first: hair volume, shoulder shapes, coat tails, knee plates. Small details (buckles, laces) are a bonus, never the identity.
+- **Women read as women from a distance.** On blocky bodies the shoulder line is the strongest gender cue, so a female hero's silhouette has to be feminine before any detail. That means narrower shoulders, a cinched waist, hips and skirts that flare wider than the waist, slimmer limbs and lighter feet. Bulky male builds (broad pauldrons, boxy chest plates, Heavy bodies) make every hero look like the same man in a different outfit. Armoured women keep their armour, but it follows the body and doesn't widen the shoulders. The recipe is in §4.2.
 - **Interpret the reference; don't copy it.** Reference art is usually a high-detail render. Match its palette, shape language, layering and pose, translated into blocks and a few meshes. Never trace someone else's asset: when told "detail like X, but not the style", take the technique (layered grooved strands) and keep the hero's own cut.
 - **Every hero is data.** Costumes, faces, hair placement and poses live in Luau source and generator scripts, so they can be reviewed, diffed and rebuilt. Nothing hero-related is authored only in Studio.
 
@@ -24,7 +27,7 @@ Reference examples, done in this order: **Jenna** (Part-built costume), **Han** 
 | Edges | Hard 90° corners, flat shading; fake bevels with a Wedge |
 | Proportions | 6.1 studs tall; head 1.4 studs; body types change width only; hands are fixed |
 | Layering | Shell pieces +0.02–0.05 studs per side; plates 0.04–0.22 thick |
-| Palette per hero | Skin, a dark base, a secondary, a metal trim (gold ≈ `200,160,70`), 1–2 accents; 5–7 colours |
+| Palette per hero | Skin, hair, a dark base, a secondary, a metal trim (gold ≈ `200,160,70`), 1–2 accents; 6–9 colours |
 | Value floor | No near-black outfit without a light trim on every bone (dark heroes vanish on dark floors) |
 | Neon | Only thin accents (≤ 0.3 studs across); never a whole plate (it blooms into a flat blob) |
 | Materials | SmoothPlastic, Fabric (cloth), Metal (trim, blades, plates), Neon (accents), Wood (hafts) |
@@ -33,7 +36,7 @@ Reference examples, done in this order: **Jenna** (Part-built costume), **Han** 
 ### 1.3 Hard constraints (never break)
 
 - **Don't break animations or weapon placement.** Never edit `HeroRigSpec` joints, hand sizes, grip attachments, `HeroSockets` or weapon prefabs while remodelling a hero. A remodel changes `HeroCostumes` data, generator scripts, hair assets, and optionally that hero's clip overrides in `HeroClips`.
-- **One bone per piece.** Each costume piece is welded to exactly one body part with an explicit `Weld`. A piece that crosses a joint (cape, coat tail, long hair) must be marked `Loose`; the lint rejects anything else.
+- **One bone per piece.** Each costume piece is welded to exactly one body part with an explicit `Weld`. A piece that crosses a joint (cape, coat tail, long hair) must be marked `Loose`; the lint rejects anything else. `Loose` only switches off the overlap lint; the piece is still welded to its one bone, so it will clip when that joint bends. Use it for hair, cloth, trims sewn onto cloth (a hem on a skirt) and pieces mounted well behind the back. Rigid gear that overlaps another bone (a collar in the chin, a cuff in the hand) gets moved, not loosened.
 - **No external scripts, models or meshes** except allow-listed hair meshes (§4.6) and face images. Free models have shipped obfuscated loader scripts before; inspect any store asset before using it.
 - **No copyrighted character art.** Don't use store decals or meshes of existing anime characters; generate our own.
 
@@ -49,8 +52,10 @@ Reference examples, done in this order: **Jenna** (Part-built costume), **Han** 
 | Builds Parts/meshes from costume data | `src/ReplicatedStorage/Assets/HeroRig/HeroCostumeBuilder.luau` |
 | Builds the bare rig (+ round head mesh) | `src/ReplicatedStorage/Assets/HeroRig/HeroRigBuilder.luau` |
 | Poses: weapon clips and per-hero overrides | `src/ReplicatedStorage/Assets/HeroRig/HeroClips.luau` |
-| Face generators + PNGs | `assets/faces/make_<hero>_face.py`, `hero_<hero>_face.png` |
-| Hair sources and exports | `assets/hair/hero_hair.blend`, `<hero>_hair.fbx`, `<hero>_hair.json` |
+| Face generators + PNGs | `assets/faces/make_<hero>_face.py`, `hero_<hero>_face.png`, `hero_<hero>_face_preview.png` |
+| Hair generators (run inside Blender) | `tools/make_<hero>_hair_ugc.py` (older: `make_aaron_hair_v2.py`, `make_catio_hair_v2.py`) |
+| Hair exports | `assets/hair/<hero>_hair.fbx` (for Import 3D), `<hero>_hair.json` (to verify the import), `<hero>_hair_ugc.blend` |
+| Procedure, helper scripts, Studio snippets | `.claude/skills/hero-remodel/` |
 | Offline tests | `tests/hero-rig.spec.luau` (run by `pwsh tests/run.ps1`) |
 | Studio checks | `tests/studio-hero-rigs.luau`, `tests/studio-hero-model-viewer.luau` |
 
@@ -83,7 +88,7 @@ Work in this order. Each step is independent enough to review on its own.
 ### 4.1 Read the reference
 
 Write down, before touching code:
-1. **Body build:** Slim, Standard or Heavy. Bulky reference art is Standard or Heavy.
+1. **Body build:** Slim, Standard or Heavy. Bulky reference art is Standard or Heavy. Women are `Slim` (§1.1), even when the art shows armour.
 2. **Palette:** 5–7 RGB values: skin, hair, main garment, secondary, leather, metal trim, accent.
 3. **Layers per bone:** what sits on the torso (shirt, vest, straps), the arms (sleeves, bands, bracers, gloves), the waist (belt, pouches, sash), the legs (trousers, straps, knee plates, greaves) and the feet (boots, soles).
 4. **Hair:** length (where the sides and back end), parting, swoop direction, fringe length, tufts, ponytail.
@@ -124,9 +129,23 @@ Proven recipes (copy and adapt):
 | Boots | A shell (1.08 × 0.34 × 1.25) slightly forward on the Foot, plus a thin gold sole underneath |
 | Pauldron | A Metal plate on the UpperArm at y ~0.42–0.45, tilted 12–15° about Z, with a gold trim `RelativeTo` it |
 
+**Feminine body** (every female hero, from §1.1). The rig's body types only change width, so the shape comes from the body type plus the costume:
+
+| Feature | Recipe |
+| --- | --- |
+| Body type | `Slim` (torso 1.8 wide, limbs 0.85). Never `Heavy`. |
+| Shoulders | No broad or stacked pauldrons. Shoulder pieces stay within the arm's width (≤ 1.06 across on the UpperArm) and lie flat (≤ 0.15 tall), or use bare shoulder caps or puffed sleeves. Nothing pokes out sideways past the arm. |
+| Waist | A narrow belt or sash, and torso pieces that taper towards the waist (Wedges at the sides of a bodice). Leave the waist as the narrowest point of the silhouette. |
+| Hips and skirt | Skirts, tassets and coat panels flare outwards below the belt (`Rotation` ±6–12°), so the hips read wider than the waist. |
+| Chest | A bodice, a neckline trim or a fitted breastplate that follows the torso. No boxy, raised chest plates. Never sculpt anatomy. |
+| Arms and legs | Slim sleeves or bell sleeves, fitted trousers or leggings, boots without a heavy cuff or wide toe cap. |
+| Stance | Narrower feet than male heroes, a slight hip shift or one knee bent inwards, an upright waist. |
+
+If `Slim` isn't feminine enough (no taper is possible from the rig itself), a dedicated body type is a rig change in `HeroRigSpec`. That is its own PR, with the weapon and animation checks in `hero-rig-rebuild-plan.md`, never part of a single hero's remodel.
+
 Rules of thumb:
 - **Count parts as you go:** 16 rig parts + pieces ≤ 60. Typical remodels land at 50–59.
-- **Lint failures tell you what to fix.** "X overlaps Head" from a collar means lower it; "overlaps LeftHand" from a cuff means shorten it or move it up the forearm. Mark only cloth and hair `Loose`, never rigid gear.
+- **Lint failures tell you what to fix.** "X overlaps Head" from a collar means lower it; "overlaps LeftHand" from a cuff means shorten it or move it up the forearm. Use `Loose` only as §1.3 allows (hair, cloth, trims on cloth, pieces well behind the back), never to hide rigid gear clipping into a bone.
 - **Keep the front of the fists clear.** Blades leave the grip through the front of the hand.
 
 ### 4.3 Face decal (generated, then uploaded)
@@ -151,24 +170,27 @@ Faces are image IDs, used directly as `Decal.Texture`. Note: a *Decal* asset ID 
 
 ### 4.4 Hair mesh (Blender → FBX → Studio import)
 
-Hair is the only place a mesh is worth it: Part-built hair can't reach the anime look. Hair is modelled procedurally in Blender through the Blender MCP (`execute_blender_code`) and checked with `look`. The script lives in the chat history and the result in `assets/hair/hero_hair.blend`; regenerate it rather than hand-editing.
+Hair is the only place a mesh is worth it: Part-built hair can't reach the anime look. Hair is modelled procedurally in Blender through the Blender MCP (`execute_blender_code`) and checked with `look`. Each hero has a generator script in `tools/make_<hero>_hair_ugc.py`; change and rerun the script rather than hand-editing the mesh, so the hair stays reproducible.
 
-**Coordinates in the generator:** write points in Roblox head space (Y up, front −Z, centred on a **1.2-stud reference head**), and convert to Blender with `B(p) = (x, −z, y)`. In Blender the face looks toward +Y, so "front" in `look` is view direction `[0, 1, 0.15]`. A reference head (cylinder r = 0.6, h = 1.2, bevelled) sits at the origin.
+**Coordinates in the generator:** write points in Roblox head space (Y up, front −Z, centred on a **1.2-stud reference head**), and convert to Blender with `B(p) = (x, −z, y)`. In Blender the face looks toward +Y, so "front" in `look` is view direction `[0, 1, 0.12]`. A reference head (`RefHead`) sits at the origin.
 
-**Building blocks:**
-- `dome(center, radii, keep)`: a partial ellipsoid for the scalp volume. `keep(x, y, z)` decides how far down it reaches; keep the hairline high at the front (y > ~0.26) and lower at the sides and back.
-- `strand(points, width, thick, out_hint, tip)`: a tube along a cubic Bézier with a 6-point cross-section that has a **groove down the outer face**, so it catches light like real strand clumps. `tip` controls how late it tapers: higher is blunter.
-- `clump(points, ...)`: 2–3 overlapping strands with jittered spread, length and twist (fixed RNG seed). This gives the "detailed" layered look and uneven tips.
+**Building blocks** (the helpers at the top of `tools/make_jenna_hair_ugc.py`; copy them, write only the layout):
+- `cap()`: the scalp shell. It must reach down over the temples, behind the ears and to the nape, or the round head shows through between locks.
+- `ribbon(path, width, thick, ...)`: one lock, a flat strip with a groove down its outer face so it catches light like a strand clump, tapering to a tip. `smooth_path` turns a few control points into a curve; `out_normal` keeps the lock's face pointing away from the head; `shell` gives it thickness.
+- `jitter` with a fixed `random.Random(seed)`: uneven spread, length and twist, so the locks look layered rather than stamped.
 
 **Shape guidance (lessons from iteration):**
-- **Shape first, detail second.** Get length and silhouette right, then add strand detail. The common failure is hair that hangs down in long droopy strands when the reference is short and fluffy.
-- Match **where the sides end** (eye level? jaw?), **fringe length** (brows? eyes?), the **swoop direction**, and **crown height**. Swirl the top clumps from an off-centre crown toward the swoop side.
-- Avoid narrow "icicle" spikes; prefer wide clumps whose tips flick outward.
+- **Match the reference's silhouette before adding detail.** Most rejected attempts were the wrong shape, not too little detail: "the hair looks inaccurate", "it looks different from this image". Compare the `look` render with the reference side by side: where the sides end (eye level? jaw? chest?), fringe length, parting, swoop direction, crown height, and any ponytail or long fall.
+- When the user asks for a change from the reference ("make the hair longer"), change only that and keep the rest of the cut.
+- Avoid narrow "icicle" spikes and crowns of thorns; prefer fewer, wider locks whose tips flick outward a little.
+- Fan the top locks out from the crown in every direction, or the spikes merge into one cone.
+- Stagger the ends' heights, or they form a straight brim.
 - Avoid long tubes lying across the head; they read as bars or headbands.
+- Wavy art needs a sideways wobble in the locks (amplitude around 0.1); straight locks read as a different character.
 
-**Budget:** Roblox imports at most ~20k triangles per mesh, and 30 heroes are on screen. Aim for **4k–8k triangles**: no Subdivision modifier, 6-point cross-sections, 6–7 segments per strand. Detailed with subdivision came out at 56k, so don't.
+**Budget:** Roblox imports at most ~20k triangles per mesh, and 30 heroes are on screen. Aim for **5k–14k triangles**: no Subdivision modifier. One attempt with subdivision came out at 56k.
 
-**Export** (in the Blender script): select only the hair, then `export_scene.fbx(use_selection=True, object_types={'MESH'}, axis_forward='-Z', axis_up='Y', apply_unit_scale=True, bake_space_transform=True)`. Also write `<hero>_hair.json` (vertices in Roblox coordinates + triangles) and print the bounding-box **centre** and **size**. You need both for placement.
+**Export:** exec the skill's `scripts/blender_export_hair.py` after setting `HAIR` and `OUT_DIR`. It exports the FBX (`axis_forward='-Z'`, `axis_up='Y'`, `bake_space_transform=True`), writes `<hero>_hair.json` (vertices in Roblox coordinates plus triangles) and the `.blend`, and prints the bounding-box **centre** and **size**. You need both for placement.
 
 **Import (manual):** scripts can't publish meshes yet (`AssetService:CreateAssetAsync` → "not available yet"). The user imports the FBX with **File → Import 3D** in Studio and sends the MeshId (or you find it on the imported MeshPart). Move the imported copy out of Workspace (e.g. to ServerStorage) afterwards.
 
@@ -189,7 +211,8 @@ piece("HairMesh", "Head", { sizeX, sizeY, sizeZ }, { cx, cy, cz }, hairColour, w
 ```
 
 - **Allowlist:** add the mesh to `HeroCostumes.MESHES` (`[meshId] = textureId` or `""` for untextured), with a comment naming the source. Untextured meshes take the piece colour, so the hair colour is just the costume colour.
-- **Fit pass:** the exported centre is only the modelling position. Look at it in Studio from front, side, back and top. If the hair floats or the scalp shows, lower `cy` (Aaron needed −0.14 in 1.2-head units) and widen X/Z slightly (e.g. `0.0104` instead of `0.01`) so it hugs the round head. Hair modelled with lots of volume above the head needs this; hair centred on the head (Velkist) usually doesn't.
+- **Verify the ID before wiring it.** The vertex count of the uploaded mesh must match the export, and its min-X vertex must mirror the export's max-X vertex (skill §6). A user once sent another hero's MeshId, and this check caught it.
+- **Fit pass:** the exported centre is only the modelling position. Look at it in Studio from front, side, back and top. If the hair floats or the scalp shows, lower `cy` (Aaron needed −0.14 in 1.2-head units) and widen X/Z slightly (e.g. `0.0104` instead of `0.01`) so it hugs the round head. If it is too big all round, scale it uniformly (Jenna uses `0.0092`). A bald patch at the back or sides that moving the mesh can't cover means the scalp `cap()` is too short: fix the generator and re-import.
 - **Store hair meshes** (Han): load the accessory with `InsertService:LoadAsset` without parenting it, inspect it (no scripts), and read its `SpecialMesh.MeshId/TextureId/Scale` and the Handle's `HairAttachment`. Place it with `hairAccessoryOffset(attachment)` so its HairAttachment meets the top of the 1.2-unit head.
 
 ### 4.6 Signature idle stance (`HeroClips.luau`)
@@ -209,16 +232,19 @@ Overrides.hero_x = { Idle = breathe(stance, 3.0), --[[ existing attack overrides
 ```
 
 - **Wide stance:** abduct the hips (left −Z, right +Z) and counter-rotate the ankles by the same amount so the feet stay flat. Bend the knees negatively, and drop `RootOffset` y by 0.1–0.15 so the feet stay on the ground.
-- **Weapon direction** (from §3): blades out and up means shoulders abducted ~38° with elbows ~60°. A sword held low and angled down means a small shoulder and elbow bend plus a strong negative wrist (−75°). A raised shield means the left shoulder forward ~45° with a slight inward yaw and the elbow ~85°.
+- **Weapon direction** (from §3): blades out and up means shoulders abducted ~38° with elbows ~60°. A sword held low and angled down means a small shoulder and elbow bend plus a strong negative wrist (−75°). A raised shield means the left shoulder forward ~45° with a slight inward yaw and the elbow ~85°. A staff upright beside the right hip is `RightShoulder {10,0,28}`, `RightElbow {35,0,0}`, `RightWrist {45,-35,0}`. That one was measured in Studio after a guessed pose put the staff across the face, so measure rather than guess when a weapon passes near the head.
+- Heroes without a weapon swing (Valeria's tome) can use their own idle helper, such as `floatIdle`; it must still loop cleanly.
 - **Character:** a cocky head tilt (`Neck` Y/Z a few degrees), wariness (a slight waist turn), confidence (an upright waist).
 - The clip tests require knees ≤ 0, no elbow hyperextension, and loops that end on their first pose (`breathe` handles that).
 
 ### 4.7 Verify
 
-1. `pwsh tests/run.ps1` must pass. The `hero-rig.spec` suite runs the costume lint (budget, overlaps, materials, mesh allowlist) and the clip checks.
-2. In Studio, after a Rojo sync and a fresh playtest, build the lineup with `tests/studio-hero-model-viewer.luau`. Wrap its body as `return (function() <file> end)()({ Armed = true })`; the file's own function needs its own `end`, so the text ends in `end end)()(...)`.
-3. Look at the hero from the front, side, back and top: hair fit, face position, pieces staying attached, weapon in hand.
-4. `tests/studio-hero-rigs.luau` in a playtest covers welds, mesh counts and "weapon never touches the head".
+1. `pwsh tests/run.ps1` must pass (add `-LuauDirectory <dir>` if the Luau CLI isn't in the default temp folder). The `hero-rig.spec` suite runs the costume lint (budget, overlaps, materials, mesh allowlist) and the clip checks. The "[The Pit] Request failed" line is expected.
+2. **Quick check in Edit mode (preferred for a single hero):** build a temporary rig with the skill's "temp rig" snippet (`references/studio-snippets.md`). It equips the archetype weapon, applies the idle pose, and stops if Rojo hasn't synced your latest edit. Capture front, face close-up and back with `screen_capture`, then delete the rig.
+3. **Full lineup in a playtest:** after a Rojo sync and a fresh playtest, run `tests/studio-hero-model-viewer.luau`. Wrap its body as `return (function() <file> end)()({ Armed = true })`; the file's own function needs its own `end`, so the text ends in `end end)()(...)`.
+4. Look at the hero from the front, side, back and top: hair fit, face position, pieces staying attached, weapon in hand, back pieces visible past the arms.
+5. `tests/studio-hero-rigs.luau` in a playtest covers welds, mesh counts and "weapon never touches the head".
+6. If Studio couldn't be checked (for example the MCP was disconnected), say so, and don't commit until the user has looked or agrees.
 
 ---
 
@@ -231,34 +257,48 @@ Overrides.hero_x = { Idle = breathe(stance, 3.0), --[[ existing attack overrides
 - **The head is rounded:** pieces designed for a cube head leave gaps at the corners. Hair must come down over the temples and back of the round head.
 - **Neon blooms:** large Neon parts become flat glowing blobs; keep Neon to strips and small gems.
 - **Joint-crossing pieces:** collars rising into the head, cuffs reaching the hand, and quivers poking into a bigger head all fail the lint. Move them by 0.05–0.1 studs rather than marking them `Loose`.
-- **Temporary Studio objects:** anything built in Edit mode for a preview (lineups, test rigs) must be deleted afterwards, or it is saved into the shared place.
+- **Temporary Studio objects:** anything built in Edit mode for a preview (lineups, test rigs, the imported hair MeshPart) must be deleted afterwards, or it is saved into the shared place.
+- **File encoding:** `HeroCostumes.luau` contains `★` and is stored with LF endings. Writing it with Python's default encoding on Windows (cp1252) crashed mid-write and left the file empty. Edit it with the skill's `replace_costume_block.py` and `wire_hair_mesh.py`, which write UTF-8 bytes and keep LF.
+- **Work in the main checkout, not a worktree:** Rojo syncs from the main folder only, so a worktree's edits never reach Studio and its files are hard for the user to find.
+- **Back pieces hidden by the arms:** frames, banners and wings behind the back must clear the arms' swing, or the front view hides them (Solaris's banners ended up at x ±3.25).
+- **Idle overrides and the spec:** `hero-rig.spec` checks that a hero *without* an idle override uses the weapon clip, using Han as the example. If Han gets an idle override, point that check at another hero.
+- **Studio MCP disconnects** ("protocol version is not supported"): MCP tools only load at session start, so the user has to update the plugin and restart the session. The Studio ID also changes when Studio restarts; get it again with `list_roblox_studios`.
 
 ---
 
 ## 6. Per-hero checklist
 
 - [ ] Reference read: body build, palette, layers per bone, hair, face, stance (§4.1)
+- [ ] Female hero: `Slim` body, narrow shoulders, cinched waist, flared hips (§4.2)
 - [ ] Costume block written; within 60 parts; lint clean (§4.2)
 - [ ] Face generated (`make_<hero>_face.py`), uploaded, ID set; brows match the hair (§4.3)
-- [ ] Hair modelled in Blender at 4k–8k triangles; FBX + JSON exported; centre and size recorded (§4.4)
-- [ ] Hair imported by the user; orientation verified; added to `MESHES`; piece placed; fit checked from four sides (§4.5)
+- [ ] Hair generator `tools/make_<hero>_hair_ugc.py` written; silhouette matches the reference; 5k–14k triangles; FBX + JSON exported; centre and size recorded (§4.4)
+- [ ] Hair imported by the user; MeshId verified against the export; added to `MESHES`; piece placed; fit checked from four sides (§4.5)
 - [ ] Idle stance override added; clip tests pass (§4.6)
-- [ ] `pwsh tests/run.ps1` passes; Studio lineup reviewed; temporary objects removed (§4.7)
+- [ ] `pwsh tests/run.ps1` passes; checked in Studio (or marked unverified); temporary objects removed (§4.7)
+- [ ] One branch and PR for this hero, with only this hero's files staged
 - [ ] Docs updated if a contract changed (`hero-rig-rebuild-plan.md` decisions)
 
 ---
 
-## 7. Status (2026-10-28)
+## 7. Status (2026-11-10)
 
-| Hero | Costume | Face | Hair | Idle |
+Every hero's hair is our own Blender mesh except Han's, which is a Creator Store hair. Every face is our own generated decal.
+
+| Hero | Face | Hair mesh | Hair generator | Idle |
 | --- | --- | --- | --- | --- |
-| Jenna | Part-built, reference-matched | store anime face | Parts (hood) | signature |
-| Han | remodelled | generated `121433999720755` | store mesh `15045614397` | weapon default |
-| Velkist | remodelled | generated `104592422151826` | ours `109684055929778` | signature (showboat) |
-| Aaron | remodelled | generated `135079238224097` | ours `76088495641706` (layered anime curtain bangs + feathered nape ducktail) | signature (wary guard) |
-| Catio | remodelled | generated `hero_catio_face.png` | ours `139185116264855` (high-poly UGC shaggy anime wolf-cut) | weapon default |
-| Others (7) | original Part-built ports | default smiley | Part blocks | weapon default |
+| Han | `121433999720755` | store `15045614397` | — | weapon default |
+| Aaron | `135079238224097` | `76088495641706` | `make_aaron_hair_v2.py` | wary guard |
+| Catio | `121586827857415` | `139185116264855` | `make_catio_hair_v2.py` | weapon default |
+| Valeria | `75911538426683` | `119546665528137` | `make_valeria_hair_ugc.py` | floating tome (`floatIdle`) |
+| Ignis | `137040425989997` | `101701313703578` | `make_ignis_hair_ugc.py` | brawler |
+| Jenna | `100881487266962` | `107250648665529` (scale 0.0092) | `make_jenna_hair_ugc.py` | ready stance |
+| Velkist | `104592422151826` | `109684055929778` | `velkist_hair.blend` | showboat |
+| Eolka | `131976429681674` | `123421721359927` | `make_eolka_hair_ugc.py` | poised (staff) |
+| Morrigan | `134987323511884` | `132434150044694` | `make_morrigan_hair_ugc.py` | planted |
+| Sovereign Archon | `104359124032831` | `139133902834118` | `make_archon_hair_ugc.py` | prowl |
+| Solaris | `89614314986771` | `116753377442189` | `make_solaris_hair_ugc.py` | sunward (staff) |
+| Astrea | `139763198478294` | `108726871571153` | `make_astrea_hair_ugc.py` | poised (bow) |
 
-**Aaron update (2026-10-28):** Generated stylized messy anime hair mesh `76088495641706` in Blender (`assets/hair/hero_hair.blend`, `tools/make_aaron_hair_v2.py`), replacing previous placeholders. Features center-left parted curtain bangs, dipping forehead strands, 5-point ridged layered clumps, and flared ducktail nape locks in Sandy Blonde (`#DEC085`). Scaled and positioned in `HeroCostumes.luau` at `{ 1.91, 1.66, 1.58 }` with offset `{ 0, 0.248, 0.061 }`. Verified in Studio across 4 angles with 0 lint errors and 16k passing spec tests.
-
-**Catio remodel (2026-10-28):** Complete rebuild from Steampunk Cat-Miner to Royal Scholar / High Archbishop based on reference image. High-poly Roblox UGC aesthetic hair modelled in Blender (`catio_hair.fbx`, `catio_hair.json`, `hero_hair.blend`, 4,844 tris / 2,558 verts) in Dark Slate Navy (`#2D334A`), featuring center-left curtain bangs, dipping central forehead strands, jaw-framing side cascades, and floating crown ahoge flyaways. Custom stoic anime face generated via PIL (`assets/faces/make_catio_face.py`). Ceremonial white & gold robe costume authored with folded hooded cowl, royal sapphire brooch with silver swag chains, boxy kimono sleeve pauldrons, pleated hakama trousers, and gold-capped heavy boots (44 costume pieces, strictly within the 60-part budget). All 16,498 spec tests pass.
+Open issues:
+- **Female heroes predate the feminine-body rule (§1.1).** Jenna is already `Slim`. Valeria, Eolka, Solaris and Astrea are `Standard`, and Eolka and Valeria wear broad pauldrons. Switch them to `Slim` and slim their shoulder pieces. Their costumes will need a lint pass, because pieces rescale with the body.
