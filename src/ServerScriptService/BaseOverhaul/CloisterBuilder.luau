@@ -1,8 +1,8 @@
 --!strict
 -- CloisterBuilder.luau
--- ModuleScript: builds the Cloister Commons, the hollow rounded-rectangle hub in front of the tower gate
--- (GDD §3.5, docs/cloister-hub-10-plots-plan.md): a walkable band around an open void, a garden island in
--- the middle joined by four footbridges, and a landing for each of the 10 plots on its outer edge.
+-- ModuleScript: builds the Cloister Commons, the solid rounded-rectangle garden hub in front of the tower gate
+-- (GDD §3.5): the Wayfinder Dais at the centre, cobbled paths from it to every plot landing and the South
+-- Gate, and a landing for each of the 8 plots on its outer edge.
 -- Hub-local frame: origin at HubLayout.HubCentre, y = 0 is the walking surface (world Y = 12),
 -- -Z is north (away from the tower), +Z is south (toward the tower gate).
 
@@ -25,17 +25,15 @@ CloisterBuilder.Config = {
 	PlazaRadius = 36,
 	PavilionScale = 1.7, -- Room for the shared boards at SharedLeaderboards.BoardScale
 
-	-- Banner colour per plot (Plot_1 .. Plot_10), shown on each gate landing
+	-- Banner colour per plot (Plot_1 .. Plot_8), shown on each gate landing
 	PlotColors = {
 		Color3.fromRGB(196, 58, 58),
 		Color3.fromRGB(214, 142, 46),
 		Color3.fromRGB(206, 190, 70),
-		Color3.fromRGB(120, 180, 60),
-		Color3.fromRGB(70, 160, 92),
+		Color3.fromRGB(90, 172, 72),
 		Color3.fromRGB(56, 160, 160),
 		Color3.fromRGB(66, 128, 204),
-		Color3.fromRGB(96, 96, 210),
-		Color3.fromRGB(150, 86, 196),
+		Color3.fromRGB(130, 90, 204),
 		Color3.fromRGB(200, 90, 160),
 	},
 }
@@ -224,14 +222,29 @@ local function outerOpenings(): { { number } }
 	return list
 end
 
-local function voidOpenings(): { { number } }
-	local w = HubLayout.FootbridgeWidth * 0.5
-	return { { -HubLayout.VoidHalfX, 0, w }, { HubLayout.VoidHalfX, 0, w }, { 0, -HubLayout.VoidHalfZ, w }, { 0, HubLayout.VoidHalfZ, w } }
+-- Radius of the Wayfinder Dais plaza once scaled (PlazaRadius 36 x 1.5); paths end just under its curb.
+local DAIS_EDGE = 56
+
+-- Hub-local garden paths as {x0, z0, x1, z1, width}: one from each plot landing straight to the dais, one
+-- from the dais north through the Reflecting Pool, and last the Pilgrim's Way from the South Gate.
+local function gardenPaths(): { { number } }
+	local c = HubLayout.HubCentre
+	local list = {}
+	for i = 1, HubLayout.PlotCount do
+		local land = HubLayout.HubLandingPoint(i)
+		local lx, lz = land.X - c.X, land.Z - c.Z
+		local len = math.sqrt(lx * lx + lz * lz)
+		table.insert(list, { lx, lz, lx / len * DAIS_EDGE, lz / len * DAIS_EDGE, CloisterBuilder.Config.PathWidth })
+	end
+	table.insert(list, { 0, -HubLayout.HubHalfZ + 30, 0, -DAIS_EDGE, CloisterBuilder.Config.PathWidth })
+	table.insert(list, { 0, HubLayout.HubHalfZ, 0, DAIS_EDGE, HubLayout.BoulevardWidth })
+	return list
 end
 
-local function islandOpenings(): { { number } }
-	local w = HubLayout.FootbridgeWidth * 0.5
-	return { { -HubLayout.IslandHalfX, 0, w }, { HubLayout.IslandHalfX, 0, w }, { 0, -HubLayout.IslandHalfZ, w }, { 0, HubLayout.IslandHalfZ, w } }
+local function segmentDistance(px: number, pz: number, seg: { number }): number
+	local dx, dz = seg[3] - seg[1], seg[4] - seg[2]
+	local t = math.clamp(((px - seg[1]) * dx + (pz - seg[2]) * dz) / (dx * dx + dz * dz), 0, 1)
+	return math.sqrt((seg[1] + t * dx - px) ^ 2 + (seg[2] + t * dz - pz) ^ 2)
 end
 
 -- A low wall along a rounded-rect edge, offset inward by `inset` (negative = outward), broken at the
@@ -319,66 +332,33 @@ end
 --============================================================================
 local function buildGround(model: Model, root: CFrame, cfg: typeof(CloisterBuilder.Config), rng: Random): Part
 	local f = folder("Ground", model)
-	local hx, hz, ro = HubLayout.HubHalfX, HubLayout.HubHalfZ, HubLayout.OuterCornerRadius
-	local band = HubLayout.BandWidth
+	local hx, hz, r = HubLayout.HubHalfX, HubLayout.HubHalfZ, HubLayout.OuterCornerRadius
 	local th = cfg.TopThickness
-	local first: Part? = nil
 
-	-- Band: slices from the outer edge inward, exactly one band wide (corners are concentric arcs).
-	-- Coplanar overlapping faces flicker (z-fighting), so straight slices meet edge to edge and the
-	-- overlapping corner slices step a few hundredths of a stud below their neighbours.
-	local arcIndex = 0
-	walkRoundedRect(hx, hz, ro, 200, function(x, z, nx, nz, len, isArc)
-		arcIndex += if isArc then 1 else 0
-		local top = if isArc then -layerDrop(arcIndex) else 0
-		local cf = edgeCF(root, x - nx * band * 0.5, z - nz * band * 0.5, nx, nz, top)
-		local slab = makePart({ Name = "BandSurface", Size = Vector3.new(if isArc then len + 0.6 else len, th, band), CFrame = cf * CFrame.new(0, -th * 0.5, 0), Color = GRASS, Material = Enum.Material.Grass, Parent = f })
-		first = first or slab
-	end, 16)
-	-- Stone kerb along the band's outer edge, standing 0.1 proud of the grass so their side faces never coincide
-	local kerbIndex = 0
-	walkRoundedRect(hx, hz, ro, 400, function(x, z, nx, nz, len)
-		kerbIndex += 1
-		makePart({ Name = "OuterKerb", Size = Vector3.new(len + 0.6, th - 0.1, 6), CFrame = edgeCF(root, x - nx * 2.9, z - nz * 2.9, nx, nz, -0.3 - layerDrop(kerbIndex)) * CFrame.new(0, -(th - 0.1) * 0.5, 0), Color = SLATE, Material = Enum.Material.Slate, Parent = f })
-	end, 16)
-
-	-- Centre island: solid rounded rectangle
-	local ix, iz, ir = HubLayout.IslandHalfX, HubLayout.IslandHalfZ, HubLayout.IslandCornerRadius
-	makePart({ Name = "IslandSurface", Size = Vector3.new(ix * 2, th, (iz - ir) * 2), CFrame = root * CFrame.new(0, -th * 0.5, 0), Color = GRASS, Material = Enum.Material.Grass, Parent = f })
+	-- Solid rounded rectangle: a full-length middle slab, a side slab each way between the corners, and four
+	-- corner discs. The slabs meet edge to edge; the discs overlap them, so they sit a few hundredths lower.
+	local first = makePart({ Name = "CommonsSurface", Size = Vector3.new((hx - r) * 2, th, hz * 2), CFrame = root * CFrame.new(0, -th * 0.5, 0), Color = GRASS, Material = Enum.Material.Grass, Parent = f })
 	for _, side in { -1, 1 } do
-		makePart({ Name = "IslandSurface", Size = Vector3.new((ix - ir) * 2, th, ir), CFrame = root * CFrame.new(0, -th * 0.5, side * (iz - ir * 0.5)), Color = GRASS, Material = Enum.Material.Grass, Parent = f })
+		makePart({ Name = "CommonsSurface", Size = Vector3.new(r, th, (hz - r) * 2), CFrame = root * CFrame.new(side * (hx - r * 0.5), -th * 0.5, 0), Color = GRASS, Material = Enum.Material.Grass, Parent = f })
 	end
 	for _, q in { { 1, 1 }, { -1, 1 }, { 1, -1 }, { -1, -1 } } do
-		cylinderY("IslandCorner", ir, th, -0.06, root * CFrame.new(q[1] * (ix - ir), 0, q[2] * (iz - ir)), GRASS, Enum.Material.Grass, false, f)
+		cylinderY("CommonsCorner", r, th, -0.06, root * CFrame.new(q[1] * (hx - r), 0, q[2] * (hz - r)), GRASS, Enum.Material.Grass, false, f)
 	end
-	walkRoundedRect(ix, iz, ir, 400, function(x, z, nx, nz, len)
+	-- Stone kerb along the outer edge, standing 0.1 proud of the grass so their side faces never coincide
+	local kerbIndex = 0
+	walkRoundedRect(hx, hz, r, 400, function(x, z, nx, nz, len)
 		kerbIndex += 1
-		makePart({ Name = "IslandKerb", Size = Vector3.new(len + 0.6, th - 0.1, 5), CFrame = edgeCF(root, x - nx * 2.4, z - nz * 2.4, nx, nz, -0.3 - layerDrop(kerbIndex)) * CFrame.new(0, -(th - 0.1) * 0.5, 0), Color = SLATE, Material = Enum.Material.Slate, Parent = f })
-	end, 8)
+		makePart({ Name = "OuterKerb", Size = Vector3.new(len + 0.6, th - 0.1, 6), CFrame = edgeCF(root, x - nx * 2.9, z - nz * 2.9, nx, nz, -0.3 - layerDrop(kerbIndex)) * CFrame.new(0, -(th - 0.1) * 0.5, 0), Color = SLATE, Material = Enum.Material.Slate, Parent = f })
+	end, 12)
 
-	-- Rocky undersides: chunks under the band, a tapered mass under the island
+	-- Rocky underside: chunks around the rim and a tapered mass under the middle
 	local under = folder("RockyUnderside", f)
-	walkRoundedRect(hx - band * 0.5, hz - band * 0.5, ro - band * 0.5, 90, function(x, z, nx, nz)
-		rockChunk(under, edgeCF(root, x, z, nx, nz, 0), rng:NextNumber(70, 95), band * 0.9, rng:NextNumber(50, 80), rng)
+	walkRoundedRect(hx - 50, hz - 50, r - 40, 90, function(x, z, nx, nz)
+		rockChunk(under, edgeCF(root, x, z, nx, nz, 0), rng:NextNumber(70, 95), 90, rng:NextNumber(50, 80), rng)
 	end)
-	rockChunk(under, root, ix * 1.8, iz * 1.8, 140, rng)
-	local cloudAnchor = makePart({ Name = "VoidCloudEmitter", Size = Vector3.new(HubLayout.VoidHalfX * 2, 1, HubLayout.VoidHalfZ * 2), CFrame = root * CFrame.new(0, -40, 0), Transparency = 1, Decorative = true, Parent = under })
-	local clouds = Instance.new("ParticleEmitter")
-	clouds.Name = "CloudWisps"
-	clouds.Texture = "rbxassetid://243660364"
-	clouds.Shape = Enum.ParticleEmitterShape.Box
-	clouds.LightEmission = 0
-	clouds.Color = ColorSequence.new(Color3.fromRGB(20, 18, 26), Color3.fromRGB(14, 12, 18))
-	clouds.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.3, 0.88), NumberSequenceKeypoint.new(0.7, 0.92), NumberSequenceKeypoint.new(1, 1) })
-	clouds.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 20), NumberSequenceKeypoint.new(1, 36) })
-	clouds.Lifetime = NumberRange.new(8, 12)
-	clouds.Rate = 6
-	clouds.Speed = NumberRange.new(1, 3)
-	clouds.Rotation = NumberRange.new(0, 360)
-	clouds.RotSpeed = NumberRange.new(-8, 8)
-	clouds.Parent = cloudAnchor
+	rockChunk(under, root, hx * 1.6, hz * 1.6, 160, rng)
 
-	return first :: Part
+	return first
 end
 
 --============================================================================
@@ -387,10 +367,8 @@ end
 local function buildEdges(model: Model, root: CFrame, cfg: typeof(CloisterBuilder.Config))
 	local hx, hz, ro = HubLayout.HubHalfX, HubLayout.HubHalfZ, HubLayout.OuterCornerRadius
 	edgeWall(folder("RimWall", model), root, hx, hz, ro, 1.5, cfg.WallHeight, outerOpenings(), true)
-	edgeWall(folder("VoidBalustrade", model), root, HubLayout.VoidHalfX, HubLayout.VoidHalfZ, HubLayout.VoidCornerRadius, -1.5, 3, voidOpenings(), false)
-	edgeWall(folder("IslandBalustrade", model), root, HubLayout.IslandHalfX, HubLayout.IslandHalfZ, HubLayout.IslandCornerRadius, 1.5, 3, islandOpenings(), true)
 
-	-- Lamp pylons along the outer rim, every third one lit
+	-- Lamp pylons along the outer rim, every fifth one lit
 	local lamps = folder("LampPylons", model)
 	local n = 0
 	local openings = outerOpenings()
@@ -408,60 +386,14 @@ local function buildEdges(model: Model, root: CFrame, cfg: typeof(CloisterBuilde
 		end
 	end)
 
-	-- Cobbled promenade down the middle of the band, plus spurs to every landing and footbridge
-	local walk = folder("Promenade", model)
-	local mid = HubLayout.BandWidth * 0.5
-	local k = 0
-	walkRoundedRect(hx - mid, hz - mid, ro - mid, 80, function(x, z, nx, nz, len, isArc)
-		k += 1
-		-- Corner pieces only overlap their neighbours at this radius, so two levels below the straights suffice
-		local thick = if isArc then (if k % 2 == 0 then 0.2 else 0.16) else 0.24
-		makePart({ Name = "PromenadeSlab", Size = Vector3.new(if isArc then len + 0.4 else len, thick, cfg.PathWidth), CFrame = edgeCF(root, x, z, nx, nz, thick * 0.5), Color = if k % 2 == 0 then COBBLE else COBBLE:Lerp(SLATE, 0.2), Material = Enum.Material.Cobblestone, Decorative = true, Parent = walk })
-	end, 10)
-	local c = HubLayout.HubCentre
-	for i = 1, HubLayout.PlotCount do
-		local slot = HubLayout.PlotSlots[i]
-		local land = HubLayout.HubLandingPoint(i)
-		local lx, lz = land.X - c.X, land.Z - c.Z
-		flatStrip("LandingSpur", root, lx, lz, lx - slot.DX * mid, lz - slot.DZ * mid, cfg.PathWidth, 0.15, 0.3, COBBLE, Enum.Material.Cobblestone, walk)
-	end
-	for _, o in voidOpenings() do
-		local len = math.sqrt(o[1] ^ 2 + o[2] ^ 2)
-		local ux, uz = o[1] / len, o[2] / len
-		flatStrip("FootbridgeSpur", root, o[1], o[2], o[1] + ux * mid, o[2] + uz * mid, cfg.PathWidth, 0.15, 0.3, COBBLE, Enum.Material.Cobblestone, walk)
-	end
-	-- Island paths: a cross joining the four footbridges
-	flatStrip("IslandPath", root, -HubLayout.IslandHalfX, 0, HubLayout.IslandHalfX, 0, cfg.PathWidth, 0.12, 0.24, COBBLE, Enum.Material.Cobblestone, walk)
-	flatStrip("IslandPath", root, 0, -HubLayout.IslandHalfZ, 0, HubLayout.IslandHalfZ, cfg.PathWidth, 0.15, 0.3, COBBLE, Enum.Material.Cobblestone, walk)
-end
-
---============================================================================
--- C. FOOTBRIDGES TO THE ISLAND
---============================================================================
-local function buildFootbridges(model: Model, root: CFrame)
-	local f = folder("Footbridges", model)
-	local w = HubLayout.FootbridgeWidth
-	for i, o in voidOpenings() do
-		local isl = islandOpenings()[i]
-		local a = Vector3.new(o[1], 0, o[2])
-		local b = Vector3.new(isl[1], 0, isl[2])
-		local len = (b - a).Magnitude + 6
-		local cf = root * CFrame.lookAt((a + b) * 0.5, b)
-		makePart({ Name = "FootbridgeDeck", Size = Vector3.new(w, 1.2, len), CFrame = cf * CFrame.new(0, -0.68, 0), Color = Color3.fromRGB(168, 156, 138), Material = Enum.Material.Cobblestone, Parent = f })
-		makePart({ Name = "FootbridgePlanks", Size = Vector3.new(w - 6, 0.2, len - 4), CFrame = cf * CFrame.new(0, 0.1, 0), Color = WOOD, Material = Enum.Material.WoodPlanks, Decorative = true, Parent = f })
-		makePart({ Name = "FootbridgeKeel", Size = Vector3.new(w * 0.5, 4, len - 8), CFrame = cf * CFrame.new(0, -3, 0), Color = SLATE, Material = Enum.Material.Slate, Decorative = true, Parent = f })
-		for _, side in { -1, 1 } do
-			makePart({ Name = "FootbridgeRail", Size = Vector3.new(1, 3, len - 6), CFrame = cf * CFrame.new(side * (w * 0.5 - 0.5), 1.5, 0), Color = Color3.fromRGB(226, 216, 192), Material = Enum.Material.Marble, Parent = f })
-			local barrier = makePart({ Name = "Barrier", Size = Vector3.new(1, BARRIER_HEIGHT, len - 6), CFrame = cf * CFrame.new(side * (w * 0.5 + 0.2), BARRIER_HEIGHT * 0.5, 0), Transparency = 1, CastShadow = false, Parent = f })
-			barrier.CanQuery = false
-			barrier.CanTouch = false
-			local post = cf * CFrame.new(side * (w * 0.5 - 0.5), 0, 0)
-			makePart({ Name = "LanternPost", Size = Vector3.new(0.8, 8, 0.8), CFrame = post * CFrame.new(0, 4, 0), Color = IRON, Material = Enum.Material.Metal, Parent = f })
-			local lantern = makePart({ Name = "HangingLantern", Size = Vector3.new(1.2, 1.6, 1.2), CFrame = post * CFrame.new(-side * 1.2, 6.6, 0), Color = LANTERN, Material = Enum.Material.Neon, Decorative = true, Parent = f })
-			if side == 1 then
-				light(lantern, LANTERN, 16, 1)
-			end
-		end
+	-- Cobbled paths from every landing to the dais. Neighbouring paths cross near the dais, so each sits at
+	-- its own height to avoid z-fighting. (The last entry is the Pilgrim's Way, built by the terrace.)
+	local walk = folder("GardenPaths", model)
+	local paths = gardenPaths()
+	for i = 1, #paths - 1 do
+		local p = paths[i]
+		local t = 0.24 + (i % 3) * 0.03
+		flatStrip("GardenPath", root, p[1], p[2], p[3], p[4], p[5], t * 0.5, t, if i % 2 == 0 then COBBLE else COBBLE:Lerp(SLATE, 0.2), Enum.Material.Cobblestone, walk)
 	end
 end
 
@@ -511,10 +443,10 @@ end
 --============================================================================
 local function buildGrandTerrace(model: Model, root: CFrame)
 	local f = folder("PilgrimsWay", model)
-	local hz, vz = HubLayout.HubHalfZ, HubLayout.VoidHalfZ
+	local hz = HubLayout.HubHalfZ
 	local w = HubLayout.BoulevardWidth
-	flatStrip("Boulevard", root, 0, hz, 0, vz, w, 0.18, 0.36, COBBLE, Enum.Material.Cobblestone, f)
-	flatStrip("CrimsonRunner", root, 0, hz, 0, -HubLayout.IslandHalfZ * 0.2, 10, 0.4, 0.06, CRIMSON, Enum.Material.Granite, f)
+	flatStrip("Boulevard", root, 0, hz, 0, DAIS_EDGE, w, 0.18, 0.36, COBBLE, Enum.Material.Cobblestone, f)
+	flatStrip("CrimsonRunner", root, 0, hz, 0, -50, 10, 0.4, 0.06, CRIMSON, Enum.Material.Granite, f)
 	makePart({
 		Name = "HubArrival",
 		Size = Vector3.new(10, 1, 6),
@@ -585,14 +517,14 @@ local function buildGrandTerrace(model: Model, root: CFrame)
 end
 
 --============================================================================
--- K. LANTERN ORCHARD (one strip along a band)
+-- K. LANTERN ORCHARD (a square grove of blossom trees round a lantern walk)
 --============================================================================
--- o: frame on the band centre line, its Z axis running along the band, X across it.
+-- o: frame at the grove centre, its Z axis running along the lantern walk, X across it.
 local function buildOrchard(model: Model, name: string, o: CFrame, rng: Random)
 	local f = folder(name, model)
 	local i = 0
 	for _, x in { -32, 32 } do
-		for _, z in { -66, -22, 22, 66 } do
+		for _, z in { -22, 22 } do
 			i += 1
 			local t = o * CFrame.new(x + rng:NextNumber(-3, 3), 0, z + (if x > 0 then 11 else -11))
 			local scale = rng:NextNumber(0.9, 1.15)
@@ -603,12 +535,12 @@ local function buildOrchard(model: Model, name: string, o: CFrame, rng: Random)
 			end
 		end
 	end
-	for k, z in { -44, 0, 44 } do
+	for k, z in { -24, 24 } do
 		for _, side in { -1, 1 } do
 			local p = o * CFrame.new(side * 12, 0, z)
 			makePart({ Name = "LanternPost", Size = Vector3.new(0.6, 6, 0.6), CFrame = p * CFrame.new(0, 3, 0), Color = WOOD, Material = Enum.Material.Wood, Parent = f })
 			local lantern = makePart({ Name = "PaperLantern", Size = Vector3.new(1, 1.4, 1), CFrame = p * CFrame.new(-side * 1.2, 4.9, 0), Color = Color3.fromRGB(255, 120, 90), Material = Enum.Material.Neon, Decorative = true, Parent = f })
-			if k == 2 and side == 1 then
+			if k == 1 and side == 1 then
 				light(lantern, Color3.fromRGB(255, 160, 110), 16, 1)
 			end
 		end
@@ -616,7 +548,7 @@ local function buildOrchard(model: Model, name: string, o: CFrame, rng: Random)
 	for _, side in { -1, 1 } do
 		bench("OrchardBench", o * CFrame.new(side * 16, 0, 0) * CFrame.Angles(0, side * math.pi * 0.5, 0), f)
 	end
-	local anchor = makePart({ Name = "FireflyAnchor", Size = Vector3.new(90, 1, 160), CFrame = o * CFrame.new(0, 3, 0), Transparency = 1, Decorative = true, Parent = f })
+	local anchor = makePart({ Name = "FireflyAnchor", Size = Vector3.new(90, 1, 80), CFrame = o * CFrame.new(0, 3, 0), Transparency = 1, Decorative = true, Parent = f })
 	local flies = Instance.new("ParticleEmitter")
 	flies.Name = "Fireflies"
 	flies.Color = ColorSequence.new(Color3.fromRGB(255, 240, 140))
@@ -668,91 +600,91 @@ local function flowerBed(parent: Instance, base: CFrame, color: Color3)
 	makePart({ Name = "BedShrub", Shape = Enum.PartType.Ball, Size = Vector3.new(3.4, 3.4, 3.4), CFrame = base * CFrame.new(0, 1.6, 0), Color = HEDGE, Material = Enum.Material.Grass, Decorative = true, Parent = parent })
 end
 
--- Hub-local spots the band props keep clear of: {x, z, radius}
-local function bandClearings(): { { number } }
-	local c = HubLayout.HubCentre
+-- Hub-local feature spots, {x, z, clearRadius}; the garden scatter keeps clear of them.
+local FEATURES = {
+	Dais = { 0, 0, 64 },
+	Pool = { 0, -160, 58 },
+	Gazebo = { -90, 165, 30 },
+	Pavilion = { 90, 165, 50 },
+	Overlook = { -150, 280, 52 },
+	BiomeStones = { 150, 275, 30 },
+	OrchardWest = { -192, -75, 54 },
+	OrchardEast = { 192, -75, 54 },
+}
+
+local function gardenClearings(): { { number } }
 	local list = {}
-	local mid = HubLayout.BandWidth * 0.5
+	for _, feature in FEATURES do
+		table.insert(list, feature)
+	end
+	local portal = HubLayout.RaidPortal
+	table.insert(list, { portal.X, portal.Z, portal.ClearRadius + 6 })
+	local c = HubLayout.HubCentre
 	for i = 1, HubLayout.PlotCount do
 		local slot = HubLayout.PlotSlots[i]
 		local land = HubLayout.HubLandingPoint(i)
-		local lx, lz = land.X - c.X, land.Z - c.Z
-		table.insert(list, { lx - slot.DX * mid, lz - slot.DZ * mid, 30 }) -- spur meets the promenade
-		table.insert(list, { lx - slot.DX * 14, lz - slot.DZ * 14, 26 }) -- landing apron and banners
+		table.insert(list, { land.X - c.X - slot.DX * 14, land.Z - c.Z - slot.DZ * 14, 28 }) -- landing apron and banners
 	end
-	local vx, vz = HubLayout.VoidHalfX, HubLayout.VoidHalfZ
-	for _, p in { { -vx - mid, 0 }, { vx + mid, 0 }, { 0, -vz - mid }, { 0, vz + mid } } do
-		table.insert(list, { p[1], p[2], 28 }) -- footbridge spurs
-	end
-	local s = HubLayout.PlotSpacing * 0.5
-	local bandMid = HubLayout.HubHalfX - mid
-	table.insert(list, { -bandMid, s, 88 }) -- west orchard
-	table.insert(list, { bandMid, -s, 88 }) -- east orchard
-	table.insert(list, { bandMid + 32, s, 34 }) -- biome stones
-	table.insert(list, { -175, HubLayout.HubHalfZ - mid + 30, 48 }) -- overlook terrace
+	table.insert(list, { 0, HubLayout.HubHalfZ - 40, 50 }) -- South Gate braziers and banners
 	return list
 end
 
--- Trees, benches, lamps and flower beds in a repeating rhythm along both sides of the band's promenade.
-local function buildBandProps(model: Model, root: CFrame, rng: Random)
-	local f = folder("BandProps", model)
-	local mid = HubLayout.BandWidth * 0.5
-	local clear = bandClearings()
-	local station, lamps = 0, 0
-	walkRoundedRect(HubLayout.HubHalfX - mid, HubLayout.HubHalfZ - mid, HubLayout.OuterCornerRadius - mid, 34, function(x, z, nx, nz)
-		station += 1
-		if nearAny(x, z, clear, 0) or (math.abs(x) < 48 and z > HubLayout.VoidHalfZ - 4) then
-			return -- keep landings, footbridges, features and the Pilgrim's Way open
+-- Lamps down both sides of every path, then trees, flower beds and benches scattered over the open lawn
+-- (kept off the paths, features, landings and the rim).
+local function buildGarden(model: Model, root: CFrame, rng: Random)
+	local f = folder("Garden", model)
+	local paths = gardenPaths()
+	local clear = gardenClearings()
+	local lamps = 0
+	for i = 1, #paths - 1 do
+		local p = paths[i]
+		local dx, dz = p[3] - p[1], p[4] - p[2]
+		local len = math.sqrt(dx * dx + dz * dz)
+		local ux, uz = dx / len, dz / len
+		local off = p[5] * 0.5 + 3
+		for k = 1, math.floor((len - 24) / 48) do
+			local side = if k % 2 == 0 then 1 else -1
+			local along = 12 + k * 48
+			local x, z = p[1] + ux * along - uz * off * side, p[2] + uz * along + ux * off * side
+			if not nearAny(x, z, clear, 0) then
+				lamps += 1
+				local pos = (root * CFrame.new(x, 0, z)).Position
+				lampPost(f, CFrame.lookAt(pos, pos + Vector3.new(uz * side, 0, -ux * side)), lamps % 4 == 0) -- lantern arm over the path
+			end
 		end
-		local function at(offset: number): CFrame
-			local px, pz = x + nx * offset, z + nz * offset
-			local pos = (root * CFrame.new(px, 0, pz)).Position
-			local onPath = (root * CFrame.new(x, 0, z)).Position
-			return CFrame.lookAt(pos, Vector3.new(onPath.X, pos.Y, onPath.Z)) -- -Z faces the promenade
-		end
-		local kind = station % 4
-		if kind == 0 then
-			oakTree(f, at(34), rng)
-			pineTree(f, at(-34), rng)
-		elseif kind == 1 then
-			bench("BandBench", at(14), f)
-			bench("BandBench", at(-14), f)
-			flowerBed(f, at(32), FLOWERS[(station % #FLOWERS) + 1])
-		elseif kind == 2 then
-			lamps += 1
-			lampPost(f, at(11), lamps % 2 == 0)
-			lampPost(f, at(-11), false)
-			flowerBed(f, at(-32), FLOWERS[((station + 2) % #FLOWERS) + 1])
-		else
-			pineTree(f, at(34), rng)
-			oakTree(f, at(-34), rng)
-		end
-	end)
-end
+	end
 
--- Island garden: trees in the corners, lamps along the cross paths, flower beds framing the dais
-local function buildIslandGarden(model: Model, root: CFrame, rng: Random)
-	local f = folder("IslandGarden", model)
-	local ix, iz = HubLayout.IslandHalfX, HubLayout.IslandHalfZ
-	for _, p in { { -1, -1 }, { 1, -1 }, { -1, 1 }, { 1, 1 } } do
-		oakTree(f, root * CFrame.new(p[1] * (ix - 26), 0, p[2] * (iz - 26)), rng)
-		pineTree(f, root * CFrame.new(p[1] * (ix - 26), 0, p[2] * (iz - 62)), rng)
-		pineTree(f, root * CFrame.new(p[1] * (ix - 60), 0, p[2] * (iz - 26)), rng)
-	end
-	for k, x in { -150, -110, 110, 150 } do
-		for _, side in { -1, 1 } do
-			local pos = (root * CFrame.new(x, 0, side * 12)).Position
-			lampPost(f, CFrame.lookAt(pos, pos - Vector3.new(0, 0, side)), side == 1 and k % 2 == 0)
+	local hx, hz, r = HubLayout.HubHalfX, HubLayout.HubHalfZ, HubLayout.OuterCornerRadius
+	local inset, step = 22, 38
+	local placed = 0
+	for gx = -hx + inset, hx - inset, step do
+		for gz = -hz + inset, hz - inset, step do
+			local x, z = gx + rng:NextNumber(-7, 7), gz + rng:NextNumber(-7, 7)
+			local ox, oz = math.max(math.abs(x) - (hx - r), 0), math.max(math.abs(z) - (hz - r), 0)
+			local insideRim = math.abs(x) < hx - inset and math.abs(z) < hz - inset and math.sqrt(ox * ox + oz * oz) < r - inset
+			local onPath = false
+			for _, p in paths do
+				if segmentDistance(x, z, p) < p[5] * 0.5 + 9 then
+					onPath = true
+					break
+				end
+			end
+			if insideRim and not onPath and not nearAny(x, z, clear, 6) then
+				placed += 1
+				local pos = (root * CFrame.new(x, 0, z)).Position
+				local base = CFrame.new(pos) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0)
+				local roll = rng:NextNumber()
+				if roll < 0.4 then
+					oakTree(f, base, rng)
+				elseif roll < 0.65 then
+					pineTree(f, base, rng)
+				elseif roll < 0.82 then
+					flowerBed(f, base, FLOWERS[(placed % #FLOWERS) + 1])
+				elseif roll < 0.92 then
+					bench("GardenBench", CFrame.lookAt(pos, Vector3.new(root.Position.X, pos.Y, root.Position.Z)), f)
+				end
+			end
 		end
-	end
-	for _, z in { -96, 96 } do
-		for _, side in { -1, 1 } do
-			local pos = (root * CFrame.new(side * 12, 0, z)).Position
-			lampPost(f, CFrame.lookAt(pos, pos - Vector3.new(side, 0, 0)), false)
-		end
-	end
-	for i, p in { { -64, -64 }, { 64, -64 }, { -64, 64 }, { 64, 64 } } do
-		flowerBed(f, root * CFrame.new(p[1], 0, p[2]) * CFrame.Angles(0, math.rad(45), 0), FLOWERS[i])
 	end
 end
 
@@ -1066,38 +998,32 @@ function CloisterBuilder.Build(container: Instance): Model
 	model.Name = "MastersCommons"
 	model.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
 	local root = CFrame.new(HubLayout.HubCentre)
-	local bandMid = HubLayout.HubHalfX - HubLayout.BandWidth * 0.5
-	local southMid = HubLayout.HubHalfZ - HubLayout.BandWidth * 0.5
+	local function at(feature: { number }): CFrame
+		local pos = (root * CFrame.new(feature[1], 0, feature[2])).Position
+		return CFrame.lookAt(pos, pos - Vector3.zAxis) -- -Z faces north
+	end
 
 	model.PrimaryPart = buildGround(model, root, cfg, rng)
 	buildEdges(model, root, cfg)
-	buildFootbridges(model, root)
 	buildLandings(model, root, cfg)
 	buildGrandTerrace(model, root)
 
-	-- Centre island: the dais (and its statue) at the exact centre, pool to the north, gazebo and the
-	-- leaderboard pavilion to the south either side of the path from the south footbridge. Each is scaled up.
-	grand(model, root, 1.5, function(m, at)
-		buildDais(m, at, cfg)
+	-- The dais (and its statue) at the exact centre, the pool to the north, the gazebo and the leaderboard
+	-- pavilion either side of the Pilgrim's Way. Each is scaled up about its anchor.
+	grand(model, root, 1.5, function(m, anchor)
+		buildDais(m, anchor, cfg)
 	end)
-	grand(model, root * CFrame.new(0, 0, -160), 1.3, buildPool)
-	local gazPos = (root * CFrame.new(-95, 0, 160)).Position
-	grand(model, CFrame.lookAt(gazPos, gazPos - Vector3.zAxis), 1.5, buildGazebo)
-	-- Top Playtime faces the dais (north), Top Power faces the south footbridge
-	local pavPos = (root * CFrame.new(95, 0, 160)).Position
-	grand(model, CFrame.lookAt(pavPos, pavPos - Vector3.zAxis), CloisterBuilder.Config.PavilionScale, buildPavilion)
-	buildIslandGarden(model, root, rng)
+	grand(model, root * CFrame.new(FEATURES.Pool[1], 0, FEATURES.Pool[2]), 1.3, buildPool)
+	grand(model, at(FEATURES.Gazebo), 1.5, buildGazebo)
+	-- Top Playtime faces the dais (north), Top Power faces the South Gate
+	grand(model, at(FEATURES.Pavilion), CloisterBuilder.Config.PavilionScale, buildPavilion)
 
-	-- Grand Terrace (south band): the overlook on its outer side, facing the tower
-	local overPos = (root * CFrame.new(-175, 0, southMid + 30)).Position
-	grand(model, CFrame.lookAt(overPos, overPos - Vector3.zAxis), 1.2, buildOverlook)
-
-	-- Side bands: orchards and the biome stones between the plot landings, then props everywhere else
-	local s = HubLayout.PlotSpacing * 0.5
-	buildOrchard(model, "OrchardWest", root * CFrame.new(-bandMid, 0, s), rng)
-	buildBiomeStones(model, root * CFrame.new(bandMid + 32, 0, s))
-	buildOrchard(model, "OrchardEast", root * CFrame.new(bandMid, 0, -s), rng)
-	buildBandProps(model, root, rng)
+	-- South corners: the overlook facing the tower and the biome stones. Orchards on the west and east lawns.
+	grand(model, at(FEATURES.Overlook), 1.2, buildOverlook)
+	buildBiomeStones(model, at(FEATURES.BiomeStones))
+	buildOrchard(model, "OrchardWest", at(FEATURES.OrchardWest), rng)
+	buildOrchard(model, "OrchardEast", at(FEATURES.OrchardEast), rng)
+	buildGarden(model, root, rng)
 
 	model.Parent = container
 	return model

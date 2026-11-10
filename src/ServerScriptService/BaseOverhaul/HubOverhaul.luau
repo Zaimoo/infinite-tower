@@ -3,10 +3,10 @@
 -- ModuleScript: builds the whole Central Hub. Build() runs both at server start (from
 -- PlaceIslandsInRing.server.luau) and from Studio's Edit mode to bake the geometry into the place.
 -- 1. Builds the centerpiece Black & Red Tower and applies Storm Lighting/Effects.
--- 2. Builds the Cloister Commons, the hollow rounded-rectangle hub in front of the tower gate (CloisterBuilder).
--- 3. Builds one reusable Floating Island template (Island + Fortress Walls + Default Plaza Fountain) and clones it 6 times.
--- 4. Places the 10 islands around the cloister's outer edge (HubLayout.PlotSlots), each facing into the hub.
--- 5. Moves Plot_1 .. Plot_10 onto their islands while preserving existing ownership, PlotSpawn, PrivateExtractionPad,
+-- 2. Builds the Cloister Commons, the solid rounded-rectangle garden hub in front of the tower gate (CloisterBuilder).
+-- 3. Builds one reusable Floating Island template (Island + Fortress Walls + Default Plaza Fountain) and clones it once per plot.
+-- 4. Places the 8 islands around the Commons' outer edge (HubLayout.PlotSlots), each facing into the hub.
+-- 5. Moves Plot_1 .. Plot_8 onto their islands while preserving existing ownership, PlotSpawn, PrivateExtractionPad,
 --    and facility objects so PlotManager, RelicService, CombatSimulation, and MasterController keep working untouched.
 -- 6. Creates a Kill/Respawn Zone below the hub that safely returns anyone who falls to their PlotSpawn.
 
@@ -27,7 +27,7 @@ local CloisterBuilder = require(BaseOverhaulFolder:WaitForChild("CloisterBuilder
 local SharedLeaderboards = require(BaseOverhaulFolder:WaitForChild("SharedLeaderboards"))
 
 local HubOverhaul = {}
-HubOverhaul.Version = 22 -- Bump to force a rebuild of baked geometry with Mossy Flagstone Courtyard Ground Tiles
+HubOverhaul.Version = 23 -- Bump to force a rebuild of baked geometry (23: solid Commons, 8 plots)
 
 -- Runtime cleanup sweep to destroy pre-baked light shaft beams, god-ray attachments, and SunRays
 function HubOverhaul.CleanupLightShaftsAndRays()
@@ -84,7 +84,7 @@ end
 -- CONFIGURATION TABLE
 --============================================================================
 local Config = {
-	-- Ten plots around the Cloister Commons (positions live in HubLayout, GDD Section 3.2)
+	-- Eight plots around the Cloister Commons (positions live in HubLayout, GDD Section 3.2)
 	IslandCount = HubLayout.PlotCount,
 
 
@@ -365,6 +365,17 @@ local function setupKillRespawnZone(container: Instance): Folder
 	return zone
 end
 
+-- Plots past PlotCount are left over from older layouts (the hub had 10): remove them so PlotManager never
+-- initialises or assigns a plot with no slot.
+local function removeExtraPlots(plotsFolder: Instance)
+	for _, plot in plotsFolder:GetChildren() do
+		local index = tonumber(string.match(plot.Name, "^Plot_(%d+)$"))
+		if index and index > Config.IslandCount then
+			plot:Destroy()
+		end
+	end
+end
+
 --============================================================================
 -- EXECUTION
 --============================================================================
@@ -384,6 +395,7 @@ function HubOverhaul.Build(forceRebuild: boolean?): (Instance, boolean)
 
 	local OVERHAUL_VERSION = HubOverhaul.Version
 	local plotsFolder = Workspace:WaitForChild("WaitingRoomPlots")
+	removeExtraPlots(plotsFolder)
 	local existingContainer = Workspace:FindFirstChild("BaseOverhaulGeometry")
 	local plot1 = plotsFolder:FindFirstChild("Plot_1")
 	local alreadyBaked = existingContainer ~= nil
@@ -470,7 +482,7 @@ function HubOverhaul.Build(forceRebuild: boolean?): (Instance, boolean)
 
 	StaticGeometry.Apply(overhaulContainer)
 	StaticGeometry.Apply(plotsFolder)
-	print("[BaseOverhaul] Cloister Commons + 10 Floating Fortress Islands + Central Crimson Tower generated successfully.")
+	print("[BaseOverhaul] Cloister Commons + " .. Config.IslandCount .. " Floating Fortress Islands + Central Crimson Tower generated successfully.")
 	return overhaulContainer, true
 end
 
