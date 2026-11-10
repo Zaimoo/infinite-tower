@@ -392,4 +392,42 @@ test("Creatures get their own set, a style per move, and key their tails, jaws, 
 	assert(Clips.mob_squall_herald["BasicAttack:ALLY_AURA"] ~= Clips.mob_squall_herald["BasicAttack:PROJECTILE"], "the herald cries and flicks")
 end)
 
+test("Head aim turns towards the action's aim through the windup, clamped, then back", function()
+	local facing = CFrame.identity -- faces -Z
+	assert(math.abs(Anim.AimYaw(facing, Vector3.new(1, 0, -1)) - math.rad(35)) < 1e-6, "45 deg right clamps to 35")
+	assert(math.abs(Anim.AimYaw(facing, Vector3.new(-1, 0, -4)) + math.atan2(1, 4)) < 1e-6, "left is negative")
+	assert(Anim.AimWeight(0, 0.6) == 0 and Anim.AimWeight(0.3, 0.6) == 1, "eases on over AIM_IN")
+	assert(Anim.AimWeight(0.6 + Anim.AIM_OUT, 0.6) == 0, "and back off after impact")
+	local rig = fakeRig("mob_blight_wolf")
+	rig.Root = { CFrame = CFrame.identity }
+	local a = Anim.new(rig, 3)
+	local input: any = { Moved = 0, Action = { AnimationKey = "BasicAttack", Shape = "ARC", StartServerTime = 0, WindupSeconds = 0.6,
+		ImpactOffsetSeconds = 0.6, RecoverySeconds = 0.5, Origin = Vector3.new(0, 0, 0), Aim = Vector3.new(3, 0, -3) } }
+	local t = a:Evaluate(0.4, input, 1 / 60)
+	assert(t.Body.ry < 0 and t.Head.ry < 0, "a quadruped turns body and head to its right")
+	local aimed = t.Head.ry
+	input.Far = true
+	local far = a:Evaluate(0.41, input, 1 / 60)
+	assert(math.abs(far.Head.ry - aimed) > 0.05, "far mobs skip the aim")
+end)
+
+test("Bodies roll into a turn while walking, and far mobs skip fidgets", function()
+	local rig = fakeRig("mob_ruin_guardian")
+	rig.Root = { CFrame = CFrame.identity }
+	local a = Anim.new(rig, 5)
+	local input: any = { Moved = 0, Speed = 8 }
+	local now = 0
+	for i = 1, 60 do
+		now += 1 / 60
+		rig.Root.CFrame = CFrame.Angles(0, i * 0.03, 0) -- turning left at 1.8 rad/s
+		a:Evaluate(now, input, 1 / 60)
+	end
+	assert(a.YawRate > 1 and a.LocoWeight > 0.5, "turning and walking")
+	assert(a.Targets.Body.rz > 0, "a left turn rolls the body left")
+	local f = Anim.new(fakeRig("mob_ruin_guardian"), 77)
+	local still: any = { Moved = 0, Far = true }
+	for s = 0, 40, 0.5 do f:Evaluate(100 + s, still, 0.5) end
+	assert(f.FidgetAt == nil and f.FidgetCount == 0, "no fidgets beyond full-rate range")
+end)
+
 print(string.format("enemy-clips: %d passed", passed))

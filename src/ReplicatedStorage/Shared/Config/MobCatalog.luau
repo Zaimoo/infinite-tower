@@ -12,6 +12,8 @@ local function authoredClip(slot: string): any
 	return {
 		Status = "LOCAL_AUTHORED_UNVERIFIED",
 		SourceModule = "ReplicatedStorage.Assets.TowerEnemyClips",
+		MotionSetDirectory = "ReplicatedStorage.Assets.EnemyClips",
+		PlayerModule = "ReplicatedStorage.Assets.EnemyAnimator",
 		Slot = slot,
 	}
 end
@@ -96,8 +98,11 @@ local function enemy(biome: string, role: string, id: string, name: string, fami
 		Bounds = { Status = "LOCAL_AUTHORED_UNVERIFIED", Width = width, Height = height, Depth = depth },
 		Source = {
 			Status = "LOCAL_AUTHORED_UNVERIFIED",
-			NativeRigModule = "src/ReplicatedStorage/Assets/TowerEnemyRigs.luau",
+			NativeRigModule = "src/ReplicatedStorage/Assets/EnemyRigFactory.luau",
+			FallbackRigModule = "src/ReplicatedStorage/Assets/TowerEnemyRigs.luau",
 			NativeClipModule = "src/ReplicatedStorage/Assets/TowerEnemyClips.luau",
+			MotionSetDirectory = "src/ReplicatedStorage/Assets/EnemyClips",
+			AnimatorModule = "src/ReplicatedStorage/Assets/EnemyAnimator.luau",
 			PlannedDirectory = "assets-source/tower/enemies/" .. id,
 			PlannedModelSourcePath = "assets-source/tower/enemies/" .. id .. "/model.blend",
 			PlannedAnimationSourcePath = "assets-source/tower/enemies/" .. id .. "/animations.blend",
