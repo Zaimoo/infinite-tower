@@ -70,34 +70,32 @@ end
 function PitService:DonorStatus(profile: any, hero: any, recipientUUID: string?): any
 	local reason, status = "", "Available"
 	local seed = HeroCatalog.Seeds[hero.TemplateId]
-	if hero.UUID == recipientUUID then reason, status = "A hero cannot be its own donor.", "Recipient"
+	if hero.UUID == recipientUUID then reason, status = "Already the recipient.", "Recipient"
 	elseif not seed or seed.BannerOrigin == "WORLD_BOSS" or (hero.Stars or 1) > 7 or hero.Unique or hero.IsUnique or hero.Protected then
-		reason, status = "This unique hero is protected from consumption.", "Protected"
-	elseif hero.Locked or hero.Favorite or hero.Favorited then reason, status = "This hero is protected. Unlock it deliberately before using it.", "Locked"
-	elseif (hero.ComaUntilTimestamp or 0) > os.time() or hero.IsHardAuditComa then reason, status = "This hero must recover from Coma first.", "Recovering"
-	elseif hero.ReservedBy ~= nil or hero.Reserved or hero.OperationReserved or hero.ReservedOperationId ~= nil then reason, status = "This hero is reserved by another operation.", "Reserved"
-	elseif hero.InCombat or hero.IsInCombat or hero.ActiveCombat then reason, status = "This hero is in active combat.", "Deployed"
-	elseif hero.EquippedArtifactUUID ~= nil and hero.EquippedArtifactUUID ~= "" then
-		reason, status = "Unequip this hero's artifact before using it as a donor.", "Equipped"
+		reason, status = "Unique heroes can't be used.", "Protected"
+	elseif hero.Locked or hero.Favorite or hero.Favorited then reason, status = "Locked. Unlock it first.", "Locked"
+	elseif (hero.ComaUntilTimestamp or 0) > os.time() or hero.IsHardAuditComa then reason, status = "Recovering from Coma.", "Recovering"
+	elseif hero.ReservedBy ~= nil or hero.Reserved or hero.OperationReserved or hero.ReservedOperationId ~= nil then reason, status = "In use elsewhere.", "Reserved"
+	elseif hero.InCombat or hero.IsInCombat or hero.ActiveCombat then reason, status = "In combat.", "Deployed"
 	elseif hero.Assignment ~= "BENCHED" then
-		if string.sub(hero.Assignment or "", 1, 8) == "FACILITY" then reason, status = "Assign this hero to the Waiting Room before using it as a donor.", "Stationed"
-		else reason, status = "Bench this deployed hero before using it as a donor.", "Deployed" end
+		if string.sub(hero.Assignment or "", 1, 8) == "FACILITY" then reason, status = "Working at a facility. Unassign it first.", "Stationed"
+		else reason, status = "In your squad. Bench it first.", "Deployed" end
 	end
 	-- Validate redundant indexes as well as the hero's assignment flag.
 	if reason == "" then
 		for _, uuid in ipairs(profile.DeployedSquadOrder or {}) do
-			if uuid == hero.UUID then reason, status = "This hero is still deployed. Bench it in the roster.", "Deployed" break end
+			if uuid == hero.UUID then reason, status = "In your squad. Bench it first.", "Deployed" break end
 		end
 	end
 	if reason == "" then
 		for _, facility in pairs(profile.Facilities or {}) do
 			for _, uuid in ipairs(facility.AssignedHeroUUIDs or {}) do
-				if uuid == hero.UUID then reason, status = "Unassign this facility worker before using it as a donor.", "Facility Worker" break end
+				if uuid == hero.UUID then reason, status = "Working at a facility. Unassign it first.", "Facility Worker" break end
 			end
 			if reason ~= "" then break end
 		end
 	end
-	if reason == "" and profile.ReservedHeroUUIDs and profile.ReservedHeroUUIDs[hero.UUID] then reason, status = "This hero is reserved by another operation.", "Reserved" end
+	if reason == "" and profile.ReservedHeroUUIDs and profile.ReservedHeroUUIDs[hero.UUID] then reason, status = "In use elsewhere.", "Reserved" end
 	return { EligibleDonor = reason == "", Reason = reason, Status = status }
 end
 
@@ -145,32 +143,26 @@ function PitService:Delta(profile: any, changed: any, removed: any): any
 		Materials = Math.Copy(profile.PitMaterials), Resources = resources, UnlockedResearch = Math.Copy(profile.UnlockedResearch), Revision = profile.PitRevision }
 end
 
-function PitService:Fingerprint(profile: any, request: any): string
-	local heroes = {}
-	local ids = Math.Copy(request.Donors or {})
-	if request.Recipient then table.insert(ids, request.Recipient) end
-	for _, uuid in ipairs(ids) do
-		local copy = Math.Copy(profile.Heroes[uuid])
-		if copy then
-			-- Stamina only affects this operation at exhaustion. Ordinary regeneration
-			-- must not invalidate a confirmation every second.
-			copy.IsExhausted = (copy.CurrentStamina or 100) <= 0
-			copy.CurrentStamina = nil
-		end
-		heroes[uuid] = copy or false
-	end
-	local assignments = {}
-	for key, facility in pairs(profile.Facilities or {}) do assignments[key] = facility.AssignedHeroUUIDs end
-	return fingerprint({ Request = request, Heroes = heroes, Currencies = profile.Currencies, Materials = profile.PitMaterials,
-		Research = profile.UnlockedResearch, Deployed = profile.DeployedSquadOrder, Facilities = assignments,
-		Reserved = profile.ReservedHeroUUIDs or {} })
+-- What the player confirmed, as an exact fingerprint: who is consumed, what is paid and what the
+-- recipient gains. A commit goes through while a fresh Build still produces this outcome, so income
+-- ticking in (Guard Post Gold, combat EXP short of a level-up, stamina) no longer voids a preview.
+function PitService:Outcome(request: any, preview: any): string
+	local donors, unequips = {}, {}
+	for _, donor in ipairs(preview.Donors or {}) do table.insert(donors, donor.UUID) end
+	for _, entry in ipairs(preview.Unequips or {}) do table.insert(unequips, entry.ArtifactUUID) end
+	local xp, after = preview.XP, preview.After
+	return fingerprint({ Action = request.Action, Recipient = request.Recipient or false, Recipe = request.Recipe or false,
+		Donors = donors, Unequips = unequips, Costs = preview.Costs or {}, Rewards = preview.Rewards or {},
+		XP = if xp then { Final = xp.Final, Applied = xp.Applied or false } else false,
+		Level = after and after.Level or false, Stars = after and after.Stars or false,
+		Rare = preview.RequiresRareConfirmation == true, Overflow = preview.RequiresOverflowConfirmation == true })
 end
 
 function PitService:Build(profile: any, request: any): (any, any)
 	local action = request.Action
 	local preview = { Action = action, CanCommit = true, Reason = "", Donors = {}, Costs = {}, Rewards = {}, Warnings = {}, Errors = {},
-		Requirements = {}, RequiresRareConfirmation = false, SuccessChance = 1 }
-	local staged = { Heroes = {}, Remove = {}, Currencies = Math.Copy(profile.Currencies), Materials = Math.Copy(profile.PitMaterials) }
+		Requirements = {}, Unequips = {}, RequiresRareConfirmation = false, SuccessChance = 1 }
+	local staged = { Heroes = {}, Remove = {}, Unequip = {}, Currencies = Math.Copy(profile.Currencies), Materials = Math.Copy(profile.PitMaterials) }
 	local function reject(reason: string)
 		preview.CanCommit = false
 		if preview.Reason == "" then preview.Reason = reason end
@@ -183,8 +175,8 @@ function PitService:Build(profile: any, request: any): (any, any)
 			preview.Recipient = Math.Copy(recipient)
 			preview.Before = Math.Snapshot(recipient, profile)
 			preview.After = Math.Copy(preview.Before)
-			if recipient.ReservedBy or recipient.Reserved or recipient.OperationReserved or recipient.ReservedOperationId or (profile.ReservedHeroUUIDs or {})[recipient.UUID] then reject("The recipient is reserved by another operation.") end
-			if (recipient.ComaUntilTimestamp or 0) > os.time() or recipient.IsHardAuditComa then reject("The recipient must recover from Coma first.") end
+			if recipient.ReservedBy or recipient.Reserved or recipient.OperationReserved or recipient.ReservedOperationId or (profile.ReservedHeroUUIDs or {})[recipient.UUID] then reject("This hero is in use elsewhere.") end
+			if (recipient.ComaUntilTimestamp or 0) > os.time() or recipient.IsHardAuditComa then reject("This hero is recovering from Coma.") end
 		end
 	end
 	local donorIds = request.Donors or {}
@@ -201,17 +193,25 @@ function PitService:Build(profile: any, request: any): (any, any)
 				if not eligibility.EligibleDonor then reject(donor.DisplayName .. ": " .. eligibility.Reason) end
 				table.insert(preview.Donors, Math.Copy(donor))
 				table.insert(staged.Remove, uuid)
+				-- A consumed hero hands its weapon back to the backpack.
+				local artifactUUID = donor.EquippedArtifactUUID
+				if artifactUUID ~= nil and artifactUUID ~= "" then
+					local artifact = profile.Artifacts and profile.Artifacts[artifactUUID]
+					table.insert(staged.Unequip, artifactUUID)
+					table.insert(preview.Unequips, { ArtifactUUID = artifactUUID, Hero = donor.DisplayName,
+						Artifact = artifact and artifact.DisplayName or "Weapon" })
+				end
 				if Math.EffectiveStars(donor) >= Config.RareConfirmationStars then preview.RequiresRareConfirmation = true end
 			end
 			seen[uuid] = true
 		end
-	elseif #donorIds > 0 then reject("This operation does not consume heroes. Clear the donor selection.") end
+	elseif #donorIds > 0 then reject("This doesn't use heroes. Clear the selection.") end
 
 	if action == "SYNTHESIS" then
 		if recipient then
 			local maxLevel = Stats.GetMaxLevel(recipient.Stars)
 			if (recipient.Level or 1) >= maxLevel then
-				reject("The recipient is already at maximum level for this star rank. Promote the hero to raise the level cap.")
+				reject("Max level. Promote to raise the cap.")
 			end
 
 			local xp = { Base = 0, Final = 0, Efficiency = 1, ResearchBonus = 0, Breakdown = {} }
@@ -219,7 +219,7 @@ function PitService:Build(profile: any, request: any): (any, any)
 
 			for index, donor in ipairs(preview.Donors) do
 				if reachedCapIndex ~= nil then
-					reject("The recipient reaches the star level cap before all selected materials are consumed. Remove excess materials.")
+					reject("Too many materials: the level cap is reached early. Remove some.")
 					break
 				end
 
@@ -241,7 +241,7 @@ function PitService:Build(profile: any, request: any): (any, any)
 				for _, part in ipairs(xp.Breakdown) do weighted += part.Base * part.Efficiency end
 				xp.Efficiency = weighted / xp.Base
 			end
-			if xp.Efficiency < 1 then table.insert(preview.Warnings, "The recipient outlevels these donors. The displayed EXP includes reduced efficiency.") end
+			if xp.Efficiency < 1 then table.insert(preview.Warnings, "Low-level materials give reduced EXP.") end
 			local after, overflow = Math.AdvanceXP(recipient, xp.Final)
 			if (after.Level or 1) >= maxLevel then
 				after.Level = maxLevel
@@ -253,9 +253,9 @@ function PitService:Build(profile: any, request: any): (any, any)
 				-- Legacy heroes may already have excess EXP. Count only this award's loss.
 				local discarded = math.min(xp.Final, overflow.Rejected)
 				xp.Applied -= discarded
-				table.insert(preview.Warnings, string.format("This synthesis exceeds the EXP cap. %d EXP will be lost.", discarded))
+				table.insert(preview.Warnings, string.format("%d EXP is over the cap and will be lost.", discarded))
 			end
-			if after.OverflowXP > (recipient.OverflowXP or 0) then table.insert(preview.Warnings, "EXP added to the reserve is released on promotion.") end
+			if after.OverflowXP > (recipient.OverflowXP or 0) then table.insert(preview.Warnings, "Extra EXP is kept for after promotion.") end
 			after.SynthesisHistory.DonorsConsumed = (after.SynthesisHistory.DonorsConsumed or 0) + #preview.Donors
 			after.SynthesisHistory.XPGained = (after.SynthesisHistory.XPGained or 0) + xp.Applied
 			preview.XP, preview.Overflow, preview.After = xp, overflow, Math.Snapshot(after, profile)
@@ -303,7 +303,12 @@ function PitService:Build(profile: any, request: any): (any, any)
 		local bucket = if staged.Currencies[currency] ~= nil then staged.Currencies else staged.Materials
 		bucket[currency] = (bucket[currency] or 0) + amount
 	end
-	if preview.RequiresRareConfirmation then table.insert(preview.Warnings, "Rare heroes are selected and will be permanently consumed.") end
+	if #preview.Unequips > 0 then
+		table.insert(preview.Warnings, if #preview.Unequips == 1
+			then string.format("%s's %s returns to your backpack.", preview.Unequips[1].Hero, preview.Unequips[1].Artifact)
+			else string.format("%d weapons return to your backpack.", #preview.Unequips))
+	end
+	if preview.RequiresRareConfirmation then table.insert(preview.Warnings, "Rare heroes will be consumed for good.") end
 	return preview, staged
 end
 
@@ -328,21 +333,21 @@ local function normalizeRequest(payload: any): (any?, string?)
 end
 
 function PitService:Request(player: any, command: any, payload: any): any
-	if self.Locks[player] then return fail("The previous Pit operation is still processing.") end
+	if self.Locks[player] then return fail("Still working. Please wait a moment.") end
 	self.Locks[player] = true
 	local ok, response = pcall(function()
 		local profile = self.Dependencies.GetProfile(player)
 		if not profile then return fail("Your roster is still loading. Try again shortly.") end
 		if command == "STATE" then
 			local now = self:Now()
-			if self.LastState[player] and now - self.LastState[player] < Config.StateCooldown then return fail("Please wait a moment before refreshing your roster.") end
+			if self.LastState[player] and now - self.LastState[player] < Config.StateCooldown then return fail("Please wait a moment.") end
 			self.LastState[player] = now
 			self:Prepare(player, profile)
 			return { Success = true, State = self:State(profile) }
 		end
 		if command == "LOCK" then
 			local now = self:Now()
-			if self.LastLock[player] and now - self.LastLock[player] < Config.LockCooldown then return fail("Please wait a moment before changing protection again.") end
+			if self.LastLock[player] and now - self.LastLock[player] < Config.LockCooldown then return fail("Please wait a moment.") end
 			self.LastLock[player] = now
 			self:Prepare(player, profile)
 			if type(payload) ~= "table" or type(payload.Hero) ~= "string" or type(payload.Locked) ~= "boolean" then return fail("Choose an owned hero and a valid protection setting.") end
@@ -363,7 +368,7 @@ function PitService:Request(player: any, command: any, payload: any): any
 		end
 		if command == "PREVIEW" then
 			local now = self:Now()
-			if self.LastPreview[player] and now - self.LastPreview[player] < Config.PreviewCooldown then return fail("Please wait a moment before refreshing the preview.") end
+			if self.LastPreview[player] and now - self.LastPreview[player] < Config.PreviewCooldown then return fail("Please wait a moment.") end
 			self.LastPreview[player] = now
 			self:Prepare(player, profile)
 			self.Previews[player] = nil
@@ -373,7 +378,7 @@ function PitService:Request(player: any, command: any, payload: any): any
 			if preview.CanCommit then
 				local token = self.Dependencies.GenerateToken()
 				local expires = now + Config.PreviewLifetime
-				self.Previews[player] = { Token = token, ExpiresAt = expires, Request = request, Fingerprint = self:Fingerprint(profile, request) }
+				self.Previews[player] = { Token = token, ExpiresAt = expires, Request = request, Outcome = self:Outcome(request, preview) }
 				preview.Token, preview.ExpiresAt = token, expires
 			end
 			return { Success = true, Preview = preview }
@@ -383,24 +388,35 @@ function PitService:Request(player: any, command: any, payload: any): any
 			local stored = self.Previews[player]
 			-- Remove before validation: a confirmation token is always single-use.
 			self.Previews[player] = nil
-			if type(payload) ~= "table" or type(payload.Token) ~= "string" or not stored or stored.Token ~= payload.Token then return fail("This confirmation is no longer valid. Refresh the preview.") end
-			if self:Now() > stored.ExpiresAt then return fail("This preview expired. Review the operation again.") end
-			if stored.Fingerprint ~= self:Fingerprint(profile, stored.Request) then return fail("Your roster or resources changed. Review the updated preview.") end
+			local function stale(message: string): any
+				local response = fail(message)
+				response.Stale = true -- the client refreshes its preview instead of showing an error
+				return response
+			end
+			if type(payload) ~= "table" or type(payload.Token) ~= "string" or not stored or stored.Token ~= payload.Token then return stale("Preview out of date.") end
+			if self:Now() > stored.ExpiresAt then return stale("Preview expired.") end
 			local preview, staged = self:Build(profile, stored.Request)
 			if not preview.CanCommit then return fail(preview.Reason) end
-			if preview.RequiresRareConfirmation and payload.ConfirmRare ~= true then return fail("Confirm the rare donor warning before consuming these heroes.") end
-			if preview.RequiresOverflowConfirmation and payload.ConfirmOverflow ~= true then return fail("Confirm the EXP cap warning before consuming these heroes.") end
+			if stored.Outcome ~= self:Outcome(stored.Request, preview) then return stale("The result changed. Check it and confirm again.") end
+			if preview.RequiresRareConfirmation and payload.ConfirmRare ~= true then return fail("Confirm the rare hero warning first.") end
+			if preview.RequiresOverflowConfirmation and payload.ConfirmOverflow ~= true then return fail("Confirm the EXP cap warning first.") end
 			-- All possible failures precede these assignments. Preserve unrelated
 			-- profile fields and do not yield between deductions and roster updates.
+			for _, artifactUUID in ipairs(staged.Unequip) do
+				local artifact = profile.Artifacts and profile.Artifacts[artifactUUID]
+				if artifact then artifact.EquippedHeroUUID = nil end
+			end
 			for _, uuid in ipairs(staged.Remove) do profile.Heroes[uuid] = nil end
 			for uuid, hero in pairs(staged.Heroes) do profile.Heroes[uuid] = hero end
 			profile.Currencies = staged.Currencies
 			profile.PitMaterials = staged.Materials
 			profile.PitRevision += 1
-			local messages = { SYNTHESIS = "Synthesis complete.", PROMOTION = "Star promotion complete!", CONVERSION = "Heroes converted into Soul Essence.", CRAFT = "Crafting complete." }
+			local messages = { SYNTHESIS = "Synthesis complete.", PROMOTION = "Promotion complete!", CONVERSION = "Converted to Soul Essence.", CRAFT = "Crafting complete." }
 			-- Replication failure cannot turn a committed transaction into a false
 			-- failure; STATE can always recover the authoritative result.
 			pcall(self.Dependencies.SyncProfile, player, staged.Heroes, staged.Remove)
+			-- Returned weapons live outside the hero delta: push the whole profile so the Forge sees them.
+			if #staged.Unequip > 0 and self.Dependencies.SyncArtifacts then pcall(self.Dependencies.SyncArtifacts, player) end
 			local deltaOK, delta = pcall(function() return self:Delta(profile, staged.Heroes, staged.Remove) end)
 			return { Success = true, Message = messages[stored.Request.Action], Result = preview, Delta = deltaOK and delta or nil }
 		end
@@ -409,7 +425,7 @@ function PitService:Request(player: any, command: any, payload: any): any
 	self.Locks[player] = nil
 	if not ok then
 		warn("[The Pit] Request failed: " .. tostring(response))
-		return fail("The Pit could not process this request. Refresh your roster and try again.")
+		return fail("That didn't go through. Try again.")
 	end
 	return response
 end

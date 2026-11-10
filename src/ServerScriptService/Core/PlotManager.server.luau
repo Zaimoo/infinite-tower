@@ -328,7 +328,7 @@ if TeleportRequest then
 		if _G.CombatSimulation and _G.CombatSimulation.IsInDuel and _G.CombatSimulation.IsInDuel(player) then
 			local dm = getDataManager()
 			if dm and dm.SendToast then
-				dm.SendToast(player, "Cannot fast-travel during a duel!", "WARN")
+				dm.SendToast(player, "Can't travel|Finish the duel first", "WARN")
 			end
 			return
 		end
@@ -340,7 +340,7 @@ if TeleportRequest then
 			if _G.CombatSimulation and _G.CombatSimulation.IsBossLocked and _G.CombatSimulation.IsBossLocked(player, state.FloorId) then
 				local dm = getDataManager()
 				if dm and dm.SendToast then
-					dm.SendToast(player, "🔒 Travel is sealed until the boss falls.", "WARN")
+					dm.SendToast(player, "Travel sealed|Defeat the boss first", "WARN")
 				end
 				return
 			end
@@ -354,7 +354,7 @@ if TeleportRequest then
 			end
 			local dm = getDataManager()
 			if dm and dm.SendToast then
-				dm.SendToast(player, "Contested cargo dropped before fast travel.", "INFO")
+				dm.SendToast(player, "Dropped|Contested loot can't travel", "INFO")
 			end
 		end
 

@@ -241,7 +241,7 @@ function RelicService.TryPickupRelic(player: Player, relic: ActiveRelic): boolea
 	end
 	local allowed, denial = LootDuel.CanPickUp(relic, player.UserId)
 	if not allowed then
-		getDataManager().SendToast(player, denial or "You cannot carry this relic.", "WARN")
+		getDataManager().SendToast(player, denial or "Can't carry this", "WARN")
 		return false
 	end
 	if relic.LockedUserId and now < relic.LockExpiresAt then
@@ -252,7 +252,7 @@ function RelicService.TryPickupRelic(player: Player, relic: ActiveRelic): boolea
 	end
 	if player.Character and player.Character:GetAttribute("SquadWiped") == true then
 		local dm = getDataManager()
-		dm.SendToast(player, "🚫 SQUAD DOWN! You cannot carry relics until you recover your squad at your Waiting Room!", "WARN")
+		dm.SendToast(player, "Squad down|Recover at your plot to carry relics", "WARN")
 		return false
 	end
 
@@ -288,7 +288,7 @@ function RelicService.TryPickupRelic(player: Player, relic: ActiveRelic): boolea
 	local combat = _G.CombatSimulation
 	local stolen = combat and combat.ReportRelicPickup and combat.ReportRelicPickup(player, relic.RelicId, relic.KillerUserId, spec.DisplayName)
 	if not stolen then
-		dm.SendToast(player, string.format("Carrying %s (-%d%% Spd)! Bring to a Floor Safe Sanctuary or your Extraction Pad!", spec.DisplayName, math.round(spec.WalkSpeedPenalty * 100)), "INFO")
+		dm.SendToast(player, string.format("Carrying %s|Bank it at a sanctuary · -%d%% speed", spec.DisplayName, math.round(spec.WalkSpeedPenalty * 100)), "INFO")
 	end
 	Tower.BroadcastAt(RelicStateRemote,relic,relic.RelicId, relic.TierId, "PICKUP", player.UserId, 0)
 	return true
@@ -376,7 +376,7 @@ function RelicService.FumbleRelicOnAoEHit(carrier: Player)
 	updateMasterMovementAttributes(carrier, now)
 
 	local dm = getDataManager()
-	dm.SendToast(carrier, string.format("💥 AoE Hit! Stunned %.1fs & Fumbled Relic (%.1fs Owner-Lock before stealable)!", FUMBLE_STUN_SECONDS, FUMBLE_OWNER_LOCK_SECONDS), "WARN")
+	dm.SendToast(carrier, string.format("Relic dropped|Stunned %.1fs · Yours for %.1fs", FUMBLE_STUN_SECONDS, FUMBLE_OWNER_LOCK_SECONDS), "WARN")
 	Tower.BroadcastAt(RelicStateRemote,relic,relic.RelicId, relic.TierId, "FUMBLE", carrier.UserId, relic.LockExpiresAt)
 end
 

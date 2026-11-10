@@ -362,7 +362,7 @@ function Service.Request(player: Player,r: any)
 	end
 	-- Phase 6 boss lock: once you have hurt this floor's summoned boss, travel stays sealed until it dies or your squad wipes.
 	if (r.Action=='VISIT' or r.Action=='HUB') and s.FloorId>0 and id~=s.FloorId and adapters.Combat and adapters.Combat.BossLocked and adapters.Combat.BossLocked(player,s.FloorId) then
-		if _G.DataManager and _G.DataManager.SendToast then _G.DataManager.SendToast(player,'🔒 Travel is sealed until the boss falls.','WARN') end
+		if _G.DataManager and _G.DataManager.SendToast then _G.DataManager.SendToast(player,'Travel sealed|Defeat the boss first','WARN') end
 		reject('BOSS_LOCKED');return
 	end
 	if (r.Action=='VISIT' or r.Action=='ASSIGN') and id > 0 and not raidEntry then
@@ -373,7 +373,7 @@ function Service.Request(player: Player,r: any)
 			if dm and dm.IsUnlocked then
 				local gate=if not dm.IsUnlocked(player,'Tower') then 'Tower' elseif id>=5 and not dm.IsUnlocked(player,'TowerFloor5') then 'TowerFloor5' else nil
 				if gate then
-					dm.SendToast(player,'🔒 '..dm.LockedMessage(gate, player),'WARN')
+					dm.SendToast(player,'Locked|'..dm.LockedMessage(gate, player),'WARN')
 					reject('SYSTEM_LOCKED')
 					return
 				end

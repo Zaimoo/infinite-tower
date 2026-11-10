@@ -186,7 +186,7 @@ local function enrage(mob: any)
 	local enrageId = Combat.RaidEnrageAttackId(boss.Id)
 	if enrageId then mob.Cooldowns[enrageId] = 0 end
 	local dm = dataManager()
-	for _, p in arenaPlayers() do dm.SendToast(p, `{boss.DisplayName} is ENRAGED: {boss.Enrage.DisplayName}!`, "WARN") end
+	for _, p in arenaPlayers() do dm.SendToast(p, `{boss.DisplayName} enraged|{boss.Enrage.DisplayName}`, "WARN") end
 	local adds = boss.Adds
 	local cs = combat()
 	local room = Tower.GetRoom(FLOOR)
@@ -295,7 +295,7 @@ function Service.TryEnter(player: Player)
 	end
 	local ok = pcall(arenaRoom)
 	if not ok or not Tower.EnterRaidFloor(player, FLOOR) then
-		dataManager().SendToast(player, "The Raid Portal flickers. Try again.", "WARN")
+		dataManager().SendToast(player, "Portal busy|Try again", "WARN")
 	end
 end
 
@@ -345,7 +345,7 @@ local function payout()
 			Gems = gems, Gold = reward.Gold, Qualified = reward.Qualified, ReturnAt = now() + timings.Results,
 		})
 		if reward.Qualified then
-			dm.SendToast(player, `Raid {if killed then "victory" else "over"}: #{rank}, +{gems} Gems, +{reward.Gold} Gold`, "SUCCESS")
+			dm.SendToast(player, `Raid {if killed then "won" else "over"} · #{rank}|+{gems} Gems · +{reward.Gold} Gold`, "SUCCESS")
 		end
 	end
 end
@@ -385,7 +385,7 @@ local function enterWarning()
 	else
 		warn("Raid arena build failed: " .. tostring(room))
 	end
-	toastAll(`{Config.FullName(boss)} rises in {Rules.Clock(startAt - now())}. The Raid Portal in the Commons is open!`, "WARN")
+	toastAll(`Raid in {Rules.Clock(startAt - now())}|{Config.FullName(boss)} · Portal open in the Commons`, "WARN")
 	publish()
 end
 
@@ -404,7 +404,7 @@ local function enterActive()
 		bossMob.BornAt = now()
 	end
 	local dm = dataManager()
-	for _, p in arenaPlayers() do dm.SendToast(p, `{Config.FullName(boss)} awakens! Deal the most damage in {Rules.Clock(timings.Active)}.`, "WARN") end
+	for _, p in arenaPlayers() do dm.SendToast(p, `{Config.FullName(boss)}|Top damage wins · {Rules.Clock(timings.Active)}`, "WARN") end
 	publish()
 end
 

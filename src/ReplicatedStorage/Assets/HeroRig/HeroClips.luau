@@ -685,6 +685,7 @@ local OVERRIDE_WEAPON: { [string]: string } = {
 	hero_shurn = "STAFF",
 	hero_diran = "TOME",
 	hero_vane = "STAFF",
+	hero_aeli = "BOW",
 }
 
 local function signature(duration: number, keys: { { any } }, markers: { [string]: number }): Clip
@@ -744,6 +745,37 @@ do
 			{ 0.58, merge(regal, { RightShoulder = { 140, 20, -10 }, RightElbow = { 150, 0, 0 } }) },
 			{ 0.7, merge(regal, { LeftShoulder = { 152, 0, 0 }, RightShoulder = { 105, 45, -60 }, RightElbow = { 60, 0, 0 } }) },
 			{ 0.85, merge(regal, { LeftShoulder = { 130, 0, -20 }, RightShoulder = { 95, 40, -75 }, RightElbow = { 20, 0, 0 }, Waist = { 14, -6, 0 } }) },
+			{ 1, p.Carry },
+		}, { Release = 0.7, Nock = 0.92 }),
+	}
+end
+
+-- Aeli (BOW): idle is a poised ranger's stance: an upright waist, narrow feet with her weight on
+-- the left leg and the right knee turned slightly in, the bow held out to her left at chest
+-- height (shoulder + elbow pitch near 90 keeps the stave upright), the right hand forward at
+-- the string as if calling the wind to the arrow, chin a little down. Canopy's Wrath drops her
+-- to one knee with the bow raised to the sky; she draws, looses the seed-arrow straight up,
+-- holds a wide follow-through and rises. Basic and Special use the bow clips.
+do
+	local p = WeaponPoses.BOW
+	local kneel: Pose = { LeftHip = { 70, 0, -6 }, RightHip = { -20, 0, 6 }, LeftKnee = { -80, 0, 0 }, RightKnee = { -95, 0, 0 }, LeftAnkle = { 10, 0, 0 }, RightAnkle = { 70, 0, 0 }, RootOffset = { 0, -0.75, 0 } }
+	local skyKneel = merge(merge(p.SkyAim, kneel), { Waist = { 20, -10, 0 }, Neck = { 18, 10, 0 } })
+	local ranger: Pose = {
+		Waist = { 0, -8, 2 }, Neck = { -4, 10, -2 },
+		LeftShoulder = { 72, 0, -22 }, LeftElbow = { 14, 0, 0 },
+		RightShoulder = { 55, 18, 0 }, RightElbow = { 68, 0, 0 },
+		LeftHip = { 2, 0, -3 }, LeftKnee = { -4, 0, 0 }, LeftAnkle = { 2, 0, 3 },
+		RightHip = { 8, -8, 2 }, RightKnee = { -14, 0, 0 }, RightAnkle = { 6, 0, -2 },
+		RootOffset = { 0, -0.04, 0 },
+	}
+	Overrides.hero_aeli = {
+		Idle = breathe(ranger, 3.6),
+		AttackSkill = signature(1.1, {
+			{ 0, p.Carry },
+			{ 0.28, skyKneel },
+			{ 0.56, merge(skyKneel, { RightShoulder = { 138, 18, -10 }, RightElbow = { 148, 0, 0 } }) },
+			{ 0.7, merge(skyKneel, { LeftShoulder = { 150, 0, 0 }, RightShoulder = { 105, 45, -55 }, RightElbow = { 60, 0, 0 } }) },
+			{ 0.86, merge(merge(p.Release, p.Crouch), { Waist = { 8, -10, 0 }, LeftShoulder = { 128, 0, -18 } }) },
 			{ 1, p.Carry },
 		}, { Release = 0.7, Nock = 0.92 }),
 	}

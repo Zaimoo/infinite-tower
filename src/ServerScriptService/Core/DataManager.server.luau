@@ -842,7 +842,7 @@ RequestSummonFunc.OnServerInvoke = function(player: Player, arg1: any, arg2: any
 	-- Heroes working in a facility are out of the backpack and don't count (InventoryCapacity).
 	local heroCap = InventoryCapacity.HeroCap(profile.FortressTree)
 	if InventoryCapacity.HeroCount(profile) + count > heroCap then
-		DataManager.SendToast(player, string.format("Hero inventory full! Maximum capacity is %d.", heroCap), "WARN")
+		DataManager.SendToast(player, string.format("Heroes full|%d max · Synthesize some", heroCap), "WARN")
 		return { Success = false, Message = "Hero inventory full" }
 	end
 
@@ -850,7 +850,7 @@ RequestSummonFunc.OnServerInvoke = function(player: Player, arg1: any, arg2: any
 	local gemCost = if count == 10 then costBanner.Cost10X else costBanner.Cost1X
 
 	if profile.Currencies.Gems < gemCost then
-		DataManager.SendToast(player, string.format("Need %d Gems to Summon!", gemCost), "WARN")
+		DataManager.SendToast(player, string.format("Not enough Gems|Need %d", gemCost), "WARN")
 		return { Success = false, Message = "Insufficient Gems" }
 	end
 
@@ -900,6 +900,7 @@ local pit = PitService.new({
 	SyncProfile = function(player: Player, changed: any, removed: any)
 		DataManager.SyncPitDelta(player, changed or {}, removed or {})
 	end,
+	SyncArtifacts = function(player: Player) DataManager.SyncProfile(player) end,
 	SyncCombatXP = function(player: Player, uuid: string, _hero: any)
 		if not pendingCombatSync[player] then
 			pendingCombatSync[player] = {}
@@ -988,7 +989,7 @@ function DataManager.EquipArtifact(player: Player, heroUUID: string, artifactUUI
 	artifact.EquippedHeroUUID = heroUUID
 
 	DataManager.SyncProfile(player)
-	DataManager.SendToast(player, string.format("Equipped %s to %s!", artifact.DisplayName, hero.DisplayName), "SUCCESS")
+	DataManager.SendToast(player, string.format("Equipped|%s on %s", artifact.DisplayName, hero.DisplayName), "SUCCESS")
 	return true, string.format("Equipped %s to %s", artifact.DisplayName, hero.DisplayName)
 end
 
@@ -1010,7 +1011,7 @@ function DataManager.UnequipArtifact(player: Player, heroUUID: string): (boolean
 	hero.EquippedArtifactUUID = nil
 
 	DataManager.SyncProfile(player)
-	DataManager.SendToast(player, string.format("Unequipped weapon from %s.", hero.DisplayName), "INFO")
+	DataManager.SendToast(player, string.format("Unequipped|%s", hero.DisplayName), "INFO")
 	return true, string.format("Unequipped weapon from %s", hero.DisplayName)
 end
 
@@ -1081,11 +1082,11 @@ function DataManager.SellArtifacts(player: Player, artifactUUIDs: { string }): (
 			local art = profile.Artifacts[uuid]
 			if art then
 				if art.EquippedHeroUUID then
-					DataManager.SendToast(player, string.format("Cannot sell %s (equipped)!", art.DisplayName), "WARN")
+					DataManager.SendToast(player, string.format("Can't sell|%s is equipped", art.DisplayName), "WARN")
 					return false, string.format("Cannot sell %s: weapon is equipped", art.DisplayName), 0, 0
 				end
 				if art.Locked then
-					DataManager.SendToast(player, string.format("Cannot sell %s (locked)!", art.DisplayName), "WARN")
+					DataManager.SendToast(player, string.format("Can't sell|%s is locked", art.DisplayName), "WARN")
 					return false, string.format("Cannot sell %s: weapon is locked", art.DisplayName), 0, 0
 				end
 				local price = ArtifactCatalog.CalculateSellPrice(art.Rarity or 1, art.Star or 1)
@@ -1106,7 +1107,7 @@ function DataManager.SellArtifacts(player: Player, artifactUUIDs: { string }): (
 
 	profile.Currencies.Gold = (profile.Currencies.Gold or 0) + totalGold
 	DataManager.SyncProfile(player)
-	DataManager.SendToast(player, string.format("Sold %d artifact%s for %s Gold!", soldCount, soldCount == 1 and "" or "s", tostring(totalGold)), "SUCCESS")
+	DataManager.SendToast(player, string.format("Sold %d|+%s Gold", soldCount, tostring(totalGold)), "SUCCESS")
 
 	return true, string.format("Sold %d artifacts for %d Gold", soldCount, totalGold), totalGold, soldCount
 end
@@ -1204,14 +1205,14 @@ function DataManager.SummonArtifact(player: Player, pullCount: any): (boolean, s
 	local cost = (count == 10) and cfg.Cost10X or cfg.Cost1X
 
 	if not profile.Currencies or (profile.Currencies.Gold or 0) < cost then
-		DataManager.SendToast(player, string.format("Need %d Gold to Summon!", cost), "WARN")
+		DataManager.SendToast(player, string.format("Not enough Gold|Need %d", cost), "WARN")
 		return false, string.format("Need %d Gold to Summon!", cost), nil, nil
 	end
 
 	if not profile.Artifacts then profile.Artifacts = {} end
 	local artifactCap = InventoryCapacity.ArtifactCap(profile.FortressTree)
 	if InventoryCapacity.ArtifactCount(profile) + count > artifactCap then
-		DataManager.SendToast(player, string.format("Artifact inventory full! Maximum capacity is %d.", artifactCap), "WARN")
+		DataManager.SendToast(player, string.format("Artifacts full|%d max · Sell some", artifactCap), "WARN")
 		return false, "Artifact inventory full", nil, nil
 	end
 
@@ -1224,8 +1225,11 @@ function DataManager.SummonArtifact(player: Player, pullCount: any): (boolean, s
 	local tierRates = SummonLuck.ApplyLuck(cfg.BaseRarityRates, luck)
 	local archetypeTypes = ArtifactCatalog.ArchetypeTypes
 	local bestTier = 1
+	-- Onboarding: the very first roll yields a weapon a squad hero can hold, so the "equip it"
+	-- lesson that follows always works. Later rolls are uniform across the six types.
+	local guidedType = OnboardingService.StarterWeaponType(player)
 
-	for _ = 1, count do
+	for pull = 1, count do
 		profile.ArtifactBannerPity += 1
 		profile.ArtifactBanner10Pity += 1
 
@@ -1254,7 +1258,7 @@ function DataManager.SummonArtifact(player: Player, pullCount: any): (boolean, s
 		end
 
 		-- Uniform archetype selection across 6 archetypes
-		local chosenType = archetypeTypes[math.random(1, #archetypeTypes)]
+		local chosenType = if pull == 1 and guidedType then guidedType else archetypeTypes[math.random(1, #archetypeTypes)]
 		local stdSeed, enhSeed = ArtifactCatalog.GetTierPair(tier, chosenType)
 
 		-- Variant roll: 60% Standard, 40% Enhanced
@@ -1367,7 +1371,7 @@ AssignHeroRoleFunc.OnServerInvoke = function(player: Player, heroUUID: any, targ
 		end
 
 		DataManager.SyncProfile(player)
-		DataManager.SendToast(player, string.format("Auto-Rotated Squad (%d hero assignments updated)!", swappedCount), "SUCCESS")
+		DataManager.SendToast(player, string.format("Squad rotated|%d swapped", swappedCount), "SUCCESS")
 		return true, "Auto-swapped exhausted heroes"
 	end
 
@@ -1515,7 +1519,7 @@ FacilityInteractEvent.OnServerEvent:Connect(function(player: Player, action: any
 
 	if action == "UPGRADE_FACILITY" then
 		-- Retired in Phase 4: facilities are unlocked and levelled only through the Fortress Tree.
-		DataManager.SendToast(player, "Upgrade facilities in Upgrades at the Architect's Table.", "INFO")
+		DataManager.SendToast(player, "Upgrades|Level facilities at the Architect's Table", "INFO")
 
 	elseif action == "DEV_GRANT_RESOURCES" then
 		-- Prototype helper so testers can also test mid/late-game features immediately if desired
@@ -1550,7 +1554,7 @@ if game:GetService("RunService"):IsStudio() then
 		end
 		local heroCap = InventoryCapacity.HeroCap(profile.FortressTree)
 		if InventoryCapacity.HeroCount(profile) + 1 > heroCap then
-			DataManager.SendToast(player, string.format("Hero inventory full! Maximum capacity is %d.", heroCap), "WARN")
+			DataManager.SendToast(player, string.format("Heroes full|%d max · Synthesize some", heroCap), "WARN")
 			return
 		end
 
@@ -1599,7 +1603,7 @@ function DataManager.RecordBiomeBossClear(player: Player, bossTier: number)
 	if bossTier > currentTier then
 		profile.HighestClearedBiomeBoss = bossTier
 		profile.HighestClearedFloor = math.max(profile.HighestClearedFloor or 0, bossTier * 5)
-		DataManager.SendToast(player, string.format("🏆 Biome Boss Milestone! Cleared Tier %d Boss (Floor %d)! Outskirts Passive Gold increased!", bossTier, bossTier * 5), "SUCCESS")
+		DataManager.SendToast(player, string.format("Biome boss down|Floor %d · Guard Post Gold up", bossTier * 5), "SUCCESS")
 		DataManager.SyncProfile(player)
 	end
 end

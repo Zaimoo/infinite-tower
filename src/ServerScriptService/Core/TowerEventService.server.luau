@@ -82,7 +82,7 @@ local function beginWarning(now: number, forcedId: string?)
 	endsAt = startsAt + EventConfig.ActiveSeconds
 	publish()
 	local event = assert(EventConfig.Get(id))
-	toastAll(string.format("%s begins in %d seconds", event.DisplayName, EventConfig.WarningSeconds), "WARN")
+	toastAll(string.format("%s|Starts in %ds", event.DisplayName, EventConfig.WarningSeconds), "WARN")
 end
 
 -- Every camp on the floors the event touches despawns and respawns fresh, so the whole floor picks up
@@ -107,7 +107,7 @@ end
 local function endActive(now: number)
 	local id, biome = eventId, featured
 	local event = EventConfig.Get(id)
-	if event then toastAll(event.DisplayName .. " has ended", "INFO") end
+	if event then toastAll(event.DisplayName .. "|Ended", "INFO") end
 	beginCalm(now)
 	resetCamps(id, biome)
 end

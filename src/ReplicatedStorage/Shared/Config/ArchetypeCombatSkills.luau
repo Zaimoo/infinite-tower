@@ -448,6 +448,15 @@ local HERO_KITS: { [string]: HeroKitOverride } = {
 			Description = "Jenna looses a sky-flare arrow that opens a wind sigil, raining gale arrows over a 16-stud radius for 2.80x ATK and shredding enemy defense by 20% for 5s.",
 		},
 	},
+	hero_aeli = {
+		Archetype = "Marksman",
+		Basic = { Name = "Leafwind Arrow" },
+		Special = { Name = "Thornbriar Volley" },
+		Skill = {
+			Name = "Canopy's Wrath",
+			Description = "Aeli looses a seed-arrow into the sky that bursts into a canopy of leaf-bladed arrows over a 16-stud radius, dealing 2.80x ATK and shredding enemy defense by 20% for 5s.",
+		},
+	},
 	hero_velkist = {
 		Archetype = "Striker",
 		Basic = { Name = "Twin Fang Cut" },

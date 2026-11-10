@@ -108,7 +108,7 @@ do
 		checkRecipe(heroId, recipe)
 		checkRadius(heroId, recipe, profile.Archetype)
 	end
-	assert(heroes == 17, "all seventeen heroes have VFX")
+	assert(heroes == 18, "all eighteen heroes have VFX")
 	for heroId in Catalog.Heroes do
 		assert(Skills.HeroProfiles[heroId], heroId .. " is a hero with a kit")
 	end
