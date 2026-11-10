@@ -40,16 +40,7 @@ local fxMap: { [string]: RelicFx } = {
 
 if RelicConfig and RelicConfig.Items then
 	for itemId, item in pairs(RelicConfig.Items) do
-		local bTier = item.BiomeTier or 1
-		local f = defaultFxByTier[bTier] or defaultFxByTier[1]
-		fxMap[itemId] = table.freeze({
-			LightRange = f.LightRange,
-			LightBrightness = f.LightBrightness,
-			BeamHeight = f.BeamHeight,
-			MoteRate = f.MoteRate,
-			Smoke = f.Smoke or (item.Rarity == "Origin"),
-			Beat = f.Beat,
-		})
+		fxMap[itemId] = fxMap[item.BaseTierId] -- a biome relic glows like its base tier
 	end
 end
 
@@ -260,8 +251,8 @@ function RelicModelBuilder.Build(tierId: string): Model
 		smoke.Parent = lidVent
 	end
 
-	-- Contested particle trail for higher-tier relics (Tier 3 Idols and Tier 4 Cores)
-	if (spec.BiomeTier and spec.BiomeTier >= 3) or tierId == "ABYSSAL_CORE" or tierId == "CALAMITY_HEART" then
+	-- Contested particle trail for the higher tiers (Cores and Hearts)
+	if spec.BiomeTier >= 3 then
 		local aura = Instance.new("ParticleEmitter")
 		aura.Name = "ContestedAura"
 		aura.Texture = "rbxasset://textures/particles/sparkles_main.dds"

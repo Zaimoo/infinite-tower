@@ -96,39 +96,7 @@ end
 
 function PitMath.GetConversionYield(hero: any): number
 	local cfg = Config.Conversion
-	local ranks = 0
-	for id, rank in pairs(hero.InheritedImprints or {}) do
-		if Config.Imprints.Definitions[id] and type(rank) == "number" then ranks += math.clamp(math.floor(rank), 0, Config.Imprints.MaxRank) end
-	end
-	return (cfg.BaseEssence[PitMath.EffectiveStars(hero)] or cfg.BaseEssence[5] or 324) + math.floor((Stats.GetEffectiveLevel(hero.Stars, hero.Level) - 1) / cfg.LevelsPerBonus) * cfg.EssencePerInvestmentLevel + ranks * cfg.EssencePerImprintRank
-end
-
-function PitMath.GetImprintCapacity(hero: any): number
-	return Config.Imprints.SlotsByStar[PitMath.EffectiveStars(hero)] or 1
-end
-
-function PitMath.GetImprintOptions(donor: any, recipient: any, research: any): { any }
-	local options = {}
-	local used = 0
-	for id, rank in pairs(recipient.InheritedImprints or {}) do
-		if Config.Imprints.Definitions[id] and type(rank) == "number" and rank > 0 then used += 1 end
-	end
-	for id, definition in pairs(Config.Imprints.Definitions) do
-		if definition.DonorRoles[donor.Archetype] then
-			local rank = (recipient.InheritedImprints or {})[id] or 0
-			local reason = ""
-			if not definition.RecipientRoles[recipient.Archetype] then reason = "This memory is incompatible with the recipient's role."
-			elseif PitMath.EffectiveStars(recipient) < (definition.MinimumStars or 1) then reason = "Promote the recipient before inheriting this memory."
-			elseif definition.Research and not research[definition.Research] then reason = "Unlock Memory Studies in the Dimensional Lab."
-			elseif rank >= Config.Imprints.MaxRank then reason = "This memory is already at maximum proficiency."
-			elseif rank == 0 and used >= PitMath.GetImprintCapacity(recipient) then reason = "All inherited memory slots are filled. Promote for more capacity." end
-			table.insert(options, { Id = id, Name = definition.Name, Description = definition.Description, Category = definition.Category,
-				Compatible = reason == "", Reason = reason, CurrentRank = rank, MaxRank = Config.Imprints.MaxRank,
-				SuccessChance = 1, Effect = PitMath.Copy(definition.Effect) })
-		end
-	end
-	table.sort(options, function(a, b) return a.Id < b.Id end)
-	return options
+	return (cfg.BaseEssence[PitMath.EffectiveStars(hero)] or cfg.BaseEssence[5] or 324) + math.floor((Stats.GetEffectiveLevel(hero.Stars, hero.Level) - 1) / cfg.LevelsPerBonus) * cfg.EssencePerInvestmentLevel
 end
 
 function PitMath.Promote(hero: any): (any, any)
@@ -154,8 +122,7 @@ function PitMath.Snapshot(hero: any, profile: any?): any
 	return { Level = hero.Level, XP = hero.XP, Stars = hero.Stars, HP = combat.Health, ATK = combat.AttackDamage, DPS = combat.DPS,
 		AttackDamage = combat.AttackDamage, Health = combat.Health, AttackSpeed = combat.AttackSpeed, MovementSpeed = combat.MovementSpeed,
 		Labor = Stats.GetEffectiveLabor(hero), MaxLevel = Stats.GetMaxLevel(hero.Stars),
-		XPRequired = Stats.GetXPRequiredForNextLevel(hero.Level, hero.Stars), OverflowXP = hero.OverflowXP or 0,
-		ImprintCapacity = PitMath.GetImprintCapacity(hero), InheritedImprints = PitMath.Copy(hero.InheritedImprints or {}) }
+		XPRequired = Stats.GetXPRequiredForNextLevel(hero.Level, hero.Stars), OverflowXP = hero.OverflowXP or 0 }
 end
 
 return PitMath

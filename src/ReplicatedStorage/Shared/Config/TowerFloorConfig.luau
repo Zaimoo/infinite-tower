@@ -260,8 +260,8 @@ function Config.GetKillRewards(floorId: number, role: string): any
 end
 
 -- A dropRoll of 0 forces a drop (boss first clears). Tiers are checked from the top:
--- Tier 4: Origin/Apex Core, Tier 3: Idol/Totem/Scarab, Tier 2: Cursed Urn, Tier 1: Biome Shard.
--- Relics are biome-locked to the floor's 5-floor biome drop table (RelicConfig.Biomes).
+-- Tier 4: Calamity Heart, Tier 3: Abyssal Core, Tier 2: Cursed Urn, Tier 1: Mana Geode.
+-- The result is the floor's biome skin of that tier (RelicConfig.Biomes); payouts come from the tier.
 -- `mods` (optional, a timed tower event's TowerEventConfig.Mods) can scale the drop chance and the Heart
 -- and Core shares, and upgrade Shards to Urns and an Elite's Urns to Cores.
 function Config.RollRelic(floorId: number, role: string, dropRoll: number, tierRoll: number, mods: any?): string?
@@ -294,8 +294,7 @@ function Config.RollRelic(floorId: number, role: string, dropRoll: number, tierR
 		return biome.DropTable[tierIndex]
 	end
 
-	local legacyTiers = { "MANA_GEODE", "CURSED_URN", "ABYSSAL_CORE", "CALAMITY_HEART" }
-	return legacyTiers[tierIndex]
+	return RelicConfig.BaseTiers[tierIndex]
 end
 
 return table.freeze(Config)

@@ -1,10 +1,12 @@
 # DOCUMENT 1: COMPLETE GAME DESIGN DOCUMENT (GDD)
 **Project Title:** *Infinite Tower: Become a Master!*  
 **Target Platform:** Roblox (PC, Mobile, Tablet, Console)  
-**Server Capacity:** 6 Players per Server (6 Dedicated Floating Fortress Plots)  
+**Server Capacity:** 10 Players per Server (10 Dedicated Floating Fortress Plots around the Cloister Commons)  
 **Engine Architecture:** Server-Authoritative Data Tables (10 Hz Heartbeat, 5 Hz tower snapshots) + Client-Side R15 Visual Interpolation (60 FPS `RenderStepped`) | Hybrid Replication: Central Hub 14-Byte Binary Buffers + Infinite Tower Room-Local v2 Binary Buffers (24-byte entity records, 46-byte header)
 
 ---
+
+**Terms used throughout:** the **Skill Gauge** (0–100) charges with attacks and fires a hero's Ultimate; the code calls it `Stamina` / `CurrentStamina` and it travels as the `Stamina` byte of the tower protocol. A hero at 0 HP is **Downed** (sim state `COMA`) until the squad changes floor, goes home or wipes. A **Relic** is the only physical loot.
 
 ## 1. EXECUTIVE OVERVIEW & PLAYER FANTASY
 
@@ -15,29 +17,29 @@
 In traditional gacha/simulator games, 95% of summons are discarded as worthless stat-sticks, and combat is reduced to passive AFK auto-clicking. **Infinite Tower** solves both problems through two foundational pillars:
 
 1. **The Dual-Role Living Roster (Combat + Labor):**
-   - Every hero pulled from the Summoning Altar rolls with **Combat Stats** (movement speed, attack speed, attack damage, health) and **Labor Output** (separate facility productivity), without trait or imprint bonuses.
-   - **Up to 5 Deployed Heroes** (one slot at the start; the Fortress Tree's Command branch opens slots 2–5, see §4.3) accompany the Master into the Central Hub or are independently deployed to specific floors (1–50) of the **Infinite Tower**. Heroes charge an in-combat **Skill/Stamina Gauge** (0 to 100) through a 3-tier attack cadence (Basic -> Basic -> Special -> Skill Attack at 100), and risk a debilitating **Downed state** (down until the squad changes floor, goes home or wipes) if left inside lethal AoE telegraphs.
-   - **Benched Heroes** physically inhabit the player's **Fortress Plot**, resting on the bench, or can be forged powerful equipment at the **Blacksmith Forge**.
-   - **Zero Dead Pulls:** Duplicate heroes across all star ranks are fed into the **Synthesis Chamber** (`SynthesisController.luau`) for EXP leveling to the star cap (Lv. 10 at every star), or sacrificed at the **Promotion Altar** (`PromotionController.luau`) for **Star Promotion** ($1★ \to 7★$). Both heroes and artifacts feature a baseline inventory space limit of **50 items**, raised by the Fortress Tree's Storage branch (§4.3). Heroes working in a support facility are out of the backpack and don't count toward the hero cap.
+   - Every hero pulled from the Summoning Altar rolls with **Combat Stats** (movement speed, attack speed, attack damage, health) and **Labor Output** (separate facility productivity). Heroes have no passive traits: rarity, stars, level and their kit (§4.4) set them apart.
+   - **Up to 5 Deployed Heroes** (one slot at the start; the Fortress Tree's Command branch opens slots 2–5, see §4.3) follow the Master onto floors 1–50 of the **Infinite Tower** or are assigned to a floor on their own. Heroes charge an in-combat **Skill Gauge** (0 to 100) through a 3-tier attack cadence (Basic -> Basic -> Special -> Skill Attack at 100), and risk being **Downed** (until the squad changes floor, goes home or wipes) if left inside lethal AoE telegraphs.
+   - **Benched Heroes** rest on the player's **Fortress Plot** or work in its support facilities (§4.3).
+   - **Zero Dead Pulls:** Duplicate heroes across all star ranks are fed into the **Synthesis Chamber** (`SynthesisController.luau`) for EXP leveling to the star cap (Lv. 10 at every star), or converted into Soul Essence that crafts the Promotion Stones the **Promotion Altar** (`PromotionController.luau`) needs for **Star Promotion** ($1★ \to 7★$, §4.2a). Both heroes and artifacts feature a baseline inventory space limit of **50 items**, raised by the Fortress Tree's Storage branch (§4.3). Heroes working in a support facility are out of the backpack and don't count toward the hero cap.
    - **Dual Hero Banners & Artifact Gacha:** At the **Summoning Altar**, players spend Gems on two distinct hero banners (Call of the Rift `100` / `900` Gems, A Star's Arrival `200` / `1,800` Gems for 1x / 10x): **Call of the Rift** (Permanent Banner featuring 5 stars: $1★ \to 5★$) and **A Star's Arrival** (Limited Time Banner featuring 1 character per star across all 7 stars: $1★ \to 7★$). In addition, Masters visit the **Blacksmith Forge** (`ForgeController.luau`) to summon equippable archetype weapons using **Gold** (`5,000 Gold` single / `45,000 Gold` 10x) across an **84-Weapon Roster** (2 weapons per archetype per rarity tier across 7 launch tiers, featuring Standard $1.00\times$ and Enhanced $1.20\times$ variants). All summoned weapons drop at **1★** baseline with inherent rarity tiers. At the Forge, donor weapons of the same rarity and star rank (regardless of weapon type), plus Gold, are used for **Star Ascension** ($1★ \to 7★$), scaling base stats up to **`16.00x`**, while unneeded artifacts can be **sold for Gold** to manage inventory limits.
 
 2. **Tactical Master Agency Over AFK Whaling:**
-   - The Master carries no personal weapon. Instead, the Master directs squads through battlefield commands—**`[Click / Tap]` Focus Target**, **`[Q]` Overdrive Whistle**, and **`[E]` Emergency Recall Whistle**—while physically hauling heavy, high-value **Relics** and cargo back to their plot.
+   - The Master carries no personal weapon. Instead, the Master directs squads through battlefield commands—**`[Click / Tap]` Focus Target**, **`[Q]` Overdrive Whistle**, and **`[E]` Emergency Recall Whistle**—while physically hauling heavy, high-value **Relics** back to a Sanctuary or their plot.
    - Masters use **`[LeftShift]` Sprint** ($3.0\times$ speed multiplier) to cross high-elevation bridges and dodge lethal hazards.
-   - Because boss signature skill checks (the **Biome Boss** signature attacks like *Moss Quake* and *Sweeping Roots*, and elite ground telegraphs) inflict instant 50% Stamina loss or a **Downed state** (down until the squad changes floor, goes home or wipes) on heroes left inside the blast zone, an AFK player will have their squad wiped and sent home, dropping their DPS to zero. An active Master who times **`[E]` Emergency Recall Whistle** to dodge the blast and triggers **`[Q]` Overdrive Whistle** during punish windows will consistently out-damage and out-loot an AFK whale.
+   - Because boss signature skill checks (the **Biome Boss** signature attacks like *Moss Quake* and *Sweeping Roots*, and elite ground telegraphs) hit every hero left inside the blast zone for heavy damage, often enough to leave them **Downed**, an AFK player will have their squad wiped and sent home, dropping their DPS to zero. An active Master who times **`[E]` Emergency Recall Whistle** to dodge the blast and triggers **`[Q]` Overdrive Whistle** during punish windows will consistently out-damage and out-loot an AFK whale.
 
 ### 1.3 Hybrid Retention Matrix & Core Drivers
 
 | Reference Title | Adopted Core Mechanic | *Infinite Tower* Evolution |
 | :--- | :--- | :--- |
-| ***Pick Me Up, Infinite Gacha*** | Desperate squad survival, Synthesis chamber, Star Promotion, living lobby workers | Heroes suffer Stamina drain and `Coma` if mismanaged; 4★/5★ heroes require hard promotion sacrifices; War Banner plot deployment. |
-| ***Pet Simulator 99*** | Multi-unit squad grinding, tactile loot explosions, exponential progression | Replaces passive pet hovering with Stamina-managed combat squads, active whistle commands, and isolated 50-floor dynamic tower rooms. |
-| ***Blox Fruits*** | Telegraphed boss skills, live DPS leaderboards, open-world bounty hunting | **Greed vs. Coma** boss checks, 10 **Biome Bosses** (Floors 5, 10, ..., 50), and **Contested Loot & Bounty-Hunt PvP** in arena rings. |
+| ***Pick Me Up, Infinite Gacha*** | Desperate squad survival, Synthesis chamber, Star Promotion, living lobby workers | Heroes are Downed if mismanaged; high-star promotions need hard sacrifices; War Banner plot deployment. |
+| ***Pet Simulator 99*** | Multi-unit squad grinding, tactile loot explosions, exponential progression | Replaces passive pet hovering with Skill-Gauge-driven combat squads, active whistle commands, and isolated 50-floor dynamic tower rooms. |
+| ***Blox Fruits*** | Telegraphed boss skills, live DPS leaderboards, open-world bounty hunting | **Greed vs. Coma** boss checks, 10 **Biome Bosses** (Floors 5, 10, ..., 50), and **Contested Loot & Bounty Duels** on tower floors. |
 | ***Grow a Garden*** | Cozy-yet-competitive perimeter plots, passive production, fortress management | Dedicated private plots with a Fortress Tree of unlockable facilities, War Banner squad deployment, and Forge progression. |
-| ***Steal an Egg*** | Physical object hauling, movement penalties, fumble & steal tension | High-tier **Relics** & cargo weld overhead, slow WalkSpeed by up to -45%, and fumble on AoE hits. |
+| ***Steal an Egg*** | Physical object hauling, movement penalties, fumble & steal tension | **Relics** weld overhead, slow WalkSpeed by up to -45%, and fumble on AoE hits. |
 
 **The Intimate Server Dynamic:**
-In a 5–6 player server, anonymity disappears. Every player knows who conquered the latest Biome Boss, who just scooped contested loot, and who carries an open 3-minute thief bounty. The interplay of high-stakes extraction, boss timing, and bounty-hunt loops keeps players engaged in continuous Biome Boss clears and Infinite Tower floor pushes.
+In a 10-player server, anonymity disappears. Every player knows who conquered the latest Biome Boss, who just scooped contested loot, and who carries an open 3-minute thief bounty. The interplay of high-stakes extraction, boss timing, and bounty-hunt loops keeps players engaged in continuous Biome Boss clears and Infinite Tower floor pushes.
 
 ---
 
@@ -46,14 +48,14 @@ In a 5–6 player server, anonymity disappears. Every player knows who conquered
 ```mermaid
 flowchart TD
     subgraph Micro["3-Minute Loop: Grind & Extract"]
-        M1["Deploy 5 Rested Heroes (Hub Arena or Tower Floors 1-50)"] --> M2["Command Squad: Focus Target, [Q] Overdrive, [E] Recall Dodge"]
-        M2 --> M3["Pick Up Physical Loot / Relic (-15% to -45% WalkSpeed)"]
-        M3 --> M4["Haul Across Bridges or Portals to Plot Pad (Dodge AoE & Loot Thieves)"]
-        M4 --> M5["Bank Gold & Gems; Rest Exhausted Heroes on the Bench"]
+        M1["Deploy up to 5 Heroes (Tower Floors 1-50)"] --> M2["Command Squad: Focus Target, [Q] Overdrive, [E] Recall Dodge"]
+        M2 --> M3["Carry a Relic (-15% to -45% WalkSpeed)"]
+        M3 --> M4["Haul it to the Floor Sanctuary or a Hub Bank Zone (Dodge AoE & Loot Thieves)"]
+        M4 --> M5["Bank Gold & Gems; Swap Heroes at the War Banner"]
         M5 --> M1
     end
 
-    subgraph Meso["15-Minute Loop: Recovery, Synthesis, Promotion & Forge"]
+    subgraph Meso["15-Minute Loop: Summoning, Synthesis, Promotion & Forge"]
         T1["Gather Gold & Gems from Drops, Relics & Tower Floors"] --> T2["Summoning Altar: Call of the Rift (5★ Perm) & A Star's Arrival (1-7★ Limited)"]
         T2 --> T3["Synthesis Chamber: Feed Duplicates for XP & Max Level Cap"]
         T1 --> T4["Blacksmith Forge Banner: 84 Weapons (5,000 Gold)"]
@@ -62,7 +64,7 @@ flowchart TD
     end
 
     subgraph Macro["Macro Loop: Tower Progression & Biome Boss Conquests"]
-        B1["Prepare Squad: Rest to 100% Stamina & Equip High-Rarity/Star Artifacts"] --> B2["Advance Tower Floors: Clear Mobs & Elites across 5-Floor Biome"]
+        B1["Prepare Squad: Promote Heroes & Equip High-Rarity/Star Artifacts"] --> B2["Advance Tower Floors: Clear Mobs & Elites across 5-Floor Biome"]
         B2 --> B3["Engage Biome Boss on Floor Milestone (Floor 5, 10, 15... 50)"]
         B3 --> B4["Dodge Signature Telegraphed AoEs (Self/Target Discs) via [E] Recall"]
         B4 --> B5["Punish Window: Trigger [Q] Overdrive to Burst Down Boss HP"]
@@ -78,28 +80,28 @@ flowchart TD
 ### 2.1 The 3-Minute Micro Loop (Grind, Command & Physical Extraction)
 1. **Deploy & Traverse (0:00 – 0:15):**
    - The Master selects up to 5 rested heroes from their roster via the **War Banner** or **Squad Deploy UI** (`SquadController.luau`).
-   - The Master can sprint (`[LeftShift]`, $3.0\times$ speed) across high-elevation stone bridges onto the **Central Hub**, or use the **Tower Controller** (`TowerController.client.luau`) to travel (`Visit floor`) or station their squad (`Assign squad`) on any of the 50 **Infinite Tower Floors**.
+   - The Master sprints (`[LeftShift]`, $3.0\times$ speed) from their plot across the Cloister Commons and the Pilgrim's Causeway to the tower gate, then uses the **Tower Controller** (`TowerController.client.luau`) to travel (`Visit floor`) or station their squad (`Assign squad`) on any unlocked floor of the 50 **Infinite Tower Floors**. The hub itself has no mobs.
 2. **Tactical Grind & Skill Gauge Building (0:15 – 2:00):**
-   - The Master uses **`[Click / Tap]` Focus Target** to direct all 5 deployed heroes onto target mobs, crystal nodes, or floor bosses.
-   - Heroes execute a 3-tier cadence: **Basic Attack** (+5 Stamina) $\to$ **Special Attack** (+10 Stamina every 3rd hit) $\to$ **Skill Attack** (unleashed when Stamina reaches 100, resetting gauge to 0).
-   - To accelerate clears and rapidly charge Skill Attacks, the Master triggers **`[Q]` Overdrive Whistle** (`20s CD`), granting **+40% Attack Speed** for `5s` with zero stamina cost.
+   - The Master uses **`[Click / Tap]` Focus Target** to direct every deployed hero onto a target mob or floor boss.
+   - Heroes execute a 3-tier cadence: **Basic Attack** (+5 Skill Gauge) $\to$ **Special Attack** (+10 Skill Gauge every 3rd hit) $\to$ **Skill Attack** (unleashed when the gauge reaches 100, resetting it to 0).
+   - To accelerate clears and rapidly charge Skill Attacks, the Master triggers **`[Q]` Overdrive Whistle** (`20s CD`), granting **+40% Attack Speed** for `5s` at no cost.
    - When an Elite or Boss telegraphs a red ground AoE or ranged projectile (`ARC`, `SELF_DISC`, `TARGET_DISC`, or swept-corridor `PROJECTILE`), the Master triggers **`[E]` Emergency Recall Whistle** (`6s CD`), warping all 5 heroes to the Master's safe position and dropping their aggro for `2s`.
-3. **Physical Loot Haul (2:00 – 2:45):**
+3. **Relic Haul (2:00 – 2:45):**
    - Defeating mobs, Elites and bosses spawns physical Relic drops in `Workspace.PhysicalRelics`: **Mana Geodes** and **Cursed Urns** from anything, **Abyssal Cores** only from Elites, and **Calamity Hearts** only from Alphas and Biome Bosses (see §5.5 Relic Drops).
    - The Master holds the drop's **Carry** prompt (E, 0.35 s) to weld it overhead, incurring a **-15% to -45% WalkSpeed penalty** (and disabling jumping for high-tier relics). Relics are never picked up by walking over them.
    - If hit by an Elite/Boss AoE mid-haul, the Master is **stunned for 1s and fumbles the item** (which becomes stealable after a **5s owner-lock**).
 4. **Extract & Bank (2:45 – 3:00):**
-   - **Hub Banking:** Stepping onto the Cloister Commons (band, island or footbridges), a plot bridge, the Pilgrim's Causeway, your plot, or a Private Extraction Pad safely deposits cargo into permanent Gold and Gems.
-   - **Floor Safe Sanctuary Banking:** Bringing physical loot (Gold/Gems) or Relics back into any floor's elevated **Floor Safe Sanctuary** automatically deposits them at the **Floor Extraction Pad** (`FloorExtractionPad`), granting 100% relic payout and Market multipliers immediately without requiring a trip back to the Hub.
+   - **Hub Banking:** Stepping onto the Cloister Commons (band, island or footbridges), a plot bridge, the Pilgrim's Causeway, your plot, or a Private Extraction Pad safely banks a carried relic into permanent Gold and Gems.
+   - **Floor Sanctuary Banking:** Carrying a relic into any floor's elevated **Sanctuary** banks it automatically anywhere inside (there is no pad or altar), with the full relic payout and the Market multiplier, without a trip back to the Hub. Kill Gold and Gems never need banking: they are paid on the kill.
    - Downed heroes stay down until the squad changes floor (they stand back up at 30% HP), returns home or wipes. A wipe sends the Master and squad home at full HP (see §2.5 and §6.1).
 
 ### 2.2 The 15-Minute Meso Loop (Fortress, Synthesis, Promotion & Forge Progression)
-1. **Facility Upkeep (Every 3–5 Minutes):**
-   - Swap rested heroes from the bench into the active squad rotation.
+1. **Roster Upkeep (Every 3–5 Minutes):**
+   - Swap heroes between the squad, the bench and the support facilities at the War Banner and the facility panels.
 2. **Summoning & Gacha Pulls (Every 5–10 Minutes):**
    - Spend Gems at the **Summoning Altar** on either **Call of the Rift** (Common–Exalted Permanent Banner) or **A Star's Arrival** (Common–Mythical Limited Time Rate-Up Banner, featuring 1 character per rarity tier, each summoned at 1★). In addition, visit the **Blacksmith Forge** (`ForgeController.luau`) to summon weapons using **Gold** (`5,000 Gold` single / `45,000 Gold` 10x) from an **84-Weapon Roster** (2 weapons per archetype per rarity tier across 7 tiers) with 120-pull Exalted+ hard pity, or liquidate unneeded gear for Gold.
-   - **Synthesis Chamber (`SynthesisController.luau`):** Place a recipient hero and up to 5 fodder heroes to level up to the current star's cap (Lv. 10).
-   - **Promotion Altar (`PromotionController.luau`):** When a hero reaches max level, sacrifice same-rank heroes and Promotion Stones to permanently ascend star rating ($1★ \to 5★$). The hero's inherent rarity never changes.
+   - **Synthesis Chamber (`SynthesisController.luau`):** Place a recipient hero and fodder heroes to level it up to the current star's cap (Lv. 10).
+   - **Promotion Altar (`PromotionController.luau`):** When a hero reaches max level, spend Gold and Promotion Stones to permanently ascend its star rating ($1★ \to 7★$, §4.2a). The hero's inherent rarity never changes.
 3. **Artifact Star Ascension & Liquidation at the Blacksmith Forge (`ForgeController.luau`):**
    - **Star Ascension (Multipliers):** Ascend artifacts from $1★ \to 7★$ at the Forge by sacrificing donor weapons of the same rarity tier and star rank (any weapon type) and Gold, scaling inherent base stats by progressive multipliers up to **`16.00x`**.
    - **Artifact Liquidation (Selling):** Sell unequipped, unlocked weapons for Gold directly from the Assign tab to maintain the 50-item inventory limit.
@@ -116,7 +118,7 @@ flowchart TD
      - **Signature 1:** Expanding circular ground shocks centered on the boss (`SELF_DISC`, e.g. `moss_quake`, 22 studs radius).
      - **Signature 2:** Ranged ground craters placed under distant heroes (`TARGET_DISC`, e.g. `sweeping_roots`, 55 studs cast range, 13 studs radius).
      - **Ranged / Caster Regulars:** Biome ranged and caster regulars (`mob_lantern_spore`, `mob_crag_channeler`, `mob_thorn_weaver`, `mob_drowned_acolyte`, `mob_astral_scribe`, `mob_void_invoker`) fire authoritative swept-corridor projectiles (`PROJECTILE`) with a floor corridor warning and flying orb visual.
-   - **Tactical Counterplay ("Dodge vs. Coma"):** Masters must watch the expanding progress-fill telegraph discs, corridor warnings, and sound cues, repositioning and executing **`[E]` Emergency Recall Whistle** to yank heroes out of danger. Heroes struck by signature skills suffer severe stamina loss or a debilitating **Downed state** (down until the squad changes floor, goes home or wipes).
+   - **Tactical Counterplay ("Dodge vs. Coma"):** Masters must watch the expanding progress-fill telegraph discs, corridor warnings, and sound cues, repositioning and executing **`[E]` Emergency Recall Whistle** to yank heroes out of danger. Heroes struck by signature skills take heavy damage and are often left **Downed** (until the squad changes floor, goes home or wipes).
    - **Punish Windows:** Following major signature attacks, the boss enters an extended recovery window (1.2s–1.5s), providing active Masters the ideal moment to pop **`[Q]` Overdrive Whistle** for massive burst DPS.
 3. **Biome Clearance & Milestone Rewards:**
    - Defeating the Biome Boss awards immense Gold, Gems, and first-clear milestone bonuses.
@@ -129,12 +131,12 @@ While active squad command in the Central Hub and Infinite Tower drives peak pro
    - **Core Main Buildings (Inner Courtyard):** Essential progression stations that every Master accesses by default in their main fortress courtyard—including the **Summoning Altar**, **War Banner**, **Synthesis Chamber**, **Promotion Altar** and **Blacksmith Forge**.
    - **Support Facilities (Inner Fortress Wings):** Upgradeable utility and economic structures (`Level 1` $\to$ `Level 5`) located inside the fortress courtyard wings where benched heroes are stationed via `FacilityController.luau` to grant global percentage buffs. Each is unlocked and levelled through the **Fortress Development Tree** (Section 4.3):
      - **God's Blessing (Plaza Fountain):** An angel statue on the courtyard fountain. Stationed Acolytes (`Healer` preferred) raise **summon luck** on every Summoning Altar banner ($+4\%$ at Lv. 1 up to a $+50\%$ cap).
-     - **The Market (Inner Commercial Wing):** Grants a percentage multiplier ($+5\%$ base at Lv. 1 up to $+40\%+$ with high-tier Miners) **strictly to Loot Earnings from the Towers**—amplifying Gold dropped by Infinite Tower mobs/Biome Bosses (Floors $1\text{–}50$) and the banking value of physical loot extracted from the Central Crimson Tower rings. (Does not multiply Outskirts Guard Post passive Gold).
+     - **The Market (Inner Commercial Wing):** Grants a percentage multiplier ($+5\%$ base at Lv. 1 up to $+40\%+$ with high-tier Miners) **strictly to Loot Earnings from the Towers**: Gold from Infinite Tower kills (Floors $1\text{–}50$) and the Gold of banked relics. (It does not multiply Outskirts Guard Post passive Gold.)
      - **The Training Grounds (Inner Martial Wing):** Grants a percentage multiplier ($+4\%$ base at Lv. 1 up to $+32\%+$ with high-tier Strikers/Scholars) to the Master's **Overall Squad Combat Power**, multiplying total `FinalATK` and `FinalHP` (both intrinsic hero stats and equipped Artifact stats) against all monsters.
-   - **The Outskirts (Southern Frontier Wilderness):** The only area located *outside* the fortress walls, reached through the rear fortress gatehouse. Houses the **Outskirts Guard Post** and wilderness patrol run.
+   - **The Outskirts (Southern Frontier Wilderness):** The only area located *outside* the fortress walls, reached through the rear fortress gatehouse. Houses the **Outskirts Guard Post** and its wave-defense trail.
 2. **The Outskirts Guard Post (Unified AFK Gold & Offline Rewards):**
    - At the southern rear border of the island, outside the fortress battlements, lies the **Outskirts Guard Post**, a frontier bastion and wilderness trail at the back of the fortress.
-   - Masters assign benched heroes (`Vanguard` and `Marksman` preferred) to the Outskirts Guard Post as **Adventurers**. Assigned Adventurers physically venture out and patrol the southern outskirts trail, fending off ambient monsters in a lightweight client-rendered visual loop without draining their combat Stamina.
+   - Masters assign benched heroes (`Vanguard` and `Marksman` preferred) to the Outskirts Guard Post as **Adventurers**. Assigned Adventurers hold a defense arc against cosmetic mob waves in a lightweight client-rendered loop (§4.3, *Facility Workers in the World*); it costs them nothing.
    - **Auto-Received Online Gold:** There is no manual treasury chest required while online. Every $60\text{ seconds}$ (ticked automatically in $10\text{-second}$ increments), passive Gold generated by stationed Adventurers is **automatically added directly to the Master's Gold balance**, scaled by the heroes' `EffectiveLabor` and the Master's **Highest Cleared Biome Boss** (Floors $5, 10, \dots, 50$).
    - **Offline Reward Function (`OfflineRewardService.luau`):** When a Master logs out (`PlayerRemoving`), the server records `LastLogoutTimestamp` alongside their current `PassiveGoldPerMin` rate. Upon reconnecting (`PlayerAdded`), the server calculates elapsed offline minutes up to the Guard Post's **Max Offline Accumulation Cap** ($4\text{ Hours}$ at Lv. 1 $\to$ $12\text{ Hours}$ at Lv. 5) and presents a **"Welcome Back, Master!" Offline Summary Modal**, crediting the accumulated Gold straight to the player's balance.
 
@@ -181,8 +183,8 @@ The world exists in two coordinated spatial contexts:
 
                =======================================================
                OFF-MAP INFINITE TOWER ROOMS (Isolated Dynamic Grid)
-               Origin(id) = (12000 + ((id-1)%10)*1800, 1000, 12000 + floor((id-1)/10)*1800)
-               Enclosed 248 x 84 x 248 studs chambers with Safe Arrival platforms (CombatSafe=true)
+               Origin(id) = (12000 + ((id-1)%10)*2400, 1000, 12000 + floor((id-1)/10)*2400)
+               380 x 420 (floor 1 of a biome) to 560 x 640 studs (floor 5) chambers with Sanctuaries (CombatSafe=true)
                Floors 5, 10, 15, ..., 50 feature dedicated Biome Boss Dais Arenas (BossDaisFixture)
 ```
 
@@ -191,12 +193,12 @@ The world exists in two coordinated spatial contexts:
 | Zone Name | Radial Distance / Coordinate Space | Dimensions | Access Rule | Combat & PvP Rules | Primary Drops |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Central Crimson Tower** | Centred at `(0, 0)`, ~650-stud footprint, walkway ring at `R = 375` ($Y = 16$) | Central multi-level landmark on its round CrackedGroundSlab | Open to all | No mobs in the hub. The gate portal (north, `z = -332`) opens the floor selector for the Infinite Tower. | None |
-| **Hub Banking Zones** | `HubLayout.BankZonePolygons()`: the four band strips, the island, the four footbridges, the 10 plot bridges and the Pilgrim's Causeway, plus a box around each PlotSpawn. The void is never a bank zone | Authored polygons (`TowerFloorService`) | Open to all | **Safe Zone** (No mobs). Entering one banks carried cargo. | Banked cargo conversion |
+| **Hub Banking Zones** | `HubLayout.BankZonePolygons()`: the four band strips, the island, the four footbridges, the 10 plot bridges and the Pilgrim's Causeway, plus a box around each PlotSpawn. The void is never a bank zone | Authored polygons (`TowerFloorService`) | Open to all | **Safe Zone** (No mobs). Entering one banks a carried relic. | Relic banking |
 | **The Cloister Commons** | Rounded rectangle centred at `(0, 12, -1036)`: X ±420, Z −1596 to −476, outer corners R 160 | A 120-stud walkable band around an open void (600 × 880, corners R 40), with a 340 × 500 garden island in the middle joined by four footbridges (Section 3.5) | Open to all | Safe Zone. The social hub every player crosses between their plot and the tower. | None |
 | **Pilgrim's Causeway** | `z = -386` to `-476` on the gate axis | `40 studs` wide, slopes from $Y = 16$ to $Y = 12$ (`CausewayBuilder.luau`) | Open to all | Safe Zone. Joins the tower walkway to the cloister's South Gate (44 wide). An obsidian deck with a crimson rune channel whose glow rolls toward the tower, spiked parapets, three pairs of fire-crowned pylons joined by arcs of crimson energy, two crested arches with hanging cages, two hooded Warden statues at the tower end, and spikes, chains, embers and red mist hanging into the void below. | None |
 | **10 Floating Fortress Plots** | Around the cloister's outer edge (`HubLayout.PlotSlots`): 3 per long side (x ±628), 2 on the north edge, 2 on the north corners at 45°. Neighbours at least 24 studs apart, nearest point to the tower about 770 ($Y = 12$) | Expanded $260 \times 320\text{ studs}$ citadel island with grand courtyard & rear outskirts; each faces into the hub and joins its edge by a 40-stud bridge | Plot Owner + Visitors | Safe Zone. Personal fortress sanctuary for recovery, banner summoning, forge ascension, and AFK outskirts guard post. Assigned nearest-to-the-gate first: 1, 10, 2, 9, 3, 8, 4, 7, 5, 6. | Roster Recovery, Gacha Banners, Forge, Outskirts Passive Gold & Multipliers |
 | **Safety Catch Plane** | Lower kill plane at $Y = -95$, centred on `(0, -950)` | `2400 x 8 x 3400 studs`, tiled (parts cap at 2048) | Fallen players | Non-lethal catch plane; teleports fallen players safely to their PlotSpawn. | None |
-| **50 Tower Floor Rooms** | Off-map grid: $X \ge 12,000, Y = 1,000, Z \ge 12,000$ (spaced $2,400\text{ studs}$) | Progressive $380 \times 130 \times 420\text{ studs}$ (F1) to $560 \times 190 \times 640\text{ studs}$ (F5) across 5 elevation tiers | Traversal via `TowerController` | Isolated floor-local PvE encounters; shared floor membership; elevated safe arrival sanctuary with instant loot unpackaging/banking. | Mob drops, Gold, Gems, **Biome Boss Rare Artifact Drops** |
+| **50 Tower Floor Rooms** | Off-map grid: $X \ge 12,000, Y = 1,000, Z \ge 12,000$ (spaced $2,400\text{ studs}$) | Progressive $380 \times 130 \times 420\text{ studs}$ (F1) to $560 \times 190 \times 640\text{ studs}$ (F5) across 5 elevation tiers | Traversal via `TowerController` | Isolated floor-local PvE encounters; shared floor membership; elevated Sanctuary that banks carried relics. Bounty duels only (§6.1). | Kill Gold & Gems, **Relics** (no artifacts, §5.4) |
 
 ### 3.3 Dynamic Tower Room Architecture & Biomes
 
@@ -209,7 +211,7 @@ Tower floors are dynamically managed by `TowerFloorService.luau` and generated v
 
 | Floor in Biome | Variant Kind | Footprint ($W \times D \times H$) | Elevation Tiers | Architectural Theme | Mob Groups (Camps) | Total Mobs |
 | :---: | :--- | :---: | :---: | :--- | :---: | :---: |
-| **Floor 1** | `INTRODUCTION` | $380 \times 420 \times 130\text{ studs}$ | 3 Tiers ($Y: 0\text{ to }+12$) | Foreground courtyard, threshold entry arches, flora/crystals/dunes, north shrine. | 4 Camps + Apex | 16 live Mobs (Elite champion summoned at the Apex) |
+| **Floor 1** | `INTRODUCTION` | $380 \times 420 \times 130\text{ studs}$ | 3 Tiers ($Y: 0\text{ to }+12$) | Foreground courtyard, threshold entry arches, flora/crystals/dunes, north shrine. | 4 Camps + Apex | 16 live Mobs (the biome Alpha is summoned at the Apex) |
 | **Floor 2** | `EXPANDED_ENCOUNTER` | $420 \times 470 \times 140\text{ studs}$ | 3 Tiers ($Y: 0\text{ to }+14$) | Flanking elevated colonnades and side galleries connected by side ramps. | 5 Camps + Apex | 22 live Mobs |
 | **Floor 3** | `TERRAIN_VARIATION` | $460 \times 520 \times 155\text{ studs}$ | 4 Tiers ($Y: -4\text{ to }+18$) | Recessed elemental chasm (water/lava/mist) with arched bridge crossings and waterfalls. | 5 Camps + Apex | 25 live Mobs |
 | **Floor 4** | `ELITE_STRONGHOLD` | $510 \times 580 \times 170\text{ studs}$ | 4 Tiers ($Y: -4\text{ to }+22$) | Monumental flanking guardians, watchtowers, and twin upper elite bastions. | 7 Camps + Apex | 35 live Mobs |
@@ -223,16 +225,16 @@ Tower floors are dynamically managed by `TowerFloorService.luau` and generated v
   4. **Upper Bastions ($Y = +10\text{ to }+16$):** Fortified wings and guardian platforms.
   5. **Apex Sanctum / Boss Dais ($Y = +16\text{ to }+28$):** Grand tiered staircase ascending to the biome apex or Boss arena.
   *Slopes are restricted to $\le 15^\circ$ and stair rises to $\le 1.0\text{ stud}$ per tread. Links have stable connector IDs, a usable corridor, and full-width flat landings with eight studs of extra approach width. The inclined deck ends outside the upper terrace's entire shoulder footprint; its flat landing bridges back into the terrace. Short links extend at their lower end to preserve the slope limit. Curbs stop two studs before the deck ends, and crossing terrace trim is cleared from landing footprints. Basin return ramps start at the actual chasm floor (`Bottom - 4`) and have matching landings. Geometry and clearance share the `TowerLayout` connector contract; see [Tower Navigation Architecture](TOWER_NAVIGATION.md).*
-- **Floor Safe Sanctuary & In-Floor Loot Unpackaging (`CanBankCargo = true`):**
+- **Floor Safe Sanctuary & Relic Banking (`CanBankCargo = true`):**
   The elevated south arrival sanctuary ($128 \times 56\text{ studs}$ at $Y = +8$) is designated with `CombatSafe = true`, `CanBankCargo = true`, and `CanRecoverWipe = true`:
-  - **Automatic unpackaging (no pad or altar):** entering the sanctuary while carrying physical Gold/Gems or Relics (`BankArmed = true`) immediately unpacks and banks them into permanent profile currency with 100% relic value and the active Market multiplier (`EXTRACT_SAFE_ZONE`).
+  - **Automatic banking (no pad or altar):** entering the sanctuary while carrying a relic (`BankArmed = true`) immediately banks it into permanent profile currency with 100% relic value and the active Market multiplier (`EXTRACT_SAFE_ZONE`).
   - **Travel portals:** 4 ProximityPrompt portals (`PREVIOUS`, `NEXT`, `SELECTOR`, `HUB`) along the rear of the sanctuary (Phase H).
 - **Procedural Landmark Kits (`TowerBiomeAssets.luau`):**
   Native-part procedural landmark kits for all 10 biomes (statues, bridges, falls, crystals, flora, overhead cogs, celestial orreries, chained obelisks) with local lights and zero external asset dependencies.
   - **Grounded clutter rule:** no prop floats. Every prop stands on a registered support (a terrace, island crown, cliff tier, foothill shelf or the rock shelf behind the Apex) or on the chasm floor (the top of the Ground slab, `layout.Bottom - 4`). Companion pieces, arch piers and tree roots that would overhang a support are dropped, run down to real ground, or pulled in. Every compound prop (a tree, spire, mushroom, arch, statue, clutter cluster, terrace outcrop or brazier, ramp curb) is a Model tagged `PropKind`, and raised supports (chasm islands, perimeter cliffs, horizon foothills) own the props standing on them. Camp and lane clearance (`TowerPropClearance`) removes a prop or support whole when any of its parts is in the way, so no canopy, cap or spire tip is ever left floating. A rock shelf level with the Apex fills the space behind it for the backdrop to stand on. After a floor is built, a settle pass lowers any prop still hovering onto the support under it (props with nothing below are removed; rings, chains, gears and sky pieces hang by design), then camp and lane clearance run again. `tests/studio-tower-prop-audit.luau` builds all 50 floors in Studio and reports orphaned and floating props and props on walkways, which must all be 0.
   - **Clear walkway rule:** `TowerLayout.Lanes` lists the walkways: every ramp and stair with a 3-stud shoulder, the authored full-width landing footprints at both ends, the 40-wide Basin causeway and the 36-wide Sanctuary exit (arrival to front edge). No scenery stands on them. Any prop with a part on a walkway is removed whole, solid or not; the ramps, terraces, curbs, causeway inlay, the arches that span the ramps and faint light shafts are exempt. Chasm islands step outward (or along the room) from their authored spot until they clear every walkway, and their waterfalls face away from the central ramps.
   - **Shared movement & destination policies (`HeroNavigation.luau`, `TowerNavigationGraph.luau`, `SquadMovement.luau`):** heroes and enemies use feet-position navigation with cached connector topology, height-aware ramp membership, supported body sweeps, and bounded asynchronous path requests (`MAX_IN_FLIGHT = 6`). Moving goals preserve connector progress. Follow and pursuit share signed-progress recovery: route refresh after $1\text{ s}$ without progress, unreachable after $3\text{ s}$; attacks pause the timer. Active floor runs sample a bounded server trail of supported player movement (`MAX_TRAIL_POINTS = 48`) with forward lookahead, connector-graph fallback across jumped gaps, and width-aware formation slots that compress on ramps and expand on platforms. Assigned squads compute a stable engagement/regroup anchor once per squad tick using connector route cost (`SquadMovement.RouteCost`), ignore stranded-hero drag, retry alternative supported attack positions within range before applying a $5\text{ s}$ generation-scoped target exclusion, and operate independently of the owner's sprint state or physical location. Ordinary follow lag never triggers a distance/stuck teleport; explicit Recall (`E`) remains. See [Tower Navigation Architecture](TOWER_NAVIGATION.md).
-  - **Sanctuary and portals (Phase H):** each floor's Sanctuary (128 × 56 studs; there is no altar or unpackaging pad: loot and relics bank automatically anywhere inside it) is traced by a glowing square on the exact `ARRIVAL` zone with a gap and two pylons at the front exit, a crystal beacon with a faint light column at each corner (visible from the Apex), and a "SANCTUARY" label over the exit. The four travel stations are **portals** (Scale 1.2, 24 studs apart; the boss portals are Scale 1.3) (Previous, Next, Choose Floor, Return to Hub) built by `TowerPortalKit` from one Blender model (`assets-source/tower/portal/TowerPortal.blend`/`.fbx`; four meshes: stone frame, gold trim, runes, vortex; about 9.8k triangles). Each biome tints the stone and gold; the vortex colour tells the actions apart (Next in the biome light, Previous dimmer, Choose Floor gold, Hub white), and Previous on floor 1 and Next on floor 50 stand dark and disabled. They keep their `TowerAction` prompts (F). Until the meshes' MeshIds are filled in (`Shared/Config/TowerPortalAssets.luau`), the kit builds the same design from parts. **When a floor's boss falls, two portals rise at the back of the Apex** (`TowerLayout.PortalSpots`, kept clear like walkways): **Ascend** to the next floor (Return to Hub on floor 50) and **Rerun**, which sends the Master and squad back to this floor's Sanctuary with a fresh kill counter (and clears their leftover surge pack) so the boss can be summoned again. Both are hold-E prompts that need the Master to have cleared this floor, and everyone on the floor gets a toast when they open.
+  - **Sanctuary and portals (Phase H):** each floor's Sanctuary (128 × 56 studs; there is no altar or pad: relics bank automatically anywhere inside it) is traced by a glowing square on the exact `ARRIVAL` zone with a gap and two pylons at the front exit, a crystal beacon with a faint light column at each corner (visible from the Apex), and a "SANCTUARY" label over the exit. The four travel stations are **portals** (Scale 1.2, 24 studs apart; the boss portals are Scale 1.3) (Previous, Next, Choose Floor, Return to Hub) built by `TowerPortalKit` from one Blender model (`assets-source/tower/portal/TowerPortal.blend`/`.fbx`; four meshes: stone frame, gold trim, runes, vortex; about 9.8k triangles). Each biome tints the stone and gold; the vortex colour tells the actions apart (Next in the biome light, Previous dimmer, Choose Floor gold, Hub white), and Previous on floor 1 and Next on floor 50 stand dark and disabled. They keep their `TowerAction` prompts (F). Until the meshes' MeshIds are filled in (`Shared/Config/TowerPortalAssets.luau`), the kit builds the same design from parts. **When a floor's boss falls, two portals rise at the back of the Apex** (`TowerLayout.PortalSpots`, kept clear like walkways): **Ascend** to the next floor (Return to Hub on floor 50) and **Rerun**, which sends the Master and squad back to this floor's Sanctuary with a fresh kill counter (and clears their leftover surge pack) so the boss can be summoned again. Both are hold-E prompts that need the Master to have cleared this floor, and everyone on the floor gets a toast when they open.
   - **Chasm groves:** up to 28 tall, rooted props per floor rise from the chasm floor around the raised terraces and beside the ramps, staying clear of every ramp and the Basin return ramps. Each biome uses its own set: canopy trees and ivy-wrapped ruin columns (Verdant), giant mushrooms (Fungal), sandstone hoodoos and dead trees (Ashen; no trees in lava), frosted pines and ice spires (Frozen), furnace stacks and basalt hoodoos (Infernal), pines and rock hoodoos (Thunder), blighted trees and mushrooms (Corrupted), coral towers and marble columns (Sunken), crystal spires and marble columns (Astral), and obsidian spires and hoodoos (Abyssal). Small clutter frames the two ends of each ramp, on the terrace itself.
 - **Multi-Area Spatial Mob Camps & AI Leashing (`FirstBiomeCombat.luau`, `TowerEncounterRuntime.luau`):** Camps respawn as a wave 10 s after their last member falls and scale up with every extra Master on the floor (Section 2.5).
   - **Camp roster rule (`CampRoster.luau`):** each live camp (spawning area) fields **all** of the biome's Regular types: members are dealt types from a shuffled bag, so every camp holds each type, in a random mix. Members stand at random spots within the camp's radius (up to 20 studs, at least 8 apart), not on fixed offsets. The floor keeps a fixed number of Elites (1 / 2 / 3 / 4 / 4 on floors 1–5 of a biome, never in the Apex Sanctum, and from floor 3 at least one above the Basin), but which camps they lead is random. The moment a camp's last member dies its next wave is planned: a fresh mix of Regular types, new spots, and its Elite, if it has one, moves to another cleared camp without an Elite (it stays put when none is cleared). A camp that is fighting never changes, and a lone survivor's partial respawn keeps the camp's plan. Rolls are seeded per floor, room generation, camp and wave. Kill points are unchanged: Regulars stay 1, Elites stay 3, and the Elite count per floor never changes.
@@ -260,7 +262,7 @@ Tower floors are dynamically managed by `TowerFloorService.luau` and generated v
     | Splitting | On death, two Regulars of its biome step out; they never respawn and give no kill progress |
     | Warded | Allies within 18 studs take 25% less damage |
     | Commanding | Allies within 20 studs deal +20% damage |
-  Enemies spawn in 4 to 7 live spatial camps per floor (16–35 mobs: two Basin flank camps, the Central Crossing from floor 2, both Galleries, and both Bastions from floor 4; the Basin centre below the arrival ramp stays clear), plus the Apex Sanctum where the floor champion or Biome Boss is summoned with ground-raycasted elevations and localized leash radiuses ($60\text{ studs}$ for regular/elite packs, $95\text{ studs}$ for Boss encounters), allowing tactical, room-by-room progression without premature floor aggro pulls.
+  Enemies spawn in 4 to 7 live spatial camps per floor (16–35 mobs: two Basin flank camps, the Central Crossing from floor 2, both Galleries, and both Bastions from floor 4; the Basin centre below the arrival ramp stays clear), plus the Apex Sanctum where the floor's Alpha or Biome Boss is summoned with ground-raycasted elevations and localized leash radiuses ($60\text{ studs}$ for regular/elite packs, $95\text{ studs}$ for Boss encounters), allowing tactical, room-by-room progression without premature floor aggro pulls.
 - **Room Lifecycle:** Rooms transition through `ABSENT -> BUILDING -> READY -> RETIRING -> ABSENT` with a 60-second retirement grace period when unoccupied.
 
 #### Biome Catalog (50 Floors across 10 Biomes):
@@ -292,7 +294,7 @@ The island is divided into two distinct, interconnected sectors:
                        |   Plaza & Cyan Private Extraction Pad  |
                        |              (Plot Spawn)              |
                        | [Summoning Altar]   [Blacksmith Forge] |
-                       | (Hero & Artifact)    & Anvil Hearth]   |
+                       | (Hero Banners)      (Artifact Banner)  |
                        |                                       |
                        |     [Plaza Fountain + Angel Statue]   |
                        |           (God's Blessing)            |
@@ -330,14 +332,14 @@ The island is divided into two distinct, interconnected sectors:
    - **Command Post (West Courtyard):** The heraldic War Banner standard on a carved stone pedestal, with an `[F]` prompt opening the **Squad Deploy UI** (`SquadController.luau`), and beside it the **Architect's Table**, whose prompt opens the **Fortress Tree**.
    - **The Pit Sanctuary (East Courtyard):**
      - **Synthesis Chamber:** Fiery cauldron station with `[F]` prompt opening the **Synthesis UI** (`SynthesisController.luau`) for feeding EXP fodder.
-     - **Promotion Altar:** Consecrated marble star dais with `[F]` prompt opening the **Promotion UI** (`PromotionController.luau`) for star ascensions ($1★ \to 5★$).
+     - **Promotion Altar:** Consecrated marble star dais with `[F]` prompt opening the **Promotion UI** (`PromotionController.luau`) for star ascensions ($1★ \to 7★$).
    - **The Blacksmith Forge (North-East Courtyard):** Interactive 3D station featuring an anvil, hearth coals, workbench, and prompt opening the **Forge UI** (`ForgeController.luau`) for Artifact Star Ascension ($1★ \to 7★$).
-   - **The Market (South-East Inner Wing):** Covered bazaar stalls, coin scales, and ledger counters located inside the fortress commercial quarter. Stationed workers (`Miner` preferred) boost Infinite Tower mob/boss loot drops and Hub extraction banking values ($+5\%$ to $+40\%+$).
+   - **The Market (South-East Inner Wing):** Covered bazaar stalls, coin scales, and ledger counters located inside the fortress commercial quarter. Stationed workers (`Miner` preferred) boost Infinite Tower kill Gold and banked relic Gold ($+5\%$ to $+40\%+$).
    - **The Training Grounds (South-West Inner Wing):** Cobblestone sparring arena with weapon racks, archery targets, and training dummies located inside the fortress military quarter. Stationed trainers (`Striker` & `Scholar` preferred) boost the Master's overall squad combat power ($+4\%$ to $+32\%+$ Final ATK/HP).
 
 3. **Sector C: The Southern Outskirts (Exterior Wilderness Zone):**
    - **Rear Fortress Archway:** A $24\text{-stud}$ wide vaulted stone passage connecting the inner fortress courtyard directly to the open wilderness behind the citadel.
-   - **The Outskirts Guard Post (South Perimeter):** Heavy timber bastion, log palisade barricade, and campfire situated along the winding wilderness trail amidst lush rolling meadow grass, asymmetrical ancient pines, broadleaf oaks, wild berry shrubs, and mossy granite boulders. Stationed Adventurers (`Vanguard` & `Marksman` preferred) venture out along the curved patrol trail to battle ambient wildlife in a lightweight visual loop, auto-generating online Gold every 60 seconds and logging offline accumulation. Only the Outskirts and its Guard Post lie outside the fortress walls.
+   - **The Outskirts Guard Post (South Perimeter):** Heavy timber bastion, log palisade barricade, and campfire situated along the winding wilderness trail amidst lush rolling meadow grass, asymmetrical ancient pines, broadleaf oaks, wild berry shrubs, and mossy granite boulders. Stationed Adventurers (`Vanguard` & `Marksman` preferred) venture out along the curved patrol trail to battle ambient wildlife in a lightweight visual loop, auto-generating online Gold every 60 seconds and logging offline accumulation. Other Masters can visit a plot but cannot affect its facilities. Only the Outskirts and its Guard Post lie outside the fortress walls.
 
 ### 3.5 The Cloister Commons (Central Hub)
 
@@ -412,26 +414,28 @@ Like weapons (Section 7.1), every hero template has a fixed **inherent rarity**.
   $$R_{\text{combat}}(t) = c_t \times (3 \times 1.35)^{(t-1)} \qquad R_{\text{labor}}(t) = c_t \times (1.35 \times 1.12)^{(t-1)}$$
   where $c_t = 1$ for Common, Uncommon and Rare (they keep 100% of their old summoned power, so the early floors stay easy) and $c_t = 0.5$ from Superior up (`StatBalance.RarityStarCompensation`). A fresh Superior (×33.2) still beats a fresh Rare (×16.4).
 - **Stars:** every hero is summoned at 1★ (`StatBalance.HeroSummonStar`) and promotes at The Pit up to 7★ (`PitBalanceConfig.MaxStars`), at ×1.5 combat per star. Rarity never changes when a hero is promoted.
-- **The Pit** values a donor at its *effective star*, Stars + Rarity − 1 (capped at 7), for synthesis XP, Soul Essence, imprint slots and the rare-donor confirmation, so a 1★ Mythical still feeds like the 7★ it used to arrive as.
+- **The Pit** values a donor at its *effective star*, Stars + Rarity − 1 (capped at 7), for synthesis XP, Soul Essence and the rare-donor confirmation, so a 1★ Mythical still feeds like the 7★ it used to arrive as.
 - **Existing saves (schema v4)** drop the stars a hero got for free at summon ($t - 1$) and keep any promotions bought on top. Levels above the new cap ($Stars \times 10$) are clamped. **Schema v5** converts the absolute level to the per-star level $L - (S-1) \times 10$, clamped to 1–10.
 
 #### Launch Roster Base & Native Stats
 Every summoned hero rolls a `QualityScalar` $q \in [0.90, 1.15]$ applied to their archetype base stats. Native stats are the stats at the summoned **1★, Lv. 1**: $Stat_0 \times R_{\text{combat}}(t)$ for combat and $L_0 \times R_{\text{labor}}(t)$ for labor (without facility synergy):
 
-| Banner | Hero | Rarity / Summoned Star | Archetype | Base HP / ATK | Native HP / ATK | Base / Native Labor | Passive Trait |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Call of the Rift** | **Han** | **Common (1) / 1★** | Striker | `300` / `40` | `300` / `40` | `14` / `14.0` | **Unyielding Adaptation** (+10% ATK, -10% Stamina Drain) |
-| **Call of the Rift** | **Aaron** | **Uncommon (2) / 1★** | Vanguard | `450` / `28` | `1,823` / `113` | `16` / `24.2` | **Phalanx Guard** (+25% Max HP, -15% AoE Taken) |
-| **Call of the Rift** | **Catio** | **Rare (3) / 1★** | Miner | `280` / `24` | `4,593` / `394` | `20` / `45.7` | **Quartermaster's Ledger** (+25% Labor Output) |
-| **Call of the Rift** | **Valeria** | **Superior (4) / 1★** | Healer | `260` / `18` | `8,636` / `598` | `18` / `31.1` | **Sanctuary Aegis** (+30% Healing, +20% Coma Recovery) |
-| **Call of the Rift** | **Ignis** | **Exalted (5) / 1★** | Vanguard | `450` / `26` | `60,534` / `3,498` | `16` / `41.8` | **Rift Warlord** (+35% ATK, +20% DMG Reduction) |
-| **A Star's Arrival** | **Jenna** | **Common (1) / 1★** | Marksman | `210` / `34` | `210` / `34` | `13` / `13.0` | **Windstep Precision** (+15% ASPD, +5% Move Spd) |
-| **A Star's Arrival** | **Velkist** | **Uncommon (2) / 1★** | Striker | `300` / `44` | `1,215` / `178` | `14` / `21.2` | **Bloodthirst Frenzy** (+20% ATK, +1s Overdrive) |
-| **A Star's Arrival** | **Eolka** | **Rare (3) / 1★** | Scholar | `230` / `52` | `3,773` / `853` | `22` / `50.3` | **Crimson Pyromancy** (+25% ATK, +30% Labor Output) |
-| **A Star's Arrival** | **Morrigan** | **Superior (4) / 1★** | Vanguard | `450` / `24` | `14,947` / `797` | `16` / `27.6` | **Abyssal Bulwark** (+30% Max HP, +15% Reflect DMG) |
-| **A Star's Arrival** | **Archon** | **Exalted (5) / 1★** | Striker | `350` / `65` | `47,082` / `8,744` | `25` / `65.3` | **Dimensional Dominion** (+30% Boss DMG, +25% All Labor) |
-| **A Star's Arrival** | **Solaris** | **Legendary (6) / 1★** | Scholar | `240` / `55` | `130,754` / `29,965` | `22` / `86.9` | **Supernova Flare** (+40% ATK, +25% AoE Radius) |
-| **A Star's Arrival** | **Astrea** | **Mythical (7) / 1★** | Marksman | `230` / `48` | `507,491` / `105,911` | `23` / `137.4` | **Cosmic Zenith** (+50% ATK, +30% ASPD, +35% Boss DMG) |
+| Banner | Hero | Rarity / Summoned Star | Archetype | Base HP / ATK | Native HP / ATK | Base / Native Labor |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Call of the Rift** | **Han** | **Common (1) / 1★** | Striker | `300` / `40` | `300` / `40` | `14` / `14.0` |
+| **Call of the Rift** | **Aaron** | **Uncommon (2) / 1★** | Vanguard | `450` / `28` | `1,823` / `113` | `16` / `24.2` |
+| **Call of the Rift** | **Catio** | **Rare (3) / 1★** | Miner | `280` / `24` | `4,593` / `394` | `20` / `45.7` |
+| **Call of the Rift** | **Valeria** | **Superior (4) / 1★** | Healer | `260` / `18` | `8,636` / `598` | `18` / `31.1` |
+| **Call of the Rift** | **Ignis** | **Exalted (5) / 1★** | Vanguard | `450` / `26` | `60,534` / `3,498` | `16` / `41.8` |
+| **A Star's Arrival** | **Jenna** | **Common (1) / 1★** | Marksman | `210` / `34` | `210` / `34` | `13` / `13.0` |
+| **A Star's Arrival** | **Velkist** | **Uncommon (2) / 1★** | Striker | `300` / `44` | `1,215` / `178` | `14` / `21.2` |
+| **A Star's Arrival** | **Eolka** | **Rare (3) / 1★** | Scholar | `230` / `52` | `3,773` / `853` | `22` / `50.3` |
+| **A Star's Arrival** | **Morrigan** | **Superior (4) / 1★** | Vanguard | `450` / `24` | `14,947` / `797` | `16` / `27.6` |
+| **A Star's Arrival** | **Archon** | **Exalted (5) / 1★** | Striker | `350` / `65` | `47,082` / `8,744` | `25` / `65.3` |
+| **A Star's Arrival** | **Solaris** | **Legendary (6) / 1★** | Scholar | `240` / `55` | `130,754` / `29,965` | `22` / `86.9` |
+| **A Star's Arrival** | **Astrea** | **Mythical (7) / 1★** | Marksman | `230` / `48` | `507,491` / `105,911` | `23` / `137.4` |
+
+*Passive traits were removed: their stat bonuses had been off since the stat rework, so the labels only promised effects that never happened. Schema v7 drops the saved `PassiveTrait` name (§8.3).*
 
 #### Archetype Foundation Table
 
@@ -455,16 +459,34 @@ Archetypes define a hero's **combat role, base stats, attack cadence, range, lab
 - **EXP per level:** $\text{XP}(L \to L+1) = \text{round}(50 \times E^{1.45})$, so each star's ten levels cost more than the last star's (1★ Lv.1 needs 50, 2★ Lv.1 needs 1,618, 7★ Lv.1 needs 19,395). Donor EXP value, the over-level efficiency gap and Conversion's level bonus also use $E$.
 - **Star Promotion Multipliers:** Promoting a hero from $S \to S+1$ resets its level to 1, multiplies Base Combat stats by **`1.5x`** (`PitBalanceConfig.Promotion.CombatMultiplier`, `StatBalance.HeroPromotionMultiplier`), and multiplies Base Labor output by **`1.35x`**. Promotion never changes the hero's inherent rarity $t$.
 - **Effective Combat Stats (with Artifact Integration):**
-  $$\text{EffectiveATK} = \text{round}\Big(ATK_0 \times q \times R_{\text{combat}}(t) \times 1.5^{(S - 1)} \times 1.08^{(L - 1)} \times (1 + B_{\text{TraitATK}} + B_{\text{ImprintATK}})\Big) + TotalATKBonus_{\text{Artifact}}$$
-  $$\text{EffectiveHP} = \text{round}\Big(HP_0 \times q \times R_{\text{combat}}(t) \times 1.5^{(S - 1)} \times 1.08^{(L - 1)} \times (1 + B_{\text{TraitHP}} + B_{\text{ImprintHP}})\Big)$$
+  $$\text{EffectiveATK} = \text{round}\Big(ATK_0 \times q \times R_{\text{combat}}(t) \times 1.5^{(S - 1)} \times 1.08^{(L - 1)}\Big) + TotalATKBonus_{\text{Artifact}}$$
+  $$\text{EffectiveHP} = \text{round}\Big(HP_0 \times q \times R_{\text{combat}}(t) \times 1.5^{(S - 1)} \times 1.08^{(L - 1)}\Big)$$
   *(Where $t$ is the hero's inherent rarity tier and $R$ is defined under *Inherent Hero Rarity*. A Common hero, $t = 1$, has $R = 1$.)*
   $$\text{EffectiveInterval} = \max\left(0.12\text{s}, \frac{HeroBaseInterval}{1 + TotalSpeedBonus_{\text{Artifact}}}\right)$$
   $$\text{TotalATKBonus}_{\text{Artifact}} = \text{round}\Big(ATK_{\text{Base, Rarity}} \times \text{Multiplier}_{\text{Star}}\Big)$$
   $$\text{TotalSpeedBonus}_{\text{Artifact}} = ASPD_{\text{Base, Rarity}} \times \text{Multiplier}_{\text{Star}}$$
   *(Where Rarity dictates inherent base stats and Stars ($1★ \to 7★$) dictate the progressive multiplier).*
 - **Effective Labor Formula:**
-  $$\text{EffectiveLabor} = L_0 \times q \times R_{\text{labor}}(t) \times 1.35^{(S - 1)} \times \big(1 + 0.05(L - 1)\big) \times (1 + B_{\text{Synergy}}) \times (1 + B_{\text{TraitLabor}} + B_{\text{ImprintLabor}})$$
+  $$\text{EffectiveLabor} = L_0 \times q \times R_{\text{labor}}(t) \times 1.35^{(S - 1)} \times \big(1 + 0.05(L - 1)\big) \times (1 + B_{\text{Synergy}})$$
   *(Where $B_{\text{Synergy}} = 0.25$ when assigned to preferred facility).*
+
+### 4.2a The Pit: Synthesis, Promotion & Soul Essence
+The Pit (`PitService`, `PitBalanceConfig`, `PitMath`) holds the Synthesis Chamber and the Promotion Altar.
+- **Synthesis:** feed up to 100 donor heroes into a recipient. A donor is worth $100 	imes 3^{(E_{\star}-1)} + 25 	imes L$ EXP, where $E_{\star}$ is its effective star (Stars + Rarity − 1, capped at 7). Over-levelled donors lose efficiency (2.5% per level past a 5-level grace, never below 55%). Donors at 5★ effective or higher ask for confirmation.
+- **Promotion** (Gold and Promotion Stones; the hero must be at Lv. 10 of its star):
+
+  | Step | Gold | Promotion Stones |
+  | --- | --- | --- |
+  | 1★ → 2★ | 1,500 | 1 |
+  | 2★ → 3★ | 7,500 | 3 |
+  | 3★ → 4★ | 35,000 | 8 |
+  | 4★ → 5★ | 150,000 | 18 |
+  | 5★ → 6★ | 450,000 | 40 |
+  | 6★ → 7★ | 1,250,000 | 85 |
+
+- **Promotion Stones** drop from tower kills (`TowerFloorConfig.RollPromotionStones`, more on a first clear) and come with banked relics (0 / 1 / 2 / 5 for a Geode / Urn / Core / Heart, §5.5). New profiles start with 2.
+- **Server only, no UI yet:** `PitService` also accepts **Conversion** (dissolve heroes into Soul Essence: 4 / 12 / 36 / 108 / 324 / 972 / 2,916 by effective star, +1 per 5 effective levels) and **Craft** (a Promotion Stone for 100 Gold + 20 Gems + 8 Soul Essence). The Synthesis and Promotion screens are the only Pit actions players can reach.
+- **Imprints were removed.** Their stat bonuses had been switched off since the stat rework, and no screen ever sent them. Schema v7 strips hero imprints and refunds any held Imprint Catalysts at their crafting cost (§8.3).
 
 ### 4.3 Fortress Outskirts & Facility Economy Formulas
 
@@ -481,7 +503,7 @@ Progression is bifurcated between **Core Main Buildings** (free, static fortress
 **Facilities appear only when unlocked:** A locked support facility is not in the world. Its site is plain ground with no model, sign or prompt, and it is missing from the Facilities panel. Buying its level 1 node builds it on the plot with a short construction reveal, and each later level swaps in that level's model. The server builds the models from the owner's saved levels, so visitors see the same plot. Core Main Buildings are always present. The "Gold Upgrade Cost" columns below are the costs of the matching level nodes. The full node list and perks are in `docs/rework-plan/PHASE_4_ONBOARDING_AND_PROGRESSION.md` §5.
 
 #### 1. Hero Recovery (no Infirmary)
-The Infirmary & Barracks was removed in Phase 4: since Phase 2, a squad wipe sends the squad home at full HP, so a recovery building had nothing left to do. Benched heroes and heroes working at any support facility recover $1\text{ Stamina/sec}$ passively, and any leftover coma timer simply runs out on the bench. Old saves send Infirmary heroes back to the bench.
+The Infirmary & Barracks was removed in Phase 4: since Phase 2, a squad wipe sends the squad home at full HP, so a recovery building had nothing left to do. Benched heroes and heroes working at any support facility refill their Skill Gauge by 1 point per second (`WaitingRoomService`), and any leftover coma timer simply runs out on the bench. Old saves send Infirmary heroes back to the bench.
 
 #### 2. Upgradeable Support Facilities (Levels 1 to 5)
 
@@ -505,7 +527,7 @@ Located outside the fortress walls along the southern wilderness border. Station
   *Presented via "Welcome Back, Master!" modal upon login, depositing accumulated Gold straight to profile currency.*
 
 ##### Facility B: The Market (Interior Fortress Commercial Wing - Tower Loot & Extraction Multiplier)
-Located inside the fortress commercial quarter. Stationed Merchants (`Miner` preferred, $+25\%$ labor synergy) amplify loot yields strictly from Infinite Tower clears and Hub cargo extractions:
+Located inside the fortress commercial quarter. Stationed Merchants (`Miner` preferred, $+25\%$ labor synergy) amplify loot yields strictly from Infinite Tower kills and banked relics:
 
 | Level | Gold Upgrade Cost | Max Workers | Base Loot Multiplier ($\text{BaseBonus}$) | Visual Identity |
 | :---: | :---: | :---: | :---: | :--- |
@@ -517,7 +539,7 @@ Located inside the fortress commercial quarter. Stationed Merchants (`Miner` pre
 
 - **Market Loot Multiplier Formula:**
   $$\text{MarketMultiplier} = 1 + \text{BaseBonus}_{\text{Level}} + \big(0.005 \times \sum \text{EffectiveLabor}_{\text{Market}}\big)$$
-  *(Multiplies Gold dropped by mobs and Biome Bosses on Infinite Tower Floors 1–50 and physical cargo banked at the Extraction Pad. Does NOT amplify Outskirts Guard Post passive Gold).*
+  *(Multiplies kill Gold on Infinite Tower Floors 1–50 and the Gold of banked relics. Does NOT amplify Outskirts Guard Post passive Gold.)*
 
 ##### Facility C: The Training Grounds (Interior Fortress Martial Wing - Squad Combat Power Multiplier)
 Located inside the fortress military quarter. Stationed Trainers (`Striker` & `Scholar` preferred, $+25\%$ labor synergy) conduct martial drills, applying an overall multiplier to squad combat stats:
@@ -564,7 +586,7 @@ When unlocked, a marble angel statue holding a lantern of light rises onto the P
 In Infinite Tower, combat is server-authoritative with client prediction/interpolation. **Every hero possesses a unique, bespoke 3-tier skill kit** (`Basic`, `Special`, `Skill / Ultimate`); kits are not shared across an archetype. Each hero executes its kit on a 3-tier attack cadence governed by the **Dynamic Skill Gauge** (formerly Stamina):
 
 #### 1. In-Combat Skill Gauge Rules & Cadence Mechanics
-- **Gauge Starting State & Maximum:** Heroes enter active combat with **0 Skill Gauge** (represented by the yellow billboard bar above the hero's head) that fills up to a maximum of **100**.
+- **Gauge State & Maximum:** The gauge (the yellow billboard bar above the hero's head) fills up to a maximum of **100**. It is saved on the hero (`CurrentStamina`) and carries into the next fight, and it refills by 1 point per second while the hero is benched or working in a facility.
 - **Accrual Rules:**
   - **Tier 1: Basic Attack:** Standard auto-attack governed by base interval $t_{\text{atk}}$. Generates **+5 Skill Gauge**.
   - **Tier 2: Special Attack:** Automatically procs on every **3rd attack** (Cadence: `Basic (5) -> Basic (5) -> Special (10)`). Generates **+10 Skill Gauge**. Deals amplified damage with archetype-specific secondary mechanics (frontal cleaves, pierces, multi-slashes, chain lightning, or allied mini-heals).
@@ -578,26 +600,26 @@ In Infinite Tower, combat is server-authoritative with client prediction/interpo
   - **Impact** is release plus travel: `0` for melee, `distance / ProjectileSpeed` for projectiles (Marksman `95` / `120 studs/s`, Healer and Scholar `70–80 studs/s`, capped at `1s`), or a fixed delay for area skills (Marksman flare `0.35s`, Scholar meteor `0.3s`).
   - An attack is cancelled if, by its release, the hero is in `COMA`, has left the room or was recalled. Once released it always arrives. Basic and Special attacks **fizzle** (no damage, no secondary effect) if their target died or left before impact. An Ultimate's area effects still land around the aim point.
   - Multi-tick Ultimates split their damage evenly across ticks: Rain of Arrows lands in `4` ticks `0.15s` apart, with the defense shred applied on the first tick. Shared timing lives in `HeroActionTiming` (clip markers in `HeroClips`, delivery fields in `ArchetypeCombatSkills`).
-- **Overdrive Whistle Synergy (`[Q]`):** Overdrive Whistle grants $+40\%$ Attack Speed for $5\text{s}$ with zero Stamina drain, compressing the time to charge and release signature Ultimates during crucial DPS/punish windows.
+- **Overdrive Whistle Synergy (`[Q]`):** Overdrive Whistle grants $+40\%$ Attack Speed for $5\text{s}$ at no cost, compressing the time to charge and release signature Ultimates during crucial DPS/punish windows.
 
 #### 2. Hero Combat Skill Ledger
 
 Each hero's kit is resolved by `HeroId` in `ArchetypeCombatSkills.HeroProfiles` (falling back to the archetype base profile for unknown heroes). A hero's kit inherits its archetype's damage multipliers and secondary mechanics (next table) unless it overrides them.
 
-| # | Hero | Star | Archetype | Basic (+5 SP) | Special (+10 SP, 3rd Hit) | Skill / Ultimate (100 SP) |
-| :---: | :--- | :---: | :--- | :--- | :--- | :--- |
-| 1 | **Han** (`hero_han`) | 1★ | Striker | Gale Slash | Crescent Cross-Cut | Relentless Blade Flurry |
-| 2 | **Aaron** (`hero_aaron`) | 2★ | Vanguard | Bastion Strike | Aegis Shield Bash | Fortress Bulwark |
-| 3 | **Catio** (`hero_catio`) | 3★ | Miner | Pickaxe Cleave | Resonance Tremor | Crystalline Excavation |
-| 4 | **Valeria** (`hero_valeria`) | 4★ | Healer | Emerald Bolt | Verdant Mend | Sanctuary Miracle |
-| 5 | **Ignis** (`hero_ignis`) | 5★ | Vanguard | Molten Cleave | Magma Breaker | Infernal Juggernaut |
-| 6 | **Jenna** (`hero_jenna`) | 1★ | Marksman | Wind-Step Shot | Piercing Gale Volley | Sylphid Arrow Storm |
-| 7 | **Velkist** (`hero_velkist`) | 2★ | Striker | Twin Fang Cut | Shadow Rend | Phantom Lotus Execution |
-| 8 | **Eolka** (`hero_eolka`) | 3★ | Scholar | Ruby Firebolt | Wildfire Chain | Crimson Hellfire Pillar |
-| 9 | **Morrigan** (`hero_morrigan`) | 4★ | Vanguard | Abyssal Reap | Dread Shockwave | Obsidian Bastion |
-| 10 | **Sovereign Archon** (`hero_archon`) | 5★ | Striker | Void Lance Strike | Rift Sever | Dimensional Cataclysm |
-| 11 | **Solaris** (`hero_solaris`) | 6★ | Scholar | Solar Ray | Corona Arc | Supernova Starfall |
-| 12 | **Astrea** (`hero_astrea`) | 7★ | Marksman | Astral Arrow | Nebula Piercer | Constellation Judgment |
+| # | Hero | Rarity | Archetype | Basic (+5 SP) | Special (+10 SP, 3rd Hit) | Skill / Ultimate (100 SP) |
+| :---: | :--- | :--- | :--- | :--- | :--- | :--- |
+| 1 | **Han** (`hero_han`) | Common | Striker | Gale Slash | Crescent Cross-Cut | Relentless Blade Flurry |
+| 2 | **Aaron** (`hero_aaron`) | Uncommon | Vanguard | Bastion Strike | Aegis Shield Bash | Fortress Bulwark |
+| 3 | **Catio** (`hero_catio`) | Rare | Miner | Pickaxe Cleave | Resonance Tremor | Crystalline Excavation |
+| 4 | **Valeria** (`hero_valeria`) | Superior | Healer | Emerald Bolt | Verdant Mend | Sanctuary Miracle |
+| 5 | **Ignis** (`hero_ignis`) | Exalted | Vanguard | Molten Cleave | Magma Breaker | Infernal Juggernaut |
+| 6 | **Jenna** (`hero_jenna`) | Common | Marksman | Wind-Step Shot | Piercing Gale Volley | Sylphid Arrow Storm |
+| 7 | **Velkist** (`hero_velkist`) | Uncommon | Striker | Twin Fang Cut | Shadow Rend | Phantom Lotus Execution |
+| 8 | **Eolka** (`hero_eolka`) | Rare | Scholar | Ruby Firebolt | Wildfire Chain | Crimson Hellfire Pillar |
+| 9 | **Morrigan** (`hero_morrigan`) | Superior | Vanguard | Abyssal Reap | Dread Shockwave | Obsidian Bastion |
+| 10 | **Sovereign Archon** (`hero_archon`) | Exalted | Striker | Void Lance Strike | Rift Sever | Dimensional Cataclysm |
+| 11 | **Solaris** (`hero_solaris`) | Legendary | Scholar | Solar Ray | Corona Arc | Supernova Starfall |
+| 12 | **Astrea** (`hero_astrea`) | Mythical | Marksman | Astral Arrow | Nebula Piercer | Constellation Judgment |
 
 #### 3. Archetype Base Mechanics (Kit Defaults)
 
@@ -652,13 +674,13 @@ These are the default multipliers and secondary mechanics each hero kit inherits
 | Action | Keybind / Input | Description |
 | :--- | :--- | :--- |
 | **Shift Sprint** | `[LeftShift / RightShift]` | $3.0\times$ speed multiplier for rapid traversal across bridges, rings, and rooms. |
-| **Focus Target** | `[Click / Tap]` | Raycast onto any mob or boss to focus all 5 heroes' aggro. Clicking a Master who stole from you challenges them to a duel instead. |
-| **Overdrive Whistle** | `[Q]` / `ButtonL1` / Right Rail | $20\text{s}$ CD. Grants $+40\%$ Attack Speed for $5\text{s}$ across all active heroes with zero Stamina drain, allowing squads to rapidly charge their Skill Gauges. |
+| **Focus Target** | `[Click / Tap]` | Raycast onto any mob or boss to focus every deployed hero on it. Clicking a Master never starts a fight. |
+| **Overdrive Whistle** | `[Q]` / `ButtonL1` / Right Rail | $20\text{s}$ CD. Grants $+40\%$ Attack Speed for $5\text{s}$ across all active heroes at no cost, allowing squads to rapidly charge their Skill Gauges. |
 | **Emergency Recall** | `[E]` / `ButtonR1` / Right Rail | $6\text{s}$ CD. Instantly warps squad to Master + $2\text{s}$ pacify (dodges lethal AoE). Yields priority to ProximityPrompts. |
-| **Drop Carried Item**| `[R]` / HUD Button | Drops carried cargo or relic on the ground; restores normal WalkSpeed. |
+| **Drop Carried Item**| `[R]` / HUD Button | Drops the carried relic on the ground; restores normal WalkSpeed. |
 | **Claim Bounty (Duel)** | `F` near a `[Loot Thief]` | Any Master but the thief, within 12 studs, during the 3-minute bounty. Starts a bounty duel for the stolen drop (§6.1). |
 
-*The Overdrive and Recall hotkeys are bound only on Tower floors, never while typing, in a modal or in a duel. Recall yields to a visible ProximityPrompt on the same key. The `Q`/`E` bindings are specified in Phase 5 (`docs/rework-plan/PHASE_5_REACT_UI_AND_MENUS.md` §2.1); until then only the HUD buttons fire the whistles.*
+*`Q`, `E` and `R` are bound in `MasterController.client.luau`, and the gamepad bumpers in `Phase5HudController`. The whistles share `Hud/Whistles` with the Right Rail, which only fires them on Tower floors (and the raid arena), never while typing, in a modal or in a duel. Recall yields to a visible ProximityPrompt on the same key.*
 
 **Hero Auto-Targeting & Squad Movement (`HeroTargeting.luau`, `SquadMovement.luau`).** The server simulation steps at $10\text{ Hz}$ (`StatBalance.TickSeconds = 0.10`) and broadcasts room-local snapshots at $5\text{ Hz}$ (every second tick). Each tick, every hero that is not pacified or downed keeps its target while it is alive, in the same room, and outside safe zones; otherwise it picks the next eligible mob. A free-following squad picks up mobs within $28\text{ studs}$ of the Master, or within the hero's own attack range, drops a fight once the mob is $30\text{ studs}$ from the Master (unless the mob is still inside that hero's attack range) or the hero is $35\text{ studs}$ from the Master, and follows the Master's supported trail with width-aware formation slots and forward trail rejoin after combat. An assigned squad computes a squad-wide engagement objective once per tick (prioritizing `FocusedTargetNetId`, retaining the current valid objective, adopting active squadmate targets in slot order, and otherwise selecting the lowest connector route-cost mob via `SquadMovement.RouteCost`). When combat pursuit reports `UNREACHABLE`, a hero first attempts an alternative supported attack position within its `AttackRange` before excluding that target for $5\text{ s}$ within its `(FloorId, RoomGeneration, EntityGeneration)`. A hero with no target forgets its cached NetId, so a camp mob that respawns under the same NetId is acquired fresh on the next tick. After an Emergency Recall the $2\text{ s}$ pacify clears every target, and heroes pick up the nearest mob on the first tick after it ends.
 
@@ -670,9 +692,9 @@ The player interface is built from modular, gothic-styled components:
    - **Right Rail (combat):** `[OVERDRIVE]` (Whistle 1 / `Q`) | `[RECALL]` (Whistle 2 / `E`) | `[TOWER]`, with radial cooldown sweeps. The rail's top is anchored below the Next Goal card so they never overlap.
    - **Squad Status Card (bottom-left):** one live row per open squad slot, showing portrait, archetype (icon and label), rarity and star, level, an HP bar (stamina off-floor), the skill gauge and a state chip (Fighting / Idle / Recalled / Down / Dueling). Locked slots collapse into a single `🔒` line that opens the Fortress Tree. It sits in a pull-up drawer: collapsed by default to a slim portrait strip (HP line, state dot, hover tooltip) that turns into the full card (only one shows at a time), toggled with the chevron, `C` or gamepad `Y`, and auto-expanded while a hero is Down or a squad alert shows (§2.2a).
    - **Raid arena (§5.6, `Hud/RaidHud.luau`):** inside the raid, a live **damage leaderboard** replaces the Right Rail (rank, name, damage, share bar; your row highlighted, or pinned under a divider when outside the top 8), and a **Leave Raid** button sits bottom centre, just above the Squad Status card (it tracks the drawer's slide; a second tap confirms). Q/E whistles keep working from the keyboard. The top banner reads `RAID BOSS · NAME [ENRAGED] — m:ss`. A results card shows rank, damage, share, Gems and Gold when the fight ends. In the hub, a **Raid Open** chip with a countdown stacks above the event badge while the portal is open.
-   - **Squad Power badge (bottom-right):** **Squad Power** is one number for the whole active squad: $$\text{HeroPower} = \text{round}\big(10 \times \text{DPS} + \text{Health}\big) \qquad \text{SquadPower} = \sum_{\text{deployed heroes}} \text{HeroPower}$$ DPS and Health come from `StatFormulas.GetCombatSnapshot`, which already includes stars, level, rarity, the equipped weapon and the Training Grounds multiplier. Heroes in a coma still count; only deployed squad slots count. The weights (10 × DPS + Health) are first-pass tuning. It is computed on the server, sent as `profile.SquadPower`, and shown with change floaters.
+   - **Squad Power badge (bottom-right):** **Squad Power** is one number for the whole active squad: $$\text{HeroPower} = \text{round}\big(10 \times \text{DPS} + \text{Health}\big) \qquad \text{SquadPower} = \sum_{\text{deployed heroes}} \text{HeroPower}$$ DPS and Health come from `StatFormulas.GetCombatSnapshot`, which already includes stars, level, rarity, the equipped weapon and the Training Grounds multiplier. Downed heroes still count; only deployed squad slots count. The weights (10 × DPS + Health) are first-pass tuning. It is computed on the server, sent as `profile.SquadPower`, and shown with change floaters.
    - **Player list columns:** every player shows **Floor** (highest Tower floor cleared) and **Power** (their Squad Power, abbreviated) through server-written `leaderstats`.
-   - **Hero Index (modal):** three columns. Left, the hero banners. Middle, the heroes in the selected banner (unowned shown as silhouettes). Right, details for the selected hero: rarity, star, archetype, weapon, stats with the rarity multiplier, labor and preferred facility, passive, Basic/Special/Skill kit, drop rate with and without God's Blessing luck, owned copies and a rotatable model.
+   - **Hero Index (modal):** three columns. Left, the hero banners. Middle, the heroes in the selected banner (unowned shown as silhouettes). Right, details for the selected hero: rarity, star, archetype, weapon, stats with the rarity multiplier, labor and preferred facility, Basic/Special/Skill kit, drop rate with and without God's Blessing luck, owned copies and a rotatable model.
 2. **Tower Navigation UI (`TowerController.client.luau`):**
    - **In-World Navigation Pedestals & Prompts:** Travel interactions are accessed in-world via ProximityPrompts (`Previous Floor`, `Next Floor`, `Floor Selector`, and `Return to Hub` pedestals on the safe arrival pad, plus the Central Crimson Tower `Choose floor` prompt in the Hub) and the bottom toolbar `[TOWER]` button.
    - **Top-Right `Return to Hub` Action Button:** Whenever the Master is visiting any Tower floor (`FloorId >= 1`), a dedicated top-right **`Return to Hub`** button (`TowerGui.ReturnHubButton`) is displayed for one-click extraction back to the Fortress Plot.
@@ -761,9 +783,9 @@ Supports have 70% of a Regular's HP and 50% of its ATK, move at 10 and aggro at 
    - **`TARGET_DISC` (Targeted AoE):** Ground circle with expanding fill disc locked onto a hero's position ($1.4\text{s–}2.2\text{s}$ windup, $9\text{–}13\text{-stud}$ radius). Requires instant Master recognition and recall repositioning.
    - **`PROJECTILE` (Ranged Swept Corridor):** Aimed linear corridor ($0.75\text{s}$ windup + $0.35\text{s}$ travel time, $26\text{-stud}$ range, $2.2\text{-stud}$ corridor width). Evaluates authoritative swept-segment distance along the projectile line at `WindupSeconds + TravelSeconds`.
 2. **Coma Skill Check:**
-   - Heroes caught inside `SELF_DISC` or `TARGET_DISC` blast zones suffer instant 50% Stamina loss or fall into a **Downed state** (down until the squad changes floor, goes home or wipes).
+   - Every hero inside a shape when it lands takes the move's damage (the attacker's ATK × the move's multiplier, with support, affix and aura modifiers). A hero brought to 0 HP is **Downed** (sim state `COMA`) until the squad changes floor, goes home or wipes. The Skill Gauge is not touched.
 3. **Punish Window:**
-   - Immediately following a Signature detonation, the Biome Boss enters an exposed recovery window granting $+25\%$ damage taken for 4.0s. Active Masters trigger **`[Q]` Overdrive Whistle** to unleash $+40\%$ squad attack speed and maximize DPS output.
+   - After a Signature lands, a tower boss stays in its recovery (1.2–1.5 s), unable to act. Active Masters trigger **`[Q]` Overdrive Whistle** here to maximise DPS. Tower bosses take no bonus damage in this window; the $+25\%$ damage-taken Punish Window (4 s) belongs to Raid Bosses only (§5.6).
 
 ### 5.4 Biome Boss Loot & Progression Ledger
 - **Summoning, not respawning:** a floor's boss (the biome **Alpha** on floors 1–4, the **Biome Boss** on floor 5) is summoned for a Master whose own kill progress reaches the floor threshold. It never respawns on a timer. Repeat kills need a fresh threshold.
@@ -784,11 +806,12 @@ Relics are the contested tower loot (`TowerFloorConfig.RelicDrops`, `RelicConfig
 | Alpha (floors 1–4 of a biome) | 20% → 40% (100% on first clear) | 2% → 5% | — | 45% → 55% |
 | Biome Boss | 20% → 40% (100% on first clear) | 4% → 10% | — | 45% → 55% |
 
-- **Payouts** (floor 1 base): Mana Geode `100` Gems / `250` Gold, Cursed Urn `300` / `1,200`, Abyssal Core `1,000` / `4,000`, Calamity Heart `5,000` / `15,000`. A Geode is worth one Call of the Rift pull.
+- **Payouts** (floor 1 base): Mana Geode `100` Gems / `250` Gold, Cursed Urn `300` / `1,200` / 1 Promotion Stone, Abyssal Core `1,000` / `4,000` / 2 stones, Calamity Heart `5,000` / `15,000` / 5 stones. A Geode is worth one Call of the Rift pull.
 - **Floor scaling:** Gems ×`(1 + 0.03 × (floor − 1))` (×2.47 on floor 50), Gold ×`(1 + 0.05 × (floor − 1))`. The Market multiplies Gold, and the climb streak multiplies both. The relic's billboard shows its base value at that floor.
-- **Billboard themes** (`Config/BillboardThemes`): relic plates are themed by rarity, with a badge above the plate: Mana Geode azure (`COMMON`), Cursed Urn amber (`RARE`), Abyssal Core void purple (`ELITE EXCLUSIVE`), Calamity Heart blood red with a gold rail (`ALPHA EXCLUSIVE`). Higher tiers get larger plates, a gradient title and longer view range, and Cores and Hearts draw on top of walls. Mob nameplates follow the same rule by tier: Normal slate (no badge), Elite void purple (`ELITE`), Alpha gilded gold (`ALPHA`), Biome Boss blood red (`BIOME BOSS`). The HP bar and outline take the tier's accent colour. Hero nameplates are themed by inherent rarity in the artifact rarity colours, each with its rarity badge: Common slate, Uncommon jade, Rare azure, Superior violet, Exalted amber, Legendary gold and Mythical blood red, with gradient titles from Exalted up. Hero HP bars stay green, and duel colours replace the title colour during a retaliation duel.
+- **Billboard themes** (`Config/BillboardThemes`): relic plates are themed by rarity, with a badge above the plate: Mana Geode azure (`COMMON`), Cursed Urn amber (`RARE`), Abyssal Core void purple (`ELITE EXCLUSIVE`), Calamity Heart blood red with a gold rail (`ALPHA EXCLUSIVE`). A biome skin wears its tier's plate with the rail and accent in the biome colour. Higher tiers get larger plates, a gradient title and longer view range, and Cores and Hearts draw on top of walls. Mob nameplates follow the same rule by tier: Normal slate (no badge), Elite void purple (`ELITE`), Alpha gilded gold (`ALPHA`), Biome Boss blood red (`BIOME BOSS`). The HP bar and outline take the tier's accent colour. Hero nameplates are themed by inherent rarity in the artifact rarity colours, each with its rarity badge: Common slate, Uncommon jade, Rare azure, Superior violet, Exalted amber, Legendary gold and Mythical blood red, with gradient titles from Exalted up. Hero HP bars stay green, and duel colours replace the title colour during a retaliation duel.
 - **Seal and owner lock:** a fresh relic drop is **sealed for everyone, its killer included**, for `5s` (Calamity Heart `15s`): its Carry prompt stays off and the billboard counts the seal down, then anyone may take it. A fumbled relic is locked to the player who fumbled it for `5s`.
-- **Calamity Heart bonus:** extracting one has a 10% chance to grant a 5★ Sovereign Archon.
+- **Calamity Heart bonus:** extracting any biome's Heart has a 10% chance to grant a free **Sovereign Archon** (Exalted, summoned at 1★ like every hero).
+- **Biome skins:** `TowerFloorConfig.RollRelic` rolls a tier, then returns the floor's biome skin of it (`RelicConfig.Biomes[i].DropTable`, ids like `VERDANT_GEODE` … `THRONE_HEART`, 40 in `RelicConfig.Items`). A skin is a copy of its base tier with only the name, colour and description changed, so payouts, speed penalty, jump lock, seal and despawn always follow the tier, and so do the billboard plate and model shape. Names run Geode / Urn / Core / Heart in every biome, e.g. Verdant Ruins: *Overgrown Moss Geode*, *Cursed Verdant Urn*, *Rootbound Earth Core*, *Heart of the Mossbound*; Abyssal Throne: *Abyssal Trench Geode*, *Sovereign's Cursed Urn*, *Void Titan Core*, *Heart of the Crimson Overlord*.
 - **Income target:** about 2,900 / 6,800 / 12,700 Gems an hour of repeat farming on Alpha floors 1 / 26 / 49, with Biome Boss floors paying a little more (`tests/tower-run-loop.spec.luau`).
 - **Visuals:** the server replicates an invisible relic root; each client builds the relic's model (`RelicModelBuilder`: a cracked crystal geode, a rune-banded urn, a caged void core, a crystal-spiked heart) with an outline glow, point light, rising motes, a vertical loot beam, a pulsing ground ring, idle bob and spin, and a spawn burst (`RelicVisualController`). Rarer tiers get a brighter light, taller beam and more motes; the beam, ring and bob hide while the relic is carried.
 
@@ -900,7 +923,7 @@ The full 1★ to 7★ path consumes 21 donor weapons plus the retained original.
   - *(God's Blessing summon luck dynamically increases Tiers 2–7 via `SummonLuck.ApplyLuck`)*.
 - **Pity Safeguards:**
   - **10-Pull Guarantee:** Every 10-pull guarantees at least one **Rare (Tier 3) or higher** artifact.
-  - **120-Pull Hard Pity (Exalted+):** If no Exalted (Tier 5), Legendary (Tier 6), or Mythical (Tier 7) artifact is pulled in 119 summons, the 120th pull guarantees an **Exalted or higher** weapon (matching the Hero Limited Banner `MaxPity = 120`).
+  - **120-Pull Hard Pity (Exalted+):** If no Exalted (Tier 5), Legendary (Tier 6), or Mythical (Tier 7) artifact is pulled in 119 summons, the 120th pull guarantees an **Exalted or higher** weapon (the same `MaxPity = 120` as Call of the Rift; A Star's Arrival uses 100).
   - **Pity Reset:** Any pull of an Exalted, Legendary, or Mythical artifact resets the counter to 0.
 - **Two-Stage Roll Hierarchy:**
   1. Roll Rarity Tier (1–7) based on rates and luck.
@@ -972,6 +995,7 @@ To isolate simulation state and prevent entity overflow or vertical AoE bleed ac
 - **Store:** One DataStore key per player, `PlayerProfiles_v3` / `User_{UserId}`, linked to the UserId for right-to-be-forgotten. The record is `{ Data, Lock = { JobId, Time }, SavedAt }`. Every write goes through `UpdateAsync` (`ProfilePersistence`, with the pure lock rules in `ProfileCodec`).
 - **Join:** The server claims the lock, then runs the saved profile (or a fresh default for a new player) through `PitService.EnsureDefaults`, `EnsureFacilities`, `ProfileMigrations.Run`, `OnboardingService.EnsureState` and `FortressTreeService.ApplyLevels`. `SyncProfile` lazy migrations still run on every sync. A lock held by another live server is retried 6 times, 5 seconds apart, before the player is kicked with "rejoin". A lock not refreshed for 10 minutes belongs to a crashed server and is taken over.
 - **Saves:** Autosave every 120–135 seconds per player (which refreshes the lock), on `PlayerRemoving` (saves and releases), and in `BindToClose` (up to 25 seconds). `DataManager.SaveProfile(player)` is the checkpoint save for purchases. A save is cancelled if this server no longer owns the lock, so a stale server can never overwrite newer progress. Failures retry with exponential backoff.
+- **Schema:** `ProfileMigrations.CurrentSchema` is 7. v3–v5 cover onboarding, 1★ summons and per-star levels (§4.1), v6 adds the onboarding guide, and v7 deletes the retired social systems (`profile.Social`: pacts, mercenaries, mimic chests, plot rune espionage) and their facility fields (`UncollectedOutput`, `BlessedUntil`, `LeechedUntil`, `LeechVisitorUserId`, `LastRuneTimestamp`, `LastRuneWasLeech`). It also removes Pit imprints (`InheritedImprints`, `ImprintCapacity`, `SynthesisHistory.ImprintsPerformed`), refunds each held Imprint Catalyst as 150 Gold, 15 Gems and 4 Soul Essence, and drops each hero's display-only `PassiveTrait` name.
 - **What is saved:** A sanitised deep copy. Derived fields (`SquadPower`, `SquadPowerByHero`) are stripped, functions and Instances are dropped, and NaN/inf numbers become 0.
 - **Studio:** Without "Enable Studio Access to API Services" the server warns and runs unsaved sessions instead of kicking. Studio play sessions use `studio-` JobIds and may take over a lock left by an earlier Studio session (Stop often kills the server before the release lands); they never take over a live server's lock, and live servers never take over a fresh Studio lock.
 - **Shutdown:** `BindToClose` waits (up to 25 s) for every in-flight release, including the ones `PlayerRemoving` started.

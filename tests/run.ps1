@@ -42,7 +42,6 @@ $modulePaths = @(
     'ReplicatedStorage/Shared/Config/TowerPortalAssets.luau',
     'ReplicatedStorage/Shared/Config/HubLayout.luau',
     'ReplicatedStorage/Shared/Config/HubLighting.luau',
-    'ReplicatedStorage/Shared/RelicConfig.luau',
     'ReplicatedStorage/Shared/Config/RelicConfig.luau',
     'ReplicatedStorage/Shared/Config/TowerFloorConfig.luau',
     'ReplicatedStorage/Shared/Config/FirstBiomeCombat.luau',

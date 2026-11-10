@@ -72,7 +72,6 @@ local RequestSummonFunc = TycoonRemotes:WaitForChild("RequestSummon") :: RemoteF
 local AssignHeroRoleFunc = TycoonRemotes:WaitForChild("AssignHeroRole") :: RemoteFunction
 local FacilityInteractEvent = TycoonRemotes:WaitForChild("FacilityInteract") :: RemoteEvent
 
-local PlotEspionageEvent = SyndicateRemotes:WaitForChild("PlotEspionage") :: RemoteEvent
 local ProfileDeltaSyncEvent = SyndicateRemotes:WaitForChild("ProfileDeltaSync") :: RemoteEvent
 local SystemToastEvent = SyndicateRemotes:WaitForChild("SystemToast") :: RemoteEvent
 

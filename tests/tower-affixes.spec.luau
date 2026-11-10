@@ -2,7 +2,7 @@
 local AffixRules = require(nodes["ReplicatedStorage.Shared.Util.AffixRules"])
 local CampRoster = require(nodes["ReplicatedStorage.Shared.Util.CampRoster"])
 local Floors = require(nodes["ReplicatedStorage.Shared.Config.TowerFloorConfig"])
-local RelicConfig = require(nodes["ReplicatedStorage.Shared.RelicConfig"])
+local RelicConfig = require(nodes["ReplicatedStorage.Shared.Config.RelicConfig"])
 local Protocol = require(nodes["ReplicatedStorage.Shared.Util.TowerProtocol"])
 local passed = 0
 local function test(name: string, fn: () -> ())

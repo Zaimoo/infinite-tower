@@ -232,7 +232,7 @@ local GUIDE_EVENTS: { [string]: string } = {
 	HeroSummoned = "Summon", ArtifactUpgraded = "Upgrade", ArtifactEquipped = "Equip",
 	TreeNodeUnlocked = "Tree", RelicBanked = "Bank", RaidEntered = "Raid",
 }
-local PIT_EVENTS: { [string]: string } = { SYNTHESIS = "Synthesis", PROMOTION = "Promotion", IMPRINT = "Imprint", CONVERSION = "Conversion", CRAFT = "Craft" }
+local PIT_EVENTS: { [string]: string } = { SYNTHESIS = "Synthesis", PROMOTION = "Promotion", CONVERSION = "Conversion", CRAFT = "Craft" }
 local REWARDS: { [string]: number } = { Summon = 1, Clear = 3, Upgrade = 4, GuardPost = 5, Synthesis = 6, Promotion = 6, Tree = 7 }
 local WORKERS: { [string]: boolean } = { GuardPost = true, Market = true, TrainingGrounds = true, GodsBlessing = true }
 

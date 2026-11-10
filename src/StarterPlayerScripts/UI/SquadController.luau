@@ -397,7 +397,7 @@ function SquadController.BuildDetails(self: any)
 	-- Shown when nothing is focused.
 	d.Empty = label(panel, "Body", {
 		Position = UDim2.fromOffset(16, 40), Size = UDim2.new(1, -32, 1, -56), TextSize = 13, TextWrapped = true,
-		TextColor3 = TEXT.Muted, Text = "Hover or click a hero to see their stats, weapon and trait.", ZIndex = Z + 2,
+		TextColor3 = TEXT.Muted, Text = "Hover or click a hero to see their stats and weapon.", ZIndex = Z + 2,
 	})
 
 	local body = new("Frame", { Name = "Body", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = Z + 1 }, panel)
@@ -486,16 +486,6 @@ function SquadController.BuildDetails(self: any)
 	d.WeaponStats = label(weapon, "Body", {
 		Position = UDim2.fromOffset(62, 41), Size = UDim2.new(1, -70, 0, 16), TextSize = 11,
 		TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = TEXT.Muted, ZIndex = Z + 4,
-	})
-
-	-- Passive trait.
-	label(body, "Title", {
-		Position = UDim2.fromOffset(14, 344), Size = UDim2.new(1, -28, 0, 16), TextSize = 12,
-		TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = TEXT.Gold, Text = "TRAIT", ZIndex = Z + 3,
-	})
-	d.Trait = label(body, "Body", {
-		Position = UDim2.fromOffset(14, 362), Size = UDim2.new(1, -28, 0, 66), TextSize = 12, TextWrapped = true,
-		TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, TextColor3 = TEXT.Parchment, ZIndex = Z + 3,
 	})
 
 	self.Details = d
@@ -887,8 +877,6 @@ function SquadController.RenderDetails(self: any)
 		d.WeaponStats.Text = "Equip one at the Forge."
 		if d.WeaponRail then d.WeaponRail.Color = Color3.fromRGB(140, 130, 160) end
 	end
-
-	d.Trait.Text = seed and seed.PassiveTraitName or hero.PassiveTrait or "No passive trait."
 end
 
 function SquadController.Refresh(self: any)

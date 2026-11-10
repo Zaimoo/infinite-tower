@@ -42,7 +42,7 @@ Tower status: all 50 floors across 10 biomes are playable, with a Biome Boss eve
     │   ├── BaseOverhaul/             -- Floating island ring, Central Crimson Tower, bridges, and lighting
     │   ├── Combat/                   -- CombatSimulation (5 Hz Zero-Humanoid Engine, buffer packing, PvP)
     │   ├── Core/                     -- DataManager (Profiles/Gacha), PitService, PlotManager, TowerTraversal, HeroNavigation
-    │   ├── ExtractionAndSocial/      -- RelicService, SyndicateService (Plot Espionage)
+    │   ├── ExtractionAndSocial/      -- RelicService (contested relics)
     │   └── Tycoon/                   -- WaitingRoomService (1 Hz Facility Production), BlacksmithService (Forge Station)
     ├── StarterPlayerScripts/
     │   ├── Input/                    -- MasterController (Raycasting, [Shift] Sprint, [Q] Overdrive, [E] Recall)

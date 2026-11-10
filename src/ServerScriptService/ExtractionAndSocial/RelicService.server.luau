@@ -110,10 +110,7 @@ local function updateMasterMovementAttributes(player: Player, now: number)
 	local spec = RelicConfig[relic.TierId]
 	local penalty = spec.WalkSpeedPenalty
 
-	local dm = getDataManager()
-	local rogueBonus = (dm and dm.IsPlayerRogue and dm.IsPlayerRogue(player)) and 0.10 or 0.0
-
-	local multiplier = math.clamp(1.0 - penalty + rogueBonus, 0.35, 1.25)
+	local multiplier = math.clamp(1.0 - penalty, 0.35, 1.0)
 	hum.WalkSpeed = BASE_WALKSPEED * multiplier
 	hum.JumpPower = spec.DisableJump and 0 or BASE_JUMPPOWER
 end
@@ -129,7 +126,7 @@ function RelicService.SpawnRelic(tierId: RelicTierId, worldPos: Vector3, initial
 	-- Each client builds the relic's model and effects around it (RelicVisualController).
 	local part = Instance.new("Part")
 	part.Name = string.format("Relic_%s_%d", tierId, relicId)
-	part.Size = (tierId == "CALAMITY_HEART" or (spec.BiomeTier and spec.BiomeTier == 4)) and Vector3.new(4.2, 4.2, 4.2) or Vector3.new(3.2, 3.8, 3.2)
+	part.Size = spec.BiomeTier == 4 and Vector3.new(4.2, 4.2, 4.2) or Vector3.new(3.2, 3.8, 3.2)
 	part.Position = Vector3.new(worldPos.X, math.max(3.5, worldPos.Y + 2.2), worldPos.Z)
 	part.Transparency = 1
 	part.Anchored = true
@@ -406,7 +403,7 @@ local function awardRelicPayout(player: Player, spec: any, scalar: number, rewar
 	if dm.ReportProgress and (gold > 0 or gems > 0 or stones > 0) then dm.ReportProgress(player, "RelicBanked") end
 
 	-- Apex Cores / Calamity Heart: a small chance of a free Exalted Archon
-	if (spec.TierId == "CALAMITY_HEART" or (spec.BiomeTier and spec.BiomeTier == 4 and spec.BiomeIndex and spec.BiomeIndex >= 9)) and math.random() <= HEART_ARCHON_CHANCE then
+	if spec.BaseTierId == "CALAMITY_HEART" and math.random() <= HEART_ARCHON_CHANCE then
 		local uuid, archon = dm.CreateHeroFromSeed("hero_archon", 1.10)
 		profile.Heroes[uuid] = archon
 		dm.BroadcastToast(string.format("👑 %s extracted %s and rolled 5★ SOVEREIGN ARCHON!", player.DisplayName, string.upper(spec.DisplayName)), "SUCCESS")

@@ -1,6 +1,6 @@
 --!strict
 -- ServerScriptService/Tycoon/WaitingRoomService.server.luau
--- 1 Hz Authoritative Waiting Room & Outskirts AFK Economy Loop (GDD Sections 2.4 & 4.3)
+-- 1 Hz roster recovery and Outskirts Guard Post online Gold loop (GDD Sections 2.4 & 4.3)
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -29,15 +29,6 @@ local function computeFacilitySumLabor(profile: any, facilityData: any, assignme
 	return sum
 end
 
-local function getBlessOrLeechMultiplier(facData: any, nowUnix: number): number
-	if nowUnix < (facData.LeechedUntil or 0) then
-		return 0.80 -- -20% stolen by Leech Rune
-	elseif nowUnix < (facData.BlessedUntil or 0) then
-		return 1.25 -- +25% from Visitor Blessing
-	end
-	return 1.00
-end
-
 -- 1 Hz Economy & AFK Facility Loop
 task.spawn(function()
 	local dm = getDataManager()
@@ -53,13 +44,6 @@ task.spawn(function()
 			if profile then
 				dm.EnsureFacilities(profile)
 				local dirty = false
-
-				-- Expire Rented Mercenary if contract has elapsed
-				local merc = profile.Social and profile.Social.RentedMercenary
-				if merc and nowUnix >= merc.ExpiresAt then
-					profile.Social.RentedMercenary = nil
-					dirty = true
-				end
 
 				-- 1. Coma clearing and passive stamina recovery (the Infirmary was removed in Phase 4)
 				for _, hero in pairs(profile.Heroes) do
@@ -90,7 +74,7 @@ task.spawn(function()
 				if tickCount % FacilityConfig.Constants.PassiveGoldTickIntervalSeconds == 0 then
 					local guardPost = profile.Facilities.GuardPost
 					if guardPost and guardPost.Level >= 1 then
-						local gpLabor = computeFacilitySumLabor(profile, guardPost, "FACILITY_GUARD_POST") * getBlessOrLeechMultiplier(guardPost, nowUnix)
+						local gpLabor = computeFacilitySumLabor(profile, guardPost, "FACILITY_GUARD_POST")
 						local bossTier = profile.HighestClearedBiomeBoss or 0
 						local goldRatePerMin = StatFormulas.GetPassiveGoldRate(guardPost.Level, gpLabor, bossTier, FortressTree.PerkBonuses(profile.FortressTree))
 						local goldSubIncrement = math.round((goldRatePerMin / 60) * FacilityConfig.Constants.PassiveGoldTickIntervalSeconds * 100) / 100

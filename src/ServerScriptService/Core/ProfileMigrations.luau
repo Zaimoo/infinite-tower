@@ -10,18 +10,12 @@ local Onboarding = require(ReplicatedStorage.Shared.Util.Onboarding)
 
 local ProfileMigrations = {}
 
-ProfileMigrations.CurrentSchema = 6
+ProfileMigrations.CurrentSchema = 7
 
 local function blankFacility(level: number): any
 	return {
 		Level = level,
 		AssignedHeroUUIDs = {},
-		UncollectedOutput = 0,
-		BlessedUntil = 0,
-		LeechedUntil = 0,
-		LeechVisitorUserId = nil,
-		LastRuneTimestamp = 0,
-		LastRuneWasLeech = false,
 	}
 end
 ProfileMigrations.BlankFacility = blankFacility
@@ -79,6 +73,44 @@ function ProfileMigrations.ToV5(profile: any)
 	profile.SchemaVersion = 5
 end
 
+-- Facility fields from removed systems: the manual claim chest and the plot rune espionage (Bless / Leech / Purge).
+local LEGACY_FACILITY_FIELDS = { "UncollectedOutput", "BlessedUntil", "LeechedUntil", "LeechVisitorUserId", "LastRuneTimestamp", "LastRuneWasLeech" }
+
+-- What an Imprint Catalyst cost to craft, refunded for any still held when imprints were removed.
+local CATALYST_REFUND = { Gold = 150, Gems = 15, SoulEssence = 4 }
+
+-- v7: drop the removed social systems (pacts, mercenaries, mimic chests, rune espionage) and their facility fields,
+-- the removed Pit imprints (hero memories, imprint slots, Imprint Catalysts, refunded at their crafting cost) and the
+-- display-only passive trait name each hero carried.
+function ProfileMigrations.ToV7(profile: any)
+	if (profile.SchemaVersion or 1) >= 7 then return end
+	profile.Social = nil
+	for _, facility in pairs(profile.Facilities or {}) do
+		if type(facility) == "table" then
+			for _, key in ipairs(LEGACY_FACILITY_FIELDS) do facility[key] = nil end
+		end
+	end
+	for _, hero in pairs(profile.Heroes or {}) do
+		hero.InheritedImprints = nil
+		hero.PassiveTrait = nil
+		hero.ImprintCapacity = nil
+		if type(hero.SynthesisHistory) == "table" then hero.SynthesisHistory.ImprintsPerformed = nil end
+	end
+	local materials = profile.PitMaterials
+	if type(materials) == "table" then
+		local catalysts = materials.ImprintCatalyst
+		if type(catalysts) == "number" and catalysts == catalysts and catalysts > 0 and catalysts < math.huge then
+			catalysts = math.floor(catalysts)
+			profile.Currencies = profile.Currencies or {}
+			profile.Currencies.Gold = (profile.Currencies.Gold or 0) + catalysts * CATALYST_REFUND.Gold
+			profile.Currencies.Gems = (profile.Currencies.Gems or 0) + catalysts * CATALYST_REFUND.Gems
+			materials.SoulEssence = (tonumber(materials.SoulEssence) or 0) + catalysts * CATALYST_REFUND.SoulEssence
+		end
+		materials.ImprintCatalyst = nil
+	end
+	profile.SchemaVersion = 7
+end
+
 function ProfileMigrations.Run(profile: any)
 	ProfileMigrations.ToV3(profile)
 	ProfileMigrations.ToV4(profile)
@@ -88,6 +120,7 @@ function ProfileMigrations.Run(profile: any)
 		Onboarding.EnsureGuide(profile.Onboarding)
 		profile.SchemaVersion = 6
 	end
+	ProfileMigrations.ToV7(profile)
 end
 
 return ProfileMigrations
