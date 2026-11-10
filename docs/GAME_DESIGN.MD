@@ -702,6 +702,8 @@ These are the default multipliers and secondary mechanics each hero kit inherits
 
 ### 4.6 Tactical UI & HUD Architecture
 
+**Join loading screen (`ReplicatedFirst/LoadingScreen`):** every join replaces Roblox's default loader with a Creekian Studios screen: a dark violet backdrop with a turning gold rune ring, the studio logo (a "CS" monogram placeholder until `LOGO_IMAGE` is set in `LoadingScreenView.luau`), the studio name, a loading bar and a status line. It sits above every other screen (DisplayOrder 1000) so the HUD never shows half-built. The bar covers `game:IsLoaded()` (to 20%) and then the critical assets in `Shared/Util/PreloadManifest`: hero and weapon templates (portraits clone these), hero faces and hair meshes, `UIAssets` art and sounds, nav and settings icons, and the HUD already built. A Skip button appears after 8 s and the screen closes by 20 s however slow the assets are. Weapon, raid boss and portal meshes and weapon VFX preload in the background after the fade. When it fades it sets the LocalPlayer attribute `ClientLoaded`; the Offline Reward modal and the Onboarding Guide wait for it.
+
 The player interface is built from modular, gothic-styled components:
 1. **Side-Rail Toolbar & Squad Status Card (Phase 5, `docs/rework-plan/PHASE_5_REACT_UI_AND_MENUS.md` §2):** The single bottom toolbar is split into two vertical rails.
    - **Left Rail (menus):** `[SUMMON]` | `[SQUAD]` | `[FORGE]` | `[FORTRESS]` (Fortress Tree) | `[INDEX]` (Hero Index). Buttons appear as their systems unlock and carry badges (a buildable tree node, an empty open squad slot, an affordable promotion, a new hero).
