@@ -21,7 +21,7 @@ local ok,err=pcall(function()
  for _,m in ledger.Slots do mobBackups[m]=table.clone(m) end
  result.SpawnStats={}
  for _,m in ledger.Slots do
-  local expected=B.GetFloorStats(5,m.Role);assert(m.MaxHP==expected.MaxHP and m.ATK==expected.ATK)
+  local expected=B.GetTowerFloorStats(5,m.Role);assert(m.MaxHP==expected.MaxHP and m.ATK==expected.ATK)
   table.insert(result.SpawnStats,{Role=m.Role,HP=m.MaxHP,ATK=m.ATK,Gold=m.GoldReward})
  end
  profile.Heroes={};profile.Artifacts={};profile.DeployedSquadOrder={};profile.Currencies={Gold=300000,Gems=1000}

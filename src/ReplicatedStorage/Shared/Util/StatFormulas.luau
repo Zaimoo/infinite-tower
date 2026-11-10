@@ -99,7 +99,7 @@ function StatFormulas.GetAttunementCap(maxFloorReached: number?): number
   local caps,best={},0
   for f=1,TowerFloorConfig.FloorCount do
    local ahead=math.min(TowerFloorConfig.FloorCount,f+StatFormulas.AttunementFloorsAhead)
-   best=math.max(best,StatFormulas.AttunementHeadroom*TowerFloorConfig.RecommendedPower(ahead)/B.ExpectedSquadSize(f))
+   best=math.max(best,StatFormulas.AttunementHeadroom*TowerFloorConfig.AttunementReferencePower(ahead)/B.ExpectedSquadSize(f))
    caps[f]=best
   end
   attunementCaps=caps
@@ -190,6 +190,18 @@ function StatFormulas.GetSquadPower(profile: any, trainingMultiplier: number?): 
 		end
 	end
 	return total, perHero
+end
+
+-- The floor selector compares against the power the deployed heroes can bring into the tower.
+function StatFormulas.GetTowerSquadPower(profile: any): number
+	if not profile then return 0 end
+	if not profile.SquadPowerByHero then return profile.SquadPower or 0 end
+	local cap = StatFormulas.GetAttunementCap(profile.MaxFloorReached)
+	local total = 0
+	for _, power in pairs(profile.SquadPowerByHero) do
+		total += math.min(power, cap)
+	end
+	return math.round(total)
 end
 
 -- Worker slots for a support facility: level table plus Fortress Tree perk slots. 0 while locked.

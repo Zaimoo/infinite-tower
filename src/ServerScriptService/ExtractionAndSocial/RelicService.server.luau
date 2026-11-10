@@ -14,6 +14,7 @@ local TowerFloorConfig = require(Shared.Config:WaitForChild("TowerFloorConfig"))
 local GildedGrimoire = require(Shared:WaitForChild("Util"):WaitForChild("GildedGrimoire"))
 local BillboardThemes = require(Shared.Config:WaitForChild("BillboardThemes"))
 local TowerRuns = require(script.Parent.Parent:WaitForChild("Combat"):WaitForChild("TowerRunService"))
+local TowerRun = require(Shared.Util.TowerRun)
 local LootDuel = require(Shared.Util.LootDuel)
 
 local RemotesFolder = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RelicPactRemotes")
@@ -389,8 +390,8 @@ local function awardRelicPayout(player: Player, spec: any, scalar: number, rewar
 	-- Gold and Gems both scale with the floor the relic dropped on (separate slopes, TowerFloorConfig).
 	-- Phase 6 M5: a relic banked during a climb streak pays more, Gold and gems alike.
 	local streakMult = TowerRuns.RelicMultiplier(player)
-	local gems = math.round(spec.Payout.Gems * scalar * (gemMultiplier or 1) * streakMult)
-	local gold = math.round(spec.Payout.Gold * scalar * marketMult * (rewardMultiplier or 1) * streakMult)
+	local gems, streakGems = TowerRun.RelicCredit(spec.Payout.Gems * scalar * (gemMultiplier or 1), streakMult)
+	local gold, streakGold = TowerRun.RelicCredit(spec.Payout.Gold * scalar * marketMult * (rewardMultiplier or 1), streakMult)
 	local stones = spec.Payout.PromotionStones or 0
 
 	profile.Currencies.Gems += gems
@@ -413,7 +414,8 @@ local function awardRelicPayout(player: Player, spec: any, scalar: number, rewar
 	dm.SendToast(
 		player,
 		string.format("Extracted %s (%d%%): +%d Gems, +%d Gold%s!", spec.DisplayName, math.round(scalar * 100), gems, gold, stoneText),
-		"SUCCESS"
+		"SUCCESS",
+		{ RelicName = spec.DisplayName, Gems = gems, Gold = gold, StreakGems = streakGems, StreakGold = streakGold, PromotionStones = stones }
 	)
 	dm.SyncProfile(player)
 end

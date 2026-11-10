@@ -53,7 +53,7 @@ end
 --============================================================================
 
 export type ToastKind = "info" | "success" | "warn" | "error" | "reward"
-export type Toast = { Id: number, Kind: ToastKind, Text: string, Count: number, Amount: number?, ExpiresAt: number }
+export type Toast = { Id: number, Kind: ToastKind, Text: string, Count: number, Amount: number?, ExpiresAt: number, Lines: { string }? }
 export type ToastStack = { Items: { Toast }, Max: number, NextId: number }
 
 UiKitRules.ToastHold = table.freeze({ info = 3.5, success = 3.5, warn = 4.5, error = 4.5, reward = 3.5 })
@@ -65,10 +65,10 @@ end
 -- Adds a toast, newest first. The same kind and text while still showing coalesces into it
 -- ("×3", amounts summed) instead of stacking a duplicate. Returns the toast, whether it is new,
 -- and the toasts pushed out because the stack was full.
-function UiKitRules.PushToast(stack: ToastStack, kind: ToastKind, text: string, now: number, amount: number?, hold: number?): (Toast, boolean, { Toast })
+function UiKitRules.PushToast(stack: ToastStack, kind: ToastKind, text: string, now: number, amount: number?, hold: number?, lines: { string }?): (Toast, boolean, { Toast })
 	local duration = hold or UiKitRules.ToastHold[kind] or 3.5
 	for _, item in stack.Items do
-		if item.Kind == kind and item.Text == text and item.ExpiresAt > now then
+		if not lines and not item.Lines and item.Kind == kind and item.Text == text and item.ExpiresAt > now then
 			item.Count += 1
 			if amount then item.Amount = (item.Amount or 0) + amount end
 			item.ExpiresAt = now + duration
@@ -76,13 +76,27 @@ function UiKitRules.PushToast(stack: ToastStack, kind: ToastKind, text: string, 
 		end
 	end
 	stack.NextId += 1
-	local toast: Toast = { Id = stack.NextId, Kind = kind, Text = text, Count = 1, Amount = amount, ExpiresAt = now + duration }
+	local toast: Toast = { Id = stack.NextId, Kind = kind, Text = text, Count = 1, Amount = amount, ExpiresAt = now + duration, Lines = lines }
 	table.insert(stack.Items, 1, toast)
 	local evicted = {}
 	while #stack.Items > stack.Max do
 		table.insert(evicted, table.remove(stack.Items) :: Toast)
 	end
 	return toast, true, evicted
+end
+
+local function formatInteger(amount: number): string
+	local digits = string.format("%.0f", amount)
+	local grouped = string.reverse((string.gsub(string.reverse(digits), "(%d%d%d)", "%1,")))
+	return (string.gsub(grouped, "^,", ""))
+end
+
+function UiKitRules.RewardLine(currency: string, amount: number, streakBonus: number?): string
+	local line = formatInteger(amount) .. " " .. currency
+	if streakBonus and streakBonus > 0 then
+		line ..= " · +" .. formatInteger(streakBonus) .. " from streak"
+	end
+	return line
 end
 
 -- Removes and returns the toasts whose time is up.

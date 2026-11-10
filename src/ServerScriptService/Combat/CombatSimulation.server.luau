@@ -714,6 +714,7 @@ local function knockHeroIntoComa(simHero: SimHero, _baseComaSeconds: number?)
 			)
 			-- Do not recall or teleport stationed squads; heroes will respawn on their timers and resume farming.
 		else
+			local hasRunSummary = false
 			if playerOnWipeFloor then
 				-- Phase 6 wipe loss: a share of the Gold and Gems earned since the last bank is gone, and the run (and streak) ends.
 				local run = TowerRuns.Get(simHero.Owner)
@@ -726,10 +727,7 @@ local function knockHeroIntoComa(simHero: SimHero, _baseComaSeconds: number?)
 					dm.SyncProfile(simHero.Owner)
 				end
 				if run then
-					TowerRuns.End(simHero.Owner, "WIPE", lossGold, lossGems)
-					if lossGold > 0 or lossGems > 0 then
-						dm.SendToast(simHero.Owner, string.format("Wiped: lost %d Gold and %d Gems earned since you last banked. Banked loot is safe.", lossGold, lossGems), "WARN")
-					end
+					hasRunSummary = TowerRuns.End(simHero.Owner, "WIPE", lossGold, lossGems) ~= nil
 				end
 				if _G.RelicService then
 					_G.RelicService.FumbleRelicOnAoEHit(simHero.Owner)
@@ -745,11 +743,13 @@ local function knockHeroIntoComa(simHero: SimHero, _baseComaSeconds: number?)
 			if wipeFloor == RAID_FLOOR then
 				dm.SendToast(simHero.Owner, "Your squad fell in the raid. Your damage still counts. Returning to your Fortress Plot...", "WARN")
 			elseif playerOnWipeFloor then
-				dm.SendToast(
-					simHero.Owner,
-					string.format("ALL HEROES FALLEN on Floor %d! Carried loot dropped. Teleporting to Fortress Plot...", wipeFloor),
-					"WARN"
-				)
+				if not hasRunSummary then
+					dm.SendToast(
+						simHero.Owner,
+						string.format("ALL HEROES FALLEN on Floor %d! Carried loot dropped. Teleporting to Fortress Plot...", wipeFloor),
+						"WARN"
+					)
+				end
 			else
 				dm.SendToast(
 					simHero.Owner,
@@ -2468,7 +2468,7 @@ local function spawnFloorAscensionPortal(floorId: number, _position: Vector3?)
 	if not floorSpec then return end
 
 	local nextFloorId = floorId + 1
-	local isMaxFloor = floorId >= 50
+	local isMaxFloor = floorId >= TowerRewards.FloorCount
 	local theme = TowerRoomBuilder.Theme(floorSpec.BiomeId)
 	local stone, gold = TowerPortalKit.Palette(theme)
 	local spots = TowerLayout.PortalSpots(floorSpec.IndexInBiome)
@@ -2523,6 +2523,9 @@ local function spawnFloorAscensionPortal(floorId: number, _position: Vector3?)
 		prompt.HoldDuration = 0.35
 		prompt.MaxActivationDistance = 15
 		prompt.RequiresLineOfSight = false
+		prompt:SetAttribute("TowerPortalAction", if spotName == "Rerun" then "RERUN" elseif isMaxFloor then "RETURN" else "ASCEND")
+		prompt:SetAttribute("TowerPortalFloorId", floorId)
+		prompt:SetAttribute("TowerPortalDestination", if spotName == "Rerun" then floorId elseif isMaxFloor then 0 else nextFloorId)
 		prompt.Parent = trigger
 		prompt.Triggered:Connect(function(player: Player)
 			local state = allowed(player)
@@ -2563,7 +2566,8 @@ local function spawnFloorAscensionPortal(floorId: number, _position: Vector3?)
 	for _, p in Players:GetPlayers() do
 		local state = Tower.GetState(p)
 		if state and state.FloorId == floorId then
-			getDataManager().SendToast(p, "Portals opened at the back of the Apex: Ascend or Rerun.", "SUCCESS")
+			local choices = if isMaxFloor then "Return to Hub or Rerun" else "Ascend or Rerun"
+			getDataManager().SendToast(p, "Portals opened at the back of the Apex: " .. choices .. ".", "SUCCESS")
 		end
 	end
 end
@@ -2862,7 +2866,8 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
        end
 
        local stoneText = if bossStones > 0 then string.format(", +%d Promotion Stone%s", bossStones, if bossStones == 1 then "" else "s") else ""
-       dm.SendToast(p, string.format("Floor %d Boss Defeated! Unlocked Floor %d! (+%d Gold, +%d Gem%s)", mob.FloorId, mob.FloorId + 1, bossGold, bossGems, stoneText), "SUCCESS")
+       local nextStep = if mob.FloorId < TowerRewards.FloorCount then string.format(" Unlocked Floor %d!", mob.FloorId + 1) else ""
+       dm.SendToast(p, string.format("Floor %d Boss Defeated!%s (+%d Gold, +%d Gem%s)", mob.FloorId, nextStep, bossGold, bossGems, stoneText), "SUCCESS")
       end
      end
     end
@@ -3024,13 +3029,7 @@ local function stepCombatHeartbeat(deltaTime: number)
 					TowerRuns.Ensure(player, location.FloorId)
 				elseif TowerRuns.Get(player) then
 					TowerRuns.Bank(player)
-					local summary = TowerRuns.End(player, "RETURN")
-					if summary and (summary.FloorsCleared > 0 or summary.Kills > 0) then
-						getDataManager().SendToast(player, string.format("Run over: floors %d-%d, %d cleared, best streak x%d, +%d Gold, +%d Gems",
-							summary.StartFloor, summary.HighestFloor, summary.FloorsCleared, summary.BestStreak, summary.GoldEarned + summary.RelicGold, summary.GemsEarned + summary.RelicGems), "INFO")
-					elseif summary then
-						getDataManager().SendToast(player, string.format("Run ended. Returned from Floor %d.", summary.StartFloor), "INFO")
-					end
+					TowerRuns.End(player, "RETURN")
 				end
 			end
 			if safety.CanBankCargo and not Tower.IsTransitioning(player) and not DuelByPlayer[player] then

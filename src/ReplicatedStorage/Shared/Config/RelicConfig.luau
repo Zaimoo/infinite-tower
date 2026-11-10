@@ -2,11 +2,10 @@
 -- ReplicatedStorage/Shared/Config/RelicConfig.luau
 -- Relics, the contested tower loot (GDD §5.5).
 --
--- Four base tiers carry every gameplay number: payout, walk-speed penalty, jump lock, despawn and seal times.
+-- Four base tiers define the hauling rules and the payouts for drops that use a base tier directly.
 --   Tier 1 Mana Geode (anything), Tier 2 Cursed Urn (anything), Tier 3 Abyssal Core (camp Elites only),
 --   Tier 4 Calamity Heart (Alphas and Biome Bosses only). Drop chances live in TowerFloorConfig.RelicDrops.
--- Each biome reskins the four tiers with its own name, colour and description (40 relics). A biome relic is a
--- copy of its base tier with those three fields replaced, so the economy is set by the tiers alone.
+-- Each biome gives the four tiers its own appearance and payout.
 
 export type Payout = { Gems: number, Gold: number, PromotionStones: number }
 
@@ -168,6 +167,20 @@ local BIOMES: { { Key: string, Name: string, Floors: { number }, Skins: { Skin }
 	} },
 }
 
+-- Gold, Gems and Promotion Stones by biome and tier (Geode, Urn, Core, Heart).
+local BIOME_PAYOUTS = {
+	{ { 325, 94, 0 }, { 625, 139, 0 }, { 950, 344, 0 }, { 1300, 650, 0 } }, -- Verdant Ruins
+	{ { 1450, 102, 0 }, { 1950, 152, 1 }, { 2500, 367, 1 }, { 3100, 750, 1 } }, -- Fungal Hollow
+	{ { 3400, 110, 0 }, { 4500, 165, 1 }, { 5800, 390, 1 }, { 7500, 850, 2 } }, -- Ashen Dunes
+	{ { 9000, 125, 1 }, { 11500, 190, 2 }, { 15000, 435, 2 }, { 19500, 1150, 3 } }, -- Frozen Citadel
+	{ { 22000, 140, 1 }, { 27500, 215, 2 }, { 34000, 480, 3 }, { 42000, 1550, 3 } }, -- Infernal Foundry
+	{ { 32500, 155, 2 }, { 39000, 240, 3 }, { 46800, 525, 3 }, { 57200, 2100, 4 } }, -- Thunder Highlands
+	{ { 65000, 170, 2 }, { 78000, 265, 4 }, { 94250, 570, 4 }, { 113750, 2850, 4 } }, -- Corrupted Grove
+	{ { 130000, 185, 3 }, { 152750, 290, 4 }, { 178750, 615, 4 }, { 208000, 3850, 5 } }, -- Sunken Sanctuary
+	{ { 240500, 200, 3 }, { 279500, 315, 4 }, { 325000, 660, 5 }, { 377000, 5200, 5 } }, -- Astral Archives
+	{ { 435500, 215, 4 }, { 507000, 340, 5 }, { 585000, 705, 5 }, { 715000, 7000, 6 } }, -- Abyssal Throne
+}
+
 local TIER_SUFFIX = { "GEODE", "URN", "CORE", "HEART" }
 
 RelicConfig.Biomes = {} :: { BiomeConfig }
@@ -184,6 +197,10 @@ for biomeIndex, biome in ipairs(BIOMES) do
 		item.DisplayName = skin[1] :: string
 		item.Color = skin[2] :: Color3
 		item.VisualDescription = skin[3] :: string
+		local payout = BIOME_PAYOUTS[biomeIndex][tier]
+		item.Payout = table.freeze({ Gold = payout[1], Gems = payout[2], PromotionStones = payout[3] })
+		item.GoldValue = item.Payout.Gold
+		item.GemValue = item.Payout.Gems
 		RelicConfig.Items[id] = table.freeze(item)
 		table.insert(dropTable, id)
 	end

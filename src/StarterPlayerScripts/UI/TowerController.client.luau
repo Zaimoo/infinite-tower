@@ -22,6 +22,7 @@ local GrimoireIcons = require(RS.Shared.Util.GrimoireIcons)
 local UIAssets = require(script.Parent:WaitForChild("UIAssets"))
 local Kit = require(script.Parent:WaitForChild("Kit"))
 local StatBalance = require(RS.Shared.Config.StatBalance)
+local StatFormulas = require(RS.Shared.Util.StatFormulas)
 local remotes = RS:WaitForChild("Remotes"):WaitForChild("TowerRemotes")
 local Store = require(script.Parent:WaitForChild("Hud"):WaitForChild("Store"))
 
@@ -330,7 +331,7 @@ local detailScaling = new("TextLabel", {
 	Size = UDim2.new(1, -36, 0, 20),
 	BackgroundTransparency = 1,
 	RichText = true,
-	Text = "Recommended Power: 700",
+	Text = "Suggested Power",
 	TextColor3 = Color3.fromRGB(240, 235, 248),
 	Font = Enum.Font.Gotham,
 	TextSize = 16,
@@ -785,17 +786,17 @@ local visitBtn = createOrnateButton(actionRow, "VISIT FLOOR", 1, true, function(
 		render()
 		return
 	end
-	-- Under the recommended power: ask first (plan §6, Soft), naming the gap.
+	-- Below the estimate, give the player the choice to try the fight.
 	local profile = _G.CurrentProfile
 	local recommended = floors.RecommendedPower(selected)
-	local mine = if profile then profile.SquadPower or 0 else 0
-	if Kit.Rules.ConfirmTier("VISIT_FLOOR", { SquadPower = mine, Recommended = recommended }) ~= "None" then
+	local mine = StatFormulas.GetTowerSquadPower(profile)
+	if profile and Kit.Rules.ConfirmTier("VISIT_FLOOR", { SquadPower = mine, Recommended = recommended }) ~= "None" then
 		local floorToVisit = selected
 		Kit.Confirm.Ask({
 			Tier = "Soft",
-			Title = string.format("Visit Floor %d under-powered?", floorToVisit),
-			Body = string.format("Your squad has %s power; this floor recommends %s (%s short). Your heroes may fall into a coma.",
-				StatBalance.Format(mine), StatBalance.Format(recommended), StatBalance.Format(recommended - mine)),
+			Title = string.format("Try Floor %d?", floorToVisit),
+			Body = string.format("Your squad has %s Tower Power. The suggested power for this floor is %s.",
+				StatBalance.Format(mine), StatBalance.Format(recommended)),
 			ConfirmText = "Visit anyway",
 			SessionKey = "VISIT_UNDERPOWERED",
 			OnConfirm = function() request("VISIT", floorToVisit) end,
@@ -873,16 +874,14 @@ render = function()
 		detailBanner.ImageColor3 = Color3.new(1, 1, 1)
 		detailBanner.ImageTransparency = 0.65
 		detailHeader.Text = string.format("Floor %d · %s (%s%s)", selected, floor.DisplayName, floor.BiomeDisplayName or (biome and biome.DisplayName) or floor.BiomeId, bossText)
-		-- Phase 5: the floor's Recommended Squad Power against yours (green when you meet it).
 		local recommended = floors.RecommendedPower(selected)
-		local mine = if profile then profile.SquadPower or 0 else 0
+		local mine = StatFormulas.GetTowerSquadPower(profile)
 		local ready = mine >= recommended
 		detailScaling.Text = string.format(
-			"Recommended Power: <font color=\"#FFD66E\"><b>%s</b></font>  ·  Your Squad: <font color=\"%s\"><b>%s</b></font>%s",
+			"Suggested Power: <font color=\"#FFD66E\"><b>%s</b></font>  ·  Your Squad: <font color=\"%s\"><b>%s</b></font>",
 			abbreviate(recommended),
 			if ready then "#4ADE80" else "#FF6B6B",
-			abbreviate(mine),
-			if ready then "" else "  (under-powered)"
+			abbreviate(mine)
 		)
 	end
 	detailRoster.Text = string.format("Roster: %s", #encounterNames > 0 and table.concat(encounterNames, ", ") or "None")

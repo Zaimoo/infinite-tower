@@ -16,13 +16,14 @@ local function remote(name: string): RemoteEvent?
 	return if r and r:IsA("RemoteEvent") then r else nil
 end
 
-local function publish(player: Player, run: TowerRun.Run?)
+local function publish(player: Player, run: TowerRun.Run?, creditedFloor: number?)
 	local r = remote("RunState")
 	if not r or player.Parent ~= Players then return end
 	r:FireClient(player, if run then {
 		Streak = run.Streak, BestStreak = run.BestStreak, UnbankedGold = run.UnbankedGold, UnbankedGems = run.UnbankedGems,
+		Active = true, LastClearedFloor = run.LastClearedFloor, CreditedFloor = creditedFloor,
 		StreakMultiplier = TowerRun.StreakMultiplier(run.Streak),
-	} else { Streak = 0, BestStreak = 0, UnbankedGold = 0, UnbankedGems = 0, StreakMultiplier = 1 })
+	} else { Active = false, Streak = 0, BestStreak = 0, UnbankedGold = 0, UnbankedGems = 0, StreakMultiplier = 1 })
 end
 
 function Service.Get(player: Player): TowerRun.Run?
@@ -58,7 +59,7 @@ function Service.RecordFloorClear(player: Player, floorId: number, firstClear: b
 	if not run then return 0 end
 	local streak = TowerRun.RecordFloorClear(run, floorId)
 	Telemetry.FloorClear(player, floorId, firstClear == true, streak)
-	publish(player, run)
+	publish(player, run, floorId)
 	return streak
 end
 

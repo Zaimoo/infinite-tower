@@ -169,10 +169,27 @@ test("Relic tiers are role-exclusive: Cores from Elites, Hearts from Alphas and 
   assert(e.CoreChance>0 and r.CoreChance==0 and a.CoreChance==0 and b.CoreChance==0,"only Elites drop Cores")
   assert(a.HeartChance>0 and b.HeartChance>a.HeartChance and r.HeartChance==0 and e.HeartChance==0,"Hearts come from Alphas and Biome Bosses")
  end
- local gold1,gems1=Floors.RelicFloorMultipliers(1)
- local gold50,gems50=Floors.RelicFloorMultipliers(50)
  assert(Floors.GetKillRewards(50,"BOSS").Gems==99 and Floors.GetKillRewards(50,"REGULAR").Gems==2)
- assert(gold1==1 and gems1==1 and math.abs(gems50-2.47)<1e-9 and math.abs(gold50-3.45)<1e-9)
- assert(select(2,Floors.RelicFloorMultipliers(0))==1,"hub relics are unscaled")
+end)
+
+test("Relic Gem payouts rise with depth and step up at each biome", function()
+ local previous = {0, 0, 0, 0}
+ for floor = 1, Floors.FloorCount do
+  local _, gemMultiplier = Floors.RelicFloorMultipliers(floor)
+  local biome = RelicConfig.GetBiomeForFloor(floor)
+  for tier, relicId in ipairs(biome.DropTable) do
+   local payout = math.round(RelicConfig.GetItem(relicId).Payout.Gems * gemMultiplier)
+   assert(payout >= previous[tier], string.format("Tier %d Gems fell on Floor %d", tier, floor))
+   if floor == biome.FloorRange[1] then
+    assert(payout > previous[tier], string.format("Tier %d Gems must increase at the start of Floor %d's biome", tier, floor))
+   end
+   previous[tier] = payout
+  end
+ end
+ local gold1, gems1 = Floors.RelicFloorMultipliers(1)
+ local gold50 = Floors.RelicFloorMultipliers(50)
+ assert(gold1 == 1 and gems1 == 1 and math.abs(gold50 - 3.45) < 1e-9)
+ assert(previous[4] == 10430, "Floor 50 Tier 4 payout before streak")
+ assert(select(2, Floors.RelicFloorMultipliers(0)) == 1, "hub relics are unscaled")
 end)
 print(string.format("Tower rework tests: %d passed",passed))

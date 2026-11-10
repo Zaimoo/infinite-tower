@@ -23,6 +23,15 @@ export type Run = {
 
 local TowerRun = {}
 
+export type RelicReceipt = {
+	RelicName: string,
+	Gold: number,
+	Gems: number,
+	StreakGold: number,
+	StreakGems: number,
+	PromotionStones: number,
+}
+
 function TowerRun.New(startFloor: number, now: number): Run
 	return {
 		StartFloor = startFloor, HighestFloor = startFloor, Streak = 0, BestStreak = 0, LastClearedFloor = nil,
@@ -51,13 +60,18 @@ end
 
 -- +1 when the cleared floor follows the previous credited clear (or is the first); a gap restarts the streak at 1;
 -- clearing the same floor again changes nothing. Returns the streak after the clear.
+function TowerRun.StreakAfterClear(streak: number, lastClearedFloor: number?, floorId: number): number
+	if floorId == lastClearedFloor then return streak end
+	return if lastClearedFloor == nil or floorId == lastClearedFloor + 1 then streak + 1 else 1
+end
+
 function TowerRun.RecordFloorClear(run: Run, floorId: number): number
 	local last = run.LastClearedFloor
 	if last == floorId then
 		return run.Streak
 	end
 	run.FloorsCleared += 1
-	run.Streak = if last == nil or floorId == last + 1 then run.Streak + 1 else 1
+	run.Streak = TowerRun.StreakAfterClear(run.Streak, last, floorId)
 	run.LastClearedFloor = floorId
 	run.BestStreak = math.max(run.BestStreak, run.Streak)
 	return run.Streak
@@ -66,6 +80,27 @@ end
 -- Banked relic value bonus: +10% per floor in the streak, capped at +100%.
 function TowerRun.StreakMultiplier(streak: number): number
 	return 1 + math.min(Hardcore.StreakBonusCap, Hardcore.StreakBonusPerFloor * math.max(0, streak))
+end
+
+function TowerRun.PortalHint(action: string, destinationFloor: number, streak: number, lastClearedFloor: number?): string
+	if action == "RETURN" then return "Return to Hub · Ends your run" end
+	local preview = TowerRun.StreakAfterClear(streak, lastClearedFloor, destinationFloor)
+	local multiplier = TowerRun.StreakMultiplier(preview)
+	local bonus = math.round((multiplier - 1) * 100)
+	if destinationFloor == lastClearedFloor then
+		return string.format("%s Floor %d · Keeps +%d%%", if action == "RERUN" then "Rerun" else "Clear", destinationFloor, bonus)
+	elseif lastClearedFloor and destinationFloor ~= lastClearedFloor + 1 then
+		return "Clearing this floor starts a new streak"
+	elseif multiplier == TowerRun.StreakMultiplier(streak) then
+		return string.format("Clear Floor %d · Relic bonus stays at max", destinationFloor)
+	end
+	return string.format("Clear Floor %d for +%d%% relic rewards", destinationFloor, bonus)
+end
+
+-- Round each final credit only once, and compare it with what would have been credited at zero streak.
+function TowerRun.RelicCredit(basePayout: number, streakMultiplier: number): (number, number)
+	local credited = math.round(basePayout * streakMultiplier)
+	return credited, credited - math.round(basePayout)
 end
 
 -- Entering a sanctuary or pad makes unbanked earnings safe. Returns what was banked.
@@ -89,6 +124,7 @@ function TowerRun.Summary(run: Run, reason: string, now: number, lossGold: numbe
 		HighestFloor = run.HighestFloor,
 		FloorsCleared = run.FloorsCleared,
 		Kills = run.Kills,
+		Streak = run.Streak,
 		BestStreak = run.BestStreak,
 		GoldEarned = run.GoldEarned,
 		GemsEarned = run.GemsEarned,

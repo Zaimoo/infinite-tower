@@ -79,33 +79,49 @@ local Floors = require(nodes["ReplicatedStorage.Shared.Config.TowerFloorConfig"]
 local Balance = require(nodes["ReplicatedStorage.Shared.Config.StatBalance"])
 local Hardcore = require(nodes["ReplicatedStorage.Shared.Config.TowerHardcoreConfig"])
 
--- The default starter pair: Catio (1-star Rare, full old 3-star power) and Han (1-star Common) with Common 1-star weapons, Lv. 1.
-local function starterPower(): number
-	local catio = { TemplateId = "hero_catio", Stars = 1, Level = 1, QualityScalar = 1.02, Rarity = 3, ComaUntilTimestamp = 0 }
-	local han = { TemplateId = "hero_han", Stars = 1, Level = 1, QualityScalar = 1.05, Rarity = 1, ComaUntilTimestamp = 0 }
-	return StatFormulas.GetHeroPower(catio, { Star = 1, Rarity = 1, TemplateId = "art_miner_pickaxe" })
-		+ StatFormulas.GetHeroPower(han, { Star = 1, Rarity = 1, TemplateId = "art_rusty_daggers" })
-end
+test("Floor 1 fits starter Han and a starter Rare feels stronger immediately", function()
+	local han = { TemplateId = "hero_han", Stars = 1, Level = 1, QualityScalar = 1.05 }
+	local dagger = { Star = 1, Rarity = 1, TemplateId = "art_rusty_daggers" }
+	local catio = { TemplateId = "hero_catio", Stars = 1, Level = 1, QualityScalar = 0.9 }
+	local hanStats = StatFormulas.GetCombatSnapshot(han, dagger)
+	local hanPower = StatFormulas.GetHeroPower(han, dagger)
+	local floorOne = Balance.GetTowerFloorStats(1, "ALPHA")
 
-test("Phase 6 M3: floor 1 is sized to the default starter pair, not a full squad", function()
-	local starter = starterPower()
-	local rec1 = Floors.RecommendedPower(1)
-	assert(math.abs(starter - rec1) / rec1 <= 0.2, string.format("starter %d vs floor 1 recommendation %d", starter, rec1))
-	-- After the 900-gem starter 10-pull (one extra Rare) with three slots open, the squad still sits under floor 3.
-	local catio = { TemplateId = "hero_catio", Stars = 1, Level = 1, QualityScalar = 1, Rarity = 3, ComaUntilTimestamp = 0 }
-	local pulled = starter + StatFormulas.GetHeroPower(catio, { Star = 1, Rarity = 1, TemplateId = "art_miner_pickaxe" })
-	assert(pulled <= Floors.RecommendedPower(3), string.format("squad after the starter pull %d vs floor 3 recommendation %d", pulled, Floors.RecommendedPower(3)))
+	assert(floorOne.MaxHP / hanStats.DPS < 24, "Han can take on the first Alpha with his starter gear")
+	assert(floorOne.ATK * 8 < hanStats.Health, "Han can survive several hits")
+	assert(hanPower >= Floors.RecommendedPower(1), "the starter should meet the first recommendation")
+	assert(StatFormulas.GetHeroPower(catio) >= Floors.RecommendedPower(5),
+		"even an unequipped low-quality Rare gives the early squad enough power for the first biome")
 	assert(Hardcore.StarterGems == 900)
 end)
 
-test("Phase 6 M3: expected squad size grows with the floor and enemy stats rise inside each biome", function()
+test("Tower combat ramps back to the original curve on Floor 15", function()
+	for _, role in { "REGULAR", "ELITE", "ALPHA", "BOSS" } do
+		local previousHPRatio, previousATKRatio = 0, 0
+		for floor = 10, 50 do
+			local stats = Balance.GetTowerFloorStats(floor, role)
+			local reference = Balance.GetFloorStats(floor, role)
+			if floor < 15 then
+				local hpRatio, atkRatio = stats.MaxHP / reference.MaxHP, stats.ATK / reference.ATK
+				assert(hpRatio < 1 and atkRatio < 1, "Floors 10–14 retain some early relief")
+				assert(hpRatio > previousHPRatio and atkRatio > previousATKRatio, "the relief tapers by floor")
+				previousHPRatio, previousATKRatio = hpRatio, atkRatio
+			else
+				assert(stats.MaxHP == reference.MaxHP and stats.ATK == reference.ATK,
+					"the original curve is restored on Floor 15 for every role")
+			end
+		end
+	end
+end)
+
+test("Tower enemy stats rise within each biome", function()
 	assert(Balance.ExpectedSquadSize(1) == 2 and Balance.ExpectedSquadSize(5) == 3 and Balance.ExpectedSquadSize(10) == 4)
 	assert(Balance.ExpectedSquadSize(15) == 5 and Balance.ExpectedSquadSize(50) == 5)
 	for biome = 0, 9 do
 		for _, role in { "REGULAR", "ELITE", "ALPHA", "BOSS" } do
 			local last
 			for i = 1, 5 do
-				local s = Balance.GetFloorStats(biome * 5 + i, role)
+				local s = Balance.GetTowerFloorStats(biome * 5 + i, role)
 				assert(s.MaxHP > 0 and s.ATK > 0)
 				if last then assert(s.MaxHP >= last.MaxHP and s.ATK >= last.ATK, role .. " should not get easier inside a biome") end
 				last = s
@@ -113,7 +129,7 @@ test("Phase 6 M3: expected squad size grows with the floor and enemy stats rise 
 		end
 	end
 	-- The sawtooth: the first floor of the next biome is a breather compared with the boss floor's jump, not a reset.
-	local boss5, reg6 = Balance.GetFloorStats(5, "REGULAR"), Balance.GetFloorStats(6, "REGULAR")
+	local boss5, reg6 = Balance.GetTowerFloorStats(5, "REGULAR"), Balance.GetTowerFloorStats(6, "REGULAR")
 	assert(reg6.MaxHP >= boss5.MaxHP * 0.8, "next biome never starts far below the boss floor")
 	assert(Balance.GetFloorStats(1, "ALPHA").MaxHP > Balance.GetFloorStats(1, "ELITE").MaxHP)
 	assert(Balance.GetFloorStats(1, "ALPHA").MaxHP < Balance.GetFloorStats(1, "BOSS").MaxHP)
@@ -152,50 +168,54 @@ end)
 
 local RelicConfig = require(nodes["ReplicatedStorage.Shared.Config.RelicConfig"])
 
--- Expected gems per hour on repeat farming. One boss cycle is round(20 + 1.2 x floor) kill points (Regular 1,
--- Elite 3) plus the boss itself, which takes about as long as 15 kills; 900 kill-equivalents fit in an hour.
-local KILLS_PER_HOUR = 900 -- ~15 kills/min
-local ELITE_SHARE = 0.08
-local BOSS_KILL_EQUIVALENT = 15
-local function relicValue(floorId: number, role: string): number
+local function expectedRelicPayout(floorId: number, role: string, currency: string): number
 	local reward = Floors.GetKillRewards(floorId, role)
-	local tiers = reward.HeartChance * RelicConfig.CALAMITY_HEART.Payout.Gems + reward.CoreChance * RelicConfig.ABYSSAL_CORE.Payout.Gems
-		+ reward.UrnChance * RelicConfig.CURSED_URN.Payout.Gems
-		+ (1 - reward.HeartChance - reward.CoreChance - reward.UrnChance) * RelicConfig.MANA_GEODE.Payout.Gems
-	return reward.RelicChance * tiers * reward.GemMultiplier
-end
-local function gemsPerHour(floorId: number): number
-	local killsPerBoss = math.round(20 + 1.2 * floorId) / ((1 - ELITE_SHARE) + ELITE_SHARE * 3)
-	local bosses = KILLS_PER_HOUR / (killsPerBoss + BOSS_KILL_EQUIVALENT)
-	local kills = bosses * killsPerBoss
-	local perKill = 1 + (1 - ELITE_SHARE) * relicValue(floorId, "REGULAR") + ELITE_SHARE * relicValue(floorId, "ELITE")
-	return kills * perKill + bosses * relicValue(floorId, if floorId % 5 == 0 then "BOSS" else "ALPHA")
+	local biome = RelicConfig.GetBiomeForFloor(floorId)
+	local chances = { 1 - reward.UrnChance - reward.CoreChance - reward.HeartChance,
+		reward.UrnChance, reward.CoreChance, reward.HeartChance }
+	local expected = 0
+	for tier, chance in chances do
+		expected += chance * RelicConfig.Items[biome.DropTable[tier]].Payout[currency]
+	end
+	local multiplier = if currency == "Gems" then reward.GemMultiplier else reward.RelicMultiplier
+	return reward.RelicChance * expected * multiplier
 end
 
-test("Relic economy: gem income sits near 2,900 / 7,500 / 15,500 per hour on Alpha floors and rises with depth", function()
-	for floorId, target in { [1] = 2900, [26] = 7500, [49] = 15500 } do
-		local rate = gemsPerHour(floorId)
-		assert(math.abs(rate - target) / target <= 0.20, string.format("floor %d earns %d gems/h, target %d", floorId, rate, target))
-	end
-	-- Biome Boss floors pay a bonus, so compare Alpha floors with each other and each Biome Boss floor with the floor before it.
-	local last = 0
-	for floorId = 1, 50 do
-		local rate = gemsPerHour(floorId)
-		if floorId % 5 == 0 then
-			assert(rate >= gemsPerHour(floorId - 1), "a Biome Boss floor pays at least its Alpha floors")
-		else
-			assert(rate >= last, "gem income never falls with depth")
-			last = rate
+test("Early relics pay more and every later floor gives better repeat relic returns per kill", function()
+	local verdant = RelicConfig.Items.VERDANT_GEODE.Payout
+	local fungal = RelicConfig.Items.FUNGAL_GEODE.Payout
+	local ashen = RelicConfig.Items.ASHEN_GEODE.Payout
+	assert(verdant.Gems == 94 and verdant.Gold >= 300)
+	assert(fungal.Gems > verdant.Gems and fungal.Gold >= 1400)
+	assert(ashen.Gems > fungal.Gems)
+	assert(Floors.GetKillRewards(1, "REGULAR").RelicChance >= 0.04)
+	assert(Floors.GetKillRewards(1, "ELITE").RelicChance >= 0.16)
+
+	for _, currency in { "Gold", "Gems" } do
+		for _, role in { "REGULAR", "ELITE", "ALPHA", "BOSS" } do
+			for floorId = 2, 50 do
+				assert(expectedRelicPayout(floorId, role, currency) > expectedRelicPayout(floorId - 1, role, currency))
+			end
 		end
 	end
-	-- A Mana Geode is the 100-gem baseline and every tier pays more than the one below.
-	assert(RelicConfig.MANA_GEODE.Payout.Gems == 100)
-	assert(RelicConfig.MANA_GEODE.Payout.Gems < RelicConfig.CURSED_URN.Payout.Gems and RelicConfig.CURSED_URN.Payout.Gems < RelicConfig.ABYSSAL_CORE.Payout.Gems
-		and RelicConfig.ABYSSAL_CORE.Payout.Gems < RelicConfig.CALAMITY_HEART.Payout.Gems)
-	-- Tower drops stay owner-locked for at least 5 seconds.
-	for _, tier in { "MANA_GEODE", "CURSED_URN", "ABYSSAL_CORE", "CALAMITY_HEART" } do
-		assert((RelicConfig :: any)[tier].InitialLockSeconds >= 5, tier .. " lock")
+end)
+
+test("Rare relics outpay shards in deeper biomes even after floor scaling", function()
+	local function bankedGems(floorId: number, tier: number): number
+		local biome = RelicConfig.GetBiomeForFloor(floorId)
+		local _, multiplier = Floors.RelicFloorMultipliers(floorId)
+		return math.round(RelicConfig.Items[biome.DropTable[tier]].Payout.Gems * multiplier)
 	end
+
+	assert(bankedGems(1, 3) > bankedGems(15, 1), "Verdant Tier 3 beats Ashen shards, including Floor 12")
+	assert(bankedGems(1, 4) > bankedGems(20, 1), "Verdant Tier 4 beats Frozen shards, including Floor 16")
+	for firstFloor = 6, 31, 5 do
+		assert(bankedGems(firstFloor, 3) > bankedGems(firstFloor + 19, 1), "Tier 3 beats shards three biomes up")
+	end
+	for firstFloor = 1, 46, 5 do
+		assert(bankedGems(firstFloor, 4) >= 1.30 * bankedGems(firstFloor, 3), "Tier 4 keeps a payout premium")
+	end
+	assert(RelicConfig.Items.THRONE_HEART.Payout.Gems == 7000, "Floor 50 Heart base payout")
 end)
 
 local TowerRun = require(nodes["ReplicatedStorage.Shared.Util.TowerRun"])
@@ -211,6 +231,37 @@ test("Phase 6 M5: the climb streak grows on consecutive clears, restarts on a ga
 	assert(run.BestStreak == 3, "the best streak is remembered")
 	assert(math.abs(TowerRun.StreakMultiplier(3) - 1.3) < 1e-9)
 	assert(TowerRun.StreakMultiplier(10) == 2 and TowerRun.StreakMultiplier(40) == 2, "the bonus caps at +100%")
+end)
+
+test("portal hints preview the next clear using this run's last credited floor", function()
+	assert(TowerRun.PortalHint("ASCEND", 14, 3, 13) == "Clear Floor 14 for +40% relic rewards")
+	assert(TowerRun.PortalHint("RERUN", 13, 3, 13) == "Rerun Floor 13 · Keeps +30%")
+	assert(TowerRun.PortalHint("ASCEND", 13, 3, 13) == "Clear Floor 13 · Keeps +30%")
+	assert(TowerRun.PortalHint("ASCEND", 15, 3, 13) == "Clearing this floor starts a new streak")
+	assert(TowerRun.PortalHint("RERUN", 12, 3, 13) == "Clearing this floor starts a new streak")
+	assert(TowerRun.PortalHint("ASCEND", 24, 10, 23) == "Clear Floor 24 · Relic bonus stays at max")
+	assert(TowerRun.PortalHint("RETURN", 0, 3, 50) == "Return to Hub · Ends your run")
+	assert(TowerRun.PortalHint("RERUN", 50, 0, nil) == "Clear Floor 50 for +10% relic rewards")
+	local run = TowerRun.New(48, 0)
+	for floor = 48, 50 do TowerRun.RecordFloorClear(run, floor) end
+	assert(TowerRun.RecordFloorClear(run, 50) == 3)
+	assert(TowerRun.PortalHint("RERUN", 50, run.Streak, run.LastClearedFloor) == "Rerun Floor 50 · Keeps +30%")
+	assert(TowerRun.RecordFloorClear(run, 48) == 1)
+end)
+
+test("relic receipts separate the streak contribution using the rounded credit and rounded base", function()
+	local goldFactor, gemFactor = Floors.RelicFloorMultipliers(50)
+	local apex = RelicConfig.Items.THRONE_HEART.Payout
+	local gems, streakGems = TowerRun.RelicCredit(apex.Gems * gemFactor, TowerRun.StreakMultiplier(3))
+	assert(gems == math.round(apex.Gems * gemFactor * 1.3))
+	assert(gems - streakGems == math.round(apex.Gems * gemFactor))
+	local baseGold = apex.Gold * 0.75 * 1.25 * goldFactor -- extraction scalar and Market multiplier
+	local gold, streakGold = TowerRun.RelicCredit(baseGold, TowerRun.StreakMultiplier(11))
+	assert(gold == math.round(baseGold * 2) and gold - streakGold == math.round(baseGold))
+	local noStreak, noBonus = TowerRun.RelicCredit(10.6, TowerRun.StreakMultiplier(0))
+	assert(noStreak == 11 and noBonus == 0)
+	local rounded, contribution = TowerRun.RelicCredit(10.6, TowerRun.StreakMultiplier(1))
+	assert(rounded == 12 and contribution == 1, "a rounded base must not be multiplied again")
 end)
 
 test("Phase 6 M5: banking makes earnings safe without touching the streak; a wipe takes 25% of what is unbanked", function()
@@ -231,7 +282,7 @@ test("Phase 6 M5: banking makes earnings safe without touching the streak; a wip
 	local afterGold, afterGems = TowerRun.WipeLoss(run, 5000, 500)
 	assert(afterGold == 0 and afterGems == 0, "banked earnings cannot be lost")
 	local summary = TowerRun.Summary(run, "WIPE", 90, 250, 10)
-	assert(summary.Reason == "WIPE" and summary.Seconds == 90 and summary.LossGold == 250 and summary.BestStreak == 1)
+	assert(summary.Reason == "WIPE" and summary.Seconds == 90 and summary.LossGold == 250 and summary.BestStreak == 1 and summary.Streak == 1)
 end)
 
 
@@ -246,6 +297,10 @@ test("Phase 6: Rift Attunement caps one hero's tower power by the Master's highe
 		last = cap
 	end
 	local cap10 = StatFormulas.GetAttunementCap(10)
+	assert(StatFormulas.GetAttunementCap(1) == 35250 and cap10 == 950000, "retuning floor guidance preserves the cap")
+	assert(StatFormulas.GetTowerSquadPower({
+		MaxFloorReached = 10, SquadPower = 3 * cap10, SquadPowerByHero = { a = 2.5 * cap10, b = 0.5 * cap10 },
+	}) == 1.5 * cap10, "the selector counts each deployed hero at their own capped power")
 	assert(raw > cap10, string.format("a Mythical pull must exceed what floor 10 allows: raw %d cap10 %d", raw, cap10))
 	local mult = StatFormulas.GetAttunedMultiplier(astrea, weapon, 1, cap10)
 	assert(mult < 1 and mult > 0, "mult " .. tostring(mult))

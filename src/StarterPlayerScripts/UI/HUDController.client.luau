@@ -511,9 +511,13 @@ local KitNotify = (function()
 	return nil
 end)()
 
-SystemToastEvent.OnClientEvent:Connect(function(msg: string, colorType: string)
+SystemToastEvent.OnClientEvent:Connect(function(msg: string, colorType: string, receipt: any?)
 	if KitNotify then
-		KitNotify.Push(if colorType == "WARN" then "warn" elseif colorType == "SUCCESS" then "success" else "info", tostring(msg))
+		if type(receipt) == "table" then
+			KitNotify.RelicReceipt(receipt)
+		else
+			KitNotify.Push(if colorType == "WARN" then "warn" elseif colorType == "SUCCESS" then "success" else "info", tostring(msg))
+		end
 		return
 	end
 	local color = if colorType == "WARN" then Color3.fromRGB(255, 105, 105)
@@ -521,6 +525,43 @@ SystemToastEvent.OnClientEvent:Connect(function(msg: string, colorType: string)
 		else Color3.fromRGB(135, 225, 255)
 	playToast(msg, color, 4.5, colorType == "WARN")
 end)
+
+do
+	local runSummary = TowerRemotes:WaitForChild("RunSummary") :: RemoteEvent
+	runSummary.OnClientEvent:Connect(function(summary)
+		local title: string
+		local lines: { string } = {}
+		local isWipe = summary.Reason == "WIPE"
+		if isWipe then
+			title = "Squad defeated"
+			if summary.Streak > 0 then
+				table.insert(lines, "Streak ended · Banked loot is safe")
+			end
+			if summary.LossGold > 0 or summary.LossGems > 0 then
+				table.insert(lines, string.format("Unbanked loss · %d Gold and %d Gems", summary.LossGold, summary.LossGems))
+			end
+			table.insert(lines, "Carried loot dropped. Returning to Fortress Plot.")
+		elseif summary.Reason == "RETURN" then
+			title = "Tower run ended"
+			if summary.BestStreak > 0 then
+				table.insert(lines, string.format("Best streak · %d %s", summary.BestStreak, if summary.BestStreak == 1 then "floor" else "floors"))
+			end
+			if summary.FloorsCleared > 0 or summary.Kills > 0 then
+				table.insert(lines, string.format("Floors %d–%d · %d cleared", summary.StartFloor, summary.HighestFloor, summary.FloorsCleared))
+				table.insert(lines, string.format("+%d Gold · +%d Gems", summary.GoldEarned + summary.RelicGold, summary.GemsEarned + summary.RelicGems))
+			else
+				table.insert(lines, string.format("Returned from Floor %d.", summary.StartFloor))
+			end
+		else
+			return
+		end
+		if KitNotify then
+			KitNotify.Push(if isWipe then "warn" else "info", title, { Lines = lines, Hold = 5 })
+		else
+			playToast(title .. " · " .. table.concat(lines, " · "), if isWipe then Color3.fromRGB(255, 105, 105) else Color3.fromRGB(135, 225, 255), 5, isWipe)
+		end
+	end)
+end
 
 -- Loot Stolen Bounty Banner
 local lootStolenBanner = makeFrame({
@@ -844,7 +885,7 @@ GildedGrimoire.Reframe(lootStolenBanner, { Tone = "Glass", Rail = Glass.Danger }
 GildedGrimoire.Reframe(squadWipeBanner, { Tone = "Glass", Rail = Glass.Danger })
 GildedGrimoire.Reframe(partiallyDefeatedBanner :: Frame, { Tone = "Glass", Rail = Glass.Royal })
 GildedGrimoire.GlassFrame(partialTooltipPopover, { Transparency = 0.12 })
-GildedGrimoire.Reframe(bossBanner, { Tone = "Glass", Rail = Glass.Danger })
+GildedGrimoire.Reframe(bossBanner, { Tone = "Glass", Rail = GildedGrimoire.Text.Gold })
 GildedGrimoire.GlassBar(novaBarBg)
 -- Bounty hint: a solid Danger chip with a hairline edge.
 GildedGrimoire.GlassFrame(bountyHint)
@@ -863,6 +904,7 @@ for _, line in { partialSubtext, tooltipList, tooltipFooter } do
 	GildedGrimoire.StyleText(line, "Body")
 end
 
+local updateClimbStreak = require(script.Parent.Hud.TowerStreakHud).Mount(bossBanner, bossTitleLabel, novaBarBg, TowerRemotes)
 
 --============================================================================
 -- 2. MODAL WINDOWS (`ThePit`, `Blacksmith`, `SquadController`)
@@ -1940,11 +1982,12 @@ RunService.RenderStepped:Connect(function()
 		curFloor = 0
 	end
 	local inRaid = curFloor == RAID_FLOOR
+	local hideFloorHud = curFloor > 0 and (Store.ModalFocus or (_G.IsAnyMasterModalOpen and _G.IsAnyMasterModalOpen()))
 	if inRaid and not hasFloorBoss then
 		-- Raid arena: the banner only shows the boss (staging, results and the timer live in RaidHud).
 		bossBanner.Visible = false
 	elseif not hasFloorBoss and curFloor > 0 then
-		bossBanner.Visible = true
+		bossBanner.Visible = not hideFloorHud
 		local floorSpec = TowerFloorConfig.Get(curFloor)
 		local floorName = floorSpec and floorSpec.DisplayName or ("Floor " .. tostring(curFloor))
 		local curKills = if clientFloorProgress.FloorId == curFloor then clientFloorProgress.CurrentKills else 0
@@ -1952,21 +1995,22 @@ RunService.RenderStepped:Connect(function()
 		local pct = math.clamp(curKills / math.max(1, reqKills), 0, 1)
 		-- The floor's Recommended Squad Power against yours (green when you meet it), as in the floor selector.
 		local recommended = recommendedPower(curFloor)
-		local mine = if CurrentProfile then CurrentProfile.SquadPower or 0 else 0
+		local mine = StatFormulas.GetTowerSquadPower(CurrentProfile)
 		bossTitleLabel.RichText = true
 		bossTitleLabel.Text = string.format(" FLOOR %d - %s  ·  REC. POWER <font color=\"#FFD66E\">%s</font>  ·  YOURS <font color=\"%s\">%s</font>",
 			curFloor, string.upper(floorName), abbreviatePower(recommended), if mine >= recommended then "#4ADE80" else "#FF6B6B", abbreviatePower(mine))
 		novaBarFill.Size = UDim2.fromScale(pct, 1)
 		novaBarFill.BackgroundColor3 = if curKills >= reqKills then GildedGrimoire.Glass.Royal else GildedGrimoire.Glass.Arcane
 		if clientFloorProgress.FloorId == curFloor and clientFloorProgress.BossDefeated then
-			novaCastLabel.Text = "FLOOR BOSS DEFEATED! ADVANCE TO NEXT FLOOR"
+			novaCastLabel.Text = if curFloor == TowerFloorConfig.FloorCount
+				then "FLOOR BOSS DEFEATED! RETURN TO HUB OR RERUN" else "FLOOR BOSS DEFEATED! ADVANCE TO NEXT FLOOR"
 		elseif curKills >= reqKills then
 			novaCastLabel.Text = "BOSS SUMMONED - ENGAGE THE FLOOR BOSS!"
 		else
 			novaCastLabel.Text = string.format("MOBS DEFEATED: %d / %d (%d%%)", curKills, reqKills, math.floor(pct * 100))
 		end
 	else
-		bossBanner.Visible = (hasFloorBoss and curFloor > 0) or false
+		bossBanner.Visible = (hasFloorBoss and curFloor > 0 and not hideFloorHud) or false
 	end
 	if hasFloorBoss and curFloor > 0 then
 		local node = cs.VisualNodes and cs.VisualNodes[floorBoss.NetId]
@@ -1985,6 +2029,9 @@ RunService.RenderStepped:Connect(function()
 		novaBarFill.BackgroundColor3 = GildedGrimoire.Glass.Danger
 		novaCastLabel.Text = string.format("BOSS HP: %.1f%%", hpPct)
 	end
+	local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+	local personalFloor = TowerFloorConfig.IsFloorId(charFloor) and not Store.ViewingSquad and humanoid ~= nil and humanoid.Health > 0
+	updateClimbStreak(charFloor, personalFloor, if CurrentProfile then CurrentProfile.HighestClearedFloor or 0 else 0)
 end)
 
 -- Art-pack UI composition. Gameplay callbacks above remain authoritative.
@@ -1999,6 +2046,7 @@ do
 	}
 	hudGui:SetAttribute("ArtPackUIVersion", "AnimeR15_20261020")
 	hudGui.IgnoreGuiInset = false
+	hudGui.ScreenInsets = Enum.ScreenInsets.CoreUISafeInsets
 	hudGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 	local function stroke(parent: Instance, color: Color3?)
@@ -2336,7 +2384,7 @@ do
 
 		bossBanner.Position = UDim2.new(0.5, 0, 0, 14)
 		bossBanner.AnchorPoint = Vector2.new(0.5, 0)
-		bossBanner.Size = UDim2.new(0, math.min(w - 32, 720), 0, 58)
+		bossBanner.Size = UDim2.new(1, -32, 0, 58)
 		bossTitleLabel.TextSize = portrait and 12 or 15
 		bossTitleLabel.TextScaled = false
 		bossTitleLabel.TextTruncate = Enum.TextTruncate.AtEnd

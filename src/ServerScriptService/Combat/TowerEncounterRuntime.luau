@@ -159,7 +159,7 @@ function Runtime.new(api: any): any
 			atk = floorStats.ATK
 			gold = floorStats.GoldReward
 		else
-			local numeric = StatBalance.GetFloorStats(floorId, "BOSS")
+			local numeric = StatBalance.GetTowerFloorStats(floorId, "BOSS")
 			if numeric then
 				maxHP = numeric.MaxHP
 				atk = numeric.ATK
@@ -765,7 +765,7 @@ function Runtime.new(api: any): any
 						e.ATK = floorStats.ATK
 						e.Gold = floorStats.GoldReward
 					else
-						local numeric = StatBalance.GetFloorStats(floor, e.Role)
+						local numeric = StatBalance.GetTowerFloorStats(floor, e.Role)
 						if numeric then
 							e.MaxHP = numeric.MaxHP
 							e.ATK = numeric.ATK

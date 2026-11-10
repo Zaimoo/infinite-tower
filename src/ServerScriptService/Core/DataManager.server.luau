@@ -18,6 +18,7 @@ local ArtifactCatalog = require(Shared:WaitForChild("Config"):WaitForChild("Arti
 local StatBalance = require(Shared:WaitForChild("Config"):WaitForChild("StatBalance"))
 local TowerHardcore = require(Shared:WaitForChild("Config"):WaitForChild("TowerHardcoreConfig"))
 local TowerProgress = require(Shared:WaitForChild("Util"):WaitForChild("TowerProgress"))
+local TowerRun = require(Shared.Util.TowerRun)
 local FortressTree = require(Shared:WaitForChild("Util"):WaitForChild("FortressTree"))
 local InventoryCapacity = require(Shared:WaitForChild("Util"):WaitForChild("InventoryCapacity"))
 local SummonLuck = require(Shared:WaitForChild("Util"):WaitForChild("SummonLuck"))
@@ -456,8 +457,8 @@ function DataManager.GetProfile(player: Player): PlayerProfile?
 	return profile
 end
 
-function DataManager.SendToast(player: Player, message: string, colorType: string?)
-	SystemToastEvent:FireClient(player, message, colorType or "INFO")
+function DataManager.SendToast(player: Player, message: string, colorType: string?, receipt: TowerRun.RelicReceipt?)
+	SystemToastEvent:FireClient(player, message, colorType or "INFO", receipt)
 end
 
 function DataManager.BroadcastToast(message: string, colorType: string?)

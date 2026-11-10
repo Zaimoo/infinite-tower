@@ -1,12 +1,12 @@
 --!strict
 -- tests/relic-biome-config.spec.luau
--- Relic tiers and their biome skins: 4 base tiers carry the economy, 10 biomes reskin them (40 relics).
+-- Relic tiers share hauling rules and have 40 biome-specific variants.
 
 local RelicConfig = require(nodes["ReplicatedStorage.Shared.Config.RelicConfig"])
 local TowerFloorConfig = require(nodes["ReplicatedStorage.Shared.Config.TowerFloorConfig"])
 local MobCatalog = require(nodes["ReplicatedStorage.Shared.Config.MobCatalog"])
 
--- 1. The four base tiers hold the relic economy (GDD §5.5).
+-- 1. Drops using a base tier directly retain its payout (GDD §5.5).
 local BASE = { MANA_GEODE = 100, CURSED_URN = 300, ABYSSAL_CORE = 1000, CALAMITY_HEART = 5000 }
 for tier, tierId in ipairs(RelicConfig.BaseTiers) do
 	local spec = RelicConfig[tierId]
@@ -15,8 +15,8 @@ for tier, tierId in ipairs(RelicConfig.BaseTiers) do
 	assert(spec.GemValue == spec.Payout.Gems and spec.GoldValue == spec.Payout.Gold, tierId .. " value fields")
 end
 
--- 2. Every biome reskins all four tiers and copies every gameplay number from them.
-local MECHANICS = { "Rarity", "WalkSpeedPenalty", "SpeedPenalty", "DisableJump", "DespawnSeconds", "InitialLockSeconds", "GoldValue", "GemValue" }
+-- 2. Every biome inherits the tier's hauling rules and sets its own payout.
+local MECHANICS = { "Rarity", "WalkSpeedPenalty", "SpeedPenalty", "DisableJump", "DespawnSeconds", "InitialLockSeconds" }
 local seen = {}
 local count = 0
 assert(#RelicConfig.Biomes == 10, "10 biomes")
@@ -37,8 +37,7 @@ for biomeIndex, biome in ipairs(RelicConfig.Biomes) do
 		for _, key in MECHANICS do
 			assert(item[key] == base[key], string.format("%s.%s must match %s", itemId, key, base.TierId))
 		end
-		assert(item.Payout.Gems == base.Payout.Gems and item.Payout.Gold == base.Payout.Gold
-			and item.Payout.PromotionStones == base.Payout.PromotionStones, itemId .. " payout follows its tier")
+		assert(item.GemValue == item.Payout.Gems and item.GoldValue == item.Payout.Gold, itemId .. " value fields")
 		assert(#item.DisplayName > 0 and #item.VisualDescription > 0 and item.Color ~= nil and item.Color ~= base.Color, itemId .. " skin")
 		assert(item.DisplayName ~= base.DisplayName, itemId .. " has its own name")
 	end
@@ -64,4 +63,4 @@ for floorId = 1, 50 do
 	assert(dropped == RelicConfig.GetBiomeForFloor(floorId).DropTable[1], "floor " .. floorId .. " baseline drop")
 end
 
-print("PASS Relic biome config: 4 tiers carry the economy, 40 biome skins copy them, drops follow the floor's biome")
+print("PASS Relic biome config: 40 biome variants inherit hauling rules and drops follow the floor's biome")

@@ -95,4 +95,34 @@ function B.GetFloorStats(floor: number, role: string): any?
 	local step=B.BiomeStep[(floor-1)%5+1]
 	return {MaxHP=math.round(dps*multipliers[1]*step),ATK=math.round(hp*multipliers[2]*step)}
 end
+
+-- Scale tower fights separately from the reference curve used by raids and Rift Attunement.
+-- Floor 1 is tuned for solo Han. Floors 5 and 10 assume a developing squad with a Rare,
+-- and the midgame ramps back into the original curve by Floor 15.
+local towerCombatScale = {
+	{ Floor = 1, HP = 0.15, ATK = 0.14 },
+	{ Floor = 2, HP = 0.16, ATK = 0.21 },
+	{ Floor = 3, HP = 0.18, ATK = 0.33 },
+	{ Floor = 4, HP = 0.20, ATK = 0.42 },
+	{ Floor = 5, HP = 0.21, ATK = 0.53 },
+	{ Floor = 10, HP = 0.085, ATK = 0.37 },
+	{ Floor = 14, HP = 0.78, ATK = 0.80 },
+	{ Floor = 15, HP = 1, ATK = 1 },
+}
+
+function B.GetTowerFloorStats(floor: number, role: string): any?
+	local stats = B.GetFloorStats(floor, role)
+	if not stats then return nil end
+	for i = 2, #towerCombatScale do
+		local upper = towerCombatScale[i]
+		if floor <= upper.Floor then
+			local lower = towerCombatScale[i - 1]
+			local t = (floor - lower.Floor) / (upper.Floor - lower.Floor)
+			stats.MaxHP = math.round(stats.MaxHP * lower.HP * (upper.HP / lower.HP) ^ t)
+			stats.ATK = math.max(1, math.round(stats.ATK * lower.ATK * (upper.ATK / lower.ATK) ^ t))
+			break
+		end
+	end
+	return stats
+end
 return table.freeze(B)

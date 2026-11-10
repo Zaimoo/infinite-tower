@@ -144,45 +144,56 @@ function Config.GetEnemyStats(floorId: any, enemyId: any): any?
 	local statRole = if enemy.Alpha then "ALPHA" else enemy.Role -- Floor Alphas have their own stat row
 	local base = Config.BaseStatsByRole[statRole]
 	if not base then return nil end
+	local stats = StatBalance.GetTowerFloorStats(floorId, statRole)
+	if not stats then return nil end
 	return table.freeze({
-		MaxHP = (StatBalance.GetFloorStats(floorId, statRole) :: any).MaxHP,
-		ATK = (StatBalance.GetFloorStats(floorId, statRole) :: any).ATK,
+		MaxHP = stats.MaxHP,
+		ATK = stats.ATK,
 		GoldReward = math.round(base.GoldReward * floor.Rewards.GoldMultiplier),
 		XPReward = math.round(base.XPReward * floor.Rewards.XPMultiplier),
 	})
 end
 
--- Recommended Squad Power for a floor (Phase 5 tower hub). Each enemy counts like a hero does in
--- StatFormulas.GetHeroPower (MaxHP + 10 x ATK), summed over the floor's roster and scaled so a
--- fresh one-star squad (~700 power) matches Floor 1. Rounded to two significant figures.
--- Retuned in Phase 6: Floor 1 is sized to the default starter pair (Catio + Han, ~11,700 power), so it reads ~12,000.
-Config.RecommendedPowerScale = 0.28
-
-function Config.RecommendedPower(floorId: number): number
-	local floor = Config.Get(floorId)
-	if not floor then return 0 end
-	local total = 0
-	for _, encounter in ipairs(floor.Encounters) do
-		local stats = Config.GetEnemyStats(floorId, encounter.EnemyId)
-		if stats then
-			total += (stats.MaxHP + 10 * stats.ATK) * encounter.Count
-		end
-	end
-	local raw = total * Config.RecommendedPowerScale
+local function roundPower(raw: number): number
 	if raw < 100 then return math.round(raw) end
 	local step = 10 ^ (math.floor(math.log10(raw)) - 1)
 	return math.round(raw / step) * step
 end
 
--- Relic drop tables by enemy role. Each pair is { floor 1, floor 50 }, interpolated linearly with depth.
--- Regulars drop Geodes and Urns, Elites are the only source of Abyssal Cores, and Alphas (floors 1-4 of a biome)
--- and Biome Bosses ("BOSS") are the only source of Calamity Hearts. Whatever share is left over is a Mana Geode.
--- Tuned with RelicConfig payouts to ~2,900 / 6,800 / 12,700 gems per hour on Alpha floors 1 / 26 / 49.
+-- Estimate the squad needed for the apex fight using the same 10 x DPS + HP units as hero power.
+-- Allow 30 seconds for an Alpha, 40 for a Biome Boss, and a health budget of six basic hits.
+function Config.RecommendedPower(floorId: number): number
+	local floor = Config.Get(floorId)
+	if not floor then return 0 end
+	local biome = MobCatalog.Biomes[floor.BiomeIndex]
+	local stats = Config.GetEnemyStats(floorId, floor.BossEnemyId or biome.AlphaEnemyId)
+	if not stats then return 0 end
+	local seconds = if floor.BossEnemyId then 40 else 30
+	return roundPower(10 * stats.MaxHP / seconds + 6 * stats.ATK)
+end
+
+-- Preserve the cap's original reference so changing the UI estimate does not also scale heroes.
+function Config.AttunementReferencePower(floorId: number): number
+	local floor = Config.Get(floorId)
+	if not floor then return 0 end
+	local total = 0
+	for _, encounter in ipairs(floor.Encounters) do
+		local enemy = assert(MobCatalog.Get(encounter.EnemyId))
+		local role = if enemy.Alpha then "ALPHA" else enemy.Role
+		local stats = assert(StatBalance.GetFloorStats(floorId, role))
+		total += (stats.MaxHP + 10 * stats.ATK) * encounter.Count
+	end
+	return roundPower(total * 0.28)
+end
+
+-- Drop odds use three anchors: Floor 1, the start of Biome 3, and Floor 50.
+-- Tier shares use the two end floors. Whatever share is left over is the biome's shard.
+local RELIC_DROP_STEP = 11
 Config.RelicDrops = table.freeze({
-	REGULAR = table.freeze({ Drop = { 0.006, 0.016 }, Heart = { 0, 0 }, Core = { 0, 0 }, Urn = { 0.12, 0.25 } }),
-	ELITE = table.freeze({ Drop = { 0.06, 0.14 }, Heart = { 0, 0 }, Core = { 0.06, 0.15 }, Urn = { 0.30, 0.40 } }),
-	ALPHA = table.freeze({ Drop = { 0.20, 0.40 }, Heart = { 0.02, 0.05 }, Core = { 0, 0 }, Urn = { 0.45, 0.55 } }),
-	BOSS = table.freeze({ Drop = { 0.20, 0.40 }, Heart = { 0.04, 0.10 }, Core = { 0, 0 }, Urn = { 0.45, 0.55 } }),
+	REGULAR = table.freeze({ Drop = { 0.04, 0.065, 0.085 }, Heart = { 0, 0 }, Core = { 0, 0 }, Urn = { 0.12, 0.25 } }),
+	ELITE = table.freeze({ Drop = { 0.16, 0.24, 0.34 }, Heart = { 0, 0 }, Core = { 0.06, 0.15 }, Urn = { 0.30, 0.40 } }),
+	ALPHA = table.freeze({ Drop = { 0.32, 0.40, 0.45 }, Heart = { 0.02, 0.05 }, Core = { 0, 0 }, Urn = { 0.45, 0.55 } }),
+	BOSS = table.freeze({ Drop = { 0.38, 0.44, 0.49 }, Heart = { 0.04, 0.10 }, Core = { 0, 0 }, Urn = { 0.45, 0.55 } }),
 })
 
 -- Promotion Stone drop tables by enemy role. Each pair is { floor 1, floor 50 }, interpolated linearly with depth.
@@ -224,9 +235,9 @@ function Config.RollPromotionStones(floorId: number, role: string, roll: number,
 	return drops.Min
 end
 
--- Relic payouts scale with the floor the relic dropped on: Gold x(1 + 0.05 per floor), Gems x(1 + 0.02 per floor).
+-- Relic payouts scale from the drop floor. Gold gains 5% and Gems gain 1% of base value per floor above Floor 1.
 Config.RelicGoldFloorScaling = 0.05
-Config.RelicGemFloorScaling = 0.03
+Config.RelicGemFloorScaling = 0.01
 
 function Config.RelicFloorMultipliers(floorId: number): (number, number)
 	if not Config.IsFloorId(floorId) then return 1, 1 end
@@ -234,7 +245,6 @@ function Config.RelicFloorMultipliers(floorId: number): (number, number)
 end
 
 -- Gems paid straight to the killer per kill, before the floor multiplier 1 + KillGemFloorScaling * (floor - 1).
--- Kept below RelicGemFloorScaling so relics gain value relative to kills deeper in the tower.
 Config.KillGemsByRole = table.freeze({ REGULAR = 1, ELITE = 5, ALPHA = 10, BOSS = 50 })
 Config.KillGemFloorScaling = 0.02
 
@@ -246,11 +256,15 @@ function Config.GetKillRewards(floorId: number, role: string): any
 	local base = assert(Config.BaseStatsByRole[role], "Invalid enemy role")
 	local progress = (floorId - 1) / (Config.FloorCount - 1)
 	local function at(pair: { number }): number return pair[1] + (pair[2] - pair[1]) * progress end
+	local drop = drops.Drop
+	local relicChance = if floorId <= RELIC_DROP_STEP
+		then math.lerp(drop[1], drop[2], (floorId - 1) / (RELIC_DROP_STEP - 1))
+		else math.lerp(drop[2], drop[3], (floorId - RELIC_DROP_STEP) / (Config.FloorCount - RELIC_DROP_STEP))
 	local goldMult, gemMult = Config.RelicFloorMultipliers(floorId)
 	return {
 		Gold = math.round(base.GoldReward * Config.Scaling.RewardPerFloor ^ (floorId - 1)),
 		Gems = math.round(assert(Config.KillGemsByRole[role], "Invalid enemy role") * (1 + Config.KillGemFloorScaling * (floorId - 1))),
-		RelicChance = at(drops.Drop),
+		RelicChance = relicChance,
 		RelicMultiplier = goldMult,
 		GemMultiplier = gemMult,
 		HeartChance = at(drops.Heart),
@@ -261,7 +275,7 @@ end
 
 -- A dropRoll of 0 forces a drop (boss first clears). Tiers are checked from the top:
 -- Tier 4: Calamity Heart, Tier 3: Abyssal Core, Tier 2: Cursed Urn, Tier 1: Mana Geode.
--- The result is the floor's biome skin of that tier (RelicConfig.Biomes); payouts come from the tier.
+-- The result is the floor's biome variant of that tier (RelicConfig.Biomes).
 -- `mods` (optional, a timed tower event's TowerEventConfig.Mods) can scale the drop chance and the Heart
 -- and Core shares, and upgrade Shards to Urns and an Elite's Urns to Cores.
 function Config.RollRelic(floorId: number, role: string, dropRoll: number, tierRoll: number, mods: any?): string?

@@ -498,22 +498,8 @@ function Service.ExitToOverworld(player: Player, targetPos: Vector3, isIsland: b
 
 	if wasOnFloor then
 		local TowerRuns = require(script.Parent.Parent.Combat.TowerRunService)
-		if TowerRuns then
-			local run = TowerRuns.Get(player)
-			if run then
-				TowerRuns.Bank(player)
-				local summary = TowerRuns.End(player, "RETURN")
-				local dm = _G.DataManager
-				if summary and dm and dm.SendToast then
-					if summary.FloorsCleared > 0 or summary.Kills > 0 then
-						dm.SendToast(player, string.format("Run over: floors %d-%d, %d cleared, best streak x%d, +%d Gold, +%d Gems",
-							summary.StartFloor, summary.HighestFloor, summary.FloorsCleared, summary.BestStreak, summary.GoldEarned + summary.RelicGold, summary.GemsEarned + summary.RelicGems), "INFO")
-					else
-						dm.SendToast(player, string.format("Run ended. Returned from Floor %d.", summary.StartFloor or prevFloor), "INFO")
-					end
-				end
-			end
-		end
+		TowerRuns.Bank(player)
+		TowerRuns.End(player, "RETURN")
 	end
 
 	if adapters.Combat and adapters.Combat.ResetPlayerTowerEncounter then
