@@ -20,6 +20,27 @@ local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local FacilityConfig = require(Shared:WaitForChild("Config"):WaitForChild("FacilityConfig"))
 local TowerFloorConfig = require(Shared:WaitForChild("Config"):WaitForChild("TowerFloorConfig"))
+
+-- 1234567 -> "1.2M", matching the floor selector's power readout.
+local function abbreviatePower(n: number): string
+	for _, unit in { { 1e12, "T" }, { 1e9, "B" }, { 1e6, "M" }, { 1e3, "K" } } do
+		if n >= unit[1] then
+			return (string.gsub(string.format("%.1f%s", n / unit[1], unit[2]), "%.0(%a)$", "%1"))
+		end
+	end
+	return tostring(math.round(n))
+end
+
+-- Recommended power per floor; fixed data, so it is computed once per floor instead of every frame.
+local recommendedPowerCache: { [number]: number } = {}
+local function recommendedPower(floorId: number): number
+	local cached = recommendedPowerCache[floorId]
+	if not cached then
+		cached = TowerFloorConfig.RecommendedPower(floorId)
+		recommendedPowerCache[floorId] = cached
+	end
+	return cached
+end
 local RAID_FLOOR = require(Shared:WaitForChild("Config"):WaitForChild("RaidConfig")).FloorId -- raid arena (docs/raid-boss-plan.md)
 local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormulas"))
 local GothicBoxStyle = require(Shared:WaitForChild("Util"):WaitForChild("GothicBoxStyle"))
@@ -1929,7 +1950,12 @@ RunService.RenderStepped:Connect(function()
 		local curKills = if clientFloorProgress.FloorId == curFloor then clientFloorProgress.CurrentKills else 0
 		local reqKills = if clientFloorProgress.FloorId == curFloor and clientFloorProgress.RequiredKills > 0 then clientFloorProgress.RequiredKills else math.max(1, math.round(12 + 0.5 * curFloor))
 		local pct = math.clamp(curKills / math.max(1, reqKills), 0, 1)
-		bossTitleLabel.Text = string.format(" FLOOR %d - %s", curFloor, string.upper(floorName))
+		-- The floor's Recommended Squad Power against yours (green when you meet it), as in the floor selector.
+		local recommended = recommendedPower(curFloor)
+		local mine = if CurrentProfile then CurrentProfile.SquadPower or 0 else 0
+		bossTitleLabel.RichText = true
+		bossTitleLabel.Text = string.format(" FLOOR %d - %s  ·  REC. POWER <font color=\"#FFD66E\">%s</font>  ·  YOURS <font color=\"%s\">%s</font>",
+			curFloor, string.upper(floorName), abbreviatePower(recommended), if mine >= recommended then "#4ADE80" else "#FF6B6B", abbreviatePower(mine))
 		novaBarFill.Size = UDim2.fromScale(pct, 1)
 		novaBarFill.BackgroundColor3 = if curKills >= reqKills then GildedGrimoire.Glass.Royal else GildedGrimoire.Glass.Arcane
 		if clientFloorProgress.FloorId == curFloor and clientFloorProgress.BossDefeated then
