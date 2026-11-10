@@ -1,6 +1,8 @@
 # Hub Re-layout v2: The Cloister Commons (10 plots)
 
-Status: **implemented.** As built, the hub grew to 840 × 1120 (centre `(0, 12, -1036)`) with concentric corners (outer R 160, void R 40) so the band stays 120 wide; that keeps every neighbour gap at least 24 studs. The island is 340 × 500. Invisible barriers are 20 studs tall, because players could jump a 12-stud barrier from the top of the wall. Figures below are from the original proposal. It replaces the round Masters' Commons and the 6-plot horseshoe (`docs/commons-hub-layout-plan.md`). GDD §3.1, §3.2, §3.4, §3.5 and §3.6 get updated in the same PR.
+Status: **superseded.** The hub is now a solid 480 × 640 Commons with 8 plots bridged straight onto it (no band, void or footbridges); see GDD §3.2 and §3.5. The history below describes the 10-plot cloister as it was built.
+
+Original status: **implemented.** As built, the hub grew to 840 × 1120 (centre `(0, 12, -1036)`) with concentric corners (outer R 160, void R 40) so the band stays 120 wide; that keeps every neighbour gap at least 24 studs. The island is 340 × 500. Invisible barriers are 20 studs tall, because players could jump a 12-stud barrier from the top of the wall. Figures below are from the original proposal. It replaces the round Masters' Commons and the 6-plot horseshoe (`docs/commons-hub-layout-plan.md`). GDD §3.1, §3.2, §3.4, §3.5 and §3.6 get updated in the same PR.
 
 ## 1. Goal
 
