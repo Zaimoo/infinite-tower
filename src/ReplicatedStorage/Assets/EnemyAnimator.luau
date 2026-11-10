@@ -11,7 +11,7 @@
 --   Treadmill    studs per second to walk in place (Facility preview)
 --   Action       { AnimationKey, StartServerTime, WindupSeconds?, ImpactOffsetSeconds, RecoverySeconds } or nil
 --   HitAt, DeathAt, BornAt, AwakenSeconds
---   Far          true beyond full-rate LOD distance: springs rest
+--   Far          true beyond full-rate LOD distance: springs rest, no fidgets, head aim or turn lean
 --
 -- Layers: Idle and Locomotion blend by a speed weight with hysteresis; an action plays on top (legs keep
 -- walking while the mob moves); a hit flinch is added on top of anything; death overrides all. Each joint
@@ -39,6 +39,31 @@ EnemyAnimator.STRIKE_LEAD = 0.15 -- share of the windup the strike takes...
 EnemyAnimator.STRIKE_LEAD_MAX = 0.25 -- ...capped in seconds
 
 local IDENTITY = CFrame.identity
+
+-- Head aim (plan §3.7): through an attack's anticipation the head turns towards the action's aim, clamped;
+-- quadrupeds and serpents turn their body with it. Turn lean (§3.6): the body rolls into a turn while walking.
+EnemyAnimator.AIM_MAX = math.rad(35)
+EnemyAnimator.AIM_IN = 0.2 -- seconds to turn onto the aim
+EnemyAnimator.AIM_OUT = 0.35 -- seconds to turn back after impact
+EnemyAnimator.AIM_BODY = { QUADRUPED = 0.45, SERPENT = 0.5 } -- share of the aim the body takes
+EnemyAnimator.TURN_LEAN = 0.09 -- radians of roll per rad/s of yaw rate
+EnemyAnimator.TURN_LEAN_MAX = math.rad(7)
+EnemyAnimator.TURN_RATE = 8 -- per second, smoothing of the measured yaw rate
+
+-- Yaw (radians, + to the rig's right) from the rig's facing to a world direction, clamped to the aim limit.
+function EnemyAnimator.AimYaw(facing: CFrame, dir: Vector3): number
+	local l = facing:VectorToObjectSpace(Vector3.new(dir.X, 0, dir.Z))
+	if l.Magnitude < 1e-3 then return 0 end
+	local m = EnemyAnimator.AIM_MAX
+	return math.clamp(math.atan2(l.X, -l.Z), -m, m)
+end
+
+-- Weight of the head aim at `elapsed` seconds into an action that lands at `impact`.
+function EnemyAnimator.AimWeight(elapsed: number, impact: number): number
+	if elapsed < 0 then return 0 end
+	if elapsed <= impact then return math.clamp(elapsed / EnemyAnimator.AIM_IN, 0, 1) end
+	return math.clamp(1 - (elapsed - impact) / EnemyAnimator.AIM_OUT, 0, 1)
+end
 
 -- ------------------------------------------------------------------ compiled clips
 type Compiled = { Times: { number }, Names: { string }, Keys: { [string]: { CFrame } } }
@@ -390,7 +415,7 @@ function EnemyAnimator:Evaluate(now: number, input: any, dt: number): ({ [string
 		end
 	end
 	-- fidgets: every 6–14 s (seeded) a calm, standing mob plays one of its set's fidgets, eased in and out
-	local fidgets = self.Fidgets
+	local fidgets = if input.Far then nil else self.Fidgets
 	if fidgets and #fidgets > 0 then
 		if act or self.Moving or input.DeathAt then
 			self.LastBusyAt = now
@@ -420,6 +445,33 @@ function EnemyAnimator:Evaluate(now: number, input: any, dt: number): ({ [string
 		end
 	end
 	local maskLegs = self.Moving
+
+	-- head aim and turn lean (full-rate mobs only)
+	local aimYaw, bodyYaw, roll = 0, 0, 0
+	local root = self.Rig.Root
+	if root and not input.Far and not input.DeathAt then
+		local facing = root.CFrame
+		if action and action.Aim and action.Origin then
+			local w = EnemyAnimator.AimWeight(now - action.StartServerTime, action.WindupSeconds or action.ImpactOffsetSeconds)
+			if w > 0 then
+				local yaw = EnemyAnimator.AimYaw(facing, action.Aim - action.Origin) * w
+				local share = EnemyAnimator.AIM_BODY[Clips.GroupFor(self.Rig.EnemyId)] or 0
+				bodyYaw, aimYaw = yaw * share, yaw * (1 - share)
+			end
+		end
+		local look = facing.LookVector
+		local heading = math.atan2(-look.X, -look.Z)
+		local last = self.LastHeading
+		self.LastHeading = heading
+		if last and dt > 0 then
+			local d = (heading - last + math.pi) % (2 * math.pi) - math.pi
+			self.YawRate = (self.YawRate or 0) + (d / dt - (self.YawRate or 0)) * (1 - math.exp(-dt * EnemyAnimator.TURN_RATE))
+		end
+		local m = EnemyAnimator.TURN_LEAN_MAX
+		roll = math.clamp((self.YawRate or 0) * EnemyAnimator.TURN_LEAN, -m, m) * self.LocoWeight
+	else
+		self.LastHeading, self.YawRate = nil, 0
+	end
 
 	-- hit flinch (additive) and death
 	local hit: { [string]: CFrame }? = nil
@@ -459,13 +511,29 @@ function EnemyAnimator:Evaluate(now: number, input: any, dt: number): ({ [string
 			if h then pose = pose * ((self.HitBase[name] or IDENTITY):Inverse() * h) end
 		end
 		if death then pose = pose:Lerp(death[name] or IDENTITY, deathWeight) end
+		if name == "Head" and aimYaw ~= 0 then
+			pose = CFrame.Angles(0, -aimYaw, 0) * pose
+		elseif name == "Body" and (bodyYaw ~= 0 or roll ~= 0) then
+			-- a left turn (heading rising) rolls the body left, into the turn
+			pose = CFrame.new(pose.X, pose.Y, pose.Z) * CFrame.Angles(0, -bodyYaw, roll) * pose.Rotation
+		end
 		if motionScale ~= 1 then pose = pose + Vector3.new(pose.X, pose.Y, pose.Z) * (motionScale - 1) end
 		targets[name] = pose
 	end
 	return targets, snap
 end
 
+-- MicroProfiler labels (plan §3.9 budget: <= 0.6 ms for 48 mobs); no-ops outside Roblox.
+local profileBegin: (string) -> () = (debug :: any).profilebegin or function(_: string) end
+local profileEnd: () -> () = (debug :: any).profileend or function() end
+
 function EnemyAnimator:Step(now: number, input: any)
+	profileBegin("EnemyAnimator.Step")
+	self:StepInner(now, input)
+	profileEnd()
+end
+
+function EnemyAnimator:StepInner(now: number, input: any)
 	local dt = if self.LastNow then math.clamp(now - self.LastNow, 0, 0.25) else 0
 	self.LastNow = now
 	local targets, snap = self:Evaluate(now, input, dt)

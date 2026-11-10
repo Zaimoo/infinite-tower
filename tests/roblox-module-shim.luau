@@ -140,4 +140,15 @@ vectorMeta.__mul=function(a,b)
 	elseif type(b) == "number" then return Vector3.new(a.X*b, a.Y*b, a.Z*b)
 	else return Vector3.new(a.X*b.X, a.Y*b.Y, a.Z*b.Z) end
 end
+-- Yaw-only approximations (the shim adds Euler angles): enough for facing maths about the vertical.
+function cframeMeta:VectorToObjectSpace(v)
+	local c, s = math.cos(self.ry), math.sin(self.ry)
+	return Vector3.new(v.X * c - v.Z * s, v.Y, v.X * s + v.Z * c)
+end
+cframeMeta.__index = function(t, k)
+	if k == "Position" then return Vector3.new(t.X, t.Y, t.Z) end
+	if k == "Rotation" then return setmetatable({ X = 0, Y = 0, Z = 0, rx = t.rx, ry = t.ry, rz = t.rz }, cframeMeta) end
+	if k == "LookVector" then return Vector3.new(-math.sin(t.ry), 0, -math.cos(t.ry)) end
+	return cframeMeta[k]
+end
 local Vector2 = {new=function(x,y) return {X=x,Y=y} end}
