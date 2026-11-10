@@ -200,7 +200,7 @@ test("Phase 4: onboarding advances only on the active step's event and merges un
 	assert(Onboarding.ActiveStep(state) == nil, "chain complete")
 end)
 
-test("Phase 4: v3 through v6 migration stamps rarity, rebases stars, builds the tree and grandfathers unlocks", function()
+test("Phase 4: v3 through v7 migration stamps rarity, rebases stars, builds the tree and grandfathers unlocks", function()
 	local profile: any = {
 		SchemaVersion = 2,
 		MaxFloorReached = 6,
@@ -208,10 +208,30 @@ test("Phase 4: v3 through v6 migration stamps rarity, rebases stars, builds the 
 			a = { TemplateId = "hero_ignis", Stars = 5, Level = 37, Assignment = "SQUAD_SLOT_1" },
 			b = { TemplateId = "hero_han", Stars = 3, Level = 12, Assignment = "SQUAD_SLOT_3" },
 		},
-		Facilities = { GuardPost = { Level = 2 }, Market = { Level = 1 }, TrainingGrounds = { Level = 1 } },
+		Facilities = { GuardPost = { Level = 2, AssignedHeroUUIDs = { "a" }, UncollectedOutput = 40, BlessedUntil = 99, LeechedUntil = 99,
+			LeechVisitorUserId = 7, LastRuneTimestamp = 5, LastRuneWasLeech = true }, Market = { Level = 1 }, TrainingGrounds = { Level = 1 } },
+		Social = { PvPImmunityUntilTimestamp = 0, MimicIllusionMode = "TRUE_STATE", Stats = { LeechesPurged = 2 } },
+		Currencies = { Gold = 1000, Gems = 50 },
+		PitMaterials = { SoulEssence = 10, PromotionStone = 3, ImprintCatalyst = 2 },
 	}
+	profile.Heroes.a.InheritedImprints = { melee_memory = 2 }
+	profile.Heroes.a.ImprintCapacity = 3
+	profile.Heroes.a.PassiveTrait = "Rift Warlord (+35% ATK, +20% DMG Reduction)"
+	profile.Heroes.a.SynthesisHistory = { DonorsConsumed = 4, ImprintsPerformed = 2 }
 	Migrations.Run(profile)
-	assert(profile.SchemaVersion == 6)
+	assert(profile.SchemaVersion == 7)
+	-- v7: imprints are gone and held catalysts are refunded at their crafting cost (150 Gold, 15 Gems, 4 Soul Essence).
+	assert(profile.Heroes.a.InheritedImprints == nil and profile.Heroes.a.ImprintCapacity == nil, "v7 strips hero imprints")
+	assert(profile.Heroes.a.PassiveTrait == nil, "v7 strips the passive trait label")
+	assert(profile.Heroes.a.SynthesisHistory.ImprintsPerformed == nil and profile.Heroes.a.SynthesisHistory.DonorsConsumed == 4)
+	assert(profile.PitMaterials.ImprintCatalyst == nil and profile.PitMaterials.SoulEssence == 18 and profile.PitMaterials.PromotionStone == 3)
+	assert(profile.Currencies.Gold == 1300 and profile.Currencies.Gems == 80, "catalyst refund")
+	-- v7: the retired social systems and their facility fields are gone; real facility data stays.
+	assert(profile.Social == nil, "v7 drops the retired Social block")
+	local gp = profile.Facilities.GuardPost
+	assert(gp.Level == 2 and gp.AssignedHeroUUIDs[1] == "a", "v7 keeps facility levels and workers")
+	assert(gp.UncollectedOutput == nil and gp.BlessedUntil == nil and gp.LeechedUntil == nil and gp.LeechVisitorUserId == nil
+		and gp.LastRuneTimestamp == nil and gp.LastRuneWasLeech == nil, "v7 strips rune and claim-chest fields")
 	-- v4: the 4 stars Ignis got for free at summon are removed, and the level is clamped to the new 1-star cap.
 	assert(profile.Heroes.a.Rarity == 5 and profile.Heroes.a.Stars == 1 and profile.Heroes.a.Level == 10)
 	assert(profile.Heroes.b.Rarity == 1 and profile.Heroes.b.Stars == 3)

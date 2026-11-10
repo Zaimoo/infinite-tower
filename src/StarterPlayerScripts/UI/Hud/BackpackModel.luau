@@ -18,7 +18,6 @@ local GOLD = Color3.fromRGB(250, 211, 125)
 local MATERIALS: { [string]: { Name: string, Description: string, Icon: string } } = {
 	PromotionStone = { Name = PitBalance.Recipes.PromotionStone.Name, Description = "Earned from Floor Alphas, Biome Bosses, and High-Tier Relic Extractions. Used at The Pit to ascend a hero's Star Rank (up to 7★).", Icon = "Gems" },
 	SoulEssence = { Name = "Soul Essence", Description = "Earned by converting heroes at the Pit. Used in Pit material recipes.", Icon = "Summon" },
-	ImprintCatalyst = { Name = PitBalance.Recipes.ImprintCatalyst.Name, Description = "Used for Focused Imprint at the Pit.", Icon = "Spark" },
 }
 local ASSIGNMENTS = {
 	FACILITY_GUARD_POST = "Guard Post", FACILITY_MARKET = "Market",

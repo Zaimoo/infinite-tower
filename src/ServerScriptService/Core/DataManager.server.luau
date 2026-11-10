@@ -143,8 +143,6 @@ export type HeroAssignment =
 	| "FACILITY_TRAINING"
 	| "FACILITY_GODS_BLESSING"
 
-export type MimicChestMode = "TRUE_STATE" | "FOOLS_GOLD" | "VEIL_OF_POVERTY"
-
 export type HeroInstance = {
 	UUID: string,
 	TemplateId: string,
@@ -160,7 +158,6 @@ export type HeroInstance = {
 	AttackRange: number,
 	AttackInterval: number,
 	BaseLabor: number,
-	PassiveTrait: string,
 	CurrentStamina: number,
 	MaxStamina: number,
 	ComaUntilTimestamp: number,
@@ -169,8 +166,6 @@ export type HeroInstance = {
 	Locked: boolean,
 	Favorite: boolean,
 	OverflowXP: number,
-	InheritedImprints: { [string]: number },
-	ImprintCapacity: number,
 	SynthesisHistory: any,
 	EquippedArtifactUUID: string?,
 }
@@ -190,43 +185,6 @@ export type ArtifactInstance = {
 export type FacilityData = {
 	Level: number,
 	AssignedHeroUUIDs: { string },
-	UncollectedOutput: number,
-	BlessedUntil: number,
-	LeechedUntil: number,
-	LeechVisitorUserId: number?,
-	LastRuneTimestamp: number,
-	LastRuneWasLeech: boolean,
-}
-
-export type SocialProfile = {
-	Honor: number?,
-	RogueUntilTimestamp: number?,
-	PvPImmunityUntilTimestamp: number,
-	ActivePactPartnerUserId: number?,
-	LastShatterTimestamp: number,
-	ListedMercenaryUUID: string?,
-	ListedMercenaryFee: number,
-	ListedMercenaryDirective: MercenaryDirective,
-	GarnishedGemDebt: number,
-	MimicIllusionMode: MimicChestMode,
-	RentedMercenary: {
-		OwnerUserId: number,
-		OwnerName: string,
-		HeroSnapshot: HeroInstance,
-		Directive: MercenaryDirective,
-		FeePaid: number,
-		ExpiresAt: number,
-		SiphonedGems: number,
-		SaboteurArmed: boolean,
-		Audited: boolean,
-	}?,
-	Stats: {
-		PactsHonored: number,
-		PactsBetrayed: number,
-		SoulsAudited: number,
-		RoguesDefeated: number,
-		LeechesPurged: number,
-	},
 }
 
 export type PlayerProfile = {
@@ -265,7 +223,6 @@ export type PlayerProfile = {
 	MaxFloorReached: number?,
 	LastLogoutTimestamp: number?,
 	LastActiveTimestamp: number?,
-	Social: SocialProfile,
 }
 
 --============================================================================
@@ -388,7 +345,6 @@ function DataManager.CreateHeroFromSeed(seedId: string, forceQuality: number?): 
 		AttackRange = seed.AttackRange,
 		AttackInterval = seed.AttackInterval,
 		BaseLabor = seed.NativeLabor,
-		PassiveTrait = seed.PassiveTraitName,
 		CurrentStamina = 100.0,
 		MaxStamina = 100.0,
 		ComaUntilTimestamp = 0,
@@ -397,9 +353,7 @@ function DataManager.CreateHeroFromSeed(seedId: string, forceQuality: number?): 
 		Locked = false,
 		Favorite = false,
 		OverflowXP = 0,
-		InheritedImprints = {},
-		ImprintCapacity = math.ceil(seed.Rarity / 2),
-		SynthesisHistory = { DonorsConsumed = 0, XPGained = 0, ImprintsPerformed = 0, Promotions = 0 },
+		SynthesisHistory = { DonorsConsumed = 0, XPGained = 0, Promotions = 0 },
 	}
 	return uuid, hero
 end
@@ -442,7 +396,6 @@ local function createDefaultPlayerProfile(): PlayerProfile
 		PitMaterials = {
 			SoulEssence = 0,
 			PromotionStone = 2,
-			ImprintCatalyst = 0,
 		},
 		PitRevision = 0,
 		PlotIndex = 1,
@@ -490,15 +443,6 @@ local function createDefaultPlayerProfile(): PlayerProfile
 		MaxFloorReached = 1,
 		LastLogoutTimestamp = os.time(),
 		LastActiveTimestamp = os.time(),
-		Social = {
-			PvPImmunityUntilTimestamp = 0,
-			LastShatterTimestamp = 0,
-			MimicIllusionMode = "TRUE_STATE",
-			Stats = {
-				RoguesDefeated = 0,
-				LeechesPurged = 0,
-			},
-		},
 	}
 end
 
@@ -762,10 +706,6 @@ function DataManager.SyncPitDelta(player: Player, changed: any, removed: any)
 end
 
 function DataManager.AdjustHonor(_player: Player, _delta: number, _markBetrayalRogue: boolean?)
-end
-
-function DataManager.IsPlayerRogue(_player: Player): boolean
-	return false
 end
 
 -- One slot to start; the Fortress Tree's Command branch opens the other four (Phase 4).

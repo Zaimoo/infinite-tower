@@ -199,47 +199,4 @@ do
     fakeCharacter:Destroy()
 end
 
--- ============================================================================
--- TEST SUITE 5: Bug 5 - Syndicate Espionage Validation & Cooldowns
--- ============================================================================
-do
-    local playerEspionageCooldowns = {}
-    local function processEspionageRune(caller, targetOwner, plotIndex, nowUnix)
-        if type(plotIndex) ~= "number" then return false, "INVALID_PLOT_INDEX" end
-        if not targetOwner or targetOwner == caller then
-            return false, "REJECT_SELF_TARGETING"
-        end
-
-        local callerCooldowns = playerEspionageCooldowns[caller.UserId]
-        if not callerCooldowns then
-            callerCooldowns = {}
-            playerEspionageCooldowns[caller.UserId] = callerCooldowns
-        end
-        if callerCooldowns[targetOwner.UserId] and nowUnix < callerCooldowns[targetOwner.UserId] then
-            return false, "COOLDOWN_ACTIVE"
-        end
-        callerCooldowns[targetOwner.UserId] = nowUnix + 60
-        return true, "SUCCESS"
-    end
-
-    local caller = { UserId = 101, Name = "Caller" }
-    local target = { UserId = 102, Name = "Target" }
-
-    -- Case 1: Self-targeting
-    local selfOk, selfErr = processEspionageRune(caller, caller, 1, 1000)
-    assertTest("Bug5_Reject_SelfBless", selfOk == false and selfErr == "REJECT_SELF_TARGETING", "Self-bless was not rejected")
-
-    -- Case 2: Valid other target
-    local validOk, validErr = processEspionageRune(caller, target, 2, 1000)
-    assertTest("Bug5_ValidTarget_Accepted", validOk == true and validErr == "SUCCESS", "Valid blessing on other player was rejected")
-
-    -- Case 3: Spamming within 60s cooldown
-    local spamOk, spamErr = processEspionageRune(caller, target, 2, 1030)
-    assertTest("Bug5_Cooldown_Enforced_Within60s", spamOk == false and spamErr == "COOLDOWN_ACTIVE", "Cooldown within 60s was not enforced")
-
-    -- Case 4: After cooldown expires
-    local expiredOk, expiredErr = processEspionageRune(caller, target, 2, 1061)
-    assertTest("Bug5_Cooldown_Expires_After60s", expiredOk == true and expiredErr == "SUCCESS", "Request after cooldown expiration was rejected")
-end
-
 return results

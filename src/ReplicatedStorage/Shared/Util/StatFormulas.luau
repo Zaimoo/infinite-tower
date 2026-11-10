@@ -25,10 +25,6 @@ function StatFormulas.GetEffectiveLevel(stars: number?, level: number?): number
 	return (s - 1) * StatFormulas.LevelsPerStar + l
 end
 
--- Legacy compatibility: retired effects cannot affect stats.
-function StatFormulas.GetImprintBonuses(_hero: any): (number,number,number)
- return 0,0,0
-end
 function StatFormulas.GetEquippedArtifact(profile: any, hero: any): any?
  return profile and profile.Artifacts and hero and hero.EquippedArtifactUUID and profile.Artifacts[hero.EquippedArtifactUUID] or nil
 end

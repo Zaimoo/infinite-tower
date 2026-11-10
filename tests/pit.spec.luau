@@ -35,9 +35,9 @@ local function hero(id, seedId, fields)
 		Stars = seed.BaseStar, Level = 1, XP = 0, OverflowXP = 0, QualityScalar = 1,
 		BaseHP = seed.NativeHP, BaseATK = seed.NativeATK, BaseLabor = seed.NativeLabor,
 		AttackInterval = seed.AttackInterval, AttackRange = seed.AttackRange,
-		PassiveTrait = seed.PassiveTraitName, CurrentStamina = 100, MaxStamina = 100,
+		CurrentStamina = 100, MaxStamina = 100,
 		ComaUntilTimestamp = 0, IsHardAuditComa = false, Assignment = "BENCHED",
-		Locked = false, Favorite = false, InheritedImprints = {},
+		Locked = false, Favorite = false,
 	}
 	for key, valueOverride in pairs(fields or {}) do value[key] = valueOverride end
 	return value
@@ -173,11 +173,10 @@ test("Five stars never exceed level 50 or create a future-tier reserve", functio
 end)
 
 test("Promotion applies one multiplier and releases reserve through real levels", function()
-	local before = hero("r", "hero_han", { Level = 10, OverflowXP = 3454, InheritedImprints = { melee_memory = 1 } })
+	local before = hero("r", "hero_han", { Level = 10, OverflowXP = 3454 })
 	local after = Math.Promote(before)
 	equal(after.Stars, 2); equal(after.BaseATK, 60); equal(after.BaseHP, 450); equal(after.BaseLabor, 18.9)
 	equal(after.Level, 3); equal(after.XP, 0) -- reset to Lv 1, reserve buys Lv 2 and 3; equal(after.OverflowXP, 0)
-	equal(after.PassiveTrait, before.PassiveTrait); equal(after.InheritedImprints.melee_memory, 1)
 	equal(before.Stars, 1); equal(before.BaseATK, 40)
 	local atk, hp = Stats.GetEffectiveCombatStats(after, false, false)
 	equal(atk, math.round(60 * 1.08^12)); equal(hp, math.round(450 * 1.08^12))
@@ -191,39 +190,6 @@ test("Conversion rewards are deterministic and account for bounded investment", 
 	equal(Math.GetConversionYield(hero("a", "hero_han", { Level = 6 })), 5)
 	equal(Math.GetConversionYield(hero("b", "hero_aaron")), 12)
 	equal(Math.GetConversionYield(hero("c", "hero_eolka")), 36)
-	equal(Math.GetConversionYield(hero("a", "hero_han", { InheritedImprints = { melee_memory = 999, fake = 999 } })), 10)
-end)
-
-test("Imprint compatibility and capacity reject unsupported transfers without research gates", function()
-	local options = Math.GetImprintOptions(hero("d", "hero_jenna"), hero("r"), {})
-	equal(#options, 1); equal(options[1].Id, "ranged_memory"); equal(options[1].Compatible, false)
-	options = Math.GetImprintOptions(hero("d"), hero("r", "hero_aaron"), {})
-	equal(options[1].Compatible, true); equal(options[1].SuccessChance, 1)
-	local full = hero("r", "hero_han", { InheritedImprints = { conduit_memory = 1 } })
-	equal(Math.GetImprintOptions(hero("d"), full, {})[1].Compatible, false)
-	local scholar = hero("r", "hero_eolka")
-	equal(Math.GetImprintOptions(hero("d", "hero_eolka"), scholar, {})[1].Compatible, true)
-	equal(Math.GetImprintOptions(hero("d", "hero_eolka"), scholar, { MemoryStudies = true })[1].Compatible, true)
-end)
-
-test("Proficiency upgrades use the existing slot and stop at rank three", function()
-	local recipient = hero("r", "hero_han", { InheritedImprints = { melee_memory = 1 } })
-	equal(Math.GetImprintOptions(hero("d"), recipient, {})[1].Compatible, true)
-	recipient.InheritedImprints.melee_memory = 3
-	equal(Math.GetImprintOptions(hero("d"), recipient, {})[1].Compatible, false)
-end)
-
-test("Malformed and incompatible imprint bonuses cannot stack beyond caps", function()
-	local recipient = hero("r", "hero_han", { InheritedImprints = {
-		melee_memory = 1000, conduit_memory = 1000, ranged_memory = 1000,
-		scholarly_memory = 1000, bulwark_memory = 1000, fake = 1000,
-	} })
-	local atk, hp, labor = Stats.GetImprintBonuses(recipient)
-	equal(atk, 0); equal(hp, 0); equal(labor, 0)
-	check(atk <= Config.Imprints.BonusCaps.ATK); check(labor <= Config.Imprints.BonusCaps.Labor)
-	recipient.InheritedImprints = { melee_memory = -1, conduit_memory = 0 / 0 }
-	atk, hp, labor = Stats.GetImprintBonuses(recipient)
-	equal(atk, 0); equal(hp, 0); equal(labor, 0)
 end)
 
 -- Service tests follow below; all tests share the same assertions and real modules.
@@ -239,7 +205,7 @@ local function profile()
 			DimensionalLab = { Level = 5, AssignedHeroUUIDs = {}, UncollectedOutput = 0 },
 		},
 		UnlockedResearch = {},
-		PitMaterials = { SoulEssence = 1000, PromotionStone = 100, ImprintCatalyst = 100 },
+		PitMaterials = { SoulEssence = 1000, PromotionStone = 100 },
 		Social = {},
 	}
 end
@@ -291,14 +257,14 @@ test("Schema migration preserves existing heroes, assignments, levels and invent
 	local p = profile()
 	p.PitMaterials = nil; p.Heroes.r.Level = 8; p.Heroes.r.Assignment = "FACILITY_LAB"
 	p.Heroes.r.Locked = nil; p.Heroes.r.Favorite = nil; p.Heroes.r.OverflowXP = nil
-	p.Heroes.r.InheritedImprints = nil; p.Facilities.DimensionalLab.AssignedHeroUUIDs = { "r" }
+	p.Facilities.DimensionalLab.AssignedHeroUUIDs = { "r" }
 	p.UnlockedResearch.SquadSlot4 = true
 	PitService.EnsureDefaults(p)
 	equal(p.SchemaVersion, 2); equal(p.Heroes.r.Level, 8); equal(p.Heroes.r.XP, 0)
 	equal(p.Heroes.r.Assignment, "FACILITY_LAB"); equal(p.Facilities.DimensionalLab.AssignedHeroUUIDs[1], "r")
 	equal(p.Currencies.Gems, 10000); equal(p.UnlockedResearch.SquadSlot4, true)
 	equal(p.Heroes.r.Locked, false); equal(p.Heroes.r.Favorite, false); equal(p.Heroes.r.OverflowXP, 0)
-	equal(p.PitMaterials.SoulEssence, 0); equal(p.PitMaterials.PromotionStone, 0); equal(p.PitMaterials.ImprintCatalyst, 0)
+	equal(p.PitMaterials.SoulEssence, 0); equal(p.PitMaterials.PromotionStone, 0); equal(p.PitMaterials.ImprintCatalyst, nil)
 	local stable = Math.Copy(p); PitService.EnsureDefaults(p); check(deepEqual(stable, p), "Migration must be idempotent")
 end)
 
@@ -430,7 +396,7 @@ test("Malformed and oversized client request shapes cannot mutate profiles", fun
 		{ Action = "SYNTHESIS", Recipient = "r", Donors = { 0 / 0 } },
 		{ Action = "SYNTHESIS", Recipient = "r", Donors = { math.huge } },
 		{ Action = "SYNTHESIS", Recipient = "r", Donors = { string.rep("x", 81) } },
-		{ Action = "IMPRINT", Recipient = "r", Donors = { "d" }, Imprint = {} },
+		{ Action = "IMPRINT", Recipient = "r", Donors = { "d" }, Imprint = "melee_memory" }, -- imprints were removed
 		{ Action = "CRAFT", Recipe = false },
 	}
 	for _, payload in ipairs(bad) do rejectedWithoutMutation(context(), "PREVIEW", payload) end
@@ -575,14 +541,13 @@ test("Synthesis rejects already-maxed heroes and rejects excess donors beyond th
 	equal(cValid.profile.Heroes.r.XP, 0)
 end)
 
-test("Valid promotion charges exact resources, preserves traits and cannot repeat", function()
-	local c = context(); c.profile.Heroes.r.Level = 10; c.profile.Heroes.r.InheritedImprints = { melee_memory = 1 }
+test("Valid promotion charges exact resources and cannot repeat", function()
+	local c = context(); c.profile.Heroes.r.Level = 10
 	local p = c:preview({ Action = "PROMOTION", Recipient = "r" }); check(p.CanCommit)
 	equal(p.Costs.Gold, 1500); equal(p.Costs.PromotionStone, 1)
 	check(c:commit(p).Success); equal(c.profile.Currencies.Gold, 998500); equal(c.profile.PitMaterials.PromotionStone, 99)
 	equal(c.profile.Heroes.r.Stars, 2); equal(c.profile.Heroes.r.BaseATK, 60)
-	equal(c.profile.Heroes.r.BaseLabor, 18.9); equal(c.profile.Heroes.r.InheritedImprints.melee_memory, 1)
-	equal(c.profile.Heroes.r.PassiveTrait, Catalog.Seeds.hero_han.PassiveTraitName)
+	equal(c.profile.Heroes.r.BaseLabor, 18.9)
 	rejectedWithoutMutation(c, "COMMIT", { Token = p.Token })
 	rejectedWithoutMutation(c, "PREVIEW", { Action = "PROMOTION", Recipient = "r" })
 end)
@@ -600,7 +565,7 @@ test("Promotion validates cap, Gold, stones and five-star ceiling without resear
 	end
 	local c = context(); c.profile.Heroes.r.Stars = 4; c.profile.Heroes.r.Level = 10
 	local p = c:preview({ Action = "PROMOTION", Recipient = "r" }); check(p.CanCommit); check(c:commit(p).Success)
-	equal(c.profile.Heroes.r.Stars, 5); equal(Math.GetImprintCapacity(c.profile.Heroes.r), 3)
+	equal(c.profile.Heroes.r.Stars, 5)
 	local cDonor = context(); cDonor.profile.Heroes.r.Level = 10
 	rejectedWithoutMutation(cDonor, "PREVIEW", { Action = "PROMOTION", Recipient = "r", Donors = { "d" } })
 	for _, tier in ipairs({ { Stars = 5, Gold = 450000, Stones = 40 }, { Stars = 6, Gold = 1250000, Stones = 85 } }) do
@@ -648,55 +613,6 @@ test("Promotion updates actual assigned facility labor without double scaling", 
 	local beforeGold = Stats.GetPassiveGoldRate(1, beforeLabor)
 	check(afterGold > beforeGold)
 	c:request("STATE"); equal(Stats.GetEffectiveLabor(c.profile.Heroes.r), actualLabor)
-end)
-
-test("Focused imprint has guaranteed server-derived rank, half EXP and exact consumption", function()
-	local c = context(); c.profile.Heroes.d = hero("d"); PitService.EnsureDefaults(c.profile)
-	local p = c:preview({ Action = "IMPRINT", Recipient = "r", Donors = { "d" }, Imprint = "melee_memory", SuccessChance = 0, Rank = 100 })
-	check(p.CanCommit); equal(p.SuccessChance, 1); equal(p.XP.Final, 65)
-	equal(p.After.InheritedImprints.melee_memory, 1); check(c:commit(p).Success)
-	equal(c.profile.Heroes.d, nil); equal(c.profile.Heroes.r.InheritedImprints.melee_memory, 1)
-	equal(c.profile.PitMaterials.ImprintCatalyst, 99); equal(c.profile.Currencies.Gold, 999800)
-	rejectedWithoutMutation(c, "COMMIT", { Token = p.Token })
-end)
-
-test("Five-star level-50 heroes receive explicitly disclosed memory-only imprints", function()
-	local c = context(); c.profile.Heroes.r.Stars = 7; c.profile.Heroes.r.Level = 10
-	c.profile.Heroes.d = hero("d"); PitService.EnsureDefaults(c.profile)
-	local beforeATK = Stats.GetEffectiveCombatStats(c.profile.Heroes.r, false, false)
-	local p = c:preview({ Action = "IMPRINT", Recipient = "r", Donors = { "d" }, Imprint = "melee_memory" })
-	check(p.CanCommit); equal(p.XP.MemoryOnly, true); equal(p.XP.Final, 0); check(#p.Warnings > 0)
-	equal(p.After.Level, 10); equal(p.After.XP, 0); equal(p.After.OverflowXP, 0)
-	check(c:commit(p).Success); equal(c.profile.Heroes.d, nil)
-	equal(c.profile.Heroes.r.InheritedImprints.melee_memory, 1); equal(c.profile.Heroes.r.Level, 10)
-	equal((Stats.GetEffectiveCombatStats(c.profile.Heroes.r, false, false)), beforeATK)
-	equal(c.profile.Currencies.Gold, 999800); equal(c.profile.PitMaterials.ImprintCatalyst, 99)
-	rejectedWithoutMutation(c, "COMMIT", { Token = p.Token })
-end)
-
-test("Imprint incompatibility, maximum rank, full slots and missing costs reject atomically", function()
-	local scenarios = {
-		function(c) end,
-		function(c) c.profile.Heroes.d = hero("d"); c.profile.Heroes.r.InheritedImprints = { melee_memory = 3 } end,
-		function(c) c.profile.Heroes.d = hero("d"); c.profile.Heroes.r.InheritedImprints = { conduit_memory = 1 } end,
-		function(c) c.profile.Heroes.d = hero("d"); c.profile.PitMaterials.ImprintCatalyst = 0 end,
-		function(c) c.profile.Heroes.d = hero("d"); c.profile.Currencies.Gold = 199 end,
-	}
-	for _, mutate in ipairs(scenarios) do
-		local c = context(); mutate(c); PitService.EnsureDefaults(c.profile)
-		rejectedWithoutMutation(c, "PREVIEW", { Action = "IMPRINT", Recipient = "r", Donors = { "d" }, Imprint = "melee_memory" })
-	end
-end)
-
-test("Duplicate imprint attempts upgrade one slot to its bounded rank", function()
-	local c = context()
-	for rank = 1, 3 do
-		local id = "imprint-donor-" .. rank; c.profile.Heroes[id] = hero(id); PitService.EnsureDefaults(c.profile)
-		local p = c:preview({ Action = "IMPRINT", Recipient = "r", Donors = { id }, Imprint = "melee_memory" })
-		check(p.CanCommit); check(c:commit(p).Success); equal(c.profile.Heroes.r.InheritedImprints.melee_memory, rank)
-	end
-	local count = 0; for _ in pairs(c.profile.Heroes.r.InheritedImprints) do count += 1 end
-	equal(count, 1); equal((Stats.GetImprintBonuses(c.profile.Heroes.r)), 0)
 end)
 
 test("Conversion grants exact essence once and no Gem/Gold or hero output", function()

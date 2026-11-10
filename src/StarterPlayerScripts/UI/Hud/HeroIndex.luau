@@ -519,7 +519,6 @@ local function HeroIndex(props: { Profile: any, Width: number, OnClose: () -> ()
 			ATK = statTile(2, "BASE ATK", Components.Abbreviate(heroSeed.NativeATK * mult), Color3.fromRGB(255, 150, 120)),
 			Labor = statTile(3, "LABOR · " .. string.upper(Theme.FacilityNames[heroSeed.PreferredFacility] or "ANY"), string.format("%.1f", labor), TEXT.Gold),
 		})
-		heroDetail.Passive = section(3, "PASSIVE", heroSeed.PassiveTraitName or "—", 40)
 		heroDetail.Basic = section(4, "BASIC ATTACK", kitLine(kit and kit.Basic), 52)
 		heroDetail.Special = section(5, "SPECIAL", kitLine(kit and kit.Special), 60)
 		heroDetail.Skill = section(6, "SKILL", kitLine(kit and kit.Skill), 60)

@@ -35,7 +35,7 @@ end
 
 function PitService.EnsureDefaults(profile: any)
 	profile.PitMaterials = profile.PitMaterials or {}
-	for _, key in ipairs({ "SoulEssence", "PromotionStone", "ImprintCatalyst" }) do
+	for _, key in ipairs({ "SoulEssence", "PromotionStone" }) do
 		if not finite(profile.PitMaterials[key]) or profile.PitMaterials[key] < 0 then profile.PitMaterials[key] = 0 end
 	end
 	profile.PitRevision = profile.PitRevision or 0
@@ -43,15 +43,11 @@ function PitService.EnsureDefaults(profile: any)
 	for _, key in ipairs({ "EssenceAttunement", "MemoryStudies", "AdvancedStonecraft", "MasterStonecraft" }) do
 		if profile.UnlockedResearch[key] == nil then profile.UnlockedResearch[key] = false end
 	end
-	-- These fields were missing even on old default social profiles.
-	if profile.Social then profile.Social.GarnishedGemDebt = profile.Social.GarnishedGemDebt or 0 end
 	for _, hero in pairs(profile.Heroes) do
 		if hero.Locked == nil then hero.Locked = false end
 		if hero.Favorite == nil then hero.Favorite = false end
-		hero.InheritedImprints = hero.InheritedImprints or {}
 		hero.OverflowXP = hero.OverflowXP or 0
-		hero.SynthesisHistory = hero.SynthesisHistory or { DonorsConsumed = 0, XPGained = 0, ImprintsPerformed = 0, Promotions = 0 }
-		hero.ImprintCapacity = Math.GetImprintCapacity(hero)
+		hero.SynthesisHistory = hero.SynthesisHistory or { DonorsConsumed = 0, XPGained = 0, Promotions = 0 }
 	end
 	profile.SchemaVersion = math.max(profile.SchemaVersion or 1, Config.SchemaVersion)
 end
@@ -173,7 +169,7 @@ end
 function PitService:Build(profile: any, request: any): (any, any)
 	local action = request.Action
 	local preview = { Action = action, CanCommit = true, Reason = "", Donors = {}, Costs = {}, Rewards = {}, Warnings = {}, Errors = {},
-		Requirements = {}, Imprints = {}, RequiresRareConfirmation = false, SuccessChance = 1 }
+		Requirements = {}, RequiresRareConfirmation = false, SuccessChance = 1 }
 	local staged = { Heroes = {}, Remove = {}, Currencies = Math.Copy(profile.Currencies), Materials = Math.Copy(profile.PitMaterials) }
 	local function reject(reason: string)
 		preview.CanCommit = false
@@ -192,10 +188,9 @@ function PitService:Build(profile: any, request: any): (any, any)
 		end
 	end
 	local donorIds = request.Donors or {}
-	local needsDonors = action == "SYNTHESIS" or action == "IMPRINT" or action == "CONVERSION"
+	local needsDonors = action == "SYNTHESIS" or action == "CONVERSION"
 	if needsDonors then
 		if #donorIds == 0 or #donorIds > Config.MaxDonors then reject("Select between 1 and " .. Config.MaxDonors .. " donors.") end
-		if action == "IMPRINT" and #donorIds ~= 1 then reject("Focused Imprint requires exactly one donor.") end
 		local seen = {}
 		for _, uuid in ipairs(donorIds) do
 			local donor = profile.Heroes[uuid]
@@ -212,10 +207,10 @@ function PitService:Build(profile: any, request: any): (any, any)
 		end
 	elseif #donorIds > 0 then reject("This operation does not consume heroes. Clear the donor selection.") end
 
-	if action == "SYNTHESIS" or action == "IMPRINT" then
+	if action == "SYNTHESIS" then
 		if recipient then
 			local maxLevel = Stats.GetMaxLevel(recipient.Stars)
-			if action == "SYNTHESIS" and (recipient.Level or 1) >= maxLevel then
+			if (recipient.Level or 1) >= maxLevel then
 				reject("The recipient is already at maximum level for this star rank. Promote the hero to raise the level cap.")
 			end
 
@@ -223,7 +218,7 @@ function PitService:Build(profile: any, request: any): (any, any)
 			local reachedCapIndex: number? = nil
 
 			for index, donor in ipairs(preview.Donors) do
-				if action == "SYNTHESIS" and reachedCapIndex ~= nil then
+				if reachedCapIndex ~= nil then
 					reject("The recipient reaches the star level cap before all selected materials are consumed. Remove excess materials.")
 					break
 				end
@@ -235,44 +230,18 @@ function PitService:Build(profile: any, request: any): (any, any)
 				xp.ResearchBonus = breakdown.ResearchBonus
 				table.insert(xp.Breakdown, breakdown)
 
-				if action == "SYNTHESIS" then
-					local simAfter, _ = Math.AdvanceXP(recipient, xp.Final)
-					if (simAfter.Level or 1) >= maxLevel then
-						reachedCapIndex = index
-					end
-
-					for _, option in ipairs(Math.GetImprintOptions(donor, recipient, profile.UnlockedResearch)) do
-						option.DonorUUID, option.DonorName = donor.UUID, donor.DisplayName
-						option.OpportunityOnly = true
-						table.insert(preview.Imprints, option)
-					end
+				local simAfter, _ = Math.AdvanceXP(recipient, xp.Final)
+				if (simAfter.Level or 1) >= maxLevel then
+					reachedCapIndex = index
 				end
 			end
-			preview.Mode = action == "IMPRINT" and "Focused Imprint" or "Essence Synthesis"
+			preview.Mode = "Essence Synthesis"
 			if xp.Base > 0 then
 				local weighted = 0
 				for _, part in ipairs(xp.Breakdown) do weighted += part.Base * part.Efficiency end
 				xp.Efficiency = weighted / xp.Base
 			end
 			if xp.Efficiency < 1 then table.insert(preview.Warnings, "The recipient outlevels these donors. The displayed EXP includes reduced efficiency.") end
-			if action == "IMPRINT" then
-				xp.Final = math.floor(xp.Final * Config.Synthesis.FocusedXPScale)
-				if recipient.Stars == Config.MaxStars and recipient.Level >= Stats.GetMaxLevel(recipient.Stars) then
-					xp.MemoryOnly = true
-					xp.Final = 0
-					table.insert(preview.Warnings, "At maximum level, Focused Imprint grants the selected memory only. This donor grants 0 EXP.")
-				end
-				preview.Costs = { Gold = Config.Imprints.GoldCost, ImprintCatalyst = Config.Imprints.CatalystCost }
-				if preview.Donors[1] then
-					preview.Imprints = Math.GetImprintOptions(preview.Donors[1], recipient, profile.UnlockedResearch)
-					local option
-					for _, candidate in ipairs(preview.Imprints) do if candidate.Id == request.Imprint then option = candidate break end end
-					if not option then reject("Choose a memory carried by this donor.")
-					elseif not option.Compatible then reject(option.Reason)
-					else preview.SelectedImprint = option end
-				end
-				preview.FailureResult = "Guaranteed inheritance. The donor is consumed once; there is no failure roll."
-			end
 			local after, overflow = Math.AdvanceXP(recipient, xp.Final)
 			if (after.Level or 1) >= maxLevel then
 				after.Level = maxLevel
@@ -280,22 +249,13 @@ function PitService:Build(profile: any, request: any): (any, any)
 			end
 			xp.Applied = xp.Final
 			if overflow.Rejected > 0 then
-				if action == "SYNTHESIS" then
-					preview.RequiresOverflowConfirmation = true
-					-- Legacy heroes may already have excess EXP. Count only this award's loss.
-					local discarded = math.min(xp.Final, overflow.Rejected)
-					xp.Applied -= discarded
-					table.insert(preview.Warnings, string.format("This synthesis exceeds the EXP cap. %d EXP will be lost.", discarded))
-				else
-					reject("This EXP would exceed the reserve. Use fewer donors or promote the recipient first.")
-				end
+				preview.RequiresOverflowConfirmation = true
+				-- Legacy heroes may already have excess EXP. Count only this award's loss.
+				local discarded = math.min(xp.Final, overflow.Rejected)
+				xp.Applied -= discarded
+				table.insert(preview.Warnings, string.format("This synthesis exceeds the EXP cap. %d EXP will be lost.", discarded))
 			end
 			if after.OverflowXP > (recipient.OverflowXP or 0) then table.insert(preview.Warnings, "EXP added to the reserve is released on promotion.") end
-			if action == "IMPRINT" and preview.SelectedImprint then
-				local option = preview.SelectedImprint
-				after.InheritedImprints[option.Id] = option.CurrentRank + 1
-				after.SynthesisHistory.ImprintsPerformed = (after.SynthesisHistory.ImprintsPerformed or 0) + 1
-			end
 			after.SynthesisHistory.DonorsConsumed = (after.SynthesisHistory.DonorsConsumed or 0) + #preview.Donors
 			after.SynthesisHistory.XPGained = (after.SynthesisHistory.XPGained or 0) + xp.Applied
 			preview.XP, preview.Overflow, preview.After = xp, overflow, Math.Snapshot(after, profile)
@@ -319,7 +279,6 @@ function PitService:Build(profile: any, request: any): (any, any)
 				if recipient.Level < Stats.GetMaxLevel(recipient.Stars) then reject("Reach Level " .. Stats.GetMaxLevel(recipient.Stars) .. " to unlock promotion.") end
 				if rule.Research and not profile.UnlockedResearch[rule.Research] then reject("Unlock " .. (rule.Research == "MasterStonecraft" and "Master Stonecraft" or "Advanced Stonecraft") .. " in the Dimensional Lab.") end
 				local after, overflow = Math.Promote(recipient)
-				after.ImprintCapacity = Math.GetImprintCapacity(after)
 				after.SynthesisHistory.Promotions = (after.SynthesisHistory.Promotions or 0) + 1
 				preview.After, preview.Overflow = Math.Snapshot(after, profile), overflow
 				staged.Heroes[recipient.UUID] = after
@@ -350,10 +309,9 @@ end
 
 local function normalizeRequest(payload: any): (any?, string?)
 	if type(payload) ~= "table" or type(payload.Action) ~= "string" then return nil, "Choose a Pit operation." end
-	local allowed = { SYNTHESIS = true, IMPRINT = true, PROMOTION = true, CONVERSION = true, CRAFT = true }
+	local allowed = { SYNTHESIS = true, PROMOTION = true, CONVERSION = true, CRAFT = true }
 	if not allowed[payload.Action] then return nil, "Unknown Pit operation." end
 	if payload.Recipient ~= nil and (type(payload.Recipient) ~= "string" or #payload.Recipient > 80) then return nil, "Invalid recipient." end
-	if payload.Imprint ~= nil and (type(payload.Imprint) ~= "string" or #payload.Imprint > 80) then return nil, "Invalid memory." end
 	if payload.Recipe ~= nil and (type(payload.Recipe) ~= "string" or #payload.Recipe > 80) then return nil, "Invalid recipe." end
 	if payload.Donors ~= nil and type(payload.Donors) ~= "table" then return nil, "Choose valid donor heroes." end
 	local donors = {}
@@ -366,7 +324,7 @@ local function normalizeRequest(payload: any): (any?, string?)
 		if type(payload.Donors[index]) ~= "string" then return nil, "Choose valid donor heroes." end
 		table.insert(donors, payload.Donors[index])
 	end
-	return { Action = payload.Action, Recipient = payload.Recipient, Donors = donors, Imprint = payload.Imprint, Recipe = payload.Recipe }, nil
+	return { Action = payload.Action, Recipient = payload.Recipient, Donors = donors, Recipe = payload.Recipe }, nil
 end
 
 function PitService:Request(player: any, command: any, payload: any): any
@@ -439,7 +397,7 @@ function PitService:Request(player: any, command: any, payload: any): any
 			profile.Currencies = staged.Currencies
 			profile.PitMaterials = staged.Materials
 			profile.PitRevision += 1
-			local messages = { SYNTHESIS = "Synthesis complete.", IMPRINT = "Memory inherited.", PROMOTION = "Star promotion complete!", CONVERSION = "Heroes converted into Soul Essence.", CRAFT = "Crafting complete." }
+			local messages = { SYNTHESIS = "Synthesis complete.", PROMOTION = "Star promotion complete!", CONVERSION = "Heroes converted into Soul Essence.", CRAFT = "Crafting complete." }
 			-- Replication failure cannot turn a committed transaction into a false
 			-- failure; STATE can always recover the authoritative result.
 			pcall(self.Dependencies.SyncProfile, player, staged.Heroes, staged.Remove)

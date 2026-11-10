@@ -3,7 +3,7 @@ local Floors=require(nodes["ReplicatedStorage.Shared.Config.TowerFloorConfig"])
 local Mobs=require(nodes["ReplicatedStorage.Shared.Config.MobCatalog"])
 local Combat=require(nodes["ReplicatedStorage.Shared.Config.FirstBiomeCombat"])
 local Rules=require(nodes["ReplicatedStorage.Shared.Util.TowerSanctuaryRules"])
-local RelicConfig=require(nodes["ReplicatedStorage.Shared.RelicConfig"])
+local RelicConfig=require(nodes["ReplicatedStorage.Shared.Config.RelicConfig"])
 local passed=0
 local function test(name,fn) fn(); passed+=1; print("PASS "..name) end
 test("Canonical biome progression and all five room envelopes",function()
