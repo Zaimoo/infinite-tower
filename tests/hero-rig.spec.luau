@@ -200,7 +200,7 @@ do
 	local HeroCostumes = require(ReplicatedStorage.Assets.HeroRig.HeroCostumes)
 	local HeroCatalog = require(ReplicatedStorage.Shared.Config.HeroCatalog)
 
-	check(#HeroCostumes.List == 13, "13 hero costumes")
+	check(#HeroCostumes.List == 14, "14 hero costumes")
 	for heroId in HeroCatalog.Seeds do
 		check(HeroCostumes.ById[heroId] ~= nil, `costume exists for {heroId}`)
 	end

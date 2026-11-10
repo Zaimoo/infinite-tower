@@ -188,6 +188,13 @@ SkillVfxCatalog.Heroes = table.freeze({
 	},
 
 	-- Miner ------------------------------------------------------------------------------------
+	-- Ironvein Chop / Bedrock Sundering / Tunnelbreaker Fault: brass gold and slate stone.
+	hero_gide = {
+		Palette = { Primary = rgb(215, 175, 95), Secondary = rgb(115, 110, 102), Core = rgb(255, 235, 190) },
+		Basic = { Style = "SLASH", Scale = 1.2, Impact = 1.8 },
+		Special = { Style = "TREMOR", Radius = 8, Spikes = 3, Impact = 2.4 },
+		Skill = { Style = "CRYSTALS", Radius = 18, Spikes = 6, Impact = 3, Linger = 1.4, Shake = 0.25 },
+	},
 	-- Pickaxe Cleave / Resonance Tremor / Crystalline Excavation: crystal cyan and stone.
 	hero_catio = {
 		Palette = { Primary = rgb(130, 235, 255), Secondary = rgb(150, 140, 120), Core = rgb(230, 255, 255) },

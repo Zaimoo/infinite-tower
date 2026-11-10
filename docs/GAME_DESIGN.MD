@@ -377,12 +377,12 @@ Dread fades in by distance from the tower centre: none beyond 470 studs (the clo
 Hero summoning at the **Summoning Altar** (`FacilityController.luau`) is partitioned into two distinct banners. Each banner rolls an **inherent rarity tier**, and each tier holds exactly one hero. Every hero is summoned at **1★**, whatever its tier, and its rarity sets how strong that 1★ hero is (see *Inherent Hero Rarity* below). Stars are earned only by promotion at The Pit. All hero odds can be raised by the **God's Blessing** facility (Section 4.3, Facility D).
 
 #### 1. Permanent Banner: "Call of the Rift" (Rarity Tiers 1–7)
-The permanent standard banner features exactly **one character for each rarity from Common to Mythical** (7 heroes; its Common, Jenna, is also the Common of A Star's Arrival):
+The permanent standard banner features exactly **one character for each rarity from Common to Mythical** (7 total heroes):
 - **Summon Cost:** `100 Gems` per single pull (`900 Gems` for 10x pull).
 - **Pity System:** Guaranteed **Exalted or higher** hero within **120 summons** (`MaxPity = 120`, `PityMinTier = 5`). The pity pull is split by the banner's Exalted/Legendary/Mythical rates (with God's Blessing luck): about 65% Ignis, 29% Edis, 6% Han. Any natural Exalted+ pull resets the counter. This banner has no featured hero and no 50/50 rule.
 - **10-Pull Guarantee:** Every 10x pull includes at least one **Rare** or higher hero.
 - **Drop Rates:**
-  - `Common (75.14%)`: **Jenna** (shared with A Star's Arrival)
+  - `Common (75.14%)`: **Gide**
   - `Uncommon (18.0%)`: **Aaron**
   - `Rare (4.7%)`: **Catio**
   - `Superior (1.65%)`: **Valeria**
@@ -390,7 +390,7 @@ The permanent standard banner features exactly **one character for each rarity f
   - `Legendary (0.15%)`: **Edis Callen** (the same Gems per copy as Solaris on A Star's Arrival: half the rate at half the price)
   - `Mythical (0.03%)`: **Han** (the same Gems per copy as Astrea, by the same rule)
 
-**Han's rework.** Han used to be this banner's Common and the starter hero. He is now its Mythical, and **Jenna** is the starter: a new Master begins with Jenna in squad slot 1 (locked) and Catio on the bench. Hans summoned before the rework keep their saved Common rarity and stats, and only take the new look. Old-save migrations pin Han to Common for the same reason (`ProfileMigrations.LEGACY_RARITY`). His base stats and kit are unchanged; only the rarity multiplier differs.
+**Han's rework.** Han used to be this banner's Common and the starter hero. He is now its Mythical, and **Gide** is the Common and the starter: a new Master begins with Gide in squad slot 1 (locked) and Catio on the bench. Hans summoned before the rework keep their saved Common rarity and stats, and only take the new look. Old-save migrations pin Han to Common for the same reason (`ProfileMigrations.LEGACY_RARITY`). His base stats and kit are unchanged; only the rarity multiplier differs.
 
 #### 2. Limited Time Banner: "A Star's Arrival" (Rarity Tiers 1–7)
 The inaugural limited-time rate-up banner features exactly **one character for each rarity from Common to Mythical** (7 total heroes):
@@ -426,6 +426,7 @@ Every summoned hero rolls a `QualityScalar` $q \in [0.90, 1.15]$ applied to thei
 
 | Banner | Hero | Rarity / Summoned Star | Archetype | Base HP / ATK | Native HP / ATK | Base / Native Labor |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Call of the Rift** | **Gide** | **Common (1) / 1★** | Miner | `340` / `36` | `340` / `36` | `18` / `18.0` |
 | **Call of the Rift** | **Aaron** | **Uncommon (2) / 1★** | Vanguard | `450` / `28` | `1,823` / `113` | `16` / `24.2` |
 | **Call of the Rift** | **Catio** | **Rare (3) / 1★** | Miner | `280` / `24` | `4,593` / `394` | `20` / `45.7` |
 | **Call of the Rift** | **Valeria** | **Superior (4) / 1★** | Healer | `260` / `18` | `8,636` / `598` | `18` / `31.1` |
@@ -626,6 +627,7 @@ Each hero's kit is resolved by `HeroId` in `ArchetypeCombatSkills.HeroProfiles` 
 | 11 | **Solaris** (`hero_solaris`) | Legendary | Scholar | Solar Ray | Corona Arc | Supernova Starfall |
 | 12 | **Astrea** (`hero_astrea`) | Mythical | Marksman | Astral Arrow | Nebula Piercer | Constellation Judgment |
 | 13 | **Edis Callen** (`hero_edis`) | Legendary | Striker | Ravenclaw Cut | Umbral Crosscut | Midnight Requiem |
+| 14 | **Gide** (`hero_gide`) | Common | Miner | Ironvein Chop | Bedrock Sundering | Tunnelbreaker Fault |
 
 #### 3. Archetype Base Mechanics (Kit Defaults)
 

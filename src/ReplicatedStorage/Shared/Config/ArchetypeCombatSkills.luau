@@ -382,6 +382,15 @@ local HERO_KITS: { [string]: HeroKitOverride } = {
 			Description = "Catio strikes a resonant fault line, erupting crystal spikes under all enemies within 18 studs for 2.60x ATK blunt damage and bonus gem shards.",
 		},
 	},
+	hero_gide = {
+		Archetype = "Miner",
+		Basic = { Name = "Ironvein Chop" },
+		Special = { Name = "Bedrock Sundering" },
+		Skill = {
+			Name = "Tunnelbreaker Fault",
+			Description = "Gide drives his heavy axe into the floor, splitting a fault line that erupts jagged stone and crystal spikes under all enemies within 18 studs for 2.60x ATK blunt damage and bonus shard drops.",
+		},
+	},
 	hero_valeria = {
 		Archetype = "Healer",
 		Basic = { Name = "Emerald Bolt" },

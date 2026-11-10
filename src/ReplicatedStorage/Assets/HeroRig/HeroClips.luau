@@ -679,6 +679,7 @@ local OVERRIDE_WEAPON: { [string]: string } = {
 	hero_solaris = "STAFF",
 	hero_astrea = "BOW",
 	hero_edis = "DAGGERS",
+	hero_gide = "AXE",
 }
 
 local function signature(duration: number, keys: { { any } }, markers: { [string]: number }): Clip
@@ -1033,6 +1034,41 @@ do
 			{ 0.42, merge(p.Windup, { Waist = { 18, 0, 0 }, RightShoulder = { 178, 0, 0 }, LeftShoulder = { 170, 0, -5 }, LeftElbow = { 50, 0, 0 }, RootOffset = { 0, 0.25, 0 } }) },
 			{ 0.62, slam },
 			{ 0.82, merge(slam, { Waist = { -34, 0, 0 } }) },
+			{ 1, p.Rest },
+		}, { Release = 0.62 }),
+	}
+end
+
+-- Gide (AXE): Bedrock Sundering winds the axe back across his chest before a heavy diagonal chop;
+-- Tunnelbreaker Fault raises the axe high overhead with both hands and drives it into the floor.
+-- Idle is his planted veteran stance from the reference art: wide feet, the heavy axe held upright
+-- out at his right side, left fist clenched and ready at his left side.
+do
+	local p = WeaponPoses.AXE
+	local sunder = merge(p.Chop, { Waist = { -30, -18, 0 }, RightShoulder = { 38, -12, 8 }, RightElbow = { 12, 0, 0 }, LeftShoulder = { 24, 0, -18 }, LeftElbow = { 42, 0, 0 }, LeftKnee = { -42, 0, 0 }, RightKnee = { -36, 0, 0 }, RootOffset = { 0, -0.4, 0 } })
+	local faultSlam = merge(p.Chop, { Waist = { -42, 0, 0 }, RightShoulder = { 28, 0, 0 }, LeftShoulder = { 32, 0, 8 }, LeftElbow = { 12, 0, 0 }, LeftHip = { 52, 0, -10 }, RightHip = { 12, 0, 10 }, LeftKnee = { -68, 0, 0 }, RightKnee = { -62, 0, 0 }, RootOffset = { 0, -0.62, 0 } })
+	local veteran: Pose = {
+		Waist = { -3, -4, 0 }, Neck = { -3, 4, 0 },
+		RightShoulder = { 12, 0, 22 }, RightElbow = { 76, 0, 0 }, RightWrist = { 10, -14, 0 },
+		LeftShoulder = { 14, 0, -20 }, LeftElbow = { 38, 0, 0 },
+		LeftHip = { 8, 0, -13 }, LeftKnee = { -18, 0, 0 }, LeftAnkle = { 10, 0, 13 },
+		RightHip = { 6, 0, 13 }, RightKnee = { -16, 0, 0 }, RightAnkle = { 10, 0, -13 },
+		RootOffset = { 0, -0.14, 0 },
+	}
+	Overrides.hero_gide = {
+		Idle = breathe(veteran, 3.2),
+		AttackSpecial = signature(0.9, {
+			{ 0, p.Rest },
+			{ 0.38, merge(p.Windup, { Waist = { 10, 24, 0 }, RightShoulder = { 162, 18, 16 } }) },
+			{ 0.65, sunder },
+			{ 0.84, merge(sunder, { Waist = { -24, -14, 0 } }) },
+			{ 1, p.Rest },
+		}, { Release = 0.65 }),
+		AttackSkill = signature(1.15, {
+			{ 0, p.Rest },
+			{ 0.36, merge(p.Windup, { Waist = { 16, 0, 0 }, RightShoulder = { 176, 0, 4 }, LeftShoulder = { 168, 0, -6 }, LeftElbow = { 46, 0, 0 }, RootOffset = { 0, 0.22, 0 } }) },
+			{ 0.62, faultSlam },
+			{ 0.84, merge(faultSlam, { Waist = { -36, 0, 0 } }) },
 			{ 1, p.Rest },
 		}, { Release = 0.62 }),
 	}

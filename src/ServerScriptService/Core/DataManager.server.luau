@@ -359,10 +359,10 @@ function DataManager.CreateHeroFromSeed(seedId: string, forceQuality: number?): 
 end
 
 local function createDefaultPlayerProfile(): PlayerProfile
-	-- Jenna leads the starting squad. Han was the starter until he became Mythical (HeroCatalog).
-	local jennaUUID, jennaHero = DataManager.CreateHeroFromSeed("hero_jenna", 1.05)
-	jennaHero.Assignment = "SQUAD_SLOT_1"
-	jennaHero.Locked = true
+	-- Gide leads the starting squad (replacing Jenna; Han was the starter before he became Mythical).
+	local gideUUID, gideHero = DataManager.CreateHeroFromSeed("hero_gide", 1.05)
+	gideHero.Assignment = "SQUAD_SLOT_1"
+	gideHero.Locked = true
 
 	local catioUUID, catioHero = DataManager.CreateHeroFromSeed("hero_catio", 1.02)
 	catioHero.Assignment = "BENCHED"
@@ -380,11 +380,11 @@ local function createDefaultPlayerProfile(): PlayerProfile
 	local f4_UUID, f4_Art = DataManager.CreateArtifact("art_miner_pickaxe", 1, 1)
 	local f5_UUID, f5_Art = DataManager.CreateArtifact("art_novice_tome", 1, 1)
 
-	jennaHero.EquippedArtifactUUID = bowUUID
-	bowArt.EquippedHeroUUID = jennaUUID
+	gideHero.EquippedArtifactUUID = axeUUID
+	axeArt.EquippedHeroUUID = gideUUID
 
-	catioHero.EquippedArtifactUUID = axeUUID
-	axeArt.EquippedHeroUUID = catioUUID
+	catioHero.EquippedArtifactUUID = f4_UUID
+	f4_Art.EquippedHeroUUID = catioUUID
 
 	return {
 		SchemaVersion = ProfileMigrations.CurrentSchema,
@@ -408,7 +408,7 @@ local function createDefaultPlayerProfile(): PlayerProfile
 		HeroLimitedFeaturedGuarantee = false, -- 50/50: set when an Exalted+ pull is not the featured hero
 
 		Heroes = {
-			[jennaUUID] = jennaHero,
+			[gideUUID] = gideHero,
 			[catioUUID] = catioHero,
 		},
 		Artifacts = {
@@ -422,7 +422,7 @@ local function createDefaultPlayerProfile(): PlayerProfile
 			[f4_UUID] = f4_Art,
 			[f5_UUID] = f5_Art,
 		},
-		DeployedSquadOrder = { jennaUUID },
+		DeployedSquadOrder = { gideUUID },
 		Facilities = {
 			GuardPost = createDefaultFacility(1),
 			Market = createDefaultFacility(0),
