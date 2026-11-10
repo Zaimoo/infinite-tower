@@ -6621,9 +6621,9 @@ export type StaffMeshData = {
 local STAFF_MESH_DATA: { [string]: StaffMeshData } = {
 	art_apprentice_cane = {
 		GripPos = Vector3.new(0.0000, 0.0000, 0.0000),
-		TipPos = Vector3.new(0.0000, 0.0000, 1.9000),
-		BasePos = Vector3.new(0.0000, 0.0000, -1.5000),
-		CorePos = Vector3.new(0.0000, 0.0000, 1.7500),
+		TipPos = Vector3.new(0.0000, 1.9000, 0.0000),
+		BasePos = Vector3.new(0.0000, -1.5000, 0.0000),
+		CorePos = Vector3.new(0.0000, 1.7500, 0.0000),
 		Parts = {
 			{ Name = "ArcaneCore", MeshId = "rbxassetid://75594269387003", Size = Vector3.new(0.3600, 0.3600, 0.3600), Offset = Vector3.new(0.0000, 1.7500, 0.0000), Mat = Enum.Material.Glass, Color = Color3.fromRGB(225, 230, 235) },
 			{ Name = "Crown", MeshId = "rbxassetid://125313355802453", Size = Vector3.new(0.2835, 0.5247, 0.2800), Offset = Vector3.new(-0.0032, 1.5173, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(195, 125, 90) },
@@ -6635,9 +6635,9 @@ local STAFF_MESH_DATA: { [string]: StaffMeshData } = {
 	},
 	art_archmage_rod = {
 		GripPos = Vector3.new(0.0000, 0.0000, 0.0000),
-		TipPos = Vector3.new(0.0000, 0.0000, 2.7000),
-		BasePos = Vector3.new(0.0000, 0.0000, -2.0000),
-		CorePos = Vector3.new(0.0000, 0.0000, 2.3500),
+		TipPos = Vector3.new(0.0000, 2.7000, 0.0000),
+		BasePos = Vector3.new(0.0000, -2.0000, 0.0000),
+		CorePos = Vector3.new(0.0000, 2.3500, 0.0000),
 		Parts = {
 			{ Name = "ArcaneCore", MeshId = "rbxassetid://73035057637400", Size = Vector3.new(0.3800, 0.3800, 0.3800), Offset = Vector3.new(0.0000, 2.3500, 0.0000), Mat = Enum.Material.Neon, Color = Color3.fromRGB(160, 90, 255) },
 			{ Name = "CaduceusWings", MeshId = "rbxassetid://105120652300312", Size = Vector3.new(0.9218, 0.5717, 0.0900), Offset = Vector3.new(0.0000, 2.3602, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(240, 200, 85) },
@@ -6651,9 +6651,9 @@ local STAFF_MESH_DATA: { [string]: StaffMeshData } = {
 	},
 	art_chronomancers_spindle = {
 		GripPos = Vector3.new(0.0000, 0.0000, 0.0000),
-		TipPos = Vector3.new(0.0000, 0.0000, 2.6500),
-		BasePos = Vector3.new(0.0000, 0.0000, -2.0000),
-		CorePos = Vector3.new(0.0000, 0.0000, 2.3500),
+		TipPos = Vector3.new(0.0000, 2.6500, 0.0000),
+		BasePos = Vector3.new(0.0000, -2.0000, 0.0000),
+		CorePos = Vector3.new(0.0000, 2.3500, 0.0000),
 		Parts = {
 			{ Name = "ArcaneCore", MeshId = "rbxassetid://71690734843269", Size = Vector3.new(0.3200, 0.4800, 0.3200), Offset = Vector3.new(0.0000, 2.3500, 0.0000), Mat = Enum.Material.Neon, Color = Color3.fromRGB(250, 210, 90) },
 			{ Name = "Crown", MeshId = "rbxassetid://77355294530423", Size = Vector3.new(0.4000, 0.3500, 0.4000), Offset = Vector3.new(0.0000, 1.8500, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(210, 170, 75) },
@@ -6667,9 +6667,9 @@ local STAFF_MESH_DATA: { [string]: StaffMeshData } = {
 	},
 	art_chronos_stave = {
 		GripPos = Vector3.new(0.0000, 0.0000, 0.0000),
-		TipPos = Vector3.new(0.0000, 0.0000, 2.8000),
-		BasePos = Vector3.new(0.0000, 0.0000, -2.1500),
-		CorePos = Vector3.new(0.0000, 0.0000, 2.4500),
+		TipPos = Vector3.new(0.0000, 2.8000, 0.0000),
+		BasePos = Vector3.new(0.0000, -2.1500, 0.0000),
+		CorePos = Vector3.new(0.0000, 2.4500, 0.0000),
 		Parts = {
 			{ Name = "ArcaneCore", MeshId = "rbxassetid://101064696461869", Size = Vector3.new(0.4400, 0.4400, 0.4400), Offset = Vector3.new(0.0000, 2.4500, 0.0000), Mat = Enum.Material.Neon, Color = Color3.fromRGB(80, 230, 255) },
 			{ Name = "Crown", MeshId = "rbxassetid://131099756829563", Size = Vector3.new(0.4400, 0.4000, 0.4400), Offset = Vector3.new(0.0000, 2.0000, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(200, 215, 230) },
@@ -6682,9 +6682,9 @@ local STAFF_MESH_DATA: { [string]: StaffMeshData } = {
 	},
 	art_eye_of_singularity = {
 		GripPos = Vector3.new(0.0000, 0.0000, 0.0000),
-		TipPos = Vector3.new(0.0000, 0.0000, 2.9000),
-		BasePos = Vector3.new(0.0000, 0.0000, -2.3000),
-		CorePos = Vector3.new(0.0000, 0.0000, 2.6000),
+		TipPos = Vector3.new(0.0000, 2.9000, 0.0000),
+		BasePos = Vector3.new(0.0000, -2.3000, 0.0000),
+		CorePos = Vector3.new(0.0000, 2.6000, 0.0000),
 		Parts = {
 			{ Name = "ArcaneCore", MeshId = "rbxassetid://87131108470982", Size = Vector3.new(0.8642, 0.5000, 0.8887), Offset = Vector3.new(0.0000, 2.6000, 0.0000), Mat = Enum.Material.Neon, Color = Color3.fromRGB(195, 85, 255) },
 			{ Name = "Crown", MeshId = "rbxassetid://89809975884823", Size = Vector3.new(0.5000, 0.4500, 0.5000), Offset = Vector3.new(0.0000, 2.1000, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(65, 32, 95) },
@@ -6698,9 +6698,9 @@ local STAFF_MESH_DATA: { [string]: StaffMeshData } = {
 	},
 	art_frostweaver_scepter = {
 		GripPos = Vector3.new(0.0000, 0.0000, 0.0000),
-		TipPos = Vector3.new(0.0000, 0.0000, 2.4000),
-		BasePos = Vector3.new(0.0000, 0.0000, -1.8000),
-		CorePos = Vector3.new(0.0000, 0.0000, 2.1500),
+		TipPos = Vector3.new(0.0000, 2.4000, 0.0000),
+		BasePos = Vector3.new(0.0000, -1.8000, 0.0000),
+		CorePos = Vector3.new(0.0000, 2.1500, 0.0000),
 		Parts = {
 			{ Name = "ArcaneCore", MeshId = "rbxassetid://121023718862452", Size = Vector3.new(0.5305, 0.2400, 0.5389), Offset = Vector3.new(0.0000, 2.1500, 0.0000), Mat = Enum.Material.Neon, Color = Color3.fromRGB(130, 220, 255) },
 			{ Name = "Crown", MeshId = "rbxassetid://119568997697910", Size = Vector3.new(0.3683, 0.5965, 0.3853), Offset = Vector3.new(-0.0294, 1.7733, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(200, 210, 225) },
@@ -6713,9 +6713,9 @@ local STAFF_MESH_DATA: { [string]: StaffMeshData } = {
 	},
 	art_glacial_monolith = {
 		GripPos = Vector3.new(0.0000, 0.0000, 0.0000),
-		TipPos = Vector3.new(0.0000, 0.0000, 2.4000),
-		BasePos = Vector3.new(0.0000, 0.0000, -1.9500),
-		CorePos = Vector3.new(0.0000, 0.0000, 2.1500),
+		TipPos = Vector3.new(0.0000, 2.4000, 0.0000),
+		BasePos = Vector3.new(0.0000, -1.9500, 0.0000),
+		CorePos = Vector3.new(0.0000, 2.1500, 0.0000),
 		Parts = {
 			{ Name = "ArcaneCore", MeshId = "rbxassetid://116141917102328", Size = Vector3.new(0.3989, 0.4000, 0.4000), Offset = Vector3.new(0.0000, 2.1500, 0.0000), Mat = Enum.Material.Neon, Color = Color3.fromRGB(60, 225, 255) },
 			{ Name = "Crown", MeshId = "rbxassetid://86060257379879", Size = Vector3.new(0.2835, 0.6823, 0.3490), Offset = Vector3.new(0.0001, 1.9161, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(180, 205, 230) },
@@ -6728,9 +6728,9 @@ local STAFF_MESH_DATA: { [string]: StaffMeshData } = {
 	},
 	art_infernal_pillar = {
 		GripPos = Vector3.new(0.0000, 0.0000, 0.0000),
-		TipPos = Vector3.new(0.0000, 0.0000, 2.7000),
-		BasePos = Vector3.new(0.0000, 0.0000, -2.0500),
-		CorePos = Vector3.new(0.0000, 0.0000, 2.3500),
+		TipPos = Vector3.new(0.0000, 2.7000, 0.0000),
+		BasePos = Vector3.new(0.0000, -2.0500, 0.0000),
+		CorePos = Vector3.new(0.0000, 2.3500, 0.0000),
 		Parts = {
 			{ Name = "ArcaneCore", MeshId = "rbxassetid://117862777979265", Size = Vector3.new(0.4391, 0.4400, 0.4400), Offset = Vector3.new(0.0000, 2.3500, 0.0000), Mat = Enum.Material.Neon, Color = Color3.fromRGB(255, 60, 20) },
 			{ Name = "Crown", MeshId = "rbxassetid://107864296147271", Size = Vector3.new(0.4391, 0.3800, 0.4400), Offset = Vector3.new(0.0000, 1.9000, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(50, 40, 45) },
@@ -6744,9 +6744,9 @@ local STAFF_MESH_DATA: { [string]: StaffMeshData } = {
 	},
 	art_omega_archon_caduceus = {
 		GripPos = Vector3.new(0.0000, 0.0000, 0.0000),
-		TipPos = Vector3.new(0.0000, 0.0000, 3.0000),
-		BasePos = Vector3.new(0.0000, 0.0000, -2.3500),
-		CorePos = Vector3.new(0.0000, 0.0000, 2.6500),
+		TipPos = Vector3.new(0.0000, 3.0000, 0.0000),
+		BasePos = Vector3.new(0.0000, -2.3500, 0.0000),
+		CorePos = Vector3.new(0.0000, 2.6500, 0.0000),
 		Parts = {
 			{ Name = "ArcaneCore", MeshId = "rbxassetid://124633983012337", Size = Vector3.new(0.5000, 0.5000, 0.5000), Offset = Vector3.new(0.0000, 2.6500, 0.0000), Mat = Enum.Material.Neon, Color = Color3.fromRGB(255, 245, 200) },
 			{ Name = "Crown", MeshId = "rbxassetid://80798890341841", Size = Vector3.new(0.5200, 0.4500, 0.5200), Offset = Vector3.new(0.0000, 2.1000, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(255, 215, 90) },
@@ -6760,9 +6760,9 @@ local STAFF_MESH_DATA: { [string]: StaffMeshData } = {
 	},
 	art_pyromancers_torch_rod = {
 		GripPos = Vector3.new(0.0000, 0.0000, 0.0000),
-		TipPos = Vector3.new(0.0000, 0.0000, 2.3000),
-		BasePos = Vector3.new(0.0000, 0.0000, -1.8000),
-		CorePos = Vector3.new(0.0000, 0.0000, 1.9500),
+		TipPos = Vector3.new(0.0000, 2.3000, 0.0000),
+		BasePos = Vector3.new(0.0000, -1.8000, 0.0000),
+		CorePos = Vector3.new(0.0000, 1.9500, 0.0000),
 		Parts = {
 			{ Name = "ArcaneCore", MeshId = "rbxassetid://90609655843176", Size = Vector3.new(0.3186, 0.3200, 0.3200), Offset = Vector3.new(0.0000, 1.9500, 0.0000), Mat = Enum.Material.Neon, Color = Color3.fromRGB(255, 95, 20) },
 			{ Name = "Crown", MeshId = "rbxassetid://86505835860389", Size = Vector3.new(0.3983, 0.3000, 0.4000), Offset = Vector3.new(0.0000, 1.6000, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(50, 52, 58) },
@@ -6775,9 +6775,9 @@ local STAFF_MESH_DATA: { [string]: StaffMeshData } = {
 	},
 	art_ruby_staff = {
 		GripPos = Vector3.new(0.0000, 0.0000, 0.0000),
-		TipPos = Vector3.new(0.0000, 0.0000, 2.3000),
-		BasePos = Vector3.new(0.0000, 0.0000, -1.7000),
-		CorePos = Vector3.new(0.0000, 0.0000, 2.0500),
+		TipPos = Vector3.new(0.0000, 2.3000, 0.0000),
+		BasePos = Vector3.new(0.0000, -1.7000, 0.0000),
+		CorePos = Vector3.new(0.0000, 2.0500, 0.0000),
 		Parts = {
 			{ Name = "ArcaneCore", MeshId = "rbxassetid://79317759674677", Size = Vector3.new(0.4000, 0.4000, 0.4000), Offset = Vector3.new(0.0000, 2.0500, 0.0000), Mat = Enum.Material.Neon, Color = Color3.fromRGB(240, 30, 80) },
 			{ Name = "Crown", MeshId = "rbxassetid://80722231690598", Size = Vector3.new(0.3600, 0.5050, 0.3600), Offset = Vector3.new(0.0000, 1.6226, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(165, 115, 70) },
@@ -6790,9 +6790,9 @@ local STAFF_MESH_DATA: { [string]: StaffMeshData } = {
 	},
 	art_scholars_spire = {
 		GripPos = Vector3.new(0.0000, 0.0000, 0.0000),
-		TipPos = Vector3.new(0.0000, 0.0000, 2.2000),
-		BasePos = Vector3.new(0.0000, 0.0000, -1.6000),
-		CorePos = Vector3.new(0.0000, 0.0000, 1.9500),
+		TipPos = Vector3.new(0.0000, 2.2000, 0.0000),
+		BasePos = Vector3.new(0.0000, -1.6000, 0.0000),
+		CorePos = Vector3.new(0.0000, 1.9500, 0.0000),
 		Parts = {
 			{ Name = "ArcaneCore", MeshId = "rbxassetid://126221139389673", Size = Vector3.new(0.3200, 0.5250, 0.3200), Offset = Vector3.new(0.0000, 1.9675, 0.0000), Mat = Enum.Material.Neon, Color = Color3.fromRGB(245, 160, 40) },
 			{ Name = "Crown", MeshId = "rbxassetid://104821740261482", Size = Vector3.new(0.3167, 0.4250, 0.3200), Offset = Vector3.new(0.0000, 1.5375, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(220, 180, 85) },
@@ -6804,9 +6804,9 @@ local STAFF_MESH_DATA: { [string]: StaffMeshData } = {
 	},
 	art_solaris_sunburst = {
 		GripPos = Vector3.new(0.0000, 0.0000, 0.0000),
-		TipPos = Vector3.new(0.0000, 0.0000, 2.8000),
-		BasePos = Vector3.new(0.0000, 0.0000, -2.1500),
-		CorePos = Vector3.new(0.0000, 0.0000, 2.4500),
+		TipPos = Vector3.new(0.0000, 2.8000, 0.0000),
+		BasePos = Vector3.new(0.0000, -2.1500, 0.0000),
+		CorePos = Vector3.new(0.0000, 2.4500, 0.0000),
 		Parts = {
 			{ Name = "ArcaneCore", MeshId = "rbxassetid://113396609524774", Size = Vector3.new(0.4800, 0.4800, 0.4800), Offset = Vector3.new(0.0000, 2.4500, 0.0000), Mat = Enum.Material.Neon, Color = Color3.fromRGB(255, 235, 175) },
 			{ Name = "Crown", MeshId = "rbxassetid://114544498744736", Size = Vector3.new(0.4800, 0.4000, 0.4800), Offset = Vector3.new(0.0000, 2.0000, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(240, 185, 55) },
@@ -6819,9 +6819,9 @@ local STAFF_MESH_DATA: { [string]: StaffMeshData } = {
 	},
 	art_void_channeler = {
 		GripPos = Vector3.new(0.0000, 0.0000, 0.0000),
-		TipPos = Vector3.new(0.0000, 0.0000, 2.7000),
-		BasePos = Vector3.new(0.0000, 0.0000, -2.0500),
-		CorePos = Vector3.new(0.0000, 0.0000, 2.3500),
+		TipPos = Vector3.new(0.0000, 2.7000, 0.0000),
+		BasePos = Vector3.new(0.0000, -2.0500, 0.0000),
+		CorePos = Vector3.new(0.0000, 2.3500, 0.0000),
 		Parts = {
 			{ Name = "ArcaneCore", MeshId = "rbxassetid://127168285935259", Size = Vector3.new(0.4400, 0.4400, 0.4400), Offset = Vector3.new(0.0000, 2.3500, 0.0000), Mat = Enum.Material.Neon, Color = Color3.fromRGB(170, 50, 250) },
 			{ Name = "Crown", MeshId = "rbxassetid://105220951861446", Size = Vector3.new(0.4400, 0.3800, 0.4400), Offset = Vector3.new(0.0000, 1.9000, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(60, 32, 85) },
@@ -7077,10 +7077,12 @@ local function makeMeshStaff(name: string): Model
 		end
 	end
 
-	-- Sockets: Grip, Tip, VfxTip, VfxBase, VfxCore
+	-- Sockets: Grip, Tip, VfxTip, VfxBase, VfxCore. Staff meshes run along +Y (head up), so the
+	-- grip is unrotated: UpVector = shaft toward the head, LookVector = head face (-Z), matching
+	-- the procedural weapon_staff the STAFF clips were authored against.
 	local grip = Instance.new("Attachment")
 	grip.Name = "Grip"
-	grip.CFrame = CFrame.fromMatrix(data.GripPos, Vector3.new(0, 1, 0), Vector3.new(0, 0, 1), Vector3.new(-1, 0, 0))
+	grip.CFrame = CFrame.new(data.GripPos)
 	grip.Parent = handlePart
 
 	local tip = Instance.new("Attachment")

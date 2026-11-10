@@ -150,6 +150,7 @@ HeroSockets.SOCKETS = table.freeze({
 -- Uniform size multiplier applied to a weapon type's prefab when it is equipped.
 HeroSockets.WEAPON_SCALE = table.freeze({
 	DAGGERS = 1.1,
+	STAFF = 1.1,
 } :: { [string]: number })
 
 -- Studs the grip point slides towards the pommel (away from the blade) when equipped, so the
