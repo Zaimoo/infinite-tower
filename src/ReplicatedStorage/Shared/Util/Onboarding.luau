@@ -42,16 +42,26 @@ function Onboarding.HasReadySquad(profile: any, now: number): boolean
 	return false
 end
 
-function Onboarding.UpdateAccess(profile: any, ready: boolean)
+-- Opens systems as the linear chain reaches them (GDD §4.7). Access is only ever added, never taken
+-- back. `facts` is the guide's lesson record; without it (legacy callers) clearing Floor 1 opens
+-- everything at once.
+--   Squad: always.   Tower: a hero fit to fight.   Forge: Floor 1 cleared.
+--   Facilities, Fortress Tree, The Pit: the first weapon forged or equipped. Reaching Floor 3 opens
+--   them regardless, so nobody is ever held behind a lesson they could not finish.
+function Onboarding.UpdateAccess(profile: any, ready: boolean, facts: { [string]: boolean }?)
 	local unlocks = profile.Unlocks
 	unlocks.Squad = true
 	if ready then unlocks.Tower = true end
-	if (profile.HighestClearedFloor or 0) >= 1 or (profile.MaxFloorReached or 0) >= 2 then
+	local cleared = (profile.HighestClearedFloor or 0) >= 1 or (profile.MaxFloorReached or 0) >= 2
+	if cleared then
 		unlocks.Tower = true
 		unlocks.Forge = true
-		unlocks.Facilities = true
-		unlocks.FortressTree = true
-		unlocks.Pit = true
+		local veteran = (profile.HighestClearedFloor or 0) >= 2 or (profile.MaxFloorReached or 0) >= 3
+		if facts == nil or veteran or facts.Roll or facts.Equip then
+			unlocks.Facilities = true
+			unlocks.FortressTree = true
+			unlocks.Pit = true
+		end
 	end
 	-- The normal floor-access check still requires MaxFloorReached to be at least 5.
 	if (profile.MaxFloorReached or 0) >= 5 then unlocks.TowerFloor5 = true end
