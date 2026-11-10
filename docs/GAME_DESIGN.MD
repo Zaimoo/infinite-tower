@@ -363,7 +363,7 @@ The hub's lighting tells the story: the fortresses are a refuge, the tower is a 
 | Preset | Where | Look |
 | :--- | :--- | :--- |
 | **Sanctuary** | Plots, bridges and the Cloister Commons | Golden afternoon: warm sun, soft blue bounce light, clear air, saturated colour, gentle bloom and sun rays, exposure +0.3 |
-| **Dread** | The tower walkway and the tower itself | Crimson murk: dark red ambient, heavy haze, drained colour, strong contrast, red glows that bloom, exposure −0.45 |
+| **Dread** | The tower walkway and the tower itself | Crimson murk: dusky red ambient, moderate red haze, slightly drained colour, red glows that bloom, exposure +0.05. Dark in mood but bright enough that the Master, their heroes and the causeway stay readable |
 | **Storm** | Off-map tower floors | The original moody storm grade, unchanged |
 
 Dread fades in by distance from the tower centre: none beyond 470 studs (the cloister's south edge at 476 and every plot), full within 395 (the walkway). Crossing the Pilgrim's Causeway is the transition, so the light drains as players approach the tower and returns as they walk home. The presets adjust `ExposureCompensation`, not `Brightness`, so the Settings brightness slider keeps working. The plot bridges use pale warm stone and cream marble rails; crimson is reserved for the tower side.
@@ -701,6 +701,7 @@ The player interface is built from modular, gothic-styled components:
    - **Biome-Grouped Floor Selector Modal (`FloorSelector`):** Scrollable 50-floor selector organized under 10 **Biome Header Banners** (`BIOME 1 — VERDANT RUINS (FLOORS 1–5)` through `BIOME 10 — ABYSSAL THRONE (FLOORS 46–50)`). Each floor button displays live status badges (`◆` Boss Floor, `★` You + Squad present, `●` You present, `▲` Squad stationed) and opens a detail pane showing floor name, biome, role (`Boss Floor` / `Combat Floor`), live `Visited: N | Squads: M` presence counts, and action buttons (`Visit floor`, `Assign squad`, `Recall squad`).
    - **Modal Click-Through Prevention (`MasterController.client.luau`):** Viewport targeting checks `GuiService:GetGuiObjectsAtPosition` so clicking inside open UI modals or HUD buttons never leaks world-space `FocusTarget` raycasts onto mobs behind the UI.
 3. **Real-Time Combat Feedback & Boss HUD (`CombatFeedback.luau`, `EnemyAnimationController.luau`, `HUDController.client.luau`):**
+   - **Floor Banner (top centre):** on any tower floor with no boss up, the banner reads `FLOOR N - NAME · REC. POWER x · YOURS y` (the floor's `TowerFloorConfig.RecommendedPower` in gold, your Squad Power in green when it meets it and red when it doesn't, as in the Floor Selector) over a kill-progress bar: `MOBS DEFEATED: k / n (p%)` until the boss is summoned.
    - **Tower Floor Boss Top HUD Banner:** Engaging any of the 10 Biome Bosses on Floors `5, 10, ..., 50` activates the top-center Boss HUD Banner (`_G.ClientCombatState.FloorBoss`), displaying `"FLOOR N BIOME BOSS — NAME [PHASE 1 / PHASE 2: ENRAGED]"` and a live HP bar that automatically clears on boss death or floor departure.
    - **Damage Popups:** Server-hit floating damage labels pooled up to 32 active instances. Styled with `GothamBold` font, quadratic easing upward, and color-coded:
      - Gold (`#FFCF59`): Overdrive crits / empowered hits.
