@@ -25,6 +25,7 @@ local Skills = require(Shared:WaitForChild("Config"):WaitForChild("ArchetypeComb
 local StatBalance = require(Shared:WaitForChild("Config"):WaitForChild("StatBalance"))
 local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormulas"))
 local SummonLuck = require(Shared:WaitForChild("Util"):WaitForChild("SummonLuck"))
+local HeroBannerOdds = require(Shared:WaitForChild("Util"):WaitForChild("HeroBannerOdds"))
 local Grimoire = require(Shared:WaitForChild("Util"):WaitForChild("GildedGrimoire"))
 local Portrait = require(script.Parent:WaitForChild("Portrait"))
 local Theme = require(script.Parent:WaitForChild("Theme"))
@@ -134,20 +135,9 @@ type Filter = "All" | "Owned" | "Missing"
 
 local CLOSE_ACTION = "HeroIndexClose"
 
+-- Every hero a banner can drop, rarest first, each once (the same list the summon odds window shows).
 local function heroesOf(banner: any): { string }
-	local list = {}
-	for tier = banner.MaxStar, 1, -1 do
-		local pool = banner.HeroesPoolByStar and banner.HeroesPoolByStar[tier]
-		if pool and #pool > 0 then
-			for _, id in ipairs(pool) do
-				table.insert(list, id)
-			end
-		else
-			local id = banner.HeroesByStar[tier]
-			if id then table.insert(list, id) end
-		end
-	end
-	return list
+	return HeroBannerOdds.Heroes(banner)
 end
 
 -- Owned copies, best star and highest level per template.

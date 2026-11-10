@@ -27,6 +27,7 @@ local HeroCard = require(script.Parent:WaitForChild("HeroCard"))
 local ModalFit = require(script.Parent:WaitForChild("ModalFit"))
 local Theme = require(script.Parent:WaitForChild("Hud"):WaitForChild("Theme"))
 local SummonReveal = require(script.Parent:WaitForChild("SummonReveal"))
+local HeroOddsModal = require(script.Parent:WaitForChild("HeroOddsModal"))
 local UIFeel = require(script.Parent:WaitForChild("UIFeel"))
 local Kit = require(script.Parent:WaitForChild("Kit"))
 local StatBalance = require(Shared:WaitForChild("Config"):WaitForChild("StatBalance"))
@@ -294,6 +295,12 @@ function Controller.new(gui: ScreenGui, getProfile: () -> any, remotes: Instance
 	-- 8. Summon Reveal Modal
 	self:BuildSummonRevealModal(gui)
 
+	-- 9. "View Heroes & Odds" window (over the Altar window)
+	self.HeroOdds = HeroOddsModal.new(gui, {
+		CALL_OF_THE_RIFT = HeroCatalog.PermanentBanner,
+		A_STARS_ARRIVAL = HeroCatalog.LimitedBanner,
+	}, getProfile)
+
 	-- Fit the window inside the safe area (below the top bar, clear of the bottom edge).
 	ModalFit.Bind(root, self.Scale, WIDTH, HEIGHT, { MaxScale = 1.25 })
 
@@ -304,8 +311,8 @@ end
 -- SECTION 1: HERO BANNER VIEWS ("CALL OF THE RIFT" 1★–7★, "A STAR'S ARRIVAL" 1★–7★)
 --============================================================================
 
--- Per-banner look. Both views share one builder; portraits are built lazily the first time a
--- view is shown, so each view owns at most eight hero viewports.
+-- Per-banner look. Both views share one builder; the featured portrait is built lazily the first
+-- time a view is shown. The full roster and odds open in HeroOddsModal.
 local BANNER_VIEWS = {
 	CALL_OF_THE_RIFT = {
 		Name = "PermanentSummonView", Prefix = "Perm", Banner = HeroCatalog.PermanentBanner,
@@ -409,48 +416,42 @@ function Controller:BuildBannerView(root: Frame, key: string)
 	title.TextStrokeColor3 = def.Stroke
 	title.ZIndex = 56
 
-	local blurb = label(card, string.format("Featured: <b>%s</b>, %s %d★. Every hero below can drop.",
+	local blurb = label(card, string.format("Featured: <b>%s</b>, %s %d★. See every hero and their odds.",
 		featuredSeed and featuredSeed.DisplayName or "Hero", HeroCatalog.RarityName(topTier), topTier), 13, C.TextLavender, Enum.Font.GothamMedium)
 	blurb.Position = UDim2.fromOffset(22, 88)
 	blurb.Size = UDim2.new(1, -270, 0, 18)
 	blurb.TextXAlignment = Enum.TextXAlignment.Left
 	blurb.ZIndex = 56
 
-	-- Roster strip: one portrait chip per tier (highest first) with its drop rate.
-	local strip = new("Frame", {
-		Name = "RosterStrip", Position = UDim2.fromOffset(18, 118), Size = UDim2.new(1, -262, 0, 112),
-		BackgroundTransparency = 1, ZIndex = 56,
+	-- Top-tier odds teaser and the "View Heroes & Odds" button (the full roster and odds live in
+	-- HeroOddsModal, like the Forge's "View all weapons & odds").
+	local teaser = label(card, string.format("%s <b>%s %s</b>  ·  %s+ guaranteed by pull %d",
+		if banner.FeaturedHeroId then "Featured" else "Top tier", HeroCatalog.RarityName(topTier), rateText(banner.Rates[topTier] or 0),
+		HeroCatalog.RarityName(banner.PityMinTier or 5), banner.MaxPity), 13, C.TextMuted, Enum.Font.GothamMedium)
+	teaser.Position = UDim2.fromOffset(22, 112)
+	teaser.Size = UDim2.new(1, -270, 0, 18)
+	teaser.TextXAlignment = Enum.TextXAlignment.Left
+	teaser.ZIndex = 56
+
+	local viewHeroesBtn = new("TextButton", {
+		Name = def.Prefix .. "ViewHeroesBtn",
+		Position = UDim2.fromOffset(22, 146),
+		Size = UDim2.fromOffset(230, 38),
+		Text = "VIEW HEROES & ODDS",
+		Font = Enum.Font.GothamBlack,
+		TextSize = 13,
+		TextColor3 = Color3.new(1, 1, 1),
+		BorderSizePixel = 0,
+		ZIndex = 58,
 	}, card)
-	new("UIListLayout", {
-		FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder,
-		VerticalAlignment = Enum.VerticalAlignment.Bottom,
-	}, strip)
-	local chipSize = if banner.MaxStar > 5 then 54 else 66
-	local portraitHosts: { { Host: Frame, TemplateId: string, Tier: number } } = {}
-	for tier = banner.MaxStar, 1, -1 do
-		local id = banner.HeroesByStar[tier]
-		local seed = HeroCatalog.Seeds[id]
-		local color = Theme.RarityColor(tier)
-		local cell = new("Frame", {
-			Name = "Tier" .. tier, LayoutOrder = banner.MaxStar - tier, Size = UDim2.fromOffset(chipSize, chipSize + 38),
-			BackgroundTransparency = 1, ZIndex = 56,
-		}, strip)
-		local host = new("Frame", {
-			Name = "Portrait", Size = UDim2.fromOffset(chipSize, chipSize), BackgroundColor3 = color:Lerp(Color3.fromRGB(10, 6, 16), 0.75),
-			BorderSizePixel = 0, ClipsDescendants = true, ZIndex = 57,
-		}, cell)
-		new("UICorner", { CornerRadius = UDim.new(0, 10) }, host)
-		new("UIStroke", { Color = color, Thickness = if tier == topTier then 2.6 else 1.8, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, host)
-		table.insert(portraitHosts, { Host = host, TemplateId = id, Tier = tier })
-		local nameLbl = label(cell, seed and seed.DisplayName or "?", 12, color, Enum.Font.GothamBold)
-		nameLbl.Position = UDim2.fromOffset(-6, chipSize + 2)
-		nameLbl.Size = UDim2.new(1, 12, 0, 16)
-		nameLbl.ZIndex = 57
-		local rate = label(cell, rateText(banner.Rates[tier] or 0), 11, C.TextMuted, Enum.Font.GothamMedium)
-		rate.Position = UDim2.fromOffset(-6, chipSize + 19)
-		rate.Size = UDim2.new(1, 12, 0, 15)
-		rate.ZIndex = 57
-	end
+	GothicBoxStyle.Apply(viewHeroesBtn, { Style = "ButtonSecondary" })
+	viewHeroesBtn.FontFace = GildedGrimoire.Fonts.Title
+	viewHeroesBtn.TextStrokeColor3 = GildedGrimoire.Ink
+	viewHeroesBtn.TextStrokeTransparency = 0.3
+	viewHeroesBtn:SetAttribute("Grimoire", true)
+	viewHeroesBtn.Activated:Connect(function()
+		if self.HeroOdds then self.HeroOdds:Open(key) end
+	end)
 
 	-- 2. Pity row: text and a progress bar on the left, the Blessing badge and 10x rule on the right.
 	local pityLabel = label(view, "", 14, C.TextLavender, Enum.Font.GothamMedium)
@@ -508,20 +509,17 @@ function Controller:BuildBannerView(root: Frame, key: string)
 	self.BannerViews = self.BannerViews or {}
 	self.BannerViews[key] = {
 		View = view, Pity = pityLabel, PityFill = pityFill, Info = infoLabel, Status = status, Buttons = buttons,
-		FeaturedHost = featuredHost, FeaturedId = featuredId, TopTier = topTier, Portraits = portraitHosts, PortraitsBuilt = false,
+		FeaturedHost = featuredHost, FeaturedId = featuredId, TopTier = topTier, PortraitBuilt = false, ViewHeroes = viewHeroesBtn,
 	}
 	return view
 end
 
--- Builds a view's hero portraits the first time it is shown.
+-- Builds a view's featured-hero portrait the first time it is shown.
 function Controller:EnsureBannerPortraits(key: string)
 	local bv = self.BannerViews and self.BannerViews[key]
-	if not bv or bv.PortraitsBuilt then return end
-	bv.PortraitsBuilt = true
+	if not bv or bv.PortraitBuilt then return end
+	bv.PortraitBuilt = true
 	HeroCard.Portrait(bv.FeaturedHost, { TemplateId = bv.FeaturedId, Stars = bv.TopTier })
-	for _, p in bv.Portraits do
-		HeroCard.Portrait(p.Host, { TemplateId = p.TemplateId, Stars = p.Tier })
-	end
 end
 
 function Controller:BuildPermanentSummonView(root: Frame)
@@ -673,6 +671,7 @@ function Controller:SetSummonTab(tab: "CALL_OF_THE_RIFT" | "A_STARS_ARRIVAL")
 
 	self.PermanentSummonView.Visible = isCall
 	self.LimitedSummonView.Visible = not isCall
+	if self.HeroOdds then self.HeroOdds:Close() end
 	self:EnsureBannerPortraits(tab)
 	self:Refresh()
 end
@@ -726,6 +725,7 @@ function Controller:PerformSummon(bannerId: string, count: number, confirmed: bo
 	end
 
 	local ownedBefore = ownedTemplates(profile)
+	if self.HeroOdds then self.HeroOdds:Close() end
 	self.Busy = true
 	self:SetSummonStatus(bannerId, "Opening the rift…")
 	self:Refresh()
@@ -778,6 +778,7 @@ function Controller:IsOpen(): boolean
 end
 
 function Controller:Close()
+	if self.HeroOdds then self.HeroOdds:Close() end
 	if not self:IsOpen() then return end
 	if self.Root then self.Root.Visible = false end
 	if self.Scrim then self.Scrim.Visible = false end
@@ -806,6 +807,7 @@ function Controller:Open(facility: string)
 	end
 
 	local isSummon = (facility == "Summoning")
+	if not isSummon and self.HeroOdds then self.HeroOdds:Close() end
 	self.TabContainer.Visible = isSummon
 	self.TabDivider.Visible = isSummon
 	self.HeaderTitle.Visible = not isSummon
@@ -883,6 +885,7 @@ function Controller:Refresh()
 		local badge = if luck > 0 then string.format("<font color=\"#FFE296\">Blessing +%.1f%% luck</font>", luck * 100) else "No Blessing luck active"
 		if self.PermanentInfoLabel then self.PermanentInfoLabel.Text = badge end
 		if self.LimitedInfoLabel then self.LimitedInfoLabel.Text = badge end
+		if self.HeroOdds then self.HeroOdds:Refresh() end
 		return
 	end
 

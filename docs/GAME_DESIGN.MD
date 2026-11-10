@@ -374,7 +374,9 @@ Dread fades in by distance from the tower centre: none beyond 470 studs (the clo
 
 ### 4.1 Gacha Banners & Hero Roster Architecture
 
-Hero summoning at the **Summoning Altar** (`FacilityController.luau`) is partitioned into two distinct banners. Each banner rolls an **inherent rarity tier**, and each tier holds exactly one hero. Every hero is summoned at **1★**, whatever its tier, and its rarity sets how strong that 1★ hero is (see *Inherent Hero Rarity* below). Stars are earned only by promotion at The Pit. All hero odds can be raised by the **God's Blessing** facility (Section 4.3, Facility D).
+Hero summoning at the **Summoning Altar** (`FacilityController.luau`) is partitioned into two distinct banners. Each banner rolls an **inherent rarity tier**, then picks a hero from that tier: most tiers hold one hero, and a tier with a pool (`HeroesPoolByStar`) splits its rate evenly between its heroes. Every hero is summoned at **1★**, whatever its tier, and its rarity sets how strong that 1★ hero is (see *Inherent Hero Rarity* below). Stars are earned only by promotion at The Pit. All hero odds can be raised by the **God's Blessing** facility (Section 4.3, Facility D).
+
+**Summon screen.** Each banner card shows its featured hero (A Star's Arrival: Astrea; Call of the Rift: its Mythical, Han), a line with the top tier's odds and the pity, and a **View Heroes & Odds** button. The button opens a window laid out like the Forge's *All weapons & odds* (`HeroOddsModal.luau`): a rate pill per tier, the banner's pity, 10-pull and price rules, the 50/50 state on A Star's Arrival, the God's Blessing luck, then every tier (rarest first) with each hero it can award, that hero's chance per pull, its 1★ stats, and Featured / Owned markers. All odds come from `HeroBannerOdds`, which mirrors the server roll and applies the player's luck. A tier whose hero has a different rarity says so on the card (Call of the Rift's Superior roll awards Catio, a Rare hero).
 
 #### 1. Permanent Banner: "Call of the Rift" (Rarity Tiers 1–7)
 The permanent standard banner features exactly **one character for each rarity from Common to Mythical** (7 total heroes):
