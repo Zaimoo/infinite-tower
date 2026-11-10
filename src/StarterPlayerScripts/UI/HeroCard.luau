@@ -10,25 +10,44 @@ local HeroAnimator = require(HeroRig:WaitForChild("HeroAnimator"))
 local GrimoireIcons = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GrimoireIcons"))
 local RunService = game:GetService("RunService")
 local HeroCard = {}
+local FIELD_OF_VIEW = 32
 
 -- Rig portraits are ViewportFrames holding a posed clone of the hero's rig (~50 parts). Rosters list
 -- hundreds of heroes, so a rig is only built while its portrait is on screen (every ancestor
--- visible, and inside its ScrollingFrame's view give or take a card), a couple per frame. A
--- portrait scrolled out of view parks its rig outside the viewport, so it costs nothing to render.
+-- visible, and inside or near its ScrollingFrame's view). A portrait scrolled well out of view parks
+-- its rig outside the viewport, so it costs nothing to render.
+-- Posing a rig and framing its camera happens once per hero and framing: the posed rig is kept as a
+-- master (never rendered) and every portrait clones it. So reopening a window, or a list rebuilding
+-- its cards, shows each portrait in a frame or two instead of rebuilding it from the template.
 -- The checks are cheap on purpose: reading AbsolutePosition right after a layout change forces a
 -- full layout pass (~15 ms), so a position is only read when its portrait first shows or after the
 -- engine reports it moved (scroll, sort, resize), and the visibility walk is spread over frames.
-local RIGS_PER_FRAME = 2
-local CHECKS_PER_FRAME = 40
-local SETTLE_SECONDS = 0.15 -- wait for a moving portrait (open pop, scrolling) to stop before reading layout
+local BUILD_BUDGET = 12 -- per frame: a clone of a cached master costs 1, posing a new master costs 4
+local MASTER_COST = 4
+local CHECKS_PER_FRAME = 120
+local SETTLE_SECONDS = 0.1 -- let a window's open pop settle before reading layout for a new portrait
+local RECHECK_SECONDS = 0.05 -- a built portrait that is moving (scrolling) is re-checked this often
 type Lazy = {
 	Viewport: ViewportFrame, Template: Model, Hero: any, Model: Model?, Dead: boolean,
 	FullBody: boolean?, CloseUp: boolean?,
-	Scroll: ScrollingFrame?, Moved: boolean, MovedAt: number, WasVisible: boolean, Queued: boolean, Y: number,
+	Scroll: ScrollingFrame?, Moved: boolean, MovedAt: number, CheckedAt: number, WasVisible: boolean, Queued: boolean, Y: number,
 }
+type Master = { Model: Model, Camera: CFrame }
 local entries: { Lazy } = {}
 local cursor = 1
 local pending: { Lazy } = {}
+-- Posed masters per template instance (weak keys, so a re-replicated template drops its old
+-- masters), then per framing ("Bust", "CloseUp", "Full").
+local masters: { [Model]: { [string]: Master } } = setmetatable({}, { __mode = "k" }) :: any
+
+local function framingKey(entry: Lazy): string
+	return if entry.FullBody then "Full" elseif entry.CloseUp then "CloseUp" else "Bust"
+end
+
+local function cachedMaster(entry: Lazy): Master?
+	local byFraming = masters[entry.Template]
+	return byFraming and byFraming[framingKey(entry)]
+end
 
 -- Every ancestor up to the ScreenGui is visible (no layout read).
 local function visible(vp: ViewportFrame): boolean
@@ -40,35 +59,39 @@ local function visible(vp: ViewportFrame): boolean
 	return node ~= nil and node:IsA("LayerCollector") and node.Enabled and node:IsDescendantOf(game)
 end
 
--- Inside the scroll's view, give or take a card. Reads layout, so call it only when needed.
+-- Inside the scroll's view or within one view's length of it, so rigs are ready before they scroll
+-- in and stay put during ordinary scrolling. Reads layout, so call it only when needed.
 local function inView(entry: Lazy, scroll: ScrollingFrame): boolean
 	local vp = entry.Viewport
 	local p, s = vp.AbsolutePosition, vp.AbsoluteSize
 	local sp, ss = scroll.AbsolutePosition, scroll.AbsoluteSize
 	entry.Y = p.Y
-	return p.Y + s.Y * 2 >= sp.Y and p.Y - s.Y <= sp.Y + ss.Y and p.X + s.X * 2 >= sp.X and p.X - s.X <= sp.X + ss.X
+	return p.Y + s.Y >= sp.Y - ss.Y and p.Y <= sp.Y + ss.Y * 2 and p.X + s.X >= sp.X - ss.X and p.X <= sp.X + ss.X * 2
 end
 
 local function check(entry: Lazy)
 	local vp = entry.Viewport
-	local settled = os.clock() - entry.MovedAt >= SETTLE_SECONDS
+	local now = os.clock()
 	if entry.Model then
 		-- Built: only a move can change whether it should render (a hidden window doesn't render
-		-- its viewports anyway).
+		-- its viewports anyway). The position is already laid out when Moved fires, so a built
+		-- portrait re-checks while scrolling instead of waiting for the scroll to stop.
 		local scroll = entry.Scroll
-		if scroll and entry.Moved and settled then
+		if scroll and entry.Moved and now - entry.CheckedAt >= RECHECK_SECONDS then
 			entry.Moved = false
+			entry.CheckedAt = now
 			local target = if inView(entry, scroll) then vp else nil
 			if entry.Model.Parent ~= target then entry.Model.Parent = target end
 		end
 		return
 	end
 	if entry.Queued then return end
+	local settled = now - entry.MovedAt >= SETTLE_SECONDS
 	local shown = visible(vp)
 	if shown and not entry.WasVisible then
 		-- Just appeared: its window is probably mid-pop, so let it settle first.
 		entry.Moved = true
-		entry.MovedAt = os.clock()
+		entry.MovedAt = now
 		settled = false
 	end
 	entry.WasVisible = shown
@@ -80,6 +103,7 @@ local function check(entry: Lazy)
 	if scroll then
 		if not entry.Moved or not settled then return end -- unchanged since the last look, or still moving
 		entry.Moved = false
+		entry.CheckedAt = now
 		if not inView(entry, scroll) then return end
 	else
 		entry.Y = 0
@@ -88,8 +112,9 @@ local function check(entry: Lazy)
 	table.insert(pending, entry)
 end
 
-local function buildRig(entry: Lazy)
-	local vp = entry.Viewport
+-- Clone the template, strip scripts, anchor, pose the idle and frame the camera. Done once per
+-- template and framing; portraits clone the result.
+local function buildMaster(entry: Lazy): Master
 	local model = entry.Template:Clone()
 	for _, descendant in model:GetDescendants() do
 		if descendant:IsA("BaseScript") then descendant:Destroy()
@@ -105,16 +130,14 @@ local function buildRig(entry: Lazy)
 			HeroAnimator.ApplyStaticPose(model, HeroAnimator.Sample(idle, 0))
 		end
 	end
-	model.Parent = vp
 	local bounds, size = model:GetBoundingBox()
 	local forward = bounds.LookVector
 	local look: Vector3
 	local distance: number
-	local fieldOfView = 32
 	if entry.FullBody then
 		look = bounds.Position
 		forward = (forward + bounds.RightVector * 0.16 + Vector3.new(0, 0.06, 0)).Unit
-		distance = math.max(size.X, size.Y) * 0.55 / math.tan(math.rad(fieldOfView / 2)) + size.Z * 0.5
+		distance = math.max(size.X, size.Y) * 0.55 / math.tan(math.rad(FIELD_OF_VIEW / 2)) + size.Z * 0.5
 	else
 		local head = model:FindFirstChild("Head")
 		look = if head and head:IsA("BasePart") then head.Position - Vector3.new(0, size.Y * 0.1, 0) else bounds.Position + Vector3.new(0, size.Y * 0.22, 0)
@@ -126,7 +149,22 @@ local function buildRig(entry: Lazy)
 			distance = math.max(2.8, size.Y * 0.65)
 		end
 	end
-	local camera = T.New("Camera", {FieldOfView = fieldOfView, CFrame = CFrame.lookAt(look + forward * distance, look)}, vp)
+	local master: Master = { Model = model, Camera = CFrame.lookAt(look + forward * distance, look) }
+	local byFraming = masters[entry.Template]
+	if not byFraming then
+		byFraming = {}
+		masters[entry.Template] = byFraming
+	end
+	byFraming[framingKey(entry)] = master
+	return master
+end
+
+local function buildRig(entry: Lazy)
+	local vp = entry.Viewport
+	local master = cachedMaster(entry) or buildMaster(entry)
+	local model = master.Model:Clone()
+	model.Parent = vp
+	local camera = T.New("Camera", {FieldOfView = FIELD_OF_VIEW, CFrame = master.Camera}, vp)
 	vp.CurrentCamera = camera
 	entry.Model = model
 end
@@ -145,9 +183,9 @@ local function stepLazyRigs()
 			cursor += 1
 		end
 	end
-	-- Build the highest queued portraits first.
-	local built = 0
-	while built < RIGS_PER_FRAME and #pending > 0 do
+	-- Build the highest queued portraits first, within the frame's budget.
+	local budget = BUILD_BUDGET
+	while budget > 0 and #pending > 0 do
 		local best = 1
 		for i = 2, #pending do
 			if pending[i].Y < pending[best].Y then best = i end
@@ -155,8 +193,8 @@ local function stepLazyRigs()
 		local entry = table.remove(pending, best) :: Lazy
 		entry.Queued = false
 		if not entry.Dead and not entry.Model and entry.Viewport.Parent then
+			budget -= if cachedMaster(entry) then 1 else MASTER_COST
 			buildRig(entry)
-			built += 1
 		end
 	end
 end
@@ -188,7 +226,7 @@ function HeroCard.Portrait(parent: Instance, hero: any, framing: (boolean | "Clo
 		local entry: Lazy = {
 			Viewport = viewport, Template = template, Hero = { TemplateId = hero.TemplateId }, Model = nil, Dead = false,
 			FullBody = framing == true, CloseUp = framing == "CloseUp",
-			Scroll = nil, Moved = false, MovedAt = 0, WasVisible = false, Queued = false, Y = 0,
+			Scroll = nil, Moved = false, MovedAt = 0, CheckedAt = 0, WasVisible = false, Queued = false, Y = 0,
 		}
 		table.insert(entries, entry)
 		-- Fires after layout (scroll, sort, resize, open pop), so listening costs no forced layout.
