@@ -139,6 +139,13 @@ SkillVfxCatalog.Heroes = table.freeze({
 		Special = { Style = "VOLLEY", Projectile = "ARROW", Scale = 1.3, Arc = 0.12, Trail = 0.22, Impact = 2.8, Count = 3, Spread = 7, Pierce = 12, Rings = true },
 		Skill = { Style = "STORM", Projectile = "ARROW", Scale = 1.3, Trail = 0.22, Impact = 2.2, FlareHeight = 28, SigilRadius = 16, RainPerWave = 4, RainHeight = 32, Shake = 0.22 },
 	},
+	-- Leafwind Arrow / Thornbriar Volley / Canopy's Wrath: forest green and silver, pale leaf core.
+	hero_aeli = {
+		Palette = { Primary = rgb(120, 220, 120), Secondary = rgb(200, 210, 215), Core = rgb(225, 255, 220) },
+		Basic = { Style = "SHOT", Projectile = "ARROW", Scale = 1.0, Arc = 0.3, Trail = 0.16, Impact = 1.8 },
+		Special = { Style = "VOLLEY", Projectile = "ARROW", Scale = 1.25, Arc = 0.12, Trail = 0.22, Impact = 2.6, Count = 3, Spread = 7, Pierce = 12, Rings = true },
+		Skill = { Style = "STORM", Projectile = "ARROW", Scale = 1.25, Trail = 0.22, Impact = 2.2, FlareHeight = 28, SigilRadius = 16, RainPerWave = 4, RainHeight = 32, Shake = 0.22 },
+	},
 	-- Astral Arrow / Nebula Piercer / Constellation Judgment: violet and star white-gold.
 	hero_astrea = {
 		Palette = { Primary = rgb(190, 150, 255), Secondary = rgb(255, 225, 140), Core = rgb(255, 255, 255) },

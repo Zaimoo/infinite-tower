@@ -30,6 +30,7 @@ local Grimoire = require(Shared:WaitForChild("Util"):WaitForChild("GildedGrimoir
 local Portrait = require(script.Parent:WaitForChild("Portrait"))
 local Theme = require(script.Parent:WaitForChild("Theme"))
 local Components = require(script.Parent:WaitForChild("Components"))
+local WindowScale = require(script.Parent.Parent:WaitForChild("WindowScale"))
 local ArtifactPreview = require(script.Parent.Parent:WaitForChild("ArtifactPreview"))
 
 local e = React.createElement
@@ -740,6 +741,7 @@ local function HeroIndex(props: { Profile: any, Width: number, OnClose: () -> ()
 			Active = true,
 		}, {
 			Max = e("UISizeConstraint", { MaxSize = Vector2.new(1200, 740) }),
+			Pop = e(WindowScale, { Window = "Index" }),
 			TitleIcon = IconAt("Index", 50, { Position = UDim2.fromOffset(18, 10), ZIndex = 3 }),
 			Title = Heavy({ Position = UDim2.fromOffset(78, 12), Size = UDim2.fromOffset(300, 30), MaxSize = 28, TextXAlignment = Enum.TextXAlignment.Left,
 				Text = windowTitle, ZIndex = 3 }),

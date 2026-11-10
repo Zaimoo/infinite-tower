@@ -42,6 +42,7 @@ local HeroLoadout = require(HeroRigFolder:WaitForChild("HeroLoadout"))
 local Theme = require(script.Parent:WaitForChild("Theme"))
 local Portrait = require(script.Parent:WaitForChild("Portrait"))
 local Components = require(script.Parent:WaitForChild("Components"))
+local WindowScale = require(script.Parent.Parent:WaitForChild("WindowScale"))
 
 local AssignHeroRole = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("TycoonGachaRemotes"):WaitForChild("AssignHeroRole") :: RemoteFunction
 
@@ -1350,7 +1351,7 @@ local function FacilityPanel(props: { Facility: string, Profile: any, Width: num
 			ZIndex = 21,
 		}, {
 			Max = e("UISizeConstraint", { MaxSize = Vector2.new(1120, 720) }),
-			Fit = e("UIScale", { Scale = fit }),
+			Fit = e(WindowScale, { Scale = fit, Window = "FacilityPanel" }),
 			Header = header,
 			Close = Panel({
 				Class = "TextButton", Text = "", AutoButtonColor = false, Selectable = true, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -18, 0, 18),

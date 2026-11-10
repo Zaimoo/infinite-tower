@@ -158,6 +158,15 @@ local function isFloorBossBannerVisible(): boolean
 	return banner ~= nil and banner:IsA("GuiObject") and banner.Visible
 end
 
+-- Heroes on the bench and fit to fight (the Squad rail badge).
+local function benchedHeroes(profile: any): number
+	local count, now = 0, os.time()
+	for _, hero in pairs(profile and profile.Heroes or {}) do
+		if hero.Assignment == "BENCHED" and (hero.ComaUntilTimestamp or 0) <= now then count += 1 end
+	end
+	return count
+end
+
 -- True when artifacts or heroes fill 90% or more of their backpack cap (the Backpack rail badge).
 local function backpackNearlyFull(profile: any): boolean
 	if not profile then return false end
@@ -185,23 +194,6 @@ local function buildableNodes(profile: any): number
 		end
 	end
 	return count
-end
-
--- Which Pit screen is open (legacy controllers until slice 3), and where its window starts.
-local function pitState(host: GuiObject): (string?, Vector2?)
-	local synth = _G.SynthesisController
-	local promo = _G.PromotionController
-	local active, window = nil, nil
-	if synth and synth.Root and synth.Root.Visible then
-		active, window = "Synthesis", synth.Root
-	elseif promo and promo.IsOpen and promo:IsOpen() then
-		active, window = "Promotion", promo.Root
-	end
-	if not active or not window then return nil, nil end
-	local origin = host.AbsolutePosition
-	local top = window.AbsolutePosition - origin
-	-- The window's top-centre, in the host's coordinates (the tab bar's fallback spot).
-	return active, Vector2.new(top.X + window.AbsoluteSize.X / 2, top.Y)
 end
 
 local function railSize(count: number, available: number): number
@@ -503,7 +495,17 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 		end
 	end, {})
 
+	local openSquad = function() call("OpenMasterModal", "SQUAD") end
 	local leftButtons = {
+		{
+			Name = "SquadRailButton",
+			Icon = "Squad",
+			Label = "Squad",
+			Accent = Color3.fromRGB(56, 189, 248), -- #38BDF8 Azure
+			-- "!" while a slot is open and a hero is free to fill it.
+			Badge = if emptySlots > 0 and benchedHeroes(profile) > 0 then "!" else nil,
+			OnActivated = openSquad,
+		},
 		{
 			Icon = "Shop",
 			Label = "Store",
@@ -633,36 +635,16 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 	local rightBottom = screen.Y - eventBottom - eventHeight - L.StackGap - (if raidChip then RaidHud.ChipHeight + 8 else 0)
 	-- Top right, top to bottom: the Next Goal card, then the Right Rail. Positions are in the Root's
 	-- coordinates unless noted.
-	-- Free part of Roblox's top bar, in screen pixels. Read live, because it can still be empty when the
-	-- HUD first renders. If Roblox reports no free area, use the whole strip (GetGuiInset height).
-	local topbar = GuiService.TopbarInset
-	if topbar.Width <= 0 or topbar.Height <= 0 then
-		local cam = workspace.CurrentCamera
-		local strip = (GuiService:GetGuiInset()).Y
-		topbar = Rect.new(0, 0, (if cam then cam.ViewportSize.X else screen.X) - 4, strip)
-	end
-	-- TopbarInset is in screen pixels, but AbsolutePosition is measured from below the top bar (a
-	-- layer that reaches into the bar reports y = -58): shift the top-bar rect into that space.
-	local guiInset = (GuiService:GetGuiInset())
-	local goalBlock = if goal then (if Store.GuideV2 then 124 else L.GoalCardHeight) + L.ZoneGap else 0
+	local goalBlock = if goal then Components.GoalCardHeight(goal, Store.GuideV2) + L.ZoneGap else 0
 	local goalTop = L.TopZone
 	local rightTop = L.TopZone + goalBlock
-	-- Pit tabs (Synthesis / Promotion): centred in the free part of Roblox's top bar under the window.
-	-- If they don't fit there, they straddle the window's top edge.
-	local pitHost = props.Overlay or props.Root
-	local pitActive, pitTop = pitState(pitHost)
-	local pitCenter: Vector2? = nil
-	if pitActive and pitTop then
-		local hostOrigin2 = pitHost.AbsolutePosition
-		local tabs = Components.PitTabsSize
-		local stripLeft = topbar.Min.X - guiInset.X + 8
-		local stripRight = topbar.Max.X - guiInset.X - 8
-		if topbar.Height >= tabs.Y and stripRight - stripLeft >= tabs.X then
-			local x = math.clamp(pitTop.X + hostOrigin2.X, stripLeft + tabs.X / 2, stripRight - tabs.X / 2)
-			pitCenter = Vector2.new(x - hostOrigin2.X, topbar.Min.Y - guiInset.Y + topbar.Height / 2 - hostOrigin2.Y)
-		else
-			pitCenter = pitTop
-		end
+	do
+		local open = drawerOpen or layoutOpen
+		local cardWidth = if compact then 20 + (#rows + (if lockedText then 1 else 0)) * 54
+			else Components.StatusCardWidth(#rows, lockedText ~= nil, tileWidth)
+		local width = if open then cardWidth + Components.DrawerTabWidth else Components.StripWidth(#rows, lockedText ~= nil)
+		Store.DrawerRight = L.Edge + width + assignButtonWidth
+		Store.DrawerTop = currencyBottom + Components.CurrencyBarHeight
 	end
 	local leftSize = railSize(#leftButtons, leftBottom - leftTop)
 	local rightSize = railSize(#rightButtons, rightBottom - rightTop)
@@ -700,7 +682,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 			SquadAssignment = Store.SquadAssignment,
 			OnAssignSquad = function() call("OpenTowerSelector", "ASSIGN") end,
 			OnToggle = function() if toggleRef.current then toggleRef.current() end end,
-			OnRow = function() call("OpenMasterModal", "SQUAD") end,
+			OnRow = openSquad,
 			OnLocked = function() call("OpenFacilityHUD", "FortressTree") end,
 			Above = e(Components.CurrencyBar, {
 				Gold = profile.Currencies and profile.Currencies.Gold or 0,
@@ -727,7 +709,10 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 		Guide = if guideOpen then e(GuidePanel, { OnClose = closeGuide, OnResume = function()
 			Store.GuideAction("Resume")
 			closeGuide()
-		end }) else nil,
+		end, OnSkip = if goal and goal.Core then function()
+			Store.GuideAction("Skip")
+			closeGuide()
+		end else nil }) else nil,
 		-- Over an open window, only when that window has no currency display of its own (Forge, Store,
 		-- Index and the Pit draw theirs or spend nothing): the HUD bar used to overlap their corners.
 		FocusCurrency = if modalFocus and profile and WindowManager.WantsHudCurrency() then e("Frame", {
@@ -745,23 +730,17 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 				Width = Components.CurrencyBarWidth,
 			}),
 		}) else nil,
-		PitTabs = (function()
-			if not pitActive or not pitCenter then return nil end
-			return e(Components.PitTabs, { Active = pitActive, Center = pitCenter, OnSelect = function(tab) call("OpenFacilityHUD", tab) end })
-		end)(),
+		-- Close buttons go through WindowManager, which shrinks the panel out and then calls the
+		-- _G.Close* function that clears the state (the same path Backspace takes).
 		Facility = if facilityOpen then e(FacilityPanel, { Facility = facilityOpen, Profile = profile, Width = screen.X,
-			OnClose = function()
-				currentFacilityOpen = nil
-				setFacilityOpen(nil)
-				call("SetModalFocusMode", false)
-			end,
+			OnClose = function() WindowManager.Close("FacilityPanel") end,
 		}) else nil,
-		Shop = if shopOpen then e(ShopPanel, { Profile = profile, Width = screen.X, OnClose = function() currentShopOpen = false setShopOpen(false) call("SetModalFocusMode", false) end }) else nil,
+		Shop = if shopOpen then e(ShopPanel, { Profile = profile, Width = screen.X, OnClose = function() WindowManager.Close("Index") end }) else nil,
 		TowerEventPopup = e(TowerEventHud.Popup, { Blocked = facilityOpen ~= nil or shopOpen or indexOpen or modalFocus }),
 		RaidResults = e(RaidHud.ResultsCard, { Blocked = facilityOpen ~= nil or shopOpen or indexOpen or guideOpen }),
-		Index = if indexOpen then e(HeroIndex, { Profile = profile, Width = screen.X, InitialMode = indexInitialMode, OnClose = function() currentIndexOpen = false setIndexOpen(false) call("SetModalFocusMode", false) end }) else nil,
+		Index = if indexOpen then e(HeroIndex, { Profile = profile, Width = screen.X, InitialMode = indexInitialMode, OnClose = function() WindowManager.Close("Index") end }) else nil,
 		Backpack = if backpackOpen then e(BackpackPanel, {
-			Width = screen.X, Height = screen.Y, OnClose = function() closeBackpack() call("SetModalFocusMode", false) end, ReturnFocus = returnBackpackFocus,
+			Width = screen.X, Height = screen.Y, OnClose = function() WindowManager.Close("Backpack") end, ReturnFocus = returnBackpackFocus,
 		}) else nil,
 		}, props.Overlay or props.Root),
 	})

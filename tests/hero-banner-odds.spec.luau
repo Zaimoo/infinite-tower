@@ -61,4 +61,22 @@ test("every listed hero has a seed and appears once", function()
 	end
 end)
 
+-- The Hero Index lists exactly HeroBannerOdds.Heroes(banner), so a seed missing from every banner
+-- never shows in the Index (or on the summon screen).
+test("every hero seed can be pulled from a banner at its own rarity", function()
+	local found = {}
+	for _, banner in BANNERS do
+		for _, t in HeroBannerOdds.Tiers(banner) do
+			for _, h in t.Heroes do
+				found[h.HeroId] = found[h.HeroId] or {}
+				table.insert(found[h.HeroId], t.Tier)
+			end
+		end
+	end
+	for id, seed in HeroCatalog.Seeds do
+		assert(found[id], id .. " is on a hero banner (Hero Index and summon screen)")
+		assert(table.find(found[id], seed.Rarity), string.format("%s is pulled at its own rarity %d", id, seed.Rarity))
+	end
+end)
+
 print(string.format("hero-banner-odds: %d passed", passed))

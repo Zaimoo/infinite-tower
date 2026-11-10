@@ -10,6 +10,7 @@ local React = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("R
 local Grimoire = require(ReplicatedStorage.Shared.Util.GildedGrimoire)
 local GrimoireIcons = require(ReplicatedStorage.Shared.Util.GrimoireIcons)
 local Components = require(script.Parent.Components)
+local WindowScale = require(script.Parent.Parent.WindowScale)
 local Model = require(script.Parent.BackpackModel)
 local Portrait = require(script.Parent.Portrait)
 local ArtifactPreview = require(script.Parent.Parent.ArtifactPreview)
@@ -301,6 +302,7 @@ local function BackpackPanel(props: { Width: number, Height: number, OnClose: ()
 			SelectionBehaviorLeft = Enum.SelectionBehavior.Stop, SelectionBehaviorRight = Enum.SelectionBehavior.Stop,
 			Top = Tones.Violet.Top, Bottom = Tones.Deep.Bottom, Rail = Tones.Bronze.Rail,
 		}, {
+			Pop = e(WindowScale, { Window = "Backpack" }),
 			Title = Heavy({ Text = "Backpack", MaxSize = 28, TextXAlignment = Enum.TextXAlignment.Left,
 				Position = UDim2.fromOffset(20, 10), Size = UDim2.new(1, -84, 0, 34) }),
 			FullNote = if fullNote then Body({ Name = "FullNote", TextSize = 12, TextColor3 = Color3.fromRGB(248, 113, 113),

@@ -620,7 +620,7 @@ function CombatSimulation.RebuildPlayerSquad(player: Player)
 				player.Character:SetAttribute("SquadWiped", false)
 			end
 			SquadWipeStateRemote:FireClient(player, false)
-			dm.SendToast(player, "🛡️ Squad operational! Field looting re-enabled.", "SUCCESS")
+			dm.SendToast(player, "Squad ready|Looting is back on", "SUCCESS")
 		end
 	end
 
@@ -641,7 +641,7 @@ DropCarriedItemRemote.OnServerEvent:Connect(function(player: Player)
 		dropped = _G.RelicService.DropCarriedRelic(player)
 	end
 	if dropped then
-		getDataManager().SendToast(player, "Dropped carried item. You can pick it up again.", "INFO")
+		getDataManager().SendToast(player, "Dropped|Pick it up again any time", "INFO")
 	end
 end)
 
@@ -674,14 +674,14 @@ local function knockHeroIntoComa(simHero: SimHero, _baseComaSeconds: number?)
 		simHero.RespawnAt = os.clock() + TowerHardcore.AssignedRespawnSeconds
 		dm.SendToast(
 			simHero.Owner,
-			string.format("%s collapsed! Respawning in %ds...", simHero.DisplayName, math.round(TowerHardcore.AssignedRespawnSeconds)),
+			string.format("%s down|Back in %ds", simHero.DisplayName, math.round(TowerHardcore.AssignedRespawnSeconds)),
 			"WARN"
 		)
 	else
 		simHero.RespawnAt = nil
 		dm.SendToast(
 			simHero.Owner,
-			string.format("%s collapsed! (No mid-run revives)", simHero.DisplayName),
+			string.format("%s down|Revives on floor travel", simHero.DisplayName),
 			"WARN"
 		)
 	end
@@ -715,7 +715,7 @@ local function knockHeroIntoComa(simHero: SimHero, _baseComaSeconds: number?)
 		if isStationed then
 			dm.SendToast(
 				simHero.Owner,
-				string.format("All heroes fallen on Floor %d! Stationed squad will respawn and regroup.", wipeFloor),
+				string.format("Squad wiped|Floor %d · Respawning", wipeFloor),
 				"WARN"
 			)
 			-- Do not recall or teleport stationed squads; heroes will respawn on their timers and resume farming.
@@ -747,19 +747,19 @@ local function knockHeroIntoComa(simHero: SimHero, _baseComaSeconds: number?)
 			end
 
 			if wipeFloor == RAID_FLOOR then
-				dm.SendToast(simHero.Owner, "Your squad fell in the raid. Your damage still counts. Returning to your Fortress Plot...", "WARN")
+				dm.SendToast(simHero.Owner, "Squad wiped|Your raid damage still counts", "WARN")
 			elseif playerOnWipeFloor then
 				if not hasRunSummary then
 					dm.SendToast(
 						simHero.Owner,
-						string.format("ALL HEROES FALLEN on Floor %d! Carried loot dropped. Teleporting to Fortress Plot...", wipeFloor),
+						string.format("Squad wiped|Floor %d · Carried loot dropped", wipeFloor),
 						"WARN"
 					)
 				end
 			else
 				dm.SendToast(
 					simHero.Owner,
-					string.format("Assigned squad fallen on Floor %d! Squad recalled and recovered.", wipeFloor),
+					string.format("Squad wiped|Floor %d · Recalled and healed", wipeFloor),
 					"WARN"
 				)
 			end
@@ -885,7 +885,7 @@ local function reviveDownedOnTransition(player: Player)
 	end
 	SquadWipeStateRemote:FireClient(player, false)
 	if revived > 0 then
-		getDataManager().SendToast(player, string.format("%d fallen hero%s stood back up at %d%% HP.", revived, if revived == 1 then "" else "es", math.round(TowerHardcore.ReviveHPFraction * 100)), "SUCCESS")
+		getDataManager().SendToast(player, string.format("%d hero%s revived|Back at %d%% HP", revived, if revived == 1 then "" else "es", math.round(TowerHardcore.ReviveHPFraction * 100)), "SUCCESS")
 	end
 	syncSquadStatus(player)
 	broadcastMetadata(nil)
@@ -1006,17 +1006,17 @@ registerPickup = function(player: Player, dropId: number, killerUserId: number, 
 	local thiefState = Tower.GetState(player)
 	for _, other in Players:GetPlayers() do
 		if other ~= player and other ~= victimPlayer and Tower.Same(Tower.GetState(other), thiefState) then
-			dm.SendToast(other, string.format("🎯 BOUNTY: %s stole %s's %s! Get close and press F to duel for it.", player.DisplayName, killerName, label), "INFO")
+			dm.SendToast(other, string.format("Bounty on %s|Stole %s's %s · Press F nearby", player.DisplayName, killerName, label), "INFO")
 		end
 	end
 	if victimPlayer then
-		dm.SendToast(victimPlayer, string.format("🚨 %s STOLE YOUR %s! Get close and press F to duel for it!", player.DisplayName, string.upper(label)), "WARN")
+		dm.SendToast(victimPlayer, string.format("%s stolen|%s took it · Press F nearby to duel", label, player.DisplayName), "WARN")
 		LootContestedRemote:FireClient(victimPlayer, {
 			Kind = "STOLEN", DropId = dropId, ThiefUserId = player.UserId, ThiefName = player.DisplayName,
 			Label = label, Seconds = LootDuel.THIEF_FLAG_SECONDS,
 		})
 	end
-	dm.SendToast(player, string.format("⚠️ You stole %s's %s! You are a [Loot Thief] with a bounty on you: any Master who reaches you can duel you for it.", killerName, label), "WARN")
+	dm.SendToast(player, string.format("You're a Loot Thief|%s's %s · Anyone can duel you for it", killerName, label), "WARN")
 	return true
 end
 
@@ -1283,8 +1283,8 @@ local function startDuel(owner: Player, contest: LootDuel.Contest?): (boolean, s
 		EndsAt = Workspace:GetServerTimeNow() + LootDuel.DUEL_INTRO_SECONDS + LootDuel.DUEL_MAX_SECONDS,
 	})
 	local dm = getDataManager()
-	dm.SendToast(owner, string.format("⚔️ Bounty duel against %s! Winner takes the drop.", thief.DisplayName), "WARN")
-	dm.SendToast(thief, string.format("⚔️ %s claimed your bounty and challenged you to a duel for the stolen drop!", owner.DisplayName), "WARN")
+	dm.SendToast(owner, string.format("Duel: %s|Winner takes the drop", thief.DisplayName), "WARN")
+	dm.SendToast(thief, string.format("Duel: %s|Winner takes the drop", owner.DisplayName), "WARN")
 	broadcastMetadata(nil)
 	return true, nil
 end
@@ -1422,12 +1422,12 @@ local function applyDuelOutcome(duel: Duel)
 	local dm = getDataManager()
 	local hunterLost = loser.UserId ~= contest.ThiefUserId
 	if winner.Parent == Players then
-		dm.SendToast(winner, string.format("🏆 You won the duel against %s! The contested drop is yours.", loser.DisplayName), "SUCCESS")
+		dm.SendToast(winner, string.format("Duel won|%s's drop is yours", loser.DisplayName), "SUCCESS")
 	end
 	if loser.Parent == Players then
 		dm.SendToast(loser, if hunterLost
-			then string.format("💀 You lost the duel. %s keeps the drop and you are locked out of it.", winner.DisplayName)
-			else string.format("💀 You lost the duel. %s claims the drop and you are locked out of it.", winner.DisplayName), "WARN")
+			then string.format("Duel lost|%s keeps the drop", winner.DisplayName)
+			else string.format("Duel lost|%s takes the drop", winner.DisplayName), "WARN")
 	end
 	local thief = Players:GetPlayerByUserId(contest.ThiefUserId)
 	if thief then refreshThiefFlag(thief) end
@@ -1571,7 +1571,7 @@ challengeThief = function(hunter: Player, thief: Player)
 	LastChallengeRequest[hunter] = now
 	local hunterPos, thiefPos = getMasterRootPosition(hunter), getMasterRootPosition(thief)
 	if not hunterPos or not thiefPos or (hunterPos - thiefPos).Magnitude > LootDuel.CHALLENGE_RANGE + 4 then
-		getDataManager().SendToast(hunter, string.format("Get closer to %s to claim the bounty.", thief.DisplayName), "WARN")
+		getDataManager().SendToast(hunter, string.format("Too far|Get closer to %s", thief.DisplayName), "WARN")
 		return
 	end
 	-- A thief with several open bounties is challenged for their newest steal.
@@ -1584,7 +1584,7 @@ challengeThief = function(hunter: Player, thief: Player)
 	end
 	local ok, reason = startDuel(hunter, chosen)
 	if not ok then
-		getDataManager().SendToast(hunter, reason or "The duel cannot start right now.", "WARN")
+		getDataManager().SendToast(hunter, reason or "Duel unavailable", "WARN")
 	end
 end
 
@@ -1621,7 +1621,7 @@ FocusTargetRemote.OnServerEvent:Connect(function(player: Player, targetNetId: an
 		if DuelByPlayer[player] then return end
 		local targetChar = targetPlayer.Character
 		if targetChar and targetChar:GetAttribute("IsLootThief") then
-			dm.SendToast(player, string.format("Walk up to %s and press F to claim the bounty.", targetPlayer.DisplayName), "INFO")
+			dm.SendToast(player, string.format("Claim the bounty|Press F next to %s", targetPlayer.DisplayName), "INFO")
 		end
 		return
 	end
@@ -2458,9 +2458,9 @@ local function summonFloorBoss(player: Player, progress: TowerProgress.PlayerFlo
  if FloorProgressRemote then FloorProgressRemote:FireClient(player, progress) end
  local dm = getDataManager()
  if existing then
-  dm.SendToast(player, string.format("Floor %d Boss is already awake! Defeat it to unlock Floor %d!", floorId, floorId + 1), "WARN")
+  dm.SendToast(player, string.format("Boss is awake|Defeat it to open Floor %d", floorId + 1), "WARN")
  elseif bossMob then
-  dm.SendToast(player, string.format("Floor %d Boss Summoned! Defeat it to unlock Floor %d!", floorId, floorId + 1), "WARN")
+  dm.SendToast(player, string.format("Boss summoned|Defeat it to open Floor %d", floorId + 1), "WARN")
  end
 end
 
@@ -2527,7 +2527,7 @@ local function spawnFloorAscensionPortal(floorId: number, _position: Vector3?)
 		if not state or state.FloorId ~= floorId or Tower.IsTransitioning(player) then return nil end
 		local profile = getDataManager().GetProfile(player)
 		if not profile or (profile.HighestClearedFloor or 0) < floorId then
-			getDataManager().SendToast(player, "Defeat this floor's boss yourself to use its portals.", "WARN")
+			getDataManager().SendToast(player, "Portal locked|Defeat this floor's boss first", "WARN")
 			return nil
 		end
 		return state
@@ -2590,7 +2590,7 @@ local function spawnFloorAscensionPortal(floorId: number, _position: Vector3?)
 					end
 				end
 			end
-			getDataManager().SendToast(player, string.format("Rerunning Floor %d: the kill counter starts again.", floorId), "INFO")
+			getDataManager().SendToast(player, string.format("Floor %d again|Kill counter reset", floorId), "INFO")
 			Tower.VisitFloor(player, floorId, travelRequest(state))
 		end)
 
@@ -2598,7 +2598,7 @@ local function spawnFloorAscensionPortal(floorId: number, _position: Vector3?)
 		local state = Tower.GetState(p)
 		if state and state.FloorId == floorId then
 			local choices = if isMaxFloor then "Return to Hub or Rerun" else "Ascend or Rerun"
-			getDataManager().SendToast(p, "Portals opened at the back of the Apex: " .. choices .. ".", "SUCCESS")
+			getDataManager().SendToast(p, "Portals open|" .. choices, "SUCCESS")
 		end
 	end
 end
@@ -2785,7 +2785,7 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
       if stones > 0 then
        profile.PitMaterials = profile.PitMaterials or {}
        profile.PitMaterials.PromotionStone = (profile.PitMaterials.PromotionStone or 0) + stones
-       dm.SendToast(killer, string.format("✨ +%d Promotion Stone%s dropped from %s!", stones, if stones == 1 then "" else "s", mob.DisplayName or "Elite"), "SUCCESS")
+       dm.SendToast(killer, string.format("Loot|+%d Promotion Stone%s", stones, if stones == 1 then "" else "s"), "SUCCESS")
       end
       dm.SyncProfile(killer)
       -- An affixed Elite (Phase F) drops relics far more often; tiers stay by role, so Cores stay Elite-only.
@@ -2809,7 +2809,7 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
       local shouldSpawn = TowerProgress.RecordKill(progress, mob.Role, stamped and stamped.KillMult or nil)
       if not shouldSpawn and TowerProgress.CheckSurge(progress) then
        Encounters:SpawnSurge(mob.FloorId, killer, mob.Position)
-       getDataManager().SendToast(killer, "A surge pack is bearing down on your squad!", "WARN")
+       getDataManager().SendToast(killer, "Surge pack|Heading for your squad", "WARN")
       end
       local activeBoss = Encounters and Encounters:GetActiveBoss(mob.FloorId)
       if (shouldSpawn or (progress.CurrentKills >= progress.RequiredKills and not activeBoss and not progress.BossDefeated)) then
@@ -2896,9 +2896,9 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
         FloorProgressRemote:FireClient(p, progress)
        end
 
-       local stoneText = if bossStones > 0 then string.format(", +%d Promotion Stone%s", bossStones, if bossStones == 1 then "" else "s") else ""
-       local nextStep = if mob.FloorId < TowerRewards.FloorCount then string.format(" Unlocked Floor %d!", mob.FloorId + 1) else ""
-       dm.SendToast(p, string.format("Floor %d Boss Defeated!%s (+%d Gold, +%d Gem%s)", mob.FloorId, nextStep, bossGold, bossGems, stoneText), "SUCCESS")
+       local stoneText = if bossStones > 0 then string.format(" · +%d Stone%s", bossStones, if bossStones == 1 then "" else "s") else ""
+       local nextStep = if mob.FloorId < TowerRewards.FloorCount then string.format(" · Floor %d open", mob.FloorId + 1) else ""
+       dm.SendToast(p, string.format("Floor %d cleared|+%d Gold · +%d Gems%s%s", mob.FloorId, bossGold, bossGems, stoneText, nextStep), "SUCCESS")
       end
      end
     end
@@ -3082,7 +3082,7 @@ local function stepCombatHeartbeat(deltaTime: number)
 						end
 						SquadWipeStateRemote:FireClient(player, false)
 						local dm = getDataManager()
-						dm.SendToast(player, "🛡️ Squad operational! Field looting re-enabled.", "SUCCESS")
+						dm.SendToast(player, "Squad ready|Looting is back on", "SUCCESS")
 					end
 				end
 			end

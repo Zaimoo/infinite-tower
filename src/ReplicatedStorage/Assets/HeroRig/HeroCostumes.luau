@@ -86,6 +86,8 @@ HeroCostumes.MESHES = table.freeze({
 	["rbxassetid://95241080213006"] = "",
 	-- Vane's hair, our own: tools/make_vane_hair_ugc.py (assets/hair/vane_hair_ugc.blend).
 	["rbxassetid://121356449188059"] = "",
+	-- Aeli's hair and braid, our own: tools/make_aeli_hair_ugc.py (assets/hair/aeli_hair_ugc.blend).
+	["rbxassetid://70386605530551"] = "",
 } :: { [string]: string })
 
 -- Avatar hair accessory placement: a piece centred so the accessory's HairAttachment meets
@@ -1354,6 +1356,88 @@ do
 		piece("EarringL", "Head", { 0.07, 0.16, 0.07 }, { -0.61, -0.22, 0.02 }, gold, METAL),
 		piece("EarringR", "Head", { 0.07, 0.16, 0.07 }, { 0.61, -0.22, 0.02 }, gold, METAL),
 	}, "rbxassetid://76929313677044"))
+end
+
+-- 18. AELI (Superior Marksman - Elven Ranger) ---------------------------------------------
+-- Adapted from the elven-ranger reference art as a woman (Slim body, docs/hero-art-pipeline.md
+-- §4.2 "Feminine body"): a fitted forest-green ranger's coat with a high standing collar, a
+-- corset band and narrow belt cinching the waist, silver frog clasps and leaf medallions, a fur
+-- ruff, flat silver shoulder caps over thin moss-green capelets (nothing widens the shoulder
+-- line), slim silver bracers with glowing green runes, a leather bandolier and hip pouch, coat
+-- skirts with silver hems that flare out below the belt, tall brown boots, and a long moss-green
+-- cape wrapping her sides with a tattered leaf hem. Pointed elf ears. Her ash-blond hair (our
+-- Blender mesh, tools/make_aeli_hair_ugc.py) gathers at the back of the crown under a silver
+-- clasp into a long braid that hangs behind her right shoulder and ends in a silver cuff. The bow
+-- is the BOW weapon, not costume. Face: our own decal from assets/faces/make_aeli_face.py.
+do
+	local skin, hair, green, moss = { 232, 196, 160 }, { 206, 192, 164 }, { 50, 72, 44 }, { 128, 142, 96 }
+	local silver, leather, darkLeather, trousers = { 196, 200, 206 }, { 96, 62, 42 }, { 66, 42, 30 }, { 58, 58, 48 }
+	local boot, fur, glow, darkGreen = { 82, 58, 42 }, { 150, 136, 118 }, { 150, 255, 170 }, { 36, 54, 34 }
+	local FABRIC = { Material = "Fabric" }
+	table.insert(COSTUMES, costume("hero_aeli", "Slim", {
+		Skin = skin, UpperTorso = green, LowerTorso = green, UpperArm = green, LowerArm = green, Hand = skin,
+		UpperLeg = trousers, LowerLeg = boot, Foot = boot,
+	}, {
+		-- Hair mesh: centred on the export's bounding box and turned 180 degrees to undo the
+		-- importer's rotation.
+		piece("HairMesh", "Head", { 1.665, 3.263, 1.877 }, { 0.004, -0.6155, 0.1939 }, hair, with(LOOSE, {
+			Rotation = { 0, 180, 0 },
+			Mesh = { MeshId = "rbxassetid://70386605530551", Scale = { 0.01, 0.01, 0.01 } },
+		})),
+		-- Pointed elf ears through the hair (1.2-head units): tips up and back, leaning out.
+		piece("EarL", "Head", { 0.06, 0.46, 0.24 }, { -0.74, 0.04, 0.06 }, skin, with(WEDGE, { Rotation = { 20, 0, 14 } })),
+		piece("EarR", "Head", { 0.06, 0.46, 0.24 }, { 0.74, 0.04, 0.06 }, skin, with(WEDGE, { Rotation = { 20, 0, -14 } })),
+		-- Silver clasp where the hair gathers into the braid, and the braid's silver cuff.
+		piece("HairClasp", "Head", { 0.38, 0.12, 0.22 }, { 0.08, 0.68, 0.72 }, silver, with(METAL, LOOSE, { Rotation = { -35, 0, 0 } })),
+		piece("HairClaspLeaf", "Head", { 0.04, 0.24, 0.12 }, { 0.08, 0.8, 0.66 }, silver, with(METAL, WEDGE, LOOSE, { Rotation = { -20, 0, 0 } })),
+		piece("BraidCuff", "Head", { 0.2, 0.34, 0.34 }, { 0.58, -1.92, 0.88 }, silver, with(METAL, LOOSE, { Shape = "Cylinder", Rotation = { 0, 0, 90 } })),
+		-- High standing collar and a fur ruff that stays inside the shoulder line
+		piece("CollarBack", "UpperTorso", { 1.2, 0.42, 0.12 }, { 0, 0.96, 0.42 }, green, with(LOOSE, FABRIC, { Rotation = { -10, 0, 0 } })),
+		piece("CollarL", "UpperTorso", { 0.44, 0.36, 0.1 }, { -0.32, 0.92, -0.4 }, green, with(LOOSE, FABRIC, { Rotation = { 0, 22, 0 } })),
+		piece("CollarR", "UpperTorso", { 0.44, 0.36, 0.1 }, { 0.32, 0.92, -0.4 }, green, with(LOOSE, FABRIC, { Rotation = { 0, -22, 0 } })),
+		piece("FurRuff", "UpperTorso", { 1.9, 0.3, 1.2 }, { 0, 0.74, 0.04 }, fur, with(LOOSE, FABRIC)),
+		-- Fitted front: a silver frog clasp, leaf medallions and a leather bandolier
+		piece("Clasp", "UpperTorso", { 0.22, 0.07, 0.05 }, { 0, 0.2, -0.53 }, silver, METAL),
+		piece("MedallionL", "UpperTorso", { 0.06, 0.2, 0.2 }, { -0.5, 0.52, -0.53 }, silver, with(METAL, { Shape = "Cylinder", Rotation = { 0, 90, 0 } })),
+		piece("MedallionR", "UpperTorso", { 0.06, 0.2, 0.2 }, { 0.5, 0.52, -0.53 }, silver, with(METAL, { Shape = "Cylinder", Rotation = { 0, 90, 0 } })),
+		piece("Bandolier", "UpperTorso", { 0.2, 1.8, 0.06 }, { 0.1, 0.02, -0.53 }, leather, { Rotation = { 0, 0, -30 } }),
+		-- Corset band: a darker green band at the bottom of the torso cinches the waist
+		piece("Corset", "UpperTorso", { 2.04, 0.34, 1.04 }, { 0, -0.6, 0 }, darkGreen, FABRIC),
+		piece("CorsetLace", "UpperTorso", { 0.06, 0.3, 0.05 }, { 0, -0.6, -0.54 }, silver, METAL),
+		-- Long moss-green cape wrapping her sides, with a tattered leaf hem
+		piece("CapeBack", "UpperTorso", { 2.0, 3.6, 0.08 }, { 0, -1.4, 0.64 }, moss, with(LOOSE, FABRIC, { Rotation = { -6, 0, 0 } })),
+		piece("CapeSideL", "UpperTorso", { 0.08, 3.0, 0.9 }, { -1.08, -1.3, 0.3 }, moss, with(LOOSE, FABRIC, { Rotation = { 0, 0, -7 } })),
+		piece("CapeSideR", "UpperTorso", { 0.08, 3.0, 0.9 }, { 1.08, -1.3, 0.3 }, moss, with(LOOSE, FABRIC, { Rotation = { 0, 0, 7 } })),
+		piece("CapeTatterL", "UpperTorso", { 0.08, 0.5, 0.7 }, { -0.45, -3.42, 0.78 }, moss, with(WEDGE, LOOSE, FABRIC, { Rotation = { 0, 90, 180 } })),
+		piece("CapeTatterR", "UpperTorso", { 0.08, 0.5, 0.7 }, { 0.45, -3.48, 0.78 }, moss, with(WEDGE, LOOSE, FABRIC, { Rotation = { 0, -90, 180 } })),
+		-- Flat silver shoulder caps over thin moss capelets, both within the arm's width
+		piece("ShoulderCapL", "LeftUpperArm", { 1.04, 0.12, 1.04 }, { 0, 0.5, 0 }, silver, with(METAL, { Rotation = { 0, 0, 6 } })),
+		piece("CapeletL", "LeftUpperArm", { 1.04, 0.1, 1.04 }, { 0, -0.1, 0 }, moss, with(FABRIC, { RelativeTo = "ShoulderCapL" })),
+		piece("ShoulderCapR", "RightUpperArm", { 1.04, 0.12, 1.04 }, { 0, 0.5, 0 }, silver, with(METAL, { Rotation = { 0, 0, -6 } })),
+		piece("CapeletR", "RightUpperArm", { 1.04, 0.1, 1.04 }, { 0, -0.1, 0 }, moss, with(FABRIC, { RelativeTo = "ShoulderCapR" })),
+		-- Slim silver bracers with a thin glowing rune on the outer face
+		piece("BracerL", "LeftLowerArm", { 1.08, 0.56, 1.08 }, { 0, -0.12, 0 }, silver, METAL),
+		piece("BracerRuneL", "LeftLowerArm", { 0.03, 0.34, 0.08 }, { -0.55, -0.12, 0 }, glow, NEON),
+		piece("BracerR", "RightLowerArm", { 1.08, 0.56, 1.08 }, { 0, -0.12, 0 }, silver, METAL),
+		piece("BracerRuneR", "RightLowerArm", { 0.03, 0.34, 0.08 }, { 0.55, -0.12, 0 }, glow, NEON),
+		-- Narrow belt and buckle, and a pouch on her right hip
+		piece("Belt", "LowerTorso", { 2.06, 0.18, 1.06 }, { 0, 0.08, 0 }, leather),
+		piece("Buckle", "LowerTorso", { 0.28, 0.2, 0.07 }, { 0, 0.08, -0.56 }, silver, METAL),
+		piece("Pouch", "LowerTorso", { 0.38, 0.38, 0.24 }, { 0.64, -0.26, -0.6 }, leather, LOOSE),
+		piece("PouchFlap", "LowerTorso", { 0.4, 0.14, 0.26 }, { 0, 0.15, -0.01 }, darkLeather, with(LOOSE, { RelativeTo = "Pouch" })),
+		-- Coat skirts flaring out below the belt so the hips read wider than the waist
+		piece("SkirtL", "LowerTorso", { 1.0, 1.15, 0.08 }, { -0.52, -0.72, -0.56 }, green, with(LOOSE, FABRIC, { Rotation = { 6, 0, -10 } })),
+		piece("SkirtR", "LowerTorso", { 1.0, 1.15, 0.08 }, { 0.52, -0.72, -0.56 }, green, with(LOOSE, FABRIC, { Rotation = { 6, 0, 10 } })),
+		piece("SkirtHemL", "LowerTorso", { 1.0, 0.06, 0.09 }, { 0, -0.57, 0 }, silver, with(LOOSE, METAL, { RelativeTo = "SkirtL" })),
+		piece("SkirtHemR", "LowerTorso", { 1.0, 0.06, 0.09 }, { 0, -0.57, 0 }, silver, with(LOOSE, METAL, { RelativeTo = "SkirtR" })),
+		-- Tall boots: a thin top rim and strap, no heavy cuff; dark soles
+		piece("BootRimL", "LeftLowerLeg", { 1.06, 0.08, 1.06 }, { 0, 0.52, 0 }, darkLeather),
+		piece("BootRimR", "RightLowerLeg", { 1.06, 0.08, 1.06 }, { 0, 0.52, 0 }, darkLeather),
+		piece("BootStrapL", "LeftLowerLeg", { 1.06, 0.08, 1.06 }, { 0, 0.12, 0 }, darkLeather),
+		piece("BootStrapR", "RightLowerLeg", { 1.06, 0.08, 1.06 }, { 0, 0.12, 0 }, darkLeather),
+		piece("BootSoleL", "LeftFoot", { 1.04, 0.07, 1.22 }, { 0, -0.13, -0.08 }, darkLeather),
+		piece("BootSoleR", "RightFoot", { 1.04, 0.07, 1.22 }, { 0, -0.13, -0.08 }, darkLeather),
+	}, "rbxassetid://71843671065006"))
 end
 
 HeroCostumes.List = table.freeze(COSTUMES)

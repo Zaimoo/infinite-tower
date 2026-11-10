@@ -270,7 +270,7 @@ function DataStoreModule.GetSortedTop(count: number): { { UserId: number, Power:
 	return result
 end
 
--- Historical profile backfill: reads existing players from Playtime totals and PlayerProfiles_v3
+-- Historical profile backfill: reads existing players from Playtime totals and PlayerProfiles_v4
 function DataStoreModule.SyncHistoricalProfiles()
 	task.spawn(function()
 		task.wait(2)
@@ -315,7 +315,7 @@ function DataStoreModule.SyncHistoricalProfiles()
 			end
 		end
 
-		local profileStore = DataStoreService:GetDataStore("PlayerProfiles_v3")
+		local profileStore = DataStoreService:GetDataStore("PlayerProfiles_v4")
 		local anyUpdated = false
 
 		for _, uid in ipairs(userIdsToScan) do

@@ -20,6 +20,7 @@ local HeroPicker = require(script.Parent.HeroPicker)
 local Balance = require(ReplicatedStorage.Shared.Config.StatBalance)
 local Icons = require(script.Parent.Parent.Hud.Icons)
 local UIFeel = require(script.Parent.Parent.UIFeel)
+local WindowScale = require(script.Parent.Parent.WindowScale)
 local ModalFit = require(script.Parent.Parent.ModalFit)
 local Types = require(script.Parent.Types)
 local Kit = require(script.Parent.Parent.Kit)
@@ -758,7 +759,7 @@ local function App(props: Types.Props)
 			Size = UDim2.fromOffset(width, height), BackgroundColor3 = T.Background, BorderSizePixel = 0, ZIndex = 2,
 			SelectionGroup = true, SelectionBehaviorUp = Enum.SelectionBehavior.Escape, SelectionBehaviorDown = Enum.SelectionBehavior.Stop, SelectionBehaviorLeft = Enum.SelectionBehavior.Stop, SelectionBehaviorRight = Enum.SelectionBehavior.Stop,
 		}, {
-			Scale = e("UIScale", { Scale = windowScale }),
+			Scale = e(WindowScale, { Scale = windowScale, Window = "Forge" }),
 			-- Header: the Forge's ember bar, icon, title and the Artifacts / Summon tabs, all inside
 			-- the window (they used to float above it in a separate bar).
 			HeaderBar = e("Frame", {

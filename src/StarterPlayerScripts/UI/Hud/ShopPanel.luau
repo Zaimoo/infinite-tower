@@ -24,6 +24,7 @@ local Grimoire = require(Shared:WaitForChild("Util"):WaitForChild("GildedGrimoir
 local Portrait = require(script.Parent:WaitForChild("Portrait"))
 local Theme = require(script.Parent:WaitForChild("Theme"))
 local Components = require(script.Parent:WaitForChild("Components"))
+local WindowScale = require(script.Parent.Parent:WaitForChild("WindowScale"))
 
 local e = React.createElement
 local Panel = Components.Panel
@@ -255,6 +256,7 @@ local function ShopPanel(props: { Profile: any, Width: number, OnClose: () -> ()
 			AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.new(1, -24, 1, -24), Radius = 16, ZIndex = 21,
 		}, {
 			Max = e("UISizeConstraint", { MaxSize = Vector2.new(1040, 760) }),
+			Pop = e(WindowScale, { Window = "Index" }),
 			Icon = IconAt("Shop", 66, { Position = UDim2.fromOffset(16, -14), ZIndex = 26 }),
 			Title = Heavy({ AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 10), Size = UDim2.fromOffset(300, 48), MaxSize = 44, Text = "STORE", ZIndex = 25 }),
 			Wallet = e("Frame", { Position = UDim2.fromOffset(92, 18), Size = UDim2.fromOffset(260, 32), BackgroundTransparency = 1, ZIndex = 25, Visible = not narrow }, {

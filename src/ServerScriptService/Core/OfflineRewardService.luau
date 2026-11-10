@@ -93,7 +93,7 @@ function OfflineRewardService.ProcessLoginRewards(player: Player, profile: any, 
 			if player.Parent == Players then
 				remote:FireClient(player, payload)
 				if dm and dm.SendToast then
-					dm.SendToast(player, string.format("👑 Welcome Back! Your Adventurers returned with +%d Gold!", gold), "SUCCESS")
+					dm.SendToast(player, string.format("Welcome back|+%d Gold from the Guard Post", gold), "SUCCESS")
 				end
 			end
 		end)

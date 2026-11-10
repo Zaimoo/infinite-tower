@@ -84,6 +84,22 @@ test("each relic receipt keeps its own lines and stack entry alongside regular n
 	assert(stack.Items[2].Lines[1] == "9,685 Gems · +2,235 from streak")
 end)
 
+test("a toast message splits into a headline and one detail line at the bar", function()
+	local title, detail = Rules.SplitToast("Floor 3 cleared|+120 Gold · +4 Gems")
+	assert(title == "Floor 3 cleared" and detail == "+120 Gold · +4 Gems")
+	title, detail = Rules.SplitToast("Saved")
+	assert(title == "Saved" and detail == nil)
+	title, detail = Rules.SplitToast("Locked | Clear Floor 1 first")
+	assert(title == "Locked" and detail == "Clear Floor 1 first")
+	title, detail = Rules.SplitToast("|Only detail")
+	assert(title == "Only detail" and detail == nil)
+	-- The same split message coalesces like any other text.
+	local stack = Rules.NewToastStack(3)
+	Rules.PushToast(stack, "warn", "Locked|Clear Floor 1 first", 0)
+	local again, isNew = Rules.PushToast(stack, "warn", "Locked|Clear Floor 1 first", 1)
+	assert(not isNew and again.Count == 2)
+end)
+
 test("sell confirmation follows the plan's risk table", function()
 	assert(Rules.ConfirmTier("SELL", { MaxRarity = 2, MaxStars = 1 }) == "None")
 	assert(Rules.ConfirmTier("SELL", { MaxRarity = 3, MaxStars = 1 }) == "Hard")

@@ -110,6 +110,18 @@ function UiKitRules.ExpireToasts(stack: ToastStack, now: number): { Toast }
 	return removed
 end
 
+-- A toast message may be "Title|Detail": a short headline and one short line under it, e.g.
+-- "Floor 3 cleared|+120 Gold · +4 Gems". Without the bar the whole message is the single line.
+function UiKitRules.SplitToast(text: string): (string, string?)
+	local bar = string.find(text, "|", 1, true)
+	if not bar then return text, nil end
+	local title = (string.gsub(string.sub(text, 1, bar - 1), "%s+$", ""))
+	local detail = (string.gsub(string.sub(text, bar + 1), "^%s+", ""))
+	if title == "" then return detail, nil end
+	if detail == "" then return title, nil end
+	return title, detail
+end
+
 -- The text a toast shows: "Saved", "Saved ×3", "+1,240 Gold".
 function UiKitRules.ToastLabel(toast: Toast): string
 	if toast.Count > 1 then return string.format("%s ×%d", toast.Text, toast.Count) end

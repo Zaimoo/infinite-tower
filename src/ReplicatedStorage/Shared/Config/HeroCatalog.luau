@@ -51,7 +51,7 @@ HeroCatalog.PermanentBanner = {
 		[1] = 0.7514, -- 75.14% Common (Gide or Shurn)
 		[2] = 0.1800, -- 18.0% Uncommon Aaron
 		[3] = 0.0470, -- 4.7% Rare Catio
-		[4] = 0.0165, -- 1.65% Superior
+		[4] = 0.0165, -- 1.65% Superior Aeli
 		[5] = 0.0033, -- 0.33% Exalted (Ignis or Diran)
 		[6] = 0.0015, -- 0.15% Legendary (Edis or Vane): the tier's heroes split its rate evenly
 		-- 0.03% Mythical Han: the same Gems per copy as Astrea on A Star's Arrival (0.06% at twice the price).
@@ -61,7 +61,7 @@ HeroCatalog.PermanentBanner = {
 		[1] = "hero_gide",
 		[2] = "hero_aaron",
 		[3] = "hero_catio",
-		[4] = "hero_catio",
+		[4] = "hero_aeli",
 		[5] = "hero_diran",
 		[6] = "hero_edis",
 		[7] = "hero_han",
@@ -313,6 +313,26 @@ HeroCatalog.Seeds = {
 		PreferredFacility = "FACILITY_TRAINING",
 		Color = Color3.fromRGB(150, 70, 230),
 	},
+	-- Aeli: an elven ranger of the deep woods, the permanent banner's Superior.
+	hero_aeli = {
+		HeroId = "hero_aeli",
+		DisplayName = "Aeli",
+		BannerOrigin = "STANDARD",
+		DropWeight = 4.0,
+		BaseStar = 1,
+		Rarity = 4,
+		Archetype = "Marksman",
+		BaseHP_1Star = 220,
+		BaseATK_1Star = 42,
+		NativeHP = 988,
+		NativeATK = 189,
+		AttackInterval = 0.80,
+		AttackRange = 30,
+		BaseLabor_1Star = 17.0,
+		NativeLabor = 41.9,
+		PreferredFacility = "FACILITY_GUARD_POST",
+		Color = Color3.fromRGB(120, 190, 110),
+	},
 
 	-- ------------------------------------------------------------------------
 	-- A STAR'S ARRIVAL (Limited Time Banner: 1★ to 7★)
@@ -477,7 +497,7 @@ HeroCatalog.PoolByStar = {
 	[1] = { "hero_gide", "hero_shurn", "hero_jenna" },
 	[2] = { "hero_aaron", "hero_velkist" },
 	[3] = { "hero_catio", "hero_eolka" },
-	[4] = { "hero_morrigan" },
+	[4] = { "hero_aeli", "hero_morrigan" },
 	[5] = { "hero_ignis", "hero_diran", "hero_archon", "hero_valeria" },
 	[6] = { "hero_edis", "hero_vane", "hero_solaris" },
 	[7] = { "hero_han", "hero_astrea" },

@@ -362,7 +362,6 @@ test("Every donor protection applies equally to synthesis and conversion", funct
 	local protections = {
 		{ Locked = true }, { Favorite = true }, { Favorited = true },
 		{ Assignment = "SQUAD_SLOT_1" }, { Assignment = "FACILITY_CONDUIT" },
-		{ EquippedArtifactUUID = "art_test" },
 		{ ComaUntilTimestamp = os.time() + 1000 }, { IsHardAuditComa = true },
 		{ ReservedBy = "ritual" }, { Reserved = true }, { OperationReserved = true },
 		{ ReservedOperationId = "operation" }, { InCombat = true }, { IsInCombat = true },
@@ -424,19 +423,43 @@ end)
 
 test("Stale economy, roster, assignment, research and material changes reject without partial consumption", function()
 	local mutations = {
-		function(p) p.Currencies.Gold -= 1 end,
 		function(p) p.Heroes.d.Level = 2 end,
 		function(p) p.Heroes.d = nil end,
 		function(p) p.Heroes.d.Locked = true end,
 		function(p) p.Facilities.ManaConduit.AssignedHeroUUIDs = { "d" } end,
 		function(p) p.DeployedSquadOrder = { "d" } end,
 		function(p) p.UnlockedResearch.EssenceAttunement = true end,
-		function(p) p.PitMaterials.SoulEssence -= 1 end,
 		function(p) p.ReservedHeroUUIDs = { d = true } end,
 	}
 	for _, mutate in ipairs(mutations) do
 		local c = context(); local preview = c:preview(synthesis()); mutate(c.profile)
 		rejectedWithoutMutation(c, "COMMIT", { Token = preview.Token, ConfirmRare = true })
+	end
+end)
+
+test("Income and combat EXP that leave the confirmed result unchanged preserve a valid preview", function()
+	-- Regression: Guard Post Gold ticking in between preview and confirm used to void every synthesis.
+	local c = context(); local p = c:preview(synthesis())
+	c.profile.Currencies.Gold += 25; c.profile.Currencies.Gems += 1; c.profile.Heroes.r.CurrentHP = 12
+	check(c:commit(p).Success); equal(c.profile.Heroes.d, nil)
+end)
+
+test("A commit whose result changed is flagged stale so the client can re-preview", function()
+	local c = context(); local p = c:preview(synthesis()); c.profile.Heroes.d.Level = 2
+	local response = rejectedWithoutMutation(c, "COMMIT", { Token = p.Token })
+	equal(response.Stale, true)
+end)
+
+test("Armed donors are consumed and their weapon returns to the backpack", function()
+	for _, action in ipairs({ "SYNTHESIS", "CONVERSION" }) do
+		local c = context()
+		c.profile.Artifacts = { art_test = { UUID = "art_test", DisplayName = "Test Blade", EquippedHeroUUID = "d" } }
+		c.profile.Heroes.d.EquippedArtifactUUID = "art_test"
+		local p = c:preview({ Action = action, Recipient = action == "SYNTHESIS" and "r" or nil, Donors = { "d" } })
+		equal(#p.Unequips, 1); equal(p.Unequips[1].Artifact, "Test Blade")
+		check(#p.Warnings >= 1, "the unequip is announced before confirming")
+		check(c:commit(p).Success)
+		equal(c.profile.Heroes.d, nil); equal(c.profile.Artifacts.art_test.EquippedHeroUUID, nil)
 	end
 end)
 

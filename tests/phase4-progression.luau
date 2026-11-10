@@ -304,6 +304,96 @@ test("Guide: recovery, cargo, and affordable actions drive the next cue", functi
 	assert(GuideLessons.Select(profile, context) == nil, "closed raid stops being recommended")
 end)
 
+test("Guide: with lesson facts, facilities and The Pit wait for the first forged weapon", function()
+	local profile = { Heroes = {}, Unlocks = {}, HighestClearedFloor = 1, MaxFloorReached = 2 }
+	local facts: { [string]: boolean } = {}
+	Onboarding.UpdateAccess(profile, true, facts)
+	assert(profile.Unlocks.Forge and not profile.Unlocks.Facilities and not profile.Unlocks.Pit and not profile.Unlocks.FortressTree)
+	facts.Roll = true
+	Onboarding.UpdateAccess(profile, true, facts)
+	assert(profile.Unlocks.Facilities and profile.Unlocks.Pit and profile.Unlocks.FortressTree)
+	-- Reaching Floor 3 opens everything even if a lesson was never finished.
+	local stuck = { Heroes = {}, Unlocks = {}, HighestClearedFloor = 2, MaxFloorReached = 3 }
+	Onboarding.UpdateAccess(stuck, true, {})
+	assert(stuck.Unlocks.Facilities and stuck.Unlocks.Pit and stuck.Unlocks.FortressTree)
+end)
+
+test("Guide: the core chain plays in order, skips what is not possible yet and ends", function()
+	local GuideLessons = require(nodes["ServerScriptService.Core.GuideLessons"])
+	local GuideConfig = require(nodes["ReplicatedStorage.Shared.Config.GuideConfig"])
+	local ArtifactCatalog = require(nodes["ReplicatedStorage.Shared.Config.ArtifactCatalog"])
+	assert(#GuideConfig.Chain == 10 and GuideConfig.Chain[1] == "Summon" and GuideConfig.Chain[10] == "Synthesis")
+	for index, id in GuideConfig.Chain do
+		local lesson = GuideConfig[id]
+		assert(lesson.Core and lesson.Index == index and lesson.Total == 10, id)
+		assert(#lesson.Title <= 24 and #lesson.Description <= 36, id .. " copy stays short")
+	end
+	local state = Onboarding.NewState()
+	local guide = Onboarding.EnsureGuide(state)
+	local facts = guide.Facts
+	local weapon = ArtifactCatalog.ArchetypeRestrictions.Vanguard[1]
+	local profile: any = {
+		Onboarding = state, Unlocks = {}, HighestClearedFloor = 0, MaxFloorReached = 1,
+		Currencies = { Gold = 0, Gems = HeroCatalog.PermanentBanner.Cost1X },
+		Heroes = {
+			lead = { UUID = "lead", Archetype = "Vanguard", Assignment = "SQUAD_SLOT_1", Stars = 1, Level = 1 },
+			spare = { UUID = "spare", Archetype = "Striker", Assignment = "BENCHED", Stars = 1, Level = 1 },
+		},
+		Artifacts = {},
+		Facilities = { GuardPost = { Level = 1, AssignedHeroUUIDs = {} } },
+		FortressTree = FortressTree.DefaultTree(),
+	}
+	local pit: string? = nil
+	local context = { Floor = 0, Ready = true, Carrying = false, CanRaid = false, Now = 100, PitLesson = function() return pit end }
+	local function nextId(): string?
+		local lesson = GuideLessons.Select(profile, context)
+		return lesson and lesson.Id
+	end
+	local function done(id: string)
+		facts[id] = true
+		Onboarding.UpdateAccess(profile, true, facts)
+	end
+
+	assert(nextId() == "Summon"); done("Summon")
+	assert(nextId() == "Squad"); done("Squad")
+	assert(nextId() == "Visit")
+	context.Floor = 1
+	assert(nextId() == "Clear")
+	profile.HighestClearedFloor, profile.MaxFloorReached = 1, 2
+	done("Clear")
+	assert(nextId() == "Return"); done("Return")
+	context.Floor = 0
+	-- No Gold for a roll yet: the step is passed over rather than shown as a dead end.
+	assert(nextId() == nil and not profile.Unlocks.Facilities)
+	profile.Currencies.Gold = ArtifactCatalog.Banner.Cost1X
+	assert(nextId() == "Roll")
+	assert(GuideLessons.StarterWeaponType(profile) == weapon, "the first roll suits a squad hero")
+	profile.Artifacts.blade = { UUID = "blade", Type = weapon, Rarity = 1, Star = 1, DisplayName = "Blade" }
+	profile.Currencies.Gold = 0
+	done("Roll")
+	assert(profile.Unlocks.Facilities and profile.Unlocks.Pit)
+	assert(nextId() == "Equip")
+	profile.Heroes.lead.EquippedArtifactUUID, profile.Artifacts.blade.EquippedHeroUUID = "blade", "lead"
+	done("Equip")
+	assert(nextId() == "GuardPost")
+	-- A core lesson cannot be put off.
+	guide.Snoozed.GuardPost = context.Now + 900
+	assert(nextId() == "GuardPost")
+	profile.Heroes.spare.Assignment = "FACILITY_GUARD_POST"
+	table.insert(profile.Facilities.GuardPost.AssignedHeroUUIDs, "spare")
+	done("GuardPost")
+	-- Nothing affordable in the tree and nobody to feed: a spare hero is the way forward.
+	assert(nextId() == "Recruit")
+	profile.Currencies.Gems = 0
+	assert(nextId() == nil)
+	pit = "Synthesis"
+	assert(nextId() == "Synthesis"); done("Synthesis")
+	pit = "Promotion"
+	assert(nextId() == "Promotion", "promotion waits for a hero at its level cap")
+	guide.Snoozed.Promotion = context.Now + 900
+	assert(nextId() == nil, "conditional lessons can be put off")
+end)
+
 test("Phase 5: Squad Power sums round(10 x DPS + Health) over deployed heroes only", function()
 	local han = { TemplateId = "hero_han", Stars = 1, Level = 1, QualityScalar = 1, Assignment = "SQUAD_SLOT_1" }
 	local jenna = { TemplateId = "hero_jenna", Stars = 1, Level = 1, QualityScalar = 1, Assignment = "SQUAD_SLOT_2", ComaUntilTimestamp = os.time() + 60 }

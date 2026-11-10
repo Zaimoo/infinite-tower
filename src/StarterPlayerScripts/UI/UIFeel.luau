@@ -290,19 +290,45 @@ end
 -- WINDOW TRANSITIONS
 --============================================================================
 
--- Pops a window in whenever it becomes visible: its UIScale grows from 92% of `target()` with an
--- overshoot. ModalFit.Bind wires this for every fitted window. `target` returns the resting scale.
+-- Every window opens and closes the same way, whoever built it (ModalFit, Kit.Motion, WindowManager
+-- and the React WindowScale all call these two):
+--   open:  pop from 94% of the resting scale to 100% in 0.2 s, with a small overshoot;
+--   close: shrink to 96% in 0.12 s, then hide.
+-- Under Reduce Motion both are instant.
+local WINDOW_IN = TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+local WINDOW_OUT = TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+
+function UIFeel.WindowIn(scale: UIScale, rest: number)
+	if UIFeel.ReducedMotion() then
+		scale.Scale = rest
+		return
+	end
+	scale.Scale = rest * 0.94
+	TweenService:Create(scale, WINDOW_IN, { Scale = rest }):Play()
+	UIFeel.Sfx("WindowOpen", 1, 0.6)
+end
+
+-- Shrinks the window out, runs `done` (which hides or unmounts it), then puts the scale back so the
+-- next open starts from the resting scale.
+function UIFeel.WindowOut(scale: UIScale, done: () -> ())
+	if UIFeel.ReducedMotion() then
+		done()
+		return
+	end
+	local rest = scale.Scale
+	local tween = TweenService:Create(scale, WINDOW_OUT, { Scale = rest * 0.96 })
+	tween.Completed:Once(function()
+		done()
+		if scale.Parent then scale.Scale = rest end
+	end)
+	tween:Play()
+end
+
+-- Pops a window in whenever it becomes visible. ModalFit.Bind wires this for every fitted window.
+-- `target` returns the resting scale.
 function UIFeel.BindOpen(root: GuiObject, scale: UIScale, target: () -> number)
 	root:GetPropertyChangedSignal("Visible"):Connect(function()
-		if not root.Visible then return end
-		local rest = target()
-		if UIFeel.ReducedMotion() then
-			scale.Scale = rest
-			return
-		end
-		scale.Scale = rest * 0.92
-		TweenService:Create(scale, TweenInfo.new(0.24, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = rest }):Play()
-		UIFeel.Sfx("WindowOpen")
+		if root.Visible then UIFeel.WindowIn(scale, target()) end
 	end)
 end
 

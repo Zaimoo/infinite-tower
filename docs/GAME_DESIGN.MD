@@ -373,7 +373,7 @@ Dread fades in by distance from the tower centre: none beyond 470 studs (the Com
 
 Hero summoning at the **Summoning Altar** (`FacilityController.luau`) is partitioned into two distinct banners. Each banner rolls an **inherent rarity tier**, then picks a hero from that tier: most tiers hold one hero, and a tier with a pool (`HeroesPoolByStar`) splits its rate evenly between its heroes. Every hero is summoned at **1★**, whatever its tier, and its rarity sets how strong that 1★ hero is (see *Inherent Hero Rarity* below). Stars are earned only by promotion at The Pit. All hero odds can be raised by the **God's Blessing** facility (Section 4.3, Facility D).
 
-**Summon screen.** Each banner card shows its featured hero (A Star's Arrival: Astrea; Call of the Rift: its Mythical, Han), a line with the top tier's odds and the pity, and a **View Heroes & Odds** button. The button opens a window laid out like the Forge's *All weapons & odds* (`HeroOddsModal.luau`): a rate pill per tier, the banner's pity, 10-pull and price rules, the 50/50 state on A Star's Arrival, the God's Blessing luck, then every tier (rarest first) with each hero it can award, that hero's chance per pull, its 1★ stats, and Featured / Owned markers. All odds come from `HeroBannerOdds`, which mirrors the server roll and applies the player's luck. A tier whose hero has a different rarity says so on the card (Call of the Rift's Superior roll awards Catio, a Rare hero).
+**Summon screen.** Each banner card shows its featured hero (A Star's Arrival: Astrea; Call of the Rift: its Mythical, Han), a line with the top tier's odds and the pity, and a **View Heroes & Odds** button. The button opens a window laid out like the Forge's *All weapons & odds* (`HeroOddsModal.luau`): a rate pill per tier, the banner's pity, 10-pull and price rules, the 50/50 state on A Star's Arrival, the God's Blessing luck, then every tier (rarest first) with each hero it can award, that hero's chance per pull, its 1★ stats, and Featured / Owned markers. All odds come from `HeroBannerOdds`, which mirrors the server roll and applies the player's luck. A tier whose hero has a different rarity says so on the card.
 
 #### 1. Permanent Banner: "Call of the Rift" (Rarity Tiers 1–7)
 The permanent standard banner features **at least one character for each rarity from Common to Mythical**, and grows as permanent heroes are added:
@@ -384,7 +384,7 @@ The permanent standard banner features **at least one character for each rarity 
   - `Common (75.14%)`: **Gide** or **Shurn**
   - `Uncommon (18.0%)`: **Aaron**
   - `Rare (4.7%)`: **Catio**
-  - `Superior (1.65%)`: **Aaron / Catio (Pool fallback)**
+  - `Superior (1.65%)`: **Aeli**
   - `Exalted (0.33%)`: **Ignis** or **Diran**
   - `Legendary (0.15%)`: **Edis Callen** or **Vane** (0.075% each)
   - `Mythical (0.03%)`: **Han** (the same Gems per copy as Astrea, by the same rule)
@@ -433,6 +433,7 @@ Every summoned hero rolls a `QualityScalar` $q \in [0.90, 1.15]$ applied to thei
 | **Call of the Rift** | **Diran** | **Exalted (5) / 1★** | Healer | `300` / `22` | `40,356` / `2,959` | `20` / `52.2` |
 | **Call of the Rift** | **Edis Callen** | **Legendary (6) / 1★** | Striker | `320` / `62` | `174,339` / `33,778` | `16` / `63.2` |
 | **Call of the Rift** | **Vane** | **Legendary (6) / 1★** | Scholar | `220` / `60` | `119,856` / `32,688` | `20` / `79.0` |
+| **Call of the Rift** | **Aeli** | **Superior (4) / 1★** | Marksman | `220` / `42` | `988` / `189` | `17` / `41.9` |
 | **Call of the Rift** | **Han** | **Mythical (7) / 1★** | Striker | `300` / `40` | `661,944` / `88,259` | `14` / `83.6` |
 | **A Star's Arrival** | **Jenna** | **Common (1) / 1★** | Marksman | `210` / `34` | `210` / `34` | `13` / `13.0` |
 | **A Star's Arrival** | **Velkist** | **Uncommon (2) / 1★** | Striker | `300` / `44` | `1,215` / `178` | `14` / `21.2` |
@@ -633,6 +634,7 @@ Each hero's kit is resolved by `HeroId` in `ArchetypeCombatSkills.HeroProfiles` 
 | 15 | **Shurn** (`hero_shurn`) | Common | Scholar | Cinder Spark | Arcing Hearthbolt | Dawnstone Convergence |
 | 16 | **Diran** (`hero_diran`) | Exalted | Healer | Runeward Bolt | Compass Mend | Vitality Covenant |
 | 17 | **Vane** (`hero_vane`) | Legendary | Scholar | Null Bolt | Singularity Lance | Event Horizon |
+| 18 | **Aeli** (`hero_aeli`) | Superior | Marksman | Leafwind Arrow | Thornbriar Volley | Canopy's Wrath |
 
 **Vane's kit** has two mechanics of its own (`docs/vane-hero-plan.md`, `docs/vane-spell-animations-plan.md`). *Singularity Lance* is an instant beam (`BEAM_LINE`): the target takes the Special hit, and every other mob within a `36-stud` line from Vane through the target, `4` studs wide, takes `0.80x` ATK. *Event Horizon* holds a black hole at the target for **4s** (`16-stud` radius, cast `1.4s`): the `3.50x` is split over **8 pulses** `0.5s` apart (other mobs take the Scholar `0.6` splash share each pulse), and each pulse drags every mob in the radius `1.5` studs inward along walkable ground, stopping `3` studs from the centre. Biome Bosses, raid bosses and floor Alphas are not pulled, and duels never displace heroes.
 
@@ -707,7 +709,7 @@ These are the default multipliers and secondary mechanics each hero kit inherits
 
 The player interface is built from modular, gothic-styled components:
 1. **Side-Rail Toolbar & Squad Status Card (Phase 5, `docs/rework-plan/PHASE_5_REACT_UI_AND_MENUS.md` §2):** The single bottom toolbar is split into two vertical rails.
-   - **Left Rail (menus):** `[SUMMON]` | `[SQUAD]` | `[FORGE]` | `[FORTRESS]` (Fortress Tree) | `[INDEX]` (Hero Index). Buttons appear as their systems unlock and carry badges (a buildable tree node, an empty open squad slot, an affordable promotion, a new hero).
+   - **Left Rail (menus):** `[SQUAD]` | `[STORE]` | `[UPGRADES]` (Fortress Tree) | `[INDEX]` (Hero Index) | `[BACKPACK]` | `[GUIDE]`. `[SQUAD]` opens the Squad window directly and shows "!" while a slot is open and a hero is free to fill it. The Squad drawer leads there too: its expanded card has a **MANAGE ›** button, every portrait opens the window on one click or tap, and the portrait tooltip says so. Buttons appear as their systems unlock and carry badges (a buildable tree node, an empty open squad slot, an affordable promotion, a new hero).
    - **Right Rail (combat):** `[OVERDRIVE]` (Whistle 1 / `Q`) | `[RECALL]` (Whistle 2 / `E`) | `[TOWER]`, with radial cooldown sweeps. The rail's top is anchored below the Next Goal card so they never overlap.
    - **Squad Status Card (bottom-left):** one live row per open squad slot, showing portrait, archetype (icon and label), rarity and star, level, an HP bar (stamina off-floor), the skill gauge and a state chip (Fighting / Idle / Recalled / Down / Dueling). Locked slots collapse into a single `🔒` line that opens the Fortress Tree. It sits in a pull-up drawer: collapsed by default to a slim portrait strip (HP line, state dot, hover tooltip) that turns into the full card (only one shows at a time), toggled with the chevron, `C` or gamepad `Y`, and auto-expanded while a hero is Down or a squad alert shows (§2.2a).
    - **Raid arena (§5.6, `Hud/RaidHud.luau`):** inside the raid, a live **damage leaderboard** replaces the Right Rail (rank, name, damage, share bar; your row highlighted, or pinned under a divider when outside the top 8), and a **Leave Raid** button sits bottom centre, just above the Squad Status card (it tracks the drawer's slide; a second tap confirms). Q/E whistles keep working from the keyboard. The top banner reads `RAID BOSS · NAME [ENRAGED] — m:ss`. A results card shows rank, damage, share, Gems and Gold when the fight ends. In the hub, a **Raid Open** chip with a countdown stacks above the event badge while the portal is open.
@@ -729,18 +731,55 @@ The player interface is built from modular, gothic-styled components:
    - **Hit Sparks:** Material Neon sphere sparks with dynamic scaling and fade.
    - **Telegraph Geometry (`MAX_EFFECTS = 12` Cap):** Authoritative server-timed warning shapes with expanding inner progress-fill discs (`SELF_DISC`, `TARGET_DISC`), frontal cleave wedges (`ARC`), and swept-corridor warning strips + flying Neon orbs (`PROJECTILE`).
 
-### 4.7 Next Goal Onboarding Chain
-Systems unlock one at a time through a linear quest chain, shown as the **Next Goal** card pinned on the HUD (`OnboardingConfig`, `OnboardingService`). A system stays hidden or disabled until its step is done.
+### 4.6.1 UI conventions (toasts, windows, alerts)
+- **Toasts** (`Kit/Notify`, top centre, three at most) are small cards: an icon, a short headline in the kind's colour and at most one short line under it. Messages are written `"Headline|detail"`, for example `"Floor 3 cleared|+120 Gold · +4 Gems"`; the same message again coalesces into `×N`. No emoji, no sentences: a headline is two or three words and the detail one clause.
+- **Window motion** is the same for every window, however it was built: open pops from 94% to 100% in 0.2 s, close shrinks to 96% in 0.12 s (`UIFeel.WindowIn` / `WindowOut`). Close buttons, scrims and Backspace / gamepad B all leave through `WindowManager.Close`, so a window closes the same way however it is dismissed. Both are instant under Reduce Motion.
+- **Tabs live in the window header.** The Pit's `Synthesis | Promotion` tabs (`PitTabs`) sit beside the "THE PIT" title in both windows, like the Forge's `Artifacts | Summon`. Nothing floats above a window.
+- **Squad alerts** (heroes down, squad wiped) sit bottom centre, 420 px wide at most, and lift above the Squad drawer and the bottom-right badges whenever they would touch either.
+- **Pit confirmations** hold while their result holds. A preview token is tied to what the player confirmed (who is consumed, the cost, the EXP and level gained), not to the whole profile, so Guard Post Gold or combat EXP arriving between preview and confirm does not void it. If the token has aged out, the client re-previews and, when the result is unchanged, finishes without a second click.
+- **Armed material heroes** can be synthesized or converted: their weapon returns to the backpack. The preview lists it as a warning and the confirm dialog repeats it. Heroes in the squad, at a facility, locked or in Coma are still protected.
 
-| Step | Goal | Trigger event | Unlocks | Reward |
+### 4.7 Onboarding: the linear guide
+New players are walked through every feature once, in a fixed order, and held to the current step until it is done (`GuideConfig`, `GuideLessons`, `OnboardingService`; client cues in `OnboardingGuide.client.luau`). The current step is the **Next Goal** card on the HUD.
+
+**Core chain** (`GuideConfig.Chain`). Steps play strictly in order. A step whose action is not possible yet (no Gold for a roll, no spare hero) is passed over rather than shown as a dead end, and comes back when it is possible. Core steps cannot be put off.
+
+| Step | Goal | Done when | Opens | Reward |
 | :---: | :--- | :--- | :--- | :--- |
-| 1 | Summon your first hero | `HeroSummoned` | Squad | 200 Gems |
-| 2 | Deploy your squad | `SquadDeployed` | Tower | 500 Gold |
-| 3 | Clear Floor 1 of the Tower | `FloorCleared` (floor 1) | Forge | 1,000 Gold |
-| 4 | Upgrade a weapon at the Forge | `ArtifactUpgraded` | Facilities, Fortress Tree | 100 Gems |
-| 5 | Assign a hero to work | `FacilityAssigned` | The Pit | 750 Gold |
-| 6 | Level up a hero in The Pit | `PitUsed` | Tower Floor 5 | 250 Gems |
-| 7 | Grow your fortress | `TreeNodeUnlocked` | (none) | 1,000 Gold |
+| 1 | Summon a hero | `HeroSummoned` | | 200 Gems |
+| 2 | Set your squad | `SquadDeployed` | Tower (with a hero fit to fight) | |
+| 3 | Enter the Tower | `FloorVisited` (floor 1) | | |
+| 4 | Clear Floor 1 | `FloorCleared` (floor 1) | Forge | 5,000 Gold, topped up so one Forge roll (5,000) is always affordable |
+| 5 | Return to the Hub | `TowerReturned` | | |
+| 6 | Forge a weapon | `ArtifactSummoned` | Facilities, Fortress Tree, The Pit | |
+| 7 | Equip the weapon | `ArtifactEquipped` | | 200 Gems |
+| 8 | Post a guard | `FacilityAssigned` (Guard Post) | | 750 Gold |
+| 9 | Upgrade your fortress | `TreeNodeUnlocked` | | 1,000 Gold |
+| 10 | Level up a hero | `PitUsed` (Synthesis) | | 250 Gems |
+
+- **Guaranteed first roll:** a player's first Forge roll yields a weapon type that a squad hero can hold (a hero with no weapon first), so step 7 always has something to equip. Tier and variant roll as normal; later rolls are uniform across the six types.
+- **Starter ten-pull:** while the starter Gems still cover a ten-pull, step 1 points at the ten-pull button (it carries the guaranteed Rare).
+- **Spare heroes:** steps 8 and 10 need a hero on the bench. With none, the guide shows *Summon a spare hero* first (when a pull is affordable).
+- **Access is never taken back.** Reaching Floor 3 opens every system regardless of lessons, and players who had cleared Floor 1 before the linear chain shipped keep everything they had (they are credited steps 1, 2, 6 and 7 where they have plainly done them).
+
+**Conditional lessons** appear when their moment comes and can be put off for 15 minutes with **Later**:
+
+| Lesson | Appears when | Reward |
+| :--- | :--- | :--- |
+| Bank your relic | carrying a relic (takes priority over everything) | |
+| Ready your squad | no hero in the squad is fit to fight (also after a wipe) | |
+| Promote a hero | a squad hero is at its level cap (Lv.10) and the promotion is affordable | 100 Gems |
+| Join the raid | the Raid Portal is open and the player can enter | |
+| Upgrade a weapon | donors and Gold for a star promotion are in hand | 100 Gems |
+| Staff the Market / Training Grounds / God's Blessing | the facility is built and empty, with a hero spare | |
+
+**Cues (client, decorative only; the server decides what counts):**
+- **Press something: a spotlight.** The screen dims to black except for the one control to press, ringed in gold, with two or three words beside it (`Lesson.Action`). For a core step the dim area also swallows input, which holds the player to the task.
+- **Walk somewhere: a trail.** Gold chevrons flow along the ground from the player to the place, a disc marks the destination, the building is outlined within 50 studs, and an arrow sits on the screen edge when the place is out of view. The caption shows the goal and the distance.
+- **The lock always lets go** when it cannot help: a higher layer covers the control (a confirm dialog, the summon reveal), pressing the control twice changed nothing, or the player chooses **Skip tutorial** (on the spotlight and in Left Rail > Guide; unearned step rewards are forfeited).
+- **Copy rule:** a goal title is two to four words, its hint one short sentence, the action label two or three words.
+
+*(The seven-step quest chain in `OnboardingConfig` remains only for the `OnboardingV2 = false` rollback switch. Rewards paid under it are not paid again.)*
 
 ---
 
@@ -1004,7 +1043,7 @@ To isolate simulation state and prevent entity overflow or vertical AoE bleed ac
 - **Budgeting:** Token bucket burst 4, refill 2 tokens/second per owner. 8-second preparation deadline before timeout rollback.
 
 ### 8.3 Profile Persistence & Session Locking
-- **Store:** One DataStore key per player, `PlayerProfiles_v3` / `User_{UserId}`, linked to the UserId for right-to-be-forgotten. The record is `{ Data, Lock = { JobId, Time }, SavedAt }`. Every write goes through `UpdateAsync` (`ProfilePersistence`, with the pure lock rules in `ProfileCodec`).
+- **Store:** One DataStore key per player, `PlayerProfiles_v4` / `User_{UserId}`, linked to the UserId for right-to-be-forgotten. The record is `{ Data, Lock = { JobId, Time }, SavedAt }`. Every write goes through `UpdateAsync` (`ProfilePersistence`, with the pure lock rules in `ProfileCodec`).
 - **Join:** The server claims the lock, then runs the saved profile (or a fresh default for a new player) through `PitService.EnsureDefaults`, `EnsureFacilities`, `ProfileMigrations.Run`, `OnboardingService.EnsureState` and `FortressTreeService.ApplyLevels`. `SyncProfile` lazy migrations still run on every sync. A lock held by another live server is retried 6 times, 5 seconds apart, before the player is kicked with "rejoin". A lock not refreshed for 10 minutes belongs to a crashed server and is taken over.
 - **Saves:** Autosave every 120–135 seconds per player (which refreshes the lock), on `PlayerRemoving` (saves and releases), and in `BindToClose` (up to 25 seconds). `DataManager.SaveProfile(player)` is the checkpoint save for purchases. A save is cancelled if this server no longer owns the lock, so a stale server can never overwrite newer progress. Failures retry with exponential backoff.
 - **Schema:** `ProfileMigrations.CurrentSchema` is 7. v3–v5 cover onboarding, 1★ summons and per-star levels (§4.1), v6 adds the onboarding guide, and v7 deletes the retired social systems (`profile.Social`: pacts, mercenaries, mimic chests, plot rune espionage) and their facility fields (`UncollectedOutput`, `BlessedUntil`, `LeechedUntil`, `LeechVisitorUserId`, `LastRuneTimestamp`, `LastRuneWasLeech`). It also removes Pit imprints (`InheritedImprints`, `ImprintCapacity`, `SynthesisHistory.ImprintsPerformed`), refunds each held Imprint Catalyst as 150 Gold, 15 Gems and 4 Soul Essence, and drops each hero's display-only `PassiveTrait` name.
