@@ -395,6 +395,15 @@ local HERO_KITS: { [string]: HeroKitOverride } = {
 			Description = "Ignis ignites into a molten juggernaut, taunting enemies within 25 studs for 4s and encasing himself in a magma barrier equal to 40% Max HP for 6s.",
 		},
 	},
+	hero_edis = {
+		Archetype = "Striker",
+		Basic = { Name = "Ravenclaw Cut" },
+		Special = { Name = "Umbral Crosscut" },
+		Skill = {
+			Name = "Midnight Requiem",
+			Description = "Edis vanishes into a whirl of black leather and steel, cutting through everything around the target for 3.20x ATK burst damage in a 12-stud radius.",
+		},
+	},
 	hero_jenna = {
 		Archetype = "Marksman",
 		Basic = { Name = "Wind-Step Shot" },

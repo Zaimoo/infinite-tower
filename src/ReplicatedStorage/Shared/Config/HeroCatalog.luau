@@ -2,7 +2,7 @@
 -- ReplicatedStorage/Shared/Config/HeroCatalog.luau
 -- Authoritative Hero Seed & Banner Configuration
 -- Features:
---   1. Permanent Banner: "Call of the Rift" (rarity tiers 1-5, exactly 1 character per tier)
+--   1. Permanent Banner: "Call of the Rift" (rarity tiers 1-6, exactly 1 character per tier)
 --   2. Limited Time Banner: "A Star's Arrival" (rarity tiers 1-7, exactly 1 character per tier)
 --   3. Inherent hero rarity (Phase 4 §7): fixed per template, multiplies base stats only.
 --      Every hero is summoned at 1★ (BaseStar); its rarity factor carries the power its tier used to get from stars.
@@ -39,20 +39,22 @@ local HeroCatalog = {}
 HeroCatalog.PermanentBanner = {
 	BannerId = "banner_call_of_the_rift",
 	Title = "CALL OF THE RIFT",
-	Subtitle = "5-STAR PERMANENT HERO BANNER",
-	MaxStar = 5,
+	Subtitle = "6-STAR PERMANENT HERO BANNER",
+	MaxStar = 6,
 	MaxPity = 120,
-	PityMinTier = 5, -- hard pity guarantees an Exalted or better hero
+	PityMinTier = 5, -- hard pity guarantees an Exalted or better hero (Ignis or Edis)
 	Cost1X = 100,
 	Cost10X = 900,
 	TenPullMinTier = 3, -- every 10-pull includes a Rare or better hero
 	-- Retuned with the 100-gem relic economy: hours of play per copy match the old rates at the higher income.
 	Rates = {
-		[1] = 0.7532, -- 75.32% Common Han
+		[1] = 0.7517, -- 75.17% Common Han
 		[2] = 0.1800, -- 18.0% Uncommon Aaron
 		[3] = 0.0470, -- 4.7% Rare Catio
 		[4] = 0.0165, -- 1.65% Superior Valeria
 		[5] = 0.0033, -- 0.33% Exalted Ignis
+		-- 0.15% Legendary Edis: the same Gems per copy as Solaris on A Star's Arrival (0.30% at twice the price).
+		[6] = 0.0015,
 	},
 	HeroesByStar = {
 		[1] = "hero_han",
@@ -60,6 +62,7 @@ HeroCatalog.PermanentBanner = {
 		[3] = "hero_catio",
 		[4] = "hero_valeria",
 		[5] = "hero_ignis",
+		[6] = "hero_edis",
 	},
 }
 
@@ -200,6 +203,25 @@ HeroCatalog.Seeds = {
 		NativeLabor = 53.1,
 		PreferredFacility = "FACILITY_GUARD_POST",
 		Color = Color3.fromRGB(255, 85, 40),
+	},
+	hero_edis = {
+		HeroId = "hero_edis",
+		DisplayName = "Edis Callen",
+		BannerOrigin = "STANDARD",
+		DropWeight = 0.5,
+		BaseStar = 1,
+		Rarity = 6,
+		Archetype = "Striker",
+		BaseHP_1Star = 320,
+		BaseATK_1Star = 62,
+		NativeHP = 174339,
+		NativeATK = 33778,
+		AttackInterval = 0.75,
+		AttackRange = 6,
+		BaseLabor_1Star = 16.0,
+		NativeLabor = 63.2,
+		PreferredFacility = "FACILITY_TRAINING",
+		Color = Color3.fromRGB(214, 150, 82),
 	},
 
 	-- ------------------------------------------------------------------------
@@ -367,7 +389,7 @@ HeroCatalog.PoolByStar = {
 	[3] = { "hero_catio", "hero_eolka" },
 	[4] = { "hero_valeria", "hero_morrigan" },
 	[5] = { "hero_ignis", "hero_archon" },
-	[6] = { "hero_solaris" },
+	[6] = { "hero_edis", "hero_solaris" },
 	[7] = { "hero_astrea" },
 }
 

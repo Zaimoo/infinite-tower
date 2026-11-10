@@ -16,7 +16,8 @@ import os
 
 import bpy
 
-hero = HAIR[: -len("Hair")].lower() if HAIR.endswith("Hair") else HAIR.lower()  # noqa: F821
+# STEM (optional) overrides the file name stem, e.g. "edis_back" for a second hair mesh.
+hero = globals().get("STEM") or (HAIR[: -len("Hair")].lower() if HAIR.endswith("Hair") else HAIR.lower())  # noqa: F821
 hair = bpy.data.objects[HAIR]  # noqa: F821
 bpy.ops.object.select_all(action="DESELECT")
 hair.select_set(True)
