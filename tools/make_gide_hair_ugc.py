@@ -1,30 +1,29 @@
 """
 Gide's hair, UGC-accessory style (run inside Blender: exec(open(path).read())).
 
-From his reference art: short, thick, messy dark-brown anime hair. Spiky bangs fall to the
-brows with two pointed central strands dipping over the bridge of the nose, temple locks
-frame the face down to the cheekbones, short cropped layers cover the sides and nape with
-outward-flicking tips, and tousled locks fan out from the crown with short lifted spikes on
-top and at the upper sides.
-
-Same construction as tools/make_jenna_hair_ugc.py: ribbon locks with a centre ridge over a full
-scalp cap, in Roblox head space on a 1.2-stud reference head. Export with the hero-remodel
-skill's scripts/blender_export_hair.py (docs/hero-art-pipeline.md 4.4).
+Built with chunky diamond-ridge Bezier locks (add_ridge_lock) and WeightedNormal shading:
+  - Distinct from Han's flat, downward-hanging shag and Aaron's wide curtain bangs.
+  - Rugged, multi-layered spiky shonen brow fringe with overlapping upper-forehead spikes.
+  - Full temple and ear coverage with stacked outward-flaring lateral spikes.
+  - Clean standing crown cowlick spikes and feathered spiky occipital/nape layers.
 """
 
-import bpy, bmesh, math, random, os, json
+import bpy
+import bmesh
+import math
+import os
+import json
 from mathutils import Vector
 
 OUT_DIR = r"D:\Programming shi\infinite-tower\assets\hair"
 NAME = "GideHair"
-rng = random.Random(419)
 
-for ob in list(bpy.data.objects):
-    if ob.name == NAME or ob.name == "Cube":
-        bpy.data.objects.remove(ob, do_unlink=True)
-for ob in bpy.data.objects:
-    if ob.name.endswith("Hair") and ob.name != NAME:
-        ob.hide_set(True)
+for obj in list(bpy.data.objects):
+    if obj.name.startswith("GideHair") or obj.name in ("Cube", "RobloxHeadRef", "HairProfile_Ridge"):
+        bpy.data.objects.remove(obj, do_unlink=True)
+for obj in bpy.data.objects:
+    if obj.name.endswith("Hair") and obj.name != NAME:
+        obj.hide_set(True)
 
 # Reference head (the in-game rounded head, authored size 1.2).
 if not bpy.data.objects.get("RefHead"):
@@ -36,208 +35,242 @@ if not bpy.data.objects.get("RefHead"):
     head.data.materials.append(skin)
     bpy.ops.object.shade_smooth()
 
-def B(p):
-    return Vector((p[0], -p[2], p[1]))
-
-# Scalp shell: an ellipsoid on top, a straight cylinder below its equator.
-CX, CY, CZ = 0.0, 0.16, 0.04
-RX, RY, RZ = 0.7, 0.76, 0.71
-
-def shell(theta, y, off=0.0):
-    """Point on the scalp at azimuth theta (0 = front, +90 deg = his right, +X) and height y."""
-    k = 1.0 if y <= CY else math.sqrt(max(0.0, 1 - ((y - CY) / RY) ** 2))
-    k = max(k, 0.06)
-    x = (RX + off) * k * math.sin(theta)
-    z = CZ - (RZ + off) * k * math.cos(theta)
-    yy = min(y, CY + RY + off)
-    return Vector((CX + x, yy + (off * 0.6 if y > CY else 0), z))
-
-def out_normal(p):
-    axis = Vector((CX, min(p.y, CY), CZ))
-    n = p - axis
-    return n.normalized() if n.length > 1e-5 else Vector((0, 1, 0))
+ref = bpy.data.objects.get("RefHead")
+if ref:
+    ref.hide_set(False)
+    ref.hide_render = False
 
 bm = bmesh.new()
 
-# --- Scalp cap: full coverage under the locks ---------------------------------------------
-def cap():
-    rings, segs = 22, 44
+def bez3(p0, p1, p2, t):
+    a = (1.0 - t) ** 2
+    b = 2.0 * (1.0 - t) * t
+    c = t * t
+    return Vector(p0) * a + Vector(p1) * b + Vector(p2) * c
+
+def bez4(p0, p1, p2, p3, t):
+    a = (1.0 - t) ** 3
+    b = 3.0 * ((1.0 - t) ** 2) * t
+    c = 3.0 * (1.0 - t) * (t * t)
+    d = t ** 3
+    return Vector(p0) * a + Vector(p1) * b + Vector(p2) * c + Vector(p3) * d
+
+def add_ridge_lock(pts, width, thick, ridge_height, out_hint, segs=10, tip_taper=1.85):
+    """
+    Creates a chunky sculpted anime lock with a sharp outer central crest ridge.
+    """
+    rings = []
+    is_cubic = len(pts) == 4
+
+    for s in range(segs + 1):
+        t = s / segs
+        if is_cubic:
+            p = bez4(pts[0], pts[1], pts[2], pts[3], t)
+            t_next = min(1.0, t + 0.02)
+            t_prev = max(0.0, t - 0.02)
+            p_next = bez4(pts[0], pts[1], pts[2], pts[3], t_next)
+            p_prev = bez4(pts[0], pts[1], pts[2], pts[3], t_prev)
+        else:
+            p = bez3(pts[0], pts[1], pts[2], t)
+            t_next = min(1.0, t + 0.02)
+            t_prev = max(0.0, t - 0.02)
+            p_next = bez3(pts[0], pts[1], pts[2], t_next)
+            p_prev = bez3(pts[0], pts[1], pts[2], t_prev)
+
+        tan = (p_next - p_prev).normalized()
+        side = tan.cross(Vector(out_hint))
+        if side.length < 1e-4:
+            side = tan.cross(Vector((0, 0, 1)))
+        side.normalize()
+        nrm = side.cross(tan).normalized()
+
+        taper = max(0.03, (1.0 - t ** tip_taper) * (1.0 + 0.16 * math.sin(math.pi * t)))
+        w = width * taper + 0.004
+        h = thick * (0.6 + 0.4 * taper) * taper + 0.004
+        rh = ridge_height * taper + 0.004
+
+        ring_coords = [
+            p - nrm * (h * 0.45),               # 0: inner scalp contact
+            p + side * w,                       # 1: right edge
+            p + nrm * h + (nrm * rh),           # 2: SHARP CENTRAL RIDGE
+            p - side * w,                       # 3: left edge
+        ]
+        rings.append([bm.verts.new(v) for v in ring_coords])
+
+    for a, b in zip(rings, rings[1:]):
+        for k in range(4):
+            bm.faces.new([a[k], a[(k + 1) % 4], b[(k + 1) % 4], b[k]])
+    bm.faces.new(list(reversed(rings[0])))
+    bm.faces.new(rings[-1])
+
+# -------------------------------------------------------------------------
+# 1. BASE SCALP CAP (Smoothly contoured so no square step ever pokes out)
+# -------------------------------------------------------------------------
+def add_scalp_dome(center, radii, keep, rings=18, segs=36):
     verts = {}
     for i in range(rings + 1):
-        y = CY + RY - (RY + 0.95) * i / rings  # top down to well below the equator
+        phi = math.pi * i / rings
         for j in range(segs):
-            th = 2 * math.pi * j / segs
-            front = math.cos(th) > 0.74  # the face opening; the temples stay covered
-            limit = 0.3 if front else (-0.12 if math.cos(th) > -0.2 else -0.3)
-            if y < limit:
-                continue
-            verts[(i, j)] = bm.verts.new(B(shell(th, y, -0.01)))
+            th = 2.0 * math.pi * j / segs
+            x = radii[0] * math.sin(phi) * math.cos(th)
+            y = radii[1] * math.sin(phi) * math.sin(th)
+            z = radii[2] * math.cos(phi)
+            if keep(x, y, z):
+                verts[(i, j)] = bm.verts.new(Vector((center[0] + x, center[1] + y, center[2] + z)))
     for i in range(rings):
         for j in range(segs):
             q = [(i, j), (i, (j + 1) % segs), (i + 1, (j + 1) % segs), (i + 1, j)]
             if all(k in verts for k in q):
                 bm.faces.new([verts[k] for k in q])
-cap()
 
-# --- Ribbon lock ---------------------------------------------------------------------------
-# Thin plate with a raised centre ridge (the UGC strand look); narrow root, needle tip.
-PROFILE = [(1.0, 0.0), (0.55, 0.42), (0.0, 0.8), (-0.55, 0.42), (-1.0, 0.0), (0.0, -0.35)]
+def cap_filter(x, y, z):
+    # Smoothly sloped cutoff from front brow (z > 0.28) down to back nape (z > -0.32)
+    # so there is no stair-step anywhere on the temples, cheeks, or behind the ear.
+    slope_limit = -0.02 + 0.32 * y
+    return z > slope_limit
 
-def smooth_path(pts, n):
-    """Catmull-Rom resample of control points into n+1 points."""
-    P = [Vector(p) for p in pts]
-    P = [P[0] + (P[0] - P[1])] + P + [P[-1] + (P[-1] - P[-2])]
-    out = []
-    seg = len(P) - 3
-    for s in range(n + 1):
-        u = s / n * seg
-        i = min(int(u), seg - 1)
-        t = u - i
-        p0, p1, p2, p3 = P[i], P[i + 1], P[i + 2], P[i + 3]
-        out.append(0.5 * ((2 * p1) + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t + (-p0 + 3 * p1 - 3 * p2 + p3) * t ** 3))
-    return out
+add_scalp_dome((0, 0.0, 0.08), (0.73, 0.74, 0.71), cap_filter, rings=20, segs=40)
 
-def ribbon(ctrl, width, thick=0.035, segs=16, tip=2.2, root=0.55, end_tie=False, twist=0.0):
-    pts = smooth_path(ctrl, segs)
-    rings = []
-    for s, p in enumerate(pts):
-        t = s / segs
-        a = pts[max(0, s - 1)]; b = pts[min(segs, s + 1)]
-        tan = (b - a).normalized()
-        nrm = out_normal(p)
-        side = tan.cross(nrm)
-        if side.length < 1e-5:
-            side = tan.cross(Vector((0, 0, 1)))
-        side.normalize()
-        nrm = side.cross(tan).normalized()
-        ang = twist * t
-        side, nrm = side * math.cos(ang) + nrm * math.sin(ang), nrm * math.cos(ang) - side * math.sin(ang)
-        grow = root + (1 - root) * min(1.0, t / 0.18)
-        if end_tie:
-            shape = grow * (1 - 0.75 * t ** 2)  # gathers into the tie instead of a point
-        else:
-            shape = grow * (1 - t ** tip) * (1 + 0.15 * math.sin(math.pi * t))
-        w = width * shape + 0.004
-        h = thick * (0.5 + 0.5 * shape) + 0.003
-        rings.append([bm.verts.new(B(p + side * (sx * w) + nrm * (ny * h))) for sx, ny in PROFILE])
-    n = len(PROFILE)
-    for r0, r1 in zip(rings, rings[1:]):
-        for k in range(n):
-            bm.faces.new([r0[k], r0[(k + 1) % n], r1[(k + 1) % n], r1[k]])
-    bm.faces.new(list(reversed(rings[0])))
-    bm.faces.new(rings[-1])
+# -------------------------------------------------------------------------
+# 2. FRONT: JAGGED MULTI-LAYERED SHONEN BROW SPIKES
+# -------------------------------------------------------------------------
+front_lower_spikes = [
+    # Far-left temple-brow spike
+    ([(-0.24, 0.34, 0.64), (-0.50, 0.64, 0.42), (-0.64, 0.56, 0.06)], 0.21, 0.095, 0.06, (-0.65, 0.9, -0.1)),
+    # Mid-left brow spike
+    ([(-0.10, 0.38, 0.66), (-0.28, 0.70, 0.44), (-0.38, 0.68, 0.08)], 0.20, 0.095, 0.06, (-0.35, 1.0, -0.15)),
+    # Center-left main spike (dips toward inner left brow, angled left)
+    ([(0.02, 0.40, 0.66), (-0.06, 0.73, 0.42), (-0.12, 0.72, 0.04)], 0.19, 0.095, 0.06, (-0.1, 1.0, -0.2)),
+    # Center-right spike (angled right, leaving a crisp V-notch over the bridge of the nose)
+    ([(0.08, 0.40, 0.66), (0.15, 0.73, 0.44), (0.20, 0.71, 0.11)], 0.19, 0.095, 0.06, (0.18, 1.0, -0.15)),
+    # Mid-right brow spike
+    ([(0.16, 0.38, 0.66), (0.35, 0.70, 0.46), (0.46, 0.65, 0.12)], 0.20, 0.095, 0.06, (0.42, 1.0, -0.15)),
+    # Far-right temple-brow spike
+    ([(0.26, 0.34, 0.64), (0.52, 0.64, 0.42), (0.64, 0.56, 0.08)], 0.21, 0.095, 0.06, (0.65, 0.9, -0.1)),
+]
+for pts, w, th, rh, out in front_lower_spikes:
+    add_ridge_lock(pts, w, th, rh, out, segs=9, tip_taper=1.75)
 
-def jitter(v, a=0.03):
-    return Vector(v) + Vector((rng.uniform(-a, a), rng.uniform(-a, a), rng.uniform(-a, a)))
+# Upper forehead overlapping spikes (second shorter spiky tier on top of the bangs)
+front_upper_spikes = [
+    ([(-0.16, 0.22, 0.72), (-0.38, 0.62, 0.62), (-0.54, 0.70, 0.34)], 0.20, 0.09, 0.055, (-0.45, 1.0, 0.3)),
+    ([(0.00, 0.24, 0.74), (-0.08, 0.66, 0.64), (-0.16, 0.78, 0.36)], 0.19, 0.09, 0.055, (-0.1, 1.0, 0.35)),
+    ([(0.10, 0.24, 0.74), (0.22, 0.66, 0.64), (0.32, 0.76, 0.36)], 0.19, 0.09, 0.055, (0.25, 1.0, 0.35)),
+    ([(0.20, 0.22, 0.72), (0.44, 0.60, 0.60), (0.60, 0.66, 0.34)], 0.20, 0.09, 0.055, (0.55, 0.9, 0.3)),
+]
+for pts, w, th, rh, out in front_upper_spikes:
+    add_ridge_lock(pts, w, th, rh, out, segs=8, tip_taper=1.7)
 
+# -------------------------------------------------------------------------
+# 3. SIDES: FULL TEMPLE COVERAGE + THREE STACKED OUTWARD-FLARING SPIKES
+# -------------------------------------------------------------------------
+for sgn in (-1, 1):
+    # Front temple bridge spike (seals gap between outer bang and sideburn)
+    add_ridge_lock(
+        [(0.42 * sgn, 0.28, 0.58), (0.72 * sgn, 0.50, 0.32), (0.76 * sgn, 0.44, -0.12)],
+        width=0.22, thick=0.095, ridge_height=0.055, out_hint=(sgn, 0.65, -0.1), segs=9, tip_taper=1.75
+    )
+    # Sharp cropped sideburn in front of the ear (down to Z = -0.32)
+    add_ridge_lock(
+        [(0.52 * sgn, 0.18, 0.52), (0.80 * sgn, 0.26, 0.12), (0.74 * sgn, 0.22, -0.32)],
+        width=0.22, thick=0.095, ridge_height=0.055, out_hint=(sgn, 0.35, -0.15), segs=9, tip_taper=1.75
+    )
+    # Mid-ear lower coverage spike (seals the side scalp completely)
+    add_ridge_lock(
+        [(0.58 * sgn, -0.02, 0.44), (0.84 * sgn, 0.00, 0.06), (0.80 * sgn, -0.06, -0.34)],
+        width=0.23, thick=0.095, ridge_height=0.055, out_hint=(sgn, 0.0, -0.1), segs=9, tip_taper=1.75
+    )
+    # Tier 1 (Upper-side bold spike flaring wide out above temple)
+    add_ridge_lock(
+        [(0.36 * sgn, 0.08, 0.68), (0.76 * sgn, 0.12, 0.64), (1.00 * sgn, 0.02, 0.44)],
+        width=0.23, thick=0.10, ridge_height=0.06, out_hint=(sgn, 0.15, 0.6), segs=9, tip_taper=1.7
+    )
+    # Tier 2 (Mid-side bold outward spike flaring out over the ear)
+    add_ridge_lock(
+        [(0.48 * sgn, -0.04, 0.56), (0.86 * sgn, -0.08, 0.34), (1.04 * sgn, -0.20, 0.08)],
+        width=0.24, thick=0.105, ridge_height=0.065, out_hint=(sgn, -0.1, 0.35), segs=9, tip_taper=1.7
+    )
+    # Tier 3 (Lower-side outward spike kicking out behind the ear)
+    add_ridge_lock(
+        [(0.56 * sgn, -0.18, 0.38), (0.86 * sgn, -0.28, 0.08), (0.96 * sgn, -0.40, -0.24)],
+        width=0.22, thick=0.095, ridge_height=0.055, out_hint=(sgn, -0.3, 0.1), segs=8, tip_taper=1.7
+    )
+    # Behind-ear transition spike
+    add_ridge_lock(
+        [(0.52 * sgn, -0.32, 0.48), (0.82 * sgn, -0.52, 0.22), (0.90 * sgn, -0.64, -0.12)],
+        width=0.22, thick=0.095, ridge_height=0.055, out_hint=(sgn, -0.6, 0.2), segs=8, tip_taper=1.75
+    )
 
-PART = shell(math.radians(-6), 0.72, 0.06)  # central-left whorl
-CROWN = Vector((-0.02, CY + RY + 0.03, 0.14))
+# -------------------------------------------------------------------------
+# 4. CROWN & TOP SPIKES (Clean, non-curling upward/outward shonen spikes)
+# -------------------------------------------------------------------------
+crown_spikes = [
+    # Center-left standing cowlick spike (sweeping up and left)
+    ([(0.04, 0.06, 0.68), (-0.14, 0.02, 0.94), (-0.34, -0.08, 1.06)], 0.22, 0.10, 0.06, (-0.4, 0.1, 1.0)),
+    # Center-right standing cowlick spike (sweeping up and right)
+    ([(-0.04, 0.04, 0.68), (0.16, 0.00, 0.96), (0.38, -0.10, 1.08)], 0.22, 0.10, 0.06, (0.4, 0.1, 1.0)),
+    # Front-crown uplifted crest (sweeping up and slightly left-forward, no downward hook)
+    ([(0.04, 0.18, 0.68), (-0.04, 0.32, 0.90), (-0.12, 0.42, 0.98)], 0.20, 0.095, 0.055, (-0.2, 0.7, 0.8)),
+    # Rear-tilted tall crown spike
+    ([(0.00, -0.06, 0.68), (0.00, -0.32, 0.96), (0.00, -0.62, 1.02)], 0.23, 0.105, 0.065, (0.0, -0.5, 1.0)),
+    # Upper-left diagonal crown spike
+    ([(-0.18, -0.02, 0.68), (-0.50, -0.12, 0.90), (-0.82, -0.26, 0.82)], 0.23, 0.10, 0.06, (-0.7, -0.2, 0.7)),
+    # Upper-right diagonal crown spike
+    ([(0.18, -0.02, 0.68), (0.50, -0.12, 0.90), (0.82, -0.26, 0.82)], 0.23, 0.10, 0.06, (0.7, -0.2, 0.7)),
+    # Back-left high crown spike
+    ([(-0.16, -0.16, 0.68), (-0.38, -0.46, 0.88), (-0.60, -0.76, 0.74)], 0.22, 0.095, 0.06, (-0.5, -0.7, 0.6)),
+    # Back-right high crown spike
+    ([(0.16, -0.16, 0.68), (0.38, -0.46, 0.88), (0.60, -0.76, 0.74)], 0.22, 0.095, 0.06, (0.5, -0.7, 0.6)),
+]
+for pts, w, th, rh, out in crown_spikes:
+    add_ridge_lock(pts, w, th, rh, out, segs=9, tip_taper=1.75)
 
-def lock(pts, width, thick=0.038, segs=14, tip=2.55, twist=0.0):
-    ribbon([jitter(p, 0.007) for p in pts], width, thick, segs=segs, tip=tip, twist=twist)
+# -------------------------------------------------------------------------
+# 5. BACK & NAPE: LAYERED OCCIPITAL SPIKES & OUTWARD DUCKTAIL TIPS
+# -------------------------------------------------------------------------
+for x in (-0.34, -0.12, 0.12, 0.34):
+    add_ridge_lock(
+        [(x, -0.32, 0.56), (x * 1.25, -0.74, 0.42), (x * 1.45, -0.92, 0.16)],
+        width=0.23, thick=0.10, ridge_height=0.06, out_hint=(x * 0.5, -1.0, 0.3), segs=8, tip_taper=1.75
+    )
 
-# 1. Crown: thick messy locks fanning out smoothly from the crown, tips lifting slightly off the head.
-for i in range(16):
-    th = math.radians(-180 + i * 22.5 + rng.uniform(-5, 5))
-    if math.cos(th) > 0.7:
-        continue  # the bangs cover the front
-    end_y = rng.uniform(0.16, 0.38)
-    swirl = rng.uniform(-0.06, 0.06)
-    lock([
-        CROWN + Vector((rng.uniform(-0.03, 0.03), 0, rng.uniform(-0.03, 0.03))),
-        shell(th, 0.80, 0.07),
-        shell(th + swirl * 0.5, 0.56, 0.11),
-        shell(th + swirl * 0.8, end_y + 0.12, 0.16),
-        shell(th + swirl, end_y, 0.24 + rng.uniform(0, 0.06)),
-    ], 0.26, 0.04, segs=14, tip=2.5, twist=rng.uniform(-0.18, 0.18))
+for x in (-0.42, -0.20, 0.0, 0.20, 0.42):
+    add_ridge_lock(
+        [(x, -0.44, 0.34), (x * 1.22, -0.82, 0.12), (x * 1.35, -0.94, -0.16)],
+        width=0.23, thick=0.095, ridge_height=0.06, out_hint=(x * 0.5, -1.0, 0.0), segs=8, tip_taper=1.75
+    )
 
-# 2. Sides and back: shorter, rugged cropped layers over the ears and nape with outward-flicking tips.
-for i in range(15):
-    th = math.radians(64 + i * (232 / 14) + rng.uniform(-4, 4))
-    back = max(0.0, -math.cos(th))  # 1 at the centre back
-    y_end = -0.20 - 0.22 * back - 0.10 * rng.random()
-    swirl = rng.uniform(-0.05, 0.05)
-    lock([
-        shell(th, 0.66, 0.06),
-        shell(th, 0.34, 0.10),
-        shell(th + swirl * 0.5, 0.06, 0.12),
-        shell(th + swirl * 0.8, (y_end + 0.06) / 2, 0.15),
-        shell(th + swirl, y_end, 0.22 + 0.07 * rng.random()),
-    ], 0.25, 0.038, segs=15, tip=2.55, twist=rng.uniform(-0.2, 0.2))
+for x in (-0.44, -0.26, -0.09, 0.09, 0.26, 0.44):
+    add_ridge_lock(
+        [(x, -0.46, 0.04), (x * 1.22, -0.76, -0.20), (x * 1.36, -0.88, -0.42)],
+        width=0.20, thick=0.085, ridge_height=0.05, out_hint=(x * 0.6, -1.0, -0.1), segs=7, tip_taper=1.65
+    )
 
-# 3. Bangs: spiky fringe across the forehead, with two central spikes dipping over the brow bridge
-# and shorter angled spikes over the brows.
-for x_end, y_end, w in [
-    (-0.49, -0.22, 0.20),
-    (-0.37, 0.02, 0.21),
-    (-0.24, 0.08, 0.20),
-    (-0.11, -0.04, 0.18),
-    (0.01, -0.09, 0.17),
-    (0.13, 0.01, 0.18),
-    (0.25, 0.08, 0.20),
-    (0.38, 0.00, 0.21),
-    (0.50, -0.22, 0.20),
-]:
-    th_end = math.asin(max(-0.95, min(0.95, x_end / 0.78)))
-    mid = shell(th_end * 0.6, 0.45, 0.10)
-    end = shell(th_end, y_end, 0.10 + 0.03 * abs(x_end))
-    lock([
-        PART + Vector((rng.uniform(-0.03, 0.03), 0.02, 0)),
-        shell(th_end * 0.35, 0.64, 0.09),
-        mid,
-        (mid + end) / 2 + Vector((0, 0, -0.025)),
-        end,
-    ], w, 0.038, segs=15, tip=2.65, twist=rng.uniform(-0.15, 0.15))
+bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
+bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
 
-# 4. Temple locks framing the sides down to the cheekbones so no scalp shows at the sides.
-for side in (-1, 1):
-    for th_deg, y_end, w in [(43, -0.28, 0.20), (52, -0.36, 0.22), (61, -0.28, 0.22)]:
-        th = math.radians(th_deg) * side
-        lock([
-            shell(th * 0.5, 0.74, 0.07),
-            shell(th * 0.85, 0.50, 0.09),
-            shell(th, 0.22, 0.10),
-            shell(th, -0.04, 0.11),
-            shell(th * 1.03, y_end, 0.18),
-        ], w, 0.036, segs=14, tip=2.6, twist=0.12 * side)
-
-# 5. Upper-side and back-crown flared spikes: long smooth arcs from the upper crown that flare out
-# cleanly at the sides and upper back, matching the spiky anime silhouette.
-for th_deg, y_end, reach in [
-    (-58, 0.28, 0.28),
-    (58, 0.28, 0.28),
-    (-82, 0.12, 0.29),
-    (82, 0.12, 0.29),
-    (-125, 0.32, 0.27),
-    (128, 0.32, 0.27),
-]:
-    th = math.radians(th_deg)
-    lock([
-        CROWN,
-        shell(th * 0.65, 0.78, 0.08),
-        shell(th * 0.88, 0.56, 0.13),
-        shell(th, y_end + 0.12, 0.19),
-        shell(th * 1.02, y_end, reach),
-    ], 0.22, 0.038, segs=12, tip=2.5, twist=0.0)
-
-bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-6)
 me = bpy.data.meshes.new(NAME)
-bm.to_mesh(me); bm.free()
+bm.to_mesh(me)
+bm.free()
+
 for p in me.polygons:
     p.use_smooth = True
+
 hair = bpy.data.objects.new(NAME, me)
 bpy.context.collection.objects.link(hair)
 
-COLOUR = (0.376, 0.259, 0.180, 1)  # Warm brown (#60422E)
+COLOUR = (0.424, 0.282, 0.188, 1.0)  # Warm Brown (#6C4830)
 mat = bpy.data.materials.get("GideHairBrown") or bpy.data.materials.new("GideHairBrown")
 mat.use_nodes = True
 bsdf = next((n for n in mat.node_tree.nodes if n.type == "BSDF_PRINCIPLED"), None)
 if bsdf:
     bsdf.inputs[0].default_value = COLOUR
-    bsdf.inputs["Roughness"].default_value = 0.38
+    bsdf.inputs["Roughness"].default_value = 0.48
 mat.diffuse_color = COLOUR
 me.materials.append(mat)
+
+wn = hair.modifiers.new("WeightedNormal", "WEIGHTED_NORMAL")
+wn.keep_sharp = True
 
 tris = sum(len(p.vertices) - 2 for p in me.polygons)
 print(NAME, "tris", tris)

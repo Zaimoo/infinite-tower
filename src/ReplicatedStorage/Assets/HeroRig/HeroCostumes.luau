@@ -80,7 +80,7 @@ HeroCostumes.MESHES = table.freeze({
 	-- Han's hair, our own: tools/make_han_hair_ugc.py (assets/hair/han_hair_ugc.blend).
 	["rbxassetid://127638976753205"] = "",
 	-- Gide's hair, our own: tools/make_gide_hair_ugc.py (assets/hair/gide_hair_ugc.blend).
-	["rbxassetid://107541920947776"] = "",
+	["rbxassetid://115502888193432"] = "",
 } :: { [string]: string })
 
 -- Avatar hair accessory placement: a piece centred so the accessory's HairAttachment meets
@@ -1068,9 +1068,9 @@ do
 	}, {
 		-- Hair mesh: centred on the export's bounding box and turned 180 degrees to undo the
 		-- importer's rotation.
-		piece("HairMesh", "Head", { 2.01, 1.494, 1.839 }, { -0.0004, 0.28, 0.1282 }, hair, with(LOOSE, {
+		piece("HairMesh", "Head", { 2.099, 1.511, 1.741 }, { 0.0, 0.3342, 0.0802 }, hair, with(LOOSE, {
 			Rotation = { 0, 180, 0 },
-			Mesh = { MeshId = "rbxassetid://107541920947776", Scale = { 0.01, 0.01, 0.01 } },
+			Mesh = { MeshId = "rbxassetid://115502888193432", Scale = { 0.01, 0.01, 0.01 } },
 		})),
 		-- High stand collar and V-neckline over the stone-grey miner tunic
 		piece("Neckline", "UpperTorso", { 0.36, 0.36, 0.04 }, { 0, 0.62, -0.51 }, skin, { Rotation = { 0, 0, 45 } }),
