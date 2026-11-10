@@ -170,7 +170,7 @@ test("Phase 4: every launch hero is summoned at 1 star and its rarity only scale
 	local saved = { TemplateId = "hero_han", Rarity = 2, Stars = 1, Level = 1, QualityScalar = 1 }
 	assert(Stats.GetCombatSnapshot(saved).AttackDamage == math.round(40 * (3 * 1.35)))
 	assert(Stats.GetEffectiveLabor({ TemplateId = "hero_valeria", Stars = 4, Level = 1, QualityScalar = 1 }, "FACILITY_GODS_BLESSING")
-		== math.round(18 * (0.5 * (1.35 * 1.12) ^ 3) * 1.35 ^ 3 * (1 + 0.05 * 30) * 1.25 * 100) / 100, "Healers get +25% synergy at God's Blessing")
+		== math.round(18 * (0.5 * (1.35 * 1.12) ^ 4) * 1.35 ^ 3 * (1 + 0.05 * 30) * 1.25 * 100) / 100, "Healers get +25% synergy at God's Blessing")
 end)
 
 test("Phase 4: hero banners use the lowered odds, raised pity and a Rare 10-pull floor", function()

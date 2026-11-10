@@ -83,6 +83,8 @@ HeroCostumes.MESHES = table.freeze({
 	["rbxassetid://115502888193432"] = "",
 	-- Shurn's hair, our own: tools/make_shurn_hair_ugc.py (assets/hair/shurn_hair_ugc.blend).
 	["rbxassetid://115542883011217"] = "",
+	-- Diran's hair, our own: tools/make_diran_hair_ugc.py (assets/hair/diran_hair_ugc.blend).
+	["rbxassetid://95241080213006"] = "",
 } :: { [string]: string })
 
 -- Avatar hair accessory placement: a piece centred so the accessory's HairAttachment meets
@@ -1201,6 +1203,82 @@ do
 		piece("BootSoleL", "LeftFoot", { 1.08, 0.07, 1.25 }, { 0, -0.13, -0.08 }, coatDark),
 		piece("BootSoleR", "RightFoot", { 1.08, 0.07, 1.25 }, { 0, -0.13, -0.08 }, coatDark),
 	}, "rbxassetid://120275678632025"))
+end
+
+-- 16. DIRAN (5★ Healer - Exalted Covenant Battle-Cleric) -------------------------------
+-- From his reference art: sturdy battle-cleric (Heavy body) with long silver-white hair tied into a
+-- high side-swept ponytail and face-framing center-parted bangs, calm amber-brown eyes, a layered
+-- bronze-ochre cowl pinned with a four-point gold compass brooch, an off-white and forest-green
+-- surcoat with gold filigree trim and chest star studs, ornate gold pauldrons and engraved bracers,
+-- a leather utility belt with a five-point gold star buckle, hip pouches and green glass potion
+-- vials, split white surcoat skirts over a central green tabard, a tattered dark burgundy cloak,
+-- and steel-and-gold armored greaves. Face: our own decal from assets/faces/make_diran_face.py.
+-- Hair: our Blender mesh (tools/make_diran_hair_ugc.py).
+do
+	local skin, hair, surcoat, green = { 236, 196, 158 }, { 192, 201, 214 }, { 228, 226, 220 }, { 48, 92, 58 }
+	local cowl, cowlDark, cloak, gold = { 138, 104, 54 }, { 84, 58, 36 }, { 58, 32, 30 }, { 196, 158, 78 }
+	local steel, leather, darkLeather, glove = { 142, 146, 154 }, { 96, 62, 40 }, { 62, 40, 26 }, { 42, 36, 34 }
+	local potion = { 76, 168, 92 }
+	table.insert(COSTUMES, costume("hero_diran", "Heavy", {
+		Skin = skin, UpperTorso = surcoat, LowerTorso = green, UpperArm = green, LowerArm = surcoat, Hand = glove,
+		UpperLeg = green, LowerLeg = steel, Foot = darkLeather,
+	}, {
+		-- Hair mesh: centred on the export's bounding box and turned 180 degrees to undo the
+		-- importer's rotation.
+		piece("HairMesh", "Head", { 2.23, 2.03, 1.864 }, { -0.3083, 0.2557, 0.1526 }, hair, with(LOOSE, {
+			Rotation = { 0, 180, 0 },
+			Mesh = { MeshId = "rbxassetid://95241080213006", Scale = { 0.01, 0.01, 0.01 } },
+		})),
+		-- Layered bronze-ochre cowl around the neck and 4-point gold compass brooch
+		piece("Neckline", "UpperTorso", { 0.36, 0.36, 0.04 }, { 0, 0.62, -0.51 }, green, { Rotation = { 0, 0, 45 } }),
+		piece("CowlFront", "UpperTorso", { 1.48, 0.30, 0.20 }, { 0, 0.72, -0.48 }, cowl, with(LOOSE, { Material = "Fabric", Rotation = { 10, 0, 0 } })),
+		piece("CowlLower", "UpperTorso", { 1.24, 0.22, 0.18 }, { 0, 0.50, -0.50 }, cowlDark, with(LOOSE, { Material = "Fabric", Rotation = { 8, 0, 0 } })),
+		piece("CowlBack", "UpperTorso", { 1.64, 0.42, 0.24 }, { 0, 0.88, 0.42 }, cowlDark, with(LOOSE, { Material = "Fabric", Rotation = { -12, 0, 0 } })),
+		piece("CowlL", "UpperTorso", { 0.24, 0.36, 0.94 }, { -0.68, 0.82, -0.02 }, cowl, with(LOOSE, { Material = "Fabric", Rotation = { 0, 0, 12 } })),
+		piece("CowlR", "UpperTorso", { 0.24, 0.36, 0.94 }, { 0.68, 0.82, -0.02 }, cowl, with(LOOSE, { Material = "Fabric", Rotation = { 0, 0, -12 } })),
+		piece("CompassBroochA", "UpperTorso", { 0.24, 0.24, 0.06 }, { 0.14, 0.60, -0.58 }, gold, with(LOOSE, METAL)),
+		piece("CompassBroochB", "UpperTorso", { 0.24, 0.24, 0.06 }, { 0.14, 0.60, -0.58 }, gold, with(LOOSE, METAL, { Rotation = { 0, 0, 45 } })),
+		-- Forest-green central chest panel with gold filigree trim and star studs
+		piece("ChestPanel", "UpperTorso", { 0.56, 1.08, 0.04 }, { 0, -0.10, -0.51 }, green, { Material = "Fabric" }),
+		piece("ChestTrimL", "UpperTorso", { 0.08, 1.08, 0.06 }, { -0.30, -0.10, -0.52 }, gold, METAL),
+		piece("ChestTrimR", "UpperTorso", { 0.08, 1.08, 0.06 }, { 0.30, -0.10, -0.52 }, gold, METAL),
+		piece("ChestStarTop", "UpperTorso", { 0.16, 0.16, 0.06 }, { 0, 0.24, -0.53 }, gold, with(METAL, { Rotation = { 0, 0, 45 } })),
+		piece("ChestStarLow", "UpperTorso", { 0.14, 0.14, 0.06 }, { 0, -0.10, -0.53 }, gold, with(METAL, { Rotation = { 0, 0, 45 } })),
+		-- Tattered dark burgundy-brown cloak behind the back
+		piece("CloakUpper", "UpperTorso", { 2.16, 1.60, 0.12 }, { 0, 0, 0.54 }, cloak, with(LOOSE, { Material = "Fabric", Rotation = { -5, 0, 0 } })),
+		piece("CloakLower", "LowerTorso", { 2.26, 2.20, 0.12 }, { 0, -1.12, 0.64 }, cloak, with(LOOSE, { Material = "Fabric", Rotation = { -9, 0, 0 } })),
+		piece("CloakTatterL", "LowerTorso", { 0.08, 0.58, 0.68 }, { -0.70, -2.42, 0.82 }, cloak, with(WEDGE, LOOSE, { Material = "Fabric", Rotation = { 0, 90, 180 } })),
+		piece("CloakTatterR", "LowerTorso", { 0.08, 0.58, 0.68 }, { 0.70, -2.42, 0.82 }, cloak, with(WEDGE, LOOSE, { Material = "Fabric", Rotation = { 0, -90, 180 } })),
+		-- Ornate gold pauldrons, sleeve borders and engraved forearm bracer cuffs
+		piece("PauldronL", "LeftUpperArm", { 1.18, 0.74, 1.18 }, { -0.06, 0.30, 0 }, gold, with(LOOSE, METAL, { Rotation = { 0, 0, 8 } })),
+		piece("PauldronPlateL", "LeftUpperArm", { 1.12, 0.14, 1.12 }, { 0, -0.34, 0 }, gold, with(LOOSE, METAL)),
+		piece("PauldronR", "RightUpperArm", { 1.18, 0.74, 1.18 }, { 0.06, 0.30, 0 }, gold, with(LOOSE, METAL, { Rotation = { 0, 0, -8 } })),
+		piece("PauldronPlateR", "RightUpperArm", { 1.12, 0.14, 1.12 }, { 0, -0.34, 0 }, gold, with(LOOSE, METAL)),
+		piece("BracerL", "LeftLowerArm", { 1.10, 0.54, 1.10 }, { 0, -0.06, 0 }, gold, METAL),
+		piece("BracerRimL", "LeftLowerArm", { 1.14, 0.10, 1.14 }, { 0, -0.28, 0 }, steel, METAL),
+		piece("BracerR", "RightLowerArm", { 1.10, 0.54, 1.10 }, { 0, -0.06, 0 }, gold, METAL),
+		piece("BracerRimR", "RightLowerArm", { 1.14, 0.10, 1.14 }, { 0, -0.28, 0 }, steel, METAL),
+		-- Utility belt with 5-point gold star buckle, hip pouches and green glass potion vials
+		piece("Belt", "LowerTorso", { 2.10, 0.26, 1.10 }, { 0, 0.04, 0 }, leather),
+		piece("StarBuckleA", "LowerTorso", { 0.32, 0.32, 0.08 }, { 0, 0.04, -0.58 }, gold, METAL),
+		piece("StarBuckleB", "LowerTorso", { 0.32, 0.32, 0.08 }, { 0, 0.04, -0.58 }, gold, with(METAL, { Rotation = { 0, 0, 45 } })),
+		piece("BeltTongue", "LowerTorso", { 0.18, 0.68, 0.06 }, { 0.22, -0.34, -0.58 }, darkLeather, LOOSE),
+		piece("PouchL", "LowerTorso", { 0.40, 0.38, 0.24 }, { -0.68, 0.02, -0.62 }, leather),
+		piece("PouchR", "LowerTorso", { 0.40, 0.38, 0.24 }, { 0.68, 0.02, -0.62 }, leather),
+		piece("PotionVialR", "LowerTorso", { 0.24, 0.26, 0.24 }, { 0.40, -0.14, -0.60 }, potion, with(LOOSE, { Shape = "Ball", Material = "Glass" })),
+		piece("PotionVialL", "LowerTorso", { 0.24, 0.26, 0.24 }, { -0.94, -0.14, -0.32 }, potion, with(LOOSE, { Shape = "Ball", Material = "Glass" })),
+		-- Split white surcoat skirts, central forest-green tabard with gold star & steel/gold greaves
+		piece("SkirtFL", "LowerTorso", { 0.72, 1.54, 0.12 }, { -0.62, -0.86, -0.52 }, surcoat, with(LOOSE, { Material = "Fabric", Rotation = { 8, 0, 10 } })),
+		piece("SkirtFR", "LowerTorso", { 0.72, 1.54, 0.12 }, { 0.62, -0.86, -0.52 }, surcoat, with(LOOSE, { Material = "Fabric", Rotation = { 8, 0, -10 } })),
+		piece("CenterTabard", "LowerTorso", { 0.48, 1.58, 0.10 }, { 0, -0.90, -0.54 }, green, with(LOOSE, { Material = "Fabric", Rotation = { 6, 0, 0 } })),
+		piece("TabardStar", "LowerTorso", { 0.22, 0.22, 0.06 }, { 0, -0.42, -0.58 }, gold, with(LOOSE, METAL, { Rotation = { 6, 0, 45 } })),
+		piece("KneePlateL", "LeftLowerLeg", { 0.68, 0.66, 0.14 }, { 0, 0.12, -0.54 }, steel, METAL),
+		piece("KneeTrimL", "LeftLowerLeg", { 0.44, 0.44, 0.06 }, { 0, 0.18, -0.05 }, gold, with(METAL, { RelativeTo = "KneePlateL", Rotation = { 0, 0, 45 } })),
+		piece("KneePlateR", "RightLowerLeg", { 0.68, 0.66, 0.14 }, { 0, 0.12, -0.54 }, steel, METAL),
+		piece("KneeTrimR", "RightLowerLeg", { 0.44, 0.44, 0.06 }, { 0, 0.18, -0.05 }, gold, with(METAL, { RelativeTo = "KneePlateR", Rotation = { 0, 0, 45 } })),
+		piece("BootToeL", "LeftFoot", { 1.06, 0.18, 0.44 }, { 0, -0.04, -0.42 }, steel, METAL),
+		piece("BootToeR", "RightFoot", { 1.06, 0.18, 0.44 }, { 0, -0.04, -0.42 }, steel, METAL),
+	}, "rbxassetid://106105764225054"))
 end
 
 HeroCostumes.List = table.freeze(COSTUMES)

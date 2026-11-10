@@ -118,7 +118,7 @@ local WIELDERS_BY_TYPE = {
 	AXE = "Gide (1★), Catio (3★)",
 	BOW = "Jenna (1★), Astrea (7★)",
 	STAFF = "Shurn (1★), Eolka (3★), Solaris (6★)",
-	TOME = "Valeria (4★)",
+	TOME = "Valeria (5★), Diran (5★)",
 }
 
 local ARTIFACT_EMOJI: { [string]: string } = {

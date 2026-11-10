@@ -5083,6 +5083,8 @@ end
 -- ============================================================================
 -- 6. WEAPON_TOME (Pyromancer Grimoire / Eldritch Tome)
 -- ============================================================================
+local makeMeshTome: (string) -> Model
+
 function WeaponModelBuilder.BuildTome(): Model
 	local model = makeMeshTome("art_novice_tome")
 	model.Name = "weapon_tome"
@@ -7628,7 +7630,7 @@ art_novice_tome = {
 	},
 }
 
-local function makeMeshTome(name: string): Model
+function makeMeshTome(name: string): Model
 	local assets = ReplicatedStorage:FindFirstChild("Assets")
 	local weaponsFolder = assets and assets:FindFirstChild("Weapons")
 	local existing = weaponsFolder and weaponsFolder:FindFirstChild(name)

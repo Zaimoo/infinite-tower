@@ -133,9 +133,39 @@ local function resolveSkill(ctx: Context, hit: Hit, scale: number)
 			return
 		end
 		local healPct = skill.HealPercent or 0.35
-		for _, ally in ctx.Squad do
-			if ally.State ~= "COMA" and ally.CurrentHP > 0 then
-				healAlly(ctx, ally, math.round(ally.MaxHP * healPct), "HEAL_BURST")
+		if skill.TargetLowestAlly then
+			local lowest: any = nil
+			local lowestPct = math.huge
+			for _, ally in ctx.Squad do
+				if ally.State ~= "COMA" and ally.CurrentHP > 0 then
+					local pct = ally.CurrentHP / math.max(1, ally.MaxHP)
+					if pct < lowestPct or (pct == lowestPct and lowest and ally.CurrentHP < lowest.CurrentHP) then
+						lowestPct = pct
+						lowest = ally
+					end
+				end
+			end
+			if lowest then
+				local buffPct = skill.MaxHpBuffPercent or 0
+				if buffPct > 0 then
+					local baseMax = lowest.BaseMaxHP or lowest.MaxHP
+					lowest.BaseMaxHP = baseMax
+					local oldMax = lowest.MaxHP
+					local newMax = math.round(baseMax * (1 + buffPct))
+					lowest.MaxHP = newMax
+					lowest.MaxHPBuffMult = 1 + buffPct
+					lowest.MaxHPBuffExpires = ctx.Now + (skill.Duration or 8.0)
+					if newMax > oldMax then
+						lowest.CurrentHP = math.min(newMax, lowest.CurrentHP + (newMax - oldMax))
+					end
+				end
+				healAlly(ctx, lowest, math.round(lowest.MaxHP * healPct), "HEAL_BURST")
+			end
+		else
+			for _, ally in ctx.Squad do
+				if ally.State ~= "COMA" and ally.CurrentHP > 0 then
+					healAlly(ctx, ally, math.round(ally.MaxHP * healPct), "HEAL_BURST")
+				end
 			end
 		end
 	elseif archetype == "Marksman" then

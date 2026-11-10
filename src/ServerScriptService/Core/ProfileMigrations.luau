@@ -13,8 +13,8 @@ local ProfileMigrations = {}
 ProfileMigrations.CurrentSchema = 7
 
 -- Rarity a template had when these old saves were written, where it differs from today's catalog.
--- Han was the Common starter before he became Mythical.
-local LEGACY_RARITY: { [string]: number } = { hero_han = 1 }
+-- Han was the Common starter before he became Mythical; Valeria was Superior before moving to Exalted.
+local LEGACY_RARITY: { [string]: number } = { hero_han = 1, hero_valeria = 4 }
 
 local function legacyRarity(templateId: string?): number
 	return (templateId and LEGACY_RARITY[templateId]) or HeroCatalog.RarityOf(templateId)

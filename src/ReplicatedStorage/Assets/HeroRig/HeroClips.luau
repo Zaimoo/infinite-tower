@@ -681,6 +681,7 @@ local OVERRIDE_WEAPON: { [string]: string } = {
 	hero_edis = "DAGGERS",
 	hero_gide = "AXE",
 	hero_shurn = "STAFF",
+	hero_diran = "TOME",
 }
 
 local function signature(duration: number, keys: { { any } }, markers: { [string]: number }): Clip
@@ -1183,6 +1184,42 @@ do
 			{ 0.35, merge(p.Channel, { Neck = { 20, 0, 0 }, LeftShoulder = { 150, 0, -10 }, LeftElbow = { 20, 0, 0 }, LeftWrist = { -110.0, 80.0, 20.0 }, RightShoulder = { 150, 0, 10 }, RightElbow = { 10, 0, 0 } }) },
 			{ 0.65, open },
 			{ 0.85, open },
+			{ 1, p.Read },
+		}, { Release = 0.65 }),
+	}
+end
+
+-- Diran (TOME): Compass Mend extends a warding palm forward while the floating grimoire flares;
+-- Vitality Covenant lifts the tome high with his left hand while his right hand calls down the
+-- emerald-and-gold vitality seal over the lowest-HP ally. Idle is his grounded battle-cleric
+-- stance from the reference art: wide planted feet, open grimoire hovering above his upturned
+-- palm, free arm braced low at his side.
+do
+	local p = WeaponPoses.TOME
+	local compassMend = merge(p.Release, { Waist = { -14, -8, 0 }, LeftShoulder = { 62, -12, -16 }, LeftElbow = { 44, 0, 0 }, LeftWrist = { -168.0, 74.0, 172.0 }, RightShoulder = { 86, 6, 10 }, RightElbow = { 14, 0, 0 }, LeftKnee = { -22, 0, 0 }, RightKnee = { -18, 0, 0 }, RootOffset = { 0, -0.18, -0.1 } })
+	local covenant = merge(ATTACK_STANCE, { Waist = { 12, 0, 0 }, Neck = { 14, 0, 0 }, LeftShoulder = { 122, 0, -45 }, LeftElbow = { 22, 0, 0 }, LeftWrist = { -112.0, 32.0, 52.0 }, RightShoulder = { 136, 0, 38 }, RightElbow = { 18, 0, 0 }, RootOffset = { 0, 0.08, 0 } })
+	local cleric: Pose = {
+		Waist = { -2, -6, 0 }, Neck = { -3, 6, 0 },
+		LeftShoulder = { 36, -12, -18 }, LeftElbow = { 62, 0, 0 }, LeftWrist = { -174.5, 72.6, 174.6 },
+		RightShoulder = { 14, 0, 20 }, RightElbow = { 34, 0, 0 }, RightWrist = { -8, 0, 0 },
+		LeftHip = { 6, 0, -12 }, LeftKnee = { -16, 0, 0 }, LeftAnkle = { 10, 0, 12 },
+		RightHip = { 6, 0, 12 }, RightKnee = { -16, 0, 0 }, RightAnkle = { 10, 0, -12 },
+		RootOffset = { 0, -0.12, 0 },
+	}
+	Overrides.hero_diran = {
+		Idle = floatIdle(cleric, 3.2),
+		AttackSpecial = signature(0.95, {
+			{ 0, p.Read },
+			{ 0.35, merge(p.Channel, { Waist = { 6, 10, 0 }, RightShoulder = { 54, 18, 24 }, RightElbow = { 64, 0, 0 } }) },
+			{ 0.65, compassMend },
+			{ 0.85, merge(compassMend, { Waist = { -10, -4, 0 } }) },
+			{ 1, p.Read },
+		}, { Release = 0.65 }),
+		AttackSkill = signature(1.2, {
+			{ 0, p.Read },
+			{ 0.35, merge(p.Channel, { Waist = { 8, 0, 0 }, Neck = { 18, 0, 0 }, LeftShoulder = { 146, 0, -14 }, LeftElbow = { 24, 0, 0 }, LeftWrist = { -110.0, 76.0, 24.0 }, RightShoulder = { 148, 0, 14 }, RightElbow = { 16, 0, 0 } }) },
+			{ 0.65, covenant },
+			{ 0.85, covenant },
 			{ 1, p.Read },
 		}, { Release = 0.65 }),
 	}

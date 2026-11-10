@@ -51,8 +51,8 @@ HeroCatalog.PermanentBanner = {
 		[1] = 0.7514, -- 75.14% Common (Gide or Shurn)
 		[2] = 0.1800, -- 18.0% Uncommon Aaron
 		[3] = 0.0470, -- 4.7% Rare Catio
-		[4] = 0.0165, -- 1.65% Superior Valeria
-		[5] = 0.0033, -- 0.33% Exalted Ignis
+		[4] = 0.0165, -- 1.65% Superior
+		[5] = 0.0033, -- 0.33% Exalted (Ignis or Diran)
 		-- 0.15% Legendary Edis: the same Gems per copy as Solaris on A Star's Arrival (0.30% at twice the price).
 		[6] = 0.0015,
 		-- 0.03% Mythical Han: the same Gems per copy as Astrea on A Star's Arrival (0.06% at twice the price).
@@ -62,13 +62,14 @@ HeroCatalog.PermanentBanner = {
 		[1] = "hero_gide",
 		[2] = "hero_aaron",
 		[3] = "hero_catio",
-		[4] = "hero_valeria",
-		[5] = "hero_ignis",
+		[4] = "hero_catio",
+		[5] = "hero_diran",
 		[6] = "hero_edis",
 		[7] = "hero_han",
 	},
 	HeroesPoolByStar = {
 		[1] = { "hero_gide", "hero_shurn" },
+		[5] = { "hero_ignis", "hero_diran" },
 	},
 }
 
@@ -78,7 +79,7 @@ HeroCatalog.LimitedBanner = {
 	Subtitle = "7-STAR LIMITED RATE-UP EVENT",
 	MaxStar = 7,
 	MaxPity = 100,
-	PityMinTier = 5, -- hard pity guarantees an Exalted or better hero (Archon, Solaris or Astrea)
+	PityMinTier = 5, -- hard pity guarantees an Exalted or better hero (Archon, Valeria, Solaris or Astrea)
 	Cost1X = 200,
 	Cost10X = 1800,
 	TenPullMinTier = 3, -- every 10-pull includes a Rare or better hero
@@ -89,7 +90,7 @@ HeroCatalog.LimitedBanner = {
 		[2] = 0.2400, -- 24.0% Uncommon Velkist
 		[3] = 0.0950, -- 9.5% Rare Eolka
 		[4] = 0.0380, -- 3.8% Superior Morrigan
-		[5] = 0.0120, -- 1.2% Exalted Archon
+		[5] = 0.0120, -- 1.2% Exalted (Archon or Valeria)
 		[6] = 0.0030, -- 0.30% Legendary Solaris
 		[7] = 0.0006, -- 0.06% Mythical Astrea (Featured)
 	},
@@ -101,6 +102,9 @@ HeroCatalog.LimitedBanner = {
 		[5] = "hero_archon",
 		[6] = "hero_solaris",
 		[7] = "hero_astrea",
+	},
+	HeroesPoolByStar = {
+		[5] = { "hero_archon", "hero_valeria" },
 	},
 }
 
@@ -212,22 +216,41 @@ HeroCatalog.Seeds = {
 		PreferredFacility = "FACILITY_MARKET",
 		Color = Color3.fromRGB(255, 205, 75),
 	},
+	hero_diran = {
+		HeroId = "hero_diran",
+		DisplayName = "Diran",
+		BannerOrigin = "STANDARD",
+		DropWeight = 1.0,
+		BaseStar = 1,
+		Rarity = 5,
+		Archetype = "Healer",
+		BaseHP_1Star = 300,
+		BaseATK_1Star = 22,
+		NativeHP = 2223,
+		NativeATK = 163,
+		AttackInterval = 1.20,
+		AttackRange = 24,
+		BaseLabor_1Star = 20.0,
+		NativeLabor = 66.4,
+		PreferredFacility = "FACILITY_GODS_BLESSING",
+		Color = Color3.fromRGB(82, 188, 126),
+	},
 	hero_valeria = {
 		HeroId = "hero_valeria",
 		DisplayName = "Valeria",
-		BannerOrigin = "STANDARD",
-		DropWeight = 4.0,
+		BannerOrigin = "LIMITED",
+		DropWeight = 3.5,
 		BaseStar = 1,
-		Rarity = 4,
+		Rarity = 5,
 		Archetype = "Healer",
 		BaseHP_1Star = 260,
 		BaseATK_1Star = 18,
-		NativeHP = 1168,
-		NativeATK = 81,
+		NativeHP = 1927,
+		NativeATK = 133,
 		AttackInterval = 1.25,
 		AttackRange = 24,
 		BaseLabor_1Star = 18.0,
-		NativeLabor = 44.3,
+		NativeLabor = 59.8,
 		PreferredFacility = "FACILITY_GODS_BLESSING",
 		Color = Color3.fromRGB(100, 232, 175),
 	},
@@ -433,8 +456,8 @@ HeroCatalog.PoolByStar = {
 	[1] = { "hero_gide", "hero_shurn", "hero_jenna" },
 	[2] = { "hero_aaron", "hero_velkist" },
 	[3] = { "hero_catio", "hero_eolka" },
-	[4] = { "hero_valeria", "hero_morrigan" },
-	[5] = { "hero_ignis", "hero_archon" },
+	[4] = { "hero_morrigan" },
+	[5] = { "hero_ignis", "hero_diran", "hero_archon", "hero_valeria" },
 	[6] = { "hero_edis", "hero_solaris" },
 	[7] = { "hero_han", "hero_astrea" },
 }

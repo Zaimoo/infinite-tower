@@ -385,8 +385,8 @@ The permanent standard banner features exactly **one character for each rarity f
   - `Common (75.14%)`: **Gide** or **Shurn**
   - `Uncommon (18.0%)`: **Aaron**
   - `Rare (4.7%)`: **Catio**
-  - `Superior (1.65%)`: **Valeria**
-  - `Exalted (0.33%)`: **Ignis**
+  - `Superior (1.65%)`: **Aaron / Catio (Pool fallback)**
+  - `Exalted (0.33%)`: **Ignis** or **Diran**
   - `Legendary (0.15%)`: **Edis Callen** (the same Gems per copy as Solaris on A Star's Arrival: half the rate at half the price)
   - `Mythical (0.03%)`: **Han** (the same Gems per copy as Astrea, by the same rule)
 
@@ -403,7 +403,7 @@ The inaugural limited-time rate-up banner features exactly **one character for e
   - `Uncommon (24.0%)`: **Velkist**
   - `Rare (9.5%)`: **Eolka**
   - `Superior (3.8%)`: **Morrigan**
-  - `Exalted (1.2%)`: **Sovereign Archon**
+  - `Exalted (1.2%)`: **Sovereign Archon** or **Valeria**
   - `Legendary (0.30%)`: **Solaris**
   - `Mythical (0.06%)`: **Astrea (Featured Starlight Mythical)**
 
@@ -430,14 +430,15 @@ Every summoned hero rolls a `QualityScalar` $q \in [0.90, 1.15]$ applied to thei
 | **Call of the Rift** | **Shurn** | **Common (1) / 1★** | Scholar | `220` / `46` | `220` / `46` | `18` / `18.0` |
 | **Call of the Rift** | **Aaron** | **Uncommon (2) / 1★** | Vanguard | `450` / `28` | `1,823` / `113` | `16` / `24.2` |
 | **Call of the Rift** | **Catio** | **Rare (3) / 1★** | Miner | `280` / `24` | `4,593` / `394` | `20` / `45.7` |
-| **Call of the Rift** | **Valeria** | **Superior (4) / 1★** | Healer | `260` / `18` | `8,636` / `598` | `18` / `31.1` |
 | **Call of the Rift** | **Ignis** | **Exalted (5) / 1★** | Vanguard | `450` / `26` | `60,534` / `3,498` | `16` / `41.8` |
+| **Call of the Rift** | **Diran** | **Exalted (5) / 1★** | Healer | `300` / `22` | `40,356` / `2,959` | `20` / `52.2` |
 | **Call of the Rift** | **Edis Callen** | **Legendary (6) / 1★** | Striker | `320` / `62` | `174,339` / `33,778` | `16` / `63.2` |
 | **Call of the Rift** | **Han** | **Mythical (7) / 1★** | Striker | `300` / `40` | `661,944` / `88,259` | `14` / `83.6` |
 | **A Star's Arrival** | **Jenna** | **Common (1) / 1★** | Marksman | `210` / `34` | `210` / `34` | `13` / `13.0` |
 | **A Star's Arrival** | **Velkist** | **Uncommon (2) / 1★** | Striker | `300` / `44` | `1,215` / `178` | `14` / `21.2` |
 | **A Star's Arrival** | **Eolka** | **Rare (3) / 1★** | Scholar | `230` / `52` | `3,773` / `853` | `22` / `50.3` |
 | **A Star's Arrival** | **Morrigan** | **Superior (4) / 1★** | Vanguard | `450` / `24` | `14,947` / `797` | `16` / `27.6` |
+| **A Star's Arrival** | **Valeria** | **Exalted (5) / 1★** | Healer | `260` / `18` | `34,975` / `2,421` | `18` / `47.0` |
 | **A Star's Arrival** | **Archon** | **Exalted (5) / 1★** | Striker | `350` / `65` | `47,082` / `8,744` | `25` / `65.3` |
 | **A Star's Arrival** | **Solaris** | **Legendary (6) / 1★** | Scholar | `240` / `55` | `130,754` / `29,965` | `22` / `86.9` |
 | **A Star's Arrival** | **Astrea** | **Mythical (7) / 1★** | Marksman | `230` / `48` | `507,491` / `105,911` | `23` / `137.4` |
@@ -618,7 +619,7 @@ Each hero's kit is resolved by `HeroId` in `ArchetypeCombatSkills.HeroProfiles` 
 | 1 | **Han** (`hero_han`) | Mythical | Striker | Gloam Cut | Nightfall Fangs | Abyssal Wake |
 | 2 | **Aaron** (`hero_aaron`) | Uncommon | Vanguard | Bastion Strike | Aegis Shield Bash | Fortress Bulwark |
 | 3 | **Catio** (`hero_catio`) | Rare | Miner | Pickaxe Cleave | Resonance Tremor | Crystalline Excavation |
-| 4 | **Valeria** (`hero_valeria`) | Superior | Healer | Emerald Bolt | Verdant Mend | Sanctuary Miracle |
+| 4 | **Valeria** (`hero_valeria`) | Exalted | Healer | Emerald Bolt | Verdant Mend | Sanctuary Miracle |
 | 5 | **Ignis** (`hero_ignis`) | Exalted | Vanguard | Molten Cleave | Magma Breaker | Infernal Juggernaut |
 | 6 | **Jenna** (`hero_jenna`) | Common | Marksman | Wind-Step Shot | Piercing Gale Volley | Sylphid Arrow Storm |
 | 7 | **Velkist** (`hero_velkist`) | Uncommon | Striker | Twin Fang Cut | Shadow Rend | Phantom Lotus Execution |
@@ -630,6 +631,7 @@ Each hero's kit is resolved by `HeroId` in `ArchetypeCombatSkills.HeroProfiles` 
 | 13 | **Edis Callen** (`hero_edis`) | Legendary | Striker | Ravenclaw Cut | Umbral Crosscut | Midnight Requiem |
 | 14 | **Gide** (`hero_gide`) | Common | Miner | Ironvein Chop | Bedrock Sundering | Tunnelbreaker Fault |
 | 15 | **Shurn** (`hero_shurn`) | Common | Scholar | Cinder Spark | Arcing Hearthbolt | Dawnstone Convergence |
+| 16 | **Diran** (`hero_diran`) | Exalted | Healer | Runeward Bolt | Compass Mend | Vitality Covenant |
 
 **Han's kit** keeps the Striker numbers but lands them differently. *Nightfall Fangs* is a leaping stab with both daggers reversed: its `1.60x` hit lands as **2 blows** `0.1s` apart, each with its own bonus-crit roll. *Abyssal Wake* is a dash through the target that leaves a circle of lingering slashes: its `3.20x` burst is split over **5 waves** `0.12s` apart, each hitting every enemy within `12 studs` of the aim point. His effects are smoky black and cold blue (`PLUNGE` and `WAKE` in `SkillVfxCatalog`).
 

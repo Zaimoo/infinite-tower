@@ -55,6 +55,8 @@ export type SkillAttackDef = {
 	StaminaCost: number, -- 100
 	DamageMultiplier: number,
 	HealPercent: number?, -- Fractional MaxHP (e.g. 0.35 for 35%)
+	TargetLowestAlly: boolean?, -- True for single-target lowest-HP ally heals
+	MaxHpBuffPercent: number?, -- Fractional MaxHP buff applied to the healed target (e.g. 0.25 for +25% Max HP)
 	BarrierPercent: number?, -- Fractional MaxHP (e.g. 0.40 for 40%)
 	Radius: number?, -- Radius in studs for AoE / Taunt
 	Duration: number?, -- Duration in seconds for buffs / ground effects
@@ -398,6 +400,19 @@ local HERO_KITS: { [string]: HeroKitOverride } = {
 		Skill = {
 			Name = "Sanctuary Miracle",
 			Description = "Valeria blooms an emerald sanctuary, restoring 35% Max HP to ALL deployed heroes, cleansing debuffs, and granting +3% HP/s regen for 4s.",
+		},
+	},
+	hero_diran = {
+		Archetype = "Healer",
+		Basic = { Name = "Runeward Bolt" },
+		Special = { Name = "Compass Mend" },
+		Skill = {
+			Name = "Vitality Covenant",
+			HealPercent = 0.55,
+			TargetLowestAlly = true,
+			MaxHpBuffPercent = 0.25,
+			Duration = 8.0,
+			Description = "Diran invokes a sacred covenant from his grimoire, prioritizing the deployed ally with the lowest HP to restore 55% Max HP and buff their Max HP by 25% for 8s.",
 		},
 	},
 	hero_ignis = {

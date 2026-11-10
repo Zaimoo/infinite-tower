@@ -234,6 +234,13 @@ SkillVfxCatalog.Heroes = table.freeze({
 		Special = { Style = "MEND", Projectile = "ORB", Scale = 1.1, Arc = 0.1, Trail = 0.22, Impact = 2.0 },
 		Skill = { Style = "SANCTUARY", Radius = 25, PillarHeight = 16, Linger = 1.4, Impact = 3 },
 	},
+	-- Runeward Bolt / Compass Mend / Vitality Covenant: sage-emerald rune light and compass gold.
+	hero_diran = {
+		Palette = { Primary = rgb(110, 235, 165), Secondary = rgb(245, 210, 115), Core = rgb(245, 255, 235) },
+		Basic = { Style = "BOLT", Projectile = "ORB", Scale = 1.05, Arc = 0.14, Trail = 0.2, Impact = 1.8 },
+		Special = { Style = "MEND", Projectile = "ORB", Scale = 1.15, Arc = 0.1, Trail = 0.22, Impact = 2.1 },
+		Skill = { Style = "SANCTUARY", Radius = 25, PillarHeight = 18, Linger = 1.5, Impact = 3.2 },
+	},
 } :: { [string]: Recipe })
 
 local TIER_KEYS = table.freeze({ BASIC = "Basic", SPECIAL = "Special", SKILL = "Skill" })
