@@ -163,8 +163,18 @@ local function formatTime(minutes: number): string
 	return string.format("%d minutes", m)
 end
 
+-- The join loading screen (ReplicatedFirst/LoadingScreen) sets ClientLoaded when it fades; open
+-- only after that so the count-up isn't played behind it. Capped so the popup can't be lost.
+local function waitForClientLoaded()
+	local waited = 0
+	while LocalPlayer:GetAttribute("ClientLoaded") ~= true and waited < 30 do
+		waited += task.wait(0.1)
+	end
+end
+
 OfflineRewardEvent.OnClientEvent:Connect(function(payload: any)
 	if not payload or type(payload.GoldEarned) ~= "number" then return end
+	waitForClientLoaded()
 
 	local gold = payload.GoldEarned
 	local offlineMin = payload.OfflineMinutes or 0

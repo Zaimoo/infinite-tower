@@ -7959,4 +7959,23 @@ function WeaponModelBuilder.EnsureWeapons(): (Folder, { [string]: Model })
 	return weaponsFolder, result
 end
 
+-- Every MeshId the artifact weapon builders use, de-duplicated. The join loading screen
+-- (ReplicatedStorage/Shared/Util/PreloadManifest) preloads these in the background.
+function WeaponModelBuilder.CollectMeshIds(): { string }
+	local ids: { string } = {}
+	local seen: { [string]: boolean } = {}
+	for _, catalog in { DAGGER_MESH_DATA, AXE_MESH_DATA, STAFF_MESH_DATA, TOME_MESH_DATA } :: { { [string]: any } } do
+		for _, data in catalog do
+			for _, part in data.Parts do
+				local id = part.MeshId
+				if type(id) == "string" and id ~= "" and not seen[id] then
+					seen[id] = true
+					table.insert(ids, id)
+				end
+			end
+		end
+	end
+	return ids
+end
+
 return WeaponModelBuilder

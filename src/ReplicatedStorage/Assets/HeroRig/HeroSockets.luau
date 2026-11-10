@@ -246,10 +246,12 @@ function HeroSockets.Equip(rig: Model, weapon: Model, weaponType: WeaponType): M
 		end
 	end
 
-	-- Per-type size tweak. ScaleTo is absolute, so re-equipping the same clone never compounds it.
+	-- Per-type size tweak, relative to the prefab's own scale (imported meshes carry a Model
+	-- scale of 0.01, so an absolute ScaleTo would blow them up). Flagged so it applies once.
 	local scale = HeroSockets.WEAPON_SCALE[weaponType]
-	if scale and scale ~= 1 then
-		weapon:ScaleTo(scale)
+	if scale and scale ~= 1 and weapon:GetAttribute("SocketScaled") ~= true then
+		weapon:ScaleTo(weapon:GetScale() * scale)
+		weapon:SetAttribute("SocketScaled", true)
 	end
 
 	for _, socket in sockets do

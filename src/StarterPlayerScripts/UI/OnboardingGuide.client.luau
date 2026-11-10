@@ -15,6 +15,20 @@ gui.Name = "OnboardingGuide"
 gui.ResetOnSpawn = false
 gui.ScreenInsets = Enum.ScreenInsets.CoreUISafeInsets
 gui.DisplayOrder = 150
+-- Hidden until the join loading screen (ReplicatedFirst/LoadingScreen) fades and sets ClientLoaded.
+gui.Enabled = player:GetAttribute("ClientLoaded") == true
+if not gui.Enabled then
+	local loadedConn: RBXScriptConnection
+	loadedConn = player:GetAttributeChangedSignal("ClientLoaded"):Connect(function()
+		if player:GetAttribute("ClientLoaded") == true then
+			gui.Enabled = true
+			loadedConn:Disconnect()
+		end
+	end)
+	task.delay(30, function()
+		gui.Enabled = true
+	end)
+end
 gui.Parent = playerGui
 
 local function label(name: string, size: Vector2): TextLabel
