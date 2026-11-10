@@ -738,7 +738,8 @@ local function rollBannerHero(bannerId: string?, luck: number, minTier: number?)
 	local banner = if isLimitedBanner(bannerId) then HeroCatalog.LimitedBanner else HeroCatalog.PermanentBanner
 	local rates = SummonLuck.ApplyLuck(banner.Rates :: { number }, luck)
 	local tier = if minTier then SummonLuck.RollAtLeast(rates, minTier, math.random()) else SummonLuck.Roll(rates, math.random())
-	local chosenId = banner.HeroesByStar[tier]
+	local bannerPool = (banner :: any).HeroesPoolByStar and (banner :: any).HeroesPoolByStar[tier]
+	local chosenId = if bannerPool and #bannerPool > 0 then bannerPool[math.random(1, #bannerPool)] else banner.HeroesByStar[tier]
 	if not chosenId then
 		local pool = HeroCatalog.PoolByStar[tier] or HeroCatalog.PoolByStar[1]
 		chosenId = pool[math.random(1, #pool)]

@@ -382,7 +382,7 @@ The permanent standard banner features exactly **one character for each rarity f
 - **Pity System:** Guaranteed **Exalted or higher** hero within **120 summons** (`MaxPity = 120`, `PityMinTier = 5`). The pity pull is split by the banner's Exalted/Legendary/Mythical rates (with God's Blessing luck): about 65% Ignis, 29% Edis, 6% Han. Any natural Exalted+ pull resets the counter. This banner has no featured hero and no 50/50 rule.
 - **10-Pull Guarantee:** Every 10x pull includes at least one **Rare** or higher hero.
 - **Drop Rates:**
-  - `Common (75.14%)`: **Gide**
+  - `Common (75.14%)`: **Gide** or **Shurn**
   - `Uncommon (18.0%)`: **Aaron**
   - `Rare (4.7%)`: **Catio**
   - `Superior (1.65%)`: **Valeria**
@@ -427,6 +427,7 @@ Every summoned hero rolls a `QualityScalar` $q \in [0.90, 1.15]$ applied to thei
 | Banner | Hero | Rarity / Summoned Star | Archetype | Base HP / ATK | Native HP / ATK | Base / Native Labor |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Call of the Rift** | **Gide** | **Common (1) / 1★** | Miner | `340` / `36` | `340` / `36` | `18` / `18.0` |
+| **Call of the Rift** | **Shurn** | **Common (1) / 1★** | Scholar | `220` / `46` | `220` / `46` | `18` / `18.0` |
 | **Call of the Rift** | **Aaron** | **Uncommon (2) / 1★** | Vanguard | `450` / `28` | `1,823` / `113` | `16` / `24.2` |
 | **Call of the Rift** | **Catio** | **Rare (3) / 1★** | Miner | `280` / `24` | `4,593` / `394` | `20` / `45.7` |
 | **Call of the Rift** | **Valeria** | **Superior (4) / 1★** | Healer | `260` / `18` | `8,636` / `598` | `18` / `31.1` |
@@ -614,7 +615,7 @@ Each hero's kit is resolved by `HeroId` in `ArchetypeCombatSkills.HeroProfiles` 
 
 | # | Hero | Rarity | Archetype | Basic (+5 SP) | Special (+10 SP, 3rd Hit) | Skill / Ultimate (100 SP) |
 | :---: | :--- | :--- | :--- | :--- | :--- | :--- |
-| 1 | **Han** (`hero_han`) | Mythical | Striker | Gale Slash | Crescent Cross-Cut | Relentless Blade Flurry |
+| 1 | **Han** (`hero_han`) | Mythical | Striker | Gloam Cut | Nightfall Fangs | Abyssal Wake |
 | 2 | **Aaron** (`hero_aaron`) | Uncommon | Vanguard | Bastion Strike | Aegis Shield Bash | Fortress Bulwark |
 | 3 | **Catio** (`hero_catio`) | Rare | Miner | Pickaxe Cleave | Resonance Tremor | Crystalline Excavation |
 | 4 | **Valeria** (`hero_valeria`) | Superior | Healer | Emerald Bolt | Verdant Mend | Sanctuary Miracle |
@@ -628,6 +629,9 @@ Each hero's kit is resolved by `HeroId` in `ArchetypeCombatSkills.HeroProfiles` 
 | 12 | **Astrea** (`hero_astrea`) | Mythical | Marksman | Astral Arrow | Nebula Piercer | Constellation Judgment |
 | 13 | **Edis Callen** (`hero_edis`) | Legendary | Striker | Ravenclaw Cut | Umbral Crosscut | Midnight Requiem |
 | 14 | **Gide** (`hero_gide`) | Common | Miner | Ironvein Chop | Bedrock Sundering | Tunnelbreaker Fault |
+| 15 | **Shurn** (`hero_shurn`) | Common | Scholar | Cinder Spark | Arcing Hearthbolt | Dawnstone Convergence |
+
+**Han's kit** keeps the Striker numbers but lands them differently. *Nightfall Fangs* is a leaping stab with both daggers reversed: its `1.60x` hit lands as **2 blows** `0.1s` apart, each with its own bonus-crit roll. *Abyssal Wake* is a dash through the target that leaves a circle of lingering slashes: its `3.20x` burst is split over **5 waves** `0.12s` apart, each hitting every enemy within `12 studs` of the aim point. His effects are smoky black and cold blue (`PLUNGE` and `WAKE` in `SkillVfxCatalog`).
 
 #### 3. Archetype Base Mechanics (Kit Defaults)
 

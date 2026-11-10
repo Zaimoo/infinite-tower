@@ -204,6 +204,13 @@ SkillVfxCatalog.Heroes = table.freeze({
 	},
 
 	-- Scholar ----------------------------------------------------------------------------------
+	-- Cinder Spark / Arcing Hearthbolt / Dawnstone Convergence: warm amber-gold and hearthstone glow.
+	hero_shurn = {
+		Palette = { Primary = rgb(255, 195, 95), Secondary = rgb(215, 130, 55), Core = rgb(255, 245, 215) },
+		Basic = { Style = "BOLT", Projectile = "ORB", Scale = 0.95, Arc = 0.1, Trail = 0.2, Impact = 1.8 },
+		Special = { Style = "CHAIN", Projectile = "ORB", Scale = 1.1, Arc = 0.05, Trail = 0.2, Impact = 2.1, Radius = 14 },
+		Skill = { Style = "PILLAR", Radius = 20, PillarHeight = 42, Linger = 3, Impact = 4.2, Shake = 0.28 },
+	},
 	-- Ruby Firebolt / Wildfire Chain / Crimson Hellfire Pillar: crimson and flame orange.
 	hero_eolka = {
 		Palette = { Primary = rgb(255, 60, 60), Secondary = rgb(255, 150, 40), Core = rgb(255, 225, 180) },
