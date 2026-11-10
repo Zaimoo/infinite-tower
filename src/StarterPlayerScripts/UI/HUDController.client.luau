@@ -538,11 +538,11 @@ do
 				table.insert(lines, "Streak ended · Banked loot is safe")
 			end
 			if summary.LossGold > 0 or summary.LossGems > 0 then
-				table.insert(lines, string.format("Unbanked loss · %d Gold and %d Gems", summary.LossGold, summary.LossGems))
+				table.insert(lines, string.format("Lost %d Gold · %d Gems", summary.LossGold, summary.LossGems))
 			end
-			table.insert(lines, "Carried loot dropped. Returning to Fortress Plot.")
+			table.insert(lines, "Carried loot dropped")
 		elseif summary.Reason == "RETURN" then
-			title = "Tower run ended"
+			title = "Run ended"
 			if summary.BestStreak > 0 then
 				table.insert(lines, string.format("Best streak · %d %s", summary.BestStreak, if summary.BestStreak == 1 then "floor" else "floors"))
 			end
@@ -678,7 +678,7 @@ local squadWipeBanner = makeFrame({
 local squadWipeText = makeLabel({
 	Size = UDim2.new(1, -12, 1, 0),
 	Position = UDim2.new(0, 6, 0, 0),
-	Text = "SQUAD DOWN! LOOTING LOCKED — RETURN TO WAITING ROOM TO HEAL/SWAP HEROES",
+	Text = "SQUAD DOWN · Recover at your plot",
 	TextColor3 = Color3.fromRGB(255, 120, 120),
 	TextSize = 13,
 	TextScaled = false,
@@ -711,7 +711,7 @@ partiallyDefeatedBanner = makeFrame({
 local partialHeader = makeLabel({
 	Size = UDim2.new(1, -16, 0, 20),
 	Position = UDim2.new(0, 8, 0, 4),
-	Text = "SQUAD COMPROMISED · 1/5 HEROES DOWNED",
+	Text = "1/5 HEROES DOWN",
 	TextColor3 = Color3.fromRGB(251, 191, 36), -- Gold Amber
 	TextSize = 13,
 	Font = Enum.Font.GothamBold,
@@ -722,7 +722,7 @@ local partialHeader = makeLabel({
 local partialSubtext = makeLabel({
 	Size = UDim2.new(1, -16, 0, 18),
 	Position = UDim2.new(0, 8, 0, 24),
-	Text = "Fallen heroes revive & heal to 100% HP on Floor Travel or Hub Return!",
+	Text = "Revive on floor travel or Hub return",
 	TextColor3 = Color3.fromRGB(254, 243, 199), -- Warm Amber Cream
 	TextSize = 11,
 	Font = Enum.Font.GothamMedium,
@@ -746,7 +746,7 @@ local partialTooltipPopover = makeFrame({
 local tooltipTitle = makeLabel({
 	Size = UDim2.new(1, -16, 0, 22),
 	Position = UDim2.new(0, 8, 0, 6),
-	Text = "SQUAD VITALITY STATUS",
+	Text = "SQUAD",
 	TextColor3 = Color3.fromRGB(251, 191, 36),
 	TextSize = 12,
 	Font = Enum.Font.GothamBold,
@@ -768,7 +768,7 @@ local tooltipList = makeLabel({
 local tooltipFooter = makeLabel({
 	Size = UDim2.new(1, -16, 0, 38),
 	Position = UDim2.new(0, 8, 1, -42),
-	Text = "Tip: Floor transitions & Hub travel fully resurrect and restore 100% HP to every hero!",
+	Text = "Floor travel or Hub return revives everyone.",
 	TextColor3 = Color3.fromRGB(147, 197, 253),
 	TextSize = 10,
 	Font = Enum.Font.GothamMedium,
@@ -808,16 +808,16 @@ SquadStatusRemote.OnClientEvent:Connect(function(status: any)
 
 	if not isStationed and fallen > 0 and alive > 0 and clientFloorProgress.FloorId > 0 then
 		partiallyDefeatedBanner.Visible = true
-		partialHeader.Text = string.format("SQUAD COMPROMISED · %d/%d HEROES DOWNED", fallen, total)
+		partialHeader.Text = string.format("%d/%d %s DOWN", fallen, total, if total == 1 then "HERO" else "HEROES")
 		local namesText = if #fallenList > 0 then table.concat(fallenList, ", ") else "Hero"
-		partialSubtext.Text = string.format("Fallen: %s · Full squad revives & heals on Floor Travel or Hub Return!", namesText)
+		partialSubtext.Text = string.format("%s · Revives on floor travel or Hub return", namesText)
 
 		local lines = {}
 		for _, h in ipairs(statuses) do
 			if h.Alive then
-				table.insert(lines, string.format("%s (Active · %d%% HP)", h.Name, h.HpPct or 100))
+				table.insert(lines, string.format("%s · %d%% HP", h.Name, h.HpPct or 100))
 			else
-				table.insert(lines, string.format("%s (Downed · Revives on Floor Travel)", h.Name))
+				table.insert(lines, string.format("%s · Down", h.Name))
 			end
 		end
 		tooltipList.Text = table.concat(lines, "\n")
@@ -835,11 +835,36 @@ Store.Changed:Connect(function()
 	end
 end)
 
+-- Both squad alerts sit bottom-centre. They used to be 560 px wide at a fixed height, which put them
+-- on top of the Squad drawer whenever it was expanded (and danger auto-expands it). Now they are
+-- narrower, and lift above the drawer and the bottom-right badges when they would touch either.
+local function placeSquadBanners()
+	local size = hudGui.AbsoluteSize
+	local width = math.min(420, size.X - 24)
+	local left = size.X / 2 - width / 2
+	local crowded = left < math.max(Store.DrawerRight, 230) + 8
+	local bottom = if crowded then math.max(Store.DrawerTop, 132) + 10 else 60
+	for _, banner in { squadWipeBanner, partiallyDefeatedBanner :: Frame } do
+		banner.AnchorPoint = Vector2.new(0.5, 1)
+		banner.Size = UDim2.fromOffset(width, banner.Size.Y.Offset)
+		banner.Position = UDim2.new(0.5, 0, 1, -bottom)
+	end
+end
+placeSquadBanners()
+hudGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(placeSquadBanners)
+task.spawn(function()
+	-- The drawer slides open a moment after an alert appears; follow it while an alert is up.
+	while true do
+		task.wait(0.2)
+		if squadWipeBanner.Visible or (partiallyDefeatedBanner :: Frame).Visible then placeSquadBanners() end
+	end
+end)
+
 -- Connected after the banner exists: an earlier connection captured an undeclared
 -- (nil) squadWipeBanner and errored on every wipe.
 SquadDefeatedRemote.OnClientEvent:Connect(function(floorId: number)
 	squadWipeBanner.Visible = true
-	squadWipeText.Text = string.format("SQUAD WIPED ON FLOOR %d! CARRIED LOOT DROPPED — TELEPORTED TO FORTRESS PLOT", floorId or 0)
+	squadWipeText.Text = string.format("SQUAD WIPED · Floor %d · Carried loot dropped", floorId or 0)
 end)
 
 -- World Boss Top Banner
@@ -1290,7 +1315,7 @@ local function toggleTower()
 		elseif _G.RequestTowerHub then
 			local ok = _G.RequestTowerHub()
 			if ok ~= false then
-				showClientToast("Traveling to Tower...")
+				showClientToast("To the Tower")
 			end
 		end
 	end
@@ -1521,6 +1546,11 @@ _G.SynthesisController = synthesisController
 local ForgeController = require(script.Parent:WaitForChild("ForgeWorkbenchController"))
 local ArtifactRemotes = Remotes:WaitForChild("ArtifactRemotes") :: Folder
 forgeController = ForgeController.new(hudGui, ArtifactRemotes, function() return CurrentProfile end, updateBottomTabHighlights)
+-- Every window's own close button now leaves through WindowManager (one close animation for all).
+for id, controller in { Squad = squadController, Promotion = promotionController, Facility = facilityController,
+	Fortress = fortressTreeController, Synthesis = synthesisController, Forge = forgeController } do
+	WindowManager.Route(id, controller)
+end
 _G.ForgeController = forgeController
 _G.OpenFacilityHUD = function(facility: string)
 	setModalFocusMode(true)

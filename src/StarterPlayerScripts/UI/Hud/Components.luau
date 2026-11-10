@@ -491,14 +491,22 @@ local function Floater(props: { Delta: number, Position: UDim2, Size: UDim2, Tex
 end
 
 --------------------------------------------------------------------------------
--- Next Goal card (top-right): a raised header strip ("NEXT GOAL ——— 3/7"), the goal title, its
--- hint and its reward. The stroke flashes Royal when the goal advances.
+-- Next Goal card (top-right): a raised header strip ("NEXT GOAL ——— 3/10"), the goal title, a
+-- one-line hint and its reward. The stroke flashes Royal when the goal advances. Lessons of the
+-- core chain show their step number and cannot be put off; the others get a "Later" button.
 --------------------------------------------------------------------------------
+-- Height of the card for `goal` (HudApp stacks the Right Rail under it).
+function Components.GoalCardHeight(goal: any, guided: boolean): number
+	if not goal then return 0 end
+	return if guided and not goal.Core then L.GoalCardHeight + 34 else L.GoalCardHeight
+end
+
 function Components.NextGoalCard(props: { Goal: any, Top: number?, GuideAction: ((string) -> ())?, GuideVisible: boolean? })
 	local goal = props.Goal
+	local canDefer = props.GuideAction ~= nil and goal ~= nil and not goal.Core
 	local strokeRef = React.useRef(nil)
 	local lastIndex = React.useRef(nil :: number?)
-	local index = goal and goal.Index
+	local index = goal and (goal.Index or goal.Id)
 	React.useEffect(function()
 		local previous = lastIndex.current
 		lastIndex.current = index
@@ -535,7 +543,7 @@ function Components.NextGoalCard(props: { Goal: any, Top: number?, GuideAction: 
 	return glass({
 		AnchorPoint = Vector2.new(1, 0),
 		Position = UDim2.new(1, -L.Edge, 0, props.Top or L.TopZone),
-		Size = UDim2.fromOffset(L.GoalCardWidth, if props.GuideAction then 124 else L.GoalCardHeight),
+		Size = UDim2.fromOffset(L.GoalCardWidth, Components.GoalCardHeight(goal, props.GuideAction ~= nil)),
 		StrokeRef = strokeRef,
 	}, {
 		Header = e("Frame", { Size = UDim2.new(1, 0, 0, 24), BackgroundColor3 = G.BaseRaised, BackgroundTransparency = G.RaisedTransparency, BorderSizePixel = 0 }, {
@@ -544,26 +552,17 @@ function Components.NextGoalCard(props: { Goal: any, Top: number?, GuideAction: 
 			Icon = icon("Goal", 18, { Position = UDim2.fromOffset(8, 3), Flat = true }),
 			Label = sectionLabel("Next Goal", { Position = UDim2.fromOffset(32, 0), Size = UDim2.new(1, -84, 1, 0) }),
 			Step = glassText({ AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -10, 0, 0), Size = UDim2.fromOffset(44, 24), FontFace = G.Fonts.Number,
-				TextXAlignment = Enum.TextXAlignment.Right, Text = if props.GuideAction then "" else string.format("%d/%d", goal.Index or 1, goal.Total or 1) }),
+				TextXAlignment = Enum.TextXAlignment.Right, Text = if goal.Index and goal.Total then string.format("%d/%d", goal.Index, goal.Total) else "" }),
 		}),
 		Title = glassText({ Position = UDim2.fromOffset(10, 28), Size = UDim2.new(1, -20, 0, 18), FontFace = G.Fonts.Number, TextSize = 15, Text = tostring(goal.Title) }),
-		Hint = glassText({ Position = UDim2.fromOffset(10, 47), Size = UDim2.new(1, -20, 0, if props.GuideAction then 26 else 15), TextTransparency = G.MutedTransparency,
-			TextWrapped = props.GuideAction ~= nil, Text = tostring(goal.Description) }),
+		Hint = glassText({ Position = UDim2.fromOffset(10, 47), Size = UDim2.new(1, -20, 0, 15), TextTransparency = G.MutedTransparency,
+			Text = tostring(goal.Description) }),
 		Reward = if reward then e("Frame", { Position = UDim2.fromOffset(10, 66), Size = UDim2.new(1, -20, 0, 16), BackgroundTransparency = 1 }, reward) else nil,
-		GuideActions = if props.GuideAction then e("Frame", {
-			Position = UDim2.fromOffset(8, 74), Size = UDim2.new(1, -16, 0, 42), BackgroundTransparency = 1,
-		}, {
-			Show = e("TextButton", {
-				Size = UDim2.new(0.55, -4, 1, 0), Text = if props.GuideVisible then "Hide marker" else "Show me",
-				BackgroundColor3 = G.BaseRaised, TextColor3 = G.Royal, TextSize = 14, FontFace = G.Fonts.Number,
-				Selectable = true, [React.Event.Activated] = function() if props.GuideAction then props.GuideAction("Show") end end,
-			}, { Corner = corner(G.Radius) }),
-			Later = e("TextButton", {
-				AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(1, 0), Size = UDim2.new(0.45, -4, 1, 0),
-				Text = "Later", BackgroundColor3 = G.BaseRaised, TextColor3 = G.Royal, TextSize = 14, FontFace = G.Fonts.Number,
-				Selectable = true, [React.Event.Activated] = function() if props.GuideAction then props.GuideAction("Snooze") end end,
-			}, { Corner = corner(G.Radius) }),
-		}) else nil,
+		Later = if canDefer then e("TextButton", {
+			Name = "GuideLaterButton", AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -8, 1, -8), Size = UDim2.fromOffset(84, 28),
+			Text = "Later", BackgroundColor3 = G.BaseRaised, TextColor3 = G.Royal, TextSize = 13, FontFace = G.Fonts.Number,
+			Selectable = true, [React.Event.Activated] = function() if props.GuideAction then props.GuideAction("Snooze") end end,
+		}, { Corner = corner(G.Radius) }) else nil,
 	})
 end
 
@@ -603,6 +602,7 @@ end
 
 function Components.SquadStatusCard(props: { Rows: { any }, LockedText: string?, LockedRange: string?, Compact: boolean, TileWidth: number?,
 	OnRow: (number) -> (), OnLocked: () -> (), Position: UDim2? })
+	local firstSlot = if props.Rows[1] then props.Rows[1].Slot else 1
 	local tileW = props.TileWidth or Components.StatusTileMax
 	local children: { [string]: any } = {
 		Layout = e("UIListLayout", {
@@ -727,7 +727,14 @@ function Components.SquadStatusCard(props: { Rows: { any }, LockedText: string?,
 		Position = props.Position or UDim2.new(0, L.Edge, 1, -L.Edge),
 		Size = UDim2.fromOffset(Components.StatusCardWidth(#props.Rows, props.LockedText ~= nil, tileW), Components.StatusCardHeight(#props.Rows, props.LockedText ~= nil, false)),
 	}, {
-		Header = sectionLabel("Squad Status", { Position = UDim2.fromOffset(CARD_PAD + 2, CARD_PAD - 4), Size = UDim2.new(1, -CARD_PAD * 2, 0, HEADER_H) }),
+		Header = sectionLabel("Squad", { Position = UDim2.fromOffset(CARD_PAD + 2, CARD_PAD - 4), Size = UDim2.new(1, -CARD_PAD * 2 - 112, 0, HEADER_H) }),
+		-- The way into the Squad window, spelled out: tiles open it too, but nothing used to say so.
+		Manage = e("TextButton", {
+			Name = "ManageSquadButton", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -CARD_PAD, 0, CARD_PAD - 6),
+			Size = UDim2.fromOffset(108, 24), BackgroundColor3 = G.BaseRaised, BackgroundTransparency = G.RaisedTransparency, BorderSizePixel = 0,
+			FontFace = G.Fonts.Number, TextSize = 12, TextColor3 = G.Royal, Text = "MANAGE  ›", AutoButtonColor = true, Selectable = true, ZIndex = 3,
+			[React.Event.Activated] = function() props.OnRow(firstSlot) end,
+		}, { Corner = corner(G.TileRadius), Stroke = stroke(G.Royal, 1, 0.35) }),
 		Strip = e("Frame", { Position = UDim2.fromOffset(CARD_PAD, CARD_PAD + HEADER_H), Size = UDim2.new(1, -CARD_PAD * 2, 0, TILE_HEIGHT), BackgroundTransparency = 1 }, children),
 	})
 end
@@ -778,6 +785,7 @@ local function stripWidth(slots: number, hasLocked: boolean): number
 	local count = slots + (if hasLocked then 1 else 0) + 1 -- + the chevron tab
 	return STRIP_PAD * 2 + count * STRIP_SLOT + (count - 1) * STRIP_GAP
 end
+Components.StripWidth = stripWidth
 
 -- Height of the drawer: the strip when collapsed, the card when expanded.
 function Components.DrawerHeight(expanded: boolean, cardHeight: number): number
@@ -831,10 +839,8 @@ local function stripSlot(row: any, index: number, hovered: boolean, onHover: (nu
 		[React.Event.MouseLeave] = function() onHover(nil) end,
 		[React.Event.SelectionGained] = function() onHover(index) end,
 		[React.Event.SelectionLost] = function() onHover(nil) end,
-		-- Mouse: hover shows the tooltip, so a click opens the Squad screen. Touch: first tap shows it.
-		[React.Event.Activated] = function()
-			if hovered or not row.Hero then onOpen() else onHover(index) end
-		end,
+		-- One click or tap opens the Squad window; hover or gamepad focus shows the tooltip.
+		[React.Event.Activated] = function() onOpen() end,
 	}, children)
 end
 
@@ -844,7 +850,7 @@ local function stripTooltip(row: any, index: number)
 	return e("Frame", {
 		AnchorPoint = Vector2.new(0, 1),
 		Position = UDim2.new(0, STRIP_PAD + (index - 1) * (STRIP_SLOT + STRIP_GAP), 1, -(STRIP_H + 6)),
-		Size = UDim2.fromOffset(170, 64),
+		Size = UDim2.fromOffset(170, 82),
 		BackgroundColor3 = G.Base,
 		BackgroundTransparency = 0.15,
 		BorderSizePixel = 0,
@@ -861,6 +867,8 @@ local function stripTooltip(row: any, index: number)
 		Hp = e("TextLabel", { Position = UDim2.fromOffset(10, 42), Size = UDim2.new(1, -20, 0, 15), BackgroundTransparency = 1, FontFace = G.Fonts.Label,
 			Text = string.format("%s %d%% · %s", if row.ShowStamina then "Stamina" else "HP", hp, state), TextColor3 = G.Text,
 			TextTransparency = 0.2, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 21 }),
+		Open = e("TextLabel", { Position = UDim2.fromOffset(10, 60), Size = UDim2.new(1, -20, 0, 15), BackgroundTransparency = 1, FontFace = G.Fonts.Number,
+			Text = "Click to manage squad", TextColor3 = G.Royal, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 21 }),
 	})
 end
 

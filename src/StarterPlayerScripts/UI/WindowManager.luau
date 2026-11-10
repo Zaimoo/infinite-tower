@@ -11,7 +11,6 @@
 -- HUDController registers the windows; other code keeps using the _G shims, which route here.
 
 local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
 local UIFeel = require(script.Parent:WaitForChild("UIFeel"))
@@ -40,6 +39,29 @@ local order: { string } = {} -- most recently opened last
 local generation: { [string]: number } = {}
 local changed = Instance.new("BindableEvent")
 WindowManager.Changed = changed.Event
+-- React windows have no long-lived frame: their WindowScale reports the mounted one here.
+local roots: { [string]: GuiObject } = {}
+local rootCleared: { [string]: number } = {}
+-- Windows whose close animation is playing.
+local closing: { [string]: boolean } = {}
+
+function WindowManager.SetRoot(id: string, root: GuiObject)
+	roots[id] = root
+end
+
+function WindowManager.ClearRoot(id: string, root: GuiObject)
+	rootCleared[id] = os.clock()
+	if roots[id] == root then roots[id] = nil end
+end
+
+-- True just after `id`'s frame unmounted: a remount now is the same window re-keyed, not an open.
+function WindowManager.RecentlyClosed(id: string): boolean
+	return os.clock() - (rootCleared[id] or -math.huge) < 0.2
+end
+
+function WindowManager.IsClosing(id: string): boolean
+	return closing[id] == true
+end
 
 local function touch(id: string)
 	generation[id] = (generation[id] or 0) + 1
@@ -93,32 +115,42 @@ function WindowManager.Opened(id: string)
 	changed:Fire(id, true)
 end
 
--- Closes `id`, shrinking it out first when it has a Root with a UIScale.
+-- Closes `id`, shrinking it out first when it has a frame with a UIScale (its adapter's Root, or the
+-- frame a React window's WindowScale reported). Close buttons, scrims and Backspace all come through
+-- here, so a window leaves the same way however it is dismissed.
 function WindowManager.Close(id: string, immediate: boolean?)
 	local a = adapters[id]
 	if not a or not isOpen(id) then return end
-	local root = a.Root and a.Root()
+	if closing[id] and not immediate then return end -- already on its way out
+	local root = roots[id] or (a.Root and a.Root())
 	local scale = root and root:FindFirstChildOfClass("UIScale")
 	local gen = generation[id]
 	local function finish()
-		if generation[id] ~= gen then return end -- reopened while closing
+		if generation[id] ~= gen then closing[id] = nil return end -- reopened while closing
+		closing[id] = true -- lets a controller's wrapped Close know this is the real one
 		pcall(a.Close)
+		closing[id] = nil
 		local i = table.find(order, id)
 		if i and not isOpen(id) then table.remove(order, i) end
 		changed:Fire(id, false)
 	end
-	if immediate or not root or not scale or not root.Visible or UIFeel.ReducedMotion() then
+	if immediate or not root or not scale or not root.Visible then
 		finish()
 		return
 	end
-	local resting = scale.Scale
-	local tween = TweenService:Create(scale, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Scale = resting * 0.94 })
-	tween.Completed:Once(function()
-		finish()
-		-- Restore for the next open (ModalFit's open pop starts from the resting scale).
-		scale.Scale = resting
-	end)
-	tween:Play()
+	closing[id] = true
+	UIFeel.WindowOut(scale, finish)
+end
+
+-- Sends a controller's own Close (its X button, its scrim) through the manager, so those closes
+-- animate like Backspace does. The adapter's Close must call `controller:Close()`.
+function WindowManager.Route(id: string, controller: any)
+	local raw = controller.Close
+	controller.Close = function(self: any, ...: any)
+		if closing[id] or not isOpen(id) then return raw(self, ...) end
+		WindowManager.Close(id)
+		return nil
+	end
 end
 
 -- Closes every open window except `keep`.

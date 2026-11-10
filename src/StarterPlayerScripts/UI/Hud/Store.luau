@@ -24,6 +24,10 @@ Store.ModalFocus = false
 Store.SquadAssignment = nil :: number?
 Store.PlayerFloorId = 0 :: number
 Store.ViewingSquad = false :: boolean
+-- Where the Squad drawer (with its currency bar and Assign button) ends, in px from the screen's left
+-- and bottom edges. HudApp writes these on render; banners read them to stay clear of the drawer.
+Store.DrawerRight = 0 :: number
+Store.DrawerTop = 0 :: number
 
 local function bump()
 	Store.Revision += 1
@@ -36,7 +40,7 @@ function Store.GuideAction(action: string)
 	if action == "Show" then
 		Store.GuideVisible = not Store.GuideVisible
 		bump()
-	elseif action == "Snooze" or action == "Resume" then
+	elseif action == "Snooze" or action == "Resume" or action == "Skip" then
 		if action == "Resume" then Store.GuideVisible = true; bump() end
 		local remote = guideRemote
 		if remote then remote:FireServer(action, if action == "Snooze" and Store.Goal then Store.Goal.Id else nil) end

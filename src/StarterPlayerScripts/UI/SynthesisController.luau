@@ -7,7 +7,8 @@
 --   * Right column: the material heroes to synthesize with, sortable (Power/Stars/Level),
 --     "READY ONLY" filter, and cards displaying power, archetype, stars, and facility chips.
 --   * Multi-select materials with no 5-hero limit.
---   * Deployed, facility-assigned, equipped, locked, coma, and recipient heroes are protected.
+--   * Deployed, facility-assigned, locked, coma, and recipient heroes are protected. A material hero
+--     that carries a weapon can be used: the weapon returns to the backpack (the confirm says so).
 -- Authoritative PitRequest remote: STATE -> PREVIEW -> COMMIT.
 
 local TweenService = game:GetService("TweenService")
@@ -27,6 +28,7 @@ local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormu
 local PitBalanceConfig = require(Shared:WaitForChild("Config"):WaitForChild("PitBalanceConfig"))
 local PitMath = require(Shared:WaitForChild("Util"):WaitForChild("PitMath"))
 local Kit = require(script.Parent:WaitForChild("Kit"))
+local PitTabs = require(script.Parent:WaitForChild("PitTabs"))
 
 local Synth = {}
 Synth.__index = Synth
@@ -267,51 +269,47 @@ local function checkDonorEligibility(hero: any, recipientUUID: string?): (boolea
 	local effectiveHero = profileHero or hero
 	local assignment = effectiveHero.Assignment or hero.Assignment or ""
 
-	-- 1. Artifact equipment check
-	if (effectiveHero.EquippedArtifactUUID and effectiveHero.EquippedArtifactUUID ~= "")
-		or (hero.EquippedArtifactUUID and hero.EquippedArtifactUUID ~= "") then
-		return false, "This hero has an artifact equipped. Unequip it before using as material.", "Equipped"
-	end
+	-- 1. A hero carrying a weapon is allowed: the server hands the weapon back on commit.
 
-	-- 2. Squad deployment check (equipped in player's squad)
+	-- 2. Squad deployment check
 	if isSquad(hero) then
-		return false, "This hero is equipped in your squad and cannot be used as material.", "Equipped"
+		return false, "In your squad. Bench it first.", "Equipped"
 	end
 
 	-- 3. Building / facility check (stationed in a building)
 	if isStationed(hero) then
-		return false, "This hero is stationed in a building. Unassign it before using as material.", "Stationed"
+		return false, "Working at a facility. Unassign it first.", "Stationed"
 	end
 
 	-- 4. Any other non-benched assignment
 	if assignment ~= "" and assignment ~= "BENCHED" then
-		return false, "This hero is currently assigned (" .. assignment .. "). Bench it first.", "Assigned"
+		return false, "Assigned elsewhere. Bench it first.", "Assigned"
 	end
 
 	-- 5. Locked / Favorited
 	if effectiveHero.Locked or effectiveHero.Favorite or effectiveHero.Favorited
 		or hero.Locked or hero.Favorite or hero.Favorited then
-		return false, "This hero is protected. Unlock it deliberately before using it.", "Locked"
+		return false, "Locked. Unlock it first.", "Locked"
 	end
 
 	-- 6. Coma / Recovering
 	local coma = math.max(effectiveHero.ComaUntilTimestamp or 0, hero.ComaUntilTimestamp or 0)
 	if coma > os.time() or effectiveHero.IsHardAuditComa or hero.IsHardAuditComa then
-		return false, "This hero must recover from Coma first.", "Recovering"
+		return false, "Recovering from Coma.", "Recovering"
 	end
 
 	-- 7. Unique / Protected (hero_archon and all summonable heroes up to 7★ are allowed as materials)
 	if effectiveHero.Unique or effectiveHero.IsUnique or effectiveHero.Protected
 		or hero.Unique or hero.IsUnique or hero.Protected then
-		return false, "This unique hero is protected from consumption.", "Protected"
+		return false, "Unique heroes can't be used.", "Protected"
 	end
 
 	-- 8. Authoritative PitStatus check from server
-	if hero.PitStatus and hero.PitStatus.EligibleDonor == false then
+	if hero.PitStatus and hero.PitStatus.EligibleDonor == false and hero.PitStatus.Status ~= "Equipped" then
 		local st = hero.PitStatus.Status or "Unavailable"
 		if st == "Facility Worker" then st = "Stationed" end
 		if st == "Deployed" then st = "Equipped" end
-		return false, hero.PitStatus.Reason or "This hero cannot be used as material.", st
+		return false, hero.PitStatus.Reason or "Can't be used as material.", st
 	end
 
 	return true, "", "Ready"
@@ -363,15 +361,16 @@ function Synth.new(gui: ScreenGui, remote: RemoteFunction)
 	local icon = GrimoireIcons.Create("Summon", 46, root, Z + 2)
 	icon.Position = UDim2.fromOffset(22, 10)
 	local title = label(root, "Title", {
-		Position = UDim2.fromOffset(76, 12), Size = UDim2.fromOffset(360, 28),
-		TextSize = 26, TextXAlignment = Enum.TextXAlignment.Left, Text = "SYNTHESIS", TextColor3 = Color3.new(1, 1, 1), ZIndex = Z + 2,
+		Position = UDim2.fromOffset(76, 14), Size = UDim2.fromOffset(124, 32),
+		TextSize = 26, TextXAlignment = Enum.TextXAlignment.Left, Text = "THE PIT", TextColor3 = Color3.new(1, 1, 1), ZIndex = Z + 2,
 	})
 	gold(title)
-	label(root, "Body", {
-		Position = UDim2.fromOffset(76, 40), Size = UDim2.fromOffset(460, 16),
-		TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = TEXT.Muted, ZIndex = Z + 2,
-		Text = "Feed duplicate and spare heroes to grant EXP and level up your heroes.",
-	})
+	-- Synthesis | Promotion live in the header, like the Forge's tabs.
+	local tabs = PitTabs.Create(root, "Synthesis", Z + 2, function(tab)
+		if self.Busy or self.Picker.Visible then return end
+		if _G.OpenFacilityHUD then _G.OpenFacilityHUD(tab) end
+	end)
+	tabs.Position = UDim2.fromOffset(204, 11)
 
 	GothicBoxStyle.CreateCloseButton(root, function() if not self.Busy then self:Close() end end)
 
@@ -506,7 +505,7 @@ function Synth.new(gui: ScreenGui, remote: RemoteFunction)
 	gold(emptyTitle)
 	label(empty, "Body", {
 		Position = UDim2.fromOffset(0, 114), Size = UDim2.new(1, 0, 0, 40), TextSize = 14, TextWrapped = true, TextColor3 = TEXT.Muted,
-		Text = "Then choose spare heroes here to feed it EXP.", ZIndex = Z + 3,
+		Text = "Spare heroes become its EXP.", ZIndex = Z + 3,
 	})
 	Kit.Button.Create(empty, {
 		Name = "EmptySelectHeroButton", Text = "Select Hero", Intent = "Primary", Size = "L", Icon = "Add",
@@ -597,7 +596,7 @@ function Synth.new(gui: ScreenGui, remote: RemoteFunction)
 	end)
 	self.ClearButton = { Button = clearBtn, Label = clearLabel }
 
-	local confirmBtn, confirmLabel = button(root, "Action", "CONFIRM SYNTHESIZE", {
+	local confirmBtn, confirmLabel = button(root, "Action", "SYNTHESIZE", {
 		Name = "ConfirmButton",
 		AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 546), Size = UDim2.fromOffset(206, 40), ZIndex = Z + 2,
 	})
@@ -607,8 +606,8 @@ function Synth.new(gui: ScreenGui, remote: RemoteFunction)
 	self:BuildPicker()
 	self:BuildPopup()
 
-	-- Fit the window inside the safe area. The Pit's tab bar sits in Roblox's top bar (React HUD), so no
-	-- space is reserved above the window; on large screens it grows up to 1.25x.
+	-- Fit the window inside the safe area; on large screens it grows up to 1.25x. The Synthesis |
+	-- Promotion tabs are part of the header, so nothing floats above the window.
 	ModalFit.Bind(root, self.Scale, WIDTH, HEIGHT, { MaxScale = 1.25, FillWidth = true })
 
 	self:Render()
@@ -825,7 +824,7 @@ function Synth.BuildRosterCard(self: any, hero: any): any
 		Size = UDim2.fromScale(1, 1),
 		TextSize = 10,
 		TextColor3 = Color3.fromRGB(250, 215, 120),
-		Text = "EQUIPPED",
+		Text = "IN SQUAD",
 		ZIndex = Z + 10,
 	})
 
@@ -940,7 +939,7 @@ function Synth.PressRosterHero(self: any, uuid: string)
 	if recipient then
 		local maxLevel = StatFormulas.GetMaxLevel(recipient.Stars)
 		if (recipient.Level or 1) >= maxLevel then
-			self:ShowPopup("MAX LEVEL REACHED", "This hero has already reached the maximum level for their current Star tier.\n\nPromote their star tier to raise the level cap.")
+			self:ShowPopup("MAX LEVEL REACHED", "Max level. Promote this hero to raise the cap.")
 			return
 		end
 	end
@@ -1050,7 +1049,7 @@ function Synth.ComputeOptimisticPreview(self: any): any?
 
 		local warnings = {}
 		if xp.Efficiency < 1 then
-			table.insert(warnings, "The recipient outlevels these donors. The displayed EXP includes reduced efficiency.")
+			table.insert(warnings, "Low-level materials give reduced EXP.")
 		end
 
 		return {
@@ -1108,16 +1107,16 @@ function Synth.Confirm(self: any)
 	if self.Busy or self.Loading or self.Popup.Visible or self.Picker.Visible then return end
 	local preview = self.Preview
 	if not self.Recipient then
-		self:ShowPopup("SYNTHESIS UNAVAILABLE", "Choose the hero who will receive the EXP.")
+		self:ShowPopup("SYNTHESIS UNAVAILABLE", "Pick a hero to level up first.")
 		return
 	end
 	local recipient = self.State.Heroes[self.Recipient]
 	if recipient and (recipient.Level or 1) >= StatFormulas.GetMaxLevel(recipient.Stars) then
-		self:ShowPopup("MAX LEVEL REACHED", "This hero has already reached the maximum level for their current Star tier.\n\nPromote their star tier to raise the level cap.")
+		self:ShowPopup("MAX LEVEL REACHED", "Max level. Promote this hero to raise the cap.")
 		return
 	end
 	if #self.Donors == 0 then
-		self:ShowPopup("SYNTHESIS UNAVAILABLE", "Select at least one material hero from the roster.")
+		self:ShowPopup("SYNTHESIS UNAVAILABLE", "Pick at least one material hero.")
 		return
 	end
 	if self.PreviewError then
@@ -1147,21 +1146,52 @@ function Synth.Confirm(self: any)
 	self:Commit(preview)
 end
 
+-- A fresh preview that still promises what the player confirmed (same EXP, same warnings).
+local function sameResult(old: any, fresh: any): boolean
+	if type(fresh) ~= "table" or not fresh.CanCommit or not fresh.Token then return false end
+	local oldXP, newXP = old.XP or {}, fresh.XP or {}
+	return #(fresh.Donors or {}) == #(old.Donors or {}) and #(fresh.Warnings or {}) == #(old.Warnings or {})
+		and (newXP.Applied or newXP.Final) == (oldXP.Applied or oldXP.Final)
+		and (fresh.After and fresh.After.Level) == (old.After and old.After.Level)
+end
+
 function Synth.Commit(self: any, preview: any)
 	if self.Busy or self.Loading or self.Picker.Visible or not self.Root.Visible then return end
 	if not preview.Token or preview ~= self.Preview or #preview.Donors ~= #self.Donors then
-		self:ShowPopup("SELECTION CHANGED", "Review the updated preview before synthesizing.")
+		self.Message = "Selection changed. Confirm again."
 		self:QueuePreview()
 		return
 	end
 	self.Busy = true
 	self:Render()
 	task.spawn(function()
-		local response = self:Request("COMMIT", {
-			Token = preview.Token,
-			ConfirmRare = preview.RequiresRareConfirmation == true,
-			ConfirmOverflow = preview.RequiresOverflowConfirmation == true,
-		})
+		local function send(p: any): any
+			return self:Request("COMMIT", {
+				Token = p.Token,
+				ConfirmRare = p.RequiresRareConfirmation == true,
+				ConfirmOverflow = p.RequiresOverflowConfirmation == true,
+			})
+		end
+		local response = send(preview)
+		if not response.Success and response.Stale then
+			-- The token aged out or the roster moved. Ask again; when the result is the one the
+			-- player already confirmed, finish the synthesis without a second click.
+			local request = { Action = "SYNTHESIS", Recipient = self.Recipient, Donors = table.clone(self.Donors) }
+			local again = self:Request("PREVIEW", request)
+			if not again.Success and tostring(again.Message):find("wait") then
+				task.wait(0.4)
+				again = self:Request("PREVIEW", request)
+			end
+			if again.Success and sameResult(preview, again.Preview) then
+				response = send(again.Preview)
+			elseif again.Success and type(again.Preview) == "table" then
+				self.Busy, self.Preview = false, again.Preview
+				self.PreviewError = nil
+				self.Message = "The result changed. Confirm again."
+				self:Render()
+				return
+			end
+		end
 		self.Busy, self.Preview = false, nil
 		if response.Success then
 			local result = response.Result or {}
@@ -1169,6 +1199,10 @@ function Synth.Commit(self: any, preview: any)
 			local before, after = result.Before, result.After
 			self.Message = string.format("Synthesis complete! +%d EXP%s", gained,
 				(before and after and after.Level > before.Level) and string.format("  ·  Lv. %d → Lv. %d", before.Level, after.Level) or "")
+			local returned = #(result.Unequips or {})
+			if returned > 0 then
+				Kit.Notify.Push("info", string.format("Weapons returned|%d back in your backpack", returned))
+			end
 			local delta = response.Delta
 			if delta then
 				for uuid, hero in delta.Heroes or {} do self.State.Heroes[uuid] = hero end
@@ -1181,7 +1215,8 @@ function Synth.Commit(self: any, preview: any)
 			end
 			self:Celebrate()
 		else
-			self:ShowPopup("SYNTHESIS UNAVAILABLE", response.Message or "The synthesis was rejected. Review your selection.")
+			self:ShowPopup("SYNTHESIS UNAVAILABLE", response.Message or "Synthesis failed. Check your selection.")
+			self:QueuePreview()
 		end
 		self:Render()
 		task.delay(0.5, function() if self.Root.Visible and not self.Busy then self:Refresh() end end)
@@ -1275,7 +1310,7 @@ function Synth.Render(self: any)
 
 			self.LevelLabel.Text = string.format("Lv. %d  (CAP: Lv. %d — MAX)", currentLevel, recipientMaxLevel)
 			self.XPText.Text = "MAX LEVEL REACHED"
-			self.SummaryLine.Text = '<font color="#EF8078"><b>MAX LEVEL REACHED — PROMOTE STAR TIER</b></font><br/><font color="#A59BB9">This hero has reached the level cap for this Star rank. Promote their star tier to continue.</font>'
+			self.SummaryLine.Text = '<font color="#EF8078"><b>MAX LEVEL</b></font><br/><font color="#A59BB9">Promote this hero to keep levelling.</font>'
 		else
 			local baseRatio = math.clamp(currentExp / safeMax, 0, 1)
 			local targetTotalRatio = baseRatio
@@ -1297,7 +1332,7 @@ function Synth.Render(self: any)
 					self.LevelLabel.Text = string.format('Lv. %d  <font color="#39E81E">→  Lv. %d (CAP)</font>', before.Level, after.Level)
 					local displayMax = StatFormulas.GetXPRequiredForNextLevel(after.Level, after.Stars or recipient.Stars)
 					self.XPText.Text = string.format("%d / %d EXP (+%d EXP) [CAP REACHED]", after.XP or 0, displayMax, gained)
-					self.SummaryLine.Text = string.format('<b><font color="#4ADE80">MAX LEVEL REACHED (Lv. %d)</font></b>  ·  +%s EXP from %d material%s<br/><font color="#A59BB9">Star tier cap reached. Remove materials to adjust, or confirm synthesis.</font>',
+					self.SummaryLine.Text = string.format('<b><font color="#4ADE80">MAX LEVEL REACHED (Lv. %d)</font></b>  ·  +%s EXP from %d material%s<br/><font color="#A59BB9">Level cap reached.</font>',
 						recipientMaxLevel, abbreviate(gained), #self.Donors, if #self.Donors == 1 then "" else "s")
 				else
 					self.LevelLabel.Text = string.format('Lv. %d  <font color="#39E81E">→  Lv. %d</font>%s', before.Level, after.Level,
@@ -1312,7 +1347,7 @@ function Synth.Render(self: any)
 			else
 				self.LevelLabel.Text = string.format("Lv. %d  (Cap: Lv. %d)", currentLevel, recipientMaxLevel)
 				self.XPText.Text = string.format("%d / %d EXP", currentExp, safeMax)
-				self.SummaryLine.Text = '<font color="#A59BB9">Select material heroes on the right to grant EXP.</font>'
+				self.SummaryLine.Text = '<font color="#A59BB9">Pick material heroes on the right.</font>'
 			end
 
 			-- 3. Green Preview EXP Bar Tweening
@@ -1384,7 +1419,7 @@ function Synth.Render(self: any)
 		self.GainFill.Size = UDim2.fromScale(0, 1)
 		self.GainFill.Visible = false
 		self.XPText.Text = ""
-		self.SummaryLine.Text = '<font color="#A59BB9">Press SELECT HERO to choose who receives EXP.</font>'
+		self.SummaryLine.Text = '<font color="#A59BB9">Pick a hero to level up.</font>'
 		self.LastRecipientUID = nil
 		self.LastBaseRatio = 0
 		self.LastTotalRatio = 0
@@ -1446,16 +1481,16 @@ function Synth.Render(self: any)
 
 	local selectedCount = #self.Donors
 	if isRecipientMaxLevel then
-		self.RosterHeader.Text = "MATERIALS — MAX LEVEL REACHED (PROMOTE STAR TIER)"
+		self.RosterHeader.Text = "MATERIALS  ·  MAX LEVEL"
 	elseif isProjectedMax then
-		self.RosterHeader.Text = string.format("MATERIALS  (%d)  ·  %d SELECTED (MAX LEVEL REACHED)", #heroList, selectedCount)
+		self.RosterHeader.Text = string.format("MATERIALS  (%d)  ·  %d SELECTED  ·  CAP", #heroList, selectedCount)
 	else
 		self.RosterHeader.Text = string.format("MATERIALS  (%d)%s", #heroList,
 			if selectedCount > 0 then string.format("  ·  %d SELECTED", selectedCount) else "")
 	end
 
 	self.EmptyLabel.Visible = hasRecipient and #heroList == 0
-	self.EmptyLabel.Text = if self.ReadyOnly then "No eligible material heroes available. Unassign, unlock or bench heroes first." else "Your roster is empty."
+	self.EmptyLabel.Text = if self.ReadyOnly then "No ready heroes. Bench, unassign or unlock some." else "No spare heroes yet."
 
 	local seen: { [string]: boolean } = {}
 	for order, hero in ipairs(heroList) do
@@ -1490,6 +1525,11 @@ function Synth.Render(self: any)
 			chipText, chipColor = string.format("RESTING %ds", resting), TEXT.Bad
 		elseif tagText == "Locked" then
 			chipText, chipColor = "LOCKED", Color3.fromRGB(224, 208, 255)
+		else
+			local live = profile and profile.Heroes and profile.Heroes[hero.UUID] or hero
+			if live.EquippedArtifactUUID and live.EquippedArtifactUUID ~= "" then
+				chipText, chipColor = "HAS WEAPON", TEXT.Gold
+			end
 		end
 
 		entry.Chip.Visible = (chipText ~= "")
@@ -1542,9 +1582,9 @@ function Synth.Render(self: any)
 	-- 4. Bottom Footer (Clear & Confirm Synthesize buttons)
 	if isRecipientMaxLevel then
 		self.ConfirmButton.Button.Interactable = false
-		retone(self.ConfirmButton.Button, self.ConfirmButton.Label, "Slate", "MAX LEVEL REACHED")
+		retone(self.ConfirmButton.Button, self.ConfirmButton.Label, "Slate", "MAX LEVEL")
 		self.ClearButton.Button.Visible = false
-		self:SetStatus("Max level for this star rank. Promote the hero to keep levelling.", "block")
+		self:SetStatus("Max level. Promote to keep levelling.", "block")
 	else
 		local canAct = materialEnabled and #self.Donors > 0 and not self.Loading
 		local retry = canAct and self.PreviewError ~= nil
@@ -1559,17 +1599,17 @@ function Synth.Render(self: any)
 		elseif self.Loading then
 			retone(self.ConfirmButton.Button, self.ConfirmButton.Label, "Slate", "CHECKING EXP…")
 		elseif retry then
-			retone(self.ConfirmButton.Button, self.ConfirmButton.Label, "Gold", "RETRY PREVIEW")
+			retone(self.ConfirmButton.Button, self.ConfirmButton.Label, "Gold", "RETRY")
 		elseif ready then
-			retone(self.ConfirmButton.Button, self.ConfirmButton.Label, "Gold", "CONFIRM SYNTHESIZE") -- the window's primary action
+			retone(self.ConfirmButton.Button, self.ConfirmButton.Label, "Gold", "SYNTHESIZE") -- the window's primary action
 		else
-			retone(self.ConfirmButton.Button, self.ConfirmButton.Label, "Slate", "CONFIRM SYNTHESIZE")
+			retone(self.ConfirmButton.Button, self.ConfirmButton.Label, "Slate", "SYNTHESIZE")
 		end
 
 		-- Status line
 		local status, color = self.Message, TEXT.Muted
 		if self.Loading then
-			status = "Checking the EXP preview with the server…"
+			status = "Checking…"
 		elseif self.PreviewError then
 			status, color = self.PreviewError, TEXT.Bad
 		elseif preview and not preview.CanCommit and preview.Reason and preview.Reason ~= "" then
@@ -1581,7 +1621,16 @@ function Synth.Render(self: any)
 		if #self.Donors > 0 and severity ~= "block" then
 			-- What happens on confirm, said before it happens.
 			status = if status ~= "" then status .. " · " else ""
-			status ..= string.format("%d material hero%s will be consumed.", #self.Donors, if #self.Donors == 1 then "" else "es")
+			status ..= string.format("Uses up %d hero%s.", #self.Donors, if #self.Donors == 1 then "" else "es")
+			local armed = 0
+			for _, uuid in self.Donors do
+				local donor = heroes[uuid]
+				local live = profile and profile.Heroes and profile.Heroes[uuid] or donor
+				if live and live.EquippedArtifactUUID and live.EquippedArtifactUUID ~= "" then armed += 1 end
+			end
+			if armed > 0 then
+				status ..= string.format(" %d weapon%s unequipped.", armed, if armed == 1 then " is" else "s are")
+			end
 			severity = "warn"
 		end
 		self:SetStatus(status, severity)

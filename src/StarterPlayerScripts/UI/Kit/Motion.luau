@@ -10,36 +10,27 @@ local Tokens = require(script.Parent:WaitForChild("Tokens"))
 
 local Motion = {}
 
-local OPEN = TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-local CLOSE = TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+local OPEN = TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out) -- tiles (Stagger)
 local SLIDE = TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
 local function reduced(): boolean
 	return UIFeel.ReducedMotion()
 end
 
--- Window open: scale from 92% of `target` with an overshoot.
+-- Window open and close: the shared motion in UIFeel (pop from 94%, shrink to 96%).
 function Motion.Open(root: GuiObject, scale: UIScale, target: number?)
-	local goal = target or 1
 	root.Visible = true
-	if reduced() then scale.Scale = goal return end
-	scale.Scale = goal * 0.92
-	TweenService:Create(scale, OPEN, { Scale = goal }):Play()
-	UIFeel.Sfx("WindowOpen", 1, 0.4)
+	UIFeel.WindowIn(scale, target or 1)
 end
 
--- Window close: shrink to 95% and hide, then restore the scale. `onDone` runs once hidden.
+-- `onDone` runs once the window is hidden.
 function Motion.Close(root: GuiObject, scale: UIScale, onDone: (() -> ())?)
-	local resting = scale.Scale
 	local function finish()
 		root.Visible = false
-		scale.Scale = resting
 		if onDone then onDone() end
 	end
-	if reduced() or not root.Visible then finish() return end
-	local tween = TweenService:Create(scale, CLOSE, { Scale = resting * 0.95 })
-	tween.Completed:Once(finish)
-	tween:Play()
+	if not root.Visible then finish() return end
+	UIFeel.WindowOut(scale, finish)
 end
 
 -- New tab content slides 12 px in from the side it came from (dir 1 = from the right).

@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local HeroCard = require(script.Parent:WaitForChild("HeroCard"))
 local ModalFit = require(script.Parent:WaitForChild("ModalFit"))
+local PitTabs = require(script.Parent:WaitForChild("PitTabs"))
 local UIAssets = require(script.Parent:WaitForChild("UIAssets"))
 local UIFeel = require(script.Parent:WaitForChild("UIFeel"))
 local Kit = require(script.Parent:WaitForChild("Kit"))
@@ -290,14 +291,21 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 		end
 	end)
 
-	-- Title: HERO PROMOTION
-	local title = label(root, "HERO PROMOTION", 30, C.Text, Enum.Font.GothamBlack)
+	-- Header: "THE PIT" and the Synthesis | Promotion tabs, in the same place as on the Synthesis window.
+	local title = label(root, "THE PIT", 26, C.Text, Enum.Font.GothamBlack)
 	title.Name = "Title"
-	title.Position = UDim2.fromOffset(48, 14)
-	title.Size = UDim2.new(1, -96, 0, 40)
+	title.Position = UDim2.fromOffset(24, 14)
+	title.Size = UDim2.fromOffset(124, 32)
+	title.TextXAlignment = Enum.TextXAlignment.Left
 	title.ZIndex = 42
 	goldText(title)
 	self.Title = title
+	local tabs = PitTabs.Create(root, "Promotion", 42, function(tab)
+		if self.Busy then return end
+		if _G.OpenFacilityHUD then _G.OpenFacilityHUD(tab) end
+	end)
+	tabs.Position = UDim2.fromOffset(152, 11)
+	self.Tabs = tabs
 
 	--========================================================================
 	-- RITUAL AREA (Circular Altar Layout — No Hero Sacrifices)
@@ -642,11 +650,16 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 			local wideScale = math.min(available.X / WIDE_SIZE.X, available.Y / WIDE_SIZE.Y)
 			local stackedScale = math.min(available.X / STACKED_SIZE.X, available.Y / STACKED_SIZE.Y)
 			if wideScale >= stackedScale then
+				title.Visible = true
+				tabs.Position = UDim2.fromOffset(152, 11)
 				ritualArea.Position = UDim2.fromOffset(183, 85)
 				statsPanel.Position = UDim2.fromOffset(366, 70)
 				actionArea.Position = UDim2.fromOffset(366, 218)
 				return WIDE_SIZE
 			end
+			-- Narrow layout: the tabs alone fit beside the close button.
+			title.Visible = false
+			tabs.Position = UDim2.fromOffset(16, 11)
 			ritualArea.Position = UDim2.fromOffset(STACKED_SIZE.X / 2, 62)
 			statsPanel.Position = UDim2.fromOffset(24, 351)
 			actionArea.Position = UDim2.fromOffset(24, 499)
@@ -735,7 +748,7 @@ function Promo.Request(self: any, command: string, payload: any?): any
 		return self.Remote:InvokeServer(command, payload)
 	end)
 	if not ok or type(response) ~= "table" then
-		return { Success = false, Message = "The Promotion chamber could not respond. Please try again." }
+		return { Success = false, Message = "No response. Try again." }
 	end
 	return response
 end
@@ -818,6 +831,22 @@ function Promo.Confirm(self: any)
 		-- Promotion consumes no donor heroes today, so the server never asks for rare confirmation here.
 		-- Pass the preview's flag rather than a blanket true so the safeguard holds if that changes.
 		local response = self:Request("COMMIT", { Token = preview.Token, ConfirmRare = preview.RequiresRareConfirmation == true })
+		if not response.Success and response.Stale then
+			-- The token aged out while the window sat open. Ask again and, when the cost is the one
+			-- already shown, finish the promotion without a second click.
+			local request = { Action = "PROMOTION", Recipient = recipientId, Donors = {} }
+			local again = self:Request("PREVIEW", request)
+			if not again.Success and tostring(again.Message):find("wait") then
+				task.wait(0.4)
+				again = self:Request("PREVIEW", request)
+			end
+			local fresh = again.Success and again.Preview
+			local oldCosts, newCosts = preview.Costs or {}, fresh and fresh.Costs or {}
+			if fresh and fresh.CanCommit and fresh.Token and newCosts.Gold == oldCosts.Gold and newCosts.PromotionStone == oldCosts.PromotionStone then
+				preview = fresh
+				response = self:Request("COMMIT", { Token = fresh.Token, ConfirmRare = fresh.RequiresRareConfirmation == true })
+			end
+		end
 		self.Preview = nil
 		local revealRank = false
 		if response.Success then
@@ -831,7 +860,7 @@ function Promo.Confirm(self: any)
 				self:PlayAscension(stoneCount)
 				revealRank = self.Root.Parent ~= nil and self.Root.Visible
 			end
-			self.Message = string.format("Ascension complete! %s has ascended to %s rank!", hero and hero.DisplayName or "Hero", stars(newStars))
+			self.Message = string.format("Ascension complete! %s is now %s.", hero and hero.DisplayName or "Hero", stars(newStars))
 			local delta = response.Delta
 			if delta then
 				for uuid, h in delta.Heroes or {} do
@@ -849,7 +878,7 @@ function Promo.Confirm(self: any)
 				self.State.Heroes[recipientId] = updated
 			end
 		else
-			self.Message = response.Message or "The promotion was rejected. Review requirements."
+			self.Message = if response.Stale then "" else (response.Message or "Promotion failed.")
 		end
 		self.Busy = false
 		if not self.Root.Parent then return end
@@ -869,7 +898,7 @@ end
 
 function Promo.OpenPicker(self: any)
 	if self.Busy then return end
-	self.PickerMessage = "Choose a hero at maximum level to promote with Promotion Stones & Gold."
+	self.PickerMessage = "Pick a max-level hero."
 	self.Picker.Visible = true
 	self:RenderPicker()
 end
@@ -977,8 +1006,8 @@ function Promo.RenderPicker(self: any)
 
 		local uuid = hero.UUID
 		local heroName = hero.DisplayName or "This hero"
-		local refusal = if isMax then string.format("%s is already at the maximum %d★ rank.", heroName, maxStars)
-			elseif not isCapped then string.format("%s needs Lv.%d to promote (now Lv.%d). Level up in Synthesis.", heroName, StatFormulas.GetMaxLevel(hero.Stars), hero.Level or 1)
+		local refusal = if isMax then string.format("%s is already %d★ (max).", heroName, maxStars)
+			elseif not isCapped then string.format("%s needs Lv.%d (now Lv.%d).", heroName, StatFormulas.GetMaxLevel(hero.Stars), hero.Level or 1)
 			else nil
 		tile.Activated:Connect(function()
 			if refusal then
@@ -1141,16 +1170,16 @@ function Promo.Render(self: any)
 
 	local status, color = self.Message, C.TextDim
 	if self.Busy then
-		status = "Channeling the promotion ritual…"
+		status = "Promoting…"
 	elseif status == "" then
 		if not recipient then
-			status = "Choose a hero to promote."
+			status = "Pick a hero to promote."
 		elseif self.Loading then
-			status = "Evaluating ascension requirements…"
+			status = "Checking…"
 		elseif preview and not preview.CanCommit then
 			status, color = preview.Reason or "Promotion requirements not met.", C.Danger
 		elseif preview and preview.CanCommit then
-			status, color = string.format("%s is ready to reach %d★.", recipient.DisplayName or "Hero", (recipient.Stars or 1) + 1), C.Good
+			status, color = string.format("Ready for %d★.", (recipient.Stars or 1) + 1), C.Good
 		end
 	elseif status:find("complete") or status:find("Ascension") then
 		color = C.Good
@@ -1205,7 +1234,7 @@ function Promo.PlayAscension(self: any, count: number)
 		}, self.RitualArea)
 		self.StoneCaption.Text = "STONES\nABSORBED"
 		self.StoneCount.Text = string.format("0 / %d", count)
-		self.Status.Text = "The hero is absorbing Promotion Stones…"
+		self.Status.Text = "Absorbing stones…"
 		self.Status.TextColor3 = C.TextMuted
 		self.StatusCallout.Update({ Text = self.Status.Text, Severity = "info" })
 
