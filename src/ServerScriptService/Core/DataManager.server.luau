@@ -1528,6 +1528,37 @@ FacilityInteractEvent.OnServerEvent:Connect(function(player: Player, action: any
 	end
 end)
 
+-- Studio-only chat command: `/summon <hero>` adds that hero to the caller's profile for free.
+-- `<hero>` is a HeroCatalog seed id, with or without the `hero_` prefix (`/summon edis`).
+if game:GetService("RunService"):IsStudio() then
+	local summonCommand = Instance.new("TextChatCommand")
+	summonCommand.Name = "DevSummonHero"
+	summonCommand.PrimaryAlias = "/summon"
+	summonCommand.Parent = game:GetService("TextChatService")
+	summonCommand.Triggered:Connect(function(source: TextSource, message: string)
+		local player = Players:GetPlayerByUserId(source.UserId)
+		local profile = player and ActiveProfiles[player]
+		if not player or not profile then return end
+
+		local arg = string.lower(string.match(message, "^%S+%s+(%S+)") or "")
+		local seedId = if HeroCatalog.Seeds[arg] then arg else "hero_" .. arg
+		if arg == "" or not HeroCatalog.Seeds[seedId] then
+			DataManager.SendToast(player, "Usage: /summon <hero>, e.g. /summon edis", "WARN")
+			return
+		end
+		local heroCap = InventoryCapacity.HeroCap(profile.FortressTree)
+		if InventoryCapacity.HeroCount(profile) + 1 > heroCap then
+			DataManager.SendToast(player, string.format("Hero inventory full! Maximum capacity is %d.", heroCap), "WARN")
+			return
+		end
+
+		local uuid, hero = DataManager.CreateHeroFromSeed(seedId)
+		profile.Heroes[uuid] = hero
+		DataManager.SendToast(player, string.format("[Dev] Summoned %s", hero.DisplayName), "SUCCESS")
+		DataManager.SyncProfile(player)
+	end)
+end
+
 function DataManager.GetMarketMultiplier(player: Player): number
 	local profile = ActiveProfiles[player]
 	if not profile or not profile.Facilities or not profile.Facilities.Market then return 1.0 end
