@@ -76,6 +76,10 @@ HeroCostumes.MESHES = table.freeze({
 	["rbxassetid://116753377442189"] = "",
 	-- Astrea's hair, our own: tools/make_astrea_hair_ugc.py (assets/hair/astrea_hair_ugc.blend).
 	["rbxassetid://108726871571153"] = "",
+	-- Edis's hair (head part), our own: EdisHair in tools/make_edis_hair_ugc.py (assets/hair/edis_hair_ugc.blend).
+	["rbxassetid://95018278281793"] = "",
+	-- Edis's hair (back fall), our own: EdisBackHair in tools/make_edis_hair_ugc.py (assets/hair/edis_hair_ugc.blend).
+	["rbxassetid://75343037988699"] = "",
 } :: { [string]: string })
 
 -- Avatar hair accessory placement: a piece centred so the accessory's HairAttachment meets
@@ -966,6 +970,82 @@ do
 		piece("BootSoleL", "LeftFoot", { 1.1, 0.07, 1.28 }, { 0, -0.13, -0.08 }, gold, METAL),
 		piece("BootSoleR", "RightFoot", { 1.1, 0.07, 1.28 }, { 0, -0.13, -0.08 }, gold, METAL),
 	}, "rbxassetid://139763198478294"))
+end
+
+-- 13. EDIS CALLEN (6★ Striker - Legendary Black-Leather Rogue) ---------------------------
+-- Rogue from her card art and render: long, wild, curly black hair, a cropped dark-brown leather
+-- jacket with a popped collar and fur-trimmed hem, a black sweetheart crop top with a buckled
+-- corset band, a bare midriff, a slung belt with pouches and a hanging tongue, a torn black coat
+-- tail, strapped black trousers, gold-rimmed knee guards and brown boots. Feminine body (Slim):
+-- the render's huge shoulder pads become flat seams so the shoulders stay narrow. Face: our own
+-- decal from assets/faces/make_edis_face.py. Hair: two Blender meshes, head and back fall
+-- (tools/make_edis_hair_ugc.py), so it can be longer than one mesh's triangle limit allows.
+do
+	local skin, hair, top, jacket, jacketDark = { 236, 200, 170 }, { 22, 20, 26 }, { 26, 24, 28 }, { 66, 48, 42 }, { 46, 36, 32 }
+	local pants, leather, fur, steel, gold, boot = { 32, 30, 34 }, { 84, 58, 42 }, { 156, 132, 100 }, { 150, 154, 162 }, { 180, 144, 72 }, { 58, 44, 38 }
+	table.insert(COSTUMES, costume("hero_edis", "Slim", {
+		Skin = skin, UpperTorso = skin, LowerTorso = pants, UpperArm = jacket, LowerArm = jacket, Hand = top,
+		UpperLeg = pants, LowerLeg = pants, Foot = boot,
+	}, {
+		-- Hair meshes: each centred on its export's bounding box and turned 180 degrees to undo
+		-- the importer's rotation.
+		piece("HairMesh", "Head", { 2.398, 2.972, 1.806 }, { 0.0013, -0.4191, 0.099 }, hair, with(LOOSE, {
+			Rotation = { 0, 180, 0 },
+			Mesh = { MeshId = "rbxassetid://95018278281793", Scale = { 0.01, 0.01, 0.01 } },
+		})),
+		piece("HairBackMesh", "Head", { 2.411, 4.223, 1.928 }, { -0.0009, -1.0643, 0.3998 }, hair, with(LOOSE, {
+			Rotation = { 0, 180, 0 },
+			Mesh = { MeshId = "rbxassetid://75343037988699", Scale = { 0.01, 0.01, 0.01 } },
+		})),
+		-- Black sweetheart crop top over a bare midriff, with a buckled corset band under the bust
+		piece("CropTop", "UpperTorso", { 2.04, 0.92, 1.04 }, { 0, 0.3, 0 }, top, { Material = "Fabric" }),
+		piece("Neckline", "UpperTorso", { 0.34, 0.34, 0.04 }, { 0, 0.66, -0.53 }, skin, { Rotation = { 0, 0, 45 } }),
+		piece("CorsetBand", "UpperTorso", { 2.06, 0.3, 1.06 }, { 0, -0.04, 0 }, top, { Material = "Fabric" }),
+		piece("CorsetBuckleA", "UpperTorso", { 0.3, 0.07, 0.04 }, { 0, 0.04, -0.55 }, steel, METAL),
+		-- Cropped open leather jacket: front panels, back, popped collar, fur-trimmed hem
+		piece("JacketL", "UpperTorso", { 0.55, 1.08, 1.08 }, { -0.75, 0.26, 0 }, jacket, { Material = "Fabric" }),
+		piece("JacketR", "UpperTorso", { 0.55, 1.08, 1.08 }, { 0.75, 0.26, 0 }, jacket, { Material = "Fabric" }),
+		piece("JacketBack", "UpperTorso", { 2.08, 1.08, 0.12 }, { 0, 0.26, 0.5 }, jacket, { Material = "Fabric" }),
+		piece("CollarBack", "UpperTorso", { 1.3, 0.4, 0.12 }, { 0, 0.96, 0.44 }, jacketDark, with(LOOSE, { Material = "Fabric", Rotation = { -12, 0, 0 } })),
+		piece("CollarL", "UpperTorso", { 0.12, 0.38, 0.5 }, { -0.64, 0.92, 0.12 }, jacketDark, with(LOOSE, { Material = "Fabric" })),
+		piece("CollarR", "UpperTorso", { 0.12, 0.38, 0.5 }, { 0.64, 0.92, 0.12 }, jacketDark, with(LOOSE, { Material = "Fabric" })),
+		piece("FurL", "UpperTorso", { 0.6, 0.16, 1.12 }, { -0.74, -0.3, 0 }, fur, { Material = "Fabric" }),
+		piece("FurR", "UpperTorso", { 0.6, 0.16, 1.12 }, { 0.74, -0.3, 0 }, fur, { Material = "Fabric" }),
+		-- Sleeves: flat shoulder seams (no pads), strap bands, darker cuffs over fingerless gloves
+		piece("ShoulderSeamL", "LeftUpperArm", { 1.04, 0.12, 1.04 }, { 0, 0.5, 0 }, jacketDark, { Material = "Fabric" }),
+		piece("ShoulderSeamR", "RightUpperArm", { 1.04, 0.12, 1.04 }, { 0, 0.5, 0 }, jacketDark, { Material = "Fabric" }),
+		piece("ArmStrapL", "LeftUpperArm", { 1.06, 0.1, 1.06 }, { 0, -0.05, 0 }, leather),
+		piece("ArmStrapR", "RightUpperArm", { 1.06, 0.1, 1.06 }, { 0, -0.05, 0 }, leather),
+		piece("CuffL", "LeftLowerArm", { 1.06, 0.3, 1.06 }, { 0, -0.3, 0 }, jacketDark, { Material = "Fabric" }),
+		piece("CuffR", "RightLowerArm", { 1.06, 0.3, 1.06 }, { 0, -0.3, 0 }, jacketDark, { Material = "Fabric" }),
+		-- Slung belt with a steel buckle, a hanging tongue and two pouches
+		piece("Belt", "LowerTorso", { 2.08, 0.18, 1.08 }, { 0, 0.06, 0 }, leather),
+		piece("BeltBuckle", "LowerTorso", { 0.28, 0.2, 0.06 }, { 0.22, 0.06, -0.56 }, steel, METAL),
+		piece("BeltTongue", "LowerTorso", { 0.16, 0.6, 0.05 }, { -0.06, -0.3, -0.57 }, leather, LOOSE),
+		piece("PouchL", "LowerTorso", { 0.34, 0.32, 0.22 }, { -0.6, -0.04, -0.62 }, leather),
+		piece("PouchR", "LowerTorso", { 0.34, 0.32, 0.22 }, { 0.6, -0.04, -0.62 }, leather),
+		-- Torn black coat tail: a back panel and side panels flaring out over the hips, tattered tips
+		piece("CoatTail", "LowerTorso", { 2.0, 2.3, 0.1 }, { 0, -1.2, 0.6 }, top, with(LOOSE, { Material = "Fabric", Rotation = { -9, 0, 0 } })),
+		piece("CoatSideL", "LowerTorso", { 0.1, 1.9, 0.85 }, { -1.06, -1.05, 0.22 }, top, with(LOOSE, { Material = "Fabric", Rotation = { 0, 0, -9 } })),
+		piece("CoatSideR", "LowerTorso", { 0.1, 1.9, 0.85 }, { 1.06, -1.05, 0.22 }, top, with(LOOSE, { Material = "Fabric", Rotation = { 0, 0, 9 } })),
+		piece("TatterA", "LowerTorso", { 0.08, 0.5, 0.6 }, { -0.65, -2.55, 0.8 }, top, with(WEDGE, LOOSE, { Material = "Fabric", Rotation = { 0, 90, 180 } })),
+		piece("TatterB", "LowerTorso", { 0.08, 0.6, 0.6 }, { 0.05, -2.6, 0.8 }, top, with(WEDGE, LOOSE, { Material = "Fabric", Rotation = { 0, 90, 180 } })),
+		piece("TatterC", "LowerTorso", { 0.08, 0.45, 0.6 }, { 0.68, -2.52, 0.8 }, top, with(WEDGE, LOOSE, { Material = "Fabric", Rotation = { 0, -90, 180 } })),
+		-- Strapped trousers, gold-rimmed knee guards
+		piece("ThighStrapL", "LeftUpperLeg", { 1.06, 0.1, 1.06 }, { 0, 0.15, 0 }, leather),
+		piece("ThighStrapR", "RightUpperLeg", { 1.06, 0.1, 1.06 }, { 0, 0.15, 0 }, leather),
+		piece("KneeRimL", "LeftLowerLeg", { 0.1, 0.52, 0.52 }, { 0, 0.4, -0.53 }, gold, with(METAL, { Shape = "Cylinder", Rotation = { 0, 90, 0 } })),
+		piece("KneeRimR", "RightLowerLeg", { 0.1, 0.52, 0.52 }, { 0, 0.4, -0.53 }, gold, with(METAL, { Shape = "Cylinder", Rotation = { 0, 90, 0 } })),
+		piece("KneePlateL", "LeftLowerLeg", { 0.1, 0.42, 0.42 }, { 0.04, 0, 0 }, jacketDark, with(METAL, { Shape = "Cylinder", RelativeTo = "KneeRimL" })),
+		piece("KneePlateR", "RightLowerLeg", { 0.1, 0.42, 0.42 }, { 0.04, 0, 0 }, jacketDark, with(METAL, { Shape = "Cylinder", RelativeTo = "KneeRimR" })),
+		-- Brown boots to mid-shin with a gold rim, dark soles
+		piece("BootShaftL", "LeftLowerLeg", { 1.06, 0.62, 1.06 }, { 0, -0.29, 0 }, boot),
+		piece("BootShaftR", "RightLowerLeg", { 1.06, 0.62, 1.06 }, { 0, -0.29, 0 }, boot),
+		piece("BootRimL", "LeftLowerLeg", { 1.08, 0.06, 1.08 }, { 0, 0.03, 0 }, gold, METAL),
+		piece("BootRimR", "RightLowerLeg", { 1.08, 0.06, 1.08 }, { 0, 0.03, 0 }, gold, METAL),
+		piece("BootSoleL", "LeftFoot", { 1.04, 0.07, 1.22 }, { 0, -0.13, -0.08 }, jacketDark),
+		piece("BootSoleR", "RightFoot", { 1.04, 0.07, 1.22 }, { 0, -0.13, -0.08 }, jacketDark),
+	}, "rbxassetid://124931739165024"))
 end
 
 HeroCostumes.List = table.freeze(COSTUMES)

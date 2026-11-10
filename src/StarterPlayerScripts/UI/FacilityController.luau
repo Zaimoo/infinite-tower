@@ -301,7 +301,7 @@ function Controller.new(gui: ScreenGui, getProfile: () -> any, remotes: Instance
 end
 
 --============================================================================
--- SECTION 1: HERO BANNER VIEWS ("CALL OF THE RIFT" 1★–5★, "A STAR'S ARRIVAL" 1★–7★)
+-- SECTION 1: HERO BANNER VIEWS ("CALL OF THE RIFT" 1★–6★, "A STAR'S ARRIVAL" 1★–7★)
 --============================================================================
 
 -- Per-banner look. Both views share one builder; portraits are built lazily the first time a
@@ -309,7 +309,7 @@ end
 local BANNER_VIEWS = {
 	CALL_OF_THE_RIFT = {
 		Name = "PermanentSummonView", Prefix = "Perm", Banner = HeroCatalog.PermanentBanner,
-		Tag = "PERMANENT HERO BANNER  ·  1★ – 5★", TitleColor = Color3.fromRGB(250, 204, 21), Stroke = Color3.fromRGB(120, 80, 0),
+		Tag = "PERMANENT HERO BANNER  ·  1★ – 6★", TitleColor = Color3.fromRGB(250, 204, 21), Stroke = Color3.fromRGB(120, 80, 0),
 		Gradient = { Color3.fromRGB(28, 19, 50), Color3.fromRGB(20, 14, 36), Color3.fromRGB(12, 9, 22) },
 	},
 	A_STARS_ARRIVAL = {

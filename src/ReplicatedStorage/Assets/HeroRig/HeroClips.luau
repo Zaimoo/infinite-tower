@@ -678,6 +678,7 @@ local OVERRIDE_WEAPON: { [string]: string } = {
 	hero_archon = "DAGGERS",
 	hero_solaris = "STAFF",
 	hero_astrea = "BOW",
+	hero_edis = "DAGGERS",
 }
 
 local function signature(duration: number, keys: { { any } }, markers: { [string]: number }): Clip
@@ -902,6 +903,45 @@ do
 			{ 0.85, merge(tear, { Waist = { -16, 0, 0 } }) },
 			{ 1, p.Crouched },
 		}, { Release = 0.62 }),
+	}
+end
+
+-- Edis (DAGGERS): Umbral Crosscut raises both blades crossed, then rips them down and apart in
+-- an X. Midnight Requiem coils low with the blades crossed at her chest, then spins them out wide
+-- through the crowd and settles into a low follow-through. Idle is her aloof guard from the art:
+-- weight on the back leg with the front knee turned in, waist turned a little away, head turned
+-- back towards the enemy, both daggers held low and out at her sides with the blades angled down.
+do
+	local p = WeaponPoses.DAGGERS
+	local crossed = merge(STANCE, { Waist = { 8, 0, 0 }, LeftShoulder = { 150, 0, 25 }, RightShoulder = { 150, 0, -25 }, LeftElbow = { 30, 0, 0 }, RightElbow = { 30, 0, 0 }, RootOffset = { 0, 0.1, 0 } })
+	local rip = merge(p.Crouched, { Waist = { -22, 0, 0 }, LeftShoulder = { 40, 0, -60 }, RightShoulder = { 40, 0, 60 }, LeftElbow = { 10, 0, 0 }, RightElbow = { 10, 0, 0 }, RootOffset = { 0, -0.35, 0 } })
+	local coil = merge(p.Crouched, { Waist = { -10, 50, 0 }, LeftShoulder = { 80, 0, 40 }, RightShoulder = { 80, 0, -40 }, LeftElbow = { 70, 0, 0 }, RightElbow = { 70, 0, 0 }, RootOffset = { 0, -0.4, 0 } })
+	local fling = merge(p.Crouched, { Waist = { -14, -60, 0 }, LeftShoulder = { 90, 0, -85 }, RightShoulder = { 90, 0, 85 }, LeftElbow = { 5, 0, 0 }, RightElbow = { 5, 0, 0 }, RootOffset = { 0, -0.3, 0 } })
+	local aloof: Pose = {
+		Waist = { -4, -12, 0 }, Neck = { -3, 14, 2 },
+		LeftShoulder = { 18, 0, -30 }, LeftElbow = { 45, 0, 0 }, LeftWrist = { -60, 0, 0 },
+		RightShoulder = { 14, 0, 26 }, RightElbow = { 40, 0, 0 }, RightWrist = { -60, 0, 0 },
+		LeftHip = { 12, 4, -5 }, LeftKnee = { -18, 0, 0 }, LeftAnkle = { 6, 0, 5 },
+		RightHip = { -4, 0, 7 }, RightKnee = { -10, 0, 0 }, RightAnkle = { 14, 0, -7 },
+		RootOffset = { 0, -0.08, 0 },
+	}
+	Overrides.hero_edis = {
+		Idle = breathe(aloof, 3.4),
+		AttackSpecial = signature(0.75, {
+			{ 0, p.Crouched },
+			{ 0.3, crossed },
+			{ 0.55, rip },
+			{ 0.8, merge(rip, { Waist = { -16, 0, 0 } }) },
+			{ 1, p.Crouched },
+		}, { Release = 0.55 }),
+		AttackSkill = signature(1.0, {
+			{ 0, p.Crouched },
+			{ 0.3, coil },
+			{ 0.55, merge(fling, { Waist = { -12, 0, 0 } }) },
+			{ 0.7, fling },
+			{ 0.85, merge(fling, { Waist = { -20, -30, 0 }, RootOffset = { 0, -0.45, 0 } }) },
+			{ 1, p.Crouched },
+		}, { Release = 0.55 }),
 	}
 end
 

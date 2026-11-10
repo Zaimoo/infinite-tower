@@ -178,6 +178,14 @@ SkillVfxCatalog.Heroes = table.freeze({
 		Skill = { Style = "TEMPEST", Radius = 12, Slashes = 6, Impact = 4, Implode = true, Shake = 0.3 },
 	},
 
+	-- Ravenclaw Cut / Umbral Crosscut / Midnight Requiem: amber steel on smoky black.
+	hero_edis = {
+		Palette = { Primary = rgb(255, 176, 86), Secondary = rgb(48, 40, 56), Core = rgb(255, 238, 205) },
+		Basic = { Style = "SLASH", Scale = 0.9, Impact = 1.3 },
+		Special = { Style = "CROSS", Scale = 1.25, Impact = 2.1 },
+		Skill = { Style = "TEMPEST", Radius = 12, Slashes = 10, Impact = 3.6, Shake = 0.28 },
+	},
+
 	-- Miner ------------------------------------------------------------------------------------
 	-- Pickaxe Cleave / Resonance Tremor / Crystalline Excavation: crystal cyan and stone.
 	hero_catio = {
