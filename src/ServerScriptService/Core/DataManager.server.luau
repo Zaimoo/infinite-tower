@@ -359,12 +359,10 @@ function DataManager.CreateHeroFromSeed(seedId: string, forceQuality: number?): 
 end
 
 local function createDefaultPlayerProfile(): PlayerProfile
-	local hanUUID, hanHero = DataManager.CreateHeroFromSeed("hero_han", 1.05)
-	hanHero.Assignment = "SQUAD_SLOT_1"
-	hanHero.Locked = true
-
-	local jennaUUID, jennaHero = DataManager.CreateHeroFromSeed("hero_jenna", 1.00)
-	jennaHero.Assignment = "BENCHED" -- squad slot 2 starts locked behind the Fortress Tree
+	-- Jenna leads the starting squad. Han was the starter until he became Mythical (HeroCatalog).
+	local jennaUUID, jennaHero = DataManager.CreateHeroFromSeed("hero_jenna", 1.05)
+	jennaHero.Assignment = "SQUAD_SLOT_1"
+	jennaHero.Locked = true
 
 	local catioUUID, catioHero = DataManager.CreateHeroFromSeed("hero_catio", 1.02)
 	catioHero.Assignment = "BENCHED"
@@ -384,9 +382,6 @@ local function createDefaultPlayerProfile(): PlayerProfile
 
 	jennaHero.EquippedArtifactUUID = bowUUID
 	bowArt.EquippedHeroUUID = jennaUUID
-
-	hanHero.EquippedArtifactUUID = daggerUUID
-	daggerArt.EquippedHeroUUID = hanUUID
 
 	catioHero.EquippedArtifactUUID = axeUUID
 	axeArt.EquippedHeroUUID = catioUUID
@@ -413,7 +408,6 @@ local function createDefaultPlayerProfile(): PlayerProfile
 		HeroLimitedFeaturedGuarantee = false, -- 50/50: set when an Exalted+ pull is not the featured hero
 
 		Heroes = {
-			[hanUUID] = hanHero,
 			[jennaUUID] = jennaHero,
 			[catioUUID] = catioHero,
 		},
@@ -428,7 +422,7 @@ local function createDefaultPlayerProfile(): PlayerProfile
 			[f4_UUID] = f4_Art,
 			[f5_UUID] = f5_Art,
 		},
-		DeployedSquadOrder = { hanUUID },
+		DeployedSquadOrder = { jennaUUID },
 		Facilities = {
 			GuardPost = createDefaultFacility(1),
 			Market = createDefaultFacility(0),
@@ -1533,6 +1527,37 @@ FacilityInteractEvent.OnServerEvent:Connect(function(player: Player, action: any
 		DataManager.SyncProfile(player)
 	end
 end)
+
+-- Studio-only chat command: `/summon <hero>` adds that hero to the caller's profile for free.
+-- `<hero>` is a HeroCatalog seed id, with or without the `hero_` prefix (`/summon edis`).
+if game:GetService("RunService"):IsStudio() then
+	local summonCommand = Instance.new("TextChatCommand")
+	summonCommand.Name = "DevSummonHero"
+	summonCommand.PrimaryAlias = "/summon"
+	summonCommand.Parent = game:GetService("TextChatService")
+	summonCommand.Triggered:Connect(function(source: TextSource, message: string)
+		local player = Players:GetPlayerByUserId(source.UserId)
+		local profile = player and ActiveProfiles[player]
+		if not player or not profile then return end
+
+		local arg = string.lower(string.match(message, "^%S+%s+(%S+)") or "")
+		local seedId = if HeroCatalog.Seeds[arg] then arg else "hero_" .. arg
+		if arg == "" or not HeroCatalog.Seeds[seedId] then
+			DataManager.SendToast(player, "Usage: /summon <hero>, e.g. /summon edis", "WARN")
+			return
+		end
+		local heroCap = InventoryCapacity.HeroCap(profile.FortressTree)
+		if InventoryCapacity.HeroCount(profile) + 1 > heroCap then
+			DataManager.SendToast(player, string.format("Hero inventory full! Maximum capacity is %d.", heroCap), "WARN")
+			return
+		end
+
+		local uuid, hero = DataManager.CreateHeroFromSeed(seedId)
+		profile.Heroes[uuid] = hero
+		DataManager.SendToast(player, string.format("[Dev] Summoned %s", hero.DisplayName), "SUCCESS")
+		DataManager.SyncProfile(player)
+	end)
+end
 
 function DataManager.GetMarketMultiplier(player: Player): number
 	local profile = ActiveProfiles[player]

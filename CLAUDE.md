@@ -28,7 +28,7 @@ Also follow `AGENTS.md`. Before working on a topic, use the matching `roblox-*` 
 
 ## Core design facts
 
-- **Heroes** have combat stats plus a labor output used by facilities. Hero banners: *Call of the Rift* (permanent, 1★–6★) and *A Star's Arrival* (limited, 1★–7★). Call of the Rift costs 100 Gems for one pull or 900 for ten, and A Star's Arrival 200 or 1,800 (`Cost1X`/`Cost10X` on each banner). The level cap is 50.
+- **Heroes** have combat stats plus a labor output used by facilities. Hero banners: *Call of the Rift* (permanent, 1★–7★) and *A Star's Arrival* (limited, 1★–7★). Call of the Rift costs 100 Gems for one pull or 900 for ten, and A Star's Arrival 200 or 1,800 (`Cost1X`/`Cost10X` on each banner). The level cap is 50.
 - **Archetypes** set role, base stats, attack interval, range, labor and weapon type. Each hero has its own Basic/Special/Skill kit (`ArchetypeCombatSkills`, keyed by hero, falling back to archetype). Basic and Special attacks charge a 0–100 skill gauge.
 - **Artifacts are weapons.** Each hero equips one, and each archetype allows exactly one weapon type:
 
