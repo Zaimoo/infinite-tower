@@ -359,12 +359,10 @@ function DataManager.CreateHeroFromSeed(seedId: string, forceQuality: number?): 
 end
 
 local function createDefaultPlayerProfile(): PlayerProfile
-	local hanUUID, hanHero = DataManager.CreateHeroFromSeed("hero_han", 1.05)
-	hanHero.Assignment = "SQUAD_SLOT_1"
-	hanHero.Locked = true
-
-	local jennaUUID, jennaHero = DataManager.CreateHeroFromSeed("hero_jenna", 1.00)
-	jennaHero.Assignment = "BENCHED" -- squad slot 2 starts locked behind the Fortress Tree
+	-- Jenna leads the starting squad. Han was the starter until he became Mythical (HeroCatalog).
+	local jennaUUID, jennaHero = DataManager.CreateHeroFromSeed("hero_jenna", 1.05)
+	jennaHero.Assignment = "SQUAD_SLOT_1"
+	jennaHero.Locked = true
 
 	local catioUUID, catioHero = DataManager.CreateHeroFromSeed("hero_catio", 1.02)
 	catioHero.Assignment = "BENCHED"
@@ -384,9 +382,6 @@ local function createDefaultPlayerProfile(): PlayerProfile
 
 	jennaHero.EquippedArtifactUUID = bowUUID
 	bowArt.EquippedHeroUUID = jennaUUID
-
-	hanHero.EquippedArtifactUUID = daggerUUID
-	daggerArt.EquippedHeroUUID = hanUUID
 
 	catioHero.EquippedArtifactUUID = axeUUID
 	axeArt.EquippedHeroUUID = catioUUID
@@ -413,7 +408,6 @@ local function createDefaultPlayerProfile(): PlayerProfile
 		HeroLimitedFeaturedGuarantee = false, -- 50/50: set when an Exalted+ pull is not the featured hero
 
 		Heroes = {
-			[hanUUID] = hanHero,
 			[jennaUUID] = jennaHero,
 			[catioUUID] = catioHero,
 		},
@@ -428,7 +422,7 @@ local function createDefaultPlayerProfile(): PlayerProfile
 			[f4_UUID] = f4_Art,
 			[f5_UUID] = f5_Art,
 		},
-		DeployedSquadOrder = { hanUUID },
+		DeployedSquadOrder = { jennaUUID },
 		Facilities = {
 			GuardPost = createDefaultFacility(1),
 			Market = createDefaultFacility(0),
