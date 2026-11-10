@@ -1800,6 +1800,11 @@ local function heroSkillContext(simHero: SimHero, now: number): HeroSkillEffects
 				Encounters:Taunt(mob, attacker, duration, now)
 			end
 		end,
+		-- Event Horizon's pull: walk the mob along the ground (stops at walls and ledges) and
+		-- drop its current path so it re-plans from where it landed.
+		Pull = function(mob: any, destination: Vector3)
+			HeroNavigation.Displace(mob, destination)
+		end,
 	}
 end
 

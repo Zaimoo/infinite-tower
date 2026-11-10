@@ -221,14 +221,39 @@ local function recentHits(kind: string, center: Vector3, radius: number, since: 
 	return found
 end
 
-local function playAttackVfx(rig: Model, animator: any, meta: any, cue: any)
+-- Named cast points a recipe's Origin can ask for (SkillVfxCatalog), live while the clip moves.
+local function castPoint(rig: Model, name: string): Vector3?
+	if name == "LEFT_HAND" then
+		local hand = rig:FindFirstChild("LeftHand")
+		local grip = hand and hand:FindFirstChild("LeftGripAttachment")
+		if grip and grip:IsA("Attachment") then
+			return grip.WorldPosition
+		end
+	elseif name == "STAFF_TIP" then
+		-- WeaponVfx puts VfxTip on every equipped weapon's head; prefabs may carry their own Tip.
+		local weapon = rig:FindFirstChild(HeroSockets.EQUIPPED_NAME)
+		local tip = weapon and (weapon:FindFirstChild("VfxTip", true) or weapon:FindFirstChild("Tip", true))
+		if tip and tip:IsA("Attachment") then
+			return tip.WorldPosition
+		end
+	end
+	return nil
+end
+
+local function attackArgs(rig: Model, animator: any, meta: any, cue: any): any
 	local targetNetId = cue.TargetNetId
 	local ownerUserId = meta and meta.OwnerUserId
-	SkillVfx.Play(CombatVfxPool, {
+	return {
 		HeroId = meta and meta.TemplateId,
 		WeaponType = animator.WeaponType,
 		Cue = cue,
 		Origin = shotOrigin(rig),
+		OriginOf = function(name: string): Vector3?
+			if not rig.Parent then
+				return nil
+			end
+			return castPoint(rig, name)
+		end,
 		Target = function(): Vector3
 			local target = targetNetId and VisualNodesByNetId[targetNetId]
 			if target and target.RootPart.Parent then
@@ -255,7 +280,16 @@ local function playAttackVfx(rig: Model, animator: any, meta: any, cue: any)
 		Shake = if meta and meta.OwnerUserId == LocalPlayer.UserId then function(magnitude: number)
 			CombatFeedback:ScreenShake(magnitude)
 		end else nil,
-	})
+	}
+end
+
+local function playAttackVfx(rig: Model, animator: any, meta: any, cue: any)
+	SkillVfx.Play(CombatVfxPool, attackArgs(rig, animator, meta, cue))
+end
+
+-- Wind-up effects at an attack clip's Charge marker (cosmetic; the server ignores it).
+local function playChargeVfx(rig: Model, animator: any, meta: any, cue: any)
+	SkillVfx.PlayCharge(CombatVfxPool, attackArgs(rig, animator, meta, cue))
 end
 
 local function playComaVFX(node: any)
@@ -619,6 +653,11 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 				local ok, err = pcall(playAttackVfx, rig, animator, meta, action.Data)
 				if not ok then
 					warn(`CombatVfx: attack effect failed: {err}`)
+				end
+			elseif marker == "Charge" and action.Data then
+				local ok, err = pcall(playChargeVfx, rig, animator, meta, action.Data)
+				if not ok then
+					warn(`CombatVfx: charge effect failed: {err}`)
 				end
 			end
 			if animator.WeaponType ~= "BOW" then

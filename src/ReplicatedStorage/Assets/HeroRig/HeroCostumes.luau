@@ -84,6 +84,8 @@ HeroCostumes.MESHES = table.freeze({
 	["rbxassetid://115542883011217"] = "",
 	-- Diran's hair, our own: tools/make_diran_hair_ugc.py (assets/hair/diran_hair_ugc.blend).
 	["rbxassetid://95241080213006"] = "",
+	-- Vane's hair, our own: tools/make_vane_hair_ugc.py (assets/hair/vane_hair_ugc.blend).
+	["rbxassetid://121356449188059"] = "",
 } :: { [string]: string })
 
 -- Avatar hair accessory placement: a piece centred so the accessory's HairAttachment meets
@@ -1278,6 +1280,80 @@ do
 		piece("BootToeL", "LeftFoot", { 1.06, 0.18, 0.44 }, { 0, -0.04, -0.42 }, steel, METAL),
 		piece("BootToeR", "RightFoot", { 1.06, 0.18, 0.44 }, { 0, -0.04, -0.42 }, steel, METAL),
 	}, "rbxassetid://106105764225054"))
+end
+
+-- 17. VANE (6★ Scholar - Legendary Void Archmage) ------------------------------------------
+-- From his reference art: a deep-purple archmage's coat with gold filigree edges over a black
+-- undershirt, a high standing collar, a broad double mantle on the shoulders and across the back,
+-- wide bell sleeves with gold rims, a violet chest tabard under a gold chain and amethyst pendant,
+-- a violet sash with a gold diamond buckle, a long open over-robe that flares at the back and
+-- sides over violet front tabards, and dark purple boots with gold straps.
+-- Gold earrings. The crystal staff and the floating sigil in the art are the STAFF weapon and
+-- VFX, not costume. Face: our own decal from assets/faces/make_vane_face.py.
+-- Hair: our Blender mesh (tools/make_vane_hair_ugc.py).
+do
+	local skin, hair, robe, violet = { 226, 178, 138 }, { 120, 50, 200 }, { 70, 28, 110 }, { 130, 64, 180 }
+	local dark, gold, gem, boot = { 34, 24, 44 }, { 200, 160, 70 }, { 190, 100, 255 }, { 52, 30, 66 }
+	local FABRIC = { Material = "Fabric" }
+	table.insert(COSTUMES, costume("hero_vane", "Standard", {
+		Skin = skin, UpperTorso = dark, LowerTorso = robe, UpperArm = robe, LowerArm = robe, Hand = skin,
+		UpperLeg = dark, LowerLeg = boot, Foot = boot,
+	}, {
+		-- Hair mesh: centred on the export's bounding box and turned 180 degrees to undo the
+		-- importer's rotation.
+		piece("HairMesh", "Head", { 1.773, 1.309, 1.756 }, { -0.0042, 0.3519, 0.071 }, hair, with(LOOSE, {
+			Rotation = { 0, 180, 0 },
+			Mesh = { MeshId = "rbxassetid://121356449188059", Scale = { 0.01, 0.01, 0.01 } },
+		})),
+		-- Open coat over the black undershirt, gold edges down the opening
+		piece("CoatL", "UpperTorso", { 0.72, 1.62, 1.08 }, { -0.66, 0, 0 }, robe, FABRIC),
+		piece("CoatR", "UpperTorso", { 0.72, 1.62, 1.08 }, { 0.66, 0, 0 }, robe, FABRIC),
+		piece("CoatBack", "UpperTorso", { 2.08, 1.62, 0.2 }, { 0, 0, 0.48 }, robe, FABRIC),
+		piece("CoatTrimL", "UpperTorso", { 0.06, 1.62, 0.08 }, { -0.3, 0, -0.55 }, gold, METAL),
+		piece("CoatTrimR", "UpperTorso", { 0.06, 1.62, 0.08 }, { 0.3, 0, -0.55 }, gold, METAL),
+		-- High standing collar, flared back from the neck
+		piece("CollarBack", "UpperTorso", { 1.4, 0.55, 0.12 }, { 0, 0.98, 0.5 }, violet, with(LOOSE, FABRIC, { Rotation = { -12, 0, 0 } })),
+		piece("CollarL", "UpperTorso", { 0.12, 0.5, 0.6 }, { -0.64, 0.94, 0.18 }, violet, with(LOOSE, FABRIC, { Rotation = { 0, 0, 12 } })),
+		piece("CollarR", "UpperTorso", { 0.12, 0.5, 0.6 }, { 0.64, 0.94, 0.18 }, violet, with(LOOSE, FABRIC, { Rotation = { 0, 0, -12 } })),
+		-- Violet chest tabard under a gold V chain and an amethyst pendant
+		piece("ChestTabard", "UpperTorso", { 0.54, 1.2, 0.05 }, { 0, -0.15, -0.53 }, violet, FABRIC),
+		piece("ChainL", "UpperTorso", { 0.42, 0.05, 0.06 }, { -0.15, 0.48, -0.57 }, gold, with(METAL, { Rotation = { 0, 0, -30 } })),
+		piece("ChainR", "UpperTorso", { 0.42, 0.05, 0.06 }, { 0.15, 0.48, -0.57 }, gold, with(METAL, { Rotation = { 0, 0, 30 } })),
+		piece("Pendant", "UpperTorso", { 0.22, 0.22, 0.06 }, { 0, 0.32, -0.58 }, gold, with(METAL, { Rotation = { 0, 0, 45 } })),
+		piece("PendantGem", "UpperTorso", { 0.12, 0.12, 0.05 }, { 0, 0.32, -0.62 }, gem, with(NEON, { Rotation = { 0, 0, 45 } })),
+		-- Broad mantle: a gold-rimmed capelet on each shoulder and a panel across the back
+		piece("MantleL", "LeftUpperArm", { 1.3, 0.24, 1.3 }, { -0.08, 0.46, 0 }, robe, with(FABRIC, { Rotation = { 0, 0, 12 } })),
+		piece("MantleTrimL", "LeftUpperArm", { 1.2, 0.06, 1.32 }, { -0.06, -0.14, 0 }, gold, with(METAL, { RelativeTo = "MantleL" })),
+		piece("MantleR", "RightUpperArm", { 1.3, 0.24, 1.3 }, { 0.08, 0.46, 0 }, robe, with(FABRIC, { Rotation = { 0, 0, -12 } })),
+		piece("MantleTrimR", "RightUpperArm", { 1.2, 0.06, 1.32 }, { 0.06, -0.14, 0 }, gold, with(METAL, { RelativeTo = "MantleR" })),
+		piece("MantleBack", "UpperTorso", { 2.2, 0.9, 0.12 }, { 0, 0.35, 0.62 }, robe, with(LOOSE, FABRIC, { Rotation = { -8, 0, 0 } })),
+		piece("MantleBackTrim", "UpperTorso", { 2.22, 0.06, 0.14 }, { 0, -0.44, 0 }, gold, with(LOOSE, METAL, { RelativeTo = "MantleBack" })),
+		-- Wide bell sleeves with gold rims
+		piece("SleeveL", "LeftLowerArm", { 1.3, 0.5, 1.3 }, { 0, -0.24, 0 }, robe, with(LOOSE, FABRIC)),
+		piece("SleeveRimL", "LeftLowerArm", { 1.32, 0.06, 1.32 }, { 0, -0.46, 0 }, gold, with(LOOSE, METAL)),
+		piece("SleeveR", "RightLowerArm", { 1.3, 0.5, 1.3 }, { 0, -0.24, 0 }, robe, with(LOOSE, FABRIC)),
+		piece("SleeveRimR", "RightLowerArm", { 1.32, 0.06, 1.32 }, { 0, -0.46, 0 }, gold, with(LOOSE, METAL)),
+		-- Violet sash with a gold diamond buckle and an amethyst
+		piece("Sash", "LowerTorso", { 2.08, 0.32, 1.08 }, { 0, 0.02, 0 }, violet, FABRIC),
+		piece("SashTrim", "LowerTorso", { 2.1, 0.05, 1.1 }, { 0, -0.15, 0 }, gold, METAL),
+		piece("Buckle", "LowerTorso", { 0.34, 0.34, 0.08 }, { 0, 0.02, -0.58 }, gold, with(METAL, { Rotation = { 0, 0, 45 } })),
+		piece("BuckleGem", "LowerTorso", { 0.16, 0.16, 0.06 }, { 0, 0.02, -0.63 }, gem, with(NEON, { Rotation = { 0, 0, 45 } })),
+		-- Long open over-robe: a flared back panel with a gold hem, flared side panels, violet front tabards
+		piece("RobeBack", "LowerTorso", { 2.1, 2.7, 0.12 }, { 0, -1.45, 0.6 }, robe, with(LOOSE, FABRIC, { Rotation = { -10, 0, 0 } })),
+		piece("RobeBackHem", "LowerTorso", { 2.12, 0.08, 0.14 }, { 0, -1.31, 0 }, gold, with(LOOSE, METAL, { RelativeTo = "RobeBack" })),
+		piece("RobeSideL", "LowerTorso", { 0.12, 2.5, 1.1 }, { -1.1, -1.35, 0.05 }, robe, with(LOOSE, FABRIC, { Rotation = { 0, 0, -8 } })),
+		piece("RobeSideR", "LowerTorso", { 0.12, 2.5, 1.1 }, { 1.1, -1.35, 0.05 }, robe, with(LOOSE, FABRIC, { Rotation = { 0, 0, 8 } })),
+		piece("TabardL", "LowerTorso", { 0.5, 2.0, 0.06 }, { -0.3, -1.1, -0.58 }, violet, with(LOOSE, FABRIC)),
+		piece("TabardR", "LowerTorso", { 0.5, 2.0, 0.06 }, { 0.3, -1.1, -0.58 }, violet, with(LOOSE, FABRIC)),
+		-- Boots: gold shin straps and gold soles
+		piece("BootStrapL", "LeftLowerLeg", { 1.08, 0.1, 1.08 }, { 0, -0.3, 0 }, gold, METAL),
+		piece("BootStrapR", "RightLowerLeg", { 1.08, 0.1, 1.08 }, { 0, -0.3, 0 }, gold, METAL),
+		piece("BootSoleL", "LeftFoot", { 1.1, 0.07, 1.28 }, { 0, -0.13, -0.08 }, gold, METAL),
+		piece("BootSoleR", "RightFoot", { 1.1, 0.07, 1.28 }, { 0, -0.13, -0.08 }, gold, METAL),
+		-- Gold earrings (1.2-head units)
+		piece("EarringL", "Head", { 0.07, 0.16, 0.07 }, { -0.61, -0.22, 0.02 }, gold, METAL),
+		piece("EarringR", "Head", { 0.07, 0.16, 0.07 }, { 0.61, -0.22, 0.02 }, gold, METAL),
+	}, "rbxassetid://76929313677044"))
 end
 
 HeroCostumes.List = table.freeze(COSTUMES)

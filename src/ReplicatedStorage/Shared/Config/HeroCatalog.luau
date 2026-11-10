@@ -53,8 +53,7 @@ HeroCatalog.PermanentBanner = {
 		[3] = 0.0470, -- 4.7% Rare Catio
 		[4] = 0.0165, -- 1.65% Superior
 		[5] = 0.0033, -- 0.33% Exalted (Ignis or Diran)
-		-- 0.15% Legendary Edis: the same Gems per copy as Solaris on A Star's Arrival (0.30% at twice the price).
-		[6] = 0.0015,
+		[6] = 0.0015, -- 0.15% Legendary (Edis or Vane): the tier's heroes split its rate evenly
 		-- 0.03% Mythical Han: the same Gems per copy as Astrea on A Star's Arrival (0.06% at twice the price).
 		[7] = 0.0003,
 	},
@@ -70,6 +69,7 @@ HeroCatalog.PermanentBanner = {
 	HeroesPoolByStar = {
 		[1] = { "hero_gide", "hero_shurn" },
 		[5] = { "hero_ignis", "hero_diran" },
+		[6] = { "hero_edis", "hero_vane" },
 	},
 }
 
@@ -292,6 +292,27 @@ HeroCatalog.Seeds = {
 		PreferredFacility = "FACILITY_TRAINING",
 		Color = Color3.fromRGB(214, 150, 82),
 	},
+	-- Valerius "Vane": a void archmage who outlived a wiped Master's account on the deep floors.
+	-- Long reach and high ATK, traded for the frailest HP of the Legendaries.
+	hero_vane = {
+		HeroId = "hero_vane",
+		DisplayName = "Vane",
+		BannerOrigin = "STANDARD",
+		DropWeight = 0.5,
+		BaseStar = 1,
+		Rarity = 6,
+		Archetype = "Scholar",
+		BaseHP_1Star = 220,
+		BaseATK_1Star = 60,
+		NativeHP = 119856,
+		NativeATK = 32688,
+		AttackInterval = 1.00,
+		AttackRange = 32,
+		BaseLabor_1Star = 20.0,
+		NativeLabor = 79.0,
+		PreferredFacility = "FACILITY_TRAINING",
+		Color = Color3.fromRGB(150, 70, 230),
+	},
 
 	-- ------------------------------------------------------------------------
 	-- A STAR'S ARRIVAL (Limited Time Banner: 1★ to 7★)
@@ -458,7 +479,7 @@ HeroCatalog.PoolByStar = {
 	[3] = { "hero_catio", "hero_eolka" },
 	[4] = { "hero_morrigan" },
 	[5] = { "hero_ignis", "hero_diran", "hero_archon", "hero_valeria" },
-	[6] = { "hero_edis", "hero_solaris" },
+	[6] = { "hero_edis", "hero_vane", "hero_solaris" },
 	[7] = { "hero_han", "hero_astrea" },
 }
 

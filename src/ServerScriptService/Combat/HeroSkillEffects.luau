@@ -23,6 +23,10 @@ export type Context = {
 	-- Tower mobs: damage left after shields, and support cast interrupts (TowerEncounterRuntime:OnMobHit).
 	Absorb: ((mob: any, amount: number) -> number)?,
 	Taunt: ((mob: any, attacker: any, duration: number) -> ())?,
+	-- Moves a mob towards `destination` along walkable ground, stopping at walls and ledges
+	-- (HeroNavigation.Displace). Without it, pull effects deal their damage but move nobody
+	-- (duels: heroes are never displaced).
+	Pull: ((mob: any, destination: Vector3) -> ())?,
 }
 
 -- What the caller knows about the attack. Impact (from HeroImpactQueue) carries FloorId and
@@ -77,6 +81,75 @@ local function healAlly(ctx: Context, ally: any, amount: number, kind: string)
 	ctx.Broadcast(ally, kind, ally.Position, amount, false, false)
 end
 
+-- Bosses, raid bosses and floor Alphas hold their ground against pulls (vane-hero-plan.md §3).
+local function pullable(mob: any): boolean
+	if mob.Role == "BOSS" or mob.RaidBoss or mob.Dormant then
+		return false
+	end
+	local enemyId = mob.EnemyId or mob.SpecId
+	return not (type(enemyId) == "string" and string.sub(enemyId, 1, 6) == "alpha_")
+end
+
+-- Where a pull of `studs` moves a mob at `from` towards `center`: straight in, never closer than
+-- `core` studs (so a pack bunches around the centre instead of stacking on one point).
+function HeroSkillEffects.PullDestination(from: Vector3, center: Vector3, studs: number, core: number): Vector3?
+	local flat = Vector3.new(center.X - from.X, 0, center.Z - from.Z)
+	local distance = flat.Magnitude
+	local travel = math.min(studs, distance - core)
+	if travel <= 0.05 then
+		return nil
+	end
+	return from + flat.Unit * travel
+end
+
+-- Distance along and across the flat line from `origin` heading `direction` (a unit vector).
+function HeroSkillEffects.LineOffset(origin: Vector3, direction: Vector3, point: Vector3): (number, number)
+	local dx, dz = point.X - origin.X, point.Z - origin.Z
+	local along = dx * direction.X + dz * direction.Z
+	local across = math.abs(dx * direction.Z - dz * direction.X)
+	return along, across
+end
+
+-- BEAM_LINE: a straight beam from the attacker through the target, `length` studs long and
+-- `width` wide, that hits every other eligible mob on it.
+local function beamLine(ctx: Context, hit: Hit, length: number, width: number, amount: number)
+	local origin = hit.Attacker.Position
+	local flat = Vector3.new(hit.Center.X - origin.X, 0, hit.Center.Z - origin.Z)
+	if flat.Magnitude < 1e-3 then
+		return
+	end
+	local direction = flat.Unit
+	for _, mob in ctx.Mobs do
+		if mob ~= hit.Primary and eligible(ctx, hit, mob) and math.abs(origin.Y - mob.Position.Y) <= Y_TOLERANCE then
+			local along, across = HeroSkillEffects.LineOffset(origin, direction, mob.Position)
+			if along >= 0 and along <= length and across <= width / 2 then
+				damageMob(ctx, hit, mob, amount)
+			end
+		end
+	end
+end
+
+-- SINGULARITY: one tick of a black hole at the centre. Every other eligible mob in the radius
+-- takes its share of the splash, then every survivor in it (the primary too) is pulled inward.
+local function singularity(ctx: Context, hit: Hit, skill: any, amount: number)
+	local radius = skill.Radius or 16
+	local studs = skill.PullStudsPerTick or 0
+	local core = skill.CoreRadius or 3
+	for _, mob in ctx.Mobs do
+		if eligible(ctx, hit, mob) and near(mob, hit.Center, radius) then
+			if mob ~= hit.Primary then
+				damageMob(ctx, hit, mob, amount)
+			end
+			if ctx.Pull and studs > 0 and mob.IsAlive ~= false and (mob.CurrentHP or 1) > 0 and pullable(mob) then
+				local destination = HeroSkillEffects.PullDestination(mob.Position, hit.Center, studs, core)
+				if destination then
+					ctx.Pull(mob, Vector3.new(destination.X, mob.Position.Y, destination.Z))
+				end
+			end
+		end
+	end
+end
+
 -- Splash to every other eligible mob around the centre.
 local function splash(ctx: Context, hit: Hit, radius: number, amount: number)
 	for _, mob in ctx.Mobs do
@@ -107,6 +180,12 @@ local function resolveSkill(ctx: Context, hit: Hit, scale: number)
 	local atk = hit.Impact.Atk
 	local mult = hit.Impact.DamageMult
 	local first = hit.Tick == 1
+
+	-- Hero kits can name their own effect; everything else uses its archetype's.
+	if skill.Effect == "SINGULARITY" then
+		singularity(ctx, hit, skill, math.round(atk * mult * 0.6 * scale))
+		return
+	end
 
 	if archetype == "Vanguard" then
 		if not first then
@@ -196,6 +275,11 @@ local function resolveSpecial(ctx: Context, hit: Hit): number
 	local special = hit.Profile.Special
 	local archetype = attacker.Archetype
 	local atk = hit.Impact.Atk
+
+	if special.SecondaryEffect == "BEAM_LINE" then
+		beamLine(ctx, hit, special.SecondaryParam or 36, special.BeamWidth or 4, math.round(atk * (special.BeamDamage or 0.8)))
+		return 1
+	end
 
 	if archetype == "Healer" then
 		if not ctx.Squad then

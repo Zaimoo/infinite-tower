@@ -141,6 +141,57 @@ do
 	local pierced = (if b.CurrentHP < 10000 then 1 else 0) + (if c.CurrentHP < 10000 then 1 else 0)
 	assert(pierced == 1 and a.CurrentHP == 10000, "pierce hits one other mob")
 
+	-- Vane's Singularity Lance (BEAM_LINE): every other mob on the 36-stud, 4-wide line from Vane
+	-- through the target, and nothing behind him, beside the line or past its end.
+	do
+		local vane = { NetId = 80, Owner = owner, Archetype = "Scholar", Position = Vector3.new(-10, 0, 0), MaxHP = 100 }
+		local vProfile = Skills.GetSkillProfile("hero_vane", "Scholar")
+		local target, onLine, edge, beside, behind, pastEnd = mob(31, 0), mob(32, 15), mob(33, 20), mob(34, 10), mob(35, -14), mob(36, 30)
+		edge.Position = Vector3.new(20, 0, 1.9)
+		beside.Position = Vector3.new(10, 0, 3)
+		ctx = context({ target, onLine, edge, beside, behind, pastEnd })
+		impact = { FloorId = 1, RoomGeneration = 1, Atk = 100, DamageMult = vProfile.Special.DamageMultiplier, Ticks = 1, Origin = vane.Position }
+		bonus = Effects.Resolve(ctx, { Impact = impact, Attacker = vane, Profile = vProfile, Tier = "SPECIAL", Tick = 1, Primary = target, Center = target.Position })
+		local lineDamage = math.round(100 * vProfile.Special.BeamDamage)
+		assert(bonus == 1 and target.CurrentHP == 10000, "the beam leaves the target to the primary hit")
+		assert(onLine.CurrentHP == 10000 - lineDamage and edge.CurrentHP == 10000 - lineDamage, "the beam hits every mob on the line")
+		assert(beside.CurrentHP == 10000 and behind.CurrentHP == 10000 and pastEnd.CurrentHP == 10000, "nothing beside, behind or past the beam")
+	end
+
+	-- Vane's Event Horizon (SINGULARITY): splash per tick, and every mob in the radius is dragged
+	-- in without overshooting the core; bosses and Alphas hold their ground; no Pull, no movement.
+	do
+		local vane = { NetId = 81, Owner = owner, Archetype = "Scholar", Position = Vector3.new(-20, 0, 0), MaxHP = 100 }
+		local vProfile = Skills.GetSkillProfile("hero_vane", "Scholar")
+		local skill = vProfile.Skill
+		local target, far, close, boss, alpha, outside = mob(41, 0), mob(42, 12), mob(43, 3.5), mob(44, -10), mob(45, 0), mob(46, 30)
+		alpha.Position = Vector3.new(0, 0, 10)
+		boss.Role = "BOSS"
+		alpha.EnemyId = "alpha_cinder_hound"
+		ctx = context({ target, far, close, boss, alpha, outside })
+		local pulls = {}
+		ctx.Pull = function(m, destination)
+			table.insert(pulls, m.NetId)
+			m.Position = destination
+		end
+		impact = { FloorId = 1, RoomGeneration = 1, Atk = 100, DamageMult = skill.DamageMultiplier, Ticks = skill.Ticks, Origin = vane.Position }
+		Effects.Resolve(ctx, { Impact = impact, Attacker = vane, Profile = vProfile, Tier = "SKILL", Tick = 1, Primary = target, Center = Vector3.new(0, 0, 0) })
+		local perTick = math.round(100 * skill.DamageMultiplier * 0.6 / skill.Ticks)
+		assert(far.CurrentHP == 10000 - perTick and target.CurrentHP == 10000, "splash per tick; the primary is left to the primary hit")
+		near(far.Position.X, 12 - skill.PullStudsPerTick, "a mob at the rim is dragged in by a tick's pull")
+		near(close.Position.X, skill.CoreRadius, "a pull never drags a mob past the core")
+		assert(boss.Position.X == -10 and alpha.Position.Z == 10, "bosses and Alphas hold their ground")
+		assert(outside.Position.X == 30 and outside.CurrentHP == 10000, "outside the radius is untouched")
+		assert(table.find(pulls, 41) == nil, "the target already inside the core is not moved")
+		ctx.Pull = nil
+		local before = far.Position
+		Effects.Resolve(ctx, { Impact = impact, Attacker = vane, Profile = vProfile, Tier = "SKILL", Tick = 2, Primary = target, Center = Vector3.new(0, 0, 0) })
+		assert(far.Position == before and far.CurrentHP == 10000 - perTick * 2, "without Pull the hole still damages but moves nobody")
+		local destination = Effects.PullDestination(Vector3.new(10, 0, 0), Vector3.new(0, 0, 0), 20, 3)
+		assert(destination and math.abs(destination.X - 3) < 1e-6, "pull destination clamps at the core")
+		assert(Effects.PullDestination(Vector3.new(2, 0, 0), Vector3.new(0, 0, 0), 2, 3) == nil, "no pull inside the core")
+	end
+
 	-- Vanguard ultimate: barrier and taunt once, on the first tick.
 	local vanguard = { NetId = 60, Owner = owner, Archetype = "Vanguard", Position = Vector3.new(0, 0, 0), MaxHP = 1000 }
 	local taunted = mob(21, 10)
