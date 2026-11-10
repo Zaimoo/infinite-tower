@@ -59,7 +59,6 @@ HeroCostumes.MESHES = table.freeze({
 	["rbxassetid://76088495641706"] = "",
 	-- Jenna's hair, our own: tools/make_jenna_hair_ugc.py (assets/hair/jenna_hair_ugc.blend).
 	["rbxassetid://107250648665529"] = "",
-	["rbxassetid://84157414920224"] = "",
 	-- Catio's hair, our own: CatioHair in assets/hair/hero_hair.blend, imported the same way.
 	["rbxassetid://139185116264855"] = "",
 	-- Eolka's hair, our own: tools/make_eolka_hair_ugc.py (assets/hair/eolka_hair_ugc.blend).
@@ -330,7 +329,7 @@ do
 		piece("BootToeR", "RightFoot", { 1.06, 0.16, 0.35 }, { 0, -0.07, -0.45 }, gold, METAL),
 		piece("BootSoleL", "LeftFoot", { 1.08, 0.08, 1.25 }, { 0, -0.12, -0.08 }, darkGold, METAL),
 		piece("BootSoleR", "RightFoot", { 1.08, 0.08, 1.25 }, { 0, -0.12, -0.08 }, darkGold, METAL),
-	}, "rbxassetid://135079238224097"))
+	}, "rbxassetid://121586827857415"))
 end
 
 -- 4. VALERIA (4★ Healer - Emerald Guardian) --------------------------------------------

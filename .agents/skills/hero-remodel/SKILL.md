@@ -23,7 +23,9 @@ keeps animations and weapon placement working.
 
 1. **Check the folder first.** Another session may share this checkout. Run
    `git branch --show-current` and `git status --short`, and say what you find if it isn't
-   what you expect. Never commit on a branch you didn't create for this hero.
+   what you expect. Never commit on a branch you didn't create for this hero. If tracked files
+   have uncommitted changes from other work, ask before switching branches: they would come
+   along. (A Valeria commit once landed on another session's branch and had to be moved.)
 2. `git fetch origin && git switch -c feat/<hero>-remodel origin/main`. Work in the user's main
    folder: Rojo syncs only from there, so Studio sees the changes. Don't use a worktree unless
    the user agrees (it confused the user: imports and Studio checks both broke).
@@ -34,7 +36,8 @@ keeps animations and weapon placement working.
 
 ## 1. Read the reference
 
-Write down: body type (bulky art → `Heavy` or `Standard`), 6–8 RGB colours, layers per bone
+Write down: body type (bulky art → `Heavy` or `Standard`; **women are always `Slim`**, see
+below), 6–8 RGB colours, layers per bone
 (torso, arms, waist, legs, feet, anything behind the back), hair (length, part, swoop
 direction, tufts, ponytail), face (expression, eye colour, marks like scars or runes) and the
 stance (feet, each hand, the weapon's angle).
@@ -44,7 +47,9 @@ stance (feet, each hand, the weapon's angle).
 1. Derive `assets/faces/make_<hero>_face.py` from the closest existing generator with a small
    Python patch script (string replaces on colours, brow polygon, lid curve, mouth, extras),
    rather than writing one from scratch. Bases: `make_han_face.py` (serious, angular),
-   `make_eolka_face.py` (soft, feminine, blush). Match brow colour to the hair.
+   `make_eolka_face.py` (soft, feminine, blush), `make_solaris_face.py` and
+   `make_astrea_face.py` (serene, feminine). Match brow colour to the hair. If the user asks for a
+   different expression from the art (Aaron: nervous → serious), follow the user.
 2. Run it with `python -I`, then **look at** `hero_<hero>_face_preview.png`. Fix anything that
    reads wrong (hooked beard lines, a too-thin smile) before uploading.
 3. Upload: serve the folder (`python -I -m http.server 8765 --bind 127.0.0.1`, run in the
@@ -57,14 +62,18 @@ stance (feet, each hand, the weapon's angle).
 1. Derive `tools/make_<hero>_hair_ugc.py` from an existing generator. Copy the helpers block
    (`B`, `shell`, `out_normal`, the scalp `cap()`, `smooth_path`, `ribbon`, `jitter`) from
    `tools/make_jenna_hair_ugc.py` and write only the layout. Closest bases:
-   - long or layered: Valeria (`make_valeria_hair_ugc.py`), wavy: Solaris
+   - long or layered: Valeria (`make_valeria_hair_ugc.py`); wavy: Solaris; very long and
+     wavy, to the thighs: Astrea
    - ponytail: Eolka (high), Jenna (back)
    - short spiky: Archon, Ignis; swept back with flaring locks: Morrigan
    Set `OUT_DIR`, `NAME`, a new `random.Random(seed)` and the material colour.
 2. Run it in Blender: `exec(open(path, encoding="utf-8").read())`, then `look` with
    `mode: angles`, views `[[0,1,0.12],[0.8,0.6,0.2],[1,-0.1,0.1],[0,-1,0.25]]` (front,
    three-quarter, side, back), `target: [<Name>Hair, "RefHead"]`.
-3. Iterate on **shape before detail**. Failures seen so far, and the fix:
+3. Iterate on **shape before detail**, comparing each render with the reference side by side.
+   The user rejects wrong shapes ("the hair looks inaccurate", "it looks different from this
+   image") far more often than missing detail. If they ask for a change from the art ("make
+   the hair longer"), change only that. Failures seen so far, and the fix:
    - thin "icicle" spikes, crown of thorns → wider ribbons, `tip` 2.4–2.6, fewer, fatter locks
    - spikes merging into one cone → fan locks from the crown in every direction instead
    - ends forming a straight brim → stagger each lock's end height with `rng.uniform`
@@ -72,6 +81,7 @@ stance (feet, each hand, the weapon's angle).
    - long droopy strands when the art is short and fluffy → shorten, end the sides at eye level
    - locks flaring twice as wide as the art → pull the end points in
    - straight hair when the art is wavy → a sideways sine wobble with amplitude ~0.1
+   - scalp showing between locks or at the nape → extend `cap()` lower at the sides and back
 4. Aim for 5k–14k triangles (Roblox's import limit is ~20k). Export with
    `scripts/blender_export_hair.py` (exec it after setting `HAIR`), which writes the FBX, the
    JSON and the `.blend`, and prints the centre and size you need for placement.
@@ -96,18 +106,26 @@ fail on exactly that placeholder, which proves the rest of the costume is clean.
        Mesh = { MeshId = "rbxassetid://…", Scale = { 0.01, 0.01, 0.01 } },
    })),
    ```
-3. Stay within 60 parts (16 rig + pieces; count `piece(` lines). Mark only cloth, hair and
-   things behind the back `LOOSE`. Use the recipes in `docs/hero-art-pipeline.md` §4.2.
-4. Remove the hero's old pieces that don't fit (neon wings, halos, held orbs). Gear comes from
+3. Stay within 60 parts (16 rig + pieces; count `piece(` lines). `LOOSE` only silences the
+   overlap lint, so use it for hair, cloth, trims on cloth and pieces well behind the back.
+   Rigid gear that overlaps a bone (a collar in the chin, a cuff in the hand) gets moved
+   0.05–0.1 studs instead. Use the recipes in `docs/hero-art-pipeline.md` §4.2.
+4. **Female heroes:** `Slim` body, narrow shoulders (no broad pauldrons; shoulder pieces stay
+   within the arm's width and lie flat), a cinched waist, a skirt or panels that flare below
+   the belt, fitted sleeves and legs, and a narrower stance. Armour follows the body instead of
+   widening it. Recipe table: `docs/hero-art-pipeline.md` §4.2 "Feminine body".
+5. Remove the hero's old pieces that don't fit (neon wings, halos, held orbs). Gear comes from
    the weapon.
-5. Pieces behind the back (frames, banners, wings) must sit outside the arms' reach, or the
+6. Pieces behind the back (frames, banners, wings) must sit outside the arms' reach, or the
    arms hide them from the front: banners ended up at x ±3.25 for Solaris.
 
 ## 5. Idle stance
 
 Add `Idle = breathe(pose, seconds)` to `Overrides.hero_<id>` in `HeroClips.luau`, with a short
 comment, keeping the existing attack overrides. Axis rules are in the pipeline doc §3; knees
-must stay ≤ 0. Weapon angles that work:
+must stay ≤ 0. Adding an override can break the `hero-rig.spec` check that a hero *without*
+one uses the weapon clip; it uses Han as the example, so repoint it if Han gets an idle.
+Weapon angles that work:
 
 - **Staff upright beside the right hip:** `RightShoulder {10,0,28}`, `RightElbow {35,0,0}`,
   `RightWrist {45,-35,0}`. Measured in Studio; guessing put the staff across the face.
@@ -132,7 +150,8 @@ in root space for a few candidate angles) instead of guessing.
 
 ## 7. Test and check in Studio
 
-1. `pwsh tests/run.ps1` must pass. Ignore the expected "[The Pit] Request failed" line. Lint
+1. `pwsh tests/run.ps1` must pass (add `-LuauDirectory <dir>` if the Luau CLI isn't in the
+   default temp folder). Ignore the expected "[The Pit] Request failed" line. Lint
    messages say what to move: "X overlaps Y" means move X 0.05–0.1 studs out of Y.
 2. Build a temporary rig with the "temp rig" snippet (it equips the weapon, applies the idle
    pose, and moves the weapon parts with their handles). It requires a **clone** of
@@ -141,11 +160,17 @@ in root space for a few candidate angles) instead of guessing.
 3. `screen_capture` front (full body), face close-up and back. Check: face visible (a blank face
    right after building is usually the image still loading), hair snug with no scalp at sides
    or back, weapon pose as in the art, back pieces visible.
+   - Hair floats or the scalp shows at the sides → lower `cy` by 0.1–0.15 and/or widen X and Z
+     scale to ~0.0104 (Aaron).
+   - Hair too big all round → scale it uniformly (Jenna: 0.0092).
+   - Bald patch at the back that moving the mesh can't cover → fix `cap()` in the generator and
+     ask for a re-import.
 4. Fix, rebuild, recapture. Delete the temp rig (cleanup snippet) when done.
 5. If Studio MCP is disconnected ("protocol version is not supported"), MCP tools only load at
    session start: ask the user to update the Studio MCP plugin and restart the session. You
    can wire the hair from the export numbers meanwhile, but say it is unverified and don't
-   commit until the user agrees.
+   commit until the user agrees. When the user says "wait for Studio", stop there until they say
+   it is back.
 
 ## 8. Commit and PR
 
@@ -156,7 +181,13 @@ the two HeroRig files, `assets/faces/*<hero>*`, `assets/hair/<hero>_hair*`, and
 costume, idle; "Rig, sockets and weapon prefabs are unchanged"; tests and what was checked in
 Studio). `gh pr edit` fails on this repo (Projects classic); use
 `gh api -X PATCH repos/<owner>/<repo>/pulls/<n>` to edit. Ask before committing, pushing or
-force-pushing.
+force-pushing. If the user asks you to pull from main first, merge `origin/main` into the hero
+branch before finishing.
+
+Afterwards, update the status table in `docs/hero-art-pipeline.md` §7 (face, hair mesh,
+generator, idle) in the same PR. If the hero exposed a new lesson, add it to this skill and the
+pipeline doc in the same PR, and keep `.agents/skills/hero-remodel/` identical to
+`.claude/skills/hero-remodel/`.
 
 ## Reporting to the user
 
