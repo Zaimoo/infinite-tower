@@ -48,7 +48,7 @@ HeroCatalog.PermanentBanner = {
 	TenPullMinTier = 3, -- every 10-pull includes a Rare or better hero
 	-- Retuned with the 100-gem relic economy: hours of play per copy match the old rates at the higher income.
 	Rates = {
-		[1] = 0.7514, -- 75.14% Common Gide
+		[1] = 0.7514, -- 75.14% Common (Gide or Shurn)
 		[2] = 0.1800, -- 18.0% Uncommon Aaron
 		[3] = 0.0470, -- 4.7% Rare Catio
 		[4] = 0.0165, -- 1.65% Superior Valeria
@@ -66,6 +66,9 @@ HeroCatalog.PermanentBanner = {
 		[5] = "hero_ignis",
 		[6] = "hero_edis",
 		[7] = "hero_han",
+	},
+	HeroesPoolByStar = {
+		[1] = { "hero_gide", "hero_shurn" },
 	},
 }
 
@@ -130,6 +133,25 @@ HeroCatalog.Seeds = {
 		NativeLabor = 18.0,
 		PreferredFacility = "FACILITY_MARKET",
 		Color = Color3.fromRGB(168, 142, 98),
+	},
+	hero_shurn = {
+		HeroId = "hero_shurn",
+		DisplayName = "Shurn",
+		BannerOrigin = "STANDARD",
+		DropWeight = 60.0,
+		BaseStar = 1,
+		Rarity = 1,
+		Archetype = "Scholar",
+		BaseHP_1Star = 220,
+		BaseATK_1Star = 46,
+		NativeHP = 220,
+		NativeATK = 46,
+		AttackInterval = 1.00,
+		AttackRange = 28,
+		BaseLabor_1Star = 18.0,
+		NativeLabor = 18.0,
+		PreferredFacility = "FACILITY_TRAINING",
+		Color = Color3.fromRGB(215, 175, 105),
 	},
 	hero_han = {
 		HeroId = "hero_han",
@@ -408,7 +430,7 @@ function HeroCatalog.RarityName(tier: number?): string
 end
 
 HeroCatalog.PoolByStar = {
-	[1] = { "hero_gide", "hero_jenna" },
+	[1] = { "hero_gide", "hero_shurn", "hero_jenna" },
 	[2] = { "hero_aaron", "hero_velkist" },
 	[3] = { "hero_catio", "hero_eolka" },
 	[4] = { "hero_valeria", "hero_morrigan" },

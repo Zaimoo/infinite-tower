@@ -48,7 +48,7 @@ Music, not wired yet: a **summon theme**, a 20–30 s loop that ducks the hub mu
 
 **P0: one bust illustration per hero.** Make them 512×512, transparent background, shoulders up, facing slightly left, with the weapon visible where it fits. Add a `Portrait = "rbxassetid://…"` field to each seed:
 
-`hero_aaron`, `hero_archon`, `hero_astrea`, `hero_catio`, `hero_edis`, `hero_eolka`, `hero_gide`, `hero_han`, `hero_ignis`, `hero_jenna`, `hero_morrigan`, `hero_solaris`, `hero_valeria`, `hero_velkist`
+`hero_aaron`, `hero_archon`, `hero_astrea`, `hero_catio`, `hero_edis`, `hero_eolka`, `hero_gide`, `hero_han`, `hero_ignis`, `hero_jenna`, `hero_morrigan`, `hero_shurn`, `hero_solaris`, `hero_valeria`, `hero_velkist`
 
 **P1: full-body splash art per hero** at 1024×1536, for the single-pull reveal card and the Hero Index detail view. This needs a new `Splash` seed field and a small change to `SummonReveal.FillCard`.
 

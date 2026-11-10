@@ -680,6 +680,7 @@ local OVERRIDE_WEAPON: { [string]: string } = {
 	hero_astrea = "BOW",
 	hero_edis = "DAGGERS",
 	hero_gide = "AXE",
+	hero_shurn = "STAFF",
 }
 
 local function signature(duration: number, keys: { { any } }, markers: { [string]: number }): Clip
@@ -826,8 +827,9 @@ end
 -- Han (DAGGERS).
 -- Nightfall Fangs (Special): he sinks into a crouch, leaps, and comes down on the target with both
 -- daggers reversed, points down. A blade points straight down when its arm's shoulder, elbow and
--- wrist pitch add up to 270 degrees, plus the waist's lean (measured in Studio), so the wrists turn
--- as the arms fall and the points stay down from the top of the jump to the landing.
+-- wrist pitch add up to 270 degrees minus the waist's pitch (measured in Studio: a forward lean of
+-- -34 needs 304), so the wrists turn as the arms fall and the points stay down from the top of the
+-- jump to the landing. A wrist past 180 is written as its negative equivalent (216 is -144).
 -- Abyssal Wake (Skill): he coils with both blades chambered at his left hip, dashes through the
 -- target with a wide cut, skids to a stop with his back to it while the wake of slashes he left
 -- behind keeps cutting (the kit's five waves), then springs back to his place.
@@ -844,22 +846,22 @@ do
 	local apex = merge(p.Crouched, {
 		Waist = { 14, 0, 0 }, Neck = { -16, 0, 0 },
 		LeftShoulder = { 166, 0, -10 }, RightShoulder = { 166, 0, 10 }, LeftElbow = { 26, 0, 0 }, RightElbow = { 26, 0, 0 },
-		LeftWrist = { 92, 0, 0 }, RightWrist = { 92, 0, 0 },
+		LeftWrist = { 64, 0, 0 }, RightWrist = { 64, 0, 0 },
 		LeftHip = { 62, 0, -6 }, RightHip = { 18, 0, 6 }, LeftKnee = { -85, 0, 0 }, RightKnee = { -100, 0, 0 },
 		LeftAnkle = { 20, 0, 0 }, RightAnkle = { 30, 0, 0 }, RootOffset = { 0, 1.9, -0.5 },
 	})
 	local falling = merge(apex, {
 		Waist = { -10, 0, 0 }, Neck = { -4, 0, 0 },
-		LeftShoulder = { 118, 0, -4 }, RightShoulder = { 118, 0, 4 }, LeftWrist = { 116, 0, 0 }, RightWrist = { 116, 0, 0 },
+		LeftShoulder = { 118, 0, -4 }, RightShoulder = { 118, 0, 4 }, LeftWrist = { 136, 0, 0 }, RightWrist = { 136, 0, 0 },
 		LeftHip = { 50, 0, -6 }, RightHip = { 0, 0, 6 }, LeftKnee = { -55, 0, 0 }, RightKnee = { -70, 0, 0 },
 		RootOffset = { 0, 0.95, -0.95 },
 	})
 	local plunge = merge(p.Crouched, {
 		Waist = { -34, 0, 0 }, Neck = { 20, 0, 0 },
 		LeftShoulder = { 60, 0, 12 }, RightShoulder = { 60, 0, -12 }, LeftElbow = { 28, 0, 0 }, RightElbow = { 28, 0, 0 },
-		LeftWrist = { 148, 0, 0 }, RightWrist = { 148, 0, 0 },
+		LeftWrist = { -144, 0, 0 }, RightWrist = { -144, 0, 0 },
 		LeftHip = { 66, 0, -8 }, RightHip = { -28, 0, 8 }, LeftKnee = { -70, 0, 0 }, RightKnee = { -55, 0, 0 },
-		LeftAnkle = { 12, 0, 0 }, RightAnkle = { 42, 0, 0 }, RootOffset = { 0, -0.6, -1.25 },
+		LeftAnkle = { 12, 0, 0 }, RightAnkle = { 42, 0, 0 }, RootOffset = { 0, -0.74, -1.25 },
 	})
 	-- Skill
 	local chambered = merge(p.Crouched, {
@@ -867,26 +869,26 @@ do
 		RightShoulder = { 52, 0, -58 }, RightElbow = { 82, 0, 0 }, RightWrist = { -20, 0, 0 },
 		LeftShoulder = { -32, 0, -18 }, LeftElbow = { 58, 0, 0 }, LeftWrist = { -40, 0, 0 },
 		LeftHip = { 38, 0, -8 }, RightHip = { -30, 0, 10 }, LeftKnee = { -58, 0, 0 }, RightKnee = { -42, 0, 0 },
-		LeftAnkle = { 14, 0, 0 }, RightAnkle = { 44, 0, 0 }, RootOffset = { 0, -0.55, 0.45 },
+		LeftAnkle = { 14, 0, 0 }, RightAnkle = { 44, 0, 0 }, RootOffset = { 0, -0.4, 0.45 },
 	})
 	local dashing = merge(chambered, {
 		Waist = { -40, 30, 0 }, Neck = { 30, -22, 0 },
 		LeftHip = { 78, 0, -6 }, RightHip = { -52, 0, 8 }, LeftKnee = { -48, 0, 0 }, RightKnee = { -20, 0, 0 },
-		LeftAnkle = { 0, 0, 0 }, RightAnkle = { 50, 0, 0 }, RootOffset = { 0, -0.5, -3.2 },
+		LeftAnkle = { 0, 0, 0 }, RightAnkle = { 50, 0, 0 }, RootOffset = { 0, -0.95, -3.2 },
 	})
 	local cutThrough = merge(p.Crouched, {
 		Waist = { -26, -58, 0 }, Neck = { 14, 40, 0 },
 		RightShoulder = { 84, 0, 78 }, RightElbow = { 8, 0, 0 }, RightWrist = { -12, 0, 0 },
 		LeftShoulder = { 58, 0, -72 }, LeftElbow = { 10, 0, 0 }, LeftWrist = { -12, 0, 0 },
 		LeftHip = { -30, 0, -10 }, RightHip = { 64, 0, 8 }, LeftKnee = { -30, 0, 0 }, RightKnee = { -62, 0, 0 },
-		LeftAnkle = { 40, 0, 0 }, RightAnkle = { 8, 0, 0 }, RootOffset = { 0, -0.5, -6.2 },
+		LeftAnkle = { 40, 0, 0 }, RightAnkle = { 8, 0, 0 }, RootOffset = { 0, -0.72, -6.2 },
 	})
 	local skid = merge(cutThrough, {
 		Waist = { -20, -72, 0 }, Neck = { 6, 58, 0 },
 		RightShoulder = { 30, 0, 98 }, RightElbow = { 12, 0, 0 }, RightWrist = { -30, 0, 0 },
 		LeftShoulder = { 16, 0, -50 }, LeftElbow = { 40, 0, 0 }, LeftWrist = { -50, 0, 0 },
 		LeftHip = { -38, 0, -12 }, RightHip = { 72, 0, 10 }, LeftKnee = { -38, 0, 0 }, RightKnee = { -78, 0, 0 },
-		RootOffset = { 0, -0.75, -6.9 },
+		RootOffset = { 0, -0.88, -6.9 },
 	})
 	local springBack = merge(p.Crouched, {
 		Waist = { 6, -20, 0 }, Neck = { -4, 14, 0 },
@@ -900,7 +902,7 @@ do
 			{ 0.42, apex },
 			{ 0.53, falling },
 			{ 0.62, plunge },
-			{ 0.8, merge(plunge, { Waist = { -30, 0, 0 }, LeftWrist = { 152, 0, 0 }, RightWrist = { 152, 0, 0 }, RootOffset = { 0, -0.52, -1.15 } }) },
+			{ 0.8, merge(plunge, { Waist = { -30, 0, 0 }, LeftWrist = { -148, 0, 0 }, RightWrist = { -148, 0, 0 }, RootOffset = { 0, -0.66, -1.15 } }) },
 			{ 1, p.Crouched },
 		}, { Release = 0.62 }),
 		AttackSkill = signature(1.0, {
@@ -909,7 +911,7 @@ do
 			{ 0.3, dashing },
 			{ 0.4, cutThrough },
 			{ 0.56, skid },
-			{ 0.8, merge(skid, { Waist = { -16, -76, 0 }, RootOffset = { 0, -0.7, -6.9 } }) },
+			{ 0.8, merge(skid, { Waist = { -16, -76, 0 }, RootOffset = { 0, -0.84, -6.9 } }) },
 			{ 0.92, springBack },
 			{ 1, p.Crouched },
 		}, { Release = 0.4 }),
@@ -1125,6 +1127,42 @@ do
 			{ 0.88, merge(ATTACK_STANCE, { Waist = { -10, 0, 0 }, LeftShoulder = { 85, 0, -15 }, RightShoulder = { 85, 0, 15 } }) },
 			{ 1, p.Stand },
 		}, { Release = 0.72 }),
+	}
+end
+
+-- Shurn (STAFF): Arcing Hearthbolt thrusts the crystal-bound branch staff forward while his left
+-- hand channels a spark; Dawnstone Convergence raises the staff high overhead and drives it down
+-- to call the radiant pillar. Idle is his grounded scholar stance from the reference art: wide
+-- planted feet, staff held upright out at his right side, left hand raised open in front of him
+-- channeling golden embers.
+do
+	local p = WeaponPoses.STAFF
+	local hearthThrust = merge(p.Cast, { Waist = { -16, -12, 0 }, RightShoulder = { 78, -8, 12 }, RightElbow = { 16, 0, 0 }, LeftShoulder = { 52, 10, -18 }, LeftElbow = { 48, 0, 0 }, LeftKnee = { -26, 0, 0 }, RightKnee = { -22, 0, 0 }, RootOffset = { 0, -0.22, -0.15 } })
+	local convergence = merge(p.Cast, { Waist = { -24, 0, 0 }, RightShoulder = { 56, 0, 4 }, LeftShoulder = { 62, 0, -12 }, LeftElbow = { 22, 0, 0 }, LeftHip = { 42, 0, -8 }, LeftKnee = { -48, 0, 0 }, RightHip = { -18, 0, 8 }, RightKnee = { -24, 0, 0 }, RootOffset = { 0, -0.38, -0.22 } })
+	local channeler: Pose = {
+		Waist = { -2, -4, 0 }, Neck = { -2, 4, 0 },
+		RightShoulder = { 10, 0, 28 }, RightElbow = { 35, 0, 0 }, RightWrist = { 45, -35, 0 },
+		LeftShoulder = { 28, 0, -20 }, LeftElbow = { 68, 0, 0 }, LeftWrist = { -10, 0, 0 },
+		LeftHip = { 6, 0, -12 }, LeftKnee = { -14, 0, 0 }, LeftAnkle = { 8, 0, 12 },
+		RightHip = { 6, 0, 12 }, RightKnee = { -14, 0, 0 }, RightAnkle = { 8, 0, -12 },
+		RootOffset = { 0, -0.12, 0 },
+	}
+	Overrides.hero_shurn = {
+		Idle = breathe(channeler, 3.3),
+		AttackSpecial = signature(0.95, {
+			{ 0, p.Stand },
+			{ 0.35, merge(p.Raised, { Waist = { 8, 14, 0 }, LeftShoulder = { 44, -14, -22 }, LeftElbow = { 62, 0, 0 } }) },
+			{ 0.65, hearthThrust },
+			{ 0.85, merge(hearthThrust, { Waist = { -12, -8, 0 } }) },
+			{ 1, p.Stand },
+		}, { Release = 0.65 }),
+		AttackSkill = signature(1.2, {
+			{ 0, p.Stand },
+			{ 0.38, merge(p.Raised, { Waist = { 14, 0, 0 }, RightShoulder = { 172, 0, 6 }, LeftShoulder = { 164, 0, -10 }, LeftElbow = { 28, 0, 0 }, RootOffset = { 0, 0.2, 0 } }) },
+			{ 0.68, convergence },
+			{ 0.86, merge(convergence, { Waist = { -20, 0, 0 } }) },
+			{ 1, p.Stand },
+		}, { Release = 0.68 }),
 	}
 end
 

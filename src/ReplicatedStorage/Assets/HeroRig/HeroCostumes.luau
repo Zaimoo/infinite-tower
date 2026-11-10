@@ -81,6 +81,8 @@ HeroCostumes.MESHES = table.freeze({
 	["rbxassetid://127638976753205"] = "",
 	-- Gide's hair, our own: tools/make_gide_hair_ugc.py (assets/hair/gide_hair_ugc.blend).
 	["rbxassetid://115502888193432"] = "",
+	-- Shurn's hair, our own: tools/make_shurn_hair_ugc.py (assets/hair/shurn_hair_ugc.blend).
+	["rbxassetid://115542883011217"] = "",
 } :: { [string]: string })
 
 -- Avatar hair accessory placement: a piece centred so the accessory's HairAttachment meets
@@ -1123,6 +1125,82 @@ do
 		piece("BootSoleL", "LeftFoot", { 1.08, 0.07, 1.25 }, { 0, -0.13, -0.08 }, steel, METAL),
 		piece("BootSoleR", "RightFoot", { 1.08, 0.07, 1.25 }, { 0, -0.13, -0.08 }, steel, METAL),
 	}, "rbxassetid://88342609507901"))
+end
+
+-- 15. SHURN (1★ Scholar - Wandering Hearthstone Scholar) --------------------------------
+-- From his reference art: sturdy young scholar (Heavy body) with swept-back medium chestnut-brown
+-- hair and a loose forehead strand over his left brow, a serious studious expression, a weathered
+-- charcoal-slate scholar coat with four horizontal frog-clasp toggles down the chest, a draped
+-- brown cloth hood/cowl around the neck, puffed upper sleeves with tattered lower edges over light
+-- grey-taupe forearm cloth wraps, a brown leather utility belt with a five-point bronze star
+-- buckle, a hanging belt tongue, two front leather pouches and a left-hip drawstring reagent bag,
+-- split front coat tails and a tattered brown travelling cloak, dark charcoal trousers, and cuffed
+-- brown leather boots. Face: our own decal from assets/faces/make_shurn_face.py. Hair: our Blender
+-- mesh (tools/make_shurn_hair_ugc.py).
+do
+	local skin, hair, coat, coatDark = { 236, 196, 158 }, { 124, 88, 58 }, { 64, 66, 70 }, { 48, 50, 54 }
+	local cowl, wraps, leather, darkLeather = { 92, 70, 54 }, { 134, 128, 118 }, { 104, 74, 52 }, { 68, 48, 34 }
+	local pouchBag, pants, bronze = { 142, 126, 102 }, { 38, 40, 44 }, { 176, 138, 86 }
+	table.insert(COSTUMES, costume("hero_shurn", "Heavy", {
+		Skin = skin, UpperTorso = coat, LowerTorso = pants, UpperArm = coat, LowerArm = wraps, Hand = skin,
+		UpperLeg = pants, LowerLeg = darkLeather, Foot = leather,
+	}, {
+		-- Hair mesh: centred on the export's bounding box and turned 180 degrees to undo the
+		-- importer's rotation.
+		piece("HairMesh", "Head", { 1.792, 1.492, 1.733 }, { -0.0116, 0.3452, 0.0637 }, hair, with(LOOSE, {
+			Rotation = { 0, 180, 0 },
+			Mesh = { MeshId = "rbxassetid://115542883011217", Scale = { 0.01, 0.01, 0.01 } },
+		})),
+		-- Draped brown cloth scholar cowl / hood around the neck and shoulders
+		piece("Neckline", "UpperTorso", { 0.36, 0.36, 0.04 }, { 0, 0.62, -0.51 }, skin, { Rotation = { 0, 0, 45 } }),
+		piece("CowlFront", "UpperTorso", { 1.44, 0.28, 0.18 }, { 0, 0.72, -0.48 }, cowl, with(LOOSE, { Material = "Fabric", Rotation = { 10, 0, 0 } })),
+		piece("CowlBack", "UpperTorso", { 1.62, 0.42, 0.24 }, { 0, 0.88, 0.42 }, cowl, with(LOOSE, { Material = "Fabric", Rotation = { -12, 0, 0 } })),
+		piece("CowlL", "UpperTorso", { 0.22, 0.34, 0.92 }, { -0.68, 0.82, -0.02 }, cowl, with(LOOSE, { Material = "Fabric", Rotation = { 0, 0, 12 } })),
+		piece("CowlR", "UpperTorso", { 0.22, 0.34, 0.92 }, { 0.68, 0.82, -0.02 }, cowl, with(LOOSE, { Material = "Fabric", Rotation = { 0, 0, -12 } })),
+		-- Centre coat placket and four horizontal strap frog clasps down the chest
+		piece("CoatPlacket", "UpperTorso", { 0.18, 1.28, 0.04 }, { 0, -0.06, -0.51 }, coatDark, { Material = "Fabric" }),
+		piece("FrogClaspA", "UpperTorso", { 0.44, 0.07, 0.06 }, { 0, 0.38, -0.53 }, wraps),
+		piece("FrogClaspB", "UpperTorso", { 0.44, 0.07, 0.06 }, { 0, 0.15, -0.53 }, wraps),
+		piece("FrogClaspC", "UpperTorso", { 0.44, 0.07, 0.06 }, { 0, -0.08, -0.53 }, wraps),
+		piece("FrogClaspD", "UpperTorso", { 0.44, 0.07, 0.06 }, { 0, -0.31, -0.53 }, wraps),
+		-- Tattered brown travelling cloak behind the back
+		piece("CloakUpper", "UpperTorso", { 2.12, 1.58, 0.12 }, { 0, -0.02, 0.54 }, cowl, with(LOOSE, { Material = "Fabric", Rotation = { -5, 0, 0 } })),
+		piece("CloakLower", "LowerTorso", { 2.22, 2.15, 0.12 }, { 0, -1.10, 0.64 }, cowl, with(LOOSE, { Material = "Fabric", Rotation = { -9, 0, 0 } })),
+		piece("CloakTatterL", "LowerTorso", { 0.08, 0.55, 0.65 }, { -0.68, -2.38, 0.82 }, cowl, with(WEDGE, LOOSE, { Material = "Fabric", Rotation = { 0, 90, 180 } })),
+		piece("CloakTatterR", "LowerTorso", { 0.08, 0.55, 0.65 }, { 0.68, -2.38, 0.82 }, cowl, with(WEDGE, LOOSE, { Material = "Fabric", Rotation = { 0, -90, 180 } })),
+		-- Puffed scholar upper sleeves, tattered sleeve hems, and layered forearm cloth wraps
+		piece("SleevePuffL", "LeftUpperArm", { 1.16, 0.76, 1.16 }, { -0.04, 0.26, 0 }, coat, with(LOOSE, { Material = "Fabric", Rotation = { 0, 0, 6 } })),
+		piece("SleeveHemL", "LeftUpperArm", { 1.12, 0.18, 1.12 }, { 0, -0.32, 0 }, coatDark, with(LOOSE, { Material = "Fabric" })),
+		piece("SleevePuffR", "RightUpperArm", { 1.16, 0.76, 1.16 }, { 0.04, 0.26, 0 }, coat, with(LOOSE, { Material = "Fabric", Rotation = { 0, 0, -6 } })),
+		piece("SleeveHemR", "RightUpperArm", { 1.12, 0.18, 1.12 }, { 0, -0.32, 0 }, coatDark, with(LOOSE, { Material = "Fabric" })),
+		piece("WrapBandAL", "LeftLowerArm", { 1.06, 0.14, 1.06 }, { 0, 0.18, 0 }, coatDark, { Material = "Fabric" }),
+		piece("WrapBandBL", "LeftLowerArm", { 1.06, 0.14, 1.06 }, { 0, -0.14, 0 }, coatDark, { Material = "Fabric" }),
+		piece("WrapBandAR", "RightLowerArm", { 1.06, 0.14, 1.06 }, { 0, 0.18, 0 }, coatDark, { Material = "Fabric" }),
+		piece("WrapBandBR", "RightLowerArm", { 1.06, 0.14, 1.06 }, { 0, -0.14, 0 }, coatDark, { Material = "Fabric" }),
+		-- Double leather belt, five-point bronze star buckle, hanging belt tongue, hip pouches & reagent bag
+		piece("Belt", "LowerTorso", { 2.08, 0.26, 1.08 }, { 0, 0.04, 0 }, leather),
+		piece("CrossBelt", "LowerTorso", { 2.10, 0.14, 1.10 }, { 0, -0.06, 0 }, darkLeather, LOOSE),
+		piece("StarBuckleA", "LowerTorso", { 0.30, 0.30, 0.08 }, { 0, 0.02, -0.57 }, bronze, METAL),
+		piece("StarBuckleB", "LowerTorso", { 0.30, 0.30, 0.08 }, { 0, 0.02, -0.57 }, bronze, with(METAL, { Rotation = { 0, 0, 45 } })),
+		piece("BeltTongue", "LowerTorso", { 0.18, 0.68, 0.06 }, { -0.16, -0.36, -0.57 }, leather, LOOSE),
+		piece("PouchL", "LowerTorso", { 0.38, 0.36, 0.22 }, { -0.62, 0.00, -0.60 }, darkLeather),
+		piece("PouchR", "LowerTorso", { 0.42, 0.40, 0.24 }, { 0.68, 0.00, -0.60 }, darkLeather),
+		piece("ReagentBag", "LowerTorso", { 0.36, 0.48, 0.36 }, { -0.98, -0.22, -0.18 }, pouchBag, with(LOOSE, { Shape = "Ball", Material = "Fabric" })),
+		-- Split front scholar coat tails flaring over the thighs
+		piece("CoatSkirtFL", "LowerTorso", { 0.88, 1.52, 0.12 }, { -0.54, -0.86, -0.52 }, coat, with(LOOSE, { Material = "Fabric", Rotation = { 8, 0, 10 } })),
+		piece("CoatSkirtFR", "LowerTorso", { 0.88, 1.52, 0.12 }, { 0.54, -0.86, -0.52 }, coat, with(LOOSE, { Material = "Fabric", Rotation = { 8, 0, -10 } })),
+		piece("CoatSkirtSL", "LowerTorso", { 0.14, 1.56, 1.06 }, { -1.04, -0.88, 0.02 }, coat, with(LOOSE, { Material = "Fabric", Rotation = { 0, 0, 8 } })),
+		piece("CoatSkirtSR", "LowerTorso", { 0.14, 1.56, 1.06 }, { 1.04, -0.88, 0.02 }, coat, with(LOOSE, { Material = "Fabric", Rotation = { 0, 0, -8 } })),
+		-- Folded brown leather boot cuffs and heavy scholar boots
+		piece("BootCuffL", "LeftLowerLeg", { 1.12, 0.24, 1.12 }, { 0, -0.02, 0 }, leather, LOOSE),
+		piece("BootCuffR", "RightLowerLeg", { 1.12, 0.24, 1.12 }, { 0, -0.02, 0 }, leather, LOOSE),
+		piece("BootShaftL", "LeftLowerLeg", { 1.06, 0.56, 1.06 }, { 0, -0.32, 0 }, darkLeather),
+		piece("BootShaftR", "RightLowerLeg", { 1.06, 0.56, 1.06 }, { 0, -0.32, 0 }, darkLeather),
+		piece("BootStrapL", "LeftFoot", { 1.06, 0.12, 0.34 }, { 0, 0.04, -0.18 }, darkLeather),
+		piece("BootStrapR", "RightFoot", { 1.06, 0.12, 0.34 }, { 0, 0.04, -0.18 }, darkLeather),
+		piece("BootSoleL", "LeftFoot", { 1.08, 0.07, 1.25 }, { 0, -0.13, -0.08 }, coatDark),
+		piece("BootSoleR", "RightFoot", { 1.08, 0.07, 1.25 }, { 0, -0.13, -0.08 }, coatDark),
+	}, "rbxassetid://120275678632025"))
 end
 
 HeroCostumes.List = table.freeze(COSTUMES)

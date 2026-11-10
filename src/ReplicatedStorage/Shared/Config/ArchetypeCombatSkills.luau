@@ -445,6 +445,15 @@ local HERO_KITS: { [string]: HeroKitOverride } = {
 			Description = "Eolka calls a crimson hellfire pillar onto the target area (20-stud radius), dealing 3.50x ATK fire damage and leaving burning ground for 3s.",
 		},
 	},
+	hero_shurn = {
+		Archetype = "Scholar",
+		Basic = { Name = "Cinder Spark" },
+		Special = { Name = "Arcing Hearthbolt" },
+		Skill = {
+			Name = "Dawnstone Convergence",
+			Description = "Shurn raises his crystal-bound branch staff and calls down a radiant pillar of golden-amber light onto the target area (20-stud radius), dealing 3.50x ATK magic damage and scorching the ground for 3s.",
+		},
+	},
 	hero_morrigan = {
 		Archetype = "Vanguard",
 		Basic = { Name = "Abyssal Reap" },
