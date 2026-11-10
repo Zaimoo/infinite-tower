@@ -7,21 +7,29 @@
 -- Each tier names a Style, the SkillVfx player that draws it:
 --   Basic    SHOT (bow arrow), BOLT (caster projectile), SLASH (melee arc on the target)
 --   Special  VOLLEY (bow), CLEAVE (Vanguard cone), CROSS (Striker), TREMOR (Miner),
---            CHAIN (Scholar), MEND (Healer), PLUNGE (two falling stabs; Han)
+--            CHAIN (Scholar), MEND (Healer), PLUNGE (two falling stabs; Han),
+--            BEAM (an instant straight laser from the attacker through the target; Vane)
 --   Skill    STORM (bow), BULWARK (Vanguard), TEMPEST (Striker), CRYSTALS (Miner),
 --            PILLAR (Scholar), SANCTUARY (Healer), WAKE (a dash streak and a lingering circle of
---            slashes, one wave per damage tick; Han)
+--            slashes, one wave per damage tick; Han), SINGULARITY (a black hole on the aim point
+--            that pulses on every damage tick and collapses on the last; Vane)
 -- The other fields are that style's knobs; a style ignores the ones it does not use.
+-- A hero's attack clip may carry a Charge marker (HeroClips) before Release; at it SkillVfx
+-- plays the style's wind-up, if it has one (BOLT: a glyph in the casting hand, Origin LEFT_HAND;
+-- BEAM: energy gathering on the staff tip; SINGULARITY: the floor dimming and drawing inward).
 
 export type Palette = {
 	Primary: Color3, -- trail, glow and main strokes
 	Secondary: Color3, -- rings, sigils, accents
 	Core: Color3, -- bright centre of bursts
+	Accent: Color3?, -- optional fourth colour for small highlights (Vane's gold)
 }
 
 export type TierRecipe = {
 	Style: string,
-	Projectile: string?, -- ProjectileVfx kind: "ARROW" | "ASTRAL" | "BOLT" | "ORB"
+	Projectile: string?, -- ProjectileVfx kind: "ARROW" | "ASTRAL" | "BOLT" | "ORB" | "VOID"
+	Origin: string?, -- where it leaves the hero: "CHEST" (default: the bow's nock, else the chest) | "LEFT_HAND" | "STAFF_TIP"
+	ImpactStyle: string?, -- projectile impact: "BURST" (default) | "IMPLODE" (collapses inward, then flashes)
 	Scale: number?, -- projectile or slash size multiplier
 	Arc: number?, -- studs of lift at mid-flight per 10 studs of distance
 	Trail: number?, -- trail lifetime, seconds
@@ -43,6 +51,12 @@ export type TierRecipe = {
 	PillarHeight: number?, -- PILLAR: column height, studs
 	Linger: number?, -- seconds a ground effect or shell lasts after impact
 	Implode: boolean?, -- TEMPEST: a dark sphere collapses before the burst (rift)
+	-- BEAM: must match the kit's BEAM_LINE (SecondaryParam, BeamWidth).
+	Length: number?, -- studs from the attacker's feet
+	Width: number?, -- studs across
+	-- SINGULARITY
+	Core: number?, -- event sphere diameter, studs
+	Tether: boolean?, -- a flickering line from the caster's left hand to the hole while it forms
 	Shake: number?, -- camera shake for the local player's own hero
 }
 
@@ -68,8 +82,8 @@ SkillVfxCatalog.WeaponArchetype = table.freeze({
 -- Every Style SkillVfx knows, per tier.
 SkillVfxCatalog.Styles = table.freeze({
 	Basic = table.freeze({ SHOT = true, BOLT = true, SLASH = true }),
-	Special = table.freeze({ VOLLEY = true, CLEAVE = true, CROSS = true, TREMOR = true, CHAIN = true, MEND = true, PLUNGE = true }),
-	Skill = table.freeze({ STORM = true, BULWARK = true, TEMPEST = true, CRYSTALS = true, PILLAR = true, SANCTUARY = true, WAKE = true }),
+	Special = table.freeze({ VOLLEY = true, CLEAVE = true, CROSS = true, TREMOR = true, CHAIN = true, MEND = true, PLUNGE = true, BEAM = true }),
+	Skill = table.freeze({ STORM = true, BULWARK = true, TEMPEST = true, CRYSTALS = true, PILLAR = true, SANCTUARY = true, WAKE = true, SINGULARITY = true }),
 })
 
 local function rgb(r: number, g: number, b: number): Color3
@@ -210,6 +224,16 @@ SkillVfxCatalog.Heroes = table.freeze({
 		Basic = { Style = "BOLT", Projectile = "ORB", Scale = 0.95, Arc = 0.1, Trail = 0.2, Impact = 1.8 },
 		Special = { Style = "CHAIN", Projectile = "ORB", Scale = 1.1, Arc = 0.05, Trail = 0.2, Impact = 2.1, Radius = 14 },
 		Skill = { Style = "PILLAR", Radius = 20, PillarHeight = 42, Linger = 3, Impact = 4.2, Shake = 0.28 },
+	},
+	-- Null Bolt / Singularity Lance / Event Horizon: void violet on black, white-violet core, gold
+	-- accent (docs/vane-spell-animations-plan.md). Null Bolt is flicked from the left hand and
+	-- swallows its hit; Singularity Lance is a straight laser off the staff tip; Event Horizon
+	-- is a black hole that pulses with every tick and collapses on the last.
+	hero_vane = {
+		Palette = { Primary = rgb(170, 80, 255), Secondary = rgb(30, 16, 44), Core = rgb(240, 220, 255), Accent = rgb(225, 180, 90) },
+		Basic = { Style = "BOLT", Projectile = "VOID", Origin = "LEFT_HAND", ImpactStyle = "IMPLODE", Scale = 0.9, Arc = 0, Trail = 0.18, Impact = 1.9 },
+		Special = { Style = "BEAM", Origin = "STAFF_TIP", Length = 36, Width = 4, Impact = 2.2, Linger = 0.3, Shake = 0.12 },
+		Skill = { Style = "SINGULARITY", Radius = 16, Core = 2.6, Impact = 5, Linger = 0.4, Shake = 0.3, Tether = true },
 	},
 	-- Ruby Firebolt / Wildfire Chain / Crimson Hellfire Pillar: crimson and flame orange.
 	hero_eolka = {

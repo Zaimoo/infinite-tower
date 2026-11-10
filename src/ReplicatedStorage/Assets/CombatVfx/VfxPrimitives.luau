@@ -527,6 +527,317 @@ function VfxPrimitives.Motes(pool: VfxPool.VfxPool, center: Vector3, color: Colo
 	end
 end
 
+-- The reverse of Burst: a sphere that collapses from `size` to a point over `duration` seconds
+-- from `at`, accelerating and brightening as it closes (a hit being swallowed).
+function VfxPrimitives.Implode(pool: VfxPool.VfxPool, position: Vector3, color: Color3, size: number, at: number, duration: number?)
+	local model = pool:Acquire("BURST", buildBurst)
+	local part = model.PrimaryPart :: BasePart
+	local length = duration or 0.14
+	part.Color = color
+	part.Transparency = 1
+	part.Size = Vector3.one * size
+	part.CFrame = CFrame.new(position)
+	pool:Show(model)
+	pool:Run({
+		Update = function(now: number): boolean
+			if now < at then
+				return false
+			end
+			local t = VfxMath.Progress(at, at + length, now)
+			part.Size = Vector3.one * math.max(0.1, size * (1 - t * t))
+			part.Transparency = 0.75 - 0.6 * t
+			return t >= 1
+		end,
+		Cleanup = function()
+			pool:Release(model)
+		end,
+	})
+end
+
+-- A small spell glyph that follows `frame()` over [startAt, endAt]: a faint disc with three
+-- spokes turning inside it (a six-pointed star), growing in and fading out. The glyph lies in
+-- the frame's XY plane, facing along its -Z (CFrame.lookAt towards what it casts at).
+function VfxPrimitives.Glyph(pool: VfxPool.VfxPool, frame: () -> CFrame, radius: number, palette: any, startAt: number, endAt: number)
+	local discModel = pool:Acquire("DISC", buildDisc)
+	local disc = discModel.PrimaryPart :: BasePart
+	disc.Color = palette.Secondary
+	disc.Transparency = 1
+	pool:Show(discModel)
+	local spokes: { Model } = {}
+	for i = 1, 3 do
+		local model = pool:Acquire("SPOKE", buildSpoke)
+		local part = model.PrimaryPart :: BasePart
+		part.Color = if i == 1 then palette.Core else palette.Primary
+		part.Transparency = 1
+		pool:Show(model)
+		spokes[i] = model
+	end
+	pool:Run({
+		Update = function(now: number): boolean
+			if now < startAt then
+				return false
+			end
+			local t = VfxMath.Progress(startAt, endAt, now)
+			local grow = math.min(1, t / 0.3)
+			local fade = fadeIn(t, 0.2, 0.15)
+			local r = math.max(0.05, radius * (0.3 + 0.7 * grow))
+			local at = frame()
+			disc.Size = Vector3.new(0.04, r * 2, r * 2)
+			disc.CFrame = at * CFrame.Angles(0, math.pi / 2, 0)
+			disc.Transparency = 1 - 0.55 * fade
+			-- Spins up as it charges: a quarter turn per second at first, two turns at the end.
+			local spin = (now - startAt) * (1.5 + 10 * t)
+			for i, model in spokes do
+				local part = model.PrimaryPart :: BasePart
+				part.Size = Vector3.new(0.05, r * 1.9, 0.03)
+				part.CFrame = at * CFrame.new(0, 0, -0.03) * CFrame.Angles(0, 0, spin + (i - 1) * math.pi / 3)
+				part.Transparency = 1 - 0.85 * fade
+			end
+			return t >= 1
+		end,
+		Cleanup = function()
+			pool:Release(discModel)
+			for _, model in spokes do
+				pool:Release(model)
+			end
+		end,
+	})
+end
+
+-- `count` motes drawn in from a shell of `radius` around `center()` to its centre over
+-- [startAt, endAt], each starting a little later than the last and spiralling as it closes.
+function VfxPrimitives.Converge(pool: VfxPool.VfxPool, center: () -> Vector3, color: Color3, radius: number, count: number, startAt: number, endAt: number, seed: number?)
+	local span = math.max(0.05, endAt - startAt)
+	local base = seed or 0
+	for i = 1, count do
+		local model = pool:Acquire("MOTE", buildMote)
+		local part = model.PrimaryPart :: BasePart
+		-- Spread start directions over a sphere (golden-angle spiral), turned by the seed.
+		local y = 1 - 2 * (i - 0.5) / count
+		local ring = math.sqrt(math.max(0, 1 - y * y))
+		local angle = base + i * 2.399963
+		local direction = Vector3.new(math.cos(angle) * ring, y * 0.6, math.sin(angle) * ring)
+		local from = startAt + span * 0.4 * (i - 1) / math.max(1, count - 1)
+		part.Color = color
+		part.Transparency = 1
+		part.Size = Vector3.one * 0.22
+		pool:Show(model)
+		pool:Run({
+			Update = function(now: number): boolean
+				if now < from then
+					return false
+				end
+				local t = VfxMath.Progress(from, endAt, now)
+				local closing = t * t
+				local twist = CFrame.Angles(0, closing * 2.2, 0)
+				local offset = twist:VectorToWorldSpace(direction) * radius * (1 - closing)
+				part.CFrame = CFrame.new(center() + offset)
+				part.Size = Vector3.one * (0.22 + 0.1 * t)
+				part.Transparency = 1 - 0.85 * fadeIn(t, 0.25, 0.08)
+				return t >= 1
+			end,
+			Cleanup = function()
+				pool:Release(model)
+			end,
+		})
+	end
+end
+
+-- Vane's void kit (docs/vane-spell-animations-plan.md) ------------------------------------
+
+local function lanceModel(): Model
+	local model = Instance.new("Model")
+	model.Name = "VfxLance"
+	for i, spec in { { "Core", Enum.Material.Neon }, { "Sheath", Enum.Material.Neon }, { "Haze", Enum.Material.ForceField } } do
+		local part = newPart(spec[1], Enum.PartType.Cylinder, spec[2])
+		part:SetAttribute("Index", i)
+		part.Parent = model
+		if i == 1 then
+			model.PrimaryPart = part
+		end
+	end
+	return model
+end
+
+-- A straight beam of light from `a` to `b`, `width` studs across: a bright core, a coloured
+-- sheath and a shimmering haze. Its head shoots out from `a` to `b` over `extend` seconds from
+-- `at`, holds for `hold`, then thins to nothing and fades over `fade`.
+function VfxPrimitives.Lance(pool: VfxPool.VfxPool, a: Vector3, b: Vector3, width: number, palette: any, at: number, extend: number, hold: number, fade: number)
+	local delta = b - a
+	local length = delta.Magnitude
+	if length < 0.1 then
+		return
+	end
+	local model = pool:Acquire("LANCE", lanceModel)
+	local list = parts(model)
+	local colors = { palette.Core, palette.Primary, palette.Primary }
+	local widths = { 0.3, 0.6, 1.0 }
+	local opacity = { 0, 0.25, 0.4 }
+	for i, part in list do
+		part.Color = colors[i]
+		part.Transparency = 1
+	end
+	pool:Show(model)
+	-- Cylinders lie along X; this turn points local +X from `a` towards `b`.
+	local frame = CFrame.lookAt(a, b) * CFrame.Angles(0, math.pi / 2, 0)
+	local finish = at + extend + hold + fade
+	pool:Run({
+		Update = function(now: number): boolean
+			if now < at then
+				return false
+			end
+			local reach = length * VfxMath.Progress(at, at + extend, now)
+			local thin = 1 - VfxMath.Progress(at + extend + hold, finish, now)
+			local swell = 1 + 0.25 * (1 - VfxMath.Progress(at, at + extend + 0.06, now))
+			for i, part in list do
+				local diameter = math.max(0.05, width * widths[i] * thin * swell)
+				part.Size = Vector3.new(math.max(0.1, reach), diameter, diameter)
+				part.CFrame = frame * CFrame.new(reach / 2, 0, 0)
+				part.Transparency = 1 - (1 - opacity[i]) * math.clamp(thin * 1.4, 0, 1)
+			end
+			return now >= finish
+		end,
+		Cleanup = function()
+			pool:Release(model)
+		end,
+	})
+end
+
+local buildBallSmooth = single("VfxBallSmooth", Enum.PartType.Ball, Enum.Material.SmoothPlastic)
+local buildBallNeon = single("VfxBallNeon", Enum.PartType.Ball, Enum.Material.Neon)
+
+export type OrbOptions = {
+	Center: () -> Vector3,
+	Diameter: (now: number) -> number, -- studs; 0 hides it
+	Color: Color3,
+	Neon: boolean?, -- glowing (a rim) instead of matte (a void)
+	Transparency: number?, -- at full strength (default 0)
+	StartAt: number,
+	EndAt: number,
+}
+
+-- A ball whose size is driven by `Diameter(now)` over [StartAt, EndAt]: the event sphere of a
+-- black hole, the well charging on a staff tip, a rim shell around either.
+function VfxPrimitives.Orb(pool: VfxPool.VfxPool, options: OrbOptions)
+	local model = if options.Neon then pool:Acquire("BALL_NEON", buildBallNeon) else pool:Acquire("BALL_SMOOTH", buildBallSmooth)
+	local part = model.PrimaryPart :: BasePart
+	part.Color = options.Color
+	part.Reflectance = 0
+	part.Transparency = 1
+	pool:Show(model)
+	pool:Run({
+		Update = function(now: number): boolean
+			if now < options.StartAt then
+				return false
+			end
+			local diameter = options.Diameter(now)
+			part.Size = Vector3.one * math.max(0.05, diameter)
+			part.CFrame = CFrame.new(options.Center())
+			part.Transparency = if diameter <= 0.05 then 1 else options.Transparency or 0
+			return now >= options.EndAt
+		end,
+		Cleanup = function()
+			pool:Release(model)
+		end,
+	})
+end
+
+local ACCRETION_SEGMENTS = 20
+local buildAccretion = segments("VfxAccretion", ACCRETION_SEGMENTS)
+
+export type AccretionOptions = {
+	Center: Vector3,
+	Radius: number,
+	Tilt: number, -- radians the disc leans from flat
+	Inner: Color3,
+	Outer: Color3,
+	StartAt: number,
+	EndAt: number,
+	Spin: number?, -- turns per second (default 1)
+	Pulses: { number }?, -- server times it flashes brighter (damage ticks)
+}
+
+-- A tilted, spinning ring of light around a black hole: alternating segments in two colours, so
+-- the spin reads. It opens over 0.15 s, flashes on each pulse and collapses over its last 0.12 s.
+function VfxPrimitives.Accretion(pool: VfxPool.VfxPool, options: AccretionOptions)
+	local model = pool:Acquire("ACCRETION", buildAccretion)
+	local list = parts(model)
+	for i, part in list do
+		part.Color = if i % 2 == 0 then options.Outer else options.Inner
+		part.Transparency = 1
+	end
+	pool:Show(model)
+	local base = CFrame.new(options.Center) * CFrame.Angles(options.Tilt, 0, 0)
+	local spin = (options.Spin or 1) * math.pi * 2
+	local pulses = options.Pulses or {}
+	pool:Run({
+		Update = function(now: number): boolean
+			if now < options.StartAt then
+				return false
+			end
+			local open = VfxMath.Progress(options.StartAt, options.StartAt + 0.15, now)
+			local close = 1 - VfxMath.Progress(options.EndAt - 0.12, options.EndAt, now)
+			local radius = options.Radius * open * close
+			local flash = 0
+			for _, pulse in pulses do
+				local since = now - pulse
+				if since >= 0 and since < 0.12 then
+					flash = math.max(flash, 1 - since / 0.12)
+				end
+			end
+			local step = math.pi * 2 / #list
+			local length = 2 * radius * math.sin(step / 2) * 1.1
+			local turn = (now - options.StartAt) * spin
+			for i, part in list do
+				local angle = turn + step * (i - 0.5)
+				part.Size = Vector3.new(math.max(0.1, length), 0.1, 0.35 + 0.25 * flash)
+				part.CFrame = base * CFrame.Angles(0, angle, 0) * CFrame.new(0, 0, -radius)
+				part.Transparency = if radius < 0.05 then 1 else 0.35 - 0.3 * flash
+			end
+			return now >= options.EndAt
+		end,
+		Cleanup = function()
+			pool:Release(model)
+		end,
+	})
+end
+
+local buildFlare = segments("VfxFlare", 2)
+
+-- A cross-shaped lens glint at `position()`, facing the camera: snaps open, then shrinks away
+-- over `duration` seconds from `at`.
+function VfxPrimitives.Flare(pool: VfxPool.VfxPool, position: () -> Vector3, size: number, color: Color3, at: number, duration: number?)
+	local model = pool:Acquire("FLARE", buildFlare)
+	local list = parts(model)
+	local length = duration or 0.18
+	for _, part in list do
+		part.Color = color
+		part.Transparency = 1
+	end
+	pool:Show(model)
+	pool:Run({
+		Update = function(now: number): boolean
+			if now < at then
+				return false
+			end
+			local t = VfxMath.Progress(at, at + length, now)
+			local camera = workspace.CurrentCamera
+			local at3 = position()
+			local facing = if camera then CFrame.lookAt(at3, camera.CFrame.Position) else CFrame.new(at3)
+			local scale = size * (if t < 0.25 then t / 0.25 else 1 - (t - 0.25) / 0.75)
+			for i, part in list do
+				part.Size = Vector3.new(math.max(0.05, if i == 1 then scale else scale * 0.12), math.max(0.05, if i == 1 then scale * 0.12 else scale), 0.05)
+				part.CFrame = facing * CFrame.Angles(0, 0, math.rad(20))
+				part.Transparency = 0.05 + 0.5 * t
+			end
+			return t >= 1
+		end,
+		Cleanup = function()
+			pool:Release(model)
+		end,
+	})
+end
+
 VfxPrimitives.FLAT = FLAT
 
 return table.freeze(VfxPrimitives)

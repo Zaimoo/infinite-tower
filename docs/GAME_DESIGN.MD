@@ -379,9 +379,9 @@ Hero summoning at the **Summoning Altar** (`FacilityController.luau`) is partiti
 **Summon screen.** Each banner card shows its featured hero (A Star's Arrival: Astrea; Call of the Rift: its Mythical, Han), a line with the top tier's odds and the pity, and a **View Heroes & Odds** button. The button opens a window laid out like the Forge's *All weapons & odds* (`HeroOddsModal.luau`): a rate pill per tier, the banner's pity, 10-pull and price rules, the 50/50 state on A Star's Arrival, the God's Blessing luck, then every tier (rarest first) with each hero it can award, that hero's chance per pull, its 1★ stats, and Featured / Owned markers. All odds come from `HeroBannerOdds`, which mirrors the server roll and applies the player's luck. A tier whose hero has a different rarity says so on the card (Call of the Rift's Superior roll awards Catio, a Rare hero).
 
 #### 1. Permanent Banner: "Call of the Rift" (Rarity Tiers 1–7)
-The permanent standard banner features exactly **one character for each rarity from Common to Mythical** (7 total heroes):
+The permanent standard banner features **at least one character for each rarity from Common to Mythical**, and grows as permanent heroes are added:
 - **Summon Cost:** `100 Gems` per single pull (`900 Gems` for 10x pull).
-- **Pity System:** Guaranteed **Exalted or higher** hero within **120 summons** (`MaxPity = 120`, `PityMinTier = 5`). The pity pull is split by the banner's Exalted/Legendary/Mythical rates (with God's Blessing luck): about 65% Ignis, 29% Edis, 6% Han. Any natural Exalted+ pull resets the counter. This banner has no featured hero and no 50/50 rule.
+- **Pity System:** Guaranteed **Exalted or higher** hero within **120 summons** (`MaxPity = 120`, `PityMinTier = 5`). The pity pull is split by the banner's Exalted/Legendary/Mythical rates (with God's Blessing luck): about 65% Exalted (Ignis or Diran), 29% Legendary (Edis or Vane), 6% Mythical (Han). Any natural Exalted+ pull resets the counter. This banner has no featured hero and no 50/50 rule.
 - **10-Pull Guarantee:** Every 10x pull includes at least one **Rare** or higher hero.
 - **Drop Rates:**
   - `Common (75.14%)`: **Gide** or **Shurn**
@@ -389,7 +389,7 @@ The permanent standard banner features exactly **one character for each rarity f
   - `Rare (4.7%)`: **Catio**
   - `Superior (1.65%)`: **Aaron / Catio (Pool fallback)**
   - `Exalted (0.33%)`: **Ignis** or **Diran**
-  - `Legendary (0.15%)`: **Edis Callen** (the same Gems per copy as Solaris on A Star's Arrival: half the rate at half the price)
+  - `Legendary (0.15%)`: **Edis Callen** or **Vane** (0.075% each)
   - `Mythical (0.03%)`: **Han** (the same Gems per copy as Astrea, by the same rule)
 
 **Han's rework.** Han used to be this banner's Common and the starter hero. He is now its Mythical, and **Gide** is the Common and the starter: a new Master begins with Gide in squad slot 1 (locked) and Catio on the bench. Hans summoned before the rework keep their saved Common rarity and stats, and only take the new look. Old-save migrations pin Han to Common for the same reason (`ProfileMigrations.LEGACY_RARITY`). His base stats and kit are unchanged; only the rarity multiplier differs.
@@ -435,6 +435,7 @@ Every summoned hero rolls a `QualityScalar` $q \in [0.90, 1.15]$ applied to thei
 | **Call of the Rift** | **Ignis** | **Exalted (5) / 1★** | Vanguard | `450` / `26` | `60,534` / `3,498` | `16` / `41.8` |
 | **Call of the Rift** | **Diran** | **Exalted (5) / 1★** | Healer | `300` / `22` | `40,356` / `2,959` | `20` / `52.2` |
 | **Call of the Rift** | **Edis Callen** | **Legendary (6) / 1★** | Striker | `320` / `62` | `174,339` / `33,778` | `16` / `63.2` |
+| **Call of the Rift** | **Vane** | **Legendary (6) / 1★** | Scholar | `220` / `60` | `119,856` / `32,688` | `20` / `79.0` |
 | **Call of the Rift** | **Han** | **Mythical (7) / 1★** | Striker | `300` / `40` | `661,944` / `88,259` | `14` / `83.6` |
 | **A Star's Arrival** | **Jenna** | **Common (1) / 1★** | Marksman | `210` / `34` | `210` / `34` | `13` / `13.0` |
 | **A Star's Arrival** | **Velkist** | **Uncommon (2) / 1★** | Striker | `300` / `44` | `1,215` / `178` | `14` / `21.2` |
@@ -634,6 +635,9 @@ Each hero's kit is resolved by `HeroId` in `ArchetypeCombatSkills.HeroProfiles` 
 | 14 | **Gide** (`hero_gide`) | Common | Miner | Ironvein Chop | Bedrock Sundering | Tunnelbreaker Fault |
 | 15 | **Shurn** (`hero_shurn`) | Common | Scholar | Cinder Spark | Arcing Hearthbolt | Dawnstone Convergence |
 | 16 | **Diran** (`hero_diran`) | Exalted | Healer | Runeward Bolt | Compass Mend | Vitality Covenant |
+| 17 | **Vane** (`hero_vane`) | Legendary | Scholar | Null Bolt | Singularity Lance | Event Horizon |
+
+**Vane's kit** has two mechanics of its own (`docs/vane-hero-plan.md`, `docs/vane-spell-animations-plan.md`). *Singularity Lance* is an instant beam (`BEAM_LINE`): the target takes the Special hit, and every other mob within a `36-stud` line from Vane through the target, `4` studs wide, takes `0.80x` ATK. *Event Horizon* holds a black hole at the target for **4s** (`16-stud` radius, cast `1.4s`): the `3.50x` is split over **8 pulses** `0.5s` apart (other mobs take the Scholar `0.6` splash share each pulse), and each pulse drags every mob in the radius `1.5` studs inward along walkable ground, stopping `3` studs from the centre. Biome Bosses, raid bosses and floor Alphas are not pulled, and duels never displace heroes.
 
 **Han's kit** keeps the Striker numbers but lands them differently. *Nightfall Fangs* is a leaping stab with both daggers reversed: its `1.60x` hit lands as **2 blows** `0.1s` apart, each with its own bonus-crit roll. *Abyssal Wake* is a dash through the target that leaves a circle of lingering slashes: its `3.20x` burst is split over **5 waves** `0.12s` apart, each hitting every enemy within `12 studs` of the aim point. His effects are smoky black and cold blue (`PLUNGE` and `WAKE` in `SkillVfxCatalog`).
 

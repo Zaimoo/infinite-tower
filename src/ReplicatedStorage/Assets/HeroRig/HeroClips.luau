@@ -642,7 +642,9 @@ local Shared: { [string]: Clip } = {
 -- Release: the fraction of an attack clip where the blow lands (melee) or the projectile leaves
 -- the weapon (ranged). HeroActionTiming reads it on the server to schedule the hit and on the
 -- client to time the effect, so the two cannot drift. Nock: the bow arrow is back on the string.
--- A hero override's attack clip sets its own Markers.
+-- A hero override's attack clip sets its own Markers, and may add Charge: a cosmetic,
+-- client-only cue before Release where wind-up VFX start (SkillVfx.PlayCharge). The server
+-- ignores it.
 local RELEASE_MARKERS: { [string]: { [string]: number } } = {
 	UNARMED = { AttackBasic = 0.35, AttackSpecial = 0.55, AttackSkill = 0.6 },
 	BOW = { AttackBasic = 0.72, AttackSpecial = 0.78, AttackSkill = 0.72 },
@@ -682,6 +684,7 @@ local OVERRIDE_WEAPON: { [string]: string } = {
 	hero_gide = "AXE",
 	hero_shurn = "STAFF",
 	hero_diran = "TOME",
+	hero_vane = "STAFF",
 }
 
 local function signature(duration: number, keys: { { any } }, markers: { [string]: number }): Clip
@@ -1164,6 +1167,99 @@ do
 			{ 0.86, merge(convergence, { Waist = { -20, 0, 0 } }) },
 			{ 1, p.Stand },
 		}, { Release = 0.68 }),
+	}
+end
+
+-- Vane (STAFF), docs/vane-spell-animations-plan.md §3. Null Bolt flicks from the left hand.
+-- Singularity Lance turns side-on and sights down the levelled staff like a rifle, the left hand
+-- guiding the shaft, then recoils as the beam fires. Event Horizon reaches out with an open hand,
+-- clenches it to crush space into the black hole, holds it, twists the fist, lets go and pushes
+-- up his glasses. Idle is his calculating stance
+-- from the reference art: upright, chin a little down, staff upright beside his right hip, left
+-- hand held forward and out, palm up, presenting a spell matrix.
+do
+	local p = WeaponPoses.STAFF
+	local calculating: Pose = {
+		Waist = { 0, 4, 0 }, Neck = { -4, 6, 3 },
+		RightShoulder = { 10, 0, 28 }, RightElbow = { 35, 0, 0 }, RightWrist = { 45, -35, 0 },
+		LeftShoulder = { 48, 0, -30 }, LeftElbow = { 55, 0, 0 }, LeftWrist = { 0, 0, 0 },
+		LeftHip = { 2, 0, -8 }, LeftKnee = { -6, 0, 0 }, LeftAnkle = { 4, 0, 8 },
+		RightHip = { 2, 0, 8 }, RightKnee = { -6, 0, 0 }, RightAnkle = { 4, 0, -8 },
+		RootOffset = { 0, -0.05, 0 },
+	}
+	-- Null Bolt, "The Dismissal" (docs/vane-spell-animations-plan.md §3.1): a two-finger flick of
+	-- the left hand while the staff stays planted. Slow cock, a creeping late anticipation, a
+	-- snap on Release, a small overshoot, then a moving hold with the hand still out. `ready` is
+	-- the staff stand with his idle hand a little forward, so Idle hands off without a pop.
+	local ready = merge(p.Stand, { LeftShoulder = { 30, 0, -18 }, LeftElbow = { 50, 0, 0 } })
+	local cocked = merge(ready, { Waist = { 0, 10, 0 }, Neck = { -2, -6, 0 }, LeftShoulder = { 38, -20, -12 }, LeftElbow = { 108, 0, 0 }, LeftWrist = { -40, 0, 0 } })
+	local creep = merge(cocked, { LeftElbow = { 114, 0, 0 }, LeftWrist = { -48, 0, 0 } })
+	local flick = merge(ready, { Waist = { -4, -8, 0 }, LeftShoulder = { 82, 10, -12 }, LeftElbow = { 18, 0, 0 }, LeftWrist = { 35, 0, 0 } })
+	local overshoot = merge(flick, { LeftElbow = { 10, 0, 0 }, LeftWrist = { 45, 0, 0 } })
+	local lingering = merge(flick, { LeftShoulder = { 76, 8, -12 }, LeftElbow = { 22, 0, 0 }, LeftWrist = { 15, 0, 0 } })
+	-- Singularity Lance, "Sightline" (§3.2). Side-on, left foot forward; the right wrist tips the
+	-- staff from upright to level along the sightline, and the left hand aims two fingers beside
+	-- it. Arm angles solved against the rig in Studio (staff level and dead ahead at `sighted`).
+	local sideOn: Pose = { LeftHip = { 14, 0, -6 }, RightHip = { -10, 0, 6 }, LeftKnee = { -16, 0, 0 }, RightKnee = { -12, 0, 0 }, LeftAnkle = { 4, 0, 0 }, RightAnkle = { 14, 0, 0 } }
+	local turnIn = merge(merge(ready, sideOn), { Waist = { -2, -14, 0 }, Neck = { -4, 12, 0 }, RightShoulder = { 50, 5, 8 }, RightElbow = { 40, 0, 0 }, RightWrist = { -50, 5, 0 }, LeftShoulder = { 70, -25, 25 }, LeftElbow = { 60, 0, 0 } })
+	local sighted = merge(turnIn, { Waist = { -6, -12, 0 }, Neck = { -8, 12, 0 }, RightShoulder = { 70, 15, 6 }, RightElbow = { 40, 0, 0 }, RightWrist = { -100, 10, 0 }, LeftShoulder = { 95, -40, 40 }, LeftElbow = { 55, 0, 0 }, RootOffset = { 0, -0.12, 0 } })
+	local pressing = merge(sighted, { Waist = { -8, -12, 0 }, RightShoulder = { 72, 15, 6 } })
+	local recoil = merge(sighted, { Waist = { 6, -8, 0 }, RightShoulder = { 86, 15, 6 }, RightWrist = { -85, 10, 0 }, LeftShoulder = { 88, -35, 35 }, LeftElbow = { 65, 0, 0 }, RootOffset = { 0, -0.08, 0.14 } })
+	local dismiss = merge(merge(ready, sideOn), { Waist = { 0, -10, 0 }, Neck = { -4, 10, 0 }, RightShoulder = { 40, -6, 10 }, RightElbow = { 45, 0, 0 }, RightWrist = { -10, 0, 0 }, LeftShoulder = { 40, 10, -24 }, LeftElbow = { 55, 0, 0 }, LeftWrist = { 0, 0, -30 } })
+
+	-- Event Horizon, "The Crush" (§3.3). Gather wide, reach high to the target palm-out, crush
+	-- down and clench on Release, hold with a micro-tremor while the staff tip points at the
+	-- hole, twist the fist, let go, push up the glasses. Left-arm angles for the reach, crush and
+	-- glasses push are solved against the rig in Studio (the hand stops in front of the lenses).
+	local gather = merge(ready, { Waist = { 4, 8, 0 }, RightShoulder = { 12, 0, 24 }, RightElbow = { 40, 0, 0 }, LeftShoulder = { 60, 0, -70 }, LeftElbow = { 10, 0, 0 }, LeftWrist = { 0, 0, -20 }, RootOffset = { 0, -0.05, 0.08 } })
+	local reach = merge(ATTACK_STANCE, { Waist = { -4, -6, 0 }, Neck = { 6, 0, 0 }, RightShoulder = { 100, 0, 14 }, RightElbow = { 0, 0, 0 }, LeftShoulder = { 130, -35, 20 }, LeftElbow = { 5, 0, 0 }, LeftWrist = { -30, 0, 0 } })
+	local strain = merge(reach, { LeftShoulder = { 132, -35, 20 }, LeftWrist = { -34, 0, 0 } })
+	local crush = merge(reach, { Waist = { -10, -4, 0 }, Neck = { -4, 0, 0 }, LeftShoulder = { 55, -20, 20 }, LeftElbow = { 65, 0, 0 }, LeftWrist = { 40, 0, 0 }, RightShoulder = { 88, 0, 10 }, RightElbow = { 5, 0, 0 }, RightWrist = { -45, 0, 0 }, RootOffset = { 0, -0.12, 0 } })
+	local settle = merge(crush, { Waist = { -12, -4, 0 }, LeftElbow = { 70, 0, 0 } })
+	local tremorA = merge(settle, { LeftShoulder = { 56.5, -20, 20 }, LeftWrist = { 41.5, 0, 0 } })
+	local tremorB = merge(settle, { LeftShoulder = { 53.5, -20, 20 }, LeftWrist = { 38.5, 0, 0 } })
+	local twist = merge(settle, { LeftElbow = { 75, 0, 0 }, LeftWrist = { 40, 0, -55 } })
+	local letGo = merge(ready, { LeftShoulder = { 35, 0, -15 }, LeftElbow = { 70, 0, 0 } })
+	local glasses = merge(ready, { Neck = { -6, 4, 0 }, LeftShoulder = { 110, -40, 30 }, LeftElbow = { 70, 0, 0 }, LeftWrist = { -20, 0, 0 } })
+
+	Overrides.hero_vane = {
+		Idle = breathe(calculating, 3.6),
+		AttackBasic = signature(1.0, {
+			{ 0, ready },
+			{ 0.2, cocked },
+			{ 0.45, creep },
+			{ 0.52, flick },
+			{ 0.58, overshoot },
+			{ 0.8, lingering },
+			{ 1, ready },
+		}, { Charge = 0.2, Release = 0.52 }),
+		AttackSpecial = signature(1.0, {
+			{ 0, ready },
+			{ 0.2, turnIn },
+			{ 0.4, sighted },
+			{ 0.52, pressing },
+			{ 0.55, pressing }, -- the body locks on the shot
+			{ 0.6, recoil },
+			{ 0.75, dismiss },
+			{ 0.88, merge(ready, { Waist = { 0, -3, 0 } }) },
+			{ 1, ready },
+		}, { Charge = 0.2, Release = 0.55 }),
+		AttackSkill = signature(1.4, {
+			{ 0, ready },
+			{ 0.15, gather },
+			{ 0.38, reach },
+			{ 0.46, strain },
+			{ 0.5, crush },
+			{ 0.54, settle },
+			{ 0.62, tremorA },
+			{ 0.68, tremorB },
+			{ 0.74, settle },
+			{ 0.8, twist },
+			{ 0.85, letGo },
+			{ 0.9, glasses },
+			{ 0.95, glasses }, -- a beat on the bridge of the glasses
+			{ 1, ready },
+		}, { Charge = 0.15, Release = 0.5 }),
 	}
 end
 

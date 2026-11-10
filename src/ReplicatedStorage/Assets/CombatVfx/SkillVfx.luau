@@ -33,6 +33,9 @@ export type PlayArgs = {
 	WeaponType: string?,
 	Cue: any, -- TowerProtocol.DecodeHeroCue result
 	Origin: Vector3, -- where a projectile leaves the weapon (the bow's Nock, else the chest)
+	-- Live position of a named cast point (a recipe's Origin, e.g. "LEFT_HAND"), or nil when
+	-- the rig has none; the effect then uses Origin.
+	OriginOf: ((name: string) -> Vector3?)?,
 	Target: () -> Vector3, -- live target body centre, or the cue's aim when the target is gone
 	-- Ground-level positions (the server's entity positions are at the feet, like Cue.Aim):
 	Self: (() -> Vector3)?, -- the attacker's feet
@@ -132,13 +135,37 @@ local function afterHits(ctx: Context, kind: string, center: () -> Vector3, radi
 	end)
 end
 
+-- Where this recipe's projectile leaves the hero: its named Origin if the rig has one, else
+-- the default (the bow's nock, else the chest).
+local function originOf(args: PlayArgs, recipe: Recipe): Vector3
+	local name = recipe.Origin
+	if name and name ~= "CHEST" and args.OriginOf then
+		local point = args.OriginOf(name)
+		if point then
+			return point
+		end
+	end
+	return args.Origin
+end
+
 -- Basic -------------------------------------------------------------------------------------
 
--- SHOT / BOLT: one projectile to the target, bursting on arrival.
+local IMPLODE_SECONDS = 0.14
+
+-- SHOT / BOLT: one projectile to the target, bursting on arrival. ImpactStyle IMPLODE swallows
+-- the hit instead: a pinpoint flash, a sphere collapsing onto it, then a small burst.
 local function playProjectile(ctx: Context)
-	local args, recipe, palette = ctx.Args, ctx.Recipe, ctx.Palette
-	fly(ctx.Pool, projectile(recipe, palette), args.Origin, args.Target, ctx.StartAt, ctx.ArriveAt, VfxMath.ArcLift(args.Origin, args.Cue.Aim, recipe.Arc), function(at: Vector3)
-		VfxPrimitives.Burst(ctx.Pool, at, palette.Core, recipe.Impact or 1.6, ctx.ArriveAt)
+	local args, recipe, palette, pool = ctx.Args, ctx.Recipe, ctx.Palette, ctx.Pool
+	local from = originOf(args, recipe)
+	local impact = recipe.Impact or 1.6
+	fly(pool, projectile(recipe, palette), from, args.Target, ctx.StartAt, ctx.ArriveAt, VfxMath.ArcLift(from, args.Cue.Aim, recipe.Arc), function(at: Vector3)
+		if recipe.ImpactStyle == "IMPLODE" then
+			VfxPrimitives.Burst(pool, at, palette.Core, impact * 0.35, ctx.ArriveAt, 0.08)
+			VfxPrimitives.Implode(pool, at, palette.Primary, impact * 1.3, ctx.ArriveAt, IMPLODE_SECONDS)
+			VfxPrimitives.Burst(pool, at, palette.Core, impact, ctx.ArriveAt + IMPLODE_SECONDS, 0.15)
+		else
+			VfxPrimitives.Burst(pool, at, palette.Core, impact, ctx.ArriveAt)
+		end
 	end)
 end
 
@@ -469,6 +496,140 @@ local function playSanctuary(ctx: Context)
 	end
 end
 
+-- Vane (docs/vane-spell-animations-plan.md §3) -----------------------------------------------
+
+local UP = Vector3.new(0, 2, 0)
+local STREAKS_PER_WAVE = 8
+
+-- Unit direction and far end of a BEAM: from the attacker's feet through the target, `length`
+-- studs, flat (the server's BEAM_LINE segment, HeroSkillEffects).
+function SkillVfx.BeamLine(feet: Vector3, target: Vector3, length: number): (Vector3, Vector3)
+	local flat = Vector3.new(target.X - feet.X, 0, target.Z - feet.Z)
+	local direction = if flat.Magnitude > 1e-3 then flat.Unit else Vector3.new(0, 0, -1)
+	return direction, feet + direction * length
+end
+
+-- BEAM: an instant straight laser off the staff tip, through the target and out to the kit's
+-- length. A muzzle shockwave, jagged arcs wrapping the core, a swallowed hit on every mob the
+-- server reports along it (rippling outward with distance) and a fading afterimage.
+local function playBeam(ctx: Context)
+	local pool, recipe, palette, args = ctx.Pool, ctx.Recipe, ctx.Palette, ctx.Args
+	local at = ctx.ArriveAt
+	local feet = if args.Self then args.Self() else args.Origin - UP
+	local length = recipe.Length or 36
+	local width = recipe.Width or 4
+	local direction, far = SkillVfx.BeamLine(feet, args.Target(), length)
+	local muzzle = originOf(args, recipe)
+	local tail = far + UP
+	VfxPrimitives.Lance(pool, muzzle, tail, width * 0.55, palette, at, 0.06, 0.08, recipe.Linger or 0.3)
+	VfxPrimitives.Beam(pool, muzzle, tail, palette.Primary, at, 0.22, args.Cue.NetId % 13)
+	VfxPrimitives.Beam(pool, muzzle, tail, palette.Accent or palette.Core, at + 0.03, 0.18, args.Cue.NetId % 7 + 5)
+	VfxPrimitives.Burst(pool, muzzle, palette.Core, 1.4, at, 0.12)
+	VfxPrimitives.FlightRing(pool, muzzle + direction * 0.6, direction, 1.2, palette.Core, at)
+	VfxPrimitives.FlightRing(pool, muzzle + direction * 1.4, direction, 2.0, palette.Primary, at + 0.08)
+	-- Afterimage: motes drift off the line as it thins.
+	for i = 1, 6 do
+		local point = feet + direction * (length * (i - 0.5) / 6) + UP * 0.8
+		VfxPrimitives.Motes(pool, point, palette.Primary, at + 0.1 + i * 0.01, 1, 0.45)
+	end
+	local mid = feet + direction * (length / 2)
+	afterHits(ctx, "HIT", fixed(mid), length / 2 + width, function(points: { Vector3 })
+		local now = at + HIT_LOOKUP_DELAY
+		for i, point in points do
+			if i > 10 then
+				break
+			end
+			local dx, dz = point.X - feet.X, point.Z - feet.Z
+			local along = dx * direction.X + dz * direction.Z
+			local across = math.abs(dx * direction.Z - dz * direction.X)
+			if along >= -1 and along <= length + 1 and across <= width then
+				local hitAt = now + along * 0.004
+				local body = point + UP
+				VfxPrimitives.Implode(pool, body, palette.Primary, (recipe.Impact or 2) * 1.2, hitAt, 0.12)
+				VfxPrimitives.Burst(pool, body, palette.Core, recipe.Impact or 2, hitAt + 0.12, 0.14)
+			end
+		end
+	end)
+	shake(ctx, at)
+end
+
+-- SINGULARITY: a black hole floating over the aim point for the skill's ticks. It is born on
+-- the first tick (a flash, an inward fold of space, the event sphere and its gold accretion
+-- ring), breathes on every tick while the server's hits streak towards it, and collapses on the
+-- last: shrink, a beat of nothing, then the burst.
+local function playSingularity(ctx: Context)
+	local pool, recipe, palette, args = ctx.Pool, ctx.Recipe, ctx.Palette, ctx.Args
+	local center: Vector3 = args.Cue.Aim
+	local hole = center + Vector3.new(0, 3, 0)
+	local radius = recipe.Radius or 16
+	local core = recipe.Core or 2.6
+	local linger = recipe.Linger or 0.4
+	local archetype = args.WeaponType and SkillVfxCatalog.WeaponArchetype[args.WeaponType]
+	local profile = ArchetypeCombatSkills.GetSkillProfile(args.HeroId, archetype)
+	local ticks, gap = HeroActionTiming.Ticks(profile.Skill)
+	local waves = VfxMath.WaveTimes(ctx.ArriveAt, ticks, gap)
+	local first, last = waves[1], waves[#waves]
+	local shrinkAt, burstAt = last, last + 0.17
+	local accent = palette.Accent or palette.Core
+
+	-- The event sphere: grows in 0.15 s, swells 12% for 0.1 s on each tick, shrinks to a point.
+	local function sphere(scale: number): (number) -> number
+		return function(now: number): number
+			local grow = VfxMath.Progress(first, first + 0.15, now)
+			local shrink = 1 - VfxMath.Progress(shrinkAt, shrinkAt + 0.12, now)
+			local breath = 0
+			for _, wave in waves do
+				local since = now - wave
+				if since >= 0 and since < 0.1 then
+					breath = math.max(breath, 0.12 * (1 - since / 0.1))
+				end
+			end
+			return core * scale * grow * shrink * (1 + breath)
+		end
+	end
+	local holeAt = fixed(hole)
+	VfxPrimitives.Burst(pool, hole, palette.Core, core * 0.6, first, 0.1)
+	VfxPrimitives.Orb(pool, { Center = holeAt, Diameter = sphere(1), Color = palette.Secondary, StartAt = first, EndAt = shrinkAt + 0.12 })
+	VfxPrimitives.Orb(pool, { Center = holeAt, Diameter = sphere(1.25), Color = palette.Primary, Neon = true, Transparency = 0.6, StartAt = first, EndAt = shrinkAt + 0.12 })
+	VfxPrimitives.Accretion(pool, { Center = hole, Radius = core * 1.15, Tilt = math.rad(18), Inner = palette.Primary, Outer = accent, StartAt = first, EndAt = shrinkAt + 0.12, Spin = 1.2, Pulses = waves })
+	-- Space folds in: a ring runs from the edge to the core, and the floor darkens under it.
+	VfxPrimitives.Ring(pool, { Center = center, From = radius, To = core, Color = palette.Primary, StartAt = first, EndAt = first + 0.3, Width = 0.9 })
+	local ground = CFrame.new(center + Vector3.new(0, 0.15, 0)) * VfxPrimitives.FLAT
+	VfxPrimitives.Disc(pool, { CFrame = ground, Radius = radius, Color = palette.Secondary, StartAt = first - 0.05, EndAt = burstAt + linger, Grow = 0.6, Transparency = 0.35 })
+	VfxPrimitives.Ring(pool, { Center = center, From = radius * 0.97, To = radius, Color = palette.Primary, StartAt = first + 0.2, EndAt = burstAt, Width = 0.35 })
+	local callback = args.Shake
+	local magnitude = recipe.Shake
+	if callback and magnitude then
+		VfxPrimitives.At(pool, first, function()
+			callback(magnitude * 0.6)
+		end)
+	end
+
+	-- Each tick: debris drawn in from the rim, and a streak from every mob it hit to the hole.
+	local lookup = args.RecentHits
+	for k, wave in waves do
+		VfxPrimitives.Converge(pool, holeAt, if k % 2 == 0 then accent else palette.Primary, radius * 0.75, 5, wave, wave + gap * 0.9, k * 1.7 + args.Cue.NetId % 5)
+		if lookup then
+			VfxPrimitives.At(pool, wave + HIT_LOOKUP_DELAY, function()
+				for i, point in lookup("HIT", center, radius + 2, wave - 0.1) do
+					if i > STREAKS_PER_WAVE then
+						break
+					end
+					local now = wave + HIT_LOOKUP_DELAY
+					VfxPrimitives.Beam(pool, point + UP, hole, palette.Primary, now, 0.22, i + k * 3)
+					VfxPrimitives.Burst(pool, point + UP, palette.Core, 0.9, now, 0.12)
+				end
+			end)
+		end
+	end
+
+	-- Collapse.
+	VfxPrimitives.Burst(pool, hole, palette.Core, recipe.Impact or 5, burstAt, 0.3)
+	VfxPrimitives.Ring(pool, { Center = center, From = 1, To = radius * 1.1, Color = palette.Core, StartAt = burstAt, EndAt = burstAt + 0.45, Width = 1.2 })
+	VfxPrimitives.Motes(pool, hole, palette.Primary, burstAt, 10, 0.6)
+	shake(ctx, burstAt)
+end
+
 local PLAYERS: { [string]: (Context) -> () } = {
 	SHOT = playProjectile,
 	BOLT = playProjectile,
@@ -477,6 +638,7 @@ local PLAYERS: { [string]: (Context) -> () } = {
 	CLEAVE = playCleave,
 	CROSS = playCross,
 	PLUNGE = playPlunge,
+	BEAM = playBeam,
 	TREMOR = playTremor,
 	CHAIN = playChain,
 	MEND = playMend,
@@ -487,8 +649,120 @@ local PLAYERS: { [string]: (Context) -> () } = {
 	CRYSTALS = playCrystals,
 	PILLAR = playPillar,
 	SANCTUARY = playSanctuary,
+	SINGULARITY = playSingularity,
 }
 SkillVfx.Styles = table.freeze(table.clone(PLAYERS))
+
+-- Charge (wind-up) ----------------------------------------------------------------------------
+-- Played at an attack clip's Charge marker, before Release. Every charge effect ends at the
+-- release time, so an interrupted cast leaves nothing behind. Cosmetic only.
+
+type ChargeContext = {
+	Pool: VfxPool.VfxPool,
+	Args: PlayArgs,
+	Recipe: Recipe,
+	Palette: Palette,
+	StartAt: number, -- now
+	ReleaseAt: number, -- server release time
+}
+
+-- BOLT from the left hand: a glyph spins up in front of the palm, facing the target, while
+-- motes are drawn into it; it pops as the bolt leaves.
+local function chargeGlyph(ctx: ChargeContext): boolean
+	local args, recipe, palette, pool = ctx.Args, ctx.Recipe, ctx.Palette, ctx.Pool
+	if recipe.Origin ~= "LEFT_HAND" or not args.OriginOf or not args.OriginOf("LEFT_HAND") then
+		return false
+	end
+	local function hand(): Vector3
+		return originOf(args, recipe)
+	end
+	local function frame(): CFrame
+		local at = hand()
+		local target = args.Target()
+		local delta = target - at
+		return if delta.Magnitude > 1e-3 then CFrame.lookAt(at, target) else CFrame.new(at)
+	end
+	local scale = recipe.Scale or 1
+	VfxPrimitives.Glyph(pool, frame, 0.45 * scale, palette, ctx.StartAt, ctx.ReleaseAt)
+	VfxPrimitives.Converge(pool, hand, palette.Core, 1.5, 3, ctx.StartAt, ctx.ReleaseAt, args.Cue.NetId % 11)
+	VfxPrimitives.Burst(pool, hand(), palette.Core, 0.6 * scale, ctx.ReleaseAt, 0.12)
+	return true
+end
+
+-- BEAM off the staff tip: motes stream into the tip, a dark well grows there inside a bright
+-- rim, and a gold glint flashes just before it fires (the tell).
+local function chargeTip(ctx: ChargeContext): boolean
+	local args, recipe, palette, pool = ctx.Args, ctx.Recipe, ctx.Palette, ctx.Pool
+	local function tip(): Vector3
+		return originOf(args, recipe)
+	end
+	local from, to = ctx.StartAt, ctx.ReleaseAt
+	local function well(scale: number): (number) -> number
+		return function(now: number): number
+			return 0.6 * scale * VfxMath.Progress(from, to, now)
+		end
+	end
+	VfxPrimitives.Converge(pool, tip, palette.Primary, 3, 8, from, to, args.Cue.NetId % 9)
+	VfxPrimitives.Orb(pool, { Center = tip, Diameter = well(1), Color = palette.Secondary, StartAt = from, EndAt = to })
+	VfxPrimitives.Orb(pool, { Center = tip, Diameter = well(1.35), Color = palette.Core, Neon = true, Transparency = 0.7, StartAt = from, EndAt = to })
+	VfxPrimitives.Flare(pool, tip, 2.2, palette.Accent or palette.Core, math.max(from, to - 0.1), 0.16)
+	return true
+end
+
+-- SINGULARITY: at the aim point, the edge of the area closes in, motes spiral to where the hole
+-- will open and the floor dims; with Tether, a thin line flickers from the caster's left hand.
+local function chargeWell(ctx: ChargeContext): boolean
+	local args, recipe, palette, pool = ctx.Args, ctx.Recipe, ctx.Palette, ctx.Pool
+	local center: Vector3 = args.Cue.Aim
+	local hole = center + Vector3.new(0, 3, 0)
+	local radius = recipe.Radius or 16
+	local from, to = ctx.StartAt, ctx.ReleaseAt
+	VfxPrimitives.Ring(pool, { Center = center, From = radius, To = 1, Color = palette.Primary, StartAt = from, EndAt = to, Width = 0.8 })
+	VfxPrimitives.Converge(pool, fixed(hole), palette.Primary, radius * 0.6, 12, from, to, args.Cue.NetId % 7)
+	VfxPrimitives.Disc(pool, { CFrame = CFrame.new(center + Vector3.new(0, 0.12, 0)) * VfxPrimitives.FLAT, Radius = radius * 0.8, Color = palette.Secondary, StartAt = from, EndAt = to + 0.05, Grow = 0.3, Transparency = 0.5 })
+	local originFn = args.OriginOf
+	if recipe.Tether and originFn then
+		local hand = originFn("LEFT_HAND")
+		if hand then
+			local span = to - from
+			for i = 0, 2 do
+				VfxPrimitives.Beam(pool, hand, hole, palette.Primary, from + span * (0.2 + 0.27 * i), span * 0.3, i + 2)
+			end
+		end
+	end
+	return true
+end
+
+local CHARGERS: { [string]: (ChargeContext) -> boolean } = {
+	BOLT = chargeGlyph,
+	BEAM = chargeTip,
+	SINGULARITY = chargeWell,
+}
+SkillVfx.Chargers = table.freeze(table.clone(CHARGERS))
+
+-- Plays the wind-up for the cue's attack, if its style has one. Returns false when there is
+-- nothing to play or release has already passed.
+function SkillVfx.PlayCharge(pool: VfxPool.VfxPool, args: PlayArgs): boolean
+	local cue = args.Cue
+	local tier = TIERS[cue.Tier]
+	local recipe, palette = SkillVfxCatalog.Get(args.HeroId, args.WeaponType, tier or "")
+	if not tier or not recipe or not palette then
+		return false
+	end
+	local charger = CHARGERS[recipe.Style]
+	local releaseAt = VfxMath.FlightWindow(cue)
+	if not charger or args.Now >= releaseAt or not pool:Visible(args.Origin) then
+		return false
+	end
+	return charger({
+		Pool = pool,
+		Args = args,
+		Recipe = recipe,
+		Palette = palette,
+		StartAt = args.Now,
+		ReleaseAt = releaseAt,
+	})
+end
 
 -- Plays the cue's attack. Returns false when this hero has no recipe, the hit already landed,
 -- or the whole effect is too far from the camera.

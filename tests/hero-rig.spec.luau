@@ -200,7 +200,7 @@ do
 	local HeroCostumes = require(ReplicatedStorage.Assets.HeroRig.HeroCostumes)
 	local HeroCatalog = require(ReplicatedStorage.Shared.Config.HeroCatalog)
 
-	check(#HeroCostumes.List == 16, "16 hero costumes")
+	check(#HeroCostumes.List == 17, "17 hero costumes")
 	for heroId in HeroCatalog.Seeds do
 		check(HeroCostumes.ById[heroId] ~= nil, `costume exists for {heroId}`)
 	end
@@ -362,6 +362,8 @@ do
 			if string.sub(state, 1, 6) == "Attack" then
 				local release = HeroClips.Marker(clip, "Release", -1)
 				check(release > 0 and release < 1, `Overrides.{heroId}.{state} has a Release marker`)
+				local charge = HeroClips.Marker(clip, "Charge", -1)
+				check(charge == -1 or (charge > 0 and charge < release), `Overrides.{heroId}.{state} charges before it releases`)
 				if HeroClips.OverrideWeapon[heroId] == "BOW" then
 					check(HeroClips.Marker(clip, "Nock", -1) > release, `Overrides.{heroId}.{state} re-nocks after release`)
 				end
@@ -371,6 +373,14 @@ do
 	check(HeroClips.Get("hero_velkist", "DAGGERS", "AttackSpecial") == HeroClips.Overrides.hero_velkist.AttackSpecial, "Velkist's Shadow Rend override")
 	check(HeroClips.Get("hero_catio", "AXE", "AttackSpecial") == HeroClips.Overrides.hero_catio.AttackSpecial, "Catio's Resonance Tremor override")
 	check(HeroClips.Get("hero_han", "DAGGERS", "AttackSpecial") == HeroClips.Overrides.hero_han.AttackSpecial, "Han's Nightfall Fangs override")
+	check(HeroClips.Get("hero_vane", "STAFF", "AttackBasic") == HeroClips.Overrides.hero_vane.AttackBasic, "Vane's Null Bolt override")
+	check(HeroClips.Get("hero_vane", "UNARMED", "AttackBasic") == HeroClips.ByWeapon.UNARMED.AttackBasic, "Vane unarmed falls back to UNARMED")
+	check(HeroClips.Marker(HeroClips.Overrides.hero_vane.AttackBasic, "Charge", -1) > 0, "Null Bolt charges its glyph before the flick")
+	for _, state in { "AttackSpecial", "AttackSkill" } do
+		local clip = HeroClips.Overrides.hero_vane[state]
+		check(HeroClips.Marker(clip, "Charge", -1) > 0, `Vane's {state} charges before it fires`)
+		check(clip.Keys[1].Pose == clip.Keys[#clip.Keys].Pose, `Vane's {state} starts and ends on the same pose`)
+	end
 	check(HeroClips.Get("hero_archon", "DAGGERS", "AttackSpecial") == HeroClips.ByWeapon.DAGGERS.AttackSpecial, "other specials use the weapon clip")
 end
 

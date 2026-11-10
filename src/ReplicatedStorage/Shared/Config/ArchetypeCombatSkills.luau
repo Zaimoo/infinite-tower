@@ -13,6 +13,7 @@ export type SecondaryEffectType =
 	| "SEISMIC_STAGGER"
 	| "ALLY_MINI_HEAL"
 	| "CHAIN_LIGHTNING"
+	| "BEAM_LINE" -- every mob on a line through the target (SecondaryParam = length; Vane)
 
 export type Delivery = "MELEE" | "PROJECTILE" | "AREA"
 
@@ -42,6 +43,8 @@ export type SpecialAttackDef = {
 	StaminaGain: number,
 	SecondaryEffect: SecondaryEffectType,
 	SecondaryParam: number, -- e.g. heal percentage, cone radius, chain count
+	BeamWidth: number?, -- BEAM_LINE: hit width in studs, bodies included
+	BeamDamage: number?, -- BEAM_LINE: ATK multiplier for every other mob on the line
 	VFXKey: string,
 	Delivery: Delivery?,
 	ProjectileSpeed: number?,
@@ -64,6 +67,9 @@ export type SkillAttackDef = {
 	Description: string,
 	VFXKey: string,
 	CastSeconds: number?, -- minimum animation lock; the hero's next attack waits for it
+	Effect: "SINGULARITY"?, -- a hero's own skill effect instead of its archetype's (HeroSkillEffects)
+	PullStudsPerTick: number?, -- SINGULARITY: studs each tick drags mobs towards the centre
+	CoreRadius: number?, -- SINGULARITY: pulls stop this far from the centre
 	Delivery: Delivery?,
 	ProjectileSpeed: number?,
 	TravelSeconds: number?,
@@ -467,6 +473,35 @@ local HERO_KITS: { [string]: HeroKitOverride } = {
 		Skill = {
 			Name = "Dawnstone Convergence",
 			Description = "Shurn raises his crystal-bound branch staff and calls down a radiant pillar of golden-amber light onto the target area (20-stud radius), dealing 3.50x ATK magic damage and scorching the ground for 3s.",
+		},
+	},
+	-- Void archmage (docs/vane-hero-plan.md §3, vane-spell-animations-plan.md). Singularity Lance
+	-- is an instant 36-stud beam through the target that hits every mob on the line. Event
+	-- Horizon is a black hole for 4s: the 3.50x is split over 8 ticks 0.5s apart, and each tick
+	-- drags mobs 1.5 studs inward (bosses and Alphas hold their ground).
+	hero_vane = {
+		Archetype = "Scholar",
+		Basic = { Name = "Null Bolt" },
+		Special = {
+			Name = "Singularity Lance",
+			SecondaryEffect = "BEAM_LINE",
+			SecondaryParam = 36, -- beam length, studs
+			BeamWidth = 4,
+			BeamDamage = 0.8,
+			Delivery = "AREA",
+			TravelSeconds = 0, -- the beam is instant: it hits on the release frame
+		},
+		Skill = {
+			Name = "Event Horizon",
+			Description = "Vane collapses the space around the target into a miniature black hole for 4s (16-stud radius), dragging enemies inward and dealing 3.50x ATK void damage over 8 pulses.",
+			Effect = "SINGULARITY",
+			Radius = 16.0,
+			Ticks = 8,
+			TickSeconds = 0.5,
+			PullStudsPerTick = 1.5,
+			CoreRadius = 3,
+			CastSeconds = 1.4,
+			TravelSeconds = 0, -- the hole opens on the clench
 		},
 	},
 	hero_morrigan = {

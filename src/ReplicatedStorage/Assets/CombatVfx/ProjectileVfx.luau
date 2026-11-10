@@ -141,11 +141,36 @@ local function buildOrb(kind: string, scale: number): Model
 	return model
 end
 
+-- Void: a sphere of absence. A dark matte core inside a thin violet Neon rim, with a bright halo
+-- ring around its waist (perpendicular to the flight) and a trail that fades from violet to
+-- black. It reads as a hole by its rim, so the rim and halo stay even at small scales.
+local function buildVoid(kind: string, scale: number): Model
+	local model = Instance.new("Model")
+	model.Name = "Projectile_" .. kind
+	local void = VfxPrimitives.NewPart("Void", Enum.PartType.Ball, Enum.Material.SmoothPlastic)
+	void.Size = Vector3.one * 0.95 * scale
+	void.Reflectance = 0
+	add(model, void, CFrame.identity)
+	model.PrimaryPart = void
+	local rim = VfxPrimitives.NewPart("Rim", Enum.PartType.Ball, Enum.Material.Neon)
+	rim.Size = Vector3.one * 1.25 * scale
+	rim.Transparency = 0.55
+	add(model, rim, CFrame.identity)
+	-- Cylinders lie along X; turned so the disc's face is across the flight (-Z).
+	local halo = VfxPrimitives.NewPart("Halo", Enum.PartType.Cylinder, Enum.Material.Neon)
+	halo.Size = Vector3.new(0.06, 1.9 * scale, 1.9 * scale)
+	halo.Transparency = 0.45
+	add(model, halo, CFrame.Angles(0, math.pi / 2, 0) * CFrame.Angles(math.rad(25), 0, 0))
+	addTrail(void, 0.55 * scale, 0.3 * scale)
+	return model
+end
+
 ProjectileVfx.Builders = table.freeze({
 	ARROW = buildArrow,
 	ASTRAL = buildArrow,
 	BOLT = buildBolt,
 	ORB = buildOrb,
+	VOID = buildVoid,
 } :: { [string]: (string, number) -> Model })
 
 function ProjectileVfx.Has(kind: string): boolean
@@ -167,7 +192,13 @@ function ProjectileVfx.Paint(model: Model, kind: string, palette: any, trailSeco
 	local astral = kind == "ASTRAL"
 	for _, d in model:GetDescendants() do
 		if d:IsA("BasePart") then
-			if d.Name == "Head" then
+			if d.Name == "Void" then
+				d.Color = palette.Secondary
+			elseif d.Name == "Rim" then
+				d.Color = palette.Primary
+			elseif d.Name == "Halo" then
+				d.Color = palette.Core
+			elseif d.Name == "Head" then
 				d.Color = if astral or kind == "BOLT" then palette.Core else palette.Primary
 			elseif d.Name == "Core" then
 				d.Color = if kind == "ORB" then palette.Core else palette.Primary
