@@ -2087,7 +2087,7 @@ RunService.RenderStepped:Connect(function()
 		novaBarFill.BackgroundColor3 = if curKills >= reqKills then GildedGrimoire.Text.Good else GildedGrimoire.Text.Gold
 		-- Recommended Squad Power only speaks up when the squad is under it.
 		local recommended = recommendedPower(curFloor)
-		local mine = CurrentProfile and CurrentProfile.SquadPower or 0 -- the same Squad Power as the badge
+		local mine = StatFormulas.GetTowerSquadPower(CurrentProfile)
 		local warning = if mine < recommended then string.format("  ·  <font color=\"#FF6B6B\">REC. POWER %s</font>", abbreviatePower(recommended)) else ""
 		if clientFloorProgress.FloorId == curFloor and clientFloorProgress.BossDefeated then
 			novaCastLabel.Text = "<font color=\"#78FF8C\">CLEARED</font>"
