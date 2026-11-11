@@ -5,9 +5,8 @@
 -- attribute "ClientLoaded" so popups (OfflineRewardModal, OnboardingGuide) wait for it.
 -- A slow asset never blocks: Skip appears after SKIP_AFTER seconds and the screen always closes
 -- by HARD_CAP. Background assets keep preloading after the fade.
--- While it is up, PreviewWarmup renders every hero and weapon template behind it, and keeps them
--- rendered (shrunk) for the session, so hero cards and artifact cards never appear without their
--- hair, face or textures.
+-- While it is up, PreviewWarmup renders every hero and weapon template behind it, so their meshes
+-- and textures are decoded before a hero card or artifact card first shows them.
 
 local ContentProvider = game:GetService("ContentProvider")
 local Players = game:GetService("Players")
@@ -23,6 +22,7 @@ local MIN_VISIBLE = 1.2 -- keep the screen up long enough to read, even on a war
 local CHUNK = 20 -- assets per PreloadAsync call, so the bar moves steadily
 local FADE_TIME = 0.6
 local WARMUP_DISPLAY_ORDER = -1000 -- under the HUD as well as under this screen
+local WARMUP_LINGER = 2 -- seconds the warm-up keeps rendering after the critical pass
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -94,6 +94,7 @@ end
 
 local backgroundTargets: { any } = {}
 local warmup: PreviewWarmup.Warmup? = nil
+local criticalDone = false
 
 -- Render every hero and weapon template behind the screen (see PreviewWarmup).
 local function startWarmup()
@@ -149,6 +150,7 @@ task.spawn(function()
 			warn(`[LoadingScreen] manifest failed: {result}`)
 		end
 	end
+	criticalDone = true
 	setTarget(1, "Ready")
 	finish()
 end)
@@ -172,10 +174,20 @@ barConn:Disconnect()
 view:Destroy()
 player:SetAttribute("ClientLoaded", true)
 
--- The warm-up stays for the session, shrunk to a couple of pixels now that nothing covers it.
+-- Nothing covers the warm-up any more, so shrink it; it goes once the critical pass has fetched
+-- everything (which may still be running after a Skip) and it has had a moment to render.
 if warmup then
 	warmup.Shrink()
 end
+task.spawn(function()
+	while not criticalDone do
+		task.wait(0.25)
+	end
+	task.wait(WARMUP_LINGER)
+	if warmup then
+		warmup.Destroy()
+	end
+end)
 
 if #failedIds > 0 then
 	warn(`[LoadingScreen] {#failedIds} asset(s) failed to preload: {table.concat(failedIds, ", ", 1, math.min(#failedIds, 12))}`)
