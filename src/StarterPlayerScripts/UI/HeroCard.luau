@@ -23,7 +23,7 @@ local SMALL_SLOT_HEIGHT = 60 -- px; bust portraits shorter than this use the clo
 -- its cards, shows each portrait in a frame or two instead of rebuilding it from the template.
 -- A rig's hair is a FileMesh, which the engine only loads once the rig is in a rendered viewport,
 -- so a rig cloned straight into a card shows its body and face first and its hair a moment later.
--- Rigs are therefore rendered before they are shown: each hero keeps a few spare posed rigs in the
+-- Rigs are therefore rendered before they are shown: each hero keeps a spare posed rig in the
 -- nursery (a few-pixel ViewportFrame under the HUD), a portrait takes a spare that has been there
 -- long enough, and the nursery refills. A portrait that finds no spare stages its own rig in the
 -- nursery first, so the card stays empty a little longer instead of showing a bald hero.
@@ -35,7 +35,7 @@ local MASTER_COST = 4
 local CHECKS_PER_FRAME = 120
 local SETTLE_SECONDS = 0.1 -- let a window's open pop settle before reading layout for a new portrait
 local RECHECK_SECONDS = 0.05 -- a built portrait that is moving (scrolling) is re-checked this often
-local SPARES_PER_HERO = 3 -- pre-rendered rigs kept in the nursery for each hero
+local SPARES_PER_HERO = 1 -- pre-rendered rigs kept in the nursery for each hero (each is ~50 parts)
 local STAGE_SECONDS = 0.3 -- how long a rig renders in the nursery before a card may show it
 local NURSERY_PIXELS = 4
 type Lazy = {

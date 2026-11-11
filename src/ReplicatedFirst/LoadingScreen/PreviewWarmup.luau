@@ -6,9 +6,9 @@
 -- appear without its hair mesh, face decal or weapon textures for a moment. Rendering all the
 -- templates here, in the same kind of ViewportFrame the cards use, pays that cost while the
 -- loading screen still covers the HUD.
--- The viewports then stay for the whole session, shrunk to a couple of pixels. Roblox releases a
--- mesh or texture soon after the last thing rendering it goes, and the card would pop in again
--- while it reloaded; a static ViewportFrame is not redrawn, so keeping these costs memory only.
+-- The viewports go again shortly after loading: holding every hero and weapon (thousands of
+-- parts and all their meshes) for the whole session made the game laggier. HeroCard's nursery is
+-- what keeps a hero from appearing without hair; this only makes the first decode happen early.
 
 local PreviewWarmup = {}
 
@@ -20,6 +20,7 @@ local CLONES_PER_FRAME = 8 -- so the loading bar keeps animating while the grids
 
 export type Warmup = {
 	Shrink: () -> (),
+	Destroy: () -> (),
 }
 
 -- One viewport holding a grid of every model in `folder`. Yields while it clones.
@@ -49,6 +50,9 @@ local function fill(gui: ScreenGui, folder: Instance): ViewportFrame
 	viewport.CurrentCamera = camera
 
 	for index, template in templates do
+		if not gui.Parent then
+			break -- destroyed while it was still filling
+		end
 		local model = template:Clone()
 		for _, descendant in model:GetDescendants() do
 			-- Effects never show on a card, and an emitter would make the viewport redraw every frame.
@@ -93,6 +97,9 @@ function PreviewWarmup.Start(playerGui: Instance, displayOrder: number, folders:
 			for slot, viewport in viewports do
 				place(viewport, slot)
 			end
+		end,
+		Destroy = function()
+			gui:Destroy()
 		end,
 	}
 	for slot, folder in folders do
