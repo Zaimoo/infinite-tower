@@ -38,21 +38,21 @@ UIAssets.Images = table.freeze({
 
 UIAssets.Sounds = table.freeze({
 	Click = "rbxassetid://139403951941162", -- the existing settings click
-	Hover = "",
-	Error = "", -- refused action / not enough Gems
-	ToastIn = "",
-	WindowOpen = "", -- soft page/whoosh when a window pops open
-	TabSwitch = "",
-	Reward = "", -- coins/gems landing (offline rewards, claims)
-	SummonCharge = "", -- rift orb charging (≈0.6 s riser)
-	SummonPulse = "", -- each orb pulse
-	SummonBurstCommon = "",
-	SummonBurstRare = "", -- Superior+
-	SummonBurstJackpot = "", -- Legendary+ / 5★ artifact; choir hit
-	CardFlip = "",
-	StarTick = "", -- one per star as they pop in
-	ResultsPop = "", -- each card in the 10x grid
-	NewBadge = "",
+	Hover = "rbxassetid://9114228012", -- soft tactile hover tick
+	Error = "rbxassetid://9114228245", -- refused action / not enough Gems
+	ToastIn = "rbxassetid://9114224759", -- shimmering notification toast
+	WindowOpen = "rbxassetid://9114228012", -- soft page/whoosh when a window pops open
+	TabSwitch = "rbxassetid://9114228012", -- quick tactile tab tick
+	Reward = "rbxassetid://9114227189", -- coins/gems landing (offline rewards, claims)
+	SummonCharge = "rbxassetid://9114224524", -- rift orb charging (≈0.6 s riser)
+	SummonPulse = "rbxassetid://9114221580", -- each orb pulse
+	SummonBurstCommon = "rbxassetid://9114224759", -- common/superior card burst
+	SummonBurstRare = "rbxassetid://9114224886", -- Superior+ burst
+	SummonBurstJackpot = "rbxassetid://9114225310", -- Legendary+ / 5★ artifact; choir hit
+	CardFlip = "rbxassetid://9114228012", -- textured card flip
+	StarTick = "rbxassetid://9114224759", -- one per star as they pop in
+	ResultsPop = "rbxassetid://9114228012", -- each card in the 10x grid
+	NewBadge = "rbxassetid://9114224886", -- new badge chime
 })
 
 local BIOME_BANNER_BY_INDEX: { [number]: string } = table.freeze({

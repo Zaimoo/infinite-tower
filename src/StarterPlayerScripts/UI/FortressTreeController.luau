@@ -277,11 +277,11 @@ function Controller.new(gui: ScreenGui, getProfile: () -> any, remotes: Instance
 	self.Hovered = nil :: string?
 	self.LastTouch = false
 
-	-- No window: the map floats over a light dim of the world, and the whole screen is the drag area.
+	-- The full-screen dimmer is handled authoritatively by ModalFocusScreenGui (no seam at topbar safe insets).
 	self.Scrim = new("Frame", {
 		Name = "FortressTreeScrim",
 		BackgroundColor3 = C.Scrim,
-		BackgroundTransparency = 0.4, -- dim the world so nameplates and props don't show through the tree
+		BackgroundTransparency = 1,
 		Size = UDim2.fromScale(1, 1),
 		Visible = false,
 		ZIndex = 50,
