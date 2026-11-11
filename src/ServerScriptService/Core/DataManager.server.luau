@@ -28,6 +28,8 @@ local FortressTreeService = require(script.Parent:WaitForChild("FortressTreeServ
 local ProfileMigrations = require(script.Parent:WaitForChild("ProfileMigrations"))
 local ProfilePersistence = require(script.Parent:WaitForChild("ProfilePersistence"))
 local ForgeTransactions = require(script.Parent:WaitForChild("ForgeTransactions"))
+local TowerFloorService = require(script.Parent:WaitForChild("TowerFloorService"))
+local RaidConfig = require(Shared:WaitForChild("Config"):WaitForChild("RaidConfig"))
 local forgeTransactions = ForgeTransactions.new({
 	Clock = function() return workspace:GetServerTimeNow() end,
 	GenerateToken = function() return HttpService:GenerateGUID(false) end,
@@ -1316,6 +1318,21 @@ local function removeUUIDFromFacilities(profile: PlayerProfile, uuid: string)
 	end
 end
 
+-- The squad is locked while the Master or the squad is in the tower or the raid arena (the arena is
+-- tower floor RaidConfig.FloorId), and during a floor transition. Returns the refusal, or nil.
+local function squadLockReason(player: Player): string?
+	local state = TowerFloorService.GetState(player)
+	if not state then return nil end
+	local floor, squadFloor = state.FloorId or 0, state.SquadFloorId or 0
+	if floor == RaidConfig.FloorId or squadFloor == RaidConfig.FloorId then
+		return "You can't change your squad during a raid."
+	end
+	if floor ~= 0 or squadFloor ~= 0 or state.Pending ~= nil then
+		return "You can't change your squad in the tower. Return home first."
+	end
+	return nil
+end
+
 AssignHeroRoleFunc.OnServerInvoke = function(player: Player, heroUUID: any, targetAssignment: any, targetPlot: any?)
 	if not validateCallerPlotOwnership(player, targetPlot) then
 		return false, "Plot ownership validation failed"
@@ -1323,6 +1340,23 @@ AssignHeroRoleFunc.OnServerInvoke = function(player: Player, heroUUID: any, targ
 	local profile = ActiveProfiles[player]
 	if not profile then
 		return false, "Profile not loaded"
+	end
+
+	-- No squad swaps in the tower or a raid: the squad smart actions, deploying a hero, or moving a
+	-- deployed hero out. Bench and facility moves for heroes outside the squad still go through.
+	local lockReason = squadLockReason(player)
+	if lockReason then
+		local movesSquad = heroUUID == "AUTO_SWAP_EXHAUSTED" or heroUUID == "AUTO_BEST"
+		if not movesSquad and type(targetAssignment) == "string" then
+			movesSquad = string.find(targetAssignment, "^SQUAD_") ~= nil
+		end
+		if not movesSquad and type(heroUUID) == "string" then
+			local current = profile.Heroes[heroUUID]
+			movesSquad = current ~= nil and string.find(current.Assignment or "", "^SQUAD_SLOT_") ~= nil
+		end
+		if movesSquad then
+			return false, lockReason
+		end
 	end
 
 	-- Special Smart Action from Document 4 Section 2.2: "AUTO_SWAP_EXHAUSTED"
