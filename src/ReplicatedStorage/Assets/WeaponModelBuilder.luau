@@ -7961,8 +7961,7 @@ function WeaponModelBuilder.EnsureWeapons(): (Folder, { [string]: Model })
 	return weaponsFolder, result
 end
 
--- Every MeshId the artifact weapon builders use, de-duplicated. The join loading screen
--- (ReplicatedStorage/Shared/Util/PreloadManifest) preloads these in the background.
+-- Every MeshId the artifact weapon builders use, de-duplicated.
 function WeaponModelBuilder.CollectMeshIds(): { string }
 	local ids: { string } = {}
 	local seen: { [string]: boolean } = {}

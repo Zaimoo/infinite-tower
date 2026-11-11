@@ -5,6 +5,9 @@
 -- attribute "ClientLoaded" so popups (OfflineRewardModal, OnboardingGuide) wait for it.
 -- A slow asset never blocks: Skip appears after SKIP_AFTER seconds and the screen always closes
 -- by HARD_CAP. Background assets keep preloading after the fade.
+-- While it is up, PreviewWarmup renders every hero and weapon template behind it, and keeps them
+-- rendered (shrunk) for the session, so hero cards and artifact cards never appear without their
+-- hair, face or textures.
 
 local ContentProvider = game:GetService("ContentProvider")
 local Players = game:GetService("Players")
@@ -19,11 +22,13 @@ local LOADED_GUARD = 15 -- longest wait for game.Loaded
 local MIN_VISIBLE = 1.2 -- keep the screen up long enough to read, even on a warm cache
 local CHUNK = 20 -- assets per PreloadAsync call, so the bar moves steadily
 local FADE_TIME = 0.6
+local WARMUP_DISPLAY_ORDER = -1000 -- under the HUD as well as under this screen
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
 local LoadingScreenView = require(script:WaitForChild("LoadingScreenView"))
+local PreviewWarmup = require(script:WaitForChild("PreviewWarmup"))
 local view = LoadingScreenView.new(playerGui)
 
 local startedAt = os.clock()
@@ -88,6 +93,28 @@ local function preload(list: { any }, from: number, to: number, status: string?)
 end
 
 local backgroundTargets: { any } = {}
+local warmup: PreviewWarmup.Warmup? = nil
+
+-- Render every hero and weapon template behind the screen (see PreviewWarmup).
+local function startWarmup()
+	local assets = game:GetService("ReplicatedStorage"):FindFirstChild("Assets")
+	local folders: { Instance } = {}
+	for _, name in { "Heroes", "Weapons" } do
+		local folder = assets and assets:FindFirstChild(name)
+		if folder then
+			table.insert(folders, folder)
+		end
+	end
+	local ok, result = pcall(PreviewWarmup.Start, playerGui, WARMUP_DISPLAY_ORDER, folders)
+	if not ok then
+		warn(`[LoadingScreen] preview warm-up failed: {result}`)
+		return
+	end
+	warmup = result
+	if closed then
+		result.Shrink() -- skipped while it was being built: nothing covers it any more
+	end
+end
 
 task.spawn(function()
 	-- 5-20%: wait for the DataModel to finish its first replication.
@@ -116,6 +143,7 @@ task.spawn(function()
 		end)
 		if ok then
 			backgroundTargets = result.Background
+			startWarmup() -- after Collect, which has waited for the template folders
 			preload(result.Critical, 0.2, 1, "Summoning heroes…")
 		else
 			warn(`[LoadingScreen] manifest failed: {result}`)
@@ -143,6 +171,11 @@ closed = true
 barConn:Disconnect()
 view:Destroy()
 player:SetAttribute("ClientLoaded", true)
+
+-- The warm-up stays for the session, shrunk to a couple of pixels now that nothing covers it.
+if warmup then
+	warmup.Shrink()
+end
 
 if #failedIds > 0 then
 	warn(`[LoadingScreen] {#failedIds} asset(s) failed to preload: {table.concat(failedIds, ", ", 1, math.min(#failedIds, 12))}`)
