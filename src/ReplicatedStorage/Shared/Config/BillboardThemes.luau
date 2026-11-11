@@ -1,17 +1,20 @@
 --!strict
 -- ReplicatedStorage/Shared/Config/BillboardThemes.luau
--- World-space billboard themes. Relic plates are themed by rarity (RelicConfig tier) and mob nameplates by tier
--- (Normal, Elite, Alpha, Biome Boss), so a glance tells the player what a drop is worth and what they are fighting.
--- Tone is a key of GildedGrimoire.Tones; Badge is the tag chip drawn above the plate (nil draws no chip).
+-- World-space billboard themes. Billboards have no plate: a name and (for units) a slim bar, both in the
+-- colour of the thing's quality. Relics are coloured by rarity (RelicConfig tier), mobs by tier (Normal,
+-- Elite, Alpha, Biome Boss) and heroes by inherent rarity, so a glance says what a drop is worth and what
+-- you are fighting without a panel covering the fight.
 
 export type Theme = {
-	Tone: string,
+	Tone: string, -- a key of GildedGrimoire.Tones (kept for screen UI that themes by tier)
 	Rail: Color3,
 	Title: Color3,
 	TitleGradient: { Color3 }?, -- 2-3 stops, left to right, over the title text
-	Accent: Color3, -- badge chip, HP bar and Highlight outline
-	Badge: string?,
-	Size: Vector2, -- billboard pixels, plate only (the badge strip is added on top)
+	Accent: Color3, -- HP bar and Highlight outline
+	Badge: string?, -- tier name for screen UI (the boss bar); never drawn in the world
+	Size: Vector2, -- billboard pixels
+	NameSize: number, -- title text size
+	BarHeight: number, -- HP bar thickness (units only)
 	MaxDistance: number,
 	AlwaysOnTop: boolean,
 }
@@ -22,7 +25,7 @@ local RelicConfig = require(script.Parent.RelicConfig)
 
 local BillboardThemes = {}
 
-BillboardThemes.BADGE_HEIGHT = 16
+BillboardThemes.Ink = Color3.fromRGB(10, 6, 14)
 
 local relicThemes: { [string]: Theme } = {
 	MANA_GEODE = table.freeze({
@@ -31,7 +34,9 @@ local relicThemes: { [string]: Theme } = {
 		Title = Color3.fromRGB(150, 230, 255),
 		Accent = Color3.fromRGB(65, 190, 255),
 		Badge = "COMMON",
-		Size = Vector2.new(210, 84),
+		Size = Vector2.new(220, 52),
+		NameSize = 15,
+		BarHeight = 0,
 		MaxDistance = 240,
 		AlwaysOnTop = false,
 	}),
@@ -42,7 +47,9 @@ local relicThemes: { [string]: Theme } = {
 		TitleGradient = { Color3.fromRGB(255, 226, 140), Color3.fromRGB(255, 150, 40) },
 		Accent = Color3.fromRGB(255, 150, 40),
 		Badge = "RARE",
-		Size = Vector2.new(220, 86),
+		Size = Vector2.new(220, 54),
+		NameSize = 16,
+		BarHeight = 0,
 		MaxDistance = 260,
 		AlwaysOnTop = false,
 	}),
@@ -53,7 +60,9 @@ local relicThemes: { [string]: Theme } = {
 		TitleGradient = { Color3.fromRGB(240, 200, 255), Color3.fromRGB(170, 70, 255), Color3.fromRGB(240, 200, 255) },
 		Accent = Color3.fromRGB(170, 60, 255),
 		Badge = "ELITE EXCLUSIVE",
-		Size = Vector2.new(230, 90),
+		Size = Vector2.new(240, 58),
+		NameSize = 18,
+		BarHeight = 0,
 		MaxDistance = 300,
 		AlwaysOnTop = true,
 	}),
@@ -64,7 +73,9 @@ local relicThemes: { [string]: Theme } = {
 		TitleGradient = { Color3.fromRGB(255, 220, 120), Color3.fromRGB(255, 40, 70), Color3.fromRGB(255, 220, 120) },
 		Accent = Color3.fromRGB(230, 25, 60),
 		Badge = "ALPHA EXCLUSIVE",
-		Size = Vector2.new(250, 94),
+		Size = Vector2.new(260, 62),
+		NameSize = 20,
+		BarHeight = 0,
 		MaxDistance = 360,
 		AlwaysOnTop = true,
 	}),
@@ -86,8 +97,10 @@ BillboardThemes.Mob = table.freeze({
 		Rail = Color3.fromRGB(150, 140, 170),
 		Title = Color3.fromRGB(255, 170, 160),
 		Accent = Color3.fromRGB(245, 70, 90),
-		Size = Vector2.new(150, 52),
-		MaxDistance = 150,
+		Size = Vector2.new(84, 24),
+		NameSize = 12,
+		BarHeight = 5,
+		MaxDistance = 110,
 		AlwaysOnTop = false,
 	}),
 	ELITE = table.freeze({
@@ -96,7 +109,9 @@ BillboardThemes.Mob = table.freeze({
 		Title = Color3.fromRGB(225, 175, 255),
 		Accent = Color3.fromRGB(205, 70, 220),
 		Badge = "ELITE",
-		Size = Vector2.new(175, 56),
+		Size = Vector2.new(104, 26),
+		NameSize = 13,
+		BarHeight = 6,
 		MaxDistance = 200,
 		AlwaysOnTop = false,
 	}),
@@ -107,7 +122,9 @@ BillboardThemes.Mob = table.freeze({
 		TitleGradient = { Color3.fromRGB(255, 248, 200), Color3.fromRGB(255, 190, 60), Color3.fromRGB(255, 248, 200) },
 		Accent = Color3.fromRGB(255, 140, 40),
 		Badge = "ALPHA",
-		Size = Vector2.new(210, 62),
+		Size = Vector2.new(128, 30),
+		NameSize = 15,
+		BarHeight = 7,
 		MaxDistance = 260,
 		AlwaysOnTop = true,
 	}),
@@ -118,14 +135,16 @@ BillboardThemes.Mob = table.freeze({
 		TitleGradient = { Color3.fromRGB(255, 220, 120), Color3.fromRGB(255, 60, 80), Color3.fromRGB(255, 220, 120) },
 		Accent = Color3.fromRGB(255, 40, 60),
 		Badge = "BIOME BOSS",
-		Size = Vector2.new(260, 70),
+		Size = Vector2.new(190, 34),
+		NameSize = 18,
+		BarHeight = 6, -- the screen-top boss bar is the real gauge
 		MaxDistance = 320,
 		AlwaysOnTop = true,
 	}),
 } :: { [MobTier]: Theme })
 
--- Hero nameplates by inherent rarity tier (HeroCatalog.RarityOf), in the ArtifactCatalog rarity colours. The HP bar
--- stays green so allies read as allies; Accent drives the badge and outline.
+-- Hero nameplates by inherent rarity tier (HeroCatalog.RarityOf), in the ArtifactCatalog rarity colours: the
+-- name and the HP bar both take the rarity colour.
 local function hero(tone: string, rail: Color3, title: Color3, accent: Color3, badge: string, width: number, gradient: { Color3 }?): Theme
 	return table.freeze({
 		Tone = tone,
@@ -134,22 +153,24 @@ local function hero(tone: string, rail: Color3, title: Color3, accent: Color3, b
 		TitleGradient = gradient,
 		Accent = accent,
 		Badge = badge,
-		Size = Vector2.new(width, 52),
+		Size = Vector2.new(width, 28),
+		NameSize = 13,
+		BarHeight = 5,
 		MaxDistance = 150,
 		AlwaysOnTop = false,
 	})
 end
 
 BillboardThemes.HeroByRarity = table.freeze({
-	hero("Slate", Color3.fromRGB(190, 190, 196), Color3.fromRGB(225, 225, 230), Color3.fromRGB(150, 150, 158), "COMMON", 150),
-	hero("Jade", Color3.fromRGB(120, 230, 120), Color3.fromRGB(150, 245, 150), Color3.fromRGB(60, 170, 70), "UNCOMMON", 150),
-	hero("Azure", Color3.fromRGB(120, 200, 255), Color3.fromRGB(150, 215, 255), Color3.fromRGB(41, 128, 200), "RARE", 155),
-	hero("Void", Color3.fromRGB(205, 140, 255), Color3.fromRGB(220, 175, 255), Color3.fromRGB(142, 68, 173), "SUPERIOR", 160),
-	hero("Amber", Color3.fromRGB(255, 170, 80), Color3.fromRGB(255, 180, 90), Color3.fromRGB(211, 84, 0), "EXALTED", 165,
+	hero("Slate", Color3.fromRGB(190, 190, 196), Color3.fromRGB(225, 225, 230), Color3.fromRGB(150, 150, 158), "COMMON", 96),
+	hero("Jade", Color3.fromRGB(120, 230, 120), Color3.fromRGB(150, 245, 150), Color3.fromRGB(60, 170, 70), "UNCOMMON", 96),
+	hero("Azure", Color3.fromRGB(120, 200, 255), Color3.fromRGB(150, 215, 255), Color3.fromRGB(41, 128, 200), "RARE", 96),
+	hero("Void", Color3.fromRGB(205, 140, 255), Color3.fromRGB(220, 175, 255), Color3.fromRGB(142, 68, 173), "SUPERIOR", 96),
+	hero("Amber", Color3.fromRGB(255, 170, 80), Color3.fromRGB(255, 180, 90), Color3.fromRGB(211, 84, 0), "EXALTED", 96,
 		{ Color3.fromRGB(255, 225, 150), Color3.fromRGB(255, 140, 40) }),
-	hero("Gilded", Color3.fromRGB(255, 226, 130), Color3.fromRGB(255, 222, 110), Color3.fromRGB(220, 170, 15), "LEGENDARY", 170,
+	hero("Gilded", Color3.fromRGB(255, 226, 130), Color3.fromRGB(255, 222, 110), Color3.fromRGB(220, 170, 15), "LEGENDARY", 96,
 		{ Color3.fromRGB(255, 250, 210), Color3.fromRGB(255, 196, 40), Color3.fromRGB(255, 250, 210) }),
-	hero("Blood", Color3.fromRGB(255, 214, 110), Color3.fromRGB(255, 110, 100), Color3.fromRGB(231, 76, 60), "MYTHICAL", 175,
+	hero("Blood", Color3.fromRGB(255, 214, 110), Color3.fromRGB(255, 110, 100), Color3.fromRGB(231, 76, 60), "MYTHICAL", 96,
 		{ Color3.fromRGB(255, 220, 120), Color3.fromRGB(255, 70, 80), Color3.fromRGB(255, 220, 120) }),
 } :: { Theme })
 
@@ -168,55 +189,56 @@ function BillboardThemes.MobTier(spec: { Role: string, Alpha: boolean? }?): MobT
 	return "NORMAL"
 end
 
--- Billboard size with room for the badge strip.
 function BillboardThemes.BillboardSize(theme: Theme): UDim2
-	local extra = if theme.Badge then BillboardThemes.BADGE_HEIGHT else 0
-	return UDim2.fromOffset(theme.Size.X, theme.Size.Y + extra)
+	return UDim2.fromOffset(theme.Size.X, theme.Size.Y)
 end
 
--- Builds the plate Frame inside `bb` (below the badge strip, if any) and the badge chip. Returns the plate;
--- callers frame it with GildedGrimoire.Frame(plate, { Tone = theme.Tone, Rail = theme.Rail }).
-function BillboardThemes.Plate(bb: BillboardGui, theme: Theme, styleText: (TextLabel, string) -> ()): Frame
-	local top = if theme.Badge then BillboardThemes.BADGE_HEIGHT - 4 else 0
-	local plate = Instance.new("Frame")
-	plate.Name = "Plate"
-	plate.Position = UDim2.fromOffset(0, top)
-	plate.Size = UDim2.new(1, 0, 1, -top)
-	plate.BorderSizePixel = 0
-	plate.Parent = bb
-	if theme.Badge then
-		local chip = Instance.new("TextLabel")
-		chip.Name = "TierBadge"
-		chip.AnchorPoint = Vector2.new(0.5, 0)
-		chip.Position = UDim2.fromScale(0.5, 0)
-		chip.AutomaticSize = Enum.AutomaticSize.X
-		chip.Size = UDim2.fromOffset(0, BillboardThemes.BADGE_HEIGHT)
-		chip.BackgroundColor3 = theme.Accent
-		chip.BorderSizePixel = 0
-		chip.Text = theme.Badge
-		chip.TextColor3 = Color3.new(1, 1, 1)
-		chip.TextSize = 11
-		chip.ZIndex = 6
-		local pad = Instance.new("UIPadding")
-		pad.PaddingLeft = UDim.new(0, 7)
-		pad.PaddingRight = UDim.new(0, 7)
-		pad.Parent = chip
-		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(1, 0)
-		corner.Parent = chip
-		local ink = Instance.new("UIStroke")
-		ink.Color = Color3.fromRGB(10, 6, 14)
-		ink.Thickness = 1.6
-		ink.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-		ink.Parent = chip
-		local shade = Instance.new("UIGradient")
-		shade.Rotation = 90
-		shade.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(170, 170, 180))
-		shade.Parent = chip
-		chip.Parent = bb
-		styleText(chip, "Body")
-	end
-	return plate
+-- A line of world text with no background: `font` (callers pass a GildedGrimoire face) and an ink outline.
+function BillboardThemes.Text(parent: Instance, font: Font, text: string, size: number, color: Color3): TextLabel
+	local label = Instance.new("TextLabel")
+	label.BackgroundTransparency = 1
+	label.FontFace = font
+	label.Text = text
+	label.TextSize = size
+	label.TextColor3 = color
+	label.TextStrokeColor3 = BillboardThemes.Ink
+	label.TextStrokeTransparency = 0
+	label.TextWrapped = false
+	label.Size = UDim2.new(1, 0, 0, size + 4)
+	-- Marked so GildedGrimoire.Watch never re-fonts it.
+	label:SetAttribute("Grimoire", true)
+	label.Parent = parent
+	return label
+end
+
+-- A slim gauge with no plate: a dark see-through track with a hairline of ink, and a flat fill in `color`.
+-- Returns (track, fill); size the fill with UDim2.fromScale(fraction, 1).
+function BillboardThemes.Bar(parent: Instance, color: Color3, height: number): (Frame, Frame)
+	local track = Instance.new("Frame")
+	track.Name = "Bar"
+	track.BackgroundColor3 = BillboardThemes.Ink
+	track.BackgroundTransparency = 0.4
+	track.BorderSizePixel = 0
+	track.Size = UDim2.new(1, -2, 0, height)
+	local edge = Instance.new("UIStroke")
+	edge.Color = BillboardThemes.Ink
+	edge.Thickness = 1
+	edge.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	edge.Parent = track
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(1, 0)
+	corner.Parent = track
+	local fill = Instance.new("Frame")
+	fill.Name = "Fill"
+	fill.BackgroundColor3 = color
+	fill.BorderSizePixel = 0
+	fill.Size = UDim2.fromScale(1, 1)
+	local fillCorner = Instance.new("UICorner")
+	fillCorner.CornerRadius = UDim.new(1, 0)
+	fillCorner.Parent = fill
+	fill.Parent = track
+	track.Parent = parent
+	return track, fill
 end
 
 -- Colours a title label: a gradient across the text for themes that have one, else the flat title colour.

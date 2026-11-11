@@ -935,21 +935,14 @@ local function applyThiefTag(player: Player)
 		bb.StudsOffset = Vector3.new(0, 3.2, 0)
 		bb.AlwaysOnTop = true
 		bb.MaxDistance = 220
-		-- Gilded Grimoire crimson plate with inked heavy type.
-		local plate = Instance.new("Frame")
-		plate.Size = UDim2.fromScale(1, 1)
-		plate.BackgroundTransparency = 0.1
-		plate.Parent = bb
-		GildedGrimoire.Frame(plate, { Class = "Compact", Tone = "Crimson" })
+		-- No plate: inked crimson type only, so it never hides the thief's squad.
 		local label = Instance.new("TextLabel")
-		label.Size = UDim2.new(1, -12, 1, -6)
-		label.Position = UDim2.fromOffset(6, 3)
+		label.Size = UDim2.fromScale(1, 1)
 		label.BackgroundTransparency = 1
 		label.Text = "LOOT THIEF"
-		label.TextColor3 = Color3.fromRGB(255, 150, 140)
-		label.TextScaled = true
-		label.ZIndex = 3
-		label.Parent = plate
+		label.TextColor3 = Color3.fromRGB(255, 96, 96)
+		label.TextSize = 18
+		label.Parent = bb
 		GildedGrimoire.StyleText(label, "Title")
 		bb.Parent = head
 	elseif not flagged and tag then

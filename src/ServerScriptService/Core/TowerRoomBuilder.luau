@@ -667,14 +667,13 @@ function Builder.Build(id: number, generation: number): any
 		bg.Parent = p
 		local lbl = Instance.new("TextLabel")
 		lbl.Size = UDim2.fromScale(1, 1)
-		lbl.BackgroundTransparency = 0.3
-		lbl.BackgroundColor3 = Color3.fromRGB(24, 20, 30)
+		-- No plate: outlined text only.
+		lbl.BackgroundTransparency = 1
 		lbl.TextColor3 = Color3.fromRGB(245, 235, 225)
 		lbl.Font = Enum.Font.GothamBold
-		lbl.TextSize = 13
-		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(0, 4)
-		corner.Parent = lbl
+		lbl.TextSize = 15
+		lbl.TextStrokeColor3 = Color3.fromRGB(10, 6, 14)
+		lbl.TextStrokeTransparency = 0
 		if action == "PREVIOUS" and id == 1 then
 			lbl.Text = "Floor 1 (Lowest)"
 			lbl.TextColor3 = Color3.fromRGB(140, 130, 130)
