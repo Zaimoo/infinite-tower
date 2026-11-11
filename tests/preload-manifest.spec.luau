@@ -1,6 +1,7 @@
 --!strict
 -- tests/preload-manifest.spec.luau
--- PreloadManifest.ScanIds: collects the asset IDs the join loading screen preloads from config tables.
+-- PreloadManifest.ScanIds / ScanAssets: collect the asset IDs the join loading screen preloads from
+-- config tables, and tell images from meshes and sounds.
 
 local PreloadManifest = require(nodes["ReplicatedStorage.Shared.Util.PreloadManifest"])
 local HeroCostumes = require(nodes["ReplicatedStorage.Assets.HeroRig.HeroCostumes"])
@@ -52,6 +53,38 @@ test("hero costumes yield the default face and the hair meshes", function()
 	assert(has(ids, HeroCostumes.DEFAULT_FACE), "default face collected")
 	for meshId in HeroCostumes.MESHES do
 		assert(has(ids, meshId), meshId .. " hair mesh collected")
+	end
+end)
+
+test("ScanAssets takes each ID's kind from the keys above it", function()
+	local assets = PreloadManifest.ScanAssets({
+		Logo = "rbxassetid://1",
+		Sounds = table.freeze({ Click = "rbxassetid://2", Hover = "" }),
+		CLICK_SOUND_ID = "rbxassetid://2",
+		Parts = { { MeshId = "rbxassetid://3", TextureId = "rbxassetid://4", Glow = { { MeshId = "rbxassetid://5" } } } },
+		ParticleTexture = "rbxassetid://6",
+	})
+	local kinds: { [string]: string } = {}
+	for _, asset in assets do
+		assert(kinds[asset.Id] == nil, asset.Id .. " collected once")
+		kinds[asset.Id] = asset.Kind
+	end
+	local expected = { "Image", "Sound", "Mesh", "Image", "Mesh", "Image" }
+	for index, kind in expected do
+		local id = "rbxassetid://" .. index
+		assert(kinds[id] == kind, `{id} is a {kind}, got {kinds[id]}`)
+	end
+	assert(#assets == #expected, "exactly six assets, got " .. #assets)
+end)
+
+test("hero hair meshes are never classed as images", function()
+	local kinds: { [string]: string } = {}
+	for _, asset in PreloadManifest.ScanAssets(HeroCostumes) do
+		kinds[asset.Id] = asset.Kind
+	end
+	assert(kinds[HeroCostumes.DEFAULT_FACE] == "Image", "default face is an image")
+	for meshId in HeroCostumes.MESHES do
+		assert(kinds[meshId] == "Mesh", meshId .. " is a mesh")
 	end
 end)
 

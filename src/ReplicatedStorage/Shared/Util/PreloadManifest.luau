@@ -1,15 +1,22 @@
 --!strict
 -- ReplicatedStorage/Shared/Util/PreloadManifest.luau
 -- What the join loading screen (ReplicatedFirst/LoadingScreen) preloads with ContentProvider:PreloadAsync.
---   Critical: blocks the loading bar. Hero rig templates (HeroCard portraits clone these), weapon
---     templates, hero faces and hair meshes, UI images and sounds, and the HUD that is already built.
---   Background: preloaded after the screen fades. Weapon meshes, raid boss and portal meshes, weapon VFX.
--- ScanIds is pure (tested in tests/preload-manifest.spec.luau); Collect touches the DataModel and is
--- only called on the client after game:IsLoaded().
+--   Critical: blocks the loading bar. Hero rig templates (HeroCard portraits clone these; they carry
+--     the faces and hair meshes), weapon templates (with their meshes), UI images and sounds, and
+--     the HUD that is already built.
+--   Background: preloaded after the screen fades. Raid boss and portal meshes, weapon VFX.
+-- PreloadAsync treats a bare content ID string as an image, so a mesh or sound ID passed as a
+-- string fails with "Asset type does not match requested type". ScanAssets therefore works out
+-- each ID's kind from the config keys above it, and Collect wraps mesh and sound IDs in a
+-- SpecialMesh or Sound to preload them as instances.
+-- ScanIds and ScanAssets are pure (tested in tests/preload-manifest.spec.luau); Collect touches the
+-- DataModel and is only called on the client after game:IsLoaded().
 
 local PreloadManifest = {}
 
 export type Target = Instance | string
+export type AssetKind = "Image" | "Mesh" | "Sound"
+export type Asset = { Id: string, Kind: AssetKind }
 export type Manifest = { Critical: { Target }, Background: { Target } }
 
 -- Instances worth handing to PreloadAsync: they carry a mesh, texture, image, sound or animation.
@@ -51,6 +58,65 @@ function PreloadManifest.ScanIds(value: any, out: { string }?, seen: { [any]: bo
 	return result
 end
 
+-- The kind a config key gives the IDs under it ("MeshId", "Sounds", "CLICK_SOUND_ID",
+-- "TextureId"...), or nil when the key says nothing and the enclosing kind carries on.
+local function kindOfKey(key: any): AssetKind?
+	if type(key) ~= "string" then
+		return nil
+	end
+	local lower = string.lower(key)
+	if string.find(lower, "mesh", 1, true) then
+		return "Mesh"
+	elseif string.find(lower, "sound", 1, true) or string.find(lower, "music", 1, true) or string.find(lower, "sfx", 1, true) then
+		return "Sound"
+	elseif string.find(lower, "texture", 1, true) or string.find(lower, "image", 1, true) or string.find(lower, "icon", 1, true) then
+		return "Image"
+	end
+	return nil
+end
+
+-- Like ScanIds, but each ID comes with its kind: taken from the nearest key above it that names
+-- one, and "Image" when none does. An ID used as a table key takes the enclosing kind.
+function PreloadManifest.ScanAssets(value: any, out: { Asset }?, seen: { [any]: boolean }?): { Asset }
+	local result = out or {}
+	local visited = seen or {}
+	local function visit(v: any, kind: AssetKind)
+		local t = type(v)
+		if t == "string" then
+			if isAssetId(v) and not visited[v] then
+				visited[v] = true
+				table.insert(result, { Id = v, Kind = kind })
+			end
+		elseif t == "table" then
+			if visited[v] then
+				return
+			end
+			visited[v] = true
+			for k, child in v do
+				visit(k, kind)
+				visit(child, kindOfKey(k) or kind)
+			end
+		end
+	end
+	visit(value, "Image")
+	return result
+end
+
+-- What to hand PreloadAsync for an asset: the ID itself for an image, an instance holding it otherwise.
+function PreloadManifest.ToTarget(asset: Asset): Target
+	if asset.Kind == "Mesh" then
+		local mesh = Instance.new("SpecialMesh")
+		mesh.MeshType = Enum.MeshType.FileMesh
+		mesh.MeshId = asset.Id
+		return mesh
+	elseif asset.Kind == "Sound" then
+		local sound = Instance.new("Sound")
+		sound.SoundId = asset.Id
+		return sound
+	end
+	return asset.Id
+end
+
 -- Descendants of `root` (and root itself) that carry content, appended to `out`.
 function PreloadManifest.ContentInstances(root: Instance, out: { Target })
 	local function consider(inst: Instance)
@@ -78,8 +144,8 @@ local function findPath(root: Instance, path: { string }): Instance?
 	return node
 end
 
--- Require a module by path and scan its table for asset IDs. A missing or erroring module is skipped.
-local function scanModule(root: Instance, path: { string }, out: { string }, seen: { [any]: boolean }, accessor: string?)
+-- Require a module by path and scan its table for assets. A missing or erroring module is skipped.
+local function scanModule(root: Instance, path: { string }, out: { Asset }, seen: { [any]: boolean })
 	local module = findPath(root, path)
 	if not module or not module:IsA("ModuleScript") then
 		warn(`[PreloadManifest] missing module {table.concat(path, ".")}`)
@@ -90,23 +156,12 @@ local function scanModule(root: Instance, path: { string }, out: { string }, see
 		warn(`[PreloadManifest] {module:GetFullName()} failed to load: {value}`)
 		return
 	end
-	if accessor then
-		local fn = type(value) == "table" and (value :: any)[accessor]
-		if type(fn) ~= "function" then
-			return
-		end
-		local okCall, ids = pcall(fn)
-		if okCall then
-			PreloadManifest.ScanIds(ids, out, seen)
-		end
-		return
-	end
-	PreloadManifest.ScanIds(value, out, seen)
+	PreloadManifest.ScanAssets(value, out, seen)
 end
 
-local function append(out: { Target }, ids: { string })
-	for _, id in ids do
-		table.insert(out, id)
+local function append(out: { Target }, assets: { Asset })
+	for _, asset in assets do
+		table.insert(out, PreloadManifest.ToTarget(asset))
 	end
 end
 
@@ -137,9 +192,9 @@ function PreloadManifest.Collect(): Manifest
 		end
 	end
 
-	-- Critical IDs: hero faces and hair meshes, UI art and sounds, settings and nav icons.
-	local criticalIds: { string } = {}
-	scanModule(ReplicatedStorage, { "Assets", "HeroRig", "HeroCostumes" }, criticalIds, seen)
+	-- Critical IDs: UI art and sounds, settings and nav icons. Hero faces and hair meshes are
+	-- already covered by the hero templates above.
+	local criticalIds: { Asset } = {}
 	scanModule(ReplicatedStorage, { "Shared", "Util", "OrnateFrameButton" }, criticalIds, seen)
 	scanModule(ReplicatedStorage, { "Shared", "Util", "GothicVectorIcons" }, criticalIds, seen)
 	local playerScripts = player:WaitForChild("PlayerScripts", MODULE_WAIT)
@@ -149,9 +204,9 @@ function PreloadManifest.Collect(): Manifest
 	end
 	append(critical, criticalIds)
 
-	-- Background IDs: everything only needed once a fight, raid or forge preview starts.
-	local backgroundIds: { string } = {}
-	scanModule(ReplicatedStorage, { "Assets", "WeaponModelBuilder" }, backgroundIds, seen, "CollectMeshIds")
+	-- Background IDs: everything only needed once a fight or raid starts. Weapon meshes are
+	-- already covered by the weapon templates above.
+	local backgroundIds: { Asset } = {}
 	scanModule(ReplicatedStorage, { "Shared", "Config", "RaidBossAssets" }, backgroundIds, seen)
 	scanModule(ReplicatedStorage, { "Shared", "Config", "RaidPortalAssets" }, backgroundIds, seen)
 	scanModule(ReplicatedStorage, { "Shared", "Config", "TowerPortalAssets" }, backgroundIds, seen)

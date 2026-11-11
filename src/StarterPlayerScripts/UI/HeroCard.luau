@@ -9,6 +9,7 @@ local HeroClips = require(HeroRig:WaitForChild("HeroClips"))
 local HeroAnimator = require(HeroRig:WaitForChild("HeroAnimator"))
 local GrimoireIcons = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GrimoireIcons"))
 local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
 local HeroCard = {}
 local FIELD_OF_VIEW = 32
 local SMALL_SLOT_HEIGHT = 60 -- px; bust portraits shorter than this use the close-up framing
@@ -20,6 +21,12 @@ local SMALL_SLOT_HEIGHT = 60 -- px; bust portraits shorter than this use the clo
 -- Posing a rig and framing its camera happens once per hero and framing: the posed rig is kept as a
 -- master (never rendered) and every portrait clones it. So reopening a window, or a list rebuilding
 -- its cards, shows each portrait in a frame or two instead of rebuilding it from the template.
+-- A rig's hair is a FileMesh, which the engine only loads once the rig is in a rendered viewport,
+-- so a rig cloned straight into a card shows its body and face first and its hair a moment later.
+-- Rigs are therefore rendered before they are shown: each hero keeps a few spare posed rigs in the
+-- nursery (a few-pixel ViewportFrame under the HUD), a portrait takes a spare that has been there
+-- long enough, and the nursery refills. A portrait that finds no spare stages its own rig in the
+-- nursery first, so the card stays empty a little longer instead of showing a bald hero.
 -- The checks are cheap on purpose: reading AbsolutePosition right after a layout change forces a
 -- full layout pass (~15 ms), so a position is only read when its portrait first shows or after the
 -- engine reports it moved (scroll, sort, resize), and the visibility walk is spread over frames.
@@ -28,15 +35,24 @@ local MASTER_COST = 4
 local CHECKS_PER_FRAME = 120
 local SETTLE_SECONDS = 0.1 -- let a window's open pop settle before reading layout for a new portrait
 local RECHECK_SECONDS = 0.05 -- a built portrait that is moving (scrolling) is re-checked this often
+local SPARES_PER_HERO = 3 -- pre-rendered rigs kept in the nursery for each hero
+local STAGE_SECONDS = 0.3 -- how long a rig renders in the nursery before a card may show it
+local NURSERY_PIXELS = 4
 type Lazy = {
 	Viewport: ViewportFrame, Template: Model, Hero: any, Model: Model?, Dead: boolean,
 	FullBody: boolean?, CloseUp: boolean?,
 	Scroll: ScrollingFrame?, Moved: boolean, MovedAt: number, CheckedAt: number, WasVisible: boolean, Queued: boolean, Y: number,
+	Staged: Model?, StagedAt: number,
 }
 type Master = { Model: Model, Camera: CFrame }
+type Spare = { Model: Model, At: number }
 local entries: { Lazy } = {}
 local cursor = 1
 local pending: { Lazy } = {}
+local staging: { Lazy } = {} -- portraits whose own rig is still rendering in the nursery
+local sources: { [Model]: Model } = setmetatable({}, { __mode = "k" }) :: any -- posed rig per template, never rendered
+local spares: { [Model]: { Spare } } = setmetatable({}, { __mode = "k" }) :: any
+local nursery: ViewportFrame? = nil
 -- Posed masters per template instance (weak keys, so a re-replicated template drops its old
 -- masters), then per framing ("Bust", "CloseUp", "Full").
 local masters: { [Model]: { [string]: Master } } = setmetatable({}, { __mode = "k" }) :: any
@@ -86,7 +102,7 @@ local function check(entry: Lazy)
 		end
 		return
 	end
-	if entry.Queued then return end
+	if entry.Queued or entry.Staged then return end
 	local settled = now - entry.MovedAt >= SETTLE_SECONDS
 	local shown = visible(vp)
 	if shown and not entry.WasVisible then
@@ -113,10 +129,12 @@ local function check(entry: Lazy)
 	table.insert(pending, entry)
 end
 
--- Clone the template, strip scripts, anchor, pose the idle and frame the camera. Done once per
--- template and framing; portraits clone the result.
-local function buildMaster(entry: Lazy): Master
-	local model = entry.Template:Clone()
+-- The template cloned, stripped of scripts, anchored and posed in the hero's idle. Done once per
+-- template; every rig is a clone of it.
+local function source(template: Model, heroId: string): Model
+	local existing = sources[template]
+	if existing then return existing end
+	local model = template:Clone()
 	for _, descendant in model:GetDescendants() do
 		if descendant:IsA("BaseScript") then descendant:Destroy()
 		elseif descendant:IsA("BasePart") then
@@ -126,11 +144,74 @@ local function buildMaster(entry: Lazy): Master
 	end
 	-- Viewports never simulate joints: pose the hero's idle by writing part CFrames.
 	if model:GetAttribute("HeroRigVersion") ~= nil then
-		local idle = HeroClips.Get(entry.Hero.TemplateId, nil, "Idle")
+		local idle = HeroClips.Get(heroId, nil, "Idle")
 		if idle then
 			HeroAnimator.ApplyStaticPose(model, HeroAnimator.Sample(idle, 0))
 		end
 	end
+	sources[template] = model
+	return model
+end
+
+-- The viewport spare and staged rigs render in until a card takes them. It sits under the HUD, a
+-- few pixels in the top-left corner, and is static, so it is not redrawn between changes.
+local function getNursery(sample: Model): ViewportFrame
+	if nursery and nursery.Parent then return nursery end
+	local gui = T.New("ScreenGui", {Name = "HeroCardNursery", DisplayOrder = -1000, IgnoreGuiInset = true, ResetOnSpawn = false}, Players.LocalPlayer:WaitForChild("PlayerGui"))
+	local vp = T.New("ViewportFrame", {BackgroundTransparency = 1, Size = UDim2.fromOffset(NURSERY_PIXELS, NURSERY_PIXELS)}, gui)
+	local bounds, size = sample:GetBoundingBox()
+	local camera = T.New("Camera", {FieldOfView = FIELD_OF_VIEW, CFrame = CFrame.lookAt(bounds.Position + bounds.LookVector * size.Y * 3, bounds.Position)}, vp)
+	vp.CurrentCamera = camera
+	nursery = vp
+	return vp
+end
+
+-- A new rig for this template, rendering in the nursery.
+local function nurse(template: Model, heroId: string): Model
+	local posed = source(template, heroId)
+	local model = posed:Clone()
+	model.Parent = getNursery(posed)
+	return model
+end
+
+-- A spare that has rendered long enough to show, if there is one.
+local function takeSpare(template: Model, now: number): Model?
+	local list = spares[template]
+	if not list then return nil end
+	for i, spare in list do
+		if now - spare.At >= STAGE_SECONDS then
+			table.remove(list, i)
+			return spare.Model
+		end
+	end
+	return nil
+end
+
+-- Top up the nursery, one hero's spare at a time, within what is left of the frame's budget.
+local function refillSpares(budget: number, now: number): number
+	local assets = ReplicatedStorage:FindFirstChild("Assets")
+	local folder = assets and assets:FindFirstChild("Heroes")
+	if not folder then return budget end
+	for _, template in folder:GetChildren() do
+		if budget <= 0 then break end
+		if template:IsA("Model") then
+			local list = spares[template]
+			if not list then
+				list = {}
+				spares[template] = list
+			end
+			if #list < SPARES_PER_HERO then
+				budget -= if sources[template] then 1 else MASTER_COST
+				table.insert(list, { Model = nurse(template, template.Name), At = now })
+			end
+		end
+	end
+	return budget
+end
+
+-- Frame the camera on the posed rig. Done once per template and framing.
+local function buildMaster(entry: Lazy): Master
+	local model = source(entry.Template, entry.Hero.TemplateId)
 	local bounds, size = model:GetBoundingBox()
 	local forward = bounds.LookVector
 	local look: Vector3
@@ -162,14 +243,14 @@ local function buildMaster(entry: Lazy): Master
 	return master
 end
 
-local function buildRig(entry: Lazy)
+-- Show `model` (already rendered in the nursery) in the entry's portrait.
+local function buildRig(entry: Lazy, model: Model)
 	local vp = entry.Viewport
 	-- A bust in a small slot leaves the face only a few pixels, so frame the head instead.
 	if not entry.FullBody and not entry.CloseUp and vp.AbsoluteSize.Y < SMALL_SLOT_HEIGHT then
 		entry.CloseUp = true
 	end
 	local master = cachedMaster(entry) or buildMaster(entry)
-	local model = master.Model:Clone()
 	model.Parent = vp
 	local camera = T.New("Camera", {FieldOfView = FIELD_OF_VIEW, CFrame = master.Camera}, vp)
 	vp.CurrentCamera = camera
@@ -190,6 +271,19 @@ local function stepLazyRigs()
 			cursor += 1
 		end
 	end
+	local now = os.clock()
+	-- Staged rigs that have rendered long enough move into their portraits.
+	for i = #staging, 1, -1 do
+		local entry = staging[i]
+		local staged = entry.Staged
+		if entry.Dead or not staged then
+			table.remove(staging, i)
+		elseif now - entry.StagedAt >= STAGE_SECONDS then
+			table.remove(staging, i)
+			entry.Staged = nil
+			if entry.Viewport.Parent then buildRig(entry, staged) else staged:Destroy() end
+		end
+	end
 	-- Build the highest queued portraits first, within the frame's budget.
 	local budget = BUILD_BUDGET
 	while budget > 0 and #pending > 0 do
@@ -199,11 +293,19 @@ local function stepLazyRigs()
 		end
 		local entry = table.remove(pending, best) :: Lazy
 		entry.Queued = false
-		if not entry.Dead and not entry.Model and entry.Viewport.Parent then
+		if not entry.Dead and not entry.Model and not entry.Staged and entry.Viewport.Parent then
 			budget -= if cachedMaster(entry) then 1 else MASTER_COST
-			buildRig(entry)
+			local spare = takeSpare(entry.Template, now)
+			if spare then
+				buildRig(entry, spare)
+			else
+				entry.Staged = nurse(entry.Template, entry.Hero.TemplateId)
+				entry.StagedAt = now
+				table.insert(staging, entry)
+			end
 		end
 	end
+	refillSpares(budget, now)
 end
 RunService.Heartbeat:Connect(function()
 	debug.profilebegin("HeroCard.LazyRigs")
@@ -236,6 +338,7 @@ function HeroCard.Portrait(parent: Instance, hero: any, framing: (boolean | "Clo
 			Viewport = viewport, Template = template, Hero = { TemplateId = hero.TemplateId }, Model = nil, Dead = false,
 			FullBody = framing == true, CloseUp = framing == "CloseUp",
 			Scroll = nil, Moved = false, MovedAt = 0, CheckedAt = 0, WasVisible = false, Queued = false, Y = 0,
+			Staged = nil, StagedAt = 0,
 		}
 		table.insert(entries, entry)
 		-- Fires after layout (scroll, sort, resize, open pop), so listening costs no forced layout.
@@ -246,6 +349,7 @@ function HeroCard.Portrait(parent: Instance, hero: any, framing: (boolean | "Clo
 		viewport.Destroying:Connect(function()
 			entry.Dead = true
 			if entry.Model then entry.Model:Destroy() end
+			if entry.Staged then entry.Staged:Destroy() end
 		end)
 		return viewport
 	end
