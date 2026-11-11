@@ -160,6 +160,7 @@ type VisualNode = {
 	HPBarFill: Frame?,
 	StamBarFill: Frame?,
 	TitleLabel: TextLabel?,
+	StarsLabel: TextLabel?,
 	StateLabel: TextLabel?,
 	Highlight: Highlight?,
 	LastSeenClock: number,
@@ -442,7 +443,15 @@ end
 
 local attachKOVFX = playComaVFX
 
--- Hero nameplate text: the name with a small level beside it (the stars are on the squad card).
+-- Hero star rank under the bars: earned stars in gold, the rest of the 7 as dim slots.
+local HERO_MAX_STARS = 7
+local function heroStars(stars: number?): string
+	local n = math.clamp(math.floor(tonumber(stars) or 1), 1, HERO_MAX_STARS)
+	local empty = if n < HERO_MAX_STARS then string.format("<font color=\"#4A4458\">%s</font>", string.rep("★", HERO_MAX_STARS - n)) else ""
+	return string.rep("★", n) .. empty
+end
+
+-- Hero nameplate text: the name with a small level beside it (the stars sit under the bars).
 local function heroTitle(name: string?, level: number?): string
 	local safe = string.gsub(name or "Hero", "[&<>]", { ["&"] = "&amp;", ["<"] = "&lt;", [">"] = "&gt;" })
 	return string.format("%s <font size=\"10\" color=\"#F2ECFF\">%d</font>", safe, level or 1)
@@ -587,7 +596,8 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 	-- (hero rarity or mob tier), plus a thin gold skill gauge for heroes.
 	local bb = Instance.new("BillboardGui")
 	bb.Name = "UnitBillboard"
-	bb.Size = BillboardThemes.BillboardSize(theme)
+	-- Heroes get one extra line under the bars for the star row.
+	bb.Size = BillboardThemes.BillboardSize(theme) + (if isHero then UDim2.fromOffset(0, 12) else UDim2.new())
 	bb.StudsOffset = Vector3.new(0, (bodySize.Y * 0.5) + (isBoss and 5.5 or 3.2), 0)
 	bb.MaxDistance = theme.MaxDistance
 	bb.AlwaysOnTop = theme.AlwaysOnTop or (isHero and meta ~= nil and meta.DuelSide ~= nil)
@@ -625,6 +635,17 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 		local track, fill = BillboardThemes.Bar(bb, Color3.fromRGB(255, 210, 55), 3)
 		track.LayoutOrder = 3
 		stamFill = fill
+	end
+
+	-- Star rank (1-7) under the bars, gold with an ink outline like the rest of the plate.
+	local starsLabel: TextLabel? = nil
+	if isHero then
+		local s = BillboardThemes.Text(bb, GildedGrimoire.Fonts.Title, heroStars(meta and meta.Stars), 10, Color3.fromRGB(255, 214, 70))
+		s.Name = "Stars"
+		s.RichText = true
+		s.Size = UDim2.new(1, 0, 0, 10)
+		s.LayoutOrder = 4
+		starsLabel = s
 	end
 
 	if isHero then
@@ -677,6 +698,7 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 		HPBarFill = hpFill,
 		StamBarFill = stamFill,
 		TitleLabel = title,
+		StarsLabel = starsLabel,
 		StateLabel = nil,
 		Highlight = hl,
 		LastSeenClock = os.clock(),
@@ -844,6 +866,7 @@ TowerRemotes.TowerEntityState.OnClientEvent:Connect(function(context,message)
      local suffix = if not entry.IsHero and spec and spec.Support then " ✚" else ""
      node.TitleLabel.Text = if entry.IsHero then heroTitle(entry.Name,entry.Level) else (entry.Name or "Mob") .. suffix
     end
+    if node.StarsLabel then node.StarsLabel.Text = heroStars(entry.Stars) end
     if entry.IsHero then
      local currentArtId = node.Model:GetAttribute("EquippedArtifactId")
      local nextArtId = entry.EquippedArtifactId
