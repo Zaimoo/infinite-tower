@@ -244,7 +244,8 @@ return function(keepPreviews: boolean?)
 				if d:IsA("LuaSourceContainer") then scripts += 1 end
 				if d:IsA("Decal") or d:IsA("Texture") then decals += 1 end
 			end
-			check(parts <= Costumes.PART_BUDGET, string.format("%s%d parts within budget %d", label, parts, Costumes.PART_BUDGET))
+			local budget = Costumes.BudgetFor(costume.HeroId)
+			check(parts <= budget, string.format("%s%d parts within budget %d", label, parts, budget))
 			check(parts == #Spec.PART_NAMES + #costume.Pieces, label .. "one Part per costume piece")
 			-- The built-in head mesh plus one FileMesh per allow-listed mesh piece.
 			local meshPieces = 0

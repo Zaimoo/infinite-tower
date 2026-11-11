@@ -722,31 +722,108 @@ do
 	}
 end
 
--- Astrea (BOW): Constellation Judgment. She rises onto her toes, arches back and draws a long,
--- deliberate shot at the sky, then holds a wide follow-through. Idle is her poised stance: the
--- bow held upright at her left side (shoulder + elbow pitch of 90 stands it vertical), the
--- right hand relaxed low as if holding an arrow, a gentle tilt of the head.
+-- Astrea (BOW): her full kit, from her second reference art.
+-- Idle: poised mid-draw. The bow is held low and forward in the left hand, canted on the
+-- diagonal; the right hand rests at the string by her chest with an arrow nocked; her waist is
+-- turned so the bow shoulder leads, her chin turned towards the target, her weight on the right
+-- leg with the left knee softly in.
+-- Astral Arrow (Basic): a quick, elegant draw from that stance and a release whose draw hand
+-- flows back and out in a flourish.
+-- Nebula Piercer (Special): she steps into a wide archer's stance side-on, takes a long full
+-- draw (Charge), and the piercing shot kicks her back half a step in recoil.
+-- Constellation Judgment (Skill): she sinks to one knee and bows her head to gather the stars
+-- (Charge), rises onto her toes arched back with the bow to the sky, looses, then sweeps the bow
+-- down at the target zone with her right arm flung out as the constellation falls.
 do
 	local p = WeaponPoses.BOW
-	local regal = merge(p.SkyAim, { Waist = { 26, -6, 0 }, Neck = { 24, 6, 0 }, LeftHip = { 20, 0, -4 }, RightHip = { -12, 0, 4 }, LeftKnee = { -10, 0, 0 }, RightKnee = { -4, 0, 0 }, RootOffset = { 0, 0.18, 0 } })
-	local poised: Pose = {
-		Waist = { 0, -6, 0 }, Neck = { -4, 6, 3 },
-		LeftShoulder = { 14, 0, -16 }, LeftElbow = { 76, 0, 0 },
-		RightShoulder = { 12, 0, 12 }, RightElbow = { 30, 0, 0 },
-		LeftHip = { 6, 0, -6 }, LeftKnee = { -8, 0, 0 }, LeftAnkle = { 2, 0, 6 },
-		RightHip = { -2, 0, 6 }, RightKnee = { -6, 0, 0 }, RightAnkle = { 8, 0, -6 },
-		RootOffset = { 0, -0.06, 0 },
+	local legs: Pose = {
+		LeftHip = { 8, -6, -2 }, LeftKnee = { -14, 0, 0 }, LeftAnkle = { 6, 0, 2 },
+		RightHip = { -4, 0, 5 }, RightKnee = { -4, 0, 0 }, RightAnkle = { 8, 0, -5 },
+		RootOffset = { 0, -0.04, 0 },
 	}
+	local poised: Pose = merge(legs, {
+		Waist = { 0, -12, 2 }, Neck = { -3, 14, -3 },
+		LeftShoulder = { 42, 0, -14 }, LeftElbow = { 14, 0, 0 }, LeftWrist = { 0, 0, -18 },
+		RightShoulder = { 30, 30, 0 }, RightElbow = { 100, 0, 0 },
+	})
+
+	-- Astral Arrow
+	local aim = merge(merge(p.Aim, legs), { Waist = { -2, -16, 0 }, Neck = { 0, 16, 0 } })
+	local drawn = merge(merge(p.Drawn, legs), { Waist = { -4, -18, 0 }, Neck = { 0, 18, 0 } })
+	local flourish = merge(merge(p.Release, legs), { Waist = { 2, -14, 0 }, Neck = { 0, 14, 0 }, RightShoulder = { 68, 48, -40 }, RightElbow = { 110, 0, 0 } })
+	local settle = merge(flourish, { LeftShoulder = { 80, 0, -6 }, RightShoulder = { 40, 40, -50 }, RightElbow = { 60, 0, 0 } })
+
+	-- Nebula Piercer
+	local wide: Pose = {
+		LeftHip = { 30, -10, -10 }, LeftKnee = { -30, 0, 0 }, LeftAnkle = { 4, 0, 10 },
+		RightHip = { -22, 10, 12 }, RightKnee = { -12, 0, 0 }, RightAnkle = { 30, 0, -12 },
+		RootOffset = { 0, -0.22, 0 },
+	}
+	local sideOn = merge(merge(p.Aim, wide), { Waist = { -6, -28, 0 }, Neck = { 2, 26, 0 } })
+	local fullDraw = merge(merge(p.Drawn, wide), { Waist = { -10, -32, 0 }, Neck = { 4, 30, 0 }, RightShoulder = { 86, 30, -14 }, RightElbow = { 150, 0, 0 } })
+	local strain = merge(fullDraw, { Waist = { -12, -34, 0 }, LeftShoulder = { 92, 0, 0 } })
+	local recoil = merge(merge(p.Release, wide), {
+		Waist = { 6, -22, 0 }, Neck = { 0, 22, 0 },
+		LeftShoulder = { 100, 0, 0 }, RightShoulder = { 60, 50, -50 }, RightElbow = { 100, 0, 0 },
+		RootOffset = { 0, -0.18, 0.25 },
+	})
+	local recover = merge(recoil, { LeftShoulder = { 70, 0, -8 }, RightShoulder = { 30, 30, -30 }, RightElbow = { 60, 0, 0 }, RootOffset = { 0, -0.12, 0.15 } })
+
+	-- Constellation Judgment
+	local kneel: Pose = {
+		Waist = { -14, -6, 0 }, Neck = { -14, 0, 0 },
+		LeftShoulder = { 30, 0, -20 }, LeftElbow = { 30, 0, 0 },
+		RightShoulder = { 12, 0, 12 }, RightElbow = { 40, 0, 0 },
+		LeftHip = { 70, 0, -6 }, LeftKnee = { -80, 0, 0 }, LeftAnkle = { 10, 0, 0 },
+		RightHip = { -10, 0, 6 }, RightKnee = { -100, 0, 0 }, RightAnkle = { 70, 0, 0 },
+		RootOffset = { 0, -0.75, 0 },
+	}
+	local rise = merge(p.SkyAim, {
+		Waist = { 24, -8, 0 }, Neck = { 24, 8, 0 },
+		LeftHip = { 14, 0, -4 }, LeftKnee = { -6, 0, 0 }, LeftAnkle = { 0, 0, 0 },
+		RightHip = { -10, 0, 4 }, RightKnee = { -2, 0, 0 }, RightAnkle = { 0, 0, 0 },
+		RootOffset = { 0, 0.12, 0 },
+	})
+	local skyDraw = merge(rise, { RightShoulder = { 140, 20, -10 }, RightElbow = { 150, 0, 0 } })
+	local loose = merge(rise, { LeftShoulder = { 155, 0, 0 }, RightShoulder = { 110, 45, -60 }, RightElbow = { 60, 0, 0 } })
+	local judgment: Pose = {
+		Waist = { -8, -10, 0 }, Neck = { -8, 10, 0 },
+		LeftShoulder = { 70, 0, -10 }, LeftElbow = { 5, 0, 0 },
+		RightShoulder = { 60, 0, 70 }, RightElbow = { 10, 0, 0 },
+		LeftHip = { 24, 0, -8 }, LeftKnee = { -26, 0, 0 }, LeftAnkle = { 4, 0, 0 },
+		RightHip = { -16, 0, 8 }, RightKnee = { -10, 0, 0 }, RightAnkle = { 20, 0, 0 },
+		RootOffset = { 0, -0.15, 0 },
+	}
+
 	Overrides.hero_astrea = {
 		Idle = breathe(poised, 3.6),
-		AttackSkill = signature(1.1, {
-			{ 0, p.Carry },
-			{ 0.3, regal },
-			{ 0.58, merge(regal, { RightShoulder = { 140, 20, -10 }, RightElbow = { 150, 0, 0 } }) },
-			{ 0.7, merge(regal, { LeftShoulder = { 152, 0, 0 }, RightShoulder = { 105, 45, -60 }, RightElbow = { 60, 0, 0 } }) },
-			{ 0.85, merge(regal, { LeftShoulder = { 130, 0, -20 }, RightShoulder = { 95, 40, -75 }, RightElbow = { 20, 0, 0 }, Waist = { 14, -6, 0 } }) },
-			{ 1, p.Carry },
-		}, { Release = 0.7, Nock = 0.92 }),
+		AttackBasic = signature(0.8, {
+			{ 0, poised },
+			{ 0.22, aim },
+			{ 0.55, drawn },
+			{ 0.68, flourish },
+			{ 0.84, settle },
+			{ 1, poised },
+		}, { Release = 0.68, Nock = 0.92 }),
+		AttackSpecial = signature(1.0, {
+			{ 0, poised },
+			{ 0.2, sideOn },
+			{ 0.5, fullDraw },
+			{ 0.66, strain },
+			{ 0.74, recoil },
+			{ 0.88, recover },
+			{ 1, poised },
+		}, { Charge = 0.38, Release = 0.74, Nock = 0.93 }),
+		AttackSkill = signature(1.4, {
+			{ 0, poised },
+			{ 0.14, kneel },
+			{ 0.32, rise },
+			{ 0.5, skyDraw },
+			{ 0.6, loose },
+			{ 0.76, judgment },
+			{ 0.88, merge(judgment, { Waist = { -10, -12, 0 }, RightShoulder = { 55, 0, 76 } }) },
+			{ 1, poised },
+		}, { Charge = 0.18, Release = 0.6, Nock = 0.94 }),
 	}
 end
 
