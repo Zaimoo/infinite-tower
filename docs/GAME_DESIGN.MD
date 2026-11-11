@@ -695,7 +695,7 @@ These are the default multipliers and secondary mechanics each hero kit inherits
 | **Shift Sprint** | `[LeftShift / RightShift]` | $3.0\times$ speed multiplier for rapid traversal across bridges, rings, and rooms. |
 | **Focus Target** | `[Click / Tap]` | Raycast onto any mob or boss to focus every deployed hero on it. Clicking a Master never starts a fight. |
 | **Overdrive Whistle** | `[Q]` / `ButtonL1` / Right Rail | $20\text{s}$ CD. Grants $+40\%$ Attack Speed for $5\text{s}$ across all active heroes at no cost, allowing squads to rapidly charge their Skill Gauges. |
-| **Emergency Recall** | `[E]` / `ButtonR1` / Right Rail | $6\text{s}$ CD. Instantly warps squad to Master + $2\text{s}$ pacify (dodges lethal AoE). Yields priority to ProximityPrompts. |
+| **Emergency Recall** | `[E]` / `ButtonR1` / Right Rail | $6\text{s}$ CD. Instantly warps squad to Master + $2\text{s}$ pacify (dodges lethal AoE). Every world ProximityPrompt (portals, relics, facilities, bounty) uses `[F]`, so Recall still fires beside them; it only yields to a visible prompt bound to `E`. |
 | **Drop Carried Item**| `[R]` / HUD Button | Drops the carried relic on the ground; restores normal WalkSpeed. |
 | **Claim Bounty (Duel)** | `F` near a `[Loot Thief]` | Any Master but the thief, within 12 studs, during the 3-minute bounty. Starts a bounty duel for the stolen drop (§6.1). |
 

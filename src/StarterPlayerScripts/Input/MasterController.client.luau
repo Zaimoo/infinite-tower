@@ -72,7 +72,7 @@ RunService.RenderStepped:Connect(function()
 	debug.profileend()
 end)
 
--- Facility interactions take priority over Recall while their prompt is visible.
+-- Visible prompts. Every world prompt uses [F]; Recall only yields [E] to a prompt that is bound to E.
 local visibleInteractionPrompts: { [ProximityPrompt]: boolean } = {}
 ProximityPromptService.PromptShown:Connect(function(prompt: ProximityPrompt)
 	visibleInteractionPrompts[prompt] = true
@@ -96,9 +96,11 @@ UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: 
 	if input.KeyCode == Enum.KeyCode.Q then
 		Whistles.Fire("Overdrive")
 	elseif input.KeyCode == Enum.KeyCode.E then
-		-- Yield [E] to visible ProximityPrompts that use it (e.g. the Synthesis Chamber)
-		if next(visibleInteractionPrompts) ~= nil then
-			return
+		-- Yield [E] only to a visible prompt bound to E (world prompts use F, so Recall works beside them)
+		for prompt in visibleInteractionPrompts do
+			if prompt.KeyboardKeyCode == Enum.KeyCode.E then
+				return
+			end
 		end
 		Whistles.Fire("Recall")
 	elseif input.KeyCode == Enum.KeyCode.R then

@@ -178,7 +178,7 @@ function RelicService.SpawnRelic(tierId: RelicTierId, worldPos: Vector3, initial
 	prompt.Name = "CarryRelicPrompt"
 	prompt.ActionText = "Carry"
 	prompt.ObjectText = spec.DisplayName
-	prompt.KeyboardKeyCode = Enum.KeyCode.E
+	prompt.KeyboardKeyCode = Enum.KeyCode.F
 	prompt.HoldDuration = 0.35
 	prompt.MaxActivationDistance = 9.5
 	prompt.RequiresLineOfSight = false

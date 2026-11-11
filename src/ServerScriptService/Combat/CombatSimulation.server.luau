@@ -2543,7 +2543,7 @@ local function spawnFloorAscensionPortal(floorId: number, _position: Vector3?)
 		prompt.Name = spotName .. "Prompt"
 		prompt.ActionText = actionText
 		prompt.ObjectText = objectText
-		prompt.KeyboardKeyCode = Enum.KeyCode.E
+		prompt.KeyboardKeyCode = Enum.KeyCode.F
 		prompt.HoldDuration = 0.35
 		prompt.MaxActivationDistance = 15
 		prompt.RequiresLineOfSight = false
