@@ -174,6 +174,7 @@ function Kit.Build(parent: Instance): Portal
 	prompt.Name = "EnterRaid"
 	prompt.ActionText = "Enter Raid"
 	prompt.ObjectText = "Raid Portal"
+	prompt.KeyboardKeyCode = Enum.KeyCode.F
 	prompt.HoldDuration = 0.4
 	prompt.MaxActivationDistance = 16
 	prompt.RequiresLineOfSight = false
