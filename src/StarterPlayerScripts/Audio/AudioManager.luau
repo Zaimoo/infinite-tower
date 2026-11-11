@@ -13,11 +13,24 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SoundService = game:GetService("SoundService")
 local Workspace = game:GetService("Workspace")
 
-local Shared = ReplicatedStorage:WaitForChild("Shared")
-local SoundCatalog = require(Shared:WaitForChild("Config"):WaitForChild("SoundCatalog"))
+local Shared = ReplicatedStorage:WaitForChild("Shared", 10)
+local configFolder = if Shared then Shared:WaitForChild("Config", 10) else nil
+local soundCatalogModule = if configFolder then configFolder:WaitForChild("SoundCatalog", 10) else nil
+local SoundCatalog = if soundCatalogModule and soundCatalogModule:IsA("ModuleScript") then require(soundCatalogModule) else nil
 local SoundPool = require(script.Parent:WaitForChild("SoundPool"))
 
 local AudioManager = {}
+
+local function getDef(name: string)
+	if not SoundCatalog then
+		local cfg = if Shared then Shared:FindFirstChild("Config") else nil
+		local sc = if cfg then cfg:FindFirstChild("SoundCatalog") else nil
+		if sc and sc:IsA("ModuleScript") then
+			SoundCatalog = require(sc)
+		end
+	end
+	return if SoundCatalog then SoundCatalog.Get(name) else nil
+end
 
 local lastPlayed: { [string]: number } = {}
 local tempAnchorsFolder: Folder? = nil
@@ -43,7 +56,7 @@ end
 --============================================================================
 
 function AudioManager.Play2D(name: string, pitchOverride: number?, volumeScale: number?): Sound?
-	local def = SoundCatalog.Get(name)
+	local def = getDef(name)
 	if not def or def.Id == "" then return nil end
 
 	local now = os.clock()
@@ -98,7 +111,7 @@ function AudioManager.Play3D(
 	pitchOverride: number?,
 	volumeScale: number?
 ): Sound?
-	local def = SoundCatalog.Get(name)
+	local def = getDef(name)
 	if not def or def.Id == "" then return nil end
 
 	local pos = if typeof(target) == "Vector3" then target else (target :: BasePart).Position
@@ -180,7 +193,7 @@ function AudioManager.PreloadCritical()
 		}
 		local soundsToPreload: { Sound } = {}
 		for _, key in ipairs(criticalKeys) do
-			local def = SoundCatalog.Get(key)
+			local def = getDef(key)
 			if def and def.Id ~= "" then
 				local s = Instance.new("Sound")
 				s.SoundId = def.Id

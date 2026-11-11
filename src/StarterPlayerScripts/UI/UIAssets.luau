@@ -38,21 +38,21 @@ UIAssets.Images = table.freeze({
 
 UIAssets.Sounds = table.freeze({
 	Click = "rbxassetid://139403951941162", -- the existing settings click
-	Hover = "rbxassetid://9114228012", -- soft tactile hover tick
-	Error = "rbxassetid://9114228245", -- refused action / not enough Gems
-	ToastIn = "rbxassetid://9114224759", -- shimmering notification toast
-	WindowOpen = "rbxassetid://9114228012", -- soft page/whoosh when a window pops open
-	TabSwitch = "rbxassetid://9114228012", -- quick tactile tab tick
-	Reward = "rbxassetid://9114227189", -- coins/gems landing (offline rewards, claims)
-	SummonCharge = "rbxassetid://9114224524", -- rift orb charging (≈0.6 s riser)
-	SummonPulse = "rbxassetid://9114221580", -- each orb pulse
-	SummonBurstCommon = "rbxassetid://9114224759", -- common/superior card burst
-	SummonBurstRare = "rbxassetid://9114224886", -- Superior+ burst
-	SummonBurstJackpot = "rbxassetid://9114225310", -- Legendary+ / 5★ artifact; choir hit
-	CardFlip = "rbxassetid://9114228012", -- textured card flip
-	StarTick = "rbxassetid://9114224759", -- one per star as they pop in
-	ResultsPop = "rbxassetid://9114228012", -- each card in the 10x grid
-	NewBadge = "rbxassetid://9114224886", -- new badge chime
+	Hover = "rbxassetid://88442833509532", -- ui-simple-button-click
+	Error = "rbxassetid://139892036682632", -- Cancel deltarune
+	ToastIn = "rbxassetid://73774648241042", -- RatingExcellent / chime
+	WindowOpen = "rbxassetid://9065073444", -- Darkest Dungeon SFX UI Button Click
+	TabSwitch = "rbxassetid://9065073444", -- quick tactile tab tick
+	Reward = "rbxassetid://4612375051", -- coin_pickup_3
+	SummonCharge = "rbxassetid://133193041768155", -- Dark Blast riser
+	SummonPulse = "rbxassetid://126976659766267", -- Impact blunt pulse
+	SummonBurstCommon = "rbxassetid://73774648241042", -- common/superior card burst
+	SummonBurstRare = "rbxassetid://4612374036", -- bling_big_diamond_pickup
+	SummonBurstJackpot = "rbxassetid://133193041768155", -- Dark Blast jackpot
+	CardFlip = "rbxassetid://9065073444", -- textured card flip
+	StarTick = "rbxassetid://4612374036", -- bling diamond star tick
+	ResultsPop = "rbxassetid://9065073444", -- each card in the 10x grid
+	NewBadge = "rbxassetid://4612374036", -- new badge chime
 })
 
 local BIOME_BANNER_BY_INDEX: { [number]: string } = table.freeze({

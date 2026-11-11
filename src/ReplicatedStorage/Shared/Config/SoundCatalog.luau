@@ -23,7 +23,7 @@ SoundCatalog.Entries = table.freeze({
 	-- COMBAT: BASIC, CRIT & HIT FEEDBACK
 	-- =========================================================================
 	HitLight = {
-		Id = "rbxassetid://9114221580",
+		Id = "rbxassetid://126976659766267", -- Hit - Impact - Punch - Blunt
 		Category = "SFX",
 		Volume = 0.55,
 		Pitch = 1.0,
@@ -33,7 +33,7 @@ SoundCatalog.Entries = table.freeze({
 		Cooldown = 0.04,
 	},
 	HitHeavy = {
-		Id = "rbxassetid://9114221768",
+		Id = "rbxassetid://101232234433592", -- Hit - Bloody - Strong - Impact - Punch
 		Category = "SFX",
 		Volume = 0.70,
 		Pitch = 0.95,
@@ -43,7 +43,7 @@ SoundCatalog.Entries = table.freeze({
 		Cooldown = 0.05,
 	},
 	HitCrit = {
-		Id = "rbxassetid://9114222019",
+		Id = "rbxassetid://79476956608476", -- Hit - Punch - Impact - Blunt - Debris
 		Category = "SFX",
 		Volume = 0.85,
 		Pitch = 1.05,
@@ -53,7 +53,7 @@ SoundCatalog.Entries = table.freeze({
 		Cooldown = 0.05,
 	},
 	HitWeak = {
-		Id = "rbxassetid://9114221580",
+		Id = "rbxassetid://74041775202019", -- Impact - Punch - Hit - Blunt
 		Category = "SFX",
 		Volume = 0.40,
 		Pitch = 0.82,
@@ -63,7 +63,7 @@ SoundCatalog.Entries = table.freeze({
 		Cooldown = 0.05,
 	},
 	HitSkill = {
-		Id = "rbxassetid://9114221431",
+		Id = "rbxassetid://133193041768155", -- Dark Blast / Magic explosion
 		Category = "SFX",
 		Volume = 0.95,
 		Pitch = 1.0,
@@ -73,7 +73,7 @@ SoundCatalog.Entries = table.freeze({
 		Cooldown = 0.08,
 	},
 	HitIncoming = {
-		Id = "rbxassetid://9114221768",
+		Id = "rbxassetid://101232234433592",
 		Category = "SFX",
 		Volume = 0.90,
 		Pitch = 0.85,
@@ -83,7 +83,7 @@ SoundCatalog.Entries = table.freeze({
 		Cooldown = 0.06,
 	},
 	Heal = {
-		Id = "rbxassetid://9114224886",
+		Id = "rbxassetid://4612374036", -- bling_big_diamond_pickup
 		Category = "SFX",
 		Volume = 0.75,
 		Pitch = 1.0,
@@ -92,7 +92,7 @@ SoundCatalog.Entries = table.freeze({
 		RollOffMax = 75,
 	},
 	BarrierApplied = {
-		Id = "rbxassetid://9114224759",
+		Id = "rbxassetid://73774648241042", -- RatingExcellent / crystal chime
 		Category = "SFX",
 		Volume = 0.70,
 		Pitch = 1.15,
@@ -105,7 +105,7 @@ SoundCatalog.Entries = table.freeze({
 	-- WEAPONS & HERO ARCHETYPE ACTIONS
 	-- =========================================================================
 	SlashSword = {
-		Id = "rbxassetid://9117627478",
+		Id = "rbxassetid://137628815514180", -- sword-slash-and-swing
 		Category = "SFX",
 		Volume = 0.65,
 		Pitch = 1.0,
@@ -115,7 +115,7 @@ SoundCatalog.Entries = table.freeze({
 		Cooldown = 0.05,
 	},
 	SlashDagger = {
-		Id = "rbxassetid://9117627478",
+		Id = "rbxassetid://5789211405", -- sword_swing_fast_whoosh_blade_ring_001
 		Category = "SFX",
 		Volume = 0.50,
 		Pitch = 1.25,
@@ -125,7 +125,7 @@ SoundCatalog.Entries = table.freeze({
 		Cooldown = 0.04,
 	},
 	BowDraw = {
-		Id = "rbxassetid://9114223847",
+		Id = "rbxassetid://9113161553", -- Arrow In And Hit 15
 		Category = "SFX",
 		Volume = 0.55,
 		Pitch = 1.1,
@@ -134,7 +134,7 @@ SoundCatalog.Entries = table.freeze({
 		RollOffMax = 50,
 	},
 	BowRelease = {
-		Id = "rbxassetid://9114223847",
+		Id = "rbxassetid://9113161406", -- Arrow In And Hit 13
 		Category = "SFX",
 		Volume = 0.70,
 		Pitch = 1.0,
@@ -144,7 +144,7 @@ SoundCatalog.Entries = table.freeze({
 		Cooldown = 0.05,
 	},
 	HammerImpact = {
-		Id = "rbxassetid://9114221768",
+		Id = "rbxassetid://79476956608476",
 		Category = "SFX",
 		Volume = 0.85,
 		Pitch = 0.75,
@@ -153,7 +153,7 @@ SoundCatalog.Entries = table.freeze({
 		RollOffMax = 80,
 	},
 	MagicSpark = {
-		Id = "rbxassetid://9114224524",
+		Id = "rbxassetid://133193041768155",
 		Category = "SFX",
 		Volume = 0.60,
 		Pitch = 1.15,
@@ -162,7 +162,7 @@ SoundCatalog.Entries = table.freeze({
 		RollOffMax = 65,
 	},
 	LightningArc = {
-		Id = "rbxassetid://9114224524",
+		Id = "rbxassetid://133193041768155",
 		Category = "SFX",
 		Volume = 0.75,
 		Pitch = 1.35,
@@ -175,7 +175,7 @@ SoundCatalog.Entries = table.freeze({
 	-- SIGNATURE ULTIMATES & SKILLS
 	-- =========================================================================
 	FortressAegis = {
-		Id = "rbxassetid://9114226154",
+		Id = "rbxassetid://9120675895",
 		Category = "SFX",
 		Volume = 0.85,
 		Pitch = 0.90,
@@ -183,7 +183,7 @@ SoundCatalog.Entries = table.freeze({
 		RollOffMax = 100,
 	},
 	TwinBladeTempest = {
-		Id = "rbxassetid://9117627478",
+		Id = "rbxassetid://137628815514180",
 		Category = "SFX",
 		Volume = 0.85,
 		Pitch = 1.30,
@@ -191,7 +191,7 @@ SoundCatalog.Entries = table.freeze({
 		RollOffMax = 95,
 	},
 	SeismicCataclysm = {
-		Id = "rbxassetid://9114221431",
+		Id = "rbxassetid://133193041768155",
 		Category = "SFX",
 		Volume = 0.95,
 		Pitch = 0.70,
@@ -199,7 +199,7 @@ SoundCatalog.Entries = table.freeze({
 		RollOffMax = 120,
 	},
 	SupernovaCataclysm = {
-		Id = "rbxassetid://9114221431",
+		Id = "rbxassetid://133193041768155",
 		Category = "SFX",
 		Volume = 1.0,
 		Pitch = 0.85,
@@ -207,7 +207,7 @@ SoundCatalog.Entries = table.freeze({
 		RollOffMax = 130,
 	},
 	SanctuaryMiracle = {
-		Id = "rbxassetid://9114224886",
+		Id = "rbxassetid://4612374036",
 		Category = "SFX",
 		Volume = 0.90,
 		Pitch = 0.95,
@@ -219,14 +219,14 @@ SoundCatalog.Entries = table.freeze({
 	-- TACTICAL WHISTLES (MASTER COMMANDS)
 	-- =========================================================================
 	WhistleOverdrive = {
-		Id = "rbxassetid://9114226154",
+		Id = "rbxassetid://9120675895", -- Whistle Calling 4 (SFX)
 		Category = "SFX",
 		Volume = 0.85,
 		Pitch = 1.25,
 		PitchVariance = 0.03,
 	},
 	WhistleRecall = {
-		Id = "rbxassetid://9114226302",
+		Id = "rbxassetid://9120675895", -- Whistle Calling 4 (SFX)
 		Category = "SFX",
 		Volume = 0.90,
 		Pitch = 1.15,
@@ -237,7 +237,7 @@ SoundCatalog.Entries = table.freeze({
 	-- KILL EFFECTS, DEFEAT & ROOM CONQUEST
 	-- =========================================================================
 	MobDeath = {
-		Id = "rbxassetid://9114225028",
+		Id = "rbxassetid://112471373203098", -- Battle death2
 		Category = "SFX",
 		Volume = 0.65,
 		Pitch = 1.10,
@@ -247,7 +247,7 @@ SoundCatalog.Entries = table.freeze({
 		Cooldown = 0.06,
 	},
 	EliteDeath = {
-		Id = "rbxassetid://9114221431",
+		Id = "rbxassetid://133193041768155", -- Dark Blast
 		Category = "SFX",
 		Volume = 0.85,
 		Pitch = 0.80,
@@ -255,7 +255,7 @@ SoundCatalog.Entries = table.freeze({
 		RollOffMax = 95,
 	},
 	BossDefeat = {
-		Id = "rbxassetid://9114225310",
+		Id = "rbxassetid://133193041768155",
 		Category = "SFX",
 		Volume = 1.0,
 		Pitch = 0.75,
@@ -263,19 +263,19 @@ SoundCatalog.Entries = table.freeze({
 		RollOffMax = 150,
 	},
 	HeroDowned = {
-		Id = "rbxassetid://9114221768",
+		Id = "rbxassetid://6655787968", -- Danger Low Health
 		Category = "SFX",
 		Volume = 0.95,
 		Pitch = 0.65,
 	},
 	SquadWipe = {
-		Id = "rbxassetid://9114228245",
+		Id = "rbxassetid://139892036682632",
 		Category = "SFX",
 		Volume = 0.90,
 		Pitch = 0.70,
 	},
 	RoomClearChime = {
-		Id = "rbxassetid://9114224886",
+		Id = "rbxassetid://4612374036",
 		Category = "SFX",
 		Volume = 0.80,
 		Pitch = 1.20,
@@ -285,7 +285,7 @@ SoundCatalog.Entries = table.freeze({
 	-- LOOT, EXTRACTION & BOUNTY
 	-- =========================================================================
 	RelicDrop = {
-		Id = "rbxassetid://9114224759",
+		Id = "rbxassetid://73774648241042",
 		Category = "SFX",
 		Volume = 0.75,
 		Pitch = 1.0,
@@ -293,25 +293,25 @@ SoundCatalog.Entries = table.freeze({
 		RollOffMax = 80,
 	},
 	RelicPickup = {
-		Id = "rbxassetid://9114227189",
+		Id = "rbxassetid://4612375051", -- coin_pickup_3
 		Category = "SFX",
 		Volume = 0.70,
 		Pitch = 1.15,
 	},
 	RelicExtractSuccess = {
-		Id = "rbxassetid://9114224886",
+		Id = "rbxassetid://4612374036",
 		Category = "SFX",
 		Volume = 0.90,
 		Pitch = 1.30,
 	},
 	BountyHorn = {
-		Id = "rbxassetid://9114226154",
+		Id = "rbxassetid://9120675895",
 		Category = "SFX",
 		Volume = 0.95,
 		Pitch = 0.80,
 	},
 	CoinClink = {
-		Id = "rbxassetid://9114227189",
+		Id = "rbxassetid://4612375051", -- coin_pickup_3
 		Category = "SFX",
 		Volume = 0.55,
 		Pitch = 1.25,
@@ -335,37 +335,37 @@ SoundCatalog.Entries = table.freeze({
 		Pitch = 1.0,
 	},
 	Biome2_Fungal = {
-		Id = "rbxassetid://9043887422", -- Eerie Cavern / Bioluminescence
+		Id = "rbxassetid://9043887091", -- Eerie Cavern / Bioluminescence
 		Category = "Music",
 		Volume = 0.48,
 		Pitch = 0.95,
 	},
 	Biome3_Ashen = {
-		Id = "rbxassetid://9043887422", -- Desolate Desert & Cinders
+		Id = "rbxassetid://9043887091", -- Desolate Desert & Cinders
 		Category = "Music",
 		Volume = 0.50,
 		Pitch = 0.90,
 	},
 	Biome4_Frozen = {
-		Id = "rbxassetid://9043887422", -- Glacial Citadel & Cold Winds
+		Id = "rbxassetid://9043887091", -- Glacial Citadel & Cold Winds
 		Category = "Music",
 		Volume = 0.45,
 		Pitch = 1.05,
 	},
 	Biome5_Infernal = {
-		Id = "rbxassetid://9043887856", -- Molten Foundry & Industrial Brass
+		Id = "rbxassetid://9043887091", -- Molten Foundry & Industrial Brass
 		Category = "Music",
 		Volume = 0.52,
 		Pitch = 0.92,
 	},
 	Biome6_Thunder = {
-		Id = "rbxassetid://9043887856", -- Tempest Redoubt War Drums
+		Id = "rbxassetid://9043887091", -- Tempest Redoubt War Drums
 		Category = "Music",
 		Volume = 0.52,
 		Pitch = 1.05,
 	},
 	Biome7_Corrupted = {
-		Id = "rbxassetid://9043887422", -- Poisonous Blighted Grove
+		Id = "rbxassetid://9043887091", -- Poisonous Blighted Grove
 		Category = "Music",
 		Volume = 0.48,
 		Pitch = 0.88,
@@ -383,31 +383,31 @@ SoundCatalog.Entries = table.freeze({
 		Pitch = 1.08,
 	},
 	Biome10_Abyssal = {
-		Id = "rbxassetid://9043888125", -- Apocalyptic Abyssal Throne
+		Id = "rbxassetid://9043887091", -- Apocalyptic Abyssal Throne
 		Category = "Music",
 		Volume = 0.60,
 		Pitch = 0.90,
 	},
 	BossBattleTheme = {
-		Id = "rbxassetid://9043887856", -- Driving Orchestral Battle
+		Id = "rbxassetid://9043887091", -- Driving Orchestral Battle
 		Category = "Music",
 		Volume = 0.60,
 		Pitch = 1.0,
 	},
 	RaidBossTheme = {
-		Id = "rbxassetid://9043888125", -- Grand Choral Symphony
+		Id = "rbxassetid://9043887091", -- Grand Choral Symphony
 		Category = "Music",
 		Volume = 0.65,
 		Pitch = 1.0,
 	},
 	VictoryFanfare = {
-		Id = "rbxassetid://9114224886",
+		Id = "rbxassetid://4612374036",
 		Category = "Music",
 		Volume = 0.75,
 		Pitch = 1.15,
 	},
 	DefeatStinger = {
-		Id = "rbxassetid://9114228245",
+		Id = "rbxassetid://139892036682632",
 		Category = "Music",
 		Volume = 0.70,
 		Pitch = 0.80,
@@ -431,7 +431,7 @@ SoundCatalog.Entries = table.freeze({
 		RollOffMax = 120,
 	},
 	PortalVoidHum = {
-		Id = "rbxassetid://9114224524",
+		Id = "rbxassetid://9116258071",
 		Category = "Ambience",
 		Volume = 0.42,
 		Pitch = 0.40,
@@ -439,7 +439,7 @@ SoundCatalog.Entries = table.freeze({
 		RollOffMax = 80,
 	},
 	ForgeHammer = {
-		Id = "rbxassetid://9114221768",
+		Id = "rbxassetid://79476956608476",
 		Category = "Ambience",
 		Volume = 0.45,
 		Pitch = 1.40,
@@ -459,7 +459,7 @@ SoundCatalog.Entries = table.freeze({
 		Cooldown = 0.04,
 	},
 	Hover = {
-		Id = "rbxassetid://9114228012",
+		Id = "rbxassetid://88442833509532", -- ui-simple-button-click
 		Category = "SFX",
 		Volume = 0.28,
 		Pitch = 1.35,
@@ -467,73 +467,73 @@ SoundCatalog.Entries = table.freeze({
 		Cooldown = 0.06,
 	},
 	Error = {
-		Id = "rbxassetid://9114228245",
+		Id = "rbxassetid://139892036682632", -- Cancel deltarune
 		Category = "SFX",
 		Volume = 0.65,
 		Pitch = 1.0,
 	},
 	WindowOpen = {
-		Id = "rbxassetid://9114228012",
+		Id = "rbxassetid://9065073444", -- Darkest Dungeon SFX UI Button Click
 		Category = "SFX",
 		Volume = 0.45,
 		Pitch = 0.95,
 	},
 	Reward = {
-		Id = "rbxassetid://9114227189",
+		Id = "rbxassetid://4612375051", -- coin_pickup_3
 		Category = "SFX",
 		Volume = 0.70,
 		Pitch = 1.10,
 	},
 	SummonCharge = {
-		Id = "rbxassetid://9114224524",
+		Id = "rbxassetid://133193041768155",
 		Category = "SFX",
 		Volume = 0.70,
 		Pitch = 0.85,
 	},
 	SummonPulse = {
-		Id = "rbxassetid://9114221580",
+		Id = "rbxassetid://126976659766267",
 		Category = "SFX",
 		Volume = 0.65,
 		Pitch = 1.10,
 	},
 	SummonBurstCommon = {
-		Id = "rbxassetid://9114224759",
+		Id = "rbxassetid://73774648241042",
 		Category = "SFX",
 		Volume = 0.75,
 		Pitch = 1.0,
 	},
 	SummonBurstJackpot = {
-		Id = "rbxassetid://9114224886",
+		Id = "rbxassetid://4612374036",
 		Category = "SFX",
 		Volume = 0.95,
 		Pitch = 0.90,
 	},
 	CardFlip = {
-		Id = "rbxassetid://9114228012",
+		Id = "rbxassetid://9065073444",
 		Category = "SFX",
 		Volume = 0.65,
 		Pitch = 1.05,
 	},
 	StarTick = {
-		Id = "rbxassetid://9114224759",
+		Id = "rbxassetid://4612374036",
 		Category = "SFX",
 		Volume = 0.60,
 		Pitch = 1.20,
 	},
 	ResultsPop = {
-		Id = "rbxassetid://9114228012",
+		Id = "rbxassetid://9065073444",
 		Category = "SFX",
 		Volume = 0.55,
 		Pitch = 1.15,
 	},
 	UpgradeSuccess = {
-		Id = "rbxassetid://9114224886",
+		Id = "rbxassetid://4612374036",
 		Category = "SFX",
 		Volume = 0.85,
 		Pitch = 1.10,
 	},
 	UpgradeFailure = {
-		Id = "rbxassetid://9114228245",
+		Id = "rbxassetid://139892036682632",
 		Category = "SFX",
 		Volume = 0.70,
 		Pitch = 0.85,
