@@ -25,7 +25,7 @@ Good examples to copy from: **Han** (store hair mesh), **Velkist** (cocky face, 
 | Construction | Code-built Block/Wedge Parts; Ball/Cylinder sparingly; FileMesh only for allow-listed hair |
 | Part budget | ≤ 60 parts per hero, counting the 16 rig parts |
 | Edges | Hard 90° corners, flat shading; fake bevels with a Wedge |
-| Proportions | 6.1 studs tall; head 1.4 studs; body types change width only; hands are fixed |
+| Proportions | 6.1 studs tall; head 1.4 studs; body types change width only; hands are fixed (`Slim` has narrower fists) |
 | Layering | Shell pieces +0.02–0.05 studs per side; plates 0.04–0.22 thick |
 | Palette per hero | Skin, hair, a dark base, a secondary, a metal trim (gold ≈ `200,160,70`), 1–2 accents; 6–9 colours |
 | Value floor | No near-black outfit without a light trim on every bone (dark heroes vanish on dark floors) |
@@ -64,7 +64,8 @@ Good examples to copy from: **Han** (store hair mesh), **Velkist** (cocky face, 
 ## 3. Rig facts you need
 
 - **Coordinates:** studs, Roblox axes: +Y up, **−Z is the hero's front**, **+X is the hero's right**. When you face the hero, their right is on your left.
-- **Body types** (`Slim`, `Standard`, `Heavy`) change torso width/depth and limb thickness only. Heights, hands and the head are shared. Costume pieces are authored on the **Standard** body and scaled horizontally to the others automatically.
+- **Body types** (`Slim`, `Standard`, `Heavy`) change torso width/depth and limb thickness only. Heights and the head are shared. Costume pieces are authored on the **Standard** body and scaled horizontally to the others automatically.
+- **`Slim` is the feminine build:** torso 1.5 × 0.78 (Standard is 2.0 × 1.0), limbs 0.7 thick (Standard 1.0) and fists 0.8 wide (`HandWidth`; every other body uses the 1.0 `HAND_SIZE`). The grips sit at the hand's centre, so weapons are held in the same place. It was slimmed from 1.8 / 0.85 on 2026-11-11 because the women still read as bulky.
 - **Head:** a 1.4-stud Part with the built-in rounded head shape (`SpecialMesh`, `MeshType.Head`). **Head pieces are authored for a 1.2-stud head** (`HeroRigSpec.HEAD_AUTHORED_SIZE`) and scaled uniformly by 1.4/1.2 at build time: positions, sizes and mesh scales. Always author head pieces in 1.2-head units, centred on the head's centre.
 - **Part sizes (Standard), useful for placing pieces:** UpperTorso 2.0 × 1.6 × 1.0; LowerTorso 2.0 × 0.4 × 1.0; arms and legs 1.0 thick; UpperArm 1.15, LowerArm 1.05, Hand 1.0 × 0.3 × 1.0; UpperLeg/LowerLeg 1.2; Foot 0.3 tall.
 - **Pose axis convention** (rotations in degrees on `Motor6D.Transform`):
@@ -128,12 +129,13 @@ Proven recipes (copy and adapt):
 | Knee plates | A gold Cylinder rim (0.1 × 0.6 × 0.6, `Rotation {0,90,0}`) at y 0.42, z −0.53 on the LowerLeg, plus a smaller dark Cylinder plate `RelativeTo` it at offset {0.04, 0, 0} |
 | Boots | A shell (1.08 × 0.34 × 1.25) slightly forward on the Foot, plus a thin gold sole underneath |
 | Pauldron | A Metal plate on the UpperArm at y ~0.42–0.45, tilted 12–15° about Z, with a gold trim `RelativeTo` it |
+| Sideburns (hair mesh leaves the cheek bare) | Hair-coloured pieces on the Head, lying flat on the round head in front of the ear: a Block `{0.07, 0.4, 0.26}` at `{±0.5755, 0.05, -0.2562}` with `Rotation {0, ±24, 0}`, and a Wedge tip `{0.07, 0.3, 0.26}` below it at y −0.3 with `Rotation {0, ±24, 180}`; both `Loose` (Gide) |
 
 **Feminine body** (every female hero, from §1.1). The rig's body types only change width, so the shape comes from the body type plus the costume:
 
 | Feature | Recipe |
 | --- | --- |
-| Body type | `Slim` (torso 1.8 wide, limbs 0.85). Never `Heavy`. |
+| Body type | `Slim` (torso 1.5 wide, limbs 0.7, fists 0.8). Never `Heavy`. |
 | Shoulders | No broad or stacked pauldrons. Shoulder pieces stay within the arm's width (≤ 1.06 across on the UpperArm) and lie flat (≤ 0.15 tall), or use bare shoulder caps or puffed sleeves. Nothing pokes out sideways past the arm. |
 | Waist | A narrow belt or sash, and torso pieces that taper towards the waist (Wedges at the sides of a bodice). Leave the waist as the narrowest point of the silhouette. |
 | Hips and skirt | Skirts, tassets and coat panels flare outwards below the belt (`Rotation` ±6–12°), so the hips read wider than the waist. |
@@ -141,7 +143,7 @@ Proven recipes (copy and adapt):
 | Arms and legs | Slim sleeves or bell sleeves, fitted trousers or leggings, boots without a heavy cuff or wide toe cap. |
 | Stance | Narrower feet than male heroes, a slight hip shift or one knee bent inwards, an upright waist. |
 
-If `Slim` isn't feminine enough (no taper is possible from the rig itself), a dedicated body type is a rig change in `HeroRigSpec`. That is its own PR, with the weapon and animation checks in `hero-rig-rebuild-plan.md`, never part of a single hero's remodel.
+If `Slim` still isn't feminine enough, change the `Slim` numbers in `HeroRigSpec.BODY_TYPES` rather than fighting it with costume pieces (every `Slim` hero is a woman, so they all move together). That is a rig change: rerun the lint for every `Slim` hero and check weapons and animations in Studio as `hero-rig-rebuild-plan.md` describes. The rig has no taper, so a waist narrower than the hips still has to come from the costume.
 
 Rules of thumb:
 - **Count parts as you go:** 16 rig parts + pieces ≤ 60. Typical remodels land at 50–59.
@@ -159,6 +161,7 @@ Faces are drawn by small Python scripts with PIL (no external art):
   - **Stern:** low, nearly straight brows and a firm mouth.
   - **Cocky:** pinched brows, half-lidded eyes and a crooked grin with teeth (`make_velkist_face.py`).
   - **Half-lidded / focused:** flatten the top lid curve, which clips the top of the iris.
+  - **Feminine eyes:** tall and rounded, never the narrow male slit. `make_jenna_face.py` and `make_edis_face.py` share an `eye()` driven by constants: the eye is about 120 wide and 55–65 tall in 512 space, the upper lash is a filled band that thickens from 3–4 px at the inner corner to 10–12 px at the outer corner and ends in one smooth upward wing, the iris is large (radii about 31 × 38) with the lid overlapping its top, a soft lid shadow, a glow crescent low in the iris and one big catchlight. Only the outer third of the lower lid is drawn, and the brows are slim and arched. Lower `EYE_TOP_PEAK` (Edis) for a cooler, half-lidded look.
 - **Colours:** match the iris to the character. Make the brows dark when the hair is dark, but **brow colour should follow hair colour** (blond hair → dark gold brows, not black).
 
 Upload (needs Studio MCP connected, and the user's OK the first time):
@@ -292,7 +295,7 @@ Every hero's hair is our own Blender mesh except Han's, which is a Creator Store
 | Catio | `121586827857415` | `139185116264855` | `make_catio_hair_v2.py` | weapon default |
 | Valeria | `75911538426683` | `119546665528137` | `make_valeria_hair_ugc.py` | floating tome (`floatIdle`) |
 | Ignis | `137040425989997` | `101701313703578` | `make_ignis_hair_ugc.py` | brawler |
-| Jenna | `100881487266962` | `107250648665529` (scale 0.0092) | `make_jenna_hair_ugc.py` | ready stance |
+| Jenna | `79233691033516` | `107250648665529` (scale 0.0092) | `make_jenna_hair_ugc.py` | ready stance |
 | Velkist | `104592422151826` | `109684055929778` | `velkist_hair.blend` | showboat |
 | Eolka | `131976429681674` | `123421721359927` | `make_eolka_hair_ugc.py` | poised (staff) |
 | Morrigan | `134987323511884` | `132434150044694` | `make_morrigan_hair_ugc.py` | planted |
@@ -301,4 +304,4 @@ Every hero's hair is our own Blender mesh except Han's, which is a Creator Store
 | Astrea | `139763198478294` | `108726871571153` | `make_astrea_hair_ugc.py` | poised (bow) |
 
 Open issues:
-- **Female heroes predate the feminine-body rule (§1.1).** Jenna is already `Slim`. Valeria, Eolka, Solaris and Astrea are `Standard`, and Eolka and Valeria wear broad pauldrons. Switch them to `Slim` and slim their shoulder pieces. Their costumes will need a lint pass, because pieces rescale with the body.
+- **Female heroes predate the feminine-body rule (§1.1).** Jenna, Edis and Aeli are `Slim`. Valeria, Eolka, Solaris and Astrea are `Standard`, and Eolka and Valeria wear broad pauldrons. Switch them to `Slim` and slim their shoulder pieces. Their costumes will need a lint pass, because pieces rescale with the body.

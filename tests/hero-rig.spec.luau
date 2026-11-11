@@ -163,12 +163,17 @@ for _, bodyType in bodyTypes do
 	check(math.abs(leg.Center[1]) - leg.Size[1] / 2 >= -EPS, `{bodyType} legs do not overlap each other`)
 end
 
--- 3. Hands are identical across body types ------------------------------------
+-- 3. Hands are identical across body types, except a body type with its own HandWidth
+-- (Slim): its fists are narrower but just as tall, and never wider than the standard hand.
 for _, bodyType in bodyTypes do
+	local handWidth = HeroRigSpec.BODY_TYPES[bodyType].HandWidth or HeroRigSpec.HAND_SIZE[1]
+	check(handWidth <= HeroRigSpec.HAND_SIZE[1] + EPS and handWidth >= 0.7, `{bodyType} hand width is within 0.7..1.0`)
 	for _, hand in { "LeftHand", "RightHand" } do
-		check(sameVec(layouts[bodyType].Parts[hand].Size, HeroRigSpec.HAND_SIZE), `{bodyType} {hand} uses HAND_SIZE`)
+		local expected = { handWidth, HeroRigSpec.HAND_SIZE[2], handWidth }
+		check(sameVec(layouts[bodyType].Parts[hand].Size, expected), `{bodyType} {hand} uses its body type's hand size`)
 	end
 end
+check(HeroRigSpec.BODY_TYPES.Standard.HandWidth == nil and HeroRigSpec.BODY_TYPES.Heavy.HandWidth == nil, "Standard and Heavy use HAND_SIZE")
 
 -- 4. Axis convention ------------------------------------------------------------
 -- Rotating a joint swings everything below it about the pivot; the checked part's
