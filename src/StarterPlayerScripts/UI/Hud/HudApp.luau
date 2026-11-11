@@ -696,7 +696,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 			PlayerFloorId = Store.PlayerFloorId,
 			ViewingSquad = Store.ViewingSquad,
 			Compact = compact,
-			Top = if isFloorBossBannerVisible() then 112 else 14,
+			Top = if isFloorBossBannerVisible() then 96 else 14,
 			OnToggleView = function() call("ToggleViewSquad") end,
 			OnRecall = function() call("TowerRecallSquad") end,
 		}) else nil,

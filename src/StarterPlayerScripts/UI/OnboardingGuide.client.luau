@@ -79,14 +79,15 @@ local function corner(parent: Instance, radius: number)
 	c.Parent = parent
 end
 
--- Spotlight: four black panels around the hole. They are buttons so they can swallow input.
-local panels: { TextButton } = {}
+-- Spotlight: four black panels around the hole. Plain frames: `Active` makes them swallow clicks
+-- and taps without being buttons (a button would get the global hover sound, hover spring and
+-- pointer cursor from UIFeel).
+local panels: { Frame } = {}
 for _, name in { "Top", "Bottom", "Left", "Right" } do
-	local panel = Instance.new("TextButton")
+	local panel = Instance.new("Frame")
 	panel.Name = "Dim" .. name
-	panel.Text = ""
-	panel.AutoButtonColor = false
 	panel.Selectable = false
+	panel.Active = false
 	panel.BorderSizePixel = 0
 	panel.BackgroundColor3 = Color3.new(0, 0, 0)
 	panel.BackgroundTransparency = 1
@@ -107,6 +108,8 @@ skip.TextSize = 14
 skip.TextColor3 = Color3.fromRGB(214, 204, 232)
 skip.Text = "Skip tutorial"
 skip.ZIndex = 5
+skip.AutoButtonColor = false
+skip:SetAttribute("NoFeel", true)
 skip.Visible = false
 skip.Parent = dimGui
 corner(skip, 8)
@@ -305,11 +308,19 @@ local function control(root: Instance?, name: string): GuiObject?
 	return found
 end
 
--- The control to press inside the open window, and whether that lesson's window is the open one.
-local function modalControl(goal: any): (GuiObject?, boolean)
+-- The Forge's React ScreenGui sits inside a host folder in PlayerGui.
+local function forgeRoot(): Instance?
+	local host = playerGui:FindFirstChild("ForgeWorkbenchHost")
+	return (host and host:FindFirstChild("ForgeWorkbench")) or playerGui:FindFirstChild("ForgeWorkbench", true)
+end
+
+-- The control to press inside the open window, whether that lesson's window is the open one, and
+-- (when the control is a step on the way rather than the lesson's own action) what to call it.
+local function modalControl(goal: any): (GuiObject?, boolean, string?)
 	local id = goal.Id
 	local root: Instance?
 	local button: GuiObject?
+	local label: string? = nil
 	if id == "Visit" then
 		root = playerGui:FindFirstChild("FloorSelector", true)
 		button = control(root, "GuideVisitFloor1") or control(root, "GuideFloor1")
@@ -319,6 +330,7 @@ local function modalControl(goal: any): (GuiObject?, boolean)
 		for slot = 1, 5 do
 			if button then break end
 			button = control(root, `GuideSquadSlot{slot}`)
+			if button then label = "Pick a slot" end
 		end
 	elseif id == "Summon" or id == "Recruit" then
 		root = playerGui:FindFirstChild("PermanentSummonView", true)
@@ -327,13 +339,21 @@ local function modalControl(goal: any): (GuiObject?, boolean)
 		if id == "Summon" and gems >= HeroCatalog.PermanentBanner.Cost10X then button = control(root, "PermSummon10XBtn") end
 		button = button or control(root, "PermSummon1XBtn")
 	elseif id == "Roll" then
-		root = playerGui:FindFirstChild("ForgeWorkbench")
-		button = control(root, "Summon1XBtn") or control(playerGui, "Summon1XBtn") or control(root, "SummonTab")
+		root = forgeRoot()
+		button = control(root, "Summon1XBtn") or control(playerGui, "Summon1XBtn")
+		if not button then
+			button = control(root, "SummonTab")
+			if button then label = "Open Summon" end
+		end
 	elseif id == "Equip" then
-		root = playerGui:FindFirstChild("ForgeWorkbench")
-		button = control(root, "EquipBestButton") or control(root, "ActionBarEquip") or control(root, "ArtifactsTab")
+		root = forgeRoot()
+		button = control(root, "EquipBestButton") or control(root, "ActionBarEquip")
+		if not button then
+			button = control(root, "ArtifactsTab")
+			if button then label = "Open Artifacts" end
+		end
 	elseif id == "Upgrade" then
-		root = playerGui:FindFirstChild("ForgeWorkbench")
+		root = forgeRoot()
 		button = control(root, "ConfirmUpgradeButton") or control(root, "ReviewUpgradeButton")
 			or control(root, "AutoFillMaterialsButton") or control(root, "ActionBarUpgrade")
 		if not button and root and goal.Control then
@@ -347,18 +367,47 @@ local function modalControl(goal: any): (GuiObject?, boolean)
 		root = playerGui:FindFirstChild("HeroPromotionModal", true)
 		button = control(root, "InitiatePromotionButton") or control(root, "MainHeroSlot")
 		local synthesis = playerGui:FindFirstChild("SynthesisModal", true)
-		if not shown(root) and shown(synthesis) then return control(synthesis, "PromotionTab"), true end
+		if not shown(root) and shown(synthesis) then return control(synthesis, "PromotionTab"), true, "Open Promotion" end
 	elseif id == "Synthesis" then
 		root = playerGui:FindFirstChild("SynthesisModal", true)
 		local promotion = playerGui:FindFirstChild("HeroPromotionModal", true)
-		if not shown(root) and shown(promotion) then return control(promotion, "SynthesisTab"), true end
-		-- Pick the hero first; then the materials are the player's choice, so only Confirm is lit.
-		button = control(root, "EmptySelectHeroButton") or control(root, "ConfirmButton")
+		if not shown(root) and shown(promotion) then return control(promotion, "SynthesisTab"), true, "Open Synthesis" end
+		-- Pick the hero first; the materials are the player's choice (no spotlight while choosing);
+		-- once a preview is ready, Synthesize is lit.
+		button = control(root, "EmptySelectHeroButton")
+		if button then
+			label = "Pick a hero to level"
+		else
+			button = control(root, "ConfirmButton")
+			if button then label = "Synthesize" end
+		end
 	elseif goal.Target then
 		root = playerGui:FindFirstChild(`GuideFacility_{goal.Target}`, true)
 		button = control(root, "GuideAssignWorker")
 	end
-	return button, shown(root)
+	return button, shown(root), label
+end
+
+-- The close button of the window on top, for when the open window is not the lesson's.
+local CLOSE_NAMES = { "CloseForgeButton", "GothicCloseButton", "CloseButton", "Close" }
+local function topCloseButton(): GuiObject?
+	local manager = _G.WindowManager
+	local top = manager and manager.Top and manager.Top()
+	if not top then return nil end
+	local candidates: { Instance } = {}
+	local forge = forgeRoot()
+	if top == "Forge" and forge then table.insert(candidates, forge) end
+	for _, name in { "MasterHUDScreenGui", "Phase5Overlay" } do
+		local layer = playerGui:FindFirstChild(name)
+		if layer then table.insert(candidates, layer) end
+	end
+	for _, layer in candidates do
+		for _, name in CLOSE_NAMES do
+			local found = control(layer, name)
+			if found then return found end
+		end
+	end
+	return nil
 end
 
 local BUILDINGS: { [string]: string } = {
@@ -436,16 +485,27 @@ local function worldTarget(target: string, root: BasePart): (Vector3?, Instance?
 	return position, building
 end
 
--- True when no higher layer that takes input sits on top of `object` (a confirm dialog, the summon
--- reveal). Layers are compared by DisplayOrder, so the answer does not depend on hit-list order.
+-- True when nothing that takes input sits on top of `object` (a hero picker, a confirm dialog, the
+-- summon reveal). GetGuiObjectsAtPosition lists the topmost first: anything input-taking listed
+-- before the control (and not part of it) is covering it. A higher ScreenGui covers it wherever
+-- it is listed.
 local function uncovered(object: GuiObject): boolean
 	local layer = object:FindFirstAncestorOfClass("ScreenGui")
 	if not layer then return false end
 	local center = object.AbsolutePosition + object.AbsoluteSize / 2
+	local reached = false
 	for _, hit in playerGui:GetGuiObjectsAtPosition(center.X, center.Y) do
 		if hit:IsDescendantOf(gui) or hit:IsDescendantOf(dimGui) then continue end
+		if hit == object or hit:IsDescendantOf(object) then
+			reached = true
+			continue
+		end
+		if object:IsDescendantOf(hit) then continue end -- the window or panel holding the control
+		if not (hit:IsA("GuiButton") or hit.Active) then continue end
 		local other = hit:FindFirstAncestorOfClass("ScreenGui")
-		if other and other ~= layer and other.DisplayOrder > layer.DisplayOrder and (hit:IsA("GuiButton") or hit.Active) then
+		if other and other ~= layer then
+			if other.DisplayOrder > layer.DisplayOrder then return false end
+		elseif not reached then
 			return false
 		end
 	end
@@ -495,7 +555,6 @@ local function setDim(visible: boolean, lock: boolean)
 	locked = visible and lock
 	for _, panel in panels do
 		panel.Active = locked
-		panel.Interactable = locked
 	end
 	skip.Visible = visible and lock
 	if visible == dimShown then return end
@@ -516,10 +575,15 @@ local function setDim(visible: boolean, lock: boolean)
 	end
 end
 
--- A tap on the dim area: nudge the eye back to the lit control.
+-- A click or tap on the dim area: nudge the eye back to the lit control.
+local lastNudge = 0
 for _, panel in panels do
-	panel.Activated:Connect(function()
+	panel.InputBegan:Connect(function(input)
 		if not locked then return end
+		local kind = input.UserInputType
+		if kind ~= Enum.UserInputType.MouseButton1 and kind ~= Enum.UserInputType.Touch then return end
+		if os.clock() - lastNudge < 0.4 then return end
+		lastNudge = os.clock()
 		UIFeel.Sfx("Error", 1, 0.4)
 		UIFeel.Shake(caption, 3, 0.25)
 	end)
@@ -655,6 +719,7 @@ local function refresh()
 	local target: string? = goal and goal.Target
 	local object: GuiObject? = nil
 	local inWindow = false
+	local stepLabel: string? = nil
 	local position: Vector3? = nil
 	local model: Instance? = nil
 	local offline = playerGui:FindFirstChild("OfflineRewardScreenGui")
@@ -671,7 +736,12 @@ local function refresh()
 		and root and root:IsA("BasePart") and humanoid and humanoid.Health > 0
 		and not Store.ViewingSquad and not (_G.IsDuelActive and _G.IsDuelActive()) then
 		if Store.ModalFocus then
-			object, inWindow = modalControl(goal)
+			object, inWindow, stepLabel = modalControl(goal)
+			if not object and not inWindow and goal.Id ~= "Clear" then
+				-- Another window is in the way (e.g. the Summoning Altar after the summon): close it.
+				object = topCloseButton()
+				if object then stepLabel = "Close this" end
+			end
 		elseif goal.Id == "Clear" and Store.PlayerFloorId == 1 then
 			local state = _G.ClientCombatState
 			local boss = state and state.FloorBoss
@@ -703,9 +773,10 @@ local function refresh()
 
 	if object then
 		stopWorld()
-		caption.Text = tostring(goal.Action or goal.Title)
+		caption.Text = stepLabel or tostring(goal.Action or goal.Title)
 		caption:SetAttribute("Title", nil)
-		setDim(true, core and not released[goalId])
+		-- Synthesize is lit once materials are picked, but the player may still change them: no lock.
+		setDim(true, core and not released[goalId] and stepLabel ~= "Synthesize")
 		if locked and UserInputService.PreferredInput == Enum.PreferredInput.Gamepad then
 			local button: GuiButton? = if object:IsA("GuiButton") then object else object:FindFirstChildWhichIsA("GuiButton", true)
 			if button and GuiService.SelectedObject ~= button then GuiService.SelectedObject = button end

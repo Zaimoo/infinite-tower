@@ -1094,16 +1094,14 @@ local function FacilityPanel(props: { Facility: string, Profile: any, Width: num
 	local nextText = if nxt
 		then string.format("NEXT: %s · %s Gold%s", string.upper(nxt.Name), Components.Abbreviate(nxt.Gold), if nxt.FloorGate > (profile.HighestClearedFloor or 0) then string.format(" · Floor %d", nxt.FloorGate) else "")
 		else "ALL NODES BUILT"
-	local header = e("Frame", { Position = UDim2.fromOffset(20, 14), Size = UDim2.new(1, -96, 0, 84), BackgroundTransparency = 1, ZIndex = 24 }, {
-		Icon = IconAt(info.Icon, 76, { Position = UDim2.fromOffset(0, 2), ZIndex = 25 }),
+	local header = e("Frame", { Position = UDim2.fromOffset(20, 14), Size = UDim2.new(1, -96, 0, 96), BackgroundTransparency = 1, ZIndex = 24 }, {
+		Icon = IconAt(info.Icon, 76, { Position = UDim2.fromOffset(0, 8), ZIndex = 25 }),
 		Title = Heavy({ Position = UDim2.fromOffset(90, 2), Size = UDim2.new(1, -90, 0, 34), MaxSize = 30, TextXAlignment = Enum.TextXAlignment.Left, Text = info.Title, ZIndex = 25 }),
-		Level = Panel({ Position = UDim2.fromOffset(90, 42), Size = UDim2.fromOffset(0, 28), AutomaticSize = Enum.AutomaticSize.X, Radius = 14,
-			Top = tone.Top, Bottom = tone.Bottom, Rail = tone.Rail, ZIndex = 25 }, {
-			Pad = e("UIPadding", { PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 14) }),
-			Text = Heavy({ AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 28), TextScaled = false, TextSize = 15, Outline = 2, Gold = false, ZIndex = 27,
+		Level = Components.Pill({ Position = UDim2.fromOffset(90, 42), Size = UDim2.fromOffset(0, 26), AutomaticSize = Enum.AutomaticSize.X, Radius = 14,
+			Top = tone.Top, Bottom = tone.Bottom, Rail = tone.Rail, ZIndex = 25 }, 14,
+			{ AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 26), TextScaled = false, TextSize = 14, Outline = 2, Gold = false, ZIndex = 27,
 				Text = string.format("LV.%d · %s", level, string.upper(levelCfg and levelCfg.VisualTitle or "Unbuilt")) }),
-		}),
-		Blurb = Body({ Position = UDim2.fromOffset(90, 72), Size = UDim2.new(1, -90, 0, 16), TextSize = 13, TextColor3 = TEXT.Muted, Text = info.Blurb, ZIndex = 25 }),
+		Blurb = Body({ Position = UDim2.fromOffset(90, 77), Size = UDim2.new(1, -90, 0, 16), TextSize = 13, TextColor3 = TEXT.Muted, Text = info.Blurb, ZIndex = 25 }),
 	})
 
 	-- Bonus panel -------------------------------------------------------------
@@ -1111,23 +1109,21 @@ local function FacilityPanel(props: { Facility: string, Profile: any, Width: num
 	for i, row in breakdown do
 		rows["R" .. i] = breakdownRow(i, row[1], row[2])
 	end
-	local bonusHeight = 118 + #breakdown * 24
+	local bonusHeight = 126 + #breakdown * 24
 	local bonus = Panel({ LayoutOrder = 1, Size = UDim2.new(1, 0, 0, bonusHeight), Top = Tones.Deep.Top, Bottom = Tones.Deep.Bottom, Rail = tone.Rail }, {
-		Caption = Heavy({ Position = UDim2.fromOffset(18, 12), Size = UDim2.new(1, -36, 0, 18), MaxSize = 15, Outline = 2, TextXAlignment = Enum.TextXAlignment.Left,
+		Caption = Heavy({ Position = UDim2.fromOffset(18, 12), Size = UDim2.new(1, -196, 0, 18), MaxSize = 15, Outline = 2, TextXAlignment = Enum.TextXAlignment.Left,
 			Text = "CURRENT BONUS", ZIndex = 3 }),
-		Figure = e("TextLabel", { Position = UDim2.fromOffset(18, 34), Size = UDim2.new(1, -36, 0, 44), BackgroundTransparency = 1, FontFace = Grimoire.Fonts.Number,
+		Figure = e("TextLabel", { Position = UDim2.fromOffset(18, 42), Size = UDim2.new(1, -36, 0, 44), BackgroundTransparency = 1, FontFace = Grimoire.Fonts.Number,
 			TextScaled = true, TextColor3 = TEXT.Gold, TextXAlignment = Enum.TextXAlignment.Left, Text = figure, ZIndex = 3 }, {
 			Limit = e("UITextSizeConstraint", { MaxTextSize = 36 }),
 			Ink = e("UIStroke", { Color = INK, Thickness = 2.6, LineJoinMode = Enum.LineJoinMode.Round }),
 		}),
-		Preview = if preview ~= "" then Panel({ AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 12), Size = UDim2.fromOffset(0, 26),
-			AutomaticSize = Enum.AutomaticSize.X, Radius = 13, Top = Color3.fromRGB(40, 120, 70), Bottom = Color3.fromRGB(16, 60, 34), Rail = TEXT.Good, ZIndex = 4 }, {
-			Pad = e("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) }),
-			Text = Heavy({ AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 26), TextScaled = false, TextSize = 14, Outline = 2, Gold = false, Text = preview, ZIndex = 6 }),
-		}) else nil,
-		Note = Body({ Position = UDim2.fromOffset(18, 80), Size = UDim2.new(1, -36, 0, 16), TextSize = 12, TextColor3 = TEXT.Muted, ZIndex = 3,
+		Preview = if preview ~= "" then Components.Pill({ AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -14, 0, 9), Size = UDim2.fromOffset(0, 26),
+			AutomaticSize = Enum.AutomaticSize.X, Radius = 13, Top = Color3.fromRGB(40, 120, 70), Bottom = Color3.fromRGB(16, 60, 34), Rail = TEXT.Good, ZIndex = 4 }, 10,
+			{ AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 26), TextScaled = false, TextSize = 14, Outline = 2, Gold = false, Text = preview, ZIndex = 6 }) else nil,
+		Note = Body({ Position = UDim2.fromOffset(18, 88), Size = UDim2.new(1, -36, 0, 16), TextSize = 12, TextColor3 = TEXT.Muted, ZIndex = 3,
 			Text = string.format("%d / %d %ss working · labor %.1f%s", #assigned, maxWorkers, info.Worker, labor, if synergy ~= "" then " · +25% for " .. synergy else "") }),
-		Lines = e("Frame", { Position = UDim2.fromOffset(18, 104), Size = UDim2.new(1, -36, 1, -112), BackgroundTransparency = 1, ZIndex = 3 }, rows),
+		Lines = e("Frame", { Position = UDim2.fromOffset(18, 112), Size = UDim2.new(1, -36, 1, -120), BackgroundTransparency = 1, ZIndex = 3 }, rows),
 	})
 
 	-- Worker slots ----------------------------------------------------------
@@ -1312,7 +1308,7 @@ local function FacilityPanel(props: { Facility: string, Profile: any, Width: num
 	})
 
 	-- Layout: always two columns (bonus, stage and workers left; the hero picker right).
-	local body = e("Frame", { Position = UDim2.fromOffset(20, 108), Size = UDim2.new(1, -40, 1, -156), BackgroundTransparency = 1, ZIndex = 23 }, {
+	local body = e("Frame", { Position = UDim2.fromOffset(20, 118), Size = UDim2.new(1, -40, 1, -166), BackgroundTransparency = 1, ZIndex = 23 }, {
 		Left = e("ScrollingFrame", { Size = UDim2.new(0.44, -8, 1, 0), BackgroundTransparency = 1, BorderSizePixel = 0,
 			ScrollBarThickness = 4, ScrollBarImageColor3 = Color3.fromRGB(240, 196, 110),
 			AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), ZIndex = 23 }, {

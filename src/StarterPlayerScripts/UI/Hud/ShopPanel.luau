@@ -124,11 +124,9 @@ end
 local function currencyCard(order: number, offer: ShopConfig.Offer, icon: string, tone: string, onBuy: (ShopConfig.Offer) -> ())
 	local t = Tones[tone]
 	return Panel({ LayoutOrder = order, Size = UDim2.fromOffset(196, 236), Radius = 14, Top = t.Top, Bottom = Tones.Deep.Bottom, Rail = t.Rail }, {
-		Tag = if offer.Tag then Panel({ AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 8, 0, -10), Size = UDim2.fromOffset(0, 26), AutomaticSize = Enum.AutomaticSize.X,
-			Radius = 13, Top = Tones.Crimson.Top:Lerp(Color3.fromRGB(255, 80, 80), 0.4), Bottom = Tones.Crimson.Bottom, Rail = Tones.Crimson.Rail, ZIndex = 8 }, {
-			Pad = e("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) }),
-			Text = Heavy({ AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 26), TextScaled = false, TextSize = 13, Outline = 2, Gold = false, Text = offer.Tag, ZIndex = 9 }),
-		}) else nil,
+		Tag = if offer.Tag then Components.Pill({ AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 8, 0, -10), Size = UDim2.fromOffset(0, 26), AutomaticSize = Enum.AutomaticSize.X,
+			Radius = 13, Top = Tones.Crimson.Top:Lerp(Color3.fromRGB(255, 80, 80), 0.4), Bottom = Tones.Crimson.Bottom, Rail = Tones.Crimson.Rail, ZIndex = 8 }, 10,
+			{ AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 26), TextScaled = false, TextSize = 13, Outline = 2, Gold = false, Text = offer.Tag, ZIndex = 9 }) else nil,
 		Art = IconAt(icon, 86, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 16), ZIndex = 4 }),
 		Amount = inkNumber({ Position = UDim2.fromOffset(8, 108), Size = UDim2.new(1, -16, 0, 34), MaxSize = 30, TextColor3 = if offer.Grant.Kind == "Gems" then Color3.fromRGB(170, 250, 255) else TEXT.Gold,
 			Text = Components.Abbreviate(offer.Grant.Amount), ZIndex = 4 }),
