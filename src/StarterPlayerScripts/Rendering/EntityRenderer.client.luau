@@ -56,6 +56,10 @@ local HeroAnimator = require(HeroRig:WaitForChild("HeroAnimator"))
 local HeroLoadout = require(HeroRig:WaitForChild("HeroLoadout"))
 local HeroSockets = require(HeroRig:WaitForChild("HeroSockets"))
 
+local AudioFolder = script.Parent.Parent:WaitForChild("Audio")
+local AudioManager = require(AudioFolder:WaitForChild("AudioManager"))
+local MusicController = require(AudioFolder:WaitForChild("MusicController"))
+
 -- Attack tier codes in the HERO_CUE (TowerProtocol.EncodeHeroCue) -> HeroClips action states.
 local ATTACK_TIER_STATES = { [1] = "AttackBasic", [2] = "AttackSpecial", [3] = "AttackSkill" }
 
@@ -733,6 +737,15 @@ local function retireVisual(id,at)
  local node=VisualNodesByNetId[id];if not node then return end
  VisualNodesByNetId[id]=nil
  if node.EnemyRig and at+1.6>Workspace:GetServerTimeNow() then
+  local pos = node.CurrentPos or (node.RootPart and node.RootPart.Position)
+  local isAffixed = node.Flags and bit32.band(node.Flags, 4) ~= 0
+  if pos then
+   if isAffixed then
+    AudioManager.Play3D("EliteDeath", pos)
+   else
+    AudioManager.Play3D("MobDeath", pos)
+   end
+  end
   EnemyAnimation.Death(node,at);DyingNodes[ActionState.Key({NetId=id,EntityGeneration=node.Model:GetAttribute("EntityGeneration")})]=node
  else node.Model:Destroy() end
 end
@@ -757,7 +770,11 @@ local function applyAction(message)
  if node and node.Model:GetAttribute("EntityGeneration")~=id.EntityGeneration then node=nil end
  if message.Kind=="DEATH" then
   ActionMetrics.Deaths+=1
-  if _G.ClientCombatState.FloorBoss and _G.ClientCombatState.FloorBoss.NetId==id.NetId then _G.ClientCombatState.FloorBoss.Enabled=false end
+  if _G.ClientCombatState.FloorBoss and _G.ClientCombatState.FloorBoss.NetId==id.NetId then
+   _G.ClientCombatState.FloorBoss.Enabled=false
+   AudioManager.Play2D("BossDefeat")
+   MusicController.PlayStinger("VictoryFanfare", 5.0)
+  end
   if node then retireVisual(id.NetId,message.StartServerTime) end
  elseif message.Kind=="START" then
   ActionMetrics.Started+=1;if now-message.StartServerTime>.15 then ActionMetrics.Seeks+=1 end
@@ -1069,29 +1086,44 @@ CombatVFXRemote.OnClientEvent:Connect(function(context: any, vfxType: string, po
 		if node then
 			(node :: any).WasKnockedOut = true
 			playComaVFX(node)
+			AudioManager.Play2D("HeroDowned")
 		end
 		return
 	elseif vfxType=="HIT_SPARK" then
 		recordHit("HIT",pos)
 		CombatFeedback:Hit(pos,amount,isOverdrive,incoming)
+		AudioManager.Play3D(if incoming then "HitIncoming" else "HitLight", pos)
 		return
 	elseif vfxType=="HIT_SPECIAL" then
 		recordHit("HIT",pos)
 		CombatFeedback:Special(pos,amount,isOverdrive,incoming)
+		AudioManager.Play3D("HitCrit", pos)
 		return
 	elseif vfxType=="HIT_SKILL" then
 		recordHit("HIT",pos)
 		CombatFeedback:Skill(pos,amount,vfxType)
+		AudioManager.Play3D("HitSkill", pos)
 		return
 	elseif vfxType=="SKILL_CAST" or vfxType=="SKILL_TEMPEST" or vfxType=="SKILL_METEOR" or vfxType=="SKILL_ARROWS" or vfxType=="SKILL_CRYSTAL" or vfxType=="SKILL_SHIELD" or vfxType=="BARRIER_APPLIED" then
 		CombatFeedback:Skill(pos,amount,vfxType)
+		if vfxType == "BARRIER_APPLIED" or vfxType == "SKILL_SHIELD" then
+			AudioManager.Play3D("BarrierApplied", pos)
+		else
+			AudioManager.Play3D("HitSkill", pos)
+		end
 		return
 	elseif vfxType=="HEAL_SPARK" or vfxType=="HEAL_BURST" then
 		recordHit("HEAL",pos)
 		CombatFeedback:Heal(pos,amount)
+		AudioManager.Play3D("Heal", pos)
 		return
 	end
 	if vfxType == "WHISTLE_Q" or vfxType == "WHISTLE_E" then
+		if vfxType == "WHISTLE_Q" then
+			AudioManager.Play2D("WhistleOverdrive")
+		else
+			AudioManager.Play2D("WhistleRecall")
+		end
 		local pulse = Instance.new("Part")
 		pulse.Shape = Enum.PartType.Cylinder
 		pulse.Size = Vector3.new(0.3, 4, 4)

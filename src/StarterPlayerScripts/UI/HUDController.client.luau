@@ -1456,6 +1456,7 @@ _G.UpdateBottomTabHighlights = updateBottomTabHighlights
 --============================================================================
 local function g(name: string): any return (_G :: any)[name] end
 WindowManager.Register("Backpack", {
+	Open = function() if g("OpenBackpack") then g("OpenBackpack")() end end,
 	IsOpen = function() return g("IsBackpackOpen") ~= nil and g("IsBackpackOpen")() end,
 	Close = function() if g("CloseBackpack") then g("CloseBackpack")() end end,
 })
@@ -1486,6 +1487,7 @@ WindowManager.Register("Facility", {
 	HudCurrency = true,
 })
 WindowManager.Register("Fortress", {
+	Open = function() if fortressTreeController then fortressTreeController:Open() end end,
 	IsOpen = function() return fortressTreeController ~= nil and fortressTreeController:IsOpen() end,
 	Close = function() fortressTreeController:Close() end,
 	HudCurrency = true,
@@ -1522,6 +1524,7 @@ end)
 local MASTER_KEEP = {
 	INDEX = "Index", SHOP = "Index", FACILITY = "FacilityPanel", SETTINGS = "Settings",
 	BLACKSMITH = "Forge", SQUAD = "Squad", WAITING_ROOM = "Squad",
+	BACKPACK = "Backpack", FORTRESS = "Fortress",
 }
 
 _G.IsAnyMasterModalOpen = function(): boolean
@@ -1637,7 +1640,7 @@ _G.OpenFacilityHUD = function(facility: string)
 		_G.OpenFacilityPanel(facility)
 		WindowManager.Opened("FacilityPanel")
 	elseif facility == "FortressTree" then
-		_G.OpenMasterModal("NONE")
+		_G.OpenMasterModal("FORTRESS")
 		fortressTreeController:Open()
 		WindowManager.Opened("Fortress")
 		updateBottomTabHighlights()

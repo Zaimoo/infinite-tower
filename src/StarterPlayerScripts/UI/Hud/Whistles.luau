@@ -9,6 +9,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local WhistleCommand = Remotes:WaitForChild("CombatRemotes"):WaitForChild("WhistleCommand") :: RemoteEvent
 
+local AudioManager = require(script.Parent.Parent.Parent:WaitForChild("Audio"):WaitForChild("AudioManager"))
+
 local Whistles = {}
 
 Whistles.Cooldown = table.freeze({ Overdrive = 20, Recall = 6 })
@@ -69,6 +71,14 @@ function Whistles.Fire(kind: string): boolean
 	if Whistles.Blocked(kind) then return false end
 	lastUsed[kind] = os.clock()
 	WhistleCommand:FireServer(CODE[kind])
+
+	-- Whistle Audio Feedback
+	if kind == "Overdrive" then
+		AudioManager.Play2D("WhistleOverdrive")
+	elseif kind == "Recall" then
+		AudioManager.Play2D("WhistleRecall")
+	end
+
 	-- The legacy HUD still draws its own cooldown text until it is retired.
 	if _G.TriggerHUDWhistleCooldown then
 		_G.TriggerHUDWhistleCooldown(if kind == "Overdrive" then "Q" else "E")

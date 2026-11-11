@@ -267,10 +267,11 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 	local backpackOpen, setBackpackOpen = React.useState(false)
 	local backpackButton = React.useRef(nil :: GuiButton?)
 	local closeBackpack = React.useCallback(function()
+		if not currentBackpackOpen and not backpackOpen then return end
 		currentBackpackOpen = false
 		setBackpackOpen(false)
 		call("SetModalFocusMode", false)
-	end, {})
+	end, { backpackOpen })
 	local returnBackpackFocus = React.useCallback(function()
 		local button = backpackButton.current
 		if button and UserInputService.PreferredInput == Enum.PreferredInput.Gamepad then
@@ -314,9 +315,22 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 	end, {})
 
 	React.useEffect(function()
+		_G.OpenBackpack = function()
+			currentFacilityOpen = nil
+			currentShopOpen = false
+			currentIndexOpen = false
+			currentBackpackOpen = true
+			call("OpenMasterModal", "BACKPACK")
+			setFacilityOpen(nil)
+			setShopOpen(false)
+			setIndexOpen(false)
+			setBackpackOpen(true)
+			call("SetModalFocusMode", true)
+		end
 		_G.IsBackpackOpen = function() return currentBackpackOpen end
 		_G.CloseBackpack = closeBackpack
 		return function()
+			_G.OpenBackpack = nil
 			_G.IsBackpackOpen = nil
 			_G.CloseBackpack = nil
 		end
@@ -539,10 +553,14 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 			Accent = Color3.fromRGB(243, 199, 119),
 			ButtonRef = backpackButton,
 			OnActivated = function()
-				currentBackpackOpen = true
-				call("OpenMasterModal", "NONE")
-				setBackpackOpen(true)
-				call("SetModalFocusMode", true)
+				if _G.OpenBackpack then
+					_G.OpenBackpack()
+				else
+					currentBackpackOpen = true
+					call("OpenMasterModal", "BACKPACK")
+					setBackpackOpen(true)
+					call("SetModalFocusMode", true)
+				end
 			end,
 		},
 	}
@@ -714,10 +732,18 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 		}) else nil,
 		Shop = if shopOpen then e(ShopPanel, { Profile = profile, Width = screen.X, OnClose = function() WindowManager.Close("Index") end }) else nil,
 		TowerEventPopup = e(TowerEventHud.Popup, { Blocked = facilityOpen ~= nil or shopOpen or indexOpen or modalFocus }),
-		RaidResults = e(RaidHud.ResultsCard, { Blocked = facilityOpen ~= nil or shopOpen or indexOpen or guideOpen }),
+		RaidResults = e(RaidHud.ResultsCard, { Blocked = facilityOpen ~= nil or shopOpen or indexOpen or modalFocus }),
 		Index = if indexOpen then e(HeroIndex, { Profile = profile, Width = screen.X, InitialMode = indexInitialMode, OnClose = function() WindowManager.Close("Index") end }) else nil,
 		Backpack = if backpackOpen then e(BackpackPanel, {
-			Width = screen.X, Height = screen.Y, OnClose = function() WindowManager.Close("Backpack") end, ReturnFocus = returnBackpackFocus,
+			Width = screen.X, Height = screen.Y,
+			OnClose = function()
+				if WindowManager.IsOpen("Backpack") then
+					WindowManager.Close("Backpack")
+				else
+					closeBackpack()
+				end
+			end,
+			ReturnFocus = returnBackpackFocus,
 		}) else nil,
 		}, props.Overlay or props.Root),
 	})

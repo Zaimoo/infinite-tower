@@ -292,7 +292,7 @@ local function BackpackPanel(props: { Width: number, Height: number, OnClose: ()
 
 	return e("Frame", { Name = "BackpackOverlay", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 12 }, {
 		Scrim = e("TextButton", { Name = "Scrim", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(9, 6, 14),
-			BackgroundTransparency = 0.28, AutoButtonColor = false, Selectable = false, Text = "", BorderSizePixel = 0,
+			BackgroundTransparency = 1, AutoButtonColor = false, Selectable = false, Text = "", BorderSizePixel = 0,
 			[React.Event.Activated] = close }),
 		Window = Panel({
 			Name = "BackpackWindow", AnchorPoint = Vector2.new(0.5, 0.5),
@@ -308,8 +308,15 @@ local function BackpackPanel(props: { Width: number, Height: number, OnClose: ()
 			FullNote = if fullNote then Body({ Name = "FullNote", TextSize = 12, TextColor3 = Color3.fromRGB(248, 113, 113),
 				TextXAlignment = Enum.TextXAlignment.Right, TextTruncate = Enum.TextTruncate.AtEnd,
 				Position = UDim2.new(0.4, 0, 0, 28), Size = UDim2.new(0.6, -66, 0, 18), Text = fullNote }) else nil,
-			Close = button({ Name = "Close", Position = UDim2.new(1, -54, 0, 8), Size = UDim2.fromOffset(44, 42),
-				[React.Event.Activated] = close }, "×"),
+			Close = Panel({
+				Class = "TextButton", Name = "Close", Text = "", AutoButtonColor = false, Selectable = true,
+				AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 8),
+				Size = UDim2.fromOffset(44, 40), Radius = 10,
+				Top = Tones.Crimson.Top, Bottom = Tones.Crimson.Bottom, Rail = Tones.Crimson.Rail, ZIndex = 10,
+				[React.Event.Activated] = close,
+			}, {
+				X = Components.IconAt("Close", 18, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), ZIndex = 12 }),
+			}),
 			Tabs = e("Frame", { Name = "Tabs", Position = UDim2.fromOffset(10, tabY),
 				Size = UDim2.new(1, -20, 0, tabHeight), BackgroundTransparency = 1 }, tabs),
 			List = e("ScrollingFrame", {
