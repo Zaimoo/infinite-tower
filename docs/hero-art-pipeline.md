@@ -4,7 +4,7 @@ This is the guide for remodelling a hero in *Infinite Tower* from a reference im
 
 All 12 heroes have been through this pipeline (status in §7). The step-by-step procedure for an agent, with helper scripts and Studio snippets, is the `hero-remodel` skill in `.claude/skills/hero-remodel/` (mirrored in `.agents/skills/hero-remodel/`). This document holds the rules and the reasons; the skill holds the steps. Keep the two consistent when either changes.
 
-Good examples to copy from: **Han** (store hair mesh), **Velkist** (cocky face, showboat idle), **Eolka** (feminine face, high ponytail, staff idle), **Valeria** (long layered hair), **Solaris** (wavy hair, back-mounted frame and banners), **Astrea** (very long hair, longer than the reference on request).
+Good examples to copy from: **Han** (store hair mesh), **Velkist** (cocky face, showboat idle), **Eolka** (feminine face and Slim body, high ponytail, staff idle), **Valeria** (long layered hair), **Solaris** (wavy hair, back-mounted frame and banners), **Astrea** (very long straight hair in two meshes, curtain bangs drawn as arcs; over-budget costume).
 
 ---
 
@@ -23,7 +23,7 @@ Good examples to copy from: **Han** (store hair mesh), **Velkist** (cocky face, 
 | Rule | Value |
 | --- | --- |
 | Construction | Code-built Block/Wedge Parts; Ball/Cylinder sparingly; FileMesh only for allow-listed hair |
-| Part budget | ≤ 60 parts per hero, counting the 16 rig parts |
+| Part budget | ≤ 60 parts per hero, counting the 16 rig parts; a hero the user signs off to go over gets its own ceiling in `HeroCostumes.BUDGET_OVERRIDES` (Astrea: 100) |
 | Edges | Hard 90° corners, flat shading; fake bevels with a Wedge |
 | Proportions | 6.1 studs tall; head 1.4 studs; body types change width only; hands are fixed (`Slim` has narrower fists) |
 | Layering | Shell pieces +0.02–0.05 studs per side; plates 0.04–0.22 thick |
@@ -193,6 +193,12 @@ Hair is the only place a mesh is worth it: Part-built hair can't reach the anime
 
 **Budget:** Roblox imports at most ~20k triangles per mesh, and 30 heroes are on screen. Aim for **5k–14k triangles**: no Subdivision modifier. One attempt with subdivision came out at 56k.
 
+**Textured hair (Astrea).** A flat colour reads as plastic strips. To read as hair, give the mesh UVs and a strand texture, as UGC hair does:
+- **Texture:** `assets/hair/make_<hero>_hair_texture.py` draws our own atlas with PIL. It is 1024 × 1024 in four 256-px columns, and each column is one lock, root at the top and tip at the bottom. It has fine strand lines, a few soft clump grooves, darker roots fading to bright tips, a soft shine band near the root and shading across the lock. Columns 0–1 are outer variants; 2–3 are darker and cooler, for inner layers and the scalp, so the layers separate. Upload it like a face decal.
+- **UVs in the generator:** `ribbon()` maps u across the lock (`PROFILE_U`) and v along it (v = 1 at the root) into a random column (`inner=True` picks 2–3), using its own `random.Random` so texture choices never change the shape. `cap()` maps the scalp to an inner column with strands running down from the crown. Use a flat card profile: the texture carries the detail, not a ridge.
+- **Colour:** a textured mesh ignores the part colour, so paint the colour into the texture (one texture per hair colour). List it as `MESHES[meshId] = textureId` and set the piece's `Mesh.TextureId` to match.
+- **Layering rules that keep cards clean:** neighbouring crown cards alternate depth (they overlap near the crown), long falls stay under the crown layer until below its tips, and nothing starts from `hang()`'s front-part root behind the head. Crossing cards show as a criss-cross lattice.
+
 **Export:** exec the skill's `scripts/blender_export_hair.py` after setting `HAIR` and `OUT_DIR`. It exports the FBX (`axis_forward='-Z'`, `axis_up='Y'`, `bake_space_transform=True`), writes `<hero>_hair.json` (vertices in Roblox coordinates plus triangles) and the `.blend`, and prints the bounding-box **centre** and **size**. You need both for placement.
 
 **Import (manual):** scripts can't publish meshes yet (`AssetService:CreateAssetAsync` → "not available yet"). The user imports the FBX with **File → Import 3D** in Studio and sends the MeshId (or you find it on the imported MeshPart). Move the imported copy out of Workspace (e.g. to ServerStorage) afterwards.
@@ -214,7 +220,7 @@ piece("HairMesh", "Head", { sizeX, sizeY, sizeZ }, { cx, cy, cz }, hairColour, w
 ```
 
 - **Allowlist:** add the mesh to `HeroCostumes.MESHES` (`[meshId] = textureId` or `""` for untextured), with a comment naming the source. Untextured meshes take the piece colour, so the hair colour is just the costume colour.
-- **Verify the ID before wiring it.** The vertex count of the uploaded mesh must match the export, and its min-X vertex must mirror the export's max-X vertex (skill §6). A user once sent another hero's MeshId, and this check caught it.
+- **Verify the ID before wiring it.** The vertex count of the uploaded mesh must match the export, and its min-X vertex must mirror the export's max-X vertex (skill §6). A mesh with UVs comes back with more vertices (the importer splits them along texture seams), so for textured hair rely on the mirrored min-X vertex and the size. A user once sent another hero's MeshId, and this check caught it.
 - **Fit pass:** the exported centre is only the modelling position. Look at it in Studio from front, side, back and top. If the hair floats or the scalp shows, lower `cy` (Aaron needed −0.14 in 1.2-head units) and widen X/Z slightly (e.g. `0.0104` instead of `0.01`) so it hugs the round head. If it is too big all round, scale it uniformly (Jenna uses `0.0092`). A bald patch at the back or sides that moving the mesh can't cover means the scalp `cap()` is too short: fix the generator and re-import.
 - **Store hair meshes** (Han): load the accessory with `InsertService:LoadAsset` without parenting it, inspect it (no scripts), and read its `SpecialMesh.MeshId/TextureId/Scale` and the Handle's `HairAttachment`. Place it with `hairAccessoryOffset(attachment)` so its HairAttachment meets the top of the 1.2-unit head.
 
@@ -284,7 +290,7 @@ Overrides.hero_x = { Idle = breathe(stance, 3.0), --[[ existing attack overrides
 
 ---
 
-## 7. Status (2026-11-10)
+## 7. Status (2026-11-11)
 
 Every hero's hair is our own Blender mesh except Han's, which is a Creator Store hair. Every face is our own generated decal.
 
@@ -297,11 +303,12 @@ Every hero's hair is our own Blender mesh except Han's, which is a Creator Store
 | Ignis | `137040425989997` | `101701313703578` | `make_ignis_hair_ugc.py` | brawler |
 | Jenna | `79233691033516` | `107250648665529` (scale 0.0092) | `make_jenna_hair_ugc.py` | ready stance |
 | Velkist | `104592422151826` | `109684055929778` | `velkist_hair.blend` | showboat |
-| Eolka | `131976429681674` | `123421721359927` | `make_eolka_hair_ugc.py` | poised (staff) |
+| Eolka | `128405793720315` | `123421721359927` | `make_eolka_hair_ugc.py` | poised (staff) |
 | Morrigan | `134987323511884` | `132434150044694` | `make_morrigan_hair_ugc.py` | planted |
 | Sovereign Archon | `104359124032831` | `139133902834118` | `make_archon_hair_ugc.py` | prowl |
 | Solaris | `89614314986771` | `116753377442189` | `make_solaris_hair_ugc.py` | sunward (staff) |
-| Astrea | `139763198478294` | `108726871571153` | `make_astrea_hair_ugc.py` | poised (bow) |
+| Astrea | `84469832141456` | head `79290192354958` + back fall `98817994028995`, textured `126451381570698` | `make_astrea_hair_ugc.py`, `make_astrea_hair_texture.py` | poised mid-draw; own Basic, Special and Skill clips |
 
 Open issues:
-- **Female heroes predate the feminine-body rule (§1.1).** Jenna, Edis and Aeli are `Slim`. Valeria, Eolka, Solaris and Astrea are `Standard`, and Eolka and Valeria wear broad pauldrons. Switch them to `Slim` and slim their shoulder pieces. Their costumes will need a lint pass, because pieces rescale with the body.
+- **Female heroes predate the feminine-body rule (§1.1).** Jenna, Edis, Aeli, Eolka, Solaris and Astrea are `Slim` (Eolka's pauldrons became flat shoulder caps, and Solaris's and Astrea's side skirts flare from the belt). Valeria is still `Standard` with broad pauldrons: switch her to `Slim` and slim her shoulder pieces, then run the lint, because pieces rescale with the body.
+- **Faces predating the feminine eye (§4.3).** Jenna, Edis, Eolka and Astrea use the constant-driven feminine `eye()`. Valeria's and Solaris's faces still use the older narrow eye.
