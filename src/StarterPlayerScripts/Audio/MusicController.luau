@@ -12,8 +12,32 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SoundService = game:GetService("SoundService")
 local TweenService = game:GetService("TweenService")
 
-local Shared = ReplicatedStorage:WaitForChild("Shared")
-local SoundCatalog = require(Shared:WaitForChild("Config"):WaitForChild("SoundCatalog"))
+local Shared = ReplicatedStorage:WaitForChild("Shared", 10)
+local configFolder = if Shared then Shared:WaitForChild("Config", 10) else nil
+local soundCatalogModule = if configFolder then configFolder:WaitForChild("SoundCatalog", 10) else nil
+local SoundCatalog = if soundCatalogModule and soundCatalogModule:IsA("ModuleScript") then require(soundCatalogModule) else nil
+
+local function getDef(name: string)
+	if not SoundCatalog then
+		local cfg = if Shared then Shared:FindFirstChild("Config") else nil
+		local sc = if cfg then cfg:FindFirstChild("SoundCatalog") else nil
+		if sc and sc:IsA("ModuleScript") then
+			SoundCatalog = require(sc)
+		end
+	end
+	return if SoundCatalog then SoundCatalog.Get(name) else nil
+end
+
+local function getBiomeMusicKey(biomeIndex: number): string
+	if not SoundCatalog then
+		local cfg = if Shared then Shared:FindFirstChild("Config") else nil
+		local sc = if cfg then cfg:FindFirstChild("SoundCatalog") else nil
+		if sc and sc:IsA("ModuleScript") then
+			SoundCatalog = require(sc)
+		end
+	end
+	return if SoundCatalog then SoundCatalog.GetBiomeMusicKey(biomeIndex) else "HubTheme"
+end
 
 local MusicController = {}
 
@@ -53,7 +77,7 @@ function MusicController.CrossfadeTo(trackKey: string, duration: number?)
 		return
 	end
 
-	local def = SoundCatalog.Get(trackKey)
+	local def = getDef(trackKey)
 	if not def or def.Id == "" then
 		return
 	end
@@ -100,7 +124,7 @@ end
 -- Temporarily ducks the current music, plays a stinger sound (e.g. Victory / Defeat),
 -- then smoothly restores the BGM volume.
 function MusicController.PlayStinger(stingerKey: string, duckDuration: number?)
-	local def = SoundCatalog.Get(stingerKey)
+	local def = getDef(stingerKey)
 	if not def or def.Id == "" then return end
 
 	local curPlayer = players[activePlayerIndex]
@@ -167,7 +191,7 @@ function MusicController.Init()
 					if isBossFloor then
 						MusicController.CrossfadeTo("BossBattleTheme", 1.8)
 					else
-						local trackKey = SoundCatalog.GetBiomeMusicKey(biomeIndex)
+						local trackKey = getBiomeMusicKey(biomeIndex)
 						MusicController.CrossfadeTo(trackKey, 2.2)
 					end
 				end
