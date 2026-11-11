@@ -11,6 +11,7 @@ local GrimoireIcons = require(ReplicatedStorage:WaitForChild("Shared"):WaitForCh
 local RunService = game:GetService("RunService")
 local HeroCard = {}
 local FIELD_OF_VIEW = 32
+local SMALL_SLOT_HEIGHT = 60 -- px; bust portraits shorter than this use the close-up framing
 
 -- Rig portraits are ViewportFrames holding a posed clone of the hero's rig (~50 parts). Rosters list
 -- hundreds of heroes, so a rig is only built while its portrait is on screen (every ancestor
@@ -139,6 +140,8 @@ local function buildMaster(entry: Lazy): Master
 		forward = (forward + bounds.RightVector * 0.16 + Vector3.new(0, 0.06, 0)).Unit
 		distance = math.max(size.X, size.Y) * 0.55 / math.tan(math.rad(FIELD_OF_VIEW / 2)) + size.Z * 0.5
 	else
+		-- A slight three-quarter turn, so the torso doesn't read as a flat slab.
+		forward = (forward + bounds.RightVector * 0.16 + Vector3.new(0, 0.04, 0)).Unit
 		local head = model:FindFirstChild("Head")
 		look = if head and head:IsA("BasePart") then head.Position - Vector3.new(0, size.Y * 0.1, 0) else bounds.Position + Vector3.new(0, size.Y * 0.22, 0)
 		distance = math.max(4, size.Y * 0.82)
@@ -161,6 +164,10 @@ end
 
 local function buildRig(entry: Lazy)
 	local vp = entry.Viewport
+	-- A bust in a small slot leaves the face only a few pixels, so frame the head instead.
+	if not entry.FullBody and not entry.CloseUp and vp.AbsoluteSize.Y < SMALL_SLOT_HEIGHT then
+		entry.CloseUp = true
+	end
 	local master = cachedMaster(entry) or buildMaster(entry)
 	local model = master.Model:Clone()
 	model.Parent = vp
@@ -220,8 +227,10 @@ function HeroCard.Portrait(parent: Instance, hero: any, framing: (boolean | "Clo
 	if template and template:IsA("Model") then
 		local viewport = T.New("ViewportFrame", {
 			Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1,
-			Ambient = Color3.fromRGB(195, 185, 168), LightColor = Color3.fromRGB(255, 238, 212),
-			LightDirection = Vector3.new(-1, -1, -2),
+			-- Templates face -Z and the camera stands in front of them, so the light has to travel
+			-- towards +Z to reach the face. Ambient stays low enough that pale costumes keep shading.
+			Ambient = Color3.fromRGB(120, 115, 110), LightColor = Color3.fromRGB(255, 238, 212),
+			LightDirection = Vector3.new(-1, -1, 2),
 		}, parent)
 		local entry: Lazy = {
 			Viewport = viewport, Template = template, Hero = { TemplateId = hero.TemplateId }, Model = nil, Dead = false,

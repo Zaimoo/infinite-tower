@@ -138,8 +138,9 @@ function RelicService.SpawnRelic(tierId: RelicTierId, worldPos: Vector3, initial
 	part:SetAttribute("RelicCarried", false)
 	part.Parent = PhysicalRelicsFolder
 
-	-- World-Space Relic Billboard (Doc 4 Section 5.1)
-	-- Themed by rarity (Config/BillboardThemes): tone, rail, title gradient and a rarity badge above the plate.
+	-- World-space relic label (Doc 4 Section 5.1): no plate, three short lines. The name is in the rarity
+	-- colour (Config/BillboardThemes), then what it is worth here, then a status line that stays empty
+	-- unless there is something to say (sealed, carried, about to despawn).
 	local theme = BillboardThemes.Relic[tierId] or BillboardThemes.Relic.MANA_GEODE
 	local bb = Instance.new("BillboardGui")
 	bb.Name = "RelicBillboard"
@@ -147,48 +148,30 @@ function RelicService.SpawnRelic(tierId: RelicTierId, worldPos: Vector3, initial
 	bb.StudsOffset = Vector3.new(0, 4.6, 0)
 	bb.MaxDistance = theme.MaxDistance
 	bb.AlwaysOnTop = theme.AlwaysOnTop
+	bb.LightInfluence = 0
 	bb.Parent = part
 
-	local frame = BillboardThemes.Plate(bb, theme, GildedGrimoire.StyleText)
-	GildedGrimoire.Frame(frame, { Class = "Card", Tone = theme.Tone, Rail = theme.Rail })
+	local stack = Instance.new("UIListLayout")
+	stack.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	stack.VerticalAlignment = Enum.VerticalAlignment.Bottom
+	stack.SortOrder = Enum.SortOrder.LayoutOrder
+	stack.Parent = bb
 
-	local title = Instance.new("TextLabel")
-	title.Size = UDim2.new(1, -14, 0.34, 0)
-	title.Position = UDim2.new(0, 7, 0, 4)
-	title.BackgroundTransparency = 1
-	title.Text = string.upper(spec.DisplayName)
+	local title = BillboardThemes.Text(bb, GildedGrimoire.Fonts.Title, spec.DisplayName, theme.NameSize, theme.Title)
+	title.LayoutOrder = 1
 	BillboardThemes.PaintTitle(title, theme)
-	title.TextScaled = true
-	title.ZIndex = 3
-	title.Parent = frame
-	GildedGrimoire.StyleText(title, "Title")
 
 	-- Base value at this floor, before Market and climb-streak bonuses.
-	local valueLbl = Instance.new("TextLabel")
-	valueLbl.Name = "ValueLabel"
-	valueLbl.Size = UDim2.new(1, -14, 0.24, 0)
-	valueLbl.Position = UDim2.new(0, 7, 0.36, 0)
-	valueLbl.BackgroundTransparency = 1
 	local stoneBonus = spec.Payout.PromotionStones or 0
-	local stoneSuffix = if stoneBonus > 0 then string.format(" · +%d Stone%s", stoneBonus, if stoneBonus == 1 then "" else "s") else ""
-	valueLbl.Text = string.format("≈ %d Gems · %d Gold%s", math.round(spec.Payout.Gems * gemMult), math.round(spec.Payout.Gold * goldMult), stoneSuffix)
-	valueLbl.TextColor3 = Color3.fromRGB(255, 226, 140)
-	valueLbl.TextScaled = true
-	valueLbl.ZIndex = 3
-	valueLbl.Parent = frame
-	GildedGrimoire.StyleText(valueLbl, "Body")
+	local valueText = string.format("%d Gems · %d Gold%s", math.round(spec.Payout.Gems * gemMult), math.round(spec.Payout.Gold * goldMult),
+		if stoneBonus > 0 then string.format(" · +%d Stone%s", stoneBonus, if stoneBonus == 1 then "" else "s") else "")
+	local valueLbl = BillboardThemes.Text(bb, GildedGrimoire.Fonts.Number, valueText, 13, Color3.fromRGB(255, 226, 140))
+	valueLbl.Name = "ValueLabel"
+	valueLbl.LayoutOrder = 2
 
-	local statusLbl = Instance.new("TextLabel")
+	local statusLbl = BillboardThemes.Text(bb, GildedGrimoire.Fonts.Body, "", 12, Color3.fromRGB(236, 228, 246))
 	statusLbl.Name = "StatusLabel"
-	statusLbl.Size = UDim2.new(1, -8, 0.36, 0)
-	statusLbl.Position = UDim2.new(0, 4, 0.62, 0)
-	statusLbl.BackgroundTransparency = 1
-	statusLbl.Text = string.format("WalkSpeed: -%d%% | Hold E to Carry", math.round(spec.WalkSpeedPenalty * 100))
-	statusLbl.TextColor3 = Color3.fromRGB(236, 228, 246)
-	statusLbl.TextScaled = true
-	statusLbl.ZIndex = 3
-	statusLbl.Parent = frame
-	GildedGrimoire.StyleText(statusLbl, "Body")
+	statusLbl.LayoutOrder = 3
 
 	-- Relics are carried on purpose: hold the prompt. Walking past one never picks it up.
 	local prompt = Instance.new("ProximityPrompt")
@@ -515,6 +498,8 @@ end
 local LOCKED_COLOR = Color3.fromRGB(255, 175, 45)
 local OPEN_COLOR = Color3.fromRGB(95, 255, 135)
 local CARRIED_COLOR = Color3.fromRGB(255, 235, 115)
+local EXPIRING_COLOR = Color3.fromRGB(255, 120, 110)
+local DESPAWN_WARNING_SECONDS = 20
 local lastStatusText: { [any]: string } = setmetatable({}, { __mode = "k" }) :: any
 
 local function setStatus(relic: any, text: string, color: Color3)
@@ -551,11 +536,14 @@ local function stepRelics()
 					local remDespawn = math.max(0, math.ceil(relic.DespawnAt - now))
 					local remLock = math.max(0, math.ceil(relic.LockExpiresAt - now))
 					if relic.LockedUserId and now < relic.LockExpiresAt and relic.LockKind ~= "FUMBLE" then
-						setStatus(relic, `🔒 SEALED: {remLock}s | Despawn: {remDespawn}s`, LOCKED_COLOR)
+						setStatus(relic, `Sealed {remLock}s`, LOCKED_COLOR)
 					elseif relic.LockedUserId and now < relic.LockExpiresAt then
-						setStatus(relic, `🔒 LOCKED: {remLock}s | Despawn: {remDespawn}s`, LOCKED_COLOR)
+						setStatus(relic, `Locked {remLock}s`, LOCKED_COLOR)
+					elseif remDespawn <= DESPAWN_WARNING_SECONDS then
+						setStatus(relic, `Vanishes in {remDespawn}s`, EXPIRING_COLOR)
 					else
-						setStatus(relic, `🔓 HOLD E TO CARRY (-{math.round(spec.WalkSpeedPenalty * 100)}% Spd) | {remDespawn}s`, OPEN_COLOR)
+						-- Nothing to say: the Carry prompt already tells the player what to do.
+						setStatus(relic, "", OPEN_COLOR)
 					end
 				end
 				-- Pickup is only ever through the prompt (Triggered above); there is no walk-over pickup.
@@ -570,7 +558,7 @@ local function stepRelics()
 			local _, hrp = getCharacterParts(carrier)
 			if hrp then
 				if relic.BillboardStatus then
-					setStatus(relic, `CARRIED BY {carrier.DisplayName} (-{math.round(spec.WalkSpeedPenalty * 100)}% SPD)`, CARRIED_COLOR)
+					setStatus(relic, carrier.DisplayName, CARRIED_COLOR)
 				end
 
 				local loc = Tower.GetState(carrier)

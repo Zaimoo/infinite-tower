@@ -337,6 +337,19 @@ local function panel(props: { [string]: any }, children: { [string]: any }?)
 end
 Components.Panel = panel
 
+-- A pill that grows to fit one heavy label. The side padding lives on an inner frame, not on the
+-- pill itself: a UIPadding on the pill would also inset its Rail outline and draw it through the text.
+function Components.Pill(props: { [string]: any }, padding: number, label: { [string]: any })
+	local inst: { [string]: any } = { AutomaticSize = Enum.AutomaticSize.X }
+	for k, v in props do inst[k] = v end
+	return panel(inst, {
+		Content = e("Frame", { AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromScale(0, 1), BackgroundTransparency = 1, ZIndex = props.ZIndex }, {
+			Pad = e("UIPadding", { PaddingLeft = UDim.new(0, padding), PaddingRight = UDim.new(0, padding) }),
+			Text = heavyLabel(label),
+		}),
+	})
+end
+
 -- Cinzel body text with a light ink outline so it reads over bright scenery.
 local function body(props: { [string]: any })
 	local base: { [string]: any } = {

@@ -116,7 +116,9 @@ local HEIGHTS = table.freeze({
 -- so the head can be resized without re-authoring every costume.
 HeroRigSpec.HEAD_AUTHORED_SIZE = 1.2
 
--- Hands are the same on every body type so every weapon grip fits every hero.
+-- Hands are the same on every body type so every weapon grip fits every hero. The one
+-- exception is a body type with its own HandWidth (Slim): the grip attachments sit at the
+-- hand's centre, so a narrower fist holds a weapon in exactly the same place.
 HeroRigSpec.HAND_SIZE = table.freeze({ 1.0, HEIGHTS.Hand, 1.0 })
 
 type BodyDims = {
@@ -124,10 +126,13 @@ type BodyDims = {
 	TorsoDepth: number,
 	LimbWidth: number, -- arm and leg X/Z
 	HeadSize: number,
+	HandWidth: number?, -- hand X/Z; defaults to HAND_SIZE
 }
 
 HeroRigSpec.BODY_TYPES = table.freeze({
-	Slim = table.freeze({ TorsoWidth = 1.8, TorsoDepth = 0.9, LimbWidth = 0.85, HeadSize = HEIGHTS.Head }),
+	-- Slim is the feminine build (every female hero uses it): a narrow torso, slender limbs
+	-- and smaller fists, so the shoulder line reads as a woman's from gameplay distance.
+	Slim = table.freeze({ TorsoWidth = 1.5, TorsoDepth = 0.78, LimbWidth = 0.7, HeadSize = HEIGHTS.Head, HandWidth = 0.8 }),
 	Standard = table.freeze({ TorsoWidth = 2.0, TorsoDepth = 1.0, LimbWidth = 1.0, HeadSize = HEIGHTS.Head }),
 	Heavy = table.freeze({ TorsoWidth = 2.3, TorsoDepth = 1.2, LimbWidth = 1.15, HeadSize = HEIGHTS.Head }),
 } :: { [string]: BodyDims })
@@ -199,7 +204,8 @@ function HeroRigSpec.Layout(bodyTypeName: BodyTypeName?): Layout
 		local prefix, sign = side.Prefix, side.Sign
 		part(prefix .. "UpperArm", v(lw, H.UpperArm, lw), v(sign * armX, shoulderY - H.UpperArm / 2, 0))
 		part(prefix .. "LowerArm", v(lw, H.LowerArm, lw), v(sign * armX, elbowY - H.LowerArm / 2, 0))
-		part(prefix .. "Hand", table.clone(HeroRigSpec.HAND_SIZE), v(sign * armX, wristY - H.Hand / 2, 0))
+		local handWidth = dims.HandWidth or HeroRigSpec.HAND_SIZE[1]
+		part(prefix .. "Hand", v(handWidth, HeroRigSpec.HAND_SIZE[2], handWidth), v(sign * armX, wristY - H.Hand / 2, 0))
 		part(prefix .. "UpperLeg", v(lw, H.UpperLeg, lw), v(sign * hipX, hipY - H.UpperLeg / 2, 0))
 		part(prefix .. "LowerLeg", v(lw, H.LowerLeg, lw), v(sign * hipX, kneeY - H.LowerLeg / 2, 0))
 		part(prefix .. "Foot", v(lw, H.Foot, lw), v(sign * hipX, sole + H.Foot / 2, 0))

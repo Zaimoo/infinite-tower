@@ -23,10 +23,12 @@ function TowerStreakHud.Mount(banner: Frame, title: TextLabel, bar: GuiObject, r
 	}, banner)
 	New("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder }, content)
 	local progress = New("Frame", {
-		Name = "Progress", LayoutOrder = 1, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 58),
+		Name = "Progress", LayoutOrder = 1, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 64),
 	}, content)
-	title.Parent = progress
-	bar.Parent = progress
+	-- Everything the strip already holds (title, bar, caption) keeps its offsets inside the progress row.
+	for _, child in banner:GetChildren() do
+		if child:IsA("GuiObject") and child ~= content then child.Parent = progress end
+	end
 	banner.AutomaticSize = Enum.AutomaticSize.Y
 	New("UISizeConstraint", { MaxSize = Vector2.new(720, math.huge) }, banner)
 
@@ -35,7 +37,6 @@ function TowerStreakHud.Mount(banner: Frame, title: TextLabel, bar: GuiObject, r
 		Size = UDim2.fromScale(1, 0), AutomaticSize = Enum.AutomaticSize.Y,
 	}, content)
 	New("UIPadding", {
-		PaddingLeft = UDim.new(0, Tokens.Space.L), PaddingRight = UDim.new(0, Tokens.Space.L),
 		PaddingBottom = UDim.new(0, Tokens.Space.S),
 	}, row)
 	local icon = Icons.Create("Spark", 16, row, 3)

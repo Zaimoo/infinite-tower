@@ -107,7 +107,7 @@ function Screens.DetailPanel(props: DetailPanelProps)
 	}, {
 		List = e("UIListLayout", {
 			FillDirection = Enum.FillDirection.Vertical,
-			Padding = UDim.new(0, 8),
+			Padding = UDim.new(0, 6),
 			HorizontalAlignment = Enum.HorizontalAlignment.Center,
 			SortOrder = Enum.SortOrder.LayoutOrder,
 		}),
@@ -138,27 +138,29 @@ function Screens.DetailPanel(props: DetailPanelProps)
 				Artifact = artifact,
 				Size = UDim2.fromScale(1, 1),
 			}),
-			-- Star Pill (Top Left of preview)
-			StarPill = e("Frame", {
+			-- Rarity pill (top left of the preview)
+			RarityPill = e("Frame", {
 				Position = UDim2.fromOffset(8, 8),
-				Size = UDim2.fromOffset(78, 26),
-				BackgroundColor3 = Color3.fromRGB(24, 18, 32),
+				Size = UDim2.fromOffset(0, 24),
+				AutomaticSize = Enum.AutomaticSize.X,
+				BackgroundColor3 = rarity.Color,
 				BorderSizePixel = 0,
 				ZIndex = 5,
 			}, {
-				Corner = e("UICorner", { CornerRadius = UDim.new(0, 6) }),
-				Stroke = e("UIStroke", { Color = T.Gold, Thickness = 1.2 }),
+				Corner = e("UICorner", { CornerRadius = UDim.new(1, 0) }),
+				Ink = e("UIStroke", { Color = T.Theme.Ink, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
+				Pad = e("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) }),
 				Text = e(C.Text, {
-					Text = string.format("★ %d / 7", artifact.Star),
-					FontFace = T.Theme.Fonts.Number,
-					TextSize = 14,
-					TextColor3 = T.Gold,
-					TextXAlignment = Enum.TextXAlignment.Center,
-					Size = UDim2.fromScale(1, 1),
+					Text = string.upper(rarity.Name),
+					TextSize = 13,
+					TextColor3 = T.Theme.Text.White,
+					TextWrapped = false,
+					Size = UDim2.fromScale(0, 1),
+					AutomaticSize = Enum.AutomaticSize.X,
 				}),
 			}),
 		}),
-		-- 2. Artifact Name
+		-- 2. Artifact name, with its stars out of seven under it
 		Name = e(C.Text, {
 			Text = artifact.DisplayName,
 			FontFace = T.Theme.Fonts.Title,
@@ -168,34 +170,35 @@ function Screens.DetailPanel(props: DetailPanelProps)
 			Size = UDim2.new(1, 0, 0, 26),
 			LayoutOrder = 2,
 		}),
-		-- 3. Rarity · Owner Status
-		StatusLine = e(C.Text, {
-			Text = string.format(
-				"%s  ·  %s",
-				rarity.Name,
-				if owner then "Equipped by " .. owner.DisplayName elseif isEquipped then "Equipped" else "Unequipped"
-			),
-			FontFace = T.Theme.Fonts.Body,
-			TextSize = 13,
-			TextColor3 = if isEquipped then T.Equipped else rarity.Color,
+		Stars = e(C.Text, {
+			Text = string.format("<font color=\"#FFD678\">%s</font><font color=\"#6A5A8C\">%s</font>", string.rep("★", artifact.Star), string.rep("★", math.max(0, Catalog.MaxStars - artifact.Star))),
+			RichText = true, -- built from numbers only
+			FontFace = T.Theme.Fonts.Number,
+			TextSize = 20,
 			TextXAlignment = Enum.TextXAlignment.Center,
-			Size = UDim2.new(1, 0, 0, 20),
+			Size = UDim2.new(1, 0, 0, 22),
 			LayoutOrder = 3,
 		}),
-		-- 4. Huge Power Number + Delta
+		-- 3. Who holds it
+		StatusLine = e(C.Text, {
+			Text = if owner then "Equipped by " .. owner.DisplayName elseif isEquipped then "Equipped" else "Not equipped",
+			FontFace = T.Theme.Fonts.Body,
+			TextSize = 13,
+			TextColor3 = if isEquipped then T.Good else T.Muted,
+			TextXAlignment = Enum.TextXAlignment.Center,
+			Size = UDim2.new(1, 0, 0, 18),
+			LayoutOrder = 4,
+		}),
+		-- 4. Power badge, with the change against the picked hero's current weapon
 		PowerDisplay = e("Frame", {
 			Name = "PowerDisplay",
-			Size = UDim2.new(1, 0, 0, 36),
+			Size = UDim2.new(1, 0, 0, 40),
 			BackgroundTransparency = 1,
-			LayoutOrder = 4,
+			LayoutOrder = 5,
 		}, {
-			Power = e(C.Text, {
-				Text = string.format("%s PWR", Balance.Format(power)) .. (if deltaPower ~= 0 then string.format(" (%s%s)", if deltaPower > 0 then "+" else "", Balance.Format(deltaPower)) else ""),
-				FontFace = T.Theme.Fonts.Number,
-				TextSize = 24,
-				TextColor3 = if deltaPower > 0 then T.Good elseif deltaPower < 0 then T.Bad else T.Gold,
-				TextXAlignment = Enum.TextXAlignment.Center,
-				Size = UDim2.fromScale(1, 1),
+			Power = e(C.PowerBadge, {
+				Value = power, Delta = deltaPower, Large = true,
+				AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0),
 			}),
 		}),
 		-- 5. 3 Stat Chips (DMG, ATK SPD, DPS)
@@ -203,11 +206,11 @@ function Screens.DetailPanel(props: DetailPanelProps)
 			Name = "ChipsRow",
 			Size = UDim2.new(1, 0, 0, 50),
 			BackgroundTransparency = 1,
-			LayoutOrder = 5,
+			LayoutOrder = 6,
 		}, {
 			Layout = e("UIListLayout", {
 				FillDirection = Enum.FillDirection.Horizontal,
-				HorizontalFlex = Enum.UIFlexAlignment.Fill,
+				HorizontalFlex = Enum.UIFlexAlignment.Fill, SortOrder = Enum.SortOrder.LayoutOrder,
 				Padding = UDim.new(0, 6),
 			}),
 			DmgChip = e(C.StatChip, {
@@ -227,18 +230,24 @@ function Screens.DetailPanel(props: DetailPanelProps)
 				Order = 3,
 			}),
 		}),
-		-- 6. Actions as labelled buttons in a 2 × 2 grid (they were 22 px icons with 10 px labels).
-		-- Upgrade is the gold primary; Sell is red; a disabled button says why on hover.
+		-- 6. Actions: the two things players do most are big (Equip, Upgrade); Lock and Sell sit
+		-- under them. A disabled button says why on hover.
 		ActionRow = e("Frame", {
 			Name = "ActionRow",
-			Size = UDim2.new(1, 0, 0, 100),
+			Size = UDim2.new(1, 0, 0, 104),
 			BackgroundTransparency = 1,
-			LayoutOrder = 6,
+			LayoutOrder = 7,
 		}, {
-			Layout = e("UIGridLayout", {
-				CellSize = UDim2.new(0.5, -4, 0, 46),
-				CellPadding = UDim2.fromOffset(8, 8),
-				SortOrder = Enum.SortOrder.LayoutOrder,
+			EquipBtn = e(C.Button, {
+				Name = "DetailEquipButton",
+				Icon = "Equipped",
+				Intent = if isEquipped then "Secondary" else "Confirm",
+				Text = if isEquipped then "Unequip" else "Equip",
+				Disabled = props.Busy,
+				OnActivate = if isEquipped then props.OnUnequip else props.OnEquip,
+				Position = UDim2.fromOffset(0, 0),
+				Size = UDim2.new(0.55, -4, 0, 52),
+				FocusOrder = 1,
 			}),
 			UpgradeBtn = e(C.Button, {
 				Name = "DetailUpgradeButton",
@@ -248,16 +257,9 @@ function Screens.DetailPanel(props: DetailPanelProps)
 				Disabled = props.Busy or maxRank,
 				Tooltip = if maxRank then "This weapon is already at 7★." else nil,
 				OnActivate = props.OnUpgrade,
-				Order = 1,
-			}),
-			EquipBtn = e(C.Button, {
-				Name = "DetailEquipButton",
-				Icon = "Equipped",
-				Intent = if isEquipped then "Secondary" else "Confirm",
-				Text = if isEquipped then "Unequip" else "Equip",
-				Disabled = props.Busy,
-				OnActivate = if isEquipped then props.OnUnequip else props.OnEquip,
-				Order = 2,
+				Position = UDim2.new(0.55, 4, 0, 0),
+				Size = UDim2.new(0.45, -4, 0, 52),
+				FocusOrder = 2,
 			}),
 			LockBtn = e(C.Button, {
 				Name = "DetailLockButton",
@@ -268,7 +270,9 @@ function Screens.DetailPanel(props: DetailPanelProps)
 				Disabled = props.Busy,
 				Tooltip = "Locked weapons can't be sold or used as upgrade material.",
 				OnActivate = props.OnToggleLock,
-				Order = 3,
+				Position = UDim2.fromOffset(0, 60),
+				Size = UDim2.new(0.5, -4, 0, 44),
+				FocusOrder = 3,
 			}),
 			SellBtn = e(C.Button, {
 				Name = "DetailSellButton",
@@ -279,7 +283,9 @@ function Screens.DetailPanel(props: DetailPanelProps)
 				Disabled = props.Busy or isEquipped or artifact.Locked == true,
 				Tooltip = if isEquipped then "Unequip it first to sell." elseif artifact.Locked then "Unlock it first to sell." else nil,
 				OnActivate = props.OnSell,
-				Order = 4,
+				Position = UDim2.new(0.5, 4, 0, 60),
+				Size = UDim2.new(0.5, -4, 0, 44),
+				FocusOrder = 4,
 			}),
 		}),
 	})

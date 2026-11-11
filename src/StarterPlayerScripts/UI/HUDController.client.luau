@@ -46,6 +46,7 @@ local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormu
 local GothicBoxStyle = require(Shared:WaitForChild("Util"):WaitForChild("GothicBoxStyle"))
 local GothicVectorIcons = require(Shared:WaitForChild("Util"):WaitForChild("GothicVectorIcons"))
 local GildedGrimoire = require(Shared:WaitForChild("Util"):WaitForChild("GildedGrimoire"))
+local BillboardThemes = require(Shared:WaitForChild("Config"):WaitForChild("BillboardThemes"))
 local UIFeel = require(script.Parent:WaitForChild("UIFeel"))
 local Store = require(script.Parent:WaitForChild("Hud"):WaitForChild("Store"))
 local WindowManager = require(script.Parent:WaitForChild("WindowManager"))
@@ -661,16 +662,12 @@ task.spawn(function()
 	end
 end)
 
--- Squad Wipe Recovery Lockout Banner
+-- Squad alerts (wiped / heroes down) are outlined text with no panel, so they never cover the fight.
 local squadWipeBanner = makeFrame({
 	Name = "SquadWipeRecoveryBanner",
-	Size = UDim2.new(0, 560, 0, 44),
+	Size = UDim2.new(0, 560, 0, 28),
 	Position = UDim2.new(0.5, -280, 1, -105),
-	BackgroundColor3 = Color3.fromRGB(38, 10, 14),
-	BackgroundTransparency = 0.08,
-	Corner = 8,
-	Stroke = 2,
-	StrokeColor = Color3.fromRGB(255, 75, 75),
+	BackgroundTransparency = 1,
 	Visible = false,
 	Parent = hudGui,
 })
@@ -679,8 +676,8 @@ local squadWipeText = makeLabel({
 	Size = UDim2.new(1, -12, 1, 0),
 	Position = UDim2.new(0, 6, 0, 0),
 	Text = "SQUAD DOWN · Recover at your plot",
-	TextColor3 = Color3.fromRGB(255, 120, 120),
-	TextSize = 13,
+	TextColor3 = Color3.fromRGB(255, 110, 110),
+	TextSize = 16,
 	TextScaled = false,
 	Parent = squadWipeBanner,
 })
@@ -697,23 +694,19 @@ end)
 -- Partially Defeated Squad Warning Banner & Detailed Tooltip Popover
 partiallyDefeatedBanner = makeFrame({
 	Name = "PartiallyDefeatedSquadBanner",
-	Size = UDim2.new(0, 560, 0, 48),
+	Size = UDim2.new(0, 560, 0, 40),
 	Position = UDim2.new(0.5, -280, 1, -108),
-	BackgroundColor3 = Color3.fromRGB(34, 22, 10),
-	BackgroundTransparency = 0.08,
-	Corner = 8,
-	Stroke = 1.5,
-	StrokeColor = Color3.fromRGB(245, 158, 11), -- Warning Amber
+	BackgroundTransparency = 1,
 	Visible = false,
 	Parent = hudGui,
 })
 
 local partialHeader = makeLabel({
-	Size = UDim2.new(1, -16, 0, 20),
-	Position = UDim2.new(0, 8, 0, 4),
+	Size = UDim2.new(1, -16, 0, 22),
+	Position = UDim2.new(0, 8, 0, 0),
 	Text = "1/5 HEROES DOWN",
 	TextColor3 = Color3.fromRGB(251, 191, 36), -- Gold Amber
-	TextSize = 13,
+	TextSize = 16,
 	Font = Enum.Font.GothamBold,
 	TextScaled = false,
 	Parent = partiallyDefeatedBanner,
@@ -721,10 +714,10 @@ local partialHeader = makeLabel({
 
 local partialSubtext = makeLabel({
 	Size = UDim2.new(1, -16, 0, 18),
-	Position = UDim2.new(0, 8, 0, 24),
+	Position = UDim2.new(0, 8, 0, 22),
 	Text = "Revive on floor travel or Hub return",
 	TextColor3 = Color3.fromRGB(254, 243, 199), -- Warm Amber Cream
-	TextSize = 11,
+	TextSize = 12,
 	Font = Enum.Font.GothamMedium,
 	TextScaled = false,
 	Parent = partiallyDefeatedBanner,
@@ -810,7 +803,7 @@ SquadStatusRemote.OnClientEvent:Connect(function(status: any)
 		partiallyDefeatedBanner.Visible = true
 		partialHeader.Text = string.format("%d/%d %s DOWN", fallen, total, if total == 1 then "HERO" else "HEROES")
 		local namesText = if #fallenList > 0 then table.concat(fallenList, ", ") else "Hero"
-		partialSubtext.Text = string.format("%s · Revives on floor travel or Hub return", namesText)
+		partialSubtext.Text = string.format("%s · revives when you change floor", namesText)
 
 		local lines = {}
 		for _, h in ipairs(statuses) do
@@ -867,38 +860,101 @@ SquadDefeatedRemote.OnClientEvent:Connect(function(floorId: number)
 	squadWipeText.Text = string.format("SQUAD WIPED · Floor %d · Carried loot dropped", floorId or 0)
 end)
 
--- World Boss Top Banner
+-- Top-centre tower strip. It has no panel, so it never covers the fight:
+--   floor   "FLOOR 3 · VERDANT RUINS", a thin kill-progress line and "3 / 14" under it;
+--   boss    the name in the boss tier colour over a wide, ink-outlined HP bar with the percentage
+--           inside and a pale trail that drains after each hit; phase and raid timer under it.
+local BOSS_THEME = BillboardThemes.Mob.BIOME_BOSS
+local FLOOR_BANNER_WIDTH, BOSS_BANNER_WIDTH = 300, 560
+local FLOOR_BAR_HEIGHT, BOSS_BAR_HEIGHT = 6, 18
+local BANNER_TITLE_HEIGHT = 24
+
 local bossBanner = makeFrame({
 	Name = "FloorBossTopBanner",
-	Size = UDim2.new(0.54, 0, 0, 46),
-	Position = UDim2.new(0.23, 0, 0, 60),
-	BackgroundColor3 = Color3.fromRGB(28, 16, 38),
-	BackgroundTransparency = 0.12,
-	Corner = 8,
-	Stroke = 2,
-	StrokeColor = Color3.fromRGB(195, 65, 255),
+	AnchorPoint = Vector2.new(0.5, 0),
+	Size = UDim2.fromOffset(FLOOR_BANNER_WIDTH, 58),
+	Position = UDim2.new(0.5, 0, 0, 14),
+	BackgroundTransparency = 1,
 	Parent = hudGui,
 })
 
-local bossTitleLabel = makeLabel({
-	Size = UDim2.new(0.96, 0, 0.48, 0),
-	Position = UDim2.new(0.02, 0, 0.04, 0),
-	Text = "FLOOR BOSS",
-	TextColor3 = Color3.fromRGB(235, 165, 255),
-	Parent = bossBanner,
-})
+local function bannerText(name: string, size: number, role: string, parent: Instance): TextLabel
+	local label = Instance.new("TextLabel")
+	label.Name = name
+	label.BackgroundTransparency = 1
+	label.Text = ""
+	label.TextSize = size
+	label.TextColor3 = GildedGrimoire.Text.White
+	label.TextTruncate = Enum.TextTruncate.AtEnd
+	label.RichText = true
+	label.ZIndex = 6
+	label:SetAttribute("Grimoire", true)
+	label.Parent = parent
+	GildedGrimoire.StyleText(label, role)
+	return label
+end
 
-local novaBarBg, novaBarFill = GildedGrimoire.Bar(bossBanner, Color3.fromRGB(175, 45, 235), 2.2)
-novaBarBg.Size = UDim2.new(1, -28, 0.36, 0)
-novaBarBg.Position = UDim2.new(0, 14, 0.52, 0)
+local bossTitleLabel = bannerText("Title", 15, "Title", bossBanner)
+bossTitleLabel.Size = UDim2.new(1, 0, 0, BANNER_TITLE_HEIGHT)
+local bossTitleGradient = Instance.new("UIGradient")
+bossTitleGradient.Enabled = false
+do
+	local stops = BOSS_THEME.TitleGradient or { BOSS_THEME.Title, BOSS_THEME.Title }
+	local keys = {}
+	for i, c in stops do table.insert(keys, ColorSequenceKeypoint.new((i - 1) / (#stops - 1), c)) end
+	bossTitleGradient.Color = ColorSequence.new(keys)
+end
+bossTitleGradient.Parent = bossTitleLabel
+
+local novaBarBg, novaBarFill = GildedGrimoire.Bar(bossBanner, GildedGrimoire.Text.Gold, 2.5)
+novaBarBg.Position = UDim2.fromOffset(0, BANNER_TITLE_HEIGHT + 2)
+novaBarBg.Size = UDim2.new(1, 0, 0, FLOOR_BAR_HEIGHT)
+novaBarBg.BackgroundTransparency = 0.25
 novaBarBg.ZIndex = 3
-novaBarFill.ZIndex = 4
-local novaCastLabel = makeLabel({
-	Size = UDim2.fromScale(1, 1),
-	Text = "Boss Encounter",
-	ZIndex = 6,
-	Parent = novaBarBg,
-})
+novaBarFill.ZIndex = 5
+-- Pale trail behind the fill: it holds the old HP for a moment, then drains to the new value.
+local bossHpTrail = Instance.new("Frame")
+bossHpTrail.Name = "Trail"
+bossHpTrail.BackgroundColor3 = Color3.fromRGB(255, 244, 214)
+bossHpTrail.BorderSizePixel = 0
+bossHpTrail.Size = UDim2.fromScale(0, 1)
+bossHpTrail.ZIndex = 4
+bossHpTrail.Visible = false
+do
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(1, 0)
+	corner.Parent = bossHpTrail
+end
+bossHpTrail.Parent = novaBarBg
+local bossHpLabel = bannerText("Percent", 13, "Number", novaBarBg)
+bossHpLabel.Size = UDim2.fromScale(1, 1)
+bossHpLabel.Visible = false
+-- One short line under the bar: kills, or the boss phase and the raid timer.
+local novaCastLabel = bannerText("Caption", 12, "Body", bossBanner)
+novaCastLabel.Size = UDim2.new(1, 0, 0, 16)
+novaCastLabel.TextColor3 = GildedGrimoire.Text.Parchment
+novaCastLabel.TextStrokeTransparency = 0
+
+local bannerBossMode: boolean? = nil
+local bossTrailFraction, bossTrailHoldUntil, bossTrailNetId = 1, 0, nil :: number?
+-- Switches the strip between its floor and boss layouts (only when the mode or the screen changes).
+local function setBannerMode(boss: boolean, force: boolean?)
+	if bannerBossMode == boss and not force then return end
+	bannerBossMode = boss
+	local barHeight = if boss then BOSS_BAR_HEIGHT else FLOOR_BAR_HEIGHT
+	local width = math.min(hudGui.AbsoluteSize.X - 32, if boss then BOSS_BANNER_WIDTH else FLOOR_BANNER_WIDTH)
+	bossBanner.Size = UDim2.fromOffset(math.max(160, width), 58)
+	bossTitleLabel.TextSize = if boss then 20 else 15
+	bossTitleGradient.Enabled = boss
+	novaBarBg.Size = UDim2.new(1, 0, 0, barHeight)
+	novaCastLabel.Position = UDim2.fromOffset(0, BANNER_TITLE_HEIGHT + 2 + barHeight + 3)
+	bossHpLabel.Visible = boss
+	bossHpTrail.Visible = boss
+end
+setBannerMode(false, true)
+hudGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+	setBannerMode(bannerBossMode == true, true)
+end)
 
 --============================================================================
 -- Clear Glass: alerts and tower banners share the HUD's glass (GildedGrimoire.Glass); a 2px
@@ -907,27 +963,29 @@ local novaCastLabel = makeLabel({
 local Glass = GildedGrimoire.Glass
 GildedGrimoire.Reframe(toastBanner, { Tone = "Glass", Rail = Glass.Arcane })
 GildedGrimoire.Reframe(lootStolenBanner, { Tone = "Glass", Rail = Glass.Danger })
-GildedGrimoire.Reframe(squadWipeBanner, { Tone = "Glass", Rail = Glass.Danger })
-GildedGrimoire.Reframe(partiallyDefeatedBanner :: Frame, { Tone = "Glass", Rail = Glass.Royal })
 GildedGrimoire.GlassFrame(partialTooltipPopover, { Transparency = 0.12 })
-GildedGrimoire.Reframe(bossBanner, { Tone = "Glass", Rail = GildedGrimoire.Text.Gold })
-GildedGrimoire.GlassBar(novaBarBg)
 -- Bounty hint: a solid Danger chip with a hairline edge.
 GildedGrimoire.GlassFrame(bountyHint)
 bountyHint.BackgroundColor3 = Glass.Danger
 bountyHint.BackgroundTransparency = 0
 bountyHint.TextColor3 = Glass.Text
 -- Every label in these banners moves to Montserrat; headlines take the bold weight.
-for _, banner in { toastBanner, lootStolenBanner, squadWipeBanner, partiallyDefeatedBanner :: Frame, partialTooltipPopover, bossBanner } do
+for _, banner in { toastBanner, lootStolenBanner, partialTooltipPopover } do
 	GildedGrimoire.GlassTexts(banner)
 end
-for _, headline in { lootStolenText, squadWipeText, partialHeader, tooltipTitle, bossTitleLabel, novaCastLabel, toastText, bountyHint } do
+for _, headline in { lootStolenText, tooltipTitle, toastText, bountyHint } do
 	GildedGrimoire.GlassText(headline, "Title")
 end
 for _, line in { partialSubtext, tooltipList, tooltipFooter } do
 	line:SetAttribute("Grimoire", true)
 	GildedGrimoire.StyleText(line, "Body")
 end
+-- The two squad alerts have no panel: heavy inked headlines, and a fully outlined second line.
+for _, headline in { squadWipeText, partialHeader } do
+	headline:SetAttribute("Grimoire", true)
+	GildedGrimoire.StyleText(headline, "Title")
+end
+partialSubtext.TextStrokeTransparency = 0
 
 local updateClimbStreak = require(script.Parent.Hud.TowerStreakHud).Mount(bossBanner, bossTitleLabel, novaBarBg, TowerRemotes)
 
@@ -2018,46 +2076,57 @@ RunService.RenderStepped:Connect(function()
 		bossBanner.Visible = false
 	elseif not hasFloorBoss and curFloor > 0 then
 		bossBanner.Visible = not hideFloorHud
+		setBannerMode(false)
 		local floorSpec = TowerFloorConfig.Get(curFloor)
 		local floorName = floorSpec and floorSpec.DisplayName or ("Floor " .. tostring(curFloor))
 		local curKills = if clientFloorProgress.FloorId == curFloor then clientFloorProgress.CurrentKills else 0
 		local reqKills = if clientFloorProgress.FloorId == curFloor and clientFloorProgress.RequiredKills > 0 then clientFloorProgress.RequiredKills else math.max(1, math.round(12 + 0.5 * curFloor))
 		local pct = math.clamp(curKills / math.max(1, reqKills), 0, 1)
-		-- The floor's Recommended Squad Power against yours (green when you meet it), as in the floor selector.
+		bossTitleLabel.Text = string.format("FLOOR %d  ·  %s", curFloor, string.upper(floorName))
+		novaBarFill.Size = UDim2.fromScale(pct, 1)
+		novaBarFill.BackgroundColor3 = if curKills >= reqKills then GildedGrimoire.Text.Good else GildedGrimoire.Text.Gold
+		-- Recommended Squad Power only speaks up when the squad is under it.
 		local recommended = recommendedPower(curFloor)
 		local mine = StatFormulas.GetTowerSquadPower(CurrentProfile)
-		bossTitleLabel.RichText = true
-		bossTitleLabel.Text = string.format(" FLOOR %d - %s  ·  REC. POWER <font color=\"#FFD66E\">%s</font>  ·  YOURS <font color=\"%s\">%s</font>",
-			curFloor, string.upper(floorName), abbreviatePower(recommended), if mine >= recommended then "#4ADE80" else "#FF6B6B", abbreviatePower(mine))
-		novaBarFill.Size = UDim2.fromScale(pct, 1)
-		novaBarFill.BackgroundColor3 = if curKills >= reqKills then GildedGrimoire.Glass.Royal else GildedGrimoire.Glass.Arcane
+		local warning = if mine < recommended then string.format("  ·  <font color=\"#FF6B6B\">REC. POWER %s</font>", abbreviatePower(recommended)) else ""
 		if clientFloorProgress.FloorId == curFloor and clientFloorProgress.BossDefeated then
-			novaCastLabel.Text = if curFloor == TowerFloorConfig.FloorCount
-				then "FLOOR BOSS DEFEATED! RETURN TO HUB OR RERUN" else "FLOOR BOSS DEFEATED! ADVANCE TO NEXT FLOOR"
+			novaCastLabel.Text = "<font color=\"#78FF8C\">CLEARED</font>"
 		elseif curKills >= reqKills then
-			novaCastLabel.Text = "BOSS SUMMONED - ENGAGE THE FLOOR BOSS!"
+			novaCastLabel.Text = "<font color=\"#FF7A7A\">BOSS SUMMONED</font>" .. warning
 		else
-			novaCastLabel.Text = string.format("MOBS DEFEATED: %d / %d (%d%%)", curKills, reqKills, math.floor(pct * 100))
+			novaCastLabel.Text = string.format("%d / %d", curKills, reqKills) .. warning
 		end
 	else
 		bossBanner.Visible = (hasFloorBoss and curFloor > 0 and not hideFloorHud) or false
 	end
 	if hasFloorBoss and curFloor > 0 then
+		setBannerMode(true)
 		local node = cs.VisualNodes and cs.VisualNodes[floorBoss.NetId]
 		local hpPct = if node and node.HpPermille then node.HpPermille / 10.0 else (floorBoss.CurrentHP or 1) / math.max(1, floorBoss.MaxHP or 1) * 100.0
 		local phase = if hpPct <= 50.0 then 2 else (floorBoss.Phase or 1)
-		local floorNum = floorBoss.FloorId or curFloor
+		local fraction = math.clamp(hpPct / 100.0, 0, 1)
+		bossTitleLabel.Text = string.upper(floorBoss.Name or (if inRaid then "RAID BOSS" else "FLOOR BOSS"))
+		novaBarFill.Size = UDim2.fromScale(fraction, 1)
+		novaBarFill.BackgroundColor3 = BOSS_THEME.Accent
+		bossHpLabel.Text = if hpPct >= 10 then string.format("%d%%", math.ceil(hpPct)) else string.format("%.1f%%", hpPct)
+		-- Damage trail: hold for a beat after a hit, then drain towards the fill.
+		local now = os.clock()
+		if bossTrailNetId ~= floorBoss.NetId or fraction >= bossTrailFraction then
+			bossTrailNetId, bossTrailFraction, bossTrailHoldUntil = floorBoss.NetId, fraction, 0
+		else
+			if bossTrailHoldUntil == 0 then bossTrailHoldUntil = now + 0.35 end
+			if now >= bossTrailHoldUntil then
+				bossTrailFraction = math.max(fraction, bossTrailFraction - 0.012)
+			end
+		end
+		bossHpTrail.Size = UDim2.fromScale(bossTrailFraction, 1)
+		local caption = if phase >= 2 then "<font color=\"#FF7A7A\">ENRAGED</font>" else ""
 		if inRaid then
 			local endsAt = ReplicatedStorage:GetAttribute("RaidEndsAt") or 0
 			local left = math.max(0, math.ceil(endsAt - workspace:GetServerTimeNow()))
-			bossTitleLabel.Text = string.format(" RAID BOSS · %s%s — %d:%02d", string.upper(floorBoss.Name or "RAID BOSS"),
-				if phase >= 2 then " [ENRAGED]" else "", left // 60, left % 60)
-		else
-			bossTitleLabel.Text = string.format(" FLOOR %d BOSS · %s (PHASE %d) — HP: %.1f%%", floorNum, string.upper(floorBoss.Name or "FLOOR BOSS"), phase, hpPct)
+			caption = string.format("%s%s%d:%02d", caption, if caption ~= "" then "  ·  " else "", left // 60, left % 60)
 		end
-		novaBarFill.Size = UDim2.fromScale(math.clamp(hpPct / 100.0, 0, 1), 1)
-		novaBarFill.BackgroundColor3 = GildedGrimoire.Glass.Danger
-		novaCastLabel.Text = string.format("BOSS HP: %.1f%%", hpPct)
+		novaCastLabel.Text = caption
 	end
 	local humanoid = char and char:FindFirstChildOfClass("Humanoid")
 	local personalFloor = TowerFloorConfig.IsFloorId(charFloor) and not Store.ViewingSquad and humanoid ~= nil and humanoid.Health > 0
@@ -2412,14 +2481,7 @@ do
 
 		topBar.Visible = false
 
-		bossBanner.Position = UDim2.new(0.5, 0, 0, 14)
-		bossBanner.AnchorPoint = Vector2.new(0.5, 0)
-		bossBanner.Size = UDim2.new(1, -32, 0, 58)
-		bossTitleLabel.TextSize = portrait and 12 or 15
-		bossTitleLabel.TextScaled = false
-		bossTitleLabel.TextTruncate = Enum.TextTruncate.AtEnd
-		novaCastLabel.TextSize = portrait and 10 or 12
-		novaCastLabel.TextScaled = false
+		-- The top-centre tower strip sizes itself (setBannerMode).
 
 		toastBanner.AnchorPoint = Vector2.new(0.5, 0)
 		toastBanner.Position = UDim2.new(0.5, 0, 0, 82)

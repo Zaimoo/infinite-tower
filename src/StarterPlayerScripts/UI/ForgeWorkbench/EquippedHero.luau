@@ -28,5 +28,5 @@ return function(props: any)
 		camera.Parent = viewport; viewport.CurrentCamera = camera
 		return function() rig:Destroy(); camera:Destroy() end
 	end, { props.Hero.TemplateId, props.Artifact.TemplateId })
-	return e("ViewportFrame", { ref = ref, Name = "EquippedHeroPreview", BackgroundTransparency = 1, Size = props.Size or UDim2.fromScale(1, 1), Ambient = Color3.fromRGB(200, 190, 220), LightColor = Color3.fromRGB(255, 240, 220), LightDirection = Vector3.new(-1, -2, -2) })
+	return e("ViewportFrame", { ref = ref, Name = "EquippedHeroPreview", BackgroundTransparency = 1, Size = props.Size or UDim2.fromScale(1, 1), Ambient = Color3.fromRGB(125, 118, 138), LightColor = Color3.fromRGB(255, 240, 220), LightDirection = Vector3.new(-1, -2, 2) }) -- the rig faces -Z: light travels towards +Z to reach its front
 end

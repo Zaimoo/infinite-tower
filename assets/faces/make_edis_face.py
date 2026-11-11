@@ -52,122 +52,95 @@ def mirror(points):
     return [(SIZE - x, y) for x, y in points]
 
 
+# Eye shape, in 512 space for the viewer's left eye (mirrored for the other). A feminine anime
+# eye: tall and rounded, a thick upper lash line that thickens into a wing at the outer corner,
+# a large iris the lid overlaps a little, and a big catchlight. Tune the look with these numbers
+# rather than redrawing: OUTER/INNER set the tilt, TOP_PEAK how open the eye is.
+EYE_OUTER = (98, 254)
+EYE_INNER = (222, 268)
+EYE_TOP_PEAK = (152, 214)      # control point of the upper lid (lower y = more open)
+EYE_BOTTOM_PEAK = (166, 308)
+IRIS_CENTRE = (163, 264)
+IRIS_RADII = (30, 35)
+LASH_THICK = (4.0, 12.0)       # upper lash thickness at the inner corner and at the outer corner
+BROW_POINTS = ((96, 206), (150, 190), (216, 208))
+
+
 def eye(img, flip):
     """Draws one eye; coordinates are for the viewer's left eye, mirrored when flip."""
     m = mirror if flip else (lambda p: p)
-    # Positions calibrated for 1.2-stud head viewed under curtain bangs
-    outer, inner = (102, 248), (218, 266)
+    outer, inner = EYE_OUTER, EYE_INNER
+    top = bezier(outer, EYE_TOP_PEAK, inner, 40)
+    bottom = bezier(inner, EYE_BOTTOM_PEAK, outer, 40)
 
-    # Almond shape anime eye with slight upward tilt at outer corner
-    top = bezier(outer, (156, 240), inner)
-    bottom = bezier(inner, (162, 298), outer)
-
-    # Sclera mask
     mask = Image.new("L", (W, W), 0)
     ImageDraw.Draw(mask).polygon(sc(m(top + bottom)), fill=255)
     img.paste(Image.new("RGBA", (W, W), SCLERA), (0, 0), mask)
 
-    # Iris with 3-stop warm golden gradient, pupil, rim, and highlights
-    cx, cy = (SIZE - 162, 262) if flip else (162, 262)
+    cx, cy = IRIS_CENTRE
+    if flip:
+        cx = SIZE - cx
+    rx, ry = IRIS_RADII
     iris = Image.new("RGBA", (W, W), (0, 0, 0, 0))
     d = ImageDraw.Draw(iris)
-    rx, ry = 28, 33
-
-    for row in range(-ry, ry + 1):
-        t = (row + ry) / (2 * ry)
-        if t < 0.45:
-            # Upper: top to mid
-            t_sub = t / 0.45
-            col = tuple(round(IRIS_TOP[i] + (IRIS_MID[i] - IRIS_TOP[i]) * t_sub) for i in range(3)) + (255,)
+    for row in range(-ry * S, ry * S + 1):
+        t = (row / S + ry) / (2 * ry)
+        if t < 0.5:
+            u = t / 0.5
+            col = tuple(round(IRIS_TOP[i] + (IRIS_MID[i] - IRIS_TOP[i]) * u) for i in range(3)) + (255,)
         else:
-            # Lower: mid to bright yellow-gold
-            t_sub = (t - 0.45) / 0.55
-            col = tuple(round(IRIS_MID[i] + (IRIS_BOTTOM[i] - IRIS_MID[i]) * t_sub) for i in range(3)) + (255,)
+            u = (t - 0.5) / 0.5
+            col = tuple(round(IRIS_MID[i] + (IRIS_BOTTOM[i] - IRIS_MID[i]) * u) for i in range(3)) + (255,)
+        half = rx * (1 - (row / S / ry) ** 2) ** 0.5
+        d.line([((cx - half) * S, cy * S + row), ((cx + half) * S, cy * S + row)], fill=col, width=1)
+    d.ellipse([((cx - rx) * S, (cy - ry) * S), ((cx + rx) * S, (cy + ry) * S)], outline=IRIS_RIM, width=int(3.0 * S))
+    # Pupil, then a bright crescent in the lower iris so the eye glows from below
+    prx, pry = rx * 0.36, ry * 0.42
+    d.ellipse([((cx - prx) * S, (cy - pry) * S), ((cx + prx) * S, (cy + pry) * S)], fill=PUPIL)
+    d.arc([((cx - rx * 0.66) * S, (cy - ry * 0.1) * S), ((cx + rx * 0.66) * S, (cy + ry * 0.78) * S)],
+          start=25, end=155, fill=tuple(IRIS_BOTTOM) + (235,), width=int(3.2 * S))
+    # Shadow the lid casts on the top of the iris and the white
+    shade = Image.new("RGBA", (W, W), (0, 0, 0, 0))
+    sd = ImageDraw.Draw(shade)
+    lid_shadow = [(x, y + 13) for x, y in top]
+    sd.polygon(sc(m(top + list(reversed(lid_shadow)))), fill=(60, 30, 40, 46))
+    iris = Image.alpha_composite(iris, Image.composite(shade, Image.new("RGBA", (W, W), (0, 0, 0, 0)), mask))
+    d = ImageDraw.Draw(iris)
+    # Catchlights: a large one toward the light (upper, viewer's left) and a small one opposite
+    hx, hy = cx - rx * 0.36, cy - ry * 0.40
+    d.ellipse([((hx - rx * 0.30) * S, (hy - ry * 0.27) * S), ((hx + rx * 0.30) * S, (hy + ry * 0.27) * S)], fill=(255, 255, 255, 250))
+    sx, sy = cx + rx * 0.40, cy + ry * 0.36
+    d.ellipse([((sx - rx * 0.13) * S, (sy - rx * 0.13) * S), ((sx + rx * 0.13) * S, (sy + rx * 0.13) * S)], fill=(255, 255, 255, 215))
+    img.paste(iris, (0, 0), Image.composite(mask, Image.new("L", (W, W), 0), iris.split()[3]))
+    img.alpha_composite(Image.composite(shade, Image.new("RGBA", (W, W), (0, 0, 0, 0)), mask))
 
-        half = rx * (1 - (row / ry) ** 2) ** 0.5
-        d.line(
-            [((cx - half) * S, (cy + row) * S), ((cx + half) * S, (cy + row) * S)],
-            fill=col,
-            width=S,
-        )
-
-    # Limbal ring
-    d.ellipse(
-        [((cx - rx) * S, (cy - ry) * S), ((cx + rx) * S, (cy + ry) * S)],
-        outline=IRIS_RIM,
-        width=int(2.2 * S),
-    )
-
-    # Pupil (warm dark chocolate oval)
-    prx, pry = 10, 15
-    d.ellipse(
-        [((cx - prx) * S, (cy - pry + 1) * S), ((cx + prx) * S, (cy + pry + 1) * S)],
-        fill=PUPIL,
-    )
-
-    # Secondary lower iris caustic / glow arc
-    glow_y = cy + 12
-    d.arc(
-        [((cx - 20) * S, (glow_y - 10) * S), ((cx + 20) * S, (glow_y + 10) * S)],
-        start=20,
-        end=160,
-        fill=(255, 205, 130, 190),
-        width=int(2.5 * S),
-    )
-
-    # Primary white sparkle catchlight (upper left of pupil)
-    hl_x, hl_y = (cx + 8, cy - 8) if flip else (cx - 8, cy - 8)
-    d.ellipse(
-        [((hl_x - 6.5) * S, (hl_y - 8.5) * S), ((hl_x + 6.5) * S, (hl_y + 8.5) * S)],
-        fill=(255, 255, 255, 245),
-    )
-
-    # Small secondary glimmer (lower right of iris)
-    s2_x, s2_y = (cx - 10, cy + 9) if flip else (cx + 10, cy + 9)
-    d.ellipse(
-        [((s2_x - 3) * S, (s2_y - 3) * S), ((s2_x + 3) * S, (s2_y + 3) * S)],
-        fill=(255, 255, 255, 180),
-    )
-
-    img.paste(iris, (0, 0), mask)
-
-    # Upper lash line & delicate wing
     d_main = ImageDraw.Draw(img)
-    d_main.line(sc(m(top)), fill=LID, width=int(5.4 * S), joint="curve")
-
-    # Outer corner eyelash flick
-    flick_end = (outer[0] - 12, outer[1] - 5)
-    d_main.line(sc(m([outer, flick_end])), fill=LID, width=int(3.2 * S))
-
-    # Inner eye corner dot
-    inner_flick = (inner[0] + 3, inner[1] + 3)
-    d_main.line(sc(m([inner, inner_flick])), fill=LID, width=int(2.2 * S))
-
-    # Lower lash line (subtle, delicate)
-    bot_pts = bezier(inner, (162, 298), outer)
-    # take lower mid portion
-    d_main.line(sc(m(bot_pts[6:22])), fill=LID, width=int(1.8 * S))
-
-    # Eyelid crease above eye
-    crease = bezier((outer[0] + 8, outer[1] - 10), (158, 226), (inner[0] - 6, inner[1] - 8))
-    d_main.line(sc(m(crease)), fill=LID_CREASE, width=int(1.8 * S))
+    # Upper lash line: a filled band that thickens toward the outer corner, then a two-point wing
+    n = len(top)
+    upper = []
+    for i, (x, y) in enumerate(top):
+        t = 1 - i / (n - 1)  # 1 at the outer corner
+        upper.append((x - 1.5 * t, y - (LASH_THICK[0] + (LASH_THICK[1] - LASH_THICK[0]) * t ** 1.4)))
+    d_main.polygon(sc(m(top + list(reversed(upper)))), fill=LID)
+    ox, oy = outer
+    wing = bezier((ox + 12, oy - LASH_THICK[1] - 1), (ox - 4, oy - LASH_THICK[1] - 3), (ox - 15, oy - LASH_THICK[1] - 9), 10)
+    d_main.polygon(sc(m(wing + bezier((ox - 15, oy - LASH_THICK[1] - 9), (ox - 6, oy - 3), (ox + 6, oy + 1), 10))), fill=LID)
+    # Lower lid: only the outer third, so the eye stays soft
+    d_main.line(sc(m(bottom[24:38])), fill=LID, width=int(2.0 * S), joint="curve")
+    # Eyelid crease, following the lid
+    crease = bezier((outer[0] + 14, outer[1] - LASH_THICK[1] - 12), (EYE_TOP_PEAK[0], EYE_TOP_PEAK[1] - 9), (inner[0] - 16, inner[1] - 16))
+    d_main.line(sc(m(crease)), fill=LID_CREASE, width=int(1.8 * S), joint="curve")
 
 
 def brow(img, flip):
-    """Draws a low, nearly straight black brow, slightly lowered at the inner end."""
+    """A slim, softly arched brow that tapers at both ends."""
     m = mirror if flip else (lambda p: p)
-    # Confident arch, slightly lowered at inner corner
-    p0 = (94, 214)    # Outer tail
-    p1 = (150, 204)   # Gentle peak
-    p2 = (214, 224)   # Inner head
-    pts = bezier(p0, p1, p2, 24)
+    pts = bezier(*BROW_POINTS, 30)
     d = ImageDraw.Draw(img)
-
-    # Tapered brow: thicker in center, tapering to outer tail
     for i in range(len(pts) - 1):
-        t = i / (len(pts) - 1)
-        w = (1.8 + 2.4 * (1.0 - (t - 0.6) ** 2)) * S
-        d.line(sc(m([pts[i], pts[i + 1]])), fill=BROW, width=int(w))
+        t = i / (len(pts) - 1)  # 0 at the outer tail, 1 at the inner head
+        w = (1.4 + 3.4 * (1 - abs(t - 0.68) / 0.68) ** 0.8) * S
+        d.line(sc(m([pts[i], pts[i + 1]])), fill=BROW, width=max(1, int(w)))
 
 
 def blush(img):

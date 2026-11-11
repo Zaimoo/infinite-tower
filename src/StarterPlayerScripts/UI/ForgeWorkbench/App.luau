@@ -26,6 +26,11 @@ local Types = require(script.Parent.Types)
 local Kit = require(script.Parent.Parent.Kit)
 local e = React.createElement
 
+local TOOLBAR_HEIGHT = 84
+local WEAPON_TYPE_LABEL: { [string]: string } = {
+	SWORD_SHIELD = "Sword", DAGGERS = "Daggers", BOW = "Bow", AXE = "Axe", STAFF = "Staff", TOME = "Tome",
+}
+
 -- "500 Gold · 1 weapon consumed": Gems only when the rank actually costs Gems.
 local function upgradeCostText(rule: { Gold: number, Gems: number, Donors: number }): string
 	local parts = { string.format("%s Gold", Balance.Format(rule.Gold)) }
@@ -388,17 +393,29 @@ local function App(props: Types.Props)
 		if route == "REVIEW" and forge.Success and forge.Sequence > 0 and forge.Phase == "idle" then setRoute("RESULT") end
 	end, { forge.Sequence })
 
-	-- Grid & Toolbar layout
-	local filterCount = (if filter.Ownership ~= "ALL" then 1 else 0) + (if filter.Rarity ~= 0 then 1 else 0) + (if filter.WeaponType ~= "ALL" then 1 else 0)
-	local toolbar = e("Frame", { Name = "InventoryToolbar", Size = UDim2.new(1, 0, 0, 42), BackgroundTransparency = 1 }, {
+	-- Toolbar: weapon types are one tap away as a chip row; search, the rarer filters and sort sit under it.
+	local filterCount = (if filter.Ownership ~= "ALL" then 1 else 0) + (if filter.Rarity ~= 0 then 1 else 0)
+	local typeChips: { [string]: any } = {
+		Layout = e("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalFlex = Enum.UIFlexAlignment.Fill, Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }),
+		Pad = e("UIPadding", { PaddingLeft = UDim.new(0, 2), PaddingRight = UDim.new(0, 2), PaddingTop = UDim.new(0, 2), PaddingBottom = UDim.new(0, 2) }),
+		All = e(C.Chip, { Name = "TypeChip_ALL", Text = "All", Order = 0, Selected = filter.WeaponType == "ALL", OnActivate = function() updateFilter("WeaponType", "ALL") end }),
+	}
+	for index, value in Catalog.ArchetypeTypes do
+		typeChips[value] = e(C.Chip, {
+			Name = "TypeChip_" .. value, Text = WEAPON_TYPE_LABEL[value] or value, Order = index, Selected = filter.WeaponType == value,
+			OnActivate = function() updateFilter("WeaponType", if filter.WeaponType == value then "ALL" else value) end,
+		})
+	end
+	local toolbar = e("Frame", { Name = "InventoryToolbar", Size = UDim2.new(1, 0, 0, TOOLBAR_HEIGHT), BackgroundTransparency = 1 }, {
+		Types = e("Frame", { Name = "WeaponTypes", Size = UDim2.new(1, 0, 0, 38), BackgroundTransparency = 1 }, typeChips),
 		Search = e("TextBox", {
-			Name = "ArtifactSearch", Text = filter.Query, PlaceholderText = "Search weapons by name…", ClearTextOnFocus = false,
-			Size = UDim2.new(0.55, -4, 1, 0), BackgroundColor3 = T.Raised, BorderSizePixel = 0,
+			Name = "ArtifactSearch", Text = filter.Query, PlaceholderText = "Search…", ClearTextOnFocus = false,
+			Position = UDim2.fromOffset(0, 44), Size = UDim2.new(0.5, -4, 0, 40), BackgroundColor3 = T.Raised, BorderSizePixel = 0,
 			FontFace = T.Theme.Fonts.Body, TextSize = 16, TextColor3 = T.Text, PlaceholderColor3 = T.Muted, TextXAlignment = Enum.TextXAlignment.Left,
 			[React.Change.Text] = function(box) updateFilter("Query", box.Text) end,
-		}, { Corner = e("UICorner", { CornerRadius = UDim.new(0, 8) }), Padding = e("UIPadding", { PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 8) }), Ink = e("UIStroke", { Color = T.Theme.Ink, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }) }),
-		Filter = e(C.Button, { Name = "FilterArtifactsButton", Text = string.format("Filters (%d)", filterCount), Position = UDim2.fromScale(0.55, 0), Size = UDim2.new(0.23, -4, 1, 0), OnActivate = function() setDialog("FILTER") end }),
-		Sort = e(C.Button, { Name = "SortArtifactsButton", Text = "Sort: " .. string.upper(string.sub(filter.Sort, 1, 1)) .. string.lower(string.sub(filter.Sort, 2)), Tooltip = "Tap to cycle: Best, Power, Rarity, Stars, Name", Position = UDim2.fromScale(0.78, 0), Size = UDim2.fromScale(0.22, 1), OnActivate = function()
+		}, { Corner = e("UICorner", { CornerRadius = UDim.new(1, 0) }), Padding = e("UIPadding", { PaddingLeft = UDim.new(0, 16), PaddingRight = UDim.new(0, 12) }), Ink = e("UIStroke", { Color = T.Theme.Ink, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }) }),
+		Filter = e(C.Button, { Name = "FilterArtifactsButton", Text = if filterCount > 0 then string.format("Filters (%d)", filterCount) else "Filters", Selected = filterCount > 0, Position = UDim2.new(0.5, 0, 0, 44), Size = UDim2.new(0.25, -4, 0, 40), OnActivate = function() setDialog("FILTER") end }),
+		Sort = e(C.Button, { Name = "SortArtifactsButton", Text = "Sort: " .. string.upper(string.sub(filter.Sort, 1, 1)) .. string.lower(string.sub(filter.Sort, 2)), Tooltip = "Tap to cycle: Best, Power, Rarity, Stars, Name", Position = UDim2.new(0.75, 0, 0, 44), Size = UDim2.new(0.25, 0, 0, 40), OnActivate = function()
 			local order = { "BEST", "POWER", "RARITY", "STARS", "NAME" }
 			updateFilter("Sort", order[(table.find(order, filter.Sort) or 1) % #order + 1])
 		end }),
@@ -518,8 +535,8 @@ local function App(props: Types.Props)
 		}, {
 			Toolbar = toolbar,
 			GridArea = e("Frame", {
-				Position = UDim2.fromOffset(0, 48),
-				Size = UDim2.new(1, 0, 1, -54 - T.ActionBarHeight),
+				Position = UDim2.fromOffset(0, TOOLBAR_HEIGHT + 6),
+				Size = UDim2.new(1, 0, 1, -TOOLBAR_HEIGHT - 12 - T.ActionBarHeight),
 				BackgroundTransparency = 1,
 				ClipsDescendants = true,
 			}, { Content = grid }),
@@ -732,9 +749,6 @@ local function App(props: Types.Props)
 		choices.Rarity = e(C.Text, { Text = "RARITY", TextColor3 = T.Gold, LayoutOrder = 8 })
 		choices.AllRarities = e(C.Button, { Text = "All rarities", Selected = filter.Rarity == 0, OnActivate = function() updateFilter("Rarity", 0) end, Order = 9 })
 		for index, r in Catalog.Rarities do choices["Rarity" .. index] = e(C.Button, { Text = r.Name, Selected = filter.Rarity == index, OnActivate = function() updateFilter("Rarity", index) end, Order = 10 + index }) end
-		choices.Type = e(C.Text, { Text = "WEAPON TYPE", TextColor3 = T.Gold, LayoutOrder = 30 })
-		choices.AllTypes = e(C.Button, { Text = "All weapon types", Selected = filter.WeaponType == "ALL", OnActivate = function() updateFilter("WeaponType", "ALL") end, Order = 31 })
-		for index, value in Catalog.ArchetypeTypes do choices["Type" .. value] = e(C.Button, { Text = value, Selected = filter.WeaponType == value, OnActivate = function() updateFilter("WeaponType", value) end, Order = 32 + index }) end
 		dialogView = e(Dialog, { Title = "Inventory filters", Children = choices, OnCancel = function() setDialog(nil) end, FocusKey = "FILTER" })
 	end
 

@@ -442,6 +442,12 @@ end
 
 local attachKOVFX = playComaVFX
 
+-- Hero nameplate text: the name with a small level beside it (the stars are on the squad card).
+local function heroTitle(name: string?, level: number?): string
+	local safe = string.gsub(name or "Hero", "[&<>]", { ["&"] = "&amp;", ["<"] = "&lt;", [">"] = "&gt;" })
+	return string.format("%s <font size=\"10\" color=\"#F2ECFF\">%d</font>", safe, level or 1)
+end
+
 local function createEntityModel(netId: number, meta: any, initPos: Vector3): VisualNode
 	local isHero = (meta and meta.IsHero) or false
 	local model = Instance.new("Model")
@@ -577,62 +583,48 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 	hl.Adornee = art or model
 	hl.Parent = model
 
-	-- World-Space BillboardGui (Name, Stars, Green HP Bar, Yellow Stamina Bar)
+	-- World-space nameplate with no plate: the name over a slim HP bar, both in the quality colour
+	-- (hero rarity or mob tier), plus a thin gold skill gauge for heroes.
 	local bb = Instance.new("BillboardGui")
 	bb.Name = "UnitBillboard"
 	bb.Size = BillboardThemes.BillboardSize(theme)
 	bb.StudsOffset = Vector3.new(0, (bodySize.Y * 0.5) + (isBoss and 5.5 or 3.2), 0)
 	bb.MaxDistance = theme.MaxDistance
 	bb.AlwaysOnTop = theme.AlwaysOnTop or (isHero and meta ~= nil and meta.DuelSide ~= nil)
+	bb.LightInfluence = 0
 	-- Tagged so FacilityLabelController can hide every nameplate while a window is open.
 	game:GetService("CollectionService"):AddTag(bb, "UnitNameplate")
 	bb.Parent = root
 
-	-- Gilded Grimoire nameplate in the theme's tone and rail, with its rarity / tier badge above.
-	local bg = BillboardThemes.Plate(bb, theme, GildedGrimoire.StyleText)
-	GildedGrimoire.Frame(bg, { Class = "Compact", Tone = theme.Tone, Rail = theme.Rail })
+	local stack = Instance.new("UIListLayout")
+	stack.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	stack.VerticalAlignment = Enum.VerticalAlignment.Bottom
+	stack.Padding = UDim.new(0, 2)
+	stack.SortOrder = Enum.SortOrder.LayoutOrder
+	stack.Parent = bb
 
-	local title = Instance.new("TextLabel")
-	title.Size = UDim2.new(1, -12, 0.42, 0)
-	title.Position = UDim2.new(0, 6, 0, 3)
-	title.BackgroundTransparency = 1
-	title.TextScaled = true
-	title.ZIndex = 3
 	-- In a bounty duel each viewer sees their own squad in green and the other in orange.
 	local duelColor = isHero and meta and meta.DuelSide and (if meta.OwnerUserId == LocalPlayer.UserId then Color3.fromRGB(120, 235, 120) else Color3.fromRGB(255, 160, 70)) or nil
-	if isHero then
-		local stars = string.rep("★", (meta and meta.Stars) or 1)
-		title.Text = string.format("%s %s Lv.%d", (meta and meta.Name) or "Hero", stars, (meta and meta.Level) or 1)
-		if duelColor then title.TextColor3 = duelColor else BillboardThemes.PaintTitle(title, theme) end
-	else
-		title.Text = (meta and meta.Name) or "Ruin Entity"
-		if enemySpec and enemySpec.Support then
-			title.Text ..= " · Support" -- Phase D: tells players which mob to focus first
-		end
-		BillboardThemes.PaintTitle(title, theme)
-	end
-	title.Parent = bg
-	GildedGrimoire.StyleText(title, "Title")
-	local cap = Instance.new("UITextSizeConstraint")
-	cap.MaxTextSize = if isBoss then 22 else 15
-	cap.Parent = title
+	local titleText = if isHero then heroTitle(meta and meta.Name, meta and meta.Level)
+		else ((meta and meta.Name) or "Ruin Entity") .. (if enemySpec and enemySpec.Support then " ✚" else "") -- Phase D: ✚ marks the support mob to focus first
+	local title = BillboardThemes.Text(bb, GildedGrimoire.Fonts.Title, titleText, theme.NameSize, theme.Title)
+	title.RichText = isHero
+	title.LayoutOrder = 1
+	if duelColor then title.TextColor3 = duelColor else BillboardThemes.PaintTitle(title, theme) end
 
-	-- HP bar: a pill gauge (green for heroes, the tier accent for mobs, the duel colour in a duel).
-	local hpBg, hpFill = GildedGrimoire.Bar(bg, duelColor or (if isHero then Color3.fromRGB(110, 245, 140) else theme.Accent), if isBoss then 2.2 else 1.6)
-	hpBg.Size = if isHero then UDim2.new(1, -16, 0.2, 0) else UDim2.new(1, -16, 0.28, 0)
-	hpBg.Position = UDim2.new(0, 8, 0.5, 0)
-	hpBg.ZIndex = 3
-	hpFill.ZIndex = 4
+	local hpFill: Frame? = nil
+	if theme.BarHeight > 0 then
+		local track, fill = BillboardThemes.Bar(bb, duelColor or theme.Accent, theme.BarHeight)
+		track.LayoutOrder = 2
+		hpFill = fill
+	end
 
 	-- Skill gauge for heroes (gold; it glows when full).
 	local stamFill: Frame? = nil
 	if isHero then
-		local stBg, sf = GildedGrimoire.Bar(bg, Color3.fromRGB(255, 210, 55), 1.4)
-		stBg.Size = UDim2.new(1, -16, 0.14, 0)
-		stBg.Position = UDim2.new(0, 8, 0.76, 0)
-		stBg.ZIndex = 3
-		sf.ZIndex = 4
-		stamFill = sf
+		local track, fill = BillboardThemes.Bar(bb, Color3.fromRGB(255, 210, 55), 3)
+		track.LayoutOrder = 3
+		stamFill = fill
 	end
 
 	if isHero then
@@ -849,8 +841,8 @@ TowerRemotes.TowerEntityState.OnClientEvent:Connect(function(context,message)
    if node then
     if node.TitleLabel then
      local spec = entry.EnemyId and FirstBiome.Get(entry.EnemyId)
-     local suffix = if not entry.IsHero and spec and spec.Support then " · Support" else ""
-     node.TitleLabel.Text = if entry.IsHero then string.format("%s %s Lv.%d",entry.Name or "Hero",string.rep("★",entry.Stars or 1),entry.Level or 1) else (entry.Name or "Mob") .. suffix
+     local suffix = if not entry.IsHero and spec and spec.Support then " ✚" else ""
+     node.TitleLabel.Text = if entry.IsHero then heroTitle(entry.Name,entry.Level) else (entry.Name or "Mob") .. suffix
     end
     if entry.IsHero then
      local currentArtId = node.Model:GetAttribute("EquippedArtifactId")

@@ -560,7 +560,7 @@ do
 		piece("BootCuffR", "RightFoot", { 1.08, 0.22, 1.18 }, { 0, 0.10, -0.05 }, leather),
 		piece("BootToeGuardR", "RightFoot", { 1.06, 0.18, 0.40 }, { 0, -0.05, -0.46 }, gold, METAL),
 		piece("BootSoleR", "RightFoot", { 1.08, 0.08, 1.25 }, { 0, -0.12, -0.08 }, charcoal, METAL),
-	}, "rbxassetid://100881487266962"))
+	}, "rbxassetid://79233691033516"))
 end
 
 -- 7. VELKIST (2★ Striker - Crimson Rogue Assassin) ---------------------------------------
@@ -1054,15 +1054,15 @@ do
 		piece("BootRimR", "RightLowerLeg", { 1.08, 0.06, 1.08 }, { 0, 0.03, 0 }, gold, METAL),
 		piece("BootSoleL", "LeftFoot", { 1.04, 0.07, 1.22 }, { 0, -0.13, -0.08 }, jacketDark),
 		piece("BootSoleR", "RightFoot", { 1.04, 0.07, 1.22 }, { 0, -0.13, -0.08 }, jacketDark),
-	}, "rbxassetid://124931739165024"))
+	}, "rbxassetid://126833628923084"))
 end
 
 -- 14. GIDE (1★ Miner - Veteran Ironvein Axeman) ------------------------------------------
 -- From his reference art: stocky veteran miner (Heavy body) with messy dark-brown hair, a scarred
--- stern face, a weathered stone-grey tunic with a high stand collar and four frog clasps down the
+-- stern face, a weathered stone-grey tunic with a high stand collar and frog clasps down the
 -- chest, an asymmetric brown leather harness with a steel chest ring, heavy riveted iron pauldrons,
 -- bolted steel bracer plates over leather forearm wraps, a utility belt with a five-point brass
--- star buckle and hip pouches, a tattered dark slate cape, double thigh straps, angular steel knee
+-- star buckle and hip pouches, a tattered dark slate cape, thigh straps, angular steel knee
 -- guards with brass chevron trim, and heavy miner boots. Face: our own decal from
 -- assets/faces/make_gide_face.py. Hair: our Blender mesh (tools/make_gide_hair_ugc.py).
 do
@@ -1079,17 +1079,22 @@ do
 			Rotation = { 0, 180, 0 },
 			Mesh = { MeshId = "rbxassetid://115502888193432", Scale = { 0.01, 0.01, 0.01 } },
 		})),
+		-- Sideburns: a hair-coloured band lying flat on the round head in front of each ear, from
+		-- under the temple locks down the cheek, ending in a point at the jaw (the hair mesh leaves
+		-- the side of the face bare there).
+		piece("SideburnL", "Head", { 0.07, 0.4, 0.26 }, { -0.5755, 0.05, -0.2562 }, hair, with(LOOSE, { Rotation = { 0, -24, 0 } })),
+		piece("SideburnTipL", "Head", { 0.07, 0.3, 0.26 }, { -0.5755, -0.3, -0.2562 }, hair, with(WEDGE, LOOSE, { Rotation = { 0, -24, 180 } })),
+		piece("SideburnR", "Head", { 0.07, 0.4, 0.26 }, { 0.5755, 0.05, -0.2562 }, hair, with(LOOSE, { Rotation = { 0, 24, 0 } })),
+		piece("SideburnTipR", "Head", { 0.07, 0.3, 0.26 }, { 0.5755, -0.3, -0.2562 }, hair, with(WEDGE, LOOSE, { Rotation = { 0, 24, 180 } })),
 		-- High stand collar and V-neckline over the stone-grey miner tunic
 		piece("Neckline", "UpperTorso", { 0.36, 0.36, 0.04 }, { 0, 0.62, -0.51 }, skin, { Rotation = { 0, 0, 45 } }),
 		piece("CollarBack", "UpperTorso", { 1.36, 0.36, 0.14 }, { 0, 0.94, 0.44 }, tunicDark, with(LOOSE, { Material = "Fabric", Rotation = { -8, 0, 0 } })),
 		piece("CollarL", "UpperTorso", { 0.12, 0.34, 0.56 }, { -0.64, 0.90, 0.08 }, tunicDark, with(LOOSE, { Material = "Fabric" })),
 		piece("CollarR", "UpperTorso", { 0.12, 0.34, 0.56 }, { 0.64, 0.90, 0.08 }, tunicDark, with(LOOSE, { Material = "Fabric" })),
-		-- Centre tunic seam and four dark frog-fastener clasps
+		-- Centre tunic seam and two dark frog-fastener clasps
 		piece("TunicSeam", "UpperTorso", { 0.06, 1.36, 0.04 }, { 0, -0.08, -0.51 }, tunicDark, { Material = "Fabric" }),
 		piece("FrogClaspA", "UpperTorso", { 0.38, 0.06, 0.05 }, { 0, 0.36, -0.52 }, darkLeather),
-		piece("FrogClaspB", "UpperTorso", { 0.38, 0.06, 0.05 }, { 0, 0.12, -0.52 }, darkLeather),
-		piece("FrogClaspC", "UpperTorso", { 0.38, 0.06, 0.05 }, { 0, -0.12, -0.52 }, darkLeather),
-		piece("FrogClaspD", "UpperTorso", { 0.38, 0.06, 0.05 }, { 0, -0.36, -0.52 }, darkLeather),
+		piece("FrogClaspC", "UpperTorso", { 0.38, 0.06, 0.05 }, { 0, -0.2, -0.52 }, darkLeather),
 		-- Asymmetric leather shoulder harness, diagonal chest strap and steel ring
 		piece("HarnessL", "UpperTorso", { 0.22, 0.95, 1.08 }, { -0.72, 0.30, 0 }, leather),
 		piece("HarnessR", "UpperTorso", { 0.22, 0.95, 1.08 }, { 0.72, 0.30, 0 }, leather),
@@ -1116,11 +1121,9 @@ do
 		piece("BeltTongue", "LowerTorso", { 0.18, 0.68, 0.06 }, { -0.14, -0.34, -0.57 }, darkLeather, LOOSE),
 		piece("PouchL", "LowerTorso", { 0.42, 0.38, 0.24 }, { -0.66, 0.02, -0.62 }, leather),
 		piece("PouchR", "LowerTorso", { 0.42, 0.38, 0.24 }, { 0.66, 0.02, -0.62 }, leather),
-		-- Double leather thigh straps, steel knee/shin guards with brass trim, and heavy miner boots
+		-- Leather thigh straps, steel knee/shin guards with brass trim, and heavy miner boots
 		piece("ThighStrapAL", "LeftUpperLeg", { 1.06, 0.12, 1.06 }, { 0, 0.18, 0 }, leather),
-		piece("ThighStrapBL", "LeftUpperLeg", { 1.06, 0.12, 1.06 }, { 0, -0.10, 0 }, leather),
 		piece("ThighStrapAR", "RightUpperLeg", { 1.06, 0.12, 1.06 }, { 0, 0.18, 0 }, leather),
-		piece("ThighStrapBR", "RightUpperLeg", { 1.06, 0.12, 1.06 }, { 0, -0.10, 0 }, leather),
 		piece("KneeGuardL", "LeftLowerLeg", { 0.68, 0.68, 0.12 }, { 0, 0.10, -0.54 }, steel, METAL),
 		piece("KneeTrimL", "LeftLowerLeg", { 0.44, 0.44, 0.06 }, { 0, 0.18, -0.05 }, gold, with(METAL, { RelativeTo = "KneeGuardL", Rotation = { 0, 0, 45 } })),
 		piece("KneeGuardR", "RightLowerLeg", { 0.68, 0.68, 0.12 }, { 0, 0.10, -0.54 }, steel, METAL),
