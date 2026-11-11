@@ -3,11 +3,18 @@
 -- Per-pull summon reveal (Gilded Grimoire). Plays one beat per summoned item:
 --   0. A 10x opens with a rift tease: the orb glows faintly in the batch's best colour, and a line
 --      hints when something Legendary+ is inside ("A blinding light answers…").
---   1. A rift orb charges up and takes the item's rarity colour. Superior (4) and higher pulls
---      charge longer, pulse more and spin light rays behind the orb.
---   2. A flash in the rarity colour (jackpots also shake, burst sparkles and rumble the gamepad),
---      then the card flips from its back to its face: portrait, rarity tag, name, stars (popping in
---      one by one), archetype (or weapon type), base stats and a NEW badge for first copies.
+--   1. The charge, which differs by kind (set pieces in SummonRevealFx.luau):
+--        Heroes: a summoning circle spins up around the rift orb. Motes are pulled into it, and with
+--        each pulse the circle climbs one colour of the item's Ladder and spins faster, so a
+--        Legendary+ pull visibly "upgrades" twice before it lands.
+--        Artifacts: a cold ingot sits on an anvil and a hammer strikes it once per Ladder colour;
+--        every strike throws sparks, bumps the anvil and heats the ingot towards its final colour.
+--      Superior (4) / 4★ and higher pulls get more steps and spin light rays on the last one.
+--   2. A flash and shockwave in the rarity colour (shiny pulls add a light pillar; jackpots also
+--      shake, burst sparkles and rumble the gamepad; artifacts quench in steam), then the card flips
+--      from its back to its face: portrait, rarity tag, name, stars (popping in one by one),
+--      archetype (or weapon type), base stats and a NEW badge for first copies. Hero cards rise out
+--      of the circle, which stays turning behind them; artifact cards slam down over rising embers.
 --      Superior+ cards keep a foil shimmer and their rays turning behind them.
 --   3. Tap anywhere to continue; a tap during a beat fast-forwards it. SKIP jumps to the results.
 --      Keyboard/gamepad: Space/Enter/A continue, B/Backspace skip or close.
@@ -18,6 +25,7 @@ local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local GuiService = game:GetService("GuiService")
+local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local HeroCard = require(script.Parent:WaitForChild("HeroCard"))
@@ -25,6 +33,7 @@ local ArtifactPreview = require(script.Parent.ArtifactPreview)
 local ModalFit = require(script.Parent:WaitForChild("ModalFit"))
 local UIFeel = require(script.Parent:WaitForChild("UIFeel"))
 local UIAssets = require(script.Parent:WaitForChild("UIAssets"))
+local Fx = require(script.Parent:WaitForChild("SummonRevealFx"))
 local Theme = require(script.Parent:WaitForChild("Hud"):WaitForChild("Theme"))
 local GildedGrimoire = require(Shared:WaitForChild("Util"):WaitForChild("GildedGrimoire"))
 local GrimoireIcons = require(Shared:WaitForChild("Util"):WaitForChild("GrimoireIcons"))
@@ -39,6 +48,7 @@ SummonReveal.__index = SummonReveal
 local Z = 80
 local STAGE_W, STAGE_H = 760, 560
 local CARD_W, CARD_H = 270, 380
+local CENTER = UDim2.fromScale(0.5, 0.47) -- where the ritual happens and the card lands
 local TEXT = GildedGrimoire.Text
 local INK = GildedGrimoire.Ink
 local IMG = UIAssets.Images
@@ -78,7 +88,15 @@ type Item = {
 	New: boolean,
 	Hero: any?,
 	ArtifactTemplateId: string?,
+	Ladder: { Color3 }, -- colours the charge climbs through, ending on Color (Emphasis + 1 steps)
 }
+
+-- A shiny pull starts low and "upgrades" on the way: `low` first, `mid` only for jackpots.
+local function ladder(emphasis: number, low: Color3, mid: Color3, final: Color3): { Color3 }
+	if emphasis >= 2 then return { low, mid, final } end
+	if emphasis == 1 then return { low, final } end
+	return { final }
+end
 
 local function new(className: string, props: { [string]: any }, parent: Instance?): any
 	local o = Instance.new(className)
@@ -117,9 +135,11 @@ local function describe(raw: any, isArtifact: boolean, isNew: boolean): Item
 			if rarity >= 6 then 2 elseif rarity >= 4 then 1 else 0,
 			if star >= 5 then 2 elseif star >= 4 then 1 else 0
 		)
+		local color = if rarity < 4 and starColor then starColor else info.Color
 		return {
+			Ladder = ladder(emphasis, Fx.Hot, ARTIFACT_STAR_COLOR[4], color),
 			Name = raw.DisplayName or "Artifact",
-			Color = if rarity < 4 and starColor then starColor else info.Color,
+			Color = color,
 			TierName = string.upper(info.Name) .. string.format("  ·  %d★", star),
 			Stars = star,
 			Icon = WEAPON_ICON[raw.Type or ""] or "Forge",
@@ -132,7 +152,9 @@ local function describe(raw: any, isArtifact: boolean, isNew: boolean): Item
 	end
 	local tier = StatFormulas.GetHeroRarity(raw)
 	local snap = StatFormulas.GetCombatSnapshot(raw)
+	local heroEmphasis = if tier >= 6 then 2 elseif tier >= 4 then 1 else 0
 	return {
+		Ladder = ladder(heroEmphasis, Theme.RarityColor(2), Theme.RarityColor(4), Theme.RarityColor(tier)),
 		Name = raw.DisplayName or "Hero",
 		Color = Theme.RarityColor(tier),
 		TierName = string.upper(HeroCatalog.RarityName(tier)),
@@ -140,7 +162,7 @@ local function describe(raw: any, isArtifact: boolean, isNew: boolean): Item
 		Icon = raw.Archetype or "Striker",
 		Kind = string.upper(raw.Archetype or "Hero"),
 		Sub = string.format("HP %d  ·  ATK %d  ·  DPS %.1f", snap.Health, snap.AttackDamage, snap.DPS),
-		Emphasis = if tier >= 6 then 2 elseif tier >= 4 then 1 else 0,
+		Emphasis = heroEmphasis,
 		New = isNew,
 		Hero = raw,
 	}
@@ -283,6 +305,20 @@ function SummonReveal.new(gui: ScreenGui)
 	end
 	self.OrbScale = new("UIScale", {}, orb)
 	self.Orb = orb
+
+	-- Ritual set pieces: the hero circle sits behind the orb, the artifact anvil takes its place.
+	self.Circle = Fx.Circle(stage, CENTER, Z + 3)
+	self.Forge = Fx.Forge(stage, CENTER, Z + 4)
+	self.SpinSpeed = 1
+	self.EmberToken = 0
+	RunService.RenderStepped:Connect(function(dt)
+		local circle = self.Circle
+		if not self.Scrim.Visible or not circle.Root.Visible or UIFeel.ReducedMotion() then return end
+		local s = self.SpinSpeed * dt
+		circle.Outer.Rotation = (circle.Outer.Rotation + 40 * s) % 360
+		circle.Mid.Rotation = (circle.Mid.Rotation - 22 * s) % 360
+		circle.Inner.Rotation = (circle.Inner.Rotation - 70 * s) % 360
+	end)
 
 	self.TeaseLabel = label(stage, "Title", {
 		AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.47, 90), Size = UDim2.fromOffset(520, 26),
@@ -495,6 +531,7 @@ function SummonReveal.Sfx(self: any, name: string, pitch: number?)
 end
 
 function SummonReveal.StopFx(self: any)
+	self.EmberToken += 1 -- ends the ember loop behind an artifact card
 	if self.StopShimmer then
 		self.StopShimmer()
 		self.StopShimmer = nil
@@ -567,16 +604,41 @@ function SummonReveal.Tease(self: any, run: number, items: { Item }): boolean
 	for _, item in items do
 		if item.Emphasis > best.Emphasis then best = item end
 	end
-	local orb, scale = self.Orb, self.OrbScale
-	orb.Visible = true
-	orb.BackgroundTransparency = 0.2
-	orb.BackgroundColor3 = Color3.new(1, 1, 1):Lerp(best.Color, 0.35 + 0.25 * best.Emphasis)
-	self.OrbHalo.Color = orb.BackgroundColor3
-	scale.Scale = 0
-	tween(scale, 0.45, { Scale = 0.7 }, Enum.EasingStyle.Back)
-	self.TeaseLabel.Text = if best.Emphasis == 2 then "A blinding light answers your call…"
-		elseif best.Emphasis == 1 then "The rift shimmers…"
-		else "The rift stirs…"
+	local hint = 0.35 + 0.25 * best.Emphasis
+	if self.IsArtifact then
+		local forge = self.Forge
+		forge.Root.Visible = true
+		forge.Root.Position = CENTER
+		forge.Fade(0, 0)
+		forge.Hammer.Visible = true
+		forge.Hammer.Rotation = Fx.HammerRaised
+		forge.Ingot.Size = Fx.IngotSize
+		forge.SetHeat(Fx.Cold, 0)
+		forge.SetHeat(Fx.Hot:Lerp(best.Color, hint), 0.6)
+		forge.Scale.Scale = 0
+		tween(forge.Scale, 0.45, { Scale = 0.85 }, Enum.EasingStyle.Back)
+		self.TeaseLabel.Text = if best.Emphasis == 2 then "The anvil rings with a blinding heat…"
+			elseif best.Emphasis == 1 then "The forge burns bright…"
+			else "The forge stirs…"
+	else
+		local orb, scale, circle = self.Orb, self.OrbScale, self.Circle
+		local color = Color3.new(1, 1, 1):Lerp(best.Color, hint)
+		orb.Visible = true
+		orb.BackgroundTransparency = 0.2
+		orb.BackgroundColor3 = color
+		self.OrbHalo.Color = color
+		scale.Scale = 0
+		tween(scale, 0.45, { Scale = 0.5 }, Enum.EasingStyle.Back)
+		circle.Root.Visible = true
+		circle.Fade(0.25, 0)
+		circle.SetColor(Fx.RiftBase:Lerp(best.Color, hint), 0)
+		self.SpinSpeed = 0.6 + 0.4 * best.Emphasis
+		circle.Scale.Scale = 0
+		tween(circle.Scale, 0.5, { Scale = 0.8 }, Enum.EasingStyle.Back)
+		self.TeaseLabel.Text = if best.Emphasis == 2 then "A blinding light answers your call…"
+			elseif best.Emphasis == 1 then "The rift shimmers…"
+			else "The rift stirs…"
+	end
 	self.TeaseLabel.Visible = true
 	self.TeaseLabel.TextTransparency = 1
 	tween(self.TeaseLabel, 0.3, { TextTransparency = 0 })
@@ -588,64 +650,171 @@ function SummonReveal.Tease(self: any, run: number, items: { Item }): boolean
 	return ok
 end
 
--- One beat: charge the orb, flash, flip the card in.
+-- Light rays behind a shiny pull, tinted and set turning for `duration` seconds.
+function SummonReveal.ShowRays(self: any, color: Color3, duration: number)
+	self.Rays.Visible = true
+	self.Rays.Rotation = 0
+	if self.Rays:IsA("ImageLabel") then
+		(self.Rays :: ImageLabel).ImageColor3 = color
+	else
+		for _, ray in self.Rays:GetChildren() do
+			if ray:IsA("Frame") then ray.BackgroundColor3 = color end
+		end
+	end
+	tween(self.Rays, duration, { Rotation = 90 }, Enum.EasingStyle.Linear)
+end
+
+function SummonReveal.HideRitual(self: any)
+	self.Orb.Visible = false
+	self.Circle.Root.Visible = false
+	self.Forge.Root.Visible = false
+end
+
+-- Hero charge: the circle spins up around the orb, then climbs the item's colour ladder. Each step
+-- pulls motes in, pulses the circle, throws a ring and spins faster.
+function SummonReveal.RiftCharge(self: any, run: number, item: Item, reduced: boolean): boolean
+	local orb, scale, circle = self.Orb, self.OrbScale, self.Circle
+	self.Forge.Root.Visible = false
+	local carried = circle.Root.Visible -- still up from the tease or the previous card
+	circle.Root.Visible = true
+	circle.Fade(0, if carried then 0.2 else 0)
+	circle.SetColor(Fx.RiftBase, if carried then 0.2 else 0)
+	self.SpinSpeed = 1
+	if not carried then circle.Scale.Scale = 0 end
+	tween(circle.Scale, 0.35, { Scale = 1 }, Enum.EasingStyle.Back)
+	orb.Visible = true
+	orb.BackgroundColor3 = Color3.new(1, 1, 1)
+	self.OrbHalo.Color = Color3.new(1, 1, 1)
+	orb.BackgroundTransparency = 0
+	scale.Scale = 0.1
+	tween(scale, 0.3, { Scale = 0.55 }, Enum.EasingStyle.Back)
+	self:Sfx("SummonCharge")
+	if not self:Wait(run, 0.35) then return false end
+
+	local steps = #item.Ladder
+	for i, color in item.Ladder do
+		local last = i == steps
+		Fx.Converge(self.Stage, CENTER, color, 8 + 2 * i, Z + 5, 230, 0.32)
+		if not self:Wait(run, 0.3) then return false end
+		circle.SetColor(color, 0.2)
+		tween(orb, 0.2, { BackgroundColor3 = color })
+		tween(self.OrbHalo, 0.2, { Color = color })
+		if self.OrbSwirl then
+			self.OrbSwirl.ImageColor3 = color
+			tween(self.OrbSwirl, 0.7, { Rotation = self.OrbSwirl.Rotation + 180 }, Enum.EasingStyle.Linear)
+		end
+		self.SpinSpeed = 1 + i * 0.9
+		Fx.Ring(self.Stage, CENTER, color, Z + 3, 120, 380 + 40 * i, 0.45)
+		self:Sfx("SummonPulse", 1 + i * 0.12)
+		if item.Emphasis > 0 then UIFeel.Haptic("Hover") end
+		if last and item.Emphasis > 0 then self:ShowRays(item.Color, 1.6) end
+		if not reduced then
+			tween(circle.Scale, 0.14, { Scale = 1.12 })
+			tween(scale, 0.14, { Scale = 0.6 + 0.2 * i })
+		end
+		if not self:Wait(run, 0.16) then return false end
+		if not reduced then
+			tween(circle.Scale, 0.2, { Scale = 1 })
+			tween(scale, 0.2, { Scale = 0.5 + 0.15 * i })
+		end
+		if not self:Wait(run, if last then 0.22 else 0.3) then return false end
+	end
+	return true
+end
+
+-- Artifact charge: the hammer strikes the ingot once per ladder colour. Each strike throws sparks,
+-- bumps the anvil and heats the ingot one step.
+function SummonReveal.ForgeCharge(self: any, run: number, item: Item, reduced: boolean): boolean
+	local forge = self.Forge
+	local hammer, ingot = forge.Hammer, forge.Ingot
+	self.Orb.Visible = false
+	self.Circle.Root.Visible = false
+	local carried = forge.Root.Visible -- still up from the tease
+	forge.Root.Visible = true
+	forge.Root.Position = CENTER
+	forge.Fade(0, 0)
+	hammer.Visible = not reduced
+	hammer.Rotation = Fx.HammerRaised
+	ingot.Size = Fx.IngotSize
+	if not carried then
+		forge.SetHeat(Fx.Cold, 0)
+		forge.Scale.Scale = 0.6
+	end
+	forge.SetHeat(Fx.Hot:Lerp(Fx.Cold, 0.35), 0.3)
+	tween(forge.Scale, 0.3, { Scale = 1 }, Enum.EasingStyle.Back)
+	self:Sfx("SummonCharge")
+	if not self:Wait(run, 0.32) then return false end
+
+	local steps = #item.Ladder
+	for i, color in item.Ladder do
+		local last = i == steps
+		-- Wind up, then slam.
+		if not reduced then tween(hammer, 0.16, { Rotation = Fx.HammerRaised + 18 }) end
+		if not self:Wait(run, 0.16) then return false end
+		if not reduced then tween(hammer, 0.08, { Rotation = 0 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In) end
+		if not self:Wait(run, 0.08) then return false end
+		-- Impact.
+		forge.SetHeat(color, 0.12)
+		UIFeel.Burst(self.Stage, CENTER, color:Lerp(Fx.Hot, 0.35), 8 + 4 * i, Z + 8, 110 + 40 * i)
+		Fx.Ring(self.Stage, CENTER, color, Z + 3, 60, 260 + 60 * i, 0.4)
+		self:Sfx("SummonPulse", 0.9 + i * 0.12)
+		UIFeel.Haptic(if item.Emphasis > 0 then "Notify" else "Click")
+		if last and item.Emphasis > 0 then self:ShowRays(item.Color, 1.6) end
+		if not reduced then
+			ingot.Size = UDim2.fromOffset(134, 16)
+			tween(ingot, 0.25, { Size = Fx.IngotSize }, Enum.EasingStyle.Back)
+			forge.Root.Position = CENTER + UDim2.fromOffset(0, 5 + 2 * i)
+			tween(forge.Root, 0.25, { Position = CENTER }, Enum.EasingStyle.Back)
+		end
+		if not self:Wait(run, 0.05) then return false end
+		if not reduced then tween(hammer, 0.2, { Rotation = Fx.HammerRaised - 12 }, Enum.EasingStyle.Back) end
+		if not self:Wait(run, if last then 0.2 else 0.24) then return false end
+	end
+	return true
+end
+
+-- One beat: the charge (rift circle or forge strikes), the burst, then the card flips in.
 function SummonReveal.Beat(self: any, run: number, item: Item): boolean
 	self:StopFx()
 	self.Card.Visible = false
 	self.CardBack.Visible = false
 	self.Rays.Visible = false
 	self.Glow.Visible = false
-	local orb, scale = self.Orb, self.OrbScale
-	orb.Visible = true
-	orb.BackgroundColor3 = Color3.new(1, 1, 1)
-	self.OrbHalo.Color = Color3.new(1, 1, 1)
-	scale.Scale = 0.15
-	orb.BackgroundTransparency = 0
+	local reduced = UIFeel.ReducedMotion()
+	self.Card.Position = CENTER
 
-	-- Charge: grow in white, then bleed into the rarity colour.
-	self:Sfx("SummonCharge")
-	tween(scale, 0.28, { Scale = 1 }, Enum.EasingStyle.Back)
-	if not self:Wait(run, 0.28) then return false end
-	tween(orb, 0.3, { BackgroundColor3 = item.Color })
-	tween(self.OrbHalo, 0.3, { Color = item.Color })
-	if self.OrbSwirl then
-		self.OrbSwirl.ImageColor3 = item.Color
-		tween(self.OrbSwirl, 1.6, { Rotation = self.OrbSwirl.Rotation + 360 }, Enum.EasingStyle.Linear)
-	end
-	local pulses = if item.Emphasis == 2 then 3 elseif item.Emphasis == 1 then 2 else 1
-	if item.Emphasis > 0 then
-		self.Rays.Visible = true
-		self.Rays.Rotation = 0
-		if self.Rays:IsA("ImageLabel") then
-			(self.Rays :: ImageLabel).ImageColor3 = item.Color
-		else
-			for _, ray in self.Rays:GetChildren() do
-				if ray:IsA("Frame") then ray.BackgroundColor3 = item.Color end
-			end
-		end
-		tween(self.Rays, 0.4 * pulses + 1.2, { Rotation = 90 }, Enum.EasingStyle.Linear)
-	end
-	for p = 1, pulses do
-		self:Sfx("SummonPulse", 1 + p * 0.12)
-		if item.Emphasis > 0 then UIFeel.Haptic("Hover") end
-		tween(scale, 0.18, { Scale = 1.3 })
-		if not self:Wait(run, 0.18) then return false end
-		tween(scale, 0.18, { Scale = 0.95 })
-		if not self:Wait(run, 0.2) then return false end
-	end
+	local charged = if self.IsArtifact then self:ForgeCharge(run, item, reduced) else self:RiftCharge(run, item, reduced)
+	if not charged then return false end
 
-	-- Burst: the orb pops, the screen flashes in the rarity colour.
-	tween(scale, 0.14, { Scale = 2.2 })
-	tween(orb, 0.14, { BackgroundTransparency = 1 })
+	-- Burst: the screen flashes in the rarity colour and a shockwave rolls out.
 	self.Flash.BackgroundColor3 = item.Color:Lerp(Color3.new(1, 1, 1), 0.45)
 	self.Flash.BackgroundTransparency = if item.Emphasis > 0 then 0.05 else 0.4
-	if UIFeel.ReducedMotion() then self.Flash.BackgroundTransparency = 0.6 end
+	if reduced then self.Flash.BackgroundTransparency = 0.6 end
 	tween(self.Flash, 0.5, { BackgroundTransparency = 1 })
 	UIFeel.Sfx(if item.Emphasis == 2 then "SummonBurstJackpot" elseif item.Emphasis == 1 then "SummonBurstRare" else "SummonBurstCommon")
 	UIFeel.Haptic(if item.Emphasis == 2 then "Impact" elseif item.Emphasis == 1 then "Notify" else "Click")
 	self.Fast = false -- the card itself always lands properly
+	Fx.Ring(self.Stage, CENTER, item.Color, Z + 5, 140, 900, 0.6)
+	if item.Emphasis > 0 then Fx.Pillar(self.Stage, CENTER, item.Color, Z + 5, item.Emphasis == 2) end
+	if self.IsArtifact then
+		-- Quench: the ingot flares white and the anvil vanishes in steam.
+		local forge = self.Forge
+		forge.SetHeat(Color3.new(1, 1, 1), 0.08)
+		Fx.Steam(self.Stage, CENTER, Z + 7)
+		forge.Fade(1, 0.12)
+		tween(forge.Scale, 0.12, { Scale = 1.15 })
+	else
+		-- The orb pops; the circle widens to frame the card and keeps turning behind it.
+		local circle = self.Circle
+		tween(self.OrbScale, 0.14, { Scale = 2.4 })
+		tween(self.Orb, 0.14, { BackgroundTransparency = 1 })
+		self.SpinSpeed = 0.3
+		circle.Fade(0.6, 0.4)
+		tween(circle.Scale, 0.4, { Scale = 1.45 }, Enum.EasingStyle.Quart)
+	end
 	if not self:Wait(run, 0.12) then return false end
-	orb.Visible = false
+	self.Orb.Visible = false
+	self.Forge.Root.Visible = false
 
 	-- Glow and sparkles behind the card for shiny pulls.
 	if item.Emphasis > 0 then
@@ -661,7 +830,6 @@ function SummonReveal.Beat(self: any, run: number, item: Item): boolean
 	-- Flip: the back narrows to nothing, then the face opens with an overshoot.
 	self:FillCard(item)
 	if self.BackRail then self.BackRail.Color = item.Color end
-	local reduced = UIFeel.ReducedMotion()
 	if not reduced then
 		self.CardBack.Visible = true
 		self.CardBack.Size = UDim2.fromOffset(CARD_W, CARD_H)
@@ -675,10 +843,25 @@ function SummonReveal.Beat(self: any, run: number, item: Item): boolean
 	if reduced then
 		self.Card.Size = UDim2.fromOffset(CARD_W, CARD_H)
 		self.CardScale.Scale = 1
-	else
+	elseif self.IsArtifact then
+		-- Artifacts slam down from oversize, then embers drift up behind the card.
 		self.Card.Size = UDim2.fromOffset(0, CARD_H)
+		self.CardScale.Scale = 1.3
+		tween(self.Card, 0.22, { Size = UDim2.fromOffset(CARD_W, CARD_H) }, Enum.EasingStyle.Back)
+		tween(self.CardScale, 0.22, { Scale = 1 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+		local token = self.EmberToken
+		task.spawn(function()
+			while self.Run == run and self.EmberToken == token and self.Scrim.Visible do
+				Fx.Ember(self.Stage, CENTER, item.Color, Z + 5)
+				task.wait(if item.Emphasis > 0 then 0.14 else 0.3)
+			end
+		end)
+	else
+		-- Heroes rise out of the circle.
+		self.Card.Size = UDim2.fromOffset(0, CARD_H)
+		self.Card.Position = CENTER + UDim2.fromOffset(0, 34)
 		self.CardScale.Scale = 0.85
-		tween(self.Card, 0.3, { Size = UDim2.fromOffset(CARD_W, CARD_H) }, Enum.EasingStyle.Back)
+		tween(self.Card, 0.3, { Size = UDim2.fromOffset(CARD_W, CARD_H), Position = CENTER }, Enum.EasingStyle.Back)
 		tween(self.CardScale, 0.35, { Scale = 1 }, Enum.EasingStyle.Back)
 	end
 	if item.Emphasis == 2 then
@@ -743,7 +926,8 @@ end
 function SummonReveal.ShowResults(self: any, items: { Item })
 	local run = self.Run
 	self:StopFx()
-	self.Orb.Visible, self.Rays.Visible, self.Card.Visible, self.CardBack.Visible, self.Glow.Visible = false, false, false, false, false
+	self:HideRitual()
+	self.Rays.Visible, self.Card.Visible, self.CardBack.Visible, self.Glow.Visible = false, false, false, false
 	self.Counter.Visible, self.Hint.Visible, self.SkipButton.Visible, self.TeaseLabel.Visible = false, false, false, false
 	self.WaitingForTap = false
 	clearGui(self.Grid)
@@ -845,12 +1029,32 @@ function SummonReveal.Again(self: any, count: number)
 	clearGui(self.Portrait)
 	clearGui(self.Grid)
 
-	-- Keep surrounding backdrop solid black and show soft pulsing orb awaiting the pull
-	self.Orb.Visible = true
-	self.Orb.BackgroundColor3 = Color3.new(1, 1, 1)
-	self.OrbHalo.Color = Color3.new(1, 1, 1)
-	self.OrbScale.Scale = 0.45
-	self.Orb.BackgroundTransparency = 0.4
+	-- Keep the backdrop solid black and leave the ritual idling while the server answers: the cold
+	-- anvil for artifacts, a dim slow circle around the orb for heroes.
+	self:HideRitual()
+	if self.IsArtifact then
+		local forge = self.Forge
+		forge.Root.Visible = true
+		forge.Root.Position = CENTER
+		forge.Fade(0.2, 0)
+		forge.Hammer.Visible = true
+		forge.Hammer.Rotation = Fx.HammerRaised
+		forge.Ingot.Size = Fx.IngotSize
+		forge.SetHeat(Fx.Cold, 0)
+		forge.Scale.Scale = 0.8
+	else
+		local circle = self.Circle
+		circle.Root.Visible = true
+		circle.Fade(0.4, 0)
+		circle.SetColor(Fx.RiftBase, 0)
+		circle.Scale.Scale = 0.8
+		self.SpinSpeed = 0.5
+		self.Orb.Visible = true
+		self.Orb.BackgroundColor3 = Color3.new(1, 1, 1)
+		self.OrbHalo.Color = Color3.new(1, 1, 1)
+		self.OrbScale.Scale = 0.45
+		self.Orb.BackgroundTransparency = 0.4
+	end
 end
 
 -- Plays the reveal for `list` (hero instances, or artifacts when isArtifact).
@@ -861,6 +1065,12 @@ function SummonReveal.Play(self: any, list: { any }, isArtifact: boolean?, opts:
 	self.Options = opts or {}
 	self.IsArtifact = isArtifact == true
 	self.Fast = false
+	-- Clear the other kind's set piece; this kind's may still be idling from SUMMON AGAIN.
+	if self.IsArtifact then
+		self.Orb.Visible, self.Circle.Root.Visible = false, false
+	else
+		self.Forge.Root.Visible = false
+	end
 	local isNew = self.Options.IsNew
 	local items: { Item } = {}
 	for _, raw in list do
@@ -944,6 +1154,7 @@ function SummonReveal.Close(self: any, isContinue: boolean?)
 	end
 
 	local function finishClose()
+		self:HideRitual()
 		self.Scrim.BackgroundTransparency = 1
 		self.Scrim.Visible = false
 		if self.RevealGui and self.RevealGui:IsA("ScreenGui") then
