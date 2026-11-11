@@ -789,13 +789,13 @@ local visitBtn = createOrnateButton(actionRow, "VISIT FLOOR", 1, true, function(
 	-- Below the estimate, give the player the choice to try the fight.
 	local profile = _G.CurrentProfile
 	local recommended = floors.RecommendedPower(selected)
-	local mine = StatFormulas.GetTowerSquadPower(profile)
+	local mine = profile and profile.SquadPower or 0 -- the same Squad Power the HUD shows
 	if profile and Kit.Rules.ConfirmTier("VISIT_FLOOR", { SquadPower = mine, Recommended = recommended }) ~= "None" then
 		local floorToVisit = selected
 		Kit.Confirm.Ask({
 			Tier = "Soft",
 			Title = string.format("Try Floor %d?", floorToVisit),
-			Body = string.format("Your squad has %s Tower Power. The suggested power for this floor is %s.",
+			Body = string.format("Your squad has %s Squad Power. The suggested power for this floor is %s.",
 				StatBalance.Format(mine), StatBalance.Format(recommended)),
 			ConfirmText = "Visit anyway",
 			SessionKey = "VISIT_UNDERPOWERED",
@@ -875,7 +875,7 @@ render = function()
 		detailBanner.ImageTransparency = 0.65
 		detailHeader.Text = string.format("Floor %d · %s (%s%s)", selected, floor.DisplayName, floor.BiomeDisplayName or (biome and biome.DisplayName) or floor.BiomeId, bossText)
 		local recommended = floors.RecommendedPower(selected)
-		local mine = StatFormulas.GetTowerSquadPower(profile)
+		local mine = profile and profile.SquadPower or 0 -- the same Squad Power the HUD shows
 		local ready = mine >= recommended
 		detailScaling.Text = string.format(
 			"Suggested Power: <font color=\"#FFD66E\"><b>%s</b></font>  ·  Your Squad: <font color=\"%s\"><b>%s</b></font>",

@@ -32,7 +32,6 @@ local FacilityPanel = require(script.Parent:WaitForChild("FacilityPanel"))
 local ShopPanel = require(script.Parent:WaitForChild("ShopPanel"))
 local TowerEventHud = require(script.Parent:WaitForChild("TowerEventHud"))
 local RaidHud = require(script.Parent:WaitForChild("RaidHud"))
-local GuidePanel = require(script.Parent:WaitForChild("GuidePanel"))
 
 -- Support facilities shown in the Phase 5 gothic panel.
 local PANEL_FACILITIES = { GuardPost = true, Market = true, TrainingGrounds = true, GodsBlessing = true }
@@ -265,11 +264,6 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 	local indexInitialMode, setIndexInitialMode = React.useState("HEROES" :: "HEROES" | "ARTIFACTS")
 	local facilityOpen, setFacilityOpen = React.useState(nil :: string?)
 	local shopOpen, setShopOpen = React.useState(false)
-	local guideOpen, setGuideOpen = React.useState(false)
-	local function closeGuide()
-		setGuideOpen(false)
-		call("SetModalFocusMode", false)
-	end
 	local backpackOpen, setBackpackOpen = React.useState(false)
 	local backpackButton = React.useRef(nil :: GuiButton?)
 	local closeBackpack = React.useCallback(function()
@@ -553,16 +547,6 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 		},
 	}
 
-	if Store.GuideV2 then
-		table.insert(leftButtons, {
-			Name = "GuideRailButton", Icon = "Index", Label = "Guide", Accent = Color3.fromRGB(255, 225, 150),
-			OnActivated = function()
-				setGuideOpen(true)
-				call("SetModalFocusMode", true)
-			end,
-		})
-	end
-
 	local overdriveBlocked = Whistles.Blocked("Overdrive")
 	local recallBlocked = Whistles.Blocked("Recall")
 	local rightButtons = {
@@ -706,13 +690,6 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 		}) else nil,
 		-- Screens and the Pit tabs render above the building screens; the zones above stay behind them.
 		Overlay = ReactRoblox.createPortal({
-		Guide = if guideOpen then e(GuidePanel, { OnClose = closeGuide, OnResume = function()
-			Store.GuideAction("Resume")
-			closeGuide()
-		end, OnSkip = if goal and goal.Core then function()
-			Store.GuideAction("Skip")
-			closeGuide()
-		end else nil }) else nil,
 		-- Over an open window, only when that window has no currency display of its own (Forge, Store,
 		-- Index and the Pit draw theirs or spend nothing): the HUD bar used to overlap their corners.
 		FocusCurrency = if modalFocus and profile and WindowManager.WantsHudCurrency() then e("Frame", {

@@ -902,24 +902,9 @@ function Controller:BindDrag()
 	end)
 end
 
-function Controller:Buy(nodeId: string, confirmed: boolean?)
+-- Builds straight away: the node card already shows the cost, so there is no confirm dialog.
+function Controller:Buy(nodeId: string)
 	if self.Busy then return end
-	-- A node costing a quarter or more of your Gold asks first (plan §6, Soft).
-	local entry = self.Nodes[nodeId]
-	local profile = self.GetProfile()
-	local gold = profile and profile.Currencies and profile.Currencies.Gold or 0
-	local cost = entry and entry.Node and entry.Node.Gold or 0
-	if not confirmed and Kit.Rules.ConfirmTier("FORTRESS_NODE", { Cost = cost, Balance = gold }) ~= "None" then
-		Kit.Confirm.Ask({
-			Tier = "Soft",
-			Title = string.format("Build %s?", entry.Node.Name or "this upgrade"),
-			Body = string.format("It costs %s Gold, %d%% of what you have.", formatGold(cost), math.floor(cost / math.max(gold, 1) * 100 + 0.5)),
-			ConfirmText = "Build",
-			SessionKey = "FORTRESS_NODE",
-			OnConfirm = function() self:Buy(nodeId, true) end,
-		})
-		return
-	end
 	self.Busy = true
 	self.Status.Text = "Building…"
 	self.Status.TextColor3 = C.Muted
