@@ -781,6 +781,23 @@ New players are walked through every feature once, in a fixed order, and held to
 
 *(The seven-step quest chain in `OnboardingConfig` remains only for the `OnboardingV2 = false` rollback switch. Rewards paid under it are not paid again.)*
 
+### 4.8 Free Rewards: Daily, Weekly, Playtime, Codes & Friend Boost
+
+Opened from the **Rewards** button on the Left Rail, which shows a badge with the number of rewards ready to claim. Tunables live in `RewardsConfig`; the rules are pure (`RewardRules`) and the server (`RewardsService`) checks every claim against its own clock. **All resets are UTC:** days roll over at 00:00 UTC and weeks on Monday 00:00 UTC.
+
+| Reward | Rule | Payout |
+| --- | --- | --- |
+| **Daily login** | One claim per day. Claiming on consecutive days walks a 7-day calendar and then loops; a missed day restarts it at Day 1. | 2,000 Gold · 50 Gems · 5,000 Gold · 2 Promotion Stones · 100 Gems · 10,000 Gold · 300 Gems + 3 Promotion Stones |
+| **Weekly chest** | One claim per week. | 30,000 Gold, 500 Gems, 5 Promotion Stones |
+| **Playtime** | 7 tiers by time played today, each claimed once; time and claims reset daily. The counter stops at the last tier (60 minutes). Time is counted on the server from the moment the save loads, in any zone, and carries across rejoins the same day. | 5 min 1,000 Gold · 10 min 25 Gems · 15 min 2,500 Gold · 20 min 40 Gems · 30 min 2 Promotion Stones · 45 min 5,000 Gold · 60 min 100 Gems |
+| **Codes** | Typed into the Rewards window. Each code pays once per profile and may have an expiry time. Case, spaces and dashes are ignored. | Per code |
+
+- **Playtime limits:** at most 7 tiers, the last at most 60 minutes (asserted in `RewardsConfig`).
+- **Codes are server-only:** the list is `ServerScriptService/Core/RewardCodes`, never in `ReplicatedStorage`, so clients cannot read it. Attempts are limited to one every 2 seconds, and an unknown code gets the same answer as a malformed one. Retire a code by setting `Expires` in the past rather than deleting it.
+- **Friend Boost:** each Roblox friend in the same server gives **+10% Gold, up to +30%** (3 friends). It multiplies the same Gold the Market does (tower kills, floor bosses and banked relics) and stacks with the Market, affixes, events and climb streaks. Gems, Promotion Stones and drop chances are unaffected. Friendships are checked on the server when a player joins (`Player:IsFriendsWithAsync`); the count is on the `FriendBoost` player attribute and in the Rewards window, and a toast announces changes. In Studio, the Workspace attribute `DebugFriendBoost` (a friend count) stands in for real friends.
+- **Remotes:** `Remotes.RewardsRemotes.RewardsRequest` (`GET`, `CLAIM_DAILY`, `CLAIM_WEEKLY`, `CLAIM_PLAYTIME` + tier, `REDEEM_CODE` + text; 4 requests per second) returns `{ Ok, Message, State }`; `RewardsSync` pushes the same State on join, at the daily reset and when the boost changes.
+- **Save data:** `profile.Rewards = { Daily = { Streak, LastClaimDay }, Weekly = { LastClaimWeek }, Playtime = { Day, Seconds, Claimed }, Codes }` (schema v8, §8.3).
+
 ---
 
 ## 5. BIOME BOSS ENCOUNTER DESIGN (MILESTONE FLOORS)
@@ -1044,9 +1061,9 @@ To isolate simulation state and prevent entity overflow or vertical AoE bleed ac
 
 ### 8.3 Profile Persistence & Session Locking
 - **Store:** One DataStore key per player, `PlayerProfiles_v4` / `User_{UserId}`, linked to the UserId for right-to-be-forgotten. The record is `{ Data, Lock = { JobId, Time }, SavedAt }`. Every write goes through `UpdateAsync` (`ProfilePersistence`, with the pure lock rules in `ProfileCodec`).
-- **Join:** The server claims the lock, then runs the saved profile (or a fresh default for a new player) through `PitService.EnsureDefaults`, `EnsureFacilities`, `ProfileMigrations.Run`, `OnboardingService.EnsureState` and `FortressTreeService.ApplyLevels`. `SyncProfile` lazy migrations still run on every sync. A lock held by another live server is retried 6 times, 5 seconds apart, before the player is kicked with "rejoin". A lock not refreshed for 10 minutes belongs to a crashed server and is taken over.
+- **Join:** The server claims the lock, then runs the saved profile (or a fresh default for a new player) through `PitService.EnsureDefaults`, `EnsureFacilities`, `ProfileMigrations.Run`, `OnboardingService.EnsureState`, `FortressTreeService.ApplyLevels` and `RewardsService.EnsureState`. `SyncProfile` lazy migrations still run on every sync. A lock held by another live server is retried 6 times, 5 seconds apart, before the player is kicked with "rejoin". A lock not refreshed for 10 minutes belongs to a crashed server and is taken over.
 - **Saves:** Autosave every 120–135 seconds per player (which refreshes the lock), on `PlayerRemoving` (saves and releases), and in `BindToClose` (up to 25 seconds). `DataManager.SaveProfile(player)` is the checkpoint save for purchases. A save is cancelled if this server no longer owns the lock, so a stale server can never overwrite newer progress. Failures retry with exponential backoff.
-- **Schema:** `ProfileMigrations.CurrentSchema` is 7. v3–v5 cover onboarding, 1★ summons and per-star levels (§4.1), v6 adds the onboarding guide, and v7 deletes the retired social systems (`profile.Social`: pacts, mercenaries, mimic chests, plot rune espionage) and their facility fields (`UncollectedOutput`, `BlessedUntil`, `LeechedUntil`, `LeechVisitorUserId`, `LastRuneTimestamp`, `LastRuneWasLeech`). It also removes Pit imprints (`InheritedImprints`, `ImprintCapacity`, `SynthesisHistory.ImprintsPerformed`), refunds each held Imprint Catalyst as 150 Gold, 15 Gems and 4 Soul Essence, and drops each hero's display-only `PassiveTrait` name.
+- **Schema:** `ProfileMigrations.CurrentSchema` is 8. v8 adds `profile.Rewards` (§4.8) with nothing claimed. v3–v5 cover onboarding, 1★ summons and per-star levels (§4.1), v6 adds the onboarding guide, and v7 deletes the retired social systems (`profile.Social`: pacts, mercenaries, mimic chests, plot rune espionage) and their facility fields (`UncollectedOutput`, `BlessedUntil`, `LeechedUntil`, `LeechVisitorUserId`, `LastRuneTimestamp`, `LastRuneWasLeech`). It also removes Pit imprints (`InheritedImprints`, `ImprintCapacity`, `SynthesisHistory.ImprintsPerformed`), refunds each held Imprint Catalyst as 150 Gold, 15 Gems and 4 Soul Essence, and drops each hero's display-only `PassiveTrait` name.
 - **What is saved:** A sanitised deep copy. Derived fields (`SquadPower`, `SquadPowerByHero`) are stripped, functions and Instances are dropped, and NaN/inf numbers become 0.
 - **Studio:** Without "Enable Studio Access to API Services" the server warns and runs unsaved sessions instead of kicking. Studio play sessions use `studio-` JobIds and may take over a lock left by an earlier Studio session (Stop often kills the server before the release lands); they never take over a live server's lock, and live servers never take over a fresh Studio lock.
 - **Shutdown:** `BindToClose` waits (up to 25 s) for every in-flight release, including the ones `PlayerRemoving` started.

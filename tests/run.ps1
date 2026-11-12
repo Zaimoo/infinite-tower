@@ -92,6 +92,9 @@ $modulePaths = @(
     'ReplicatedStorage/Shared/Util/HeroBannerOdds.luau',
     'ReplicatedStorage/Shared/Util/PreloadManifest.luau',
     'ReplicatedStorage/Shared/Util/Onboarding.luau',
+    'ReplicatedStorage/Shared/Config/RewardsConfig.luau',
+    'ReplicatedStorage/Shared/Util/RewardRules.luau',
+    'ServerScriptService/Core/RewardCodes.luau',
     'ServerScriptService/Core/ProfileMigrations.luau',
     'ServerScriptService/Core/ProfileCodec.luau',
     'ReplicatedStorage/Shared/Util/PitMath.luau',
@@ -118,7 +121,7 @@ foreach ($modulePath in $modulePaths) {
     $bundleParts.Add([System.IO.File]::ReadAllText($sourcePath))
     $bundleParts.Add("`nend)")
 }
-foreach ($suite in @('pit.spec.luau', 'forge.spec.luau', 'forge-workbench.spec.luau', 'equip-best.spec.luau', 'combat-skills.spec.luau', 'tower.spec.luau', 'tower-transport.spec.luau', 'tower-combat.spec.luau', 'tower-rework.spec.luau', 'phase1-combat-tempo.luau', 'hero-rig.spec.luau', 'phase2-floor-loop.spec.luau', 'phase2-defeat-rules.spec.luau', 'hero-action.spec.luau', 'hero-targeting.spec.luau', 'tower-navigation.spec.luau', 'squad-movement.spec.luau', 'combat-vfx.spec.luau', 'phase4-progression.luau', 'profile-persistence.spec.luau', 'tower-run-loop.spec.luau', 'tower-camp-roster.spec.luau', 'tower-support.spec.luau', 'tower-patrols.spec.luau', 'tower-affixes.spec.luau', 'tower-events.spec.luau', 'tower-portals.spec.luau', 'hublayout.spec.luau', 'outskirts-waves.spec.luau', 'facility-workers.spec.luau', 'relic-biome-config.spec.luau', 'inventory-capacity.spec.luau', 'hero-banner-odds.spec.luau', 'preload-manifest.spec.luau', 'ui-kit.spec.luau', 'raid.spec.luau', 'enemy-models.spec.luau', 'enemy-clips.spec.luau')) {
+foreach ($suite in @('pit.spec.luau', 'forge.spec.luau', 'forge-workbench.spec.luau', 'equip-best.spec.luau', 'combat-skills.spec.luau', 'tower.spec.luau', 'tower-transport.spec.luau', 'tower-combat.spec.luau', 'tower-rework.spec.luau', 'phase1-combat-tempo.luau', 'hero-rig.spec.luau', 'phase2-floor-loop.spec.luau', 'phase2-defeat-rules.spec.luau', 'hero-action.spec.luau', 'hero-targeting.spec.luau', 'tower-navigation.spec.luau', 'squad-movement.spec.luau', 'combat-vfx.spec.luau', 'phase4-progression.luau', 'profile-persistence.spec.luau', 'tower-run-loop.spec.luau', 'tower-camp-roster.spec.luau', 'tower-support.spec.luau', 'tower-patrols.spec.luau', 'tower-affixes.spec.luau', 'tower-events.spec.luau', 'tower-portals.spec.luau', 'hublayout.spec.luau', 'outskirts-waves.spec.luau', 'facility-workers.spec.luau', 'relic-biome-config.spec.luau', 'inventory-capacity.spec.luau', 'hero-banner-odds.spec.luau', 'preload-manifest.spec.luau', 'ui-kit.spec.luau', 'raid.spec.luau', 'rewards.spec.luau', 'enemy-models.spec.luau', 'enemy-clips.spec.luau')) {
     $bundleParts.Add('do local function runSuite()')
     $bundleParts.Add([System.IO.File]::ReadAllText((Join-Path $PSScriptRoot $suite)))
     $bundleParts.Add("`nend`nrunSuite()`nend")

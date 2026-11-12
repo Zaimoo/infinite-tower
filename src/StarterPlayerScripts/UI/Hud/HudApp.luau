@@ -30,6 +30,8 @@ local HeroIndex = require(script.Parent:WaitForChild("HeroIndex"))
 local BackpackPanel = require(script.Parent:WaitForChild("BackpackPanel"))
 local FacilityPanel = require(script.Parent:WaitForChild("FacilityPanel"))
 local ShopPanel = require(script.Parent:WaitForChild("ShopPanel"))
+local RewardsPanel = require(script.Parent:WaitForChild("RewardsPanel"))
+local RewardsStore = require(script.Parent:WaitForChild("RewardsStore"))
 local TowerEventHud = require(script.Parent:WaitForChild("TowerEventHud"))
 local RaidHud = require(script.Parent:WaitForChild("RaidHud"))
 
@@ -248,6 +250,7 @@ end
 local currentFacilityOpen: string? = nil
 local currentIndexOpen = false
 local currentShopOpen = false
+local currentRewardsOpen = false
 local currentBackpackOpen = false
 
 local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
@@ -264,6 +267,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 	local indexInitialMode, setIndexInitialMode = React.useState("HEROES" :: "HEROES" | "ARTIFACTS")
 	local facilityOpen, setFacilityOpen = React.useState(nil :: string?)
 	local shopOpen, setShopOpen = React.useState(false)
+	local rewardsOpen, setRewardsOpen = React.useState(false)
 	local backpackOpen, setBackpackOpen = React.useState(false)
 	local backpackButton = React.useRef(nil :: GuiButton?)
 	local closeBackpack = React.useCallback(function()
@@ -318,11 +322,13 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 		_G.OpenBackpack = function()
 			currentFacilityOpen = nil
 			currentShopOpen = false
+			currentRewardsOpen = false
 			currentIndexOpen = false
 			currentBackpackOpen = true
 			call("OpenMasterModal", "BACKPACK")
 			setFacilityOpen(nil)
 			setShopOpen(false)
+			setRewardsOpen(false)
 			setIndexOpen(false)
 			setBackpackOpen(true)
 			call("SetModalFocusMode", true)
@@ -340,6 +346,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 		_G.OpenHeroIndex = function(mode: string?)
 			currentFacilityOpen = nil
 			currentShopOpen = false
+			currentRewardsOpen = false
 			currentIndexOpen = true
 			call("OpenMasterModal", "INDEX")
 			if mode == "ARTIFACTS" or mode == "HEROES" then
@@ -347,6 +354,7 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 			end
 			setFacilityOpen(nil)
 			setShopOpen(false)
+			setRewardsOpen(false)
 			setIndexOpen(true)
 			setNewHeroes(0)
 			call("SetModalFocusMode", true)
@@ -354,15 +362,17 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 		_G.OpenArtifactIndex = function()
 			currentFacilityOpen = nil
 			currentShopOpen = false
+			currentRewardsOpen = false
 			currentIndexOpen = true
 			call("OpenMasterModal", "INDEX")
 			setIndexInitialMode("ARTIFACTS")
 			setFacilityOpen(nil)
 			setShopOpen(false)
+			setRewardsOpen(false)
 			setIndexOpen(true)
 			call("SetModalFocusMode", true)
 		end
-		_G.IsHeroIndexOpen = function() return currentIndexOpen or currentShopOpen end
+		_G.IsHeroIndexOpen = function() return currentIndexOpen or currentShopOpen or currentRewardsOpen end
 		_G.IsFacilityPanelOpen = function(): boolean
 			return currentFacilityOpen ~= nil
 		end
@@ -373,11 +383,13 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 			call("SetModalFocusMode", false)
 		end
 		_G.CloseHeroIndex = function()
-			if not currentIndexOpen and not currentShopOpen and not indexOpen and not shopOpen then return end
+			if not currentIndexOpen and not currentShopOpen and not currentRewardsOpen and not indexOpen and not shopOpen and not rewardsOpen then return end
 			currentIndexOpen = false
 			currentShopOpen = false
+			currentRewardsOpen = false
 			setIndexOpen(false)
 			setShopOpen(false)
+			setRewardsOpen(false)
 			call("SetModalFocusMode", false)
 		end
 		-- Robux Store (Phase 5): the Shop button on the Right Rail.
@@ -385,10 +397,25 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 			currentFacilityOpen = nil
 			currentIndexOpen = false
 			currentShopOpen = true
+			currentRewardsOpen = false
 			call("OpenMasterModal", "SHOP")
 			setIndexOpen(false)
 			setFacilityOpen(nil)
+			setRewardsOpen(false)
 			setShopOpen(true)
+			call("SetModalFocusMode", true)
+		end
+		-- Rewards (GDD §4.8): shares the Index / Store panel slot.
+		_G.OpenRewards = function()
+			currentFacilityOpen = nil
+			currentIndexOpen = false
+			currentShopOpen = false
+			currentRewardsOpen = true
+			call("OpenMasterModal", "SHOP")
+			setIndexOpen(false)
+			setFacilityOpen(nil)
+			setShopOpen(false)
+			setRewardsOpen(true)
 			call("SetModalFocusMode", true)
 		end
 		_G.OpenFacilityPanel = function(facility: string): boolean
@@ -396,14 +423,16 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 			currentFacilityOpen = facility
 			currentIndexOpen = false
 			currentShopOpen = false
+			currentRewardsOpen = false
 			call("OpenMasterModal", "FACILITY")
 			setIndexOpen(false)
 			setShopOpen(false)
+			setRewardsOpen(false)
 			setFacilityOpen(facility)
 			call("SetModalFocusMode", true)
 			return true
 		end
-	end, { indexOpen, facilityOpen, shopOpen })
+	end, { indexOpen, facilityOpen, shopOpen, rewardsOpen })
 
 	local raid = RaidHud.useRaid() -- raid arena state: swaps the Right Rail for the damage leaderboard
 	local profile = Store.Profile
@@ -522,6 +551,19 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 			OnActivated = function()
 				if _G.OpenRobuxShop then
 					_G.OpenRobuxShop()
+				end
+			end,
+		},
+		{
+			Name = "RewardsRailButton",
+			Icon = "Gems",
+			Label = "Rewards",
+			Accent = Color3.fromRGB(74, 222, 128), -- #4ADE80 Green
+			-- Daily, weekly and playtime rewards ready to claim.
+			Badge = RewardsStore.Claimable(),
+			OnActivated = function()
+				if _G.OpenRewards then
+					_G.OpenRewards()
 				end
 			end,
 		},
@@ -731,8 +773,9 @@ local function HudApp(props: { Root: GuiObject, Overlay: GuiObject? })
 			OnClose = function() WindowManager.Close("FacilityPanel") end,
 		}) else nil,
 		Shop = if shopOpen then e(ShopPanel, { Profile = profile, Width = screen.X, OnClose = function() WindowManager.Close("Index") end }) else nil,
-		TowerEventPopup = e(TowerEventHud.Popup, { Blocked = facilityOpen ~= nil or shopOpen or indexOpen or modalFocus }),
-		RaidResults = e(RaidHud.ResultsCard, { Blocked = facilityOpen ~= nil or shopOpen or indexOpen or modalFocus }),
+		Rewards = if rewardsOpen then e(RewardsPanel, { Width = screen.X, OnClose = function() WindowManager.Close("Index") end }) else nil,
+		TowerEventPopup = e(TowerEventHud.Popup, { Blocked = facilityOpen ~= nil or shopOpen or rewardsOpen or indexOpen or modalFocus }),
+		RaidResults = e(RaidHud.ResultsCard, { Blocked = facilityOpen ~= nil or shopOpen or rewardsOpen or indexOpen or modalFocus }),
 		Index = if indexOpen then e(HeroIndex, { Profile = profile, Width = screen.X, InitialMode = indexInitialMode, OnClose = function() WindowManager.Close("Index") end }) else nil,
 		Backpack = if backpackOpen then e(BackpackPanel, {
 			Width = screen.X, Height = screen.Y,
