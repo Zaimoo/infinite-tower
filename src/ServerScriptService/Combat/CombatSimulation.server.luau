@@ -2766,6 +2766,7 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
      -- Phase 6: an assigned squad farms Gold, gems and XP anywhere; relics and floor progress need its Master on the floor.
      local masterHere = Tower.GetState(killer).FloorId == mob.FloorId
      local marketMult = dm.GetMarketMultiplier and dm.GetMarketMultiplier(killer) or 1.0
+     marketMult *= dm.GetFriendBoostMultiplier and dm.GetFriendBoostMultiplier(killer) or 1.0 -- friend boost (GDD §4.8)
      local profile = dm.GetProfile(killer)
      if profile then
       local reward = TowerRewards.GetKillRewards(mob.FloorId, mob.Role)
@@ -2822,6 +2823,7 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
       local damage = (mob.DamageLedger and mob.DamageLedger[p.UserId]) or 0
       if TowerProgress.CheckParticipation(damage, mob.MaxHP, p == killer) then
        local marketMult = dm.GetMarketMultiplier and dm.GetMarketMultiplier(p) or 1.0
+       marketMult *= dm.GetFriendBoostMultiplier and dm.GetFriendBoostMultiplier(p) or 1.0 -- friend boost (GDD §4.8)
        local profile = dm.GetProfile(p)
        local reward = TowerRewards.GetKillRewards(mob.FloorId, "BOSS")
        -- Phase 6 M4: the first clear of a floor is the big payout (Gold x3, gems that grow with depth, a guaranteed relic);

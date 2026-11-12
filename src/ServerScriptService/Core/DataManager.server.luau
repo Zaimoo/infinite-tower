@@ -25,6 +25,8 @@ local SummonLuck = require(Shared:WaitForChild("Util"):WaitForChild("SummonLuck"
 local Onboarding = require(Shared:WaitForChild("Util"):WaitForChild("Onboarding"))
 local OnboardingService = require(script.Parent:WaitForChild("OnboardingService"))
 local FortressTreeService = require(script.Parent:WaitForChild("FortressTreeService"))
+local RewardsService = require(script.Parent:WaitForChild("RewardsService"))
+local RewardRules = require(Shared:WaitForChild("Util"):WaitForChild("RewardRules"))
 local ProfileMigrations = require(script.Parent:WaitForChild("ProfileMigrations"))
 local ProfilePersistence = require(script.Parent:WaitForChild("ProfilePersistence"))
 local ForgeTransactions = require(script.Parent:WaitForChild("ForgeTransactions"))
@@ -260,6 +262,7 @@ export type PlayerProfile = {
 	MaxFloorReached: number?,
 	LastLogoutTimestamp: number?,
 	LastActiveTimestamp: number?,
+	Rewards: RewardRules.State?, -- daily / weekly / playtime claims and redeemed codes (RewardsService)
 }
 
 --============================================================================
@@ -501,6 +504,7 @@ local function createDefaultPlayerProfile(): PlayerProfile
 		MaxFloorReached = 1,
 		LastLogoutTimestamp = os.time(),
 		LastActiveTimestamp = os.time(),
+		Rewards = RewardRules.NewState(),
 	}
 end
 
@@ -1676,6 +1680,11 @@ function DataManager.GetMarketMultiplier(player: Player): number
 	return StatFormulas.GetMarketLootMultiplier(market.Level, sumLabor, FortressTree.PerkBonuses(profile.FortressTree))
 end
 
+-- Gold multiplier from Roblox friends in this server (GDD §4.8); stacks with the Market.
+function DataManager.GetFriendBoostMultiplier(player: Player): number
+	return RewardsService.GetFriendBoostMultiplier(player)
+end
+
 function DataManager.GetTrainingMultiplier(player: Player): number
 	local profile = ActiveProfiles[player]
 	if not profile or not profile.Facilities or not profile.Facilities.TrainingGrounds then return 1.0 end
@@ -1769,6 +1778,12 @@ FortressTreeService.Init({
 	UnlockRemote = UnlockTreeNodeFunc,
 })
 
+RewardsService.Init({
+	GetProfile = function(player: Player) return ActiveProfiles[player] end,
+	SendToast = DataManager.SendToast,
+	SyncProfile = function(player: Player) DataManager.SyncProfile(player, true) end,
+})
+
 --============================================================================
 -- 7. PLAYER LIFECYCLE INITIALIZATION
 --============================================================================
@@ -1814,6 +1829,7 @@ local function onPlayerAdded(player: Player)
 	ProfileMigrations.Run(profile)
 	OnboardingService.EnsureState(profile)
 	FortressTreeService.ApplyLevels(profile)
+	RewardsService.EnsureState(profile)
 	ActiveProfiles[player] = profile
 	persistentPlayers[player] = loaded.Persistent or nil
 	releasedPlayers[player] = nil

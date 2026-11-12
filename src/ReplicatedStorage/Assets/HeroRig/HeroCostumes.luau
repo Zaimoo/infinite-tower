@@ -41,6 +41,15 @@ export type Costume = {
 local HeroCostumes = {}
 
 HeroCostumes.PART_BUDGET = 60
+-- Heroes the user signed off to go over the default budget for a more faithful look, with
+-- their own ceiling. Keep this list short: every hero can be on screen 30 times over.
+HeroCostumes.BUDGET_OVERRIDES = table.freeze({
+	hero_astrea = 100, -- 7★ featured banner hero, remodelled from her second reference art
+} :: { [string]: number })
+
+function HeroCostumes.BudgetFor(heroId: string): number
+	return HeroCostumes.BUDGET_OVERRIDES[heroId] or HeroCostumes.PART_BUDGET
+end
 HeroCostumes.DEFAULT_FACE = "rbxassetid://144080495"
 HeroCostumes.SHAPES = table.freeze({ Block = true, Wedge = true, Ball = true, Cylinder = true })
 HeroCostumes.MATERIALS = table.freeze({ SmoothPlastic = true, Neon = true, Metal = true, Fabric = true, Wood = true, Glass = true })
@@ -70,8 +79,12 @@ HeroCostumes.MESHES = table.freeze({
 	["rbxassetid://101701313703578"] = "",
 	-- Solaris's hair, our own: tools/make_solaris_hair_ugc.py (assets/hair/solaris_hair_ugc.blend).
 	["rbxassetid://116753377442189"] = "",
-	-- Astrea's hair, our own: tools/make_astrea_hair_ugc.py (assets/hair/astrea_hair_ugc.blend).
-	["rbxassetid://108726871571153"] = "",
+	-- Astrea's hair (head part), our own: AstreaHair in tools/make_astrea_hair_ugc.py (assets/hair/astrea_hair_ugc.blend),
+	-- textured with our strand atlas from assets/hair/make_astrea_hair_texture.py.
+	["rbxassetid://79290192354958"] = "rbxassetid://126451381570698",
+	-- Astrea's hair (back fall), our own: AstreaBackHair in tools/make_astrea_hair_ugc.py (assets/hair/astrea_back_hair_ugc.blend),
+	-- same strand atlas.
+	["rbxassetid://98817994028995"] = "rbxassetid://126451381570698",
 	-- Edis's hair (head part), our own: EdisHair in tools/make_edis_hair_ugc.py (assets/hair/edis_hair_ugc.blend).
 	["rbxassetid://95018278281793"] = "",
 	-- Edis's hair (back fall), our own: EdisBackHair in tools/make_edis_hair_ugc.py (assets/hair/edis_hair_ugc.blend).
@@ -632,14 +645,15 @@ end
 
 -- 8. EOLKA (3★ Scholar - Crimson Pyromancer Sorceress) ------------------------------------
 -- Battle-sorceress look from her reference art: copper hair swept into a high ponytail with a
--- gold band, high black collar with a ruby brooch, black yoke and broad pauldrons edged in gold,
+-- gold band, high black collar with a ruby brooch, black yoke and flat gold-edged shoulder caps,
 -- crimson chest panels with gold piping, gold-trimmed belt and crimson tabard, black cape with
--- crimson lining, gold bracers, black trousers and gilded boots. Face: our own decal from
+-- crimson lining, gold bracers, black trousers and gilded boots. Feminine body (Slim): the art's
+-- broad pauldrons became flat caps so the shoulders stay narrow. Face: our own decal from
 -- assets/faces/make_eolka_face.py. Hair: our Blender mesh (tools/make_eolka_hair_ugc.py).
 do
 	local skin, hair, black, crimson = { 247, 223, 198 }, { 216, 98, 40 }, { 26, 22, 28 }, { 140, 29, 34 }
 	local gold, ruby, sleeve, boot = { 214, 172, 92 }, { 255, 50, 40 }, { 78, 64, 80 }, { 48, 36, 30 }
-	table.insert(COSTUMES, costume("hero_eolka", "Standard", {
+	table.insert(COSTUMES, costume("hero_eolka", "Slim", {
 		Skin = skin, UpperTorso = black, LowerTorso = black, UpperArm = black, LowerArm = sleeve, Hand = skin,
 		UpperLeg = black, LowerLeg = boot, Foot = boot,
 	}, {
@@ -664,12 +678,12 @@ do
 		piece("PipingR", "UpperTorso", { 0.06, 1.0, 0.07 }, { 0.12, -0.2, -0.52 }, gold, with(METAL, { Rotation = { 0, 0, 6 } })),
 		piece("CapeUpper", "UpperTorso", { 2.1, 1.62, 0.1 }, { 0, 0, 0.58 }, black, with(LOOSE, { Material = "Fabric" })),
 		-- Broad pauldrons edged in gold, with a gold emblem on the outer face
-		piece("PauldronL", "LeftUpperArm", { 1.4, 0.75, 1.3 }, { -0.2, 0.35, 0 }, black, { Rotation = { 0, 0, 8 } }),
-		piece("PauldronTrimL", "LeftUpperArm", { 1.44, 0.08, 1.34 }, { 0, -0.36, 0 }, gold, with(METAL, { RelativeTo = "PauldronL" })),
-		piece("PauldronEmblemL", "LeftUpperArm", { 0.04, 0.34, 0.5 }, { -0.71, 0.02, 0 }, gold, with(METAL, { RelativeTo = "PauldronL" })),
-		piece("PauldronR", "RightUpperArm", { 1.4, 0.75, 1.3 }, { 0.2, 0.35, 0 }, black, { Rotation = { 0, 0, -8 } }),
-		piece("PauldronTrimR", "RightUpperArm", { 1.44, 0.08, 1.34 }, { 0, -0.36, 0 }, gold, with(METAL, { RelativeTo = "PauldronR" })),
-		piece("PauldronEmblemR", "RightUpperArm", { 0.04, 0.34, 0.5 }, { 0.71, 0.02, 0 }, gold, with(METAL, { RelativeTo = "PauldronR" })),
+		piece("ShoulderCapL", "LeftUpperArm", { 1.04, 0.14, 1.04 }, { 0, 0.5, 0 }, black, { Material = "Fabric" }),
+		piece("ShoulderTrimL", "LeftUpperArm", { 1.06, 0.05, 1.06 }, { 0, 0.41, 0 }, gold, METAL),
+		piece("ShoulderEmblemL", "LeftUpperArm", { 0.04, 0.22, 0.32 }, { -0.53, 0.22, 0 }, gold, METAL),
+		piece("ShoulderCapR", "RightUpperArm", { 1.04, 0.14, 1.04 }, { 0, 0.5, 0 }, black, { Material = "Fabric" }),
+		piece("ShoulderTrimR", "RightUpperArm", { 1.06, 0.05, 1.06 }, { 0, 0.41, 0 }, gold, METAL),
+		piece("ShoulderEmblemR", "RightUpperArm", { 0.04, 0.22, 0.32 }, { 0.53, 0.22, 0 }, gold, METAL),
 		-- Forearms: dusky sleeves, a gold ring at the elbow and double gold bracers
 		piece("ElbowRingL", "LeftLowerArm", { 1.08, 0.08, 1.08 }, { 0, 0.42, 0 }, gold, METAL),
 		piece("ElbowRingR", "RightLowerArm", { 1.08, 0.08, 1.08 }, { 0, 0.42, 0 }, gold, METAL),
@@ -696,7 +710,7 @@ do
 		piece("BootSoleL", "LeftFoot", { 1.1, 0.07, 1.28 }, { 0, -0.13, -0.1 }, gold, METAL),
 		piece("BootR", "RightFoot", { 1.08, 0.34, 1.25 }, { 0, 0.02, -0.1 }, boot),
 		piece("BootSoleR", "RightFoot", { 1.1, 0.07, 1.28 }, { 0, -0.13, -0.1 }, gold, METAL),
-	}, "rbxassetid://131976429681674"))
+	}, "rbxassetid://128405793720315"))
 end
 
 -- 9. MORRIGAN (4★ Vanguard - Void Nightblade) ---------------------------------------------
@@ -841,13 +855,16 @@ end
 -- Sun priestess from her reference art: long wavy copper hair, a dark fur collar over a gold
 -- torc, a black and crimson bodice with gold trim, black sleeves with gold cuffs and an armband,
 -- an ember belt with a gold sigil, crimson and flame-orange tabards over black skirts, dark knee
--- plates and flame-orange boots. Behind her, a gold sun frame with ember gems and two crimson
--- banners. Face: our own decal from assets/faces/make_solaris_face.py. Hair: our Blender mesh
+-- plates and flame-orange boots. Behind her, a gold sun frame holding a crimson banner with a
+-- gold sun, and two crimson side banners. Feminine body (Slim): the side skirts flare from the belt so the hips read wider than
+-- the waist; the banners are authored at x ±3.6 so they land at about ±2.7, clear of the arms.
+-- Face: our own decal from assets/faces/make_solaris_face.py. Hair: our Blender mesh
 -- (tools/make_solaris_hair_ugc.py).
 do
 	local skin, hair, black, crimson, flame = { 214, 170, 132 }, { 205, 96, 42 }, { 32, 24, 26 }, { 128, 30, 28 }, { 230, 112, 34 }
 	local gold, fur, ember, plate, boot = { 214, 166, 70 }, { 62, 42, 34 }, { 255, 110, 30 }, { 58, 46, 42 }, { 200, 80, 34 }
-	table.insert(COSTUMES, costume("hero_solaris", "Standard", {
+	local sun = { 255, 210, 110 }
+	table.insert(COSTUMES, costume("hero_solaris", "Slim", {
 		Skin = skin, UpperTorso = black, LowerTorso = black, UpperArm = skin, LowerArm = black, Hand = flame,
 		UpperLeg = black, LowerLeg = boot, Foot = boot,
 	}, {
@@ -866,7 +883,6 @@ do
 		piece("BodiceTrimR", "UpperTorso", { 0.05, 1.0, 0.07 }, { 0.5, -0.05, -0.52 }, gold, METAL),
 		piece("BodiceVL", "UpperTorso", { 0.5, 0.06, 0.07 }, { -0.2, 0.32, -0.53 }, gold, with(METAL, { Rotation = { 0, 0, -35 } })),
 		piece("BodiceVR", "UpperTorso", { 0.5, 0.06, 0.07 }, { 0.2, 0.32, -0.53 }, gold, with(METAL, { Rotation = { 0, 0, 35 } })),
-		piece("EmberGlow", "UpperTorso", { 0.16, 0.16, 0.04 }, { 0, -0.2, -0.55 }, ember, with(NEON, { Rotation = { 0, 0, 45 } })),
 		-- Arms: a gold-trimmed armband on the left, black sleeves with gold cuffs
 		piece("ArmbandL", "LeftUpperArm", { 1.08, 0.18, 1.08 }, { 0, -0.1, 0 }, black),
 		piece("ArmbandTrimL", "LeftUpperArm", { 1.1, 0.05, 1.1 }, { 0, 0.01, 0 }, gold, METAL),
@@ -881,10 +897,10 @@ do
 		piece("TabardFront", "LowerTorso", { 0.6, 1.5, 0.06 }, { 0, -0.85, -0.56 }, crimson, with(LOOSE, { Material = "Fabric" })),
 		piece("TabardFlame", "LowerTorso", { 0.24, 0.5, 0.04 }, { 0, -0.95, -0.6 }, ember, with(LOOSE, NEON)),
 		piece("TabardTip", "LowerTorso", { 0.06, 0.3, 0.6 }, { 0, -1.75, -0.56 }, crimson, with(WEDGE, LOOSE, { Material = "Fabric", Rotation = { 0, 90, 180 } })),
-		piece("SkirtL", "LowerTorso", { 0.7, 1.4, 0.08 }, { -0.66, -0.8, -0.54 }, black, with(LOOSE, { Material = "Fabric" })),
-		piece("SkirtR", "LowerTorso", { 0.7, 1.4, 0.08 }, { 0.66, -0.8, -0.54 }, black, with(LOOSE, { Material = "Fabric" })),
-		piece("SkirtTrimL", "LowerTorso", { 0.06, 1.4, 0.09 }, { -0.32, -0.8, -0.55 }, flame, with(LOOSE, METAL)),
-		piece("SkirtTrimR", "LowerTorso", { 0.06, 1.4, 0.09 }, { 0.32, -0.8, -0.55 }, flame, with(LOOSE, METAL)),
+		piece("SkirtL", "LowerTorso", { 0.7, 1.4, 0.08 }, { -0.7, -0.8, -0.54 }, black, with(LOOSE, { Material = "Fabric", Rotation = { 0, 0, -9 } })),
+		piece("SkirtR", "LowerTorso", { 0.7, 1.4, 0.08 }, { 0.7, -0.8, -0.54 }, black, with(LOOSE, { Material = "Fabric", Rotation = { 0, 0, 9 } })),
+		piece("SkirtTrimL", "LowerTorso", { 0.06, 1.4, 0.09 }, { 0.34, 0, -0.01 }, flame, with(LOOSE, METAL, { RelativeTo = "SkirtL" })),
+		piece("SkirtTrimR", "LowerTorso", { 0.06, 1.4, 0.09 }, { -0.34, 0, -0.01 }, flame, with(LOOSE, METAL, { RelativeTo = "SkirtR" })),
 		piece("SkirtBack", "LowerTorso", { 2.1, 1.6, 0.1 }, { 0, -0.9, 0.58 }, black, with(LOOSE, { Material = "Fabric", Rotation = { -6, 0, 0 } })),
 		-- Legs: dark knee plates, gold-rimmed flame boots
 		piece("KneePlateL", "LeftLowerLeg", { 0.85, 0.5, 0.14 }, { 0, 0.44, -0.55 }, plate, METAL),
@@ -900,85 +916,140 @@ do
 		piece("FrameTop", "UpperTorso", { 2.1, 0.26, 0.18 }, { 0, 2.85, 1.35 }, gold, with(LOOSE, METAL)),
 		piece("FrameCrest", "UpperTorso", { 0.18, 0.7, 0.5 }, { 0, 3.3, 1.35 }, gold, with(LOOSE, METAL, WEDGE, { Rotation = { 0, 90, 0 } })),
 		piece("FrameGemTop", "UpperTorso", { 0.3, 0.3, 0.12 }, { 0, 2.85, 1.24 }, ember, with(LOOSE, NEON, { Shape = "Ball" })),
-		piece("FrameGemL", "UpperTorso", { 0.26, 0.26, 0.12 }, { -1.42, 1.9, 1.24 }, ember, with(LOOSE, NEON, { Shape = "Ball" })),
-		piece("FrameGemR", "UpperTorso", { 0.26, 0.26, 0.12 }, { 1.42, 1.9, 1.24 }, ember, with(LOOSE, NEON, { Shape = "Ball" })),
-		piece("BannerPostL", "UpperTorso", { 0.2, 1.3, 0.2 }, { -3.25, 1.1, 1.1 }, gold, with(LOOSE, METAL)),
-		piece("BannerPostR", "UpperTorso", { 0.2, 1.3, 0.2 }, { 3.25, 1.1, 1.1 }, gold, with(LOOSE, METAL)),
-		piece("BannerL", "UpperTorso", { 0.8, 2.6, 0.05 }, { -3.25, -0.8, 1.1 }, crimson, with(LOOSE, { Material = "Fabric" })),
-		piece("BannerR", "UpperTorso", { 0.8, 2.6, 0.05 }, { 3.25, -0.8, 1.1 }, crimson, with(LOOSE, { Material = "Fabric" })),
+		-- The main flag: a crimson banner hung inside the frame with a gold sun in the middle
+		-- (two squares turned 45 degrees apart for eight rays, and a pale gold disc). X sizes are
+		-- authored wider so they come out square after the Slim body's horizontal scaling.
+		piece("SunBanner", "UpperTorso", { 1.96, 1.85, 0.05 }, { 0, 1.83, 1.35 }, crimson, with(LOOSE, { Material = "Fabric" })),
+		piece("SunRaysA", "UpperTorso", { 1.18, 0.9, 0.08 }, { 0, 1.85, 1.35 }, gold, with(LOOSE, METAL)),
+		piece("SunRaysB", "UpperTorso", { 1.18, 0.9, 0.08 }, { 0, 1.85, 1.35 }, gold, with(LOOSE, METAL, { Rotation = { 0, 0, 45 } })),
+		piece("SunDisc", "UpperTorso", { 0.14, 0.6, 0.78 }, { 0, 1.85, 1.35 }, sun, with(LOOSE, { Shape = "Cylinder", Rotation = { 0, 90, 0 } })),
+		piece("BannerPostL", "UpperTorso", { 0.2, 1.3, 0.2 }, { -3.6, 1.1, 1.1 }, gold, with(LOOSE, METAL)),
+		piece("BannerPostR", "UpperTorso", { 0.2, 1.3, 0.2 }, { 3.6, 1.1, 1.1 }, gold, with(LOOSE, METAL)),
+		piece("BannerL", "UpperTorso", { 0.8, 2.6, 0.05 }, { -3.6, -0.8, 1.1 }, crimson, with(LOOSE, { Material = "Fabric" })),
+		piece("BannerR", "UpperTorso", { 0.8, 2.6, 0.05 }, { 3.6, -0.8, 1.1 }, crimson, with(LOOSE, { Material = "Fabric" })),
 	}, "rbxassetid://89614314986771"))
 end
 
 -- 12. ASTREA (7★ Marksman - Featured Astral Star-Gazer) -----------------------------------
--- Astral archer from her reference art: very long wavy silver-blue hair with star ornaments, a
--- halo of stars behind her head, an off-shoulder lavender gown with silver trim and a star
--- brooch, bell sleeves, a silver belt with a star clasp, a sheer layered overskirt, a quiver at
--- her left hip, lavender trousers and pale blue boots with gold trim. Face: our own decal from
--- assets/faces/make_astrea_face.py. Hair: our Blender mesh (tools/make_astrea_hair_ugc.py).
+-- From her second reference art (bow drawn, silver tiara): very long, sleek silver hair, a teal
+-- crystal spray on a silver tiara, a high lavender collar with a teal gem, a fitted lavender
+-- bodice with gold filigree and a large teal crystal at the chest, bare shoulders above purple
+-- off-shoulder bands edged in gold, long lavender sleeves, purple bracers with gold rims and
+-- teal gems, dark fingerless gloves, a lilac sash with a teal crystal clasp and a row of teal
+-- crystal pendants, an open-front purple coat skirt lined in lavender with gold trim and
+-- filigree, pale blue trousers, and pale blue knee and shin armour edged in gold. Feminine body
+-- (Slim). Goes over the default part budget (HeroCostumes.BUDGET_OVERRIDES) at the user's
+-- request. Face: our own decal from assets/faces/make_astrea_face.py. Hair: our Blender meshes
+-- (tools/make_astrea_hair_ugc.py).
 do
-	local skin, hair, lavender, lilac, silver = { 238, 200, 168 }, { 200, 212, 236 }, { 170, 170, 220 }, { 196, 196, 236 }, { 214, 218, 232 }
-	local star, gold, leather, boot, glow = { 120, 190, 255 }, { 214, 176, 90 }, { 42, 38, 46 }, { 176, 196, 228 }, { 170, 220, 255 }
-	table.insert(COSTUMES, costume("hero_astrea", "Standard", {
-		Skin = skin, UpperTorso = lavender, LowerTorso = lavender, UpperArm = lavender, LowerArm = lavender, Hand = skin,
-		UpperLeg = lilac, LowerLeg = boot, Foot = boot,
+	local skin, hair, lavender, lilac, purple = { 238, 200, 168 }, { 206, 210, 230 }, { 178, 170, 224 }, { 204, 196, 240 }, { 104, 72, 170 }
+	local gold, teal, glove, trousers, armour = { 222, 182, 92 }, { 80, 232, 214 }, { 44, 40, 60 }, { 180, 206, 238 }, { 200, 224, 248 }
+	local sash = { 168, 140, 214 }
+	table.insert(COSTUMES, costume("hero_astrea", "Slim", {
+		Skin = skin, UpperTorso = lavender, LowerTorso = lavender, UpperArm = lavender, LowerArm = lavender, Hand = glove,
+		UpperLeg = trousers, LowerLeg = trousers, Foot = armour,
 	}, {
-		-- Hair mesh: centred on the export's bounding box and turned 180 degrees to undo the
-		-- importer's rotation.
-		piece("HairMesh", "Head", { 2.31, 5.02, 2.11 }, { -0.0118, -1.4656, 0.1972 }, hair, with(LOOSE, {
+		-- Hair: two meshes (head part, long back fall), each centred on its export's bounding box
+		-- and turned 180 degrees to undo the importer's rotation. Both carry our strand texture,
+		-- which also sets the colour (a textured mesh ignores the part colour).
+		piece("HairMesh", "Head", { 2.152, 3.62, 1.7 }, { 0.0123, -0.6613, 0.0611 }, hair, with(LOOSE, {
 			Rotation = { 0, 180, 0 },
-			Mesh = { MeshId = "rbxassetid://108726871571153", Scale = { 0.01, 0.01, 0.01 } },
+			Mesh = { MeshId = "rbxassetid://79290192354958", TextureId = "rbxassetid://126451381570698", Scale = { 0.01, 0.01, 0.01 } },
 		})),
-		-- Star ornaments in the hair and crystal earrings
-		piece("HairStarL", "Head", { 0.08, 0.3, 0.3 }, { -0.62, 0.32, -0.15 }, star, with(NEON, { Rotation = { 45, 0, 0 } })),
-		piece("HairStarR", "Head", { 0.08, 0.3, 0.3 }, { 0.62, 0.32, -0.15 }, star, with(NEON, { Rotation = { 45, 0, 0 } })),
-		piece("EarringL", "Head", { 0.06, 0.2, 0.06 }, { -0.6, -0.3, -0.1 }, glow, with(LOOSE, NEON)),
-		piece("EarringR", "Head", { 0.06, 0.2, 0.06 }, { 0.6, -0.3, -0.1 }, glow, with(LOOSE, NEON)),
-		-- Halo of stars behind her head
-		piece("HaloStar1", "UpperTorso", { 0.14, 0.14, 0.14 }, { -0.95, 1.95, 0.75 }, glow, with(LOOSE, NEON, { Shape = "Ball" })),
-		piece("HaloStar2", "UpperTorso", { 0.14, 0.14, 0.14 }, { -0.7, 2.45, 0.75 }, glow, with(LOOSE, NEON, { Shape = "Ball" })),
-		piece("HaloStar3", "UpperTorso", { 0.14, 0.14, 0.14 }, { -0.25, 2.72, 0.75 }, glow, with(LOOSE, NEON, { Shape = "Ball" })),
-		piece("HaloStar4", "UpperTorso", { 0.14, 0.14, 0.14 }, { 0.25, 2.72, 0.75 }, glow, with(LOOSE, NEON, { Shape = "Ball" })),
-		piece("HaloStar5", "UpperTorso", { 0.14, 0.14, 0.14 }, { 0.7, 2.45, 0.75 }, glow, with(LOOSE, NEON, { Shape = "Ball" })),
-		piece("HaloStar6", "UpperTorso", { 0.14, 0.14, 0.14 }, { 0.95, 1.95, 0.75 }, glow, with(LOOSE, NEON, { Shape = "Ball" })),
-		piece("HaloCrown", "UpperTorso", { 0.06, 0.5, 0.5 }, { 0, 3.05, 0.75 }, star, with(LOOSE, NEON, { Rotation = { 45, 0, 0 } })),
-		-- Off-shoulder bodice: bare shoulders, silver neckline, star brooch, silver seams
-		piece("BareShoulders", "UpperTorso", { 2.02, 0.26, 1.02 }, { 0, 0.68, 0 }, skin),
-		piece("NecklineTrim", "UpperTorso", { 2.06, 0.08, 1.06 }, { 0, 0.52, 0 }, silver, METAL),
-		piece("StarBrooch", "UpperTorso", { 0.04, 0.3, 0.3 }, { 0, 0.32, -0.53 }, star, with(NEON, { Rotation = { 0, 90, 45 } })),
-		piece("SeamL", "UpperTorso", { 0.05, 0.8, 0.05 }, { -0.3, -0.2, -0.52 }, silver, METAL),
-		piece("SeamR", "UpperTorso", { 0.05, 0.8, 0.05 }, { 0.3, -0.2, -0.52 }, silver, METAL),
-		-- Arms: bare shoulder caps, silver bands, flared bell sleeves with silver hems
-		piece("ShoulderCapL", "LeftUpperArm", { 1.02, 0.3, 1.02 }, { 0, 0.42, 0 }, skin),
-		piece("ShoulderCapR", "RightUpperArm", { 1.02, 0.3, 1.02 }, { 0, 0.42, 0 }, skin),
-		piece("ArmBandL", "LeftUpperArm", { 1.06, 0.1, 1.06 }, { 0, 0.24, 0 }, silver, METAL),
-		piece("ArmBandR", "RightUpperArm", { 1.06, 0.1, 1.06 }, { 0, 0.24, 0 }, silver, METAL),
-		piece("BellSleeveL", "LeftLowerArm", { 1.35, 0.85, 1.35 }, { 0, 0.05, 0 }, lilac, with(LOOSE, { Material = "Fabric" })),
-		piece("BellSleeveR", "RightLowerArm", { 1.35, 0.85, 1.35 }, { 0, 0.05, 0 }, lilac, with(LOOSE, { Material = "Fabric" })),
-		piece("SleeveHemL", "LeftLowerArm", { 1.38, 0.06, 1.38 }, { 0, -0.36, 0 }, silver, with(LOOSE, METAL)),
-		piece("SleeveHemR", "RightLowerArm", { 1.38, 0.06, 1.38 }, { 0, -0.36, 0 }, silver, with(LOOSE, METAL)),
-		-- Silver belt with a star clasp
-		piece("Belt", "LowerTorso", { 2.06, 0.18, 1.06 }, { 0, 0.1, 0 }, silver, METAL),
-		piece("StarClasp", "LowerTorso", { 0.04, 0.26, 0.26 }, { 0.4, 0.1, -0.55 }, star, with(NEON, { Rotation = { 0, 90, 45 } })),
-		-- Sheer layered overskirt: open front panels, a wrap drape, a long back
-		piece("OverskirtL", "LowerTorso", { 0.75, 1.9, 0.06 }, { -0.65, -1.05, -0.56 }, lilac, with(LOOSE, { Material = "Glass" })),
-		piece("OverskirtR", "LowerTorso", { 0.75, 1.9, 0.06 }, { 0.65, -1.05, -0.56 }, lilac, with(LOOSE, { Material = "Glass" })),
-		piece("WrapDrape", "LowerTorso", { 1.2, 1.0, 0.07 }, { 0.15, -0.55, -0.58 }, lavender, with(LOOSE, { Material = "Fabric", Rotation = { 0, 0, -12 } })),
-		piece("SkirtBack", "LowerTorso", { 2.2, 2.2, 0.1 }, { 0, -1.2, 0.6 }, lavender, with(LOOSE, { Material = "Fabric", Rotation = { -8, 0, 0 } })),
-		piece("HemL", "LowerTorso", { 0.75, 0.06, 0.07 }, { -0.65, -2.0, -0.57 }, silver, with(LOOSE, METAL)),
-		piece("HemR", "LowerTorso", { 0.75, 0.06, 0.07 }, { 0.65, -2.0, -0.57 }, silver, with(LOOSE, METAL)),
-		-- Quiver at her left hip with a gold rim and glowing crystal fletching
-		piece("Quiver", "LowerTorso", { 0.4, 1.4, 0.4 }, { -1.2, -0.45, 0.2 }, leather, with(LOOSE, { Shape = "Cylinder", Rotation = { 0, 0, 80 } })),
-		piece("QuiverRim", "LowerTorso", { 0.44, 0.1, 0.44 }, { -1.24, 0.25, 0.2 }, gold, with(LOOSE, METAL, { Rotation = { 0, 0, -10 } })),
-		piece("FletchA", "LowerTorso", { 0.06, 0.32, 0.18 }, { -1.22, 0.45, 0.14 }, glow, with(LOOSE, NEON)),
-		piece("FletchB", "LowerTorso", { 0.06, 0.32, 0.18 }, { -1.28, 0.42, 0.28 }, glow, with(LOOSE, NEON)),
-		-- Boots: gold V trim and cuff, gold soles
-		piece("BootCuffL", "LeftLowerLeg", { 1.08, 0.1, 1.08 }, { 0, 0.32, 0 }, gold, METAL),
-		piece("BootCuffR", "RightLowerLeg", { 1.08, 0.1, 1.08 }, { 0, 0.32, 0 }, gold, METAL),
-		piece("BootStarL", "LeftLowerLeg", { 0.22, 0.22, 0.04 }, { 0, 0.05, -0.54 }, gold, with(METAL, { Rotation = { 0, 0, 45 } })),
-		piece("BootStarR", "RightLowerLeg", { 0.22, 0.22, 0.04 }, { 0, 0.05, -0.54 }, gold, with(METAL, { Rotation = { 0, 0, 45 } })),
+		piece("HairBackMesh", "Head", { 2.429, 4.881, 1.549 }, { 0.2868, -1.6453, 0.5112 }, hair, with(LOOSE, {
+			Rotation = { 0, 180, 0 },
+			Mesh = { MeshId = "rbxassetid://98817994028995", TextureId = "rbxassetid://126451381570698", Scale = { 0.01, 0.01, 0.01 } },
+		})),
+		-- Silver tiara on the crown with a spray of teal crystals, and teal crystal earrings
+		piece("TiaraBase", "Head", { 0.42, 0.06, 0.12 }, { 0, 0.7, -0.22 }, armour, with(LOOSE, METAL, { Rotation = { -30, 0, 0 } })),
+		piece("CrystalCrown", "Head", { 0.12, 0.12, 0.08 }, { 0, 0.86, -0.2 }, teal, with(LOOSE, NEON, { Rotation = { -20, 0, 45 } })),
+		piece("CrystalCrownTip", "Head", { 0.08, 0.2, 0.12 }, { 0, 0.99, -0.17 }, teal, with(LOOSE, NEON, WEDGE, { Rotation = { -20, 90, 0 } })),
+		piece("CrystalL", "Head", { 0.08, 0.2, 0.08 }, { -0.12, 0.8, -0.2 }, teal, with(LOOSE, NEON, { Rotation = { -20, 0, 28 } })),
+		piece("CrystalR", "Head", { 0.08, 0.2, 0.08 }, { 0.12, 0.8, -0.2 }, teal, with(LOOSE, NEON, { Rotation = { -20, 0, -28 } })),
+		piece("EarringL", "Head", { 0.06, 0.16, 0.06 }, { -0.6, -0.3, -0.1 }, teal, with(LOOSE, NEON, { Rotation = { 0, 0, 45 } })),
+		piece("EarringR", "Head", { 0.06, 0.16, 0.06 }, { 0.6, -0.3, -0.1 }, teal, with(LOOSE, NEON, { Rotation = { 0, 0, 45 } })),
+		-- High collar with a gold rim and a small teal gem at the throat
+		piece("HighCollar", "UpperTorso", { 1.0, 0.3, 0.9 }, { 0, 0.86, 0.02 }, lavender, with(LOOSE, { Material = "Fabric" })),
+		piece("CollarRim", "UpperTorso", { 1.04, 0.05, 0.94 }, { 0, 1.0, 0.02 }, gold, with(LOOSE, METAL)),
+		piece("CollarGem", "UpperTorso", { 0.1, 0.1, 0.05 }, { 0, 0.82, -0.47 }, teal, with(LOOSE, NEON, { Rotation = { 0, 0, 45 } })),
+		-- Fitted bodice: a lilac centre panel with gold piping, a gold V from the collar to the
+		-- chest crystal, and gold side seams curving in to the waist
+		piece("BodicePanel", "UpperTorso", { 0.6, 1.1, 0.05 }, { 0, -0.24, -0.51 }, lilac, { Material = "Fabric" }),
+		piece("PipingL", "UpperTorso", { 0.05, 1.1, 0.06 }, { -0.3, -0.24, -0.52 }, gold, METAL),
+		piece("PipingR", "UpperTorso", { 0.05, 1.1, 0.06 }, { 0.3, -0.24, -0.52 }, gold, METAL),
+		piece("YokeVL", "UpperTorso", { 0.6, 0.06, 0.06 }, { -0.22, 0.46, -0.52 }, gold, with(METAL, { Rotation = { 0, 0, -38 } })),
+		piece("YokeVR", "UpperTorso", { 0.6, 0.06, 0.06 }, { 0.22, 0.46, -0.52 }, gold, with(METAL, { Rotation = { 0, 0, 38 } })),
+		piece("ChestBezel", "UpperTorso", { 0.3, 0.3, 0.05 }, { 0, 0.2, -0.53 }, gold, with(METAL, { Rotation = { 0, 0, 45 } })),
+		piece("ChestCrystal", "UpperTorso", { 0.2, 0.2, 0.06 }, { 0, 0.2, -0.55 }, teal, with(NEON, { Rotation = { 0, 0, 45 } })),
+		piece("SeamL", "UpperTorso", { 0.05, 0.9, 0.06 }, { -0.68, -0.25, -0.51 }, gold, with(METAL, { Rotation = { 0, 0, -10 } })),
+		piece("SeamR", "UpperTorso", { 0.05, 0.9, 0.06 }, { 0.68, -0.25, -0.51 }, gold, with(METAL, { Rotation = { 0, 0, 10 } })),
+		-- Arms: bare shoulders, purple off-shoulder bands edged in gold, long lavender sleeves,
+		-- purple bracers with gold rims and a teal gem
+		piece("ShoulderL", "LeftUpperArm", { 1.02, 0.2, 1.02 }, { 0, 0.47, 0 }, skin),
+		piece("ShoulderR", "RightUpperArm", { 1.02, 0.2, 1.02 }, { 0, 0.47, 0 }, skin),
+		piece("BandL", "LeftUpperArm", { 1.06, 0.26, 1.06 }, { 0, 0.22, 0 }, purple, { Material = "Fabric" }),
+		piece("BandR", "RightUpperArm", { 1.06, 0.26, 1.06 }, { 0, 0.22, 0 }, purple, { Material = "Fabric" }),
+		piece("BandTopL", "LeftUpperArm", { 1.08, 0.04, 1.08 }, { 0, 0.36, 0 }, gold, METAL),
+		piece("BandTopR", "RightUpperArm", { 1.08, 0.04, 1.08 }, { 0, 0.36, 0 }, gold, METAL),
+		piece("BandBottomL", "LeftUpperArm", { 1.08, 0.04, 1.08 }, { 0, 0.08, 0 }, gold, METAL),
+		piece("BandBottomR", "RightUpperArm", { 1.08, 0.04, 1.08 }, { 0, 0.08, 0 }, gold, METAL),
+		piece("BracerL", "LeftLowerArm", { 1.08, 0.6, 1.08 }, { 0, -0.12, 0 }, purple, METAL),
+		piece("BracerR", "RightLowerArm", { 1.08, 0.6, 1.08 }, { 0, -0.12, 0 }, purple, METAL),
+		piece("BracerTopL", "LeftLowerArm", { 1.12, 0.07, 1.12 }, { 0, 0.2, 0 }, gold, METAL),
+		piece("BracerTopR", "RightLowerArm", { 1.12, 0.07, 1.12 }, { 0, 0.2, 0 }, gold, METAL),
+		piece("BracerBottomL", "LeftLowerArm", { 1.12, 0.07, 1.12 }, { 0, -0.4, 0 }, gold, METAL),
+		piece("BracerBottomR", "RightLowerArm", { 1.12, 0.07, 1.12 }, { 0, -0.4, 0 }, gold, METAL),
+		piece("BracerGemL", "LeftLowerArm", { 0.04, 0.16, 0.16 }, { -0.56, -0.1, 0 }, teal, with(NEON, { Rotation = { 45, 0, 0 } })),
+		piece("BracerGemR", "RightLowerArm", { 0.04, 0.16, 0.16 }, { 0.56, -0.1, 0 }, teal, with(NEON, { Rotation = { 45, 0, 0 } })),
+		-- Lilac sash with gold edges, a teal crystal clasp and a tail falling on her left hip
+		piece("Sash", "LowerTorso", { 2.08, 0.3, 1.08 }, { 0, 0.02, 0 }, sash, { Material = "Fabric" }),
+		piece("SashTop", "LowerTorso", { 2.1, 0.04, 1.1 }, { 0, 0.17, 0 }, gold, METAL),
+		piece("SashBottom", "LowerTorso", { 2.1, 0.04, 1.1 }, { 0, -0.13, 0 }, gold, METAL),
+		piece("ClaspBezel", "LowerTorso", { 0.28, 0.28, 0.05 }, { 0, 0.02, -0.56 }, gold, with(METAL, { Rotation = { 0, 0, 45 } })),
+		piece("ClaspCrystal", "LowerTorso", { 0.18, 0.18, 0.06 }, { 0, 0.02, -0.58 }, teal, with(NEON, { Rotation = { 0, 0, 45 } })),
+		piece("SashTail", "LowerTorso", { 0.28, 0.8, 0.05 }, { -0.42, -0.5, -0.58 }, sash, with(LOOSE, { Material = "Fabric", Rotation = { 0, 0, -6 } })),
+		-- Teal crystal pendants hanging from the sash: a facet and a downward point each
+		piece("PendantA", "LowerTorso", { 0.11, 0.11, 0.05 }, { -0.62, -0.28, -0.63 }, teal, with(LOOSE, NEON, { Rotation = { 0, 0, 45 } })),
+		piece("PendantTipA", "LowerTorso", { 0.04, 0.16, 0.11 }, { -0.62, -0.42, -0.63 }, teal, with(LOOSE, NEON, WEDGE, { Rotation = { 0, 90, 180 } })),
+		piece("PendantB", "LowerTorso", { 0.11, 0.11, 0.05 }, { -0.24, -0.3, -0.63 }, teal, with(LOOSE, NEON, { Rotation = { 0, 0, 45 } })),
+		piece("PendantTipB", "LowerTorso", { 0.04, 0.2, 0.11 }, { -0.24, -0.46, -0.63 }, teal, with(LOOSE, NEON, WEDGE, { Rotation = { 0, 90, 180 } })),
+		piece("PendantC", "LowerTorso", { 0.13, 0.13, 0.05 }, { 0.2, -0.32, -0.63 }, teal, with(LOOSE, NEON, { Rotation = { 0, 0, 45 } })),
+		piece("PendantTipC", "LowerTorso", { 0.04, 0.24, 0.13 }, { 0.2, -0.5, -0.63 }, teal, with(LOOSE, NEON, WEDGE, { Rotation = { 0, 90, 180 } })),
+		piece("PendantD", "LowerTorso", { 0.11, 0.11, 0.05 }, { 0.62, -0.28, -0.63 }, teal, with(LOOSE, NEON, { Rotation = { 0, 0, 45 } })),
+		piece("PendantTipD", "LowerTorso", { 0.04, 0.16, 0.11 }, { 0.62, -0.42, -0.63 }, teal, with(LOOSE, NEON, WEDGE, { Rotation = { 0, 90, 180 } })),
+		piece("PendantSideL", "LowerTorso", { 0.05, 0.11, 0.11 }, { -1.1, -0.28, -0.2 }, teal, with(LOOSE, NEON, { Rotation = { 45, 0, 0 } })),
+		piece("PendantSideR", "LowerTorso", { 0.05, 0.11, 0.11 }, { 1.1, -0.28, -0.2 }, teal, with(LOOSE, NEON, { Rotation = { 45, 0, 0 } })),
+		-- Open-front coat skirt: purple panels flaring from the sash, lined in lavender along the
+		-- opening, gold-edged, with a gold filigree diamond near each hem; side panels and a back
+		piece("CoatL", "LowerTorso", { 0.78, 2.3, 0.07 }, { -0.66, -1.3, -0.56 }, purple, with(LOOSE, { Material = "Fabric", Rotation = { 0, 0, -8 } })),
+		piece("CoatR", "LowerTorso", { 0.78, 2.3, 0.07 }, { 0.66, -1.3, -0.56 }, purple, with(LOOSE, { Material = "Fabric", Rotation = { 0, 0, 8 } })),
+		piece("LiningL", "LowerTorso", { 0.14, 2.3, 0.05 }, { 0.34, 0, -0.03 }, lavender, with(LOOSE, { Material = "Fabric", RelativeTo = "CoatL" })),
+		piece("LiningR", "LowerTorso", { 0.14, 2.3, 0.05 }, { -0.34, 0, -0.03 }, lavender, with(LOOSE, { Material = "Fabric", RelativeTo = "CoatR" })),
+		piece("CoatEdgeL", "LowerTorso", { 0.05, 2.3, 0.08 }, { 0.26, 0, -0.02 }, gold, with(LOOSE, METAL, { RelativeTo = "CoatL" })),
+		piece("CoatEdgeR", "LowerTorso", { 0.05, 2.3, 0.08 }, { -0.26, 0, -0.02 }, gold, with(LOOSE, METAL, { RelativeTo = "CoatR" })),
+		piece("CoatHemL", "LowerTorso", { 0.92, 0.06, 0.08 }, { 0, -1.13, -0.01 }, gold, with(LOOSE, METAL, { RelativeTo = "CoatL" })),
+		piece("CoatHemR", "LowerTorso", { 0.92, 0.06, 0.08 }, { 0, -1.13, -0.01 }, gold, with(LOOSE, METAL, { RelativeTo = "CoatR" })),
+		piece("FiligreeL", "LowerTorso", { 0.24, 0.24, 0.03 }, { -0.06, -0.7, -0.04 }, gold, with(LOOSE, METAL, { RelativeTo = "CoatL", Rotation = { 0, 0, 45 } })),
+		piece("FiligreeR", "LowerTorso", { 0.24, 0.24, 0.03 }, { 0.06, -0.7, -0.04 }, gold, with(LOOSE, METAL, { RelativeTo = "CoatR", Rotation = { 0, 0, 45 } })),
+		piece("FiligreeInL", "LowerTorso", { 0.12, 0.12, 0.03 }, { 0, 0, -0.01 }, purple, with(LOOSE, { RelativeTo = "FiligreeL" })),
+		piece("FiligreeInR", "LowerTorso", { 0.12, 0.12, 0.03 }, { 0, 0, -0.01 }, purple, with(LOOSE, { RelativeTo = "FiligreeR" })),
+		piece("CoatSideL", "LowerTorso", { 0.07, 2.1, 0.86 }, { -1.08, -1.2, 0.06 }, purple, with(LOOSE, { Material = "Fabric", Rotation = { 0, 0, -8 } })),
+		piece("CoatSideR", "LowerTorso", { 0.07, 2.1, 0.86 }, { 1.08, -1.2, 0.06 }, purple, with(LOOSE, { Material = "Fabric", Rotation = { 0, 0, 8 } })),
+		piece("CoatBack", "LowerTorso", { 2.2, 2.4, 0.08 }, { 0, -1.3, 0.6 }, purple, with(LOOSE, { Material = "Fabric", Rotation = { -8, 0, 0 } })),
+		piece("CoatBackHem", "LowerTorso", { 2.22, 0.06, 0.1 }, { 0, -1.18, 0 }, gold, with(LOOSE, METAL, { RelativeTo = "CoatBack" })),
+		-- Legs: pale blue knee cops with a gold diamond, shin plates with a gold top band, armoured
+		-- boots on gold soles
+		piece("KneeL", "LeftLowerLeg", { 0.76, 0.5, 0.14 }, { 0, 0.36, -0.55 }, armour, METAL),
+		piece("KneeR", "RightLowerLeg", { 0.76, 0.5, 0.14 }, { 0, 0.36, -0.55 }, armour, METAL),
+		piece("KneeTrimL", "LeftLowerLeg", { 0.28, 0.28, 0.04 }, { 0, 0, -0.08 }, gold, with(METAL, { RelativeTo = "KneeL", Rotation = { 0, 0, 45 } })),
+		piece("KneeTrimR", "RightLowerLeg", { 0.28, 0.28, 0.04 }, { 0, 0, -0.08 }, gold, with(METAL, { RelativeTo = "KneeR", Rotation = { 0, 0, 45 } })),
+		piece("ShinL", "LeftLowerLeg", { 1.06, 0.62, 1.06 }, { 0, -0.24, 0 }, armour, METAL),
+		piece("ShinR", "RightLowerLeg", { 1.06, 0.62, 1.06 }, { 0, -0.24, 0 }, armour, METAL),
+		piece("ShinBandL", "LeftLowerLeg", { 1.1, 0.06, 1.1 }, { 0, 0.08, 0 }, gold, METAL),
+		piece("ShinBandR", "RightLowerLeg", { 1.1, 0.06, 1.1 }, { 0, 0.08, 0 }, gold, METAL),
 		piece("BootSoleL", "LeftFoot", { 1.1, 0.07, 1.28 }, { 0, -0.13, -0.08 }, gold, METAL),
 		piece("BootSoleR", "RightFoot", { 1.1, 0.07, 1.28 }, { 0, -0.13, -0.08 }, gold, METAL),
-	}, "rbxassetid://139763198478294"))
+	}, "rbxassetid://84469832141456"))
 end
 
 -- 13. EDIS CALLEN (6★ Striker - Legendary Black-Leather Rogue) ---------------------------
@@ -1486,8 +1557,9 @@ function HeroCostumes.Lint(c: Costume): { string }
 		problem(`face must be an rbxassetid, got {c.Face}`)
 	end
 	local partCount = #HeroRigSpec.PART_NAMES + #c.Pieces
-	if partCount > HeroCostumes.PART_BUDGET then
-		problem(`{partCount} parts exceeds the budget of {HeroCostumes.PART_BUDGET}`)
+	local budget = HeroCostumes.BudgetFor(c.HeroId)
+	if partCount > budget then
+		problem(`{partCount} parts exceeds the budget of {budget}`)
 	end
 
 	local names: { [string]: boolean } = {}

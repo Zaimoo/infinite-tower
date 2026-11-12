@@ -17,7 +17,13 @@ This skill is the procedure, with the lessons that each cost an iteration.
 **Never change** `HeroRigSpec` joints or hands, grip attachments, `HeroSockets` or weapon
 prefabs. A remodel touches only that hero's block in `HeroCostumes.luau`, its override in
 `HeroClips.luau`, and new files under `assets/faces`, `assets/hair` and `tools/`. That is what
-keeps animations and weapon placement working.
+keeps animations and weapon placement working. The one sanctioned rig edit is the `Slim`
+numbers in `HeroRigSpec.BODY_TYPES` (pipeline doc §4.2), and only as its own change that
+re-lints every `Slim` hero, never inside one hero's remodel.
+
+**Partial restyles** ("redo X's face", "make her body slim") use only the matching steps: §2
+for a face, §4.4 for a body switch, §3 and §6 for hair. Several heroes may share one branch
+when the user asks for the same change on all of them.
 
 ## 0. Set up
 
@@ -46,10 +52,21 @@ stance (feet, each hand, the weapon's angle).
 
 1. Derive `assets/faces/make_<hero>_face.py` from the closest existing generator with a small
    Python patch script (string replaces on colours, brow polygon, lid curve, mouth, extras),
-   rather than writing one from scratch. Bases: `make_han_face.py` (serious, angular),
-   `make_eolka_face.py` (soft, feminine, blush), `make_solaris_face.py` and
-   `make_astrea_face.py` (serene, feminine). Match brow colour to the hair. If the user asks for a
-   different expression from the art (Aaron: nervous → serious), follow the user.
+   rather than writing one from scratch. Bases:
+   - **Male:** `make_han_face.py` (serious, angular), `make_velkist_face.py` (cocky grin).
+   - **Female:** always the constant-driven feminine `eye()` from `make_jenna_face.py` (warm,
+     open), `make_edis_face.py` (cool, half-lidded: lower `EYE_TOP_PEAK`), `make_eolka_face.py`
+     (knowing, warm) or `make_astrea_face.py` (serene, forehead jewel). Tune the module
+     constants (`EYE_OUTER`, `EYE_INNER`, `EYE_TOP_PEAK`, `EYE_BOTTOM_PEAK`, `IRIS_CENTRE`,
+     `IRIS_RADII`, `LASH_THICK`, `BROW_POINTS`) instead of redrawing. Targets in 512 space: eye
+     ~120 wide and 55–65 tall, upper lash 3–4 px at the inner corner thickening to 10–12 px with
+     one upward wing, iris radii ~31 × 38 overlapped by the lid, lid shadow, low glow crescent,
+     one big catchlight, only the outer third of the lower lid, slim arched brows. Never the
+     narrow slit eye of the male faces: the user rejected women's faces drawn that way.
+   - Layout: brows y ≈ 200–245, eye centres y ≈ 262–270 at x ≈ 160 and 350, nose 300–340,
+     mouth 380–400.
+   Brow colour follows hair colour (blond → dark gold, silver → cool grey, not black). If the
+   user asks for a different expression from the art (Aaron: nervous → serious), follow the user.
 2. Run it with `python -I`, then **look at** `hero_<hero>_face_preview.png`. Fix anything that
    reads wrong (hooked beard lines, a too-thin smile) before uploading.
 3. Upload: serve the folder (`python -I -m http.server 8765 --bind 127.0.0.1`, run in the
@@ -82,10 +99,15 @@ stance (feet, each hand, the weapon's angle).
    - locks flaring twice as wide as the art → pull the end points in
    - straight hair when the art is wavy → a sideways sine wobble with amplitude ~0.1
    - scalp showing between locks or at the nape → extend `cap()` lower at the sides and back
-4. Aim for 5k–14k triangles (Roblox's import limit is ~20k). Export with
+4. For hair that reads as hair, texture it (Astrea): a PIL strand atlas
+   (`assets/hair/make_<hero>_hair_texture.py`), UVs from `ribbon()`/`cap()`, the colour painted
+   into the texture, and `MESHES[meshId] = textureId`. Rules in the pipeline doc §4.4
+   "Textured hair". Blender can run headless (`blender -b --factory-startup --python ...`) to
+   build, render and export when the Blender MCP is down.
+5. Aim for 5k–14k triangles (Roblox's import limit is ~20k). Export with
    `scripts/blender_export_hair.py` (exec it after setting `HAIR`), which writes the FBX, the
    JSON and the `.blend`, and prints the centre and size you need for placement.
-5. Send the user the angles render and ask them to import the FBX (File → Import 3D) and send
+6. Send the user the angles render and ask them to import the FBX (File → Import 3D) and send
    the MeshId. **Scripts can't publish meshes** (`CreateAssetAsync` is "not available yet"),
    so this step is always manual. Give the full file path.
 
@@ -106,18 +128,30 @@ fail on exactly that placeholder, which proves the rest of the costume is clean.
        Mesh = { MeshId = "rbxassetid://…", Scale = { 0.01, 0.01, 0.01 } },
    })),
    ```
-3. Stay within 60 parts (16 rig + pieces; count `piece(` lines). `LOOSE` only silences the
+3. Stay within 60 parts (16 rig + pieces; count `piece(` lines). Only when the user says to go
+   over the budget, give the hero its own ceiling in `HeroCostumes.BUDGET_OVERRIDES` (Astrea: 100);
+   the lint and `tests/studio-hero-rigs.luau` read it through `HeroCostumes.BudgetFor`. `LOOSE` only silences the
    overlap lint, so use it for hair, cloth, trims on cloth and pieces well behind the back.
    Rigid gear that overlaps a bone (a collar in the chin, a cuff in the hand) gets moved
    0.05–0.1 studs instead. Use the recipes in `docs/hero-art-pipeline.md` §4.2.
-4. **Female heroes:** `Slim` body, narrow shoulders (no broad pauldrons; shoulder pieces stay
-   within the arm's width and lie flat), a cinched waist, a skirt or panels that flare below
-   the belt, fitted sleeves and legs, and a narrower stance. Armour follows the body instead of
-   widening it. Recipe table: `docs/hero-art-pipeline.md` §4.2 "Feminine body".
+4. **Female heroes:** `Slim` body (torso 1.5 × 0.78, limbs 0.7, fists 0.8 wide; grips stay at
+   the hand's centre, so weapons don't move), narrow shoulders (no broad pauldrons; shoulder
+   pieces stay within the arm's width, ≤ 1.06 across, and lie flat, ≤ 0.15 tall), a cinched
+   waist, a skirt or panels that flare ±6–12° below the belt, fitted sleeves and legs, and a
+   narrower stance. Armour follows the body instead of widening it. Recipe table:
+   `docs/hero-art-pipeline.md` §4.2 "Feminine body".
+   - **Switching an existing hero to `Slim`:** change the body type, keep authoring pieces in
+     Standard space (they rescale horizontally), then fix what the lint and the look flag:
+     shoulder plates wider than the arm, rings around limbs, back pieces now crossing the
+     narrower arms, and fist-adjacent cuffs. Re-check the idle pose's weapon in Studio.
+   - If `Slim` itself still reads bulky, that is a `HeroRigSpec.BODY_TYPES.Slim` change for all
+     women at once, not costume padding (see the "Never change" note at the top).
 5. Remove the hero's old pieces that don't fit (neon wings, halos, held orbs). Gear comes from
    the weapon.
 6. Pieces behind the back (frames, banners, wings) must sit outside the arms' reach, or the
    arms hide them from the front: banners ended up at x ±3.25 for Solaris.
+7. If the hair mesh leaves the cheek bare in front of the ear, add the sideburn recipe from
+   the pipeline doc §4.2 (Gide) rather than regenerating the hair.
 
 ## 5. Idle stance
 
@@ -142,7 +176,7 @@ in root space for a few candidate angles) instead of guessing.
 
 1. **Verify the ID first.** In Studio Edit mode, run the "verify mesh" snippet from
    `references/studio-snippets.md`, and `scripts/export_signature.py <hero>` locally. The vertex
-   counts must match and the max-X vertex must mirror the export's (X and Z negated: the
+   counts must match (not for textured meshes: UV seams split vertices) and the max-X vertex must mirror the export's (X and Z negated: the
    importer's 180° turn). A user once sent another hero's ID; the counts caught it.
 2. Replace the placeholder and add the mesh to `HeroCostumes.MESHES` with a comment naming the
    generator: `scripts/wire_hair_mesh.py <placeholder> <meshId> <comment>`.
@@ -151,7 +185,7 @@ in root space for a few candidate angles) instead of guessing.
 ## 7. Test and check in Studio
 
 1. `pwsh tests/run.ps1` must pass (add `-LuauDirectory <dir>` if the Luau CLI isn't in the
-   default temp folder). Ignore the expected "[The Pit] Request failed" line. Lint
+   default temp folder; on the user's machine it is `D:/luau`, never `-InstallLuau`). Ignore the expected "[The Pit] Request failed" line. Lint
    messages say what to move: "X overlaps Y" means move X 0.05–0.1 studs out of Y.
 2. Build a temporary rig with the "temp rig" snippet (it equips the weapon, applies the idle
    pose, and moves the weapon parts with their handles). It requires a **clone** of

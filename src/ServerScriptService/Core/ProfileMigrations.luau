@@ -7,11 +7,12 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local HeroCatalog = require(ReplicatedStorage.Shared.Config.HeroCatalog)
 local FortressTree = require(ReplicatedStorage.Shared.Util.FortressTree)
 local Onboarding = require(ReplicatedStorage.Shared.Util.Onboarding)
+local RewardRules = require(ReplicatedStorage.Shared.Util.RewardRules)
 local SettingsConfig = require(ReplicatedStorage.Shared.Config.SettingsConfig)
 
 local ProfileMigrations = {}
 
-ProfileMigrations.CurrentSchema = 7
+ProfileMigrations.CurrentSchema = 8
 
 -- Rarity a template had when these old saves were written, where it differs from today's catalog.
 -- Han was the Common starter before he became Mythical; Valeria was Superior before moving to Exalted.
@@ -120,6 +121,14 @@ function ProfileMigrations.ToV7(profile: any)
 	profile.SchemaVersion = 7
 end
 
+-- v8: free rewards (GDD §4.8). Older saves start with nothing claimed, so their first daily reward,
+-- weekly chest and every promo code are available.
+function ProfileMigrations.ToV8(profile: any)
+	if (profile.SchemaVersion or 1) >= 8 then return end
+	RewardRules.EnsureState(profile)
+	profile.SchemaVersion = 8
+end
+
 function ProfileMigrations.Run(profile: any)
 	ProfileMigrations.ToV3(profile)
 	ProfileMigrations.ToV4(profile)
@@ -130,6 +139,7 @@ function ProfileMigrations.Run(profile: any)
 		profile.SchemaVersion = 6
 	end
 	ProfileMigrations.ToV7(profile)
+	ProfileMigrations.ToV8(profile)
 	profile.Settings = SettingsConfig.Sanitize(profile.Settings)
 end
 

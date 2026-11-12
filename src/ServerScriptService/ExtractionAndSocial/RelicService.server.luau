@@ -370,6 +370,8 @@ local function awardRelicPayout(player: Player, spec: any, scalar: number, rewar
 		return
 	end
 	local marketMult = dm.GetMarketMultiplier and dm.GetMarketMultiplier(player) or 1.0
+	-- Friend boost (GDD §4.8): more Gold while Roblox friends are in this server.
+	marketMult *= dm.GetFriendBoostMultiplier and dm.GetFriendBoostMultiplier(player) or 1.0
 	-- Gold and Gems both scale with the floor the relic dropped on (separate slopes, TowerFloorConfig).
 	-- Phase 6 M5: a relic banked during a climb streak pays more, Gold and gems alike.
 	local streakMult = TowerRuns.RelicMultiplier(player)
