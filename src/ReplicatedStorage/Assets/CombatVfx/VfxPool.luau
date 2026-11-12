@@ -47,6 +47,10 @@ local function setTrails(model: Model, enabled: boolean)
 			if enabled then
 				d:Clear()
 			end
+		elseif d:IsA("ParticleEmitter") then
+			-- Particles left over from the last flight would pop in at the new position.
+			d.Enabled = enabled
+			d:Clear()
 		end
 	end
 end

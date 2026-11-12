@@ -218,6 +218,83 @@ local function playVolley(ctx: Context)
 	end
 end
 
+-- The deep colour a palette's nebula cools to: its Accent, else a darkened Primary.
+local function nebula(palette: Palette): Color3
+	return palette.Accent or palette.Primary:Lerp(Color3.new(0.1, 0.05, 0.3), 0.55)
+end
+
+-- PIERCER: one heavy bolt. It cracks off the bow through two shock rings, punches through the
+-- target and carries on, and leaves a two-tone ribbon along its whole path that spreads and
+-- fades after it has gone (Astrea's Nebula Piercer).
+local function playPiercer(ctx: Context)
+	local args, recipe, palette, pool = ctx.Args, ctx.Recipe, ctx.Palette, ctx.Pool
+	local cue = args.Cue
+	local origin = originOf(args, recipe)
+	local startAt, arriveAt = ctx.StartAt, ctx.ArriveAt
+	local scale = recipe.Scale or 1
+	local impact = recipe.Impact or 3
+	local pierce = recipe.Pierce or 0
+	local body = projectile(recipe, palette)
+	local flightTime = math.max(0.05, arriveAt - startAt)
+	local aimed = args.Target()
+	local distance = math.max(1, VfxMath.Distance(origin, aimed))
+	local speed = distance / flightTime
+	local exit = VfxMath.Extend(origin, aimed, pierce)
+	local exitAt = arriveAt + pierce / speed
+	local direction = aimed - origin
+	local seed = cue.NetId % 17
+
+	-- Muzzle: a flash, a star glint and two rings thrown forward off the string.
+	VfxPrimitives.Burst(pool, origin, palette.Core, 1.5 * scale, startAt, 0.14)
+	VfxPrimitives.Flare(pool, fixed(origin), 3 * scale, palette.Secondary, startAt, 0.2)
+	if direction.Magnitude > 1e-3 then
+		local unit = direction.Unit
+		VfxPrimitives.FlightRing(pool, origin + unit * 0.8, unit, 0.9 * scale, palette.Core, startAt)
+		VfxPrimitives.FlightRing(pool, origin + unit * 2, unit, 1.5 * scale, palette.Primary, startAt + 0.05)
+		if recipe.Rings then
+			for _, f in { 0.4, 0.75 } do
+				VfxPrimitives.FlightRing(pool, VfxMath.Lerp(origin, aimed, f), unit, 0.6 * scale, palette.Secondary, startAt + f * flightTime)
+			end
+		end
+	end
+
+	fly(pool, body, origin, args.Target, startAt, arriveAt, VfxMath.ArcLift(origin, cue.Aim, recipe.Arc), function(at: Vector3)
+		VfxPrimitives.Burst(pool, at, palette.Core, impact, arriveAt, 0.18)
+		VfxPrimitives.Burst(pool, at, palette.Primary, impact * 1.6, arriveAt + 0.03, 0.38)
+		VfxPrimitives.Flare(pool, fixed(at), impact * 2.2, palette.Secondary, arriveAt, 0.24)
+		VfxPrimitives.FlightRing(pool, at, direction, impact * 0.75, palette.Secondary, arriveAt)
+		if pierce > 0 then
+			fly(pool, body, at, fixed(exit), arriveAt, exitAt, 0, function(tail: Vector3)
+				VfxPrimitives.Burst(pool, tail, palette.Primary, impact * 0.6, exitAt, 0.2)
+			end)
+		end
+	end)
+
+	-- The nebula: a wide violet wake and a thin bright thread inside it.
+	local width = recipe.Width or 1.1
+	local linger = recipe.Linger or 0.7
+	VfxPrimitives.Ribbon(pool, { From = origin, To = exit, StartAt = startAt, EndAt = exitAt, Width = width, Inner = palette.Primary, Outer = nebula(palette), Linger = linger, Seed = seed })
+	VfxPrimitives.Ribbon(pool, { From = origin, To = exit, StartAt = startAt, EndAt = exitAt, Width = width * 0.3, Inner = palette.Core, Outer = palette.Secondary, Linger = linger * 0.6, Seed = seed + 4.2 })
+
+	-- Everything else the server says the bolt went through flashes as it passes.
+	local mid = VfxMath.Lerp(origin, exit, 0.5)
+	local reach = VfxMath.Distance(origin, exit) / 2 + 3
+	afterHits(ctx, "HIT", fixed(mid), reach, function(points: { Vector3 })
+		local now = arriveAt + HIT_LOOKUP_DELAY
+		for i, point in points do
+			if i > 6 then
+				break
+			end
+			local hit = chest(point)
+			if VfxMath.Distance(hit, aimed) > 2 then
+				VfxPrimitives.Burst(pool, hit, palette.Primary, impact * 0.7, now, 0.2)
+				VfxPrimitives.Flare(pool, fixed(hit), impact * 1.2, palette.Secondary, now, 0.18)
+			end
+		end
+	end)
+	shake(ctx, arriveAt)
+end
+
 -- CLEAVE: a wide slash and a shockwave cone sweeping out in front of the Vanguard.
 local function playCleave(ctx: Context)
 	local pool, recipe, palette = ctx.Pool, ctx.Recipe, ctx.Palette
@@ -348,6 +425,97 @@ local function playStorm(ctx: Context)
 		end
 	end
 	shake(ctx, waves[1])
+end
+
+local STAR_FALL_SECONDS = 0.24
+-- The figure is finished this long before its first stars fall, so it reads whole for a beat.
+local FIGURE_HOLD = 0.1
+
+-- CONSTELLATION: an arrow is loosed into the sky and bursts; over the aim point a constellation
+-- then draws itself star by star and line by line, and once it is whole its stars fall as
+-- bolts, one wave per server damage tick, each landing under where it hung (Astrea's
+-- Constellation Judgment). The last wave closes with a shockwave over the whole area.
+local function playConstellation(ctx: Context)
+	local args, recipe, palette, pool = ctx.Args, ctx.Recipe, ctx.Palette, ctx.Pool
+	local cue = args.Cue
+	local origin = originOf(args, recipe)
+	local aim: Vector3 = cue.Aim
+	local radius = recipe.Radius or 16
+	local height = recipe.RainHeight or 20
+	local archetype = args.WeaponType and SkillVfxCatalog.WeaponArchetype[args.WeaponType]
+	local profile = ArchetypeCombatSkills.GetSkillProfile(args.HeroId, archetype)
+	local ticks, gap = HeroActionTiming.Ticks(profile.Skill)
+	local waves = VfxMath.WaveTimes(ctx.ArriveAt, ticks, gap)
+	local first, last = waves[1], waves[#waves]
+	local startAt = ctx.StartAt
+	local towards = heading(ctx)
+	local sky = aim + Vector3.new(0, height, 0)
+	local figure = VfxMath.ARCHER
+
+	-- The shot: straight up off the bow, leaning a little towards the target, and gone in a flash.
+	local window = math.max(0.1, first - STAR_FALL_SECONDS - startAt)
+	local flareAt = startAt + math.min(0.16, window * 0.3)
+	local flareHeight = recipe.FlareHeight or 30
+	local flareTop = origin + Vector3.new(0, flareHeight, 0) + towards * (flareHeight * 0.2)
+	fly(pool, projectile(recipe, palette, (recipe.Scale or 1) * 1.3), origin, fixed(flareTop), startAt, flareAt, 0, function(at: Vector3)
+		VfxPrimitives.Burst(pool, at, palette.Core, 3.5, flareAt, 0.3)
+		VfxPrimitives.Flare(pool, fixed(at), 7, palette.Secondary, flareAt, 0.3)
+	end)
+	VfxPrimitives.Burst(pool, origin, palette.Core, 1.4, startAt, 0.14)
+	VfxPrimitives.Disc(pool, { CFrame = CFrame.new(origin + Vector3.new(0, 1.2, 0)) * VfxPrimitives.FLAT, Radius = 1.4, Color = palette.Secondary, StartAt = startAt, EndAt = startAt + 0.35, Grow = 0.3, Transparency = 0.25 })
+
+	-- The sky answers: a glint where the figure will hang, then it draws itself.
+	local drawnAt = math.max(flareAt + 0.05, first - STAR_FALL_SECONDS - FIGURE_HOLD)
+	local lineStarts, lineSeconds, starAt = VfxMath.FigureTrace(figure, flareAt, drawnAt)
+	local ground = VfxMath.FigurePoints(figure, aim, radius * 0.9, towards)
+	local stars = table.create(#ground)
+	local dropAt = table.create(#ground)
+	local landAt = table.create(#ground)
+	for i, point in ground do
+		local wave = waves[(i - 1) % #waves + 1]
+		-- Stars of one wave land a few hundredths apart, so a wave patters instead of clapping.
+		local land = wave + ((i * 7) % 5) * 0.012
+		table.insert(stars, point + Vector3.new(0, height, 0))
+		table.insert(landAt, land)
+		table.insert(dropAt, land - STAR_FALL_SECONDS)
+	end
+	local endAt = last + SIGIL_LINGER
+	VfxPrimitives.Flare(pool, fixed(sky), radius * 0.9, palette.Core, flareAt, 0.3)
+	VfxPrimitives.Disc(pool, { CFrame = CFrame.new(sky - Vector3.new(0, 0.4, 0)) * VfxPrimitives.FLAT, Radius = radius, Color = nebula(palette), StartAt = flareAt, EndAt = endAt, Grow = 0.15, Transparency = 0.72 })
+	VfxPrimitives.Constellation(pool, { Stars = stars, Lines = figure.Lines, LineStarts = lineStarts, LineSeconds = lineSeconds, StarAt = starAt, DropAt = dropAt, EndAt = endAt, StarSize = 1.1, Palette = palette })
+
+	-- The ground under it: the area marked by a rim of light while the stars are overhead.
+	VfxPrimitives.Ring(pool, { Center = aim, From = 1, To = radius, Color = palette.Secondary, StartAt = flareAt, EndAt = flareAt + 0.35, Width = 0.5 })
+	VfxPrimitives.Ring(pool, { Center = aim, From = radius * 0.97, To = radius, Color = palette.Primary, StartAt = flareAt + 0.3, EndAt = endAt, Width = 0.35 })
+	VfxPrimitives.Disc(pool, { CFrame = CFrame.new(aim + Vector3.new(0, 0.15, 0)) * VfxPrimitives.FLAT, Radius = radius, Color = palette.Primary, StartAt = flareAt, EndAt = endAt, Grow = 0.2, Transparency = 0.7 })
+
+	-- The fall. A bolt lands a little past the point under its star, so it never drops dead
+	-- vertical (a projectile has no heading to face straight down).
+	local body = projectile(recipe, palette)
+	local impact = recipe.Impact or 2.4
+	local slant = towards * 1.6
+	for i, point in ground do
+		local land = landAt[i]
+		fly(pool, body, stars[i], fixed(point + slant), dropAt[i], land, 0, function(at: Vector3)
+			VfxPrimitives.Burst(pool, at + Vector3.new(0, 0.6, 0), palette.Core, impact, land, 0.16)
+			VfxPrimitives.Burst(pool, at + Vector3.new(0, 0.6, 0), palette.Primary, impact * 1.5, land + 0.02, 0.3)
+			VfxPrimitives.Ring(pool, { Center = at, From = 0.4, To = impact * 1.2, Color = palette.Secondary, StartAt = land, EndAt = land + 0.3, Width = 0.3 })
+		end)
+	end
+	for _, wave in waves do
+		VfxPrimitives.Motes(pool, aim + Vector3.new(0, 0.8, 0), palette.Secondary, wave, 3, 0.6)
+	end
+
+	-- The verdict: the empty sky flashes and a shockwave closes the area on the last wave.
+	VfxPrimitives.Flare(pool, fixed(chest(aim)), radius * 0.7, palette.Core, last, 0.3)
+	VfxPrimitives.Ring(pool, { Center = aim, From = radius * 0.3, To = radius * 1.08, Color = palette.Core, StartAt = last, EndAt = last + 0.4, Width = 0.9 })
+	shake(ctx, first)
+	local callback, magnitude = args.Shake, recipe.Shake
+	if callback and magnitude then
+		VfxPrimitives.At(pool, last, function()
+			callback(magnitude * 0.7)
+		end)
+	end
 end
 
 -- BULWARK: a barrier shell around the Vanguard for the barrier's duration, and a taunt
@@ -635,6 +803,7 @@ local PLAYERS: { [string]: (Context) -> () } = {
 	BOLT = playProjectile,
 	SLASH = playSlash,
 	VOLLEY = playVolley,
+	PIERCER = playPiercer,
 	CLEAVE = playCleave,
 	CROSS = playCross,
 	PLUNGE = playPlunge,
@@ -643,6 +812,7 @@ local PLAYERS: { [string]: (Context) -> () } = {
 	CHAIN = playChain,
 	MEND = playMend,
 	STORM = playStorm,
+	CONSTELLATION = playConstellation,
 	BULWARK = playBulwark,
 	TEMPEST = playTempest,
 	WAKE = playWake,
@@ -733,8 +903,69 @@ local function chargeWell(ctx: ChargeContext): boolean
 	return true
 end
 
+-- PIERCER on a drawn bow: starlight is pulled into the arrow. Motes stream to the nock, a core
+-- of light swells there inside a trembling violet shell, a star glyph spins up in front of the
+-- bow facing the target, the ground under the archer draws in, and a glint flashes on the
+-- arrow just before it leaves (the tell).
+local function chargeBolt(ctx: ChargeContext): boolean
+	local args, recipe, palette, pool = ctx.Args, ctx.Recipe, ctx.Palette, ctx.Pool
+	local function nock(): Vector3
+		return originOf(args, recipe)
+	end
+	local from, to = ctx.StartAt, ctx.ReleaseAt
+	local span = to - from
+	local scale = recipe.Scale or 1
+	local seed = args.Cue.NetId % 11
+	local function swell(size: number, tremble: number): (number) -> number
+		return function(now: number): number
+			local grown = VfxMath.Progress(from, to, now)
+			return size * scale * grown * (1 + tremble * grown * math.sin(now * 46))
+		end
+	end
+	VfxPrimitives.Converge(pool, nock, palette.Primary, 3.4, 8, from, to, seed)
+	VfxPrimitives.Converge(pool, nock, palette.Secondary, 2.2, 4, from + span * 0.3, to, seed + 3)
+	VfxPrimitives.Orb(pool, { Center = nock, Diameter = swell(0.55, 0), Color = palette.Core, Neon = true, StartAt = from, EndAt = to })
+	VfxPrimitives.Orb(pool, { Center = nock, Diameter = swell(1.2, 0.14), Color = palette.Primary, Neon = true, Transparency = 0.6, StartAt = from, EndAt = to })
+	VfxPrimitives.Glyph(pool, function(): CFrame
+		local at = nock()
+		local delta = args.Target() - at
+		if delta.Magnitude < 1e-3 then
+			return CFrame.new(at)
+		end
+		return CFrame.lookAt(at + delta.Unit * 1.4, at + delta.Unit * 2.4)
+	end, 1.15 * scale, palette, from, to)
+	if args.Self then
+		VfxPrimitives.Ring(pool, { Center = args.Self(), From = 5, To = 0.8, Color = palette.Primary, StartAt = from, EndAt = to, Width = 0.45 })
+	end
+	VfxPrimitives.Flare(pool, nock, 2.8 * scale, palette.Secondary, math.max(from, to - 0.1), 0.18)
+	return true
+end
+
+-- CONSTELLATION during the spin: two crescents of starlight sweep round the archer, one behind
+-- the other, a ring rolls out from her feet, and motes gather on the bow for the shot.
+local function chargeStars(ctx: ChargeContext): boolean
+	local args, recipe, palette, pool = ctx.Args, ctx.Recipe, ctx.Palette, ctx.Pool
+	local from, to = ctx.StartAt, ctx.ReleaseAt
+	local span = to - from
+	local feet = if args.Self then args.Self() else args.Origin - Vector3.new(0, 2, 0)
+	local yaw = VfxPrimitives.Yaw(args.Cue.Aim - feet)
+	local waist = CFrame.new(feet + Vector3.new(0, 2.3, 0)) * CFrame.Angles(0, yaw, 0)
+	local sweep = math.min(0.34, span * 0.55)
+	VfxPrimitives.SlashArc(pool, waist * CFrame.Angles(0, math.pi / 2, math.rad(8)), 3.4, palette.Primary, from, sweep)
+	VfxPrimitives.SlashArc(pool, waist * CFrame.Angles(0, -math.pi / 2, math.rad(-8)), 3.8, palette.Secondary, from + sweep * 0.4, sweep)
+	VfxPrimitives.SlashArc(pool, waist * CFrame.new(0, 0.5, 0) * CFrame.Angles(0, math.pi / 2, math.rad(-6)), 3, palette.Core, from + sweep * 0.8, sweep * 0.8)
+	VfxPrimitives.Ring(pool, { Center = feet, From = 1, To = 6, Color = palette.Primary, StartAt = from, EndAt = from + sweep * 1.4, Width = 0.5 })
+	VfxPrimitives.Motes(pool, feet + Vector3.new(0, 1, 0), palette.Secondary, from + sweep * 0.5, 6, 0.6)
+	VfxPrimitives.Converge(pool, function(): Vector3
+		return originOf(args, recipe)
+	end, palette.Secondary, 3, 8, from + span * 0.45, to, args.Cue.NetId % 13)
+	return true
+end
+
 local CHARGERS: { [string]: (ChargeContext) -> boolean } = {
 	BOLT = chargeGlyph,
+	PIERCER = chargeBolt,
+	CONSTELLATION = chargeStars,
 	BEAM = chargeTip,
 	SINGULARITY = chargeWell,
 }

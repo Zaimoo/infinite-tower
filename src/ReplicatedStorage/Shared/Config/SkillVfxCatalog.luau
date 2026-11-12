@@ -8,27 +8,34 @@
 --   Basic    SHOT (bow arrow), BOLT (caster projectile), SLASH (melee arc on the target)
 --   Special  VOLLEY (bow), CLEAVE (Vanguard cone), CROSS (Striker), TREMOR (Berserker),
 --            CHAIN (Scholar), MEND (Healer), PLUNGE (two falling stabs; Han),
---            BEAM (an instant straight laser from the attacker through the target; Vane)
+--            BEAM (an instant straight laser from the attacker through the target; Vane),
+--            PIERCER (one heavy bolt that punches through and leaves a fading ribbon; Astrea)
 --   Skill    STORM (bow), BULWARK (Vanguard), TEMPEST (Striker), CRYSTALS (Berserker),
 --            PILLAR (Scholar), SANCTUARY (Healer), WAKE (a dash streak and a lingering circle of
 --            slashes, one wave per damage tick; Han), SINGULARITY (a black hole on the aim point
---            that pulses on every damage tick and collapses on the last; Vane)
+--            that pulses on every damage tick and collapses on the last; Vane),
+--            CONSTELLATION (a constellation draws itself over the aim point, then its stars
+--            fall as bolts, one wave per damage tick; Astrea)
 -- The other fields are that style's knobs; a style ignores the ones it does not use.
 -- A hero's attack clip may carry a Charge marker (HeroClips) before Release; at it SkillVfx
 -- plays the style's wind-up, if it has one (BOLT: a glyph in the casting hand, Origin LEFT_HAND;
--- BEAM: energy gathering on the staff tip; SINGULARITY: the floor dimming and drawing inward).
+-- BEAM: energy gathering on the staff tip; SINGULARITY: the floor dimming and drawing inward;
+-- PIERCER: starlight drawn into the nocked arrow; CONSTELLATION: crescents of light round the
+-- spinning archer).
 
 export type Palette = {
 	Primary: Color3, -- trail, glow and main strokes
 	Secondary: Color3, -- rings, sigils, accents
 	Core: Color3, -- bright centre of bursts
-	Accent: Color3?, -- optional fourth colour for small highlights (Vane's gold)
+	Accent: Color3?, -- optional fourth colour: small highlights (Vane's gold), or what a nebula cools to (Astrea)
 }
 
 export type TierRecipe = {
 	Style: string,
-	Projectile: string?, -- ProjectileVfx kind: "ARROW" | "ASTRAL" | "BOLT" | "ORB" | "VOID"
-	Origin: string?, -- where it leaves the hero: "CHEST" (default: the bow's nock, else the chest) | "LEFT_HAND" | "STAFF_TIP"
+	Projectile: string?, -- ProjectileVfx kind: "ARROW" | "ASTRAL" | "BOLT" | "ORB" | "VOID" | "STARBOLT"
+	-- Where it leaves the hero: "CHEST" (default: the bow's nock at release, else the chest) |
+	-- "LEFT_HAND" | "STAFF_TIP" | "NOCK" (the bow's nock, followed live while a charge plays)
+	Origin: string?,
 	ImpactStyle: string?, -- projectile impact: "BURST" (default) | "IMPLODE" (collapses inward, then flashes)
 	Scale: number?, -- projectile or slash size multiplier
 	Arc: number?, -- studs of lift at mid-flight per 10 studs of distance
@@ -43,17 +50,17 @@ export type TierRecipe = {
 	FlareHeight: number?,
 	SigilRadius: number?,
 	RainPerWave: number?,
-	RainHeight: number?,
+	RainHeight: number?, -- CONSTELLATION: how high over the aim point the figure hangs
 	-- Area styles
 	Radius: number?, -- studs: cone reach, tremor, tempest, crystal field, healing circle, taunt
 	Slashes: number?, -- TEMPEST: slash arcs around the target. WAKE: slash arcs per wave
 	Spikes: number?, -- CRYSTALS / TREMOR: spikes at the centre (plus one under each hit enemy)
 	PillarHeight: number?, -- PILLAR: column height, studs
-	Linger: number?, -- seconds a ground effect or shell lasts after impact
+	Linger: number?, -- seconds a ground effect or shell lasts after impact (PIERCER: the ribbon's fade)
 	Implode: boolean?, -- TEMPEST: a dark sphere collapses before the burst (rift)
 	-- BEAM: must match the kit's BEAM_LINE (SecondaryParam, BeamWidth).
 	Length: number?, -- studs from the attacker's feet
-	Width: number?, -- studs across
+	Width: number?, -- studs across (PIERCER: the ribbon's width when fresh)
 	-- SINGULARITY
 	Core: number?, -- event sphere diameter, studs
 	Tether: boolean?, -- a flickering line from the caster's left hand to the hole while it forms
@@ -82,8 +89,8 @@ SkillVfxCatalog.WeaponArchetype = table.freeze({
 -- Every Style SkillVfx knows, per tier.
 SkillVfxCatalog.Styles = table.freeze({
 	Basic = table.freeze({ SHOT = true, BOLT = true, SLASH = true }),
-	Special = table.freeze({ VOLLEY = true, CLEAVE = true, CROSS = true, TREMOR = true, CHAIN = true, MEND = true, PLUNGE = true, BEAM = true }),
-	Skill = table.freeze({ STORM = true, BULWARK = true, TEMPEST = true, CRYSTALS = true, PILLAR = true, SANCTUARY = true, WAKE = true, SINGULARITY = true }),
+	Special = table.freeze({ VOLLEY = true, CLEAVE = true, CROSS = true, TREMOR = true, CHAIN = true, MEND = true, PLUNGE = true, BEAM = true, PIERCER = true }),
+	Skill = table.freeze({ STORM = true, BULWARK = true, TEMPEST = true, CRYSTALS = true, PILLAR = true, SANCTUARY = true, WAKE = true, SINGULARITY = true, CONSTELLATION = true }),
 })
 
 local function rgb(r: number, g: number, b: number): Color3
@@ -146,12 +153,15 @@ SkillVfxCatalog.Heroes = table.freeze({
 		Special = { Style = "VOLLEY", Projectile = "ARROW", Scale = 1.25, Arc = 0.12, Trail = 0.22, Impact = 2.6, Count = 3, Spread = 7, Pierce = 12, Rings = true },
 		Skill = { Style = "STORM", Projectile = "ARROW", Scale = 1.25, Trail = 0.22, Impact = 2.2, FlareHeight = 28, SigilRadius = 16, RainPerWave = 4, RainHeight = 32, Shake = 0.22 },
 	},
-	-- Astral Arrow / Nebula Piercer / Constellation Judgment: violet and star white-gold.
+	-- Astral Arrow / Nebula Piercer / Constellation Judgment: violet and star white-gold, cooling
+	-- to deep nebula indigo. Nebula Piercer is one star-bolt charged on the string that leaves a
+	-- fading ribbon; Constellation Judgment draws the Archer (VfxMath.ARCHER) over the target and
+	-- drops its sixteen stars as bolts.
 	hero_astrea = {
-		Palette = { Primary = rgb(190, 150, 255), Secondary = rgb(255, 225, 140), Core = rgb(255, 255, 255) },
+		Palette = { Primary = rgb(190, 150, 255), Secondary = rgb(255, 225, 140), Core = rgb(255, 255, 255), Accent = rgb(84, 52, 190) },
 		Basic = { Style = "SHOT", Projectile = "ASTRAL", Scale = 1.0, Arc = 0.25, Trail = 0.18, Impact = 2.0 },
-		Special = { Style = "VOLLEY", Projectile = "ASTRAL", Scale = 1.4, Arc = 0.08, Trail = 0.3, Impact = 3.2, Count = 3, Spread = 6, Pierce = 14, Rings = true },
-		Skill = { Style = "STORM", Projectile = "ASTRAL", Scale = 1.2, Trail = 0.25, Impact = 2.4, FlareHeight = 34, SigilRadius = 16, RainPerWave = 5, RainHeight = 36, Shake = 0.25 },
+		Special = { Style = "PIERCER", Projectile = "STARBOLT", Origin = "NOCK", Scale = 1.3, Arc = 0, Trail = 0.3, Impact = 3.4, Pierce = 14, Rings = true, Width = 1.2, Linger = 0.75, Shake = 0.1 },
+		Skill = { Style = "CONSTELLATION", Projectile = "STARBOLT", Origin = "NOCK", Scale = 0.9, Trail = 0.22, Impact = 2.6, Radius = 16, FlareHeight = 30, RainHeight = 20, Shake = 0.28 },
 	},
 
 	-- Vanguard ---------------------------------------------------------------------------------

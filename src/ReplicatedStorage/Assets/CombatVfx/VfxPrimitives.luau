@@ -838,6 +838,184 @@ function VfxPrimitives.Flare(pool: VfxPool.VfxPool, position: () -> Vector3, siz
 	})
 end
 
+-- Astrea's star kit ---------------------------------------------------------------------------
+
+local RIBBON_SEGMENTS = 12
+local buildRibbon = segments("VfxRibbon", RIBBON_SEGMENTS)
+
+export type RibbonOptions = {
+	From: Vector3,
+	To: Vector3,
+	StartAt: number, -- when the head of whatever leaves the ribbon is at From
+	EndAt: number, -- and when it reaches To
+	Width: number, -- studs across when fresh
+	Inner: Color3, -- fresh colour
+	Outer: Color3, -- colour it cools to
+	Linger: number, -- seconds each stretch takes to spread and fade
+	Seed: number?,
+}
+
+-- A ribbon of light left along a straight path: each stretch appears as the head passes it,
+-- then drifts off the line, spreads to about three times its width and cools from Inner to
+-- Outer as it fades over `Linger` seconds (a nebula wake).
+function VfxPrimitives.Ribbon(pool: VfxPool.VfxPool, options: RibbonOptions)
+	local delta = options.To - options.From
+	local length = delta.Magnitude
+	if length < 0.5 then
+		return
+	end
+	local model = pool:Acquire("RIBBON", buildRibbon)
+	local list = parts(model)
+	for _, part in list do
+		part.Transparency = 1
+	end
+	pool:Show(model)
+	local direction = delta.Unit
+	local side = direction:Cross(Vector3.yAxis)
+	side = if side.Magnitude > 1e-3 then side.Unit else Vector3.xAxis
+	local up = side:Cross(direction)
+	local frame = CFrame.lookAt(options.From, options.To)
+	local seed = options.Seed or 0
+	local step = length / #list
+	local linger = math.max(0.05, options.Linger)
+	local finish = options.EndAt + linger
+	pool:Run({
+		Update = function(now: number): boolean
+			if now < options.StartAt then
+				return false
+			end
+			for i, part in list do
+				local u = (i - 0.5) / #list
+				local passedAt = options.StartAt + (options.EndAt - options.StartAt) * u
+				if now < passedAt then
+					part.Transparency = 1
+					continue
+				end
+				local t = math.clamp((now - passedAt) / linger, 0, 1)
+				local spread = 1 - (1 - t) * (1 - t)
+				local width = options.Width * (0.45 + 2.2 * spread)
+				-- Each stretch drifts its own way, so the ribbon breaks into wisps as it fades.
+				local drift = side * (math.sin(seed + i * 2.17) * 0.9 * spread) + up * (math.cos(seed * 1.3 + i * 1.31) * 0.55 * spread)
+				part.Color = options.Inner:Lerp(options.Outer, spread)
+				part.Size = Vector3.new(width, math.max(0.05, width * 0.3), step * 1.15)
+				part.CFrame = (frame + direction * (length * u) + drift) * CFrame.Angles(0, 0, seed + i * 0.7 + t * 1.5)
+				part.Transparency = 0.3 + 0.7 * t
+			end
+			return now >= finish
+		end,
+		Cleanup = function()
+			pool:Release(model)
+		end,
+	})
+end
+
+-- One model holding a figure's stars, their halos and its lines.
+local function buildConstellation(stars: number, lines: number): () -> Model
+	return function(): Model
+		local model = Instance.new("Model")
+		model.Name = "VfxConstellation"
+		for i = 1, stars * 2 + lines do
+			local isLine = i > stars * 2
+			local part = newPart(if isLine then "Line" elseif i > stars then "Halo" else "Star", if isLine then Enum.PartType.Block else Enum.PartType.Ball, Enum.Material.Neon)
+			part.Transparency = 1
+			part:SetAttribute("Index", i)
+			part.Parent = model
+			if i == 1 then
+				model.PrimaryPart = part
+			end
+		end
+		return model
+	end
+end
+
+export type ConstellationOptions = {
+	Stars: { Vector3 }, -- world positions
+	Lines: { { number } }, -- pairs of star indices, in drawing order
+	LineStarts: { number }, -- when each line starts drawing (VfxMath.FigureTrace)
+	LineSeconds: number, -- how long a line takes to draw
+	StarAt: { number }, -- when each star lights
+	DropAt: { number }, -- when each star leaves the sky: it flares, then is gone
+	EndAt: number,
+	StarSize: number, -- studs
+	Palette: any,
+}
+
+-- A constellation that draws itself: each star pops alight as the pen reaches it, the lines
+-- grow from star to star, and the finished figure twinkles until its stars leave. A star
+-- flares just before its DropAt and vanishes on it; the lines it held fade with it.
+function VfxPrimitives.Constellation(pool: VfxPool.VfxPool, options: ConstellationOptions)
+	local stars, lines = options.Stars, options.Lines
+	local count = #stars
+	local model = pool:Acquire(`CONSTELLATION@{count}_{#lines}`, buildConstellation(count, #lines))
+	local list = parts(model)
+	local palette = options.Palette
+	for i, part in list do
+		part.Color = if i <= count then palette.Core elseif i <= count * 2 then palette.Secondary else palette.Primary
+		part.Transparency = 1
+		part.Size = Vector3.one * 0.1
+		part.CFrame = CFrame.new(stars[if i <= count then i elseif i <= count * 2 then i - count else lines[i - count * 2][1]])
+	end
+	pool:Show(model)
+	local size = options.StarSize
+	local startAt = math.huge
+	for _, at in options.StarAt do
+		startAt = math.min(startAt, at)
+	end
+	pool:Run({
+		Update = function(now: number): boolean
+			if now < startAt then
+				return false
+			end
+			for i = 1, count do
+				local star, halo = list[i], list[count + i]
+				local lit, drop = options.StarAt[i], options.DropAt[i]
+				if now < lit or now >= drop then
+					star.Transparency = 1
+					halo.Transparency = 1
+					continue
+				end
+				-- Pops in oversized and settles, twinkles, then swells as it is about to fall.
+				local pop = math.clamp((now - lit) / 0.16, 0, 1)
+				local flare = math.clamp((now - (drop - 0.1)) / 0.1, 0, 1)
+				local twinkle = 1 + 0.14 * math.sin(now * 11 + i * 2.1)
+				local scale = (1 + 1.1 * (1 - pop)) * twinkle * (1 + 1.3 * flare)
+				star.Size = Vector3.one * size * scale
+				star.Transparency = 0
+				halo.Size = Vector3.one * size * 2.6 * scale
+				halo.Transparency = 0.78 - 0.3 * math.max(1 - pop, flare)
+			end
+			for k, line in lines do
+				local part = list[count * 2 + k]
+				local from = options.LineStarts[k]
+				local gone = math.min(options.DropAt[line[1]], options.DropAt[line[2]])
+				local fade = math.clamp((now - (gone - 0.06)) / 0.2, 0, 1)
+				if now < from or fade >= 1 then
+					part.Transparency = 1
+					continue
+				end
+				local a, b = stars[line[1]], stars[line[2]]
+				local drawn = math.clamp((now - from) / options.LineSeconds, 0, 1)
+				local tip = a:Lerp(b, drawn)
+				local span = (tip - a).Magnitude
+				if span < 0.05 then
+					part.Transparency = 1
+					continue
+				end
+				-- Bright while it is being drawn, then it settles to a thin thread.
+				local fresh = 1 - math.clamp((now - from - options.LineSeconds) / 0.25, 0, 1)
+				local thickness = size * (0.14 + 0.12 * fresh)
+				part.Size = Vector3.new(thickness, thickness, span)
+				part.CFrame = CFrame.lookAt(a:Lerp(tip, 0.5), tip)
+				part.Transparency = 1 - (0.6 + 0.3 * fresh) * (1 - fade)
+			end
+			return now >= options.EndAt
+		end,
+		Cleanup = function()
+			pool:Release(model)
+		end,
+	})
+end
+
 VfxPrimitives.FLAT = FLAT
 
 return table.freeze(VfxPrimitives)

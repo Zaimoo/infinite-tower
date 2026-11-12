@@ -547,6 +547,8 @@ local HERO_KITS: { [string]: HeroKitOverride } = {
 		Skill = {
 			Name = "Constellation Judgment",
 			Description = "Astrea draws a constellation across the sky and fires its stars down over a 16-stud radius, dealing 2.80x ATK and shredding enemy defense by 20% for 5s.",
+			CastSeconds = 1.4, -- the pirouette, the sky shot and the hand that calls the stars down
+			TravelSeconds = 0.9, -- the arrow climbs and the constellation draws itself before the first stars fall
 		},
 	},
 }

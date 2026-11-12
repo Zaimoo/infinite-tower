@@ -165,12 +165,87 @@ local function buildVoid(kind: string, scale: number): Model
 	return model
 end
 
+-- Star-bolt (Astrea): a long needle of white light in a violet sheath, with a diamond tip and a
+-- four-point star glint across it. It sheds sparks from the tip and draws two trails: a tight
+-- bright streak, and a wide soft one that outlives it and spreads as it fades (the nebula).
+local function buildStarBolt(kind: string, scale: number): Model
+	local model = Instance.new("Model")
+	model.Name = "Projectile_" .. kind
+	local core = VfxPrimitives.NewPart("Core", Enum.PartType.Block, Enum.Material.Neon)
+	core.Size = Vector3.new(0.2, 0.2, 5) * scale
+	add(model, core, CFrame.identity)
+	model.PrimaryPart = core
+	local sheath = VfxPrimitives.NewPart("Sheath", Enum.PartType.Block, Enum.Material.Neon)
+	sheath.Size = Vector3.new(0.48, 0.48, 3.6) * scale
+	sheath.Transparency = 0.55
+	add(model, sheath, CFrame.new(0, 0, 0.4 * scale) * CFrame.Angles(0, 0, math.rad(45)))
+	local head = VfxPrimitives.NewPart("Head", Enum.PartType.Block, Enum.Material.Neon)
+	head.Size = Vector3.new(0.62, 0.62, 1.4) * scale
+	add(model, head, CFrame.new(0, 0, -2.7 * scale) * CFrame.Angles(0, 0, math.rad(45)))
+	local glow = VfxPrimitives.NewPart("Glow", Enum.PartType.Ball, Enum.Material.Neon)
+	glow.Size = Vector3.one * 1.3 * scale
+	glow.Transparency = 0.6
+	add(model, glow, CFrame.new(0, 0, -2.5 * scale))
+	-- The glint: two thin bars crossed over the tip, across the flight.
+	for i = 1, 2 do
+		local star = VfxPrimitives.NewPart("Star" .. i, Enum.PartType.Block, Enum.Material.Neon)
+		star.Size = Vector3.new(2.3, 0.1, 0.1) * scale
+		star.Transparency = 0.15
+		add(model, star, CFrame.new(0, 0, -2.4 * scale) * CFrame.Angles(0, 0, if i == 1 then 0 else math.pi / 2))
+	end
+
+	addTrail(core, 0.3 * scale, 2.4 * scale)
+	local top = Instance.new("Attachment")
+	top.Name = "NebulaTop"
+	top.Position = Vector3.new(0, 1.05 * scale, 2.2 * scale)
+	top.Parent = core
+	local bottom = Instance.new("Attachment")
+	bottom.Name = "NebulaBottom"
+	bottom.Position = Vector3.new(0, -1.05 * scale, 2.2 * scale)
+	bottom.Parent = core
+	local nebula = Instance.new("Trail")
+	nebula.Name = "Nebula"
+	nebula.Attachment0 = top
+	nebula.Attachment1 = bottom
+	nebula.FaceCamera = true
+	nebula.LightEmission = 0.8
+	nebula.LightInfluence = 0
+	nebula.MinLength = 0.05
+	nebula.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.55), NumberSequenceKeypoint.new(0.5, 0.8), NumberSequenceKeypoint.new(1, 1) })
+	nebula.WidthScale = NumberSequence.new(0.7, 1.7)
+	nebula.Enabled = false
+	nebula.Parent = core
+
+	local tip = Instance.new("Attachment")
+	tip.Name = "Tip"
+	tip.Position = Vector3.new(0, 0, -2.4 * scale)
+	tip.Parent = core
+	local sparks = Instance.new("ParticleEmitter")
+	sparks.Name = "Sparks"
+	sparks.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	sparks.Rate = 70
+	sparks.Lifetime = NumberRange.new(0.22, 0.42)
+	sparks.Speed = NumberRange.new(1.5, 5)
+	sparks.SpreadAngle = Vector2.new(180, 180)
+	sparks.Rotation = NumberRange.new(0, 360)
+	sparks.RotSpeed = NumberRange.new(-180, 180)
+	sparks.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.55 * scale), NumberSequenceKeypoint.new(1, 0) })
+	sparks.Transparency = NumberSequence.new(0.1, 1)
+	sparks.LightEmission = 1
+	sparks.LightInfluence = 0
+	sparks.Drag = 3
+	sparks.Enabled = false
+	sparks.Parent = tip
+	return model
+end
+
 ProjectileVfx.Builders = table.freeze({
 	ARROW = buildArrow,
 	ASTRAL = buildArrow,
 	BOLT = buildBolt,
 	ORB = buildOrb,
 	VOID = buildVoid,
+	STARBOLT = buildStarBolt,
 } :: { [string]: (string, number) -> Model })
 
 function ProjectileVfx.Has(kind: string): boolean
@@ -190,9 +265,14 @@ end
 -- Colours a pooled projectile for a hero's palette and sets its trail length.
 function ProjectileVfx.Paint(model: Model, kind: string, palette: any, trailSeconds: number?)
 	local astral = kind == "ASTRAL"
+	local starBolt = kind == "STARBOLT"
 	for _, d in model:GetDescendants() do
 		if d:IsA("BasePart") then
-			if d.Name == "Void" then
+			if starBolt then
+				d.Color = if d.Name == "Core" or d.Name == "Head" then palette.Core
+					elseif d.Name == "Star1" or d.Name == "Star2" then palette.Secondary
+					else palette.Primary
+			elseif d.Name == "Void" then
 				d.Color = palette.Secondary
 			elseif d.Name == "Rim" then
 				d.Color = palette.Primary
@@ -212,8 +292,16 @@ function ProjectileVfx.Paint(model: Model, kind: string, palette: any, trailSeco
 				d.Color = palette.Primary
 			end
 		elseif d:IsA("Trail") then
-			d.Color = ColorSequence.new(palette.Primary, palette.Secondary)
-			d.Lifetime = trailSeconds or 0.15
+			if d.Name == "Nebula" then
+				-- The nebula ribbon: deeper in colour and much longer-lived than the streak.
+				d.Color = ColorSequence.new(palette.Primary, palette.Accent or palette.Primary)
+				d.Lifetime = (trailSeconds or 0.15) * 2.5
+			else
+				d.Color = if starBolt then ColorSequence.new(palette.Core, palette.Primary) else ColorSequence.new(palette.Primary, palette.Secondary)
+				d.Lifetime = trailSeconds or 0.15
+			end
+		elseif d:IsA("ParticleEmitter") then
+			d.Color = ColorSequence.new(palette.Secondary, palette.Primary)
 		end
 	end
 end

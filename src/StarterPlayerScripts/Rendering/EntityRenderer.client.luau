@@ -234,6 +234,12 @@ local function castPoint(rig: Model, name: string): Vector3?
 		if grip and grip:IsA("Attachment") then
 			return grip.WorldPosition
 		end
+	elseif name == "NOCK" then
+		local weapon = rig:FindFirstChild(HeroSockets.EQUIPPED_NAME)
+		local nock = weapon and weapon:FindFirstChild("Nock", true)
+		if nock and nock:IsA("Attachment") then
+			return nock.WorldPosition
+		end
 	elseif name == "STAFF_TIP" then
 		-- WeaponVfx puts VfxTip on every equipped weapon's head; prefabs may carry their own Tip.
 		local weapon = rig:FindFirstChild(HeroSockets.EQUIPPED_NAME)

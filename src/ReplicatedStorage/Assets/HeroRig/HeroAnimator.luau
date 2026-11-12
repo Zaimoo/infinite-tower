@@ -79,8 +79,10 @@ function HeroAnimator.Sample(clip: HeroClips.Clip, t: number): { [string]: CFram
 	end
 	local span = b.T - a.T
 	local alpha = if span > 0 then math.clamp((t - a.T) / span, 0, 1) else 0
-	-- Ease in and out between keys.
-	alpha = alpha * alpha * (3 - 2 * alpha)
+	-- Ease in and out between keys, unless the key asks to be approached at a steady rate.
+	if not b.Linear then
+		alpha = alpha * alpha * (3 - 2 * alpha)
+	end
 
 	local result: { [string]: CFrame } = {}
 	local joints: { [string]: boolean } = {}
