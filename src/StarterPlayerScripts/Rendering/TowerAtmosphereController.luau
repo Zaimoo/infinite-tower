@@ -13,7 +13,8 @@
 --        - Zone 1 (Masonry):         Weathered Dark Slate (#18151D)
 --        - Zone 2 (Window Emissive): Intense Crimson Glow (#FF2222, Enum.Material.Neon)
 --        - Zone 3 (Trims/Iron):      Wrought Iron (#111111)
---        - Zone 4 (Cloud Meshes):    Dark Storm Grey (#2A2A35)
+--        - Zone 4 (Cloud Meshes):    Dark Storm Grey (#2A2A35) on the imported kit only; the procedural
+--                                    tower's charcoal-grey `Zone4_CloudBank` cumulus keeps the colours TowerBuilder gave it
 --   5. Spawns native Roblox `ParticleEmitter` instances (thick rolling fog & storm clouds + rising
 --      crimson embers) at the `VFX_Fog_Base` and `VFX_Storm_Peak` attachments to blend the solid
 --      Blender cloud meshes with dynamic game weather.
@@ -84,7 +85,10 @@ local function applyMaterialZones(root: Instance)
 			local zone = desc:GetAttribute("MaterialZone") :: string?
 			local nameLower = string.lower(desc.Name)
 
-			if zone == "Zone2_WindowEmissive" or string.find(nameLower, "window") and (string.find(nameLower, "pane") or desc.Material == Enum.Material.Neon) then
+			if zone == "Zone4_CloudBank" then
+				-- TowerBuilder's cumulus bank is shaded white-to-grey per puff; leave it as built
+				continue
+			elseif zone == "Zone2_WindowEmissive" or string.find(nameLower, "window") and (string.find(nameLower, "pane") or desc.Material == Enum.Material.Neon) then
 				desc.Material = cfg.Zone2WindowEmissive.Material
 				desc.Color = cfg.Zone2WindowEmissive.Color
 			elseif zone == "Zone3_WroughtIron" or string.find(nameLower, "iron") or string.find(nameLower, "mullion") or string.find(nameLower, "transom") or string.find(nameLower, "portcullis") or string.find(nameLower, "finial") or string.find(nameLower, "spur") then
@@ -155,14 +159,15 @@ local function spawnFogBaseParticles(att: Attachment)
 	rollingFog.Name = "TowerBaseRollingFog"
 	rollingFog.Texture = cfg.SmokeTexture
 	rollingFog.Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0.0, Color3.fromRGB(150, 160, 175)),
-		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(110, 118, 132)),
-		ColorSequenceKeypoint.new(1.0, Color3.fromRGB(60, 62, 74)),
+		ColorSequenceKeypoint.new(0.0, Color3.fromRGB(120, 117, 128)),
+		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(88, 85, 96)),
+		ColorSequenceKeypoint.new(1.0, Color3.fromRGB(56, 54, 64)),
 	})
+	-- Slow charcoal smoke that curls off the solid cloud puffs and blurs their edges
 	rollingFog.Transparency = NumberSequence.new({
 		NumberSequenceKeypoint.new(0.0, 1.0),
-		NumberSequenceKeypoint.new(0.18, 0.28),
-		NumberSequenceKeypoint.new(0.80, 0.38),
+		NumberSequenceKeypoint.new(0.18, 0.42),
+		NumberSequenceKeypoint.new(0.80, 0.55),
 		NumberSequenceKeypoint.new(1.0, 1.0),
 	})
 	rollingFog.Size = NumberSequence.new({
@@ -171,8 +176,10 @@ local function spawnFogBaseParticles(att: Attachment)
 		NumberSequenceKeypoint.new(1.0, 160),
 	})
 	rollingFog.Lifetime = NumberRange.new(9, 14)
-	rollingFog.Rate = 24
-	rollingFog.Speed = NumberRange.new(8, 18)
+	-- One socket per cloud (about 50), so each emits only a little and the mist stays close to it
+	rollingFog.Speed = NumberRange.new(1.5, 5)
+	rollingFog.Rate = 2
+	rollingFog.Acceleration = Vector3.new(0, 1.2, 0) -- smoke lifts gently off the bank
 	rollingFog.SpreadAngle = Vector2.new(180, 20)
 	rollingFog.Rotation = NumberRange.new(0, 360)
 	rollingFog.RotSpeed = NumberRange.new(-12, 12)
