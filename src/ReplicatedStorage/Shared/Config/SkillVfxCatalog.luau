@@ -6,10 +6,10 @@
 --
 -- Each tier names a Style, the SkillVfx player that draws it:
 --   Basic    SHOT (bow arrow), BOLT (caster projectile), SLASH (melee arc on the target)
---   Special  VOLLEY (bow), CLEAVE (Vanguard cone), CROSS (Striker), TREMOR (Miner),
+--   Special  VOLLEY (bow), CLEAVE (Vanguard cone), CROSS (Striker), TREMOR (Berserker),
 --            CHAIN (Scholar), MEND (Healer), PLUNGE (two falling stabs; Han),
 --            BEAM (an instant straight laser from the attacker through the target; Vane)
---   Skill    STORM (bow), BULWARK (Vanguard), TEMPEST (Striker), CRYSTALS (Miner),
+--   Skill    STORM (bow), BULWARK (Vanguard), TEMPEST (Striker), CRYSTALS (Berserker),
 --            PILLAR (Scholar), SANCTUARY (Healer), WAKE (a dash streak and a lingering circle of
 --            slashes, one wave per damage tick; Han), SINGULARITY (a black hole on the aim point
 --            that pulses on every damage tick and collapses on the last; Vane)
@@ -74,7 +74,7 @@ SkillVfxCatalog.WeaponArchetype = table.freeze({
 	BOW = "Marksman",
 	SWORD_SHIELD = "Vanguard",
 	DAGGERS = "Striker",
-	AXE = "Miner",
+	AXE = "Berserker",
 	STAFF = "Scholar",
 	TOME = "Healer",
 })
@@ -208,7 +208,7 @@ SkillVfxCatalog.Heroes = table.freeze({
 		Skill = { Style = "TEMPEST", Radius = 12, Slashes = 10, Impact = 3.6, Shake = 0.28 },
 	},
 
-	-- Miner ------------------------------------------------------------------------------------
+	-- Berserker ------------------------------------------------------------------------------------
 	-- Ironvein Chop / Bedrock Sundering / Tunnelbreaker Fault: brass gold and slate stone.
 	hero_gide = {
 		Palette = { Primary = rgb(215, 175, 95), Secondary = rgb(115, 110, 102), Core = rgb(255, 235, 190) },
@@ -216,7 +216,7 @@ SkillVfxCatalog.Heroes = table.freeze({
 		Special = { Style = "TREMOR", Radius = 8, Spikes = 3, Impact = 2.4 },
 		Skill = { Style = "CRYSTALS", Radius = 18, Spikes = 6, Impact = 3, Linger = 1.4, Shake = 0.25 },
 	},
-	-- Pickaxe Cleave / Resonance Tremor / Crystalline Excavation: crystal cyan and stone.
+	-- Riftsteel Cleave / Resonance Tremor / Crystalline Excavation: crystal cyan and stone.
 	hero_catio = {
 		Palette = { Primary = rgb(130, 235, 255), Secondary = rgb(150, 140, 120), Core = rgb(230, 255, 255) },
 		Basic = { Style = "SLASH", Scale = 1.2, Impact = 1.8 },

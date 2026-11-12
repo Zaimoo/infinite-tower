@@ -419,6 +419,16 @@ do
 	check(select(2, HeroSockets.ResolvePrefab("", "", ArtifactCatalog.Seeds)) == nil, "empty ids resolve to nothing")
 	check(select(2, HeroSockets.ResolvePrefab(nil, "RING", ArtifactCatalog.Seeds)) == nil, "unknown weapon types resolve to nothing")
 
+	-- Two-handed weapons: the off hand is the one the weapon is not welded to.
+	check(HeroSockets.OFFHAND.AXE ~= nil, "the greataxe is two-handed")
+	for weaponType, offhand in HeroSockets.OFFHAND do
+		local sockets = HeroSockets.SOCKETS[weaponType]
+		check(sockets ~= nil, `{weaponType} off hand belongs to a socketed weapon`)
+		for _, socket in sockets or {} do
+			check(socket.RigPart ~= offhand.Side .. "Hand", `{weaponType} off hand ({offhand.Side}) is not the welded hand`)
+		end
+	end
+
 	for _, bodyType in bodyTypes do
 		local byPart: { [string]: { [string]: boolean } } = {}
 		for _, attachment in layouts[bodyType].Attachments do

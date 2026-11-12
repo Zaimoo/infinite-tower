@@ -22,7 +22,7 @@ end
 -- 1. ARCHETYPE PROFILE COMPLETENESS & DATA INTEGRITY
 -- ============================================================================
 do
-	local archetypes = { "Vanguard", "Striker", "Marksman", "Miner", "Healer", "Scholar" }
+	local archetypes = { "Vanguard", "Striker", "Marksman", "Berserker", "Healer", "Scholar" }
 	for _, arch in ipairs(archetypes) do
 		local profile = ArchetypeCombatSkills.GetSkillProfile(arch)
 		assertEq(profile.Archetype, arch, "Profile archetype matches key")

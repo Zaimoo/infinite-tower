@@ -72,7 +72,7 @@ do
 	local impactStyles = { BURST = true, IMPLODE = true }
 	local projectileStyles = { SHOT = true, BOLT = true, VOLLEY = true, CHAIN = true, MEND = true, STORM = true }
 	-- Each archetype's ultimate is drawn by one style, and its radius matches the kit.
-	local skillStyle = { Marksman = "STORM", Vanguard = "BULWARK", Striker = "TEMPEST", Miner = "CRYSTALS", Scholar = "PILLAR", Healer = "SANCTUARY" }
+	local skillStyle = { Marksman = "STORM", Vanguard = "BULWARK", Striker = "TEMPEST", Berserker = "CRYSTALS", Scholar = "PILLAR", Healer = "SANCTUARY" }
 	-- A hero may draw its ultimate with its own style instead of its archetype's.
 	local heroSkillStyle = { hero_han = "WAKE", hero_vane = "SINGULARITY" }
 	local function checkRecipe(name: string, recipe: any)

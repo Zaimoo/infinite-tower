@@ -291,32 +291,55 @@ do
 	}
 end
 
--- AXE (right hand) --------------------------------------------------------------------------
+-- AXE (two-handed greataxe) -----------------------------------------------------------------
+-- The right hand is welded high on the haft; the left closes on the weapon's OffhandGrip, 1.7
+-- studs towards the butt. HeroAnimator.SolveOffhand re-solves the left arm every frame, so the
+-- left-arm numbers below are only the baked answer for a Standard body (static poses, tests).
+-- Both hands only reach the haft when it runs across the chest from the left hip out to the
+-- right, so every pose keeps it there in torso space and the waist aims the swing: turned left
+-- (+Y) the head comes round to the front, turned right it is drawn back.
 do
-	-- Haft resting up past the right shoulder.
-	local rest = merge(STANCE, {
-		RightShoulder = { 10, 0, 10 }, RightElbow = { 100, 0, 0 },
-		LeftShoulder = { 6, 0, -6 }, LeftElbow = { 15, 0, 0 },
+	local function arms(right: { { number } }, left: { { number } }): Pose
+		return {
+			RightShoulder = right[1], RightElbow = right[2], RightWrist = right[3],
+			LeftShoulder = left[1], LeftElbow = left[2], LeftWrist = left[3],
+		}
+	end
+	-- Port arms: butt at the left hip, head up past the right shoulder.
+	local port = arms({ { 11, 9, -60 }, { 92, 0, 0 }, { -11, 4, 33 } }, { { -13, -42, -17 }, { 84, 0, 0 }, { 0, -24, 0 } })
+	-- Hauled back over the right shoulder, left hand in front of the chest.
+	local cocked = arms({ { 96, 26, -60 }, { 103, 0, 0 }, { -35, -11, 35 } }, { { 18, -38, -4 }, { 109, 0, 0 }, { 0, -39, 0 } })
+	-- End of a chop: arms driven out, edge down, head below the hands.
+	local driven = arms({ { 12, -20, -35 }, { 47, 0, 0 }, { -35, -54, 35 } }, { { -15, -45, -17 }, { 108, 0, 0 }, { 0, -136, 0 } })
+	-- Level and drawn back on the right, edge leading.
+	local drawn = arms({ { -21, 6, -52 }, { 114, 0, 0 }, { 7, -32, -4 } }, { { 22, -40, 1 }, { 77, 0, 0 }, { 0, -70, 0 } })
+	-- Level and swung through to the front.
+	local through = arms({ { 4, -23, -52 }, { 63, 0, 0 }, { -33, -20, -27 } }, { { -21, -44, -21 }, { 110, 0, 0 }, { 0, -91, 0 } })
+	-- Both hands overhead, head straight up.
+	local overhead = arms({ { 164, -5, -43 }, { 3, 0, 0 }, { -35, -46, 35 } }, { { 51, -37, 23 }, { 109, 0, 0 }, { 0, -30, 0 } })
+	-- Head buried in the floor.
+	local buried = arms({ { 8, -41, -40 }, { 22, 0, 0 }, { -33, -43, 33 } }, { { -5, -47, -9 }, { 111, 0, 0 }, { 0, -154, 0 } })
+
+	local rest = merge(merge(STANCE, port), { Waist = { -2, 18, 0 }, Neck = { 0, -16, 0 } })
+	local windup = merge(merge(ATTACK_STANCE, cocked), { Waist = { 8, -24, 0 }, Neck = { -4, 20, 0 } })
+	local chop = merge(merge(ATTACK_STANCE, driven), { Waist = { -22, 55, 0 }, Neck = { 12, -42, 0 }, RootOffset = { 0, -0.25, 0 } })
+	local sweepBack = merge(merge(ATTACK_STANCE, drawn), { Waist = { 0, -42, 0 }, Neck = { 0, 34, 0 } })
+	local sweepThrough = merge(merge(ATTACK_STANCE, through), { Waist = { -8, 62, 0 }, Neck = { 4, -46, 0 }, RootOffset = { 0, -0.18, 0 } })
+	local high = merge(merge(ATTACK_STANCE, overhead), { Waist = { 12, 8, 0 }, Neck = { -6, -6, 0 }, RootOffset = { 0, 0.2, 0 } })
+	local slam = merge(merge(ATTACK_STANCE, buried), {
+		Waist = { -36, 50, 0 }, Neck = { 22, -40, 0 }, RootOffset = { 0, -0.55, 0 },
+		LeftKnee = { -60, 0, 0 }, RightKnee = { -55, 0, 0 }, LeftHip = { 45, 0, -6 }, RightHip = { 10, 0, 6 },
 	})
-	local windup = merge(ATTACK_STANCE, { Waist = { 8, 15, 0 }, RightShoulder = { 170, 0, 10 }, RightElbow = { 50, 0, 0 }, LeftShoulder = { 50, 0, -10 }, LeftElbow = { 60, 0, 0 } })
-	local chop = merge(ATTACK_STANCE, { Waist = { -25, -10, 0 }, RightShoulder = { 45, 0, 0 }, RightElbow = { 5, 0, 0 }, LeftShoulder = { 30, 0, -10 }, LeftElbow = { 40, 0, 0 }, RootOffset = { 0, -0.25, 0 } })
-	WeaponPoses.AXE = { Rest = rest, Windup = windup, Chop = chop }
+	WeaponPoses.AXE = { Rest = rest, Windup = windup, Chop = chop, SweepBack = sweepBack, SweepThrough = sweepThrough, High = high, Slam = slam }
 	ByWeapon.AXE = {
 		Idle = breathe(rest),
 		Move = walk(rest),
-		AttackBasic = clip(0.85, false, { { 0, rest }, { 0.45, windup }, { 0.65, chop }, { 1, rest } }),
-		AttackSpecial = clip(0.9, false, {
-			{ 0, rest },
-			{ 0.4, merge(ATTACK_STANCE, { Waist = { 0, 45, 0 }, RightShoulder = { 90, 50, 20 }, RightElbow = { 30, 0, 0 } }) },
-			{ 0.68, merge(ATTACK_STANCE, { Waist = { -6, -45, 0 }, RightShoulder = { 90, -40, 0 }, RightElbow = { 10, 0, 0 } }) },
-			{ 1, rest },
-		}),
-		AttackSkill = clip(1.15, false, {
-			{ 0, rest },
-			{ 0.4, merge(windup, { Waist = { 15, 0, 0 }, RightShoulder = { 178, 0, 0 }, RootOffset = { 0, 0.2, 0 } }) },
-			{ 0.62, merge(chop, { Waist = { -38, 0, 0 }, RightShoulder = { 30, 0, 0 }, RootOffset = { 0, -0.55, 0 }, LeftKnee = { -60, 0, 0 }, RightKnee = { -55, 0, 0 }, LeftHip = { 45, 0, -6 }, RightHip = { 10, 0, 6 } }) },
-			{ 1, rest },
-		}),
+		-- Overhand chop: haul it back over the shoulder, then the whole torso drives it down.
+		AttackBasic = clip(0.85, false, { { 0, rest }, { 0.45, windup }, { 0.65, chop }, { 0.8, chop }, { 1, rest } }),
+		-- Level sweep: drawn back on the right, swung flat through the front.
+		AttackSpecial = clip(0.9, false, { { 0, rest }, { 0.4, sweepBack }, { 0.68, sweepThrough }, { 0.82, sweepThrough }, { 1, rest } }),
+		-- Both hands overhead, then buried in the floor.
+		AttackSkill = clip(1.15, false, { { 0, rest }, { 0.4, high }, { 0.62, slam }, { 0.84, slam }, { 1, rest } }),
 	}
 end
 
@@ -1131,59 +1154,56 @@ do
 	}
 end
 
--- Catio (AXE): Resonance Tremor is an overhead strike into the ground; Crystalline Excavation
--- spins the axe round once before a two-handed slam.
+-- Catio (AXE): Resonance Tremor is an overhand strike sunk into the ground; Crystalline
+-- Excavation winds the greataxe round once before a two-handed slam.
 do
 	local p = WeaponPoses.AXE
-	local slam = merge(p.Chop, { Waist = { -40, 0, 0 }, RightShoulder = { 30, 0, 0 }, LeftShoulder = { 35, 0, 10 }, LeftElbow = { 10, 0, 0 }, LeftHip = { 50, 0, -8 }, RightHip = { 10, 0, 8 }, LeftKnee = { -65, 0, 0 }, RightKnee = { -60, 0, 0 }, RootOffset = { 0, -0.6, 0 } })
 	Overrides.hero_catio = {
 		AttackSpecial = signature(0.9, {
 			{ 0, p.Rest },
 			{ 0.4, p.Windup },
-			{ 0.65, merge(p.Chop, { Waist = { -32, 0, 0 }, LeftKnee = { -45, 0, 0 }, RightKnee = { -40, 0, 0 }, RootOffset = { 0, -0.45, 0 } }) },
+			{ 0.65, merge(p.Chop, { Waist = { -30, 55, 0 }, LeftKnee = { -45, 0, 0 }, RightKnee = { -40, 0, 0 }, RootOffset = { 0, -0.45, 0 } }) },
+			{ 0.82, merge(p.Chop, { Waist = { -26, 52, 0 }, LeftKnee = { -40, 0, 0 }, RightKnee = { -36, 0, 0 }, RootOffset = { 0, -0.4, 0 } }) },
 			{ 1, p.Rest },
 		}, { Release = 0.65 }),
 		AttackSkill = signature(1.15, {
 			{ 0, p.Rest },
-			{ 0.22, merge(ATTACK_STANCE, { Waist = { 0, 60, 0 }, RightShoulder = { 90, 60, 20 }, RightElbow = { 20, 0, 0 }, LeftShoulder = { 60, 30, -10 }, LeftElbow = { 40, 0, 0 } }) },
-			{ 0.42, merge(p.Windup, { Waist = { 18, 0, 0 }, RightShoulder = { 178, 0, 0 }, LeftShoulder = { 170, 0, -5 }, LeftElbow = { 50, 0, 0 }, RootOffset = { 0, 0.25, 0 } }) },
-			{ 0.62, slam },
-			{ 0.82, merge(slam, { Waist = { -34, 0, 0 } }) },
+			{ 0.22, merge(p.SweepBack, { Waist = { 0, -60, 0 }, Neck = { 0, 44, 0 } }) },
+			{ 0.42, merge(p.High, { Waist = { 16, 6, 0 }, RootOffset = { 0, 0.25, 0 } }) },
+			{ 0.62, p.Slam },
+			{ 0.82, merge(p.Slam, { Waist = { -32, 48, 0 } }) },
 			{ 1, p.Rest },
 		}, { Release = 0.62 }),
 	}
 end
 
--- Gide (AXE): Bedrock Sundering winds the axe back across his chest before a heavy diagonal chop;
--- Tunnelbreaker Fault raises the axe high overhead with both hands and drives it into the floor.
--- Idle is his planted veteran stance from the reference art: wide feet, the heavy axe held upright
--- out at his right side, left fist clenched and ready at his left side.
+-- Gide (AXE): Bedrock Sundering hauls the greataxe far back before a heavy diagonal chop;
+-- Tunnelbreaker Fault raises it overhead in both hands and drives it into the floor. Idle is his
+-- planted veteran stance: feet wide, knees set, the greataxe held across his chest at port arms.
 do
 	local p = WeaponPoses.AXE
-	local sunder = merge(p.Chop, { Waist = { -30, -18, 0 }, RightShoulder = { 38, -12, 8 }, RightElbow = { 12, 0, 0 }, LeftShoulder = { 24, 0, -18 }, LeftElbow = { 42, 0, 0 }, LeftKnee = { -42, 0, 0 }, RightKnee = { -36, 0, 0 }, RootOffset = { 0, -0.4, 0 } })
-	local faultSlam = merge(p.Chop, { Waist = { -42, 0, 0 }, RightShoulder = { 28, 0, 0 }, LeftShoulder = { 32, 0, 8 }, LeftElbow = { 12, 0, 0 }, LeftHip = { 52, 0, -10 }, RightHip = { 12, 0, 10 }, LeftKnee = { -68, 0, 0 }, RightKnee = { -62, 0, 0 }, RootOffset = { 0, -0.62, 0 } })
-	local veteran: Pose = {
-		Waist = { -3, -4, 0 }, Neck = { -3, 4, 0 },
-		RightShoulder = { 12, 0, 22 }, RightElbow = { 76, 0, 0 }, RightWrist = { 10, -14, 0 },
-		LeftShoulder = { 14, 0, -20 }, LeftElbow = { 38, 0, 0 },
+	local sunder = merge(p.Chop, { Waist = { -28, 66, 0 }, Neck = { 14, -50, 0 }, LeftKnee = { -42, 0, 0 }, RightKnee = { -36, 0, 0 }, RootOffset = { 0, -0.4, 0 } })
+	local faultSlam = merge(p.Slam, { Waist = { -40, 50, 0 }, LeftHip = { 52, 0, -10 }, RightHip = { 12, 0, 10 }, LeftKnee = { -68, 0, 0 }, RightKnee = { -62, 0, 0 }, RootOffset = { 0, -0.62, 0 } })
+	local veteran = merge(p.Rest, {
+		Waist = { -3, 14, 0 }, Neck = { -3, -12, 0 },
 		LeftHip = { 8, 0, -13 }, LeftKnee = { -18, 0, 0 }, LeftAnkle = { 10, 0, 13 },
 		RightHip = { 6, 0, 13 }, RightKnee = { -16, 0, 0 }, RightAnkle = { 10, 0, -13 },
 		RootOffset = { 0, -0.14, 0 },
-	}
+	})
 	Overrides.hero_gide = {
 		Idle = breathe(veteran, 3.2),
 		AttackSpecial = signature(0.9, {
 			{ 0, p.Rest },
-			{ 0.38, merge(p.Windup, { Waist = { 10, 24, 0 }, RightShoulder = { 162, 18, 16 } }) },
+			{ 0.38, merge(p.Windup, { Waist = { 10, -36, 0 }, Neck = { -4, 30, 0 } }) },
 			{ 0.65, sunder },
-			{ 0.84, merge(sunder, { Waist = { -24, -14, 0 } }) },
+			{ 0.84, merge(sunder, { Waist = { -24, 60, 0 } }) },
 			{ 1, p.Rest },
 		}, { Release = 0.65 }),
 		AttackSkill = signature(1.15, {
 			{ 0, p.Rest },
-			{ 0.36, merge(p.Windup, { Waist = { 16, 0, 0 }, RightShoulder = { 176, 0, 4 }, LeftShoulder = { 168, 0, -6 }, LeftElbow = { 46, 0, 0 }, RootOffset = { 0, 0.22, 0 } }) },
+			{ 0.36, merge(p.High, { Waist = { 16, 8, 0 }, RootOffset = { 0, 0.22, 0 } }) },
 			{ 0.62, faultSlam },
-			{ 0.84, merge(faultSlam, { Waist = { -36, 0, 0 } }) },
+			{ 0.84, merge(faultSlam, { Waist = { -36, 48, 0 } }) },
 			{ 1, p.Rest },
 		}, { Release = 0.62 }),
 	}

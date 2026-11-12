@@ -31,7 +31,7 @@ local ARCHETYPE_ICON: { [string]: string } = {
 	SWORD_SHIELD = "Vanguard",
 	DAGGERS = "Striker",
 	BOW = "Marksman",
-	AXE = "Miner",
+	AXE = "Berserker",
 	STAFF = "Scholar",
 	TOME = "Healer",
 }
@@ -1847,7 +1847,7 @@ function Forge:BuildUpgradeView(root: Frame)
 		ZIndex = 54,
 	}, targetArea)
 
-	local targetName = label(targetMeta, "Prospector's\nCleaver", 16, C.Text, Enum.Font.GothamBold)
+	local targetName = label(targetMeta, "Raider's\nGreataxe", 16, C.Text, Enum.Font.GothamBold)
 	targetName.Name = "TargetName"
 	targetName.Position = UDim2.fromOffset(0, 0)
 	targetName.Size = UDim2.new(1, 0, 0, 48)
@@ -2989,7 +2989,7 @@ local ARCHETYPE_FILTER_KEYS = {
 	{ Key = "SWORD_SHIELD", Title = "VANGUARD" },
 	{ Key = "DAGGERS", Title = "STRIKER" },
 	{ Key = "BOW", Title = "MARKSMAN" },
-	{ Key = "AXE", Title = "MINER" },
+	{ Key = "AXE", Title = "BERSERKER" },
 	{ Key = "STAFF", Title = "SCHOLAR" },
 	{ Key = "TOME", Title = "HEALER" },
 }

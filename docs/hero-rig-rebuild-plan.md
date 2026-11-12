@@ -109,7 +109,7 @@ weld.C1 = weaponGrip.CFrame -- the prefab's Grip
 | `BOW` | `LeftGripAttachment` | string `Beam`s from limb tips to `Nock` at rest; to `RightHand.DrawAttachment` while drawing |
 | `SWORD_SHIELD` | `RightGripAttachment` | shield `ShieldMount` → `LeftLowerArm.ShieldMountAttachment` |
 | `DAGGERS` | `RightGripAttachment` | left dagger `Grip` → `LeftGripAttachment`; optional `ReverseGrip` attribute rotates 180° about look |
-| `AXE` | `RightGripAttachment` | optional `OffhandGrip` for a two-handed swing pose |
+| `AXE` | `RightGripAttachment` | `OffhandGrip` for the left hand (two-handed greataxe); solved by `HeroAnimator.SolveOffhand`, not welded |
 | `STAFF` | `RightGripAttachment` | none |
 | `TOME` | `LeftGripAttachment` | none |
 

@@ -48,7 +48,7 @@ FacilityConfig.Constants = {
 
 FacilityConfig.FacilityArchetypeSynergies = {
 	GuardPost = { "Vanguard", "Marksman" },
-	Market = { "Miner" },
+	Market = { "Berserker" },
 	TrainingGrounds = { "Striker", "Scholar" },
 	GodsBlessing = { "Healer" },
 }

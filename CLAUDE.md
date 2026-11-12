@@ -37,7 +37,7 @@ Also follow `AGENTS.md`. Before working on a topic, use the matching `roblox-*` 
   | Vanguard | `SWORD_SHIELD` |
   | Striker | `DAGGERS` |
   | Marksman | `BOW` |
-  | Miner | `AXE` |
+  | Berserker | `AXE` (two-handed greataxe) |
   | Scholar (mage) | `STAFF` |
   | Healer | `TOME` |
 

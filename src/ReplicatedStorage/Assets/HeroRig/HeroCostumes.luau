@@ -1128,7 +1128,7 @@ do
 	}, "rbxassetid://126833628923084"))
 end
 
--- 14. GIDE (1★ Miner - Veteran Ironvein Axeman) ------------------------------------------
+-- 14. GIDE (1★ Berserker - Veteran Ironvein Axeman) ------------------------------------------
 -- From his reference art: stocky veteran miner (Heavy body) with messy dark-brown hair, a scarred
 -- stern face, a weathered stone-grey tunic with a high stand collar and frog clasps down the
 -- chest, an asymmetric brown leather harness with a steel chest ring, heavy riveted iron pauldrons,

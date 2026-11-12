@@ -77,7 +77,7 @@ HeroSockets.PREFABS = table.freeze({
 	art_abyssal_razor = "art_abyssal_razor",
 	art_abyssal_ravagers = "art_abyssal_ravagers",
 	art_void_reapers = "art_void_reapers",
-	-- Miner Axes (Batch 4)
+	-- Berserker Greataxes (Batch 4)
 	art_miner_pickaxe = "art_miner_pickaxe",
 	art_heavy_hewing_axe = "art_heavy_hewing_axe",
 	art_canyon_splitter = "art_canyon_splitter",
@@ -136,6 +136,7 @@ HeroSockets.SOCKETS = table.freeze({
 		{ WeaponAttachment = "Grip", RigPart = "RightHand", RigAttachment = "RightGripAttachment" },
 		{ Assembly = "LeftDagger", WeaponAttachment = "Grip", RigPart = "LeftHand", RigAttachment = "LeftGripAttachment" },
 	}),
+	-- Two-handed: the right hand is welded high on the haft, the left reaches OffhandGrip (OFFHAND).
 	AXE = table.freeze({
 		{ WeaponAttachment = "Grip", RigPart = "RightHand", RigAttachment = "RightGripAttachment" },
 	}),
@@ -146,6 +147,14 @@ HeroSockets.SOCKETS = table.freeze({
 		{ WeaponAttachment = "Grip", RigPart = "LeftHand", RigAttachment = "LeftGripAttachment" },
 	}),
 } :: { [WeaponType]: { Socket } })
+
+-- Two-handed weapons. The weapon is welded to one hand only (SOCKETS); the other hand reaches
+-- for this attachment on the weapon's PrimaryPart. Nothing is welded there: HeroAnimator solves
+-- that arm every frame, so the hand stays on the haft through every clip and body type.
+export type Offhand = { WeaponAttachment: string, Side: "Left" | "Right" }
+HeroSockets.OFFHAND = table.freeze({
+	AXE = table.freeze({ WeaponAttachment = "OffhandGrip", Side = "Left" }),
+} :: { [string]: Offhand })
 
 -- Uniform size multiplier applied to a weapon type's prefab when it is equipped.
 HeroSockets.WEAPON_SCALE = table.freeze({

@@ -244,7 +244,7 @@ function Feedback.new(parent: Instance): any
 			})
 		end
 
-		-- Distinct elemental bursts for Scholar and Miner archetypes + Directional slash
+		-- Distinct elemental bursts for Scholar and Berserker archetypes + Directional slash
 		local sparkPos = position + Vector3.new(0, 1.8, 0)
 		if archetype == "Scholar" then
 			-- Arcane / Lightning burst (Cyan & Violet)
@@ -266,7 +266,7 @@ function Feedback.new(parent: Instance): any
 			TweenService:Create(shockRing, TweenInfo.new(0.24, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.new(0.12, 3.8, 3.8), Transparency = 1 }):Play()
 			Debris:AddItem(shockRing, 0.26)
 
-		elseif archetype == "Miner" then
+		elseif archetype == "Berserker" then
 			-- Seismic / Earth burst (Amber & Slate fragments)
 			local seismicSpark = fxPart("SeismicBurst", anchor)
 			seismicSpark.Shape = Enum.PartType.Ball

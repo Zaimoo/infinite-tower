@@ -66,7 +66,7 @@ FacilityWorkerRules.DefaultArchetypeWeapons = table.freeze({
 	Marksman = "BOW",
 	Vanguard = "SWORD_SHIELD",
 	Striker = "DAGGERS",
-	Miner = "AXE",
+	Berserker = "AXE",
 	Scholar = "STAFF",
 	Healer = "TOME",
 })

@@ -76,7 +76,7 @@ do
 	assertEq(HeroCatalog.Seeds.hero_ignis.PreferredFacility, "FACILITY_GUARD_POST", "Ignis (Vanguard) prefers Guard Post")
 	assertEq(HeroCatalog.Seeds.hero_morrigan.PreferredFacility, "FACILITY_GUARD_POST", "Morrigan (Vanguard) prefers Guard Post")
 
-	assertEq(HeroCatalog.Seeds.hero_catio.PreferredFacility, "FACILITY_MARKET", "Catio (Miner) prefers The Market")
+	assertEq(HeroCatalog.Seeds.hero_catio.PreferredFacility, "FACILITY_MARKET", "Catio (Berserker) prefers The Market")
 
 	assertEq(HeroCatalog.Seeds.hero_han.PreferredFacility, "FACILITY_TRAINING", "Han (Striker) prefers Training Grounds")
 	assertEq(HeroCatalog.Seeds.hero_velkist.PreferredFacility, "FACILITY_TRAINING", "Velkist (Striker) prefers Training Grounds")

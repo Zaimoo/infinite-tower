@@ -216,7 +216,7 @@ do
 	local diran = { NetId = 70, Owner = owner, Archetype = "Healer", Position = Vector3.new(0, 0, 0), MaxHP = 1500, CurrentHP = 1500, State = "ATTACKING" }
 	local healthyAlly = { NetId = 71, Owner = owner, Archetype = "Vanguard", Position = Vector3.new(5, 0, 0), MaxHP = 2000, CurrentHP = 1800, State = "ATTACKING" }
 	local lowAlly = { NetId = 72, Owner = owner, Archetype = "Striker", Position = Vector3.new(8, 0, 0), MaxHP = 1000, CurrentHP = 200, State = "ATTACKING" }
-	local comaAlly = { NetId = 73, Owner = owner, Archetype = "Miner", Position = Vector3.new(4, 0, 0), MaxHP = 1000, CurrentHP = 0, State = "COMA" }
+	local comaAlly = { NetId = 73, Owner = owner, Archetype = "Berserker", Position = Vector3.new(4, 0, 0), MaxHP = 1000, CurrentHP = 0, State = "COMA" }
 	ctx = context({})
 	ctx.Squad = { d = diran, h = healthyAlly, l = lowAlly, c = comaAlly }
 	local dProfile = Skills.GetSkillProfile("hero_diran", "Healer")

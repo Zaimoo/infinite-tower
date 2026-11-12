@@ -264,7 +264,7 @@ local function resolveSkill(ctx: Context, hit: Hit, scale: number)
 		splash(ctx, hit, skill.Radius or 12.0, math.round(atk * mult * 0.5 * scale))
 	elseif archetype == "Scholar" then
 		splash(ctx, hit, skill.Radius or 20.0, math.round(atk * mult * 0.6 * scale))
-	elseif archetype == "Miner" then
+	elseif archetype == "Berserker" then
 		splash(ctx, hit, skill.Radius or 18.0, math.round(atk * mult * 0.5 * scale))
 	end
 end
@@ -309,7 +309,7 @@ local function resolveSpecial(ctx: Context, hit: Hit): number
 	elseif archetype == "Scholar" then
 		-- Chain lightning: up to 2 other mobs within 14 studs of the target.
 		nearbyOthers(ctx, hit, hit.Center, 14, 2, math.round(atk * 0.70))
-	elseif archetype == "Miner" then
+	elseif archetype == "Berserker" then
 		-- Seismic slam: every other mob within 8 studs of the target.
 		nearbyOthers(ctx, hit, hit.Center, 8, math.huge, math.round(atk * 0.50))
 	elseif archetype == "Marksman" then

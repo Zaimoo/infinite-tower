@@ -14,7 +14,7 @@ export type HeroSeed = {
 	DropWeight: number, -- Relative weight within tier
 	BaseStar: number, -- summon star; 1 for every hero
 	Rarity: number, -- Inherent rarity tier (1 Common .. 7 Mythical at launch); never changes
-	Archetype: "Vanguard" | "Striker" | "Marksman" | "Miner" | "Healer" | "Scholar",
+	Archetype: "Vanguard" | "Striker" | "Marksman" | "Berserker" | "Healer" | "Scholar",
 	BaseHP_1Star: number,
 	BaseATK_1Star: number,
 	NativeHP: number,
@@ -126,7 +126,7 @@ HeroCatalog.Seeds = {
 		DropWeight = 60.0,
 		BaseStar = 1,
 		Rarity = 1,
-		Archetype = "Miner",
+		Archetype = "Berserker",
 		BaseHP_1Star = 340,
 		BaseATK_1Star = 36,
 		NativeHP = 340,
@@ -204,7 +204,7 @@ HeroCatalog.Seeds = {
 		DropWeight = 10.0,
 		BaseStar = 1,
 		Rarity = 3,
-		Archetype = "Miner",
+		Archetype = "Berserker",
 		BaseHP_1Star = 280,
 		BaseATK_1Star = 24,
 		NativeHP = 762,

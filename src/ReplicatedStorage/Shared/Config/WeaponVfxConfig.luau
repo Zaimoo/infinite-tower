@@ -187,7 +187,7 @@ WeaponVfxConfig.ArtifactElements = table.freeze({
 	art_abyssal_ravagers = "COSMIC",
 	art_void_reapers = "VOID",
 
-	-- Miner Axes (Batch 4)
+	-- Berserker Axes (Batch 4)
 	art_miner_pickaxe = "PHYSICAL",
 	art_heavy_hewing_axe = "PHYSICAL",
 	art_canyon_splitter = "CRYSTAL",

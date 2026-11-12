@@ -168,7 +168,7 @@ local OnboardingSyncEvent = progressionRemote("OnboardingSync", "RemoteEvent") :
 -- 1. EXPORTED TYPE DEFINITIONS
 --============================================================================
 
-export type HeroArchetype = "Vanguard" | "Striker" | "Marksman" | "Miner" | "Healer" | "Scholar"
+export type HeroArchetype = "Vanguard" | "Striker" | "Marksman" | "Berserker" | "Healer" | "Scholar"
 
 export type HeroAssignment =
 	"BENCHED"
@@ -361,10 +361,20 @@ end
 -- templates (legacy SWORD/SHIELD -> SWORD_SHIELD), drop removed templates such
 -- as rings, and swap heroes off weapons their archetype can no longer hold.
 function DataManager.MigrateArtifactTypes(profile: PlayerProfile)
+	-- A hero's archetype is its template's (Miner became Berserker). Re-derive it before the
+	-- equip check below, or a renamed archetype would be stripped of its own weapon.
+	for _, hero in pairs(profile.Heroes) do
+		local heroSeed = HeroCatalog.Seeds[hero.TemplateId]
+		if heroSeed and hero.Archetype ~= heroSeed.Archetype then
+			hero.Archetype = heroSeed.Archetype :: HeroArchetype
+		end
+	end
+
 	for uuid, artifact in pairs(profile.Artifacts) do
 		local seed = ArtifactCatalog.Seeds[artifact.TemplateId]
 		if seed then
 			artifact.Type = seed.Type
+			artifact.DisplayName = seed.DisplayName
 		else
 			local owner = artifact.EquippedHeroUUID and profile.Heroes[artifact.EquippedHeroUUID]
 			if owner and owner.EquippedArtifactUUID == uuid then
