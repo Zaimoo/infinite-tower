@@ -6,7 +6,7 @@
 --   - weapon_sword (bare sword prefab, base of weapon_sword_shield)
 --   - weapon_sword_shield (Vanguard sword & shield: Broadswords, Claymores, Aegis Core)
 --   - weapon_daggers (Striker dual daggers: Rogue Daggers, Shadow Fangs)
---   - weapon_axe (Miner axes: Pickaxe, Battleaxes)
+--   - weapon_axe (Berserker two-handed greataxes)
 --   - weapon_staff (Scholar staves: Ruby Staff, Archmage Scepter)
 --   - weapon_tome (Healer tomes: Pyromancer Tome, Eldritch Grimoire)
 
@@ -104,6 +104,9 @@ local function addSocket(part: BasePart, name: string, position: Vector3, rotati
 	attachment.Parent = part
 	return attachment
 end
+
+-- Studs between a greataxe's two hands along the haft (the Blender generator uses the same gap).
+local AXE_HAND_GAP = 1.7
 
 -- Blades and axe heads sit along handle +Y with their edge facing handle +X, so the grip
 -- looks along +X (CFrame.Angles(0, -90, 0) turns -Z onto +X and keeps +Y).
@@ -5014,39 +5017,47 @@ function WeaponModelBuilder.BuildDaggers(): Model
 end
 
 -- ============================================================================
--- 4. WEAPON_AXE (Prospector's Cleaver / Warforged Battleaxe)
+-- 4. WEAPON_AXE (generic two-handed greataxe)
 -- ============================================================================
 function WeaponModelBuilder.BuildAxe(): Model
 	local model = Instance.new("Model")
 	model.Name = "weapon_axe"
 
 	local ashwood = Color3.fromRGB(115, 85, 55)
+	local leather = Color3.fromRGB(70, 48, 32)
 	local iron = Color3.fromRGB(165, 172, 185)
 	local gold = Color3.fromRGB(235, 195, 60)
 
-	local handle = makePart(model, "Handle", Vector3.new(0.22, 2.8, 0.22), CFrame.new(0, 0, 0), ashwood)
+	-- Two-handed: a 5.4-stud haft with the head at the top. Grip is the upper (right) hand,
+	-- OffhandGrip the lower (left) hand, AXE_HAND_GAP studs towards the butt.
+	local handle = makePart(model, "Handle", Vector3.new(0.24, 5.4, 0.24), CFrame.new(0, 0, 0), ashwood)
 	model.PrimaryPart = handle
 
-	local pommel = makePart(model, "Pommel", Vector3.new(0.35, 0.3, 0.35), CFrame.new(0, -1.45, 0), iron)
+	local pommel = makePart(model, "Pommel", Vector3.new(0.38, 0.3, 0.38), CFrame.new(0, -2.75, 0), iron)
 	weldTo(handle, pommel)
 
-	local headCollar = makePart(model, "HeadCollar", Vector3.new(0.38, 0.4, 0.38), CFrame.new(0, 1.1, 0), gold)
+	local headCollar = makePart(model, "HeadCollar", Vector3.new(0.42, 0.9, 0.42), CFrame.new(0, 2.0, 0), gold)
 	weldTo(handle, headCollar)
 
-	-- Beveled axe blade
-	local blade = makePart(model, "Blade", Vector3.new(1.3, 1.2, 0.18), CFrame.new(0.7, 1.1, 0), iron, Enum.Material.Metal)
+	-- Broad beveled blade
+	local blade = makePart(model, "Blade", Vector3.new(1.5, 1.9, 0.2), CFrame.new(0.85, 1.95, 0), iron, Enum.Material.Metal)
 	weldTo(handle, blade)
 
-	local edge = makeWedge(model, "BladeEdge", Vector3.new(0.18, 1.4, 0.5), CFrame.new(1.4, 1.1, 0) * CFrame.Angles(0, 0, math.rad(-90)), iron, Enum.Material.Metal)
+	local edge = makeWedge(model, "BladeEdge", Vector3.new(0.2, 2.2, 0.5), CFrame.new(1.85, 1.95, 0) * CFrame.Angles(0, 0, math.rad(-90)), iron, Enum.Material.Metal)
 	weldTo(handle, edge)
 
 	-- Counter-spike
-	local spike = makeWedge(model, "BackSpike", Vector3.new(0.18, 0.6, 0.4), CFrame.new(-0.4, 1.1, 0) * CFrame.Angles(0, 0, math.rad(90)), iron, Enum.Material.Metal)
+	local spike = makeWedge(model, "BackSpike", Vector3.new(0.2, 0.7, 0.5), CFrame.new(-0.46, 2.0, 0) * CFrame.Angles(0, 0, math.rad(90)), iron, Enum.Material.Metal)
 	weldTo(handle, spike)
 
-	-- Held near the butt of the haft; OffhandGrip is the second hand for two-handed swings.
-	addSocket(handle, "Grip", Vector3.new(0, -0.9, 0), EDGE_PLUS_X)
-	addSocket(handle, "OffhandGrip", Vector3.new(0, 0.2, 0), EDGE_PLUS_X)
+	local gripY = 0.35
+	for _, y in { gripY, gripY - AXE_HAND_GAP } do
+		local wrap = makePart(model, "GripWrap", Vector3.new(0.3, 0.66, 0.3), CFrame.new(0, y, 0), leather)
+		weldTo(handle, wrap)
+	end
+
+	addSocket(handle, "Grip", Vector3.new(0, gripY, 0), EDGE_PLUS_X)
+	addSocket(handle, "OffhandGrip", Vector3.new(0, gripY - AXE_HAND_GAP, 0), EDGE_PLUS_X)
 
 	return model
 end
@@ -5196,7 +5207,7 @@ function WeaponModelBuilder.Style(wModel: Model, weaponAssetId: string?, rarityI
 		end
 	end
 
-	-- Miner Axes (Batch 4) Styling Hook
+	-- Berserker Greataxes (Batch 4) Styling Hook
 	local axeStyle = (AXE_STYLES and weaponAssetId) and AXE_STYLES[weaponAssetId]
 	if axeStyle and axeStyle.Parts then
 		for partName, pStyle in pairs(axeStyle.Parts) do
@@ -6018,21 +6029,22 @@ function WeaponModelBuilder.BuildVoidReapersArtifact(): Model
 end
 
 -- ============================================================================
--- MINER AXES (Batch 4) - 14 Modular 3D Pickaxes, Battleaxes & Cleavers
+-- BERSERKER GREATAXES (Batch 4) - 14 modular two-handed greataxes
 -- ============================================================================
+-- Imported with tests/studio-greataxe-import.luau from assets/artifacts/axes/*.fbx. In the
+-- Handle's space the haft runs along +Y (head up) and the main cutting edge faces +X. Materials
+-- and colours come from AXE_STYLES. Offsets and sizes are in studs.
 type AxePartData = {
 	Name: string,
 	MeshId: string,
 	Size: Vector3,
 	Offset: Vector3,
-	Mat: Enum.Material,
-	Color: Color3,
 }
 
 type AxeMeshData = {
 	Parts: { AxePartData },
-	GripPos: Vector3,
-	OffhandGripPos: Vector3,
+	GripPos: Vector3, -- upper (right) hand
+	OffhandGripPos: Vector3, -- lower (left) hand, AXE_HAND_GAP towards the butt
 	TipPos: Vector3,
 	BasePos: Vector3,
 	CorePos: Vector3,
@@ -6040,225 +6052,239 @@ type AxeMeshData = {
 
 local AXE_MESH_DATA: { [string]: AxeMeshData } = {
 	art_miner_pickaxe = {
-		GripPos = Vector3.new(0.0000, 0.0000, -0.9000),
-		OffhandGripPos = Vector3.new(0.0000, 0.0000, 0.2000),
-		TipPos = Vector3.new(-1.1400, 0.0000, 1.5340),
-		BasePos = Vector3.new(-1.1400, 0.0000, 0.7960),
-		CorePos = Vector3.new(-0.3420, 0.0000, 1.1650),
+		GripPos = Vector3.new(0.0000, 0.5800, 0.0000),
+		OffhandGripPos = Vector3.new(0.0000, -1.1200, 0.0000),
+		TipPos = Vector3.new(1.1250, 2.6300, 0.0000),
+		BasePos = Vector3.new(1.0750, 1.0800, 0.0000),
+		CorePos = Vector3.new(0.5625, 2.0800, 0.0000),
 		Parts = {
-			{ Name = "BackSpike", MeshId = "rbxassetid://94836296854862", Size = Vector3.new(0.9447, 0.2552, 0.3937), Offset = Vector3.new(0.6123, 0.0000, 1.1058), Mat = Enum.Material.Metal, Color = Color3.fromRGB(130, 135, 145) },
-			{ Name = "Blade", MeshId = "rbxassetid://92737992313603", Size = Vector3.new(0.9600, 0.2200, 0.7800), Offset = Vector3.new(-0.6200, 0.0000, 1.1650), Mat = Enum.Material.Metal, Color = Color3.fromRGB(145, 150, 160) },
-			{ Name = "BladeEdge", MeshId = "rbxassetid://102129404384623", Size = Vector3.new(0.0800, 0.0500, 0.8200), Offset = Vector3.new(-1.1400, 0.0000, 1.1650), Mat = Enum.Material.Metal, Color = Color3.fromRGB(205, 210, 220) },
-			{ Name = "Handle", MeshId = "rbxassetid://140551721555968", Size = Vector3.new(0.2160, 0.2106, 2.7500), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Wood, Color = Color3.fromRGB(115, 85, 55) },
-			{ Name = "HeadCollar", MeshId = "rbxassetid://131577315646852", Size = Vector3.new(0.3500, 0.3500, 0.4600), Offset = Vector3.new(0.0000, 0.0000, 1.1850), Mat = Enum.Material.Metal, Color = Color3.fromRGB(110, 115, 125) },
-			{ Name = "Pommel", MeshId = "rbxassetid://82493519554699", Size = Vector3.new(0.2500, 0.2437, 0.1720), Offset = Vector3.new(0.0000, 0.0000, -1.4410), Mat = Enum.Material.Metal, Color = Color3.fromRGB(95, 100, 108) },
+			{ Name = "Handle", MeshId = "rbxassetid://109773881228463", Size = Vector3.new(0.2100, 5.2000, 0.2100), Offset = Vector3.new(0.0000, 0.0000, 0.0000) },
+			{ Name = "GripWrap", MeshId = "rbxassetid://82568459452584", Size = Vector3.new(0.2520, 2.4200, 0.2520), Offset = Vector3.new(0.0000, -0.2700, 0.0000) },
+			{ Name = "Pommel", MeshId = "rbxassetid://94171209498967", Size = Vector3.new(0.3150, 0.3600, 0.3150), Offset = Vector3.new(0.0000, -2.5800, 0.0000) },
+			{ Name = "HeadCollar", MeshId = "rbxassetid://129687261573943", Size = Vector3.new(0.3801, 1.3100, 0.3497), Offset = Vector3.new(0.0000, 1.9250, 0.0000) },
+			{ Name = "Blade", MeshId = "rbxassetid://129009107137173", Size = Vector3.new(1.2450, 1.5500, 0.1600), Offset = Vector3.new(0.6025, 1.8550, 0.0000) },
+			{ Name = "BladeEdge", MeshId = "rbxassetid://128545858833589", Size = Vector3.new(0.2163, 1.5596, 0.1230), Offset = Vector3.new(1.1368, 1.8544, 0.0000) },
+			{ Name = "BackSpike", MeshId = "rbxassetid://105161887034805", Size = Vector3.new(0.3800, 0.4500, 0.2835), Offset = Vector3.new(-0.2950, 2.0800, 0.0000) },
 		},
 	},
 	art_heavy_hewing_axe = {
-		GripPos = Vector3.new(0.0000, 0.0000, -0.9000),
-		OffhandGripPos = Vector3.new(0.0000, 0.0000, 0.2000),
-		TipPos = Vector3.new(-1.2975, 0.0000, 1.9000),
-		BasePos = Vector3.new(-1.2975, 0.0000, 0.3700),
-		CorePos = Vector3.new(-0.3893, 0.0000, 1.1350),
+		GripPos = Vector3.new(0.0000, 0.4600, 0.0000),
+		OffhandGripPos = Vector3.new(0.0000, -1.2400, 0.0000),
+		TipPos = Vector3.new(1.2600, 2.8600, 0.0000),
+		BasePos = Vector3.new(1.2040, 0.9600, 0.0000),
+		CorePos = Vector3.new(0.6300, 2.0100, 0.0000),
 		Parts = {
-			{ Name = "BackSpike", MeshId = "rbxassetid://90228869052544", Size = Vector3.new(0.5400, 0.4000, 0.4200), Offset = Vector3.new(0.4275, 0.0000, 1.3250), Mat = Enum.Material.Metal, Color = Color3.fromRGB(95, 100, 110) },
-			{ Name = "Blade", MeshId = "rbxassetid://137345086194686", Size = Vector3.new(1.0900, 0.2600, 1.6000), Offset = Vector3.new(-0.6975, 0.0000, 1.1450), Mat = Enum.Material.Metal, Color = Color3.fromRGB(135, 140, 150) },
-			{ Name = "BladeEdge", MeshId = "rbxassetid://104405564702305", Size = Vector3.new(0.1100, 0.0500, 1.7000), Offset = Vector3.new(-1.2975, 0.0000, 1.1350), Mat = Enum.Material.Metal, Color = Color3.fromRGB(215, 220, 230) },
-			{ Name = "Handle", MeshId = "rbxassetid://133026283942673", Size = Vector3.new(0.2749, 0.2760, 2.4595), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Wood, Color = Color3.fromRGB(90, 65, 42) },
-			{ Name = "HeadCollar", MeshId = "rbxassetid://78054603575061", Size = Vector3.new(0.3800, 0.4000, 0.4800), Offset = Vector3.new(-0.0025, 0.0000, 1.3450), Mat = Enum.Material.Metal, Color = Color3.fromRGB(100, 105, 115) },
-			{ Name = "Pommel", MeshId = "rbxassetid://88136172246793", Size = Vector3.new(0.3400, 0.4200, 0.1800), Offset = Vector3.new(-0.0425, 0.0000, -1.3050), Mat = Enum.Material.Metal, Color = Color3.fromRGB(80, 85, 92) },
+			{ Name = "Handle", MeshId = "rbxassetid://119450506780293", Size = Vector3.new(0.2300, 5.3000, 0.2300), Offset = Vector3.new(0.0000, 0.0000, 0.0000) },
+			{ Name = "GripWrap", MeshId = "rbxassetid://72900063451041", Size = Vector3.new(0.2760, 2.4200, 0.2760), Offset = Vector3.new(0.0000, -0.3900, 0.0000) },
+			{ Name = "Pommel", MeshId = "rbxassetid://89449665445167", Size = Vector3.new(0.4025, 0.4612, 0.4025), Offset = Vector3.new(0.0000, -2.6807, 0.0000) },
+			{ Name = "HeadCollar", MeshId = "rbxassetid://80537875441032", Size = Vector3.new(0.4163, 2.1350, 0.3830), Offset = Vector3.new(0.0000, 1.5625, 0.0000) },
+			{ Name = "Blade", MeshId = "rbxassetid://78702626230632", Size = Vector3.new(1.3500, 1.9000, 0.2000), Offset = Vector3.new(0.6550, 1.9100, 0.0000) },
+			{ Name = "BladeEdge", MeshId = "rbxassetid://125601023525044", Size = Vector3.new(0.1990, 1.9062, 0.1450), Offset = Vector3.new(1.2505, 1.9094, 0.0000) },
+			{ Name = "BackSpike", MeshId = "rbxassetid://123627611674527", Size = Vector3.new(0.5800, 0.8190, 0.3105), Offset = Vector3.new(-0.4050, 2.0100, 0.0000) },
 		},
 	},
 	art_canyon_splitter = {
-		GripPos = Vector3.new(0.0000, 0.0000, -0.9000),
-		OffhandGripPos = Vector3.new(0.0000, 0.0000, 0.2000),
-		TipPos = Vector3.new(-1.3300, 0.0000, 1.7440),
-		BasePos = Vector3.new(-1.3300, 0.0000, 0.4660),
-		CorePos = Vector3.new(-0.3990, 0.0000, 1.1050),
+		GripPos = Vector3.new(0.0000, 0.3300, 0.0000),
+		OffhandGripPos = Vector3.new(0.0000, -1.3700, 0.0000),
+		TipPos = Vector3.new(1.3050, 2.8800, 0.0000),
+		BasePos = Vector3.new(1.2470, 0.8300, 0.0000),
+		CorePos = Vector3.new(0.6525, 2.0800, 0.0000),
 		Parts = {
-			{ Name = "BackSpike", MeshId = "rbxassetid://123646299894909", Size = Vector3.new(0.5600, 0.3360, 0.3360), Offset = Vector3.new(0.4400, 0.0000, 1.1750), Mat = Enum.Material.Metal, Color = Color3.fromRGB(135, 140, 150) },
-			{ Name = "Blade", MeshId = "rbxassetid://129529480268500", Size = Vector3.new(1.1200, 0.2800, 1.3200), Offset = Vector3.new(-0.7200, 0.0000, 1.1150), Mat = Enum.Material.Metal, Color = Color3.fromRGB(120, 125, 135) },
-			{ Name = "BladeEdge", MeshId = "rbxassetid://121729671658855", Size = Vector3.new(0.1000, 0.0500, 1.4200), Offset = Vector3.new(-1.3300, 0.0000, 1.1050), Mat = Enum.Material.Metal, Color = Color3.fromRGB(195, 200, 215) },
-			{ Name = "Handle", MeshId = "rbxassetid://116325093459870", Size = Vector3.new(0.2912, 0.2912, 2.7500), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Slate, Color = Color3.fromRGB(82, 80, 88) },
-			{ Name = "HeadCollar", MeshId = "rbxassetid://117439509760474", Size = Vector3.new(0.5200, 0.4032, 0.9547), Offset = Vector3.new(0.0000, 0.0000, 1.1950), Mat = Enum.Material.Metal, Color = Color3.fromRGB(180, 135, 75) },
-			{ Name = "Pommel", MeshId = "rbxassetid://126680098402040", Size = Vector3.new(0.3584, 0.3584, 0.3300), Offset = Vector3.new(0.0000, 0.0000, -1.5300), Mat = Enum.Material.Metal, Color = Color3.fromRGB(165, 120, 65) },
-			{ Name = "RuneInlay", MeshId = "rbxassetid://79000887825740", Size = Vector3.new(1.4489, 0.4153, 0.6257), Offset = Vector3.new(-0.1480, 0.0000, 1.4573), Mat = Enum.Material.Neon, Color = Color3.fromRGB(185, 105, 255) },
+			{ Name = "Handle", MeshId = "rbxassetid://79662440402911", Size = Vector3.new(0.2400, 5.4000, 0.2283), Offset = Vector3.new(0.0000, 0.0000, 0.0000) },
+			{ Name = "GripWrap", MeshId = "rbxassetid://71602687449906", Size = Vector3.new(0.2880, 2.4200, 0.2739), Offset = Vector3.new(0.0000, -0.5200, 0.0000) },
+			{ Name = "Pommel", MeshId = "rbxassetid://77552975024105", Size = Vector3.new(0.5880, 0.6946, 0.3196), Offset = Vector3.new(0.0000, -2.8673, 0.0000) },
+			{ Name = "HeadCollar", MeshId = "rbxassetid://140203607906820", Size = Vector3.new(0.4488, 3.2900, 0.3927), Offset = Vector3.new(0.0000, 1.0350, 0.0000) },
+			{ Name = "Blade", MeshId = "rbxassetid://90093374420444", Size = Vector3.new(1.3845, 2.0500, 0.2200), Offset = Vector3.new(0.6723, 1.8550, 0.0000) },
+			{ Name = "BladeEdge", MeshId = "rbxassetid://85785425952680", Size = Vector3.new(0.1927, 2.0552, 0.1560), Offset = Vector3.new(1.2882, 1.8545, 0.0000) },
+			{ Name = "BackSpike", MeshId = "rbxassetid://94315946513429", Size = Vector3.new(0.9700, 0.6400, 0.1980), Offset = Vector3.new(-0.4650, 2.0800, 0.0000) },
+			{ Name = "RuneInlay", MeshId = "rbxassetid://89000027353376", Size = Vector3.new(1.3198, 0.7718, 0.2188), Offset = Vector3.new(0.5931, 2.7673, 0.0060) },
 		},
 	},
 	art_quakestone_greataxe = {
-		GripPos = Vector3.new(0.0000, 0.0000, -0.9000),
-		OffhandGripPos = Vector3.new(0.0000, 0.0000, 0.2000),
-		TipPos = Vector3.new(-1.4100, 0.0000, 1.8160),
-		BasePos = Vector3.new(-1.4100, 0.0000, 0.3040),
-		CorePos = Vector3.new(-0.4230, 0.0000, 1.0600),
+		GripPos = Vector3.new(0.0000, 0.2990, 0.0000),
+		OffhandGripPos = Vector3.new(0.0000, -1.4010, 0.0000),
+		TipPos = Vector3.new(1.3500, 3.1490, 0.0000),
+		BasePos = Vector3.new(1.2900, 0.7990, 0.0000),
+		CorePos = Vector3.new(0.6750, 2.0990, 0.0000),
 		Parts = {
-			{ Name = "BackSpike", MeshId = "rbxassetid://122705498692520", Size = Vector3.new(0.6600, 0.2954, 0.3000), Offset = Vector3.new(0.4900, 0.0000, 1.1800), Mat = Enum.Material.Metal, Color = Color3.fromRGB(125, 130, 140) },
-			{ Name = "Blade", MeshId = "rbxassetid://81271720134153", Size = Vector3.new(1.2000, 0.2800, 1.6200), Offset = Vector3.new(-0.7600, 0.0000, 1.0500), Mat = Enum.Material.Metal, Color = Color3.fromRGB(140, 145, 155) },
-			{ Name = "BladeEdge", MeshId = "rbxassetid://123122246356785", Size = Vector3.new(0.1000, 0.0500, 1.6800), Offset = Vector3.new(-1.4100, 0.0000, 1.0600), Mat = Enum.Material.Metal, Color = Color3.fromRGB(210, 215, 225) },
-			{ Name = "Handle", MeshId = "rbxassetid://98539484149239", Size = Vector3.new(0.3155, 0.2732, 2.8000), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(190, 150, 65) },
-			{ Name = "HeadCollar", MeshId = "rbxassetid://106148442053393", Size = Vector3.new(0.5400, 0.3817, 1.0000), Offset = Vector3.new(0.0000, 0.0000, 1.2100), Mat = Enum.Material.Metal, Color = Color3.fromRGB(115, 118, 125) },
-			{ Name = "Pommel", MeshId = "rbxassetid://122782964219360", Size = Vector3.new(0.3944, 0.3416, 0.3400), Offset = Vector3.new(0.0000, 0.0000, -1.5600), Mat = Enum.Material.Metal, Color = Color3.fromRGB(170, 130, 50) },
-			{ Name = "RuneInlay", MeshId = "rbxassetid://78101601037032", Size = Vector3.new(0.7000, 0.3600, 0.8000), Offset = Vector3.new(-0.8000, 0.0000, 0.9800), Mat = Enum.Material.Neon, Color = Color3.fromRGB(245, 205, 90) },
+			{ Name = "Handle", MeshId = "rbxassetid://71972021455682", Size = Vector3.new(0.2600, 5.5000, 0.2252), Offset = Vector3.new(0.0000, 0.0000, 0.0000) },
+			{ Name = "GripWrap", MeshId = "rbxassetid://127482820048600", Size = Vector3.new(0.3120, 2.4200, 0.3120), Offset = Vector3.new(0.0000, -0.5510, 0.0000) },
+			{ Name = "Pommel", MeshId = "rbxassetid://125884019315848", Size = Vector3.new(0.3900, 0.3600, 0.3900), Offset = Vector3.new(0.0000, -2.7300, 0.0000) },
+			{ Name = "HeadCollar", MeshId = "rbxassetid://85995778539796", Size = Vector3.new(0.4862, 3.3400, 0.4473), Offset = Vector3.new(0.0000, 1.0291, 0.0000) },
+			{ Name = "Blade", MeshId = "rbxassetid://107089315488255", Size = Vector3.new(1.5350, 2.3500, 0.2200), Offset = Vector3.new(0.7475, 1.9740, 0.0000) },
+			{ Name = "BladeEdge", MeshId = "rbxassetid://124463868777868", Size = Vector3.new(0.3006, 2.3599, 0.1560), Offset = Vector3.new(1.3847, 1.9735, 0.0000) },
+			{ Name = "BackSpike", MeshId = "rbxassetid://88096914718422", Size = Vector3.new(1.1125, 1.4710, 0.2815), Offset = Vector3.new(-0.3937, 2.5145, 0.0000) },
+			{ Name = "RuneInlay", MeshId = "rbxassetid://131649248097616", Size = Vector3.new(0.6615, 0.6211, 0.2640), Offset = Vector3.new(0.7619, 2.0990, 0.0000) },
 		},
 	},
 	art_battleaxe_cleaver = {
-		GripPos = Vector3.new(0.0000, 0.0000, -0.9000),
-		OffhandGripPos = Vector3.new(0.0000, 0.0000, 0.2000),
-		TipPos = Vector3.new(-1.3900, 0.0000, 1.8590),
-		BasePos = Vector3.new(-1.3900, 0.0000, 0.4010),
-		CorePos = Vector3.new(-0.4170, 0.0000, 1.1300),
+		GripPos = Vector3.new(0.0000, 0.5800, 0.0000),
+		OffhandGripPos = Vector3.new(0.0000, -1.1200, 0.0000),
+		TipPos = Vector3.new(1.3050, 3.1800, 0.0000),
+		BasePos = Vector3.new(1.2470, 1.0800, 0.0000),
+		CorePos = Vector3.new(0.6525, 2.1800, 0.0000),
 		Parts = {
-			{ Name = "BackSpike", MeshId = "rbxassetid://83629336206756", Size = Vector3.new(1.2800, 0.2800, 1.6200), Offset = Vector3.new(0.8000, 0.0000, 1.1300), Mat = Enum.Material.Metal, Color = Color3.fromRGB(120, 125, 138) },
-			{ Name = "Blade", MeshId = "rbxassetid://108383883423975", Size = Vector3.new(1.1800, 0.2800, 1.5400), Offset = Vector3.new(-0.7500, 0.0000, 1.1300), Mat = Enum.Material.Metal, Color = Color3.fromRGB(110, 115, 128) },
-			{ Name = "BladeEdge", MeshId = "rbxassetid://99596637826974", Size = Vector3.new(0.1000, 0.0440, 1.6200), Offset = Vector3.new(-1.3900, 0.0000, 1.1300), Mat = Enum.Material.Metal, Color = Color3.fromRGB(215, 222, 235) },
-			{ Name = "Handle", MeshId = "rbxassetid://93446786622418", Size = Vector3.new(0.2640, 0.2640, 2.8000), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(65, 70, 78) },
-			{ Name = "HeadCollar", MeshId = "rbxassetid://135675088482295", Size = Vector3.new(0.3600, 0.6000, 0.6000), Offset = Vector3.new(0.0000, 0.0000, 1.1800), Mat = Enum.Material.Metal, Color = Color3.fromRGB(175, 125, 45) },
-			{ Name = "Pommel", MeshId = "rbxassetid://80129153720203", Size = Vector3.new(0.3400, 0.3151, 0.4088), Offset = Vector3.new(0.0000, 0.0000, -1.5356), Mat = Enum.Material.Metal, Color = Color3.fromRGB(195, 145, 60) },
-			{ Name = "RuneInlay", MeshId = "rbxassetid://99693544038289", Size = Vector3.new(0.3600, 0.5000, 0.3600), Offset = Vector3.new(0.0000, 0.0000, 1.1800), Mat = Enum.Material.Neon, Color = Color3.fromRGB(60, 210, 255) },
+			{ Name = "Handle", MeshId = "rbxassetid://89078483037450", Size = Vector3.new(0.2500, 5.6000, 0.2378), Offset = Vector3.new(0.0000, 0.0000, 0.0000) },
+			{ Name = "GripWrap", MeshId = "rbxassetid://87270001154303", Size = Vector3.new(0.3000, 2.4200, 0.2853), Offset = Vector3.new(0.0000, -0.2700, 0.0000) },
+			{ Name = "Pommel", MeshId = "rbxassetid://127896046418750", Size = Vector3.new(0.4000, 0.7500, 0.3804), Offset = Vector3.new(0.0000, -2.9750, 0.0000) },
+			{ Name = "HeadCollar", MeshId = "rbxassetid://106213043456920", Size = Vector3.new(0.4825, 4.7300, 0.5513), Offset = Vector3.new(0.0000, 0.5350, 0.0000) },
+			{ Name = "Blade", MeshId = "rbxassetid://108276742968257", Size = Vector3.new(1.4700, 2.1000, 0.2200), Offset = Vector3.new(0.7150, 2.1300, 0.0000) },
+			{ Name = "BladeEdge", MeshId = "rbxassetid://72611934343834", Size = Vector3.new(2.9400, 2.1100, 0.1560), Offset = Vector3.new(0.0000, 2.1295, 0.0000) },
+			{ Name = "BackSpike", MeshId = "rbxassetid://122406048878171", Size = Vector3.new(1.6500, 2.6700, 0.2200), Offset = Vector3.new(-0.6250, 2.4150, 0.0000) },
+			{ Name = "RuneInlay", MeshId = "rbxassetid://108131857254631", Size = Vector3.new(1.9317, 0.8014, 0.7722), Offset = Vector3.new(0.0000, 2.1801, 0.0000) },
 		},
 	},
 	art_iron_juggernaut_cleaver = {
-		GripPos = Vector3.new(0.0000, 0.0000, -0.9000),
-		OffhandGripPos = Vector3.new(0.0000, 0.0000, 0.2000),
-		TipPos = Vector3.new(-1.4600, 0.0000, 1.6110),
-		BasePos = Vector3.new(-1.4600, 0.0000, 0.7290),
-		CorePos = Vector3.new(-0.4380, 0.0000, 1.1700),
+		GripPos = Vector3.new(0.0000, 0.2300, 0.0000),
+		OffhandGripPos = Vector3.new(0.0000, -1.4700, 0.0000),
+		TipPos = Vector3.new(1.5360, 3.1380, 0.0000),
+		BasePos = Vector3.new(1.1520, 0.7300, 0.0000),
+		CorePos = Vector3.new(0.7200, 2.0800, 0.0000),
 		Parts = {
-			{ Name = "BackSpike", MeshId = "rbxassetid://115411069374772", Size = Vector3.new(2.0300, 0.4600, 0.7300), Offset = Vector3.new(-0.0750, 0.0000, 1.1550), Mat = Enum.Material.Metal, Color = Color3.fromRGB(85, 88, 96) },
-			{ Name = "Blade", MeshId = "rbxassetid://115167154627225", Size = Vector3.new(1.2400, 0.3200, 0.9400), Offset = Vector3.new(-0.8000, 0.0000, 1.1700), Mat = Enum.Material.Metal, Color = Color3.fromRGB(125, 130, 140) },
-			{ Name = "BladeEdge", MeshId = "rbxassetid://127033198284534", Size = Vector3.new(0.0800, 0.0600, 0.9800), Offset = Vector3.new(-1.4600, 0.0000, 1.1700), Mat = Enum.Material.Metal, Color = Color3.fromRGB(200, 205, 218) },
-			{ Name = "Handle", MeshId = "rbxassetid://139597811398589", Size = Vector3.new(0.3251, 0.3251, 2.8000), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(55, 58, 64) },
-			{ Name = "HeadCollar", MeshId = "rbxassetid://133666425497749", Size = Vector3.new(0.4600, 0.6300, 0.6300), Offset = Vector3.new(0.0000, 0.0000, 1.1800), Mat = Enum.Material.Metal, Color = Color3.fromRGB(90, 94, 102) },
-			{ Name = "Pommel", MeshId = "rbxassetid://106175253766399", Size = Vector3.new(0.3600, 0.3600, 0.3950), Offset = Vector3.new(0.0000, 0.0000, -1.5425), Mat = Enum.Material.Metal, Color = Color3.fromRGB(75, 78, 86) },
-			{ Name = "RuneInlay", MeshId = "rbxassetid://92383796799269", Size = Vector3.new(1.0850, 0.6100, 0.1700), Offset = Vector3.new(-0.4575, 0.0000, 1.1800), Mat = Enum.Material.Neon, Color = Color3.fromRGB(255, 140, 30) },
+			{ Name = "Handle", MeshId = "rbxassetid://90375561019897", Size = Vector3.new(0.2700, 5.6000, 0.2568), Offset = Vector3.new(0.0000, 0.0000, 0.0000) },
+			{ Name = "GripWrap", MeshId = "rbxassetid://120732176274446", Size = Vector3.new(0.3240, 2.4200, 0.3081), Offset = Vector3.new(0.0000, -0.6200, 0.0000) },
+			{ Name = "Pommel", MeshId = "rbxassetid://91916151229473", Size = Vector3.new(0.4725, 0.4962, 0.4494), Offset = Vector3.new(0.0000, -2.8481, 0.0000) },
+			{ Name = "HeadCollar", MeshId = "rbxassetid://88800978953592", Size = Vector3.new(0.5211, 4.9600, 0.5868), Offset = Vector3.new(0.0000, 0.3000, 0.0000) },
+			{ Name = "Blade", MeshId = "rbxassetid://130103159979309", Size = Vector3.new(1.6200, 2.5000, 0.3000), Offset = Vector3.new(0.7900, 1.9800, 0.0000) },
+			{ Name = "BladeEdge", MeshId = "rbxassetid://79988274269140", Size = Vector3.new(0.5141, 2.4218, 0.2000), Offset = Vector3.new(1.3627, 1.9277, 0.0000) },
+			{ Name = "BackSpike", MeshId = "rbxassetid://97177239308079", Size = Vector3.new(0.6510, 1.0000, 0.4860), Offset = Vector3.new(-0.4605, 2.0800, 0.0000) },
+			{ Name = "RuneInlay", MeshId = "rbxassetid://114757363177253", Size = Vector3.new(0.6254, 1.4683, 0.3440), Offset = Vector3.new(0.8480, 1.9399, 0.0000) },
 		},
 	},
 	art_magma_behemoth = {
-		GripPos = Vector3.new(0.0000, 0.0000, -0.9000),
-		OffhandGripPos = Vector3.new(0.0000, 0.0000, 0.2000),
-		TipPos = Vector3.new(-1.4700, 0.0000, 1.8490),
-		BasePos = Vector3.new(-1.4700, 0.0000, 0.3910),
-		CorePos = Vector3.new(-0.4410, 0.0000, 1.1200),
+		GripPos = Vector3.new(0.0000, 0.2180, 0.0000),
+		OffhandGripPos = Vector3.new(0.0000, -1.4820, 0.0000),
+		TipPos = Vector3.new(1.5300, 3.2680, 0.0000),
+		BasePos = Vector3.new(1.4620, 0.7180, 0.0000),
+		CorePos = Vector3.new(0.7650, 2.1680, 0.0000),
 		Parts = {
-			{ Name = "BackSpike", MeshId = "rbxassetid://117829913219561", Size = Vector3.new(0.9995, 0.2600, 0.7277), Offset = Vector3.new(0.6507, 0.0000, 1.3740), Mat = Enum.Material.Basalt, Color = Color3.fromRGB(35, 32, 40) },
-			{ Name = "Blade", MeshId = "rbxassetid://84576415241066", Size = Vector3.new(1.2400, 0.3200, 1.5400), Offset = Vector3.new(-0.8000, 0.0000, 1.1200), Mat = Enum.Material.Basalt, Color = Color3.fromRGB(48, 44, 52) },
-			{ Name = "BladeEdge", MeshId = "rbxassetid://110865577034071", Size = Vector3.new(0.1000, 0.0500, 1.6200), Offset = Vector3.new(-1.4700, 0.0000, 1.1200), Mat = Enum.Material.Metal, Color = Color3.fromRGB(90, 75, 85) },
-			{ Name = "Handle", MeshId = "rbxassetid://113396116741488", Size = Vector3.new(0.2900, 0.2900, 2.8200), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Basalt, Color = Color3.fromRGB(40, 38, 44) },
-			{ Name = "HeadCollar", MeshId = "rbxassetid://90004532153240", Size = Vector3.new(0.6400, 0.4400, 0.6400), Offset = Vector3.new(0.0000, 0.0000, 1.1700), Mat = Enum.Material.Metal, Color = Color3.fromRGB(70, 50, 50) },
-			{ Name = "Pommel", MeshId = "rbxassetid://114708277522959", Size = Vector3.new(0.4438, 0.4165, 0.4243), Offset = Vector3.new(0.0000, 0.0000, -1.5578), Mat = Enum.Material.Slate, Color = Color3.fromRGB(30, 28, 35) },
-			{ Name = "RuneInlay", MeshId = "rbxassetid://130771680307739", Size = Vector3.new(1.9600, 0.4072, 0.8400), Offset = Vector3.new(-0.2750, 0.0000, 1.0850), Mat = Enum.Material.Neon, Color = Color3.fromRGB(255, 70, 15) },
+			{ Name = "Handle", MeshId = "rbxassetid://86324771258672", Size = Vector3.new(0.2975, 5.7000, 0.2951), Offset = Vector3.new(0.0000, 0.0000, 0.0000) },
+			{ Name = "GripWrap", MeshId = "rbxassetid://101545700060214", Size = Vector3.new(0.3360, 2.4200, 0.3360), Offset = Vector3.new(-0.0026, -0.6320, 0.0051) },
+			{ Name = "Pommel", MeshId = "rbxassetid://128699143147809", Size = Vector3.new(0.4760, 6.1025, 0.4122), Offset = Vector3.new(-0.0026, 0.1813, 0.0051) },
+			{ Name = "HeadCollar", MeshId = "rbxassetid://75586951544825", Size = Vector3.new(0.5572, 3.5400, 0.5126), Offset = Vector3.new(-0.0026, 1.0480, 0.0051) },
+			{ Name = "Blade", MeshId = "rbxassetid://103426460663944", Size = Vector3.new(1.7492, 2.5500, 0.3000), Offset = Vector3.new(0.8521, 1.9930, 0.0051) },
+			{ Name = "BladeEdge", MeshId = "rbxassetid://96953390499609", Size = Vector3.new(0.3611, 2.5709, 0.2000), Offset = Vector3.new(1.5660, 1.9937, 0.0051) },
+			{ Name = "BackSpike", MeshId = "rbxassetid://98275551811389", Size = Vector3.new(1.6777, 1.5420, 0.3412), Offset = Vector3.new(-0.6837, 2.5790, 0.0051) },
+			{ Name = "RuneInlay", MeshId = "rbxassetid://72769107530143", Size = Vector3.new(1.0434, 1.3867, 0.3440), Offset = Vector3.new(0.7448, 2.0588, 0.0051) },
 		},
 	},
 	art_obsidian_hell_splitter = {
-		GripPos = Vector3.new(0.0000, 0.0000, -0.9000),
-		OffhandGripPos = Vector3.new(0.0000, 0.0000, 0.2000),
-		TipPos = Vector3.new(-1.5100, 0.0000, 1.9220),
-		BasePos = Vector3.new(-1.5100, 0.0000, 0.3380),
-		CorePos = Vector3.new(-0.4530, 0.0000, 1.1300),
+		GripPos = Vector3.new(0.0000, 0.3870, 0.0000),
+		OffhandGripPos = Vector3.new(0.0000, -1.3130, 0.0000),
+		TipPos = Vector3.new(1.4400, 3.3370, 0.0000),
+		BasePos = Vector3.new(1.3760, 0.8870, 0.0000),
+		CorePos = Vector3.new(0.7200, 2.1870, 0.0000),
 		Parts = {
-			{ Name = "BackSpike", MeshId = "rbxassetid://99053279233826", Size = Vector3.new(1.3800, 0.3000, 1.7600), Offset = Vector3.new(0.8700, 0.0000, 1.1300), Mat = Enum.Material.Metal, Color = Color3.fromRGB(35, 30, 38) },
-			{ Name = "Blade", MeshId = "rbxassetid://82509003451629", Size = Vector3.new(1.2800, 0.3000, 1.6800), Offset = Vector3.new(-0.8200, 0.0000, 1.1300), Mat = Enum.Material.Glass, Color = Color3.fromRGB(30, 28, 36) },
-			{ Name = "BladeEdge", MeshId = "rbxassetid://86291810162458", Size = Vector3.new(0.1000, 0.0400, 1.7600), Offset = Vector3.new(-1.5100, 0.0000, 1.1300), Mat = Enum.Material.Glass, Color = Color3.fromRGB(150, 40, 45) },
-			{ Name = "Handle", MeshId = "rbxassetid://110696513696634", Size = Vector3.new(0.2845, 0.2845, 2.8200), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(45, 40, 48) },
-			{ Name = "HeadCollar", MeshId = "rbxassetid://124506145395745", Size = Vector3.new(0.4600, 0.6700, 0.6750), Offset = Vector3.new(0.0000, 0.0000, 1.1725), Mat = Enum.Material.Metal, Color = Color3.fromRGB(80, 55, 55) },
-			{ Name = "Pommel", MeshId = "rbxassetid://136899147853046", Size = Vector3.new(0.3800, 0.3400, 0.3843), Offset = Vector3.new(0.0000, 0.0000, -1.5321), Mat = Enum.Material.Metal, Color = Color3.fromRGB(60, 45, 50) },
-			{ Name = "RuneInlay", MeshId = "rbxassetid://128212872585468", Size = Vector3.new(2.7100, 0.5472, 0.8600), Offset = Vector3.new(0.0000, 0.0000, 1.1450), Mat = Enum.Material.Neon, Color = Color3.fromRGB(255, 180, 20) },
+			{ Name = "Handle", MeshId = "rbxassetid://79687283302419", Size = Vector3.new(0.2700, 5.8000, 0.2700), Offset = Vector3.new(0.0000, 0.0000, 0.0000) },
+			{ Name = "GripWrap", MeshId = "rbxassetid://134881646012374", Size = Vector3.new(0.3240, 2.4200, 0.3240), Offset = Vector3.new(0.0000, -0.4630, 0.0000) },
+			{ Name = "Pommel", MeshId = "rbxassetid://98596001073143", Size = Vector3.new(0.4590, 6.2025, 0.3975), Offset = Vector3.new(0.0000, 0.1813, 0.0000) },
+			{ Name = "HeadCollar", MeshId = "rbxassetid://81421501563031", Size = Vector3.new(0.5373, 5.0230, 0.4943), Offset = Vector3.new(0.0000, 0.4885, 0.0000) },
+			{ Name = "Blade", MeshId = "rbxassetid://108296715353112", Size = Vector3.new(1.6293, 2.4500, 0.2400), Offset = Vector3.new(0.7946, 2.1121, 0.0000) },
+			{ Name = "BladeEdge", MeshId = "rbxassetid://126393339175438", Size = Vector3.new(3.2651, 2.4704, 0.1670), Offset = Vector3.new(-0.0033, 2.1110, 0.0000) },
+			{ Name = "BackSpike", MeshId = "rbxassetid://138755075334013", Size = Vector3.new(1.8159, 2.9630, 0.2400), Offset = Vector3.new(-0.7080, 2.3685, 0.0000) },
+			{ Name = "RuneInlay", MeshId = "rbxassetid://127405192196350", Size = Vector3.new(2.3878, 1.3006, 0.8216), Offset = Vector3.new(0.0007, 2.1405, 0.0000) },
 		},
 	},
 	art_titan_earthshaker = {
-		GripPos = Vector3.new(0.0000, 0.0000, -0.9000),
-		OffhandGripPos = Vector3.new(0.0000, 0.0000, 0.2000),
-		TipPos = Vector3.new(-1.6600, 0.0000, 2.0540),
-		BasePos = Vector3.new(-1.6600, 0.0000, 0.2360),
-		CorePos = Vector3.new(-0.4980, 0.0000, 1.1450),
+		GripPos = Vector3.new(0.0000, 0.2130, 0.0000),
+		OffhandGripPos = Vector3.new(0.0000, -1.4870, 0.0000),
+		TipPos = Vector3.new(1.6200, 3.5130, 0.0000),
+		BasePos = Vector3.new(1.5480, 0.7130, 0.0000),
+		CorePos = Vector3.new(0.8100, 2.1630, 0.0000),
 		Parts = {
-			{ Name = "BackSpike", MeshId = "rbxassetid://116548411188476", Size = Vector3.new(1.5200, 0.3200, 2.0200), Offset = Vector3.new(0.9600, 0.0000, 1.1450), Mat = Enum.Material.Metal, Color = Color3.fromRGB(225, 175, 45) },
-			{ Name = "Blade", MeshId = "rbxassetid://81406752367241", Size = Vector3.new(1.4000, 0.3200, 1.9100), Offset = Vector3.new(-0.9000, 0.0000, 1.1500), Mat = Enum.Material.Metal, Color = Color3.fromRGB(210, 215, 225) },
-			{ Name = "BladeEdge", MeshId = "rbxassetid://105285807959208", Size = Vector3.new(0.1200, 0.0500, 2.0200), Offset = Vector3.new(-1.6600, 0.0000, 1.1450), Mat = Enum.Material.Metal, Color = Color3.fromRGB(255, 220, 80) },
-			{ Name = "Handle", MeshId = "rbxassetid://139773216422947", Size = Vector3.new(0.2960, 0.2960, 2.8500), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Marble, Color = Color3.fromRGB(235, 235, 240) },
-			{ Name = "HeadCollar", MeshId = "rbxassetid://74769495775230", Size = Vector3.new(0.4900, 0.7200, 0.7300), Offset = Vector3.new(0.0000, 0.0000, 1.1600), Mat = Enum.Material.Metal, Color = Color3.fromRGB(245, 195, 60) },
-			{ Name = "Pommel", MeshId = "rbxassetid://90507202750542", Size = Vector3.new(0.4200, 0.3700, 0.4186), Offset = Vector3.new(0.0000, 0.0000, -1.5650), Mat = Enum.Material.Metal, Color = Color3.fromRGB(235, 185, 50) },
-			{ Name = "RuneInlay", MeshId = "rbxassetid://109609890425736", Size = Vector3.new(2.9100, 0.4100, 0.4100), Offset = Vector3.new(0.0000, 0.0000, 1.3050), Mat = Enum.Material.Neon, Color = Color3.fromRGB(255, 230, 110) },
+			{ Name = "Handle", MeshId = "rbxassetid://108637142443728", Size = Vector3.new(0.2900, 6.0000, 0.2900), Offset = Vector3.new(0.0000, 0.0000, 0.0000) },
+			{ Name = "GripWrap", MeshId = "rbxassetid://125803412064582", Size = Vector3.new(0.3480, 2.4200, 0.3480), Offset = Vector3.new(0.0000, -0.6370, 0.0000) },
+			{ Name = "Pommel", MeshId = "rbxassetid://114387369869546", Size = Vector3.new(0.5945, 0.8600, 0.5945), Offset = Vector3.new(0.0000, -3.1700, 0.0000) },
+			{ Name = "HeadCollar", MeshId = "rbxassetid://117269060488112", Size = Vector3.new(0.5945, 5.2970, 0.6682), Offset = Vector3.new(0.0000, 0.4515, 0.0000) },
+			{ Name = "Blade", MeshId = "rbxassetid://101702863064507", Size = Vector3.new(1.8560, 2.8000, 0.2600), Offset = Vector3.new(0.9080, 2.1130, 0.0000) },
+			{ Name = "BladeEdge", MeshId = "rbxassetid://85552726851546", Size = Vector3.new(3.7120, 2.8108, 0.1780), Offset = Vector3.new(0.0000, 2.1125, 0.0000) },
+			{ Name = "BackSpike", MeshId = "rbxassetid://120389072019686", Size = Vector3.new(2.0360, 3.6870, 0.2600), Offset = Vector3.new(-0.8180, 2.5565, 0.0000) },
+			{ Name = "RuneInlay", MeshId = "rbxassetid://95414121871679", Size = Vector3.new(2.5290, 1.6886, 0.8730), Offset = Vector3.new(0.0000, 2.1376, 0.0000) },
 		},
 	},
 	art_mountain_breaker = {
-		GripPos = Vector3.new(0.0000, 0.0000, -0.9000),
-		OffhandGripPos = Vector3.new(0.0000, 0.0000, 0.2000),
-		TipPos = Vector3.new(-1.7000, 0.0000, 2.1150),
-		BasePos = Vector3.new(-1.7000, 0.0000, 0.3150),
-		CorePos = Vector3.new(-0.5100, 0.0000, 1.2150),
+		GripPos = Vector3.new(0.0000, 0.0320, 0.0000),
+		OffhandGripPos = Vector3.new(0.0000, -1.6680, 0.0000),
+		TipPos = Vector3.new(1.6720, 3.2240, 0.0000),
+		BasePos = Vector3.new(1.7860, 0.8520, 0.0000),
+		CorePos = Vector3.new(0.8550, 2.1320, 0.0000),
 		Parts = {
-			{ Name = "BackSpike", MeshId = "rbxassetid://74402307832417", Size = Vector3.new(0.9700, 0.3983, 0.4000), Offset = Vector3.new(0.6850, 0.0000, 1.1750), Mat = Enum.Material.Metal, Color = Color3.fromRGB(110, 105, 115) },
-			{ Name = "Blade", MeshId = "rbxassetid://107554293458839", Size = Vector3.new(1.4400, 0.3400, 1.8800), Offset = Vector3.new(-0.9200, 0.0000, 1.2150), Mat = Enum.Material.Slate, Color = Color3.fromRGB(70, 68, 75) },
-			{ Name = "BladeEdge", MeshId = "rbxassetid://137487600730050", Size = Vector3.new(0.1200, 0.0500, 2.0000), Offset = Vector3.new(-1.7000, 0.0000, 1.2150), Mat = Enum.Material.Metal, Color = Color3.fromRGB(240, 190, 70) },
-			{ Name = "Handle", MeshId = "rbxassetid://79118305341376", Size = Vector3.new(0.3534, 0.3449, 2.8500), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Granite, Color = Color3.fromRGB(85, 80, 88) },
-			{ Name = "HeadCollar", MeshId = "rbxassetid://119620279083051", Size = Vector3.new(0.5000, 0.7400, 0.7390), Offset = Vector3.new(0.0000, 0.0000, 1.1555), Mat = Enum.Material.Metal, Color = Color3.fromRGB(220, 165, 55) },
-			{ Name = "Pommel", MeshId = "rbxassetid://95467070636552", Size = Vector3.new(0.4400, 0.3787, 0.4400), Offset = Vector3.new(0.0000, 0.0000, -1.5650), Mat = Enum.Material.Metal, Color = Color3.fromRGB(190, 140, 50) },
-			{ Name = "RuneInlay", MeshId = "rbxassetid://113184894438481", Size = Vector3.new(2.1600, 0.5100, 0.9100), Offset = Vector3.new(-0.3250, 0.0000, 1.3550), Mat = Enum.Material.Neon, Color = Color3.fromRGB(255, 175, 40) },
+			{ Name = "Handle", MeshId = "rbxassetid://130802419797662", Size = Vector3.new(0.3390, 6.0000, 0.3362), Offset = Vector3.new(0.0000, 0.0000, 0.0000) },
+			{ Name = "GripWrap", MeshId = "rbxassetid://112063351178805", Size = Vector3.new(0.3840, 2.4200, 0.3840), Offset = Vector3.new(-0.0029, -0.8180, 0.0057) },
+			{ Name = "Pommel", MeshId = "rbxassetid://79173854299112", Size = Vector3.new(0.6560, 0.8600, 0.6560), Offset = Vector3.new(-0.0029, -3.1700, 0.0057) },
+			{ Name = "HeadCollar", MeshId = "rbxassetid://124486439432205", Size = Vector3.new(0.6560, 5.3100, 0.6035), Offset = Vector3.new(-0.0029, 0.2770, 0.0057) },
+			{ Name = "Blade", MeshId = "rbxassetid://75900507775688", Size = Vector3.new(1.9200, 3.0000, 0.4200), Offset = Vector3.new(0.9371, 2.0320, 0.0057) },
+			{ Name = "BladeEdge", MeshId = "rbxassetid://81712330961787", Size = Vector3.new(0.3116, 2.3783, 0.2660), Offset = Vector3.new(1.7612, 2.0396, 0.0057) },
+			{ Name = "BackSpike", MeshId = "rbxassetid://108017338349774", Size = Vector3.new(1.1277, 1.9980, 0.6720), Offset = Vector3.new(-0.3866, 2.5010, 0.0057) },
+			{ Name = "RuneInlay", MeshId = "rbxassetid://89093571902546", Size = Vector3.new(0.3800, 1.9500, 0.4640), Offset = Vector3.new(0.9471, 1.9871, 0.0057) },
 		},
 	},
 	art_valkyrie_waraxe = {
-		GripPos = Vector3.new(0.0000, 0.0000, -0.9000),
-		OffhandGripPos = Vector3.new(0.0000, 0.0000, 0.2000),
-		TipPos = Vector3.new(-1.7600, 0.0000, 2.1920),
-		BasePos = Vector3.new(-1.7600, 0.0000, 0.3380),
-		CorePos = Vector3.new(-0.5280, 0.0000, 1.2650),
+		GripPos = Vector3.new(0.0000, 0.0580, 0.0000),
+		OffhandGripPos = Vector3.new(0.0000, -1.6420, 0.0000),
+		TipPos = Vector3.new(1.4000, 3.6580, 0.0000),
+		BasePos = Vector3.new(1.4000, 0.5580, 0.0000),
+		CorePos = Vector3.new(0.7875, 2.0580, 0.0000),
 		Parts = {
-			{ Name = "BackSpike", MeshId = "rbxassetid://111700472085822", Size = Vector3.new(1.0750, 0.3000, 0.7769), Offset = Vector3.new(0.6943, 0.0000, 1.3764), Mat = Enum.Material.Metal, Color = Color3.fromRGB(235, 240, 252) },
-			{ Name = "Blade", MeshId = "rbxassetid://137949235119990", Size = Vector3.new(1.5000, 0.3200, 1.9400), Offset = Vector3.new(-0.9500, 0.0000, 1.2650), Mat = Enum.Material.Metal, Color = Color3.fromRGB(230, 235, 250) },
-			{ Name = "BladeEdge", MeshId = "rbxassetid://138742986148878", Size = Vector3.new(0.1200, 0.0500, 2.0600), Offset = Vector3.new(-1.7600, 0.0000, 1.2650), Mat = Enum.Material.Metal, Color = Color3.fromRGB(255, 225, 95) },
-			{ Name = "Handle", MeshId = "rbxassetid://94020196573736", Size = Vector3.new(0.2760, 0.2760, 2.8500), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(225, 230, 245) },
-			{ Name = "HeadCollar", MeshId = "rbxassetid://106997586662980", Size = Vector3.new(0.3800, 0.6500, 0.6942), Offset = Vector3.new(0.0000, 0.0000, 1.1779), Mat = Enum.Material.Metal, Color = Color3.fromRGB(250, 210, 80) },
-			{ Name = "Pommel", MeshId = "rbxassetid://126677805549543", Size = Vector3.new(0.4200, 0.2000, 0.4595), Offset = Vector3.new(0.0000, 0.0000, -1.6152), Mat = Enum.Material.Metal, Color = Color3.fromRGB(245, 205, 70) },
-			{ Name = "RuneInlay", MeshId = "rbxassetid://123188788303564", Size = Vector3.new(2.7400, 0.5500, 0.8600), Offset = Vector3.new(-0.3650, 0.0000, 1.3800), Mat = Enum.Material.Neon, Color = Color3.fromRGB(0, 235, 255) },
+			{ Name = "Handle", MeshId = "rbxassetid://92809868602326", Size = Vector3.new(0.2704, 6.1000, 0.2636), Offset = Vector3.new(0.0000, 0.0000, 0.0000) },
+			{ Name = "GripWrap", MeshId = "rbxassetid://99139881641931", Size = Vector3.new(0.3120, 2.4200, 0.3042), Offset = Vector3.new(0.0000, -0.7920, 0.0000) },
+			{ Name = "Pommel", MeshId = "rbxassetid://108333270220911", Size = Vector3.new(0.5330, 0.8600, 0.5330), Offset = Vector3.new(0.0000, -3.2200, 0.0000) },
+			{ Name = "HeadCollar", MeshId = "rbxassetid://77791252143031", Size = Vector3.new(0.5486, 5.8320, 0.4921), Offset = Vector3.new(0.0000, 0.2340, 0.0000) },
+			{ Name = "Blade", MeshId = "rbxassetid://76887488218693", Size = Vector3.new(1.7000, 3.1000, 0.2200), Offset = Vector3.new(0.8300, 2.1080, 0.0000) },
+			{ Name = "BladeEdge", MeshId = "rbxassetid://112133507649262", Size = Vector3.new(0.3630, 3.1109, 0.1560), Offset = Vector3.new(1.5185, 2.1080, 0.0000) },
+			{ Name = "BackSpike", MeshId = "rbxassetid://122122598478578", Size = Vector3.new(1.3813, 2.9840, 0.1200), Offset = Vector3.new(-0.4907, 2.9580, 0.0000) },
+			{ Name = "RuneInlay", MeshId = "rbxassetid://87878414447245", Size = Vector3.new(0.9470, 1.4520, 0.8317), Offset = Vector3.new(0.3015, 2.0790, 0.0000) },
 		},
 	},
 	art_world_shaper = {
-		GripPos = Vector3.new(0.0000, 0.0000, -0.9000),
-		OffhandGripPos = Vector3.new(0.0000, 0.0000, 0.2000),
-		TipPos = Vector3.new(-1.8400, 0.0000, 2.2280),
-		BasePos = Vector3.new(-1.8400, 0.0000, 0.3020),
-		CorePos = Vector3.new(-0.5520, 0.0000, 1.2650),
+		GripPos = Vector3.new(0.0000, 0.1320, 0.0000),
+		OffhandGripPos = Vector3.new(0.0000, -1.5680, 0.0000),
+		TipPos = Vector3.new(1.7100, 3.6320, 0.0000),
+		BasePos = Vector3.new(1.6340, 0.6320, 0.0000),
+		CorePos = Vector3.new(0.8550, 2.2320, 0.0000),
 		Parts = {
-			{ Name = "BackSpike", MeshId = "rbxassetid://79778088493180", Size = Vector3.new(0.6791, 0.6400, 0.6385), Offset = Vector3.new(0.5395, 0.0000, 1.1550), Mat = Enum.Material.Metal, Color = Color3.fromRGB(215, 160, 45) },
-			{ Name = "Blade", MeshId = "rbxassetid://88347879601295", Size = Vector3.new(1.5800, 0.3400, 2.0200), Offset = Vector3.new(-0.9900, 0.0000, 1.2650), Mat = Enum.Material.Metal, Color = Color3.fromRGB(175, 185, 200) },
-			{ Name = "BladeEdge", MeshId = "rbxassetid://103026536239619", Size = Vector3.new(0.1200, 0.0500, 2.1400), Offset = Vector3.new(-1.8400, 0.0000, 1.2650), Mat = Enum.Material.Metal, Color = Color3.fromRGB(245, 195, 75) },
-			{ Name = "Handle", MeshId = "rbxassetid://114198844788679", Size = Vector3.new(0.3062, 0.3040, 2.8500), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(150, 160, 175) },
-			{ Name = "HeadCollar", MeshId = "rbxassetid://107428404863119", Size = Vector3.new(0.5800, 0.7000, 0.7393), Offset = Vector3.new(0.0000, 0.0000, 1.1753), Mat = Enum.Material.Metal, Color = Color3.fromRGB(235, 180, 60) },
-			{ Name = "Pommel", MeshId = "rbxassetid://139200718533338", Size = Vector3.new(0.4600, 0.3200, 0.4900), Offset = Vector3.new(0.0000, 0.0000, -1.6100), Mat = Enum.Material.Metal, Color = Color3.fromRGB(225, 170, 50) },
-			{ Name = "RuneInlay", MeshId = "rbxassetid://91190367374261", Size = Vector3.new(2.2891, 0.5973, 0.9400), Offset = Vector3.new(-0.3350, 0.0000, 1.2450), Mat = Enum.Material.Neon, Color = Color3.fromRGB(255, 205, 30) },
+			{ Name = "Handle", MeshId = "rbxassetid://80841942461919", Size = Vector3.new(0.3000, 6.2000, 0.2925), Offset = Vector3.new(0.0000, 0.0000, 0.0000) },
+			{ Name = "GripWrap", MeshId = "rbxassetid://108844582964260", Size = Vector3.new(0.3600, 2.4200, 0.3510), Offset = Vector3.new(0.0000, -0.7180, 0.0000) },
+			{ Name = "Pommel", MeshId = "rbxassetid://76711884700270", Size = Vector3.new(0.6150, 0.8600, 0.6150), Offset = Vector3.new(0.0000, -3.2700, 0.0000) },
+			{ Name = "HeadCollar", MeshId = "rbxassetid://82926485737471", Size = Vector3.new(1.0600, 6.7880, 0.9947), Offset = Vector3.new(0.0000, 0.7860, 0.0000) },
+			{ Name = "Blade", MeshId = "rbxassetid://103685906828970", Size = Vector3.new(1.9208, 3.0000, 0.3000), Offset = Vector3.new(0.9404, 2.1320, 0.0000) },
+			{ Name = "BladeEdge", MeshId = "rbxassetid://72651788900013", Size = Vector3.new(0.3501, 3.0092, 0.2000), Offset = Vector3.new(1.7457, 2.1316, 0.0000) },
+			{ Name = "BackSpike", MeshId = "rbxassetid://99969748795547", Size = Vector3.new(0.9825, 1.0500, 0.6300), Offset = Vector3.new(-0.6412, 2.2321, 0.0000) },
+			{ Name = "RuneInlay", MeshId = "rbxassetid://90795644688029", Size = Vector3.new(1.5900, 2.2780, 0.5200), Offset = Vector3.new(0.5350, 2.7710, 0.0000) },
 		},
 	},
 	art_world_carver = {
-		GripPos = Vector3.new(0.0000, 0.0000, -0.9000),
-		OffhandGripPos = Vector3.new(0.0000, 0.0000, 0.2000),
-		TipPos = Vector3.new(-1.9612, 0.0000, 2.3630),
-		BasePos = Vector3.new(-1.9612, 0.0000, 0.2570),
-		CorePos = Vector3.new(-0.5884, 0.0000, 1.3100),
+		GripPos = Vector3.new(0.0000, -0.4780, 0.0000),
+		OffhandGripPos = Vector3.new(0.0000, -2.1780, 0.0000),
+		TipPos = Vector3.new(1.8860, 3.9220, 0.0000),
+		BasePos = Vector3.new(1.7940, 0.0220, 0.0000),
+		CorePos = Vector3.new(1.0350, 2.0220, 0.0000),
 		Parts = {
-			{ Name = "BackSpike", MeshId = "rbxassetid://87653437985852", Size = Vector3.new(1.2330, 0.3600, 0.5493), Offset = Vector3.new(0.8072, 0.0016, 1.2974), Mat = Enum.Material.Slate, Color = Color3.fromRGB(30, 24, 38) },
-			{ Name = "Blade", MeshId = "rbxassetid://140623418260943", Size = Vector3.new(1.6800, 0.3600, 2.1800), Offset = Vector3.new(-1.0612, 0.0016, 1.3100), Mat = Enum.Material.Metal, Color = Color3.fromRGB(35, 28, 45) },
-			{ Name = "BladeEdge", MeshId = "rbxassetid://84999182742385", Size = Vector3.new(0.1200, 0.0500, 2.3400), Offset = Vector3.new(-1.9612, 0.0016, 1.3100), Mat = Enum.Material.Metal, Color = Color3.fromRGB(220, 225, 245) },
-			{ Name = "Handle", MeshId = "rbxassetid://129292925190316", Size = Vector3.new(0.3171, 0.3188, 2.8800), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Slate, Color = Color3.fromRGB(25, 20, 32) },
-			{ Name = "HeadCollar", MeshId = "rbxassetid://114597544271248", Size = Vector3.new(0.4800, 0.7900, 0.8050), Offset = Vector3.new(-0.0012, 0.0016, 1.1875), Mat = Enum.Material.Metal, Color = Color3.fromRGB(205, 210, 228) },
-			{ Name = "Pommel", MeshId = "rbxassetid://138099900725119", Size = Vector3.new(0.4425, 0.4174, 0.5030), Offset = Vector3.new(-0.0012, 0.0016, -1.6200), Mat = Enum.Material.Metal, Color = Color3.fromRGB(195, 200, 218) },
-			{ Name = "RuneInlay", MeshId = "rbxassetid://71984284477387", Size = Vector3.new(3.0700, 0.6000, 1.2200), Offset = Vector3.new(-0.3762, 0.0016, 1.4600), Mat = Enum.Material.Neon, Color = Color3.fromRGB(195, 70, 255) },
+			{ Name = "Handle", MeshId = "rbxassetid://71637548209624", Size = Vector3.new(0.3260, 6.4000, 0.3233), Offset = Vector3.new(0.0000, 0.0000, 0.0000) },
+			{ Name = "GripWrap", MeshId = "rbxassetid://93459597852710", Size = Vector3.new(0.3720, 2.4200, 0.3720), Offset = Vector3.new(-0.0028, -1.3280, 0.0056) },
+			{ Name = "Pommel", MeshId = "rbxassetid://135096127513216", Size = Vector3.new(0.5270, 6.8025, 0.4564), Offset = Vector3.new(-0.0028, 0.1813, 0.0056) },
+			{ Name = "HeadCollar", MeshId = "rbxassetid://139537135583524", Size = Vector3.new(0.6727, 6.5180, 0.6189), Offset = Vector3.new(-0.0028, 0.0410, 0.0056) },
+			{ Name = "Blade", MeshId = "rbxassetid://136478028796707", Size = Vector3.new(2.2503, 3.9000, 0.3000), Offset = Vector3.new(1.1024, 1.9720, 0.0056) },
+			{ Name = "BladeEdge", MeshId = "rbxassetid://98624012016379", Size = Vector3.new(0.5155, 3.9170, 0.2000), Offset = Vector3.new(1.9898, 1.9719, 0.0056) },
+			{ Name = "BackSpike", MeshId = "rbxassetid://94946493805202", Size = Vector3.new(2.7388, 4.1065, 0.4908), Offset = Vector3.new(-1.1722, 2.5468, 0.0364) },
+			{ Name = "RuneInlay", MeshId = "rbxassetid://102402693978883", Size = Vector3.new(1.8990, 2.7525, 0.3782), Offset = Vector3.new(0.7576, 1.9871, 0.0056) },
 		},
 	},
 	art_genesis_sunderer = {
-		GripPos = Vector3.new(0.0000, 0.0000, -0.9000),
-		OffhandGripPos = Vector3.new(0.0000, 0.0000, 0.2000),
-		TipPos = Vector3.new(-2.0700, 0.0000, 2.4920),
-		BasePos = Vector3.new(-2.0700, 0.0000, 0.1880),
-		CorePos = Vector3.new(-0.6210, 0.0000, 1.3400),
+		GripPos = Vector3.new(0.0000, 0.0080, 0.0000),
+		OffhandGripPos = Vector3.new(0.0000, -1.6920, 0.0000),
+		TipPos = Vector3.new(1.8900, 3.8080, 0.0000),
+		BasePos = Vector3.new(1.8060, 0.5080, 0.0000),
+		CorePos = Vector3.new(0.9450, 2.2080, 0.0000),
 		Parts = {
-			{ Name = "BackSpike", MeshId = "rbxassetid://89991968909201", Size = Vector3.new(1.9000, 0.3800, 2.5600), Offset = Vector3.new(1.1900, 0.0000, 1.3400), Mat = Enum.Material.Metal, Color = Color3.fromRGB(55, 42, 72) },
-			{ Name = "Blade", MeshId = "rbxassetid://138844654001318", Size = Vector3.new(1.7600, 0.3800, 2.4200), Offset = Vector3.new(-1.1200, 0.0000, 1.3300), Mat = Enum.Material.Metal, Color = Color3.fromRGB(65, 50, 85) },
-			{ Name = "BladeEdge", MeshId = "rbxassetid://85383635867879", Size = Vector3.new(0.1400, 0.0500, 2.5600), Offset = Vector3.new(-2.0700, 0.0000, 1.3400), Mat = Enum.Material.Metal, Color = Color3.fromRGB(255, 225, 90) },
-			{ Name = "Handle", MeshId = "rbxassetid://85646136061312", Size = Vector3.new(0.4000, 0.3248, 2.9200), Offset = Vector3.new(0.0000, 0.0000, 0.0000), Mat = Enum.Material.Metal, Color = Color3.fromRGB(45, 35, 60) },
-			{ Name = "HeadCollar", MeshId = "rbxassetid://121847590034130", Size = Vector3.new(0.9200, 0.9200, 0.9100), Offset = Vector3.new(0.0000, 0.0000, 1.1950), Mat = Enum.Material.Metal, Color = Color3.fromRGB(255, 210, 75) },
-			{ Name = "Pommel", MeshId = "rbxassetid://81500945899066", Size = Vector3.new(0.5320, 0.4006, 0.4990), Offset = Vector3.new(0.0000, 0.0000, -1.6600), Mat = Enum.Material.Metal, Color = Color3.fromRGB(250, 200, 65) },
-			{ Name = "RuneInlay", MeshId = "rbxassetid://80580311004629", Size = Vector3.new(4.0300, 0.6487, 1.2500), Offset = Vector3.new(0.0000, 0.0000, 1.5000), Mat = Enum.Material.Neon, Color = Color3.fromRGB(255, 100, 180) },
+			{ Name = "Handle", MeshId = "rbxassetid://77866838254217", Size = Vector3.new(0.3200, 6.4000, 0.3120), Offset = Vector3.new(0.0000, 0.0000, 0.0000) },
+			{ Name = "GripWrap", MeshId = "rbxassetid://79194263813391", Size = Vector3.new(0.3840, 2.4200, 0.3744), Offset = Vector3.new(0.0000, -0.8420, 0.0000) },
+			{ Name = "Pommel", MeshId = "rbxassetid://136050170245197", Size = Vector3.new(0.6560, 0.8600, 0.6560), Offset = Vector3.new(0.0000, -3.3700, 0.0000) },
+			{ Name = "HeadCollar", MeshId = "rbxassetid://138809836593954", Size = Vector3.new(1.0500, 7.1273, 1.2400), Offset = Vector3.new(0.0000, 0.6936, 0.0000) },
+			{ Name = "Blade", MeshId = "rbxassetid://123357242464604", Size = Vector3.new(2.1626, 3.3000, 0.3000), Offset = Vector3.new(1.0613, 2.1580, 0.0000) },
+			{ Name = "BladeEdge", MeshId = "rbxassetid://125778625612557", Size = Vector3.new(4.3252, 3.3107, 2.6968), Offset = Vector3.new(0.0000, 2.1576, 0.0000) },
+			{ Name = "BackSpike", MeshId = "rbxassetid://83490077431234", Size = Vector3.new(2.2926, 3.3000, 2.6568), Offset = Vector3.new(-0.9963, 2.1580, 0.0000) },
+			{ Name = "RuneInlay", MeshId = "rbxassetid://139745271937039", Size = Vector3.new(2.8907, 2.8020, 0.9630), Offset = Vector3.new(0.0000, 2.5990, 0.0000) },
 		},
 	},
 }
@@ -6277,6 +6303,7 @@ AXE_STYLES = {
 	art_miner_pickaxe = {
 		RarityTier = 1,
 		Parts = {
+			GripWrap = { Material = Enum.Material.Leather, Color = Color3.fromRGB(70, 48, 32) },
 			BackSpike = { Material = Enum.Material.Metal, Color = Color3.fromRGB(130, 135, 145) },
 			Blade = { Material = Enum.Material.Metal, Color = Color3.fromRGB(145, 150, 160) },
 			BladeEdge = { Material = Enum.Material.Metal, Color = Color3.fromRGB(205, 210, 220) },
@@ -6288,6 +6315,7 @@ AXE_STYLES = {
 	art_heavy_hewing_axe = {
 		RarityTier = 1,
 		Parts = {
+			GripWrap = { Material = Enum.Material.Leather, Color = Color3.fromRGB(52, 38, 28) },
 			BackSpike = { Material = Enum.Material.Metal, Color = Color3.fromRGB(95, 100, 110) },
 			Blade = { Material = Enum.Material.Metal, Color = Color3.fromRGB(135, 140, 150) },
 			BladeEdge = { Material = Enum.Material.Metal, Color = Color3.fromRGB(215, 220, 230) },
@@ -6299,6 +6327,7 @@ AXE_STYLES = {
 	art_canyon_splitter = {
 		RarityTier = 2,
 		Parts = {
+			GripWrap = { Material = Enum.Material.Leather, Color = Color3.fromRGB(60, 44, 34) },
 			BackSpike = { Material = Enum.Material.Metal, Color = Color3.fromRGB(135, 140, 150) },
 			Blade = { Material = Enum.Material.Metal, Color = Color3.fromRGB(120, 125, 135) },
 			BladeEdge = { Material = Enum.Material.Metal, Color = Color3.fromRGB(195, 200, 215) },
@@ -6311,6 +6340,7 @@ AXE_STYLES = {
 	art_quakestone_greataxe = {
 		RarityTier = 2,
 		Parts = {
+			GripWrap = { Material = Enum.Material.Leather, Color = Color3.fromRGB(74, 52, 36) },
 			BackSpike = { Material = Enum.Material.Metal, Color = Color3.fromRGB(125, 130, 140) },
 			Blade = { Material = Enum.Material.Metal, Color = Color3.fromRGB(140, 145, 155) },
 			BladeEdge = { Material = Enum.Material.Metal, Color = Color3.fromRGB(210, 215, 225) },
@@ -6323,6 +6353,7 @@ AXE_STYLES = {
 	art_battleaxe_cleaver = {
 		RarityTier = 3,
 		Parts = {
+			GripWrap = { Material = Enum.Material.Leather, Color = Color3.fromRGB(48, 36, 30) },
 			BackSpike = { Material = Enum.Material.Metal, Color = Color3.fromRGB(120, 125, 138) },
 			Blade = { Material = Enum.Material.Metal, Color = Color3.fromRGB(110, 115, 128) },
 			BladeEdge = { Material = Enum.Material.Metal, Color = Color3.fromRGB(215, 222, 235) },
@@ -6335,6 +6366,7 @@ AXE_STYLES = {
 	art_iron_juggernaut_cleaver = {
 		RarityTier = 3,
 		Parts = {
+			GripWrap = { Material = Enum.Material.Leather, Color = Color3.fromRGB(40, 32, 28) },
 			BackSpike = { Material = Enum.Material.Metal, Color = Color3.fromRGB(85, 88, 96) },
 			Blade = { Material = Enum.Material.Metal, Color = Color3.fromRGB(125, 130, 140) },
 			BladeEdge = { Material = Enum.Material.Metal, Color = Color3.fromRGB(200, 205, 218) },
@@ -6347,6 +6379,7 @@ AXE_STYLES = {
 	art_magma_behemoth = {
 		RarityTier = 4,
 		Parts = {
+			GripWrap = { Material = Enum.Material.Leather, Color = Color3.fromRGB(58, 34, 30) },
 			BackSpike = { Material = Enum.Material.Basalt, Color = Color3.fromRGB(35, 32, 40) },
 			Blade = { Material = Enum.Material.Basalt, Color = Color3.fromRGB(48, 44, 52) },
 			BladeEdge = { Material = Enum.Material.Metal, Color = Color3.fromRGB(90, 75, 85) },
@@ -6359,6 +6392,7 @@ AXE_STYLES = {
 	art_obsidian_hell_splitter = {
 		RarityTier = 4,
 		Parts = {
+			GripWrap = { Material = Enum.Material.Leather, Color = Color3.fromRGB(62, 36, 34) },
 			BackSpike = { Material = Enum.Material.Metal, Color = Color3.fromRGB(35, 30, 38) },
 			Blade = { Material = Enum.Material.Glass, Color = Color3.fromRGB(30, 28, 36) },
 			BladeEdge = { Material = Enum.Material.Glass, Color = Color3.fromRGB(150, 40, 45) },
@@ -6371,6 +6405,7 @@ AXE_STYLES = {
 	art_titan_earthshaker = {
 		RarityTier = 5,
 		Parts = {
+			GripWrap = { Material = Enum.Material.Leather, Color = Color3.fromRGB(120, 82, 46) },
 			BackSpike = { Material = Enum.Material.Metal, Color = Color3.fromRGB(225, 175, 45) },
 			Blade = { Material = Enum.Material.Metal, Color = Color3.fromRGB(210, 215, 225) },
 			BladeEdge = { Material = Enum.Material.Metal, Color = Color3.fromRGB(255, 220, 80) },
@@ -6383,6 +6418,7 @@ AXE_STYLES = {
 	art_mountain_breaker = {
 		RarityTier = 5,
 		Parts = {
+			GripWrap = { Material = Enum.Material.Leather, Color = Color3.fromRGB(96, 68, 40) },
 			BackSpike = { Material = Enum.Material.Metal, Color = Color3.fromRGB(110, 105, 115) },
 			Blade = { Material = Enum.Material.Slate, Color = Color3.fromRGB(70, 68, 75) },
 			BladeEdge = { Material = Enum.Material.Metal, Color = Color3.fromRGB(240, 190, 70) },
@@ -6395,6 +6431,7 @@ AXE_STYLES = {
 	art_valkyrie_waraxe = {
 		RarityTier = 6,
 		Parts = {
+			GripWrap = { Material = Enum.Material.Leather, Color = Color3.fromRGB(70, 110, 160) },
 			BackSpike = { Material = Enum.Material.Metal, Color = Color3.fromRGB(235, 240, 252) },
 			Blade = { Material = Enum.Material.Metal, Color = Color3.fromRGB(230, 235, 250) },
 			BladeEdge = { Material = Enum.Material.Metal, Color = Color3.fromRGB(255, 225, 95) },
@@ -6407,6 +6444,7 @@ AXE_STYLES = {
 	art_world_shaper = {
 		RarityTier = 6,
 		Parts = {
+			GripWrap = { Material = Enum.Material.Leather, Color = Color3.fromRGB(84, 58, 40) },
 			BackSpike = { Material = Enum.Material.Metal, Color = Color3.fromRGB(215, 160, 45) },
 			Blade = { Material = Enum.Material.Metal, Color = Color3.fromRGB(175, 185, 200) },
 			BladeEdge = { Material = Enum.Material.Metal, Color = Color3.fromRGB(245, 195, 75) },
@@ -6419,6 +6457,7 @@ AXE_STYLES = {
 	art_world_carver = {
 		RarityTier = 7,
 		Parts = {
+			GripWrap = { Material = Enum.Material.Leather, Color = Color3.fromRGB(70, 50, 110) },
 			BackSpike = { Material = Enum.Material.Slate, Color = Color3.fromRGB(30, 24, 38) },
 			Blade = { Material = Enum.Material.Metal, Color = Color3.fromRGB(35, 28, 45) },
 			BladeEdge = { Material = Enum.Material.Metal, Color = Color3.fromRGB(220, 225, 245) },
@@ -6431,6 +6470,7 @@ AXE_STYLES = {
 	art_genesis_sunderer = {
 		RarityTier = 7,
 		Parts = {
+			GripWrap = { Material = Enum.Material.Leather, Color = Color3.fromRGB(120, 60, 110) },
 			BackSpike = { Material = Enum.Material.Metal, Color = Color3.fromRGB(55, 42, 72) },
 			Blade = { Material = Enum.Material.Metal, Color = Color3.fromRGB(65, 50, 85) },
 			BladeEdge = { Material = Enum.Material.Metal, Color = Color3.fromRGB(255, 225, 90) },
@@ -6469,8 +6509,8 @@ local function makeMeshAxe(name: string): Model
 		p.CFrame = CFrame.new(pInfo.Offset)
 
 		local pStyle = style and style.Parts and style.Parts[pInfo.Name]
-		p.Material = (pStyle and pStyle.Material) or pInfo.Mat or Enum.Material.Metal
-		p.Color = (pStyle and pStyle.Color) or pInfo.Color or Color3.fromRGB(150, 150, 150)
+		p.Material = (pStyle and pStyle.Material) or Enum.Material.Metal
+		p.Color = (pStyle and pStyle.Color) or Color3.fromRGB(150, 150, 150)
 
 		p.CanCollide = false
 		p.CanTouch = false
@@ -6498,15 +6538,17 @@ local function makeMeshAxe(name: string): Model
 		end
 	end
 
-	-- Sockets: Grip, OffhandGrip, Tip, VfxTip, VfxBase, VfxCore
+	-- Sockets: Grip, OffhandGrip, Tip, VfxTip, VfxBase, VfxCore. The haft runs along the Handle's
+	-- +Y and the main edge faces +X, so both grips have UpVector +Y and LookVector +X.
+	local gripRotation = CFrame.Angles(math.rad(EDGE_PLUS_X.X), math.rad(EDGE_PLUS_X.Y), math.rad(EDGE_PLUS_X.Z))
 	local grip = Instance.new("Attachment")
 	grip.Name = "Grip"
-	grip.CFrame = CFrame.fromMatrix(data.GripPos, Vector3.new(0, 1, 0), Vector3.new(0, 0, 1), Vector3.new(-1, 0, 0))
+	grip.CFrame = CFrame.new(data.GripPos) * gripRotation
 	grip.Parent = handlePart
 
 	local offhandGrip = Instance.new("Attachment")
 	offhandGrip.Name = "OffhandGrip"
-	offhandGrip.CFrame = CFrame.fromMatrix(data.OffhandGripPos, Vector3.new(0, 1, 0), Vector3.new(0, 0, 1), Vector3.new(-1, 0, 0))
+	offhandGrip.CFrame = CFrame.new(data.OffhandGripPos) * gripRotation
 	offhandGrip.Parent = handlePart
 
 	local tip = Instance.new("Attachment")
@@ -7859,7 +7901,7 @@ function WeaponModelBuilder.EnsureWeapons(): (Folder, { [string]: Model })
 		art_abyssal_razor = WeaponModelBuilder.BuildAbyssalRazorArtifact,
 		art_abyssal_ravagers = WeaponModelBuilder.BuildAbyssalRavagersArtifact,
 		art_void_reapers = WeaponModelBuilder.BuildVoidReapersArtifact,
-		-- Miner Axes (Batch 4)
+		-- Berserker Axes (Batch 4)
 		art_miner_pickaxe = WeaponModelBuilder.BuildMinerPickaxeArtifact,
 		art_heavy_hewing_axe = WeaponModelBuilder.BuildHeavyHewingAxeArtifact,
 		art_canyon_splitter = WeaponModelBuilder.BuildCanyonSplitterArtifact,
@@ -7933,6 +7975,19 @@ function WeaponModelBuilder.EnsureWeapons(): (Folder, { [string]: Model })
 				local handle = existing:FindFirstChild("Handle") :: BasePart?
 				if handle then
 					alignHunterArrow(existing, handle)
+				end
+			end
+			-- A staff prefab saved in the place can carry sockets from an older import whose shaft
+			-- ran along +Z, which holds the staff sideways. The mesh runs along +Y (head up), so
+			-- put the sockets back where STAFF_MESH_DATA says they are.
+			local staffData = STAFF_MESH_DATA[weaponName]
+			local staffHandle = existing:IsA("Model") and existing.PrimaryPart
+			if staffData and staffHandle then
+				for socketName, position in { Grip = staffData.GripPos, Tip = staffData.TipPos, VfxTip = staffData.TipPos, VfxBase = staffData.BasePos, VfxCore = staffData.CorePos } do
+					local socket = staffHandle:FindFirstChild(socketName)
+					if socket and socket:IsA("Attachment") then
+						socket.CFrame = CFrame.new(position)
+					end
 				end
 			end
 			-- Clean any cross-assembly welds from cached prefabs (e.g. LeftDagger or OffhandShield)

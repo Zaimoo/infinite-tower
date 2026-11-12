@@ -78,7 +78,7 @@ export type SkillAttackDef = {
 }
 
 export type ArchetypeSkillProfile = {
-	Archetype: "Vanguard" | "Striker" | "Marksman" | "Miner" | "Healer" | "Scholar",
+	Archetype: "Vanguard" | "Striker" | "Marksman" | "Berserker" | "Healer" | "Scholar",
 	HeroId: string?, -- Set on per-hero kits; nil on archetype base profiles
 	DisplayName: string,
 	Role: string,
@@ -211,17 +211,17 @@ ArchetypeCombatSkills.Profiles = {
 	} :: ArchetypeSkillProfile,
 
 	-- ------------------------------------------------------------------------
-	-- 4. MINER (Disruptor / Defense | Melee 6 studs | Interval ~1.05s | Axes)
+	-- 4. BERSERKER (Two-handed bruiser | Melee 6 studs | Interval ~1.05s | Greataxes)
 	-- ------------------------------------------------------------------------
-	Miner = {
-		Archetype = "Miner",
-		DisplayName = "Miner",
-		Role = "Heavy Blunt Disruptor & Resource Extractor",
+	Berserker = {
+		Archetype = "Berserker",
+		DisplayName = "Berserker",
+		Role = "Two-Handed Greataxe Bruiser & Ground Disruptor",
 		Basic = {
-			Name = "Maul Swing",
+			Name = "Greataxe Cleave",
 			DamageMultiplier = 1.00,
 			StaminaGain = 5,
-			VFXKey = "MINER_BASIC",
+			VFXKey = "BERSERKER_BASIC",
 		},
 		Special = {
 			Name = "Seismic Slam",
@@ -230,7 +230,7 @@ ArchetypeCombatSkills.Profiles = {
 			StaminaGain = 10,
 			SecondaryEffect = "SEISMIC_STAGGER",
 			SecondaryParam = 8.0, -- 8-stud ground shatter
-			VFXKey = "MINER_SPECIAL",
+			VFXKey = "BERSERKER_SPECIAL",
 		},
 		Skill = {
 			Name = "Crystalline Cataclysm",
@@ -239,7 +239,7 @@ ArchetypeCombatSkills.Profiles = {
 			Radius = 18.0, -- 18-stud crystalline shockwave
 			Duration = 1.0,
 			Description = "Slams the ground to summon sharp crystalline spikes under all nearby enemies within 18 studs, dealing 2.60x ATK blunt AoE damage and yielding bonus temporary Mana/Shard drops.",
-			VFXKey = "MINER_SKILL",
+			VFXKey = "BERSERKER_SKILL",
 			CastSeconds = 1.15,
 		},
 	} :: ArchetypeSkillProfile,
@@ -382,8 +382,8 @@ local HERO_KITS: { [string]: HeroKitOverride } = {
 		},
 	},
 	hero_catio = {
-		Archetype = "Miner",
-		Basic = { Name = "Pickaxe Cleave" },
+		Archetype = "Berserker",
+		Basic = { Name = "Riftsteel Cleave" },
 		Special = { Name = "Resonance Tremor" },
 		Skill = {
 			Name = "Crystalline Excavation",
@@ -391,7 +391,7 @@ local HERO_KITS: { [string]: HeroKitOverride } = {
 		},
 	},
 	hero_gide = {
-		Archetype = "Miner",
+		Archetype = "Berserker",
 		Basic = { Name = "Ironvein Chop" },
 		Special = { Name = "Bedrock Sundering" },
 		Skill = {

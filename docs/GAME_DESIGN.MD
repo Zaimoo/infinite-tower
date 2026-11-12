@@ -131,7 +131,7 @@ While active squad command in the Central Hub and Infinite Tower drives peak pro
    - **Core Main Buildings (Inner Courtyard):** Essential progression stations that every Master accesses by default in their main fortress courtyard—including the **Summoning Altar**, **War Banner**, **Synthesis Chamber**, **Promotion Altar** and **Blacksmith Forge**.
    - **Support Facilities (Inner Fortress Wings):** Upgradeable utility and economic structures (`Level 1` $\to$ `Level 5`) located inside the fortress courtyard wings where benched heroes are stationed via `FacilityController.luau` to grant global percentage buffs. Each is unlocked and levelled through the **Fortress Development Tree** (Section 4.3):
      - **God's Blessing (Plaza Fountain):** An angel statue on the courtyard fountain. Stationed Acolytes (`Healer` preferred) raise **summon luck** on every Summoning Altar banner ($+4\%$ at Lv. 1 up to a $+50\%$ cap).
-     - **The Market (Inner Commercial Wing):** Grants a percentage multiplier ($+5\%$ base at Lv. 1 up to $+40\%+$ with high-tier Miners) **strictly to Loot Earnings from the Towers**: Gold from Infinite Tower kills (Floors $1\text{–}50$) and the Gold of banked relics. (It does not multiply Outskirts Guard Post passive Gold.)
+     - **The Market (Inner Commercial Wing):** Grants a percentage multiplier ($+5\%$ base at Lv. 1 up to $+40\%+$ with high-tier Berserkers) **strictly to Loot Earnings from the Towers**: Gold from Infinite Tower kills (Floors $1\text{–}50$) and the Gold of banked relics. (It does not multiply Outskirts Guard Post passive Gold.)
      - **The Training Grounds (Inner Martial Wing):** Grants a percentage multiplier ($+4\%$ base at Lv. 1 up to $+32\%+$ with high-tier Strikers/Scholars) to the Master's **Overall Squad Combat Power**, multiplying total `FinalATK` and `FinalHP` (both intrinsic hero stats and equipped Artifact stats) against all monsters.
    - **The Outskirts (Southern Frontier Wilderness):** The only area located *outside* the fortress walls, reached through the rear fortress gatehouse. Houses the **Outskirts Guard Post** and its wave-defense trail.
 2. **The Outskirts Guard Post (Unified AFK Gold & Offline Rewards):**
@@ -333,7 +333,7 @@ The island is divided into two distinct, interconnected sectors:
      - **Synthesis Chamber:** Fiery cauldron station with `[F]` prompt opening the **Synthesis UI** (`SynthesisController.luau`) for feeding EXP fodder.
      - **Promotion Altar:** Consecrated marble star dais with `[F]` prompt opening the **Promotion UI** (`PromotionController.luau`) for star ascensions ($1★ \to 7★$).
    - **The Blacksmith Forge (North-East Courtyard):** Interactive 3D station featuring an anvil, hearth coals, workbench, and prompt opening the **Forge UI** (`ForgeController.luau`) for Artifact Star Ascension ($1★ \to 7★$).
-   - **The Market (South-East Inner Wing):** Covered bazaar stalls, coin scales, and ledger counters located inside the fortress commercial quarter. Stationed workers (`Miner` preferred) boost Infinite Tower kill Gold and banked relic Gold ($+5\%$ to $+40\%+$).
+   - **The Market (South-East Inner Wing):** Covered bazaar stalls, coin scales, and ledger counters located inside the fortress commercial quarter. Stationed workers (`Berserker` preferred) boost Infinite Tower kill Gold and banked relic Gold ($+5\%$ to $+40\%+$).
    - **The Training Grounds (South-West Inner Wing):** Cobblestone sparring arena with weapon racks, archery targets, and training dummies located inside the fortress military quarter. Stationed trainers (`Striker` & `Scholar` preferred) boost the Master's overall squad combat power ($+4\%$ to $+32\%+$ Final ATK/HP).
 
 3. **Sector C: The Southern Outskirts (Exterior Wilderness Zone):**
@@ -425,10 +425,10 @@ Every summoned hero rolls a `QualityScalar` $q \in [0.90, 1.15]$ applied to thei
 
 | Banner | Hero | Rarity / Summoned Star | Archetype | Base HP / ATK | Native HP / ATK | Base / Native Labor |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Call of the Rift** | **Gide** | **Common (1) / 1★** | Miner | `340` / `36` | `340` / `36` | `18` / `18.0` |
+| **Call of the Rift** | **Gide** | **Common (1) / 1★** | Berserker | `340` / `36` | `340` / `36` | `18` / `18.0` |
 | **Call of the Rift** | **Shurn** | **Common (1) / 1★** | Scholar | `220` / `46` | `220` / `46` | `18` / `18.0` |
 | **Call of the Rift** | **Aaron** | **Uncommon (2) / 1★** | Vanguard | `450` / `28` | `1,823` / `113` | `16` / `24.2` |
-| **Call of the Rift** | **Catio** | **Rare (3) / 1★** | Miner | `280` / `24` | `4,593` / `394` | `20` / `45.7` |
+| **Call of the Rift** | **Catio** | **Rare (3) / 1★** | Berserker | `280` / `24` | `4,593` / `394` | `20` / `45.7` |
 | **Call of the Rift** | **Ignis** | **Exalted (5) / 1★** | Vanguard | `450` / `26` | `60,534` / `3,498` | `16` / `41.8` |
 | **Call of the Rift** | **Diran** | **Exalted (5) / 1★** | Healer | `300` / `22` | `40,356` / `2,959` | `20` / `52.2` |
 | **Call of the Rift** | **Edis Callen** | **Legendary (6) / 1★** | Striker | `320` / `62` | `174,339` / `33,778` | `16` / `63.2` |
@@ -455,11 +455,13 @@ Archetypes define a hero's **combat role, base stats, attack cadence, range, lab
 | **Vanguard** | Frontline Tank & Damage Absorber | `450` | `22` | `1.20s` | `6 studs` | `10 / min` | `SWORD_SHIELD` |
 | **Striker** | Agile Melee Critical DPS | `280` | `38` | `0.85s` | `6 studs` | `12 / min` | `DAGGERS` |
 | **Marksman** | Long-Range Physical DPS & Armor Shredder | `210` | `34` | `0.80s` | `28 studs` | `13 / min` | `BOW` |
-| **Miner** | Heavy Blunt Disruptor & Gem Specialist | `300` | `20` | `1.05s` | `6 studs` | `20 / min` | `AXE` |
+| **Berserker** | Two-Handed Greataxe Bruiser & Ground Disruptor | `300` | `20` | `1.05s` | `6 studs` | `20 / min` | `AXE` |
 | **Healer** | Squad Sustain & God's Blessing Acolyte | `260` | `18` | `1.25s` | `24 studs` | `18 / min` | `TOME` |
 | **Scholar** | Elemental Catalyst & Burst Magic | `220` | `24` | `1.00s` | `26 studs` | `22 / min` | `STAFF` |
 
 *(Note: Each archetype equips exactly one weapon type, and each hero holds one artifact. Sword & Shield is a single combined weapon; rings are removed. See Section 7.5.)*
+
+*(Berserker was called Miner until the two-handed greataxe rework. A saved hero keeps its template, so `DataManager.MigrateArtifactTypes` re-derives `Archetype` from `HeroCatalog` on load, before the equip check, and refreshes saved artifact names.)*
 
 ### 4.2 Effective Combat & Labor Formulas
 - **Per-star levels:** every star rank has its own Lv. 1–10 track ($\text{MaxLevel} = 10$). Promoting resets the hero to Lv. 1 of the next star (reserved EXP is then released). Stats and EXP use the **effective level**
@@ -536,7 +538,7 @@ Located outside the fortress walls along the southern wilderness border. Station
   *Presented via "Welcome Back, Master!" modal upon login, depositing accumulated Gold straight to profile currency.*
 
 ##### Facility B: The Market (Interior Fortress Commercial Wing - Tower Loot & Extraction Multiplier)
-Located inside the fortress commercial quarter. Stationed Merchants (`Miner` preferred, $+25\%$ labor synergy) amplify loot yields strictly from Infinite Tower kills and banked relics:
+Located inside the fortress commercial quarter. Stationed Merchants (`Berserker` preferred, $+25\%$ labor synergy) amplify loot yields strictly from Infinite Tower kills and banked relics:
 
 | Level | Gold Upgrade Cost | Max Workers | Base Loot Multiplier ($\text{BaseBonus}$) | Visual Identity |
 | :---: | :---: | :---: | :---: | :--- |
@@ -619,7 +621,7 @@ Each hero's kit is resolved by `HeroId` in `ArchetypeCombatSkills.HeroProfiles` 
 | :---: | :--- | :--- | :--- | :--- | :--- | :--- |
 | 1 | **Han** (`hero_han`) | Mythical | Striker | Gloam Cut | Nightfall Fangs | Abyssal Wake |
 | 2 | **Aaron** (`hero_aaron`) | Uncommon | Vanguard | Bastion Strike | Aegis Shield Bash | Fortress Bulwark |
-| 3 | **Catio** (`hero_catio`) | Rare | Miner | Pickaxe Cleave | Resonance Tremor | Crystalline Excavation |
+| 3 | **Catio** (`hero_catio`) | Rare | Berserker | Riftsteel Cleave | Resonance Tremor | Crystalline Excavation |
 | 4 | **Valeria** (`hero_valeria`) | Exalted | Healer | Emerald Bolt | Verdant Mend | Sanctuary Miracle |
 | 5 | **Ignis** (`hero_ignis`) | Exalted | Vanguard | Molten Cleave | Magma Breaker | Infernal Juggernaut |
 | 6 | **Jenna** (`hero_jenna`) | Common | Marksman | Wind-Step Shot | Piercing Gale Volley | Sylphid Arrow Storm |
@@ -630,7 +632,7 @@ Each hero's kit is resolved by `HeroId` in `ArchetypeCombatSkills.HeroProfiles` 
 | 11 | **Solaris** (`hero_solaris`) | Legendary | Scholar | Solar Ray | Corona Arc | Supernova Starfall |
 | 12 | **Astrea** (`hero_astrea`) | Mythical | Marksman | Astral Arrow | Nebula Piercer | Constellation Judgment |
 | 13 | **Edis Callen** (`hero_edis`) | Legendary | Striker | Ravenclaw Cut | Umbral Crosscut | Midnight Requiem |
-| 14 | **Gide** (`hero_gide`) | Common | Miner | Ironvein Chop | Bedrock Sundering | Tunnelbreaker Fault |
+| 14 | **Gide** (`hero_gide`) | Common | Berserker | Ironvein Chop | Bedrock Sundering | Tunnelbreaker Fault |
 | 15 | **Shurn** (`hero_shurn`) | Common | Scholar | Cinder Spark | Arcing Hearthbolt | Dawnstone Convergence |
 | 16 | **Diran** (`hero_diran`) | Exalted | Healer | Runeward Bolt | Compass Mend | Vitality Covenant |
 | 17 | **Vane** (`hero_vane`) | Legendary | Scholar | Null Bolt | Singularity Lance | Event Horizon |
@@ -655,7 +657,7 @@ These are the default multipliers and secondary mechanics each hero kit inherits
 | **Marksman**<br>*(Ranged DPS)* | **Basic** | Precision Shot | `1.0x ATK` Piercing | Single-target arrow projectile (`28 studs`). | `+5` |
 | | **Special** (Hit 3) | Piercing Volley | `1.5x ATK` Piercing | Penetrating bolt passing through primary target in a straight line up to `32 studs`. | `+10` |
 | | **Skill** (100 SP) | Rain of Arrows | `2.8x ATK` Physical (4 ticks) | Localized arrow storm (`16-stud` radius) dealing 4 rapid ticks and shredding enemy defense by `20%` for `5s`. | `Resets to 0` |
-| **Miner**<br>*(Disruptor)* | **Basic** | Heavy Maul Swing | `1.0x ATK` Blunt | Single-target heavy melee (`6 studs`). | `+5` |
+| **Berserker**<br>*(Disruptor)* | **Basic** | Greataxe Cleave | `1.0x ATK` Blunt | Single-target heavy melee (`6 studs`). | `+5` |
 | | **Special** (Hit 3) | Seismic Slam | `1.5x ATK` Blunt | Ground pound shattering the earth in an `8-stud` radius, staggering targets. | `+10` |
 | | **Skill** (100 SP) | Crystalline Cataclysm | `2.6x ATK` Blunt AoE | Summons sharp crystalline spikes under all enemies within `18 studs`; struck targets yield bonus temporary gem shards. | `Resets to 0` |
 | **Healer**<br>*(Recovery)* | **Basic** | Holy Bolt | `1.0x ATK` Holy | Single-target holy projectile against hostile target (`24 studs`). | `+5` |
@@ -683,7 +685,7 @@ These are the default multipliers and secondary mechanics each hero kit inherits
     - **Melee basics:** a crescent slash across the target.
     - **Vanguard:** a shockwave cone for the Special. The ultimate draws a barrier shell that lasts the 6 s barrier, plus a 25-stud taunt shockwave.
     - **Striker:** crossing slashes for the Special. The ultimate is a ring of crescents with a 12-stud shockwave; Archon's also opens a collapsing rift.
-    - **Miner:** a ground tremor for the Special. The ultimate raises a crystal spike cluster, plus a spike under each enemy hit.
+    - **Berserker:** a ground tremor for the Special. The ultimate raises a crystal spike cluster, plus a spike under each enemy hit.
     - **Scholar:** orb basics; the Special chains lightning to each enemy the server chained. The ultimate drops a column of fire or light that leaves 3 s of burning ground.
     - **Healer:** bolt basics; the Special sends motes of light to the healed ally. The ultimate draws a 25-stud sigil with a light column on each squad hero.
   - **Budget:** pooled parts, at most 160 live effects per client, and nothing drawn when an effect is more than 180 studs from the camera.
@@ -905,7 +907,7 @@ Implemented by `LootDuel` (`Shared/Util`, rules and arena layout), `DuelArena` (
 2. **Physical Overhead Hauling:** Picking up loot welds it overhead, slows movement by `-15%` to `-45%`, and triggers the upper-arm holding pose (`HoldingAnimationController.client.luau`).
 3. **Theft Detection:** Picking up a drop tagged to someone else opens a **contest** for that drop and flags the picker as a `[Loot Thief]` (character attribute `IsLootThief` plus a nameplate everyone sees) for 3 minutes. The flag is an open **bounty**: the thief carries a `Claim Bounty [F]` ProximityPrompt (`BountyPrompt`, 12-stud range, hidden on the thief's own client) and every other Master on the floor gets a bounty toast. The owner also gets a banner with a countdown and an `HUNT THEM: [F]` hint (`TowerRemotes.LootContested`). There is no Gold reward: the prize is the drop itself. The contest closes when the window runs out, the drop is banked or despawns, or the owner picks it back up. If the drop is stolen again, only the newest thief carries the bounty.
 4. **Bounty Duel:** Any Master except the thief (the robbed owner included) walks up to the thief and presses **F**. The duel starts at once; the server re-checks range, so the hunter must really be next to the thief. A thief with several bounties is challenged for the newest steal. Both Masters must be on the same floor with at least one hero standing. Clicking another Master never starts a fight. There is no open-field PvP: squads only fight each other inside a duel.
-   - **Arena:** A floating hex-grid island is built just under the room's ceiling bound, above the hunter, so it stays inside room-local replication and clear of floor geometry. Each squad lines up in formation on its own half: melee (Vanguard, Miner, Striker) in a front row of three, ranged and support (Marksman, Scholar, Healer) in a back row of two. Each client gets a fixed high-angle camera from behind its own squad, with its heroes labelled green and the opponent orange (`DuelState` remote).
+   - **Arena:** A floating hex-grid island is built just under the room's ceiling bound, above the hunter, so it stays inside room-local replication and clear of floor geometry. Each squad lines up in formation on its own half: melee (Vanguard, Berserker, Striker) in a front row of three, ranged and support (Marksman, Scholar, Healer) in a back row of two. Each client gets a fixed high-angle camera from behind its own squad, with its heroes labelled green and the opponent orange (`DuelState` remote).
    - **Flow:** 2.5 s line-up, then up to 40 s of automatic combat with each hero's own kit at 50% hero-vs-hero damage. Mobs ignore duelling squads. Masters are held in place, cannot bank or recall, and the drop cannot be picked up by anyone.
    - **Victory:** Knock out every opposing hero. On timeout, the side with more total HP fraction left wins (a tie goes to the thief, who defends). A Master who leaves, travels or changes floor forfeits.
 5. **Zero-Consequence Resolution:** Duel knockouts never cause a squad wipe, teleport or progression loss. Afterwards every hero returns to its Master at its pre-duel HP and Skill Gauge.
@@ -995,7 +997,7 @@ The full 1★ to 7★ path consumes 21 donor weapons plus the retained original.
   - **Pity Reset:** Any pull of an Exalted, Legendary, or Mythical artifact resets the counter to 0.
 - **Two-Stage Roll Hierarchy:**
   1. Roll Rarity Tier (1–7) based on rates and luck.
-  2. Roll Archetype uniformly (1 of 6: Vanguard, Striker, Marksman, Miner, Scholar, Healer).
+  2. Roll Archetype uniformly (1 of 6: Vanguard, Striker, Marksman, Berserker, Scholar, Healer).
   3. Roll Variant (60% Standard, 40% High-Stat Enhanced).
   4. Instantiate weapon at 1★.
 - **Legacy Purge:** Crafting materials (`IronGear`, etc.) and milestone boss equipment drops are completely removed; all weapon acquisition occurs through the Forge banner and star ascension.
@@ -1010,7 +1012,7 @@ The full 1★ to 7★ path consumes 21 donor weapons plus the retained original.
    | `Vanguard` | **Sword & Shield (`SWORD_SHIELD`)** | Main-hand slashing with an off-hand shield for defensive posture and damage mitigation. |
    | `Striker` | **Daggers (`DAGGERS`)** | High-speed dual-wield flurry attacks. |
    | `Marksman` | **Bow (`BOW`)** | Ranged single-target piercing attacks. |
-   | `Miner` | **Axe (`AXE`)** | Heavy cleaving strikes. |
+   | `Berserker` | **Greataxe (`AXE`)** | Two-handed, long-hafted greataxes: overhand chops, level sweeps and ground slams. |
    | `Scholar` (Mage) | **Staff (`STAFF`)** | Ranged mystic projectiles and aura empowerment. |
    | `Healer` | **Tome (`TOME`)** | Channeled magical bursts and restorative resonance. |
 
@@ -1024,7 +1026,7 @@ The full 1★ to 7★ path consumes 21 donor weapons plus the retained original.
    | `BOW` | Left hand grip | — (string `Nock` and limb tips for the draw) |
    | `SWORD_SHIELD` | Right hand grip | Shield strapped to the outer left forearm |
    | `DAGGERS` | Right hand grip | Off-hand dagger in the left hand grip |
-   | `AXE` | Right hand grip, near the butt of the haft | — (`OffhandGrip` reserved for two-handed swings) |
+   | `AXE` | Right hand grip, high on the haft below the head | Left hand on `OffhandGrip`, 1.7 studs towards the butt. Not welded: `HeroAnimator.SolveOffhand` solves the left arm onto it every frame (`HeroSockets.OFFHAND`) |
    | `STAFF` | Right hand grip | — |
    | `TOME` | Left hand grip | — |
 

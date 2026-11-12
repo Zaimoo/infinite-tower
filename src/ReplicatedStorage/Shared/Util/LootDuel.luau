@@ -77,7 +77,7 @@ function LootDuel.SlotLocal(side: Side, slot: number): Vector3
 end
 
 -- Melee archetypes hold the front row, ranged and support stand behind.
-local FRONTLINE_ORDER = table.freeze({ Vanguard = 1, Miner = 2, Striker = 3, Marksman = 4, Scholar = 5, Healer = 6 })
+local FRONTLINE_ORDER = table.freeze({ Vanguard = 1, Berserker = 2, Striker = 3, Marksman = 4, Scholar = 5, Healer = 6 })
 
 -- Returns the indices of `archetypes` in formation order (slot 1 first). Ties keep squad order.
 function LootDuel.FormationOrder(archetypes: { string }): { number }

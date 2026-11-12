@@ -81,7 +81,7 @@ test("Each archetype equips exactly one weapon type", function()
 		Vanguard = "SWORD_SHIELD",
 		Striker = "DAGGERS",
 		Marksman = "BOW",
-		Miner = "AXE",
+		Berserker = "AXE",
 		Scholar = "STAFF",
 		Healer = "TOME",
 	}

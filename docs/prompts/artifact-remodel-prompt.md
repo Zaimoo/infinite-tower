@@ -52,7 +52,7 @@ Work in batches by weapon type (e.g. all 14 axes, all 14 swords, all 14 staves),
 
 #### Tier Progression Matrix
 
-| Tier | Rarity | Typical Polycount | Material Palette | Silhouette Fantasy & Geometry | Example (Miner Axes) |
+| Tier | Rarity | Typical Polycount | Material Palette | Silhouette Fantasy & Geometry | Example (Berserker Axes) |
 |---|---|---|---|---|---|
 | **Tier 1** | Common | 1,500 – 2,500 tris | Wood, Hammered Metal, Wrought Iron | Utilitarian, rugged, functional tools. Straight hafts, pinned collars. | `art_miner_pickaxe` (pointed pick bit, ashwood haft), `art_heavy_hewing_axe` (felling blade, heavy poll) |
 | **Tier 2** | Uncommon | 3,000 – 6,000 tris | Tempered Bronze, Slate, Geodes | Early segmented geometry, raw crystal chunks embedded in spines, bearded profiles. | `art_canyon_splitter` (amethyst geode spine fracture), `art_quakestone_greataxe` (granite-tempered brass greataxe) |
@@ -151,7 +151,7 @@ The agent executes an automated Luau script in Roblox Studio via `execute_luau`:
 3. **Internal Welds:** Weld every child part (`Pommel`, `Blade`, `BladeEdge`, `BackSpike`, `RuneInlay`, etc.) to `Handle` using `WeldConstraint`. Set all parts to `Anchored = false`, `CanCollide = false`, `CanTouch = false`, `CanQuery = false`, `Massless = true`, `CastShadow = false`.
 4. **Socket Attachments:** Configure sockets on `Handle`:
    - `Grip`: Position `(0, 0, -0.9)`, rotated with `CFrame.fromMatrix(pos, Vector3.new(0, 1, 0), Vector3.new(0, 0, 1), Vector3.new(-1, 0, 0))`.
-   - `OffhandGrip`: Position `(0, 0, 0.2)` (for two-handed weapons like axes).
+   - `OffhandGrip`: for two-handed weapons. Berserker greataxes put `Grip` high on the haft (right hand, below the head) and `OffhandGrip` 1.7 studs towards the butt (left hand); both come from `greataxes_manifest.json` via `tests/studio-greataxe-import.luau`.
    - `Tip` and `VfxTip`: Placed at blade tip.
    - `VfxBase`: Placed at blade base.
    - `VfxCore`: Placed at weapon center of mass.

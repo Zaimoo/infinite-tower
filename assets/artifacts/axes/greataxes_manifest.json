@@ -1,0 +1,574 @@
+{
+	"art_miner_pickaxe": {
+		"id": "art_miner_pickaxe",
+		"tier": 1,
+		"haft_length": 5.2,
+		"grip": [
+			0,
+			0,
+			0.5800000000000001
+		],
+		"offhand": [
+			0,
+			0,
+			-1.1199999999999999
+		],
+		"tip": [
+			-1.125,
+			0,
+			2.630000114440918
+		],
+		"base": [
+			-1.0750000476837158,
+			0,
+			1.0800000429153442
+		],
+		"core": [
+			-0.5625,
+			0,
+			2.08
+		],
+		"parts": [
+			"Handle",
+			"GripWrap",
+			"Pommel",
+			"HeadCollar",
+			"Blade",
+			"BladeEdge",
+			"BackSpike"
+		],
+		"tris": 1022
+	},
+	"art_heavy_hewing_axe": {
+		"id": "art_heavy_hewing_axe",
+		"tier": 1,
+		"haft_length": 5.3,
+		"grip": [
+			0,
+			0,
+			0.45999999999999974
+		],
+		"offhand": [
+			0,
+			0,
+			-1.2400000000000002
+		],
+		"tip": [
+			-1.2599999904632568,
+			0,
+			2.859999895095825
+		],
+		"base": [
+			-1.2039999961853027,
+			0,
+			0.9599999785423279
+		],
+		"core": [
+			-0.63,
+			0,
+			2.01
+		],
+		"parts": [
+			"Handle",
+			"GripWrap",
+			"Pommel",
+			"HeadCollar",
+			"Blade",
+			"BladeEdge",
+			"BackSpike"
+		],
+		"tris": 1108
+	},
+	"art_canyon_splitter": {
+		"id": "art_canyon_splitter",
+		"tier": 2,
+		"haft_length": 5.4,
+		"grip": [
+			0,
+			0,
+			0.33000000000000007
+		],
+		"offhand": [
+			0,
+			0,
+			-1.3699999999999999
+		],
+		"tip": [
+			-1.3049999475479126,
+			0,
+			2.880000114440918
+		],
+		"base": [
+			-1.246999979019165,
+			0,
+			0.8299999833106995
+		],
+		"core": [
+			-0.6525,
+			0,
+			2.08
+		],
+		"parts": [
+			"Handle",
+			"GripWrap",
+			"Pommel",
+			"HeadCollar",
+			"Blade",
+			"BladeEdge",
+			"BackSpike",
+			"RuneInlay"
+		],
+		"tris": 1706
+	},
+	"art_quakestone_greataxe": {
+		"id": "art_quakestone_greataxe",
+		"tier": 2,
+		"haft_length": 5.5,
+		"grip": [
+			0,
+			0,
+			0.29900000000000015
+		],
+		"offhand": [
+			0,
+			0,
+			-1.4009999999999998
+		],
+		"tip": [
+			-1.350000023841858,
+			0,
+			3.1489999294281006
+		],
+		"base": [
+			-1.2899999618530273,
+			0,
+			0.7990000247955322
+		],
+		"core": [
+			-0.675,
+			0,
+			2.099
+		],
+		"parts": [
+			"Handle",
+			"GripWrap",
+			"Pommel",
+			"HeadCollar",
+			"Blade",
+			"BladeEdge",
+			"BackSpike",
+			"RuneInlay"
+		],
+		"tris": 1342
+	},
+	"art_battleaxe_cleaver": {
+		"id": "art_battleaxe_cleaver",
+		"tier": 3,
+		"haft_length": 5.6,
+		"grip": [
+			0,
+			0,
+			0.5799999999999996
+		],
+		"offhand": [
+			0,
+			0,
+			-1.1200000000000003
+		],
+		"tip": [
+			-1.3049999475479126,
+			0,
+			3.180000066757202
+		],
+		"base": [
+			-1.246999979019165,
+			0,
+			1.0800000429153442
+		],
+		"core": [
+			-0.6525,
+			0,
+			2.1799999999999997
+		],
+		"parts": [
+			"Handle",
+			"GripWrap",
+			"Pommel",
+			"HeadCollar",
+			"Blade",
+			"BladeEdge",
+			"BackSpike",
+			"RuneInlay"
+		],
+		"tris": 2370
+	},
+	"art_iron_juggernaut_cleaver": {
+		"id": "art_iron_juggernaut_cleaver",
+		"tier": 3,
+		"haft_length": 5.6,
+		"grip": [
+			0,
+			0,
+			0.22999999999999998
+		],
+		"offhand": [
+			0,
+			0,
+			-1.47
+		],
+		"tip": [
+			-1.5360000133514404,
+			0,
+			3.138000011444092
+		],
+		"base": [
+			-1.1519999504089355,
+			0,
+			0.7300000190734863
+		],
+		"core": [
+			-0.7200000000000001,
+			0,
+			2.08
+		],
+		"parts": [
+			"Handle",
+			"GripWrap",
+			"Pommel",
+			"HeadCollar",
+			"Blade",
+			"BladeEdge",
+			"BackSpike",
+			"RuneInlay"
+		],
+		"tris": 2056
+	},
+	"art_magma_behemoth": {
+		"id": "art_magma_behemoth",
+		"tier": 4,
+		"haft_length": 5.7,
+		"grip": [
+			0,
+			0,
+			0.2180000000000002
+		],
+		"offhand": [
+			0,
+			0,
+			-1.4819999999999998
+		],
+		"tip": [
+			-1.5299999713897705,
+			0,
+			3.2679998874664307
+		],
+		"base": [
+			-1.4620000123977661,
+			0,
+			0.7179999947547913
+		],
+		"core": [
+			-0.765,
+			0,
+			2.168
+		],
+		"parts": [
+			"Handle",
+			"GripWrap",
+			"Pommel",
+			"HeadCollar",
+			"Blade",
+			"BladeEdge",
+			"BackSpike",
+			"RuneInlay"
+		],
+		"tris": 2394
+	},
+	"art_obsidian_hell_splitter": {
+		"id": "art_obsidian_hell_splitter",
+		"tier": 4,
+		"haft_length": 5.8,
+		"grip": [
+			0,
+			0,
+			0.3869999999999998
+		],
+		"offhand": [
+			0,
+			0,
+			-1.3130000000000002
+		],
+		"tip": [
+			-1.440000057220459,
+			0,
+			3.3369998931884766
+		],
+		"base": [
+			-1.3760000467300415,
+			0,
+			0.8870000243186951
+		],
+		"core": [
+			-0.7200000000000001,
+			0,
+			2.187
+		],
+		"parts": [
+			"Handle",
+			"GripWrap",
+			"Pommel",
+			"HeadCollar",
+			"Blade",
+			"BladeEdge",
+			"BackSpike",
+			"RuneInlay"
+		],
+		"tris": 3928
+	},
+	"art_titan_earthshaker": {
+		"id": "art_titan_earthshaker",
+		"tier": 5,
+		"haft_length": 6.0,
+		"grip": [
+			0,
+			0,
+			0.21299999999999986
+		],
+		"offhand": [
+			0,
+			0,
+			-1.487
+		],
+		"tip": [
+			-1.6200000047683716,
+			0,
+			3.513000011444092
+		],
+		"base": [
+			-1.5479999780654907,
+			0,
+			0.7129999995231628
+		],
+		"core": [
+			-0.81,
+			0,
+			2.163
+		],
+		"parts": [
+			"Handle",
+			"GripWrap",
+			"Pommel",
+			"HeadCollar",
+			"Blade",
+			"BladeEdge",
+			"BackSpike",
+			"RuneInlay"
+		],
+		"tris": 4670
+	},
+	"art_mountain_breaker": {
+		"id": "art_mountain_breaker",
+		"tier": 5,
+		"haft_length": 6.0,
+		"grip": [
+			0,
+			0,
+			0.03200000000000003
+		],
+		"offhand": [
+			0,
+			0,
+			-1.668
+		],
+		"tip": [
+			-1.6720000505447388,
+			0,
+			3.2239999771118164
+		],
+		"base": [
+			-1.7860000133514404,
+			0,
+			0.8519999980926514
+		],
+		"core": [
+			-0.855,
+			0,
+			2.132
+		],
+		"parts": [
+			"Handle",
+			"GripWrap",
+			"Pommel",
+			"HeadCollar",
+			"Blade",
+			"BladeEdge",
+			"BackSpike",
+			"RuneInlay"
+		],
+		"tris": 2368
+	},
+	"art_valkyrie_waraxe": {
+		"id": "art_valkyrie_waraxe",
+		"tier": 6,
+		"haft_length": 6.1,
+		"grip": [
+			0,
+			0,
+			0.05799999999999983
+		],
+		"offhand": [
+			0,
+			0,
+			-1.6420000000000001
+		],
+		"tip": [
+			-1.399999976158142,
+			0,
+			3.6579999923706055
+		],
+		"base": [
+			-1.399999976158142,
+			0,
+			0.5580000281333923
+		],
+		"core": [
+			-0.7875,
+			0,
+			2.058
+		],
+		"parts": [
+			"Handle",
+			"GripWrap",
+			"Pommel",
+			"HeadCollar",
+			"Blade",
+			"BladeEdge",
+			"BackSpike",
+			"RuneInlay"
+		],
+		"tris": 5310
+	},
+	"art_world_shaper": {
+		"id": "art_world_shaper",
+		"tier": 6,
+		"haft_length": 6.2,
+		"grip": [
+			0,
+			0,
+			0.13200000000000012
+		],
+		"offhand": [
+			0,
+			0,
+			-1.5679999999999998
+		],
+		"tip": [
+			-1.7100000381469727,
+			0,
+			3.631999969482422
+		],
+		"base": [
+			-1.6339999437332153,
+			0,
+			0.6320000290870667
+		],
+		"core": [
+			-0.855,
+			0,
+			2.232
+		],
+		"parts": [
+			"Handle",
+			"GripWrap",
+			"Pommel",
+			"HeadCollar",
+			"Blade",
+			"BladeEdge",
+			"BackSpike",
+			"RuneInlay"
+		],
+		"tris": 4694
+	},
+	"art_world_carver": {
+		"id": "art_world_carver",
+		"tier": 7,
+		"haft_length": 6.4,
+		"grip": [
+			0,
+			0,
+			-0.47799999999999976
+		],
+		"offhand": [
+			0,
+			0,
+			-2.178
+		],
+		"tip": [
+			-1.8860000371932983,
+			0,
+			3.921999931335449
+		],
+		"base": [
+			-1.7940000295639038,
+			0,
+			0.02199999988079071
+		],
+		"core": [
+			-1.035,
+			0,
+			2.0220000000000002
+		],
+		"parts": [
+			"Handle",
+			"GripWrap",
+			"Pommel",
+			"HeadCollar",
+			"Blade",
+			"BladeEdge",
+			"BackSpike",
+			"RuneInlay"
+		],
+		"tris": 3590
+	},
+	"art_genesis_sunderer": {
+		"id": "art_genesis_sunderer",
+		"tier": 7,
+		"haft_length": 6.4,
+		"grip": [
+			0,
+			0,
+			0.00800000000000023
+		],
+		"offhand": [
+			0,
+			0,
+			-1.6919999999999997
+		],
+		"tip": [
+			-1.8899999856948853,
+			0,
+			3.808000087738037
+		],
+		"base": [
+			-1.805999994277954,
+			0,
+			0.5080000162124634
+		],
+		"core": [
+			-0.9450000000000001,
+			0,
+			2.208
+		],
+		"parts": [
+			"Handle",
+			"GripWrap",
+			"Pommel",
+			"HeadCollar",
+			"Blade",
+			"BladeEdge",
+			"BackSpike",
+			"RuneInlay"
+		],
+		"tris": 7618
+	}
+}

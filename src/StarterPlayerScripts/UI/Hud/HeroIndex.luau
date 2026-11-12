@@ -74,10 +74,10 @@ local ARTIFACT_CATEGORIES = {
 	},
 	{
 		Key = "AXE",
-		Title = "MINING AXES",
-		Tag = "MINER · 14 ARTIFACTS",
+		Title = "GREATAXES",
+		Tag = "BERSERKER · 14 ARTIFACTS",
 		Tone = "Bronze",
-		Icon = "Miner",
+		Icon = "Berserker",
 		FilterFn = function(seed: any) return seed.Type == "AXE" end,
 	},
 	{

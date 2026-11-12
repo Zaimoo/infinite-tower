@@ -38,7 +38,7 @@ function Theme.RarityColor(tier: number?): Color3
 	return Theme.Rarity[math.clamp(math.floor(tier or 1), 1, #Theme.Rarity)]
 end
 
--- Archetype icons are drawn (GrimoireIcons: Vanguard, Striker, Marksman, Miner, Scholar, Healer).
+-- Archetype icons are drawn (GrimoireIcons: Vanguard, Striker, Marksman, Berserker, Scholar, Healer).
 
 Theme.FacilityNames = table.freeze({
 	FACILITY_GUARD_POST = "Guard Post",

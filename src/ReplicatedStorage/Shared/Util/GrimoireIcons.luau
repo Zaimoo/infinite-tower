@@ -181,11 +181,11 @@ GrimoireIcons.Drawings = {
 		{ X = 18, Y = 52, W = 16, H = 8, Rot = 0, Hi = P.BloodHi, Lo = P.BloodLo, Radius = 2, Outline = 2, Sheen = false },
 		{ X = 48, Y = 16, W = 18, H = 18, Rot = 45, Hi = P.SteelHi, Lo = P.SteelLo, Radius = 3 },
 	},
-	-- Miner: a pickaxe with a steel head and leather haft.
-	Miner = {
-		{ X = 32, Y = 36, W = 8, H = 50, Rot = 35, Hi = P.LeatherHi, Lo = P.LeatherLo, Radius = 3 },
-		{ X = 40, Y = 18, W = 50, H = 11, Rot = 35, Hi = P.SteelHi, Lo = P.SteelLo, Radius = 5 },
-		{ X = 41, Y = 18, W = 12, H = 14, Rot = 35, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 3, Outline = 2, Sheen = false },
+	-- Berserker: a double-bitted greataxe on a long leather haft.
+	Berserker = {
+		{ X = 30, Y = 38, W = 7, H = 54, Rot = 35, Hi = P.LeatherHi, Lo = P.LeatherLo, Radius = 3 },
+		{ X = 40, Y = 19, W = 46, H = 24, Rot = 35, Hi = P.SteelHi, Lo = P.SteelLo, Radius = 10 },
+		{ X = 40, Y = 19, W = 11, H = 28, Rot = 35, Hi = P.GoldHi, Lo = P.GoldLo, Radius = 3, Outline = 2, Sheen = false },
 	},
 	-- Scholar: a violet scrying orb on a gold stand.
 	Scholar = {
