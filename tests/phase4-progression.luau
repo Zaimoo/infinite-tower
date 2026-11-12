@@ -204,7 +204,7 @@ test("Phase 4: onboarding advances only on the active step's event and merges un
 	assert(Onboarding.ActiveStep(state) == nil, "chain complete")
 end)
 
-test("Phase 4: v3 through v7 migration stamps rarity, rebases stars, builds the tree and grandfathers unlocks", function()
+test("Phase 4: v3 through v8 migration stamps rarity, rebases stars, builds the tree and grandfathers unlocks", function()
 	local profile: any = {
 		SchemaVersion = 2,
 		MaxFloorReached = 6,
@@ -223,7 +223,8 @@ test("Phase 4: v3 through v7 migration stamps rarity, rebases stars, builds the 
 	profile.Heroes.a.PassiveTrait = "Rift Warlord (+35% ATK, +20% DMG Reduction)"
 	profile.Heroes.a.SynthesisHistory = { DonorsConsumed = 4, ImprintsPerformed = 2 }
 	Migrations.Run(profile)
-	assert(profile.SchemaVersion == 7)
+	assert(profile.SchemaVersion == 8)
+	assert(profile.Rewards.Daily.Streak == 0 and profile.Rewards.Weekly.LastClaimWeek == 0, "v8 adds unclaimed rewards")
 	-- v7: imprints are gone and held catalysts are refunded at their crafting cost (150 Gold, 15 Gems, 4 Soul Essence).
 	assert(profile.Heroes.a.InheritedImprints == nil and profile.Heroes.a.ImprintCapacity == nil, "v7 strips hero imprints")
 	assert(profile.Heroes.a.PassiveTrait == nil, "v7 strips the passive trait label")
