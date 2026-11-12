@@ -12,8 +12,8 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 -- Uploaded assets for the stickman hero logo:
-local LOGO_BASE_IMAGE = "rbxassetid://140220157345746" -- transparent cutout of the stickman hero
-local LOGO_OUTLINE_GLOW = "rbxassetid://111082861701819" -- isolated contour neon glow (hugs outlines only)
+local LOGO_BASE_IMAGE = "rbxassetid://89970755424339" -- transparent cutout of the stickman hero (HD)
+local LOGO_OUTLINE_GLOW = "rbxassetid://72701493106519" -- isolated contour neon glow (HD)
 
 local INK = Color3.fromRGB(6, 6, 8)
 local BG_DARK = Color3.fromRGB(10, 10, 14)
@@ -168,7 +168,7 @@ function View.new(playerGui: Instance): View
 	local logoContainer = Instance.new("Frame")
 	logoContainer.Name = "LogoContainer"
 	logoContainer.LayoutOrder = 1
-	logoContainer.Size = UDim2.fromScale(0.42, 0.42)
+	logoContainer.Size = UDim2.fromScale(0.55, 0.55)
 	logoContainer.SizeConstraint = Enum.SizeConstraint.RelativeYY
 	logoContainer.BackgroundTransparency = 1
 	logoContainer.Parent = column
@@ -178,40 +178,27 @@ function View.new(playerGui: Instance): View
 	aspect.Parent = logoContainer
 
 	local logoConstraint = Instance.new("UISizeConstraint")
-	logoConstraint.MinSize = Vector2.new(180, 180)
-	logoConstraint.MaxSize = Vector2.new(380, 380)
+	logoConstraint.MinSize = Vector2.new(240, 240)
+	logoConstraint.MaxSize = Vector2.new(540, 540)
 	logoConstraint.Parent = logoContainer
 
 	local logoScale = Instance.new("UIScale")
 	logoScale.Parent = logoContainer
 
-	-- Layer 1: Outer contour fringe (outline only, scaled 1.025x)
-	local outlineGlowOuter = Instance.new("ImageLabel")
-	outlineGlowOuter.Name = "OutlineGlowOuter"
-	outlineGlowOuter.AnchorPoint = Vector2.new(0.5, 0.5)
-	outlineGlowOuter.Position = UDim2.fromScale(0.5, 0.5)
-	outlineGlowOuter.Size = UDim2.fromScale(1.025, 1.025)
-	outlineGlowOuter.BackgroundTransparency = 1
-	outlineGlowOuter.Image = LOGO_OUTLINE_GLOW
-	outlineGlowOuter.ImageColor3 = Color3.fromRGB(50, 95, 140)
-	outlineGlowOuter.ImageTransparency = 0.90
-	outlineGlowOuter.ZIndex = 1
-	outlineGlowOuter.Parent = logoContainer
+	-- Layer 1: Ethereal outline bloom (behind character, exact 1x alignment, zero displacement blur)
+	local outlineGlow = Instance.new("ImageLabel")
+	outlineGlow.Name = "OutlineGlow"
+	outlineGlow.AnchorPoint = Vector2.new(0.5, 0.5)
+	outlineGlow.Position = UDim2.fromScale(0.5, 0.5)
+	outlineGlow.Size = UDim2.fromScale(1, 1)
+	outlineGlow.BackgroundTransparency = 1
+	outlineGlow.Image = LOGO_OUTLINE_GLOW
+	outlineGlow.ImageColor3 = Color3.fromRGB(80, 140, 200)
+	outlineGlow.ImageTransparency = 0.85
+	outlineGlow.ZIndex = 1
+	outlineGlow.Parent = logoContainer
 
-	-- Layer 2: Direct outline bloom (outline only, 1x)
-	local outlineGlowCore = Instance.new("ImageLabel")
-	outlineGlowCore.Name = "OutlineGlowCore"
-	outlineGlowCore.AnchorPoint = Vector2.new(0.5, 0.5)
-	outlineGlowCore.Position = UDim2.fromScale(0.5, 0.5)
-	outlineGlowCore.Size = UDim2.fromScale(1, 1)
-	outlineGlowCore.BackgroundTransparency = 1
-	outlineGlowCore.Image = LOGO_OUTLINE_GLOW
-	outlineGlowCore.ImageColor3 = Color3.fromRGB(70, 120, 170)
-	outlineGlowCore.ImageTransparency = 0.85
-	outlineGlowCore.ZIndex = 2
-	outlineGlowCore.Parent = logoContainer
-
-	-- Layer 3: Stickman Hero silhouette & sword
+	-- Layer 2: Stickman Hero silhouette & sword (needle-sharp foreground, exact 1x alignment)
 	local baseLogo = Instance.new("ImageLabel")
 	baseLogo.Name = "BaseLogo"
 	baseLogo.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -219,8 +206,8 @@ function View.new(playerGui: Instance): View
 	baseLogo.Size = UDim2.fromScale(1, 1)
 	baseLogo.BackgroundTransparency = 1
 	baseLogo.Image = LOGO_BASE_IMAGE
-	baseLogo.ImageColor3 = Color3.fromRGB(140, 150, 165)
-	baseLogo.ZIndex = 3
+	baseLogo.ImageColor3 = Color3.fromRGB(200, 215, 230)
+	baseLogo.ZIndex = 2
 	baseLogo.Parent = logoContainer
 
 	-- Spacer between logo and progress bar
@@ -312,31 +299,23 @@ function View.new(playerGui: Instance): View
 	local function applyGlow(g: number)
 		g = math.clamp(g, 0, 1)
 
-		-- Outer outline fringe (scaled 1.025x)
-		outlineGlowOuter.ImageTransparency = 0.90 - 0.75 * g
-		outlineGlowOuter.ImageColor3 = Color3.fromRGB(
-			math.floor(50 + 80 * g),
-			math.floor(95 + 115 * g),
-			math.floor(140 + 115 * g)
-		)
-
-		-- Direct outline bloom core (1x)
-		outlineGlowCore.ImageTransparency = 0.85 - 0.85 * g
-		outlineGlowCore.ImageColor3 = Color3.fromRGB(
-			math.floor(70 + 155 * g),
-			math.floor(120 + 125 * g),
-			math.floor(170 + 85 * g)
-		)
-
-		-- Base character lineart brightness (starts dim muted, reaches pure white)
-		baseLogo.ImageColor3 = Color3.fromRGB(
+		-- Outline bloom behind the character
+		outlineGlow.ImageTransparency = 0.85 - 0.80 * g
+		outlineGlow.ImageColor3 = Color3.fromRGB(
+			math.floor(80 + 175 * g),
 			math.floor(140 + 115 * g),
-			math.floor(150 + 105 * g),
-			math.floor(165 + 90 * g)
+			math.floor(200 + 55 * g)
+		)
+
+		-- Base character lineart brightness (starts clear, reaches blazing white at peak)
+		baseLogo.ImageColor3 = Color3.fromRGB(
+			math.floor(190 + 65 * g),
+			math.floor(205 + 50 * g),
+			math.floor(220 + 35 * g)
 		)
 
 		if not fading then
-			logoScale.Scale = 1.0 + 0.015 * g
+			logoScale.Scale = 1.0 + 0.02 * g
 		end
 	end
 
@@ -375,7 +354,7 @@ function View.new(playerGui: Instance): View
 	local destroyed = false
 
 	local self = {} :: View
-	self.PreloadTargets = { baseLogo, outlineGlowCore, outlineGlowOuter, status }
+	self.PreloadTargets = { baseLogo, outlineGlow, status }
 
 	function self.SetProgress(_: View, alpha: number)
 		currentProgress = math.clamp(alpha, 0, 1)
