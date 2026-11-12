@@ -5,6 +5,7 @@ local M = require(nodes["ReplicatedStorage.Assets.CombatVfx.VfxMath"])
 local Catalog = require(nodes["ReplicatedStorage.Shared.Config.SkillVfxCatalog"])
 local Skills = require(nodes["ReplicatedStorage.Shared.Config.ArchetypeCombatSkills"])
 local Timing = require(nodes["ReplicatedStorage.Shared.Util.HeroActionTiming"])
+local Clips = require(nodes["ReplicatedStorage.Assets.HeroRig.HeroClips"])
 
 local function near(a: number, b: number, msg: string, eps: number?)
 	assert(math.abs(a - b) < (eps or 1e-6), msg .. ": expected " .. tostring(b) .. ", got " .. tostring(a))
@@ -67,14 +68,14 @@ end
 
 -- Catalog -------------------------------------------------------------------------------------
 do
-	local kinds = { ARROW = true, ASTRAL = true, BOLT = true, ORB = true, VOID = true }
-	local origins = { CHEST = true, LEFT_HAND = true, STAFF_TIP = true }
+	local kinds = { ARROW = true, ASTRAL = true, BOLT = true, ORB = true, VOID = true, STARBOLT = true }
+	local origins = { CHEST = true, LEFT_HAND = true, STAFF_TIP = true, NOCK = true }
 	local impactStyles = { BURST = true, IMPLODE = true }
-	local projectileStyles = { SHOT = true, BOLT = true, VOLLEY = true, CHAIN = true, MEND = true, STORM = true }
+	local projectileStyles = { SHOT = true, BOLT = true, VOLLEY = true, CHAIN = true, MEND = true, STORM = true, PIERCER = true, CONSTELLATION = true }
 	-- Each archetype's ultimate is drawn by one style, and its radius matches the kit.
 	local skillStyle = { Marksman = "STORM", Vanguard = "BULWARK", Striker = "TEMPEST", Berserker = "CRYSTALS", Scholar = "PILLAR", Healer = "SANCTUARY" }
 	-- A hero may draw its ultimate with its own style instead of its archetype's.
-	local heroSkillStyle = { hero_han = "WAKE", hero_vane = "SINGULARITY" }
+	local heroSkillStyle = { hero_han = "WAKE", hero_vane = "SINGULARITY", hero_astrea = "CONSTELLATION" }
 	local function checkRecipe(name: string, recipe: any)
 		assert(recipe.Palette and recipe.Palette.Primary and recipe.Palette.Secondary and recipe.Palette.Core, name .. " palette")
 		for _, tier in { "Basic", "Special", "Skill" } do
@@ -159,6 +160,84 @@ do
 	assert(#waves == 8, "eight pulses")
 	near(waves[8] - waves[1], 3.5, "pulses span 3.5 s")
 	near(Catalog.Heroes.hero_vane.Skill.Radius, vane.Skill.Radius, "hole radius matches the kit")
+end
+
+-- Astrea: Nebula Piercer is one charged star-bolt off the nock; Constellation Judgment draws the
+-- Archer over the target, then drops one star per bolt in a wave per server tick.
+do
+	local astrea = Skills.GetSkillProfile("hero_astrea", "Marksman")
+	local recipe = Catalog.Heroes.hero_astrea
+	assert(recipe.Special.Style == "PIERCER" and recipe.Special.Projectile == "STARBOLT" and recipe.Special.Origin == "NOCK", "Nebula Piercer is a star-bolt from the nock")
+	assert((recipe.Special.Pierce or 0) > 0 and (recipe.Special.Linger or 0) > 0, "Nebula Piercer pierces and leaves a ribbon")
+	assert(recipe.Palette.Accent ~= nil, "Astrea's palette has its nebula indigo")
+	local special = Timing.For("hero_astrea", "BOW", "SPECIAL", astrea.Special, 0.7, 28)
+	near(special.CastSeconds, 0.7, "Nebula Piercer plays over her attack interval")
+	local clip = Clips.Get("hero_astrea", "BOW", "AttackSpecial")
+	local charge, release = Clips.Marker(clip, "Charge", -1), Clips.Marker(clip, "Release", -1)
+	assert(charge > 0 and release - charge >= 0.5, "Nebula Piercer charges for at least half the clip")
+
+	local skill = Timing.For("hero_astrea", "BOW", "SKILL", astrea.Skill, 0.7, 28)
+	near(skill.CastSeconds, 1.4, "Constellation Judgment holds her for the spin and the sky shot")
+	near(skill.ReleaseSeconds, 1.4 * 0.56, "the sky shot leaves after the spin")
+	near(skill.TravelSeconds, 0.9, "the constellation has time to draw before the first stars fall")
+	near(recipe.Skill.Radius, astrea.Skill.Radius, "constellation radius matches the kit")
+
+	-- The spin: Root keys that add up to one full turn, each under 180 degrees from the last,
+	-- finished before the release.
+	local skillClip = Clips.Get("hero_astrea", "BOW", "AttackSkill")
+	local turned, yaw, spunBy = 0, 0, 0
+	for _, key in skillClip.Keys do
+		local root = key.Pose.Root
+		local nextYaw = if root then root[2] else 0
+		local step = (nextYaw - yaw + 180) % 360 - 180
+		assert(math.abs(step) < 180, "spin keys take the short way round")
+		turned += step
+		yaw = nextYaw
+		if root then
+			spunBy = key.T
+		end
+	end
+	near(turned, 360, "Constellation Judgment spins one full turn")
+	assert(spunBy < Clips.Marker(skillClip, "Release", -1), "the spin ends before the shot")
+
+	-- The figure: every star inside the unit disc, every line between two stars and starting
+	-- from one already drawn, and every star on a line.
+	local figure = M.ARCHER
+	local ticks, gap = Timing.Ticks(astrea.Skill)
+	local waves = M.WaveTimes(skill.ImpactSeconds, ticks, gap)
+	assert(#figure.Stars % #waves == 0, "each wave drops the same number of stars")
+	local reached = { [figure.Lines[1][1]] = true }
+	for k, line in figure.Lines do
+		assert(figure.Stars[line[1]] and figure.Stars[line[2]] and line[1] ~= line[2], "line " .. k .. " joins two stars")
+		assert(reached[line[1]], "line " .. k .. " starts from a star already drawn")
+		reached[line[2]] = true
+	end
+	for i, star in figure.Stars do
+		assert(star[1] * star[1] + star[2] * star[2] <= 1, "star " .. i .. " is inside the disc")
+		assert(reached[i], "star " .. i .. " is on a line")
+	end
+	local center = Vector3.new(40, 3, -10)
+	local points = M.FigurePoints(figure, center, 14.4, Vector3.new(0, 0, -1))
+	assert(#points == #figure.Stars, "one point per star")
+	for _, point in points do
+		assert(M.Horizontal(center, point) <= 14.4 + 1e-6, "stars land inside the skill radius")
+		near(point.Y, 3, "stars are laid at aim height")
+	end
+	near(points[9].Z, -10 - figure.Stars[9][2] * 14.4, "the top of the figure points along the heading", 1e-4)
+	near(points[9].X, 40 + figure.Stars[9][1] * 14.4, "the figure is not mirrored", 1e-4)
+	local turnedPoints = M.FigurePoints(figure, center, 14.4, Vector3.new(1, 0, 0))
+	near(turnedPoints[9].X, 40 + figure.Stars[9][2] * 14.4, "the figure turns with the heading", 1e-4)
+
+	-- The trace: every line finishes by the end, and a star is lit before any line leaves it.
+	local lineStarts, lineSeconds, starAt = M.FigureTrace(figure, 10, 10.4)
+	near(lineStarts[1], 10, "the trace starts on time")
+	near(lineStarts[#lineStarts] + lineSeconds, 10.4, "the last line finishes on time")
+	for k, line in figure.Lines do
+		assert(starAt[line[1]] <= lineStarts[k] + 1e-9, "line " .. k .. " leaves a lit star")
+		assert(starAt[line[2]] <= lineStarts[k] + lineSeconds + 1e-9, "line " .. k .. " reaches a lit star")
+	end
+	local _, hurried = M.FigureTrace(figure, 10, 10)
+	assert(hurried > 0, "a late cue still draws")
 end
 
 print("combat-vfx.spec: ok")

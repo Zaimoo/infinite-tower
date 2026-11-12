@@ -12,7 +12,9 @@
 -- Lookup order for a state: Overrides[heroId] -> ByWeapon[weaponType] -> Shared.
 
 export type Pose = { [string]: { number } } -- joint -> {rx, ry, rz}; "RootOffset" -> {x, y, z}
-export type Key = { T: number, Pose: Pose }
+-- Linear: the blend into this key is linear instead of eased, so a run of keys moves at a
+-- steady rate (a full-body spin through several Root keys) instead of pausing on each one.
+export type Key = { T: number, Pose: Pose, Linear: boolean? }
 export type Clip = {
 	Duration: number, -- seconds at speed 1 (attacks are rescaled to the attack interval)
 	Looped: boolean,
@@ -74,7 +76,7 @@ end
 local function clip(duration: number, looped: boolean, keys: { { any } }): Clip
 	local list: { Key } = {}
 	for _, k in keys do
-		table.insert(list, { T = k[1], Pose = k[2] })
+		table.insert(list, { T = k[1], Pose = k[2], Linear = if k[3] == true then true else nil })
 	end
 	return { Duration = duration, Looped = looped, Keys = list }
 end
@@ -752,11 +754,15 @@ end
 -- leg with the left knee softly in.
 -- Astral Arrow (Basic): a quick, elegant draw from that stance and a release whose draw hand
 -- flows back and out in a flourish.
--- Nebula Piercer (Special): she steps into a wide archer's stance side-on, takes a long full
--- draw (Charge), and the piercing shot kicks her back half a step in recoil.
--- Constellation Judgment (Skill): she sinks to one knee and bows her head to gather the stars
--- (Charge), rises onto her toes arched back with the bow to the sky, looses, then sweeps the bow
--- down at the target zone with her right arm flung out as the constellation falls.
+-- Nebula Piercer (Special): she steps into a wide archer's stance side-on and takes a long full
+-- draw. From Charge she holds it and gathers the shot: she sinks lower, the draw creeps back
+-- past her ear and the bow trembles under the load. The release snaps the bow arm up and kicks
+-- her back half a step; she rides the recoil out and settles.
+-- Constellation Judgment (Skill): she coils against the turn, then pirouettes a full circle on
+-- her left foot with her arms flung wide (Charge, the spin is four Root keys blended at a
+-- steady rate), lands in a planted stance already raising the bow, draws to the sky arched
+-- back and looses. She holds the follow-through watching the arrow, raises her right hand to
+-- the stars as the constellation draws, and sweeps it down at the target to call them.
 do
 	local p = WeaponPoses.BOW
 	local legs: Pose = {
@@ -784,35 +790,65 @@ do
 	}
 	local sideOn = merge(merge(p.Aim, wide), { Waist = { -6, -28, 0 }, Neck = { 2, 26, 0 } })
 	local fullDraw = merge(merge(p.Drawn, wide), { Waist = { -10, -32, 0 }, Neck = { 4, 30, 0 }, RightShoulder = { 86, 30, -14 }, RightElbow = { 150, 0, 0 } })
-	local strain = merge(fullDraw, { Waist = { -12, -34, 0 }, LeftShoulder = { 92, 0, 0 } })
+	-- The held charge: deeper, further back, with a tremor between the keys.
+	local gather = merge(fullDraw, { Waist = { -12, -34, 0 }, LeftShoulder = { 92, 0, 0 }, RightElbow = { 152, 0, 0 }, RootOffset = { 0, -0.3, 0 } })
+	local tremble = merge(gather, { Waist = { -10, -32, 2 }, Neck = { 6, 31, 0 }, LeftShoulder = { 89, 0, 2 }, RightShoulder = { 87, 32, -15 } })
+	local peak = merge(gather, { Waist = { -15, -37, 0 }, Neck = { 4, 34, 0 }, LeftShoulder = { 93, 0, -1 }, RightShoulder = { 84, 35, -18 }, RightElbow = { 156, 0, 0 }, RootOffset = { 0, -0.35, 0 } })
+	local strain = merge(peak, { Waist = { -13, -36, -2 }, LeftShoulder = { 90, 0, 1 } })
 	local recoil = merge(merge(p.Release, wide), {
 		Waist = { 6, -22, 0 }, Neck = { 0, 22, 0 },
 		LeftShoulder = { 100, 0, 0 }, RightShoulder = { 60, 50, -50 }, RightElbow = { 100, 0, 0 },
 		RootOffset = { 0, -0.18, 0.25 },
 	})
+	local kick = merge(recoil, { Waist = { 11, -18, 0 }, Neck = { -4, 20, 0 }, LeftShoulder = { 114, 0, 0 }, RightShoulder = { 46, 54, -62 }, RightElbow = { 70, 0, 0 }, RootOffset = { 0, -0.14, 0.4 } })
 	local recover = merge(recoil, { LeftShoulder = { 70, 0, -8 }, RightShoulder = { 30, 30, -30 }, RightElbow = { 60, 0, 0 }, RootOffset = { 0, -0.12, 0.15 } })
 
 	-- Constellation Judgment
-	local kneel: Pose = {
-		Waist = { -14, -6, 0 }, Neck = { -14, 0, 0 },
-		LeftShoulder = { 30, 0, -20 }, LeftElbow = { 30, 0, 0 },
-		RightShoulder = { 12, 0, 12 }, RightElbow = { 40, 0, 0 },
-		LeftHip = { 70, 0, -6 }, LeftKnee = { -80, 0, 0 }, LeftAnkle = { 10, 0, 0 },
-		RightHip = { -10, 0, 6 }, RightKnee = { -100, 0, 0 }, RightAnkle = { 70, 0, 0 },
-		RootOffset = { 0, -0.75, 0 },
+	local coil: Pose = {
+		Root = { 0, -25, 0 },
+		Waist = { -8, -30, 0 }, Neck = { 0, 24, 0 },
+		LeftShoulder = { 40, 0, -20 }, LeftElbow = { 60, 0, 0 },
+		RightShoulder = { 20, 0, 30 }, RightElbow = { 50, 0, 0 },
+		LeftHip = { 25, 0, -6 }, LeftKnee = { -40, 0, 0 }, LeftAnkle = { 12, 0, 0 },
+		RightHip = { 5, 0, 6 }, RightKnee = { -35, 0, 0 }, RightAnkle = { 20, 0, 0 },
+		RootOffset = { 0, -0.35, 0 },
 	}
-	local rise = merge(p.SkyAim, {
-		Waist = { 24, -8, 0 }, Neck = { 24, 8, 0 },
-		LeftHip = { 14, 0, -4 }, LeftKnee = { -6, 0, 0 }, LeftAnkle = { 0, 0, 0 },
-		RightHip = { -10, 0, 4 }, RightKnee = { -2, 0, 0 }, RightAnkle = { 0, 0, 0 },
-		RootOffset = { 0, 0.12, 0 },
+	-- Up on the left toes, right foot tucked to the knee, arms carried wide by the turn.
+	local pirouette: Pose = {
+		Waist = { 4, 25, 0 }, Neck = { -4, 30, 0 },
+		LeftShoulder = { 25, 0, -80 }, LeftElbow = { 8, 0, 0 },
+		RightShoulder = { 25, 0, 75 }, RightElbow = { 15, 0, 0 },
+		LeftHip = { 2, 0, -2 }, LeftKnee = { -4, 0, 0 }, LeftAnkle = { 25, 0, 0 },
+		RightHip = { 35, 0, 14 }, RightKnee = { -85, 0, 0 }, RightAnkle = { 30, 0, 0 },
+		RootOffset = { 0, 0.18, 0 },
+	}
+	-- A full turn to the left. Each key is under 180 degrees from the last, so the blend
+	-- always takes the short way round and the turn never doubles back.
+	local spinA = merge(pirouette, { Root = { 0, 100, 0 } })
+	local spinB = merge(pirouette, { Root = { 0, -140, 0 }, Waist = { 6, 18, 0 }, LeftShoulder = { 60, 0, -70 }, RightShoulder = { 50, 0, 65 }, RootOffset = { 0, 0.26, 0 } })
+	local spinC = merge(pirouette, { Root = { 0, -30, 0 }, Waist = { 10, 8, 0 }, Neck = { 4, 16, 0 }, LeftShoulder = { 110, 0, -30 }, RightShoulder = { 80, 10, 30 }, RightElbow = { 40, 0, 0 }, RightHip = { 20, 0, 12 }, RightKnee = { -50, 0, 0 }, RootOffset = { 0, 0.12, 0 } })
+	local land = merge(p.SkyAim, {
+		Waist = { 14, -10, 0 }, Neck = { 14, 10, 0 },
+		LeftHip = { 26, -8, -10 }, LeftKnee = { -30, 0, 0 }, LeftAnkle = { 4, 0, 8 },
+		RightHip = { -18, 8, 10 }, RightKnee = { -14, 0, 0 }, RightAnkle = { 24, 0, -8 },
+		RootOffset = { 0, -0.22, 0 },
 	})
-	local skyDraw = merge(rise, { RightShoulder = { 140, 20, -10 }, RightElbow = { 150, 0, 0 } })
-	local loose = merge(rise, { LeftShoulder = { 155, 0, 0 }, RightShoulder = { 110, 45, -60 }, RightElbow = { 60, 0, 0 } })
+	local skyDraw = merge(land, { Waist = { 22, -10, 0 }, Neck = { 22, 10, 0 }, RightShoulder = { 140, 20, -10 }, RightElbow = { 150, 0, 0 }, RootOffset = { 0, -0.12, 0 } })
+	local skyHold = merge(skyDraw, { Waist = { 26, -12, 0 }, LeftShoulder = { 144, 0, 0 }, RightElbow = { 154, 0, 0 }, RootOffset = { 0, -0.08, 0 } })
+	local loose = merge(skyHold, { Waist = { 28, -8, 0 }, LeftShoulder = { 156, 0, 0 }, RightShoulder = { 110, 45, -60 }, RightElbow = { 60, 0, 0 }, RootOffset = { 0, 0.06, 0 } })
+	local watch = merge(loose, { Waist = { 20, -8, 0 }, Neck = { 26, 8, 0 }, LeftShoulder = { 150, 0, -6 }, RightShoulder = { 70, 30, -70 }, RightElbow = { 30, 0, 0 }, RootOffset = { 0, 0, 0 } })
+	local command: Pose = {
+		Waist = { 10, -6, 0 }, Neck = { 18, 6, 0 },
+		LeftShoulder = { 60, 0, -24 }, LeftElbow = { 20, 0, 0 },
+		RightShoulder = { 165, 0, 12 }, RightElbow = { 8, 0, 0 },
+		LeftHip = { 8, -4, -4 }, LeftKnee = { -8, 0, 0 }, LeftAnkle = { 4, 0, 0 },
+		RightHip = { -6, 0, 5 }, RightKnee = { -4, 0, 0 }, RightAnkle = { 8, 0, 0 },
+		RootOffset = { 0, 0.05, 0 },
+	}
 	local judgment: Pose = {
-		Waist = { -8, -10, 0 }, Neck = { -8, 10, 0 },
-		LeftShoulder = { 70, 0, -10 }, LeftElbow = { 5, 0, 0 },
-		RightShoulder = { 60, 0, 70 }, RightElbow = { 10, 0, 0 },
+		Waist = { -10, -12, 0 }, Neck = { -6, 10, 0 },
+		LeftShoulder = { 30, 0, -40 }, LeftElbow = { 15, 0, 0 },
+		RightShoulder = { 70, -10, 10 }, RightElbow = { 5, 0, 0 },
 		LeftHip = { 24, 0, -8 }, LeftKnee = { -26, 0, 0 }, LeftAnkle = { 4, 0, 0 },
 		RightHip = { -16, 0, 8 }, RightKnee = { -10, 0, 0 }, RightAnkle = { 20, 0, 0 },
 		RootOffset = { 0, -0.15, 0 },
@@ -828,25 +864,37 @@ do
 			{ 0.84, settle },
 			{ 1, poised },
 		}, { Release = 0.68, Nock = 0.92 }),
-		AttackSpecial = signature(1.0, {
+		-- Played over her 0.7 s attack interval, so the draw is quick and the charge takes more
+		-- than half the clip (Charge to Release).
+		AttackSpecial = signature(0.8, {
 			{ 0, poised },
-			{ 0.2, sideOn },
-			{ 0.5, fullDraw },
-			{ 0.66, strain },
+			{ 0.1, sideOn },
+			{ 0.22, fullDraw },
+			{ 0.36, gather },
+			{ 0.46, tremble },
+			{ 0.56, peak },
+			{ 0.64, strain },
+			{ 0.71, peak },
 			{ 0.74, recoil },
-			{ 0.88, recover },
+			{ 0.8, kick },
+			{ 0.9, recover },
 			{ 1, poised },
-		}, { Charge = 0.38, Release = 0.74, Nock = 0.93 }),
+		}, { Charge = 0.22, Release = 0.74, Nock = 0.94 }),
 		AttackSkill = signature(1.4, {
 			{ 0, poised },
-			{ 0.14, kneel },
-			{ 0.32, rise },
-			{ 0.5, skyDraw },
-			{ 0.6, loose },
-			{ 0.76, judgment },
-			{ 0.88, merge(judgment, { Waist = { -10, -12, 0 }, RightShoulder = { 55, 0, 76 } }) },
+			{ 0.07, coil },
+			{ 0.15, spinA, true },
+			{ 0.23, spinB, true },
+			{ 0.31, spinC, true },
+			{ 0.36, land, true },
+			{ 0.46, skyDraw },
+			{ 0.53, skyHold },
+			{ 0.56, loose },
+			{ 0.68, watch },
+			{ 0.8, command },
+			{ 0.91, judgment },
 			{ 1, poised },
-		}, { Charge = 0.18, Release = 0.6, Nock = 0.94 }),
+		}, { Charge = 0.07, Release = 0.56, Nock = 0.95 }),
 	}
 end
 

@@ -225,7 +225,7 @@ Each phase is its own branch and PR off `main` (`feat(combat): ...`).
   - `OVERRIDE_WEAPON` (exported as `HeroClips.OverrideWeapon`): a hero override now applies only while the hero holds its signature weapon. `HeroClips.Get` enforces this, and the server's `HeroActionTiming` reads clips through `Get`, so an unarmed hero uses the `UNARMED` clips and markers on both sides.
   - A signature `AttackSkill` for all 12 heroes, each with its own `Release` (bows also `Nock`):
     - Jenna: a backward wind-step leap, firing at the top of the jump.
-    - Astrea: an arched, deliberate sky shot with a held follow-through.
+    - Astrea: an arched, deliberate sky shot with a held follow-through. (Superseded 2026-11-13: see "Astrea rework" below.)
     - Aaron: shield planted in a braced stance.
     - Ignis: a two-armed roar.
     - Morrigan: sword driven into the ground from one knee.
@@ -260,6 +260,14 @@ Each phase is its own branch and PR off `main` (`feat(combat): ...`).
 - `tests/combat-vfx.spec.luau`: every hero and weapon has valid styles and projectiles, all 12 heroes are covered, each ultimate's style matches its archetype, and each ultimate's radius matches its kit.
 - Not built yet: dedicated Healer heal-ring and Scholar meteor projectiles. `PILLAR` draws the meteor as a column of light.
 - Playtest tweak: slashes looked small. Every crescent now goes through `SLASH_SIZE = 1.7` in `SkillVfx`, giving a basic slash about a 3.7-stud radius. `SlashArc`'s band is about twice as wide (0.3 × radius), thicker, and spans 165°.
+
+#### Astrea rework (2026-11-13)
+- **Nebula Piercer** is the `PIERCER` Special style: one `STARBOLT` projectile (white needle, violet sheath, four-point glint, a `Sparks` ParticleEmitter and two trails) from the live `NOCK` cast point, with a `chargeBolt` wind-up from the clip's `Charge` marker (0.22) to `Release` (0.74). The lingering ribbon is the new `VfxPrimitives.Ribbon` (12 segments that appear as the bolt passes, then drift, spread and cool), because a pooled projectile's own trails vanish when it is released.
+- **Constellation Judgment** is the `CONSTELLATION` Skill style. `VfxMath.ARCHER` is the figure (pure data, checked by the spec); `VfxMath.FigurePoints` lays it over the aim point facing away from the caster and `VfxMath.FigureTrace` times the pen. `VfxPrimitives.Constellation` draws all stars, halos and lines as one pooled model and one effect, so the whole figure costs one slot of the 160-effect budget; the 16 falling bolts are ordinary flights.
+- Her kit sets `CastSeconds = 1.4` and `TravelSeconds = 0.9` on the Skill so the spin fits before the shot and the figure has about 0.5 s to draw before the first wave.
+- Clips: `Key.Linear` (third element of a key) blends into that key at a steady rate. Her 360° spin is four `Root` yaw keys (100°, -140°, -30°, 0°), each under 180° from the last so the blend never doubles back.
+- `VfxPool` now switches ParticleEmitters on and off with trails, and clears them, when a body is shown or parked.
+- Not yet checked in Studio: sizes and timings are first-pass numbers in `SkillVfxCatalog.Heroes.hero_astrea`.
 
 ### Phase 6: Polish and budget
 - Culling, caps, mobile check (`studio-part3-mobile-client.luau`), and the multiplayer check with 6 squads in a room (`studio-part3-multiplayer-*`). MicroProfiler label `CombatVfx.Step` under 1 ms at 30 heroes.
