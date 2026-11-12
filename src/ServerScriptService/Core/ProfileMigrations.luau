@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local HeroCatalog = require(ReplicatedStorage.Shared.Config.HeroCatalog)
 local FortressTree = require(ReplicatedStorage.Shared.Util.FortressTree)
 local Onboarding = require(ReplicatedStorage.Shared.Util.Onboarding)
+local SettingsConfig = require(ReplicatedStorage.Shared.Config.SettingsConfig)
 
 local ProfileMigrations = {}
 
@@ -129,6 +130,7 @@ function ProfileMigrations.Run(profile: any)
 		profile.SchemaVersion = 6
 	end
 	ProfileMigrations.ToV7(profile)
+	profile.Settings = SettingsConfig.Sanitize(profile.Settings)
 end
 
 return ProfileMigrations

@@ -33,8 +33,49 @@ local Body = SettingsComponents.Body
 
 local Grimoire = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("GildedGrimoire"))
 local Icons = require(script.Parent.Parent:WaitForChild("Hud"):WaitForChild("Icons"))
+local Store = require(script.Parent.Parent:WaitForChild("Hud"):WaitForChild("Store"))
+
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local SyndicateRemotes = Remotes:WaitForChild("SyndicateRemotes")
+local SaveUserSettingsFunc = SyndicateRemotes:FindFirstChild("SaveUserSettings") :: RemoteFunction?
+if not SaveUserSettingsFunc then
+	task.spawn(function()
+		SaveUserSettingsFunc = SyndicateRemotes:WaitForChild("SaveUserSettings", 10) :: RemoteFunction?
+	end)
+end
 
 local LocalPlayer = Players.LocalPlayer
+
+local function readInitialSettings(): SettingsConfig.SettingsState
+	local base = table.clone(SettingsConfig.DEFAULTS)
+	local prof = Store.Profile or _G.CurrentProfile
+	if prof and type(prof.Settings) == "table" then
+		return SettingsConfig.Sanitize(prof.Settings)
+	end
+	if LocalPlayer:GetAttribute("Settings_MasterVolume") ~= nil then
+		base.Sound = (LocalPlayer:GetAttribute("Settings_MasterVolume") :: number?) or base.Sound
+		base.Music = (LocalPlayer:GetAttribute("Settings_MusicVolume") :: number?) or base.Music
+		base.Ambience = (LocalPlayer:GetAttribute("Settings_AmbienceVolume") :: number?) or base.Ambience
+		base.MuteSFX = (LocalPlayer:GetAttribute("Settings_MuteSFX") :: boolean?) or false
+		base.MuteMusic = (LocalPlayer:GetAttribute("Settings_MuteMusic") :: boolean?) or false
+		base.MuteAmbience = (LocalPlayer:GetAttribute("Settings_MuteAmbience") :: boolean?) or false
+		base.FOV = (LocalPlayer:GetAttribute("Settings_FOV") :: number?) or base.FOV
+		base.Brightness = (LocalPlayer:GetAttribute("Settings_Brightness") :: number?) or base.Brightness
+		base.GlobalShadows = if LocalPlayer:GetAttribute("Settings_GlobalShadows") ~= nil then LocalPlayer:GetAttribute("Settings_GlobalShadows") == true else base.GlobalShadows
+		base.Bloom = if LocalPlayer:GetAttribute("Settings_Bloom") ~= nil then LocalPlayer:GetAttribute("Settings_Bloom") == true else base.Bloom
+		base.ColorFX = if LocalPlayer:GetAttribute("Settings_ColorFX") ~= nil then LocalPlayer:GetAttribute("Settings_ColorFX") == true else base.ColorFX
+		base.CompactMode = (LocalPlayer:GetAttribute("Settings_CompactMode") :: boolean?) or false
+		base.ShowNotifications = if LocalPlayer:GetAttribute("Settings_ShowNotifications") ~= nil then LocalPlayer:GetAttribute("Settings_ShowNotifications") == true else base.ShowNotifications
+		base.DamageNumbers = if LocalPlayer:GetAttribute("Settings_DamageNumbers") ~= nil then LocalPlayer:GetAttribute("Settings_DamageNumbers") == true else base.DamageNumbers
+		base.ReduceMotion = (LocalPlayer:GetAttribute("Settings_ReduceMotion") :: boolean?) or false
+		base.HighContrast = (LocalPlayer:GetAttribute("Settings_HighContrast") :: boolean?) or false
+		base.LivePreview = if LocalPlayer:GetAttribute("Settings_LivePreview") ~= nil then LocalPlayer:GetAttribute("Settings_LivePreview") == true else base.LivePreview
+		base.Scale = (LocalPlayer:GetAttribute("Settings_Scale") :: number?) or base.Scale
+		base.Theme = ((LocalPlayer:GetAttribute("Settings_Theme") :: any) or base.Theme)
+		base.Font = ((LocalPlayer:GetAttribute("Settings_Font") :: any) or base.Font)
+	end
+	return SettingsConfig.Sanitize(base)
+end
 
 local setIsOpenGlobal: ((boolean) -> ())? = nil
 local isCurrentlyOpen = false
@@ -102,8 +143,9 @@ local function SettingsApp()
 	local statusMsg, setStatusMsg = useState("Ready.")
 	-- `settings` is the draft: it previews live while the window is open. `applied` is what the
 	-- player kept with Apply. Closing with a different draft asks before throwing it away.
-	local settings, setSettings = useState(table.clone(SettingsConfig.DEFAULTS))
-	local applied, setApplied = useState(table.clone(SettingsConfig.DEFAULTS))
+	local initialSettings = readInitialSettings()
+	local settings, setSettings = useState(table.clone(initialSettings))
+	local applied, setApplied = useState(table.clone(initialSettings))
 	local confirmDiscard, setConfirmDiscard = useState(false)
 	local dirty = not sameSettings(settings, applied)
 	local dirtyRef = React.useRef(false)
@@ -137,6 +179,23 @@ local function SettingsApp()
 	useEffect(function()
 		SettingsAudioEngine.init()
 		SettingsGraphicsEngine.init()
+	end, {})
+
+	-- Synchronize settings when profile arrives from server
+	useEffect(function()
+		local synced = false
+		local function onProfileSync()
+			local prof = Store.Profile or _G.CurrentProfile
+			if prof and type(prof.Settings) == "table" and not synced and not dirtyRef.current then
+				synced = true
+				local clean = SettingsConfig.Sanitize(prof.Settings)
+				setApplied(table.clone(clean))
+				setSettings(table.clone(clean))
+			end
+		end
+		local conn = Store.Changed:Connect(onProfileSync)
+		onProfileSync()
+		return function() conn:Disconnect() end
 	end, {})
 
 	useEffect(function()
@@ -305,49 +364,76 @@ local function SettingsApp()
 		setStatusMsg("Defaults loaded. Press Apply to keep them.")
 	end, {})
 
+	local saveToServer = useCallback(function(targetSettings: any)
+		task.spawn(function()
+			local remote = SaveUserSettingsFunc or (SyndicateRemotes and SyndicateRemotes:FindFirstChild("SaveUserSettings") :: RemoteFunction?)
+			if remote then
+				pcall(function()
+					return remote:InvokeServer(targetSettings)
+				end)
+			end
+		end)
+	end, {})
+
 	local applySettings = useCallback(function()
-		setApplied(table.clone(settings))
-		setStatusMsg("Settings applied.")
+		local toSave = table.clone(settings)
+		setApplied(toSave)
+		setStatusMsg("Saving settings...")
+		task.spawn(function()
+			local remote = SaveUserSettingsFunc or (SyndicateRemotes and SyndicateRemotes:FindFirstChild("SaveUserSettings") :: RemoteFunction?)
+			if remote then
+				local ok, res = pcall(function()
+					return remote:InvokeServer(toSave)
+				end)
+				if ok and res and res.Success then
+					setStatusMsg("Settings applied & saved permanently.")
+				else
+					setStatusMsg("Settings applied.")
+				end
+			else
+				setStatusMsg("Settings applied.")
+			end
+		end)
 	end, { settings })
 
 	local applyPreset = useCallback(function(name: string)
 		if name == "Quiet" then
-			setSettings(function(prev)
-				local c = table.clone(prev)
-				c.Sound = 0.0
-				c.Music = 0.0
-				c.Ambience = 0.0
-				c.MuteSFX = true
-				c.MuteMusic = true
-				c.MuteAmbience = true
-				return c
-			end)
-			setStatusMsg("Quiet Mode loaded (all audio silenced). Press Apply to keep it.")
+			local c = table.clone(settings)
+			c.Sound = 0.0
+			c.Music = 0.0
+			c.Ambience = 0.0
+			c.MuteSFX = true
+			c.MuteMusic = true
+			c.MuteAmbience = true
+			setSettings(c)
+			setApplied(c)
+			saveToServer(c)
+			setStatusMsg("Quiet Mode active & saved permanently.")
 		elseif name == "Performance" then
-			setSettings(function(prev)
-				local c = table.clone(prev)
-				c.Quality = "Low"
-				c.GlobalShadows = false
-				c.Bloom = false
-				c.ColorFX = false
-				c.ReduceMotion = true
-				return c
-			end)
-			setStatusMsg("Max Performance loaded (effects trimmed). Press Apply to keep it.")
+			local c = table.clone(settings)
+			c.Quality = "Low"
+			c.GlobalShadows = false
+			c.Bloom = false
+			c.ColorFX = false
+			c.ReduceMotion = true
+			setSettings(c)
+			setApplied(c)
+			saveToServer(c)
+			setStatusMsg("Max Performance active & saved permanently.")
 		elseif name == "Cinematic" then
-			setSettings(function(prev)
-				local c = table.clone(prev)
-				c.Quality = "High"
-				c.GlobalShadows = true
-				c.Bloom = true
-				c.ColorFX = true
-				c.FOV = 75
-				c.Brightness = 0.25
-				return c
-			end)
-			setStatusMsg("Cinematic loaded (shadows, bloom and color FX). Press Apply to keep it.")
+			local c = table.clone(settings)
+			c.Quality = "High"
+			c.GlobalShadows = true
+			c.Bloom = true
+			c.ColorFX = true
+			c.FOV = 75
+			c.Brightness = 0.25
+			setSettings(c)
+			setApplied(c)
+			saveToServer(c)
+			setStatusMsg("Cinematic loaded & saved permanently.")
 		end
-	end, {})
+	end, { settings, saveToServer })
 
 	----------------------------------------------------------------------------
 	-- 4. Tab Content Pages

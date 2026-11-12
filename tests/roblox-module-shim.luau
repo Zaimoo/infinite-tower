@@ -152,3 +152,12 @@ cframeMeta.__index = function(t, k)
 	return cframeMeta[k]
 end
 local Vector2 = {new=function(x,y) return {X=x,Y=y} end}
+local Enum = setmetatable({}, {
+	__index = function(_, enumName)
+		return setmetatable({}, {
+			__index = function(_, itemName)
+				return itemName
+			end,
+		})
+	end,
+})

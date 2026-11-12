@@ -232,14 +232,48 @@ function SettingsAudioEngine.init()
 	if isInitialized then return end
 	isInitialized = true
 
+	local localPlayer = Players.LocalPlayer
+	if localPlayer then
+		local function syncFromAttributes()
+			local snd = localPlayer:GetAttribute("Settings_MasterVolume")
+			if typeof(snd) == "number" then currentSoundVolume = math.clamp(snd, 0, 1) end
+			local mus = localPlayer:GetAttribute("Settings_MusicVolume")
+			if typeof(mus) == "number" then currentMusicVolume = math.clamp(mus, 0, 1) end
+			local amb = localPlayer:GetAttribute("Settings_AmbienceVolume")
+			if typeof(amb) == "number" then currentAmbienceVolume = math.clamp(amb, 0, 1) end
+
+			currentMuteSFX = localPlayer:GetAttribute("Settings_MuteSFX") == true
+			currentMuteMusic = localPlayer:GetAttribute("Settings_MuteMusic") == true
+			currentMuteAmbience = localPlayer:GetAttribute("Settings_MuteAmbience") == true
+
+			SettingsAudioEngine.updateVolumes(
+				currentSoundVolume,
+				currentMusicVolume,
+				currentAmbienceVolume,
+				currentMuteSFX,
+				currentMuteMusic,
+				currentMuteAmbience
+			)
+		end
+
+		syncFromAttributes()
+
+		localPlayer:GetAttributeChangedSignal("Settings_MasterVolume"):Connect(syncFromAttributes)
+		localPlayer:GetAttributeChangedSignal("Settings_MusicVolume"):Connect(syncFromAttributes)
+		localPlayer:GetAttributeChangedSignal("Settings_AmbienceVolume"):Connect(syncFromAttributes)
+		localPlayer:GetAttributeChangedSignal("Settings_MuteSFX"):Connect(syncFromAttributes)
+		localPlayer:GetAttributeChangedSignal("Settings_MuteMusic"):Connect(syncFromAttributes)
+		localPlayer:GetAttributeChangedSignal("Settings_MuteAmbience"):Connect(syncFromAttributes)
+	end
+
 	-- Ensure Master SoundGroups
 	local sgSFX = getSoundGroup("SG_SFX")
 	local sgMusic = getSoundGroup("SG_Music")
 	local sgAmbience = getSoundGroup("SG_Ambience")
 
-	sgSFX.Volume = currentSoundVolume
-	sgMusic.Volume = currentMusicVolume
-	sgAmbience.Volume = currentAmbienceVolume
+	sgSFX.Volume = if currentMuteSFX then 0 else currentSoundVolume
+	sgMusic.Volume = if currentMuteMusic then 0 else currentMusicVolume
+	sgAmbience.Volume = if currentMuteAmbience then 0 else currentAmbienceVolume
 
 	-- Scan existing sounds in Workspace, SoundService, and LocalPlayer PlayerGui
 	local function scan(container: Instance)
