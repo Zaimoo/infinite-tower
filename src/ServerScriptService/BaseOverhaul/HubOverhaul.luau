@@ -27,7 +27,7 @@ local CloisterBuilder = require(BaseOverhaulFolder:WaitForChild("CloisterBuilder
 local SharedLeaderboards = require(BaseOverhaulFolder:WaitForChild("SharedLeaderboards"))
 
 local HubOverhaul = {}
-HubOverhaul.Version = 23 -- Bump to force a rebuild of baked geometry (23: solid Commons, 8 plots)
+HubOverhaul.Version = 25 -- Bump to force a rebuild of baked geometry (25: stepped tower, crown spire, cloud bank clear of the hub)
 
 -- Runtime cleanup sweep to destroy pre-baked light shaft beams, god-ray attachments, and SunRays
 function HubOverhaul.CleanupLightShaftsAndRays()
