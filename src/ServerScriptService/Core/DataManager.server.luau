@@ -32,6 +32,7 @@ local ProfilePersistence = require(script.Parent:WaitForChild("ProfilePersistenc
 local ForgeTransactions = require(script.Parent:WaitForChild("ForgeTransactions"))
 local TowerFloorService = require(script.Parent:WaitForChild("TowerFloorService"))
 local RaidConfig = require(Shared:WaitForChild("Config"):WaitForChild("RaidConfig"))
+local SettingsConfig = require(Shared:WaitForChild("Config"):WaitForChild("SettingsConfig"))
 local forgeTransactions = ForgeTransactions.new({
 	Clock = function() return workspace:GetServerTimeNow() end,
 	GenerateToken = function() return HttpService:GenerateGUID(false) end,
@@ -55,6 +56,39 @@ end
 
 local ProfileDeltaSyncEvent = SyndicateRemotes:WaitForChild("ProfileDeltaSync") :: RemoteEvent
 local SystemToastEvent = SyndicateRemotes:WaitForChild("SystemToast") :: RemoteEvent
+
+local SaveUserSettingsFunc = SyndicateRemotes:FindFirstChild("SaveUserSettings") :: RemoteFunction?
+if not SaveUserSettingsFunc then
+	SaveUserSettingsFunc = Instance.new("RemoteFunction")
+	SaveUserSettingsFunc.Name = "SaveUserSettings"
+	SaveUserSettingsFunc.Parent = SyndicateRemotes
+end
+
+local lastSettingsSave: { [Player]: number } = {}
+
+local function applySettingsAttributes(player: Player, s: SettingsConfig.SettingsState?)
+	local clean = s or SettingsConfig.DEFAULTS
+	player:SetAttribute("Settings_MasterVolume", clean.Sound)
+	player:SetAttribute("Settings_MusicVolume", clean.Music)
+	player:SetAttribute("Settings_AmbienceVolume", clean.Ambience)
+	player:SetAttribute("Settings_MuteSFX", clean.MuteSFX)
+	player:SetAttribute("Settings_MuteMusic", clean.MuteMusic)
+	player:SetAttribute("Settings_MuteAmbience", clean.MuteAmbience)
+	player:SetAttribute("Settings_FOV", clean.FOV)
+	player:SetAttribute("Settings_Brightness", clean.Brightness)
+	player:SetAttribute("Settings_GlobalShadows", clean.GlobalShadows)
+	player:SetAttribute("Settings_Bloom", clean.Bloom)
+	player:SetAttribute("Settings_ColorFX", clean.ColorFX)
+	player:SetAttribute("Settings_ShowNotifications", clean.ShowNotifications)
+	player:SetAttribute("Settings_DamageNumbers", clean.DamageNumbers)
+	player:SetAttribute("Settings_CompactMode", clean.CompactMode)
+	player:SetAttribute("Settings_ReduceMotion", clean.ReduceMotion)
+	player:SetAttribute("Settings_HighContrast", clean.HighContrast)
+	player:SetAttribute("Settings_LivePreview", clean.LivePreview)
+	player:SetAttribute("Settings_Scale", clean.Scale)
+	player:SetAttribute("Settings_Theme", clean.Theme)
+	player:SetAttribute("Settings_Font", clean.Font)
+end
 
 local ArtifactRemotes = Remotes:FindFirstChild("ArtifactRemotes")
 if not ArtifactRemotes then
@@ -239,6 +273,33 @@ local DataManager = {}
 _G.DataManager = DataManager
 print("[DataManager] _G.DataManager registered at line 145")
 local ActiveProfiles: { [Player]: PlayerProfile } = {}
+
+function DataManager.ApplySettingsAttributes(player: Player, s: SettingsConfig.SettingsState?)
+	applySettingsAttributes(player, s)
+end
+
+SaveUserSettingsFunc.OnServerInvoke = function(player: Player, rawSettings: any): { Success: boolean, Settings: SettingsConfig.SettingsState? }
+	local profile = ActiveProfiles[player]
+	if not profile then
+		return { Success = false }
+	end
+
+	local now = os.clock()
+	if now - (lastSettingsSave[player] or 0) < 0.25 then
+		return { Success = false }
+	end
+	lastSettingsSave[player] = now
+
+	local clean = SettingsConfig.Sanitize(rawSettings)
+	profile.Settings = clean
+	applySettingsAttributes(player, clean)
+
+	task.spawn(function()
+		DataManager.SaveProfile(player)
+	end)
+
+	return { Success = true, Settings = clean }
+end
 
 -- Support facilities start at level 0 (not built) until the Fortress Tree raises them.
 local function createDefaultFacility(level: number?): FacilityData
@@ -619,6 +680,7 @@ function DataManager.SyncProfile(player: Player, progressionOnly: boolean?)
 		_G.CombatSimulation.RefreshPlayerHeroStats(player)
 	end
 	DataManager.UpdateSquadPower(player)
+	DataManager.ApplySettingsAttributes(player, profile.Settings)
 	forgeTransactions.Snapshot(profile)
 	ProfileDeltaSyncEvent:FireClient(player, profile)
 	OnboardingService.Push(player)
@@ -1771,6 +1833,7 @@ local function onPlayerAdded(player: Player)
 	ActiveProfiles[player] = profile
 	persistentPlayers[player] = loaded.Persistent or nil
 	releasedPlayers[player] = nil
+	DataManager.ApplySettingsAttributes(player, profile.Settings)
 	-- Claim the new player's record right away so the first visit survives a crash.
 	if loaded.Persistent and not loaded.Data then task.spawn(DataManager.SaveProfile, player) end
 
@@ -1804,6 +1867,7 @@ Players.PlayerRemoving:Connect(function(player: Player)
 	FortressTreeService.Forget(player)
 	lastLeaderstatsWrite[player] = nil
 	pendingCombatSync[player] = nil
+	lastSettingsSave[player] = nil
 	ActiveProfiles[player] = nil
 	persistentPlayers[player] = nil
 	releasedPlayers[player] = nil

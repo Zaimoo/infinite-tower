@@ -8,6 +8,7 @@ local HeroCatalog = require(ReplicatedStorage.Shared.Config.HeroCatalog)
 local FortressTree = require(ReplicatedStorage.Shared.Util.FortressTree)
 local Onboarding = require(ReplicatedStorage.Shared.Util.Onboarding)
 local RewardRules = require(ReplicatedStorage.Shared.Util.RewardRules)
+local SettingsConfig = require(ReplicatedStorage.Shared.Config.SettingsConfig)
 
 local ProfileMigrations = {}
 
@@ -139,6 +140,7 @@ function ProfileMigrations.Run(profile: any)
 	end
 	ProfileMigrations.ToV7(profile)
 	ProfileMigrations.ToV8(profile)
+	profile.Settings = SettingsConfig.Sanitize(profile.Settings)
 end
 
 return ProfileMigrations
