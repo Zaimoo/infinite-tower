@@ -51,7 +51,7 @@ SettingsConfig.DEFAULTS = table.freeze({
 	Quality = "High" :: QualityName,
 	Brightness = 0.20,
 	FOV = 70,
-	GlobalShadows = true,
+	GlobalShadows = false, -- sun shadows cost ~20% of the hub frame; players can turn them on in Settings
 	Bloom = true,
 	ColorFX = true,
 

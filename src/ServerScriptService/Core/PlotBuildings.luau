@@ -15,7 +15,7 @@ local FacilityPresence = require(script.Parent:WaitForChild("FacilityPresence"))
 local StaticGeometry = require(script.Parent:WaitForChild("StaticGeometry"))
 local FacilityConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("FacilityConfig"))
 
-local VERSION = 33 -- 33: Synthesis Chamber interior Cauldron & Grimoire Lectern replacing anvil
+local VERSION = 34 -- 34: no dark smoke plume over the Blacksmith Forge chimney (33: Synthesis Chamber Cauldron & Lectern)
 
 local function attachPrompt(
 	parent: Instance,

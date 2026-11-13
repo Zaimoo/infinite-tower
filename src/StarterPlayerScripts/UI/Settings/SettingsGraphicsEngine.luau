@@ -6,7 +6,7 @@
 -- 2. Lighting Brightness + dedicated SettingsBrightnessCC ColorCorrectionEffect
 -- 3. Global Dynamic Shadows + Workspace PointLight/SpotLight/SurfaceLight toggle
 -- 4. Bloom & Glow Effects across all Lighting bloom/sunrays/DoF effects
--- 5. Atmospheric Color Correction across environmental CC and Atmosphere density/haze
+-- 5. Colour FX: the scene's own colour grade and Atmosphere density/haze (no extra grade of its own)
 -- 6. Dynamic Glass Blur (SettingsGlassBlur) with smooth 0.18s open/close tweens
 
 local Lighting = game:GetService("Lighting")
@@ -25,8 +25,6 @@ local isInitialized = false
 local isSettingFOV = false
 
 local brightnessCC: ColorCorrectionEffect
-local localBloom: BloomEffect
-local localColor: ColorCorrectionEffect
 local glassBlur: BlurEffect
 
 local trackedLights: { [Light]: boolean } = {}
@@ -41,6 +39,13 @@ local function ensureEffect<T>(className: string, name: string): T
 	inst.Name = name
 	inst.Parent = Lighting
 	return inst :: any
+end
+
+-- The hub/tower colour grade (TowerStormColorCorrection and the like). The Settings menu's own effects and the
+-- HUD's modal focus effect are excluded: force-enabling ModalFocusColorCorrection left its extra contrast on
+-- the screen after every popup closed.
+local function isSceneGrade(effect: Instance): boolean
+	return string.sub(effect.Name, 1, 8) ~= "Settings" and string.sub(effect.Name, 1, 10) ~= "ModalFocus"
 end
 
 local function applyLightShadow(light: Light)
@@ -99,12 +104,6 @@ end
 function SettingsGraphicsEngine.updateBloom(enabled: boolean)
 	currentBloom = enabled
 
-	if localBloom then
-		localBloom.Enabled = enabled
-		localBloom.Intensity = 0.50
-		localBloom.Size = 18
-	end
-
 	for _, child in ipairs(Lighting:GetChildren()) do
 		if (child:IsA("BloomEffect") or child:IsA("DepthOfFieldEffect"))
 			and child.Name ~= "SettingsGlassBlur" then
@@ -120,14 +119,8 @@ end
 function SettingsGraphicsEngine.updateColorCorrection(enabled: boolean)
 	currentColorFX = enabled
 
-	if localColor then
-		localColor.Enabled = enabled
-		localColor.Contrast = 0.04
-		localColor.Saturation = 0.02
-	end
-
 	for _, child in ipairs(Lighting:GetChildren()) do
-		if child:IsA("ColorCorrectionEffect") and child.Name ~= "SettingsBrightnessCC" and child.Name ~= "SettingsLocalColor" then
+		if child:IsA("ColorCorrectionEffect") and isSceneGrade(child) then
 			child.Enabled = enabled
 		end
 	end
@@ -183,15 +176,19 @@ function SettingsGraphicsEngine.init()
 	brightnessCC.Brightness = 0.0
 	brightnessCC.Enabled = true
 
-	localBloom = ensureEffect("BloomEffect", "SettingsLocalBloom")
-	localBloom.Intensity = 0.50
-	localBloom.Size = 18
-	localBloom.Enabled = true
+	-- No bloom of its own: the hub presets' TowerStormBloom is the only bloom, and the Bloom toggle switches it.
+	-- A second bloom here doubled the glow on every neon surface.
+	local oldBloom = Lighting:FindFirstChild("SettingsLocalBloom")
+	if oldBloom then
+		oldBloom:Destroy()
+	end
 
-	localColor = ensureEffect("ColorCorrectionEffect", "SettingsLocalColor")
-	localColor.Contrast = 0.04
-	localColor.Saturation = 0.02
-	localColor.Enabled = true
+	-- No extra grade of its own either: SettingsLocalColor stacked contrast on top of the preset, so the game
+	-- looked harsher than the place in Edit mode.
+	local oldColor = Lighting:FindFirstChild("SettingsLocalColor")
+	if oldColor then
+		oldColor:Destroy()
+	end
 
 	glassBlur = ensureEffect("BlurEffect", "SettingsGlassBlur")
 	glassBlur.Size = 0
