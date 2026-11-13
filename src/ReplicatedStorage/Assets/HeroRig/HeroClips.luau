@@ -1710,8 +1710,9 @@ end
 
 -- Caspian (SWORD_SHIELD). Idle, from his reference art: standing tall with his feet apart, the
 -- sword hanging low in his right hand with the blade angled down across his front, and the
--- shield at his left side; his walk keeps the same arms. Gilt Edge: the sword up high on his
--- right, then a diagonal cut down across. Polished Bash: he turns away, pulling the shield back,
+-- shield at his left side; his walk keeps the same arms. Gilt Edge: a diagonal slash: he turns
+-- right with the sword cocked high over his right shoulder, then turns into the strike and
+-- sweeps the blade down across his body to low on his left, and follows through. Polished Bash: he turns away, pulling the shield back,
 -- then steps in and drives it forward (the shield flashes like a mirror). Looking-Glass
 -- Bulwark: he plants the shield in front of him and raises the sword overhead as the glass wall
 -- rises.
@@ -1730,12 +1731,20 @@ do
 	Overrides.hero_caspian = {
 		Idle = breathe(stand, 3.6),
 		Move = walk(arms),
-		AttackBasic = signature(0.75, {
+		AttackBasic = signature(0.8, {
 			{ 0, stand },
-			{ 0.38, merge(p.High, { RightShoulder = { 150, 0, 15 } }) }, -- sword up high on his right
-			{ 0.6, p.Cut }, -- diagonal cut down across
+			{ 0.3, merge(stand, { Waist = { 6, -30, 0 }, Neck = { 2, 20, 0 },
+				RightShoulder = { 150, 0, 45 }, RightElbow = { 95, 0, 0 }, RightWrist = { 0, 0, 0 } }) }, -- cocked high over his right shoulder
+			{ 0.48, merge(stand, { Waist = { -12, 25, 0 }, Neck = { 0, -15, 0 },
+				RightShoulder = { 72, 0, -18 }, RightElbow = { 5, 0, 0 }, RightWrist = { -95, 0, 0 },
+				LeftHip = { 18, 0, -8 }, LeftKnee = { -20, 0, 0 }, RightHip = { -12, 0, 8 }, RightKnee = { -16, 0, 0 },
+				RootOffset = { 0, -0.1, -0.3 } }) }, -- the cut, down across the body
+			{ 0.64, merge(stand, { Waist = { -14, 35, 0 }, Neck = { 0, -20, 0 },
+				RightShoulder = { 40, 0, -40 }, RightElbow = { 10, 0, 0 }, RightWrist = { -80, 0, 0 },
+				LeftHip = { 18, 0, -8 }, LeftKnee = { -20, 0, 0 }, RightHip = { -12, 0, 8 }, RightKnee = { -16, 0, 0 },
+				RootOffset = { 0, -0.1, -0.3 } }) }, -- follow-through, blade low on his left
 			{ 1, stand },
-		}, { Release = 0.6 }),
+		}, { Release = 0.48 }),
 		AttackSpecial = signature(0.9, {
 			{ 0, stand },
 			{ 0.35, merge(p.Guard, { Waist = { 4, 30, 0 }, LeftShoulder = { 40, -40, -10 }, LeftElbow = { 100, 0, 0 } }) }, -- shield pulled back
