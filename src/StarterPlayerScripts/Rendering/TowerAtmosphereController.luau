@@ -171,14 +171,15 @@ local function spawnFogBaseParticles(att: Attachment)
 		NumberSequenceKeypoint.new(1.0, 1.0),
 	})
 	rollingFog.Size = NumberSequence.new({
-		NumberSequenceKeypoint.new(0.0, 60),
-		NumberSequenceKeypoint.new(0.5, 110),
-		NumberSequenceKeypoint.new(1.0, 160),
+		NumberSequenceKeypoint.new(0.0, 40),
+		NumberSequenceKeypoint.new(0.5, 75),
+		NumberSequenceKeypoint.new(1.0, 110),
 	})
 	rollingFog.Lifetime = NumberRange.new(9, 14)
-	-- One socket per cloud (about 50), so each emits only a little and the mist stays close to it
+	-- One socket per cloud (about 35), so each emits very little: at Rate 2 with 60-160 stud puffs the
+	-- bank held ~800 screen-sized translucent quads and the overdraw alone dropped the hub to ~10 FPS
 	rollingFog.Speed = NumberRange.new(1.5, 5)
-	rollingFog.Rate = 2
+	rollingFog.Rate = 0.6
 	rollingFog.Acceleration = Vector3.new(0, 1.2, 0) -- smoke lifts gently off the bank
 	rollingFog.SpreadAngle = Vector2.new(180, 20)
 	rollingFog.Rotation = NumberRange.new(0, 360)

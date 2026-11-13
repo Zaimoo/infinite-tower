@@ -427,7 +427,7 @@ local function SettingsApp()
 			c.Bloom = true
 			c.ColorFX = true
 			c.FOV = 75
-			c.Brightness = 0.25
+			c.Brightness = 0.20 -- 0.20 is the place's own brightness (1.65); higher washes the scene out
 			setSettings(c)
 			setApplied(c)
 			saveToServer(c)

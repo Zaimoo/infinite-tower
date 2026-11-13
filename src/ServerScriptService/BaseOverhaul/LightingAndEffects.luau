@@ -8,6 +8,7 @@ local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local HubLighting = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("HubLighting"))
+local SettingsConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("SettingsConfig"))
 
 local LightingAndEffects = {}
 
@@ -29,15 +30,20 @@ function LightingAndEffects.Apply(customConfig: { [string]: any }?)
 		end
 	end
 
+	-- Roblox's unified lighting replaced Lighting.Technology with LightingStyle + PrioritizeLightingQuality;
+	-- lighting quality now follows each player's graphics level. The place file's own
+	-- PrioritizeLightingQuality can win over the write below, so untick it in Studio too.
 	local lightingAny: any = Lighting
-	pcall(function()
-		lightingAny.Technology = Enum.Technology.Future
-	end)
+	-- Separate pcalls: LightingStyle may be locked to plugins too, and a throw there must not skip the rest
 	pcall(function()
 		lightingAny.LightingStyle = Enum.LightingStyle.Realistic
-		lightingAny.PrioritizeLightingQuality = true
 	end)
-	Lighting.GlobalShadows = true
+	pcall(function()
+		-- false lets lower graphics levels scale lighting down; at high quality nothing changes
+		lightingAny.PrioritizeLightingQuality = false
+	end)
+	-- Baseline for everyone; each client then applies its own Settings choice (default off)
+	Lighting.GlobalShadows = SettingsConfig.DEFAULTS.GlobalShadows
 
 	Lighting.ClockTime = cfg.ClockTime
 	Lighting.Brightness = cfg.Brightness

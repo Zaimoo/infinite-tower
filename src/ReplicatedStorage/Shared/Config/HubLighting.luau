@@ -62,9 +62,9 @@ local Presets: { [string]: Preset } = {
 		Saturation = -0.10,
 		BrightnessOffset = 0.01,
 
-		BloomIntensity = 0.45,
+		BloomIntensity = 0.25,
 		BloomSize = 24,
-		BloomThreshold = 1.05,
+		BloomThreshold = 1.25,
 
 		SunRaysIntensity = 0,
 		SunRaysSpread = 0,
@@ -92,9 +92,9 @@ local Presets: { [string]: Preset } = {
 		Saturation = -0.12,
 		BrightnessOffset = 0.02,
 
-		BloomIntensity = 0.6,
+		BloomIntensity = 0.35,
 		BloomSize = 28,
-		BloomThreshold = 1.0,
+		BloomThreshold = 1.2,
 
 		SunRaysIntensity = 0,
 		SunRaysSpread = 0,
@@ -121,9 +121,9 @@ local Presets: { [string]: Preset } = {
 		Saturation = 0.06,
 		BrightnessOffset = 0,
 
-		BloomIntensity = 0.42,
+		BloomIntensity = 0.3,
 		BloomSize = 24,
-		BloomThreshold = 1.15,
+		BloomThreshold = 1.25,
 
 		SunRaysIntensity = 0,
 		SunRaysSpread = 0,
@@ -150,9 +150,9 @@ local Presets: { [string]: Preset } = {
 		Saturation = -0.15,
 		BrightnessOffset = 0,
 
-		BloomIntensity = 0.35,
+		BloomIntensity = 0.25,
 		BloomSize = 20,
-		BloomThreshold = 1.1,
+		BloomThreshold = 1.25,
 
 		SunRaysIntensity = 0,
 		SunRaysSpread = 0,

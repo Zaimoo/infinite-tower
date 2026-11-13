@@ -1253,7 +1253,7 @@ function Arch.BuildBlacksmith(folder: Instance, centerCF: CFrame): Part
 		addForgeFire(brazierCore, 22, 2.2, 1.4, 16)
 	end
 
-	-- Chimney Top Fire Glow & Rising Dark Smoke Plume
+	-- Chimney Top Fire Glow (no smoke plume: the dark smoke over the forge was removed)
 	local chimneyFlue = cylinder(
 		model,
 		"ChimneySmokeAnchor",
@@ -1265,24 +1265,6 @@ function Arch.BuildBlacksmith(folder: Instance, centerCF: CFrame): Part
 		false
 	)
 	pointLight(chimneyFlue, emberOrange, 2.4, 28, false)
-	local smokeEmit = Instance.new("ParticleEmitter")
-	smokeEmit.Name = "ChimneySmoke"
-	smokeEmit.Texture = "rbxassetid://243660364"
-	smokeEmit.Color = ColorSequence.new(Color3.fromRGB(58, 56, 62), Color3.fromRGB(28, 26, 32))
-	smokeEmit.Size = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 2.8),
-		NumberSequenceKeypoint.new(1, 8.5),
-	})
-	smokeEmit.Transparency = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 0.38),
-		NumberSequenceKeypoint.new(0.7, 0.62),
-		NumberSequenceKeypoint.new(1, 1.0),
-	})
-	smokeEmit.Lifetime = NumberRange.new(2.8, 4.5)
-	smokeEmit.Rate = 14
-	smokeEmit.Speed = NumberRange.new(4.5, 8.0)
-	smokeEmit.SpreadAngle = Vector2.new(18, 18)
-	smokeEmit.Parent = chimneyFlue
 
 	-- Anvil Spark Emitter on top of the central Anvil inside the Forge
 	local anvilSparkAnchor = part(

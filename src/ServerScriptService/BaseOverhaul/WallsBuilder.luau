@@ -110,7 +110,7 @@ local function attachTorchLightAndVFX(emberCore: BasePart)
 	pt.Color = Color3.fromRGB(255, 148, 56) -- #FF9438
 	pt.Brightness = 2.2
 	pt.Range = 22
-	pt.Shadows = true
+	pt.Shadows = false
 	pt.Parent = emberCore
 	CollectionService:AddTag(pt, "WallTorchFlicker")
 
@@ -983,7 +983,7 @@ local function spawnGothicCornerSpireTower(parent: Instance, name: string, tower
 			pt.Color = Color3.fromRGB(255, 125, 40)
 			pt.Brightness = 1.8
 			pt.Range = 26
-			pt.Shadows = true
+			pt.Shadows = false
 			pt.Parent = sock
 		end
 		local rampartSock = createSocketPart(targetModel, "VFX_RampartArch_Glow", towerCF * CFrame.new(0, 20, 0))
@@ -992,7 +992,7 @@ local function spawnGothicCornerSpireTower(parent: Instance, name: string, tower
 		rLight.Color = Color3.fromRGB(255, 125, 40)
 		rLight.Brightness = 1.8
 		rLight.Range = 26
-		rLight.Shadows = true
+		rLight.Shadows = false
 		rLight.Parent = rampartSock
 	end
 

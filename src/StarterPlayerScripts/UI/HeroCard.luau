@@ -50,12 +50,17 @@ local entries: { Lazy } = {}
 local cursor = 1
 local pending: { Lazy } = {}
 local staging: { Lazy } = {} -- portraits whose own rig is still rendering in the nursery
-local sources: { [Model]: Model } = setmetatable({}, { __mode = "k" }) :: any -- posed rig per template, never rendered
-local spares: { [Model]: { Spare } } = setmetatable({}, { __mode = "k" }) :: any
+-- These are keyed by template instance with STRONG keys. Weak Instance keys are unsafe in Roblox: the
+-- Lua wrapper of a live template can be collected, which drops its entry, so the nursery kept nursing a
+-- fresh spare while the old one stayed parented forever (~8 rigs a second, 100k+ instances, ~10 FPS).
+-- Templates that leave the Heroes folder are dropped by pruneTemplates instead.
+local sources: { [Model]: Model } = {} -- posed rig per template, never rendered
+local spares: { [Model]: { Spare } } = {}
 local nursery: ViewportFrame? = nil
--- Posed masters per template instance (weak keys, so a re-replicated template drops its old
--- masters), then per framing ("Bust", "CloseUp", "Full").
-local masters: { [Model]: { [string]: Master } } = setmetatable({}, { __mode = "k" }) :: any
+-- Posed masters per template instance, then per framing ("Bust", "CloseUp", "Full").
+local masters: { [Model]: { [string]: Master } } = {}
+local PRUNE_SECONDS = 2
+local prunedAt = 0
 
 local function framingKey(entry: Lazy): string
 	return if entry.FullBody then "Full" elseif entry.CloseUp then "CloseUp" else "Bust"
@@ -187,11 +192,38 @@ local function takeSpare(template: Model, now: number): Model?
 	return nil
 end
 
+-- Forget templates that are no longer in the Heroes folder (re-replicated or rebuilt), destroying
+-- their spares so nothing is left behind in the nursery.
+local function pruneTemplates(folder: Instance)
+	for template, list in spares do
+		if template.Parent ~= folder then
+			for _, spare in list do
+				spare.Model:Destroy()
+			end
+			spares[template] = nil
+		end
+	end
+	for template, posed in sources do
+		if template.Parent ~= folder then
+			posed:Destroy()
+			sources[template] = nil
+			masters[template] = nil
+		end
+	end
+	for template in masters do
+		if template.Parent ~= folder then masters[template] = nil end
+	end
+end
+
 -- Top up the nursery, one hero's spare at a time, within what is left of the frame's budget.
 local function refillSpares(budget: number, now: number): number
 	local assets = ReplicatedStorage:FindFirstChild("Assets")
 	local folder = assets and assets:FindFirstChild("Heroes")
 	if not folder then return budget end
+	if now - prunedAt >= PRUNE_SECONDS then
+		prunedAt = now
+		pruneTemplates(folder)
+	end
 	for _, template in folder:GetChildren() do
 		if budget <= 0 then break end
 		if template:IsA("Model") then

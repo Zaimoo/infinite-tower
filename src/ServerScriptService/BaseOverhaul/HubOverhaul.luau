@@ -423,6 +423,9 @@ function HubOverhaul.Build(forceRebuild: boolean?): (Instance, boolean)
 			setupKillRespawnZone(baked)
 		end
 		mountLeaderboards(baked, plotsFolder)
+		-- Re-run the scenery pass so places baked before a StaticGeometry change pick it up without a rebake
+		StaticGeometry.Apply(baked)
+		StaticGeometry.Apply(plotsFolder)
 		return baked, false
 	end
 
