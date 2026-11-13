@@ -1948,6 +1948,18 @@ performHeroAttack = function(simHero: SimHero, targetPos: Vector3, targetMob: Si
 		local ticks, tickSeconds = HeroActionTiming.Ticks(tierDef)
 		local target: any = targetMob or targetEnemyHero
 
+		-- Twin Reflection (Isabelle): pick the second half's target now, so clients can split the
+		-- arrow toward it; the hit reuses this pick while it is still valid (HeroSkillEffects).
+		local twinTarget: any = nil
+		if attackType == "SKILL" and targetMob and skillProfile and skillProfile.Skill.Effect == "TWIN_SHOT" then
+			twinTarget = HeroSkillEffects.PickTwinTarget(heroSkillContext(simHero, now),
+				{ Impact = { FloorId = simHero.FloorId, RoomGeneration = simHero.RoomGeneration }, Primary = targetMob } :: any,
+				simHero.Position, skillProfile.Skill.TwinRange or 30)
+			local mark: any = twinTarget or targetMob
+			-- Cosmetic: TWIN_MARK carries the attacker's NetId (amount) and the second target's NetId.
+			Tower.BroadcastAt(CombatVFXRemote, simHero, "TWIN_MARK", mark.Position, simHero.NetId, mark.NetId)
+		end
+
 		-- Cosmetic cue: clients play the tier's clip over the cast time and time the effect to
 		-- the same release and travel the impact queue uses (TowerProtocol.EncodeHeroCue).
 		Tower.BroadcastAt(CombatVFXRemote, simHero, "HERO_CUE", Protocol.EncodeHeroCue({
@@ -1984,6 +1996,8 @@ performHeroAttack = function(simHero: SimHero, targetPos: Vector3, targetMob: Si
 			TargetMob = targetMob,
 			TargetHero = targetEnemyHero,
 			TargetGeneration = target and target.EntityGeneration,
+			TwinTarget = twinTarget,
+			TwinGeneration = twinTarget and twinTarget.EntityGeneration,
 		})
 	end
 end

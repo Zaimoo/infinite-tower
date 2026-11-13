@@ -1594,7 +1594,11 @@ end
 
 -- Isabelle (BOW), from her reference art: an upright, mid-stride stance with the bow held low in
 -- her left hand, the draw hand loose at her side and her head turned a little to her left.
--- Twin Reflection: a step back, a held glowing draw, then a release with a flourish as it splits.
+-- Her attacks are her own, not the generic bow set (a LeftWrist Y turn cants the bow sideways):
+--   Glint Shot: a quick snap shot with the bow canted, head tilted to the monocle.
+--   Ricochet: she turns away, drops low and pivots back into a flat, sideways shot.
+--   Twin Reflection: a step back into a long, rising draw held while the arrow glows, then a
+--   release with a small hop and the draw hand sweeping wide as the arrow splits.
 do
 	local p = WeaponPoses.BOW
 	local poised = merge(p.Carry, { Waist = { 0, 6, 0 }, Neck = { 0, 12, 0 },
@@ -1602,30 +1606,35 @@ do
 		RightShoulder = { -4, 0, 9 }, RightElbow = { 12, 0, 0 },
 		LeftHip = { -8, 0, -3 }, RightHip = { 14, 0, 3 }, LeftKnee = { -4, 0, 0 }, RightKnee = { -14, 0, 0 },
 		RootOffset = { 0, -0.04, 0 } })
-	local held = merge(merge(p.Drawn, p.Crouch), { Waist = { -12, -20, 0 }, RootOffset = { 0, -0.15, 0.25 } })
+	local snap: Pose = { LeftWrist = { 0, 35, 0 }, Waist = { -4, -18, 0 }, Neck = { -6, 8, 6 } }
+	local flat: Pose = { LeftWrist = { 0, 80, 0 }, Waist = { -8, -32, 0 }, Neck = { 0, 22, 0 } }
+	local rise = merge(p.Drawn, { Waist = { 10, -24, 0 }, Neck = { 8, 10, 0 }, LeftShoulder = { 110, 0, 0 },
+		RightShoulder = { 108, 28, -10 }, RootOffset = { 0, 0.05, 0.25 } })
 	Overrides.hero_isabelle = {
 		Idle = breathe(poised, 3.4),
-		AttackBasic = signature(0.75, {
+		AttackBasic = signature(0.7, {
 			{ 0, p.Carry },
-			{ 0.3, merge(p.Aim, { Waist = { -4, -14, 0 } }) },
-			{ 0.55, p.Drawn },
-			{ 0.62, merge(p.Release, { Neck = { -4, 6, 0 } }) }, -- the monocle catches the light
+			{ 0.25, merge(p.Aim, snap) },
+			{ 0.5, merge(p.Drawn, snap) },
+			{ 0.58, merge(p.Release, merge(snap, { Waist = { 0, -12, 0 }, RightShoulder = { 60, 50, -40 } })) },
 			{ 1, p.Carry },
-		}, { Release = 0.62, Nock = 0.85 }),
+		}, { Release = 0.58, Nock = 0.85 }),
 		AttackSpecial = signature(0.95, {
 			{ 0, p.Carry },
-			{ 0.3, merge(p.Aim, { Waist = { -6, -40, 0 } }) },
-			{ 0.62, merge(p.Drawn, { Waist = { -10, -40, 0 } }) },
-			{ 0.72, merge(p.Release, { Waist = { 6, -10, 0 } }) },
+			{ 0.28, merge(p.Carry, { Waist = { 0, 40, 0 }, Neck = { 0, -10, 0 } }) }, -- turns away
+			{ 0.5, merge(merge(p.Aim, p.Crouch), flat) }, -- pivots back low, bow flat
+			{ 0.66, merge(merge(p.Drawn, p.Crouch), flat) },
+			{ 0.74, merge(merge(p.Release, p.Crouch), merge(flat, { Waist = { 4, -20, 0 } })) },
 			{ 1, p.Carry },
-		}, { Release = 0.72, Nock = 0.9 }),
+		}, { Release = 0.74, Nock = 0.9 }),
 		AttackSkill = signature(1.2, {
 			{ 0, p.Carry },
-			{ 0.2, merge(p.Aim, { RootOffset = { 0, 0, 0.25 } }) },
-			{ 0.4, held },
-			{ 0.6, held }, -- the arrow glows while she holds the draw
-			{ 0.68, merge(p.Release, { Waist = { 6, -16, 0 }, RightShoulder = { 120, 40, -30 }, RightElbow = { 30, 0, 0 } }) },
-			{ 0.85, merge(p.Release, { RightShoulder = { 60, 60, -40 } }) },
+			{ 0.2, merge(p.Aim, { Waist = { 4, -20, 0 }, RootOffset = { 0, 0, 0.3 } }) }, -- a step back
+			{ 0.4, rise },
+			{ 0.62, merge(rise, { Waist = { 12, -26, 0 } }) }, -- the arrow glows while she holds the draw
+			{ 0.68, merge(p.Release, { Waist = { 6, -10, 0 }, LeftShoulder = { 100, 0, 0 }, RightShoulder = { 95, 70, -60 },
+				RightElbow = { 20, 0, 0 }, RootOffset = { 0, 0.3, 0 } }) }, -- release with a hop
+			{ 0.82, merge(p.Release, { Waist = { 0, 10, 0 }, RightShoulder = { 40, 80, -70 }, RightElbow = { 10, 0, 0 }, RootOffset = { 0, 0.1, 0 } }) },
 			{ 1, p.Carry },
 		}, { Charge = 0.2, Release = 0.68, Nock = 0.9 }),
 	}

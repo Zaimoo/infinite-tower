@@ -296,6 +296,28 @@ test("Twin Reflection hits the toughest other enemy, or the lone target twice", 
 	check(alone.CurrentHP == 750, "a lone target takes the second half too")
 end)
 
+test("Twin Reflection's second half lands on the target picked when the attack started", function()
+	local profile = Skills.GetSkillProfile("hero_isabelle", "Marksman")
+	local function twinHit(mobs, primary, picked, generation)
+		return Effects.Resolve(effectContext(mobs) :: any, { Impact = { Atk = 100, DamageMult = profile.Skill.DamageMultiplier, Ticks = 1,
+			Origin = Vector3.new(0, 0, 0), TwinTarget = picked, TwinGeneration = generation },
+			Attacker = attacker("hero_isabelle", "Marksman"), Profile = profile, Tier = "SKILL", Tick = 1, Primary = primary, Center = primary.Position })
+	end
+	local target, a, b = mob(1, 10), mob(2, 12, 3000), mob(3, 14, 5000)
+	a.EntityGeneration, b.EntityGeneration = 1, 1
+	local picked = Effects.PickTwinTarget(effectContext({ target, a, b }) :: any, { Impact = {}, Primary = target } :: any, Vector3.new(0, 0, 0), 30)
+	check(picked == b, "the pick is the toughest other enemy in range")
+	b.CurrentHP = 2000 -- b took damage before the arrow landed; a is now tougher
+	twinHit({ target, a, b }, target, b, 1)
+	check(b.CurrentHP == 2000 - 250 and a.CurrentHP == 3000, "the half the client drew toward b still lands on b")
+	local c, d = mob(1, 10), mob(2, 12, 3000)
+	d.EntityGeneration = 2
+	local gone = mob(3, 14, 5000)
+	gone.EntityGeneration, gone.IsAlive = 1, false
+	twinHit({ c, d, gone }, c, gone, 1)
+	check(d.CurrentHP == 3000 - 250, "a dead pick falls back to the toughest living enemy")
+end)
+
 test("Looking-Glass Bulwark reflects for 6s; Gilded Frenzy speeds Rourke up for 4s", function()
 	local caspian = attacker("hero_caspian", "Vanguard")
 	local target = mob(1, 5)

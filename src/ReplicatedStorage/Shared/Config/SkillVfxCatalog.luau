@@ -48,6 +48,11 @@ export type TierRecipe = {
 	Spread: number?, -- fan half-angle in degrees
 	Pierce: number?, -- studs the centre arrow carries on past the target
 	Rings: boolean?, -- rings along the centre arrow's path
+	-- RICOCHET: bounce arrows from the target to the enemies the hit carried on to (Radius: how
+	-- far around the target to look for them).
+	Bounces: number?,
+	-- TWIN: where along the flight the arrow splits (0..1).
+	Split: number?,
 	-- STORM: a flare climbs from the bow, a sigil opens, then one wave of arrows per damage tick.
 	FlareHeight: number?,
 	SigilRadius: number?,
@@ -91,8 +96,8 @@ SkillVfxCatalog.WeaponArchetype = table.freeze({
 -- Every Style SkillVfx knows, per tier.
 SkillVfxCatalog.Styles = table.freeze({
 	Basic = table.freeze({ SHOT = true, BOLT = true, SLASH = true }),
-	Special = table.freeze({ VOLLEY = true, CLEAVE = true, CROSS = true, TREMOR = true, CHAIN = true, MEND = true, PLUNGE = true, BEAM = true, PIERCER = true, WHIRL = true }),
-	Skill = table.freeze({ STORM = true, BULWARK = true, TEMPEST = true, CRYSTALS = true, PILLAR = true, SANCTUARY = true, WAKE = true, SINGULARITY = true, CONSTELLATION = true, EXECUTE = true }),
+	Special = table.freeze({ RICOCHET = true, VOLLEY = true, CLEAVE = true, CROSS = true, TREMOR = true, CHAIN = true, MEND = true, PLUNGE = true, BEAM = true, PIERCER = true, WHIRL = true }),
+	Skill = table.freeze({ TWIN = true, STORM = true, BULWARK = true, TEMPEST = true, CRYSTALS = true, PILLAR = true, SANCTUARY = true, WAKE = true, SINGULARITY = true, CONSTELLATION = true, EXECUTE = true }),
 })
 
 local function rgb(r: number, g: number, b: number): Color3
@@ -296,12 +301,14 @@ SkillVfxCatalog.Heroes = table.freeze({
 
 	-- The Gilded Mirror (docs/gilded-mirror-plan.md §6.2): gilt and glass over each hero's rarity colour.
 	-- Glint Shot / Ricochet / Twin Reflection, from her reference art: glowing crimson arrows with long,
-	-- laser-like trails and gilt sparks; the Skill rains twin crimson arrows from a red flare.
+	-- laser-like trails and gilt sparks. Ricochet glints off the target and bounces on to the next
+	-- enemy; Twin Reflection's held draw glows, then the arrow shatters through a gilt mirror
+	-- mid-flight into two halves, one per target.
 	hero_isabelle = {
 		Palette = { Primary = rgb(255, 46, 84), Secondary = rgb(212, 175, 90), Core = rgb(255, 222, 228), Accent = rgb(150, 14, 40) },
 		Basic = { Style = "SHOT", Projectile = "ARROW", Scale = 1.0, Arc = 0.12, Trail = 0.3, Impact = 1.8 },
-		Special = { Style = "VOLLEY", Projectile = "ARROW", Scale = 1.25, Arc = 0.12, Trail = 0.22, Impact = 2.4, Count = 2, Spread = 9, Pierce = 6, Rings = true },
-		Skill = { Style = "STORM", Projectile = "ARROW", Scale = 1.4, Trail = 0.25, Impact = 2.6, FlareHeight = 24, SigilRadius = 16, RainPerWave = 2, RainHeight = 26, Shake = 0.22 },
+		Special = { Style = "RICOCHET", Projectile = "ARROW", Scale = 1.2, Arc = 0.1, Trail = 0.3, Impact = 2.4, Bounces = 1, Radius = 14 },
+		Skill = { Style = "TWIN", Projectile = "ARROW", Origin = "NOCK", Scale = 1.5, Arc = 0.05, Trail = 0.35, Impact = 3.2, Split = 0.5, Radius = 16, Shake = 0.22 },
 	},
 	-- Gilt Cut / Mirror Step / Shatterdance: thin teal cuts; five clone slashes ring the target.
 	hero_nyx = {

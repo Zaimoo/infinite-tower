@@ -216,6 +216,10 @@ local function recordHit(kind: string, position: any)
 	end
 end
 
+-- Twin Reflection's second target per attacker NetId (the server's TWIN_MARK, sent with the cue).
+local TwinMarks: { [number]: { NetId: number, Position: Vector3, At: number } } = {}
+local TWIN_MARK_SECONDS = 3
+
 local function recentHits(kind: string, center: Vector3, radius: number, since: number): { Vector3 }
 	local found: { Vector3 } = {}
 	for _, hit in RecentHits do
@@ -287,6 +291,17 @@ local function attackArgs(rig: Model, animator: any, meta: any, cue: any): any
 			return positions
 		end,
 		RecentHits = recentHits,
+		Twin = function(): Vector3?
+			local mark = TwinMarks[cue.NetId]
+			if not mark or os.clock() - mark.At > TWIN_MARK_SECONDS then
+				return nil
+			end
+			local node = VisualNodesByNetId[mark.NetId]
+			if node and node.RootPart.Parent then
+				return node.RootPart.Position
+			end
+			return mark.Position + Vector3.new(0, 2, 0)
+		end,
 		Now = Workspace:GetServerTimeNow(),
 		Shake = if meta and meta.OwnerUserId == LocalPlayer.UserId then function(magnitude: number)
 			CombatFeedback:ScreenShake(magnitude)
@@ -1094,6 +1109,12 @@ CombatVFXRemote.OnClientEvent:Connect(function(context: any, vfxType: string, po
 			if elapsed < cue.CastSeconds then
 				animator:PlayAction(ATTACK_TIER_STATES[cue.Tier] or "AttackBasic", cue.CastSeconds, elapsed, cue)
 			end
+		end
+		return
+	elseif vfxType=="TWIN_MARK" then
+		-- amount = the attacker's NetId, isOverdrive = the second target's NetId (cosmetic).
+		if type(amount) == "number" and type(isOverdrive) == "number" and typeof(pos) == "Vector3" then
+			TwinMarks[amount] = { NetId = isOverdrive, Position = pos, At = os.clock() }
 		end
 		return
 	elseif vfxType=="HERO_COMA" or vfxType=="HERO_KO" then

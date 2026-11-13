@@ -42,6 +42,9 @@ export type PlayArgs = {
 	Allies: (() -> { Vector3 })?, -- the attacker's squad (healing effects)
 	-- Positions the server reported hits ("HIT") or heals ("HEAL") at, near `center`, since `since`.
 	RecentHits: ((kind: string, center: Vector3, radius: number, since: number) -> { Vector3 })?,
+	-- TWIN: live body centre of the second target the server picked when the attack started
+	-- (its TWIN_MARK), or nil when there is none.
+	Twin: (() -> Vector3?)?,
 	Now: number, -- server time
 	Shake: ((magnitude: number) -> ())?, -- set only for the local player's own heroes
 }
@@ -427,6 +430,37 @@ local function playChain(ctx: Context)
 	end)
 end
 
+-- RICOCHET: the arrow strikes the target with a gilt glint, then bounces on to each enemy the
+-- server carried the hit to (Isabelle's Ricochet): a smaller arrow from the target to each,
+-- nearest first, up to Bounces.
+local function playRicochet(ctx: Context)
+	local pool, recipe, palette = ctx.Pool, ctx.Recipe, ctx.Palette
+	playProjectile(ctx)
+	local target = ctx.Args.Target
+	VfxPrimitives.Flare(pool, target, 2.4, palette.Secondary, ctx.ArriveAt, 0.16)
+	afterHits(ctx, "HIT", target, recipe.Radius or 14, function(points: { Vector3 })
+		local from = target()
+		local now = ctx.ArriveAt + HIT_LOOKUP_DELAY
+		local others = {}
+		for _, point in points do
+			if VfxMath.Distance(point, from) > 1.5 then
+				table.insert(others, point)
+			end
+		end
+		table.sort(others, function(a: Vector3, b: Vector3): boolean
+			return VfxMath.Distance(a, from) < VfxMath.Distance(b, from)
+		end)
+		local body = projectile(recipe, palette, (recipe.Scale or 1) * 0.8)
+		for i = 1, math.min(#others, recipe.Bounces or 1) do
+			local point = others[i] + Vector3.new(0, 1.5, 0)
+			local travel = math.clamp(VfxMath.Distance(from, point) / 70, 0.08, 0.22)
+			fly(pool, body, from, fixed(point), now, now + travel, 0.6, function(at: Vector3)
+				VfxPrimitives.Burst(pool, at, palette.Core, (recipe.Impact or 2) * 0.7, now + travel, 0.18)
+			end)
+		end
+	end)
+end
+
 -- MEND: a bolt to the enemy, then motes of light rising from whoever the server healed.
 local function playMend(ctx: Context)
 	local pool, palette = ctx.Pool, ctx.Palette
@@ -478,6 +512,42 @@ local function playStorm(ctx: Context)
 		end
 	end
 	shake(ctx, waves[1])
+end
+
+-- TWIN: one large glowing arrow leaves the bow; part-way there it meets a flash of gilt glass and
+-- splits in two. One half flies on into the target, the other to the second target the server
+-- picked (or, for a lone target, arcing over and into the same one), and both land at the
+-- impact time (Isabelle's Twin Reflection).
+local function playTwin(ctx: Context)
+	local args, recipe, palette, pool = ctx.Args, ctx.Recipe, ctx.Palette, ctx.Pool
+	local origin = originOf(args, recipe)
+	local startAt, arriveAt = ctx.StartAt, ctx.ArriveAt
+	local split = recipe.Split or 0.5
+	local splitAt = startAt + (arriveAt - startAt) * split
+	local aim = args.Target()
+	local splitPoint = origin:Lerp(aim, split) + Vector3.new(0, 0.8, 0)
+	local impact = recipe.Impact or 3
+	local lead = projectile(recipe, palette, (recipe.Scale or 1) * 1.3)
+	local half = projectile(recipe, palette)
+	local twin = args.Twin and args.Twin()
+	local lone = twin == nil or VfxMath.Distance(twin :: Vector3, aim) < 2
+	local function secondTo(): Vector3
+		local live = args.Twin and args.Twin()
+		return if live then live else args.Target()
+	end
+	fly(pool, lead, origin, fixed(splitPoint), startAt, splitAt, 0.2, function(at: Vector3)
+		-- The mirror: a gilt flash, a glass ring facing along the flight, and a spray of light.
+		VfxPrimitives.Flare(pool, fixed(at), 3.2, palette.Secondary, splitAt, 0.2)
+		VfxPrimitives.FlightRing(pool, at, aim - origin, 1.8, palette.Accent or palette.Core, splitAt)
+		VfxPrimitives.Burst(pool, at, palette.Core, impact * 0.6, splitAt, 0.18)
+		local function land(point: Vector3)
+			VfxPrimitives.Burst(pool, point, palette.Primary, impact, arriveAt, 0.25)
+			VfxPrimitives.Flare(pool, fixed(point), 2.2, palette.Secondary, arriveAt, 0.18)
+		end
+		fly(pool, half, at, args.Target, splitAt, arriveAt, 0.3, land)
+		fly(pool, half, at, if lone then args.Target else secondTo, splitAt, arriveAt, if lone then 3.5 else 1.2, land)
+	end)
+	shake(ctx, arriveAt)
 end
 
 local STAR_FALL_SECONDS = 0.24
@@ -910,6 +980,8 @@ local PLAYERS: { [string]: (Context) -> () } = {
 	BEAM = playBeam,
 	TREMOR = playTremor,
 	CHAIN = playChain,
+	RICOCHET = playRicochet,
+	TWIN = playTwin,
 	MEND = playMend,
 	STORM = playStorm,
 	CONSTELLATION = playConstellation,
@@ -1108,6 +1180,7 @@ local CHARGERS: { [string]: (ChargeContext) -> boolean } = {
 	PIERCER = chargeBolt,
 	CONSTELLATION = chargeStars,
 	BEAM = chargeTip,
+	TWIN = chargeTip, -- the held, glowing draw
 	SINGULARITY = chargeWell,
 }
 SkillVfx.Chargers = table.freeze(table.clone(CHARGERS))

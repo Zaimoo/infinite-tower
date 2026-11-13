@@ -190,6 +190,19 @@ local function nearbyOthers(ctx: Context, hit: Hit, center: Vector3, radius: num
 	end
 end
 
+-- Twin Reflection's second target: the mob with the most HP within `radius` of `center`, other
+-- than the primary. CombatSimulation picks it when the attack starts (so clients can draw the
+-- split toward it) and the hit reuses that pick while it is still valid.
+function HeroSkillEffects.PickTwinTarget(ctx: Context, hit: Hit, center: Vector3, radius: number): any?
+	local best: any, bestHP = nil, -1
+	for _, mob in ctx.Mobs do
+		if mob ~= hit.Primary and eligible(ctx, hit, mob) and near(mob, center, radius) and (mob.CurrentHP or 0) > bestHP then
+			best, bestHP = mob, mob.CurrentHP or 0
+		end
+	end
+	return best
+end
+
 local function resolveSkill(ctx: Context, hit: Hit, scale: number)
 	local attacker = hit.Attacker
 	local skill = hit.Profile.Skill
@@ -204,12 +217,12 @@ local function resolveSkill(ctx: Context, hit: Hit, scale: number)
 		if not first then return end
 		local amount = math.round(atk * mult * scale)
 		local radius = skill.TwinRange or 30
-		local best: any, bestHP = nil, -1
-		for _, mob in ctx.Mobs do
-			if mob ~= hit.Primary and eligible(ctx, hit, mob) and near(mob, attacker.Position, radius) and (mob.CurrentHP or 0) > bestHP then
-				best, bestHP = mob, mob.CurrentHP or 0
-			end
-		end
+		-- Prefer the target picked when the attack started (the one clients drew the split toward).
+		local picked = hit.Impact.TwinTarget
+		local best = if picked and picked.EntityGeneration == hit.Impact.TwinGeneration and eligible(ctx, hit, picked)
+				and near(picked, attacker.Position, radius + 6)
+			then picked
+			else HeroSkillEffects.PickTwinTarget(ctx, hit, attacker.Position, radius)
 		local second = best or (if hit.Primary and eligible(ctx, hit, hit.Primary) then hit.Primary else nil)
 		if second then damageMob(ctx, hit, second, amount) end
 		return
