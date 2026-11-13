@@ -54,6 +54,10 @@ local RARITY = {
 	Color3.fromRGB(228, 193, 111),
 	Color3.fromRGB(240, 110, 95),
 	Color3.fromRGB(130, 235, 255),
+	Color3.fromRGB(40, 210, 175), -- Transcendent
+	Color3.fromRGB(224, 96, 253), -- Ascendant
+	Color3.fromRGB(120, 125, 240), -- Ethereal
+	Color3.fromRGB(255, 130, 150), -- Immortal
 }
 
 local function new(className: string, props: { [string]: any }, parent: Instance?): any
@@ -479,13 +483,13 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 		new("UITextSizeConstraint", { MinTextSize = 10, MaxTextSize = 17 }, valLbl)
 		valLbl.TextXAlignment = Enum.TextXAlignment.Right
 		valLbl.ZIndex = 43
-		return valLbl
+		return valLbl, nameLbl
 	end
 
 	local currentHeading = label(leftBlock, "CURRENT", 14, C.TextMuted, nil, "Header")
 	currentHeading.Size = UDim2.new(1, 0, 0, 20)
 	currentHeading.ZIndex = 43
-	self.OldMaxLevel = makeStatRow(leftBlock, 22, "Level")
+	self.OldMaxLevel, self.OldLevelName = makeStatRow(leftBlock, 22, "Level")
 	self.OldHP = makeStatRow(leftBlock, 46, "HP")
 	self.OldATK = makeStatRow(leftBlock, 70, "ATK")
 	self.OldStars = label(leftBlock, "", 18, C.StarGold, Enum.Font.GothamBold)
@@ -510,7 +514,7 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 	local previewHeading = label(rightBlock, "AFTER PROMOTION", 14, C.TextMuted, nil, "Header")
 	previewHeading.Size = UDim2.new(1, 0, 0, 20)
 	previewHeading.ZIndex = 43
-	self.NewMaxLevel = makeStatRow(rightBlock, 22, "Level")
+	self.NewMaxLevel, self.NewLevelName = makeStatRow(rightBlock, 22, "Level")
 	self.NewMaxLevel.TextColor3 = C.SuccessGreen
 	self.NewHP = makeStatRow(rightBlock, 46, "HP")
 	self.NewHP.TextColor3 = C.SuccessGreen
@@ -537,6 +541,9 @@ function Promo.new(gui: ScreenGui, remote: RemoteFunction)
 	rateLbl.Position = UDim2.fromOffset(0, 0)
 	rateLbl.Size = UDim2.new(1, 0, 0, 22)
 	rateLbl.ZIndex = 43
+	-- Scales down so a mirror hero's longer source line fits.
+	rateLbl.TextScaled = true
+	new("UITextSizeConstraint", { MinTextSize = 10, MaxTextSize = 16 }, rateLbl)
 	self.RateLabel = rateLbl
 
 	local costLbl = label(actionArea, "", 15, C.TextMuted, Enum.Font.GothamBold, "Body")
@@ -1077,19 +1084,30 @@ function Promo.Render(self: any)
 		local oldHP = math.floor(beforeSnap.HP or beforeSnap.Health or recipient.BaseHP or 1000)
 		local oldATK = math.floor(beforeSnap.ATK or beforeSnap.AttackDamage or recipient.BaseATK or 100)
 
+		-- Before the server preview arrives, estimate the gain: x1.5 for a normal hero, +2% share for a mirror hero.
+		local estimate = if StatFormulas.IsMirror(recipient)
+			then 1 + 0.02 / StatFormulas.GetMirrorPercent(recipient)
+			else PitBalanceConfig.Promotion.CombatMultiplier
 		local newHP = if curStars >= maxStars
 			then oldHP
-			else (preview and preview.After and preview.After.HP) or math.round(oldHP * PitBalanceConfig.Promotion.CombatMultiplier)
+			else (preview and preview.After and preview.After.HP) or math.round(oldHP * estimate)
 		local newATK = if curStars >= maxStars
 			then oldATK
-			else (preview and preview.After and preview.After.ATK) or math.round(oldATK * PitBalanceConfig.Promotion.CombatMultiplier)
+			else (preview and preview.After and preview.After.ATK) or math.round(oldATK * estimate)
 
-		self.OldMaxLevel.Text = tostring(curMaxLvl)
+		-- Mirror heroes don't level: the first row shows their mirror share instead (gilded-mirror-plan §3.4).
+		local mirror = StatFormulas.IsMirror(recipient)
+		self.OldLevelName.Text = if mirror then "Mirror" else "Level"
+		self.NewLevelName.Text = if mirror then "Mirror" else "Level"
+		local beforePct = beforeSnap.MirrorPercent or (mirror and StatFormulas.GetMirrorPercent(recipient)) or 0
+		local afterPct = (preview and preview.After and preview.After.MirrorPercent)
+			or (if mirror then beforePct + (if curStars >= maxStars then 0 else 0.02) else 0)
+		self.OldMaxLevel.Text = if mirror then string.format("%d%%", math.round(beforePct * 100)) else tostring(curMaxLvl)
 		self.OldHP.Text = formatNumber(oldHP)
 		self.OldATK.Text = formatNumber(oldATK)
 		self.OldStars.Text = string.rep("★", curStars)
 
-		self.NewMaxLevel.Text = tostring(nextMaxLvl)
+		self.NewMaxLevel.Text = if mirror then string.format("%d%%", math.round(afterPct * 100)) else tostring(nextMaxLvl)
 		self.NewHP.Text = formatNumber(newHP)
 		self.NewATK.Text = formatNumber(newATK)
 		if curStars >= maxStars then
@@ -1098,6 +1116,8 @@ function Promo.Render(self: any)
 			self.NewStars.Text = string.format('%s<font color="#39ff14">★</font>', string.rep("★", curStars))
 		end
 	else
+		self.OldLevelName.Text = "Level"
+		self.NewLevelName.Text = "Level"
 		self.OldMaxLevel.Text = "—"
 		self.OldHP.Text = "—"
 		self.OldATK.Text = "—"
@@ -1107,6 +1127,16 @@ function Promo.Render(self: any)
 		self.NewHP.Text = "—"
 		self.NewATK.Text = "—"
 		self.NewStars.Text = ""
+	end
+
+	-- Mirror heroes: name the hero they copy, and point at the better buy (that hero's x1.5 lifts every mirror hero).
+	local source = recipient and StatFormulas.IsMirror(recipient) and recipient.MirrorSource
+	if type(source) == "table" and type(source.Name) == "string" and source.Name ~= "" then
+		self.RateLabel.TextColor3 = C.StarGold
+		self.RateLabel.Text = string.format("COPYING %s %s · PROMOTE %s FOR x1.5", string.upper(source.Name), string.rep("★", source.Stars or 1), string.upper(source.Name))
+	else
+		self.RateLabel.TextColor3 = C.SuccessGreen
+		self.RateLabel.Text = "100% SUCCESS RATE"
 	end
 
 	-- 3. Costs / Requirements Display

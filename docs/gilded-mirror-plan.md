@@ -1,6 +1,6 @@
 # The Gilded Mirror: premium mirror-hero banner implementation plan
 
-Status: PR 1 (`feat/mirror-heroes-core`) built 2026-11-13; PRs 2–5 not started. GDD sections to update with the code: §2.5 (Rift Attunement exception list), §4 (banners, Pit promotion), §8 if any new remote is added.
+Status: PRs 1–4 built on `feat/mirror-heroes-core` (2026-11-13); PR 5 (final looks: faces and hair through `hero-remodel`) not started. PR 4 built the kits, their clips and VFX, and the glass shatter on KO. Changes from §5: Shatterdance uses the Striker splash (half damage to others), Twin Reflection's search range is `TwinRange` (the VFX test ties `Radius` to the sigil), and Hall of Mirrors draws with the `CRYSTALS` style. PR 2 put the banner in the Store (`ShopPanel`) instead of a fourth summon-altar tab, next to the other Robux packs, with the odds listed inline; `HeroOddsModal` is unchanged. GDD sections to update with the code: §2.5 (Rift Attunement exception list), §4 (banners, Pit promotion), §8 if any new remote is added.
 
 ---
 

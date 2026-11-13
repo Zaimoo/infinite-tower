@@ -3,6 +3,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config")
 local HeroCatalog = require(Config:WaitForChild("HeroCatalog"))
+local StatFormulas = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("StatFormulas"))
 local ArtifactCatalog = require(Config:WaitForChild("ArtifactCatalog"))
 local PitBalance = require(Config:WaitForChild("PitBalanceConfig"))
 local InventoryCapacity = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("InventoryCapacity"))
@@ -109,8 +110,9 @@ function Model.Build(profile: any, tab: Tab): { Row }?
 			local role = hero.Archetype or (seed and seed.Archetype) or "Hero"
 			table.insert(rows, {
 				Id = id, Name = hero.DisplayName or (seed and seed.DisplayName) or readable(hero.TemplateId or id),
-				Summary = ("%s  ·  %d★  ·  Lv. %d"):format(HeroCatalog.RarityName(rarity), stars, number(hero.Level, 1)),
-				Description = role,
+				Summary = ("%s  ·  %d★  ·  %s"):format(HeroCatalog.RarityName(rarity), stars,
+					if StatFormulas.IsMirror(hero) then StatFormulas.LevelText(hero) else ("Lv. %d"):format(number(hero.Level, 1))),
+				Description = if StatFormulas.IsMirror(hero) then role .. " · " .. (StatFormulas.MirrorDescription(hero) :: string) else role,
 				AssignedArtifact = if item then artifactName(item, "Artifact") else nil,
 				ArtifactTemplateId = if item then item.TemplateId else nil,
 				Status = assignment(hero.Assignment), Icon = "Squad", Color = GOLD, Rarity = rarity, Stars = stars,

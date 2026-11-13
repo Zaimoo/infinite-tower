@@ -167,6 +167,11 @@ export type SimHero = {
 	EquippedArtifactRarity: number?,
 	EquippedArtifactType: string?,
 	EquippedArtifactStar: number?,
+	ReflectPercent: number?, -- Caspian's Looking-Glass Bulwark: share of ranged damage sent back (HeroSkillEffects)
+	ReflectExpires: number?,
+	AttackSpeedBonus: number?, -- Rourke's Gilded Frenzy: +attack speed until AttackSpeedUntil
+	AttackSpeedUntil: number?,
+	MirrorSourceUUID: string?, -- a mirror hero's source (the hero it copies), for the client's reflection thread
 	Archetype: string?,
 	AttackCount: number?,
 	BarrierHP: number?,
@@ -295,6 +300,7 @@ local function buildMetadataTable(): { any }
 			EquippedArtifactRarity = h.EquippedArtifactRarity,
 			EquippedArtifactType = h.EquippedArtifactType,
 			EquippedArtifactStar = h.EquippedArtifactStar,
+			MirrorSourceUUID = h.MirrorSourceUUID,
 			DuelSide = h.DuelSide,
 		})
 	end
@@ -553,6 +559,7 @@ function CombatSimulation.RebuildPlayerSquad(player: Player)
 			existing.EquippedArtifactRarity = artifact and artifact.Rarity
 			existing.EquippedArtifactType = artifact and artifact.Type
 			existing.EquippedArtifactStar = artifact and artifact.Star
+			existing.MirrorSourceUUID = heroData.MirrorSource and heroData.MirrorSource.UUID or nil
 			existing.Archetype = (HeroCatalog.Seeds[heroData.TemplateId] and HeroCatalog.Seeds[heroData.TemplateId].Archetype) or "Striker"
 			existing.AttackCount = existing.AttackCount or 0
 			existing.BarrierHP = existing.BarrierHP or 0
@@ -594,6 +601,7 @@ function CombatSimulation.RebuildPlayerSquad(player: Player)
 				EquippedArtifactRarity = artifact and artifact.Rarity,
 				EquippedArtifactType = artifact and artifact.Type,
 				EquippedArtifactStar = artifact and artifact.Star,
+				MirrorSourceUUID = heroData.MirrorSource and heroData.MirrorSource.UUID or nil,
 				Archetype = (HeroCatalog.Seeds[heroData.TemplateId] and HeroCatalog.Seeds[heroData.TemplateId].Archetype) or "Striker",
 				AttackCount = 0,
 				BarrierHP = 0,
@@ -1890,7 +1898,8 @@ end
 -- PvE state machine and duel heroes.
 performHeroAttack = function(simHero: SimHero, targetPos: Vector3, targetMob: SimMob?, targetEnemyHero: SimHero?, distToTarget: number, now: number, dt: number, isOverdrive: boolean)
 	local profile = getDataManager().GetProfile(simHero.Owner)
-	local effectiveInterval = simHero.AttackInterval / (isOverdrive and OVERDRIVE_ATK_SPEED_MULT or 1.0)
+	local frenzy = if (simHero.AttackSpeedUntil or 0) > now then 1 + (simHero.AttackSpeedBonus or 0) else 1
+	local effectiveInterval = simHero.AttackInterval / (isOverdrive and OVERDRIVE_ATK_SPEED_MULT or 1.0) / frenzy
 	simHero.AttackCooldown -= dt
 	if simHero.AttackCooldown <= 0 then
 		simHero.AttackCooldown = effectiveInterval
@@ -1912,7 +1921,20 @@ performHeroAttack = function(simHero: SimHero, targetPos: Vector3, targetMob: Si
 			simHero.Stamina = 0
 		else
 			simHero.AttackCount = (simHero.AttackCount or 0) + 1
-			simHero.Stamina = math.clamp((simHero.Stamina or 0) + tierDef.StaminaGain, 0, 100)
+			local gain = tierDef.StaminaGain
+			-- Nyx's Gilded Edge: Basic attacks charge more while another of her Master's mirror heroes is close.
+			local passive = (skillProfile :: any).Passive
+			if attackType == "BASIC" and passive and passive.Effect == "GILDED_EDGE" then
+				local masterState = ActiveMasters[simHero.Owner]
+				for _, ally in pairs(masterState and masterState.DeployedHeroes or {}) do
+					if ally ~= simHero and ally.State ~= "COMA" and HeroCatalog.IsMirror(ally.TemplateId)
+						and (ally.Position - simHero.Position).Magnitude <= (passive.Radius or 8) then
+						gain *= 1 + (passive.GaugeBonus or 0.15)
+						break
+					end
+				end
+			end
+			simHero.Stamina = math.clamp((simHero.Stamina or 0) + gain, 0, 100)
 		end
 		if profile and profile.Heroes[simHero.HeroUUID] then
 			profile.Heroes[simHero.HeroUUID].CurrentStamina = simHero.Stamina
@@ -2734,7 +2756,7 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
   CombatLifecycleRevision+=1;message.LifecycleRevision=CombatLifecycleRevision
   Tower.BroadcastAt(TowerRemotes.TowerAction,context,message)
  end,
- Damage=function(victim,damage,mob)
+ Damage=function(victim,damage,mob,ranged)
   if victim.Player then return end -- The commander is not a combatant.
   if victim.DuelId then return end -- Mobs leave duelling squads alone.
   if not Tower.Same(victim,mob) or Tower.GetSafety(victim,victim.Position).CombatSafe then return end
@@ -2742,6 +2764,15 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
    local hp=victim.Humanoid.Health;victim.Humanoid:TakeDamage(damage)
    Tower.BroadcastAt(CombatVFXRemote,victim,"HIT_SPARK",victim.Position,hp-victim.Humanoid.Health,false,true)
   else
+   -- Caspian's Looking-Glass Bulwark: part of a ranged hit goes back to the shooter.
+   if ranged and mob and (victim.ReflectExpires or 0) > os.clock() and (victim.ReflectPercent or 0) > 0 and (mob.CurrentHP or 0) > 0 then
+    local back = math.max(1, math.round(damage * victim.ReflectPercent))
+    if Encounters then back = Encounters:OnMobHit(mob, back) end
+    mob.CurrentHP = math.max(0, mob.CurrentHP - back)
+    if mob.DamageLedger and victim.Owner then mob.DamageLedger[victim.Owner.UserId] = (mob.DamageLedger[victim.Owner.UserId] or 0) + back end
+    Tower.BroadcastAt(CombatVFXRemote, mob, "HIT_SPARK", mob.Position, back, false, false)
+    if mob.CurrentHP <= 0 and victim.Owner then handleMobDeath(mob, victim.Owner) end
+   end
    local heroBarrier = victim.BarrierHP or 0
    if heroBarrier > 0 and (victim.BarrierExpires or 0) > os.clock() then
        local absorbed = math.min(heroBarrier, damage)

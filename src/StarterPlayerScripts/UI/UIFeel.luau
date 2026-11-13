@@ -228,8 +228,9 @@ function UIFeel.Burst(parent: GuiObject, at: UDim2, color: Color3, count: number
 end
 
 -- A diagonal light band sweeping across `host` (which should clip, or carry matching corners).
--- Returns a stop function; with `loop` it repeats every `period` seconds until stopped.
-function UIFeel.Shimmer(host: GuiObject, zIndex: number?, loop: boolean?, period: number?): () -> ()
+-- Returns a stop function; with `loop` it repeats every `period` seconds until stopped. `gentle` keeps it
+-- running under Reduce Motion (a light sweep, not movement: the Store banners use it).
+function UIFeel.Shimmer(host: GuiObject, zIndex: number?, loop: boolean?, period: number?, gentle: boolean?): () -> ()
 	local band = Instance.new("Frame")
 	band.Name = "Shimmer"
 	band.BackgroundColor3 = Color3.new(1, 1, 1)
@@ -251,7 +252,7 @@ function UIFeel.Shimmer(host: GuiObject, zIndex: number?, loop: boolean?, period
 	task.spawn(function()
 		repeat
 			grad.Offset = Vector2.new(-1, 0)
-			if not UIFeel.ReducedMotion() then
+			if gentle or not UIFeel.ReducedMotion() then
 				local tw = UIFeel.Tween(grad, 0.7, { Offset = Vector2.new(1, 0) }, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
 				tw.Completed:Wait()
 			end

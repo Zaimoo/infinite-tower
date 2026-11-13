@@ -426,6 +426,7 @@ local function SettingsApp()
 			c.GlobalShadows = true
 			c.Bloom = true
 			c.ColorFX = true
+			c.ReduceMotion = false
 			c.FOV = 75
 			c.Brightness = 0.20 -- 0.20 is the place's own brightness (1.65); higher washes the scene out
 			setSettings(c)
@@ -669,6 +670,15 @@ local function SettingsApp()
 						AccentColor = accent,
 						LayoutOrder = 3,
 						OnToggle = function() updateSetting("ColorFX", not settings.ColorFX) end,
+					}),
+					-- Max Performance turns this on; without a toggle there was no way back.
+					MotionToggle = e(Toggle, {
+						Label = "Reduce Motion",
+						Description = "Calmer menus and effects",
+						Value = settings.ReduceMotion,
+						AccentColor = accent,
+						LayoutOrder = 4,
+						OnToggle = function() updateSetting("ReduceMotion", not settings.ReduceMotion) end,
 					}),
 				},
 			}),

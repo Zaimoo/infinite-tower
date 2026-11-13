@@ -45,6 +45,8 @@ local INK = Grimoire.Ink
 local BANNERS = {
 	{ Key = "PERMANENT", Banner = HeroCatalog.PermanentBanner, Tag = "PERMANENT", Tone = "Violet", Summon = "CALL_OF_THE_RIFT" },
 	{ Key = "LIMITED", Banner = HeroCatalog.LimitedBanner, Tag = "LIMITED EVENT", Tone = "Bronze", Summon = "A_STARS_ARRIVAL" },
+	-- Robux only: its heroes are summoned from the Store, and have no stats of their own (docs/gilded-mirror-plan.md).
+	{ Key = "MIRROR", Banner = HeroCatalog.MirrorBanner, Tag = "PREMIUM · STORE", Tone = "Crimson", Summon = "GILDED_MIRROR", Mirror = true },
 }
 
 local ARTIFACT_CATEGORIES = {
@@ -484,6 +486,8 @@ local function HeroIndex(props: { Profile: any, Width: number, OnClose: () -> ()
 		local lucky = if luck > 0 then SummonLuck.ApplyLuck(rates, luck)[tier] else base
 		local mine = ownedHeroes[heroSeed.HeroId]
 		local mult = StatBalance.HeroRarityCombatMultiplier ^ (tier - 1)
+		local mirrorHero = (heroSeed :: any).Mirror == true
+		local mirrorBanner = heroEntry.Mirror == true
 		local function kitLine(def: any): string
 			if not def then return "—" end
 			return string.format("<b>%s</b> — %s", def.Name or "?", def.Description or string.format("%.0f%% damage", (def.DamageMultiplier or 1) * 100))
@@ -511,28 +515,40 @@ local function HeroIndex(props: { Profile: any, Width: number, OnClose: () -> ()
 		})
 		heroDetail.Stats = e("Frame", { LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 52), BackgroundTransparency = 1 }, {
 			Layout = e("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
-			HP = statTile(1, "BASE HP", Components.Abbreviate(heroSeed.NativeHP * mult), TEXT.Good),
-			ATK = statTile(2, "BASE ATK", Components.Abbreviate(heroSeed.NativeATK * mult), Color3.fromRGB(255, 150, 120)),
-			Labor = statTile(3, "LABOR · " .. string.upper(Theme.FacilityNames[heroSeed.PreferredFacility] or "ANY"), string.format("%.1f", labor), TEXT.Gold),
+			-- A mirror hero's stats are a share of your best normal hero: show the share, not base numbers.
+			HP = if mirrorHero then statTile(1, "MIRROR 1★ → 7★", string.format("%d%% → %d%%", math.round(StatFormulas.GetMirrorPercent(probe) * 100),
+					math.round(StatFormulas.GetMirrorPercent({ TemplateId = heroSeed.HeroId, Stars = 7 }) * 100)), TEXT.Good)
+				else statTile(1, "BASE HP", Components.Abbreviate(heroSeed.NativeHP * mult), TEXT.Good),
+			ATK = if mirrorHero then statTile(2, "COPIES", "BEST HERO", Color3.fromRGB(255, 150, 120))
+				else statTile(2, "BASE ATK", Components.Abbreviate(heroSeed.NativeATK * mult), Color3.fromRGB(255, 150, 120)),
+			Labor = if mirrorHero then statTile(3, "LABOR", "= BEST HERO", TEXT.Gold)
+				else statTile(3, "LABOR · " .. string.upper(Theme.FacilityNames[heroSeed.PreferredFacility] or "ANY"), string.format("%.1f", labor), TEXT.Gold),
 		})
 		heroDetail.Basic = section(4, "BASIC ATTACK", kitLine(kit and kit.Basic), 52)
 		heroDetail.Special = section(5, "SPECIAL", kitLine(kit and kit.Special), 60)
 		heroDetail.Skill = section(6, "SKILL", kitLine(kit and kit.Skill), 60)
-		heroDetail.Odds = Panel({ LayoutOrder = 7, Size = UDim2.new(1, 0, 0, if tier >= (heroEntry.Banner.PityMinTier or 5) then 78 else 58), Radius = 10,
+		local showPity = mirrorBanner or tier >= (heroEntry.Banner.PityMinTier or 5)
+		heroDetail.Odds = Panel({ LayoutOrder = 7, Size = UDim2.new(1, 0, 0, if showPity then 78 else 58), Radius = 10,
 			Top = Tones.Violet.Top, Bottom = Tones.Violet.Bottom, Rail = Tones.Violet.Rail }, {
 			Title = Heavy({ Position = UDim2.fromOffset(12, 8), Size = UDim2.new(1, -24, 0, 18), MaxSize = 14, Outline = 1.8, TextXAlignment = Enum.TextXAlignment.Left,
 				Text = "DROP RATE", ZIndex = 3 }),
 			Rate = Body({ Position = UDim2.fromOffset(12, 30), Size = UDim2.new(1, -24, 0, 18), TextSize = 14, ZIndex = 3,
-				Text = if luck > 0 then string.format("%.2f%%  →  <font color=\"#78FF8C\"><b>%.2f%%</b></font> with God's Blessing", base * 100, lucky * 100)
+				-- God's Blessing luck doesn't apply to the Robux banner.
+				Text = if luck > 0 and not mirrorBanner then string.format("%.2f%%  →  <font color=\"#78FF8C\"><b>%.2f%%</b></font> with God's Blessing", base * 100, lucky * 100)
 					else string.format("<b>%.2f%%</b> per summon", base * 100) }),
-			Pity = if tier >= (heroEntry.Banner.PityMinTier or 5) then Body({ Position = UDim2.fromOffset(12, 52), Size = UDim2.new(1, -24, 0, 18), TextSize = 13, TextColor3 = TEXT.Gold,
-				Text = string.format("Exalted+ guaranteed within %d summons (pity)", heroEntry.Banner.MaxPity), ZIndex = 3 }) else nil,
+			Pity = if showPity then Body({ Position = UDim2.fromOffset(12, 52), Size = UDim2.new(1, -24, 0, 18), TextSize = 13, TextColor3 = TEXT.Gold,
+				Text = if mirrorBanner
+					then string.format("Every 10x: %s or better · Spark: pick any hero every %d pulls",
+						HeroCatalog.Seeds[heroEntry.Banner.HeroesByStar[heroEntry.Banner.TenPullMinTier]].DisplayName, heroEntry.Banner.SparkPulls)
+					else string.format("Exalted+ guaranteed within %d summons (pity)", heroEntry.Banner.MaxPity), ZIndex = 3 }) else nil,
 		})
 		heroDetail.Summon = button({ LayoutOrder = 8, Size = UDim2.new(1, 0, 0, 46), ZIndex = 3,
 			[React.Event.Activated] = function()
 				props.OnClose()
-				if _G.OpenFacilityHUD then _G.OpenFacilityHUD("Summoning") end
-			end }, "Action", "SUMMON ON " .. string.upper(heroEntry.Banner.Title), 15)
+				if mirrorBanner then
+					if _G.OpenRobuxShop then _G.OpenRobuxShop() end
+				elseif _G.OpenFacilityHUD then _G.OpenFacilityHUD("Summoning") end
+			end }, "Action", if mirrorBanner then "SUMMON IN THE STORE" else "SUMMON ON " .. string.upper(heroEntry.Banner.Title), 15)
 	end
 
 	-- =========================================================================

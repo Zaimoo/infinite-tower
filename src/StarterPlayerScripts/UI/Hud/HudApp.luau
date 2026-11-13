@@ -114,6 +114,7 @@ local function buildRows(profile: any): ({ any }, string?)
 			local row: any = {
 				Slot = slot, Hero = true, Name = hero.DisplayName, TemplateId = hero.TemplateId, Archetype = hero.Archetype or (seed and seed.Archetype) or "Striker",
 				Rarity = rarity, RarityName = HeroCatalog.RarityName(rarity), Stars = hero.Stars or 1, Level = hero.Level or 1,
+				LevelText = StatFormulas.LevelText(hero),
 			}
 			local info = live[hero.UUID]
 			local comaLeft = (hero.ComaUntilTimestamp or 0) - now

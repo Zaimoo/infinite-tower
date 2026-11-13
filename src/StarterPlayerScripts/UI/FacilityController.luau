@@ -1036,7 +1036,7 @@ function Controller:Refresh()
 		local hasSynergy = currentTag and (pref == "ALL" or pref == currentTag or (currentTag == "FACILITY_GODS_BLESSING" and hero.Archetype == "Healer"))
 		local synergyText = hasSynergy and " <font color=\"#4ADE80\">★ +25% Synergy</font>" or ""
 
-		desc.Text = string.format("%s %s  <font color=\"#FACC15\">%s</font>  Lv.%d\n<font color=\"#A0B0C4\">%s  •  %s</font>\n<font color=\"#E2D5FC\">Labor: <b>%.1f</b>%s</font>", archIcon, hero.DisplayName, stars, hero.Level or 1, hero.Assignment, status, labor, synergyText)
+		desc.Text = string.format("%s %s  <font color=\"#FACC15\">%s</font>  %s\n<font color=\"#A0B0C4\">%s  •  %s</font>\n<font color=\"#E2D5FC\">Labor: <b>%.1f</b>%s</font>", archIcon, hero.DisplayName, stars, StatFormulas.LevelText(hero), hero.Assignment, status, labor, synergyText)
 
 		local assignTitle = "DEPLOY"
 		local targetAssignment = "SQUAD_AUTO"

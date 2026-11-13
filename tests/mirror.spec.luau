@@ -185,5 +185,134 @@ test("mirror heroes promote without a level and gain 2% a star, but never level"
 	check(not granted and reason == "Mirror heroes don't level.", "no combat EXP")
 end)
 
+local MirrorBanner = require(nodes["ReplicatedStorage.Shared.Util.MirrorBanner"])
+local ShopConfig = require(nodes["ReplicatedStorage.Shared.Config.ShopConfig"])
+
+test("pulls follow the banner rates and never land below Isabelle", function()
+	local n, counts = 10000, {}
+	local i = 0
+	local tiers = MirrorBanner.RollTiers(n, function() i += 1; return (i - 0.5) / n end)
+	for _, tier in tiers do counts[tier] = (counts[tier] or 0) + 1 end
+	for tier = 1, 6 do check(counts[tier] == nil, "no tier " .. tier) end
+	for tier = 7, 11 do
+		close(counts[tier] / n, Catalog.MirrorBanner.Rates[tier], 0.002, "tier " .. tier .. " rate")
+		check(Catalog.Seeds[MirrorBanner.HeroForTier(tier)].Rarity == tier, "tier " .. tier .. " hero")
+	end
+	local top = MirrorBanner.RollTiers(1, function() return 0.9999999999 end)
+	check(top[1] == 7, "a roll at the very top of [0,1) is Isabelle")
+end)
+
+test("a ten-pull of nine Isabelles ends on Caspian or better", function()
+	local tiers = MirrorBanner.RollTiers(10, function() return 0.99 end)
+	for pull = 1, 9 do check(tiers[pull] == 7, "pull " .. pull .. " is Isabelle") end
+	check(tiers[10] >= 9, "the tenth is Caspian or better")
+	local single = MirrorBanner.RollTiers(1, function() return 0.99 end)
+	check(single[1] == 7, "single pulls have no floor")
+end)
+
+test("the Spark banks one pick every 80 pulls and repairs bad saves", function()
+	local p = {}
+	local spark = MirrorBanner.EnsureSpark(p)
+	check(p.MirrorSpark == spark and spark.Pulls == 0 and spark.Selections == 0, "created")
+	check(MirrorBanner.AddPulls(spark, 79) == 0 and spark.Pulls == 79, "79 pulls")
+	check(MirrorBanner.AddPulls(spark, 10) == 1 and spark.Pulls == 9 and spark.Selections == 1, "the 80th pull banks a pick")
+	check(MirrorBanner.AddPulls(spark, 160) == 2 and spark.Selections == 3, "picks stack")
+	p.MirrorSpark = { Pulls = 0 / 0, Selections = -4 }
+	local fixed = MirrorBanner.EnsureSpark(p)
+	check(fixed.Pulls == 0 and fixed.Selections == 0, "NaN and negatives are repaired")
+	check(MirrorBanner.IsSparkChoice("hero_rourke") and not MirrorBanner.IsSparkChoice("hero_astrea") and not MirrorBanner.IsSparkChoice(7), "only the five")
+end)
+
+test("Robux packs pull on the mirror banner; restricted players get 150 Gems a pull", function()
+	check(MirrorBanner.IsBanner("GILDED_MIRROR") and MirrorBanner.IsBanner("banner_gilded_mirror") and not MirrorBanner.IsBanner("A_STARS_ARRIVAL"), "banner ids")
+	local one, ten = ShopConfig.ById("pack_mirror_1"), ShopConfig.ById("pack_mirror_10")
+	check(one and one.RobuxPrice == 55 and one.Grant.Amount == 1 and one.Grant.Banner == "GILDED_MIRROR", "single pull offer")
+	check(ten and ten.RobuxPrice == 499 and ten.Grant.Amount == 10 and ten.Grant.Banner == "GILDED_MIRROR", "ten-pull offer")
+	local safe = ShopConfig.SafeGrant(ten.Grant, true)
+	check(safe.Kind == "Gems" and safe.Amount == 1500, "restricted ten-pull becomes 1,500 Gems")
+	check(ShopConfig.SafeGrant(ten.Grant, false).Kind == "Summons", "allowed players get the pulls")
+end)
+
+test("hero lists show the mirror share instead of a level", function()
+	local p = profileWith({ hero("s", "hero_astrea", { Level = 7 }), hero("m", "hero_rourke", { Stars = 2 }) })
+	check(Stats.LevelText(p.Heroes.s) == "Lv.7", "normal heroes show their level")
+	check(Stats.LevelText(p.Heroes.m) == "Mirror 152%", "mirror heroes show their share")
+	check(Stats.MirrorDescription(p.Heroes.s) == nil, "no mirror line for normal heroes")
+	check(Stats.MirrorDescription(p.Heroes.m) == "Copies 152% of your best hero's power", "before a source is known")
+	Stats.RefreshMirrorSources(p)
+	check(Stats.MirrorDescription(p.Heroes.m) == "Copies 152% of Astrea's power", "names the source")
+end)
+
+local Skills = require(nodes["ReplicatedStorage.Shared.Config.ArchetypeCombatSkills"])
+local Effects = require(nodes["ServerScriptService.Combat.HeroSkillEffects"])
+
+local function mob(id, x, hp)
+	return { NetId = id, IsAlive = true, CurrentHP = hp or 1000, MaxHP = hp or 1000, Position = Vector3.new(x, 0, 0), DamageLedger = {} }
+end
+local function effectContext(mobs)
+	return { Mobs = mobs, Now = 100, Same = function() return true end, IsCombatSafe = function() return false end,
+		Broadcast = function() end, HandleMobDeath = function() end }
+end
+local function attacker(heroId, archetype, hp)
+	return { Owner = { UserId = 1 }, Archetype = archetype, TemplateId = heroId, MaxHP = 1000, CurrentHP = hp or 1000, NetId = 1, Position = Vector3.new(0, 0, 0) }
+end
+local function resolve(heroId, archetype, tier, mobs, primary, a)
+	local profile = Skills.GetSkillProfile(heroId, archetype)
+	local def = if tier == "SKILL" then profile.Skill elseif tier == "SPECIAL" then profile.Special else profile.Basic
+	return Effects.Resolve(effectContext(mobs) :: any, { Impact = { Atk = 100, DamageMult = def.DamageMultiplier, Ticks = 1, Origin = Vector3.new(0, 0, 0) },
+		Attacker = a or attacker(heroId, archetype), Profile = profile, Tier = tier, Tick = 1, Primary = primary, Center = primary.Position })
+end
+
+test("Refraction splits to three other enemies within 14 studs; Ricochet to one", function()
+	local target, near1, near2, near3, near4, far = mob(1, 5), mob(2, 8), mob(3, 9), mob(4, 10), mob(5, 11), mob(6, 40)
+	resolve("hero_seraphine", "Scholar", "SPECIAL", { target, near1, near2, near3, near4, far }, target)
+	local hit = 0
+	for _, m in { near1, near2, near3, near4 } do if m.CurrentHP == 940 then hit += 1 end end
+	check(hit == 3, "three shards at 0.60x ATK")
+	check(far.CurrentHP == 1000 and target.CurrentHP == 1000, "the far enemy is untouched; the caller lands the prism")
+	local t2, a, b = mob(1, 5), mob(2, 8), mob(3, 9)
+	resolve("hero_isabelle", "Marksman", "SPECIAL", { t2, a, b }, t2)
+	check((a.CurrentHP == 925) ~= (b.CurrentHP == 925), "one bounce at 0.75x ATK")
+end)
+
+test("Last Stand grows from 1.5x at full HP to 2.5x at 10% HP", function()
+	local special = Skills.GetSkillProfile("hero_rourke", "Berserker").Special
+	close(Effects.LastStandBonus({ CurrentHP = 1000, MaxHP = 1000 }, special), 1, 1e-9, "full HP")
+	close(Effects.LastStandBonus({ CurrentHP = 100, MaxHP = 1000 }, special), 2.5 / 1.5, 1e-9, "10% HP")
+	close(Effects.LastStandBonus({ CurrentHP = 10, MaxHP = 1000 }, special), 2.5 / 1.5, 1e-9, "capped below 10%")
+	close(Effects.LastStandBonus({ CurrentHP = 550, MaxHP = 1000 }, special), 1 + 0.5 * (2.5 / 1.5 - 1), 1e-9, "halfway")
+	local target = mob(1, 4)
+	local bonus = resolve("hero_rourke", "Berserker", "SPECIAL", { target, mob(2, 6) }, target, attacker("hero_rourke", "Berserker", 100))
+	close(bonus, 2.5 / 1.5, 1e-9, "Resolve returns the bonus")
+end)
+
+test("Twin Reflection hits the toughest other enemy, or the lone target twice", function()
+	local target, weak, tough, far = mob(1, 10, 1000), mob(2, 12, 500), mob(3, 14, 5000), mob(4, 60, 9999)
+	resolve("hero_isabelle", "Marksman", "SKILL", { target, weak, tough, far }, target)
+	check(tough.CurrentHP == 5000 - 250 and weak.CurrentHP == 500 and far.CurrentHP == 9999, "2.50x ATK to the toughest within 30 studs")
+	check(target.CurrentHP == 1000, "no splash: the caller lands the first half")
+	local alone = mob(1, 10)
+	resolve("hero_isabelle", "Marksman", "SKILL", { alone }, alone)
+	check(alone.CurrentHP == 750, "a lone target takes the second half too")
+end)
+
+test("Looking-Glass Bulwark reflects for 6s; Gilded Frenzy speeds Rourke up for 4s", function()
+	local caspian = attacker("hero_caspian", "Vanguard")
+	local target = mob(1, 5)
+	resolve("hero_caspian", "Vanguard", "SKILL", { target }, target, caspian)
+	check(caspian.ReflectPercent == 0.20 and caspian.ReflectExpires == 106, "reflection set")
+	check(caspian.BarrierHP == 400 and target.TauntedByNetId == 1, "the Vanguard barrier and taunt still apply")
+	local rourke = attacker("hero_rourke", "Berserker")
+	local t2 = mob(1, 5)
+	resolve("hero_rourke", "Berserker", "SKILL", { t2, mob(2, 10) }, t2, rourke)
+	check(rourke.AttackSpeedBonus == 0.25 and rourke.AttackSpeedUntil == 104, "frenzy set")
+end)
+
+test("Nyx's Gilded Edge passive is on her kit only", function()
+	local passive = (Skills.GetSkillProfile("hero_nyx", "Striker") :: any).Passive
+	check(passive and passive.Effect == "GILDED_EDGE" and passive.GaugeBonus == 0.15 and passive.Radius == 8, "Nyx's passive")
+	check((Skills.GetSkillProfile("hero_edis", "Striker") :: any).Passive == nil, "other Strikers have none")
+end)
+
 print(string.format("mirror: %d passed, %d failed", passed, failed))
 if failed > 0 then error(string.format("%d mirror tests failed", failed)) end

@@ -22,6 +22,7 @@ local TowerRun = require(Shared.Util.TowerRun)
 local FortressTree = require(Shared:WaitForChild("Util"):WaitForChild("FortressTree"))
 local InventoryCapacity = require(Shared:WaitForChild("Util"):WaitForChild("InventoryCapacity"))
 local SummonLuck = require(Shared:WaitForChild("Util"):WaitForChild("SummonLuck"))
+local MirrorBanner = require(Shared:WaitForChild("Util"):WaitForChild("MirrorBanner"))
 local Onboarding = require(Shared:WaitForChild("Util"):WaitForChild("Onboarding"))
 local OnboardingService = require(script.Parent:WaitForChild("OnboardingService"))
 local FortressTreeService = require(script.Parent:WaitForChild("FortressTreeService"))
@@ -164,6 +165,8 @@ local function progressionRemote(name: string, className: string): Instance
 end
 local UnlockTreeNodeFunc = progressionRemote("UnlockTreeNode", "RemoteFunction") :: RemoteFunction
 local OnboardingSyncEvent = progressionRemote("OnboardingSync", "RemoteEvent") :: RemoteEvent
+-- The Gilded Mirror's Spark: spend one banked pick on any of the five mirror heroes.
+local ClaimMirrorSparkFunc = progressionRemote("ClaimMirrorSpark", "RemoteFunction") :: RemoteFunction
 
 --============================================================================
 -- 1. EXPORTED TYPE DEFINITIONS
@@ -584,6 +587,8 @@ function DataManager.SyncProfile(player: Player, progressionOnly: boolean?)
 	DataManager.MigrateArtifactTypes(profile)
 	-- Raid bosses (docs/raid-boss-plan.md §10): idempotent payout key and raid stats. Lazy, so old profiles gain it.
 	DataManager.EnsureRaidData(profile)
+	-- The Gilded Mirror's Spark counter (docs/gilded-mirror-plan.md): lazy, so old profiles gain it.
+	MirrorBanner.EnsureSpark(profile)
 	-- Crafting was removed with the Gold banner: drop its old materials from the Backpack.
 	if profile.PitMaterials then
 		for _, id in { "IronGear", "RiftOrb", "AegisGem", "StarDust", "VoidPowder" } do
@@ -843,9 +848,31 @@ local function validateCallerPlotOwnership(player: Player, targetPlot: any?): bo
 	return true
 end
 
+-- The Gilded Mirror (Robux only, granted by ShopService): no luck and no pity; the ten-pull floor and the
+-- Spark come from MirrorBanner. Returns the same shape as RollSummons.
+function DataManager.RollMirrorSummons(player: Player, count: number): ({ HeroInstance }, number, number, any, string, boolean)
+	local profile = ActiveProfiles[player] :: PlayerProfile
+	local spark = MirrorBanner.EnsureSpark(profile)
+	local summonedList: { HeroInstance } = {}
+	local bestTier = 0
+	for _, tier in MirrorBanner.RollTiers(count, function() return math.random() end) do
+		local uuid, hero = DataManager.CreateHeroFromSeed(MirrorBanner.HeroForTier(tier))
+		profile.Heroes[uuid] = hero
+		table.insert(summonedList, hero)
+		bestTier = math.max(bestTier, tier)
+	end
+	if MirrorBanner.AddPulls(spark, count) > 0 then
+		DataManager.SendToast(player, "Spark ready|Choose any Gilded Mirror hero in the Store", "SUCCESS")
+	end
+	return summonedList, bestTier, 0, HeroCatalog.MirrorBanner, "MirrorSpark", false
+end
+
 -- Rolls `count` heroes on a banner (no cost): pity, the 10-pull floor and God's Blessing luck all
 -- apply. Used by Gem summons and by Robux summon packs (ShopService).
 function DataManager.RollSummons(player: Player, bannerId: string, count: number): ({ HeroInstance }, number, number, any, string, boolean)
+	if MirrorBanner.IsBanner(bannerId) then
+		return DataManager.RollMirrorSummons(player, count)
+	end
 	local profile = ActiveProfiles[player] :: PlayerProfile
 	local isLimited = isLimitedBanner(bannerId)
 	local banner = if isLimited then HeroCatalog.LimitedBanner else HeroCatalog.PermanentBanner
@@ -924,6 +951,10 @@ RequestSummonFunc.OnServerInvoke = function(player: Player, arg1: any, arg2: any
 	if not profile then
 		return { Success = false, Message = "Profile not loaded" }
 	end
+	-- The Gilded Mirror is Robux only (ShopService); it has no Gem price.
+	if MirrorBanner.IsBanner(bannerId) then
+		return { Success = false, Message = "The Gilded Mirror is summoned from the Store." }
+	end
 
 	local count = (pullCount == 10) and 10 or 1
 	-- Heroes working in a facility are out of the backpack and don't count (InventoryCapacity).
@@ -961,6 +992,35 @@ RequestSummonFunc.OnServerInvoke = function(player: Player, arg1: any, arg2: any
 		LimitedPityRemaining = math.max(1, HeroCatalog.LimitedBanner.MaxPity - profile.HeroLimitedPity),
 		SummonLuck = luck,
 	}
+end
+
+-- Spends one banked Spark pick on a mirror hero the player chose.
+local lastSparkClaim: { [Player]: number } = {}
+Players.PlayerRemoving:Connect(function(player) lastSparkClaim[player] = nil end)
+ClaimMirrorSparkFunc.OnServerInvoke = function(player: Player, heroId: any)
+	local now = os.clock()
+	if now - (lastSparkClaim[player] or -99) < 1 then
+		return { Success = false, Message = "Slow down." }
+	end
+	lastSparkClaim[player] = now
+	local profile = ActiveProfiles[player]
+	if not profile then return { Success = false, Message = "Profile not loaded" } end
+	if not MirrorBanner.IsSparkChoice(heroId) then return { Success = false, Message = "Choose a Gilded Mirror hero." } end
+	local spark = MirrorBanner.EnsureSpark(profile)
+	if spark.Selections <= 0 then
+		return { Success = false, Message = string.format("Spark needs %d more pulls.", HeroCatalog.MirrorBanner.SparkPulls - spark.Pulls) }
+	end
+	local heroCap = InventoryCapacity.HeroCap(profile.FortressTree)
+	if InventoryCapacity.HeroCount(profile) + 1 > heroCap then
+		DataManager.SendToast(player, string.format("Heroes full|%d max · Synthesize some", heroCap), "WARN")
+		return { Success = false, Message = "Hero inventory full" }
+	end
+	spark.Selections -= 1
+	local uuid, hero = DataManager.CreateHeroFromSeed(heroId :: string)
+	profile.Heroes[uuid] = hero
+	DataManager.SendToast(player, string.format("Spark|%s joins your roster", hero.DisplayName), "SUCCESS")
+	DataManager.SyncProfile(player)
+	return { Success = true, Hero = hero }
 end
 
 -- Legacy endpoints cannot bypass confirmed previews.
@@ -1680,6 +1740,26 @@ if game:GetService("RunService"):IsStudio() then
 		local uuid, hero = DataManager.CreateHeroFromSeed(seedId)
 		profile.Heroes[uuid] = hero
 		DataManager.SendToast(player, string.format("[Dev] Summoned %s", hero.DisplayName), "SUCCESS")
+		DataManager.SyncProfile(player)
+	end)
+
+	-- Studio-only chat command: `/mirrorpull [1|10]` runs Gilded Mirror pulls as if a Robux pack was bought
+	-- (ProductIds are 0 until the products exist), so the ten-pull floor and the Spark can be tested.
+	local mirrorCommand = Instance.new("TextChatCommand")
+	mirrorCommand.Name = "DevMirrorPull"
+	mirrorCommand.PrimaryAlias = "/mirrorpull"
+	mirrorCommand.Parent = game:GetService("TextChatService")
+	mirrorCommand.Triggered:Connect(function(source: TextSource, message: string)
+		local player = Players:GetPlayerByUserId(source.UserId)
+		local profile = player and ActiveProfiles[player]
+		if not player or not profile then return end
+		local count = if string.match(message, "^%S+%s+10") then 10 else 1
+		local summoned = DataManager.RollMirrorSummons(player, count)
+		local names = {}
+		for _, hero in summoned do table.insert(names, hero.DisplayName) end
+		local spark = MirrorBanner.EnsureSpark(profile)
+		DataManager.SendToast(player, string.format("[Dev] %s · Spark %d/%d (%d to pick)", table.concat(names, ", "),
+			spark.Pulls, HeroCatalog.MirrorBanner.SparkPulls, spark.Selections), "SUCCESS")
 		DataManager.SyncProfile(player)
 	end)
 

@@ -1266,7 +1266,7 @@ local function FacilityPanel(props: { Facility: string, Profile: any, Width: num
 			Name = Heavy({ Position = UDim2.fromOffset(84, 8), Size = UDim2.new(1, -250, 0, 20), MaxSize = 16, Outline = 2, Gold = false,
 				TextXAlignment = Enum.TextXAlignment.Left, Text = hero.DisplayName, ZIndex = 4 }),
 			Info = Body({ Position = UDim2.fromOffset(84, 30), Size = UDim2.new(1, -250, 0, 16), TextSize = 12, ZIndex = 4, TextColor3 = Theme.RarityColor(rarity),
-				Text = string.format("%s · %s %d★ · Lv.%d", hero.Archetype or "?", HeroCatalog.RarityName(rarity), hero.Stars or 1, hero.Level or 1) }),
+				Text = string.format("%s · %s %d★ · %s", hero.Archetype or "?", HeroCatalog.RarityName(rarity), hero.Stars or 1, StatFormulas.LevelText(hero)) }),
 			Where = Body({ Position = UDim2.fromOffset(84, 50), Size = UDim2.new(1, -250, 0, 16), TextSize = 12, ZIndex = 4,
 				TextColor3 = if resting > 0 then TEXT.Bad elseif away then Color3.fromRGB(150, 236, 255) else TEXT.Muted,
 				Text = if resting > 0 then string.format("Resting %ds", resting) else "Now: " .. assignmentLabel(hero.Assignment) }),

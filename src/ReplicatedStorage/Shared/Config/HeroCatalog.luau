@@ -111,8 +111,8 @@ HeroCatalog.LimitedBanner = {
 }
 
 -- The Gilded Mirror (docs/gilded-mirror-plan.md): a Robux-only banner of five mirror heroes, one per tier 7-11.
--- Every pull is one of the five, so tiers 1-6 are 0 (Rates stays a dense array for SummonLuck). The purchase path,
--- ten-pull floor and Spark land with the banner PR; this is the data the Hero Index and odds window read.
+-- Every pull is one of the five, so tiers 1-6 are 0 (Rates stays a dense array for SummonLuck). Pull rules (ten-pull
+-- floor, Spark) live in Util/MirrorBanner; purchases go through ShopConfig.Mirror and ShopService.
 HeroCatalog.MirrorBanner = {
 	BannerId = "banner_gilded_mirror",
 	Title = "THE GILDED MIRROR",
@@ -121,6 +121,8 @@ HeroCatalog.MirrorBanner = {
 	RobuxOnly = true,
 	TenPullMinTier = 9, -- every 10-pull includes Caspian or better
 	SparkPulls = 80, -- after 80 pulls the Master picks any of the five
+	-- A restricted player's purchase becomes Gems: 49.9 R$ a pull at the Gem store's 3 Gems per Robux.
+	RestrictedGemsPerPull = 150,
 	FeaturedHeroId = "hero_rourke",
 	Rates = { 0, 0, 0, 0, 0, 0,
 		0.50, -- 50% Mythical Isabelle (110% mirror)

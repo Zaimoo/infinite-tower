@@ -199,6 +199,29 @@ local function resolveSkill(ctx: Context, hit: Hit, scale: number)
 	local first = hit.Tick == 1
 
 	-- Hero kits can name their own effect; everything else uses its archetype's.
+	if skill.Effect == "TWIN_SHOT" then
+		-- Isabelle: the arrow splits; the second half hits the toughest other mob in range, or the target again.
+		if not first then return end
+		local amount = math.round(atk * mult * scale)
+		local radius = skill.TwinRange or 30
+		local best: any, bestHP = nil, -1
+		for _, mob in ctx.Mobs do
+			if mob ~= hit.Primary and eligible(ctx, hit, mob) and near(mob, attacker.Position, radius) and (mob.CurrentHP or 0) > bestHP then
+				best, bestHP = mob, mob.CurrentHP or 0
+			end
+		end
+		local second = best or (if hit.Primary and eligible(ctx, hit, hit.Primary) then hit.Primary else nil)
+		if second then damageMob(ctx, hit, second, amount) end
+		return
+	elseif skill.Effect == "MIRROR_WALL" and first then
+		-- Caspian: the Vanguard taunt and barrier below, plus ranged reflection for the barrier's duration.
+		attacker.ReflectPercent = skill.ReflectPercent or 0.20
+		attacker.ReflectExpires = ctx.Now + (skill.Duration or 6.0)
+	elseif skill.Effect == "FRENZY" and first then
+		-- Rourke: the Berserker slam below, then a short attack-speed buff (CombatSimulation reads it).
+		attacker.AttackSpeedBonus = skill.AttackSpeedBonus or 0.25
+		attacker.AttackSpeedUntil = ctx.Now + (skill.BuffSeconds or 4)
+	end
 	if skill.Effect == "SINGULARITY" then
 		singularity(ctx, hit, skill, math.round(atk * mult * 0.6 * scale))
 		return
@@ -295,7 +318,16 @@ local function resolveSpecial(ctx: Context, hit: Hit): number
 	local archetype = attacker.Archetype
 	local atk = hit.Impact.Atk
 
-	if special.SecondaryEffect == "BEAM_LINE" then
+	if special.SecondaryEffect == "RICOCHET" then
+		-- Isabelle's Ricochet, Seraphine's Refraction: the hit carries on to the nearest other mobs.
+		nearbyOthers(ctx, hit, hit.Center, special.RicochetRadius or 14, special.SecondaryParam or 1, math.round(atk * (special.RicochetDamage or 0.75)))
+		return 1
+	elseif special.SecondaryEffect == "LAST_STAND" then
+		-- Rourke: the Berserker stagger, and a hit that grows from DamageMultiplier at full HP to
+		-- MaxMultiplier at 10% HP or less.
+		nearbyOthers(ctx, hit, hit.Center, special.SecondaryParam or 8, math.huge, math.round(atk * 0.50))
+		return HeroSkillEffects.LastStandBonus(attacker, special)
+	elseif special.SecondaryEffect == "BEAM_LINE" then
 		beamLine(ctx, hit, special.SecondaryParam or 36, special.BeamWidth or 4, math.round(atk * (special.BeamDamage or 0.8)))
 		return 1
 	elseif special.SecondaryEffect == "WHIRLWIND" then
@@ -341,6 +373,15 @@ local function resolveSpecial(ctx: Context, hit: Hit): number
 		nearbyOthers(ctx, hit, hit.Impact.Origin, special.SecondaryParam or 32, 1, math.round(atk * 0.75))
 	end
 	return 1
+end
+
+-- Rourke's Last Stand: extra multiplier on the primary hit for the attacker's missing HP.
+function HeroSkillEffects.LastStandBonus(attacker: any, special: any): number
+	local hp = (attacker.CurrentHP or 0) / math.max(1, attacker.MaxHP or 1)
+	local missing = math.clamp((1 - hp) / 0.9, 0, 1)
+	local base = special.DamageMultiplier or 1.5
+	local top = special.MaxMultiplier or base
+	return 1 + missing * (top / base - 1)
 end
 
 -- Applies the tier's secondary effects for one tick. Returns the extra primary-hit multiplier.

@@ -91,6 +91,8 @@ $modulePaths = @(
     'ReplicatedStorage/Shared/Util/FacilityWorkerRules.luau',
     'ReplicatedStorage/Shared/Util/SummonLuck.luau',
     'ReplicatedStorage/Shared/Util/HeroBannerOdds.luau',
+    'ReplicatedStorage/Shared/Config/ShopConfig.luau',
+    'ReplicatedStorage/Shared/Util/MirrorBanner.luau',
     'ReplicatedStorage/Shared/Util/PreloadManifest.luau',
     'ReplicatedStorage/Shared/Util/Onboarding.luau',
     'ReplicatedStorage/Shared/Config/RewardsConfig.luau',

@@ -476,6 +476,13 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 	model:SetAttribute("EntityGeneration",meta.EntityGeneration)
 	model:SetAttribute("FloorId",meta.FloorId)
 	model:SetAttribute("RoomGeneration",meta.RoomGeneration)
+	-- Hero identity, for MirrorHeroFx (a mirror hero draws a gold thread to the hero it copies).
+	if isHero and meta then
+		model:SetAttribute("HeroUUID", meta.HeroUUID)
+		model:SetAttribute("OwnerUserId", meta.OwnerUserId)
+		model:SetAttribute("MirrorSourceUUID", meta.MirrorSourceUUID)
+		if HeroCatalog.IsMirror(meta.TemplateId) then game:GetService("CollectionService"):AddTag(model, "MirrorHero") end
+	end
 
 	local bodySize = Vector3.new(2.4, 3.4, 1.4)
 	local bodyColor = Color3.fromRGB(90, 170, 255)
@@ -1006,11 +1013,13 @@ local function stepRender(dt: number)
 				if not (node :: any).WasKnockedOut or not (node :: any).ComaBillboard then
 					(node :: any).WasKnockedOut = true
 					playComaVFX(node)
+					node.Model:SetAttribute("HeroDown", true) -- MirrorHeroFx shatters a mirror hero's glass
 				end
 			else
 				if (node :: any).WasKnockedOut or (node :: any).ComaBillboard then
 					(node :: any).WasKnockedOut = false
 					removeKOVFX(node)
+					node.Model:SetAttribute("HeroDown", false)
 				end
 			end
 		end

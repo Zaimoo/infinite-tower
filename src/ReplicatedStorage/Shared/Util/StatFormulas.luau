@@ -124,6 +124,22 @@ function StatFormulas.RefreshMirrorSources(profile: any): boolean
 	return changed
 end
 
+-- The short level label every hero list shows: "Lv.5", or "Mirror 152%" for a mirror hero (they don't level).
+function StatFormulas.LevelText(hero: any): string
+	if StatFormulas.IsMirror(hero) then
+		return string.format("Mirror %d%%", math.round(StatFormulas.GetMirrorPercent(hero) * 100))
+	end
+	return string.format("Lv.%d", if hero and type(hero.Level) == "number" then hero.Level else 1)
+end
+
+-- "Copies 152% of Astrea's power" for a mirror hero, nil for anyone else.
+function StatFormulas.MirrorDescription(hero: any): string?
+	if not StatFormulas.IsMirror(hero) then return nil end
+	local source = hero.MirrorSource
+	local name = if type(source) == "table" and type(source.Name) == "string" and source.Name ~= "" then source.Name .. "'s" else "your best hero's"
+	return string.format("Copies %d%% of %s power", math.round(StatFormulas.GetMirrorPercent(hero) * 100), name)
+end
+
 local function mirrorSourceOf(hero: any): MirrorSource
 	local source = hero.MirrorSource
 	if type(source) == "table" and B.Finite(source.Power) and source.Power >= 0 and B.Finite(source.Labor) then
