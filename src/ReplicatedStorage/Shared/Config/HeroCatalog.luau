@@ -79,7 +79,7 @@ HeroCatalog.LimitedBanner = {
 	Subtitle = "7-STAR LIMITED RATE-UP EVENT",
 	MaxStar = 7,
 	MaxPity = 100,
-	PityMinTier = 5, -- hard pity guarantees an Exalted or better hero (Archon, Valeria, Solaris or Astrea)
+	PityMinTier = 5, -- hard pity guarantees an Exalted or better hero (Archon, Valeria, Solaris, Rhyman or Astrea)
 	Cost1X = 200,
 	Cost10X = 1800,
 	TenPullMinTier = 3, -- every 10-pull includes a Rare or better hero
@@ -91,7 +91,7 @@ HeroCatalog.LimitedBanner = {
 		[3] = 0.0950, -- 9.5% Rare Eolka
 		[4] = 0.0380, -- 3.8% Superior Morrigan
 		[5] = 0.0120, -- 1.2% Exalted (Archon or Valeria)
-		[6] = 0.0030, -- 0.30% Legendary Solaris
+		[6] = 0.0030, -- 0.30% Legendary (Solaris or Rhyman): the tier's heroes split its rate evenly
 		[7] = 0.0006, -- 0.06% Mythical Astrea (Featured)
 	},
 	HeroesByStar = {
@@ -105,6 +105,7 @@ HeroCatalog.LimitedBanner = {
 	},
 	HeroesPoolByStar = {
 		[5] = { "hero_archon", "hero_valeria" },
+		[6] = { "hero_solaris", "hero_rhyman" },
 	},
 }
 
@@ -451,6 +452,25 @@ HeroCatalog.Seeds = {
 		PreferredFacility = "FACILITY_TRAINING",
 		Color = Color3.fromRGB(255, 215, 0),
 	},
+	hero_rhyman = {
+		HeroId = "hero_rhyman",
+		DisplayName = "Rhyman",
+		BannerOrigin = "LIMITED",
+		DropWeight = 1.2,
+		BaseStar = 1,
+		Rarity = 6,
+		Archetype = "Berserker",
+		BaseHP_1Star = 360,
+		BaseATK_1Star = 58,
+		NativeHP = 196132,
+		NativeATK = 31599,
+		AttackInterval = 1.00,
+		AttackRange = 6,
+		BaseLabor_1Star = 20.0,
+		NativeLabor = 79.0,
+		PreferredFacility = "FACILITY_GUARD_POST",
+		Color = Color3.fromRGB(128, 44, 56),
+	},
 	hero_astrea = {
 		HeroId = "hero_astrea",
 		DisplayName = "Astrea",
@@ -499,7 +519,7 @@ HeroCatalog.PoolByStar = {
 	[3] = { "hero_catio", "hero_eolka" },
 	[4] = { "hero_aeli", "hero_morrigan" },
 	[5] = { "hero_ignis", "hero_diran", "hero_archon", "hero_valeria" },
-	[6] = { "hero_edis", "hero_vane", "hero_solaris" },
+	[6] = { "hero_edis", "hero_vane", "hero_solaris", "hero_rhyman" },
 	[7] = { "hero_han", "hero_astrea" },
 }
 

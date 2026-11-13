@@ -1848,6 +1848,9 @@ local function resolveHeroImpact(impact: any, tick: number)
 		if (mob :: any).RaidBoss and _G.RaidService then
 			damage = _G.RaidService.ModifyDamage(mob, damage, now) -- Punish Window and enrage weak points
 		end
+		if impact.Tier == "SKILL" and HeroSkillEffects.Executes(impact.Profile.Skill, mob) then
+			damage = math.max(damage, mob.CurrentHP) -- an execute takes whatever is left, shields or not
+		end
 		local actualDamage = math.min(mob.CurrentHP, damage)
 		local participation = ProgressionHits[mob.NetId]
 		if not participation then

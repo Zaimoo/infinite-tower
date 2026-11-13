@@ -101,6 +101,8 @@ HeroCostumes.MESHES = table.freeze({
 	["rbxassetid://121356449188059"] = "",
 	-- Aeli's hair and braid, our own: tools/make_aeli_hair_ugc.py (assets/hair/aeli_hair_ugc.blend).
 	["rbxassetid://70386605530551"] = "",
+	-- Rhyman's hair, our own: tools/make_rhyman_hair_ugc.py (assets/hair/rhyman_hair_ugc.blend).
+	["rbxassetid://126418889340816"] = "",
 } :: { [string]: string })
 
 -- Avatar hair accessory placement: a piece centred so the accessory's HairAttachment meets
@@ -1512,6 +1514,81 @@ do
 		piece("BootSoleL", "LeftFoot", { 1.04, 0.07, 1.22 }, { 0, -0.13, -0.08 }, darkLeather),
 		piece("BootSoleR", "RightFoot", { 1.04, 0.07, 1.22 }, { 0, -0.13, -0.08 }, darkLeather),
 	}, "rbxassetid://71843671065006"))
+end
+
+-- 19. RHYMAN (6★ Berserker - Legendary Scarred Headsman) ------------------------------------
+-- From his reference art: a broad, grinning brute (Heavy body) with a swept-back dirty-blond
+-- mane, a scarred face and a chin beard, bare fists, dark studded leather armour under crossed
+-- chest straps, a torn maroon scarf bunched round his neck, layered dark-steel pauldrons and
+-- vambraces, a maroon sash and a ragged loincloth under a heavy buckled belt with pouches,
+-- twin thigh straps, angular knee guards trimmed in dull gold, and gold-capped boots. The
+-- greataxe comes from the weapon system. Face: our own decal from
+-- assets/faces/make_rhyman_face.py. Hair: our Blender mesh (tools/make_rhyman_hair_ugc.py).
+do
+	local skin, hair, leather, darkLeather = { 236, 192, 152 }, { 196, 160, 90 }, { 74, 64, 62 }, { 48, 42, 42 }
+	local strap, steel, steelDark = { 104, 76, 56 }, { 134, 134, 140 }, { 96, 96, 104 }
+	local maroon, maroonDark, gold = { 118, 42, 56 }, { 88, 32, 44 }, { 196, 156, 74 }
+	table.insert(COSTUMES, costume("hero_rhyman", "Heavy", {
+		Skin = skin, UpperTorso = leather, LowerTorso = darkLeather, UpperArm = leather, LowerArm = darkLeather, Hand = skin,
+		UpperLeg = darkLeather, LowerLeg = leather, Foot = darkLeather,
+	}, {
+		-- Hair mesh: centred on the export's bounding box and turned 180 degrees to undo the
+		-- importer's rotation.
+		piece("HairMesh", "Head", { 1.814, 1.775, 1.899 }, { 0.0, 0.1647, 0.1756 }, hair, with(LOOSE, {
+			Rotation = { 0, 180, 0 },
+			Mesh = { MeshId = "rbxassetid://126418889340816", Scale = { 0.01, 0.01, 0.01 } },
+		})),
+		-- Torn maroon scarf: a thick wrap round the neck, a drape over the chest and two tatters
+		piece("ScarfWrap", "UpperTorso", { 1.9, 0.4, 1.2 }, { 0, 0.72, -0.02 }, maroon, with(LOOSE, { Material = "Fabric" })),
+		piece("ScarfDrape", "UpperTorso", { 1.5, 0.5, 0.1 }, { 0, 0.34, -0.56 }, maroon, with(LOOSE, { Material = "Fabric", Rotation = { 8, 0, 0 } })),
+		piece("ScarfTatterL", "UpperTorso", { 0.08, 0.45, 0.6 }, { -0.36, -0.12, -0.6 }, maroonDark, with(WEDGE, LOOSE, { Material = "Fabric", Rotation = { 0, 90, 180 } })),
+		piece("ScarfTatterR", "UpperTorso", { 0.08, 0.38, 0.5 }, { 0.3, -0.08, -0.6 }, maroon, with(WEDGE, LOOSE, { Material = "Fabric", Rotation = { 0, -90, 180 } })),
+		-- Crossed chest straps with a steel buckle, and the maroon sash above the belt
+		piece("ChestStrapA", "UpperTorso", { 0.22, 1.5, 0.06 }, { 0, -0.2, -0.53 }, strap, { Rotation = { 0, 0, 50 } }),
+		piece("ChestStrapB", "UpperTorso", { 0.22, 1.5, 0.06 }, { 0, -0.2, -0.54 }, strap, { Rotation = { 0, 0, -50 } }),
+		piece("StrapBuckle", "UpperTorso", { 0.3, 0.3, 0.08 }, { 0, -0.2, -0.56 }, steel, with(METAL, { Rotation = { 0, 0, 45 } })),
+		piece("Sash", "UpperTorso", { 2.06, 0.22, 1.06 }, { 0, -0.68, 0 }, maroon, { Material = "Fabric" }),
+		-- Layered dark-steel pauldrons: a broad top plate, a lower lame and a bright rim
+		piece("PauldronL", "LeftUpperArm", { 1.3, 0.56, 1.3 }, { -0.08, 0.38, 0 }, steel, with(LOOSE, METAL, { Rotation = { 0, 0, 10 } })),
+		piece("PauldronLameL", "LeftUpperArm", { 1.22, 0.3, 1.22 }, { -0.04, -0.4, 0 }, steelDark, with(LOOSE, METAL, { RelativeTo = "PauldronL" })),
+		piece("PauldronRimL", "LeftUpperArm", { 1.34, 0.08, 1.34 }, { 0, -0.26, 0 }, gold, with(LOOSE, METAL, { RelativeTo = "PauldronL" })),
+		piece("PauldronR", "RightUpperArm", { 1.3, 0.56, 1.3 }, { 0.08, 0.38, 0 }, steel, with(LOOSE, METAL, { Rotation = { 0, 0, -10 } })),
+		piece("PauldronLameR", "RightUpperArm", { 1.22, 0.3, 1.22 }, { 0.04, -0.4, 0 }, steelDark, with(LOOSE, METAL, { RelativeTo = "PauldronR" })),
+		piece("PauldronRimR", "RightUpperArm", { 1.34, 0.08, 1.34 }, { 0, -0.26, 0 }, gold, with(LOOSE, METAL, { RelativeTo = "PauldronR" })),
+		-- Leather arm bands and riveted steel vambraces over the forearms
+		piece("ArmBandL", "LeftUpperArm", { 1.08, 0.14, 1.08 }, { 0, -0.38, 0 }, strap),
+		piece("ArmBandR", "RightUpperArm", { 1.08, 0.14, 1.08 }, { 0, -0.38, 0 }, strap),
+		piece("VambraceL", "LeftLowerArm", { 1.12, 0.62, 1.12 }, { 0, 0.08, 0 }, steel, METAL),
+		piece("VambraceBandL", "LeftLowerArm", { 1.16, 0.1, 1.16 }, { 0, -0.2, 0 }, steelDark, METAL),
+		piece("VambraceR", "RightLowerArm", { 1.12, 0.62, 1.12 }, { 0, 0.08, 0 }, steel, METAL),
+		piece("VambraceBandR", "RightLowerArm", { 1.16, 0.1, 1.16 }, { 0, -0.2, 0 }, steelDark, METAL),
+		-- Heavy belt with a steel buckle, a hanging tongue and hip pouches
+		piece("Belt", "LowerTorso", { 2.08, 0.28, 1.08 }, { 0, 0.04, 0 }, strap),
+		piece("BeltBuckle", "LowerTorso", { 0.42, 0.34, 0.08 }, { 0, 0.04, -0.57 }, steel, METAL),
+		piece("BeltTongue", "LowerTorso", { 0.18, 0.6, 0.06 }, { 0.3, -0.32, -0.6 }, strap, LOOSE),
+		piece("PouchL", "LowerTorso", { 0.42, 0.38, 0.24 }, { -0.68, 0.02, -0.62 }, strap),
+		piece("PouchR", "LowerTorso", { 0.42, 0.38, 0.24 }, { 0.68, 0.02, -0.62 }, strap),
+		-- Ragged maroon loincloth, front and back
+		piece("LoinFront", "LowerTorso", { 0.8, 1.45, 0.08 }, { 0, -0.92, -0.58 }, maroon, with(LOOSE, { Material = "Fabric", Rotation = { -4, 0, 0 } })),
+		piece("LoinTatterL", "LowerTorso", { 0.08, 0.55, 0.42 }, { -0.19, -1.9, -0.62 }, maroon, with(WEDGE, LOOSE, { Material = "Fabric", Rotation = { 0, 90, 180 } })),
+		piece("LoinTatterR", "LowerTorso", { 0.08, 0.4, 0.38 }, { 0.21, -1.82, -0.62 }, maroonDark, with(WEDGE, LOOSE, { Material = "Fabric", Rotation = { 0, -90, 180 } })),
+		piece("LoinBack", "LowerTorso", { 0.9, 1.2, 0.08 }, { 0, -0.8, 0.58 }, maroonDark, with(LOOSE, { Material = "Fabric", Rotation = { 5, 0, 0 } })),
+		-- Twin thigh straps, angular knee guards trimmed in gold, shin bands and capped boots
+		piece("ThighStrapAL", "LeftUpperLeg", { 1.06, 0.12, 1.06 }, { 0, 0.22, 0 }, strap),
+		piece("ThighStrapBL", "LeftUpperLeg", { 1.06, 0.12, 1.06 }, { 0, -0.08, 0 }, strap),
+		piece("ThighStrapAR", "RightUpperLeg", { 1.06, 0.12, 1.06 }, { 0, 0.22, 0 }, strap),
+		piece("ThighStrapBR", "RightUpperLeg", { 1.06, 0.12, 1.06 }, { 0, -0.08, 0 }, strap),
+		piece("KneeGuardL", "LeftLowerLeg", { 0.72, 0.8, 0.14 }, { 0, 0.12, -0.55 }, steelDark, METAL),
+		piece("KneeTrimL", "LeftLowerLeg", { 0.5, 0.5, 0.06 }, { 0, 0.14, -0.06 }, gold, with(METAL, { RelativeTo = "KneeGuardL", Rotation = { 0, 0, 45 } })),
+		piece("KneeGuardR", "RightLowerLeg", { 0.72, 0.8, 0.14 }, { 0, 0.12, -0.55 }, steelDark, METAL),
+		piece("KneeTrimR", "RightLowerLeg", { 0.5, 0.5, 0.06 }, { 0, 0.14, -0.06 }, gold, with(METAL, { RelativeTo = "KneeGuardR", Rotation = { 0, 0, 45 } })),
+		piece("ShinBandL", "LeftLowerLeg", { 1.06, 0.12, 1.06 }, { 0, -0.36, 0 }, strap),
+		piece("ShinBandR", "RightLowerLeg", { 1.06, 0.12, 1.06 }, { 0, -0.36, 0 }, strap),
+		piece("BootToeL", "LeftFoot", { 1.06, 0.16, 0.38 }, { 0, -0.06, -0.44 }, gold, METAL),
+		piece("BootToeR", "RightFoot", { 1.06, 0.16, 0.38 }, { 0, -0.06, -0.44 }, gold, METAL),
+		piece("BootSoleL", "LeftFoot", { 1.08, 0.07, 1.25 }, { 0, -0.13, -0.08 }, steelDark, METAL),
+		piece("BootSoleR", "RightFoot", { 1.08, 0.07, 1.25 }, { 0, -0.13, -0.08 }, steelDark, METAL),
+	}, "rbxassetid://84312734879578"))
 end
 
 HeroCostumes.List = table.freeze(COSTUMES)

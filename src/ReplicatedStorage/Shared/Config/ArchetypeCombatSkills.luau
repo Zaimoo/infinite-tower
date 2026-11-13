@@ -14,6 +14,7 @@ export type SecondaryEffectType =
 	| "ALLY_MINI_HEAL"
 	| "CHAIN_LIGHTNING"
 	| "BEAM_LINE" -- every mob on a line through the target (SecondaryParam = length; Vane)
+	| "WHIRLWIND" -- every mob around the attacker (SecondaryParam = radius; Rhyman)
 
 export type Delivery = "MELEE" | "PROJECTILE" | "AREA"
 
@@ -45,6 +46,7 @@ export type SpecialAttackDef = {
 	SecondaryParam: number, -- e.g. heal percentage, cone radius, chain count
 	BeamWidth: number?, -- BEAM_LINE: hit width in studs, bodies included
 	BeamDamage: number?, -- BEAM_LINE: ATK multiplier for every other mob on the line
+	SpinDamage: number?, -- WHIRLWIND: ATK multiplier for every other mob in the radius, split across the ticks
 	VFXKey: string,
 	Delivery: Delivery?,
 	ProjectileSpeed: number?,
@@ -67,7 +69,10 @@ export type SkillAttackDef = {
 	Description: string,
 	VFXKey: string,
 	CastSeconds: number?, -- minimum animation lock; the hero's next attack waits for it
-	Effect: "SINGULARITY"?, -- a hero's own skill effect instead of its archetype's (HeroSkillEffects)
+	-- A hero's own skill effect instead of its archetype's (HeroSkillEffects). EXECUTE: one blow
+	-- on the target alone that kills any mob outright; raid bosses and Biome Bosses take the
+	-- multiplier's damage instead (HeroSkillEffects.Executes).
+	Effect: ("SINGULARITY" | "EXECUTE")?,
 	PullStudsPerTick: number?, -- SINGULARITY: studs each tick drags mobs towards the centre
 	CoreRadius: number?, -- SINGULARITY: pulls stop this far from the centre
 	Delivery: Delivery?,
@@ -397,6 +402,21 @@ local HERO_KITS: { [string]: HeroKitOverride } = {
 		Skill = {
 			Name = "Tunnelbreaker Fault",
 			Description = "Gide drives his heavy axe into the floor, splitting a fault line that erupts jagged stone and crystal spikes under all enemies within 18 studs for 2.60x ATK blunt damage and bonus shard drops.",
+		},
+	},
+	hero_rhyman = {
+		Archetype = "Berserker",
+		Basic = { Name = "Warbrand Cleave" },
+		-- A full turn with the greataxe at arm's length. The 1.50x hit on the target lands as
+		-- three cuts, and every other mob within 9 studs of him takes 0.90x ATK over the same three.
+		Special = { Name = "Reaver's Whirl", SecondaryEffect = "WHIRLWIND", SecondaryParam = 9.0, SpinDamage = 0.90, Ticks = 3, TickSeconds = 0.12 },
+		Skill = {
+			Name = "Headsman's Verdict",
+			Description = "Rhyman leaps and brings his greataxe straight down through one enemy, slaying any mob outright. Raid bosses and Biome Bosses survive it and take 6.00x ATK instead.",
+			Effect = "EXECUTE",
+			DamageMultiplier = 6.00,
+			Radius = 4.0, -- the crater the blow leaves (visual; the execute hits its target alone)
+			CastSeconds = 1.3, -- the crouch, the leap and the fall
 		},
 	},
 	hero_valeria = {

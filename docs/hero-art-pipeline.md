@@ -308,6 +308,7 @@ Every hero's hair is our own Blender mesh except Han's, which is a Creator Store
 | Sovereign Archon | `104359124032831` | `139133902834118` | `make_archon_hair_ugc.py` | prowl |
 | Solaris | `89614314986771` | `116753377442189` | `make_solaris_hair_ugc.py` | sunward (staff) |
 | Astrea | `84469832141456` | head `79290192354958` + back fall `98817994028995`, textured `126451381570698` | `make_astrea_hair_ugc.py`, `make_astrea_hair_texture.py` | poised mid-draw; own Basic, Special (charged draw) and Skill (360° pirouette, sky shot) clips |
+| Rhyman | `84312734879578` | `126418889340816` | `make_rhyman_hair_ugc.py` | low brawler; own Special (360° whirl) and Skill (leaping execute) clips |
 
 Open issues:
 - **Female heroes predate the feminine-body rule (§1.1).** Jenna, Edis, Aeli, Eolka, Solaris and Astrea are `Slim` (Eolka's pauldrons became flat shoulder caps, and Solaris's and Astrea's side skirts flare from the belt). Valeria is still `Standard` with broad pauldrons: switch her to `Slim` and slim her shoulder pieces, then run the lint, because pieces rescale with the body.

@@ -394,7 +394,7 @@ The permanent standard banner features **at least one character for each rarity 
 #### 2. Limited Time Banner: "A Star's Arrival" (Rarity Tiers 1–7)
 The inaugural limited-time rate-up banner features exactly **one character for each rarity from Common to Mythical** (7 total heroes):
 - **Summon Cost:** `200 Gems` per single pull (`1,800 Gems` for 10x pull).
-- **Pity System:** Guaranteed **Exalted or higher** hero within **100 summons** (`MaxPity = 100`, `PityMinTier = 5`). The pity pull is split by the banner's Exalted/Legendary/Mythical rates (with God's Blessing luck): about 77% Archon, 19% Solaris, 4% Astrea. Any natural Exalted+ pull resets the counter.
+- **Pity System:** Guaranteed **Exalted or higher** hero within **100 summons** (`MaxPity = 100`, `PityMinTier = 5`). The pity pull is split by the banner's Exalted/Legendary/Mythical rates (with God's Blessing luck): about 77% Exalted (Archon or Valeria), 19% Legendary (Solaris or Rhyman, evenly) and 4% Astrea. Any natural Exalted+ pull resets the counter.
 - **50/50 rule:** whenever an Exalted+ hero that is *not* Astrea is pulled on this banner (natural or pity), the next pity is guaranteed to be **Astrea** (`HeroLimitedFeaturedGuarantee`). Pulling Astrea clears the guarantee. The summon screen shows "Guaranteed Astrea in N summons" while it is active. Worst case for Astrea: 200 summons.
 - **10-Pull Guarantee:** Every 10x pull includes at least one **Rare** or higher hero.
 - **Drop Rates:**
@@ -403,7 +403,7 @@ The inaugural limited-time rate-up banner features exactly **one character for e
   - `Rare (9.5%)`: **Eolka**
   - `Superior (3.8%)`: **Morrigan**
   - `Exalted (1.2%)`: **Sovereign Archon** or **Valeria**
-  - `Legendary (0.30%)`: **Solaris**
+  - `Legendary (0.30%)`: **Solaris** or **Rhyman** (0.15% each)
   - `Mythical (0.06%)`: **Astrea (Featured Starlight Mythical)**
 
 *(The relic economy rebalance raised Gem income about 1.3–1.5×, so both banners were tightened to keep hours of play per hero at or above the old pace: Call of the Rift from 70/20/7/2.5/0.5% with pity 80, and A Star's Arrival from 60/24/10/4.2/1.4/0.33/0.07% with pity 90 and a 100-Gem price. See `docs/relic-loot-rebalance-plan.md`. Earlier history: `docs/rework-plan/PHASE_4_ONBOARDING_AND_PROGRESSION.md` §7.)*
@@ -442,6 +442,7 @@ Every summoned hero rolls a `QualityScalar` $q \in [0.90, 1.15]$ applied to thei
 | **A Star's Arrival** | **Valeria** | **Exalted (5) / 1★** | Healer | `260` / `18` | `34,975` / `2,421` | `18` / `47.0` |
 | **A Star's Arrival** | **Archon** | **Exalted (5) / 1★** | Striker | `350` / `65` | `47,082` / `8,744` | `25` / `65.3` |
 | **A Star's Arrival** | **Solaris** | **Legendary (6) / 1★** | Scholar | `240` / `55` | `130,754` / `29,965` | `22` / `86.9` |
+| **A Star's Arrival** | **Rhyman** | **Legendary (6) / 1★** | Berserker | `360` / `58` | `196,132` / `31,599` | `20` / `79.0` |
 | **A Star's Arrival** | **Astrea** | **Mythical (7) / 1★** | Marksman | `230` / `48` | `507,491` / `105,911` | `23` / `137.4` |
 
 *Passive traits were removed: their stat bonuses had been off since the stat rework, so the labels only promised effects that never happened. Schema v7 drops the saved `PassiveTrait` name (§8.3).*
@@ -637,6 +638,9 @@ Each hero's kit is resolved by `HeroId` in `ArchetypeCombatSkills.HeroProfiles` 
 | 16 | **Diran** (`hero_diran`) | Exalted | Healer | Runeward Bolt | Compass Mend | Vitality Covenant |
 | 17 | **Vane** (`hero_vane`) | Legendary | Scholar | Null Bolt | Singularity Lance | Event Horizon |
 | 18 | **Aeli** (`hero_aeli`) | Superior | Marksman | Leafwind Arrow | Thornbriar Volley | Canopy's Wrath |
+| 19 | **Rhyman** (`hero_rhyman`) | Legendary | Berserker | Warbrand Cleave | Reaver's Whirl | Headsman's Verdict |
+
+**Rhyman's kit** has two mechanics of its own (`HeroSkillEffects`). *Reaver's Whirl* is a spin (`WHIRLWIND`): the target takes the `1.50x` Special hit as `3` cuts `0.12s` apart, and every other mob within `9 studs` of Rhyman, in any direction, takes `0.90x` ATK split across the same three cuts. *Headsman's Verdict* is an execute (`Effect = "EXECUTE"`, cast `1.3s`): he leaps and lands one blow on his target alone, with no splash. Any mob it hits dies outright, whatever its remaining HP or shields: normal mobs, Elites, floor Alphas and raid adds. **Raid bosses and Biome Bosses are immune** and take `6.00x` ATK instead (`HeroSkillEffects.Executes`). In a duel the enemy hero also takes the `6.00x` hit, never an execute. On the client the whirl is the `WHIRL` style (crescents sweeping a full circle, one third per tick) and the execute is `EXECUTE` (a blade of light from above, a tall vertical cut and a crack in the floor past the target, with the target marked during the leap).
 
 **Vane's kit** has two mechanics of its own (`docs/vane-hero-plan.md`, `docs/vane-spell-animations-plan.md`). *Singularity Lance* is an instant beam (`BEAM_LINE`): the target takes the Special hit, and every other mob within a `36-stud` line from Vane through the target, `4` studs wide, takes `0.80x` ATK. *Event Horizon* holds a black hole at the target for **4s** (`16-stud` radius, cast `1.4s`): the `3.50x` is split over **8 pulses** `0.5s` apart (other mobs take the Scholar `0.6` splash share each pulse), and each pulse drags every mob in the radius `1.5` studs inward along walkable ground, stopping `3` studs from the centre. Biome Bosses, raid bosses and floor Alphas are not pulled, and duels never displace heroes.
 

@@ -295,6 +295,59 @@ local function playPiercer(ctx: Context)
 	shake(ctx, arriveAt)
 end
 
+-- WHIRL: a full-circle spin. On each server damage tick a pair of crescents sweeps a third of
+-- the way round the attacker (so three ticks close the circle), a shockwave rolls out to the
+-- spin's reach on the first and last, and every mob the server reports hit flashes (Rhyman's
+-- Reaver's Whirl). It follows the attacker, who may still be sliding into range.
+local function playWhirl(ctx: Context)
+	local pool, recipe, palette, args = ctx.Pool, ctx.Recipe, ctx.Palette, ctx.Args
+	local self = args.Self or function(): Vector3
+		return args.Origin - Vector3.new(0, 2, 0)
+	end
+	local radius = recipe.Radius or 9
+	local scale = recipe.Scale or 1
+	local archetype = args.WeaponType and SkillVfxCatalog.WeaponArchetype[args.WeaponType]
+	local profile = ArchetypeCombatSkills.GetSkillProfile(args.HeroId, archetype)
+	local ticks, gap = HeroActionTiming.Ticks(profile.Special)
+	local waves = VfxMath.WaveTimes(ctx.ArriveAt, ticks, if gap > 0 then gap else 0.1)
+	local first, last = waves[1], waves[#waves]
+	local yaw = VfxPrimitives.Yaw(heading(ctx))
+	local turn = math.pi * 2 / #waves
+	local feet = self()
+	for k, at in waves do
+		-- The spin turns left, so each tick's crescent starts where the last one ended.
+		local facing = yaw + (k - 0.5) * turn - math.pi / 2
+		local waist = CFrame.new(feet + Vector3.new(0, 2.2, 0)) * CFrame.Angles(0, facing, math.rad(if k % 2 == 0 then 5 else -5))
+		VfxPrimitives.SlashArc(pool, waist, radius * 0.72 * scale, palette.Primary, at - 0.05, 0.34)
+		VfxPrimitives.SlashArc(pool, waist * CFrame.new(0, 0.25, 0), radius * 0.5 * scale, palette.Core, at - 0.03, 0.26)
+		VfxPrimitives.SlashArc(pool, waist * CFrame.new(0, -0.5, 0), radius * 0.9 * scale, palette.Secondary, at, 0.42)
+	end
+	VfxPrimitives.Ring(pool, { Center = feet, From = 1.5, To = radius, Color = palette.Primary, StartAt = first, EndAt = first + 0.4, Width = 0.8 })
+	VfxPrimitives.Ring(pool, { Center = feet, From = radius * 0.4, To = radius * 1.05, Color = palette.Core, StartAt = last, EndAt = last + 0.35, Width = 0.5 })
+	VfxPrimitives.Disc(pool, { CFrame = CFrame.new(feet + Vector3.new(0, 0.15, 0)) * VfxPrimitives.FLAT, Radius = radius, Color = palette.Secondary, StartAt = first - 0.05, EndAt = last + 0.3, Grow = 0.3, Transparency = 0.6 })
+	VfxPrimitives.Motes(pool, feet + Vector3.new(0, 0.6, 0), palette.Secondary, first, 5, 0.6)
+
+	local lookup = args.RecentHits
+	if lookup then
+		for k, at in waves do
+			VfxPrimitives.At(pool, at + HIT_LOOKUP_DELAY, function()
+				local now = at + HIT_LOOKUP_DELAY
+				for i, point in lookup("HIT", feet, radius + 3, at - 0.1) do
+					if i > 6 then
+						break
+					end
+					local body = chest(point)
+					local away = body - (feet + Vector3.new(0, 2, 0))
+					local frame = if away.Magnitude > 0.5 then CFrame.lookAt(body, body + away) else CFrame.new(body)
+					VfxPrimitives.SlashArc(pool, frame * CFrame.Angles(0, 0, math.rad(if (i + k) % 2 == 0 then 20 else -20)), 1.6 * SLASH_SIZE, palette.Core, now, 0.22)
+					VfxPrimitives.Burst(pool, body, palette.Primary, recipe.Impact or 2, now, 0.18)
+				end
+			end)
+		end
+	end
+	shake(ctx, first)
+end
+
 -- CLEAVE: a wide slash and a shockwave cone sweeping out in front of the Vanguard.
 local function playCleave(ctx: Context)
 	local pool, recipe, palette = ctx.Pool, ctx.Recipe, ctx.Palette
@@ -516,6 +569,52 @@ local function playConstellation(ctx: Context)
 			callback(magnitude * 0.7)
 		end)
 	end
+end
+
+-- EXECUTE: one blow from above. A blade of light drops along the axe's path onto the target,
+-- two tall crescents cut it top to bottom, the ground cracks in a line past it and a crater of
+-- dark dust lingers (Rhyman's Headsman's Verdict). One target: nothing else is touched.
+local function playExecute(ctx: Context)
+	local pool, recipe, palette, args = ctx.Pool, ctx.Recipe, ctx.Palette, ctx.Args
+	local at = ctx.ArriveAt
+	local body = args.Target()
+	local ground = Vector3.new(body.X, args.Cue.Aim.Y, body.Z)
+	local towards = heading(ctx)
+	local radius = recipe.Radius or 4
+	local scale = recipe.Scale or 1
+	local height = recipe.PillarHeight or 16
+	local impact = recipe.Impact or 4.5
+	local linger = recipe.Linger or 0.9
+	local accent = palette.Accent or palette.Core
+
+	-- The blade: from above and a little behind (the axe's own arc, and never dead vertical).
+	local top = ground + Vector3.new(0, height, 0) - towards * (height * 0.14)
+	VfxPrimitives.Lance(pool, top, ground, 1.5 * scale, palette, at - 0.05, 0.05, 0.07, 0.32)
+	VfxPrimitives.Beam(pool, top, ground, accent, at, 0.2, args.Cue.NetId % 11)
+
+	-- The cut: two tall crescents down through the target, a hair apart.
+	local cut = slashFrame(ctx, body + Vector3.new(0, 1.2, 0), 90)
+	VfxPrimitives.SlashArc(pool, cut, 3.4 * scale * SLASH_SIZE, palette.Core, at - 0.04, 0.34)
+	VfxPrimitives.SlashArc(pool, cut * CFrame.new(0, 0, 0.3), 3.9 * scale * SLASH_SIZE, palette.Primary, at - 0.01, 0.46)
+	VfxPrimitives.SlashArc(pool, cut * CFrame.new(0, 0, 0.6), 4.3 * scale * SLASH_SIZE, palette.Secondary, at + 0.02, 0.6)
+	VfxPrimitives.Burst(pool, body, palette.Core, impact, at, 0.16)
+	VfxPrimitives.Burst(pool, body, palette.Primary, impact * 1.7, at + 0.03, 0.4)
+	VfxPrimitives.Flare(pool, fixed(body), impact * 2.6, accent, at, 0.26)
+
+	-- The ground: a shockwave, a crater of dark dust, and a crack running on past the target.
+	VfxPrimitives.Ring(pool, { Center = ground, From = 0.6, To = radius * 1.6, Color = palette.Primary, StartAt = at, EndAt = at + 0.4, Width = 1.1 })
+	VfxPrimitives.Ring(pool, { Center = ground, From = 0.3, To = radius, Color = palette.Core, StartAt = at + 0.05, EndAt = at + 0.35, Width = 0.4 })
+	VfxPrimitives.Disc(pool, { CFrame = CFrame.new(ground + Vector3.new(0, 0.15, 0)) * VfxPrimitives.FLAT, Radius = radius, Color = palette.Secondary, StartAt = at, EndAt = at + linger, Grow = 0.3, Transparency = 0.35 })
+	local crackFrom = ground - towards * 1.5 + Vector3.new(0, 0.3, 0)
+	local crackTo = ground + towards * (radius * 2.2) + Vector3.new(0, 0.3, 0)
+	VfxPrimitives.Beam(pool, crackFrom, crackTo, palette.Primary, at, linger * 0.7, args.Cue.NetId % 7 + 2)
+	VfxPrimitives.Beam(pool, crackFrom, crackTo, palette.Core, at + 0.02, linger * 0.4, args.Cue.NetId % 5 + 6)
+	for i = 1, 3 do
+		local along = ground + towards * (radius * 0.55 * i)
+		VfxPrimitives.Spike(pool, along, 1.4 + 0.5 * (i % 2), palette.Secondary, at + 0.04 * i, linger * 0.5, i + args.Cue.NetId % 9)
+	end
+	VfxPrimitives.Motes(pool, ground + Vector3.new(0, 0.8, 0), palette.Secondary, at, 8, 0.8)
+	shake(ctx, at)
 end
 
 -- BULWARK: a barrier shell around the Vanguard for the barrier's duration, and a taunt
@@ -804,6 +903,7 @@ local PLAYERS: { [string]: (Context) -> () } = {
 	SLASH = playSlash,
 	VOLLEY = playVolley,
 	PIERCER = playPiercer,
+	WHIRL = playWhirl,
 	CLEAVE = playCleave,
 	CROSS = playCross,
 	PLUNGE = playPlunge,
@@ -813,6 +913,7 @@ local PLAYERS: { [string]: (Context) -> () } = {
 	MEND = playMend,
 	STORM = playStorm,
 	CONSTELLATION = playConstellation,
+	EXECUTE = playExecute,
 	BULWARK = playBulwark,
 	TEMPEST = playTempest,
 	WAKE = playWake,
@@ -962,7 +1063,47 @@ local function chargeStars(ctx: ChargeContext): boolean
 	return true
 end
 
+-- WHIRL while he coils: the ground draws in round his feet and dust lifts.
+local function chargeWhirl(ctx: ChargeContext): boolean
+	local args, recipe, palette, pool = ctx.Args, ctx.Recipe, ctx.Palette, ctx.Pool
+	local feet = if args.Self then args.Self() else args.Origin - Vector3.new(0, 2, 0)
+	VfxPrimitives.Ring(pool, { Center = feet, From = (recipe.Radius or 9) * 0.6, To = 1.2, Color = palette.Primary, StartAt = ctx.StartAt, EndAt = ctx.ReleaseAt, Width = 0.5 })
+	VfxPrimitives.Motes(pool, feet + Vector3.new(0, 0.6, 0), palette.Secondary, ctx.StartAt, 4, math.max(0.2, ctx.ReleaseAt - ctx.StartAt))
+	return true
+end
+
+-- EXECUTE through the crouch and the leap: dust kicks out from under him as he leaves the
+-- ground, and the target is marked: a ring closes on it and a thin line of light stands over
+-- it, with a glint at the top just before the blow (the tell).
+local function chargeExecute(ctx: ChargeContext): boolean
+	local args, recipe, palette, pool = ctx.Args, ctx.Recipe, ctx.Palette, ctx.Pool
+	local from, to = ctx.StartAt, ctx.ReleaseAt
+	local span = to - from
+	local feet = if args.Self then args.Self() else args.Origin - Vector3.new(0, 2, 0)
+	local radius = recipe.Radius or 4
+	local height = recipe.PillarHeight or 16
+	local accent = palette.Accent or palette.Core
+	local leapAt = from + span * 0.3
+	VfxPrimitives.Ring(pool, { Center = feet, From = 3.5, To = 0.8, Color = palette.Secondary, StartAt = from, EndAt = leapAt, Width = 0.5 })
+	VfxPrimitives.Ring(pool, { Center = feet, From = 0.8, To = 5, Color = palette.Primary, StartAt = leapAt, EndAt = leapAt + 0.35, Width = 0.7 })
+	VfxPrimitives.Motes(pool, feet + Vector3.new(0, 0.6, 0), palette.Secondary, leapAt, 6, 0.6)
+	local function mark(): Vector3
+		local body = args.Target()
+		return Vector3.new(body.X, args.Cue.Aim.Y, body.Z)
+	end
+	local marked = mark()
+	VfxPrimitives.Ring(pool, { Center = marked, From = radius * 1.6, To = 0.8, Color = palette.Primary, StartAt = from, EndAt = to, Width = 0.45 })
+	VfxPrimitives.Disc(pool, { CFrame = CFrame.new(marked + Vector3.new(0, 0.12, 0)) * VfxPrimitives.FLAT, Radius = radius, Color = palette.Secondary, StartAt = from, EndAt = to + 0.05, Grow = 0.4, Transparency = 0.55 })
+	VfxPrimitives.Pillar(pool, marked, 0.12, height, accent, leapAt, to, 0.05)
+	VfxPrimitives.Flare(pool, function(): Vector3
+		return mark() + Vector3.new(0, height, 0)
+	end, 5, accent, math.max(from, to - 0.14), 0.2)
+	return true
+end
+
 local CHARGERS: { [string]: (ChargeContext) -> boolean } = {
+	WHIRL = chargeWhirl,
+	EXECUTE = chargeExecute,
 	BOLT = chargeGlyph,
 	PIERCER = chargeBolt,
 	CONSTELLATION = chargeStars,

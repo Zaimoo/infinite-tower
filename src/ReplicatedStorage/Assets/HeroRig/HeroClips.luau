@@ -707,6 +707,7 @@ local OVERRIDE_WEAPON: { [string]: string } = {
 	hero_astrea = "BOW",
 	hero_edis = "DAGGERS",
 	hero_gide = "AXE",
+	hero_rhyman = "AXE",
 	hero_shurn = "STAFF",
 	hero_diran = "TOME",
 	hero_vane = "STAFF",
@@ -1254,6 +1255,91 @@ do
 			{ 0.84, merge(faultSlam, { Waist = { -36, 48, 0 } }) },
 			{ 1, p.Rest },
 		}, { Release = 0.62 }),
+	}
+end
+
+-- Rhyman (AXE): his full signature set.
+-- Idle: a low, wide brawler's stance from his reference art, the greataxe at port arms across
+-- his chest, weight sunk into the front leg, chin tipped and head cocked.
+-- Reaver's Whirl (Special): he coils the axe back on his right, then whips a full turn to the
+-- left with it held level at arm's length (four Root keys blended at a steady rate), and
+-- brakes in the follow-through of the sweep. Release is where the edge first comes round; the
+-- three damage ticks land through the turn.
+-- Headsman's Verdict (Skill): he drops into a deep crouch, leaps with the axe hauled overhead
+-- and his back arched, hangs at the top, then falls forward onto the target and buries the
+-- head in the floor (Release). He holds the blow, then wrenches the axe free.
+do
+	local p = WeaponPoses.AXE
+	local brawler = merge(p.Rest, {
+		Waist = { -6, 16, 0 }, Neck = { 2, -14, 4 },
+		LeftHip = { 14, 0, -16 }, LeftKnee = { -26, 0, 0 }, LeftAnkle = { 12, 0, 16 },
+		RightHip = { 4, 0, 15 }, RightKnee = { -20, 0, 0 }, RightAnkle = { 14, 0, -15 },
+		RootOffset = { 0, -0.22, 0 },
+	})
+
+	-- Reaver's Whirl
+	local low: Pose = {
+		LeftHip = { 22, 0, -14 }, LeftKnee = { -38, 0, 0 }, LeftAnkle = { 14, 0, 14 },
+		RightHip = { -8, 0, 14 }, RightKnee = { -34, 0, 0 }, RightAnkle = { 30, 0, -14 },
+		RootOffset = { 0, -0.34, 0 },
+	}
+	local coil = merge(merge(p.SweepBack, low), { Waist = { 4, -58, 0 }, Neck = { 0, 44, 0 }, Root = { 0, -20, 0 } })
+	-- The axe held level and out, the body leaning into the turn. Each Root key is under 180
+	-- degrees from the last, so the blend always goes the short way round.
+	local whirl = merge(merge(p.SweepThrough, low), { Waist = { -6, 26, 0 }, Neck = { 2, -12, 0 } })
+	local whirlA = merge(whirl, { Root = { 0, 110, 0 } })
+	local whirlB = merge(whirl, { Root = { 0, -130, 0 }, Waist = { -8, 34, 0 }, RootOffset = { 0, -0.28, 0 } })
+	local whirlC = merge(whirl, { Root = { 0, -20, 0 }, Waist = { -8, 46, 0 } })
+	local brake = merge(merge(p.SweepThrough, low), { Waist = { -10, 68, 0 }, Neck = { 4, -50, 0 } })
+
+	-- Headsman's Verdict
+	local crouch = merge(p.Windup, {
+		Waist = { -14, -20, 0 }, Neck = { 10, 16, 0 },
+		LeftHip = { 62, 0, -10 }, LeftKnee = { -84, 0, 0 }, LeftAnkle = { 22, 0, 10 },
+		RightHip = { 40, 0, 10 }, RightKnee = { -88, 0, 0 }, RightAnkle = { 44, 0, -10 },
+		RootOffset = { 0, -0.85, 0 },
+	})
+	local tucked: Pose = {
+		LeftHip = { 50, 0, -8 }, LeftKnee = { -70, 0, 0 }, LeftAnkle = { 20, 0, 0 },
+		RightHip = { 12, 0, 8 }, RightKnee = { -96, 0, 0 }, RightAnkle = { 30, 0, 0 },
+	}
+	local leap = merge(merge(p.High, tucked), { Waist = { 16, 8, 0 }, Neck = { -4, -6, 0 }, RootOffset = { 0, 2.5, -0.2 } })
+	local apex = merge(merge(p.High, tucked), { Waist = { 24, 10, 0 }, Neck = { -12, -8, 0 }, LeftHip = { 62, 0, -8 }, RootOffset = { 0, 3.4, -0.5 } })
+	local fall = merge(merge(p.Chop, tucked), { Waist = { -6, 40, 0 }, Neck = { 10, -32, 0 }, LeftHip = { 34, 0, -8 }, LeftKnee = { -40, 0, 0 }, RightKnee = { -70, 0, 0 }, RootOffset = { 0, 1.5, -0.95 } })
+	local verdict = merge(p.Slam, {
+		Waist = { -42, 50, 0 }, Neck = { 24, -40, 0 },
+		LeftHip = { 56, 0, -10 }, LeftKnee = { -72, 0, 0 }, RightHip = { 12, 0, 10 }, RightKnee = { -66, 0, 0 },
+		RootOffset = { 0, -0.66, -1.1 },
+	})
+	local wrench = merge(p.Rest, {
+		Waist = { -10, 30, 0 }, Neck = { 4, -24, 0 },
+		LeftHip = { 20, 0, -8 }, LeftKnee = { -28, 0, 0 }, RightHip = { -4, 0, 8 }, RightKnee = { -22, 0, 0 },
+		RootOffset = { 0, -0.25, -0.5 },
+	})
+
+	Overrides.hero_rhyman = {
+		Idle = breathe(brawler, 3.0),
+		AttackSpecial = signature(1.0, {
+			{ 0, p.Rest },
+			{ 0.18, coil },
+			{ 0.3, whirlA, true },
+			{ 0.4, whirlB, true },
+			{ 0.5, whirlC, true },
+			{ 0.56, brake, true },
+			{ 0.74, merge(brake, { Waist = { -8, 62, 0 } }) },
+			{ 1, p.Rest },
+		}, { Charge = 0.12, Release = 0.3 }),
+		AttackSkill = signature(1.3, {
+			{ 0, p.Rest },
+			{ 0.14, crouch },
+			{ 0.3, leap },
+			{ 0.44, apex },
+			{ 0.54, fall },
+			{ 0.6, verdict },
+			{ 0.8, merge(verdict, { Waist = { -38, 48, 0 } }) },
+			{ 0.92, wrench },
+			{ 1, p.Rest },
+		}, { Charge = 0.1, Release = 0.6 }),
 	}
 end
 

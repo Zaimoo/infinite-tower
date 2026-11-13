@@ -90,6 +90,23 @@ local function pullable(mob: any): boolean
 	return not (type(enemyId) == "string" and string.sub(enemyId, 1, 6) == "alpha_")
 end
 
+-- EXECUTE (Rhyman's Headsman's Verdict): true when a skill kills `mob` outright. Raid bosses and
+-- Biome Bosses are immune and take the skill's ordinary damage; floor Alphas share the BOSS role
+-- but are executed like any other mob. Hero targets (duels) never reach this: only mobs do.
+function HeroSkillEffects.Executes(skill: any, mob: any): boolean
+	if not skill or skill.Effect ~= "EXECUTE" or not mob then
+		return false
+	end
+	if mob.RaidBoss or mob.Dormant then
+		return false
+	end
+	if mob.Role == "BOSS" then
+		local enemyId = mob.EnemyId or mob.SpecId
+		return type(enemyId) == "string" and string.sub(enemyId, 1, 6) == "alpha_"
+	end
+	return true
+end
+
 -- Where a pull of `studs` moves a mob at `from` towards `center`: straight in, never closer than
 -- `core` studs (so a pack bunches around the centre instead of stacking on one point).
 function HeroSkillEffects.PullDestination(from: Vector3, center: Vector3, studs: number, core: number): Vector3?
@@ -185,6 +202,8 @@ local function resolveSkill(ctx: Context, hit: Hit, scale: number)
 	if skill.Effect == "SINGULARITY" then
 		singularity(ctx, hit, skill, math.round(atk * mult * 0.6 * scale))
 		return
+	elseif skill.Effect == "EXECUTE" then
+		return -- one target, no splash: the caller lands the blow (HeroSkillEffects.Executes)
 	end
 
 	if archetype == "Vanguard" then
@@ -278,6 +297,11 @@ local function resolveSpecial(ctx: Context, hit: Hit): number
 
 	if special.SecondaryEffect == "BEAM_LINE" then
 		beamLine(ctx, hit, special.SecondaryParam or 36, special.BeamWidth or 4, math.round(atk * (special.BeamDamage or 0.8)))
+		return 1
+	elseif special.SecondaryEffect == "WHIRLWIND" then
+		-- A spin: every other mob around the attacker, on every tick of the turn.
+		local perTick = atk * (special.SpinDamage or 0.9) / math.max(1, hit.Impact.Ticks or 1)
+		nearbyOthers(ctx, hit, attacker.Position, special.SecondaryParam or 9, math.huge, math.round(perTick))
 		return 1
 	end
 

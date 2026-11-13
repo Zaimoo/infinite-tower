@@ -192,6 +192,44 @@ do
 		assert(Effects.PullDestination(Vector3.new(2, 0, 0), Vector3.new(0, 0, 0), 2, 3) == nil, "no pull inside the core")
 	end
 
+	-- Rhyman's Reaver's Whirl (WHIRLWIND): every other mob around him, on each of the three ticks;
+	-- Headsman's Verdict (EXECUTE): no splash, and it kills any mob but a raid or Biome Boss.
+	do
+		local rhyman = { NetId = 82, Owner = owner, Archetype = "Berserker", Position = Vector3.new(0, 0, 0), MaxHP = 100 }
+		local rProfile = Skills.GetSkillProfile("hero_rhyman", "Berserker")
+		local special, skill = rProfile.Special, rProfile.Skill
+		local target, beside, behind, outside = mob(51, 4), mob(52, 6), mob(53, -8), mob(54, 12)
+		ctx = context({ target, beside, behind, outside })
+		impact = { FloorId = 1, RoomGeneration = 1, Atk = 100, DamageMult = special.DamageMultiplier, Ticks = special.Ticks, Origin = rhyman.Position }
+		for tick = 1, special.Ticks do
+			bonus = Effects.Resolve(ctx, { Impact = impact, Attacker = rhyman, Profile = rProfile, Tier = "SPECIAL", Tick = tick, Primary = target, Center = target.Position })
+		end
+		local spin = math.round(100 * special.SpinDamage / special.Ticks) * special.Ticks
+		assert(special.Ticks == 3 and bonus == 1 and target.CurrentHP == 10000, "the spin leaves the target to the primary hit")
+		assert(beside.CurrentHP == 10000 - spin and behind.CurrentHP == 10000 - spin, "the spin cuts every mob around him, behind included")
+		assert(outside.CurrentHP == 10000, "nothing past the spin's reach")
+		local t = Timing.For("hero_rhyman", "AXE", "SPECIAL", special, 1.0, 5)
+		near(t.TravelSeconds, 0, "the spin is a melee blow")
+
+		local bystander = mob(55, 2)
+		ctx = context({ target, bystander })
+		impact = { FloorId = 1, RoomGeneration = 1, Atk = 100, DamageMult = skill.DamageMultiplier, Ticks = 1, Origin = rhyman.Position }
+		Effects.Resolve(ctx, { Impact = impact, Attacker = rhyman, Profile = rProfile, Tier = "SKILL", Tick = 1, Primary = target, Center = target.Position })
+		assert(bystander.CurrentHP == 10000, "the execute has no splash")
+		local elite, alpha, biomeBoss, namelessBoss, raidBoss, raidAdd = mob(56, 0), mob(57, 0), mob(58, 0), mob(59, 0), mob(60, 0), mob(61, 0)
+		elite.Role = "ELITE"
+		alpha.Role, alpha.EnemyId = "BOSS", "alpha_cinder_hound"
+		biomeBoss.Role, biomeBoss.EnemyId = "BOSS", "boss_ember_titan"
+		namelessBoss.Role = "BOSS"
+		raidBoss.RaidBoss = true
+		raidAdd.RaidAdd = true
+		assert(Effects.Executes(skill, target) and Effects.Executes(skill, elite) and Effects.Executes(skill, alpha) and Effects.Executes(skill, raidAdd), "mobs, Elites, Alphas and raid adds are executed")
+		assert(not Effects.Executes(skill, biomeBoss) and not Effects.Executes(skill, namelessBoss) and not Effects.Executes(skill, raidBoss), "Biome Bosses and raid bosses are not")
+		assert(not Effects.Executes(Skills.GetSkillProfile("hero_gide", "Berserker").Skill, target) and not Effects.Executes(skill, nil), "only an EXECUTE skill with a target executes")
+		assert(skill.DamageMultiplier > Skills.Profiles.Berserker.Skill.DamageMultiplier, "bosses take amplified damage instead")
+		near(Timing.For("hero_rhyman", "AXE", "SKILL", skill, 1.0, 5).CastSeconds, 1.3, "the leap holds him for its cast")
+	end
+
 	-- Vanguard ultimate: barrier and taunt once, on the first tick.
 	local vanguard = { NetId = 60, Owner = owner, Archetype = "Vanguard", Position = Vector3.new(0, 0, 0), MaxHP = 1000 }
 	local taunted = mob(21, 10)
