@@ -1765,7 +1765,7 @@ end
 -- straps; plate vambraces with gilt cuffs; a brown belt with a gilt buckle; a long blue tabard
 -- edged in gilt between plate faulds; a blue cape; plate thighs, knee cops with gilt rims,
 -- greaves and sabatons. Hair: our Blender mesh (tools/make_caspian_hair_ugc.py), a messy,
--- spiky auburn shag from his second reference art. Face: our own decal from assets/faces/make_caspian_face.py. The glowing
+-- spiky auburn shag from his second reference art, textured with assets/hair/caspian_hair_texture.png. Face: our own decal from assets/faces/make_caspian_face.py. The glowing
 -- runed sword and shield are the SWORD_SHIELD weapon, not costume.
 do
 	local skin, hair, plate, shade = { 204, 152, 114 }, { 156, 78, 44 }, { 234, 232, 238 }, { 196, 194, 204 }
@@ -1776,10 +1776,10 @@ do
 		UpperLeg = plate, LowerLeg = plate, Foot = plate,
 	}, {
 		-- Hair mesh: centred on the export's bounding box and turned 180 degrees to undo the
-		-- importer's rotation.
+		-- importer's rotation; textured, so the colour comes from the texture.
 		piece("HairMesh", "Head", { 1.919, 1.422, 1.853 }, { 0.006, 0.3023, 0.0928 }, hair, with(LOOSE, {
 			Rotation = { 0, 180, 0 },
-			Mesh = { MeshId = "rbxassetid://CASPIAN_HAIR_ID", Scale = { 0.01, 0.01, 0.01 } },
+			Mesh = { MeshId = "rbxassetid://CASPIAN_HAIR_ID", TextureId = "rbxassetid://131547739661735", Scale = { 0.01, 0.01, 0.01 } },
 		})),
 		-- High plate collar with a gilt rim
 		piece("CollarBack", "UpperTorso", { 1.3, 0.44, 0.14 }, { 0, 0.96, 0.44 }, plate, with(LOOSE, METAL, { Rotation = { -10, 0, 0 } })),

@@ -5,12 +5,15 @@ From his second reference art: a messy, voluminous auburn shag. Spiky, pointed b
 his brows with one longer piece between the eyes; spiky locks cover the tops of his ears and
 flick outward; the back is layered to the nape with outward flicks, which with the bangs gives
 the crown its volume. Built UGC style (thick, rounded clumps over a lightly grooved base sheet) with the
-helpers from tools/make_isabelle_hair_ugc.py. Untextured: the costume colours it. Roblox head
+helpers from tools/make_isabelle_hair_ugc.py. Textured: the mesh has UVs with V mapped to height
+on the head (1 at the crown, about 0.5 at the brows, 0 at the nape) for
+assets/hair/caspian_hair_texture.png (assets/hair/make_caspian_hair_texture.py): darker roots, a
+warm shine near the crown, lighter tips and strand lines. Roblox head
 space (Y up, -Z front, +X the hero's right) on a 1.2-stud reference head. Export with the
 hero-remodel skill's scripts/blender_export_hair.py.
 """
 
-import bpy, bmesh, math, random
+import bpy, bmesh, math, os, random
 from mathutils import Vector
 
 OUT_DIR = r"D:\Programming shi\infinite-tower\assets\hair"
@@ -227,6 +230,17 @@ for k, th_deg in enumerate(range(124, 237, 12)):
     clump(pts, rng.uniform(0.15, 0.2), 0.065, segs=14, tip=rng.uniform(2.0, 2.5))
 
 bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-6)
+
+# UVs: V by height (1 at the crown, about 0.5 at the brows, 0 at the nape), U across the head
+# from his left to his right (no wrap, so no seam). Kept just inside 0..1: a V of exactly 1
+# samples across the wrap into the other end of the texture.
+uvl = bm.loops.layers.uv.verify()
+for f in bm.faces:
+    for loop in f.loops:
+        co = loop.vert.co  # Blender (x, y, z) = Roblox (x, -z, y)
+        v = max(0.02, min(0.98, (co.z + 0.5) / 1.45))
+        u = max(0.02, min(0.98, (co.x + 1.0) / 2.0))
+        loop[uvl].uv = (u, v)
 me = bpy.data.meshes.new(NAME)
 bm.to_mesh(me); bm.free()
 for p in me.polygons:
@@ -238,9 +252,14 @@ mat = bpy.data.materials.get("CaspianHairAuburn") or bpy.data.materials.new("Cas
 mat.use_nodes = True
 bsdf = next((n for n in mat.node_tree.nodes if n.type == "BSDF_PRINCIPLED"), None)
 col = (0.33, 0.08, 0.025, 1)  # about rgb(156, 78, 44)
+tex_path = os.path.join(OUT_DIR, "caspian_hair_texture.png")
 if bsdf:
     bsdf.inputs[0].default_value = col
     bsdf.inputs["Roughness"].default_value = 0.45
+    if os.path.exists(tex_path):
+        node = mat.node_tree.nodes.new("ShaderNodeTexImage")
+        node.image = bpy.data.images.load(tex_path, check_existing=True)
+        mat.node_tree.links.new(node.outputs["Color"], bsdf.inputs[0])
 mat.diffuse_color = col
 me.materials.append(mat)
 
