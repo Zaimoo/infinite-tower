@@ -219,8 +219,8 @@ from the standard. Shared by every hero and not overridden: the **hit flinch** (
 | Slot | Name | Effect | Animation |
 | --- | --- | --- | --- |
 | Grip | — | Standard staff grip (right hand). | — |
-| Idle | — | — | From her art: floating slightly (`floatIdle`), the staff upright in her right hand, the free hand raised palm up before her chest (where the art's grimoire floats), head tilted down a little. Her three halo shards hang above her head (costume). |
-| Walk | — | — | The same upper body over small walking steps (`walk(regent)`); the floor-length robe makes it read as a glide. |
+| Idle | — | — | From her art: she floats about a stud off the floor (every clip is lifted, legs hanging loose) and bobs slowly up and down; the staff upright in her right hand, the free hand raised palm up before her chest (where the art's grimoire floats), head tilted down a little. Her three halo shards hang above her head (costume). |
+| Walk | — | — | No steps: she flies, from the user's flying-wizard reference. The whole body leans forward, the legs trail behind bent at the knee, the staff is carried tipped ahead in her right hand and the left arm is swept back, still bobbing. |
 | Basic | Shard Bolt | 1.0× glass-shard projectile. | A one-handed point with the staff as a shard leaves her halo (`Origin = "HALO"`). |
 | Special | Refraction | A glass prism hits the target for **1.5×**, then splits into three shards that hit the three nearest other enemies within 14 studs for **0.6×** each. | She draws the staff back and turns into it while the three halo shards fly to its tip and join into a prism (`Charge` 0.2), then thrusts it forward to launch it (`Release` 0.62, 1.2 s clip). |
 | Skill | Hall of Mirrors | Four mirror crystals rise around the target and fire for 4 s: **3.5×** in total over 8 pulses to the target, and 60% of that to every other enemy within 16 studs. Cast 1.4 s. | Staff held two-handed overhead; she turns a slow half circle while the crystals fire. |

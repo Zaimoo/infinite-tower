@@ -1764,45 +1764,93 @@ do
 	}
 end
 
--- Seraphine (STAFF), from her reference art: floating slightly, the staff upright in her right
--- hand, the free hand raised palm up before her chest (where the art's grimoire floats), head
--- tilted down a little. Walk: the same upper body over small walking steps (her robe hides the
--- feet, so it reads as a glide). Shard Bolt: a one-handed point with the staff as a halo shard
--- flies. Refraction: she draws the staff back while the halo shards fly to its tip and join into
--- a prism (Charge), then thrusts it forward to launch it (Release). Hall of Mirrors: the staff
--- held overhead in both hands while she turns a slow half circle and the crystals fire.
+-- Seraphine (STAFF), from her reference art: she floats, always. Every clip lifts her root
+-- HOVER studs off the floor, with her legs hanging loose under the robe.
+-- Idle: the staff upright in her right hand, the free hand raised palm up before her chest (where
+-- the art's grimoire floats), head tilted down a little, bobbing slowly up and down.
+-- Move: no steps; she flies, leaning forward with her legs trailing behind, the staff carried
+-- ahead in her right hand and her left arm swept back, still bobbing (the user's flying-wizard
+-- reference). Shard Bolt: a one-handed point with the staff as a halo shard flies. Refraction:
+-- she draws the staff back while the halo shards fly to its tip and join into a prism (Charge),
+-- then thrusts it forward to launch it (Release). Hall of Mirrors: the staff held overhead in
+-- both hands while she turns a slow half circle and the crystals fire.
 do
 	local p = WeaponPoses.STAFF
+	local HOVER, BOB = 0.9, 0.18
+	-- Legs hanging loose under the robe while she floats.
+	local DANGLE: Pose = {
+		LeftHip = { 10, 0, -2 }, RightHip = { -2, 0, 2 },
+		LeftKnee = { -18, 0, 0 }, RightKnee = { -30, 0, 0 },
+		LeftAnkle = { 20, 0, 0 }, RightAnkle = { 20, 0, 0 },
+	}
+	-- Lifts every key of a clip HOVER studs (keeping any RootOffset it has), plus a bob of `amp`
+	-- studs over one sine cycle across the clip, and lets the legs hang. Ends where it starts, so
+	-- loops stay seamless.
+	local function floating(c: Clip, amp: number): Clip
+		for _, k in c.Keys do
+			local pose = merge(k.Pose, DANGLE)
+			local ro = k.Pose.RootOffset or { 0, 0, 0 }
+			local wave = if k.T <= 0 or k.T >= 1 then 0 else math.sin(2 * math.pi * k.T)
+			pose.RootOffset = { ro[1], ro[2] + HOVER + amp * wave, ro[3] }
+			k.Pose = pose
+		end
+		return c
+	end
 	local regent = merge(p.Stand, { Neck = { -4, 0, 0 }, LeftShoulder = { 40, -10, -20 }, LeftElbow = { 60, 0, 0 }, LeftWrist = { -174.5, 72.6, 174.6 } })
+	-- Flying: the whole body leans forward (Root), the head lifts to look ahead, the legs trail
+	-- back bent at the knee, the staff arm reaches ahead and the free arm sweeps back.
+	local fly = merge(regent, {
+		Root = { 22, 0, 0 }, Waist = { 4, 0, 0 }, Neck = { -18, 0, 0 },
+		RightShoulder = { 38, 0, 12 }, RightElbow = { 35, 0, 0 }, RightWrist = { -50, 0, 0 }, -- staff tipped ahead
+		LeftShoulder = { -38, 0, -14 }, LeftElbow = { 28, 0, 0 }, LeftWrist = { 0, 0, 0 },
+	})
+	local flyLegs: Pose = {
+		LeftHip = { -30, 0, -3 }, RightHip = { -14, 0, 3 },
+		LeftKnee = { -75, 0, 0 }, RightKnee = { -50, 0, 0 },
+		LeftAnkle = { 25, 0, 0 }, RightAnkle = { 25, 0, 0 },
+	}
 	local overhead = merge(p.Raised, { LeftShoulder = { 160, 0, -10 }, LeftElbow = { 10, 0, 0 }, RootOffset = { 0, 0.15, 0 } })
 	local drawBack = merge(p.Stand, { Waist = { 6, 30, 0 }, RightShoulder = { 60, 0, 40 }, RightElbow = { 70, 0, 0 },
 		LeftShoulder = { 60, 0, -30 }, LeftElbow = { 40, 0, 0 } })
 	local thrust = merge(p.Cast, { Waist = { -12, -10, 0 }, RightShoulder = { 95, 0, 0 }, RootOffset = { 0, -0.05, -0.3 } })
+	-- The flight loop: the arms sway a little against the bob; the legs trail throughout.
+	local function flight(sway: number): Pose
+		return merge(fly, {
+			RightShoulder = { 38 + 4 * sway, 0, 12 }, LeftShoulder = { -38 - 6 * sway, 0, -14 },
+			Waist = { 4 - 2 * sway, 0, 0 },
+		})
+	end
+	local move = floating(clip(1.6, true, {
+		{ 0, flight(0) }, { 0.25, flight(1) }, { 0.5, flight(0) }, { 0.75, flight(-1) }, { 1, flight(0) },
+	}), BOB)
+	for _, k in move.Keys do
+		k.Pose = merge(k.Pose, flyLegs) -- trailing legs instead of hanging ones
+	end
 	Overrides.hero_seraphine = {
-		Idle = floatIdle(regent, 3.4),
-		Move = walk(regent),
-		AttackBasic = signature(0.8, {
+		Idle = floating(floatIdle(regent, 3.0), BOB),
+		Move = move,
+		AttackBasic = floating(signature(0.8, {
 			{ 0, p.Stand },
 			{ 0.4, p.Cast },
 			{ 0.6, merge(p.Cast, { RightShoulder = { 98, 0, 0 } }) },
 			{ 1, p.Stand },
-		}, { Release = 0.6 }),
-		AttackSpecial = signature(1.2, {
+		}, { Release = 0.6 }), 0),
+		AttackSpecial = floating(signature(1.2, {
 			{ 0, p.Stand },
 			{ 0.2, drawBack }, -- the three halo shards fly to the tip and join into a prism
 			{ 0.5, merge(drawBack, { Waist = { 8, 36, 0 } }) },
 			{ 0.62, thrust },
 			{ 0.82, thrust },
 			{ 1, p.Stand },
-		}, { Charge = 0.2, Release = 0.62 }),
-		AttackSkill = signature(1.4, {
+		}, { Charge = 0.2, Release = 0.62 }), 0),
+		AttackSkill = floating(signature(1.4, {
 			{ 0, p.Stand },
 			{ 0.25, overhead },
 			{ 0.5, merge(overhead, { Waist = { 10, 60, 0 } }) },
 			{ 0.75, merge(overhead, { Waist = { 10, -60, 0 } }) },
 			{ 0.9, overhead },
 			{ 1, p.Stand },
-		}, { Charge = 0.25, Release = 0.5 }),
+		}, { Charge = 0.25, Release = 0.5 }), 0),
 	}
 end
 
