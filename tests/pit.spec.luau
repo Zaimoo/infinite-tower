@@ -109,6 +109,7 @@ end)
 
 test("Every native seed uses canonical compounded growth without retired effects", function()
 	for seedId, seed in pairs(Catalog.Seeds) do
+		if seed.Mirror then continue end -- mirror heroes copy another hero (mirror.spec.luau)
 		equal(seed.BaseStar, 1, seedId .. " is summoned at 1 star")
 		-- Rarity folds in the old summon-star bonus: 100% for Common-Rare, 50% from Superior up.
 		local comp = seed.Rarity <= 3 and 1 or 0.5
@@ -136,6 +137,7 @@ end)
 
 test("A 1-star pull keeps its old summoned power: 100% to Rare, 50% from Superior", function()
 	for seedId, seed in pairs(Catalog.Seeds) do
+		if seed.Mirror then continue end -- mirror heroes copy another hero (mirror.spec.luau)
 		local now = Stats.GetHeroPower(hero("p", seedId, { Stars = 1, Rarity = seed.Rarity }))
 		-- Old rule: summoned at star = tier, 3x per star, 1.35x per tier.
 		local g = 3^(seed.Rarity-1) * 1.35^(seed.Rarity-1)

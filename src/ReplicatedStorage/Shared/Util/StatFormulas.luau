@@ -64,6 +64,84 @@ function StatFormulas.GetHeroRarity(hero: any): number
 	return HeroCatalog.RarityOf(hero and hero.TemplateId)
 end
 
+-- Mirror heroes (The Gilded Mirror, docs/gilded-mirror-plan.md §2.1) have no stats of their own. Their base power is
+-- GetMirrorPercent of their source: the Master's best NORMAL hero by power without a weapon or Training Grounds.
+-- That power is split into HP and ATK by the mirror hero's own archetype shape (its seed's HP, ATK and interval), so
+-- 10 x DPS + HP before the weapon equals the target. Their own weapon and Training Grounds then apply as usual.
+-- The server stores the source on each mirror hero (RefreshMirrorSources) so snapshots don't need the profile.
+function StatFormulas.IsMirror(hero: any): boolean
+	return hero ~= nil and HeroCatalog.IsMirror(hero.TemplateId)
+end
+
+function StatFormulas.GetMirrorPercent(hero: any): number
+	local base = B.MirrorBase[StatFormulas.GetHeroRarity(hero)] or B.MirrorBase[7]
+	local stars = if B.Integer(hero and hero.Stars, 1, PitBalanceConfig.MaxStars) then hero.Stars else 1
+	return base + B.MirrorPerStar * (stars - 1)
+end
+
+export type MirrorSource = { UUID: string, Name: string, Stars: number, Level: number, Power: number, Labor: number }
+
+-- Used only if a mirror hero has no source yet (a client copy before the first refresh). The server keeps one
+-- normal hero in every roster (PitService), so this is a safety net: a 1★ Lv 1 Common.
+local FALLBACK_SOURCE_HERO = { UUID = "", TemplateId = "hero_gide", DisplayName = "", Stars = 1, Level = 1, Rarity = 1, QualityScalar = 1 }
+local fallbackSource: MirrorSource? = nil
+
+function StatFormulas.DescribeMirrorSource(source: any): MirrorSource
+	return { UUID = source.UUID or "", Name = source.DisplayName or "", Stars = source.Stars or 1, Level = source.Level or 1,
+		Power = StatFormulas.GetHeroPower(source, nil, 1), Labor = StatFormulas.GetEffectiveLabor(source, "") }
+end
+
+-- The Master's best normal hero: highest power without a weapon (ties go to the lower UUID, so the pick is stable).
+function StatFormulas.GetMirrorSource(profile: any): any?
+	local best, bestPower = nil, -1
+	for uuid, hero in pairs(profile and profile.Heroes or {}) do
+		if not StatFormulas.IsMirror(hero) then
+			local power = StatFormulas.GetHeroPower(hero, nil, 1)
+			if power > bestPower or (power == bestPower and best and tostring(uuid) < tostring(best.UUID)) then
+				best, bestPower = hero, power
+			end
+		end
+	end
+	return best
+end
+
+-- Writes the current source onto every mirror hero. Returns true when any mirror hero's source changed.
+function StatFormulas.RefreshMirrorSources(profile: any): boolean
+	local source = StatFormulas.GetMirrorSource(profile)
+	local info = source and StatFormulas.DescribeMirrorSource(source)
+	local changed = false
+	for _, hero in pairs(profile and profile.Heroes or {}) do
+		if StatFormulas.IsMirror(hero) then
+			local old = hero.MirrorSource
+			local same = old ~= nil and info ~= nil and old.UUID == info.UUID and old.Power == info.Power and old.Labor == info.Labor
+				and old.Stars == info.Stars and old.Level == info.Level and old.Name == info.Name
+			if not same and not (old == nil and info == nil) then
+				hero.MirrorSource = if info then table.clone(info) else nil
+				changed = true
+			end
+		end
+	end
+	return changed
+end
+
+local function mirrorSourceOf(hero: any): MirrorSource
+	local source = hero.MirrorSource
+	if type(source) == "table" and B.Finite(source.Power) and source.Power >= 0 and B.Finite(source.Labor) then
+		return source
+	end
+	if not fallbackSource then fallbackSource = StatFormulas.DescribeMirrorSource(FALLBACK_SOURCE_HERO) end
+	return fallbackSource :: MirrorSource
+end
+
+-- HP and ATK before the weapon and Training Grounds.
+function StatFormulas.GetMirrorBase(hero: any): (number, number)
+	local seed = HeroCatalog.Seeds[hero.TemplateId]
+	local target = mirrorSourceOf(hero).Power * StatFormulas.GetMirrorPercent(hero)
+	local h, a = seed.BaseHP_1Star, seed.BaseATK_1Star
+	local k = target / (10 * a / B.ScheduledInterval(seed.AttackInterval) + h)
+	return k * h, k * a
+end
+
 -- Canonical four-stat snapshot. Legacy base fields are never multiplied again.
 -- trainingMultiplier: from The Training Grounds (GDD Section 4.3.2.C)
 function StatFormulas.GetCombatSnapshot(hero: any, artifact: any?, inOverdrive: boolean?, _inBloodPact: boolean?, trainingMultiplier: number?): any
@@ -75,8 +153,10 @@ function StatFormulas.GetCombatSnapshot(hero: any, artifact: any?, inOverdrive: 
  local power,speed=0,0
  if artifact then power,speed=ArtifactCatalog.CalculateEffectiveStats(artifact.Star,artifact.Rarity,nil,artifact.TemplateId) end
  local mult = trainingMultiplier or 1.0
- local damage=math.round((seed and seed.BaseATK_1Star or 35)*quality*growth*(1+power/B.WeaponPowerDivisor)*mult)
- local health=math.round((seed and seed.BaseHP_1Star or 280)*quality*growth*mult)
+ local baseATK,baseHP=(seed and seed.BaseATK_1Star or 35)*quality*growth,(seed and seed.BaseHP_1Star or 280)*quality*growth
+ if seed and (seed :: any).Mirror then baseHP,baseATK=StatFormulas.GetMirrorBase(hero) end
+ local damage=math.round(baseATK*(1+power/B.WeaponPowerDivisor)*mult)
+ local health=math.round(baseHP*mult)
  local baseInterval=seed and seed.AttackInterval or hero.AttackInterval or 1
  local interval=math.max(.2,baseInterval/(1+speed))
  local tickInterval=B.ScheduledInterval(interval)
@@ -127,6 +207,8 @@ function StatFormulas.GetEffectiveLabor(hero: any, targetFacilityAssignment: str
  local pref=seed and seed.PreferredFacility or ""
  local target=targetFacilityAssignment or hero.Assignment or ""
  local synergy=pref=="ALL" or (pref~="" and pref==target) or (target=="FACILITY_GODS_BLESSING" and (hero.Archetype or seed and seed.Archetype)=="Healer")
+ -- Mirror heroes copy their source's labor at 100%; their own facility synergy still applies.
+ if seed and (seed :: any).Mirror then return math.round(mirrorSourceOf(hero).Labor*(synergy and 1.25 or 1)*100)/100 end
  local rarity=B.HeroRarityLabor(StatFormulas.GetHeroRarity(hero))
  local labor=(seed and seed.BaseLabor_1Star or 14)*q*rarity*PitBalanceConfig.Promotion.LaborMultiplier^(stars-1)*(1+.05*(level-1))*(synergy and 1.25 or 1)
  return math.round(labor*100)/100

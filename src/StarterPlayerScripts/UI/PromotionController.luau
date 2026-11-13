@@ -932,8 +932,9 @@ function Promo.RenderPicker(self: any)
 		local aMax = (a.Stars or 1) >= maxStars
 		local bMax = (b.Stars or 1) >= maxStars
 		if aMax ~= bMax then return not aMax end
-		local aCap = (a.Level or 1) >= StatFormulas.GetMaxLevel(a.Stars)
-		local bCap = (b.Level or 1) >= StatFormulas.GetMaxLevel(b.Stars)
+		-- Mirror heroes don't level, so they are always ready to promote (docs/gilded-mirror-plan.md §2.3).
+		local aCap = StatFormulas.IsMirror(a) or (a.Level or 1) >= StatFormulas.GetMaxLevel(a.Stars)
+		local bCap = StatFormulas.IsMirror(b) or (b.Level or 1) >= StatFormulas.GetMaxLevel(b.Stars)
 		if aCap ~= bCap then return aCap end
 		if (a.Stars or 1) ~= (b.Stars or 1) then return (a.Stars or 1) > (b.Stars or 1) end
 		if (a.Level or 1) ~= (b.Level or 1) then return (a.Level or 1) > (b.Level or 1) end
@@ -948,7 +949,8 @@ function Promo.RenderPicker(self: any)
 
 	for i, hero in heroes do
 		local isMax = (hero.Stars or 1) >= maxStars
-		local isCapped = (hero.Level or 1) >= StatFormulas.GetMaxLevel(hero.Stars)
+		local isMirror = StatFormulas.IsMirror(hero)
+		local isCapped = isMirror or (hero.Level or 1) >= StatFormulas.GetMaxLevel(hero.Stars)
 		local eligible = not isMax and isCapped
 		local tagText: string? = nil
 		if isMax then
@@ -984,7 +986,8 @@ function Promo.RenderPicker(self: any)
 		name.Size = UDim2.new(1, -8, 0, 18)
 		name.ZIndex = 63
 
-		local info = label(tile, string.format("%s  Lv.%d", stars(hero.Stars), hero.Level or 1), 13, eligible and C.Text or C.TextDim, Enum.Font.GothamMedium, "Number")
+		local info = label(tile, if isMirror then string.format("%s  %d%%", stars(hero.Stars), math.round(StatFormulas.GetMirrorPercent(hero) * 100))
+			else string.format("%s  Lv.%d", stars(hero.Stars), hero.Level or 1), 13, eligible and C.Text or C.TextDim, Enum.Font.GothamMedium, "Number")
 		info.Position = UDim2.fromOffset(4, 114)
 		info.Size = UDim2.new(1, -8, 0, 16)
 		info.ZIndex = 63
@@ -1054,7 +1057,8 @@ function Promo.Render(self: any)
 		local maxLevel = StatFormulas.GetMaxLevel(recipient.Stars)
 		local isCapped = (recipient.Level or 1) >= maxLevel
 		self.MainBadge.Visible = true
-		self.MainBadgeText.Text = isCapped and "MAX LVL" or string.format("LV. %d/%d", recipient.Level or 1, maxLevel)
+		self.MainBadgeText.Text = if StatFormulas.IsMirror(recipient) then string.format("MIRROR %d%%", math.round(StatFormulas.GetMirrorPercent(recipient) * 100))
+			elseif isCapped then "MAX LVL" else string.format("LV. %d/%d", recipient.Level or 1, maxLevel)
 	else
 		self.MainQuestion.Visible = true
 		self.MainStroke.Color = C.Border

@@ -687,6 +687,8 @@ function DataManager.SyncProfile(player: Player, progressionOnly: boolean?)
 		_G.PlotManager.RefreshPlotVisuals(player)
 	end
 
+	-- Mirror heroes copy the best normal hero (docs/gilded-mirror-plan.md): derived, so recomputed on every sync.
+	StatFormulas.RefreshMirrorSources(profile)
 	if progressionOnly and _G.CombatSimulation and _G.CombatSimulation.RefreshPlayerHeroStats then
 		_G.CombatSimulation.RefreshPlayerHeroStats(player)
 	end
@@ -761,6 +763,12 @@ end
 function DataManager.SyncPitDelta(player: Player, changed: any, removed: any)
 	local profile = ActiveProfiles[player]
 	if not profile then return end
+	-- A promoted or levelled normal hero can change what every mirror hero copies: send those heroes too.
+	if StatFormulas.RefreshMirrorSources(profile) then
+		for uuid, hero in pairs(profile.Heroes) do
+			if StatFormulas.IsMirror(hero) then changed[uuid] = hero end
+		end
+	end
 	if _G.CombatSimulation and _G.CombatSimulation.RefreshPlayerHeroStats then
 		_G.CombatSimulation.RefreshPlayerHeroStats(player)
 	end

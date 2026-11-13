@@ -410,11 +410,18 @@ The inaugural limited-time rate-up banner features exactly **one character for e
 
 *(The relic economy rebalance raised Gem income about 1.3–1.5×, so both banners were tightened to keep hours of play per hero at or above the old pace: Call of the Rift from 70/20/7/2.5/0.5% with pity 80, and A Star's Arrival from 60/24/10/4.2/1.4/0.33/0.07% with pity 90 and a 100-Gem price. See `docs/relic-loot-rebalance-plan.md`. Earlier history: `docs/rework-plan/PHASE_4_ONBOARDING_AND_PROGRESSION.md` §7.)*
 
+#### 3. Premium Banner: "The Gilded Mirror" (Rarity Tiers 7–11, Robux)
+Five **mirror heroes** (`HeroCatalog.MirrorBanner`, plan: `docs/gilded-mirror-plan.md`). Every pull is one of the five; there is no filler.
+- **Drop Rates:** `Mythical (50%)`: **Isabelle** · `Transcendent (28%)`: **Nyx** · `Ascendant (14%)`: **Caspian** · `Ethereal (6%)`: **Seraphine** · `Immortal (2%)`: **Rourke (Featured)**.
+- **Planned, not built yet:** Robux purchase (55 R$ / 499 R$ for ten), the ten-pull floor (Caspian or better), the 80-pull Spark (pick any of the five), and the paid-random-item policy check. Today the banner is data only: the heroes, their stats and the odds window.
+- **Mirror heroes have no stats of their own.** Their base power is a share of the Master's **best normal hero** (highest power without a weapon or Training Grounds; mirror heroes never copy each other): **110 / 120 / 130 / 140 / 150%** for rarity 7–11, **+2% per star** above 1★ (`StatBalance.MirrorBase`, `MirrorPerStar`). A 7★ Isabelle (122%) beats a 1★ Nyx (120%). The share is split into HP and ATK by the mirror hero's **own** archetype shape (its seed HP, ATK and interval), so $10 	imes DPS + HP$ before the weapon equals the target. Their own weapon and Training Grounds then apply as usual, and Rift Attunement still caps them (§2.5). Labor copies the source's labor at 100%, with the mirror hero's own facility synergy (`StatFormulas.GetMirrorBase`, `RefreshMirrorSources`).
+- **Every roster keeps one normal hero.** The Pit refuses to consume a Master's last normal hero as a donor, alone or together with others (§4.2a).
+
 ---
 
 #### Inherent Hero Rarity
 Like weapons (Section 7.1), every hero template has a fixed **inherent rarity**. For heroes it sets a stat multiplier; every hero is summoned at 1★.
-- **Rarity** uses the weapon tier names. Launch heroes span tiers 1 (Common) to 7 (Mythical), and tiers 8–16 are reserved for future heroes. Rarity can never be upgraded, rerolled or refined.
+- **Rarity** uses the weapon tier names. Launch heroes span tiers 1 (Common) to 7 (Mythical); the Gilded Mirror heroes use 7–11 (Transcendent, Ascendant, Ethereal, Immortal), and tiers 12–16 are reserved. Rarity can never be upgraded, rerolled or refined. For a mirror hero, rarity only sets its mirror share; the multipliers below don't apply to it.
 - **Rarity multipliers:** heroes used to be summoned at a star equal to their tier, which gave tier $t$ an extra $3^{(t-1)}$ combat and $1.35^{(t-1)}$ labor. That bonus now lives in the rarity multiplier, scaled by a compensation factor $c_t$:
   $$R_{\text{combat}}(t) = c_t \times (3 \times 1.35)^{(t-1)} \qquad R_{\text{labor}}(t) = c_t \times (1.35 \times 1.12)^{(t-1)}$$
   where $c_t = 1$ for Common, Uncommon and Rare (they keep 100% of their old summoned power, so the early floors stay easy) and $c_t = 0.5$ from Superior up (`StatBalance.RarityStarCompensation`). A fresh Superior (×33.2) still beats a fresh Rare (×16.4).
@@ -498,6 +505,8 @@ The Pit (`PitService`, `PitBalanceConfig`, `PitMath`) holds the Synthesis Chambe
   | 5★ → 6★ | 450,000 | 40 |
   | 6★ → 7★ | 1,250,000 | 85 |
 
+- **Mirror heroes** (§4.1) promote at the same Gold and Stone costs **without a level requirement** (they don't level: no synthesis EXP, no combat EXP), and each star adds +2% to their mirror share. Promoting the best normal hero is usually the better buy, since every mirror hero copies its ×1.5.
+- **The last normal hero** can't be a donor, alone or with others: mirror heroes copy it (`PitService.LastNormalHeroReason`).
 - **Promotion Stones** drop from tower kills (`TowerFloorConfig.RollPromotionStones`, more on a first clear) and come with banked relics (0 / 1 / 2 / 5 for a Geode / Urn / Core / Heart, §5.5). New profiles start with 2.
 - **Server only, no UI yet:** `PitService` also accepts **Conversion** (dissolve heroes into Soul Essence: 4 / 12 / 36 / 108 / 324 / 972 / 2,916 by effective star, +1 per 5 effective levels) and **Craft** (a Promotion Stone for 100 Gold + 20 Gems + 8 Soul Essence). The Synthesis and Promotion screens are the only Pit actions players can reach.
 - **Imprints were removed.** Their stat bonuses had been switched off since the stat rework, and no screen ever sent them. Schema v7 strips hero imprints and refunds any held Imprint Catalysts at their crafting cost (§8.3).

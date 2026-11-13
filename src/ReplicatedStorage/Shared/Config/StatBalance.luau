@@ -26,6 +26,10 @@ end
 function B.HeroRarityLabor(tier: number): number
 	return B.RarityCompensation(tier) * (B.LegacySummonLaborMultiplier * B.HeroRarityLaborMultiplier) ^ (tier - 1)
 end
+-- Mirror heroes (The Gilded Mirror, docs/gilded-mirror-plan.md) have no stats of their own: their base power is a
+-- share of the Master's best normal hero. The share is set by rarity and rises by MirrorPerStar for every star above 1★.
+B.MirrorBase = table.freeze({ [7] = 1.10, [8] = 1.20, [9] = 1.30, [10] = 1.40, [11] = 1.50 } :: { [number]: number })
+B.MirrorPerStar = 0.02
 B.MovementSpeed = 20
 B.MaxAttackSpeed = 5
 B.MaxHeroInventory = 50

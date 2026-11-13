@@ -355,6 +355,7 @@ end)
 
 test("All hero/weapon tiers are finite, monotonic and independent of legacy levels", function()
 	for id, seed in pairs(Heroes.Seeds) do
+		if seed.Mirror then continue end -- mirror heroes copy another hero (mirror.spec.luau)
 		local hero = { TemplateId = id, Stars = 5, Level = 50, QualityScalar = 1, CurrentStamina = 100 }
 		for r = 1, 16 do
 			local last = 0

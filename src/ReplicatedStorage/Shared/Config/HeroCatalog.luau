@@ -10,7 +10,8 @@
 export type HeroSeed = {
 	HeroId: string,
 	DisplayName: string,
-	BannerOrigin: "STANDARD" | "WORLD_BOSS" | "LIMITED",
+	BannerOrigin: "STANDARD" | "WORLD_BOSS" | "LIMITED" | "PREMIUM",
+	Mirror: boolean?, -- The Gilded Mirror: no stats of its own, copies the best normal hero (StatFormulas)
 	DropWeight: number, -- Relative weight within tier
 	BaseStar: number, -- summon star; 1 for every hero
 	Rarity: number, -- Inherent rarity tier (1 Common .. 7 Mythical at launch); never changes
@@ -106,6 +107,34 @@ HeroCatalog.LimitedBanner = {
 	HeroesPoolByStar = {
 		[5] = { "hero_archon", "hero_valeria" },
 		[6] = { "hero_solaris", "hero_rhyman" },
+	},
+}
+
+-- The Gilded Mirror (docs/gilded-mirror-plan.md): a Robux-only banner of five mirror heroes, one per tier 7-11.
+-- Every pull is one of the five, so tiers 1-6 are 0 (Rates stays a dense array for SummonLuck). The purchase path,
+-- ten-pull floor and Spark land with the banner PR; this is the data the Hero Index and odds window read.
+HeroCatalog.MirrorBanner = {
+	BannerId = "banner_gilded_mirror",
+	Title = "THE GILDED MIRROR",
+	Subtitle = "PREMIUM MIRROR HERO BANNER",
+	MaxStar = 11,
+	RobuxOnly = true,
+	TenPullMinTier = 9, -- every 10-pull includes Caspian or better
+	SparkPulls = 80, -- after 80 pulls the Master picks any of the five
+	FeaturedHeroId = "hero_rourke",
+	Rates = { 0, 0, 0, 0, 0, 0,
+		0.50, -- 50% Mythical Isabelle (110% mirror)
+		0.28, -- 28% Transcendent Nyx (120%)
+		0.14, -- 14% Ascendant Caspian (130%)
+		0.06, -- 6% Ethereal Seraphine (140%)
+		0.02, -- 2% Immortal Rourke (150%, featured)
+	},
+	HeroesByStar = {
+		[7] = "hero_isabelle",
+		[8] = "hero_nyx",
+		[9] = "hero_caspian",
+		[10] = "hero_seraphine",
+		[11] = "hero_rourke",
 	},
 }
 
@@ -490,14 +519,128 @@ HeroCatalog.Seeds = {
 		PreferredFacility = "ALL",
 		Color = Color3.fromRGB(235, 220, 255),
 	},
+
+	-- ------------------------------------------------------------------------
+	-- THE GILDED MIRROR (Robux banner, docs/gilded-mirror-plan.md)
+	-- Mirror heroes have no stats of their own (StatFormulas.GetMirrorSnapshotBase). BaseHP/BaseATK/AttackInterval
+	-- only set the SHAPE their mirrored power is split into; BaseLabor is unused (labor copies the source hero).
+	-- ------------------------------------------------------------------------
+	hero_isabelle = {
+		HeroId = "hero_isabelle",
+		DisplayName = "Isabelle",
+		BannerOrigin = "PREMIUM",
+		Mirror = true,
+		DropWeight = 50.0,
+		BaseStar = 1,
+		Rarity = 7,
+		Archetype = "Marksman",
+		BaseHP_1Star = 220,
+		BaseATK_1Star = 44,
+		NativeHP = 220,
+		NativeATK = 44,
+		AttackInterval = 0.75,
+		AttackRange = 30,
+		BaseLabor_1Star = 14.0,
+		NativeLabor = 14.0,
+		PreferredFacility = "FACILITY_MARKET",
+		Color = Color3.fromRGB(236, 230, 214),
+	},
+	hero_nyx = {
+		HeroId = "hero_nyx",
+		DisplayName = "Nyx",
+		BannerOrigin = "PREMIUM",
+		Mirror = true,
+		DropWeight = 28.0,
+		BaseStar = 1,
+		Rarity = 8,
+		Archetype = "Striker",
+		BaseHP_1Star = 310,
+		BaseATK_1Star = 62,
+		NativeHP = 310,
+		NativeATK = 62,
+		AttackInterval = 0.70,
+		AttackRange = 6,
+		BaseLabor_1Star = 14.0,
+		NativeLabor = 14.0,
+		PreferredFacility = "FACILITY_TRAINING",
+		Color = Color3.fromRGB(26, 188, 156),
+	},
+	hero_caspian = {
+		HeroId = "hero_caspian",
+		DisplayName = "Caspian",
+		BannerOrigin = "PREMIUM",
+		Mirror = true,
+		DropWeight = 14.0,
+		BaseStar = 1,
+		Rarity = 9,
+		Archetype = "Vanguard",
+		BaseHP_1Star = 460,
+		BaseATK_1Star = 26,
+		NativeHP = 460,
+		NativeATK = 26,
+		AttackInterval = 1.15,
+		AttackRange = 8,
+		BaseLabor_1Star = 14.0,
+		NativeLabor = 14.0,
+		PreferredFacility = "FACILITY_GUARD_POST",
+		Color = Color3.fromRGB(224, 86, 253),
+	},
+	hero_seraphine = {
+		HeroId = "hero_seraphine",
+		DisplayName = "Seraphine",
+		BannerOrigin = "PREMIUM",
+		Mirror = true,
+		DropWeight = 6.0,
+		BaseStar = 1,
+		Rarity = 10,
+		Archetype = "Scholar",
+		BaseHP_1Star = 220,
+		BaseATK_1Star = 60,
+		NativeHP = 220,
+		NativeATK = 60,
+		AttackInterval = 1.00,
+		AttackRange = 32,
+		BaseLabor_1Star = 14.0,
+		NativeLabor = 14.0,
+		PreferredFacility = "FACILITY_TRAINING",
+		Color = Color3.fromRGB(104, 109, 224),
+	},
+	hero_rourke = {
+		HeroId = "hero_rourke",
+		DisplayName = "Rourke",
+		BannerOrigin = "PREMIUM",
+		Mirror = true,
+		DropWeight = 2.0,
+		BaseStar = 1,
+		Rarity = 11,
+		Archetype = "Berserker",
+		BaseHP_1Star = 370,
+		BaseATK_1Star = 58,
+		NativeHP = 370,
+		NativeATK = 58,
+		AttackInterval = 1.00,
+		AttackRange = 6,
+		BaseLabor_1Star = 14.0,
+		NativeLabor = 14.0,
+		PreferredFacility = "FACILITY_MARKET",
+		Color = Color3.fromRGB(255, 121, 121),
+	},
 }
 
--- Hero rarity uses the weapon tier names (GDD §4.1). Tiers 8-16 are reserved for future heroes.
-HeroCatalog.RarityNames = table.freeze({ "Common", "Uncommon", "Rare", "Superior", "Exalted", "Legendary", "Mythical" })
+-- Hero rarity uses the weapon tier names (GDD §4.1). Tiers 8-11 are the Gilded Mirror heroes; 12-16 are reserved.
+HeroCatalog.RarityNames = table.freeze({ "Common", "Uncommon", "Rare", "Superior", "Exalted", "Legendary", "Mythical",
+	"Transcendent", "Ascendant", "Ethereal", "Immortal" })
+
+-- Mirror heroes copy the Master's best normal hero instead of having stats of their own.
+function HeroCatalog.IsMirror(templateId: string?): boolean
+	local seed = templateId and HeroCatalog.Seeds[templateId]
+	return seed ~= nil and (seed :: any).Mirror == true
+end
 
 -- Derived compatibility fields; immutable one-star seeds remain authoritative.
 -- Native stats are the stats at the summon star (1★), Lv. 1, quality 1.
 for _, seed in pairs(HeroCatalog.Seeds) do
+ if (seed :: any).Mirror then seed.MovementSpeed = 20; continue end -- no stats of their own to derive
  local growth = StatBalance.HeroPromotionMultiplier^(seed.BaseStar-1) * StatBalance.HeroRarityCombat(seed.Rarity)
  seed.NativeHP = math.round(seed.BaseHP_1Star * growth)
  seed.NativeATK = math.round(seed.BaseATK_1Star * growth)
