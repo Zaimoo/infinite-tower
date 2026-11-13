@@ -36,15 +36,32 @@ local function getBiomeMusicKey(biomeIndex: number): string
 			SoundCatalog = require(sc)
 		end
 	end
-	return if SoundCatalog then SoundCatalog.GetBiomeMusicKey(biomeIndex) else "HubTheme"
+	return if SoundCatalog then SoundCatalog.GetBiomeMusicKey(biomeIndex) else "Biome1_Verdant"
 end
 
 local MusicController = {}
 
 local activePlayerIndex = 1
 local players: { Sound } = {}
+local playerTokens: { number } = { 0, 0 }
+local activeTweens: { Tween? } = { nil, nil }
 local activeTrackKey = ""
 local isInitialized = false
+
+local function cancelPlayerTween(index: number)
+	local tw = activeTweens[index]
+	if tw then
+		tw:Cancel()
+		activeTweens[index] = nil
+	end
+end
+
+local function tweenPlayerVolume(index: number, player: Sound, info: TweenInfo, targetVolume: number)
+	cancelPlayerTween(index)
+	local tw = TweenService:Create(player, info, { Volume = targetVolume })
+	activeTweens[index] = tw
+	tw:Play()
+end
 
 local function getMusicGroup(): SoundGroup
 	local sg = SoundService:FindFirstChild("SG_Music")
@@ -72,23 +89,60 @@ local function createMusicPlayer(index: number): Sound
 	return s
 end
 
+function MusicController.Stop(duration: number?)
+	activeTrackKey = ""
+
+	local fadeTime = duration or 2.0
+	for index, player in ipairs(players) do
+		cancelPlayerTween(index)
+		playerTokens[index] += 1
+		local stopToken = playerTokens[index]
+
+		if player.IsPlaying then
+			if fadeTime <= 0 then
+				player.Volume = 0
+				player:Stop()
+			else
+				tweenPlayerVolume(
+					index,
+					player,
+					TweenInfo.new(fadeTime, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+					0
+				)
+				task.delay(fadeTime + 0.05, function()
+					if playerTokens[index] == stopToken then
+						player:Stop()
+					end
+				end)
+			end
+		end
+	end
+end
+
 function MusicController.CrossfadeTo(trackKey: string, duration: number?)
+	if not players[1] or not players[2] then
+		return
+	end
+
 	if trackKey == activeTrackKey and players[activePlayerIndex] and players[activePlayerIndex].IsPlaying then
 		return
 	end
 
 	local def = getDef(trackKey)
 	if not def or def.Id == "" then
+		MusicController.Stop(duration)
 		return
 	end
 
 	local fadeTime = duration or 2.0
+	local prevIndex = activePlayerIndex
 	local nextIndex = if activePlayerIndex == 1 then 2 else 1
-	local curPlayer = players[activePlayerIndex]
+	local curPlayer = players[prevIndex]
 	local nextPlayer = players[nextIndex]
 
 	activeTrackKey = trackKey
 	activePlayerIndex = nextIndex
+	playerTokens[nextIndex] += 1
 
 	-- Prepare next player
 	nextPlayer.SoundId = def.Id
@@ -98,23 +152,25 @@ function MusicController.CrossfadeTo(trackKey: string, duration: number?)
 	nextPlayer:Play()
 
 	local targetVol = def.Volume or 0.5
-	local tweenIn = TweenService:Create(
+	tweenPlayerVolume(
+		nextIndex,
 		nextPlayer,
 		TweenInfo.new(fadeTime, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-		{ Volume = targetVol }
+		targetVol
 	)
-	tweenIn:Play()
 
 	-- Fade out current player
 	if curPlayer and curPlayer.IsPlaying then
-		local tweenOut = TweenService:Create(
+		playerTokens[prevIndex] += 1
+		local fadeToken = playerTokens[prevIndex]
+		tweenPlayerVolume(
+			prevIndex,
 			curPlayer,
 			TweenInfo.new(fadeTime, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-			{ Volume = 0 }
+			0
 		)
-		tweenOut:Play()
 		task.delay(fadeTime + 0.05, function()
-			if activePlayerIndex ~= (if curPlayer == players[1] then 1 else 2) then
+			if playerTokens[prevIndex] == fadeToken then
 				curPlayer:Stop()
 			end
 		end)
@@ -127,13 +183,31 @@ function MusicController.PlayStinger(stingerKey: string, duckDuration: number?)
 	local def = getDef(stingerKey)
 	if not def or def.Id == "" then return end
 
-	local curPlayer = players[activePlayerIndex]
+	local stingerPlayerIndex = activePlayerIndex
+	local stingerTrackKey = activeTrackKey
+	local stingerToken = playerTokens[stingerPlayerIndex]
+	local curPlayer = players[stingerPlayerIndex]
 	local origVol = (curPlayer and curPlayer:GetAttribute("OrigVolume")) or 0.5
 	local dur = duckDuration or 4.0
+	local restored = false
 
 	-- Duck music by 65%
-	if curPlayer and curPlayer.IsPlaying then
-		TweenService:Create(curPlayer, TweenInfo.new(0.3, Enum.EasingStyle.Quad), { Volume = origVol * 0.35 }):Play()
+	if curPlayer and curPlayer.IsPlaying and stingerTrackKey ~= "" then
+		tweenPlayerVolume(stingerPlayerIndex, curPlayer, TweenInfo.new(0.3, Enum.EasingStyle.Quad), origVol * 0.35)
+	end
+
+	local function restoreMusic()
+		if restored then return end
+		restored = true
+		if
+			curPlayer
+			and curPlayer.IsPlaying
+			and activePlayerIndex == stingerPlayerIndex
+			and activeTrackKey == stingerTrackKey
+			and playerTokens[stingerPlayerIndex] == stingerToken
+		then
+			tweenPlayerVolume(stingerPlayerIndex, curPlayer, TweenInfo.new(1.2, Enum.EasingStyle.Quad), origVol)
+		end
 	end
 
 	local stinger = Instance.new("Sound")
@@ -148,17 +222,13 @@ function MusicController.PlayStinger(stingerKey: string, duckDuration: number?)
 
 	stinger.Ended:Once(function()
 		stinger:Destroy()
-		if curPlayer and curPlayer.IsPlaying then
-			TweenService:Create(curPlayer, TweenInfo.new(1.2, Enum.EasingStyle.Quad), { Volume = origVol }):Play()
-		end
+		restoreMusic()
 	end)
 
 	-- Fallback timeout
 	task.delay(dur, function()
 		if stinger.Parent then stinger:Destroy() end
-		if curPlayer and curPlayer.IsPlaying and curPlayer.Volume < origVol then
-			TweenService:Create(curPlayer, TweenInfo.new(1.2, Enum.EasingStyle.Quad), { Volume = origVol }):Play()
-		end
+		restoreMusic()
 	end)
 end
 
@@ -181,8 +251,8 @@ function MusicController.Init()
 				if type(c) ~= "table" then return end
 				local floorId = c.FloorId
 				if type(floorId) ~= "number" or floorId <= 0 then
-					-- Floor 0 is Hub Cloister Commons
-					MusicController.CrossfadeTo("HubTheme", 2.5)
+					-- Floor 0 is Hub Cloister Commons: stay silent in the Hub
+					MusicController.Stop(2.5)
 				else
 					-- 50 Floors across 10 Biomes (5 floors per biome)
 					local biomeIndex = math.clamp(math.floor((floorId - 1) / 5) + 1, 1, 10)
@@ -198,9 +268,6 @@ function MusicController.Init()
 			end)
 		end
 	end)
-
-	-- Start on HubTheme by default
-	MusicController.CrossfadeTo("HubTheme", 2.0)
 end
 
 return MusicController
