@@ -323,9 +323,9 @@ SoundCatalog.Entries = table.freeze({
 	-- BACKGROUND FANTASY MUSIC (BGM)
 	-- =========================================================================
 	HubTheme = {
-		Id = "rbxassetid://9043887091", -- Peaceful Medieval Sanctuary / Lute
+		Id = "", -- Disabled: no background music plays on game start / in the Hub
 		Category = "Music",
-		Volume = 0.55,
+		Volume = 0,
 		Pitch = 1.0,
 	},
 	Biome1_Verdant = {
