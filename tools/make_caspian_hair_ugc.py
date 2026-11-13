@@ -1,13 +1,13 @@
 """
 Caspian's hair, UGC-accessory style (run inside Blender: exec(open(path, encoding="utf-8").read())).
 
-From his reference art: short auburn hair swept up and back from the forehead into a full
-quiff, with a couple of loose locks falling over his forehead on his right, short sides swept
-back above the ears, a short layered back to the nape, and a few messy spikes over the crown.
-Built UGC style (thick, rounded clumps over a lightly grooved base sheet) with the helpers from
-tools/make_isabelle_hair_ugc.py. Untextured: the costume colours it. Roblox head space (Y up,
--Z front, +X the hero's right) on a 1.2-stud reference head. Export with the hero-remodel
-skill's scripts/blender_export_hair.py.
+From his second reference art: a messy, voluminous auburn shag. Spiky, pointed bangs fall to
+his brows with one longer piece between the eyes; spiky locks cover the tops of his ears and
+flick outward; the back is layered to the nape with outward flicks, which with the bangs gives
+the crown its volume. Built UGC style (thick, rounded clumps over a lightly grooved base sheet) with the
+helpers from tools/make_isabelle_hair_ugc.py. Untextured: the costume colours it. Roblox head
+space (Y up, -Z front, +X the hero's right) on a 1.2-stud reference head. Export with the
+hero-remodel skill's scripts/blender_export_hair.py.
 """
 
 import bpy, bmesh, math, random
@@ -171,60 +171,60 @@ def clump(pts, width, thick=0.06, segs=14, tip=3.2, twist=0.0):
     ribbon([jitter(p, 0.004) for p in pts], width, thick, segs=segs, tip=tip, root=0.75, twist=twist)
 
 
-# 1. Base sheet: a high front hairline, short sides above the ears, the back to the nape.
+# 1. Base sheet: stops above the bangs in front, reaches the tops of the ears at the sides and
+#    the nape at the back, so no scalp shows between the clumps.
 FRONT = math.radians(70)
 
 def hem(th):
     a = abs(th)
     if a <= FRONT:
-        return 0.44
-    if a <= math.radians(115):
-        t = (a - FRONT) / math.radians(45)
-        return 0.44 + (0.06 - 0.44) * t * t * (3 - 2 * t)
-    t = min(1.0, (a - math.radians(115)) / math.radians(50))
-    return 0.06 + (-0.14 - 0.06) * t * t * (3 - 2 * t)
+        return 0.5
+    t = min(1.0, (a - FRONT) / math.radians(40))
+    t = t * t * (3 - 2 * t)
+    return 0.5 + (-0.24 - 0.5) * t
 
-curtain(-math.pi, math.pi, 0.915, hem, 0.04, 0.07, thick=0.04, nth=128, ny=8, grooves=24, depth=0.01)
+curtain(-math.pi, math.pi, 0.915, hem, 0.05, 0.08, thick=0.04, nth=128, ny=8, grooves=24, depth=0.01)
 
 crown = bmesh.ops.create_uvsphere(bm, u_segments=16, v_segments=8, radius=0.1)
 for v in crown["verts"]:
     v.co = B(Vector((v.co.x * 1.4, v.co.z * 0.5, v.co.y * 1.4)) + shell(0, CY + RY, 0.0) + Vector((0, -0.01, 0.02)))
 
-# 2. The quiff: full clumps from the front hairline that rise and sweep up and back over the
-#    top of the head, their tips flicking up at the back of the crown.
-for k, x in enumerate([-0.42, -0.28, -0.14, 0.0, 0.14, 0.28, 0.42]):
-    lift = 0.06 * (1 - abs(x) / 0.5) + rng.uniform(-0.02, 0.02)
-    pts = [Vector((x, 0.44, -0.6)), Vector((x * 1.08, 0.8 + lift, -0.56)), Vector((x * 1.12, 1.0 + lift, -0.24)),
-           Vector((x * 1.18, 0.96 + lift * 0.5, 0.1)), Vector((x * 1.25, 0.86, 0.3))]
-    clump(pts, rng.uniform(0.14, 0.17), 0.08, segs=18, tip=rng.uniform(2.2, 2.8))
+# 2. Bangs: spiky, pointed clumps from the front of the crown, standing out with volume over the
+#    forehead and ending around the brows at staggered heights; one longer piece falls between
+#    the eyes. A narrower layer behind fills the gaps.
+for k, th_deg in enumerate(range(-66, 67, 12)):
+    th = math.radians(th_deg + rng.uniform(-2, 2))
+    edge = abs(th_deg) / 66
+    y_end = 0.18 - 0.06 * edge + rng.uniform(-0.05, 0.05)
+    if abs(th_deg) <= 6:
+        y_end = 0.02  # the long piece between the eyes
+    sweep = math.radians(rng.uniform(-6, 6))
+    pts = [shell(th * 0.3, 0.88, 0.0), shell(th * 0.7, 0.78, 0.12), shell(th * 0.95, 0.56, 0.15),
+           shell(th + sweep * 0.6, (0.56 + y_end) / 2, 0.13), shell(th + sweep, y_end, 0.08)]
+    clump(pts, rng.uniform(0.13, 0.16), 0.065, segs=16, tip=rng.uniform(2.0, 2.5))
+for th_deg in range(-60, 61, 12):
+    th = math.radians(th_deg)
+    pts = [shell(th * 0.3, 0.86, -0.02), shell(th * 0.7, 0.74, 0.08), shell(th * 0.95, 0.5, 0.1), shell(th, 0.24, 0.07)]
+    clump(pts, 0.12, 0.05, segs=12, tip=2.4)
 
-# 3. Loose locks falling over the forehead on his right (+X), lying close to the brow.
-for x0, y_end, w in [(0.14, 0.24, 0.09), (0.27, 0.2, 0.08)]:
-    pts = [Vector((x0, 0.5, -0.64)), Vector((x0 + 0.04, 0.42, -0.67)), Vector((x0 + 0.09, 0.32, -0.67)), Vector((x0 + 0.13, y_end, -0.65))]
-    clump(pts, w, 0.04, segs=12, tip=2.2)
-
-# 4. Short sides: from above the temples, down and back to just above the ears, close to the head.
+# 3. Sides: spiky clumps over the tops of the ears, flicking outward at the tips.
 for side in (1, -1):
-    for th_deg, y_end in [(76, 0.12), (92, 0.04), (108, 0.0)]:
-        th = math.radians(th_deg) * side
-        pts = [shell(th * 0.9, 0.6, 0.05), shell(th, 0.38, 0.07), shell(th + math.radians(10) * side, 0.18, 0.08),
-               shell(th + math.radians(18) * side, y_end, 0.085)]
-        clump(pts, 0.16, 0.055, segs=12, tip=2.6)
+    for th_deg, y_end in [(74, 0.04), (88, -0.06), (102, -0.12), (116, -0.16)]:
+        th = math.radians(th_deg + rng.uniform(-3, 3)) * side
+        y_end += rng.uniform(-0.05, 0.04)
+        pts = [shell(th * 0.85, 0.66, 0.08), shell(th, 0.38, 0.13), shell(th, 0.12, 0.14),
+               shell(th * 1.03, y_end, 0.14 + rng.uniform(0.06, 0.12))]
+        clump(pts, rng.uniform(0.15, 0.18), 0.065, segs=14, tip=rng.uniform(2.0, 2.4), twist=0.08 * side)
 
-# 5. The back: short layered clumps from the crown to the top of the nape, with small flicks.
-for k, th_deg in enumerate(range(122, 239, 13)):
+# 4. Back: layered spiky clumps from the crown to the nape, each with its own width, length,
+#    depth and outward flick.
+for k, th_deg in enumerate(range(124, 237, 12)):
     th = math.radians(th_deg + rng.uniform(-3, 3))
-    off = 0.08 + (0.02 if k % 2 else 0.0)
-    y_end = rng.uniform(-0.2, -0.06)
-    pts = [shell(th * 0.5 + math.pi * 0.5, 0.93, 0.03), shell(th, 0.75, off), shell(th, 0.4, off + 0.01),
-           shell(th, y_end + 0.12, off + 0.01), shell(th, y_end, off + rng.uniform(0.03, 0.06))]
-    clump(pts, rng.uniform(0.16, 0.2), 0.065, segs=14, tip=rng.uniform(2.2, 2.8))
-
-# 6. A few messy tufts over the crown, swept back with the quiff.
-for x in (-0.18, 0.04, 0.22):
-    base = Vector((x, 1.0, -0.02 + rng.uniform(-0.04, 0.04)))
-    pts = [base, base + Vector((x * 0.15, 0.07, 0.12)), base + Vector((x * 0.3, 0.06, 0.26))]
-    clump(pts, rng.uniform(0.11, 0.14), 0.055, segs=8, tip=2.2)
+    off = 0.11 + (0.025 if k % 2 else 0.0)
+    y_end = rng.uniform(-0.44, -0.26)
+    pts = [shell(th * 0.5 + math.pi * 0.5, 0.93, 0.04), shell(th, 0.78, off), shell(th, 0.42, off + 0.02),
+           shell(th, 0.05, off + 0.02), shell(th + rng.uniform(-0.08, 0.08), y_end, off + rng.uniform(0.08, 0.14))]
+    clump(pts, rng.uniform(0.15, 0.2), 0.065, segs=14, tip=rng.uniform(2.0, 2.5))
 
 bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-6)
 me = bpy.data.meshes.new(NAME)
