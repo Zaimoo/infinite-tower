@@ -22,7 +22,9 @@ prefabs. A remodel touches only that hero's block in `HeroCostumes.luau`, its ov
 `HeroClips.luau`, and new files under `assets/faces`, `assets/hair` and `tools/`. That is what
 keeps animations and weapon placement working. The one sanctioned rig edit is the `Slim`
 numbers in `HeroRigSpec.BODY_TYPES` (pipeline doc §4.2), and only as its own change that
-re-lints every `Slim` hero, never inside one hero's remodel.
+re-lints every `Slim` hero, never inside one hero's remodel. The other exception is a per-hero grip in `HeroSockets.HERO_GRIPS` (see
+`docs/hero-art-pipeline.md` §1.3): add one only when the user asks, and re-pose that hero's clips
+for it in Studio.
 
 **Partial restyles** ("redo X's face", "make her body slim") use only the matching steps: §2
 for a face, §4.4 for a body switch, §3 and §6 for hair. Several heroes may share one branch
@@ -84,7 +86,8 @@ stance (feet, each hand, the weapon's angle).
    `tools/make_jenna_hair_ugc.py` and write only the layout. Closest bases:
    - long or layered: Valeria (`make_valeria_hair_ugc.py`); wavy: Solaris; very long and
      wavy, to the thighs: Astrea
-   - ponytail: Eolka (high), Jenna (back)
+   - ponytail: Aeli (`make_aeli_hair_ugc.py`)
+   - male with bangs: Han (`make_han_hair_ugc.py`)
    - short spiky: Archon, Ignis; swept back with flaring locks: Morrigan
    Set `OUT_DIR`, `NAME`, a new `random.Random(seed)` and the material colour.
 2. Run it in Blender: `exec(open(path, encoding="utf-8").read())`, then `look` with
