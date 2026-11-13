@@ -1764,8 +1764,13 @@ do
 	}
 end
 
--- Seraphine (STAFF): floating slightly, staff upright, free hand palm up.
--- Hall of Mirrors: the staff held overhead in both hands while she turns a slow half circle.
+-- Seraphine (STAFF), from her reference art: floating slightly, the staff upright in her right
+-- hand, the free hand raised palm up before her chest (where the art's grimoire floats), head
+-- tilted down a little. Walk: the same upper body over small walking steps (her robe hides the
+-- feet, so it reads as a glide). Shard Bolt: a one-handed point with the staff as a halo shard
+-- flies. Refraction: she draws the staff back while the halo shards fly to its tip and join into
+-- a prism (Charge), then thrusts it forward to launch it (Release). Hall of Mirrors: the staff
+-- held overhead in both hands while she turns a slow half circle and the crystals fire.
 do
 	local p = WeaponPoses.STAFF
 	local regent = merge(p.Stand, { Neck = { -4, 0, 0 }, LeftShoulder = { 40, -10, -20 }, LeftElbow = { 60, 0, 0 }, LeftWrist = { -174.5, 72.6, 174.6 } })
@@ -1775,19 +1780,21 @@ do
 	local thrust = merge(p.Cast, { Waist = { -12, -10, 0 }, RightShoulder = { 95, 0, 0 }, RootOffset = { 0, -0.05, -0.3 } })
 	Overrides.hero_seraphine = {
 		Idle = floatIdle(regent, 3.4),
+		Move = walk(regent),
 		AttackBasic = signature(0.8, {
 			{ 0, p.Stand },
 			{ 0.4, p.Cast },
 			{ 0.6, merge(p.Cast, { RightShoulder = { 98, 0, 0 } }) },
 			{ 1, p.Stand },
 		}, { Release = 0.6 }),
-		AttackSpecial = signature(1.0, {
+		AttackSpecial = signature(1.2, {
 			{ 0, p.Stand },
-			{ 0.35, drawBack }, -- the three halo shards gather into a prism at the tip
+			{ 0.2, drawBack }, -- the three halo shards fly to the tip and join into a prism
+			{ 0.5, merge(drawBack, { Waist = { 8, 36, 0 } }) },
 			{ 0.62, thrust },
-			{ 0.8, thrust },
+			{ 0.82, thrust },
 			{ 1, p.Stand },
-		}, { Charge = 0.35, Release = 0.62 }),
+		}, { Charge = 0.2, Release = 0.62 }),
 		AttackSkill = signature(1.4, {
 			{ 0, p.Stand },
 			{ 0.25, overhead },

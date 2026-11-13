@@ -10,14 +10,18 @@
 --            CHAIN (Scholar), MEND (Healer), PLUNGE (two falling stabs; Han),
 --            BEAM (an instant straight laser from the attacker through the target; Vane),
 --            PIERCER (one heavy bolt that punches through and leaves a fading ribbon; Astrea),
---            WHIRL (crescents sweeping a full circle round the attacker, one per damage tick; Rhyman)
+--            WHIRL (crescents sweeping a full circle round the attacker, one per damage tick; Rhyman),
+--            REFRACTION (a prism from the staff tip that breaks on the target and splits into
+--            shards flying on to the enemies the hit carried to, up to Bounces; Seraphine)
 --   Skill    STORM (bow), BULWARK (Vanguard), TEMPEST (Striker), CRYSTALS (Berserker),
 --            PILLAR (Scholar), SANCTUARY (Healer), WAKE (a dash streak and a lingering circle of
 --            slashes, one wave per damage tick; Han), SINGULARITY (a black hole on the aim point
 --            that pulses on every damage tick and collapses on the last; Vane),
 --            CONSTELLATION (a constellation draws itself over the aim point, then its stars
 --            fall as bolts, one wave per damage tick; Astrea), EXECUTE (one tall vertical cut
---            through the target, a blade of light from above and a fissure past it; Rhyman)
+--            through the target, a blade of light from above and a fissure past it; Rhyman),
+--            HALL_OF_MIRRORS (Spikes mirror crystals rise round the target and beam into it and
+--            every enemy inside on each damage tick, then shatter; Seraphine)
 -- The other fields are that style's knobs; a style ignores the ones it does not use.
 -- A hero's attack clip may carry a Charge marker (HeroClips) before Release; at it SkillVfx
 -- plays the style's wind-up, if it has one (BOLT: a glyph in the casting hand, Origin LEFT_HAND;
@@ -96,8 +100,8 @@ SkillVfxCatalog.WeaponArchetype = table.freeze({
 -- Every Style SkillVfx knows, per tier.
 SkillVfxCatalog.Styles = table.freeze({
 	Basic = table.freeze({ DIAGONAL_SLASH = true, GILT_CUT = true, SHOT = true, BOLT = true, SLASH = true }),
-	Special = table.freeze({ POLISHED_BASH = true, MIRROR_STEP = true, RICOCHET = true, VOLLEY = true, CLEAVE = true, CROSS = true, TREMOR = true, CHAIN = true, MEND = true, PLUNGE = true, BEAM = true, PIERCER = true, WHIRL = true }),
-	Skill = table.freeze({ LOOKING_GLASS = true, SHATTERDANCE = true, TWIN = true, STORM = true, BULWARK = true, TEMPEST = true, CRYSTALS = true, PILLAR = true, SANCTUARY = true, WAKE = true, SINGULARITY = true, CONSTELLATION = true, EXECUTE = true }),
+	Special = table.freeze({ REFRACTION = true, POLISHED_BASH = true, MIRROR_STEP = true, RICOCHET = true, VOLLEY = true, CLEAVE = true, CROSS = true, TREMOR = true, CHAIN = true, MEND = true, PLUNGE = true, BEAM = true, PIERCER = true, WHIRL = true }),
+	Skill = table.freeze({ HALL_OF_MIRRORS = true, LOOKING_GLASS = true, SHATTERDANCE = true, TWIN = true, STORM = true, BULWARK = true, TEMPEST = true, CRYSTALS = true, PILLAR = true, SANCTUARY = true, WAKE = true, SINGULARITY = true, CONSTELLATION = true, EXECUTE = true }),
 })
 
 local function rgb(r: number, g: number, b: number): Color3
@@ -331,12 +335,17 @@ SkillVfxCatalog.Heroes = table.freeze({
 		Special = { Style = "POLISHED_BASH", Radius = 10, Impact = 2.8, Shake = 0.15 },
 		Skill = { Style = "LOOKING_GLASS", Radius = 25, Linger = 6, Impact = 3.4, Shake = 0.3 },
 	},
-	-- Skill raises a ring of mirror crystals that stays for its pulses.
+	-- From her reference art's halo and grimoire glow: periwinkle light, pale glass blue, white,
+	-- and her gilt trim. Shard Bolt: a glass shard leaves her halo and flies to the target. Refraction: the three halo
+	-- shards fly to the staff tip and join into a prism; the prism breaks on the target in a
+	-- triangle of glass rings and splits into three shards that fly on to the other enemies hit.
+	-- Hall of Mirrors: four mirror crystals rise around the target over a floor sigil and fire
+	-- beams into it (and at every enemy inside) on every pulse, then shatter.
 	hero_seraphine = {
-		Palette = { Primary = rgb(120, 125, 240), Secondary = rgb(190, 215, 255), Core = rgb(245, 245, 255), Accent = rgb(212, 175, 90) },
-		Basic = { Style = "BOLT", Projectile = "ORB", Scale = 0.9, Arc = 0.05, Trail = 0.18, Impact = 1.8 },
-		Special = { Style = "CHAIN", Projectile = "ORB", Scale = 1.25, Arc = 0.05, Trail = 0.22, Impact = 2.4, Radius = 14 },
-		Skill = { Style = "CRYSTALS", Radius = 16, Spikes = 4, Impact = 3.4, Linger = 4, Shake = 0.22 },
+		Palette = { Primary = rgb(130, 140, 255), Secondary = rgb(190, 215, 255), Core = rgb(248, 248, 255), Accent = rgb(212, 175, 90) },
+		Basic = { Style = "BOLT", Projectile = "SHARD", Origin = "HALO", Scale = 1.1, Arc = 0.08, Trail = 0.22, Impact = 1.9 },
+		Special = { Style = "REFRACTION", Projectile = "PRISM", Origin = "STAFF_TIP", Scale = 1.3, Arc = 0.04, Trail = 0.3, Impact = 2.8, Radius = 14, Bounces = 3, Shake = 0.15 },
+		Skill = { Style = "HALL_OF_MIRRORS", Radius = 16, Spikes = 4, Impact = 3.2, Shake = 0.25 },
 	},
 	-- Gilt Cleave / Last Stand / Gilded Frenzy: rose and gold; the slam bursts into gold shards.
 	hero_rourke = {

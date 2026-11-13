@@ -244,6 +244,16 @@ local function castPoint(rig: Model, name: string): Vector3?
 		if nock and nock:IsA("Attachment") then
 			return nock.WorldPosition
 		end
+	elseif name == "HALO" then
+		-- The costume's top halo shard (Seraphine), else a point above the head.
+		local shard = rig:FindFirstChild("HaloShardTop", true)
+		if shard and shard:IsA("BasePart") then
+			return shard.Position
+		end
+		local head = rig:FindFirstChild("Head")
+		if head and head:IsA("BasePart") then
+			return head.Position + Vector3.new(0, 1.6, 0)
+		end
 	elseif name == "STAFF_TIP" then
 		-- WeaponVfx puts VfxTip on every equipped weapon's head; prefabs may carry their own Tip.
 		local weapon = rig:FindFirstChild(HeroSockets.EQUIPPED_NAME)

@@ -1140,6 +1140,121 @@ local function playShatterdance(ctx: Context)
 	shake(ctx, finale)
 end
 
+-- REFRACTION: a glass prism flies from the staff tip and strikes the target in a burst of light
+-- inside a spinning triangle of glass rings; it splits into three shards that fly on to the
+-- (up to) three enemies the server carried the hit to, nearest first, each trailing a ribbon of
+-- light and landing in a flash (Seraphine's Refraction).
+local function playRefraction(ctx: Context)
+	local pool, recipe, palette, args = ctx.Pool, ctx.Recipe, ctx.Palette, ctx.Args
+	local impact = recipe.Impact or 2.6
+	playProjectile(ctx)
+	local target = args.Target
+	local at = ctx.ArriveAt
+	local aim = target()
+	local from = originOf(args, recipe)
+	local direction = aim - from
+	-- The prism breaks: three glass rings at a third of a turn to each other, a white core flash
+	-- and a gilt glint, a ground shockwave and sparks.
+	for i = 0, 2 do
+		local tilt = CFrame.Angles(0, 0, i * math.pi * 2 / 3)
+		local axis = if direction.Magnitude > 1e-3 then (CFrame.lookAt(aim, aim + direction) * tilt).UpVector else Vector3.yAxis
+		VfxPrimitives.FlightRing(pool, aim, axis, 2.6 + 0.4 * i, if i == 1 then palette.Secondary else palette.Core, at + 0.03 * i)
+	end
+	bigHit(pool, palette, aim, impact, at)
+	VfxPrimitives.Flare(pool, target, impact * 2.4, palette.Core, at, 0.3)
+	local shard = projectile({ Style = "BOLT", Projectile = "SHARD", Scale = (recipe.Scale or 1) * 0.9, Trail = 0.3 } :: any, palette)
+	afterHits(ctx, "HIT", target, recipe.Radius or 14, function(points: { Vector3 })
+		local origin = target()
+		local now = at + HIT_LOOKUP_DELAY
+		local others = {}
+		for _, point in points do
+			if VfxMath.Distance(point, origin) > 1.5 then
+				table.insert(others, point)
+			end
+		end
+		table.sort(others, function(a: Vector3, b: Vector3): boolean
+			return VfxMath.Distance(a, origin) < VfxMath.Distance(b, origin)
+		end)
+		for i = 1, math.min(#others, recipe.Bounces or 3) do
+			local point = others[i] + Vector3.new(0, 1.5, 0)
+			local travel = math.clamp(VfxMath.Distance(origin, point) / 45, 0.18, 0.35)
+			local leave = now + 0.04 * (i - 1)
+			VfxPrimitives.Ribbon(pool, { From = origin, To = point, StartAt = leave, EndAt = leave + travel, Width = 0.55,
+				Inner = palette.Core, Outer = palette.Primary, Linger = 0.5, Seed = args.Cue.NetId + i })
+			fly(pool, shard, origin, fixed(point), leave, leave + travel, 0.9, function(hit: Vector3)
+				VfxPrimitives.Burst(pool, hit, palette.Primary, impact * 0.9, leave + travel, 0.3)
+				VfxPrimitives.Flare(pool, fixed(hit), impact * 1.3, palette.Core, leave + travel, 0.25)
+				VfxPrimitives.Motes(pool, hit, palette.Secondary, leave + travel, 6, 0.5)
+			end)
+		end
+	end)
+	shake(ctx, at)
+end
+
+-- HALL_OF_MIRRORS: four mirror crystals burst up around the target (a tall crystal and a mirror
+-- pane facing in at each corner) over a glowing floor ring, and fire for the whole skill: on
+-- every server damage tick each crystal shoots a beam into the target, the beams meet in a
+-- flash, and thinner beams strike every enemy inside the area. On the last tick the crystals
+-- shatter and a shockwave rolls out (Seraphine's Hall of Mirrors).
+local HALL_CRYSTAL_RADIUS = 7
+local function playHallOfMirrors(ctx: Context)
+	local pool, recipe, palette, args = ctx.Pool, ctx.Recipe, ctx.Palette, ctx.Args
+	local radius = recipe.Radius or 16
+	local impact = recipe.Impact or 3
+	local count = recipe.Spikes or 4
+	local ticks, gap = tierTicks(args, "Skill")
+	local waves = VfxMath.WaveTimes(ctx.ArriveAt, ticks, if gap > 0 then gap else 0.5)
+	local riseAt = ctx.StartAt
+	local last = waves[#waves]
+	local finale = last + 0.25
+	local floor: Vector3 = args.Cue.Aim
+	local hold = finale - riseAt
+	-- The hall: a floor sigil over the area and a ring marking its edge, for the whole skill.
+	VfxPrimitives.Sigil(pool, floor, radius * 0.9, palette, riseAt, finale)
+	VfxPrimitives.Ring(pool, { Center = floor, From = 1, To = radius, Color = palette.Secondary, StartAt = riseAt, EndAt = riseAt + 0.5, Width = 1.0 })
+	local crystals = {}
+	for i, angle in ringAngles(args, count) do
+		local base = ringPoint(floor, angle, HALL_CRYSTAL_RADIUS)
+		VfxPrimitives.Spike(pool, base, 6, palette.Primary, riseAt + 0.06 * i, hold - 0.06 * i, i)
+		VfxPrimitives.Spike(pool, base + Vector3.new(0.6, 0, 0.4), 3.6, palette.Core, riseAt + 0.06 * i + 0.04, hold - 0.06 * i, i + 11)
+		drawPane(pool, palette, base + Vector3.new(0, 3.2, 0), floor + Vector3.new(0, 3.2, 0), riseAt + 0.06 * i, finale, 0.2)
+		VfxPrimitives.Burst(pool, base + Vector3.new(0, 1, 0), palette.Secondary, 3, riseAt + 0.06 * i, 0.3)
+		VfxPrimitives.Motes(pool, base, palette.Core, riseAt + 0.06 * i, 6, 0.6)
+		table.insert(crystals, base + Vector3.new(0, 4.6, 0))
+	end
+	shake(ctx, riseAt)
+	-- The pulses: every crystal fires into the target, then at every enemy in the hall.
+	for w, hitAt in waves do
+		local center = args.Target()
+		for i, crystal in crystals do
+			VfxPrimitives.Lance(pool, crystal, center, 0.9, palette, hitAt - 0.08, 0.08, 0.1, 0.18)
+			VfxPrimitives.Flare(pool, fixed(crystal), 2.4, palette.Core, hitAt - 0.08, 0.2)
+		end
+		VfxPrimitives.Burst(pool, center, palette.Core, impact * 0.8, hitAt, 0.22)
+		VfxPrimitives.Flare(pool, args.Target, impact * 1.6, palette.Secondary, hitAt, 0.22)
+		local enemies = if args.Enemies then args.Enemies(floor, radius) else {}
+		local drawn = 0
+		for k, enemy in enemies do
+			local body = enemy + Vector3.new(0, 1.5, 0)
+			if VfxMath.Distance(body, center) > 2 and drawn < 8 then
+				drawn += 1
+				local crystal = crystals[(k + w) % #crystals + 1]
+				VfxPrimitives.Beam(pool, crystal, body, palette.Primary, hitAt, 0.2, k + w)
+				VfxPrimitives.Burst(pool, body, palette.Primary, impact * 0.45, hitAt, 0.2)
+			end
+		end
+	end
+	-- The finale: the crystals shatter and a shockwave crosses the hall.
+	for _, crystal in crystals do
+		VfxPrimitives.Burst(pool, crystal, palette.Primary, 4, finale, 0.4)
+		VfxPrimitives.Flare(pool, fixed(crystal), 4, palette.Core, finale, 0.3)
+		VfxPrimitives.Motes(pool, crystal, palette.Secondary, finale, 10, 0.7)
+	end
+	VfxPrimitives.Ring(pool, { Center = floor, From = 1, To = radius, Color = palette.Primary, StartAt = finale, EndAt = finale + 0.6, Width = 1.2 })
+	bigHit(pool, palette, args.Target(), impact, finale)
+	shake(ctx, finale)
+end
+
 -- WAKE: a dash streak from the attacker through the target, then a smoky circle over the skill
 -- radius that keeps cutting: one wave of crescents inside it per server damage tick.
 local function playWake(ctx: Context)
@@ -1408,6 +1523,8 @@ local PLAYERS: { [string]: (Context) -> () } = {
 	LOOKING_GLASS = playLookingGlass,
 	MIRROR_STEP = playMirrorStep,
 	SHATTERDANCE = playShatterdance,
+	REFRACTION = playRefraction,
+	HALL_OF_MIRRORS = playHallOfMirrors,
 	WAKE = playWake,
 	CRYSTALS = playCrystals,
 	PILLAR = playPillar,
@@ -1697,9 +1814,62 @@ local function chargeShatterdance(ctx: ChargeContext): boolean
 	return true
 end
 
+-- REFRACTION while the staff is drawn back: the three halo shards fly down to the staff tip and
+-- join into a spinning prism of light there, which flashes just before the thrust.
+local function chargePrism(ctx: ChargeContext): boolean
+	local args, recipe, palette, pool = ctx.Args, ctx.Recipe, ctx.Palette, ctx.Pool
+	local function tip(): Vector3
+		return originOf(args, recipe)
+	end
+	local from, to = ctx.StartAt, ctx.ReleaseAt
+	local span = to - from
+	local halo = (args.OriginOf and args.OriginOf("HALO")) or (args.Origin + Vector3.new(0, 2.5, 0))
+	local shard = projectile({ Style = "BOLT", Projectile = "SHARD", Scale = 0.7, Trail = 0.2 } :: any, palette)
+	for i = 0, 2 do
+		local angle = i * math.pi * 2 / 3
+		local start = halo + Vector3.new(math.cos(angle) * 1.1, 0.3 * math.sin(angle), math.sin(angle) * 1.1)
+		fly(pool, shard, start, tip, from, from + span * 0.55, 0.6, nil)
+	end
+	local function grow(size: number): (number) -> number
+		return function(now: number): number
+			return size * VfxMath.Progress(from + span * 0.5, to, now)
+		end
+	end
+	VfxPrimitives.Orb(pool, { Center = tip, Diameter = grow(0.9), Color = palette.Core, Neon = true, StartAt = from + span * 0.5, EndAt = to })
+	VfxPrimitives.Orb(pool, { Center = tip, Diameter = grow(1.8), Color = palette.Primary, Neon = true, Transparency = 0.65, StartAt = from + span * 0.5, EndAt = to })
+	VfxPrimitives.Converge(pool, tip, palette.Secondary, 2.4, 6, from, to, args.Cue.NetId % 9)
+	VfxPrimitives.Flare(pool, tip, 3, palette.Core, math.max(from, to - 0.1), 0.18)
+	return true
+end
+
+-- HALL_OF_MIRRORS while the staff is held overhead: light gathers on the staff tip, the hall's
+-- edge closes in around the target and four columns of motes rise where the crystals will.
+local function chargeHall(ctx: ChargeContext): boolean
+	local args, recipe, palette, pool = ctx.Args, ctx.Recipe, ctx.Palette, ctx.Pool
+	local from, to = ctx.StartAt, ctx.ReleaseAt
+	local floor: Vector3 = args.Cue.Aim
+	local radius = recipe.Radius or 16
+	VfxPrimitives.Ring(pool, { Center = floor, From = radius, To = HALL_CRYSTAL_RADIUS, Color = palette.Primary, StartAt = from, EndAt = to, Width = 0.8 })
+	for i, angle in ringAngles(args, recipe.Spikes or 4) do
+		local base = ringPoint(floor, angle, HALL_CRYSTAL_RADIUS)
+		VfxPrimitives.Converge(pool, fixed(base + Vector3.new(0, 2, 0)), palette.Secondary, 2.5, 4, from, to, i)
+	end
+	local tip = function(): Vector3
+		return originOf(args, { Origin = "STAFF_TIP" } :: any)
+	end
+	VfxPrimitives.Converge(pool, tip, palette.Primary, 3, 8, from, to, args.Cue.NetId % 7)
+	VfxPrimitives.Orb(pool, { Center = tip, Diameter = function(now: number): number
+		return 1.4 * VfxMath.Progress(from, to, now)
+	end, Color = palette.Core, Neon = true, Transparency = 0.3, StartAt = from, EndAt = to })
+	VfxPrimitives.Flare(pool, tip, 3.4, palette.Secondary, math.max(from, to - 0.1), 0.2)
+	return true
+end
+
 local CHARGERS: { [string]: (ChargeContext) -> boolean } = {
 	MIRROR_STEP = chargeMirrorStep,
 	SHATTERDANCE = chargeShatterdance,
+	REFRACTION = chargePrism,
+	HALL_OF_MIRRORS = chargeHall,
 	WHIRL = chargeWhirl,
 	EXECUTE = chargeExecute,
 	BOLT = chargeGlyph,

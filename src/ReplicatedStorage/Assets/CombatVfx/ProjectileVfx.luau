@@ -239,6 +239,53 @@ local function buildStarBolt(kind: string, scale: number): Model
 	return model
 end
 
+-- Shard (Seraphine's halo shards): a long glass diamond with a bright core, pointed along the
+-- flight, a soft glow at the tip and a pale trail.
+local function buildShard(kind: string, scale: number): Model
+	local model = Instance.new("Model")
+	model.Name = "Projectile_" .. kind
+	local core = VfxPrimitives.NewPart("Core", Enum.PartType.Block, Enum.Material.Neon)
+	core.Size = Vector3.new(0.22, 0.22, 2.2) * scale
+	add(model, core, CFrame.Angles(0, 0, math.rad(45)))
+	model.PrimaryPart = core
+	local shell = VfxPrimitives.NewPart("Shell", Enum.PartType.Block, Enum.Material.Glass)
+	shell.Size = Vector3.new(0.5, 0.5, 1.8) * scale
+	shell.Transparency = 0.35
+	add(model, shell, CFrame.new(0, 0, 0.1 * scale) * CFrame.Angles(0, 0, math.rad(45)))
+	local glow = VfxPrimitives.NewPart("Glow", Enum.PartType.Ball, Enum.Material.Neon)
+	glow.Size = Vector3.one * 0.9 * scale
+	glow.Transparency = 0.6
+	add(model, glow, CFrame.new(0, 0, -0.9 * scale))
+	addTrail(core, 0.4 * scale, 0.4 * scale)
+	return model
+end
+
+-- Prism (Seraphine's Refraction): a glass diamond around a bright core, ringed by a thin halo
+-- across the flight, with a wide trail.
+local function buildPrism(kind: string, scale: number): Model
+	local model = Instance.new("Model")
+	model.Name = "Projectile_" .. kind
+	local core = VfxPrimitives.NewPart("Core", Enum.PartType.Block, Enum.Material.Neon)
+	core.Size = Vector3.one * 0.6 * scale
+	add(model, core, CFrame.Angles(math.rad(45), 0, math.rad(45)))
+	model.PrimaryPart = core
+	local shell = VfxPrimitives.NewPart("Shell", Enum.PartType.Block, Enum.Material.Glass)
+	shell.Size = Vector3.new(1.1, 1.1, 1.6) * scale
+	shell.Transparency = 0.3
+	add(model, shell, CFrame.Angles(0, 0, math.rad(45)))
+	local glow = VfxPrimitives.NewPart("Glow", Enum.PartType.Ball, Enum.Material.Neon)
+	glow.Size = Vector3.one * 1.7 * scale
+	glow.Transparency = 0.65
+	add(model, glow, CFrame.identity)
+	-- Cylinders lie along X; turned so the ring's face is across the flight (-Z).
+	local halo = VfxPrimitives.NewPart("Halo", Enum.PartType.Cylinder, Enum.Material.Neon)
+	halo.Size = Vector3.new(0.06, 2.2 * scale, 2.2 * scale)
+	halo.Transparency = 0.5
+	add(model, halo, CFrame.Angles(0, math.pi / 2, 0))
+	addTrail(core, 0.75 * scale, 0.6 * scale)
+	return model
+end
+
 ProjectileVfx.Builders = table.freeze({
 	ARROW = buildArrow,
 	ASTRAL = buildArrow,
@@ -246,6 +293,8 @@ ProjectileVfx.Builders = table.freeze({
 	ORB = buildOrb,
 	VOID = buildVoid,
 	STARBOLT = buildStarBolt,
+	SHARD = buildShard,
+	PRISM = buildPrism,
 } :: { [string]: (string, number) -> Model })
 
 function ProjectileVfx.Has(kind: string): boolean
@@ -281,7 +330,7 @@ function ProjectileVfx.Paint(model: Model, kind: string, palette: any, trailSeco
 			elseif d.Name == "Head" then
 				d.Color = if astral or kind == "BOLT" then palette.Core else palette.Primary
 			elseif d.Name == "Core" then
-				d.Color = if kind == "ORB" then palette.Core else palette.Primary
+				d.Color = if kind == "ORB" or kind == "SHARD" or kind == "PRISM" then palette.Core else palette.Primary
 			elseif d.Name == "Shell" then
 				d.Color = palette.Secondary
 			elseif d.Name == "Glow" then

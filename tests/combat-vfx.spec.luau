@@ -68,14 +68,14 @@ end
 
 -- Catalog -------------------------------------------------------------------------------------
 do
-	local kinds = { ARROW = true, ASTRAL = true, BOLT = true, ORB = true, VOID = true, STARBOLT = true }
-	local origins = { CHEST = true, LEFT_HAND = true, STAFF_TIP = true, NOCK = true }
+	local kinds = { ARROW = true, ASTRAL = true, BOLT = true, ORB = true, VOID = true, STARBOLT = true, SHARD = true, PRISM = true }
+	local origins = { CHEST = true, LEFT_HAND = true, STAFF_TIP = true, NOCK = true, HALO = true }
 	local impactStyles = { BURST = true, IMPLODE = true }
-	local projectileStyles = { SHOT = true, BOLT = true, VOLLEY = true, CHAIN = true, MEND = true, STORM = true, PIERCER = true, CONSTELLATION = true, RICOCHET = true, TWIN = true }
+	local projectileStyles = { SHOT = true, BOLT = true, VOLLEY = true, CHAIN = true, MEND = true, STORM = true, PIERCER = true, CONSTELLATION = true, RICOCHET = true, TWIN = true, REFRACTION = true }
 	-- Each archetype's ultimate is drawn by one style, and its radius matches the kit.
 	local skillStyle = { Marksman = "STORM", Vanguard = "BULWARK", Striker = "TEMPEST", Berserker = "CRYSTALS", Scholar = "PILLAR", Healer = "SANCTUARY" }
 	-- A hero may draw its ultimate with its own style instead of its archetype's.
-	local heroSkillStyle = { hero_han = "WAKE", hero_vane = "SINGULARITY", hero_astrea = "CONSTELLATION", hero_rhyman = "EXECUTE", hero_seraphine = "CRYSTALS", hero_isabelle = "TWIN", hero_nyx = "SHATTERDANCE", hero_caspian = "LOOKING_GLASS" }
+	local heroSkillStyle = { hero_han = "WAKE", hero_vane = "SINGULARITY", hero_astrea = "CONSTELLATION", hero_rhyman = "EXECUTE", hero_seraphine = "HALL_OF_MIRRORS", hero_isabelle = "TWIN", hero_nyx = "SHATTERDANCE", hero_caspian = "LOOKING_GLASS" }
 	local function checkRecipe(name: string, recipe: any)
 		assert(recipe.Palette and recipe.Palette.Primary and recipe.Palette.Secondary and recipe.Palette.Core, name .. " palette")
 		for _, tier in { "Basic", "Special", "Skill" } do
