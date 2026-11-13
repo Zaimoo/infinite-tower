@@ -124,6 +124,44 @@ local function setBowArrowHidden(rig: Model, hidden: boolean)
 	end
 end
 
+local haloShardToken: { [BasePart]: number } = setmetatable({}, { __mode = "k" }) :: any
+
+-- Animates Seraphine's halo shards dissolving off her head when launched (Basic / Special)
+-- and smoothly reforming back into place once the action finishes or is interrupted.
+local function animateHaloShards(rig: Model, shardNames: { string }, hidden: boolean)
+	local target = if hidden then 1 else 0
+	local duration = if hidden then 0.09 else 0.18
+	for _, shardName in shardNames do
+		local shard = rig:FindFirstChild(shardName, true)
+		if not (shard and shard:IsA("BasePart")) then
+			continue
+		end
+		local token = (haloShardToken[shard] or 0) + 1
+		haloShardToken[shard] = token
+		shard:SetAttribute("HaloHidden", hidden)
+		local startAlpha = shard.LocalTransparencyModifier
+		if math.abs(startAlpha - target) < 1e-3 then
+			shard.LocalTransparencyModifier = target
+			continue
+		end
+		task.spawn(function()
+			local started = os.clock()
+			while haloShardToken[shard] == token and shard.Parent do
+				local a = math.clamp((os.clock() - started) / duration, 0, 1)
+				local eased = if hidden then a * a else 1 - (1 - a) * (1 - a)
+				shard.LocalTransparencyModifier = startAlpha + (target - startAlpha) * eased
+				if a >= 1 then
+					break
+				end
+				RunService.RenderStepped:Wait()
+			end
+			if haloShardToken[shard] == token then
+				shard.LocalTransparencyModifier = target
+			end
+		end)
+	end
+end
+
 -- Where a shot leaves the hero: the equipped bow's Nock attachment, else the rig's chest.
 local function shotOrigin(rig: Model): Vector3
 	local weapon = rig:FindFirstChild(HeroSockets.EQUIPPED_NAME)
@@ -253,6 +291,12 @@ local function castPoint(rig: Model, name: string): Vector3?
 		local head = rig:FindFirstChild("Head")
 		if head and head:IsA("BasePart") then
 			return head.Position + Vector3.new(0, 1.6, 0)
+		end
+	elseif name == "HALO_TOP" or name == "HALO_L" or name == "HALO_R" then
+		local partName = if name == "HALO_L" then "HaloShardL" elseif name == "HALO_R" then "HaloShardR" else "HaloShardTop"
+		local shard = rig:FindFirstChild(partName, true)
+		if shard and shard:IsA("BasePart") then
+			return shard.Position
 		end
 	elseif name == "STAFF_TIP" then
 		-- WeaponVfx puts VfxTip on every equipped weapon's head; prefabs may carry their own Tip.
@@ -734,13 +778,28 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 					warn(`CombatVfx: charge effect failed: {err}`)
 				end
 			end
-			if animator.WeaponType ~= "BOW" then
-				return
-			end
-			if marker == "Release" then
-				setBowArrowHidden(rig, true)
-			elseif marker == "Nock" or marker == "End" then
-				setBowArrowHidden(rig, false)
+			if animator.WeaponType == "BOW" then
+				if marker == "Release" then
+					setBowArrowHidden(rig, true)
+				elseif marker == "Nock" or marker == "End" then
+					setBowArrowHidden(rig, false)
+				end
+			elseif animator.WeaponType == "STAFF" then
+				if action.Name == "AttackBasic" then
+					if marker == "Release" then
+						animateHaloShards(rig, { "HaloShardTop" }, true)
+					elseif marker == "End" then
+						animateHaloShards(rig, { "HaloShardTop", "HaloShardL", "HaloShardR" }, false)
+					end
+				elseif action.Name == "AttackSpecial" then
+					if marker == "Charge" then
+						animateHaloShards(rig, { "HaloShardTop", "HaloShardL", "HaloShardR" }, true)
+					elseif marker == "End" then
+						animateHaloShards(rig, { "HaloShardTop", "HaloShardL", "HaloShardR" }, false)
+					end
+				end
+			elseif meta and meta.TemplateId == "hero_rourke" and action.Name == "AttackSkill" and marker == "Release" then
+				model:SetAttribute("FrenzyUntil", os.clock() + 4.0)
 			end
 		end
 	end

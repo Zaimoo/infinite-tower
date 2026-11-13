@@ -49,7 +49,7 @@ def B(p):
 
 # Scalp shell: an ellipsoid on top, a straight cylinder below its equator.
 CX, CY, CZ = 0.0, 0.16, 0.04
-RX, RY, RZ = 0.7, 0.76, 0.71
+RX, RY, RZ = 0.72, 0.80, 0.74
 
 def shell(theta, y, off=0.0):
     """Point on the scalp at azimuth theta (0 = front, +90 deg = her right, +X) and height y."""
@@ -160,63 +160,95 @@ def curtain(th0, th1, y_top, y_end, off_top, off_bot, thick=0.045, nth=72, ny=12
         bm.faces.new([outer[0][j + 1], inner[0][j + 1], inner[0][j], outer[0][j]])
         bm.faces.new([outer[nth][j], inner[nth][j], inner[nth][j + 1], outer[nth][j + 1]])
 
-# 1. Base sheet: covers the head from a high, bare hairline in front (swept back, no fringe) to
-#    the nape at the back, where the long back clumps take over.
-FRONT = math.radians(62)
+# 1. Base sheet: smooth inner cap tucked cleanly under the sculpted front arches and crown
+#    waves (thick enough at the center part to close any skin gap above the circlet) and down
+#    to the nape at the back.
+FRONT = math.radians(72)
 
 def hem(th):
     a = abs(th)
     if a <= FRONT:
-        return 0.56 - 0.08 * (a / FRONT) ** 2  # a rounded hairline, highest in the middle
-    t = min(1.0, (a - FRONT) / math.radians(40))
+        u = a / FRONT
+        return 0.460 - 0.290 * (u ** 1.45)
+    t = min(1.0, (a - FRONT) / math.radians(34))
     t = t * t * (3 - 2 * t)
-    return 0.48 + (-0.3 - 0.48) * t
+    return 0.17 + (-0.34 - 0.17) * t
 
-curtain(-math.pi, math.pi, 0.915, hem, 0.04, 0.06, thick=0.04, nth=96, ny=10, grooves=30, depth=0.022)
+curtain(-math.pi, math.pi, 1.02, hem, 0.020, 0.028, thick=0.032, nth=56, ny=7, grooves=12, depth=0.002)
 
-# 2. The bun's place: high on the crown, a little back. The swept-back top is the base sheet
-#    itself (its grooves run up from the hairline and meet under the bun): separate locks over
-#    it read as feathers or a ruffled band, not the sleek pulled-back hair of the art.
-BUN = Vector((0.0, 0.98, 0.2))  # centre of the bun: high on the crown, a little back
-BUN_R = 0.27
+# 2. The bun's place: high on the crown, set slightly back so the swept crown hair rises into it
+#    gracefully and the front silhouette shows a soft parted crown below the bun.
+BUN = Vector((0.0, 1.04, 0.24))
+BUN_R = 0.28
 
-# 3. The bun: a round core wrapped by coils, each coil a clump spiralling once around it.
-core = bmesh.ops.create_uvsphere(bm, u_segments=20, v_segments=12, radius=1.0)
+# 3. The bun: a smooth rounded chignon core wrapped by one continuous ascending spiral coil
+#    (adjacent turns sit side by side cleanly with zero separate-coil sawtooth clipping).
+core = bmesh.ops.create_uvsphere(bm, u_segments=18, v_segments=12, radius=1.0)
 for vert in core["verts"]:
-    c = Vector((vert.co.x, vert.co.z, vert.co.y))  # Blender z up -> head-space y
+    c = Vector((vert.co.x, vert.co.z, vert.co.y))
     u = math.atan2(c.x, c.z) / math.pi
-    VERT_UV[vert] = (zigzag(u * 3), 0.6 + 0.3 * (c.y + 1) / 2)
-    vert.co = B(BUN + Vector((c.x * BUN_R * 0.95, c.y * BUN_R * 0.82, c.z * BUN_R * 0.95)))
+    VERT_UV[vert] = (zigzag(u * 3), 0.65 + 0.25 * (c.y + 1) / 2)
+    vert.co = B(BUN + Vector((c.x * BUN_R * 0.86, c.y * BUN_R * 0.76, c.z * BUN_R * 0.86)))
 
 def bun_normal(p):
     n = p - BUN
     return n.normalized() if n.length > 1e-5 else Vector((0, 1, 0))
 
-for k in range(6):
-    phase = 2 * math.pi * k / 6 + rng.uniform(-0.15, 0.15)
-    tilt = rng.uniform(-0.25, 0.25)
-    pts = []
-    for i in range(7):
-        a = phase + i / 6 * math.pi * 1.5
-        y = (0.8 - 1.15 * i / 6) + tilt * math.sin(a) * (i / 6)  # from the very top, closing it  # winds from the top down around the core
-        r = BUN_R * (0.98 + 0.05 * math.sin(a * 2)) * math.sqrt(max(0.15, 1 - (y * 0.82) ** 2))
-        pts.append(BUN + Vector((math.sin(a) * r, y * BUN_R * 0.82, math.cos(a) * r)))
-    clump(pts, 0.12, 0.05, segs=18, tip=3.0, normal_fn=bun_normal)
+bun_pts = []
+turns = 2.8
+for i in range(31):
+    u = i / 30
+    a = -0.3 * math.pi + u * turns * math.pi * 2.0
+    y = -0.78 + 1.56 * u
+    y_c = max(-0.94, min(0.94, y))
+    # Subtle spiral swell: ends tuck softly into the core so no exposed tip pokes out at top
+    tuck = min(1.0, u / 0.12) * min(1.0, (1.0 - u) / 0.25)
+    r = BUN_R * (0.72 + 0.28 * tuck) * math.sqrt(max(0.10, 1 - (y_c * 0.84) ** 2))
+    bun_pts.append(BUN + Vector((math.sin(a) * r, y_c * BUN_R * 0.80, math.cos(a) * r)))
+ribbon(bun_pts, 0.082, 0.044, segs=44, tip=2.4, root=0.82, normal_fn=bun_normal)
 
-# 4. Face-framing strands: from the temples, in front of the ears, falling in front of the
-#    shoulders to the chest (the shoulders are about 0.6 below the head centre and the front of
-#    the chest at z -0.36). Two per side: a thin strand by the cheek and a fuller one outside it.
+# 3b. Center-parted front curtain-bang arches & sleek swept crown:
+#     Wide, smooth, shingle-layered waves tucked into the center part (-1.5 deg overlap) cleanly
+#     above the inner curtain cap (off >= 0.040 at part with close 12-deg guide points so chord
+#     interpolation never dips into the cap), arching around the forehead corners & temples and
+#     sweeping upward-and-back smoothly into the bun / upper back.
+for side in (-1, 1):
+    fan_specs = [
+        # (width, thick, root_scale, to_bun, [(th_deg, y, off), ...])
+        (0.155, 0.020, 0.86, False, [(-1.5, 0.515, 0.040), (14, 0.465, 0.056), (32, 0.340, 0.060), (54, 0.215, 0.058), (82, 0.200, 0.054), (118, 0.290, 0.046), (150, 0.42, 0.038)]),
+        (0.165, 0.018, 0.86, False, [(-1.5, 0.605, 0.040), (18, 0.570, 0.062), (40, 0.475, 0.066), (68, 0.385, 0.064), (104, 0.400, 0.057), (142, 0.520, 0.046)]),
+        (0.175, 0.017, 0.86, True,  [(-1.0, 0.700, 0.040), (16, 0.685, 0.062), (36, 0.645, 0.070), (64, 0.600, 0.071), (98, 0.610, 0.066), (132, 0.700, 0.056)]),
+        (0.180, 0.016, 0.84, True,  [(-0.5, 0.800, 0.042), (16, 0.788, 0.066), (38, 0.760, 0.076), (68, 0.735, 0.076), (104, 0.750, 0.070), (138, 0.820, 0.060)]),
+        (0.175, 0.016, 0.82, True,  [(0.0,  0.895, 0.044), (16, 0.885, 0.068), (40, 0.868, 0.078), (74, 0.855, 0.080), (118, 0.870, 0.068)]),
+    ]
+    for k, (w, thk, root_w, to_bun, spec) in enumerate(fan_specs):
+        pts = [shell(math.radians(th_deg) * side, y, off) for th_deg, y, off in spec]
+        if to_bun:
+            pts.append(BUN + Vector((side * 0.08, -BUN_R * 0.16, -0.05)))
+        ribbon(pts, w, thk, segs=18, tip=2.2, root=root_w)
+
+# 4. Face-framing strands: emerge smoothly from under the swept temple wave near the ears
+#    and drape gracefully along the jawline and in front of the shoulders onto the chest.
 for side in (1, -1):
-    for th_deg, w, x_low, z_low, y_end, thick in [(70, 0.11, 0.5, -0.5, -1.2, 0.045), (84, 0.16, 0.6, -0.46, -1.45, 0.06)]:
+    for th_deg, w, x_low, z_low, y_end, thick in [
+        (62, 0.088, 0.49, -0.50, -1.28, 0.036),
+        (74, 0.122, 0.58, -0.45, -1.52, 0.044),
+    ]:
         th = math.radians(th_deg) * side
-        pts = [shell(th * 0.9, 0.6, 0.05), shell(th, 0.25, 0.07), shell(th, -0.15, 0.08),
-               Vector((x_low * side, -0.55, z_low)), Vector((x_low * 0.95 * side, (y_end - 0.55) * 0.55 - 0.55, z_low - 0.04)),
-               Vector((x_low * 0.92 * side, y_end, z_low - 0.06))]
-        clump(pts, w, thick, segs=18, tip=2.4)
+        pts = [
+            shell(th * 0.90, 0.34, 0.042),
+            shell(th * 0.96, 0.12, 0.060),
+            shell(th * 0.88, -0.16, 0.062),
+            Vector((x_low * side, -0.54, z_low)),
+            Vector((x_low * 0.94 * side, (y_end - 0.54) * 0.54 - 0.54, z_low - 0.04)),
+            Vector((x_low * 0.88 * side, y_end, z_low - 0.05)),
+        ]
+        clump(pts, w, thick, segs=15, tip=2.6)
 
 # 5. Long back hair: clumps from the back of the head that fall straight down her back to the
-#    hips (their roots start inside the bun, so the back hangs from under it, half up), drawn in behind the shoulders (the back of the robe is at about z 0.4), with the tips
-#    staggered into a soft V. Depth alternates so neighbours overlap cleanly.
+#    hips (their roots start inside the bun, so the back hangs from under it, half up), drawn in
+#    behind the shoulders (the back of the robe is at about z 0.4), with the tips staggered into
+#    a soft V. Depth alternates so neighbours overlap cleanly.
 def back_point(th, y, off):
     """Below the head the hair fan narrows behind the back instead of following the cylinder."""
     narrow = math.pi + (th - math.pi) * 0.72
@@ -225,21 +257,26 @@ def back_point(th, y, off):
 
 for k, th_deg in enumerate(range(96, 265, 12)):
     th = math.radians(th_deg + rng.uniform(-2, 2))
-    off = 0.07 + (0.025 if k % 2 else 0.0) + rng.uniform(-0.004, 0.008)
+    off = 0.062 + (0.022 if k % 2 else 0.0) + rng.uniform(-0.004, 0.008)
     centre = 1 - abs(th_deg - 180) / 84  # 1 in the middle of the back, 0 at the sides
-    y_end = -1.75 - 0.75 * centre + rng.uniform(-0.12, 0.12)
-    pts = [BUN + Vector((math.sin(th) * 0.08, -BUN_R * 0.35, 0.02)), shell(th * 0.75 + math.pi * 0.25, 0.8, off - 0.01), shell(th, 0.55, off), shell(th, 0.1, off + 0.01),
+    y_end = -1.75 - 0.72 * centre + rng.uniform(-0.1, 0.1)
+    pts = [BUN + Vector((math.sin(th) * 0.04, -BUN_R * 0.18, -0.03)), shell(th * 0.75 + math.pi * 0.25, 0.76, off - 0.025), shell(th, 0.55, off), shell(th, 0.1, off + 0.01),
            back_point(th, -0.45, off + 0.04), back_point(th, (y_end - 0.45) * 0.5 - 0.2, off + 0.05),
            back_point(th, y_end, off + 0.06)]
-    clump(pts, rng.uniform(0.17, 0.21), rng.uniform(0.055, 0.07), segs=22, tip=rng.uniform(2.4, 3.4))
+    clump(pts, rng.uniform(0.24, 0.28), rng.uniform(0.052, 0.064), segs=16, tip=rng.uniform(2.8, 3.6))
 
-# 6. A shorter top layer over the back, ending at different heights, for layering.
-for th_deg in range(120, 241, 24):
-    th = math.radians(th_deg + rng.uniform(-5, 5))
-    y_end = rng.uniform(-0.75, -0.3)
-    pts = [BUN + Vector((math.sin(th) * 0.08, -BUN_R * 0.3, 0.05)), shell(th * 0.75 + math.pi * 0.25, 0.78, 0.09), shell(th, 0.45, 0.125), shell(th, 0.0, 0.13),
-           back_point(th, y_end, 0.14)]
-    clump(pts, rng.uniform(0.15, 0.19), 0.055, segs=14, tip=rng.uniform(2.0, 2.8))
+# Center-back seal clump beneath the main layer so no hairline vertical slit shows through
+clump([BUN + Vector((0.0, -BUN_R * 0.18, -0.03)), shell(math.pi, 0.76, 0.040), shell(math.pi, 0.50, 0.055), shell(math.pi, 0.05, 0.060),
+       back_point(math.pi, -0.50, 0.078), back_point(math.pi, -1.45, 0.085), back_point(math.pi, -2.42, 0.090)],
+      0.30, 0.050, segs=14, tip=3.2)
+
+# 6. A softer top layer over the back, emerging smoothly from beneath the bun.
+for th_deg in range(116, 245, 20):
+    th = math.radians(th_deg + rng.uniform(-3, 3))
+    y_end = rng.uniform(-2.05, -1.55)
+    pts = [BUN + Vector((math.sin(th) * 0.04, -BUN_R * 0.14, -0.04)), shell(th * 0.75 + math.pi * 0.25, 0.80, 0.024), shell(th, 0.52, 0.088), shell(th, 0.0, 0.118),
+           back_point(th, y_end, 0.124)]
+    clump(pts, rng.uniform(0.20, 0.24), 0.048, segs=14, tip=rng.uniform(2.4, 3.2))
 
 # Write the texture coordinates to the loops (before merging vertices, which would drop the
 # per-vertex table's keys).
