@@ -1,370 +1,187 @@
 --!strict
 -- ReplicatedFirst/LoadingScreen/LoadingScreenView.luau
--- Builds the join loading screen: a dark cosmic backdrop with ethereal floating specks,
--- the stickman hero logo with animated neon glow strictly on its outlines (starts dim,
--- flares up to radiant bright along every contour line, and rhythmically breathes),
--- a sleek cyan/white loading bar, a status line, and an optional Skip button.
--- ReplicatedFirst runs before ReplicatedStorage arrives, so all styling tokens and assets
--- are self-contained here.
+-- Minimal obsidian join loading screen with the centered stickman hero cutout logo and a
+-- diagonal curtain wipe-across reveal: a pure black (-39 deg) curtain sweeps in from top-right
+-- to bottom-left over the logo until covering the viewport, hides the backdrop, and continues
+-- sweeping down-left to uncover the live 3D world and HUD.
+-- ReplicatedFirst runs before ReplicatedStorage arrives, so styling tokens and assets live here.
 
 local GuiService = game:GetService("GuiService")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
--- Uploaded assets for the stickman hero logo:
-local LOGO_BASE_IMAGE = "rbxassetid://89970755424339" -- transparent cutout of the stickman hero (HD)
-local LOGO_OUTLINE_GLOW = "rbxassetid://72701493106519" -- isolated contour neon glow (HD)
+local LOGO_IMAGE_ASSET_ID = "rbxassetid://111490026450912" -- clean cutout of stickman_4k.png
 
+local STAGE_COLOR = Color3.fromRGB(10, 10, 12) -- #0A0A0C dark stage contrasting against #000000 curtain
+local CURTAIN_COLOR = Color3.fromRGB(0, 0, 0)
+local SKIP_BG = Color3.fromRGB(16, 18, 26)
+local SKIP_BORDER = Color3.fromRGB(90, 160, 230)
+local SKIP_TEXT = Color3.fromRGB(225, 245, 255)
 local INK = Color3.fromRGB(6, 6, 8)
-local BG_DARK = Color3.fromRGB(10, 10, 14)
-local BG_MID = Color3.fromRGB(15, 17, 24)
-local NEON_CYAN = Color3.fromRGB(140, 215, 255)
-local NEON_CORE = Color3.fromRGB(225, 245, 255)
-local TEXT_COLOR = Color3.fromRGB(195, 225, 250)
 
-local BODY_FONT = Font.fromName("Cinzel", Enum.FontWeight.Bold)
+local DIAGONAL_ANGLE_DEG = -39 -- matches reference video "\" seam (top-right -> bottom-left sweep)
+local CURTAIN_OVERSCAN = 1.08 -- brief full-black beat at midpoint before uncovering the world
+local CURTAIN_HEIGHT_PAD = 96
+local CURTAIN_EDGE_PAD = 16
 
-local SPECK_COUNT = 20
-local NARROW_WIDTH = 600
-local INTRO_DURATION = 1.3 -- seconds to transition from dim to radiant bright
+local DEFAULT_WIPE_DURATION = 0.60
+local LOGO_REVEAL_DURATION = 0.22
 
 export type View = {
 	PreloadTargets: { Instance },
-	SetProgress: (self: View, alpha: number) -> (),
-	SetStatus: (self: View, text: string) -> (),
+	RevealLogo: (self: View) -> (),
 	ShowSkip: (self: View, onSkip: () -> ()) -> (),
-	FadeOut: (self: View, duration: number) -> (),
+	FadeOut: (self: View, duration: number?) -> (),
 	Destroy: (self: View) -> (),
 }
 
 local View = {}
 
-local function corner(parent: Instance, radius: UDim)
-	local c = Instance.new("UICorner")
-	c.CornerRadius = radius
-	c.Parent = parent
-end
-
-local function stroke(parent: Instance, color: Color3, thickness: number, transparency: number?): UIStroke
-	local s = Instance.new("UIStroke")
-	s.Color = color
-	s.Thickness = thickness
-	s.Transparency = transparency or 0
-	s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	s.Parent = parent
-	return s
-end
-
-local function textStroke(parent: Instance, thickness: number)
-	local s = Instance.new("UIStroke")
-	s.Color = INK
-	s.Thickness = thickness
-	s.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
-	s.Parent = parent
-end
-
-local function screenGui(name: string, displayOrder: number, insets: Enum.ScreenInsets, playerGui: Instance): (ScreenGui, CanvasGroup)
-	local gui = Instance.new("ScreenGui")
-	gui.Name = name
-	gui.DisplayOrder = displayOrder
-	gui.IgnoreGuiInset = true
-	gui.ResetOnSpawn = false
-	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-	gui.ScreenInsets = insets
-
-	local root = Instance.new("CanvasGroup")
-	root.Name = "Root"
-	root.Size = UDim2.fromScale(1, 1)
-	root.BackgroundTransparency = 1
-	root.Parent = gui
-	gui.Parent = playerGui
-	return gui, root
-end
-
--- Background: sleek dark gradient, subtle vignette, and drifting ethereal embers.
-local function buildBackground(root: CanvasGroup): { Frame }
-	local fill = Instance.new("Frame")
-	fill.Name = "Backdrop"
-	fill.Size = UDim2.fromScale(1, 1)
-	fill.BackgroundColor3 = Color3.new(1, 1, 1)
-	fill.BorderSizePixel = 0
-	fill.Parent = root
-
-	local g = Instance.new("UIGradient")
-	g.Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, BG_MID),
-		ColorSequenceKeypoint.new(0.5, BG_DARK),
-		ColorSequenceKeypoint.new(1, INK),
-	})
-	g.Rotation = 90
-	g.Parent = fill
-
-	-- Vignette: darkened border frame
-	local vignette = Instance.new("Frame")
-	vignette.Name = "Vignette"
-	vignette.Size = UDim2.fromScale(1, 1)
-	vignette.BackgroundColor3 = INK
-	vignette.BorderSizePixel = 0
-	vignette.Parent = root
-
-	local vg = Instance.new("UIGradient")
-	vg.Transparency = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 0.35),
-		NumberSequenceKeypoint.new(0.28, 1),
-		NumberSequenceKeypoint.new(0.72, 1),
-		NumberSequenceKeypoint.new(1, 0.35),
-	})
-	vg.Parent = vignette
-
-	-- Floating glowing embers/specks
-	local specks: { Frame } = {}
-	local rng = Random.new()
-	for i = 1, SPECK_COUNT do
-		local speck = Instance.new("Frame")
-		speck.Name = "Speck"
-		speck.AnchorPoint = Vector2.new(0.5, 0.5)
-		speck.Position = UDim2.fromScale(rng:NextNumber(), rng:NextNumber())
-		local px = rng:NextInteger(2, 4)
-		speck.Size = UDim2.fromOffset(px, px)
-		speck.BackgroundColor3 = NEON_CYAN
-		speck.BackgroundTransparency = rng:NextNumber(0.45, 0.85)
-		speck.BorderSizePixel = 0
-		speck:SetAttribute("Speed", rng:NextNumber(0.015, 0.038))
-		speck:SetAttribute("Sway", rng:NextNumber(0, math.pi * 2))
-		speck.Parent = root
-		corner(speck, UDim.new(0.5, 0))
-		specks[i] = speck
+local function getViewportSize(stage: Frame): Vector2
+	local size = stage.AbsoluteSize
+	if size.X > 0 and size.Y > 0 then
+		return size
 	end
-
-	return specks
+	local camera = workspace.CurrentCamera
+	if camera and camera.ViewportSize.X > 0 and camera.ViewportSize.Y > 0 then
+		return camera.ViewportSize
+	end
+	return Vector2.new(1920, 1080)
 end
 
 function View.new(playerGui: Instance): View
-	local bgGui, bgRoot = screenGui("LoadingScreen", 1000, Enum.ScreenInsets.None, playerGui)
-	local contentGui, contentRoot = screenGui("LoadingScreenContent", 1001, Enum.ScreenInsets.CoreUISafeInsets, playerGui)
-	local specks = buildBackground(bgRoot)
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "LoadingScreen"
+	gui.DisplayOrder = 10000
+	gui.IgnoreGuiInset = true
+	gui.ScreenInsets = Enum.ScreenInsets.None
+	gui.ResetOnSpawn = false
+	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-	-- Center content column
-	local column = Instance.new("Frame")
-	column.Name = "Column"
-	column.AnchorPoint = Vector2.new(0.5, 0.5)
-	column.Position = UDim2.fromScale(0.5, 0.5)
-	column.Size = UDim2.fromScale(0.9, 0.9)
-	column.BackgroundTransparency = 1
-	column.Parent = contentRoot
+	local stage = Instance.new("Frame")
+	stage.Name = "Stage"
+	stage.Size = UDim2.fromScale(1, 1)
+	stage.Position = UDim2.fromScale(0, 0)
+	stage.BackgroundTransparency = 1
+	stage.BorderSizePixel = 0
+	stage.ClipsDescendants = true
+	stage.Parent = gui
 
-	local list = Instance.new("UIListLayout")
-	list.FillDirection = Enum.FillDirection.Vertical
-	list.HorizontalAlignment = Enum.HorizontalAlignment.Center
-	list.VerticalAlignment = Enum.VerticalAlignment.Center
-	list.SortOrder = Enum.SortOrder.LayoutOrder
-	list.Padding = UDim.new(0.02, 0)
-	list.Parent = column
+	local backdrop = Instance.new("Frame")
+	backdrop.Name = "Backdrop"
+	backdrop.Size = UDim2.fromScale(1, 1)
+	backdrop.BackgroundColor3 = STAGE_COLOR
+	backdrop.BorderSizePixel = 0
+	backdrop.ZIndex = 1
+	backdrop.Parent = stage
 
-	local columnScale = Instance.new("UIScale")
-	columnScale.Parent = column
-
-	-- Logo Container (holds the stickman hero with animated outline-only glow)
 	local logoContainer = Instance.new("Frame")
 	logoContainer.Name = "LogoContainer"
-	logoContainer.LayoutOrder = 1
-	logoContainer.Size = UDim2.fromScale(0.55, 0.55)
+	logoContainer.AnchorPoint = Vector2.new(0.5, 0.5)
+	logoContainer.Position = UDim2.fromScale(0.5, 0.5)
+	logoContainer.Size = UDim2.fromScale(0.32, 0.32)
 	logoContainer.SizeConstraint = Enum.SizeConstraint.RelativeYY
 	logoContainer.BackgroundTransparency = 1
-	logoContainer.Parent = column
+	logoContainer.ZIndex = 2
+	logoContainer.Parent = stage
 
 	local aspect = Instance.new("UIAspectRatioConstraint")
 	aspect.AspectRatio = 1
 	aspect.Parent = logoContainer
 
-	local logoConstraint = Instance.new("UISizeConstraint")
-	logoConstraint.MinSize = Vector2.new(240, 240)
-	logoConstraint.MaxSize = Vector2.new(540, 540)
-	logoConstraint.Parent = logoContainer
+	local sizeConstraint = Instance.new("UISizeConstraint")
+	sizeConstraint.MinSize = Vector2.new(150, 150)
+	sizeConstraint.MaxSize = Vector2.new(380, 380)
+	sizeConstraint.Parent = logoContainer
 
 	local logoScale = Instance.new("UIScale")
+	logoScale.Scale = 0.90
 	logoScale.Parent = logoContainer
 
-	-- Layer 1: Ethereal outline bloom (behind character, exact 1x alignment, zero displacement blur)
-	local outlineGlow = Instance.new("ImageLabel")
-	outlineGlow.Name = "OutlineGlow"
-	outlineGlow.AnchorPoint = Vector2.new(0.5, 0.5)
-	outlineGlow.Position = UDim2.fromScale(0.5, 0.5)
-	outlineGlow.Size = UDim2.fromScale(1, 1)
-	outlineGlow.BackgroundTransparency = 1
-	outlineGlow.Image = LOGO_OUTLINE_GLOW
-	outlineGlow.ImageColor3 = Color3.fromRGB(80, 140, 200)
-	outlineGlow.ImageTransparency = 0.85
-	outlineGlow.ZIndex = 1
-	outlineGlow.Parent = logoContainer
+	local logoImage = Instance.new("ImageLabel")
+	logoImage.Name = "StickmanLogo"
+	logoImage.AnchorPoint = Vector2.new(0.5, 0.5)
+	logoImage.Position = UDim2.fromScale(0.5, 0.5)
+	logoImage.Size = UDim2.fromScale(1, 1)
+	logoImage.BackgroundTransparency = 1
+	logoImage.Image = LOGO_IMAGE_ASSET_ID
+	logoImage.ScaleType = Enum.ScaleType.Fit
+	logoImage.ResampleMode = Enum.ResamplerMode.Default
+	logoImage.ImageTransparency = 1
+	logoImage.ZIndex = 2
+	logoImage.Parent = logoContainer
 
-	-- Layer 2: Stickman Hero silhouette & sword (needle-sharp foreground, exact 1x alignment)
-	local baseLogo = Instance.new("ImageLabel")
-	baseLogo.Name = "BaseLogo"
-	baseLogo.AnchorPoint = Vector2.new(0.5, 0.5)
-	baseLogo.Position = UDim2.fromScale(0.5, 0.5)
-	baseLogo.Size = UDim2.fromScale(1, 1)
-	baseLogo.BackgroundTransparency = 1
-	baseLogo.Image = LOGO_BASE_IMAGE
-	baseLogo.ImageColor3 = Color3.fromRGB(200, 215, 230)
-	baseLogo.ZIndex = 2
-	baseLogo.Parent = logoContainer
+	-- Pitch-black diagonal curtain that sweeps top-right -> bottom-left over the logo and off-screen
+	local curtain = Instance.new("Frame")
+	curtain.Name = "DiagonalCurtain"
+	curtain.AnchorPoint = Vector2.new(0.5, 0.5)
+	curtain.Position = UDim2.fromScale(2, -1)
+	curtain.Size = UDim2.fromOffset(100, 100)
+	curtain.BackgroundColor3 = CURTAIN_COLOR
+	curtain.BorderSizePixel = 0
+	curtain.Rotation = DIAGONAL_ANGLE_DEG
+	curtain.Visible = false
+	curtain.ZIndex = 10
+	curtain.Parent = stage
 
-	-- Spacer between logo and progress bar
-	local spacer = Instance.new("Frame")
-	spacer.Name = "Spacer"
-	spacer.LayoutOrder = 2
-	spacer.Size = UDim2.fromScale(1, 0.015)
-	spacer.BackgroundTransparency = 1
-	spacer.Parent = column
+	-- Optional Skip button inside safe area, only shown if loading exceeds SKIP_AFTER seconds
+	local skipSafeArea = Instance.new("Frame")
+	skipSafeArea.Name = "SkipSafeArea"
+	skipSafeArea.AnchorPoint = Vector2.new(0.5, 1)
+	skipSafeArea.Position = UDim2.new(0.5, 0, 1, -36)
+	skipSafeArea.Size = UDim2.fromOffset(132, 42)
+	skipSafeArea.BackgroundTransparency = 1
+	skipSafeArea.ZIndex = 5
+	skipSafeArea.Parent = stage
 
-	-- Progress Bar Track
-	local track = Instance.new("Frame")
-	track.Name = "BarTrack"
-	track.LayoutOrder = 3
-	track.Size = UDim2.new(0.44, 0, 0, 12)
-	track.BackgroundColor3 = Color3.fromRGB(14, 16, 22)
-	track.BorderSizePixel = 0
-	track.ClipsDescendants = true
-	track.Parent = column
-	corner(track, UDim.new(0.5, 0))
-	stroke(track, Color3.fromRGB(70, 130, 190), 1.5, 0.35)
-
-	local trackSize = Instance.new("UISizeConstraint")
-	trackSize.MinSize = Vector2.new(220, 12)
-	trackSize.MaxSize = Vector2.new(520, 12)
-	trackSize.Parent = track
-
-	-- Progress Bar Fill
-	local fill = Instance.new("Frame")
-	fill.Name = "Fill"
-	fill.Size = UDim2.fromScale(0, 1)
-	fill.BackgroundColor3 = Color3.new(1, 1, 1)
-	fill.BorderSizePixel = 0
-	fill.Parent = track
-	corner(fill, UDim.new(0.5, 0))
-
-	local fillGrad = Instance.new("UIGradient")
-	fillGrad.Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, Color3.fromRGB(65, 150, 235)),
-		ColorSequenceKeypoint.new(0.8, Color3.fromRGB(160, 225, 255)),
-		ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255)),
-	})
-	fillGrad.Parent = fill
-
-	-- Status Label
-	local status = Instance.new("TextLabel")
-	status.Name = "Status"
-	status.LayoutOrder = 4
-	status.Size = UDim2.new(0.65, 0, 0, 22)
-	status.BackgroundTransparency = 1
-	status.FontFace = BODY_FONT
-	status.TextSize = 16
-	status.TextColor3 = TEXT_COLOR
-	status.Text = "Opening the gates…"
-	status.Parent = column
-	textStroke(status, 1.5)
-
-	-- Skip Button
 	local skip = Instance.new("TextButton")
 	skip.Name = "Skip"
-	skip.LayoutOrder = 5
-	skip.Size = UDim2.fromOffset(132, 42)
-	skip.BackgroundColor3 = Color3.fromRGB(16, 18, 26)
-	skip.FontFace = BODY_FONT
-	skip.TextSize = 17
-	skip.TextColor3 = NEON_CORE
+	skip.Size = UDim2.fromScale(1, 1)
+	skip.BackgroundColor3 = SKIP_BG
+	skip.Font = Enum.Font.GothamBold
+	skip.TextSize = 16
+	skip.TextColor3 = SKIP_TEXT
 	skip.Text = "Skip"
 	skip.AutoButtonColor = true
 	skip.Selectable = true
 	skip.Visible = false
-	skip.Parent = column
-	corner(skip, UDim.new(0, 10))
-	stroke(skip, Color3.fromRGB(90, 160, 230), 1.8, 0.2)
-	textStroke(skip, 1.5)
+	skip.ZIndex = 5
+	skip.Parent = skipSafeArea
 
-	-- Responsive fit for narrow / mobile screens
-	local function refit()
-		columnScale.Scale = if contentGui.AbsoluteSize.X > 0 and contentGui.AbsoluteSize.X < NARROW_WIDTH then 0.85 else 1
-	end
-	local sizeConn = contentGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(refit)
-	refit()
+	local skipCorner = Instance.new("UICorner")
+	skipCorner.CornerRadius = UDim.new(0, 10)
+	skipCorner.Parent = skip
 
-	local clock = 0
-	local currentProgress = 0
-	local fading = false
+	local skipStroke = Instance.new("UIStroke")
+	skipStroke.Color = SKIP_BORDER
+	skipStroke.Thickness = 1.6
+	skipStroke.Transparency = 0.25
+	skipStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	skipStroke.Parent = skip
 
-	-- Applies outline glow level `g` from 0 (dim) to 1 (bright + extra bright peak)
-	-- All glow effects strictly follow the outline contour of the stickman hero
-	local function applyGlow(g: number)
-		g = math.clamp(g, 0, 1)
+	local skipTextStroke = Instance.new("UIStroke")
+	skipTextStroke.Color = INK
+	skipTextStroke.Thickness = 1.5
+	skipTextStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
+	skipTextStroke.Parent = skip
 
-		-- Outline bloom behind the character
-		outlineGlow.ImageTransparency = 0.85 - 0.80 * g
-		outlineGlow.ImageColor3 = Color3.fromRGB(
-			math.floor(80 + 175 * g),
-			math.floor(140 + 115 * g),
-			math.floor(200 + 55 * g)
-		)
+	gui.Parent = playerGui
 
-		-- Base character lineart brightness (starts clear, reaches blazing white at peak)
-		baseLogo.ImageColor3 = Color3.fromRGB(
-			math.floor(190 + 65 * g),
-			math.floor(205 + 50 * g),
-			math.floor(220 + 35 * g)
-		)
-
-		if not fading then
-			logoScale.Scale = 1.0 + 0.02 * g
-		end
-	end
-
-	-- Animation loop: drives ember drift and outline-only breathing glow
-	local renderConn = RunService.RenderStepped:Connect(function(dt: number)
-		clock += dt
-
-		-- Glow animation on the outlines: starts dim, flares to bright peak, then rhythmically breathes
-		local glowLevel: number
-		if clock < INTRO_DURATION then
-			local t = clock / INTRO_DURATION
-			glowLevel = t * t * (3 - 2 * t) -- smooth ease-in from 0 (dim) to 1 (bright)
-		else
-			local breathCycle = clock - INTRO_DURATION
-			local breath = 0.5 + 0.5 * math.cos(breathCycle * 2.2)
-			local floorGlow = 0.25 + 0.35 * currentProgress
-			glowLevel = floorGlow + (1 - floorGlow) * breath
-		end
-		applyGlow(glowLevel)
-
-		-- Ember particles floating upward
-		for _, speck in specks do
-			local pos = speck.Position
-			local speed = (speck:GetAttribute("Speed") :: number?) or 0.02
-			local sway = (speck:GetAttribute("Sway") :: number?) or 0
-			local y = pos.Y.Scale - speed * dt
-			local x = pos.X.Scale + math.sin(clock * 0.9 + sway) * 0.005 * dt
-			if y < -0.02 then
-				y = 1.02
-			end
-			speck.Position = UDim2.fromScale(x, y)
-		end
-	end)
-
-	local skipConn: RBXScriptConnection? = nil
 	local destroyed = false
+	local logoRevealed = false
+	local skipConn: RBXScriptConnection? = nil
 
 	local self = {} :: View
-	self.PreloadTargets = { baseLogo, outlineGlow, status }
+	self.PreloadTargets = { logoImage }
 
-	function self.SetProgress(_: View, alpha: number)
-		currentProgress = math.clamp(alpha, 0, 1)
-		fill.Size = UDim2.fromScale(currentProgress, 1)
-	end
-
-	function self.SetStatus(_: View, text: string)
-		if status.Text ~= text then
-			status.Text = text
+	function self.RevealLogo(_: View)
+		if logoRevealed or destroyed then
+			return
 		end
+		logoRevealed = true
+		local info = TweenInfo.new(LOGO_REVEAL_DURATION, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+		TweenService:Create(logoImage, info, { ImageTransparency = 0 }):Play()
+		TweenService:Create(logoScale, info, { Scale = 1.0 }):Play()
 	end
 
 	function self.ShowSkip(_: View, onSkip: () -> ())
@@ -379,18 +196,70 @@ function View.new(playerGui: Instance): View
 		GuiService.SelectedObject = skip
 	end
 
-	function self.FadeOut(_: View, duration: number)
+	function self.FadeOut(_: View, duration: number?)
+		if destroyed then
+			return
+		end
 		if GuiService.SelectedObject == skip then
 			GuiService.SelectedObject = nil
 		end
 		skip.Active = false
-		fading = true
-		local info = TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-		TweenService:Create(logoScale, info, { Scale = 1.08 }):Play()
-		TweenService:Create(contentRoot, info, { GroupTransparency = 1 }):Play()
-		local bgTween = TweenService:Create(bgRoot, info, { GroupTransparency = 1 })
-		bgTween:Play()
-		bgTween.Completed:Wait()
+		skip.Visible = false
+
+		if not logoRevealed then
+			logoRevealed = true
+			logoImage.ImageTransparency = 0
+			logoScale.Scale = 1.0
+		end
+
+		local wipeDuration = duration or DEFAULT_WIPE_DURATION
+		local theta = math.rad(DIAGONAL_ANGLE_DEG)
+		-- Local +X axis points up-right; local +Y axis points down-right along the "\" diagonal seam
+		local axisU = Vector2.new(math.cos(theta), math.sin(theta))
+		local axisV = Vector2.new(-math.sin(theta), math.cos(theta))
+
+		local elapsed = 0
+		local stageHidden = false
+		local done = false
+
+		local function step(dt: number)
+			elapsed += dt
+			local alpha = math.clamp(elapsed / wipeDuration, 0, 1)
+			local eased = TweenService:GetValue(alpha, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
+
+			local vp = getViewportSize(stage)
+			local spanU = math.abs(axisU.X) * vp.X + math.abs(axisU.Y) * vp.Y
+			local spanV = math.abs(axisV.X) * vp.X + math.abs(axisV.Y) * vp.Y
+
+			local curtainW = spanU * CURTAIN_OVERSCAN
+			local curtainH = spanV + CURTAIN_HEIGHT_PAD
+			local dStart = (curtainW + spanU) * 0.5 + CURTAIN_EDGE_PAD
+			local dEnd = -(curtainW + spanU) * 0.5 - CURTAIN_EDGE_PAD
+			local d = dStart + (dEnd - dStart) * eased
+
+			curtain.Size = UDim2.fromOffset(math.ceil(curtainW), math.ceil(curtainH))
+			curtain.Position = UDim2.fromOffset(vp.X * 0.5 + axisU.X * d, vp.Y * 0.5 + axisU.Y * d)
+			curtain.Visible = true
+
+			-- Once the black curtain covers 100% of the screen, drop the backdrop & logo behind it
+			-- so the continuing sweep uncovers the live 3D game world and HUD.
+			if not stageHidden and d <= (curtainW - spanU) * 0.5 - 4 then
+				stageHidden = true
+				backdrop.Visible = false
+				logoContainer.Visible = false
+			end
+
+			if alpha >= 1 then
+				done = true
+			end
+		end
+
+		step(0)
+		local conn = RunService.RenderStepped:Connect(step)
+		while not done and not destroyed do
+			task.wait()
+		end
+		conn:Disconnect()
 	end
 
 	function self.Destroy(_: View)
@@ -398,13 +267,10 @@ function View.new(playerGui: Instance): View
 			return
 		end
 		destroyed = true
-		renderConn:Disconnect()
-		sizeConn:Disconnect()
 		if skipConn then
 			skipConn:Disconnect()
 		end
-		bgGui:Destroy()
-		contentGui:Destroy()
+		gui:Destroy()
 	end
 
 	return self
