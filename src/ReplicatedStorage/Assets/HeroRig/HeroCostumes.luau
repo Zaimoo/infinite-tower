@@ -1598,33 +1598,84 @@ local GILT = { 212, 175, 90 }
 local GLASS = { Material = "Glass" }
 
 -- 20. ISABELLE (Mythical Marksman - Glass-Eyed Huntress) -----------------------------------------
--- Ivory riding coat with a teal lining and a split tail, a chest quiver strap, a round glass
--- monocle over the right eye and a long platinum side braid.
+-- From her reference art (Slim body, docs/hero-art-pipeline.md §4.2 "Feminine body"): an ivory
+-- double-breasted long coat with a standing collar, gilt plackets and two rows of gilt buttons,
+-- a gilt band cinching the waist, and long coat skirts that open at the front over black
+-- trousers, edged in gilt, with a teal lining showing between the legs. A brown leather
+-- bandolier crosses from her left shoulder to her right hip with a gilt buckle, and a dark
+-- quiver of glowing red arrows hangs across her back. Ivory sleeves end in gilt cuffs over black
+-- fingerless gauntlets with a red rune; tall brown buckled boots. Platinum UGC-style hair (layered
+-- fringe, framing locks) with a braid behind her right shoulder (our Blender mesh, tools/make_isabelle_hair_ugc.py) ending in a
+-- gilt cuff. The monocle and its chain are drawn into her face decal (our own,
+-- assets/faces/make_isabelle_face.py) so they always sit on her left eye. The bow is the BOW
+-- weapon, not costume.
 do
-	local skin, hair, coat, lining = { 236, 200, 170 }, { 232, 220, 190 }, { 236, 230, 214 }, { 30, 80, 90 }
-	local pants, boot, strap, accent = { 44, 44, 50 }, { 70, 48, 34 }, { 92, 64, 44 }, { 231, 76, 60 }
+	local skin, hair, coat, lining = { 232, 192, 158 }, { 226, 220, 204 }, { 238, 232, 218 }, { 28, 96, 100 }
+	local pants, boot, bootDark, strap = { 40, 40, 46 }, { 74, 48, 34 }, { 52, 34, 26 }, { 96, 64, 42 }
+	local gauntlet, quiver, rune, runeDim = { 36, 34, 38 }, { 58, 32, 30 }, { 255, 70, 90 }, { 168, 40, 58 }
+	local FABRIC = { Material = "Fabric" }
 	table.insert(COSTUMES, costume("hero_isabelle", "Slim", {
-		Skin = skin, UpperTorso = coat, LowerTorso = coat, UpperArm = coat, LowerArm = coat, Hand = skin,
+		Skin = skin, UpperTorso = coat, LowerTorso = pants, UpperArm = coat, LowerArm = gauntlet, Hand = gauntlet,
 		UpperLeg = pants, LowerLeg = boot, Foot = boot,
 	}, {
-		piece("HairCap", "Head", { 1.32, 0.42, 1.32 }, { 0, 0.5, 0.04 }, hair, LOOSE),
-		piece("HairBangs", "Head", { 1.2, 0.26, 0.14 }, { 0, 0.36, -0.6 }, hair, LOOSE),
-		piece("HairBack", "Head", { 1.3, 0.8, 0.3 }, { 0, 0.1, 0.52 }, hair, LOOSE),
-		piece("SideBraid", "Head", { 0.26, 1.3, 0.26 }, { -0.62, -0.6, -0.1 }, hair, with(LOOSE, { Rotation = { 0, 0, -8 } })),
-		piece("Monocle", "Head", { 0.06, 0.3, 0.3 }, { 0.26, 0.06, -0.62 }, { 190, 215, 255 }, with(GLASS, LOOSE, { Shape = "Cylinder", Rotation = { 0, 90, 0 } })),
-		piece("MonocleRim", "Head", { 0.04, 0.34, 0.34 }, { 0.26, 0.06, -0.6 }, GILT, with(METAL, LOOSE, { Shape = "Cylinder", Rotation = { 0, 90, 0 } })),
-		piece("CoatCollar", "UpperTorso", { 1.9, 0.4, 1.2 }, { 0, 0.72, -0.02 }, coat, with(LOOSE, { Material = "Fabric" })),
-		piece("CoatLapel", "UpperTorso", { 0.5, 1.1, 0.08 }, { 0, 0.05, -0.54 }, lining, { Material = "Fabric" }),
-		piece("QuiverStrap", "UpperTorso", { 0.2, 1.7, 0.06 }, { 0, -0.1, -0.56 }, strap, { Rotation = { 0, 0, 40 } }),
-		piece("StrapGem", "UpperTorso", { 0.18, 0.18, 0.08 }, { 0, -0.1, -0.6 }, accent, NEON),
-		piece("Belt", "LowerTorso", { 2.08, 0.28, 1.08 }, { 0, 0.04, 0 }, strap),
-		piece("BeltBuckle", "LowerTorso", { 0.4, 0.32, 0.08 }, { 0, 0.04, -0.57 }, GILT, METAL),
-		piece("CoatTail", "LowerTorso", { 1.9, 1.5, 0.08 }, { 0, -0.95, 0.58 }, coat, with(LOOSE, { Material = "Fabric", Rotation = { 6, 0, 0 } })),
-		piece("CuffL", "LeftLowerArm", { 1.1, 0.14, 1.1 }, { 0, -0.36, 0 }, GILT, METAL),
-		piece("CuffR", "RightLowerArm", { 1.1, 0.14, 1.1 }, { 0, -0.36, 0 }, GILT, METAL),
-		piece("BootTopL", "LeftLowerLeg", { 1.08, 0.16, 1.08 }, { 0, 0.42, 0 }, GILT, METAL),
-		piece("BootTopR", "RightLowerLeg", { 1.08, 0.16, 1.08 }, { 0, 0.42, 0 }, GILT, METAL),
-	}))
+		-- Hair mesh: centred on the export's bounding box and turned 180 degrees to undo the
+		-- importer's rotation. The braid's gilt cuff sits at the braid's end (1.2-head units).
+		piece("HairMesh", "Head", { 1.793, 3.323, 1.757 }, { 0.0013, -0.6602, 0.0832 }, hair, with(LOOSE, {
+			Rotation = { 0, 180, 0 },
+			Mesh = { MeshId = "rbxassetid://ISABELLE_HAIR_ID", Scale = { 0.01, 0.01, 0.01 } },
+		})),
+		piece("BraidCuff", "Head", { 0.18, 0.26, 0.26 }, { 0.62, -1.98, 0.74 }, GILT, with(METAL, LOOSE, { Shape = "Cylinder", Rotation = { 0, 0, 90 } })),
+		-- Standing mandarin collar with a gilt edge
+		piece("CollarBack", "UpperTorso", { 1.2, 0.4, 0.12 }, { 0, 0.96, 0.42 }, coat, with(LOOSE, FABRIC, { Rotation = { -10, 0, 0 } })),
+		piece("CollarL", "UpperTorso", { 0.44, 0.36, 0.1 }, { -0.32, 0.92, -0.4 }, coat, with(LOOSE, FABRIC, { Rotation = { 0, 22, 0 } })),
+		piece("CollarR", "UpperTorso", { 0.44, 0.36, 0.1 }, { 0.32, 0.92, -0.4 }, coat, with(LOOSE, FABRIC, { Rotation = { 0, -22, 0 } })),
+		piece("CollarTrim", "UpperTorso", { 1.22, 0.05, 0.13 }, { 0, 0.2, 0 }, GILT, with(LOOSE, METAL, { RelativeTo = "CollarBack" })),
+		-- Double-breasted front: gilt plackets and two rows of gilt buttons
+		piece("PlacketL", "UpperTorso", { 0.05, 1.5, 0.05 }, { -0.5, -0.05, -0.52 }, GILT, METAL),
+		piece("PlacketR", "UpperTorso", { 0.05, 1.5, 0.05 }, { 0.5, -0.05, -0.52 }, GILT, METAL),
+		piece("ButtonL1", "UpperTorso", { 0.05, 0.13, 0.13 }, { -0.3, 0.42, -0.52 }, GILT, with(METAL, { Shape = "Cylinder", Rotation = { 0, 90, 0 } })),
+		piece("ButtonL2", "UpperTorso", { 0.05, 0.13, 0.13 }, { -0.3, 0.1, -0.52 }, GILT, with(METAL, { Shape = "Cylinder", Rotation = { 0, 90, 0 } })),
+		piece("ButtonL3", "UpperTorso", { 0.05, 0.13, 0.13 }, { -0.3, -0.22, -0.52 }, GILT, with(METAL, { Shape = "Cylinder", Rotation = { 0, 90, 0 } })),
+		piece("ButtonR1", "UpperTorso", { 0.05, 0.13, 0.13 }, { 0.3, 0.42, -0.52 }, GILT, with(METAL, { Shape = "Cylinder", Rotation = { 0, 90, 0 } })),
+		piece("ButtonR2", "UpperTorso", { 0.05, 0.13, 0.13 }, { 0.3, 0.1, -0.52 }, GILT, with(METAL, { Shape = "Cylinder", Rotation = { 0, 90, 0 } })),
+		piece("ButtonR3", "UpperTorso", { 0.05, 0.13, 0.13 }, { 0.3, -0.22, -0.52 }, GILT, with(METAL, { Shape = "Cylinder", Rotation = { 0, 90, 0 } })),
+		-- Bandolier from her left shoulder to her right hip, with a gilt buckle
+		piece("Bandolier", "UpperTorso", { 0.2, 1.9, 0.06 }, { 0.05, 0.02, -0.56 }, strap, { Rotation = { 0, 0, 40 } }),
+		piece("StrapBuckle", "UpperTorso", { 0.26, 0.22, 0.08 }, { -0.26, 0.33, -0.59 }, GILT, with(METAL, { Rotation = { 0, 0, 40 } })),
+		-- Gilt band cinching the waist
+		piece("WaistBand", "UpperTorso", { 2.04, 0.09, 1.04 }, { 0, -0.66, 0 }, GILT, METAL),
+		-- Quiver of glowing red arrows across her back, top over her left shoulder
+		piece("Quiver", "UpperTorso", { 1.6, 0.42, 0.42 }, { 0.05, 0.1, 0.78 }, quiver, with(LOOSE, { Shape = "Cylinder", Rotation = { 0, 0, 115 } })),
+		piece("QuiverBand", "UpperTorso", { 0.08, 0.44, 0.44 }, { 0.45, 0, 0 }, runeDim, with(LOOSE, { Shape = "Cylinder", RelativeTo = "Quiver" })),
+		piece("FletchA", "UpperTorso", { 0.3, 0.05, 0.14 }, { 0.94, 0.07, 0.06 }, rune, with(LOOSE, NEON, { RelativeTo = "Quiver" })),
+		piece("FletchB", "UpperTorso", { 0.3, 0.05, 0.14 }, { 0.98, -0.06, 0.04 }, rune, with(LOOSE, NEON, { RelativeTo = "Quiver" })),
+		piece("FletchC", "UpperTorso", { 0.3, 0.05, 0.14 }, { 0.92, 0, -0.08 }, rune, with(LOOSE, NEON, { RelativeTo = "Quiver" })),
+		-- Long coat skirts, open at the front over the trousers and edged in gilt; the back panel
+		-- shows its teal lining between the legs
+		piece("SkirtL", "LowerTorso", { 0.82, 2.6, 0.08 }, { -0.6, -1.45, -0.56 }, coat, with(LOOSE, FABRIC, { Rotation = { 6, 0, -6 } })),
+		piece("SkirtR", "LowerTorso", { 0.82, 2.6, 0.08 }, { 0.6, -1.45, -0.56 }, coat, with(LOOSE, FABRIC, { Rotation = { 6, 0, 6 } })),
+		piece("SkirtEdgeL", "LowerTorso", { 0.06, 2.6, 0.1 }, { 0.41, 0, 0 }, GILT, with(LOOSE, METAL, { RelativeTo = "SkirtL" })),
+		piece("SkirtEdgeR", "LowerTorso", { 0.06, 2.6, 0.1 }, { -0.41, 0, 0 }, GILT, with(LOOSE, METAL, { RelativeTo = "SkirtR" })),
+		piece("CoatBack", "LowerTorso", { 2.1, 2.7, 0.08 }, { 0, -1.45, 0.58 }, coat, with(LOOSE, FABRIC, { Rotation = { -8, 0, 0 } })),
+		piece("CoatLining", "LowerTorso", { 1.9, 2.6, 0.04 }, { 0, 0, -0.06 }, lining, with(LOOSE, FABRIC, { RelativeTo = "CoatBack" })),
+		piece("CoatHem", "LowerTorso", { 2.12, 0.06, 0.1 }, { 0, -1.33, 0 }, GILT, with(LOOSE, METAL, { RelativeTo = "CoatBack" })),
+		-- Ivory sleeves ending in gilt cuffs over black fingerless gauntlets with a red rune
+		piece("SleeveL", "LeftLowerArm", { 1.08, 0.32, 1.08 }, { 0, 0.36, 0 }, coat, FABRIC),
+		piece("SleeveR", "RightLowerArm", { 1.08, 0.32, 1.08 }, { 0, 0.36, 0 }, coat, FABRIC),
+		piece("CuffL", "LeftLowerArm", { 1.12, 0.06, 1.12 }, { 0, 0.18, 0 }, GILT, METAL),
+		piece("CuffR", "RightLowerArm", { 1.12, 0.06, 1.12 }, { 0, 0.18, 0 }, GILT, METAL),
+		piece("RuneL", "LeftLowerArm", { 0.03, 0.3, 0.08 }, { -0.55, -0.15, 0 }, rune, NEON),
+		piece("RuneR", "RightLowerArm", { 0.03, 0.3, 0.08 }, { 0.55, -0.15, 0 }, rune, NEON),
+		-- Tall brown boots: a dark top rim, a buckled strap and dark soles
+		piece("BootTopL", "LeftLowerLeg", { 1.08, 0.12, 1.08 }, { 0, 0.54, 0 }, bootDark),
+		piece("BootTopR", "RightLowerLeg", { 1.08, 0.12, 1.08 }, { 0, 0.54, 0 }, bootDark),
+		piece("BootStrapL", "LeftLowerLeg", { 1.06, 0.08, 1.06 }, { 0, 0, 0 }, bootDark),
+		piece("BootStrapR", "RightLowerLeg", { 1.06, 0.08, 1.06 }, { 0, 0, 0 }, bootDark),
+		piece("BootBuckleL", "LeftLowerLeg", { 0.06, 0.14, 0.18 }, { -0.55, 0, 0 }, GILT, METAL),
+		piece("BootBuckleR", "RightLowerLeg", { 0.06, 0.14, 0.18 }, { 0.55, 0, 0 }, GILT, METAL),
+		piece("BootSoleL", "LeftFoot", { 1.04, 0.07, 1.22 }, { 0, -0.13, -0.08 }, bootDark),
+		piece("BootSoleR", "RightFoot", { 1.04, 0.07, 1.22 }, { 0, -0.13, -0.08 }, bootDark),
+	}, "rbxassetid://83610743655380"))
 end
 
 -- 21. NYX (Transcendent Striker - Gilt Shadow) ---------------------------------------------------
