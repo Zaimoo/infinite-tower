@@ -103,10 +103,10 @@ HeroCostumes.MESHES = table.freeze({
 	["rbxassetid://70386605530551"] = "",
 	-- Rhyman's hair, our own: tools/make_rhyman_hair_ugc.py (assets/hair/rhyman_hair_ugc.blend).
 	["rbxassetid://126418889340816"] = "",
-	-- Isabelle: our Blender UGC-style hair (tools/make_isabelle_hair_ugc.py)
-	["rbxassetid://125709940577517"] = "",
+	-- Isabelle: our Blender UGC-style hair (tools/make_isabelle_hair_ugc.py), textured with assets/hair/isabelle_hair_texture.png
+	["rbxassetid://126764589472090"] = "rbxassetid://119465069375794",
 	-- Nyx: our Blender UGC-style hair (tools/make_nyx_hair_ugc.py), textured with assets/hair/nyx_hair_texture.png
-	["rbxassetid://93772226685564"] = "rbxassetid://71008130952735",
+	["rbxassetid://118642308945063"] = "rbxassetid://71008130952735",
 	-- Caspian: our Blender UGC-style shag (tools/make_caspian_hair_ugc.py), textured with assets/hair/caspian_hair_texture.png
 	["rbxassetid://90421651481031"] = "rbxassetid://131547739661735",
 } :: { [string]: string })
@@ -1629,7 +1629,7 @@ do
 		-- hugs the head (checked in Studio); the braid's gilt cuff moves with the braid's end.
 		piece("HairMesh", "Head", { 1.6496, 3.0572, 1.6164 }, { 0.0012, -0.6214, 0.0797 }, hair, with(LOOSE, {
 			Rotation = { 0, 180, 0 },
-			Mesh = { MeshId = "rbxassetid://125709940577517", Scale = { 0.0092, 0.0092, 0.0092 } },
+			Mesh = { MeshId = "rbxassetid://126764589472090", TextureId = "rbxassetid://119465069375794", Scale = { 0.0092, 0.0092, 0.0092 } },
 		})),
 		piece("BraidCuff", "Head", { 0.18, 0.26, 0.26 }, { 0.5704, -1.8356, 0.684 }, GILT, with(METAL, LOOSE, { Shape = "Cylinder", Rotation = { 0, 0, 90 } })),
 		-- Standing mandarin collar with a gilt edge
@@ -1709,7 +1709,7 @@ do
 		-- 92% about the head and lowered a little so it hugs the head (checked in Studio).
 		piece("HairMesh", "Head", { 1.6615, 1.6624, 1.6247 }, { -0.0153, 0.1726, 0.082 }, hair, with(LOOSE, {
 			Rotation = { 0, 180, 0 },
-			Mesh = { MeshId = "rbxassetid://93772226685564", TextureId = "rbxassetid://71008130952735", Scale = { 0.0092, 0.0092, 0.0092 } },
+			Mesh = { MeshId = "rbxassetid://118642308945063", TextureId = "rbxassetid://71008130952735", Scale = { 0.0092, 0.0092, 0.0092 } },
 		})),
 		-- High collar edged in gilt, with a gilt clasp at the throat
 		piece("CollarBack", "UpperTorso", { 1.2, 0.42, 0.12 }, { 0, 0.96, 0.42 }, suit, with(LOOSE, FABRIC, { Rotation = { -10, 0, 0 } })),
