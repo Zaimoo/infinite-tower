@@ -5,10 +5,11 @@ From his second reference art: a messy, voluminous auburn shag. Spiky, pointed b
 his brows with one longer piece between the eyes; spiky locks cover the tops of his ears and
 flick outward; the back is layered to the nape with outward flicks, which with the bangs gives
 the crown its volume. Built UGC style (thick, rounded clumps over a lightly grooved base sheet) with the
-helpers from tools/make_isabelle_hair_ugc.py. Textured: the mesh has UVs with V mapped to height
-on the head (1 at the crown, about 0.5 at the brows, 0 at the nape) for
-assets/hair/caspian_hair_texture.png (assets/hair/make_caspian_hair_texture.py): darker roots, a
-warm shine near the crown, lighter tips and strand lines. Roblox head
+helpers from tools/make_isabelle_hair_ugc.py. Textured with assets/hair/caspian_hair_texture.png
+(assets/hair/make_caspian_hair_texture.py): every lock is mapped along its own length (V from 1 at
+its root to 0 at its tip, U across it, on a random slice of the texture), so the strand lines
+follow each lock's direction and every lock runs from a darker root through a shine to a lighter
+tip. The base sheet maps V down from the crown and U around the head. Roblox head
 space (Y up, -Z front, +X the hero's right) on a 1.2-stud reference head. Export with the
 hero-remodel skill's scripts/blender_export_hair.py.
 """
@@ -103,8 +104,16 @@ def smooth_path(pts, n):
         out.append(0.5 * ((2 * p1) + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t + (-p0 + 3 * p1 - 3 * p2 + p3) * t ** 3))
     return out
 
+# Texture coordinates per vertex, filled as locks and the base sheet are built (VERT_UV), then
+# written to the loops before vertices are merged. PROFILE_U places each profile point across a
+# lock; each lock uses its own slice of the texture so neighbours don't match.
+VERT_UV = {}
+PROFILE_U = [1.0, 0.86, 0.5, 0.14, 0.0, 0.19, 0.5, 0.81]
+uv_rng = random.Random(777)  # separate from rng, so texture choices never change the shape
+
 def ribbon(ctrl, width, thick=0.035, segs=16, tip=2.5, root=0.6, end_tie=False, twist=0.0):
     pts = smooth_path(ctrl, segs)
+    u_lo = uv_rng.uniform(0.02, 0.5)
     rings = []
     for s, p in enumerate(pts):
         t = s / segs
@@ -125,7 +134,10 @@ def ribbon(ctrl, width, thick=0.035, segs=16, tip=2.5, root=0.6, end_tie=False, 
             shape = grow * (1 - t ** tip) * (1 + 0.15 * math.sin(math.pi * t))
         w = width * shape + 0.004
         h = thick * (0.5 + 0.5 * shape) + 0.003
-        rings.append([bm.verts.new(B(p + side * (sx * w) + nrm * (ny * h))) for sx, ny in PROFILE])
+        ring = [bm.verts.new(B(p + side * (sx * w) + nrm * (ny * h))) for sx, ny in PROFILE]
+        for k, vert in enumerate(ring):
+            VERT_UV[vert] = (u_lo + 0.46 * PROFILE_U[k], 0.98 - 0.96 * t)  # root at the top
+        rings.append(ring)
     n = len(PROFILE)
     for r0, r1 in zip(rings, rings[1:]):
         for k in range(n):
@@ -154,8 +166,13 @@ def curtain(th0, th1, y_top, y_end, off_top, off_bot, thick=0.045, nth=72, ny=12
             v = j / ny
             y = y_top + (y_end(th) - y_top) * v
             off = off_top + (off_bot - off_top) * v
-            col_o.append(bm.verts.new(B(shell(th, y, off + groove))))
-            col_i.append(bm.verts.new(B(shell(th, y, off - thick))))
+            vo = bm.verts.new(B(shell(th, y, off + groove)))
+            vi = bm.verts.new(B(shell(th, y, off - thick)))
+            uv = (0.02 + 0.96 * abs((u * 6) % 2 - 1), 0.98 - 0.5 * v)
+            VERT_UV[vo] = uv
+            VERT_UV[vi] = uv
+            col_o.append(vo)
+            col_i.append(vi)
         outer.append(col_o); inner.append(col_i)
     for i in range(nth):
         for j in range(ny):
@@ -229,18 +246,14 @@ for k, th_deg in enumerate(range(124, 237, 12)):
            shell(th, 0.05, off + 0.02), shell(th + rng.uniform(-0.08, 0.08), y_end, off + rng.uniform(0.08, 0.14))]
     clump(pts, rng.uniform(0.15, 0.2), 0.065, segs=14, tip=rng.uniform(2.0, 2.5))
 
-bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-6)
-
-# UVs: V by height (1 at the crown, about 0.5 at the brows, 0 at the nape), U across the head
-# from his left to his right (no wrap, so no seam). Kept just inside 0..1: a V of exactly 1
-# samples across the wrap into the other end of the texture.
+# Write the texture coordinates to the loops (before merging vertices, which would drop the
+# per-vertex table's keys). Anything not recorded (the crown dome) takes the root colour.
 uvl = bm.loops.layers.uv.verify()
-for f in bm.faces:
-    for loop in f.loops:
-        co = loop.vert.co  # Blender (x, y, z) = Roblox (x, -z, y)
-        v = max(0.02, min(0.98, (co.z + 0.5) / 1.45))
-        u = max(0.02, min(0.98, (co.x + 1.0) / 2.0))
-        loop[uvl].uv = (u, v)
+for face in bm.faces:
+    for loop in face.loops:
+        loop[uvl].uv = VERT_UV.get(loop.vert, (0.5, 0.96))
+
+bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-6)
 me = bpy.data.meshes.new(NAME)
 bm.to_mesh(me); bm.free()
 for p in me.polygons:

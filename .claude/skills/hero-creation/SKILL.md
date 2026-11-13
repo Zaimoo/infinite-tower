@@ -68,7 +68,9 @@ Follow the `hero-remodel` skill (face, hair, costume) with these defaults:
   layout from `tools/make_isabelle_hair_ugc.py` (braid) or `tools/make_nyx_hair_ugc.py` (bob,
   textured).
 - **Two-colour hair:** UVs with V by height (clamped 0.02–0.98) and a gradient texture from a
-  PIL generator next to the export; upload the texture like a face decal; `MESHES[mesh] =
+  PIL generator next to the export. **Strand textures** map along each lock instead (V root to
+  tip, U across, a random slice per lock; written before `remove_doubles`), so the lines follow
+  the hair: `tools/make_caspian_hair_ugc.py`; upload the texture like a face decal; `MESHES[mesh] =
   texture`; verify the import by the mirrored extreme vertex (counts differ).
 - **Blender MCP down?** Run headless with `scripts/run_hair_headless.py` (see its docstring),
   which renders front, three-quarter, side and back. Stitch them and compare with the art; fix

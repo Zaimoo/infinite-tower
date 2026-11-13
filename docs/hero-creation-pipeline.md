@@ -205,6 +205,15 @@ the other end of the texture. List the mesh in `HeroCostumes.MESHES` as `[meshId
 and set the piece's `Mesh.TextureId`. A textured import has more vertices than the export (the
 importer splits seams): verify it by the mirrored extreme vertex, not the count.
 
+Height mapping suits a plain gradient. **A texture with strand lines must follow the locks**
+instead (the user's feedback on Caspian: "the texture doesn't follow the hair's direction"):
+map every lock along its own length (V from about 1 at its root to 0 at its tip, U across it
+from the profile, each lock on its own random slice of the texture) and the base sheet with V
+down from the crown and U zig-zagging around the head (continuous, no seam). Record a UV per
+vertex while building and write them to the loops **before** `remove_doubles`, which would
+merge the vertices the table is keyed on (`tools/make_caspian_hair_ugc.py`). Each lock then
+runs from a darker root through a shine to a lighter tip, which also reads as depth.
+
 ### 6.3 Headless Blender
 
 When the Blender MCP is down, generators run headless:
@@ -433,4 +442,5 @@ What the user accepted after asking for "more pop":
 | "The braid looks like a separate part" | Back hair ended beside the braid | Gather the back clumps into the braid's root |
 | "The base of the back is overlapping" | Converging clumps crossed | Ordered end slots, farther clumps higher |
 | Hair top teal instead of black | UV V = 1 wrapped | Clamp V to 0.02–0.98 |
+| "The texture doesn't follow the hair's direction" | Strand texture mapped by height | Map strand textures along each lock (§6.2) |
 | Fist by the face instead of across the chest | Pitch only | Twist the upper arm (shoulder Y) |
