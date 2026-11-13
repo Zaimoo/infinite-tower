@@ -292,6 +292,12 @@ local function attackArgs(rig: Model, animator: any, meta: any, cue: any): any
 		end,
 		RecentHits = recentHits,
 		Rig = rig,
+		Blink = function(position: Vector3, yaw: number, from: number, to: number)
+			local node = VisualNodesByNetId[cue.NetId] :: any
+			if node then
+				node.Blink = { Position = position, Yaw = yaw, From = from, To = to }
+			end
+		end,
 		Twin = function(): Vector3?
 			local mark = TwinMarks[cue.NetId]
 			if not mark or os.clock() - mark.At > TWIN_MARK_SECONDS then
@@ -999,6 +1005,16 @@ local function stepRender(dt: number)
 		n.LodAccum = 0
 		local bodyH = (node :: any).RootHeight or node.IsHero and HeroRigSpec.GROUND_OFFSET or (node.RootPart.Size.Y * 0.5)
 		local cf = CFrame.new(node.CurrentPos + Vector3.new(0, bodyH, 0)) * CFrame.Angles(0, yaw, 0)
+		-- A skill effect (Nyx's Mirror Step) can draw the hero somewhere else for a moment; the
+		-- server position, and everything that reads it, is untouched.
+		local blink = n.Blink
+		if blink then
+			if serverNow >= blink.To then
+				n.Blink = nil
+			elseif serverNow >= blink.From then
+				cf = CFrame.new(blink.Position + Vector3.new(0, bodyH, 0)) * CFrame.Angles(0, blink.Yaw, 0)
+			end
+		end
 		node.Model:PivotTo(cf)
 		local animator = (node :: any).HeroAnimator
 		if (node :: any).EnemyRig then

@@ -50,6 +50,9 @@ export type PlayArgs = {
 	Twin: (() -> Vector3?)?,
 	-- The attacker's rendered rig (SHATTERDANCE copies it into mirror clones), when available.
 	Rig: Model?,
+	-- Draws the attacker at `position` (ground level) facing `yaw` between server times `from`
+	-- and `to` (MIRROR_STEP's blink). Cosmetic: the server position is unchanged.
+	Blink: ((position: Vector3, yaw: number, from: number, to: number) -> ())?,
 	Now: number, -- server time
 	Shake: ((magnitude: number) -> ())?, -- set only for the local player's own heroes
 }
@@ -814,17 +817,14 @@ local function behindTarget(ctx: { Args: PlayArgs }, target: Vector3): Vector3
 	return target + dir * 2.6
 end
 
--- MIRROR_STEP (the strike; the vanish and dash are its charge): a gilt flash where she appears
--- behind the target, a teal lance stabbing through it from behind, and a crit-bright burst of
--- teal and gilt sparks.
+-- MIRROR_STEP's strike, from behind the target where she blinked to (chargeMirrorStep): a
+-- teal lance stabbing through it, and a crit-bright burst of teal and gilt sparks.
 local function playMirrorStep(ctx: Context)
 	local pool, recipe, palette, args = ctx.Pool, ctx.Recipe, ctx.Palette, ctx.Args
 	local target = args.Target()
 	local behind = behindTarget(ctx, target)
 	local impact = recipe.Impact or 2.4
 	local at = ctx.ArriveAt
-	VfxPrimitives.Flare(pool, fixed(behind), 5, palette.Secondary, at - 0.08, 0.35)
-	VfxPrimitives.Burst(pool, behind, palette.Primary, impact * 0.9, at - 0.08, 0.3)
 	VfxPrimitives.Lance(pool, behind, target + (target - behind).Unit * 2.2, 0.55, palette, at, 0.05, 0.12, 0.3)
 	VfxPrimitives.Burst(pool, target, palette.Core, impact * 1.3, at, 0.35)
 	VfxPrimitives.Burst(pool, target, palette.Primary, impact * 1.8, at + 0.04, 0.4)
@@ -1470,20 +1470,80 @@ local function chargeExecute(ctx: ChargeContext): boolean
 	return true
 end
 
--- MIRROR_STEP's vanish: a glass ring and a burst of teal shards where Nyx stands, then a teal
--- streak racing from her to just behind the target by the time she strikes.
+-- MIRROR_STEP's blink (Nyx): at the wind-up she leaves a glass clone of herself where she
+-- stands and blinks behind the target in a streak of teal light; she stabs from there (the
+-- strike), then blinks back to her place as the clone shatters. The renderer draws her at the
+-- blink spot (PlayArgs.Blink); the server never moves her.
+local BLINK_OUT = 0.05 -- after the charge marker
+local BLINK_BACK = 0.82 -- of the cast
+local function blinkFlash(pool: VfxPool.VfxPool, palette: Palette, at: Vector3, time: number)
+	VfxPrimitives.Burst(pool, at, palette.Primary, 3, time, 0.3)
+	VfxPrimitives.Flare(pool, fixed(at), 4.2, palette.Core, time, 0.28)
+	VfxPrimitives.Motes(pool, at, palette.Primary, time, 10, 0.6)
+end
+
 local function chargeMirrorStep(ctx: ChargeContext): boolean
 	local pool, palette, args = ctx.Pool, ctx.Palette, ctx.Args
-	local from = (if args.Self then args.Self() else args.Origin) + Vector3.new(0, 2, 0)
+	local cue = args.Cue
+	local feet = if args.Self then args.Self() else args.Origin - Vector3.new(0, 2, 0)
+	local from = feet + Vector3.new(0, 2, 0)
 	local target = args.Target()
 	local behind = behindTarget(ctx, target)
-	local start = ctx.StartAt
-	VfxPrimitives.FlightRing(pool, from, target - from, 2.2, palette.Secondary, start)
-	VfxPrimitives.Burst(pool, from, palette.Primary, 3, start, 0.35)
-	VfxPrimitives.Flare(pool, fixed(from), 4, palette.Core, start, 0.3)
-	VfxPrimitives.Motes(pool, from, palette.Primary, start, 12, 0.7)
-	VfxPrimitives.Ribbon(pool, { From = from, To = behind, StartAt = start + 0.04, EndAt = math.max(start + 0.08, ctx.ReleaseAt - 0.04), Width = 0.8,
-		Inner = palette.Core, Outer = palette.Primary, Linger = 0.45, Seed = args.Cue.NetId })
+	local behindFeet = Vector3.new(behind.X, cue.Aim.Y, behind.Z)
+	local out = ctx.StartAt + BLINK_OUT
+	local back = math.max(ctx.ReleaseAt + 0.2, cue.StartServerTime + cue.CastSeconds * BLINK_BACK)
+	local face = Vector3.new(target.X - behind.X, 0, target.Z - behind.Z)
+	local yaw = if face.Magnitude > 1e-3 then math.atan2(-face.X, -face.Z) else 0
+
+	-- The clone she leaves behind: a glass copy of her, standing in her guard where she was.
+	local rig = args.Rig
+	local clone = if rig and rig.Parent then MirrorClones.Make(rig, pool.Folder, palette.Primary, palette.Secondary) else nil
+	if clone and rig then
+		local idle = HeroClips.Get(args.HeroId, args.WeaponType, "Idle")
+		if idle then
+			clone.Pose(rig:GetPivot(), HeroAnimator.Sample(idle, 0))
+		end
+		local shown = false
+		pool:Run({
+			Update = function(now: number): boolean
+				if now < out then
+					return false
+				end
+				if not shown then
+					shown = true
+					clone.Fade(0)
+				end
+				if now < back then
+					return false
+				end
+				local t = VfxMath.Progress(back, back + 0.2, now)
+				clone.Fade(t)
+				return t >= 1
+			end,
+			Cleanup = function()
+				clone.Destroy()
+			end,
+		})
+	end
+
+	-- Out: a flash where she stood, a streak to behind the target, a flash where she appears.
+	blinkFlash(pool, palette, from, out)
+	VfxPrimitives.FlightRing(pool, from, target - from, 2.2, palette.Secondary, out)
+	VfxPrimitives.Ribbon(pool, { From = from, To = behind, StartAt = out, EndAt = out + 0.1, Width = 0.8,
+		Inner = palette.Core, Outer = palette.Primary, Linger = 0.45, Seed = cue.NetId })
+	VfxPrimitives.Flare(pool, fixed(behind), 5, palette.Secondary, out + 0.08, 0.32)
+	VfxPrimitives.Burst(pool, behind, palette.Primary, 2.4, out + 0.08, 0.3)
+	if args.Blink then
+		args.Blink(behindFeet, yaw, out + 0.06, back)
+	end
+
+	-- Back: a flash behind the target, a streak home, and the clone shatters as she arrives.
+	blinkFlash(pool, palette, behind, back)
+	VfxPrimitives.Ribbon(pool, { From = behind, To = from, StartAt = back, EndAt = back + 0.1, Width = 0.8,
+		Inner = palette.Core, Outer = palette.Primary, Linger = 0.45, Seed = cue.NetId + 7 })
+	VfxPrimitives.Burst(pool, from, palette.Secondary, 3.2, back + 0.08, 0.35)
+	VfxPrimitives.Motes(pool, from, palette.Core, back + 0.08, 14, 0.7)
+	VfxPrimitives.FlightRing(pool, from, from - behind, 2.4, palette.Primary, back + 0.08)
 	return true
 end
 

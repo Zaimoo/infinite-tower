@@ -1647,8 +1647,9 @@ end
 -- little to her left, the forward blade held across her chest in the right hand and the reversed
 -- blade low by her left hip. Her walk carries the same guard over the walking legs.
 -- Gilt Cut: an overhead diagonal cut with the forward blade, then a backhand sweep of the
--- reversed one. Mirror Step: she drops low (the vanish), then lunges into a forward thrust with
--- the reversed blade held across as a guard (she appears behind the target). Shatterdance: the
+-- reversed one. Mirror Step: she gathers low and blinks behind the target (leaving a glass
+-- clone in her place, SkillVfx MIRROR_STEP), thrusts with the reversed blade held across as a
+-- guard, then recovers as she blinks back. Shatterdance: the
 -- forward blade upright before her face crossed by the reversed one, held while the mirror
 -- clones cut, then both slashed out as the last one shatters.
 do
@@ -1687,11 +1688,13 @@ do
 				LeftShoulder = { 80, 0, -75 }, LeftElbow = { 10, 0, 0 } }) }, -- backhand sweep
 			{ 1, ready },
 		}, { Release = 0.38 }),
-		AttackSpecial = signature(0.9, {
+		AttackSpecial = signature(1.0, {
 			{ 0, ready },
-			{ 0.3, merge(kneel, { RootOffset = { 0, -0.5, 0 } }) }, -- she drops low, then is gone
-			{ 0.46, merge(thrust, { RootOffset = { 0, -0.25, -1.6 } }) }, -- the lunge and thrust
-			{ 0.7, merge(thrust, { RootOffset = { 0, -0.2, -1.4 } }) },
+			{ 0.28, merge(kneel, { RootOffset = { 0, -0.5, 0 } }) }, -- gathers low, then blinks out
+			{ 0.36, merge(ready, { Waist = { -12, 0, 0 } }) }, -- appears behind the target
+			{ 0.48, merge(thrust, { RootOffset = { 0, -0.2, -0.5 } }) }, -- the thrust
+			{ 0.72, merge(thrust, { RootOffset = { 0, -0.2, -0.45 } }) },
+			{ 0.82, ready }, -- blinks back home
 			{ 1, ready },
 		}, { Charge = 0.3, Release = 0.48 }),
 		AttackSkill = signature(1.4, {
