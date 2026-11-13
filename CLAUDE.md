@@ -6,7 +6,7 @@ A Roblox squad-command action RPG with extraction and fortress progression, insp
 
 ## Roblox skills
 
-Also follow `AGENTS.md`. Before working on a topic, use the matching `roblox-*` skill, such as `roblox-luau`, `roblox-networking`, `roblox-security` or `roblox-data-stores`.
+Also follow `AGENTS.md`. Before working on a topic, use the matching `roblox-*` skill, such as `roblox-luau`, `roblox-networking`, `roblox-security` or `roblox-data-stores`. For hero work use `hero-creation` (a whole hero: kit, look, grip, animations, VFX; `docs/hero-creation-pipeline.md`) or `hero-remodel` (look only; `docs/hero-art-pipeline.md`).
 
 ## Layout (Rojo, `default.project.json`)
 

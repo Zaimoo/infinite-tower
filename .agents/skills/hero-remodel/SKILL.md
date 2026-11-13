@@ -14,6 +14,9 @@ One hero per branch and PR. The design rules (style, part budget, colours, rig f
 recipes) are in `docs/hero-art-pipeline.md`; read it before the first remodel in a session.
 This skill is the procedure, with the lessons that each cost an iteration.
 
+For more than the look (a new hero, its kit, grip, attack animations or skill VFX), use the
+`hero-creation` skill and `docs/hero-creation-pipeline.md` instead; they build on this skill.
+
 **Never change** `HeroRigSpec` joints or hands, grip attachments, `HeroSockets` or weapon
 prefabs. A remodel touches only that hero's block in `HeroCostumes.luau`, its override in
 `HeroClips.luau`, and new files under `assets/faces`, `assets/hair` and `tools/`. That is what

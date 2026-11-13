@@ -4,6 +4,8 @@ This is the guide for remodelling a hero in *Infinite Tower* from a reference im
 
 All 12 heroes have been through this pipeline (status in §7). The step-by-step procedure for an agent, with helper scripts and Studio snippets, is the `hero-remodel` skill in `.claude/skills/hero-remodel/` (mirrored in `.agents/skills/hero-remodel/`). This document holds the rules and the reasons; the skill holds the steps. Keep the two consistent when either changes.
 
+For a whole hero (its kit, grip, attack animations and skill VFX, not only its look), see `docs/hero-creation-pipeline.md` and the `hero-creation` skill, which build on this document.
+
 Good examples to copy from: **Han** (store hair mesh), **Velkist** (cocky face, showboat idle), **Eolka** (feminine face and Slim body, high ponytail, staff idle), **Valeria** (long layered hair), **Solaris** (wavy hair, back-mounted frame and banners), **Astrea** (very long straight hair in two meshes, curtain bangs drawn as arcs; over-budget costume).
 
 ---
