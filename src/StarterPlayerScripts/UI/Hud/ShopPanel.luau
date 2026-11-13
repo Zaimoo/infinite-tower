@@ -258,7 +258,7 @@ local function ShopPanel(props: { Profile: any, Width: number, OnClose: () -> ()
 			Layout = e("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, VerticalAlignment = Enum.VerticalAlignment.Bottom,
 				HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder }),
 		}
-		-- Isabelle first, Rourke (featured) last and largest. The odds are listed before purchase (paid random items).
+		-- Isabelle first, Rook (featured) last and largest. The odds are listed before purchase (paid random items).
 		local odds = {}
 		for tier = 7, mb.MaxStar do
 			local id = mb.HeroesByStar[tier]

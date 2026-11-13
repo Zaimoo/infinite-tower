@@ -169,7 +169,7 @@ export type SimHero = {
 	EquippedArtifactStar: number?,
 	ReflectPercent: number?, -- Caspian's Looking-Glass Bulwark: share of ranged damage sent back (HeroSkillEffects)
 	ReflectExpires: number?,
-	AttackSpeedBonus: number?, -- Rourke's Gilded Frenzy: +attack speed until AttackSpeedUntil
+	AttackSpeedBonus: number?, -- Rook's Gilded Frenzy: +attack speed until AttackSpeedUntil
 	AttackSpeedUntil: number?,
 	MirrorSourceUUID: string?, -- a mirror hero's source (the hero it copies), for the client's reflection thread
 	Archetype: string?,
@@ -1948,6 +1948,18 @@ performHeroAttack = function(simHero: SimHero, targetPos: Vector3, targetMob: Si
 		local ticks, tickSeconds = HeroActionTiming.Ticks(tierDef)
 		local target: any = targetMob or targetEnemyHero
 
+		-- Twin Reflection (Isabelle): pick the second half's target now, so clients can split the
+		-- arrow toward it; the hit reuses this pick while it is still valid (HeroSkillEffects).
+		local twinTarget: any = nil
+		if attackType == "SKILL" and targetMob and skillProfile and skillProfile.Skill.Effect == "TWIN_SHOT" then
+			twinTarget = HeroSkillEffects.PickTwinTarget(heroSkillContext(simHero, now),
+				{ Impact = { FloorId = simHero.FloorId, RoomGeneration = simHero.RoomGeneration }, Primary = targetMob } :: any,
+				simHero.Position, skillProfile.Skill.TwinRange or 30)
+			local mark: any = twinTarget or targetMob
+			-- Cosmetic: TWIN_MARK carries the attacker's NetId (amount) and the second target's NetId.
+			Tower.BroadcastAt(CombatVFXRemote, simHero, "TWIN_MARK", mark.Position, simHero.NetId, mark.NetId)
+		end
+
 		-- Cosmetic cue: clients play the tier's clip over the cast time and time the effect to
 		-- the same release and travel the impact queue uses (TowerProtocol.EncodeHeroCue).
 		Tower.BroadcastAt(CombatVFXRemote, simHero, "HERO_CUE", Protocol.EncodeHeroCue({
@@ -1984,6 +1996,8 @@ performHeroAttack = function(simHero: SimHero, targetPos: Vector3, targetMob: Si
 			TargetMob = targetMob,
 			TargetHero = targetEnemyHero,
 			TargetGeneration = target and target.EntityGeneration,
+			TwinTarget = twinTarget,
+			TwinGeneration = twinTarget and twinTarget.EntityGeneration,
 		})
 	end
 end
@@ -2771,6 +2785,8 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
     mob.CurrentHP = math.max(0, mob.CurrentHP - back)
     if mob.DamageLedger and victim.Owner then mob.DamageLedger[victim.Owner.UserId] = (mob.DamageLedger[victim.Owner.UserId] or 0) + back end
     Tower.BroadcastAt(CombatVFXRemote, mob, "HIT_SPARK", mob.Position, back, false, false)
+    -- Cosmetic: clients draw the reflection from the hero back to the shooter (amount = hero NetId).
+    Tower.BroadcastAt(CombatVFXRemote, victim, "REFLECT", mob.Position, victim.NetId, back)
     if mob.CurrentHP <= 0 and victim.Owner then handleMobDeath(mob, victim.Owner) end
    end
    local heroBarrier = victim.BarrierHP or 0

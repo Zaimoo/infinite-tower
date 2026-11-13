@@ -4,6 +4,8 @@ This is the guide for remodelling a hero in *Infinite Tower* from a reference im
 
 All 12 heroes have been through this pipeline (status in §7). The step-by-step procedure for an agent, with helper scripts and Studio snippets, is the `hero-remodel` skill in `.claude/skills/hero-remodel/` (mirrored in `.agents/skills/hero-remodel/`). This document holds the rules and the reasons; the skill holds the steps. Keep the two consistent when either changes.
 
+For a whole hero (its kit, grip, attack animations and skill VFX, not only its look), see `docs/hero-creation-pipeline.md` and the `hero-creation` skill, which build on this document.
+
 Good examples to copy from: **Han** (store hair mesh), **Velkist** (cocky face, showboat idle), **Eolka** (feminine face and Slim body, high ponytail, staff idle), **Valeria** (long layered hair), **Solaris** (wavy hair, back-mounted frame and banners), **Astrea** (very long straight hair in two meshes, curtain bangs drawn as arcs; over-budget costume).
 
 ---
@@ -35,7 +37,7 @@ Good examples to copy from: **Han** (store hair mesh), **Velkist** (cocky face, 
 
 ### 1.3 Hard constraints (never break)
 
-- **Don't break animations or weapon placement.** Never edit `HeroRigSpec` joints, hand sizes, grip attachments, `HeroSockets` or weapon prefabs while remodelling a hero. A remodel changes `HeroCostumes` data, generator scripts, hair assets, and optionally that hero's clip overrides in `HeroClips`.
+- **Don't break animations or weapon placement.** Never edit `HeroRigSpec` joints, hand sizes, grip attachments, `HeroSockets` or weapon prefabs while remodelling a hero. A remodel changes `HeroCostumes` data, generator scripts, hair assets, and optionally that hero's clip overrides in `HeroClips`. One deliberate exception: a hero may get its own grip in `HeroSockets.HERO_GRIPS` (forward or reverse, a shift along the blade, an extra offset, per weapon assembly; read from the rig's `HeroId` attribute). Other heroes keep the standard grip, and that hero's clip overrides must then be posed for the new grip and checked in Studio. Nyx holds her main dagger forward and her off-hand dagger reversed.
 - **One bone per piece.** Each costume piece is welded to exactly one body part with an explicit `Weld`. A piece that crosses a joint (cape, coat tail, long hair) must be marked `Loose`; the lint rejects anything else. `Loose` only switches off the overlap lint; the piece is still welded to its one bone, so it will clip when that joint bends. Use it for hair, cloth, trims sewn onto cloth (a hem on a skirt) and pieces mounted well behind the back. Rigid gear that overlaps another bone (a collar in the chin, a cuff in the hand) gets moved, not loosened.
 - **No external scripts, models or meshes** except allow-listed hair meshes (§4.6) and face images. Free models have shipped obfuscated loader scripts before; inspect any store asset before using it.
 - **No copyrighted character art.** Don't use store decals or meshes of existing anime characters; generate our own.

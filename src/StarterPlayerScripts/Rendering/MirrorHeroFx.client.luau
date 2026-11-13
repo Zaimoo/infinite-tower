@@ -10,11 +10,18 @@
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+
+local HeroAnimator = require(ReplicatedStorage:WaitForChild("Assets"):WaitForChild("HeroRig"):WaitForChild("HeroAnimator"))
 
 local LocalPlayer = Players.LocalPlayer
 local TAG = "MirrorHero"
 local GOLD = Color3.fromRGB(255, 214, 120)
+local FRENZY_ROSE = Color3.fromRGB(255, 76, 148)
+local HALO_BLUE = Color3.fromRGB(150, 200, 255)
+local HALO_CORE = Color3.fromRGB(230, 245, 255)
+local HALO_SHARDS = { "HaloShardTop", "HaloShardL", "HaloShardR" }
 local THREAD_SECONDS = 1.2
 local THREAD_EVERY = 14
 local GLINT_EVERY = { 6, 10 }
@@ -124,14 +131,221 @@ local function shatter(model: Model)
 	task.delay(1.2, function() e:Destroy() end)
 end
 
+-- Seraphine's halo: an ice-blue ring of light wrapping through the three glowing crystal shards,
+-- plus soft light and drifting starlight motes on each shard. EntityRenderer sets HaloHidden on a
+-- shard when it launches off her head (Basic / Special), dimming its glow until it reforms.
+local function weldLocalPos(head: BasePart, shard: BasePart): Vector3
+	local weld = shard:FindFirstChild("CostumeWeld")
+	if weld and weld:IsA("Weld") and weld.Part0 == head then
+		return (weld.C0 * weld.C1:Inverse()).Position
+	end
+	return head.CFrame:PointToObjectSpace(shard.Position)
+end
+
+local function attachHaloFx(model: Model)
+	if model:GetAttribute("HaloFxAttached") then return end
+	local head = model:FindFirstChild("Head", true)
+	local sTop = model:FindFirstChild("HaloShardTop", true)
+	local sL = model:FindFirstChild("HaloShardL", true)
+	local sR = model:FindFirstChild("HaloShardR", true)
+	if not (head and head:IsA("BasePart") and sTop and sTop:IsA("BasePart") and sL and sL:IsA("BasePart") and sR and sR:IsA("BasePart")) then
+		return
+	end
+	model:SetAttribute("HaloFxAttached", true)
+
+	local pTop = weldLocalPos(head, sTop)
+	local pL = weldLocalPos(head, sL)
+	local pR = weldLocalPos(head, sR)
+	local spec = HeroAnimator.HaloRingSpec(pTop, pL, pR)
+
+	local attL = attachmentOn(head, "HaloRingL", spec.Center - Vector3.xAxis * spec.Rx)
+	attL.CFrame = CFrame.fromMatrix(attL.Position, spec.Axis, spec.Normal, spec.Axis:Cross(spec.Normal))
+	local attR = attachmentOn(head, "HaloRingR", spec.Center + Vector3.xAxis * spec.Rx)
+	attR.CFrame = CFrame.fromMatrix(attR.Position, -spec.Axis, spec.Normal, (-spec.Axis):Cross(spec.Normal))
+
+	local curve = spec.Ry * 4 / 3
+	local beams: { Beam } = {}
+	for i, c in { curve, -curve } do
+		local name = if i == 1 then "HaloRingUpper" else "HaloRingLower"
+		local existing = head:FindFirstChild(name)
+		if existing and existing:IsA("Beam") then
+			table.insert(beams, existing)
+			continue
+		end
+		local b = Instance.new("Beam")
+		b.Name = name
+		b.Attachment0 = attL
+		b.Attachment1 = attR
+		b.Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, HALO_BLUE),
+			ColorSequenceKeypoint.new(0.5, HALO_CORE),
+			ColorSequenceKeypoint.new(1, HALO_BLUE),
+		})
+		b.LightEmission = 1
+		b.LightInfluence = 0
+		b.FaceCamera = true
+		b.Width0, b.Width1 = 0.06, 0.06
+		b.Segments = 28
+		b.CurveSize0, b.CurveSize1 = c, c
+		b.Transparency = NumberSequence.new(0.2)
+		b.Parent = head
+		table.insert(beams, b)
+	end
+
+	local shardFx: { { Shard: BasePart, Light: PointLight, Motes: ParticleEmitter } } = {}
+	for _, shardName in HALO_SHARDS do
+		local shard = model:FindFirstChild(shardName, true)
+		if not (shard and shard:IsA("BasePart")) then continue end
+		local light = Instance.new("PointLight")
+		light.Name = "HaloGlow"
+		light.Color = HALO_BLUE
+		light.Range = if shardName == "HaloShardTop" then 5.5 else 4.5
+		light.Brightness = 1.0
+		light.Shadows = false
+		light.Parent = shard
+
+		local att = attachmentOn(shard, "HaloMoteOrigin", Vector3.zero)
+		local motes = Instance.new("ParticleEmitter")
+		motes.Name = "HaloMotes"
+		motes.Color = ColorSequence.new(HALO_CORE, HALO_BLUE)
+		motes.LightEmission = 1
+		motes.Rate = 3
+		motes.Lifetime = NumberRange.new(0.6, 1.1)
+		motes.Speed = NumberRange.new(0.3, 0.9)
+		motes.SpreadAngle = Vector2.new(180, 180)
+		motes.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.14), NumberSequenceKeypoint.new(1, 0) })
+		motes.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.1), NumberSequenceKeypoint.new(1, 1) })
+		motes.Rotation = NumberRange.new(0, 360)
+		motes.Enabled = not reducedMotion()
+		motes.Parent = att
+		table.insert(shardFx, { Shard = shard, Light = light, Motes = motes })
+	end
+
+	local function refresh()
+		local allHidden = true
+		local rm = reducedMotion()
+		for _, fx in shardFx do
+			local hidden = fx.Shard:GetAttribute("HaloHidden") == true
+			fx.Light.Enabled = not hidden
+			fx.Motes.Enabled = (not hidden) and (not rm)
+			if not hidden then allHidden = false end
+		end
+		for _, b in beams do
+			b.Enabled = not allHidden
+		end
+	end
+
+	for _, fx in shardFx do
+		fx.Shard:GetAttributeChangedSignal("HaloHidden"):Connect(function()
+			local hidden = fx.Shard:GetAttribute("HaloHidden") == true
+			if hidden and not reducedMotion() then
+				fx.Motes:Emit(5)
+			end
+			refresh()
+		end)
+	end
+	refresh()
+end
+
+-- Rook's Gilded Frenzy aura: 4 seconds of hot-rose lightning sparks & glow on his greataxe.
+local function watchFrenzyAura(model: Model)
+	local function hostPart(): BasePart?
+		local weapon = model:FindFirstChild("EquippedWeapon", true)
+		if weapon and weapon:IsA("Model") and weapon.PrimaryPart then
+			return weapon.PrimaryPart
+		end
+		local hand = model:FindFirstChild("RightHand", true)
+		return if hand and hand:IsA("BasePart") then hand else rootOf(model)
+	end
+	local function setAura(active: boolean, burst: boolean)
+		local host = hostPart()
+		if not host then return end
+		local att = attachmentOn(host, "FrenzyAuraOrigin", Vector3.new(0, 0.8, 0))
+		local emitter = att:FindFirstChild("FrenzySparks") :: ParticleEmitter?
+		local light = host:FindFirstChild("FrenzyLight") :: PointLight?
+		if active then
+			if not emitter then
+				local e = Instance.new("ParticleEmitter")
+				e.Name = "FrenzySparks"
+				e.Color = ColorSequence.new(FRENZY_ROSE, GOLD)
+				e.LightEmission = 1
+				e.Rate = 18
+				e.Lifetime = NumberRange.new(0.25, 0.45)
+				e.Speed = NumberRange.new(2, 5)
+				e.SpreadAngle = Vector2.new(180, 180)
+				e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.24), NumberSequenceKeypoint.new(1, 0) })
+				e.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 1) })
+				e.Rotation = NumberRange.new(0, 360)
+				e.Parent = att
+				emitter = e
+			end
+			if not light then
+				local l = Instance.new("PointLight")
+				l.Name = "FrenzyLight"
+				l.Color = FRENZY_ROSE
+				l.Range = 7
+				l.Brightness = 1.6
+				l.Shadows = false
+				l.Parent = host
+				light = l
+			end
+			if emitter then
+				emitter.Enabled = not reducedMotion()
+				if burst and not reducedMotion() then emitter:Emit(12) end
+			end
+			if light then light.Enabled = true end
+		else
+			if emitter then emitter.Enabled = false end
+			if light then light.Enabled = false end
+		end
+	end
+
+	model:GetAttributeChangedSignal("FrenzyUntil"):Connect(function()
+		local untilTime = model:GetAttribute("FrenzyUntil")
+		if type(untilTime) ~= "number" or untilTime <= os.clock() or model:GetAttribute("HeroDown") == true then
+			setAura(false, false)
+			return
+		end
+		setAura(true, true)
+		task.delay(math.max(0.05, untilTime - os.clock()), function()
+			if not model.Parent then return end
+			local cur = model:GetAttribute("FrenzyUntil")
+			if type(cur) ~= "number" or cur <= os.clock() + 0.02 or model:GetAttribute("HeroDown") == true then
+				setAura(false, false)
+			end
+		end)
+	end)
+end
+
 local function watch(model: Instance)
 	if not model:IsA("Model") then return end
+	local typed = model :: Model
+	attachHaloFx(typed)
+	watchFrenzyAura(typed)
+	local conn: RBXScriptConnection? = nil
+	if not typed:GetAttribute("HaloFxAttached") then
+		conn = typed.DescendantAdded:Connect(function()
+			if typed:GetAttribute("HaloFxAttached") then
+				if conn then conn:Disconnect() end
+				return
+			end
+			attachHaloFx(typed)
+			if typed:GetAttribute("HaloFxAttached") and conn then
+				conn:Disconnect()
+			end
+		end)
+	end
 	model:GetAttributeChangedSignal("HeroDown"):Connect(function()
-		if model:GetAttribute("HeroDown") == true then shatter(model :: Model) end
+		if model:GetAttribute("HeroDown") == true then
+			model:SetAttribute("FrenzyUntil", nil)
+			shatter(typed)
+		end
 	end)
 	task.spawn(function()
 		-- Let the squad's other models spawn before looking for the source.
 		task.wait(0.4)
+		attachHaloFx(typed)
+		if conn and typed:GetAttribute("HaloFxAttached") then conn:Disconnect() end
 		local nextThread, nextGlint = 0, os.clock() + math.random(GLINT_EVERY[1], GLINT_EVERY[2])
 		while model.Parent and CollectionService:HasTag(model, TAG) do
 			local now = os.clock()

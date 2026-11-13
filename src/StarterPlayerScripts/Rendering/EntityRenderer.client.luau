@@ -124,6 +124,44 @@ local function setBowArrowHidden(rig: Model, hidden: boolean)
 	end
 end
 
+local haloShardToken: { [BasePart]: number } = setmetatable({}, { __mode = "k" }) :: any
+
+-- Animates Seraphine's halo shards dissolving off her head when launched (Basic / Special)
+-- and smoothly reforming back into place once the action finishes or is interrupted.
+local function animateHaloShards(rig: Model, shardNames: { string }, hidden: boolean)
+	local target = if hidden then 1 else 0
+	local duration = if hidden then 0.09 else 0.18
+	for _, shardName in shardNames do
+		local shard = rig:FindFirstChild(shardName, true)
+		if not (shard and shard:IsA("BasePart")) then
+			continue
+		end
+		local token = (haloShardToken[shard] or 0) + 1
+		haloShardToken[shard] = token
+		shard:SetAttribute("HaloHidden", hidden)
+		local startAlpha = shard.LocalTransparencyModifier
+		if math.abs(startAlpha - target) < 1e-3 then
+			shard.LocalTransparencyModifier = target
+			continue
+		end
+		task.spawn(function()
+			local started = os.clock()
+			while haloShardToken[shard] == token and shard.Parent do
+				local a = math.clamp((os.clock() - started) / duration, 0, 1)
+				local eased = if hidden then a * a else 1 - (1 - a) * (1 - a)
+				shard.LocalTransparencyModifier = startAlpha + (target - startAlpha) * eased
+				if a >= 1 then
+					break
+				end
+				RunService.RenderStepped:Wait()
+			end
+			if haloShardToken[shard] == token then
+				shard.LocalTransparencyModifier = target
+			end
+		end)
+	end
+end
+
 -- Where a shot leaves the hero: the equipped bow's Nock attachment, else the rig's chest.
 local function shotOrigin(rig: Model): Vector3
 	local weapon = rig:FindFirstChild(HeroSockets.EQUIPPED_NAME)
@@ -216,6 +254,10 @@ local function recordHit(kind: string, position: any)
 	end
 end
 
+-- Twin Reflection's second target per attacker NetId (the server's TWIN_MARK, sent with the cue).
+local TwinMarks: { [number]: { NetId: number, Position: Vector3, At: number } } = {}
+local TWIN_MARK_SECONDS = 3
+
 local function recentHits(kind: string, center: Vector3, radius: number, since: number): { Vector3 }
 	local found: { Vector3 } = {}
 	for _, hit in RecentHits do
@@ -239,6 +281,22 @@ local function castPoint(rig: Model, name: string): Vector3?
 		local nock = weapon and weapon:FindFirstChild("Nock", true)
 		if nock and nock:IsA("Attachment") then
 			return nock.WorldPosition
+		end
+	elseif name == "HALO" then
+		-- The costume's top halo shard (Seraphine), else a point above the head.
+		local shard = rig:FindFirstChild("HaloShardTop", true)
+		if shard and shard:IsA("BasePart") then
+			return shard.Position
+		end
+		local head = rig:FindFirstChild("Head")
+		if head and head:IsA("BasePart") then
+			return head.Position + Vector3.new(0, 1.6, 0)
+		end
+	elseif name == "HALO_TOP" or name == "HALO_L" or name == "HALO_R" then
+		local partName = if name == "HALO_L" then "HaloShardL" elseif name == "HALO_R" then "HaloShardR" else "HaloShardTop"
+		local shard = rig:FindFirstChild(partName, true)
+		if shard and shard:IsA("BasePart") then
+			return shard.Position
 		end
 	elseif name == "STAFF_TIP" then
 		-- WeaponVfx puts VfxTip on every equipped weapon's head; prefabs may carry their own Tip.
@@ -287,6 +345,36 @@ local function attackArgs(rig: Model, animator: any, meta: any, cue: any): any
 			return positions
 		end,
 		RecentHits = recentHits,
+		Rig = rig,
+		Enemies = function(center: Vector3, radius: number): { Vector3 }
+			local out: { Vector3 } = {}
+			for _, node in VisualNodesByNetId do
+				if not node.IsHero and node.RootPart.Parent then
+					local p = node.RootPart.Position
+					if Vector3.new(p.X - center.X, 0, p.Z - center.Z).Magnitude <= radius then
+						table.insert(out, p)
+					end
+				end
+			end
+			return out
+		end,
+		Blink = function(position: Vector3, yaw: number, from: number, to: number)
+			local node = VisualNodesByNetId[cue.NetId] :: any
+			if node then
+				node.Blink = { Position = position, Yaw = yaw, From = from, To = to }
+			end
+		end,
+		Twin = function(): Vector3?
+			local mark = TwinMarks[cue.NetId]
+			if not mark or os.clock() - mark.At > TWIN_MARK_SECONDS then
+				return nil
+			end
+			local node = VisualNodesByNetId[mark.NetId]
+			if node and node.RootPart.Parent then
+				return node.RootPart.Position
+			end
+			return mark.Position + Vector3.new(0, 2, 0)
+		end,
 		Now = Workspace:GetServerTimeNow(),
 		Shake = if meta and meta.OwnerUserId == LocalPlayer.UserId then function(magnitude: number)
 			CombatFeedback:ScreenShake(magnitude)
@@ -690,13 +778,28 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 					warn(`CombatVfx: charge effect failed: {err}`)
 				end
 			end
-			if animator.WeaponType ~= "BOW" then
-				return
-			end
-			if marker == "Release" then
-				setBowArrowHidden(rig, true)
-			elseif marker == "Nock" or marker == "End" then
-				setBowArrowHidden(rig, false)
+			if animator.WeaponType == "BOW" then
+				if marker == "Release" then
+					setBowArrowHidden(rig, true)
+				elseif marker == "Nock" or marker == "End" then
+					setBowArrowHidden(rig, false)
+				end
+			elseif animator.WeaponType == "STAFF" then
+				if action.Name == "AttackBasic" then
+					if marker == "Release" then
+						animateHaloShards(rig, { "HaloShardTop" }, true)
+					elseif marker == "End" then
+						animateHaloShards(rig, { "HaloShardTop", "HaloShardL", "HaloShardR" }, false)
+					end
+				elseif action.Name == "AttackSpecial" then
+					if marker == "Charge" then
+						animateHaloShards(rig, { "HaloShardTop", "HaloShardL", "HaloShardR" }, true)
+					elseif marker == "End" then
+						animateHaloShards(rig, { "HaloShardTop", "HaloShardL", "HaloShardR" }, false)
+					end
+				end
+			elseif meta and meta.TemplateId == "hero_rourke" and action.Name == "AttackSkill" and marker == "Release" then
+				model:SetAttribute("FrenzyUntil", os.clock() + 4.0)
 			end
 		end
 	end
@@ -983,6 +1086,16 @@ local function stepRender(dt: number)
 		n.LodAccum = 0
 		local bodyH = (node :: any).RootHeight or node.IsHero and HeroRigSpec.GROUND_OFFSET or (node.RootPart.Size.Y * 0.5)
 		local cf = CFrame.new(node.CurrentPos + Vector3.new(0, bodyH, 0)) * CFrame.Angles(0, yaw, 0)
+		-- A skill effect (Nyx's Mirror Step) can draw the hero somewhere else for a moment; the
+		-- server position, and everything that reads it, is untouched.
+		local blink = n.Blink
+		if blink then
+			if serverNow >= blink.To then
+				n.Blink = nil
+			elseif serverNow >= blink.From then
+				cf = CFrame.new(blink.Position + Vector3.new(0, bodyH, 0)) * CFrame.Angles(0, blink.Yaw, 0)
+			end
+		end
 		node.Model:PivotTo(cf)
 		local animator = (node :: any).HeroAnimator
 		if (node :: any).EnemyRig then
@@ -1094,6 +1207,21 @@ CombatVFXRemote.OnClientEvent:Connect(function(context: any, vfxType: string, po
 			if elapsed < cue.CastSeconds then
 				animator:PlayAction(ATTACK_TIER_STATES[cue.Tier] or "AttackBasic", cue.CastSeconds, elapsed, cue)
 			end
+		end
+		return
+	elseif vfxType=="REFLECT" then
+		-- Caspian's Looking-Glass Bulwark sent part of a ranged hit back: amount = his NetId.
+		local node = type(amount) == "number" and VisualNodesByNetId[amount]
+		local meta = type(amount) == "number" and MetadataByNetId[amount]
+		if node and meta and typeof(pos) == "Vector3" then
+			pcall(SkillVfx.PlayReflect, CombatVfxPool, meta.TemplateId, node.RootPart.Position + Vector3.new(0, 0.5, 0),
+				pos + Vector3.new(0, 2, 0), Workspace:GetServerTimeNow())
+		end
+		return
+	elseif vfxType=="TWIN_MARK" then
+		-- amount = the attacker's NetId, isOverdrive = the second target's NetId (cosmetic).
+		if type(amount) == "number" and type(isOverdrive) == "number" and typeof(pos) == "Vector3" then
+			TwinMarks[amount] = { NetId = isOverdrive, Position = pos, At = os.clock() }
 		end
 		return
 	elseif vfxType=="HERO_COMA" or vfxType=="HERO_KO" then

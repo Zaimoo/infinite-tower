@@ -35,7 +35,7 @@ Theme.Rarity = table.freeze({
 	Color3.fromRGB(40, 210, 175), -- Transcendent (Nyx)
 	Color3.fromRGB(224, 96, 253), -- Ascendant (Caspian)
 	Color3.fromRGB(120, 125, 240), -- Ethereal (Seraphine)
-	Color3.fromRGB(255, 130, 150), -- Immortal (Rourke)
+	Color3.fromRGB(255, 130, 150), -- Immortal (Rook)
 })
 
 function Theme.RarityColor(tier: number?): Color3

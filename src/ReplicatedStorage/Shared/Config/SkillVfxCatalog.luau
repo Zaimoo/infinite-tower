@@ -10,14 +10,18 @@
 --            CHAIN (Scholar), MEND (Healer), PLUNGE (two falling stabs; Han),
 --            BEAM (an instant straight laser from the attacker through the target; Vane),
 --            PIERCER (one heavy bolt that punches through and leaves a fading ribbon; Astrea),
---            WHIRL (crescents sweeping a full circle round the attacker, one per damage tick; Rhyman)
+--            WHIRL (crescents sweeping a full circle round the attacker, one per damage tick; Rhyman),
+--            REFRACTION (a prism from the staff tip that breaks on the target and splits into
+--            shards flying on to the enemies the hit carried to, up to Bounces; Seraphine)
 --   Skill    STORM (bow), BULWARK (Vanguard), TEMPEST (Striker), CRYSTALS (Berserker),
 --            PILLAR (Scholar), SANCTUARY (Healer), WAKE (a dash streak and a lingering circle of
 --            slashes, one wave per damage tick; Han), SINGULARITY (a black hole on the aim point
 --            that pulses on every damage tick and collapses on the last; Vane),
 --            CONSTELLATION (a constellation draws itself over the aim point, then its stars
 --            fall as bolts, one wave per damage tick; Astrea), EXECUTE (one tall vertical cut
---            through the target, a blade of light from above and a fissure past it; Rhyman)
+--            through the target, a blade of light from above and a fissure past it; Rhyman),
+--            HALL_OF_MIRRORS (Spikes mirror crystals rise round the target and beam into it and
+--            every enemy inside on each damage tick, then shatter; Seraphine)
 -- The other fields are that style's knobs; a style ignores the ones it does not use.
 -- A hero's attack clip may carry a Charge marker (HeroClips) before Release; at it SkillVfx
 -- plays the style's wind-up, if it has one (BOLT: a glyph in the casting hand, Origin LEFT_HAND;
@@ -48,6 +52,11 @@ export type TierRecipe = {
 	Spread: number?, -- fan half-angle in degrees
 	Pierce: number?, -- studs the centre arrow carries on past the target
 	Rings: boolean?, -- rings along the centre arrow's path
+	-- RICOCHET: bounce arrows from the target to the enemies the hit carried on to (Radius: how
+	-- far around the target to look for them).
+	Bounces: number?,
+	-- TWIN: where along the flight the arrow splits (0..1).
+	Split: number?,
 	-- STORM: a flare climbs from the bow, a sigil opens, then one wave of arrows per damage tick.
 	FlareHeight: number?,
 	SigilRadius: number?,
@@ -57,6 +66,7 @@ export type TierRecipe = {
 	Radius: number?, -- studs: cone reach, tremor, tempest, crystal field, healing circle, taunt
 	Slashes: number?, -- TEMPEST: slash arcs around the target. WAKE: slash arcs per wave
 	Spikes: number?, -- CRYSTALS / TREMOR: spikes at the centre (plus one under each hit enemy)
+	SpinRadius: number?, -- GILDED_FRENZY: the whirlwind's reach after the slam (the kit's SpinRadius)
 	PillarHeight: number?, -- PILLAR: column height, studs
 	Linger: number?, -- seconds a ground effect or shell lasts after impact (PIERCER: the ribbon's fade)
 	Implode: boolean?, -- TEMPEST: a dark sphere collapses before the burst (rift)
@@ -90,9 +100,9 @@ SkillVfxCatalog.WeaponArchetype = table.freeze({
 
 -- Every Style SkillVfx knows, per tier.
 SkillVfxCatalog.Styles = table.freeze({
-	Basic = table.freeze({ SHOT = true, BOLT = true, SLASH = true }),
-	Special = table.freeze({ VOLLEY = true, CLEAVE = true, CROSS = true, TREMOR = true, CHAIN = true, MEND = true, PLUNGE = true, BEAM = true, PIERCER = true, WHIRL = true }),
-	Skill = table.freeze({ STORM = true, BULWARK = true, TEMPEST = true, CRYSTALS = true, PILLAR = true, SANCTUARY = true, WAKE = true, SINGULARITY = true, CONSTELLATION = true, EXECUTE = true }),
+	Basic = table.freeze({ DIAGONAL_SLASH = true, GILT_CLEAVE = true, GILT_CUT = true, SHOT = true, BOLT = true, SLASH = true }),
+	Special = table.freeze({ REFRACTION = true, POLISHED_BASH = true, LAST_STAND = true, MIRROR_STEP = true, RICOCHET = true, VOLLEY = true, CLEAVE = true, CROSS = true, TREMOR = true, CHAIN = true, MEND = true, PLUNGE = true, BEAM = true, PIERCER = true, WHIRL = true }),
+	Skill = table.freeze({ HALL_OF_MIRRORS = true, LOOKING_GLASS = true, GILDED_FRENZY = true, SHATTERDANCE = true, TWIN = true, STORM = true, BULWARK = true, TEMPEST = true, CRYSTALS = true, PILLAR = true, SANCTUARY = true, WAKE = true, SINGULARITY = true, CONSTELLATION = true, EXECUTE = true }),
 })
 
 local function rgb(r: number, g: number, b: number): Color3
@@ -295,41 +305,56 @@ SkillVfxCatalog.Heroes = table.freeze({
 	},
 
 	-- The Gilded Mirror (docs/gilded-mirror-plan.md §6.2): gilt and glass over each hero's rarity colour.
-	-- Glint Shot / Ricochet / Twin Reflection: gold-trailed arrows; the Skill rains twin arrows from a red flare.
+	-- Glint Shot / Ricochet / Twin Reflection, from her reference art: glowing crimson arrows with long,
+	-- laser-like trails and gilt sparks. Ricochet glints off the target and bounces on to the next
+	-- enemy; Twin Reflection's held draw glows, then the arrow shatters through a gilt mirror
+	-- mid-flight into two halves, one per target.
 	hero_isabelle = {
-		Palette = { Primary = rgb(255, 214, 120), Secondary = rgb(231, 76, 60), Core = rgb(255, 250, 235), Accent = rgb(190, 215, 255) },
-		Basic = { Style = "SHOT", Projectile = "ARROW", Scale = 1.0, Arc = 0.3, Trail = 0.16, Impact = 1.8 },
-		Special = { Style = "VOLLEY", Projectile = "ARROW", Scale = 1.25, Arc = 0.12, Trail = 0.22, Impact = 2.4, Count = 2, Spread = 9, Pierce = 6, Rings = true },
-		Skill = { Style = "STORM", Projectile = "ARROW", Scale = 1.4, Trail = 0.25, Impact = 2.6, FlareHeight = 24, SigilRadius = 16, RainPerWave = 2, RainHeight = 26, Shake = 0.22 },
+		Palette = { Primary = rgb(255, 46, 84), Secondary = rgb(212, 175, 90), Core = rgb(255, 222, 228), Accent = rgb(150, 14, 40) },
+		Basic = { Style = "SHOT", Projectile = "ARROW", Scale = 1.0, Arc = 0.12, Trail = 0.3, Impact = 1.8 },
+		Special = { Style = "RICOCHET", Projectile = "ARROW", Scale = 1.4, Arc = 0.1, Trail = 0.4, Impact = 3.0, Bounces = 1, Radius = 14 },
+		Skill = { Style = "TWIN", Projectile = "ARROW", Origin = "NOCK", Scale = 1.6, Arc = 0.05, Trail = 0.45, Impact = 3.6, Split = 0.42, Radius = 16, Shake = 0.3 },
 	},
-	-- Gilt Cut / Mirror Step / Shatterdance: thin teal cuts; five clone slashes ring the target.
+	-- Gilt Cut: an X of teal and gilt crescents. Mirror Step: a glass afterimage where she stood, a
+	-- streak to behind the target and a lance-bright stab through it. Shatterdance: five glass
+	-- clones of Nyx stand before mirror panes around the target; each in turn lunges in, slashes
+	-- and shatters, then a shockwave over the skill's radius.
 	hero_nyx = {
-		Palette = { Primary = rgb(60, 220, 190), Secondary = rgb(212, 175, 90), Core = rgb(235, 255, 250) },
-		Basic = { Style = "SLASH", Scale = 0.8, Impact = 1.2 },
-		Special = { Style = "CROSS", Scale = 1.05, Impact = 1.9 },
-		Skill = { Style = "TEMPEST", Radius = 12, Slashes = 5, Impact = 3, Shake = 0.2 },
+		Palette = { Primary = rgb(40, 226, 196), Secondary = rgb(212, 175, 90), Core = rgb(235, 255, 250), Accent = rgb(12, 110, 104) },
+		Basic = { Style = "GILT_CUT", Scale = 0.9, Impact = 1.6 },
+		Special = { Style = "MIRROR_STEP", Impact = 2.6, Shake = 0.15 },
+		Skill = { Style = "SHATTERDANCE", Radius = 12, Impact = 3.4, Shake = 0.25 },
 	},
-	-- Gilt Edge / Polished Bash / Looking-Glass Bulwark: pearl white and gilt; the wall glows pink-violet.
+	-- From his reference art's runed sword and shield: violet glow over pearl and gilt. Gilt Edge: a
+	-- diagonal cut that slices through the target (a cut line, a wake and a crescent along it). Polished Bash: the shield flashes like a mirror and a shockwave fans over the
+	-- stagger cone. Looking-Glass Bulwark: a wall of mirror panes rises before him, a taunt
+	-- shockwave and tethers mark every enemy in range, the wall shatters into a glass barrier, and
+	-- every reflected ranged hit flies back at the shooter (PlayReflect).
 	hero_caspian = {
-		Palette = { Primary = rgb(236, 232, 255), Secondary = rgb(224, 96, 253), Core = rgb(255, 255, 255), Accent = rgb(212, 175, 90) },
-		Basic = { Style = "SLASH", Scale = 1.0, Impact = 1.6 },
-		Special = { Style = "CLEAVE", Scale = 1.2, Radius = 10, Impact = 2.4 },
-		Skill = { Style = "BULWARK", Radius = 25, Linger = 6, Impact = 3.2, Shake = 0.2 },
+		Palette = { Primary = rgb(226, 86, 255), Secondary = rgb(212, 175, 90), Core = rgb(255, 236, 255), Accent = rgb(150, 60, 220) },
+		Basic = { Style = "DIAGONAL_SLASH", Scale = 1.1, Impact = 1.8 },
+		Special = { Style = "POLISHED_BASH", Radius = 10, Impact = 2.8, Shake = 0.15 },
+		Skill = { Style = "LOOKING_GLASS", Radius = 25, Linger = 6, Impact = 3.4, Shake = 0.3 },
 	},
-	-- Shard Bolt / Refraction / Hall of Mirrors: indigo glass; the prism chains to three shards and the
-	-- Skill raises a ring of mirror crystals that stays for its pulses.
+	-- From her reference art's halo and grimoire glow: periwinkle light, pale glass blue, white,
+	-- and her gilt trim. Shard Bolt: a glass shard leaves her halo and flies to the target. Refraction: the three halo
+	-- shards fly to the staff tip and join into a prism; the prism breaks on the target in a
+	-- triangle of glass rings and splits into three shards that fly on to the other enemies hit.
+	-- Hall of Mirrors: four mirror crystals rise around the target over a floor sigil and fire
+	-- beams into it (and at every enemy inside) on every pulse, then shatter.
 	hero_seraphine = {
-		Palette = { Primary = rgb(120, 125, 240), Secondary = rgb(190, 215, 255), Core = rgb(245, 245, 255), Accent = rgb(212, 175, 90) },
-		Basic = { Style = "BOLT", Projectile = "ORB", Scale = 0.9, Arc = 0.05, Trail = 0.18, Impact = 1.8 },
-		Special = { Style = "CHAIN", Projectile = "ORB", Scale = 1.25, Arc = 0.05, Trail = 0.22, Impact = 2.4, Radius = 14 },
-		Skill = { Style = "CRYSTALS", Radius = 16, Spikes = 4, Impact = 3.4, Linger = 4, Shake = 0.22 },
+		Palette = { Primary = rgb(130, 140, 255), Secondary = rgb(190, 215, 255), Core = rgb(248, 248, 255), Accent = rgb(212, 175, 90) },
+		Basic = { Style = "BOLT", Projectile = "SHARD", Origin = "HALO", Scale = 1.1, Arc = 0.08, Trail = 0.22, Impact = 1.9 },
+		Special = { Style = "REFRACTION", Projectile = "PRISM", Origin = "STAFF_TIP", Scale = 1.3, Arc = 0.04, Trail = 0.3, Impact = 2.8, Radius = 14, Bounces = 3, Shake = 0.15 },
+		Skill = { Style = "HALL_OF_MIRRORS", Radius = 16, Spikes = 4, Impact = 3.2, Shake = 0.25 },
 	},
-	-- Gilt Cleave / Last Stand / Gilded Frenzy: rose and gold; the slam bursts into gold shards.
+	-- Gilt Cleave / Last Stand / Gilded Frenzy: hot rose frenzy lightning and gilt shards; the slam
+	-- erupts into rose-gold crystals and wraps his greataxe in rose energy for 4 s.
 	hero_rourke = {
-		Palette = { Primary = rgb(255, 130, 150), Secondary = rgb(212, 175, 90), Core = rgb(255, 240, 220), Accent = rgb(255, 214, 120) },
-		Basic = { Style = "SLASH", Scale = 1.3, Impact = 2.0 },
-		Special = { Style = "TREMOR", Radius = 8, Spikes = 4, Impact = 2.8, Shake = 0.15 },
-		Skill = { Style = "CRYSTALS", Radius = 18, Spikes = 7, Impact = 3.4, Linger = 1.2, Shake = 0.35 },
+		Palette = { Primary = rgb(255, 76, 148), Secondary = rgb(212, 175, 90), Core = rgb(255, 234, 242), Accent = rgb(255, 214, 120) },
+		Basic = { Style = "GILT_CLEAVE", Scale = 1.4, Impact = 2.4 },
+		Special = { Style = "LAST_STAND", Radius = 8, Impact = 3.2, Shake = 0.2 },
+		Skill = { Style = "GILDED_FRENZY", Radius = 18, SpinRadius = 12, Spikes = 8, Impact = 3.8, Linger = 1.2, Shake = 0.35 },
 	},
 } :: { [string]: Recipe })
 

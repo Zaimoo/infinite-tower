@@ -190,6 +190,19 @@ local function nearbyOthers(ctx: Context, hit: Hit, center: Vector3, radius: num
 	end
 end
 
+-- Twin Reflection's second target: the mob with the most HP within `radius` of `center`, other
+-- than the primary. CombatSimulation picks it when the attack starts (so clients can draw the
+-- split toward it) and the hit reuses that pick while it is still valid.
+function HeroSkillEffects.PickTwinTarget(ctx: Context, hit: Hit, center: Vector3, radius: number): any?
+	local best: any, bestHP = nil, -1
+	for _, mob in ctx.Mobs do
+		if mob ~= hit.Primary and eligible(ctx, hit, mob) and near(mob, center, radius) and (mob.CurrentHP or 0) > bestHP then
+			best, bestHP = mob, mob.CurrentHP or 0
+		end
+	end
+	return best
+end
+
 local function resolveSkill(ctx: Context, hit: Hit, scale: number)
 	local attacker = hit.Attacker
 	local skill = hit.Profile.Skill
@@ -204,12 +217,12 @@ local function resolveSkill(ctx: Context, hit: Hit, scale: number)
 		if not first then return end
 		local amount = math.round(atk * mult * scale)
 		local radius = skill.TwinRange or 30
-		local best: any, bestHP = nil, -1
-		for _, mob in ctx.Mobs do
-			if mob ~= hit.Primary and eligible(ctx, hit, mob) and near(mob, attacker.Position, radius) and (mob.CurrentHP or 0) > bestHP then
-				best, bestHP = mob, mob.CurrentHP or 0
-			end
-		end
+		-- Prefer the target picked when the attack started (the one clients drew the split toward).
+		local picked = hit.Impact.TwinTarget
+		local best = if picked and picked.EntityGeneration == hit.Impact.TwinGeneration and eligible(ctx, hit, picked)
+				and near(picked, attacker.Position, radius + 6)
+			then picked
+			else HeroSkillEffects.PickTwinTarget(ctx, hit, attacker.Position, radius)
 		local second = best or (if hit.Primary and eligible(ctx, hit, hit.Primary) then hit.Primary else nil)
 		if second then damageMob(ctx, hit, second, amount) end
 		return
@@ -217,10 +230,19 @@ local function resolveSkill(ctx: Context, hit: Hit, scale: number)
 		-- Caspian: the Vanguard taunt and barrier below, plus ranged reflection for the barrier's duration.
 		attacker.ReflectPercent = skill.ReflectPercent or 0.20
 		attacker.ReflectExpires = ctx.Now + (skill.Duration or 6.0)
-	elseif skill.Effect == "FRENZY" and first then
-		-- Rourke: the Berserker slam below, then a short attack-speed buff (CombatSimulation reads it).
-		attacker.AttackSpeedBonus = skill.AttackSpeedBonus or 0.25
-		attacker.AttackSpeedUntil = ctx.Now + (skill.BuffSeconds or 4)
+	elseif skill.Effect == "FRENZY" then
+		-- Rook: a leaping slam (the first tick, over Radius), then a whirlwind (one tick per spin,
+		-- over SpinRadius), weighted by TickWeight; the attack-speed buff (CombatSimulation reads
+		-- it) starts on the last spin. Others in range take the Berserker half.
+		local ticks = math.max(1, hit.Impact.Ticks or 1)
+		local weight = HeroSkillEffects.TickWeight(skill, hit.Tick, ticks)
+		local radius = if first then (skill.Radius or 18.0) else (skill.SpinRadius or skill.Radius or 12.0)
+		splash(ctx, hit, radius, math.round(atk * mult * 0.5 * scale * weight))
+		if hit.Tick >= ticks then
+			attacker.AttackSpeedBonus = skill.AttackSpeedBonus or 0.25
+			attacker.AttackSpeedUntil = ctx.Now + (skill.BuffSeconds or 4)
+		end
+		return
 	end
 	if skill.Effect == "SINGULARITY" then
 		singularity(ctx, hit, skill, math.round(atk * mult * 0.6 * scale))
@@ -323,7 +345,7 @@ local function resolveSpecial(ctx: Context, hit: Hit): number
 		nearbyOthers(ctx, hit, hit.Center, special.RicochetRadius or 14, special.SecondaryParam or 1, math.round(atk * (special.RicochetDamage or 0.75)))
 		return 1
 	elseif special.SecondaryEffect == "LAST_STAND" then
-		-- Rourke: the Berserker stagger, and a hit that grows from DamageMultiplier at full HP to
+		-- Rook: the Berserker stagger, and a hit that grows from DamageMultiplier at full HP to
 		-- MaxMultiplier at 10% HP or less.
 		nearbyOthers(ctx, hit, hit.Center, special.SecondaryParam or 8, math.huge, math.round(atk * 0.50))
 		return HeroSkillEffects.LastStandBonus(attacker, special)
@@ -375,7 +397,7 @@ local function resolveSpecial(ctx: Context, hit: Hit): number
 	return 1
 end
 
--- Rourke's Last Stand: extra multiplier on the primary hit for the attacker's missing HP.
+-- Rook's Last Stand: extra multiplier on the primary hit for the attacker's missing HP.
 function HeroSkillEffects.LastStandBonus(attacker: any, special: any): number
 	local hp = (attacker.CurrentHP or 0) / math.max(1, attacker.MaxHP or 1)
 	local missing = math.clamp((1 - hp) / 0.9, 0, 1)
@@ -385,9 +407,22 @@ function HeroSkillEffects.LastStandBonus(attacker: any, special: any): number
 end
 
 -- Applies the tier's secondary effects for one tick. Returns the extra primary-hit multiplier.
+-- Share of a Skill's damage that tick `tick` of `ticks` carries, relative to an even split (1 = an
+-- even share). A kit with SlamShare puts that share of the total on the first tick and splits
+-- the rest evenly over the others (Rook's slam, then his spins).
+function HeroSkillEffects.TickWeight(skill: any, tick: number, ticks: number): number
+	local share = skill and skill.SlamShare
+	if type(share) ~= "number" or ticks <= 1 then
+		return 1
+	end
+	return if tick <= 1 then share * ticks else (1 - share) * ticks / (ticks - 1)
+end
+
 function HeroSkillEffects.Resolve(ctx: Context, hit: Hit): number
 	if hit.Tier == "SKILL" then
 		resolveSkill(ctx, hit, 1 / math.max(1, hit.Impact.Ticks or 1))
+		-- The primary hit scales with the tick's weight too (CombatSimulation multiplies by it).
+		return HeroSkillEffects.TickWeight(hit.Profile.Skill, hit.Tick, math.max(1, hit.Impact.Ticks or 1))
 	elseif hit.Tier == "SPECIAL" then
 		return resolveSpecial(ctx, hit)
 	end

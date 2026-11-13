@@ -93,7 +93,7 @@ test("the Gilded Mirror drops only its five mirror heroes, one per tier 7-11", f
 		end
 	end
 	assert(math.abs(total - 1) < 1e-9, "rates sum to 1")
-	assert(banner.FeaturedHeroId == "hero_rourke", "Rourke is featured")
+	assert(banner.FeaturedHeroId == "hero_rourke", "Rook is featured")
 end)
 
 print(string.format("hero-banner-odds: %d passed", passed))

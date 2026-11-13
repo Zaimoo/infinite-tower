@@ -15,6 +15,9 @@ local VfxMath = require(script.Parent:WaitForChild("VfxMath"))
 local VfxPool = require(script.Parent:WaitForChild("VfxPool"))
 local VfxPrimitives = require(script.Parent:WaitForChild("VfxPrimitives"))
 local ProjectileVfx = require(script.Parent:WaitForChild("ProjectileVfx"))
+local MirrorClones = require(script.Parent:WaitForChild("MirrorClones"))
+local HeroClips = require(script.Parent.Parent:WaitForChild("HeroRig"):WaitForChild("HeroClips"))
+local HeroAnimator = require(script.Parent.Parent:WaitForChild("HeroRig"):WaitForChild("HeroAnimator"))
 
 local SkillVfx = {}
 
@@ -42,6 +45,17 @@ export type PlayArgs = {
 	Allies: (() -> { Vector3 })?, -- the attacker's squad (healing effects)
 	-- Positions the server reported hits ("HIT") or heals ("HEAL") at, near `center`, since `since`.
 	RecentHits: ((kind: string, center: Vector3, radius: number, since: number) -> { Vector3 })?,
+	-- TWIN: live body centre of the second target the server picked when the attack started
+	-- (its TWIN_MARK), or nil when there is none.
+	Twin: (() -> Vector3?)?,
+	-- The attacker's rendered rig (SHATTERDANCE copies it into mirror clones), when available.
+	Rig: Model?,
+	-- Positions of the enemies currently drawn within `radius` of `center` (LOOKING_GLASS marks
+	-- the taunted ones). Cosmetic: the server decides who is taunted.
+	Enemies: ((center: Vector3, radius: number) -> { Vector3 })?,
+	-- Draws the attacker at `position` (ground level) facing `yaw` between server times `from`
+	-- and `to` (MIRROR_STEP's blink). Cosmetic: the server position is unchanged.
+	Blink: ((position: Vector3, yaw: number, from: number, to: number) -> ())?,
 	Now: number, -- server time
 	Shake: ((magnitude: number) -> ())?, -- set only for the local player's own heroes
 }
@@ -427,6 +441,58 @@ local function playChain(ctx: Context)
 	end)
 end
 
+-- A ring of light lying flat on the ground under `point` (a landing shockwave).
+local function groundRing(pool: VfxPool.VfxPool, point: Vector3, radius: number, color: Color3, at: number, duration: number)
+	local ground = CFrame.new(point.X, point.Y - 1.8, point.Z) * CFrame.Angles(0, 0, math.pi / 2)
+	VfxPrimitives.Disc(pool, { CFrame = ground, Radius = radius, Color = color, StartAt = at, EndAt = at + duration, Grow = 0.15, Transparency = 0.3 })
+end
+
+-- A bright, layered hit: a big burst, a gold glint, a ground shockwave and rising sparks.
+local function bigHit(pool: VfxPool.VfxPool, palette: Palette, point: Vector3, size: number, at: number)
+	VfxPrimitives.Burst(pool, point, palette.Primary, size * 1.3, at, 0.4)
+	VfxPrimitives.Burst(pool, point, palette.Core, size * 0.7, at, 0.25)
+	VfxPrimitives.Flare(pool, fixed(point), size * 1.7, palette.Secondary, at, 0.4)
+	groundRing(pool, point, size * 1.1, palette.Primary, at, 0.55)
+	VfxPrimitives.Motes(pool, point, palette.Secondary, at, 8, 0.6)
+end
+
+-- RICOCHET: the arrow strikes the target with a big gilt glint and shockwave, then bounces on to
+-- each enemy the server carried the hit to (Isabelle's Ricochet): a full-size arrow trailing a
+-- glowing crimson wake from the target to each, nearest first, up to Bounces, landing in a flash.
+local function playRicochet(ctx: Context)
+	local pool, recipe, palette = ctx.Pool, ctx.Recipe, ctx.Palette
+	local impact = recipe.Impact or 2.4
+	playProjectile(ctx)
+	local target = ctx.Args.Target
+	VfxPrimitives.Flare(pool, target, impact * 2.2, palette.Secondary, ctx.ArriveAt, 0.35)
+	VfxPrimitives.Burst(pool, target(), palette.Core, impact * 1.4, ctx.ArriveAt, 0.35)
+	afterHits(ctx, "HIT", target, recipe.Radius or 14, function(points: { Vector3 })
+		local from = target()
+		local now = ctx.ArriveAt + HIT_LOOKUP_DELAY
+		local others = {}
+		for _, point in points do
+			if VfxMath.Distance(point, from) > 1.5 then
+				table.insert(others, point)
+			end
+		end
+		table.sort(others, function(a: Vector3, b: Vector3): boolean
+			return VfxMath.Distance(a, from) < VfxMath.Distance(b, from)
+		end)
+		local body = projectile(recipe, palette, (recipe.Scale or 1) * 1.15)
+		for i = 1, math.min(#others, recipe.Bounces or 1) do
+			local point = others[i] + Vector3.new(0, 1.5, 0)
+			local travel = math.clamp(VfxMath.Distance(from, point) / 40, 0.2, 0.4)
+			-- The deflection: a glass ring on the target, facing the way the arrow leaves.
+			VfxPrimitives.FlightRing(pool, from, point - from, 2.2, palette.Secondary, now)
+			VfxPrimitives.Ribbon(pool, { From = from, To = point, StartAt = now, EndAt = now + travel, Width = 0.7,
+				Inner = palette.Primary, Outer = palette.Accent or palette.Secondary, Linger = 0.6, Seed = ctx.Args.Cue.NetId + i })
+			fly(pool, body, from, fixed(point), now, now + travel, 1.2, function(at: Vector3)
+				bigHit(pool, palette, at, impact, now + travel)
+			end)
+		end
+	end)
+end
+
 -- MEND: a bolt to the enemy, then motes of light rising from whoever the server healed.
 local function playMend(ctx: Context)
 	local pool, palette = ctx.Pool, ctx.Palette
@@ -478,6 +544,68 @@ local function playStorm(ctx: Context)
 		end
 	end
 	shake(ctx, waves[1])
+end
+
+-- TWIN: one large glowing arrow leaves the bow. Ahead of it a gilt mirror pane forms in the air;
+-- the arrow strikes it in a big gold flash and a spray of sparks, and splits in two. One half
+-- flies on into the target, the other to the second target the server picked (or, for a lone
+-- target, arcing over and into the same one), each trailing a crimson wake, and both land
+-- together in bright hits while the pane lingers and fades (Isabelle's Twin Reflection).
+local MIRROR_FORM = 0.25 -- the pane appears this long before the arrow reaches it
+local MIRROR_LINGER = 0.7 -- and stays this long after the split
+
+local function playTwin(ctx: Context)
+	local args, recipe, palette, pool = ctx.Args, ctx.Recipe, ctx.Palette, ctx.Pool
+	local origin = originOf(args, recipe)
+	local startAt, arriveAt = ctx.StartAt, ctx.ArriveAt
+	local split = recipe.Split or 0.42
+	local splitAt = startAt + (arriveAt - startAt) * split
+	local aim = args.Target()
+	local splitPoint = origin:Lerp(aim, split) + Vector3.new(0, 1, 0)
+	local impact = recipe.Impact or 3
+	local lead = projectile(recipe, palette, (recipe.Scale or 1) * 1.6)
+	local half = projectile(recipe, palette, (recipe.Scale or 1) * 1.25)
+	local twin = args.Twin and args.Twin()
+	local lone = twin == nil or VfxMath.Distance(twin :: Vector3, aim) < 2
+	local function secondTo(): Vector3
+		local live = args.Twin and args.Twin()
+		return if live then live else args.Target()
+	end
+
+	-- The mirror pane: a glass disc facing along the flight inside a wider gilt rim.
+	local direction = aim - origin
+	if direction.Magnitude > 1e-3 then
+		local frame = CFrame.lookAt(splitPoint, splitPoint + direction) * CFrame.Angles(0, math.pi / 2, 0)
+		local formAt = math.max(startAt, splitAt - MIRROR_FORM)
+		VfxPrimitives.Disc(pool, { CFrame = frame, Radius = 4.2, Color = palette.Secondary, StartAt = formAt, EndAt = splitAt + MIRROR_LINGER, Grow = 0.1, Transparency = 0.45 })
+		VfxPrimitives.Disc(pool, { CFrame = frame * CFrame.new(0.05, 0, 0), Radius = 3.4, Color = palette.Accent or palette.Core, StartAt = formAt, EndAt = splitAt + MIRROR_LINGER, Grow = 0.1, Transparency = 0.25 })
+	end
+
+	fly(pool, lead, origin, fixed(splitPoint), startAt, splitAt, 0.2, function(at: Vector3)
+		-- The split: a big gold flash, a white core flash, a shockwave ring and a spray of sparks.
+		VfxPrimitives.Flare(pool, fixed(at), 10, palette.Secondary, splitAt, 0.55)
+		VfxPrimitives.Flare(pool, fixed(at), 6, palette.Core, splitAt, 0.35)
+		VfxPrimitives.Burst(pool, at, palette.Core, impact * 1.4, splitAt, 0.4)
+		VfxPrimitives.Burst(pool, at, palette.Primary, impact * 2, splitAt + 0.05, 0.5)
+		VfxPrimitives.FlightRing(pool, at, direction, 5, palette.Secondary, splitAt)
+		VfxPrimitives.Motes(pool, at, palette.Secondary, splitAt, 16, 0.8)
+		VfxPrimitives.Motes(pool, at, palette.Core, splitAt, 10, 0.6)
+		local function land(point: Vector3)
+			bigHit(pool, palette, point, impact, arriveAt)
+		end
+		local seed = args.Cue.NetId
+		VfxPrimitives.Ribbon(pool, { From = at, To = aim, StartAt = splitAt, EndAt = arriveAt, Width = 0.9,
+			Inner = palette.Primary, Outer = palette.Secondary, Linger = 0.7, Seed = seed })
+		fly(pool, half, at, args.Target, splitAt, arriveAt, 0.4, land)
+		local second = secondTo()
+		if not lone then
+			VfxPrimitives.Ribbon(pool, { From = at, To = second, StartAt = splitAt, EndAt = arriveAt, Width = 0.9,
+				Inner = palette.Primary, Outer = palette.Secondary, Linger = 0.7, Seed = seed + 3 })
+		end
+		fly(pool, half, at, if lone then args.Target else secondTo, splitAt, arriveAt, if lone then 4 else 1.4, land)
+	end)
+	shake(ctx, splitAt)
+	shake(ctx, arriveAt)
 end
 
 local STAR_FALL_SECONDS = 0.24
@@ -654,6 +782,477 @@ local function playTempest(ctx: Context)
 	VfxPrimitives.Ring(pool, { Center = center, From = 1, To = radius, Color = palette.Primary, StartAt = at, EndAt = at + 0.45, Width = 0.9 })
 	VfxPrimitives.Burst(pool, center + Vector3.new(0, 1.5, 0), palette.Core, recipe.Impact or 3, at, 0.3)
 	shake(ctx, at)
+end
+
+-- Caspian's kit (the Gilded Mirror) -----------------------------------------------------------
+
+-- DIAGONAL_SLASH (Caspian's Gilt Edge): one diagonal cut that slices through the target, matching
+-- his swing from high on his right down across to his left. A bright cut line shoots through the
+-- target along that diagonal and leaves a short glowing wake, a large crescent sweeps along the
+-- same line, and the target flashes with a burst and a spray of gilt sparks.
+local function playDiagonalSlash(ctx: Context)
+	local pool, recipe, palette, args = ctx.Pool, ctx.Recipe, ctx.Palette, ctx.Args
+	local at = ctx.ArriveAt
+	local target = args.Target()
+	local forward = heading(ctx)
+	local right = forward:Cross(Vector3.yAxis).Unit -- the attacker's right
+	local scale = recipe.Scale or 1
+	local reach = 2.4 * scale
+	-- High on his right, slightly in front of the target, through it to low on his left, past it.
+	local from = target + right * reach + Vector3.new(0, reach * 0.95, 0) - forward * 0.6
+	local to = target - right * reach - Vector3.new(0, reach * 0.75, 0) + forward * 0.9
+	VfxPrimitives.Lance(pool, from, to, 0.24 * scale, palette, at - 0.05, 0.07, 0.05, 0.22)
+	VfxPrimitives.Ribbon(pool, { From = from, To = to, StartAt = at - 0.05, EndAt = at + 0.02, Width = 0.45 * scale,
+		Inner = palette.Core, Outer = palette.Primary, Linger = 0.35, Seed = args.Cue.NetId })
+	-- The crescent lies in the cut's plane: roll the target-facing frame so its X runs along the
+	-- line (the frame's X is the attacker's left, so the cut down to his left is about -42 deg).
+	VfxPrimitives.SlashArc(pool, slashFrame(ctx, target, -42), 2.4 * scale * SLASH_SIZE, palette.Primary, at - 0.03, 0.3)
+	VfxPrimitives.Burst(pool, target, palette.Core, recipe.Impact or 1.8, at, 0.22)
+	VfxPrimitives.Flare(pool, fixed(target), 2.6, palette.Secondary, at, 0.22)
+	VfxPrimitives.Motes(pool, target, palette.Secondary, at, 6, 0.45)
+end
+
+-- POLISHED_BASH: his polished shield flashes like a mirror as he drives it in, a violet
+-- shockwave fans out over the stagger cone, and every enemy the bash staggered sparks.
+local function playPolishedBash(ctx: Context)
+	local pool, recipe, palette, args = ctx.Pool, ctx.Recipe, ctx.Palette, ctx.Args
+	local at = ctx.ArriveAt
+	local target = args.Target()
+	local feet = if args.Self then args.Self() else args.Origin - Vector3.new(0, 2, 0)
+	local shield = (args.OriginOf and args.OriginOf("LEFT_HAND")) or chest(feet)
+	local radius = recipe.Radius or 10
+	local impact = recipe.Impact or 2.6
+	VfxPrimitives.Flare(pool, fixed(shield), 5.5, palette.Core, at - 0.04, 0.35)
+	VfxPrimitives.Flare(pool, fixed(shield), 3.5, palette.Secondary, at, 0.4)
+	VfxPrimitives.FlightRing(pool, shield, target - shield, 2.4, palette.Accent or palette.Core, at)
+	VfxPrimitives.Ring(pool, { Center = feet, From = 1.5, To = radius, Color = palette.Primary, StartAt = at, EndAt = at + 0.45,
+		Arc = 100, Facing = VfxPrimitives.Yaw(heading(ctx)), Width = 1.2 })
+	VfxPrimitives.Ring(pool, { Center = feet, From = 1, To = radius * 0.65, Color = palette.Secondary, StartAt = at + 0.06, EndAt = at + 0.5,
+		Arc = 80, Facing = VfxPrimitives.Yaw(heading(ctx)), Width = 0.7 })
+	VfxPrimitives.Burst(pool, target, palette.Primary, impact * 1.3, at, 0.35)
+	VfxPrimitives.Burst(pool, target, palette.Core, impact * 0.7, at, 0.25)
+	afterHits(ctx, "HIT", function(): Vector3 return feet end, radius + 1, function(points: { Vector3 })
+		local now = ctx.ArriveAt + HIT_LOOKUP_DELAY
+		for _, point in points do
+			VfxPrimitives.Motes(pool, point + Vector3.new(0, 1.5, 0), palette.Primary, now, 6, 0.5)
+			VfxPrimitives.Flare(pool, fixed(point + Vector3.new(0, 1.5, 0)), 2.2, palette.Secondary, now, 0.25)
+		end
+	end)
+	shake(ctx, at)
+end
+
+-- LOOKING_GLASS (Looking-Glass Bulwark): he plants his shield and a glass wall of mirror panes
+-- rises in an arc in front of him with a ground shockwave; a taunting shockwave rolls out over
+-- the skill's radius and a violet tether and mark snap to every enemy in it; the wall shatters
+-- into a glass barrier that stays around him for the barrier's duration. Reflections while it
+-- lasts are drawn by SkillVfx.PlayReflect (the server's REFLECT message).
+local WALL_PANES = 5
+local WALL_HOLD = 1.2
+local function playLookingGlass(ctx: Context)
+	local pool, recipe, palette, args = ctx.Pool, ctx.Recipe, ctx.Palette, ctx.Args
+	local at = ctx.ArriveAt
+	local self = args.Self or function(): Vector3
+		return args.Origin - Vector3.new(0, 2, 0)
+	end
+	local feet = self()
+	local forward = heading(ctx)
+	local radius = recipe.Radius or 25
+	local impact = recipe.Impact or 3.4
+	-- The plant: a ground shockwave and a burst at the shield.
+	VfxPrimitives.Ring(pool, { Center = feet, From = 0.5, To = 7, Color = palette.Secondary, StartAt = at, EndAt = at + 0.4, Width = 1.2 })
+	VfxPrimitives.Burst(pool, feet + forward * 1.5 + Vector3.new(0, 1, 0), palette.Core, impact, at, 0.35)
+	-- The glass wall: mirror panes in an arc in front of him, each facing out.
+	for i = 1, WALL_PANES do
+		local angle = math.rad(-60 + (i - 1) * 30)
+		local dir = CFrame.Angles(0, angle, 0):VectorToWorldSpace(forward)
+		local pane = feet + dir * 2.8 + Vector3.new(0, 2.2, 0)
+		local frame = CFrame.lookAt(pane, pane + dir) * CFrame.Angles(0, math.pi / 2, 0)
+		local rise = at + (i - 1) * 0.04
+		VfxPrimitives.Disc(pool, { CFrame = frame, Radius = 1.8, Color = palette.Secondary, StartAt = rise, EndAt = at + WALL_HOLD, Grow = 0.05, Transparency = 0.45 })
+		VfxPrimitives.Disc(pool, { CFrame = frame * CFrame.new(0.05, 0, 0), Radius = 1.55, Color = palette.Primary, StartAt = rise, EndAt = at + WALL_HOLD, Grow = 0.05, Transparency = 0.3 })
+		VfxPrimitives.Flare(pool, fixed(pane), 3, palette.Core, rise + 0.1, 0.25)
+		-- It shatters into the barrier.
+		VfxPrimitives.Burst(pool, pane, palette.Primary, 2.4, at + WALL_HOLD, 0.3)
+		VfxPrimitives.Motes(pool, pane, palette.Core, at + WALL_HOLD, 6, 0.6)
+	end
+	-- The taunt: a shockwave over the radius, and a tether and mark on every enemy in it.
+	VfxPrimitives.Ring(pool, { Center = feet, From = 2, To = radius, Color = palette.Primary, StartAt = at + 0.1, EndAt = at + 0.8, Width = 1.4 })
+	if args.Enemies then
+		local from = chest(feet)
+		local marked = 0
+		for i, enemy in args.Enemies(feet, radius) do
+			if marked >= 12 then
+				break
+			end
+			marked += 1
+			local head = enemy + Vector3.new(0, 2.5, 0)
+			VfxPrimitives.Beam(pool, from, head, palette.Primary, at + 0.15 + i * 0.02, 0.45, args.Cue.NetId + i)
+			VfxPrimitives.Flare(pool, fixed(head), 3, palette.Secondary, at + 0.2 + i * 0.02, 0.5)
+			VfxPrimitives.Burst(pool, head, palette.Primary, 1.8, at + 0.2 + i * 0.02, 0.3)
+		end
+	end
+	-- The barrier: a glass shell that follows him for the barrier's duration.
+	VfxPrimitives.Shell(pool, function(): Vector3
+		return chest(self())
+	end, 3.6, palette.Accent or palette.Primary, at + WALL_HOLD - 0.1, at + (recipe.Linger or 6))
+	VfxPrimitives.Flare(pool, function(): Vector3
+		return chest(self())
+	end, 7, palette.Secondary, at, 0.5)
+	shake(ctx, at)
+end
+
+-- Nyx's kit (the Gilded Mirror) ---------------------------------------------------------------
+
+-- Ticks and gap of one of the attacking hero's tiers ("Basic" | "Special" | "Skill").
+local function tierTicks(args: PlayArgs, tier: string): (number, number)
+	local archetype = args.WeaponType and SkillVfxCatalog.WeaponArchetype[args.WeaponType]
+	local profile = ArchetypeCombatSkills.GetSkillProfile(args.HeroId, archetype) :: any
+	return HeroActionTiming.Ticks(profile[tier])
+end
+
+-- GILT_CUT: an X of crescents across the target, teal then gilt, one per damage tick, with a
+-- glint and a spray of sparks on the second.
+local function playGiltCut(ctx: Context)
+	local pool, recipe, palette, args = ctx.Pool, ctx.Recipe, ctx.Palette, ctx.Args
+	local at = args.Target()
+	local scale = recipe.Scale or 1
+	local ticks, gap = tierTicks(args, "Basic")
+	local waves = VfxMath.WaveTimes(ctx.ArriveAt, math.max(2, ticks), if gap > 0 then gap else 0.1)
+	for k, hitAt in waves do
+		local roll = if k % 2 == 1 then 42 else -42
+		VfxPrimitives.SlashArc(pool, slashFrame(ctx, at, roll), 2.3 * scale * SLASH_SIZE, if k % 2 == 1 then palette.Primary else palette.Secondary, hitAt, 0.28)
+		VfxPrimitives.Burst(pool, at, palette.Core, (recipe.Impact or 1.6) * 0.8, hitAt, 0.18)
+	end
+	local last = waves[#waves]
+	VfxPrimitives.Flare(pool, fixed(at), 3, palette.Secondary, last, 0.25)
+	VfxPrimitives.Motes(pool, at, palette.Primary, last, 6, 0.45)
+end
+
+-- Where Mirror Step lands: just behind the target, along the line from Nyx through it.
+local function behindTarget(ctx: { Args: PlayArgs }, target: Vector3): Vector3
+	local args = ctx.Args
+	local from = if args.Self then args.Self() else args.Origin
+	local delta = Vector3.new(target.X - from.X, 0, target.Z - from.Z)
+	local dir = if delta.Magnitude > 1e-3 then delta.Unit else Vector3.new(0, 0, -1)
+	return target + dir * 2.6
+end
+
+-- MIRROR_STEP's strike, from behind the target where she blinked to (chargeMirrorStep): a
+-- teal lance stabbing through it, and a crit-bright burst of teal and gilt sparks.
+local function playMirrorStep(ctx: Context)
+	local pool, recipe, palette, args = ctx.Pool, ctx.Recipe, ctx.Palette, ctx.Args
+	local target = args.Target()
+	local behind = behindTarget(ctx, target)
+	local impact = recipe.Impact or 2.4
+	local at = ctx.ArriveAt
+	VfxPrimitives.Lance(pool, behind, target + (target - behind).Unit * 2.2, 0.55, palette, at, 0.05, 0.12, 0.3)
+	VfxPrimitives.Burst(pool, target, palette.Core, impact * 1.3, at, 0.35)
+	VfxPrimitives.Burst(pool, target, palette.Primary, impact * 1.8, at + 0.04, 0.4)
+	VfxPrimitives.Flare(pool, fixed(target), 4.5, palette.Core, at, 0.3)
+	VfxPrimitives.Motes(pool, target, palette.Secondary, at, 12, 0.6)
+	VfxPrimitives.Motes(pool, target, palette.Primary, at, 8, 0.5)
+	shake(ctx, at)
+end
+
+-- Shatterdance: five glass copies of Nyx (MirrorClones) stand in a ring around the target, each
+-- in front of a mirror pane. On each damage tick one winds up, lunges in, slashes across the
+-- target and shatters with its pane. Deterministic from the cue, so the charge (which raises the
+-- panes and clones) and the strike use the same places.
+local CLONE_RADIUS = 4.4
+local PANE_RADIUS = 5.4
+local CLONE_LUNGE = 1.7 -- how close to the target a clone's lunge ends
+local CLONE_WINDUP = 0.2
+local CLONE_HOLD = 0.14 -- strike pose held before the clone shatters
+local CLONE_FADE_IN = 0.25
+
+local function ringAngles(args: PlayArgs, count: number): { number }
+	local spin = (args.Cue.NetId % 360) * math.pi / 180
+	local out = table.create(count)
+	for i = 1, count do
+		table.insert(out, spin + (i - 1) / count * math.pi * 2)
+	end
+	return out
+end
+
+local function ringPoint(center: Vector3, angle: number, radius: number): Vector3
+	return center + Vector3.new(math.cos(angle) * radius, 0, math.sin(angle) * radius)
+end
+
+local function drawPane(pool: VfxPool.VfxPool, palette: Palette, pane: Vector3, center: Vector3, startAt: number, endAt: number, grow: number)
+	local facing = Vector3.new(center.X - pane.X, 0, center.Z - pane.Z)
+	if facing.Magnitude < 1e-3 then
+		return
+	end
+	local frame = CFrame.lookAt(pane, pane + facing) * CFrame.Angles(0, math.pi / 2, 0)
+	VfxPrimitives.Disc(pool, { CFrame = frame, Radius = 2.1, Color = palette.Secondary, StartAt = startAt, EndAt = endAt, Grow = grow, Transparency = 0.5 })
+	VfxPrimitives.Disc(pool, { CFrame = frame * CFrame.new(0.05, 0, 0), Radius = 1.85, Color = palette.Primary, StartAt = startAt, EndAt = endAt, Grow = grow, Transparency = 0.35 })
+end
+
+-- The clones' poses, from the hero's own clips: ready (Idle), wind-up and strike (Gilt Cut).
+local function clonePoses(args: PlayArgs): ({ [string]: CFrame }, { [string]: CFrame }, { [string]: CFrame })
+	local idle = HeroClips.Get(args.HeroId, args.WeaponType, "Idle")
+	local cut = HeroClips.Get(args.HeroId, args.WeaponType, "AttackBasic")
+	local ready = if idle then HeroAnimator.Sample(idle, 0) else {}
+	local windup = if cut then HeroAnimator.Sample(cut, 0.25) else ready
+	local strike = if cut then HeroAnimator.Sample(cut, 0.56) else ready
+	return ready, windup, strike
+end
+
+-- Height of the rig's pivot above its feet, so clones stand on the ground under the target.
+local function pivotHeight(args: PlayArgs): number
+	local rig = args.Rig
+	if rig and args.Self then
+		return math.clamp(rig:GetPivot().Position.Y - args.Self().Y, 1, 6)
+	end
+	return 3
+end
+
+type ClonePlan = { Clones: { MirrorClones.Clone? }, Expire: number }
+-- Clones raised by a charge, waiting for that cue's strike (keyed by the attacker's NetId).
+local pendingClones: { [number]: ClonePlan } = {}
+
+local function destroyPlan(plan: ClonePlan)
+	for _, clone in plan.Clones do
+		if clone then
+			clone.Destroy()
+		end
+	end
+end
+
+-- Raises the clones around `center`, fading in from `appearAt`, in the ready pose.
+local function raiseClones(pool: VfxPool.VfxPool, args: PlayArgs, palette: Palette, center: Vector3, count: number, appearAt: number): ClonePlan
+	local rig = args.Rig
+	local clones: { MirrorClones.Clone? } = {}
+	if rig and rig.Parent then
+		local ground = Vector3.new(center.X, args.Cue.Aim.Y + pivotHeight(args), center.Z)
+		local ready = clonePoses(args)
+		for i, angle in ringAngles(args, count) do
+			local spot = ringPoint(ground, angle, CLONE_RADIUS)
+			local clone = MirrorClones.Make(rig, pool.Folder, palette.Primary, palette.Secondary)
+			if clone then
+				clone.Pose(CFrame.lookAt(spot, Vector3.new(ground.X, spot.Y, ground.Z)), ready)
+			end
+			clones[i] = clone
+		end
+		pool:Run({
+			Update = function(now: number): boolean
+				local t = VfxMath.Progress(appearAt, appearAt + CLONE_FADE_IN, now)
+				for _, clone in clones do
+					if clone then
+						clone.Fade(1 - t)
+					end
+				end
+				return t >= 1
+			end,
+		})
+	end
+	return { Clones = clones, Expire = appearAt + 4 }
+end
+
+-- One clone's cut: wind up toward the target, lunge in and slash at `hitAt`, hold, then fade as
+-- it shatters.
+local function cloneCut(pool: VfxPool.VfxPool, clone: MirrorClones.Clone, home: CFrame, center: Vector3, poses: { any }, hitAt: number)
+	local ready, windup, strike = poses[1], poses[2], poses[3]
+	local target = Vector3.new(center.X, home.Position.Y, center.Z)
+	local towards = (target - home.Position)
+	local lungeTo = if towards.Magnitude > CLONE_LUNGE then target - towards.Unit * CLONE_LUNGE else home.Position
+	local state = 0
+	pool:Run({
+		Update = function(now: number): boolean
+			if now < hitAt - CLONE_WINDUP then
+				return false
+			elseif now < hitAt then
+				if state < 1 then
+					state = 1
+					clone.Pose(home, windup)
+				end
+				return false
+			elseif now < hitAt + CLONE_HOLD then
+				local t = VfxMath.Progress(hitAt, hitAt + 0.08, now)
+				local frame = CFrame.lookAt(home.Position:Lerp(lungeTo, t), target)
+				if state < 2 then
+					state = 2
+					clone.Pose(frame, strike)
+				else
+					clone.Move(frame)
+				end
+				return false
+			end
+			local t = VfxMath.Progress(hitAt + CLONE_HOLD, hitAt + CLONE_HOLD + 0.18, now)
+			clone.Fade(t)
+			return t >= 1
+		end,
+		Cleanup = function()
+			clone.Destroy()
+		end,
+	})
+	local _ = ready
+end
+
+-- SHATTERDANCE: mirror panes and five glass clones of Nyx stand around the target (raised at
+-- the charge). On each damage tick one clone winds up, lunges in and slashes across the target,
+-- then shatters with its pane in glass and gilt. After the last cut a shockwave rolls out over
+-- the skill's radius with a big gilt flash.
+local function playShatterdance(ctx: Context)
+	local pool, recipe, palette, args = ctx.Pool, ctx.Recipe, ctx.Palette, ctx.Args
+	local center = args.Target()
+	local ticks, gap = tierTicks(args, "Skill")
+	local waves = VfxMath.WaveTimes(ctx.ArriveAt, ticks, if gap > 0 then gap else 0.15)
+	local angles = ringAngles(args, #waves)
+	local impact = recipe.Impact or 3
+	local plan = pendingClones[args.Cue.NetId]
+	pendingClones[args.Cue.NetId] = nil
+	if not plan then
+		plan = raiseClones(pool, args, palette, center, #waves, ctx.StartAt - CLONE_WINDUP)
+	end
+	local ground = Vector3.new(center.X, args.Cue.Aim.Y + pivotHeight(args), center.Z)
+	local ready, windup, strike = clonePoses(args)
+	local poses = { ready, windup, strike }
+	for i, hitAt in waves do
+		local angle = angles[i]
+		local pane = ringPoint(center, angle, PANE_RADIUS)
+		drawPane(pool, palette, pane, center, ctx.StartAt, hitAt + 0.1, 1)
+		local clone = plan.Clones[i]
+		local spot = ringPoint(ground, angle, CLONE_RADIUS)
+		if clone then
+			cloneCut(pool, clone, CFrame.lookAt(spot, Vector3.new(ground.X, spot.Y, ground.Z)), center, poses, hitAt)
+		end
+		local frame = CFrame.lookAt(center, center + (center - spot)) * CFrame.Angles(0, 0, math.rad(if i % 2 == 0 then 38 else -38))
+		VfxPrimitives.SlashArc(pool, frame, 2.8 * SLASH_SIZE, if i % 2 == 0 then palette.Primary else palette.Secondary, hitAt, 0.32)
+		VfxPrimitives.Burst(pool, center, palette.Core, impact * 0.6, hitAt, 0.2)
+		-- The clone and its pane shatter.
+		local shatterAt = hitAt + CLONE_HOLD
+		local shardAt = spot:Lerp(Vector3.new(center.X, spot.Y, center.Z), 0.5)
+		VfxPrimitives.Burst(pool, shardAt, palette.Primary, 3.2, shatterAt, 0.35)
+		VfxPrimitives.Flare(pool, fixed(shardAt), 3.6, palette.Core, shatterAt, 0.25)
+		VfxPrimitives.Motes(pool, shardAt, palette.Core, shatterAt, 10, 0.6)
+		VfxPrimitives.Burst(pool, pane, palette.Secondary, 2.4, hitAt + 0.1, 0.3)
+		VfxPrimitives.Motes(pool, pane, palette.Secondary, hitAt + 0.1, 6, 0.5)
+	end
+	local finale = waves[#waves] + CLONE_HOLD + 0.08
+	local floor = Vector3.new(center.X, args.Cue.Aim.Y, center.Z)
+	VfxPrimitives.Ring(pool, { Center = floor, From = 1, To = recipe.Radius or 12, Color = palette.Primary, StartAt = finale, EndAt = finale + 0.55, Width = 1.2 })
+	VfxPrimitives.Ring(pool, { Center = floor, From = 0.5, To = (recipe.Radius or 12) * 0.7, Color = palette.Secondary, StartAt = finale + 0.06, EndAt = finale + 0.6, Width = 0.7 })
+	VfxPrimitives.Flare(pool, fixed(center), 8, palette.Secondary, finale, 0.45)
+	VfxPrimitives.Burst(pool, center, palette.Core, impact * 1.4, finale, 0.4)
+	VfxPrimitives.Motes(pool, center, palette.Secondary, finale, 16, 0.8)
+	shake(ctx, waves[1])
+	shake(ctx, finale)
+end
+
+-- REFRACTION: a glass prism flies from the staff tip and strikes the target in a burst of light
+-- inside a spinning triangle of glass rings; it splits into three shards that fly on to the
+-- (up to) three enemies the server carried the hit to, nearest first, each trailing a ribbon of
+-- light and landing in a flash (Seraphine's Refraction).
+local function playRefraction(ctx: Context)
+	local pool, recipe, palette, args = ctx.Pool, ctx.Recipe, ctx.Palette, ctx.Args
+	local impact = recipe.Impact or 2.6
+	playProjectile(ctx)
+	local target = args.Target
+	local at = ctx.ArriveAt
+	local aim = target()
+	local from = originOf(args, recipe)
+	local direction = aim - from
+	-- The prism breaks: three glass rings at a third of a turn to each other, a white core flash
+	-- and a gilt glint, a ground shockwave and sparks.
+	for i = 0, 2 do
+		local tilt = CFrame.Angles(0, 0, i * math.pi * 2 / 3)
+		local axis = if direction.Magnitude > 1e-3 then (CFrame.lookAt(aim, aim + direction) * tilt).UpVector else Vector3.yAxis
+		VfxPrimitives.FlightRing(pool, aim, axis, 2.6 + 0.4 * i, if i == 1 then palette.Secondary else palette.Core, at + 0.03 * i)
+	end
+	bigHit(pool, palette, aim, impact, at)
+	VfxPrimitives.Flare(pool, target, impact * 2.4, palette.Core, at, 0.3)
+	local shard = projectile({ Style = "BOLT", Projectile = "SHARD", Scale = (recipe.Scale or 1) * 0.9, Trail = 0.3 } :: any, palette)
+	afterHits(ctx, "HIT", target, recipe.Radius or 14, function(points: { Vector3 })
+		local origin = target()
+		local now = at + HIT_LOOKUP_DELAY
+		local others = {}
+		for _, point in points do
+			if VfxMath.Distance(point, origin) > 1.5 then
+				table.insert(others, point)
+			end
+		end
+		table.sort(others, function(a: Vector3, b: Vector3): boolean
+			return VfxMath.Distance(a, origin) < VfxMath.Distance(b, origin)
+		end)
+		for i = 1, math.min(#others, recipe.Bounces or 3) do
+			local point = others[i] + Vector3.new(0, 1.5, 0)
+			local travel = math.clamp(VfxMath.Distance(origin, point) / 45, 0.18, 0.35)
+			local leave = now + 0.04 * (i - 1)
+			VfxPrimitives.Ribbon(pool, { From = origin, To = point, StartAt = leave, EndAt = leave + travel, Width = 0.55,
+				Inner = palette.Core, Outer = palette.Primary, Linger = 0.5, Seed = args.Cue.NetId + i })
+			fly(pool, shard, origin, fixed(point), leave, leave + travel, 0.9, function(hit: Vector3)
+				VfxPrimitives.Burst(pool, hit, palette.Primary, impact * 0.9, leave + travel, 0.3)
+				VfxPrimitives.Flare(pool, fixed(hit), impact * 1.3, palette.Core, leave + travel, 0.25)
+				VfxPrimitives.Motes(pool, hit, palette.Secondary, leave + travel, 6, 0.5)
+			end)
+		end
+	end)
+	shake(ctx, at)
+end
+
+-- HALL_OF_MIRRORS: four mirror crystals burst up around the target (a tall crystal and a mirror
+-- pane facing in at each corner) over a glowing floor ring, and fire for the whole skill: on
+-- every server damage tick each crystal shoots a beam into the target, the beams meet in a
+-- flash, and thinner beams strike every enemy inside the area. On the last tick the crystals
+-- shatter and a shockwave rolls out (Seraphine's Hall of Mirrors).
+local HALL_CRYSTAL_RADIUS = 7
+local function playHallOfMirrors(ctx: Context)
+	local pool, recipe, palette, args = ctx.Pool, ctx.Recipe, ctx.Palette, ctx.Args
+	local radius = recipe.Radius or 16
+	local impact = recipe.Impact or 3
+	local count = recipe.Spikes or 4
+	local ticks, gap = tierTicks(args, "Skill")
+	local waves = VfxMath.WaveTimes(ctx.ArriveAt, ticks, if gap > 0 then gap else 0.5)
+	local riseAt = ctx.StartAt
+	local last = waves[#waves]
+	local finale = last + 0.25
+	local floor: Vector3 = args.Cue.Aim
+	local hold = finale - riseAt
+	-- The hall: a floor sigil over the area and a ring marking its edge, for the whole skill.
+	VfxPrimitives.Sigil(pool, floor, radius * 0.9, palette, riseAt, finale)
+	VfxPrimitives.Ring(pool, { Center = floor, From = 1, To = radius, Color = palette.Secondary, StartAt = riseAt, EndAt = riseAt + 0.5, Width = 1.0 })
+	local crystals = {}
+	for i, angle in ringAngles(args, count) do
+		local base = ringPoint(floor, angle, HALL_CRYSTAL_RADIUS)
+		VfxPrimitives.Spike(pool, base, 6, palette.Primary, riseAt + 0.06 * i, hold - 0.06 * i, i)
+		VfxPrimitives.Spike(pool, base + Vector3.new(0.6, 0, 0.4), 3.6, palette.Core, riseAt + 0.06 * i + 0.04, hold - 0.06 * i, i + 11)
+		drawPane(pool, palette, base + Vector3.new(0, 3.2, 0), floor + Vector3.new(0, 3.2, 0), riseAt + 0.06 * i, finale, 0.2)
+		VfxPrimitives.Burst(pool, base + Vector3.new(0, 1, 0), palette.Secondary, 3, riseAt + 0.06 * i, 0.3)
+		VfxPrimitives.Motes(pool, base, palette.Core, riseAt + 0.06 * i, 6, 0.6)
+		table.insert(crystals, base + Vector3.new(0, 4.6, 0))
+	end
+	shake(ctx, riseAt)
+	-- The pulses: every crystal fires into the target, then at every enemy in the hall.
+	for w, hitAt in waves do
+		local center = args.Target()
+		for i, crystal in crystals do
+			VfxPrimitives.Lance(pool, crystal, center, 0.9, palette, hitAt - 0.08, 0.08, 0.1, 0.18)
+			VfxPrimitives.Flare(pool, fixed(crystal), 2.4, palette.Core, hitAt - 0.08, 0.2)
+		end
+		VfxPrimitives.Burst(pool, center, palette.Core, impact * 0.8, hitAt, 0.22)
+		VfxPrimitives.Flare(pool, args.Target, impact * 1.6, palette.Secondary, hitAt, 0.22)
+		local enemies = if args.Enemies then args.Enemies(floor, radius) else {}
+		local drawn = 0
+		for k, enemy in enemies do
+			local body = enemy + Vector3.new(0, 1.5, 0)
+			if VfxMath.Distance(body, center) > 2 and drawn < 8 then
+				drawn += 1
+				local crystal = crystals[(k + w) % #crystals + 1]
+				VfxPrimitives.Beam(pool, crystal, body, palette.Primary, hitAt, 0.2, k + w)
+				VfxPrimitives.Burst(pool, body, palette.Primary, impact * 0.45, hitAt, 0.2)
+			end
+		end
+	end
+	-- The finale: the crystals shatter and a shockwave crosses the hall.
+	for _, crystal in crystals do
+		VfxPrimitives.Burst(pool, crystal, palette.Primary, 4, finale, 0.4)
+		VfxPrimitives.Flare(pool, fixed(crystal), 4, palette.Core, finale, 0.3)
+		VfxPrimitives.Motes(pool, crystal, palette.Secondary, finale, 10, 0.7)
+	end
+	VfxPrimitives.Ring(pool, { Center = floor, From = 1, To = radius, Color = palette.Primary, StartAt = finale, EndAt = finale + 0.6, Width = 1.2 })
+	bigHit(pool, palette, args.Target(), impact, finale)
+	shake(ctx, finale)
 end
 
 -- WAKE: a dash streak from the attacker through the target, then a smoky circle over the skill
@@ -897,6 +1496,143 @@ local function playSingularity(ctx: Context)
 	shake(ctx, burstAt)
 end
 
+-- Rook's kit (the Gilded Mirror, Berserker) ---------------------------------------------------
+
+-- GILT_CLEAVE: each swing's own path through the target. The forehand is a flat sweep, the
+-- backhand a rising diagonal (the rig's BasicSwing attribute, set by HeroAnimator, says which):
+-- a wide hot-rose crescent with a gilt one inside it and a thin white edge, a wake of light
+-- left along the swing, a glint and a spray of gilt sparks off the blade.
+local function playGiltCleave(ctx: Context)
+	local pool, recipe, palette, args = ctx.Pool, ctx.Recipe, ctx.Palette, ctx.Args
+	local at = args.Target()
+	local scale = recipe.Scale or 1.4
+	local swing = if args.Rig then args.Rig:GetAttribute("BasicSwing") else nil
+	local backhand = swing == 2
+	local roll = if backhand then 38 else 6
+	local frame = slashFrame(ctx, at, roll)
+	local t = ctx.ArriveAt
+	VfxPrimitives.SlashArc(pool, frame, 2.7 * scale * SLASH_SIZE, palette.Primary, t, 0.36)
+	VfxPrimitives.SlashArc(pool, frame * CFrame.new(0, 0, 0.25), 2.25 * scale * SLASH_SIZE, palette.Secondary, t + 0.02, 0.32)
+	VfxPrimitives.SlashArc(pool, frame * CFrame.new(0, 0, 0.45), 1.9 * scale * SLASH_SIZE, palette.Core, t + 0.03, 0.2)
+	-- The wake: along the frame's X axis (across the cut), in the direction he swings.
+	local across = frame.RightVector * (if backhand then -1 else 1)
+	VfxPrimitives.Ribbon(pool, { From = at + across * 4.5, To = at - across * 4.5, StartAt = t - 0.04, EndAt = t + 0.06, Width = 0.7,
+		Inner = palette.Core, Outer = palette.Primary, Linger = 0.45, Seed = args.Cue.NetId })
+	VfxPrimitives.Flare(pool, fixed(at), (recipe.Impact or 2.4) * 1.2, palette.Secondary, t, 0.22)
+	VfxPrimitives.Burst(pool, at, palette.Core, recipe.Impact or 2.4, t + 0.02, 0.2)
+	VfxPrimitives.Motes(pool, at, palette.Secondary, t, 10, 0.5)
+end
+
+-- LAST_STAND, on landing: a vertical blade of light drops onto the target as the axe buries
+-- itself, a tall crescent, a crack of shards running out along his heading and splaying to the
+-- sides, two shockwaves over the stagger radius and a layered flash. (The leap itself is drawn
+-- by its charger.)
+local function playLastStand(ctx: Context)
+	local pool, recipe, palette, args = ctx.Pool, ctx.Recipe, ctx.Palette, ctx.Args
+	local center: Vector3 = args.Cue.Aim
+	local radius = recipe.Radius or 8
+	local at = ctx.ArriveAt
+	local impact = recipe.Impact or 3.2
+	local forward = heading(ctx)
+	local side = Vector3.new(-forward.Z, 0, forward.X)
+	VfxPrimitives.Lance(pool, center + Vector3.new(0, 10, 0), center, 0.7, palette, at - 0.06, 0.06, 0.08, 0.3)
+	VfxPrimitives.SlashArc(pool, slashFrame(ctx, center + Vector3.new(0, 1.5, 0), 88), 3.0 * SLASH_SIZE, palette.Primary, at - 0.02, 0.36)
+	VfxPrimitives.SlashArc(pool, slashFrame(ctx, center + Vector3.new(0, 1.5, 0), 88) * CFrame.new(0, 0, 0.3), 2.5 * SLASH_SIZE, palette.Secondary, at, 0.3)
+	-- The crack: shards rising one after another along his heading, with shorter ones off to the sides.
+	for i = 1, 5 do
+		local base = center + forward * (1.2 * i)
+		VfxPrimitives.Spike(pool, base, 3.2 - 0.35 * i, if i % 2 == 0 then palette.Secondary else palette.Primary, at + 0.035 * i, 0.35, i)
+		VfxPrimitives.Spike(pool, center + side * (1.1 * i) * (if i % 2 == 0 then 1 else -1) + forward * 0.4 * i, 2.2 - 0.25 * i, palette.Primary, at + 0.04 * i, 0.3, i + 5)
+	end
+	VfxPrimitives.Disc(pool, { CFrame = CFrame.new(center + Vector3.new(0, 0.14, 0)) * VfxPrimitives.FLAT, Radius = radius * 0.75, Color = palette.Secondary, StartAt = at, EndAt = at + 0.6, Grow = 0.2, Transparency = 0.45 })
+	VfxPrimitives.Ring(pool, { Center = center, From = 1.2, To = radius, Color = palette.Primary, StartAt = at, EndAt = at + 0.45, Width = 1.3 })
+	VfxPrimitives.Ring(pool, { Center = center, From = 0.6, To = radius * 0.65, Color = palette.Secondary, StartAt = at + 0.06, EndAt = at + 0.5, Width = 0.8 })
+	bigHit(pool, palette, center + Vector3.new(0, 1.2, 0), impact, at)
+	VfxPrimitives.Flare(pool, fixed(center + Vector3.new(0, 1.2, 0)), impact * 2.4, palette.Core, at, 0.3)
+	shake(ctx, at)
+end
+
+-- GILDED_FRENZY: the slam (the first tick) sends a gold-and-rose shockwave across the whole
+-- radius with arcs of lightning and shards bursting up under every enemy hit; then a whirlwind
+-- round him, one ring of three rose and gilt crescents per spin tick with a ground ring over
+-- SpinRadius and a flash on each enemy the spin hit; then the roar: a burst of light on him
+-- and a wave rolling out as the frenzy takes hold (the 4 s aura on the axe is MirrorHeroFx).
+local function playGildedFrenzy(ctx: Context)
+	local pool, recipe, palette, args = ctx.Pool, ctx.Recipe, ctx.Palette, ctx.Args
+	local center: Vector3 = args.Cue.Aim
+	local radius = recipe.Radius or 18
+	local spinRadius = recipe.SpinRadius or 12
+	local at = ctx.ArriveAt
+	local hold = recipe.Linger or 1.2
+	local impact = recipe.Impact or 3.8
+	-- The slam.
+	VfxPrimitives.Ring(pool, { Center = center, From = 2, To = radius, Color = palette.Secondary, StartAt = at, EndAt = at + 0.55, Width = 1.4 })
+	VfxPrimitives.Ring(pool, { Center = center, From = 1, To = radius * 0.6, Color = palette.Primary, StartAt = at + 0.04, EndAt = at + 0.5, Width = 1.0 })
+	VfxPrimitives.Disc(pool, { CFrame = CFrame.new(center + Vector3.new(0, 0.16, 0)) * VfxPrimitives.FLAT, Radius = radius * 0.5, Color = palette.Primary, StartAt = at, EndAt = at + 0.65, Grow = 0.25, Transparency = 0.45 })
+	VfxPrimitives.Lance(pool, center + Vector3.new(0, 12, 0), center, 1.0, palette, at - 0.06, 0.06, 0.08, 0.3)
+	VfxPrimitives.Spike(pool, center, 5.6, palette.Secondary, at, hold, 0)
+	local count = recipe.Spikes or 8
+	for i = 1, count - 1 do
+		local angle = i / (count - 1) * math.pi * 2
+		local base = center + Vector3.new(math.cos(angle) * 2.2, 0, math.sin(angle) * 2.2)
+		VfxPrimitives.Spike(pool, base, 3.8, if i % 2 == 0 then palette.Primary else palette.Secondary, at + 0.03 * i, hold, i)
+		VfxPrimitives.Beam(pool, center + Vector3.new(0, 1.2, 0), center + Vector3.new(math.cos(angle) * 6, 4.5, math.sin(angle) * 6), palette.Primary, at + 0.02 * i, 0.3, i + args.Cue.NetId)
+	end
+	bigHit(pool, palette, center + Vector3.new(0, 1.5, 0), impact, at)
+	afterHits(ctx, "HIT", fixed(center), radius, function(points: { Vector3 })
+		local now = at + HIT_LOOKUP_DELAY
+		for i, point in points do
+			if i > 10 then
+				break
+			end
+			VfxPrimitives.Spike(pool, point, 3.8, if i % 2 == 0 then palette.Primary else palette.Secondary, now + 0.025 * i, hold * 0.85, i + 11)
+		end
+	end)
+	shake(ctx, at)
+	-- The whirlwind: one ring of crescents per spin tick, centred on him as he edges forward.
+	local ticks, gap = tierTicks(args, "Skill")
+	local waves = VfxMath.WaveTimes(at, ticks, if gap > 0 then gap else 0.3)
+	local self = args.Self or function(): Vector3
+		return center
+	end
+	local lookup = args.RecentHits
+	for w = 2, #waves do
+		local hitAt = waves[w]
+		VfxPrimitives.At(pool, hitAt - 0.12, function()
+			local feet = self()
+			local body = feet + Vector3.new(0, 1.6, 0)
+			for k = 0, 2 do
+				local yaw = w * 1.3 + k * math.pi * 2 / 3
+				local frame = CFrame.new(body) * CFrame.Angles(0, yaw, 0) * CFrame.Angles(math.rad(if k == 1 then 8 else -6), 0, 0)
+				VfxPrimitives.SlashArc(pool, frame, 4.6 * SLASH_SIZE * 0.6, if k == 1 then palette.Secondary else palette.Primary, hitAt - 0.12 + 0.04 * k, 0.3)
+			end
+			VfxPrimitives.Ring(pool, { Center = feet, From = 2, To = spinRadius, Color = palette.Primary, StartAt = hitAt, EndAt = hitAt + 0.35, Width = 0.7 })
+			VfxPrimitives.Motes(pool, body, palette.Secondary, hitAt, 6, 0.4)
+		end)
+		if lookup then
+			VfxPrimitives.At(pool, hitAt + HIT_LOOKUP_DELAY, function()
+				for i, point in lookup("HIT", self(), spinRadius + 2, hitAt - 0.1) do
+					if i > 8 then
+						break
+					end
+					VfxPrimitives.Burst(pool, point + Vector3.new(0, 1.5, 0), palette.Primary, impact * 0.45, hitAt + HIT_LOOKUP_DELAY, 0.2)
+				end
+			end)
+		end
+	end
+	-- The roar.
+	local roarAt = waves[#waves] + 0.3
+	VfxPrimitives.At(pool, roarAt, function()
+		local body = self() + Vector3.new(0, 2.2, 0)
+		VfxPrimitives.Flare(pool, fixed(body), 7, palette.Secondary, roarAt, 0.45)
+		VfxPrimitives.Burst(pool, body, palette.Core, impact * 1.2, roarAt, 0.35)
+		VfxPrimitives.Burst(pool, body, palette.Primary, impact * 1.8, roarAt + 0.04, 0.45)
+		VfxPrimitives.Ring(pool, { Center = self(), From = 1, To = 9, Color = palette.Accent or palette.Secondary, StartAt = roarAt, EndAt = roarAt + 0.5, Width = 1.0 })
+		VfxPrimitives.Motes(pool, body, palette.Primary, roarAt, 16, 0.8)
+	end)
+	shake(ctx, roarAt)
+end
+
 local PLAYERS: { [string]: (Context) -> () } = {
 	SHOT = playProjectile,
 	BOLT = playProjectile,
@@ -910,12 +1646,25 @@ local PLAYERS: { [string]: (Context) -> () } = {
 	BEAM = playBeam,
 	TREMOR = playTremor,
 	CHAIN = playChain,
+	RICOCHET = playRicochet,
+	TWIN = playTwin,
 	MEND = playMend,
 	STORM = playStorm,
 	CONSTELLATION = playConstellation,
 	EXECUTE = playExecute,
 	BULWARK = playBulwark,
 	TEMPEST = playTempest,
+	GILT_CUT = playGiltCut,
+	GILT_CLEAVE = playGiltCleave,
+	LAST_STAND = playLastStand,
+	GILDED_FRENZY = playGildedFrenzy,
+	POLISHED_BASH = playPolishedBash,
+	DIAGONAL_SLASH = playDiagonalSlash,
+	LOOKING_GLASS = playLookingGlass,
+	MIRROR_STEP = playMirrorStep,
+	SHATTERDANCE = playShatterdance,
+	REFRACTION = playRefraction,
+	HALL_OF_MIRRORS = playHallOfMirrors,
 	WAKE = playWake,
 	CRYSTALS = playCrystals,
 	PILLAR = playPillar,
@@ -1101,13 +1850,218 @@ local function chargeExecute(ctx: ChargeContext): boolean
 	return true
 end
 
+-- MIRROR_STEP's blink (Nyx): at the wind-up she leaves a glass clone of herself where she
+-- stands and blinks behind the target in a streak of teal light; she stabs from there (the
+-- strike), then blinks back to her place as the clone shatters. The renderer draws her at the
+-- blink spot (PlayArgs.Blink); the server never moves her.
+local BLINK_OUT = 0.05 -- after the charge marker
+local BLINK_BACK = 0.82 -- of the cast
+local function blinkFlash(pool: VfxPool.VfxPool, palette: Palette, at: Vector3, time: number)
+	VfxPrimitives.Burst(pool, at, palette.Primary, 3, time, 0.3)
+	VfxPrimitives.Flare(pool, fixed(at), 4.2, palette.Core, time, 0.28)
+	VfxPrimitives.Motes(pool, at, palette.Primary, time, 10, 0.6)
+end
+
+local function chargeMirrorStep(ctx: ChargeContext): boolean
+	local pool, palette, args = ctx.Pool, ctx.Palette, ctx.Args
+	local cue = args.Cue
+	local feet = if args.Self then args.Self() else args.Origin - Vector3.new(0, 2, 0)
+	local from = feet + Vector3.new(0, 2, 0)
+	local target = args.Target()
+	local behind = behindTarget(ctx, target)
+	local behindFeet = Vector3.new(behind.X, cue.Aim.Y, behind.Z)
+	local out = ctx.StartAt + BLINK_OUT
+	local back = math.max(ctx.ReleaseAt + 0.2, cue.StartServerTime + cue.CastSeconds * BLINK_BACK)
+	local face = Vector3.new(target.X - behind.X, 0, target.Z - behind.Z)
+	local yaw = if face.Magnitude > 1e-3 then math.atan2(-face.X, -face.Z) else 0
+
+	-- The clone she leaves behind: a glass copy of her, standing in her guard where she was.
+	local rig = args.Rig
+	local clone = if rig and rig.Parent then MirrorClones.Make(rig, pool.Folder, palette.Primary, palette.Secondary) else nil
+	if clone and rig then
+		local idle = HeroClips.Get(args.HeroId, args.WeaponType, "Idle")
+		if idle then
+			clone.Pose(rig:GetPivot(), HeroAnimator.Sample(idle, 0))
+		end
+		local shown = false
+		pool:Run({
+			Update = function(now: number): boolean
+				if now < out then
+					return false
+				end
+				if not shown then
+					shown = true
+					clone.Fade(0)
+				end
+				if now < back then
+					return false
+				end
+				local t = VfxMath.Progress(back, back + 0.2, now)
+				clone.Fade(t)
+				return t >= 1
+			end,
+			Cleanup = function()
+				clone.Destroy()
+			end,
+		})
+	end
+
+	-- Out: a flash where she stood, a streak to behind the target, a flash where she appears.
+	blinkFlash(pool, palette, from, out)
+	VfxPrimitives.FlightRing(pool, from, target - from, 2.2, palette.Secondary, out)
+	VfxPrimitives.Ribbon(pool, { From = from, To = behind, StartAt = out, EndAt = out + 0.1, Width = 0.8,
+		Inner = palette.Core, Outer = palette.Primary, Linger = 0.45, Seed = cue.NetId })
+	VfxPrimitives.Flare(pool, fixed(behind), 5, palette.Secondary, out + 0.08, 0.32)
+	VfxPrimitives.Burst(pool, behind, palette.Primary, 2.4, out + 0.08, 0.3)
+	if args.Blink then
+		args.Blink(behindFeet, yaw, out + 0.06, back)
+	end
+
+	-- Back: a flash behind the target, a streak home, and the clone shatters as she arrives.
+	blinkFlash(pool, palette, behind, back)
+	VfxPrimitives.Ribbon(pool, { From = behind, To = from, StartAt = back, EndAt = back + 0.1, Width = 0.8,
+		Inner = palette.Core, Outer = palette.Primary, Linger = 0.45, Seed = cue.NetId + 7 })
+	VfxPrimitives.Burst(pool, from, palette.Secondary, 3.2, back + 0.08, 0.35)
+	VfxPrimitives.Motes(pool, from, palette.Core, back + 0.08, 14, 0.7)
+	VfxPrimitives.FlightRing(pool, from, from - behind, 2.4, palette.Primary, back + 0.08)
+	return true
+end
+
+-- SHATTERDANCE's wind-up: the mirror panes rise around the target from slivers and the glass
+-- clones fade in before them, waiting for the strike (which takes them over).
+local function chargeShatterdance(ctx: ChargeContext): boolean
+	local args, pool, palette = ctx.Args, ctx.Pool, ctx.Palette
+	local center = args.Target()
+	local ticks = tierTicks(args, "Skill")
+	for _, angle in ringAngles(args, ticks) do
+		local pane = ringPoint(center, angle, PANE_RADIUS)
+		drawPane(pool, palette, pane, center, ctx.StartAt, ctx.ReleaseAt, 0.1)
+		VfxPrimitives.Motes(pool, pane, palette.Primary, ctx.StartAt, 4, 0.5)
+	end
+	local old = pendingClones[args.Cue.NetId]
+	if old then
+		destroyPlan(old)
+	end
+	local plan = raiseClones(pool, args, palette, center, ticks, ctx.StartAt)
+	pendingClones[args.Cue.NetId] = plan
+	-- If the strike never comes (the hero died, the room changed), the clones go anyway.
+	VfxPrimitives.At(pool, plan.Expire, function()
+		if pendingClones[args.Cue.NetId] == plan then
+			pendingClones[args.Cue.NetId] = nil
+			destroyPlan(plan)
+		end
+	end)
+	return true
+end
+
+-- REFRACTION while the staff is drawn back: the three halo shards fly down to the staff tip and
+-- join into a spinning prism of light there, which flashes just before the thrust.
+local function chargePrism(ctx: ChargeContext): boolean
+	local args, recipe, palette, pool = ctx.Args, ctx.Recipe, ctx.Palette, ctx.Pool
+	local function tip(): Vector3
+		return originOf(args, recipe)
+	end
+	local from, to = ctx.StartAt, ctx.ReleaseAt
+	local span = to - from
+	local originOfPoint = args.OriginOf
+	local exactStarts: { Vector3? } = {
+		originOfPoint and originOfPoint("HALO_TOP"),
+		originOfPoint and originOfPoint("HALO_L"),
+		originOfPoint and originOfPoint("HALO_R"),
+	}
+	local halo = (originOfPoint and originOfPoint("HALO")) or (args.Origin + Vector3.new(0, 2.5, 0))
+	local shard = projectile({ Style = "BOLT", Projectile = "SHARD", Scale = 0.85, Trail = 0.25 } :: any, palette)
+	for i = 1, 3 do
+		local angle = (i - 1) * math.pi * 2 / 3
+		local start = exactStarts[i] or (halo + Vector3.new(math.cos(angle) * 1.1, 0.3 * math.sin(angle), math.sin(angle) * 1.1))
+		fly(pool, shard, start, tip, from, from + span * 0.55, 0.45, nil)
+	end
+	local function grow(size: number): (number) -> number
+		return function(now: number): number
+			return size * VfxMath.Progress(from + span * 0.5, to, now)
+		end
+	end
+	VfxPrimitives.Orb(pool, { Center = tip, Diameter = grow(0.9), Color = palette.Core, Neon = true, StartAt = from + span * 0.5, EndAt = to })
+	VfxPrimitives.Orb(pool, { Center = tip, Diameter = grow(1.8), Color = palette.Primary, Neon = true, Transparency = 0.65, StartAt = from + span * 0.5, EndAt = to })
+	VfxPrimitives.Converge(pool, tip, palette.Secondary, 2.4, 6, from, to, args.Cue.NetId % 9)
+	VfxPrimitives.Flare(pool, tip, 3, palette.Core, math.max(from, to - 0.1), 0.18)
+	return true
+end
+
+-- HALL_OF_MIRRORS while the staff is held overhead: light gathers on the staff tip, the hall's
+-- edge closes in around the target and four columns of motes rise where the crystals will.
+local function chargeHall(ctx: ChargeContext): boolean
+	local args, recipe, palette, pool = ctx.Args, ctx.Recipe, ctx.Palette, ctx.Pool
+	local from, to = ctx.StartAt, ctx.ReleaseAt
+	local floor: Vector3 = args.Cue.Aim
+	local radius = recipe.Radius or 16
+	VfxPrimitives.Ring(pool, { Center = floor, From = radius, To = HALL_CRYSTAL_RADIUS, Color = palette.Primary, StartAt = from, EndAt = to, Width = 0.8 })
+	for i, angle in ringAngles(args, recipe.Spikes or 4) do
+		local base = ringPoint(floor, angle, HALL_CRYSTAL_RADIUS)
+		VfxPrimitives.Converge(pool, fixed(base + Vector3.new(0, 2, 0)), palette.Secondary, 2.5, 4, from, to, i)
+	end
+	local tip = function(): Vector3
+		return originOf(args, { Origin = "STAFF_TIP" } :: any)
+	end
+	VfxPrimitives.Converge(pool, tip, palette.Primary, 3, 8, from, to, args.Cue.NetId % 7)
+	VfxPrimitives.Orb(pool, { Center = tip, Diameter = function(now: number): number
+		return 1.4 * VfxMath.Progress(from, to, now)
+	end, Color = palette.Core, Neon = true, Transparency = 0.3, StartAt = from, EndAt = to })
+	VfxPrimitives.Flare(pool, tip, 3.4, palette.Secondary, math.max(from, to - 0.1), 0.2)
+	return true
+end
+
+-- LAST_STAND / GILDED_FRENZY wind-up: the leap. Sparks gather on the axe through the crouch;
+-- at take-off a burst of dust and a ground ring kick up from his feet and a rose streak follows
+-- him up to the top of the leap, where a gilt glint marks the roar; for Last Stand (a leap
+-- toward the target) a second streak falls from there onto the target as the release lands.
+-- Timings are fractions of the Charge-to-Release window, matching the clips (HeroClips).
+local LEAP = {
+	LAST_STAND = { TakeOff = 0.18, Apex = 0.65, Height = 6.5, Forward = 1.8 },
+	GILDED_FRENZY = { TakeOff = 0.2, Apex = 0.73, Height = 8, Forward = 0.4 },
+}
+local function chargeLeap(ctx: ChargeContext): boolean
+	local args, recipe, palette, pool = ctx.Args, ctx.Recipe, ctx.Palette, ctx.Pool
+	local leap = LEAP[recipe.Style] or LEAP.LAST_STAND
+	local feet = if args.Self then args.Self() else args.Origin - Vector3.new(0, 2, 0)
+	local delta = args.Cue.Aim - feet
+	local flat = Vector3.new(delta.X, 0, delta.Z)
+	local forward = if flat.Magnitude > 1e-3 then flat.Unit else Vector3.new(0, 0, -1)
+	local from, to = ctx.StartAt, ctx.ReleaseAt
+	local span = to - from
+	local takeOff = from + span * leap.TakeOff
+	local apexAt = from + span * leap.Apex
+	local hand = feet + Vector3.new(0, 2.6, 0)
+	local apex = feet + forward * leap.Forward + Vector3.new(0, leap.Height, 0)
+	VfxPrimitives.Converge(pool, fixed(hand), palette.Primary, 2.8, 6, from, takeOff, args.Cue.NetId % 11)
+	VfxPrimitives.Burst(pool, feet + Vector3.new(0, 0.5, 0), palette.Accent or palette.Secondary, 3, takeOff, 0.3)
+	VfxPrimitives.Ring(pool, { Center = feet, From = 0.6, To = 5, Color = palette.Accent or palette.Secondary, StartAt = takeOff, EndAt = takeOff + 0.35, Width = 0.8 })
+	VfxPrimitives.Motes(pool, feet, palette.Secondary, takeOff, 8, 0.5)
+	VfxPrimitives.Ribbon(pool, { From = feet + Vector3.new(0, 1, 0), To = apex, StartAt = takeOff, EndAt = apexAt, Width = 0.8,
+		Inner = palette.Core, Outer = palette.Primary, Linger = 0.5, Seed = args.Cue.NetId })
+	VfxPrimitives.Flare(pool, fixed(apex), 4, palette.Secondary, apexAt, 0.3)
+	if recipe.Style == "LAST_STAND" then
+		local landing = args.Cue.Aim + Vector3.new(0, 1, 0)
+		VfxPrimitives.Ribbon(pool, { From = apex, To = landing, StartAt = apexAt, EndAt = to, Width = 1.0,
+			Inner = palette.Core, Outer = palette.Primary, Linger = 0.4, Seed = args.Cue.NetId + 3 })
+	end
+	return true
+end
+
 local CHARGERS: { [string]: (ChargeContext) -> boolean } = {
+	MIRROR_STEP = chargeMirrorStep,
+	SHATTERDANCE = chargeShatterdance,
+	REFRACTION = chargePrism,
+	HALL_OF_MIRRORS = chargeHall,
 	WHIRL = chargeWhirl,
 	EXECUTE = chargeExecute,
+	LAST_STAND = chargeLeap,
+	GILDED_FRENZY = chargeLeap,
 	BOLT = chargeGlyph,
 	PIERCER = chargeBolt,
 	CONSTELLATION = chargeStars,
 	BEAM = chargeTip,
+	TWIN = chargeTip, -- the held, glowing draw
 	SINGULARITY = chargeWell,
 }
 SkillVfx.Chargers = table.freeze(table.clone(CHARGERS))
@@ -1134,6 +2088,24 @@ function SkillVfx.PlayCharge(pool: VfxPool.VfxPool, args: PlayArgs): boolean
 		StartAt = args.Now,
 		ReleaseAt = releaseAt,
 	})
+end
+
+-- A reflected hit (Caspian's Looking-Glass Bulwark, the server's REFLECT message): a mirror glint
+-- on the hero and a bolt of light flying back into the shooter, in the hero's palette.
+function SkillVfx.PlayReflect(pool: VfxPool.VfxPool, heroId: string?, from: Vector3, to: Vector3, now: number)
+	if not pool:Visible(from, to) then
+		return
+	end
+	local recipe = heroId and SkillVfxCatalog.Heroes[heroId]
+	local palette = (recipe and recipe.Palette) or SkillVfxCatalog.Weapons.SWORD_SHIELD.Palette
+	local travel = math.clamp(VfxMath.Distance(from, to) / 80, 0.1, 0.3)
+	VfxPrimitives.Flare(pool, fixed(from), 4, palette.Core, now, 0.3)
+	VfxPrimitives.FlightRing(pool, from, to - from, 1.8, palette.Secondary, now)
+	local body = projectile({ Style = "SHOT", Projectile = "BOLT", Scale = 0.9, Trail = 0.25 } :: any, palette)
+	fly(pool, body, from, fixed(to), now, now + travel, 0.4, function(at: Vector3)
+		VfxPrimitives.Burst(pool, at, palette.Primary, 2.6, now + travel, 0.3)
+		VfxPrimitives.Flare(pool, fixed(at), 2.6, palette.Secondary, now + travel, 0.25)
+	end)
 end
 
 -- Plays the cue's attack. Returns false when this hero has no recipe, the hit already landed,
