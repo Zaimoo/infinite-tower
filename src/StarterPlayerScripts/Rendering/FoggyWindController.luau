@@ -4,7 +4,8 @@
 --
 -- Responsibilities:
 -- 1. Drives workspace.GlobalWind with organic Perlin-noise gusting (swaying terrain grass).
--- 2. Controls dynamic overcast Clouds in workspace.Terrain.
+-- 2. Keeps workspace.Terrain free of volumetric Clouds: at 0.84 cover they cost about a third of the hub's
+--    frame in Studio profiling (~13 -> ~20 FPS without them), so the sky relies on Atmosphere and the cloud bank.
 -- 3. Emits camera-local drifting mist sheets and airborne bokeh specks (wind without rain).
 -- 4. Blends atmospheric fog via HubLightingController and workspace attributes.
 -- 5. Streams ambient wind sound loop.
@@ -42,7 +43,6 @@ local BLEND_SPEED = 2.0 -- ~1.5 s smooth fade in / out
 local emitterPart: Part? = nil
 local mistEmitter: ParticleEmitter? = nil
 local specksEmitter: ParticleEmitter? = nil
-local cloudsInstance: Clouds? = nil
 local windSound: Sound? = nil
 local isStarted = false
 
@@ -84,8 +84,8 @@ local function ensureEmitterPart(): Part
 	})
 	mist.Transparency = NumberSequence.new({
 		NumberSequenceKeypoint.new(0.0, 1.0),
-		NumberSequenceKeypoint.new(0.2, 0.88),
-		NumberSequenceKeypoint.new(0.7, 0.90),
+		NumberSequenceKeypoint.new(0.2, 0.93), -- faint: the camera looks through it all the time
+		NumberSequenceKeypoint.new(0.7, 0.94),
 		NumberSequenceKeypoint.new(1.0, 1.0),
 	})
 	mist.Size = NumberSequence.new({
@@ -149,23 +149,13 @@ end
 --============================================================================
 -- OVERCAST CLOUDS SETUP
 --============================================================================
-local function ensureClouds(): Clouds
-	if cloudsInstance and cloudsInstance.Parent then
-		return cloudsInstance
+-- Remove any volumetric Clouds (older builds of this controller created them, and a place file may carry one).
+local function removeClouds()
+	for _, child in Workspace.Terrain:GetChildren() do
+		if child:IsA("Clouds") then
+			child:Destroy()
+		end
 	end
-	local existing = Workspace.Terrain:FindFirstChildOfClass("Clouds")
-	if existing then
-		cloudsInstance = existing
-		return existing
-	end
-	local clouds = Instance.new("Clouds")
-	clouds.Name = "FoggyWindClouds"
-	clouds.Cover = 0
-	clouds.Density = 0.72
-	clouds.Color = Color3.fromRGB(195, 205, 215)
-	clouds.Parent = Workspace.Terrain
-	cloudsInstance = clouds
-	return clouds
 end
 
 local function lerp(a: number, b: number, t: number): number
@@ -197,11 +187,6 @@ local function onHeartbeat(dt: number)
 		local windDir = Vector3.new(math.cos(rad), 0, math.sin(rad))
 		Workspace.GlobalWind = windDir * activeSpeed
 
-		-- 2. Clouds
-		local clouds = ensureClouds()
-		clouds.Cover = 0.84 * currentWeight
-		clouds.Density = 0.72
-
 		-- 3. Move particle emitter with Camera
 		local cam = Workspace.CurrentCamera
 		if cam then
@@ -214,7 +199,7 @@ local function onHeartbeat(dt: number)
 		-- 4. Particle Rates scaled by tower proximity (faint on plots, heavy near tower)
 		local pMult = if State.ParticlesEnabled then currentWeight else 0
 		local particleAccel = windDir * activeSpeed * 0.45
-		local mistTargetRate = lerp(2, 16, prox)
+		local mistTargetRate = lerp(1, 10, prox)
 		local specksTargetRate = lerp(5, 24, prox)
 		if mistEmitter then
 			mistEmitter.Rate = mistTargetRate * pMult
@@ -247,9 +232,6 @@ local function onHeartbeat(dt: number)
 			windSound.Volume = 0
 			windSound:Stop()
 		end
-		if cloudsInstance then
-			cloudsInstance.Cover = 0
-		end
 	end
 end
 
@@ -262,7 +244,12 @@ function FoggyWindController.Start()
 
 	ensureEmitterPart()
 	ensureAudio()
-	ensureClouds()
+	removeClouds()
+	Workspace.Terrain.ChildAdded:Connect(function(child)
+		if child:IsA("Clouds") then
+			task.defer(child.Destroy, child)
+		end
+	end)
 
 	RunService.Heartbeat:Connect(onHeartbeat)
 end
