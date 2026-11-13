@@ -11,6 +11,8 @@ local CollectionService = game:GetService("CollectionService")
 
 local HubLayout = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("HubLayout"))
 local PartKit = require(script.Parent:WaitForChild("PartKit"))
+local WallsBuilder = require(script.Parent:WaitForChild("WallsBuilder"))
+local GothicLanternSpawner = require(script.Parent:WaitForChild("GothicLanternSpawner"))
 
 local CloisterBuilder = {}
 
@@ -364,12 +366,8 @@ end
 --============================================================================
 -- B. RIM WALL, VOID BALUSTRADES, LAMPS AND PROMENADE
 --============================================================================
-local function buildEdges(model: Model, root: CFrame, cfg: typeof(CloisterBuilder.Config))
+local function spawnRimLanterns(lamps: Instance, root: CFrame)
 	local hx, hz, ro = HubLayout.HubHalfX, HubLayout.HubHalfZ, HubLayout.OuterCornerRadius
-	edgeWall(folder("RimWall", model), root, hx, hz, ro, 1.5, cfg.WallHeight, outerOpenings(), true)
-
-	-- Lamp pylons along the outer rim, every fifth one lit
-	local lamps = folder("LampPylons", model)
 	local n = 0
 	local openings = outerOpenings()
 	walkRoundedRect(hx - 6, hz - 6, ro - 6, 70, function(x, z, nx, nz)
@@ -377,14 +375,21 @@ local function buildEdges(model: Model, root: CFrame, cfg: typeof(CloisterBuilde
 			return
 		end
 		n += 1
-		local cf = edgeCF(root, x, z, nx, nz, 0)
-		makePart({ Name = "LampPost", Size = Vector3.new(1, 9, 1), CFrame = cf * CFrame.new(0, 4.5, 0), Color = IRON, Material = Enum.Material.Metal, Parent = lamps })
-		makePart({ Name = "LampCap", Size = Vector3.new(2.2, 0.5, 2.2), CFrame = cf * CFrame.new(0, 9.6, 0), Color = IRON, Material = Enum.Material.Metal, Decorative = true, Parent = lamps })
-		local lantern = makePart({ Name = "LampLantern", Size = Vector3.new(1.4, 1.6, 1.4), CFrame = cf * CFrame.new(0, 8.5, 0), Color = LANTERN, Material = Enum.Material.Neon, Decorative = true, Parent = lamps })
-		if n % 5 == 0 then
-			light(lantern, LANTERN, 18, 1.2)
+		local name = string.format("GothicLantern_Rim_%d", n)
+		if lamps:FindFirstChild(name) then
+			return
 		end
+		local cf = edgeCF(root, x, z, nx, nz, 0)
+		GothicLanternSpawner.Spawn(lamps, cf, name)
 	end)
+end
+
+local function buildEdges(model: Model, root: CFrame, cfg: typeof(CloisterBuilder.Config))
+	local hx, hz, ro = HubLayout.HubHalfX, HubLayout.HubHalfZ, HubLayout.OuterCornerRadius
+	edgeWall(folder("RimWall", model), root, hx, hz, ro, 1.5, cfg.WallHeight, outerOpenings(), true)
+
+	-- Gothic medieval lantern posts along the outer rim
+	spawnRimLanterns(folder("LampPylons", model), root)
 
 	-- Cobbled paths from every landing to the dais. Neighbouring paths cross near the dais, so each sits at
 	-- its own height to avoid z-fighting. (The last entry is the Pilgrim's Way, built by the terrace.)
@@ -415,26 +420,14 @@ local function buildLandings(model: Model, root: CFrame, cfg: typeof(CloisterBui
 		for _, side in { -1, 1 } do
 			local post = apron * CFrame.new(side * 14, 0, 4)
 			makePart({ Name = "BannerPylon", Size = Vector3.new(2, 14, 2), CFrame = post * CFrame.new(0, 7, 0), Color = SLATE, Material = Enum.Material.Slate, Parent = g })
-			makePart({ Name = "BannerArm", Size = Vector3.new(0.4, 0.4, 3.6), CFrame = post * CFrame.new(0, 13, -1.8), Color = IRON, Material = Enum.Material.Metal, Decorative = true, Parent = g })
-			makePart({ Name = "Banner", Size = Vector3.new(0.2, 7, 3), CFrame = post * CFrame.new(0, 9.3, -2), Color = cfg.PlotColors[index], Material = Enum.Material.Fabric, Decorative = true, Parent = g })
+			makePart({ Name = "BannerArm", Size = Vector3.new(0.4, 0.4, 4.6), CFrame = post * CFrame.new(0, 13, -2.3), Color = IRON, Material = Enum.Material.Metal, Decorative = true, Parent = g })
+			WallsBuilder.SpawnBanner(
+				g,
+				"GateBanner_" .. (if side < 0 then "L" else "R"),
+				post * CFrame.new(0, 12.8, -2.8) * CFrame.Angles(0, math.pi * 0.5, 0),
+				{ Scale = 1.0, DoubleSided = true, IncludeCrossbar = true }
+			)
 		end
-		local tablet = makePart({ Name = "GateTablet", Size = Vector3.new(10, 4, 1), CFrame = apron * CFrame.new(-20, 2.4, -2), Color = SLATE_DARK, Material = Enum.Material.Slate, Parent = g })
-		local gui = Instance.new("SurfaceGui")
-		gui.Name = "Nameplate"
-		gui.Face = Enum.NormalId.Front
-		gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-		gui.PixelsPerStud = 40
-		gui.LightInfluence = 0.3
-		gui.Parent = tablet
-		local label = Instance.new("TextLabel")
-		label.Name = "OwnerLabel"
-		label.Size = UDim2.fromScale(1, 1)
-		label.BackgroundTransparency = 1
-		label.Font = Enum.Font.GothamBold
-		label.TextScaled = true
-		label.TextColor3 = Color3.fromRGB(240, 232, 214)
-		label.Text = string.format("PLOT %d\nUnclaimed", index)
-		label.Parent = gui
 	end
 end
 
@@ -472,8 +465,13 @@ local function buildGrandTerrace(model: Model, root: CFrame)
 			end
 			local pole = root * CFrame.new(bx, 0, bz - 25)
 			makePart({ Name = "BannerPole", Size = Vector3.new(0.8, 18, 0.8), CFrame = pole * CFrame.new(0, 9, 0), Color = IRON, Material = Enum.Material.Metal, Parent = f })
-			makePart({ Name = "BannerBar", Size = Vector3.new(4.6, 0.4, 0.4), CFrame = pole * CFrame.new(-side * 2.2, 17.2, 0), Color = IRON, Material = Enum.Material.Metal, Decorative = true, Parent = f })
-			makePart({ Name = "CrimsonBanner", Size = Vector3.new(4, 8, 0.2), CFrame = pole * CFrame.new(-side * 2.2, 12.8, 0), Color = CRIMSON, Material = Enum.Material.Fabric, Decorative = true, Parent = f })
+			makePart({ Name = "BannerBracket", Size = Vector3.new(0.6, 0.24, 0.24), CFrame = pole * CFrame.new(-side * 0.45, 17.2, 0), Color = IRON, Material = Enum.Material.Metal, Decorative = true, Parent = f })
+			WallsBuilder.SpawnBanner(
+				f,
+				string.format("PilgrimsBanner_%d_%s", k + 1, if side < 0 then "L" else "R"),
+				pole * CFrame.new(-side * 2.55, 17.2, 0),
+				{ Scale = 1.15, DoubleSided = true, IncludeCrossbar = true }
+			)
 		end
 	end
 
@@ -520,6 +518,20 @@ end
 -- K. LANTERN ORCHARD (a square grove of blossom trees round a lantern walk)
 --============================================================================
 -- o: frame at the grove centre, its Z axis running along the lantern walk, X across it.
+local function spawnOrchardLanterns(f: Instance, o: CFrame)
+	for k, z in { -24, 24 } do
+		for _, side in { -1, 1 } do
+			local name = string.format("GothicLantern_Orchard_%d_%s", k, if side < 0 then "W" else "E")
+			if f:FindFirstChild(name) then
+				continue
+			end
+			local p = o * CFrame.new(side * 12, 0, z)
+			local baseCF = CFrame.lookAt(p.Position, (o * CFrame.new(0, 0, z)).Position)
+			GothicLanternSpawner.Spawn(f, baseCF, name)
+		end
+	end
+end
+
 local function buildOrchard(model: Model, name: string, o: CFrame, rng: Random)
 	local f = folder(name, model)
 	local i = 0
@@ -535,16 +547,7 @@ local function buildOrchard(model: Model, name: string, o: CFrame, rng: Random)
 			end
 		end
 	end
-	for k, z in { -24, 24 } do
-		for _, side in { -1, 1 } do
-			local p = o * CFrame.new(side * 12, 0, z)
-			makePart({ Name = "LanternPost", Size = Vector3.new(0.6, 6, 0.6), CFrame = p * CFrame.new(0, 3, 0), Color = WOOD, Material = Enum.Material.Wood, Parent = f })
-			local lantern = makePart({ Name = "PaperLantern", Size = Vector3.new(1, 1.4, 1), CFrame = p * CFrame.new(-side * 1.2, 4.9, 0), Color = Color3.fromRGB(255, 120, 90), Material = Enum.Material.Neon, Decorative = true, Parent = f })
-			if k == 1 and side == 1 then
-				light(lantern, Color3.fromRGB(255, 160, 110), 16, 1)
-			end
-		end
-	end
+	spawnOrchardLanterns(f, o)
 	for _, side in { -1, 1 } do
 		bench("OrchardBench", o * CFrame.new(side * 16, 0, 0) * CFrame.Angles(0, side * math.pi * 0.5, 0), f)
 	end
@@ -585,15 +588,6 @@ local function pineTree(parent: Instance, base: CFrame, rng: Random)
 	end
 end
 
-local function lampPost(parent: Instance, base: CFrame, lit: boolean)
-	makePart({ Name = "LampPost", Size = Vector3.new(0.9, 10, 0.9), CFrame = base * CFrame.new(0, 5, 0), Color = IRON, Material = Enum.Material.Metal, Parent = parent })
-	makePart({ Name = "LampArm", Size = Vector3.new(0.4, 0.4, 2.6), CFrame = base * CFrame.new(0, 9.6, -1.1), Color = IRON, Material = Enum.Material.Metal, Decorative = true, Parent = parent })
-	local lantern = makePart({ Name = "LampLantern", Size = Vector3.new(1.3, 1.7, 1.3), CFrame = base * CFrame.new(0, 8.4, -2.2), Color = LANTERN, Material = Enum.Material.Neon, Decorative = true, Parent = parent })
-	if lit then
-		light(lantern, LANTERN, 18, 1.1)
-	end
-end
-
 local function flowerBed(parent: Instance, base: CFrame, color: Color3)
 	makePart({ Name = "BedKerb", Size = Vector3.new(14, 0.8, 7), CFrame = base * CFrame.new(0, 0.4, 0), Color = SLATE, Material = Enum.Material.Slate, Decorative = true, Parent = parent })
 	makePart({ Name = "FlowerBed", Size = Vector3.new(12.6, 1.1, 5.6), CFrame = base * CFrame.new(0, 0.6, 0), Color = color, Material = Enum.Material.Grass, Decorative = true, Parent = parent })
@@ -629,12 +623,9 @@ local function gardenClearings(): { { number } }
 	return list
 end
 
--- Lamps down both sides of every path, then trees, flower beds and benches scattered over the open lawn
--- (kept off the paths, features, landings and the rim).
-local function buildGarden(model: Model, root: CFrame, rng: Random)
-	local f = folder("Garden", model)
+local function spawnGardenLanterns(f: Instance, root: CFrame, clearPoints: { { number } }?)
 	local paths = gardenPaths()
-	local clear = gardenClearings()
+	local clear = clearPoints or gardenClearings()
 	local lamps = 0
 	for i = 1, #paths - 1 do
 		local p = paths[i]
@@ -648,11 +639,24 @@ local function buildGarden(model: Model, root: CFrame, rng: Random)
 			local x, z = p[1] + ux * along - uz * off * side, p[2] + uz * along + ux * off * side
 			if not nearAny(x, z, clear, 0) then
 				lamps += 1
-				local pos = (root * CFrame.new(x, 0, z)).Position
-				lampPost(f, CFrame.lookAt(pos, pos + Vector3.new(uz * side, 0, -ux * side)), lamps % 4 == 0) -- lantern arm over the path
+				local name = string.format("GothicLantern_Path_%d", lamps)
+				if not f:FindFirstChild(name) then
+					local pos = (root * CFrame.new(x, 0, z)).Position
+					local baseCF = CFrame.lookAt(pos, pos + Vector3.new(uz * side, 0, -ux * side))
+					GothicLanternSpawner.Spawn(f, baseCF, name)
+				end
 			end
 		end
 	end
+end
+
+-- Lamps down both sides of every path, then trees, flower beds and benches scattered over the open lawn
+-- (kept off the paths, features, landings and the rim).
+local function buildGarden(model: Model, root: CFrame, rng: Random)
+	local f = folder("Garden", model)
+	local paths = gardenPaths()
+	local clear = gardenClearings()
+	spawnGardenLanterns(f, root, clear)
 
 	local hx, hz, r = HubLayout.HubHalfX, HubLayout.HubHalfZ, HubLayout.OuterCornerRadius
 	local inset, step = 22, 38
@@ -965,10 +969,16 @@ local function buildOverlook(model: Model, root: CFrame)
 			local len = zr[2] - zr[1]
 			makePart({ Name = "Balustrade", Size = Vector3.new(1, 3.06, len), CFrame = t * CFrame.new(side * 21.5, h + 1.53, (zr[1] + zr[2]) * 0.5), Color = SLATE_DARK, Material = Enum.Material.Slate, Parent = f })
 		end
-		-- Crimson banners at the outer corners
+		-- Heraldic crimson-and-gold banners at the outer corners
 		local pole = t * CFrame.new(side * 20, h, 13.5)
 		makePart({ Name = "BannerPole", Size = Vector3.new(0.8, 12, 0.8), CFrame = pole * CFrame.new(0, 6, 0), Color = IRON, Material = Enum.Material.Metal, Parent = f })
-		makePart({ Name = "CrimsonBanner", Size = Vector3.new(3.6, 6, 0.2), CFrame = pole * CFrame.new(-side * 2, 8, 0), Color = CRIMSON, Material = Enum.Material.Fabric, Decorative = true, Parent = f })
+		makePart({ Name = "BannerBracket", Size = Vector3.new(0.55, 0.22, 0.22), CFrame = pole * CFrame.new(-side * 0.45, 11.4, 0), Color = IRON, Material = Enum.Material.Metal, Decorative = true, Parent = f })
+		WallsBuilder.SpawnBanner(
+			f,
+			"OverlookBanner_" .. (if side < 0 then "L" else "R"),
+			pole * CFrame.new(-side * 2.3, 11.4, 0),
+			{ Scale = 1.0, DoubleSided = true, IncludeCrossbar = true }
+		)
 	end
 	makePart({ Name = "Balustrade", Size = Vector3.new(44, 3, 1), CFrame = t * CFrame.new(0, h + 1.5, 14.5), Color = SLATE_DARK, Material = Enum.Material.Slate, Parent = f })
 	-- Brass telescopes aimed at the tower top
@@ -1029,25 +1039,30 @@ function CloisterBuilder.Build(container: Instance): Model
 	return model
 end
 
--- Keeps each gate landing's nameplate in sync with its plot's OwnerName (set by PlotManager).
-function CloisterBuilder.BindGateTablets(commons: Instance, plotsFolder: Instance)
-	local landings = commons:FindFirstChild("GateLandings")
-	if not landings then
-		return
+-- Populates (or backfills after prefab import) every hub perimeter, garden pathway & orchard Gothic lantern.
+function CloisterBuilder.SpawnHubLanterns(commons: Instance)
+	GothicLanternSpawner.CleanupLegacyLamps(commons)
+	local root = CFrame.new(HubLayout.HubCentre)
+	local lamps = commons:FindFirstChild("LampPylons")
+	if not lamps then
+		lamps = folder("LampPylons", commons)
 	end
-	for _, gate in landings:GetChildren() do
-		local index = gate:GetAttribute("PlotIndex")
-		local tablet = gate:FindFirstChild("GateTablet")
-		local label = tablet and tablet:FindFirstChild("OwnerLabel", true) :: TextLabel?
-		local plot = plotsFolder:FindFirstChild("Plot_" .. tostring(index))
-		if label and plot then
-			local function refresh()
-				local owner = plot:GetAttribute("OwnerName")
-				local claimed = type(owner) == "string" and owner ~= "" and owner ~= "Unclaimed"
-				label.Text = if claimed then string.format("PLOT %d\n%s's Fortress", index, owner) else string.format("PLOT %d\nUnclaimed", index)
-			end
-			refresh()
-			plot:GetAttributeChangedSignal("OwnerName"):Connect(refresh)
+	spawnRimLanterns(lamps, root)
+
+	local garden = commons:FindFirstChild("Garden")
+	if garden then
+		spawnGardenLanterns(garden, root)
+	end
+
+	for _, orchardInfo in {
+		{ Name = "OrchardWest", Feat = FEATURES.OrchardWest },
+		{ Name = "OrchardEast", Feat = FEATURES.OrchardEast },
+	} do
+		local orchardFolder = commons:FindFirstChild(orchardInfo.Name)
+		if orchardFolder then
+			local pos = (root * CFrame.new(orchardInfo.Feat[1], 0, orchardInfo.Feat[2])).Position
+			local o = CFrame.lookAt(pos, pos - Vector3.zAxis)
+			spawnOrchardLanterns(orchardFolder, o)
 		end
 	end
 end

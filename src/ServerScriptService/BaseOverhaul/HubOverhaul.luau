@@ -25,9 +25,10 @@ local TowerBuilder = require(BaseOverhaulFolder:WaitForChild("TowerBuilder"))
 local LightingAndEffects = require(BaseOverhaulFolder:WaitForChild("LightingAndEffects"))
 local CloisterBuilder = require(BaseOverhaulFolder:WaitForChild("CloisterBuilder"))
 local SharedLeaderboards = require(BaseOverhaulFolder:WaitForChild("SharedLeaderboards"))
+local GothicLanternSpawner = require(BaseOverhaulFolder:WaitForChild("GothicLanternSpawner"))
 
 local HubOverhaul = {}
-HubOverhaul.Version = 25 -- Bump to force a rebuild of baked geometry (25: stepped tower, crown spire, cloud bank clear of the hub)
+HubOverhaul.Version = 27 -- Bump to force a rebuild of baked geometry (27: import GothicLanternPost, replace all hub/orchard/courtyard streetlamps)
 
 -- Runtime cleanup sweep to destroy pre-baked light shaft beams, god-ray attachments, and SunRays
 function HubOverhaul.CleanupLightShaftsAndRays()
@@ -412,11 +413,37 @@ function HubOverhaul.Build(forceRebuild: boolean?): (Instance, boolean)
 	if alreadyBaked and not forceRebuild then
 		-- Geometry was already baked in Edit mode; re-seat spawns, beacons and the shared leaderboards
 		local baked = existingContainer :: Instance
+		GothicLanternSpawner.CleanupLegacyLamps(baked)
+		GothicLanternSpawner.CleanupLegacyLamps(plotsFolder)
+		local bakedCommons = baked:FindFirstChild("MastersCommons")
+		if bakedCommons then
+			for _, desc in bakedCommons:GetDescendants() do
+				if desc.Name == "GateTablet" then
+					desc:Destroy()
+				end
+			end
+			if GothicLanternSpawner.GetTemplate() ~= nil then
+				CloisterBuilder.SpawnHubLanterns(bakedCommons)
+			end
+		end
 		for i = 1, Config.IslandCount do
 			local pModel = plotsFolder:FindFirstChild("Plot_" .. tostring(i))
 			if pModel and pModel:IsA("Model") then
 				alignPlotSpawnAndBeacon(pModel, HubLayout.PlotIslandCFrame(i))
+				if GothicLanternSpawner.GetTemplate() ~= nil then
+					local island = pModel:FindFirstChild("FloatingFortressIsland")
+					local accents = island and island:FindFirstChild("CourtyardAccents")
+					if accents then
+						local courtyardTopCF = HubLayout.PlotIslandCFrame(i)
+							* CFrame.new(0, 0, -(IslandBuilder.Config.CenterOffsetZ or 100))
+						IslandBuilder.SpawnCourtyardLanterns(accents, courtyardTopCF)
+					end
+				end
 			end
+		end
+		if bakedCommons and GothicLanternSpawner.GetTemplate() == nil then
+			-- Emit the single missing-asset warning cleanly without spawning primitive fallbacks
+			GothicLanternSpawner.Spawn(bakedCommons, CFrame.identity)
 		end
 		local zone = baked:FindFirstChild("IslandKillRespawnZone")
 		if not (zone and zone:IsA("Folder")) then
@@ -515,9 +542,16 @@ function HubOverhaul.StartRuntime(container: Instance, rebuilt: boolean)
 			end
 		end
 	end
+	local plotsFolder = Workspace:WaitForChild("WaitingRoomPlots")
+	GothicLanternSpawner.CleanupLegacyLamps(container)
+	GothicLanternSpawner.CleanupLegacyLamps(plotsFolder)
 	local commons = container:FindFirstChild("MastersCommons")
 	if commons then
-		CloisterBuilder.BindGateTablets(commons, Workspace:WaitForChild("WaitingRoomPlots"))
+		for _, desc in commons:GetDescendants() do
+			if desc.Name == "GateTablet" then
+				desc:Destroy()
+			end
+		end
 	end
 	if rebuilt then
 		-- Islands may have moved under buildings that PlotBuildingPlacement already placed

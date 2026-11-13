@@ -3,6 +3,8 @@
 -- ModuleScript: Builds a single reusable floating fortress island (flat cobblestone top + jagged tapered rock underside + cloud wisps).
 -- All decorative underside parts have CanCollide, CanTouch, and CanQuery disabled for mobile performance.
 
+local GothicLanternSpawner = require(script.Parent:WaitForChild("GothicLanternSpawner"))
+
 local IslandBuilder = {}
 
 --============================================================================
@@ -474,72 +476,9 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 	local ironColor = Color3.fromRGB(28, 30, 36)
 	local stoneBenchColor = Color3.fromRGB(92, 96, 106)
 	local goldAccentColor = Color3.fromRGB(196, 152, 58)
-	local warmFlameColor = Color3.fromRGB(255, 182, 88)
-	local warmLightColor = Color3.fromRGB(255, 172, 76)
 
-	-- 4 Gothic Lampposts at the corners of the radiating paths (Brightness 1.5, Range 15)
-	local lampAnglesDeg = { -152, -72, 68, 152 }
-	local lampRadius = 19.6
-	for idx, angDeg in ipairs(lampAnglesDeg) do
-		local a = math.rad(angDeg)
-		local lx = math.sin(a) * lampRadius
-		local lz = math.cos(a) * lampRadius
-		local baseCF = CFrame.new(lx, 0, lz) * CFrame.Angles(0, a, 0)
-
-		makePart({
-			Name = string.format("Lamppost_Plinth_%d", idx),
-			Size = Vector3.new(1.35, 1.2, 1.35),
-			CFrame = baseCF * CFrame.new(0, 0.6, 0),
-			Material = Enum.Material.Slate,
-			Color = stoneBenchColor,
-			Decorative = true,
-			Parent = accentsFolder,
-		})
-		makePart({
-			Name = string.format("Lamppost_Shaft_%d", idx),
-			Size = Vector3.new(0.38, 7.6, 0.38),
-			CFrame = baseCF * CFrame.new(0, 5.0, 0),
-			Material = Enum.Material.Metal,
-			Color = ironColor,
-			Decorative = true,
-			Parent = accentsFolder,
-		})
-		makePart({
-			Name = string.format("Lamppost_Crossbar_%d", idx),
-			Size = Vector3.new(1.15, 0.22, 0.22),
-			CFrame = baseCF * CFrame.new(0, 8.6, 0),
-			Material = Enum.Material.Metal,
-			Color = goldAccentColor,
-			Decorative = true,
-			Parent = accentsFolder,
-		})
-		makePart({
-			Name = string.format("Lamppost_CageCap_%d", idx),
-			Size = Vector3.new(1.1, 0.35, 1.1),
-			CFrame = baseCF * CFrame.new(0, 10.15, 0),
-			Material = Enum.Material.Metal,
-			Color = ironColor,
-			Decorative = true,
-			Parent = accentsFolder,
-		})
-		local lanternGlass = makePart({
-			Name = string.format("Lamppost_Lantern_%d", idx),
-			Size = Vector3.new(0.76, 1.15, 0.76),
-			CFrame = baseCF * CFrame.new(0, 9.4, 0),
-			Material = Enum.Material.Neon,
-			Color = warmFlameColor,
-			Transparency = 0.18,
-			Decorative = true,
-			Parent = accentsFolder,
-		})
-		local lampLight = Instance.new("PointLight")
-		lampLight.Name = "WarmCourtyardLampLight"
-		lampLight.Color = warmLightColor
-		lampLight.Brightness = 1.5
-		lampLight.Range = 15
-		lampLight.Shadows = false
-		lampLight.Parent = lanternGlass
-	end
+	-- 4 Blender-authored Gothic Medieval Lantern Posts at the corners of the radiating paths
+	IslandBuilder.SpawnCourtyardLanterns(accentsFolder, CFrame.identity)
 
 	-- 2 Carved Gothic Stone Benches flanking the outer ring promenade (facing the fountain)
 	for idx, benchAngDeg in ipairs({ -108, 18 }) do
@@ -712,6 +651,25 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 	end
 
 	return islandModel
+end
+
+-- Spawns the 4 courtyard Gothic Medieval Lantern Posts (overhanging lantern -Z points inward toward the fountain)
+function IslandBuilder.SpawnCourtyardLanterns(accentsFolder: Instance, courtyardTopCF: CFrame?)
+	GothicLanternSpawner.CleanupLegacyLamps(accentsFolder)
+	local origin = courtyardTopCF or CFrame.identity
+	local lampAnglesDeg = { -152, -72, 68, 152 }
+	local lampRadius = 19.6
+	for idx, angDeg in ipairs(lampAnglesDeg) do
+		local name = string.format("GothicLantern_%d", idx)
+		if accentsFolder:FindFirstChild(name) then
+			continue
+		end
+		local a = math.rad(angDeg)
+		local lx = math.sin(a) * lampRadius
+		local lz = math.cos(a) * lampRadius
+		local baseCF = origin * CFrame.new(lx, 0, lz) * CFrame.Angles(0, a, 0)
+		GothicLanternSpawner.Spawn(accentsFolder, baseCF, name)
+	end
 end
 
 return IslandBuilder
