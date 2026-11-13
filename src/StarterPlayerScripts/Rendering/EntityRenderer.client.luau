@@ -291,6 +291,7 @@ local function attackArgs(rig: Model, animator: any, meta: any, cue: any): any
 			return positions
 		end,
 		RecentHits = recentHits,
+		Rig = rig,
 		Twin = function(): Vector3?
 			local mark = TwinMarks[cue.NetId]
 			if not mark or os.clock() - mark.At > TWIN_MARK_SECONDS then

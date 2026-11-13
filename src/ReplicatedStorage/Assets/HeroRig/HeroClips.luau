@@ -1644,8 +1644,8 @@ end
 -- reaching down toward the ground and the right dagger held out to the side, head up.
 -- Gilt Cut: both daggers cross high, then slash out in an X. Mirror Step: she drops low (the
 -- vanish), then lunges forward into a two-handed reverse-grip stab (she appears behind the
--- target). Shatterdance: a gathering crouch, a spin into a throw, a counter-spin into a second
--- throw while the clones cut, then a landing kneel.
+-- target). Shatterdance: she crosses her daggers before her face and holds, calling the mirror
+-- clones, while they cut in turn, then slashes both blades out as the last one shatters.
 do
 	local p = WeaponPoses.DAGGERS
 	local lurk = merge(p.Crouched, { Waist = { -18, 10, 0 }, Neck = { 14, -8, 0 },
@@ -1654,8 +1654,10 @@ do
 		LeftHip = { 40, 0, -10 }, LeftKnee = { -60, 0, 0 }, LeftAnkle = { 20, 0, 0 },
 		RightHip = { 10, 0, 12 }, RightKnee = { -50, 0, 0 }, RightAnkle = { 40, 0, 0 },
 		RootOffset = { 0, -0.45, 0 } })
-	local spin = merge(p.Crouched, { Waist = { 4, 160, 0 }, LeftShoulder = { 100, 0, -80 }, RightShoulder = { 100, 0, 80 }, RootOffset = { 0, 0.5, 0 } })
-	local throw = merge(p.Crouched, { Waist = { -10, 0, 0 }, LeftShoulder = { 150, 0, -30 }, RightShoulder = { 150, 0, 30 }, LeftElbow = { 10, 0, 0 }, RightElbow = { 10, 0, 0 }, RootOffset = { 0, 0.3, 0 } })
+	local summon = merge(p.Crouched, { Waist = { -6, 0, 0 }, Neck = { 6, 0, 0 }, LeftShoulder = { 115, 0, 28 }, RightShoulder = { 115, 0, -28 },
+		LeftElbow = { 60, 0, 0 }, RightElbow = { 60, 0, 0 }, RootOffset = { 0, -0.25, 0 } })
+	local release = merge(p.Crouched, { Waist = { -14, 0, 0 }, LeftShoulder = { 70, 0, -70 }, RightShoulder = { 70, 0, 70 },
+		LeftElbow = { 10, 0, 0 }, RightElbow = { 10, 0, 0 }, LeftWrist = { -80, 0, 0 }, RightWrist = { -80, 0, 0 }, RootOffset = { 0, -0.3, 0 } })
 	local kneel = merge(p.Crouched, { Waist = { -20, 0, 0 }, LeftHip = { 80, 0, 0 }, LeftKnee = { -90, 0, 0 }, RightHip = { -10, 0, 0 }, RightKnee = { -100, 0, 0 },
 		LeftShoulder = { 30, 0, -60 }, RightShoulder = { 30, 0, 60 }, RootOffset = { 0, -0.6, 0 } })
 	local stab = merge(p.Crouched, { Waist = { -14, 0, 0 }, RightShoulder = { 100, 0, 10 }, RightElbow = { 10, 0, 0 }, RightWrist = { -90, 0, 0 },
@@ -1682,14 +1684,12 @@ do
 		}, { Charge = 0.3, Release = 0.48 }),
 		AttackSkill = signature(1.4, {
 			{ 0, p.Crouched },
-			{ 0.15, merge(kneel, { LeftShoulder = { 60, 0, 20 }, RightShoulder = { 60, 0, -20 }, LeftElbow = { 90, 0, 0 }, RightElbow = { 90, 0, 0 } }) }, -- gathers
-			{ 0.3, spin },
-			{ 0.4, throw }, -- the first clone cuts
-			{ 0.55, merge(spin, { Waist = { 4, -160, 0 } }) }, -- counter-spin
-			{ 0.68, throw },
-			{ 0.85, kneel }, -- lands as the last pane shatters
+			{ 0.12, summon }, -- daggers crossed before her face: the clones appear
+			{ 0.3, merge(summon, { Waist = { -10, 0, 0 }, RootOffset = { 0, -0.3, 0 } }) },
+			{ 0.78, merge(summon, { Waist = { -12, 0, 0 }, RootOffset = { 0, -0.32, 0 } }) }, -- holds while they cut
+			{ 0.88, release }, -- slashes both blades out as the last one shatters
 			{ 1, p.Crouched },
-		}, { Charge = 0.15, Release = 0.4 }),
+		}, { Charge = 0.12, Release = 0.3 }),
 	}
 end
 

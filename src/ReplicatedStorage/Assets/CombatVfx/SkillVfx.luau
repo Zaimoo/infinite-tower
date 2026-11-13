@@ -15,6 +15,9 @@ local VfxMath = require(script.Parent:WaitForChild("VfxMath"))
 local VfxPool = require(script.Parent:WaitForChild("VfxPool"))
 local VfxPrimitives = require(script.Parent:WaitForChild("VfxPrimitives"))
 local ProjectileVfx = require(script.Parent:WaitForChild("ProjectileVfx"))
+local MirrorClones = require(script.Parent:WaitForChild("MirrorClones"))
+local HeroClips = require(script.Parent.Parent:WaitForChild("HeroRig"):WaitForChild("HeroClips"))
+local HeroAnimator = require(script.Parent.Parent:WaitForChild("HeroRig"):WaitForChild("HeroAnimator"))
 
 local SkillVfx = {}
 
@@ -45,6 +48,8 @@ export type PlayArgs = {
 	-- TWIN: live body centre of the second target the server picked when the attack started
 	-- (its TWIN_MARK), or nil when there is none.
 	Twin: (() -> Vector3?)?,
+	-- The attacker's rendered rig (SHATTERDANCE copies it into mirror clones), when available.
+	Rig: Model?,
 	Now: number, -- server time
 	Shake: ((magnitude: number) -> ())?, -- set only for the local player's own heroes
 }
@@ -829,17 +834,28 @@ local function playMirrorStep(ctx: Context)
 	shake(ctx, at)
 end
 
--- Shatterdance's mirror panes: one per damage tick, standing in a ring around the target and
--- facing it. Deterministic from the cue, so the charge and the strike draw them in the same place.
-local PANE_RADIUS = 3.6
-local function panePositions(args: PlayArgs, center: Vector3, count: number): { Vector3 }
+-- Shatterdance: five glass copies of Nyx (MirrorClones) stand in a ring around the target, each
+-- in front of a mirror pane. On each damage tick one winds up, lunges in, slashes across the
+-- target and shatters with its pane. Deterministic from the cue, so the charge (which raises the
+-- panes and clones) and the strike use the same places.
+local CLONE_RADIUS = 4.4
+local PANE_RADIUS = 5.4
+local CLONE_LUNGE = 1.7 -- how close to the target a clone's lunge ends
+local CLONE_WINDUP = 0.2
+local CLONE_HOLD = 0.14 -- strike pose held before the clone shatters
+local CLONE_FADE_IN = 0.25
+
+local function ringAngles(args: PlayArgs, count: number): { number }
 	local spin = (args.Cue.NetId % 360) * math.pi / 180
 	local out = table.create(count)
 	for i = 1, count do
-		local angle = spin + (i - 1) / count * math.pi * 2
-		table.insert(out, center + Vector3.new(math.cos(angle) * PANE_RADIUS, 0, math.sin(angle) * PANE_RADIUS))
+		table.insert(out, spin + (i - 1) / count * math.pi * 2)
 	end
 	return out
+end
+
+local function ringPoint(center: Vector3, angle: number, radius: number): Vector3
+	return center + Vector3.new(math.cos(angle) * radius, 0, math.sin(angle) * radius)
 end
 
 local function drawPane(pool: VfxPool.VfxPool, palette: Palette, pane: Vector3, center: Vector3, startAt: number, endAt: number, grow: number)
@@ -848,39 +864,155 @@ local function drawPane(pool: VfxPool.VfxPool, palette: Palette, pane: Vector3, 
 		return
 	end
 	local frame = CFrame.lookAt(pane, pane + facing) * CFrame.Angles(0, math.pi / 2, 0)
-	VfxPrimitives.Disc(pool, { CFrame = frame, Radius = 1.7, Color = palette.Secondary, StartAt = startAt, EndAt = endAt, Grow = grow, Transparency = 0.45 })
-	VfxPrimitives.Disc(pool, { CFrame = frame * CFrame.new(0.05, 0, 0), Radius = 1.45, Color = palette.Primary, StartAt = startAt, EndAt = endAt, Grow = grow, Transparency = 0.3 })
+	VfxPrimitives.Disc(pool, { CFrame = frame, Radius = 2.1, Color = palette.Secondary, StartAt = startAt, EndAt = endAt, Grow = grow, Transparency = 0.5 })
+	VfxPrimitives.Disc(pool, { CFrame = frame * CFrame.new(0.05, 0, 0), Radius = 1.85, Color = palette.Primary, StartAt = startAt, EndAt = endAt, Grow = grow, Transparency = 0.35 })
 end
 
--- SHATTERDANCE: five mirror panes stand around the target. On each damage tick one flashes, a
--- clone streaks out of it through the target leaving a teal wake, a crescent cuts across the
--- target, and the pane shatters into glass and gilt. After the last cut a shockwave rolls out
--- over the skill's radius with a big gilt flash.
+-- The clones' poses, from the hero's own clips: ready (Idle), wind-up and strike (Gilt Cut).
+local function clonePoses(args: PlayArgs): ({ [string]: CFrame }, { [string]: CFrame }, { [string]: CFrame })
+	local idle = HeroClips.Get(args.HeroId, args.WeaponType, "Idle")
+	local cut = HeroClips.Get(args.HeroId, args.WeaponType, "AttackBasic")
+	local ready = if idle then HeroAnimator.Sample(idle, 0) else {}
+	local windup = if cut then HeroAnimator.Sample(cut, 0.25) else ready
+	local strike = if cut then HeroAnimator.Sample(cut, 0.56) else ready
+	return ready, windup, strike
+end
+
+-- Height of the rig's pivot above its feet, so clones stand on the ground under the target.
+local function pivotHeight(args: PlayArgs): number
+	local rig = args.Rig
+	if rig and args.Self then
+		return math.clamp(rig:GetPivot().Position.Y - args.Self().Y, 1, 6)
+	end
+	return 3
+end
+
+type ClonePlan = { Clones: { MirrorClones.Clone? }, Expire: number }
+-- Clones raised by a charge, waiting for that cue's strike (keyed by the attacker's NetId).
+local pendingClones: { [number]: ClonePlan } = {}
+
+local function destroyPlan(plan: ClonePlan)
+	for _, clone in plan.Clones do
+		if clone then
+			clone.Destroy()
+		end
+	end
+end
+
+-- Raises the clones around `center`, fading in from `appearAt`, in the ready pose.
+local function raiseClones(pool: VfxPool.VfxPool, args: PlayArgs, palette: Palette, center: Vector3, count: number, appearAt: number): ClonePlan
+	local rig = args.Rig
+	local clones: { MirrorClones.Clone? } = {}
+	if rig and rig.Parent then
+		local ground = Vector3.new(center.X, args.Cue.Aim.Y + pivotHeight(args), center.Z)
+		local ready = clonePoses(args)
+		for i, angle in ringAngles(args, count) do
+			local spot = ringPoint(ground, angle, CLONE_RADIUS)
+			local clone = MirrorClones.Make(rig, pool.Folder, palette.Primary, palette.Secondary)
+			if clone then
+				clone.Pose(CFrame.lookAt(spot, Vector3.new(ground.X, spot.Y, ground.Z)), ready)
+			end
+			clones[i] = clone
+		end
+		pool:Run({
+			Update = function(now: number): boolean
+				local t = VfxMath.Progress(appearAt, appearAt + CLONE_FADE_IN, now)
+				for _, clone in clones do
+					if clone then
+						clone.Fade(1 - t)
+					end
+				end
+				return t >= 1
+			end,
+		})
+	end
+	return { Clones = clones, Expire = appearAt + 4 }
+end
+
+-- One clone's cut: wind up toward the target, lunge in and slash at `hitAt`, hold, then fade as
+-- it shatters.
+local function cloneCut(pool: VfxPool.VfxPool, clone: MirrorClones.Clone, home: CFrame, center: Vector3, poses: { any }, hitAt: number)
+	local ready, windup, strike = poses[1], poses[2], poses[3]
+	local target = Vector3.new(center.X, home.Position.Y, center.Z)
+	local towards = (target - home.Position)
+	local lungeTo = if towards.Magnitude > CLONE_LUNGE then target - towards.Unit * CLONE_LUNGE else home.Position
+	local state = 0
+	pool:Run({
+		Update = function(now: number): boolean
+			if now < hitAt - CLONE_WINDUP then
+				return false
+			elseif now < hitAt then
+				if state < 1 then
+					state = 1
+					clone.Pose(home, windup)
+				end
+				return false
+			elseif now < hitAt + CLONE_HOLD then
+				local t = VfxMath.Progress(hitAt, hitAt + 0.08, now)
+				local frame = CFrame.lookAt(home.Position:Lerp(lungeTo, t), target)
+				if state < 2 then
+					state = 2
+					clone.Pose(frame, strike)
+				else
+					clone.Move(frame)
+				end
+				return false
+			end
+			local t = VfxMath.Progress(hitAt + CLONE_HOLD, hitAt + CLONE_HOLD + 0.18, now)
+			clone.Fade(t)
+			return t >= 1
+		end,
+		Cleanup = function()
+			clone.Destroy()
+		end,
+	})
+	local _ = ready
+end
+
+-- SHATTERDANCE: mirror panes and five glass clones of Nyx stand around the target (raised at
+-- the charge). On each damage tick one clone winds up, lunges in and slashes across the target,
+-- then shatters with its pane in glass and gilt. After the last cut a shockwave rolls out over
+-- the skill's radius with a big gilt flash.
 local function playShatterdance(ctx: Context)
 	local pool, recipe, palette, args = ctx.Pool, ctx.Recipe, ctx.Palette, ctx.Args
 	local center = args.Target()
 	local ticks, gap = tierTicks(args, "Skill")
 	local waves = VfxMath.WaveTimes(ctx.ArriveAt, ticks, if gap > 0 then gap else 0.15)
-	local panes = panePositions(args, center, #waves)
+	local angles = ringAngles(args, #waves)
 	local impact = recipe.Impact or 3
-	for i, hitAt in waves do
-		local pane = panes[i]
-		drawPane(pool, palette, pane, center, ctx.StartAt, hitAt + 0.04, 1)
-		local through = center + (center - pane).Unit * PANE_RADIUS
-		VfxPrimitives.Flare(pool, fixed(pane), 3.4, palette.Core, hitAt - 0.1, 0.22)
-		VfxPrimitives.Ribbon(pool, { From = pane, To = through, StartAt = hitAt - 0.1, EndAt = hitAt + 0.06, Width = 0.7,
-			Inner = palette.Primary, Outer = palette.Secondary, Linger = 0.5, Seed = args.Cue.NetId + i })
-		local frame = CFrame.lookAt(center, center + (center - pane)) * CFrame.Angles(0, 0, math.rad(if i % 2 == 0 then 35 else -35))
-		VfxPrimitives.SlashArc(pool, frame, 2.6 * SLASH_SIZE, if i % 2 == 0 then palette.Primary else palette.Secondary, hitAt, 0.3)
-		VfxPrimitives.Burst(pool, center, palette.Core, impact * 0.6, hitAt, 0.2)
-		-- The pane shatters.
-		VfxPrimitives.Burst(pool, pane, palette.Primary, 2.6, hitAt + 0.02, 0.3)
-		VfxPrimitives.Motes(pool, pane, palette.Core, hitAt + 0.02, 8, 0.55)
+	local plan = pendingClones[args.Cue.NetId]
+	pendingClones[args.Cue.NetId] = nil
+	if not plan then
+		plan = raiseClones(pool, args, palette, center, #waves, ctx.StartAt - CLONE_WINDUP)
 	end
-	local finale = waves[#waves] + 0.08
-	local ground = Vector3.new(center.X, args.Cue.Aim.Y, center.Z)
-	VfxPrimitives.Ring(pool, { Center = ground, From = 1, To = recipe.Radius or 12, Color = palette.Primary, StartAt = finale, EndAt = finale + 0.55, Width = 1.2 })
-	VfxPrimitives.Ring(pool, { Center = ground, From = 0.5, To = (recipe.Radius or 12) * 0.7, Color = palette.Secondary, StartAt = finale + 0.06, EndAt = finale + 0.6, Width = 0.7 })
+	local ground = Vector3.new(center.X, args.Cue.Aim.Y + pivotHeight(args), center.Z)
+	local ready, windup, strike = clonePoses(args)
+	local poses = { ready, windup, strike }
+	for i, hitAt in waves do
+		local angle = angles[i]
+		local pane = ringPoint(center, angle, PANE_RADIUS)
+		drawPane(pool, palette, pane, center, ctx.StartAt, hitAt + 0.1, 1)
+		local clone = plan.Clones[i]
+		local spot = ringPoint(ground, angle, CLONE_RADIUS)
+		if clone then
+			cloneCut(pool, clone, CFrame.lookAt(spot, Vector3.new(ground.X, spot.Y, ground.Z)), center, poses, hitAt)
+		end
+		local frame = CFrame.lookAt(center, center + (center - spot)) * CFrame.Angles(0, 0, math.rad(if i % 2 == 0 then 38 else -38))
+		VfxPrimitives.SlashArc(pool, frame, 2.8 * SLASH_SIZE, if i % 2 == 0 then palette.Primary else palette.Secondary, hitAt, 0.32)
+		VfxPrimitives.Burst(pool, center, palette.Core, impact * 0.6, hitAt, 0.2)
+		-- The clone and its pane shatter.
+		local shatterAt = hitAt + CLONE_HOLD
+		local shardAt = spot:Lerp(Vector3.new(center.X, spot.Y, center.Z), 0.5)
+		VfxPrimitives.Burst(pool, shardAt, palette.Primary, 3.2, shatterAt, 0.35)
+		VfxPrimitives.Flare(pool, fixed(shardAt), 3.6, palette.Core, shatterAt, 0.25)
+		VfxPrimitives.Motes(pool, shardAt, palette.Core, shatterAt, 10, 0.6)
+		VfxPrimitives.Burst(pool, pane, palette.Secondary, 2.4, hitAt + 0.1, 0.3)
+		VfxPrimitives.Motes(pool, pane, palette.Secondary, hitAt + 0.1, 6, 0.5)
+	end
+	local finale = waves[#waves] + CLONE_HOLD + 0.08
+	local floor = Vector3.new(center.X, args.Cue.Aim.Y, center.Z)
+	VfxPrimitives.Ring(pool, { Center = floor, From = 1, To = recipe.Radius or 12, Color = palette.Primary, StartAt = finale, EndAt = finale + 0.55, Width = 1.2 })
+	VfxPrimitives.Ring(pool, { Center = floor, From = 0.5, To = (recipe.Radius or 12) * 0.7, Color = palette.Secondary, StartAt = finale + 0.06, EndAt = finale + 0.6, Width = 0.7 })
 	VfxPrimitives.Flare(pool, fixed(center), 8, palette.Secondary, finale, 0.45)
 	VfxPrimitives.Burst(pool, center, palette.Core, impact * 1.4, finale, 0.4)
 	VfxPrimitives.Motes(pool, center, palette.Secondary, finale, 16, 0.8)
@@ -1355,15 +1487,30 @@ local function chargeMirrorStep(ctx: ChargeContext): boolean
 	return true
 end
 
--- SHATTERDANCE's wind-up: the mirror panes rise around the target, growing from slivers.
+-- SHATTERDANCE's wind-up: the mirror panes rise around the target from slivers and the glass
+-- clones fade in before them, waiting for the strike (which takes them over).
 local function chargeShatterdance(ctx: ChargeContext): boolean
-	local args = ctx.Args
+	local args, pool, palette = ctx.Args, ctx.Pool, ctx.Palette
 	local center = args.Target()
 	local ticks = tierTicks(args, "Skill")
-	for _, pane in panePositions(args, center, ticks) do
-		drawPane(ctx.Pool, ctx.Palette, pane, center, ctx.StartAt, ctx.ReleaseAt, 0.1)
-		VfxPrimitives.Motes(ctx.Pool, pane, ctx.Palette.Primary, ctx.StartAt, 4, 0.5)
+	for _, angle in ringAngles(args, ticks) do
+		local pane = ringPoint(center, angle, PANE_RADIUS)
+		drawPane(pool, palette, pane, center, ctx.StartAt, ctx.ReleaseAt, 0.1)
+		VfxPrimitives.Motes(pool, pane, palette.Primary, ctx.StartAt, 4, 0.5)
 	end
+	local old = pendingClones[args.Cue.NetId]
+	if old then
+		destroyPlan(old)
+	end
+	local plan = raiseClones(pool, args, palette, center, ticks, ctx.StartAt)
+	pendingClones[args.Cue.NetId] = plan
+	-- If the strike never comes (the hero died, the room changed), the clones go anyway.
+	VfxPrimitives.At(pool, plan.Expire, function()
+		if pendingClones[args.Cue.NetId] == plan then
+			pendingClones[args.Cue.NetId] = nil
+			destroyPlan(plan)
+		end
+	end)
 	return true
 end
 

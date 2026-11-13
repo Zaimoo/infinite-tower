@@ -311,9 +311,9 @@ SkillVfxCatalog.Heroes = table.freeze({
 		Skill = { Style = "TWIN", Projectile = "ARROW", Origin = "NOCK", Scale = 1.6, Arc = 0.05, Trail = 0.45, Impact = 3.6, Split = 0.42, Radius = 16, Shake = 0.3 },
 	},
 	-- Gilt Cut: an X of teal and gilt crescents. Mirror Step: a glass afterimage where she stood, a
-	-- streak to behind the target and a lance-bright stab through it. Shatterdance: five mirror
-	-- panes ring the target; each in turn flashes, a clone streaks through and it shatters, then a
-	-- shockwave over the skill's radius.
+	-- streak to behind the target and a lance-bright stab through it. Shatterdance: five glass
+	-- clones of Nyx stand before mirror panes around the target; each in turn lunges in, slashes
+	-- and shatters, then a shockwave over the skill's radius.
 	hero_nyx = {
 		Palette = { Primary = rgb(40, 226, 196), Secondary = rgb(212, 175, 90), Core = rgb(235, 255, 250), Accent = rgb(12, 110, 104) },
 		Basic = { Style = "GILT_CUT", Scale = 0.9, Impact = 1.6 },
