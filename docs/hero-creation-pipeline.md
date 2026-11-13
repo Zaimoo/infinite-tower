@@ -214,6 +214,18 @@ vertex while building and write them to the loops **before** `remove_doubles`, w
 merge the vertices the table is keyed on (`tools/make_caspian_hair_ugc.py`). Each lock then
 runs from a darker root through a shine to a lighter tip, which also reads as depth.
 
+### 6.2a Fit pass: hug the head
+
+UGC clumps stand off the scalp for volume, and imported at `Scale 0.01` the hair floats with a
+visible gap between it and the head (the user's feedback on Caspian). After wiring, scale the
+mesh down about a point **at the head**, not about the mesh's bounding-box centre (a braid or a
+long fall puts that centre far below the head, and scaling about it pulls the hair off the
+head): with anchor `a = (0, 0.2, 0.04)`, factor `k` and a small drop `d`, the new piece position
+is `a + (0, d, 0) - (a - centre) * k`, the mesh scale `0.01 * k` and the piece size times `k`;
+move any piece hung on the hair (a braid cuff) the same way. Compare `k` = 1, 0.92, 0.88 on
+head-only rigs in Studio (hide every other part). The Gilded Mirror heroes use `k = 0.9`
+(Caspian) and `0.92` (Isabelle, Nyx) with `d = -0.03`.
+
 ### 6.3 Headless Blender
 
 When the Blender MCP is down, generators run headless:

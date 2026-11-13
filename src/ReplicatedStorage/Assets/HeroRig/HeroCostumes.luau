@@ -1625,12 +1625,13 @@ do
 		UpperLeg = pants, LowerLeg = boot, Foot = boot,
 	}, {
 		-- Hair mesh: centred on the export's bounding box and turned 180 degrees to undo the
-		-- importer's rotation. The braid's gilt cuff sits at the braid's end (1.2-head units).
-		piece("HairMesh", "Head", { 1.793, 3.323, 1.757 }, { 0.0013, -0.6602, 0.0832 }, hair, with(LOOSE, {
+		-- importer's rotation. Fit pass: scaled to 92% about the head and lowered a little so it
+		-- hugs the head (checked in Studio); the braid's gilt cuff moves with the braid's end.
+		piece("HairMesh", "Head", { 1.6496, 3.0572, 1.6164 }, { 0.0012, -0.6214, 0.0797 }, hair, with(LOOSE, {
 			Rotation = { 0, 180, 0 },
-			Mesh = { MeshId = "rbxassetid://125709940577517", Scale = { 0.01, 0.01, 0.01 } },
+			Mesh = { MeshId = "rbxassetid://125709940577517", Scale = { 0.0092, 0.0092, 0.0092 } },
 		})),
-		piece("BraidCuff", "Head", { 0.18, 0.26, 0.26 }, { 0.62, -1.98, 0.74 }, GILT, with(METAL, LOOSE, { Shape = "Cylinder", Rotation = { 0, 0, 90 } })),
+		piece("BraidCuff", "Head", { 0.18, 0.26, 0.26 }, { 0.5704, -1.8356, 0.684 }, GILT, with(METAL, LOOSE, { Shape = "Cylinder", Rotation = { 0, 0, 90 } })),
 		-- Standing mandarin collar with a gilt edge
 		piece("CollarBack", "UpperTorso", { 1.2, 0.4, 0.12 }, { 0, 0.96, 0.42 }, coat, with(LOOSE, FABRIC, { Rotation = { -10, 0, 0 } })),
 		piece("CollarL", "UpperTorso", { 0.44, 0.36, 0.1 }, { -0.32, 0.92, -0.4 }, coat, with(LOOSE, FABRIC, { Rotation = { 0, 22, 0 } })),
@@ -1704,10 +1705,11 @@ do
 		UpperLeg = suit, LowerLeg = suit, Foot = boot,
 	}, {
 		-- Hair mesh: centred on the export's bounding box and turned 180 degrees to undo the
-		-- importer's rotation; textured, so the colour comes from the texture.
-		piece("HairMesh", "Head", { 1.806, 1.807, 1.766 }, { -0.0166, 0.2028, 0.0857 }, hair, with(LOOSE, {
+		-- importer's rotation; textured, so the colour comes from the texture. Fit pass: scaled to
+		-- 92% about the head and lowered a little so it hugs the head (checked in Studio).
+		piece("HairMesh", "Head", { 1.6615, 1.6624, 1.6247 }, { -0.0153, 0.1726, 0.082 }, hair, with(LOOSE, {
 			Rotation = { 0, 180, 0 },
-			Mesh = { MeshId = "rbxassetid://93772226685564", TextureId = "rbxassetid://79576997989816", Scale = { 0.01, 0.01, 0.01 } },
+			Mesh = { MeshId = "rbxassetid://93772226685564", TextureId = "rbxassetid://79576997989816", Scale = { 0.0092, 0.0092, 0.0092 } },
 		})),
 		-- High collar edged in gilt, with a gilt clasp at the throat
 		piece("CollarBack", "UpperTorso", { 1.2, 0.42, 0.12 }, { 0, 0.96, 0.42 }, suit, with(LOOSE, FABRIC, { Rotation = { -10, 0, 0 } })),

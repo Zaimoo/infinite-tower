@@ -77,6 +77,8 @@ Follow the `hero-remodel` skill (face, hair, costume) with these defaults:
   shape before detail; send the user the angles and the FBX path, and ask for the MeshId.
 - Accessories that must sit on the eyes (monocles, marks) go in the face decal.
 - After wiring the real mesh, run the tests again: the lint shows problems the placeholder hid.
+- **Fit pass:** scale the hair down about the head (pipeline doc §6.2a: anchor `(0, 0.2, 0.04)`,
+  try `k` 1 / 0.92 / 0.88 on head-only rigs) so it hugs the head instead of floating.
 
 ## 3. Grip (only when the user asks)
 
