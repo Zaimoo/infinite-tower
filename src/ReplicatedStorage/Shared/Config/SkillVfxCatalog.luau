@@ -66,6 +66,7 @@ export type TierRecipe = {
 	Radius: number?, -- studs: cone reach, tremor, tempest, crystal field, healing circle, taunt
 	Slashes: number?, -- TEMPEST: slash arcs around the target. WAKE: slash arcs per wave
 	Spikes: number?, -- CRYSTALS / TREMOR: spikes at the centre (plus one under each hit enemy)
+	SpinRadius: number?, -- GILDED_FRENZY: the whirlwind's reach after the slam (the kit's SpinRadius)
 	PillarHeight: number?, -- PILLAR: column height, studs
 	Linger: number?, -- seconds a ground effect or shell lasts after impact (PIERCER: the ribbon's fade)
 	Implode: boolean?, -- TEMPEST: a dark sphere collapses before the burst (rift)
@@ -99,9 +100,9 @@ SkillVfxCatalog.WeaponArchetype = table.freeze({
 
 -- Every Style SkillVfx knows, per tier.
 SkillVfxCatalog.Styles = table.freeze({
-	Basic = table.freeze({ DIAGONAL_SLASH = true, GILT_CUT = true, SHOT = true, BOLT = true, SLASH = true }),
-	Special = table.freeze({ REFRACTION = true, POLISHED_BASH = true, MIRROR_STEP = true, RICOCHET = true, VOLLEY = true, CLEAVE = true, CROSS = true, TREMOR = true, CHAIN = true, MEND = true, PLUNGE = true, BEAM = true, PIERCER = true, WHIRL = true }),
-	Skill = table.freeze({ HALL_OF_MIRRORS = true, LOOKING_GLASS = true, SHATTERDANCE = true, TWIN = true, STORM = true, BULWARK = true, TEMPEST = true, CRYSTALS = true, PILLAR = true, SANCTUARY = true, WAKE = true, SINGULARITY = true, CONSTELLATION = true, EXECUTE = true }),
+	Basic = table.freeze({ DIAGONAL_SLASH = true, GILT_CLEAVE = true, GILT_CUT = true, SHOT = true, BOLT = true, SLASH = true }),
+	Special = table.freeze({ REFRACTION = true, POLISHED_BASH = true, LAST_STAND = true, MIRROR_STEP = true, RICOCHET = true, VOLLEY = true, CLEAVE = true, CROSS = true, TREMOR = true, CHAIN = true, MEND = true, PLUNGE = true, BEAM = true, PIERCER = true, WHIRL = true }),
+	Skill = table.freeze({ HALL_OF_MIRRORS = true, LOOKING_GLASS = true, GILDED_FRENZY = true, SHATTERDANCE = true, TWIN = true, STORM = true, BULWARK = true, TEMPEST = true, CRYSTALS = true, PILLAR = true, SANCTUARY = true, WAKE = true, SINGULARITY = true, CONSTELLATION = true, EXECUTE = true }),
 })
 
 local function rgb(r: number, g: number, b: number): Color3
@@ -347,12 +348,13 @@ SkillVfxCatalog.Heroes = table.freeze({
 		Special = { Style = "REFRACTION", Projectile = "PRISM", Origin = "STAFF_TIP", Scale = 1.3, Arc = 0.04, Trail = 0.3, Impact = 2.8, Radius = 14, Bounces = 3, Shake = 0.15 },
 		Skill = { Style = "HALL_OF_MIRRORS", Radius = 16, Spikes = 4, Impact = 3.2, Shake = 0.25 },
 	},
-	-- Gilt Cleave / Last Stand / Gilded Frenzy: rose and gold; the slam bursts into gold shards.
+	-- Gilt Cleave / Last Stand / Gilded Frenzy: hot rose frenzy lightning and gilt shards; the slam
+	-- erupts into rose-gold crystals and wraps his greataxe in rose energy for 4 s.
 	hero_rourke = {
-		Palette = { Primary = rgb(255, 130, 150), Secondary = rgb(212, 175, 90), Core = rgb(255, 240, 220), Accent = rgb(255, 214, 120) },
-		Basic = { Style = "SLASH", Scale = 1.3, Impact = 2.0 },
-		Special = { Style = "TREMOR", Radius = 8, Spikes = 4, Impact = 2.8, Shake = 0.15 },
-		Skill = { Style = "CRYSTALS", Radius = 18, Spikes = 7, Impact = 3.4, Linger = 1.2, Shake = 0.35 },
+		Palette = { Primary = rgb(255, 76, 148), Secondary = rgb(212, 175, 90), Core = rgb(255, 234, 242), Accent = rgb(255, 214, 120) },
+		Basic = { Style = "GILT_CLEAVE", Scale = 1.4, Impact = 2.4 },
+		Special = { Style = "LAST_STAND", Radius = 8, Impact = 3.2, Shake = 0.2 },
+		Skill = { Style = "GILDED_FRENZY", Radius = 18, SpinRadius = 12, Spikes = 8, Impact = 3.8, Linger = 1.2, Shake = 0.35 },
 	},
 } :: { [string]: Recipe })
 

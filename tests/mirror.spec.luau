@@ -318,16 +318,44 @@ test("Twin Reflection's second half lands on the target picked when the attack s
 	check(d.CurrentHP == 3000 - 250, "a dead pick falls back to the toughest living enemy")
 end)
 
-test("Looking-Glass Bulwark reflects for 6s; Gilded Frenzy speeds Rourke up for 4s", function()
+test("Looking-Glass Bulwark reflects for 6s; Gilded Frenzy speeds Rook up for 4s", function()
 	local caspian = attacker("hero_caspian", "Vanguard")
 	local target = mob(1, 5)
 	resolve("hero_caspian", "Vanguard", "SKILL", { target }, target, caspian)
 	check(caspian.ReflectPercent == 0.20 and caspian.ReflectExpires == 106, "reflection set")
 	check(caspian.BarrierHP == 400 and target.TauntedByNetId == 1, "the Vanguard barrier and taunt still apply")
-	local rourke = attacker("hero_rourke", "Berserker")
+	local rook = attacker("hero_rourke", "Berserker")
 	local t2 = mob(1, 5)
-	resolve("hero_rourke", "Berserker", "SKILL", { t2, mob(2, 10) }, t2, rourke)
-	check(rourke.AttackSpeedBonus == 0.25 and rourke.AttackSpeedUntil == 104, "frenzy set")
+	resolve("hero_rourke", "Berserker", "SKILL", { t2, mob(2, 10) }, t2, rook)
+	check(rook.AttackSpeedBonus == 0.25 and rook.AttackSpeedUntil == 104, "frenzy set")
+end)
+
+test("Gilded Frenzy: a slam over 18 studs, then four spins over 12, 2.6x in total, buff on the last spin", function()
+	local profile = Skills.GetSkillProfile("hero_rourke", "Berserker")
+	local skill = profile.Skill :: any
+	check(skill.Ticks == 5 and skill.Radius == 18 and skill.SpinRadius == 12 and skill.CastSeconds == 2.4, "kit shape")
+	local total = 0
+	for tick = 1, 5 do
+		total += Effects.TickWeight(skill, tick, 5) / 5
+	end
+	close(total, 1, 1e-9, "the weights keep the 2.6x total")
+	close(Effects.TickWeight(skill, 1, 5) / 5 * 2.6, 1.2, 1e-9, "the slam is 1.2x")
+	close(Effects.TickWeight(skill, 3, 5) / 5 * 2.6, 0.35, 1e-9, "each spin is 0.35x")
+	local rook = attacker("hero_rourke", "Berserker")
+	local function frenzyTick(mobs, primary, tick)
+		return Effects.Resolve(effectContext(mobs) :: any, { Impact = { Atk = 100, DamageMult = skill.DamageMultiplier, Ticks = 5, Origin = Vector3.new(0, 0, 0) },
+			Attacker = rook, Profile = profile, Tier = "SKILL", Tick = tick, Primary = primary, Center = primary.Position })
+	end
+	local target, mid, far = mob(1, 0), mob(2, 15), mob(3, 25)
+	frenzyTick({ target, mid, far }, target, 1)
+	check(mid.CurrentHP == 1000 - 60 and far.CurrentHP == 1000, "the slam hits others within 18 studs for half of 1.2x")
+	frenzyTick({ target, mid, far }, target, 2)
+	check(mid.CurrentHP == 940, "a spin does not reach 15 studs")
+	check(rook.AttackSpeedBonus == nil, "no buff before the last spin")
+	local near = mob(4, 8)
+	frenzyTick({ target, near }, target, 5)
+	check(near.CurrentHP == 1000 - math.round(17.5), "a spin hits others within 12 studs for half of 0.35x")
+	check(rook.AttackSpeedBonus == 0.25 and rook.AttackSpeedUntil == 104, "the buff starts on the last spin")
 end)
 
 test("Nyx's Gilded Edge passive is on her kit only", function()

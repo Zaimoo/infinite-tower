@@ -59,7 +59,85 @@ export type HeroAnimator = typeof(setmetatable({} :: {
 	OffhandWeapon: Instance?, -- the EquippedWeapon the two fields below were read from
 	OffhandWeld: Weld?,
 	OffhandAttachment: Attachment?,
+	Alternations: { [string]: number }, -- per state, how many times it has played (alternate clips)
+	Halo: { Head: BasePart, Spec: HaloRing, Shards: { BasePart }, Welds: { Weld }, Phases: { number } }?,
 }, HeroAnimator))
+
+export type HaloRing = { Center: Vector3, Rx: number, Ry: number, Axis: Vector3, Normal: Vector3 }
+
+local HALO_ORBIT_SPEED = 1.35 -- rad/s (~4.65 s per loop around the halo)
+local HALO_SHARD_NAMES = { "HaloShardTop", "HaloShardL", "HaloShardR" }
+
+-- Derives Seraphine's tilted halo ring ellipse in Head-local space from the rest shard positions
+-- so both the orbiting shards (Step) and the glowing Beam ring (MirrorHeroFx) share one curve.
+function HeroAnimator.HaloRingSpec(pTop: Vector3, pL: Vector3, pR: Vector3): HaloRing
+	local rx = math.max(math.abs(pL.X), math.abs(pR.X)) * 1.12
+	local center = Vector3.new(0, pTop.Y * 0.94, pTop.Z * 0.36)
+	local uVec = Vector3.new(0, pTop.Y * 0.12, pTop.Z * 0.90)
+	local ry = uVec.Magnitude
+	local axis = if ry > 1e-4 then uVec.Unit else Vector3.zAxis
+	local normal = Vector3.xAxis:Cross(axis)
+	normal = if normal.Magnitude > 1e-4 then normal.Unit else Vector3.yAxis
+	return { Center = center, Rx = rx, Ry = ry, Axis = axis, Normal = normal }
+end
+
+-- Local-space CFrame of one halo shard at orbit phase `theta` and bob time `clock`.
+function HeroAnimator.HaloOrbitCFrame(spec: HaloRing, theta: number, clock: number?): CFrame
+	local cosT, sinT = math.cos(theta), math.sin(theta)
+	local bob = math.sin(theta * 2 + (clock or 0)) * 0.03
+	local pos = spec.Center + Vector3.xAxis * (spec.Rx * cosT) + spec.Axis * (spec.Ry * sinT) + spec.Normal * bob
+	local radial = (Vector3.xAxis * cosT + spec.Axis * sinT).Unit
+	local tangent = (-Vector3.xAxis * (spec.Rx * sinT) + spec.Axis * (spec.Ry * cosT)).Unit
+	local upAxis = (radial * 0.7 + Vector3.yAxis * 0.5).Unit
+	local zAxis = (-tangent):Cross(upAxis).Unit
+	local right = upAxis:Cross(zAxis)
+	return CFrame.fromMatrix(pos, right, upAxis, zAxis)
+end
+
+local function findHaloRig(rig: Model): { Head: BasePart, Spec: HaloRing, Shards: { BasePart }, Welds: { Weld }, Phases: { number } }?
+	local head = rig:FindFirstChild("Head")
+	if not (head and head:IsA("BasePart")) then
+		return nil
+	end
+	local shards: { BasePart } = {}
+	local welds: { Weld } = {}
+	local pos: { Vector3 } = {}
+	for i, name in HALO_SHARD_NAMES do
+		local part = rig:FindFirstChild(name, true)
+		local weld = part and part:FindFirstChild("CostumeWeld")
+		if not (part and part:IsA("BasePart") and weld and weld:IsA("Weld") and weld.Part0 == head) then
+			return nil
+		end
+		shards[i] = part
+		welds[i] = weld
+		pos[i] = (weld.C0 * weld.C1:Inverse()).Position
+	end
+	local spec = HeroAnimator.HaloRingSpec(pos[1], pos[2], pos[3])
+	local base = math.pi * 0.5
+	return {
+		Head = head,
+		Spec = spec,
+		Shards = shards,
+		Welds = welds,
+		Phases = { base, base + math.pi * 2 / 3, base + math.pi * 4 / 3 },
+	}
+end
+
+local function stepHalo(self: HeroAnimator)
+	local halo = self.Halo
+	if not halo or self.Locomotion == "Coma" then
+		return
+	end
+	local phaseShift = self.Clock * HALO_ORBIT_SPEED
+	for i, weld in halo.Welds do
+		local c0 = HeroAnimator.HaloOrbitCFrame(halo.Spec, halo.Phases[i] + phaseShift, phaseShift) * weld.C1
+		weld.C0 = c0
+		local shard = halo.Shards[i]
+		if shard.Anchored then
+			shard.CFrame = halo.Head.CFrame * c0 * weld.C1:Inverse()
+		end
+	end
+end
 
 local function toCFrame(rotation: { number }?, offset: { number }?): CFrame
 	local r = rotation or { 0, 0, 0 }
@@ -117,6 +195,8 @@ function HeroAnimator.new(rig: Model, options: Options?): HeroAnimator
 		OffhandWeapon = nil :: Instance?,
 		OffhandWeld = nil :: Weld?,
 		OffhandAttachment = nil :: Attachment?,
+		Alternations = {} :: { [string]: number },
+		Halo = findHaloRig(rig),
 	}, HeroAnimator)
 	self.LocomotionClip = HeroClips.Get(self.HeroId, self.WeaponType, "Idle")
 	return self
@@ -149,6 +229,19 @@ end
 -- seconds in, for a cue that arrived late; markers before that point are skipped.
 function HeroAnimator.PlayAction(self: HeroAnimator, state: string, duration: number?, startOffset: number?, data: any?)
 	local clip = HeroClips.Get(self.HeroId, self.WeaponType, state)
+	-- A hero with an alternate clip for the state plays the two in turn (Rook's forehand and
+	-- backhand). The rig's BasicSwing attribute (1 or 2) tells the attack VFX which one played.
+	local alternate = HeroClips.Alternate(self.HeroId, self.WeaponType, state)
+	if alternate then
+		self.Alternations[state] = (self.Alternations[state] or 0) + 1
+		local second = self.Alternations[state] % 2 == 0
+		if second then
+			clip = alternate
+		end
+		if state == "AttackBasic" then
+			self.Rig:SetAttribute("BasicSwing", if second then 2 else 1)
+		end
+	end
 	if not clip then
 		return
 	end
@@ -180,6 +273,12 @@ function HeroAnimator.SolveOffhand(self: HeroAnimator, pose: { [string]: CFrame 
 	local offhand = HeroSockets.OFFHAND[self.WeaponType]
 	if not offhand or not HeroAnimator.OFFHAND_STATES[self.Locomotion] then
 		return
+	end
+	if not self.Action or self.Action.Name == "Hit" then
+		local grip = HeroSockets.GripFor(self.HeroId, self.WeaponType, nil)
+		if grip and grip.OneHandCarry then
+			return
+		end
 	end
 	local weapon = self.Rig:FindFirstChild(HeroSockets.EQUIPPED_NAME)
 	if weapon ~= self.OffhandWeapon then
@@ -305,6 +404,7 @@ function HeroAnimator.Step(self: HeroAnimator, dt: number, moveSpeedScale: numbe
 	for joint, motor in self.Joints do
 		motor.Transform = motor.Transform:Lerp(pose[joint] or CFrame.identity, alpha)
 	end
+	stepHalo(self)
 end
 
 -- Applies a pose immediately with no smoothing (rigs in the simulated world).

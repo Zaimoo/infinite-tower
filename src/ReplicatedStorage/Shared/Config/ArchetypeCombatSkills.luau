@@ -79,8 +79,10 @@ export type SkillAttackDef = {
 	-- FRENZY adds an attack-speed buff to the Berserker slam.
 	Effect: ("SINGULARITY" | "EXECUTE" | "TWIN_SHOT" | "MIRROR_WALL" | "FRENZY")?,
 	ReflectPercent: number?, -- MIRROR_WALL: share of ranged damage taken sent back to the attacker
-	AttackSpeedBonus: number?, -- FRENZY: +attack speed while the buff lasts
+	AttackSpeedBonus: number?, -- FRENZY: +attack speed while the buff lasts (from the last tick)
 	BuffSeconds: number?, -- FRENZY: how long the buff lasts
+	SlamShare: number?, -- FRENZY: share of the total on the first tick (the slam); the rest is split over the later ticks
+	SpinRadius: number?, -- FRENZY: splash radius of the later ticks (the whirlwind); the first uses Radius
 	PullStudsPerTick: number?, -- SINGULARITY: studs each tick drags mobs towards the centre
 	CoreRadius: number?, -- SINGULARITY: pulls stop this far from the centre
 	Delivery: Delivery?,
@@ -666,18 +668,23 @@ local HERO_KITS: { [string]: HeroKitOverride } = {
 		Basic = { Name = "Gilt Cleave" },
 		Special = {
 			Name = "Last Stand",
-			Description = "An overhead chop for 1.50x ATK, rising to 2.50x ATK as Rourke's HP falls to 10%, that also staggers enemies within 8 studs.",
+			Description = "An overhead chop for 1.50x ATK, rising to 2.50x ATK as Rook's HP falls to 10%, that also staggers enemies within 8 studs.",
 			SecondaryEffect = "LAST_STAND",
 			SecondaryParam = 8.0,
 			MaxMultiplier = 2.50,
 		},
 		Skill = {
 			Name = "Gilded Frenzy",
-			Description = "Rourke slams the ground into gold shards: 2.60x ATK to every enemy within 18 studs, then +25% attack speed for 4s.",
+			Description = "Rook leaps and slams the ground for 1.20x ATK within 18 studs, tears into a whirlwind of 4 spins for 0.35x ATK each within 12 studs (2.60x in total), then gains +25% attack speed for 4s.",
 			Effect = "FRENZY",
+			Radius = 18.0,
+			SpinRadius = 12.0,
+			Ticks = 5, -- the slam, then one tick per spin
+			TickSeconds = 0.3,
+			SlamShare = 1.2 / 2.6,
 			AttackSpeedBonus = 0.25,
 			BuffSeconds = 4,
-			CastSeconds = 1.3,
+			CastSeconds = 2.4,
 		},
 	},
 }

@@ -109,9 +109,12 @@ HeroCostumes.MESHES = table.freeze({
 	["rbxassetid://118642308945063"] = "rbxassetid://71008130952735",
 	-- Caspian: our Blender UGC-style shag (tools/make_caspian_hair_ugc.py), textured with assets/hair/caspian_hair_texture.png
 	["rbxassetid://90421651481031"] = "rbxassetid://131547739661735",
-	-- Seraphine's hair, our own: tools/make_seraphine_hair_ugc.py (assets/hair/seraphine_hair_ugc.blend),
+	-- Seraphine's hair, our own: tools/make_seraphine_hair_ugc.py (assets/hair/seraphine_hair.ugc.blend),
 	-- textured with assets/hair/seraphine_hair_texture.png.
-	["rbxassetid://93987759341599"] = "rbxassetid://104036736686844",
+	["rbxassetid://73306858038693"] = "rbxassetid://102982159460789",
+	-- Rook's wild rust-copper mane, our own: tools/make_rook_hair_ugc.py (assets/hair/rook_hair_ugc.blend),
+	-- textured with assets/hair/rook_hair_texture.png.
+	["rbxassetid://75190167677289"] = "rbxassetid://122563567770919",
 } :: { [string]: string })
 
 -- Avatar hair accessory placement: a piece centred so the accessory's HairAttachment meets
@@ -1849,7 +1852,7 @@ end
 -- carries the circlet's centre point and gem. Her weapon is the STAFF, not costume.
 do
 	local skin, hair, robe, robeDeep, inner, bodice = { 240, 214, 196 }, { 222, 224, 238 }, { 60, 52, 146 }, { 40, 34, 104 }, { 196, 188, 238 }, { 214, 208, 246 }
-	local gem, shard = { 120, 150, 255 }, { 190, 215, 255 }
+	local gem, shard = { 120, 150, 255 }, { 150, 200, 255 }
 	local FABRIC = { Material = "Fabric" }
 	table.insert(COSTUMES, costume("hero_seraphine", "Slim", {
 		Skin = skin, UpperTorso = bodice, LowerTorso = inner, UpperArm = robe, LowerArm = inner, Hand = skin,
@@ -1857,16 +1860,16 @@ do
 	}, {
 		-- Hair mesh: centred on the export's bounding box and turned 180 degrees to undo the
 		-- importer's rotation; textured, so the colour comes from the texture. Fit pass: scaled to
-		-- 92% about the head and lowered a little so it hugs the head.
-		piece("HairMesh", "Head", { 1.5686, 3.5273, 1.4232 }, { 0.0028, -0.647, 0.136 }, hair, with(LOOSE, {
+		-- 92% about the head and lowered slightly so the bangs and crown hug the head cleanly.
+		piece("HairMesh", "Head", { 1.6089, 3.3769, 1.5556 }, { 0.0079, -0.5499, 0.0898 }, hair, with(LOOSE, {
 			Rotation = { 0, 180, 0 },
-			Mesh = { MeshId = "rbxassetid://93987759341599", TextureId = "rbxassetid://104036736686844", Scale = { 0.0092, 0.0092, 0.0092 } },
+			Mesh = { MeshId = "rbxassetid://73306858038693", TextureId = "rbxassetid://102982159460789", Scale = { 0.0092, 0.0092, 0.0092 } },
 		})),
 		piece("Circlet", "Head", { 1.36, 0.06, 1.36 }, { 0, 0.4, 0 }, GILT, with(METAL, LOOSE, { Shape = "Cylinder", Rotation = { 0, 0, 90 } })),
-		-- Halo: three glass shards turning above and behind her head
-		piece("HaloShardTop", "Head", { 0.18, 0.44, 0.06 }, { 0, 1.32, 0.42 }, shard, with(GLASS, LOOSE, WEDGE)),
-		piece("HaloShardL", "Head", { 0.16, 0.38, 0.06 }, { -0.82, 1.06, 0.3 }, shard, with(GLASS, LOOSE, WEDGE, { Rotation = { 0, 20, 40 } })),
-		piece("HaloShardR", "Head", { 0.16, 0.38, 0.06 }, { 0.82, 1.06, 0.3 }, shard, with(GLASS, LOOSE, WEDGE, { Rotation = { 0, -20, -40 } })),
+		-- Halo: three glowing crystal shards turning above and behind her head
+		piece("HaloShardTop", "Head", { 0.18, 0.44, 0.06 }, { 0, 1.32, 0.42 }, shard, with(NEON, LOOSE, WEDGE)),
+		piece("HaloShardL", "Head", { 0.16, 0.38, 0.06 }, { -0.82, 1.06, 0.3 }, shard, with(NEON, LOOSE, WEDGE, { Rotation = { 0, 20, 40 } })),
+		piece("HaloShardR", "Head", { 0.16, 0.38, 0.06 }, { 0.82, 1.06, 0.3 }, shard, with(NEON, LOOSE, WEDGE, { Rotation = { 0, -20, -40 } })),
 		-- Tall standing collar: indigo wings flaring out from the back of the neck, edged in gilt
 		piece("CollarBack", "UpperTorso", { 1.5, 0.8, 0.1 }, { 0, 1.1, 0.4 }, robe, with(LOOSE, FABRIC, { Rotation = { -14, 0, 0 } })),
 		piece("CollarL", "UpperTorso", { 0.55, 0.75, 0.1 }, { -0.62, 1.06, -0.1 }, robe, with(LOOSE, FABRIC, { Rotation = { -6, 62, 8 } })),
@@ -1893,50 +1896,95 @@ do
 		piece("BellR", "RightLowerArm", { 1.3, 0.5, 1.3 }, { 0, -0.3, 0 }, inner, with(LOOSE, FABRIC)),
 		piece("BellCuffL", "LeftLowerArm", { 1.34, 0.07, 1.34 }, { 0, -0.26, 0 }, GILT, with(LOOSE, METAL, { RelativeTo = "BellL" })),
 		piece("BellCuffR", "RightLowerArm", { 1.34, 0.07, 1.34 }, { 0, -0.26, 0 }, GILT, with(LOOSE, METAL, { RelativeTo = "BellR" })),
-		-- The gown: lavender with a gilt centre line, to the floor
-		piece("Gown", "LowerTorso", { 1.3, 2.9, 0.08 }, { 0, -1.45, -0.58 }, inner, with(LOOSE, FABRIC, { Rotation = { 4, 0, 0 } })),
-		piece("GownLine", "LowerTorso", { 0.08, 2.9, 0.1 }, { 0, 0, -0.01 }, GILT, with(LOOSE, METAL, { RelativeTo = "Gown" })),
-		piece("GownHem", "LowerTorso", { 1.32, 0.06, 0.1 }, { 0, -1.44, 0 }, GILT, with(LOOSE, METAL, { RelativeTo = "Gown" })),
-		-- The over-robe: indigo, open at the front with gilt borders, flaring to the floor with a train
-		piece("RobeL", "LowerTorso", { 0.8, 2.95, 0.08 }, { -0.72, -1.45, -0.6 }, robe, with(LOOSE, FABRIC, { Rotation = { 5, 0, -7 } })),
-		piece("RobeR", "LowerTorso", { 0.8, 2.95, 0.08 }, { 0.72, -1.45, -0.6 }, robe, with(LOOSE, FABRIC, { Rotation = { 5, 0, 7 } })),
-		piece("RobeEdgeL", "LowerTorso", { 0.1, 2.95, 0.1 }, { 0.37, 0, -0.01 }, GILT, with(LOOSE, METAL, { RelativeTo = "RobeL" })),
-		piece("RobeEdgeR", "LowerTorso", { 0.1, 2.95, 0.1 }, { -0.37, 0, -0.01 }, GILT, with(LOOSE, METAL, { RelativeTo = "RobeR" })),
-		piece("RobeHemL", "LowerTorso", { 0.82, 0.1, 0.1 }, { 0, -1.45, 0 }, GILT, with(LOOSE, METAL, { RelativeTo = "RobeL" })),
-		piece("RobeHemR", "LowerTorso", { 0.82, 0.1, 0.1 }, { 0, -1.45, 0 }, GILT, with(LOOSE, METAL, { RelativeTo = "RobeR" })),
-		piece("RobeSideL", "LowerTorso", { 0.08, 2.95, 1.2 }, { -1.1, -1.45, 0 }, robe, with(LOOSE, FABRIC, { Rotation = { 0, 0, -7 } })),
-		piece("RobeSideR", "LowerTorso", { 0.08, 2.95, 1.2 }, { 1.1, -1.45, 0 }, robe, with(LOOSE, FABRIC, { Rotation = { 0, 0, 7 } })),
-		piece("RobeBack", "LowerTorso", { 2.3, 3.2, 0.08 }, { 0, -1.55, 0.66 }, robe, with(LOOSE, FABRIC, { Rotation = { -10, 0, 0 } })),
-		piece("RobeBackHem", "LowerTorso", { 2.32, 0.1, 0.1 }, { 0, -1.58, 0 }, GILT, with(LOOSE, METAL, { RelativeTo = "RobeBack" })),
+		-- Articulated gown & over-robe: split across UpperLeg (thigh) and LowerLeg (shin/hem) so
+		-- the skirt and bottom hem follow Seraphine's legs and feet during walking and gliding.
+		-- Small Z offsets on Right vs Left panels prevent coplanar z-fighting across the centre seam.
+		piece("ThighGownL", "LeftUpperLeg", { 1.03, 1.66, 0.20 }, { 0.27, 0.15, -0.62 }, inner, with(LOOSE, FABRIC, { Rotation = { 4, 0, 0 } })),
+		piece("ThighGownR", "RightUpperLeg", { 1.03, 1.66, 0.20 }, { -0.27, 0.15, -0.625 }, inner, with(LOOSE, FABRIC, { Rotation = { 4, 0, 0 } })),
+		piece("ThighRobeL", "LeftUpperLeg", { 0.80, 1.66, 1.37 }, { -0.35, 0.15, 0.06 }, robe, with(LOOSE, FABRIC, { Rotation = { 0, 0, -5 } })),
+		piece("ThighRobeR", "RightUpperLeg", { 0.80, 1.66, 1.37 }, { 0.35, 0.15, 0.06 }, robe, with(LOOSE, FABRIC, { Rotation = { 0, 0, 5 } })),
+		piece("ThighBackL", "LeftUpperLeg", { 1.34, 1.68, 0.20 }, { -0.07, 0.14, 0.71 }, robe, with(LOOSE, FABRIC, { Rotation = { -6, 0, 0 } })),
+		piece("ThighBackR", "RightUpperLeg", { 1.34, 1.68, 0.20 }, { 0.07, 0.14, 0.715 }, robe, with(LOOSE, FABRIC, { Rotation = { -6, 0, 0 } })),
+		piece("ShinGownL", "LeftLowerLeg", { 1.09, 1.50, 0.20 }, { 0.26, -0.15, -0.59 }, inner, with(LOOSE, FABRIC, { Rotation = { 4, 0, 0 } })),
+		piece("ShinGownR", "RightLowerLeg", { 1.09, 1.50, 0.20 }, { -0.26, -0.15, -0.595 }, inner, with(LOOSE, FABRIC, { Rotation = { 4, 0, 0 } })),
+		piece("ShinRobeL", "LeftLowerLeg", { 0.83, 1.56, 1.49 }, { -0.39, -0.12, 0.06 }, robe, with(LOOSE, FABRIC, { Rotation = { 0, 0, -6 } })),
+		piece("ShinRobeR", "RightLowerLeg", { 0.83, 1.56, 1.49 }, { 0.39, -0.12, 0.06 }, robe, with(LOOSE, FABRIC, { Rotation = { 0, 0, 6 } })),
+		piece("ShinEdgeL", "LeftLowerLeg", { 0.12, 1.56, 0.14 }, { 0.27, 0, -0.50 }, GILT, with(LOOSE, METAL, { RelativeTo = "ShinRobeL" })),
+		piece("ShinEdgeR", "RightLowerLeg", { 0.12, 1.56, 0.14 }, { -0.27, 0, -0.50 }, GILT, with(LOOSE, METAL, { RelativeTo = "ShinRobeR" })),
+		piece("ShinHemL", "LeftLowerLeg", { 0.86, 0.10, 1.52 }, { 0, -0.75, 0 }, GILT, with(LOOSE, METAL, { RelativeTo = "ShinRobeL" })),
+		piece("ShinHemR", "RightLowerLeg", { 0.86, 0.10, 1.52 }, { 0, -0.75, 0 }, GILT, with(LOOSE, METAL, { RelativeTo = "ShinRobeR" })),
+		piece("ShinBackL", "LeftLowerLeg", { 1.43, 1.70, 0.20 }, { -0.13, -0.18, 0.83 }, robe, with(LOOSE, FABRIC, { Rotation = { -10, 0, 0 } })),
+		piece("ShinBackR", "RightLowerLeg", { 1.43, 1.70, 0.20 }, { 0.13, -0.18, 0.835 }, robe, with(LOOSE, FABRIC, { Rotation = { -10, 0, 0 } })),
+		piece("ShinBackHemL", "LeftLowerLeg", { 1.46, 0.10, 0.22 }, { 0, -0.82, 0 }, GILT, with(LOOSE, METAL, { RelativeTo = "ShinBackL" })),
+		piece("ShinBackHemR", "RightLowerLeg", { 1.46, 0.10, 0.22 }, { 0, -0.82, 0 }, GILT, with(LOOSE, METAL, { RelativeTo = "ShinBackR" })),
 	}, "rbxassetid://136837961496092"))
 end
 
--- 24. ROURKE (Immortal Berserker - Gilt Hound, featured) -----------------------------------------
--- A grey-brown fur mantle over a cross-chest leather harness studded with gold mirror-plate
--- medallions, gold armbands, a skull buckle and a loincloth; a wild rust-red mane and braided beard.
+-- 24. ROOK (Immortal Berserker - Gilt Hound, featured) -------------------------------------------
+-- From his reference art (Heavy body): bare scarred muscular arms, sleeveless brown leather
+-- torso armor beneath crossed chest straps studded with gilt-rimmed mirror medallions, a thick
+-- grey-brown fur mantle pinned by twin shoulder mirror clasps, embossed gold bracers, a belt
+-- with a glowing rose-eyed gold skull buckle and side runes, fur hip tassets with gilt trim,
+-- and heavy studded boots. Hair: wild swept-back rust-copper mane (tools/make_rook_hair_ugc.py,
+-- textured with assets/hair/rook_hair_texture.png) + braided goatee. Face: assets/faces/make_rook_face.py.
 do
-	local skin, hair, leather, fur, pants, accent = { 176, 120, 88 }, { 160, 60, 40 }, { 60, 40, 30 }, { 110, 96, 84 }, { 30, 28, 30 }, { 255, 121, 121 }
+	local skin, beard, tunic, leather, fur, furDeep = { 176, 120, 88 }, { 136, 48, 28 }, { 54, 40, 34 }, { 76, 48, 34 }, { 112, 96, 84 }, { 82, 70, 62 }
+	local pants, boot, mirror, rose = { 30, 28, 30 }, { 48, 36, 32 }, { 222, 232, 245 }, { 255, 76, 148 }
+	local FABRIC = { Material = "Fabric" }
 	table.insert(COSTUMES, costume("hero_rourke", "Heavy", {
-		Skin = skin, UpperTorso = skin, LowerTorso = leather, UpperArm = skin, LowerArm = skin, Hand = skin,
-		UpperLeg = pants, LowerLeg = pants, Foot = leather,
+		Skin = skin, UpperTorso = tunic, LowerTorso = leather, UpperArm = skin, LowerArm = skin, Hand = skin,
+		UpperLeg = pants, LowerLeg = pants, Foot = boot,
 	}, {
-		piece("ManeCap", "Head", { 1.4, 0.5, 1.4 }, { 0, 0.5, 0.06 }, hair, LOOSE),
-		piece("ManeBack", "Head", { 1.5, 1.2, 0.4 }, { 0, -0.05, 0.56 }, hair, LOOSE),
-		piece("BeardBraid", "Head", { 0.3, 0.6, 0.2 }, { 0, -0.75, -0.5 }, hair, LOOSE),
-		piece("FurMantle", "UpperTorso", { 2.3, 0.6, 1.4 }, { 0, 0.72, 0.02 }, fur, with(LOOSE, { Material = "Fabric" })),
-		piece("HarnessA", "UpperTorso", { 0.24, 1.6, 0.06 }, { 0, -0.2, -0.53 }, leather, { Rotation = { 0, 0, 45 } }),
-		piece("HarnessB", "UpperTorso", { 0.24, 1.6, 0.06 }, { 0, -0.2, -0.54 }, leather, { Rotation = { 0, 0, -45 } }),
-		piece("Medallion", "UpperTorso", { 0.06, 0.5, 0.5 }, { 0, -0.2, -0.57 }, { 220, 200, 150 }, with(GLASS, { Shape = "Cylinder", Rotation = { 0, 90, 0 } })),
-		piece("MedallionRim", "UpperTorso", { 0.05, 0.58, 0.58 }, { 0, -0.2, -0.55 }, GILT, with(METAL, { Shape = "Cylinder", Rotation = { 0, 90, 0 } })),
-		piece("ArmbandL", "LeftUpperArm", { 1.1, 0.16, 1.1 }, { 0, -0.3, 0 }, GILT, METAL),
-		piece("ArmbandR", "RightUpperArm", { 1.1, 0.16, 1.1 }, { 0, -0.3, 0 }, GILT, METAL),
-		piece("Belt", "LowerTorso", { 2.08, 0.3, 1.08 }, { 0, 0.04, 0 }, leather),
-		piece("SkullBuckle", "LowerTorso", { 0.44, 0.38, 0.1 }, { 0, 0.04, -0.58 }, GILT, METAL),
-		piece("BuckleEyes", "LowerTorso", { 0.24, 0.06, 0.04 }, { 0, 0.08, -0.64 }, accent, NEON),
-		piece("LoinFront", "LowerTorso", { 0.8, 1.4, 0.08 }, { 0, -0.9, -0.58 }, fur, with(LOOSE, { Material = "Fabric" })),
-		piece("BootCuffL", "LeftFoot", { 1.08, 0.22, 1.18 }, { 0, 0.1, -0.05 }, fur, { Material = "Fabric" }),
-		piece("BootCuffR", "RightFoot", { 1.08, 0.22, 1.18 }, { 0, 0.1, -0.05 }, fur, { Material = "Fabric" }),
-	}))
+		-- Wild rust-copper mane mesh & braided chin goatee
+		piece("HairMesh", "Head", { 2.367, 2.097, 1.867 }, { 0.0, 0.24, 0.18 }, beard, with(LOOSE, {
+			Rotation = { 0, 180, 0 },
+			Mesh = { MeshId = "rbxassetid://75190167677289", TextureId = "rbxassetid://122563567770919", Scale = { 0.0106, 0.0106, 0.0106 } },
+		})),
+		piece("BeardBraid", "Head", { 0.24, 0.42, 0.20 }, { 0, -0.62, -0.46 }, beard, with(LOOSE, { Rotation = { -14, 0, 0 } })),
+		piece("BeardTie", "Head", { 0.28, 0.08, 0.24 }, { 0, -0.02, 0 }, GILT, with(LOOSE, METAL, { RelativeTo = "BeardBraid" })),
+		-- Thick grey-brown fur mantle draped across shoulders and hanging down the back
+		piece("FurCollarMid", "UpperTorso", { 1.85, 0.56, 1.15 }, { 0, 0.86, 0.16 }, fur, with(LOOSE, FABRIC)),
+		piece("FurShoulderL", "UpperTorso", { 1.24, 0.64, 1.32 }, { -1.16, 0.76, 0.10 }, fur, with(LOOSE, FABRIC, { Rotation = { 0, 0, 14 } })),
+		piece("FurShoulderR", "UpperTorso", { 1.24, 0.64, 1.32 }, { 1.16, 0.76, 0.10 }, fur, with(LOOSE, FABRIC, { Rotation = { 0, 0, -14 } })),
+		piece("FurCapeBack", "UpperTorso", { 2.25, 2.05, 0.24 }, { 0, -0.08, 0.62 }, furDeep, with(LOOSE, FABRIC, { Rotation = { 10, 0, 0 } })),
+		-- Crossed leather chest harness studded with five gilt-rimmed mirror medallions
+		piece("HarnessA", "UpperTorso", { 0.24, 1.85, 0.07 }, { 0, -0.02, -0.53 }, leather, { Rotation = { 0, 0, 44 } }),
+		piece("HarnessB", "UpperTorso", { 0.24, 1.85, 0.07 }, { 0, -0.02, -0.54 }, leather, { Rotation = { 0, 0, -44 } }),
+		piece("ClaspRimL", "UpperTorso", { 0.06, 0.44, 0.44 }, { -0.62, 0.54, -0.58 }, GILT, with(METAL, { Shape = "Cylinder", Rotation = { 0, 90, 0 } })),
+		piece("ClaspRimR", "UpperTorso", { 0.06, 0.44, 0.44 }, { 0.62, 0.54, -0.58 }, GILT, with(METAL, { Shape = "Cylinder", Rotation = { 0, 90, 0 } })),
+		piece("ClaspMirrorL", "UpperTorso", { 0.07, 0.32, 0.32 }, { -0.62, 0.54, -0.595 }, mirror, with(GLASS, { Shape = "Cylinder", Rotation = { 0, 90, 0 } })),
+		piece("ClaspMirrorR", "UpperTorso", { 0.07, 0.32, 0.32 }, { 0.62, 0.54, -0.595 }, mirror, with(GLASS, { Shape = "Cylinder", Rotation = { 0, 90, 0 } })),
+		piece("CenterRim", "UpperTorso", { 0.06, 0.40, 0.40 }, { 0, 0.02, -0.57 }, GILT, with(METAL, { Shape = "Cylinder", Rotation = { 0, 90, 0 } })),
+		piece("CenterMirror", "UpperTorso", { 0.07, 0.28, 0.28 }, { 0, 0.02, -0.585 }, mirror, with(GLASS, { Shape = "Cylinder", Rotation = { 0, 90, 0 } })),
+		piece("StudL", "UpperTorso", { 0.06, 0.28, 0.28 }, { -0.52, -0.38, -0.57 }, GILT, with(METAL, { Shape = "Cylinder", Rotation = { 0, 90, 0 } })),
+		piece("StudR", "UpperTorso", { 0.06, 0.28, 0.28 }, { 0.52, -0.38, -0.57 }, GILT, with(METAL, { Shape = "Cylinder", Rotation = { 0, 90, 0 } })),
+		piece("StudMirrorL", "UpperTorso", { 0.07, 0.20, 0.20 }, { -0.52, -0.38, -0.585 }, mirror, with(GLASS, { Shape = "Cylinder", Rotation = { 0, 90, 0 } })),
+		piece("StudMirrorR", "UpperTorso", { 0.07, 0.20, 0.20 }, { 0.52, -0.38, -0.585 }, mirror, with(GLASS, { Shape = "Cylinder", Rotation = { 0, 90, 0 } })),
+		-- Embossed gold forearm bracers (clear of the hands and torso)
+		piece("BracerL", "LeftLowerArm", { 1.10, 0.62, 1.10 }, { 0, -0.18, 0 }, GILT, METAL),
+		piece("BracerR", "RightLowerArm", { 1.10, 0.62, 1.10 }, { 0, -0.18, 0 }, GILT, METAL),
+		piece("BracerRimL", "LeftLowerArm", { 1.14, 0.10, 1.14 }, { 0, 0.26, 0 }, GILT, with(METAL, { RelativeTo = "BracerL" })),
+		piece("BracerRimR", "RightLowerArm", { 1.14, 0.10, 1.14 }, { 0, 0.26, 0 }, GILT, with(METAL, { RelativeTo = "BracerR" })),
+		-- Belt with flared gilt plate, glowing magenta side runes, rose-eyed skull buckle, and pelts
+		piece("Belt", "LowerTorso", { 2.12, 0.36, 1.14 }, { 0, 0.06, 0 }, leather),
+		piece("BucklePlate", "LowerTorso", { 0.88, 0.46, 0.10 }, { 0, 0.06, -0.58 }, GILT, METAL),
+		piece("RuneL", "LowerTorso", { 0.14, 0.24, 0.04 }, { -0.34, 0.06, -0.64 }, rose, NEON),
+		piece("RuneR", "LowerTorso", { 0.14, 0.24, 0.04 }, { 0.34, 0.06, -0.64 }, rose, NEON),
+		piece("SkullBuckle", "LowerTorso", { 0.46, 0.46, 0.14 }, { 0, 0.06, -0.66 }, GILT, METAL),
+		piece("SkullEyes", "LowerTorso", { 0.22, 0.07, 0.04 }, { 0, 0.12, -0.74 }, rose, NEON),
+		piece("LoinFront", "LowerTorso", { 0.86, 1.48, 0.08 }, { 0, -0.76, -0.58 }, furDeep, with(LOOSE, FABRIC)),
+		piece("TassetL", "LowerTorso", { 0.72, 1.05, 0.12 }, { -0.82, -0.55, -0.36 }, leather, with(LOOSE, { Rotation = { -6, 28, -14 } })),
+		piece("TassetR", "LowerTorso", { 0.72, 1.05, 0.12 }, { 0.82, -0.55, -0.36 }, leather, with(LOOSE, { Rotation = { -6, -28, 14 } })),
+		piece("TassetTrimL", "LowerTorso", { 0.74, 0.10, 0.14 }, { 0, 0.48, 0 }, GILT, with(LOOSE, METAL, { RelativeTo = "TassetL" })),
+		piece("TassetTrimR", "LowerTorso", { 0.74, 0.10, 0.14 }, { 0, 0.48, 0 }, GILT, with(LOOSE, METAL, { RelativeTo = "TassetR" })),
+		-- Studded leather boots with fur calf collars and gold instep straps
+		piece("BootShinL", "LeftLowerLeg", { 1.08, 0.88, 1.08 }, { 0, -0.18, 0 }, boot),
+		piece("BootShinR", "RightLowerLeg", { 1.08, 0.88, 1.08 }, { 0, -0.18, 0 }, boot),
+		piece("BootCollarL", "LeftLowerLeg", { 1.16, 0.22, 1.16 }, { 0, 0.36, 0 }, fur, with(FABRIC, { RelativeTo = "BootShinL" })),
+		piece("BootCollarR", "RightLowerLeg", { 1.16, 0.22, 1.16 }, { 0, 0.36, 0 }, fur, with(FABRIC, { RelativeTo = "BootShinR" })),
+		piece("BootTrimL", "LeftFoot", { 1.12, 0.10, 1.24 }, { 0, 0.10, -0.02 }, GILT, METAL),
+		piece("BootTrimR", "RightFoot", { 1.12, 0.10, 1.24 }, { 0, 0.10, -0.02 }, GILT, METAL),
+	}, "rbxassetid://125042561277680"))
 end
 
 HeroCostumes.List = table.freeze(COSTUMES)

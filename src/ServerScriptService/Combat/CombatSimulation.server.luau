@@ -169,7 +169,7 @@ export type SimHero = {
 	EquippedArtifactStar: number?,
 	ReflectPercent: number?, -- Caspian's Looking-Glass Bulwark: share of ranged damage sent back (HeroSkillEffects)
 	ReflectExpires: number?,
-	AttackSpeedBonus: number?, -- Rourke's Gilded Frenzy: +attack speed until AttackSpeedUntil
+	AttackSpeedBonus: number?, -- Rook's Gilded Frenzy: +attack speed until AttackSpeedUntil
 	AttackSpeedUntil: number?,
 	MirrorSourceUUID: string?, -- a mirror hero's source (the hero it copies), for the client's reflection thread
 	Archetype: string?,

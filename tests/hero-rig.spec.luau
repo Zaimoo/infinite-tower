@@ -337,6 +337,15 @@ do
 	for _, weaponType in ArtifactCatalog.ArchetypeWeaponType do
 		check(HeroClips.ByWeapon[weaponType] ~= nil, `catalog weapon type {weaponType} has clips`)
 	end
+	-- Alternate clips are cosmetic: each must land its hit on the main clip's Release.
+	for heroId, states in HeroClips.Alternates do
+		for state, alt in states do
+			local main = HeroClips.Overrides[heroId] and HeroClips.Overrides[heroId][state]
+			check(main ~= nil and HeroClips.Marker(alt, "Release", -1) == HeroClips.Marker(main, "Release", -2), `{heroId} {state} alternate shares the Release`)
+			checkClip(`Alternates.{heroId}.{state}`, alt, false)
+		end
+	end
+	check(HeroClips.Alternate("hero_rourke", "AXE", "AttackBasic") ~= nil and HeroClips.Alternate("hero_rourke", "UNARMED", "AttackBasic") == nil, "Rook's backhand needs his axe")
 	for heroId, states in HeroClips.Overrides do
 		check(HeroCostumes.ById[heroId] ~= nil, `override {heroId} is a hero`)
 		for state, clip in states do
@@ -439,6 +448,8 @@ do
 	local nyxOff = HeroSockets.GripFor("hero_nyx", "DAGGERS", "LeftDagger")
 	check(nyxMain ~= nil and nyxMain.Reverse == false and nyxOff ~= nil and nyxOff.Reverse == true, "Nyx holds the main dagger forward and the off-hand one reversed")
 	check(HeroSockets.GripFor("hero_edis", "DAGGERS", nil) == nil and HeroSockets.GripFor(nil, "DAGGERS", nil) == nil, "other heroes keep the standard grip")
+	local rookAxe = HeroSockets.GripFor("hero_rourke", "AXE", nil)
+	check(rookAxe ~= nil and not rookAxe.OneHandCarry and (rookAxe.Shift or 0) < 0, "Rook chokes up and keeps both hands on his greataxe (the art's two-handed guard)")
 
 	-- Two-handed weapons: the off hand is the one the weapon is not welded to.
 	check(HeroSockets.OFFHAND.AXE ~= nil, "the greataxe is two-handed")

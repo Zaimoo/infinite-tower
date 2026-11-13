@@ -171,17 +171,30 @@ HeroSockets.GRIP_SHIFT = table.freeze({
 -- Per-hero grips: how one hero holds a weapon type, per assembly ("Main" for the weapon itself,
 -- else the socket's Assembly, e.g. "LeftDagger"). Heroes and assemblies without an entry keep
 -- the standard grip. Reverse overrides the prefab's ReverseGrip attribute; Shift adds studs to
--- GRIP_SHIFT (towards the pommel); Offset is an extra turn or nudge in the hand (applied to the
--- weapon side of the weld). The hero comes from the rig's HeroId attribute (HeroCostumeBuilder).
+-- GRIP_SHIFT (positive = towards the pommel, negative = choked up towards the blade); Offset is an
+-- extra turn or nudge in the hand (applied to the weapon side of the weld); OneHandCarry frees the
+-- two-handed offhand during calm locomotion (Idle / Move / Hit) while keeping two hands locked
+-- on attack clips. The hero comes from the rig's HeroId attribute (HeroCostumeBuilder).
 -- A hero listed here holds the weapon differently from everyone else, so its clip overrides
 -- (HeroClips) must be posed for this grip.
-export type HeroGrip = { Reverse: boolean?, Shift: number?, Offset: CFrame? }
+export type HeroGrip = { Reverse: boolean?, Shift: number?, Offset: CFrame?, OneHandCarry: boolean? }
 HeroSockets.HERO_GRIPS = table.freeze({
 	-- Nyx: the main-hand dagger held forward, the off-hand dagger reversed along the forearm.
 	hero_nyx = table.freeze({
 		DAGGERS = table.freeze({
 			Main = table.freeze({ Reverse = false }),
 			LeftDagger = table.freeze({ Reverse = true }),
+		}),
+	}),
+	-- Rook: the right hand choked high up under the axe collar with the blade canted
+	-- forward-down; both hands on the haft at all times (his reference art's low two-handed
+	-- guard), the left closing on OffhandGrip.
+	hero_rourke = table.freeze({
+		AXE = table.freeze({
+			Main = table.freeze({
+				Shift = -0.32,
+				Offset = CFrame.Angles(math.rad(16), math.rad(14), 0),
+			}),
 		}),
 	}),
 } :: { [string]: { [string]: { [string]: HeroGrip } } })

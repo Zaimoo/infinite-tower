@@ -129,7 +129,7 @@ HeroCatalog.MirrorBanner = {
 		0.28, -- 28% Transcendent Nyx (120%)
 		0.14, -- 14% Ascendant Caspian (130%)
 		0.06, -- 6% Ethereal Seraphine (140%)
-		0.02, -- 2% Immortal Rourke (150%, featured)
+		0.02, -- 2% Immortal Rook (150%, featured)
 	},
 	HeroesByStar = {
 		[7] = "hero_isabelle",
@@ -609,7 +609,7 @@ HeroCatalog.Seeds = {
 	},
 	hero_rourke = {
 		HeroId = "hero_rourke",
-		DisplayName = "Rourke",
+		DisplayName = "Rook",
 		BannerOrigin = "PREMIUM",
 		Mirror = true,
 		DropWeight = 2.0,

@@ -293,7 +293,10 @@ set. When the user reports "default animations", check that the hero has the wea
 - `breathe(pose, seconds)`: a looping idle.
 - `walk(upperBody, armSwing?)`: a walk cycle that keeps the given upper body (arms, waist,
   neck) over walking legs. Give a guard-style hero a walk with its guard (`walk(guardArms)`),
-  or it walks with the generic arms of its weapon.
+  or it walks with the generic arms of its weapon. Every walk adds stride motion on top of the
+  upper body (`strideUpperBody`): the torso twists against the legs, rolls and leans into each
+  landing, the head turns back to stay forward, and the arms sway a few degrees. A hand-written
+  walk (Rook's, Seraphine's flight) should do the same.
 - `signature(duration, keys, markers)`: an attack. Keys are `{ fraction, pose }`.
 - `merge(a, b)` layers poses; start from `WeaponPoses.<TYPE>` keys (`Carry`, `Aim`, `Drawn`,
   `Release`, `Crouch`, `Crouched`, `Guard`, ...).

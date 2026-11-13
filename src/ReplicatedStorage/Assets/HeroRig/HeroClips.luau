@@ -116,7 +116,27 @@ local function floatIdle(stance: Pose, duration: number?): Clip
 	})
 end
 
--- Walk cycle: legs swing, the root bobs, the upper body keeps its carry pose.
+-- Adds `delta` to a joint of `pose` (missing joints count as zero).
+local function nudge(pose: Pose, joint: string, delta: { number })
+	local v = pose[joint] or { 0, 0, 0 }
+	pose[joint] = { v[1] + delta[1], v[2] + delta[2], v[3] + delta[3] }
+end
+
+-- Upper-body motion over a stride, added on top of whatever the hero carries: the torso
+-- twists against the legs (the shoulder opposite the forward foot comes round), rolls a little
+-- toward the planted side and leans into each landing; the head turns back against the twist
+-- so it stays on the way ahead; the arms sway a few degrees opposite the legs. `s` is +1 with
+-- the left foot forward, -1 with the right, 0 when passing. Small enough that a held weapon
+-- only rides along with the body.
+local function strideUpperBody(pose: Pose, s: number)
+	nudge(pose, "Waist", { if s == 0 then 0 else -1.5, 7 * s, 2 * s })
+	nudge(pose, "Neck", { 0, -5 * s, -1.5 * s })
+	nudge(pose, "RightShoulder", { 4 * s, 0, 0 })
+	nudge(pose, "LeftShoulder", { -4 * s, 0, 0 })
+end
+
+-- Walk cycle: legs swing, the root bobs, and the upper body moves with the stride over its
+-- carry pose (strideUpperBody). With armSwing, free arms swing that far instead.
 local function walk(carry: Pose, armSwing: number?): Clip
 	local swing = armSwing or 0
 	local function step(phase: number): Pose
@@ -127,6 +147,7 @@ local function walk(carry: Pose, armSwing: number?): Clip
 			LeftAnkle = { if s < 0 then 12 else 0, 0, 0 }, RightAnkle = { if s > 0 then 12 else 0, 0, 0 },
 			RootOffset = { 0, if s == 0 then 0.08 else -0.04, 0 },
 		})
+		strideUpperBody(p, s)
 		if swing ~= 0 then
 			p.LeftShoulder = { -swing * s, 0, 0 }
 			p.RightShoulder = { swing * s, 0, 0 }
@@ -726,6 +747,10 @@ local function signature(duration: number, keys: { { any } }, markers: { [string
 end
 
 local Overrides: { [string]: { [string]: Clip } } = {}
+-- A second clip a hero alternates with for a state (HeroAnimator plays them in turn; only
+-- AttackBasic so far). Cosmetic: the server times the hit from the main clip's Release, so an
+-- alternate must share it (tests).
+local Alternates: { [string]: { [string]: Clip } } = {}
 
 -- Jenna (BOW): Wind-Step Shot kit. Idle is the Wind-Scout ready stance; Sylphid Arrow Storm
 -- is a backward wind-step leap that looses the flare arrow skyward at the top of the jump.
@@ -1797,27 +1822,33 @@ do
 		return c
 	end
 	local regent = merge(p.Stand, { Neck = { -4, 0, 0 }, LeftShoulder = { 40, -10, -20 }, LeftElbow = { 60, 0, 0 }, LeftWrist = { -174.5, 72.6, 174.6 } })
-	-- Flying: the whole body leans forward (Root), the head lifts to look ahead, the legs trail
-	-- back bent at the knee, the staff arm reaches ahead and the free arm sweeps back.
+	-- Flying: the whole body leans forward (Root -X tilts toward -Z), the head lifts (+X) to look
+	-- ahead, the legs trail gracefully behind, the staff arm reaches ahead and the free arm sweeps back.
 	local fly = merge(regent, {
-		Root = { 22, 0, 0 }, Waist = { 4, 0, 0 }, Neck = { -18, 0, 0 },
-		RightShoulder = { 38, 0, 12 }, RightElbow = { 35, 0, 0 }, RightWrist = { -50, 0, 0 }, -- staff tipped ahead
-		LeftShoulder = { -38, 0, -14 }, LeftElbow = { 28, 0, 0 }, LeftWrist = { 0, 0, 0 },
+		Root = { -22, 0, 0 }, Waist = { -4, 0, 0 }, Neck = { 20, 0, 0 },
+		RightShoulder = { 68, 0, 14 }, RightElbow = { 30, 0, 0 }, RightWrist = { -45, 0, 0 }, -- staff tipped ahead
+		LeftShoulder = { -22, 0, -16 }, LeftElbow = { 20, 0, 0 }, LeftWrist = { 0, 0, 0 },
 	})
 	local flyLegs: Pose = {
-		LeftHip = { -30, 0, -3 }, RightHip = { -14, 0, 3 },
-		LeftKnee = { -75, 0, 0 }, RightKnee = { -50, 0, 0 },
+		LeftHip = { -10, 0, -3 }, RightHip = { -2, 0, 3 },
+		LeftKnee = { -28, 0, 0 }, RightKnee = { -16, 0, 0 },
 		LeftAnkle = { 25, 0, 0 }, RightAnkle = { 25, 0, 0 },
 	}
-	local overhead = merge(p.Raised, { LeftShoulder = { 160, 0, -10 }, LeftElbow = { 10, 0, 0 }, RootOffset = { 0, 0.15, 0 } })
+	local overhead = merge(ATTACK_STANCE, {
+		Waist = { 8, 0, 0 }, Neck = { 12, 0, 0 }, RootOffset = { 0, 0.15, 0 },
+		RightShoulder = { 160, 0, -14 }, RightElbow = { 14, 0, 0 }, RightWrist = { 45, 100, -10 },
+		LeftShoulder = { 154, -10, 16 }, LeftElbow = { 27, 0, 0 }, LeftWrist = { 45, -100, 10 },
+	})
 	local drawBack = merge(p.Stand, { Waist = { 6, 30, 0 }, RightShoulder = { 60, 0, 40 }, RightElbow = { 70, 0, 0 },
 		LeftShoulder = { 60, 0, -30 }, LeftElbow = { 40, 0, 0 } })
 	local thrust = merge(p.Cast, { Waist = { -12, -10, 0 }, RightShoulder = { 95, 0, 0 }, RootOffset = { 0, -0.05, -0.3 } })
 	-- The flight loop: the arms sway a little against the bob; the legs trail throughout.
+	local flyNeck = fly.Neck or { 0, 0, 0 }
 	local function flight(sway: number): Pose
 		return merge(fly, {
-			RightShoulder = { 38 + 4 * sway, 0, 12 }, LeftShoulder = { -38 - 6 * sway, 0, -14 },
-			Waist = { 4 - 2 * sway, 0, 0 },
+			RightShoulder = { 68 + 4 * sway, 0, 14 }, LeftShoulder = { -22 - 6 * sway, 0, -16 },
+			Waist = { -4 - 2 * sway, 5 * sway, 3 * sway }, -- the torso sways and rolls with the bob
+			Neck = { flyNeck[1] + 1.5 * sway, flyNeck[2] - 4 * sway, flyNeck[3] - 2 * sway }, -- the head stays on the way ahead
 		})
 	end
 	local move = floating(clip(1.6, true, {
@@ -1846,49 +1877,194 @@ do
 		AttackSkill = floating(signature(1.4, {
 			{ 0, p.Stand },
 			{ 0.25, overhead },
-			{ 0.5, merge(overhead, { Waist = { 10, 60, 0 } }) },
-			{ 0.75, merge(overhead, { Waist = { 10, -60, 0 } }) },
+			{ 0.5, merge(overhead, { Waist = { 8, 60, 0 } }) },
+			{ 0.75, merge(overhead, { Waist = { 8, -60, 0 } }) },
 			{ 0.9, overhead },
 			{ 1, p.Stand },
 		}, { Charge = 0.25, Release = 0.5 }), 0),
 	}
 end
 
--- Rourke (AXE): feet wide, axe on the shoulder, a big chest heave on every breath.
+-- Rook (AXE): from his reference art (Heavy fur mantle, crossed chest medallions, rose skull
+-- belt). A wide, low two-handed guard: feet planted far apart with the knees bent deep, leaning
+-- a little into it, the right hand choked up under the axe head low in front of his right
+-- thigh with the blade hanging down, and the haft rising diagonally across his body to the left
+-- hand at his left hip (solved onto OffhandGrip by HeroAnimator). Both hands stay on the haft
+-- when he walks and swings. His attacks are whole-body moves (docs/gilded-mirror-plan.md 5.5):
+-- Gilt Cleave alternates a forehand sweep and a rising backhand (Alternates); Last Stand is a
+-- leaping chop; Gilded Frenzy is a leap slam into four full whirlwind spins and a roar. The
+-- leaps and spins are root motion only; the server position never moves.
 -- Gilded Frenzy: a jump, a two-handed slam, then one spin with the axe.
 do
 	local p = WeaponPoses.AXE
-	local brute = merge(p.Rest, { LeftHip = { 6, 0, -14 }, RightHip = { 6, 0, 14 }, LeftAnkle = { 8, 0, 14 }, RightAnkle = { 8, 0, -14 }, Waist = { 2, 18, 0 } })
-	Overrides.hero_rourke = {
-		Idle = breathe(brute, 2.8),
-		AttackBasic = signature(0.9, {
-			{ 0, p.Rest },
-			{ 0.4, p.SweepBack },
-			{ 0.66, merge(p.SweepThrough, { RootOffset = { 0, -0.18, -0.3 } }) },
-			{ 0.82, p.SweepThrough },
-			{ 1, p.Rest },
-		}, { Release = 0.66 }),
-		AttackSpecial = signature(1.05, {
-			{ 0, p.Rest },
-			{ 0.4, merge(p.High, { Neck = { -20, 0, 0 } }) }, -- the roar
-			{ 0.62, p.Chop },
-			{ 0.8, p.Chop },
-			{ 1, p.Rest },
-		}, { Charge = 0.4, Release = 0.62 }),
-		AttackSkill = signature(1.3, {
-			{ 0, p.Rest },
-			{ 0.3, merge(p.High, { RootOffset = { 0, 0.8, 0 } }) },
-			{ 0.48, p.Slam },
-			{ 0.62, p.Slam },
-			{ 0.8, merge(p.SweepThrough, { Waist = { -8, 170, 0 } }) },
-			{ 1, p.Rest },
-		}, { Charge = 0.3, Release = 0.48 }),
+	-- Measured in Studio against the art (the left arm is the offhand solver's): the right wrist
+	-- was searched so the axe head hangs at his right thigh with the blade's face forward and the
+	-- off-hand grip lands in front of his left hip.
+	local carry: Pose = {
+		LeftHip = { 20, 0, -26 }, RightHip = { -6, 0, 26 },
+		LeftKnee = { -34, 0, 0 }, RightKnee = { -30, 0, 0 },
+		LeftAnkle = { 14, 0, 26 }, RightAnkle = { 24, 0, -26 },
+		RootOffset = { 0, -0.35, 0 },
+		Waist = { -8, 10, 0 }, Neck = { -6, -8, 0 },
+		RightShoulder = { 25, -20, -15 }, RightElbow = { 20, 0, 0 }, RightWrist = { -180, -120, -150 },
 	}
+	-- A heavy, rolling stride that keeps the two-handed guard. Each step has four beats: heel
+	-- strike (front leg reaching, toes up; back leg pushing off on its toes), the weight dropping
+	-- onto the front knee, passing (the stance leg under him, the other knee lifted through) and
+	-- the push into the next step. Above the waist: the torso twists against the legs (the
+	-- shoulder opposite the forward foot comes round), rolls toward the stance leg and dips on
+	-- each landing; the head stays on the target; the axe arm sways with the twist; the hips
+	-- shift over the planted foot. The left arm follows the haft (offhand solver).
+	local function rookWalk(): Clip
+		-- side: +1 = left foot forward, -1 = right foot forward. beat: "strike" | "load" | "pass" | "push".
+		local function step(side: number, beat: string): Pose
+			local front = if side > 0 then "Left" else "Right"
+			local back = if side > 0 then "Right" else "Left"
+			local out = if side > 0 then 1 else -1 -- -out is the front leg's outward hip Z (Left splays negative)
+			local legs: Pose = {}
+			local twist, dip, roll, lift, lean = 0, 0, 0, 0, -6
+			if beat == "strike" then
+				legs[front .. "Hip"] = { 32, 0, -10 * out }; legs[front .. "Knee"] = { -8, 0, 0 }; legs[front .. "Ankle"] = { -14, 0, 10 * out }
+				legs[back .. "Hip"] = { -22, 0, 10 * out }; legs[back .. "Knee"] = { -24, 0, 0 }; legs[back .. "Ankle"] = { 22, 0, -10 * out }
+				twist, dip, roll, lean = 9, -0.06, 2, -8
+			elseif beat == "load" then
+				legs[front .. "Hip"] = { 24, 0, -10 * out }; legs[front .. "Knee"] = { -26, 0, 0 }; legs[front .. "Ankle"] = { 4, 0, 10 * out }
+				legs[back .. "Hip"] = { -16, 0, 10 * out }; legs[back .. "Knee"] = { -40, 0, 0 }; legs[back .. "Ankle"] = { 30, 0, -10 * out }
+				twist, dip, roll, lean = 6, -0.16, 4, -11
+			elseif beat == "pass" then
+				-- The front leg is now under him; the back leg swings through with the knee high.
+				legs[front .. "Hip"] = { 2, 0, -8 * out }; legs[front .. "Knee"] = { -12, 0, 0 }; legs[front .. "Ankle"] = { 6, 0, 8 * out }
+				legs[back .. "Hip"] = { 30, 0, 6 * out }; legs[back .. "Knee"] = { -62, 0, 0 }; legs[back .. "Ankle"] = { -6, 0, -6 * out }
+				twist, dip, roll, lift, lean = 0, 0.04, 3, 1, -5
+			else -- "push": the stance leg drives back onto its toes as the swing leg reaches ahead
+				legs[front .. "Hip"] = { -14, 0, -8 * out }; legs[front .. "Knee"] = { -14, 0, 0 }; legs[front .. "Ankle"] = { 18, 0, 8 * out }
+				legs[back .. "Hip"] = { 26, 0, 8 * out }; legs[back .. "Knee"] = { -28, 0, 0 }; legs[back .. "Ankle"] = { -8, 0, -8 * out }
+				twist, dip, roll, lift, lean = -4, 0.0, 1, 0, -6
+			end
+			local yaw = twist * side -- left foot forward: torso turns left (+Y)
+			return merge(merge(carry, legs), {
+				Waist = { lean, 10 + yaw, roll * -out },
+				Neck = { -6 - dip * 20, -8 - yaw * 0.8, -roll * -out * 0.6 }, -- the head stays level and on the target
+				RightShoulder = { 25 + yaw * 0.6 + lift * 3, -20, -15 }, -- the axe sways with the twist
+				RightElbow = { 20 - dip * 30, 0, 0 },
+				RootOffset = { 0.08 * -out * (if beat == "pass" then 1 else 0.6), -0.35 + dip, 0 },
+			})
+		end
+		local keys = {}
+		local beats = { "strike", "load", "pass", "push" }
+		for i, side in { 1, -1 } do
+			for j, beat in beats do
+				table.insert(keys, { ((i - 1) * 4 + (j - 1)) / 8, step(side, beat) })
+			end
+		end
+		table.insert(keys, { 1, keys[1][2] })
+		return clip(0.95, true, keys)
+	end
+	-- Legs for the swings: a long step forward with the left foot (forehand) or the right (backhand).
+	local stepLeft: Pose = { LeftHip = { 42, 0, -10 }, LeftKnee = { -44, 0, 0 }, LeftAnkle = { 4, 0, 10 },
+		RightHip = { -22, 0, 12 }, RightKnee = { -22, 0, 0 }, RightAnkle = { 28, 0, -12 } }
+	local stepRight: Pose = { RightHip = { 40, 0, 10 }, RightKnee = { -42, 0, 0 }, RightAnkle = { 4, 0, -10 },
+		LeftHip = { -20, 0, -12 }, LeftKnee = { -22, 0, 0 }, LeftAnkle = { 28, 0, 12 } }
+	local loadBack: Pose = { LeftHip = { 14, 0, -18 }, LeftKnee = { -18, 0, 0 }, LeftAnkle = { 4, 0, 18 },
+		RightHip = { -4, 0, 20 }, RightKnee = { -46, 0, 0 }, RightAnkle = { 26, 0, -20 } }
+	local crouch: Pose = { LeftHip = { 62, 0, -14 }, LeftKnee = { -96, 0, 0 }, LeftAnkle = { 34, 0, 14 },
+		RightHip = { 48, 0, 14 }, RightKnee = { -100, 0, 0 }, RightAnkle = { 50, 0, -14 } }
+	local tuck: Pose = { LeftHip = { 55, 0, -8 }, LeftKnee = { -95, 0, 0 }, LeftAnkle = { 20, 0, 8 },
+		RightHip = { 22, 0, 8 }, RightKnee = { -70, 0, 0 }, RightAnkle = { 20, 0, -8 } }
+	local wide: Pose = { LeftHip = { 18, 0, -26 }, LeftKnee = { -38, 0, 0 }, LeftAnkle = { 14, 0, 26 },
+		RightHip = { -6, 0, 26 }, RightKnee = { -34, 0, 0 }, RightAnkle = { 24, 0, -26 } }
+	local function with(base: Pose, legs: Pose, extra: Pose): Pose
+		return merge(merge(base, legs), extra)
+	end
+
+	-- Gilt Cleave, forehand: haul the axe back over the right shoulder with the torso wound away
+	-- and the weight on the right leg, then a long step in with the left as the whole body whips
+	-- through a flat 160-degree sweep; the momentum carries him round a quarter turn.
+	local forehand = signature(0.9, {
+		{ 0, carry },
+		{ 0.32, with(p.SweepBack, loadBack, { Waist = { 4, -70, 0 }, Neck = { -2, 58, 0 }, RootOffset = { 0, -0.38, 0.25 } }) },
+		{ 0.6, with(p.SweepThrough, stepLeft, { Waist = { -12, 72, 0 }, Neck = { 6, -56, 0 }, RootOffset = { 0, -0.48, -0.7 } }) },
+		{ 0.78, with(p.SweepThrough, stepLeft, { Root = { 0, 28, 0 }, Waist = { -16, 88, 0 }, Neck = { 8, -60, 0 }, RootOffset = { 0, -0.5, -0.8 } }) },
+		{ 1, carry },
+	}, { Release = 0.6 })
+	-- Gilt Cleave, backhand: the axe swung across to his left and loaded low, then dragged back
+	-- in a rising diagonal as he steps through with the right foot, finishing high over his
+	-- right shoulder. Same Release as the forehand (the server times the hit from it).
+	local backhand = signature(0.9, {
+		{ 0, carry },
+		{ 0.3, with(p.SweepThrough, loadBack, { Waist = { -14, 82, 0 }, Neck = { 4, -58, 0 }, RootOffset = { 0, -0.42, 0.1 } }) },
+		{ 0.6, with(p.SweepBack, stepRight, { Waist = { 6, -24, 0 }, Neck = { -4, 20, 0 }, RootOffset = { 0, -0.4, -0.65 } }) },
+		{ 0.8, with(p.Windup, stepRight, { Root = { 0, -22, 0 }, Waist = { 12, -58, 0 }, Neck = { -8, 44, 0 }, RootOffset = { 0, -0.2, -0.75 } }) },
+		{ 1, carry },
+	}, { Release = 0.6 })
+
+	-- Last Stand: a deep crouch with the axe dragged behind (Charge), a spring about 4.5 studs up
+	-- and toward the target with the axe swung up behind his head as he roars, then down into
+	-- the ground as he lands on bent knees (Release), and a backward heave to wrench it free.
+	local airborne = with(p.High, tuck, { Waist = { 16, 0, 0 }, Neck = { -30, 0, 0 } })
+	local lastStand = signature(1.3, {
+		{ 0, carry },
+		{ 0.2, with(p.SweepBack, crouch, { Waist = { -28, -40, 0 }, Neck = { -24, 30, 0 }, RootOffset = { 0, -1.0, 0.25 } }) },
+		{ 0.34, merge(airborne, { RootOffset = { 0, 3.2, -0.9 } }) },
+		{ 0.46, merge(airborne, { RootOffset = { 0, 4.5, -1.6 } }) }, -- the roar at the top
+		{ 0.6, merge(p.Slam, { RootOffset = { 0, -0.65, -2.1 } }) },
+		{ 0.78, merge(p.Slam, { RootOffset = { 0, -0.7, -2.1 } }) },
+		{ 0.9, with(p.Windup, wide, { Waist = { 18, -20, 0 }, Neck = { -6, 10, 0 }, RootOffset = { 0, -0.3, -1.2 } }) },
+		{ 1, carry },
+	}, { Charge = 0.2, Release = 0.6 })
+
+	-- Gilded Frenzy (2.4 s, ticks 0.3 s apart from Release): a crouch, a leap about 6 studs
+	-- straight up with the axe overhead, the slam at 0.36 (the first tick), then four full spins
+	-- (one per tick, the axe held out at arm's length, edging forward), the axe flung wide and an
+	-- overhead roar as the frenzy takes hold.
+	local frenzyKeys = {
+		{ 0, carry },
+		{ 0.1, with(carry, crouch, { Waist = { -24, 0, 0 }, Neck = { -18, 0, 0 }, RootOffset = { 0, -1.0, 0 } }) },
+		{ 0.2, with(p.High, tuck, { Waist = { 14, 0, 0 }, Neck = { -20, 0, 0 }, RootOffset = { 0, 5.4, -0.2 } }) },
+		{ 0.29, with(p.High, tuck, { Waist = { 20, 0, 0 }, Neck = { -26, 0, 0 }, RootOffset = { 0, 6.0, -0.4 } }) },
+		{ 0.36, merge(p.Slam, { RootOffset = { 0, -0.65, -0.5 } }) },
+		{ 0.4, merge(p.Slam, { RootOffset = { 0, -0.6, -0.5 } }) },
+	}
+	-- The whirlwind: Root turns steadily (Linear keys every quarter turn) from 0.42 to 0.86, so a
+	-- full turn spans one tick (0.125 of the clip); he edges forward through it.
+	local spinFrom, spinTo, quarters = 0.42, 0.86, 16
+	for q = 0, quarters do
+		local t = spinFrom + (spinTo - spinFrom) * q / quarters
+		local turn = (q * 90) % 360
+		local pose = with(p.SweepThrough, wide, {
+			Root = { 0, if turn > 180 then turn - 360 else turn, 0 }, -- kept within +-180 (same facing)
+			Waist = { -10, 40, 0 }, Neck = { 4, -30, 0 },
+			RootOffset = { 0, -0.45, -0.5 - 0.6 * q / quarters },
+		})
+		table.insert(frenzyKeys, { t, pose, q > 0 })
+	end
+	table.insert(frenzyKeys, { 0.9, with(p.SweepThrough, wide, { Waist = { -8, 95, 0 }, Neck = { 6, -60, 0 }, RootOffset = { 0, -0.4, -1.1 } }) })
+	table.insert(frenzyKeys, { 0.95, with(p.High, wide, { Waist = { 18, 0, 0 }, Neck = { -32, 0, 0 }, RootOffset = { 0, -0.2, -1.1 } }) }) -- the roar
+	table.insert(frenzyKeys, { 1, carry })
+
+	Overrides.hero_rourke = {
+		Idle = breathe(carry, 2.8),
+		Move = rookWalk(),
+		AttackBasic = forehand,
+		AttackSpecial = lastStand,
+		AttackSkill = signature(2.4, frenzyKeys, { Charge = 0.1, Release = 0.36 }),
+	}
+	Alternates.hero_rourke = { AttackBasic = backhand }
 end
 
 HeroClips.ByWeapon = ByWeapon
 HeroClips.Shared = Shared
 HeroClips.Overrides = Overrides
+HeroClips.Alternates = Alternates
+
+-- The alternate clip for a state, under the same weapon rule as overrides, or nil.
+function HeroClips.Alternate(heroId: string?, weaponType: string?, state: string): Clip?
+	local set = heroId and Alternates[heroId]
+	if set and set[state] and OVERRIDE_WEAPON[heroId :: string] == weaponType then
+		return set[state]
+	end
+	return nil
+end
 HeroClips.OverrideWeapon = OVERRIDE_WEAPON
 
 -- Resolves a state for a hero and weapon type, or nil when no clip exists. A hero override
