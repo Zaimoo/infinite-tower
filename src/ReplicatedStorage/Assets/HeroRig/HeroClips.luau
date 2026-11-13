@@ -1643,8 +1643,9 @@ end
 -- Nyx (DAGGERS). She has her own grip (HeroSockets.HERO_GRIPS): the right dagger held forward
 -- (blade out past the thumb, upright when the forearm points forward) and the left reversed
 -- along the forearm, so her poses are her own rather than the shared reverse-grip set.
--- Idle, from her reference art's rooftop crouch: low and leaning forward, the forward blade
--- raised at her side and her left hand down by the ground, its blade along the forearm.
+-- Idle, from the user's pose reference: a wide guard, right foot forward and body turned a
+-- little to her left, the forward blade held across her chest in the right hand and the reversed
+-- blade low by her left hip. Her walk carries the same guard over the walking legs.
 -- Gilt Cut: an overhead diagonal cut with the forward blade, then a backhand sweep of the
 -- reversed one. Mirror Step: she drops low (the vanish), then lunges into a forward thrust with
 -- the reversed blade held across as a guard (she appears behind the target). Shatterdance: the
@@ -1652,14 +1653,18 @@ end
 -- clones cut, then both slashed out as the last one shatters.
 do
 	local p = WeaponPoses.DAGGERS
-	local legs: Pose = { LeftHip = { 40, 0, -10 }, LeftKnee = { -60, 0, 0 }, LeftAnkle = { 20, 0, 0 },
-		RightHip = { 10, 0, 12 }, RightKnee = { -50, 0, 0 }, RightAnkle = { 40, 0, 0 }, RootOffset = { 0, -0.45, 0 } }
 	local ready = merge(p.Crouched, { Waist = { -6, 0, 0 },
 		RightShoulder = { 60, 0, 15 }, RightElbow = { 30, 0, 0 }, RightWrist = { 0, 0, 0 },
 		LeftShoulder = { 50, 0, -15 }, LeftElbow = { 80, 0, 0 }, LeftWrist = { 0, 0, 0 } })
-	local lurk = merge(merge(p.Crouched, legs), { Waist = { -18, 10, 0 }, Neck = { 14, -8, 0 },
-		RightShoulder = { 30, 0, 50 }, RightElbow = { 40, 0, 0 }, RightWrist = { 20, 0, 0 },
-		LeftShoulder = { 34, 0, -12 }, LeftElbow = { 12, 0, 0 }, LeftWrist = { 0, 0, 0 } })
+	local guardArms: Pose = { Waist = { -4, 14, 0 }, Neck = { -6, -12, 0 },
+		-- Upper arm turned in so the forearm lies across the chest; the wrist angles the blade
+		-- down and out to her right (measured in Studio).
+		RightShoulder = { 40, 45, 0 }, RightElbow = { 90, 0, 0 }, RightWrist = { 110, 0, 0 },
+		LeftShoulder = { 15, 0, -14 }, LeftElbow = { 35, 0, 0 }, LeftWrist = { 0, 0, 0 } }
+	local guard = merge(guardArms, {
+		LeftHip = { -6, 0, -16 }, LeftKnee = { -18, 0, 0 }, LeftAnkle = { 14, 0, 16 },
+		RightHip = { 10, 0, 14 }, RightKnee = { -16, 0, 0 }, RightAnkle = { 2, 0, -14 },
+		RootOffset = { 0, -0.22, 0 } })
 	local kneel = merge(p.Crouched, { Waist = { -20, 0, 0 }, LeftHip = { 80, 0, 0 }, LeftKnee = { -90, 0, 0 }, RightHip = { -10, 0, 0 }, RightKnee = { -100, 0, 0 },
 		RightShoulder = { 40, 0, 20 }, RightElbow = { 60, 0, 0 }, LeftShoulder = { 40, 0, -20 }, LeftElbow = { 90, 0, 0 }, RootOffset = { 0, -0.6, 0 } })
 	local thrust = merge(p.Crouched, { Waist = { -24, 0, 0 }, RightShoulder = { 95, 0, 0 }, RightElbow = { 0, 0, 0 }, RightWrist = { -90, 0, 0 },
@@ -1670,7 +1675,8 @@ do
 	local flingOut = merge(p.Crouched, { Waist = { -14, 0, 0 }, RightShoulder = { 70, 0, 70 }, RightElbow = { 10, 0, 0 }, RightWrist = { -60, 0, 0 },
 		LeftShoulder = { 70, 0, -70 }, LeftElbow = { 10, 0, 0 }, LeftWrist = { 0, 0, 0 }, RootOffset = { 0, -0.3, 0 } })
 	Overrides.hero_nyx = {
-		Idle = breathe(lurk, 2.8),
+		Idle = breathe(guard, 3.0),
+		Move = walk(guardArms),
 		AttackBasic = signature(0.65, {
 			{ 0, ready },
 			{ 0.22, merge(ready, { Waist = { 0, 20, 0 }, RightShoulder = { 150, 0, 30 }, RightElbow = { 40, 0, 0 }, RightWrist = { -40, 0, 0 } }) }, -- forward blade high
