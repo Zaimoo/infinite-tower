@@ -1627,7 +1627,7 @@ do
 			{ 0.74, merge(merge(p.Release, p.Crouch), merge(flat, { Waist = { 4, -20, 0 } })) },
 			{ 1, p.Carry },
 		}, { Release = 0.74, Nock = 0.9 }),
-		AttackSkill = signature(1.2, {
+		AttackSkill = signature(1.5, {
 			{ 0, p.Carry },
 			{ 0.2, merge(p.Aim, { Waist = { 4, -20, 0 }, RootOffset = { 0, 0, 0.3 } }) }, -- a step back
 			{ 0.4, rise },

@@ -307,8 +307,8 @@ SkillVfxCatalog.Heroes = table.freeze({
 	hero_isabelle = {
 		Palette = { Primary = rgb(255, 46, 84), Secondary = rgb(212, 175, 90), Core = rgb(255, 222, 228), Accent = rgb(150, 14, 40) },
 		Basic = { Style = "SHOT", Projectile = "ARROW", Scale = 1.0, Arc = 0.12, Trail = 0.3, Impact = 1.8 },
-		Special = { Style = "RICOCHET", Projectile = "ARROW", Scale = 1.2, Arc = 0.1, Trail = 0.3, Impact = 2.4, Bounces = 1, Radius = 14 },
-		Skill = { Style = "TWIN", Projectile = "ARROW", Origin = "NOCK", Scale = 1.5, Arc = 0.05, Trail = 0.35, Impact = 3.2, Split = 0.5, Radius = 16, Shake = 0.22 },
+		Special = { Style = "RICOCHET", Projectile = "ARROW", Scale = 1.4, Arc = 0.1, Trail = 0.4, Impact = 3.0, Bounces = 1, Radius = 14 },
+		Skill = { Style = "TWIN", Projectile = "ARROW", Origin = "NOCK", Scale = 1.6, Arc = 0.05, Trail = 0.45, Impact = 3.6, Split = 0.42, Radius = 16, Shake = 0.3 },
 	},
 	-- Gilt Cut / Mirror Step / Shatterdance: thin teal cuts; five clone slashes ring the target.
 	hero_nyx = {

@@ -604,7 +604,7 @@ local HERO_KITS: { [string]: HeroKitOverride } = {
 			Effect = "TWIN_SHOT",
 			DamageMultiplier = 2.50,
 			TwinRange = 30.0, -- how far the second half looks for the toughest other enemy
-			CastSeconds = 1.2,
+			CastSeconds = 1.5, -- a long, glowing held draw
 		},
 	},
 	hero_nyx = {
