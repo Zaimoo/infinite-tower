@@ -1,6 +1,6 @@
 # The Gilded Mirror: premium mirror-hero banner implementation plan
 
-Status: PRs 1–4 built on `feat/mirror-heroes-core` (2026-11-13); PR 5 (final looks: faces and hair through `hero-remodel`) not started. PR 4 built the kits, their clips and VFX, and the glass shatter on KO. Changes from §5: Shatterdance uses the Striker splash (half damage to others), Twin Reflection's search range is `TwinRange` (the VFX test ties `Radius` to the sigil), and Hall of Mirrors draws with the `CRYSTALS` style. Isabelle's Ricochet and Twin Reflection have their own VFX styles (`RICOCHET`, `TWIN`) and clips; the server sends Twin Reflection's second target as a cosmetic `TWIN_MARK` (GDD §4.4). PR 2 put the banner in the Store (`ShopPanel`) instead of a fourth summon-altar tab, next to the other Robux packs, with the odds listed inline; `HeroOddsModal` is unchanged. GDD sections to update with the code: §2.5 (Rift Attunement exception list), §4 (banners, Pit promotion), §8 if any new remote is added.
+Status: PRs 1–4 built on `feat/mirror-heroes-core` (2026-11-13). PR 5 (final looks and own kits, through the `hero-creation` skill): Isabelle, Nyx and Caspian built (2026-11-14); Seraphine and Rourke to do. PR 4 built the kits, their clips and VFX, and the glass shatter on KO. Changes from §5: Shatterdance uses the Striker splash (half damage to others), Twin Reflection's search range is `TwinRange` (the VFX test ties `Radius` to the sigil), and Hall of Mirrors draws with the `CRYSTALS` style. Isabelle's Ricochet and Twin Reflection have their own VFX styles (`RICOCHET`, `TWIN`) and clips; the server sends Twin Reflection's second target as a cosmetic `TWIN_MARK` (GDD §4.4). PR 2 put the banner in the Store (`ShopPanel`) instead of a fourth summon-altar tab, next to the other Robux packs, with the odds listed inline; `HeroOddsModal` is unchanged. GDD sections to update with the code: §2.5 (Rift Attunement exception list), §4 (banners, Pit promotion), §8 if any new remote is added.
 
 ---
 
@@ -155,7 +155,17 @@ Shared theme: **gilt and glass.** Every costume uses a gold trim colour (`212,17
 
 ## 5. Kits and animations
 
-Clips live in `HeroClips.luau` as data (`Idle`, `Move`, `AttackBasic`, `AttackSpecial`, `AttackSkill`) and play through `HeroAnimator`. Each hero gets its own signature idle, like Jenna, Rhyman and Vane. Timing follows `AttackTimeline` so damage lands on the impact frame.
+Clips live in `HeroClips.luau` as data and play through `HeroAnimator`; every row below is a
+state a player sees. A hero's own clips apply only while it holds its signature weapon
+(`OVERRIDE_WEAPON`); without it the hero uses the shared unarmed set. Damage lands on each attack
+clip's `Release` marker (`HeroActionTiming`), so the strike key and the marker stay together.
+
+Every mirror hero has, as its own: a **stance** (`Idle`), a **walk** (`Move`, usually the stance's
+upper body over walking legs), and its **three attacks**, plus its weapon **grip** when it differs
+from the standard. Shared by every hero and not overridden: the **hit flinch** (`Hit`), the
+**knocked-out** slump (`Coma`, with the mirror glass shatter on top, §6.1) and the off-duty states
+(`Carry` for loot, `Labor`, `Sleep`, the Market and Training Grounds work loops). Rows marked
+*built* are in the game (PR #281); the rest are the plan for that hero's own pass.
 
 **Numbers are multiples of the hero's ATK** (`DamageMultiplier` in `ArchetypeCombatSkills`). The kits are tuned to match the existing archetype kits, so mirror heroes get their power from the mirror percentage, not from stronger skills. Rourke, the featured hero, gets one small extra (the attack-speed buff).
 
@@ -167,51 +177,66 @@ Clips live in `HeroClips.luau` as data (`Idle`, `Move`, `AttackBasic`, `AttackSp
 | Berserker | 1.0 | 1.5 + stagger | 2.6 in 18 studs |
 | Scholar | 1.0 | 1.4 + chain to 2 | 3.5 in 20 studs |
 
-### 5.1 Isabelle (`BOW`)
+### 5.1 Isabelle (`BOW`), built
 
 | Slot | Name | Effect | Animation |
 | --- | --- | --- | --- |
-| Basic | Glint Shot | 1.0× ATK arrow. | A quick draw and release. The bow stays canted at chest height, and the monocle catches the light on release. |
-| Special | Ricochet | 1.5× to the target, then bounces once to the nearest other enemy within 14 studs for 0.75×. | A full draw with a half turn of the torso, then the release follows through. |
-| Skill | Twin Reflection | The arrow splits and hits the two highest-HP enemies for **2.5×** each. With only one enemy, both halves hit it (5.0×). A focused boss-killer, where the Marksman default is a 2.8× area. | She steps back, holds the draw for 0.4 s while the arrow glows, then releases with a hand flourish as it splits. |
-| Idle | — | — | Weight on the back foot, bow low in her left hand, right hand resting on the quiver strap. Every few seconds she adjusts the monocle. |
+| Grip | — | Standard bow grip (left hand). | — |
+| Idle | — | — | From her art: upright, mid-stride, the bow held low in her left hand, the draw hand loose at her side, head turned a little to her left. A slow breath. |
+| Walk | — | — | The shared bow walk (bow carried low). |
+| Basic | Glint Shot | 1.0× ATK arrow. | A quick snap shot with the bow canted (`LeftWrist` Y 35°) and her head tilted toward the monocle. |
+| Special | Ricochet | 1.5× to the target, then bounces once to the nearest other enemy within 14 studs for 0.75×. | She turns away, pivots back low (crouch) and shoots with the bow held flat (80° cant). |
+| Skill | Twin Reflection | The arrow splits: **2.5×** to the target and 2.5× to the toughest other enemy within 30 studs (both halves hit a lone target). A focused boss-killer, where the Marksman default is a 2.8× area. Cast 1.5 s. | A step back into a long rising draw held while the arrow glows, then a release with a small hop and the draw hand sweeping wide as it splits. |
+| Hit / KO | — | — | Shared flinch; shared slump with the glass shatter. |
 
-### 5.2 Nyx (`DAGGERS`)
+### 5.2 Nyx (`DAGGERS`), built
 
 | Slot | Name | Effect | Animation |
 | --- | --- | --- | --- |
-| Basic | Gilt Cut | Two slashes of 0.5× each (1.0× total). | Alternating forehand and backhand cuts. |
-| Special | Mirror Step | Blinks behind the target and strikes for 1.6× with +25% crit chance. | A crouch, then she vanishes (leaving an afterimage) and reappears behind the target with a reverse-grip stab. |
-| Skill | Shatterdance | Five mirror clones each slash every enemy within 12 studs for **0.65×** (3.25× total). | She spins up to a throwing pose, clones appear in a ring and slash inward in sequence, and she lands in a kneel. |
+| Grip | — | Her own grip (`HeroSockets.HERO_GRIPS`): the right dagger held forward, the left reversed along the forearm. | — |
+| Idle | — | — | From the user's pose reference: a wide guard, right foot forward, body turned a little left, the forward blade across her chest angled down and out, the reversed blade low by her left hip. |
+| Walk | — | — | The same guard over walking legs (`walk(guardArms)`). |
+| Basic | Gilt Cut | Two slashes of 0.5× each (1.0× total). | The forward blade raised high, an overhead diagonal cut, then a backhand sweep of the reversed blade: one cut per hit. |
+| Special | Mirror Step | Blinks behind the target and strikes for 1.6× with +25% crit chance. | She gathers low; the renderer blinks her behind the target (a glass clone stays in her place) where she thrusts with the reversed blade held as a guard; she blinks back as the clone shatters. |
+| Skill | Shatterdance | Five mirror clones each cut every enemy within 12 studs (**3.25×** total over 5 cuts, 0.18 s apart, half to the others). Cast 1.4 s. | No dance: she crosses the forward blade upright before her face with the reversed one and holds it while the clones cut, then slashes both out as the last one shatters. |
 | Passive | Gilded Edge | Basic attacks charge 15% more skill gauge (5 → 5.75) while another mirror hero is within 8 studs. | — |
-| Idle | — | — | Low crouch, both daggers reversed, one hand touching the mask. The cape sways. |
+| Hit / KO | — | — | Shared flinch; shared slump with the glass shatter. |
 
-### 5.3 Caspian (`SWORD_SHIELD`)
-
-| Slot | Name | Effect | Animation |
-| --- | --- | --- | --- |
-| Basic | Gilt Edge | 1.0× sword strike. | A short overhand chop from behind the shield. |
-| Special | Polished Bash | 1.4× shield bash with the Vanguard cone stagger (10 studs). | He steps forward and drives the shield in, and the chest mirror flashes. |
-| Skill | Looking-Glass Bulwark | Taunts enemies within 25 studs for 4 s and raises a 40% Max HP barrier for 6 s (the Vanguard default). For those 6 s, **20% of the ranged damage Caspian takes is reflected** back to the attacker. | He plants the shield in the ground and raises the sword overhead, and a glass wall rises from the shield edge. |
-| Idle | — | — | Upright guard, shield forward, sword resting on the shoulder. A slow, heavy breath. |
-
-### 5.4 Seraphine (`STAFF`)
+### 5.3 Caspian (`SWORD_SHIELD`), built
 
 | Slot | Name | Effect | Animation |
 | --- | --- | --- | --- |
+| Grip | — | Standard sword and shield. | — |
+| Idle | — | — | From his art: standing tall, feet apart, the sword low in his right hand with the blade angled down across his front, the shield's face forward at his left side. A slow, heavy breath. |
+| Walk | — | — | The same arms over walking legs (`walk(arms)`). |
+| Basic | Gilt Edge | 1.0× sword strike. | A diagonal slash: he turns right with the sword cocked high over his right shoulder, turns into the strike sweeping it down across his body, and follows through low on his left. |
+| Special | Polished Bash | 1.4× shield bash with the Vanguard cone stagger (10 studs). | He turns away pulling the shield back, then steps in and drives it forward; the shield flashes like a mirror. |
+| Skill | Looking-Glass Bulwark | Taunts enemies within 25 studs for 4 s and raises a 40% Max HP barrier for 6 s (the Vanguard default). For those 6 s, **20% of the ranged damage Caspian takes is reflected** back to the attacker. | He plants the shield in front of him and raises the sword overhead as the glass wall rises. |
+| Hit / KO | — | — | Shared flinch; shared slump with the glass shatter. |
+
+### 5.4 Seraphine (`STAFF`), planned
+
+| Slot | Name | Effect | Animation |
+| --- | --- | --- | --- |
+| Grip | — | Standard staff grip. | — |
+| Idle | — | — | Floating slightly (`floatIdle`), staff upright, free hand palm up. The halo shards turn slowly. (First pass built.) |
+| Walk | — | — | A gliding walk that keeps the float's upper body: staff upright, free hand palm up, small steps. |
 | Basic | Shard Bolt | 1.0× glass-shard projectile. | One-handed staff point. A halo shard detaches and flies. |
 | Special | Refraction | A glass prism hits the target for **1.5×**, then splits into three shards that hit the three nearest other enemies within 14 studs for **0.6×** each. | She draws the staff back, the three halo shards join into a prism at the staff tip, and she thrusts the staff forward to launch it. |
 | Skill | Hall of Mirrors | Four mirror crystals surround a 16-stud area and fire beams for 4 s: **3.5×** in total over 8 pulses to every enemy inside. | Staff held two-handed overhead. She turns a slow half circle while the crystals rise. |
-| Idle | — | — | Floating slightly (`floatIdle`), staff upright, free hand palm up. The halo shards turn slowly. |
+| Hit / KO | — | — | Shared flinch; shared slump with the glass shatter. |
 
-### 5.5 Rourke (`AXE`)
+### 5.5 Rourke (`AXE`), planned
 
 | Slot | Name | Effect | Animation |
 | --- | --- | --- | --- |
+| Grip | — | Standard two-handed greataxe grip. | — |
+| Idle | — | — | Feet wide, axe resting on the right shoulder, left fist clenched forward. A big chest heave every breath. (First pass built.) |
+| Walk | — | — | A heavy, rolling stride with the axe still on his shoulder and the left fist swinging. |
 | Basic | Gilt Cleave | 1.0× heavy horizontal swing. | A wide two-handed sweep with a step through. |
 | Special | Last Stand | 1.5× overhead chop with the Berserker stagger, rising linearly to **2.5×** as his HP falls from full to 10%. | He raises the axe high behind his head, roars, and brings it down to the ground. |
 | Skill | Gilded Frenzy | A ground slam for **2.6×** to every enemy within 18 studs, then +25% attack speed for 4 s. | He jumps, slams down with both hands, then spins once with the axe. |
-| Idle | — | — | Feet wide, axe resting on the right shoulder, left fist clenched forward. A big chest heave every breath. |
+| Hit / KO | — | — | Shared flinch; shared slump with the glass shatter. |
 
 **New mechanics, each needing a combat-sim change and a spec test:**
 
@@ -241,9 +266,9 @@ Built from `CombatVfx` (`SkillVfx` styles, `ProjectileVfx`, `VfxPool`, `VfxPrimi
 
 | Hero | Basic | Special | Skill |
 | --- | --- | --- | --- |
-| Isabelle | a gold trail on the arrow (`SHOT`) | a bounce flash between targets (`Chain`) | the arrow glows red, splits into two arrows with mirrored trails, and two impacts land (`Volley` with 2) |
-| Nyx | thin teal slash arcs (`Slash`) | a teal afterimage at the start point and a burst behind the target (`Cross`) | five translucent glass clones slash inward in sequence, then shatter (`Whirl` with clone pass) |
-| Caspian | a short gold swing arc | a ring shockwave from the shield (`Tremor`, small) | a tall pink-violet glass wall with a moving reflection streak, plus a glint flying back to the shooter on each reflected hit (`Bulwark`) |
+| Isabelle (built) | crimson arrows with long laser-like trails (`SHOT`) | the arrow glints off the target and a second arrow bounces to the enemy the hit carried on to (`RICOCHET`) | a charged draw at the nock, then the arrow splits through a gilt mirror pane into two halves toward the server-picked targets (`TWIN`, `TWIN_MARK`) |
+| Nyx (built) | an X of teal and gilt crescents, one per hit (`GILT_CUT`) | a glass clone left in her place, streaks out and back, a lance-bright stab from behind (`MIRROR_STEP`, renderer blink) | five glass clones of her before mirror panes, each lunging in, slashing and shattering in turn, then a shockwave (`SHATTERDANCE`, `MirrorClones`) |
+| Caspian (built) | a diagonal cut line, wake and crescent through the target along his swing (`DIAGONAL_SLASH`) | a mirror flash on the shield and a shockwave over the stagger cone (`POLISHED_BASH`) | a wall of mirror panes, a taunt shockwave with tethers to every enemy in range, then a glass barrier for 6 s; each reflected hit flies back at the shooter (`LOOKING_GLASS`, `REFLECT`) |
 | Seraphine | a spinning glass shard (`BOLT`) | an indigo glass prism flies to the target (`BOLT`), bursts with a light flash, and three smaller shards fan out to the next enemies (`Chain`) | four crystals rise and fire indigo beams to the centre (`Crystals` + `Beam`) |
 | Rourke | a heavy rose-gold swing arc (`Cleave`) | an overhead trail that grows redder as his HP falls, plus a ground crack (`Execute`) | a gold shockwave ring with gold shards flying out (`Tremor`), then a rose aura on the axe for 4 s |
 
