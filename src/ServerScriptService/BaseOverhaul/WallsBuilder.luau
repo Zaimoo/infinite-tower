@@ -232,6 +232,120 @@ local function spawnWallTorchAtSocket(parent: Instance, name: string, socketCF: 
 	attachTorchLightAndVFX(emberCore)
 end
 
+export type BannerOptions = {
+	Scale: number?,
+	DoubleSided: boolean?,
+	IncludeCrossbar: boolean?,
+}
+
+-- Heraldic swallowtail crimson-and-gold banner (`2.8W x 7.65H` at Scale=1), anchored at the crossbar centre.
+function WallsBuilder.SpawnBanner(parent: Instance, name: string, topCenterCF: CFrame, opts: BannerOptions?): Model
+	local sc = if opts and opts.Scale then opts.Scale else 1
+	local doubleSided = opts ~= nil and opts.DoubleSided == true
+	local includeCrossbar = if opts and opts.IncludeCrossbar ~= nil then opts.IncludeCrossbar else true
+
+	local bannerModel = Instance.new("Model")
+	bannerModel.Name = name
+	bannerModel.WorldPivot = topCenterCF
+
+	local goldZ = if doubleSided then 0 else 0.04 * sc
+	local crimsonZ = if doubleSided then 0 else -0.02 * sc
+	local stripeZ = if doubleSided then 0 else -0.07 * sc
+	local emblemZ = if doubleSided then 0 else -0.08 * sc
+
+	local crimsonDepth = if doubleSided then 0.14 * sc else 0.08 * sc
+	local stripeDepth = if doubleSided then 0.18 * sc else 0.06 * sc
+	local emblemDepth = if doubleSided then 0.20 * sc else 0.08 * sc
+
+	if includeCrossbar then
+		-- Top wrought-iron crossbar & finials
+		makePart({
+			Name = "Crossbar",
+			Size = Vector3.new(3.4 * sc, 0.22 * sc, 0.22 * sc),
+			CFrame = topCenterCF,
+			Material = Enum.Material.Metal,
+			Color = C_IRON,
+			Decorative = true,
+			Parent = bannerModel,
+		})
+		for _, s in ipairs({ -1, 1 }) do
+			makePart({
+				Name = "Finial",
+				Size = Vector3.new(0.34 * sc, 0.34 * sc, 0.34 * sc),
+				CFrame = topCenterCF * CFrame.new(s * 1.8 * sc, 0, 0),
+				Material = Enum.Material.Metal,
+				Color = C_IRON,
+				Decorative = true,
+				Parent = bannerModel,
+			})
+		end
+	end
+
+	-- Gold trim backing plate
+	makePart({
+		Name = "GoldTrimBorder",
+		Size = Vector3.new(2.8 * sc, 6.1 * sc, 0.08 * sc),
+		CFrame = topCenterCF * CFrame.new(0, -3.2 * sc, goldZ),
+		Material = Enum.Material.Metal,
+		Color = C_GOLD,
+		Decorative = true,
+		Parent = bannerModel,
+	})
+	-- Main crimson tapestry cloth
+	makePart({
+		Name = "CrimsonTapestry",
+		Size = Vector3.new(2.4 * sc, 5.85 * sc, crimsonDepth),
+		CFrame = topCenterCF * CFrame.new(0, -3.22 * sc, crimsonZ),
+		Material = Enum.Material.Fabric,
+		Color = C_CRIMSON,
+		Decorative = true,
+		Parent = bannerModel,
+	})
+	-- Pointed swallowtail / shield tip at the bottom
+	for _, s in ipairs({ -1, 1 }) do
+		makeWedge({
+			Name = "BannerTipGold",
+			Size = Vector3.new(0.08 * sc, 1.4 * sc, 1.4 * sc),
+			CFrame = topCenterCF * CFrame.new(s * 0.7 * sc, -6.95 * sc, goldZ) * CFrame.Angles(0, math.rad(s * 90), math.rad(180)),
+			Material = Enum.Material.Metal,
+			Color = C_GOLD,
+			Decorative = true,
+			Parent = bannerModel,
+		})
+		makeWedge({
+			Name = "BannerTipCrimson",
+			Size = Vector3.new(crimsonDepth, 1.2 * sc, 1.2 * sc),
+			CFrame = topCenterCF * CFrame.new(s * 0.6 * sc, -6.75 * sc, crimsonZ) * CFrame.Angles(0, math.rad(s * 90), math.rad(180)),
+			Material = Enum.Material.Fabric,
+			Color = C_CRIMSON,
+			Decorative = true,
+			Parent = bannerModel,
+		})
+	end
+	-- Central gold heraldic emblem & top stripe
+	makePart({
+		Name = "HeraldicEmblem",
+		Size = Vector3.new(1.1 * sc, 1.4 * sc, emblemDepth),
+		CFrame = topCenterCF * CFrame.new(0, -3.1 * sc, emblemZ),
+		Material = Enum.Material.Metal,
+		Color = C_GOLD,
+		Decorative = true,
+		Parent = bannerModel,
+	})
+	makePart({
+		Name = "TopGoldStripe",
+		Size = Vector3.new(2.4 * sc, 0.22 * sc, stripeDepth),
+		CFrame = topCenterCF * CFrame.new(0, -0.9 * sc, stripeZ),
+		Material = Enum.Material.Metal,
+		Color = C_GOLD,
+		Decorative = true,
+		Parent = bannerModel,
+	})
+
+	bannerModel.Parent = parent
+	return bannerModel
+end
+
 -- Module 4A: Medieval Heraldic Banner (`2.8W x 7.5H`) mounted at BannerSocket
 local function spawnWallBannerAtSocket(parent: Instance, name: string, socketCF: CFrame)
 	local imported = getImportedWallAsset("Prop_WallBanner")
@@ -243,90 +357,10 @@ local function spawnWallBannerAtSocket(parent: Instance, name: string, socketCF:
 		return
 	end
 
-	local bannerModel = Instance.new("Model")
-	bannerModel.Name = name
-	bannerModel.Parent = parent
-
-	-- Top wrought-iron crossbar & finials
-	makePart({
-		Name = "Crossbar",
-		Size = Vector3.new(3.4, 0.22, 0.22),
-		CFrame = socketCF * CFrame.new(0, -0.1, -0.32),
-		Material = Enum.Material.Metal,
-		Color = C_IRON,
-		Decorative = true,
-		Parent = bannerModel,
-	})
-	for _, s in ipairs({ -1, 1 }) do
-		makePart({
-			Name = "Finial",
-			Size = Vector3.new(0.34, 0.34, 0.34),
-			CFrame = socketCF * CFrame.new(s * 1.8, -0.1, -0.32),
-			Material = Enum.Material.Metal,
-			Color = C_IRON,
-			Decorative = true,
-			Parent = bannerModel,
-		})
-	end
-	-- Gold trim backing plate
-	makePart({
-		Name = "GoldTrimBorder",
-		Size = Vector3.new(2.8, 6.1, 0.08),
-		CFrame = socketCF * CFrame.new(0, -3.3, -0.28),
-		Material = Enum.Material.Metal,
-		Color = C_GOLD,
-		Decorative = true,
-		Parent = bannerModel,
-	})
-	-- Main crimson tapestry cloth
-	makePart({
-		Name = "CrimsonTapestry",
-		Size = Vector3.new(2.4, 5.85, 0.08),
-		CFrame = socketCF * CFrame.new(0, -3.32, -0.34),
-		Material = Enum.Material.Fabric,
-		Color = C_CRIMSON,
-		Decorative = true,
-		Parent = bannerModel,
-	})
-	-- Pointed swallowtail / shield tip at the bottom
-	for _, s in ipairs({ -1, 1 }) do
-		makeWedge({
-			Name = "BannerTipGold",
-			Size = Vector3.new(0.08, 1.4, 1.4),
-			CFrame = socketCF * CFrame.new(s * 0.7, -7.05, -0.28) * CFrame.Angles(0, math.rad(s * 90), math.rad(180)),
-			Material = Enum.Material.Metal,
-			Color = C_GOLD,
-			Decorative = true,
-			Parent = bannerModel,
-		})
-		makeWedge({
-			Name = "BannerTipCrimson",
-			Size = Vector3.new(0.08, 1.2, 1.2),
-			CFrame = socketCF * CFrame.new(s * 0.6, -6.85, -0.34) * CFrame.Angles(0, math.rad(s * 90), math.rad(180)),
-			Material = Enum.Material.Fabric,
-			Color = C_CRIMSON,
-			Decorative = true,
-			Parent = bannerModel,
-		})
-	end
-	-- Central gold heraldic emblem
-	makePart({
-		Name = "HeraldicEmblem",
-		Size = Vector3.new(1.1, 1.4, 0.08),
-		CFrame = socketCF * CFrame.new(0, -3.2, -0.40),
-		Material = Enum.Material.Metal,
-		Color = C_GOLD,
-		Decorative = true,
-		Parent = bannerModel,
-	})
-	makePart({
-		Name = "TopGoldStripe",
-		Size = Vector3.new(2.4, 0.22, 0.06),
-		CFrame = socketCF * CFrame.new(0, -1.0, -0.39),
-		Material = Enum.Material.Metal,
-		Color = C_GOLD,
-		Decorative = true,
-		Parent = bannerModel,
+	WallsBuilder.SpawnBanner(parent, name, socketCF * CFrame.new(0, -0.1, -0.32), {
+		Scale = 1,
+		DoubleSided = false,
+		IncludeCrossbar = true,
 	})
 end
 

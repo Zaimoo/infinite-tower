@@ -11,6 +11,7 @@ local CollectionService = game:GetService("CollectionService")
 
 local HubLayout = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("HubLayout"))
 local PartKit = require(script.Parent:WaitForChild("PartKit"))
+local WallsBuilder = require(script.Parent:WaitForChild("WallsBuilder"))
 
 local CausewayBuilder = {}
 
@@ -161,9 +162,21 @@ function CausewayBuilder.Build(parent: Instance): Model
 				l.Brightness = 2
 				l.Parent = bowl
 			end
-			makePart({ Name = "Banner", Size = Vector3.new(0.2, 9, 3.2), CFrame = base * CFrame.new(-side * 2, 15, 0), Color = BLOOD, Material = Enum.Material.Fabric, Decorative = true, Parent = pylons })
-			makeWedge({ Name = "BannerTail", Size = Vector3.new(0.2, 1.6, 1.6), CFrame = base * CFrame.new(-side * 2, 9.7, 0.8) * CFrame.Angles(math.pi, 0, 0), Color = BLOOD, Material = Enum.Material.Fabric, Decorative = true, Parent = pylons })
-			makeWedge({ Name = "BannerTail", Size = Vector3.new(0.2, 1.6, 1.6), CFrame = base * CFrame.new(-side * 2, 9.7, -0.8) * CFrame.Angles(math.pi, math.pi, 0), Color = BLOOD, Material = Enum.Material.Fabric, Decorative = true, Parent = pylons })
+			makePart({
+				Name = "BannerArm",
+				Size = Vector3.new(0.45, 0.24, 0.24),
+				CFrame = base * CFrame.new(-side * 1.98, 19.5, 0),
+				Color = IRON,
+				Material = Enum.Material.Metal,
+				Decorative = true,
+				Parent = pylons,
+			})
+			WallsBuilder.SpawnBanner(
+				pylons,
+				string.format("CausewayBanner_%d_%s", pairIndex, if side < 0 then "L" else "R"),
+				base * CFrame.new(-side * 2.2, 19.5, 0) * CFrame.Angles(0, math.pi * 0.5, 0),
+				{ Scale = 1.1, DoubleSided = true, IncludeCrossbar = true }
+			)
 
 			-- Beam anchor above the brazier, primary axis pointing up so the arc bows skyward
 			local anchor = Instance.new("Attachment")
