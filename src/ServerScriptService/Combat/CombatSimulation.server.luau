@@ -2785,6 +2785,8 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
     mob.CurrentHP = math.max(0, mob.CurrentHP - back)
     if mob.DamageLedger and victim.Owner then mob.DamageLedger[victim.Owner.UserId] = (mob.DamageLedger[victim.Owner.UserId] or 0) + back end
     Tower.BroadcastAt(CombatVFXRemote, mob, "HIT_SPARK", mob.Position, back, false, false)
+    -- Cosmetic: clients draw the reflection from the hero back to the shooter (amount = hero NetId).
+    Tower.BroadcastAt(CombatVFXRemote, victim, "REFLECT", mob.Position, victim.NetId, back)
     if mob.CurrentHP <= 0 and victim.Owner then handleMobDeath(mob, victim.Owner) end
    end
    local heroBarrier = victim.BarrierHP or 0

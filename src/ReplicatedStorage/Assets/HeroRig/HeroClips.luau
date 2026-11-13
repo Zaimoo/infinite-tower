@@ -1708,35 +1708,47 @@ do
 	}
 end
 
--- Caspian (SWORD_SHIELD): an upright guard, shield forward, sword resting on the shoulder.
--- Looking-Glass Bulwark: he plants the shield and raises the sword overhead as the wall rises.
+-- Caspian (SWORD_SHIELD). Idle, from his reference art: standing tall with his feet apart, the
+-- sword hanging low in his right hand with the blade angled down across his front, and the
+-- shield at his left side; his walk keeps the same arms. Gilt Edge: the sword up high on his
+-- right, then a diagonal cut down across. Polished Bash: he turns away, pulling the shield back,
+-- then steps in and drives it forward (the shield flashes like a mirror). Looking-Glass
+-- Bulwark: he plants the shield in front of him and raises the sword overhead as the glass wall
+-- rises.
 do
 	local p = WeaponPoses.SWORD_SHIELD
-	local upright = merge(p.Guard, { RightShoulder = { 60, 0, 30 }, RightElbow = { 120, 0, 0 } })
+	local arms: Pose = { Waist = { 0, 6, 0 }, Neck = { 2, -4, 0 },
+		-- Measured in Studio: the upper arm turned in angles the low blade across his front, and
+		-- the shield arm turned (Y -60) shows the shield's face forward at his side.
+		RightShoulder = { 12, 35, 12 }, RightElbow = { 20, 0, 0 }, RightWrist = { -70, 0, 0 },
+		LeftShoulder = { 10, -60, -12 }, LeftElbow = { 25, 0, 0 } }
+	local stand = merge(arms, { LeftHip = { 2, 0, -8 }, LeftKnee = { -6, 0, 0 }, LeftAnkle = { 2, 0, 8 },
+		RightHip = { -2, 0, 8 }, RightKnee = { -6, 0, 0 }, RightAnkle = { 4, 0, -8 }, RootOffset = { 0, -0.05, 0 } })
 	local planted = merge(p.Bash, { Waist = { -16, -10, 0 }, LeftShoulder = { 60, 10, -5 }, RootOffset = { 0, -0.3, 0 },
 		LeftKnee = { -40, 0, 0 }, RightKnee = { -35, 0, 0 }, LeftHip = { 30, 0, -6 } })
 	local raised = merge(planted, { RightShoulder = { 175, 0, 5 }, RightElbow = { 10, 0, 0 }, Neck = { 12, 0, 0 } })
 	Overrides.hero_caspian = {
-		Idle = breathe(upright, 3.6),
+		Idle = breathe(stand, 3.6),
+		Move = walk(arms),
 		AttackBasic = signature(0.75, {
-			{ 0, p.Guard },
-			{ 0.38, merge(p.High, { RightShoulder = { 150, 0, 15 } }) },
-			{ 0.6, p.Cut },
-			{ 1, p.Guard },
+			{ 0, stand },
+			{ 0.38, merge(p.High, { RightShoulder = { 150, 0, 15 } }) }, -- sword up high on his right
+			{ 0.6, p.Cut }, -- diagonal cut down across
+			{ 1, stand },
 		}, { Release = 0.6 }),
-		AttackSpecial = signature(0.85, {
-			{ 0, p.Guard },
-			{ 0.35, merge(p.Guard, { Waist = { 4, 28, 0 }, LeftShoulder = { 40, -40, -10 }, LeftElbow = { 100, 0, 0 } }) },
-			{ 0.58, merge(p.Bash, { RootOffset = { 0, -0.1, -0.5 } }) }, -- the chest mirror flashes as he drives in
-			{ 0.75, p.Bash },
-			{ 1, p.Guard },
+		AttackSpecial = signature(0.9, {
+			{ 0, stand },
+			{ 0.35, merge(p.Guard, { Waist = { 4, 30, 0 }, LeftShoulder = { 40, -40, -10 }, LeftElbow = { 100, 0, 0 } }) }, -- shield pulled back
+			{ 0.58, merge(p.Bash, { RootOffset = { 0, -0.1, -0.6 } }) }, -- steps in and drives it forward
+			{ 0.78, merge(p.Bash, { RootOffset = { 0, -0.1, -0.5 } }) },
+			{ 1, stand },
 		}, { Release = 0.58 }),
 		AttackSkill = signature(1.2, {
-			{ 0, p.Guard },
-			{ 0.3, planted },
-			{ 0.55, raised },
+			{ 0, stand },
+			{ 0.3, planted }, -- plants the shield
+			{ 0.55, raised }, -- raises the sword as the wall rises
 			{ 0.85, raised },
-			{ 1, p.Guard },
+			{ 1, stand },
 		}, { Release = 0.55 }),
 	}
 end

@@ -292,6 +292,18 @@ local function attackArgs(rig: Model, animator: any, meta: any, cue: any): any
 		end,
 		RecentHits = recentHits,
 		Rig = rig,
+		Enemies = function(center: Vector3, radius: number): { Vector3 }
+			local out: { Vector3 } = {}
+			for _, node in VisualNodesByNetId do
+				if not node.IsHero and node.RootPart.Parent then
+					local p = node.RootPart.Position
+					if Vector3.new(p.X - center.X, 0, p.Z - center.Z).Magnitude <= radius then
+						table.insert(out, p)
+					end
+				end
+			end
+			return out
+		end,
 		Blink = function(position: Vector3, yaw: number, from: number, to: number)
 			local node = VisualNodesByNetId[cue.NetId] :: any
 			if node then
@@ -1126,6 +1138,15 @@ CombatVFXRemote.OnClientEvent:Connect(function(context: any, vfxType: string, po
 			if elapsed < cue.CastSeconds then
 				animator:PlayAction(ATTACK_TIER_STATES[cue.Tier] or "AttackBasic", cue.CastSeconds, elapsed, cue)
 			end
+		end
+		return
+	elseif vfxType=="REFLECT" then
+		-- Caspian's Looking-Glass Bulwark sent part of a ranged hit back: amount = his NetId.
+		local node = type(amount) == "number" and VisualNodesByNetId[amount]
+		local meta = type(amount) == "number" and MetadataByNetId[amount]
+		if node and meta and typeof(pos) == "Vector3" then
+			pcall(SkillVfx.PlayReflect, CombatVfxPool, meta.TemplateId, node.RootPart.Position + Vector3.new(0, 0.5, 0),
+				pos + Vector3.new(0, 2, 0), Workspace:GetServerTimeNow())
 		end
 		return
 	elseif vfxType=="TWIN_MARK" then

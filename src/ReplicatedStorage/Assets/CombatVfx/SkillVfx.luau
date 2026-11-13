@@ -50,6 +50,9 @@ export type PlayArgs = {
 	Twin: (() -> Vector3?)?,
 	-- The attacker's rendered rig (SHATTERDANCE copies it into mirror clones), when available.
 	Rig: Model?,
+	-- Positions of the enemies currently drawn within `radius` of `center` (LOOKING_GLASS marks
+	-- the taunted ones). Cosmetic: the server decides who is taunted.
+	Enemies: ((center: Vector3, radius: number) -> { Vector3 })?,
 	-- Draws the attacker at `position` (ground level) facing `yaw` between server times `from`
 	-- and `to` (MIRROR_STEP's blink). Cosmetic: the server position is unchanged.
 	Blink: ((position: Vector3, yaw: number, from: number, to: number) -> ())?,
@@ -781,6 +784,97 @@ local function playTempest(ctx: Context)
 	shake(ctx, at)
 end
 
+-- Caspian's kit (the Gilded Mirror) -----------------------------------------------------------
+
+-- POLISHED_BASH: his polished shield flashes like a mirror as he drives it in, a violet
+-- shockwave fans out over the stagger cone, and every enemy the bash staggered sparks.
+local function playPolishedBash(ctx: Context)
+	local pool, recipe, palette, args = ctx.Pool, ctx.Recipe, ctx.Palette, ctx.Args
+	local at = ctx.ArriveAt
+	local target = args.Target()
+	local feet = if args.Self then args.Self() else args.Origin - Vector3.new(0, 2, 0)
+	local shield = (args.OriginOf and args.OriginOf("LEFT_HAND")) or chest(feet)
+	local radius = recipe.Radius or 10
+	local impact = recipe.Impact or 2.6
+	VfxPrimitives.Flare(pool, fixed(shield), 5.5, palette.Core, at - 0.04, 0.35)
+	VfxPrimitives.Flare(pool, fixed(shield), 3.5, palette.Secondary, at, 0.4)
+	VfxPrimitives.FlightRing(pool, shield, target - shield, 2.4, palette.Accent or palette.Core, at)
+	VfxPrimitives.Ring(pool, { Center = feet, From = 1.5, To = radius, Color = palette.Primary, StartAt = at, EndAt = at + 0.45,
+		Arc = 100, Facing = VfxPrimitives.Yaw(heading(ctx)), Width = 1.2 })
+	VfxPrimitives.Ring(pool, { Center = feet, From = 1, To = radius * 0.65, Color = palette.Secondary, StartAt = at + 0.06, EndAt = at + 0.5,
+		Arc = 80, Facing = VfxPrimitives.Yaw(heading(ctx)), Width = 0.7 })
+	VfxPrimitives.Burst(pool, target, palette.Primary, impact * 1.3, at, 0.35)
+	VfxPrimitives.Burst(pool, target, palette.Core, impact * 0.7, at, 0.25)
+	afterHits(ctx, "HIT", function(): Vector3 return feet end, radius + 1, function(points: { Vector3 })
+		local now = ctx.ArriveAt + HIT_LOOKUP_DELAY
+		for _, point in points do
+			VfxPrimitives.Motes(pool, point + Vector3.new(0, 1.5, 0), palette.Primary, now, 6, 0.5)
+			VfxPrimitives.Flare(pool, fixed(point + Vector3.new(0, 1.5, 0)), 2.2, palette.Secondary, now, 0.25)
+		end
+	end)
+	shake(ctx, at)
+end
+
+-- LOOKING_GLASS (Looking-Glass Bulwark): he plants his shield and a glass wall of mirror panes
+-- rises in an arc in front of him with a ground shockwave; a taunting shockwave rolls out over
+-- the skill's radius and a violet tether and mark snap to every enemy in it; the wall shatters
+-- into a glass barrier that stays around him for the barrier's duration. Reflections while it
+-- lasts are drawn by SkillVfx.PlayReflect (the server's REFLECT message).
+local WALL_PANES = 5
+local WALL_HOLD = 1.2
+local function playLookingGlass(ctx: Context)
+	local pool, recipe, palette, args = ctx.Pool, ctx.Recipe, ctx.Palette, ctx.Args
+	local at = ctx.ArriveAt
+	local self = args.Self or function(): Vector3
+		return args.Origin - Vector3.new(0, 2, 0)
+	end
+	local feet = self()
+	local forward = heading(ctx)
+	local radius = recipe.Radius or 25
+	local impact = recipe.Impact or 3.4
+	-- The plant: a ground shockwave and a burst at the shield.
+	VfxPrimitives.Ring(pool, { Center = feet, From = 0.5, To = 7, Color = palette.Secondary, StartAt = at, EndAt = at + 0.4, Width = 1.2 })
+	VfxPrimitives.Burst(pool, feet + forward * 1.5 + Vector3.new(0, 1, 0), palette.Core, impact, at, 0.35)
+	-- The glass wall: mirror panes in an arc in front of him, each facing out.
+	for i = 1, WALL_PANES do
+		local angle = math.rad(-60 + (i - 1) * 30)
+		local dir = CFrame.Angles(0, angle, 0):VectorToWorldSpace(forward)
+		local pane = feet + dir * 2.8 + Vector3.new(0, 2.2, 0)
+		local frame = CFrame.lookAt(pane, pane + dir) * CFrame.Angles(0, math.pi / 2, 0)
+		local rise = at + (i - 1) * 0.04
+		VfxPrimitives.Disc(pool, { CFrame = frame, Radius = 1.8, Color = palette.Secondary, StartAt = rise, EndAt = at + WALL_HOLD, Grow = 0.05, Transparency = 0.45 })
+		VfxPrimitives.Disc(pool, { CFrame = frame * CFrame.new(0.05, 0, 0), Radius = 1.55, Color = palette.Primary, StartAt = rise, EndAt = at + WALL_HOLD, Grow = 0.05, Transparency = 0.3 })
+		VfxPrimitives.Flare(pool, fixed(pane), 3, palette.Core, rise + 0.1, 0.25)
+		-- It shatters into the barrier.
+		VfxPrimitives.Burst(pool, pane, palette.Primary, 2.4, at + WALL_HOLD, 0.3)
+		VfxPrimitives.Motes(pool, pane, palette.Core, at + WALL_HOLD, 6, 0.6)
+	end
+	-- The taunt: a shockwave over the radius, and a tether and mark on every enemy in it.
+	VfxPrimitives.Ring(pool, { Center = feet, From = 2, To = radius, Color = palette.Primary, StartAt = at + 0.1, EndAt = at + 0.8, Width = 1.4 })
+	if args.Enemies then
+		local from = chest(feet)
+		local marked = 0
+		for i, enemy in args.Enemies(feet, radius) do
+			if marked >= 12 then
+				break
+			end
+			marked += 1
+			local head = enemy + Vector3.new(0, 2.5, 0)
+			VfxPrimitives.Beam(pool, from, head, palette.Primary, at + 0.15 + i * 0.02, 0.45, args.Cue.NetId + i)
+			VfxPrimitives.Flare(pool, fixed(head), 3, palette.Secondary, at + 0.2 + i * 0.02, 0.5)
+			VfxPrimitives.Burst(pool, head, palette.Primary, 1.8, at + 0.2 + i * 0.02, 0.3)
+		end
+	end
+	-- The barrier: a glass shell that follows him for the barrier's duration.
+	VfxPrimitives.Shell(pool, function(): Vector3
+		return chest(self())
+	end, 3.6, palette.Accent or palette.Primary, at + WALL_HOLD - 0.1, at + (recipe.Linger or 6))
+	VfxPrimitives.Flare(pool, function(): Vector3
+		return chest(self())
+	end, 7, palette.Secondary, at, 0.5)
+	shake(ctx, at)
+end
+
 -- Nyx's kit (the Gilded Mirror) ---------------------------------------------------------------
 
 -- Ticks and gap of one of the attacking hero's tiers ("Basic" | "Special" | "Skill").
@@ -1283,6 +1377,8 @@ local PLAYERS: { [string]: (Context) -> () } = {
 	BULWARK = playBulwark,
 	TEMPEST = playTempest,
 	GILT_CUT = playGiltCut,
+	POLISHED_BASH = playPolishedBash,
+	LOOKING_GLASS = playLookingGlass,
 	MIRROR_STEP = playMirrorStep,
 	SHATTERDANCE = playShatterdance,
 	WAKE = playWake,
@@ -1610,6 +1706,24 @@ function SkillVfx.PlayCharge(pool: VfxPool.VfxPool, args: PlayArgs): boolean
 		StartAt = args.Now,
 		ReleaseAt = releaseAt,
 	})
+end
+
+-- A reflected hit (Caspian's Looking-Glass Bulwark, the server's REFLECT message): a mirror glint
+-- on the hero and a bolt of light flying back into the shooter, in the hero's palette.
+function SkillVfx.PlayReflect(pool: VfxPool.VfxPool, heroId: string?, from: Vector3, to: Vector3, now: number)
+	if not pool:Visible(from, to) then
+		return
+	end
+	local recipe = heroId and SkillVfxCatalog.Heroes[heroId]
+	local palette = (recipe and recipe.Palette) or SkillVfxCatalog.Weapons.SWORD_SHIELD.Palette
+	local travel = math.clamp(VfxMath.Distance(from, to) / 80, 0.1, 0.3)
+	VfxPrimitives.Flare(pool, fixed(from), 4, palette.Core, now, 0.3)
+	VfxPrimitives.FlightRing(pool, from, to - from, 1.8, palette.Secondary, now)
+	local body = projectile({ Style = "SHOT", Projectile = "BOLT", Scale = 0.9, Trail = 0.25 } :: any, palette)
+	fly(pool, body, from, fixed(to), now, now + travel, 0.4, function(at: Vector3)
+		VfxPrimitives.Burst(pool, at, palette.Primary, 2.6, now + travel, 0.3)
+		VfxPrimitives.Flare(pool, fixed(at), 2.6, palette.Secondary, now + travel, 0.25)
+	end)
 end
 
 -- Plays the cue's attack. Returns false when this hero has no recipe, the hit already landed,

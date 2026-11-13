@@ -3,6 +3,7 @@
     blender.exe --background --factory-startup --python run_hair_headless.py -- \
         --generator tools/make_nyx_hair_ugc.py --hair NyxHair --out <render folder> \
         [--export] [--textured] [--views front,threequarter,side,back,backright,backlow]
+        [--focus -0.6] [--zoom 3.4]
 
 Blender (Steam): D:\\SteamLibrary\\steamapps\\common\\Blender\\blender.exe.
 Run it from the repository root (cwd); paths are relative to it. Renders go to <out>/<hair>_<view>.png (Workbench,
@@ -10,6 +11,8 @@ orthographic, with grey torso and arm proxies for a Slim body in 1.2-head units,
 judge length and clearance). --export runs the hero-remodel skill's blender_export_hair.py
 into assets/hair (FBX, JSON, .blend) and prints the centre and size for the costume piece.
 --textured shows the image texture (two-colour hair) instead of the material colour.
+--focus is the height the camera aims at (head centre = 0; -0.6 suits long hair, about 0 short
+hair) and --zoom the orthographic width in studs (smaller = closer).
 Stitch the views with PIL afterwards and compare them with the reference art.
 """
 
@@ -67,8 +70,8 @@ cam = bpy.data.objects.new("Cam", bpy.data.cameras.new("Cam"))
 scene.collection.objects.link(cam)
 scene.camera = cam
 cam.data.type = "ORTHO"
-cam.data.ortho_scale = 3.4
-target = Vector((0, 0, -0.6))
+cam.data.ortho_scale = float(arg("--zoom", "3.4"))
+target = Vector((0, 0, float(arg("--focus", "-0.6"))))
 ALL = {
     "front": (0, 1, 0.12),
     "threequarter": (0.8, 0.6, 0.2),

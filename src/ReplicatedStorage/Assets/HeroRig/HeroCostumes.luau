@@ -1759,32 +1759,74 @@ do
 end
 
 -- 22. CASPIAN (Ascendant Vanguard - Looking-Glass Knight) ----------------------------------------
--- Pearl-white plate with gilt trim over a royal-blue tabard, layered pauldrons and a round glass
--- mirror set in the breastplate; short swept-back auburn hair.
+-- From his reference art (Heavy body): pearl-white plate trimmed in gilt over a royal-blue
+-- undersuit; a high collar; a round mirror orb set in a gilt sunburst on the breastplate with
+-- gilt lines below it; big rounded pauldrons in two lames with gilt rims and brown leather arm
+-- straps; plate vambraces with gilt cuffs; a brown belt with a gilt buckle; a long blue tabard
+-- edged in gilt between plate faulds; a blue cape; plate thighs, knee cops with gilt rims,
+-- greaves and sabatons. Hair: our Blender mesh (tools/make_caspian_hair_ugc.py), a short
+-- swept-up auburn quiff. Face: our own decal from assets/faces/make_caspian_face.py. The glowing
+-- runed sword and shield are the SWORD_SHIELD weapon, not costume.
 do
-	local skin, hair, plate, shadow, blue, accent = { 200, 150, 115 }, { 140, 70, 40 }, { 228, 226, 220 }, { 170, 168, 160 }, { 40, 60, 130 }, { 224, 86, 253 }
+	local skin, hair, plate, shade = { 204, 152, 114 }, { 156, 78, 44 }, { 234, 232, 238 }, { 196, 194, 204 }
+	local blue, leather, glass = { 36, 60, 150 }, { 100, 64, 40 }, { 200, 220, 255 }
+	local FABRIC = { Material = "Fabric" }
 	table.insert(COSTUMES, costume("hero_caspian", "Heavy", {
-		Skin = skin, UpperTorso = plate, LowerTorso = blue, UpperArm = plate, LowerArm = shadow, Hand = shadow,
-		UpperLeg = blue, LowerLeg = plate, Foot = shadow,
+		Skin = skin, UpperTorso = plate, LowerTorso = blue, UpperArm = blue, LowerArm = plate, Hand = shade,
+		UpperLeg = plate, LowerLeg = plate, Foot = plate,
 	}, {
-		piece("HairCap", "Head", { 1.32, 0.38, 1.32 }, { 0, 0.52, 0.08 }, hair, LOOSE),
-		piece("HairBack", "Head", { 1.28, 0.5, 0.26 }, { 0, 0.24, 0.54 }, hair, LOOSE),
-		piece("Beard", "Head", { 0.9, 0.3, 0.14 }, { 0, -0.5, -0.56 }, hair, LOOSE),
-		piece("ChestMirror", "UpperTorso", { 0.08, 0.6, 0.6 }, { 0, 0.15, -0.56 }, { 190, 215, 255 }, with(GLASS, { Shape = "Cylinder", Rotation = { 0, 90, 0 } })),
-		piece("ChestMirrorRim", "UpperTorso", { 0.06, 0.7, 0.7 }, { 0, 0.15, -0.53 }, GILT, with(METAL, { Shape = "Cylinder", Rotation = { 0, 90, 0 } })),
-		piece("MirrorCore", "UpperTorso", { 0.1, 0.14, 0.14 }, { 0, 0.15, -0.6 }, accent, with(NEON, { Shape = "Ball" })),
-		piece("PauldronL", "LeftUpperArm", { 1.3, 0.56, 1.3 }, { -0.08, 0.38, 0 }, plate, with(LOOSE, METAL, { Rotation = { 0, 0, 10 } })),
-		piece("PauldronRimL", "LeftUpperArm", { 1.34, 0.08, 1.34 }, { 0, -0.26, 0 }, GILT, with(LOOSE, METAL, { RelativeTo = "PauldronL" })),
-		piece("PauldronR", "RightUpperArm", { 1.3, 0.56, 1.3 }, { 0.08, 0.38, 0 }, plate, with(LOOSE, METAL, { Rotation = { 0, 0, -10 } })),
-		piece("PauldronRimR", "RightUpperArm", { 1.34, 0.08, 1.34 }, { 0, -0.26, 0 }, GILT, with(LOOSE, METAL, { RelativeTo = "PauldronR" })),
-		piece("Cape", "UpperTorso", { 1.9, 2.4, 0.08 }, { 0, -0.4, 0.56 }, blue, with(LOOSE, { Material = "Fabric", Rotation = { 4, 0, 0 } })),
-		piece("Belt", "LowerTorso", { 2.08, 0.28, 1.08 }, { 0, 0.04, 0 }, GILT, METAL),
-		piece("Tabard", "LowerTorso", { 0.9, 1.4, 0.08 }, { 0, -0.9, -0.58 }, blue, with(LOOSE, { Material = "Fabric" })),
-		piece("FauldL", "LowerTorso", { 0.7, 0.5, 0.9 }, { -0.75, -0.3, 0 }, plate, with(LOOSE, METAL)),
-		piece("FauldR", "LowerTorso", { 0.7, 0.5, 0.9 }, { 0.75, -0.3, 0 }, plate, with(LOOSE, METAL)),
-		piece("KneeGuardL", "LeftLowerLeg", { 0.72, 0.8, 0.14 }, { 0, 0.12, -0.55 }, GILT, METAL),
-		piece("KneeGuardR", "RightLowerLeg", { 0.72, 0.8, 0.14 }, { 0, 0.12, -0.55 }, GILT, METAL),
-	}))
+		-- Hair mesh: centred on the export's bounding box and turned 180 degrees to undo the
+		-- importer's rotation.
+		piece("HairMesh", "Head", { 1.655, 1.343, 1.647 }, { -0.0015, 0.4772, 0.1018 }, hair, with(LOOSE, {
+			Rotation = { 0, 180, 0 },
+			Mesh = { MeshId = "rbxassetid://CASPIAN_HAIR_ID", Scale = { 0.01, 0.01, 0.01 } },
+		})),
+		-- High plate collar with a gilt rim
+		piece("CollarBack", "UpperTorso", { 1.3, 0.44, 0.14 }, { 0, 0.96, 0.44 }, plate, with(LOOSE, METAL, { Rotation = { -10, 0, 0 } })),
+		piece("CollarL", "UpperTorso", { 0.5, 0.4, 0.12 }, { -0.36, 0.94, -0.42 }, plate, with(LOOSE, METAL, { Rotation = { 0, 22, 0 } })),
+		piece("CollarR", "UpperTorso", { 0.5, 0.4, 0.12 }, { 0.36, 0.94, -0.42 }, plate, with(LOOSE, METAL, { Rotation = { 0, -22, 0 } })),
+		piece("CollarTrim", "UpperTorso", { 1.32, 0.06, 0.15 }, { 0, 0.22, 0 }, GILT, with(LOOSE, METAL, { RelativeTo = "CollarBack" })),
+		-- The mirror orb in a gilt sunburst, and gilt lines down the breastplate
+		piece("ChestMirror", "UpperTorso", { 0.1, 0.56, 0.56 }, { 0, 0.22, -0.56 }, glass, with(GLASS, { Shape = "Cylinder", Rotation = { 0, 90, 0 } })),
+		piece("ChestMirrorRim", "UpperTorso", { 0.07, 0.68, 0.68 }, { 0, 0.22, -0.53 }, GILT, with(METAL, { Shape = "Cylinder", Rotation = { 0, 90, 0 } })),
+		piece("SunTop", "UpperTorso", { 0.05, 0.22, 0.16 }, { 0, 0.62, -0.53 }, GILT, with(METAL, WEDGE, { Rotation = { 0, 90, 0 } })),
+		piece("SunBottom", "UpperTorso", { 0.05, 0.22, 0.16 }, { 0, -0.18, -0.53 }, GILT, with(METAL, WEDGE, { Rotation = { 0, 90, 180 } })),
+		piece("SunLeft", "UpperTorso", { 0.05, 0.22, 0.16 }, { -0.4, 0.22, -0.53 }, GILT, with(METAL, WEDGE, { Rotation = { 0, 90, 90 } })),
+		piece("SunRight", "UpperTorso", { 0.05, 0.22, 0.16 }, { 0.4, 0.22, -0.53 }, GILT, with(METAL, WEDGE, { Rotation = { 0, 90, -90 } })),
+		piece("PlateLineL", "UpperTorso", { 0.06, 0.6, 0.05 }, { -0.3, -0.42, -0.52 }, GILT, with(METAL, { Rotation = { 0, 0, -32 } })),
+		piece("PlateLineR", "UpperTorso", { 0.06, 0.6, 0.05 }, { 0.3, -0.42, -0.52 }, GILT, with(METAL, { Rotation = { 0, 0, 32 } })),
+		-- Blue cape
+		piece("Cape", "UpperTorso", { 2.0, 3.0, 0.08 }, { 0, -0.7, 0.6 }, blue, with(LOOSE, FABRIC, { Rotation = { -6, 0, 0 } })),
+		-- Big rounded pauldrons in two lames with gilt rims, and leather arm straps
+		piece("PauldronL", "LeftUpperArm", { 1.36, 0.6, 1.36 }, { -0.1, 0.38, 0 }, plate, with(LOOSE, METAL, { Rotation = { 0, 0, 12 } })),
+		piece("PauldronLameL", "LeftUpperArm", { 1.28, 0.3, 1.28 }, { -0.04, -0.4, 0 }, plate, with(LOOSE, METAL, { RelativeTo = "PauldronL" })),
+		piece("PauldronRimL", "LeftUpperArm", { 1.4, 0.08, 1.4 }, { 0, -0.28, 0 }, GILT, with(LOOSE, METAL, { RelativeTo = "PauldronL" })),
+		piece("PauldronR", "RightUpperArm", { 1.36, 0.6, 1.36 }, { 0.1, 0.38, 0 }, plate, with(LOOSE, METAL, { Rotation = { 0, 0, -12 } })),
+		piece("PauldronLameR", "RightUpperArm", { 1.28, 0.3, 1.28 }, { 0.04, -0.4, 0 }, plate, with(LOOSE, METAL, { RelativeTo = "PauldronR" })),
+		piece("PauldronRimR", "RightUpperArm", { 1.4, 0.08, 1.4 }, { 0, -0.28, 0 }, GILT, with(LOOSE, METAL, { RelativeTo = "PauldronR" })),
+		piece("ArmStrapL", "LeftUpperArm", { 1.08, 0.14, 1.08 }, { 0, -0.36, 0 }, leather),
+		piece("ArmStrapR", "RightUpperArm", { 1.08, 0.14, 1.08 }, { 0, -0.36, 0 }, leather),
+		-- Plate vambraces with gilt cuffs
+		piece("CuffL", "LeftLowerArm", { 1.12, 0.08, 1.12 }, { 0, 0.4, 0 }, GILT, METAL),
+		piece("CuffR", "RightLowerArm", { 1.12, 0.08, 1.12 }, { 0, 0.4, 0 }, GILT, METAL),
+		-- Belt and buckle, the long blue tabard edged in gilt, and plate faulds with gilt rims
+		piece("Belt", "LowerTorso", { 2.08, 0.26, 1.08 }, { 0, 0.04, 0 }, leather),
+		piece("Buckle", "LowerTorso", { 0.36, 0.3, 0.08 }, { 0, 0.04, -0.57 }, GILT, METAL),
+		piece("Tabard", "LowerTorso", { 0.9, 2.4, 0.08 }, { 0, -1.3, -0.58 }, blue, with(LOOSE, FABRIC)),
+		piece("TabardEdgeL", "LowerTorso", { 0.06, 2.4, 0.09 }, { -0.45, 0, 0 }, GILT, with(LOOSE, METAL, { RelativeTo = "Tabard" })),
+		piece("TabardEdgeR", "LowerTorso", { 0.06, 2.4, 0.09 }, { 0.45, 0, 0 }, GILT, with(LOOSE, METAL, { RelativeTo = "Tabard" })),
+		piece("FauldL", "LowerTorso", { 0.72, 0.56, 1.0 }, { -0.76, -0.32, 0 }, plate, with(LOOSE, METAL, { Rotation = { 0, 0, -8 } })),
+		piece("FauldRimL", "LowerTorso", { 0.74, 0.06, 1.02 }, { 0, -0.28, 0 }, GILT, with(LOOSE, METAL, { RelativeTo = "FauldL" })),
+		piece("FauldR", "LowerTorso", { 0.72, 0.56, 1.0 }, { 0.76, -0.32, 0 }, plate, with(LOOSE, METAL, { Rotation = { 0, 0, 8 } })),
+		piece("FauldRimR", "LowerTorso", { 0.74, 0.06, 1.02 }, { 0, -0.28, 0 }, GILT, with(LOOSE, METAL, { RelativeTo = "FauldR" })),
+		-- Knee cops with gilt rims, and sabatons with gilt rims
+		piece("KneeRimL", "LeftLowerLeg", { 0.1, 0.66, 0.66 }, { 0, 0.42, -0.53 }, GILT, with(METAL, { Shape = "Cylinder", Rotation = { 0, 90, 0 } })),
+		piece("KneeCopL", "LeftLowerLeg", { 0.08, 0.52, 0.52 }, { 0.04, 0, 0 }, plate, with(METAL, { Shape = "Cylinder", RelativeTo = "KneeRimL" })),
+		piece("KneeRimR", "RightLowerLeg", { 0.1, 0.66, 0.66 }, { 0, 0.42, -0.53 }, GILT, with(METAL, { Shape = "Cylinder", Rotation = { 0, 90, 0 } })),
+		piece("KneeCopR", "RightLowerLeg", { 0.08, 0.52, 0.52 }, { 0.04, 0, 0 }, plate, with(METAL, { Shape = "Cylinder", RelativeTo = "KneeRimR" })),
+		piece("SabatonRimL", "LeftFoot", { 1.08, 0.08, 1.26 }, { 0, 0.1, -0.08 }, GILT, METAL),
+		piece("SabatonRimR", "RightFoot", { 1.08, 0.08, 1.26 }, { 0, 0.1, -0.08 }, GILT, METAL),
+	}, "rbxassetid://80616535549180"))
 end
 
 -- 23. SERAPHINE (Ethereal Scholar - Mirror Regent) -----------------------------------------------
