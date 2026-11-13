@@ -109,6 +109,9 @@ HeroCostumes.MESHES = table.freeze({
 	["rbxassetid://118642308945063"] = "rbxassetid://71008130952735",
 	-- Caspian: our Blender UGC-style shag (tools/make_caspian_hair_ugc.py), textured with assets/hair/caspian_hair_texture.png
 	["rbxassetid://90421651481031"] = "rbxassetid://131547739661735",
+	-- Seraphine's hair, our own: tools/make_seraphine_hair_ugc.py (assets/hair/seraphine_hair_ugc.blend),
+	-- textured with assets/hair/seraphine_hair_texture.png.
+	["rbxassetid://93987759341599"] = "rbxassetid://104036736686844",
 } :: { [string]: string })
 
 -- Avatar hair accessory placement: a piece centred so the accessory's HairAttachment meets
@@ -1842,8 +1845,7 @@ end
 -- longer train behind; indigo upper sleeves with gilt armlets and wide lavender bell sleeves with
 -- gilt cuffs; a gilt circlet, and three glass shards of her halo turning above her head. Hair:
 -- very long silver-white, swept back into a high bun (tools/make_seraphine_hair_ugc.py,
--- textured with assets/hair/seraphine_hair_texture.png; the pieces below stand in until the
--- mesh is imported). Face: our own decal from assets/faces/make_seraphine_face.py, which also
+-- textured with assets/hair/seraphine_hair_texture.png). Face: our own decal from assets/faces/make_seraphine_face.py, which also
 -- carries the circlet's centre point and gem. Her weapon is the STAFF, not costume.
 do
 	local skin, hair, robe, robeDeep, inner, bodice = { 240, 214, 196 }, { 222, 224, 238 }, { 60, 52, 146 }, { 40, 34, 104 }, { 196, 188, 238 }, { 214, 208, 246 }
@@ -1853,10 +1855,13 @@ do
 		Skin = skin, UpperTorso = bodice, LowerTorso = inner, UpperArm = robe, LowerArm = inner, Hand = skin,
 		UpperLeg = inner, LowerLeg = inner, Foot = robeDeep,
 	}, {
-		-- Hair (stand-in until the mesh is imported): a cap, the high bun and the long back fall
-		piece("HairCap", "Head", { 1.32, 0.42, 1.32 }, { 0, 0.5, 0.06 }, hair, LOOSE),
-		piece("HairBun", "Head", { 0.6, 0.5, 0.6 }, { 0, 0.92, 0.2 }, hair, with(LOOSE, { Shape = "Ball" })),
-		piece("HairLong", "Head", { 1.3, 3.2, 0.3 }, { 0, -1.0, 0.6 }, hair, LOOSE),
+		-- Hair mesh: centred on the export's bounding box and turned 180 degrees to undo the
+		-- importer's rotation; textured, so the colour comes from the texture. Fit pass: scaled to
+		-- 92% about the head and lowered a little so it hugs the head.
+		piece("HairMesh", "Head", { 1.5686, 3.5273, 1.4232 }, { 0.0028, -0.647, 0.136 }, hair, with(LOOSE, {
+			Rotation = { 0, 180, 0 },
+			Mesh = { MeshId = "rbxassetid://93987759341599", TextureId = "rbxassetid://104036736686844", Scale = { 0.0092, 0.0092, 0.0092 } },
+		})),
 		piece("Circlet", "Head", { 1.36, 0.06, 1.36 }, { 0, 0.4, 0 }, GILT, with(METAL, LOOSE, { Shape = "Cylinder", Rotation = { 0, 0, 90 } })),
 		-- Halo: three glass shards turning above and behind her head
 		piece("HaloShardTop", "Head", { 0.18, 0.44, 0.06 }, { 0, 1.32, 0.42 }, shard, with(GLASS, LOOSE, WEDGE)),
