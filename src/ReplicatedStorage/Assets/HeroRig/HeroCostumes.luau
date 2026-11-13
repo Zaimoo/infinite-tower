@@ -106,7 +106,7 @@ HeroCostumes.MESHES = table.freeze({
 	-- Isabelle: our Blender UGC-style hair (tools/make_isabelle_hair_ugc.py)
 	["rbxassetid://125709940577517"] = "",
 	-- Nyx: our Blender UGC-style hair (tools/make_nyx_hair_ugc.py), textured with assets/hair/nyx_hair_texture.png
-	["rbxassetid://93772226685564"] = "rbxassetid://79576997989816",
+	["rbxassetid://93772226685564"] = "rbxassetid://71008130952735",
 	-- Caspian: our Blender UGC-style shag (tools/make_caspian_hair_ugc.py), textured with assets/hair/caspian_hair_texture.png
 	["rbxassetid://90421651481031"] = "rbxassetid://131547739661735",
 } :: { [string]: string })
@@ -1709,7 +1709,7 @@ do
 		-- 92% about the head and lowered a little so it hugs the head (checked in Studio).
 		piece("HairMesh", "Head", { 1.6615, 1.6624, 1.6247 }, { -0.0153, 0.1726, 0.082 }, hair, with(LOOSE, {
 			Rotation = { 0, 180, 0 },
-			Mesh = { MeshId = "rbxassetid://93772226685564", TextureId = "rbxassetid://79576997989816", Scale = { 0.0092, 0.0092, 0.0092 } },
+			Mesh = { MeshId = "rbxassetid://93772226685564", TextureId = "rbxassetid://71008130952735", Scale = { 0.0092, 0.0092, 0.0092 } },
 		})),
 		-- High collar edged in gilt, with a gilt clasp at the throat
 		piece("CollarBack", "UpperTorso", { 1.2, 0.42, 0.12 }, { 0, 0.96, 0.42 }, suit, with(LOOSE, FABRIC, { Rotation = { -10, 0, 0 } })),
