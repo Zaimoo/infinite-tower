@@ -103,6 +103,8 @@ HeroCostumes.MESHES = table.freeze({
 	["rbxassetid://70386605530551"] = "",
 	-- Rhyman's hair, our own: tools/make_rhyman_hair_ugc.py (assets/hair/rhyman_hair_ugc.blend).
 	["rbxassetid://126418889340816"] = "",
+	-- Isabelle: our Blender UGC-style hair (tools/make_isabelle_hair_ugc.py)
+	["rbxassetid://125709940577517"] = "",
 } :: { [string]: string })
 
 -- Avatar hair accessory placement: a piece centred so the accessory's HairAttachment meets
@@ -1622,7 +1624,7 @@ do
 		-- importer's rotation. The braid's gilt cuff sits at the braid's end (1.2-head units).
 		piece("HairMesh", "Head", { 1.793, 3.323, 1.757 }, { 0.0013, -0.6602, 0.0832 }, hair, with(LOOSE, {
 			Rotation = { 0, 180, 0 },
-			Mesh = { MeshId = "rbxassetid://ISABELLE_HAIR_ID", Scale = { 0.01, 0.01, 0.01 } },
+			Mesh = { MeshId = "rbxassetid://125709940577517", Scale = { 0.01, 0.01, 0.01 } },
 		})),
 		piece("BraidCuff", "Head", { 0.18, 0.26, 0.26 }, { 0.62, -1.98, 0.74 }, GILT, with(METAL, LOOSE, { Shape = "Cylinder", Rotation = { 0, 0, 90 } })),
 		-- Standing mandarin collar with a gilt edge
