@@ -1,6 +1,6 @@
 # The Gilded Mirror: premium mirror-hero banner implementation plan
 
-Status: PRs 1–4 built on `feat/mirror-heroes-core` (2026-11-13). PR 5 (final looks and own kits, through the `hero-creation` skill): Isabelle, Nyx and Caspian built (2026-11-14); Seraphine and Rourke to do. PR 4 built the kits, their clips and VFX, and the glass shatter on KO. Changes from §5: Shatterdance uses the Striker splash (half damage to others), Twin Reflection's search range is `TwinRange` (the VFX test ties `Radius` to the sigil), and Hall of Mirrors draws with the `CRYSTALS` style. Isabelle's Ricochet and Twin Reflection have their own VFX styles (`RICOCHET`, `TWIN`) and clips; the server sends Twin Reflection's second target as a cosmetic `TWIN_MARK` (GDD §4.4). PR 2 put the banner in the Store (`ShopPanel`) instead of a fourth summon-altar tab, next to the other Robux packs, with the odds listed inline; `HeroOddsModal` is unchanged. GDD sections to update with the code: §2.5 (Rift Attunement exception list), §4 (banners, Pit promotion), §8 if any new remote is added.
+Status: PRs 1–4 built on `feat/mirror-heroes-core` (2026-11-13). PR 5 (final looks and own kits, through the `hero-creation` skill): Isabelle, Nyx, Caspian and Seraphine built (2026-11-14); Rourke to do. PR 4 built the kits, their clips and VFX, and the glass shatter on KO. Changes from §5: Shatterdance uses the Striker splash (half damage to others), Twin Reflection's search range is `TwinRange` (the VFX test ties `Radius` to the sigil), and Hall of Mirrors first drew with the `CRYSTALS` style (it now has its own, `HALL_OF_MIRRORS`). Isabelle's Ricochet and Twin Reflection have their own VFX styles (`RICOCHET`, `TWIN`) and clips; the server sends Twin Reflection's second target as a cosmetic `TWIN_MARK` (GDD §4.4). PR 2 put the banner in the Store (`ShopPanel`) instead of a fourth summon-altar tab, next to the other Robux packs, with the odds listed inline; `HeroOddsModal` is unchanged. GDD sections to update with the code: §2.5 (Rift Attunement exception list), §4 (banners, Pit promotion), §8 if any new remote is added.
 
 ---
 
@@ -214,16 +214,16 @@ from the standard. Shared by every hero and not overridden: the **hit flinch** (
 | Skill | Looking-Glass Bulwark | Taunts enemies within 25 studs for 4 s and raises a 40% Max HP barrier for 6 s (the Vanguard default). For those 6 s, **20% of the ranged damage Caspian takes is reflected** back to the attacker. | He plants the shield in front of him and raises the sword overhead as the glass wall rises. |
 | Hit / KO | — | — | Shared flinch; shared slump with the glass shatter. |
 
-### 5.4 Seraphine (`STAFF`), planned
+### 5.4 Seraphine (`STAFF`), built
 
 | Slot | Name | Effect | Animation |
 | --- | --- | --- | --- |
-| Grip | — | Standard staff grip. | — |
-| Idle | — | — | Floating slightly (`floatIdle`), staff upright, free hand palm up. The halo shards turn slowly. (First pass built.) |
-| Walk | — | — | A gliding walk that keeps the float's upper body: staff upright, free hand palm up, small steps. |
-| Basic | Shard Bolt | 1.0× glass-shard projectile. | One-handed staff point. A halo shard detaches and flies. |
-| Special | Refraction | A glass prism hits the target for **1.5×**, then splits into three shards that hit the three nearest other enemies within 14 studs for **0.6×** each. | She draws the staff back, the three halo shards join into a prism at the staff tip, and she thrusts the staff forward to launch it. |
-| Skill | Hall of Mirrors | Four mirror crystals surround a 16-stud area and fire beams for 4 s: **3.5×** in total over 8 pulses to every enemy inside. | Staff held two-handed overhead. She turns a slow half circle while the crystals rise. |
+| Grip | — | Standard staff grip (right hand). | — |
+| Idle | — | — | From her art: floating slightly (`floatIdle`), the staff upright in her right hand, the free hand raised palm up before her chest (where the art's grimoire floats), head tilted down a little. Her three halo shards hang above her head (costume). |
+| Walk | — | — | The same upper body over small walking steps (`walk(regent)`); the floor-length robe makes it read as a glide. |
+| Basic | Shard Bolt | 1.0× glass-shard projectile. | A one-handed point with the staff as a shard leaves her halo (`Origin = "HALO"`). |
+| Special | Refraction | A glass prism hits the target for **1.5×**, then splits into three shards that hit the three nearest other enemies within 14 studs for **0.6×** each. | She draws the staff back and turns into it while the three halo shards fly to its tip and join into a prism (`Charge` 0.2), then thrusts it forward to launch it (`Release` 0.62, 1.2 s clip). |
+| Skill | Hall of Mirrors | Four mirror crystals rise around the target and fire for 4 s: **3.5×** in total over 8 pulses to the target, and 60% of that to every other enemy within 16 studs. Cast 1.4 s. | Staff held two-handed overhead; she turns a slow half circle while the crystals fire. |
 | Hit / KO | — | — | Shared flinch; shared slump with the glass shatter. |
 
 ### 5.5 Rourke (`AXE`), planned
@@ -269,7 +269,7 @@ Built from `CombatVfx` (`SkillVfx` styles, `ProjectileVfx`, `VfxPool`, `VfxPrimi
 | Isabelle (built) | crimson arrows with long laser-like trails (`SHOT`) | the arrow glints off the target and a second arrow bounces to the enemy the hit carried on to (`RICOCHET`) | a charged draw at the nock, then the arrow splits through a gilt mirror pane into two halves toward the server-picked targets (`TWIN`, `TWIN_MARK`) |
 | Nyx (built) | an X of teal and gilt crescents, one per hit (`GILT_CUT`) | a glass clone left in her place, streaks out and back, a lance-bright stab from behind (`MIRROR_STEP`, renderer blink) | five glass clones of her before mirror panes, each lunging in, slashing and shattering in turn, then a shockwave (`SHATTERDANCE`, `MirrorClones`) |
 | Caspian (built) | a diagonal cut line, wake and crescent through the target along his swing (`DIAGONAL_SLASH`) | a mirror flash on the shield and a shockwave over the stagger cone (`POLISHED_BASH`) | a wall of mirror panes, a taunt shockwave with tethers to every enemy in range, then a glass barrier for 6 s; each reflected hit flies back at the shooter (`LOOKING_GLASS`, `REFLECT`) |
-| Seraphine | a spinning glass shard (`BOLT`) | an indigo glass prism flies to the target (`BOLT`), bursts with a light flash, and three smaller shards fan out to the next enemies (`Chain`) | four crystals rise and fire indigo beams to the centre (`Crystals` + `Beam`) |
+| Seraphine (built) | a glass shard leaves her halo and flies to the target (`BOLT`, `SHARD` projectile, `HALO` origin) | the halo shards fly to the staff tip and join into a prism (charger); the prism (`PRISM`) breaks on the target in a triangle of glass rings and three shards fly on to the other enemies hit (`REFRACTION`) | a floor sigil, four mirror crystals with panes rising round the target, beams from every crystal into the target and at every enemy inside on each of the 8 pulses, then the crystals shatter in a shockwave (`HALL_OF_MIRRORS`) |
 | Rourke | a heavy rose-gold swing arc (`Cleave`) | an overhead trail that grows redder as his HP falls, plus a ground crack (`Execute`) | a gold shockwave ring with gold shards flying out (`Tremor`), then a rose aura on the axe for 4 s |
 
 ---
