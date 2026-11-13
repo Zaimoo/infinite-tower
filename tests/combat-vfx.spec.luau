@@ -75,7 +75,7 @@ do
 	-- Each archetype's ultimate is drawn by one style, and its radius matches the kit.
 	local skillStyle = { Marksman = "STORM", Vanguard = "BULWARK", Striker = "TEMPEST", Berserker = "CRYSTALS", Scholar = "PILLAR", Healer = "SANCTUARY" }
 	-- A hero may draw its ultimate with its own style instead of its archetype's.
-	local heroSkillStyle = { hero_han = "WAKE", hero_vane = "SINGULARITY", hero_astrea = "CONSTELLATION" }
+	local heroSkillStyle = { hero_han = "WAKE", hero_vane = "SINGULARITY", hero_astrea = "CONSTELLATION", hero_rhyman = "EXECUTE" }
 	local function checkRecipe(name: string, recipe: any)
 		assert(recipe.Palette and recipe.Palette.Primary and recipe.Palette.Secondary and recipe.Palette.Core, name .. " palette")
 		for _, tier in { "Basic", "Special", "Skill" } do
@@ -109,7 +109,7 @@ do
 		checkRecipe(heroId, recipe)
 		checkRadius(heroId, recipe, profile.Archetype)
 	end
-	assert(heroes == 18, "all eighteen heroes have VFX")
+	assert(heroes == 19, "all nineteen heroes have VFX")
 	for heroId in Catalog.Heroes do
 		assert(Skills.HeroProfiles[heroId], heroId .. " is a hero with a kit")
 	end
@@ -160,6 +160,49 @@ do
 	assert(#waves == 8, "eight pulses")
 	near(waves[8] - waves[1], 3.5, "pulses span 3.5 s")
 	near(Catalog.Heroes.hero_vane.Skill.Radius, vane.Skill.Radius, "hole radius matches the kit")
+end
+
+-- Rhyman: Reaver's Whirl is drawn over the server's WHIRLWIND reach and ticks, and his spin is
+-- one full turn that starts at the release; Headsman's Verdict lands on the slam.
+do
+	local rhyman = Skills.GetSkillProfile("hero_rhyman", "Berserker")
+	local recipe = Catalog.Heroes.hero_rhyman
+	assert(recipe.Special.Style == "WHIRL" and recipe.Skill.Style == "EXECUTE", "Rhyman has his own Special and Skill styles")
+	assert(rhyman.Special.SecondaryEffect == "WHIRLWIND" and rhyman.Skill.Effect == "EXECUTE", "Rhyman's kit names his effects")
+	near(recipe.Special.Radius, rhyman.Special.SecondaryParam, "the whirl is drawn over the spin's reach")
+	local ticks, gap = Timing.Ticks(rhyman.Special)
+	assert(ticks == 3 and gap > 0, "the spin lands in three cuts")
+	local spin = Clips.Get("hero_rhyman", "AXE", "AttackSpecial")
+	local turned, yaw, lastSpinKey = 0, 0, 0
+	for _, key in spin.Keys do
+		local root = key.Pose.Root
+		local nextYaw = if root then root[2] else 0
+		local step = (nextYaw - yaw + 180) % 360 - 180
+		turned += step
+		yaw = nextYaw
+		if root then
+			lastSpinKey = key.T
+		end
+	end
+	near(turned, 360, "Reaver's Whirl spins one full turn")
+	local release = Clips.Marker(spin, "Release", -1)
+	local special = Timing.For("hero_rhyman", "AXE", "SPECIAL", rhyman.Special, 1.0, 5)
+	assert(lastSpinKey > release, "the spin is still turning when the first cut lands")
+	assert(lastSpinKey * special.CastSeconds >= special.ImpactSeconds + (ticks - 1) * gap - 0.1, "the cuts land during the turn")
+
+	local skill = Timing.For("hero_rhyman", "AXE", "SKILL", rhyman.Skill, 1.0, 5)
+	near(skill.CastSeconds, 1.3, "Headsman's Verdict holds him for the leap")
+	near(skill.ReleaseSeconds, 1.3 * 0.6, "the blow lands on the slam")
+	near(skill.TravelSeconds, 0, "a melee blow has no travel")
+	local leapClip = Clips.Get("hero_rhyman", "AXE", "AttackSkill")
+	local peak = 0
+	for _, key in leapClip.Keys do
+		local offset = key.Pose.RootOffset
+		if offset and key.T < Clips.Marker(leapClip, "Release", -1) then
+			peak = math.max(peak, offset[2])
+		end
+	end
+	assert(peak >= 2.5, "he leaves the ground before the blow")
 end
 
 -- Astrea: Nebula Piercer is one charged star-bolt off the nock; Constellation Judgment draws the

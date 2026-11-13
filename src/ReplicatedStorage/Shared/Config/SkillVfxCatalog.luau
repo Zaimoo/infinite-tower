@@ -9,19 +9,21 @@
 --   Special  VOLLEY (bow), CLEAVE (Vanguard cone), CROSS (Striker), TREMOR (Berserker),
 --            CHAIN (Scholar), MEND (Healer), PLUNGE (two falling stabs; Han),
 --            BEAM (an instant straight laser from the attacker through the target; Vane),
---            PIERCER (one heavy bolt that punches through and leaves a fading ribbon; Astrea)
+--            PIERCER (one heavy bolt that punches through and leaves a fading ribbon; Astrea),
+--            WHIRL (crescents sweeping a full circle round the attacker, one per damage tick; Rhyman)
 --   Skill    STORM (bow), BULWARK (Vanguard), TEMPEST (Striker), CRYSTALS (Berserker),
 --            PILLAR (Scholar), SANCTUARY (Healer), WAKE (a dash streak and a lingering circle of
 --            slashes, one wave per damage tick; Han), SINGULARITY (a black hole on the aim point
 --            that pulses on every damage tick and collapses on the last; Vane),
 --            CONSTELLATION (a constellation draws itself over the aim point, then its stars
---            fall as bolts, one wave per damage tick; Astrea)
+--            fall as bolts, one wave per damage tick; Astrea), EXECUTE (one tall vertical cut
+--            through the target, a blade of light from above and a fissure past it; Rhyman)
 -- The other fields are that style's knobs; a style ignores the ones it does not use.
 -- A hero's attack clip may carry a Charge marker (HeroClips) before Release; at it SkillVfx
 -- plays the style's wind-up, if it has one (BOLT: a glyph in the casting hand, Origin LEFT_HAND;
 -- BEAM: energy gathering on the staff tip; SINGULARITY: the floor dimming and drawing inward;
 -- PIERCER: starlight drawn into the nocked arrow; CONSTELLATION: crescents of light round the
--- spinning archer).
+-- spinning archer; WHIRL: dust drawn in round his feet; EXECUTE: the target marked from above).
 
 export type Palette = {
 	Primary: Color3, -- trail, glow and main strokes
@@ -89,8 +91,8 @@ SkillVfxCatalog.WeaponArchetype = table.freeze({
 -- Every Style SkillVfx knows, per tier.
 SkillVfxCatalog.Styles = table.freeze({
 	Basic = table.freeze({ SHOT = true, BOLT = true, SLASH = true }),
-	Special = table.freeze({ VOLLEY = true, CLEAVE = true, CROSS = true, TREMOR = true, CHAIN = true, MEND = true, PLUNGE = true, BEAM = true, PIERCER = true }),
-	Skill = table.freeze({ STORM = true, BULWARK = true, TEMPEST = true, CRYSTALS = true, PILLAR = true, SANCTUARY = true, WAKE = true, SINGULARITY = true, CONSTELLATION = true }),
+	Special = table.freeze({ VOLLEY = true, CLEAVE = true, CROSS = true, TREMOR = true, CHAIN = true, MEND = true, PLUNGE = true, BEAM = true, PIERCER = true, WHIRL = true }),
+	Skill = table.freeze({ STORM = true, BULWARK = true, TEMPEST = true, CRYSTALS = true, PILLAR = true, SANCTUARY = true, WAKE = true, SINGULARITY = true, CONSTELLATION = true, EXECUTE = true }),
 })
 
 local function rgb(r: number, g: number, b: number): Color3
@@ -225,6 +227,15 @@ SkillVfxCatalog.Heroes = table.freeze({
 		Basic = { Style = "SLASH", Scale = 1.2, Impact = 1.8 },
 		Special = { Style = "TREMOR", Radius = 8, Spikes = 3, Impact = 2.4 },
 		Skill = { Style = "CRYSTALS", Radius = 18, Spikes = 6, Impact = 3, Linger = 1.4, Shake = 0.25 },
+	},
+	-- Warbrand Cleave / Reaver's Whirl / Headsman's Verdict: blood crimson on dark maroon, a
+	-- pale steel core and a dull gold accent. Reaver's Whirl sweeps crescents a full circle round
+	-- him (Radius = the kit's WHIRLWIND reach); Headsman's Verdict is one tall vertical cut.
+	hero_rhyman = {
+		Palette = { Primary = rgb(214, 52, 64), Secondary = rgb(96, 26, 38), Core = rgb(255, 232, 214), Accent = rgb(226, 178, 92) },
+		Basic = { Style = "SLASH", Scale = 1.3, Impact = 1.9 },
+		Special = { Style = "WHIRL", Radius = 9, Scale = 1.0, Impact = 2.2, Shake = 0.12 },
+		Skill = { Style = "EXECUTE", Radius = 4, Scale = 1.0, PillarHeight = 16, Impact = 4.5, Linger = 0.9, Shake = 0.4 },
 	},
 	-- Riftsteel Cleave / Resonance Tremor / Crystalline Excavation: crystal cyan and stone.
 	hero_catio = {
