@@ -32,6 +32,7 @@ local ProfilePersistence = require(script.Parent:WaitForChild("ProfilePersistenc
 local ForgeTransactions = require(script.Parent:WaitForChild("ForgeTransactions"))
 local TowerFloorService = require(script.Parent:WaitForChild("TowerFloorService"))
 local RaidConfig = require(Shared:WaitForChild("Config"):WaitForChild("RaidConfig"))
+local TowerFloorConfig = require(Shared:WaitForChild("Config"):WaitForChild("TowerFloorConfig"))
 local SettingsConfig = require(Shared:WaitForChild("Config"):WaitForChild("SettingsConfig"))
 local forgeTransactions = ForgeTransactions.new({
 	Clock = function() return workspace:GetServerTimeNow() end,
@@ -1671,6 +1672,35 @@ if game:GetService("RunService"):IsStudio() then
 		local uuid, hero = DataManager.CreateHeroFromSeed(seedId)
 		profile.Heroes[uuid] = hero
 		DataManager.SendToast(player, string.format("[Dev] Summoned %s", hero.DisplayName), "SUCCESS")
+		DataManager.SyncProfile(player)
+	end)
+
+	-- Studio-only chat command: `/floors [n]` sets the caller's tower progress so floors 1..n are open
+	-- (floors before n count as cleared, along with their Biome Bosses). No argument unlocks all 50.
+	-- It sets progress exactly, so a lower n locks floors again for testing early-game flows.
+	local floorCount = TowerFloorConfig.FloorCount
+	local floorsCommand = Instance.new("TextChatCommand")
+	floorsCommand.Name = "DevUnlockFloors"
+	floorsCommand.PrimaryAlias = "/floors"
+	floorsCommand.SecondaryAlias = "/unlockfloors"
+	floorsCommand.Parent = game:GetService("TextChatService")
+	floorsCommand.Triggered:Connect(function(source: TextSource, message: string)
+		local player = Players:GetPlayerByUserId(source.UserId)
+		local profile = player and ActiveProfiles[player]
+		if not player or not profile then return end
+
+		local arg = string.match(message, "^%S+%s+(%S+)")
+		local target = if arg then tonumber(arg) else floorCount
+		if not target or target ~= target or target < 1 or target > floorCount or target % 1 ~= 0 then
+			DataManager.SendToast(player, string.format("Usage: /floors [1-%d], e.g. /floors 25", floorCount), "WARN")
+			return
+		end
+
+		local cleared = target - 1
+		profile.MaxFloorReached = target
+		profile.HighestClearedFloor = cleared
+		profile.HighestClearedBiomeBoss = cleared // 5
+		DataManager.SendToast(player, string.format("[Dev] Floors 1-%d unlocked", target), "SUCCESS")
 		DataManager.SyncProfile(player)
 	end)
 end
