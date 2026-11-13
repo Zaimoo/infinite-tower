@@ -105,6 +105,8 @@ HeroCostumes.MESHES = table.freeze({
 	["rbxassetid://126418889340816"] = "",
 	-- Isabelle: our Blender UGC-style hair (tools/make_isabelle_hair_ugc.py)
 	["rbxassetid://125709940577517"] = "",
+	-- Nyx: our Blender UGC-style hair (tools/make_nyx_hair_ugc.py), textured with assets/hair/nyx_hair_texture.png
+	["rbxassetid://93772226685564"] = "rbxassetid://79576997989816",
 } :: { [string]: string })
 
 -- Avatar hair accessory placement: a piece centred so the accessory's HairAttachment meets
@@ -1703,7 +1705,7 @@ do
 		-- importer's rotation; textured, so the colour comes from the texture.
 		piece("HairMesh", "Head", { 1.806, 1.807, 1.766 }, { -0.0166, 0.2028, 0.0857 }, hair, with(LOOSE, {
 			Rotation = { 0, 180, 0 },
-			Mesh = { MeshId = "rbxassetid://NYX_HAIR_ID", TextureId = "rbxassetid://79576997989816", Scale = { 0.01, 0.01, 0.01 } },
+			Mesh = { MeshId = "rbxassetid://93772226685564", TextureId = "rbxassetid://79576997989816", Scale = { 0.01, 0.01, 0.01 } },
 		})),
 		-- High collar edged in gilt, with a gilt clasp at the throat
 		piece("CollarBack", "UpperTorso", { 1.2, 0.42, 0.12 }, { 0, 0.96, 0.42 }, suit, with(LOOSE, FABRIC, { Rotation = { -10, 0, 0 } })),
@@ -1746,8 +1748,8 @@ do
 		piece("ThighStrapBL", "LeftUpperLeg", { 1.06, 0.1, 1.06 }, { 0, -0.3, 0 }, leather),
 		piece("ThighStrapAR", "RightUpperLeg", { 1.06, 0.1, 1.06 }, { 0, 0.22, 0 }, leather),
 		piece("ThighStrapBR", "RightUpperLeg", { 1.06, 0.1, 1.06 }, { 0, -0.16, 0 }, leather),
-		piece("Pouch", "RightUpperLeg", { 0.22, 0.44, 0.4 }, { 0.62, 0.03, -0.05 }, leather),
-		piece("PouchFlap", "RightUpperLeg", { 0.24, 0.16, 0.42 }, { 0, 0.16, 0 }, { 58, 38, 26 }, { RelativeTo = "Pouch" }),
+		piece("Pouch", "RightUpperLeg", { 0.4, 0.44, 0.22 }, { 0.22, 0.03, -0.62 }, leather),
+		piece("PouchFlap", "RightUpperLeg", { 0.42, 0.16, 0.24 }, { 0, 0.16, 0 }, { 58, 38, 26 }, { RelativeTo = "Pouch" }),
 		-- Black ankle boots: a cuff and dark soles
 		piece("BootCuffL", "LeftLowerLeg", { 1.08, 0.12, 1.08 }, { 0, -0.36, 0 }, boot),
 		piece("BootCuffR", "RightLowerLeg", { 1.08, 0.12, 1.08 }, { 0, -0.36, 0 }, boot),
