@@ -183,7 +183,7 @@ from the standard. Shared by every hero and not overridden: the **hit flinch** (
 | --- | --- | --- | --- |
 | Grip | — | Standard bow grip (left hand). | — |
 | Idle | — | — | From her art: upright, mid-stride, the bow held low in her left hand, the draw hand loose at her side, head turned a little to her left. A slow breath. |
-| Walk | — | — | The shared bow walk (bow carried low). |
+| Walk | — | — | Her stance's upper body over walking legs (`walk(poised)`): the bow low in her left hand, the draw hand loose, head turned a little left. |
 | Basic | Glint Shot | 1.0× ATK arrow. | A quick snap shot with the bow canted (`LeftWrist` Y 35°) and her head tilted toward the monocle. |
 | Special | Ricochet | 1.5× to the target, then bounces once to the nearest other enemy within 14 studs for 0.75×. | She turns away, pivots back low (crouch) and shoots with the bow held flat (80° cant). |
 | Skill | Twin Reflection | The arrow splits: **2.5×** to the target and 2.5× to the toughest other enemy within 30 studs (both halves hit a lone target). A focused boss-killer, where the Marksman default is a 2.8× area. Cast 1.5 s. | A step back into a long rising draw held while the arrow glows, then a release with a small hop and the draw hand sweeping wide as it splits. |

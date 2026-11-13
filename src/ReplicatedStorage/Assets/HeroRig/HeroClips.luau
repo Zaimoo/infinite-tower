@@ -1593,7 +1593,8 @@ end
 -- Skill) built from the weapon key poses.
 
 -- Isabelle (BOW), from her reference art: an upright, mid-stride stance with the bow held low in
--- her left hand, the draw hand loose at her side and her head turned a little to her left.
+-- her left hand, the draw hand loose at her side and her head turned a little to her left; her
+-- walk keeps that upper body.
 -- Her attacks are her own, not the generic bow set (a LeftWrist Y turn cants the bow sideways):
 --   Glint Shot: a quick snap shot with the bow canted, head tilted to the monocle.
 --   Ricochet: she turns away, drops low and pivots back into a flat, sideways shot.
@@ -1612,6 +1613,7 @@ do
 		RightShoulder = { 108, 28, -10 }, RootOffset = { 0, 0.05, 0.25 } })
 	Overrides.hero_isabelle = {
 		Idle = breathe(poised, 3.4),
+		Move = walk(poised), -- her stance's upper body (bow low, draw hand loose) over walking legs
 		AttackBasic = signature(0.7, {
 			{ 0, p.Carry },
 			{ 0.25, merge(p.Aim, snap) },
