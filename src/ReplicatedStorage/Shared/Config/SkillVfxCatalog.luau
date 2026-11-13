@@ -95,9 +95,9 @@ SkillVfxCatalog.WeaponArchetype = table.freeze({
 
 -- Every Style SkillVfx knows, per tier.
 SkillVfxCatalog.Styles = table.freeze({
-	Basic = table.freeze({ SHOT = true, BOLT = true, SLASH = true }),
-	Special = table.freeze({ RICOCHET = true, VOLLEY = true, CLEAVE = true, CROSS = true, TREMOR = true, CHAIN = true, MEND = true, PLUNGE = true, BEAM = true, PIERCER = true, WHIRL = true }),
-	Skill = table.freeze({ TWIN = true, STORM = true, BULWARK = true, TEMPEST = true, CRYSTALS = true, PILLAR = true, SANCTUARY = true, WAKE = true, SINGULARITY = true, CONSTELLATION = true, EXECUTE = true }),
+	Basic = table.freeze({ GILT_CUT = true, SHOT = true, BOLT = true, SLASH = true }),
+	Special = table.freeze({ MIRROR_STEP = true, RICOCHET = true, VOLLEY = true, CLEAVE = true, CROSS = true, TREMOR = true, CHAIN = true, MEND = true, PLUNGE = true, BEAM = true, PIERCER = true, WHIRL = true }),
+	Skill = table.freeze({ SHATTERDANCE = true, TWIN = true, STORM = true, BULWARK = true, TEMPEST = true, CRYSTALS = true, PILLAR = true, SANCTUARY = true, WAKE = true, SINGULARITY = true, CONSTELLATION = true, EXECUTE = true }),
 })
 
 local function rgb(r: number, g: number, b: number): Color3
@@ -310,12 +310,15 @@ SkillVfxCatalog.Heroes = table.freeze({
 		Special = { Style = "RICOCHET", Projectile = "ARROW", Scale = 1.4, Arc = 0.1, Trail = 0.4, Impact = 3.0, Bounces = 1, Radius = 14 },
 		Skill = { Style = "TWIN", Projectile = "ARROW", Origin = "NOCK", Scale = 1.6, Arc = 0.05, Trail = 0.45, Impact = 3.6, Split = 0.42, Radius = 16, Shake = 0.3 },
 	},
-	-- Gilt Cut / Mirror Step / Shatterdance: thin teal cuts; five clone slashes ring the target.
+	-- Gilt Cut: an X of teal and gilt crescents. Mirror Step: a glass afterimage where she stood, a
+	-- streak to behind the target and a lance-bright stab through it. Shatterdance: five mirror
+	-- panes ring the target; each in turn flashes, a clone streaks through and it shatters, then a
+	-- shockwave over the skill's radius.
 	hero_nyx = {
-		Palette = { Primary = rgb(60, 220, 190), Secondary = rgb(212, 175, 90), Core = rgb(235, 255, 250) },
-		Basic = { Style = "SLASH", Scale = 0.8, Impact = 1.2 },
-		Special = { Style = "CROSS", Scale = 1.05, Impact = 1.9 },
-		Skill = { Style = "TEMPEST", Radius = 12, Slashes = 5, Impact = 3, Shake = 0.2 },
+		Palette = { Primary = rgb(40, 226, 196), Secondary = rgb(212, 175, 90), Core = rgb(235, 255, 250), Accent = rgb(12, 110, 104) },
+		Basic = { Style = "GILT_CUT", Scale = 0.9, Impact = 1.6 },
+		Special = { Style = "MIRROR_STEP", Impact = 2.6, Shake = 0.15 },
+		Skill = { Style = "SHATTERDANCE", Radius = 12, Impact = 3.4, Shake = 0.25 },
 	},
 	-- Gilt Edge / Polished Bash / Looking-Glass Bulwark: pearl white and gilt; the wall glows pink-violet.
 	hero_caspian = {

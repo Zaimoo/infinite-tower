@@ -75,7 +75,7 @@ do
 	-- Each archetype's ultimate is drawn by one style, and its radius matches the kit.
 	local skillStyle = { Marksman = "STORM", Vanguard = "BULWARK", Striker = "TEMPEST", Berserker = "CRYSTALS", Scholar = "PILLAR", Healer = "SANCTUARY" }
 	-- A hero may draw its ultimate with its own style instead of its archetype's.
-	local heroSkillStyle = { hero_han = "WAKE", hero_vane = "SINGULARITY", hero_astrea = "CONSTELLATION", hero_rhyman = "EXECUTE", hero_seraphine = "CRYSTALS", hero_isabelle = "TWIN" }
+	local heroSkillStyle = { hero_han = "WAKE", hero_vane = "SINGULARITY", hero_astrea = "CONSTELLATION", hero_rhyman = "EXECUTE", hero_seraphine = "CRYSTALS", hero_isabelle = "TWIN", hero_nyx = "SHATTERDANCE" }
 	local function checkRecipe(name: string, recipe: any)
 		assert(recipe.Palette and recipe.Palette.Primary and recipe.Palette.Secondary and recipe.Palette.Core, name .. " palette")
 		for _, tier in { "Basic", "Special", "Skill" } do

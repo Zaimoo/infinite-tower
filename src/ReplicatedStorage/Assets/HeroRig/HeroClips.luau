@@ -1642,7 +1642,10 @@ end
 
 -- Nyx (DAGGERS), from her reference art's rooftop crouch: low and leaning forward, her left hand
 -- reaching down toward the ground and the right dagger held out to the side, head up.
--- Shatterdance: a spin up into a throwing pose while the clones slash, then a landing kneel.
+-- Gilt Cut: both daggers cross high, then slash out in an X. Mirror Step: she drops low (the
+-- vanish), then lunges forward into a two-handed reverse-grip stab (she appears behind the
+-- target). Shatterdance: a gathering crouch, a spin into a throw, a counter-spin into a second
+-- throw while the clones cut, then a landing kneel.
 do
 	local p = WeaponPoses.DAGGERS
 	local lurk = merge(p.Crouched, { Waist = { -18, 10, 0 }, Neck = { 14, -8, 0 },
@@ -1659,27 +1662,34 @@ do
 		LeftShoulder = { 40, 0, -30 }, RootOffset = { 0, -0.2, -0.4 } })
 	Overrides.hero_nyx = {
 		Idle = breathe(lurk, 2.8),
-		AttackBasic = signature(0.55, {
+		AttackBasic = signature(0.6, {
 			{ 0, p.Crouched },
-			{ 0.28, merge(p.Crouched, { Waist = { -6, -22, 0 }, RightShoulder = { 88, 0, -5 }, RightElbow = { 10, 0, 0 }, RightWrist = { -80, 0, 0 } }) },
-			{ 0.52, merge(p.Crouched, { Waist = { -6, 22, 0 }, LeftShoulder = { 88, 0, 5 }, LeftElbow = { 10, 0, 0 }, LeftWrist = { -80, 0, 0 } }) },
+			{ 0.25, merge(p.Crouched, { Waist = { 6, 0, 0 }, LeftShoulder = { 125, 0, 25 }, RightShoulder = { 125, 0, -25 },
+				LeftElbow = { 45, 0, 0 }, RightElbow = { 45, 0, 0 } }) }, -- daggers cross high
+			{ 0.38, merge(p.Crouched, { Waist = { -8, -18, 0 }, RightShoulder = { 70, 0, 55 }, RightElbow = { 10, 0, 0 }, RightWrist = { -80, 0, 0 },
+				LeftShoulder = { 110, 0, 15 }, LeftElbow = { 40, 0, 0 } }) }, -- the first cut
+			{ 0.56, merge(p.Crouched, { Waist = { -8, 18, 0 }, LeftShoulder = { 70, 0, -55 }, LeftElbow = { 10, 0, 0 }, LeftWrist = { -80, 0, 0 },
+				RightShoulder = { 60, 0, 60 }, RightElbow = { 10, 0, 0 }, RightWrist = { -80, 0, 0 } }) }, -- the second
 			{ 1, p.Crouched },
-		}, { Release = 0.28 }),
-		AttackSpecial = signature(0.8, {
+		}, { Release = 0.38 }),
+		AttackSpecial = signature(0.9, {
 			{ 0, p.Crouched },
-			{ 0.3, merge(kneel, { RootOffset = { 0, -0.4, 0 } }) }, -- she drops low, then is gone
-			{ 0.5, stab }, -- and stabs from behind
-			{ 0.7, stab },
+			{ 0.3, merge(kneel, { RootOffset = { 0, -0.5, 0 } }) }, -- she drops low, then is gone
+			{ 0.46, merge(stab, { Waist = { -24, 0, 0 }, LeftShoulder = { 95, 0, -8 }, LeftElbow = { 10, 0, 0 }, LeftWrist = { -90, 0, 0 },
+				RootOffset = { 0, -0.25, -1.6 } }) }, -- the lunge: both blades driven in reverse-grip
+			{ 0.7, merge(stab, { LeftShoulder = { 90, 0, -8 }, LeftElbow = { 10, 0, 0 }, LeftWrist = { -90, 0, 0 }, RootOffset = { 0, -0.2, -1.4 } }) },
 			{ 1, p.Crouched },
-		}, { Charge = 0.3, Release = 0.5 }),
-		AttackSkill = signature(1.1, {
+		}, { Charge = 0.3, Release = 0.48 }),
+		AttackSkill = signature(1.4, {
 			{ 0, p.Crouched },
-			{ 0.25, spin },
-			{ 0.4, throw },
-			{ 0.7, throw }, -- the clones slash inward
-			{ 0.85, kneel },
+			{ 0.15, merge(kneel, { LeftShoulder = { 60, 0, 20 }, RightShoulder = { 60, 0, -20 }, LeftElbow = { 90, 0, 0 }, RightElbow = { 90, 0, 0 } }) }, -- gathers
+			{ 0.3, spin },
+			{ 0.4, throw }, -- the first clone cuts
+			{ 0.55, merge(spin, { Waist = { 4, -160, 0 } }) }, -- counter-spin
+			{ 0.68, throw },
+			{ 0.85, kneel }, -- lands as the last pane shatters
 			{ 1, p.Crouched },
-		}, { Charge = 0.25, Release = 0.4 }),
+		}, { Charge = 0.15, Release = 0.4 }),
 	}
 end
 

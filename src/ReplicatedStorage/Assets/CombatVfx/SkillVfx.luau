@@ -773,6 +773,121 @@ local function playTempest(ctx: Context)
 	shake(ctx, at)
 end
 
+-- Nyx's kit (the Gilded Mirror) ---------------------------------------------------------------
+
+-- Ticks and gap of one of the attacking hero's tiers ("Basic" | "Special" | "Skill").
+local function tierTicks(args: PlayArgs, tier: string): (number, number)
+	local archetype = args.WeaponType and SkillVfxCatalog.WeaponArchetype[args.WeaponType]
+	local profile = ArchetypeCombatSkills.GetSkillProfile(args.HeroId, archetype) :: any
+	return HeroActionTiming.Ticks(profile[tier])
+end
+
+-- GILT_CUT: an X of crescents across the target, teal then gilt, one per damage tick, with a
+-- glint and a spray of sparks on the second.
+local function playGiltCut(ctx: Context)
+	local pool, recipe, palette, args = ctx.Pool, ctx.Recipe, ctx.Palette, ctx.Args
+	local at = args.Target()
+	local scale = recipe.Scale or 1
+	local ticks, gap = tierTicks(args, "Basic")
+	local waves = VfxMath.WaveTimes(ctx.ArriveAt, math.max(2, ticks), if gap > 0 then gap else 0.1)
+	for k, hitAt in waves do
+		local roll = if k % 2 == 1 then 42 else -42
+		VfxPrimitives.SlashArc(pool, slashFrame(ctx, at, roll), 2.3 * scale * SLASH_SIZE, if k % 2 == 1 then palette.Primary else palette.Secondary, hitAt, 0.28)
+		VfxPrimitives.Burst(pool, at, palette.Core, (recipe.Impact or 1.6) * 0.8, hitAt, 0.18)
+	end
+	local last = waves[#waves]
+	VfxPrimitives.Flare(pool, fixed(at), 3, palette.Secondary, last, 0.25)
+	VfxPrimitives.Motes(pool, at, palette.Primary, last, 6, 0.45)
+end
+
+-- Where Mirror Step lands: just behind the target, along the line from Nyx through it.
+local function behindTarget(ctx: { Args: PlayArgs }, target: Vector3): Vector3
+	local args = ctx.Args
+	local from = if args.Self then args.Self() else args.Origin
+	local delta = Vector3.new(target.X - from.X, 0, target.Z - from.Z)
+	local dir = if delta.Magnitude > 1e-3 then delta.Unit else Vector3.new(0, 0, -1)
+	return target + dir * 2.6
+end
+
+-- MIRROR_STEP (the strike; the vanish and dash are its charge): a gilt flash where she appears
+-- behind the target, a teal lance stabbing through it from behind, and a crit-bright burst of
+-- teal and gilt sparks.
+local function playMirrorStep(ctx: Context)
+	local pool, recipe, palette, args = ctx.Pool, ctx.Recipe, ctx.Palette, ctx.Args
+	local target = args.Target()
+	local behind = behindTarget(ctx, target)
+	local impact = recipe.Impact or 2.4
+	local at = ctx.ArriveAt
+	VfxPrimitives.Flare(pool, fixed(behind), 5, palette.Secondary, at - 0.08, 0.35)
+	VfxPrimitives.Burst(pool, behind, palette.Primary, impact * 0.9, at - 0.08, 0.3)
+	VfxPrimitives.Lance(pool, behind, target + (target - behind).Unit * 2.2, 0.55, palette, at, 0.05, 0.12, 0.3)
+	VfxPrimitives.Burst(pool, target, palette.Core, impact * 1.3, at, 0.35)
+	VfxPrimitives.Burst(pool, target, palette.Primary, impact * 1.8, at + 0.04, 0.4)
+	VfxPrimitives.Flare(pool, fixed(target), 4.5, palette.Core, at, 0.3)
+	VfxPrimitives.Motes(pool, target, palette.Secondary, at, 12, 0.6)
+	VfxPrimitives.Motes(pool, target, palette.Primary, at, 8, 0.5)
+	shake(ctx, at)
+end
+
+-- Shatterdance's mirror panes: one per damage tick, standing in a ring around the target and
+-- facing it. Deterministic from the cue, so the charge and the strike draw them in the same place.
+local PANE_RADIUS = 3.6
+local function panePositions(args: PlayArgs, center: Vector3, count: number): { Vector3 }
+	local spin = (args.Cue.NetId % 360) * math.pi / 180
+	local out = table.create(count)
+	for i = 1, count do
+		local angle = spin + (i - 1) / count * math.pi * 2
+		table.insert(out, center + Vector3.new(math.cos(angle) * PANE_RADIUS, 0, math.sin(angle) * PANE_RADIUS))
+	end
+	return out
+end
+
+local function drawPane(pool: VfxPool.VfxPool, palette: Palette, pane: Vector3, center: Vector3, startAt: number, endAt: number, grow: number)
+	local facing = Vector3.new(center.X - pane.X, 0, center.Z - pane.Z)
+	if facing.Magnitude < 1e-3 then
+		return
+	end
+	local frame = CFrame.lookAt(pane, pane + facing) * CFrame.Angles(0, math.pi / 2, 0)
+	VfxPrimitives.Disc(pool, { CFrame = frame, Radius = 1.7, Color = palette.Secondary, StartAt = startAt, EndAt = endAt, Grow = grow, Transparency = 0.45 })
+	VfxPrimitives.Disc(pool, { CFrame = frame * CFrame.new(0.05, 0, 0), Radius = 1.45, Color = palette.Primary, StartAt = startAt, EndAt = endAt, Grow = grow, Transparency = 0.3 })
+end
+
+-- SHATTERDANCE: five mirror panes stand around the target. On each damage tick one flashes, a
+-- clone streaks out of it through the target leaving a teal wake, a crescent cuts across the
+-- target, and the pane shatters into glass and gilt. After the last cut a shockwave rolls out
+-- over the skill's radius with a big gilt flash.
+local function playShatterdance(ctx: Context)
+	local pool, recipe, palette, args = ctx.Pool, ctx.Recipe, ctx.Palette, ctx.Args
+	local center = args.Target()
+	local ticks, gap = tierTicks(args, "Skill")
+	local waves = VfxMath.WaveTimes(ctx.ArriveAt, ticks, if gap > 0 then gap else 0.15)
+	local panes = panePositions(args, center, #waves)
+	local impact = recipe.Impact or 3
+	for i, hitAt in waves do
+		local pane = panes[i]
+		drawPane(pool, palette, pane, center, ctx.StartAt, hitAt + 0.04, 1)
+		local through = center + (center - pane).Unit * PANE_RADIUS
+		VfxPrimitives.Flare(pool, fixed(pane), 3.4, palette.Core, hitAt - 0.1, 0.22)
+		VfxPrimitives.Ribbon(pool, { From = pane, To = through, StartAt = hitAt - 0.1, EndAt = hitAt + 0.06, Width = 0.7,
+			Inner = palette.Primary, Outer = palette.Secondary, Linger = 0.5, Seed = args.Cue.NetId + i })
+		local frame = CFrame.lookAt(center, center + (center - pane)) * CFrame.Angles(0, 0, math.rad(if i % 2 == 0 then 35 else -35))
+		VfxPrimitives.SlashArc(pool, frame, 2.6 * SLASH_SIZE, if i % 2 == 0 then palette.Primary else palette.Secondary, hitAt, 0.3)
+		VfxPrimitives.Burst(pool, center, palette.Core, impact * 0.6, hitAt, 0.2)
+		-- The pane shatters.
+		VfxPrimitives.Burst(pool, pane, palette.Primary, 2.6, hitAt + 0.02, 0.3)
+		VfxPrimitives.Motes(pool, pane, palette.Core, hitAt + 0.02, 8, 0.55)
+	end
+	local finale = waves[#waves] + 0.08
+	local ground = Vector3.new(center.X, args.Cue.Aim.Y, center.Z)
+	VfxPrimitives.Ring(pool, { Center = ground, From = 1, To = recipe.Radius or 12, Color = palette.Primary, StartAt = finale, EndAt = finale + 0.55, Width = 1.2 })
+	VfxPrimitives.Ring(pool, { Center = ground, From = 0.5, To = (recipe.Radius or 12) * 0.7, Color = palette.Secondary, StartAt = finale + 0.06, EndAt = finale + 0.6, Width = 0.7 })
+	VfxPrimitives.Flare(pool, fixed(center), 8, palette.Secondary, finale, 0.45)
+	VfxPrimitives.Burst(pool, center, palette.Core, impact * 1.4, finale, 0.4)
+	VfxPrimitives.Motes(pool, center, palette.Secondary, finale, 16, 0.8)
+	shake(ctx, waves[1])
+	shake(ctx, finale)
+end
+
 -- WAKE: a dash streak from the attacker through the target, then a smoky circle over the skill
 -- radius that keeps cutting: one wave of crescents inside it per server damage tick.
 local function playWake(ctx: Context)
@@ -1035,6 +1150,9 @@ local PLAYERS: { [string]: (Context) -> () } = {
 	EXECUTE = playExecute,
 	BULWARK = playBulwark,
 	TEMPEST = playTempest,
+	GILT_CUT = playGiltCut,
+	MIRROR_STEP = playMirrorStep,
+	SHATTERDANCE = playShatterdance,
 	WAKE = playWake,
 	CRYSTALS = playCrystals,
 	PILLAR = playPillar,
@@ -1220,7 +1338,38 @@ local function chargeExecute(ctx: ChargeContext): boolean
 	return true
 end
 
+-- MIRROR_STEP's vanish: a glass ring and a burst of teal shards where Nyx stands, then a teal
+-- streak racing from her to just behind the target by the time she strikes.
+local function chargeMirrorStep(ctx: ChargeContext): boolean
+	local pool, palette, args = ctx.Pool, ctx.Palette, ctx.Args
+	local from = (if args.Self then args.Self() else args.Origin) + Vector3.new(0, 2, 0)
+	local target = args.Target()
+	local behind = behindTarget(ctx, target)
+	local start = ctx.StartAt
+	VfxPrimitives.FlightRing(pool, from, target - from, 2.2, palette.Secondary, start)
+	VfxPrimitives.Burst(pool, from, palette.Primary, 3, start, 0.35)
+	VfxPrimitives.Flare(pool, fixed(from), 4, palette.Core, start, 0.3)
+	VfxPrimitives.Motes(pool, from, palette.Primary, start, 12, 0.7)
+	VfxPrimitives.Ribbon(pool, { From = from, To = behind, StartAt = start + 0.04, EndAt = math.max(start + 0.08, ctx.ReleaseAt - 0.04), Width = 0.8,
+		Inner = palette.Core, Outer = palette.Primary, Linger = 0.45, Seed = args.Cue.NetId })
+	return true
+end
+
+-- SHATTERDANCE's wind-up: the mirror panes rise around the target, growing from slivers.
+local function chargeShatterdance(ctx: ChargeContext): boolean
+	local args = ctx.Args
+	local center = args.Target()
+	local ticks = tierTicks(args, "Skill")
+	for _, pane in panePositions(args, center, ticks) do
+		drawPane(ctx.Pool, ctx.Palette, pane, center, ctx.StartAt, ctx.ReleaseAt, 0.1)
+		VfxPrimitives.Motes(ctx.Pool, pane, ctx.Palette.Primary, ctx.StartAt, 4, 0.5)
+	end
+	return true
+end
+
 local CHARGERS: { [string]: (ChargeContext) -> boolean } = {
+	MIRROR_STEP = chargeMirrorStep,
+	SHATTERDANCE = chargeShatterdance,
 	WHIRL = chargeWhirl,
 	EXECUTE = chargeExecute,
 	BOLT = chargeGlyph,

@@ -617,8 +617,8 @@ local HERO_KITS: { [string]: HeroKitOverride } = {
 			DamageMultiplier = 3.25,
 			Radius = 12.0,
 			Ticks = 5,
-			TickSeconds = 0.12,
-			CastSeconds = 1.1,
+			TickSeconds = 0.18, -- spread out so each clone's cut reads
+			CastSeconds = 1.4,
 		},
 		Passive = {
 			Name = "Gilded Edge",
