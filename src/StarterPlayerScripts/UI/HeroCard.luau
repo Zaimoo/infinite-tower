@@ -34,6 +34,10 @@ local BUILD_BUDGET = 12 -- per frame: a clone of a cached master costs 1, posing
 local MASTER_COST = 4
 local CHECKS_PER_FRAME = 120
 local SETTLE_SECONDS = 0.1 -- let a window's open pop settle before reading layout for a new portrait
+-- A portrait that keeps moving (a row nudged every few frames by an animated neighbour, like the
+-- shop's breathing featured hero in a centred list) would never stay still for SETTLE_SECONDS; once
+-- it has been showing this long it loads anyway.
+local MAX_SETTLE_SECONDS = 0.35
 local RECHECK_SECONDS = 0.05 -- a built portrait that is moving (scrolling) is re-checked this often
 local SPARES_PER_HERO = 1 -- pre-rendered rigs kept in the nursery for each hero (each is ~50 parts)
 local STAGE_SECONDS = 0.3 -- how long a rig renders in the nursery before a card may show it
@@ -42,6 +46,7 @@ type Lazy = {
 	Viewport: ViewportFrame, Template: Model, Hero: any, Model: Model?, Dead: boolean,
 	FullBody: boolean?, CloseUp: boolean?,
 	Scroll: ScrollingFrame?, Moved: boolean, MovedAt: number, CheckedAt: number, WasVisible: boolean, Queued: boolean, Y: number,
+	ShownAt: number, -- when it last became visible (for MAX_SETTLE_SECONDS)
 	Staged: Model?, StagedAt: number,
 }
 type Master = { Model: Model, Camera: CFrame }
@@ -108,14 +113,14 @@ local function check(entry: Lazy)
 		return
 	end
 	if entry.Queued or entry.Staged then return end
-	local settled = now - entry.MovedAt >= SETTLE_SECONDS
 	local shown = visible(vp)
 	if shown and not entry.WasVisible then
 		-- Just appeared: its window is probably mid-pop, so let it settle first.
 		entry.Moved = true
 		entry.MovedAt = now
-		settled = false
+		entry.ShownAt = now
 	end
+	local settled = now - entry.MovedAt >= SETTLE_SECONDS or (shown and entry.WasVisible and now - entry.ShownAt >= MAX_SETTLE_SECONDS)
 	entry.WasVisible = shown
 	if not shown then return end
 	if entry.Scroll == nil then
@@ -369,7 +374,7 @@ function HeroCard.Portrait(parent: Instance, hero: any, framing: (boolean | "Clo
 		local entry: Lazy = {
 			Viewport = viewport, Template = template, Hero = { TemplateId = hero.TemplateId }, Model = nil, Dead = false,
 			FullBody = framing == true, CloseUp = framing == "CloseUp",
-			Scroll = nil, Moved = false, MovedAt = 0, CheckedAt = 0, WasVisible = false, Queued = false, Y = 0,
+			Scroll = nil, Moved = false, MovedAt = 0, CheckedAt = 0, WasVisible = false, Queued = false, Y = 0, ShownAt = 0,
 			Staged = nil, StagedAt = 0,
 		}
 		table.insert(entries, entry)
