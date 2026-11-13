@@ -95,7 +95,7 @@ SkillVfxCatalog.WeaponArchetype = table.freeze({
 
 -- Every Style SkillVfx knows, per tier.
 SkillVfxCatalog.Styles = table.freeze({
-	Basic = table.freeze({ GILT_CUT = true, SHOT = true, BOLT = true, SLASH = true }),
+	Basic = table.freeze({ DIAGONAL_SLASH = true, GILT_CUT = true, SHOT = true, BOLT = true, SLASH = true }),
 	Special = table.freeze({ POLISHED_BASH = true, MIRROR_STEP = true, RICOCHET = true, VOLLEY = true, CLEAVE = true, CROSS = true, TREMOR = true, CHAIN = true, MEND = true, PLUNGE = true, BEAM = true, PIERCER = true, WHIRL = true }),
 	Skill = table.freeze({ LOOKING_GLASS = true, SHATTERDANCE = true, TWIN = true, STORM = true, BULWARK = true, TEMPEST = true, CRYSTALS = true, PILLAR = true, SANCTUARY = true, WAKE = true, SINGULARITY = true, CONSTELLATION = true, EXECUTE = true }),
 })
@@ -321,13 +321,13 @@ SkillVfxCatalog.Heroes = table.freeze({
 		Skill = { Style = "SHATTERDANCE", Radius = 12, Impact = 3.4, Shake = 0.25 },
 	},
 	-- From his reference art's runed sword and shield: violet glow over pearl and gilt. Gilt Edge: a
-	-- violet crescent. Polished Bash: the shield flashes like a mirror and a shockwave fans over the
+	-- diagonal cut that slices through the target (a cut line, a wake and a crescent along it). Polished Bash: the shield flashes like a mirror and a shockwave fans over the
 	-- stagger cone. Looking-Glass Bulwark: a wall of mirror panes rises before him, a taunt
 	-- shockwave and tethers mark every enemy in range, the wall shatters into a glass barrier, and
 	-- every reflected ranged hit flies back at the shooter (PlayReflect).
 	hero_caspian = {
 		Palette = { Primary = rgb(226, 86, 255), Secondary = rgb(212, 175, 90), Core = rgb(255, 236, 255), Accent = rgb(150, 60, 220) },
-		Basic = { Style = "SLASH", Scale = 1.15, Impact = 1.8 },
+		Basic = { Style = "DIAGONAL_SLASH", Scale = 1.1, Impact = 1.8 },
 		Special = { Style = "POLISHED_BASH", Radius = 10, Impact = 2.8, Shake = 0.15 },
 		Skill = { Style = "LOOKING_GLASS", Radius = 25, Linger = 6, Impact = 3.4, Shake = 0.3 },
 	},

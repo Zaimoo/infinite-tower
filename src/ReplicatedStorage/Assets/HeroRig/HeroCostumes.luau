@@ -1778,10 +1778,11 @@ do
 		UpperLeg = plate, LowerLeg = plate, Foot = plate,
 	}, {
 		-- Hair mesh: centred on the export's bounding box and turned 180 degrees to undo the
-		-- importer's rotation; textured, so the colour comes from the texture.
-		piece("HairMesh", "Head", { 1.919, 1.422, 1.853 }, { 0.006, 0.3023, 0.0928 }, hair, with(LOOSE, {
+		-- importer's rotation; textured, so the colour comes from the texture. Fit pass: scaled to
+		-- 90% and lowered so it hugs the head instead of floating off it (checked in Studio).
+		piece("HairMesh", "Head", { 1.727, 1.28, 1.668 }, { 0.006, 0.2623, 0.0928 }, hair, with(LOOSE, {
 			Rotation = { 0, 180, 0 },
-			Mesh = { MeshId = "rbxassetid://90421651481031", TextureId = "rbxassetid://131547739661735", Scale = { 0.01, 0.01, 0.01 } },
+			Mesh = { MeshId = "rbxassetid://90421651481031", TextureId = "rbxassetid://131547739661735", Scale = { 0.009, 0.009, 0.009 } },
 		})),
 		-- High plate collar with a gilt rim
 		piece("CollarBack", "UpperTorso", { 1.3, 0.44, 0.14 }, { 0, 0.96, 0.44 }, plate, with(LOOSE, METAL, { Rotation = { -10, 0, 0 } })),

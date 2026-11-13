@@ -786,6 +786,32 @@ end
 
 -- Caspian's kit (the Gilded Mirror) -----------------------------------------------------------
 
+-- DIAGONAL_SLASH (Caspian's Gilt Edge): one diagonal cut that slices through the target, matching
+-- his swing from high on his right down across to his left. A bright cut line shoots through the
+-- target along that diagonal and leaves a short glowing wake, a large crescent sweeps along the
+-- same line, and the target flashes with a burst and a spray of gilt sparks.
+local function playDiagonalSlash(ctx: Context)
+	local pool, recipe, palette, args = ctx.Pool, ctx.Recipe, ctx.Palette, ctx.Args
+	local at = ctx.ArriveAt
+	local target = args.Target()
+	local forward = heading(ctx)
+	local right = forward:Cross(Vector3.yAxis).Unit -- the attacker's right
+	local scale = recipe.Scale or 1
+	local reach = 2.4 * scale
+	-- High on his right, slightly in front of the target, through it to low on his left, past it.
+	local from = target + right * reach + Vector3.new(0, reach * 0.95, 0) - forward * 0.6
+	local to = target - right * reach - Vector3.new(0, reach * 0.75, 0) + forward * 0.9
+	VfxPrimitives.Lance(pool, from, to, 0.24 * scale, palette, at - 0.05, 0.07, 0.05, 0.22)
+	VfxPrimitives.Ribbon(pool, { From = from, To = to, StartAt = at - 0.05, EndAt = at + 0.02, Width = 0.45 * scale,
+		Inner = palette.Core, Outer = palette.Primary, Linger = 0.35, Seed = args.Cue.NetId })
+	-- The crescent lies in the cut's plane: roll the target-facing frame so its X runs along the
+	-- line (the frame's X is the attacker's left, so the cut down to his left is about -42 deg).
+	VfxPrimitives.SlashArc(pool, slashFrame(ctx, target, -42), 2.4 * scale * SLASH_SIZE, palette.Primary, at - 0.03, 0.3)
+	VfxPrimitives.Burst(pool, target, palette.Core, recipe.Impact or 1.8, at, 0.22)
+	VfxPrimitives.Flare(pool, fixed(target), 2.6, palette.Secondary, at, 0.22)
+	VfxPrimitives.Motes(pool, target, palette.Secondary, at, 6, 0.45)
+end
+
 -- POLISHED_BASH: his polished shield flashes like a mirror as he drives it in, a violet
 -- shockwave fans out over the stagger cone, and every enemy the bash staggered sparks.
 local function playPolishedBash(ctx: Context)
@@ -1378,6 +1404,7 @@ local PLAYERS: { [string]: (Context) -> () } = {
 	TEMPEST = playTempest,
 	GILT_CUT = playGiltCut,
 	POLISHED_BASH = playPolishedBash,
+	DIAGONAL_SLASH = playDiagonalSlash,
 	LOOKING_GLASS = playLookingGlass,
 	MIRROR_STEP = playMirrorStep,
 	SHATTERDANCE = playShatterdance,
