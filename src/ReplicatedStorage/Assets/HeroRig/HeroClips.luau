@@ -1640,11 +1640,17 @@ do
 	}
 end
 
--- Nyx (DAGGERS): a low crouch, both daggers reversed, one hand raised to the mask.
+-- Nyx (DAGGERS), from her reference art's rooftop crouch: low and leaning forward, her left hand
+-- reaching down toward the ground and the right dagger held out to the side, head up.
 -- Shatterdance: a spin up into a throwing pose while the clones slash, then a landing kneel.
 do
 	local p = WeaponPoses.DAGGERS
-	local lurk = merge(p.Crouched, { Waist = { -10, 12, 0 }, Neck = { 6, -10, 0 }, LeftShoulder = { 70, 0, -30 }, LeftElbow = { 120, 0, 0 } })
+	local lurk = merge(p.Crouched, { Waist = { -18, 10, 0 }, Neck = { 14, -8, 0 },
+		LeftShoulder = { 34, 0, -12 }, LeftElbow = { 12, 0, 0 }, LeftWrist = { -10, 0, 0 },
+		RightShoulder = { 28, 0, 58 }, RightElbow = { 48, 0, 0 }, RightWrist = { -55, 0, 0 },
+		LeftHip = { 40, 0, -10 }, LeftKnee = { -60, 0, 0 }, LeftAnkle = { 20, 0, 0 },
+		RightHip = { 10, 0, 12 }, RightKnee = { -50, 0, 0 }, RightAnkle = { 40, 0, 0 },
+		RootOffset = { 0, -0.45, 0 } })
 	local spin = merge(p.Crouched, { Waist = { 4, 160, 0 }, LeftShoulder = { 100, 0, -80 }, RightShoulder = { 100, 0, 80 }, RootOffset = { 0, 0.5, 0 } })
 	local throw = merge(p.Crouched, { Waist = { -10, 0, 0 }, LeftShoulder = { 150, 0, -30 }, RightShoulder = { 150, 0, 30 }, LeftElbow = { 10, 0, 0 }, RightElbow = { 10, 0, 0 }, RootOffset = { 0, 0.3, 0 } })
 	local kneel = merge(p.Crouched, { Waist = { -20, 0, 0 }, LeftHip = { 80, 0, 0 }, LeftKnee = { -90, 0, 0 }, RightHip = { -10, 0, 0 }, RightKnee = { -100, 0, 0 },

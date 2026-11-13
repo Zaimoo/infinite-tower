@@ -18,7 +18,7 @@ reference head. Export with the hero-remodel skill's scripts/blender_export_hair
 import bpy, bmesh, math, random
 from mathutils import Vector
 
-OUT_DIR = r"C:\Projects\infinite-tower\assets\hair"
+OUT_DIR = r"D:\Programming shi\infinite-tower\assets\hair"
 NAME = "IsabelleHair"
 rng = random.Random(2027)
 

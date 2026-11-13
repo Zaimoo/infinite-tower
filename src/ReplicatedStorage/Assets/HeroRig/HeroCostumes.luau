@@ -1681,29 +1681,79 @@ do
 end
 
 -- 21. NYX (Transcendent Striker - Gilt Shadow) ---------------------------------------------------
--- Black bodysuit with gold filigree, a half cape on the left shoulder, wrapped forearms and a
--- mirror-glass half mask; a short asymmetric black bob with teal tips.
+-- From her reference art (Slim body, docs/hero-art-pipeline.md §4.2 "Feminine body"), without
+-- the mirror mask at the user's request: a sleeveless black bodysuit with gilt filigree on the
+-- chest, a high black collar edged in gilt with a gilt clasp, a teal sash cinching the waist,
+-- black front panels with teal outer stripes and gilt hems flaring over the hips, and a black
+-- cape edged in gilt with a teal lining, held by gilt clasps at the shoulders. Bare arms with
+-- grey bandage wraps over the forearms and hands; black leggings with a gilt filigree on her left
+-- thigh, two leather straps on each thigh and a pouch on her right; black ankle boots. Hair: our
+-- Blender mesh (tools/make_nyx_hair_ugc.py), a messy black bob fading to teal, textured with
+-- assets/hair/nyx_hair_texture.png. Face: our own decal from assets/faces/make_nyx_face.py. The
+-- daggers are the DAGGERS weapon, not costume.
 do
-	local skin, hair, suit, wrap, accent = { 214, 170, 140 }, { 20, 20, 26 }, { 22, 22, 28 }, { 58, 58, 66 }, { 26, 188, 156 }
+	local skin, hair, suit, teal = { 196, 140, 106 }, { 24, 24, 30 }, { 22, 22, 28 }, { 26, 188, 160 }
+	local wrap, wrapDark, leather, boot, sole = { 104, 106, 114 }, { 70, 72, 80 }, { 78, 52, 36 }, { 32, 32, 38 }, { 14, 14, 18 }
+	local FABRIC = { Material = "Fabric" }
 	table.insert(COSTUMES, costume("hero_nyx", "Slim", {
-		Skin = skin, UpperTorso = suit, LowerTorso = suit, UpperArm = suit, LowerArm = wrap, Hand = suit,
-		UpperLeg = suit, LowerLeg = suit, Foot = suit,
+		Skin = skin, UpperTorso = suit, LowerTorso = suit, UpperArm = skin, LowerArm = wrap, Hand = wrap,
+		UpperLeg = suit, LowerLeg = suit, Foot = boot,
 	}, {
-		piece("HairCap", "Head", { 1.32, 0.42, 1.32 }, { 0, 0.5, 0.04 }, hair, LOOSE),
-		piece("HairBobL", "Head", { 0.3, 0.95, 1.1 }, { -0.6, -0.05, 0.05 }, hair, LOOSE),
-		piece("HairBobR", "Head", { 0.26, 0.65, 1.0 }, { 0.6, 0.12, 0.08 }, hair, LOOSE),
-		piece("HairTips", "Head", { 0.32, 0.14, 1.1 }, { -0.6, -0.56, 0.05 }, accent, with(NEON, LOOSE)),
-		piece("HalfMask", "Head", { 1.0, 0.4, 0.08 }, { 0, -0.32, -0.62 }, { 200, 210, 220 }, with(GLASS, LOOSE)),
-		piece("Collar", "UpperTorso", { 1.9, 0.22, 1.1 }, { 0, 0.74, 0 }, GILT, with(METAL, LOOSE)),
-		piece("Filigree", "UpperTorso", { 0.5, 0.5, 0.06 }, { 0, 0.1, -0.53 }, GILT, with(METAL, { Rotation = { 0, 0, 45 } })),
-		piece("HalfCape", "UpperTorso", { 1.0, 2.0, 0.08 }, { -0.5, -0.3, 0.56 }, suit, with(LOOSE, { Material = "Fabric", Rotation = { 4, 0, 0 } })),
-		piece("Tabard", "LowerTorso", { 0.7, 1.0, 0.06 }, { 0, -0.62, -0.58 }, suit, with(LOOSE, { Material = "Fabric" })),
-		piece("Belt", "LowerTorso", { 2.08, 0.22, 1.08 }, { 0, 0.04, 0 }, GILT, METAL),
-		piece("ThighStrapL", "LeftUpperLeg", { 1.06, 0.12, 1.06 }, { 0, 0.1, 0 }, wrap),
-		piece("ThighStrapR", "RightUpperLeg", { 1.06, 0.12, 1.06 }, { 0, 0.1, 0 }, wrap),
-		piece("WrapBandL", "LeftLowerArm", { 1.1, 0.1, 1.1 }, { 0, 0.2, 0 }, GILT, METAL),
-		piece("WrapBandR", "RightLowerArm", { 1.1, 0.1, 1.1 }, { 0, 0.2, 0 }, GILT, METAL),
-	}))
+		-- Hair mesh: centred on the export's bounding box and turned 180 degrees to undo the
+		-- importer's rotation; textured, so the colour comes from the texture.
+		piece("HairMesh", "Head", { 1.806, 1.807, 1.766 }, { -0.0166, 0.2028, 0.0857 }, hair, with(LOOSE, {
+			Rotation = { 0, 180, 0 },
+			Mesh = { MeshId = "rbxassetid://NYX_HAIR_ID", TextureId = "rbxassetid://79576997989816", Scale = { 0.01, 0.01, 0.01 } },
+		})),
+		-- High collar edged in gilt, with a gilt clasp at the throat
+		piece("CollarBack", "UpperTorso", { 1.2, 0.42, 0.12 }, { 0, 0.96, 0.42 }, suit, with(LOOSE, FABRIC, { Rotation = { -10, 0, 0 } })),
+		piece("CollarL", "UpperTorso", { 0.44, 0.4, 0.1 }, { -0.32, 0.94, -0.4 }, suit, with(LOOSE, FABRIC, { Rotation = { 0, 22, 0 } })),
+		piece("CollarR", "UpperTorso", { 0.44, 0.4, 0.1 }, { 0.32, 0.94, -0.4 }, suit, with(LOOSE, FABRIC, { Rotation = { 0, -22, 0 } })),
+		piece("CollarTrim", "UpperTorso", { 1.22, 0.05, 0.13 }, { 0, 0.21, 0 }, GILT, with(LOOSE, METAL, { RelativeTo = "CollarBack" })),
+		piece("CollarClasp", "UpperTorso", { 0.06, 0.2, 0.2 }, { 0, 0.82, -0.5 }, GILT, with(METAL, LOOSE, { Shape = "Cylinder", Rotation = { 0, 90, 0 } })),
+		-- Gilt filigree on the chest: a centre diamond and two scrolls, and gilt edges at the armholes
+		piece("FiligreeCentre", "UpperTorso", { 0.3, 0.3, 0.05 }, { 0, 0.18, -0.53 }, GILT, with(METAL, { Rotation = { 0, 0, 45 } })),
+		piece("FiligreeL", "UpperTorso", { 0.07, 0.62, 0.05 }, { -0.34, 0.12, -0.53 }, GILT, with(METAL, { Rotation = { 0, 0, -24 } })),
+		piece("FiligreeR", "UpperTorso", { 0.07, 0.62, 0.05 }, { 0.34, 0.12, -0.53 }, GILT, with(METAL, { Rotation = { 0, 0, 24 } })),
+		piece("ArmholeL", "UpperTorso", { 0.06, 0.5, 1.04 }, { -1.0, 0.52, 0 }, GILT, METAL),
+		piece("ArmholeR", "UpperTorso", { 0.06, 0.5, 1.04 }, { 1.0, 0.52, 0 }, GILT, METAL),
+		-- Teal sash cinching the waist, with a gilt edge
+		piece("Sash", "UpperTorso", { 2.06, 0.2, 1.06 }, { 0, -0.66, 0 }, teal, FABRIC),
+		piece("SashTrim", "UpperTorso", { 2.08, 0.05, 1.08 }, { 0, -0.54, 0 }, GILT, METAL),
+		-- Black cape edged in gilt with a teal lining, held by gilt clasps at the shoulders
+		piece("CapeBack", "UpperTorso", { 1.9, 2.8, 0.08 }, { 0, -0.6, 0.62 }, suit, with(LOOSE, FABRIC, { Rotation = { -8, 0, 0 } })),
+		piece("CapeLining", "UpperTorso", { 1.8, 2.7, 0.04 }, { 0, 0, -0.05 }, teal, with(LOOSE, FABRIC, { RelativeTo = "CapeBack" })),
+		piece("CapeEdgeL", "UpperTorso", { 0.06, 2.8, 0.1 }, { -0.95, 0, 0 }, GILT, with(LOOSE, METAL, { RelativeTo = "CapeBack" })),
+		piece("CapeEdgeR", "UpperTorso", { 0.06, 2.8, 0.1 }, { 0.95, 0, 0 }, GILT, with(LOOSE, METAL, { RelativeTo = "CapeBack" })),
+		piece("CapeHem", "UpperTorso", { 1.92, 0.06, 0.1 }, { 0, -1.4, 0 }, GILT, with(LOOSE, METAL, { RelativeTo = "CapeBack" })),
+		piece("CapeClaspL", "UpperTorso", { 0.08, 0.22, 0.22 }, { -0.66, 0.66, -0.5 }, GILT, with(METAL, { Shape = "Cylinder", Rotation = { 0, 90, 0 } })),
+		piece("CapeClaspR", "UpperTorso", { 0.08, 0.22, 0.22 }, { 0.66, 0.66, -0.5 }, GILT, with(METAL, { Shape = "Cylinder", Rotation = { 0, 90, 0 } })),
+		-- Front panels flaring over the hips: black with a teal outer stripe and a gilt hem
+		piece("PanelL", "LowerTorso", { 0.75, 1.3, 0.06 }, { -0.5, -0.75, -0.58 }, suit, with(LOOSE, FABRIC, { Rotation = { 6, 0, -6 } })),
+		piece("PanelR", "LowerTorso", { 0.75, 1.3, 0.06 }, { 0.5, -0.75, -0.58 }, suit, with(LOOSE, FABRIC, { Rotation = { 6, 0, 6 } })),
+		piece("PanelStripeL", "LowerTorso", { 0.14, 1.3, 0.07 }, { -0.3, 0, 0 }, teal, with(LOOSE, FABRIC, { RelativeTo = "PanelL" })),
+		piece("PanelStripeR", "LowerTorso", { 0.14, 1.3, 0.07 }, { 0.3, 0, 0 }, teal, with(LOOSE, FABRIC, { RelativeTo = "PanelR" })),
+		piece("PanelHemL", "LowerTorso", { 0.75, 0.06, 0.08 }, { 0, -0.65, 0 }, GILT, with(LOOSE, METAL, { RelativeTo = "PanelL" })),
+		piece("PanelHemR", "LowerTorso", { 0.75, 0.06, 0.08 }, { 0, -0.65, 0 }, GILT, with(LOOSE, METAL, { RelativeTo = "PanelR" })),
+		-- Bandage wraps: darker crossing bands over the grey forearm wraps
+		piece("WrapAL", "LeftLowerArm", { 1.08, 0.08, 1.08 }, { 0, 0.18, 0 }, wrapDark, { Rotation = { 0, 0, 12 } }),
+		piece("WrapBL", "LeftLowerArm", { 1.08, 0.08, 1.08 }, { 0, -0.2, 0 }, wrapDark, { Rotation = { 0, 0, -12 } }),
+		piece("WrapAR", "RightLowerArm", { 1.08, 0.08, 1.08 }, { 0, 0.18, 0 }, wrapDark, { Rotation = { 0, 0, -12 } }),
+		piece("WrapBR", "RightLowerArm", { 1.08, 0.08, 1.08 }, { 0, -0.2, 0 }, wrapDark, { Rotation = { 0, 0, 12 } }),
+		-- Her left thigh: gilt filigree and two straps. Her right thigh: two straps and a pouch.
+		piece("ThighFiligree", "LeftUpperLeg", { 0.28, 0.44, 0.05 }, { 0, 0.02, -0.53 }, GILT, with(METAL, { Rotation = { 0, 0, 20 } })),
+		piece("ThighStrapAL", "LeftUpperLeg", { 1.06, 0.1, 1.06 }, { 0, 0.3, 0 }, leather),
+		piece("ThighStrapBL", "LeftUpperLeg", { 1.06, 0.1, 1.06 }, { 0, -0.3, 0 }, leather),
+		piece("ThighStrapAR", "RightUpperLeg", { 1.06, 0.1, 1.06 }, { 0, 0.22, 0 }, leather),
+		piece("ThighStrapBR", "RightUpperLeg", { 1.06, 0.1, 1.06 }, { 0, -0.16, 0 }, leather),
+		piece("Pouch", "RightUpperLeg", { 0.22, 0.44, 0.4 }, { 0.62, 0.03, -0.05 }, leather),
+		piece("PouchFlap", "RightUpperLeg", { 0.24, 0.16, 0.42 }, { 0, 0.16, 0 }, { 58, 38, 26 }, { RelativeTo = "Pouch" }),
+		-- Black ankle boots: a cuff and dark soles
+		piece("BootCuffL", "LeftLowerLeg", { 1.08, 0.12, 1.08 }, { 0, -0.36, 0 }, boot),
+		piece("BootCuffR", "RightLowerLeg", { 1.08, 0.12, 1.08 }, { 0, -0.36, 0 }, boot),
+		piece("BootSoleL", "LeftFoot", { 1.04, 0.07, 1.22 }, { 0, -0.13, -0.08 }, sole),
+		piece("BootSoleR", "RightFoot", { 1.04, 0.07, 1.22 }, { 0, -0.13, -0.08 }, sole),
+	}, "rbxassetid://71025867007073"))
 end
 
 -- 22. CASPIAN (Ascendant Vanguard - Looking-Glass Knight) ----------------------------------------
