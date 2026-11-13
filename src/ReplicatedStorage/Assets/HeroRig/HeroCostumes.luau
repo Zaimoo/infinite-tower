@@ -107,6 +107,8 @@ HeroCostumes.MESHES = table.freeze({
 	["rbxassetid://125709940577517"] = "",
 	-- Nyx: our Blender UGC-style hair (tools/make_nyx_hair_ugc.py), textured with assets/hair/nyx_hair_texture.png
 	["rbxassetid://93772226685564"] = "rbxassetid://79576997989816",
+	-- Caspian: our Blender UGC-style shag (tools/make_caspian_hair_ugc.py), textured with assets/hair/caspian_hair_texture.png
+	["rbxassetid://90421651481031"] = "rbxassetid://131547739661735",
 } :: { [string]: string })
 
 -- Avatar hair accessory placement: a piece centred so the accessory's HairAttachment meets
@@ -1779,7 +1781,7 @@ do
 		-- importer's rotation; textured, so the colour comes from the texture.
 		piece("HairMesh", "Head", { 1.919, 1.422, 1.853 }, { 0.006, 0.3023, 0.0928 }, hair, with(LOOSE, {
 			Rotation = { 0, 180, 0 },
-			Mesh = { MeshId = "rbxassetid://CASPIAN_HAIR_ID", TextureId = "rbxassetid://131547739661735", Scale = { 0.01, 0.01, 0.01 } },
+			Mesh = { MeshId = "rbxassetid://90421651481031", TextureId = "rbxassetid://131547739661735", Scale = { 0.01, 0.01, 0.01 } },
 		})),
 		-- High plate collar with a gilt rim
 		piece("CollarBack", "UpperTorso", { 1.3, 0.44, 0.14 }, { 0, 0.96, 0.44 }, plate, with(LOOSE, METAL, { Rotation = { -10, 0, 0 } })),
