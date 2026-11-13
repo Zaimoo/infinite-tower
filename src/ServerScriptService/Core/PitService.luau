@@ -67,10 +67,21 @@ function PitService:Now(): number
 	return self.Dependencies.Clock and self.Dependencies.Clock() or os.clock()
 end
 
+-- Mirror heroes copy the Master's best normal hero, so every roster keeps at least one normal hero (gilded-mirror-plan §2.2).
+PitService.LastNormalHeroReason = "Your last normal hero can't be used. Mirror heroes copy it."
+local function normalHeroCount(profile: any, excluded: { [string]: boolean }?): number
+	local count = 0
+	for uuid, hero in pairs(profile.Heroes) do
+		if not Stats.IsMirror(hero) and not (excluded and excluded[uuid]) then count += 1 end
+	end
+	return count
+end
+
 function PitService:DonorStatus(profile: any, hero: any, recipientUUID: string?): any
 	local reason, status = "", "Available"
 	local seed = HeroCatalog.Seeds[hero.TemplateId]
 	if hero.UUID == recipientUUID then reason, status = "Already the recipient.", "Recipient"
+	elseif not Stats.IsMirror(hero) and normalHeroCount(profile) <= 1 then reason, status = PitService.LastNormalHeroReason, "Protected"
 	elseif not seed or seed.BannerOrigin == "WORLD_BOSS" or (hero.Stars or 1) > 7 or hero.Unique or hero.IsUnique or hero.Protected then
 		reason, status = "Unique heroes can't be used.", "Protected"
 	elseif hero.Locked or hero.Favorite or hero.Favorited then reason, status = "Locked. Unlock it first.", "Locked"
@@ -105,6 +116,9 @@ function PitService:RecipientStatus(profile: any, hero: any): any
 	end
 	if (hero.ComaUntilTimestamp or 0) > os.time() or hero.IsHardAuditComa then
 		return { Eligible = false, Reason = "Recovering from coma" }
+	end
+	if Stats.IsMirror(hero) then
+		return { Eligible = false, Reason = "Mirror heroes don't level." }
 	end
 	return { Eligible = true, Reason = "Ready to receive EXP" }
 end
@@ -205,10 +219,16 @@ function PitService:Build(profile: any, request: any): (any, any)
 			end
 			seen[uuid] = true
 		end
+		-- Several donors together must not use up the last normal hero either.
+		local removing = {}
+		for _, uuid in ipairs(staged.Remove) do removing[uuid] = true end
+		if #staged.Remove > 0 and normalHeroCount(profile, removing) == 0 then reject(PitService.LastNormalHeroReason) end
 	elseif #donorIds > 0 then reject("This doesn't use heroes. Clear the selection.") end
 
 	if action == "SYNTHESIS" then
-		if recipient then
+		if recipient and Stats.IsMirror(recipient) then
+			reject("Mirror heroes don't level. Promote them instead.")
+		elseif recipient then
 			local maxLevel = Stats.GetMaxLevel(recipient.Stars)
 			if (recipient.Level or 1) >= maxLevel then
 				reject("Max level. Promote to raise the cap.")
@@ -271,12 +291,14 @@ function PitService:Build(profile: any, request: any): (any, any)
 			if recipient.Stars >= Config.MaxStars or not rule then reject("This hero has reached the maximum " .. Config.MaxStars .. "★ rank.")
 			else
 				preview.Costs = { Gold = rule.Gold, PromotionStone = rule.PromotionStone }
-				preview.Requirements = { { Label = "Reach the current level cap", Current = recipient.Level, Required = Stats.GetMaxLevel(recipient.Stars), Met = recipient.Level >= Stats.GetMaxLevel(recipient.Stars) } }
+				-- Mirror heroes don't level, so they promote without a level requirement (+2% mirror per star).
+				local mirror = Stats.IsMirror(recipient)
+				preview.Requirements = if mirror then {} else { { Label = "Reach the current level cap", Current = recipient.Level, Required = Stats.GetMaxLevel(recipient.Stars), Met = recipient.Level >= Stats.GetMaxLevel(recipient.Stars) } }
 				if rule.Research then
 					table.insert(preview.Requirements, { Label = rule.Research == "MasterStonecraft" and "Master Stonecraft" or "Advanced Stonecraft",
 						Current = profile.UnlockedResearch[rule.Research] and 1 or 0, Required = 1, Met = profile.UnlockedResearch[rule.Research] == true })
 				end
-				if recipient.Level < Stats.GetMaxLevel(recipient.Stars) then reject("Reach Level " .. Stats.GetMaxLevel(recipient.Stars) .. " to unlock promotion.") end
+				if not mirror and recipient.Level < Stats.GetMaxLevel(recipient.Stars) then reject("Reach Level " .. Stats.GetMaxLevel(recipient.Stars) .. " to unlock promotion.") end
 				if rule.Research and not profile.UnlockedResearch[rule.Research] then reject("Unlock " .. (rule.Research == "MasterStonecraft" and "Master Stonecraft" or "Advanced Stonecraft") .. " in the Dimensional Lab.") end
 				local after, overflow = Math.Promote(recipient)
 				after.SynthesisHistory.Promotions = (after.SynthesisHistory.Promotions or 0) + 1
@@ -436,6 +458,7 @@ function PitService:GrantCombatXP(player: any, uuid: string, amount: number): (b
 	if not profile then return false, "Profile not loaded." end
 	self:Prepare(player, profile)
 	local hero = profile.Heroes[uuid]
+	if hero and Stats.IsMirror(hero) then return false, "Mirror heroes don't level." end
 	if not hero or not string.find(hero.Assignment, "^SQUAD_SLOT_") or (hero.CurrentStamina or 0) <= 0 or (hero.ComaUntilTimestamp or 0) > os.time() then return false, "Hero is not an active combat participant." end
 	local key = tostring(player) .. ":" .. uuid
 	local now = self:Now()

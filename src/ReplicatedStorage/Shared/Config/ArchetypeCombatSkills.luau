@@ -15,6 +15,8 @@ export type SecondaryEffectType =
 	| "CHAIN_LIGHTNING"
 	| "BEAM_LINE" -- every mob on a line through the target (SecondaryParam = length; Vane)
 	| "WHIRLWIND" -- every mob around the attacker (SecondaryParam = radius; Rhyman)
+	| "RICOCHET" -- the hit carries on to the nearest other mobs (SecondaryParam = how many; Isabelle, Seraphine)
+	| "LAST_STAND" -- the hit grows as the attacker's HP falls, plus the Berserker stagger (Rourke)
 
 export type Delivery = "MELEE" | "PROJECTILE" | "AREA"
 
@@ -72,7 +74,13 @@ export type SkillAttackDef = {
 	-- A hero's own skill effect instead of its archetype's (HeroSkillEffects). EXECUTE: one blow
 	-- on the target alone that kills any mob outright; raid bosses and Biome Bosses take the
 	-- multiplier's damage instead (HeroSkillEffects.Executes).
-	Effect: ("SINGULARITY" | "EXECUTE")?,
+	-- Gilded Mirror kits (docs/gilded-mirror-plan.md §5): TWIN_SHOT also hits the highest-HP other mob (or the
+	-- target again) for the same damage; MIRROR_WALL adds ranged reflection to the Vanguard taunt and barrier;
+	-- FRENZY adds an attack-speed buff to the Berserker slam.
+	Effect: ("SINGULARITY" | "EXECUTE" | "TWIN_SHOT" | "MIRROR_WALL" | "FRENZY")?,
+	ReflectPercent: number?, -- MIRROR_WALL: share of ranged damage taken sent back to the attacker
+	AttackSpeedBonus: number?, -- FRENZY: +attack speed while the buff lasts
+	BuffSeconds: number?, -- FRENZY: how long the buff lasts
 	PullStudsPerTick: number?, -- SINGULARITY: studs each tick drags mobs towards the centre
 	CoreRadius: number?, -- SINGULARITY: pulls stop this far from the centre
 	Delivery: Delivery?,
@@ -90,6 +98,9 @@ export type ArchetypeSkillProfile = {
 	Basic: BasicAttackDef,
 	Special: SpecialAttackDef,
 	Skill: SkillAttackDef,
+	-- GILDED_EDGE (Nyx): Basic attacks charge GaugeBonus more skill gauge while another mirror hero of the
+	-- same Master is within Radius studs.
+	Passive: { Name: string, Effect: "GILDED_EDGE", GaugeBonus: number, Radius: number, Description: string }?,
 }
 
 local ArchetypeCombatSkills = {}
@@ -343,6 +354,7 @@ type HeroKitOverride = {
 	Basic: { [string]: any },
 	Special: { [string]: any },
 	Skill: { [string]: any },
+	Passive: { [string]: any }?,
 }
 
 local function buildHeroProfile(heroId: string, kit: HeroKitOverride): ArchetypeSkillProfile
@@ -359,6 +371,7 @@ local function buildHeroProfile(heroId: string, kit: HeroKitOverride): Archetype
 	profile.Basic = merge(base.Basic :: any, kit.Basic)
 	profile.Special = merge(base.Special :: any, kit.Special)
 	profile.Skill = merge(base.Skill :: any, kit.Skill)
+	profile.Passive = if kit.Passive then table.freeze(table.clone(kit.Passive)) else nil
 	return table.freeze(profile) :: ArchetypeSkillProfile
 end
 
@@ -569,6 +582,102 @@ local HERO_KITS: { [string]: HeroKitOverride } = {
 			Description = "Astrea draws a constellation across the sky and fires its stars down over a 16-stud radius, dealing 2.80x ATK and shredding enemy defense by 20% for 5s.",
 			CastSeconds = 1.4, -- the pirouette, the sky shot and the hand that calls the stars down
 			TravelSeconds = 0.9, -- the arrow climbs and the constellation draws itself before the first stars fall
+		},
+	},
+
+	-- THE GILDED MIRROR (docs/gilded-mirror-plan.md §5). Numbers match the archetype defaults: a mirror
+	-- hero's strength comes from its mirror share, not a stronger kit (Rourke's buff is the featured extra).
+	hero_isabelle = {
+		Archetype = "Marksman",
+		Basic = { Name = "Glint Shot" },
+		Special = {
+			Name = "Ricochet",
+			Description = "A 1.50x ATK arrow that bounces once to the nearest other enemy within 14 studs for 0.75x ATK.",
+			SecondaryEffect = "RICOCHET",
+			SecondaryParam = 1,
+			RicochetDamage = 0.75,
+			RicochetRadius = 14,
+		},
+		Skill = {
+			Name = "Twin Reflection",
+			Description = "Isabelle holds a glowing draw, then the arrow splits: 2.50x ATK to the target and 2.50x ATK to the toughest other enemy within 30 studs (both halves hit a lone target).",
+			Effect = "TWIN_SHOT",
+			DamageMultiplier = 2.50,
+			TwinRange = 30.0, -- how far the second half looks for the toughest other enemy
+			CastSeconds = 1.2,
+		},
+	},
+	hero_nyx = {
+		Archetype = "Striker",
+		Basic = { Name = "Gilt Cut", Ticks = 2, TickSeconds = 0.12 },
+		Special = { Name = "Mirror Step", Description = "Nyx blinks behind the target for a 1.60x ATK stab with +25% critical chance." },
+		Skill = {
+			Name = "Shatterdance",
+			Description = "Five mirror clones slash inward in turn: 3.25x ATK to the target over five cuts, and half of that to every enemy within 12 studs.",
+			DamageMultiplier = 3.25,
+			Radius = 12.0,
+			Ticks = 5,
+			TickSeconds = 0.12,
+			CastSeconds = 1.1,
+		},
+		Passive = {
+			Name = "Gilded Edge",
+			Effect = "GILDED_EDGE",
+			GaugeBonus = 0.15,
+			Radius = 8,
+			Description = "Basic attacks charge 15% more skill gauge while another mirror hero stands within 8 studs.",
+		},
+	},
+	hero_caspian = {
+		Archetype = "Vanguard",
+		Basic = { Name = "Gilt Edge" },
+		Special = { Name = "Polished Bash" },
+		Skill = {
+			Name = "Looking-Glass Bulwark",
+			Description = "Caspian plants his shield and a glass wall rises: enemies within 25 studs are taunted for 4s, he gains a barrier of 40% Max HP for 6s, and for those 6s 20% of the ranged damage he takes is reflected at the shooter.",
+			Effect = "MIRROR_WALL",
+			ReflectPercent = 0.20,
+			CastSeconds = 1.2,
+		},
+	},
+	hero_seraphine = {
+		Archetype = "Scholar",
+		Basic = { Name = "Shard Bolt" },
+		Special = {
+			Name = "Refraction",
+			Description = "A 1.50x ATK glass prism that splits on impact into three shards, each hitting another enemy within 14 studs for 0.60x ATK.",
+			DamageMultiplier = 1.50,
+			SecondaryEffect = "RICOCHET",
+			SecondaryParam = 3,
+			RicochetDamage = 0.60,
+			RicochetRadius = 14,
+		},
+		Skill = {
+			Name = "Hall of Mirrors",
+			Description = "Four mirror crystals rise around the target and fire for 4s: 3.50x ATK over 8 pulses to the target, and 60% of that to every enemy within 16 studs.",
+			Radius = 16.0,
+			Ticks = 8,
+			TickSeconds = 0.5,
+			CastSeconds = 1.4,
+		},
+	},
+	hero_rourke = {
+		Archetype = "Berserker",
+		Basic = { Name = "Gilt Cleave" },
+		Special = {
+			Name = "Last Stand",
+			Description = "An overhead chop for 1.50x ATK, rising to 2.50x ATK as Rourke's HP falls to 10%, that also staggers enemies within 8 studs.",
+			SecondaryEffect = "LAST_STAND",
+			SecondaryParam = 8.0,
+			MaxMultiplier = 2.50,
+		},
+		Skill = {
+			Name = "Gilded Frenzy",
+			Description = "Rourke slams the ground into gold shards: 2.60x ATK to every enemy within 18 studs, then +25% attack speed for 4s.",
+			Effect = "FRENZY",
+			AttackSpeedBonus = 0.25,
+			BuffSeconds = 4,
+			CastSeconds = 1.3,
 		},
 	},
 }

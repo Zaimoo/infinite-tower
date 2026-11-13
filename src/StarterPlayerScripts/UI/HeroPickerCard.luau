@@ -62,7 +62,9 @@ function Card.Create(parent: Instance, entry: any, order: number, z: number, onS
 	name.TextScaled = true
 	name.TextTruncate = Enum.TextTruncate.AtEnd
 	new("UITextSizeConstraint", { MinTextSize = 13, MaxTextSize = 20 }, name)
-	local level = text("Level", string.format("★%d  ·  Lv.%d / %d", hero.Stars or 1, hero.Level or 1, StatFormulas.GetMaxLevel(hero.Stars or 1)), "Body", TALL_PORTRAIT_HEIGHT + 39, 18, 13, accent)
+	local levelText = if StatFormulas.IsMirror(hero) then StatFormulas.LevelText(hero)
+		else string.format("Lv.%d / %d", hero.Level or 1, StatFormulas.GetMaxLevel(hero.Stars or 1))
+	local level = text("Level", string.format("★%d  ·  %s", hero.Stars or 1, levelText), "Body", TALL_PORTRAIT_HEIGHT + 39, 18, 13, accent)
 	level.TextWrapped = false
 	level.TextScaled = true
 	new("UITextSizeConstraint", { MinTextSize = 10, MaxTextSize = 13 }, level)

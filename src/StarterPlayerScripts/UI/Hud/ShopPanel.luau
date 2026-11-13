@@ -3,10 +3,13 @@
 -- Robux Store (Phase 5), drawn in Gilded Grimoire. Offers come from ShopConfig:
 --   * Featured LIMITED pack: the limited banner's top heroes (top tier shown largest, with Squad
 --     Power), and Buy 1 / Buy 5 / Buy 10 summon offers (10 shows its struck-through price).
+--   * The Gilded Mirror: its five mirror heroes with their mirror share, the full odds, Buy 1 / Buy 10,
+--     and the Spark counter with a pick of any hero once 80 pulls are banked (docs/gilded-mirror-plan.md).
 --   * Gem and Gold rows: drawn currency art, amount, bonus tag and a Robux price button.
 -- Prices are read live from MarketplaceService; offers with ProductId 0 show COMING SOON. Summon
 -- packs are hidden for players who may not buy paid random items. Purchases are granted by the
--- server (ShopService); the result arrives as a toast and a profile sync.
+-- server (ShopService); the result arrives as a toast and a profile sync. Both summon banners carry
+-- BannerFx motion (motes, rail pulse, shimmer, sparkles, a breathing featured hero, shining 10x buttons).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local MarketplaceService = game:GetService("MarketplaceService")
@@ -25,6 +28,7 @@ local Portrait = require(script.Parent:WaitForChild("Portrait"))
 local Theme = require(script.Parent:WaitForChild("Theme"))
 local Components = require(script.Parent:WaitForChild("Components"))
 local WindowScale = require(script.Parent.Parent:WaitForChild("WindowScale"))
+local BannerFx = require(script.Parent:WaitForChild("BannerFx"))
 
 local e = React.createElement
 local Panel = Components.Panel
@@ -62,7 +66,7 @@ local function inkNumber(props: { [string]: any })
 end
 
 -- The Robux price button: drawn Robux mark + price; disabled (COMING SOON) until a ProductId is set.
-local function PriceButton(props: { Offer: ShopConfig.Offer, Tone: string?, Size: UDim2, Position: UDim2?, AnchorPoint: Vector2?, LayoutOrder: number?, OnBuy: (ShopConfig.Offer) -> () })
+local function PriceButton(props: { Offer: ShopConfig.Offer, Tone: string?, Size: UDim2, Position: UDim2?, AnchorPoint: Vector2?, LayoutOrder: number?, Shine: boolean?, OnBuy: (ShopConfig.Offer) -> () })
 	local offer = props.Offer
 	local live = offer.ProductId ~= 0
 	local price, setPrice = React.useState(offer.RobuxPrice)
@@ -85,6 +89,7 @@ local function PriceButton(props: { Offer: ShopConfig.Offer, Tone: string?, Size
 		end,
 	}, {
 		Scale = e("UIScale", { ref = scaleRef }),
+		Shine = if props.Shine then e(BannerFx.Shine, { Radius = 12, ZIndex = 9, Period = 2.6 }) else nil,
 		Row = e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 7 }, {
 			Layout = e("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center,
 				VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
@@ -102,8 +107,11 @@ local function heroTile(order: number, heroId: string, big: boolean)
 	if not seed then return nil end
 	local rarity = Theme.RarityColor(seed.Rarity)
 	local probe = { TemplateId = seed.HeroId, Stars = seed.BaseStar, Level = 1, QualityScalar = 1, Archetype = seed.Archetype }
-	local power = StatFormulas.GetHeroPower(probe)
+	-- A mirror hero has no power of its own: show the share of your best hero it copies instead.
+	local mirror = (seed :: any).Mirror == true
+	local power = if mirror then 0 else StatFormulas.GetHeroPower(probe)
 	return e("Frame", { LayoutOrder = order, Size = if big then UDim2.fromOffset(196, 236) else UDim2.fromOffset(142, 196), BackgroundTransparency = 1 }, {
+		Breathe = if big then e(BannerFx.Breathe, { Amount = 0.035, Period = 2.6 }) else nil,
 		Name = Heavy({ Size = UDim2.new(1, 0, 0, if big then 26 else 22), MaxSize = if big then 20 else 16, Outline = 2.2, Gold = big,
 			TextColor3 = if big then Color3.new(1, 1, 1) else Color3.fromRGB(255, 190, 170), Text = seed.DisplayName, ZIndex = 6 }),
 		Frame = Panel({ Position = UDim2.fromOffset(0, if big then 30 else 26), Size = UDim2.new(1, 0, 1, if big then -30 else -26), Radius = 14,
@@ -115,7 +123,8 @@ local function heroTile(order: number, heroId: string, big: boolean)
 			Rarity = Body({ AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -24), Size = UDim2.new(1, -12, 0, 16), TextSize = 12,
 				TextXAlignment = Enum.TextXAlignment.Center, TextColor3 = rarity, Text = string.format("%s · %d★", HeroCatalog.RarityName(seed.Rarity), seed.BaseStar), ZIndex = 7 }),
 			Power = inkNumber({ AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -4), Size = UDim2.new(1, -12, 0, 22), MaxSize = if big then 22 else 18,
-				TextColor3 = TEXT.Good, Text = Components.Abbreviate(power) .. " PWR", ZIndex = 7 }),
+				TextColor3 = TEXT.Good, Text = if mirror then tostring(math.round(StatFormulas.GetMirrorPercent(probe) * 100)) .. "% MIRROR"
+					else Components.Abbreviate(power) .. " PWR", ZIndex = 7 }),
 		}),
 	})
 end
@@ -176,7 +185,21 @@ local function ShopPanel(props: { Profile: any, Width: number, OnClose: () -> ()
 		MarketplaceService:PromptProductPurchase(LocalPlayer, offer.ProductId)
 	end
 
+	local function claimSpark(heroId: string)
+		setStatus("Claiming your Spark…")
+		task.spawn(function()
+			local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+			local progression = remotes and remotes:FindFirstChild("ProgressionRemotes")
+			local remote = progression and progression:FindFirstChild("ClaimMirrorSpark")
+			if not remote then setStatus("The Spark isn't available right now.") return end
+			local ok, result = pcall(function() return (remote :: RemoteFunction):InvokeServer(heroId) end)
+			setStatus(if ok and type(result) == "table" and result.Success then "Spark claimed!"
+				elseif ok and type(result) == "table" then tostring(result.Message) else "Couldn't claim the Spark. Try again.")
+		end)
+	end
+
 	local narrow = props.Width < 820
+	local profile = props.Profile
 	local featured = ShopConfig.Featured
 	local banner = HeroCatalog.LimitedBanner
 	local rows: { [string]: any } = {
@@ -204,13 +227,15 @@ local function ShopPanel(props: { Profile: any, Width: number, OnClose: () -> ()
 			buys["O" .. i] = e("Frame", { LayoutOrder = i, Size = UDim2.fromOffset(196, 84), BackgroundTransparency = 1 }, {
 				Was = if offer.WasPrice then Body({ AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -4, 0, -20), Size = UDim2.fromOffset(110, 18), TextSize = 14,
 					TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = Color3.fromRGB(255, 140, 140), Text = string.format("<s>%d</s> %s", offer.WasPrice, offer.Tag or ""), ZIndex = 7 }) else nil,
-				Button = e(PriceButton, { Offer = offer, Tone = if offer.WasPrice then "Gold" else "Crimson", Size = UDim2.new(1, 0, 0, 52), OnBuy = buy }),
+				Button = e(PriceButton, { Offer = offer, Tone = if offer.WasPrice then "Gold" else "Violet", Shine = offer.WasPrice ~= nil, Size = UDim2.new(1, 0, 0, 52), OnBuy = buy }),
 				Label = Heavy({ Position = UDim2.fromOffset(0, 56), Size = UDim2.new(1, 0, 0, 22), MaxSize = 16, Outline = 2, Gold = false,
 					Text = string.format("%s · %d summon%s", offer.Label, offer.Grant.Amount, if offer.Grant.Amount == 1 then "" else "s"), ZIndex = 7 }),
 			})
 		end
-		rows.Featured = Panel({ LayoutOrder = 1, Size = UDim2.new(1, 0, 0, 470), Radius = 16,
-			Top = Tones.Crimson.Top:Lerp(Color3.fromRGB(180, 40, 50), 0.35), Bottom = Tones.Crimson.Bottom, Rail = TEXT.Gold }, {
+		local gilt = Color3.fromRGB(212, 175, 90)
+		rows.Featured = Panel({ LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 470), Radius = 16,
+			Top = Tones.Violet.Top:Lerp(gilt, 0.25), Bottom = Tones.Deep.Bottom, Rail = gilt }, {
+			Fx = e(BannerFx.Backdrop, { Color = Color3.fromRGB(200, 160, 255), Accent = gilt, Radius = 16, ZIndex = 4 }),
 			Crest = IconAt("Spark", 54, { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 10), ZIndex = 6 }),
 			Title = Heavy({ Position = UDim2.fromOffset(22, 14), Size = UDim2.new(1, -220, 0, 46), MaxSize = 42, TextXAlignment = Enum.TextXAlignment.Left,
 				Text = featured.Title, ZIndex = 6 }),
@@ -219,9 +244,90 @@ local function ShopPanel(props: { Profile: any, Width: number, OnClose: () -> ()
 				Rail = Color3.fromRGB(255, 250, 214), ZIndex = 6 }, {
 				Text = Heavy({ Size = UDim2.fromScale(1, 1), MaxSize = 15, Outline = 2, Gold = false, TextColor3 = Color3.new(1, 1, 1), Text = "LIMITED", ZIndex = 8 }),
 			}),
-			Sub = Body({ Position = UDim2.fromOffset(140, 66), Size = UDim2.new(1, -160, 0, 18), TextSize = 14, TextColor3 = Color3.fromRGB(255, 220, 210), Text = featured.Subtitle, ZIndex = 6 }),
+			Sub = Body({ Position = UDim2.fromOffset(140, 66), Size = UDim2.new(1, -160, 0, 18), TextSize = 14, TextColor3 = Color3.fromRGB(230, 220, 255), Text = featured.Subtitle, ZIndex = 6 }),
 			Tiles = e("Frame", { Position = UDim2.fromOffset(16, 94), Size = UDim2.new(1, -32, 0, 240), BackgroundTransparency = 1, ZIndex = 5 }, tiles),
 			Buys = e("Frame", { Position = UDim2.fromOffset(16, 360), Size = UDim2.new(1, -32, 0, 84), BackgroundTransparency = 1, ZIndex = 5 }, buys),
+		})
+	end
+
+	-- The Gilded Mirror ---------------------------------------------------------------------------
+	if not restricted then
+		local mirror = ShopConfig.Mirror
+		local mb = HeroCatalog.MirrorBanner
+		local tiles: { [string]: any } = {
+			Layout = e("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, VerticalAlignment = Enum.VerticalAlignment.Bottom,
+				HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder }),
+		}
+		-- Isabelle first, Rourke (featured) last and largest. The odds are listed before purchase (paid random items).
+		local odds = {}
+		for tier = 7, mb.MaxStar do
+			local id = mb.HeroesByStar[tier]
+			if id then
+				tiles["T" .. tier] = heroTile(tier, id, tier == mb.MaxStar)
+				table.insert(odds, HeroCatalog.Seeds[id].DisplayName .. " " .. tostring(math.round(mb.Rates[tier] * 1000) / 10) .. "%")
+			end
+		end
+		local floorHero = HeroCatalog.Seeds[mb.HeroesByStar[mb.TenPullMinTier]].DisplayName
+		local oddsText = "Odds: " .. table.concat(odds, " · ") .. ". Every 10x includes " .. floorHero
+			.. " or better. Mirror heroes copy 110-150% of your best hero's power."
+		local buys: { [string]: any } = {
+			Layout = e("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center,
+				Padding = UDim.new(0, 14), SortOrder = Enum.SortOrder.LayoutOrder }),
+		}
+		for i, offer in mirror.Offers do
+			buys["O" .. i] = e("Frame", { LayoutOrder = i, Size = UDim2.fromOffset(196, 84), BackgroundTransparency = 1 }, {
+				Was = if offer.WasPrice then Body({ AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -4, 0, -20), Size = UDim2.fromOffset(110, 18), TextSize = 14,
+					TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = Color3.fromRGB(255, 140, 140), Text = string.format("<s>%d</s> %s", offer.WasPrice, offer.Tag or ""), ZIndex = 7 }) else nil,
+				Button = e(PriceButton, { Offer = offer, Tone = if offer.WasPrice then "Gold" else "Crimson", Shine = offer.WasPrice ~= nil, Size = UDim2.new(1, 0, 0, 52), OnBuy = buy }),
+				Label = Heavy({ Position = UDim2.fromOffset(0, 56), Size = UDim2.new(1, 0, 0, 22), MaxSize = 16, Outline = 2, Gold = false,
+					Text = string.format("%s · %d summon%s", offer.Label, offer.Grant.Amount, if offer.Grant.Amount == 1 then "" else "s"), ZIndex = 7 }),
+			})
+		end
+
+		-- Spark: progress, and a pick button per hero while a pick is banked.
+		local spark = profile and profile.MirrorSpark
+		local sparkPulls = if spark and type(spark.Pulls) == "number" then spark.Pulls else 0
+		local picks = if spark and type(spark.Selections) == "number" then spark.Selections else 0
+		local sparkRow: { [string]: any } = {
+			Layout = e("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center,
+				VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
+			Text = Heavy({ LayoutOrder = 0, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 24), MaxSize = 16, Outline = 2, Gold = picks > 0,
+				Text = if picks > 0 then string.format("SPARK READY (%d) · CHOOSE:", picks)
+					else string.format("SPARK %d / %d · pick any hero at %d pulls", sparkPulls, mb.SparkPulls, mb.SparkPulls), ZIndex = 7 }),
+		}
+		if picks > 0 then
+			for tier = 7, mb.MaxStar do
+				local id = mb.HeroesByStar[tier]
+				local seed = id and HeroCatalog.Seeds[id]
+				if seed then
+					local t = Tones.Crimson
+					sparkRow["P" .. tier] = Panel({ Class = "TextButton", Text = "", AutoButtonColor = false, Selectable = true, LayoutOrder = tier,
+						Size = UDim2.fromOffset(104, 34), Radius = 10, Top = t.Top, Bottom = t.Bottom, Rail = Theme.RarityColor(seed.Rarity), ZIndex = 7,
+						[React.Event.Activated] = function() claimSpark(id) end,
+					}, {
+						Breathe = e(BannerFx.Breathe, { Amount = 0.06, Period = 1.4 }),
+						Name = Heavy({ Size = UDim2.fromScale(1, 1), MaxSize = 15, Outline = 2, Gold = false, Text = seed.DisplayName, ZIndex = 8 }),
+					})
+				end
+			end
+		end
+
+		rows.Mirror = Panel({ LayoutOrder = 1, Size = UDim2.new(1, 0, 0, 548), Radius = 16,
+			Top = Tones.Crimson.Top:Lerp(Color3.fromRGB(180, 40, 50), 0.35), Bottom = Tones.Crimson.Bottom, Rail = TEXT.Gold }, {
+			Fx = e(BannerFx.Backdrop, { Color = Color3.fromRGB(255, 214, 120), Accent = TEXT.Gold, Motes = 20, Radius = 16, ZIndex = 4 }),
+			Crest = IconAt("Spark", 54, { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 10), ZIndex = 6 }),
+			Title = Heavy({ Position = UDim2.fromOffset(22, 14), Size = UDim2.new(1, -220, 0, 46), MaxSize = 42, TextXAlignment = Enum.TextXAlignment.Left,
+				Text = mirror.Title, ZIndex = 6 }),
+			Premium = Panel({ Position = UDim2.fromOffset(24, 62), Size = UDim2.fromOffset(104, 26), Radius = 13, Top = Color3.fromRGB(240, 214, 140), Bottom = Color3.fromRGB(176, 130, 50),
+				Rail = Color3.fromRGB(255, 250, 214), ZIndex = 6 }, {
+				Text = Heavy({ Size = UDim2.fromScale(1, 1), MaxSize = 15, Outline = 2, Gold = false, TextColor3 = Color3.new(1, 1, 1), Text = "PREMIUM", ZIndex = 8 }),
+			}),
+			Sub = Body({ Position = UDim2.fromOffset(140, 66), Size = UDim2.new(1, -160, 0, 18), TextSize = 14, TextColor3 = Color3.fromRGB(255, 220, 210), Text = mirror.Subtitle, ZIndex = 6 }),
+			Tiles = e("Frame", { Position = UDim2.fromOffset(16, 94), Size = UDim2.new(1, -32, 0, 240), BackgroundTransparency = 1, ZIndex = 5 }, tiles),
+			Odds = Body({ Position = UDim2.fromOffset(16, 342), Size = UDim2.new(1, -32, 0, 36), TextSize = 13, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Center,
+				TextColor3 = Color3.fromRGB(255, 220, 210), Text = oddsText, ZIndex = 6 }),
+			Buys = e("Frame", { Position = UDim2.fromOffset(16, 400), Size = UDim2.new(1, -32, 0, 84), BackgroundTransparency = 1, ZIndex = 5 }, buys),
+			Spark = e("Frame", { Position = UDim2.fromOffset(16, 498), Size = UDim2.new(1, -32, 0, 36), BackgroundTransparency = 1, ZIndex = 5 }, sparkRow),
 		})
 	end
 
@@ -236,12 +342,11 @@ local function ShopPanel(props: { Profile: any, Width: number, OnClose: () -> ()
 		end
 		return e("Frame", { LayoutOrder = order, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1 }, kids)
 	end
-	rows.GemsHeader = sectionHeader(2, "Gems", "GEMS", "Summon heroes and artifacts")
-	rows.Gems = cardRow(3, ShopConfig.Gems, "Gems", "Teal")
-	rows.GoldHeader = sectionHeader(4, "Gold", "GOLD", "Unlock upgrades and promote heroes")
-	rows.Gold = cardRow(5, ShopConfig.Gold, "Gold", "Bronze")
+	rows.GemsHeader = sectionHeader(3, "Gems", "GEMS", "Summon heroes and artifacts")
+	rows.Gems = cardRow(4, ShopConfig.Gems, "Gems", "Teal")
+	rows.GoldHeader = sectionHeader(5, "Gold", "GOLD", "Unlock upgrades and promote heroes")
+	rows.Gold = cardRow(6, ShopConfig.Gold, "Gold", "Bronze")
 
-	local profile = props.Profile
 	local gems = profile and profile.Currencies and profile.Currencies.Gems or 0
 	local gold = profile and profile.Currencies and profile.Currencies.Gold or 0
 

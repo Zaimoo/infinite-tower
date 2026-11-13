@@ -1044,7 +1044,8 @@ function Runtime.new(api: any): any
 				self.Metrics.Hits += 1
 				local amount = math.max(1, math.round(m.ATK * mult * SupportRules.AtkMultiplier(m, now)
 					* AffixRules.AtkMultiplier(m) * AffixRules.AuraAtk(m, self:AffixedNear(m))))
-				api.Damage(v, amount, m)
+				-- Ranged shapes can be reflected (Caspian's Looking-Glass Bulwark).
+				api.Damage(v, amount, m, definition ~= nil and (definition.Shape == "PROJECTILE" or definition.Shape == "TARGET_DISC"))
 				if AffixRules.Has(m, "VAMPIRIC") then
 					m.CurrentHP = math.min(m.MaxHP, m.CurrentHP + math.round(amount * AffixRules.VampiricFraction))
 				end

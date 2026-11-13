@@ -460,7 +460,9 @@ function HeroCard.Update(self: any, hero: any, selected: boolean, mode: string, 
 	self.Name.TextColor3 = rarity
 	local stats = hero.Stats or hero.PitStats
 	local combat = stats or StatFormulas.GetCombatSnapshot(hero)
-	self.Info.Text = string.format("%s  Lv.%d / %d\n%s · DPS %s", T.Stars(stars), hero.Level or 1, StatFormulas.GetMaxLevel(stars), hero.Archetype or "Hero", T.Number(combat.DPS))
+	local mirror = StatFormulas.IsMirror(hero)
+	local levelText = if mirror then StatFormulas.LevelText(hero) else string.format("Lv.%d / %d", hero.Level or 1, StatFormulas.GetMaxLevel(stars))
+	self.Info.Text = string.format("%s  %s\n%s · DPS %s", T.Stars(stars), levelText, hero.Archetype or "Hero", T.Number(combat.DPS))
 	local status = hero.PitStatus or {}
 	local reason = status.Reason
 	self.Status.Text = (hero.Locked and "[LOCKED] " or "") .. (hero.Favorite and "[FAVORITE] " or "") .. (status.Status or hero.Assignment or "Available")
@@ -469,7 +471,8 @@ function HeroCard.Update(self: any, hero: any, selected: boolean, mode: string, 
 		self.Status.TextColor3 = T.Color.Danger
 	else self.Status.TextColor3 = T.Color.Muted end
 	self.Trait.Text = string.format("Damage %s · HP %s\nSpeed %.2f/s · Move %.0f studs/s", T.Number(combat.AttackDamage or combat.ATK), T.Number(combat.Health or combat.HP), combat.AttackSpeed or 1, combat.MovementSpeed or 20)
-	self.XPFill.Size = UDim2.fromScale(math.clamp((hero.XP or 0) / StatFormulas.GetXPRequiredForNextLevel(hero.Level or 1, hero.Stars), 0, 1), 1)
+	-- Mirror heroes don't level: their bar reads full.
+	self.XPFill.Size = UDim2.fromScale(if mirror then 1 else math.clamp((hero.XP or 0) / StatFormulas.GetXPRequiredForNextLevel(hero.Level or 1, hero.Stars), 0, 1), 1)
 	self.XPFill.BackgroundColor3 = rarity
 	self.Name.TextSize = (textSize or 14) + 1
 	self.Info.TextSize = textSize or 14

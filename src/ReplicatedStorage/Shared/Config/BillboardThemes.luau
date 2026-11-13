@@ -172,6 +172,15 @@ BillboardThemes.HeroByRarity = table.freeze({
 		{ Color3.fromRGB(255, 250, 210), Color3.fromRGB(255, 196, 40), Color3.fromRGB(255, 250, 210) }),
 	hero("Blood", Color3.fromRGB(255, 214, 110), Color3.fromRGB(255, 110, 100), Color3.fromRGB(231, 76, 60), "MYTHICAL", 96,
 		{ Color3.fromRGB(255, 220, 120), Color3.fromRGB(255, 70, 80), Color3.fromRGB(255, 220, 120) }),
+	-- The Gilded Mirror heroes (rarity 8-11), each with a gilt shimmer over its tier colour.
+	hero("Tide", Color3.fromRGB(150, 255, 230), Color3.fromRGB(110, 240, 210), Color3.fromRGB(26, 188, 156), "TRANSCENDENT", 96,
+		{ Color3.fromRGB(255, 236, 170), Color3.fromRGB(60, 220, 190), Color3.fromRGB(255, 236, 170) }),
+	hero("Orchid", Color3.fromRGB(245, 180, 255), Color3.fromRGB(235, 140, 255), Color3.fromRGB(190, 60, 230), "ASCENDANT", 96,
+		{ Color3.fromRGB(255, 236, 170), Color3.fromRGB(224, 86, 253), Color3.fromRGB(255, 236, 170) }),
+	hero("Astral", Color3.fromRGB(190, 195, 255), Color3.fromRGB(160, 165, 255), Color3.fromRGB(104, 109, 224), "ETHEREAL", 96,
+		{ Color3.fromRGB(255, 236, 170), Color3.fromRGB(130, 135, 245), Color3.fromRGB(255, 236, 170) }),
+	hero("Rose", Color3.fromRGB(255, 205, 210), Color3.fromRGB(255, 150, 160), Color3.fromRGB(220, 80, 100), "IMMORTAL", 96,
+		{ Color3.fromRGB(255, 236, 170), Color3.fromRGB(255, 121, 121), Color3.fromRGB(255, 236, 170) }),
 } :: { Theme })
 
 -- Theme for a hero rarity tier; tiers above the launch set (8-16) use the highest one until they get their own.

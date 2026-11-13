@@ -81,7 +81,8 @@ stance (feet, each hand, the weapon's angle).
    `tools/make_jenna_hair_ugc.py` and write only the layout. Closest bases:
    - long or layered: Valeria (`make_valeria_hair_ugc.py`); wavy: Solaris; very long and
      wavy, to the thighs: Astrea
-   - ponytail: Eolka (high), Jenna (back)
+   - ponytail: Aeli (`make_aeli_hair_ugc.py`)
+   - male with bangs: Han (`make_han_hair_ugc.py`)
    - short spiky: Archon, Ignis; swept back with flaring locks: Morrigan
    Set `OUT_DIR`, `NAME`, a new `random.Random(seed)` and the material colour.
 2. Run it in Blender: `exec(open(path, encoding="utf-8").read())`, then `look` with

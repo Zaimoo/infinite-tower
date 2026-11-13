@@ -105,7 +105,8 @@ function PitMath.Promote(hero: any): (any, any)
 	-- Promotion resets to Lv 1 of the new star; reserved EXP is released below. Stats never drop (effective level rises by 1).
 	result.Level, result.XP = 1, 0
 	local seed = Catalog.Seeds[result.TemplateId]
-	if seed then
+	-- Mirror heroes have no stats of their own: a star only raises their mirror share (StatFormulas.GetMirrorPercent).
+	if seed and not (seed :: any).Mirror then
 		local rarity = Stats.GetHeroRarity(result)
 		local rarityCombat = Balance.HeroRarityCombat(rarity)
 		local rarityLabor = Balance.HeroRarityLabor(rarity)
@@ -122,6 +123,7 @@ function PitMath.Snapshot(hero: any, profile: any?): any
 	return { Level = hero.Level, XP = hero.XP, Stars = hero.Stars, HP = combat.Health, ATK = combat.AttackDamage, DPS = combat.DPS,
 		AttackDamage = combat.AttackDamage, Health = combat.Health, AttackSpeed = combat.AttackSpeed, MovementSpeed = combat.MovementSpeed,
 		Labor = Stats.GetEffectiveLabor(hero), MaxLevel = Stats.GetMaxLevel(hero.Stars),
+		MirrorPercent = if Stats.IsMirror(hero) then Stats.GetMirrorPercent(hero) else nil,
 		XPRequired = Stats.GetXPRequiredForNextLevel(hero.Level, hero.Stars), OverflowXP = hero.OverflowXP or 0 }
 end
 

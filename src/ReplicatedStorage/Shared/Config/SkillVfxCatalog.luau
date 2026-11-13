@@ -293,6 +293,44 @@ SkillVfxCatalog.Heroes = table.freeze({
 		Special = { Style = "MEND", Projectile = "ORB", Scale = 1.15, Arc = 0.1, Trail = 0.22, Impact = 2.1 },
 		Skill = { Style = "SANCTUARY", Radius = 25, PillarHeight = 18, Linger = 1.5, Impact = 3.2 },
 	},
+
+	-- The Gilded Mirror (docs/gilded-mirror-plan.md §6.2): gilt and glass over each hero's rarity colour.
+	-- Glint Shot / Ricochet / Twin Reflection: gold-trailed arrows; the Skill rains twin arrows from a red flare.
+	hero_isabelle = {
+		Palette = { Primary = rgb(255, 214, 120), Secondary = rgb(231, 76, 60), Core = rgb(255, 250, 235), Accent = rgb(190, 215, 255) },
+		Basic = { Style = "SHOT", Projectile = "ARROW", Scale = 1.0, Arc = 0.3, Trail = 0.16, Impact = 1.8 },
+		Special = { Style = "VOLLEY", Projectile = "ARROW", Scale = 1.25, Arc = 0.12, Trail = 0.22, Impact = 2.4, Count = 2, Spread = 9, Pierce = 6, Rings = true },
+		Skill = { Style = "STORM", Projectile = "ARROW", Scale = 1.4, Trail = 0.25, Impact = 2.6, FlareHeight = 24, SigilRadius = 16, RainPerWave = 2, RainHeight = 26, Shake = 0.22 },
+	},
+	-- Gilt Cut / Mirror Step / Shatterdance: thin teal cuts; five clone slashes ring the target.
+	hero_nyx = {
+		Palette = { Primary = rgb(60, 220, 190), Secondary = rgb(212, 175, 90), Core = rgb(235, 255, 250) },
+		Basic = { Style = "SLASH", Scale = 0.8, Impact = 1.2 },
+		Special = { Style = "CROSS", Scale = 1.05, Impact = 1.9 },
+		Skill = { Style = "TEMPEST", Radius = 12, Slashes = 5, Impact = 3, Shake = 0.2 },
+	},
+	-- Gilt Edge / Polished Bash / Looking-Glass Bulwark: pearl white and gilt; the wall glows pink-violet.
+	hero_caspian = {
+		Palette = { Primary = rgb(236, 232, 255), Secondary = rgb(224, 96, 253), Core = rgb(255, 255, 255), Accent = rgb(212, 175, 90) },
+		Basic = { Style = "SLASH", Scale = 1.0, Impact = 1.6 },
+		Special = { Style = "CLEAVE", Scale = 1.2, Radius = 10, Impact = 2.4 },
+		Skill = { Style = "BULWARK", Radius = 25, Linger = 6, Impact = 3.2, Shake = 0.2 },
+	},
+	-- Shard Bolt / Refraction / Hall of Mirrors: indigo glass; the prism chains to three shards and the
+	-- Skill raises a ring of mirror crystals that stays for its pulses.
+	hero_seraphine = {
+		Palette = { Primary = rgb(120, 125, 240), Secondary = rgb(190, 215, 255), Core = rgb(245, 245, 255), Accent = rgb(212, 175, 90) },
+		Basic = { Style = "BOLT", Projectile = "ORB", Scale = 0.9, Arc = 0.05, Trail = 0.18, Impact = 1.8 },
+		Special = { Style = "CHAIN", Projectile = "ORB", Scale = 1.25, Arc = 0.05, Trail = 0.22, Impact = 2.4, Radius = 14 },
+		Skill = { Style = "CRYSTALS", Radius = 16, Spikes = 4, Impact = 3.4, Linger = 4, Shake = 0.22 },
+	},
+	-- Gilt Cleave / Last Stand / Gilded Frenzy: rose and gold; the slam bursts into gold shards.
+	hero_rourke = {
+		Palette = { Primary = rgb(255, 130, 150), Secondary = rgb(212, 175, 90), Core = rgb(255, 240, 220), Accent = rgb(255, 214, 120) },
+		Basic = { Style = "SLASH", Scale = 1.3, Impact = 2.0 },
+		Special = { Style = "TREMOR", Radius = 8, Spikes = 4, Impact = 2.8, Shake = 0.15 },
+		Skill = { Style = "CRYSTALS", Radius = 18, Spikes = 7, Impact = 3.4, Linger = 1.2, Shake = 0.35 },
+	},
 } :: { [string]: Recipe })
 
 local TIER_KEYS = table.freeze({ BASIC = "Basic", SPECIAL = "Special", SKILL = "Skill" })

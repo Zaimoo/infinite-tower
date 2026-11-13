@@ -31,6 +31,8 @@ local HeroCatalog = require(game:GetService("ReplicatedStorage").Shared.Config.H
 
 -- Gems a restricted player gets per summon: the 1x price of the banner the pack pulls on.
 function ShopConfig.GemsPerSummon(banner: string?): number
+	-- The Gilded Mirror has no Gem price: a restricted purchase is refunded at the Gem store's Robux rate.
+	if banner == "GILDED_MIRROR" then return HeroCatalog.MirrorBanner.RestrictedGemsPerPull end
 	local catalog = if banner == "A_STARS_ARRIVAL" then HeroCatalog.LimitedBanner else HeroCatalog.PermanentBanner
 	return catalog.Cost1X
 end
@@ -46,6 +48,18 @@ ShopConfig.Featured = table.freeze({
 		table.freeze({ Id = "pack_summon_5", ProductId = 0, RobuxPrice = 400, Label = "Buy 5", Grant = { Kind = "Summons", Amount = 5, Banner = "A_STARS_ARRIVAL" } }),
 		table.freeze({ Id = "pack_summon_10", ProductId = 0, RobuxPrice = 720, WasPrice = 800, Label = "Buy 10", Tag = "-10%",
 			Grant = { Kind = "Summons", Amount = 10, Banner = "A_STARS_ARRIVAL" } }),
+	} :: { Offer }),
+})
+
+-- The Gilded Mirror (docs/gilded-mirror-plan.md): Robux-only pulls on HeroCatalog.MirrorBanner.
+ShopConfig.Mirror = table.freeze({
+	Title = "THE GILDED MIRROR",
+	Subtitle = "Heroes that copy your best hero",
+	Banner = "GILDED_MIRROR",
+	Offers = table.freeze({
+		table.freeze({ Id = "pack_mirror_1", ProductId = 0, RobuxPrice = 55, Label = "Buy 1", Grant = { Kind = "Summons", Amount = 1, Banner = "GILDED_MIRROR" } }),
+		table.freeze({ Id = "pack_mirror_10", ProductId = 0, RobuxPrice = 499, WasPrice = 550, Label = "Buy 10", Tag = "-9%",
+			Grant = { Kind = "Summons", Amount = 10, Banner = "GILDED_MIRROR" } }),
 	} :: { Offer }),
 })
 
@@ -65,7 +79,7 @@ ShopConfig.Gold = table.freeze({
 -- Every offer, by ProductId (live products only) and by Id.
 local byProduct: { [number]: Offer } = {}
 local byId: { [string]: Offer } = {}
-for _, list in { ShopConfig.Featured.Offers, ShopConfig.Gems, ShopConfig.Gold } do
+for _, list in { ShopConfig.Featured.Offers, ShopConfig.Mirror.Offers, ShopConfig.Gems, ShopConfig.Gold } do
 	for _, offer in list :: { Offer } do
 		byId[offer.Id] = offer
 		if offer.ProductId ~= 0 then

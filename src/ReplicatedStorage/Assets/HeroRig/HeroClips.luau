@@ -712,6 +712,11 @@ local OVERRIDE_WEAPON: { [string]: string } = {
 	hero_diran = "TOME",
 	hero_vane = "STAFF",
 	hero_aeli = "BOW",
+	hero_isabelle = "BOW",
+	hero_nyx = "DAGGERS",
+	hero_caspian = "SWORD_SHIELD",
+	hero_seraphine = "STAFF",
+	hero_rourke = "AXE",
 }
 
 local function signature(duration: number, keys: { { any } }, markers: { [string]: number }): Clip
@@ -1581,6 +1586,181 @@ do
 			{ 0.85, covenant },
 			{ 1, p.Read },
 		}, { Release = 0.65 }),
+	}
+end
+
+-- THE GILDED MIRROR (docs/gilded-mirror-plan.md §5): signature idles and full kits (Basic, Special,
+-- Skill) built from the weapon key poses.
+
+-- Isabelle (BOW): weight on the back foot, bow low, draw hand resting on the quiver strap.
+-- Twin Reflection: a step back, a held glowing draw, then a release with a flourish as it splits.
+do
+	local p = WeaponPoses.BOW
+	local poised = merge(p.Carry, { Waist = { -2, -12, 0 }, Neck = { 0, 10, 0 }, RightShoulder = { 18, 0, -20 }, RightElbow = { 70, 0, 0 },
+		LeftHip = { -6, 0, -4 }, RightHip = { 12, 0, 4 }, LeftKnee = { -6, 0, 0 }, RightKnee = { -18, 0, 0 } })
+	local held = merge(merge(p.Drawn, p.Crouch), { Waist = { -12, -20, 0 }, RootOffset = { 0, -0.15, 0.25 } })
+	Overrides.hero_isabelle = {
+		Idle = breathe(poised, 3.4),
+		AttackBasic = signature(0.75, {
+			{ 0, p.Carry },
+			{ 0.3, merge(p.Aim, { Waist = { -4, -14, 0 } }) },
+			{ 0.55, p.Drawn },
+			{ 0.62, merge(p.Release, { Neck = { -4, 6, 0 } }) }, -- the monocle catches the light
+			{ 1, p.Carry },
+		}, { Release = 0.62, Nock = 0.85 }),
+		AttackSpecial = signature(0.95, {
+			{ 0, p.Carry },
+			{ 0.3, merge(p.Aim, { Waist = { -6, -40, 0 } }) },
+			{ 0.62, merge(p.Drawn, { Waist = { -10, -40, 0 } }) },
+			{ 0.72, merge(p.Release, { Waist = { 6, -10, 0 } }) },
+			{ 1, p.Carry },
+		}, { Release = 0.72, Nock = 0.9 }),
+		AttackSkill = signature(1.2, {
+			{ 0, p.Carry },
+			{ 0.2, merge(p.Aim, { RootOffset = { 0, 0, 0.25 } }) },
+			{ 0.4, held },
+			{ 0.6, held }, -- the arrow glows while she holds the draw
+			{ 0.68, merge(p.Release, { Waist = { 6, -16, 0 }, RightShoulder = { 120, 40, -30 }, RightElbow = { 30, 0, 0 } }) },
+			{ 0.85, merge(p.Release, { RightShoulder = { 60, 60, -40 } }) },
+			{ 1, p.Carry },
+		}, { Charge = 0.2, Release = 0.68, Nock = 0.9 }),
+	}
+end
+
+-- Nyx (DAGGERS): a low crouch, both daggers reversed, one hand raised to the mask.
+-- Shatterdance: a spin up into a throwing pose while the clones slash, then a landing kneel.
+do
+	local p = WeaponPoses.DAGGERS
+	local lurk = merge(p.Crouched, { Waist = { -10, 12, 0 }, Neck = { 6, -10, 0 }, LeftShoulder = { 70, 0, -30 }, LeftElbow = { 120, 0, 0 } })
+	local spin = merge(p.Crouched, { Waist = { 4, 160, 0 }, LeftShoulder = { 100, 0, -80 }, RightShoulder = { 100, 0, 80 }, RootOffset = { 0, 0.5, 0 } })
+	local throw = merge(p.Crouched, { Waist = { -10, 0, 0 }, LeftShoulder = { 150, 0, -30 }, RightShoulder = { 150, 0, 30 }, LeftElbow = { 10, 0, 0 }, RightElbow = { 10, 0, 0 }, RootOffset = { 0, 0.3, 0 } })
+	local kneel = merge(p.Crouched, { Waist = { -20, 0, 0 }, LeftHip = { 80, 0, 0 }, LeftKnee = { -90, 0, 0 }, RightHip = { -10, 0, 0 }, RightKnee = { -100, 0, 0 },
+		LeftShoulder = { 30, 0, -60 }, RightShoulder = { 30, 0, 60 }, RootOffset = { 0, -0.6, 0 } })
+	local stab = merge(p.Crouched, { Waist = { -14, 0, 0 }, RightShoulder = { 100, 0, 10 }, RightElbow = { 10, 0, 0 }, RightWrist = { -90, 0, 0 },
+		LeftShoulder = { 40, 0, -30 }, RootOffset = { 0, -0.2, -0.4 } })
+	Overrides.hero_nyx = {
+		Idle = breathe(lurk, 2.8),
+		AttackBasic = signature(0.55, {
+			{ 0, p.Crouched },
+			{ 0.28, merge(p.Crouched, { Waist = { -6, -22, 0 }, RightShoulder = { 88, 0, -5 }, RightElbow = { 10, 0, 0 }, RightWrist = { -80, 0, 0 } }) },
+			{ 0.52, merge(p.Crouched, { Waist = { -6, 22, 0 }, LeftShoulder = { 88, 0, 5 }, LeftElbow = { 10, 0, 0 }, LeftWrist = { -80, 0, 0 } }) },
+			{ 1, p.Crouched },
+		}, { Release = 0.28 }),
+		AttackSpecial = signature(0.8, {
+			{ 0, p.Crouched },
+			{ 0.3, merge(kneel, { RootOffset = { 0, -0.4, 0 } }) }, -- she drops low, then is gone
+			{ 0.5, stab }, -- and stabs from behind
+			{ 0.7, stab },
+			{ 1, p.Crouched },
+		}, { Charge = 0.3, Release = 0.5 }),
+		AttackSkill = signature(1.1, {
+			{ 0, p.Crouched },
+			{ 0.25, spin },
+			{ 0.4, throw },
+			{ 0.7, throw }, -- the clones slash inward
+			{ 0.85, kneel },
+			{ 1, p.Crouched },
+		}, { Charge = 0.25, Release = 0.4 }),
+	}
+end
+
+-- Caspian (SWORD_SHIELD): an upright guard, shield forward, sword resting on the shoulder.
+-- Looking-Glass Bulwark: he plants the shield and raises the sword overhead as the wall rises.
+do
+	local p = WeaponPoses.SWORD_SHIELD
+	local upright = merge(p.Guard, { RightShoulder = { 60, 0, 30 }, RightElbow = { 120, 0, 0 } })
+	local planted = merge(p.Bash, { Waist = { -16, -10, 0 }, LeftShoulder = { 60, 10, -5 }, RootOffset = { 0, -0.3, 0 },
+		LeftKnee = { -40, 0, 0 }, RightKnee = { -35, 0, 0 }, LeftHip = { 30, 0, -6 } })
+	local raised = merge(planted, { RightShoulder = { 175, 0, 5 }, RightElbow = { 10, 0, 0 }, Neck = { 12, 0, 0 } })
+	Overrides.hero_caspian = {
+		Idle = breathe(upright, 3.6),
+		AttackBasic = signature(0.75, {
+			{ 0, p.Guard },
+			{ 0.38, merge(p.High, { RightShoulder = { 150, 0, 15 } }) },
+			{ 0.6, p.Cut },
+			{ 1, p.Guard },
+		}, { Release = 0.6 }),
+		AttackSpecial = signature(0.85, {
+			{ 0, p.Guard },
+			{ 0.35, merge(p.Guard, { Waist = { 4, 28, 0 }, LeftShoulder = { 40, -40, -10 }, LeftElbow = { 100, 0, 0 } }) },
+			{ 0.58, merge(p.Bash, { RootOffset = { 0, -0.1, -0.5 } }) }, -- the chest mirror flashes as he drives in
+			{ 0.75, p.Bash },
+			{ 1, p.Guard },
+		}, { Release = 0.58 }),
+		AttackSkill = signature(1.2, {
+			{ 0, p.Guard },
+			{ 0.3, planted },
+			{ 0.55, raised },
+			{ 0.85, raised },
+			{ 1, p.Guard },
+		}, { Release = 0.55 }),
+	}
+end
+
+-- Seraphine (STAFF): floating slightly, staff upright, free hand palm up.
+-- Hall of Mirrors: the staff held overhead in both hands while she turns a slow half circle.
+do
+	local p = WeaponPoses.STAFF
+	local regent = merge(p.Stand, { Neck = { -4, 0, 0 }, LeftShoulder = { 40, -10, -20 }, LeftElbow = { 60, 0, 0 }, LeftWrist = { -174.5, 72.6, 174.6 } })
+	local overhead = merge(p.Raised, { LeftShoulder = { 160, 0, -10 }, LeftElbow = { 10, 0, 0 }, RootOffset = { 0, 0.15, 0 } })
+	local drawBack = merge(p.Stand, { Waist = { 6, 30, 0 }, RightShoulder = { 60, 0, 40 }, RightElbow = { 70, 0, 0 },
+		LeftShoulder = { 60, 0, -30 }, LeftElbow = { 40, 0, 0 } })
+	local thrust = merge(p.Cast, { Waist = { -12, -10, 0 }, RightShoulder = { 95, 0, 0 }, RootOffset = { 0, -0.05, -0.3 } })
+	Overrides.hero_seraphine = {
+		Idle = floatIdle(regent, 3.4),
+		AttackBasic = signature(0.8, {
+			{ 0, p.Stand },
+			{ 0.4, p.Cast },
+			{ 0.6, merge(p.Cast, { RightShoulder = { 98, 0, 0 } }) },
+			{ 1, p.Stand },
+		}, { Release = 0.6 }),
+		AttackSpecial = signature(1.0, {
+			{ 0, p.Stand },
+			{ 0.35, drawBack }, -- the three halo shards gather into a prism at the tip
+			{ 0.62, thrust },
+			{ 0.8, thrust },
+			{ 1, p.Stand },
+		}, { Charge = 0.35, Release = 0.62 }),
+		AttackSkill = signature(1.4, {
+			{ 0, p.Stand },
+			{ 0.25, overhead },
+			{ 0.5, merge(overhead, { Waist = { 10, 60, 0 } }) },
+			{ 0.75, merge(overhead, { Waist = { 10, -60, 0 } }) },
+			{ 0.9, overhead },
+			{ 1, p.Stand },
+		}, { Charge = 0.25, Release = 0.5 }),
+	}
+end
+
+-- Rourke (AXE): feet wide, axe on the shoulder, a big chest heave on every breath.
+-- Gilded Frenzy: a jump, a two-handed slam, then one spin with the axe.
+do
+	local p = WeaponPoses.AXE
+	local brute = merge(p.Rest, { LeftHip = { 6, 0, -14 }, RightHip = { 6, 0, 14 }, LeftAnkle = { 8, 0, 14 }, RightAnkle = { 8, 0, -14 }, Waist = { 2, 18, 0 } })
+	Overrides.hero_rourke = {
+		Idle = breathe(brute, 2.8),
+		AttackBasic = signature(0.9, {
+			{ 0, p.Rest },
+			{ 0.4, p.SweepBack },
+			{ 0.66, merge(p.SweepThrough, { RootOffset = { 0, -0.18, -0.3 } }) },
+			{ 0.82, p.SweepThrough },
+			{ 1, p.Rest },
+		}, { Release = 0.66 }),
+		AttackSpecial = signature(1.05, {
+			{ 0, p.Rest },
+			{ 0.4, merge(p.High, { Neck = { -20, 0, 0 } }) }, -- the roar
+			{ 0.62, p.Chop },
+			{ 0.8, p.Chop },
+			{ 1, p.Rest },
+		}, { Charge = 0.4, Release = 0.62 }),
+		AttackSkill = signature(1.3, {
+			{ 0, p.Rest },
+			{ 0.3, merge(p.High, { RootOffset = { 0, 0.8, 0 } }) },
+			{ 0.48, p.Slam },
+			{ 0.62, p.Slam },
+			{ 0.8, merge(p.SweepThrough, { Waist = { -8, 170, 0 } }) },
+			{ 1, p.Rest },
+		}, { Charge = 0.3, Release = 0.48 }),
 	}
 end
 

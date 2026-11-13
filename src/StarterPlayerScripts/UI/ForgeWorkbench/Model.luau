@@ -39,7 +39,7 @@ function Model.ownerText(snapshot: Snapshot, artifactId: string): string
 	if #owners == 0 then return "Unequipped" end
 	if #owners > 1 then return "Equipped · sync required" end
 	local hero = snapshot.Heroes[owners[1]]
-	return if hero then string.format("Equipped · %s · Lv.%d · #%s", hero.DisplayName, hero.Level, string.sub(hero.UUID, -4)) else "Equipped · unavailable hero"
+	return if hero then string.format("Equipped · %s · %s · #%s", hero.DisplayName, Stats.LevelText(hero), string.sub(hero.UUID, -4)) else "Equipped · unavailable hero"
 end
 
 function Model.compatible(hero: Hero?, artifact: Artifact?): boolean
@@ -164,7 +164,7 @@ function Model.consequences(snapshot: Snapshot, heroId: string, artifactId: stri
 end
 
 function Model.heroLabel(hero: Hero): string
-	return string.format("%s · Lv.%d · %s · %s", hero.DisplayName, hero.Level, hero.Archetype, string.sub(hero.UUID, -4))
+	return string.format("%s · %s · %s · %s", hero.DisplayName, Stats.LevelText(hero), hero.Archetype, string.sub(hero.UUID, -4))
 end
 
 function Model.sortedHeroes(snapshot: Snapshot): { Hero }

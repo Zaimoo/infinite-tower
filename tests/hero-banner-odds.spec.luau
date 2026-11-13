@@ -65,7 +65,7 @@ end)
 -- never shows in the Index (or on the summon screen).
 test("every hero seed can be pulled from a banner at its own rarity", function()
 	local found = {}
-	for _, banner in BANNERS do
+	for _, banner in { HeroCatalog.PermanentBanner, HeroCatalog.LimitedBanner, HeroCatalog.MirrorBanner } do
 		for _, t in HeroBannerOdds.Tiers(banner) do
 			for _, h in t.Heroes do
 				found[h.HeroId] = found[h.HeroId] or {}
@@ -77,6 +77,23 @@ test("every hero seed can be pulled from a banner at its own rarity", function()
 		assert(found[id], id .. " is on a hero banner (Hero Index and summon screen)")
 		assert(table.find(found[id], seed.Rarity), string.format("%s is pulled at its own rarity %d", id, seed.Rarity))
 	end
+end)
+
+test("the Gilded Mirror drops only its five mirror heroes, one per tier 7-11", function()
+	local banner = HeroCatalog.MirrorBanner
+	local total = 0
+	for _, t in HeroBannerOdds.Tiers(banner) do
+		total += t.Rate
+		if t.Tier < 7 then
+			assert(t.Rate == 0, "no filler below Mythical")
+		else
+			assert(#t.Heroes == 1, "one hero per tier")
+			local seed = HeroCatalog.Seeds[t.Heroes[1].HeroId]
+			assert(seed.Mirror == true and seed.Rarity == t.Tier, t.Heroes[1].HeroId .. " is a mirror hero of tier " .. t.Tier)
+		end
+	end
+	assert(math.abs(total - 1) < 1e-9, "rates sum to 1")
+	assert(banner.FeaturedHeroId == "hero_rourke", "Rourke is featured")
 end)
 
 print(string.format("hero-banner-odds: %d passed", passed))

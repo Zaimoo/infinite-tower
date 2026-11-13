@@ -410,11 +410,24 @@ The inaugural limited-time rate-up banner features exactly **one character for e
 
 *(The relic economy rebalance raised Gem income about 1.3–1.5×, so both banners were tightened to keep hours of play per hero at or above the old pace: Call of the Rift from 70/20/7/2.5/0.5% with pity 80, and A Star's Arrival from 60/24/10/4.2/1.4/0.33/0.07% with pity 90 and a 100-Gem price. See `docs/relic-loot-rebalance-plan.md`. Earlier history: `docs/rework-plan/PHASE_4_ONBOARDING_AND_PROGRESSION.md` §7.)*
 
+#### 3. Premium Banner: "The Gilded Mirror" (Rarity Tiers 7–11, Robux)
+Five **mirror heroes** (`HeroCatalog.MirrorBanner`, plan: `docs/gilded-mirror-plan.md`). Every pull is one of the five; there is no filler.
+- **Drop Rates:** `Mythical (50%)`: **Isabelle** · `Transcendent (28%)`: **Nyx** · `Ascendant (14%)`: **Caspian** · `Ethereal (6%)`: **Seraphine** · `Immortal (2%)`: **Rourke (Featured)**.
+- **Robux only** (`ShopConfig.Mirror`, granted by `ShopService` through `DataManager.RollMirrorSummons`): **55 R$** for one pull, **499 R$** for ten. There is no Gem price, no God's Blessing luck and no pity counter; Gem summons on this banner are refused. The Store shows the five heroes with their mirror share and the full odds before purchase.
+- **10-Pull Guarantee:** every ten-pull includes **Caspian or better** (`TenPullMinTier = 9`).
+- **Spark:** every pull adds to `profile.MirrorSpark.Pulls`; each **80 pulls** bank one free pick of any of the five (`Selections`), spent in the Store through `ProgressionRemotes.ClaimMirrorSpark` (`Util/MirrorBanner`). Older saves gain the counter lazily in `SyncProfile`.
+- **Paid random items:** players whose `PolicyService` restricts them never see the banner; a purchase that still arrives becomes **150 Gems per pull** (the Gem store's rate).
+- **Live once ProductIds are set:** both offers have `ProductId = 0` (COMING SOON). In Studio, the chat command `/mirrorpull [1|10]` runs the pulls without a purchase.
+- **Mirror heroes have no stats of their own.** Their base power is a share of the Master's **best normal hero** (highest power without a weapon or Training Grounds; mirror heroes never copy each other): **110 / 120 / 130 / 140 / 150%** for rarity 7–11, **+2% per star** above 1★ (`StatBalance.MirrorBase`, `MirrorPerStar`). A 7★ Isabelle (122%) beats a 1★ Nyx (120%). The share is split into HP and ATK by the mirror hero's **own** archetype shape (its seed HP, ATK and interval), so $10 	imes DPS + HP$ before the weapon equals the target. Their own weapon and Training Grounds then apply as usual, and Rift Attunement still caps them (§2.5). Labor copies the source's labor at 100%, with the mirror hero's own facility synergy (`StatFormulas.GetMirrorBase`, `RefreshMirrorSources`).
+- **UI:** hero lists show "Mirror 152%" where other heroes show a level (`StatFormulas.LevelText`), the Backpack says which hero it copies (`MirrorDescription`), the Hero Index has a Gilded Mirror banner (its Summon button opens the Store), and the Promotion tab shows a Mirror row, the hero being copied and a reminder that promoting that hero lifts every mirror hero ×1.5. Rarity 8–11 have their own colours (teal, orchid, indigo, rose).
+- **In the world** (`Rendering/MirrorHeroFx`): a mirror hero draws a gold thread to the hero it copies when it appears and every 14 s, and throws off a small gold glint every 6–10 s (the glint stops under Reduce Motion).
+- **Every roster keeps one normal hero.** The Pit refuses to consume a Master's last normal hero as a donor, alone or together with others (§4.2a).
+
 ---
 
 #### Inherent Hero Rarity
 Like weapons (Section 7.1), every hero template has a fixed **inherent rarity**. For heroes it sets a stat multiplier; every hero is summoned at 1★.
-- **Rarity** uses the weapon tier names. Launch heroes span tiers 1 (Common) to 7 (Mythical), and tiers 8–16 are reserved for future heroes. Rarity can never be upgraded, rerolled or refined.
+- **Rarity** uses the weapon tier names. Launch heroes span tiers 1 (Common) to 7 (Mythical); the Gilded Mirror heroes use 7–11 (Transcendent, Ascendant, Ethereal, Immortal), and tiers 12–16 are reserved. Rarity can never be upgraded, rerolled or refined. For a mirror hero, rarity only sets its mirror share; the multipliers below don't apply to it.
 - **Rarity multipliers:** heroes used to be summoned at a star equal to their tier, which gave tier $t$ an extra $3^{(t-1)}$ combat and $1.35^{(t-1)}$ labor. That bonus now lives in the rarity multiplier, scaled by a compensation factor $c_t$:
   $$R_{\text{combat}}(t) = c_t \times (3 \times 1.35)^{(t-1)} \qquad R_{\text{labor}}(t) = c_t \times (1.35 \times 1.12)^{(t-1)}$$
   where $c_t = 1$ for Common, Uncommon and Rare (they keep 100% of their old summoned power, so the early floors stay easy) and $c_t = 0.5$ from Superior up (`StatBalance.RarityStarCompensation`). A fresh Superior (×33.2) still beats a fresh Rare (×16.4).
@@ -498,6 +511,8 @@ The Pit (`PitService`, `PitBalanceConfig`, `PitMath`) holds the Synthesis Chambe
   | 5★ → 6★ | 450,000 | 40 |
   | 6★ → 7★ | 1,250,000 | 85 |
 
+- **Mirror heroes** (§4.1) promote at the same Gold and Stone costs **without a level requirement** (they don't level: no synthesis EXP, no combat EXP), and each star adds +2% to their mirror share. Promoting the best normal hero is usually the better buy, since every mirror hero copies its ×1.5.
+- **The last normal hero** can't be a donor, alone or with others: mirror heroes copy it (`PitService.LastNormalHeroReason`).
 - **Promotion Stones** drop from tower kills (`TowerFloorConfig.RollPromotionStones`, more on a first clear) and come with banked relics (0 / 1 / 2 / 5 for a Geode / Urn / Core / Heart, §5.5). New profiles start with 2.
 - **Server only, no UI yet:** `PitService` also accepts **Conversion** (dissolve heroes into Soul Essence: 4 / 12 / 36 / 108 / 324 / 972 / 2,916 by effective star, +1 per 5 effective levels) and **Craft** (a Promotion Stone for 100 Gold + 20 Gems + 8 Soul Essence). The Synthesis and Promotion screens are the only Pit actions players can reach.
 - **Imprints were removed.** Their stat bonuses had been switched off since the stat rework, and no screen ever sent them. Schema v7 strips hero imprints and refunds any held Imprint Catalysts at their crafting cost (§8.3).
@@ -641,10 +656,24 @@ Each hero's kit is resolved by `HeroId` in `ArchetypeCombatSkills.HeroProfiles` 
 | 17 | **Vane** (`hero_vane`) | Legendary | Scholar | Null Bolt | Singularity Lance | Event Horizon |
 | 18 | **Aeli** (`hero_aeli`) | Superior | Marksman | Leafwind Arrow | Thornbriar Volley | Canopy's Wrath |
 | 19 | **Rhyman** (`hero_rhyman`) | Legendary | Berserker | Warbrand Cleave | Reaver's Whirl | Headsman's Verdict |
+| 20 | **Isabelle** (`hero_isabelle`) | Mythical (mirror) | Marksman | Glint Shot | Ricochet | Twin Reflection |
+| 21 | **Nyx** (`hero_nyx`) | Transcendent (mirror) | Striker | Gilt Cut | Mirror Step | Shatterdance |
+| 22 | **Caspian** (`hero_caspian`) | Ascendant (mirror) | Vanguard | Gilt Edge | Polished Bash | Looking-Glass Bulwark |
+| 23 | **Seraphine** (`hero_seraphine`) | Ethereal (mirror) | Scholar | Shard Bolt | Refraction | Hall of Mirrors |
+| 24 | **Rourke** (`hero_rourke`) | Immortal (mirror) | Berserker | Gilt Cleave | Last Stand | Gilded Frenzy |
 
 **Rhyman's kit** has two mechanics of its own (`HeroSkillEffects`). *Reaver's Whirl* is a spin (`WHIRLWIND`): the target takes the `1.50x` Special hit as `3` cuts `0.12s` apart, and every other mob within `9 studs` of Rhyman, in any direction, takes `0.90x` ATK split across the same three cuts. *Headsman's Verdict* is an execute (`Effect = "EXECUTE"`, cast `1.3s`): he leaps and lands one blow on his target alone, with no splash. Any mob it hits dies outright, whatever its remaining HP or shields: normal mobs, Elites, floor Alphas and raid adds. **Raid bosses and Biome Bosses are immune** and take `6.00x` ATK instead (`HeroSkillEffects.Executes`). In a duel the enemy hero also takes the `6.00x` hit, never an execute. On the client the whirl is the `WHIRL` style (crescents sweeping a full circle, one third per tick) and the execute is `EXECUTE` (a blade of light from above, a tall vertical cut and a crack in the floor past the target, with the target marked during the leap).
 
 **Vane's kit** has two mechanics of its own (`docs/vane-hero-plan.md`, `docs/vane-spell-animations-plan.md`). *Singularity Lance* is an instant beam (`BEAM_LINE`): the target takes the Special hit, and every other mob within a `36-stud` line from Vane through the target, `4` studs wide, takes `0.80x` ATK. *Event Horizon* holds a black hole at the target for **4s** (`16-stud` radius, cast `1.4s`): the `3.50x` is split over **8 pulses** `0.5s` apart (other mobs take the Scholar `0.6` splash share each pulse), and each pulse drags every mob in the radius `1.5` studs inward along walkable ground, stopping `3` studs from the centre. Biome Bosses, raid bosses and floor Alphas are not pulled, and duels never displace heroes.
+
+**The Gilded Mirror kits** (`docs/gilded-mirror-plan.md` §5) keep their archetype's numbers; a mirror hero's strength comes from its mirror share. New mechanics in `HeroSkillEffects`:
+- *Ricochet* (Isabelle) and *Refraction* (Seraphine) are `RICOCHET` Specials: the hit carries on to the nearest other mobs within `14 studs`, `1` at `0.75x` ATK and `3` at `0.60x` ATK. Refraction's prism hits for `1.50x`.
+- *Twin Reflection* (`TWIN_SHOT`, `2.50x`): no splash; the second half hits the highest-HP other mob within `30 studs` for the same damage, or the target again when it stands alone.
+- *Shatterdance* is the Striker burst as **5 clone cuts** (`3.25x`, `12 studs`); *Gilt Cut* lands as 2 cuts. Nyx's passive **Gilded Edge** makes her Basic attacks charge **15%** more gauge while another of her Master's mirror heroes stands within `8 studs`.
+- *Looking-Glass Bulwark* (`MIRROR_WALL`) is the Vanguard taunt and barrier, and for its `6s` Caspian reflects **20%** of the ranged damage he takes (`PROJECTILE` and `TARGET_DISC` attacks) back at the shooter.
+- *Hall of Mirrors* is the Scholar burst over **8 pulses** `0.5s` apart in a `16-stud` ring of mirror crystals (`CRYSTALS` style).
+- *Last Stand* (`LAST_STAND`) is the Berserker stagger on a hit that grows from `1.50x` at full HP to `2.50x` at `10%` HP or less. *Gilded Frenzy* (`FRENZY`) is the Berserker slam (`2.60x`, `18 studs`) and then **+25% attack speed for 4s**.
+- A mirror hero knocked out shatters into glass and gilt shards (`MirrorHeroFx`).
 
 **Han's kit** keeps the Striker numbers but lands them differently. *Nightfall Fangs* is a leaping stab with both daggers reversed: its `1.60x` hit lands as **2 blows** `0.1s` apart, each with its own bonus-crit roll. *Abyssal Wake* is a dash through the target that leaves a circle of lingering slashes: its `3.20x` burst is split over **5 waves** `0.12s` apart, each hitting every enemy within `12 studs` of the aim point. His effects are smoky black and cold blue (`PLUNGE` and `WAKE` in `SkillVfxCatalog`).
 
