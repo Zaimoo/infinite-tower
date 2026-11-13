@@ -7,7 +7,10 @@ everything else falling to the nape and gathered behind her right ear into one t
 braid that hangs behind her right shoulder down her back to the waist. Built UGC style: thick,
 rounded clumps that taper to soft points (a fringe of staggered clumps over a second layer,
 fuller framing clumps, a pointed back layer) over a lightly grooved base sheet. The braid's gilt cuff is a costume piece (BraidCuff), not part of
-this mesh (the mesh is untextured and takes one colour).
+this mesh. Textured with assets/hair/isabelle_hair_texture.png
+(assets/hair/make_isabelle_hair_texture.py): every lock, every braid plait and the braid's core
+are mapped along their own length (V from 1 at the root to 0 at the tip, U across, a random slice
+per lock), so the strand lines follow the hair; the base sheet maps V down from the crown.
 
 Derived from tools/make_aeli_hair_ugc.py (ponytail/braid base, docs/hero-art-pipeline.md 4.4):
 the same helpers and stylised braid (stacked teardrop lobes over a filled core), with the braid
@@ -15,7 +18,7 @@ turned to face forward. Roblox head space (Y up, -Z front, +X the hero's right) 
 reference head. Export with the hero-remodel skill's scripts/blender_export_hair.py.
 """
 
-import bpy, bmesh, math, random
+import bpy, bmesh, math, os, random
 from mathutils import Vector
 
 OUT_DIR = r"D:\Programming shi\infinite-tower\assets\hair"
@@ -104,8 +107,20 @@ def smooth_path(pts, n):
         out.append(0.5 * ((2 * p1) + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t + (-p0 + 3 * p1 - 3 * p2 + p3) * t ** 3))
     return out
 
+# Texture coordinates per vertex, filled as the hair is built (VERT_UV), then written to the
+# loops before vertices are merged. PROFILE_U places each profile point across a lock; each lock
+# uses its own slice of the texture so neighbours don't match.
+VERT_UV = {}
+PROFILE_U = [1.0, 0.86, 0.5, 0.14, 0.0, 0.19, 0.5, 0.81]
+uv_rng = random.Random(778)  # separate from rng, so texture choices never change the shape
+
+def zigzag(x):
+    """0..1 back and forth (continuous, so a wrapped strip has no seam)."""
+    return 0.02 + 0.96 * abs((x % 2) - 1)
+
 def ribbon(ctrl, width, thick=0.035, segs=16, tip=2.5, root=0.6, end_tie=False, twist=0.0):
     pts = smooth_path(ctrl, segs)
+    u_lo = uv_rng.uniform(0.02, 0.5)
     rings = []
     for s, p in enumerate(pts):
         t = s / segs
@@ -126,7 +141,10 @@ def ribbon(ctrl, width, thick=0.035, segs=16, tip=2.5, root=0.6, end_tie=False, 
             shape = grow * (1 - t ** tip) * (1 + 0.15 * math.sin(math.pi * t))
         w = width * shape + 0.004
         h = thick * (0.5 + 0.5 * shape) + 0.003
-        rings.append([bm.verts.new(B(p + side * (sx * w) + nrm * (ny * h))) for sx, ny in PROFILE])
+        ring = [bm.verts.new(B(p + side * (sx * w) + nrm * (ny * h))) for sx, ny in PROFILE]
+        for k, vert in enumerate(ring):
+            VERT_UV[vert] = (u_lo + 0.46 * PROFILE_U[k], 0.98 - 0.96 * t)  # root at the top
+        rings.append(ring)
     n = len(PROFILE)
     for r0, r1 in zip(rings, rings[1:]):
         for k in range(n):
@@ -158,8 +176,11 @@ def curtain(th0, th1, y_top, y_end, off_top, off_bot, thick=0.045, nth=72, ny=12
             v = j / ny
             y = y_top + (y_end(th) - y_top) * v
             off = off_top + (off_bot - off_top) * v
-            col_o.append(bm.verts.new(B(shell(th, y, off + groove))))
-            col_i.append(bm.verts.new(B(shell(th, y, off - thick))))
+            vo = bm.verts.new(B(shell(th, y, off + groove)))
+            vi = bm.verts.new(B(shell(th, y, off - thick)))
+            VERT_UV[vo] = VERT_UV[vi] = (zigzag(u * 6), 0.98 - 0.5 * v)
+            col_o.append(vo)
+            col_i.append(vi)
         outer.append(col_o); inner.append(col_i)
     for i in range(nth):
         for j in range(ny):
@@ -305,8 +326,11 @@ def braid(path, end, width0=0.5, width1=0.16, spacing=0.14, slant=34.0, facing=(
         out, side = frame(tan)
         w = width1 + (width0 - width1) * (1 - d / total) ** 1.5  # full at the root, thinning to the tie
         r = 0.24 * w * (1 - 0.35 * max(0.0, (d / total - 0.94) / 0.06))
-        rings.append([bm.verts.new(B(c + side * (math.cos(2 * math.pi * j / sides) * r * 1.2)
-                                     + out * (math.sin(2 * math.pi * j / sides) * r * 0.8))) for j in range(sides)])
+        ring = [bm.verts.new(B(c + side * (math.cos(2 * math.pi * j / sides) * r * 1.2)
+                               + out * (math.sin(2 * math.pi * j / sides) * r * 0.8))) for j in range(sides)]
+        for j, vert in enumerate(ring):
+            VERT_UV[vert] = (zigzag(2 * j / sides), 0.98 - 0.96 * d / total)
+        rings.append(ring)
     for r0, r1 in zip(rings, rings[1:]):
         for j in range(sides):
             bm.faces.new([r0[j], r0[(j + 1) % sides], r1[(j + 1) % sides], r1[j]])
@@ -332,6 +356,7 @@ def braid(path, end, width0=0.5, width1=0.16, spacing=0.14, slant=34.0, facing=(
         # A teardrop: rounder at the outer, upper end and tapering into the middle.
         segs_l, segs_r = 7, 8
         grid = []
+        u_lo = uv_rng.uniform(0.02, 0.5)
         for i in range(segs_l + 1):
             v = i / segs_l                      # 0 top (outer edge) -> 1 bottom (middle)
             along = (v - 0.5) * 2 * half_len
@@ -340,7 +365,10 @@ def braid(path, end, width0=0.5, width1=0.16, spacing=0.14, slant=34.0, facing=(
             for j in range(segs_r):
                 a = 2 * math.pi * j / segs_r
                 pnt = centre_pt + L * along + Wd * (math.cos(a) * half_w * prof) + out * (math.sin(a) * half_d * prof)
-                ring.append(bm.verts.new(B(pnt)))
+                vert = bm.verts.new(B(pnt))
+                # Each plait: strands across it, and its place along the braid sets the shade.
+                VERT_UV[vert] = (u_lo + 0.46 * zigzag(2 * j / segs_r), max(0.02, 0.98 - 0.96 * min(1.0, (d + along) / total)))
+                ring.append(vert)
             grid.append(ring)
         for r0, r1 in zip(grid, grid[1:]):
             for j in range(segs_r):
@@ -358,6 +386,13 @@ for k in range(5):
     pts = [BRAID_END + off * 0.5, BRAID_END + down * 0.14 + off, BRAID_END + down * 0.32 + off * 1.4 + Vector((0, rng.uniform(-0.03, 0.03), 0))]
     ribbon(pts, 0.07, 0.03, segs=8, tip=2.2, root=0.9)
 
+# Write the texture coordinates to the loops (before merging vertices, which would drop the
+# per-vertex table's keys). Anything not recorded (the scalp cap, the crown dome) takes the root.
+uvl = bm.loops.layers.uv.verify()
+for face in bm.faces:
+    for loop in face.loops:
+        loop[uvl].uv = VERT_UV.get(loop.vert, (0.5, 0.96))
+
 bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-6)
 me = bpy.data.meshes.new(NAME)
 bm.to_mesh(me); bm.free()
@@ -370,9 +405,14 @@ mat = bpy.data.materials.get("IsabelleHairPlatinum") or bpy.data.materials.new("
 mat.use_nodes = True
 bsdf = next((n for n in mat.node_tree.nodes if n.type == "BSDF_PRINCIPLED"), None)
 col = (0.76, 0.72, 0.62, 1)  # about rgb(226, 220, 204)
+tex_path = os.path.join(OUT_DIR, "isabelle_hair_texture.png")
 if bsdf:
     bsdf.inputs[0].default_value = col
     bsdf.inputs["Roughness"].default_value = 0.45
+    if os.path.exists(tex_path):
+        node = mat.node_tree.nodes.new("ShaderNodeTexImage")
+        node.image = bpy.data.images.load(tex_path, check_existing=True)
+        mat.node_tree.links.new(node.outputs["Color"], bsdf.inputs[0])
 mat.diffuse_color = col
 me.materials.append(mat)
 

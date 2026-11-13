@@ -8,9 +8,10 @@ her left) and flick outward at the tips; the back is layered to the nape with ou
 two strands stick up from the crown. Built UGC style: thick, rounded clumps over a lightly
 grooved base sheet, from tools/make_isabelle_hair_ugc.py's helpers.
 
-Textured: the mesh has UVs, V mapped to height on the head (1 at the crown, 0.5 at the cheeks,
-0 at the chin and nape) so every lock turns teal at the same height, with
-assets/hair/nyx_hair_texture.png (assets/hair/make_nyx_hair_texture.py). Roblox head space (Y up,
+Textured with assets/hair/nyx_hair_texture.png (assets/hair/make_nyx_hair_texture.py): V is
+mapped to height on the head (1 at the crown, 0.5 at the cheeks, 0 at the chin and nape) so every
+lock turns teal at the same height, and U runs across each lock (a random slice per lock), so the
+texture's strand lines follow each lock's direction. Roblox head space (Y up,
 -Z front, +X the hero's right) on a 1.2-stud reference head. Export with the hero-remodel skill's
 scripts/blender_export_hair.py.
 """
@@ -104,8 +105,15 @@ def smooth_path(pts, n):
         out.append(0.5 * ((2 * p1) + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t + (-p0 + 3 * p1 - 3 * p2 + p3) * t ** 3))
     return out
 
+# U per vertex (across each lock), filled as the hair is built; V comes from height. Written to
+# the loops before vertices are merged.
+VERT_U = {}
+PROFILE_U = [1.0, 0.86, 0.5, 0.14, 0.0, 0.19, 0.5, 0.81]
+uv_rng = random.Random(779)  # separate from rng, so texture choices never change the shape
+
 def ribbon(ctrl, width, thick=0.035, segs=16, tip=2.5, root=0.6, end_tie=False, twist=0.0):
     pts = smooth_path(ctrl, segs)
+    u_lo = uv_rng.uniform(0.02, 0.5)
     rings = []
     for s, p in enumerate(pts):
         t = s / segs
@@ -126,7 +134,10 @@ def ribbon(ctrl, width, thick=0.035, segs=16, tip=2.5, root=0.6, end_tie=False, 
             shape = grow * (1 - t ** tip) * (1 + 0.15 * math.sin(math.pi * t))
         w = width * shape + 0.004
         h = thick * (0.5 + 0.5 * shape) + 0.003
-        rings.append([bm.verts.new(B(p + side * (sx * w) + nrm * (ny * h))) for sx, ny in PROFILE])
+        ring = [bm.verts.new(B(p + side * (sx * w) + nrm * (ny * h))) for sx, ny in PROFILE]
+        for k, vert in enumerate(ring):
+            VERT_U[vert] = u_lo + 0.46 * PROFILE_U[k]
+        rings.append(ring)
     n = len(PROFILE)
     for r0, r1 in zip(rings, rings[1:]):
         for k in range(n):
@@ -155,8 +166,11 @@ def curtain(th0, th1, y_top, y_end, off_top, off_bot, thick=0.045, nth=72, ny=12
             v = j / ny
             y = y_top + (y_end(th) - y_top) * v
             off = off_top + (off_bot - off_top) * v
-            col_o.append(bm.verts.new(B(shell(th, y, off + groove))))
-            col_i.append(bm.verts.new(B(shell(th, y, off - thick))))
+            vo = bm.verts.new(B(shell(th, y, off + groove)))
+            vi = bm.verts.new(B(shell(th, y, off - thick)))
+            VERT_U[vo] = VERT_U[vi] = 0.02 + 0.96 * abs(((u * 6) % 2) - 1)
+            col_o.append(vo)
+            col_i.append(vi)
         outer.append(col_o); inner.append(col_i)
     for i in range(nth):
         for j in range(ny):
@@ -249,18 +263,17 @@ for dx, h in [(0.03, 0.18)]:
     pts = [root, root + Vector((dx * 0.5, h * 0.6, -0.04)), root + Vector((dx, h, -0.14)), root + Vector((dx * 1.2, h * 0.9, -0.26))]
     ribbon(pts, 0.05, 0.03, segs=12, tip=2.2, root=0.9)
 
-bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-6)
-
-# UVs: V by height (1 at the crown, 0.5 at the cheeks, 0 at the chin and nape), U across the
-# head from her left to her right (no wrap, so no seam).
+# UVs: V by height (1 at the crown, about 0.5 at the cheeks, 0 at the chin and nape), U across
+# each lock. Kept just inside 0..1: a V of exactly 1 samples across the wrap into the teal end.
+# Written before merging vertices, which would drop the per-vertex table's keys.
 uvl = bm.loops.layers.uv.verify()
-for f in bm.faces:
-    for loop in f.loops:
+for face in bm.faces:
+    for loop in face.loops:
         co = loop.vert.co  # Blender (x, y, z) = Roblox (x, -z, y)
-        # Kept just inside 0..1: a V of exactly 1 samples across the wrap into the teal ends.
         v = max(0.02, min(0.98, (co.z + 0.55) / 1.0))
-        u = max(0.02, min(0.98, (co.x + 1.0) / 2.0))
-        loop[uvl].uv = (u, v)
+        loop[uvl].uv = (VERT_U.get(loop.vert, 0.5), v)
+
+bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-6)
 
 me = bpy.data.meshes.new(NAME)
 bm.to_mesh(me); bm.free()
