@@ -1640,55 +1640,61 @@ do
 	}
 end
 
--- Nyx (DAGGERS), from her reference art's rooftop crouch: low and leaning forward, her left hand
--- reaching down toward the ground and the right dagger held out to the side, head up.
--- Gilt Cut: both daggers cross high, then slash out in an X. Mirror Step: she drops low (the
--- vanish), then lunges forward into a two-handed reverse-grip stab (she appears behind the
--- target). Shatterdance: she crosses her daggers before her face and holds, calling the mirror
--- clones, while they cut in turn, then slashes both blades out as the last one shatters.
+-- Nyx (DAGGERS). She has her own grip (HeroSockets.HERO_GRIPS): the right dagger held forward
+-- (blade out past the thumb, upright when the forearm points forward) and the left reversed
+-- along the forearm, so her poses are her own rather than the shared reverse-grip set.
+-- Idle, from her reference art's rooftop crouch: low and leaning forward, the forward blade
+-- raised at her side and her left hand down by the ground, its blade along the forearm.
+-- Gilt Cut: an overhead diagonal cut with the forward blade, then a backhand sweep of the
+-- reversed one. Mirror Step: she drops low (the vanish), then lunges into a forward thrust with
+-- the reversed blade held across as a guard (she appears behind the target). Shatterdance: the
+-- forward blade upright before her face crossed by the reversed one, held while the mirror
+-- clones cut, then both slashed out as the last one shatters.
 do
 	local p = WeaponPoses.DAGGERS
-	local lurk = merge(p.Crouched, { Waist = { -18, 10, 0 }, Neck = { 14, -8, 0 },
-		LeftShoulder = { 34, 0, -12 }, LeftElbow = { 12, 0, 0 }, LeftWrist = { -10, 0, 0 },
-		RightShoulder = { 28, 0, 58 }, RightElbow = { 48, 0, 0 }, RightWrist = { -55, 0, 0 },
-		LeftHip = { 40, 0, -10 }, LeftKnee = { -60, 0, 0 }, LeftAnkle = { 20, 0, 0 },
-		RightHip = { 10, 0, 12 }, RightKnee = { -50, 0, 0 }, RightAnkle = { 40, 0, 0 },
-		RootOffset = { 0, -0.45, 0 } })
-	local summon = merge(p.Crouched, { Waist = { -6, 0, 0 }, Neck = { 6, 0, 0 }, LeftShoulder = { 115, 0, 28 }, RightShoulder = { 115, 0, -28 },
-		LeftElbow = { 60, 0, 0 }, RightElbow = { 60, 0, 0 }, RootOffset = { 0, -0.25, 0 } })
-	local release = merge(p.Crouched, { Waist = { -14, 0, 0 }, LeftShoulder = { 70, 0, -70 }, RightShoulder = { 70, 0, 70 },
-		LeftElbow = { 10, 0, 0 }, RightElbow = { 10, 0, 0 }, LeftWrist = { -80, 0, 0 }, RightWrist = { -80, 0, 0 }, RootOffset = { 0, -0.3, 0 } })
+	local legs: Pose = { LeftHip = { 40, 0, -10 }, LeftKnee = { -60, 0, 0 }, LeftAnkle = { 20, 0, 0 },
+		RightHip = { 10, 0, 12 }, RightKnee = { -50, 0, 0 }, RightAnkle = { 40, 0, 0 }, RootOffset = { 0, -0.45, 0 } }
+	local ready = merge(p.Crouched, { Waist = { -6, 0, 0 },
+		RightShoulder = { 60, 0, 15 }, RightElbow = { 30, 0, 0 }, RightWrist = { 0, 0, 0 },
+		LeftShoulder = { 50, 0, -15 }, LeftElbow = { 80, 0, 0 }, LeftWrist = { 0, 0, 0 } })
+	local lurk = merge(merge(p.Crouched, legs), { Waist = { -18, 10, 0 }, Neck = { 14, -8, 0 },
+		RightShoulder = { 30, 0, 50 }, RightElbow = { 40, 0, 0 }, RightWrist = { 20, 0, 0 },
+		LeftShoulder = { 34, 0, -12 }, LeftElbow = { 12, 0, 0 }, LeftWrist = { 0, 0, 0 } })
 	local kneel = merge(p.Crouched, { Waist = { -20, 0, 0 }, LeftHip = { 80, 0, 0 }, LeftKnee = { -90, 0, 0 }, RightHip = { -10, 0, 0 }, RightKnee = { -100, 0, 0 },
-		LeftShoulder = { 30, 0, -60 }, RightShoulder = { 30, 0, 60 }, RootOffset = { 0, -0.6, 0 } })
-	local stab = merge(p.Crouched, { Waist = { -14, 0, 0 }, RightShoulder = { 100, 0, 10 }, RightElbow = { 10, 0, 0 }, RightWrist = { -90, 0, 0 },
-		LeftShoulder = { 40, 0, -30 }, RootOffset = { 0, -0.2, -0.4 } })
+		RightShoulder = { 40, 0, 20 }, RightElbow = { 60, 0, 0 }, LeftShoulder = { 40, 0, -20 }, LeftElbow = { 90, 0, 0 }, RootOffset = { 0, -0.6, 0 } })
+	local thrust = merge(p.Crouched, { Waist = { -24, 0, 0 }, RightShoulder = { 95, 0, 0 }, RightElbow = { 0, 0, 0 }, RightWrist = { -90, 0, 0 },
+		LeftShoulder = { 70, 0, -30 }, LeftElbow = { 100, 0, 0 }, LeftWrist = { 0, 0, 0 } })
+	local summon = merge(p.Crouched, { Waist = { -6, 0, 0 }, Neck = { 6, 0, 0 },
+		RightShoulder = { 95, 0, 10 }, RightElbow = { 0, 0, 0 }, RightWrist = { 0, 0, 0 },
+		LeftShoulder = { 80, 0, 30 }, LeftElbow = { 70, 0, 0 }, LeftWrist = { 0, 0, 0 }, RootOffset = { 0, -0.25, 0 } })
+	local flingOut = merge(p.Crouched, { Waist = { -14, 0, 0 }, RightShoulder = { 70, 0, 70 }, RightElbow = { 10, 0, 0 }, RightWrist = { -60, 0, 0 },
+		LeftShoulder = { 70, 0, -70 }, LeftElbow = { 10, 0, 0 }, LeftWrist = { 0, 0, 0 }, RootOffset = { 0, -0.3, 0 } })
 	Overrides.hero_nyx = {
 		Idle = breathe(lurk, 2.8),
-		AttackBasic = signature(0.6, {
-			{ 0, p.Crouched },
-			{ 0.25, merge(p.Crouched, { Waist = { 6, 0, 0 }, LeftShoulder = { 125, 0, 25 }, RightShoulder = { 125, 0, -25 },
-				LeftElbow = { 45, 0, 0 }, RightElbow = { 45, 0, 0 } }) }, -- daggers cross high
-			{ 0.38, merge(p.Crouched, { Waist = { -8, -18, 0 }, RightShoulder = { 70, 0, 55 }, RightElbow = { 10, 0, 0 }, RightWrist = { -80, 0, 0 },
-				LeftShoulder = { 110, 0, 15 }, LeftElbow = { 40, 0, 0 } }) }, -- the first cut
-			{ 0.56, merge(p.Crouched, { Waist = { -8, 18, 0 }, LeftShoulder = { 70, 0, -55 }, LeftElbow = { 10, 0, 0 }, LeftWrist = { -80, 0, 0 },
-				RightShoulder = { 60, 0, 60 }, RightElbow = { 10, 0, 0 }, RightWrist = { -80, 0, 0 } }) }, -- the second
-			{ 1, p.Crouched },
+		AttackBasic = signature(0.65, {
+			{ 0, ready },
+			{ 0.22, merge(ready, { Waist = { 0, 20, 0 }, RightShoulder = { 150, 0, 30 }, RightElbow = { 40, 0, 0 }, RightWrist = { -40, 0, 0 } }) }, -- forward blade high
+			{ 0.38, merge(ready, { Waist = { -10, -20, 0 }, RightShoulder = { 40, 0, -25 }, RightElbow = { 10, 0, 0 }, RightWrist = { -60, 0, 0 } }) }, -- diagonal cut
+			{ 0.5, merge(ready, { Waist = { -8, -24, 0 }, RightShoulder = { 40, 0, -25 }, RightElbow = { 10, 0, 0 }, RightWrist = { -60, 0, 0 },
+				LeftShoulder = { 80, 0, 40 }, LeftElbow = { 60, 0, 0 } }) }, -- reversed blade drawn across
+			{ 0.62, merge(ready, { Waist = { -8, 20, 0 }, RightShoulder = { 40, 0, 10 }, RightElbow = { 40, 0, 0 },
+				LeftShoulder = { 80, 0, -75 }, LeftElbow = { 10, 0, 0 } }) }, -- backhand sweep
+			{ 1, ready },
 		}, { Release = 0.38 }),
 		AttackSpecial = signature(0.9, {
-			{ 0, p.Crouched },
+			{ 0, ready },
 			{ 0.3, merge(kneel, { RootOffset = { 0, -0.5, 0 } }) }, -- she drops low, then is gone
-			{ 0.46, merge(stab, { Waist = { -24, 0, 0 }, LeftShoulder = { 95, 0, -8 }, LeftElbow = { 10, 0, 0 }, LeftWrist = { -90, 0, 0 },
-				RootOffset = { 0, -0.25, -1.6 } }) }, -- the lunge: both blades driven in reverse-grip
-			{ 0.7, merge(stab, { LeftShoulder = { 90, 0, -8 }, LeftElbow = { 10, 0, 0 }, LeftWrist = { -90, 0, 0 }, RootOffset = { 0, -0.2, -1.4 } }) },
-			{ 1, p.Crouched },
+			{ 0.46, merge(thrust, { RootOffset = { 0, -0.25, -1.6 } }) }, -- the lunge and thrust
+			{ 0.7, merge(thrust, { RootOffset = { 0, -0.2, -1.4 } }) },
+			{ 1, ready },
 		}, { Charge = 0.3, Release = 0.48 }),
 		AttackSkill = signature(1.4, {
-			{ 0, p.Crouched },
-			{ 0.12, summon }, -- daggers crossed before her face: the clones appear
+			{ 0, ready },
+			{ 0.12, summon }, -- blades crossed before her face: the clones appear
 			{ 0.3, merge(summon, { Waist = { -10, 0, 0 }, RootOffset = { 0, -0.3, 0 } }) },
 			{ 0.78, merge(summon, { Waist = { -12, 0, 0 }, RootOffset = { 0, -0.32, 0 } }) }, -- holds while they cut
-			{ 0.88, release }, -- slashes both blades out as the last one shatters
-			{ 1, p.Crouched },
+			{ 0.88, flingOut }, -- slashes both out as the last one shatters
+			{ 1, ready },
 		}, { Charge = 0.12, Release = 0.3 }),
 	}
 end

@@ -419,6 +419,27 @@ do
 	check(select(2, HeroSockets.ResolvePrefab("", "", ArtifactCatalog.Seeds)) == nil, "empty ids resolve to nothing")
 	check(select(2, HeroSockets.ResolvePrefab(nil, "RING", ArtifactCatalog.Seeds)) == nil, "unknown weapon types resolve to nothing")
 
+	-- Per-hero grips name real heroes, weapon types and socket assemblies.
+	local Costumes = require(ReplicatedStorage.Assets.HeroRig.HeroCostumes)
+	for heroId, byType in HeroSockets.HERO_GRIPS do
+		check(Costumes.ById[heroId] ~= nil, `{heroId} grip belongs to a hero`)
+		for weaponType, byAssembly in byType do
+			local sockets = HeroSockets.SOCKETS[weaponType]
+			check(sockets ~= nil, `{heroId} grip is for a socketed weapon ({weaponType})`)
+			for assembly in byAssembly do
+				local found = false
+				for _, socket in sockets or {} do
+					if (socket.Assembly or "Main") == assembly then found = true end
+				end
+				check(found, `{heroId} {weaponType} grip names a real assembly ({assembly})`)
+			end
+		end
+	end
+	local nyxMain = HeroSockets.GripFor("hero_nyx", "DAGGERS", nil)
+	local nyxOff = HeroSockets.GripFor("hero_nyx", "DAGGERS", "LeftDagger")
+	check(nyxMain ~= nil and nyxMain.Reverse == false and nyxOff ~= nil and nyxOff.Reverse == true, "Nyx holds the main dagger forward and the off-hand one reversed")
+	check(HeroSockets.GripFor("hero_edis", "DAGGERS", nil) == nil and HeroSockets.GripFor(nil, "DAGGERS", nil) == nil, "other heroes keep the standard grip")
+
 	-- Two-handed weapons: the off hand is the one the weapon is not welded to.
 	check(HeroSockets.OFFHAND.AXE ~= nil, "the greataxe is two-handed")
 	for weaponType, offhand in HeroSockets.OFFHAND do

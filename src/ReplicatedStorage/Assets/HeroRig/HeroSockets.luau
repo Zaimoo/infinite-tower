@@ -168,6 +168,31 @@ HeroSockets.GRIP_SHIFT = table.freeze({
 	DAGGERS = 0.15,
 } :: { [string]: number })
 
+-- Per-hero grips: how one hero holds a weapon type, per assembly ("Main" for the weapon itself,
+-- else the socket's Assembly, e.g. "LeftDagger"). Heroes and assemblies without an entry keep
+-- the standard grip. Reverse overrides the prefab's ReverseGrip attribute; Shift adds studs to
+-- GRIP_SHIFT (towards the pommel); Offset is an extra turn or nudge in the hand (applied to the
+-- weapon side of the weld). The hero comes from the rig's HeroId attribute (HeroCostumeBuilder).
+-- A hero listed here holds the weapon differently from everyone else, so its clip overrides
+-- (HeroClips) must be posed for this grip.
+export type HeroGrip = { Reverse: boolean?, Shift: number?, Offset: CFrame? }
+HeroSockets.HERO_GRIPS = table.freeze({
+	-- Nyx: the main-hand dagger held forward, the off-hand dagger reversed along the forearm.
+	hero_nyx = table.freeze({
+		DAGGERS = table.freeze({
+			Main = table.freeze({ Reverse = false }),
+			LeftDagger = table.freeze({ Reverse = true }),
+		}),
+	}),
+} :: { [string]: { [string]: { [string]: HeroGrip } } })
+
+-- The grip one hero uses for one assembly of a weapon type, or nil for the standard grip.
+function HeroSockets.GripFor(heroId: string?, weaponType: string, assembly: string?): HeroGrip?
+	local byType = heroId and HeroSockets.HERO_GRIPS[heroId]
+	local byAssembly = byType and byType[weaponType]
+	return byAssembly and byAssembly[assembly or "Main"] or nil
+end
+
 -- Unit blade direction in the primary part's space: towards the Tip attachment, else the Blade part.
 local function bladeAxis(assembly: Model, primary: BasePart): Vector3?
 	local tip = primary:FindFirstChild("Tip")
@@ -220,6 +245,8 @@ function HeroSockets.Equip(rig: Model, weapon: Model, weaponType: WeaponType): M
 
 	HeroSockets.Unequip(rig)
 	local reverse = weapon:GetAttribute("ReverseGrip") == true
+	local heroId = rig:GetAttribute("HeroId")
+	local gripHero: string? = if type(heroId) == "string" then heroId else nil
 
 	for _, d in weapon:GetDescendants() do
 		if d:IsA("BasePart") then
@@ -277,15 +304,20 @@ function HeroSockets.Equip(rig: Model, weapon: Model, weaponType: WeaponType): M
 		assert(rigAttachment and rigAttachment:IsA("Attachment"), `HeroSockets: rig has no {socket.RigPart}.{socket.RigAttachment}`)
 
 		local c1 = weaponAttachment.CFrame
-		local shift = HeroSockets.GRIP_SHIFT[weaponType]
-		if shift and socket.WeaponAttachment == "Grip" then
+		local grip = HeroSockets.GripFor(gripHero, weaponType, socket.Assembly)
+		local shift = (HeroSockets.GRIP_SHIFT[weaponType] or 0) + (if grip and grip.Shift then grip.Shift else 0)
+		if shift ~= 0 and socket.WeaponAttachment == "Grip" then
 			local axis = bladeAxis(assembly, primary)
 			if axis then
 				c1 = CFrame.new(-axis * shift) * c1
 			end
 		end
-		if reverse and socket.WeaponAttachment == "Grip" then
+		local reversed = if grip and grip.Reverse ~= nil then grip.Reverse else reverse
+		if reversed and socket.WeaponAttachment == "Grip" then
 			c1 *= CFrame.Angles(0, 0, math.pi)
+		end
+		if grip and grip.Offset then
+			c1 *= grip.Offset
 		end
 
 		-- Place the assembly before welding so it is correct on the first frame.
