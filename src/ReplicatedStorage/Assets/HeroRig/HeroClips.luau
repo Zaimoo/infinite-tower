@@ -1592,12 +1592,16 @@ end
 -- THE GILDED MIRROR (docs/gilded-mirror-plan.md §5): signature idles and full kits (Basic, Special,
 -- Skill) built from the weapon key poses.
 
--- Isabelle (BOW): weight on the back foot, bow low, draw hand resting on the quiver strap.
+-- Isabelle (BOW), from her reference art: an upright, mid-stride stance with the bow held low in
+-- her left hand, the draw hand loose at her side and her head turned a little to her left.
 -- Twin Reflection: a step back, a held glowing draw, then a release with a flourish as it splits.
 do
 	local p = WeaponPoses.BOW
-	local poised = merge(p.Carry, { Waist = { -2, -12, 0 }, Neck = { 0, 10, 0 }, RightShoulder = { 18, 0, -20 }, RightElbow = { 70, 0, 0 },
-		LeftHip = { -6, 0, -4 }, RightHip = { 12, 0, 4 }, LeftKnee = { -6, 0, 0 }, RightKnee = { -18, 0, 0 } })
+	local poised = merge(p.Carry, { Waist = { 0, 6, 0 }, Neck = { 0, 12, 0 },
+		LeftShoulder = { 18, 0, -6 }, LeftElbow = { 14, 0, 0 },
+		RightShoulder = { -4, 0, 9 }, RightElbow = { 12, 0, 0 },
+		LeftHip = { -8, 0, -3 }, RightHip = { 14, 0, 3 }, LeftKnee = { -4, 0, 0 }, RightKnee = { -14, 0, 0 },
+		RootOffset = { 0, -0.04, 0 } })
 	local held = merge(merge(p.Drawn, p.Crouch), { Waist = { -12, -20, 0 }, RootOffset = { 0, -0.15, 0.25 } })
 	Overrides.hero_isabelle = {
 		Idle = breathe(poised, 3.4),

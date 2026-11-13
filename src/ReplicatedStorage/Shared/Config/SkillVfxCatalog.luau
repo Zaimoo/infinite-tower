@@ -295,10 +295,11 @@ SkillVfxCatalog.Heroes = table.freeze({
 	},
 
 	-- The Gilded Mirror (docs/gilded-mirror-plan.md §6.2): gilt and glass over each hero's rarity colour.
-	-- Glint Shot / Ricochet / Twin Reflection: gold-trailed arrows; the Skill rains twin arrows from a red flare.
+	-- Glint Shot / Ricochet / Twin Reflection, from her reference art: glowing crimson arrows with long,
+	-- laser-like trails and gilt sparks; the Skill rains twin crimson arrows from a red flare.
 	hero_isabelle = {
-		Palette = { Primary = rgb(255, 214, 120), Secondary = rgb(231, 76, 60), Core = rgb(255, 250, 235), Accent = rgb(190, 215, 255) },
-		Basic = { Style = "SHOT", Projectile = "ARROW", Scale = 1.0, Arc = 0.3, Trail = 0.16, Impact = 1.8 },
+		Palette = { Primary = rgb(255, 46, 84), Secondary = rgb(212, 175, 90), Core = rgb(255, 222, 228), Accent = rgb(150, 14, 40) },
+		Basic = { Style = "SHOT", Projectile = "ARROW", Scale = 1.0, Arc = 0.12, Trail = 0.3, Impact = 1.8 },
 		Special = { Style = "VOLLEY", Projectile = "ARROW", Scale = 1.25, Arc = 0.12, Trail = 0.22, Impact = 2.4, Count = 2, Spread = 9, Pierce = 6, Rings = true },
 		Skill = { Style = "STORM", Projectile = "ARROW", Scale = 1.4, Trail = 0.25, Impact = 2.6, FlareHeight = 24, SigilRadius = 16, RainPerWave = 2, RainHeight = 26, Shake = 0.22 },
 	},
