@@ -383,7 +383,11 @@ local function attackArgs(rig: Model, animator: any, meta: any, cue: any): any
 end
 
 local function playAttackVfx(rig: Model, animator: any, meta: any, cue: any)
-	SkillVfx.Play(CombatVfxPool, attackArgs(rig, animator, meta, cue))
+	local args = attackArgs(rig, animator, meta, cue)
+	SkillVfx.Play(CombatVfxPool, args)
+	if _G.GildedAnvilCombatFx and _G.GildedAnvilCombatFx.OnRelease then
+		_G.GildedAnvilCombatFx.OnRelease(rig, meta, args)
+	end
 end
 
 -- Wind-up effects at an attack clip's Charge marker (cosmetic; the server ignores it).
@@ -856,6 +860,7 @@ local function retireVisual(id,at)
   local pos = node.CurrentPos or (node.RootPart and node.RootPart.Position)
   local isAffixed = node.Flags and bit32.band(node.Flags, 4) ~= 0
   if pos then
+   if _G.GildedAnvilCombatFx then _G.GildedAnvilCombatFx.OnKill(pos) end
    if isAffixed then
     AudioManager.Play3D("EliteDeath", pos)
    else
@@ -934,6 +939,7 @@ local function consume(buf: buffer)
    n.SegSpeed=if segDist<=TELEPORT_SNAP_DISTANCE then segDist/n.SegDuration else 0
   end
   node.GoalPos=e.Position;node.GoalYaw=e.Yaw;node.HpPermille=e.HpPermille;node.Stamina=e.Stamina
+  if node.IsHero and node.Model:GetAttribute("HpPermille")~=e.HpPermille then node.Model:SetAttribute("HpPermille",e.HpPermille) end -- read by GildedAnvilFx
   node.StateEnum=e.StateEnum;node.Flags=e.Flags;node.LastSeenClock=now
   if node.HPBarFill then node.HPBarFill.Size=UDim2.fromScale(e.HpPermille/1000,1) end
   if node.StamBarFill then
@@ -1236,11 +1242,17 @@ CombatVFXRemote.OnClientEvent:Connect(function(context: any, vfxType: string, po
 		recordHit("HIT",pos)
 		CombatFeedback:Hit(pos,amount,isOverdrive,incoming)
 		AudioManager.Play3D(if incoming then "HitIncoming" else "HitLight", pos)
+		if not incoming and _G.GildedAnvilCombatFx then
+			_G.GildedAnvilCombatFx.OnHit(pos, "BASIC", isOverdrive == true)
+		end
 		return
 	elseif vfxType=="HIT_SPECIAL" then
 		recordHit("HIT",pos)
 		CombatFeedback:Special(pos,amount,isOverdrive,incoming)
 		AudioManager.Play3D("HitCrit", pos)
+		if not incoming and _G.GildedAnvilCombatFx then
+			_G.GildedAnvilCombatFx.OnHit(pos, "SPECIAL", isOverdrive == true)
+		end
 		return
 	elseif vfxType=="HIT_SKILL" then
 		recordHit("HIT",pos)
