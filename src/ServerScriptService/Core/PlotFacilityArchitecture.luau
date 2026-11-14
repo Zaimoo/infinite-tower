@@ -12,6 +12,8 @@
 --   7. GuardpostOutskirts (Timber Palisade Watch-Post, slatted roof, stone-ringed campfire & log seating)
 --   8. CommandPost        (War Banner & Architect's Table for Squad Management & Fortress Tree)
 
+local AssetService = game:GetService("AssetService")
+local InsertService = game:GetService("InsertService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SynthesisChamberBuilder = require(script.Parent:WaitForChild("SynthesisChamberBuilder"))
 
@@ -219,7 +221,9 @@ end
 -- 2.1 SUMMONING PORTAL (`SummoningPortal` — Wall-Mounted Gothic Corner Portal)
 --============================================================================
 function Arch.BuildSummoning(folder: Instance, centerCF: CFrame): Part
-	local ReplicatedStorage = game:GetService("ReplicatedStorage")
+	local AssetService = game:GetService("AssetService")
+local InsertService = game:GetService("InsertService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 	local model = Instance.new("Model")
 	model.Name = "Building_Summoning"
 	model:SetAttribute("PortalState", "Closed")
@@ -1304,25 +1308,173 @@ function Arch.BuildBlacksmith(folder: Instance, centerCF: CFrame): Part
 end
 
 --============================================================================
--- 2.6 TRAINING AREA (`TrainingArea` — Fenced Circular Cobblestone Combat Ring)
+-- 2.6 TRAINING AREA (`TrainingArea` — Fenced Polygonal Cobblestone Combat Ring)
 --============================================================================
+type TrainingMeshSpec = {
+	Name: string,
+	MeshId: string,
+	Size: Vector3,
+	Pos: Vector3,
+	PivotOffset: Vector3,
+	ColorMap: string,
+	NormalMap: string,
+	RoughnessMap: string,
+	CastShadow: boolean,
+}
+
+local TG_PROPS_CM = "rbxassetid://108825920828981"
+local TG_PROPS_NM = "rbxassetid://103410370581370"
+local TG_PROPS_RM = "rbxassetid://116703552811362"
+local TG_FLOOR_CM = "rbxassetid://113479401976759"
+local TG_FLOOR_NM = "rbxassetid://128264443006045"
+local TG_FLOOR_RM = "rbxassetid://86555471679808"
+
+local TRAINING_GROUND_MESHES: { TrainingMeshSpec } = {
+	{ Name = "Arena_Floor", MeshId = "rbxassetid://107205650672236", Size = V(48.500000, 0.080008, 40.750000), Pos = V(0, -0.460001, 7.575134), PivotOffset = V(0, -0.0400, 7.5750), ColorMap = TG_FLOOR_CM, NormalMap = TG_FLOOR_NM, RoughnessMap = TG_FLOOR_RM, CastShadow = false },
+	{ Name = "Entrance_Archway", MeshId = "rbxassetid://86958939031314", Size = V(13.612968, 11.690001, 4.458000), Pos = V(0, 5.345001, -12.028931), PivotOffset = V(0, -5.8450, -12.0290), ColorMap = TG_PROPS_CM, NormalMap = TG_PROPS_NM, RoughnessMap = TG_PROPS_RM, CastShadow = true },
+	{ Name = "Perimeter_Fence", MeshId = "rbxassetid://133116725826364", Size = V(48.079998, 3.200007, 39.980000), Pos = V(0, 1.099998, 7.750061), PivotOffset = V(0, -1.6000, 7.7500), ColorMap = TG_PROPS_CM, NormalMap = TG_PROPS_NM, RoughnessMap = TG_PROPS_RM, CastShadow = true },
+	{ Name = "Training_Props", MeshId = "rbxassetid://101080363217091", Size = V(44.995201, 5.732375, 36.785378), Pos = V(0, 2.341270, 5.185791), PivotOffset = V(0, -2.8413, 5.1857), ColorMap = TG_PROPS_CM, NormalMap = TG_PROPS_NM, RoughnessMap = TG_PROPS_RM, CastShadow = true },
+	{ Name = "Dummy_1_Base", MeshId = "rbxassetid://99125394433707", Size = V(2.299000, 1.190000, 2.299000), Pos = V(-8.500000, 0.175000, -1.500000), PivotOffset = V(0, -0.5950, 0), ColorMap = TG_PROPS_CM, NormalMap = TG_PROPS_NM, RoughnessMap = TG_PROPS_RM, CastShadow = true },
+	{ Name = "Dummy_1_Body", MeshId = "rbxassetid://86192274983173", Size = V(1.955179, 4.465000, 2.852854), Pos = V(-8.500000, 2.957500, -1.500000), PivotOffset = V(0, -2.2275, 0), ColorMap = TG_PROPS_CM, NormalMap = TG_PROPS_NM, RoughnessMap = TG_PROPS_RM, CastShadow = true },
+	{ Name = "Dummy_2_Base", MeshId = "rbxassetid://140129259261171", Size = V(2.360000, 1.190000, 2.360000), Pos = V(0, 0.174999, 2.000000), PivotOffset = V(0, -0.5950, 0), ColorMap = TG_PROPS_CM, NormalMap = TG_PROPS_NM, RoughnessMap = TG_PROPS_RM, CastShadow = true },
+	{ Name = "Dummy_2_Body", MeshId = "rbxassetid://117182456500032", Size = V(3.150000, 4.465000, 1.673859), Pos = V(0, 2.957500, 2.000000), PivotOffset = V(0, -2.2275, 0), ColorMap = TG_PROPS_CM, NormalMap = TG_PROPS_NM, RoughnessMap = TG_PROPS_RM, CastShadow = true },
+	{ Name = "Dummy_3_Base", MeshId = "rbxassetid://132106594732171", Size = V(2.299000, 1.190000, 2.299000), Pos = V(8.500000, 0.175000, -1.500000), PivotOffset = V(0, -0.5950, 0), ColorMap = TG_PROPS_CM, NormalMap = TG_PROPS_NM, RoughnessMap = TG_PROPS_RM, CastShadow = true },
+	{ Name = "Dummy_3_Body", MeshId = "rbxassetid://87751998200386", Size = V(1.955179, 4.465000, 2.852854), Pos = V(8.500000, 2.957500, -1.500000), PivotOffset = V(0, -2.2275, 0), ColorMap = TG_PROPS_CM, NormalMap = TG_PROPS_NM, RoughnessMap = TG_PROPS_RM, CastShadow = true },
+	{ Name = "Dummy_4_Base", MeshId = "rbxassetid://74666535097921", Size = V(2.242216, 1.190000, 2.242216), Pos = V(-6.200000, 0.175000, 11.200000), PivotOffset = V(0, -0.5950, 0), ColorMap = TG_PROPS_CM, NormalMap = TG_PROPS_NM, RoughnessMap = TG_PROPS_RM, CastShadow = true },
+	{ Name = "Dummy_4_Body", MeshId = "rbxassetid://113994151162337", Size = V(2.964515, 4.465000, 1.739178), Pos = V(-6.200000, 2.957500, 11.200000), PivotOffset = V(0, -2.2275, 0), ColorMap = TG_PROPS_CM, NormalMap = TG_PROPS_NM, RoughnessMap = TG_PROPS_RM, CastShadow = true },
+	{ Name = "Dummy_5_Base", MeshId = "rbxassetid://123098187620011", Size = V(2.242216, 1.190000, 2.242216), Pos = V(6.200000, 0.175000, 11.200000), PivotOffset = V(0, -0.5950, 0), ColorMap = TG_PROPS_CM, NormalMap = TG_PROPS_NM, RoughnessMap = TG_PROPS_RM, CastShadow = true },
+	{ Name = "Dummy_5_Body", MeshId = "rbxassetid://77160486416462", Size = V(2.964515, 4.465000, 1.739178), Pos = V(6.200000, 2.957500, 11.200000), PivotOffset = V(0, -2.2275, 0), ColorMap = TG_PROPS_CM, NormalMap = TG_PROPS_NM, RoughnessMap = TG_PROPS_RM, CastShadow = true },
+}
+
+local buildingTrainingTemplate = false
+
+local function createMeshPartFromId(meshId: string): MeshPart?
+	local ok, res = pcall(function()
+		return AssetService:CreateMeshPartAsync(Content.fromUri(meshId))
+	end)
+	if ok and res and res:IsA("MeshPart") then
+		return res
+	end
+	ok, res = pcall(function()
+		return (AssetService :: any):CreateMeshPartAsync(meshId)
+	end)
+	if ok and res and res:IsA("MeshPart") then
+		return res
+	end
+	ok, res = pcall(function()
+		return InsertService:CreateMeshPartAsync(meshId, Enum.CollisionFidelity.Default, Enum.RenderFidelity.Automatic)
+	end)
+	if ok and res and res:IsA("MeshPart") then
+		return res
+	end
+	return nil
+end
+
+local function resolveTrainingGroundsTemplate(): Model?
+	local function findValidTemplate(): Model?
+		local assetsFolder = ReplicatedStorage:FindFirstChild("Assets")
+		local customMeshes = assetsFolder and assetsFolder:FindFirstChild("CustomFacilityMeshes")
+		local imported = customMeshes and customMeshes:FindFirstChild("TrainingArea")
+		if imported and imported:IsA("Model") and imported:FindFirstChildWhichIsA("MeshPart", true) then
+			return imported
+		end
+		local plotFacs = assetsFolder and assetsFolder:FindFirstChild("PlotFacilities")
+		local candidate = plotFacs and plotFacs:FindFirstChild("TrainingArea")
+		if candidate and candidate:IsA("Model") and candidate:FindFirstChildWhichIsA("MeshPart", true) then
+			return candidate
+		end
+		return nil
+	end
+
+	while buildingTrainingTemplate do
+		task.wait()
+	end
+	local existing = findValidTemplate()
+	if existing then
+		return existing
+	end
+
+	-- Self-healing fallback: reconstruct and cache all 14 Blender MeshParts from uploaded AssetIds
+	-- so Training Grounds stays visible even if CustomFacilityMeshes was stripped or unsynced.
+	buildingTrainingTemplate = true
+	local ok, built = pcall(function(): Model?
+		local templateModel = Instance.new("Model")
+		templateModel.Name = "TrainingArea"
+		templateModel.WorldPivot = CFrame.identity
+
+		local remaining = #TRAINING_GROUND_MESHES
+		local createdCount = 0
+		local meshRot = CFrame.Angles(0, math.pi, 0)
+		local neutralTint = Color3.fromRGB(163, 162, 165)
+
+		for _, spec in ipairs(TRAINING_GROUND_MESHES) do
+			task.spawn(function()
+				local mp = createMeshPartFromId(spec.MeshId)
+				if mp then
+					mp.Name = spec.Name
+					mp.Size = spec.Size
+					mp.CFrame = CFrame.new(spec.Pos) * meshRot
+					mp.PivotOffset = CFrame.new(spec.PivotOffset)
+					mp.Color = neutralTint
+					mp.Material = Enum.Material.Plastic
+					mp.Anchored = true
+					mp.CanCollide = false
+					mp.CanTouch = false
+					mp.CanQuery = false
+					mp.CastShadow = spec.CastShadow
+
+					local sa = Instance.new("SurfaceAppearance")
+					sa.ColorMap = spec.ColorMap
+					sa.NormalMap = spec.NormalMap
+					sa.RoughnessMap = spec.RoughnessMap
+					sa.AlphaMode = Enum.AlphaMode.Overlay
+					sa.Parent = mp
+
+					mp.Parent = templateModel
+					createdCount += 1
+				end
+				remaining -= 1
+			end)
+		end
+
+		while remaining > 0 do
+			task.wait()
+		end
+
+		if createdCount == 0 then
+			templateModel:Destroy()
+			return nil
+		end
+
+		local assetsFolder = ReplicatedStorage:FindFirstChild("Assets")
+		if not assetsFolder then
+			local newAssets = Instance.new("Folder")
+			newAssets.Name = "Assets"
+			newAssets.Parent = ReplicatedStorage
+			assetsFolder = newAssets
+		end
+		local customMeshes = assetsFolder:FindFirstChild("CustomFacilityMeshes")
+		if not customMeshes then
+			local newCustom = Instance.new("Folder")
+			newCustom.Name = "CustomFacilityMeshes"
+			newCustom.Parent = assetsFolder
+			customMeshes = newCustom
+		end
+		templateModel.Parent = customMeshes
+		return templateModel
+	end)
+	buildingTrainingTemplate = false
+
+	return if ok then built else nil
+end
+
 function Arch.BuildTrainingGrounds(folder: Instance, centerCF: CFrame): Part
 	local model = Instance.new("Model")
 	model.Name = "Building_TrainingGrounds"
 	model.Parent = folder
 
-	local assetsFolder = ReplicatedStorage:FindFirstChild("Assets")
-	local customMeshes = assetsFolder and assetsFolder:FindFirstChild("CustomFacilityMeshes")
-	local importedTemplate = customMeshes and customMeshes:FindFirstChild("TrainingArea")
-	if not importedTemplate then
-		local plotFacs = assetsFolder and assetsFolder:FindFirstChild("PlotFacilities")
-		local candidate = plotFacs and plotFacs:FindFirstChild("TrainingArea")
-		if candidate and candidate:FindFirstChildWhichIsA("MeshPart", true) then
-			importedTemplate = candidate
-		end
-	end
-
-	if importedTemplate and importedTemplate:IsA("Model") then
+	local importedTemplate = resolveTrainingGroundsTemplate()
+	if importedTemplate then
 		local cloned = importedTemplate:Clone()
 		cloned:PivotTo(centerCF)
 		for _, desc in ipairs(cloned:GetDescendants()) do
@@ -1341,7 +1493,7 @@ function Arch.BuildTrainingGrounds(folder: Instance, centerCF: CFrame): Part
 		end
 		cloned:Destroy()
 	else
-		warn("[PlotFacilityArchitecture] Missing ReplicatedStorage.Assets.CustomFacilityMeshes.TrainingArea prefab")
+		warn("[PlotFacilityArchitecture] Failed to load TrainingGrounds MeshParts")
 	end
 
 	-- Invisible solid collision hull for V-gable archway stone piers & 8 perimeter fence spans

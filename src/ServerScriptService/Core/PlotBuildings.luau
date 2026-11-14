@@ -16,7 +16,7 @@ local StaticGeometry = require(script.Parent:WaitForChild("StaticGeometry"))
 local EnvironmentSpawner = require(script.Parent.Parent:WaitForChild("BaseOverhaul"):WaitForChild("EnvironmentSpawner"))
 local FacilityConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("FacilityConfig"))
 
-local VERSION = 38 -- 38: Align TrainingGrounds tip directly with SE corner bastion column tip (37: expanded symmetrical polygonal courtyard)
+local VERSION = 39 -- 39: Preserve FacilityPresence-stashed facilities and ensure TrainingGrounds always includes its 14 MeshParts (38: bastion tip alignment)
 
 local function attachPrompt(
 	parent: Instance,
@@ -106,11 +106,14 @@ function Buildings.Build(plot: Instance)
 	end
 
 	-- Reuse cached buildings only if they were built for this version and this island position
+	-- (including support facilities temporarily stashed off-tree by FacilityPresence).
 	local existing = plot:FindFirstChild("PlotBuildings")
+	local existingTG = FacilityPresence.GetBuilding(plot, "TrainingGrounds")
 	if existing and existing:GetAttribute("Version") == VERSION
 		and sameOrigin(existing:GetAttribute("Origin"), origin)
-		and existing:FindFirstChild("Building_Market")
-		and existing:FindFirstChild("Building_TrainingGrounds") then
+		and FacilityPresence.GetBuilding(plot, "Market") ~= nil
+		and existingTG ~= nil
+		and existingTG:FindFirstChildWhichIsA("MeshPart", true) ~= nil then
 		return existing
 	end
 
