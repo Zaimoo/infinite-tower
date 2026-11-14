@@ -116,7 +116,7 @@ The guide already logs a lot. Fill the gaps rather than adding a second system.
   - **Step 2, Try the limited banner.** Step 1's 200 Gems pay for exactly one A Star's Arrival single pull, so the spotlight goes on that button. The card's featured Astrea, the "View Heroes & Odds" button and the pity counter are the lesson: this is the banner worth saving for. `DataManager` reports `LimitedSummoned` when `isLimited` is true. Step 2's own 200 Gems replace what the pull cost.
   - **Step 3, Set your squad.** The spotlight goes on the showcase hero's card, then on slot 1. Placing it swaps Gide to the bench. Gide is protected from the Pit and sale, so he's safe there, and he becomes the first Guard Post worker in chapter 2. The step completes on any squad change, so a player who prefers Gide isn't stuck. `AUTO_BEST` counts too.
   - **Steps 7 and 8** are the Rival lesson (A7). Until A7 ships, the chain goes straight from step 6 to step 9.
-- **Chapter 2** starts after the first Floor 2 clear or the first hub return, whichever comes later: Roll → Equip → Guard Post → Tree → Synthesis. The Tree step's `buildableNode` should prefer `sq_1` (Second Banner, 500 Gold), so slot 2 is the first fortress upgrade and the bench hero from chapter 1 joins the squad.
+- **Chapter 2** starts after the Return step: Roll → Equip → Guard Post → Tree → Synthesis. (Built that way: waiting for a Floor 2 clear as well would leave a player at the Hub with no next goal.) The Tree step's `buildableNode` should prefer `sq_1` (Second Banner, 500 Gold), so slot 2 is the first fortress upgrade and the bench hero from chapter 1 joins the squad.
 - **Move the unlocks with the steps.** The unlock keys (`Forge` on Clear; `Facilities`, `FortressTree` and `Pit` on Roll) and both lock-hint tables in `OnboardingService` (`LOCK_HINTS` and `V2_LOCK_HINTS`) must match the new order. `TowerFloor5` stays gated on reaching Floor 5. The old v1 hint "Level a hero in The Pit first" must not come back.
 - **If the first relic is lost** (it despawns, or a wipe fumbles it), the Bank step is passed over like any other impossible step and comes back as the conditional lesson.
 - Keep the guide's existing rules: a step that can't be done yet is passed over, reaching Floor 3 opens everything, and rewards already paid are never paid again. Bump the guide `Version` to 4. Credit existing players the way v3 did: anyone who has cleared Floor 1 gets steps 1–3, and anyone who has cleared Floor 2 also gets steps 7 and 8. Credited steps pay nothing.
@@ -139,13 +139,14 @@ The guide already logs a lot. Fill the gaps rather than adding a second system.
 
 ### A5. Frame the first Ultimate
 
-- New heroes already start with a full gauge. The first time any of a player's heroes fires an Ultimate, play a 0.4 s slow-motion moment, a camera punch-in and a name banner ("Event Horizon!").
-  - It's client-only, on the renderer clock. The server is unaffected, and `EntityRenderer` catches up on the snapshot buffer afterwards. Never in a duel or a raid.
-  - Under Reduce Motion, show the banner without the slow motion or the camera move.
-  - Store the flag as `guide.Facts.FirstUltimate`, which needs no migration.
+- New heroes already start with a full gauge. The first time any of a player's heroes fires an Ultimate on a tower floor, show a name banner ("Canopy's Wrath!") over a briefly dimmed screen, with a short camera dolly toward the squad. Never in a duel or a raid.
+  - **As built, without slow motion.** `EntityRenderer` times everything from `GetServerTimeNow()`, so a renderer slow-down would desync every timeline. The camera moves by a dolly applied after the camera module each frame, because the Settings FOV guard re-asserts the player's field of view on any outside change.
+  - Under Reduce Motion, only the banner shows.
+  - Stored as `guide.Facts.FirstUltimate`, which needs no migration. Only Masters who haven't cleared Floor 1 can get it.
 - With one hero in the squad, the first Ultimate is always the showcase hero's, on its first attack of Floor 1.
 - After that, the banner is only for Legendary and Mythical heroes (rarity tiers 6–7) and Biome Boss kills, so it stays special. (Every hero is summoned at 1★, so "7★" can't be the rule: stars only come from promotion.)
-- **One-time whistle hints, input-aware:** "Speed up your heroes" the first time a boss enters its post-Signature recovery (the tower Punish Window, §5.3), and "Pull them out" on the first lethal telegraph. Show the bound control: `Q`/`E` on keyboard, `L1`/`R1` on gamepad, the Right Rail button on touch.
+- **One-time whistle hint, input-aware:** "Speed up your heroes" when the first boss is summoned, telling the player to use Overdrive when the boss stops after a big attack (the tower Punish Window, §5.3). It shows the bound control: `Q` on keyboard, `L1` on gamepad, the whistle button on touch.
+  - *Not built yet:* the "Pull them out" (Recall) hint on the first lethal telegraph, which needs a server-side lethal-telegraph check per squad.
 
 **Files:** `EntityRenderer.client.luau`, `HeroClips` and the VFX layer, `MasterController.client.luau` and `Phase5HudController` (hints).
 
