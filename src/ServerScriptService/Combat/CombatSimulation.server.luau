@@ -3088,7 +3088,10 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
        -- One contested relic roll per boss kill, tagged to the killer: guaranteed on a first clear, the boss's drop
        -- chance afterwards. Alphas (floors 1-4 of a biome) and Biome Bosses drop the Calamity Heart; a first
        -- Biome Boss clear pays at least a Cursed Urn.
-       if p == killer and _G.RelicService then
+       -- A new Master's first Floor 1 clear always pays them a relic, even when someone else landed
+       -- the kill, and nobody else can carry it (first-session-and-social-plan.md A4).
+       local firstRelic = firstClear and mob.FloorId == 1
+       if (p == killer or firstRelic) and _G.RelicService then
         local relicRole = if bossTier > 0 then "BOSS" else "ALPHA"
         local relicTier = TowerRewards.RollRelic(mob.FloorId, relicRole, if firstClear then 0 else math.random(), math.random(),
          bossEventMods) -- Stamped at spawn (Alpha Hunt raises the Heart share; Calamity Hour raises tiers)
@@ -3100,7 +3103,10 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
           relicTier = "CURSED_URN"
          end
         end
-        if relicTier then _G.RelicService.SpawnRelic(relicTier, mob.Position, p.UserId) end
+        if relicTier then
+         local at = if p == killer then mob.Position else mob.Position + Vector3.new(math.random(-4, 4), 0, math.random(-4, 4))
+         _G.RelicService.SpawnRelic(relicTier, at, p.UserId, firstRelic)
+        end
        end
 
        if bossTier > 0 then

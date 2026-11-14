@@ -56,6 +56,9 @@ export type ActiveRelic = {
 	KillerUserId: number,
 	KillerName: string?,
 	OriginalOwnerUserId: number, -- the killer at spawn; a duel win changes KillerUserId, never this
+	-- A new Master's first relic (their first Floor 1 clear): nobody else may carry it, so it can't be
+	-- stolen, for as long as it exists. Docs: first-session-and-social-plan.md A4.
+	ProtectedForUserId: number?,
 	LockedOut: { [number]: boolean }?, -- duel losers, for the relic's lifetime
 	DuelLocked: boolean?, -- nobody may pick it up while its duel runs
 }
@@ -117,7 +120,7 @@ local function updateMasterMovementAttributes(player: Player, now: number)
 	hum.JumpPower = spec.DisableJump and 0 or BASE_JUMPPOWER
 end
 
-function RelicService.SpawnRelic(tierId: RelicTierId, worldPos: Vector3, initialOwnerUserId: number?): ActiveRelic
+function RelicService.SpawnRelic(tierId: RelicTierId, worldPos: Vector3, initialOwnerUserId: number?, protected: boolean?): ActiveRelic
 	local spec = RelicConfig[tierId] or RelicConfig.MANA_GEODE
 	local context=assert(Tower.ContextAt(worldPos),"Relic spawn outside room")
 	local goldMult, gemMult = TowerFloorConfig.RelicFloorMultipliers(context.FloorId)
@@ -204,6 +207,7 @@ function RelicService.SpawnRelic(tierId: RelicTierId, worldPos: Vector3, initial
 		DespawnAt = now + spec.DespawnSeconds,
 		KillerUserId = initialOwnerUserId or 0,
 		OriginalOwnerUserId = initialOwnerUserId or 0,
+		ProtectedForUserId = if protected then initialOwnerUserId else nil,
 	}
 	prompt.Triggered:Connect(function(player: Player)
 		RelicService.TryPickupRelic(player, relic)
@@ -222,6 +226,10 @@ function RelicService.TryPickupRelic(player: Player, relic: ActiveRelic): boolea
 	end
 	if relic.PickupBlockedUserId == player.UserId and now < (relic.PickupBlockedUntil or 0) then return false end
 	if now < (PlayerStunnedUntil[player] or 0) then
+		return false
+	end
+	if relic.ProtectedForUserId and relic.ProtectedForUserId ~= player.UserId then
+		getDataManager().SendToast(player, "Protected relic|A new Master's first relic", "WARN")
 		return false
 	end
 	local allowed, denial = LootDuel.CanPickUp(relic, player.UserId)
@@ -559,6 +567,8 @@ local function stepRelics()
 						setStatus(relic, `Locked {remLock}s`, LOCKED_COLOR)
 					elseif remDespawn <= DESPAWN_WARNING_SECONDS then
 						setStatus(relic, `Vanishes in {remDespawn}s`, EXPIRING_COLOR)
+					elseif relic.ProtectedForUserId then
+						setStatus(relic, "Protected", LOCKED_COLOR)
 					else
 						-- Nothing to say: the Carry prompt already tells the player what to do.
 						setStatus(relic, "", OPEN_COLOR)
