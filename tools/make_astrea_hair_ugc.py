@@ -47,8 +47,8 @@ def B(p):
     return Vector((p[0], -p[2], p[1]))
 
 # Scalp shell: an ellipsoid on top, a straight cylinder below its equator.
-CX, CY, CZ = 0.0, 0.16, 0.04
-RX, RY, RZ = 0.7, 0.76, 0.71
+CX, CY, CZ = 0.0, 0.14, 0.04
+RX, RY, RZ = 0.68, 0.73, 0.69
 
 def shell(theta, y, off=0.0):
     """Point on the scalp at azimuth theta (0 = front, +90 deg = her right, +X) and height y."""
@@ -64,38 +64,121 @@ def out_normal(p):
     n = p - axis
     return n.normalized() if n.length > 1e-5 else Vector((0, 1, 0))
 
+def dome_pt(x, z, off=0.0):
+    """Point directly on the scalp dome at (x, z), pushed outward by off along dome normal."""
+    r2 = (x / RX) ** 2 + ((z - CZ) / RZ) ** 2
+    y = CY + RY * math.sqrt(max(0.0, 1.0 - min(0.999, r2)))
+    p = Vector((CX + x, y, z))
+    return p + out_normal(p) * off
+
 bm = bmesh.new()
 
-# --- Scalp cap: full coverage under the locks ---------------------------------------------
+# --- Scalp cap: middle-parted left/right crown dome matching the ref center part -----------------
 def cap():
-    rings, segs = 22, 44
-    verts = {}
-    for i in range(rings + 1):
-        y = CY + RY - (RY + 0.95) * i / rings  # top down to well below the equator
-        for j in range(segs):
-            th = 2 * math.pi * j / segs
-            front = math.cos(th) > 0.74  # the face opening; the temples stay covered
-            limit = 0.3 if front else (-0.12 if math.cos(th) > -0.2 else -0.3)
-            if y < limit:
-                continue
-            verts[(i, j)] = bm.verts.new(B(shell(th, y, -0.01)))
+    s_segs, r_segs = 36, 20
     uvl = bm.loops.layers.uv.verify()
-    for i in range(rings):
-        for j in range(segs):
-            q = [(i, j), (i, (j + 1) % segs), (i + 1, (j + 1) % segs), (i + 1, j)]
-            if all(k in verts for k in q):
+
+    def tri_wave(x):
+        f = x % 1.0
+        return 1.0 - abs(2.0 * f - 1.0)
+
+    def rim_limit(c):
+        if c > 0.68:
+            t_arch = (c - 0.68) / 0.32
+            return 0.40 + 0.10 * t_arch
+        if c > 0.25:
+            t_side = (c - 0.25) / 0.43
+            return -0.10 + 0.50 * t_side
+        if c > -0.2:
+            return -0.10
+        return -0.34
+
+    phi_front = math.asin((0.52 - CY) / RY)         # ~31.4 deg above -Z (front center forehead)
+    phi_back = math.radians(120.0)                  # ~30 deg past top pole (natural crown end of middle part)
+    cap_faces = []
+
+    for side in (-1, 1):
+        verts = {}
+        for j in range(s_segs + 1):
+            s = j / s_segs
+            th = side * math.pi * s
+            c = math.cos(th)
+            y_rim = rim_limit(c)
+            k_rim = 1.0 if y_rim <= CY else math.sqrt(max(0.0, 1.0 - ((y_rim - CY) / RY) ** 2))
+            d_rim = Vector((math.sin(th) * k_rim, (y_rim - CY) / RY, -c * k_rim))
+
+            phi_s = phi_front + s * (phi_back - phi_front)
+            d_spine = Vector((0.0, math.sin(phi_s), -math.cos(phi_s)))
+
+            # Sculpt the middle-part cleft along the spine (x=0) rising into two lush waves before tapering over temples/back
+            part_env = math.sin(min(1.0, s / 0.88) * math.pi) ** 0.55
+
+            for i in range(r_segs + 1):
+                row_t = i / r_segs
+                # Ease slightly denser near the center part curve so the cleft & pillow crest are silky smooth
+                w_t = row_t ** 1.12
+                v_mix = d_spine.lerp(d_rim, w_t)
+                y = CY + RY * v_mix.y
+                # Keep surface flush with head ellipsoid above CY, cylinder below CY
+                k = 1.0 if y <= CY else math.sqrt(max(0.0, 1.0 - ((y - CY) / RY) ** 2))
+
+                crown_t = max(0.0, min(1.0, (y - 0.45) / 0.34))
+                off = 0.004 + 0.018 * crown_t
+                if c > 0.68:
+                    front_t = max(0.0, min(1.0, (y - 0.40) / 0.32))
+                    edge_t = max(0.0, min(1.0, (y - y_rim) / 0.06))
+                    off = 0.004 + (max(off, 0.012 + 0.010 * front_t) - 0.004) * edge_t
+                elif c > 0.25:
+                    off = max(off, 0.014)
+                # Smooth center-part cleft & parted waves on top/front crown; taper rear cap gently under back cape
+                back_recess = max(0.0, min(1.0, (s - 0.50) / 0.35))
+                if c < 0.10:
+                    rear_t = max(0.0, min(1.0, (y - 0.56) / 0.20))
+                    off = 0.002 + 0.018 * (crown_t * rear_t)
+                elif back_recess > 0.0:
+                    off = off * (1.0 - 0.25 * back_recess) + 0.008 * back_recess
+
+                # Center-part cleft dip (-0.018 at row_t=0) rising smoothly into parted waves (+0.016 in front)
+                cleft = -0.018 * math.exp(-(row_t / 0.075) ** 2) * part_env * (1.0 - 0.45 * back_recess)
+                pillow = 0.016 * math.exp(-((row_t - 0.22) / 0.16) ** 2) * part_env * (1.0 - 0.70 * back_recess)
+                off = max(0.002, off + cleft + pillow)
+
+                if i == 0:
+                    x_dir, z_dir = 0.0, -math.cos(phi_s)
+                    h_k = abs(z_dir)
+                    x_pos = 0.0
+                    z_pos = CZ + (RZ + off) * (-math.cos(phi_s))
+                    y_pos = CY + (RY + off * 0.6) * math.sin(phi_s)
+                else:
+                    h_len = math.hypot(v_mix.x, v_mix.z)
+                    if h_len < 1e-5:
+                        x_pos = 0.0
+                        z_pos = CZ
+                    else:
+                        x_pos = (RX + off) * k * (v_mix.x / h_len)
+                        z_pos = CZ + (RZ + off) * k * (v_mix.z / h_len)
+                    y_pos = y + (off * 0.6 if y > CY else 0.0)
+
+                verts[(i, j)] = bm.verts.new(B(Vector((CX + x_pos, y_pos, z_pos))))
+
+        for i in range(r_segs):
+            for j in range(s_segs):
+                q = [(i, j), (i, j + 1), (i + 1, j + 1), (i + 1, j)]
+                if side < 0:
+                    q = list(reversed(q))
                 f = bm.faces.new([verts[k] for k in q])
-                # Inner atlas column 2, strands running down from the crown; four faces span it.
-                u0 = 0.5 + 0.25 * (j % 4) / 4
+                cap_faces.append(f)
                 for loop, (ii, jj) in zip(f.loops, q):
-                    du = 0.25 / 4 if jj != j else 0.0
-                    loop[uvl].uv = (u0 + du, 1.0 - 0.6 * ii / rings)
+                    u = 0.03 + 0.19 * tri_wave((jj / s_segs) * 7.0)
+                    v = 0.99 - 0.54 * (ii / r_segs)
+                    loop[uvl].uv = (u, v)
+
+    bmesh.ops.recalc_face_normals(bm, faces=cap_faces)
 cap()
 
 # --- Ribbon lock ---------------------------------------------------------------------------
-# A flat card with a gentle crown across it (the strand detail comes from the texture), a
-# narrow root and a fine tip. PROFILE_U places each profile point across the lock in UV space.
-PROFILE = [(1.0, 0.0), (0.5, 0.24), (0.0, 0.32), (-0.5, 0.24), (-1.0, 0.0), (0.0, -0.22)]
+# Sculpted Roblox UGC anime lock cross-section: plump rounded dome with clean underside bevel
+PROFILE = [(1.0, 0.0), (0.55, 0.20), (0.0, 0.30), (-0.55, 0.20), (-1.0, 0.0), (0.0, -0.14)]
 PROFILE_U = [1.0, 0.75, 0.5, 0.25, 0.0, 0.5]
 uv_rng = random.Random(4242)  # separate from rng, so texture choices never change the shape
 # Atlas columns (assets/hair/make_astrea_hair_texture.py): 0-1 outer locks, 2-3 inner layers.
@@ -118,18 +201,30 @@ def smooth_path(pts, n):
 def ribbon(ctrl, width, thick=0.035, segs=16, tip=2.2, root=0.55, end_tie=False, twist=0.0, inner=False, grow_len=0.18):
     pts = smooth_path(ctrl, segs)
     rings = []
+    prev_side = None
     for s, p in enumerate(pts):
         t = s / segs
         a = pts[max(0, s - 1)]; b = pts[min(segs, s + 1)]
         tan = (b - a).normalized()
-        nrm = out_normal(p)
-        side = tan.cross(nrm)
-        if side.length < 1e-5:
-            side = tan.cross(Vector((0, 0, 1)))
-        side.normalize()
+        if prev_side is None:
+            nrm = out_normal(p)
+            side = tan.cross(nrm)
+            if side.length < 1e-5:
+                side = tan.cross(Vector((0, 0, 1)))
+            if side.length < 1e-5:
+                side = tan.cross(Vector((1, 0, 0)))
+            side.normalize()
+        else:
+            # Parallel transport keeps the ribbon flat without 180-degree flips on outward-curling wings
+            side = prev_side - tan * prev_side.dot(tan)
+            if side.length < 1e-5:
+                side = tan.cross(out_normal(p))
+            side.normalize()
+        prev_side = side
         nrm = side.cross(tan).normalized()
         ang = twist * t
-        side, nrm = side * math.cos(ang) + nrm * math.sin(ang), nrm * math.cos(ang) - side * math.sin(ang)
+        s_vec = side * math.cos(ang) + nrm * math.sin(ang)
+        n_vec = nrm * math.cos(ang) - side * math.sin(ang)
         grow = root + (1 - root) * min(1.0, t / grow_len)
         if end_tie:
             shape = grow * (1 - 0.75 * t ** 2)  # gathers into the tie instead of a point
@@ -137,7 +232,7 @@ def ribbon(ctrl, width, thick=0.035, segs=16, tip=2.2, root=0.55, end_tie=False,
             shape = grow * (1 - t ** tip) * (1 + 0.15 * math.sin(math.pi * t))
         w = width * shape + 0.004
         h = thick * (0.5 + 0.5 * shape) + 0.003
-        rings.append([bm.verts.new(B(p + side * (sx * w) + nrm * (ny * h))) for sx, ny in PROFILE])
+        rings.append([bm.verts.new(B(p + s_vec * (sx * w) + n_vec * (ny * h))) for sx, ny in PROFILE])
     n = len(PROFILE)
     col = uv_rng.choice((2, 3) if inner else (0, 1))
     u_lo, u_span = col * 0.25 + ATLAS_INSET, 0.25 - 2 * ATLAS_INSET
@@ -214,119 +309,95 @@ def finish(name, colour):
     print(name, "tris", tris)
     return ob
 
-COLOUR = (0.78, 0.8, 0.9, 1)
+COLOUR = (0.86, 0.88, 0.96, 1)
 
-# ===== AstreaHair: the head part =========================================================
+# ===== Unified AstreaHair: middle-parted crown blending seamlessly into UGC anime bangs, sidelocks & cape =====
 
-# 1. Sleek crown: a smooth top layer swirling out from the crown over the sides and back,
-# ending in staggered soft tips on the upper back of the head. The bangs and front locks cover
-# the front half, and the long fall starts underneath this layer, so nothing cuts through it.
-for i in range(15):
-    th = math.radians(70 + i * (220 / 14))
-    behind = math.cos(th) < -0.3
-    y_end = rng.uniform(0.12, 0.36) if behind else rng.uniform(-0.05, 0.2)
-    # Start in a ring round the crown, not at one point: converging cards form a criss-cross
-    # lattice. The textured scalp shows strands radiating from the crown inside the ring.
-    o = 0.016 * (i % 2)  # neighbours alternate under/over, so overlapping cards stack
-    pts = [shell(th, 0.87, 0.06 + o), shell(th, 0.8, 0.12 + o), shell(th, 0.62, 0.13 + o),
-           shell(th, (0.62 + y_end) / 2, 0.135 + o), shell(th, y_end, 0.14 + o)]
-    ribbon(pts, 0.34, 0.026, segs=16, tip=1.8, root=0.12, grow_len=0.45)
-
-# 2. Curtain bangs from the centre part. Each bang is a smooth arc, not a diagonal: it leaves
-# the part sweeping sideways while staying high on the forehead, then curves down at the temple
-# (azimuth eases out like a sine, height eases in like 1 - cos), so the set reads as a rounded
-# curtain framing the face. The outer bangs are longer and lie on top of the inner ones.
+# 1. Clean iconic anime curtain-bang wing per side (IN FRONT, plump sculpted UGC volume framing temples/cheeks)
 for side in (-1, 1):
-    for k, (x_end, y_end, w) in enumerate([(0.38, 0.1, 0.22), (0.46, -0.04, 0.24), (0.53, -0.2, 0.25), (0.59, -0.36, 0.24)]):
-        th_end = math.asin(min(0.95, x_end / 0.8)) * side
-        th_root = side * math.radians(6)  # all four leave the part from one point
-        y_root = 0.66
-        lift = 0.014 * k  # outer bangs on top
-        pts = []
-        for j in range(7):
-            u = j / 6
-            th = th_root + (th_end - th_root) * math.sin(u * math.pi / 2)
-            y = y_root - (y_root - y_end) * (1 - math.cos(u * math.pi / 2)) ** 0.85
-            pts.append(shell(th, y, 0.07 + lift + 0.03 * u))
-        ribbon([jitter(q, 0.002) for q in pts], w, 0.034, segs=22, tip=2.3, root=0.35)
+    # Main sleek flared curtain wing matching ref (media_1794663964630_6fda0dd4.jpg)
+    pts_main = [
+        dome_pt(side * 0.042, CZ - 0.24, 0.016),
+        shell(side * math.radians(16), 0.60, 0.030),
+        shell(side * math.radians(32), 0.36, 0.058),
+        shell(side * math.radians(49), 0.14, 0.098),
+        shell(side * math.radians(62), 0.02, 0.152) + Vector((side * 0.02, 0.0, -0.01)),
+        shell(side * math.radians(70), 0.00, 0.205) + Vector((side * 0.06, 0.01, 0.00)),
+    ]
+    ribbon(pts_main, 0.20, 0.058, segs=24, tip=2.4, root=0.14, grow_len=0.26)
 
-# 3. Long front locks: from the temples, down beside the cheeks, over the front of each
-# shoulder and onto the chest, the longest reaching the waist.
+    # Secondary softer inner curl strictly underneath the main wing (starts well off center line so top stays smooth)
+    pts_sub = [
+        shell(side * math.radians(18), 0.58, -0.006),
+        shell(side * math.radians(26), 0.50, 0.006),
+        shell(side * math.radians(42), 0.26, 0.028),
+        shell(side * math.radians(58), 0.02, 0.064),
+        shell(side * math.radians(72), -0.14, 0.122) + Vector((side * 0.04, 0.00, 0.02)),
+    ]
+    ribbon(pts_sub, 0.17, 0.048, segs=22, tip=2.4, root=0.14, grow_len=0.26)
+
+# 2. Plump UGC sidelocks clearly BEHIND the flared curtain wings (tucked behind cheeks down to head/neck length)
 for side in (-1, 1):
-    for k, (th_deg, x_low, y_end, w) in enumerate([(58, 0.52, -1.75, 0.2), (68, 0.62, -2.35, 0.24),
-                                                    (78, 0.72, -2.05, 0.23), (88, 0.8, -1.55, 0.21)]):
-        th = math.radians(th_deg) * side
-        jx = rng.uniform(-0.03, 0.03)
-        pts = [shell(th * 0.8, 0.45, 0.05), shell(th * 0.92, 0.25, 0.08), shell(th, 0.0, 0.11),
-               shell(th * 1.03, -0.35, 0.13),
-               Vector((side * (x_low - 0.02 + jx), -0.75, -0.3 - 0.02 * k)),
-               Vector((side * (x_low + jx), -1.2, -0.42 - 0.02 * k)),
-               Vector((side * (x_low - 0.02 + jx), (y_end - 1.2) / 2 - 0.6, -0.45 - 0.02 * k)),
-               Vector((side * (x_low - 0.06 + jx), y_end, -0.43 - 0.02 * k))]
-        pts = sway(pts, 0.0, 0.03, rng.uniform(0, 6.28), below=-0.4)
-        ribbon([jitter(p, 0.006) for p in pts], w, 0.034, segs=36, tip=3.0, twist=rng.uniform(-0.25, 0.25))
-    # A fine separated strand in front of each lock group
-    th = math.radians(64) * side
-    pts = [shell(th * 0.85, 0.35, 0.1), shell(th, 0.1, 0.14), shell(th * 1.04, -0.35, 0.15),
-           Vector((side * 0.5, -0.8, -0.36)), Vector((side * 0.47, -1.4, -0.47)), Vector((side * 0.44, -1.9, -0.48))]
-    ribbon(pts, 0.07, 0.022, segs=24, tip=2.6, root=0.8)
+    for k, (th_deg, y_end, out_z, w, sep) in enumerate([
+        (68, -0.82, -0.24, 0.19, 0.000),
+        (82, -0.70, -0.08, 0.20, 0.008),
+    ]):
+        th = side * math.radians(th_deg)
+        pts = [
+            shell(th * 0.88, 0.64, -0.006),
+            shell(th * 0.94, 0.34, 0.018 + sep * 0.5),
+            shell(th, -0.04, 0.048 + sep),
+            shell(th * 1.01, -0.34, 0.068 + sep) + Vector((0.0, 0.0, out_z * 0.25)),
+            shell(th * 1.02, y_end, 0.080 + sep) + Vector((-side * 0.03, 0.0, out_z * 0.45)),
+        ]
+        ribbon(pts, w, 0.052, segs=22, tip=2.5, root=0.14, grow_len=0.28)
 
-# 4. Shaggy layers (the layered UGC look): medium locks from the crown over the sides, ending
-# at cheek, jaw and shoulder height with tips that flick outward, over the long hair below.
-for side in (-1, 1):
-    for k in range(6):
-        th = math.radians(side * (62 + 13 * k + rng.uniform(-4, 4)))
-        y_end = rng.uniform(-0.35, -0.95) if k < 4 else rng.uniform(-0.2, -0.6)
-        flick = rng.uniform(0.32, 0.44)
-        pts = [shell(th * 0.9, 0.78, 0.15), shell(th, 0.45, 0.16), shell(th, 0.1, 0.17),
-               shell(th * 1.02, (0.1 + y_end) / 2, 0.2), shell(th * 1.05, y_end + 0.08, flick - 0.06),
-               shell(th * 1.08, y_end, flick)]
-        ribbon([jitter(q, 0.006) for q in pts], rng.uniform(0.2, 0.26), 0.03, segs=20, tip=2.4, root=0.4)
+# 3. Sculpted crescent ahoge strand arching off her right upper crown (rooted inside crown cap)
+base = CROWN + Vector((0.04, -0.06, -0.05))
+pts = [
+    base,
+    base + Vector((0.09, 0.21, -0.05)),
+    base + Vector((0.24, 0.25, -0.12)),
+    base + Vector((0.37, 0.14, -0.20)),
+]
+ribbon(pts, 0.062, 0.045, segs=16, tip=2.4, root=0.72)
 
-# 5. A stray strand rising from the crown and arcing forward (the ahoge in both references).
-for k, (dx, h, reach) in enumerate(((0.02, 0.24, 0.4),)):
-    base = CROWN + Vector((dx, -0.05, -0.08))
-    pts = [base, base + Vector((dx, h * 0.8, -reach * 0.35)), base + Vector((dx * 2, h, -reach * 0.7)),
-           base + Vector((dx * 3, h * 0.55, -reach))]
-    ribbon(pts, 0.06, 0.02, segs=16, tip=2.0, root=0.8)
+# 4. Blended middle-part-to-cape UGC anime locks: fan smoothly out from under the rear crown dome
+# and drape in lush wide sculpted curves behind the shoulders with zero crossing wedges or inner poke-through.
+for layer, specs in enumerate([
+    # Inner darker shadow layer (6 fuller chunks strictly beneath outer layer, emerging only near tips)
+    [(th_d, -1.78 - 0.18 * math.sin(idx * 1.7), 0.055, 0.25) for idx, th_d in enumerate([114, 138, 164, 192, 218, 246])],
+    # Outer sculpted bright silver UGC cape (8 wide rounded locks seamlessly overlapping from crown cap down)
+    [(th_d, -1.58 - 0.38 * (math.sin(((idx + 0.5) / 8) * math.pi) ** 0.75) - 0.06 * (idx % 2), 0.100, 0.28)
+     for idx, th_d in enumerate([94, 116, 139, 164, 190, 215, 239, 264])],
+]):
+    is_inner = (layer == 0)
+    count = len(specs)
+    for i, (th_deg, y_end, off, width) in enumerate(specs):
+        u_span = i / max(1, count - 1)
+        th = math.radians(th_deg)
+        pts = hang(th, y_end, off, steps=11, flare_rate=0.14, flare_max=0.38)
+        if is_inner:
+            full = [off + (0.0 if q.y > 0.0 else min(0.36, -q.y * 0.11)) for q in pts]
+            body = [shell(th, q.y, -0.002 + (f + 0.002) * min(1.0, max(0.0, (0.35 - q.y) / 0.80))) for q, f in zip(pts, full) if q.y < 0.30]
+            pts = [shell(th, 0.54, -0.012), shell(th, 0.38, -0.002)] + body
+            root_w, grow_l, thick = 0.35, 0.24, 0.052
+        else:
+            low = 0.026
+            full = [off + (0.0 if q.y > 0.0 else min(0.38, -q.y * 0.12)) for q in pts]
+            body = [shell(th, q.y, low + (f - low) * min(1.0, max(0.0, (0.42 - q.y) / 0.56))) for q, f in zip(pts, full) if q.y < 0.36]
+            pts = [shell(th, 0.72, -0.006), shell(th, 0.58, 0.016), shell(th, 0.44, 0.024)] + body
+            root_w, grow_l, thick = 0.24, 0.28, 0.062
+        # Smooth graceful left-sweeping wind flow + lush anime S-curve tips
+        sweep_x = -0.22 - 0.42 * (u_span ** 0.90)
+        new_pts = [pts[0]]
+        n_p = len(pts)
+        for j, q in enumerate(pts[1:], 1):
+            t = j / (n_p - 1)
+            if q.y < 0.0:
+                s_curve = 0.032 * math.sin(1.25 * math.pi * t + u_span * 1.4)
+                q = q + Vector((sweep_x * (t ** 1.45) + s_curve, 0.0, 0.055 * t))
+            new_pts.append(q)
+        ribbon(new_pts, width, thick, segs=22, tip=2.8, root=root_w, inner=is_inner, grow_len=grow_l)
 
 head_part = finish(NAME, COLOUR)
-
-# ===== AstreaBackHair: the long straight fall ===========================================
-bm = bmesh.new()
-
-# 6. The long fall: straight locks down her back to the knees, the centre longest, the tips
-# flowing towards her right. Two interleaved layers so no gaps show between them.
-for layer, (count, off, width) in enumerate([(24, 0.07, 0.27), (20, 0.13, 0.24)]):
-    for i in range(count):
-        th = math.radians(94 + (i + 0.5 * layer) * (172 / (count - 1)))
-        edge = abs(math.cos(th + math.pi))  # 1 at the centre back
-        y_end = -2.4 - 1.25 * edge ** 0.7 - 0.35 * rng.random() - 0.15 * layer
-        pts = hang(th, y_end, off + 0.022 * (i % 2), steps=14)
-        # Stay under the crown layer (offset 0.13-0.14) until below its tips, so the two never
-        # cross (crossing cards make a criss-cross lattice on the back of the head).
-        low = 0.05 + 0.03 * layer
-        full = [off + 0.022 * (i % 2) + (0.0 if q.y > 0.0 else min(0.38, -q.y * 0.1)) for q in pts]
-        pts = [shell(th, q.y, low + (f - low) * min(1.0, max(0.0, (0.1 - q.y) / 0.5))) for q, f in zip(pts, full)]
-        pts[0] = shell(th, 0.74, 0.04 + 0.03 * layer)
-        pts = sway(pts, 0.28 + 0.1 * rng.random(), 0.035, rng.uniform(0, 6.28))
-        lock = [jitter(p, 0.004) for p in pts]
-        ribbon(lock, width, 0.034, segs=24, tip=3.0, root=0.9, inner=(layer == 0))
-        # On the outer layer, a split wisp peels off the last third of every other lock.
-        if layer == 1 and i % 2 == 0:
-            branch = lock[-6:]
-            sidestep = Vector((rng.choice((-1, 1)) * 0.09, -0.05, 0.02))
-            wisp = [branch[0]] + [q + sidestep * ((j + 1) / (len(branch) - 1)) ** 1.5 for j, q in enumerate(branch[1:])]
-            wisp[-1] = wisp[-1] + Vector((0, -0.12, 0))
-            ribbon(wisp, 0.06, 0.02, segs=12, tip=2.4, root=0.9)
-
-# 7. Separated fine strands at the edges and over the fall, so the silhouette has wisps.
-for i in range(10):
-    th = math.radians(rng.uniform(100, 260))
-    y_end = rng.uniform(-3.4, -2.2)
-    pts = hang(th, y_end, 0.14, steps=12)
-    pts = [shell(th, 0.15, 0.13)] + [q for q in pts if q.y < 0.1]  # start below the crown tips
-    pts = sway(pts, 0.35 + 0.2 * rng.random(), 0.05, rng.uniform(0, 6.28))
-    ribbon([jitter(p, 0.01) for p in pts], 0.08, 0.022, segs=22, tip=2.6, root=0.8, twist=rng.uniform(-0.4, 0.4))
-
-back_part = finish(BACK, COLOUR)

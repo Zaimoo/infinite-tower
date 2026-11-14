@@ -26,11 +26,11 @@ COL = 256
 S = 2  # supersampling
 OUT = Path(__file__).with_name("astrea_hair_texture.png")
 
-# Silver with cool lavender-blue shadows (her art), root -> mid -> tip
-ROOT = (112, 114, 140)
-MID = (208, 212, 230)
-TIP = (240, 242, 250)
-INNER_SHADE = (0.74, 0.75, 0.8)  # multiply for the inner variants (cooler and darker)
+# Cool pearl silver-white with lavender-blue shadows (matching reference art even under warm sun)
+ROOT = (106, 114, 158)
+MID = (198, 206, 236)
+TIP = (232, 238, 254)
+INNER_SHADE = (0.72, 0.75, 0.86)  # cooler indigo-lavender shadow for inner layers
 
 
 def lerp(a, b, t):
