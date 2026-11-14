@@ -871,15 +871,21 @@ local function buildPool(model: Model, root: CFrame)
 		cylinderY("LilyPad", 1.5, 0.08, 0.46, pc * CFrame.new(math.sin(a) * 17, 0, -math.cos(a) * 17), Color3.fromRGB(70, 140, 70), Enum.Material.Grass, true, f)
 	end
 	-- Weeping willows on the north bank
+	local envSpawner = getEnvSpawner()
+	local willowRng = Random.new(409)
 	for _, side in { -1, 1 } do
 		local w = pc * CFrame.new(side * 18, 0, -34)
-		makePart({ Name = "WillowTrunk", Size = Vector3.new(2.2, 11, 2.2), CFrame = w * CFrame.new(0, 5.5, 0), Color = WOOD, Material = Enum.Material.Wood, Parent = f })
-		for j, ball in { { 0, 12, 0, 13 }, { -3, 10.5, 2, 9 }, { 3, 10.5, -2, 9 } } do
-			makePart({ Name = "WillowCanopy_" .. j, Shape = Enum.PartType.Ball, Size = Vector3.new(ball[4], ball[4], ball[4]), CFrame = w * CFrame.new(ball[1], ball[2], ball[3]), Color = Color3.fromRGB(110, 150, 70), Material = Enum.Material.Grass, Decorative = true, Parent = f })
-		end
-		for k = 0, 5 do
-			local a = math.rad(k * 60)
-			makePart({ Name = "WillowFrond", Size = Vector3.new(1.2, 7, 1.2), CFrame = w * CFrame.new(math.cos(a) * 5.5, 7, math.sin(a) * 5.5), Color = Color3.fromRGB(96, 136, 62), Material = Enum.Material.Grass, Decorative = true, Parent = f })
+		if envSpawner.HasTemplate("WeepingWillowTree") then
+			envSpawner.SpawnWillow(f, w, 1.0, willowRng)
+		else
+			makePart({ Name = "WillowTrunk", Size = Vector3.new(2.2, 11, 2.2), CFrame = w * CFrame.new(0, 5.5, 0), Color = WOOD, Material = Enum.Material.Wood, Parent = f })
+			for j, ball in { { 0, 12, 0, 13 }, { -3, 10.5, 2, 9 }, { 3, 10.5, -2, 9 } } do
+				makePart({ Name = "WillowCanopy_" .. j, Shape = Enum.PartType.Ball, Size = Vector3.new(ball[4], ball[4], ball[4]), CFrame = w * CFrame.new(ball[1], ball[2], ball[3]), Color = Color3.fromRGB(110, 150, 70), Material = Enum.Material.Grass, Decorative = true, Parent = f })
+			end
+			for k = 0, 5 do
+				local a = math.rad(k * 60)
+				makePart({ Name = "WillowFrond", Size = Vector3.new(1.2, 7, 1.2), CFrame = w * CFrame.new(math.cos(a) * 5.5, 7, math.sin(a) * 5.5), Color = Color3.fromRGB(96, 136, 62), Material = Enum.Material.Grass, Decorative = true, Parent = f })
+			end
 		end
 	end
 	-- Fountain jet in the middle of the pool

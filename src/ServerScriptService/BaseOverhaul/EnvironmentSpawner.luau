@@ -41,6 +41,7 @@ local EXPECTED_HEIGHTS = {
 	HeroOakTree = 17.0,
 	HighlandPineTree = 20.6,
 	SakuraBlossomTree = 13.0,
+	WeepingWillowTree = 15.6,
 	WildForestShrub = 2.9,
 	GroundProp_MeadowTurfClump = 1.45,
 	Ground_MossyRootCollar = 0.85,
@@ -86,6 +87,7 @@ function EnvironmentSpawner.HasAllTreeTemplates(): boolean
 	return findTemplate("HeroOakTree") ~= nil
 		and findTemplate("HighlandPineTree") ~= nil
 		and findTemplate("SakuraBlossomTree") ~= nil
+		and findTemplate("WeepingWillowTree") ~= nil
 end
 
 function EnvironmentSpawner.WarnIfMissingOnce()
@@ -496,6 +498,32 @@ function EnvironmentSpawner.SpawnSakura(
 	return m
 end
 
+function EnvironmentSpawner.SpawnWillow(
+	parent: Instance,
+	baseCFrame: CFrame,
+	scale: number?,
+	rng: Random?
+): Model?
+	local r = rng or Random.new()
+	local s = scale or r:NextNumber(0.95, 1.25)
+	local yaw = r:NextNumber(0, math.tau)
+	local m = spawnPrefabModel(
+		"WeepingWillowTree",
+		parent,
+		baseCFrame,
+		s,
+		yaw,
+		EXPECTED_HEIGHTS.WeepingWillowTree,
+		nil,
+		0.28
+	)
+	if m then
+		EnvironmentSpawner.SpawnRootCollar(m, baseCFrame, s * 0.92, yaw)
+		scatterRootTurf(m, baseCFrame, 3.0 * s, 3, r)
+	end
+	return m
+end
+
 function EnvironmentSpawner.SpawnShrub(
 	parent: Instance,
 	baseCFrame: CFrame,
@@ -514,6 +542,8 @@ local function isTreeCanopyName(name: string): boolean
 		or name:find("OakCanopyCluster_", 1, true) ~= nil
 		or name:find("PineTier_", 1, true) ~= nil
 		or name:find("BlossomCanopy_", 1, true) ~= nil
+		or name:find("WillowCanopy_", 1, true) ~= nil
+		or name:find("WillowFrond", 1, true) ~= nil
 		or name:find("PineFoliage", 1, true) ~= nil
 		or name:find("OakFoliage", 1, true) ~= nil
 		or name:find("PineRoot", 1, true) ~= nil
@@ -549,6 +579,7 @@ local function getTrunkBaseAndScale(part: BasePart, kind: string): (Vector3, num
 	local scale = if kind == "Oak"
 		then math.clamp(part.Size.Y / 9.0, 0.85, 1.30)
 		elseif kind == "Pine" then math.clamp(part.Size.Y / 6.0, 0.85, 1.35)
+		elseif kind == "Willow" then math.clamp(part.Size.Y / 11.0, 0.85, 1.45)
 		else math.clamp(part.Size.Y / 7.0, 0.85, 1.20)
 	return basePos, scale
 end
@@ -562,9 +593,10 @@ function EnvironmentSpawner.UpgradeExistingScene(roots: { Instance }): number
 	local hasOak = EnvironmentSpawner.HasTemplate("HeroOakTree")
 	local hasPine = EnvironmentSpawner.HasTemplate("HighlandPineTree")
 	local hasSakura = EnvironmentSpawner.HasTemplate("SakuraBlossomTree")
+	local hasWillow = EnvironmentSpawner.HasTemplate("WeepingWillowTree")
 	local hasShrub = EnvironmentSpawner.HasTemplate("WildForestShrub")
 
-	if hasOak or hasPine or hasSakura or hasShrub then
+	if hasOak or hasPine or hasSakura or hasWillow or hasShrub then
 		type Replacement = {
 			parent: Instance,
 			kind: string,
@@ -676,13 +708,25 @@ function EnvironmentSpawner.UpgradeExistingScene(roots: { Instance }): number
 			for _, desc in ipairs(descs) do
 				if not claimed[desc] and desc:IsA("BasePart") and desc.Parent and not desc.Parent:IsA("Model") and not desc:FindFirstAncestor("BackgroundFloatingIslets") then
 					local n = desc.Name
-					if (n == "OakTrunk" and hasOak) or (n == "PineTrunk" and hasPine) or (n == "BlossomTrunk" and hasSakura) then
-						local kind = if n == "OakTrunk" then "Oak" elseif n == "PineTrunk" then "Pine" else "Sakura"
+					if
+						(n == "OakTrunk" and hasOak)
+						or (n == "PineTrunk" and hasPine)
+						or (n == "BlossomTrunk" and hasSakura)
+						or (n == "WillowTrunk" and hasWillow)
+					then
+						local kind = if n == "OakTrunk"
+							then "Oak"
+							elseif n == "PineTrunk" then "Pine"
+							elseif n == "BlossomTrunk" then "Sakura"
+							else "Willow"
 						local basePos, scale = getTrunkBaseAndScale(desc, kind)
 						local toDestroy: { Instance } = { desc }
 						claimed[desc] = true
 						local tint: Color3? = nil
-						local maxReachSq = if n == "OakTrunk" and desc:IsA("Part") and desc.Shape == Enum.PartType.Cylinder then 225 else 64
+						local maxReachSq = if n == "OakTrunk" and desc:IsA("Part") and desc.Shape == Enum.PartType.Cylinder
+							then 225
+							elseif kind == "Willow" then 121
+							else 64
 						for _, sib in desc.Parent:GetChildren() do
 							if not claimed[sib] and sib ~= desc and sib:IsA("BasePart") and isTreeCanopyName(sib.Name) then
 								local dx = sib.Position.X - basePos.X
@@ -766,6 +810,8 @@ function EnvironmentSpawner.UpgradeExistingScene(roots: { Instance }): number
 				spawned = EnvironmentSpawner.SpawnPine(rep.parent, rep.cf, rep.scale, rng)
 			elseif rep.kind == "Sakura" then
 				spawned = EnvironmentSpawner.SpawnSakura(rep.parent, rep.cf, rep.scale, rep.tint, rng)
+			elseif rep.kind == "Willow" then
+				spawned = EnvironmentSpawner.SpawnWillow(rep.parent, rep.cf, rep.scale, rng)
 			elseif rep.kind == "Shrub" then
 				spawned = EnvironmentSpawner.SpawnShrub(rep.parent, rep.cf, rep.scale, rng)
 			end

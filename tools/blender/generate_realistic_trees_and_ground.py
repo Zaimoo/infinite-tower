@@ -38,7 +38,10 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 ENV_DIR = REPO_ROOT / "assets" / "meshes" / "environment"
 TEX_DIR = ENV_DIR / "textures"
 SCRATCH_DIR = Path(
-    r"C:\Users\enter\.gemini\antigravity\brain\978d5919-910f-4f65-8b6b-86e51f6565cf\scratch"
+    os.environ.get(
+        "ENV_PREVIEW_DIR",
+        r"C:\Users\enter\.gemini\antigravity\brain\acb0e4c7-bcfb-4008-99fb-2546b64122c1\scratch",
+    )
 )
 
 MAX_TRIS_PER_MESHPART = 9600
@@ -662,6 +665,12 @@ def bake_seamless_bark_texture(prefix: str, species: str) -> tuple[Path, Path, P
         c_ridge = (0.175, 0.108, 0.098, 1.0)
         moss_col = (0.038, 0.068, 0.026, 1.0)
         r_base = 0.56
+    elif species == "WILLOW":
+        c_dark = (0.018, 0.017, 0.012, 1.0)
+        c_mid = (0.068, 0.058, 0.040, 1.0)
+        c_ridge = (0.140, 0.122, 0.090, 1.0)
+        moss_col = (0.030, 0.088, 0.024, 1.0)
+        r_base = 0.86
     else:  # SHRUB
         c_dark = (0.045, 0.032, 0.020, 1.0)
         c_mid = (0.118, 0.086, 0.055, 1.0)
@@ -735,6 +744,12 @@ def bake_seamless_bark_texture(prefix: str, species: str) -> tuple[Path, Path, P
             n1 = math.sin(ax * 7.0 + 0.8 * math.sin(ay * 3.0 + ax))
             n2 = math.cos(ax * 11.0 - ay * 4.0 + 0.5 * math.sin(ay * 5.0))
             return 0.02 + 0.075 * (abs(0.65 * n1 + 0.35 * n2) ** 0.55)
+        elif species == "WILLOW":
+            # Deeply furrowed twisted riverside willow bark ridges
+            warp_x = 0.62 * math.sin(ay * 2.0 + 0.6 * math.cos(ax * 3.0)) + 0.30 * math.cos(ay * 4.0 - ax)
+            r1 = abs(math.sin(ax * 6.0 + ay * 1.0 + warp_x * 2.5)) ** 0.42
+            r2 = abs(math.sin(ax * 10.0 - ay * 3.0 - warp_x * 1.4)) ** 0.52
+            return 0.014 + 0.125 * (0.60 * r1 + 0.40 * r2)
         else:  # OAK
             # Rugged multi-frequency interlaced oak bark plates & broken vertical crevices (no regular stripes)
             warp_x = 0.45 * math.sin(ay * 2.0 + 0.5 * math.cos(ax * 2.0)) + 0.28 * math.cos(ay * 3.0 - ax * 2.0)
@@ -1335,6 +1350,12 @@ def _make_atlas_leaf_material(
             mid = (0.072, 0.185, 0.040)
             tip = (0.135, 0.270, 0.065)
         rough = 0.46
+    elif kind == "WILLOW":
+        # Lush velvety sage-emerald & golden-spring willow greens (no washed-out highlights under direct sun)
+        base = (0.038, 0.100, 0.024)
+        mid = (0.092, 0.215, 0.046)
+        tip = (0.160, 0.315, 0.072)
+        rough = 0.84
     else:  # TURF
         base = (0.024, 0.064, 0.014)
         mid = (0.068, 0.165, 0.030)
@@ -1438,6 +1459,8 @@ def bake_botanical_4x4_atlas(prefix: str, kind: str) -> tuple[Path, Path, Path]:
                     u_col = (0.42 * tier_mul, 0.14 * tier_mul, 0.26 * tier_mul, 1.0)
                 elif kind == "PINE":
                     u_col = (0.015 * tier_mul, 0.048 * tier_mul, 0.015 * tier_mul, 1.0)
+                elif kind == "WILLOW":
+                    u_col = (0.016 * tier_mul, 0.052 * tier_mul, 0.014 * tier_mul, 1.0)
                 else:
                     u_col = (0.020 * tier_mul, 0.064 * tier_mul, 0.013 * tier_mul, 1.0)
                 under_mat = make_soil_ground_mat(f"{prefix}_u_{row}_{col}", u_col, u_col, u_col)
@@ -1489,6 +1512,64 @@ def bake_botanical_4x4_atlas(prefix: str, kind: str) -> tuple[Path, Path, Path]:
                             pyaw = base_yaw + k * (math.tau / 5.0)
                             ctr = Vector((fx + math.cos(pyaw) * rad * 0.52, fy + math.sin(pyaw) * rad * 0.52, fz))
                             _add_leaf_element_to_bm(bm, uv, ctr, pyaw - math.pi * 0.5, rad * 1.0, rad * 1.18, cup=0.024)
+                elif kind == "WILLOW":
+                    # Deep olive leaf-canopy underlayer at valid matte UV (v=0.72) so zero mirror-black roughness holes bake
+                    bv = [
+                        bm.verts.new((cx0 - 0.05, cy0 - 0.05, 0.03)),
+                        bm.verts.new((cx0 + 1.05, cy0 - 0.05, 0.03)),
+                        bm.verts.new((cx0 + 1.05, cy0 + 1.05, 0.03)),
+                        bm.verts.new((cx0 - 0.05, cy0 + 1.05, 0.03)),
+                    ]
+                    bf = bm.faces.new(bv)
+                    bf.smooth = True
+                    for loop in bf.loops:
+                        loop[uv].uv = (0.5, 0.72)
+                    # Dense crisscrossed canopy mosaic in cols 0-1 (dome) & cascading willow sprays in cols 2-3 (plumes)
+                    if col < 2:
+                        for l_i in range(340):
+                            lx = cx0 + rng.uniform(0.0, 1.0)
+                            ly = cy0 + rng.uniform(0.01, 0.99)
+                            lz = rng.uniform(0.06, 0.25)
+                            lyaw = math.pi + rng.uniform(-1.45, 1.45)
+                            _add_leaf_element_to_bm(
+                                bm,
+                                uv,
+                                Vector((lx, ly, lz)),
+                                lyaw,
+                                rng.uniform(0.050, 0.082),
+                                rng.uniform(0.110, 0.175),
+                                cup=0.007,
+                            )
+                    else:
+                        for s_i in range(18):
+                            sx = cx0 + (s_i + 0.5) / 18.0 + rng.uniform(-0.016, 0.016)
+                            _add_tapered_blade_to_bmesh(
+                                bm,
+                                uv,
+                                Vector((sx, cy0 + 1.02, rng.uniform(0.06, 0.12))),
+                                math.pi,
+                                1.12,
+                                0.0,
+                                1.04,
+                                0.012,
+                                4,
+                                rng.uniform(-0.14, 0.14),
+                            )
+                            for l_j in range(22):
+                                ly = cy0 + 0.02 + (l_j / 21.5) * 0.96 + rng.uniform(-0.015, 0.015)
+                                side_sign = 1.0 if (l_j % 2 == 0) else -1.0
+                                lx = sx + side_sign * rng.uniform(0.014, 0.038)
+                                lz = rng.uniform(0.06, 0.22)
+                                lyaw = math.pi + side_sign * rng.uniform(0.26, 0.68)
+                                _add_leaf_element_to_bm(
+                                    bm,
+                                    uv,
+                                    Vector((lx, ly, lz)),
+                                    lyaw,
+                                    rng.uniform(0.034, 0.054),
+                                    rng.uniform(0.112, 0.170),
+                                    cup=0.007,
+                                )
                 else:
                     for l_i in range(210):
                         lx = cx0 + rng.uniform(0.0, 1.0)
@@ -1647,11 +1728,16 @@ def _add_sculpted_leaf_mass(
     flatten_bottom: float = 0.60,
     amp: float = 0.22,
     tile_u: float = 0.28,
+    lock_cell: bool = False,
 ) -> None:
     """Adds an organically rippled 3D botanical foliage cloud lobe (tight crisp micro-leaf UV projection)."""
     u0, u1, v0, v1 = uv_bounds
     dv = (v1 - v0) * 0.44
-    uc = 0.50 + 0.18 * math.sin(phase * 1.17)
+    if lock_cell:
+        uc = 0.5 * (u0 + u1)
+        tile_u = min(tile_u, (u1 - u0) * 0.44)
+    else:
+        uc = 0.50 + 0.18 * math.sin(phase * 1.17)
     vc = 0.5 * (v0 + v1)
 
     ret = bmesh.ops.create_icosphere(bm, subdivisions=subdivisions, radius=1.0)
@@ -1778,11 +1864,16 @@ def _finalize_foliage(
     tex_paths: tuple[Path, Path, Path],
     crown_cores: list[Vector] | None = None,
     normal_blend: float = 0.88,
+    vert_normals: dict[bmesh.types.BMVert, Vector] | None = None,
 ) -> bpy.types.Object:
     bm.normal_update()
     custom_norms: list[tuple[float, float, float]] = []
     if crown_cores and normal_blend > 0.0:
         for v in bm.verts:
+            if vert_normals is not None and v in vert_normals:
+                blended = vert_normals[v].normalized()
+                custom_norms.append((blended.x, blended.y, blended.z))
+                continue
             best_c = crown_cores[0]
             best_d2 = (v.co - best_c).length_squared
             for c in crown_cores[1:]:
@@ -2510,6 +2601,431 @@ def render_visual_previews(
 
 
 # ---------------------------------------------------------------------------
+# Hero Weeping Willow Tree (arched dome boughs + cascading draped veil tresses)
+# ---------------------------------------------------------------------------
+
+def _add_willow_weeping_plume(
+    bm: bmesh.types.BMesh,
+    uv_layer,
+    vert_normals: dict[bmesh.types.BMVert, Vector],
+    origin: Vector,
+    out_dir: Vector,
+    out_arch: float,
+    drop_len: float,
+    width: float,
+    depth: float,
+    twist_yaw: float,
+    sway_amp: float,
+    uv_bounds: tuple[float, float, float, float],
+    segs: int = 5,
+    phase: float = 0.0,
+    min_z: float = 1.65,
+) -> None:
+    """Adds a closed, softly rounded 4-sided 3D sculpted cascading weeping willow plume."""
+    u0, u1, v0, v1 = uv_bounds
+    uc = 0.5 * (u0 + u1)
+    du = min((u1 - u0) * 0.36, 0.088)
+    u_ring = (uc - du, uc, uc + du, uc, uc - du)
+    v_top = v1 - (v1 - v0) * 0.04
+    v_bot = v0 + (v1 - v0) * 0.05
+
+    out_xy = Vector((out_dir.x, out_dir.y, 0.0))
+    if out_xy.length < 1e-4:
+        out_xy = Vector((1.0, 0.0, 0.0))
+    else:
+        out_xy.normalize()
+    side_xy = Vector((-out_xy.y, out_xy.x, 0.0))
+
+    rows: list[tuple[float, list[bmesh.types.BMVert]]] = []
+    center_end = origin.copy()
+    f_end = out_xy
+    for i in range(segs + 1):
+        t = i / segs
+        # Smooth parabolic fountain drape curving gently outward from dome, never spiking upward
+        radial = out_arch * math.sin(min(1.0, t * 1.18) * math.pi * 0.5)
+        radial_flutter = 0.12 * math.sin(t * 3.6 + phase)
+        z = origin.z - (t ** 1.16) * drop_len
+        if z < min_z:
+            z = min_z + 0.10 * (1.0 - t)
+
+        sway = sway_amp * math.sin(t * math.pi * 1.35 + phase)
+        center = origin + out_xy * (radial + radial_flutter) + side_xy * sway
+        center.z = z
+        center_end = center
+
+        # Full billowing cascade through upper/mid veil, tapering smoothly near bottom pendant
+        w_env = (0.58 + 0.46 * math.sin(min(1.0, t * 0.85 + 0.08) * math.pi)) * (1.0 - 0.68 * (t ** 2.2))
+        w_env = max(w_env, 0.28)
+        hw = width * 0.5 * w_env
+        hd = depth * 0.5 * w_env
+
+        ang = twist_yaw + 0.18 * math.sin(t * 2.5 + phase)
+        f_dir = (out_xy * math.cos(ang) - side_xy * math.sin(ang)).normalized()
+        s_dir = (side_xy * math.cos(ang) + out_xy * math.sin(ang)).normalized()
+        f_end = f_dir
+
+        coords = [
+            center + f_dir * hd,
+            center + s_dir * hw,
+            center - f_dir * (hd * 0.88),
+            center - s_dir * hw,
+        ]
+        ring_vs: list[bmesh.types.BMVert] = []
+        for p in coords:
+            v = bm.verts.new(p)
+            rad_dir = (p - center)
+            if rad_dir.length > 1e-4:
+                rad_dir.normalize()
+            else:
+                rad_dir = out_xy
+            # Smooth outward + soft upward crown shading bias so light glides organically
+            sm_n = (rad_dir * 0.78 + out_xy * 0.16 + Vector((0.0, 0.0, 0.22))).normalized()
+            vert_normals[v] = sm_n
+            ring_vs.append(v)
+        rows.append((t, ring_vs))
+
+    for i in range(segs):
+        t0, r0 = rows[i]
+        t1, r1 = rows[i + 1]
+        va = v_top + (v_bot - v_top) * t0
+        vb = v_top + (v_bot - v_top) * t1
+        for k in range(4):
+            kn = (k + 1) % 4
+            ua = u_ring[k]
+            ub = u_ring[k + 1]
+            # Outward winding looking from outside the closed plume tube
+            face = bm.faces.new((r0[k], r1[k], r1[kn], r0[kn]))
+            face.smooth = True
+            for loop, uv_pt in zip(face.loops, ((ua, va), (ua, vb), (ub, vb), (ub, va))):
+                loop[uv_layer].uv = uv_pt
+
+    # Soft rounded droplet tip closing the bottom cleanly
+    tip_pt = center_end + Vector((0.0, 0.0, -0.22)) + f_end * 0.04
+    v_tip = bm.verts.new(tip_pt)
+    vert_normals[v_tip] = (f_end * 0.55 + Vector((0.0, 0.0, -0.45))).normalized()
+    last_ring = rows[-1][1]
+    for k in range(4):
+        kn = (k + 1) % 4
+        face = bm.faces.new((last_ring[k], v_tip, last_ring[kn]))
+        face.smooth = True
+        ua = u_ring[k]
+        ub = u_ring[k + 1]
+        for loop, uv_pt in zip(face.loops, ((ua, v_bot), (0.5 * (ua + ub), v0), (ub, v_bot))):
+            loop[uv_layer].uv = uv_pt
+
+
+def build_weeping_willow(
+    willow_atlas: tuple[Path, Path, Path],
+    willow_bark: tuple[Path, Path, Path],
+) -> tuple[Path, list[bpy.types.Object]]:
+    clear_objects()
+    rng = random.Random(706)
+    bm_bark = bmesh.new()
+    bm_fol = bmesh.new()
+    uv_fol = bm_fol.loops.layers.uv.new("UVMap")
+    plume_normals: dict[bmesh.types.BMVert, Vector] = {}
+
+    # 1. Gnarly fluted willow trunk leaning gently toward waterside
+    trunk_pts, trunk_r = _subdivide_smooth_chain(
+        [
+            Vector((0.0, 0.0, -0.45)),
+            Vector((0.10, -0.06, 0.95)),
+            Vector((0.24, -0.10, 2.50)),
+            Vector((0.12, 0.06, 4.10)),
+            Vector((-0.04, 0.12, 5.45)),
+        ],
+        [1.46, 1.02, 0.86, 0.75, 0.58],
+        subdivs=1,
+        wobble_amp=0.05,
+        rng=rng,
+    )
+    _sweep_branch_tube(bm_bark, trunk_pts, trunk_r, sides=12, flute_amp=0.12, flute_count=6, root_flare_amp=0.42)
+
+    # 6 sinuous buttress roots hugging the grassy lakeside bank
+    for r_i in range(6):
+        ang = r_i * (math.tau / 6.0) + rng.uniform(-0.22, 0.22)
+        d = Vector((math.cos(ang), math.sin(ang), 0.0))
+        side_d = Vector((-d.y, d.x, 0.0))
+        rlen = rng.uniform(2.5, 3.3)
+        r_pts, r_r = _subdivide_smooth_chain(
+            [
+                Vector((0.08, -0.04, 1.35)) + d * 0.48,
+                d * (rlen * 0.38) + side_d * rng.uniform(-0.28, 0.28) + Vector((0, 0, 0.42)),
+                d * (rlen * 0.74) + side_d * rng.uniform(-0.20, 0.20) + Vector((0, 0, 0.07)),
+                d * rlen + Vector((0, 0, -0.32)),
+            ],
+            [0.44, 0.30, 0.18, 0.06],
+            subdivs=1,
+        )
+        _sweep_branch_tube(bm_bark, r_pts, r_r, sides=6, cap_tip=False)
+
+    # 2. Sweeping vaulted interior limbs staying compact inside rad<=4.2 so zero twigs pierce out
+    bough_specs = [
+        (Vector((0.04, 0.08, 4.50)), 0.25, 0.76, 4.2, 0.42),
+        (Vector((-0.02, 0.12, 5.00)), 1.30, 0.82, 4.1, 0.40),
+        (Vector((-0.06, 0.10, 5.15)), 2.38, 0.78, 4.3, 0.40),
+        (Vector((0.02, 0.06, 4.65)), 3.45, 0.74, 4.0, 0.42),
+        (Vector((0.10, 0.02, 4.80)), 4.52, 0.80, 4.0, 0.40),
+        (Vector((-0.04, 0.13, 5.20)), 5.45, 0.86, 3.9, 0.38),
+    ]
+    for base_pt, az, elev, length, r0 in bough_specs:
+        horiz = Vector((math.cos(az), math.sin(az), 0.0))
+        side_v = Vector((-horiz.y, horiz.x, 0.0))
+        p0 = base_pt
+        p1 = p0 + horiz * (length * 0.44) + Vector((0, 0, math.sin(elev) * length * 0.56)) + side_v * rng.uniform(-0.25, 0.25)
+        p2 = p1 + horiz * (length * 0.42) + Vector((0, 0, math.sin(elev) * length * 0.24)) + side_v * rng.uniform(-0.20, 0.20)
+        p3 = p2 + horiz * (length * 0.24) + Vector((0, 0, -0.30))
+        b_pts, b_r = _subdivide_smooth_chain([p0, p1, p2, p3], [r0, r0 * 0.68, r0 * 0.36, 0.09], subdivs=1)
+        _sweep_branch_tube(bm_bark, b_pts, b_r, sides=7)
+
+        for sub_idx, (src_pt, d_az, slen) in enumerate([(p1, 0.44, 2.0), (p2, -0.46, 1.8)]):
+            faz = az + d_az + rng.uniform(-0.14, 0.14)
+            fhoriz = Vector((math.cos(faz), math.sin(faz), 0.0))
+            fp1 = src_pt + fhoriz * (slen * 0.65) + Vector((0, 0, 0.55 - 0.12 * sub_idx))
+            fp2 = fp1 + fhoriz * (slen * 0.35) + Vector((0, 0, -0.15))
+            f_pts, f_r = _subdivide_smooth_chain([src_pt, fp1, fp2], [0.16, 0.09, 0.035], subdivs=1)
+            _sweep_branch_tube(bm_bark, f_pts, f_r, sides=5)
+
+    for a_i in range(4):
+        aaz = a_i * (math.tau / 4.0) + 0.45
+        ah = Vector((math.cos(aaz), math.sin(aaz), 0.0))
+        ap1 = Vector((-0.02, 0.10, 5.35)) + ah * 1.0 + Vector((0, 0, 2.8))
+        ap2 = ap1 + ah * 1.3 + Vector((0, 0, 1.4))
+        a_pts, a_r = _subdivide_smooth_chain([Vector((-0.02, 0.10, 5.35)), ap1, ap2], [0.28, 0.15, 0.05], subdivs=1)
+        _sweep_branch_tube(bm_bark, a_pts, a_r, sides=5)
+
+    bark_obj = _finalize_bark_with_tile_tex("WeepingWillowTree_Bark", bm_bark, willow_bark)
+
+    # 3. Layered sculpted willow crown canopy tufts tucked cleanly inside the weeping fountain (16 x 80 = 1,280 tris)
+    dome_list: list[tuple[Vector, float, float, float]] = [
+        (Vector((0.0, 0.0, 12.35)), 2.25, 2.25, 1.55),
+        (Vector((0.1, -0.1, 11.45)), 2.55, 2.55, 1.60),
+    ]
+    for c_i in range(6):
+        caz = (c_i / 6.0) * math.tau + 0.35
+        ch = Vector((math.cos(caz), math.sin(caz), 0.0))
+        dome_list.append((ch * 2.15 + Vector((0.0, 0.0, 11.0 + 0.25 * math.sin(caz * 2.0))), 1.95, 1.95, 1.45))
+    for c_i in range(8):
+        caz = (c_i / 8.0) * math.tau + 0.12
+        ch = Vector((math.cos(caz), math.sin(caz), 0.0))
+        dome_list.append((ch * 3.35 + Vector((0.0, 0.0, 9.75 + 0.25 * math.cos(caz * 3.0))), 1.90, 1.90, 1.40))
+
+    dome_cores: list[Vector] = [Vector((0.0, 0.0, 10.6))]
+    for idx_d, (dp, rx, ry, rz) in enumerate(dome_list[:16]):
+        dome_cores.append(dp)
+        rel_h = max(0.0, min(1.0, (dp.z - 9.2) / 3.4))
+        row = min(3, max(2, int(1.8 + rel_h * 1.4)))
+        col = rng.randint(0, 1)  # mosaic foliage cells (zero stripes on rounded crown tufts)
+        _add_sculpted_leaf_mass(
+            bm_fol,
+            uv_fol,
+            dp,
+            rx,
+            ry,
+            rz,
+            _cell_uv_bounds(row, col),
+            phase=idx_d * 1.27,
+            subdivisions=2,
+            flatten_bottom=0.72,
+            amp=0.11,
+            tile_u=0.095,
+            lock_cell=True,
+        )
+
+    # 4. Seamless cascading 3D weeping plumes waterfalling right from inside the upper crown tufts!
+    # Crown crest apex weeping sprays breaking the top dome silhouette cleanly (10 x 36 = 360 tris)
+    for k in range(10):
+        az = (k / 10.0) * math.tau + rng.uniform(-0.12, 0.12)
+        horiz = Vector((math.cos(az), math.sin(az), 0.0))
+        orig = horiz * rng.uniform(0.35, 1.15) + Vector((0.0, 0.0, rng.uniform(12.2, 13.0)))
+        _add_willow_weeping_plume(
+            bm_fol,
+            uv_fol,
+            plume_normals,
+            orig,
+            horiz,
+            out_arch=rng.uniform(1.85, 2.55),
+            drop_len=rng.uniform(3.2, 4.4),
+            width=rng.uniform(0.86, 1.12),
+            depth=rng.uniform(0.58, 0.76),
+            twist_yaw=rng.uniform(-0.35, 0.35),
+            sway_amp=rng.uniform(-0.22, 0.22),
+            uv_bounds=_cell_uv_bounds(3, rng.randint(2, 3)),
+            segs=4,
+            phase=k * 0.63,
+            min_z=7.4,
+        )
+
+    # A. Upper-shoulder weeping mantle buried cleanly at roots & hugging the dome curve (62 x 36 = 2,232 tris)
+    for k in range(62):
+        az = (k / 62.0) * math.tau + rng.uniform(-0.06, 0.06)
+        horiz = Vector((math.cos(az), math.sin(az), 0.0))
+        rad = rng.uniform(1.4, 2.9)
+        z_start = rng.uniform(10.8, 12.2)
+        orig = horiz * rad + Vector((rng.uniform(-0.18, 0.18), rng.uniform(-0.18, 0.18), z_start))
+        hem = 0.78 + 0.22 * math.sin(az * 3.0 + 0.6)
+        row = 3 if z_start > 11.4 else 2
+        _add_willow_weeping_plume(
+            bm_fol,
+            uv_fol,
+            plume_normals,
+            orig,
+            horiz,
+            out_arch=rng.uniform(1.75, 2.45),
+            drop_len=rng.uniform(4.8, 6.4) * hem,
+            width=rng.uniform(0.82, 1.12),
+            depth=rng.uniform(0.56, 0.78),
+            twist_yaw=rng.uniform(-0.4, 0.4),
+            sway_amp=rng.uniform(-0.26, 0.26),
+            uv_bounds=_cell_uv_bounds(row, rng.randint(2, 3)),
+            segs=4,
+            phase=k * 0.71,
+            min_z=4.2,
+        )
+
+    # B. Hero outer weeping curtain columns with roots tucked deeply inside upper mantle (92 x 44 = 4,048 tris)
+    for k in range(92):
+        az = (k / 92.0) * math.tau + rng.uniform(-0.05, 0.05)
+        horiz = Vector((math.cos(az), math.sin(az), 0.0))
+        hem_window = 0.64 + 0.36 * math.sin(az * 3.0 + 0.85)
+        rad = rng.uniform(3.0, 4.4)
+        z_start = rng.uniform(9.1, 10.6)
+        orig = horiz * rad + Vector((rng.uniform(-0.2, 0.2), rng.uniform(-0.2, 0.2), z_start))
+        drop = rng.uniform(5.8, 8.0) * hem_window
+        row = rng.choices([1, 2, 3], weights=[1, 3, 4])[0]
+        _add_willow_weeping_plume(
+            bm_fol,
+            uv_fol,
+            plume_normals,
+            orig,
+            horiz,
+            out_arch=rng.uniform(1.35, 2.05),
+            drop_len=drop,
+            width=rng.uniform(0.70, 0.98),
+            depth=rng.uniform(0.48, 0.68),
+            twist_yaw=rng.uniform(-0.45, 0.45),
+            sway_amp=rng.uniform(-0.32, 0.32),
+            uv_bounds=_cell_uv_bounds(row, rng.randint(2, 3)),
+            segs=5,
+            phase=k * 0.89,
+            min_z=1.65,
+        )
+
+    # C. Inner depth weeping curtains giving rich layered volume underneath (40 x 36 = 1,440 tris)
+    for k in range(40):
+        az = (k / 40.0) * math.tau + rng.uniform(-0.09, 0.09)
+        horiz = Vector((math.cos(az), math.sin(az), 0.0))
+        hem_window = 0.68 + 0.32 * math.sin(az * 3.0 + 0.85)
+        rad = rng.uniform(2.3, 3.6)
+        z_start = rng.uniform(7.5, 9.0)
+        orig = horiz * rad + Vector((0.0, 0.0, z_start))
+        _add_willow_weeping_plume(
+            bm_fol,
+            uv_fol,
+            plume_normals,
+            orig,
+            horiz,
+            out_arch=rng.uniform(0.95, 1.55),
+            drop_len=rng.uniform(4.2, 5.8) * hem_window,
+            width=rng.uniform(0.78, 1.08),
+            depth=rng.uniform(0.54, 0.74),
+            twist_yaw=rng.uniform(-0.6, 0.6),
+            sway_amp=rng.uniform(-0.24, 0.24),
+            uv_bounds=_cell_uv_bounds(rng.randint(0, 1), rng.randint(2, 3)),
+            segs=4,
+            phase=k * 1.43,
+            min_z=2.3,
+        )
+
+    fol_obj = _finalize_foliage(
+        "WeepingWillowTree_Foliage",
+        bm_fol,
+        willow_atlas,
+        crown_cores=dome_cores,
+        normal_blend=0.84,
+        vert_normals=plume_normals,
+    )
+    fbx_path = _export_fbx([bark_obj, fol_obj], "WeepingWillowTree.fbx")
+    return fbx_path, [bark_obj, fol_obj]
+
+
+def render_willow_preview(
+    grass_tex: tuple[Path, Path, Path],
+    willow_fbx: Path,
+) -> None:
+    clear_objects()
+    scene = bpy.context.scene
+    scene.cycles.samples = 48
+    scene.view_settings.view_transform = "AgX"
+    scene.view_settings.exposure = -1.10
+
+    world = bpy.data.worlds.new("WillowPreviewWorld")
+    scene.world = world
+    if world.node_tree is None:
+        world.use_nodes = True
+    wnt = world.node_tree
+    wnt.nodes.clear()
+    w_out = wnt.nodes.new("ShaderNodeOutputWorld")
+    bg = wnt.nodes.new("ShaderNodeBackground")
+    sky = wnt.nodes.new("ShaderNodeTexSky")
+    sky.sky_type = "MULTIPLE_SCATTERING"
+    if hasattr(sky, "sun_elevation"):
+        sky.sun_elevation = math.radians(40.0)
+        sky.sun_rotation = math.radians(35.0)
+    bg.inputs["Strength"].default_value = 0.40
+    wnt.links.new(sky.outputs["Color"], bg.inputs["Color"])
+    wnt.links.new(bg.outputs["Background"], w_out.inputs["Surface"])
+
+    sun_d = bpy.data.lights.new("WillowSun", type="SUN")
+    sun_d.energy = 2.4
+    sun_d.angle = math.radians(3.5)
+    sun = link_obj(bpy.data.objects.new("WillowSun", sun_d))
+    sun.rotation_euler = (math.radians(44.0), math.radians(14.0), math.radians(-35.0))
+
+    bm_g = bmesh.new()
+    uv_g = bm_g.loops.layers.uv.new("UVMap")
+    vs = [bm_g.verts.new((-22, -22, 0)), bm_g.verts.new((22, -22, 0)), bm_g.verts.new((22, 22, 0)), bm_g.verts.new((-22, 22, 0))]
+    fg = bm_g.faces.new(vs)
+    for loop, c in zip(fg.loops, [(0, 0), (5, 0), (5, 5), (0, 5)]):
+        loop[uv_g].uv = c
+    mg = bpy.data.meshes.new("WillowStageGrass")
+    bm_g.to_mesh(mg)
+    bm_g.free()
+    og = link_obj(bpy.data.objects.new("WillowStageGrass", mg))
+    og.data.materials.append(make_pbr_material("WillowStageGrassMat", *grass_tex))
+
+    bpy.ops.import_scene.fbx(filepath=str(willow_fbx))
+    for obj in bpy.context.scene.objects:
+        if obj.type == "MESH" and hasattr(obj, "cycles") and hasattr(obj.cycles, "shadow_terminator_offset"):
+            obj.cycles.shadow_terminator_offset = 0.10
+
+    # Save an inspectable .blend file as well for the user's open Blender
+    blend_out = SCRATCH_DIR / "WeepingWillowTree.blend"
+    bpy.ops.wm.save_as_mainfile(filepath=str(blend_out))
+
+    cam_d = bpy.data.cameras.new("WillowCam")
+    cam_d.lens = 35.0
+    cam = link_obj(bpy.data.objects.new("WillowCam", cam_d))
+    scene.camera = cam
+
+    def aim(pos: Vector, target: Vector) -> None:
+        cam.location = pos
+        cam.rotation_euler = (target - pos).normalized().to_track_quat("-Z", "Y").to_euler()
+
+    scene.render.resolution_x = 1280
+    scene.render.resolution_y = 860
+
+    aim(Vector((0.0, -28.0, 9.2)), Vector((0.0, 0.0, 7.6)))
+    scene.render.filepath = str(SCRATCH_DIR / "willow_preview_hero.png")
+    bpy.ops.render.render(write_still=True)
+
+    aim(Vector((13.0, -15.5, 4.6)), Vector((0.0, 0.0, 5.2)))
+    scene.render.filepath = str(SCRATCH_DIR / "willow_preview_closeup.png")
+    bpy.ops.render.render(write_still=True)
+    print(f"[WillowRender] Saved previews & blend to {SCRATCH_DIR}")
+
+
+# ---------------------------------------------------------------------------
 # Entrypoint
 # ---------------------------------------------------------------------------
 
@@ -2526,9 +3042,21 @@ def main() -> None:
     ensure_dirs()
     reset_scene()
     force_rebake = os.environ.get("REBAKE_ATLASES") == "1"
+    only_willow = os.environ.get("ONLY_WILLOW") == "1"
 
     print("=== Step 1: Ground textures (1024x1024 PBR) ===")
     grass_tex = (None if force_rebake else _tex_triplet_exists("Tex_MeadowGrass")) or bake_meadow_grass_texture()
+    if only_willow:
+        print("=== Step 2 (Willow): 4x4 willow foliage & bark atlases (1024x1024 PBR) ===")
+        willow_atlas = (None if force_rebake else _tex_triplet_exists("Tex_WillowFoliage")) or bake_botanical_4x4_atlas("Tex_WillowFoliage", "WILLOW")
+        willow_bark = (None if force_rebake else _tex_triplet_exists("Tex_WillowBark")) or bake_seamless_bark_texture("Tex_WillowBark", "WILLOW")
+        print("=== Step 3 (Willow): Sculpting hero weeping willow ===")
+        willow_fbx, _ = build_weeping_willow(willow_atlas, willow_bark)
+        print("=== Step 4 (Willow): Rendering Cycles visual QA previews ===")
+        render_willow_preview(grass_tex, willow_fbx)
+        print("WEEPING WILLOW GENERATED CLEANLY.")
+        return
+
     cobble_tex = (None if force_rebake else _tex_triplet_exists("Tex_MedievalCobble")) or bake_medieval_cobble_texture()
     earth_tex = (None if force_rebake else _tex_triplet_exists("Tex_ForestEarth")) or bake_forest_earth_texture()
 
@@ -2538,11 +3066,13 @@ def main() -> None:
     sakura_atlas = (None if force_rebake else _tex_triplet_exists("Tex_SakuraBlossom")) or bake_botanical_4x4_atlas("Tex_SakuraBlossom", "SAKURA")
     shrub_atlas = (None if force_rebake else _tex_triplet_exists("Tex_ShrubFoliage")) or bake_botanical_4x4_atlas("Tex_ShrubFoliage", "SHRUB")
     turf_atlas = (None if force_rebake else _tex_triplet_exists("Tex_MeadowTurfClump")) or bake_botanical_4x4_atlas("Tex_MeadowTurfClump", "TURF")
+    willow_atlas = (None if force_rebake else _tex_triplet_exists("Tex_WillowFoliage")) or bake_botanical_4x4_atlas("Tex_WillowFoliage", "WILLOW")
 
     oak_bark = (None if force_rebake else _tex_triplet_exists("Tex_OakBark")) or bake_seamless_bark_texture("Tex_OakBark", "OAK")
     pine_bark = (None if force_rebake else _tex_triplet_exists("Tex_PineBark")) or bake_seamless_bark_texture("Tex_PineBark", "PINE")
     sakura_bark = (None if force_rebake else _tex_triplet_exists("Tex_SakuraBark")) or bake_seamless_bark_texture("Tex_SakuraBark", "SAKURA")
     shrub_bark = (None if force_rebake else _tex_triplet_exists("Tex_ShrubWood")) or bake_seamless_bark_texture("Tex_ShrubWood", "SHRUB")
+    willow_bark = (None if force_rebake else _tex_triplet_exists("Tex_WillowBark")) or bake_seamless_bark_texture("Tex_WillowBark", "WILLOW")
 
     print("=== Step 3: Sculpting trees, shrubs, clumps & kits ===")
     oak_fbx, _ = build_hero_oak(oak_atlas, oak_bark)
@@ -2551,6 +3081,7 @@ def main() -> None:
     shrub_fbx, _ = build_wild_shrub(shrub_atlas, shrub_bark)
     turf_fbx, _ = build_meadow_turf_clump(turf_atlas)
     kit_fbx, _ = build_ground_materials_kit(grass_tex, cobble_tex, earth_tex)
+    build_weeping_willow(willow_atlas, willow_bark)
 
     print("=== Step 4: Rendering Cycles visual QA previews ===")
     render_visual_previews(
