@@ -151,6 +151,14 @@ WeaponVfxConfig.Elements = table.freeze({
 		Wisps = true,
 		Sparks = true,
 	}),
+	AURORA = table.freeze({
+		PrimaryColor = Color3.fromRGB(68, 235, 212),
+		AccentColor = Color3.fromRGB(228, 120, 235),
+		ParticleTexture = "",
+		TrailTexture = "",
+		Wisps = true,
+		Sparks = true,
+	}),
 } :: { [ElementType]: ElementStyle })
 
 -- Specific mapping for Bows and future weapon types
@@ -254,11 +262,13 @@ WeaponVfxConfig.ArtifactElements = table.freeze({
 	-- The Gilded Anvil (Band 6 Gildforged)
 	art_gild_dawnwarden_oath = "SUNLIGHT",
 	art_gild_eclipse_sisters = "ECLIPSE",
+	art_gild_aurora_skyhook = "AURORA",
 } :: { [string]: ElementType })
 
 local GILDED_ARTIFACTS: { [string]: boolean } = table.freeze({
 	art_gild_dawnwarden_oath = true,
 	art_gild_eclipse_sisters = true,
+	art_gild_aurora_skyhook = true,
 })
 
 -- Balanced particle & lighting rates: punchy, radiant anime VFX accents with clear gameplay presence
