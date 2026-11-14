@@ -23,6 +23,7 @@ local FortressTree = require(Shared:WaitForChild("Util"):WaitForChild("FortressT
 local InventoryCapacity = require(Shared:WaitForChild("Util"):WaitForChild("InventoryCapacity"))
 local SummonLuck = require(Shared:WaitForChild("Util"):WaitForChild("SummonLuck"))
 local MirrorBanner = require(Shared:WaitForChild("Util"):WaitForChild("MirrorBanner"))
+local AnvilBanner = require(Shared:WaitForChild("Util"):WaitForChild("AnvilBanner"))
 local Onboarding = require(Shared:WaitForChild("Util"):WaitForChild("Onboarding"))
 local OnboardingService = require(script.Parent:WaitForChild("OnboardingService"))
 local FortressTreeService = require(script.Parent:WaitForChild("FortressTreeService"))
@@ -167,6 +168,10 @@ local UnlockTreeNodeFunc = progressionRemote("UnlockTreeNode", "RemoteFunction")
 local OnboardingSyncEvent = progressionRemote("OnboardingSync", "RemoteEvent") :: RemoteEvent
 -- The Gilded Mirror's Spark: spend one banked pick on any of the five mirror heroes.
 local ClaimMirrorSparkFunc = progressionRemote("ClaimMirrorSpark", "RemoteFunction") :: RemoteFunction
+-- The Gilded Anvil (Tier-8 Gildforged relics): Focus pick, Spark claim, and pack reveal notification.
+local SetAnvilFocusFunc = progressionRemote("SetAnvilFocus", "RemoteFunction") :: RemoteFunction
+local ClaimAnvilSparkFunc = progressionRemote("ClaimAnvilSpark", "RemoteFunction") :: RemoteFunction
+local AnvilRevealEvent = progressionRemote("AnvilReveal", "RemoteEvent") :: RemoteEvent
 
 --============================================================================
 -- 1. EXPORTED TYPE DEFINITIONS
@@ -592,8 +597,9 @@ function DataManager.SyncProfile(player: Player, progressionOnly: boolean?)
 	DataManager.MigrateArtifactTypes(profile)
 	-- Raid bosses (docs/raid-boss-plan.md §10): idempotent payout key and raid stats. Lazy, so old profiles gain it.
 	DataManager.EnsureRaidData(profile)
-	-- The Gilded Mirror's Spark counter (docs/gilded-mirror-plan.md): lazy, so old profiles gain it.
+	-- The Gilded Mirror and Gilded Anvil Spark counters: lazy, so old profiles gain them.
 	MirrorBanner.EnsureSpark(profile)
+	AnvilBanner.EnsureSpark(profile)
 	-- Crafting was removed with the Gold banner: drop its old materials from the Backpack.
 	if profile.PitMaterials then
 		for _, id in { "IronGear", "RiftOrb", "AegisGem", "StarDust", "VoidPowder" } do
@@ -872,6 +878,38 @@ function DataManager.RollMirrorSummons(player: Player, count: number): ({ HeroIn
 	return summonedList, bestTier, 0, HeroCatalog.MirrorBanner, "MirrorSpark", false
 end
 
+-- The Gilded Anvil (Robux only, granted by ShopService): no luck and no pity; custom Focus (40% / 12%),
+-- 10-pull Focus guarantee, and 60-pull Spark come from AnvilBanner. Enforces artifact inventory cap.
+function DataManager.RollAnvilSummons(player: Player, count: number): ({ ArtifactInstance }, boolean, string?)
+	local profile = ActiveProfiles[player] :: PlayerProfile
+	if not profile then
+		return {}, false, "Profile not loaded"
+	end
+	if not profile.Artifacts then
+		profile.Artifacts = {}
+	end
+	local safeCount = if count == 10 then 10 else 1
+	local cap = InventoryCapacity.ArtifactCap(profile.FortressTree)
+	if InventoryCapacity.ArtifactCount(profile) + safeCount > cap then
+		DataManager.SendToast(player, string.format("Artifacts full|%d max · Promote or free space", cap), "WARN")
+		return {}, false, "Artifact inventory full"
+	end
+
+	local spark = AnvilBanner.EnsureSpark(profile)
+	local summonedList: { ArtifactInstance } = {}
+	local rolledIds = AnvilBanner.Roll(safeCount, spark.Focus, function() return math.random() end)
+	for _, weaponId in ipairs(rolledIds) do
+		local uuid, artifact = DataManager.CreateArtifact(weaponId, 1, 8)
+		profile.Artifacts[uuid] = artifact
+		table.insert(summonedList, artifact)
+	end
+	if AnvilBanner.AddPulls(spark, safeCount) > 0 then
+		DataManager.SendToast(player, "Spark ready|Choose any Gildforged weapon in the Store", "SUCCESS")
+	end
+	AnvilRevealEvent:FireClient(player, summonedList)
+	return summonedList, true, nil
+end
+
 -- Rolls `count` heroes on a banner (no cost): pity, the 10-pull floor and God's Blessing luck all
 -- apply. Used by Gem summons and by Robux summon packs (ShopService).
 function DataManager.RollSummons(player: Player, bannerId: string, count: number): ({ HeroInstance }, number, number, any, string, boolean)
@@ -1026,6 +1064,54 @@ ClaimMirrorSparkFunc.OnServerInvoke = function(player: Player, heroId: any)
 	DataManager.SendToast(player, string.format("Spark|%s joins your roster", hero.DisplayName), "SUCCESS")
 	DataManager.SyncProfile(player)
 	return { Success = true, Hero = hero }
+end
+
+local lastAnvilSparkClaim: { [Player]: number } = {}
+Players.PlayerRemoving:Connect(function(player) lastAnvilSparkClaim[player] = nil end)
+
+SetAnvilFocusFunc.OnServerInvoke = function(player: Player, focusChoice: any)
+	local profile = ActiveProfiles[player]
+	if not profile then return { Success = false, Message = "Profile not loaded" } end
+	local ok, resolved = AnvilBanner.SetFocus(profile, focusChoice)
+	if not ok or not resolved then
+		return { Success = false, Message = "Choose a valid Gildforged Focus weapon type." }
+	end
+	DataManager.SyncProfile(player)
+	local weaponId = AnvilBanner.ResolveWeaponId(resolved)
+	local seed = weaponId and ArtifactCatalog.Seeds[weaponId]
+	return { Success = true, Focus = resolved, DisplayName = seed and seed.DisplayName or resolved }
+end
+
+ClaimAnvilSparkFunc.OnServerInvoke = function(player: Player, choice: any)
+	local now = os.clock()
+	if now - (lastAnvilSparkClaim[player] or -99) < 1 then
+		return { Success = false, Message = "Slow down." }
+	end
+	lastAnvilSparkClaim[player] = now
+	local profile = ActiveProfiles[player]
+	if not profile then return { Success = false, Message = "Profile not loaded" } end
+	local weaponId = AnvilBanner.ResolveWeaponId(choice)
+	if not weaponId then return { Success = false, Message = "Choose a Gildforged relic." } end
+	local spark = AnvilBanner.EnsureSpark(profile)
+	if spark.Selections <= 0 then
+		return { Success = false, Message = string.format("Spark needs %d more pulls.", AnvilBanner.SPARK_COST - spark.Pulls) }
+	end
+	if not profile.Artifacts then profile.Artifacts = {} end
+	local artifactCap = InventoryCapacity.ArtifactCap(profile.FortressTree)
+	if InventoryCapacity.ArtifactCount(profile) + 1 > artifactCap then
+		DataManager.SendToast(player, string.format("Artifacts full|%d max · Promote or free space", artifactCap), "WARN")
+		return { Success = false, Message = "Artifact inventory full" }
+	end
+	local claimed, claimedId = AnvilBanner.ClaimSpark(profile, weaponId)
+	if not claimed or not claimedId then
+		return { Success = false, Message = "Couldn't claim the Spark." }
+	end
+	local uuid, artifact = DataManager.CreateArtifact(claimedId, 1, 8)
+	profile.Artifacts[uuid] = artifact
+	DataManager.SendToast(player, string.format("Spark|%s forged in your armory", artifact.DisplayName), "SUCCESS")
+	DataManager.SyncProfile(player)
+	AnvilRevealEvent:FireClient(player, { artifact })
+	return { Success = true, Artifact = artifact }
 end
 
 -- Legacy endpoints cannot bypass confirmed previews.
@@ -1241,7 +1327,11 @@ function DataManager.SellArtifacts(player: Player, artifactUUIDs: { string }): (
 					DataManager.SendToast(player, string.format("Can't sell|%s is locked", art.DisplayName), "WARN")
 					return false, string.format("Cannot sell %s: weapon is locked", art.DisplayName), 0, 0
 				end
-				local price = ArtifactCatalog.CalculateSellPrice(art.Rarity or 1, art.Star or 1)
+				if ArtifactCatalog.IsGildforged(art) or (art.Rarity or 1) >= 8 then
+					DataManager.SendToast(player, string.format("Can't sell|%s is Gildforged", art.DisplayName), "WARN")
+					return false, string.format("Cannot sell %s: Gildforged weapons cannot be sold", art.DisplayName), 0, 0
+				end
+				local price = ArtifactCatalog.CalculateSellPrice(art.Rarity or 1, art.Star or 1, art.TemplateId)
 				totalGold += price
 				soldCount += 1
 				table.insert(toDelete, uuid)
@@ -1719,10 +1809,141 @@ FacilityInteractEvent.OnServerEvent:Connect(function(player: Player, action: any
 	end
 end)
 
--- Studio-only chat command: `/summon <hero>` adds that hero to the caller's profile for free.
--- `<hero>` is a HeroCatalog seed id, with or without the `hero_` prefix (`/summon edis`), or the hero's
--- display name (`/summon rook`).
+-- Studio-only chat commands:
+--   * `/summon <hero|weapon> [1-7]` grants any HeroCatalog hero or ArtifactCatalog weapon.
+--   * `/weapon <id|name|archetype|gild> [1-7]` (alias `/summonweapon`) grants any weapon at 1..7★.
 if game:GetService("RunService"):IsStudio() then
+	local function normalizeWeaponQuery(text: string): string
+		return (string.gsub(string.lower(text), "[^%w]+", ""))
+	end
+
+	local function resolveWeaponSeedId(query: string): string?
+		local q = string.lower((string.gsub(query, "^%s*(.-)%s*$", "%1")))
+		if q == "" then
+			return nil
+		end
+		if ArtifactCatalog.Seeds[q] then
+			return q
+		end
+		if ArtifactCatalog.Seeds["art_" .. q] then
+			return "art_" .. q
+		end
+		if ArtifactCatalog.Seeds["art_gild_" .. q] then
+			return "art_gild_" .. q
+		end
+		local byArchetype = AnvilBanner.ResolveWeaponId(string.upper(q))
+		if byArchetype and ArtifactCatalog.Seeds[byArchetype] then
+			return byArchetype
+		end
+
+		local qNorm = normalizeWeaponQuery(q)
+		for _, id in ArtifactCatalog.AnvilOrder do
+			local seed = ArtifactCatalog.Seeds[id]
+			if seed and (string.lower(seed.DisplayName) == q or normalizeWeaponQuery(seed.DisplayName) == qNorm) then
+				return id
+			end
+		end
+		for _, id in ArtifactCatalog.CatalogOrder do
+			local seed = ArtifactCatalog.Seeds[id]
+			if seed and (string.lower(seed.DisplayName) == q or normalizeWeaponQuery(seed.DisplayName) == qNorm) then
+				return id
+			end
+		end
+
+		local function matchOrdered(list: { string }): string?
+			for _, id in list do
+				local seed = ArtifactCatalog.Seeds[id]
+				if seed then
+					local dnNorm = normalizeWeaponQuery(seed.DisplayName)
+					local idNorm = normalizeWeaponQuery((string.gsub(id, "^art_gild_", "")))
+					if string.sub(dnNorm, 1, #qNorm) == qNorm or string.sub(idNorm, 1, #qNorm) == qNorm then
+						return id
+					end
+				end
+			end
+			for _, id in list do
+				local seed = ArtifactCatalog.Seeds[id]
+				if seed then
+					local dnNorm = normalizeWeaponQuery(seed.DisplayName)
+					if string.find(dnNorm, qNorm, 1, true) or string.find(string.lower(id), q, 1, true) then
+						return id
+					end
+				end
+			end
+			return nil
+		end
+
+		return matchOrdered(ArtifactCatalog.AnvilOrder) or matchOrdered(ArtifactCatalog.CatalogOrder)
+	end
+
+	local function grantDevWeapons(player: Player, profile: PlayerProfile, rawArgs: string): boolean
+		local trimmed = string.match(rawArgs, "^%s*(.-)%s*$") or ""
+		if trimmed == "" then
+			return false
+		end
+
+		local star = 1
+		local query = trimmed
+		local qPart, starStr = string.match(trimmed, "^(.-)%s+([1-7])$")
+		if qPart and starStr then
+			query = qPart
+			star = tonumber(starStr) or 1
+		end
+
+		local qLower = string.lower(query)
+		local seedIds: { string }
+		local isBatch = qLower == "gild" or qLower == "allgild" or qLower == "anvil"
+		if isBatch then
+			seedIds = table.clone(ArtifactCatalog.AnvilOrder)
+		else
+			local resolved = resolveWeaponSeedId(query)
+			if not resolved then
+				return false
+			end
+			seedIds = { resolved }
+		end
+
+		if not profile.Artifacts then
+			profile.Artifacts = {}
+		end
+		local artifactCap = InventoryCapacity.ArtifactCap(profile.FortressTree)
+		if InventoryCapacity.ArtifactCount(profile) + #seedIds > artifactCap then
+			DataManager.SendToast(player, string.format("Artifacts full|%d max · Free %d slot%s first", artifactCap, #seedIds, if #seedIds == 1 then "" else "s"), "WARN")
+			return true
+		end
+
+		local names = {}
+		for _, id in seedIds do
+			local seed = ArtifactCatalog.Seeds[id]
+			local uuid, artifact = DataManager.CreateArtifact(id, star, seed and seed.RarityTier or 1)
+			profile.Artifacts[uuid] = artifact
+			table.insert(names, artifact.DisplayName)
+		end
+
+		local summary = if isBatch
+			then string.format("%d Gildforged weapons (%d★)", #names, star)
+			else string.format("%s (%d★)", table.concat(names, ", "), star)
+		DataManager.SendToast(player, "[Dev] Summoned " .. summary, "SUCCESS")
+		DataManager.SyncProfile(player)
+		return true
+	end
+
+	local weaponCommand = Instance.new("TextChatCommand")
+	weaponCommand.Name = "DevSummonWeapon"
+	weaponCommand.PrimaryAlias = "/weapon"
+	weaponCommand.SecondaryAlias = "/summonweapon"
+	weaponCommand.Parent = game:GetService("TextChatService")
+	weaponCommand.Triggered:Connect(function(source: TextSource, message: string)
+		local player = Players:GetPlayerByUserId(source.UserId)
+		local profile = player and ActiveProfiles[player]
+		if not player or not profile then return end
+
+		local rawArgs = string.match(message, "^%S+%s*(.-)%s*$") or ""
+		if not grantDevWeapons(player, profile, rawArgs) then
+			DataManager.SendToast(player, "Usage: /weapon <id|name|gild> [1-7], e.g. /weapon wyrmheart 7", "WARN")
+		end
+	end)
+
 	local summonCommand = Instance.new("TextChatCommand")
 	summonCommand.Name = "DevSummonHero"
 	summonCommand.PrimaryAlias = "/summon"
@@ -1732,7 +1953,8 @@ if game:GetService("RunService"):IsStudio() then
 		local profile = player and ActiveProfiles[player]
 		if not player or not profile then return end
 
-		local arg = string.lower(string.match(message, "^%S+%s+(%S+)") or "")
+		local rawArgs = string.match(message, "^%S+%s*(.-)%s*$") or ""
+		local arg = string.lower(string.match(rawArgs, "^(%S+)") or "")
 		local seedId = if HeroCatalog.Seeds[arg] then arg else "hero_" .. arg
 		if arg ~= "" and not HeroCatalog.Seeds[seedId] then
 			for id, seed in HeroCatalog.Seeds do
@@ -1742,8 +1964,13 @@ if game:GetService("RunService"):IsStudio() then
 				end
 			end
 		end
+		if arg ~= "" and not HeroCatalog.Seeds[seedId] then
+			if grantDevWeapons(player, profile, rawArgs) then
+				return
+			end
+		end
 		if arg == "" or not HeroCatalog.Seeds[seedId] then
-			DataManager.SendToast(player, "Usage: /summon <hero>, e.g. /summon edis", "WARN")
+			DataManager.SendToast(player, "Usage: /summon <hero|weapon>, e.g. /summon edis or /weapon wyrmheart", "WARN")
 			return
 		end
 		local heroCap = InventoryCapacity.HeroCap(profile.FortressTree)
@@ -1775,6 +2002,33 @@ if game:GetService("RunService"):IsStudio() then
 		local spark = MirrorBanner.EnsureSpark(profile)
 		DataManager.SendToast(player, string.format("[Dev] %s · Spark %d/%d (%d to pick)", table.concat(names, ", "),
 			spark.Pulls, HeroCatalog.MirrorBanner.SparkPulls, spark.Selections), "SUCCESS")
+		DataManager.SyncProfile(player)
+	end)
+
+	-- Studio-only chat command: `/anvilpull [1|10] [focus]` simulates Gilded Anvil Robux pack pulls.
+	local anvilCommand = Instance.new("TextChatCommand")
+	anvilCommand.Name = "DevAnvilPull"
+	anvilCommand.PrimaryAlias = "/anvilpull"
+	anvilCommand.Parent = game:GetService("TextChatService")
+	anvilCommand.Triggered:Connect(function(source: TextSource, message: string)
+		local player = Players:GetPlayerByUserId(source.UserId)
+		local profile = player and ActiveProfiles[player]
+		if not player or not profile then return end
+		local count = if string.match(message, "^%S+%s+10") then 10 else 1
+		local focusArg = string.match(message, "^%S+%s+%d+%s+(%S+)") or string.match(message, "^%S+%s+(%a%S+)")
+		if focusArg then
+			AnvilBanner.SetFocus(profile, string.upper(focusArg))
+		end
+		local summoned, ok, err = DataManager.RollAnvilSummons(player, count)
+		if not ok then
+			DataManager.SendToast(player, "[Dev] " .. tostring(err), "WARN")
+			return
+		end
+		local names = {}
+		for _, art in summoned do table.insert(names, art.DisplayName) end
+		local spark = AnvilBanner.EnsureSpark(profile)
+		DataManager.SendToast(player, string.format("[Dev] %s · Focus %s · Spark %d/%d (%d to pick)", table.concat(names, ", "),
+			spark.Focus, spark.Pulls, AnvilBanner.SPARK_COST, spark.Selections), "SUCCESS")
 		DataManager.SyncProfile(player)
 	end)
 

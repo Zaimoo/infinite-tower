@@ -1,0 +1,2866 @@
+{
+  "art_gild_dawnwarden_oath": {
+    "TemplateId": "art_gild_dawnwarden_oath",
+    "FBX": "art_gild_dawnwarden_oath.fbx",
+    "Triangles": 4838,
+    "Parts": [
+      {
+        "Name": "Handle",
+        "SubCollection": "",
+        "Offset": [
+          0.0,
+          0.005,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.3456,
+          0.97,
+          0.2534
+        ],
+        "Material": "SmoothPlastic",
+        "Color": [
+          248,
+          242,
+          228
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          0.0,
+          0.005,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://91753240622861"
+      },
+      {
+        "Name": "Pommel",
+        "SubCollection": "",
+        "Offset": [
+          0.0,
+          -0.74,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.68,
+          0.68,
+          0.3392
+        ],
+        "Material": "Metal",
+        "Color": [
+          245,
+          192,
+          72
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          0.0,
+          -0.74,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://72804722301290"
+      },
+      {
+        "Name": "PommelGem",
+        "SubCollection": "",
+        "Offset": [
+          0.0,
+          -0.74,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.22,
+          0.26,
+          0.2
+        ],
+        "Material": "Neon",
+        "Color": [
+          255,
+          234,
+          142
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          0.0,
+          -0.74,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://123949633825432"
+      },
+      {
+        "Name": "Crossguard",
+        "SubCollection": "",
+        "Offset": [
+          0.0,
+          0.67,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          1.76,
+          0.46,
+          0.3
+        ],
+        "Material": "Metal",
+        "Color": [
+          245,
+          192,
+          72
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          0.0,
+          0.67,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://120538095676534"
+      },
+      {
+        "Name": "CrossguardWings",
+        "SubCollection": "",
+        "Offset": [
+          0.0,
+          0.9676,
+          -0.0025
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          2.4113,
+          0.7027,
+          0.145
+        ],
+        "Material": "Metal",
+        "Color": [
+          255,
+          245,
+          212
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          0.0,
+          0.9676,
+          -0.0025
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://98560105222910"
+      },
+      {
+        "Name": "Blade",
+        "SubCollection": "",
+        "Offset": [
+          0.0,
+          2.97,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.58,
+          4.46,
+          0.15
+        ],
+        "Material": "Metal",
+        "Color": [
+          255,
+          245,
+          212
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          0.0,
+          2.97,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://98392623937472"
+      },
+      {
+        "Name": "BladeEdge",
+        "SubCollection": "",
+        "Offset": [
+          0.0,
+          3.1618,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.624,
+          4.0848,
+          0.052
+        ],
+        "Material": "Metal",
+        "Color": [
+          245,
+          192,
+          72
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          0.0,
+          3.1618,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://122386820374876"
+      },
+      {
+        "Name": "BladeFullerGlow",
+        "SubCollection": "",
+        "Offset": [
+          0.0,
+          2.49,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.2666,
+          3.92,
+          0.2771
+        ],
+        "Material": "Neon",
+        "Color": [
+          255,
+          234,
+          142
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          0.0,
+          2.49,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://105676788353377"
+      },
+      {
+        "Name": "HandleS",
+        "SubCollection": "OffhandShield",
+        "Offset": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.22,
+          0.64,
+          0.22
+        ],
+        "Material": "Metal",
+        "Color": [
+          245,
+          192,
+          72
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://96116133293460"
+      },
+      {
+        "Name": "ShieldRim",
+        "SubCollection": "OffhandShield",
+        "Offset": [
+          -0.2422,
+          0.0482,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.3256,
+          3.31,
+          2.0861
+        ],
+        "Material": "Metal",
+        "Color": [
+          245,
+          192,
+          72
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          -0.2422,
+          0.0482,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://99235962959632"
+      },
+      {
+        "Name": "ShieldBody",
+        "SubCollection": "OffhandShield",
+        "Offset": [
+          -0.3012,
+          0.0426,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.3077,
+          2.9244,
+          1.8025
+        ],
+        "Material": "SmoothPlastic",
+        "Color": [
+          248,
+          242,
+          228
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          -0.3012,
+          0.0426,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://126098302168275"
+      },
+      {
+        "Name": "ShieldWings",
+        "SubCollection": "OffhandShield",
+        "Offset": [
+          -0.2467,
+          0.5502,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.4301,
+          1.6453,
+          2.758
+        ],
+        "Material": "Metal",
+        "Color": [
+          255,
+          245,
+          212
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          -0.2467,
+          0.5502,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://100227851471618"
+      },
+      {
+        "Name": "SunDisc",
+        "SubCollection": "OffhandShield",
+        "Offset": [
+          -0.56,
+          0.24,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.28,
+          1.1085,
+          1.28
+        ],
+        "Material": "Neon",
+        "Color": [
+          255,
+          234,
+          142
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "SunDisc",
+        "PivotOffset": [
+          -0.54,
+          0.24,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://100122233793186"
+      },
+      {
+        "Name": "HaloRing1",
+        "SubCollection": "OffhandShield",
+        "Offset": [
+          -0.62,
+          0.24,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.4438,
+          1.6011,
+          1.5626
+        ],
+        "Material": "Metal",
+        "Color": [
+          245,
+          192,
+          72
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "HaloRing1",
+        "PivotOffset": [
+          -0.62,
+          0.24,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://90806233082649"
+      },
+      {
+        "Name": "HaloRing2",
+        "SubCollection": "OffhandShield",
+        "Offset": [
+          -0.68,
+          0.24,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.5726,
+          1.9302,
+          1.8773
+        ],
+        "Material": "Metal",
+        "Color": [
+          255,
+          245,
+          212
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "HaloRing2",
+        "PivotOffset": [
+          -0.68,
+          0.24,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://79752497651352"
+      }
+    ]
+  },
+  "art_gild_eclipse_sisters": {
+    "TemplateId": "art_gild_eclipse_sisters",
+    "FBX": "art_gild_eclipse_sisters.fbx",
+    "Triangles": 3388,
+    "Parts": [
+      {
+        "Name": "Handle",
+        "SubCollection": "",
+        "Offset": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.2851,
+          0.8,
+          0.2028
+        ],
+        "Material": "Glass",
+        "Color": [
+          26,
+          22,
+          42
+        ],
+        "Transparency": 0.1,
+        "AnimRole": "",
+        "PivotOffset": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://97730139413170"
+      },
+      {
+        "Name": "RingPommel",
+        "SubCollection": "",
+        "Offset": [
+          -0.0113,
+          -0.6,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.5175,
+          0.49,
+          0.07
+        ],
+        "Material": "Metal",
+        "Color": [
+          245,
+          192,
+          72
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          -0.0113,
+          -0.6,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://96502214112638"
+      },
+      {
+        "Name": "Guard",
+        "SubCollection": "",
+        "Offset": [
+          0.04,
+          0.4905,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.84,
+          0.461,
+          0.14
+        ],
+        "Material": "Metal",
+        "Color": [
+          245,
+          192,
+          72
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          0.04,
+          0.4905,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://118235858665460"
+      },
+      {
+        "Name": "Blade",
+        "SubCollection": "",
+        "Offset": [
+          0.0343,
+          1.52,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.2939,
+          2.12,
+          0.095
+        ],
+        "Material": "Glass",
+        "Color": [
+          26,
+          22,
+          42
+        ],
+        "Transparency": 0.1,
+        "AnimRole": "",
+        "PivotOffset": [
+          0.0343,
+          1.52,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://136162516198079"
+      },
+      {
+        "Name": "BladeEdge",
+        "SubCollection": "",
+        "Offset": [
+          0.1009,
+          1.5191,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.1967,
+          2.1255,
+          0.036
+        ],
+        "Material": "Metal",
+        "Color": [
+          245,
+          192,
+          72
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          0.1009,
+          1.5191,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://117607554355021"
+      },
+      {
+        "Name": "BladeRunes",
+        "SubCollection": "",
+        "Offset": [
+          0.002,
+          1.2353,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.144,
+          1.6905,
+          0.1905
+        ],
+        "Material": "Neon",
+        "Color": [
+          148,
+          122,
+          228
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          0.002,
+          1.2353,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://135476581906440"
+      },
+      {
+        "Name": "EclipseRing",
+        "SubCollection": "",
+        "Offset": [
+          0.0,
+          -0.6,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.3578,
+          0.355,
+          0.135
+        ],
+        "Material": "Metal",
+        "Color": [
+          245,
+          192,
+          72
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "EclipseRing",
+        "PivotOffset": [
+          0.0,
+          -0.6,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://113976524913595"
+      },
+      {
+        "Name": "EclipseCore",
+        "SubCollection": "",
+        "Offset": [
+          0.0,
+          -0.6,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.19,
+          0.23,
+          0.19
+        ],
+        "Material": "Glass",
+        "Color": [
+          26,
+          22,
+          42
+        ],
+        "Transparency": 0.1,
+        "AnimRole": "EclipseCore",
+        "PivotOffset": [
+          0.0,
+          -0.6,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://98238262381549"
+      },
+      {
+        "Name": "HandleL",
+        "SubCollection": "LeftDagger",
+        "Offset": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.2851,
+          0.8,
+          0.2028
+        ],
+        "Material": "Metal",
+        "Color": [
+          255,
+          245,
+          212
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://110303711129497"
+      },
+      {
+        "Name": "RingPommelL",
+        "SubCollection": "LeftDagger",
+        "Offset": [
+          0.0113,
+          -0.6,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.5175,
+          0.49,
+          0.07
+        ],
+        "Material": "Glass",
+        "Color": [
+          26,
+          22,
+          42
+        ],
+        "Transparency": 0.1,
+        "AnimRole": "",
+        "PivotOffset": [
+          0.0113,
+          -0.6,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://105883257948347"
+      },
+      {
+        "Name": "GuardL",
+        "SubCollection": "LeftDagger",
+        "Offset": [
+          -0.04,
+          0.4905,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.84,
+          0.461,
+          0.14
+        ],
+        "Material": "Glass",
+        "Color": [
+          26,
+          22,
+          42
+        ],
+        "Transparency": 0.1,
+        "AnimRole": "",
+        "PivotOffset": [
+          -0.04,
+          0.4905,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://109145161799217"
+      },
+      {
+        "Name": "BladeL",
+        "SubCollection": "LeftDagger",
+        "Offset": [
+          -0.0342,
+          1.49,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.3129,
+          2.06,
+          0.095
+        ],
+        "Material": "Metal",
+        "Color": [
+          255,
+          245,
+          212
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          -0.0342,
+          1.49,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://80428235430598"
+      },
+      {
+        "Name": "BladeEdgeL",
+        "SubCollection": "LeftDagger",
+        "Offset": [
+          -0.1011,
+          1.4921,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.215,
+          2.0687,
+          0.036
+        ],
+        "Material": "Glass",
+        "Color": [
+          26,
+          22,
+          42
+        ],
+        "Transparency": 0.1,
+        "AnimRole": "",
+        "PivotOffset": [
+          -0.1011,
+          1.4921,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://131460015624162"
+      },
+      {
+        "Name": "BladeRunesL",
+        "SubCollection": "LeftDagger",
+        "Offset": [
+          -0.002,
+          1.2353,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.144,
+          1.6905,
+          0.1905
+        ],
+        "Material": "Neon",
+        "Color": [
+          148,
+          122,
+          228
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          -0.002,
+          1.2353,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://97304072642019"
+      },
+      {
+        "Name": "EclipseRingL",
+        "SubCollection": "LeftDagger",
+        "Offset": [
+          0.0,
+          -0.6,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.3578,
+          0.355,
+          0.135
+        ],
+        "Material": "Neon",
+        "Color": [
+          255,
+          234,
+          142
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "EclipseRing",
+        "PivotOffset": [
+          0.0,
+          -0.6,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://121456615798824"
+      },
+      {
+        "Name": "EclipseCoreL",
+        "SubCollection": "LeftDagger",
+        "Offset": [
+          0.0,
+          -0.6,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.19,
+          0.23,
+          0.19
+        ],
+        "Material": "Metal",
+        "Color": [
+          245,
+          192,
+          72
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "EclipseCore",
+        "PivotOffset": [
+          0.0,
+          -0.6,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://72046049702324"
+      }
+    ]
+  },
+  "art_gild_aurora_skyhook": {
+    "TemplateId": "art_gild_aurora_skyhook",
+    "FBX": "art_gild_aurora_skyhook.fbx",
+    "Triangles": 3320,
+    "Parts": [
+      {
+        "Name": "Handle",
+        "SubCollection": "",
+        "Offset": [
+          0.1352,
+          0.0,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.5344,
+          1.3701,
+          0.354
+        ],
+        "Material": "Metal",
+        "Color": [
+          245,
+          192,
+          72
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          0.1352,
+          0.0,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://107850484749482"
+      },
+      {
+        "Name": "ClaspUpper",
+        "SubCollection": "",
+        "Offset": [
+          0.0,
+          0.6316,
+          0.04
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.306,
+          0.3432,
+          0.4248
+        ],
+        "Material": "Metal",
+        "Color": [
+          255,
+          245,
+          212
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          0.0,
+          0.6316,
+          0.04
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://74497543048251"
+      },
+      {
+        "Name": "ClaspLower",
+        "SubCollection": "",
+        "Offset": [
+          0.0,
+          -0.6316,
+          0.04
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.306,
+          0.3432,
+          0.4248
+        ],
+        "Material": "Metal",
+        "Color": [
+          255,
+          245,
+          212
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          0.0,
+          -0.6316,
+          0.04
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://121172771860757"
+      },
+      {
+        "Name": "AuroraRibbonUpper",
+        "SubCollection": "",
+        "Offset": [
+          0.0059,
+          1.2454,
+          0.2133
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.2906,
+          1.4611,
+          0.6183
+        ],
+        "Material": "Glass",
+        "Color": [
+          110,
+          240,
+          232
+        ],
+        "Transparency": 0.08,
+        "AnimRole": "AuroraRibbonUpper",
+        "PivotOffset": [
+          0.0,
+          0.56,
+          0.04
+        ],
+        "DoubleSided": true,
+        "MeshId": "rbxassetid://129694968995765"
+      },
+      {
+        "Name": "AuroraVeilUpper",
+        "SubCollection": "",
+        "Offset": [
+          0.0689,
+          1.4514,
+          0.4155
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.1814,
+          1.6336,
+          0.8356
+        ],
+        "Material": "Glass",
+        "Color": [
+          178,
+          132,
+          255
+        ],
+        "Transparency": 0.12,
+        "AnimRole": "AuroraRibbonUpper",
+        "PivotOffset": [
+          0.0,
+          0.56,
+          0.04
+        ],
+        "DoubleSided": true,
+        "MeshId": "rbxassetid://88323163389311"
+      },
+      {
+        "Name": "AuroraRibbonLower",
+        "SubCollection": "",
+        "Offset": [
+          -0.0052,
+          -1.2454,
+          0.2118
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.2892,
+          1.4611,
+          0.6213
+        ],
+        "Material": "Glass",
+        "Color": [
+          178,
+          132,
+          255
+        ],
+        "Transparency": 0.12,
+        "AnimRole": "AuroraRibbonLower",
+        "PivotOffset": [
+          0.0,
+          -0.56,
+          0.04
+        ],
+        "DoubleSided": true,
+        "MeshId": "rbxassetid://82079491922263"
+      },
+      {
+        "Name": "AuroraVeilLower",
+        "SubCollection": "",
+        "Offset": [
+          -0.0752,
+          -1.452,
+          0.4141
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.194,
+          1.635,
+          0.8326
+        ],
+        "Material": "SmoothPlastic",
+        "Color": [
+          246,
+          128,
+          198
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "AuroraRibbonLower",
+        "PivotOffset": [
+          0.0,
+          -0.56,
+          0.04
+        ],
+        "DoubleSided": true,
+        "MeshId": "rbxassetid://116761354432940"
+      },
+      {
+        "Name": "TipHornUpper",
+        "SubCollection": "",
+        "Offset": [
+          0.0,
+          2.0533,
+          0.6505
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.15,
+          0.3986,
+          0.4727
+        ],
+        "Material": "Metal",
+        "Color": [
+          245,
+          192,
+          72
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          0.0,
+          2.0533,
+          0.6505
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://71390618860819"
+      },
+      {
+        "Name": "TipHornLower",
+        "SubCollection": "",
+        "Offset": [
+          0.0,
+          -2.0533,
+          0.6505
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.15,
+          0.3986,
+          0.4727
+        ],
+        "Material": "Metal",
+        "Color": [
+          245,
+          192,
+          72
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          0.0,
+          -2.0533,
+          0.6505
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://138128900885795"
+      },
+      {
+        "Name": "BowString",
+        "SubCollection": "",
+        "Offset": [
+          0.0,
+          0.0,
+          0.5
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.048,
+          3.92,
+          0.048
+        ],
+        "Material": "Metal",
+        "Color": [
+          255,
+          245,
+          212
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          0.0,
+          0.0,
+          0.5
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://112249184403455"
+      },
+      {
+        "Name": "NockCrystal",
+        "SubCollection": "",
+        "Offset": [
+          0.2,
+          0.1,
+          0.48
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.11,
+          0.11,
+          0.1299
+        ],
+        "Material": "Glass",
+        "Color": [
+          110,
+          240,
+          232
+        ],
+        "Transparency": 0.08,
+        "AnimRole": "",
+        "PivotOffset": [
+          0.2,
+          0.1,
+          0.48
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://73753629481328"
+      },
+      {
+        "Name": "ArrowShaft",
+        "SubCollection": "HunterArrow",
+        "Offset": [
+          0.2,
+          0.1,
+          -0.52
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.056,
+          0.0533,
+          2.04
+        ],
+        "Material": "Metal",
+        "Color": [
+          255,
+          245,
+          212
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          0.2,
+          0.1,
+          -0.52
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://108987310264280"
+      },
+      {
+        "Name": "ArrowHead",
+        "SubCollection": "HunterArrow",
+        "Offset": [
+          0.2,
+          0.1,
+          -1.58
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.17,
+          0.0953,
+          0.38
+        ],
+        "Material": "Glass",
+        "Color": [
+          110,
+          240,
+          232
+        ],
+        "Transparency": 0.08,
+        "AnimRole": "",
+        "PivotOffset": [
+          0.2,
+          0.1,
+          -1.58
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://119941420054771"
+      },
+      {
+        "Name": "ArrowFletch_1",
+        "SubCollection": "HunterArrow",
+        "Offset": [
+          0.2,
+          0.1352,
+          0.3403
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.012,
+          0.1141,
+          0.2247
+        ],
+        "Material": "Glass",
+        "Color": [
+          110,
+          240,
+          232
+        ],
+        "Transparency": 0.08,
+        "AnimRole": "",
+        "PivotOffset": [
+          0.2,
+          0.1352,
+          0.3403
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://77608255672209"
+      },
+      {
+        "Name": "ArrowFletch_2",
+        "SubCollection": "HunterArrow",
+        "Offset": [
+          0.2305,
+          0.0824,
+          0.3403
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.0989,
+          0.0571,
+          0.2247
+        ],
+        "Material": "SmoothPlastic",
+        "Color": [
+          246,
+          128,
+          198
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          0.2305,
+          0.0824,
+          0.3403
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://98794918626879"
+      },
+      {
+        "Name": "ArrowFletch_3",
+        "SubCollection": "HunterArrow",
+        "Offset": [
+          0.1695,
+          0.0824,
+          0.3403
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.0989,
+          0.0571,
+          0.2247
+        ],
+        "Material": "Glass",
+        "Color": [
+          110,
+          240,
+          232
+        ],
+        "Transparency": 0.08,
+        "AnimRole": "",
+        "PivotOffset": [
+          0.1695,
+          0.0824,
+          0.3403
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://102641106149403"
+      }
+    ]
+  },
+  "art_gild_wyrmheart_cleaver": {
+    "TemplateId": "art_gild_wyrmheart_cleaver",
+    "FBX": "art_gild_wyrmheart_cleaver.fbx",
+    "Triangles": 6636,
+    "Parts": [
+      {
+        "Name": "Handle",
+        "SubCollection": "",
+        "Offset": [
+          0.0,
+          0.01,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.3096,
+          5.54,
+          0.4248
+        ],
+        "Material": "Metal",
+        "Color": [
+          62,
+          56,
+          66
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          0.0,
+          0.01,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://107813632694243"
+      },
+      {
+        "Name": "GripWrapUpper",
+        "SubCollection": "",
+        "Offset": [
+          0.0,
+          0.35,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.2675,
+          0.72,
+          0.3648
+        ],
+        "Material": "Leather",
+        "Color": [
+          86,
+          56,
+          38
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          0.0,
+          0.35,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://85006672729784"
+      },
+      {
+        "Name": "GripWrapLower",
+        "SubCollection": "",
+        "Offset": [
+          0.0,
+          -1.35,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.2675,
+          0.72,
+          0.3648
+        ],
+        "Material": "Leather",
+        "Color": [
+          86,
+          56,
+          38
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          0.0,
+          -1.35,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://82821503825615"
+      },
+      {
+        "Name": "Pommel",
+        "SubCollection": "",
+        "Offset": [
+          0.0,
+          -2.9736,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.4416,
+          0.5871,
+          0.5483
+        ],
+        "Material": "Metal",
+        "Color": [
+          245,
+          192,
+          72
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          0.0,
+          -2.9736,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://82718193321081"
+      },
+      {
+        "Name": "PommelHeart",
+        "SubCollection": "",
+        "Offset": [
+          0.0,
+          -3.06,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.3,
+          0.38,
+          0.3
+        ],
+        "Material": "Neon",
+        "Color": [
+          255,
+          78,
+          28
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          0.0,
+          -3.06,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://87193784391990"
+      },
+      {
+        "Name": "DragonSkull",
+        "SubCollection": "",
+        "Offset": [
+          0.23,
+          2.08,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.98,
+          1.16,
+          0.46
+        ],
+        "Material": "Metal",
+        "Color": [
+          245,
+          192,
+          72
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          0.23,
+          2.08,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://71753883556335"
+      },
+      {
+        "Name": "SkullHornTop",
+        "SubCollection": "",
+        "Offset": [
+          -0.4797,
+          2.8891,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          1.0984,
+          0.9974,
+          0.6878
+        ],
+        "Material": "SmoothPlastic",
+        "Color": [
+          232,
+          218,
+          196
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          -0.4797,
+          2.8891,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://119890861005029"
+      },
+      {
+        "Name": "SkullHornBot",
+        "SubCollection": "",
+        "Offset": [
+          -0.479,
+          1.3999,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          1.0969,
+          0.7796,
+          0.6873
+        ],
+        "Material": "SmoothPlastic",
+        "Color": [
+          232,
+          218,
+          196
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          -0.479,
+          1.3999,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://127915345246154"
+      },
+      {
+        "Name": "Blade",
+        "SubCollection": "",
+        "Offset": [
+          1.1515,
+          2.11,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          1.943,
+          2.7,
+          0.21
+        ],
+        "Material": "Metal",
+        "Color": [
+          62,
+          56,
+          66
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          1.1515,
+          2.11,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://101037385361326"
+      },
+      {
+        "Name": "BladeEdge",
+        "SubCollection": "",
+        "Offset": [
+          1.9321,
+          2.1092,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.4319,
+          2.7216,
+          0.145
+        ],
+        "Material": "Metal",
+        "Color": [
+          245,
+          192,
+          72
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          1.9321,
+          2.1092,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://129427682766244"
+      },
+      {
+        "Name": "RuneInlay",
+        "SubCollection": "",
+        "Offset": [
+          1.0433,
+          2.1043,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          1.6966,
+          2.1747,
+          0.5239
+        ],
+        "Material": "Neon",
+        "Color": [
+          255,
+          78,
+          28
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          1.0433,
+          2.1043,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://101872914960874"
+      },
+      {
+        "Name": "BackSpike",
+        "SubCollection": "",
+        "Offset": [
+          -0.52,
+          2.27,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.72,
+          0.74,
+          0.16
+        ],
+        "Material": "Metal",
+        "Color": [
+          62,
+          56,
+          66
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          -0.52,
+          2.27,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://97711843063129"
+      },
+      {
+        "Name": "HeartCageRing",
+        "SubCollection": "",
+        "Offset": [
+          0.7503,
+          2.0914,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.7478,
+          0.4657,
+          0.8249
+        ],
+        "Material": "Metal",
+        "Color": [
+          245,
+          192,
+          72
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          0.7503,
+          2.0914,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://96920134684701"
+      },
+      {
+        "Name": "WyrmHeart",
+        "SubCollection": "",
+        "Offset": [
+          0.74,
+          2.08,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.48,
+          0.64,
+          0.4375
+        ],
+        "Material": "Neon",
+        "Color": [
+          255,
+          78,
+          28
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "WyrmHeart",
+        "PivotOffset": [
+          0.74,
+          2.08,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://133560300372542"
+      }
+    ]
+  },
+  "art_gild_ninth_sky_orrery": {
+    "TemplateId": "art_gild_ninth_sky_orrery",
+    "FBX": "art_gild_ninth_sky_orrery.fbx",
+    "Triangles": 4312,
+    "Parts": [
+      {
+        "Name": "Handle",
+        "SubCollection": "",
+        "Offset": [
+          0.0,
+          -0.08,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.35,
+          4.36,
+          0.3464
+        ],
+        "Material": "Metal",
+        "Color": [
+          38,
+          76,
+          168
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          0.0,
+          -0.08,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://95835523011342"
+      },
+      {
+        "Name": "ShaftBands",
+        "SubCollection": "",
+        "Offset": [
+          0.0,
+          0.25,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.4592,
+          3.54,
+          0.4592
+        ],
+        "Material": "Metal",
+        "Color": [
+          245,
+          192,
+          72
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          0.0,
+          0.25,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://116081842884373"
+      },
+      {
+        "Name": "Pommel",
+        "SubCollection": "",
+        "Offset": [
+          0.0,
+          -2.38,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.32,
+          0.48,
+          0.32
+        ],
+        "Material": "Neon",
+        "Color": [
+          253,
+          224,
+          71
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          0.0,
+          -2.38,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://132027751926489"
+      },
+      {
+        "Name": "Cradle",
+        "SubCollection": "",
+        "Offset": [
+          0.0,
+          2.6508,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          1.7211,
+          1.5578,
+          0.13
+        ],
+        "Material": "Metal",
+        "Color": [
+          245,
+          192,
+          72
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          0.0,
+          2.6508,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://77290743563123"
+      },
+      {
+        "Name": "OrreryRing1",
+        "SubCollection": "",
+        "Offset": [
+          0.0,
+          2.75,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          1.4986,
+          0.8092,
+          1.5409
+        ],
+        "Material": "Metal",
+        "Color": [
+          245,
+          192,
+          72
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "OrreryRing1",
+        "PivotOffset": [
+          0.0,
+          2.75,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://99459569384026"
+      },
+      {
+        "Name": "OrreryRing2",
+        "SubCollection": "",
+        "Offset": [
+          0.0,
+          2.75,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          1.1894,
+          0.6685,
+          1.1499
+        ],
+        "Material": "Metal",
+        "Color": [
+          255,
+          245,
+          212
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "OrreryRing2",
+        "PivotOffset": [
+          0.0,
+          2.75,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://90997344075299"
+      },
+      {
+        "Name": "OrreryRing3",
+        "SubCollection": "",
+        "Offset": [
+          0.0,
+          2.75,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.8587,
+          0.6834,
+          0.774
+        ],
+        "Material": "Metal",
+        "Color": [
+          245,
+          192,
+          72
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "OrreryRing3",
+        "PivotOffset": [
+          0.0,
+          2.75,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://120236277385321"
+      },
+      {
+        "Name": "OrreryStar",
+        "SubCollection": "",
+        "Offset": [
+          0.0,
+          2.75,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.32,
+          0.48,
+          0.32
+        ],
+        "Material": "Neon",
+        "Color": [
+          253,
+          224,
+          71
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "OrreryStar",
+        "PivotOffset": [
+          0.0,
+          2.75,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://117305511249241"
+      },
+      {
+        "Name": "OrreryMoon1",
+        "SubCollection": "",
+        "Offset": [
+          0.92,
+          2.94,
+          0.14
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.345,
+          0.2263,
+          0.3517
+        ],
+        "Material": "Neon",
+        "Color": [
+          184,
+          228,
+          255
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "OrreryMoon1",
+        "PivotOffset": [
+          0.0,
+          2.75,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://136577202267987"
+      },
+      {
+        "Name": "OrreryMoon2",
+        "SubCollection": "",
+        "Offset": [
+          -0.7384,
+          2.54,
+          -0.4437
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.1585,
+          0.1693,
+          0.1708
+        ],
+        "Material": "Neon",
+        "Color": [
+          184,
+          228,
+          255
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "OrreryMoon2",
+        "PivotOffset": [
+          0.0,
+          2.75,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://77293004582320"
+      },
+      {
+        "Name": "OrreryMoon3",
+        "SubCollection": "",
+        "Offset": [
+          0.142,
+          3.46,
+          0.5222
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.1617,
+          0.2356,
+          0.1613
+        ],
+        "Material": "Glass",
+        "Color": [
+          46,
+          218,
+          152
+        ],
+        "Transparency": 0.06,
+        "AnimRole": "OrreryMoon3",
+        "PivotOffset": [
+          0.0,
+          2.75,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://107519881944711"
+      }
+    ]
+  },
+  "art_gild_evergarden_codex": {
+    "TemplateId": "art_gild_evergarden_codex",
+    "FBX": "art_gild_evergarden_codex.fbx",
+    "Triangles": 3484,
+    "Parts": [
+      {
+        "Name": "Handle",
+        "SubCollection": "",
+        "Offset": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.12,
+          0.12,
+          0.1039
+        ],
+        "Material": "Metal",
+        "Color": [
+          245,
+          192,
+          72
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://131939652390890"
+      },
+      {
+        "Name": "Spine",
+        "SubCollection": "",
+        "Offset": [
+          0.0,
+          0.3359,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.3135,
+          0.1318,
+          1.36
+        ],
+        "Material": "Metal",
+        "Color": [
+          245,
+          192,
+          72
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          0.0,
+          0.3359,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://78404262120229"
+      },
+      {
+        "Name": "CoverL",
+        "SubCollection": "",
+        "Offset": [
+          -0.45,
+          0.3928,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.78,
+          0.1955,
+          1.3
+        ],
+        "Material": "SmoothPlastic",
+        "Color": [
+          224,
+          214,
+          196
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          -0.45,
+          0.3928,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://70418796738743"
+      },
+      {
+        "Name": "CoverR",
+        "SubCollection": "",
+        "Offset": [
+          0.45,
+          0.3928,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.78,
+          0.1955,
+          1.3
+        ],
+        "Material": "SmoothPlastic",
+        "Color": [
+          224,
+          214,
+          196
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          0.45,
+          0.3928,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://115418124087152"
+      },
+      {
+        "Name": "FiligreeTrim",
+        "SubCollection": "",
+        "Offset": [
+          0.0,
+          0.3933,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          1.6948,
+          0.1057,
+          1.3252
+        ],
+        "Material": "Metal",
+        "Color": [
+          245,
+          192,
+          72
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          0.0,
+          0.3933,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://74371654801814"
+      },
+      {
+        "Name": "PagesL",
+        "SubCollection": "",
+        "Offset": [
+          -0.395,
+          0.4784,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.73,
+          0.3168,
+          1.18
+        ],
+        "Material": "SmoothPlastic",
+        "Color": [
+          242,
+          228,
+          188
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          -0.395,
+          0.4784,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://104274315250076"
+      },
+      {
+        "Name": "PagesR",
+        "SubCollection": "",
+        "Offset": [
+          0.395,
+          0.4784,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.73,
+          0.3168,
+          1.18
+        ],
+        "Material": "SmoothPlastic",
+        "Color": [
+          242,
+          228,
+          188
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "",
+        "PivotOffset": [
+          0.395,
+          0.4784,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://90883904507324"
+      },
+      {
+        "Name": "JadeGem",
+        "SubCollection": "",
+        "Offset": [
+          0.0,
+          0.9,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.4892,
+          0.48,
+          0.4274
+        ],
+        "Material": "Glass",
+        "Color": [
+          46,
+          218,
+          152
+        ],
+        "Transparency": 0.06,
+        "AnimRole": "JadeGem",
+        "PivotOffset": [
+          0.0,
+          0.9,
+          0.0
+        ],
+        "DoubleSided": false,
+        "MeshId": "rbxassetid://122579585854447"
+      },
+      {
+        "Name": "BlossomBookmark",
+        "SubCollection": "",
+        "Offset": [
+          0.0466,
+          0.1397,
+          0.8275
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.231,
+          0.4662,
+          0.5398
+        ],
+        "Material": "Fabric",
+        "Color": [
+          244,
+          114,
+          182
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "BlossomBookmark",
+        "PivotOffset": [
+          0.0,
+          0.36,
+          0.6
+        ],
+        "DoubleSided": true,
+        "MeshId": "rbxassetid://131103722562769"
+      },
+      {
+        "Name": "LivingPage1",
+        "SubCollection": "",
+        "Offset": [
+          0.33,
+          0.7272,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.58,
+          0.4144,
+          1.04
+        ],
+        "Material": "SmoothPlastic",
+        "Color": [
+          242,
+          228,
+          188
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "LivingPage1",
+        "PivotOffset": [
+          0.04,
+          0.54,
+          0.0
+        ],
+        "DoubleSided": true,
+        "MeshId": "rbxassetid://76332094691203"
+      },
+      {
+        "Name": "LivingPage2",
+        "SubCollection": "",
+        "Offset": [
+          -0.33,
+          0.775,
+          0.0
+        ],
+        "RotDeg": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "Size": [
+          0.58,
+          0.47,
+          1.04
+        ],
+        "Material": "SmoothPlastic",
+        "Color": [
+          242,
+          228,
+          188
+        ],
+        "Transparency": 0.0,
+        "AnimRole": "LivingPage2",
+        "PivotOffset": [
+          -0.04,
+          0.56,
+          0.0
+        ],
+        "DoubleSided": true,
+        "MeshId": "rbxassetid://108666606720765"
+      }
+    ]
+  }
+}

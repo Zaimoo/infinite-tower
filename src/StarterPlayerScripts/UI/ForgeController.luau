@@ -1094,10 +1094,11 @@ local function updateCard(self: any, node: CardNode, item: { UUID: string, Art: 
 	if self.SellMode then
 		node.AssignBtn.Visible = false
 		node.SellBtn.Visible = true
-		local canSell = not isEquipped and not art.Locked
-		local sellPrice = ArtifactCatalog.CalculateSellPrice(art.Rarity or 1, art.Star or 1)
+		local isGild = ArtifactCatalog.IsGildforged(art)
+		local canSell = not isEquipped and not art.Locked and not isGild
+		local sellPrice = ArtifactCatalog.CalculateSellPrice(art.Rarity or 1, art.Star or 1, art.TemplateId)
 		if not canSell then
-			node.SellBtn.Text = if isEquipped then "EQUIPPED" else "LOCKED"
+			node.SellBtn.Text = if isGild then "GILDFORGED" elseif isEquipped then "EQUIPPED" else "LOCKED"
 			node.SellBtn.BackgroundColor3 = Color3.fromRGB(30, 20, 35)
 			node.SellBtn.TextColor3 = Color3.fromRGB(140, 120, 140)
 			if node.SellStroke then node.SellStroke.Color = Color3.fromRGB(60, 45, 70) end
@@ -1787,6 +1788,23 @@ end
 
 function Forge:BuildSummonRevealModal(gui: ScreenGui)
 	self.Reveal = SummonReveal.new(gui)
+	task.spawn(function()
+		local remotes = ReplicatedStorage:WaitForChild("Remotes", 10)
+		local progression = remotes and remotes:WaitForChild("ProgressionRemotes", 10)
+		local anvilReveal = progression and progression:WaitForChild("AnvilReveal", 10)
+		if anvilReveal and anvilReveal:IsA("RemoteEvent") then
+			anvilReveal.OnClientEvent:Connect(function(summonedList: any)
+				if type(summonedList) == "table" and #summonedList > 0 then
+					self:ShowAnvilResults(summonedList)
+				end
+			end)
+		end
+	end)
+end
+
+-- Plays the Gilded Anvil reveal (no Gold Summon Again buttons).
+function Forge:ShowAnvilResults(summonedList: { any })
+	self.Reveal:Play(summonedList, true, {})
 end
 
 -- `ownedBefore`: artifact templates owned before the pull (for the NEW badge).
@@ -2867,7 +2885,7 @@ function Forge:UpdateSellValuationDisplay()
 	for uuid, sel in pairs(self.SelectedSellUUIDs) do
 		if sel and artifacts[uuid] then
 			local art = artifacts[uuid]
-			totalVal += ArtifactCatalog.CalculateSellPrice(art.Rarity or 1, art.Star or 1)
+			totalVal += ArtifactCatalog.CalculateSellPrice(art.Rarity or 1, art.Star or 1, art.TemplateId)
 			count += 1
 		end
 	end
@@ -2881,7 +2899,7 @@ function Forge:SelectAllUnequippedForSell(maxRarity: number?)
 	local cap = maxRarity or 2
 	for uuid, art in pairs(artifacts) do
 		local inFilter = self.AssignFilter == "ALL" or art.Type == self.AssignFilter
-		if inFilter and (art.Rarity or 1) <= cap and not art.EquippedHeroUUID and not art.Locked then
+		if inFilter and (art.Rarity or 1) <= cap and not art.EquippedHeroUUID and not art.Locked and not ArtifactCatalog.IsGildforged(art) then
 			self.SelectedSellUUIDs[uuid] = true
 		end
 	end
@@ -2896,9 +2914,9 @@ function Forge:ConfirmSellArtifacts()
 	local count, total, best = 0, 0, 1
 	for uuid, sel in pairs(self.SelectedSellUUIDs) do
 		local art = sel and artifacts[uuid]
-		if art then
+		if art and not ArtifactCatalog.IsGildforged(art) then
 			count += 1
-			total += ArtifactCatalog.CalculateSellPrice(art.Rarity or 1, art.Star or 1)
+			total += ArtifactCatalog.CalculateSellPrice(art.Rarity or 1, art.Star or 1, art.TemplateId)
 			best = math.max(best, art.Rarity or 1)
 		end
 	end

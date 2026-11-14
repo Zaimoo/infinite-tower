@@ -122,6 +122,13 @@ HeroSockets.PREFABS = table.freeze({
 	art_divine_providence = "art_divine_providence",
 	art_akashic_records = "art_akashic_records",
 	art_book_of_primordial_genesis = "art_book_of_primordial_genesis",
+	-- The Gilded Anvil (Tier 8 Gildforged)
+	art_gild_dawnwarden_oath = "art_gild_dawnwarden_oath",
+	art_gild_eclipse_sisters = "art_gild_eclipse_sisters",
+	art_gild_aurora_skyhook = "art_gild_aurora_skyhook",
+	art_gild_wyrmheart_cleaver = "art_gild_wyrmheart_cleaver",
+	art_gild_ninth_sky_orrery = "art_gild_ninth_sky_orrery",
+	art_gild_evergarden_codex = "art_gild_evergarden_codex",
 } :: { [string]: string })
 
 HeroSockets.SOCKETS = table.freeze({
@@ -302,6 +309,11 @@ function HeroSockets.Equip(rig: Model, weapon: Model, weaponType: WeaponType): M
 	if scale and scale ~= 1 and weapon:GetAttribute("SocketScaled") ~= true then
 		weapon:ScaleTo(weapon:GetScale() * scale)
 		weapon:SetAttribute("SocketScaled", true)
+		for _, d in weapon:GetDescendants() do
+			if d:IsA("Weld") and d:GetAttribute("BaseC0") ~= nil then
+				d:SetAttribute("BaseC0", d.C0)
+			end
+		end
 	end
 
 	for _, socket in sockets do

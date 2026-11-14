@@ -4,7 +4,7 @@
 
 export type VfxBand = number
 
-export type ElementType = "PHYSICAL" | "WIND" | "LIGHTNING" | "CRYSTAL" | "FIRE" | "CELESTIAL" | "COSMIC" | "VOID"
+export type ElementType = "PHYSICAL" | "WIND" | "LIGHTNING" | "CRYSTAL" | "FIRE" | "CELESTIAL" | "COSMIC" | "VOID" | "SUNLIGHT" | "ECLIPSE" | "AURORA" | "DRAGONFIRE" | "STAR_ORBIT" | "BLOOM"
 
 export type ElementStyle = {
 	PrimaryColor: Color3,
@@ -38,10 +38,10 @@ WeaponVfxConfig.RarityBands = table.freeze({
 	[5]  = 4, -- Exalted (Radiant PointLight, energetic motes, flame/solar aura, 2-layer trail)
 	[6]  = 5, -- Legendary (Brilliant PointLight, dense motes, celestial aura, wide trail)
 	[7]  = 5, -- Mythical / Launch Origin (Cosmic aura, starburst motes, pinnacle radiance)
-	[8]  = 4, -- Transcendent
-	[9]  = 4, -- Ascendant
-	[10] = 4, -- Ethereal
-	[11] = 4, -- Immortal
+	[8]  = 5, -- Transcendent
+	[9]  = 5, -- Ascendant
+	[10] = 5, -- Ethereal
+	[11] = 5, -- Immortal
 	[12] = 5, -- Divine
 	[13] = 5, -- Celestial
 	[14] = 5, -- Primordial
@@ -134,6 +134,54 @@ WeaponVfxConfig.Elements = table.freeze({
 		TrailTexture = "",
 		Wisps = true,
 		Sparks = false,
+	}),
+	SUNLIGHT = table.freeze({
+		PrimaryColor = Color3.fromRGB(255, 215, 95),
+		AccentColor = Color3.fromRGB(255, 252, 232),
+		ParticleTexture = "",
+		TrailTexture = "",
+		Wisps = true,
+		Sparks = true,
+	}),
+	ECLIPSE = table.freeze({
+		PrimaryColor = Color3.fromRGB(35, 28, 46),
+		AccentColor = Color3.fromRGB(255, 208, 90),
+		ParticleTexture = "",
+		TrailTexture = "",
+		Wisps = true,
+		Sparks = true,
+	}),
+	AURORA = table.freeze({
+		PrimaryColor = Color3.fromRGB(68, 235, 212),
+		AccentColor = Color3.fromRGB(228, 120, 235),
+		ParticleTexture = "",
+		TrailTexture = "",
+		Wisps = true,
+		Sparks = true,
+	}),
+	DRAGONFIRE = table.freeze({
+		PrimaryColor = Color3.fromRGB(245, 175, 42),
+		AccentColor = Color3.fromRGB(220, 42, 42),
+		ParticleTexture = "",
+		TrailTexture = "",
+		Wisps = true,
+		Sparks = true,
+	}),
+	STAR_ORBIT = table.freeze({
+		PrimaryColor = Color3.fromRGB(255, 212, 95),
+		AccentColor = Color3.fromRGB(62, 118, 230),
+		ParticleTexture = "",
+		TrailTexture = "",
+		Wisps = true,
+		Sparks = true,
+	}),
+	BLOOM = table.freeze({
+		PrimaryColor = Color3.fromRGB(110, 224, 152),
+		AccentColor = Color3.fromRGB(255, 218, 118),
+		ParticleTexture = "",
+		TrailTexture = "",
+		Wisps = true,
+		Sparks = true,
 	}),
 } :: { [ElementType]: ElementStyle })
 
@@ -234,7 +282,24 @@ WeaponVfxConfig.ArtifactElements = table.freeze({
 	art_divine_providence = "CELESTIAL",
 	art_akashic_records = "COSMIC",
 	art_book_of_primordial_genesis = "VOID",
+
+	-- The Gilded Anvil (Band 6 Gildforged)
+	art_gild_dawnwarden_oath = "SUNLIGHT",
+	art_gild_eclipse_sisters = "ECLIPSE",
+	art_gild_aurora_skyhook = "AURORA",
+	art_gild_wyrmheart_cleaver = "DRAGONFIRE",
+	art_gild_ninth_sky_orrery = "STAR_ORBIT",
+	art_gild_evergarden_codex = "BLOOM",
 } :: { [string]: ElementType })
+
+local GILDED_ARTIFACTS: { [string]: boolean } = table.freeze({
+	art_gild_dawnwarden_oath = true,
+	art_gild_eclipse_sisters = true,
+	art_gild_aurora_skyhook = true,
+	art_gild_wyrmheart_cleaver = true,
+	art_gild_ninth_sky_orrery = true,
+	art_gild_evergarden_codex = true,
+})
 
 -- Balanced particle & lighting rates: punchy, radiant anime VFX accents with clear gameplay presence
 WeaponVfxConfig.Budget = table.freeze({
@@ -243,11 +308,17 @@ WeaponVfxConfig.Budget = table.freeze({
 	Band3 = table.freeze({ MoteRate = 6,  AuraRate = 6,  LightRange = 5.2,  LightBrightness = 0.48 }),
 	Band4 = table.freeze({ MoteRate = 10, AuraRate = 10, LightRange = 6.2,  LightBrightness = 0.60 }),
 	Band5 = table.freeze({ MoteRate = 14, AuraRate = 14, LightRange = 7.2,  LightBrightness = 0.75 }),
+	Band6 = table.freeze({ MoteRate = 18, AuraRate = 18, LightRange = 8.5,  LightBrightness = 0.90 }),
 })
+
+function WeaponVfxConfig.IsGildforgedId(artifactId: string?): boolean
+	return artifactId ~= nil and GILDED_ARTIFACTS[artifactId] == true
+end
 
 function WeaponVfxConfig.GetProfile(artifactId: string?, rarityTier: number?): ArtifactVfxProfile
 	local tier = math.clamp(rarityTier or 1, 1, 16)
-	local band = WeaponVfxConfig.RarityBands[tier] or 0
+	local isGilded = WeaponVfxConfig.IsGildforgedId(artifactId)
+	local band = if isGilded then 6 else (WeaponVfxConfig.RarityBands[tier] or 0)
 	local rarityColor = WeaponVfxConfig.RarityColors[tier] or Color3.fromRGB(180, 180, 180)
 	local elemKey = (artifactId and WeaponVfxConfig.ArtifactElements[artifactId]) or "PHYSICAL"
 	local elemStyle = WeaponVfxConfig.Elements[elemKey] or WeaponVfxConfig.Elements.PHYSICAL
@@ -257,12 +328,13 @@ function WeaponVfxConfig.GetProfile(artifactId: string?, rarityTier: number?): A
 		elseif band == 3 then WeaponVfxConfig.Budget.Band3
 		elseif band == 4 then WeaponVfxConfig.Budget.Band4
 		elseif band == 5 then WeaponVfxConfig.Budget.Band5
+		elseif band == 6 then WeaponVfxConfig.Budget.Band6
 		else nil
 
 	return {
 		Band = band,
 		Element = elemKey,
-		Color = rarityColor,
+		Color = if isGilded then elemStyle.PrimaryColor else rarityColor,
 		Accent = elemStyle.AccentColor,
 		LightRange = bConfig and bConfig.LightRange or 0,
 		LightBrightness = bConfig and bConfig.LightBrightness or 0,

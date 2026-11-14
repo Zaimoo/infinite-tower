@@ -27,7 +27,8 @@ export type ArtifactSeed = {
 	Type: WeaponType,
 	RarityTier: number,
 	IsHighStat: boolean,
-	Variant: ("Standard" | "Enhanced")?,
+	Variant: ("Standard" | "Enhanced" | "Gildforged")?,
+	VisualElement: string?,
 	StatMultiplier: number,
 	SpeedBonusAdditive: number,
 	ModelAssetId: string, -- Key in ReplicatedStorage.Assets.Weapons
@@ -190,8 +191,32 @@ local RarityBaseSellPrice: { [number]: number } = {
 }
 ArtifactCatalog.RarityBaseSellPrice = RarityBaseSellPrice
 
-function ArtifactCatalog.CalculateSellPrice(rarity: number, star: number): number
-	local r = math.clamp(math.floor(rarity or 1), 1, 7)
+function ArtifactCatalog.IsGildforged(seedOrId: any): boolean
+	if seedOrId == "Gildforged" then
+		return true
+	end
+	local seeds = ArtifactCatalog.Seeds
+	local seed = if type(seedOrId) == "string"
+		then (seeds and seeds[seedOrId])
+		elseif type(seedOrId) == "table" then (
+			if seedOrId.Variant == "Gildforged"
+				then seedOrId
+				elseif type(seedOrId.TemplateId) == "string" and seeds then seeds[seedOrId.TemplateId]
+				else nil
+		)
+		else nil
+	return seed ~= nil and (seed :: any).Variant == "Gildforged"
+end
+
+function ArtifactCatalog.CalculateSellPrice(rarity: number, star: number, seedOrId: any?): number
+	if seedOrId ~= nil and ArtifactCatalog.IsGildforged(seedOrId) then
+		return 0
+	end
+	local rawRarity = math.floor(rarity or 1)
+	if rawRarity >= 8 then
+		return 0
+	end
+	local r = math.clamp(rawRarity, 1, 7)
 	local s = math.clamp(math.floor(star or 1), 1, 7)
 	local basePrice = RarityBaseSellPrice[r] or 100
 	return math.floor(basePrice * (1 + 0.5 * (s - 1)))
@@ -1134,10 +1159,106 @@ local Seeds: { [string]: ArtifactSeed } = {
 		ModelAssetId = "art_book_of_primordial_genesis",
 		Description = "Transcendent scripture of life itself, written in eternal light that resurrects fallen allies and grants immortality.",
 	},
+
+	-- ------------------------------------------------------------------------
+	-- THE GILDED ANVIL (6 Tier-8 Transcendent Gildforged Weapons, 1 per Archetype)
+	-- ------------------------------------------------------------------------
+	art_gild_dawnwarden_oath = {
+		TemplateId = "art_gild_dawnwarden_oath",
+		DisplayName = "Dawnwarden's Oath",
+		Type = "SWORD_SHIELD",
+		RarityTier = 8,
+		IsHighStat = false,
+		Variant = "Gildforged",
+		VisualElement = "SUNLIGHT",
+		StatMultiplier = 1.00,
+		SpeedBonusAdditive = 0.000,
+		BaseATK = 10000,
+		BaseHP = 0,
+		ModelAssetId = "art_gild_dawnwarden_oath",
+		Description = "White-gold longsword sworn to a kite shield whose sun-disc boss rises and sets in the hand of its bearer.",
+	},
+	art_gild_eclipse_sisters = {
+		TemplateId = "art_gild_eclipse_sisters",
+		DisplayName = "Eclipse Sisters",
+		Type = "DAGGERS",
+		RarityTier = 8,
+		IsHighStat = false,
+		Variant = "Gildforged",
+		VisualElement = "ECLIPSE",
+		StatMultiplier = 1.00,
+		SpeedBonusAdditive = 0.000,
+		BaseATK = 10000,
+		BaseHP = 0,
+		ModelAssetId = "art_gild_eclipse_sisters",
+		Description = "Twin daggers Umbra and Corona: one of black glass edged in light, one of gold wreathed in black flame.",
+	},
+	art_gild_aurora_skyhook = {
+		TemplateId = "art_gild_aurora_skyhook",
+		DisplayName = "Aurora Skyhook",
+		Type = "BOW",
+		RarityTier = 8,
+		IsHighStat = false,
+		Variant = "Gildforged",
+		VisualElement = "AURORA",
+		StatMultiplier = 1.00,
+		SpeedBonusAdditive = 0.000,
+		BaseATK = 10000,
+		BaseHP = 0,
+		ModelAssetId = "art_gild_aurora_skyhook",
+		Description = "Recurve bow whose limbs are ribbons of living aurora held in gold clasps, strung with a thread of polar light.",
+	},
+	art_gild_wyrmheart_cleaver = {
+		TemplateId = "art_gild_wyrmheart_cleaver",
+		DisplayName = "Wyrmheart Cleaver",
+		Type = "AXE",
+		RarityTier = 8,
+		IsHighStat = false,
+		Variant = "Gildforged",
+		VisualElement = "DRAGONFIRE",
+		StatMultiplier = 1.00,
+		SpeedBonusAdditive = 0.000,
+		BaseATK = 10000,
+		BaseHP = 0,
+		ModelAssetId = "art_gild_wyrmheart_cleaver",
+		Description = "Two-handed greataxe forged around a caged dragon's heart; molten gold drips from a head carved as a roaring skull.",
+	},
+	art_gild_ninth_sky_orrery = {
+		TemplateId = "art_gild_ninth_sky_orrery",
+		DisplayName = "Orrery of the Ninth Sky",
+		Type = "STAFF",
+		RarityTier = 8,
+		IsHighStat = false,
+		Variant = "Gildforged",
+		VisualElement = "STAR_ORBIT",
+		StatMultiplier = 1.00,
+		SpeedBonusAdditive = 0.000,
+		BaseATK = 10000,
+		BaseHP = 0,
+		ModelAssetId = "art_gild_ninth_sky_orrery",
+		Description = "Gilded staff crowned by a living armillary sphere: three gold rings turning around a captured star and its moons.",
+	},
+	art_gild_evergarden_codex = {
+		TemplateId = "art_gild_evergarden_codex",
+		DisplayName = "Evergarden Codex",
+		Type = "TOME",
+		RarityTier = 8,
+		IsHighStat = false,
+		Variant = "Gildforged",
+		VisualElement = "BLOOM",
+		StatMultiplier = 1.00,
+		SpeedBonusAdditive = 0.000,
+		BaseATK = 10000,
+		BaseHP = 0,
+		ModelAssetId = "art_gild_evergarden_codex",
+		Description = "Living tome bound in white bark and gold filigree, its leaf-pages turning on their own and breathing blossoms.",
+	},
 }
 ArtifactCatalog.Seeds = Seeds
 for _, seed in pairs(Seeds) do
-	(seed :: any).Variant = if seed.IsHighStat then "Enhanced" else "Standard"
+	if not seed.Variant then
+		(seed :: any).Variant = if seed.IsHighStat then "Enhanced" else "Standard"
+	end
 end
 
 -- Master order of all 84 weapons for the Artifact Index and catalog viewers
@@ -1228,6 +1349,38 @@ local CatalogOrder: { string } = {
 	"art_book_of_primordial_genesis",
 }
 ArtifactCatalog.CatalogOrder = CatalogOrder
+
+ArtifactCatalog.AnvilOrder = table.freeze({
+	"art_gild_dawnwarden_oath",
+	"art_gild_eclipse_sisters",
+	"art_gild_aurora_skyhook",
+	"art_gild_wyrmheart_cleaver",
+	"art_gild_ninth_sky_orrery",
+	"art_gild_evergarden_codex",
+})
+
+ArtifactCatalog.AnvilBanner = table.freeze({
+	BannerId = "banner_gilded_anvil",
+	Title = "THE GILDED ANVIL",
+	Subtitle = "PREMIUM ARTIFACT BANNER",
+	RarityTier = 8,
+	RobuxOnly = true,
+	FocusChance = 0.40,
+	OffFocusChance = 0.12,
+	GuaranteeOnTenPull = true,
+	SparkPulls = 60,
+	RestrictedGemsPerPull = 135,
+	DefaultFocus = "SWORD_SHIELD",
+	Weapons = ArtifactCatalog.AnvilOrder,
+	WeaponByType = table.freeze({
+		SWORD_SHIELD = "art_gild_dawnwarden_oath",
+		DAGGERS = "art_gild_eclipse_sisters",
+		BOW = "art_gild_aurora_skyhook",
+		AXE = "art_gild_wyrmheart_cleaver",
+		STAFF = "art_gild_ninth_sky_orrery",
+		TOME = "art_gild_evergarden_codex",
+	}),
+})
 
 
 -- Structured lookup for gacha rolls: [tier][weaponType] = { Standard = seed, Enhanced = seed }

@@ -39,14 +39,21 @@ function HeroLoadout.Equip(entity: Model, rig: Model, artifactId: string?, weapo
 		HeroLoadout.Unequip(entity, rig)
 		return nil
 	end
-	local folder = weaponsFolder()
-	local template = folder and folder:FindFirstChild(prefabName)
-	if not template or not template:IsA("Model") then
+	local weapon: Model? = nil
+	if WeaponModelBuilder.IsGildedTemplate and WeaponModelBuilder.IsGildedTemplate(prefabName) then
+		weapon = WeaponModelBuilder.CloneOrBuildPrefab(prefabName)
+	else
+		local folder = weaponsFolder()
+		local template = folder and folder:FindFirstChild(prefabName)
+		if template and template:IsA("Model") then
+			weapon = template:Clone()
+		end
+	end
+	if not weapon then
 		HeroLoadout.Unequip(entity, rig)
 		return nil
 	end
 
-	local weapon = template:Clone()
 	WeaponModelBuilder.Style(weapon, artifactId, rarityIndex)
 	HeroSockets.Equip(rig, weapon, resolvedType)
 	entity:SetAttribute("EquippedArtifactId", if artifactId and artifactId ~= "" then artifactId else prefabName)

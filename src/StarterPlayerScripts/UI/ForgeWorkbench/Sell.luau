@@ -25,13 +25,13 @@ return function(props: any)
 	local snapshot = props.Snapshot
 	local ids, items, total = {}, {}, 0
 	local function eligible(artifact)
-		return not artifact.Locked and #Model.ownerIds(snapshot, artifact.UUID) == 0
+		return not artifact.Locked and not Catalog.IsGildforged(artifact) and #Model.ownerIds(snapshot, artifact.UUID) == 0
 	end
 	for _, artifact in props.Items do
 		if selected[artifact.UUID] and eligible(artifact) then
 			table.insert(ids, artifact.UUID)
 			table.insert(items, artifact)
-			total += Catalog.CalculateSellPrice(artifact.Rarity, artifact.Star)
+			total += Catalog.CalculateSellPrice(artifact.Rarity, artifact.Star, artifact.TemplateId)
 		end
 	end
 	local selectionSignature = {}

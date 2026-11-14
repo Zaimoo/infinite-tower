@@ -20,6 +20,8 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ShopConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("ShopConfig"))
+local AnvilBanner = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("AnvilBanner"))
+local InventoryCapacity = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("InventoryCapacity"))
 
 local Receipts = DataStoreService:GetDataStore("ShopReceipts_V1")
 
@@ -68,6 +70,18 @@ local function grant(player: Player, offer: ShopConfig.Offer): string
 		dm.SyncProfile(player)
 		return string.format("Purchase complete: +%d Gold!", g.Amount)
 	else
+		if AnvilBanner.IsBanner(g.Banner) then
+			local cap = InventoryCapacity.ArtifactCap(profile.FortressTree)
+			assert(InventoryCapacity.ArtifactCount(profile) + g.Amount <= cap, "Artifact inventory full")
+			local summoned, ok, err = dm.RollAnvilSummons(player, g.Amount)
+			assert(ok, err or "Gilded Anvil roll failed")
+			dm.SyncProfile(player)
+			local names = {}
+			for _, art in summoned do
+				table.insert(names, art.DisplayName)
+			end
+			return "Pack opened: " .. table.concat(names, ", ")
+		end
 		local summoned = dm.RollSummons(player, g.Banner or "A_STARS_ARRIVAL", g.Amount)
 		dm.SyncProfile(player)
 		local names = {}

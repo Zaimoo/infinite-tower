@@ -40,15 +40,17 @@ test("84 master catalog weapons exist across 6 archetypes and 7 rarity tiers", f
 	local totalSeeds = 0
 
 	for id, seed in pairs(ArtifactCatalog.Seeds) do
-		totalSeeds += 1
-		countsByType[seed.Type] = (countsByType[seed.Type] or 0) + 1
-		local tier = seed.RarityTier or 1
-		countsByTier[tier] = (countsByTier[tier] or 0) + 1
+		if seed.Variant ~= "Gildforged" then
+			totalSeeds += 1
+			countsByType[seed.Type] = (countsByType[seed.Type] or 0) + 1
+			local tier = seed.RarityTier or 1
+			countsByTier[tier] = (countsByTier[tier] or 0) + 1
 
-		assert(seed.DisplayName and #seed.DisplayName > 0, id .. " missing DisplayName")
-		assert(seed.Description and #seed.Description > 0, id .. " missing Description")
-		assert(seed.Variant == "Standard" or seed.Variant == "Enhanced", id .. " invalid variant")
-		assert(seed.RarityTier >= 1 and seed.RarityTier <= 7, id .. " invalid RarityTier")
+			assert(seed.DisplayName and #seed.DisplayName > 0, id .. " missing DisplayName")
+			assert(seed.Description and #seed.Description > 0, id .. " missing Description")
+			assert(seed.Variant == "Standard" or seed.Variant == "Enhanced", id .. " invalid variant")
+			assert(seed.RarityTier >= 1 and seed.RarityTier <= 7, id .. " invalid RarityTier")
+		end
 	end
 
 	assertEqual(totalSeeds, 84, "Master catalog must have exactly 84 weapons")

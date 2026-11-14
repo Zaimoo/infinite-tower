@@ -1,6 +1,6 @@
-# The Gilded Anvil: premium artifact banner (design draft)
+# The Gilded Anvil: premium artifact banner
 
-Status: **description only** (2026-11-14). No models, no catalog entries, no code yet. This document is the brief the models, `ArtifactCatalog` entries, VFX and Store wiring will be built from. It is the artifact counterpart of the Gilded Mirror hero banner (`docs/gilded-mirror-plan.md`).
+Status: **implemented** (2026-11-14). Shipped across `ArtifactCatalog`, `AnvilBanner`, `WeaponVfxConfig` (Band 6), `GildedAnvilMeshData` / `WeaponModelBuilder`, `WeaponVfx`, `GildedAnvilFx`, `ShopConfig`, `ShopService`, `DataManager`, `ShopPanel`, and `SummonReveal`. This document also serves as the companion specification to the Gilded Mirror hero banner (`docs/gilded-mirror-plan.md`).
 
 ---
 
@@ -145,17 +145,37 @@ Each entry gives the catalog `Description` (one line, the same style as `Artifac
 - **Kill / crit:** a puff of seeds that drift away.
 - **Equip:** the tome opens and the first flower blooms.
 
-## 5. Build order (later, not now)
+## 5. Build checklist (shipped)
 
-1. Catalog entries in `ArtifactCatalog` (tier 8, `Variant = "Gildforged"`, not sellable) and `WeaponVfxConfig` (Band 6, the six elements).
-2. Models in `WeaponModelBuilder` (moving centrepieces as named parts the VFX module animates).
-3. `WeaponVfx` Band 6 layers, signature finishers, Reduce Motion and distance LOD.
-4. Store card, odds, Focus pick and spark (`ShopConfig`, `ShopService`, `DataManager` roll and migration for the spark counter).
-5. GDD §7 update with the shipped rules.
+1. Catalog entries in `ArtifactCatalog` (tier 8, `Variant = "Gildforged"`, `CalculateSellPrice` returning `0` / unsellable across sell UIs & `DataManager.SellArtifacts`) and `WeaponVfxConfig` (Band 6, six bespoke elements: `SUNLIGHT`, `ECLIPSE`, `AURORA`, `DRAGONFIRE`, `STAR_ORBIT`, `BLOOM`).
+2. Sculpted `EditableMesh` + `AssetService:CreateMeshPartAsync` models in `GildedAnvilMeshData` and `WeaponModelBuilder` (`IsGildedTemplate`, `CloneOrBuildPrefab`, per-assembly `OffhandShield`, `LeftDagger`, `HunterArrow`, invisible `Handle` on `Evergarden Codex`, and `GildAnimRole` `Weld`s).
+3. `WeaponVfx` Band 6 layers (`VfxGildFiligreeTrail`, `VfxGildGlintSweep`, `SetRateScale`, `BaseRate`/`VfxKeepFar` LOD) and `GildedAnvilFx`, driven by `_G.GildedAnvilCombatFx` hooks in `EntityRenderer`. `GildedAnvilFx` covers:
+   - centrepiece animation that spins up on equip;
+   - a footprint sigil for each weapon (rising sun, a waxing crescent, an aurora ring with a north star, lava cracks, a turning star chart, a flower ring);
+   - idle extras: the Wyrmheart's heartbeat, embers, molten drips and a skull that burns below 30% HP, the Dawnwarden's sun pulse, and the Evergarden's footstep flowers;
+   - weapon afterimages on Specials (three for the Eclipse Sisters);
+   - each weapon's own Basic and Special hit effect, signature skill finishers, and kill / crit bursts;
+   - Reduce Motion, 60-stud LOD and the Band 5 cap on other Masters' weapons.
 
-## 6. Open decisions
+   Hit and kill events carry no attacker, so the client credits them to the Gildforged hero that last attacked toward that spot (a cosmetic guess). Not built: the Eclipse's drifting mini-eclipse between the hands, the Aurora's shed curtains, the Orrery's constellation lines to the shoulders, the bow's draw spiral and the Evergarden's heal bloom.
+4. Store card, 3D `ArtifactPreview` tiles, Focus pick, and Spark (`AnvilBanner`, `ShopConfig.Anvil`, `ShopService`, `DataManager.RollAnvilSummons` + `SetAnvilFocus`/`ClaimAnvilSpark`, `ShopPanel`, `SummonReveal`, and `ForgeController`).
+5. GDD §7 (`docs/GAME_DESIGN.MD` §7.4a) and unit tests (`tests/anvil.spec.luau`) updated with shipped behavior.
 
-- Same tier for all six (recommended) or a spread over tiers 8–11 like the Mirror.
-- Price and spark count.
-- Whether Gildforged weapons may promote with normal Transcendent weapons if those are ever added.
-- Whether to raise Band 4 to Band 5 for tiers 8–11 so no premium-tier weapon looks weaker than a Mythical.
+## 5a. Mesh upload (Blender to Roblox)
+
+The models are authored in `tools/blender/generate_gilded_anvil_weapons.py`, which exports one FBX per weapon to `assets/artifacts/gilded_anvil/`, plus `manifest.json` and the packed geometry shards in `ReplicatedStorage/Assets/GildedAnvilMeshes/`.
+
+`WeaponModelBuilder` builds each part from its uploaded `MeshId` (`AssetService:CreateMeshPartAsync`). A part with no MeshId falls back to rebuilding the sculpt from its shard through `EditableMesh` (`GildedAnvilMeshData.GetGeometry`, decoded only on that path). The fallback is a stopgap: it doesn't save with the place, server-built copies don't replicate, and it depends on the EditableMesh memory budget. Ship with every MeshId filled in.
+
+1. In Studio, **File → Import 3D** each `art_gild_*.fbx` into Workspace, keeping the parts separate and leaving the model named after the file.
+2. Run `tests/studio-gilded-anvil-import.luau` through Studio MCP. It finalizes the prefabs in `ReplicatedStorage.Assets.Weapons` and prints a JSON map `{ templateId: { PartName: MeshId } }` on its last line.
+3. Save that JSON as `assets/artifacts/gilded_anvil/mesh_ids.json`, then run `python3 tools/apply_gilded_anvil_mesh_ids.py`. It writes the IDs into the shards and the manifest and warns about any part that has no ID.
+
+The generator reads `mesh_ids.json` too, so a re-export keeps the IDs. If a weapon's geometry changes, re-upload that weapon.
+
+## 6. Resolved design decisions
+
+- **Same tier for all six:** All six Gildforged relics ship at Tier 8 (Transcendent, `10,000` Power at 1★ up to `160,000` at 7★).
+- **Price and Spark count:** `49` Robux per single pull (`pack_anvil_1`), `449` Robux per 10-pull (`pack_anvil_10`, `-8%` vs `490`), `60` pulls per Spark pick (`AnvilBanner.SPARK_COST`), and `135` Gems per pull for policy-restricted fallback (`ShopConfig.GemsPerSummon`).
+- **Cross-type Tier-8 promotion:** `WeaponPromotion` accepts any Tier-8 weapon of matching star rank as a donor across archetypes, including across Gildforged and any future Tier-8 Transcendent weapons.
+- **Tiers 8–11 VFX band:** `WeaponVfxConfig.RarityBands[8..11]` raised from Band 4 to Band 5 so no premium-tier weapon falls below Mythical visuals, while Gildforged weapons exclusively receive Band 6.

@@ -22,9 +22,13 @@ local React = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("R
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local ShopConfig = require(Shared:WaitForChild("Config"):WaitForChild("ShopConfig"))
 local HeroCatalog = require(Shared:WaitForChild("Config"):WaitForChild("HeroCatalog"))
+local ArtifactCatalog = require(Shared:WaitForChild("Config"):WaitForChild("ArtifactCatalog"))
+local WeaponVfxConfig = require(Shared:WaitForChild("Config"):WaitForChild("WeaponVfxConfig"))
+local AnvilBanner = require(Shared:WaitForChild("Util"):WaitForChild("AnvilBanner"))
 local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormulas"))
 local Grimoire = require(Shared:WaitForChild("Util"):WaitForChild("GildedGrimoire"))
 local Portrait = require(script.Parent:WaitForChild("Portrait"))
+local ArtifactPreview = require(script.Parent.Parent:WaitForChild("ArtifactPreview"))
 local Theme = require(script.Parent:WaitForChild("Theme"))
 local Components = require(script.Parent:WaitForChild("Components"))
 local WindowScale = require(script.Parent.Parent:WaitForChild("WindowScale"))
@@ -129,6 +133,60 @@ local function heroTile(order: number, heroId: string, big: boolean)
 	})
 end
 
+-- A Gilded Anvil weapon tile: 3D EditableMesh preview in a selectable Focus frame.
+local function AnvilWeaponTile(props: { Order: number, WeaponId: string, Focused: boolean, OnSelectFocus: (string) -> () })
+	local seed = ArtifactCatalog.Seeds[props.WeaponId]
+	local viewportHost = React.useRef(nil :: Frame?)
+	React.useEffect(function()
+		local host = viewportHost.current
+		if host then
+			ArtifactPreview.Show(host, props.WeaponId)
+		end
+	end, { props.WeaponId })
+	if not seed then return nil end
+
+	local vfxProfile = WeaponVfxConfig.GetProfile(props.WeaponId, 8)
+	local accent = vfxProfile.Color
+	local gilt = Color3.fromRGB(255, 218, 92)
+	local rail = if props.Focused then gilt else accent:Lerp(TEXT.Muted, 0.35)
+	local shortArchetype = string.gsub(seed.Type, "_", " & ")
+
+	return Panel({
+		Class = "TextButton", Text = "", AutoButtonColor = false, Selectable = true,
+		LayoutOrder = props.Order, Size = UDim2.fromOffset(146, 206), Radius = 14,
+		Top = Tones.Deep.Top:Lerp(if props.Focused then gilt else accent, if props.Focused then 0.42 else 0.25),
+		Bottom = Tones.Deep.Bottom, Rail = rail, ZIndex = 5,
+		[React.Event.Activated] = function() props.OnSelectFocus(seed.Type) end,
+	}, {
+		Badge = Panel({
+			AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, -9),
+			Size = UDim2.fromOffset(92, 20), Radius = 10,
+			Top = if props.Focused then gilt else Tones.Slate.Top,
+			Bottom = if props.Focused then Color3.fromRGB(196, 128, 28) else Tones.Slate.Bottom,
+			Rail = if props.Focused then Color3.fromRGB(255, 248, 210) else Tones.Slate.Rail, ZIndex = 8,
+		}, {
+			Text = Heavy({ Size = UDim2.fromScale(1, 1), MaxSize = 11, Outline = 2, Gold = false,
+				TextColor3 = if props.Focused then INK else TEXT.Parchment,
+				Text = if props.Focused then "40% FOCUS" else "12%", ZIndex = 9 }),
+		}),
+		Name = Heavy({ Position = UDim2.fromOffset(6, 14), Size = UDim2.new(1, -12, 0, 20), MaxSize = 14, Outline = 2,
+			Gold = props.Focused, TextColor3 = if props.Focused then Color3.new(1, 1, 1) else accent:Lerp(Color3.new(1, 1, 1), 0.35),
+			Text = seed.DisplayName, ZIndex = 7 }),
+		Art = e("Frame", {
+			ref = viewportHost,
+			Position = UDim2.fromOffset(10, 38), Size = UDim2.new(1, -20, 0, 122),
+			BackgroundColor3 = Color3.fromRGB(12, 10, 20), BackgroundTransparency = 0.3, ClipsDescendants = true, ZIndex = 6,
+		}, {
+			Corner = e("UICorner", { CornerRadius = UDim.new(0, 10) }),
+		}),
+		TypeText = Body({ AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -22), Size = UDim2.new(1, -10, 0, 14),
+			TextSize = 11, TextXAlignment = Enum.TextXAlignment.Center, TextColor3 = accent:Lerp(Color3.new(1, 1, 1), 0.4),
+			Text = shortArchetype, ZIndex = 7 }),
+		PowerText = inkNumber({ AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -3), Size = UDim2.new(1, -10, 0, 18),
+			MaxSize = 15, TextColor3 = gilt, Text = "10K–160K PWR", ZIndex = 7 }),
+	})
+end
+
 -- A Gem / Gold card.
 local function currencyCard(order: number, offer: ShopConfig.Offer, icon: string, tone: string, onBuy: (ShopConfig.Offer) -> ())
 	local t = Tones[tone]
@@ -155,6 +213,11 @@ end
 local function ShopPanel(props: { Profile: any, Width: number, OnClose: () -> () })
 	local restricted, setRestricted = React.useState(true) -- hide summon packs until the policy says otherwise
 	local status, setStatus = React.useState("")
+	local profileFocus = if props.Profile and type(props.Profile.AnvilSpark) == "table" then props.Profile.AnvilSpark.Focus else nil
+	local selectedFocus, setSelectedFocus = React.useState(profileFocus or AnvilBanner.DEFAULT_FOCUS)
+	React.useEffect(function()
+		if profileFocus then setSelectedFocus(profileFocus) end
+	end, { profileFocus })
 
 	React.useEffect(function()
 		ContextActionService:BindAction(CLOSE_ACTION, function(_, state)
@@ -198,6 +261,37 @@ local function ShopPanel(props: { Profile: any, Width: number, OnClose: () -> ()
 		end)
 	end
 
+	local function selectAnvilFocus(focusType: string)
+		setSelectedFocus(focusType)
+		setStatus("Setting Gilded Anvil Focus…")
+		task.spawn(function()
+			local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+			local progression = remotes and remotes:FindFirstChild("ProgressionRemotes")
+			local remote = progression and progression:FindFirstChild("SetAnvilFocus")
+			if not remote then setStatus("Focus picker isn't ready right now.") return end
+			local ok, result = pcall(function() return (remote :: RemoteFunction):InvokeServer(focusType) end)
+			if ok and type(result) == "table" and result.Success then
+				setSelectedFocus(result.Focus or focusType)
+				setStatus("Focus set to " .. tostring(result.DisplayName or focusType) .. " (40%).")
+			else
+				setStatus(if ok and type(result) == "table" then tostring(result.Message) else "Couldn't set Focus.")
+			end
+		end)
+	end
+
+	local function claimAnvilSpark(weaponId: string)
+		setStatus("Forging your Gilded Anvil Spark…")
+		task.spawn(function()
+			local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+			local progression = remotes and remotes:FindFirstChild("ProgressionRemotes")
+			local remote = progression and progression:FindFirstChild("ClaimAnvilSpark")
+			if not remote then setStatus("The Spark isn't available right now.") return end
+			local ok, result = pcall(function() return (remote :: RemoteFunction):InvokeServer(weaponId) end)
+			setStatus(if ok and type(result) == "table" and result.Success then "Gildforged relic claimed!"
+				elseif ok and type(result) == "table" then tostring(result.Message) else "Couldn't claim the Spark. Try again.")
+		end)
+	end
+
 	local narrow = props.Width < 820
 	local profile = props.Profile
 	local featured = ShopConfig.Featured
@@ -233,7 +327,7 @@ local function ShopPanel(props: { Profile: any, Width: number, OnClose: () -> ()
 			})
 		end
 		local gilt = Color3.fromRGB(212, 175, 90)
-		rows.Featured = Panel({ LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 470), Radius = 16,
+		rows.Featured = Panel({ LayoutOrder = 3, Size = UDim2.new(1, 0, 0, 470), Radius = 16,
 			Top = Tones.Violet.Top:Lerp(gilt, 0.25), Bottom = Tones.Deep.Bottom, Rail = gilt }, {
 			Fx = e(BannerFx.Backdrop, { Color = Color3.fromRGB(200, 160, 255), Accent = gilt, Radius = 16, ZIndex = 4 }),
 			Crest = IconAt("Spark", 54, { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 10), ZIndex = 6 }),
@@ -331,6 +425,90 @@ local function ShopPanel(props: { Profile: any, Width: number, OnClose: () -> ()
 		})
 	end
 
+	-- The Gilded Anvil (Tier-8 Gildforged artifacts) -----------------------------------------------
+	if not restricted then
+		local anvilShop = ShopConfig.Anvil
+		local ab = ArtifactCatalog.AnvilBanner
+		local activeFocusType = AnvilBanner.ResolveFocusType(selectedFocus) or AnvilBanner.DEFAULT_FOCUS
+		local activeFocusWeapon = AnvilBanner.ResolveWeaponId(activeFocusType)
+		local tiles: { [string]: any } = {
+			Layout = e("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, VerticalAlignment = Enum.VerticalAlignment.Center,
+				HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder, Wraps = narrow }),
+		}
+		for i, weaponId in ab.Weapons do
+			tiles["W" .. i] = e(AnvilWeaponTile, {
+				Order = i, WeaponId = weaponId, Focused = weaponId == activeFocusWeapon, OnSelectFocus = selectAnvilFocus,
+			})
+		end
+
+		local focusSeed = activeFocusWeapon and ArtifactCatalog.Seeds[activeFocusWeapon]
+		local oddsText = string.format(
+			"Focus: %s (40%%) · Other five: 12%% each · Every 10x guarantees your Focus · 10,000 Power (1★) to 160,000 (7★) · Counts toward inventory cap · Cannot be sold.",
+			if focusSeed then focusSeed.DisplayName else activeFocusType
+		)
+
+		local buys: { [string]: any } = {
+			Layout = e("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center,
+				Padding = UDim.new(0, 14), SortOrder = Enum.SortOrder.LayoutOrder }),
+		}
+		for i, offer in anvilShop.Offers do
+			buys["O" .. i] = e("Frame", { LayoutOrder = i, Size = UDim2.fromOffset(196, 84), BackgroundTransparency = 1 }, {
+				Was = if offer.WasPrice then Body({ AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -4, 0, -20), Size = UDim2.fromOffset(110, 18), TextSize = 14,
+					TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = Color3.fromRGB(255, 224, 140), Text = string.format("<s>%d</s> %s", offer.WasPrice, offer.Tag or ""), ZIndex = 7 }) else nil,
+				Button = e(PriceButton, { Offer = offer, Tone = "Gold", Shine = offer.WasPrice ~= nil, Size = UDim2.new(1, 0, 0, 52), OnBuy = buy }),
+				Label = Heavy({ Position = UDim2.fromOffset(0, 56), Size = UDim2.new(1, 0, 0, 22), MaxSize = 16, Outline = 2, Gold = false,
+					Text = string.format("%s · %d forge%s", offer.Label, offer.Grant.Amount, if offer.Grant.Amount == 1 then "" else "s"), ZIndex = 7 }),
+			})
+		end
+
+		local anvilSpark = profile and profile.AnvilSpark
+		local sparkPulls = if anvilSpark and type(anvilSpark.Pulls) == "number" then anvilSpark.Pulls else 0
+		local picks = if anvilSpark and type(anvilSpark.Selections) == "number" then anvilSpark.Selections else 0
+		local sparkRow: { [string]: any } = {
+			Layout = e("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center,
+				VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder, Wraps = true }),
+			Text = Heavy({ LayoutOrder = 0, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 24), MaxSize = 15, Outline = 2, Gold = picks > 0,
+				Text = if picks > 0 then string.format("SPARK READY (%d) · FORGE:", picks)
+					else string.format("SPARK %d / %d · pick any relic at %d pulls", sparkPulls, ab.SparkPulls, ab.SparkPulls), ZIndex = 7 }),
+		}
+		if picks > 0 then
+			for i, weaponId in ab.Weapons do
+				local seed = ArtifactCatalog.Seeds[weaponId]
+				if seed then
+					local shortLabel = string.match(seed.DisplayName, "^(%S+)") or seed.DisplayName
+					local vfxColor = WeaponVfxConfig.GetProfile(weaponId, 8).Color
+					sparkRow["S" .. i] = Panel({ Class = "TextButton", Text = "", AutoButtonColor = false, Selectable = true, LayoutOrder = i,
+						Size = UDim2.fromOffset(100, 32), Radius = 10, Top = Tones.Gold.Top, Bottom = Tones.Gold.Bottom, Rail = vfxColor, ZIndex = 7,
+						[React.Event.Activated] = function() claimAnvilSpark(weaponId) end,
+					}, {
+						Breathe = e(BannerFx.Breathe, { Amount = 0.06, Period = 1.4 }),
+						Name = Heavy({ Size = UDim2.fromScale(1, 1), MaxSize = 14, Outline = 2, Gold = false, Text = shortLabel, ZIndex = 8 }),
+					})
+				end
+			end
+		end
+
+		local anvilGold = Color3.fromRGB(240, 186, 68)
+		rows.Anvil = Panel({ LayoutOrder = 2, Size = UDim2.new(1, 0, 0, if narrow then 680 else 538), Radius = 16,
+			Top = Tones.Deep.Top:Lerp(Color3.fromRGB(168, 108, 28), 0.45), Bottom = Tones.Deep.Bottom, Rail = anvilGold }, {
+			Fx = e(BannerFx.Backdrop, { Color = Color3.fromRGB(255, 224, 128), Accent = Color3.fromRGB(255, 248, 212), Motes = 22, Radius = 16, ZIndex = 4 }),
+			Crest = IconAt("Forge", 54, { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 10), ZIndex = 6 }),
+			Title = Heavy({ Position = UDim2.fromOffset(22, 14), Size = UDim2.new(1, -220, 0, 46), MaxSize = 42, TextXAlignment = Enum.TextXAlignment.Left,
+				Text = anvilShop.Title, ZIndex = 6 }),
+			Tag = Panel({ Position = UDim2.fromOffset(24, 62), Size = UDim2.fromOffset(118, 26), Radius = 13, Top = Color3.fromRGB(255, 224, 118), Bottom = Color3.fromRGB(196, 128, 28),
+				Rail = Color3.fromRGB(255, 250, 214), ZIndex = 6 }, {
+				Text = Heavy({ Size = UDim2.fromScale(1, 1), MaxSize = 14, Outline = 2, Gold = false, TextColor3 = INK, Text = "GILDFORGED", ZIndex = 8 }),
+			}),
+			Sub = Body({ Position = UDim2.fromOffset(152, 66), Size = UDim2.new(1, -172, 0, 18), TextSize = 14, TextColor3 = Color3.fromRGB(255, 236, 196),
+				Text = anvilShop.Subtitle .. " · Tap a tile to change Focus", ZIndex = 6 }),
+			Tiles = e("Frame", { Position = UDim2.fromOffset(14, 96), Size = UDim2.new(1, -28, 0, if narrow then 420 else 218), BackgroundTransparency = 1, ZIndex = 5 }, tiles),
+			Odds = Body({ AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 16, 1, -148), Size = UDim2.new(1, -32, 0, 36), TextSize = 13, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Center,
+				TextColor3 = Color3.fromRGB(255, 236, 196), Text = oddsText, ZIndex = 6 }),
+			Buys = e("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 16, 1, -56), Size = UDim2.new(1, -32, 0, 84), BackgroundTransparency = 1, ZIndex = 5 }, buys),
+			Spark = e("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 16, 1, -12), Size = UDim2.new(1, -32, 0, 38), BackgroundTransparency = 1, ZIndex = 5 }, sparkRow),
+		})
+	end
+
 	-- Gems ------------------------------------------------------------------------------------------
 	local function cardRow(order: number, list: { ShopConfig.Offer }, icon: string, tone: string)
 		local kids: { [string]: any } = {
@@ -342,10 +520,10 @@ local function ShopPanel(props: { Profile: any, Width: number, OnClose: () -> ()
 		end
 		return e("Frame", { LayoutOrder = order, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1 }, kids)
 	end
-	rows.GemsHeader = sectionHeader(3, "Gems", "GEMS", "Summon heroes and artifacts")
-	rows.Gems = cardRow(4, ShopConfig.Gems, "Gems", "Teal")
-	rows.GoldHeader = sectionHeader(5, "Gold", "GOLD", "Unlock upgrades and promote heroes")
-	rows.Gold = cardRow(6, ShopConfig.Gold, "Gold", "Bronze")
+	rows.GemsHeader = sectionHeader(4, "Gems", "GEMS", "Summon heroes and artifacts")
+	rows.Gems = cardRow(5, ShopConfig.Gems, "Gems", "Teal")
+	rows.GoldHeader = sectionHeader(6, "Gold", "GOLD", "Unlock upgrades and promote heroes")
+	rows.Gold = cardRow(7, ShopConfig.Gold, "Gold", "Bronze")
 
 	local gems = profile and profile.Currencies and profile.Currencies.Gems or 0
 	local gold = profile and profile.Currencies and profile.Currencies.Gold or 0
