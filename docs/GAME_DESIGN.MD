@@ -1047,6 +1047,9 @@ The full 1★ to 7★ path consumes 21 donor weapons plus the retained original.
 - **Artifact Index Compendium:** All 84 weapons are cataloged in `HeroIndex.luau` under the Index's **ARTIFACTS** tab, with live collection tracking (`Collected X / 84 artifacts`), category filtering, 3D previews, and each weapon's acquisition line (price, exact per-pull chance, 1★ sell price).
 - **Inventory caps in the Backpack:** the Backpack tabs read `Artifacts X/cap` and `Heroes X/cap` (50 plus the Storage branch, facility workers not counted), turning amber 5 below the cap and red at it, with a note on where to make room.
 
+### 7.4a Premium Artifact Banner: "The Gilded Anvil" (Planned, Robux)
+*Design draft only; nothing is built yet.* A Robux-only banner of six **Gildforged** weapons, one per archetype: Dawnwarden's Oath (`SWORD_SHIELD`), Eclipse Sisters (`DAGGERS`), Aurora Skyhook (`BOW`), Wyrmheart Cleaver (`AXE`), Orrery of the Ninth Sky (`STAFF`) and Evergarden Codex (`TOME`). The proposal: all six at Transcendent (tier 8), a Focus archetype pick, not sellable for Gold, and a new **Band 6** of weapon VFX above Mythical (moving centrepieces, footprint sigils, afterimages, a signature skill finisher, an equip flourish and its own reveal). Full descriptions, proposed rules and open decisions: `docs/gilded-anvil-plan.md`.
+
 ### 7.5 Archetype Restrictions & 3D Socketing Standards
 1. **One Weapon Type per Archetype:** Each hero holds a single equipped artifact, and each archetype can equip exactly one weapon type. There are no off-hand or accessory slots.
 
