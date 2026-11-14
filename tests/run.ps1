@@ -33,6 +33,7 @@ $modulePaths = @(
     'ReplicatedStorage/Shared/Config/TowerHardcoreConfig.luau',
     'ReplicatedStorage/Shared/Config/HeroCatalog.luau',
     'ReplicatedStorage/Shared/Config/ArtifactCatalog.luau',
+    'ReplicatedStorage/Shared/Config/WeaponVfxConfig.luau',
     'ReplicatedStorage/Shared/Config/ArchetypeCombatSkills.luau',
     'ReplicatedStorage/Shared/Config/FacilityConfig.luau',
     'ReplicatedStorage/Shared/Config/PitBalanceConfig.luau',

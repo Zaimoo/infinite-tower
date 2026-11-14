@@ -4,7 +4,7 @@
 
 export type VfxBand = number
 
-export type ElementType = "PHYSICAL" | "WIND" | "LIGHTNING" | "CRYSTAL" | "FIRE" | "CELESTIAL" | "COSMIC" | "VOID"
+export type ElementType = "PHYSICAL" | "WIND" | "LIGHTNING" | "CRYSTAL" | "FIRE" | "CELESTIAL" | "COSMIC" | "VOID" | "SUNLIGHT" | "ECLIPSE" | "AURORA" | "DRAGONFIRE" | "STAR_ORBIT" | "BLOOM"
 
 export type ElementStyle = {
 	PrimaryColor: Color3,
@@ -236,6 +236,9 @@ WeaponVfxConfig.ArtifactElements = table.freeze({
 	art_book_of_primordial_genesis = "VOID",
 } :: { [string]: ElementType })
 
+local GILDED_ARTIFACTS: { [string]: boolean } = table.freeze({
+})
+
 -- Balanced particle & lighting rates: punchy, radiant anime VFX accents with clear gameplay presence
 WeaponVfxConfig.Budget = table.freeze({
 	Band1 = table.freeze({ MoteRate = 2,  AuraRate = 0,  LightRange = 3.2,  LightBrightness = 0.22 }),
@@ -243,11 +246,17 @@ WeaponVfxConfig.Budget = table.freeze({
 	Band3 = table.freeze({ MoteRate = 6,  AuraRate = 6,  LightRange = 5.2,  LightBrightness = 0.48 }),
 	Band4 = table.freeze({ MoteRate = 10, AuraRate = 10, LightRange = 6.2,  LightBrightness = 0.60 }),
 	Band5 = table.freeze({ MoteRate = 14, AuraRate = 14, LightRange = 7.2,  LightBrightness = 0.75 }),
+	Band6 = table.freeze({ MoteRate = 18, AuraRate = 18, LightRange = 8.5,  LightBrightness = 0.90 }),
 })
+
+function WeaponVfxConfig.IsGildforgedId(artifactId: string?): boolean
+	return artifactId ~= nil and GILDED_ARTIFACTS[artifactId] == true
+end
 
 function WeaponVfxConfig.GetProfile(artifactId: string?, rarityTier: number?): ArtifactVfxProfile
 	local tier = math.clamp(rarityTier or 1, 1, 16)
-	local band = WeaponVfxConfig.RarityBands[tier] or 0
+	local isGilded = WeaponVfxConfig.IsGildforgedId(artifactId)
+	local band = if isGilded then 6 else (WeaponVfxConfig.RarityBands[tier] or 0)
 	local rarityColor = WeaponVfxConfig.RarityColors[tier] or Color3.fromRGB(180, 180, 180)
 	local elemKey = (artifactId and WeaponVfxConfig.ArtifactElements[artifactId]) or "PHYSICAL"
 	local elemStyle = WeaponVfxConfig.Elements[elemKey] or WeaponVfxConfig.Elements.PHYSICAL
@@ -257,12 +266,13 @@ function WeaponVfxConfig.GetProfile(artifactId: string?, rarityTier: number?): A
 		elseif band == 3 then WeaponVfxConfig.Budget.Band3
 		elseif band == 4 then WeaponVfxConfig.Budget.Band4
 		elseif band == 5 then WeaponVfxConfig.Budget.Band5
+		elseif band == 6 then WeaponVfxConfig.Budget.Band6
 		else nil
 
 	return {
 		Band = band,
 		Element = elemKey,
-		Color = rarityColor,
+		Color = if isGilded then elemStyle.PrimaryColor else rarityColor,
 		Accent = elemStyle.AccentColor,
 		LightRange = bConfig and bConfig.LightRange or 0,
 		LightBrightness = bConfig and bConfig.LightBrightness or 0,
