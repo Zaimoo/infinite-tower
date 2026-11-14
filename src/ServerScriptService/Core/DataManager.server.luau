@@ -366,11 +366,16 @@ end
 -- as rings, and swap heroes off weapons their archetype can no longer hold.
 function DataManager.MigrateArtifactTypes(profile: PlayerProfile)
 	-- A hero's archetype is its template's (Miner became Berserker). Re-derive it before the
-	-- equip check below, or a renamed archetype would be stripped of its own weapon.
+	-- equip check below, or a renamed archetype would be stripped of its own weapon. Its name is
+	-- the template's too: heroes save their DisplayName when summoned, so a renamed hero (Rourke
+	-- became Rook) would keep the old name on cards and nameplates. Players can't rename heroes.
 	for _, hero in pairs(profile.Heroes) do
 		local heroSeed = HeroCatalog.Seeds[hero.TemplateId]
 		if heroSeed and hero.Archetype ~= heroSeed.Archetype then
 			hero.Archetype = heroSeed.Archetype :: HeroArchetype
+		end
+		if heroSeed and hero.DisplayName ~= heroSeed.DisplayName then
+			hero.DisplayName = heroSeed.DisplayName
 		end
 	end
 
