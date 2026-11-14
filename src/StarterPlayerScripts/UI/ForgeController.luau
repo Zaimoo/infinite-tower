@@ -1695,6 +1695,33 @@ function Forge:PerformSummon(count: number, confirmed: boolean?): boolean?
 			UIFeel.Deny(btn)
 		end
 	end
+	-- A full weapon backpack is a modal, not just the status line: the line is easy to miss and the
+	-- reveal's Summon Again buttons cover it.
+	if profile then
+		local owned = InventoryCapacity.ArtifactCount(profile)
+		local cap = InventoryCapacity.ArtifactCap(profile.FortressTree)
+		if owned + count > cap then
+			deny()
+			local full = owned >= cap
+			Kit.Confirm.Ask({
+				Tier = "Soft",
+				Title = if full then "Weapon backpack full" else "Not enough backpack space",
+				Body = if full
+					then string.format("You hold %d / %d weapons. Sell or promote weapons to make room before you summon.", owned, cap)
+					else string.format("You have room for %d more weapon%s, and a %dx summon needs %d free slots. Sell or promote weapons, or summon fewer.",
+						cap - owned, if cap - owned == 1 then "" else "s", count, count),
+				ConfirmText = "Sell weapons",
+				CancelText = "Close",
+				OnConfirm = function()
+					if self.Reveal and self.Reveal:IsOpen() then self.Reveal:Close(true) end
+					local host = _G.ForgeController
+					if host and host ~= self and host.OpenSell then host:OpenSell() end
+				end,
+			})
+			if self.SummonStatusLabel then self.SummonStatusLabel.Text = self:SummonBlockReason(count) or "" end
+			return false
+		end
+	end
 	if not profile or self:SummonBlockReason(count) then
 		deny()
 		if self.SummonStatusLabel then

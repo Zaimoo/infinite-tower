@@ -779,6 +779,7 @@ The player interface is built from modular, gothic-styled components:
 - **Squad alerts** (heroes down, squad wiped) sit bottom centre, 420 px wide at most, and lift above the Squad drawer and the bottom-right badges whenever they would touch either.
 - **Pit confirmations** hold while their result holds. A preview token is tied to what the player confirmed (who is consumed, the cost, the EXP and level gained), not to the whole profile, so Guard Post Gold or combat EXP arriving between preview and confirm does not void it. If the token has aged out, the client re-previews and, when the result is unchanged, finishes without a second click.
 - **Armed material heroes** can be synthesized or converted: their weapon returns to the backpack. The preview lists it as a warning and the confirm dialog repeats it. Heroes in the squad, at a facility, locked or in Coma are still protected.
+- **Blocking refusals are modals.** A full weapon backpack on a Forge summon opens a modal with **Sell weapons**, and a squad change refused in the tower or a raid opens one with **Return to Hub** (`SquadLockModal`).
 
 ### 4.7 Onboarding: the linear guide
 New players are walked through every feature once, in a fixed order, and held to the current step until it is done (`GuideConfig`, `GuideLessons`, `OnboardingService`; client cues in `OnboardingGuide.client.luau`). The current step is the **Next Goal** card on the HUD.
