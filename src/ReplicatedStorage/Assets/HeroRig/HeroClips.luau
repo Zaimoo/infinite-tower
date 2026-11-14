@@ -797,14 +797,14 @@ end
 do
 	local p = WeaponPoses.BOW
 	local legs: Pose = {
-		LeftHip = { 8, -6, -2 }, LeftKnee = { -14, 0, 0 }, LeftAnkle = { 6, 0, 2 },
-		RightHip = { -4, 0, 5 }, RightKnee = { -4, 0, 0 }, RightAnkle = { 8, 0, -5 },
+		LeftHip = { 6, -4, -3 }, LeftKnee = { -10, 0, 0 }, LeftAnkle = { 4, 0, 3 },
+		RightHip = { -8, 4, 5 }, RightKnee = { -6, 0, 0 }, RightAnkle = { 14, 0, -5 },
 		RootOffset = { 0, -0.04, 0 },
 	}
 	local poised: Pose = merge(legs, {
-		Waist = { 0, -12, 2 }, Neck = { -3, 14, -3 },
-		LeftShoulder = { 42, 0, -14 }, LeftElbow = { 14, 0, 0 }, LeftWrist = { 0, 0, -18 },
-		RightShoulder = { 30, 30, 0 }, RightElbow = { 100, 0, 0 },
+		Waist = { 0, -8, 1 }, Neck = { -2, 8, -2 },
+		LeftShoulder = { -8, 0, -20 }, LeftElbow = { 18, 0, 0 }, LeftWrist = { 0, 0, -14 },
+		RightShoulder = { 4, -14, 54 }, RightElbow = { 44, 0, 0 }, RightWrist = { -18, 0, 14 },
 	})
 
 	-- Astral Arrow

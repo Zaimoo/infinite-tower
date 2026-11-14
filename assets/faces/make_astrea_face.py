@@ -18,20 +18,20 @@ OUT = Path(__file__).with_name("hero_astrea_face.png")
 PREVIEW = Path(__file__).with_name("hero_astrea_face_preview.png")
 
 INK = (42, 22, 18, 255)            # Deep warm chestnut ink
-IRIS_TOP = (44, 62, 112)           # Deep night blue under the lid
-IRIS_MID = (104, 140, 204)          # Star blue
-IRIS_BOTTOM = (196, 224, 255)       # Pale starlight
-IRIS_RIM = (34, 44, 84, 255)       # Outer limbal ring
-PUPIL = (18, 20, 40, 255)          # Navy pupil
-SCLERA = (252, 250, 248, 255)      # Warm white
-LID = (44, 38, 62, 240)            # Cool plum-navy liner (silver hair)
-LID_CREASE = (118, 96, 120, 100)    # Soft eyelid fold
-NOSE = (160, 95, 75, 140)          # Soft warm nose shadow
-MOUTH_LIP = (58, 26, 22, 255)      # Smirk outline
-MOUTH_CAVITY = (68, 24, 28, 255)   # Inside mouth shadow
-TEETH = (255, 252, 248, 255)       # Clean upper teeth slit
-BROW = (132, 140, 172, 255)          # Silver-blue hair, a shade darker so it reads on skin
-BLUSH = (235, 140, 110, 30)         # Soft cheerful anime blush
+IRIS_TOP = (48, 38, 108)           # Deep indigo-violet under the lid
+IRIS_MID = (122, 92, 204)          # Vibrant amethyst-violet
+IRIS_BOTTOM = (198, 180, 252)      # Luminous lavender-periwinkle glow
+IRIS_RIM = (34, 24, 76, 255)       # Outer limbal ring
+PUPIL = (24, 16, 52, 255)          # Deep violet-navy pupil
+SCLERA = (252, 250, 250, 255)      # Warm white
+LID = (42, 30, 58, 248)            # Deep plum-indigo liner
+LID_CREASE = (132, 96, 114, 120)   # Soft eyelid fold
+NOSE = (148, 86, 68, 155)          # Warm nose shadow
+MOUTH_LIP = (102, 44, 52, 255)     # Warm plum-rose smile line
+MOUTH_CAVITY = (68, 24, 28, 255)
+TEETH = (255, 252, 248, 255)
+BROW = (116, 122, 158, 255)        # Cool silver-lavender brow, legible on warm peach skin
+BLUSH = (232, 120, 96, 56)         # Warm peachy-coral anime blush
 
 
 def sc(points):
@@ -55,14 +55,14 @@ def mirror(points):
 # eye: tall and rounded, a thick upper lash line that thickens into a wing at the outer corner,
 # a large iris the lid overlaps a little, and a big catchlight. Tune the look with these numbers
 # rather than redrawing: OUTER/INNER set the tilt, TOP_PEAK how open the eye is.
-EYE_OUTER = (100, 254)
-EYE_INNER = (222, 270)
-EYE_TOP_PEAK = (150, 204)      # a touch lower than Jenna's: serene, not wide-eyed
-EYE_BOTTOM_PEAK = (166, 316)
-IRIS_CENTRE = (163, 265)
-IRIS_RADII = (31, 38)
-LASH_THICK = (3.5, 10.5)       # upper lash thickness at the inner corner and at the outer corner
-BROW_POINTS = ((96, 202), (150, 182), (214, 206))
+EYE_OUTER = (96, 254)
+EYE_INNER = (224, 268)
+EYE_TOP_PEAK = (152, 196)      # lush rounded anime eye matching her ref
+EYE_BOTTOM_PEAK = (166, 318)
+IRIS_CENTRE = (164, 263)
+IRIS_RADII = (33, 40)
+LASH_THICK = (4.0, 11.5)       # upper lash thickness at the inner corner and at the outer corner
+BROW_POINTS = ((94, 196), (152, 172), (218, 198))
 
 
 def eye(img, flip):
@@ -143,12 +143,15 @@ def brow(img, flip):
 
 
 def blush(img):
-    """Soft peachy cheeks."""
+    """Warm layered peachy-coral cheeks."""
     d = ImageDraw.Draw(img)
-    # Left cheek
-    d.ellipse(sc([(112, 302), (176, 326)]), fill=BLUSH)
-    # Right cheek
-    d.ellipse(sc([(SIZE - 176, 302), (SIZE - 112, 326)]), fill=BLUSH)
+    for box, col in (
+        ([(102, 298), (186, 334)], (232, 120, 96, 36)),
+        ([(118, 306), (170, 326)], (236, 118, 102, 52)),
+        ([(SIZE - 186, 298), (SIZE - 102, 334)], (232, 120, 96, 36)),
+        ([(SIZE - 170, 306), (SIZE - 118, 326)], (236, 118, 102, 52)),
+    ):
+        d.ellipse(sc(box), fill=col)
 
 
 def freckles(img):
@@ -176,33 +179,41 @@ def freckles(img):
         )
 
 
-GLYPH = (80, 232, 214, 255)        # Teal crystal (matches the tiara crystals)
-GLYPH_DEEP = (30, 150, 150, 255)
-CHAIN = (196, 204, 222, 230)       # Silver circlet
+GLYPH = (72, 234, 220, 255)        # Luminous cyan-teal crystal
+GLYPH_LIGHT = (182, 255, 250, 255)
+GLYPH_DEEP = (26, 154, 158, 255)
+CHAIN = (210, 218, 236, 248)       # Silver circlet
+CHAIN_EDGE = (92, 98, 128, 220)
 
 
 def mouth_and_nose(img):
-    """Serene closed mouth, small nose dot."""
+    """Serene warm closed smile and neat nose shadow."""
     d = ImageDraw.Draw(img)
-    d.ellipse(sc([(253, 316), (259, 322)]), fill=NOSE)
-    d.line(sc(bezier((236, 370), (256, 382), (276, 370))), fill=MOUTH_LIP, width=int(2.6 * S), joint="curve")
-    d.line(sc(bezier((246, 388), (256, 390), (266, 388))), fill=(150, 85, 72, 90), width=int(2.0 * S))
+    d.ellipse(sc([(253, 315), (259, 322)]), fill=NOSE)
+    # Soft warm upper-lip coral fill + gentle smile line + subtle lower lip shade
+    d.polygon(sc(bezier((233, 369), (256, 376), (279, 369)) + list(reversed(bezier((233, 369), (256, 383), (279, 369))))), fill=(214, 124, 114, 140))
+    d.line(sc(bezier((232, 368), (256, 383), (280, 368))), fill=MOUTH_LIP, width=int(2.8 * S), joint="curve")
+    d.line(sc(bezier((244, 390), (256, 393), (268, 390))), fill=(156, 92, 78, 115), width=int(2.2 * S), joint="curve")
 
 
 def sun_runes(img):
-    """Forehead jewel from her reference art: a silver circlet with a filigree setting and a
-    teal crystal diamond in the middle."""
+    """Ornate silver filigree circlet with scrollwork curls and a faceted cyan forehead crystal."""
     d = ImageDraw.Draw(img)
-    d.line(sc(bezier((140, 152), (256, 186), (372, 152))), fill=CHAIN, width=int(2.0 * S), joint="curve")
-    cx, cy = 256, 168
-    # Silver filigree curls either side of the setting
+    d.line(sc(bezier((124, 146), (256, 184), (388, 146))), fill=CHAIN_EDGE, width=int(3.6 * S), joint="curve")
+    d.line(sc(bezier((124, 146), (256, 184), (388, 146))), fill=CHAIN, width=int(2.2 * S), joint="curve")
+    cx, cy = 256, 165
+    # Layered filigree curls flanking the central crystal
     for side in (-1, 1):
-        d.line(sc(bezier((cx + side * 14, cy - 2), (cx + side * 30, cy - 14), (cx + side * 38, cy + 2))), fill=CHAIN, width=int(2.2 * S), joint="curve")
-    # Silver setting, teal crystal, a darker lower facet and a catchlight
-    d.polygon(sc([(cx, cy - 22), (cx + 15, cy), (cx, cy + 24), (cx - 15, cy)]), fill=CHAIN)
-    d.polygon(sc([(cx, cy - 17), (cx + 11, cy), (cx, cy + 19), (cx - 11, cy)]), fill=GLYPH)
-    d.polygon(sc([(cx - 11, cy), (cx + 11, cy), (cx, cy + 19)]), fill=GLYPH_DEEP)
-    d.polygon(sc([(cx - 3, cy - 11), (cx + 1, cy - 13), (cx - 5, cy - 3)]), fill=(240, 255, 252, 255))
+        d.line(sc(bezier((cx + side * 14, cy - 2), (cx + side * 32, cy - 18), (cx + side * 44, cy + 1))), fill=CHAIN_EDGE, width=int(3.2 * S), joint="curve")
+        d.line(sc(bezier((cx + side * 14, cy - 2), (cx + side * 32, cy - 18), (cx + side * 44, cy + 1))), fill=CHAIN, width=int(2.0 * S), joint="curve")
+        d.line(sc(bezier((cx + side * 42, cy), (cx + side * 62, cy - 12), (cx + side * 74, cy - 2))), fill=CHAIN, width=int(1.8 * S), joint="curve")
+    # Silver setting + faceted cyan diamond crystal
+    d.polygon(sc([(cx, cy - 26), (cx + 18, cy), (cx, cy + 28), (cx - 18, cy)]), fill=CHAIN_EDGE)
+    d.polygon(sc([(cx, cy - 24), (cx + 16, cy), (cx, cy + 26), (cx - 16, cy)]), fill=CHAIN)
+    d.polygon(sc([(cx, cy - 19), (cx + 12, cy), (cx, cy + 21), (cx - 12, cy)]), fill=GLYPH)
+    d.polygon(sc([(cx, cy - 19), (cx, cy), (cx - 12, cy)]), fill=GLYPH_LIGHT)
+    d.polygon(sc([(cx - 12, cy), (cx + 12, cy), (cx, cy + 21)]), fill=GLYPH_DEEP)
+    d.polygon(sc([(cx - 3, cy - 12), (cx + 1, cy - 14), (cx - 5, cy - 3)]), fill=(246, 255, 254, 255))
 
 
 def main():
@@ -222,8 +233,8 @@ def main():
     final.save(OUT)
     print(f"Saved: {OUT}")
 
-    # Generate a preview against warm peach skin background
-    bg = Image.new("RGBA", (SIZE, SIZE), (232, 196, 160, 255))
+    # Generate a preview against warm golden-peach skin background
+    bg = Image.new("RGBA", (SIZE, SIZE), (232, 182, 146, 255))
     preview = Image.alpha_composite(bg, final)
     preview.save(PREVIEW)
     print(f"Saved: {PREVIEW}")
