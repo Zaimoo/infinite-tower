@@ -82,6 +82,10 @@ HeroCostumes.MESHES = table.freeze({
 	-- Astrea's unified UGC anime hair (AstreaHair in tools/make_astrea_hair_ugc.py, assets/hair/astrea_hair_ugc.blend),
 	-- textured with our strand atlas from assets/hair/make_astrea_hair_texture.py.
 	["rbxassetid://78703249204935"] = "rbxassetid://83500704776709",
+	-- Astrea's sculpted silver filigree tiara frame & 5-crystal starburst (tools/make_astrea_tiara.py,
+	-- assets/tiara/astrea_tiara.fbx), with crystals textured from assets/tiara/make_astrea_tiara_texture.py.
+	["rbxassetid://81729067680455"] = "",
+	["rbxassetid://95518157227954"] = "rbxassetid://129575799863061",
 	-- Edis's hair (head part), our own: EdisHair in tools/make_edis_hair_ugc.py (assets/hair/edis_hair_ugc.blend).
 	["rbxassetid://95018278281793"] = "",
 	-- Edis's hair (back fall), our own: EdisBackHair in tools/make_edis_hair_ugc.py (assets/hair/edis_hair_ugc.blend).
@@ -966,15 +970,16 @@ do
 			Rotation = { 0, 180, 0 },
 			Mesh = { MeshId = "rbxassetid://78703249204935", TextureId = "rbxassetid://83500704776709", Scale = { 0.01, 0.01, 0.01 } },
 		})),
-		-- Tall 5-crystal silver astral tiara nestled cleanly onto the front hair parting
-		piece("TiaraBase", "Head", { 0.74, 0.12, 0.22 }, { 0, 0.74, -0.36 }, silver, with(METAL, LOOSE, { Rotation = { -10, 0, 0 } })),
-		piece("TiaraPeakL", "Head", { 0.32, 0.11, 0.17 }, { -0.24, 0.82, -0.34 }, silver, with(METAL, LOOSE, { Rotation = { -10, 0, 22 } })),
-		piece("TiaraPeakR", "Head", { 0.32, 0.11, 0.17 }, { 0.24, 0.82, -0.34 }, silver, with(METAL, LOOSE, { Rotation = { -10, 0, -22 } })),
-		piece("CrystalC", "Head", { 0.12, 0.46, 0.09 }, { 0, 1.08, -0.42 }, teal, with(NEON, LOOSE, { Rotation = { -8, 0, 0 } })),
-		piece("CrystalInnerL", "Head", { 0.09, 0.31, 0.08 }, { -0.14, 0.99, -0.39 }, teal, with(NEON, LOOSE, { Rotation = { -8, 0, 14 } })),
-		piece("CrystalInnerR", "Head", { 0.09, 0.31, 0.08 }, { 0.14, 0.99, -0.39 }, teal, with(NEON, LOOSE, { Rotation = { -8, 0, -14 } })),
-		piece("CrystalOuterL", "Head", { 0.075, 0.21, 0.07 }, { -0.26, 0.90, -0.35 }, teal, with(NEON, LOOSE, { Rotation = { -8, 0, 28 } })),
-		piece("CrystalOuterR", "Head", { 0.075, 0.21, 0.07 }, { 0.26, 0.90, -0.35 }, teal, with(NEON, LOOSE, { Rotation = { -8, 0, -28 } })),
+		-- Sculpted silver filigree crown arch & 5 radiant astral crystal spires (AstreaTiaraFrame & AstreaTiaraCrystals)
+		piece("TiaraFrame", "Head", { 1.133, 0.458, 0.327 }, { 0, 0.7848, -0.2908 }, silver, with(METAL, LOOSE, {
+			Rotation = { 0, 180, 0 },
+			Mesh = { MeshId = "rbxassetid://81729067680455", Scale = { 0.01, 0.01, 0.01 } },
+		})),
+		piece("TiaraCrystals", "Head", { 0.724, 0.539, 0.181 }, { 0, 1.0426, -0.3728 }, teal, with(LOOSE, {
+			Material = "Glass",
+			Rotation = { 0, 180, 0 },
+			Mesh = { MeshId = "rbxassetid://95518157227954", TextureId = "rbxassetid://129575799863061", Scale = { 0.01, 0.01, 0.01 } },
+		})),
 		-- Cyan diamond drop earrings
 		piece("EarringL", "Head", { 0.09, 0.16, 0.09 }, { -0.65, -0.18, -0.14 }, teal, with(NEON, LOOSE, { Rotation = { 0, 0, 45 } })),
 		piece("EarringR", "Head", { 0.09, 0.16, 0.09 }, { 0.65, -0.18, -0.14 }, teal, with(NEON, LOOSE, { Rotation = { 0, 0, -45 } })),
