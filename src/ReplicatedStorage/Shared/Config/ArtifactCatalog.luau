@@ -27,7 +27,8 @@ export type ArtifactSeed = {
 	Type: WeaponType,
 	RarityTier: number,
 	IsHighStat: boolean,
-	Variant: ("Standard" | "Enhanced")?,
+	Variant: ("Standard" | "Enhanced" | "Gildforged")?,
+	VisualElement: string?,
 	StatMultiplier: number,
 	SpeedBonusAdditive: number,
 	ModelAssetId: string, -- Key in ReplicatedStorage.Assets.Weapons
@@ -190,8 +191,32 @@ local RarityBaseSellPrice: { [number]: number } = {
 }
 ArtifactCatalog.RarityBaseSellPrice = RarityBaseSellPrice
 
-function ArtifactCatalog.CalculateSellPrice(rarity: number, star: number): number
-	local r = math.clamp(math.floor(rarity or 1), 1, 7)
+function ArtifactCatalog.IsGildforged(seedOrId: any): boolean
+	if seedOrId == "Gildforged" then
+		return true
+	end
+	local seeds = ArtifactCatalog.Seeds
+	local seed = if type(seedOrId) == "string"
+		then (seeds and seeds[seedOrId])
+		elseif type(seedOrId) == "table" then (
+			if seedOrId.Variant == "Gildforged"
+				then seedOrId
+				elseif type(seedOrId.TemplateId) == "string" and seeds then seeds[seedOrId.TemplateId]
+				else nil
+		)
+		else nil
+	return seed ~= nil and (seed :: any).Variant == "Gildforged"
+end
+
+function ArtifactCatalog.CalculateSellPrice(rarity: number, star: number, seedOrId: any?): number
+	if seedOrId ~= nil and ArtifactCatalog.IsGildforged(seedOrId) then
+		return 0
+	end
+	local rawRarity = math.floor(rarity or 1)
+	if rawRarity >= 8 then
+		return 0
+	end
+	local r = math.clamp(rawRarity, 1, 7)
 	local s = math.clamp(math.floor(star or 1), 1, 7)
 	local basePrice = RarityBaseSellPrice[r] or 100
 	return math.floor(basePrice * (1 + 0.5 * (s - 1)))
@@ -1137,7 +1162,9 @@ local Seeds: { [string]: ArtifactSeed } = {
 }
 ArtifactCatalog.Seeds = Seeds
 for _, seed in pairs(Seeds) do
-	(seed :: any).Variant = if seed.IsHighStat then "Enhanced" else "Standard"
+	if not seed.Variant then
+		(seed :: any).Variant = if seed.IsHighStat then "Enhanced" else "Standard"
+	end
 end
 
 -- Master order of all 84 weapons for the Artifact Index and catalog viewers
