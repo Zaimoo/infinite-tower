@@ -59,6 +59,8 @@ local BossTelegraphRemote = CombatRemotes:WaitForChild("BossTelegraph") :: Remot
 local CombatVFXRemote = CombatRemotes:WaitForChild("CombatVFX") :: UnreliableRemoteEvent
 local EntityMetadataRemote = CombatRemotes:WaitForChild("EntityMetadataSync") :: RemoteEvent
 local LootContestedRemote = TowerRemotes:WaitForChild("LootContested") :: RemoteEvent
+-- One-time first-session cues (the first Ultimate, the first boss), drawn by UltimateMomentController.
+local GuideMomentRemote = TowerRemotes:WaitForChild("GuideMoment") :: RemoteEvent
 local DuelStateRemote = TowerRemotes:WaitForChild("DuelState") :: RemoteEvent
 local SquadWipeStateRemote = CombatRemotes:WaitForChild("SquadWipeState") :: RemoteEvent
 local FloorProgressRemote = TowerRemotes:WaitForChild("FloorProgress") :: RemoteEvent
@@ -1931,6 +1933,17 @@ performHeroAttack = function(simHero: SimHero, targetPos: Vector3, targetMob: Si
 			if not targetEnemyHero then
 				local dm = getDataManager()
 				if dm.ReportMilestone then dm.ReportMilestone(simHero.Owner, "FirstUltimate") end
+				-- A new Master's first Ultimate on a tower floor gets its moment (never in a duel or raid).
+				local floorId = Tower.GetState(simHero.Owner).FloorId
+				if floorId >= 1 and floorId <= 50 and dm.ClaimGuideMoment and dm.ClaimGuideMoment(simHero.Owner, "FirstUltimate") then
+					local seed = HeroCatalog.Seeds[simHero.TemplateId]
+					GuideMomentRemote:FireClient(simHero.Owner, {
+						Kind = "ULTIMATE",
+						HeroName = if seed then seed.DisplayName else "Your hero",
+						SkillName = skillProfile.Skill.Name,
+						Position = simHero.Position,
+					})
+				end
 			end
 		else
 			simHero.AttackCount = (simHero.AttackCount or 0) + 1
@@ -2671,6 +2684,10 @@ local function summonFloorBoss(player: Player, progress: TowerProgress.PlayerFlo
   dm.SendToast(player, string.format("Boss is awake|Defeat it to open Floor %d", floorId + 1), "WARN")
  elseif bossMob then
   dm.SendToast(player, string.format("Boss summoned|Defeat it to open Floor %d", floorId + 1), "WARN")
+ end
+ -- First boss: a one-time hint that the Overdrive whistle is for its recovery after a Signature.
+ if bossMob and dm.ClaimGuideMoment and dm.ClaimGuideMoment(player, "WhistleHint") then
+  GuideMomentRemote:FireClient(player, { Kind = "HINT_WHISTLE" })
  end
 end
 

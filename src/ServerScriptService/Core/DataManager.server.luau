@@ -2147,6 +2147,11 @@ function DataManager.ReportProgress(player: Player, eventName: string, detail: (
 	OnboardingService.Report(player, eventName, detail)
 end
 
+-- A one-time first-session moment (the first Ultimate, the first boss): true once per profile.
+function DataManager.ClaimGuideMoment(player: Player, fact: string): boolean
+	return OnboardingService.ClaimMoment(player, fact)
+end
+
 -- First-session funnel milestones that are not guide events (OnboardingFunnel).
 function DataManager.ReportMilestone(player: Player, name: string)
 	OnboardingService.Milestone(player, name)

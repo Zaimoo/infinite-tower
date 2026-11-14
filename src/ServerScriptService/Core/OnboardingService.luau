@@ -65,6 +65,21 @@ function OnboardingService.ShowcaseFirstPull(profile: any): boolean
 	return GuideConfig.Arms[OnboardingService.ArmOf(profile)].Showcase == true
 end
 
+-- One-time first-session moments (first-session-and-social-plan.md A5): true the first time `fact`
+-- is claimed by a profile in an arm that frames them (FrameUltimate). Both moments come before the
+-- first Floor 1 clear, so a Master who has cleared it never gets them. The fact is a guide fact,
+-- saved with the profile, so it needs no migration.
+function OnboardingService.ClaimMoment(player: Player, fact: string): boolean
+	local d = deps
+	local profile = d and d.GetProfile(player)
+	local guide = profile and profile.Onboarding and profile.Onboarding.Guide
+	if not guide or not guide.Enabled or guide.Facts[fact] then return false end
+	if (profile.HighestClearedFloor or 0) >= 1 then return false end
+	if not GuideConfig.Arms[OnboardingService.ArmOf(profile)].FrameUltimate then return false end
+	guide.Facts[fact] = true
+	return true
+end
+
 -- The guide chain a profile plays ("v3" control, "v4"), from its arm.
 function OnboardingService.ChainOf(profile: any): string
 	return GuideConfig.Arms[OnboardingService.ArmOf(profile)].Chain
