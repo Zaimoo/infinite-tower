@@ -189,7 +189,7 @@ HeroSockets.HERO_GRIPS = table.freeze({
 	-- Rook: the right hand choked high up under the axe collar with the blade canted
 	-- forward-down; both hands on the haft at all times (his reference art's low two-handed
 	-- guard), the left closing on OffhandGrip.
-	hero_rourke = table.freeze({
+	hero_rook = table.freeze({
 		AXE = table.freeze({
 			Main = table.freeze({
 				Shift = -0.32,

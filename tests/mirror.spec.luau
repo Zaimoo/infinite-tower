@@ -51,7 +51,7 @@ local function rawPower(h)
 	return Stats.GetHeroPower(h, nil, 1)
 end
 
-local MIRRORS = { "hero_isabelle", "hero_nyx", "hero_caspian", "hero_seraphine", "hero_rourke" }
+local MIRRORS = { "hero_isabelle", "hero_nyx", "hero_caspian", "hero_seraphine", "hero_rook" }
 
 test("every mirror seed is a premium mirror hero with its own rarity tier 7-11", function()
 	for i, id in MIRRORS do
@@ -65,7 +65,7 @@ test("every mirror seed is a premium mirror hero with its own rarity tier 7-11",
 end)
 
 test("the mirror share is 110-150% by rarity plus 2% per star", function()
-	local expected = { hero_isabelle = 1.10, hero_nyx = 1.20, hero_caspian = 1.30, hero_seraphine = 1.40, hero_rourke = 1.50 }
+	local expected = { hero_isabelle = 1.10, hero_nyx = 1.20, hero_caspian = 1.30, hero_seraphine = 1.40, hero_rook = 1.50 }
 	for id, base in expected do
 		close(Stats.GetMirrorPercent(hero("m", id)), base, 1e-9, id .. " 1 star")
 		close(Stats.GetMirrorPercent(hero("m", id, { Stars = 7 })), base + 0.12, 1e-9, id .. " 7 stars")
@@ -75,7 +75,7 @@ end)
 
 test("the source is the best normal hero, never another mirror hero", function()
 	local weak, strong = hero("a", "hero_gide"), hero("b", "hero_astrea", { Stars = 3 })
-	local p = profileWith({ weak, strong, hero("m", "hero_rourke"), hero("n", "hero_isabelle") })
+	local p = profileWith({ weak, strong, hero("m", "hero_rook"), hero("n", "hero_isabelle") })
 	check(Stats.GetMirrorSource(p) == strong, "Astrea is the strongest normal hero")
 	check(Stats.RefreshMirrorSources(p), "the first refresh writes sources")
 	check(not Stats.RefreshMirrorSources(p), "a second refresh changes nothing")
@@ -105,7 +105,7 @@ test("mirror power is its share of the source, shaped by its own archetype", fun
 end)
 
 test("its own weapon and Training Grounds multiply the mirrored stats", function()
-	local p = profileWith({ hero("s", "hero_astrea", { Stars = 2 }), hero("m", "hero_rourke") })
+	local p = profileWith({ hero("s", "hero_astrea", { Stars = 2 }), hero("m", "hero_rook") })
 	Stats.RefreshMirrorSources(p)
 	local m = p.Heroes.m
 	local bare = Stats.GetCombatSnapshot(m)
@@ -220,7 +220,7 @@ test("the Spark banks one pick every 80 pulls and repairs bad saves", function()
 	p.MirrorSpark = { Pulls = 0 / 0, Selections = -4 }
 	local fixed = MirrorBanner.EnsureSpark(p)
 	check(fixed.Pulls == 0 and fixed.Selections == 0, "NaN and negatives are repaired")
-	check(MirrorBanner.IsSparkChoice("hero_rourke") and not MirrorBanner.IsSparkChoice("hero_astrea") and not MirrorBanner.IsSparkChoice(7), "only the five")
+	check(MirrorBanner.IsSparkChoice("hero_rook") and not MirrorBanner.IsSparkChoice("hero_astrea") and not MirrorBanner.IsSparkChoice(7), "only the five")
 end)
 
 test("Robux packs pull on the mirror banner; restricted players get 150 Gems a pull", function()
@@ -234,7 +234,7 @@ test("Robux packs pull on the mirror banner; restricted players get 150 Gems a p
 end)
 
 test("hero lists show the mirror share instead of a level", function()
-	local p = profileWith({ hero("s", "hero_astrea", { Level = 7 }), hero("m", "hero_rourke", { Stars = 2 }) })
+	local p = profileWith({ hero("s", "hero_astrea", { Level = 7 }), hero("m", "hero_rook", { Stars = 2 }) })
 	check(Stats.LevelText(p.Heroes.s) == "Lv.7", "normal heroes show their level")
 	check(Stats.LevelText(p.Heroes.m) == "Mirror 152%", "mirror heroes show their share")
 	check(Stats.MirrorDescription(p.Heroes.s) == nil, "no mirror line for normal heroes")
@@ -276,13 +276,13 @@ test("Refraction splits to three other enemies within 14 studs; Ricochet to one"
 end)
 
 test("Last Stand grows from 1.5x at full HP to 2.5x at 10% HP", function()
-	local special = Skills.GetSkillProfile("hero_rourke", "Berserker").Special
+	local special = Skills.GetSkillProfile("hero_rook", "Berserker").Special
 	close(Effects.LastStandBonus({ CurrentHP = 1000, MaxHP = 1000 }, special), 1, 1e-9, "full HP")
 	close(Effects.LastStandBonus({ CurrentHP = 100, MaxHP = 1000 }, special), 2.5 / 1.5, 1e-9, "10% HP")
 	close(Effects.LastStandBonus({ CurrentHP = 10, MaxHP = 1000 }, special), 2.5 / 1.5, 1e-9, "capped below 10%")
 	close(Effects.LastStandBonus({ CurrentHP = 550, MaxHP = 1000 }, special), 1 + 0.5 * (2.5 / 1.5 - 1), 1e-9, "halfway")
 	local target = mob(1, 4)
-	local bonus = resolve("hero_rourke", "Berserker", "SPECIAL", { target, mob(2, 6) }, target, attacker("hero_rourke", "Berserker", 100))
+	local bonus = resolve("hero_rook", "Berserker", "SPECIAL", { target, mob(2, 6) }, target, attacker("hero_rook", "Berserker", 100))
 	close(bonus, 2.5 / 1.5, 1e-9, "Resolve returns the bonus")
 end)
 
@@ -324,14 +324,14 @@ test("Looking-Glass Bulwark reflects for 6s; Gilded Frenzy speeds Rook up for 4s
 	resolve("hero_caspian", "Vanguard", "SKILL", { target }, target, caspian)
 	check(caspian.ReflectPercent == 0.20 and caspian.ReflectExpires == 106, "reflection set")
 	check(caspian.BarrierHP == 400 and target.TauntedByNetId == 1, "the Vanguard barrier and taunt still apply")
-	local rook = attacker("hero_rourke", "Berserker")
+	local rook = attacker("hero_rook", "Berserker")
 	local t2 = mob(1, 5)
-	resolve("hero_rourke", "Berserker", "SKILL", { t2, mob(2, 10) }, t2, rook)
+	resolve("hero_rook", "Berserker", "SKILL", { t2, mob(2, 10) }, t2, rook)
 	check(rook.AttackSpeedBonus == 0.25 and rook.AttackSpeedUntil == 104, "frenzy set")
 end)
 
 test("Gilded Frenzy: a slam over 18 studs, then four spins over 12, 2.6x in total, buff on the last spin", function()
-	local profile = Skills.GetSkillProfile("hero_rourke", "Berserker")
+	local profile = Skills.GetSkillProfile("hero_rook", "Berserker")
 	local skill = profile.Skill :: any
 	check(skill.Ticks == 5 and skill.Radius == 18 and skill.SpinRadius == 12 and skill.CastSeconds == 2.4, "kit shape")
 	local total = 0
@@ -341,7 +341,7 @@ test("Gilded Frenzy: a slam over 18 studs, then four spins over 12, 2.6x in tota
 	close(total, 1, 1e-9, "the weights keep the 2.6x total")
 	close(Effects.TickWeight(skill, 1, 5) / 5 * 2.6, 1.2, 1e-9, "the slam is 1.2x")
 	close(Effects.TickWeight(skill, 3, 5) / 5 * 2.6, 0.35, 1e-9, "each spin is 0.35x")
-	local rook = attacker("hero_rourke", "Berserker")
+	local rook = attacker("hero_rook", "Berserker")
 	local function frenzyTick(mobs, primary, tick)
 		return Effects.Resolve(effectContext(mobs) :: any, { Impact = { Atk = 100, DamageMult = skill.DamageMultiplier, Ticks = 5, Origin = Vector3.new(0, 0, 0) },
 			Attacker = rook, Profile = profile, Tier = "SKILL", Tick = tick, Primary = primary, Center = primary.Position })
@@ -356,6 +356,16 @@ test("Gilded Frenzy: a slam over 18 studs, then four spins over 12, 2.6x in tota
 	frenzyTick({ target, near }, target, 5)
 	check(near.CurrentHP == 1000 - math.round(17.5), "a spin hits others within 12 studs for half of 0.35x")
 	check(rook.AttackSpeedBonus == 0.25 and rook.AttackSpeedUntil == 104, "the buff starts on the last spin")
+end)
+
+test("Saved Rourkes become Rook (hero_rourke -> hero_rook) on load", function()
+	local Migrations = require(nodes["ServerScriptService.Core.ProfileMigrations"])
+	local profile = { Heroes = { a = { TemplateId = "hero_rourke", DisplayName = "Rourke" }, b = { TemplateId = "hero_nyx" } } }
+	Migrations.RenameTemplates(profile)
+	check(profile.Heroes.a.TemplateId == "hero_rook" and profile.Heroes.b.TemplateId == "hero_nyx", "renamed, others untouched")
+	Migrations.RenameTemplates(profile)
+	check(profile.Heroes.a.TemplateId == "hero_rook", "idempotent")
+	check(Catalog.Seeds.hero_rook ~= nil and Catalog.Seeds.hero_rourke == nil, "the catalog only knows the new id")
 end)
 
 test("Nyx's Gilded Edge passive is on her kit only", function()

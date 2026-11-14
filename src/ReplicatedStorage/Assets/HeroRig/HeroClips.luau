@@ -737,7 +737,7 @@ local OVERRIDE_WEAPON: { [string]: string } = {
 	hero_nyx = "DAGGERS",
 	hero_caspian = "SWORD_SHIELD",
 	hero_seraphine = "STAFF",
-	hero_rourke = "AXE",
+	hero_rook = "AXE",
 }
 
 local function signature(duration: number, keys: { { any } }, markers: { [string]: number }): Clip
@@ -2042,14 +2042,14 @@ do
 	table.insert(frenzyKeys, { 0.95, with(p.High, wide, { Waist = { 18, 0, 0 }, Neck = { -32, 0, 0 }, RootOffset = { 0, -0.2, -1.1 } }) }) -- the roar
 	table.insert(frenzyKeys, { 1, carry })
 
-	Overrides.hero_rourke = {
+	Overrides.hero_rook = {
 		Idle = breathe(carry, 2.8),
 		Move = rookWalk(),
 		AttackBasic = forehand,
 		AttackSpecial = lastStand,
 		AttackSkill = signature(2.4, frenzyKeys, { Charge = 0.1, Release = 0.36 }),
 	}
-	Alternates.hero_rourke = { AttackBasic = backhand }
+	Alternates.hero_rook = { AttackBasic = backhand }
 end
 
 HeroClips.ByWeapon = ByWeapon

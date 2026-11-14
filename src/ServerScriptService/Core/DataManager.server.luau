@@ -366,11 +366,16 @@ end
 -- as rings, and swap heroes off weapons their archetype can no longer hold.
 function DataManager.MigrateArtifactTypes(profile: PlayerProfile)
 	-- A hero's archetype is its template's (Miner became Berserker). Re-derive it before the
-	-- equip check below, or a renamed archetype would be stripped of its own weapon.
+	-- equip check below, or a renamed archetype would be stripped of its own weapon. Its name is
+	-- the template's too: heroes save their DisplayName when summoned, so a renamed hero (Rourke
+	-- became Rook) would keep the old name on cards and nameplates. Players can't rename heroes.
 	for _, hero in pairs(profile.Heroes) do
 		local heroSeed = HeroCatalog.Seeds[hero.TemplateId]
 		if heroSeed and hero.Archetype ~= heroSeed.Archetype then
 			hero.Archetype = heroSeed.Archetype :: HeroArchetype
+		end
+		if heroSeed and hero.DisplayName ~= heroSeed.DisplayName then
+			hero.DisplayName = heroSeed.DisplayName
 		end
 	end
 
@@ -1714,7 +1719,8 @@ FacilityInteractEvent.OnServerEvent:Connect(function(player: Player, action: any
 end)
 
 -- Studio-only chat command: `/summon <hero>` adds that hero to the caller's profile for free.
--- `<hero>` is a HeroCatalog seed id, with or without the `hero_` prefix (`/summon edis`).
+-- `<hero>` is a HeroCatalog seed id, with or without the `hero_` prefix (`/summon edis`), or the hero's
+-- display name (`/summon rook`).
 if game:GetService("RunService"):IsStudio() then
 	local summonCommand = Instance.new("TextChatCommand")
 	summonCommand.Name = "DevSummonHero"
@@ -1727,6 +1733,14 @@ if game:GetService("RunService"):IsStudio() then
 
 		local arg = string.lower(string.match(message, "^%S+%s+(%S+)") or "")
 		local seedId = if HeroCatalog.Seeds[arg] then arg else "hero_" .. arg
+		if arg ~= "" and not HeroCatalog.Seeds[seedId] then
+			for id, seed in HeroCatalog.Seeds do
+				if string.lower(seed.DisplayName) == arg then
+					seedId = id
+					break
+				end
+			end
+		end
 		if arg == "" or not HeroCatalog.Seeds[seedId] then
 			DataManager.SendToast(player, "Usage: /summon <hero>, e.g. /summon edis", "WARN")
 			return

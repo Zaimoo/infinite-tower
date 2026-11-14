@@ -798,7 +798,7 @@ local function createEntityModel(netId: number, meta: any, initPos: Vector3): Vi
 						animateHaloShards(rig, { "HaloShardTop", "HaloShardL", "HaloShardR" }, false)
 					end
 				end
-			elseif meta and meta.TemplateId == "hero_rourke" and action.Name == "AttackSkill" and marker == "Release" then
+			elseif meta and meta.TemplateId == "hero_rook" and action.Name == "AttackSkill" and marker == "Release" then
 				model:SetAttribute("FrenzyUntil", os.clock() + 4.0)
 			end
 		end

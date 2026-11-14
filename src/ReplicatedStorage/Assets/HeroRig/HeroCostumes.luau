@@ -1931,7 +1931,7 @@ do
 	local skin, beard, tunic, leather, fur, furDeep = { 176, 120, 88 }, { 136, 48, 28 }, { 54, 40, 34 }, { 76, 48, 34 }, { 112, 96, 84 }, { 82, 70, 62 }
 	local pants, boot, mirror, rose = { 30, 28, 30 }, { 48, 36, 32 }, { 222, 232, 245 }, { 255, 76, 148 }
 	local FABRIC = { Material = "Fabric" }
-	table.insert(COSTUMES, costume("hero_rourke", "Heavy", {
+	table.insert(COSTUMES, costume("hero_rook", "Heavy", {
 		Skin = skin, UpperTorso = tunic, LowerTorso = leather, UpperArm = skin, LowerArm = skin, Hand = skin,
 		UpperLeg = pants, LowerLeg = pants, Foot = boot,
 	}, {

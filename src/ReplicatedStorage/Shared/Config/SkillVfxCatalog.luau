@@ -350,7 +350,7 @@ SkillVfxCatalog.Heroes = table.freeze({
 	},
 	-- Gilt Cleave / Last Stand / Gilded Frenzy: hot rose frenzy lightning and gilt shards; the slam
 	-- erupts into rose-gold crystals and wraps his greataxe in rose energy for 4 s.
-	hero_rourke = {
+	hero_rook = {
 		Palette = { Primary = rgb(255, 76, 148), Secondary = rgb(212, 175, 90), Core = rgb(255, 234, 242), Accent = rgb(255, 214, 120) },
 		Basic = { Style = "GILT_CLEAVE", Scale = 1.4, Impact = 2.4 },
 		Special = { Style = "LAST_STAND", Radius = 8, Impact = 3.2, Shake = 0.2 },

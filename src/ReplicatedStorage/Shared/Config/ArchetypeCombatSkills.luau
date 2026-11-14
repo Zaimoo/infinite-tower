@@ -16,7 +16,7 @@ export type SecondaryEffectType =
 	| "BEAM_LINE" -- every mob on a line through the target (SecondaryParam = length; Vane)
 	| "WHIRLWIND" -- every mob around the attacker (SecondaryParam = radius; Rhyman)
 	| "RICOCHET" -- the hit carries on to the nearest other mobs (SecondaryParam = how many; Isabelle, Seraphine)
-	| "LAST_STAND" -- the hit grows as the attacker's HP falls, plus the Berserker stagger (Rourke)
+	| "LAST_STAND" -- the hit grows as the attacker's HP falls, plus the Berserker stagger (Rook)
 
 export type Delivery = "MELEE" | "PROJECTILE" | "AREA"
 
@@ -588,7 +588,7 @@ local HERO_KITS: { [string]: HeroKitOverride } = {
 	},
 
 	-- THE GILDED MIRROR (docs/gilded-mirror-plan.md §5). Numbers match the archetype defaults: a mirror
-	-- hero's strength comes from its mirror share, not a stronger kit (Rourke's buff is the featured extra).
+	-- hero's strength comes from its mirror share, not a stronger kit (Rook's buff is the featured extra).
 	hero_isabelle = {
 		Archetype = "Marksman",
 		Basic = { Name = "Glint Shot" },
@@ -663,7 +663,7 @@ local HERO_KITS: { [string]: HeroKitOverride } = {
 			CastSeconds = 1.4,
 		},
 	},
-	hero_rourke = {
+	hero_rook = {
 		Archetype = "Berserker",
 		Basic = { Name = "Gilt Cleave" },
 		Special = {
