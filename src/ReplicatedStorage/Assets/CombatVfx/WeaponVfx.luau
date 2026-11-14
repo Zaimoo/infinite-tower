@@ -433,4 +433,20 @@ function WeaponVfx.TriggerAttack(model: Model, tier: number, duration: number?)
 	end
 end
 
+-- Distance LOD & other-Master Band 5 rate scaling without losing the original BaseRate.
+function WeaponVfx.SetRateScale(model: Model, scale: number)
+	if not model or not model.Parent then return end
+	local s = math.max(0, scale)
+	for _, desc in ipairs(model:GetDescendants()) do
+		if desc:IsA("ParticleEmitter") and desc:GetAttribute(VFX_TAG) and not desc:GetAttribute("VfxKeepFar") then
+			local baseRate = desc:GetAttribute("BaseRate")
+			if type(baseRate) ~= "number" then
+				baseRate = desc.Rate
+				desc:SetAttribute("BaseRate", baseRate)
+			end
+			desc.Rate = math.round(baseRate * s * 100) / 100
+		end
+	end
+end
+
 return table.freeze(WeaponVfx)
