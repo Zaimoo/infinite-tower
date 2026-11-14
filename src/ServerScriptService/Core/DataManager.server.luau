@@ -2005,6 +2005,33 @@ if game:GetService("RunService"):IsStudio() then
 		DataManager.SyncProfile(player)
 	end)
 
+	-- Studio-only chat command: `/anvilpull [1|10] [focus]` simulates Gilded Anvil Robux pack pulls.
+	local anvilCommand = Instance.new("TextChatCommand")
+	anvilCommand.Name = "DevAnvilPull"
+	anvilCommand.PrimaryAlias = "/anvilpull"
+	anvilCommand.Parent = game:GetService("TextChatService")
+	anvilCommand.Triggered:Connect(function(source: TextSource, message: string)
+		local player = Players:GetPlayerByUserId(source.UserId)
+		local profile = player and ActiveProfiles[player]
+		if not player or not profile then return end
+		local count = if string.match(message, "^%S+%s+10") then 10 else 1
+		local focusArg = string.match(message, "^%S+%s+%d+%s+(%S+)") or string.match(message, "^%S+%s+(%a%S+)")
+		if focusArg then
+			AnvilBanner.SetFocus(profile, string.upper(focusArg))
+		end
+		local summoned, ok, err = DataManager.RollAnvilSummons(player, count)
+		if not ok then
+			DataManager.SendToast(player, "[Dev] " .. tostring(err), "WARN")
+			return
+		end
+		local names = {}
+		for _, art in summoned do table.insert(names, art.DisplayName) end
+		local spark = AnvilBanner.EnsureSpark(profile)
+		DataManager.SendToast(player, string.format("[Dev] %s · Focus %s · Spark %d/%d (%d to pick)", table.concat(names, ", "),
+			spark.Focus, spark.Pulls, AnvilBanner.SPARK_COST, spark.Selections), "SUCCESS")
+		DataManager.SyncProfile(player)
+	end)
+
 	-- Studio-only chat command: `/floors [n]` sets the caller's tower progress so floors 1..n are open
 	-- (floors before n count as cleared, along with their Biome Bosses). No argument unlocks all 50.
 	-- It sets progress exactly, so a lower n locks floors again for testing early-game flows.
