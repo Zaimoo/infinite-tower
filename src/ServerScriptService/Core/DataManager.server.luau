@@ -1809,10 +1809,141 @@ FacilityInteractEvent.OnServerEvent:Connect(function(player: Player, action: any
 	end
 end)
 
--- Studio-only chat command: `/summon <hero>` adds that hero to the caller's profile for free.
--- `<hero>` is a HeroCatalog seed id, with or without the `hero_` prefix (`/summon edis`), or the hero's
--- display name (`/summon rook`).
+-- Studio-only chat commands:
+--   * `/summon <hero|weapon> [1-7]` grants any HeroCatalog hero or ArtifactCatalog weapon.
+--   * `/weapon <id|name|archetype|gild> [1-7]` (alias `/summonweapon`) grants any weapon at 1..7★.
 if game:GetService("RunService"):IsStudio() then
+	local function normalizeWeaponQuery(text: string): string
+		return (string.gsub(string.lower(text), "[^%w]+", ""))
+	end
+
+	local function resolveWeaponSeedId(query: string): string?
+		local q = string.lower((string.gsub(query, "^%s*(.-)%s*$", "%1")))
+		if q == "" then
+			return nil
+		end
+		if ArtifactCatalog.Seeds[q] then
+			return q
+		end
+		if ArtifactCatalog.Seeds["art_" .. q] then
+			return "art_" .. q
+		end
+		if ArtifactCatalog.Seeds["art_gild_" .. q] then
+			return "art_gild_" .. q
+		end
+		local byArchetype = AnvilBanner.ResolveWeaponId(string.upper(q))
+		if byArchetype and ArtifactCatalog.Seeds[byArchetype] then
+			return byArchetype
+		end
+
+		local qNorm = normalizeWeaponQuery(q)
+		for _, id in ArtifactCatalog.AnvilOrder do
+			local seed = ArtifactCatalog.Seeds[id]
+			if seed and (string.lower(seed.DisplayName) == q or normalizeWeaponQuery(seed.DisplayName) == qNorm) then
+				return id
+			end
+		end
+		for _, id in ArtifactCatalog.CatalogOrder do
+			local seed = ArtifactCatalog.Seeds[id]
+			if seed and (string.lower(seed.DisplayName) == q or normalizeWeaponQuery(seed.DisplayName) == qNorm) then
+				return id
+			end
+		end
+
+		local function matchOrdered(list: { string }): string?
+			for _, id in list do
+				local seed = ArtifactCatalog.Seeds[id]
+				if seed then
+					local dnNorm = normalizeWeaponQuery(seed.DisplayName)
+					local idNorm = normalizeWeaponQuery((string.gsub(id, "^art_gild_", "")))
+					if string.sub(dnNorm, 1, #qNorm) == qNorm or string.sub(idNorm, 1, #qNorm) == qNorm then
+						return id
+					end
+				end
+			end
+			for _, id in list do
+				local seed = ArtifactCatalog.Seeds[id]
+				if seed then
+					local dnNorm = normalizeWeaponQuery(seed.DisplayName)
+					if string.find(dnNorm, qNorm, 1, true) or string.find(string.lower(id), q, 1, true) then
+						return id
+					end
+				end
+			end
+			return nil
+		end
+
+		return matchOrdered(ArtifactCatalog.AnvilOrder) or matchOrdered(ArtifactCatalog.CatalogOrder)
+	end
+
+	local function grantDevWeapons(player: Player, profile: PlayerProfile, rawArgs: string): boolean
+		local trimmed = string.match(rawArgs, "^%s*(.-)%s*$") or ""
+		if trimmed == "" then
+			return false
+		end
+
+		local star = 1
+		local query = trimmed
+		local qPart, starStr = string.match(trimmed, "^(.-)%s+([1-7])$")
+		if qPart and starStr then
+			query = qPart
+			star = tonumber(starStr) or 1
+		end
+
+		local qLower = string.lower(query)
+		local seedIds: { string }
+		local isBatch = qLower == "gild" or qLower == "allgild" or qLower == "anvil"
+		if isBatch then
+			seedIds = table.clone(ArtifactCatalog.AnvilOrder)
+		else
+			local resolved = resolveWeaponSeedId(query)
+			if not resolved then
+				return false
+			end
+			seedIds = { resolved }
+		end
+
+		if not profile.Artifacts then
+			profile.Artifacts = {}
+		end
+		local artifactCap = InventoryCapacity.ArtifactCap(profile.FortressTree)
+		if InventoryCapacity.ArtifactCount(profile) + #seedIds > artifactCap then
+			DataManager.SendToast(player, string.format("Artifacts full|%d max · Free %d slot%s first", artifactCap, #seedIds, if #seedIds == 1 then "" else "s"), "WARN")
+			return true
+		end
+
+		local names = {}
+		for _, id in seedIds do
+			local seed = ArtifactCatalog.Seeds[id]
+			local uuid, artifact = DataManager.CreateArtifact(id, star, seed and seed.RarityTier or 1)
+			profile.Artifacts[uuid] = artifact
+			table.insert(names, artifact.DisplayName)
+		end
+
+		local summary = if isBatch
+			then string.format("%d Gildforged weapons (%d★)", #names, star)
+			else string.format("%s (%d★)", table.concat(names, ", "), star)
+		DataManager.SendToast(player, "[Dev] Summoned " .. summary, "SUCCESS")
+		DataManager.SyncProfile(player)
+		return true
+	end
+
+	local weaponCommand = Instance.new("TextChatCommand")
+	weaponCommand.Name = "DevSummonWeapon"
+	weaponCommand.PrimaryAlias = "/weapon"
+	weaponCommand.SecondaryAlias = "/summonweapon"
+	weaponCommand.Parent = game:GetService("TextChatService")
+	weaponCommand.Triggered:Connect(function(source: TextSource, message: string)
+		local player = Players:GetPlayerByUserId(source.UserId)
+		local profile = player and ActiveProfiles[player]
+		if not player or not profile then return end
+
+		local rawArgs = string.match(message, "^%S+%s*(.-)%s*$") or ""
+		if not grantDevWeapons(player, profile, rawArgs) then
+			DataManager.SendToast(player, "Usage: /weapon <id|name|gild> [1-7], e.g. /weapon wyrmheart 7", "WARN")
+		end
+	end)
+
 	local summonCommand = Instance.new("TextChatCommand")
 	summonCommand.Name = "DevSummonHero"
 	summonCommand.PrimaryAlias = "/summon"
@@ -1822,7 +1953,8 @@ if game:GetService("RunService"):IsStudio() then
 		local profile = player and ActiveProfiles[player]
 		if not player or not profile then return end
 
-		local arg = string.lower(string.match(message, "^%S+%s+(%S+)") or "")
+		local rawArgs = string.match(message, "^%S+%s*(.-)%s*$") or ""
+		local arg = string.lower(string.match(rawArgs, "^(%S+)") or "")
 		local seedId = if HeroCatalog.Seeds[arg] then arg else "hero_" .. arg
 		if arg ~= "" and not HeroCatalog.Seeds[seedId] then
 			for id, seed in HeroCatalog.Seeds do
@@ -1832,8 +1964,13 @@ if game:GetService("RunService"):IsStudio() then
 				end
 			end
 		end
+		if arg ~= "" and not HeroCatalog.Seeds[seedId] then
+			if grantDevWeapons(player, profile, rawArgs) then
+				return
+			end
+		end
 		if arg == "" or not HeroCatalog.Seeds[seedId] then
-			DataManager.SendToast(player, "Usage: /summon <hero>, e.g. /summon edis", "WARN")
+			DataManager.SendToast(player, "Usage: /summon <hero|weapon>, e.g. /summon edis or /weapon wyrmheart", "WARN")
 			return
 		end
 		local heroCap = InventoryCapacity.HeroCap(profile.FortressTree)
