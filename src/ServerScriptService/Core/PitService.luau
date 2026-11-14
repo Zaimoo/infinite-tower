@@ -35,9 +35,7 @@ end
 
 function PitService.EnsureDefaults(profile: any)
 	profile.PitMaterials = profile.PitMaterials or {}
-	for _, key in ipairs({ "SoulEssence", "PromotionStone" }) do
-		if not finite(profile.PitMaterials[key]) or profile.PitMaterials[key] < 0 then profile.PitMaterials[key] = 0 end
-	end
+	if not finite(profile.PitMaterials.PromotionStone) or profile.PitMaterials.PromotionStone < 0 then profile.PitMaterials.PromotionStone = 0 end
 	profile.PitRevision = profile.PitRevision or 0
 	profile.UnlockedResearch = profile.UnlockedResearch or {}
 	for _, key in ipairs({ "EssenceAttunement", "MemoryStudies", "AdvancedStonecraft", "MasterStonecraft" }) do
@@ -137,7 +135,7 @@ function PitService:State(profile: any): any
 	for key, amount in pairs(profile.PitMaterials) do resources[key] = amount end
 	return { Heroes = heroes, Currencies = Math.Copy(profile.Currencies), Materials = Math.Copy(profile.PitMaterials), Resources = resources,
 		UnlockedResearch = Math.Copy(profile.UnlockedResearch), Revision = profile.PitRevision, MaxDonors = Config.MaxDonors,
-		Recipes = Math.Copy(Config.Recipes), Research = Math.Copy(FacilityConfig.TechNodes), Facilities = Math.Copy(profile.Facilities),
+		Research = Math.Copy(FacilityConfig.TechNodes), Facilities = Math.Copy(profile.Facilities),
 		SessionOnly = true }
 end
 
@@ -183,7 +181,7 @@ function PitService:Build(profile: any, request: any): (any, any)
 		table.insert(preview.Errors, reason)
 	end
 	local recipient = request.Recipient and profile.Heroes[request.Recipient]
-	if action ~= "CONVERSION" and action ~= "CRAFT" then
+	do
 		if not recipient then reject("Choose an owned recipient hero.")
 		else
 			preview.Recipient = Math.Copy(recipient)
@@ -194,7 +192,7 @@ function PitService:Build(profile: any, request: any): (any, any)
 		end
 	end
 	local donorIds = request.Donors or {}
-	local needsDonors = action == "SYNTHESIS" or action == "CONVERSION"
+	local needsDonors = action == "SYNTHESIS"
 	if needsDonors then
 		if #donorIds == 0 or #donorIds > Config.MaxDonors then reject("Select between 1 and " .. Config.MaxDonors .. " donors.") end
 		local seen = {}
@@ -284,10 +282,6 @@ function PitService:Build(profile: any, request: any): (any, any)
 			if gold > 0 then preview.Costs = { Gold = gold } end
 			staged.Heroes[recipient.UUID] = after
 		end
-	elseif action == "CONVERSION" then
-		local essence = 0
-		for _, donor in ipairs(preview.Donors) do essence += Math.GetConversionYield(donor) end
-		preview.Rewards = { SoulEssence = essence }
 	elseif action == "PROMOTION" then
 		if recipient then
 			local rule = Config.Promotion[recipient.Stars]
@@ -308,14 +302,6 @@ function PitService:Build(profile: any, request: any): (any, any)
 				preview.After, preview.Overflow = Math.Snapshot(after, profile), overflow
 				staged.Heroes[recipient.UUID] = after
 			end
-		end
-	elseif action == "CRAFT" then
-		local recipe = Config.Recipes[request.Recipe]
-		if not recipe then reject("Choose a valid crafting recipe.")
-		else
-			preview.Recipe = request.Recipe
-			preview.Costs = { Gold = recipe.Gold, Gems = recipe.Gems, SoulEssence = recipe.SoulEssence }
-			preview.Rewards = { [request.Recipe] = recipe.Output }
 		end
 	else reject("Choose a valid Pit operation.") end
 
@@ -339,10 +325,9 @@ end
 
 local function normalizeRequest(payload: any): (any?, string?)
 	if type(payload) ~= "table" or type(payload.Action) ~= "string" then return nil, "Choose a Pit operation." end
-	local allowed = { SYNTHESIS = true, PROMOTION = true, CONVERSION = true, CRAFT = true }
+	local allowed = { SYNTHESIS = true, PROMOTION = true }
 	if not allowed[payload.Action] then return nil, "Unknown Pit operation." end
 	if payload.Recipient ~= nil and (type(payload.Recipient) ~= "string" or #payload.Recipient > 80) then return nil, "Invalid recipient." end
-	if payload.Recipe ~= nil and (type(payload.Recipe) ~= "string" or #payload.Recipe > 80) then return nil, "Invalid recipe." end
 	if payload.Donors ~= nil and type(payload.Donors) ~= "table" then return nil, "Choose valid donor heroes." end
 	local donors = {}
 	local count = 0
@@ -354,7 +339,7 @@ local function normalizeRequest(payload: any): (any?, string?)
 		if type(payload.Donors[index]) ~= "string" then return nil, "Choose valid donor heroes." end
 		table.insert(donors, payload.Donors[index])
 	end
-	return { Action = payload.Action, Recipient = payload.Recipient, Donors = donors, Recipe = payload.Recipe }, nil
+	return { Action = payload.Action, Recipient = payload.Recipient, Donors = donors }, nil
 end
 
 function PitService:Request(player: any, command: any, payload: any): any
@@ -436,7 +421,7 @@ function PitService:Request(player: any, command: any, payload: any): any
 			profile.Currencies = staged.Currencies
 			profile.PitMaterials = staged.Materials
 			profile.PitRevision += 1
-			local messages = { SYNTHESIS = "Synthesis complete.", PROMOTION = "Promotion complete!", CONVERSION = "Converted to Soul Essence.", CRAFT = "Crafting complete." }
+			local messages = { SYNTHESIS = "Synthesis complete.", PROMOTION = "Promotion complete!" }
 			-- Replication failure cannot turn a committed transaction into a false
 			-- failure; STATE can always recover the authoritative result.
 			pcall(self.Dependencies.SyncProfile, player, staged.Heroes, staged.Remove)

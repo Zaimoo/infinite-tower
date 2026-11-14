@@ -273,7 +273,7 @@ local GUIDE_EVENTS: { [string]: string } = {
 	HeroSummoned = "Summon", SquadDeployed = "Squad", ArtifactSummoned = "Roll", ArtifactUpgraded = "Upgrade",
 	ArtifactEquipped = "Equip", TreeNodeUnlocked = "Tree", RelicBanked = "Bank", RaidEntered = "Raid",
 }
-local PIT_EVENTS: { [string]: string } = { SYNTHESIS = "Synthesis", PROMOTION = "Promotion", CONVERSION = "Conversion", CRAFT = "Craft" }
+local PIT_EVENTS: { [string]: string } = { SYNTHESIS = "Synthesis", PROMOTION = "Promotion" }
 local WORKERS: { [string]: boolean } = { GuardPost = true, Market = true, TrainingGrounds = true, GodsBlessing = true }
 -- Rewards are paid once per lesson. Lessons that replaced a step of the old quest chain share its
 -- CompletedSteps key, so a reward paid under the old chain is not paid again.

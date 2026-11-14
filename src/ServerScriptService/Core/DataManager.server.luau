@@ -480,7 +480,6 @@ local function createDefaultPlayerProfile(): PlayerProfile
 	return {
 		SchemaVersion = ProfileMigrations.CurrentSchema,
 		PitMaterials = {
-			SoulEssence = 0,
 			PromotionStone = 2,
 		},
 		PitRevision = 0,
@@ -1802,7 +1801,6 @@ FacilityInteractEvent.OnServerEvent:Connect(function(player: Player, action: any
 		profile.Currencies.Gold += 25000
 		profile.Currencies.Gems += 5000
 		profile.PitMaterials.PromotionStone = (profile.PitMaterials.PromotionStone or 0) + 20
-		profile.PitMaterials.SoulEssence = (profile.PitMaterials.SoulEssence or 0) + 100
 		OnboardingService.UnlockAll(player)
 		DataManager.SendToast(player, "[Prototype Boost] +25k Gold, +5k Gems, +20 Promotion Stones, all systems unlocked!", "SUCCESS")
 		DataManager.SyncProfile(player)

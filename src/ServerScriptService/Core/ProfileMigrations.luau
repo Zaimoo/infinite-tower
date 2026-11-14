@@ -12,7 +12,7 @@ local SettingsConfig = require(ReplicatedStorage.Shared.Config.SettingsConfig)
 
 local ProfileMigrations = {}
 
-ProfileMigrations.CurrentSchema = 8
+ProfileMigrations.CurrentSchema = 9
 
 -- Rarity a template had when these old saves were written, where it differs from today's catalog.
 -- Han was the Common starter before he became Mythical; Valeria was Superior before moving to Exalted.
@@ -129,6 +129,25 @@ function ProfileMigrations.ToV8(profile: any)
 	profile.SchemaVersion = 8
 end
 
+-- What one Promotion Stone cost in Soul Essence before Soul Essence was removed.
+local ESSENCE_PER_STONE = 8
+
+-- v9: Soul Essence is gone (no Conversion, no crafting). Held essence becomes Promotion Stones at the old
+-- crafting rate, free of the Gold and Gems the recipe also charged, rounded up so no one loses a partial stone.
+function ProfileMigrations.ToV9(profile: any)
+	if (profile.SchemaVersion or 1) >= 9 then return end
+	local materials = profile.PitMaterials
+	if type(materials) == "table" then
+		local essence = materials.SoulEssence
+		if type(essence) == "number" and essence == essence and essence > 0 and essence < math.huge then
+			local stones = tonumber(materials.PromotionStone) or 0
+			materials.PromotionStone = stones + math.ceil(math.floor(essence) / ESSENCE_PER_STONE)
+		end
+		materials.SoulEssence = nil
+	end
+	profile.SchemaVersion = 9
+end
+
 -- Hero template ids that were renamed: old id -> new id. Saved heroes keep their template id, so
 -- every load moves them to the new one (cheap and idempotent, so it isn't tied to a schema
 -- version). Rourke became Rook.
@@ -157,6 +176,7 @@ function ProfileMigrations.Run(profile: any)
 	end
 	ProfileMigrations.ToV7(profile)
 	ProfileMigrations.ToV8(profile)
+	ProfileMigrations.ToV9(profile)
 	profile.Settings = SettingsConfig.Sanitize(profile.Settings)
 end
 

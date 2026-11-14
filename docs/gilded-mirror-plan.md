@@ -41,7 +41,7 @@ final         = HP/ATK × own weapon bonus (1 + WeaponPower/40), then Rift Attun
 
 ### 2.2 The last normal hero is protected
 
-A Master must always own at least one normal hero. Heroes leave the roster only as Pit donors (`SYNTHESIS` / `CONVERSION`, `PitService.luau:409`). So:
+A Master must always own at least one normal hero. Heroes leave the roster only as Pit donors (`SYNTHESIS`). So:
 
 - `PitService:DonorStatus` marks a hero **Protected** with the reason "Your mirror heroes copy your last normal hero." when it's the only normal hero left.
 - `PitService:Build` also counts the normal heroes left after `staged.Remove`. Several donors in one request must not be able to remove the last one together. If none would remain, it rejects with the same reason.

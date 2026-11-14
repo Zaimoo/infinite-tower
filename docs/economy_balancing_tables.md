@@ -67,11 +67,9 @@
 | 5★ Max Level | 5 | 50 | 50 | 289,443 | — | — | 81.00x | 43.4274x | 140,705 | 1,055,286 | 140,705.00 | 175,881.25 | 160.43 |
 
 ### 2.3 The Pit Recipes & Conversion Table
-- **Soul Essence Conversion:** Disassembling heroes in The Pit yields Soul Essence based on Star tier (`1★: 4`, `2★: 12`, `3★: 36`, `4★: 108`, `5★: 324`) plus bonus essence for invested levels (`+1 per 5 levels`).
-- **Deterministic Crafting:**
+- **Removed.** Soul Essence, hero Conversion and Promotion Stone crafting are gone. Promotion Stones come only from tower kills and banked relics (GDD §4.2a, §5.5).
 
-| Recipe Product | Gold Cost | Gems Cost | Soul Essence Cost | Output | Purpose |
-| :--- | :--- | :--- | :--- | :--- | :--- |
+--- | :--- | :--- | :--- | :--- | :--- |
 | **Promotion Stone** | 100 Gold | 20 Gems | 8 Soul Essence | 1x Stone | Required sacrifice for Star Promotions ($1★ \to 5★$). |
 
 ---
