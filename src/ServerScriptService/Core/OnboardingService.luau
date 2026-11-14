@@ -56,6 +56,15 @@ function OnboardingService.ArmOf(profile: any): string
 	return if type(arm) == "string" and GuideConfig.Arms[arm] then arm else GuideConfig.DefaultArm
 end
 
+-- A new Master's first Call of the Rift ten-pull is raised to Superior or better
+-- (HeroCatalog.PermanentBanner.FirstTenPullMinTier) in arms with Showcase. Only before the profile's
+-- first summon of any kind, which older players have all made (guide.Facts.Summon).
+function OnboardingService.ShowcaseFirstPull(profile: any): boolean
+	local guide = profile.Onboarding and profile.Onboarding.Guide
+	if not guide or not guide.Enabled or guide.Facts.Summon then return false end
+	return GuideConfig.Arms[OnboardingService.ArmOf(profile)].Showcase == true
+end
+
 -- The guide chain a profile plays ("v3" control, "v4"), from its arm.
 function OnboardingService.ChainOf(profile: any): string
 	return GuideConfig.Arms[OnboardingService.ArmOf(profile)].Chain

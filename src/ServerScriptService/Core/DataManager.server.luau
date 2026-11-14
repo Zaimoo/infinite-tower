@@ -712,6 +712,8 @@ function DataManager.SyncProfile(player: Player, progressionOnly: boolean?)
 		_G.CombatSimulation.RefreshPlayerHeroStats(player)
 	end
 	DataManager.UpdateSquadPower(player)
+	-- Derived (never saved): the summon screen discloses the first ten-pull guarantee.
+	;(profile :: any).FirstTenPullShowcase = OnboardingService.ShowcaseFirstPull(profile)
 	DataManager.ApplySettingsAttributes(player, profile.Settings)
 	forgeTransactions.Snapshot(profile)
 	ProfileDeltaSyncEvent:FireClient(player, profile)
@@ -932,6 +934,11 @@ function DataManager.RollSummons(player: Player, bannerId: string, count: number
 	local summonedList: { HeroInstance } = {}
 	local luck = DataManager.GetSummonLuck(player)
 	local bestTier = 0
+	-- A new Master's first Call of the Rift ten-pull: Superior or better instead of Rare (GDD §4.7).
+	local tenPullFloor = banner.TenPullMinTier
+	if count == 10 and not isLimited and banner.FirstTenPullMinTier and OnboardingService.ShowcaseFirstPull(profile) then
+		tenPullFloor = math.max(tenPullFloor, banner.FirstTenPullMinTier)
+	end
 
 	for pull = 1, count do
 		local currentPity = (profile[bannerKey] or 0) + 1
@@ -950,7 +957,7 @@ function DataManager.RollSummons(player: Player, bannerId: string, count: number
 			uuid, hero, tier = rollBannerHero(isLimited and "A_STARS_ARRIVAL" or "CALL_OF_THE_RIFT", luck, pityTier)
 		else
 			-- The 10th pull of a 10x is forced to Rare or better if the first nine were not.
-			local guarantee = if count == 10 and pull == count and bestTier < banner.TenPullMinTier then banner.TenPullMinTier else nil
+			local guarantee = if count == 10 and pull == count and bestTier < tenPullFloor then tenPullFloor else nil
 			uuid, hero, tier = rollBannerHero(isLimited and "A_STARS_ARRIVAL" or "CALL_OF_THE_RIFT", luck, guarantee)
 		end
 		if tier >= pityTier then
@@ -1016,6 +1023,12 @@ RequestSummonFunc.OnServerInvoke = function(player: Player, arg1: any, arg2: any
 	if profile.Currencies.Gems < gemCost then
 		DataManager.SendToast(player, string.format("Not enough Gems|Need %d", gemCost), "WARN")
 		return { Success = false, Message = "Insufficient Gems" }
+	end
+	-- While the first ten-pull carries its Superior guarantee, any other pull would spend it.
+	if OnboardingService.ShowcaseFirstPull(profile) and (count ~= 10 or isLimitedBanner(bannerId))
+		and profile.Currencies.Gems >= HeroCatalog.PermanentBanner.Cost10X then
+		DataManager.SendToast(player, "Ten-pull first|Call of the Rift 10x · Superior+ guaranteed", "INFO")
+		return { Success = false, Message = "First ten-pull first" }
 	end
 
 	profile.Currencies.Gems -= gemCost

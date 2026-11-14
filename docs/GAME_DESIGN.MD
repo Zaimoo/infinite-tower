@@ -382,6 +382,7 @@ The permanent standard banner features **at least one character for each rarity 
 - **Summon Cost:** `100 Gems` per single pull (`900 Gems` for 10x pull).
 - **Pity System:** Guaranteed **Exalted or higher** hero within **120 summons** (`MaxPity = 120`, `PityMinTier = 5`). The pity pull is split by the banner's Exalted/Legendary/Mythical rates (with God's Blessing luck): about 65% Exalted (Ignis or Diran), 29% Legendary (Edis or Vane), 6% Mythical (Han). Any natural Exalted+ pull resets the counter. This banner has no featured hero and no 50/50 rule.
 - **10-Pull Guarantee:** Every 10x pull includes at least one **Rare** or higher hero.
+- **First 10-pull (new Masters):** in onboarding arms with the showcase (`v2`, §4.7), a Master's first Call of the Rift 10x, made before any other summon, includes a **Superior** or higher hero instead (`FirstTenPullMinTier = 4`, Aeli unless a rarer hero lands). Superior is below `PityMinTier`, so pity is untouched. While that guarantee is open and the Gems cover a 10x, single pulls and A Star's Arrival pulls are refused with a "Ten-pull first" toast, so the guarantee can't be spent by accident. The odds window states it while it applies (`FirstTenPullShowcase`, a derived profile flag that is never saved).
 - **Drop Rates:**
   - `Common (75.14%)`: **Gide** or **Shurn**
   - `Uncommon (18.0%)`: **Aaron**

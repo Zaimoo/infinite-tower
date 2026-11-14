@@ -47,6 +47,9 @@ HeroCatalog.PermanentBanner = {
 	Cost1X = 100,
 	Cost10X = 900,
 	TenPullMinTier = 3, -- every 10-pull includes a Rare or better hero
+	-- A new Master's first 10-pull (before any other summon, in the showcase onboarding arm) includes a
+	-- Superior or better hero. Below PityMinTier, so it never touches pity. GDD §4.1, §4.7.
+	FirstTenPullMinTier = 4,
 	-- Retuned with the 100-gem relic economy: hours of play per copy match the old rates at the higher income.
 	Rates = {
 		[1] = 0.7514, -- 75.14% Common (Gide or Shurn)
