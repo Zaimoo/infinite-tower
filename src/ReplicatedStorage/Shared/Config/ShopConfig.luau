@@ -27,12 +27,15 @@ export type Offer = {
 
 local ShopConfig = {}
 
-local HeroCatalog = require(game:GetService("ReplicatedStorage").Shared.Config.HeroCatalog)
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local HeroCatalog = require(ReplicatedStorage.Shared.Config.HeroCatalog)
+local ArtifactCatalog = require(ReplicatedStorage.Shared.Config.ArtifactCatalog)
 
 -- Gems a restricted player gets per summon: the 1x price of the banner the pack pulls on.
 function ShopConfig.GemsPerSummon(banner: string?): number
-	-- The Gilded Mirror has no Gem price: a restricted purchase is refunded at the Gem store's Robux rate.
+	-- The Gilded Mirror and Gilded Anvil have no Gem price: restricted purchases convert at the Store rate.
 	if banner == "GILDED_MIRROR" then return HeroCatalog.MirrorBanner.RestrictedGemsPerPull end
+	if banner == "GILDED_ANVIL" then return ArtifactCatalog.AnvilBanner.RestrictedGemsPerPull end
 	local catalog = if banner == "A_STARS_ARRIVAL" then HeroCatalog.LimitedBanner else HeroCatalog.PermanentBanner
 	return catalog.Cost1X
 end
@@ -63,6 +66,18 @@ ShopConfig.Mirror = table.freeze({
 	} :: { Offer }),
 })
 
+-- The Gilded Anvil (docs/gilded-anvil-plan.md): Robux-only pulls on ArtifactCatalog.AnvilBanner.
+ShopConfig.Anvil = table.freeze({
+	Title = "THE GILDED ANVIL",
+	Subtitle = "Six Tier-8 Gildforged relics · Pick your Focus",
+	Banner = "GILDED_ANVIL",
+	Offers = table.freeze({
+		table.freeze({ Id = "pack_anvil_1", ProductId = 0, RobuxPrice = 49, Label = "Buy 1", Grant = { Kind = "Summons", Amount = 1, Banner = "GILDED_ANVIL" } }),
+		table.freeze({ Id = "pack_anvil_10", ProductId = 0, RobuxPrice = 449, WasPrice = 490, Label = "Buy 10", Tag = "-8%",
+			Grant = { Kind = "Summons", Amount = 10, Banner = "GILDED_ANVIL" } }),
+	} :: { Offer }),
+})
+
 ShopConfig.Gems = table.freeze({
 	table.freeze({ Id = "gems_160", ProductId = 0, RobuxPrice = 80, Label = "Pouch of Gems", Grant = { Kind = "Gems", Amount = 160 } }),
 	table.freeze({ Id = "gems_550", ProductId = 0, RobuxPrice = 250, Label = "Sack of Gems", Tag = "+10%", Grant = { Kind = "Gems", Amount = 550 } }),
@@ -79,7 +94,7 @@ ShopConfig.Gold = table.freeze({
 -- Every offer, by ProductId (live products only) and by Id.
 local byProduct: { [number]: Offer } = {}
 local byId: { [string]: Offer } = {}
-for _, list in { ShopConfig.Featured.Offers, ShopConfig.Mirror.Offers, ShopConfig.Gems, ShopConfig.Gold } do
+for _, list in { ShopConfig.Featured.Offers, ShopConfig.Mirror.Offers, ShopConfig.Anvil.Offers, ShopConfig.Gems, ShopConfig.Gold } do
 	for _, offer in list :: { Offer } do
 		byId[offer.Id] = offer
 		if offer.ProductId ~= 0 then
