@@ -837,6 +837,12 @@ New players are walked through every feature once, in a fixed order, and held to
 
 *(The seven-step quest chain in `OnboardingConfig` remains only for the `OnboardingV2 = false` rollback switch. Rewards paid under it are not paid again.)*
 
+**First-session funnel and experiment arms** (`OnboardingFunnel`, `OnboardingService`; plan: `docs/first-session-and-social-plan.md`):
+- **Milestones** are fixed, not guide steps, so every arm feeds the same Creator Hub onboarding funnel (`LogOnboardingFunnelStepEvent`): Joined, FirstPull, LimitedPull, SquadSet, EnteredTower, FirstUltimate, ClearedFloor1, PickedUpRelic, BankedRelic, ReachedFloor2, FirstTheft, FirstDuel, DuelWon, BankedStolenRelic. Steps are sequential, so reaching a milestone also logs every earlier step not yet logged. Each milestone also logs `OnboardingMilestone` (value: seconds since first join; fields: milestone, arm).
+- **Only new profiles count.** A profile created by the default-profile path carries `Onboarding.FirstJoinAt` (`os.time()`). Older profiles get 0 and never enter first-session metrics. `Onboarding.Funnel` holds the highest step logged.
+- **Arms:** `control`, `v1`, `v2` (`GuideConfig.Arms`). A new profile's arm is read once from its `OnboardingArm` experience config (`ConfigService:GetConfigForPlayerAsync`) and saved in `Onboarding.Arm`, so a player never changes arms mid-onboarding. Without an experiment, or for older profiles, the arm is `GuideConfig.DefaultArm`. `OnboardingV2 = false` stays the emergency switch.
+- **Studio:** analytics never leave Studio. The Workspace attribute `DebugOnboardingTelemetry = true` prints every guide event and milestone to Output, and `OnboardingArmForce` (a server-side attribute) picks the arm of a new profile.
+
 ### 4.8 Free Rewards: Daily, Weekly, Playtime, Codes & Friend Boost
 
 Opened from the **Rewards** button on the Left Rail, which shows a badge with the number of rewards ready to claim. Tunables live in `RewardsConfig`; the rules are pure (`RewardRules`) and the server (`RewardsService`) checks every claim against its own clock. **All resets are UTC:** days roll over at 00:00 UTC and weeks on Monday 00:00 UTC.

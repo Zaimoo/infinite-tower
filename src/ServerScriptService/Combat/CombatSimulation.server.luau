@@ -1020,6 +1020,7 @@ registerPickup = function(player: Player, dropId: number, killerUserId: number, 
 		})
 	end
 	dm.SendToast(player, string.format("You're a Loot Thief|%s's %s · Anyone can duel you for it", killerName, label), "WARN")
+	if dm.ReportMilestone then dm.ReportMilestone(player, "FirstTheft") end
 	return true
 end
 
@@ -1289,6 +1290,10 @@ local function startDuel(owner: Player, contest: LootDuel.Contest?): (boolean, s
 	local dm = getDataManager()
 	dm.SendToast(owner, string.format("Duel: %s|Winner takes the drop", thief.DisplayName), "WARN")
 	dm.SendToast(thief, string.format("Duel: %s|Winner takes the drop", owner.DisplayName), "WARN")
+	if dm.ReportMilestone then
+		dm.ReportMilestone(owner, "FirstDuel")
+		dm.ReportMilestone(thief, "FirstDuel")
+	end
 	broadcastMetadata(nil)
 	return true, nil
 end
@@ -1427,6 +1432,7 @@ local function applyDuelOutcome(duel: Duel)
 	local hunterLost = loser.UserId ~= contest.ThiefUserId
 	if winner.Parent == Players then
 		dm.SendToast(winner, string.format("Duel won|%s's drop is yours", loser.DisplayName), "SUCCESS")
+		if dm.ReportMilestone then dm.ReportMilestone(winner, "DuelWon") end
 	end
 	if loser.Parent == Players then
 		dm.SendToast(loser, if hunterLost
@@ -1922,6 +1928,10 @@ performHeroAttack = function(simHero: SimHero, targetPos: Vector3, targetMob: Si
 		-- the damage itself waits for the impact (resolveHeroImpact).
 		if attackType == "SKILL" then
 			simHero.Stamina = 0
+			if not targetEnemyHero then
+				local dm = getDataManager()
+				if dm.ReportMilestone then dm.ReportMilestone(simHero.Owner, "FirstUltimate") end
+			end
 		else
 			simHero.AttackCount = (simHero.AttackCount or 0) + 1
 			local gain = tierDef.StaminaGain

@@ -10,6 +10,7 @@ local RunService = game:GetService("RunService")
 local GuideConfig = require(ReplicatedStorage.Shared.Config.GuideConfig)
 local ArtifactCatalog = require(ReplicatedStorage.Shared.Config.ArtifactCatalog)
 local Onboarding = require(ReplicatedStorage.Shared.Util.Onboarding)
+local OnboardingFunnel = require(ReplicatedStorage.Shared.Util.OnboardingFunnel)
 local GuideLessons = require(script.Parent.GuideLessons)
 
 export type Dependencies = {
@@ -26,15 +27,90 @@ local latest: { [Player]: any } = {}
 local lastRequest: { [Player]: number } = {}
 local sessionStarted: { [Player]: number } = {}
 local offered: { [Player]: { [string]: boolean } } = {}
+local armPending: { [Player]: boolean } = {}
+
+-- Analytics never reach Creator Hub from Studio. Set the Workspace attribute
+-- DebugOnboardingTelemetry to print them to Output instead (playtest timing checks).
+local function studioDebug(player: Player, event: string, label: string, detail: string, value: number?): boolean
+	if not RunService:IsStudio() then return false end
+	if workspace:GetAttribute("DebugOnboardingTelemetry") == true then
+		print(string.format("[Onboarding] %s %s %s %s = %s", player.Name, event, label, detail, tostring(value or 1)))
+	end
+	return true
+end
 
 local function telemetry(player: Player, event: string, label: string, version: string, value: number?)
-	if RunService:IsStudio() then return end
+	if studioDebug(player, event, label, version, value) then return end
 	task.defer(function()
 		if player.Parent ~= Players then return end
 		pcall(AnalyticsService.LogCustomEvent, AnalyticsService, player, event, value or 1, {
 			[Enum.AnalyticsCustomFieldKeys.CustomField01.Name] = label,
 			[Enum.AnalyticsCustomFieldKeys.CustomField02.Name] = version,
 		})
+	end)
+end
+
+-- The experiment arm a profile plays (GuideConfig.Arms).
+function OnboardingService.ArmOf(profile: any): string
+	local arm = profile.Onboarding and profile.Onboarding.Arm
+	return if type(arm) == "string" and GuideConfig.Arms[arm] then arm else GuideConfig.DefaultArm
+end
+
+-- First-session funnel (OnboardingFunnel, GDD §4.7): logs every funnel step up to `name` once per
+-- profile, plus the seconds from first join to this milestone. Only profiles created after the
+-- funnel shipped have a first-join time, so older players never enter first-session metrics.
+local function milestone(player: Player, profile: any, name: string)
+	local state = profile.Onboarding
+	local joined = state and state.FirstJoinAt
+	if type(joined) ~= "number" or joined <= 0 then return end
+	local steps = OnboardingFunnel.StepsToLog(state.Funnel or 0, name)
+	if #steps == 0 then return end
+	state.Funnel = steps[#steps]
+	local arm = OnboardingService.ArmOf(profile)
+	local seconds = math.max(0, os.time() - joined)
+	if studioDebug(player, "OnboardingMilestone", name, arm, seconds) then return end
+	task.defer(function()
+		if player.Parent ~= Players then return end
+		for _, step in steps do
+			pcall(AnalyticsService.LogOnboardingFunnelStepEvent, AnalyticsService, player, step, OnboardingFunnel.Milestones[step])
+		end
+		pcall(AnalyticsService.LogCustomEvent, AnalyticsService, player, "OnboardingMilestone", seconds, {
+			[Enum.AnalyticsCustomFieldKeys.CustomField01.Name] = name,
+			[Enum.AnalyticsCustomFieldKeys.CustomField02.Name] = arm,
+		})
+	end)
+end
+
+-- For milestones that are not guide events (an Ultimate, a relic pickup, a theft, a duel).
+function OnboardingService.Milestone(player: Player, name: string)
+	local d = deps
+	local profile = d and d.GetProfile(player)
+	if profile and profile.Onboarding then milestone(player, profile, name) end
+end
+
+-- Picks a new profile's arm once: the Studio override (Workspace attribute OnboardingArmForce),
+-- else the player's "OnboardingArm" experience config value, else GuideConfig.DefaultArm.
+local function assignArm(player: Player, profile: any)
+	local state = profile.Onboarding
+	if state.Arm ~= nil or armPending[player] or type(state.FirstJoinAt) ~= "number" or state.FirstJoinAt <= 0 then return end
+	armPending[player] = true
+	task.spawn(function()
+		local arm: any = if RunService:IsStudio() then workspace:GetAttribute("OnboardingArmForce") else nil
+		if arm == nil then
+			local ok, config = pcall(function()
+				return (game:GetService("ConfigService") :: any):GetConfigForPlayerAsync(player)
+			end)
+			if ok and config then
+				local got, value = pcall(function() return config:GetValue("OnboardingArm") end)
+				if got then arm = value end
+			end
+		end
+		armPending[player] = nil
+		local d = deps
+		if player.Parent ~= Players or d == nil or d.GetProfile(player) ~= profile or state.Arm ~= nil then return end
+		state.Arm = if type(arm) == "string" and GuideConfig.Arms[arm] then arm else GuideConfig.DefaultArm
+		telemetry(player, "OnboardingArm", state.Arm, "v4")
+		OnboardingService.Push(player, true)
 	end)
 end
 
@@ -86,6 +162,7 @@ function OnboardingService.Init(dependencies: Dependencies)
 		lastRequest[player] = nil
 		sessionStarted[player] = nil
 		offered[player] = nil
+		armPending[player] = nil
 	end)
 	-- Ready heroes can recover and raids can open without a profile transaction.
 	task.spawn(function()
@@ -108,6 +185,8 @@ function OnboardingService.EnsureState(profile: any)
 	if type(profile.Unlocks) ~= "table" then
 		profile.Unlocks = { Summon = true }
 	end
+	-- Profiles from before the first-session funnel have no first-join time: 0 keeps them out of it.
+	if type(profile.Onboarding.FirstJoinAt) ~= "number" then profile.Onboarding.FirstJoinAt = 0 end
 	local guide = Onboarding.EnsureGuide(profile.Onboarding)
 	if guide.Enabled == nil then
 		guide.Enabled = workspace:GetAttribute("OnboardingV2") ~= false
@@ -218,6 +297,8 @@ function OnboardingService.Push(player: Player, force: boolean?)
 	local guide = profile.Onboarding.Guide
 	local now = os.time()
 	sessionStarted[player] = sessionStarted[player] or os.clock()
+	milestone(player, profile, "Joined")
+	assignArm(player, profile)
 	local version = if guide.Enabled then "v3" else "legacy"
 	local ready = Onboarding.HasReadySquad(profile, now)
 	mark(player, guide.Facts, "Bootstrap", version)
@@ -287,6 +368,7 @@ function OnboardingService.Report(player: Player, eventName: string, detail: (st
 	local profile = d and d.GetProfile(player)
 	if not d or not profile then return end
 	OnboardingService.EnsureState(profile)
+	for _, name in OnboardingFunnel.FromEvent(eventName, detail) do milestone(player, profile, name) end
 	local guide = profile.Onboarding.Guide
 	local completed: any
 	local completedTitle: string?

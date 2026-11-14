@@ -7,7 +7,17 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Steps = require(ReplicatedStorage.Shared.Config.OnboardingConfig)
 
 export type Guide = { Enabled: boolean?, Facts: { [string]: boolean }, Snoozed: { [string]: number } }
-export type State = { StepIndex: number, StepProgress: number, CompletedSteps: { [string]: boolean }, Guide: Guide? }
+export type State = {
+	StepIndex: number,
+	StepProgress: number,
+	CompletedSteps: { [string]: boolean },
+	Guide: Guide?,
+	-- First-session funnel (OnboardingFunnel): os.time() of a new profile's first join (0 for
+	-- profiles created before the funnel), the highest funnel step logged, the experiment arm.
+	FirstJoinAt: number?,
+	Funnel: number?,
+	Arm: string?,
+}
 
 local Onboarding = {}
 

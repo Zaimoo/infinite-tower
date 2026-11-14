@@ -55,6 +55,7 @@ export type ActiveRelic = {
 	-- Bounty duels (GDD 6.1): the killer owns the relic; anyone else carrying it is a [Loot Thief].
 	KillerUserId: number,
 	KillerName: string?,
+	OriginalOwnerUserId: number, -- the killer at spawn; a duel win changes KillerUserId, never this
 	LockedOut: { [number]: boolean }?, -- duel losers, for the relic's lifetime
 	DuelLocked: boolean?, -- nobody may pick it up while its duel runs
 }
@@ -202,6 +203,7 @@ function RelicService.SpawnRelic(tierId: RelicTierId, worldPos: Vector3, initial
 		Prompt = prompt,
 		DespawnAt = now + spec.DespawnSeconds,
 		KillerUserId = initialOwnerUserId or 0,
+		OriginalOwnerUserId = initialOwnerUserId or 0,
 	}
 	prompt.Triggered:Connect(function(player: Player)
 		RelicService.TryPickupRelic(player, relic)
@@ -273,6 +275,7 @@ function RelicService.TryPickupRelic(player: Player, relic: ActiveRelic): boolea
 	if not stolen then
 		dm.SendToast(player, string.format("Carrying %s|Bank it at a sanctuary · -%d%% speed", spec.DisplayName, math.round(spec.WalkSpeedPenalty * 100)), "INFO")
 	end
+	if dm.ReportMilestone then dm.ReportMilestone(player, "PickedUpRelic") end
 	Tower.BroadcastAt(RelicStateRemote,relic,relic.RelicId, relic.TierId, "PICKUP", player.UserId, 0)
 	return true
 end
@@ -363,7 +366,8 @@ function RelicService.FumbleRelicOnAoEHit(carrier: Player)
 	Tower.BroadcastAt(RelicStateRemote,relic,relic.RelicId, relic.TierId, "FUMBLE", carrier.UserId, relic.LockExpiresAt)
 end
 
-local function awardRelicPayout(player: Player, spec: any, scalar: number, rewardMultiplier: number?, gemMultiplier: number?)
+-- `stolen`: the banker took this relic from another Master (a theft or a duel win).
+local function awardRelicPayout(player: Player, spec: any, scalar: number, rewardMultiplier: number?, gemMultiplier: number?, stolen: boolean?)
 	local dm = getDataManager()
 	local profile = dm.GetProfile(player)
 	if not profile then
@@ -386,7 +390,7 @@ local function awardRelicPayout(player: Player, spec: any, scalar: number, rewar
 		profile.PitMaterials.PromotionStone = (profile.PitMaterials.PromotionStone or 0) + stones
 	end
 	TowerRuns.AddRelicPayout(player, gold, gems)
-	if dm.ReportProgress and (gold > 0 or gems > 0 or stones > 0) then dm.ReportProgress(player, "RelicBanked") end
+	if dm.ReportProgress and (gold > 0 or gems > 0 or stones > 0) then dm.ReportProgress(player, "RelicBanked", if stolen then "Stolen" else nil) end
 
 	-- Apex Cores / Calamity Heart: a small chance of a free Exalted Archon
 	if spec.BaseTierId == "CALAMITY_HEART" and math.random() <= HEART_ARCHON_CHANCE then
@@ -458,7 +462,7 @@ local function extractAtSanctuary(carrier: Player, floorOnly: boolean?)
 	-- Reentrant calls cannot award the same authoritative relic twice.
 	CarrierToRelic[carrier]=nil
 	ActiveRelics[relic.RelicId]=nil
-	awardRelicPayout(carrier,spec,1,relic.RewardMultiplier,relic.GemMultiplier)
+	awardRelicPayout(carrier,spec,1,relic.RewardMultiplier,relic.GemMultiplier,relic.OriginalOwnerUserId~=0 and relic.OriginalOwnerUserId~=carrier.UserId)
 	Tower.BroadcastAt(RelicStateRemote,relic,relic.RelicId,relic.TierId,event,carrier.UserId,0)
 	destroyRelicInstance(relic)
 end
@@ -475,7 +479,7 @@ function RelicService.StoreCarriedRelic(carrier: Player, location: any?): boolea
 	local event = if loc and type(loc.FloorId) == "number" and loc.FloorId > 0 then "EXTRACT_SAFE_ZONE" else "EXTRACT_PRIVATE"
 	CarrierToRelic[carrier] = nil
 	ActiveRelics[relic.RelicId] = nil
-	awardRelicPayout(carrier, spec, 1, relic.RewardMultiplier, relic.GemMultiplier)
+	awardRelicPayout(carrier, spec, 1, relic.RewardMultiplier, relic.GemMultiplier, relic.OriginalOwnerUserId ~= 0 and relic.OriginalOwnerUserId ~= carrier.UserId)
 	Tower.BroadcastAt(RelicStateRemote, relic, relic.RelicId, relic.TierId, event, carrier.UserId, 0)
 	destroyRelicInstance(relic)
 	return true

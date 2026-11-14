@@ -477,6 +477,10 @@ local function createDefaultPlayerProfile(): PlayerProfile
 	catioHero.EquippedArtifactUUID = f4_UUID
 	f4_Art.EquippedHeroUUID = catioUUID
 
+	-- Only a brand-new profile starts the first-session funnel clock (OnboardingFunnel).
+	local onboarding = Onboarding.NewState()
+	onboarding.FirstJoinAt = os.time()
+
 	return {
 		SchemaVersion = ProfileMigrations.CurrentSchema,
 		PitMaterials = {
@@ -520,7 +524,7 @@ local function createDefaultPlayerProfile(): PlayerProfile
 			GodsBlessing = createDefaultFacility(0),
 		},
 		FortressTree = FortressTree.DefaultTree(),
-		Onboarding = Onboarding.NewState(),
+		Onboarding = onboarding,
 		Unlocks = { Summon = true },
 		HighestClearedBiomeBoss = 0,
 		HighestClearedFloor = 0,
@@ -2127,6 +2131,11 @@ end
 -- Onboarding events reported by systems outside DataManager (tower floor clears).
 function DataManager.ReportProgress(player: Player, eventName: string, detail: (string | number)?)
 	OnboardingService.Report(player, eventName, detail)
+end
+
+-- First-session funnel milestones that are not guide events (OnboardingFunnel).
+function DataManager.ReportMilestone(player: Player, name: string)
+	OnboardingService.Milestone(player, name)
 end
 
 function DataManager.IsUnlocked(player: Player, key: string): boolean

@@ -72,4 +72,10 @@ for _, id in Chain do table.insert(ordered, Lessons[id]) end
 for _, id in { "Bank", "Upgrade", "Promotion", "Market", "TrainingGrounds", "GodsBlessing", "Raid" } do table.insert(ordered, Lessons[id]) end
 GuideConfig.Ordered = table.freeze(ordered)
 
+-- Onboarding experiment arms (docs/first-session-and-social-plan.md, A1). A new profile's arm is
+-- picked once, on its first join, from the "OnboardingArm" experience config (ConfigService), and
+-- saved so the player never changes arms mid-onboarding. Profiles without an arm use DefaultArm.
+GuideConfig.Arms = table.freeze({ control = true, v1 = true, v2 = true })
+GuideConfig.DefaultArm = "v2"
+
 return table.freeze(GuideConfig)
