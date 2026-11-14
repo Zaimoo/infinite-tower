@@ -499,7 +499,7 @@ Archetypes define a hero's **combat role, base stats, attack cadence, range, lab
 
 ### 4.2a The Pit: Synthesis, Promotion & Soul Essence
 The Pit (`PitService`, `PitBalanceConfig`, `PitMath`) holds the Synthesis Chamber and the Promotion Altar.
-- **Synthesis:** feed up to 100 donor heroes into a recipient. A donor is worth $100 	imes 3^{(E_{\star}-1)} + 25 	imes L$ EXP, where $E_{\star}$ is its effective star (Stars + Rarity − 1, capped at 7). Over-levelled donors lose efficiency (2.5% per level past a 5-level grace, never below 55%). Donors at 5★ effective or higher ask for confirmation.
+- **Synthesis:** feed up to 100 donor heroes into a recipient. A donor is worth $100 	imes 3^{(E_{\star}-1)} + 25 	imes L$ EXP, where $E_{\star}$ is its effective star (Stars + Rarity − 1, capped at 7). Over-levelled donors lose efficiency (2.5% per level past a 5-level grace, never below 55%). Donors at 5★ effective or higher ask for confirmation. Synthesis costs **1 Gold per EXP applied** (rounded up, at least 50 Gold; EXP lost over the cap is not charged), set by `PitBalanceConfig.Synthesis.GoldPerXP` / `MinimumGold` and computed by `PitMath.GetSynthesisGoldCost`. The Synthesize button and the footer show the cost, and the server refuses the synthesis without enough Gold.
 - **Promotion** (Gold and Promotion Stones; the hero must be at Lv. 10 of its star):
 
   | Step | Gold | Promotion Stones |

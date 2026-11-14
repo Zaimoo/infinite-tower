@@ -279,6 +279,9 @@ function PitService:Build(profile: any, request: any): (any, any)
 			after.SynthesisHistory.DonorsConsumed = (after.SynthesisHistory.DonorsConsumed or 0) + #preview.Donors
 			after.SynthesisHistory.XPGained = (after.SynthesisHistory.XPGained or 0) + xp.Applied
 			preview.XP, preview.Overflow, preview.After = xp, overflow, Math.Snapshot(after, profile)
+			-- Synthesis costs Gold for the EXP it applies (EXP lost over the cap is not charged).
+			local gold = Math.GetSynthesisGoldCost(xp.Applied)
+			if gold > 0 then preview.Costs = { Gold = gold } end
 			staged.Heroes[recipient.UUID] = after
 		end
 	elseif action == "CONVERSION" then
