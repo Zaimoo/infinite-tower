@@ -1788,6 +1788,23 @@ end
 
 function Forge:BuildSummonRevealModal(gui: ScreenGui)
 	self.Reveal = SummonReveal.new(gui)
+	task.spawn(function()
+		local remotes = ReplicatedStorage:WaitForChild("Remotes", 10)
+		local progression = remotes and remotes:WaitForChild("ProgressionRemotes", 10)
+		local anvilReveal = progression and progression:WaitForChild("AnvilReveal", 10)
+		if anvilReveal and anvilReveal:IsA("RemoteEvent") then
+			anvilReveal.OnClientEvent:Connect(function(summonedList: any)
+				if type(summonedList) == "table" and #summonedList > 0 then
+					self:ShowAnvilResults(summonedList)
+				end
+			end)
+		end
+	end)
+end
+
+-- Plays the Gilded Anvil reveal (no Gold Summon Again buttons).
+function Forge:ShowAnvilResults(summonedList: { any })
+	self.Reveal:Play(summonedList, true, {})
 end
 
 -- `ownedBefore`: artifact templates owned before the pull (for the NEW badge).

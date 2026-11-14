@@ -41,6 +41,8 @@ local GrimoireSummonButton = require(Shared:WaitForChild("Util"):WaitForChild("G
 local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormulas"))
 local HeroCatalog = require(Shared:WaitForChild("Config"):WaitForChild("HeroCatalog"))
 local ArtifactCatalog = require(Shared:WaitForChild("Config"):WaitForChild("ArtifactCatalog"))
+local WeaponVfxConfig = require(Shared:WaitForChild("Config"):WaitForChild("WeaponVfxConfig"))
+local StatBalance = require(Shared:WaitForChild("Config"):WaitForChild("StatBalance"))
 
 local SummonReveal = {}
 SummonReveal.__index = SummonReveal
@@ -88,6 +90,7 @@ type Item = {
 	New: boolean,
 	Hero: any?,
 	ArtifactTemplateId: string?,
+	Gildforged: boolean?,
 	Ladder: { Color3 }, -- colours the charge climbs through, ending on Color (Emphasis + 1 steps)
 }
 
@@ -130,6 +133,24 @@ local function describe(raw: any, isArtifact: boolean, isNew: boolean): Item
 		local info = ArtifactCatalog.GetRarityInfo(raw.Rarity or 1)
 		local rarity = info.Index
 		local star = math.clamp(raw.Star or 1, 1, 7)
+		if ArtifactCatalog.IsGildforged(raw.TemplateId) then
+			local gildGold = Color3.fromRGB(255, 214, 102)
+			local vfxColor = WeaponVfxConfig.GetProfile(raw.TemplateId, rarity).Color:Lerp(gildGold, 0.35)
+			return {
+				Ladder = { Fx.Hot, Color3.fromRGB(255, 195, 70), vfxColor },
+				Name = raw.DisplayName or "Artifact",
+				Color = vfxColor,
+				TierName = "GILDFORGED · " .. string.upper(info.Name) .. string.format("  ·  %d★", star),
+				Stars = star,
+				Icon = WEAPON_ICON[raw.Type or ""] or "Forge",
+				ArtifactTemplateId = raw.TemplateId,
+				Gildforged = true,
+				Kind = (string.gsub(raw.Type or "WEAPON", "_", " & ")),
+				Sub = string.format("Gildforged  ·  Power %s", StatBalance.Format(math.round((ArtifactCatalog.CalculateEffectiveStats(star, rarity, nil, raw.TemplateId))))),
+				Emphasis = 2,
+				New = isNew,
+			}
+		end
 		local starColor = ARTIFACT_STAR_COLOR[math.min(star, 5)]
 		local emphasis = math.max(
 			if rarity >= 6 then 2 elseif rarity >= 4 then 1 else 0,
@@ -614,10 +635,11 @@ function SummonReveal.Tease(self: any, run: number, items: { Item }): boolean
 		forge.Hammer.Rotation = Fx.HammerRaised
 		forge.Ingot.Size = Fx.IngotSize
 		forge.SetHeat(Fx.Cold, 0)
-		forge.SetHeat(Fx.Hot:Lerp(best.Color, hint), 0.6)
+		forge.SetHeat(if best.Gildforged then Color3.fromRGB(255, 214, 96) else Fx.Hot:Lerp(best.Color, hint), 0.6)
 		forge.Scale.Scale = 0
 		tween(forge.Scale, 0.45, { Scale = 0.85 }, Enum.EasingStyle.Back)
-		self.TeaseLabel.Text = if best.Emphasis == 2 then "The anvil rings with a blinding heat…"
+		self.TeaseLabel.Text = if best.Gildforged then "The Gilded Anvil rings with molten gold…"
+			elseif best.Emphasis == 2 then "The anvil rings with a blinding heat…"
 			elseif best.Emphasis == 1 then "The forge burns bright…"
 			else "The forge stirs…"
 	else
@@ -755,11 +777,16 @@ function SummonReveal.ForgeCharge(self: any, run: number, item: Item, reduced: b
 		if not self:Wait(run, 0.08) then return false end
 		-- Impact.
 		forge.SetHeat(color, 0.12)
-		UIFeel.Burst(self.Stage, CENTER, color:Lerp(Fx.Hot, 0.35), 8 + 4 * i, Z + 8, 110 + 40 * i)
-		Fx.Ring(self.Stage, CENTER, color, Z + 3, 60, 260 + 60 * i, 0.4)
+		if item.Gildforged then
+			UIFeel.Burst(self.Stage, CENTER, Color3.fromRGB(255, 226, 120), 14 + 6 * i, Z + 9, 170 + 50 * i)
+			Fx.Ring(self.Stage, CENTER, Color3.fromRGB(255, 214, 96), Z + 4, 80, 320 + 70 * i, 0.48)
+		else
+			UIFeel.Burst(self.Stage, CENTER, color:Lerp(Fx.Hot, 0.35), 8 + 4 * i, Z + 8, 110 + 40 * i)
+			Fx.Ring(self.Stage, CENTER, color, Z + 3, 60, 260 + 60 * i, 0.4)
+		end
 		self:Sfx("SummonPulse", 0.9 + i * 0.12)
 		UIFeel.Haptic(if item.Emphasis > 0 then "Notify" else "Click")
-		if last and item.Emphasis > 0 then self:ShowRays(item.Color, 1.6) end
+		if last and item.Emphasis > 0 then self:ShowRays(if item.Gildforged then Color3.fromRGB(255, 216, 108) else item.Color, if item.Gildforged then 1.8 else 1.6) end
 		if not reduced then
 			ingot.Size = UDim2.fromOffset(134, 16)
 			tween(ingot, 0.25, { Size = Fx.IngotSize }, Enum.EasingStyle.Back)
