@@ -167,6 +167,14 @@ WeaponVfxConfig.Elements = table.freeze({
 		Wisps = true,
 		Sparks = true,
 	}),
+	STAR_ORBIT = table.freeze({
+		PrimaryColor = Color3.fromRGB(255, 212, 95),
+		AccentColor = Color3.fromRGB(62, 118, 230),
+		ParticleTexture = "",
+		TrailTexture = "",
+		Wisps = true,
+		Sparks = true,
+	}),
 } :: { [ElementType]: ElementStyle })
 
 -- Specific mapping for Bows and future weapon types
@@ -272,6 +280,7 @@ WeaponVfxConfig.ArtifactElements = table.freeze({
 	art_gild_eclipse_sisters = "ECLIPSE",
 	art_gild_aurora_skyhook = "AURORA",
 	art_gild_wyrmheart_cleaver = "DRAGONFIRE",
+	art_gild_ninth_sky_orrery = "STAR_ORBIT",
 } :: { [string]: ElementType })
 
 local GILDED_ARTIFACTS: { [string]: boolean } = table.freeze({
@@ -279,6 +288,7 @@ local GILDED_ARTIFACTS: { [string]: boolean } = table.freeze({
 	art_gild_eclipse_sisters = true,
 	art_gild_aurora_skyhook = true,
 	art_gild_wyrmheart_cleaver = true,
+	art_gild_ninth_sky_orrery = true,
 })
 
 -- Balanced particle & lighting rates: punchy, radiant anime VFX accents with clear gameplay presence
