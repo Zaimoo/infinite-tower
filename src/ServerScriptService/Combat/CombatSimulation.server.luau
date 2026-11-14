@@ -94,10 +94,11 @@ local function getDataManager(): any
 	return _G.DataManager
 end
 
--- Training Grounds multiplier, reduced by Rift Attunement when a hero out-powers what its Master's highest floor allows.
-local function attunedMultiplier(player: Player, profile: any, hero: any, artifact: any?): number
+-- Training Grounds multipliers for ATK and HP, each reduced by Rift Attunement when a hero out-powers what its Master's
+-- highest floor allows. Damage and HP are capped apart, so a huge weapon never shrinks the hero's HP.
+local function attunedMultiplier(player: Player, profile: any, hero: any, artifact: any?): (number, number)
 	local training = getDataManager().GetTrainingMultiplier and getDataManager().GetTrainingMultiplier(player) or 1.0
-	return StatFormulas.GetAttunedMultiplier(hero, artifact, training, StatFormulas.GetAttunementCap(profile.MaxFloorReached))
+	return StatFormulas.GetAttunedMultipliers(hero, artifact, training, StatFormulas.GetAttunementCap(profile.MaxFloorReached))
 end
 
 --============================================================================
@@ -471,8 +472,8 @@ function CombatSimulation.RefreshPlayerHeroStats(player: Player)
 	for uuid, simHero in pairs(state.DeployedHeroes) do
 		local hero = profile.Heroes[uuid]
 		if hero then
-			local trainingMult = attunedMultiplier(player, profile, hero, StatFormulas.GetEquippedArtifact(profile,hero))
-			local atk, hp, _, interval = StatFormulas.GetEffectiveCombatStats(hero, false, false, StatFormulas.GetEquippedArtifact(profile,hero), trainingMult)
+			local atkMult, hpMult = attunedMultiplier(player, profile, hero, StatFormulas.GetEquippedArtifact(profile,hero))
+			local atk, hp, _, interval = StatFormulas.GetEffectiveCombatStats(hero, false, false, StatFormulas.GetEquippedArtifact(profile,hero), atkMult, hpMult)
 			metadataChanged = metadataChanged or simHero.Level ~= hero.Level or simHero.Stars ~= hero.Stars or simHero.MaxHP ~= hp
 			simHero.Level, simHero.Stars = hero.Level, hero.Stars
 			simHero.EffectiveATK, simHero.MaxHP, simHero.AttackInterval = atk, hp, interval
@@ -541,8 +542,8 @@ function CombatSimulation.RebuildPlayerSquad(player: Player)
 	for uuid, slotIndex in pairs(desiredUUIDs) do
 		local heroData = profile.Heroes[uuid]
 		local artifact = heroData.EquippedArtifactUUID and profile.Artifacts and profile.Artifacts[heroData.EquippedArtifactUUID]
-		local trainingMult = attunedMultiplier(player, profile, heroData, artifact)
-		local effATK, effHP, _, effInterval = StatFormulas.GetEffectiveCombatStats(heroData, false, false, artifact, trainingMult)
+		local atkMult, hpMult = attunedMultiplier(player, profile, heroData, artifact)
+		local effATK, effHP, _, effInterval = StatFormulas.GetEffectiveCombatStats(heroData, false, false, artifact, atkMult, hpMult)
 		local existing = masterState.DeployedHeroes[uuid]
 		if existing then
 			rosterChanged=rosterChanged or existing.SlotIndex~=slotIndex
@@ -1239,13 +1240,14 @@ local function startDuel(owner: Player, contest: LootDuel.Contest?): (boolean, s
 			-- Rift Attunement in a duel: both squads are held to the lower of the two Masters' caps, so a premium
 			-- squad cannot simply out-power a Master who has climbed less. Restored from Saved when the duel ends.
 			local tick = math.ceil(math.max(TICK_INTERVAL, h.AttackInterval) / TICK_INTERVAL - 1e-10) * TICK_INTERVAL
-			local power = 10 * (h.EffectiveATK / tick) + h.MaxHP
-			if power > duelCap then
-				local f = duelCap / power
-				h.EffectiveATK = math.max(1, math.round(h.EffectiveATK * f))
-				h.MaxHP = math.max(1, math.round(h.MaxHP * f))
+			-- Damage and HP are capped apart (StatFormulas.SplitAttunement), as in the tower.
+			local atkF, hpF = StatFormulas.SplitAttunement(10 * (h.EffectiveATK / tick), h.MaxHP, duelCap,
+				StatFormulas.GetAttunementHPShare(h.TemplateId))
+			if atkF < 1 or hpF < 1 then
+				h.EffectiveATK = math.max(1, math.round(h.EffectiveATK * atkF))
+				h.MaxHP = math.max(1, math.round(h.MaxHP * hpF))
 				h.BaseMaxHP = h.MaxHP
-				h.CurrentHP = math.min(h.MaxHP, math.max(1, math.round(h.CurrentHP * f)))
+				h.CurrentHP = math.min(h.MaxHP, math.max(1, math.round(h.CurrentHP * hpF)))
 			else
 				h.BaseMaxHP = h.MaxHP
 			end
@@ -2336,8 +2338,8 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 		local currentHero = profile and profile.Heroes[simHero.HeroUUID]
 		if currentHero then
 			local artifact = StatFormulas.GetEquippedArtifact(profile, currentHero)
-			local trainingMult = attunedMultiplier(simHero.Owner, profile, currentHero, artifact)
-			local effATK, effHP, _, interval = StatFormulas.GetEffectiveCombatStats(currentHero, false, false, artifact, trainingMult)
+			local atkMult, hpMult = attunedMultiplier(simHero.Owner, profile, currentHero, artifact)
+			local effATK, effHP, _, interval = StatFormulas.GetEffectiveCombatStats(currentHero, false, false, artifact, atkMult, hpMult)
 			simHero.AttackInterval = interval
 			simHero.EffectiveATK = effATK
 			simHero.BaseMaxHP = effHP

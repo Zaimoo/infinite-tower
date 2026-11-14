@@ -160,7 +160,8 @@ end
 
 -- Canonical four-stat snapshot. Legacy base fields are never multiplied again.
 -- trainingMultiplier: from The Training Grounds (GDD Section 4.3.2.C)
-function StatFormulas.GetCombatSnapshot(hero: any, artifact: any?, inOverdrive: boolean?, _inBloodPact: boolean?, trainingMultiplier: number?): any
+-- hpMultiplier: optional separate HP factor (Rift Attunement caps ATK and HP apart); defaults to trainingMultiplier.
+function StatFormulas.GetCombatSnapshot(hero: any, artifact: any?, inOverdrive: boolean?, _inBloodPact: boolean?, trainingMultiplier: number?, hpMultiplier: number?): any
  local seed=HeroCatalog.Seeds[hero.TemplateId]
  local stars=B.Integer(hero.Stars,1,PitBalanceConfig.MaxStars) and hero.Stars or 1
  local level=StatFormulas.GetEffectiveLevel(stars,hero.Level)
@@ -172,7 +173,7 @@ function StatFormulas.GetCombatSnapshot(hero: any, artifact: any?, inOverdrive: 
  local baseATK,baseHP=(seed and seed.BaseATK_1Star or 35)*quality*growth,(seed and seed.BaseHP_1Star or 280)*quality*growth
  if seed and (seed :: any).Mirror then baseHP,baseATK=StatFormulas.GetMirrorBase(hero) end
  local damage=math.round(baseATK*(1+power/B.WeaponPowerDivisor)*mult)
- local health=math.round(baseHP*mult)
+ local health=math.round(baseHP*(hpMultiplier or mult))
  local baseInterval=seed and seed.AttackInterval or hero.AttackInterval or 1
  local interval=math.max(.2,baseInterval/(1+speed))
  local tickInterval=B.ScheduledInterval(interval)
@@ -202,17 +203,33 @@ function StatFormulas.GetAttunementCap(maxFloorReached: number?): number
  end
  return (attunementCaps :: { number })[floor]
 end
--- The ATK/HP multiplier to apply for one hero: the Training Grounds multiplier, reduced if the hero would exceed `cap`.
--- GetHeroPower scales linearly with this multiplier, so a single factor caps damage and health together and keeps the kit.
-function StatFormulas.GetAttunedMultiplier(hero: any, artifact: any?, trainingMultiplier: number?, cap: number?): number
- local mult=trainingMultiplier or 1
- if not cap then return mult end
- local power=StatFormulas.GetHeroPower(hero,artifact,mult)
- if power<=cap or power<=0 then return mult end
- return mult*cap/power
+-- HP's share of a hero's power from its own archetype shape (seed HP, ATK and interval, before weapon and training).
+function StatFormulas.GetAttunementHPShare(templateId: string?): number
+ local seed=templateId and HeroCatalog.Seeds[templateId]
+ local h,a=seed and seed.BaseHP_1Star or 280,seed and seed.BaseATK_1Star or 35
+ local dmg=10*a/B.ScheduledInterval(seed and seed.AttackInterval or 1)
+ return if dmg+h>0 then h/(dmg+h) else .5
 end
-function StatFormulas.GetEffectiveCombatStats(hero: any, inBloodPact: boolean?, inOverdrive: boolean?, artifact: any?, trainingMultiplier: number?): (number,number,number,number)
- local v=StatFormulas.GetCombatSnapshot(hero,artifact,inOverdrive,inBloodPact,trainingMultiplier)
+-- Splits `cap` between the damage term (10 x DPS) and HP so one inflated stat never drains the other. Each side gets
+-- the hero's archetype share of the cap, and whatever one side does not use flows to the other. Returns the factors to
+-- apply to ATK and HP (1 and 1 when under the cap). The attuned power still lands exactly on the cap.
+function StatFormulas.SplitAttunement(damagePower: number, hp: number, cap: number?, hpShare: number): (number, number)
+ if not cap or damagePower+hp<=cap or damagePower+hp<=0 then return 1,1 end
+ local hpBudget,dmgBudget=cap*hpShare,cap*(1-hpShare)
+ if hp<hpBudget then dmgBudget=cap-hp elseif damagePower<dmgBudget then hpBudget=cap-damagePower end
+ return (if damagePower>0 then math.min(1,dmgBudget/damagePower) else 1),(if hp>0 then math.min(1,hpBudget/hp) else 1)
+end
+-- The ATK and HP multipliers to apply for one hero: the Training Grounds multiplier, each reduced if the hero would
+-- exceed `cap`. Damage and HP are capped apart (SplitAttunement), so a huge weapon cannot shrink the hero's HP.
+function StatFormulas.GetAttunedMultipliers(hero: any, artifact: any?, trainingMultiplier: number?, cap: number?): (number, number)
+ local mult=trainingMultiplier or 1
+ if not cap then return mult,mult end
+ local v=StatFormulas.GetCombatSnapshot(hero,artifact,false,false,mult)
+ local atkF,hpF=StatFormulas.SplitAttunement(10*v.AttackDamage/v.TickInterval,v.Health,cap,StatFormulas.GetAttunementHPShare(hero.TemplateId))
+ return mult*atkF,mult*hpF
+end
+function StatFormulas.GetEffectiveCombatStats(hero: any, inBloodPact: boolean?, inOverdrive: boolean?, artifact: any?, trainingMultiplier: number?, hpMultiplier: number?): (number,number,number,number)
+ local v=StatFormulas.GetCombatSnapshot(hero,artifact,inOverdrive,inBloodPact,trainingMultiplier,hpMultiplier)
  return v.AttackDamage,v.Health,v.DPS,v.AttackInterval
 end
 function StatFormulas.GetEffectiveLabor(hero: any, targetFacilityAssignment: string?): number

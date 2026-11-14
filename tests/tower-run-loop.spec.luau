@@ -302,21 +302,52 @@ test("Phase 6: Rift Attunement caps one hero's tower power by the Master's highe
 		MaxFloorReached = 10, SquadPower = 3 * cap10, SquadPowerByHero = { a = 2.5 * cap10, b = 0.5 * cap10 },
 	}) == 1.5 * cap10, "the selector counts each deployed hero at their own capped power")
 	assert(raw > cap10, string.format("a Mythical pull must exceed what floor 10 allows: raw %d cap10 %d", raw, cap10))
-	local mult = StatFormulas.GetAttunedMultiplier(astrea, weapon, 1, cap10)
-	assert(mult < 1 and mult > 0, "mult " .. tostring(mult))
-	-- One factor scales ATK and HP together, landing the hero exactly on the cap and keeping its attack speed.
-	local attuned = StatFormulas.GetHeroPower(astrea, weapon, mult)
-	assert(math.abs(attuned - cap10) / cap10 < 0.001, string.format("attuned %d vs cap %d", attuned, cap10))
+	local atkMult, hpMult = StatFormulas.GetAttunedMultipliers(astrea, weapon, 1, cap10)
+	assert(atkMult < 1 and atkMult > 0 and hpMult <= 1 and hpMult > 0, string.format("mults %s %s", atkMult, hpMult))
+	-- ATK and HP get their own factors, landing the hero exactly on the cap and keeping its attack speed.
 	local full = StatFormulas.GetCombatSnapshot(astrea, weapon, false, false, 1)
-	local capped = StatFormulas.GetCombatSnapshot(astrea, weapon, false, false, mult)
+	local capped = StatFormulas.GetCombatSnapshot(astrea, weapon, false, false, atkMult, hpMult)
+	local attuned = 10 * capped.AttackDamage / capped.TickInterval + capped.Health
+	assert(math.abs(attuned - cap10) / cap10 < 0.001, string.format("attuned %d vs cap %d", attuned, cap10))
 	assert(capped.AttackInterval == full.AttackInterval and capped.AttackSpeed == full.AttackSpeed)
-	assert(math.abs(capped.Health / full.Health - mult) < 1e-3 and math.abs(capped.AttackDamage / full.AttackDamage - mult) < 1e-3)
+	assert(math.abs(capped.Health / full.Health - hpMult) < 1e-3 and math.abs(capped.AttackDamage / full.AttackDamage - atkMult) < 1e-3)
 	-- Heroes under the cap are untouched, and the starter pair is under floor 1's cap.
 	local catio = { TemplateId = "hero_catio", Stars = 1, Level = 1, QualityScalar = 1, Rarity = 3, ComaUntilTimestamp = 0 }
-	assert(StatFormulas.GetAttunedMultiplier(catio, { Star = 1, Rarity = 1, TemplateId = "art_miner_pickaxe" }, 1.2, StatFormulas.GetAttunementCap(1)) == 1.2)
-	assert(StatFormulas.GetAttunedMultiplier(astrea, weapon, 1.2, nil) == 1.2, "no cap means no change")
+	local ca, ch = StatFormulas.GetAttunedMultipliers(catio, { Star = 1, Rarity = 1, TemplateId = "art_miner_pickaxe" }, 1.2, StatFormulas.GetAttunementCap(1))
+	assert(ca == 1.2 and ch == 1.2)
+	local na, nh = StatFormulas.GetAttunedMultipliers(astrea, weapon, 1.2, nil)
+	assert(na == 1.2 and nh == 1.2, "no cap means no change")
 	-- Labor is not capped: the effective labor formula does not take the cap at all.
 	assert(StatFormulas.GetEffectiveLabor(astrea, "FACILITY_GUARD_POST") > 0)
+end)
+
+
+test("Rift Attunement caps damage and HP apart, so a huge weapon cannot shrink a hero's HP", function()
+	local split = StatFormulas.SplitAttunement
+	-- Both over budget: each side lands on its own share of the cap.
+	local a, h = split(9000, 3000, 1000, 0.4)
+	assert(math.abs(9000 * a - 600) < 1e-6 and math.abs(3000 * h - 400) < 1e-6)
+	-- Weapon-inflated damage with modest HP: HP keeps its full value and damage takes the rest of the cap.
+	a, h = split(1e9, 200, 1000, 0.4)
+	assert(h == 1 and math.abs(1e9 * a - 800) < 1e-6, "HP is untouched when only damage is over budget")
+	-- HP-heavy hero: damage is untouched and HP takes the rest.
+	a, h = split(100, 5000, 1000, 0.4)
+	assert(a == 1 and math.abs(5000 * h - 900) < 1e-6)
+	-- Under the cap: no change.
+	a, h = split(300, 300, 1000, 0.4)
+	assert(a == 1 and h == 1)
+	-- A real hero with a top weapon keeps far more HP than one shared factor would have left it.
+	local astrea = { TemplateId = "hero_astrea", Stars = 1, Level = 1, QualityScalar = 1, Rarity = 7, ComaUntilTimestamp = 0 }
+	local weapon = { Star = 7, Rarity = 8, TemplateId = "art_hunters_shortbow" }
+	local cap = StatFormulas.GetAttunementCap(8)
+	local full = StatFormulas.GetCombatSnapshot(astrea, weapon, false, false, 1)
+	local power = 10 * full.AttackDamage / full.TickInterval + full.Health
+	assert(power > cap * 10, "the weapon must push the hero far over the cap")
+	local _, hpMult = StatFormulas.GetAttunedMultipliers(astrea, weapon, 1, cap)
+	local share = StatFormulas.GetAttunementHPShare("hero_astrea")
+	assert(share > 0 and share < 1)
+	assert(full.Health * hpMult >= math.min(full.Health, cap * share) - 1, "HP keeps its archetype share of the cap")
+	assert(full.Health * hpMult > full.Health * (cap / power) * 5, "much more HP than the old single factor")
 end)
 
 
