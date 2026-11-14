@@ -108,7 +108,6 @@ HeroCombatMovement.MAX_HEIGHT_GAP = 11.0 -- AttackTimeline.Contains ignores targ
 -- Vanguards and Berserkers hold their ground and take the hit; the rest step out of telegraphs.
 -- When Signatures or several Elites' Specials come closer together than the dodge cooldown, a
 -- hero whose dodge is spent takes the next one: with the Vanguard down, camps and bosses can kill the squad.
-local PROFILES: { [string]: Profile } = {
 -- The Striker, the most agile, sets the floor; every other archetype waits longer between dodges.
 HeroCombatMovement.EVADE_COOLDOWN_MIN = 8.5
 local PROFILES: { [string]: Profile } = {
