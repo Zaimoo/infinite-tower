@@ -7854,6 +7854,16 @@ type GildedSpec = {
 }
 
 local GILDED_SPECS: { [string]: GildedSpec } = {
+	art_gild_dawnwarden_oath = {
+		Type = "SWORD_SHIELD",
+		GripPos = Vector3.zero,
+		GripRotDeg = EDGE_PLUS_X,
+		TipPos = Vector3.new(0, 5.20, 0),
+		BasePos = Vector3.new(0, 0.74, 0),
+		CorePos = Vector3.new(0, 2.75, 0),
+		TrailTopPos = Vector3.new(0, 5.15, 0),
+		TrailBottomPos = Vector3.new(0, 0.85, 0),
+	},
 }
 
 local gildedMeshPartCache: { [string]: MeshPart } = {}
@@ -8236,6 +8246,10 @@ function WeaponModelBuilder.CloneOrBuildPrefab(prefabName: string): Model?
 	return nil
 end
 
+function WeaponModelBuilder.BuildDawnwardenOath(): Model
+	return buildGildedWeapon("art_gild_dawnwarden_oath", GILDED_SPECS.art_gild_dawnwarden_oath)
+end
+
 
 
 
@@ -8350,6 +8364,8 @@ function WeaponModelBuilder.EnsureWeapons(): (Folder, { [string]: Model })
 		art_chronos_stave = WeaponModelBuilder.BuildChronosStaveArtifact,
 		art_eye_of_singularity = WeaponModelBuilder.BuildEyeOfSingularityArtifact,
 		art_omega_archon_caduceus = WeaponModelBuilder.BuildOmegaArchonCaduceusArtifact,
+		-- The Gilded Anvil (Tier 8 Gildforged)
+		art_gild_dawnwarden_oath = WeaponModelBuilder.BuildDawnwardenOath,
 		weapon_daggers = WeaponModelBuilder.BuildDaggers,
 		weapon_axe = WeaponModelBuilder.BuildAxe,
 		weapon_staff = WeaponModelBuilder.BuildStaff,

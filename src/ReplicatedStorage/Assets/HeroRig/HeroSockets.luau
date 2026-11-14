@@ -122,6 +122,8 @@ HeroSockets.PREFABS = table.freeze({
 	art_divine_providence = "art_divine_providence",
 	art_akashic_records = "art_akashic_records",
 	art_book_of_primordial_genesis = "art_book_of_primordial_genesis",
+	-- The Gilded Anvil (Tier 8 Gildforged)
+	art_gild_dawnwarden_oath = "art_gild_dawnwarden_oath",
 } :: { [string]: string })
 
 HeroSockets.SOCKETS = table.freeze({

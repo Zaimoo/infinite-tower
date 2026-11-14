@@ -142,6 +142,7 @@ end
 local MeshesFolder = (script.Parent :: Instance):WaitForChild("GildedAnvilMeshes")
 
 GildedAnvilMeshData.Weapons = {
+	art_gild_dawnwarden_oath = unpackWeapon(MeshesFolder:WaitForChild("art_gild_dawnwarden_oath")),
 } :: { [string]: { PartMeshSpec } }
 
 return GildedAnvilMeshData

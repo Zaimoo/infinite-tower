@@ -1159,6 +1159,25 @@ local Seeds: { [string]: ArtifactSeed } = {
 		ModelAssetId = "art_book_of_primordial_genesis",
 		Description = "Transcendent scripture of life itself, written in eternal light that resurrects fallen allies and grants immortality.",
 	},
+
+	-- ------------------------------------------------------------------------
+	-- THE GILDED ANVIL (6 Tier-8 Transcendent Gildforged Weapons, 1 per Archetype)
+	-- ------------------------------------------------------------------------
+	art_gild_dawnwarden_oath = {
+		TemplateId = "art_gild_dawnwarden_oath",
+		DisplayName = "Dawnwarden's Oath",
+		Type = "SWORD_SHIELD",
+		RarityTier = 8,
+		IsHighStat = false,
+		Variant = "Gildforged",
+		VisualElement = "SUNLIGHT",
+		StatMultiplier = 1.00,
+		SpeedBonusAdditive = 0.000,
+		BaseATK = 10000,
+		BaseHP = 0,
+		ModelAssetId = "art_gild_dawnwarden_oath",
+		Description = "White-gold longsword sworn to a kite shield whose sun-disc boss rises and sets in the hand of its bearer.",
+	},
 }
 ArtifactCatalog.Seeds = Seeds
 for _, seed in pairs(Seeds) do
