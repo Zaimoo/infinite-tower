@@ -1238,6 +1238,21 @@ local Seeds: { [string]: ArtifactSeed } = {
 		ModelAssetId = "art_gild_ninth_sky_orrery",
 		Description = "Gilded staff crowned by a living armillary sphere: three gold rings turning around a captured star and its moons.",
 	},
+	art_gild_evergarden_codex = {
+		TemplateId = "art_gild_evergarden_codex",
+		DisplayName = "Evergarden Codex",
+		Type = "TOME",
+		RarityTier = 8,
+		IsHighStat = false,
+		Variant = "Gildforged",
+		VisualElement = "BLOOM",
+		StatMultiplier = 1.00,
+		SpeedBonusAdditive = 0.000,
+		BaseATK = 10000,
+		BaseHP = 0,
+		ModelAssetId = "art_gild_evergarden_codex",
+		Description = "Living tome bound in white bark and gold filigree, its leaf-pages turning on their own and breathing blossoms.",
+	},
 }
 ArtifactCatalog.Seeds = Seeds
 for _, seed in pairs(Seeds) do

@@ -7905,6 +7905,16 @@ local GILDED_SPECS: { [string]: GildedSpec } = {
 		TrailTopPos = Vector3.new(0, 3.55, 0),
 		TrailBottomPos = Vector3.new(0, 2.02, 0),
 	},
+	art_gild_evergarden_codex = {
+		Type = "TOME",
+		GripPos = Vector3.new(0, -1.025, -0.05),
+		GripRotDeg = Vector3.new(0, 0, 90),
+		TipPos = Vector3.new(0, 0.90, 0),
+		BasePos = Vector3.new(0, 0.34, 0),
+		CorePos = Vector3.new(0, 0.72, 0),
+		TrailTopPos = Vector3.new(0, 0.96, 0),
+		TrailBottomPos = Vector3.new(0, 0.34, 0),
+	},
 }
 
 local gildedMeshPartCache: { [string]: MeshPart } = {}
@@ -8307,6 +8317,10 @@ function WeaponModelBuilder.BuildNinthSkyOrrery(): Model
 	return buildGildedWeapon("art_gild_ninth_sky_orrery", GILDED_SPECS.art_gild_ninth_sky_orrery)
 end
 
+function WeaponModelBuilder.BuildEvergardenCodex(): Model
+	return buildGildedWeapon("art_gild_evergarden_codex", GILDED_SPECS.art_gild_evergarden_codex)
+end
+
 
 
 
@@ -8427,6 +8441,7 @@ function WeaponModelBuilder.EnsureWeapons(): (Folder, { [string]: Model })
 		art_gild_aurora_skyhook = WeaponModelBuilder.BuildAuroraSkyhook,
 		art_gild_wyrmheart_cleaver = WeaponModelBuilder.BuildWyrmheartCleaver,
 		art_gild_ninth_sky_orrery = WeaponModelBuilder.BuildNinthSkyOrrery,
+		art_gild_evergarden_codex = WeaponModelBuilder.BuildEvergardenCodex,
 		weapon_daggers = WeaponModelBuilder.BuildDaggers,
 		weapon_axe = WeaponModelBuilder.BuildAxe,
 		weapon_staff = WeaponModelBuilder.BuildStaff,
