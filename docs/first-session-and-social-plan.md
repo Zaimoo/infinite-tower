@@ -209,6 +209,8 @@ Work in this order:
 4. **Catio's own idle**, so he doesn't stand in the default axe stance on the bench or at the Guard Post.
 5. **The other low-tier heroes** only if they still look flat after step 1.
 
+**Done:** steps 1 and 2 (generic Basic and Move for every weapon; Aeli's own Basic and Special), checked on posed rigs in Studio and by the clip specs.
+
 Steps 2–4 use the `hero-creation` skill (animations, grip, Studio check). Step 1 needs a Studio check of every weapon type, both walking and attacking, including on heroes that only override some states. The changes are art, not flow, so they ship to every A1 arm at once. Note the ship date against the baseline week so a change in feel isn't mistaken for an onboarding effect.
 
 **Files:** `HeroClips.luau` (`ByWeapon` and `Overrides`), `HeroAnimator.luau` if new markers are needed, `tests/hero-rig.spec.luau`.

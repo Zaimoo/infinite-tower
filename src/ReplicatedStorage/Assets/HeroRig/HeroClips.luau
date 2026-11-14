@@ -1013,7 +1013,12 @@ end
 -- height (shoulder + elbow pitch near 90 keeps the stave upright), the right hand forward at
 -- the string as if calling the wind to the arrow, chin a little down. Canopy's Wrath drops her
 -- to one knee with the bow raised to the sky; she draws, looses the seed-arrow straight up,
--- holds a wide follow-through and rises. Basic and Special use the bow clips.
+-- holds a wide follow-through and rises.
+-- Leafwind Arrow (Basic) keeps her narrow ranger's feet: a quick snap to the aim, a short draw,
+-- and on the loose her draw hand opens out and up past her shoulder like a leaf on the wind.
+-- Thornbriar Volley (Special, a shot that pierces a line) is a power shot: she steps her left
+-- foot through and drops side-on, holds a long full draw, then looses with her whole body
+-- thrusting after the arrow and holds the line it flew down.
 do
 	local p = WeaponPoses.BOW
 	local kneel: Pose = { LeftHip = { 70, 0, -6 }, RightHip = { -20, 0, 6 }, LeftKnee = { -80, 0, 0 }, RightKnee = { -95, 0, 0 }, LeftAnkle = { 10, 0, 0 }, RightAnkle = { 70, 0, 0 }, RootOffset = { 0, -0.75, 0 } }
@@ -1026,8 +1031,55 @@ do
 		RightHip = { 8, -8, 2 }, RightKnee = { -14, 0, 0 }, RightAnkle = { 6, 0, -2 },
 		RootOffset = { 0, -0.04, 0 },
 	}
+	-- Her stance's legs, so the Basic keeps her footing.
+	local rangerLegs: Pose = {
+		LeftHip = ranger.LeftHip, LeftKnee = ranger.LeftKnee, LeftAnkle = ranger.LeftAnkle,
+		RightHip = ranger.RightHip, RightKnee = ranger.RightKnee, RightAnkle = ranger.RightAnkle,
+		RootOffset = ranger.RootOffset,
+	}
+	local snapAim = merge(merge(p.Aim, rangerLegs), { Waist = { 0, -14, 2 }, Neck = { -4, 14, -2 } })
+	local shortDraw = merge(merge(p.Drawn, rangerLegs), { Waist = { 2, -16, 2 }, Neck = { -4, 16, -2 }, RightShoulder = { 88, 30, -12 }, RightElbow = { 146, 0, 0 } })
+	local leafLoose = merge(merge(p.Release, rangerLegs), {
+		Waist = { -2, -12, 0 }, Neck = { -4, 12, 0 }, LeftShoulder = { 98, 0, 0 },
+		RightShoulder = { 90, 20, 40 }, RightElbow = { 20, 0, 0 },
+	})
+	-- The open hand keeps rising after the loose (picked by eye from candidates in Studio).
+	local leafHeld = merge(leafLoose, { LeftShoulder = { 95, 0, 0 }, RightShoulder = { 112, 10, 36 }, RightElbow = { 24, 0, 0 } })
+	-- Side-on lunge for the power shot: left foot through, weight dropped onto it.
+	local braced: Pose = {
+		LeftHip = { 50, 0, -12 }, LeftKnee = { -58, 0, 0 }, LeftAnkle = { 10, 0, 0 },
+		RightHip = { -28, 0, 12 }, RightKnee = { -12, 0, 0 }, RightAnkle = { 30, 0, 0 },
+		RootOffset = { 0, -0.4, -0.14 },
+	}
+	local stepIn = merge(merge(p.Aim, braced), { Waist = { -4, -38, 0 }, Neck = { 0, 34, 0 } })
+	local heavyDraw = merge(merge(p.Drawn, braced), {
+		Waist = { 4, -42, 0 }, Neck = { -2, 38, 0 }, LeftShoulder = { 92, 0, 0 },
+		RightShoulder = { 86, 36, -16 }, RightElbow = { 155, 0, 0 },
+	})
+	local thornLoose = merge(merge(p.Release, braced), {
+		Waist = { -14, -34, 0 }, Neck = { 8, 30, 0 }, LeftShoulder = { 100, 0, 0 },
+		RightShoulder = { 60, 50, -42 }, RightElbow = { 100, 0, 0 }, RootOffset = { 0, -0.46, -0.32 },
+	})
+	local thornHeld = merge(thornLoose, { Waist = { -12, -32, 0 }, RightShoulder = { 56, 52, -46 }, RightElbow = { 94, 0, 0 }, RootOffset = { 0, -0.44, -0.3 } })
 	Overrides.hero_aeli = {
 		Idle = breathe(ranger, 3.6),
+		-- Release and Nock match the shared bow clips, so her hits land on the same beat.
+		AttackBasic = signature(0.8, {
+			{ 0, ranger },
+			{ 0.22, snapAim },
+			{ 0.6, shortDraw },
+			{ 0.72, leafLoose, true },
+			{ 0.88, leafHeld },
+			{ 1, ranger },
+		}, { Release = 0.72, Nock = 0.9 }),
+		AttackSpecial = signature(0.95, {
+			{ 0, ranger },
+			{ 0.2, stepIn },
+			{ 0.62, heavyDraw },
+			{ 0.78, thornLoose, true },
+			{ 0.9, thornHeld },
+			{ 1, ranger },
+		}, { Release = 0.78, Nock = 0.9 }),
 		AttackSkill = signature(1.1, {
 			{ 0, p.Carry },
 			{ 0.28, skyKneel },
