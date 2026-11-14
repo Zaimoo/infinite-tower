@@ -10,8 +10,12 @@
 --   - weapon_staff (Scholar staves: Ruby Staff, Archmage Scepter)
 --   - weapon_tome (Healer tomes: Pyromancer Tome, Eldritch Grimoire)
 
+local AssetService = game:GetService("AssetService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
+
+local GildedAnvilMeshData = require(script.Parent:WaitForChild("GildedAnvilMeshData"))
 
 local WeaponModelBuilder = {}
 
@@ -5245,7 +5249,9 @@ function WeaponModelBuilder.Style(wModel: Model, weaponAssetId: string?, rarityI
 
 	-- Subtle accent rune glow for Exalted+ weapons (rarity >= 5), applied ONLY to dedicated micro-pip parts.
 	-- Main staves, limbs, blades, wings, rings, and crystals retain their physical materials.
-	if rarityIndex and rarityIndex >= 5 then
+	-- Gildforged (The Gilded Anvil) weapons preserve their sculpted bespoke element palettes.
+	local isGildforged = wModel:GetAttribute("IsGildforged") == true or (weaponAssetId ~= nil and GildedAnvilMeshData.Weapons[weaponAssetId] ~= nil)
+	if not isGildforged and rarityIndex and rarityIndex >= 5 then
 		local Shared = ReplicatedStorage:FindFirstChild("Shared")
 		local ArtifactCatalog = Shared and require(Shared:WaitForChild("Config"):WaitForChild("ArtifactCatalog")) :: any
 		local rInfo = ArtifactCatalog and ArtifactCatalog.GetRarityInfo(rarityIndex)
@@ -7832,6 +7838,404 @@ function WeaponModelBuilder.BuildBookOfPrimordialGenesisArtifact(): Model
 	return makeMeshTome("art_book_of_primordial_genesis")
 end
 
+-- ============================================================================
+-- THE GILDED ANVIL (6 Gildforged Tier-8 Transcendent Weapons from Blender)
+-- ============================================================================
+type GildedSpec = {
+	Type: string,
+	GripPos: Vector3,
+	GripRotDeg: Vector3?,
+	OffhandGripPos: Vector3?,
+	TipPos: Vector3,
+	BasePos: Vector3,
+	CorePos: Vector3,
+	TrailTopPos: Vector3?,
+	TrailBottomPos: Vector3?,
+}
+
+local GILDED_SPECS: { [string]: GildedSpec } = {
+}
+
+local gildedMeshPartCache: { [string]: MeshPart } = {}
+-- Studio's 3D importer turns every uploaded Gilded Anvil mesh 180° about +Y relative to the Blender export
+-- (X and Z negated, checked against the shard vertices). Parts loaded from a MeshId undo that turn;
+-- EditableMesh fallback parts are built straight from the shard and need no correction.
+local GILDED_IMPORTER_FIX = CFrame.Angles(0, math.pi, 0)
+local gildedLocalModelCache: { [string]: Model } = {}
+
+function WeaponModelBuilder.IsGildedTemplate(templateId: string?): boolean
+	return type(templateId) == "string" and GildedAnvilMeshData.Weapons[templateId] ~= nil
+end
+
+local function createGildedMeshPart(cacheKey: string, spec: GildedAnvilMeshData.PartMeshSpec, size: Vector3, doubleSided: boolean, meshId: string?): BasePart
+	local targetSize = if size.Magnitude > 0.001
+		then Vector3.new(math.max(0.02, size.X), math.max(0.02, size.Y), math.max(0.02, size.Z))
+		else Vector3.new(0.04, 0.04, 0.04)
+
+	local cachedMp = gildedMeshPartCache[cacheKey]
+	if cachedMp then
+		local cloned = cachedMp:Clone()
+		pcall(function()
+			cloned.DoubleSided = doubleSided
+		end)
+		cloned.Size = targetSize
+		return cloned
+	end
+
+	if type(meshId) == "string" and meshId ~= "" then
+		local okAsset, assetMp = pcall(function(): any
+			local mp = AssetService:CreateMeshPartAsync(Content.fromUri(meshId))
+			mp.DoubleSided = doubleSided
+			mp.Size = targetSize
+			mp:SetAttribute("GildUploadedMesh", true)
+			return mp
+		end)
+		if okAsset and assetMp then
+			gildedMeshPartCache[cacheKey] = assetMp
+			return assetMp:Clone()
+		end
+		local directMp = Instance.new("MeshPart")
+		local okAssign = pcall(function()
+			(directMp :: any).MeshId = meshId
+		end)
+		if okAssign then
+			pcall(function()
+				directMp.DoubleSided = doubleSided
+			end)
+			directMp.Size = targetSize
+			gildedMeshPartCache[cacheKey] = directMp
+			return directMp:Clone()
+		end
+		directMp:Destroy()
+	end
+
+	-- Fallback: no uploaded MeshId (or it failed to load), so rebuild the sculpt from the packed shard geometry.
+	local ok, resultPart = pcall(function(): any
+		local verts, tris = GildedAnvilMeshData.GetGeometry(spec)
+		local em = AssetService:CreateEditableMesh()
+		local vertCount = #verts // 3
+		local vPos = table.create(vertCount)
+		local vIds = table.create(vertCount)
+		for idx = 1, vertCount do
+			local base = (idx - 1) * 3
+			local pos = Vector3.new(verts[base + 1], verts[base + 2], verts[base + 3])
+			vPos[idx] = pos
+			vIds[idx] = em:AddVertex(pos)
+		end
+
+		local normX = table.create(vertCount, 0)
+		local normY = table.create(vertCount, 0)
+		local normZ = table.create(vertCount, 0)
+		for i = 1, #tris, 3 do
+			local i1, i2, i3 = tris[i], tris[i + 1], tris[i + 2]
+			local p1, p2, p3 = vPos[i1], vPos[i2], vPos[i3]
+			if p1 and p2 and p3 then
+				local c = (p2 - p1):Cross(p3 - p1)
+				normX[i1] += c.X
+				normY[i1] += c.Y
+				normZ[i1] += c.Z
+				normX[i2] += c.X
+				normY[i2] += c.Y
+				normZ[i2] += c.Z
+				normX[i3] += c.X
+				normY[i3] += c.Y
+				normZ[i3] += c.Z
+			end
+		end
+
+		local nIds = table.create(vertCount)
+		for idx = 1, vertCount do
+			local nx, ny, nz = normX[idx], normY[idx], normZ[idx]
+			local len = math.sqrt(nx * nx + ny * ny + nz * nz)
+			local nVec = if len > 1e-6 then Vector3.new(nx / len, ny / len, nz / len) else Vector3.yAxis
+			nIds[idx] = em:AddNormal(nVec)
+		end
+
+		for i = 1, #tris, 3 do
+			local i1, i2, i3 = tris[i], tris[i + 1], tris[i + 2]
+			local a, b, c = vIds[i1], vIds[i2], vIds[i3]
+			if a and b and c then
+				local triId = em:AddTriangle(a, b, c)
+				local na, nb, nc = nIds[i1], nIds[i2], nIds[i3]
+				if na and nb and nc then
+					pcall(function()
+						em:SetFaceNormals(triId, { na, nb, nc })
+					end)
+				end
+			end
+		end
+
+		local mp = AssetService:CreateMeshPartAsync(Content.fromObject(em))
+		pcall(function()
+			em:Destroy()
+		end)
+		pcall(function()
+			mp.DoubleSided = doubleSided
+		end)
+		mp.Size = targetSize
+		gildedMeshPartCache[cacheKey] = mp
+		return mp:Clone()
+	end)
+	if ok and resultPart then
+		return resultPart
+	end
+
+	local fallback = Instance.new("Part")
+	fallback.Size = targetSize
+	return fallback
+end
+
+local function setWeaponSpaceAttachment(primary: BasePart, attName: string, weaponPos: Vector3, rotDeg: Vector3?): Attachment
+	local rot = rotDeg or Vector3.zero
+	local worldCF = CFrame.new(weaponPos) * CFrame.Angles(math.rad(rot.X), math.rad(rot.Y), math.rad(rot.Z))
+	local existing = primary:FindFirstChild(attName)
+	if existing then
+		existing:Destroy()
+	end
+	local att = Instance.new("Attachment")
+	att.Name = attName
+	att.CFrame = primary.CFrame:ToObjectSpace(worldCF)
+	att.Parent = primary
+	return att
+end
+
+-- Loads every uploaded mesh of a Gildforged weapon at once (CreateMeshPartAsync yields per call, so one at a
+-- time took 5-8 s a weapon) and fills gildedMeshPartCache. Yields until all of them have answered.
+local function prefetchGildedMeshes(templateId: string)
+	local meshList = GildedAnvilMeshData.Weapons[templateId]
+	if not meshList then
+		return
+	end
+	local pending = 0
+	for idx, pData in ipairs(meshList) do
+		local cacheKey = `{templateId}::{pData.Name}::{idx}`
+		local meshId = pData.MeshId
+		if not gildedMeshPartCache[cacheKey] and type(meshId) == "string" and meshId ~= "" then
+			pending += 1
+			task.spawn(function()
+				local ok, mp = pcall(function(): any
+					return AssetService:CreateMeshPartAsync(Content.fromUri(meshId))
+				end)
+				if ok and mp and not gildedMeshPartCache[cacheKey] then
+					mp:SetAttribute("GildUploadedMesh", true)
+					gildedMeshPartCache[cacheKey] = mp
+				end
+				pending -= 1
+			end)
+		end
+	end
+	local deadline = os.clock() + 20
+	while pending > 0 and os.clock() < deadline do
+		task.wait()
+	end
+end
+
+-- Warms the mesh cache for all six Gildforged weapons in parallel (call once from a client or server bootstrap).
+function WeaponModelBuilder.PreloadGildedMeshes()
+	for templateId in pairs(GildedAnvilMeshData.Weapons) do
+		task.spawn(prefetchGildedMeshes, templateId)
+	end
+end
+
+local function buildGildedWeapon(templateId: string, spec: GildedSpec?): Model
+	prefetchGildedMeshes(templateId)
+	local meshList = GildedAnvilMeshData.Weapons[templateId]
+	assert(meshList, `No GildedAnvilMeshData entry for {templateId}`)
+	local resolvedSpec = spec or GILDED_SPECS[templateId]
+	assert(resolvedSpec, `No GILDED_SPECS entry for {templateId}`)
+
+	local model = Instance.new("Model")
+	model.Name = templateId
+	model:SetAttribute("IsGildforged", true)
+	model:SetAttribute("WeaponTemplateId", templateId)
+
+	local offhandShieldModel: Model? = nil
+	local leftDaggerModel: Model? = nil
+	local hunterArrowModel: Model? = nil
+
+	if templateId == "art_gild_dawnwarden_oath" then
+		offhandShieldModel = Instance.new("Model")
+		offhandShieldModel.Name = "OffhandShield"
+		offhandShieldModel.Parent = model
+	elseif templateId == "art_gild_eclipse_sisters" then
+		leftDaggerModel = Instance.new("Model")
+		leftDaggerModel.Name = "LeftDagger"
+		leftDaggerModel.Parent = model
+	elseif templateId == "art_gild_aurora_skyhook" then
+		hunterArrowModel = Instance.new("Model")
+		hunterArrowModel.Name = "HunterArrow"
+		hunterArrowModel.Parent = model
+	end
+
+	local animRecords: { { Part: BasePart, AssemblyPrimaryName: string, Role: string, PivotOffset: Vector3 } } = {}
+	local partAssemblyPrimary: { [BasePart]: string } = {}
+	local primaries: { [string]: BasePart } = {}
+
+	for idx, pData in ipairs(meshList) do
+		local cacheKey = `{templateId}::{pData.Name}::{idx}`
+		local p = createGildedMeshPart(cacheKey, pData, pData.Size, pData.DoubleSided == true, pData.MeshId)
+		p.Name = pData.Name
+		local rotDeg = pData.RotDeg or Vector3.zero
+		p.CFrame = CFrame.new(pData.Offset)
+			* CFrame.Angles(math.rad(rotDeg.X), math.rad(rotDeg.Y), math.rad(rotDeg.Z))
+			* (if p:GetAttribute("GildUploadedMesh") then GILDED_IMPORTER_FIX else CFrame.identity)
+		p.Material = pData.Material or Enum.Material.Metal
+		p.Color = pData.Color or Color3.fromRGB(245, 192, 72)
+		p.Transparency = if templateId == "art_gild_evergarden_codex" and pData.Name == "Handle"
+			then 1
+			else (pData.Transparency or 0)
+		p.CanCollide = false
+		p.CanTouch = false
+		p.CanQuery = false
+		p.Massless = true
+		p.Anchored = false
+		p.CastShadow = false
+
+		local subCol = pData.SubCollection or ""
+		local primaryKey = "Main"
+		if subCol == "OffhandShield" and offhandShieldModel then
+			p.Parent = offhandShieldModel
+			primaryKey = "OffhandShield"
+			if pData.Name == "HandleS" then
+				offhandShieldModel.PrimaryPart = p
+				primaries.OffhandShield = p
+			end
+		elseif subCol == "LeftDagger" and leftDaggerModel then
+			p.Parent = leftDaggerModel
+			primaryKey = "LeftDagger"
+			if pData.Name == "HandleL" then
+				leftDaggerModel.PrimaryPart = p
+				primaries.LeftDagger = p
+			end
+		elseif subCol == "HunterArrow" and hunterArrowModel then
+			p.Parent = hunterArrowModel
+			primaryKey = "Main"
+		else
+			p.Parent = model
+			primaryKey = "Main"
+			if pData.Name == "Handle" then
+				model.PrimaryPart = p
+				primaries.Main = p
+			end
+		end
+
+		partAssemblyPrimary[p] = primaryKey
+		if pData.AnimRole and pData.AnimRole ~= "" then
+			p:SetAttribute("GildAnimRole", pData.AnimRole)
+			table.insert(animRecords, {
+				Part = p,
+				AssemblyPrimaryName = primaryKey,
+				Role = pData.AnimRole,
+				PivotOffset = pData.PivotOffset or pData.Offset,
+			})
+		end
+	end
+
+	local animByPart: { [BasePart]: { Role: string, PivotOffset: Vector3 } } = {}
+	for _, rec in ipairs(animRecords) do
+		animByPart[rec.Part] = { Role = rec.Role, PivotOffset = rec.PivotOffset }
+	end
+
+	local mainPrimary = primaries.Main
+	assert(mainPrimary, `Handle part missing for {templateId}`)
+
+	for part, key in pairs(partAssemblyPrimary) do
+		local root = primaries[key]
+		if root and part ~= root then
+			local animInfo = animByPart[part]
+			if animInfo then
+				local weld = Instance.new("Weld")
+				weld.Name = "GildAnimWeld_" .. part.Name
+				weld.Part0 = root
+				weld.Part1 = part
+				weld.C0 = root.CFrame:ToObjectSpace(CFrame.new(animInfo.PivotOffset))
+				weld.C1 = part.CFrame:ToObjectSpace(root.CFrame * weld.C0)
+				weld:SetAttribute("BaseC0", weld.C0)
+				weld:SetAttribute("GildAnimRole", animInfo.Role)
+				weld.Parent = root
+			else
+				weldTo(root, part)
+			end
+		end
+	end
+
+	-- Main assembly socket & VFX attachments (in weapon space mapped to Handle object space)
+	setWeaponSpaceAttachment(mainPrimary, "Grip", resolvedSpec.GripPos, resolvedSpec.GripRotDeg)
+	if resolvedSpec.OffhandGripPos then
+		setWeaponSpaceAttachment(mainPrimary, "OffhandGrip", resolvedSpec.OffhandGripPos, resolvedSpec.GripRotDeg)
+	end
+	if resolvedSpec.Type == "BOW" then
+		setWeaponSpaceAttachment(mainPrimary, "Nock", Vector3.new(ARROW_REST.X, ARROW_REST.Y, 0.50))
+		setWeaponSpaceAttachment(mainPrimary, "TipUpper", Vector3.new(0, 1.96, 0.50))
+		setWeaponSpaceAttachment(mainPrimary, "TipLower", Vector3.new(0, -1.96, 0.50))
+		setWeaponSpaceAttachment(mainPrimary, "BowStringTop", Vector3.new(0, 1.96, 0.50))
+		setWeaponSpaceAttachment(mainPrimary, "BowStringBottom", Vector3.new(0, -1.96, 0.50))
+	end
+	setWeaponSpaceAttachment(mainPrimary, "Tip", resolvedSpec.TipPos)
+	setWeaponSpaceAttachment(mainPrimary, "VfxTip", resolvedSpec.TipPos)
+	setWeaponSpaceAttachment(mainPrimary, "VfxBase", resolvedSpec.BasePos)
+	setWeaponSpaceAttachment(mainPrimary, "VfxCore", resolvedSpec.CorePos)
+	if resolvedSpec.TrailTopPos then
+		setWeaponSpaceAttachment(mainPrimary, "TrailTop", resolvedSpec.TrailTopPos)
+	end
+	if resolvedSpec.TrailBottomPos then
+		setWeaponSpaceAttachment(mainPrimary, "TrailBottom", resolvedSpec.TrailBottomPos)
+	end
+
+	if offhandShieldModel and primaries.OffhandShield then
+		local handleS = primaries.OffhandShield
+		setWeaponSpaceAttachment(handleS, "ShieldMount", Vector3.new(-0.18, 0, 0), Vector3.new(0, 90, 0))
+		setWeaponSpaceAttachment(handleS, "VfxShieldCenter", Vector3.new(-0.54, 0.24, 0))
+	end
+
+	if leftDaggerModel and primaries.LeftDagger then
+		local handleL = primaries.LeftDagger
+		setWeaponSpaceAttachment(handleL, "Grip", resolvedSpec.GripPos, resolvedSpec.GripRotDeg)
+		setWeaponSpaceAttachment(handleL, "Tip", Vector3.new(0, 2.52, 0))
+		setWeaponSpaceAttachment(handleL, "VfxTip", Vector3.new(0, 2.52, 0))
+		setWeaponSpaceAttachment(handleL, "VfxBase", Vector3.new(0, 0.46, 0))
+		setWeaponSpaceAttachment(handleL, "VfxCore", Vector3.new(0, 1.42, 0))
+		setWeaponSpaceAttachment(handleL, "TrailTop", Vector3.new(0, 2.48, 0))
+		setWeaponSpaceAttachment(handleL, "TrailBottom", Vector3.new(0, 0.48, 0))
+	end
+
+	-- Apply Gilded Band 6 VFX
+	local assets = ReplicatedStorage:FindFirstChild("Assets")
+	local combatVfx = assets and assets:FindFirstChild("CombatVfx")
+	local weaponVfxMod = combatVfx and combatVfx:FindFirstChild("WeaponVfx")
+	if weaponVfxMod then
+		local ok, WeaponVfx = pcall(require, weaponVfxMod)
+		if ok and WeaponVfx and WeaponVfx.Apply then
+			WeaponVfx.Apply(model, resolvedSpec.Type, 8, templateId)
+		end
+	end
+
+	return model
+end
+
+function WeaponModelBuilder.CloneOrBuildPrefab(prefabName: string): Model?
+	if WeaponModelBuilder.IsGildedTemplate(prefabName) then
+		-- On clients, always instantiate from a client-local EditableMesh cache so MeshContent stays valid across the client-server boundary.
+		if RunService:IsClient() then
+			local cached = gildedLocalModelCache[prefabName]
+			if not cached then
+				cached = buildGildedWeapon(prefabName, GILDED_SPECS[prefabName])
+				gildedLocalModelCache[prefabName] = cached
+			end
+			return cached:Clone()
+		end
+		return buildGildedWeapon(prefabName, GILDED_SPECS[prefabName])
+	end
+
+	local assets = ReplicatedStorage:FindFirstChild("Assets")
+	local weaponsFolder = assets and assets:FindFirstChild("Weapons")
+	local existing = weaponsFolder and weaponsFolder:FindFirstChild(prefabName)
+	if existing and existing:IsA("Model") then
+		return existing:Clone()
+	end
+	return nil
+end
+
 
 
 
@@ -8028,6 +8432,15 @@ function WeaponModelBuilder.CollectMeshIds(): { string }
 					seen[id] = true
 					table.insert(ids, id)
 				end
+			end
+		end
+	end
+	for _, parts in pairs(GildedAnvilMeshData.Weapons) do
+		for _, part in ipairs(parts) do
+			local id = (part :: any).MeshId
+			if type(id) == "string" and id ~= "" and not seen[id] then
+				seen[id] = true
+				table.insert(ids, id)
 			end
 		end
 	end

@@ -112,12 +112,24 @@ function ArtifactPreview.Show(host: GuiObject, templateId: string?, options: Pre
 	if current then current:Destroy() end
 	local seed = templateId and ArtifactCatalog.Seeds[templateId]
 	local assets = ReplicatedStorage:FindFirstChild("Assets")
-	local weapons = assets and assets:FindFirstChild("Weapons")
-	local source = seed and weapons and weapons:FindFirstChild(seed.ModelAssetId)
-	if not source or not source:IsA("Model") or not source:FindFirstChildWhichIsA("BasePart", true) then return false end
-
-	local model = source:Clone()
-	if not model then return false end
+	local model: Model? = nil
+	if seed and type(seed.ModelAssetId) == "string" then
+		local builderMod = assets and assets:FindFirstChild("WeaponModelBuilder")
+		if builderMod then
+			local ok, WeaponModelBuilder = pcall(require, builderMod)
+			if ok and WeaponModelBuilder and WeaponModelBuilder.IsGildedTemplate and WeaponModelBuilder.IsGildedTemplate(seed.ModelAssetId) then
+				model = WeaponModelBuilder.CloneOrBuildPrefab(seed.ModelAssetId)
+			end
+		end
+		if not model then
+			local weapons = assets and assets:FindFirstChild("Weapons")
+			local source = weapons and weapons:FindFirstChild(seed.ModelAssetId)
+			if source and source:IsA("Model") and source:FindFirstChildWhichIsA("BasePart", true) then
+				model = source:Clone()
+			end
+		end
+	end
+	if not model or not model:FindFirstChildWhichIsA("BasePart", true) then return false end
 	for _, object in model:GetDescendants() do
 		if object:IsA("LuaSourceContainer") or object:IsA("ParticleEmitter") or object:IsA("Trail") or object:IsA("Beam") then
 			object:Destroy()

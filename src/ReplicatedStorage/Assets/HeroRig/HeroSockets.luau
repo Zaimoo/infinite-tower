@@ -302,6 +302,11 @@ function HeroSockets.Equip(rig: Model, weapon: Model, weaponType: WeaponType): M
 	if scale and scale ~= 1 and weapon:GetAttribute("SocketScaled") ~= true then
 		weapon:ScaleTo(weapon:GetScale() * scale)
 		weapon:SetAttribute("SocketScaled", true)
+		for _, d in weapon:GetDescendants() do
+			if d:IsA("Weld") and d:GetAttribute("BaseC0") ~= nil then
+				d:SetAttribute("BaseC0", d.C0)
+			end
+		end
 	end
 
 	for _, socket in sockets do
