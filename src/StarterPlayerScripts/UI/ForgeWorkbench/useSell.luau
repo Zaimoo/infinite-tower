@@ -38,7 +38,7 @@ local function useSell(props: UseSellProps)
 	local snapshot = props.Snapshot
 
 	local function eligible(artifact: Artifact): boolean
-		return not artifact.Locked and #Model.ownerIds(snapshot, artifact.UUID) == 0
+		return not artifact.Locked and not Catalog.IsGildforged(artifact) and #Model.ownerIds(snapshot, artifact.UUID) == 0
 	end
 
 	local selectedIds: { string } = {}
@@ -52,7 +52,7 @@ local function useSell(props: UseSellProps)
 		if selected[artifact.UUID] and eligible(artifact) then
 			table.insert(selectedIds, artifact.UUID)
 			table.insert(selectedItems, artifact)
-			totalGold += Catalog.CalculateSellPrice(artifact.Rarity, artifact.Star)
+			totalGold += Catalog.CalculateSellPrice(artifact.Rarity, artifact.Star, artifact.TemplateId)
 			rarityCounts[artifact.Rarity] = (rarityCounts[artifact.Rarity] or 0) + 1
 			if artifact.Rarity > 2 then
 				hasRareOrBetter = true

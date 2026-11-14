@@ -1241,7 +1241,11 @@ function DataManager.SellArtifacts(player: Player, artifactUUIDs: { string }): (
 					DataManager.SendToast(player, string.format("Can't sell|%s is locked", art.DisplayName), "WARN")
 					return false, string.format("Cannot sell %s: weapon is locked", art.DisplayName), 0, 0
 				end
-				local price = ArtifactCatalog.CalculateSellPrice(art.Rarity or 1, art.Star or 1)
+				if ArtifactCatalog.IsGildforged(art) or (art.Rarity or 1) >= 8 then
+					DataManager.SendToast(player, string.format("Can't sell|%s is Gildforged", art.DisplayName), "WARN")
+					return false, string.format("Cannot sell %s: Gildforged weapons cannot be sold", art.DisplayName), 0, 0
+				end
+				local price = ArtifactCatalog.CalculateSellPrice(art.Rarity or 1, art.Star or 1, art.TemplateId)
 				totalGold += price
 				soldCount += 1
 				table.insert(toDelete, uuid)
