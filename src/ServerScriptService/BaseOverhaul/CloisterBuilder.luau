@@ -227,8 +227,8 @@ end
 -- Radius of the Wayfinder Dais plaza once scaled (PlazaRadius 36 x 1.5); paths end just under its curb.
 local DAIS_EDGE = 56
 
--- Hub-local garden paths as {x0, z0, x1, z1, width}: one from each plot landing straight to the dais, one
--- from the dais north through the Reflecting Pool, and last the Pilgrim's Way from the South Gate.
+-- Hub-local garden paths as {x0, z0, x1, z1, width}: one from each plot landing straight to the dais, and
+-- last the Pilgrim's Way from the South Gate. (HeroBridgePond rests directly on open meadow lawn without a dead-end north spoke.)
 local function gardenPaths(): { { number } }
 	local c = HubLayout.HubCentre
 	local list = {}
@@ -238,7 +238,6 @@ local function gardenPaths(): { { number } }
 		local len = math.sqrt(lx * lx + lz * lz)
 		table.insert(list, { lx, lz, lx / len * DAIS_EDGE, lz / len * DAIS_EDGE, CloisterBuilder.Config.PathWidth })
 	end
-	table.insert(list, { 0, -HubLayout.HubHalfZ + 30, 0, -DAIS_EDGE, CloisterBuilder.Config.PathWidth })
 	table.insert(list, { 0, HubLayout.HubHalfZ, 0, DAIS_EDGE, HubLayout.BoulevardWidth })
 	return list
 end

@@ -705,6 +705,50 @@ end
 
 -- Non-destructively upgrades any previously baked primitive trees/shrubs/grass in a Hub or
 -- Plot tree container once the Blender assets are imported into ReplicatedStorage.Assets.Environment.
+local function pruneDeadEndNorthPath(commons: Instance, hubBase: Vector3): number
+	local removed = 0
+	local gp = commons:FindFirstChild("GardenPaths")
+	if gp then
+		for _, child in ipairs(gp:GetChildren()) do
+			if child:IsA("BasePart") and child.Name == "GardenPath" then
+				local p = child.Position
+				if math.abs(p.X - hubBase.X) < 2 and p.Z < hubBase.Z - 50 and child.Size.X <= 20 then
+					child:Destroy()
+					removed += 1
+				end
+			end
+		end
+	end
+	local garden = commons:FindFirstChild("Garden")
+	if garden then
+		for _, child in ipairs(garden:GetChildren()) do
+			if child.Name:find("GothicLantern_Path_", 1, true) == 1 then
+				local pos = if child:IsA("Model") then child:GetPivot().Position
+					elseif child:IsA("BasePart") then child.Position
+					else nil
+				if pos and math.abs(pos.X - hubBase.X) < 12.5 and pos.Z < hubBase.Z - 50 then
+					child:Destroy()
+					removed += 1
+				end
+			end
+		end
+	end
+	local scatter = commons:FindFirstChild("CloisterTurfScatter")
+	if scatter then
+		local poolPos = Vector3.new(hubBase.X, 0, hubBase.Z - 160)
+		for _, child in ipairs(scatter:GetChildren()) do
+			local pos = if child:IsA("Model") then child:GetPivot().Position
+				elseif child:IsA("BasePart") then child.Position
+				else nil
+			if pos and ((Vector3.new(pos.X, 0, pos.Z) - poolPos).Magnitude < 42) then
+				child:Destroy()
+				removed += 1
+			end
+		end
+	end
+	return removed
+end
+
 function EnvironmentSpawner.UpgradeExistingScene(roots: { Instance }): number
 	local upgraded = 0
 	local rng = Random.new(404)
@@ -1013,6 +1057,7 @@ function EnvironmentSpawner.UpgradeExistingScene(roots: { Instance }): number
 			if surf and surf:IsA("BasePart") then
 				local surfTopY = surf.Position.Y + surf.Size.Y * 0.5
 				local hubBase = Vector3.new(surf.Position.X, surfTopY, surf.Position.Z)
+				upgraded += pruneDeadEndNorthPath(commons, hubBase)
 				local pondsFolder = commons:FindFirstChild("NaturalPonds")
 				for _, spec in ipairs(HUB_POND_SPECS) do
 					if EnvironmentSpawner.HasTemplate(spec.template) then
@@ -1069,8 +1114,11 @@ function EnvironmentSpawner.UpgradeExistingScene(roots: { Instance }): number
 										then Vector3.new(along, 0, lateral)
 										else Vector3.new(lateral, 0, along)
 									local wp = (desc.CFrame * CFrame.new(localOff)).Position
-									local turfCF = CFrame.new(wp.X, surfTopY, wp.Z)
-									EnvironmentSpawner.SpawnTurfClump(scatterFolder, turfCF, tRng:NextNumber(0.85, 1.20), tRng)
+									local poolDist = Vector2.new(wp.X - surf.Position.X, wp.Z - (surf.Position.Z - 160)).Magnitude
+									if poolDist >= 42 then
+										local turfCF = CFrame.new(wp.X, surfTopY, wp.Z)
+										EnvironmentSpawner.SpawnTurfClump(scatterFolder, turfCF, tRng:NextNumber(0.85, 1.20), tRng)
+									end
 								end
 							end
 						end
