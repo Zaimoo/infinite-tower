@@ -159,6 +159,14 @@ WeaponVfxConfig.Elements = table.freeze({
 		Wisps = true,
 		Sparks = true,
 	}),
+	DRAGONFIRE = table.freeze({
+		PrimaryColor = Color3.fromRGB(245, 175, 42),
+		AccentColor = Color3.fromRGB(220, 42, 42),
+		ParticleTexture = "",
+		TrailTexture = "",
+		Wisps = true,
+		Sparks = true,
+	}),
 } :: { [ElementType]: ElementStyle })
 
 -- Specific mapping for Bows and future weapon types
@@ -263,12 +271,14 @@ WeaponVfxConfig.ArtifactElements = table.freeze({
 	art_gild_dawnwarden_oath = "SUNLIGHT",
 	art_gild_eclipse_sisters = "ECLIPSE",
 	art_gild_aurora_skyhook = "AURORA",
+	art_gild_wyrmheart_cleaver = "DRAGONFIRE",
 } :: { [string]: ElementType })
 
 local GILDED_ARTIFACTS: { [string]: boolean } = table.freeze({
 	art_gild_dawnwarden_oath = true,
 	art_gild_eclipse_sisters = true,
 	art_gild_aurora_skyhook = true,
+	art_gild_wyrmheart_cleaver = true,
 })
 
 -- Balanced particle & lighting rates: punchy, radiant anime VFX accents with clear gameplay presence
