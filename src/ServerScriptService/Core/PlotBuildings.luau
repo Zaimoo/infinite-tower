@@ -13,9 +13,10 @@ local Architecture = require(script.Parent:WaitForChild("PlotFacilityArchitectur
 local OutskirtsBuilder = require(script.Parent:WaitForChild("OutskirtsEnvironmentBuilder"))
 local FacilityPresence = require(script.Parent:WaitForChild("FacilityPresence"))
 local StaticGeometry = require(script.Parent:WaitForChild("StaticGeometry"))
+local EnvironmentSpawner = require(script.Parent.Parent:WaitForChild("BaseOverhaul"):WaitForChild("EnvironmentSpawner"))
 local FacilityConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("FacilityConfig"))
 
-local VERSION = 34 -- 34: no dark smoke plume over the Blacksmith Forge chimney (33: Synthesis Chamber Cauldron & Lectern)
+local VERSION = 35 -- 35: Blender environment trees, shrubs, and PBR ground materials in Outskirts (34: no dark smoke plume over the Blacksmith Forge chimney)
 
 local function attachPrompt(
 	parent: Instance,
@@ -123,6 +124,7 @@ function Buildings.Build(plot: Instance)
 
 	-- 1. Build Eastern Forested Outskirts (28 layered conical pines, craggy rocks, winding Ground trail)
 	OutskirtsBuilder.Build(folder, origin)
+	EnvironmentSpawner.UpgradeExistingScene({ folder })
 
 	-- 2. Summoning Portal (Circular Stone Stargate in NW / Bridge-Right Quadrant)
 	local summonCfg = layout.SummoningPortal

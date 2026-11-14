@@ -26,9 +26,10 @@ local LightingAndEffects = require(BaseOverhaulFolder:WaitForChild("LightingAndE
 local CloisterBuilder = require(BaseOverhaulFolder:WaitForChild("CloisterBuilder"))
 local SharedLeaderboards = require(BaseOverhaulFolder:WaitForChild("SharedLeaderboards"))
 local GothicLanternSpawner = require(BaseOverhaulFolder:WaitForChild("GothicLanternSpawner"))
+local EnvironmentSpawner = require(BaseOverhaulFolder:WaitForChild("EnvironmentSpawner"))
 
 local HubOverhaul = {}
-HubOverhaul.Version = 27 -- Bump to force a rebuild of baked geometry (27: import GothicLanternPost, replace all hub/orchard/courtyard streetlamps)
+HubOverhaul.Version = 28 -- Bump to force a rebuild of baked geometry (28: Blender hyper-realistic trees, shrubs, turf clumps, and Cycles PBR ground MaterialVariants)
 
 -- Runtime cleanup sweep to destroy pre-baked light shaft beams, god-ray attachments, and SunRays
 function HubOverhaul.CleanupLightShaftsAndRays()
@@ -449,6 +450,7 @@ function HubOverhaul.Build(forceRebuild: boolean?): (Instance, boolean)
 		if not (zone and zone:IsA("Folder")) then
 			setupKillRespawnZone(baked)
 		end
+		EnvironmentSpawner.UpgradeExistingScene({ baked, plotsFolder })
 		mountLeaderboards(baked, plotsFolder)
 		-- Re-run the scenery pass so places baked before a StaticGeometry change pick it up without a rebake
 		StaticGeometry.Apply(baked)
@@ -510,6 +512,7 @@ function HubOverhaul.Build(forceRebuild: boolean?): (Instance, boolean)
 	-- 5. One shared Playtime + Power board pair in the Commons pavilion (replaces the per-plot copies)
 	mountLeaderboards(overhaulContainer, plotsFolder, rescued)
 
+	EnvironmentSpawner.UpgradeExistingScene({ overhaulContainer, plotsFolder })
 	StaticGeometry.Apply(overhaulContainer)
 	StaticGeometry.Apply(plotsFolder)
 	print("[BaseOverhaul] Cloister Commons + " .. Config.IslandCount .. " Floating Fortress Islands + Central Crimson Tower generated successfully.")
@@ -557,6 +560,7 @@ function HubOverhaul.StartRuntime(container: Instance, rebuilt: boolean)
 		-- Islands may have moved under buildings that PlotBuildingPlacement already placed
 		HubOverhaul.RebuildPlotBuildings()
 	end
+	EnvironmentSpawner.UpgradeExistingScene({ container, plotsFolder })
 	if rebuilt and _G.PlotManager and _G.PlotManager.TeleportPlayerToPlot then
 		for _, player in ipairs(Players:GetPlayers()) do
 			_G.PlotManager.TeleportPlayerToPlot(player)

@@ -332,6 +332,14 @@ end
 --============================================================================
 -- A. BAND, VOID EDGES AND ISLAND
 --============================================================================
+local cachedEnvSpawner: any = nil
+local function getEnvSpawner(): any
+	if not cachedEnvSpawner then
+		cachedEnvSpawner = require(script.Parent:WaitForChild("EnvironmentSpawner"))
+	end
+	return cachedEnvSpawner
+end
+
 local function buildGround(model: Model, root: CFrame, cfg: typeof(CloisterBuilder.Config), rng: Random): Part
 	local f = folder("Ground", model)
 	local hx, hz, r = HubLayout.HubHalfX, HubLayout.HubHalfZ, HubLayout.OuterCornerRadius
@@ -535,15 +543,20 @@ end
 local function buildOrchard(model: Model, name: string, o: CFrame, rng: Random)
 	local f = folder(name, model)
 	local i = 0
+	local envSpawner = getEnvSpawner()
 	for _, x in { -32, 32 } do
 		for _, z in { -22, 22 } do
 			i += 1
 			local t = o * CFrame.new(x + rng:NextNumber(-3, 3), 0, z + (if x > 0 then 11 else -11))
 			local scale = rng:NextNumber(0.9, 1.15)
-			makePart({ Name = "BlossomTrunk", Size = Vector3.new(1.6, 7 * scale, 1.6), CFrame = t * CFrame.new(0, 3.5 * scale, 0), Color = WOOD, Material = Enum.Material.Wood, Parent = f })
 			local blossom = if i % 2 == 0 then Color3.fromRGB(255, 183, 197) else Color3.fromRGB(250, 240, 245)
-			for j, b in { { 0, 8.5, 0, 9 }, { -2.4, 7.4, 1.2, 7 }, { 2.2, 7.6, -1.4, 6 } } do
-				makePart({ Name = "BlossomCanopy_" .. j, Shape = Enum.PartType.Ball, Size = Vector3.one * b[4] * scale, CFrame = t * CFrame.new(b[1] * scale, b[2] * scale, b[3] * scale), Color = blossom, Material = Enum.Material.SmoothPlastic, Decorative = true, Parent = f })
+			if envSpawner.HasTemplate("SakuraBlossomTree") then
+				envSpawner.SpawnSakura(f, t, scale, blossom, rng)
+			else
+				makePart({ Name = "BlossomTrunk", Size = Vector3.new(1.6, 7 * scale, 1.6), CFrame = t * CFrame.new(0, 3.5 * scale, 0), Color = WOOD, Material = Enum.Material.Wood, Parent = f })
+				for j, b in { { 0, 8.5, 0, 9 }, { -2.4, 7.4, 1.2, 7 }, { 2.2, 7.6, -1.4, 6 } } do
+					makePart({ Name = "BlossomCanopy_" .. j, Shape = Enum.PartType.Ball, Size = Vector3.one * b[4] * scale, CFrame = t * CFrame.new(b[1] * scale, b[2] * scale, b[3] * scale), Color = blossom, Material = Enum.Material.SmoothPlastic, Decorative = true, Parent = f })
+				end
 			end
 		end
 	end
@@ -574,6 +587,11 @@ local FLOWERS = { Color3.fromRGB(220, 90, 120), Color3.fromRGB(240, 210, 90), Co
 
 local function oakTree(parent: Instance, base: CFrame, rng: Random)
 	local s = rng:NextNumber(0.9, 1.25)
+	local envSpawner = getEnvSpawner()
+	if envSpawner.HasTemplate("HeroOakTree") then
+		envSpawner.SpawnOak(parent, base, s, rng)
+		return
+	end
 	makePart({ Name = "OakTrunk", Size = Vector3.new(2.2, 9, 2.2) * s, CFrame = base * CFrame.new(0, 4.5 * s, 0), Color = WOOD, Material = Enum.Material.Wood, Parent = parent })
 	for j, b in { { 0, 11, 0, 12 }, { -3.2, 9.6, 1.6, 9 }, { 3, 9.8, -1.8, 8.5 }, { 0.6, 13.6, 0.4, 8 } } do
 		makePart({ Name = "OakCanopy_" .. j, Shape = Enum.PartType.Ball, Size = Vector3.one * b[4] * s, CFrame = base * CFrame.new(b[1] * s, b[2] * s, b[3] * s), Color = OAK_LEAVES[(j % #OAK_LEAVES) + 1], Material = Enum.Material.Grass, Decorative = true, Parent = parent })
@@ -582,6 +600,11 @@ end
 
 local function pineTree(parent: Instance, base: CFrame, rng: Random)
 	local s = rng:NextNumber(0.9, 1.3)
+	local envSpawner = getEnvSpawner()
+	if envSpawner.HasTemplate("HighlandPineTree") then
+		envSpawner.SpawnPine(parent, base, s, rng)
+		return
+	end
 	makePart({ Name = "PineTrunk", Size = Vector3.new(1.6, 6, 1.6) * s, CFrame = base * CFrame.new(0, 3 * s, 0), Color = WOOD, Material = Enum.Material.Wood, Parent = parent })
 	for j, t in { { 5.5, 12 }, { 9, 9 }, { 12.2, 6 }, { 14.8, 3.2 } } do
 		cylinderY("PineTier_" .. j, t[2] * 0.5 * s, 3 * s, (t[1] + 1.5) * s, base, PINE_NEEDLES, Enum.Material.Grass, true, parent)
@@ -591,7 +614,12 @@ end
 local function flowerBed(parent: Instance, base: CFrame, color: Color3)
 	makePart({ Name = "BedKerb", Size = Vector3.new(14, 0.8, 7), CFrame = base * CFrame.new(0, 0.4, 0), Color = SLATE, Material = Enum.Material.Slate, Decorative = true, Parent = parent })
 	makePart({ Name = "FlowerBed", Size = Vector3.new(12.6, 1.1, 5.6), CFrame = base * CFrame.new(0, 0.6, 0), Color = color, Material = Enum.Material.Grass, Decorative = true, Parent = parent })
-	makePart({ Name = "BedShrub", Shape = Enum.PartType.Ball, Size = Vector3.new(3.4, 3.4, 3.4), CFrame = base * CFrame.new(0, 1.6, 0), Color = HEDGE, Material = Enum.Material.Grass, Decorative = true, Parent = parent })
+	local envSpawner = getEnvSpawner()
+	if envSpawner.HasTemplate("WildForestShrub") then
+		envSpawner.SpawnShrub(parent, base * CFrame.new(0, 0.9, 0), 0.95)
+	else
+		makePart({ Name = "BedShrub", Shape = Enum.PartType.Ball, Size = Vector3.new(3.4, 3.4, 3.4), CFrame = base * CFrame.new(0, 1.6, 0), Color = HEDGE, Material = Enum.Material.Grass, Decorative = true, Parent = parent })
+	end
 end
 
 -- Hub-local feature spots, {x, z, clearRadius}; the garden scatter keeps clear of them.

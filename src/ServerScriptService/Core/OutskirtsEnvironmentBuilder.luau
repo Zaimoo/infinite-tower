@@ -8,6 +8,23 @@
 local OutskirtsBuilder = {}
 
 local V = Vector3.new
+local cachedEnvSpawner: any = false
+
+local function getEnvSpawner(): any?
+	if cachedEnvSpawner ~= false then
+		return cachedEnvSpawner
+	end
+	local sss = script.Parent and script.Parent.Parent
+	local baseOverhaul = sss and sss:FindFirstChild("BaseOverhaul")
+	local mod = baseOverhaul and baseOverhaul:FindFirstChild("EnvironmentSpawner")
+	if mod and mod:IsA("ModuleScript") then
+		local ok, res = pcall(require, mod)
+		cachedEnvSpawner = if ok then res else nil
+	else
+		cachedEnvSpawner = nil
+	end
+	return cachedEnvSpawner
+end
 
 local function makePart(parent: Instance, name: string, size: Vector3, cf: CFrame, color: Color3, material: Enum.Material?, canCollide: boolean?): Part
 	local p = Instance.new("Part")
@@ -138,6 +155,13 @@ end
 
 -- Ancient Mountain Pine: Tapered conifer with leaning trunk, root flares, and multi-tier conical boughs
 local function buildHighlandPine(folder: Instance, origin: CFrame, localPos: Vector3, scale: number, leanYaw: number)
+	local envSpawner = getEnvSpawner()
+	if envSpawner and envSpawner.HasTemplate("HighlandPineTree") then
+		local rng = Random.new(math.abs(math.round(localPos.X * 13 + localPos.Z * 31)) + 1)
+		envSpawner.SpawnPine(folder, origin * CFrame.new(localPos) * CFrame.Angles(0, math.rad(leanYaw), 0), scale, rng)
+		return
+	end
+
 	local barkColor = Color3.fromRGB(58, 42, 28)
 	local pineNeedle1 = Color3.fromRGB(45, 75, 42)
 	local pineNeedle2 = Color3.fromRGB(52, 84, 48)
@@ -194,6 +218,13 @@ end
 
 -- Broadleaf Wilderness Oak: Sprawling canopy with gnarled branching limbs and multi-cluster foliage clouds
 local function buildWildernessOak(folder: Instance, origin: CFrame, localPos: Vector3, scale: number, rotationYaw: number)
+	local envSpawner = getEnvSpawner()
+	if envSpawner and envSpawner.HasTemplate("HeroOakTree") then
+		local rng = Random.new(math.abs(math.round(localPos.X * 17 + localPos.Z * 29)) + 7)
+		envSpawner.SpawnOak(folder, origin * CFrame.new(localPos) * CFrame.Angles(0, math.rad(rotationYaw), 0), scale, rng)
+		return
+	end
+
 	local woodColor = Color3.fromRGB(72, 52, 36)
 	local leafColor1 = Color3.fromRGB(60, 104, 52)
 	local leafColor2 = Color3.fromRGB(74, 122, 62)
@@ -245,6 +276,13 @@ end
 --============================================================================
 
 local function buildWildBush(folder: Instance, origin: CFrame, localPos: Vector3, scale: number, hasBerries: boolean)
+	local envSpawner = getEnvSpawner()
+	if envSpawner and envSpawner.HasTemplate("WildForestShrub") then
+		local rng = Random.new(math.abs(math.round(localPos.X * 23 + localPos.Z * 19)) + 13)
+		envSpawner.SpawnShrub(folder, origin * CFrame.new(localPos), scale, rng)
+		return
+	end
+
 	local bushColor = hasBerries and Color3.fromRGB(66, 112, 56) or Color3.fromRGB(78, 126, 64)
 
 	-- 4 Overlapping organic spheres for lush bush form
