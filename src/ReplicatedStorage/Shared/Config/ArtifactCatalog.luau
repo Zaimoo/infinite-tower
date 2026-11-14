@@ -1350,6 +1350,38 @@ local CatalogOrder: { string } = {
 }
 ArtifactCatalog.CatalogOrder = CatalogOrder
 
+ArtifactCatalog.AnvilOrder = table.freeze({
+	"art_gild_dawnwarden_oath",
+	"art_gild_eclipse_sisters",
+	"art_gild_aurora_skyhook",
+	"art_gild_wyrmheart_cleaver",
+	"art_gild_ninth_sky_orrery",
+	"art_gild_evergarden_codex",
+})
+
+ArtifactCatalog.AnvilBanner = table.freeze({
+	BannerId = "banner_gilded_anvil",
+	Title = "THE GILDED ANVIL",
+	Subtitle = "PREMIUM ARTIFACT BANNER",
+	RarityTier = 8,
+	RobuxOnly = true,
+	FocusChance = 0.40,
+	OffFocusChance = 0.12,
+	GuaranteeOnTenPull = true,
+	SparkPulls = 60,
+	RestrictedGemsPerPull = 135,
+	DefaultFocus = "SWORD_SHIELD",
+	Weapons = ArtifactCatalog.AnvilOrder,
+	WeaponByType = table.freeze({
+		SWORD_SHIELD = "art_gild_dawnwarden_oath",
+		DAGGERS = "art_gild_eclipse_sisters",
+		BOW = "art_gild_aurora_skyhook",
+		AXE = "art_gild_wyrmheart_cleaver",
+		STAFF = "art_gild_ninth_sky_orrery",
+		TOME = "art_gild_evergarden_codex",
+	}),
+})
+
 
 -- Structured lookup for gacha rolls: [tier][weaponType] = { Standard = seed, Enhanced = seed }
 local RosterByTierAndType: { [number]: { [WeaponType]: { Standard: ArtifactSeed, Enhanced: ArtifactSeed } } } = {}
