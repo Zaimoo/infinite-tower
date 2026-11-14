@@ -69,6 +69,7 @@ local ARTIFACT_STAR_COLOR: { [number]: Color3 } = {
 }
 
 export type Options = {
+	BannerId: string?, -- "CALL_OF_THE_RIFT" | "A_STARS_ARRIVAL" (tints tease & hero circle)
 	IsNew: ((raw: any) -> boolean)?, -- shows the NEW badge (first copy of a template)
 	OnAgain: ((count: number) -> any)?, -- results screen: SUMMON AGAIN x1 / x10
 	OnContinue: (() -> ())?, -- called when closing/continuing (reopens initial summon panel)
@@ -644,7 +645,10 @@ function SummonReveal.Tease(self: any, run: number, items: { Item }): boolean
 			else "The forge stirs…"
 	else
 		local orb, scale, circle = self.Orb, self.OrbScale, self.Circle
-		local color = Color3.new(1, 1, 1):Lerp(best.Color, hint)
+		local isStar = self.Options and self.Options.BannerId == "A_STARS_ARRIVAL"
+		local baseTint = if isStar then Color3.fromRGB(255, 224, 130) else Color3.new(1, 1, 1)
+		local circleBase = if isStar then Color3.fromRGB(255, 214, 110) else Fx.RiftBase
+		local color = baseTint:Lerp(best.Color, hint)
 		orb.Visible = true
 		orb.BackgroundTransparency = 0.2
 		orb.BackgroundColor3 = color
@@ -653,13 +657,19 @@ function SummonReveal.Tease(self: any, run: number, items: { Item }): boolean
 		tween(scale, 0.45, { Scale = 0.5 }, Enum.EasingStyle.Back)
 		circle.Root.Visible = true
 		circle.Fade(0.25, 0)
-		circle.SetColor(Fx.RiftBase:Lerp(best.Color, hint), 0)
+		circle.SetColor(circleBase:Lerp(best.Color, hint), 0)
 		self.SpinSpeed = 0.6 + 0.4 * best.Emphasis
 		circle.Scale.Scale = 0
 		tween(circle.Scale, 0.5, { Scale = 0.8 }, Enum.EasingStyle.Back)
-		self.TeaseLabel.Text = if best.Emphasis == 2 then "A blinding light answers your call…"
-			elseif best.Emphasis == 1 then "The rift shimmers…"
-			else "The rift stirs…"
+		if isStar then
+			self.TeaseLabel.Text = if best.Emphasis == 2 then "A blinding star answers your wish…"
+				elseif best.Emphasis == 1 then "Starlight gathers in the heavens…"
+				else "A faint star stirs…"
+		else
+			self.TeaseLabel.Text = if best.Emphasis == 2 then "A blinding light answers your call…"
+				elseif best.Emphasis == 1 then "The rift shimmers…"
+				else "The rift stirs…"
+		end
 	end
 	self.TeaseLabel.Visible = true
 	self.TeaseLabel.TextTransparency = 1
@@ -696,17 +706,20 @@ end
 -- pulls motes in, pulses the circle, throws a ring and spins faster.
 function SummonReveal.RiftCharge(self: any, run: number, item: Item, reduced: boolean): boolean
 	local orb, scale, circle = self.Orb, self.OrbScale, self.Circle
+	local isStar = self.Options and self.Options.BannerId == "A_STARS_ARRIVAL"
+	local startCircle = if isStar then Color3.fromRGB(255, 214, 110) else Fx.RiftBase
+	local startOrb = if isStar then Color3.fromRGB(255, 234, 165) else Color3.new(1, 1, 1)
 	self.Forge.Root.Visible = false
 	local carried = circle.Root.Visible -- still up from the tease or the previous card
 	circle.Root.Visible = true
 	circle.Fade(0, if carried then 0.2 else 0)
-	circle.SetColor(Fx.RiftBase, if carried then 0.2 else 0)
+	circle.SetColor(startCircle, if carried then 0.2 else 0)
 	self.SpinSpeed = 1
 	if not carried then circle.Scale.Scale = 0 end
 	tween(circle.Scale, 0.35, { Scale = 1 }, Enum.EasingStyle.Back)
 	orb.Visible = true
-	orb.BackgroundColor3 = Color3.new(1, 1, 1)
-	self.OrbHalo.Color = Color3.new(1, 1, 1)
+	orb.BackgroundColor3 = startOrb
+	self.OrbHalo.Color = startOrb
 	orb.BackgroundTransparency = 0
 	scale.Scale = 0.1
 	tween(scale, 0.3, { Scale = 0.55 }, Enum.EasingStyle.Back)
