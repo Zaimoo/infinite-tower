@@ -626,6 +626,9 @@ end
 local FEATURES = {
 	Dais = { 0, 0, 64 },
 	Pool = { 0, -160, 58 },
+	WaterfallPond = { 116, -176, 24 },
+	RockeryPond = { -52, 234, 22 },
+	StreamPond = { 157, 43, 22 },
 	Gazebo = { -90, 165, 30 },
 	Pavilion = { 90, 165, 50 },
 	Overlook = { -150, 280, 52 },
@@ -1057,7 +1060,23 @@ function CloisterBuilder.Build(container: Instance): Model
 	grand(model, root, 1.5, function(m, anchor)
 		buildDais(m, anchor, cfg)
 	end)
-	grand(model, root * CFrame.new(FEATURES.Pool[1], 0, FEATURES.Pool[2]), 1.3, buildPool)
+	local poolAnchor = root * CFrame.new(FEATURES.Pool[1], 0, FEATURES.Pool[2])
+	local envSpawner = getEnvSpawner()
+	if envSpawner.HasTemplate("HeroBridgePond") then
+		local poolFolder = folder("ReflectingPool", model)
+		envSpawner.SpawnPond("HeroBridgePond", poolFolder, poolAnchor, 1.0, 0, "HeroBridgePond")
+		local willowRng = Random.new(409)
+		for _, side in { -1, 1 } do
+			local w = poolAnchor * CFrame.new(side * 23.4, 0, -44.2)
+			if envSpawner.HasTemplate("WeepingWillowTree") then
+				envSpawner.SpawnWillow(poolFolder, w, 1.3, willowRng)
+			else
+				willowTree(poolFolder, w, willowRng)
+			end
+		end
+	else
+		grand(model, poolAnchor, 1.3, buildPool)
+	end
 	grand(model, at(FEATURES.Gazebo), 1.5, buildGazebo)
 	-- Top Playtime faces the dais (north), Top Power faces the South Gate
 	grand(model, at(FEATURES.Pavilion), CloisterBuilder.Config.PavilionScale, buildPavilion)
@@ -1068,6 +1087,15 @@ function CloisterBuilder.Build(container: Instance): Model
 	buildOrchard(model, "OrchardWest", at(FEATURES.OrchardWest), rng)
 	buildOrchard(model, "OrchardEast", at(FEATURES.OrchardEast), rng)
 	buildGarden(model, root, rng)
+	local pondSpecs = envSpawner.GetHubPondSpecs()
+	if #pondSpecs > 0 then
+		local pondsFolder = folder("NaturalPonds", model)
+		for _, spec in ipairs(pondSpecs) do
+			if envSpawner.HasTemplate(spec.template) then
+				envSpawner.SpawnPond(spec.template, pondsFolder, root * CFrame.new(spec.offset), spec.scale, spec.yaw, spec.modelName)
+			end
+		end
+	end
 
 	model.Parent = container
 	return model

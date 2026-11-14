@@ -424,6 +424,125 @@ function EnvironmentSpawner.SpawnTurfClump(
 	)
 end
 
+export type PondPlacementSpec = {
+	template: string,
+	offset: Vector3,
+	yaw: number,
+	scale: number,
+	modelName: string,
+}
+
+local HUB_POND_SPECS: { PondPlacementSpec } = {
+	{
+		template = "WaterfallBoulderPond",
+		offset = Vector3.new(116, 0, -176),
+		yaw = math.rad(147),
+		scale = 1.0,
+		modelName = "WaterfallBoulderPond",
+	},
+	{
+		template = "RockeryKoiPond",
+		offset = Vector3.new(-52, 0, 234),
+		yaw = math.rad(-35),
+		scale = 1.0,
+		modelName = "RockeryKoiPond",
+	},
+	{
+		template = "SteppingStreamPond",
+		offset = Vector3.new(157, 0, 43),
+		yaw = math.rad(-24),
+		scale = 1.0,
+		modelName = "SteppingStreamPond",
+	},
+}
+
+function EnvironmentSpawner.GetHubPondSpecs(): { PondPlacementSpec }
+	return HUB_POND_SPECS
+end
+
+local function configurePondPart(part: BasePart)
+	part.Anchored = true
+	part.PivotOffset = CFrame.identity
+	part.TopSurface = Enum.SurfaceType.Smooth
+	part.BottomSurface = Enum.SurfaceType.Smooth
+	local cleanName = (part.Name:gsub("%.%d+$", ""))
+	part.Name = cleanName
+
+	local isSolid = (
+		cleanName == "Pond_BridgeDeck"
+		or cleanName == "Pond_BridgeRails"
+		or cleanName == "Pond_Rocks"
+		or cleanName == "Pond_Bed"
+	)
+
+	if isSolid then
+		part.CanCollide = true
+		part.CanQuery = true
+		part.CanTouch = true
+		part.CastShadow = true
+		part.Material = Enum.Material.Slate
+	else
+		part.CanCollide = false
+		part.CanQuery = false
+		part.CanTouch = false
+		part.Massless = true
+		part.CastShadow = (cleanName == "Pond_Flora")
+		if cleanName == "Pond_Flora" then
+			part.Material = Enum.Material.Grass
+		else
+			part.Material = Enum.Material.SmoothPlastic
+		end
+	end
+
+	local sa = part:FindFirstChildWhichIsA("SurfaceAppearance", true)
+	if sa and sa:IsA("SurfaceAppearance") then
+		if cleanName == "Pond_Water" or cleanName == "Pond_Waterfall" then
+			pcall(function()
+				sa.AlphaMode = Enum.AlphaMode.Transparency
+			end)
+		else
+			pcall(function()
+				sa.AlphaMode = Enum.AlphaMode.Overlay
+			end)
+		end
+	end
+end
+
+function EnvironmentSpawner.SpawnPond(
+	templateName: string,
+	parent: Instance,
+	baseCFrame: CFrame,
+	scale: number?,
+	yaw: number?,
+	modelName: string?
+): Model?
+	local template = findTemplate(templateName)
+	if not template then
+		return nil
+	end
+
+	local model = wrapAsModel(template:Clone(), modelName or templateName)
+	model.PrimaryPart = nil
+
+	for _, desc in model:GetDescendants() do
+		if desc:IsA("BasePart") then
+			configurePondPart(desc)
+		end
+	end
+
+	local finalScale = math.clamp(scale or 1.0, 0.25, 4.0)
+	if math.abs(finalScale - 1.0) > 0.001 then
+		pcall(function()
+			model:ScaleTo(finalScale)
+		end)
+	end
+
+	model:PivotTo(baseCFrame * CFrame.Angles(0, yaw or 0, 0))
+	model:SetAttribute("BlenderEnvAsset", templateName)
+	model.Parent = parent
+	return model
+end
+
 local function scatterRootTurf(parent: Instance, baseCFrame: CFrame, radius: number, count: number, rng: Random)
 	if not EnvironmentSpawner.HasTemplate("GroundProp_MeadowTurfClump") then
 		return
@@ -822,6 +941,101 @@ function EnvironmentSpawner.UpgradeExistingScene(roots: { Instance }): number
 					end
 				end
 				upgraded += 1
+			end
+		end
+	end
+
+	local hasHeroPond = EnvironmentSpawner.HasTemplate("HeroBridgePond")
+	if hasHeroPond then
+		local LEGACY_POOL_PARTS: { [string]: boolean } = {
+			PoolFloor = true,
+			PoolWater = true,
+			Coping = true,
+			FootbridgeDecl = true,
+			FootbridgeDeck = true,
+			FootbridgeRamp = true,
+			FootbridgeRail = true,
+			FootbridgePost = true,
+			SteppingStone = true,
+			LilyPad = true,
+			LilyFlower = true,
+		}
+		for _, root in ipairs(roots) do
+			local commons = if root.Name == "MastersCommons"
+				then root
+				else root:FindFirstChild("MastersCommons", true)
+			if commons then
+				local surf = commons:FindFirstChild("CommonsSurface", true)
+				local surfTopY = if surf and surf:IsA("BasePart")
+					then (surf.Position.Y + surf.Size.Y * 0.5)
+					else 12.0
+				local poolFolder = commons:FindFirstChild("ReflectingPool")
+				if poolFolder then
+					local alreadyUpgraded = false
+					for _, ch in poolFolder:GetChildren() do
+						if ch:GetAttribute("BlenderEnvAsset") == "HeroBridgePond" then
+							alreadyUpgraded = true
+							break
+						end
+					end
+					if not alreadyUpgraded then
+						local centerPos: Vector3? = nil
+						local waterPart = poolFolder:FindFirstChild("PoolWater") or poolFolder:FindFirstChild("PoolFloor")
+						if waterPart and waterPart:IsA("BasePart") then
+							centerPos = Vector3.new(waterPart.Position.X, surfTopY, waterPart.Position.Z)
+						elseif surf and surf:IsA("BasePart") then
+							centerPos = Vector3.new(surf.Position.X, surfTopY, surf.Position.Z - 160)
+						end
+						-- Destroy only primitive pool/bridge pieces, preserving upgraded WeepingWillowTrees
+						for _, ch in poolFolder:GetChildren() do
+							local isWillow = ch:GetAttribute("BlenderEnvAsset") == "WeepingWillowTree"
+								or ch.Name:find("Willow", 1, true) ~= nil
+							if not isWillow and (LEGACY_POOL_PARTS[ch.Name] or ch:GetAttribute("BlenderEnvAsset") == nil) then
+								ch:Destroy()
+							end
+						end
+						if centerPos then
+							EnvironmentSpawner.SpawnPond("HeroBridgePond", poolFolder, CFrame.new(centerPos), 1.0, 0, "HeroBridgePond")
+							upgraded += 1
+						end
+					end
+				end
+			end
+		end
+	end
+
+	for _, root in ipairs(roots) do
+		local commons = if root.Name == "MastersCommons"
+			then root
+			else root:FindFirstChild("MastersCommons", true)
+		if commons then
+			local surf = commons:FindFirstChild("CommonsSurface", true)
+			if surf and surf:IsA("BasePart") then
+				local surfTopY = surf.Position.Y + surf.Size.Y * 0.5
+				local hubBase = Vector3.new(surf.Position.X, surfTopY, surf.Position.Z)
+				local pondsFolder = commons:FindFirstChild("NaturalPonds")
+				for _, spec in ipairs(HUB_POND_SPECS) do
+					if EnvironmentSpawner.HasTemplate(spec.template) then
+						local alreadyExists = false
+						for _, desc in commons:GetDescendants() do
+							if desc:GetAttribute("BlenderEnvAsset") == spec.template then
+								alreadyExists = true
+								break
+							end
+						end
+						if not alreadyExists then
+							if not pondsFolder then
+								local nf = Instance.new("Folder")
+								nf.Name = "NaturalPonds"
+								nf.Parent = commons
+								pondsFolder = nf
+							end
+							local pondCF = CFrame.new(hubBase + spec.offset)
+							EnvironmentSpawner.SpawnPond(spec.template, pondsFolder :: Instance, pondCF, spec.scale, spec.yaw, spec.modelName)
+							upgraded += 1
+						end
+					end
+				end
 			end
 		end
 	end
