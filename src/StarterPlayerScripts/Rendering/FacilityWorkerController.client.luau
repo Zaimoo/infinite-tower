@@ -437,8 +437,28 @@ local function ensureDummyCache(director: PlotWorkerDirector)
 		return
 	end
 
-	for idx = 1, 4 do
-		local basePart = trainingModel:FindFirstChild("DummyBase_" .. idx) :: BasePart?
+	for idx = 1, 5 do
+		local bodyMesh = trainingModel:FindFirstChild("Dummy_" .. idx .. "_Body", true)
+		if bodyMesh and bodyMesh:IsA("BasePart") then
+			-- Imported FBX Dummy_N_Body has its PivotOffset baked cleanly at the base collar hinge (y=1.23)
+			local pivotWorld = bodyMesh:GetPivot()
+			director.DummyStates[idx] = {
+				PivotWorld = pivotWorld,
+				Parts = {
+					{
+						Part = bodyMesh,
+						OffsetFromPivot = pivotWorld:ToObjectSpace(bodyMesh.CFrame),
+					},
+				},
+				AxisWorld = Vector3.new(1, 0, 0),
+				StartClock = -10,
+				AmplitudeRad = 0,
+				Settled = true,
+			}
+			continue
+		end
+
+		local basePart = trainingModel:FindFirstChild("DummyBase_" .. idx, true) :: BasePart?
 		if not basePart then
 			continue
 		end
@@ -508,7 +528,7 @@ local function triggerDummyWobble(
 	state.Settled = false
 
 	local vfxNow = Workspace:GetServerTimeNow()
-	local torsoWorld = state.PivotWorld.Position + Vector3.new(0, 3.6, 0)
+	local torsoWorld = state.PivotWorld.Position + Vector3.new(0, 2.4, 0)
 	VfxPrimitives.Burst(WorkerVfxPool, torsoWorld, STRAW_COLOR, 1.55, vfxNow, 0.22)
 	VfxPrimitives.Motes(WorkerVfxPool, torsoWorld, STRAW_COLOR, vfxNow, 4, 0.55)
 end
@@ -1089,9 +1109,12 @@ local function stepTrainingSlotRoutine(
 	local slot = worker.Slot
 
 	if slot == 1 then
-		-- Slot 1: Dummy Combo Striker — chains 4-hit weapon combos on Dummy_1 (NE), then Dummy_4 (SE)
-		local dummyIndex = if worker.Phase == 1 then 1 else 4
-		local targetStation = if worker.Phase == 1 then slotSpec.Primary else slotSpec.Secondary
+		-- Slot 1: Dummy Combo Striker — chains 4-hit weapon combos across Dummy_1, Dummy_4, and Dummy_5
+		local dummyIndex = if worker.Phase == 1 then 1 elseif worker.Phase == 2 then 4 else 5
+		local targetStation = if worker.Phase == 1
+			then slotSpec.Primary
+			elseif worker.Phase == 2 then slotSpec.Secondary
+			else (slotSpec.Tertiary or slotSpec.Secondary)
 		local arrived = moveWorkerToStation(worker, targetStation, 12.5, "Move", dt)
 		if arrived then
 			if worker.Animator then
@@ -1100,20 +1123,22 @@ local function stepTrainingSlotRoutine(
 			if nowClock >= worker.NextActionAt then
 				worker.SubCounter += 1
 				local tier = COMBO_TIERS[((worker.SubCounter - 1) % #COMBO_TIERS) + 1]
-				local dummyPos = FacilityWorkerRules.GetDummyPlotPosition(dummyIndex) + Vector3.new(0, 3.3, 0)
+				local dummyPos = FacilityWorkerRules.GetDummyPlotPosition(dummyIndex) + Vector3.new(0, 3.2, 0)
 				fireTrainingAttack(worker, tier, dummyPos, dummyIndex, false, 0.92)
 				worker.NextActionAt = nowClock + 1.18
 				if worker.SubCounter >= 4 then
 					worker.SubCounter = 0
-					worker.Phase = if worker.Phase == 1 then 2 else 1
+					worker.Phase = (worker.Phase % 3) + 1
 					worker.NextActionAt = nowClock + 1.05
 				end
 			end
 		end
 	elseif slot == 2 then
-		-- Slot 2: Bullseye Marksman — fires volleys into +Z Bullseye, resets form with TrainingKata
-		local bullseyeAim = slotSpec.BullseyeTargetPlot
-			or FacilityWorkerRules.FacilityToPlot("TrainingGrounds", Vector3.new(0, 4.1, 11.8))
+		-- Slot 2: Bullseye Marksman — fires volleys at both Bullseye targets, resets form with TrainingKata
+		local targets = FacilityWorkerRules.BullseyeTargetsPlot
+		local bullseyeAim = if worker.Phase <= 2
+			then ((targets and targets[1]) or slotSpec.BullseyeTargetPlot or FacilityWorkerRules.FacilityToPlot("TrainingGrounds", Vector3.new(16.2, 2.65, 9.8)))
+			else ((targets and targets[2]) or slotSpec.BullseyeTargetPlot or FacilityWorkerRules.FacilityToPlot("TrainingGrounds", Vector3.new(-16.2, 2.65, 9.8)))
 		local tertiary = slotSpec.Tertiary or slotSpec.Primary
 
 		if worker.Phase == 1 or worker.Phase == 3 then
