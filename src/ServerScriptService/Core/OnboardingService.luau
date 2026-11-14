@@ -56,6 +56,11 @@ function OnboardingService.ArmOf(profile: any): string
 	return if type(arm) == "string" and GuideConfig.Arms[arm] then arm else GuideConfig.DefaultArm
 end
 
+-- The guide chain a profile plays ("v3" control, "v4"), from its arm.
+function OnboardingService.ChainOf(profile: any): string
+	return GuideConfig.Arms[OnboardingService.ArmOf(profile)].Chain
+end
+
 -- First-session funnel (OnboardingFunnel, GDD §4.7): logs every funnel step up to `name` once per
 -- profile, plus the seconds from first join to this milestone. Only profiles created after the
 -- funnel shipped have a first-join time, so older players never enter first-session metrics.
@@ -138,10 +143,11 @@ function OnboardingService.Init(dependencies: Dependencies)
 			OnboardingService.Push(player, true)
 		elseif guide and guide.Enabled and action == "Skip" then
 			-- Leave the tutorial: every core lesson counts as seen (no rewards) and nothing stays locked.
-			for _, lessonId in GuideConfig.Chain do
+			local chainId = OnboardingService.ChainOf(profile)
+			for _, lessonId in GuideConfig.Chains[chainId] do
 				if not guide.Facts[lessonId] then
 					guide.Facts[lessonId] = true
-					telemetry(player, "GuideSkipped", lessonId, "v3")
+					telemetry(player, "GuideSkipped", lessonId, chainId)
 				end
 			end
 			OnboardingService.Push(player, true)
@@ -207,7 +213,8 @@ function OnboardingService.EnsureState(profile: any)
 		end
 		if profile.Raid and (profile.Raid.Participations or 0) > 0 then guide.Facts.Raid = true end
 	end
-	if guide.Enabled and (guide :: any).Version ~= 3 then
+	local guideVersion = (guide :: any).Version or 0
+	if guide.Enabled and guideVersion < 3 then
 		-- Linear chain (v3): credit what an existing player has plainly already done, so only the
 		-- lessons they never met are played. Runs once per profile.
 		(guide :: any).Version = 3
@@ -224,6 +231,16 @@ function OnboardingService.EnsureState(profile: any)
 					facts.Roll, facts.Equip = true, true
 				end
 			end
+		end
+	end
+	if guide.Enabled and ((guide :: any).Version or 0) < 4 then
+		-- v4 chain (limited banner, core Bank step): a player past Floor 1 has met both moments
+		-- already. Credited lessons pay nothing. Runs once per profile.
+		(guide :: any).Version = 4
+		local facts = guide.Facts
+		if facts.Clear or (profile.HighestClearedFloor or 0) >= 1 or (profile.MaxFloorReached or 0) >= 2 then
+			facts.Limited = true
+			facts.Bank = true
 		end
 	end
 	if guide.Enabled then Onboarding.UpdateAccess(profile, Onboarding.HasReadySquad(profile, os.time()), guide.Facts) end
@@ -299,7 +316,8 @@ function OnboardingService.Push(player: Player, force: boolean?)
 	sessionStarted[player] = sessionStarted[player] or os.clock()
 	milestone(player, profile, "Joined")
 	assignArm(player, profile)
-	local version = if guide.Enabled then "v3" else "legacy"
+	local chainId = OnboardingService.ChainOf(profile)
+	local version = if guide.Enabled then chainId else "legacy"
 	local ready = Onboarding.HasReadySquad(profile, now)
 	mark(player, guide.Facts, "Bootstrap", version)
 	if ready then mark(player, guide.Facts, "Ready", version) end
@@ -310,7 +328,10 @@ function OnboardingService.Push(player: Player, force: boolean?)
 		local carrying = character ~= nil and character:GetAttribute("CarryingRelic") ~= nil
 		local combat = _G.CombatSimulation
 		local raid = _G.RaidService
+		local relics = _G.RelicService
 		step = GuideLessons.Select(profile, {
+			Chain = chainId,
+			OwnRelic = floor > 0 and not carrying and relics ~= nil and relics.HasOwnRelicOnFloor ~= nil and relics.HasOwnRelicOnFloor(player),
 			Floor = floor,
 			Carrying = carrying,
 			TravelSealed = carrying and floor > 0 and combat ~= nil and combat.IsBossLocked ~= nil and combat.IsBossLocked(player, floor),
@@ -351,7 +372,7 @@ function OnboardingService.Push(player: Player, force: boolean?)
 end
 
 local GUIDE_EVENTS: { [string]: string } = {
-	HeroSummoned = "Summon", SquadDeployed = "Squad", ArtifactSummoned = "Roll", ArtifactUpgraded = "Upgrade",
+	HeroSummoned = "Summon", LimitedSummoned = "Limited", SquadDeployed = "Squad", ArtifactSummoned = "Roll", ArtifactUpgraded = "Upgrade",
 	ArtifactEquipped = "Equip", TreeNodeUnlocked = "Tree", RelicBanked = "Bank", RaidEntered = "Raid",
 }
 local PIT_EVENTS: { [string]: string } = { SYNTHESIS = "Synthesis", PROMOTION = "Promotion" }
@@ -379,7 +400,8 @@ function OnboardingService.Report(player: Player, eventName: string, detail: (st
 	if eventName == "TowerReturned" and guide.Facts.Clear then id = "Return" end
 	if eventName == "PitUsed" and type(detail) == "string" then id = PIT_EVENTS[detail] end
 	if eventName == "FacilityAssigned" and type(detail) == "string" and WORKERS[detail] then id = detail end
-	local first = id ~= nil and mark(player, guide.Facts, id, if guide.Enabled then "v3" else "legacy")
+	local chainId = OnboardingService.ChainOf(profile)
+	local first = id ~= nil and mark(player, guide.Facts, id, if guide.Enabled then chainId else "legacy")
 	if guide.Enabled then
 		if not id or not first then
 			OnboardingService.Push(player)
@@ -387,10 +409,11 @@ function OnboardingService.Report(player: Player, eventName: string, detail: (st
 		end
 		local lesson = (GuideConfig :: any)[id]
 		local key = LEGACY_STEP[id] or ("guide_" .. id)
-		if lesson and lesson.Reward and not profile.Onboarding.CompletedSteps[key] then
+		local lessonReward = GuideConfig.RewardFor(chainId, id)
+		if lesson and lessonReward and not profile.Onboarding.CompletedSteps[key] then
 			profile.Onboarding.CompletedSteps[key] = true
 			completed, completedTitle = lesson, lesson.Title
-			reward = table.clone(lesson.Reward)
+			reward = table.clone(lessonReward)
 			if id == "Clear" then
 				-- The next lesson is a Forge roll: make sure the Gold for one is there.
 				local short = ArtifactCatalog.Banner.Cost1X - (profile.Currencies.Gold or 0)

@@ -2,8 +2,9 @@
 -- Selects the one lesson to show, from the player's committed progress and what they can do now.
 -- Order of business (GDD §4.7):
 --   1. a carried relic (bank it);
---   2. the core chain, strictly in order. A step whose action is not possible yet is passed over
---      (never shown as a dead end) and comes back when it is;
+--   2. the core chain of the player's arm (GuideConfig.Chains), strictly in order. A step whose
+--      action is not possible yet is passed over (never shown as a dead end) and comes back when
+--      it is;
 --   3. conditional lessons: promotion, raid, weapon upgrade, the other facilities.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
@@ -23,6 +24,8 @@ export type Context = {
 	TravelSealed: boolean?,
 	Ready: boolean,
 	CanRaid: boolean,
+	Chain: string?, -- "v3" (control) or "v4"; nil means v3
+	OwnRelic: boolean?, -- a relic this player owns lies on their floor, waiting to be carried
 	Now: number,
 	PitLesson: (any, boolean, boolean) -> string?,
 }
@@ -83,6 +86,11 @@ local function canSummon(profile: any): boolean
 		and Capacity.HeroCount(profile) < Capacity.HeroCap(profile.FortressTree)
 end
 
+local function canSummonLimited(profile: any): boolean
+	return (profile.Currencies.Gems or 0) >= HeroCatalog.LimitedBanner.Cost1X
+		and Capacity.HeroCount(profile) < Capacity.HeroCap(profile.FortressTree)
+end
+
 local function canRoll(profile: any): boolean
 	return (profile.Currencies.Gold or 0) >= ArtifactCatalog.Banner.Cost1X
 		and Capacity.ArtifactCount(profile) < Capacity.ArtifactCap(profile.FortressTree)
@@ -113,12 +121,13 @@ end
 
 local OTHER_FACILITIES = { Config.Market, Config.TrainingGrounds, Config.GodsBlessing }
 
-function GuideLessons.Select(profile: any, context: Context): Lesson?
+local function selectLesson(profile: any, context: Context): Lesson?
 	local guide = profile.Onboarding.Guide
 	local facts = guide.Facts
 	local unlocks = profile.Unlocks or {}
 	local now = context.Now
 	local atHub = context.Floor == 0
+	local v4 = context.Chain == "v4"
 	local function open(lesson: Lesson): boolean
 		return not facts[lesson.Id]
 	end
@@ -127,7 +136,8 @@ function GuideLessons.Select(profile: any, context: Context): Lesson?
 		return open(lesson) and (guide.Snoozed[lesson.Id] or 0) <= now
 	end
 
-	if context.Carrying and available(Config.Bank) then
+	-- Bank is a core step in v4, so Later does not put it off there.
+	if context.Carrying and (if v4 then open(Config.Bank) else available(Config.Bank)) then
 		if context.TravelSealed then
 			return with(Config.Bank, { Description = "Travel is sealed. Bank it on this floor." })
 		end
@@ -136,6 +146,8 @@ function GuideLessons.Select(profile: any, context: Context): Lesson?
 
 	-- Core chain ---------------------------------------------------------------------------------
 	if atHub and open(Config.Summon) and canSummon(profile) then return Config.Summon end
+	-- v4: step 1's Gems pay for one pull on A Star's Arrival, the banner worth saving for.
+	if v4 and atHub and facts.Summon and open(Config.Limited) and canSummonLimited(profile) then return Config.Limited end
 	-- No hero fit to fight: nothing else can happen until one is placed (also after a wipe).
 	if not context.Ready then
 		if atHub then return Config.Ready end
@@ -145,6 +157,11 @@ function GuideLessons.Select(profile: any, context: Context): Lesson?
 	if open(Config.Clear) then
 		if context.Floor == 1 then return Config.Clear end
 		return if atHub then Config.Visit else nil
+	end
+	-- v4: the first relic is a core step. Carrying it is handled above; here it still lies on the
+	-- floor (sealed for a few seconds). With no relic to carry the step is passed over.
+	if v4 and facts.Clear and open(Config.Bank) and context.Floor > 0 and context.OwnRelic then
+		return with(Config.Bank, { Description = "Pick up your relic, then carry it to a sanctuary." })
 	end
 	if open(Config.Return) and context.Floor > 0 and context.Floor <= 50 then return Config.Return end
 	if not atHub then return nil end
@@ -184,6 +201,18 @@ function GuideLessons.Select(profile: any, context: Context): Lesson?
 		end
 	end
 	return nil
+end
+
+-- The lesson to show, marked with its place in the player's chain (Core, Index, Total).
+function GuideLessons.Select(profile: any, context: Context): Lesson?
+	local lesson = selectLesson(profile, context)
+	if not lesson then return nil end
+	local chainId = context.Chain or "v3"
+	local index, total = Config.Position(chainId, lesson.Id)
+	local marked: any = with(lesson, { Core = index ~= nil, Total = total })
+	marked.Index = index
+	marked.Reward = Config.RewardFor(chainId, lesson.Id) -- a chain can move a lesson's reward
+	return marked
 end
 
 -- The weapon type a first Forge roll should produce: one a squad hero can hold (a hero with no

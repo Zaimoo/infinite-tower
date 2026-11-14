@@ -338,6 +338,14 @@ local function modalControl(goal: any): (GuiObject?, boolean, string?)
 		local gems = Store.Profile and Store.Profile.Currencies and Store.Profile.Currencies.Gems or 0
 		if id == "Summon" and gems >= HeroCatalog.PermanentBanner.Cost10X then button = control(root, "PermSummon10XBtn") end
 		button = button or control(root, "PermSummon1XBtn")
+	elseif id == "Limited" then
+		-- One single pull on A Star's Arrival; open its tab first when Call of the Rift is showing.
+		root = playerGui:FindFirstChild("LimitedSummonView", true)
+		button = control(root, "LimSummon1XBtn")
+		if not button then
+			button = control(playerGui, "TabAStarsArrival")
+			if button then label = "Open the banner" end
+		end
 	elseif id == "Roll" then
 		root = forgeRoot()
 		button = control(root, "Summon1XBtn") or control(playerGui, "Summon1XBtn")

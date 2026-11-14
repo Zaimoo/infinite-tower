@@ -280,6 +280,18 @@ function RelicService.TryPickupRelic(player: Player, relic: ActiveRelic): boolea
 	return true
 end
 
+-- A relic this player owns lies on the ground on their floor (the guide's Bank step points at it).
+function RelicService.HasOwnRelicOnFloor(player: Player): boolean
+	local state = Tower.GetState(player)
+	local now = os.clock()
+	for _, relic in pairs(ActiveRelics) do
+		if relic.Carrier == nil and relic.KillerUserId == player.UserId and now < relic.DespawnAt and Tower.Same(state, relic) then
+			return true
+		end
+	end
+	return false
+end
+
 function RelicService.GetRelic(relicId: number): ActiveRelic?
 	return ActiveRelics[relicId]
 end

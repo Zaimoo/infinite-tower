@@ -327,7 +327,8 @@ test("Guide: the core chain plays in order, skips what is not possible yet and e
 	assert(#GuideConfig.Chain == 10 and GuideConfig.Chain[1] == "Summon" and GuideConfig.Chain[10] == "Synthesis")
 	for index, id in GuideConfig.Chain do
 		local lesson = GuideConfig[id]
-		assert(lesson.Core and lesson.Index == index and lesson.Total == 10, id)
+		local at, total = GuideConfig.Position("v3", id)
+		assert(at == index and total == 10, id)
 		assert(#lesson.Title <= 24 and #lesson.Description <= 36, id .. " copy stays short")
 	end
 	local state = Onboarding.NewState()
@@ -394,6 +395,76 @@ test("Guide: the core chain plays in order, skips what is not possible yet and e
 	assert(nextId() == "Promotion", "promotion waits for a hero at its level cap")
 	guide.Snoozed.Promotion = context.Now + 900
 	assert(nextId() == nil, "conditional lessons can be put off")
+end)
+
+test("Guide v4: limited banner, squad, and the first relic is a core step", function()
+	local GuideLessons = require(nodes["ServerScriptService.Core.GuideLessons"])
+	local GuideConfig = require(nodes["ReplicatedStorage.Shared.Config.GuideConfig"])
+	local chain = GuideConfig.Chains.v4
+	assert(chain[1] == "Summon" and chain[2] == "Limited" and chain[3] == "Squad" and chain[6] == "Bank" and chain[7] == "Return")
+	for _, id in chain do
+		local lesson = GuideConfig[id]
+		assert(#lesson.Title <= 24 and #lesson.Description <= 36, id .. " copy stays short")
+	end
+	assert(GuideConfig.Arms.control.Chain == "v3" and GuideConfig.Arms.v1.Chain == "v4" and GuideConfig.Arms.v2.Chain == "v4")
+	-- v4 moves Equip's Gems to the Bank step; the control chain keeps them on Equip.
+	assert(GuideConfig.RewardFor("v4", "Bank").Gems == 200 and GuideConfig.RewardFor("v4", "Equip") == nil)
+	assert(GuideConfig.RewardFor("v3", "Bank") == nil and GuideConfig.RewardFor("v3", "Equip").Gems == 200)
+	assert(GuideConfig.RewardFor("v4", "Limited").Gems == HeroCatalog.LimitedBanner.Cost1X, "the limited pull is Gem-neutral")
+
+	local state = Onboarding.NewState()
+	local guide = Onboarding.EnsureGuide(state)
+	local facts = guide.Facts
+	local profile: any = {
+		Onboarding = state, Unlocks = {}, HighestClearedFloor = 0, MaxFloorReached = 1,
+		Currencies = { Gold = 0, Gems = HeroCatalog.PermanentBanner.Cost10X },
+		Heroes = {
+			lead = { UUID = "lead", Archetype = "Berserker", Assignment = "SQUAD_SLOT_1", Stars = 1, Level = 1 },
+			spare = { UUID = "spare", Archetype = "Marksman", Assignment = "BENCHED", Stars = 1, Level = 1 },
+		},
+		Artifacts = {},
+		Facilities = { GuardPost = { Level = 1, AssignedHeroUUIDs = {} } },
+		FortressTree = FortressTree.DefaultTree(),
+	}
+	local context: any = { Chain = "v4", Floor = 0, Ready = true, Carrying = false, CanRaid = false, Now = 100, PitLesson = function() return nil end }
+	local function nextLesson(): any
+		return GuideLessons.Select(profile, context)
+	end
+	local first = nextLesson()
+	assert(first.Id == "Summon" and first.Core and first.Index == 1 and first.Total == #chain)
+	facts.Summon = true
+	profile.Currencies.Gems = GuideConfig.Summon.Reward.Gems
+	local limited = nextLesson()
+	assert(limited.Id == "Limited" and limited.Core and limited.Index == 2, "step 1's Gems pay for one limited pull")
+	facts.Limited = true
+	assert(nextLesson().Id == "Squad")
+	-- Without the Gems for the limited pull, the step is passed over.
+	facts.Limited = nil
+	profile.Currencies.Gems = 0
+	assert(nextLesson().Id == "Squad")
+	facts.Limited, facts.Squad = true, true
+	assert(nextLesson().Id == "Visit")
+	context.Floor = 1
+	assert(nextLesson().Id == "Clear")
+	facts.Clear = true
+	profile.HighestClearedFloor, profile.MaxFloorReached = 1, 2
+	-- The boss's relic lies on the floor: Bank is a core step with a reward, and cannot be put off.
+	context.OwnRelic = true
+	local bank = nextLesson()
+	assert(bank.Id == "Bank" and bank.Core and bank.Index == 6 and bank.Reward.Gems == 200)
+	context.OwnRelic, context.Carrying = false, true
+	guide.Snoozed.Bank = context.Now + 900
+	assert(nextLesson().Id == "Bank", "a core Bank step ignores Later")
+	-- The relic despawned or was banked elsewhere: the step is passed over.
+	context.Carrying = false
+	assert(nextLesson().Id == "Return")
+	-- The control chain never shows the Limited step and keeps Bank conditional.
+	context.Chain = "v3"
+	facts.Limited = nil
+	context.Carrying = true
+	guide.Snoozed.Bank = nil
+	local conditional = nextLesson()
+	assert(conditional.Id == "Bank" and not conditional.Core and conditional.Reward == nil)
 end)
 
 test("Phase 5: Squad Power sums round(10 x DPS + Health) over deployed heroes only", function()

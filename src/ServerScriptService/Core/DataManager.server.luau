@@ -1024,6 +1024,7 @@ RequestSummonFunc.OnServerInvoke = function(player: Player, arg1: any, arg2: any
 	local pityRemaining = math.max(1, banner.MaxPity - (profile[bannerKey] or 0))
 	DataManager.SyncProfile(player)
 	OnboardingService.Report(player, "HeroSummoned")
+	if isLimited then OnboardingService.Report(player, "LimitedSummoned") end
 	if luck > 0 and bestTier >= 3 and _G.PlotManager and _G.PlotManager.PulseBlessing then
 		_G.PlotManager.PulseBlessing(player)
 	end

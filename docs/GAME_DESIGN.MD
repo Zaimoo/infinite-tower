@@ -813,6 +813,12 @@ New players are walked through every feature once, in a fixed order, and held to
 | 9 | Upgrade your fortress | `TreeNodeUnlocked` | | 1,000 Gold |
 | 10 | Level up a hero | `PitUsed` (Synthesis) | | 250 Gems |
 
+**v4 chain** (arms `v1` and `v2`, `GuideConfig.Chains.v4`; the control arm plays the table above): Summon → **Try the limited banner** → Set your squad → Enter the Tower → Clear Floor 1 → **Bank your relic** → Return to the Hub, then Forge, Equip, Guard Post, Fortress Tree and Synthesis as before.
+- **Try the limited banner** (`LimitedSummoned`, any A Star's Arrival pull, 200 Gems): step 1's 200 Gems pay for exactly one single pull, so the spotlight goes on A Star's Arrival's single-pull button (opening its tab first). The reward refunds the pull. Passed over without the Gems.
+- **Bank your relic** is a core step in v4 (it can't be put off) and pays 200 Gems, moved from Equip (which pays nothing in v4). While the Floor 1 relic still lies on the floor, the step points at it; while it is carried, at a sanctuary. With no relic to carry (banked elsewhere, despawned) it is passed over.
+- Step numbers (`Index`/`Total`), core status and rewards come from the player's chain (`GuideConfig.Position`, `GuideConfig.RewardFor`), not from the lesson. **Skip tutorial** skips the player's own chain.
+- Guide `Version` 4 credits the Limited and Bank steps to every player past Floor 1, without rewards.
+
 - **Guaranteed first roll:** a player's first Forge roll yields a weapon type that a squad hero can hold (a hero with no weapon first), so step 7 always has something to equip. Tier and variant roll as normal; later rolls are uniform across the six types.
 - **Starter ten-pull:** while the starter Gems still cover a ten-pull, step 1 points at the ten-pull button (it carries the guaranteed Rare).
 - **Spare heroes:** steps 8 and 10 need a hero on the bench. With none, the guide shows *Summon a spare hero* first (when a pull is affordable).
