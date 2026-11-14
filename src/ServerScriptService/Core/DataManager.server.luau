@@ -1719,7 +1719,8 @@ FacilityInteractEvent.OnServerEvent:Connect(function(player: Player, action: any
 end)
 
 -- Studio-only chat command: `/summon <hero>` adds that hero to the caller's profile for free.
--- `<hero>` is a HeroCatalog seed id, with or without the `hero_` prefix (`/summon edis`).
+-- `<hero>` is a HeroCatalog seed id, with or without the `hero_` prefix (`/summon edis`), or the hero's
+-- display name (`/summon rook`; Rook's seed id is still hero_rourke, so saves need no migration).
 if game:GetService("RunService"):IsStudio() then
 	local summonCommand = Instance.new("TextChatCommand")
 	summonCommand.Name = "DevSummonHero"
@@ -1732,6 +1733,14 @@ if game:GetService("RunService"):IsStudio() then
 
 		local arg = string.lower(string.match(message, "^%S+%s+(%S+)") or "")
 		local seedId = if HeroCatalog.Seeds[arg] then arg else "hero_" .. arg
+		if arg ~= "" and not HeroCatalog.Seeds[seedId] then
+			for id, seed in HeroCatalog.Seeds do
+				if string.lower(seed.DisplayName) == arg then
+					seedId = id
+					break
+				end
+			end
+		end
 		if arg == "" or not HeroCatalog.Seeds[seedId] then
 			DataManager.SendToast(player, "Usage: /summon <hero>, e.g. /summon edis", "WARN")
 			return
