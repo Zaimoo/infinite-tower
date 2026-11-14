@@ -92,6 +92,32 @@ function Runtime.new(api: any): any
 		end
 		return actions
 	end
+	-- Telegraphs still winding up in a room, in world space, for hero combat movement
+	-- (HeroCombatMovement). Ally casts and landed hits are left out.
+	function self:Threats(floorId: number, roomGeneration: number): { any }
+		local threats = {}
+		local now = workspace:GetServerTimeNow()
+		for _, m in pairs(api.Mobs) do
+			local action = m.TowerEnemy and m.Action
+			if action and not action.Impacted and action.Status == "WINDUP" and m.FloorId == floorId and m.RoomGeneration == roomGeneration
+				and action.Shape:sub(1, 4) ~= "ALLY" then
+				local definition = Config.Attack(m.EnemyId, action.AttackId)
+				local elapsed = now - action.StartServerTime
+				table.insert(threats, {
+					Shape = action.Shape,
+					Origin = action.Origin,
+					Aim = action.Aim,
+					Yaw = action.Yaw,
+					Range = action.Range or 0,
+					Radius = action.Radius or 0,
+					HalfArcCos = definition and definition.HalfArcCos,
+					TimeToImpact = action.ImpactOffsetSeconds - elapsed,
+					Age = elapsed,
+				})
+			end
+		end
+		return threats
+	end
 	function self:BossPresentation(context)
 		for _, m in pairs(api.Mobs) do
 			if m.TowerEnemy and m.Role == "BOSS" and m.IsAlive and api.Tower.Same(m, context) then

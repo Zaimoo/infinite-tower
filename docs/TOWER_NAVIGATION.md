@@ -14,6 +14,7 @@ Infinite Tower uses **one shared server-authoritative navigation solver** (`Hero
 | `src/ServerScriptService/Core/TowerNavigationGraph.luau` | Pure topology graph: platform/connector location (`Locate`), shortest connector routes (`Route`), directed mid-connector progress preservation, and route cost (`Remaining`). |
 | `src/ServerScriptService/Core/HeroNavigation.luau` | Feet-coordinate movement solver (`Step`), ground/clearance sweeps, friendly/prop avoidance, bounded async `PathfindingService` queue (`MAX_IN_FLIGHT = 6`), and signed-progress recovery. |
 | `src/ServerScriptService/Combat/SquadMovement.luau` | Active floor-run trail/formation policy (`UpdateMaster`, `PlanActiveFollow`) and assigned-squad objective/regroup/target-failure policy (`SelectAssignedAnchor`, `PlanAssignedRegroup`, `HandleCombatMoveOutcome`). |
+| `src/ServerScriptService/Combat/HeroCombatMovement.luau` | Pure fight positioning for a hero with a target: telegraph evasion, ranged kiting and spreading, melee ring slots (§6). |
 | `src/ServerScriptService/Combat/HeroTargeting.luau` | Per-tick combat target retention, focus priority, squad assist, connector `RouteCost` scoring, and generation-scoped unreachable target exclusion. |
 | `src/StarterPlayerScripts/Rendering/EntityRenderer.client.luau` | 60 FPS visual interpolation of 5 Hz server snapshots with ramp/landing support clamping and distinct teleport snapping. |
 
@@ -70,7 +71,23 @@ Infinite Tower uses **one shared server-authoritative navigation solver** (`Hero
    - When `MOVE_TO_TARGET` reports `UNREACHABLE`, `SquadMovement.FindAlternativeAttackPosition` searches supported attack positions around the target within `hero.AttackRange` that satisfy `CanAttack`.
    - If an alternative position exists, the hero retries once toward `AlternativeAttackGoal`; if that also fails (or none exists), `SquadMovement.RejectTarget` records a 5-second exclusion scoped to `(NetId, EntityGeneration, FloorId, RoomGeneration)` and returns the hero to `FOLLOW_MASTER`.
 
-## 6. Verification & Review Index
+## 6. Combat Movement (`HeroCombatMovement` / `CombatSimulation.stepCombatManeuver`)
+
+Destination policy for a hero that already has a target. It follows the same split as the rest of this document: the policy is pure, the shared solver moves the hero.
+
+1. **Plan (`HeroCombatMovement.Plan`):** returns at most one manoeuvre: `EVADE` (leave an enemy telegraph), `KITE` (ranged hero backs off a mob that closed in), `FLANK` (melee ring slot; Strikers go for the back, Vanguards guard the backline) or `SPREAD` (ranged heroes unstack). Tunables are constants on the module; behaviour and numbers are in GDD §4.5.
+2. **Validate:** `stepCombatManeuver` resolves the goal with `HeroNavigation.PlaceOnGround` (ground support and a clear straight walk), rejects safe zones, and for positioning goals requires the target to stay inside `AttackRange` with `CanAttack` line of sight. A rejected goal backs off for 0.3–0.5 s before the next attempt.
+3. **Walk:** `HeroNavigation.Step` moves the hero, so corridor limits, friendly avoidance and recovery all apply. A blocked or unreachable positioning goal is dropped; a blocked evade holds where it got to.
+4. **Timing:** manoeuvres run only after the hero's blow is released (`CastLockUntil`, set in `performHeroAttack`). An evading hero does not attack and its swing timer keeps running; once clear it reports `HOLD` and waits for the telegraph to land before approaching again.
+5. **Inputs:** `TowerEncounterRuntime:Threats(floorId, roomGeneration)` lists wind-ups in world space with time to impact; `combatRoomContext` caches those and the room's live mobs once per tick.
+
+### Solver query cost
+
+- `HeroNavigation` keeps one `RaycastParams` per collision group and rebuilds them when the exclusion list changes, instead of allocating one per ground or body query.
+- `HeroNavigation.Step` gathers same-room actors within reach once per step; avoidance substeps scan that list instead of every actor on the server.
+- `TowerNavigationGraph.new` indexes connectors by id (`LinkById`).
+
+## 7. Verification & Review Index
 
 - Implementation plan: [docs/tower-movement-reliability-plan.md](tower-movement-reliability-plan.md)
 - Phase 0 baseline evidence: [docs/reviews/tower-movement/2026-11-05/README.md](reviews/tower-movement/2026-11-05/README.md)

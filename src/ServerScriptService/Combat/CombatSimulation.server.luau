@@ -41,6 +41,7 @@ local HeroImpactQueue=require(script.Parent.HeroImpactQueue)
 local HeroTargeting=require(script.Parent.HeroTargeting)
 local HeroSkillEffects=require(script.Parent.HeroSkillEffects)
 local SquadMovement=require(script.Parent.SquadMovement)
+local HeroCombatMovement=require(script.Parent.HeroCombatMovement)
 local HeroImpacts=HeroImpactQueue.new()
 local TowerProgress=require(Shared.Util.TowerProgress)
 local TowerRoomBuilder=require(script.Parent.Parent:WaitForChild("Core"):WaitForChild("TowerRoomBuilder"))
@@ -1945,6 +1946,8 @@ performHeroAttack = function(simHero: SimHero, targetPos: Vector3, targetMob: Si
 			-- Ultimates hold the hero for their whole cast so the animation reads.
 			simHero.AttackCooldown = math.max(effectiveInterval, timing.CastSeconds)
 		end
+		-- Combat movement waits for the blow to leave the hero (stepCombatManeuver).
+		;(simHero :: any).CastLockUntil = now + (if attackType == "SKILL" then timing.CastSeconds else timing.ReleaseSeconds)
 		local ticks, tickSeconds = HeroActionTiming.Ticks(tierDef)
 		local target: any = targetMob or targetEnemyHero
 
@@ -2119,6 +2122,134 @@ local function buildFreeSquadAssistList(
 	end
 
 	return list
+end
+
+-- Combat movement (GDD 4.5, HeroCombatMovement): live mobs and enemy telegraphs per room,
+-- gathered once per tick and shared by every hero fighting there.
+local combatRoomCache: { [number]: { Clock: number, Generation: number, Hostiles: { any }, Threats: { any } } } = {}
+local function combatRoomContext(simHero: SimHero, now: number)
+	local cached = combatRoomCache[simHero.FloorId]
+	if cached and cached.Clock == now and cached.Generation == simHero.RoomGeneration then
+		return cached
+	end
+	local hostiles = {}
+	for _, mob in pairs(ActiveMobsByNetId) do
+		if isHostileMob(simHero, mob) then
+			table.insert(hostiles, mob)
+		end
+	end
+	local fresh = {
+		Clock = now,
+		Generation = simHero.RoomGeneration,
+		Hostiles = hostiles,
+		Threats = if Encounters then Encounters:Threats(simHero.FloorId, simHero.RoomGeneration) else {},
+	}
+	combatRoomCache[simHero.FloorId] = fresh
+	return fresh
+end
+
+-- Seconds a hero stands still after a manoeuvre before it considers the next one.
+local MANEUVER_REST: { [string]: number } = { EVADE = 0, KITE = 0.25, FLANK = 0.6, SPREAD = 0.8 }
+local MANEUVER_MAX_SECONDS = 2.5
+
+-- One tick of a hero's fight positioning. Picks a manoeuvre (HeroCombatMovement.Plan), checks
+-- its goal against the world, and walks it with the shared solver. Returns what the hero did:
+--   "EVADE"  walking out of a telegraph: no attack and no approach this tick
+--   "HOLD"   out of the telegraph, waiting for it to land: may attack, must not walk back in
+--   "KITE" | "FLANK" | "SPREAD"  repositioned inside its own range and keeps attacking
+--   nil      standing still
+local function stepCombatManeuver(simHero: SimHero, targetMob: SimMob, inRange: boolean, baseSpeed: number,
+	leashCenter: Vector3?, dt: number, now: number): string?
+	local h: any = simHero
+	local maneuver = h.CombatManeuver
+	if maneuver and (maneuver.TargetNetId ~= targetMob.NetId or now >= maneuver.Until
+		or (maneuver.Kind ~= "EVADE" and not inRange)) then
+		maneuver = nil
+		h.CombatManeuver = nil
+	end
+	-- The hero is mid-swing: it stays put until the blow is released.
+	if now < (h.CastLockUntil or 0) then
+		return if maneuver and maneuver.Arrived then "HOLD" else nil
+	end
+
+	if not maneuver or maneuver.Kind ~= "EVADE" or maneuver.Arrived then
+		local positioning = inRange and not maneuver and now >= (h.NextManeuverAt or 0)
+		local room = combatRoomContext(simHero, now)
+		if positioning or (#room.Threats > 0 and now >= (h.NextEvadeAt or 0)) then
+			local allies = {}
+			local masterState = ActiveMasters[simHero.Owner]
+			for _, other in pairs(masterState and masterState.DeployedHeroes or {}) do
+				if other ~= simHero and other.State ~= "COMA" and other.CurrentHP > 0 and not other.DuelId and Tower.Same(simHero, other) then
+					table.insert(allies, other)
+				end
+			end
+			local plan = HeroCombatMovement.Plan({
+				NetId = simHero.NetId,
+				Position = simHero.Position,
+				AttackRange = simHero.AttackRange,
+				Archetype = simHero.Archetype,
+				BaseSpeed = baseSpeed,
+				TargetNetId = targetMob.NetId,
+				TargetPosition = targetMob.Position,
+				TargetYaw = targetMob.Yaw,
+				TargetAimsAtHero = (targetMob :: any).TargetNetId == simHero.NetId,
+				Allies = allies,
+				Hostiles = room.Hostiles,
+				Threats = room.Threats,
+				LeashCenter = leashCenter,
+				LeashRadius = if leashCenter then HeroTargeting.HERO_TETHER - 5 else nil,
+				EvadeOnly = not positioning,
+			})
+			if plan then
+				-- The plan is pure geometry; the world decides whether the spot can be stood on
+				-- and walked to, and a positioning goal must still see and reach the target.
+				local resolved = HeroNavigation.PlaceOnGround(simHero.Position, plan.Goal - simHero.Position)
+				local valid = getHorizontalDistance(resolved, simHero.Position) > 0.75
+					and Tower.GetSafety(simHero, resolved).CombatSafe ~= true
+				if valid and plan.Kind ~= "EVADE" then
+					valid = (resolved - targetMob.Position).Magnitude <= simHero.AttackRange
+						and HeroNavigation.CanAttack(resolved, targetMob.Position)
+				end
+				if valid then
+					maneuver = {
+						Kind = plan.Kind,
+						Goal = resolved,
+						Speed = plan.Speed,
+						TargetNetId = targetMob.NetId,
+						Until = now + (if plan.Deadline then plan.Deadline + 0.15 else MANEUVER_MAX_SECONDS),
+					}
+					h.CombatManeuver = maneuver
+				elseif plan.Kind == "EVADE" then
+					h.NextEvadeAt = now + 0.3
+				else
+					h.NextManeuverAt = now + 0.5
+				end
+			elseif positioning then
+				h.NextManeuverAt = now + 0.3
+			end
+		end
+	end
+	if not maneuver then
+		return nil
+	end
+	if maneuver.Arrived then
+		return "HOLD"
+	end
+
+	local outcome = HeroNavigation.Step(simHero, maneuver.Goal, maneuver.Speed * dt, now, dt)
+	h.NavigationStatus = outcome.Status
+	local arrived = outcome.Status == "ARRIVED" or getHorizontalDistance(simHero.Position, maneuver.Goal) < 0.6
+	if maneuver.Kind == "EVADE" then
+		if arrived or outcome.Status == "BLOCKED" or outcome.Status == "UNREACHABLE" then
+			maneuver.Arrived = true -- as far out as it gets: wait there for the hit to resolve
+		end
+		return "EVADE"
+	end
+	if arrived or outcome.Status == "BLOCKED" or outcome.Status == "UNREACHABLE" or outcome.Status == "FALLING" then
+		h.CombatManeuver = nil
+		h.NextManeuverAt = now + (if arrived then MANEUVER_REST[maneuver.Kind] or 0.5 else 1.0)
+	end
+	return maneuver.Kind
 end
 
 local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
@@ -2309,6 +2440,7 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 
 	if simHero.State == "FOLLOW_MASTER" or not targetPos then
 		movementHero.AlternativeAttackGoal = nil
+		movementHero.CombatManeuver = nil
 		if not assignedRoom then
 			local plan = SquadMovement.PlanActiveFollow(simHero.Owner, simHero, masterPos, now, {
 				HeroBaseSpeed = heroBaseSpeed,
@@ -2368,7 +2500,34 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 	SquadMovement.MarkCombat(simHero.Owner, simHero)
 
 	local distToTarget = (simHero.Position - targetPos).Magnitude
-	if distToTarget > simHero.AttackRange or not HeroNavigation.CanAttack(simHero.Position, targetPos) then
+	local inRange = distToTarget <= simHero.AttackRange and HeroNavigation.CanAttack(simHero.Position, targetPos)
+
+	-- Fight positioning: sidestep telegraphs, kite, flank and spread between the hero's own attacks.
+	local maneuverKind = if targetMob
+		then stepCombatManeuver(simHero, targetMob, inRange, heroBaseSpeed * overdriveMult, if assignedRoom then nil else masterPos, dt, now)
+		else nil
+	if maneuverKind and maneuverKind ~= "HOLD" then
+		distToTarget = (simHero.Position - targetPos).Magnitude
+		inRange = distToTarget <= simHero.AttackRange and HeroNavigation.CanAttack(simHero.Position, targetPos)
+	end
+	if maneuverKind == "EVADE" or (maneuverKind == "HOLD" and not inRange) then
+		-- Getting clear comes first. The swing timer keeps running so the hero strikes as soon as it is back.
+		simHero.State = "MOVE_TO_TARGET"
+		simHero.AttackCooldown = math.max(0, simHero.AttackCooldown - dt)
+		if maneuverKind == "HOLD" then
+			HeroNavigation.Pause(simHero)
+			local toTarget = targetPos - simHero.Position
+			if toTarget.Magnitude > 0.01 then
+				simHero.Yaw = math.atan2(-toTarget.X, -toTarget.Z)
+			end
+		end
+		simHero.GroundBaseY = simHero.Position.Y
+		simHero.JumpStart = nil
+		simHero.JumpEnd = nil
+		return
+	end
+
+	if not inRange then
 		simHero.State = "MOVE_TO_TARGET"
 		local moveGoal = targetPos
 		local altGoal = movementHero.AlternativeAttackGoal
@@ -2416,7 +2575,9 @@ local function stepHeroSimulation(simHero: SimHero, dt: number, now: number)
 			simHero.JumpEnd = nil
 		end
 	else
-		HeroNavigation.Pause(simHero)
+		if not maneuverKind or maneuverKind == "HOLD" then
+			HeroNavigation.Pause(simHero)
+		end
 		simHero.State = "ATTACKING"
 		local delta = targetPos - simHero.Position
 		if delta.Magnitude > 0.01 then

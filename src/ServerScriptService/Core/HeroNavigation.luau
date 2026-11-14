@@ -16,13 +16,16 @@ local diagnostics: any=if game:GetService("RunService"):IsStudio()then {
 	Steps=0,GroundQueries=0,BodyQueries=0,PathRequests=0,PathSuccess=0,PathFailure=0,PeakComputing=0,StalePaths=0,
 }else nil
 local exclusions: {Instance}={}
+-- One RaycastParams per collision group. A step runs dozens of ground and body queries, and
+-- building a filter list for each one was the solver's largest allocation.
+local paramCache: {[string]:RaycastParams}={}
 local function refreshExclusions()
 	local list: {Instance}={}
 	for _,name in {"ClientVisualEntities","PhysicalRelics","ModelViewer"}do
 		local f=Workspace:FindFirstChild(name);if f then table.insert(list,f)end
 	end
 	for _,p in Players:GetPlayers()do if p.Character then table.insert(list,p.Character)end end
-	exclusions=list
+	exclusions=list;table.clear(paramCache)
 end
 local function trackPlayer(p: Player)
 	p.CharacterAdded:Connect(function()task.defer(refreshExclusions)end)
@@ -34,9 +37,13 @@ Players.PlayerAdded:Connect(trackPlayer)
 Players.PlayerRemoving:Connect(function()task.defer(refreshExclusions)end)
 Workspace.ChildAdded:Connect(refreshExclusions)
 local function parameters(group: string?): RaycastParams
-	local p=RaycastParams.new()
+	local key=group or "Default"
+	local p=paramCache[key]
+	if p then return p end
+	p=RaycastParams.new()
 	p.FilterType=Enum.RaycastFilterType.Exclude;p.FilterDescendantsInstances=exclusions
-	p.RespectCanCollide=true;p.IgnoreWater=true;p.CollisionGroup=group or "Default"
+	p.RespectCanCollide=true;p.IgnoreWater=true;p.CollisionGroup=key
+	paramCache[key]=p
 	return p
 end
 function Navigation.Ground(position: Vector3,group: string?,up: number?,down: number?): Vector3?
@@ -234,12 +241,26 @@ local function advance(points: {Vector3},index: number,position: Vector3,group: 
 	end
 	return index
 end
+-- Actors that can matter to this step's avoidance: same room, standing, and close enough to be
+-- reached with this tick's budget. Gathered once per step, so each substep scans a handful of
+-- neighbours instead of every actor on the server.
+local function neighbours(hero: any,from: Vector3,budget: number): {any}
+	local list={}
+	local reach=budget+6
+	for other in states do
+		if other~=hero and other.FloorId==hero.FloorId and other.RoomGeneration==hero.RoomGeneration
+			and other.State~="COMA" and other.Position and flatDistance(other.Position,from)<=reach then
+			table.insert(list,other)
+		end
+	end
+	return list
+end
 local function avoid(hero: any,s: any,old: Vector3,nextPosition: Vector3,group: string): Vector3
 	local movement=nextPosition-old
 	if movement.Magnitude<.01 then return nextPosition end
-	for other,otherState in states do
-		if other==hero or other.FloorId~=hero.FloorId or other.RoomGeneration~=hero.RoomGeneration
-			or other.State=="COMA" or not other.Position or math.abs(other.Position.Y-old.Y)>3 then continue end
+	for _,other in s.Neighbours do
+		local otherState=states[other]
+		if other.State=="COMA" or math.abs(other.Position.Y-old.Y)>3 then continue end
 		local offset=Vector3.new(other.Position.X-old.X,0,other.Position.Z-old.Z)
 		local flat=Vector3.new(movement.X,0,movement.Z)
 		if flat.Magnitude<.01 or offset:Dot(flat)<=0 or offset.Magnitude>flat.Magnitude+1.8 then continue end
@@ -282,15 +303,7 @@ function Navigation.Step(hero: any,goal: Vector3,distance: number,now: number,de
 		location=Graph.Locate(g,localPoint(from,origin));goalLocation=Graph.Locate(g,localPoint(goal,origin))
 	end
 	local key=scope..":"..(location and location.Key or "WORLD")..">"..(goalLocation and goalLocation.Key or "WORLD")
-	local currentLink = nil
-	if location and location.Link and g then
-		for _, link in g.Links do
-			if link.Id == location.Link then
-				currentLink = link
-				break
-			end
-		end
-	end
+	local currentLink = if location and location.Link and g then g.LinkById[location.Link] else nil
 
 	local isMidRamp = currentLink ~= nil and TowerTraversal.IsDiagonalRamp(currentLink) and TowerTraversal.IsMidRamp(location and location.T)
 	local isOverride = hero.FocusOverride == true or hero.RecallOverride == true or hero.IsFocusTarget == true
@@ -357,8 +370,7 @@ function Navigation.Step(hero: any,goal: Vector3,distance: number,now: number,de
 	end
 	s.TowerRoute[#s.TowerRoute]=goal;s.TowerGoal=goal;s.Origin=origin
 	s.TowerIndex=math.min(s.TowerIndex,#s.TowerRoute)
-	s.Corridor=nil
-	if location and location.Link then for _,link in g.Links do if link.Id==location.Link then s.Corridor=link;break end end end
+	s.Corridor=currentLink
 	s.Destination=goal;s.RequestedDistance=distance;s.BlockReason=nil
 	if diagnostics then diagnostics.Steps+=1 end
 	-- Deep descent is for externally airborne actors, never a walking shortcut.
@@ -375,6 +387,7 @@ function Navigation.Step(hero: any,goal: Vector3,distance: number,now: number,de
 	if s.PathGoal and (s.PathRouteIndex~=s.TowerIndex or (s.PathGoal-s.SubGoal).Magnitude>(if s.Pending then 36 else 16))then resetPath(hero,s)end
 	local before=remaining(s,hero.Position)
 	local budget=math.max(0,distance)
+	s.Neighbours=neighbours(hero,from,budget)
 	for _=1,64 do
 		if budget<.01 then break end
 		s.TowerIndex=advance(s.TowerRoute,s.TowerIndex,hero.Position,group,origin,s.Corridor,s.TowerStart)
@@ -424,6 +437,7 @@ function Navigation.Step(hero: any,goal: Vector3,distance: number,now: number,de
 		hero.Position=nextPosition;budget-=spent
 		if spent<.01 then break end
 	end
+	s.Neighbours=nil
 	hero.GroundBaseY=hero.Position.Y
 	local moved=hero.Position-from
 	s.ConsumedDistance=moved.Magnitude

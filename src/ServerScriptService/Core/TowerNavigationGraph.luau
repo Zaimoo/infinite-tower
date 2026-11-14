@@ -7,7 +7,7 @@ function Graph.Distance(a: Point,b: Point): number
 	return math.sqrt((a.X-b.X)^2+(a.Y-b.Y)^2+(a.Z-b.Z)^2)
 end
 function Graph.new(layout: any): any
-	local g: any={Platforms=table.clone(layout.Platforms),Links=table.clone(layout.Links),Edges={}}
+	local g: any={Platforms=table.clone(layout.Platforms),Links=table.clone(layout.Links),Edges={},LinkById={}}
 	for _,link in layout.ReturnLinks or {} do
 		table.insert(g.Links,link)
 		local pad=link.LandingA
@@ -15,6 +15,7 @@ function Graph.new(layout: any): any
 	end
 	for id in g.Platforms do g.Edges[id]={} end
 	for _,link in g.Links do
+		g.LinkById[link.Id]=link
 		local a,b=point(link.AX,link.AY,link.AZ),point(link.BX,link.BY,link.BZ)
 		local p,q=g.Platforms[link.From],g.Platforms[link.To]
 		local cost=Graph.Distance(p,a)+Graph.Distance(a,b)+Graph.Distance(b,q)
