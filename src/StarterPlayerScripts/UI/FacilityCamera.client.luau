@@ -1,13 +1,14 @@
 --!strict
 -- StarterPlayerScripts/UI/FacilityCamera.client.luau
--- Opening a facility from its world prompt eases the camera in on the station (the Pit's altar,
--- the Blacksmith's forge, the Summoning Altar, a support facility's counter) while its window is
--- up, then eases back to where it was when the last window closes. Only prompts on the Master's own
--- plot do this; windows opened from HUD buttons leave the camera alone. Another script taking the
--- camera (duel, squad view) cancels the focus without restoring over it.
+-- Opening a facility from its world prompt first eases the camera in on the station (the Pit's
+-- altar, the Blacksmith's forge, the Summoning Altar, a support facility's counter), then opens its
+-- window; the camera eases back to where it was when the last window closes. MasterController hands
+-- the open step to _G.FocusFacilityCamera(prompt, open), which runs it when the pan lands (or at
+-- once when the camera can't move). Only prompts on the Master's own plot pan; windows opened from
+-- HUD buttons leave the camera alone. Another script taking the camera (duel, squad view) cancels
+-- the focus without restoring over it.
 
 local Players = game:GetService("Players")
-local ProximityPromptService = game:GetService("ProximityPromptService")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
@@ -20,12 +21,10 @@ local player = Players.LocalPlayer
 local DISTANCE = 14 -- studs from the station, on the side the camera came from
 local HEIGHT = 6 -- above the station
 local LOOK_LIFT = 1.5 -- aim slightly above the prompt point
-local IN_TIME, OUT_TIME = 0.6, 0.45
-local OPEN_GRACE = 0.6 -- the window must open within this long after the prompt
+local IN_TIME, OUT_TIME = 0.5, 0.45
 
-local FACILITY_PROMPTS = { FacilityHUDPrompt = true, SummonAltarPrompt = true, BlacksmithPrompt = true }
-
-type Focus = { Saved: CFrame, SavedType: Enum.CameraType, Goal: CFrame, Tween: Tween? }
+-- Opening: the pan is still running and the window isn't up yet, so nothing may release it.
+type Focus = { Saved: CFrame, SavedType: Enum.CameraType, Goal: CFrame, Tween: Tween?, Opening: boolean }
 local focus: Focus? = nil
 
 local function onOwnPlot(prompt: ProximityPrompt): boolean
@@ -75,15 +74,20 @@ local function release(immediate: boolean?)
 	back:Play()
 end
 
-local function focusOn(point: Vector3)
+-- Pans to `point`, then calls `onArrive` (also when the camera can't move, so the window always opens).
+local function focusOn(point: Vector3, onArrive: () -> ())
 	local camera = Workspace.CurrentCamera
-	if not camera then return end
-	if (_G :: any).IsViewingSquad and (_G :: any).IsViewingSquad() then return end
 	local current = focus
+	local blocked = not camera
+		or ((_G :: any).IsViewingSquad and (_G :: any).IsViewingSquad())
+		or (not current and camera.CameraType ~= Enum.CameraType.Custom) -- another script owns it
+	if blocked or not camera then
+		onArrive()
+		return
+	end
 	local saved = if current then current.Saved else camera.CFrame
 	local savedType = if current then current.SavedType else camera.CameraType
 	if current and current.Tween then current.Tween:Cancel() end
-	if not current and camera.CameraType ~= Enum.CameraType.Custom then return end -- another script owns it
 
 	-- Approach from the side the camera is already on, so the move reads as a push-in.
 	local away = saved.Position - point
@@ -98,35 +102,43 @@ local function focusOn(point: Vector3)
 	local goal = CFrame.lookAt(point + flat.Unit * DISTANCE + Vector3.new(0, HEIGHT, 0), look)
 
 	camera.CameraType = Enum.CameraType.Scriptable
-	local f: Focus = { Saved = saved, SavedType = savedType, Goal = goal, Tween = nil }
+	local f: Focus = { Saved = saved, SavedType = savedType, Goal = goal, Tween = nil, Opening = true }
 	focus = f
+	local function arrive()
+		if focus ~= f then return end -- released or refocused meanwhile
+		f.Opening = false
+		onArrive()
+	end
 	if UIFeel.ReducedMotion() then
 		camera.CFrame = goal
+		arrive()
 	else
-		f.Tween = TweenService:Create(camera, TweenInfo.new(IN_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { CFrame = goal })
-		;(f.Tween :: Tween):Play()
+		local tween = TweenService:Create(camera, TweenInfo.new(IN_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { CFrame = goal })
+		f.Tween = tween
+		tween.Completed:Once(function(state)
+			if state == Enum.PlaybackState.Completed then arrive() end
+		end)
+		tween:Play()
 	end
 end
 
-ProximityPromptService.PromptTriggered:Connect(function(prompt: ProximityPrompt, who: Player)
-	if who ~= player then return end
-	if not FACILITY_PROMPTS[prompt.Name] and prompt:GetAttribute("FacilityHUD") == nil then return end
-	if not onOwnPlot(prompt) then return end
-	local point = stationPoint(prompt)
-	if not point then return end
-	-- The window opens from MasterController's handler for the same event; focus once it is up.
-	task.spawn(function()
-		local deadline = os.clock() + OPEN_GRACE
-		repeat task.wait() until anyWindowOpen() or os.clock() > deadline
-		if anyWindowOpen() then focusOn(point :: Vector3) end
-	end)
-end)
+-- MasterController's facility prompts: pan to the station, then `open` its window. A second press
+-- while the pan is running is ignored.
+(_G :: any).FocusFacilityCamera = function(prompt: ProximityPrompt, open: () -> ())
+	if focus and focus.Opening then return end
+	local point = if onOwnPlot(prompt) then stationPoint(prompt) else nil
+	if not point then
+		open()
+		return
+	end
+	focusOn(point, open)
+end
 
 -- The last window closing (any way: X, scrim, Backspace) eases the camera back.
 WindowManager.Changed:Connect(function(_, open: boolean)
 	if open or not focus then return end
 	task.defer(function()
-		if focus and not anyWindowOpen() then release() end
+		if focus and not focus.Opening and not anyWindowOpen() then release() end
 	end)
 end)
 
@@ -136,6 +148,6 @@ player.CharacterRemoving:Connect(function() release(true) end)
 task.spawn(function()
 	while true do
 		task.wait(0.5)
-		if focus and not anyWindowOpen() then release() end
+		if focus and not focus.Opening and not anyWindowOpen() then release() end
 	end
 end)
