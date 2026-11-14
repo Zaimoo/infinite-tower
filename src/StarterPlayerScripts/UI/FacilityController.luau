@@ -28,6 +28,8 @@ local ModalFit = require(script.Parent:WaitForChild("ModalFit"))
 local Theme = require(script.Parent:WaitForChild("Hud"):WaitForChild("Theme"))
 local SummonReveal = require(script.Parent:WaitForChild("SummonReveal"))
 local HeroOddsModal = require(script.Parent:WaitForChild("HeroOddsModal"))
+local HeroBannerFx = require(script.Parent:WaitForChild("HeroBannerFx"))
+local UIAssets = require(script.Parent:WaitForChild("UIAssets"))
 local UIFeel = require(script.Parent:WaitForChild("UIFeel"))
 local Kit = require(script.Parent:WaitForChild("Kit"))
 local StatBalance = require(Shared:WaitForChild("Config"):WaitForChild("StatBalance"))
@@ -230,6 +232,7 @@ function Controller.new(gui: ScreenGui, getProfile: () -> any, remotes: Instance
 		Position = UDim2.fromOffset(10, 0),
 		ZIndex = 53,
 	}, tabContainer)
+	callTabBtn:SetAttribute("FeelSound", "TabSwitch")
 
 	local starTabBtn = new("TextButton", {
 		Name = "TabAStarsArrival",
@@ -242,6 +245,7 @@ function Controller.new(gui: ScreenGui, getProfile: () -> any, remotes: Instance
 		Position = UDim2.fromOffset(185, 0),
 		ZIndex = 53,
 	}, tabContainer)
+	starTabBtn:SetAttribute("FeelSound", "TabSwitch")
 
 	local activeIndicator = new("Frame", {
 		Name = "ActiveTabIndicator",
@@ -304,6 +308,12 @@ function Controller.new(gui: ScreenGui, getProfile: () -> any, remotes: Instance
 	-- Fit the window inside the safe area (below the top bar, clear of the bottom edge).
 	ModalFit.Bind(root, self.Scale, WIDTH, HEIGHT, { MaxScale = 1.25 })
 
+	root:GetPropertyChangedSignal("Visible"):Connect(function()
+		if not root.Visible then
+			self:SyncBannerFx(false)
+		end
+	end)
+
 	return self
 end
 
@@ -344,6 +354,8 @@ local function rateText(rate: number): string
 		else (string.gsub(string.format("%.2f", pct), "0$", "")) .. "%"
 end
 
+local BANNER_VIEW_POS = UDim2.fromOffset(16, 72)
+
 function Controller:BuildBannerView(root: Frame, key: string)
 	local def = BANNER_VIEWS[key]
 	local banner = def.Banner
@@ -354,7 +366,7 @@ function Controller:BuildBannerView(root: Frame, key: string)
 	local view = new("Frame", {
 		Name = def.Name,
 		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(16, 72),
+		Position = BANNER_VIEW_POS,
 		Size = UDim2.new(1, -32, 1, -82),
 		Visible = false,
 		ZIndex = 52,
@@ -370,6 +382,9 @@ function Controller:BuildBannerView(root: Frame, key: string)
 		ZIndex = 53,
 	}, view)
 	applyGothicStyle(card, "Card")
+	local oldGrad = card:FindFirstChild("GothicObsidianGrad")
+	if oldGrad then oldGrad:Destroy() end
+	card.BackgroundColor3 = Color3.new(1, 1, 1)
 	new("UIGradient", {
 		Color = ColorSequence.new({
 			ColorSequenceKeypoint.new(0.0, def.Gradient[1]),
@@ -506,12 +521,45 @@ function Controller:BuildBannerView(root: Frame, key: string)
 		buttons[count] = b
 	end
 
+	local fx = HeroBannerFx.Attach({
+		Key = key :: HeroBannerFx.BannerKey,
+		Card = card,
+		Halo = halo,
+		PortraitHost = featuredHost,
+		Plate = plate,
+		TitleLabel = title,
+		TagLabel = tag,
+		PityFill = pityFill,
+		Button10X = buttons[10].Root,
+		AccentColor = topColor,
+		KeyArtId = if key == "CALL_OF_THE_RIFT" then UIAssets.Images.BannerCallOfTheRift else UIAssets.Images.BannerStarsArrival,
+		IsVisible = function()
+			return self.Root ~= nil and self.Root.Visible and self.Current == "Summoning" and view.Visible
+		end,
+	})
+
 	self.BannerViews = self.BannerViews or {}
 	self.BannerViews[key] = {
 		View = view, Pity = pityLabel, PityFill = pityFill, Info = infoLabel, Status = status, Buttons = buttons,
 		FeaturedHost = featuredHost, FeaturedId = featuredId, TopTier = topTier, PortraitBuilt = false, ViewHeroes = viewHeroesBtn,
+		Fx = fx,
 	}
 	return view
+end
+
+-- Syncs banner VFX state so only the currently displayed banner animates.
+function Controller:SyncBannerFx(playEntrance: boolean?)
+	if not self.BannerViews then return end
+	local open = self.Root ~= nil and self.Root.Visible and self.Current == "Summoning"
+	for key, bv in self.BannerViews do
+		local active = open and (self.ActiveSummonTab == key)
+		if bv.Fx then
+			bv.Fx:SetActive(active)
+			if active and playEntrance then
+				bv.Fx:PlayEntrance()
+			end
+		end
+	end
 end
 
 -- Builds a view's featured-hero portrait the first time it is shown.
@@ -519,7 +567,10 @@ function Controller:EnsureBannerPortraits(key: string)
 	local bv = self.BannerViews and self.BannerViews[key]
 	if not bv or bv.PortraitBuilt then return end
 	bv.PortraitBuilt = true
-	HeroCard.Portrait(bv.FeaturedHost, { TemplateId = bv.FeaturedId, Stars = bv.TopTier })
+	local portrait = HeroCard.Portrait(bv.FeaturedHost, { TemplateId = bv.FeaturedId, Stars = bv.TopTier })
+	if portrait then
+		portrait.ZIndex = bv.FeaturedHost.ZIndex
+	end
 end
 
 function Controller:BuildPermanentSummonView(root: Frame)
@@ -608,6 +659,7 @@ end
 function Controller:ShowSummonResults(summonedList: { any }, bannerId: string, ownedBefore: { [string]: boolean })
 	local seen = table.clone(ownedBefore)
 	self.Reveal:Play(summonedList, false, {
+		BannerId = bannerId,
 		IsNew = function(hero: any): boolean
 			local id = hero.TemplateId
 			if not id or seen[id] then return false end
@@ -659,6 +711,7 @@ function Controller:Button(parent: Instance, name: string, text: string, size: U
 end
 
 function Controller:SetSummonTab(tab: "CALL_OF_THE_RIFT" | "A_STARS_ARRIVAL")
+	local prev = self.ActiveSummonTab
 	self.ActiveSummonTab = tab
 	local isCall = (tab == "CALL_OF_THE_RIFT")
 	self.CallTabBtn.TextColor3 = isCall and C.Text or C.TextMuted
@@ -671,8 +724,22 @@ function Controller:SetSummonTab(tab: "CALL_OF_THE_RIFT" | "A_STARS_ARRIVAL")
 
 	self.PermanentSummonView.Visible = isCall
 	self.LimitedSummonView.Visible = not isCall
+	if prev ~= tab and not UIFeel.ReducedMotion() then
+		local activeView = if isCall then self.PermanentSummonView else self.LimitedSummonView
+		local dir = if isCall then -1 else 1
+		if self.TabSlideTween then
+			self.TabSlideTween:Cancel()
+		end
+		activeView.Position = BANNER_VIEW_POS + UDim2.fromOffset(18 * dir, 0)
+		local slide = TweenService:Create(activeView, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Position = BANNER_VIEW_POS,
+		})
+		self.TabSlideTween = slide
+		slide:Play()
+	end
 	if self.HeroOdds then self.HeroOdds:Close() end
 	self:EnsureBannerPortraits(tab)
+	self:SyncBannerFx(prev ~= tab)
 	self:Refresh()
 end
 
@@ -727,7 +794,11 @@ function Controller:PerformSummon(bannerId: string, count: number, confirmed: bo
 	local ownedBefore = ownedTemplates(profile)
 	if self.HeroOdds then self.HeroOdds:Close() end
 	self.Busy = true
-	self:SetSummonStatus(bannerId, "Opening the rift…")
+	local activeBv = self.BannerViews and self.BannerViews[bannerId]
+	if activeBv and activeBv.Fx then
+		activeBv.Fx:SetCharging(true)
+	end
+	self:SetSummonStatus(bannerId, if bannerId == "A_STARS_ARRIVAL" then "Calling upon the stars…" else "Opening the rift…")
 	self:Refresh()
 	task.spawn(function()
 		local ok, result = pcall(function()
@@ -736,20 +807,37 @@ function Controller:PerformSummon(bannerId: string, count: number, confirmed: bo
 		self.Busy = false
 		if ok and result and result.Success then
 			self.LastSummoned = result.Summoned or {}
-			if _G.PortalEffectController and _G.PortalEffectController.TriggerSummonBurst then
-				local topPulledStars = 1
-				for _, h in ipairs(self.LastSummoned) do
-					if type(h) == "table" and (h.Stars or 1) > topPulledStars then
+			local topPulledStars = 1
+			local topPulledRarity = 1
+			for _, h in ipairs(self.LastSummoned) do
+				if type(h) == "table" then
+					if (h.Stars or 1) > topPulledStars then
 						topPulledStars = h.Stars or 1
 					end
+					local r = StatFormulas.GetHeroRarity(h)
+					if r > topPulledRarity then
+						topPulledRarity = r
+					end
 				end
+			end
+			if _G.PortalEffectController and _G.PortalEffectController.TriggerSummonBurst then
 				_G.PortalEffectController.TriggerSummonBurst(nil, topPulledStars)
+			end
+			if activeBv and activeBv.Fx then
+				activeBv.Fx:PlayTriggerBurst(topPulledRarity)
+				if self.Root.Visible and not UIFeel.ReducedMotion() then
+					task.wait(0.18)
+				end
+				activeBv.Fx:SetCharging(false)
 			end
 			self:SetSummonStatus(bannerId, "")
 			self.Root.Visible = false
 			self.Scrim.Visible = false
 			self:ShowSummonResults(self.LastSummoned, bannerId, ownedBefore)
 		elseif ok then
+			if activeBv and activeBv.Fx then
+				activeBv.Fx:SetCharging(false)
+			end
 			if not self.Root.Visible then
 				self:Open("Summoning")
 			end
@@ -759,6 +847,9 @@ function Controller:PerformSummon(bannerId: string, count: number, confirmed: bo
 				self.Reveal:Close(true)
 			end
 		else
+			if activeBv and activeBv.Fx then
+				activeBv.Fx:SetCharging(false)
+			end
 			if not self.Root.Visible then
 				self:Open("Summoning")
 			end
@@ -823,6 +914,7 @@ function Controller:Open(facility: string)
 		self.HeaderTitle.TextColor3 = info.Color
 	end
 
+	self:SyncBannerFx(isSummon)
 	self:Refresh()
 end
 
@@ -861,6 +953,9 @@ function Controller:Refresh()
 				then string.format("Guaranteed <b>%s</b> in <b>%d</b> summons", featuredSeed and featuredSeed.DisplayName or "featured hero", math.max(1, banner.MaxPity - done))
 				else string.format("Guaranteed %s+ hero in <b>%d</b> summons", HeroCatalog.RarityName(banner.PityMinTier or 5), math.max(1, banner.MaxPity - done))
 			TweenService:Create(bv.PityFill, TweenInfo.new(0.3, Enum.EasingStyle.Quad), { Size = UDim2.fromScale(done / banner.MaxPity, 1) }):Play()
+			if bv.Fx then
+				bv.Fx:SetPityRatio(done / banner.MaxPity, guaranteedFeatured)
+			end
 			for count, b in bv.Buttons do
 				local cost = summonCost(key, count)
 				b.TitleLabel.Text = if self.Busy then "SUMMONING…" else string.format("SUMMON %dX", count)
