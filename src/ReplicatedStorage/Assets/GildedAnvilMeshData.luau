@@ -145,6 +145,7 @@ GildedAnvilMeshData.Weapons = {
 	art_gild_dawnwarden_oath = unpackWeapon(MeshesFolder:WaitForChild("art_gild_dawnwarden_oath")),
 	art_gild_eclipse_sisters = unpackWeapon(MeshesFolder:WaitForChild("art_gild_eclipse_sisters")),
 	art_gild_aurora_skyhook = unpackWeapon(MeshesFolder:WaitForChild("art_gild_aurora_skyhook")),
+	art_gild_wyrmheart_cleaver = unpackWeapon(MeshesFolder:WaitForChild("art_gild_wyrmheart_cleaver")),
 } :: { [string]: { PartMeshSpec } }
 
 return GildedAnvilMeshData

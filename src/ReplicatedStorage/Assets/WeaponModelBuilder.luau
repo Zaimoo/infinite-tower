@@ -7884,6 +7884,17 @@ local GILDED_SPECS: { [string]: GildedSpec } = {
 		TrailTopPos = Vector3.new(0, 1.96, 0.50),
 		TrailBottomPos = Vector3.new(0, -1.96, 0.50),
 	},
+	art_gild_wyrmheart_cleaver = {
+		Type = "AXE",
+		GripPos = Vector3.new(0, 0.35, 0),
+		GripRotDeg = EDGE_PLUS_X,
+		OffhandGripPos = Vector3.new(0, 0.35 - AXE_HAND_GAP, 0),
+		TipPos = Vector3.new(1.88, 3.46, 0),
+		BasePos = Vector3.new(1.76, 0.76, 0),
+		CorePos = Vector3.new(0.74, 2.08, 0),
+		TrailTopPos = Vector3.new(1.88, 3.46, 0),
+		TrailBottomPos = Vector3.new(1.76, 0.76, 0),
+	},
 }
 
 local gildedMeshPartCache: { [string]: MeshPart } = {}
@@ -8278,6 +8289,10 @@ function WeaponModelBuilder.BuildAuroraSkyhook(): Model
 	return buildGildedWeapon("art_gild_aurora_skyhook", GILDED_SPECS.art_gild_aurora_skyhook)
 end
 
+function WeaponModelBuilder.BuildWyrmheartCleaver(): Model
+	return buildGildedWeapon("art_gild_wyrmheart_cleaver", GILDED_SPECS.art_gild_wyrmheart_cleaver)
+end
+
 
 
 
@@ -8396,6 +8411,7 @@ function WeaponModelBuilder.EnsureWeapons(): (Folder, { [string]: Model })
 		art_gild_dawnwarden_oath = WeaponModelBuilder.BuildDawnwardenOath,
 		art_gild_eclipse_sisters = WeaponModelBuilder.BuildEclipseSisters,
 		art_gild_aurora_skyhook = WeaponModelBuilder.BuildAuroraSkyhook,
+		art_gild_wyrmheart_cleaver = WeaponModelBuilder.BuildWyrmheartCleaver,
 		weapon_daggers = WeaponModelBuilder.BuildDaggers,
 		weapon_axe = WeaponModelBuilder.BuildAxe,
 		weapon_staff = WeaponModelBuilder.BuildStaff,

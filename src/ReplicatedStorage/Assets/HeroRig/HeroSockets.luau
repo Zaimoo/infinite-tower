@@ -126,6 +126,7 @@ HeroSockets.PREFABS = table.freeze({
 	art_gild_dawnwarden_oath = "art_gild_dawnwarden_oath",
 	art_gild_eclipse_sisters = "art_gild_eclipse_sisters",
 	art_gild_aurora_skyhook = "art_gild_aurora_skyhook",
+	art_gild_wyrmheart_cleaver = "art_gild_wyrmheart_cleaver",
 } :: { [string]: string })
 
 HeroSockets.SOCKETS = table.freeze({
