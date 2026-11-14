@@ -7864,6 +7864,16 @@ local GILDED_SPECS: { [string]: GildedSpec } = {
 		TrailTopPos = Vector3.new(0, 5.15, 0),
 		TrailBottomPos = Vector3.new(0, 0.85, 0),
 	},
+	art_gild_eclipse_sisters = {
+		Type = "DAGGERS",
+		GripPos = Vector3.zero,
+		GripRotDeg = EDGE_PLUS_X,
+		TipPos = Vector3.new(0, 2.58, 0),
+		BasePos = Vector3.new(0, 0.46, 0),
+		CorePos = Vector3.new(0, 1.45, 0),
+		TrailTopPos = Vector3.new(0, 2.54, 0),
+		TrailBottomPos = Vector3.new(0, 0.50, 0),
+	},
 }
 
 local gildedMeshPartCache: { [string]: MeshPart } = {}
@@ -8250,6 +8260,10 @@ function WeaponModelBuilder.BuildDawnwardenOath(): Model
 	return buildGildedWeapon("art_gild_dawnwarden_oath", GILDED_SPECS.art_gild_dawnwarden_oath)
 end
 
+function WeaponModelBuilder.BuildEclipseSisters(): Model
+	return buildGildedWeapon("art_gild_eclipse_sisters", GILDED_SPECS.art_gild_eclipse_sisters)
+end
+
 
 
 
@@ -8366,6 +8380,7 @@ function WeaponModelBuilder.EnsureWeapons(): (Folder, { [string]: Model })
 		art_omega_archon_caduceus = WeaponModelBuilder.BuildOmegaArchonCaduceusArtifact,
 		-- The Gilded Anvil (Tier 8 Gildforged)
 		art_gild_dawnwarden_oath = WeaponModelBuilder.BuildDawnwardenOath,
+		art_gild_eclipse_sisters = WeaponModelBuilder.BuildEclipseSisters,
 		weapon_daggers = WeaponModelBuilder.BuildDaggers,
 		weapon_axe = WeaponModelBuilder.BuildAxe,
 		weapon_staff = WeaponModelBuilder.BuildStaff,

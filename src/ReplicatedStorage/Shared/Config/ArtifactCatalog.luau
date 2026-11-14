@@ -1178,6 +1178,21 @@ local Seeds: { [string]: ArtifactSeed } = {
 		ModelAssetId = "art_gild_dawnwarden_oath",
 		Description = "White-gold longsword sworn to a kite shield whose sun-disc boss rises and sets in the hand of its bearer.",
 	},
+	art_gild_eclipse_sisters = {
+		TemplateId = "art_gild_eclipse_sisters",
+		DisplayName = "Eclipse Sisters",
+		Type = "DAGGERS",
+		RarityTier = 8,
+		IsHighStat = false,
+		Variant = "Gildforged",
+		VisualElement = "ECLIPSE",
+		StatMultiplier = 1.00,
+		SpeedBonusAdditive = 0.000,
+		BaseATK = 10000,
+		BaseHP = 0,
+		ModelAssetId = "art_gild_eclipse_sisters",
+		Description = "Twin daggers Umbra and Corona: one of black glass edged in light, one of gold wreathed in black flame.",
+	},
 }
 ArtifactCatalog.Seeds = Seeds
 for _, seed in pairs(Seeds) do
