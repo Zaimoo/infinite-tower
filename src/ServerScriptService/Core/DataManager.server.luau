@@ -23,6 +23,7 @@ local FortressTree = require(Shared:WaitForChild("Util"):WaitForChild("FortressT
 local InventoryCapacity = require(Shared:WaitForChild("Util"):WaitForChild("InventoryCapacity"))
 local SummonLuck = require(Shared:WaitForChild("Util"):WaitForChild("SummonLuck"))
 local MirrorBanner = require(Shared:WaitForChild("Util"):WaitForChild("MirrorBanner"))
+local AnvilBanner = require(Shared:WaitForChild("Util"):WaitForChild("AnvilBanner"))
 local Onboarding = require(Shared:WaitForChild("Util"):WaitForChild("Onboarding"))
 local OnboardingService = require(script.Parent:WaitForChild("OnboardingService"))
 local FortressTreeService = require(script.Parent:WaitForChild("FortressTreeService"))
@@ -167,6 +168,10 @@ local UnlockTreeNodeFunc = progressionRemote("UnlockTreeNode", "RemoteFunction")
 local OnboardingSyncEvent = progressionRemote("OnboardingSync", "RemoteEvent") :: RemoteEvent
 -- The Gilded Mirror's Spark: spend one banked pick on any of the five mirror heroes.
 local ClaimMirrorSparkFunc = progressionRemote("ClaimMirrorSpark", "RemoteFunction") :: RemoteFunction
+-- The Gilded Anvil (Tier-8 Gildforged relics): Focus pick, Spark claim, and pack reveal notification.
+local SetAnvilFocusFunc = progressionRemote("SetAnvilFocus", "RemoteFunction") :: RemoteFunction
+local ClaimAnvilSparkFunc = progressionRemote("ClaimAnvilSpark", "RemoteFunction") :: RemoteFunction
+local AnvilRevealEvent = progressionRemote("AnvilReveal", "RemoteEvent") :: RemoteEvent
 
 --============================================================================
 -- 1. EXPORTED TYPE DEFINITIONS
@@ -592,8 +597,9 @@ function DataManager.SyncProfile(player: Player, progressionOnly: boolean?)
 	DataManager.MigrateArtifactTypes(profile)
 	-- Raid bosses (docs/raid-boss-plan.md §10): idempotent payout key and raid stats. Lazy, so old profiles gain it.
 	DataManager.EnsureRaidData(profile)
-	-- The Gilded Mirror's Spark counter (docs/gilded-mirror-plan.md): lazy, so old profiles gain it.
+	-- The Gilded Mirror and Gilded Anvil Spark counters: lazy, so old profiles gain them.
 	MirrorBanner.EnsureSpark(profile)
+	AnvilBanner.EnsureSpark(profile)
 	-- Crafting was removed with the Gold banner: drop its old materials from the Backpack.
 	if profile.PitMaterials then
 		for _, id in { "IronGear", "RiftOrb", "AegisGem", "StarDust", "VoidPowder" } do
@@ -872,6 +878,38 @@ function DataManager.RollMirrorSummons(player: Player, count: number): ({ HeroIn
 	return summonedList, bestTier, 0, HeroCatalog.MirrorBanner, "MirrorSpark", false
 end
 
+-- The Gilded Anvil (Robux only, granted by ShopService): no luck and no pity; custom Focus (40% / 12%),
+-- 10-pull Focus guarantee, and 60-pull Spark come from AnvilBanner. Enforces artifact inventory cap.
+function DataManager.RollAnvilSummons(player: Player, count: number): ({ ArtifactInstance }, boolean, string?)
+	local profile = ActiveProfiles[player] :: PlayerProfile
+	if not profile then
+		return {}, false, "Profile not loaded"
+	end
+	if not profile.Artifacts then
+		profile.Artifacts = {}
+	end
+	local safeCount = if count == 10 then 10 else 1
+	local cap = InventoryCapacity.ArtifactCap(profile.FortressTree)
+	if InventoryCapacity.ArtifactCount(profile) + safeCount > cap then
+		DataManager.SendToast(player, string.format("Artifacts full|%d max · Promote or free space", cap), "WARN")
+		return {}, false, "Artifact inventory full"
+	end
+
+	local spark = AnvilBanner.EnsureSpark(profile)
+	local summonedList: { ArtifactInstance } = {}
+	local rolledIds = AnvilBanner.Roll(safeCount, spark.Focus, function() return math.random() end)
+	for _, weaponId in ipairs(rolledIds) do
+		local uuid, artifact = DataManager.CreateArtifact(weaponId, 1, 8)
+		profile.Artifacts[uuid] = artifact
+		table.insert(summonedList, artifact)
+	end
+	if AnvilBanner.AddPulls(spark, safeCount) > 0 then
+		DataManager.SendToast(player, "Spark ready|Choose any Gildforged weapon in the Store", "SUCCESS")
+	end
+	AnvilRevealEvent:FireClient(player, summonedList)
+	return summonedList, true, nil
+end
+
 -- Rolls `count` heroes on a banner (no cost): pity, the 10-pull floor and God's Blessing luck all
 -- apply. Used by Gem summons and by Robux summon packs (ShopService).
 function DataManager.RollSummons(player: Player, bannerId: string, count: number): ({ HeroInstance }, number, number, any, string, boolean)
@@ -1026,6 +1064,54 @@ ClaimMirrorSparkFunc.OnServerInvoke = function(player: Player, heroId: any)
 	DataManager.SendToast(player, string.format("Spark|%s joins your roster", hero.DisplayName), "SUCCESS")
 	DataManager.SyncProfile(player)
 	return { Success = true, Hero = hero }
+end
+
+local lastAnvilSparkClaim: { [Player]: number } = {}
+Players.PlayerRemoving:Connect(function(player) lastAnvilSparkClaim[player] = nil end)
+
+SetAnvilFocusFunc.OnServerInvoke = function(player: Player, focusChoice: any)
+	local profile = ActiveProfiles[player]
+	if not profile then return { Success = false, Message = "Profile not loaded" } end
+	local ok, resolved = AnvilBanner.SetFocus(profile, focusChoice)
+	if not ok or not resolved then
+		return { Success = false, Message = "Choose a valid Gildforged Focus weapon type." }
+	end
+	DataManager.SyncProfile(player)
+	local weaponId = AnvilBanner.ResolveWeaponId(resolved)
+	local seed = weaponId and ArtifactCatalog.Seeds[weaponId]
+	return { Success = true, Focus = resolved, DisplayName = seed and seed.DisplayName or resolved }
+end
+
+ClaimAnvilSparkFunc.OnServerInvoke = function(player: Player, choice: any)
+	local now = os.clock()
+	if now - (lastAnvilSparkClaim[player] or -99) < 1 then
+		return { Success = false, Message = "Slow down." }
+	end
+	lastAnvilSparkClaim[player] = now
+	local profile = ActiveProfiles[player]
+	if not profile then return { Success = false, Message = "Profile not loaded" } end
+	local weaponId = AnvilBanner.ResolveWeaponId(choice)
+	if not weaponId then return { Success = false, Message = "Choose a Gildforged relic." } end
+	local spark = AnvilBanner.EnsureSpark(profile)
+	if spark.Selections <= 0 then
+		return { Success = false, Message = string.format("Spark needs %d more pulls.", AnvilBanner.SPARK_COST - spark.Pulls) }
+	end
+	if not profile.Artifacts then profile.Artifacts = {} end
+	local artifactCap = InventoryCapacity.ArtifactCap(profile.FortressTree)
+	if InventoryCapacity.ArtifactCount(profile) + 1 > artifactCap then
+		DataManager.SendToast(player, string.format("Artifacts full|%d max · Promote or free space", artifactCap), "WARN")
+		return { Success = false, Message = "Artifact inventory full" }
+	end
+	local claimed, claimedId = AnvilBanner.ClaimSpark(profile, weaponId)
+	if not claimed or not claimedId then
+		return { Success = false, Message = "Couldn't claim the Spark." }
+	end
+	local uuid, artifact = DataManager.CreateArtifact(claimedId, 1, 8)
+	profile.Artifacts[uuid] = artifact
+	DataManager.SendToast(player, string.format("Spark|%s forged in your armory", artifact.DisplayName), "SUCCESS")
+	DataManager.SyncProfile(player)
+	AnvilRevealEvent:FireClient(player, { artifact })
+	return { Success = true, Artifact = artifact }
 end
 
 -- Legacy endpoints cannot bypass confirmed previews.
