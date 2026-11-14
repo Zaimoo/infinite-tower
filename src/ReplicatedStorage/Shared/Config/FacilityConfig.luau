@@ -211,6 +211,13 @@ FacilityConfig.UpgradeTable = {
 --   +Z (+60) = Dividing Wall to Forest Outskirts (Right in reference camera view)
 --   +X (+80) = North / Top Wall in reference camera view
 --   -X (-80) = South / Bottom Wall in reference camera view
+-- Align TrainingGrounds + its cobblestone approach path along the exact ray from Fountain (0, 0)
+-- through the SE corner bastion inner tip (-66.8, 46.8) so Fountain -> Path -> Archway -> Tip -> Column align.
+local TRAINING_CORNER_LEN = math.sqrt(66.8 * 66.8 + 46.8 * 46.8)
+local TRAINING_AXIS_X = -66.8 / TRAINING_CORNER_LEN
+local TRAINING_AXIS_Z = 46.8 / TRAINING_CORNER_LEN
+local TRAINING_CENTER_DIST = 49.0
+
 FacilityConfig.FacilityLayout = {
 	Fountain = {
 		Offset = Vector3.new(0, 0, 0),
@@ -263,8 +270,8 @@ FacilityConfig.FacilityLayout = {
 		Keybind = if Enum then Enum.KeyCode.F else ("F" :: any),
 	},
 	TrainingArea = {
-		Offset = Vector3.new(-38, 0, 30),
-		RotationY = math.rad(0),
+		Offset = Vector3.new(TRAINING_AXIS_X * TRAINING_CENTER_DIST, 0, TRAINING_AXIS_Z * TRAINING_CENTER_DIST),
+		RotationY = -math.atan2(66.8, 46.8),
 		Radius = 26,
 		PromptText = "Training Grounds",
 		Keybind = if Enum then Enum.KeyCode.F else ("F" :: any),

@@ -137,12 +137,13 @@ test("Courtyard run-in paths and coma rest spots stay inside courtyard bounds an
 		end
 	end
 
-	for dummyIdx = 1, 4 do
+	assert((FacilityWorkerRules.DummyCount or 0) == 5, "TrainingGrounds should define 5 strike dummies")
+	for dummyIdx = 1, 5 do
 		local dPos = FacilityWorkerRules.GetDummyPlotPosition(dummyIdx)
 		inCourtyard(dPos, "TrainingDummy_" .. dummyIdx)
 		assert(
-			math.abs(dist2D(dPos, FacilityWorkerRules.Facilities.TrainingGrounds.Center) - 9.6) < 0.05,
-			"Dummy_" .. dummyIdx .. " should sit at radius 9.6 from TrainingGrounds center"
+			dist2D(dPos, FacilityWorkerRules.Facilities.TrainingGrounds.Center) <= 18.5,
+			"Dummy_" .. dummyIdx .. " should sit inside the polygonal TrainingGrounds footprint"
 		)
 	end
 end)

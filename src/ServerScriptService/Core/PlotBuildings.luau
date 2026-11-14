@@ -16,7 +16,7 @@ local StaticGeometry = require(script.Parent:WaitForChild("StaticGeometry"))
 local EnvironmentSpawner = require(script.Parent.Parent:WaitForChild("BaseOverhaul"):WaitForChild("EnvironmentSpawner"))
 local FacilityConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"):WaitForChild("FacilityConfig"))
 
-local VERSION = 35 -- 35: Blender environment trees, shrubs, and PBR ground materials in Outskirts (34: no dark smoke plume over the Blacksmith Forge chimney)
+local VERSION = 38 -- 38: Align TrainingGrounds tip directly with SE corner bastion column tip (37: expanded symmetrical polygonal courtyard)
 
 local function attachPrompt(
 	parent: Instance,

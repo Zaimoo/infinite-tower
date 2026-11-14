@@ -144,6 +144,8 @@ local function buildMossyFlagstoneCourtyard(
 	end
 
 	-- 2. Radial Walkway Definitions (Connecting Fountain Plaza to Bridge Gate, Outskirts Gate & all 5 Stations)
+	local trainingCornerLen = math.sqrt(66.8 * 66.8 + 46.8 * 46.8)
+	local trainingDirX, trainingDirZ = -66.8 / trainingCornerLen, 46.8 / trainingCornerLen
 	local radialWalkways = {
 		{ Name = "Path_BridgeGate", P0 = Vector3.new(0, 0, -19.6), P1 = Vector3.new(0, 0, -56.0), Width = 9.2, Segments = 5 },
 		{ Name = "Path_SummoningPortal", P0 = Vector3.new(16.0, 0, -11.4), P1 = Vector3.new(41.5, 0, -29.5), Width = 8.4, Segments = 4 },
@@ -151,7 +153,7 @@ local function buildMossyFlagstoneCourtyard(
 		{ Name = "Path_Market", P0 = Vector3.new(16.2, 0, 11.2), P1 = Vector3.new(36.0, 0, 25.4), Width = 8.4, Segments = 4 },
 		{ Name = "Path_OutskirtsGate", P0 = Vector3.new(4.8, 0, 19.0), P1 = Vector3.new(14.0, 0, 56.0), Width = 9.0, Segments = 5 },
 		{ Name = "Path_SynthesisChamber", P0 = Vector3.new(-16.6, 0, -10.6), P1 = Vector3.new(-32.0, 0, -20.4), Width = 8.4, Segments = 3 },
-		{ Name = "Path_TrainingArea", P0 = Vector3.new(-15.4, 0, 12.2), P1 = Vector3.new(-30.5, 0, 24.0), Width = 8.4, Segments = 3 },
+		{ Name = "Path_TrainingArea", P0 = Vector3.new(trainingDirX * 19.65, 0, trainingDirZ * 19.65), P1 = Vector3.new(trainingDirX * 39.2, 0, trainingDirZ * 39.2), Width = 8.4, Segments = 3 },
 	}
 
 	local radialBranchAngles = {}

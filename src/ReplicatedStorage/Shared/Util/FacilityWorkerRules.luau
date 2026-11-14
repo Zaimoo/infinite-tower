@@ -35,6 +35,11 @@ export type FacilitySlotSpec = {
 
 local FacilityWorkerRules = {}
 
+local TRAINING_CORNER_LEN = math.sqrt(66.8 * 66.8 + 46.8 * 46.8)
+local TRAINING_AXIS_X = -66.8 / TRAINING_CORNER_LEN
+local TRAINING_AXIS_Z = 46.8 / TRAINING_CORNER_LEN
+local TRAINING_CENTER_DIST = 49.0
+
 FacilityWorkerRules.Facilities = table.freeze({
 	Market = table.freeze({
 		Center = Vector3.new(42, 0, 30),
@@ -44,9 +49,9 @@ FacilityWorkerRules.Facilities = table.freeze({
 		LevelAttr = "FacilityLevel_Market",
 	}),
 	TrainingGrounds = table.freeze({
-		Center = Vector3.new(-38, 0, 30),
-		RotationY = 0,
-		FloorY = 0.56,
+		Center = Vector3.new(TRAINING_AXIS_X * TRAINING_CENTER_DIST, 0, TRAINING_AXIS_Z * TRAINING_CENTER_DIST),
+		RotationY = -math.atan2(66.8, 46.8),
+		FloorY = 0.08,
 		BuildingName = "Building_TrainingGrounds",
 		LevelAttr = "FacilityLevel_TrainingGrounds",
 	}),
@@ -122,10 +127,10 @@ FacilityWorkerRules.CourtyardRunIn = table.freeze({
 		FacilityWorkerRules.FacilityToPlot("Market", Vector3.new(0, 0.30, 6.8)),
 	}),
 	TrainingGrounds = table.freeze({
-		Vector3.new(-14, 0, 10),
-		Vector3.new(-26, 0, 18),
-		FacilityWorkerRules.FacilityToPlot("TrainingGrounds", Vector3.new(0, 0.56, -15.0)),
-		FacilityWorkerRules.FacilityToPlot("TrainingGrounds", Vector3.new(0, 0.56, -10.5)),
+		Vector3.new(TRAINING_AXIS_X * 19.65, 0, TRAINING_AXIS_Z * 19.65),
+		Vector3.new(TRAINING_AXIS_X * 31.0, 0, TRAINING_AXIS_Z * 31.0),
+		FacilityWorkerRules.FacilityToPlot("TrainingGrounds", Vector3.new(0, 0.08, -14.8)),
+		FacilityWorkerRules.FacilityToPlot("TrainingGrounds", Vector3.new(0, 0.08, -8.5)),
 	}),
 })
 
@@ -138,10 +143,10 @@ FacilityWorkerRules.ComaRestSpots = table.freeze({
 		makeStation("Market", Vector3.new(14.4, 0.30, 2.8), Vector3.new(0, 0.30, 0)),
 	}),
 	TrainingGrounds = table.freeze({
-		makeStation("TrainingGrounds", Vector3.new(8.8, 0.56, -8.2), Vector3.new(0, 0.56, 0)),
-		makeStation("TrainingGrounds", Vector3.new(10.2, 0.56, -4.6), Vector3.new(0, 0.56, 0)),
-		makeStation("TrainingGrounds", Vector3.new(-8.6, 0.56, -8.4), Vector3.new(0, 0.56, 0)),
-		makeStation("TrainingGrounds", Vector3.new(-9.6, 0.56, 6.8), Vector3.new(0, 0.56, 0)),
+		makeStation("TrainingGrounds", Vector3.new(12.2, 0.08, -6.2), Vector3.new(0, 0.08, 0)),
+		makeStation("TrainingGrounds", Vector3.new(15.5, 0.08, 1.5), Vector3.new(0, 0.08, 0)),
+		makeStation("TrainingGrounds", Vector3.new(-15.5, 0.08, 1.5), Vector3.new(0, 0.08, 0)),
+		makeStation("TrainingGrounds", Vector3.new(-12.2, 0.08, -6.2), Vector3.new(0, 0.08, 0)),
 	}),
 })
 
@@ -238,28 +243,47 @@ local marketSlots: { FacilitySlotSpec } = {
 }
 
 --============================================================================
--- TRAINING GROUNDS SLOTS (4 Distinct Combat Drill Roles)
+-- TRAINING GROUNDS SLOTS (4 Distinct Combat Drill Roles, 5 Dummies, 2 Bullseyes)
 --============================================================================
 local ringY = FacilityWorkerRules.Facilities.TrainingGrounds.FloorY
-local dummyAngles = { math.rad(35), math.rad(125), math.rad(215), math.rad(305) }
 
-local function makeDummyStrikeStation(dummyIndex: number, standRadius: number): StationPose
-	local angle = dummyAngles[dummyIndex]
-	local dx = math.cos(angle) * 9.6
-	local dz = math.sin(angle) * 9.6
-	local sx = math.cos(angle) * standRadius
-	local sz = math.sin(angle) * standRadius
+local function unitXZ(fx: number, fz: number): (number, number)
+	local len = math.sqrt(fx * fx + fz * fz)
+	if len < 1e-6 then
+		return 0, -1
+	end
+	return fx / len, fz / len
+end
+
+local dummyDefs = {
+	{ X = -8.5, Z = -1.5, Fx = 0.85, Fz = -0.53 },
+	{ X = 0.0, Z = 2.0, Fx = 0.0, Fz = -1.0 },
+	{ X = 8.5, Z = -1.5, Fx = -0.85, Fz = -0.53 },
+	{ X = -6.2, Z = 11.2, Fx = 0.45, Fz = -0.89 },
+	{ X = 6.2, Z = 11.2, Fx = -0.45, Fz = -0.89 },
+}
+
+local function makeDummyStrikeStation(dummyIndex: number, standDist: number?): StationPose
+	local d = dummyDefs[math.clamp(math.floor(dummyIndex), 1, #dummyDefs)]
+	local ux, uz = unitXZ(d.Fx, d.Fz)
+	local dist = standDist or 3.2
 	return makeStation(
 		"TrainingGrounds",
-		Vector3.new(sx, ringY, sz),
-		Vector3.new(dx, ringY, dz)
+		Vector3.new(d.X + ux * dist, ringY, d.Z + uz * dist),
+		Vector3.new(d.X, ringY, d.Z)
 	)
 end
 
-local bullseyePlot = FacilityWorkerRules.FacilityToPlot("TrainingGrounds", Vector3.new(0, 4.1, 11.8))
+local bullseye1Local = Vector3.new(16.2, 2.65, 9.8)
+local bullseye2Local = Vector3.new(-16.2, 2.65, 9.8)
+local bullseyePlot = FacilityWorkerRules.FacilityToPlot("TrainingGrounds", bullseye1Local)
+FacilityWorkerRules.BullseyeTargetsPlot = table.freeze({
+	bullseyePlot,
+	FacilityWorkerRules.FacilityToPlot("TrainingGrounds", bullseye2Local),
+})
 
 local trainingSlots: { FacilitySlotSpec } = {
-	-- Slot 1: Dummy Combo Striker (alternates Dummy_1 NE & Dummy_4 SE with melee/weapon combos)
+	-- Slot 1: Dummy Combo Striker (alternates Dummy_1, Dummy_4 & Dummy_5 with melee/weapon combos)
 	table.freeze({
 		SlotIndex = 1,
 		FacilityId = "TrainingGrounds" :: WorkerFacilityId,
@@ -269,18 +293,14 @@ local trainingSlots: { FacilitySlotSpec } = {
 		SecondaryClip = "AttackSpecial",
 		PropKind = "NONE" :: PropKind,
 		EquipHeroWeapon = true,
-		EntryWaypoint = FacilityWorkerRules.FacilityToPlot("TrainingGrounds", Vector3.new(2.8, ringY, -7.8)),
-		Primary = makeDummyStrikeStation(1, 6.2),
-		Secondary = makeDummyStrikeStation(4, 6.2),
-		Tertiary = makeStation(
-			"TrainingGrounds",
-			Vector3.new(4.4, ringY, -0.8),
-			Vector3.new(7.86, ringY, 5.51)
-		),
-		DummyIndices = table.freeze({ 1, 4 }),
+		EntryWaypoint = FacilityWorkerRules.FacilityToPlot("TrainingGrounds", Vector3.new(2.2, ringY, -8.5)),
+		Primary = makeDummyStrikeStation(1, 3.2),
+		Secondary = makeDummyStrikeStation(4, 3.2),
+		Tertiary = makeDummyStrikeStation(5, 3.2),
+		DummyIndices = table.freeze({ 1, 4, 5 }),
 		BullseyeTargetPlot = nil,
 	}),
-	-- Slot 2: Bullseye Precision Drill (fires volleys/shockwaves into +Z Bullseye target)
+	-- Slot 2: Bullseye Precision Drill (fires volleys into mirrored side Bullseye targets)
 	table.freeze({
 		SlotIndex = 2,
 		FacilityId = "TrainingGrounds" :: WorkerFacilityId,
@@ -290,26 +310,26 @@ local trainingSlots: { FacilitySlotSpec } = {
 		SecondaryClip = "TrainingKata",
 		PropKind = "NONE" :: PropKind,
 		EquipHeroWeapon = true,
-		EntryWaypoint = FacilityWorkerRules.FacilityToPlot("TrainingGrounds", Vector3.new(0.0, ringY, -6.5)),
+		EntryWaypoint = FacilityWorkerRules.FacilityToPlot("TrainingGrounds", Vector3.new(1.5, ringY, -7.8)),
 		Primary = makeStation(
 			"TrainingGrounds",
-			Vector3.new(-1.2, ringY, -1.2),
-			Vector3.new(0, ringY, 11.8)
+			Vector3.new(6.8, ringY, 5.2),
+			Vector3.new(bullseye1Local.X, ringY, bullseye1Local.Z)
 		),
 		Secondary = makeStation(
 			"TrainingGrounds",
-			Vector3.new(2.2, ringY, -1.2),
-			Vector3.new(0, ringY, 11.8)
+			Vector3.new(-6.8, ringY, 5.2),
+			Vector3.new(bullseye2Local.X, ringY, bullseye2Local.Z)
 		),
 		Tertiary = makeStation(
 			"TrainingGrounds",
-			Vector3.new(0.0, ringY, 2.4),
-			Vector3.new(0, ringY, 11.8)
+			Vector3.new(8.5, ringY, 4.8),
+			Vector3.new(bullseye1Local.X, ringY, bullseye1Local.Z)
 		),
 		DummyIndices = table.freeze({}),
 		BullseyeTargetPlot = bullseyePlot,
 	}),
-	-- Slot 3: Martial Kata & Weapon Rack Inspection (western mat + Dummy_3 lunge + SW rack check)
+	-- Slot 3: Martial Kata & Weapon Rack Inspection (open mat + Dummy_3 lunge + back rack check)
 	table.freeze({
 		SlotIndex = 3,
 		FacilityId = "TrainingGrounds" :: WorkerFacilityId,
@@ -319,22 +339,22 @@ local trainingSlots: { FacilitySlotSpec } = {
 		SecondaryClip = "AttackBasic",
 		PropKind = "NONE" :: PropKind,
 		EquipHeroWeapon = true,
-		EntryWaypoint = FacilityWorkerRules.FacilityToPlot("TrainingGrounds", Vector3.new(-3.8, ringY, -7.8)),
+		EntryWaypoint = FacilityWorkerRules.FacilityToPlot("TrainingGrounds", Vector3.new(-2.0, ringY, -8.5)),
 		Primary = makeStation(
 			"TrainingGrounds",
-			Vector3.new(-5.8, ringY, 0.8),
-			Vector3.new(2.0, ringY, 0.8)
+			Vector3.new(-2.5, ringY, 6.5),
+			Vector3.new(4.0, ringY, 6.5)
 		),
-		Secondary = makeDummyStrikeStation(3, 6.2),
+		Secondary = makeDummyStrikeStation(3, 3.2),
 		Tertiary = makeStation(
 			"TrainingGrounds",
-			Vector3.new(-8.6, ringY, -4.6),
-			Vector3.new(-11.4, ringY, -4.8)
+			Vector3.new(-4.8, ringY, 17.5),
+			Vector3.new(-5.4, ringY, 21.8)
 		),
 		DummyIndices = table.freeze({ 3 }),
 		BullseyeTargetPlot = nil,
 	}),
-	-- Slot 4: Drill Sergeant / Arena Coach (Drill Sergeant perk: paces ring + Dummy_2 heavy skill)
+	-- Slot 4: Drill Sergeant / Arena Coach (Drill Sergeant perk: paces arena + Dummy_2 heavy skill)
 	table.freeze({
 		SlotIndex = 4,
 		FacilityId = "TrainingGrounds" :: WorkerFacilityId,
@@ -344,18 +364,18 @@ local trainingSlots: { FacilitySlotSpec } = {
 		SecondaryClip = "AttackSkill",
 		PropKind = "NONE" :: PropKind,
 		EquipHeroWeapon = true,
-		EntryWaypoint = FacilityWorkerRules.FacilityToPlot("TrainingGrounds", Vector3.new(-1.6, ringY, -8.2)),
+		EntryWaypoint = FacilityWorkerRules.FacilityToPlot("TrainingGrounds", Vector3.new(0.0, ringY, -8.5)),
 		Primary = makeStation(
 			"TrainingGrounds",
-			Vector3.new(0.6, ringY, -5.6),
-			Vector3.new(-0.8, ringY, 4.5)
+			Vector3.new(0.0, ringY, -6.2),
+			Vector3.new(0.0, ringY, 4.0)
 		),
 		Secondary = makeStation(
 			"TrainingGrounds",
-			Vector3.new(-2.6, ringY, 2.0),
-			Vector3.new(3.5, ringY, 1.5)
+			Vector3.new(-11.5, ringY, 3.2),
+			Vector3.new(0.0, ringY, 2.0)
 		),
-		Tertiary = makeDummyStrikeStation(2, 6.2),
+		Tertiary = makeDummyStrikeStation(2, 3.2),
 		DummyIndices = table.freeze({ 2 }),
 		BullseyeTargetPlot = nil,
 	}),
@@ -391,13 +411,27 @@ function FacilityWorkerRules.GetComaStation(facilityId: string, slotIndex: numbe
 end
 
 function FacilityWorkerRules.GetDummyPlotPosition(dummyIndex: number): Vector3
-	local idx = math.clamp(math.floor(dummyIndex), 1, #dummyAngles)
-	local angle = dummyAngles[idx]
+	local idx = math.clamp(math.floor(dummyIndex), 1, #dummyDefs)
+	local d = dummyDefs[idx]
 	return FacilityWorkerRules.FacilityToPlot(
 		"TrainingGrounds",
-		Vector3.new(math.cos(angle) * 9.6, 0.5, math.sin(angle) * 9.6)
+		Vector3.new(d.X, ringY, d.Z)
 	)
 end
+
+FacilityWorkerRules.DummyCount = #dummyDefs
+
+FacilityWorkerRules.CourtyardPolygonLocal = table.freeze({
+	Vector2.new(5.0, -12.0),
+	Vector2.new(16.0, -9.5),
+	Vector2.new(23.8, 2.5),
+	Vector2.new(12.0, 18.5),
+	Vector2.new(0.0, 27.5),
+	Vector2.new(-12.0, 18.5),
+	Vector2.new(-23.8, 2.5),
+	Vector2.new(-16.0, -9.5),
+	Vector2.new(-5.0, -12.0),
+})
 
 function FacilityWorkerRules.ResolveHeroWeaponType(archetype: string?, equippedWeaponType: string?): string
 	if type(equippedWeaponType) == "string" and equippedWeaponType ~= "" then

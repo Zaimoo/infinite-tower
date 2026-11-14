@@ -8,7 +8,7 @@
 --   3. MarketCluster      (4-Stall U-Shaped Merchant Bazaar with striped awnings, barrels, crates, warm lights)
 --   4. SynthesisChamber   (Cylindrical Gothic Stone Rotunda with cyan barrier arch & #C084FC purple oculus plume)
 --   5. BlacksmithForge    (Open-Air Stone Hearth & Chimney against Dividing Wall, anvil sparks, coal, trough)
---   6. TrainingArea       (28-Stud Circular Cobblestone Ring, split-rail fences, 4 straw dummies, bullseye target)
+--   6. TrainingArea       (Polygonal Split-Rail Courtyard with V-Gable Archway, 5 Dummies & 2 Bullseyes)
 --   7. GuardpostOutskirts (Timber Palisade Watch-Post, slatted roof, stone-ringed campfire & log seating)
 --   8. CommandPost        (War Banner & Architect's Table for Squad Management & Fortress Tree)
 
@@ -1311,72 +1311,84 @@ function Arch.BuildTrainingGrounds(folder: Instance, centerCF: CFrame): Part
 	model.Name = "Building_TrainingGrounds"
 	model.Parent = folder
 
-	local ringCobble = Color3.fromRGB(84, 82, 78)
-	local ringCurb = Color3.fromRGB(56, 60, 68)
-	local fenceWood = Color3.fromRGB(108, 74, 44)
-	local strawColor = Color3.fromRGB(214, 182, 102)
-	local postWood = Color3.fromRGB(88, 58, 34)
-
-	-- Sunken/Bordered Circular Cobblestone Combat Ring (Diameter = 28 studs)
-	cylinder(model, "TrainingRingBorder", 14.8, 0.45, centerCF * CFrame.new(0, 0.22, 0), ringCurb, Enum.Material.Slate, false)
-	cylinder(model, "TrainingRingFloor", 13.8, 0.52, centerCF * CFrame.new(0, 0.26, 0), ringCobble, Enum.Material.Cobblestone, false)
-	cylinder(model, "InnerSparringCircle", 8.5, 0.56, centerCF * CFrame.new(0, 0.28, 0), Color3.fromRGB(98, 94, 88), Enum.Material.Cobblestone, false)
-
-	-- 4 Curved Wooden Split-Rail Fence Segments enclosing the ring (with open entry gaps)
-	local fenceRadius = 14.2
-	for quad = 1, 4 do
-		local baseAngle = math.rad((quad - 1) * 90 + 45)
-		for sub = -1, 1 do
-			local a1 = baseAngle + math.rad(sub * 18 - 9)
-			local a2 = baseAngle + math.rad(sub * 18 + 9)
-			local p1 = V(math.cos(a1) * fenceRadius, 0, math.sin(a1) * fenceRadius)
-			local p2 = V(math.cos(a2) * fenceRadius, 0, math.sin(a2) * fenceRadius)
-			local mid = (p1 + p2) * 0.5
-			local segLen = (p2 - p1).Magnitude
-			local railCF = centerCF * CFrame.lookAt(mid, p2)
-
-			part(model, "FencePost", V(0.65, 3.4, 0.65), centerCF * CFrame.new(p1 + V(0, 1.7, 0)), postWood, Enum.Material.Wood, false)
-			if sub == 1 then
-				part(model, "FencePostEnd", V(0.65, 3.4, 0.65), centerCF * CFrame.new(p2 + V(0, 1.7, 0)), postWood, Enum.Material.Wood, false)
-			end
-			part(model, "SplitRailTop", V(0.35, 0.4, segLen + 0.3), railCF * CFrame.new(0, 2.7, 0), fenceWood, Enum.Material.WoodPlanks, false)
-			part(model, "SplitRailLow", V(0.35, 0.4, segLen + 0.3), railCF * CFrame.new(0, 1.4, 0), fenceWood, Enum.Material.WoodPlanks, false)
+	local assetsFolder = ReplicatedStorage:FindFirstChild("Assets")
+	local customMeshes = assetsFolder and assetsFolder:FindFirstChild("CustomFacilityMeshes")
+	local importedTemplate = customMeshes and customMeshes:FindFirstChild("TrainingArea")
+	if not importedTemplate then
+		local plotFacs = assetsFolder and assetsFolder:FindFirstChild("PlotFacilities")
+		local candidate = plotFacs and plotFacs:FindFirstChild("TrainingArea")
+		if candidate and candidate:FindFirstChildWhichIsA("MeshPart", true) then
+			importedTemplate = candidate
 		end
 	end
 
-	-- 4 Wooden T-Posed Straw Training Dummies positioned around the inner perimeter
-	local dummyAngles = { math.rad(35), math.rad(125), math.rad(215), math.rad(305) }
-	for idx, dAngle in ipairs(dummyAngles) do
-		local dPos = V(math.cos(dAngle) * 9.6, 0.5, math.sin(dAngle) * 9.6)
-		local dummyCF = centerCF * CFrame.lookAt(dPos, V(0, 0.5, 0))
-
-		cylinder(model, "DummyBase_" .. idx, 1.3, 0.35, dummyCF * CFrame.new(0, 0.18, 0), postWood, Enum.Material.Wood, false)
-		cylinder(model, "TrainingDummy_" .. idx, 0.4, 5.6, dummyCF * CFrame.new(0, 2.8, 0), postWood, Enum.Material.Wood, false)
-		part(model, "DummyCrossbar_" .. idx, V(3.8, 0.45, 0.45), dummyCF * CFrame.new(0, 4.1, 0), postWood, Enum.Material.Wood, false)
-		cylinder(model, "DummyTorso_" .. idx, 0.95, 2.5, dummyCF * CFrame.new(0, 3.5, 0), strawColor, Enum.Material.Fabric, false)
-		sphere(model, "DummyHead_" .. idx, 1.35, dummyCF * CFrame.new(0, 5.35, 0), strawColor, Enum.Material.Fabric)
-		-- Target band across dummy chest
-		cylinder(model, "DummyTargetBand_" .. idx, 0.98, 0.45, dummyCF * CFrame.new(0, 3.6, 0), Color3.fromRGB(190, 42, 42), Enum.Material.Fabric, false)
+	if importedTemplate and importedTemplate:IsA("Model") then
+		local cloned = importedTemplate:Clone()
+		cloned:PivotTo(centerCF)
+		for _, desc in ipairs(cloned:GetDescendants()) do
+			if desc:IsA("BasePart") then
+				desc.Anchored = true
+				desc.CanCollide = false
+				desc.CanTouch = false
+				desc.CanQuery = false
+				desc.CastShadow = (desc.Name ~= "Arena_Floor")
+			end
+		end
+		for _, ch in ipairs(cloned:GetChildren()) do
+			if not ch:IsA("PackageLink") then
+				ch.Parent = model
+			end
+		end
+		cloned:Destroy()
+	else
+		warn("[PlotFacilityArchitecture] Missing ReplicatedStorage.Assets.CustomFacilityMeshes.TrainingArea prefab")
 	end
 
-	-- 1 Freestanding Circular Red-and-White Bullseye Target on the East (+Z) Side
-	local targetCF = centerCF * CFrame.new(0, 0.5, 11.8) * CFrame.Angles(math.rad(-10), 0, 0)
-	part(model, "BullseyeLegL", V(0.45, 5.2, 0.45), targetCF * CFrame.new(-1.2, 2.4, 0.4), postWood, Enum.Material.Wood, false)
-	part(model, "BullseyeLegR", V(0.45, 5.2, 0.45), targetCF * CFrame.new(1.2, 2.4, 0.4), postWood, Enum.Material.Wood, false)
-	local discCF = targetCF * CFrame.new(0, 3.6, 0) * CFrame.Angles(0, math.pi * 0.5, 0)
-	cylinder(model, "BullseyeBack", 2.2, 0.35, discCF, strawColor, Enum.Material.Wood, false)
-	cylinder(model, "BullseyeRedOuter", 1.9, 0.40, discCF, Color3.fromRGB(205, 40, 40), Enum.Material.SmoothPlastic, false)
-	cylinder(model, "BullseyeWhiteMid", 1.3, 0.44, discCF, Color3.fromRGB(240, 240, 240), Enum.Material.SmoothPlastic, false)
-	cylinder(model, "BullseyeRedCenter", 0.65, 0.48, discCF, Color3.fromRGB(215, 35, 35), Enum.Material.SmoothPlastic, false)
+	-- Invisible solid collision hull for V-gable archway stone piers & 8 perimeter fence spans
+	-- (central 8.0x6.2 doorway opening stays 100% passable from Path_TrainingArea)
+	local colColor = Color3.fromRGB(92, 86, 78)
+	local function addCollider(cName: string, sz: Vector3, relCF: CFrame)
+		local cp = part(model, cName, sz, centerCF * relCF, colColor, Enum.Material.Wood, true)
+		cp.Transparency = 1
+		cp.CastShadow = false
+		return cp
+	end
 
-	-- Weapon Racks along the South-West edge
-	addWeaponRack(model, centerCF * CFrame.new(-10.5, 0.4, -7.5) * CFrame.Angles(0, math.rad(45), 0))
-	addWeaponRack(model, centerCF * CFrame.new(-12.2, 0.4, -2.0) * CFrame.Angles(0, math.rad(75), 0))
+	addCollider("ArchPierCollider_L", V(2.2, 6.8, 2.4), CFrame.new(5.0, 3.4, -12.0))
+	addCollider("ArchPierCollider_R", V(2.2, 6.8, 2.4), CFrame.new(-5.0, 3.4, -12.0))
+	addCollider("ArchHeaderCollider", V(12.4, 5.0, 2.4), CFrame.new(0, 8.9, -12.0))
 
-	-- Warm corner torch post for evening visibility
-	local torchPost = part(model, "ArenaTorchPost", V(0.7, 7.5, 0.7), centerCF * CFrame.new(11.5, 3.75, -8.5), postWood, Enum.Material.Wood, false)
-	local flame = sphere(model, "ArenaTorchFlame", 1.1, torchPost.CFrame * CFrame.new(0, 4.0, 0), Color3.fromRGB(255, 165, 65), Enum.Material.Neon)
-	pointLight(flame, Color3.fromRGB(255, 165, 65), 1.8, 22, false)
+	local fenceVertices = {
+		V(5.0, 0, -12.0),
+		V(16.0, 0, -9.5),
+		V(23.8, 0, 2.5),
+		V(12.0, 0, 18.5),
+		V(0.0, 0, 27.5),
+		V(-12.0, 0, 18.5),
+		V(-23.8, 0, 2.5),
+		V(-16.0, 0, -9.5),
+		V(-5.0, 0, -12.0),
+	}
+	for i = 1, #fenceVertices - 1 do
+		local a = fenceVertices[i]
+		local b = fenceVertices[i + 1]
+		local p1 = V(a.X, 1.8, a.Z)
+		local p2 = V(b.X, 1.8, b.Z)
+		local mid = (p1 + p2) * 0.5
+		local segLen = (p2 - p1).Magnitude + 0.4
+		addCollider("FenceCollider_" .. i, V(0.85, 3.6, segLen), CFrame.lookAt(mid, p2))
+	end
+
+	-- Subtle warm evening bounce lights at gable entrance and courtyard center (non-colliding invisible emitters)
+	local archLightHost = part(model, "ArchLanternLightHost", V(0.4, 0.4, 0.4), centerCF * CFrame.new(0, 5.6, -11.8), colColor, Enum.Material.SmoothPlastic, false)
+	archLightHost.Transparency = 1
+	archLightHost.CanQuery = false
+	pointLight(archLightHost, Color3.fromRGB(255, 185, 105), 0.9, 22, false)
+
+	local arenaLightHost = part(model, "ArenaAmbientLightHost", V(0.4, 0.4, 0.4), centerCF * CFrame.new(0, 5.2, 2.5), colColor, Enum.Material.SmoothPlastic, false)
+	arenaLightHost.Transparency = 1
+	arenaLightHost.CanQuery = false
+	pointLight(arenaLightHost, Color3.fromRGB(255, 200, 130), 0.7, 28, false)
 
 	local interactionPart = finalizeFacilityModel(model, centerCF, V(4, 1.0, 4), V(0, 3.8, -11.5))
 	return interactionPart
@@ -1573,7 +1585,7 @@ function Arch.EnsureFacilityPrefabs(): Folder
 	end
 
 	local existing = assetsFolder:FindFirstChild("PlotFacilities")
-	if existing and existing:GetAttribute("PrefabVersion") == 10 then
+	if existing and existing:GetAttribute("PrefabVersion") == 12 then
 		return existing :: Folder
 	end
 	if existing then
@@ -1582,7 +1594,7 @@ function Arch.EnsureFacilityPrefabs(): Folder
 
 	local prefabs = Instance.new("Folder")
 	prefabs.Name = "PlotFacilities"
-	prefabs:SetAttribute("PrefabVersion", 10)
+	prefabs:SetAttribute("PrefabVersion", 12)
 	prefabs.Parent = assetsFolder
 
 	local tempHolder = Instance.new("Folder")

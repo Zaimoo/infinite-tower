@@ -571,7 +571,7 @@ Located inside the fortress commercial quarter. Stationed Merchants (`Berserker`
   *(Multiplies kill Gold on Infinite Tower Floors 1–50 and the Gold of banked relics. Does NOT amplify Outskirts Guard Post passive Gold.)*
 
 ##### Facility C: The Training Grounds (Interior Fortress Martial Wing - Squad Combat Power Multiplier)
-Located inside the fortress military quarter. Stationed Trainers (`Striker` & `Scholar` preferred, $+25\%$ labor synergy) conduct martial drills, applying an overall multiplier to squad combat stats:
+Located inside the fortress military quarter along a diagonal cobblestone approach aligned with the Plaza Fountain and corner bastion tip through a pointed timber-and-stone V-gable entrance archway. A symmetrical polygonal split-rail wooden courtyard sits flush on level courtyard turf with a centered cobblestone sparring floor, 5 chevron-arranged animated burlap-and-crimson strike dummies, mirrored red-and-white archery bullseye targets, paired weapon/halberd racks, stacked crates/barrels, and twin wrought-iron corner stands. Stationed Trainers (`Striker` & `Scholar` preferred, $+25\%$ labor synergy) conduct martial drills, applying an overall multiplier to squad combat stats:
 
 | Level | Gold Upgrade Cost | Max Workers | Base Combat Multiplier ($\text{BaseBonus}$) | Visual Identity |
 | :---: | :---: | :---: | :---: | :--- |

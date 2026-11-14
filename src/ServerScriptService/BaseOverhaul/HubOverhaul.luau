@@ -29,7 +29,7 @@ local GothicLanternSpawner = require(BaseOverhaulFolder:WaitForChild("GothicLant
 local EnvironmentSpawner = require(BaseOverhaulFolder:WaitForChild("EnvironmentSpawner"))
 
 local HubOverhaul = {}
-HubOverhaul.Version = 28 -- Bump to force a rebuild of baked geometry (28: Blender hyper-realistic trees, shrubs, turf clumps, and Cycles PBR ground MaterialVariants)
+HubOverhaul.Version = 29 -- Bump to force a rebuild of baked geometry (29: align TrainingGrounds & Path_TrainingArea ray with SE bastion tip)
 
 -- Runtime cleanup sweep to destroy pre-baked light shaft beams, god-ray attachments, and SunRays
 function HubOverhaul.CleanupLightShaftsAndRays()
