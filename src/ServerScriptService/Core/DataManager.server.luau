@@ -1720,7 +1720,7 @@ end)
 
 -- Studio-only chat command: `/summon <hero>` adds that hero to the caller's profile for free.
 -- `<hero>` is a HeroCatalog seed id, with or without the `hero_` prefix (`/summon edis`), or the hero's
--- display name (`/summon rook`; Rook's seed id is still hero_rourke, so saves need no migration).
+-- display name (`/summon rook`).
 if game:GetService("RunService"):IsStudio() then
 	local summonCommand = Instance.new("TextChatCommand")
 	summonCommand.Name = "DevSummonHero"

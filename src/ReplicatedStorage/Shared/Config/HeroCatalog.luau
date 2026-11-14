@@ -123,7 +123,7 @@ HeroCatalog.MirrorBanner = {
 	SparkPulls = 80, -- after 80 pulls the Master picks any of the five
 	-- A restricted player's purchase becomes Gems: 49.9 R$ a pull at the Gem store's 3 Gems per Robux.
 	RestrictedGemsPerPull = 150,
-	FeaturedHeroId = "hero_rourke",
+	FeaturedHeroId = "hero_rook",
 	Rates = { 0, 0, 0, 0, 0, 0,
 		0.50, -- 50% Mythical Isabelle (110% mirror)
 		0.28, -- 28% Transcendent Nyx (120%)
@@ -136,7 +136,7 @@ HeroCatalog.MirrorBanner = {
 		[8] = "hero_nyx",
 		[9] = "hero_caspian",
 		[10] = "hero_seraphine",
-		[11] = "hero_rourke",
+		[11] = "hero_rook",
 	},
 }
 
@@ -607,8 +607,8 @@ HeroCatalog.Seeds = {
 		PreferredFacility = "FACILITY_TRAINING",
 		Color = Color3.fromRGB(104, 109, 224),
 	},
-	hero_rourke = {
-		HeroId = "hero_rourke",
+	hero_rook = {
+		HeroId = "hero_rook",
 		DisplayName = "Rook",
 		BannerOrigin = "PREMIUM",
 		Mirror = true,

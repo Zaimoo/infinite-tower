@@ -663,7 +663,7 @@ local HERO_KITS: { [string]: HeroKitOverride } = {
 			CastSeconds = 1.4,
 		},
 	},
-	hero_rourke = {
+	hero_rook = {
 		Archetype = "Berserker",
 		Basic = { Name = "Gilt Cleave" },
 		Special = {

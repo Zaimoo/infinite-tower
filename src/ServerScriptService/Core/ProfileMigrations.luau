@@ -129,7 +129,24 @@ function ProfileMigrations.ToV8(profile: any)
 	profile.SchemaVersion = 8
 end
 
+-- Hero template ids that were renamed: old id -> new id. Saved heroes keep their template id, so
+-- every load moves them to the new one (cheap and idempotent, so it isn't tied to a schema
+-- version). Rourke became Rook.
+ProfileMigrations.RENAMED_TEMPLATES = table.freeze({ hero_rourke = "hero_rook" } :: { [string]: string })
+
+function ProfileMigrations.RenameTemplates(profile: any)
+	if type(profile.Heroes) ~= "table" then return end
+	for _, hero in profile.Heroes do
+		local renamed = type(hero) == "table" and ProfileMigrations.RENAMED_TEMPLATES[hero.TemplateId]
+		if renamed then
+			hero.TemplateId = renamed
+		end
+	end
+end
+
 function ProfileMigrations.Run(profile: any)
+	-- First, so every later step (and gameplay) only sees current template ids.
+	ProfileMigrations.RenameTemplates(profile)
 	ProfileMigrations.ToV3(profile)
 	ProfileMigrations.ToV4(profile)
 	ProfileMigrations.ToV5(profile)

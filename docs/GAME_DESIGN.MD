@@ -660,7 +660,7 @@ Each hero's kit is resolved by `HeroId` in `ArchetypeCombatSkills.HeroProfiles` 
 | 21 | **Nyx** (`hero_nyx`) | Transcendent (mirror) | Striker | Gilt Cut | Mirror Step | Shatterdance |
 | 22 | **Caspian** (`hero_caspian`) | Ascendant (mirror) | Vanguard | Gilt Edge | Polished Bash | Looking-Glass Bulwark |
 | 23 | **Seraphine** (`hero_seraphine`) | Ethereal (mirror) | Scholar | Shard Bolt | Refraction | Hall of Mirrors |
-| 24 | **Rook** (`hero_rourke`) | Immortal (mirror) | Berserker | Gilt Cleave | Last Stand | Gilded Frenzy |
+| 24 | **Rook** (`hero_rook`) | Immortal (mirror) | Berserker | Gilt Cleave | Last Stand | Gilded Frenzy |
 
 **Rhyman's kit** has two mechanics of its own (`HeroSkillEffects`). *Reaver's Whirl* is a spin (`WHIRLWIND`): the target takes the `1.50x` Special hit as `3` cuts `0.12s` apart, and every other mob within `9 studs` of Rhyman, in any direction, takes `0.90x` ATK split across the same three cuts. *Headsman's Verdict* is an execute (`Effect = "EXECUTE"`, cast `1.3s`): he leaps and lands one blow on his target alone, with no splash. Any mob it hits dies outright, whatever its remaining HP or shields: normal mobs, Elites, floor Alphas and raid adds. **Raid bosses and Biome Bosses are immune** and take `6.00x` ATK instead (`HeroSkillEffects.Executes`). In a duel the enemy hero also takes the `6.00x` hit, never an execute. On the client the whirl is the `WHIRL` style (crescents sweeping a full circle, one third per tick) and the execute is `EXECUTE` (a blade of light from above, a tall vertical cut and a crack in the floor past the target, with the target marked during the leap).
 
