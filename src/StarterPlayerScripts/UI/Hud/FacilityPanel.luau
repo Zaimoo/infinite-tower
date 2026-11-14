@@ -26,6 +26,7 @@ local OutskirtsRules = require(Shared:WaitForChild("Util"):WaitForChild("Outskir
 local FacilityWorkerRules = require(Shared:WaitForChild("Util"):WaitForChild("FacilityWorkerRules"))
 local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormulas"))
 local InventoryCapacity = require(Shared:WaitForChild("Util"):WaitForChild("InventoryCapacity"))
+local SquadLockModal = require(script.Parent.Parent:WaitForChild("SquadLockModal"))
 local SummonLuck = require(Shared:WaitForChild("Util"):WaitForChild("SummonLuck"))
 local Grimoire = require(Shared:WaitForChild("Util"):WaitForChild("GildedGrimoire"))
 local Kit = require(script.Parent.Parent:WaitForChild("Kit"))
@@ -1057,10 +1058,13 @@ local function FacilityPanel(props: { Facility: string, Profile: any, Width: num
 		setBusy(true)
 		say("Saving…")
 		task.spawn(function()
-			local ok, success, msg = pcall(function() return AssignHeroRole:InvokeServer(uuid, target) end)
+			local ok, success, msg, code = pcall(function() return AssignHeroRole:InvokeServer(uuid, target) end)
 			setBusy(false)
 			setConfirming(nil)
-			if not ok then
+			if ok and not success and SquadLockModal.Show(code, msg) then
+				say("")
+				return
+			elseif not ok then
 				say("Couldn't reach the server. Try again.", true)
 			elseif success then
 				local hero = profile.Heroes[uuid]

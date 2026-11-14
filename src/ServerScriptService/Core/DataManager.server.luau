@@ -1469,18 +1469,19 @@ local function removeUUIDFromFacilities(profile: PlayerProfile, uuid: string)
 end
 
 -- The squad is locked while the Master or the squad is in the tower or the raid arena (the arena is
--- tower floor RaidConfig.FloorId), and during a floor transition. Returns the refusal, or nil.
-local function squadLockReason(player: Player): string?
+-- tower floor RaidConfig.FloorId), and during a floor transition. Returns the refusal and a code the
+-- Squad window uses to show it as a modal ("SQUAD_LOCKED_TOWER" / "SQUAD_LOCKED_RAID"), or nil.
+local function squadLockReason(player: Player): (string?, string?)
 	local state = TowerFloorService.GetState(player)
-	if not state then return nil end
+	if not state then return nil, nil end
 	local floor, squadFloor = state.FloorId or 0, state.SquadFloorId or 0
 	if floor == RaidConfig.FloorId or squadFloor == RaidConfig.FloorId then
-		return "You can't change your squad during a raid."
+		return "You can't change your squad during a raid.", "SQUAD_LOCKED_RAID"
 	end
 	if floor ~= 0 or squadFloor ~= 0 or state.Pending ~= nil then
-		return "You can't change your squad in the tower. Return home first."
+		return "You can't change your squad in the tower. Return home first.", "SQUAD_LOCKED_TOWER"
 	end
-	return nil
+	return nil, nil
 end
 
 AssignHeroRoleFunc.OnServerInvoke = function(player: Player, heroUUID: any, targetAssignment: any, targetPlot: any?)
@@ -1494,7 +1495,7 @@ AssignHeroRoleFunc.OnServerInvoke = function(player: Player, heroUUID: any, targ
 
 	-- No squad swaps in the tower or a raid: the squad smart actions, deploying a hero, or moving a
 	-- deployed hero out. Bench and facility moves for heroes outside the squad still go through.
-	local lockReason = squadLockReason(player)
+	local lockReason, lockCode = squadLockReason(player)
 	if lockReason then
 		local movesSquad = heroUUID == "AUTO_SWAP_EXHAUSTED" or heroUUID == "AUTO_BEST"
 		if not movesSquad and type(targetAssignment) == "string" then
@@ -1505,7 +1506,7 @@ AssignHeroRoleFunc.OnServerInvoke = function(player: Player, heroUUID: any, targ
 			movesSquad = current ~= nil and string.find(current.Assignment or "", "^SQUAD_SLOT_") ~= nil
 		end
 		if movesSquad then
-			return false, lockReason
+			return false, lockReason, lockCode
 		end
 	end
 

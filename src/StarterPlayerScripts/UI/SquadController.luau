@@ -23,6 +23,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local HeroCard = require(script.Parent:WaitForChild("HeroCard"))
 local ModalFit = require(script.Parent:WaitForChild("ModalFit"))
+local SquadLockModal = require(script.Parent:WaitForChild("SquadLockModal"))
 local Theme = require(script.Parent:WaitForChild("Hud"):WaitForChild("Theme"))
 local GothicBoxStyle = require(Shared:WaitForChild("Util"):WaitForChild("GothicBoxStyle"))
 local GildedGrimoire = require(Shared:WaitForChild("Util"):WaitForChild("GildedGrimoire"))
@@ -703,7 +704,7 @@ function SquadController.Assign(self: any, uuid: string, target: string, success
 	self.HeldHero = nil
 	self:SetStatus("Saving…")
 	task.spawn(function()
-		local ok, okFlag, message = pcall(function()
+		local ok, okFlag, message, code = pcall(function()
 			return self.AssignRemote:InvokeServer(uuid, target)
 		end)
 		self.Busy = false
@@ -711,6 +712,9 @@ function SquadController.Assign(self: any, uuid: string, target: string, success
 			self:SetStatus("Couldn't reach the server. Try again.", true)
 		elseif okFlag then
 			self:SetStatus(successText)
+		elseif SquadLockModal.Show(code, message) then
+			-- Locked in the tower or a raid: the modal says so, not the footer line.
+			self:SetStatus("")
 		else
 			self:SetStatus(tostring(message or "That change was refused."), true)
 		end
