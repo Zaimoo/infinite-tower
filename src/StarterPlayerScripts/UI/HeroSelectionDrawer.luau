@@ -7,6 +7,8 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Grimoire = require(ReplicatedStorage.Shared.Util.GildedGrimoire)
 local GrimoireIcons = require(ReplicatedStorage.Shared.Util.GrimoireIcons)
+local StatFormulas = require(ReplicatedStorage.Shared.Util.StatFormulas)
+local HeroPickerFilter = require(ReplicatedStorage.Shared.Util.HeroPickerFilter)
 local Card = require(script.Parent.HeroPickerCard)
 local Motion = require(script.Parent.Kit.Motion)
 local Drawer = {}
@@ -78,6 +80,70 @@ function Drawer.new(parent: Instance, z: number, onClose: () -> ())
 	GrimoireIcons.CloseGlyph(self.CloseButton, 18)
 	self.CloseButton.Activated:Connect(function() self:Close() end)
 
+	-- Toolbar: search, sort, role filter and "available only" (HeroPickerFilter). The choices stay
+	-- for the session, so reopening the picker keeps them.
+	self.Query, self.Sort, self.Role, self.AvailableOnly = "", "RECOMMENDED", "ALL", false
+	self.Toolbar = new("Frame", {
+		Name = "Toolbar", Position = UDim2.fromOffset(14, 78), Size = UDim2.new(1, -28, 0, 36),
+		BackgroundTransparency = 1, AutomaticSize = Enum.AutomaticSize.Y, ZIndex = z + 2,
+	}, self.Panel)
+	new("UIListLayout", {
+		FillDirection = Enum.FillDirection.Horizontal, Wraps = true, Padding = UDim.new(0, 8),
+		VerticalAlignment = Enum.VerticalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder,
+	}, self.Toolbar)
+	local function chip(name: string, order: number, width: number): TextButton
+		local button = new("TextButton", {
+			Name = name, LayoutOrder = order, Size = UDim2.fromOffset(width, 36), AutoButtonColor = true,
+			BackgroundColor3 = Color3.fromRGB(31, 22, 42), BorderSizePixel = 0, Text = "", TextSize = 14,
+			TextColor3 = Grimoire.Text.Parchment, ZIndex = z + 3,
+		}, self.Toolbar)
+		new("UICorner", { CornerRadius = UDim.new(0, 7) }, button)
+		new("UIStroke", { Color = GOLD, Thickness = 1, Transparency = 0.35, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, button)
+		button:SetAttribute("Grimoire", true)
+		Grimoire.StyleText(button, "Body")
+		return button
+	end
+	local searchBox = new("Frame", {
+		Name = "SearchBox", LayoutOrder = 1, Size = UDim2.fromOffset(240, 36),
+		BackgroundColor3 = Color3.fromRGB(16, 10, 24), BorderSizePixel = 0, ZIndex = z + 3,
+	}, self.Toolbar)
+	new("UICorner", { CornerRadius = UDim.new(0, 7) }, searchBox)
+	new("UIStroke", { Color = GOLD, Thickness = 1, Transparency = 0.35 }, searchBox)
+	self.Search = new("TextBox", {
+		Name = "Search", Position = UDim2.fromOffset(12, 0), Size = UDim2.new(1, -24, 1, 0),
+		BackgroundTransparency = 1, ClearTextOnFocus = false, Text = "", PlaceholderText = "Search heroes or roles",
+		PlaceholderColor3 = Grimoire.Text.Muted, TextColor3 = Grimoire.Text.Parchment, TextSize = 14,
+		TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = z + 4,
+	}, searchBox)
+	self.Search:SetAttribute("Grimoire", true)
+	Grimoire.StyleText(self.Search, "Body")
+	self.Search:GetPropertyChangedSignal("Text"):Connect(function()
+		if self.Search.Text == self.Query then return end
+		self.Query = self.Search.Text
+		self:Rebuild(true)
+	end)
+	self.SortButton = chip("Sort", 2, 170)
+	self.SortButton.Activated:Connect(function()
+		self.Sort = HeroPickerFilter.Next(HeroPickerFilter.Sorts :: any, self.Sort)
+		self:Rebuild(true)
+	end)
+	self.RoleButton = chip("Role", 3, 150)
+	self.RoleButton.Activated:Connect(function()
+		self.Role = HeroPickerFilter.Next(HeroPickerFilter.Roles(self.Entries or {}), self.Role)
+		self:Rebuild(true)
+	end)
+	self.AvailableButton = chip("AvailableOnly", 4, 150)
+	self.AvailableButton.Activated:Connect(function()
+		self.AvailableOnly = not self.AvailableOnly
+		self:Rebuild(true)
+	end)
+	self.ResetButton = chip("Reset", 5, 80)
+	self.ResetButton.Activated:Connect(function()
+		self.Query, self.Sort, self.Role, self.AvailableOnly = "", "RECOMMENDED", "ALL", false
+		self.Search.Text = ""
+		self:Rebuild(true)
+	end)
+
 	self.Scroll = new("ScrollingFrame", {
 		Name = "Heroes", Position = UDim2.fromOffset(14, 82), Size = UDim2.new(1, -28, 1, -118),
 		BackgroundTransparency = 1, BorderSizePixel = 0, CanvasSize = UDim2.new(),
@@ -86,7 +152,7 @@ function Drawer.new(parent: Instance, z: number, onClose: () -> ())
 	}, self.Panel)
 	self.Grid = new("UIGridLayout", {
 		CellSize = UDim2.fromOffset(170, 254), CellPadding = UDim2.fromOffset(12, 14),
-		HorizontalAlignment = Enum.HorizontalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder,
+		HorizontalAlignment = Enum.HorizontalAlignment.Left, SortOrder = Enum.SortOrder.LayoutOrder,
 	}, self.Scroll)
 	new("UIPadding", { PaddingTop = UDim.new(0, 4), PaddingBottom = UDim.new(0, 10), PaddingLeft = UDim.new(0, 4), PaddingRight = UDim.new(0, 12) }, self.Scroll)
 	self.Footer = new("TextLabel", {
@@ -114,8 +180,15 @@ function Drawer.new(parent: Instance, z: number, onClose: () -> ())
 		self.Subtitle.Position = UDim2.fromOffset(14, if compact then 30 else 47)
 		self.Subtitle.TextSize = if compact then 13 else 15
 		self.CloseButton.Position = UDim2.new(1, -58, 0, if compact then 4 else 14)
-		self.Scroll.Position = UDim2.fromOffset(14, if compact then 54 else 82)
-		self.Scroll.Size = UDim2.new(1, -28, 1, if compact then -80 else -118)
+		local toolbarTop = if compact then 52 else 78
+		self.Toolbar.Position = UDim2.fromOffset(14, toolbarTop)
+		local narrow = self.Panel.AbsoluteSize.X < 640
+		self.Search.Parent.Size = UDim2.new(if narrow then 1 else 0, if narrow then 0 else 240, 0, 36)
+		local scrollTop = toolbarTop + math.max(36, self.Toolbar.AbsoluteSize.Y) + 8
+		self.Scroll.Position = UDim2.fromOffset(14, scrollTop)
+		self.Scroll.Size = UDim2.new(1, -28, 1, -(scrollTop + (if compact then 26 else 36)))
+		self.Empty.Position = self.Scroll.Position
+		self.Empty.Size = self.Scroll.Size
 		self.Footer.Position = UDim2.new(0, 18, 1, if compact then -22 else -30)
 		self.Footer.Size = UDim2.new(1, -36, 0, if compact then 18 else 24)
 		self.Footer.TextSize = if compact then 12 else 14
@@ -130,6 +203,8 @@ function Drawer.new(parent: Instance, z: number, onClose: () -> ())
 		self:LinkFocus()
 	end
 	self.Scroll:GetPropertyChangedSignal("AbsoluteSize"):Connect(resize)
+	self.Toolbar:GetPropertyChangedSignal("AbsoluteSize"):Connect(resize)
+	self.Panel:GetPropertyChangedSignal("AbsoluteSize"):Connect(resize)
 	self.Root:GetPropertyChangedSignal("AbsoluteSize"):Connect(resize)
 	local inputConnection = UserInputService:GetPropertyChangedSignal("PreferredInput"):Connect(function()
 		if self.Opened and UserInputService.PreferredInput == Enum.PreferredInput.Gamepad then
@@ -156,7 +231,7 @@ end
 function Drawer.LinkFocus(self: any)
 	local buttons = self.Buttons or {}
 	local columns = self.Columns or 1
-	self.CloseButton.NextSelectionDown = buttons[1] or self.CloseButton
+	self.CloseButton.NextSelectionDown = buttons[1] or self.SortButton or self.CloseButton
 	for i, button in buttons do
 		button.NextSelectionLeft = buttons[i - 1] or button
 		button.NextSelectionRight = buttons[i + 1] or button
@@ -165,25 +240,64 @@ function Drawer.LinkFocus(self: any)
 	end
 end
 
+-- The caller's entries in its preferred order ("Recommended"); the toolbar filters and re-sorts them.
 function Drawer.SetContent(self: any, title: string, subtitle: string, entries: { any }, onSelect: (string) -> (), emptyText: string?)
+	self.Title.Text, self.Subtitle.Text = title, subtitle
+	self.EmptyText = emptyText or "No heroes in your roster."
+	self.OnSelect = onSelect
+	local profile = (_G :: any).CurrentProfile
+	for _, entry in entries do
+		local hero = entry.Hero
+		if entry.Rarity == nil then entry.Rarity = StatFormulas.GetHeroRarity(hero) end
+		if entry.Power == nil then
+			local ok, power = pcall(function()
+				local known = profile and profile.SquadPowerByHero and profile.SquadPowerByHero[hero.UUID]
+				return known or StatFormulas.GetHeroPower(hero, StatFormulas.GetEquippedArtifact(profile, hero))
+			end)
+			entry.Power = if ok and type(power) == "number" then power else 0
+		end
+	end
+	self.Entries = entries
+	-- A role that no longer exists in this list falls back to All.
+	if not table.find(HeroPickerFilter.Roles(entries), self.Role) then self.Role = "ALL" end
+	self:Rebuild(false)
+end
+
+function Drawer.RenderToolbar(self: any, shownCount: number, total: number)
+	self.SortButton.Text = "Sort: " .. (HeroPickerFilter.SortLabels[self.Sort] or self.Sort)
+	self.RoleButton.Text = "Role: " .. (if self.Role == "ALL" then "All" else self.Role)
+	self.AvailableButton.Text = if self.AvailableOnly then "Available only" else "All heroes"
+	local filtered = self.Query ~= "" or self.Role ~= "ALL" or self.AvailableOnly or self.Sort ~= "RECOMMENDED"
+	self.ResetButton.Visible = filtered
+	for _, button in { self.RoleButton, self.AvailableButton } do
+		local active = (button == self.RoleButton and self.Role ~= "ALL") or (button == self.AvailableButton and self.AvailableOnly)
+		button.BackgroundColor3 = if active then Color3.fromRGB(74, 52, 24) else Color3.fromRGB(31, 22, 42)
+	end
+	self.Footer.Text = if shownCount == total then string.format("%d heroes", total)
+		else string.format("%d of %d heroes", shownCount, total)
+end
+
+function Drawer.Rebuild(self: any, resetScroll: boolean)
+	local all = self.Entries or {}
+	local entries = HeroPickerFilter.Apply(all, { Query = self.Query, Sort = self.Sort, Role = self.Role, AvailableOnly = self.AvailableOnly })
 	local selected = GuiService.SelectedObject
 	local focusUUID = selected and selected:GetAttribute("HeroUUID")
-	local hadFocus = selected and selected:IsDescendantOf(self.Root)
+	local hadFocus = selected and selected:IsDescendantOf(self.Scroll)
 	for _, child in self.Scroll:GetChildren() do if child:IsA("GuiObject") then child:Destroy() end end
-	self.Title.Text, self.Subtitle.Text = title, subtitle
-	self.Empty.Text = emptyText or "No heroes in your roster."
+	self.Empty.Text = if #all == 0 then self.EmptyText or "No heroes in your roster." else "No heroes match. Clear the search or filters."
 	self.Empty.Visible = #entries == 0
-	self.Footer.Text = string.format("%d heroes  ·  Scroll for more", #entries)
+	self:RenderToolbar(#entries, #all)
 	self.Buttons = {}
 	local focus = nil
 	for i, entry in entries do
 		local button = Card.Create(self.Scroll, entry, i, self.Z + 3, function(uuid)
-			if self.Opened and self.Root.Visible then onSelect(uuid) end
+			if self.Opened and self.Root.Visible and self.OnSelect then self.OnSelect(uuid) end
 		end)
 		Card.Resize(button, self.WideCards == true)
 		table.insert(self.Buttons, button)
 		if entry.UUID == focusUUID or (not focusUUID and entry.Selected) then focus = button end
 	end
+	if resetScroll then self.Scroll.CanvasPosition = Vector2.zero end
 	self:LinkFocus()
 	if hadFocus then GuiService.SelectedObject = focus or self.Buttons[1] or self.CloseButton end
 end

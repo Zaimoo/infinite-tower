@@ -321,7 +321,15 @@ test("Preview does not spend resources and committed single donor matches exact 
 	check(result.Success, result.Message); equal(c.profile.Heroes.d, nil); check(c.profile.Heroes.e)
 	check(deepEqual(Math.Snapshot(c.profile.Heroes.r), preview.After))
 	equal(c.profile.Heroes.r.SynthesisHistory.DonorsConsumed, 1); equal(c.profile.Heroes.r.SynthesisHistory.XPGained, 125)
-	equal(c.profile.Currencies.Gold, before.Currencies.Gold); equal(c.syncs, 1)
+	equal(preview.Costs.Gold, 125); equal(c.profile.Currencies.Gold, before.Currencies.Gold - 125); equal(c.syncs, 1)
+end)
+
+test("Synthesis costs Gold for the EXP applied and is refused without enough Gold", function()
+	equal(Math.GetSynthesisGoldCost(0), 0); equal(Math.GetSynthesisGoldCost(10), 50); equal(Math.GetSynthesisGoldCost(125), 125)
+	local c = context(); c.profile.Currencies.Gold = 124
+	local preview = c:preview(synthesis())
+	check(not preview.CanCommit); equal(preview.Costs.Gold, 125)
+	rejectedWithoutMutation(c, "PREVIEW", synthesis())
 end)
 
 test("Batch synthesis is deterministic and independent of donor order", function()

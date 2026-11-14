@@ -1060,6 +1060,7 @@ function Synth.ComputeOptimisticPreview(self: any): any?
 			Before = PitMath.Snapshot(recipient, profile),
 			After = PitMath.Snapshot(after, profile),
 			XP = xp,
+			Costs = { Gold = PitMath.GetSynthesisGoldCost(xp.Applied) },
 			Donors = donorList,
 			Warnings = warnings,
 			RequiresRareConfirmation = false,
@@ -1590,6 +1591,10 @@ function Synth.Render(self: any)
 		local retry = canAct and self.PreviewError ~= nil
 		local ready = canAct and not retry and preview ~= nil and preview.CanCommit and preview.Token ~= nil
 
+		-- Synthesis costs Gold for the EXP it applies (PitMath.GetSynthesisGoldCost); the button shows it.
+		local goldCost = if #self.Donors > 0 and preview and preview.Costs then tonumber(preview.Costs.Gold) or 0 else 0
+		local synthLabel = if goldCost > 0 then "SYNTHESIZE · " .. abbreviate(goldCost) .. " GOLD" else "SYNTHESIZE"
+
 		self.ConfirmButton.Button.Interactable = ready or retry
 		self.ClearButton.Button.Visible = #self.Donors > 0
 		self.ClearButton.Label.Text = string.format("CLEAR (%d)", #self.Donors)
@@ -1601,9 +1606,9 @@ function Synth.Render(self: any)
 		elseif retry then
 			retone(self.ConfirmButton.Button, self.ConfirmButton.Label, "Gold", "RETRY")
 		elseif ready then
-			retone(self.ConfirmButton.Button, self.ConfirmButton.Label, "Gold", "SYNTHESIZE") -- the window's primary action
+			retone(self.ConfirmButton.Button, self.ConfirmButton.Label, "Gold", synthLabel) -- the window's primary action
 		else
-			retone(self.ConfirmButton.Button, self.ConfirmButton.Label, "Slate", "SYNTHESIZE")
+			retone(self.ConfirmButton.Button, self.ConfirmButton.Label, "Slate", synthLabel)
 		end
 
 		-- Status line
@@ -1621,6 +1626,7 @@ function Synth.Render(self: any)
 		if #self.Donors > 0 and severity ~= "block" then
 			-- What happens on confirm, said before it happens.
 			status = if status ~= "" then status .. " · " else ""
+			if goldCost > 0 then status ..= string.format("Costs %s Gold. ", abbreviate(goldCost)) end
 			status ..= string.format("Uses up %d hero%s.", #self.Donors, if #self.Donors == 1 then "" else "es")
 			local armed = 0
 			for _, uuid in self.Donors do

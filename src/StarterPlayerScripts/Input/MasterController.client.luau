@@ -262,19 +262,26 @@ ProximityPromptService.PromptTriggered:Connect(function(prompt: ProximityPrompt,
 	end
 
 	local name = prompt.Name
+	local open: (() -> ())? = nil
 	if name == "FacilityHUDPrompt" then
 		local facility = prompt:GetAttribute("FacilityHUD")
 		if type(facility) == "string" and _G.OpenFacilityHUD then
-			_G.OpenFacilityHUD(facility)
+			open = function() _G.OpenFacilityHUD(facility) end
 		end
 	elseif name == "SummonAltarPrompt" then
 		if _G.OpenMasterModal then
-			_G.OpenMasterModal("WAITING_ROOM")
+			open = function() _G.OpenMasterModal("WAITING_ROOM") end
 		end
-
 	elseif name == "BlacksmithPrompt" then
 		if _G.OpenMasterModal then
-			_G.OpenMasterModal("BLACKSMITH")
+			open = function() _G.OpenMasterModal("BLACKSMITH") end
 		end
+	end
+	if not open then return end
+	-- Pan the camera onto the station first, then open its window (FacilityCamera.client.luau).
+	if _G.FocusFacilityCamera then
+		_G.FocusFacilityCamera(prompt, open)
+	else
+		open()
 	end
 end)

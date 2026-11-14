@@ -72,6 +72,13 @@ function PitMath.GetSynthesisXP(donor: any, recipient: any, research: any): any
 		Final = math.floor(base * efficiency * (1 + researchBonus + affinity) + 0.5 + 1e-7) }
 end
 
+-- Gold a synthesis costs for `xp` EXP fed in (PitBalanceConfig.Synthesis.GoldPerXP / MinimumGold).
+function PitMath.GetSynthesisGoldCost(xp: number): number
+	local balance = Config.Synthesis
+	if xp <= 0 then return 0 end
+	return math.max(balance.MinimumGold, math.ceil(xp * balance.GoldPerXP - 1e-7))
+end
+
 function PitMath.AdvanceXP(hero: any, amount: number): (any, any)
 	local result = PitMath.Copy(hero)
 	local capacity = PitMath.GetOverflowCapacity(result)

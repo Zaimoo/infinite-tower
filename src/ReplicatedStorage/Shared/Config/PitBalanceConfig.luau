@@ -20,6 +20,10 @@ Config.Synthesis = {
 	ResearchBonus = 0.10,
 	AffinityBonus = 0.05,
 	OverflowNextLevels = 2,
+	-- Gold cost: every point of EXP fed into the recipient costs GoldPerXP Gold (rounded up), at least
+	-- MinimumGold per synthesis. A 1★ Lv 1 donor (125 EXP) costs 125 Gold.
+	GoldPerXP = 1,
+	MinimumGold = 50,
 }
 Config.Promotion = {
 	CombatMultiplier = 1.5, -- matches StatBalance.HeroPromotionMultiplier (heroes are summoned at 1★)
