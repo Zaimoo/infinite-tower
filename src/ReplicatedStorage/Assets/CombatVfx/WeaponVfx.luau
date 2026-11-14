@@ -3,6 +3,7 @@
 -- Authoritative Client-side Weapon VFX Engine (Auras, Trails, Lights, and Hit Accents).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CollectionService = game:GetService("CollectionService")
 local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -12,14 +13,16 @@ local WeaponVfx = {}
 
 local VFX_TAG = "WeaponVfxInstance"
 local SWING_TRAIL_NAME = "VfxSwingTrail"
+local GILD_TRAIL_NAME = "VfxGildFiligreeTrail"
 local GLINT_EMITTER_NAME = "VfxGlint"
+local GILD_GLINT_NAME = "VfxGildGlintSweep"
 local MOTES_EMITTER_NAME = "VfxMotes"
 local AURA_EMITTER_NAME = "VfxAura"
 local GLOW_LIGHT_NAME = "VfxGlowLight"
 
 local function clearVfxInstances(container: Instance)
 	for _, child in ipairs(container:GetDescendants()) do
-		if child:GetAttribute(VFX_TAG) == true or child.Name:sub(1, 4) == "Vfx_" or child.Name == SWING_TRAIL_NAME then
+		if child:GetAttribute(VFX_TAG) == true or child.Name:sub(1, 4) == "Vfx_" or child.Name == SWING_TRAIL_NAME or child.Name == GILD_TRAIL_NAME then
 			child:Destroy()
 		end
 	end
@@ -320,6 +323,78 @@ function WeaponVfx.Apply(model: Model, weaponType: string?, rarityIndex: number?
 		end
 	end
 
+	-- Band 6 ("Gilded"): dual gold filigree edge trail, 4s sweeping filigree glint, and BaseRate stamps for LOD/cap.
+	if band == 6 then
+		CollectionService:AddTag(model, "GildforgedWeapon")
+		model:SetAttribute("GildElement", profile.Element)
+		model:SetAttribute("GildTemplateId", artifactId or "")
+
+		local goldSeq = ColorSequence.new({
+			ColorSequenceKeypoint.new(0.0, Color3.fromRGB(255, 224, 118)),
+			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 250, 225)),
+			ColorSequenceKeypoint.new(1.0, Color3.fromRGB(245, 195, 72)),
+		})
+		if vfxBase and vfxTip and primary then
+			local gildTrail = Instance.new("Trail")
+			gildTrail.Name = GILD_TRAIL_NAME
+			gildTrail:SetAttribute(VFX_TAG, true)
+			gildTrail.Attachment0 = vfxBase
+			gildTrail.Attachment1 = vfxTip
+			gildTrail.FaceCamera = true
+			gildTrail.Lifetime = 0.34
+			gildTrail.LightEmission = 0.85
+			gildTrail.LightInfluence = 0.15
+			gildTrail.Color = goldSeq
+			gildTrail.Transparency = NumberSequence.new({
+				NumberSequenceKeypoint.new(0.0, 0.12),
+				NumberSequenceKeypoint.new(0.6, 0.40),
+				NumberSequenceKeypoint.new(1.0, 1.0),
+			})
+			gildTrail.WidthScale = NumberSequence.new({
+				NumberSequenceKeypoint.new(0.0, 0.68),
+				NumberSequenceKeypoint.new(0.75, 0.38),
+				NumberSequenceKeypoint.new(1.0, 0.0),
+			})
+			gildTrail.Enabled = false
+			gildTrail.Parent = primary
+		end
+
+		local glintAnchor = vfxCore or vfxTip or vfxBase
+		if glintAnchor then
+			local sweep = Instance.new("ParticleEmitter")
+			sweep.Name = GILD_GLINT_NAME
+			sweep:SetAttribute(VFX_TAG, true)
+			sweep:SetAttribute("VfxKeepFar", true)
+			sweep.Rate = 0.25 -- 1 filigree sweep every 4s
+			sweep.Lifetime = NumberRange.new(0.45, 0.70)
+			sweep.Speed = NumberRange.new(0.05, 0.20)
+			sweep.SpreadAngle = Vector2.new(35, 35)
+			sweep.Color = goldSeq
+			sweep.LightEmission = 1.0
+			sweep.LightInfluence = 0.0
+			sweep.Size = NumberSequence.new({
+				NumberSequenceKeypoint.new(0.0, 0.05),
+				NumberSequenceKeypoint.new(0.45, 0.55),
+				NumberSequenceKeypoint.new(1.0, 0.0),
+			})
+			sweep.Transparency = NumberSequence.new({
+				NumberSequenceKeypoint.new(0.0, 1.0),
+				NumberSequenceKeypoint.new(0.3, 0.0),
+				NumberSequenceKeypoint.new(1.0, 1.0),
+			})
+			sweep.Parent = glintAnchor
+		end
+
+		for _, desc in ipairs(model:GetDescendants()) do
+			if desc:IsA("ParticleEmitter") and desc:GetAttribute(VFX_TAG) then
+				desc:SetAttribute("BaseRate", desc.Rate)
+				if string.sub(desc.Name, 1, #GLINT_EMITTER_NAME) == GLINT_EMITTER_NAME or desc.Name == "Vfx_ShieldGlint" then
+					desc:SetAttribute("VfxKeepFar", true)
+				end
+			end
+		end
+	end
+
 end
 
 -- Toggles idle emitters and light when hero is benched, in COMA or far from the camera.
@@ -339,7 +414,7 @@ end
 function WeaponVfx.TriggerAttack(model: Model, tier: number, duration: number?)
 	local dur = duration or (if tier >= 3 then 0.28 elseif tier == 2 then 0.22 else 0.18)
 	for _, trail in ipairs(model:GetDescendants()) do
-		if trail.Name == SWING_TRAIL_NAME and trail:IsA("Trail") then
+		if (trail.Name == SWING_TRAIL_NAME or trail.Name == GILD_TRAIL_NAME) and trail:IsA("Trail") then
 			trail.Enabled = true
 			trail:Clear()
 			task.delay(dur, function()
