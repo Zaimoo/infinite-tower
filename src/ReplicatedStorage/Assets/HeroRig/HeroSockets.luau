@@ -125,6 +125,7 @@ HeroSockets.PREFABS = table.freeze({
 	-- The Gilded Anvil (Tier 8 Gildforged)
 	art_gild_dawnwarden_oath = "art_gild_dawnwarden_oath",
 	art_gild_eclipse_sisters = "art_gild_eclipse_sisters",
+	art_gild_aurora_skyhook = "art_gild_aurora_skyhook",
 } :: { [string]: string })
 
 HeroSockets.SOCKETS = table.freeze({

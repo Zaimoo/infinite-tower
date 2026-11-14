@@ -1193,6 +1193,21 @@ local Seeds: { [string]: ArtifactSeed } = {
 		ModelAssetId = "art_gild_eclipse_sisters",
 		Description = "Twin daggers Umbra and Corona: one of black glass edged in light, one of gold wreathed in black flame.",
 	},
+	art_gild_aurora_skyhook = {
+		TemplateId = "art_gild_aurora_skyhook",
+		DisplayName = "Aurora Skyhook",
+		Type = "BOW",
+		RarityTier = 8,
+		IsHighStat = false,
+		Variant = "Gildforged",
+		VisualElement = "AURORA",
+		StatMultiplier = 1.00,
+		SpeedBonusAdditive = 0.000,
+		BaseATK = 10000,
+		BaseHP = 0,
+		ModelAssetId = "art_gild_aurora_skyhook",
+		Description = "Recurve bow whose limbs are ribbons of living aurora held in gold clasps, strung with a thread of polar light.",
+	},
 }
 ArtifactCatalog.Seeds = Seeds
 for _, seed in pairs(Seeds) do

@@ -7874,6 +7874,16 @@ local GILDED_SPECS: { [string]: GildedSpec } = {
 		TrailTopPos = Vector3.new(0, 2.54, 0),
 		TrailBottomPos = Vector3.new(0, 0.50, 0),
 	},
+	art_gild_aurora_skyhook = {
+		Type = "BOW",
+		GripPos = Vector3.zero,
+		GripRotDeg = Vector3.zero,
+		TipPos = Vector3.new(0, 1.96, 0.50),
+		BasePos = Vector3.new(0, -1.96, 0.50),
+		CorePos = Vector3.new(0, 0, -0.05),
+		TrailTopPos = Vector3.new(0, 1.96, 0.50),
+		TrailBottomPos = Vector3.new(0, -1.96, 0.50),
+	},
 }
 
 local gildedMeshPartCache: { [string]: MeshPart } = {}
@@ -8264,6 +8274,10 @@ function WeaponModelBuilder.BuildEclipseSisters(): Model
 	return buildGildedWeapon("art_gild_eclipse_sisters", GILDED_SPECS.art_gild_eclipse_sisters)
 end
 
+function WeaponModelBuilder.BuildAuroraSkyhook(): Model
+	return buildGildedWeapon("art_gild_aurora_skyhook", GILDED_SPECS.art_gild_aurora_skyhook)
+end
+
 
 
 
@@ -8381,6 +8395,7 @@ function WeaponModelBuilder.EnsureWeapons(): (Folder, { [string]: Model })
 		-- The Gilded Anvil (Tier 8 Gildforged)
 		art_gild_dawnwarden_oath = WeaponModelBuilder.BuildDawnwardenOath,
 		art_gild_eclipse_sisters = WeaponModelBuilder.BuildEclipseSisters,
+		art_gild_aurora_skyhook = WeaponModelBuilder.BuildAuroraSkyhook,
 		weapon_daggers = WeaponModelBuilder.BuildDaggers,
 		weapon_axe = WeaponModelBuilder.BuildAxe,
 		weapon_staff = WeaponModelBuilder.BuildStaff,
