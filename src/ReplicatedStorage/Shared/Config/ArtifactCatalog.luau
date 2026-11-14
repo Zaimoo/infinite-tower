@@ -1223,6 +1223,21 @@ local Seeds: { [string]: ArtifactSeed } = {
 		ModelAssetId = "art_gild_wyrmheart_cleaver",
 		Description = "Two-handed greataxe forged around a caged dragon's heart; molten gold drips from a head carved as a roaring skull.",
 	},
+	art_gild_ninth_sky_orrery = {
+		TemplateId = "art_gild_ninth_sky_orrery",
+		DisplayName = "Orrery of the Ninth Sky",
+		Type = "STAFF",
+		RarityTier = 8,
+		IsHighStat = false,
+		Variant = "Gildforged",
+		VisualElement = "STAR_ORBIT",
+		StatMultiplier = 1.00,
+		SpeedBonusAdditive = 0.000,
+		BaseATK = 10000,
+		BaseHP = 0,
+		ModelAssetId = "art_gild_ninth_sky_orrery",
+		Description = "Gilded staff crowned by a living armillary sphere: three gold rings turning around a captured star and its moons.",
+	},
 }
 ArtifactCatalog.Seeds = Seeds
 for _, seed in pairs(Seeds) do
