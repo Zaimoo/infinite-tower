@@ -129,32 +129,56 @@ end
 -- the left foot forward, -1 with the right, 0 when passing. Small enough that a held weapon
 -- only rides along with the body.
 local function strideUpperBody(pose: Pose, s: number)
-	nudge(pose, "Waist", { if s == 0 then 0 else -1.5, 7 * s, 2 * s })
+	nudge(pose, "Waist", { -1.5 * math.abs(s), 7 * s, 2 * s })
 	nudge(pose, "Neck", { 0, -5 * s, -1.5 * s })
 	nudge(pose, "RightShoulder", { 4 * s, 0, 0 })
 	nudge(pose, "LeftShoulder", { -4 * s, 0, 0 })
 end
 
--- Walk cycle: legs swing, the root bobs, and the upper body moves with the stride over its
--- carry pose (strideUpperBody). With armSwing, free arms swing that far instead.
-local function walk(carry: Pose, armSwing: number?): Clip
+-- How a weapon walks (docs/first-session-and-social-plan.md A8). Every field is optional.
+--   Stride  hip swing each way (deg)           Lift   extra knee bend of the leg swinging through
+--   Bob     root rise and fall (studs)          Lean   waist pitch held all cycle (negative: forward)
+--   Crouch  extra knee bend on both legs (a low, prowling walk)
+--   Twist   scales the torso's counter-twist against the legs (strideUpperBody)
+export type Gait = { Stride: number?, Lift: number?, Bob: number?, Lean: number?, Crouch: number?, Twist: number? }
+
+-- Walk cycle, sampled from smooth curves at eight points and played at a steady rate between them,
+-- so the stride never pauses on a key: each leg swings through with its knee lifting and its foot
+-- flexing, the root is lowest just after each foot lands and highest as the legs pass, and the
+-- upper body moves with the stride over its carry pose (strideUpperBody). With armSwing, free arms
+-- swing that far instead.
+local function walk(carry: Pose, armSwing: number?, gait: Gait?): Clip
 	local swing = armSwing or 0
-	local function step(phase: number): Pose
-		local s = if phase == 0 then 1 elseif phase == 1 then -1 else 0
+	local g: Gait = gait or {}
+	local stride, lift, bob = g.Stride or 28, g.Lift or 30, g.Bob or 0.06
+	local lean, crouch, twist = g.Lean or 0, g.Crouch or 0, g.Twist or 1
+	local SAMPLES = 8
+	local function step(i: number): Pose
+		local a = 2 * math.pi * i / SAMPLES
+		local c = math.cos(a) -- +1: left foot forward, -1: right foot forward
+		local leftSwing = math.max(0, -math.sin(a)) -- the left leg travelling forward
+		local rightSwing = math.max(0, math.sin(a))
 		local p = merge(carry, {
-			LeftHip = { 28 * s, 0, 0 }, RightHip = { -28 * s, 0, 0 },
-			LeftKnee = { if s < 0 then -35 else -8, 0, 0 }, RightKnee = { if s > 0 then -35 else -8, 0, 0 },
-			LeftAnkle = { if s < 0 then 12 else 0, 0, 0 }, RightAnkle = { if s > 0 then 12 else 0, 0, 0 },
-			RootOffset = { 0, if s == 0 then 0.08 else -0.04, 0 },
+			LeftHip = { stride * c + crouch * 0.6, 0, -2 }, RightHip = { -stride * c + crouch * 0.6, 0, 2 },
+			LeftKnee = { -7 - crouch - lift * leftSwing, 0, 0 }, RightKnee = { -7 - crouch - lift * rightSwing, 0, 0 },
+			LeftAnkle = { 2 + 12 * leftSwing + crouch * 0.4, 0, 0 }, RightAnkle = { 2 + 12 * rightSwing + crouch * 0.4, 0, 0 },
+			RootOffset = { 0, 0.02 - crouch * 0.008 - bob * math.cos(2 * a), 0 },
 		})
-		strideUpperBody(p, s)
+		strideUpperBody(p, c * twist)
+		if lean ~= 0 then nudge(p, "Waist", { lean, 0, 0 }) end
 		if swing ~= 0 then
-			p.LeftShoulder = { -swing * s, 0, 0 }
-			p.RightShoulder = { swing * s, 0, 0 }
+			p.LeftShoulder = { -swing * c, 0, 0 }
+			p.RightShoulder = { swing * c, 0, 0 }
 		end
 		return p
 	end
-	return clip(0.7, true, { { 0, step(0) }, { 0.25, step(0.5) }, { 0.5, step(1) }, { 0.75, step(0.5) }, { 1, step(0) } })
+	local first = step(0)
+	local keys: { { any } } = { { 0, first } }
+	for i = 1, SAMPLES - 1 do
+		table.insert(keys, { i / SAMPLES, step(i), true })
+	end
+	table.insert(keys, { 1, first, true }) -- the loop closes exactly on its first pose
+	return clip(0.7, true, keys)
 end
 
 -- Base stance shared by most weapon idles: soft knees, weight slightly forward.
@@ -228,10 +252,17 @@ do
 	local crouch: Pose = { LeftHip = { 40, 0, -8 }, RightHip = { -10, 0, 8 }, LeftKnee = { -55, 0, 0 }, RightKnee = { -70, 0, 0 }, LeftAnkle = { 15, 0, 0 }, RightAnkle = { 60, 0, 0 }, RootOffset = { 0, -0.55, 0 } }
 	local skyAim = merge(aim, { Waist = { 18, -10, 0 }, Neck = { 15, 10, 0 }, LeftShoulder = { 140, 0, 0 }, RightShoulder = { 138, 14, 0 } })
 	WeaponPoses.BOW = { Carry = carry, Aim = aim, Drawn = drawn, Release = release, Crouch = crouch, SkyAim = skyAim }
+	-- Basic: square up and nock, lean back into a full draw, then loose: the bow arm kicks up,
+	-- the draw hand flies back past the ear and the shot is held a beat before settling.
+	local nocked = merge(aim, { Waist = { -4, -14, 0 }, Neck = { 0, 14, 0 }, RootOffset = { 0, -0.14, 0 } })
+	local fullDraw = merge(drawn, { Waist = { 3, -20, 0 }, Neck = { -2, 18, 0 }, RightShoulder = { 88, 32, -14 }, RightElbow = { 150, 0, 0 } })
+	local loose = merge(release, { Waist = { -3, -16, 0 }, Neck = { 0, 14, 0 }, LeftShoulder = { 100, 0, 0 }, RightShoulder = { 62, 46, -40 }, RightElbow = { 112, 0, 0 }, RootOffset = { 0, -0.1, 0.05 } })
+	local looseHeld = merge(loose, { LeftShoulder = { 97, 0, 0 }, RightShoulder = { 58, 48, -44 }, RightElbow = { 104, 0, 0 } })
 	ByWeapon.BOW = {
 		Idle = breathe(carry),
-		Move = walk(carry),
-		AttackBasic = clip(0.8, false, { { 0, carry }, { 0.3, aim }, { 0.62, drawn }, { 0.72, release }, { 1, carry } }),
+		-- A light scout's walk: long, easy strides, leaning a little into them.
+		Move = walk(carry, nil, { Stride = 26, Lean = -3 }),
+		AttackBasic = clip(0.8, false, { { 0, carry }, { 0.24, nocked }, { 0.62, fullDraw }, { 0.72, loose, true }, { 0.86, looseHeld }, { 1, carry } }),
 		AttackSpecial = clip(0.95, false, {
 			{ 0, carry },
 			{ 0.3, merge(aim, crouch) },
@@ -260,10 +291,20 @@ do
 	local cut = merge(ATTACK_STANCE, { Waist = { -14, -25, 0 }, RightShoulder = { 55, -20, -5 }, RightElbow = { 10, 0, 0 }, LeftShoulder = { 20, -10, -15 }, LeftElbow = { 60, 0, 0 } })
 	local bash = merge(ATTACK_STANCE, { Waist = { -8, -30, 0 }, LeftShoulder = { 85, 25, -5 }, LeftElbow = { 20, 0, 0 }, RightShoulder = { 20, 0, 25 }, RightElbow = { 60, 0, 0 } })
 	WeaponPoses.SWORD_SHIELD = { Guard = guard, High = high, Cut = cut, Bash = bash }
+	-- Basic: rock back with the sword cocked high, bring it over the shoulder, then step into a
+	-- diagonal cut that drives the front knee down, follow through, and recover behind the shield.
+	local coil = merge(high, { Waist = { 8, 32, 0 }, Neck = { -4, -24, 0 }, RightShoulder = { 160, 10, 24 }, RightElbow = { 55, 0, 0 }, RootOffset = { 0, -0.05, 0.08 } })
+	local overhand = merge(ATTACK_STANCE, { Waist = { -4, 8, 0 }, Neck = { 0, -6, 0 }, RightShoulder = { 122, -10, 10 }, RightElbow = { 25, 0, 0 }, LeftShoulder = { 30, -15, -12 }, LeftElbow = { 70, 0, 0 } })
+	local lunge = merge(cut, {
+		Waist = { -20, -32, 0 }, Neck = { 10, 22, 0 }, RightShoulder = { 48, -26, -8 }, RightElbow = { 6, 0, 0 },
+		LeftHip = { 34, 0, -6 }, LeftKnee = { -40, 0, 0 }, RightHip = { -22, 0, 6 }, RootOffset = { 0, -0.3, -0.12 },
+	})
+	local followThrough = merge(lunge, { Waist = { -16, -28, 0 }, RightShoulder = { 40, -22, -6 }, RootOffset = { 0, -0.24, -0.08 } })
 	ByWeapon.SWORD_SHIELD = {
 		Idle = breathe(guard),
-		Move = walk(guard),
-		AttackBasic = clip(0.75, false, { { 0, guard }, { 0.4, high }, { 0.62, cut }, { 1, guard } }),
+		-- A guarded march: shorter steps, shield held, weight forward.
+		Move = walk(guard, nil, { Stride = 24, Lift = 26, Lean = -4, Bob = 0.05 }),
+		AttackBasic = clip(0.75, false, { { 0, guard }, { 0.32, coil }, { 0.52, overhand, true }, { 0.62, lunge, true }, { 0.78, followThrough }, { 1, guard } }),
 		AttackSpecial = clip(0.85, false, {
 			{ 0, guard },
 			{ 0.35, merge(guard, { Waist = { 4, 25, 0 }, LeftShoulder = { 40, -40, -10 }, LeftElbow = { 100, 0, 0 } }) },
@@ -287,14 +328,28 @@ do
 	})
 	local crouched = merge(ready, ATTACK_STANCE)
 	WeaponPoses.DAGGERS = { Ready = ready, Crouched = crouched }
+	-- Basic: a coiled one-two. Each blade is drawn back by the hip with the torso wound the other
+	-- way, then the torso unwinds into a lunging stab while the other blade guards the chest.
+	local coilRight = merge(crouched, { Waist = { -2, 22, 0 }, Neck = { 0, -16, 0 }, RightShoulder = { 25, 10, 10 }, RightElbow = { 120, 0, 0 }, RightWrist = { -40, 0, 0 } })
+	local stabRight = merge(crouched, {
+		Waist = { -10, -24, 0 }, Neck = { 4, 18, 0 }, RightShoulder = { 92, -4, -6 }, RightElbow = { 4, 0, 0 }, RightWrist = { -85, 0, 0 },
+		LeftShoulder = { 30, 0, -14 }, LeftElbow = { 95, 0, 0 }, RootOffset = { 0, -0.2, -0.14 },
+	})
+	local coilLeft = merge(crouched, { Waist = { -4, -20, 0 }, Neck = { 0, 14, 0 }, LeftShoulder = { 25, -10, -10 }, LeftElbow = { 120, 0, 0 }, LeftWrist = { -40, 0, 0 }, RootOffset = { 0, -0.12, -0.06 } })
+	local stabLeft = merge(crouched, {
+		Waist = { -10, 24, 0 }, Neck = { 4, -18, 0 }, LeftShoulder = { 92, 4, 6 }, LeftElbow = { 4, 0, 0 }, LeftWrist = { -85, 0, 0 },
+		RightShoulder = { 30, 0, 14 }, RightElbow = { 95, 0, 0 }, RootOffset = { 0, -0.2, -0.14 },
+	})
 	ByWeapon.DAGGERS = {
 		Idle = breathe(ready, 2.6),
-		Move = walk(ready),
+		-- A low prowl: knees bent, chest forward, the torso twisting with each step.
+		Move = walk(ready, nil, { Stride = 30, Lift = 34, Crouch = 12, Lean = -9, Bob = 0.04, Twist = 1.3 }),
 		AttackBasic = clip(0.55, false, {
 			{ 0, crouched },
-			{ 0.3, merge(crouched, { Waist = { -6, -18, 0 }, RightShoulder = { 85, 0, -5 }, RightElbow = { 10, 0, 0 }, RightWrist = { -80, 0, 0 } }) },
-			{ 0.55, crouched },
-			{ 0.75, merge(crouched, { Waist = { -6, 18, 0 }, LeftShoulder = { 85, 0, 5 }, LeftElbow = { 10, 0, 0 }, LeftWrist = { -80, 0, 0 } }) },
+			{ 0.14, coilRight },
+			{ 0.3, stabRight, true },
+			{ 0.58, coilLeft },
+			{ 0.75, stabLeft, true },
 			{ 1, crouched },
 		}),
 		AttackSpecial = clip(0.7, false, {
@@ -354,11 +409,18 @@ do
 		LeftKnee = { -60, 0, 0 }, RightKnee = { -55, 0, 0 }, LeftHip = { 45, 0, -6 }, RightHip = { 10, 0, 6 },
 	})
 	WeaponPoses.AXE = { Rest = rest, Windup = windup, Chop = chop, SweepBack = sweepBack, SweepThrough = sweepThrough, High = high, Slam = slam }
+	-- Basic beats only change the waist, legs and root: the arms keep their baked haft grips.
+	local settle = merge(rest, { Waist = { -6, 12, 0 }, LeftHip = { 12, 0, -4 }, LeftKnee = { -20, 0, 0 }, RightKnee = { -16, 0, 0 }, RootOffset = { 0, -0.16, 0 } })
+	local rise = merge(windup, { Waist = { 12, -30, 0 }, Neck = { -6, 24, 0 }, LeftKnee = { -10, 0, 0 }, RightKnee = { -8, 0, 0 }, RootOffset = { 0, 0.08, 0.06 } })
+	local strike = merge(chop, { Waist = { -28, 60, 0 }, LeftHip = { 30, 0, -6 }, LeftKnee = { -38, 0, 0 }, RightKnee = { -30, 0, 0 }, RootOffset = { 0, -0.38, -0.1 } })
+	local recoil = merge(chop, { Waist = { -20, 52, 0 }, RootOffset = { 0, -0.22, -0.06 } })
 	ByWeapon.AXE = {
 		Idle = breathe(rest),
-		Move = walk(rest),
-		-- Overhand chop: haul it back over the shoulder, then the whole torso drives it down.
-		AttackBasic = clip(0.85, false, { { 0, rest }, { 0.45, windup }, { 0.65, chop }, { 0.8, chop }, { 1, rest } }),
+		-- A heavy walk: shorter strides, a deeper bob, the weapon's weight keeping the torso square.
+		Move = walk(rest, nil, { Stride = 24, Lift = 28, Bob = 0.09, Lean = -5, Twist = 0.7 }),
+		-- Overhand chop: sink, then rise onto the toes hauling it back over the shoulder, then the
+		-- whole body drops through the chop and bounces off the impact.
+		AttackBasic = clip(0.85, false, { { 0, rest }, { 0.16, settle }, { 0.45, rise }, { 0.65, strike, true }, { 0.8, recoil }, { 1, rest } }),
 		-- Level sweep: drawn back on the right, swung flat through the front.
 		AttackSpecial = clip(0.9, false, { { 0, rest }, { 0.4, sweepBack }, { 0.68, sweepThrough }, { 0.82, sweepThrough }, { 1, rest } }),
 		-- Both hands overhead, then buried in the floor.
@@ -376,10 +438,22 @@ do
 	local cast = merge(ATTACK_STANCE, { Waist = { -4, -10, 0 }, RightShoulder = { 90, 0, 0 }, RightElbow = { 0, 0, 0 }, LeftShoulder = { 70, 0, -20 }, LeftElbow = { 20, 0, 0 } })
 	local raised = merge(ATTACK_STANCE, { Waist = { 10, 0, 0 }, Neck = { 12, 0, 0 }, RightShoulder = { 165, 0, 10 }, RightElbow = { 10, 0, 0 }, LeftShoulder = { 120, 0, -30 }, LeftElbow = { 15, 0, 0 } })
 	WeaponPoses.STAFF = { Stand = stand, Cast = cast, Raised = raised }
+	-- Basic: draw the staff up and back while the off-hand gathers at the chest, then lunge and
+	-- thrust both forward together, hold the cast, and recover.
+	local gather = merge(ATTACK_STANCE, {
+		Waist = { 6, 22, 0 }, Neck = { -2, -18, 0 }, RightShoulder = { 130, 20, 20 }, RightElbow = { 55, 0, 0 },
+		LeftShoulder = { 50, 30, -10 }, LeftElbow = { 100, 0, 0 }, RootOffset = { 0, -0.06, 0.06 },
+	})
+	local thrust = merge(cast, {
+		Waist = { -12, -16, 0 }, Neck = { 6, 12, 0 }, RightShoulder = { 96, -4, 0 }, RightElbow = { 0, 0, 0 },
+		LeftShoulder = { 82, 0, -16 }, LeftElbow = { 8, 0, 0 }, RootOffset = { 0, -0.18, -0.1 },
+	})
+	local castHeld = merge(thrust, { Waist = { -9, -12, 0 }, RightShoulder = { 92, 0, 0 }, LeftShoulder = { 72, 0, -18 }, LeftElbow = { 16, 0, 0 }, RootOffset = { 0, -0.14, -0.07 } })
 	ByWeapon.STAFF = {
 		Idle = breathe(stand),
-		Move = walk(stand),
-		AttackBasic = clip(0.8, false, { { 0, stand }, { 0.45, cast }, { 0.62, merge(cast, { RightShoulder = { 96, 0, 0 } }) }, { 1, stand } }),
+		-- A measured walk.
+		Move = walk(stand, nil, { Stride = 25, Lift = 28, Lean = -2, Bob = 0.05 }),
+		AttackBasic = clip(0.8, false, { { 0, stand }, { 0.32, gather }, { 0.62, thrust, true }, { 0.8, castHeld }, { 1, stand } }),
 		AttackSpecial = clip(0.9, false, { { 0, stand }, { 0.45, raised }, { 0.65, merge(cast, { Waist = { -12, 0, 0 } }) }, { 1, stand } }),
 		AttackSkill = clip(1.2, false, {
 			{ 0, stand },
@@ -436,13 +510,18 @@ do
 	})
 
 	WeaponPoses.TOME = { Read = read, Channel = gather, Release = release }
+	-- Basic: wind the casting hand further back with the torso, then push the orb out with a
+	-- small step in, and ease back to reading.
+	local wind = merge(gather, { Waist = { 2, 24, 0 }, Neck = { -2, -12, 0 }, RightShoulder = { 28, 30, 30 }, RightElbow = { 105, 0, 0 }, RootOffset = { 0, -0.04, 0.05 } })
+	local push = merge(release, { Waist = { -8, -18, 0 }, RightShoulder = { 96, -8, 2 }, RightElbow = { 4, 0, 0 }, RootOffset = { 0, -0.12, -0.08 } })
 	ByWeapon.TOME = {
 		Idle = floatIdle(read, 3.2),
-		Move = walk(read),
+		-- A gliding walk: short steps, little bob, the tome steady.
+		Move = walk(read, nil, { Stride = 22, Lift = 24, Bob = 0.04 }),
 		AttackBasic = clip(0.8, false, {
 			{ 0, read },
-			{ 0.28, gather },
-			{ 0.55, release },
+			{ 0.3, wind },
+			{ 0.55, push, true },
 			{ 0.72, followThrough },
 			{ 1, read },
 		}),
@@ -934,7 +1013,12 @@ end
 -- height (shoulder + elbow pitch near 90 keeps the stave upright), the right hand forward at
 -- the string as if calling the wind to the arrow, chin a little down. Canopy's Wrath drops her
 -- to one knee with the bow raised to the sky; she draws, looses the seed-arrow straight up,
--- holds a wide follow-through and rises. Basic and Special use the bow clips.
+-- holds a wide follow-through and rises.
+-- Leafwind Arrow (Basic) keeps her narrow ranger's feet: a quick snap to the aim, a short draw,
+-- and on the loose her draw hand opens out and up past her shoulder like a leaf on the wind.
+-- Thornbriar Volley (Special, a shot that pierces a line) is a power shot: she steps her left
+-- foot through and drops side-on, holds a long full draw, then looses with her whole body
+-- thrusting after the arrow and holds the line it flew down.
 do
 	local p = WeaponPoses.BOW
 	local kneel: Pose = { LeftHip = { 70, 0, -6 }, RightHip = { -20, 0, 6 }, LeftKnee = { -80, 0, 0 }, RightKnee = { -95, 0, 0 }, LeftAnkle = { 10, 0, 0 }, RightAnkle = { 70, 0, 0 }, RootOffset = { 0, -0.75, 0 } }
@@ -947,8 +1031,55 @@ do
 		RightHip = { 8, -8, 2 }, RightKnee = { -14, 0, 0 }, RightAnkle = { 6, 0, -2 },
 		RootOffset = { 0, -0.04, 0 },
 	}
+	-- Her stance's legs, so the Basic keeps her footing.
+	local rangerLegs: Pose = {
+		LeftHip = ranger.LeftHip, LeftKnee = ranger.LeftKnee, LeftAnkle = ranger.LeftAnkle,
+		RightHip = ranger.RightHip, RightKnee = ranger.RightKnee, RightAnkle = ranger.RightAnkle,
+		RootOffset = ranger.RootOffset,
+	}
+	local snapAim = merge(merge(p.Aim, rangerLegs), { Waist = { 0, -14, 2 }, Neck = { -4, 14, -2 } })
+	local shortDraw = merge(merge(p.Drawn, rangerLegs), { Waist = { 2, -16, 2 }, Neck = { -4, 16, -2 }, RightShoulder = { 88, 30, -12 }, RightElbow = { 146, 0, 0 } })
+	local leafLoose = merge(merge(p.Release, rangerLegs), {
+		Waist = { -2, -12, 0 }, Neck = { -4, 12, 0 }, LeftShoulder = { 98, 0, 0 },
+		RightShoulder = { 90, 20, 40 }, RightElbow = { 20, 0, 0 },
+	})
+	-- The open hand keeps rising after the loose (picked by eye from candidates in Studio).
+	local leafHeld = merge(leafLoose, { LeftShoulder = { 95, 0, 0 }, RightShoulder = { 112, 10, 36 }, RightElbow = { 24, 0, 0 } })
+	-- Side-on lunge for the power shot: left foot through, weight dropped onto it.
+	local braced: Pose = {
+		LeftHip = { 50, 0, -12 }, LeftKnee = { -58, 0, 0 }, LeftAnkle = { 10, 0, 0 },
+		RightHip = { -28, 0, 12 }, RightKnee = { -12, 0, 0 }, RightAnkle = { 30, 0, 0 },
+		RootOffset = { 0, -0.4, -0.14 },
+	}
+	local stepIn = merge(merge(p.Aim, braced), { Waist = { -4, -38, 0 }, Neck = { 0, 34, 0 } })
+	local heavyDraw = merge(merge(p.Drawn, braced), {
+		Waist = { 4, -42, 0 }, Neck = { -2, 38, 0 }, LeftShoulder = { 92, 0, 0 },
+		RightShoulder = { 86, 36, -16 }, RightElbow = { 155, 0, 0 },
+	})
+	local thornLoose = merge(merge(p.Release, braced), {
+		Waist = { -14, -34, 0 }, Neck = { 8, 30, 0 }, LeftShoulder = { 100, 0, 0 },
+		RightShoulder = { 60, 50, -42 }, RightElbow = { 100, 0, 0 }, RootOffset = { 0, -0.46, -0.32 },
+	})
+	local thornHeld = merge(thornLoose, { Waist = { -12, -32, 0 }, RightShoulder = { 56, 52, -46 }, RightElbow = { 94, 0, 0 }, RootOffset = { 0, -0.44, -0.3 } })
 	Overrides.hero_aeli = {
 		Idle = breathe(ranger, 3.6),
+		-- Release and Nock match the shared bow clips, so her hits land on the same beat.
+		AttackBasic = signature(0.8, {
+			{ 0, ranger },
+			{ 0.22, snapAim },
+			{ 0.6, shortDraw },
+			{ 0.72, leafLoose, true },
+			{ 0.88, leafHeld },
+			{ 1, ranger },
+		}, { Release = 0.72, Nock = 0.9 }),
+		AttackSpecial = signature(0.95, {
+			{ 0, ranger },
+			{ 0.2, stepIn },
+			{ 0.62, heavyDraw },
+			{ 0.78, thornLoose, true },
+			{ 0.9, thornHeld },
+			{ 1, ranger },
+		}, { Release = 0.78, Nock = 0.9 }),
 		AttackSkill = signature(1.1, {
 			{ 0, p.Carry },
 			{ 0.28, skyKneel },
@@ -1234,10 +1365,21 @@ do
 end
 
 -- Catio (AXE): Resonance Tremor is an overhand strike sunk into the ground; Crystalline
--- Excavation winds the greataxe round once before a two-handed slam.
+-- Excavation winds the greataxe round once before a two-handed slam. Idle is an inquisitor's
+-- composure, to match his ceremonial mantle: upright and still, chest lifted, chin raised, feet
+-- close with his weight settled on the back leg, the greataxe held at port arms like a mace of
+-- office, breathing slowly. Only the torso, head and legs differ from the shared rest, so the
+-- arms keep their baked haft grip.
 do
 	local p = WeaponPoses.AXE
+	local inquisitor = merge(p.Rest, {
+		Waist = { 3, 10, 0 }, Neck = { 11, -8, 0 },
+		LeftHip = { 2, 0, -4 }, LeftKnee = { -3, 0, 0 }, LeftAnkle = { 1, 0, 4 },
+		RightHip = { -6, 0, 6 }, RightKnee = { -6, 0, 0 }, RightAnkle = { 6, 0, -6 },
+		RootOffset = { 0, -0.02, 0 },
+	})
 	Overrides.hero_catio = {
+		Idle = breathe(inquisitor, 4.2),
 		AttackSpecial = signature(0.9, {
 			{ 0, p.Rest },
 			{ 0.4, p.Windup },
@@ -1259,6 +1401,9 @@ end
 -- Gide (AXE): Bedrock Sundering hauls the greataxe far back before a heavy diagonal chop;
 -- Tunnelbreaker Fault raises it overhead in both hands and drives it into the floor. Idle is his
 -- planted veteran stance: feet wide, knees set, the greataxe held across his chest at port arms.
+-- Ironvein Chop (Basic) is a miner's stroke, short and vertical where Bedrock Sundering is a
+-- long diagonal: he sinks, lifts the axe straight overhead without hauling it back, drops it
+-- into the vein in front of him, then wrenches his torso round as if prying the ore loose.
 do
 	local p = WeaponPoses.AXE
 	local sunder = merge(p.Chop, { Waist = { -28, 66, 0 }, Neck = { 14, -50, 0 }, LeftKnee = { -42, 0, 0 }, RightKnee = { -36, 0, 0 }, RootOffset = { 0, -0.4, 0 } })
@@ -1269,8 +1414,29 @@ do
 		RightHip = { 6, 0, 13 }, RightKnee = { -16, 0, 0 }, RightAnkle = { 10, 0, -13 },
 		RootOffset = { 0, -0.14, 0 },
 	})
+	local veteranLegs: Pose = {
+		LeftHip = veteran.LeftHip, LeftKnee = veteran.LeftKnee, LeftAnkle = veteran.LeftAnkle,
+		RightHip = veteran.RightHip, RightKnee = veteran.RightKnee, RightAnkle = veteran.RightAnkle,
+	}
+	local sink = merge(veteran, { Waist = { -6, 10, 0 }, LeftKnee = { -28, 0, 0 }, RightKnee = { -26, 0, 0 }, RootOffset = { 0, -0.26, 0 } })
+	local lift = merge(merge(p.High, veteranLegs), { Waist = { 10, 14, 0 }, Neck = { -4, -10, 0 }, RootOffset = { 0, -0.06, 0.04 } })
+	local intoVein = merge(p.Chop, {
+		Waist = { -30, 40, 0 }, Neck = { 16, -30, 0 },
+		LeftHip = { 30, 0, -13 }, LeftKnee = { -40, 0, 0 }, RightHip = { 4, 0, 13 }, RightKnee = { -30, 0, 0 },
+		RootOffset = { 0, -0.36, -0.08 },
+	})
+	local pry = merge(intoVein, { Waist = { -24, 60, 0 }, Neck = { 12, -46, 0 }, RootOffset = { 0, -0.3, -0.04 } })
 	Overrides.hero_gide = {
 		Idle = breathe(veteran, 3.2),
+		-- Release matches the shared axe Basic, so the hit lands on the same beat.
+		AttackBasic = signature(0.85, {
+			{ 0, veteran },
+			{ 0.18, sink },
+			{ 0.42, lift },
+			{ 0.65, intoVein, true },
+			{ 0.8, pry },
+			{ 1, veteran },
+		}, { Release = 0.65 }),
 		AttackSpecial = signature(0.9, {
 			{ 0, p.Rest },
 			{ 0.38, merge(p.Windup, { Waist = { 10, -36, 0 }, Neck = { -4, 30, 0 } }) },

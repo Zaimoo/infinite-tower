@@ -1,7 +1,8 @@
 --!strict
 -- Shared/Util/LootDuel.luau
--- Rules for contested tower drops and bounty-hunt duels (GDD 6.1). A thief carries an open bounty:
--- any other Master who walks up to them and presses F challenges them to a duel for the drop.
+-- Rules for contested tower drops and duels (GDD 6.1). A thief carries an open bounty: any other
+-- Master who walks up to them and presses F challenges them to a duel for the drop. Any Master
+-- carrying a relic can also be challenged for it (a carry challenge), within the guardrails below.
 -- Pure data and math: the server owns the state, the client only reads the layout constants.
 
 local LootDuel = {}
@@ -13,6 +14,13 @@ LootDuel.DUEL_OUTRO_SECONDS = 3.0 -- result banner before squads return to their
 LootDuel.DUEL_DAMAGE_SCALE = 0.5 -- hero-vs-hero damage multiplier
 LootDuel.CHALLENGE_COOLDOWN = 3.0
 LootDuel.CHALLENGE_RANGE = 12 -- studs between the hunter and the thief for the F prompt
+
+-- Carry challenges: guardrails against griefing, ambushes and passing loot between accounts.
+LootDuel.CARRY_SHIELD_SECONDS = 45 -- after any duel, the relic's holder can't be carry-challenged
+LootDuel.CARRY_LOSS_COOLDOWN = 120 -- a challenger who loses waits this long to challenge anyone again
+LootDuel.CARRY_WIN_COOLDOWN = 30 -- ...and this long after a win
+LootDuel.CARRY_PAIR_COOLDOWN = 600 -- the same two Masters can't carry-duel each other again for 10 minutes
+LootDuel.CARRY_OVERLEVEL_FLOORS = 10 -- no carry challenges on a floor this far below your best clear
 
 -- Arena geometry: flat-top hex grid, HEX_SIZE is centre-to-corner in studs.
 LootDuel.HEX_SIZE = 3.2
@@ -29,6 +37,12 @@ export type Contest = {
 	ExpiresAt: number,
 	Status: "CONTESTED" | "DUELING" | "RESOLVED" | "EXPIRED",
 	WinnerUserId: number?,
+	-- "CARRY": a carry challenge. The carrier defends as the thief side (B) without being a thief:
+	-- no [Loot Thief] flag and no bounty. nil: a theft's bounty.
+	Kind: "CARRY"?,
+	-- A Rival Master lesson's theft (first-session-and-social-plan.md A7): private to the thief. No
+	-- public bounty toast or Claim Bounty prompt, and only the Rival may duel for it.
+	Training: boolean?,
 }
 
 local SQRT3 = math.sqrt(3)
@@ -126,6 +140,88 @@ function LootDuel.NewContest(dropId: number, ownerUserId: number, thiefUserId: n
 		ChallengerUserId = nil,
 		WinnerUserId = nil,
 	}
+end
+
+-- A carry challenge's contest: the carrier defends (thief side B), the challenger hunts (side A).
+-- It is fought at once, so its window only has to outlast the duel.
+function LootDuel.NewCarryContest(dropId: number, carrierUserId: number, challengerUserId: number, now: number): Contest
+	return {
+		DropId = dropId,
+		OwnerUserId = carrierUserId,
+		ThiefUserId = carrierUserId,
+		ChallengerUserId = challengerUserId,
+		ExpiresAt = now + LootDuel.DUEL_INTRO_SECONDS + LootDuel.DUEL_MAX_SECONDS + LootDuel.DUEL_OUTRO_SECONDS + 10,
+		Status = "CONTESTED",
+		WinnerUserId = nil,
+		Kind = "CARRY",
+	}
+end
+
+-- One key per pair of Masters, whichever challenged.
+function LootDuel.PairKey(a: number, b: number): string
+	return if a < b then `{a}:{b}` else `{b}:{a}`
+end
+
+-- Everything the server knows when a Master challenges a carrier (CombatSimulation gathers it).
+export type CarryCheck = {
+	ChallengerUserId: number,
+	CarrierUserId: number,
+	Drop: any, -- the carried relic's record (LockedOut, DuelLocked, ProtectedForUserId, TrainingFor)
+	SameFloor: boolean,
+	FloorId: number,
+	ChallengerCarrying: boolean,
+	ChallengerBestFloor: number, -- HighestClearedFloor
+	ChallengerSafe: boolean, -- standing in a sanctuary or combat-safe zone
+	CarrierSafe: boolean,
+	CarrierBossLocked: boolean, -- has hurt this floor's boss, which is still alive
+	Busy: boolean, -- either Master is duelling or travelling
+	CarrierShieldUntil: number?,
+	ChallengerCooldownUntil: number?,
+	PairCooldownUntil: number?,
+	Now: number,
+}
+
+-- Can this Master challenge that carrier for the relic they hold? Returns (ok, "Headline|detail").
+-- Each refusal is a guardrail (GDD 6.1):
+--   empty hands: the challenger risks a lockout and a cooldown, and can't hold two relics;
+--   protected relics (a new Master's first) are never contested;
+--   sanctuaries are off limits, so nobody is pinned at the door they are banking through;
+--   a boss fight isn't interrupted;
+--   over-levelled Masters can't farm low floors (or a low-floor alt account);
+--   a fresh duel shields the relic's holder, a challenger waits after each try, and the same two
+--   Masters can't keep duelling each other.
+function LootDuel.CanChallengeCarrier(c: CarryCheck): (boolean, string?)
+	local now = c.Now
+	if c.ChallengerUserId == c.CarrierUserId then
+		return false, "Your own relic|You're carrying it"
+	elseif c.Busy then
+		return false, "Not now|A duel or a trip is under way"
+	elseif not c.SameFloor or c.FloorId < 1 or c.FloorId > 50 then
+		return false, "Out of reach|Only on your own Tower floor"
+	elseif c.ChallengerCarrying then
+		return false, "Hands full|Bank or drop your relic first"
+	elseif c.Drop.ProtectedForUserId then
+		return false, "Protected|A new Master's first relic"
+	elseif c.Drop.TrainingFor then
+		return false, "Protected|A Rival lesson's relic"
+	elseif c.Drop.DuelLocked then
+		return false, "Already contested|A duel for it is running"
+	elseif c.Drop.LockedOut and c.Drop.LockedOut[c.ChallengerUserId] then
+		return false, "Locked out|You lost a duel for this relic"
+	elseif c.ChallengerSafe or c.CarrierSafe then
+		return false, "Sanctuary|No duels in a sanctuary"
+	elseif c.CarrierBossLocked then
+		return false, "Boss fight|Wait until the boss falls"
+	elseif c.ChallengerBestFloor >= c.FloorId + LootDuel.CARRY_OVERLEVEL_FLOORS then
+		return false, string.format("Beneath you|Floor %d is far below your best", c.FloorId)
+	elseif (c.CarrierShieldUntil or 0) > now then
+		return false, string.format("Shielded|%ds after their last duel", math.ceil((c.CarrierShieldUntil :: number) - now))
+	elseif (c.ChallengerCooldownUntil or 0) > now then
+		return false, string.format("Catch your breath|%ds until your next challenge", math.ceil((c.ChallengerCooldownUntil :: number) - now))
+	elseif (c.PairCooldownUntil or 0) > now then
+		return false, "Not again|You duelled them a moment ago"
+	end
+	return true, nil
 end
 
 -- Any Master except the thief may claim the bounty, the robbed owner included.

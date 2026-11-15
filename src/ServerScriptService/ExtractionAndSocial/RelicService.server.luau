@@ -55,6 +55,13 @@ export type ActiveRelic = {
 	-- Bounty duels (GDD 6.1): the killer owns the relic; anyone else carrying it is a [Loot Thief].
 	KillerUserId: number,
 	KillerName: string?,
+	OriginalOwnerUserId: number, -- the killer at spawn; a duel win changes KillerUserId, never this
+	-- A new Master's first relic (their first Floor 1 clear): nobody else may carry it, so it can't be
+	-- stolen, for as long as it exists. Docs: first-session-and-social-plan.md A4.
+	ProtectedForUserId: number?,
+	-- A Rival Master lesson's relic (A7): only this player may take it, and taking it opens a
+	-- private, training bounty (CombatSimulation registerPickup).
+	TrainingFor: number?,
 	LockedOut: { [number]: boolean }?, -- duel losers, for the relic's lifetime
 	DuelLocked: boolean?, -- nobody may pick it up while its duel runs
 }
@@ -116,7 +123,7 @@ local function updateMasterMovementAttributes(player: Player, now: number)
 	hum.JumpPower = spec.DisableJump and 0 or BASE_JUMPPOWER
 end
 
-function RelicService.SpawnRelic(tierId: RelicTierId, worldPos: Vector3, initialOwnerUserId: number?): ActiveRelic
+function RelicService.SpawnRelic(tierId: RelicTierId, worldPos: Vector3, initialOwnerUserId: number?, protected: boolean?): ActiveRelic
 	local spec = RelicConfig[tierId] or RelicConfig.MANA_GEODE
 	local context=assert(Tower.ContextAt(worldPos),"Relic spawn outside room")
 	local goldMult, gemMult = TowerFloorConfig.RelicFloorMultipliers(context.FloorId)
@@ -202,6 +209,8 @@ function RelicService.SpawnRelic(tierId: RelicTierId, worldPos: Vector3, initial
 		Prompt = prompt,
 		DespawnAt = now + spec.DespawnSeconds,
 		KillerUserId = initialOwnerUserId or 0,
+		OriginalOwnerUserId = initialOwnerUserId or 0,
+		ProtectedForUserId = if protected then initialOwnerUserId else nil,
 	}
 	prompt.Triggered:Connect(function(player: Player)
 		RelicService.TryPickupRelic(player, relic)
@@ -220,6 +229,14 @@ function RelicService.TryPickupRelic(player: Player, relic: ActiveRelic): boolea
 	end
 	if relic.PickupBlockedUserId == player.UserId and now < (relic.PickupBlockedUntil or 0) then return false end
 	if now < (PlayerStunnedUntil[player] or 0) then
+		return false
+	end
+	if relic.ProtectedForUserId and relic.ProtectedForUserId ~= player.UserId then
+		getDataManager().SendToast(player, "Protected relic|A new Master's first relic", "WARN")
+		return false
+	end
+	if relic.TrainingFor and relic.TrainingFor ~= player.UserId then
+		getDataManager().SendToast(player, "Not yours|A rival's lesson for another Master", "WARN")
 		return false
 	end
 	local allowed, denial = LootDuel.CanPickUp(relic, player.UserId)
@@ -273,8 +290,26 @@ function RelicService.TryPickupRelic(player: Player, relic: ActiveRelic): boolea
 	if not stolen then
 		dm.SendToast(player, string.format("Carrying %s|Bank it at a sanctuary · -%d%% speed", spec.DisplayName, math.round(spec.WalkSpeedPenalty * 100)), "INFO")
 	end
+	if dm.ReportMilestone then dm.ReportMilestone(player, "PickedUpRelic") end
 	Tower.BroadcastAt(RelicStateRemote,relic,relic.RelicId, relic.TierId, "PICKUP", player.UserId, 0)
 	return true
+end
+
+-- The relic this player is carrying, if any (carry challenges, GDD 6.1).
+function RelicService.GetCarriedRelic(player: Player): ActiveRelic?
+	return CarrierToRelic[player]
+end
+
+-- A relic this player owns lies on the ground on their floor (the guide's Bank step points at it).
+function RelicService.HasOwnRelicOnFloor(player: Player): boolean
+	local state = Tower.GetState(player)
+	local now = os.clock()
+	for _, relic in pairs(ActiveRelics) do
+		if relic.Carrier == nil and relic.KillerUserId == player.UserId and now < relic.DespawnAt and Tower.Same(state, relic) then
+			return true
+		end
+	end
+	return false
 end
 
 function RelicService.GetRelic(relicId: number): ActiveRelic?
@@ -363,7 +398,8 @@ function RelicService.FumbleRelicOnAoEHit(carrier: Player)
 	Tower.BroadcastAt(RelicStateRemote,relic,relic.RelicId, relic.TierId, "FUMBLE", carrier.UserId, relic.LockExpiresAt)
 end
 
-local function awardRelicPayout(player: Player, spec: any, scalar: number, rewardMultiplier: number?, gemMultiplier: number?)
+-- `stolen`: the banker took this relic from another Master (a theft or a duel win).
+local function awardRelicPayout(player: Player, spec: any, scalar: number, rewardMultiplier: number?, gemMultiplier: number?, stolen: boolean?)
 	local dm = getDataManager()
 	local profile = dm.GetProfile(player)
 	if not profile then
@@ -386,7 +422,7 @@ local function awardRelicPayout(player: Player, spec: any, scalar: number, rewar
 		profile.PitMaterials.PromotionStone = (profile.PitMaterials.PromotionStone or 0) + stones
 	end
 	TowerRuns.AddRelicPayout(player, gold, gems)
-	if dm.ReportProgress and (gold > 0 or gems > 0 or stones > 0) then dm.ReportProgress(player, "RelicBanked") end
+	if dm.ReportProgress and (gold > 0 or gems > 0 or stones > 0) then dm.ReportProgress(player, "RelicBanked", if stolen then "Stolen" else nil) end
 
 	-- Apex Cores / Calamity Heart: a small chance of a free Exalted Archon
 	if spec.BaseTierId == "CALAMITY_HEART" and math.random() <= HEART_ARCHON_CHANCE then
@@ -424,6 +460,14 @@ local function destroyRelicInstance(relic: ActiveRelic)
 	ActiveRelics[relic.RelicId] = nil
 end
 
+-- Removes a relic that lies on the ground (an abandoned Rival lesson). Carried relics stay.
+function RelicService.RemoveRelic(relicId: number): boolean
+	local relic = ActiveRelics[relicId]
+	if not relic or relic.Carrier then return false end
+	destroyRelicInstance(relic) -- as a natural despawn: clients drop the visual with the part
+	return true
+end
+
 local function extractAtSanctuary(carrier: Player, floorOnly: boolean?)
 	local location = Tower.GetState(carrier)
 	if Tower.IsTransitioning(carrier) then return end
@@ -458,7 +502,7 @@ local function extractAtSanctuary(carrier: Player, floorOnly: boolean?)
 	-- Reentrant calls cannot award the same authoritative relic twice.
 	CarrierToRelic[carrier]=nil
 	ActiveRelics[relic.RelicId]=nil
-	awardRelicPayout(carrier,spec,1,relic.RewardMultiplier,relic.GemMultiplier)
+	awardRelicPayout(carrier,spec,1,relic.RewardMultiplier,relic.GemMultiplier,relic.OriginalOwnerUserId~=0 and relic.OriginalOwnerUserId~=carrier.UserId)
 	Tower.BroadcastAt(RelicStateRemote,relic,relic.RelicId,relic.TierId,event,carrier.UserId,0)
 	destroyRelicInstance(relic)
 end
@@ -475,7 +519,7 @@ function RelicService.StoreCarriedRelic(carrier: Player, location: any?): boolea
 	local event = if loc and type(loc.FloorId) == "number" and loc.FloorId > 0 then "EXTRACT_SAFE_ZONE" else "EXTRACT_PRIVATE"
 	CarrierToRelic[carrier] = nil
 	ActiveRelics[relic.RelicId] = nil
-	awardRelicPayout(carrier, spec, 1, relic.RewardMultiplier, relic.GemMultiplier)
+	awardRelicPayout(carrier, spec, 1, relic.RewardMultiplier, relic.GemMultiplier, relic.OriginalOwnerUserId ~= 0 and relic.OriginalOwnerUserId ~= carrier.UserId)
 	Tower.BroadcastAt(RelicStateRemote, relic, relic.RelicId, relic.TierId, event, carrier.UserId, 0)
 	destroyRelicInstance(relic)
 	return true
@@ -543,6 +587,8 @@ local function stepRelics()
 						setStatus(relic, `Locked {remLock}s`, LOCKED_COLOR)
 					elseif remDespawn <= DESPAWN_WARNING_SECONDS then
 						setStatus(relic, `Vanishes in {remDespawn}s`, EXPIRING_COLOR)
+					elseif relic.ProtectedForUserId then
+						setStatus(relic, "Protected", LOCKED_COLOR)
 					else
 						-- Nothing to say: the Carry prompt already tells the player what to do.
 						setStatus(relic, "", OPEN_COLOR)

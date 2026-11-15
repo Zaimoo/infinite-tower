@@ -202,7 +202,8 @@ function HeroOddsModal:Signature(): string
 	local profile = self.GetProfile()
 	local copies = ownership(profile)
 	local parts = { tostring(self.BannerKey), string.format("%.6f", SummonLuck.ForProfile(profile)),
-		tostring(profile ~= nil and profile.HeroLimitedFeaturedGuarantee == true) }
+		tostring(profile ~= nil and profile.HeroLimitedFeaturedGuarantee == true),
+		tostring(profile ~= nil and (profile :: any).FirstTenPullShowcase == true) }
 	for _, id in HeroBannerOdds.Heroes(banner) do
 		table.insert(parts, tostring(copies[id] or 0))
 	end
@@ -262,6 +263,11 @@ function HeroOddsModal:Render()
 		banner.Cost1X, StatBalance.Format(banner.Cost10X))
 
 	local stateParts = {}
+	-- A new Master's first ten-pull guarantee (server: DataManager.RollSummons, GDD §4.7).
+	if banner.FirstTenPullMinTier and profile and (profile :: any).FirstTenPullShowcase == true then
+		table.insert(stateParts, string.format("<font color=\"#FFD678\"><b>Your first 10x includes a %s or better hero.</b></font>",
+			HeroCatalog.RarityName(banner.FirstTenPullMinTier)))
+	end
 	if banner.FeaturedHeroId then
 		if profile and profile.HeroLimitedFeaturedGuarantee == true then
 			table.insert(stateParts, string.format("<font color=\"#FFD678\"><b>Your next pity is guaranteed %s.</b></font>", featuredName))
