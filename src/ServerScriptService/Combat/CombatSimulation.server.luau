@@ -243,6 +243,7 @@ local LastChallengeRequest: { [Player]: number } = {}
 -- Carry challenges (GDD 6.1, LootDuel.CanChallengeCarrier): the relic holder's shield after a duel,
 -- each challenger's cooldown, and the cooldown between the same two Masters (LootDuel.PairKey).
 local CarryShieldUntil: { [Player]: number } = {}
+local ServerBiomeFirsts: { [number]: boolean } = {} -- floors whose Biome Boss someone in this server has killed
 local CarryCooldownUntil: { [Player]: number } = {}
 local CarryPairUntil: { [string]: number } = {}
 
@@ -1062,6 +1063,14 @@ registerPickup = function(player: Player, dropId: number, killerUserId: number, 
 			Label = label, Seconds = LootDuel.THIEF_FLAG_SECONDS,
 		})
 	end
+	-- A Core or Heart theft is server news with a Hunt button (B1); smaller relics stay floor news.
+	local relicSpec = relic and RelicConfig[relic.TierId]
+	local baseTier = relicSpec and relicSpec.BaseTierId
+	if not contest.Training and (baseTier == "ABYSSAL_CORE" or baseTier == "CALAMITY_HEART") and dm.PostNews then
+		dm.PostNews({ Kind = "THEFT", ActorUserId = player.UserId, ActorName = player.DisplayName,
+			TargetUserId = killerUserId, TargetName = killerName, ItemName = label, FloorId = thiefState.FloorId },
+			LootDuel.THIEF_FLAG_SECONDS)
+	end
 	if contest.Training then
 		dm.SendToast(player, string.format("You're a Loot Thief|%s is coming for it", killerName), "WARN")
 	else
@@ -1525,6 +1534,20 @@ local function applyDuelOutcome(duel: Duel)
 		return
 	end
 	local hunterLost = loser.UserId ~= contest.ThiefUserId
+	-- Duel results between two Masters are server news (B2); rival duels are not.
+	if winner.Parent == Players and loser.Parent == Players and dm.PostNews then
+		local spec = record and RelicConfig[record.TierId]
+		local item = { ActorUserId = winner.UserId, ActorName = winner.DisplayName, TargetUserId = loser.UserId,
+			TargetName = loser.DisplayName, ItemName = if spec then spec.DisplayName else "relic" }
+		if contest.Kind == "CARRY" then
+			item.Kind = "RELIC_DUEL"
+		elseif hunterLost then
+			item.Kind = "ESCAPED" -- the thief beat the hunter
+		else
+			item.Kind = "BOUNTY_CLAIMED"
+		end
+		dm.PostNews(item)
+	end
 	if winner.Parent == Players then
 		dm.SendToast(winner, string.format("Duel won|%s's drop is yours", loser.DisplayName), "SUCCESS")
 		if dm.ReportMilestone then dm.ReportMilestone(winner, "DuelWon") end
@@ -3345,6 +3368,11 @@ Encounters=EncounterRuntime.new({Tower=Tower,Heroes=ActiveHeroesByNetId,Mobs=Act
 
        if bossTier > 0 then
         dm.RecordBiomeBossClear(p, bossTier)
+        -- The first kill of each Biome Boss in this server is news (B3).
+        if p == killer and not ServerBiomeFirsts[mob.FloorId] and dm.PostNews then
+         ServerBiomeFirsts[mob.FloorId] = true
+         dm.PostNews({ Kind = "BIOME_FIRST", ActorUserId = p.UserId, ActorName = p.DisplayName, ItemName = mob.DisplayName, FloorId = mob.FloorId })
+        end
        end
 
        local progress = ActivePlayerProgress[p]
@@ -3693,6 +3721,29 @@ function CombatSimulation.DebugRivalDuel(player: Player, roster: { { TemplateId:
 	local ok, reason = startDuel(rival :: any, Contests[relic.RelicId])
 	if not ok then dismissRival(rival) end
 	return ok, reason
+end
+
+-- Every open public bounty, for the Wanted list (NewsService, B1): not training or carry contests.
+-- EndsAt is server time (GetServerTimeNow).
+CombatSimulation.PublicBounties = function(): { any }
+	local now, serverNow = os.clock(), Workspace:GetServerTimeNow()
+	local list = {}
+	for dropId, contest in pairs(Contests) do
+		if contest.Status == "CONTESTED" and not contest.Training and contest.Kind ~= "CARRY" and contest.ExpiresAt > now then
+			local thief = Players:GetPlayerByUserId(contest.ThiefUserId)
+			local relic = _G.RelicService and _G.RelicService.GetRelic(dropId)
+			local spec = relic and RelicConfig[relic.TierId]
+			if thief and relic and relic.Carrier == thief then
+				table.insert(list, {
+					ThiefUserId = thief.UserId, ThiefName = thief.DisplayName,
+					ItemName = if spec then spec.DisplayName else "relic",
+					FloorId = Tower.GetState(thief).FloorId, EndsAt = serverNow + (contest.ExpiresAt - now),
+				})
+			end
+		end
+	end
+	table.sort(list, function(a, b) return a.EndsAt < b.EndsAt end)
+	return list
 end
 
 -- The Rival Master lesson (RivalLesson.server.luau) drives rivals through these.

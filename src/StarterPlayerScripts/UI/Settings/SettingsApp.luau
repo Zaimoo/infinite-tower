@@ -67,6 +67,7 @@ local function readInitialSettings(): SettingsConfig.SettingsState
 		base.CompactMode = (LocalPlayer:GetAttribute("Settings_CompactMode") :: boolean?) or false
 		base.ShowNotifications = if LocalPlayer:GetAttribute("Settings_ShowNotifications") ~= nil then LocalPlayer:GetAttribute("Settings_ShowNotifications") == true else base.ShowNotifications
 		base.DamageNumbers = if LocalPlayer:GetAttribute("Settings_DamageNumbers") ~= nil then LocalPlayer:GetAttribute("Settings_DamageNumbers") == true else base.DamageNumbers
+		base.ShowNews = if LocalPlayer:GetAttribute("Settings_ShowNews") ~= nil then LocalPlayer:GetAttribute("Settings_ShowNews") == true else base.ShowNews
 		base.ReduceMotion = (LocalPlayer:GetAttribute("Settings_ReduceMotion") :: boolean?) or false
 		base.HighContrast = (LocalPlayer:GetAttribute("Settings_HighContrast") :: boolean?) or false
 		base.LivePreview = if LocalPlayer:GetAttribute("Settings_LivePreview") ~= nil then LocalPlayer:GetAttribute("Settings_LivePreview") == true else base.LivePreview
@@ -229,6 +230,7 @@ local function SettingsApp()
 		LocalPlayer:SetAttribute("Settings_ColorFX", settings.ColorFX)
 		LocalPlayer:SetAttribute("Settings_ShowNotifications", settings.ShowNotifications)
 		LocalPlayer:SetAttribute("Settings_DamageNumbers", settings.DamageNumbers)
+		LocalPlayer:SetAttribute("Settings_ShowNews", settings.ShowNews)
 		LocalPlayer:SetAttribute("Settings_CompactMode", settings.CompactMode)
 		LocalPlayer:SetAttribute("Settings_ReduceMotion", settings.ReduceMotion)
 		LocalPlayer:SetAttribute("Settings_Theme", settings.Theme)
@@ -253,6 +255,7 @@ local function SettingsApp()
 		settings.Bloom,
 		settings.ColorFX,
 		settings.ShowNotifications,
+		settings.ShowNews,
 		settings.DamageNumbers,
 		settings.CompactMode,
 		settings.ReduceMotion,
@@ -679,6 +682,14 @@ local function SettingsApp()
 						AccentColor = accent,
 						LayoutOrder = 4,
 						OnToggle = function() updateSetting("ReduceMotion", not settings.ReduceMotion) end,
+					}),
+					NewsToggle = e(Toggle, {
+						Label = "Server News",
+						Description = "Thefts, duels and big pulls",
+						Value = settings.ShowNews,
+						AccentColor = accent,
+						LayoutOrder = 5,
+						OnToggle = function() updateSetting("ShowNews", not settings.ShowNews) end,
 					}),
 				},
 			}),

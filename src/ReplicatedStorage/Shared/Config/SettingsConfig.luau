@@ -27,6 +27,7 @@ export type SettingsState = {
 	-- Interface
 	CompactMode: boolean,
 	ShowNotifications: boolean,
+	ShowNews: boolean, -- server-wide headlines (NewsFeedController)
 	DamageNumbers: boolean,
 	ReduceMotion: boolean,
 	HighContrast: boolean,
@@ -57,6 +58,7 @@ SettingsConfig.DEFAULTS = table.freeze({
 
 	CompactMode = false,
 	ShowNotifications = true,
+	ShowNews = true,
 	DamageNumbers = true,
 	ReduceMotion = false,
 	HighContrast = false,
@@ -149,6 +151,7 @@ function SettingsConfig.Sanitize(raw: any): SettingsState
 
 	if type(raw.CompactMode) == "boolean" then out.CompactMode = raw.CompactMode end
 	if type(raw.ShowNotifications) == "boolean" then out.ShowNotifications = raw.ShowNotifications end
+	if type(raw.ShowNews) == "boolean" then out.ShowNews = raw.ShowNews end
 	if type(raw.DamageNumbers) == "boolean" then out.DamageNumbers = raw.DamageNumbers end
 	if type(raw.ReduceMotion) == "boolean" then out.ReduceMotion = raw.ReduceMotion end
 	if type(raw.HighContrast) == "boolean" then out.HighContrast = raw.HighContrast end
