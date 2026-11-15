@@ -4,26 +4,26 @@
       "CT01_Cobblestone_2b2e34": {
         "Color": "2b2e34",
         "Material": "Cobblestone",
-        "Parts": 4,
-        "Triangles": 48
+        "Parts": 5,
+        "Triangles": 60
       },
       "CT02_Cobblestone_3e424a": {
         "Color": "3e424a",
         "Material": "Cobblestone",
-        "Parts": 9,
-        "Triangles": 108
+        "Parts": 7,
+        "Triangles": 84
       },
       "CT03_Cobblestone_3f4a3c": {
         "Color": "3f4a3c",
         "Material": "Cobblestone",
-        "Parts": 56,
-        "Triangles": 672
+        "Parts": 63,
+        "Triangles": 756
       },
       "CT04_Cobblestone_4e545c": {
         "Color": "4e545c",
         "Material": "Cobblestone",
-        "Parts": 5,
-        "Triangles": 60
+        "Parts": 4,
+        "Triangles": 48
       },
       "CT05_Ground_2a3b24": {
         "Color": "2a3b24",
@@ -34,14 +34,14 @@
       "CT06_Rock_2b2e34": {
         "Color": "2b2e34",
         "Material": "Rock",
-        "Parts": 17,
-        "Triangles": 204
+        "Parts": 11,
+        "Triangles": 132
       },
       "CT07_Slate_2b2e34": {
         "Color": "2b2e34",
         "Material": "Slate",
-        "Parts": 25,
-        "Triangles": 300
+        "Parts": 29,
+        "Triangles": 348
       },
       "CT08_Slate_3e424a": {
         "Color": "3e424a",
@@ -52,18 +52,18 @@
       "CT09_Slate_3f4a3c": {
         "Color": "3f4a3c",
         "Material": "Slate",
-        "Parts": 8,
-        "Triangles": 96
+        "Parts": 7,
+        "Triangles": 84
       },
       "CT10_Slate_4e545c": {
         "Color": "4e545c",
         "Material": "Slate",
-        "Parts": 65,
-        "Triangles": 780
+        "Parts": 63,
+        "Triangles": 756
       }
     },
     "Parts": 246,
-    "Signature": "246-1860596a-5b99e09e",
+    "Signature": "246-3d37fd59-17224229",
     "Triangles": 2952
   },
   "FortressWalls": {

@@ -9,7 +9,7 @@ export type Entry = { Signature: string, Meshes: { [string]: MeshLook } }
 
 local Index: { [string]: Entry } = {
 	CourtyardGroundTiles = {
-		Signature = "246-1860596a-5b99e09e", -- 246 parts, 2952 triangles
+		Signature = "246-3d37fd59-17224229", -- 246 parts, 2952 triangles
 		Meshes = {
 			CT01_Cobblestone_2b2e34 = { Material = "Cobblestone", Color = "2b2e34" },
 			CT02_Cobblestone_3e424a = { Material = "Cobblestone", Color = "3e424a" },
