@@ -1365,10 +1365,21 @@ do
 end
 
 -- Catio (AXE): Resonance Tremor is an overhand strike sunk into the ground; Crystalline
--- Excavation winds the greataxe round once before a two-handed slam.
+-- Excavation winds the greataxe round once before a two-handed slam. Idle is an inquisitor's
+-- composure, to match his ceremonial mantle: upright and still, chest lifted, chin raised, feet
+-- close with his weight settled on the back leg, the greataxe held at port arms like a mace of
+-- office, breathing slowly. Only the torso, head and legs differ from the shared rest, so the
+-- arms keep their baked haft grip.
 do
 	local p = WeaponPoses.AXE
+	local inquisitor = merge(p.Rest, {
+		Waist = { 3, 10, 0 }, Neck = { 11, -8, 0 },
+		LeftHip = { 2, 0, -4 }, LeftKnee = { -3, 0, 0 }, LeftAnkle = { 1, 0, 4 },
+		RightHip = { -6, 0, 6 }, RightKnee = { -6, 0, 0 }, RightAnkle = { 6, 0, -6 },
+		RootOffset = { 0, -0.02, 0 },
+	})
 	Overrides.hero_catio = {
+		Idle = breathe(inquisitor, 4.2),
 		AttackSpecial = signature(0.9, {
 			{ 0, p.Rest },
 			{ 0.4, p.Windup },
@@ -1390,6 +1401,9 @@ end
 -- Gide (AXE): Bedrock Sundering hauls the greataxe far back before a heavy diagonal chop;
 -- Tunnelbreaker Fault raises it overhead in both hands and drives it into the floor. Idle is his
 -- planted veteran stance: feet wide, knees set, the greataxe held across his chest at port arms.
+-- Ironvein Chop (Basic) is a miner's stroke, short and vertical where Bedrock Sundering is a
+-- long diagonal: he sinks, lifts the axe straight overhead without hauling it back, drops it
+-- into the vein in front of him, then wrenches his torso round as if prying the ore loose.
 do
 	local p = WeaponPoses.AXE
 	local sunder = merge(p.Chop, { Waist = { -28, 66, 0 }, Neck = { 14, -50, 0 }, LeftKnee = { -42, 0, 0 }, RightKnee = { -36, 0, 0 }, RootOffset = { 0, -0.4, 0 } })
@@ -1400,8 +1414,29 @@ do
 		RightHip = { 6, 0, 13 }, RightKnee = { -16, 0, 0 }, RightAnkle = { 10, 0, -13 },
 		RootOffset = { 0, -0.14, 0 },
 	})
+	local veteranLegs: Pose = {
+		LeftHip = veteran.LeftHip, LeftKnee = veteran.LeftKnee, LeftAnkle = veteran.LeftAnkle,
+		RightHip = veteran.RightHip, RightKnee = veteran.RightKnee, RightAnkle = veteran.RightAnkle,
+	}
+	local sink = merge(veteran, { Waist = { -6, 10, 0 }, LeftKnee = { -28, 0, 0 }, RightKnee = { -26, 0, 0 }, RootOffset = { 0, -0.26, 0 } })
+	local lift = merge(merge(p.High, veteranLegs), { Waist = { 10, 14, 0 }, Neck = { -4, -10, 0 }, RootOffset = { 0, -0.06, 0.04 } })
+	local intoVein = merge(p.Chop, {
+		Waist = { -30, 40, 0 }, Neck = { 16, -30, 0 },
+		LeftHip = { 30, 0, -13 }, LeftKnee = { -40, 0, 0 }, RightHip = { 4, 0, 13 }, RightKnee = { -30, 0, 0 },
+		RootOffset = { 0, -0.36, -0.08 },
+	})
+	local pry = merge(intoVein, { Waist = { -24, 60, 0 }, Neck = { 12, -46, 0 }, RootOffset = { 0, -0.3, -0.04 } })
 	Overrides.hero_gide = {
 		Idle = breathe(veteran, 3.2),
+		-- Release matches the shared axe Basic, so the hit lands on the same beat.
+		AttackBasic = signature(0.85, {
+			{ 0, veteran },
+			{ 0.18, sink },
+			{ 0.42, lift },
+			{ 0.65, intoVein, true },
+			{ 0.8, pry },
+			{ 1, veteran },
+		}, { Release = 0.65 }),
 		AttackSpecial = signature(0.9, {
 			{ 0, p.Rest },
 			{ 0.38, merge(p.Windup, { Waist = { 10, -36, 0 }, Neck = { -4, 30, 0 } }) },
