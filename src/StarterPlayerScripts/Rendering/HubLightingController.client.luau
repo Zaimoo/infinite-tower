@@ -18,6 +18,16 @@ local Presets = HubLighting.Presets
 
 local BLEND_RATE = 2.5 -- per second; ~1 s to settle after a step change such as a teleport
 
+-- With Colour FX off (Settings, e.g. Max Performance) the Atmosphere is thinned to this wherever the player is.
+-- SettingsGraphicsEngine sets the Lighting attribute; this script is the only one that writes the Atmosphere.
+local COLOR_FX_ATTRIBUTE = "SettingsColorFX"
+local REDUCED_ATMOSPHERE_DENSITY = 0.10
+local REDUCED_ATMOSPHERE_HAZE = 0
+
+local function colorFXEnabled(): boolean
+	return Lighting:GetAttribute(COLOR_FX_ATTRIBUTE) ~= false
+end
+
 local function lerp(a: number, b: number, t: number): number
 	return a + (b - a) * t
 end
@@ -60,12 +70,13 @@ local function apply(p: Preset)
 
 	local atmosphere = effect("Atmosphere", "TowerStormAtmosphere") :: Atmosphere?
 	if atmosphere then
-		atmosphere.Density = p.AtmosphereDensity
+		local full = colorFXEnabled()
+		atmosphere.Density = if full then p.AtmosphereDensity else REDUCED_ATMOSPHERE_DENSITY
 		atmosphere.Offset = p.AtmosphereOffset
 		atmosphere.Color = p.AtmosphereColor
 		atmosphere.Decay = p.AtmosphereDecay
 		atmosphere.Glare = 0 -- Keep glare 0 to eliminate harsh directional ray bloom
-		atmosphere.Haze = p.AtmosphereHaze
+		atmosphere.Haze = if full then p.AtmosphereHaze else REDUCED_ATMOSPHERE_HAZE
 	end
 	local cc = effect("ColorCorrectionEffect", "TowerStormColorCorrection") :: ColorCorrectionEffect?
 	if cc then
@@ -110,6 +121,11 @@ end
 
 local dreadW, stormW = targetWeights()
 local lastDread, lastStorm = -1, -1
+
+-- Colour FX switched: re-apply on the next step even if the player has not moved
+Lighting:GetAttributeChangedSignal(COLOR_FX_ATTRIBUTE):Connect(function()
+	lastDread, lastStorm = -1, -1
+end)
 
 local function stepHubLighting(dt: number)
 	local wantDread, wantStorm = targetWeights()

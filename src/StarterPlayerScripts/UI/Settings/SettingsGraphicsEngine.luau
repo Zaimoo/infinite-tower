@@ -6,7 +6,7 @@
 -- 2. Lighting Brightness + dedicated SettingsBrightnessCC ColorCorrectionEffect
 -- 3. Global Dynamic Shadows + Workspace PointLight/SpotLight/SurfaceLight toggle
 -- 4. Bloom & Glow Effects across all Lighting bloom/sunrays/DoF effects
--- 5. Colour FX: the scene's own colour grade and Atmosphere density/haze (no extra grade of its own)
+-- 5. Colour FX: the scene's own colour grade, and (through HubLightingController) Atmosphere density/haze
 -- 6. Dynamic Glass Blur (SettingsGlassBlur) with smooth 0.18s open/close tweens
 
 local Lighting = game:GetService("Lighting")
@@ -125,24 +125,10 @@ function SettingsGraphicsEngine.updateColorCorrection(enabled: boolean)
 		end
 	end
 
-	local atmosphere = Lighting:FindFirstChildOfClass("Atmosphere")
-	if atmosphere then
-		if atmosphere:GetAttribute("OrigDensity") == nil then
-			atmosphere:SetAttribute("OrigDensity", atmosphere.Density)
-			atmosphere:SetAttribute("OrigHaze", atmosphere.Haze)
-			atmosphere:SetAttribute("OrigGlare", 0)
-		end
-
-		if enabled then
-			atmosphere.Density = (atmosphere:GetAttribute("OrigDensity") :: number?) or 0.35
-			atmosphere.Haze = (atmosphere:GetAttribute("OrigHaze") :: number?) or 1.5
-			atmosphere.Glare = 0
-		else
-			atmosphere.Density = 0.10
-			atmosphere.Haze = 0
-			atmosphere.Glare = 0
-		end
-	end
+	-- The Atmosphere belongs to HubLightingController, which sets it for where the player stands and thins it
+	-- while this is off. Restoring a density captured here once brought back a stale value: one saved near the
+	-- tower came back as a thick black haze in the hub after Max Performance -> Cinematic.
+	Lighting:SetAttribute("SettingsColorFX", enabled)
 end
 
 function SettingsGraphicsEngine.setGlassBlur(isOpen: boolean)
