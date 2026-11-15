@@ -39,8 +39,10 @@ HeroClips.SHARED_STATES = table.freeze({
 	"MarketLedger",
 	"TrainingKata",
 	"TrainingCoach",
+	"Victory", -- a duel's winners, through its outro (B2); every weapon has its own, this is the fallback
 })
 HeroClips.LOCOMOTION_STATES = table.freeze({
+	Victory = true,
 	Idle = true,
 	Move = true,
 	Coma = true,
@@ -181,6 +183,18 @@ local function walk(carry: Pose, armSwing: number?, gait: Gait?): Clip
 	return clip(0.7, true, keys)
 end
 
+-- A looping victory cheer over `pose`: the raised arm pumps, the chest lifts and the hero bobs up
+-- onto the toes. `joint` is the shoulder that pumps (the weapon arm).
+local function cheer(pose: Pose, joint: string): Clip
+	local pumped = merge(pose, {})
+	nudge(pumped, joint, { 10, 0, 0 })
+	nudge(pumped, "Waist", { 4, 0, 0 })
+	nudge(pumped, "Neck", { 4, 0, 0 })
+	local root = pose.RootOffset or { 0, 0, 0 }
+	pumped.RootOffset = { root[1], root[2] + 0.12, root[3] }
+	return clip(1.1, true, { { 0, pose }, { 0.45, pumped }, { 1, pose } })
+end
+
 -- Base stance shared by most weapon idles: soft knees, weight slightly forward.
 local STANCE: Pose = {
 	LeftHip = { 6, 0, -3 }, RightHip = { -4, 0, 3 },
@@ -208,7 +222,9 @@ do
 		LeftShoulder = { 60, 0, -10 }, LeftElbow = { 95, 0, 0 },
 		RightShoulder = { 45, 0, 10 }, RightElbow = { 110, 0, 0 },
 	})
+	local fistUp = merge(STANCE, { Waist = { 4, 0, 0 }, Neck = { 8, 0, 0 }, RightShoulder = { 160, 0, 14 }, RightElbow = { 30, 0, 0 }, LeftShoulder = { 10, 0, -10 }, LeftElbow = { 40, 0, 0 } })
 	ByWeapon.UNARMED = {
+		Victory = cheer(fistUp, "RightShoulder"),
 		Idle = breathe(idle),
 		Move = walk(idle, 24),
 		AttackBasic = clip(0.5, false, {
@@ -258,7 +274,9 @@ do
 	local fullDraw = merge(drawn, { Waist = { 3, -20, 0 }, Neck = { -2, 18, 0 }, RightShoulder = { 88, 32, -14 }, RightElbow = { 150, 0, 0 } })
 	local loose = merge(release, { Waist = { -3, -16, 0 }, Neck = { 0, 14, 0 }, LeftShoulder = { 100, 0, 0 }, RightShoulder = { 62, 46, -40 }, RightElbow = { 112, 0, 0 }, RootOffset = { 0, -0.1, 0.05 } })
 	local looseHeld = merge(loose, { LeftShoulder = { 97, 0, 0 }, RightShoulder = { 58, 48, -44 }, RightElbow = { 104, 0, 0 } })
+	local bowUp = merge(STANCE, { Waist = { 4, -6, 0 }, Neck = { 8, 6, 0 }, LeftShoulder = { 158, 0, -8 }, LeftElbow = { 12, 0, 0 }, RightShoulder = { 20, 0, 18 }, RightElbow = { 40, 0, 0 } })
 	ByWeapon.BOW = {
+		Victory = cheer(bowUp, "LeftShoulder"),
 		Idle = breathe(carry),
 		-- A light scout's walk: long, easy strides, leaning a little into them.
 		Move = walk(carry, nil, { Stride = 26, Lean = -3 }),
@@ -300,7 +318,9 @@ do
 		LeftHip = { 34, 0, -6 }, LeftKnee = { -40, 0, 0 }, RightHip = { -22, 0, 6 }, RootOffset = { 0, -0.3, -0.12 },
 	})
 	local followThrough = merge(lunge, { Waist = { -16, -28, 0 }, RightShoulder = { 40, -22, -6 }, RootOffset = { 0, -0.24, -0.08 } })
+	local swordUp = merge(STANCE, { Waist = { 4, 8, 0 }, Neck = { 8, -6, 0 }, RightShoulder = { 165, 0, 10 }, RightElbow = { 12, 0, 0 }, LeftShoulder = { 30, -25, -10 }, LeftElbow = { 75, 0, 0 } })
 	ByWeapon.SWORD_SHIELD = {
+		Victory = cheer(swordUp, "RightShoulder"),
 		Idle = breathe(guard),
 		-- A guarded march: shorter steps, shield held, weight forward.
 		Move = walk(guard, nil, { Stride = 24, Lift = 26, Lean = -4, Bob = 0.05 }),
@@ -340,7 +360,9 @@ do
 		Waist = { -10, 24, 0 }, Neck = { 4, -18, 0 }, LeftShoulder = { 92, 4, 6 }, LeftElbow = { 4, 0, 0 }, LeftWrist = { -85, 0, 0 },
 		RightShoulder = { 30, 0, 14 }, RightElbow = { 95, 0, 0 }, RootOffset = { 0, -0.2, -0.14 },
 	})
+	local bladesUp = merge(STANCE, { Waist = { 4, 0, 0 }, Neck = { 8, 0, 0 }, LeftShoulder = { 150, 0, -28 }, LeftElbow = { 25, 0, 0 }, RightShoulder = { 150, 0, 28 }, RightElbow = { 25, 0, 0 } })
 	ByWeapon.DAGGERS = {
+		Victory = cheer(bladesUp, "RightShoulder"),
 		Idle = breathe(ready, 2.6),
 		-- A low prowl: knees bent, chest forward, the torso twisting with each step.
 		Move = walk(ready, nil, { Stride = 30, Lift = 34, Crouch = 12, Lean = -9, Bob = 0.04, Twist = 1.3 }),
@@ -414,7 +436,10 @@ do
 	local rise = merge(windup, { Waist = { 12, -30, 0 }, Neck = { -6, 24, 0 }, LeftKnee = { -10, 0, 0 }, RightKnee = { -8, 0, 0 }, RootOffset = { 0, 0.08, 0.06 } })
 	local strike = merge(chop, { Waist = { -28, 60, 0 }, LeftHip = { 30, 0, -6 }, LeftKnee = { -38, 0, 0 }, RightKnee = { -30, 0, 0 }, RootOffset = { 0, -0.38, -0.1 } })
 	local recoil = merge(chop, { Waist = { -20, 52, 0 }, RootOffset = { 0, -0.22, -0.06 } })
+	local axeUp = merge(merge(STANCE, overhead), { Waist = { 8, 8, 0 }, Neck = { -2, -6, 0 } })
 	ByWeapon.AXE = {
+		-- The arms keep the baked overhead haft grip, so only the chest and bob move.
+		Victory = clip(1.1, true, { { 0, axeUp }, { 0.45, merge(axeUp, { Waist = { 12, 8, 0 }, RootOffset = { 0, 0.12, 0 } }) }, { 1, axeUp } }),
 		Idle = breathe(rest),
 		-- A heavy walk: shorter strides, a deeper bob, the weapon's weight keeping the torso square.
 		Move = walk(rest, nil, { Stride = 24, Lift = 28, Bob = 0.09, Lean = -5, Twist = 0.7 }),
@@ -449,7 +474,9 @@ do
 		LeftShoulder = { 82, 0, -16 }, LeftElbow = { 8, 0, 0 }, RootOffset = { 0, -0.18, -0.1 },
 	})
 	local castHeld = merge(thrust, { Waist = { -9, -12, 0 }, RightShoulder = { 92, 0, 0 }, LeftShoulder = { 72, 0, -18 }, LeftElbow = { 16, 0, 0 }, RootOffset = { 0, -0.14, -0.07 } })
+	local staffUp = merge(STANCE, { Waist = { 6, 0, 0 }, Neck = { 10, 0, 0 }, RightShoulder = { 165, 0, 10 }, RightElbow = { 10, 0, 0 }, LeftShoulder = { 20, 0, -18 }, LeftElbow = { 30, 0, 0 } })
 	ByWeapon.STAFF = {
+		Victory = cheer(staffUp, "RightShoulder"),
 		Idle = breathe(stand),
 		-- A measured walk.
 		Move = walk(stand, nil, { Stride = 25, Lift = 28, Lean = -2, Bob = 0.05 }),
@@ -514,7 +541,9 @@ do
 	-- small step in, and ease back to reading.
 	local wind = merge(gather, { Waist = { 2, 24, 0 }, Neck = { -2, -12, 0 }, RightShoulder = { 28, 30, 30 }, RightElbow = { 105, 0, 0 }, RootOffset = { 0, -0.04, 0.05 } })
 	local push = merge(release, { Waist = { -8, -18, 0 }, RightShoulder = { 96, -8, 2 }, RightElbow = { 4, 0, 0 }, RootOffset = { 0, -0.12, -0.08 } })
+	local tomeUp = merge(read, { Waist = { 4, 6, 0 }, Neck = { 6, 8, 2 }, RightShoulder = { 158, 0, 22 }, RightElbow = { 20, 0, 0 }, RightWrist = { 0, 0, 0 } })
 	ByWeapon.TOME = {
+		Victory = cheer(tomeUp, "RightShoulder"),
 		Idle = floatIdle(read, 3.2),
 		-- A gliding walk: short steps, little bob, the tome steady.
 		Move = walk(read, nil, { Stride = 22, Lift = 24, Bob = 0.04 }),
@@ -544,6 +573,8 @@ end
 
 -- Shared states -----------------------------------------------------------------------------
 local Shared: { [string]: Clip } = {
+	-- Weapon sets have their own Victory; this is the fallback for anything else.
+	Victory = cheer(merge(STANCE, { Waist = { 4, 0, 0 }, Neck = { 8, 0, 0 }, RightShoulder = { 160, 0, 14 }, RightElbow = { 30, 0, 0 } }), "RightShoulder"),
 	Hit = clip(0.35, false, {
 		{ 0, {} },
 		{ 0.3, { Waist = { 14, 0, 0 }, Neck = { 12, 0, 0 }, LeftShoulder = { -10, 0, -25 }, RightShoulder = { -10, 0, 25 }, RootOffset = { 0, 0, 0.15 } } },

@@ -134,7 +134,8 @@ local RECALL_PACIFY_DURATION = 2.0
 
 local COMA_DURATION_DEFAULT = 60
 
-export type HeroSimState = "FOLLOW_MASTER" | "MOVE_TO_TARGET" | "ATTACKING" | "COMA"
+-- VICTORY: a duel's winners strike a pose through its outro (B2); finishDuel puts them back.
+export type HeroSimState = "FOLLOW_MASTER" | "MOVE_TO_TARGET" | "ATTACKING" | "COMA" | "VICTORY"
 
 export type SimHero = {
 	NetId: number,
@@ -1213,6 +1214,30 @@ local function findDrop(dropId: number): (any?, Player?)
 	return nil, nil
 end
 
+-- A duel side's power as it will fight (after the Attunement clamp): Squad Power's 10 x DPS + HP.
+local function duelSidePower(squad: DuelSquad): number
+	local total = 0
+	for _, h in squad.Heroes do
+		total += 10 * h.EffectiveATK / math.max(0.1, h.AttackInterval) + h.MaxHP
+	end
+	return math.round(total)
+end
+
+-- Other Masters on the duel's floor can watch it (B2): they get the arena, and a notice when it ends.
+local function notifyWatchers(duel: Duel, payload: { [string]: any })
+	local a, b = duel.Sides.A.Player, duel.Sides.B.Player
+	for _, other in Players:GetPlayers() do
+		if other ~= a and other ~= b and not DuelByPlayer[other] then
+			local state = Tower.GetState(other)
+			if state.FloorId == duel.FloorId then
+				local message = table.clone(payload)
+				message.DuelId = duel.Id
+				DuelStateRemote:FireClient(other, message)
+			end
+		end
+	end
+end
+
 local function startDuel(owner: Player, contest: LootDuel.Contest?): (boolean, string?)
 	-- `owner` is the bounty hunter (side A); the thief defends as side B. The hunter may be a
 	-- server-run rival (newRival): it has no character, profile or tower state of its own.
@@ -1353,9 +1378,15 @@ local function startDuel(owner: Player, contest: LootDuel.Contest?): (boolean, s
 		record.DespawnAt += LootDuel.DUEL_INTRO_SECONDS + LootDuel.DUEL_MAX_SECONDS + LootDuel.DUEL_OUTRO_SECONDS
 	end
 	closeContestPrompt(contest)
+	notifyWatchers(duel, {
+		Kind = "NEARBY", Center = center, Forward = forward, NameA = owner.DisplayName, NameB = thief.DisplayName,
+		EndsAt = Workspace:GetServerTimeNow() + LootDuel.DUEL_INTRO_SECONDS + LootDuel.DUEL_MAX_SECONDS,
+	})
 	sendDuelState(duel, {
 		Kind = "START",
 		DuelKind = contest.Kind, -- "CARRY" or nil (a bounty); the HUD titles the duel by it
+		UserIdA = owner.UserId, UserIdB = thief.UserId, -- the intro card's headshots (a rival's id is negative)
+		PowerA = duelSidePower(duel.Sides.A), PowerB = duelSidePower(duel.Sides.B),
 		Center = center,
 		Forward = forward,
 		Radius = DuelArena.Radius(),
@@ -1621,6 +1652,7 @@ local function finishDuel(duel: Duel)
 	duel.Arena:Destroy()
 	applyDuelOutcome(duel)
 	sendDuelState(duel, { Kind = "CLEAR" })
+	notifyWatchers(duel, { Kind = "NEARBY_END" })
 	for _, side in { "A", "B" } :: { LootDuel.Side } do
 		local player = duelSquad(duel, side).Player
 		if player.Parent == Players then syncSquadStatus(player) end
@@ -1635,9 +1667,11 @@ local function concludeDuel(duel: Duel, winner: LootDuel.Side, reason: string)
 	for _, side in { "A", "B" } :: { LootDuel.Side } do
 		for _, h in duelSquad(duel, side).Heroes do
 			h.TargetNetId = nil
-			if h.State ~= "COMA" then h.State = "FOLLOW_MASTER" end
+			if h.State ~= "COMA" then h.State = if side == winner then "VICTORY" else "FOLLOW_MASTER" end
 		end
 	end
+	local record = findDrop(duel.Contest.DropId)
+	local spec = record and RelicConfig[record.TierId]
 	sendDuelState(duel, {
 		Kind = "END",
 		Winner = winner,
@@ -1645,6 +1679,9 @@ local function concludeDuel(duel: Duel, winner: LootDuel.Side, reason: string)
 		WinnerName = duelSquad(duel, winner).Player.DisplayName,
 		OwnerWon = winner == "A",
 		OutroSeconds = LootDuel.DUEL_OUTRO_SECONDS,
+		DuelKind = duel.Contest.Kind,
+		Training = duel.Contest.Training == true, -- a Rival lesson: the player keeps the relic either way
+		PrizeName = if spec then spec.DisplayName else "relic",
 	})
 end
 
@@ -2867,6 +2904,7 @@ local STATE_TO_ENUM: { [HeroSimState]: number } = {
 	MOVE_TO_TARGET = 2,
 	ATTACKING = 3,
 	COMA = 4,
+	VICTORY = 5, -- EntityRenderer plays the hero's Victory clip
 }
 
 local ENEMY_STATE_TO_ENUM: { [string]: number } = { IDLE = 20, CHASE = 21, WINDUP = 22, RECOVERY = 23, RESET = 24, PATROL = 25 }
