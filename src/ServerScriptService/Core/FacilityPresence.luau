@@ -4,6 +4,10 @@
 -- Locked buildings are taken out of the DataModel (so nothing replicates or prompts), a level 1
 -- unlock plays a construction reveal, and later levels play an upgrade burst. Levels are mirrored
 -- on the plot as attributes so a rebuilt PlotBuildings folder can be re-hidden without the profile.
+--
+-- A plot nobody owns stands empty: every Building_* model in PlotBuildings (the Guard Post included)
+-- and the plaza fountain are taken out of the DataModel until a Master is assigned the plot. The walls,
+-- the courtyard and the outskirts scenery (trees, rocks, trail) remain.
 
 local RunService = game:GetService("RunService")
 local AngelStatue = require(script.Parent:WaitForChild("AngelStatue"))
@@ -21,6 +25,85 @@ local REVEAL_SECONDS = 1.6
 local DUST_TEXTURE = "rbxassetid://243660364"
 
 local hidden: { [Instance]: { [string]: Model } } = {}
+
+-- What an unoccupied plot has had removed: building models by name, and the fountain.
+local BUILDING_PREFIX = "Building_"
+local FOUNTAIN_NAME = "PlazaFountain"
+-- Set to true to leave the plaza fountain standing on unoccupied plots.
+local KEEP_FOUNTAIN_WHEN_VACANT = false
+local vacated: { [Instance]: { [string]: Instance } } = {}
+
+function FacilityPresence.IsOccupied(plot: Instance): boolean
+	local owner = plot:GetAttribute("OwnerUserId")
+	return type(owner) == "number" and owner > 0
+end
+
+-- Takes `inst` out of the DataModel and remembers it under `key`. A newer copy replaces an older one.
+local function stashVacant(plot: Instance, key: string, inst: Instance)
+	local stash = vacated[plot] or {}
+	vacated[plot] = stash
+	local older = stash[key]
+	if older and older ~= inst then
+		older:Destroy()
+	end
+	inst.Parent = nil
+	stash[key] = inst
+end
+
+-- Removes every building (and the fountain) from a plot with no owner.
+local function vacate(plot: Instance)
+	local folder = plot:FindFirstChild("PlotBuildings")
+	if folder then
+		for _, building in folder:GetChildren() do
+			-- Everything else in the folder is outskirts scenery, which stays
+			if building:IsA("Model") and string.sub(building.Name, 1, #BUILDING_PREFIX) == BUILDING_PREFIX then
+				stashVacant(plot, building.Name, building)
+			end
+		end
+	end
+	if not KEEP_FOUNTAIN_WHEN_VACANT then
+		local fountain = plot:FindFirstChild(FOUNTAIN_NAME)
+		if fountain then
+			stashVacant(plot, FOUNTAIN_NAME, fountain)
+		end
+	end
+end
+
+-- Whether a building that is not in the plot's folder is only put away (the plot is unoccupied, or the
+-- facility is still locked), as opposed to missing. PlotBuildings uses it to keep its cached folder.
+function FacilityPresence.Holds(plot: Instance, buildingName: string): boolean
+	local vacant = vacated[plot]
+	if vacant and vacant[buildingName] then
+		return true
+	end
+	local stash = hidden[plot]
+	if stash then
+		for _, model in stash do
+			if model.Name == buildingName then
+				return true
+			end
+		end
+	end
+	return false
+end
+
+-- Puts back what vacate removed. A copy rebuilt in the meantime wins over the stashed one.
+local function occupy(plot: Instance)
+	local stash = vacated[plot]
+	if not stash then
+		return
+	end
+	vacated[plot] = nil
+	local folder = plot:FindFirstChild("PlotBuildings")
+	for key, inst in stash do
+		local home: Instance? = if key == FOUNTAIN_NAME then plot else folder
+		if home and not home:FindFirstChild(key) then
+			inst.Parent = home
+		else
+			inst:Destroy()
+		end
+	end
+end
 
 local function attributeName(facility: string): string
 	return "FacilityLevel_" .. facility
@@ -171,6 +254,9 @@ end
 -- `levels` maps facility -> level (missing = 0). Animations play only for increases since the last
 -- Apply on this plot; the first Apply after Reset (a join) builds silently.
 function FacilityPresence.Apply(plot: Instance, levels: { [string]: number })
+	if FacilityPresence.IsOccupied(plot) then
+		occupy(plot)
+	end
 	for _, facility in GATED do
 		local level = levels[facility] or 0
 		local previousAttr = plot:GetAttribute(attributeName(facility))
@@ -192,6 +278,10 @@ function FacilityPresence.Reapply(plot: Instance)
 	if RunService:IsStudio() and not RunService:IsRunning() then
 		return
 	end
+	local occupied = FacilityPresence.IsOccupied(plot)
+	if occupied then
+		occupy(plot)
+	end
 	for _, facility in GATED do
 		local attr = plot:GetAttribute(attributeName(facility))
 		local level = if type(attr) == "number" then attr else 0
@@ -200,6 +290,10 @@ function FacilityPresence.Reapply(plot: Instance)
 		else
 			applyBuilding(plot, facility, level, nil)
 		end
+	end
+	if not occupied then
+		-- After the gated pass, so the statue is gone before its fountain is removed
+		vacate(plot)
 	end
 end
 

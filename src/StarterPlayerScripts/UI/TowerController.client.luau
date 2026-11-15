@@ -1436,11 +1436,22 @@ end)
 local SyndicateRemotes = RS:WaitForChild("Remotes"):WaitForChild("SyndicateRemotes")
 local ProfileDeltaSyncEvent = SyndicateRemotes:WaitForChild("ProfileDeltaSync") :: RemoteEvent
 ProfileDeltaSyncEvent.OnClientEvent:Connect(function(profile: any)
-	if profile and not profile._PitDelta then
-		_G.CurrentProfile = profile
-		if panel.Visible then
-			render()
+	if not profile then return end
+	if profile._Delta then
+		-- HUDController patches _G.CurrentProfile; the selector only shows floor progress.
+		local set = profile.Set
+		if set and (set.MaxFloorReached ~= nil or set.HighestClearedFloor ~= nil) then
+			task.defer(function()
+				if panel.Visible then
+					render()
+				end
+			end)
 		end
+		return
+	end
+	_G.CurrentProfile = profile
+	if panel.Visible then
+		render()
 	end
 end)
 remotes.OpenSelector.OnClientEvent:Connect(function()

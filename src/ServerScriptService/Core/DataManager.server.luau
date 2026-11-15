@@ -12,6 +12,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local HeroCatalog = require(Shared:WaitForChild("Config"):WaitForChild("HeroCatalog"))
 local FacilityConfig = require(Shared:WaitForChild("Config"):WaitForChild("FacilityConfig"))
 local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormulas"))
+local ProfileDelta = require(Shared:WaitForChild("Util"):WaitForChild("ProfileDelta"))
 local PitService = require(script.Parent:WaitForChild("PitService"))
 local OfflineRewardService = require(script.Parent:WaitForChild("OfflineRewardService"))
 local ArtifactCatalog = require(Shared:WaitForChild("Config"):WaitForChild("ArtifactCatalog"))
@@ -563,6 +564,40 @@ function DataManager.EnsureRaidData(profile: any): any
 	return raid
 end
 
+-- What each client last received. Every sync diffs the live profile against this copy and sends only
+-- the difference (Shared/Util/ProfileDelta); the first sync, and any sync after ResyncProfile, sends
+-- the whole profile. Nothing is sent when nothing changed.
+local SentProfiles: { [Player]: any } = {}
+
+local function sendProfile(player: Player, profile: any)
+	local sent = SentProfiles[player]
+	if not sent then
+		SentProfiles[player] = ProfileDelta.DeepCopy(profile)
+		ProfileDeltaSyncEvent:FireClient(player, profile)
+		return
+	end
+	local delta = ProfileDelta.Diff(sent, profile)
+	if delta then
+		ProfileDelta.Apply(sent, ProfileDelta.DeepCopy(delta))
+		ProfileDeltaSyncEvent:FireClient(player, delta)
+	end
+end
+
+-- Makes the next sync send the whole profile again (a respawn does this, which also repairs any drift).
+function DataManager.ResyncProfile(player: Player)
+	SentProfiles[player] = nil
+end
+
+-- Sends what changed and nothing else: no migrations, no squad rebuild, no plot refresh. For frequent
+-- changes that only move numbers the client displays (kill Gold and Gems, passive Gold, stamina).
+-- Anything that changes the squad, equipment, facilities or hero stats must use SyncProfile.
+function DataManager.SyncLight(player: Player)
+	local profile = ActiveProfiles[player]
+	if profile then
+		sendProfile(player, profile)
+	end
+end
+
 function DataManager.SyncProfile(player: Player, progressionOnly: boolean?)
 	local profile = ActiveProfiles[player]
 	if not profile then
@@ -711,7 +746,7 @@ function DataManager.SyncProfile(player: Player, progressionOnly: boolean?)
 	DataManager.UpdateSquadPower(player)
 	DataManager.ApplySettingsAttributes(player, profile.Settings)
 	forgeTransactions.Snapshot(profile)
-	ProfileDeltaSyncEvent:FireClient(player, profile)
+	sendProfile(player, profile)
 	OnboardingService.Push(player)
 end
 
@@ -774,8 +809,8 @@ function DataManager.UpdateSquadPower(player: Player)
 	end
 end
 
--- Pit operations and participation EXP send only affected heroes. Consumers merge
--- this packet into their current session profile instead of replacing the roster.
+-- Pit operations and participation EXP skip SyncProfile's migrations and squad rebuild. `changed` and
+-- `removed` say which heroes the caller touched; what travels is whatever the diff finds.
 function DataManager.SyncPitDelta(player: Player, changed: any, removed: any)
 	local profile = ActiveProfiles[player]
 	if not profile then return end
@@ -796,11 +831,8 @@ function DataManager.SyncPitDelta(player: Player, changed: any, removed: any)
 		_G.PlotManager.RefreshPlotVisuals(player)
 	end
 	DataManager.UpdateSquadPower(player)
-	local forgeSnapshot = forgeTransactions.Snapshot(profile)
-	ProfileDeltaSyncEvent:FireClient(player, { _PitDelta = true, Heroes = changed, Removed = removed, ForgeRevision = forgeSnapshot.Revision,
-		Currencies = profile.Currencies, PitMaterials = profile.PitMaterials, PitRevision = profile.PitRevision,
-		UnlockedResearch = profile.UnlockedResearch, SquadPower = (profile :: any).SquadPower,
-		SquadPowerByHero = (profile :: any).SquadPowerByHero })
+	forgeTransactions.Snapshot(profile) -- stamps profile.ForgeRevision
+	sendProfile(player, profile)
 end
 
 function DataManager.AdjustHonor(_player: Player, _delta: number, _markBetrayalRogue: boolean?)
@@ -2238,6 +2270,7 @@ local function onPlayerAdded(player: Player)
 
 	player.CharacterAdded:Connect(function(char)
 		task.wait(0.2)
+		DataManager.ResyncProfile(player) -- a respawn resends the whole profile
 		DataManager.SyncProfile(player)
 	end)
 
@@ -2265,6 +2298,7 @@ Players.PlayerRemoving:Connect(function(player: Player)
 	lastLeaderstatsWrite[player] = nil
 	pendingCombatSync[player] = nil
 	lastSettingsSave[player] = nil
+	SentProfiles[player] = nil
 	ActiveProfiles[player] = nil
 	persistentPlayers[player] = nil
 	releasedPlayers[player] = nil

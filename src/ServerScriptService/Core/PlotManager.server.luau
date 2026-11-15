@@ -383,8 +383,74 @@ local function setupPlotGateBarrier(plotModel: Model)
 	barrier.Transparency = 1
 end
 
+-- Plot streaming. Nothing on a plot is Persistent except its small PlotBeaconAnchor, so clients stream
+-- other players' plots in and out by distance.
+--   * The island (walls, courtyard, outskirts) stays Default: its parts arrive a few at a time as a
+--     player approaches. Making it one atomic unit sent ~2,800 instances in a single frame and hitched.
+--   * The fountain, the statue and each building are Atomic: client effects bind to their children the
+--     moment the model appears, so they must arrive whole. Each is a few hundred instances at most.
+--   * The owner keeps their own plot loaded through a replication focus on the plot's anchor, which
+--     streams the area around it for that player wherever their character is.
+local NONATOMIC_PLOT_CHILDREN = { PlotBeaconAnchor = true, FloatingFortressIsland = true }
+
+local function isAtomicPlotUnit(plotModel: Model, inst: Instance): boolean
+	if not inst:IsA("Model") then
+		return false
+	end
+	local parent = inst.Parent
+	if parent == plotModel then
+		return not NONATOMIC_PLOT_CHILDREN[inst.Name]
+	end
+	-- The buildings inside the PlotBuildings folder
+	return parent ~= nil and parent:IsA("Folder") and parent.Parent == plotModel
+end
+
+local function applyPlotUnitStreaming(plotModel: Model, inst: Instance)
+	if isAtomicPlotUnit(plotModel, inst) then
+		(inst :: Model).ModelStreamingMode = Enum.ModelStreamingMode.Atomic
+	end
+end
+
+local function plotFocusPart(plotModel: Model): BasePart?
+	local anchor = plotModel:FindFirstChild("PlotBeaconAnchor")
+	local part = anchor and anchor:FindFirstChild("AnchorPart")
+	return if part and part:IsA("BasePart") then part else nil
+end
+
+local function setPlotReplicationFocus(plotModel: Model, owner: Player, focused: boolean)
+	local part = plotFocusPart(plotModel)
+	if not part then
+		return
+	end
+	if focused then
+		owner:AddReplicationFocus(part)
+	else
+		-- The player may already be leaving; a failed removal needs no handling.
+		pcall(owner.RemoveReplicationFocus, owner, part)
+	end
+end
+
 local function initializePlotModel(plotModel: Model)
-	plotModel.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
+	plotModel.ModelStreamingMode = Enum.ModelStreamingMode.Default
+	local island = plotModel:FindFirstChild("FloatingFortressIsland")
+	if island and island:IsA("Model") then
+		island.ModelStreamingMode = Enum.ModelStreamingMode.Default
+	end
+	for _, child in plotModel:GetChildren() do
+		applyPlotUnitStreaming(plotModel, child)
+		if child:IsA("Folder") then
+			for _, inner in child:GetChildren() do
+				applyPlotUnitStreaming(plotModel, inner)
+			end
+		end
+	end
+	-- Buildings are rebuilt on facility upgrades: pick new units up as they arrive. Deferred so a
+	-- builder that sets its own streaming mode after parenting does not win.
+	plotModel.DescendantAdded:Connect(function(inst)
+		if isAtomicPlotUnit(plotModel, inst) then
+			task.defer(applyPlotUnitStreaming, plotModel, inst)
+		end
+	end)
 	if not plotModel:GetAttribute("OwnerUserId") then
 		plotModel:SetAttribute("OwnerUserId", 0)
 	end
@@ -488,6 +554,9 @@ local function assignPlotToPlayer(player: Player)
 			spawnLoc.Neutral = false
 			player.RespawnLocation = spawnLoc
 		end
+		setPlotReplicationFocus(plotModel, player, true)
+		-- An unoccupied plot stands empty: bring its buildings and fountain back for the new owner
+		FacilityPresence.Reapply(plotModel)
 	end
 
 	player.CharacterAdded:Connect(function()
@@ -517,6 +586,7 @@ Players.PlayerRemoving:Connect(function(player: Player)
 		PlayerToPlotIndex[player] = nil
 		local plotModel = PlotsFolder:FindFirstChild("Plot_" .. tostring(idx)) :: Model?
 		if plotModel then
+			setPlotReplicationFocus(plotModel, player, false)
 			plotModel:SetAttribute("OwnerUserId", 0)
 			plotModel:SetAttribute("OwnerName", "Unclaimed")
 			plotModel:SetAttribute("OutskirtsFloorId", nil)

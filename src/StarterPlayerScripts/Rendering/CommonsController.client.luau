@@ -93,7 +93,8 @@ local function stepCommons()
 		end
 	end
 end
-RunService.RenderStepped:Connect(function()
+-- Heartbeat, not RenderStepped: nothing here tracks the camera or a moving character, so it need not hold up the frame
+RunService.Heartbeat:Connect(function()
 	debug.profilebegin("Commons")
 	stepCommons()
 	debug.profileend()

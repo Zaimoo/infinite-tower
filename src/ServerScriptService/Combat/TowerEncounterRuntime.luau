@@ -1,4 +1,5 @@
 --!strict
+--!native
 -- Server-only director. Retained slots belong to the floor, never to its viewers.
 local RS = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")

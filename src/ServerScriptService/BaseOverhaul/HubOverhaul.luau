@@ -20,6 +20,7 @@ local BaseOverhaulFolder = script.Parent
 local IslandBuilder = require(BaseOverhaulFolder:WaitForChild("IslandBuilder"))
 local StaticGeometry = require(script.Parent.Parent:WaitForChild("Core"):WaitForChild("StaticGeometry"))
 local WallsBuilder = require(BaseOverhaulFolder:WaitForChild("WallsBuilder"))
+local SceneryBake = require(BaseOverhaulFolder:WaitForChild("SceneryBake"))
 local FountainBuilder = require(BaseOverhaulFolder:WaitForChild("FountainBuilder"))
 local TowerBuilder = require(BaseOverhaulFolder:WaitForChild("TowerBuilder"))
 local LightingAndEffects = require(BaseOverhaulFolder:WaitForChild("LightingAndEffects"))
@@ -135,7 +136,8 @@ local function alignPlotSpawnAndBeacon(plotModel: Model, islandTopCF: CFrame)
 		end
 	end
 
-	plotModel.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
+	-- Default, not Persistent: PlotManager keeps a plot's scenery loaded only for its owner
+	plotModel.ModelStreamingMode = Enum.ModelStreamingMode.Default
 	local beaconAnchor = plotModel:FindFirstChild("PlotBeaconAnchor") :: Model?
 	if not beaconAnchor then
 		beaconAnchor = Instance.new("Model")
@@ -395,7 +397,9 @@ function HubOverhaul.Build(forceRebuild: boolean?): (Instance, boolean)
 	LightingAndEffects.Apply()
 	HubOverhaul.CleanupLightShaftsAndRays()
 
-	local OVERHAUL_VERSION = HubOverhaul.Version
+	-- Importing or re-baking a merged scenery mesh changes the tag, which rebuilds the baked hub once
+	local bakeTag = SceneryBake.VersionTag()
+	local OVERHAUL_VERSION: number | string = if bakeTag == "" then HubOverhaul.Version else string.format("%d+%s", HubOverhaul.Version, bakeTag)
 	local plotsFolder = Workspace:WaitForChild("WaitingRoomPlots")
 	removeExtraPlots(plotsFolder)
 	local existingContainer = Workspace:FindFirstChild("BaseOverhaulGeometry")
@@ -455,6 +459,8 @@ function HubOverhaul.Build(forceRebuild: boolean?): (Instance, boolean)
 		-- Re-run the scenery pass so places baked before a StaticGeometry change pick it up without a rebake
 		StaticGeometry.Apply(baked)
 		StaticGeometry.Apply(plotsFolder)
+		StaticGeometry.ThinEmitters(baked)
+		StaticGeometry.ThinEmitters(plotsFolder)
 		return baked, false
 	end
 
@@ -484,7 +490,7 @@ function HubOverhaul.Build(forceRebuild: boolean?): (Instance, boolean)
 		if not plotModel then
 			plotModel = Instance.new("Model")
 			plotModel.Name = "Plot_" .. tostring(i)
-			plotModel.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
+			plotModel.ModelStreamingMode = Enum.ModelStreamingMode.Default
 			plotModel.Parent = plotsFolder
 
 			local plotSpawn = Instance.new("SpawnLocation")
@@ -515,6 +521,8 @@ function HubOverhaul.Build(forceRebuild: boolean?): (Instance, boolean)
 	EnvironmentSpawner.UpgradeExistingScene({ overhaulContainer, plotsFolder })
 	StaticGeometry.Apply(overhaulContainer)
 	StaticGeometry.Apply(plotsFolder)
+	StaticGeometry.ThinEmitters(overhaulContainer)
+	StaticGeometry.ThinEmitters(plotsFolder)
 	print("[BaseOverhaul] Cloister Commons + " .. Config.IslandCount .. " Floating Fortress Islands + Central Crimson Tower generated successfully.")
 	return overhaulContainer, true
 end

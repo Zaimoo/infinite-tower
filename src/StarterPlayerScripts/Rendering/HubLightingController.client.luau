@@ -128,7 +128,8 @@ local function stepHubLighting(dt: number)
 	local hub = mix(Presets.Sanctuary, Presets.Dread, dreadW)
 	apply(mix(hub, Presets.Storm, stormW))
 end
-RunService.RenderStepped:Connect(function(dt: number)
+-- Heartbeat, not RenderStepped: nothing here tracks the camera or a moving character, so it need not hold up the frame
+RunService.Heartbeat:Connect(function(dt: number)
 	debug.profilebegin("HubLighting")
 	stepHubLighting(dt)
 	debug.profileend()

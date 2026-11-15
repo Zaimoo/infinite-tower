@@ -93,7 +93,8 @@ local function build(plot: Instance, level: number): Model?
 	model:SetAttribute("Facility", "GodsBlessing")
 	model:SetAttribute("Level", level)
 	model:SetAttribute("PromptVersion", PROMPT_VERSION)
-	model.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
+	-- Arrives whole, so its prompt and glow are there the moment a client has it
+	model.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
 
 	local hasGoddess = fountain:GetAttribute("GoddessFountainOverhaul") == true
 		or fountain:FindFirstChild("Goddess_Statue") ~= nil

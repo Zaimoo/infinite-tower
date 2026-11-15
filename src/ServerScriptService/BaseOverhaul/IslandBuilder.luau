@@ -4,6 +4,7 @@
 -- All decorative underside parts have CanCollide, CanTouch, and CanQuery disabled for mobile performance.
 
 local GothicLanternSpawner = require(script.Parent:WaitForChild("GothicLanternSpawner"))
+local SceneryBake = require(script.Parent:WaitForChild("SceneryBake"))
 
 local IslandBuilder = {}
 
@@ -468,7 +469,9 @@ function IslandBuilder.Build(customConfig: { [string]: any }?): Model
 	end
 
 	-- 1B. Mossy Green & Grey Flagstone Courtyard Ground (Concentric Plaza, Radial Walkways & Mossy Scatter)
-	buildMossyFlagstoneCourtyard(islandModel, CFrame.identity, Vector2.new(cfg.TopWidth, courtyardL), cfg.RandomSeed)
+	local courtyardTiles = buildMossyFlagstoneCourtyard(islandModel, CFrame.identity, Vector2.new(cfg.TopWidth, courtyardL), cfg.RandomSeed)
+	-- Swap the ~246 thin tile slabs for the Blender-merged meshes when they are imported (SceneryBake)
+	SceneryBake.Apply(courtyardTiles, CFrame.identity, "CourtyardGroundTiles")
 
 	-- 1C. Courtyard Gothic Lampposts & Carved Stone Benches (Phase 2.3 Accent Lighting & Props)
 	local accentsFolder = Instance.new("Folder")

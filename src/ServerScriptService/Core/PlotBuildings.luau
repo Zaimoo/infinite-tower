@@ -109,8 +109,8 @@ function Buildings.Build(plot: Instance)
 	local existing = plot:FindFirstChild("PlotBuildings")
 	if existing and existing:GetAttribute("Version") == VERSION
 		and sameOrigin(existing:GetAttribute("Origin"), origin)
-		and existing:FindFirstChild("Building_Market")
-		and existing:FindFirstChild("Building_TrainingGrounds") then
+		and (existing:FindFirstChild("Building_Market") or FacilityPresence.Holds(plot, "Building_Market"))
+		and (existing:FindFirstChild("Building_TrainingGrounds") or FacilityPresence.Holds(plot, "Building_TrainingGrounds")) then
 		return existing
 	end
 
@@ -276,6 +276,7 @@ function Buildings.Build(plot: Instance)
 		existing:Destroy()
 	end
 	StaticGeometry.Apply(folder)
+	StaticGeometry.ThinEmitters(folder)
 	folder.Name = "PlotBuildings"
 	if RunService:IsRunning() then
 		FacilityPresence.Reapply(plot)

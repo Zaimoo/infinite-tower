@@ -1,4 +1,5 @@
 --!strict
+--!native
 -- ServerScriptService/Combat/HeroTargeting.luau
 -- PvE target choice for squad heroes (GDD 4.5, Hero Auto-Targeting). Pure: CombatSimulation passes the
 -- Master's ground position and an `eligible` check (alive, same room, outside safe zones), and

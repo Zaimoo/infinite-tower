@@ -200,10 +200,16 @@ local function build(prompt: ProximityPrompt)
 	detail.Visible = false
 
 	labels[prompt] = { Billboard = billboard, Bonus = bonus, Detail = detail, Facility = facility or "", Owned = owned, LastBonus = "", LastDetail = "" }
-	prompt.Destroying:Connect(function()
+	-- Other players' buildings stream out with distance: the prompt then leaves the DataModel without
+	-- necessarily firing Destroying, and comes back as a new instance when the building streams in again.
+	local function drop()
 		local label = labels[prompt]
 		if label then label.Billboard:Destroy() end
 		labels[prompt] = nil
+	end
+	prompt.Destroying:Connect(drop)
+	prompt.AncestryChanged:Connect(function()
+		if not prompt:IsDescendantOf(Workspace) then drop() end
 	end)
 end
 
