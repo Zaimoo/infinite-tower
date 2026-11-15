@@ -477,6 +477,10 @@ local function createDefaultPlayerProfile(): PlayerProfile
 	catioHero.EquippedArtifactUUID = f4_UUID
 	f4_Art.EquippedHeroUUID = catioUUID
 
+	-- Only a brand-new profile starts the first-session funnel clock (OnboardingFunnel).
+	local onboarding = Onboarding.NewState()
+	onboarding.FirstJoinAt = os.time()
+
 	return {
 		SchemaVersion = ProfileMigrations.CurrentSchema,
 		PitMaterials = {
@@ -520,7 +524,7 @@ local function createDefaultPlayerProfile(): PlayerProfile
 			GodsBlessing = createDefaultFacility(0),
 		},
 		FortressTree = FortressTree.DefaultTree(),
-		Onboarding = Onboarding.NewState(),
+		Onboarding = onboarding,
 		Unlocks = { Summon = true },
 		HighestClearedBiomeBoss = 0,
 		HighestClearedFloor = 0,
@@ -708,6 +712,8 @@ function DataManager.SyncProfile(player: Player, progressionOnly: boolean?)
 		_G.CombatSimulation.RefreshPlayerHeroStats(player)
 	end
 	DataManager.UpdateSquadPower(player)
+	-- Derived (never saved): the summon screen discloses the first ten-pull guarantee.
+	;(profile :: any).FirstTenPullShowcase = OnboardingService.ShowcaseFirstPull(profile)
 	DataManager.ApplySettingsAttributes(player, profile.Settings)
 	forgeTransactions.Snapshot(profile)
 	ProfileDeltaSyncEvent:FireClient(player, profile)
@@ -928,6 +934,11 @@ function DataManager.RollSummons(player: Player, bannerId: string, count: number
 	local summonedList: { HeroInstance } = {}
 	local luck = DataManager.GetSummonLuck(player)
 	local bestTier = 0
+	-- A new Master's first Call of the Rift ten-pull: Superior or better instead of Rare (GDD §4.7).
+	local tenPullFloor = banner.TenPullMinTier
+	if count == 10 and not isLimited and banner.FirstTenPullMinTier and OnboardingService.ShowcaseFirstPull(profile) then
+		tenPullFloor = math.max(tenPullFloor, banner.FirstTenPullMinTier)
+	end
 
 	for pull = 1, count do
 		local currentPity = (profile[bannerKey] or 0) + 1
@@ -946,7 +957,7 @@ function DataManager.RollSummons(player: Player, bannerId: string, count: number
 			uuid, hero, tier = rollBannerHero(isLimited and "A_STARS_ARRIVAL" or "CALL_OF_THE_RIFT", luck, pityTier)
 		else
 			-- The 10th pull of a 10x is forced to Rare or better if the first nine were not.
-			local guarantee = if count == 10 and pull == count and bestTier < banner.TenPullMinTier then banner.TenPullMinTier else nil
+			local guarantee = if count == 10 and pull == count and bestTier < tenPullFloor then tenPullFloor else nil
 			uuid, hero, tier = rollBannerHero(isLimited and "A_STARS_ARRIVAL" or "CALL_OF_THE_RIFT", luck, guarantee)
 		end
 		if tier >= pityTier then
@@ -1013,6 +1024,12 @@ RequestSummonFunc.OnServerInvoke = function(player: Player, arg1: any, arg2: any
 		DataManager.SendToast(player, string.format("Not enough Gems|Need %d", gemCost), "WARN")
 		return { Success = false, Message = "Insufficient Gems" }
 	end
+	-- While the first ten-pull carries its Superior guarantee, any other pull would spend it.
+	if OnboardingService.ShowcaseFirstPull(profile) and (count ~= 10 or isLimitedBanner(bannerId))
+		and profile.Currencies.Gems >= HeroCatalog.PermanentBanner.Cost10X then
+		DataManager.SendToast(player, "Ten-pull first|Call of the Rift 10x · Superior+ guaranteed", "INFO")
+		return { Success = false, Message = "First ten-pull first" }
+	end
 
 	profile.Currencies.Gems -= gemCost
 	local summonedList, bestTier, luck, banner, bannerKey, isLimited = DataManager.RollSummons(player, bannerId, count)
@@ -1020,6 +1037,7 @@ RequestSummonFunc.OnServerInvoke = function(player: Player, arg1: any, arg2: any
 	local pityRemaining = math.max(1, banner.MaxPity - (profile[bannerKey] or 0))
 	DataManager.SyncProfile(player)
 	OnboardingService.Report(player, "HeroSummoned")
+	if isLimited then OnboardingService.Report(player, "LimitedSummoned") end
 	if luck > 0 and bestTier >= 3 and _G.PlotManager and _G.PlotManager.PulseBlessing then
 		_G.PlotManager.PulseBlessing(player)
 	end
@@ -2127,6 +2145,22 @@ end
 -- Onboarding events reported by systems outside DataManager (tower floor clears).
 function DataManager.ReportProgress(player: Player, eventName: string, detail: (string | number)?)
 	OnboardingService.Report(player, eventName, detail)
+end
+
+-- The Rival Master lesson is due for this player (RivalLesson.server.luau, A7).
+function DataManager.RivalLessonDue(player: Player): boolean
+	local profile = ActiveProfiles[player]
+	return profile ~= nil and OnboardingService.RivalLessonDue(profile)
+end
+
+-- A one-time first-session moment (the first Ultimate, the first boss): true once per profile.
+function DataManager.ClaimGuideMoment(player: Player, fact: string): boolean
+	return OnboardingService.ClaimMoment(player, fact)
+end
+
+-- First-session funnel milestones that are not guide events (OnboardingFunnel).
+function DataManager.ReportMilestone(player: Player, name: string)
+	OnboardingService.Milestone(player, name)
 end
 
 function DataManager.IsUnlocked(player: Player, key: string): boolean

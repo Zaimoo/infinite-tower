@@ -142,7 +142,7 @@ DuelStateRemote.OnClientEvent:Connect(function(message: any)
 		current = { Id = message.DuelId, Side = message.Side, FightAt = message.FightAt or 0, EndsAt = message.EndsAt or 0, Ended = false }
 		local mine = if message.Side == "A" then message.NameA else message.NameB
 		local theirs = if message.Side == "A" then message.NameB else message.NameA
-		titleLabel.Text = "BOUNTY DUEL"
+		titleLabel.Text = if message.DuelKind == "CARRY" then "RELIC DUEL" else "BOUNTY DUEL"
 		myLabel.Text = tostring(mine)
 		enemyLabel.Text = tostring(theirs)
 		updateScore(message)

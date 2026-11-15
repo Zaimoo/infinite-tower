@@ -96,4 +96,13 @@ test("the Gilded Mirror drops only its five mirror heroes, one per tier 7-11", f
 	assert(banner.FeaturedHeroId == "hero_rook", "Rook is featured")
 end)
 
+test("a new Master's first Call of the Rift ten-pull is Superior or better, below pity", function()
+	local perm = HeroCatalog.PermanentBanner
+	assert(perm.FirstTenPullMinTier == 4, "Superior")
+	assert(perm.FirstTenPullMinTier > perm.TenPullMinTier, "raises the usual ten-pull floor")
+	assert(perm.FirstTenPullMinTier < (perm.PityMinTier or 5), "never an Exalted gift, so pity is untouched")
+	assert(#HeroBannerOdds.TierHeroes(perm, perm.FirstTenPullMinTier) > 0, "the guaranteed tier has a hero to award")
+	assert(HeroCatalog.LimitedBanner.FirstTenPullMinTier == nil, "only Call of the Rift carries it")
+end)
+
 print(string.format("hero-banner-odds: %d passed", passed))

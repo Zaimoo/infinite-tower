@@ -6,7 +6,7 @@
 local ProfileCodec = {}
 
 -- Recomputed from heroes on every sync; never persisted.
-ProfileCodec.DerivedFields = { "SquadPower", "SquadPowerByHero" }
+ProfileCodec.DerivedFields = { "SquadPower", "SquadPowerByHero", "FirstTenPullShowcase" }
 
 -- A lock not refreshed for this long belongs to a crashed server and may be stolen.
 ProfileCodec.LockTimeoutSeconds = 600
