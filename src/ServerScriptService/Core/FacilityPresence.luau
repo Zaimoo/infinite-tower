@@ -69,24 +69,6 @@ local function vacate(plot: Instance)
 	end
 end
 
--- Whether a building that is not in the plot's folder is only put away (the plot is unoccupied, or the
--- facility is still locked), as opposed to missing. PlotBuildings uses it to keep its cached folder.
-function FacilityPresence.Holds(plot: Instance, buildingName: string): boolean
-	local vacant = vacated[plot]
-	if vacant and vacant[buildingName] then
-		return true
-	end
-	local stash = hidden[plot]
-	if stash then
-		for _, model in stash do
-			if model.Name == buildingName then
-				return true
-			end
-		end
-	end
-	return false
-end
-
 -- Puts back what vacate removed. A copy rebuilt in the meantime wins over the stashed one.
 local function occupy(plot: Instance)
 	local stash = vacated[plot]
@@ -295,6 +277,28 @@ function FacilityPresence.Reapply(plot: Instance)
 		-- After the gated pass, so the statue is gone before its fountain is removed
 		vacate(plot)
 	end
+end
+
+-- Returns the live or off-tree stashed facility model if one is present for this plot.
+function FacilityPresence.GetBuilding(plot: Instance, facility: string): Model?
+	local name = BUILDINGS[facility]
+	if not name then
+		return nil
+	end
+	local folder = plot:FindFirstChild("PlotBuildings")
+	local live = folder and folder:FindFirstChild(name)
+	if live and live:IsA("Model") then
+		return live
+	end
+	local stash = hidden[plot]
+	local stashed = if stash then stash[facility] else nil
+	if stashed and stashed:IsA("Model") then
+		return stashed
+	end
+	-- Removed because the plot is unoccupied
+	local vacant = vacated[plot]
+	local removed = if vacant then vacant[name] else nil
+	return if removed and removed:IsA("Model") then removed else nil
 end
 
 -- The owner left: hide everything and forget the levels so the next owner's join builds silently.

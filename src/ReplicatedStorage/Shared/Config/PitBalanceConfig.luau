@@ -35,14 +35,6 @@ Config.Promotion = {
 	[5] = { Gold = 450000, PromotionStone = 40 },
 	[6] = { Gold = 1250000, PromotionStone = 85 },
 }
-Config.Conversion = {
-	BaseEssence = { [1] = 4, [2] = 12, [3] = 36, [4] = 108, [5] = 324, [6] = 972, [7] = 2916 },
-	LevelsPerBonus = 5,
-	EssencePerInvestmentLevel = 1,
-}
-Config.Recipes = {
-	PromotionStone = { Name = "Promotion Stone", Gold = 100, Gems = 20, SoulEssence = 8, Output = 1 },
-}
 Config.CombatXP = { Ring1 = 25, Ring2 = 65, Boss = 150, MaxGrant = 150, Cooldown = 8,
 	ActivityWindow = 45, ParticipationWindow = 15, MinimumDamageFraction = 0.02, AwardCooldown = 8 }
 

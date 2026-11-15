@@ -152,7 +152,6 @@ test("A rare donor is worth its old summon star in The Pit", function()
 	local astrea = hero("d", "hero_astrea", { Stars = 1 })
 	equal(Math.EffectiveStars(astrea), 7)
 	equal(Math.EffectiveStars(hero("h", "hero_han", { Stars = 3 })), 3)
-	equal(Math.GetConversionYield(astrea), 2916)
 end)
 test("One and multiple donors apply the existing level curve", function()
 	local original = hero("r")
@@ -193,13 +192,6 @@ test("Promotion applies one multiplier and releases reserve through real levels"
 	close(Stats.GetEffectiveLabor(after, "FACILITY_CONDUIT"), 30.24, 0.00001)
 end)
 
-test("Conversion rewards are deterministic and account for bounded investment", function()
-	equal(Math.GetConversionYield(hero("a")), 4)
-	equal(Math.GetConversionYield(hero("a", "hero_han", { Level = 6 })), 5)
-	equal(Math.GetConversionYield(hero("b", "hero_aaron")), 12)
-	equal(Math.GetConversionYield(hero("c", "hero_eolka")), 36)
-end)
-
 -- Service tests follow below; all tests share the same assertions and real modules.
 local function profile()
 	return {
@@ -213,7 +205,7 @@ local function profile()
 			DimensionalLab = { Level = 5, AssignedHeroUUIDs = {}, UncollectedOutput = 0 },
 		},
 		UnlockedResearch = {},
-		PitMaterials = { SoulEssence = 1000, PromotionStone = 100 },
+		PitMaterials = { PromotionStone = 100 },
 		Social = {},
 	}
 end
@@ -272,7 +264,7 @@ test("Schema migration preserves existing heroes, assignments, levels and invent
 	equal(p.Heroes.r.Assignment, "FACILITY_LAB"); equal(p.Facilities.DimensionalLab.AssignedHeroUUIDs[1], "r")
 	equal(p.Currencies.Gems, 10000); equal(p.UnlockedResearch.SquadSlot4, true)
 	equal(p.Heroes.r.Locked, false); equal(p.Heroes.r.Favorite, false); equal(p.Heroes.r.OverflowXP, 0)
-	equal(p.PitMaterials.SoulEssence, 0); equal(p.PitMaterials.PromotionStone, 0); equal(p.PitMaterials.ImprintCatalyst, nil)
+	equal(p.PitMaterials.SoulEssence, nil); equal(p.PitMaterials.PromotionStone, 0); equal(p.PitMaterials.ImprintCatalyst, nil)
 	local stable = Math.Copy(p); PitService.EnsureDefaults(p); check(deepEqual(stable, p), "Migration must be idempotent")
 end)
 
@@ -280,8 +272,8 @@ test("State snapshots do not expose mutable references", function()
 	local c = context()
 	local result = c:request("STATE")
 	check(result.Success); equal(result.State.SessionOnly, true)
-	result.State.Heroes.r.Level = 50; result.State.Materials.SoulEssence = 10000000
-	equal(c.profile.Heroes.r.Level, 1); equal(c.profile.PitMaterials.SoulEssence, 1000)
+	result.State.Heroes.r.Level = 50; result.State.Materials.PromotionStone = 10000000
+	equal(c.profile.Heroes.r.Level, 1); equal(c.profile.PitMaterials.PromotionStone, 100)
 end)
 
 test("Recipient status ignores donor protections and level cap", function()
@@ -357,7 +349,7 @@ test("Duplicate hero names remain separate UUID instances", function()
 	local c = context()
 	c.profile.Heroes.d = hero("d"); c.profile.Heroes.e = hero("e")
 	equal(c.profile.Heroes.d.DisplayName, c.profile.Heroes.e.DisplayName)
-	local preview = c:preview({ Action = "CONVERSION", Donors = { "d" } })
+	local preview = c:preview(synthesis({ "d" }))
 	check(c:commit(preview).Success); equal(c.profile.Heroes.d, nil); check(c.profile.Heroes.e); check(c.profile.Heroes.r)
 end)
 
@@ -368,7 +360,7 @@ test("Self-donors, duplicate UUIDs, missing heroes and foreign UUIDs reject atom
 	end
 end)
 
-test("Every donor protection applies equally to synthesis and conversion", function()
+test("Every donor protection blocks synthesis", function()
 	local protections = {
 		{ Locked = true }, { Favorite = true }, { Favorited = true },
 		{ Assignment = "SQUAD_SLOT_1" }, { Assignment = "FACILITY_CONDUIT" },
@@ -379,11 +371,9 @@ test("Every donor protection applies equally to synthesis and conversion", funct
 		{ Stars = 8 }, { TemplateId = "unknown-unique" },
 	}
 	for _, fields in ipairs(protections) do
-		for _, action in ipairs({ "SYNTHESIS", "CONVERSION" }) do
-			local c = context()
-			for key, value in pairs(fields) do c.profile.Heroes.d[key] = value end
-			rejectedWithoutMutation(c, "PREVIEW", { Action = action, Recipient = action == "SYNTHESIS" and "r" or nil, Donors = { "d" } })
-		end
+		local c = context()
+		for key, value in pairs(fields) do c.profile.Heroes.d[key] = value end
+		rejectedWithoutMutation(c, "PREVIEW", synthesis())
 	end
 end)
 
@@ -412,7 +402,8 @@ test("Malformed and oversized client request shapes cannot mutate profiles", fun
 		{ Action = "SYNTHESIS", Recipient = "r", Donors = { math.huge } },
 		{ Action = "SYNTHESIS", Recipient = "r", Donors = { string.rep("x", 81) } },
 		{ Action = "IMPRINT", Recipient = "r", Donors = { "d" }, Imprint = "melee_memory" }, -- imprints were removed
-		{ Action = "CRAFT", Recipe = false },
+		{ Action = "CONVERSION", Donors = { "d" } }, -- Soul Essence was removed
+		{ Action = "CRAFT", Recipe = "PromotionStone" },
 	}
 	for _, payload in ipairs(bad) do rejectedWithoutMutation(context(), "PREVIEW", payload) end
 	rejectedWithoutMutation(context(), "PREVIEW", nil)
@@ -461,16 +452,14 @@ test("A commit whose result changed is flagged stale so the client can re-previe
 end)
 
 test("Armed donors are consumed and their weapon returns to the backpack", function()
-	for _, action in ipairs({ "SYNTHESIS", "CONVERSION" }) do
-		local c = context()
-		c.profile.Artifacts = { art_test = { UUID = "art_test", DisplayName = "Test Blade", EquippedHeroUUID = "d" } }
-		c.profile.Heroes.d.EquippedArtifactUUID = "art_test"
-		local p = c:preview({ Action = action, Recipient = action == "SYNTHESIS" and "r" or nil, Donors = { "d" } })
-		equal(#p.Unequips, 1); equal(p.Unequips[1].Artifact, "Test Blade")
-		check(#p.Warnings >= 1, "the unequip is announced before confirming")
-		check(c:commit(p).Success)
-		equal(c.profile.Heroes.d, nil); equal(c.profile.Artifacts.art_test.EquippedHeroUUID, nil)
-	end
+	local c = context()
+	c.profile.Artifacts = { art_test = { UUID = "art_test", DisplayName = "Test Blade", EquippedHeroUUID = "d" } }
+	c.profile.Heroes.d.EquippedArtifactUUID = "art_test"
+	local p = c:preview(synthesis())
+	equal(#p.Unequips, 1); equal(p.Unequips[1].Artifact, "Test Blade")
+	check(#p.Warnings >= 1, "the unequip is announced before confirming")
+	check(c:commit(p).Success)
+	equal(c.profile.Heroes.d, nil); equal(c.profile.Artifacts.art_test.EquippedHeroUUID, nil)
 end)
 
 test("Ordinary stamina regeneration preserves a valid preview", function()
@@ -492,31 +481,31 @@ end)
 
 test("A new preview invalidates a previous operation token", function()
 	local c = context(); local old = c:preview(synthesis())
-	c:preview({ Action = "CONVERSION", Donors = { "e" } })
+	c:preview(synthesis({ "e" }))
 	rejectedWithoutMutation(c, "COMMIT", { Token = old.Token })
 end)
 
 test("Rare donors require explicit confirmation, with no cost on rejection", function()
 	-- 4-star and below do not require rare confirmation
 	local c4 = context(); c4.profile.Heroes.d = hero("d", "hero_morrigan"); PitService.EnsureDefaults(c4.profile)
-	local p4 = c4:preview({ Action = "CONVERSION", Donors = { "d" } })
+	local p4 = c4:preview(synthesis())
 	equal(p4.RequiresRareConfirmation, false)
 
 	-- 5-star heroes require explicit confirmation
 	local c = context(); c.profile.Heroes.d = hero("d", "hero_ignis"); PitService.EnsureDefaults(c.profile)
-	local p = c:preview({ Action = "CONVERSION", Donors = { "d" } })
+	local p = c:preview(synthesis())
 	equal(p.RequiresRareConfirmation, true)
-	rejectedWithoutMutation(c, "COMMIT", { Token = p.Token, ConfirmRare = false })
-	p = c:preview({ Action = "CONVERSION", Donors = { "d" } }); check(c:commit(p).Success)
+	rejectedWithoutMutation(c, "COMMIT", { Token = p.Token, ConfirmRare = false, ConfirmOverflow = true })
+	p = c:preview(synthesis()); check(c:commit(p, { ConfirmOverflow = true }).Success)
 	equal(c.profile.Heroes.d, nil)
 end)
 
 test("Reentrant requests observe the per-player lock and cannot double consume", function()
-	local c = context(); local p = c:preview({ Action = "CONVERSION", Donors = { "d" } })
+	local c = context(); local p = c:preview(synthesis())
 	local nested
 	c.onSync = function() nested = c.service:Request(c.player, "COMMIT", { Token = p.Token, ConfirmRare = true }) end
 	local result = c:commit(p)
-	check(result.Success); equal(nested.Success, false); equal(c.profile.PitMaterials.SoulEssence, 1004)
+	check(result.Success); equal(nested.Success, false); equal(c.profile.Heroes.r.Level, 2)
 	equal(c.profile.Heroes.d, nil); equal(c.service.Locks[c.player], nil)
 end)
 
@@ -654,46 +643,11 @@ test("Promotion updates actual assigned facility labor without double scaling", 
 	c:request("STATE"); equal(Stats.GetEffectiveLabor(c.profile.Heroes.r), actualLabor)
 end)
 
-test("Conversion grants exact essence once and no Gem/Gold or hero output", function()
-	local c = context(); local startingGold, startingGems = c.profile.Currencies.Gold, c.profile.Currencies.Gems
-	local p = c:preview({ Action = "CONVERSION", Donors = { "d", "e" } })
-	equal(p.Rewards.SoulEssence, 8); equal(p.Rewards.Gems, nil); equal(p.Rewards.Gold, nil)
-	check(c:commit(p).Success); equal(c.profile.PitMaterials.SoulEssence, 1008)
-	equal(c.profile.Currencies.Gold, startingGold); equal(c.profile.Currencies.Gems, startingGems)
-	equal(c.profile.Heroes.d, nil); equal(c.profile.Heroes.e, nil)
-	rejectedWithoutMutation(c, "COMMIT", { Token = p.Token })
-end)
-
-test("Conversion-to-crafting loop is a finite resource sink", function()
-	local c = context(); c.profile.PitMaterials.SoulEssence = 0; c.profile.PitMaterials.PromotionStone = 0
-	local p = c:preview({ Action = "CONVERSION", Donors = { "d", "e" } }); check(c:commit(p).Success)
-	p = c:preview({ Action = "CRAFT", Recipe = "PromotionStone" }); check(p.CanCommit)
-	equal(p.Costs.SoulEssence, 8); equal(p.Costs.Gems, 20); equal(p.Costs.Gold, 100)
-	check(c:commit(p).Success); equal(c.profile.PitMaterials.SoulEssence, 0); equal(c.profile.PitMaterials.PromotionStone, 1)
-	equal(c.profile.Currencies.Gems, 9980); equal(c.profile.Currencies.Gold, 999900)
-	equal(c.profile.Heroes.d, nil); equal(c.profile.Heroes.e, nil)
-	rejectedWithoutMutation(c, "PREVIEW", { Action = "CRAFT", Recipe = "PromotionStone" })
-	for _, recipe in pairs(Config.Recipes) do check(recipe.Gems > 0); check(recipe.Gold > 0); check(recipe.SoulEssence > 0) end
-end)
-
-test("Crafting rejects invalid recipes, invalid funds and accidental donor selections", function()
-	for _, mutation in ipairs({
-		function(p) p.Currencies.Gems = 19 end,
-		function(p) p.Currencies.Gold = 99 end,
-		function(p) p.PitMaterials.SoulEssence = 7 end,
-		function(p) p.Currencies.Gold = -10 end,
-		function(p) p.Currencies.Gems = 0 / 0 end,
-		function(p) p.Currencies.Gems = math.huge end,
-	}) do
-		local c = context(); mutation(c.profile)
-		local beforeGold, beforeGems = c.profile.Currencies.Gold, c.profile.Currencies.Gems
-		local p = c:preview({ Action = "CRAFT", Recipe = "PromotionStone" }); equal(p.CanCommit, false)
-		check(c.profile.Heroes.d); equal(c.profile.PitMaterials.PromotionStone, 100)
-		check(c.profile.Currencies.Gold == beforeGold or (beforeGold ~= beforeGold and c.profile.Currencies.Gold ~= c.profile.Currencies.Gold))
-		check(c.profile.Currencies.Gems == beforeGems or (beforeGems ~= beforeGems and c.profile.Currencies.Gems ~= c.profile.Currencies.Gems))
-	end
-	rejectedWithoutMutation(context(), "PREVIEW", { Action = "CRAFT", Recipe = "FreeSummon" })
-	rejectedWithoutMutation(context(), "PREVIEW", { Action = "CRAFT", Recipe = "PromotionStone", Donors = { "d" } })
+test("Conversion and crafting were removed with Soul Essence", function()
+	rejectedWithoutMutation(context(), "PREVIEW", { Action = "CONVERSION", Donors = { "d", "e" } })
+	rejectedWithoutMutation(context(), "PREVIEW", { Action = "CRAFT", Recipe = "PromotionStone" })
+	equal(Config.Conversion, nil); equal(Config.Recipes, nil)
+	equal(context():request("STATE").State.Recipes, nil)
 end)
 
 test("Lock control invalidates previews and cannot unlock a unique or foreign hero", function()
@@ -720,12 +674,12 @@ end)
 
 test("Two Masters' simultaneous valid operations affect only their own profiles", function()
 	local c = context()
-	local first = c:preview({ Action = "CONVERSION", Donors = { "d" } })
-	local second = c:preview({ Action = "CONVERSION", Donors = { "e" } }, c.other)
+	local first = c:preview(synthesis({ "d" }))
+	local second = c:preview(synthesis({ "e" }), c.other)
 	check(c:commit(first).Success); check(c:commit(second, nil, c.other).Success)
 	equal(c.profile.Heroes.d, nil); check(c.profile.Heroes.e)
 	equal(c.otherProfile.Heroes.e, nil); check(c.otherProfile.Heroes.d)
-	equal(c.profile.PitMaterials.SoulEssence, 1004); equal(c.otherProfile.PitMaterials.SoulEssence, 1004)
+	equal(c.profile.Heroes.r.Level, 2); equal(c.otherProfile.Heroes.r.Level, 2)
 end)
 
 test("Combat EXP requires active participation, bounds awards and applies cooldown", function()

@@ -6,7 +6,8 @@
 -- with HeroNavigation, so this module never touches geometry.
 --
 -- A hero in range of its target used to stand still. It now picks one manoeuvre at a time:
---   EVADE   leave an enemy telegraph (arc, disc or projectile lane) before it lands
+--   EVADE   leave an enemy Special or Signature telegraph before it lands (basic attacks are
+--           taken), at most once per archetype dodge cooldown
 --   KITE    a ranged hero backs away from a mob that closed in, staying inside its own range
 --   FLANK   a melee hero takes its own slot on a ring round the target (Strikers go for the back)
 --   SPREAD  a ranged hero sidesteps off an ally it is stacked on
@@ -28,6 +29,7 @@ export type Threat = {
 	HalfArcCos: number?,
 	TimeToImpact: number, -- seconds until the hit resolves
 	Age: number, -- seconds since the wind-up started
+	Basic: boolean?, -- the enemy's basic attack: heroes take it instead of dodging
 }
 
 export type Ally = {
@@ -58,6 +60,7 @@ export type Input = {
 	LeashCenter: Vector3?, -- free-following squads stay inside LeashRadius of the Master
 	LeashRadius: number?,
 	EvadeOnly: boolean?, -- skip positioning: the hero is busy or out of range
+	EvadeOnCooldown: boolean?, -- the hero dodged recently (Profile.EvadeCooldown): it takes this hit
 }
 
 export type Plan = {
@@ -70,6 +73,7 @@ export type Plan = {
 export type Profile = {
 	Evades: boolean,
 	Ring: RingStyle,
+	EvadeCooldown: number, -- seconds from the start of one dodge until the next may start
 }
 
 -- Heroes with at least this much reach fight from range: they kite and spread instead of flanking.
@@ -103,15 +107,19 @@ HeroCombatMovement.DEADBAND = 1.25
 HeroCombatMovement.MAX_HEIGHT_GAP = 11.0 -- AttackTimeline.Contains ignores targets further above or below
 
 -- Vanguards and Berserkers hold their ground and take the hit; the rest step out of telegraphs.
+-- When Signatures or several Elites' Specials come closer together than the dodge cooldown, a
+-- hero whose dodge is spent takes the next one: with the Vanguard down, camps and bosses can kill the squad.
+-- The Striker, the most agile, sets the floor; every other archetype waits longer between dodges.
+HeroCombatMovement.EVADE_COOLDOWN_MIN = 8.5
 local PROFILES: { [string]: Profile } = {
-	Vanguard = { Evades = false, Ring = "GUARD" },
-	Berserker = { Evades = false, Ring = "NEAREST" },
-	Striker = { Evades = true, Ring = "BACK" },
-	Marksman = { Evades = true, Ring = "NEAREST" },
-	Scholar = { Evades = true, Ring = "NEAREST" },
-	Healer = { Evades = true, Ring = "NEAREST" },
+	Vanguard = { Evades = false, Ring = "GUARD", EvadeCooldown = 0 },
+	Berserker = { Evades = false, Ring = "NEAREST", EvadeCooldown = 0 },
+	Striker = { Evades = true, Ring = "BACK", EvadeCooldown = 8.5 },
+	Marksman = { Evades = true, Ring = "NEAREST", EvadeCooldown = 10.5 },
+	Scholar = { Evades = true, Ring = "NEAREST", EvadeCooldown = 11.5 },
+	Healer = { Evades = true, Ring = "NEAREST", EvadeCooldown = 12.5 },
 }
-local DEFAULT_PROFILE: Profile = { Evades = true, Ring = "NEAREST" }
+local DEFAULT_PROFILE: Profile = { Evades = true, Ring = "NEAREST", EvadeCooldown = 10.5 }
 
 function HeroCombatMovement.Profile(archetype: string?): Profile
 	return (archetype and PROFILES[archetype]) or DEFAULT_PROFILE
@@ -243,6 +251,10 @@ local function planEvade(input: Input): Plan?
 	local bestTime = math.huge
 	for _, threat in threats do
 		if threat.TimeToImpact <= 0 or threat.Age < HeroCombatMovement.EVADE_REACTION or threat.TimeToImpact >= bestTime then
+			continue
+		end
+		-- Basic swings are taken, not dodged: a crowd of them would keep the hero walking instead of fighting.
+		if threat.Basic then
 			continue
 		end
 		local goal = HeroCombatMovement.EscapePoint(threat, input.Position, input.NetId)
@@ -431,7 +443,7 @@ end
 -- The manoeuvre a hero should start now, or nil to hold its ground.
 function HeroCombatMovement.Plan(input: Input): Plan?
 	local profile = HeroCombatMovement.Profile(input.Archetype)
-	if profile.Evades then
+	if profile.Evades and not input.EvadeOnCooldown then
 		local evade = planEvade(input)
 		if evade then
 			return evade

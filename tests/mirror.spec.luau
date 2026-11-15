@@ -39,7 +39,7 @@ local function profileWith(heroes)
 	local p = {
 		SchemaVersion = 1, PlotIndex = 1, Currencies = { Gold = 10000000, Gems = 10000, ResearchPoints = 1000 },
 		Heroes = {}, DeployedSquadOrder = {}, Facilities = {}, UnlockedResearch = { AdvancedStonecraft = true, MasterStonecraft = true },
-		PitMaterials = { SoulEssence = 1000, PromotionStone = 1000 }, Social = {}, Artifacts = {},
+		PitMaterials = { PromotionStone = 1000 }, Social = {}, Artifacts = {},
 	}
 	for _, h in heroes do p.Heroes[h.UUID] = h end
 	PitService.EnsureDefaults(p)
@@ -156,9 +156,9 @@ test("the last normal hero can't be a Pit donor, alone or with others", function
 
 	local two = profileWith({ hero("a", "hero_gide"), hero("b", "hero_jenna"), hero("c", "hero_shurn"), hero("m", "hero_isabelle") })
 	check(service:DonorStatus(two, two.Heroes.a).EligibleDonor, "one of several normal heroes is fine")
-	local preview = service:Build(two, { Action = "CONVERSION", Donors = { "a", "b", "c" } })
+	local preview = service:Build(two, { Action = "SYNTHESIS", Recipient = "m", Donors = { "a", "b", "c" } })
 	check(not preview.CanCommit and preview.Reason == PitService.LastNormalHeroReason, "consuming every normal hero at once is refused")
-	local ok = service:Build(two, { Action = "CONVERSION", Donors = { "a", "b" } })
+	local ok = service:Build(two, { Action = "SYNTHESIS", Recipient = "c", Donors = { "a", "b" } })
 	check(ok.CanCommit, "keeping one normal hero is allowed: " .. tostring(ok.Reason))
 end)
 

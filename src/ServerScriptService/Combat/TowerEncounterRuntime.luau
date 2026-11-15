@@ -114,6 +114,8 @@ function Runtime.new(api: any): any
 					HalfArcCos = definition and definition.HalfArcCos,
 					TimeToImpact = action.ImpactOffsetSeconds - elapsed,
 					Age = elapsed,
+					-- Heroes take basic attacks; only Specials and Signatures are dodged.
+					Basic = (action.AnimationKey or (definition and definition.AnimationKey)) == "BasicAttack",
 				})
 			end
 		end

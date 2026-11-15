@@ -2202,6 +2202,7 @@ local function stepCombatManeuver(simHero: SimHero, targetMob: SimMob, inRange: 
 				LeashCenter = leashCenter,
 				LeashRadius = if leashCenter then HeroTargeting.HERO_TETHER - 5 else nil,
 				EvadeOnly = not positioning,
+				EvadeOnCooldown = now < (h.NextEvadeAt or 0),
 			})
 			if plan then
 				-- The plan is pure geometry; the world decides whether the spot can be stood on
@@ -2222,6 +2223,10 @@ local function stepCombatManeuver(simHero: SimHero, targetMob: SimMob, inRange: 
 						Until = now + (if plan.Deadline then plan.Deadline + 0.15 else MANEUVER_MAX_SECONDS),
 					}
 					h.CombatManeuver = maneuver
+					if plan.Kind == "EVADE" then
+						-- The cooldown runs from the start of the dodge; a hero still on it takes the next hit.
+						h.NextEvadeAt = now + HeroCombatMovement.Profile(simHero.Archetype).EvadeCooldown
+					end
 				elseif plan.Kind == "EVADE" then
 					h.NextEvadeAt = now + 0.3
 				else

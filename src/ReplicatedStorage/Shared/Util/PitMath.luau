@@ -101,11 +101,6 @@ function PitMath.AdvanceXP(hero: any, amount: number): (any, any)
 	return result, { Stored = result.OverflowXP, Capacity = capacity, Rejected = rejected }
 end
 
-function PitMath.GetConversionYield(hero: any): number
-	local cfg = Config.Conversion
-	return (cfg.BaseEssence[PitMath.EffectiveStars(hero)] or cfg.BaseEssence[5] or 324) + math.floor((Stats.GetEffectiveLevel(hero.Stars, hero.Level) - 1) / cfg.LevelsPerBonus) * cfg.EssencePerInvestmentLevel
-end
-
 function PitMath.Promote(hero: any): (any, any)
 	local result = PitMath.Copy(hero)
 	result.Stars += 1
