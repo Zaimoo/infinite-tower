@@ -288,6 +288,11 @@ function RelicService.TryPickupRelic(player: Player, relic: ActiveRelic): boolea
 	return true
 end
 
+-- The relic this player is carrying, if any (carry challenges, GDD 6.1).
+function RelicService.GetCarriedRelic(player: Player): ActiveRelic?
+	return CarrierToRelic[player]
+end
+
 -- A relic this player owns lies on the ground on their floor (the guide's Bank step points at it).
 function RelicService.HasOwnRelicOnFloor(player: Player): boolean
 	local state = Tower.GetState(player)

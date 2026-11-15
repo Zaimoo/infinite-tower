@@ -240,6 +240,11 @@ export type MasterCombatState = {
 local Contests: { [number]: LootDuel.Contest } = {}
 local ThiefFlagUntil: { [Player]: number } = {}
 local LastChallengeRequest: { [Player]: number } = {}
+-- Carry challenges (GDD 6.1, LootDuel.CanChallengeCarrier): the relic holder's shield after a duel,
+-- each challenger's cooldown, and the cooldown between the same two Masters (LootDuel.PairKey).
+local CarryShieldUntil: { [Player]: number } = {}
+local CarryCooldownUntil: { [Player]: number } = {}
+local CarryPairUntil: { [string]: number } = {}
 
 -- `Rival`: a server-run side (first-session-and-social-plan.md A7). Its Player is a stand-in
 -- (newRival), never a real Player.
@@ -929,6 +934,8 @@ end
 --============================================================================
 
 local challengeThief: (hunter: Player, thief: Player) -> () -- defined with the bounty duels below
+local challengeCarrier: (challenger: Player, carrier: Player) -> () -- defined with the bounty duels below
+local refreshStealPrompt: (player: Player, now: number) -> () -- defined with the bounty duels below
 
 -- [Loot Thief] marker: a character attribute for game logic, a nameplate everyone can see, and the
 -- bounty prompt (F) other Masters use to challenge the thief. The thief's own client hides the prompt.
@@ -984,7 +991,8 @@ end
 local function refreshThiefFlag(player: Player)
 	local latest = 0
 	for _, contest in pairs(Contests) do
-		if contest.ThiefUserId == player.UserId and (contest.Status == "CONTESTED" or contest.Status == "DUELING") then
+		-- A carry challenge's defender isn't a thief: only a theft's bounty flags one.
+		if contest.ThiefUserId == player.UserId and contest.Kind ~= "CARRY" and (contest.Status == "CONTESTED" or contest.Status == "DUELING") then
 			latest = math.max(latest, contest.ExpiresAt)
 		end
 	end
@@ -1277,6 +1285,11 @@ local function startDuel(owner: Player, contest: LootDuel.Contest?): (boolean, s
 			else
 				h.BaseMaxHP = h.MaxHP
 			end
+			if contest.Kind == "CARRY" then
+				-- Carry duels start at full HP (restored from Saved afterwards), so nobody can ambush a
+				-- carrier whose squad a boss or a camp has just worn down.
+				h.CurrentHP = h.MaxHP
+			end
 			HeroNavigation.Clear(h)
 			h.DuelId, h.DuelSide = id, side
 			h.Position = frame:PointToWorldSpace(LootDuel.SlotLocal(side, slot)) + Vector3.new(0, DuelArena.StandHeight, 0)
@@ -1301,9 +1314,15 @@ local function startDuel(owner: Player, contest: LootDuel.Contest?): (boolean, s
 	contest.Status = "DUELING"
 	contest.ChallengerUserId = owner.UserId
 	record.DuelLocked = true
+	-- The relic's despawn clock stands still while it is fought over, so a duel (or a chain of them)
+	-- can't run it out from under its holder.
+	if type(record.DespawnAt) == "number" then
+		record.DespawnAt += LootDuel.DUEL_INTRO_SECONDS + LootDuel.DUEL_MAX_SECONDS + LootDuel.DUEL_OUTRO_SECONDS
+	end
 	closeContestPrompt(contest)
 	sendDuelState(duel, {
 		Kind = "START",
+		DuelKind = contest.Kind, -- "CARRY" or nil (a bounty); the HUD titles the duel by it
 		Center = center,
 		Forward = forward,
 		Radius = DuelArena.Radius(),
@@ -1454,6 +1473,18 @@ local function applyDuelOutcome(duel: Duel)
 	end
 
 	local dm = getDataManager()
+	-- Whoever holds the relic after a duel is shielded from carry challenges for a while, so they
+	-- can make for a sanctuary instead of being pinned by one challenger after another.
+	local now = os.clock()
+	if winner.Parent == Players then
+		CarryShieldUntil[winner] = now + LootDuel.CARRY_SHIELD_SECONDS
+	end
+	if contest.Kind == "CARRY" then
+		local challenger = Players:GetPlayerByUserId(contest.ChallengerUserId or 0)
+		if challenger then
+			CarryCooldownUntil[challenger] = now + (if winner == challenger then LootDuel.CARRY_WIN_COOLDOWN else LootDuel.CARRY_LOSS_COOLDOWN)
+		end
+	end
 	local hunterLost = loser.UserId ~= contest.ThiefUserId
 	if winner.Parent == Players then
 		dm.SendToast(winner, string.format("Duel won|%s's drop is yours", loser.DisplayName), "SUCCESS")
@@ -1606,6 +1637,119 @@ local function stepContests(now: number)
 	for player, untilClock in pairs(ThiefFlagUntil) do
 		if now >= untilClock then refreshThiefFlag(player) end
 	end
+	for _, player in Players:GetPlayers() do
+		refreshStealPrompt(player, now)
+	end
+end
+
+-- A sanctuary or other combat-safe spot (tower sanctuaries, the Commons, plots).
+local function inSafeZone(state: any, position: Vector3): boolean
+	local zone = Tower.GetSafety(state, position)
+	return zone.CombatSafe == true or zone.CanBankCargo == true
+end
+
+-- Fired by a carrier's Steal Relic [F] prompt: challenge them for the relic they carry (GDD 6.1).
+-- The duel starts at once; the loser is locked out of the relic (LootDuel.Resolve). Every rule is
+-- re-checked here: the prompt's range and visibility are only client hints.
+challengeCarrier = function(challenger: Player, carrier: Player)
+	if challenger == carrier or challenger.Parent ~= Players or carrier.Parent ~= Players then return end
+	local now = os.clock()
+	if now - (LastChallengeRequest[challenger] or -math.huge) < LootDuel.CHALLENGE_COOLDOWN then return end
+	LastChallengeRequest[challenger] = now
+	local dm = getDataManager()
+	local challengerPos, carrierPos = getMasterRootPosition(challenger), getMasterRootPosition(carrier)
+	if not challengerPos or not carrierPos or (challengerPos - carrierPos).Magnitude > LootDuel.CHALLENGE_RANGE + 4 then
+		dm.SendToast(challenger, string.format("Too far|Get closer to %s", carrier.DisplayName), "WARN")
+		return
+	end
+	local relics = _G.RelicService
+	local relic = relics and relics.GetCarriedRelic and relics.GetCarriedRelic(carrier)
+	if not relic then
+		dm.SendToast(challenger, "Nothing to take|They aren't carrying a relic", "WARN")
+		return
+	end
+	-- A thief's stolen relic is claimed through its bounty instead.
+	local existing = Contests[relic.RelicId]
+	if existing and existing.Status == "CONTESTED" and existing.Kind ~= "CARRY" and existing.ThiefUserId == carrier.UserId then
+		LastChallengeRequest[challenger] = nil
+		challengeThief(challenger, carrier)
+		return
+	end
+	local challengerState, carrierState = Tower.GetState(challenger), Tower.GetState(carrier)
+	local profile = dm.GetProfile(challenger)
+	local pairKey = LootDuel.PairKey(challenger.UserId, carrier.UserId)
+	local ok, reason = LootDuel.CanChallengeCarrier({
+		ChallengerUserId = challenger.UserId,
+		CarrierUserId = carrier.UserId,
+		Drop = relic,
+		SameFloor = Tower.Same(challengerState, carrierState),
+		FloorId = carrierState.FloorId,
+		ChallengerCarrying = relics.GetCarriedRelic(challenger) ~= nil,
+		ChallengerBestFloor = if profile then profile.HighestClearedFloor or 0 else 0,
+		ChallengerSafe = inSafeZone(challengerState, challengerPos),
+		CarrierSafe = inSafeZone(carrierState, carrierPos),
+		CarrierBossLocked = CombatSimulation.IsBossLocked ~= nil and CombatSimulation.IsBossLocked(carrier, carrierState.FloorId),
+		Busy = DuelByPlayer[challenger] ~= nil or DuelByPlayer[carrier] ~= nil
+			or Tower.IsTransitioning(challenger) or Tower.IsTransitioning(carrier),
+		CarrierShieldUntil = CarryShieldUntil[carrier],
+		ChallengerCooldownUntil = CarryCooldownUntil[challenger],
+		PairCooldownUntil = CarryPairUntil[pairKey],
+		Now = now,
+	})
+	if not ok then
+		dm.SendToast(challenger, reason or "Can't challenge|Not now", "WARN")
+		return
+	end
+	local contest = LootDuel.NewCarryContest(relic.RelicId, carrier.UserId, challenger.UserId, now)
+	Contests[relic.RelicId] = contest
+	local started, why = startDuel(challenger, contest)
+	if not started then
+		Contests[relic.RelicId] = existing
+		dm.SendToast(challenger, why or "Duel unavailable", "WARN")
+		return
+	end
+	-- Settled on the result (applyDuelOutcome); a challenger who leaves mid-duel keeps the long one.
+	CarryCooldownUntil[challenger] = now + LootDuel.CARRY_LOSS_COOLDOWN
+	CarryPairUntil[pairKey] = now + LootDuel.CARRY_PAIR_COOLDOWN
+	local spec = relic.TierId and RelicConfig[relic.TierId]
+	dm.SendToast(carrier, string.format("Challenged|%s wants your %s", challenger.DisplayName, if spec then spec.DisplayName else "relic"), "WARN")
+end
+
+-- Every Master carrying a relic carries a Steal Relic [F] prompt for the others (hidden on their own
+-- client). It is off while it can't be used by anyone: a thief's relic (claimed through its bounty
+-- prompt), a protected relic, a duel, a fresh shield, or off the Tower floors.
+refreshStealPrompt = function(player: Player, now: number)
+	local char = player.Character
+	local root = char and char:FindFirstChild("HumanoidRootPart")
+	if not root then return end
+	local prompt = root:FindFirstChild("StealPrompt") :: ProximityPrompt?
+	local relics = _G.RelicService
+	local relic = relics and relics.GetCarriedRelic and relics.GetCarriedRelic(player)
+	if not relic then
+		if prompt then prompt:Destroy() end
+		return
+	end
+	local floorId = Tower.GetState(player).FloorId
+	local usable = floorId >= 1 and floorId <= 50 and not relic.ProtectedForUserId and not relic.DuelLocked
+		and DuelByPlayer[player] == nil and (CarryShieldUntil[player] or 0) <= now and (ThiefFlagUntil[player] or 0) <= now
+	if not prompt then
+		local created = Instance.new("ProximityPrompt")
+		created.Name = "StealPrompt"
+		created.ActionText = "Steal Relic"
+		created.ObjectText = player.DisplayName
+		created.KeyboardKeyCode = Enum.KeyCode.F
+		created.GamepadKeyCode = Enum.KeyCode.ButtonY
+		created.HoldDuration = 0.5 -- a short hold, so a stray F can't start a duel
+		created.MaxActivationDistance = LootDuel.CHALLENGE_RANGE
+		created.RequiresLineOfSight = false
+		created.Enabled = usable
+		created.Triggered:Connect(function(challenger: Player)
+			challengeCarrier(challenger, player)
+		end)
+		created.Parent = root
+	elseif prompt.Enabled ~= usable then
+		prompt.Enabled = usable
+	end
 end
 
 -- Fired by the thief's F prompt. The prompt's range is enforced by the client, so the server re-checks it.
@@ -1622,7 +1766,7 @@ challengeThief = function(hunter: Player, thief: Player)
 	-- A thief with several open bounties is challenged for their newest steal.
 	local chosen: LootDuel.Contest? = nil
 	for _, contest in pairs(Contests) do
-		if contest.ThiefUserId == thief.UserId and contest.Status == "CONTESTED"
+		if contest.ThiefUserId == thief.UserId and contest.Status == "CONTESTED" and contest.Kind ~= "CARRY"
 			and (not chosen or contest.ExpiresAt > chosen.ExpiresAt) then
 			chosen = contest
 		end
@@ -3253,6 +3397,8 @@ Players.PlayerRemoving:Connect(function(player: Player)
 	end
 	ThiefFlagUntil[player] = nil
 	LastChallengeRequest[player] = nil
+	CarryShieldUntil[player] = nil
+	CarryCooldownUntil[player] = nil
 	ProgressionActivity[player] = nil
 	LastMetadataRequestByPlayer[player] = nil
 	local masterState = ActiveMasters[player]

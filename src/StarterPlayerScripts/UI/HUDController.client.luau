@@ -604,12 +604,17 @@ local bountyHint = makeLabel({
 	Parent = lootStolenBanner,
 })
 
--- The server puts a "Claim Bounty" [F] prompt on every [Loot Thief]. Hide the one on our own
--- character locally (the server also rejects a thief claiming their own bounty).
+-- The server puts a "Claim Bounty" [F] prompt on every [Loot Thief] and a "Steal Relic" [F] prompt
+-- on every Master carrying a relic. Hide the ones on our own character locally (the server also
+-- rejects challenging yourself). The server toggles StealPrompt.Enabled, so keep it off here.
+local OWN_PROMPTS = { BountyPrompt = true, StealPrompt = true }
 local function hideOwnBountyPrompt(character: Model)
 	local function hide(child: Instance)
-		if child:IsA("ProximityPrompt") and child.Name == "BountyPrompt" then
+		if child:IsA("ProximityPrompt") and OWN_PROMPTS[child.Name] then
 			child.Enabled = false
+			child:GetPropertyChangedSignal("Enabled"):Connect(function()
+				if child.Enabled then child.Enabled = false end
+			end)
 		end
 	end
 	local root = character:WaitForChild("HumanoidRootPart", 10)
