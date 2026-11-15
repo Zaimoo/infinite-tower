@@ -45,6 +45,12 @@ Config.WarningSeconds = 60
 Config.ActiveSeconds = 300
 Config.RelicRainSeconds = 30 -- one meteor per featured floor in play, this often
 Config.MeteorWarningSeconds = 3
+-- Gathering players (plan B4): Relic Rain comes round at least once every RelicDroughtCycles
+-- events (more relics: more thefts, bounties and Relic Duels), and an event's warning and run never
+-- overlap a raid's warning, fight and results; RaidGapSeconds of quiet separate them.
+Config.RelicEventId = "RELIC_RAIN"
+Config.RelicDroughtCycles = 3
+Config.RaidGapSeconds = 30
 
 Config.Events = table.freeze({
 	table.freeze({

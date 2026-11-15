@@ -146,6 +146,25 @@ local function tooltip(state: State)
 end
 
 -- Bottom-right badge, directly above the Squad Power badge (props.Bottom: its bottom offset).
+-- "Go to event" (plan B4): travel to the event's floor. The server picks the floor and runs the
+-- usual travel checks; it answers with a toast when the Master can't go (TowerEventService).
+local function goToEvent()
+	local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+	local tower = remotes and remotes:FindFirstChild("TowerRemotes")
+	local travel = tower and tower:FindFirstChild("EventTravel")
+	if travel and travel:IsA("RemoteEvent") then travel:FireServer() end
+end
+
+local function goButton(props: { [string]: any })
+	local base: { [string]: any } = {
+		Name = "GoToEvent", AutoButtonColor = true, BackgroundColor3 = GOLD, BorderSizePixel = 0,
+		Text = "GO", TextColor3 = Color3.fromRGB(20, 14, 26), FontFace = G.Fonts.Display, TextSize = 13, ZIndex = 6,
+		[React.Event.Activated] = goToEvent,
+	}
+	for k, v in props do base[k] = v end
+	return e("TextButton", base, { Corner = e("UICorner", { CornerRadius = UDim.new(0, 6) }) })
+end
+
 function TowerEventHud.Badge(props: { Compact: boolean, Bottom: number })
 	local state = TowerEventHud.useTowerEvent()
 	local hover, setHover = React.useState(false)
@@ -195,14 +214,21 @@ function TowerEventHud.Badge(props: { Compact: boolean, Bottom: number })
 				FontFace = G.Fonts.Display, TextSize = if props.Compact then 18 else 14,
 				TextColor3 = if state.Phase == "CALM" then G.TextMuted else GOLD, Text = EventRules.Format(state.SecondsLeft),
 			}),
+			Go = if not props.Compact and state.Phase ~= "CALM" and event then goButton({
+				AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -10, 0, 23), Size = UDim2.fromOffset(38, 18),
+			}) else nil,
 			Name = if not props.Compact then Components.GlassText({
-				Position = UDim2.fromOffset(48, 22), Size = UDim2.new(1, -58, 0, 20), FontFace = G.Fonts.Display,
+				Position = UDim2.fromOffset(48, 22), Size = UDim2.new(1, if state.Phase ~= "CALM" and event then -104 else -58, 0, 20), FontFace = G.Fonts.Display,
 				TextSize = 15, Text = name, TextColor3 = if state.Phase == "CALM" then G.TextMuted else G.Text,
 			}) else nil,
 			Bar = if not props.Compact and state.Phase ~= "CALM" then e("Frame", {
 				Position = UDim2.new(0, 10, 1, -7), Size = UDim2.new(1, -20, 0, 3), BackgroundTransparency = 1,
 			}, { Fill = Components.GlassBar(state.Fraction, barColor, 1, 3) }) else nil,
 		}),
+		-- Phones: the compact badge has no room, so GO sits just above it.
+		CompactGo = if props.Compact and state.Phase ~= "CALM" and event then goButton({
+			AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, 0, 0, -4), Size = UDim2.fromOffset(52, 22),
+		}) else nil,
 		Tooltip = if hover then tooltip(state) else nil,
 	})
 end

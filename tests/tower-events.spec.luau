@@ -139,4 +139,58 @@ test("Camp resets hit every floor a tower event touches and only the featured bi
 	end
 end)
 
+test("Relic Rain comes round after a drought, never twice in a row (B4)", function()
+	local seq = { 0.99, 0.5 }
+	local i = 0
+	local rng = function() i += 1; return seq[(i - 1) % #seq + 1] end
+	local id = Rules.PickWithRelicDrought(rng, "SWARM", { 1, 2, 3 }, EventConfig.RelicDroughtCycles)
+	assert(id == EventConfig.RelicEventId, "a long enough drought brings Relic Rain")
+	local again = Rules.PickWithRelicDrought(rng, EventConfig.RelicEventId, { 1, 2, 3 }, 99)
+	assert(again ~= EventConfig.RelicEventId, "never back to back")
+	for _ = 1, 40 do
+		local picked, biome = Rules.PickWithRelicDrought(rng, nil, { 1, 2 }, EventConfig.RelicDroughtCycles)
+		if picked == EventConfig.RelicEventId then assert(biome == 1 or biome == 2, "an unlocked biome") end
+	end
+end)
+
+test("An event's warning and run stay clear of raids (B4)", function()
+	local raid = { Interval = 1800, Warning = 60, Active = 300, Results = 12 }
+	local gap, warning, active = EventConfig.RaidGapSeconds, EventConfig.WarningSeconds, EventConfig.ActiveSeconds
+	local function overlaps(start: number): boolean
+		local from, to = start - warning, start + active
+		for k = -1, 3 do
+			local r = (math.floor(from / raid.Interval) + k) * raid.Interval
+			if from < r + raid.Active + raid.Results + gap and r - raid.Warning - gap < to then return true end
+		end
+		return false
+	end
+	-- A start that would run straight into the :30 raid moves past it.
+	local clash = 1800 * 10 - 100
+	assert(overlaps(clash), "the test start does clash")
+	local moved = Rules.ClearOfRaids(clash, warning, active, raid, gap)
+	assert(moved > clash and not overlaps(moved), "pushed past the raid")
+	assert(moved == 1800 * 10 + raid.Active + raid.Results + gap + warning, "the event's warning begins after the raid's results")
+	-- A start well clear of raids is untouched.
+	local clear = 1800 * 10 + 900
+	assert(Rules.ClearOfRaids(clear, warning, active, raid, gap) == clear)
+	for start = 0, 1800 * 4, 37 do
+		assert(not overlaps(Rules.ClearOfRaids(start, warning, active, raid, gap)), "no start ever lands on a raid")
+	end
+end)
+
+test("Go to event picks a floor the Master can reach (B4)", function()
+	local function event(id: string) return assert(EventConfig.Get(id)) end
+	local biomeEvent = event(EventConfig.RelicEventId)
+	local towerEvent
+	for _, e in EventConfig.Events do
+		if e.Scope == "TOWER" and not towerEvent then towerEvent = e end
+	end
+	assert(towerEvent)
+	assert(Rules.EventFloor(biomeEvent, 3, 20) == math.max(biomeEvent.MinFloor, 11), "the featured biome's first floor")
+	assert(Rules.EventFloor(biomeEvent, 3, 9) == nil, "not reached yet")
+	assert(Rules.EventFloor(towerEvent, 0, 30) == math.max(30, towerEvent.MinFloor) or Rules.EventFloor(towerEvent, 0, 30) == 30)
+	assert(Rules.EventFloor(towerEvent, 0, towerEvent.MinFloor - 1) == nil or towerEvent.MinFloor <= 1, "a tower event below its first floor")
+	assert(event(EventConfig.RelicEventId).Scope == "BIOME", "Relic Rain features a biome")
+end)
+
 print("Event tests: " .. passed .. " passed, 0 failed")
