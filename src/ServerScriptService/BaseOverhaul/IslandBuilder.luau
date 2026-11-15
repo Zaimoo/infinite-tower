@@ -154,7 +154,7 @@ local function buildMossyFlagstoneCourtyard(
 		{ Name = "Path_Market", P0 = Vector3.new(16.2, 0, 11.2), P1 = Vector3.new(40.8, 0, 28.9), Width = 8.4, Segments = 5 },
 		{ Name = "Path_OutskirtsGate", P0 = Vector3.new(4.8, 0, 19.0), P1 = Vector3.new(14.0, 0, 56.0), Width = 9.0, Segments = 5 },
 		{ Name = "Path_SynthesisChamber", P0 = Vector3.new(-16.6, 0, -10.6), P1 = Vector3.new(-32.0, 0, -20.4), Width = 8.4, Segments = 3 },
-		{ Name = "Path_TrainingArea", P0 = Vector3.new(trainingDirX * 19.65, 0, trainingDirZ * 19.65), P1 = Vector3.new(trainingDirX * 39.2, 0, trainingDirZ * 39.2), Width = 8.4, Segments = 3 },
+		{ Name = "Path_TrainingArea", P0 = Vector3.new(trainingDirX * 19.65, 0, trainingDirZ * 19.65), P1 = Vector3.new(trainingDirX * 36.4, 0, trainingDirZ * 36.4), Width = 8.4, Segments = 3 },
 	}
 
 	local radialBranchAngles = {}
@@ -172,6 +172,27 @@ local function buildMossyFlagstoneCourtyard(
 		return false
 	end
 
+	local trainCenterX, trainCenterZ = trainingDirX * 49.0, trainingDirZ * 49.0
+	local trainYaw = -math.atan2(66.8, 46.8)
+	local trainCos, trainSin = math.cos(trainYaw), math.sin(trainYaw)
+	local function trainingHalfWidthAtZ(lz: number): number
+		if lz < -13.0 or lz > 28.2 then
+			return -1
+		elseif lz <= -9.85 then
+			local t = (lz + 13.0) / 3.15
+			return 5.6 + t * (16.6 - 5.6)
+		elseif lz <= 2.55 then
+			local t = (lz + 9.85) / 12.4
+			return 16.6 + t * (24.4 - 16.6)
+		elseif lz <= 18.85 then
+			local t = (lz - 2.55) / 16.3
+			return 24.4 + t * (12.6 - 24.4)
+		else
+			local t = (lz - 18.85) / 9.35
+			return math.max(0.5, 12.6 * (1 - t))
+		end
+	end
+
 	-- Helper to check if a courtyard (x, z) point overlaps any radial walkway or facility footprint
 	local function isPointOnWalkwayOrFacility(px: number, pz: number): boolean
 		local distCenter = math.sqrt(px * px + pz * pz)
@@ -181,6 +202,14 @@ local function buildMossyFlagstoneCourtyard(
 		-- Keep random courtyard flagstones outside Market's enlarged organic flagstone bazaar perimeter
 		local distMarket = math.sqrt((px - 50) ^ 2 + (pz - 36) ^ 2)
 		if distMarket < 21.5 then
+			return true
+		end
+		-- Keep random courtyard flagstones outside Training Grounds' arena floor polygon
+		local tdx, tdz = px - trainCenterX, pz - trainCenterZ
+		local tlx = tdx * trainCos - tdz * trainSin
+		local tlz = tdx * trainSin + tdz * trainCos
+		local halfWTrain = trainingHalfWidthAtZ(tlz)
+		if halfWTrain > 0 and math.abs(tlx) < (halfWTrain + 1.6) then
 			return true
 		end
 		for _, rw in ipairs(radialWalkways) do
