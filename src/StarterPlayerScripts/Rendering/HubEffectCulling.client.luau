@@ -1,9 +1,9 @@
 --!strict
 -- StarterPlayerScripts/Rendering/HubEffectCulling.client.luau
 -- Distance culling for the hub's static scenery effects. All 8 plots sit around the Cloister Commons, so
--- every torch light, brazier, forge flame and spark emitter on every island used to render every frame
--- (~550 lights, ~750 emitters). This turns lights and small emitters off once the camera is far from them
--- and back on as it approaches. Rules and distances: Shared/Util/EffectCullingRules.
+-- every torch light, brazier, forge flame, spark emitter and fountain waterfall beam on every island used
+-- to render every frame (~550 lights, ~750 emitters, ~950 beams). This turns lights, small emitters and
+-- beams off once the camera is far from them and back on as it approaches. Rules and distances: Shared/Util/EffectCullingRules.
 --
 -- Only static scenery under WaitingRoomPlots and BaseOverhaulGeometry is touched. Effects inside rigs
 -- (anything under a Model with a Humanoid or AnimationController) are skipped, because their own scripts
@@ -19,7 +19,7 @@ local Rules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Uti
 local ROOT_NAMES = { "WaitingRoomPlots", "BaseOverhaulGeometry" }
 
 type Record = {
-	Effect: Light | ParticleEmitter,
+	Effect: Light | ParticleEmitter | Beam,
 	Position: Vector3,
 	CullDistance: number,
 	Running: boolean, -- false while the culler has it switched off
@@ -51,29 +51,49 @@ local function hostPosition(effect: Instance): Vector3?
 	return nil
 end
 
+-- A beam sits between two attachments: its position is their midpoint, and its length extends its reach.
+local function beamSpan(beam: Beam): (Vector3?, number)
+	local a0, a1 = beam.Attachment0, beam.Attachment1
+	if not (a0 and a1) then
+		return nil, 0
+	end
+	local p0, p1 = a0.WorldPosition, a1.WorldPosition
+	return (p0 + p1) * 0.5, (p0 - p1).Magnitude
+end
+
 local function track(inst: Instance, root: Instance)
 	if byEffect[inst] then
 		return
 	end
 	local isLight = inst:IsA("Light")
-	if not (isLight or inst:IsA("ParticleEmitter")) then
+	local isBeam = inst:IsA("Beam")
+	if not (isLight or isBeam or inst:IsA("ParticleEmitter")) then
 		return
 	end
 	local effect = inst :: any
 	if not effect.Enabled then
 		return -- its owner disabled it; not ours to turn on
 	end
-	if not isLight and Rules.IsAtmospheric(Rules.MaxParticleSize((effect :: ParticleEmitter).Size.Keypoints :: any)) then
+	if not isLight and not isBeam and Rules.IsAtmospheric(Rules.MaxParticleSize((effect :: ParticleEmitter).Size.Keypoints :: any)) then
 		return
 	end
-	local position = hostPosition(inst)
+	local position: Vector3?
+	local cullDistance: number
+	if isBeam then
+		local length: number
+		position, length = beamSpan(effect :: Beam)
+		cullDistance = Rules.BeamCullDistance(length)
+	else
+		position = hostPosition(inst)
+		cullDistance = Rules.CullDistance(isLight, if isLight then (effect :: any).Range or 0 else 0)
+	end
 	if not position or insideRig(inst, root) then
 		return
 	end
 	local record: Record = {
 		Effect = effect,
 		Position = position,
-		CullDistance = Rules.CullDistance(isLight, if isLight then (effect :: any).Range or 0 else 0),
+		CullDistance = cullDistance,
 		Running = true,
 		Dead = false,
 	}

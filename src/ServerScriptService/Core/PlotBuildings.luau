@@ -281,6 +281,7 @@ function Buildings.Build(plot: Instance)
 		existing:Destroy()
 	end
 	StaticGeometry.Apply(folder)
+	StaticGeometry.ThinEmitters(folder)
 	folder.Name = "PlotBuildings"
 	if RunService:IsRunning() then
 		FacilityPresence.Reapply(plot)

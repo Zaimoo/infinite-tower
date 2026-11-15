@@ -13,6 +13,10 @@
 --   * Scenery lights are dimmed to SCENERY_LIGHT_BRIGHTNESS of what their builder set, so torches and
 --     window glows don't wash the stone orange. The original value is kept in the BaseBrightness attribute,
 --     which also makes the pass safe to run more than once.
+-- ThinEmitters is a separate pass for the hub only (tower rooms keep their authored rates): hub scenery
+-- emitters run at SCENERY_EMITTER_RATE of what their builder set. The original is kept in the BaseRate
+-- attribute, so the pass is safe to run more than once. Emitters at or below MIN_THINNED_RATE (cloud mist,
+-- slow embers) are already sparse and are skipped, as is anything carrying the KeepRate attribute.
 -- CanCollide and CanQuery are left alone: floors, walls and navigation raycasts depend on them.
 
 local StaticGeometry = {}
@@ -23,6 +27,10 @@ StaticGeometry.SMALL_PART_MAX_SIZE = 1.5
 StaticGeometry.KEEP_SHADOWS_ATTRIBUTE = "KeepShadows"
 StaticGeometry.SCENERY_LIGHT_BRIGHTNESS = 0.6
 StaticGeometry.BASE_BRIGHTNESS_ATTRIBUTE = "BaseBrightness"
+StaticGeometry.SCENERY_EMITTER_RATE = 0.5
+StaticGeometry.MIN_THINNED_RATE = 2
+StaticGeometry.BASE_RATE_ATTRIBUTE = "BaseRate"
+StaticGeometry.KEEP_RATE_ATTRIBUTE = "KeepRate"
 
 export type Stats = { Parts: number, TouchOff: number, ShadowOff: number, LightShadowOff: number }
 
@@ -67,6 +75,33 @@ function StaticGeometry.Apply(root: Instance): Stats
 		end
 	end
 	return stats
+end
+
+-- The thinned rate for an emitter authored at `rate`; pure, so it can be tested without instances.
+function StaticGeometry.ThinnedRate(rate: number): number
+	if rate <= StaticGeometry.MIN_THINNED_RATE then
+		return rate
+	end
+	return math.max(StaticGeometry.MIN_THINNED_RATE, rate * StaticGeometry.SCENERY_EMITTER_RATE)
+end
+
+-- Halves hub scenery emitter rates. Returns how many emitters changed.
+function StaticGeometry.ThinEmitters(root: Instance): number
+	local changed = 0
+	for _, d in root:GetDescendants() do
+		if d:IsA("ParticleEmitter")
+			and d:GetAttribute(StaticGeometry.BASE_RATE_ATTRIBUTE) == nil
+			and d:GetAttribute(StaticGeometry.KEEP_RATE_ATTRIBUTE) ~= true
+		then
+			local thinned = StaticGeometry.ThinnedRate(d.Rate)
+			if thinned ~= d.Rate then
+				d:SetAttribute(StaticGeometry.BASE_RATE_ATTRIBUTE, d.Rate)
+				d.Rate = thinned
+				changed += 1
+			end
+		end
+	end
+	return changed
 end
 
 -- For parts that connect Touched: tag them so Apply leaves them alone, and make sure touch is on.

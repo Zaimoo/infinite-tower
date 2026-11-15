@@ -1,4 +1,5 @@
 --!strict
+--!native
 -- Shared v2 codec. No legacy stride guessing or position clamping.
 -- Snapshot Flags bits: 1 hero, 2 overdrive, 4 pacified, 8 shielded (WARD / SHIELDED), 16 roused, 32 affixed Elite.
 local P = { Version = 2, HeaderBytes = 46, RecordBytes = 24, BatchSize = 32, MaxFlags = 63 }

@@ -43,6 +43,7 @@ local function recommendedPower(floorId: number): number
 end
 local RAID_FLOOR = require(Shared:WaitForChild("Config"):WaitForChild("RaidConfig")).FloorId -- raid arena (docs/raid-boss-plan.md)
 local StatFormulas = require(Shared:WaitForChild("Util"):WaitForChild("StatFormulas"))
+local ProfileDelta = require(Shared:WaitForChild("Util"):WaitForChild("ProfileDelta"))
 local GothicBoxStyle = require(Shared:WaitForChild("Util"):WaitForChild("GothicBoxStyle"))
 local GothicVectorIcons = require(Shared:WaitForChild("Util"):WaitForChild("GothicVectorIcons"))
 local GildedGrimoire = require(Shared:WaitForChild("Util"):WaitForChild("GildedGrimoire"))
@@ -1948,43 +1949,133 @@ end
 -- 6. PROFILE SYNC & 60 FPS HUD UPDATE LOOP (WITH [E] SKILL-CHECK PULSE)
 --============================================================================
 
-ProfileDeltaSyncEvent.OnClientEvent:Connect(function(profile: any)
-	if not profile then return end
-	if profile._PitDelta then
-		-- Pit and combat EXP send small updates; retain unrelated profile fields.
-		if not CurrentProfile then return end
-		for uuid, hero in profile.Heroes or {} do CurrentProfile.Heroes[uuid] = hero end
-		for _, uuid in profile.Removed or {} do CurrentProfile.Heroes[uuid] = nil end
-		for _, key in {"Currencies", "PitMaterials", "PitRevision", "ForgeRevision", "UnlockedResearch", "SquadPower", "SquadPowerByHero"} do
-			if profile[key] ~= nil then CurrentProfile[key] = profile[key] end
-		end
-		profile = CurrentProfile
-	else CurrentProfile = profile end
-	_G.CurrentProfile = CurrentProfile
-	facilityController:Refresh()
-	if fortressTreeController and fortressTreeController:IsOpen() then
+-- Panels refresh only when a sync touched something they show. Each list names the profile keys a
+-- panel does NOT depend on; any key not listed (including fields added later) refreshes the panel.
+local PANEL_IGNORES: { [string]: { [string]: boolean } } = {
+	Facility = { LastActiveTimestamp = true, SquadPower = true, SquadPowerByHero = true, MaxFloorReached = true, HighestClearedFloor = true },
+	FortressTree = { LastActiveTimestamp = true, SquadPower = true, SquadPowerByHero = true, Artifacts = true },
+	Forge = { LastActiveTimestamp = true, SquadPower = true, SquadPowerByHero = true, MaxFloorReached = true, HighestClearedFloor = true, HighestClearedBiomeBoss = true },
+	Squad = { LastActiveTimestamp = true, Currencies = true, PitMaterials = true, MaxFloorReached = true, HighestClearedFloor = true },
+	Blacksmith = { LastActiveTimestamp = true, SquadPower = true, SquadPowerByHero = true },
+}
+
+-- `touched` is the set of top-level keys that changed, or nil after a whole profile.
+local function refreshPanels(touched: { [string]: boolean }?)
+	if ProfileDelta.Affects(touched, PANEL_IGNORES.Facility) then
+		facilityController:Refresh()
+	end
+	if fortressTreeController and fortressTreeController:IsOpen() and ProfileDelta.Affects(touched, PANEL_IGNORES.FortressTree) then
 		fortressTreeController:Refresh()
 	end
 	-- Note: SynthesisController and PromotionController fetch STATE on Open()
 	-- and reconcile on COMMIT. Do NOT auto-refresh them on ProfileDeltaSyncEvent
 	-- as it fires continuously (every 3s passive gold tick, combat) and causes network/render lag.
-	if forgeController and forgeController.Root and forgeController.Root.Visible then
+	if forgeController and forgeController.Root and forgeController.Root.Visible and ProfileDelta.Affects(touched, PANEL_IGNORES.Forge) then
 		forgeController:Refresh()
 	end
-
-	currencyLabel.Text = string.format(
-		" GOLD: %d    GEMS: %d",
-		math.floor(profile.Currencies.Gold),
-		math.floor(profile.Currencies.Gems)
-	)
-
-	if squadController and squadController:IsOpen() then
+	if squadController and squadController:IsOpen() and ProfileDelta.Affects(touched, PANEL_IGNORES.Squad) then
 		squadController:Refresh()
 	end
-	if blacksmithModal.Visible and refreshBlacksmithModal then
+	if blacksmithModal.Visible and refreshBlacksmithModal and ProfileDelta.Affects(touched, PANEL_IGNORES.Blacksmith) then
 		refreshBlacksmithModal()
 	end
+end
+
+-- Deltas can arrive several times a second (one per kill): their panel refreshes are merged and run
+-- once, PANEL_REFRESH_DELAY after the first. A whole profile refreshes at once.
+local PANEL_REFRESH_DELAY = 0.2
+local pendingTouched: { [string]: boolean }? = nil
+
+ProfileDeltaSyncEvent.OnClientEvent:Connect(function(profile: any)
+	if not profile then return end
+	local touched: { [string]: boolean }? = nil
+	if ProfileDelta.IsDelta(profile) then
+		-- Only what changed was sent: patch the cached profile, keeping every other field.
+		if not CurrentProfile then return end
+		touched = ProfileDelta.Apply(CurrentProfile, profile)
+		profile = CurrentProfile
+	else CurrentProfile = profile end
+	_G.CurrentProfile = CurrentProfile
+
+	if not touched or touched.Currencies then
+		currencyLabel.Text = string.format(
+			" GOLD: %d    GEMS: %d",
+			math.floor(profile.Currencies.Gold),
+			math.floor(profile.Currencies.Gems)
+		)
+	end
+
+	if not touched then
+		pendingTouched = nil
+		refreshPanels(nil)
+	elseif pendingTouched then
+		for key in touched do pendingTouched[key] = true end
+	else
+		pendingTouched = touched
+		task.delay(PANEL_REFRESH_DELAY, function()
+			local merged = pendingTouched
+			pendingTouched = nil
+			if merged then refreshPanels(merged) end
+		end)
+	end
 end)
+
+-- The HUD loop runs every frame but only touches the UI when what it shows changes.
+-- `paint` remembers the last value written per property, so an unchanged frame costs no engine calls.
+-- Nothing else writes the properties painted here; anything that does must go through `paint` too.
+local painted: { [Instance]: { [string]: any } } = {}
+local function paint(obj: any, prop: string, value: any)
+	local seen = painted[obj]
+	if not seen then
+		seen = {}
+		painted[obj] = seen
+	end
+	if seen[prop] ~= value then
+		seen[prop] = value
+		obj[prop] = value
+	end
+end
+
+-- A whistle button repaints on a state flip (ready / cooling down / Nova window) or when the countdown
+-- second ticks over. `look` is the cooldown second while cooling, else the name of the ready look.
+local WHISTLE_COOLDOWN_GLYPH = Color3.fromRGB(120, 120, 130)
+local WHISTLE_COOLDOWN_STROKE = Color3.fromRGB(49, 39, 64)
+local WHISTLE_COOLDOWN_LABEL = Color3.fromRGB(120, 115, 130)
+local WHISTLE_NOVA_COLOR = Color3.fromRGB(255, 230, 80)
+local whistleLook: { [any]: number | string } = {}
+local function paintWhistle(handle: any, cooldownSeconds: number, readyLook: string, readyColor: Color3, tintGlow: boolean)
+	local cooling = cooldownSeconds > 0
+	local look: number | string = if cooling then cooldownSeconds else readyLook
+	if whistleLook[handle] == look then
+		return
+	end
+	whistleLook[handle] = look
+	if handle.CooldownText then
+		handle.CooldownText.Visible = cooling
+		if cooling then
+			handle.CooldownText.Text = tostring(cooldownSeconds)
+		end
+	end
+	if handle.KeybindPill then handle.KeybindPill.Visible = not cooling end
+	if handle.VectorGlyph then
+		handle.VectorGlyph.ImageColor3 = if cooling then WHISTLE_COOLDOWN_GLYPH else readyColor
+		handle.VectorGlyph.ImageTransparency = if cooling then 0.7 else 0
+	end
+	if handle.ShadowGlow then
+		handle.ShadowGlow.Visible = not cooling
+		if tintGlow and not cooling then
+			handle.ShadowGlow.ImageColor3 = readyColor
+		end
+	end
+	if handle.DiscStroke then handle.DiscStroke.Color = if cooling then WHISTLE_COOLDOWN_STROKE else readyColor end
+	handle.PillStroke.Color = if cooling then WHISTLE_COOLDOWN_STROKE else readyColor
+	handle.PillLabel.TextColor3 = if cooling then WHISTLE_COOLDOWN_LABEL else readyColor
+end
+
+-- The floor strip's text is rebuilt when its inputs change, and otherwise twice a second (Squad Power
+-- can change under it without any of the inputs moving).
+local FLOOR_STRIP_REFRESH_SECONDS = 0.5
+local floorStripAt, floorStripFloor, floorStripKills, floorStripRequired, floorStripDefeated = -1, -1, -1, -1, false
 
 RunService.RenderStepped:Connect(function()
 	local now = os.clock()
@@ -1992,32 +2083,7 @@ RunService.RenderStepped:Connect(function()
 
 	-- 1. Whistle Cooldowns & Devouring Nova Recall Skill-Check Pulse
 	local qRem = math.max(0, 20.0 - (now - LastQClock))
-	if qRem > 0 then
-		if overdriveHandle.CooldownText then
-			overdriveHandle.CooldownText.Visible = true
-			overdriveHandle.CooldownText.Text = tostring(math.ceil(qRem))
-		end
-		if overdriveHandle.KeybindPill then overdriveHandle.KeybindPill.Visible = false end
-		if overdriveHandle.VectorGlyph then
-			overdriveHandle.VectorGlyph.ImageColor3 = Color3.fromRGB(120, 120, 130)
-			overdriveHandle.VectorGlyph.ImageTransparency = 0.7
-		end
-		if overdriveHandle.ShadowGlow then overdriveHandle.ShadowGlow.Visible = false end
-		if overdriveHandle.DiscStroke then overdriveHandle.DiscStroke.Color = Color3.fromRGB(49, 39, 64) end
-		overdriveHandle.PillStroke.Color = Color3.fromRGB(49, 39, 64)
-		overdriveHandle.PillLabel.TextColor3 = Color3.fromRGB(120, 115, 130)
-	else
-		if overdriveHandle.CooldownText then overdriveHandle.CooldownText.Visible = false end
-		if overdriveHandle.KeybindPill then overdriveHandle.KeybindPill.Visible = true end
-		if overdriveHandle.VectorGlyph then
-			overdriveHandle.VectorGlyph.ImageColor3 = ACTION_COLORS.Overdrive
-			overdriveHandle.VectorGlyph.ImageTransparency = 0
-		end
-		if overdriveHandle.ShadowGlow then overdriveHandle.ShadowGlow.Visible = true end
-		if overdriveHandle.DiscStroke then overdriveHandle.DiscStroke.Color = ACTION_COLORS.Overdrive end
-		overdriveHandle.PillStroke.Color = ACTION_COLORS.Overdrive
-		overdriveHandle.PillLabel.TextColor3 = ACTION_COLORS.Overdrive
-	end
+	paintWhistle(overdriveHandle, math.ceil(qRem), "ready", ACTION_COLORS.Overdrive, false)
 
 	local eRem = math.max(0, 6.0 - (now - LastEClock))
 	local novaStart = cs and cs.NovaCastStartClock or 0
@@ -2025,47 +2091,9 @@ RunService.RenderStepped:Connect(function()
 	local inNovaOptimalWindow = (novaElapsed >= 1.1 and novaElapsed <= 2.8)
 
 	if inNovaOptimalWindow then
-		if recallHandle.CooldownText then recallHandle.CooldownText.Visible = false end
-		if recallHandle.KeybindPill then recallHandle.KeybindPill.Visible = true end
-		if recallHandle.VectorGlyph then
-			recallHandle.VectorGlyph.ImageColor3 = Color3.fromRGB(255, 230, 80)
-			recallHandle.VectorGlyph.ImageTransparency = 0
-		end
-		if recallHandle.ShadowGlow then
-			recallHandle.ShadowGlow.Visible = true
-			recallHandle.ShadowGlow.ImageColor3 = Color3.fromRGB(255, 230, 80)
-		end
-		if recallHandle.DiscStroke then recallHandle.DiscStroke.Color = Color3.fromRGB(255, 230, 80) end
-		recallHandle.PillStroke.Color = Color3.fromRGB(255, 230, 80)
-		recallHandle.PillLabel.TextColor3 = Color3.fromRGB(255, 230, 80)
-	elseif eRem > 0 then
-		if recallHandle.CooldownText then
-			recallHandle.CooldownText.Visible = true
-			recallHandle.CooldownText.Text = tostring(math.ceil(eRem))
-		end
-		if recallHandle.KeybindPill then recallHandle.KeybindPill.Visible = false end
-		if recallHandle.VectorGlyph then
-			recallHandle.VectorGlyph.ImageColor3 = Color3.fromRGB(120, 120, 130)
-			recallHandle.VectorGlyph.ImageTransparency = 0.7
-		end
-		if recallHandle.ShadowGlow then recallHandle.ShadowGlow.Visible = false end
-		if recallHandle.DiscStroke then recallHandle.DiscStroke.Color = Color3.fromRGB(49, 39, 64) end
-		recallHandle.PillStroke.Color = Color3.fromRGB(49, 39, 64)
-		recallHandle.PillLabel.TextColor3 = Color3.fromRGB(120, 115, 130)
+		paintWhistle(recallHandle, 0, "nova", WHISTLE_NOVA_COLOR, true)
 	else
-		if recallHandle.CooldownText then recallHandle.CooldownText.Visible = false end
-		if recallHandle.KeybindPill then recallHandle.KeybindPill.Visible = true end
-		if recallHandle.VectorGlyph then
-			recallHandle.VectorGlyph.ImageColor3 = ACTION_COLORS.Recall
-			recallHandle.VectorGlyph.ImageTransparency = 0
-		end
-		if recallHandle.ShadowGlow then
-			recallHandle.ShadowGlow.Visible = true
-			recallHandle.ShadowGlow.ImageColor3 = ACTION_COLORS.Recall
-		end
-		if recallHandle.DiscStroke then recallHandle.DiscStroke.Color = ACTION_COLORS.Recall end
-		recallHandle.PillStroke.Color = ACTION_COLORS.Recall
-		recallHandle.PillLabel.TextColor3 = ACTION_COLORS.Recall
+		paintWhistle(recallHandle, math.ceil(eRem), "ready", ACTION_COLORS.Recall, true)
 	end
 
 	-- 2. Update World Boss Top Banner & Devouring Nova Cast Bar
@@ -2081,31 +2109,38 @@ RunService.RenderStepped:Connect(function()
 	local hideFloorHud = curFloor > 0 and (Store.ModalFocus or (_G.IsAnyMasterModalOpen and _G.IsAnyMasterModalOpen()))
 	if inRaid and not hasFloorBoss then
 		-- Raid arena: the banner only shows the boss (staging, results and the timer live in RaidHud).
-		bossBanner.Visible = false
+		paint(bossBanner, "Visible", false)
 	elseif not hasFloorBoss and curFloor > 0 then
-		bossBanner.Visible = not hideFloorHud
+		paint(bossBanner, "Visible", not hideFloorHud)
 		setBannerMode(false)
-		local floorSpec = TowerFloorConfig.Get(curFloor)
-		local floorName = floorSpec and floorSpec.DisplayName or ("Floor " .. tostring(curFloor))
-		local curKills = if clientFloorProgress.FloorId == curFloor then clientFloorProgress.CurrentKills else 0
-		local reqKills = if clientFloorProgress.FloorId == curFloor and clientFloorProgress.RequiredKills > 0 then clientFloorProgress.RequiredKills else math.max(1, math.round(12 + 0.5 * curFloor))
-		local pct = math.clamp(curKills / math.max(1, reqKills), 0, 1)
-		bossTitleLabel.Text = string.format("FLOOR %d  ·  %s", curFloor, string.upper(floorName))
-		novaBarFill.Size = UDim2.fromScale(pct, 1)
-		novaBarFill.BackgroundColor3 = if curKills >= reqKills then GildedGrimoire.Text.Good else GildedGrimoire.Text.Gold
-		-- Recommended Squad Power only speaks up when the squad is under it.
-		local recommended = recommendedPower(curFloor)
-		local mine = StatFormulas.GetTowerSquadPower(CurrentProfile)
-		local warning = if mine < recommended then string.format("  ·  <font color=\"#FF6B6B\">REC. POWER %s</font>", abbreviatePower(recommended)) else ""
-		if clientFloorProgress.FloorId == curFloor and clientFloorProgress.BossDefeated then
-			novaCastLabel.Text = "<font color=\"#78FF8C\">CLEARED</font>"
-		elseif curKills >= reqKills then
-			novaCastLabel.Text = "<font color=\"#FF7A7A\">BOSS SUMMONED</font>" .. warning
-		else
-			novaCastLabel.Text = string.format("%d / %d", curKills, reqKills) .. warning
+		local onThisFloor = clientFloorProgress.FloorId == curFloor
+		local curKills = if onThisFloor then clientFloorProgress.CurrentKills else 0
+		local reqKills = if onThisFloor and clientFloorProgress.RequiredKills > 0 then clientFloorProgress.RequiredKills else math.max(1, math.round(12 + 0.5 * curFloor))
+		local defeated = onThisFloor and clientFloorProgress.BossDefeated == true
+		if curFloor ~= floorStripFloor or curKills ~= floorStripKills or reqKills ~= floorStripRequired
+			or defeated ~= floorStripDefeated or now - floorStripAt >= FLOOR_STRIP_REFRESH_SECONDS
+		then
+			floorStripAt, floorStripFloor, floorStripKills, floorStripRequired, floorStripDefeated = now, curFloor, curKills, reqKills, defeated
+			local floorSpec = TowerFloorConfig.Get(curFloor)
+			local floorName = floorSpec and floorSpec.DisplayName or ("Floor " .. tostring(curFloor))
+			local pct = math.clamp(curKills / math.max(1, reqKills), 0, 1)
+			paint(bossTitleLabel, "Text", string.format("FLOOR %d  ·  %s", curFloor, string.upper(floorName)))
+			paint(novaBarFill, "Size", UDim2.fromScale(pct, 1))
+			paint(novaBarFill, "BackgroundColor3", if curKills >= reqKills then GildedGrimoire.Text.Good else GildedGrimoire.Text.Gold)
+			-- Recommended Squad Power only speaks up when the squad is under it.
+			local recommended = recommendedPower(curFloor)
+			local mine = StatFormulas.GetTowerSquadPower(CurrentProfile)
+			local warning = if mine < recommended then string.format("  ·  <font color=\"#FF6B6B\">REC. POWER %s</font>", abbreviatePower(recommended)) else ""
+			if defeated then
+				paint(novaCastLabel, "Text", "<font color=\"#78FF8C\">CLEARED</font>")
+			elseif curKills >= reqKills then
+				paint(novaCastLabel, "Text", "<font color=\"#FF7A7A\">BOSS SUMMONED</font>" .. warning)
+			else
+				paint(novaCastLabel, "Text", string.format("%d / %d", curKills, reqKills) .. warning)
+			end
 		end
 	else
-		bossBanner.Visible = (hasFloorBoss and curFloor > 0 and not hideFloorHud) or false
+		paint(bossBanner, "Visible", (hasFloorBoss and curFloor > 0 and not hideFloorHud) or false)
 	end
 	if hasFloorBoss and curFloor > 0 then
 		setBannerMode(true)
@@ -2113,10 +2148,11 @@ RunService.RenderStepped:Connect(function()
 		local hpPct = if node and node.HpPermille then node.HpPermille / 10.0 else (floorBoss.CurrentHP or 1) / math.max(1, floorBoss.MaxHP or 1) * 100.0
 		local phase = if hpPct <= 50.0 then 2 else (floorBoss.Phase or 1)
 		local fraction = math.clamp(hpPct / 100.0, 0, 1)
-		bossTitleLabel.Text = string.upper(floorBoss.Name or (if inRaid then "RAID BOSS" else "FLOOR BOSS"))
-		novaBarFill.Size = UDim2.fromScale(fraction, 1)
-		novaBarFill.BackgroundColor3 = BOSS_THEME.Accent
-		bossHpLabel.Text = if hpPct >= 10 then string.format("%d%%", math.ceil(hpPct)) else string.format("%.1f%%", hpPct)
+		floorStripAt = -1 -- the floor strip repaints as soon as the boss is gone
+		paint(bossTitleLabel, "Text", string.upper(floorBoss.Name or (if inRaid then "RAID BOSS" else "FLOOR BOSS")))
+		paint(novaBarFill, "Size", UDim2.fromScale(fraction, 1))
+		paint(novaBarFill, "BackgroundColor3", BOSS_THEME.Accent)
+		paint(bossHpLabel, "Text", if hpPct >= 10 then string.format("%d%%", math.ceil(hpPct)) else string.format("%.1f%%", hpPct))
 		-- Damage trail: hold for a beat after a hit, then drain towards the fill.
 		local now = os.clock()
 		if bossTrailNetId ~= floorBoss.NetId or fraction >= bossTrailFraction then
@@ -2127,14 +2163,14 @@ RunService.RenderStepped:Connect(function()
 				bossTrailFraction = math.max(fraction, bossTrailFraction - 0.012)
 			end
 		end
-		bossHpTrail.Size = UDim2.fromScale(bossTrailFraction, 1)
+		paint(bossHpTrail, "Size", UDim2.fromScale(bossTrailFraction, 1))
 		local caption = if phase >= 2 then "<font color=\"#FF7A7A\">ENRAGED</font>" else ""
 		if inRaid then
 			local endsAt = ReplicatedStorage:GetAttribute("RaidEndsAt") or 0
 			local left = math.max(0, math.ceil(endsAt - workspace:GetServerTimeNow()))
 			caption = string.format("%s%s%d:%02d", caption, if caption ~= "" then "  ·  " else "", left // 60, left % 60)
 		end
-		novaCastLabel.Text = caption
+		paint(novaCastLabel, "Text", caption)
 	end
 	local humanoid = char and char:FindFirstChildOfClass("Humanoid")
 	local personalFloor = TowerFloorConfig.IsFloorId(charFloor) and not Store.ViewingSquad and humanoid ~= nil and humanoid.Health > 0
@@ -2341,7 +2377,7 @@ do
 
 	local function updateCurrency(profile: any)
 		if not profile then return end
-		if profile._PitDelta then profile = CurrentProfile end
+		if ProfileDelta.IsDelta(profile) then profile = CurrentProfile end
 		if not profile or not profile.Currencies then return end
 		for key, label in currencyFields do
 			label.Text = number(profile.Currencies[key])

@@ -1,0 +1,148 @@
+{
+  "CourtyardGroundTiles": {
+    "Meshes": {
+      "CT01_Cobblestone_2b2e34": {
+        "Color": "2b2e34",
+        "Material": "Cobblestone",
+        "Parts": 5,
+        "Triangles": 60
+      },
+      "CT02_Cobblestone_3e424a": {
+        "Color": "3e424a",
+        "Material": "Cobblestone",
+        "Parts": 7,
+        "Triangles": 84
+      },
+      "CT03_Cobblestone_3f4a3c": {
+        "Color": "3f4a3c",
+        "Material": "Cobblestone",
+        "Parts": 63,
+        "Triangles": 756
+      },
+      "CT04_Cobblestone_4e545c": {
+        "Color": "4e545c",
+        "Material": "Cobblestone",
+        "Parts": 4,
+        "Triangles": 48
+      },
+      "CT05_Ground_2a3b24": {
+        "Color": "2a3b24",
+        "Material": "Ground",
+        "Parts": 10,
+        "Triangles": 120
+      },
+      "CT06_Rock_2b2e34": {
+        "Color": "2b2e34",
+        "Material": "Rock",
+        "Parts": 11,
+        "Triangles": 132
+      },
+      "CT07_Slate_2b2e34": {
+        "Color": "2b2e34",
+        "Material": "Slate",
+        "Parts": 29,
+        "Triangles": 348
+      },
+      "CT08_Slate_3e424a": {
+        "Color": "3e424a",
+        "Material": "Slate",
+        "Parts": 47,
+        "Triangles": 564
+      },
+      "CT09_Slate_3f4a3c": {
+        "Color": "3f4a3c",
+        "Material": "Slate",
+        "Parts": 7,
+        "Triangles": 84
+      },
+      "CT10_Slate_4e545c": {
+        "Color": "4e545c",
+        "Material": "Slate",
+        "Parts": 63,
+        "Triangles": 756
+      }
+    },
+    "Parts": 246,
+    "Signature": "246-3d37fd59-17224229",
+    "Triangles": 2952
+  },
+  "FortressWalls": {
+    "Meshes": {
+      "FW01_Fabric_7f1d1d": {
+        "Color": "7f1d1d",
+        "Material": "Fabric",
+        "Parts": 90,
+        "Triangles": 840
+      },
+      "FW02_Metal_181a1e": {
+        "Color": "181a1e",
+        "Material": "Metal",
+        "Parts": 216,
+        "Triangles": 2592
+      },
+      "FW03_Metal_d97706": {
+        "Color": "d97706",
+        "Material": "Metal",
+        "Parts": 153,
+        "Triangles": 1596
+      },
+      "FW04_Rock_4e555f": {
+        "Color": "4e555f",
+        "Material": "Rock",
+        "Parts": 1048,
+        "Triangles": 12448
+      },
+      "FW05_Slate_1e2228": {
+        "Color": "1e2228",
+        "Material": "Slate",
+        "Parts": 49,
+        "Triangles": 588
+      },
+      "FW06_Slate_232730": {
+        "Color": "232730",
+        "Material": "Slate",
+        "Parts": 164,
+        "Triangles": 1392
+      },
+      "FW07_Slate_3b4048": {
+        "Color": "3b4048",
+        "Material": "Slate",
+        "Parts": 414,
+        "Triangles": 4816
+      },
+      "FW08_WoodPlanks_3a2618": {
+        "Color": "3a2618",
+        "Material": "WoodPlanks",
+        "Parts": 45,
+        "Triangles": 540
+      },
+      "FW09_WoodPlanks_5c3e26": {
+        "Color": "5c3e26",
+        "Material": "WoodPlanks",
+        "Parts": 4,
+        "Triangles": 240
+      },
+      "FW10_WoodPlanks_60422a": {
+        "Color": "60422a",
+        "Material": "WoodPlanks",
+        "Parts": 3,
+        "Triangles": 36
+      },
+      "FW11_WoodPlanks_704c2e": {
+        "Color": "704c2e",
+        "Material": "WoodPlanks",
+        "Parts": 4,
+        "Triangles": 48
+      },
+      "FW12_WoodPlanks_7c5634": {
+        "Color": "7c5634",
+        "Material": "WoodPlanks",
+        "Parts": 4,
+        "Triangles": 48
+      }
+    },
+    "Parts": 2194,
+    "Signature": "2194-6f0b2128-ed2bdc68",
+    "Triangles": 25184
+  }
+}

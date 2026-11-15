@@ -1,4 +1,5 @@
 --!strict
+--!native
 -- ReplicatedStorage/Assets/HeroRig/HeroAnimator.luau
 -- Client-side clip player for hero rigs (hero-rig-rebuild-plan.md, Phase 4). Drives
 -- Motor6D.Transform directly; rigs carry no Animator.

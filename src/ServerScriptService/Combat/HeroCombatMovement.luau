@@ -1,4 +1,5 @@
 --!strict
+--!native
 -- ServerScriptService/Combat/HeroCombatMovement.luau
 -- Where a hero wants to stand while it fights (GDD 4.5, Combat Movement). Pure: CombatSimulation
 -- passes positions and telegraphs, validates the returned goal against the world and walks it

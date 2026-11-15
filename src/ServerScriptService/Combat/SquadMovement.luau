@@ -1,4 +1,5 @@
 --!strict
+--!native
 -- ServerScriptService/Combat/SquadMovement.luau
 -- Destination policy for active floor-run following (Phase 3) and assigned squads (Phase 4).
 
